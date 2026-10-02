@@ -80,14 +80,9 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA = "05-vibracao.html"
 
-#: O ENDEREÇO DA BANCADA — faixa SINTÉTICA da casa, nunca derivada de um MAC
-#: real. Há dois portões de anonimato nesta árvore, e uma máscara aplicada a um
-#: endereço de verdade ainda carrega o OUI dela.
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
-#: A FORÇA GERAL DO PERFIL DELA. `max` é o que o DON'T SCREAM tem no disco, e é
-#: o degrau que ela clicou três vezes sem resposta.
 GLOBAL = "max"
 
 
@@ -101,7 +96,6 @@ class PonteDeMentira:
         self.chamadas.append(f"profile_switch:{nome}")
         return True
 
-    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
     def profile_reaplicar(self, nome: str) -> bool:
         self.chamadas.append(f"profile_reaplicar:{nome}")
         return True
@@ -112,18 +106,7 @@ class PonteDeMentira:
 
 
 def _o_perfil_dela(com_override: str | None = None) -> dict[str, Any]:
-    """O perfil DELA na forma CRUA que a pintura lê — global `max`, sem override.
-
-    CRU E SEM PYDANTIC de propósito: é o que `pacotes/perfil.ativo` entrega à
-    tela, lendo o JSON direto. Montar um `Profile` aqui mediria a borda do
-    esquema, e o que esta régua persegue é o caminho da PINTURA.
-
-    O BLOCO `controllers[uniq]` EXISTE E NÃO TEM `rumble` — é a forma exata do
-    disco dela, e não um `controllers` vazio: o DON'T SCREAM guarda `leds`,
-    `speaker` e `mic` para aquele controle e nenhuma opinião sobre vibração. Um
-    dicionário vazio mediria um perfil mais pobre que o dela e deixaria passar
-    uma cura que só olhasse a presença da chave do controle.
-    """
+    """O perfil DELA na forma CRUA que a pintura lê — global `max`, sem override."""
     dele: dict[str, Any] = {"leds": {"lightbar": [65, 9, 55]},
                             "speaker": {"volume": 102, "muted": False}}
     if com_override:
@@ -149,14 +132,7 @@ def a05():
 
 @pytest.fixture
 def disco_dela(monkeypatch, a05):
-    """Desvia o perfil ATIVO para o dela, e o disco para a memória.
-
-    DOIS DESVIOS PORQUE SÃO DOIS CAMINHOS, e confundi-los foi o que fez esta
-    aba ser medida com o perfil errado: a PINTURA lê por `perfil.ativo` (JSON
-    cru) e o GESTO grava por `loader.load_profile`/`save_profile` (pydantic).
-    Desviar só o primeiro deixaria o clique falando com o disco de verdade —
-    que é o perfil DELA, e ela está com o controle na mão.
-    """
+    """Desvia o perfil ATIVO para o dela, e o disco para a memória."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -185,12 +161,7 @@ def disco_dela(monkeypatch, a05):
 
 
 def _ctx(pac):
-    """Um tique com UM controle na mesa e a força geral do perfil dela.
-
-    O `rumble_policy` do `state` é o que o daemon publica da MESA, e é de onde a
-    coluna HERDA quando não tem opinião própria — a mesma precedência de
-    `app/draft_config.effective_rumble_for`.
-    """
+    """Um tique com UM controle na mesa e a força geral do perfil dela."""
     return pac.Contexto(
         state={"active_profile": "Bancada", "rumble_policy": GLOBAL,
                "rumble_mult_applied": 1.5},
@@ -209,16 +180,8 @@ def _coluna(pac) -> dict[str, Any]:
     return fora[UNIQ]
 
 
-# ---------------------------------------------------------------------------
-# 1. O DEGRAU HERDADO ACENDE
-# ---------------------------------------------------------------------------
 def test_a_coluna_que_herda_acende_o_degrau_em_vigor(pac, disco_dela) -> None:
-    """Sem override, a coluna acende o degrau da força geral.
-
-    É A QUEIXA DELA, na asserção mais curta que ela cabe: com `max` no global e
-    nenhum override, o produto está vibrando em Máximo — e a tela tem de dizer
-    Máximo. Emitir `""` apaga os três e é o que ela fotografou.
-    """
+    """Sem override, a coluna acende o degrau da força geral."""
     col = _coluna(pac)
     assert col["degrau"] == GLOBAL, (
         f"a coluna emitiu {col['degrau']!r} com a força geral em {GLOBAL!r} e "
@@ -227,13 +190,7 @@ def test_a_coluna_que_herda_acende_o_degrau_em_vigor(pac, disco_dela) -> None:
 
 
 def test_o_degrau_herdado_nao_tem_a_cara_do_escolhido(pac, disco_dela) -> None:
-    """Aceso, sim — igual ao escolhido, não. A decisão [05] dela continua de pé.
-
-    ESTA RÉGUA É O CONTRAPESO DA DE CIMA, e sem ela a cura seria uma mentira
-    nova: um degrau herdado com a mesma cara de um escolhido devolve a aba ao
-    estado de 03/09, em que ela não tinha como saber se aquilo era escolha dela
-    ou herança.
-    """
+    """Aceso, sim — igual ao escolhido, não. A decisão [05] dela continua de pé."""
     col = _coluna(pac)
     assert col["degrau-herdado"] == "1", (
         "a coluna herdou o degrau e não marcou a procedência — aceso igual ao "
@@ -242,13 +199,7 @@ def test_o_degrau_herdado_nao_tem_a_cara_do_escolhido(pac, disco_dela) -> None:
 
 def test_a_coluna_com_override_proprio_nao_se_diz_herdada(
         pac, disco_dela) -> None:
-    """O par da régua acima: com ajuste próprio, a marca NÃO sai.
-
-    Uma marca cravada em `"1"` passaria as duas réguas de cima e diria "herdado"
-    sobre uma escolha dela — o defeito espelhado. Aqui o override é `economia`,
-    DIFERENTE do global `max`, senão o produto o limparia e a cena mediria
-    herança de novo.
-    """
+    """O par da régua acima: com ajuste próprio, a marca NÃO sai."""
     vivo, _ = disco_dela
     vivo["cru"] = _o_perfil_dela(com_override="economia")
 
@@ -262,12 +213,7 @@ def test_a_coluna_com_override_proprio_nao_se_diz_herdada(
 
 def test_sem_politica_nenhuma_a_marca_nao_afirma_procedencia(
         pac, disco_dela) -> None:
-    """Campo sem informação NÃO MOSTRA NADA — a regra dela, 02/09/2026.
-
-    Com o daemon sem responder política, não há degrau aceso e não há herança a
-    confessar. Marcar a coluna ali seria afirmar a procedência de um valor que a
-    tela não está mostrando — a tela inventando um fato.
-    """
+    """Campo sem informação NÃO MOSTRA NADA — a regra dela, 02/09/2026."""
     ctx = _ctx(pac)
     ctx.state["rumble_policy"] = ""
     col = pac.pacote_da_pagina(PAGINA, ctx)["colunas"][UNIQ]
@@ -301,16 +247,8 @@ def test_a_marca_tem_onde_pousar_nos_quatro_lugares() -> None:
         "muda um pixel, que é verde sobre nada")
 
 
-# ---------------------------------------------------------------------------
-# 2. O CLIQUE QUE JÁ VALE RESPONDE
-# ---------------------------------------------------------------------------
 def test_o_clique_no_degrau_que_ja_vale_responde(pac, disco_dela) -> None:
-    """Clicar "Máximo" com o global em `max` devolve uma linha para a faixa.
-
-    **É O CLIQUE MORTO INTEIRO.** Não grava (e não deve: a peça já vibra em
-    Máximo), e até 17/09 também não dizia nada — três desfechos do produto e
-    nenhum canal de volta.
-    """
+    """Clicar "Máximo" com o global em `max` devolve uma linha para a faixa."""
     fn = pac.gesto_da_pagina(PAGINA, "forca")
     assert fn is not None, "o gesto `forca` perdeu o dono"
 
@@ -325,13 +263,7 @@ def test_o_clique_no_degrau_que_ja_vale_responde(pac, disco_dela) -> None:
 
 def test_o_recado_do_clique_que_ja_vale_diz_a_procedencia(
         pac, disco_dela) -> None:
-    """A frase do caso HERDADO é a que fala da força geral.
-
-    E ela carrega a procedência em PALAVRAS — o que faz o defeito 1 chegar à
-    tela dela mesmo antes de a marca nova ser publicada: até o `--publicar 05`,
-    a página que o produto renderiza não tem o endereço `degrau-herdado`, e esta
-    linha é o canal que sobra.
-    """
+    """A frase do caso HERDADO é a que fala da força geral."""
     from pacotes import a05_vibracao as a05
 
     fn = pac.gesto_da_pagina(PAGINA, "forca")
@@ -344,18 +276,7 @@ def test_o_recado_do_clique_que_ja_vale_diz_a_procedencia(
 
 
 def test_a_frase_do_caso_herdado_tem_caminho(pac, disco_dela) -> None:
-    """A ``FRASE_DO_QUE_A_COLUNA_MOSTRA`` é ALCANÇÁVEL — e não era.
-
-    **ESTA RÉGUA GUARDA UMA FORMA DE DEFEITO, não uma linha.** A frase foi
-    escrita em 04/09 para o caso *"a sua escolha é igual à força geral"*, e o
-    `if mostra != policy` que a guardava a tornava inalcançável: quando a
-    escolha é igual ao global o override é limpo, a coluna passa a mostrar o
-    próprio global, e `mostra == policy`. Texto certo, sem caminho que o
-    produzisse — o que o `casa-sabe` chama de promessa sem chamador, e que
-    nenhum portão pegou porque a constante ERA citada no código.
-
-    Se alguém voltar a fechar o caminho, esta régua reprova antes da tela dela.
-    """
+    """A ``FRASE_DO_QUE_A_COLUNA_MOSTRA`` é ALCANÇÁVEL — e não era."""
     from pacotes import a05_vibracao as a05
 
     fn = pac.gesto_da_pagina(PAGINA, "forca")
@@ -394,14 +315,7 @@ def test_o_clique_que_ja_vale_nao_escreve_no_perfil(pac, disco_dela) -> None:
 
 def test_o_clique_que_muda_alguma_coisa_continua_calado(
         pac, disco_dela) -> None:
-    """O desfecho 1 não virou ruído: quem muda a tela não precisa de frase.
-
-    **É O CONTRAPESO DA CURA, e sem ele ela viraria o defeito oposto.** Uma
-    frase por clique bem sucedido é ruído crônico — a tarja nasceria a cada
-    degrau que ela escolhesse. O silêncio só é resposta quando a TELA responde,
-    e aqui ela responde: o override vai ao disco e o tique seguinte acende
-    "Economia" com a cara de escolhido.
-    """
+    """O desfecho 1 não virou ruído: quem muda a tela não precisa de frase."""
     _, gravados = disco_dela
 
     fora = pac.gesto_da_pagina(PAGINA, "forca")(
@@ -415,13 +329,7 @@ def test_o_clique_que_muda_alguma_coisa_continua_calado(
 
 def test_o_clique_no_override_que_ja_e_dela_diz_a_outra_frase(
         pac, disco_dela) -> None:
-    """Dois estados por baixo, duas frases — e a diferença é de FATO.
-
-    Com um override próprio `economia` e a força geral em `max`, clicar
-    "Economia" também não muda nada. Mas a frase do outro ramo diria *"a sua
-    escolha é igual à força geral"*, e aqui ela NÃO é: `economia` não é `max`. A
-    tela afirmaria uma igualdade que não existe.
-    """
+    """Dois estados por baixo, duas frases — e a diferença é de FATO."""
     from pacotes import a05_vibracao as a05
 
     vivo, gravados = disco_dela
@@ -442,14 +350,7 @@ def test_o_clique_no_override_que_ja_e_dela_diz_a_outra_frase(
 
 def test_o_arraste_da_barra_nao_ganhou_um_recibo_por_tique(
         pac, disco_dela) -> None:
-    """O `custom` fica FORA do recado, e não é esquecimento.
-
-    A barra "Personalizado" chega DUAS VEZES por arraste — o ouvinte do piloto
-    escuta `change` e `click`, e soltar o polegar dispara os dois com o mesmo
-    valor (está escrito em `a05_vibracao.intensidade`). A segunda passagem é
-    sempre um não-mudou; um recibo ali seria uma tarja por arraste, que é o
-    ruído que a cura do desfecho 1 existe para não criar.
-    """
+    """O `custom` fica FORA do recado, e não é esquecimento."""
     fn = pac.gesto_da_pagina(PAGINA, "intensidade")
     assert fn is not None, "o gesto `intensidade` perdeu o dono"
     ctx = _ctx(pac)
@@ -463,21 +364,8 @@ def test_o_arraste_da_barra_nao_ganhou_um_recibo_por_tique(
         f"mesmo valor duas vezes, e isto vira uma tarja por arraste")
 
 
-# ---------------------------------------------------------------------------
-# 3. A CENA INTEIRA, como ela a viveu
-# ---------------------------------------------------------------------------
 def test_o_silencio_medido_na_tela_dela_nao_volta(pac, disco_dela) -> None:
-    """As TRÊS ausências de 17/09 numa cena só: não grava, não acende, não fala.
-
-    É a linha que a sprint mediu — ``gravou_override=False,
-    degrau_pintado='', recado=NENHUM`` — e o que esta régua exige é que as duas
-    últimas tenham mudado. A primeira **continua `False` de propósito**: é a
-    decisão, não o defeito.
-
-    ELA MEDE NA ORDEM EM QUE ELA VIVEU: abrir a aba (o pacote), clicar (o
-    gesto), e olhar de novo (o pacote outra vez). Medir só o gesto deixaria
-    passar uma cura que respondesse a frase certa sobre uma tela ainda apagada.
-    """
+    """As TRÊS ausências de 17/09 numa cena só: não grava, não acende, não fala."""
     _, gravados = disco_dela
 
     antes = _coluna(pac)

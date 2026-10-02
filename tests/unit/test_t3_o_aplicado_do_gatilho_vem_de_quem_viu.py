@@ -46,7 +46,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("o desfecho do gatilho vem do corpo do daemon")
 
 from typing import Any
@@ -58,13 +57,10 @@ from hefesto_dualsense4unix.app.actions.triggers_actions import TriggersActionsM
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.textos_de_aplicacao import GUARDADO, NADA_ACONTECEU
 
-#: Endereços sintéticos, FORA da faixa `aabbcc…` que outros arquivos usam.
 NA_MESA = "02:fe:00:00:00:33"
 FORA_DA_MESA = "e8:47:3a:00:00:66"
-#: O rótulo que a aba Status guarda do alvo (a R-16 o preserva quando ele cai).
 ROTULO_DO_AUSENTE = "Controle 2 (BT)"
 
-#: A resposta que a bancada MEDIU em 23/08 com a mesa vazia. É o caso.
 CORPO_MESA_VAZIA: dict[str, Any] = {
     "status": "ok",
     "aplicado_em": [],
@@ -94,12 +90,7 @@ class _Slider:
 
 
 class _Caixa:
-    """O mínimo de `Gtk.Box` que `_rebuild_params` toca (o "Desligar" o chama).
-
-    O modo ``Off`` não tem parâmetro nenhum, então o laço que monta sliders não
-    roda e nenhum widget de verdade é criado — é o que deixa este arquivo medir
-    o caminho de produção sem servidor gráfico.
-    """
+    """O mínimo de `Gtk.Box` que `_rebuild_params` toca (o "Desligar" o chama)."""
 
     def __init__(self) -> None:
         self.filhos: list[Any] = []
@@ -189,12 +180,7 @@ class _Host(TriggersActionsMixin):
 
 @pytest.fixture
 def daemon(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Dublê da ponte que sabe RECUSAR, e não só passar.
-
-    Régua que só sabe passar não é régua: os testes abaixo exercitam as duas
-    respostas — corpo com destino, corpo sem destino nenhum, recusa, e o
-    silêncio do daemon morto (``corpo=None``).
-    """
+    """Dublê da ponte que sabe RECUSAR, e não só passar."""
 
     class _Ponte:
         def __init__(self) -> None:

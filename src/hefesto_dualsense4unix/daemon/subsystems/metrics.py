@@ -1,25 +1,4 @@
-"""Subsystem de métricas Prometheus — HTTP exposition text format (sem dep externa).
-
-Expõe um servidor HTTP minimalista em 127.0.0.1:<metrics_port>/metrics que
-serializa contadores e gauges do StateStore + estado do controller no formato
-Prometheus text exposition (https://prometheus.io/docs/instrumenting/exposition_formats/).
-
-Requisitos de segurança:
-  - Bind somente em 127.0.0.1 — NUNCA em 0.0.0.0.
-  - Se a porta estiver ocupada, loga warning e vira no-op (daemon não para).
-  - Padrão desligado (metrics_enabled=False); opt-in explícito.
-
-Configuração (PROMESSA-NÃO-CUMPRIDA-01/C1, 01/08/2026):
-  - metrics_enabled (DaemonConfig): False por padrão. Opt-in explícito.
-  - HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED: "1" liga o endpoint.
-  - HEFESTO_DUALSENSE4UNIX_METRICS_PORT: sobrescreve a porta da config.
-Até 01/08/2026 nenhuma das duas existia, e o `DaemonConfig` era construído sem
-`metrics_enabled` — subir o endpoint exigia editar o código, apesar de a
-ADR-016 ter decidido "opt-in via config ou env".
-
-Não usa prometheus_client como dependência obrigatória. O formato text/plain
-é simples o suficiente para serialização manual neste nível (V1).
-"""
+"""Subsystem de métricas Prometheus — HTTP exposition text format (sem dep externa)."""
 from __future__ import annotations
 
 import http.server
@@ -36,35 +15,16 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Endereço de bind fixo — alteração exige ADR nova.
 _BIND_HOST = "127.0.0.1"
 
-#: As duas chaves de usuário das métricas (PROMESSA-NÃO-CUMPRIDA-01/C1).
-#:
-#: Nomes constantes, e não literais espalhados, porque `docs/usage/hotkeys.md`
-#: é cobrada por um teste que lê os literais do código — quem renomear aqui
-#: precisa que o mesmo nome esteja no documento.
 ENV_METRICS_ENABLED = "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED"
 ENV_METRICS_PORT = "HEFESTO_DUALSENSE4UNIX_METRICS_PORT"
 
-# Tipo: lista de (dict_de_labels, valor)
 _LabeledSeries = list[tuple[dict[str, str], int | float]]
 
 
 def _porta_efetiva(porta_da_config: int) -> int:
-    """A porta do endpoint, com a variável de ambiente vencendo a config.
-
-    PROMESSA-NÃO-CUMPRIDA-01/C1, segunda metade. Ligar as métricas sem poder
-    escolher a porta seria meia-chave: `metrics_port` sofre exatamente do mesmo
-    mal que `metrics_enabled` sofria — é campo de `DaemonConfig` que nada de
-    fora do código alcança. Quem já tem 9090 ocupada (Prometheus local é o caso
-    óbvio) ligaria o endpoint e receberia `metrics_bind_failed` no log, sem ter
-    onde mexer.
-
-    Valor inválido NÃO derruba o daemon nem cai em silêncio: loga e usa a
-    porta da config. É a mesma postura do bind que falha — o daemon segue, as
-    métricas é que não sobem.
-    """
+    """A porta do endpoint, com a variável de ambiente vencendo a config."""
     bruto = os.environ.get(ENV_METRICS_PORT)
     if bruto is None:
         return porta_da_config
@@ -81,11 +41,6 @@ def _porta_efetiva(porta_da_config: int) -> int:
         )
         return porta_da_config
     return porta
-
-
-# ---------------------------------------------------------------------------
-# Serialização Prometheus text exposition (formato manual, sem dep extra)
-# ---------------------------------------------------------------------------
 
 
 def _format_counter(name: str, help_text: str, value: int | float) -> str:
@@ -121,16 +76,8 @@ def _render_labeled(
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Coletor de métricas
-# ---------------------------------------------------------------------------
-
-
 class MetricsCollector:
-    """Coleta métricas do StateStore e do estado do controller.
-
-    Instanciada pelo MetricsSubsystem; injetada no handler HTTP via closure.
-    """
+    """Coleta métricas do StateStore e do estado do controller."""
 
     def __init__(self, store: Any, controller: Any) -> None:
         self._store = store
@@ -143,7 +90,6 @@ class MetricsCollector:
 
         parts: list[str] = []
 
-        # -- poll_ticks_total ------------------------------------------------
         parts.append(
             _format_counter(
                 "hefesto_poll_ticks_total",
@@ -152,7 +98,6 @@ class MetricsCollector:
             )
         )
 
-        # -- controller_connected {transport} --------------------------------
         transport = "unknown"
         connected = 0
         try:
@@ -182,18 +127,13 @@ class MetricsCollector:
             )
         )
 
-        # -- ipc_requests_total {method, status} -----------------------------
-        # Convenção de chave: ipc.<method>.<status>
-        # status = último segmento após o último ponto; method = segmento(s) entre
-        # o prefixo "ipc." e o último ponto.
-        # Exemplo: "ipc.daemon.status.ok" → method="daemon.status", status="ok"
         ipc_series: _LabeledSeries = []
         for key, value in counters.items():
             if key.startswith("ipc.") and key.count(".") >= 2:
-                rest = key[len("ipc."):]  # "daemon.status.ok"
+                rest = key[len("ipc."):]
                 last_dot = rest.rfind(".")
-                method = rest[:last_dot]   # "daemon.status"
-                status = rest[last_dot + 1:]  # "ok"
+                method = rest[:last_dot]
+                status = rest[last_dot + 1:]
                 ipc_series.append(({"method": method, "status": status}, value))
 
         if ipc_series:
@@ -214,7 +154,6 @@ class MetricsCollector:
                 )
             )
 
-        # -- udp_packets_total {result} --------------------------------------
         udp_accepted = counters.get("udp.accepted", 0)
         udp_limited = counters.get("udp.rate_limited", 0)
         parts.append(
@@ -229,8 +168,6 @@ class MetricsCollector:
             )
         )
 
-        # -- events_dispatched_total {topic} ---------------------------------
-        # Contadores de eventos: event.<topic>
         event_series: _LabeledSeries = []
         for key, value in counters.items():
             if key.startswith("event."):
@@ -255,7 +192,6 @@ class MetricsCollector:
                 )
             )
 
-        # -- button_down_emitted_total / button_up_emitted_total -------------
         parts.append(
             _format_counter(
                 "hefesto_button_down_emitted_total",
@@ -272,11 +208,6 @@ class MetricsCollector:
         )
 
         return "\n".join(parts)
-
-
-# ---------------------------------------------------------------------------
-# Handler HTTP
-# ---------------------------------------------------------------------------
 
 
 def _make_handler(collector: MetricsCollector) -> type[http.server.BaseHTTPRequestHandler]:
@@ -306,21 +237,8 @@ def _make_handler(collector: MetricsCollector) -> type[http.server.BaseHTTPReque
     return _MetricsHandler
 
 
-# ---------------------------------------------------------------------------
-# MetricsSubsystem
-# ---------------------------------------------------------------------------
-
-
 class MetricsSubsystem:
-    """Subsystem que expõe métricas em formato Prometheus via HTTP.
-
-    Ciclo de vida:
-      start() → sobe TCPServer em thread daemon
-      stop()  → chama server.shutdown() (bloqueia até thread terminar)
-
-    O servidor é no-op (None) se a porta estiver ocupada ou se
-    metrics_enabled=False.
-    """
+    """Subsystem que expõe métricas em formato Prometheus via HTTP."""
 
     name = "metrics"
 
@@ -371,20 +289,7 @@ class MetricsSubsystem:
         logger.info("metrics_subsystem_stopped")
 
     def is_enabled(self, config: DaemonConfig) -> bool:
-        """Habilitado por ``metrics_enabled=True`` OU pela variável de ambiente.
-
-        PROMESSA-NÃO-CUMPRIDA-01/C1. A env var é a chave que faltava: até
-        01/08/2026 o campo `metrics_enabled` era inalcançável de fora do
-        código — nenhuma variável, flag ou arquivo o ligava, e o daemon
-        construía o `DaemonConfig` sem ele (`daemon/main.py`), então o default
-        `False` vencia sempre. A ADR-016 decidiu *"opt-in via config ou env"*;
-        a metade "env" nunca tinha sido escrita.
-
-        O formato é o mesmo dos plugins (`subsystems/plugins.py`), de
-        propósito: duas chaves opcionais do mesmo daemon não podem ter duas
-        gramáticas. Só `"1"` liga — qualquer outro valor, inclusive `"true"`,
-        deixa desligado, que é o comportamento do irmão.
-        """
+        """Habilitado por ``metrics_enabled=True`` OU pela variável de ambiente."""
         env_force = os.environ.get(ENV_METRICS_ENABLED, "0") == "1"
         return bool(getattr(config, "metrics_enabled", False)) or env_force
 

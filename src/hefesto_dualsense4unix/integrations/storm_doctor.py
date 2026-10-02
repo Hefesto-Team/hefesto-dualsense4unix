@@ -39,114 +39,32 @@ from hefesto_dualsense4unix.utils.repo_files import (
     esta_instalacao_e_um_checkout,
 )
 
-# Tags no padrão do doctor.
 OK = "[ OK ]"
 WARN = "[WARN]"
 INFO = "[INFO]"
 
-#: O prefixo do gesto, palavra por palavra do molde já aprovado na aba
-#: Configurações (`app/actions/config/secao_exame.PREFIXO_DA_CURA`, e a foto
-#: `docs/usage/assets/readme_configuracoes.png`: *"O que fazer: Vale mudar um
 #: deles de porta."*).
-#:
-#: **DUPLICAÇÃO DECLARADA, não descuido.** O dono do prefixo é o `secao_exame`,
-#: que vive em `app/` — e `integrations/` não pode importar de `app/` sem
-#: inverter a camada (é a mesma razão que mudou o conselho de atualizar de casa,
-#: em `utils/repo_files.py:35-41`). A saída certa é o prefixo descer para
-#: `utils/`, e isso está RELATADO na entrega desta frente.
 PREFIXO_DA_CURA = "O que fazer: "
 
 
-#: Os rótulos dos botões que as frases desta casa mandam clicar. LIDOS do
-#: `main.glade`, nunca digitados — corrigido em 26/08/2026, e o defeito era
-#: vivo: a leva daquele dia renomeou "Aplicar correções" para "Consertar
-#: problemas conhecidos" (o rótulo velho não dizia o que o botão faz), e esta
-#: frase continuou mandando a pessoa procurar um botão QUE NÃO EXISTE MAIS na
-#: janela. Quem pegou foi `tests/unit/test_steam_input_ponteiros.py`, que
-#: compara a frase com os rótulos vivos — e é por isso que ele existe.
 _ROTULOS_EM_CACHE: dict[str, str] = {}
 
 #: OS RÓTULOS QUE SAÍRAM DA RESERVA — `{id do widget: o rótulo que saiu}`.
-#:
-#: **O SILÊNCIO ACABOU AQUI — 06/09/2026, sprint GTK-2.** A reserva do
-#: :func:`rotulo_do_botao` continua sendo reserva (uma frase que some é pior que
-#: uma frase com um nome velho), mas ela era CALADA e ficava no
-#: :data:`_ROTULOS_EM_CACHE` para o resto do processo: sem o glade ao alcance o
-#: produto publicava o nome de reserva para sempre e nada acusava. Um valor de
-#: reserva que vira permanente sem nada acusando é o defeito, não a reserva —
-#: e ele deixa de ser hipotético no dia em que a `GTK-3` apagar o
-#: XML da janela GTK (`D-0609-GTK-LEVA-INTEIRA`).
-#:
-#: Quem lê isto: :func:`rotulos_de_reserva` (para quem chama por código) e
-#: `tests/unit/test_os_leitores_do_glade_tem_dono.py`, que reprova nomeando o
-#: id do botão que ficou sem dono. O aviso de runtime é um
-#: :func:`warnings.warn`, uma vez por id.
 _ROTULOS_DE_RESERVA: dict[str, str] = {}
 
 
 def rotulos_de_reserva() -> dict[str, str]:
-    """`{id do widget: rótulo}` de todo rótulo que a FONTE não soube dar.
-
-    Vazio é o estado saudável: quer dizer que todo rótulo que o produto cita
-    foi lido de onde ele vive. Uma entrada aqui é uma frase de tela mandando
-    clicar num botão cujo nome ninguém conferiu — ver :data:`_ROTULOS_DE_RESERVA`.
-    """
+    """`{id do widget: rótulo}` de todo rótulo que a FONTE não soube dar."""
     return dict(_ROTULOS_DE_RESERVA)
 
 
-#: A TELA VIVA DE CADA BOTÃO QUE ESTE MÓDULO CITA — 06/09/2026,
-#: `SISTEMA-STEAM-01`. `{id no glade: (página, `data-gesto`)}`.
-#:
-#: **ELE NASCEU DE UM DEFEITO VIVO**, achado pela `GTK-2` e medido aqui: a
-#: frase deste módulo manda clicar em *"Consertar problemas conhecidos"* **na
-#: aba Sistema**, e na aba Sistema que ela usa o botão se chama *"Refazer os
-#: consertos automáticos"*. A frase nomeia um botão que não está lá — a forma
-#: exata que o glossário proíbe (*"qualquer frase que mande a pessoa procurar um
-#: botão que não existe"*).
-#:
-#: **E TROCAR O `se_faltar` NÃO CURAVA**, o que é o achado que importa. Medido
-#: em 06/09/2026, com o glade ainda no disco:
-#:
-#:     rotulo_do_botao('btn_storm_fix_safe', 'Refazer os consertos automáticos')
-#:       -> 'Consertar problemas conhecidos'          ← o glade venceu
-#:       rotulos_de_reserva() == {}                    ← a reserva nem foi usada
-#:
-#: A leitura do glade acontece PRIMEIRO e dá certo, então a reserva nunca sai.
-#: Uma cura que só vale no dia em que a `GTK-3` apagar o XML não é cura para a
-#: tela que ela tem hoje.
-#:
-#: **QUAL LADO CEDEU, E POR QUÊ.** O rótulo não se moveu, e a frase sim, por
-#: três medições:
-#:
-#: 1. esta função é um LEITOR, não um dono — ela existe exatamente para a frase
-#:    não virar o segundo dono do rótulo. O defeito não é o que ela diz: é a
-#:    tela a quem ela pergunta;
-#: 2. o rótulo da tela nova é do MOCKUP e está sob dúvida declarada desde
-#:    29/08 (`MIGRA-SISTEMA-07`, *"O que é dela decidir"*: as três opções para o
-#:    rótulo quando não houve conserto). Mover uma palavra que espera a decisão
-#:    dela, para agradar a uma frase de uma janela que está saindo, é o avesso;
-#: 3. a janela GTK sai inteira (`D-0609-GTK-LEVA-INTEIRA`). Alinhar a tela viva
-#:    à que morre seria trabalho para desfazer no mesmo mês.
 _NA_TELA_VIVA: dict[str, tuple[str, str]] = {
     "btn_storm_fix_safe": ("09-sistema.html", "refazer-consertos"),
 }
 
 
 def _rotulo_na_tela_viva(widget_id: str) -> str | None:
-    """O rótulo daquele botão NA PÁGINA QUE O PRODUTO RENDERIZA, ou `None`.
-
-    Lê a página publicada — nunca a bancada: uma frase de tela que citasse o
-    rótulo do `mockup/` mandaria clicar num nome que ela só vai ver depois de
-    publicar, e publicar é ato dela.
-
-    **TEM GÊMEO, e ele é declarado:** `interface/pacotes/a09_sistema.py`
-    (`_rotulo_do_desenho`) lê o mesmo `<button>` pelo mesmo `data-gesto`, para
-    repor o rótulo dos botões que confirmam em dois cliques. Os dois não podem
-    ser um só sem um ciclo de import — aquele módulo importa ESTE. O que segura
-    o par é a régua `test_a_frase_do_exame_nomeia_o_botao_que_esta_na_tela`, em
-    `tests/unit/test_a_09_sistema_fecha_a_paridade.py`, que compara as duas
-    leituras e reprova na divergência.
-    """
+    """O rótulo daquele botão NA PÁGINA QUE O PRODUTO RENDERIZA, ou `None`."""
     alvo = _NA_TELA_VIVA.get(widget_id)
     if alvo is None:
         return None
@@ -169,24 +87,7 @@ def _rotulo_na_tela_viva(widget_id: str) -> str | None:
 
 
 def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
-    """O rótulo VIVO daquele botão — na TELA QUE ELA USA, pelo id dele.
-
-    TRÊS FONTES, e a ordem é o ponto:
-
-    1. **a página que o produto renderiza** (:data:`_NA_TELA_VIVA`) — é a tela
-       que ela tem na frente quando lê esta frase;
-    2. **o `gui/main.glade`**, enquanto a janela GTK existir. Ela some inteira
-       na `D-0609-GTK-LEVA-INTEIRA`, e por isso não pode ser a primeira;
-    3. **`se_faltar`**, quando nenhuma das duas responde.
-
-    ATÉ 06/09/2026 A ORDEM ERA SÓ A 2 E A 3, e o preço estava na tela dela:
-    ver :data:`_NA_TELA_VIVA`.
-
-    `se_faltar` é o que sai quando nenhuma fonte está ao alcance (empacotamento
-    parcial, teste sem recurso). Uma frase que some é pior que uma frase com um
-    nome velho, então isto nunca levanta — **mas não é calado**: o id vai
-    para :data:`_ROTULOS_DE_RESERVA` e sai um `warnings.warn` na primeira vez.
-    """
+    """O rótulo VIVO daquele botão — na TELA QUE ELA USA, pelo id dele."""
     if widget_id in _ROTULOS_EM_CACHE:
         return _ROTULOS_EM_CACHE[widget_id]
     da_tela = _rotulo_na_tela_viva(widget_id)
@@ -194,12 +95,6 @@ def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
         _ROTULOS_EM_CACHE[widget_id] = da_tela
         return da_tela
     alvo = se_faltar
-    # A BANDEIRA É O INSTRUMENTO, e comparar as duas strings NÃO seria: hoje o
-    # rótulo do `btn_storm_fix_safe` no glade é palavra por palavra o
-    # `se_faltar` desta casa ("Consertar problemas conhecidos"), então
-    # `alvo == se_faltar` acusaria reserva sobre uma LEITURA que deu certo.
-    # Régua que responde sobre outra coisa que não o produto é o defeito que
-    # esta casa achou seis vezes em três dias.
     lido_da_fonte = False
     try:
         import re as _re
@@ -208,12 +103,6 @@ def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
         glade = (
             _Path(__file__).resolve().parents[1] / "gui" / "main.glade"
         ).read_text(encoding="utf-8")
-        # A janela termina no PRÓXIMO `id=`, e não num número de caracteres:
-        # o rótulo pode ser propriedade direta do botão OU, quando ele precisa
-        # quebrar linha, um `<child><object class="GtkLabel">` alguns comentários
-        # abaixo. Um teto fixo de caracteres achava o primeiro caso e perdia o
-        # segundo — medido em 26/08, com o `btn_storm_fix_safe`, que é
-        # exatamente o botão que virou filho naquele dia.
         bloco = glade.split(f'id="{widget_id}"', 1)[1]
         bloco = bloco.split(' id="', 1)[0]
         achado = _re.search(
@@ -225,10 +114,6 @@ def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
     except (OSError, IndexError):
         pass
     if not lido_da_fonte:
-        # A FONTE NÃO RESPONDEU. Três caminhos chegam aqui e os três valem o
-        # mesmo aviso: o arquivo não existe (`OSError`), o id não está nele
-        # (`IndexError` no split) ou o bloco não tem `label`. Registrar antes
-        # de cachear é o que impede o `se_faltar` de virar permanente calado.
         _ROTULOS_DE_RESERVA[widget_id] = se_faltar
         warnings.warn(
             f"storm_doctor: o rótulo do botão {widget_id!r} não foi lido de "
@@ -241,25 +126,8 @@ def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
     return alvo
 
 
-# ---------------------------------------------------------------------------
-# O GESTO DE ATUALIZAR, POR FORMATO DE INSTALAÇÃO (BG-06b)
-#
-# ESTE BLOCO MORA AQUI POR POSSE, NÃO POR DESENHO. A casa dele é
-# `utils/repo_files.py`, ao lado de `FRASE_DE_ATUALIZAR` e de
-# `esta_instalacao_e_um_checkout` — é a MESMA pergunta ("o que esta instalação
-# tem ao lado do código?"), um grau mais fina. `repo_files.py` está fora da
-# posse desta frente (LEVA-2-G, 26/08/2026), e a regra da leva é relatar em vez
 # de escrever em arquivo alheio. Fica RELATADO: enquanto ele não descer,
-# `app/actions/mouse_actions.py` e `app/actions/emulation_actions.py` — que
-# chamam `repo_files.como_atualizar_esta_instalacao()` direto — continuam
-# entregando a frase genérica, que é o último degrau desta escada e não uma
-# contradição.
-#
-# O QUE ELE NÃO FAZ: adivinhar o formato pela distribuição. "Tem `apt`, logo é
-# `.deb`" está errado para todo AppImage e todo `pip install --user` numa
-# máquina Debian — e um gesto errado é pior que um gesto vago. A pergunta é
 # sempre sobre ESTE código no disco: quem é o dono dele?
-# ---------------------------------------------------------------------------
 
 FORMATO_CHECKOUT = "checkout"
 FORMATO_FLATPAK = "flatpak"
@@ -269,15 +137,6 @@ FORMATO_DEBIAN = "debian"
 FORMATO_FEDORA = "fedora"
 FORMATO_DESCONHECIDO = "desconhecido"
 
-#: O gesto de cada formato. **PROVISÓRIO — decisão dela**: os cinco nomeados
-#: são texto novo de tela (o carimbo é herdado da T-03, que redigiu a genérica
-#: e parou aqui de propósito).
-#:
-#: A forma é a mesma dos dois que já existiam, e não é estilo: a frase entra no
-#: MESMO lugar de outras ("…, ou <isto>", "— <isto> e reconecte os controles"),
-#: então ela é um GESTO ("rode X"), nunca uma oração inteira. Os dois extremos
-#: da escada vêm de `repo_files.FRASE_DE_ATUALIZAR` por referência — redigi-los
-#: de novo aqui é como duas verdades começam nesta casa.
 GESTO_DE_ATUALIZAR: dict[str, str] = {
     FORMATO_CHECKOUT: FRASE_DE_ATUALIZAR[True],
     FORMATO_FLATPAK: "rode flatpak update",
@@ -288,8 +147,6 @@ GESTO_DE_ATUALIZAR: dict[str, str] = {
     FORMATO_DESCONHECIDO: FRASE_DE_ATUALIZAR[False],
 }
 
-#: Quem responde "este arquivo é meu", e o formato de cada um. A ordem não
-#: importa: numa máquina só um deles reconhece o caminho.
 _GERENCIADORES: tuple[tuple[str, str, str], ...] = (
     (FORMATO_ARCH, "pacman", "-Qo"),
     (FORMATO_DEBIAN, "dpkg", "-S"),
@@ -299,18 +156,7 @@ _GERENCIADORES: tuple[tuple[str, str, str], ...] = (
 
 @lru_cache(maxsize=8)
 def _dono_do_arquivo(caminho: str) -> str | None:
-    """Qual gerenciador de pacotes diz ser dono deste caminho, ou ``None``.
-
-    ``None`` é o degrau final da escada e significa *"ninguém assume"* —
-    AppImage, `pip install --user`, `make install` à mão. É a resposta honesta,
-    e é ela que devolve a frase genérica.
-
-    Em cache porque a resposta não muda no meio de um processo (o pacote não é
-    reinstalado por baixo da GUI aberta) e porque a frase é interpolada em
-    muitas linhas do mesmo laudo — sem cache, o cartão "Saúde do sistema"
-    pagaria um `dpkg -S` por linha. A chave é `str` e não `Path` de propósito:
-    quem injeta o consultor nos testes não passa por aqui.
-    """
+    """Qual gerenciador de pacotes diz ser dono deste caminho, ou ``None``."""
     for formato, binario, flag in _GERENCIADORES:
         if shutil.which(binario) is None:
             continue
@@ -336,22 +182,7 @@ def formato_desta_instalacao(
     raiz_do_codigo: Path | None = None,
     consultar_dono: Callable[[str], str | None] | None = None,
 ) -> str:
-    """Como este Hefesto foi instalado — em uma palavra.
-
-    Os quatro parâmetros existem para a bancada e para quem já perguntou; em
-    produção ninguém passa nenhum. Eles são o que dá mordida ao teste: um
-    `/nix/store` de mentira é um `Path`, não uma variável de ambiente de
-    fundo de gaveta.
-
-    A escada, e cada degrau é uma MEDIÇÃO, não um palpite:
-
-    1. **checkout** — há um `install.sh` ao lado do código (`repo_files`);
-    2. **flatpak** — o `/.flatpak-info` que o próprio flatpak monta em todo
-       sandbox, ou o `FLATPAK_ID` do ambiente;
-    3. **nix** — o código está dentro do `/nix/store`;
-    4. **arch/debian/fedora** — o gerenciador de pacotes ASSUME o arquivo;
-    5. **desconhecido** — ninguém assume, e a frase volta a ser a genérica.
-    """
+    """Como este Hefesto foi instalado — em uma palavra."""
     if e_checkout is None:
         e_checkout = esta_instalacao_e_um_checkout()
     if e_checkout:
@@ -376,11 +207,7 @@ def gesto_de_atualizar(
     raiz_do_codigo: Path | None = None,
     consultar_dono: Callable[[str], str | None] | None = None,
 ) -> str:
-    """O gesto de atualizar que serve para ESTA instalação, sem jargão.
-
-    Substitui `repo_files.como_atualizar_esta_instalacao()` nos chamadores que
-    esta frente possui. Os argumentos são os de :func:`formato_desta_instalacao`.
-    """
+    """O gesto de atualizar que serve para ESTA instalação, sem jargão."""
     return GESTO_DE_ATUALIZAR[
         formato_desta_instalacao(
             e_checkout=e_checkout,
@@ -391,33 +218,6 @@ def gesto_de_atualizar(
     ]
 
 
-# ---------------------------------------------------------------------------
-# O NOME DO PACOTE, e o gesto de INSTALAR — A-LIBOPUS-TEM-NOME-EM-CADA-CASA-01
-#
-# A frase que originou isto dizia, em toda máquina, o nome que só o Debian usa,
-# e mandava o gesto de ATUALIZAR o Hefesto. Num Arch, quem a seguia recebia
-# `target not found` e concluía que o produto estava quebrado.
-#
-# Os dois erros têm a mesma assinatura: *o valor tem dono, e quem escreveu a
-# frase digitou em vez de perguntar ao dono*. O dono do nome mora no
-# `install.sh`, em shell, e não tinha contraparte em Python — então o lado
-# Python digitou.
-# ---------------------------------------------------------------------------
-
-#: O nome do pacote de cada dependência do sistema, por formato de instalação.
-#:
-#: **SEGUNDA CÓPIA DECLARADA, e o dono é o `install.sh`** (a tabela do
-#: `_pkg_nome`, que já sabia os três nomes antes desta frente existir). O
-#: produto não lê shell em tempo de execução, então o lado Python guarda a sua
-#: cópia — e quem as mantém iguais é
-#: `tests/unit/test_o_nome_do_pacote_tem_um_dono_so.py`, que LÊ o bloco de lá e
-#: compara chave por chave, nos dois sentidos. Acrescentar um formato aqui sem
-#: acrescentar lá — ou o contrário — reprova.
-#:
-#: **Só as três famílias que empacotam.** Flatpak, Nix, checkout e o formato
-#: que ninguém assume não têm nome de pacote em canto nenhum desta casa, e
-#: inventar um é exatamente o defeito que esta frente cura: eles caem no degrau
-#: final de :func:`gesto_de_instalar`.
 PACOTE_POR_FORMATO: dict[str, dict[str, str]] = {
     "opus": {
         FORMATO_DEBIAN: "libopus0",
@@ -426,27 +226,16 @@ PACOTE_POR_FORMATO: dict[str, dict[str, str]] = {
     },
 }
 
-#: Como a dependência se chama para quem LÊ a frase — o nome da BIBLIOTECA,
-#: com o artigo, porque ele entra no meio de uma oração. Não é nome de pacote:
-#: é o que sobra de honesto quando nenhum gerenciador assume a instalação.
 NOME_DA_DEPENDENCIA: dict[str, str] = {
     "opus": "a libopus",
 }
 
-#: O molde do gesto de INSTALAR, por formato. Irmão do
-#: :data:`GESTO_DE_ATUALIZAR`, e a diferença é a pergunta que cada um responde:
-#: aquele diz *"como atualizo ESTE Hefesto?"*, este diz *"como ponho esta
-#: biblioteca nesta máquina?"*. Trocar um pelo outro manda quem lê atualizar o
-#: sistema inteiro sem instalar nada — foi o que a frase da libopus fez.
 GESTO_DE_INSTALAR: dict[str, str] = {
     FORMATO_ARCH: "rode sudo pacman -S {pacote}",
     FORMATO_FEDORA: "rode sudo dnf install {pacote}",
     FORMATO_DEBIAN: "rode sudo apt install {pacote}",
 }
 
-#: O degrau final, para todo formato sem gerenciador que assuma o arquivo.
-#: Nomeia a biblioteca e nenhum pacote. O `FRASE_DE_ATUALIZAR[False]` não serve
-#: aqui: ele fala de atualizar o Hefesto, não de instalar isto.
 FRASE_DE_INSTALAR_GENERICA = (
     "instale {biblioteca} pelo gerenciador de pacotes da sua distribuição"
 )
@@ -460,19 +249,7 @@ def gesto_de_instalar(
     raiz_do_codigo: Path | None = None,
     consultar_dono: Callable[[str], str | None] | None = None,
 ) -> str:
-    """O gesto de INSTALAR esta biblioteca, com o nome que ela tem AQUI.
-
-    `chave` é a canônica do `install.sh` (a mesma do `_pkg_nome`), nunca um
-    nome de pacote. Os demais argumentos são os de
-    :func:`formato_desta_instalacao`, e existem para a bancada.
-
-    Um formato sem nome de pacote cai na frase genérica em vez de inventar um:
-    é a mesma escada de :func:`gesto_de_atualizar`, e o degrau final continua
-    sendo a resposta honesta.
-
-    `KeyError` numa chave desconhecida é de propósito — uma frase que não sabe
-    o que mandar instalar não deve chegar à tela.
-    """
+    """O gesto de INSTALAR esta biblioteca, com o nome que ela tem AQUI."""
     formato = formato_desta_instalacao(
         e_checkout=e_checkout,
         marca_flatpak=marca_flatpak,
@@ -487,47 +264,17 @@ def gesto_de_instalar(
 
 
 _QUIRK_RE = re.compile(r"054c:0ce6")
-# SPRINT-GAME-RUMBLE-01: a cura de raiz é o quirk_flags do snd_usb_audio para o
 # DualSense COM ignore_ctl_error (o que ataca o mixer que martela o EP0).
 _SND_QUIRK_RE = re.compile(r"054c:0ce6:.*ignore_ctl_error")
-# MESA-CHEIA-11/E3: linha de CABEÇALHO de placa no /proc/asound/cards
-# (" 1 [Controller     ]: USB-Audio - ..."). A segunda linha de cada placa é a
-# descrição, e repete o nome — contar a palavra daria o dobro.
 _CARD_HEADER_RE = re.compile(r"^\s*\d+\s*\[")
 _STEAM_INPUT_RE = re.compile(
     r'"(SteamController_PSSupport|UseSteamControllerConfig)"\s+"[12]"'
 )
 
 # STEAM-INPUT-ALLOWLIST-01 (22/07): alguns jogos entregam o suporte a DualSense
-# PELA Steam (API Steamworks — caso medido: Mullet Mad Jack chama
 # SetDualSenseTriggerEffect, que só funciona com o Steam Input do jogo LIGADO).
-# O opt-in per-app desses títulos é deliberado — os checks não devem acusá-lo
-# de conflito. Mesma allowlist do disable_steam_input.sh.
 def _allowlist_path() -> Path:
-    """Caminho da allowlist, resolvido A CADA CHAMADA.
-
-    CANARIO-FS-01 (05/08/2026, decisão dela): isto ERA uma constante de módulo
-    — ``Path.home() / ...`` avaliada no IMPORT. Em produção funcionava; em
-    teste, não: o valor congelava antes de qualquer ``monkeypatch`` de ``HOME``,
-    e a suíte passava a LER o arquivo real da mantenedora. O resultado de três
-    arquivos de teste dependia, sem ninguém saber, do conteúdo do disco dela.
-
-    ``Path.home()`` lê ``HOME`` no momento da chamada. Dentro de uma função,
-    portanto, o isolamento da suíte volta a valer — e o comportamento em
-    produção não muda em nada, porque lá o ``HOME`` é o mesmo do começo ao fim.
-
-    O irmão desta cura é ``EmulationActionsMixin._wp_dropin_dir``, que tinha a
-    mesma forma e é DIRETÓRIO DE ESCRITA.
-
-    AMBIENTE-PRESUMIDO-01 (23/08/2026): o ``.config`` era CRAVADO aqui, e este
-    era o único dos cinco leitores da allowlist que ignorava
-    ``XDG_CONFIG_HOME`` — os outros quatro (o `disable_steam_input.sh`, o
-    `doctor.sh`, o `daemon/launch_env` e o próprio ESCRITOR, o botão "Este jogo
-    não funciona") o resolvem. Com a variável setada, o botão gravava num
-    arquivo e o cartão da aba lia outro: a exceção era escrita e a tela seguia
-    dizendo que o jogo estava fora da lista, sem erro nenhum. Agora o leitor
-    chama a MESMA função do escritor — a divergência deixa de ser possível.
-    """
+    """Caminho da allowlist, resolvido A CADA CHAMADA."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import (
         steam_input_allowlist_path,
     )
@@ -599,8 +346,6 @@ def steam_input_fora_da_allowlist(text: str, allow: set[str]) -> tuple[list[str]
             appids.append(appid)
         elif not appid:
             # `UseSteamControllerConfig` fora de qualquer bloco `apps/<id>`:
-            # não dá para atribuir a jogo nenhum — entra como global em vez de
-            # virar um jogo de appid vazio.
             global_ligado = True
     return appids, global_ligado
 
@@ -622,14 +367,6 @@ def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
             quirks_text = ""
     if _QUIRK_RE.search(quirks_text or ""):
         return OK, "quirk anti-storm ativo (054c:0ce6 — áudio USB espaçado)"
-    # BG-SAUDE-01 (26/08/2026) — **PROVISÓRIO — decisão dela**.
-    # A frase dizia *"quirk anti-storm AUSENTE do usbcore (storm pode reincidir
-    # sob carga)"*: o quê e o porquê em linguagem de kernel, e nenhum
-    # o-que-fazer. Aqui o gesto honesto é NADA, e isso não é evasiva — este
-    # quirk é o cinto extra (a alavanca A do `doctor.sh:875`), e a cura de raiz
-    # é a linha de cima, do `check_snd_quirk`. Mandar mexer no cmdline do
-    # kernel quem já está curado seria trabalho inventado; o público desta tela
-    # não tem PS5 nem guia de USB.
     return WARN, (
         "o cinto extra do áudio USB não está posto (sob carga o travamento "
         f"pode voltar). {PREFIXO_DA_CURA}nada, enquanto a linha da cura do "
@@ -639,11 +376,7 @@ def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
 
 
 def find_localconfig_vdfs(home: Path) -> list[Path]:
-    """localconfig.vdf per-user em layouts comuns de Steam no Linux (dedup).
-
-    A lista de raízes é a de `steam_launch_options.RAIZES_STEAM_RELATIVAS` —
-    uma só para o projeto inteiro (AMBIENTE-PRESUMIDO-01, 23/08/2026).
-    """
+    """localconfig.vdf per-user em layouts comuns de Steam no Linux (dedup)."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import (
         RAIZES_STEAM_RELATIVAS,
     )
@@ -672,20 +405,12 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
     home = home or Path.home()
     vdfs = find_localconfig_vdfs(home)
     if not vdfs:
-        # BG-SAUDE-01 — **PROVISÓRIO — decisão dela**. Era *"Steam Input:
-        # nenhum localconfig.vdf encontrado (Steam instalada?)"*: o nome de um
-        # arquivo que a pessoa nunca vai abrir, e uma pergunta em vez de um
-        # gesto. O nome do arquivo fica entre parênteses porque o `doctor.sh`
-        # e o `disable_steam_input.sh` falam dele — mas ele deixou de ser a
-        # frase.
         return INFO, (
             "Steam Input: não encontrei a Steam nesta máquina (nenhum "
             f"localconfig.vdf). {PREFIXO_DA_CURA}nada, se você não usa a "
             "Steam. Se usa, abra a Steam e faça login uma vez — depois volte "
             "a esta aba."
         )
-    # STEAM-INPUT-ALLOWLIST-01: opt-in per-app deliberado (ex.: MMJ) não é
-    # conflito — só acusa o que a transformação do guard corrigiria.
     allow = steam_input_allowlist()
     appids: list[str] = []
     global_ligado = False
@@ -696,20 +421,7 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
                 appids.append(appid)
         global_ligado = global_ligado or glob_on
     if appids or global_ligado:
-        # STEAM-INPUT-01 (entrega 9): o rótulo citado aqui era 'Reaplicar fixes
-        # seguros', que não é o nome de widget nenhum. O botão que de fato roda
-        # o `disable_steam_input.sh --apply-quiet` chama-se "Aplicar correções"
-        # e mora na aba Sistema (`gui/main.glade`, id `btn_storm_fix_safe`,
         # handler `on_storm_fix_safe` em `app/actions/daemon_actions.py`).
-        #
-        # D-33 (05/08/2026): a frase era "Steam Input LIGADO em N perfil(is)
-        # fora da allowlist — clique 'Aplicar correções'". Três defeitos num
-        # fôlego: o N contava ARQUIVOS `vdf` e não JOGOS; ela não dizia DE QUAL
-        # jogo falava; e mandava clicar no botão que APAGA exatamente a escolha
-        # que a usuária tomou na janela da Steam. Agora o jogo é nomeado, o que
-        # vai acontecer é dito antes de acontecer, e o botão apontado é o que
-        # PRESERVA a escolha. O ajuste GLOBAL da Steam continua sendo caso do
-        # 'Aplicar correções' — ele não é escolha por jogo, é chave geral.
         partes: list[str] = []
         if appids:
             jogos = lista_de_jogos(appids, home)
@@ -732,23 +444,7 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
         v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))
     ]
     if excecoes:
-        # T-07 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026). Esta linha É PINTADA NA
         # TELA, e dizia *"jogos cujo DualSense é entregue pela Steam"* — o
-        # enquadramento que ela DERRUBOU em 09/08/2026
-        # (ESCONDER-EM-VEZ-DE-SAIR-01). A marca inverteu de lado: em vez de
-        # tirar o Hefesto da frente, ela ESCONDE o controle físico do jogo, e
-        # os controles virtuais do Hefesto ficam de pé — que é justamente o
-        # que o texto velho tinha de omitir.
-        #
-        # O `main.glade` recebeu o recado naquele dia (a nota datada em volta
-        # do `btn_steam_game_broken`); o código que pinta, não. Fato errado
-        # sai de TODOS os lugares onde aparece, e este era o último em `src/`
-        # que ainda chegava aos olhos dela.
-        #
-        # A redação abaixo é a da caixinha da aba Perfis (`profiles_actions.
-        # _frase_da_marca`), palavra por palavra, porque as duas marcam a
-        # MESMA coisa — e duas maneiras de dizer o mesmo gesto obrigam quem lê
-        # a descobrir que são o mesmo gesto.
         return OK, (
             "Steam Input desligado (com exceções por jogo, marcadas por "
             "você — nesses o controle físico fica escondido)"
@@ -759,7 +455,6 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
 def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
     """Drop-in do WirePlumber (DualSense não-default / só-HID) instalado?"""
     if dropin_dir is None:
-        # T-05 (ONDA0-Z7): dono único em xdg_paths — honra XDG_CONFIG_HOME.
         from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_config_dir
 
         dropin_dir = wireplumber_config_dir()
@@ -770,17 +465,8 @@ def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
     present = [n for n in names if (dropin_dir / n).is_file()]
     if present:
         return OK, f"WirePlumber configurado ({', '.join(present)})"
-    # BG-SAUDE-01 — **PROVISÓRIO — decisão dela**. Esta era a pior das doze:
-    # dizia *"WirePlumber sem drop-in do hefesto ('doctor --fix-safe'
-    # instala)"* — mandava a pessoa a um comando de terminal enquanto o botão
-    # que roda EXATAMENTE esse script está três linhas abaixo, na mesma tela
     # ("Aplicar correções" → `on_storm_fix_safe`, que chama o
     # `scripts/fix_wireplumber_default_source.sh --install`).
-    # O BOTÃO SAIU DO CAMINHO — SISTEMA-BOTOES-01, 13/09/2026. Nenhum botão se
-    # chama "Aplicar correções", e o «Refazer os consertos automáticos» deixou
-    # de rodar o `--install` (DROPIN-AMBIGUO-01: é o gesto contrário ao de
-    # ligar o mic). Quem repõe o drop-in é a instalação: o `install.sh` o roda
-    # por padrão (`WITH_WIREPLUMBER_FIX=1`).
     return INFO, (
         "o ajuste de áudio do Hefesto não está instalado — sem ele o controle "
         "pode virar o microfone padrão do sistema sozinho. "
@@ -789,17 +475,10 @@ def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
 
 
 def check_authorized_rule(rules_dir: Path | None = None) -> tuple[str, str]:
-    """Regra udev authorized=0 (rota áudio-off agressiva) instalada?
-
-    Opt-in: presença = mic/fone do controle desligados. Só INFO.
-    """
+    """Regra udev authorized=0 (rota áudio-off agressiva) instalada?"""
     rules_dir = rules_dir or Path("/etc/udev/rules.d")
     rule = rules_dir / "75-ps5-controller-disable-usb-audio.rules"
     if rule.is_file():
-        # BG-SAUDE-01 — **PROVISÓRIO — decisão dela**. `authorized=0` é o nome
-        # do gesto no kernel, não na tela. O estado é DELIBERADO (a regra 75 é
-        # opt-in do instalador), então o gesto é "nada" — com a saída escrita
-        # ao lado, que é o que faltava.
         return INFO, (
             "o mic e o fone do controle estão DESLIGADOS de propósito (regra "
             f"áudio-off ATIVA). {PREFIXO_DA_CURA}nada, se foi você que pediu. "
@@ -815,13 +494,7 @@ def check_authorized_rule(rules_dir: Path | None = None) -> tuple[str, str]:
 def check_snd_quirk(
     quirk_flags_text: str | None = None, conf_path: Path | None = None
 ) -> tuple[str, str]:
-    """A CURA DE RAIZ do storm (snd_usb_audio quirk_flags) está ativa?
-
-    SPRINT-GAME-RUMBLE-01: o quirk `054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m`
-    torna o probe do mixer UAC tolerante e espaça o EP0 — mata o storm na origem
-    PRESERVANDO mic+fone (ao contrário da regra 75). Reporta o sysfs (sessão) e o
-    drop-in de /etc/modprobe.d (persistente).
-    """
+    """A CURA DE RAIZ do storm (snd_usb_audio quirk_flags) está ativa?"""
     if quirk_flags_text is None:
         try:
             quirk_flags_text = Path(
@@ -835,33 +508,13 @@ def check_snd_quirk(
     if active:
         return OK, "cura do travamento do USB ATIVA (mic e fone do controle preservados)"
     if persisted:
-        # MESA-CHEIA-11/E4: são os QUATRO a reconectar — o quirk pega no replug
-        # de cada controle, não no primeiro que voltar.
-        # BG-SAUDE-01 — o gesto já estava aqui; o que faltava era estar no
-        # molde, para a pessoa achá-lo sempre no mesmo lugar da frase.
         return INFO, (
             "a cura do travamento está agendada. "
             f"{PREFIXO_DA_CURA}desconecte e reconecte os controles para ela "
             "valer agora."
         )
-    # STEAM-INPUT-01 (entrega 9), com reenquadramento: a sprint mandou trocar o
-    # rótulo morto ('Reaplicar fixes seguros') pelo nome do botão real, e aqui
     # isso seria uma mentira NOVA. O "Aplicar correções" (`on_storm_fix_safe`,
-    # em `app/actions/daemon_actions.py`) roda dois scripts — o
-    # `scripts/disable_steam_input.sh` e o
     # `scripts/fix_wireplumber_default_source.sh` — e deixa o quirk de fora DE
-    # PROPÓSITO (BUG-C: escrevê-lo a quente era `sudo tee` no /sys, o único
-    # sudo em runtime da GUI, e falhava calado num botão que promete "não pede
-    # senha"). Quem instala esta cura é o `install.sh` (via
-    # `scripts/install_snd_quirk.sh`, em /etc/modprobe.d), e ela pega no
-    # próximo replug do controle. É esse o ponteiro honesto.
-    # BG-INSTALL-01 (26/08/2026): o "rode ./install.sh" era cravado, e este
-    # laudo aparece em TODO formato de instalação — inclusive nos cinco que
-    # não têm o arquivo.
-    # BG-06b (26/08/2026): a frase deixou de parar no honesto-e-vago. O
-    # `gesto_de_atualizar()` NOMEIA o gesto do formato desta máquina
-    # (`flatpak update`, `pacman -Syu`, …) e só cai na genérica quando ninguém
-    # assume o arquivo — ver o bloco no topo deste módulo.
     return (
         WARN,
         f"cura do travamento do USB AUSENTE — sem ela os controles podem "
@@ -930,14 +583,7 @@ def controles_no_cabo(state: object) -> int | None:
 
 
 def _frase_do_cabo(quantos: int) -> str:
-    """"no único controle no cabo" ou "nos N controles no cabo".
-
-    MESA-CHEIA-11/E3 (conserto de 14/08/2026): a primeira versão interpolava
-    sempre no plural e o caso MAIS COMUM do produto — UM controle no cabo —
-    saía como "nos 1 controles no cabo", verbatim na tela (cartão anti-storm) e
-    no `doctor`. O ramo vizinho desta mesma função já lembrava do plural; aqui
-    ele tinha sido esquecido.
-    """
+    """"no único controle no cabo" ou "nos N controles no cabo"."""
     if quantos == 1:
         return "no único controle no cabo"
     return f"nos {quantos} controles no cabo"
@@ -1004,8 +650,6 @@ def check_snd_audio_healthy(
             "espere alguns segundos e olhe de novo; se não voltar, desconecte "
             "e reconecte o cabo.",
         )
-    # Aqui `esperados >= 2` sempre (0 < placas < esperados), então o denominador
-    # é plural de verdade; o que varia é quantos ficaram de fora.
     faltam = "o outro está" if esperados - placas == 1 else "os demais estão"
     return (
         WARN,
@@ -1062,10 +706,6 @@ def storm_report(
     return achados
 
 
-# --- o histórico do rádio, por família (O-DIARIO-DO-RADIO-01) ------------------
-
-#: A tag do kernel-watch (``scripts/storm_watch.sh``) → ``(família, nome)``. O
-#: nome é o que a tela pode dizer: curto, sem culpa e sem a palavra «storm».
 FAMILIAS_DO_RADIO: dict[str, tuple[str, str]] = {
     "[USB-71]": ("1", "porta USB"),
     "[BT-SOCKET]": ("2A", "rádio afogado"),
@@ -1075,25 +715,10 @@ FAMILIAS_DO_RADIO: dict[str, tuple[str, str]] = {
     "[CRC]": ("4", "entrada corrompida"),
 }
 
-#: A família que DERRUBA os controles: o EAGAIN do bluetoothd que vira
-#: ``uhid_disconnect`` (dossiê de 23/09, os quatro episódios de 22/09).
 FAMILIA_DA_QUEDA = "2A"
 
-#: Quantas pontes de som ou vibração um adaptador aguenta. O NÚMERO TEM UM
-#: DONO, e não é este arquivo: é o ``radio_da_mesa.N_MAX_PONTES``, que o
-#: orçamento publica e o governador usa na admissão (GOVERNADOR-DO-RADIO-01,
-#: 23/09/2026). Aqui ele era digitado de novo — dois 2 iguais por coincidência,
-#: que divergiriam na primeira medição da bancada dela. O nome fica, porque o
-#: sino o lê com este nome.
 LIMITE_DE_PONTES_POR_ADAPTADOR = N_MAX_PONTES
 
-#: O LOG DE ANTES DAS FAMÍLIAS. Até 23/09 o kernel-watch marcava o laço do
-#: Realtek e o enlace parado com a tag genérica ``[BT-HCI]`` (as 74.973 linhas
-#: de 13/09 estão assim no kernel.log dela), e a fila cheia, o CRC e o EAGAIN do
-#: bluetoothd nem entravam. A pergunta dela na R2 — *«tiveram storm nos dias
-#: anteriores»* — só se responde relendo o PASSADO pelo conteúdo: estas tags
-#: genéricas têm a mensagem reclassificada pelas mesmas palavras do
-#: classificador do ``storm_watch.sh``.
 _TAGS_GENERICAS = frozenset({"[BT-HCI]", "[KERNEL]"})
 _RECLASSIFICAR: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"output queue is full", re.I), "[FILA-CHEIA]"),
@@ -1110,13 +735,8 @@ _RECLASSIFICAR: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"crc.s check failed", re.I), "[CRC]"),
 )
 
-#: Sem repetir por este tanto, a rajada acabou — o mesmo número do
-#: ``HEFESTO_KERNELWATCH_JANELA_S`` do kernel-watch, para o log velho (linha a
-#: linha) e o novo (borda e resumo) contarem rajada do mesmo jeito.
 JANELA_DA_RAJADA_S = 10.0
 
-#: Uma linha do kernel.log: ``TS [TAG] mensagem``, ou o resumo de uma rajada,
-#: ``TS [TAG] repetiu +N (…): mensagem`` / ``TS [TAG] segue +N (…): mensagem``.
 _LINHA_DO_VIGIA = re.compile(
     r"^(?P<ts>\S+) (?P<tag>\[[A-Z0-9-]+\]) "
     r"(?:(?P<resumo>repetiu|segue) \+(?P<n>\d+) \([^)]*\): )?(?P<texto>.*)$"
@@ -1131,9 +751,7 @@ class EventoDoRadio:
     carimbo: float
     tag: str
     familia: str
-    #: 1 na borda (a primeira linha da rajada); N num resumo.
     ocorrencias: int
-    #: A primeira linha de uma rajada — é ela que marca QUANDO começou.
     borda: bool
     texto: str
 
@@ -1148,22 +766,14 @@ class ContagemDaFamilia:
     ocorrencias: int = 0
     primeira: str = ""
     ultima: str = ""
-    #: Desde quando o kernel-watch PROCURA esta família (``AAAA-MM-DDTHH:MM:SS``).
-    #: Antes disso, zero não é zero: é «não olhei».
     medida_desde: str = ""
 
 
-#: A primeira linha de cada volta do kernel-watch: ``# AAAA-MM-DD HH:MM:SS
-#: kernel-watch iniciado (padrões: USB-71 JOYCON … + contadores hci; …)``. As
-#: palavras entre «padrões:» e o «+» são as tags que AQUELA volta procurava.
 _BANNER_DO_VIGIA = re.compile(
     r"^# (?P<data>\d{4}-\d{2}-\d{2}) (?P<hora>\d{2}:\d{2}:\d{2}) "
     r"kernel-watch iniciado \(padrões: (?P<lista>[^+)]*)"
 )
 
-#: Quem via a família ANTES de ela ganhar tag própria: o laço do Realtek e o
-#: «link tx timeout» entravam pela tag genérica ``[BT-HCI]``. (A família 2 era
-#: vista pela metade: o «killing stalled connection» não casava o genérico.)
 _VISTA_PELA_TAG_GENERICA = {"2": "BT-HCI", "3": "BT-HCI"}
 
 
@@ -1192,11 +802,7 @@ def _carimbo(ts: str) -> float | None:
 
 
 def ler_eventos_do_radio(linhas: Iterable[str]) -> list[EventoDoRadio]:
-    """As linhas das quatro famílias, na ordem em que vieram.
-
-    Linha de outra tag, comentário e linha sem hora legível ficam de fora — o
-    ``kernel.log`` também guarda o Nintendo, o xHCI e os banners da vigia.
-    """
+    """As linhas das quatro famílias, na ordem em que vieram."""
     eventos: list[EventoDoRadio] = []
     for linha in linhas:
         casou = _LINHA_DO_VIGIA.match(linha.rstrip("\n"))
@@ -1230,24 +836,7 @@ def ler_eventos_do_radio(linhas: Iterable[str]) -> list[EventoDoRadio]:
 
 
 def classificar_o_historico(linhas: Iterable[str]) -> dict[str, ContagemDaFamilia]:
-    """``{família: contagem}`` de tudo o que o kernel-watch viu.
-
-    As ocorrências contam como o log as guarda: a borda soma uma, e cada resumo
-    soma as que ele diz. Assim o 2B de 22/09 (3.807 linhas no kernel) é UMA
-    rajada com 3.807 ocorrências, e não três linhas. A RAJADA é contada pelo
-    relógio, e não pela forma da linha: uma linha que chega mais de
-    :data:`JANELA_DA_RAJADA_S` depois da anterior da mesma família abre outra.
-    É o que deixa o log de antes das famílias — linha a linha, 74.973 linhas no
-    laço de 13/09 — contar as mesmas rajadas que o log de hoje conta.
-
-    «NÃO OLHEI» NÃO É ZERO (a R2 dela: *«tiveram storm nos dias anteriores»*).
-    Até 23/09 o kernel-watch não procurava a fila cheia, o EAGAIN do
-    bluetoothd nem o CRC — 0 dos 4.019 «Output queue is full» de 22/09 estão
-    no log. Por isso cada família diz :attr:`ContagemDaFamilia.medida_desde`,
-    lido dos banners do próprio kernel-watch, e uma família que nenhuma volta
-    procurou FICA DE FORA do dicionário: ausente é «não medido»; presente com
-    zero rajadas é «medido, e não houve».
-    """
+    """``{família: contagem}`` de tudo o que o kernel-watch viu."""
     linhas = list(linhas)
     medida_desde = _desde_quando_se_mede(linhas)
     contagens: dict[str, ContagemDaFamilia] = {}
@@ -1271,7 +860,6 @@ def classificar_o_historico(linhas: Iterable[str]) -> dict[str, ContagemDaFamili
     for familia in medida_desde:
         contagens.setdefault(familia, ContagemDaFamilia(familia=familia, nome=nomes[familia]))
     for conta in contagens.values():
-        #: Uma linha da família prova que ela era procurada ao menos dali.
         candidatos = [c for c in (medida_desde.get(conta.familia), conta.primeira[:19]) if c]
         conta.medida_desde = min(candidatos) if candidatos else ""
     return contagens
@@ -1301,13 +889,7 @@ def o_fato_da_queda(
     *,
     limite: int = LIMITE_DE_PONTES_POR_ADAPTADOR,
 ) -> str | None:
-    """O fato de uma queda, dito do jeito que a tela diz. ``None`` = não sei.
-
-    Pergunta ao diário quais pontes estavam de pé no instante da queda e fala
-    do adaptador mais carregado: «4 controles com som (limite 2)». Sem ponte
-    registrada naquele instante, não há fato a dizer — e inventar um seria o
-    sino afirmando o que ninguém mediu.
-    """
+    """O fato de uma queda, dito do jeito que a tela diz. ``None`` = não sei."""
     from hefesto_dualsense4unix.integrations.diario_do_radio import pontes_de_pe
 
     por_adaptador = pontes_de_pe(list(entradas_do_diario), queda.carimbo)

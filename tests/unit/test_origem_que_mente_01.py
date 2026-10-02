@@ -1,36 +1,4 @@
-"""Silêncio não é gesto dela: o `origin` viaja explícito, sem default.
-
-ORIGEM-QUE-MENTE-01 (08/08/2026). Os setters do daemon tinham
-`origin: Literal["manual", "profile"] = "manual"`, e o protocolo IPC **não
-expunha o campo**. Consequência: o daemon lia a AUSÊNCIA de informação como a
-mão dela, e qualquer cliente que apenas reconciliasse estado era promovido a
-gesto humano.
-
-O CUSTO, MEDIDO
-===============
-Com o Sackboy aberto e marcado na allowlist do Steam Input, um cliente chamou
-`gamepad.emulation.set` sem `origin`. O portão JOGO-01 (`gamepad.py`,
-`if origin != "manual"`) deixou passar, o gamepad virtual voltou com o grab e o
-esconde-esconde pulados, e o jogo passou a ver o controle físico E o virtual.
-Ela fotografou um **"Jogador 3"** fantasma no Sackboy.
-
-E o ramo `origin == "manual"` ainda carimba `_emu_manual_ts`, que cala o perfil
-por 30 s: o cliente distraído não só furava o portão como silenciava o
-autoswitch depois.
-
-A REGRA, E ELA É ASSIMÉTRICA DE PROPÓSITO
-=========================================
-**"manual" só quando o cliente DIZ que é manual.** É a inversão do default
-antigo, e a assimetria é escolhida:
-
-- errar para ``"profile"`` custa, no pior caso, um gesto dela que não fura o
-  portão — e o produto lhe diz por quê;
-- errar para ``"manual"``, como antes, custa **o controle dela no meio da
-  partida**.
-
-O caso inteiro está em
-`docs/process/sprints/arquivados/2026-08-08-JOGADOR-3-FANTASMA-01-a-cura-certa-no-momento-errado.md`.
-"""
+"""Silêncio não é gesto dela: o `origin` viaja explícito, sem default."""
 
 from __future__ import annotations
 
@@ -45,8 +13,6 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Os setters que decidem quem manda no controle. Todos passam pelo portão
-#: JOGO-01 ou carimbam `_emu_manual_ts`.
 SETTERS = (
     "set_gamepad_emulation",
     "set_native_mode",
@@ -55,53 +21,29 @@ SETTERS = (
 )
 
 
-# --- a função pura: silêncio é automático -------------------------------------
-
-
 def test_silencio_nao_e_gesto_dela() -> None:
-    """Sem `origin` no pedido, a origem é automática.
-
-    ARRANQUE A CURA (volte a devolver "manual" no silêncio) e este teste
-    REPROVA. É o defeito exato: um cliente reconciliando estado fura o portão
-    JOGO-01 e devolve o gamepad virtual com o jogo da allowlist aberto.
-    """
+    """Sem `origin` no pedido, a origem é automática."""
     assert origem_do_pedido(None) == "profile"
     assert origem_do_pedido({}) == "profile"
     assert origem_do_pedido({"enabled": True}) == "profile"
 
 
 def test_o_cliente_declara_e_e_respeitado() -> None:
-    """Quem diz "manual" continua sendo tratado como gesto dela.
-
-    O contrapeso: a cura não pode virar "nada é manual", senão o botão dela na
-    janela deixaria de funcionar dentro de um jogo marcado — e aí o produto
-    passaria a recusar o gesto legítimo, que é o oposto do que ela pediu.
-    """
+    """Quem diz "manual" continua sendo tratado como gesto dela."""
     assert origem_do_pedido({"origin": "manual"}) == "manual"
     assert origem_do_pedido({"origin": "profile"}) == "profile"
 
 
 @pytest.mark.parametrize("lixo", ["auto", "autoswitch", "", 1, True, []])
 def test_origem_invalida_e_recusada_em_voz_alta(lixo: object) -> None:
-    """Valor desconhecido levanta, em vez de virar "manual" por engano.
-
-    Cair no default silencioso é o que criou este defeito. Um cliente que
-    invente um valor achando que existe merece um erro, não uma promoção.
-    """
+    """Valor desconhecido levanta, em vez de virar "manual" por engano."""
     with pytest.raises(ValueError, match="origin"):
         origem_do_pedido({"origin": lixo})
 
 
-# --- as assinaturas: sem default, keyword-only --------------------------------
-
-
 @pytest.mark.parametrize("nome", SETTERS)
 def test_o_setter_nao_tem_default_de_origem(nome: str) -> None:
-    """`origin` é obrigatório: o `mypy` obriga cada chamador a declarar.
-
-    ARRANQUE A CURA (devolva `= "manual"`) e este teste REPROVA. É o portão que
-    impede a mina de voltar por descuido, num setter novo ou num refactor.
-    """
+    """`origin` é obrigatório: o `mypy` obriga cada chamador a declarar."""
     sig = inspect.signature(getattr(lifecycle.Daemon, nome))
     p = sig.parameters.get("origin")
     assert p is not None, f"`{nome}` perdeu o parâmetro `origin`"
@@ -126,12 +68,7 @@ def test_o_start_do_gamepad_tambem_exige_a_origem() -> None:
 
 @pytest.mark.parametrize("nome", SETTERS)
 def test_o_protocolo_declara_a_origem(nome: str) -> None:
-    """A armadilha morava no CONTRATO, não só na implementação.
-
-    Antes, `daemon/protocols.py` nem mencionava `origin`: quem programasse
-    contra o protocolo não tinha como saber que existia essa decisão a tomar. Um
-    protocolo que esconde a decisão obriga a implementação a chutar.
-    """
+    """A armadilha morava no CONTRATO, não só na implementação."""
     sig = inspect.signature(getattr(protocols.DaemonProtocol, nome))
     p = sig.parameters.get("origin")
     assert p is not None, (
@@ -144,16 +81,8 @@ def test_o_protocolo_declara_a_origem(nome: str) -> None:
     )
 
 
-# --- nenhum chamador do produto ficou mudo ------------------------------------
-
-
 def test_nenhum_handler_ipc_chama_sem_declarar() -> None:
-    """Os quatro handlers IPC declaram a origem a partir do pedido.
-
-    É o teste que amarra a ponta: sem ele, alguém acrescenta um handler novo
-    chamando o setter sem `origin` e o `mypy` reclama — mas um `# type: ignore`
-    apressado reabriria o buraco em silêncio.
-    """
+    """Os quatro handlers IPC declaram a origem a partir do pedido."""
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_handlers.py"
     ).read_text(encoding="utf-8")
@@ -184,14 +113,8 @@ def test_o_porque_esta_escrito_no_codigo() -> None:
         )
 
 
-# --- a janela DECLARA que o clique é dela -------------------------------------
-
-
-#: Os métodos IPC cujo pedido, vindo da janela, é gesto dela — e que o daemon
-#: recusa dentro de um jogo marcado se chegarem sem `origin`.
 METODOS_DE_MODO = ("gamepad.emulation.set", "native.mode.set", "mouse.emulation.set")
 
-#: Os arquivos da janela que disparam esses métodos por clique dela.
 TELAS = (
     "app/actions/mode_transition.py",
     "app/actions/home_actions.py",
@@ -201,28 +124,12 @@ TELAS = (
 
 @pytest.mark.parametrize("arquivo", TELAS)
 def test_a_janela_declara_o_gesto_dela(arquivo: str) -> None:
-    """Todo pedido de modo saído da janela leva `origin: "manual"`.
-
-    ARRANQUE A CURA e este teste REPROVA — e o defeito que ele descreve foi
-    MEDIDO na máquina dela: com o Sackboy marcado na allowlist, o botão "Jogar
-    pelo Hefesto" **parou de funcionar**. O clique chegava sem `origin`, era
-    lido como reconciliação, e o daemon o recusava com
-    `gamepad_start_recusado_steam_input`.
-
-    É a metade que faltava da ORIGEM-QUE-MENTE-01: inverter o default protegeu o
-    daemon de clientes distraídos, mas a janela também era um deles. Curar só um
-    lado troca um defeito por outro — antes qualquer coisa virava gesto dela;
-    depois, nem o gesto dela era gesto dela.
-    """
+    """Todo pedido de modo saído da janela leva `origin: "manual"`."""
     texto = (RAIZ / "src" / "hefesto_dualsense4unix" / arquivo).read_text(
         encoding="utf-8"
     )
     for metodo in METODOS_DE_MODO:
         for trecho in texto.split(f'"{metodo}",')[1:]:
-            # o dicionário de params do pedido vem logo depois do método. Um
-            # trecho que NÃO abre `{` antes de fechar não é um pedido — é o
-            # método citado numa lista/conjunto (`_MODE_DEFINING_METHODS`), e
-            # esses não têm params para declarar.
             fecha = trecho.index("}")
             if "{" not in trecho[:fecha]:
                 continue
@@ -253,11 +160,6 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "daemon/lifecycle.py"
     ).read_text(encoding="utf-8")
-    # O RECORTE É O MÉTODO, e só ele: a fronteira é o próximo `def` no mesmo
-    # nível de indentação. Ancorar no NOME do método seguinte deixaria a régua
-    # refém da ordem do arquivo — foi assim que este recorte passou a engolir
-    # `aplicar_o_arranjo_do_desktop`, que carimba `origin="manual"` quando o
-    # pedido declara o gesto dela.
     inicio = texto.index("def restore_mouse_preference")
     bloco = texto[inicio : texto.index("\n    def ", inicio)]
     assert 'origin="profile"' in bloco, (
@@ -271,14 +173,7 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
 
 
 def test_o_arranjo_do_desktop_declara_a_origem() -> None:
-    """E o passo que É gesto dela declara — a outra metade da mesma cura.
-
-    ORIGEM-QUE-MENTE-01 é assimétrico de propósito: **"manual" só quando o
-    cliente DIZ que é manual**. O `desktop.arranjo.apply` é o clique dela no
-    chip Navegação, e sem a declaração o daemon o lê como reconciliação — o
-    mouse liga sem o carimbo do lock manual de 30 s, e o modo `desktop` não
-    vai ao perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01): a escolha se perde.
-    """
+    """E o passo que É gesto dela declara — a outra metade da mesma cura."""
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "app/actions/mode_transition.py"
     ).read_text(encoding="utf-8")

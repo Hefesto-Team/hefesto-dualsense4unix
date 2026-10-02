@@ -1,51 +1,5 @@
 #!/usr/bin/env python3
-"""A ABA 01 VESTE O CONTROLE DE PONTA A PONTA — do daemon ao pixel.
-
-A LEI, e ela é dela (03/09/2026):
-
-    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-    entende? nada hardcoded. eu quero que cada user ao usar seu controle se
-    toque disso que o app se adaptou ao controle dele"   (noqa-acento: dela)
-
-O QUE ESTA RÉGUA MEDE, E POR QUE ELA NÃO É A TERCEIRA CÓPIA DE NADA
---------------------------------------------------------------------
-A cura de 03/09 (`c95737d1`) tem TRÊS elos, e cada um já tem a sua régua:
-
-    daemon → `a01_jogar.pacote`      `test_a_aba01_veste_a_cor_do_controle`
-    `escrever(alvo=atributo)`        — NINGUÉM
-    folha das 28 → pixel             `test_o_desenho_da_aba01_veste_o_controle_lido`
-
-**O elo do meio não tinha régua nenhuma**, e é o mais novo dos três: o alvo
-`atributo` nasceu em 03/09/2026, noutra frente, e chegou aqui por merge. A régua
-do motor que já existe escreve o `data-colorway` com um `setAttribute` do
-PRÓPRIO roteiro — ela prova a folha, e passaria intacta se o `escrever()` do
-piloto escrevesse o atributo errado, recusasse o nome, ou nunca chegasse ao SVG.
-A régua do pacote prova o slug, e passaria intacta se ele nunca fosse pintado.
-
-Esta abre a bancada num WebKit, injeta o **`BOOTSTRAP` do piloto de verdade**
-(`hefesto_vivo.BOOTSTRAP`, o mesmo texto que a janela dela executa), monta a
-carga com o **pacote de verdade** (`a01_jogar.pacote` + `pacotes.normalizar`) e
-chama `window.__hef.pintar`. Depois LÊ o `fill` computado do chassi. Nenhum elo
-é imitado: o que se mede é a corrente inteira.
-
-E ELA USA OS VINTE E QUATRO MODELOS QUE O MOCKUP **NÃO** TEM
--------------------------------------------------------------
-O desenho traz quatro (`monta.MESA`: Cosmic Red, Starlight Blue, Galactic
-Purple, White). Uma cura que só funcionasse para esses quatro seria um cravado
-trocado por outro — e passaria numa régua que testasse a mesa do mockup. Aqui a
-mesa é FORÇADA, um modelo por vez, aos 24 que sobram: Nova Pink, Astro Bot,
-Sterling Silver, os camuflados que pintam com `<pattern>` e os dois que pintam
-com `<linearGradient>`.
-
-AS MORDIDAS QUE ELA SOFRE (medidas em 03/09/2026, uma a uma)
--------------------------------------------------------------
-* devolver a poda da folha ao `aba01._desenho` — 24 dos 24 no cinza cru;
-* tirar o `data-hef-atributo` do `<svg>` — o alvo não sabe o que escrever e
-  `atributo_escrevivel('')` recusa: 24 ficam no Cosmic Red do mockup;
-* trocar o alvo por `texto` — o piloto escreve o slug POR CIMA do desenho;
-* o pacote devolver o slug do desenho em vez do lido — o P1 fica Cosmic Red.
-"""
+"""A ABA 01 VESTE O CONTROLE DE PONTA A PONTA — do daemon ao pixel."""
 from __future__ import annotations
 
 import json
@@ -66,8 +20,6 @@ for _p in (str(RAIZ / "src"),):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# O import do PACOTE põe `interface/` no `sys.path` (`pacotes/__init__` faz o
-# `insert`), e é o que deixa `import monta` funcionar logo abaixo.
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a01_jogar
@@ -75,19 +27,11 @@ from hefesto_dualsense4unix.interface.pacotes import a01_jogar
 import hefesto_vivo
 import monta
 
-#: A BANCADA, e não o publicado. É onde `aba01.py` escreve, e é o desenho de
-#: HOJE — apontar para `paginas/` daria verde sobre a página congelada, que é a
-#: armadilha mais cara do `COMO-OLHAR-A-TELA.md`.
 BANCADA = RAIZ / "mockup/01-jogar.html"
 
-#: O `fill` cru do `ds_limpo.svg` — o que o chassi mostra quando regra nenhuma
-#: casa. Lido do desenho, no mesmo `<g class="z-casca">` que a folha pinta;
-#: digitá-lo aqui seria a segunda verdade que esta casa persegue.
 CRU = re.compile(r'<g id="jg-p1-corpo" class="z-casca"[^>]*>\s*'
                  r'(?:<title>[^<]*</title>\s*)?<path[^>]*fill="(#[0-9a-fA-F]{6})"')
 
-#: O `uniq` do controle forçado. Mascarado pela regra da casa (octetos 4 e 5
-#: zerados), como todo endereço de rádio em arquivo versionado.
 UNIQ = "aa:bb:cc:00:00:01"
 
 
@@ -97,24 +41,13 @@ def _modelos_do_mapa() -> list[str]:
 
 
 def _fora_do_mockup() -> list[str]:
-    """Os modelos que o desenho NÃO traz — os 24 que provam a lei.
-
-    A lista do mockup sai de `monta.MESA`, que é o dono dela: digitar os quatro
-    aqui faria esta régua envelhecer no dia em que ela trocar um controle de
-    lugar na bancada.
-    """
+    """Os modelos que o desenho NÃO traz — os 24 que provam a lei."""
     do_mockup = {str(c["cor"]) for c in monta.MESA}
     return [m for m in _modelos_do_mapa() if m not in do_mockup]
 
 
 def _carga(slug: str) -> dict[str, Any]:
-    """A carga que o piloto pintaria com ESTE modelo no cabo do P1.
-
-    Ela atravessa o caminho inteiro do produto: `a01_jogar.pacote` monta,
-    `pacotes.normalizar` traduz `uniq → pref` e achata para `{mesa, colunas}`,
-    e `apagar_os_lugares_sem_dono` marca os três lugares que sobram. É a MESMA
-    sequência de `hefesto_vivo`, e nenhuma linha dela é imitada aqui.
-    """
+    """A carga que o piloto pintaria com ESTE modelo no cabo do P1."""
     cru = {"uniq": UNIQ, "connected": True, "player_slot": 1,
            "transport": "usb", "battery_pct": 95}
     da_mesa = {"uniq": UNIQ, "pref": "p1", "jogador": 1,
@@ -125,12 +58,6 @@ def _carga(slug: str) -> dict[str, Any]:
     return dict(pacotes.apagar_os_lugares_sem_dono(carga))
 
 
-#: O ROTEIRO, e ele vai numa IDA SÓ. Uma carga por modelo custaria 24 aberturas
-#: de página para medir o que uma abertura mede — e a régua irmã já pagou essa
-#: lição.
-#:
-#: `__hef.pintar` é o do piloto: o roteiro não escreve atributo nenhum por conta
-#: própria, e é exatamente isso que faz esta régua medir o elo do meio.
 ROTEIRO = """
 (function(){
   const svg = document.querySelector('[data-controle="p1"] svg[data-campo="desenho"]');
@@ -152,12 +79,7 @@ ROTEIRO = """
 
 
 def _no_webkit(roteiro: str) -> dict[str, Any]:
-    """Abre a bancada num WebKit offscreen, com o BOOTSTRAP do piloto dentro.
-
-    `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
-    janelas e uma janela comum fica 1x1 para sempre. E offscreen também porque
-    ela tem UMA tela — janela de teste não nasce na frente dela.
-    """
+    """Abre a bancada num WebKit offscreen, com o BOOTSTRAP do piloto dentro."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -190,22 +112,11 @@ def _no_webkit(roteiro: str) -> dict[str, Any]:
 
     def carregou(v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
-            # O BOOTSTRAP É O DO PILOTO, lido do módulo — nunca copiado. Uma
-            # cópia aqui viraria a segunda verdade sobre o `escrever()`, e esta
-            # régua ficaria verde no dia em que o piloto mudasse de forma.
             v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None, None,
                                   bootou)
 
     view.connect("load-changed", carregou)
     view.load_uri(BANCADA.as_uri())
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do
-    # mesmo processo — 05/09/2026, e a cura já existia em cinco arquivos
-    # irmãos (*"Já matou onze medições"*). Aqui ela faltava: medido no
-    # lote-00 da suíte, DUAS voltas em três davam *"o WebKit não respondeu
-    # em 30 s"* com o `saiu` VAZIO — o laço não estourou, ele foi MORTO por
-    # um `main_quit` que outro teste deixou armado. Reprodutível só na
-    # ordem aleatória, que é o que o torna invisível quando se roda o
-    # arquivo sozinho.
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -224,16 +135,7 @@ def _rgb(hexa: str) -> str:
 
 
 def _como_o_motor_diz(valor: str) -> str:
-    """O que o WebKit devolve para o valor que a folha dela escreveu.
-
-    SEIS DOS 28 NÃO SÃO HEXADECIMAL: `god-of-war-20th` e `spider-man-2` pintam
-    com `<linearGradient>`, e os sem hex medido pintam com o
-    `<pattern id="hachura-sem-hex">`. Os três moram no `<defs>` que a página
-    publica UMA vez — logo, o `url(#…)` de um SVG resolve num `<defs>` que está
-    em OUTRO `<svg>` da mesma página, e é a prova mais dura de que a tabela
-    compartilhada funciona. Medido neste motor: o WebKit devolve
-    `url("#hachura-sem-hex")`, com aspas.
-    """
+    """O que o WebKit devolve para o valor que a folha dela escreveu."""
     if valor.startswith("#"):
         return _rgb(valor)
     return valor.replace("url(#", 'url("#').replace(")", '")')
@@ -251,12 +153,7 @@ def medido() -> dict[str, Any]:
 
 
 def test_o_piloto_escreve_o_colorway_que_o_pacote_leu(medido: dict[str, Any]) -> None:
-    """O elo do meio: o `escrever()` do piloto chega ao atributo do `<svg>`.
-
-    Esta é a asserção que a régua irmã não pode fazer — ela escreve o atributo
-    com a própria mão. Aqui quem escreve é o `BOOTSTRAP` do piloto, e o que se
-    cobra é que o valor no DOM seja o SLUG que o pacote leu do controle.
-    """
+    """O elo do meio: o `escrever()` do piloto chega ao atributo do `<svg>`."""
     for slug in _fora_do_mockup():
         assert medido["colorway"][slug] == slug, (
             f"com {slug!r} na mesa o `<svg>` ficou com "
@@ -267,11 +164,7 @@ def test_o_piloto_escreve_o_colorway_que_o_pacote_leu(medido: dict[str, Any]) ->
 
 def test_os_vinte_e_quatro_modelos_de_fora_do_mockup_pintam(
         medido: dict[str, Any]) -> None:
-    """A lei dela, no pixel: o controle DELE, não o do desenho.
-
-    O esperado sai de `monta.cor_da_zona`, que lê a folha gerada do
-    `docs/data/cores-do-dualsense.csv`. Nenhum hexadecimal é digitado aqui.
-    """
+    """A lei dela, no pixel: o controle DELE, não o do desenho."""
     achou = CRU.search(BANCADA.read_text(encoding="utf-8"))
     assert achou, "o chassi do desenho do P1 mudou de forma — não há neutro a medir"
     cru = _rgb(achou.group(1))
@@ -326,13 +219,7 @@ def test_a_borda_e_o_desenho_nunca_discordam(medido: dict[str, Any]) -> None:
 
 
 def test_a_pintura_nao_deu_verde_sobre_nada(medido: dict[str, Any]) -> None:
-    """Um contador em zero é endereço que não existe — e é verde sobre nada.
-
-    A primeira carga pinta tudo; as seguintes só mexem no que mudou, e por isso
-    a régua cobra do PRIMEIRO tique. Sem ela, uma página sem endereço nenhum
-    passaria nas asserções acima no dia em que o `fill` cru coincidisse com a
-    cor esperada.
-    """
+    """Um contador em zero é endereço que não existe — e é verde sobre nada."""
     primeiro = _fora_do_mockup()[0]
     assert medido["pintou"][primeiro] > 0, (
         "o piloto pintou ZERO valores na bancada — nenhum endereço da carga "

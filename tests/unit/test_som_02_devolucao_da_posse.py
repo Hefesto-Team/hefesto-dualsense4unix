@@ -1,27 +1,4 @@
-"""SOM-02 (E3) — a devolução da posse do alto-falante, o irmão do `mic release`.
-
-O `release_audio_volumes` existia no handle desde o AUDIO-OWNER-01 e NADA acima
-dele o chamava: o serviço não tinha método, o IPC não tinha chave, a ponte não
-tinha função e a linha de comando não tinha verbo. Sem essa porta, o PRIMEIRO
-uso do volume sequestrava o alto-falante do controle até a próxima desconexão.
-
-O que cada bloco daqui MORDE (cada mordida foi arrancada uma vez, conferida
-reprovando, e devolvida):
-
-- a limpeza da preferência no `release`: deixá-la viva faz um `muted=False`
-  posterior ressuscitar o volume antigo e RETOMAR a posse sem ninguém pedir;
-- a porta acima do handle: sem o ramo `release` no `speaker.set`, o pedido cai
-  na chamada vazia, que toma a posse e manda ZERO (armadilha 1, medida) — a
-  chave `speaker` não some do estado, ela vira `{'volume': 0, 'muted': True}`;
-- a guarda do mudo sem volume conhecido: sem ela, mudo como primeira escrita
-  tranca o alto-falante em zero e o próprio mudo não o solta (armadilha 2);
-- os bits de áudio do `flag0` depois da devolução: a asserção que o
-  AUDIO-OWNER-01 já sabia fazer, agora do outro lado do ciclo;
-- a quarta categoria da trava manual (`audio`): sem ela o autoswitch reaplica o
-  perfil na troca de janela por cima do volume que ela acabou de ajustar.
-
-MACs fake (regra da casa).
-"""
+"""SOM-02 (E3) — a devolução da posse do alto-falante, o irmão do `mic release`."""
 from __future__ import annotations
 
 import asyncio
@@ -49,18 +26,8 @@ MAC1 = "aabbcc000001"
 MAC2 = "aabbcc000002"
 
 
-# ---------------------------------------------------------------------------
-# Handles e backend REAIS — nada de dublê onde a conta é o que está em teste
-# ---------------------------------------------------------------------------
-
-
 def _handle_real() -> Any:
-    """Handle da pydualsense sem device — só o estado que o builder lê.
-
-    Mesmo molde do `tests/unit/test_audio_owner_report.py`: o `_build_common`
-    é a única testemunha do que sai no fio, e um dublê de handle não teria os
-    bits de validação para provar nada.
-    """
+    """Handle da pydualsense sem device — só o estado que o builder lê."""
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
@@ -98,12 +65,7 @@ def _backend_com_dois() -> tuple[Any, Any, Any]:
 
 class TestBackendDevolveAPosse:
     def test_release_zera_os_bits_de_audio_do_report(self) -> None:
-        """A prova no FIO: depois da devolução o flag0 sai sem áudio nenhum.
-
-        MORDIDA: arrancar o `release_audio_volumes()` do serviço deixa
-        `flag0 & VALID_FLAG0_AUDIO_MASK` valendo 0x30 (fone + alto-falante) e os
-        bytes 4/5 em 180 — o hefesto continuaria mandando o volume para sempre.
-        """
+        """A prova no FIO: depois da devolução o flag0 sai sem áudio nenhum."""
         inst, h1, _h2 = _backend_com_dois()
         assert inst.set_speaker_volume(180, uniq=MAC1) is True
         common = h1._build_common(rumble_asserted=False)
@@ -125,14 +87,7 @@ class TestBackendDevolveAPosse:
         assert h1._volumes_audio == [None, None, None, None]
 
     def test_muted_false_depois_do_release_nao_reabre_a_posse(self) -> None:
-        """A MORDIDA da entrega: sem a limpeza da preferência, isto reabre.
-
-        Arrancando o `alvo._speaker_volume_pref = None` do
-        `release_speaker_volume`, a preferência sobrevive em 180, o
-        `muted=False` a "restaura" e o hefesto volta a mandar o volume em todo
-        report — posse retomada sem ninguém pedir. Medido: com a cura arrancada
-        este teste reprova em `speaker_state_for is None`.
-        """
+        """A MORDIDA da entrega: sem a limpeza da preferência, isto reabre."""
         inst, h1, _h2 = _backend_com_dois()
         inst.set_speaker_volume(180, uniq=MAC1)
         inst.release_speaker_volume(uniq=MAC1)
@@ -144,12 +99,7 @@ class TestBackendDevolveAPosse:
         assert common[0] & rep.VALID_FLAG0_AUDIO_MASK == 0
 
     def test_mudo_como_primeira_escrita_e_recusado(self) -> None:
-        """Armadilha 2, na raiz: sem volume conhecido, `muted` não escreve nada.
-
-        Sem esta guarda a sequência mudo/desmudo termina em
-        `{'volume': 0, 'muted': True}` e o próprio botão não solta o
-        alto-falante.
-        """
+        """Armadilha 2, na raiz: sem volume conhecido, `muted` não escreve nada."""
         inst, h1, _h2 = _backend_com_dois()
         assert inst.set_speaker_volume(muted=True, uniq=MAC1) is False
         assert inst.set_speaker_volume(muted=False, uniq=MAC1) is False
@@ -158,11 +108,7 @@ class TestBackendDevolveAPosse:
         assert inst.speaker_state_for(MAC1) is None
 
     def test_com_volume_conhecido_o_par_mudo_desmudo_funciona(self) -> None:
-        """O outro lado da guarda: com volume de verdade, o par sobrevive.
-
-        Medido na sprint: `volume=180` -> `muted=True` manda 0 e guarda 180 ->
-        `muted=False` devolve os 180.
-        """
+        """O outro lado da guarda: com volume de verdade, o par sobrevive."""
         inst, _h1, _h2 = _backend_com_dois()
         inst.set_speaker_volume(180, uniq=MAC1)
         assert inst.set_speaker_volume(muted=True, uniq=MAC1) is True
@@ -208,11 +154,6 @@ class TestBackendDevolveAPosse:
 
         h1.release_audio_volumes = _explode  # type: ignore[method-assign]
         assert inst.release_speaker_volume(uniq=MAC1) is False
-
-
-# ---------------------------------------------------------------------------
-# O fio: `speaker.set {release: true}` num IpcServer de verdade
-# ---------------------------------------------------------------------------
 
 
 class _ControllerComSpeaker(FakeController):
@@ -316,13 +257,7 @@ class TestReleaseNoProtocolo:
 
     @pytest.mark.asyncio
     async def test_a_chave_speaker_some_do_estado(self, daemon_vivo: Any) -> None:
-        """MORDIDA da porta acima do handle.
-
-        Arrancando o ramo `release` do `_handle_speaker_set`, o payload cai na
-        chamada vazia — que toma a posse e manda ZERO — e a chave `speaker`
-        NÃO some: ela vira `{'volume': 0, 'muted': True}`. Medido com a cura
-        arrancada: este teste reprova exatamente aí.
-        """
+        """MORDIDA da porta acima do handle."""
         env = daemon_vivo
         await _chamar(env.socket, "speaker.set", {"volume": 180, "uniq": MAC1})
         payload = await _chamar(env.socket, "daemon.state_full")
@@ -345,12 +280,7 @@ class TestReleaseNoProtocolo:
     async def test_muted_false_depois_do_release_e_recusado_com_o_caminho(
         self, daemon_vivo: Any
     ) -> None:
-        """MORDIDA da guarda no handler: sem ela não há recusa, só um status.
-
-        A recusa precisa dizer o CAMINHO ("mande um volume antes"); um
-        `sem_controle` mentiria sobre um controle que está conectado, e um "ok"
-        silencioso esconderia que nada foi feito.
-        """
+        """MORDIDA da guarda no handler: sem ela não há recusa, só um status."""
         env = daemon_vivo
         await _chamar(env.socket, "speaker.set", {"volume": 180, "uniq": MAC1})
         await _chamar(env.socket, "speaker.set", {"release": True, "uniq": MAC1})
@@ -424,29 +354,6 @@ class TestReleaseNoProtocolo:
         assert res["status"] == "sem_controle"
 
 
-# A CLASSE `TestTravaManualAudio` SAIU — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`.
-#
-# Ela vigiava a quarta categoria da trava manual, a que a SOM-02/E3 trouxe: o
-# `speaker.set` (volume, mudo e devolução da posse) armava `audio` para o perfil
-# reaplicado não retomar a posse que ela soltara. Eram seis testes — a categoria
-# válida, a porta que recusa nome desconhecido, as duas formas de armar, o pedido
-# recusado que não arma, e a troca explícita que libera.
-#
-# A TRAVA SAIU INTEIRA por decisão dela, e o `audio` saiu com as outras três: a
-# ordem foi *"e pra qualquer outro jogo"*. A razão, o journal que a mediu e a
-# régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
-#
-# O QUE ESTA SUÍTE CONTINUA MEDINDO não mudou uma linha: a devolução da posse do
-# alto-falante é o assunto do arquivo, e ela é um ato do produto com ou sem
-# trava. O que sumiu foi o efeito colateral que o ato tinha no autoswitch.
-
-# ---------------------------------------------------------------------------
-# A ponte da janela
-# ---------------------------------------------------------------------------
-
-
 class TestPonteDaJanela:
     """`app/ipc_bridge.py` — a assinatura acordada com a frente da interface."""
 
@@ -459,14 +366,6 @@ class TestPonteDaJanela:
         monkeypatch.setattr(
             ipc_bridge,
             "_safe_call",
-            # O DUBLÊ ACEITA O TETO — 09/09/2026, e a razão é do PRODUTO.
-            # Ele era uma lambda de DOIS parâmetros, e o `speaker.set` passou a
-            # sair com `timeout=_TETO_DO_ATO_DE_AUDIO` (6 s) em `edfcc9b4` — a
-            # cura do teto que fazia a tela mentir. O dublê quebrou com
-            # `TypeError: got an unexpected keyword argument 'timeout'`, e a
-            # docstring de `_corpo_do_daemon` PREVIA isto com todas as letras.
-            # Quem tinha de ceder é o dublê: um ato de áudio que espera 250 ms
-            # devolve "não respondeu" sobre um daemon que ia responder.
             lambda metodo, params, **_teto: (vistos.append((metodo, params)),
                                              (True, {"status": "ok"}))[1],
         )
@@ -496,21 +395,11 @@ class TestPonteDaJanela:
             ipc_bridge.speaker_set(volume=100, release=True)
 
 
-# ---------------------------------------------------------------------------
-# A linha de comando — a saída de emergência sem janela
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def cli_no_socket(
     daemon_vivo: Any, monkeypatch: pytest.MonkeyPatch
 ) -> Any:
-    """Aponta o CLI para o socket do daemon de teste e espiona o despacho.
-
-    O espião é o que dá mordida à guarda do CLI: com ela arrancada o daemon
-    também recusaria (e o código de saída seria o mesmo), então o que prova a
-    guarda é NENHUM pedido ter chegado ao fio.
-    """
+    """Aponta o CLI para o socket do daemon de teste e espiona o despacho."""
     env = daemon_vivo
     monkeypatch.setattr(
         "hefesto_dualsense4unix.cli.ipc_client.ipc_socket_path",
@@ -547,26 +436,7 @@ class TestCliSpeaker:
 
     @pytest.mark.asyncio
     async def test_volume_em_porcentagem_vira_0_255(self, cli_no_socket: Any) -> None:
-        """60 % da linha de comando vira o MESMO cru que 60 % da janela.
-
-        REAPONTADO em 01/08/2026, e o motivo é a razão de o teste existir. A
-        versão anterior travava o número 153, que é `60 * 255 / 100` — a régua
-        LINEAR. A medição do mesmo dia (microfone do próprio controle, tom de
-        1 kHz, Goertzel) mostrou que o registrador satura por volta de 102 e é
-        mudo até 38: pela régua linear, 60 % e 100 % caíam os dois na planície
-        de cima e soavam IGUAIS, e os primeiros 15 % do curso não faziam som
-        nenhum.
-
-        O teste não some, porque o defeito que ele protege continua de pé: a
-        linha de comando e a janela têm de mandar o MESMO valor para o mesmo
-        registrador. O que muda é de onde vem o número esperado — deixa de ser
-        uma constante copiada e passa a ser derivado da régua única, de modo
-        que reaferir as bordas no futuro não exija reescrever este arquivo.
-
-        A régua vive em `core/speaker_scale.py`, e a trava de que os dois
-        caminhos a compartilham está em
-        `tests/unit/test_speaker_regua_unica_cli_e_janela.py`.
-        """
+        """60 % da linha de comando vira o MESMO cru que 60 % da janela."""
         from hefesto_dualsense4unix.cli import cmd_speaker
         from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
@@ -598,12 +468,7 @@ class TestCliSpeaker:
     async def test_mute_sem_volume_conhecido_e_recusado_sem_ir_ao_fio(
         self, cli_no_socket: Any
     ) -> None:
-        """MORDIDA da guarda do CLI (a mesma da interface, armadilha 2).
-
-        Arrancando a consulta ao estado, o `speaker mute` vira a PRIMEIRA
-        escrita: o pedido sai no fio e o teste reprova em `chamadas == []` —
-        e no produto o alto-falante ficaria trancado em zero.
-        """
+        """MORDIDA da guarda do CLI (a mesma da interface, armadilha 2)."""
         from hefesto_dualsense4unix.cli import cmd_speaker
 
         env = cli_no_socket
@@ -670,20 +535,11 @@ class TestCliSpeaker:
         assert "speaker" in nomes
 
 
-# ---------------------------------------------------------------------------
-# O documento de protocolo — a correção medida da posse por byte
-# ---------------------------------------------------------------------------
-
-
 class TestDocumentoDoProtocolo:
     """Contrato de texto (padrão do repo): o que a sprint mediu tem de estar lá."""
 
     def _texto(self) -> str:
-        """O documento com o espaçamento NORMALIZADO.
-
-        As frases do markdown quebram em 80 colunas; procurar a frase crua
-        pegaria a quebra de linha e reprovaria por formatação, não por conteúdo.
-        """
+        """O documento com o espaçamento NORMALIZADO."""
         raiz = Path(__file__).resolve().parents[2]
         bruto = (raiz / "docs" / "protocol" / "ipc-unix-socket.md").read_text(
             encoding="utf-8"

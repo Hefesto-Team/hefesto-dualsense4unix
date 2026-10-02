@@ -48,8 +48,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi`. `importorskip("gi")`
-# aceita o stub que outro arquivo planta em `sys.modules`; esta guarda não.
 exigir_gi_real("a cura fora do tooltip")
 
 import re
@@ -68,37 +66,22 @@ from hefesto_dualsense4unix.integrations import exame_da_mesa as exame_mod
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
 from tests.unit import bancada_das_ordens as bancada
 
-#: Doze hex seguidos, que é a FORMA em que um serial USB carrega endereço. A
-#: régua é a mesma de `scripts/check_endereco_de_radio.py:103`, e o comprimento
-#: sai da constante do módulo em vez de ser recopiado — se um dia o produto
-#: mudar de ideia sobre o que é serial, esta régua muda junto.
 SERIAL = re.compile(
     "(?<![0-9A-Fa-f])[0-9A-Fa-f]{"
     f"{ordens._TAMANHO_DO_SERIAL_DE_ENDERECO}"
     "}(?![0-9A-Fa-f])"
 )
 
-#: Uma raiz que não existe: força cada uma das cinco conferências ao ramo
-#: pessimista sem tocar em arquivo nenhum da máquina.
 SEM_BANCADA = Path("/bancada/nao-existe")
 
 
 def _leitura() -> ordens.Leitura:
-    """A bancada de 24/08 como `Leitura` — sem desenho de gabinete nenhum.
-
-    Sem desenho é o caso mais comum e é uma resposta: R1 e R3 mandam mover, e
-    dizem que só ela pode dizer para onde.
-    """
+    """A bancada de 24/08 como `Leitura` — sem desenho de gabinete nenhum."""
     return ordens.Leitura(censo=bancada.censo(), entradas=bancada.entradas())
 
 
 def _itens(**extra: Any) -> list[exame_mod.Item]:
-    """As cinco conferências no pior caso, mais o que o teste pedir por cima.
-
-    Os cinco caminhos apontam para uma raiz inexistente de propósito: é o que
-    põe cada conferência no ramo pessimista — o que tem cura — sem tocar em
-    arquivo nenhum desta máquina.
-    """
+    """As cinco conferências no pior caso, mais o que o teste pedir por cima."""
     argumentos: dict[str, Any] = {
         "parametro_do_radio": SEM_BANCADA,
         "conf_do_radio": SEM_BANCADA,
@@ -125,12 +108,7 @@ def _montar() -> tuple[Gtk.OffscreenWindow, secao.PainelDoExame]:
 
 
 def _textos_visiveis(raiz: Any) -> list[str]:
-    """O texto de todo ``Gtk.Label`` da árvore — e **nenhum tooltip**.
-
-    A omissão é o ponto do arquivo: `get_tooltip_text()` não é lido em lugar
-    nenhum daqui, então tudo que estas asserções encontrarem chegou à tela por
-    um caminho que a pessoa vê sem passar o mouse por cima de nada.
-    """
+    """O texto de todo ``Gtk.Label`` da árvore — e **nenhum tooltip**."""
     achados: list[str] = []
     for widget in _arvore(raiz):
         if isinstance(widget, Gtk.Label) and widget.get_text():
@@ -163,11 +141,6 @@ def _arvore(raiz: Any) -> list[Any]:
 
 def _aplicar(painel: secao.PainelDoExame, itens: list[exame_mod.Item]) -> None:
     painel.aplicar(itens, exame_mod.veredito(itens), time.time())
-
-
-# ---------------------------------------------------------------------------
-# 1. A ordem chega à tela inteira — o imperativo e as três linhas.
-# ---------------------------------------------------------------------------
 
 
 def test_a_ordem_sai_do_tooltip_e_vira_texto_na_tela() -> None:
@@ -227,12 +200,7 @@ def test_as_tres_linhas_aparecem_com_o_rotulo_e_o_selo() -> None:
 
 
 def test_a_terceira_linha_confessa_o_ganho_nao_medido_na_tela() -> None:
-    """A regra que não tem exceção: o ganho não medido é DITO, nunca escondido.
-
-    Uma ordem que manda mover um aparelho sem dizer quanto se ganha é honesta; a
-    mesma ordem com o ganho escondido é palpite com cara de laudo. Esta é a
-    linha que custa uma linha de tela e paga a confiança inteira.
-    """
+    """A regra que não tem exceção: o ganho não medido é DITO, nunca escondido."""
     janela, painel = _montar()
     itens = _itens()
 
@@ -251,12 +219,7 @@ def test_a_terceira_linha_confessa_o_ganho_nao_medido_na_tela() -> None:
 
 
 def test_a_ordem_sem_desenho_nao_inventa_nome_nem_numero_de_entrada() -> None:
-    """Sem declaração dela, a ordem MANDA e diz o que falta para apontar.
-
-    "Wi-Fi" é o nome que o `product` sugere e que a classe `ff` não sustenta;
-    `usb1-port5` é um lugar que ninguém acha atrás do gabinete. Os dois são a
-    tela afirmando além do que a máquina sabe.
-    """
+    """Sem declaração dela, a ordem MANDA e diz o que falta para apontar."""
     janela, painel = _montar()
 
     _aplicar(painel, _itens())
@@ -273,12 +236,7 @@ def test_a_ordem_sem_desenho_nao_inventa_nome_nem_numero_de_entrada() -> None:
 
 
 def test_sem_entrada_livre_o_card_nao_manda_e_diz_por_que() -> None:
-    """Ordem sem destino nasce sem imperativo — e as três linhas ficam.
-
-    Um imperativo que manda mover para lugar nenhum é pior que silêncio; um
-    card que some por não ter para onde mandar é o F7 de novo, porque a medição
-    continua valendo. O que a tela perde é a ordem, não o fato.
-    """
+    """Ordem sem destino nasce sem imperativo — e as três linhas ficam."""
     janela, painel = _montar()
 
     def _sem_buraco() -> ordens.Leitura:
@@ -304,19 +262,8 @@ def test_sem_entrada_livre_o_card_nao_manda_e_diz_por_que() -> None:
         assert rotulo in juntos, f"a linha {rotulo!r} sumiu junto com o imperativo"
 
 
-# ---------------------------------------------------------------------------
-# 2. A cura de uma conferência sem ordem também sai do tooltip.
-# ---------------------------------------------------------------------------
-
-
 def test_a_cura_de_uma_conferencia_sem_ordem_tambem_vira_card() -> None:
-    """Quatro das cinco conferências escrevem cura, e nem toda uma vira ordem.
-
-    `energia_do_radio` e `suporte_ao_controle` disparam por arquivo de sistema,
-    não por topologia de barramento: nenhuma regra do catálogo as cobre. Se o
-    card só falasse de ordem, a cura delas continuaria no tooltip — o defeito
-    curado pela metade, que é o mais caro desta casa.
-    """
+    """Quatro das cinco conferências escrevem cura, e nem toda uma vira ordem."""
     janela, painel = _montar()
     itens = _itens()
     sem_ordem = [
@@ -338,12 +285,7 @@ def test_a_cura_de_uma_conferencia_sem_ordem_tambem_vira_card() -> None:
 
 
 def test_a_montagem_nao_desenha_card_nenhum() -> None:
-    """O estado que o retrato das abas fotografa: montado e ainda sem exame.
-
-    A montagem não examina (cabeçalho de `secao_exame.py`), então não há ordem
-    para desenhar — e uma zona de cards que nascesse cheia estaria mostrando o
-    resultado de leitura nenhuma.
-    """
+    """O estado que o retrato das abas fotografa: montado e ainda sem exame."""
     janela, painel = _montar()
 
     assert painel.cards is not None
@@ -352,12 +294,7 @@ def test_a_montagem_nao_desenha_card_nenhum() -> None:
 
 
 def test_a_zona_de_cards_nao_acumula_entre_dois_exames() -> None:
-    """Dois exames seguidos não podem deixar a recomendação de ontem na tela.
-
-    Zona que só acrescenta parece tela cheia de informação e é tela mentindo:
-    ela mostraria junto o que a máquina dizia antes e depois de ela mexer nos
-    cabos.
-    """
+    """Dois exames seguidos não podem deixar a recomendação de ontem na tela."""
     _janela, painel = _montar()
     itens = _itens()
 
@@ -386,20 +323,8 @@ def test_um_exame_sem_ordem_nenhuma_limpa_a_zona() -> None:
     assert not restantes, f"card de ordem sobreviveu a um exame sem ordens: {restantes}"
 
 
-# ---------------------------------------------------------------------------
-# 3. O serial não chega ao PNG.
-# ---------------------------------------------------------------------------
-
-
 def test_a_tela_nao_publica_serial_nem_endereco() -> None:
-    """Doze hex no markup reprova — e o markup é o que vira pixel e vira PNG.
-
-    `Identidade` não carrega serial por construção (`ordens_da_mesa` o lê dentro
-    de `identidades`, compara e descarta), mas construção não é portão: um campo
-    novo, um `f"{aparelho}"` distraído, e o serial da unidade dela entra num
-    arquivo versionado que nenhum portão de anonimato varre, porque nenhum deles
-    varre imagem.
-    """
+    """Doze hex no markup reprova — e o markup é o que vira pixel e vira PNG."""
     janela, painel = _montar()
 
     _aplicar(painel, _itens())
@@ -416,12 +341,7 @@ def test_a_tela_nao_publica_serial_nem_endereco() -> None:
 
 
 def test_a_regua_do_serial_de_fato_pega_um_serial() -> None:
-    """A régua contra si mesma: um dublê que só sabe passar não é régua.
-
-    Esta casa pagou por três instrumentos falsos num dia só. Aqui o custo seria
-    silencioso: uma regex quebrada daria verde para sempre sobre uma tela
-    publicando a unidade dela.
-    """
+    """A régua contra si mesma: um dublê que só sabe passar não é régua."""
     janela, painel = _montar()
     vazada = ordens.Ordem(
         chave="regua_da_regua",
@@ -450,11 +370,6 @@ def test_a_regua_do_serial_de_fato_pega_um_serial() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. As duas famílias de chave não podem colidir.
-# ---------------------------------------------------------------------------
-
-
 def test_as_chaves_das_regras_nao_colidem_com_as_da_tira() -> None:
     """Colisão aqui seria MUDA, e é por isso que ela tem portão.
 
@@ -481,34 +396,15 @@ def test_as_chaves_das_regras_nao_colidem_com_as_da_tira() -> None:
     assert exame_mod.CHAVE_DAS_ORDENS not in da_tira
 
 
-# ---------------------------------------------------------------------------
-# 5. O exame só lê o barramento quando pedem — a proteção da foto.
-# ---------------------------------------------------------------------------
-
-
 def test_sem_pedir_o_exame_nao_traz_ordem_nenhuma() -> None:
-    """O default de `leitura_das_ordens` é desligado, e isso é a foto.
-
-    A régua nasceu do retratista da janela GTK, que montava uma bancada para os
-    cinco caminhos do exame e fotografava o resultado para `docs/usage/assets/`;
-    ele saiu com a janela em 06/09/2026. **O motivo dela não saiu junto**, e é
-    este: se o catálogo de ordens ligasse sozinho, ele varreria o barramento
-    REAL da máquina dela por dentro de uma chamada que quem monta a bancada
-    acredita ter injetado inteira — e o
-    `test_com_as_raizes_injetadas_nada_do_sistema_real_e_lido` não veria, porque
-    ele vigia `pathlib` e as duas varreduras usam `os.listdir` e `open`.
-    """
+    """O default de `leitura_das_ordens` é desligado, e isso é a foto."""
     itens = _itens(leitura_das_ordens=None)
 
     assert [item.ordem for item in itens] == [None] * 5
 
 
 def test_leitura_que_explode_vira_nao_sei_e_nunca_silencio() -> None:
-    """Falha de leitura não pode virar "não recomendei nada".
-
-    "Não achei o que mudar" e "não consegui olhar" são afirmações opostas, e a
-    tela que as colapsa é a tela que mente de cinza.
-    """
+    """Falha de leitura não pode virar "não recomendei nada"."""
 
     def _quebrada() -> ordens.Leitura:
         raise OSError("o barramento sumiu no meio da leitura")

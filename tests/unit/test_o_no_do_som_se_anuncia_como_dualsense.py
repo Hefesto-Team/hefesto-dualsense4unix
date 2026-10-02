@@ -41,18 +41,12 @@ from hefesto_dualsense4unix.integrations import endpoint_de_haptica as haptica
 from hefesto_dualsense4unix.integrations import fontes_de_captura as fontes
 from hefesto_dualsense4unix.integrations import vestido_de_dualsense as vestido
 
-#: A FORMA A, decisão dela de 23/09/2026 — digitada, não lida do dono.
 _SONY = " (DualSense Wireless Controller)"
 
-#: O teto do Wine, do fonte que roda nesta máquina: ``MAX_DEVICE_NAME_LEN`` em
-#: ``proton-hefesto/fonte/wine/dlls/winepulse.drv/pulse.c``. Acima dele o
-#: ``get_device_name`` troca a frase inteira pelo ``device.product.name``.
 _TETO_DO_WINE = 62
 
-#: O que o ``pipewire-pulse`` põe na frente do nome do monitor de um sink.
 _MONITOR_DE = "Monitor of "
 
-#: Faixa sintética da casa — nenhum controle desta bancada.
 _UNIQ = "02:fe:00:11:a1:b2"
 
 
@@ -71,13 +65,7 @@ def assento() -> Iterator[Callable[[int | None], None]]:
 
 
 def _como_o_servidor_le(argumento: str, chave: str) -> dict[str, str]:
-    """``chave="a='x y' b=1"`` → ``{"a": "x y", "b": "1"}``, como o ``pipewire-pulse``.
-
-    O servidor tira as aspas DUPLAS de fora e parte o resto respeitando as
-    SIMPLES — é o parser que cortava tudo depois do primeiro espaço quando as
-    duplas faltavam (06/09/2026). Ler o ARGV cru deu verde sobre aquele defeito;
-    esta função lê o que o NÓ recebe.
-    """
+    """``chave="a='x y' b=1"`` → ``{"a": "x y", "b": "1"}``, como o ``pipewire-pulse``."""
     prefixo = f'{chave}="'
     assert argumento.startswith(prefixo) and argumento.endswith('"'), argumento
     miolo = argumento[len(prefixo) : -1]
@@ -114,18 +102,9 @@ def _props_do_no_publicado(descricao: str) -> dict[str, str]:
     return _como_o_servidor_le(argumento, "sink_properties")
 
 
-# ---------------------------------------------------------------------------
-# 1. O NOME que o jogo lê — a forma A, nos quatro assentos e sem assento
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, None])
 def test_o_nome_que_o_jogo_le_e_a_forma_a(assento, numero: int | None) -> None:
-    """Os dois nós de cada controle levam o nome da Sony atrás do nome dela.
-
-    MORDIDA 1: faça ``com_o_nome_da_sony`` devolver o rótulo sem o sufixo e as
-    duas igualdades caem — o nó continua de pé e jogo nenhum o reconhece.
-    """
+    """Os dois nós de cada controle levam o nome da Sony atrás do nome dela."""
     assento(numero)
     sufixo = "" if numero is None else f" {numero}"
 
@@ -135,11 +114,7 @@ def test_o_nome_que_o_jogo_le_e_a_forma_a(assento, numero: int | None) -> None:
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4])
 def test_um_jogo_que_casa_por_substring_acha_os_dois(assento, numero: int) -> None:
-    """O teste que o JOGO faz: alguma das palavras da Sony no nome, sem caixa.
-
-    As marcas são as da casa (``fontes_de_captura.MARCADORES_DUALSENSE``), que
-    são as mesmas que um motor de jogo procura — e as que o nó NÃO tinha.
-    """
+    """O teste que o JOGO faz: alguma das palavras da Sony no nome, sem caixa."""
     assento(numero)
     for rotulo in (som.descricao_do_alto_falante(_UNIQ), mic.descricao_do_microfone(_UNIQ)):
         baixa = rotulo.lower()
@@ -148,11 +123,7 @@ def test_um_jogo_que_casa_por_substring_acha_os_dois(assento, numero: int) -> No
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, None])
 def test_o_nome_cabe_no_teto_do_wine(assento, numero: int | None) -> None:
-    """Acima de 62 o Wine joga a frase fora — e com ela o «Controle N».
-
-    Sem o número os quatro controles chegariam ao jogo com o MESMO nome, que é o
-    defeito de dois «Alto-falante do Controle 1» com outra roupa.
-    """
+    """Acima de 62 o Wine joga a frase fora — e com ela o «Controle N»."""
     assento(numero)
     for rotulo in (som.descricao_do_alto_falante(_UNIQ), mic.descricao_do_microfone(_UNIQ)):
         assert len(rotulo) <= _TETO_DO_WINE, (len(rotulo), rotulo)
@@ -164,50 +135,24 @@ def test_o_sufixo_nunca_come_o_numero() -> None:
     comprido = "Alto-falante do Controle de quem joga do lado esquerdo 4"
     assert len(comprido + _SONY) > _TETO_DO_WINE
     assert vestido.com_o_nome_da_sony(comprido) == comprido
-    # E a forma é idempotente: vestir duas vezes não põe dois sufixos.
     uma = vestido.com_o_nome_da_sony("Microfone do Controle 2")
     assert vestido.com_o_nome_da_sony(uma) == uma == "Microfone do Controle 2" + _SONY
 
 
-# `test_a_janela_e_o_daemon_dizem_o_mesmo_nome` e
-# `test_a_janela_publica_o_mesmo_no_que_o_daemon` MORARAM AQUI até 28/09/2026:
-# mediam que o plano da janela (`app/audio_saida.nome_do_alto_falante` e
-# `argv_para_publicar_o_no`) e o daemon publicavam o MESMO nó. O plano saiu
-# (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01) — ninguém o executava —, e com um
-# publicador só não há o que concordar: o nome e as propriedades do nó são as
-# do `SinkVirtualPipeWire`, medidas nas réguas desta seção e da seguinte.
-
-
-# ---------------------------------------------------------------------------
-# 2. O NÓ DO ALTO-FALANTE veste o nome da Sony, e só o nome
-# ---------------------------------------------------------------------------
-
-
 def test_o_no_do_alto_falante_veste_o_nome_da_sony() -> None:
-    """Fabricante, produto e apelido chegam ao NÓ — lidos como o servidor os lê.
-
-    MORDIDA 2: tire ``*campos_do_nome()`` de ``propriedades_do_sink`` e os três
-    somem daqui.
-    """
+    """Fabricante, produto e apelido chegam ao NÓ — lidos como o servidor os lê."""
     props = _props_do_no_publicado("Alto-falante do Controle 1" + _SONY)
 
     assert props["device.description"] == "Alto-falante do Controle 1" + _SONY
     assert props["device.vendor.name"] == "Sony Interactive Entertainment"
     assert props["device.product.name"] == "DualSense Wireless Controller"
     assert props["node.nick"] == "DualSense Wireless Controller"
-    # O que já estava lá não pode sair por causa do vestido.
     assert props["priority.session"] == str(som.PRIORIDADE_SESSAO_DO_SOM)
     assert props["device.icon_name"] == "audio-speakers"
 
 
 def test_o_monitor_tem_nome_de_reserva_no_wine(assento) -> None:
-    """O monitor do nó passa do teto, e é o ``device.product.name`` que o salva.
-
-    O ``pipewire-pulse`` chama o monitor de «Monitor of <descrição>». Com a
-    forma A isso dá 69 caracteres; acima do teto o Wine monta o nome a partir do
-    ``device.product.name`` — sem ele, o nome comprido chega inteiro ao jogo, e
-    é esse comprimento que derruba o aplicativo que o teto existe para proteger.
-    """
+    """O monitor do nó passa do teto, e é o ``device.product.name`` que o salva."""
     assento(1)
     rotulo = som.descricao_do_alto_falante(_UNIQ)
     assert len(_MONITOR_DE + rotulo) > _TETO_DO_WINE
@@ -232,24 +177,12 @@ def test_o_no_do_alto_falante_nao_veste_a_identidade() -> None:
         assert chave not in props, f"o nó do alto-falante declarou {chave}={props[chave]!r}"
 
 
-# ---------------------------------------------------------------------------
-# 3. O ENDPOINT DE HÁPTICA lê a identidade do mesmo dono
-# ---------------------------------------------------------------------------
-
-
 def test_o_endpoint_de_haptica_declara_a_ancora() -> None:
-    """A identidade do endpoint sai de ``campos_da_identidade``, com a âncora dele.
-
-    MORDIDA 4: tire a linha do ``sysfs.path`` de ``campos_da_identidade`` e o
-    ``ContainerId`` que o Wine calcula sai ZERADO — com o ``pactl`` dando ``ok``,
-    que é a forma de instrumento falso que esta casa mais paga.
-    """
+    """A identidade do endpoint sai de ``campos_da_identidade``, com a âncora dele."""
     ancora = haptica.Ancora(
         syspath="/devices/pci0000:00/0000:00:14.0/usb3/3-4",
         declarado="/devices/pci0000:00/0000:00:14.0/usb3/3-4/3-4:1.0",
     )
-    # O endpoint é do APARELHO desde 02/10/2026 (A-HAPTICA-E-POR-APARELHO-01):
-    # o primeiro argumento é o `uniq` (de 28/09 a 02/10 era o lugar).
     props = _como_o_servidor_le(
         haptica.propriedades_do_endpoint("aa:bb:cc:00:00:01", ancora), "sink_properties"
     )
@@ -266,11 +199,6 @@ def test_sem_ancora_nao_ha_identidade() -> None:
     assert vestido.campos_da_identidade("   ") == ()
     com = vestido.campos_da_identidade("/devices/x/3-4:1.0")
     assert "sysfs.path=/devices/x/3-4:1.0" in com
-
-
-# ---------------------------------------------------------------------------
-# 4. O NOME DE DENTRO não mudou — a regressão que a sprint mandou travar
-# ---------------------------------------------------------------------------
 
 
 def test_o_nome_de_dentro_nao_ganhou_a_palavra_da_sony() -> None:
@@ -296,34 +224,18 @@ def test_o_nome_de_dentro_nao_ganhou_a_palavra_da_sony() -> None:
     assert fontes.sinks_dualsense(curta) == [placa]
 
 
-# ---------------------------------------------------------------------------
-# 5. O RÓTULO continua acompanhando o assento, através do sufixo
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("numero", [1, 2, 3, 4])
 def test_o_numero_se_le_atraves_do_sufixo(numero: int) -> None:
-    """``numero_do_rotulo`` acha o assento nas duas formas — a de antes e a A.
-
-    MORDIDA 6: tire o ``sem_o_nome_da_sony`` de ``numero_do_rotulo`` e a forma
-    A devolve ``None`` — o nó perde o número e ``rotulo_envelheceu`` nunca mais
-    republica nada.
-    """
+    """``numero_do_rotulo`` acha o assento nas duas formas — a de antes e a A."""
     assert mic.numero_do_rotulo(f"Alto-falante do Controle {numero}{_SONY}") == numero
     assert mic.numero_do_rotulo(f"Microfone do Controle {numero}{_SONY}") == numero
     assert mic.numero_do_rotulo(f"Alto-falante do Controle {numero}") == numero
 
 
 def test_o_no_no_ar_com_o_nome_de_antes_renasce_com_a_forma_a() -> None:
-    """Depois do install, os nós que estão no ar com o nome velho mudam UMA vez.
-
-    É a migração: o nó publicado antes da forma A tem o rótulo sem o sufixo, e
-    ele envelheceu — o daemon o republica quando o nó ficar em silêncio. E a
-    forma A igual a si mesma não envelhece, senão o nó renasceria em laço.
-    """
+    """Depois do install, os nós que estão no ar com o nome velho mudam UMA vez."""
     velho = "Alto-falante do Controle 1"
     novo = velho + _SONY
     assert mic.rotulo_envelheceu(velho, novo) is True
     assert mic.rotulo_envelheceu(novo, novo) is False
-    # Perder o número continua nunca contando como envelhecer.
     assert mic.rotulo_envelheceu(novo, "Alto-falante do Controle" + _SONY) is False

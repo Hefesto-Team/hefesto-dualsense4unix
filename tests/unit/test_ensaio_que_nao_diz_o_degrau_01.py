@@ -1,34 +1,4 @@
-"""ENSAIO-QUE-NÃO-DIZ-O-DEGRAU-01: o portão aceitava prova de IDA como prova de VOLTA.
-
-**O buraco irmão do de 12/08.** Naquele dia um agente escreveu a afirmação mais
-forte do vocabulário desta casa numa linha com ZERO ensaios, e o portão devolveu
-o mesmo número de reprovações de antes. As regras 6, 9 e 13 nasceram disso.
-
-Só que a lição foi aprendida para *"nenhum ensaio"* e não para *"o ensaio
-errado"*. O casamento ensaio↔célula é `(linha_id, transporte)` e nada mais —
-então uma linha que TEM ensaios podia ser promovida a QUALQUER degrau, inclusive
-aos dois de ENTRADA, sustentada por medições de outra coisa inteira.
-
-**Reproduzido à mão em 20/08/2026, em cópia descartável:** escrevendo
-`ate_onde_foi = O JOGO REAGIU` nos dois lados de `luz.lightbar.cor@dualsense` —
-cujos ensaios falam todos de `0x08 VALID_FLAG1_RELEASE_LEDS`, que é saída pura,
-acender luz — o portão devolveu `exit 0`. O grau que afirma que um JOGO REAGIU
-passou sustentado por medições de acender lightbar.
-
-Isso importa porque a direção de entrada tem HOJE zero células. A primeira
-pessoa a preenchê-las — inclusive um agente — encheria com o que já estava no
-caderno, e nada pegaria.
-
-**Por que a regra vale só para os degraus de ENTRADA:** os de saída continuam
-sustentados pelo caderno como sempre estiveram. Reprovar afirmação verdadeira é
-o erro que esta casa já pagou em 12/08 e 13/08, e as 21 células de
-`O APARELHO OBEDECEU` são verdadeiras. A direção que ainda não tem uma célula é
-onde exigir declaração explícita não machuca ninguém — e é o momento certo.
-
-**Como estes testes MORDEM:** apague o bloco `if grau in GRAUS_DE_ENTRADA` do
-`check_paridade_transporte.py` e o primeiro reprova, porque a mentira volta a
-passar.
-"""
+"""ENSAIO-QUE-NÃO-DIZ-O-DEGRAU-01: o portão aceitava prova de IDA como prova de VOLTA."""
 
 from __future__ import annotations
 
@@ -44,8 +14,6 @@ PORTAO = RAIZ / "scripts" / "check_paridade_transporte.py"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"
 
-#: A linha do estudo da lightbar: SAÍDA pura, com ensaios de sobra no caderno.
-#: É o pior caso justamente por ter ensaios — a regra 6 não a pega.
 LINHA_DE_SAIDA = ("luz.lightbar.cor", "dualsense")
 
 
@@ -108,13 +76,7 @@ def test_o_portao_reprova_grau_de_entrada_sustentado_por_ensaio_de_saida(
 
 
 def test_o_portao_continua_verde_na_arvore_de_verdade(arvore: Path) -> None:
-    """Contraprova: a regra nova não machuca uma afirmação verdadeira.
-
-    As 21 células de `O APARELHO OBEDECEU` são de saída e continuam sustentadas
-    pelos 177 ensaios legados, que nascem com `degrau` VAZIO. Se este teste
-    reprovar, a regra ficou larga demais e está cobrando declaração de quem não
-    devia — o erro de 12/08 e 13/08 ao contrário.
-    """
+    """Contraprova: a regra nova não machuca uma afirmação verdadeira."""
     saida = _rodar(arvore)
     assert saida.returncode == 0, (
         "o portão reprovou a árvore INTACTA depois da regra nova:\n"

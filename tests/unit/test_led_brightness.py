@@ -1,11 +1,4 @@
-"""Testes para ``LedSettings.apply_brightness`` (FEAT-LED-BRIGHTNESS-01).
-
-Cobertura:
-- default 1.0 não altera RGB;
-- 0.5 divide cada canal pela metade;
-- 0.0 zera todos os canais;
-- valores > 1.0 sofrem clamp por canal (0-255).
-"""
+"""Testes para ``LedSettings.apply_brightness`` (FEAT-LED-BRIGHTNESS-01)."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.core.led_control import LedSettings
@@ -18,8 +11,6 @@ class TestApplyBrightness:
         assert escalado.lightbar == (200, 100, 50)
 
     def test_metade_divide_canais(self) -> None:
-        # O PISO (D-2909-O-BRILHO-TEM-PISO, 29/09/2026): a 50% o fator é
-        # 0,2 + 0,8 x 0,5 = 0,6, e não 0,5 — a escala inteira vai até o piso.
         original = LedSettings(lightbar=(200, 100, 50))
         escalado = original.apply_brightness(0.5)
         assert escalado.lightbar == (120, 60, 30)
@@ -32,7 +23,6 @@ class TestApplyBrightness:
     def test_acima_de_um_clampa_em_255(self) -> None:
         original = LedSettings(lightbar=(200, 100, 50))
         escalado = original.apply_brightness(2.0)
-        # 200*2=400 -> 255, 100*2=200, 50*2=100
         assert escalado.lightbar == (255, 200, 100)
 
     def test_imutabilidade_da_origem(self) -> None:

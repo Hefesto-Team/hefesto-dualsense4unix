@@ -32,14 +32,8 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.linhagem_nintendo import OUIS_CLONE
 
-#: CLONE-01: campo do payload que traz a identidade de APARELHO já resolvida
-#: pelo daemon (a mesma com que ele numerou o controle e acendeu o LED). É
-#: contrato de FIO, então o nome vive dos dois lados como literal — a definição
-#: canônica é ``daemon.subsystems.external_identity.EXTERNAL_IDENTITY_FIELD``;
-#: importá-la aqui acoplaria a GUI a um módulo do daemon por uma string.
 _IDENTITY_FIELD = "identity"
 
-#: VID:PID → tipo amigável. Chave "vvvv:pppp" minúsculo; fallback só por VID.
 _TYPE_BY_VIDPID: dict[str, str] = {
     "057e:2009": "Pro Controller (modo Switch)",
     "057e:2017": "Pro Controller (modo Switch)",
@@ -53,7 +47,6 @@ _TYPE_BY_VIDPID: dict[str, str] = {
     "28de:1142": "Steam Controller",
 }
 
-#: Fabricante por VID (quando o PID não é conhecido).
 _VENDOR_BY_VID: dict[str, str] = {
     "057e": "Nintendo",
     "045e": "Xbox",
@@ -64,27 +57,8 @@ _VENDOR_BY_VID: dict[str, str] = {
     "054c": "Sony",  # não deveria chegar aqui (o inventário exclui DualSense)
 }
 
-#: VIDs cujo controle, por Bluetooth, cai no driver ``hid-nintendo`` — que
-#: desiste por timeouts com firmware clone (8BitDo em modo Switch). Provado nos
-#: estudos: a morte acontece SEM a Steam aberta; a cura é decisão de modo dela
-#: (cabo Switch = estável), não código nosso.
 _NINTENDO_MODE_VIDS = frozenset({"057e"})
 
-#: Marca por OUI do MAC (3 primeiros octetos = 6 hex minúsculos, sem ``:``).
-#: É o ÚNICO sinal que desambigua um 8BitDo em modo DualShock4 — que MENTE o
-#: VID 054c (Sony) e o nome "Wireless Controller", ficando IDÊNTICO a um DS4
-#: Sony de verdade — de um controle Sony genuíno. Quando presente e conhecido,
-#: o OUI VENCE o VID (o firmware clone mente o VID, nunca o MAC). Só existe por
-#: Bluetooth — por cabo o ``uniq`` vem vazio e caímos no VID.
-#:
-#: A faixa vem de ``core/linhagem_nintendo.OUIS_CLONE`` e **não** é copiada
-#: aqui: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026) fez desse módulo a casa
-#: única de faixa OUI no ``src/``, e há portão que reprova a segunda cópia
-#: (``tests/unit/test_uma_faixa_nao_e_um_fabricante.py``).
-#:
-#: Aqui a lista de tamanho um é a lista COMPLETA — a 8BitDo tem exatamente uma
-#: faixa MA-L no registro IEEE, medido em 22/08/2026 —, e é essa diferença que
-#: separa este uso legítimo do defeito que a sprint curou.
 _BRAND_BY_OUI: dict[str, str] = dict.fromkeys(OUIS_CLONE, "8BitDo")
 
 
@@ -95,11 +69,7 @@ def _vidpid(entry: dict[str, Any]) -> str:
 
 
 def _oui_of(entry: dict[str, Any]) -> str | None:
-    """OUI (6 hex minúsculos) do MAC do controle, ou ``None`` sem ``uniq``.
-
-    ``uniq`` vem preenchido por Bluetooth (ex.: ``e4:17:d8:00:00:03``) e vazio
-    por cabo — por isso a marca por OUI só desambigua no transporte BT.
-    """
+    """OUI (6 hex minúsculos) do MAC do controle, ou ``None`` sem ``uniq``."""
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     uniq = entry.get("uniq")
@@ -108,11 +78,7 @@ def _oui_of(entry: dict[str, Any]) -> str | None:
 
 
 def friendly_type(entry: dict[str, Any]) -> str:
-    """Tipo amigável do controle externo (ex.: 'Pro Controller (modo Switch)').
-
-    Ordem: VID:PID conhecido → marca por OUI do MAC (desambigua o clone que
-    mente o VID) → fabricante (por VID) → o nome cru do device.
-    """
+    """Tipo amigável do controle externo (ex.: 'Pro Controller (modo Switch)')."""
     vp = _vidpid(entry)
     if vp in _TYPE_BY_VIDPID:
         return _TYPE_BY_VIDPID[vp]
@@ -128,14 +94,7 @@ def friendly_type(entry: dict[str, Any]) -> str:
 
 
 def brand_of(entry: dict[str, Any]) -> str:
-    """Marca do controle, com o OUI do MAC VENCENDO o VID.
-
-    Um 8BitDo em modo DualShock4 reporta VID 054c (Sony) e nome genérico
-    "Wireless Controller" — indistinguível de um DS4 real por VID/nome. O OUI
-    do MAC (``e4:17:d8`` = 8BitDo) é o único sinal que os separa, então vem
-    primeiro. Sem OUI conhecido (ou sem ``uniq``, caso USB) cai no fabricante
-    por VID e, por fim, no :func:`friendly_type`.
-    """
+    """Marca do controle, com o OUI do MAC VENCENDO o VID."""
     oui = _oui_of(entry)
     if oui and oui in _BRAND_BY_OUI:
         return _BRAND_BY_OUI[oui]
@@ -210,11 +169,6 @@ def button_labels_for(
         bus = str(e.get("bus") or "").lower()
         via = "cabo" if bus == "usb" else ("BT" if bus in ("bluetooth", "bt") else bus)
         if slot is None:
-            # SELETOR-UNO-01 (22/07): registry ainda sem opinião (primeiros
-            # segundos do boot) — o botão mostra só marca+via ("Nintendo · BT")
-            # em vez do "Nintendo — · BT" que parecia quebrado; o número entra
-            # sozinho no tick seguinte, quando o daemon numerar. O "—" honesto
-            # (NUMA-05) segue nos contextos de ficha/tooltip via slot_label.
             saida.append(f"{nome} · {via}" if via else nome)
         else:
             saida.append(f"{nome} {slot} · {via}" if via else f"{nome} {slot}")
@@ -222,17 +176,7 @@ def button_labels_for(
 
 
 def nintendo_bt_warning(entry: dict[str, Any]) -> str | None:
-    """Aviso honesto quando é um controle Nintendo-mode POR Bluetooth.
-
-    ``None`` quando não se aplica. O texto NÃO promete cura pelo Hefesto — a
-    morte é do driver ``hid-nintendo`` do kernel; a saída estável é o USB.
-
-    A PALAVRA DO TRANSPORTE NA TELA É USB E BT — decisão dela de 21/09/2026 (a
-    I9 revogada). Esta frase sai na linha do externo da aba 08 e da aba 01, ao
-    lado de ``palavra_do_transporte`` («BT · o Hefesto só vê»), e dizia «Por
-    Bluetooth… por cabo» — duas palavras de outra língua para o mesmo transporte
-    na mesma linha (A-GESTAO-SEGUE-O-JOGADOR-01, conferência, 24/09/2026).
-    """
+    """Aviso honesto quando é um controle Nintendo-mode POR Bluetooth."""
     vid = str(entry.get("vid") or "").lower()
     bus = str(entry.get("bus") or "").lower()
     if vid in _NINTENDO_MODE_VIDS and bus in ("bluetooth", "bt"):
@@ -243,16 +187,6 @@ def nintendo_bt_warning(entry: dict[str, Any]) -> str | None:
     return None
 
 
-#: Os QUATRO modos de hardware do 8BitDo/Pro Controller, como a canônica os
-#: nomeia (``docs/protocol/externos-firmware-e-modos.md:145-149``), na ordem em
-#: que o card os mostra. Decisão T3: quatro, não três — o desenho mostrava só
-#: XInput/DInput/Switch, e faltar um faz o card mentir sobre o aparelho.
-#:
-#: O rótulo do macOS é "Apple" e não "macOS" por duas razões que apontam para o
-#: mesmo lado: o portão de redação da aba cobra maiúscula inicial em toda opção
-#: (``tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py``), e a própria
-#: canônica escreve a linha como "macOS / Apple". "Apple" é a metade que cabe
-#: num botão de card sem alargar a coluna inteira.
 MODOS_DO_APARELHO: list[tuple[str, str]] = [
     ("dinput", "D-input"),
     ("xinput", "X-input"),
@@ -260,9 +194,6 @@ MODOS_DO_APARELHO: list[tuple[str, str]] = [
     ("macos", "Apple"),
 ]
 
-#: Ids de :data:`MODOS_DO_APARELHO` que o modo legado de dois estados conhece.
-#: ``dinput`` e ``macos`` caem em "outro" no seletor da ficha — e cair ali é o
-#: comportamento de sempre, medido: até esta leva o produto nem sabia nomeá-los.
 _MODO_LEGADO: dict[str, str] = {"switch": "nintendo", "xinput": "xbox"}
 
 
@@ -305,40 +236,24 @@ def modo_deduzido(entry: dict[str, Any]) -> str:
         return "dinput"
     if vid == "054c" or driver in ("playstation", "hid-playstation"):
         # O inventário de externos EXCLUI o DualSense adotado, então um VID da
-        # Sony aqui é o clone em modo macOS mentindo o VID — o caso que a
-        # canônica registra como o segundo dos três erros de rótulo medidos.
         return "macos"
     return ""
 
 
 def input_mode(entry: dict[str, Any]) -> str:
-    """Modo do controle: 'nintendo' (Switch), 'xbox' (X-input) ou 'outro'.
-
-    É a PROJEÇÃO de dois estados de :func:`modo_deduzido`, para o seletor
-    read-only da ficha do controle (`mode_selector_state`), que só tem dois
-    botões. Uma função só decide o modo; esta escolhe o que cabe naquela tela.
-
-    Duas leituras do mesmo fato, e não duas verdades: trocar a ficha para
-    quatro botões é trabalho em `gui_dialogs` e nos testes que a congelam, que
-    são território de outra frente nesta leva.
-    """
+    """Modo do controle: 'nintendo' (Switch), 'xbox' (X-input) ou 'outro'."""
     return _MODO_LEGADO.get(modo_deduzido(entry), "outro")
 
 
-#: GUI-05/P4: itens do seletor SEGMENTADO READ-ONLY da ficha — os DOIS modos de
-#: HARDWARE do 8BitDo/Pro Controller. Ids casam com o retorno de `input_mode`.
-#: Sem popup/dropdown (veto do 8BIT-02: cosmic-comp fecha qualquer popup).
 MODE_SELECTOR_ITEMS: list[tuple[str, str]] = [
     ("nintendo", "Nintendo (Switch)"),
     ("xbox", "Xbox (X-input)"),
 ]
 
-#: Subtítulo curto sob o segmentado — liga ao texto de orientação existente.
 MODE_SELECTOR_SUBTITLE = (
     "O modo é uma troca física no controle (combo ao ligar) — veja o manual."
 )
 
-#: Tooltip do segmentado read-only (explica por que ele não é clicável).
 MODE_SELECTOR_TOOLTIP = (
     "Só leitura: mostra o modo em que o controle está agora. A troca não é "
     "por software — é um combo de botões no próprio controle ao ligar."
@@ -348,12 +263,7 @@ MODE_SELECTOR_TOOLTIP = (
 def mode_selector_state(
     entry: dict[str, Any],
 ) -> tuple[list[tuple[str, str]], str] | None:
-    """(itens, id ativo) do segmentado read-only da ficha — ou ``None``.
-
-    Só para controles com os dois modos de hardware (`input_mode` devolvendo
-    "nintendo"/"xbox" — o mesmo gate do `mode_guidance`); "outro" não tem o
-    que marcar. Pura (testável sem GTK), consumida por `gui_dialogs`.
-    """
+    """(itens, id ativo) do segmentado read-only da ficha — ou ``None``."""
     modo = input_mode(entry)
     if modo not in ("nintendo", "xbox"):
         return None
@@ -361,13 +271,7 @@ def mode_selector_state(
 
 
 def mode_guidance(entry: dict[str, Any]) -> tuple[str, str] | None:
-    """(modo_atual_legível, orientação) para a ficha — ou None se não se aplica.
-
-    Só para controles que TÊM os dois modos (Nintendo/8BitDo). A orientação é
-    HONESTA: X-input (Xbox) é a raiz da estabilidade (foge do driver que morre
-    em BT), Switch (Nintendo) dá gyro mas trava em BT. Como é modo de HARDWARE,
-    a "troca" é no controle (combo ao ligar), não no software.
-    """
+    """(modo_atual_legível, orientação) para a ficha — ou None se não se aplica."""
     modo = input_mode(entry)
     if modo == "nintendo":
         atual = "Nintendo (modo Switch)"
@@ -381,18 +285,11 @@ def mode_guidance(entry: dict[str, Any]) -> tuple[str, str] | None:
 
 
 def detail_rows(entry: dict[str, Any]) -> list[tuple[str, str]]:
-    """Linhas ``(rótulo, valor)`` da ficha read-only do controle externo.
-
-    Só o que interessa a quem vai jogar; nada de caminho cru de /dev. O
-    ``holders`` (Steam segurando o hidraw) NÃO vira alarme — é estado normal.
-    """
+    """Linhas ``(rótulo, valor)`` da ficha read-only do controle externo."""
     rows: list[tuple[str, str]] = [
         ("Controle", friendly_type(entry)),
         ("Como conectou", transport_label(entry)),
     ]
-    # GUI-05/P4: a linha "O jogo vê como" saiu da grade — o modo detectado
-    # agora aparece no seletor segmentado read-only da ficha
-    # (`mode_selector_state`), fonte única sem informação duplicada.
     driver = str(entry.get("driver") or "").strip()
     if driver:
         rows.append(("Driver do Linux", driver))
@@ -404,23 +301,7 @@ def detail_rows(entry: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def external_key(entry: dict[str, Any]) -> str:
-    """Chave estável do controle externo — o `identity` que o daemon carimbou.
-
-    Usada para casar o botão do seletor com a entrada do inventário sem
-    depender da posição na lista (que muda a cada replug).
-
-    CLONE-01: a chave é o campo `identity` do payload — a MESMA identidade de
-    aparelho com que o daemon atribuiu o slot e acendeu o LED de jogador. Ela
-    vem PRONTA de propósito: resolvê-la exige ler o sysfs do aparelho, coisa
-    que a GUI não tem por que fazer (outro processo, a cada repintura de
-    botão) e que ela nem sempre conseguiria fazer igual.
-
-    Sem o campo (daemon anterior a esta leva) cai no comportamento antigo —
-    `uniq`, senão `evdev_path`. É exatamente aí que dois Nintendo-class
-    degradados no cabo colidiam: o `hid-nintendo` sintetiza o MESMO `uniq`
-    para os dois (`02` + VID + PID + bus), então os dois botões respondiam
-    pela mesma entrada e mostravam o mesmo número de jogador.
-    """
+    """Chave estável do controle externo — o `identity` que o daemon carimbou."""
     identity = entry.get(_IDENTITY_FIELD)
     if isinstance(identity, str) and identity:
         return identity
@@ -430,28 +311,7 @@ def external_key(entry: dict[str, Any]) -> str:
     return str(entry.get("evdev_path") or entry.get("hidraw") or entry.get("name") or "?")
 
 
-# ---------------------------------------------------------------------------
-# A seção "Os controles" da aba Configurações (CONFIG-06)
-# ---------------------------------------------------------------------------
-
-#: Os seis nomes de fábrica que o desenho aprovado põe na lista, com o rótulo em
-#: português e o id igual ao CÓDIGO da tabela do firmware
-#: (``integrations/cor_do_plastico.NOMES_DE_FABRICA``). O sétimo é o "Outra", que
-#: não é código nenhum: é a porta do texto livre da decisão C2.
-#:
-#: A tabela tem as entradas do mapa dela (28 em 25/09/2026, lidas de
-#: ``docs/data/cores-do-dualsense.csv``) e a lista mostra seis. Não é recorte
 #: arbitrário: ``00``-``05`` são as cores de catálogo do DualSense, e as outras
-#: são edições especiais e coleções, que caberiam na lista do jeito que
-#: cabem na vida — pelo nome, no campo livre.
-#:
-#: O PAPEL DELA MUDOU EM 25/08/2026 (LEX-5), e ela não caducou. O card deixou de
-#: mostrar estes seis como BOTÕES — quem lista agora é :func:`cores_para_busca`,
-#: com a tabela inteira. O que estes seis pares passaram a ser é a tradução para o
-#: PORTUGUÊS das cores de catálogo, e ela virou o SINÔNIMO de busca
-#: (:func:`sinonimos_da_busca`): quem digita "vermelho" acha "Cosmic Red" sem
-#: que a tela deixe de dizer "Cosmic Red". Sem isso, trocar a lista pela busca
-#: teria tirado da tela a única palavra em português que a cor já tinha.
 _CORES_DA_LISTA: tuple[tuple[str, str], ...] = (
     ("00", "Branco"),
     ("01", "Preto"),
@@ -461,70 +321,30 @@ _CORES_DA_LISTA: tuple[tuple[str, str], ...] = (
     ("05", "Azul"),
 )
 
-#: Id do sétimo botão. Não é um código de cor, e por isso não pode colidir com
-#: nenhum: os códigos são dois caracteres, este tem cinco.
 ID_DE_OUTRA_COR = "outra"
 
-#: A dica do "Outra", literal do desenho aprovado (``TOOLTIPS.md``).
 DICA_DE_OUTRA_COR = "Para um modelo fora da lista, ou uma edição especial."
 
-#: Id do oitavo botão — a resposta "não sei", que devolve o campo a ``None``.
-#: Não é código de cor e não é ``ID_DE_OUTRA_COR``: existe porque o
-#: ``SegmentedSelector`` é grupo de rádio e IGNORA o clique no botão já
-#: afundado, então sem um botão próprio quem declarasse a cor errada não tinha
-#: gesto nenhum para desfazer (``D-A1``: "não sei" é resposta válida).
 ID_DE_NAO_SEI = "nao_sei"
 
-#: A dica do "Não sei", em todo campo declarável do card.
 DICA_DE_NAO_SEI = "Apaga o que foi declarado aqui. O Hefesto volta a não saber."
 
 #: Os códigos que a Sony vende no catálogo corrente do DualSense. São os seis
-#: de :data:`_CORES_DA_LISTA` mais os que entraram depois — todo código de dois
-#: DÍGITOS até `12`. `30` e a família `Z*` são aniversário e edição de jogo.
 _CODIGOS_DE_CATALOGO = frozenset(
     {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}
 )
 
-#: As duas dicas da busca de cor (LEX-5). Elas dizem o que a linha não mostra:
-#: de que família aquele nome é. Ver :func:`dicas_da_busca`.
-#:
-#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo de tela.
 DICA_DE_CATALOGO = "Cor de catálogo do DualSense."
 DICA_DE_EDICAO = "Edição especial ou coleção."
 
 
 def cores_do_plastico_items() -> list[tuple[str, str]]:
-    """``(id, rótulo)`` da lista de cor — seis nomes, "Outra" e "Não sei".
-
-    O id é o CÓDIGO do firmware, não o rótulo: assim o botão marcado casa com o
-    que a leitura do aparelho devolveu, sem tradução no meio. O que vai para o
-    disco é o NOME oficial (``ControleDeclarado.cor`` é texto livre, decisão
-    C2) — quem faz essa ponte é :func:`nome_oficial_da_cor`.
-    """
+    """``(id, rótulo)`` da lista de cor — seis nomes, "Outra" e "Não sei"."""
     return [*_CORES_DA_LISTA, (ID_DE_OUTRA_COR, "Outra"), (ID_DE_NAO_SEI, "Não sei")]
 
 
 def cores_para_busca() -> list[tuple[str, str]]:
-    """``(id, nome)`` de TODAS as cores de fábrica, mais "Outra" e "Não sei".
-
-    LEX-5 (25/08/2026). Enquanto a cor era uma fileira de botões, mostrar as
-    vinte e uma custava sete fileiras por card, e o recorte de seis
-    (:data:`_CORES_DA_LISTA`) era o preço para o card caber. Com a busca o preço
-    sumiu — a lista só existe enquanto ela digita —, e o recorte deixa de ter
-    razão de ser: quem tem uma "Galactic Purple" ou uma edição especial passa a
-    achar o próprio controle pelo nome que está escrito na caixa dele.
-
-    NADA AQUI PASSA POR ``_()``, e é a mesma fronteira da
-    :func:`cores_do_plastico_items`: este módulo devolve a tabela, e quem
-    traduz é o call site — que sabe quais linhas são redação nossa ("Outra",
-    "Não sei") e quais são nome de fábrica. "Cosmic Red" é o que está na caixa e
-    no serial do aparelho; traduzi-lo inventaria um nome que a Sony não usa e
-    que não casa com nenhuma outra fonte.
-
-    A ORDEM É A DA TABELA, que é a ordem do CÓDIGO no firmware — as de catálogo
-    (``00``-``12``) antes das edições especiais (``30``, ``Z*``). Ordenar por
-    nome misturaria as duas famílias sem ganhar nada: quem busca digita.
-    """
+    """``(id, nome)`` de TODAS as cores de fábrica, mais "Outra" e "Não sei"."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 
     return [
@@ -535,24 +355,7 @@ def cores_para_busca() -> list[tuple[str, str]]:
 
 
 def sinonimos_da_busca() -> dict[str, str]:
-    """``{código: palavra em português}`` — o que também ACHA, sem se mostrar.
-
-    ESTA FUNÇÃO EXISTE PORQUE A BUSCA CRIARIA UMA REGRESSÃO SEM ELA, e a
-    regressão tem nome: a lista de botões que ela substituiu mostrava seis
-    rótulos em PORTUGUÊS ("Vermelho", "Azul"...), e os nomes de fábrica são
-    todos em inglês. Quem sabe o nome do próprio controle digita
-    "Cosmic Red" — que é o gesto que ela descreveu. Quem só sabe que *é
-    vermelho* digitaria "vermelho" e não acharia nada, e essa pessoa era
-    exatamente quem a lista de seis atendia.
-
-    A palavra casa e não aparece: a linha continua dizendo "Cosmic Red", que é o
-    que está escrito na caixa e no serial do aparelho.
-
-    Ela lê :func:`cores_do_plastico_items` em vez de repetir os seis pares —
-    aquela função é a dona da tradução, e duas cópias divergiriam na primeira
-    revisão de redação. Os dois ids que não são cor ficam de fora: "Outra" e
-    "Não sei" já são as próprias palavras em português.
-    """
+    """``{código: palavra em português}`` — o que também ACHA, sem se mostrar."""
     return {
         ident: rotulo
         for ident, rotulo in cores_do_plastico_items()
@@ -561,20 +364,7 @@ def sinonimos_da_busca() -> dict[str, str]:
 
 
 def dicas_da_busca() -> dict[str, str]:
-    """``{id: dica}`` da busca de cor — a dica é a FAMÍLIA da cor.
-
-    Na lista de seis botões a dica servia para dizer o nome de fábrica que o
-    rótulo em português escondia ("Vermelho" → "Cosmic Red"). Na busca o rótulo
-    JÁ é o nome de fábrica, então repeti-lo na dica não diria nada. O que ela
-    diz agora é a única coisa que a linha não mostra: se aquela cor é de
-    catálogo ou edição especial — que é a diferença entre "a minha é essa" e "a
-    minha se parece com essa".
-
-    As duas linhas que NÃO são cor continuam com a dica que sempre tiveram, e
-    vêm de :func:`dicas_das_cores` em vez de serem repetidas aqui: aquela função
-    é a dona delas, e "Não sei" tem de dizer a mesma coisa em todo campo
-    declarável do card (D-A1).
-    """
+    """``{id: dica}`` da busca de cor — a dica é a FAMÍLIA da cor."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 
     dicas = {
@@ -590,13 +380,7 @@ def dicas_da_busca() -> dict[str, str]:
 
 
 def dicas_das_cores() -> dict[str, str]:
-    """``{id: dica}`` da lista de cor — o nome OFICIAL de fábrica, em inglês.
-
-    O rótulo do botão é "Vermelho" porque é o que ela lê; a dica é "Cosmic Red"
-    porque é o que está escrito na caixa e no serial do aparelho. Traduzir o
-    nome de fábrica seria inventar um nome que a Sony não usa e que não casa com
-    nenhuma outra fonte.
-    """
+    """``{id: dica}`` da lista de cor — o nome OFICIAL de fábrica, em inglês."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 
     dicas = {codigo: NOMES_DE_FABRICA[codigo] for codigo, _ in _CORES_DA_LISTA}
@@ -613,9 +397,6 @@ def nome_oficial_da_cor(codigo: str) -> str | None:
     return None if cor is None else cor.nome
 
 
-#: Os campos que a pessoa DECLARA num card, na ordem em que o desenho os põe.
-#: O modo NÃO está aqui, e a ausência é a decisão T1: ele é deduzido e mostrado,
-#: nunca declarado.
 _CAMPOS_DECLARAVEIS: tuple[tuple[str, str], ...] = (
     ("botoes", "Botões:"),
     ("cor", "Cor:"),
@@ -653,12 +434,7 @@ def declaracoes_do_aparelho(
 
 
 def _valor_declarado(declarado: Any, chave: str) -> str | None:
-    """O valor de ``chave`` na declaração, ou ``None`` — nunca levanta.
-
-    Aceita ``ControleDeclarado`` (pydantic) e dicionário porque os dois chegam:
-    o primeiro vem do disco, o segundo vem da declaração PENDENTE que a aba
-    acumula antes do "Aplicar" (``D-A4``, aba diferida).
-    """
+    """O valor de ``chave`` na declaração, ou ``None`` — nunca levanta."""
     if declarado is None:
         return None
     valor = (
@@ -670,13 +446,7 @@ def _valor_declarado(declarado: Any, chave: str) -> str | None:
 
 
 def via_do_controle(entry: dict[str, Any]) -> str:
-    """Como o controle chegou, na palavra do desenho: "cabo" ou "Bluetooth".
-
-    Difere de :func:`transport_label` ("Cabo (USB)") de propósito: aqui o texto
-    entra num subtítulo de card colado à marca ("Sony · cabo"), onde o parêntese
-    do barramento é ruído. Valor cru quando o barramento é outro, e "" quando
-    não há barramento nenhum — a mesma honestidade do resto do arquivo.
-    """
+    """Como o controle chegou, na palavra do desenho: "cabo" ou "Bluetooth"."""
     bus = str(entry.get("bus") or "").lower()
     if bus == "usb":
         return "cabo"
@@ -700,22 +470,7 @@ def marca_e_via(entry: dict[str, Any], *, marca: str | None = None) -> str:
 
 
 def chave_de_maquina(entry: dict[str, Any]) -> str | None:
-    """A chave deste controle no ``maquina.json``, ou ``None`` se não há uma.
-
-    O schema exige doze hexa minúsculos sem separador
-    (``utils/maquina.py:_CHAVE_DE_CONTROLE``) e RECUSA o documento inteiro
-    quando a chave não casa — um campo escrito errado vira "não consegui
-    gravar", não "valor inválido".
-
-    ``None`` para o endereço que começa em ``02``, e a recusa é do schema, não
-    minha: é o MAC que o ``usb_probe_degrade`` do nosso DKMS FORJA quando não há
-    endereço, somando VID, PID e bus. Dois clones do mesmo modelo recebem o
-    MESMO endereço forjado, e persistir isso gravaria em disco a FUSÃO de dois
-    aparelhos — a cor de um pintando a borda do outro.
-
-    Quem recebe ``None`` não pode persistir a declaração, e a tela tem de dizer
-    isso em vez de fingir que gravou.
-    """
+    """A chave deste controle no ``maquina.json``, ou ``None`` se não há uma."""
     bruto = external_key(entry) if entry.get(_IDENTITY_FIELD) else entry.get("uniq")
     if not isinstance(bruto, str):
         return None

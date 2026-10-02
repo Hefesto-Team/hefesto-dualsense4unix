@@ -1,35 +1,4 @@
-"""O portão de citação de linha alcança as planilhas de `docs/data/`.
-
-DECISÃO DELA, 31/08/2026. `docs/data/mapa-controles.csv` carregava **762
-citações `arquivo:linha`** na prosa das células e **nenhuma tinha portão**: o
-`scripts/validar-citacoes-de-linha.py` varria só `docs/protocol/` e recusava o
-CSV até quando nomeado à mão. Uma citação que aponta para a linha errada depois
-de um refactor vira afirmação forte e falsa, e o mapa a propaga.
-
-O PORTÃO NASCE EM ZERO, e isso é medição, não esperança — 31/08/2026, com o
-mapa em disco: das 762 citações, **723 resolvem nesta árvore** e **ZERO aponta
-além do fim**, ZERO tem faixa invertida e ZERO promete símbolo que a faixa não
-contém. Nada foi consertado; o que se fecha é o buraco por onde a primeira
-podridão entraria calada.
-
-O RISCO REAL AQUI NÃO É O FALSO NEGATIVO, É O FALSO POSITIVO — *"um portão que
-grita falso é um portão que se desliga"*. A prosa do mapa cita coisa que NÃO é
-arquivo desta árvore, e metade destes testes existe para provar que o portão
-fica CALADO sobre elas:
-
-- repositório de fora, com o repo e a tag escritos ao lado
-  (`libsdl-org/SDL release-3.4.14 src/joystick/hidapi/SDL_hidapi_ps5.c:391-403`);
-- basename solto, que tanto pode ser o driver upstream (`hid-nintendo.c:1945`)
-  quanto arquivo nosso sem caminho (`led_control.py:119`) — 28 citações;
-- a forma curta `:N`, que no CSV é **706** ocorrências e cai em dois lados que
-  o portão não pode confundir: continuação de repo de fora e HORA DE RELÓGIO na
-  prosa (*"a das 01:51:25"*, que daria `:51`, `:25`).
-
-E a forma: a prosa do mapa vive DENTRO de célula, com vírgula, aspas e quebra
-de linha embutidas. Quem varrer o arquivo cru com regex despedaça a célula no
-meio de um endereço — por isso o portão lê com o módulo `csv`, e há teste aqui
-que morde exatamente esse ponto.
-"""
+"""O portão de citação de linha alcança as planilhas de `docs/data/`."""
 from __future__ import annotations
 
 import csv
@@ -42,19 +11,12 @@ import pytest
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "validar-citacoes-de-linha.py"
 
-#: Onze linhas, e a última nomeia um símbolo. Qualquer endereço acima de 11 é
-#: podre por construção.
 FONTE = ("\n".join(f"linha_{n} = {n}" for n in range(1, 11))
          + "\nFLAG_DE_AUDIO = 0x01\n")
 
 CABECALHO = ["id", "chave", "nota", "cabo_evidencia"]
 
 
-#: Os DUBLÊS que fazem os testes do "fica calado" morderem. Sem eles, o portão
-#: ficaria calado por não ter o que achar, e o teste daria verde sobre nada —
-#: que é o defeito do `--prova-gesto` de 29/08, verde sobre dois botões mortos.
-#: Com eles na árvore, qualquer régua que resolva por BASENAME acha um arquivo
-#: de três linhas e acusa na hora.
 DUBLES = {
     "assets/dkms/hid-nintendo/hid-nintendo.c": "a\nb\nc\n",
     "src/hefesto_dualsense4unix/core/led_control.py": "a\nb\nc\n",
@@ -95,10 +57,6 @@ def rodar(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True, text=True, check=False)
 
 
-# --------------------------------------------------------------------------
-# O QUE O PORTÃO TEM DE PEGAR
-# --------------------------------------------------------------------------
-
 def test_a_citacao_boa_no_csv_passa(arvore: Path) -> None:
     """O controle. Sem ele, os outros poderiam estar reprovando por nada."""
     planilha(arvore, "o bit sai de core/exemplo.py:3-5, e é só isso")
@@ -121,11 +79,7 @@ def test_a_citacao_alem_do_fim_no_csv_reprova(arvore: Path) -> None:
 
 
 def test_o_achado_nomeia_a_linha_do_mapa_e_a_coluna(arvore: Path) -> None:
-    """Uma célula não se acha por número de linha física: acha-se por id+coluna.
-
-    O registro tem quebra de linha embutida, então dizer só "linha 2" mandaria
-    quem for consertar procurar no lugar errado.
-    """
+    """Uma célula não se acha por número de linha física: acha-se por id+coluna."""
     planilha(arvore, "luz.lightbar", "prosa\ncom quebra", "core/exemplo.py:900")
     saida = rodar(arvore, "--all")
     assert saida.returncode == 1, saida.stdout
@@ -133,9 +87,6 @@ def test_o_achado_nomeia_a_linha_do_mapa_e_a_coluna(arvore: Path) -> None:
         f"o achado não diz QUAL linha do mapa. Disse: {saida.stdout!r}")
     assert "cabo_evidencia" in saida.stdout, (
         f"o achado não diz QUAL coluna. Disse: {saida.stdout!r}")
-    #: O endereço está na linha física 3 (a quebra embutida empurrou), e o
-    #: número impresso é o INÍCIO do registro — que é onde quem for consertar
-    #: precisa parar de rolar.
     assert "mapa-controles.csv:2 " in saida.stdout, (
         f"o número da linha não é o começo do registro. Disse: {saida.stdout!r}")
 
@@ -176,11 +127,7 @@ def test_o_csv_nomeado_a_mao_deixou_de_ser_recusado(arvore: Path) -> None:
 
 
 def test_planilha_nova_em_docs_data_nasce_coberta(arvore: Path) -> None:
-    """Defeito de FORMA, o mesmo que o `rglob` da canônica fechou em 26/08.
-
-    A varredura é por glob e as exclusões são nominais e declaradas: um CSV
-    novo em `docs/data/` não pode nascer fora do portão por omissão.
-    """
+    """Defeito de FORMA, o mesmo que o `rglob` da canônica fechou em 26/08."""
     planilha(arvore, "core/exemplo.py:900", nome="planilha-que-ainda-nao-existe.csv")
     saida = rodar(arvore, "--all")
     assert saida.returncode == 1, (
@@ -188,9 +135,6 @@ def test_planilha_nova_em_docs_data_nasce_coberta(arvore: Path) -> None:
         f"{saida.stdout!r}")
 
 
-#: Arquivos DESTA árvore com extensões que a lista digitada de antes de
-#: 25/09/2026 não tinha. O `.conf` é o do achado; os outros são os tipos que a
-#: medição daquele dia achou citados no mapa e resolvendo na árvore.
 EXTENSOES_QUE_A_LISTA_ESQUECIA = (
     "assets/modprobe.d/hefesto-exemplo.conf",
     "assets/hefesto-exemplo.service",
@@ -230,12 +174,7 @@ def test_extensao_que_ninguem_listou_nasce_coberta(arvore: Path, relativo: str) 
 def test_a_celula_com_virgula_e_quebra_de_linha_nao_despedaca_o_endereco(
     arvore: Path,
 ) -> None:
-    """MORDIDA DA FORMA: por que se lê com o módulo `csv`, e não com regex.
-
-    A célula tem vírgula e quebra de linha embutidas — que é como a prosa do
-    mapa é de verdade. Uma varredura por linha física do arquivo cru veria
-    `exemplo.py:9` numa linha e o resto noutra, e o endereço podre passaria.
-    """
+    """MORDIDA DA FORMA: por que se lê com o módulo `csv`, e não com regex."""
     planilha(arvore, 'nota: um, dois, três\ne aí o bit em core/exemplo.py:9-40,\n'
                      'com o resto da frase depois da vírgula')
     saida = rodar(arvore, "--all")
@@ -244,17 +183,8 @@ def test_a_celula_com_virgula_e_quebra_de_linha_nao_despedaca_o_endereco(
         f"conferido. Disse: {saida.stdout!r}")
 
 
-# --------------------------------------------------------------------------
-# O QUE O PORTÃO TEM DE DEIXAR PASSAR — e é aqui que mora o risco
-# --------------------------------------------------------------------------
-
 def test_repositorio_de_fora_fica_calado(arvore: Path) -> None:
-    """11 citações do mapa apontam para repo alheio, com repo e tag ao lado.
-
-    A árvore de brinquedo TEM um `SDL_hidapi_ps5.c` e um `utils.h` de três
-    linhas (os dublês): o caminho que o mapa escreve é o do repositório DELES,
-    e o portão só pode cobrar o caminho que existe AQUI.
-    """
+    """11 citações do mapa apontam para repo alheio, com repo e tag ao lado."""
     planilha(arvore, "libsdl-org/SDL release-3.4.14 "
                      "src/joystick/hidapi/SDL_hidapi_ps5.c:391-403; "
                      "e src/utils.h:12-99999")
@@ -265,14 +195,7 @@ def test_repositorio_de_fora_fica_calado(arvore: Path) -> None:
 
 
 def test_basename_solto_fica_calado(arvore: Path) -> None:
-    """28 citações do mapa são basename sem caminho.
-
-    Casá-las por busca na árvore misturaria o `hid-nintendo.c` do kernel com a
-    cópia versionada em `assets/dkms/`, que é outro arquivo em outra versão —
-    e é exatamente isso que os dublês provam aqui: os dois nomes EXISTEM nesta
-    árvore de brinquedo, com três linhas cada, e o portão continua calado.
-    Menos alcance, zero invenção — a mesma escolha da continuação `:N`.
-    """
+    """28 citações do mapa são basename sem caminho."""
     planilha(arvore, "o driver faz isso em hid-nintendo.c:99999, e o nosso "
                      "em led_control.py:99999")
     saida = rodar(arvore, "--all")
@@ -281,12 +204,7 @@ def test_basename_solto_fica_calado(arvore: Path) -> None:
 
 
 def test_a_forma_curta_no_csv_fica_calada(arvore: Path) -> None:
-    """A conservadoria que a HORA DO RELÓGIO obriga.
-
-    O mapa tem 706 formas curtas `:N`. Uma célula tem milhares de caracteres e
-    dezenas de blocos, então a âncora "da mesma linha" que segura o `.md` não
-    segura aqui — e a prosa escreve hora: `01:51:25` daria `:51` e `:25`.
-    """
+    """A conservadoria que a HORA DO RELÓGIO obriga."""
     planilha(arvore, "o bloco em core/exemplo.py:1-5, e também :99999 — "
                      "a das 01:51:25 passou 27 s depois da recusa às 01:50:58")
     saida = rodar(arvore, "--all")
@@ -306,21 +224,7 @@ def test_a_promessa_nao_atravessa_o_separador_de_bloco(arvore: Path) -> None:
 
 
 def test_a_isencao_nominal_funciona_e_esta_vazia(arvore: Path) -> None:
-    """A porta de saída do portão existe, morde, e hoje não tem ninguém dentro.
-
-    Até 05/09/2026 este teste se chamava `test_a_arqueologia_v1_continua_fora` e
-    provava que `mapa-controles-v1.csv` estava isento. Aquele arquivo FOI
-    APAGADO naquele dia, junto com `ensaios-v1.csv` e o
-    `scripts/migrar-mapa-v2.py` que os produzia — decisão dela: *"a ideia é
-    termos menos arquivos, se algo vira a v2 deveria ser o mesmo arquivo
-    sobrescrevendo o anterior"*.
-
-    A lápide perdeu o objeto, então ela foi RELIDA em vez de removida: o que
-    importava nunca foi aquele nome, e sim que a isenção seja NOMINAL e
-    DECLARADA. Um portão sem porta de saída vira impossível de satisfazer; uma
-    porta que ninguém testa deixa de abrir sem avisar. Este teste prova as duas
-    metades, e a segunda é o vazio de hoje.
-    """
+    """A porta de saída do portão existe, morde, e hoje não tem ninguém dentro."""
     import ast
 
     fonte = (RAIZ_REAL / "scripts" / "validar-citacoes-de-linha.py").read_text(
@@ -336,24 +240,14 @@ def test_a_isencao_nominal_funciona_e_esta_vazia(arvore: Path) -> None:
         f"escrita junto — {isencao}"
     )
 
-    # A MORDIDA, nas duas direções: sem isenção o portão acusa; com ela, cala.
     planilha(arvore, "core/exemplo.py:99999", nome="um-csv-qualquer.csv")
     assert rodar(arvore, "--all").returncode != 0, (
         "o portão deixou passar um endereço podre num CSV NÃO isento"
     )
 
 
-# --------------------------------------------------------------------------
-# CONTRA A ÁRVORE DE VERDADE
-# --------------------------------------------------------------------------
-
 def test_o_mapa_de_verdade_esta_sob_o_portao() -> None:
-    """Alcance declarado não é alcance: este teste sente o portão encolher.
-
-    Sem ele, alguém poderia devolver o script a `docs/protocol/` e o
-    `test_a_arvore_de_verdade_esta_limpa` ficaria verde por não olhar — que é
-    o defeito de forma que esta casa já pagou duas vezes.
-    """
+    """Alcance declarado não é alcance: este teste sente o portão encolher."""
     saida = subprocess.run(
         [sys.executable, str(SCRIPT), str(RAIZ_REAL / "docs/data/mapa-controles.csv")],
         capture_output=True, text=True, cwd=RAIZ_REAL, check=False)
@@ -363,9 +257,6 @@ def test_o_mapa_de_verdade_esta_sob_o_portao() -> None:
     assert "1 planilha(s)" in saida.stdout, (
         f"o mapa não foi varrido. Disse: {saida.stdout!r}")
 
-    #: Piso, não número exato: o mapa cresce. Medido em 31/08/2026 -> 723
-    #: citações conferidas. Um piso baixo pega o encolhimento do alcance sem
-    #: virar número errado no primeiro dia em que alguém escrever no mapa.
     conferidas = int(saida.stdout.split()[1])
     assert conferidas >= 700, (
         f"o portão conferiu só {conferidas} citações do mapa, contra as 723 "

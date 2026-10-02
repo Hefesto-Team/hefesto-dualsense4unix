@@ -45,10 +45,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileMovimentoConfig,
 )
 
-# ---------------------------------------------------------------------------
-# E1 — o motor puro
-# ---------------------------------------------------------------------------
-
 
 def _arranjo(**kw: Any) -> rot.ArranjoDeMovimento:
     base: dict[str, Any] = {"destino": rot.DESTINO_ANALOGICO_DIREITO}
@@ -56,10 +52,6 @@ def _arranjo(**kw: Any) -> rot.ArranjoDeMovimento:
     return rot.ArranjoDeMovimento(**base)
 
 
-#: A DERIVA MEDIDA NO DUALSENSE DELA, parado na mesa, em 21/09/2026: 60
-#: amostras a 20 Hz pelo nó "Motion Sensors". Pior eixo (y): média 0,72,
-#: máximo **0,85 graus/s**. É o número contra o qual a zona morta padrão (3,0)
-#: se dimensiona — 3,5x de margem.
 DERIVA_MEDIDA_GRAUS_S = 0.85
 
 
@@ -80,22 +72,7 @@ def test_a_deriva_do_controle_dela_nao_move_a_mira() -> None:
 
 
 def test_a_zona_morta_alta_e_o_dial_de_quem_tem_tremor() -> None:
-    """ARRANQUE a zona morta e este teste reprova — e é o ÚNICO que reprova.
-
-    **O QUE A MORDIDA REVELOU, e a prosa desta régua estava errada antes
-    (21/09/2026):** com a zona morta PADRÃO (3,0) o resultado é byte a byte o
-    mesmo de sem zona morta nenhuma. A curva (`EXPO_DO_GIRO` 1,6) mais o
-    arredondamento do eixo já zeram tudo abaixo de ~7 graus/s sozinhos. A
-    primeira redação deste teste usava 2 graus/s e dava VERDE com a cura
-    arrancada — mais um instrumento que respondia sobre outra coisa.
-
-    ONDE A ZONA MORTA É A FEATURE INTEIRA: o tremor. Este app é de
-    acessibilidade, e um tremor essencial mora na faixa de 15 a 30 graus/s —
-    bem acima do que a curva corta. Para essa pessoa o campo `zona_morta_graus_s`
-    (1 a 60 na tela) é o que separa uma mira usável de uma câmera que treme
-    junto com a mão. O default de 3,0 cobre a DERIVA do aparelho (0,85 medido);
-    subir o dial é o que cobre a mão.
-    """
+    """ARRANQUE a zona morta e este teste reprova — e é o ÚNICO que reprova."""
     tremor = (0.0, 25.0, 0.0)
     forte = _arranjo(sensibilidade=12)
     assert rot.deflexao(tremor, forte) != (0, 0), (
@@ -112,32 +89,20 @@ def test_um_gesto_de_verdade_move() -> None:
 
 
 def test_o_teto_satura_e_nao_estoura_o_eixo() -> None:
-    """ARRANQUE o teto e este teste reprova: um giro brusco mandaria um valor
-    fora de 0..255 e o jogo leria lixo (ou o uinput recusaria o evento)."""
+    """ARRANQUE o teto e este teste reprova: um giro brusco mandaria um valor"""
     dh, _ = rot.deflexao((0.0, 5000.0, 0.0), _arranjo())
     assert abs(dh) <= rot.DEFLEXAO_MAXIMA, (
         f"deflexão {dh} passou do máximo {rot.DEFLEXAO_MAXIMA}")
 
 
 def test_a_mistura_nao_estoura_o_byte_do_analogico() -> None:
-    """ARRANQUE o `_saturar` e este teste reprova.
-
-    O analógico vai ao jogo como BYTE. Somar a mira a um stick já no batente
-    produziria 255+ — e o que chega ao jogo não é "mais forte", é outro valor.
-    """
+    """ARRANQUE o `_saturar` e este teste reprova."""
     x, y = rot.misturar(250, 5, 120, -120)
     assert 0 <= x <= 255 and 0 <= y <= 255, f"({x}, {y}) saiu da faixa do byte"
 
 
 def test_o_arranjo_desligado_nao_e_arranjo() -> None:
-    """ARRANQUE o ramo `nenhum` de `ArranjoDeMovimento.ligado` e este teste
-    reprova: guardar a calibração dela com a mira DESLIGADA é o que permite
-    experimentar sem perder o ajuste — e o arranjo guardado não chega ao tique.
-
-    O `resolver` que este teste cobrava saiu em 24/09/2026
-    (A-MIRA-POR-MOVIMENTO-NA-TELA-01): o `montar` guarda o arranjo desligado
-    inteiro, e é o `ativo()` que não o entrega.
-    """
+    """ARRANQUE o ramo `nenhum` de `ArranjoDeMovimento.ligado` e este teste"""
     guardado = rot.montar(ProfileMovimentoConfig(destino="nenhum"))
     assert not guardado.ligado
     store = SimpleNamespace()
@@ -145,41 +110,19 @@ def test_o_arranjo_desligado_nao_e_arranjo() -> None:
     assert rot.ativo(store) is None
 
 
-# ---------------------------------------------------------------------------
-# E2 — o campo do perfil
-# ---------------------------------------------------------------------------
-
-
 def test_o_perfil_de_ontem_continua_saindo_igual() -> None:
-    """ARRANQUE "movimento" da tupla de omissões e este teste reprova.
-
-    Um perfil que nunca ouviu falar de mira por movimento não pode ganhar a
-    chave só por passar por um load→save: o Hefesto da versão anterior tem
-    `extra="forbid"` e recusaria o arquivo INTEIRO — todos os perfis dela, não
-    só os que usam a seção.
-    """
+    """ARRANQUE "movimento" da tupla de omissões e este teste reprova."""
     perfil = Profile(name="Antigo", match=MatchAny(type="any"))
     assert "movimento" not in perfil.model_dump()
 
 
-#: Uma mira FORA do padrão em todo campo que o salvar poderia zerar — com o
-#: padrão, um `None` virando `ProfileMovimentoConfig()` passaria despercebido.
 _MIRA_DELA = ProfileMovimentoConfig(
     destino="mouse", sensibilidade=9, eixo_horizontal="roll",
     inverter_vertical=True, zona_morta_graus_s=18.0, gatilho="l2")
 
 
 def test_o_salvar_perfil_transporta_a_mira_por_movimento() -> None:
-    """ARRANQUE `movimento=self.source_movimento` de `DraftConfig.to_profile` e
-    este teste reprova nas duas linhas.
-
-    O DEFEITO, medido pela suíte em 21/09/2026, no mesmo dia em que o campo
-    nasceu: `to_profile` reconstrói o perfil do zero, e a mira não tinha
-    transporte — todo «Salvar Perfil» e todo gesto de aba que grava o perfil
-    (Controles, Vibração, Perfis) devolvia `movimento=None`, e a mira dela
-    sumia do disco sem uma palavra. Com nome novo ela vai junto, como o
-    `remapeamento`: é configuração dela, não regra de identidade do perfil.
-    """
+    """ARRANQUE `movimento=self.source_movimento` de `DraftConfig.to_profile` e"""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
     perfil = Profile(name="Com Mira", match=MatchAny(type="any"), movimento=_MIRA_DELA)
@@ -189,12 +132,7 @@ def test_o_salvar_perfil_transporta_a_mira_por_movimento() -> None:
 
 
 def test_a_mira_sobrevive_a_ida_e_volta_pelo_disco() -> None:
-    """O caminho inteiro do Salvar, pelo disco do lar de mentira do conftest.
-
-    `save_profile` → `load_profile` → rascunho → `to_profile` → `save_profile`
-    → `load_profile`. A régua de cima mede o rascunho; esta mede que o disco
-    devolve o que recebeu, com o perfil sem mira continuando SEM a chave.
-    """
+    """O caminho inteiro do Salvar, pelo disco do lar de mentira do conftest."""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
@@ -206,8 +144,7 @@ def test_a_mira_sobrevive_a_ida_e_volta_pelo_disco() -> None:
 
 
 def test_teto_abaixo_da_zona_morta_e_recusado_no_load() -> None:
-    """ARRANQUE o `model_validator` e este teste reprova — o arranjo silencioso
-    que nunca move nada só apareceria no meio da partida dela."""
+    """ARRANQUE o `model_validator` e este teste reprova — o arranjo silencioso"""
     with pytest.raises(ValidationError):
         ProfileMovimentoConfig(
             destino="analogico_direito", zona_morta_graus_s=50.0, teto_graus_s=20.0
@@ -215,8 +152,7 @@ def test_teto_abaixo_da_zona_morta_e_recusado_no_load() -> None:
 
 
 def test_o_ps_nunca_vira_gatilho_da_mira() -> None:
-    """ARRANQUE a derivação de REMAPEAVEIS e este teste reprova: o PS é a saída
-    de emergência dela, e prendê-lo a uma feature a tira."""
+    """ARRANQUE a derivação de REMAPEAVEIS e este teste reprova: o PS é a saída"""
     with pytest.raises(ValidationError):
         ProfileMovimentoConfig(destino="mouse", gatilho="ps")
 
@@ -229,10 +165,6 @@ def test_o_gatilho_do_perfil_sai_da_lista_do_motor() -> None:
         ProfileMovimentoConfig(destino="mouse", gatilho="botao_que_nao_existe")
 
 
-# ---------------------------------------------------------------------------
-# E3 — a fonte: o ângulo integrado no ritmo do NÓ, não no do tique
-# ---------------------------------------------------------------------------
-
 _EC = SimpleNamespace(EV_SYN=0, EV_ABS=3, SYN_REPORT=0,
                       ABS_RX=3, ABS_RY=4, ABS_RZ=5, ABS_X=0, ABS_Y=1, ABS_Z=2)
 
@@ -243,19 +175,12 @@ def _evento(tipo: int, code: int, *, t: float = 0.0, value: int = 0) -> SimpleNa
 
 
 def _leitor() -> MotionSensorReader:
-    # PATH DE MENTIRA E NÃO `None`: com `None` o construtor chama `_locate()`,
-    # que varre `/dev/input` da máquina — a suíte passaria a depender de haver
     # (ou não) um DualSense na mesa dela. É a TELA-DELA-01 aplicada ao sensor.
     return MotionSensorReader(device_path=Path("/dev/hefesto-nao-existe"))
 
 
 def test_um_giro_rapido_entre_dois_tiques_nao_se_perde() -> None:
-    """ARRANQUE a integração e este teste reprova.
-
-    Vinte pacotes de 100 graus/s com 5 ms entre eles são 10 graus de giro. Quem
-    multiplicasse a VELOCIDADE pelo período do tique (1/60 s) leria 1,67 —
-    um sexto do movimento que a mão dela fez.
-    """
+    """ARRANQUE a integração e este teste reprova."""
     leitor = _leitor()
     for n in range(21):
         leitor._eixos["y"] = 100.0
@@ -265,8 +190,7 @@ def test_um_giro_rapido_entre_dois_tiques_nao_se_perde() -> None:
 
 
 def test_o_buraco_de_tempo_nao_vira_virada_de_camera() -> None:
-    """ARRANQUE o `_MAIOR_DT_INTEGRAVEL_S` e este teste reprova: uma máquina
-    suspensa por 30 s com o controle a 100 graus/s injetaria 3.000 num quadro."""
+    """ARRANQUE o `_MAIOR_DT_INTEGRAVEL_S` e este teste reprova: uma máquina"""
     leitor = _leitor()
     leitor._eixos["y"] = 100.0
     leitor._integrar_o_angulo(0.0)
@@ -275,8 +199,7 @@ def test_o_buraco_de_tempo_nao_vira_virada_de_camera() -> None:
 
 
 def test_o_angulo_drena_e_nao_se_repete() -> None:
-    """ARRANQUE o zeramento de `consume_angulo` e este teste reprova: a mira
-    andaria para sempre na direção do último movimento."""
+    """ARRANQUE o zeramento de `consume_angulo` e este teste reprova: a mira"""
     leitor = _leitor()
     leitor._angulo = {"x": 0.0, "y": 7.0, "z": 0.0}
     assert leitor.consume_angulo() == (0.0, 7.0, 0.0)
@@ -284,8 +207,7 @@ def test_o_angulo_drena_e_nao_se_repete() -> None:
 
 
 def test_o_primeiro_pacote_nao_inventa_intervalo() -> None:
-    """ARRANQUE o `if anterior is None` e este teste reprova: o salto nasceria
-    no instante em que o controle conecta — com a mão dela no aparelho."""
+    """ARRANQUE o `if anterior is None` e este teste reprova: o salto nasceria"""
     leitor = _leitor()
     leitor._eixos["y"] = 500.0
     leitor._handle_event(_evento(_EC.EV_SYN, _EC.SYN_REPORT, t=1.0), _EC)
@@ -293,8 +215,7 @@ def test_o_primeiro_pacote_nao_inventa_intervalo() -> None:
 
 
 def test_o_angulo_some_quando_o_controle_some() -> None:
-    """ARRANQUE as duas linhas do `_reset_on_disconnect` e este teste reprova:
-    o gesto de pôr o controle de volta na mesa viraria virada de câmera."""
+    """ARRANQUE as duas linhas do `_reset_on_disconnect` e este teste reprova:"""
     leitor = _leitor()
     leitor._angulo = {"x": 1.0, "y": 2.0, "z": 3.0}
     leitor._ultimo_syn = 9.0
@@ -304,17 +225,11 @@ def test_o_angulo_some_quando_o_controle_some() -> None:
 
 
 def test_a_velocidade_continua_chegando_como_antes() -> None:
-    """A régua de NÃO-REGRESSÃO da E3: o `_handle_event` ganhou um ramo novo
-    antes do EV_ABS, e o giro que o painel já lia não pode ter mudado."""
+    """A régua de NÃO-REGRESSÃO da E3: o `_handle_event` ganhou um ramo novo"""
     leitor = _leitor()
     leitor._resolucoes = {"y": 1024}
     leitor._handle_event(_evento(_EC.EV_ABS, _EC.ABS_RY, value=1024), _EC)
     assert abs(leitor.snapshot().y - 1.0) < 0.001
-
-
-# ---------------------------------------------------------------------------
-# E5 — a mistura no tique, e os três achados do advogado do diabo
-# ---------------------------------------------------------------------------
 
 
 class _Device:
@@ -362,17 +277,7 @@ class _Hub:
 
 
 def _daemon_do_tamanho_do_real(hub: Any, **campos: Any) -> SimpleNamespace:
-    """O daemon dublado com o CAMINHO DO HUB do `Daemon` de verdade.
-
-    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026). Os três dublês desta régua
-    penduravam ``_garantir_sensor_hub=lambda: hub`` direto no daemon — um método
-    que o `Daemon` real (`daemon/lifecycle.py`) NÃO tinha. As dezessete réguas
-    que passam por eles davam verde, e a mira nunca andou no produto.
-
-    Agora o hub mora onde mora no produto (o `IpcServer`, em ``_ipc_server``) e
-    quem responde é o método DA CLASSE REAL, ligado a este objeto: arranque
-    ``Daemon._garantir_sensor_hub`` e as dezessete reprovam na montagem.
-    """
+    """O daemon dublado com o CAMINHO DO HUB do `Daemon` de verdade."""
     from types import MethodType
 
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
@@ -410,13 +315,7 @@ def _despachar(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any, hub: _Hub,
 
 
 def test_a_mira_vale_na_mascara_xbox(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ENTREGA INTEIRA NUMA LINHA. ARRANQUE a chamada de
-    `aplicar_o_movimento` do `dispatch_gamepad` e este teste reprova.
-
-    `dispatch_gamepad` é o caminho do controle ao vpad, e o vpad é o que veste
-    a máscara. A mira entrar AQUI é o que a faz valer em QUALQUER máscara —
-    inclusive na Xbox, onde o jogo não tem onde receber o giro nativo.
-    """
+    """A ENTREGA INTEIRA NUMA LINHA. ARRANQUE a chamada de"""
     dev = _despachar(monkeypatch,
                      arranjo=_arranjo(sensibilidade=12),
                      hub=_Hub(velocidade=(0.0, 120.0, 0.0)))
@@ -426,12 +325,7 @@ def test_a_mira_vale_na_mascara_xbox(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_uma_mira_quebrada_nao_leva_o_controle_junto(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `try/except` de `aplicar_o_movimento` e este teste reprova.
-
-    O `except` do `dispatch_gamepad` registra um warning e **pula o forward
-    inteiro**: os sticks, os botões e os gatilhos dela morreriam no jogo por
-    causa de uma mira.
-    """
+    """ARRANQUE o `try/except` de `aplicar_o_movimento` e este teste reprova."""
     estado = SimpleNamespace(raw_lx=200, raw_ly=128, raw_rx=128, raw_ry=128,
                              l2_raw=0, r2_raw=0)
     dev = _despachar(monkeypatch,
@@ -444,8 +338,7 @@ def test_uma_mira_quebrada_nao_leva_o_controle_junto(
 
 def test_o_giro_desligado_por_ela_desliga_a_mira(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o portão do `REGISTRO` e este teste reprova: o interruptor de
-    sensor dela passaria a mentir."""
+    """ARRANQUE o portão do `REGISTRO` e este teste reprova: o interruptor de"""
     dev = _despachar(monkeypatch, arranjo=_arranjo(sensibilidade=12),
                      hub=_Hub(velocidade=(0.0, 300.0, 0.0)), giro_ligado=False)
     assert dev.analog[0]["rx"] == 128
@@ -459,23 +352,9 @@ def test_sem_arranjo_o_tique_nao_paga_nada(monkeypatch: pytest.MonkeyPatch) -> N
     assert hub.drenagens == 0, "o tique sem mira consultou o hub"
 
 
-# --- 9.1 e 9.3: o gatilho fala a língua do LEITOR, não a da TELA -----------
-
-
 def test_o_gatilho_dispara_com_o_botao_que_o_produto_entrega(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ACHADO 9.1 do advogado do diabo, e a régua é a 9.3.
-
-    `ProfileMovimentoConfig.gatilho` guarda o id da TELA (`l2`); o
-    `buttons_pressed` que chega ao `dispatch_gamepad` fala o vocabulário do
-    LEITOR EVDEV (`l2_btn`, em `EvdevReader.BUTTON_MAP`). Sem a tradução por
-    `remapeamento_de_botao.GATILHOS`, `"l2" not in {"l2_btn"}` é sempre
-    verdadeiro e **a mira com gatilho nunca dispararia** — silenciosamente.
-
-    A RÉGUA QUE A SPRINT TRAZIA ESCRITA DARIA VERDE SOBRE ESSE DEFEITO: ela
-    injetava `frozenset({"l2"})` à mão. Esta monta o conjunto pelo MESMO
-    dicionário que o leitor usa, que é o que o produto entrega.
-    """
+    """ACHADO 9.1 do advogado do diabo, e a régua é a 9.3."""
     nome_no_jogo = remap.GATILHOS["l2"]
     assert nome_no_jogo != "l2", (
         "a premissa do achado 9.1 caiu — o leitor passou a falar o id da tela")
@@ -489,8 +368,7 @@ def test_o_gatilho_dispara_com_o_botao_que_o_produto_entrega(
 
 
 def test_o_gatilho_solto_nao_move(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o portão do gatilho e este teste reprova: a mira valeria
-    sempre, e o arranjo «só enquanto aperto» deixaria de existir."""
+    """ARRANQUE o portão do gatilho e este teste reprova: a mira valeria"""
     dev = _despachar(monkeypatch,
                      arranjo=_arranjo(sensibilidade=12, gatilho="l2"),
                      hub=_Hub(velocidade=(0.0, 300.0, 0.0)),
@@ -499,12 +377,7 @@ def test_o_gatilho_solto_nao_move(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_gatilho_le_o_botao_original(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE `botoes=da_mao` e ponha os botões traduzidos: este
-    teste reprova.
-
-    Com o remapeamento `{l2: r2}` ativo, o JOGO vê R2 quando ela aperta L2. A
-    mira tem de continuar ligando pelo que a MÃO dela apertou.
-    """
+    """ARRANQUE `botoes=da_mao` e ponha os botões traduzidos: este"""
     from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
@@ -527,20 +400,9 @@ def test_o_gatilho_le_o_botao_original(monkeypatch: pytest.MonkeyPatch) -> None:
         "dela apertou")
 
 
-# --- 9.2: o acumulador drena ANTES dos portões -----------------------------
-
-
 def test_o_gatilho_solto_nao_deixa_o_angulo_acumular(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ACHADO 9.2 do advogado do diabo. MOVA a drenagem para DEPOIS dos
-    portões — como a sprint a trazia escrita — e este teste reprova.
-
-    O acumulador de ângulo cresce na thread do reader, a ~675 Hz, e só zera em
-    `consume_angulo()`. Com a drenagem atrás do portão do gatilho, dez segundos
-    de gatilho solto com o controle na mão despejariam o percurso INTEIRO no
-    primeiro tique em que ela apertasse. Drenando antes, o que o portão barra é
-    descartado — que é o que a mão dela espera.
-    """
+    """ACHADO 9.2 do advogado do diabo. MOVA a drenagem para DEPOIS dos"""
     hub = _Hub(velocidade=(0.0, 300.0, 0.0), angulo=(0.0, 400.0, 0.0))
     dev = _despachar(monkeypatch,
                      arranjo=_arranjo(destino=rot.DESTINO_MOUSE, gatilho="l2"),
@@ -552,8 +414,7 @@ def test_o_gatilho_solto_nao_deixa_o_angulo_acumular(
 
 
 def test_o_giro_desligado_tambem_drena(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O mesmo achado 9.2, pelo segundo portão: com o giroscópio desligado por
-    ela o acumulador também não pode crescer em silêncio."""
+    """O mesmo achado 9.2, pelo segundo portão: com o giroscópio desligado por"""
     hub = _Hub(velocidade=(0.0, 300.0, 0.0), angulo=(0.0, 400.0, 0.0))
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                hub=hub, giro_ligado=False, mouse=_Mouse())
@@ -561,14 +422,7 @@ def test_o_giro_desligado_tambem_drena(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_destino_mouse_move_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A entrega do destino «mouse»: ângulo percorrido vira pixel.
-
-    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): DOIS tiques, e o
-    primeiro não move. A primeira drenagem de uma peça é o acumulado de quando
-    ninguém drenava (`roteador.angulo_do_tique`), e sai como nada — é o salto
-    de cursor que a mira na Navegação traria na volta de um silêncio. O cursor
-    anda no SEGUNDO tique.
-    """
+    """A entrega do destino «mouse»: ângulo percorrido vira pixel."""
     mouse = _Mouse()
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                hub=_Hub(velocidade=(0.0, 300.0, 0.0), angulo=(0.0, 10.0, 0.0)),
@@ -581,9 +435,7 @@ def test_o_destino_mouse_move_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_sem_no_de_mouse_a_mira_nao_inventa_um(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `if mouse is not None` e este teste reprova (com um
-    `AttributeError` que o `except` engoliria): um segundo dono para o cursor
-    dela é decisão dela, não efeito colateral de uma mira."""
+    """ARRANQUE o `if mouse is not None` e este teste reprova (com um"""
     dev = _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                      hub=_Hub(velocidade=(0.0, 300.0, 0.0),
                               angulo=(0.0, 10.0, 0.0)), mouse=None)
@@ -591,26 +443,13 @@ def test_sem_no_de_mouse_a_mira_nao_inventa_um(
 
 
 def test_a_deriva_nao_passeia_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o portão `deflexao(velocidade) == (0, 0)` do ramo do mouse e
-    este teste reprova.
-
-    A zona morta se mede na VELOCIDADE, mas quem move o cursor é o ÂNGULO — e
-    um controle parado com deriva percorre ângulo de verdade. Sem este portão o
-    cursor dela passearia sozinho com o controle na mesa.
-    """
-    # DOIS tiques desde 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): o primeiro é
-    # descartado como acumulado, e só o segundo chega a este portão.
+    """ARRANQUE o portão `deflexao(velocidade) == (0, 0)` do ramo do mouse e"""
     mouse = _Mouse()
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                hub=_Hub(velocidade=(0.0, 1.0, 0.0), angulo=(0.0, 8.0, 0.0)),
                mouse=mouse, tiques=2)
     assert mouse.movimentos == [], (
         f"a deriva moveu o cursor em {mouse.movimentos}")
-
-
-# ---------------------------------------------------------------------------
-# E6 — a segunda saída: o carry sub-pixel
-# ---------------------------------------------------------------------------
 
 
 def _mouse_falso() -> Any:
@@ -640,9 +479,7 @@ def _soma_rel_x(dev: Any) -> int:
 
 
 def test_a_mira_fina_nao_e_jogada_fora() -> None:
-    """ARRANQUE o carry e este teste reprova: 0,4 px por tique viraria zero
-    para sempre, e o ajuste fino — que é o que o giro faz melhor que o stick —
-    não moveria nada."""
+    """ARRANQUE o carry e este teste reprova: 0,4 px por tique viraria zero"""
     dev = _mouse_falso()
     for _ in range(5):
         dev.emit_gyro_move(0.4, 0.0)
@@ -650,8 +487,7 @@ def test_a_mira_fina_nao_e_jogada_fora() -> None:
 
 
 def test_o_carry_do_giro_nao_rouba_o_do_touchpad() -> None:
-    """ARRANQUE o par próprio e use `_tp_carry_*`: este teste reprova — o dedo
-    dela empurraria a mira e a mira empurraria o dedo."""
+    """ARRANQUE o par próprio e use `_tp_carry_*`: este teste reprova — o dedo"""
     dev = _mouse_falso()
     dev.emit_gyro_move(0.6, 0.0)
     dev.emit_touchpad_move(1, 0)
@@ -665,21 +501,11 @@ def test_sem_device_a_mira_e_no_op() -> None:
     """O roteador NÃO cria nó de mouse por conta própria."""
     from hefesto_dualsense4unix.integrations.uinput_mouse import UinputMouseDevice
 
-    UinputMouseDevice().emit_gyro_move(99.0, 99.0)  # não levanta
-
-
-# ---------------------------------------------------------------------------
-# E7 — o depósito na ativação, e o contágio que ele impede
-# ---------------------------------------------------------------------------
+    UinputMouseDevice().emit_gyro_move(99.0, 99.0)
 
 
 def test_o_jogo_seguinte_nao_herda_a_mira_do_anterior() -> None:
-    """ARRANQUE o `definir_ativo` do ramo sem arranjo e este teste reprova.
-
-    É a forma exata do CAMINHO-CONTAGIO-01: a escolha de UM jogo virando padrão
-    da máquina sem ninguém pedir. O depósito acontece SEMPRE, inclusive com
-    `None` — é o que apaga a mira do jogo anterior.
-    """
+    """ARRANQUE o `definir_ativo` do ramo sem arranjo e este teste reprova."""
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
     store = SimpleNamespace()
@@ -698,8 +524,7 @@ def test_o_jogo_seguinte_nao_herda_a_mira_do_anterior() -> None:
 
 
 def test_um_arranjo_torto_nao_derruba_as_luzes_dela() -> None:
-    """ARRANQUE o `except ArranjoRecusadoError` e este teste reprova: uma linha
-    torta de mira derrubaria a ativação inteira do perfil."""
+    """ARRANQUE o `except ArranjoRecusadoError` e este teste reprova: uma linha"""
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
     store = SimpleNamespace()
@@ -708,7 +533,6 @@ def test_um_arranjo_torto_nao_derruba_as_luzes_dela() -> None:
 
     torto = Profile(name="Torto", match=MatchAny(type="any"),
                     movimento=ProfileMovimentoConfig(destino="analogico_direito"))
-    # Só um `model_copy` sem validação chega aqui torto — o esquema recusa no load.
     object.__setattr__(torto.movimento, "destino", "destino_que_nao_existe")
     relatorio: dict[str, str] = {}
     gerente.apply_movimento(torto, relatorio=relatorio)
@@ -717,12 +541,7 @@ def test_um_arranjo_torto_nao_derruba_as_luzes_dela() -> None:
 
 
 def test_a_secao_nova_entra_na_ativacao() -> None:
-    """A régua de LIGAÇÃO: uma seção de perfil sem quem a aplique é trabalho
-    dela que morre no disco. ARRANQUE a linha do `activate` e ela reprova.
-
-    NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01): a cadeia
-    da ativação mora em `_ativar`, que o `activate` e o `reaplicar` (o
-    «Aplicar») chamam; a régua lê a cadeia, e confere que os dois a chamam."""
+    """A régua de LIGAÇÃO: uma seção de perfil sem quem a aplique é trabalho"""
     import inspect
 
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -733,16 +552,6 @@ def test_a_secao_nova_entra_na_ativacao() -> None:
         "existe e nunca chega ao tique")
     for porta in (ProfileManager.activate, ProfileManager.reaplicar):
         assert "self._ativar(" in inspect.getsource(porta), porta.__name__
-
-
-# ---------------------------------------------------------------------------
-# E4 — a torneira, contra o `SensorHub` DE VERDADE
-# ---------------------------------------------------------------------------
-#
-# O `_Hub` de mentira acima mede a MISTURA; estas duas medem a TORNEIRA. As
-# duas coisas separadas de propósito: um dublê que respondesse por si só
-# deixaria a porta real sem nenhuma régua — que é a forma de defeito que esta
-# casa chama de "o instrumento respondia sobre outra coisa que não o produto".
 
 
 class _ReaderDeMotionFalso:
@@ -761,10 +570,6 @@ class _ReaderDeMotionFalso:
         return valores
 
     def start(self) -> bool:
-        # `True` E NÃO `None`: `SensorHub._abrir_um` descarta o reader cujo
-        # `start()` não afirma ter aberto. Um dublê que devolvesse `None`
-        # nunca entraria no `_motion`, e a régua da demanda mediria um hub
-        # vazio — verde sobre nada.
         return True
 
     def stop(self) -> None:
@@ -800,10 +605,7 @@ def _hub_de_verdade(relogio: _Relogio, nodes: dict[str, Any]) -> Any:
 
 
 def test_a_mira_ligada_mantem_o_reader_vivo() -> None:
-    """ARRANQUE `self._demanda[uniq] = agora` das duas portas e este teste
-    reprova: o TTL de 5 s apagaria o reader no meio da partida e a mira
-    morreria sozinha, sem nenhum erro em lugar nenhum — que é a forma de
-    defeito mais difícil de diagnosticar que existe."""
+    """ARRANQUE `self._demanda[uniq] = agora` das duas portas e este teste"""
     relogio = _Relogio()
     hub = _hub_de_verdade(relogio, {_UNIQ: Path("/dev/input/event-de-mentira")})
     hub.velocidade_do_movimento(_UNIQ)
@@ -818,23 +620,17 @@ def test_a_mira_ligada_mantem_o_reader_vivo() -> None:
 
 
 def test_sem_reader_a_resposta_e_none_e_nao_zero() -> None:
-    """ARRANQUE o `return None` e ponha `(0.0, 0.0, 0.0)`: este teste reprova.
-
-    Zero é um controle PARADO; ausência de reader é outra coisa. Um painel (ou
-    uma mira) alimentado por essa confusão descreve um aparelho que não está lá.
-    """
+    """ARRANQUE o `return None` e ponha `(0.0, 0.0, 0.0)`: este teste reprova."""
     hub = _hub_de_verdade(_Relogio(), {})
     assert hub.velocidade_do_movimento("aa:bb:cc:00:00:99") is None
     assert hub.angulo_do_movimento("aa:bb:cc:00:00:99") is None
 
 
 def test_a_porta_do_angulo_drena_e_a_da_velocidade_nao() -> None:
-    """A separação é a entrega: duas chamadas de `angulo_do_movimento` no mesmo
-    tique dividiriam o movimento entre dois consumidores, e a mira dela andaria
-    pela metade. ARRANQUE a diferença e este teste reprova."""
+    """A separação é a entrega: duas chamadas de `angulo_do_movimento` no mesmo"""
     relogio = _Relogio()
     hub = _hub_de_verdade(relogio, {_UNIQ: Path("/dev/input/event-de-mentira")})
-    hub.velocidade_do_movimento(_UNIQ)  # registra a demanda — o reader nasce dela
+    hub.velocidade_do_movimento(_UNIQ)
     hub.reconciliar()
     hub._motion[_UNIQ].definir_angulo((0.0, 5.0, 0.0))
     assert hub.velocidade_do_movimento(_UNIQ) == (0.0, 42.0, 0.0)
@@ -842,23 +638,6 @@ def test_a_porta_do_angulo_drena_e_a_da_velocidade_nao() -> None:
         "a porta da velocidade DRENOU — ela não pode roubar de ninguém")
     assert hub.angulo_do_movimento(_UNIQ) == (0.0, 5.0, 0.0)
     assert hub.angulo_do_movimento(_UNIQ) == (0.0, 0.0, 0.0)
-
-
-# ---------------------------------------------------------------------------
-# E8 — A MIRA VALE NOS QUATRO, e não só no P1
-# ---------------------------------------------------------------------------
-#
-# **ORDEM DELA, 21/09/2026:** *"cara nenhuma solução pode ser feita só pro p1"*.
-#
-# A primeira entrega desta sprint misturava o giro dentro do `dispatch_gamepad`
-# — o caminho do PRIMÁRIO. Os jogadores 2 a 4 passam por
-# `coop.CoopManager.forward_all`, que tem laço próprio, e ficariam de fora. Eu
-# declarei isso como dívida no §10.3 e ela RECUSOU a declaração.
-#
-# Ela está certa, e a razão é o que o produto é: um roteador de adaptação para
-# quem adapta o controle à própria deficiência. Uma feature de acessibilidade
-# que só alcança o P1 obriga a pessoa a ser o P1 — e quem escolhe a ordem da
-# mesa é o jogo, não ela.
 
 
 class _VpadDoJogador:
@@ -887,12 +666,7 @@ def _mesa_de_quatro(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any,
                     botoes_por_uniq: dict[str, frozenset[str]] | None = None,
                     giro_ligado: dict[str, bool] | None = None,
                     ) -> dict[str, _VpadDoJogador]:
-    """Monta P2, P3 e P4 no `CoopManager` e roda UM tique de `forward_all`.
-
-    O P1 não entra aqui de propósito: ele tem régua própria (o
-    `dispatch_gamepad`), e a pergunta desta seção é justamente se os OUTROS
-    recebem o mesmo tratamento.
-    """
+    """Monta P2, P3 e P4 no `CoopManager` e roda UM tique de `forward_all`."""
     from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
     from hefesto_dualsense4unix.daemon.subsystems import coop as co
     from hefesto_dualsense4unix.daemon.subsystems.coop import (
@@ -943,12 +717,7 @@ _P2, _P3, _P4 = "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04"
 
 def test_a_mira_vale_para_os_jogadores_2_3_e_4(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ORDEM DELA NUMA LINHA. ARRANQUE a chamada de `aplicar_o_movimento` do
-    `coop.forward_all` e este teste reprova.
-
-    *"cara nenhuma solução pode ser feita só pro p1"* — e era exatamente o que
-    a primeira entrega desta sprint fazia.
-    """
+    """A ORDEM DELA NUMA LINHA. ARRANQUE a chamada de `aplicar_o_movimento` do"""
     vpads = _mesa_de_quatro(
         monkeypatch, arranjo=_arranjo(sensibilidade=12),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0),
@@ -961,13 +730,7 @@ def test_a_mira_vale_para_os_jogadores_2_3_e_4(
 
 def test_cada_jogador_le_o_proprio_giroscopio(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `uniq=player.identity` e ponha um endereço fixo: este teste
-    reprova.
-
-    Três controles na mesa, um parado. Se o laço perguntasse sempre ao mesmo
-    aparelho, o controle parado miraria junto — e o que se move na tela do
-    jogo não seria o que a mão daquela pessoa fez.
-    """
+    """ARRANQUE o `uniq=player.identity` e ponha um endereço fixo: este teste"""
     vpads = _mesa_de_quatro(
         monkeypatch, arranjo=_arranjo(sensibilidade=12),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 0.0, 0.0),
@@ -980,9 +743,7 @@ def test_cada_jogador_le_o_proprio_giroscopio(
 
 def test_o_interruptor_de_sensor_e_por_controle_tambem_no_coop(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o portão do `REGISTRO` (ou passe o uniq errado) e este teste
-    reprova: desligar o giroscópio de UM controle desligaria a mira de todos,
-    ou de nenhum."""
+    """ARRANQUE o portão do `REGISTRO` (ou passe o uniq errado) e este teste"""
     vpads = _mesa_de_quatro(
         monkeypatch, arranjo=_arranjo(sensibilidade=12),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0)},
@@ -993,8 +754,7 @@ def test_o_interruptor_de_sensor_e_por_controle_tambem_no_coop(
 
 
 def test_o_gatilho_e_por_controle_no_coop(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE `botoes=botoes` (a mão deste jogador) e este teste reprova: o
-    gatilho de um jogador ligaria a mira do outro."""
+    """ARRANQUE `botoes=botoes` (a mão deste jogador) e este teste reprova: o"""
     vpads = _mesa_de_quatro(
         monkeypatch, arranjo=_arranjo(sensibilidade=12, gatilho="l2"),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0)},
@@ -1005,8 +765,7 @@ def test_o_gatilho_e_por_controle_no_coop(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_sem_arranjo_o_coop_nao_paga_nada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A régua de CUSTO no laço dos secundários: sem mira ligada, o tique não
-    chama o motor nem uma vez por jogador."""
+    """A régua de CUSTO no laço dos secundários: sem mira ligada, o tique não"""
     vpads = _mesa_de_quatro(
         monkeypatch, arranjo=None,
         giro_por_uniq={_P2: (0.0, 900.0, 0.0), _P3: (0.0, 900.0, 0.0)})
@@ -1015,12 +774,7 @@ def test_sem_arranjo_o_coop_nao_paga_nada(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_os_dois_lacos_chamam_o_mesmo_motor() -> None:
-    """ARRANQUE o import e copie o bloco para o `coop`: este teste reprova.
-
-    Duas redações da mesma regra fazem a próxima cura alcançar UMA — que é o
-    defeito que esta casa nomeia como *"cobrir um chamador deixa a próxima
-    pessoa remedindo o mesmo defeito"*.
-    """
+    """ARRANQUE o import e copie o bloco para o `coop`: este teste reprova."""
     import inspect
 
     from hefesto_dualsense4unix.daemon.subsystems import coop, gamepad

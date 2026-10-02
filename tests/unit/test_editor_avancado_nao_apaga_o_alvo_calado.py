@@ -35,7 +35,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("O cinto do editor avançado (os três campos em branco)")
 
 import pytest
@@ -57,7 +56,7 @@ from tests.unit.test_editor_avancado_mostra_a_regra_de_verdade import (
     perfil_dela,
 )
 
-assert APPID  # o appid do Pragmata vem do arquivo irmão, e é o mesmo
+assert APPID
 
 
 @pytest.fixture(autouse=True)
@@ -73,49 +72,22 @@ def _apagar_os_tres_campos(editor: Editor) -> None:
     editor._get("profile_process_name_entry").set_text("")
 
 
-# ---------------------------------------------------------------------------
-# 1. O predicado, sozinho (função pura, sem GTK)
-# ---------------------------------------------------------------------------
-
-
 class TestOPredicado:
     def test_perfil_de_jogo_virando_manual_pede_aviso(self) -> None:
-        """O caso da foto: o perfil do jogo dela perdendo o alvo.
-
-        MORDIDA: remover o predicado (ou deixá-lo devolver sempre False)
-        reprova aqui.
-        """
+        """O caso da foto: o perfil do jogo dela perdendo o alvo."""
         antes = MatchCriteria(window_class=[WM_JOGO])
         assert pa.rebaixamento_para_so_manual(antes, MatchManual()) is True
 
     def test_perfil_sempre_virando_manual_pede_aviso(self) -> None:
-        """"Sempre" → "nunca sozinho" é a mesma perda pelo outro lado.
-
-        MORDIDA: guardar o predicado por `isinstance(antes, MatchCriteria)` —
-        a tentação de copiar a forma do aviso antigo — reprova aqui.
-        """
+        """"Sempre" → "nunca sozinho" é a mesma perda pelo outro lado."""
         assert pa.rebaixamento_para_so_manual(MatchAny(), MatchManual()) is True
 
     def test_quem_ja_era_so_manual_nao_pede_nada(self) -> None:
-        """Round-trip do perfil manual: nada a perder, nada a perguntar.
-
-        Um diálogo por Salvar vira o ruído que se aprende a clicar sem ler — e
-        aí mata também o aviso que importa (a lição do
-        `QUEDA_DE_PRIORIDADE_QUE_PEDE_AVISO`).
-
-        MORDIDA: tirar o `and not _nunca_entra_sozinho(antes)` do predicado.
-        """
+        """Round-trip do perfil manual: nada a perder, nada a perguntar."""
         assert pa.rebaixamento_para_so_manual(MatchManual(), MatchManual()) is False
 
     def test_o_criteria_vazio_conta_como_so_manual_nos_dois_lados(self) -> None:
-        """O acidente e a intenção têm a MESMA cara na tela — e o mesmo efeito.
-
-        `_match_label` já trata os dois como "Só manual (nunca ativa sozinho)";
-        o predicado não pode discordar da coluna "Quando usar".
-
-        MORDIDA: trocar `_nunca_entra_sozinho` por um
-        `isinstance(m, MatchManual)` reprova nas duas asserções.
-        """
+        """O acidente e a intenção têm a MESMA cara na tela — e o mesmo efeito."""
         vazio = MatchCriteria()
         assert pa.rebaixamento_para_so_manual(vazio, MatchManual()) is False
         assert (
@@ -126,19 +98,10 @@ class TestOPredicado:
         )
 
     def test_continuar_com_alvo_nao_pede_nada(self) -> None:
-        """Trocar de jogo não é perder o jogo — e não gera pergunta.
-
-        MORDIDA: um predicado que respondesse "a regra mudou?" em vez de "o
-        perfil perdeu o que o fazia entrar?" reprova aqui.
-        """
+        """Trocar de jogo não é perder o jogo — e não gera pergunta."""
         antes = MatchCriteria(window_class=[WM_JOGO])
         depois = MatchCriteria(window_class=["steam_app_1599660"])
         assert pa.rebaixamento_para_so_manual(antes, depois) is False
-
-
-# ---------------------------------------------------------------------------
-# 2. O Salvar pergunta — e obedece à resposta dela
-# ---------------------------------------------------------------------------
 
 
 class TestOSalvarPergunta:
@@ -178,16 +141,7 @@ class TestOSalvarPergunta:
     def test_o_aviso_cita_o_rotulo_da_coluna_quando_usar(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O diálogo não pode chamar o perfil de uma coisa e a lista de outra.
-
-        Mesma disciplina do `confirm_downgrade_match_to_any` desde a
-        SALVAR-NAO-REBAIXA-02: o rótulo vem de `_match_label`, que é a fonte da
-        coluna "Quando usar".
-
-        MORDIDA: passar um literal no `regra_atual=` (ou omiti-lo) reprova
-        aqui — o diálogo diria "Só neste programa" de um perfil que a lista
-        chama de "Sempre".
-        """
+        """O diálogo não pode chamar o perfil de uma coisa e a lista de outra."""
         perfil = Profile(name="vitoria", match=MatchAny(), priority=100)
         editor = Editor(cache=[perfil])
         editor.selecionado = perfil.name
@@ -196,9 +150,6 @@ class TestOSalvarPergunta:
         editor.resposta_manual = False
 
         editor.ligar_o_avancado()
-        # Um gesto dela na regra, para as guardas SALVAR-NAO-REBAIXA saírem da
-        # frente: sem isso o Salvar preserva a regra do disco e não há o que
-        # perguntar.
         editor._get("profile_window_class_entry").set_text("firefox")
         editor._get("profile_window_class_entry").set_text("")
         editor._regra_tocada = True
@@ -210,11 +161,7 @@ class TestOSalvarPergunta:
     def test_ela_disse_sim_e_o_perfil_vira_so_manual(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """NUNCA recusar o gesto dela: o cinto pergunta, não decide.
-
-        MORDIDA: trocar a pergunta por uma recusa (um `return` seco quando os
-        três campos estão vazios) reprova aqui — o perfil não seria salvo.
-        """
+        """NUNCA recusar o gesto dela: o cinto pergunta, não decide."""
         editor = self._editor_aberto_no_jogo(monkeypatch)
         editor.resposta_manual = True
 
@@ -228,12 +175,7 @@ class TestOSalvarPergunta:
     def test_o_perfil_que_ja_era_so_manual_salva_sem_perguntar(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Round-trip do manual: abrir, mexer na prioridade, salvar — sem ruído.
-
-        MORDIDA: um cinto guardado só por "os três campos estão vazios" (sem
-        olhar o que o perfil ERA) pergunta aqui, e vira o diálogo que se
-        aprende a clicar sem ler.
-        """
+        """Round-trip do manual: abrir, mexer na prioridade, salvar — sem ruído."""
         perfil = Profile(name="coop_local", match=MatchManual(), priority=45)
         editor = Editor(cache=[perfil])
         editor.selecionado = perfil.name
@@ -271,14 +213,7 @@ class TestOSalvarPergunta:
     def test_o_aviso_antigo_continua_sendo_o_dono_do_caminho_dele(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """COR-A intacta: virar "Sempre" segue perguntando pelo diálogo antigo.
-
-        Os dois avisos são irmãos, não concorrentes — e o novo não pode ter
-        roubado o caminho do velho.
-
-        MORDIDA: fundir os dois avisos num diálogo só, ou trocar o `if` solto
-        do cinto novo por um `elif` mal encaixado, reprova aqui.
-        """
+        """COR-A intacta: virar "Sempre" segue perguntando pelo diálogo antigo."""
         perfil = perfil_dela()
         editor = Editor(cache=[perfil])
         editor.selecionado = perfil.name
@@ -294,18 +229,9 @@ class TestOSalvarPergunta:
         assert editor.salvos == []
 
 
-# ---------------------------------------------------------------------------
-# 3. O diálogo novo obedece às duas doutrinas da casa
-# ---------------------------------------------------------------------------
-
-
 class TestODialogoNovo:
     def test_passa_pelo_envelope_da_casa(self) -> None:
-        """DIÁLOGO-QUE-MATA-A-JANELA-01: nada de `dialog.run()` cru.
-
-        MORDIDA: trocar `executar_dialogo(dialog, ...)` por `dialog.run()` no
-        diálogo novo reprova aqui — e derrubaria a janela dela de verdade.
-        """
+        """DIÁLOGO-QUE-MATA-A-JANELA-01: nada de `dialog.run()` cru."""
         import inspect
 
         from hefesto_dualsense4unix.app import gui_dialogs
@@ -315,10 +241,7 @@ class TestODialogoNovo:
         assert ".run()" not in src
 
     def test_nasce_com_o_tema_do_app(self) -> None:
-        """GUI-05/P5: diálogo sem a classe abre CLARO no COSMIC (XWayland).
-
-        MORDIDA: apagar a linha `_apply_app_theme(dialog)` do diálogo novo.
-        """
+        """GUI-05/P5: diálogo sem a classe abre CLARO no COSMIC (XWayland)."""
         import inspect
 
         from hefesto_dualsense4unix.app import gui_dialogs
@@ -327,13 +250,7 @@ class TestODialogoNovo:
         assert "_apply_app_theme(" in src
 
     def test_o_default_e_cancelar(self) -> None:
-        """Um Enter distraído não pode custar a regra do perfil dela.
-
-        Mesma escolha do `confirm_downgrade_match_to_any`, e pela mesma razão.
-
-        MORDIDA: trocar o default para `Gtk.ResponseType.OK` (o que o
-        `prompt_overwrite_existing` faz, porque lá o preço é outro).
-        """
+        """Um Enter distraído não pode custar a regra do perfil dela."""
         import inspect
 
         from hefesto_dualsense4unix.app import gui_dialogs
@@ -342,13 +259,7 @@ class TestODialogoNovo:
         assert "set_default_response(Gtk.ResponseType.CANCEL)" in src
 
     def test_o_texto_nao_promete_o_contrario_do_que_acontece(self) -> None:
-        """O diálogo antigo diz "vale para TUDO" — aqui é o oposto exato.
-
-        Reusar aquela frase seria o aviso mentindo sobre o que ela vai perder.
-
-        MORDIDA: copiar o texto secundário do `confirm_downgrade_match_to_any`
-        para o diálogo novo reprova nas duas asserções.
-        """
+        """O diálogo antigo diz "vale para TUDO" — aqui é o oposto exato."""
         import inspect
 
         from hefesto_dualsense4unix.app import gui_dialogs

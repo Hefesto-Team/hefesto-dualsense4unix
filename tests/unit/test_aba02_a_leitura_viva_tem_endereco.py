@@ -38,10 +38,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 BANCADA = RAIZ / "mockup/02-controles.html"
 
-#: QUANTOS LUGARES A BANCADA DESENHA — e o número vem do DONO da mesa do
-#: desenho (`monta.MESA`), nunca digitado. O `MESA` deste arquivo é outra coisa:
-#: é a mesa VIVA dela, com dois controles. Confundir os dois é o que faria esta
-#: régua cobrar quatro chips de uma fita que só desenha os conectados.
 def _lugares_da_bancada() -> int:
     import monta
 
@@ -51,13 +47,11 @@ def _lugares_da_bancada() -> int:
 LUGARES = _lugares_da_bancada()
 
 
-#: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 UNIQ_RADIO = "aa:bb:cc:00:00:02"
 
 #: OS DOIS CONTROLES DA MESA DELA, na forma do `state_full` medido em
 #: 03/09/2026: um `is_primary` COM leitura e um por rádio SEM `inputs` nenhum.
-#: O segundo é metade da mesa dela e é o card que mais mentia.
 CABO = {
     "uniq": UNIQ_CABO, "transport": "usb", "battery_pct": 95, "player_slot": 1,
     "vpad_backend": "uhid",
@@ -82,9 +76,6 @@ MESA = [
      "mascara": "DualSense"},
 ]
 
-#: OS 46 ENDEREÇOS QUE A LEITURA VIVA PRECISA, montados pela mesma regra que os
-#: escreve — e não digitados. Uma lista à mão aqui seria a segunda cópia da
-#: gramática, e ela envelheceria calada no dia em que um eixo mudasse de nome.
 GLIFOS = [
     "cross", "circle", "square", "triangle",
     "dpad_up", "dpad_down", "dpad_left", "dpad_right",
@@ -113,14 +104,7 @@ def a02():
 
 @pytest.fixture()
 def ctx(a02):
-    """O `Contexto` da mesa dela, com a BANCADA como lista de endereços válidos.
-
-    POR QUE A BANCADA E NÃO O PUBLICADO: `_so_se_a_pagina_tiver` pergunta à
-    página PUBLICADA, e **publicar é ato dela**. Perguntar ao publicado hoje
-    faria este arquivo passar por VACUIDADE — o pacote não emitiria nenhum dos
-    46 e não haveria o que conferir. É o mesmo desvio que
-    `test_aba02_a_identidade_vem_da_fita` já usa, pela mesma razão.
-    """
+    """O `Contexto` da mesa dela, com a BANCADA como lista de endereços válidos."""
     from pacotes import Contexto
 
     a02._ENDERECOS = frozenset(
@@ -129,18 +113,8 @@ def ctx(a02):
     a02._ENDERECOS = None
 
 
-# ---------------------------------------------------------------------------
-# 1. O DESENHO TEM ONDE O PRODUTO ESCREVER
-# ---------------------------------------------------------------------------
 def test_a_bancada_tem_os_quarenta_e_seis_enderecos_da_leitura_viva():
-    """Sem eles a pintura escreve zero, calada — e foi o estado até hoje.
-
-    A CONTA PASSOU DE 2 PARA 4 — 07/09/2026,
-    CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01. Os quatro lugares são o MESMO
-    cartão desde hoje; até aqui o vazio não tinha endereço nenhum, e `!= 2` era
-    exatamente o número que o defeito produzia. Ela não afrouxou: passou a
-    cobrar os 46 nos QUATRO assentos, que é onde o dado dela pode chegar.
-    """
+    """Sem eles a pintura escreve zero, calada — e foi o estado até hoje."""
     doc = BANCADA.read_text(encoding="utf-8")
     faltam = [c for c in DA_LEITURA_VIVA
               if doc.count(f'data-campo="{c}"') != LUGARES]
@@ -166,15 +140,10 @@ def test_o_glifo_e_a_barra_declaram_o_alvo_que_o_piloto_precisa():
         ), f"`{campo}` não declara `data-hef-alvo=\"{alvo}\"`"
 
 
-# ---------------------------------------------------------------------------
-# 2. O PRODUTO ESCREVE — e escreve o que LEU
-# ---------------------------------------------------------------------------
 def test_os_glifos_acendem_os_apertados_e_apagam_o_resto(a02):
     """Os dezesseis, um a um. No desenho três ficam acesos para sempre."""
     v = a02.leitura_viva(CABO)
     acesos = {n for n in GLIFOS if v[f"glifo-{n}"]}
-    # `l2` entra porque 200 passa do limiar do produto (`L2_R2_THRESHOLD` = 30);
-    # `r2` fica fora porque 12 não passa. É a mesma conta do `_refresh_glyphs`.
     assert acesos == {"cross", "r1", "l2"}
 
 
@@ -231,12 +200,7 @@ def test_os_sensores_usam_a_grafia_de_largura_fixa_da_gtk(a02):
 
 
 def test_a_barra_negativa_cresce_para_a_esquerda_e_a_positiva_para_a_direita(a02):
-    """As duas metades são exclusivas: uma tem largura, a outra tem zero.
-
-    É o que faz o par `right:50%` / `left:50%` desenhar os mesmos pixels que o
-    `left:L%;width:W%` de um elemento só — e é a única forma de a barra andar
-    com o alvo `largura`, que é o que o piloto tem.
-    """
+    """As duas metades são exclusivas: uma tem largura, a outra tem zero."""
     v = a02.leitura_viva(CABO)
     assert float(v["giro-y-neg"]) > 0 and v["giro-y-pos"] == "0"
     assert v["accel-y-neg"] == "0" and float(v["accel-y-pos"]) > 0
@@ -249,13 +213,9 @@ def test_a_cor_da_barra_sai_do_dono_e_nao_daqui(a02):
     v = a02.leitura_viva(CABO)
     assert v["giro-y-cor"] == "var(--red)"
     assert v["accel-y-cor"] == "var(--green)"
-    # O giro em Z é ZERO: a barra não afirma direção nenhuma.
     assert v["giro-z-cor"] == mesa_viva._barra_bipolar(0.0, 500.0)["background"]
 
 
-# ---------------------------------------------------------------------------
-# 3. SEM LEITOR, NADA DE NÚMERO — o card que mais mentia
-# ---------------------------------------------------------------------------
 def test_sem_leitor_tudo_volta_ao_repouso_e_nao_ao_desenho(a02):
     """O `_reset_inputs_render` da GTK, linha por linha.
 
@@ -276,21 +236,13 @@ def test_sem_leitor_tudo_volta_ao_repouso_e_nao_ao_desenho(a02):
 
 
 def test_o_sensor_ausente_e_diferente_do_sensor_em_zero(a02):
-    """`gyro` que não veio é travessão; `gyro` em zero é `+0.0`.
-
-    Os leitores de sensor nascem sob demanda (`sensor_hub.leitura`), então o
-    bloco some e volta com o controle ligado. Zero fingindo repouso é o que
-    `gyro_do_inputs` existe para não deixar acontecer.
-    """
+    """`gyro` que não veio é travessão; `gyro` em zero é `+0.0`."""
     ausente = a02.leitura_viva({"inputs": {"buttons": []}})
     em_zero = a02.leitura_viva({"inputs": {"gyro": {"x": 0.0, "y": 0.0, "z": 0.0}}})
     assert ausente["giro-x"] == "—"
     assert em_zero["giro-x"].strip() == "+0.0"
 
 
-# ---------------------------------------------------------------------------
-# 4. O PACOTE LEVA OS 46 À TELA
-# ---------------------------------------------------------------------------
 def test_o_pacote_emite_os_quarenta_e_seis_para_os_dois_cards(a02, ctx):
     p = a02.pacote(ctx)
     for uniq in (UNIQ_CABO, UNIQ_RADIO):
@@ -299,9 +251,7 @@ def test_o_pacote_emite_os_quarenta_e_seis_para_os_dois_cards(a02, ctx):
 
 
 def test_o_pacote_nao_inventa_endereco_que_a_pagina_nao_tem(a02, ctx):
-    """A outra metade da régua: emitir a mais é órfão no `casamento`, e mentira
-    na conta de `cobertura.pintados` — o pacote se reportaria pintando o que não
-    pinta. É o defeito que custou 13 relatados para 10 pintados em 01/09/2026."""
+    """A outra metade da régua: emitir a mais é órfão no `casamento`, e mentira"""
     tem = a02._enderecos_da_pagina()
     p = a02.pacote(ctx)
     sobrando = [c for c in p["cards"][UNIQ_CABO] if c not in tem]
@@ -316,25 +266,12 @@ def test_a_conta_de_cobertura_inclui_a_leitura_viva(a02, ctx):
     assert p["cobertura"]["pintados"] >= 2 * len(DA_LEITURA_VIVA)
 
 
-# ---------------------------------------------------------------------------
-# 5. O GERADOR VOLTA A RODAR — e a bancada é reproduzível
-# ---------------------------------------------------------------------------
 def test_a_ancora_do_plastico_acha_os_chips_da_fita_de_hoje():
-    """`monta.fita()` pôs `data-campo="fita-chip"` ENTRE o `class` e o `style`.
-
-    Com a âncora exigindo os dois vizinhos, `python3 aba02.py` morria com
-    `ERRO no plástico: 2 caixa(s) e 0 chip(s)` — e `monta()` GRAVA antes deste
-    pós-processamento, então quem rodasse o gerador ficava com a bancada dela
-    meio pronta no disco. A régua olha a FORMA de hoje, não o número.
-    """
+    """`monta.fita()` pôs `data-campo="fita-chip"` ENTRE o `class` e o `style`."""
     import aba02
     from monta import fita
 
-    # A MESA DO MOCKUP, e não a de cima: os dois controles dela têm cor lida,
     # que é a condição para `monta.fita()` escrever o `style="--plastico:…"`.
-    # Com um controle por rádio (cor não lida) o chip nasce SEM estilo — e uma
-    # régua montada sobre ele acharia um chip só e chamaria isso de forma
-    # quebrada. É o número de `CONECTADOS` que a âncora do gerador cobra.
     clicavel = aba02.fita_clicavel(fita(ativo="p1"))
     achados = aba02.CHIP_COM_COR.findall(clicavel)
     assert len(achados) == len(aba02.CONECTADOS), (

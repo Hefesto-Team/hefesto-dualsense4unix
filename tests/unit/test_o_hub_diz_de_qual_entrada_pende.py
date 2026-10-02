@@ -1,26 +1,4 @@
-"""O hub diz de qual entrada pende — O-MAPA-QUE-ELA-CORRIGE-01, passo 5.
-
-Pedido dela: *«identificar onde fica o hub»*. A face «Num hub ou extensão» não
-sabia que pendia da entrada 3: o plugue 3 dizia «Hub · 3-1», a face dizia «4 de
-7», e nada ligava um ao outro. Declarar «Hub» na 3 PIORAVA: nascia uma segunda
-face com quatro buracos inventados, e o painel passava a «15 de 19» — a
-deduplicação comparava só o nome da face (D-2609-O-HUB-PENDE-DA-ENTRADA).
-<!-- noqa-acento: citação literal dela -->
-
-A ligação é do dono (``entrada_a_entrada.de_quem_pende``), sobre o que o
-Mapear gravou no disco — por isso vale com o hub desplugado. A tela a recebe
-pelo arranjo: ``daEntrada``, o ``titulo`` («Hub na Entrada 3»), a
-``diverge`` (a frase da divergência) e o ``hubLido``.
-
-A MORDIDA: devolva a deduplicação pelo nome no
-``arranjo_desta_maquina._o_que_ela_declarou_nas_entradas`` (``nome in nomes``
-no lugar de ``numero in ligadas``) — o «Hub» na 3 volta a criar a face de
-quatro buracos, e «15 de 19» reprova
-(``test_hub_declarado_na_3_nao_cria_face``).
-
-Máquina sintética (a forma da dela, de ``test_o_nome_da_entrada_e_da_posicao``)
-e o censo sintético do hub de dois chips, nos barramentos ``3``/``4`` dela.
-"""
+"""O hub diz de qual entrada pende — O-MAPA-QUE-ELA-CORRIGE-01, passo 5."""
 
 from __future__ import annotations
 
@@ -47,8 +25,6 @@ def _aparelho(caminho: str, mbps: float, classe: str, *, hub: bool = False) -> A
     )
 
 
-#: O hub de dois chips na entrada 3 (``3-1``/``3-1.1`` e o gêmeo ``4-1``/``4-1.1``)
-#: e dois aparelhos nele: o teclado na 11 e o adaptador na 13.
 _CENSO = Censo(
     aparelhos=(
         _aparelho("3-1", 480.0, "09", hub=True),
@@ -93,8 +69,7 @@ def _a_face(dado: dict[str, Any], nome: str) -> dict[str, Any]:
 
 
 def test_a_face_do_hub_pende_da_3() -> None:
-    """Sem declarar nada: o barramento lê a face 9…15 na 3, e a tela diz
-    «Hub na Entrada 3» e marca a 3."""
+    """Sem declarar nada: o barramento lê a face 9…15 na 3, e a tela diz"""
     documento = _documento()
     pende = ee.de_quem_pende(documento.mapa)
     assert pende == {_HUB: ee.Pendencia("3", None, False, "3")}
@@ -115,8 +90,7 @@ def test_hub_declarado_na_3_nao_cria_face() -> None:
 
 
 def test_so_hub_na_5_vale_a_dela_e_diz_onde_o_computador_le() -> None:
-    """Só «Hub» na 5, e nada na 3: vale a dela, com a linha a mais — e sem a
-    face fantasma."""
+    """Só «Hub» na 5, e nada na 3: vale a dela, com a linha a mais — e sem a"""
     dado = _arranjo(_documento(**{"5": {"liga": "hub"}}))
     face = _a_face(dado, _HUB)
     assert face["daEntrada"] == "5"
@@ -127,8 +101,7 @@ def test_so_hub_na_5_vale_a_dela_e_diz_onde_o_computador_le() -> None:
 
 
 def test_hub_declarado_com_nada_lido_desenha_os_quatro_buracos() -> None:
-    """Uma máquina sem o hub no disco: o hub declarado na 5 é a face de quatro
-    buracos, como antes."""
+    """Uma máquina sem o hub no disco: o hub declarado na 5 é a face de quatro"""
     dado = _a_maquina_dela()
     dado["mapa"]["faces"] = dado["mapa"]["faces"][:2]
     for numero in range(9, 16):

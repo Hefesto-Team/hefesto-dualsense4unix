@@ -1,14 +1,4 @@
-"""O doctor sabe dizer se o alto-falante do controle ainda pode dormir.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-16: o «Canal dormindo»
-saiu da tela por ordem dela (O-ALTO-FALANTE-DIZ-ATIVO-01), e era o único aviso
-indireto de que o drop-in 54 do WirePlumber faltava — o leitor Python dele só
-alimentava a janela GTK. O `doctor.sh` passa a ler o disco: sem o arquivo, ou
-com o de outra versão, avisa e diz o gesto; com o desta versão, passa.
-
-A MORDIDA, medida: trocar o `warn` do arquivo ausente por `pass` reprova o
-primeiro teste; tirar a chamada do `main`, o último.
-"""
+"""O doctor sabe dizer se o alto-falante do controle ainda pode dormir."""
 
 from __future__ import annotations
 

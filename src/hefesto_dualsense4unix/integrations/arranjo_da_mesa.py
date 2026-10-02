@@ -81,11 +81,8 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     SLOTS_POR_SEGUNDO,
 )
 
-# ══ 1. O VOCABULÁRIO ═════════════════════════════════════════════════════
 
-#: entrada -> caminho de barramento. Declarado uma vez, envelhece devagar.
 Mapa = Mapping[str, str]
-#: id do aparelho -> caminho de barramento. Medido agora, envelhece num cabo.
 Leitura = Mapping[str, str]
 
 SELO_MEDIDO = "medido"
@@ -94,7 +91,6 @@ SELO_ESPEC = "espec"
 
 CLASSES_DE_RADIO = frozenset({"bt", "wifi", "teclado", "mouse"})
 
-#: a ordem de decisão: quem tem exigência dura escolhe antes.
 ORDEM_DE_DECISAO = ("hub", "teclado", "wifi", "bt", "mouse", "webcam")
 
 
@@ -269,9 +265,6 @@ class Controle:
 @dataclass(frozen=True)
 class PlanoDosControles:
     adaptadores: tuple[Adaptador, ...]
-    #: fatias por segundo já comprometidas em cada adaptador. É FLOAT porque o
-    #: número medido é 260,4 / 276,7 — arredondar aqui recriaria a cópia que a
-    #: D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO acabou de matar.
     carga: Mapping[str, float]
     destino: Mapping[str, str]
     cabe: bool
@@ -286,21 +279,12 @@ class Variante:
     opcoes: Opcoes = field(default_factory=Opcoes)
 
 
-# ══ 2. AS PEÇAS QUE TODO O RESTO USA ═════════════════════════════════════
-
 _SO_DIGITOS = re.compile(r"^(0|[1-9][0-9]*)$")
 _CAMINHO = re.compile(r"^(\d+)-(.+)$")
 
 
 def _chaves_em_ordem_js(d: Mapping[str, object]) -> list[str]:
-    """As chaves na ordem em que o JavaScript as percorre.
-
-    ``Object.keys`` põe as chaves que parecem índice em ordem numérica
-    crescente e só depois as demais, em ordem de inserção. Um dicionário Python
-    devolve tudo em ordem de inserção. A diferença só aparece quando dois
-    caminhos iguais disputam a mesma entrada — e é exatamente o tipo de
-    divergência silenciosa que este porte existe para não ter.
-    """
+    """As chaves na ordem em que o JavaScript as percorre."""
     inteiras = sorted((k for k in d if _SO_DIGITOS.match(k)), key=int)
     vistas = set(inteiras)
     return inteiras + [k for k in d if k not in vistas]
@@ -379,15 +363,8 @@ def ocupada(faces: Iterable[Face], plano: Mapping[str, str], entrada: Entrada) -
     return bool(mae is not None and mae.n in plano)
 
 
-# ══ 3. O QUE SE DERIVA DA LEITURA ════════════════════════════════════════
-
-
 def alocacao(mapa: Mapa, leitura: Leitura) -> dict[str, str]:
-    """entrada -> id do aparelho. **Derivado**, nunca guardado.
-
-    A versão que lia uma alocação em cache dava resposta VELHA depois de um
-    reexame: o dongle que ela moveu ainda era relatado na entrada antiga.
-    """
+    """entrada -> id do aparelho. **Derivado**, nunca guardado."""
     fora: dict[str, str] = {}
     for entrada in _chaves_em_ordem_js(mapa):
         caminho = mapa[entrada]
@@ -399,12 +376,7 @@ def alocacao(mapa: Mapa, leitura: Leitura) -> dict[str, str]:
 
 
 def caminho_do_hub(mesa: Mesa) -> str | None:
-    """O caminho do hub externo AGORA — ``None`` quando ele não está na mesa.
-
-    Às 02h36 de 25/08/2026 o hub dela saiu do barramento e levou os três
-    adaptadores Bluetooth junto. Sem hub não há topologia de hub para deduzir,
-    e a resposta honesta de ``regiao_do_caminho`` passa a ser ``None``.
-    """
+    """O caminho do hub externo AGORA — ``None`` quando ele não está na mesa."""
     for aparelho in mesa.aparelhos:
         if aparelho.classe == "hub":
             return mesa.leitura.get(aparelho.id)
@@ -412,15 +384,7 @@ def caminho_do_hub(mesa: Mesa) -> str | None:
 
 
 def regiao_do_caminho(caminho: str | None, caminho_hub: str | None) -> str | None:
-    """``"hub"``, ``"pc"`` ou ``None`` — deduzido do barramento, não chutado.
-
-    ``3-1.1.1`` pende de ``3-1``, que é o hub. Esconder o aparelho por não saber
-    a entrada exata é jogar fora metade da informação que existe.
-
-    O lado USB 3.0 do mesmo hub físico aparece noutro barramento (``4-1.x``
-    contra ``3-1.x``) porque hub 3.0 é dual-bus — mesmo metal, dois números; daí
-    a segunda comparação.
-    """
+    """``"hub"``, ``"pc"`` ou ``None`` — deduzido do barramento, não chutado."""
     if not caminho_hub or not caminho:
         return None
     if caminho.startswith(caminho_hub + "."):
@@ -433,12 +397,7 @@ def regiao_do_caminho(caminho: str | None, caminho_hub: str | None) -> str | Non
 
 
 def sem_entrada(mesa: Mesa) -> list[SemEntrada]:
-    """Os aparelhos que a leitura vê e o mapa não sabe onde estão.
-
-    Medido na mesa dela em 24/08, com 8 de 16 entradas declaradas: quatro dos
-    cinco aparelhos que ela moveu caíram aqui. É o argumento medido para
-    declarar as entradas vazias também.
-    """
+    """Os aparelhos que a leitura vê e o mapa não sabe onde estão."""
     conhecidos = {mesa.mapa[k] for k in _chaves_em_ordem_js(mesa.mapa)}
     hub = caminho_do_hub(mesa)
     fora: list[SemEntrada] = []
@@ -451,23 +410,11 @@ def sem_entrada(mesa: Mesa) -> list[SemEntrada]:
 
 
 def candidatas(mesa: Mesa, regiao: str) -> list[Entrada]:
-    """As entradas daquela região que ainda não foram declaradas.
-
-    De 16 candidatas para 4, sem ela declarar nada. Isso é dedução, não chute.
-    """
+    """As entradas daquela região que ainda não foram declaradas."""
     declaradas = set(mesa.mapa)
     alvo = "hub" if regiao == "hub" else "pc"
     return [e for e in todas_as_entradas(mesa.faces) if e.n not in declaradas and e.onde == alvo]
 
-
-# ══ 4. A TABELA DE NOTAS ═════════════════════════════════════════════════
-#
-# Cada entrada ganha uma nota por aparelho; ele vai para a de maior nota. Não é
-# otimizador global: é nota explicável, porque conselho que a pessoa não entende
-# ela não segue.
-#
-# O selo não é enfeite — é a coluna `de_onde_sei` do mapa de canais, e é o que
-# impede raciocínio de se vestir de medição (decisão dela, `D-ORDEM-DE-SERVICO`).
 
 REGRAS: Mapping[str, tuple[Regra, ...]] = {
     "teclado": (
@@ -581,7 +528,6 @@ def nota_de(
             razoes.append(Razao(regra.selo, regra.texto))
             if regra.essencial:
                 peso = "essencial"
-    # penalidade que NÃO casou é uma exigência satisfeita: também explica
     for regra in regras:
         if regra.n >= 0 or regra.quando(entrada, ctx):
             continue
@@ -598,32 +544,14 @@ def nota_de(
     return Nota(n=n, razoes=tuple(razoes), peso=peso)
 
 
-# ══ 5. O PLANEJADOR ══════════════════════════════════════════════════════
-
-
 def _sem_proibicao(_entrada: Entrada) -> bool:
     return False
 
 
 def _receita_manda_mover(de: str | None, para: str | None, motivo: Motivo | None) -> bool:
-    """A ÚNICA regra de *"isto vira ordem de serviço"* — e ela tem um dono só.
-
-    Ela morava dentro de :func:`receita`, e o mapa (que sai de :func:`planejar`)
-    não a consultava. Daí o defeito que a
-    ``D-MAPA-SEM-RECEITA`` fechou: nas variantes que PROÍBEM a entrada de hoje o
-    desenho mostrava o aparelho no lugar novo e a receita não mandava mexer, e
-    quem olhava a tela via o aparelho noutro lugar **sem instrução nenhuma**.
-
-    Agora as duas beiras perguntam a mesma coisa a esta função, e por isso não
-    há como discordarem. Arrancá-la (devolver sempre ``True``) faz o mapa E a
-    receita voltarem a mandar mexer à toa — é a mordida do §5 de
-    ``test_arranjo_invariantes.py``.
-    """
+    """A ÚNICA regra de *"isto vira ordem de serviço"* — e ela tem um dono só."""
     if not para or de == para:
         return False
-    # aparelho que ainda não tem lugar no mapa entra sempre: não há "ficar onde
-    # está" para comparar. Quem já tem lugar só entra se o movimento MELHORA —
-    # ganho infinito é o movimento forçado por terceiro, que também melhora.
     return not de or (motivo is not None and motivo.ganho > 0)
 
 
@@ -631,7 +559,7 @@ def planejar(mesa: Mesa, op: Opcoes | None = None) -> Plano:
     """O melhor arranjo, e por quê — entrada por entrada."""
     op = op or Opcoes()
     proibida = op.proibir or _sem_proibicao
-    aloc = alocacao(mesa.mapa, mesa.leitura)  # nunca planejar sobre leitura velha
+    aloc = alocacao(mesa.mapa, mesa.leitura)
 
     plano: dict[str, str] = {}
     motivo: dict[str, Motivo] = {}
@@ -650,7 +578,6 @@ def planejar(mesa: Mesa, op: Opcoes | None = None) -> Plano:
             melhor_efetiva = 0
             for candidata in livres:
                 nota = nota_de(mesa, aparelho, candidata, plano, ja_postos, aloc)
-                # o bônus de ficar parado só DESEMPATA: nunca troca uma escolha melhor
                 efetiva = nota.n + (op.bonus_parado if candidata.n == atual else 0)
                 if melhor is None or efetiva > melhor_efetiva:
                     melhor, melhor_nota, melhor_efetiva = candidata, nota, efetiva
@@ -669,9 +596,6 @@ def planejar(mesa: Mesa, op: Opcoes | None = None) -> Plano:
     return Plano(plano=plano, motivo=motivo)
 
 
-#: A frase que a receita diz quando a variante tirou do tabuleiro a entrada em
-#: que o aparelho está hoje. É o único caso em que ele SAI de um lugar bom sem
-#: ganho nenhum, e sem esta linha a ordem de serviço não teria porquê.
 _PORQUE_A_VARIANTE_TIROU = "esta opção não usa a entrada {de}, onde ele está hoje"
 
 
@@ -683,38 +607,7 @@ def _o_mapa_so_move_o_que_a_receita_manda(
     aloc: Mapping[str, str],
     proibida: Callable[[Entrada], bool],
 ) -> None:
-    """``D-MAPA-SEM-RECEITA`` (25/08/2026): se não há ordem, o mapa não move nada.
-
-    **O defeito, medido em 25/08 sobre a mesa dela de 24/08.** Em ``Sem o
-    extensor`` e ``Sem usar o hub`` a variante PROÍBE a entrada em que o dongle
-    está hoje. O planejador então o realoja — e o mapa desenha isso —, mas a
-    nota da entrada nova é PIOR que a da atual (``-25``, ``-60``, ``-130`` nos
-    três casos medidos), e a receita, que só manda o que melhora, cala. Quem
-    olha a tela vê o aparelho noutro lugar e não recebe instrução nenhuma.
-
-    **A decisão dela**, entre três caminhos — mover e dizer que o ganho é zero,
-    baixar o corte para o ganho zero contar, ou este: *"se não há ordem, o mapa
-    não move nada. Uma verdade só na tela: o desenho mostra o que a receita
-    manda fazer."* O preço, que ela aceitou por escrito: **o mapa passa a
-    mostrar MENOS do que o motor calculou** — o aparelho fica desenhado onde
-    está, e a melhoria que ele perde não aparece na tela.
-
-    **A ordem importa:** roda DEPOIS de :func:`_intercambiaveis_ficam`, porque
-    aquele passe ainda troca destinos entre irmãos e recalcula motivos.
-
-    DUAS ENTRADAS DE HOJE NÃO ACEITAM O APARELHO DE VOLTA, e nas duas o
-    movimento vira ORDEM em vez de sumir do mapa — que é a mesma invariante
-    vista do outro lado:
-
-    * **a variante proibiu aquela entrada.** ``Sem o extensor`` com o dongle na
-      ponta do extensor não pode devolvê-lo para lá: o desenho passaria a
-      mostrar, numa opção chamada *sem o extensor*, um dongle no extensor. Aqui
-      não existe *"ficar onde está"* para comparar — a entrada saiu do
-      tabuleiro —, então o movimento é forçado, e a receita diz por quê com
-      :data:`_PORQUE_A_VARIANTE_TIROU`;
-    * **outro aparelho ficou com ela** (direto, ou pela mãe do extensor). É o
-      mesmo *"forçado por terceiro"* que :func:`_motivo_de` já sabe nomear.
-    """
+    """``D-MAPA-SEM-RECEITA`` (25/08/2026): se não há ordem, o mapa não move nada."""
     for aparelho in mesa.aparelhos:
         de = entrada_de_em(aloc, aparelho.id)
         para = entrada_de_em(plano, aparelho.id)
@@ -725,7 +618,7 @@ def _o_mapa_so_move_o_que_a_receita_manda(
 
         entrada_de_hoje = por_num(mesa.faces, de)
         if entrada_de_hoje is None:
-            continue  # entrada declarada que não existe em face nenhuma: nada a desenhar
+            continue
 
         del plano[para]
         tirada = proibida(entrada_de_hoje)
@@ -756,12 +649,7 @@ def _motivo_de(
     aloc: Mapping[str, str],
     nota: Nota,
 ) -> Motivo:
-    """Quanto este destino melhora — e se o movimento foi forçado por terceiro.
-
-    Se a entrada de hoje foi tomada por outro aparelho no plano, o movimento é
-    FORÇADO: não há "ficar onde está" para comparar, e escondê-lo faria o mapa e
-    a receita discordarem na tela.
-    """
+    """Quanto este destino melhora — e se o movimento foi forçado por terceiro."""
     tomada = bool(atual and plano.get(atual) and plano.get(atual) != aparelho.id)
     entrada_atual = por_num(mesa.faces, atual) if (atual and not tomada) else None
     nota_atual = (
@@ -794,14 +682,7 @@ def _intercambiaveis_ficam(
     ja_postos: Sequence[Entrada],
     aloc: Mapping[str, str],
 ) -> None:
-    """A segunda regra que salva a credibilidade: irmão não troca com irmão.
-
-    Aparelhos de mesma classe E mesmo modelo não têm por que trocar de lugar
-    entre si. Se um deles já está numa das entradas de destino, ele fica nela —
-    o conjunto de entradas é o mesmo, e cada troca evitada é um movimento a
-    menos que ela precisa fazer. Sem isto o plano mandava mover dois UB500
-    idênticos entre a 9 e a 15a.
-    """
+    """A segunda regra que salva a credibilidade: irmão não troca com irmão."""
     por_modelo: dict[str, list[Aparelho]] = {}
     for aparelho in mesa.aparelhos:
         por_modelo.setdefault(f"{aparelho.classe}|{aparelho.nome}", []).append(aparelho)
@@ -833,7 +714,6 @@ def _intercambiaveis_ficam(
             if aparelho.id in novo:
                 plano[novo[aparelho.id]] = aparelho.id
 
-        # o motivo acompanha a ENTRADA, não o aparelho: recalcula para quem mudou
         for aparelho in grupo:
             onde = novo.get(aparelho.id)
             if not onde:
@@ -846,9 +726,6 @@ def _intercambiaveis_ficam(
             motivo[aparelho.id] = _motivo_de(
                 mesa, aparelho, entrada_de_em(aloc, aparelho.id), plano, (), aloc, nota
             )
-
-
-# ══ 6. A RECEITA: a diferença entre o que está e o que devia ═════════════
 
 
 def _rotulo(aparelho: Aparelho) -> tuple[str, str]:
@@ -876,16 +753,7 @@ _FECHO = Movimento(
 
 
 def receita(mesa: Mesa, op: Opcoes | None = None) -> list[Movimento]:
-    """Só entra aqui o que MELHORA.
-
-    Aparelho que já está numa entrada tão boa quanto a melhor candidata fica
-    onde está e não vira movimento. Sem esta linha o plano mandava mexer no cabo
-    do hub e no mouse à toa.
-
-    Quem decide é :func:`_receita_manda_mover`, e o mapa pergunta à MESMA
-    função: desde a ``D-MAPA-SEM-RECEITA`` o desenho não pode mostrar um
-    movimento que esta lista não mande.
-    """
+    """Só entra aqui o que MELHORA."""
     resultado = planejar(mesa, op)
     aloc = alocacao(mesa.mapa, mesa.leitura)
     movimentos: list[Movimento] = []
@@ -916,7 +784,6 @@ def receita(mesa: Mesa, op: Opcoes | None = None) -> list[Movimento]:
             essencial=motivo.essencial, ganho=motivo.ganho,
         ))
 
-    # os essenciais primeiro, e dentro deles o de maior ganho
     movimentos.sort(key=lambda m: (0 if m.essencial else 1, -m.ganho))
     if movimentos:
         movimentos.append(_FECHO)
@@ -937,9 +804,6 @@ def _linha_de_hoje(mesa: Mesa, aparelho: Aparelho, de: str | None) -> Linha:
     if no_hub and aparelho.classe == "teclado":
         return Linha(SELO_MEDIDO, f"Hoje ele está pendurado no hub (<code>{caminho}</code>).")
     return Linha(SELO_MEDIDO, f"Hoje ele está na entrada <b>{de}</b> (<code>{caminho}</code>).")
-
-
-# ══ 7. O JULGAMENTO POR ENTRADA, no modo "estou segurando" ═══════════════
 
 
 def julgar(
@@ -992,10 +856,6 @@ def julgar(
         if no_hub:
             return Veredito("melhor", "melhor lugar",
                             "no alto do rack, com a antena acima das cabeças")
-        # A PALAVRA "mesa" SAIU DA TELA — 05/09/2026, ordem dela: *"muda o termo
-        # pra objeto e sinônimos nesses casos"*. Aqui o sentido é ALTURA FÍSICA,
-        # e o contraste com "no alto do rack" (duas linhas acima) é o que a frase
-        # vende: "escrivaninha" o diz inteiro, sem a palavra.
         return Veredito("serve", "serve", "entrada direta, mas na altura da escrivaninha")
 
     if na_mao == "wifi":
@@ -1034,12 +894,6 @@ def julgar(
     return None
 
 
-# ══ 8. AS VARIANTES, com o preço em PALAVRA ══════════════════════════════
-#
-# Um arranjo só não serve: o melhor no papel pode ser impossível na mesa — o cabo
-# não alcança, o hub está longe, a entrada de trás é inacessível. Cada variante é
-# a MESMA regra com uma restrição declarada.
-
 VARIANTES: tuple[Variante, ...] = (
     Variante("melhor", "O melhor no papel",
              "Sem restrição: o arranjo que a regra escolhe quando tudo é possível.",
@@ -1066,11 +920,7 @@ def variante_por_id(ident: str) -> Variante:
 
 
 def consequencias(mesa: Mesa, op: Opcoes | None = None) -> list[str]:
-    """O que se perde nesta variante, **em palavra**.
-
-    *"437 pontos pior"* não diz nada a ninguém; a pessoa precisa saber O QUÊ
-    fica pior, para decidir se aceita.
-    """
+    """O que se perde nesta variante, **em palavra**."""
     plano = planejar(mesa, op).plano
     fora: list[str] = []
 
@@ -1107,10 +957,7 @@ def consequencias(mesa: Mesa, op: Opcoes | None = None) -> list[str]:
 
 
 def qualidade(mesa: Mesa, op: Opcoes | None = None) -> int:
-    """A nota total de um plano. **Só** para ordenar variantes entre si.
-
-    Nunca vai para a tela: quem vai é ``consequencias()``.
-    """
+    """A nota total de um plano. **Só** para ordenar variantes entre si."""
     resultado = planejar(mesa, op)
     aloc = alocacao(mesa.mapa, mesa.leitura)
     total = 0
@@ -1129,19 +976,8 @@ def qualidade(mesa: Mesa, op: Opcoes | None = None) -> int:
     return total
 
 
-# ══ 9. A RE-IDENTIFICAÇÃO POR SERIAL ═════════════════════════════════════
-
-
 def reexame(mesa: Mesa, antes: Leitura, agora: Leitura) -> list[Mudanca]:
-    """Quem mudou de lugar entre duas leituras — e para onde, quando dá para saber.
-
-    O caminho de barramento de quem foi movido é outro; o **serial** não. É por
-    ele que o produto sabe quem foi para onde, sem ela declarar nada.
-
-    Medido em 24/08, duas leituras com 1h50 de intervalo: cinco aparelhos
-    mudaram e só o teclado caiu numa entrada declarada. O não-reconhecido também
-    ensina — é o argumento para declarar as entradas vazias também.
-    """
+    """Quem mudou de lugar entre duas leituras — e para onde, quando dá para saber."""
     por_caminho: dict[str, str] = {}
     for entrada in _chaves_em_ordem_js(mesa.mapa):
         por_caminho[mesa.mapa[entrada]] = entrada
@@ -1160,32 +996,8 @@ def reexame(mesa: Mesa, antes: Leitura, agora: Leitura) -> list[Mudanca]:
     return mudou
 
 
-# ══ 10. OS CONTROLES ═════════════════════════════════════════════════════
-#
-# A CONTA, medida (A/B de 25/07/2026, `integrations/dualsense_bt_audio.py:76-78`):
-#   sem microfone .. 260,4 relatórios por segundo
-#   com microfone .. 276,7  (o áudio NÃO abre canal novo: divide a fila:
-#                            170,5 de entrada + 106,2 de áudio)
-# Gatilho, vibração, barra de luz, giroscópio e touch andam no MESMO canal HID —
-# eles não somam pacote. **Só o microfone muda a conta.**
-#
-# O NÚMERO TEM UM DONO SÓ, e não é este módulo. Até 25/08/2026 estas três linhas
-# guardavam `260`, `277` e `1600` — literais copiados do mockup, ARREDONDADOS.
-# O dono é `integrations/radio_da_mesa.py`, que tem portão contra a linha 23 de
-# `docs/data/mapa-controles.csv` (`test_radio_da_mesa_bate_com_o_mapa.py`); este
-# módulo estava FORA desse portão, então remedir o A/B corrigia o dono e deixava
-# o motor mentindo com tudo verde. Agora as três saem de lá por IMPORTAÇÃO —
-# nunca por cópia —, e por isso não há como divergirem.
-# D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO (25/08/2026): corrigir nos DOIS, Python E
-# mockup, que é a regra da casa aplicada inteira — fato errado sai de todos os
-# lugares onde aparece. O mockup que ela abre mudou de número, e é o preço aceito.
-
-#: Fatias por segundo de um controle **sem** microfone.
 CUSTO_SEM_MIC = HZ_INPUT_SEM_MIC * SLOTS_POR_RELATORIO
-#: Fatias por segundo de um controle **com** o microfone de pé — as duas metades
-#: da mesma fila somadas, porque o áudio não abre canal novo.
 CUSTO_COM_MIC = (HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC) * SLOTS_POR_RELATORIO
-#: O teto do rádio, por adaptador. Especificação do Bluetooth Classic.
 SLOTS = SLOTS_POR_SEGUNDO
 
 
@@ -1212,24 +1024,13 @@ def plano_dos_controles(
     controles: Sequence[Controle],
     adaptadores: Sequence[Adaptador],
 ) -> PlanoDosControles:
-    """Em qual adaptador cada controle deve ficar.
-
-    A regra que salva o conselho: parte-se de onde cada um JÁ está, e só se move
-    alguém quando isso **baixa a carga do adaptador mais cheio**. Trocar custa
-    caro de verdade — desfazer o pareamento, apagar o cache SDP e parear de
-    novo, com o controle na mão. Sem esta regra o plano mandava trocar três
-    controles entre dongles idênticos, sem ganho.
-
-    **Sem adaptador nenhum, nada cabe** — e esse é o estado real dela às 02h36
-    de 25/08/2026, quando o hub saiu do barramento levando os três dongles.
-    """
+    """Em qual adaptador cada controle deve ficar."""
     if not adaptadores:
         return PlanoDosControles((), {}, {}, cabe=False, sobra=0)
 
     carga: dict[str, float] = {a.id: 0.0 for a in adaptadores}
     destino: dict[str, str] = {}
 
-    # 1. cada um fica onde está — se o adaptador dele ainda existe
     orfaos: list[Controle] = []
     for controle in controles:
         if controle.onde in carga:
@@ -1238,13 +1039,11 @@ def plano_dos_controles(
         else:
             orfaos.append(controle)
 
-    # 2. quem perdeu o adaptador vai para o menos carregado
     for controle in orfaos:
         alvo = _menos_carregado(adaptadores, carga)
         destino[controle.nome] = alvo
         carga[alvo] += _custo(controle)
 
-    # 3. rebalanceia SÓ enquanto isso baixar o pico
     for _ in range(len(controles) * 2):
         cheio = _mais_carregado(adaptadores, carga)
         vazio = _menos_carregado(adaptadores, carga)
@@ -1264,8 +1063,6 @@ def plano_dos_controles(
 
     pico = max(carga[a.id] for a in adaptadores)
 
-    # quantos MAIS cabem: simula acrescentar até um adaptador estourar. Dividir a
-    # folga total daria número maior e falso — controle não se parte em dois.
     teste = dict(carga)
     sobra = 0
     while sobra < 32:

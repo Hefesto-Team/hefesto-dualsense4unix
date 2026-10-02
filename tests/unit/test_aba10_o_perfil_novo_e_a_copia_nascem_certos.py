@@ -6,7 +6,7 @@ que ficou no disco dela.
 
 1. **O perfil novo nascia em prioridade ZERO** — PERFIL-NASCE-CERTO-01. A
    janela estável calcula ``max(prioridade dos catch-all) + 10``
-   (``_prioridade_acima_dos_catch_all``, ``profiles_actions.py:4172``); esta aba
+   (``_prioridade_acima_dos_catch_all``, ``profiles_actions.py:2590``); esta aba
    não calculava nada. O defeito tem caso medido, com ela jogando, em 26/07: o
    perfil que ela criou para o Pragmata nasceu em 0 e NUNCA valia no jogo,
    porque o catch-all dela (100) vencia em todo o resto. **Ela não errou a
@@ -41,8 +41,6 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
 
-#: A MESA — endereço MASCARADO (octetos 4 e 5 zerados). Nenhum endereço real de
-#: rádio entra em arquivo versionado.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
@@ -125,20 +123,10 @@ def _ctx() -> Contexto:
                     conectados=list(MESA), estados={})
 
 
-# --------------------------------------------------------------------------
-# 1. O PERFIL NOVO NASCE ACIMA DOS QUE VALEM SEMPRE
-# --------------------------------------------------------------------------
 def test_o_perfil_novo_nasce_acima_dos_catch_all(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """A conta é a da janela estável: maior catch-all + a folga de 10.
-
-    Os números são os do disco DELA, medidos em 03/09: os catch-all são
-    ``meu_perfil`` (1) e ``fallback`` (0), então o novo sai em **11**.
-
-    MORDIDA: troque a chamada por ``Profile(name=nome, match=regra)`` (que é
-    como o gesto era até 03/09) e este teste reprova dizendo "nasceu em 0".
-    """
+    """A conta é a da janela estável: maior catch-all + a folga de 10."""
     _o_disco_tem(monkeypatch, _catch_all("meu_perfil", 1),
                  _catch_all("fallback", 0), _de_jogo("Pragmata", 80))
     a10_perfis.novo(_ctx(), {}, PonteDeMentira())
@@ -153,12 +141,7 @@ def test_o_perfil_novo_nasce_acima_dos_catch_all(
 def test_a_conta_do_perfil_novo_respeita_o_teto_do_esquema(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """Com um catch-all no teto, somar 10 estouraria o esquema.
-
-    Quem sabe disso é a função do produto (``min(PRIORIDADE_MAXIMA, …)``), e é
-    por isso que ela é CHAMADA em vez de copiada: uma segunda conta aqui teria
-    de lembrar do teto sozinha, e o ``Profile`` recusaria a gravação.
-    """
+    """Com um catch-all no teto, somar 10 estouraria o esquema."""
     from hefesto_dualsense4unix.app.actions.profiles_actions import PRIORIDADE_MAXIMA
 
     _o_disco_tem(monkeypatch, _catch_all("teto", PRIORIDADE_MAXIMA))
@@ -205,9 +188,6 @@ def test_o_perfil_novo_nao_e_ativado(
         f"o Novo trocou o perfil que está valendo: {ponte.chamadas}")
 
 
-# --------------------------------------------------------------------------
-# 2. A CÓPIA NÃO HERDA O CARIMBO DE PONTE
-# --------------------------------------------------------------------------
 def _com_carimbo(nome: str) -> Any:
     """Um perfil de jogo que JÁ TEM ponte confirmada — o caso do defeito."""
     from hefesto_dualsense4unix.profiles.schema import PonteConfirmada
@@ -242,12 +222,7 @@ def test_a_copia_nao_leva_o_carimbo_de_ponte(
 def test_a_copia_continua_levando_o_perfil_inteiro(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """A outra ponta, e ela é a cura que NÃO pode ser desfeita por esta.
-
-    BUG-DUPLICATE-NO-CONFIG-COPY-01: a cópia já teve só o nome trocado e o resto
-    virando default. Cortar o carimbo não pode virar cortar o resto — a dica
-    dela promete *"Copia o perfil inteiro"*.
-    """
+    """A outra ponta, e ela é a cura que NÃO pode ser desfeita por esta."""
     original = _com_carimbo("Pragmata")
     original.priority = 77
     _o_disco_tem(monkeypatch, original)

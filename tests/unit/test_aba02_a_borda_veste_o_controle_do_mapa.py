@@ -51,25 +51,14 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: A BANCADA, e não o publicado. É onde o desenho de HOJE está — o publicado
-#: ainda tem a cura de duas folhas de 03/09 às 01h31, e apontar para ele daria
-#: verde sobre página congelada, que é a armadilha mais cara do
-#: `COMO-OLHAR-A-TELA.md`.
 BANCADA = RAIZ / "mockup/02-controles.html"
 
-#: OS TRÊS QUE O DESENHO NÃO TEM. O mockup traz Cosmic Red (`p1`) e Starlight
-#: Blue (`p2`); estes três não aparecem em lugar nenhum da página, então uma cor
-#: certa na tela só pode ter vindo do mapa dela.
-#:
-#: O `rgb(…)` é o que o WebKit devolve; o hexa ao lado é o `casca_esq` do
-#: `docs/data/cores-do-dualsense.csv`, que é o que ela amostrou.
 FORA_DO_DESENHO = {
     "nova-pink": ("#e35b8c", "rgb(227, 91, 140)"),
     "astro-bot": ("#e8e4dc", "rgb(232, 228, 220)"),
     "sterling-silver": ("#c5c8cc", "rgb(197, 200, 204)"),
 }
 
-#: O que o desenho crava, e nenhum destes pode sobreviver a um aparelho outro.
 DO_DESENHO = ("rgb(174, 51, 90)", "rgb(126, 184, 212)")
 
 ROTEIRO = """
@@ -95,11 +84,7 @@ ROTEIRO = """
 
 
 def _bootstrap() -> str:
-    """O BOOTSTRAP lido do FONTE do piloto, e não importado.
-
-    Importar `hefesto_vivo` arrastaria a janela GTK inteira para dentro do
-    teste. É como os outros testes do pintor fazem, e pela mesma razão.
-    """
+    """O BOOTSTRAP lido do FONTE do piloto, e não importado."""
     import re
 
     achou = re.search(r'^BOOTSTRAP = r"""(.*?)"""$',
@@ -147,14 +132,6 @@ def _rodar_no_webkit(folhas: dict[str, str]) -> dict:
 
     view.connect("load-changed", carregou)
     view.load_uri(BANCADA.as_uri())
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do
-    # mesmo processo — 05/09/2026, e a cura já existia em cinco arquivos
-    # irmãos (*"Já matou onze medições"*). Aqui ela faltava: medido no
-    # lote-00 da suíte, DUAS voltas em três davam *"o WebKit não respondeu
-    # em 30 s"* com o `saiu` VAZIO — o laço não estourou, ele foi MORTO por
-    # um `main_quit` que outro teste deixou armado. Reprodutível só na
-    # ordem aleatória, que é o que o torna invisível quando se roda o
-    # arquivo sozinho.
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -166,22 +143,11 @@ def _rodar_no_webkit(folhas: dict[str, str]) -> dict:
     return dict(json.loads(saiu[0]))
 
 
-#: A TABELA DIGITADA DE ANTES, CONGELADA AQUI — só as duas linhas que a mordida
-#: usa. Até 25/09/2026 ela morava no produto (`cor_do_plastico.TONS`, 21 hexas
-#: aproximados, e `NOMES_DE_FABRICA`, com `Spider-Man 2` sem o `Marvel's`), e a
-#: mordida a pedia de lá. A O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01 fez o
-#: produto LER o mapa dela, e a regra velha deixou de existir para ser pedida:
-#: sem a cópia, a mordida mediria a cura contra ela mesma e passaria calada.
 _TONS_DE_ANTES = {"nova pink": "#ee7ea6"}
 
 
 def _folha_velha(mesa: list[dict[str, str]]) -> str:
-    """A folha pela REGRA ANTIGA — nome de tela → a tabela digitada → hexa.
-
-    É a cura ARRANCADA, escrita aqui para que a mordida rode em vez de morar num
-    comentário. Ela repete a antiga de propósito: o que se mede é a TELA que
-    aquela regra produzia.
-    """
+    """A folha pela REGRA ANTIGA — nome de tela → a tabela digitada → hexa."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
     from pacotes import a02_controles as a02
 
@@ -202,23 +168,16 @@ def medido() -> dict:
         slug: a02.folha_do_plastico([{"pref": "p1", "cor": slug}])
         for slug in FORA_DO_DESENHO
     }
-    # A MESA DELA DE HOJE, com os dois: P1 White no cabo, P2 Galactic Purple no
-    # rádio. Ela entra aqui porque é a única mesa que ELA vê, e porque é a que
-    # prova que o assento 2 também obedece.
     folhas["mesa-dela"] = a02.folha_do_plastico([
         {"pref": "p1", "cor": "white"},
         {"pref": "p2", "cor": "galactic-purple"},
     ])
-    # A MORDIDA, pela regra velha, na mesma ida ao motor.
     folhas["mordida-nova-pink"] = _folha_velha([{"pref": "p1", "nome": "Nova Pink"}])
     folhas["mordida-spider"] = _folha_velha(
         [{"pref": "p1", "nome": "Marvel's Spider-Man 2"}])
     return _rodar_no_webkit(folhas)
 
 
-# ---------------------------------------------------------------------------
-# 1. A BANCADA nasce com o desenho — sem isto o resto não prova nada
-# ---------------------------------------------------------------------------
 def test_a_pagina_virgem_mostra_o_desenho_que_ela_aprovou(medido: dict) -> None:
     """Se a página já nascesse neutra, qualquer cor depois pareceria cura."""
     assert medido["virgem_p1"] == DO_DESENHO[0], (
@@ -226,9 +185,6 @@ def test_a_pagina_virgem_mostra_o_desenho_que_ela_aprovou(medido: dict) -> None:
     assert medido["virgem_p2"] == DO_DESENHO[1]
 
 
-# ---------------------------------------------------------------------------
-# 2. A LEI — um modelo que o desenho NÃO tem chega à tela na cor dela
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("slug", sorted(FORA_DO_DESENHO))
 def test_um_modelo_fora_do_desenho_pinta_a_borda(medido: dict, slug: str) -> None:
     """Nova Pink, Astro Bot, Sterling Silver: nenhum aparece na página."""
@@ -249,27 +205,13 @@ def test_o_assento_sem_controle_nao_fica_com_a_cor_do_desenho(medido: dict) -> N
 
 
 def test_a_mesa_dela_de_hoje_chega_certa_aos_dois_assentos(medido: dict) -> None:
-    """P1 White (`#e4e0d8`) e P2 Galactic Purple (`#74588e`), do mapa dela.
-
-    O White aqui NÃO é `#edeef0`: aquele é o da tabela aproximada que saiu do
-    caminho em 03/09. O `#e4e0d8` é o `casca_esq` que ela amostrou, e é o mesmo
-    que o chip da fita mostra três centímetros acima.
-    """
+    """P1 White (`#e4e0d8`) e P2 Galactic Purple (`#74588e`), do mapa dela."""
     assert medido["medidas"]["mesa-dela"]["p1"] == "rgb(228, 224, 216)"
     assert medido["medidas"]["mesa-dela"]["p2"] == "rgb(116, 88, 142)"
 
 
-# ---------------------------------------------------------------------------
-# 3. AS MORDIDAS — a cura arrancada, medida na mesma tela
-# ---------------------------------------------------------------------------
 def test_a_mordida_com_a_tabela_velha_a_tela_erra_a_cor(medido: dict) -> None:
-    """A regra antiga pinta o Nova Pink em `rgb(238, 126, 166)`, que não é dela.
-
-    Não é "um tom parecido": é a tabela `TONS`, cujo próprio cabeçalho diz que
-    vinte das vinte e uma linhas são aproximadas. O chip da fita ao lado
-    continuaria em `rgb(227, 91, 140)` — dois valores da mesma cor, na mesma
-    tela, que é o defeito que ELA reportou.
-    """
+    """A regra antiga pinta o Nova Pink em `rgb(238, 126, 166)`, que não é dela."""
     _hexa, certo = FORA_DO_DESENHO["nova-pink"]
     velho = medido["medidas"]["mordida-nova-pink"]["p1"]
     assert velho != certo, (
@@ -281,15 +223,7 @@ def test_a_mordida_com_a_tabela_velha_a_tela_erra_a_cor(medido: dict) -> None:
 
 
 def test_a_mordida_da_grafia_a_borda_some_no_spider_man(medido: dict) -> None:
-    """`Marvel's Spider-Man 2` é o nome que a MESA entrega, do CSV dela.
-
-    Até 25/09/2026 `NOMES_DE_FABRICA` escrevia `Spider-Man 2`, sem o
-    `Marvel's`. Pela regra velha os dois não casavam e a borda caía no neutro —
-    o card perdia a única marca que diz de quem ele é. Eram TRÊS modelos assim;
-    a grafia fechou quando a tabela passou a ser lida do CSV (ver
-    `test_aba02_a_cor_do_plastico_vem_do_aparelho.py`). A mordida continua
-    medindo a regra velha, por nome, que é o que ela prova.
-    """
+    """`Marvel's Spider-Man 2` é o nome que a MESA entrega, do CSV dela."""
     from pacotes import a02_controles as a02
 
     velho = medido["medidas"]["mordida-spider"]["p1"]

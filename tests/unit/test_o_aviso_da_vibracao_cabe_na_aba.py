@@ -103,53 +103,21 @@ except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem 
 
 PAGINA = "05-vibracao.html"
 
-#: MAC da faixa SINTÉTICA da casa — há dois portões de anonimato nesta árvore, e
-#: um endereço mascarado ainda carrega o OUI do aparelho dela.
 UNIQ = "aa:bb:cc:00:00:01"
 
-#: O ESTADO DA MÁQUINA DELA em 02/09/2026: dois controles na mesa e
-#: ``rumble_ff.vpads == 0``. Nele as DUAS primeiras frases acendem — a dos
-#: pedidos e a do alcance —, e é a soma delas que empurra a tela.
 SEM_VPAD = {"rumble_policy": "max", "rumble_mult_applied": 1.5,
             "native_mode": False,
             "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 0}}
 
-#: OS DOIS ESTADOS EM QUE O AVISO DO ALCANCE ACENDE — RECADO-VPAD-01
-#: (17/09/2026). Até aqui a régua olhava UM, e a frase era uma só. Depois da
-#: RECADO-VPAD-01 ela é TRÊS: a segunda metade passou a sair de
 #: ``rumble_actions._causa_do_alcance_perdido``, que pergunta ao painel da aba
-#: Jogar onde o interruptor está. Uma régua de largura que mede um dos ramos
-#: deixa os outros nascerem largos — e a frase larga só aparece na máquina
-#: dela, no dia errado.
-#:
-#: O terceiro ramo (o painel dizendo **Desligado**) NÃO entra, e a ausência é
-#: medida, não esquecimento: ele é **inalcançável** pela porta deste aviso. O
-#: quadrante do ``sem_dono_do_rumble`` exige ``native_mode`` falso, e com ele
 #: falso ``mode_of_state`` só devolve ``gamepad`` ou ``desktop`` — os dois
-#: membros de ``MODOS_LIGADOS``. Não há estado a montar aqui.
 ESTADOS_DO_AVISO: dict[str, dict] = {
-    # O da máquina dela: o chip «Navegação» aceso, que é o `desktop`.
     "navegacao": SEM_VPAD,
-    # VPAD-09, a falha TOTAL: o interruptor em pé e nenhum gamepad virtual —
-    # `/dev/uhid` e `/dev/uinput` sem a ACL do `uaccess` no boot.
     "vpad-nao-subiu": {**SEM_VPAD, "gamepad_emulation": {"enabled": True}},
 }
 
-#: O MIOLO da janela do produto — o que a página realmente recebe. É importado
-#: de ``gui/ponte_da_tela`` porque **o que tem dono não se digita**: a conta
-#: (``TAMANHO_NA_TELA`` menos a ``HeaderBar``) mora lá, e um número copiado para
-#: cá envelheceria calado — foi exatamente o que aconteceu com o ``(1180, 757)``
-#: que esta linha trazia até 04/09/2026.
 JANELA = TAMANHO_OCULTA
 
-#: O que o navegador devolve por linha da ``.vib-estado`` e pelo miolo que a
-#: contém. ``base`` e ``fundo_do_miolo`` são coordenadas de viewport: a linha
-#: cortada é a que tem ``base`` maior que o fundo.
-#:
-#: O ``viewport`` vem junto para a régua poder DECLARAR em que janela mediu — e
-#: ``.janela > .miolo`` e não ``.miolo``: a classe se repete dentro do SVG do
-#: controle (``interface/topo.html:562`` avisa disso), e ali ela é a bola do
-#: polegar do analógico.
 MEDIDA = r"""
 (function(){
   var de = document.documentElement;
@@ -177,11 +145,7 @@ MEDIDA = r"""
 
 
 def _carga(estado: dict) -> dict:
-    """A carga do tique, montada pelo PACOTE da aba — nunca HTML digitado aqui.
-
-    Um dublê de bloco mediria a régua contra ela mesma: o que tem de caber é o
-    que o produto emite, e quem o emite é ``a05_vibracao.pacote``.
-    """
+    """A carga do tique, montada pelo PACOTE da aba — nunca HTML digitado aqui."""
     import pacotes
 
     falso = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
@@ -197,13 +161,7 @@ def _carga(estado: dict) -> dict:
 @pytest.fixture(scope="module", params=sorted(ESTADOS_DO_AVISO),
                 ids=sorted(ESTADOS_DO_AVISO))
 def medido(request) -> dict:
-    """Abre a aba publicada num WebKit offscreen, pinta a carga e mede o DOM.
-
-    O ORÇAMENTO É INJETADO: ``_orcamento_da_maquina`` lê o ``maquina.json`` da
-    máquina de quem roda, e com ele solto esta régua mediria a configuração da
-    bancada em vez da tela. Com ``None`` a frase do teto cala, que é o silêncio
-    documentado da própria ``texto_do_teto_do_orcamento``.
-    """
+    """Abre a aba publicada num WebKit offscreen, pinta a carga e mede o DOM."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -262,14 +220,6 @@ def medido(request) -> dict:
 
     view.connect("load-changed", carregou)
     view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do
-    # mesmo processo — 05/09/2026, e a cura já existia em cinco arquivos
-    # irmãos (*"Já matou onze medições"*). Aqui ela faltava: medido no
-    # lote-00 da suíte, DUAS voltas em três davam *"o WebKit não respondeu
-    # em 30 s"* com o `saiu` VAZIO — o laço não estourou, ele foi MORTO por
-    # um `main_quit` que outro teste deixou armado. Reprodutível só na
-    # ordem aleatória, que é o que o torna invisível quando se roda o
-    # arquivo sozinho.
     guarda = GLib.timeout_add(20000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -288,30 +238,17 @@ def medido(request) -> dict:
     return lido
 
 
-#: A ALTURA DE UMA SUBLINHA na ``.vib-estado``, em pixels. É consequência do CSS
-#: aprovado (``font-size:12px; line-height:1.5``), e a folga de 2 px é para o
-#: arredondamento do motor — nunca para caber uma segunda sublinha, que custa 18.
 UMA_SUBLINHA = 20
 
 
 def test_a_regua_mede_o_miolo_da_janela_do_produto(medido):
-    """O viewport MEDIDO tem de ser o que a página recebe. Não o que se digitou.
-
-    Uma ``Gtk.OffscreenWindow`` **não tem HeaderBar**: pedir-lhe
-    ``TAMANHO_NA_TELA`` dá à página os ``ALTURA_DA_BARRA`` px que a barra de
-    título come na janela de verdade. Este caso é o que impede a régua de voltar
-    a medir uma janela que não existe — e ele lê o viewport de dentro do motor,
-    em vez de confiar no ``set_default_size``.
-    """
+    """O viewport MEDIDO tem de ser o que a página recebe. Não o que se digitou."""
     assert TAMANHO_OCULTA == (LARGURA_DO_DESENHO, ALTURA_DO_DESENHO), (
         "o dono mudou a conta do desenho e esta régua não foi junto: "
         f"TAMANHO_OCULTA={TAMANHO_OCULTA}")
     assert TAMANHO_NA_TELA[1] - ALTURA_DA_BARRA == ALTURA_DO_DESENHO, (
         "a janela na tela deixou de pedir o desenho MAIS a barra: "
         f"TAMANHO_NA_TELA={TAMANHO_NA_TELA} · ALTURA_DA_BARRA={ALTURA_DA_BARRA}")
-    # O ALVO É `TAMANHO_OCULTA`, e NÃO a `JANELA` desta régua. Comparar a medida
-    # com o que a própria régua pediu seria circular: trocar `JANELA` por
-    # `TAMANHO_NA_TELA` passaria verde, que é o defeito de 02/09 intacto.
     assert medido["viewport"] == {"larg": TAMANHO_OCULTA[0], "alt": TAMANHO_OCULTA[1]}, (
         f"a página recebeu {medido['viewport']} e o miolo da janela do produto é "
         f"{TAMANHO_OCULTA}. Se a diferença na altura for {ALTURA_DA_BARRA} px, "
@@ -320,17 +257,7 @@ def test_a_regua_mede_o_miolo_da_janela_do_produto(medido):
 
 
 def test_cada_frase_da_linha_cabe_numa_sublinha(medido):
-    """Nenhuma das frases pode quebrar em duas — foi assim que o aviso sumiu.
-
-    MEDIDO em 04/09/2026, no miolo real: a caixa da linha tem **1119 px** e a
-    frase mais longa (163 caracteres) põe **957 px** de tinta — 162 px de folga.
-    A frase de 211 caracteres de 02/09 enchia a caixa inteira e transbordava.
-
-    NÚMEROS SUBSTITUÍDOS: esta docstring dizia *"a caixa de texto tem 1072 px …
-    a de hoje ocupa 942, com 130 px de folga"*. Os 130 px eram a folga contra a
-    caixa de **1087 px** que a janela errada (1180 de viewport) produzia; no
-    produto a caixa é 32 px mais larga.
-    """
+    """Nenhuma das frases pode quebrar em duas — foi assim que o aviso sumiu."""
     largas = [x for x in medido["linhas"] if x["alto"] > UMA_SUBLINHA]
     assert not largas, (
         "frase da linha de estado quebrando em mais de uma sublinha — a aba "
@@ -340,11 +267,7 @@ def test_cada_frase_da_linha_cabe_numa_sublinha(medido):
 
 
 def test_o_aviso_nao_e_cortado_pela_borda_do_miolo(medido):
-    """A última linha tem de terminar DENTRO do miolo. Fotografado em 02/09.
-
-    Antes: a segunda sublinha do alerta terminava em 740 e o miolo em 733 —
-    sete pixels fora, com a barra de rolagem à direita.
-    """
+    """A última linha tem de terminar DENTRO do miolo. Fotografado em 02/09."""
     fundo = medido["fundo_do_miolo"]
     fora = [x for x in medido["linhas"] if x["base"] > fundo]
     assert not fora, (

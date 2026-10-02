@@ -36,9 +36,6 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     rotulo_lightbar,
 )
 
-#: Verbos que atribuem a ESCRITA a um terceiro. Nenhum deles é medido pelo
-#: `lightbar_disputada`, que sai de quem tem o `fd` aberto. Lista literal de
-#: propósito: um teste que a derivasse do produto não mediria nada.
 VERBOS_DE_ESCRITA = (
     "escreve",
     "escrevendo",
@@ -53,7 +50,6 @@ VERBOS_DE_ESCRITA = (
     "apagou",
 )
 
-#: A frase que a tela mostrou até 22/08/2026 — o controle negativo da régua.
 FRASE_ANTIGA = "A Steam também escreve nesta barra"
 
 ENTRY_DISPUTADA: dict[str, Any] = {
@@ -85,7 +81,6 @@ def test_o_card_nao_acusa_ninguem_de_escrever_na_barra() -> None:
     assert not acusa_escrita(rotulo), (
         f"o card voltou a atribuir a escrita a um terceiro: {rotulo!r}"
     )
-    # O accent segue a última cor NOSSA — é a informação que existe.
     assert base == (0, 255, 0)
 
 
@@ -101,29 +96,12 @@ def test_o_card_afirma_exatamente_o_que_o_fuser_viu() -> None:
 
 
 def test_a_frase_nomeia_quem_a_sonda_sabe_reconhecer() -> None:
-    """A frase e o ALCANCE da sonda andam juntos — F6 não passa em silêncio.
-
-    Hoje `core/escritor_cru.pids_da_steam` só reconhece a Steam, então nomear a
-    Steam é afirmação medida. No dia em que a sonda aprender outro escritor cru
-    (Lutris, Heroic, `dualsensectl`, um jogo nativo), esta frase vira mentira
-    para quem não usa Steam — e este caso é o alarme que obriga a trocar as
-    duas coisas na mesma leva, nunca uma sem a outra.
-    """
+    """A frase e o ALCANCE da sonda andam juntos — F6 não passa em silêncio."""
     from hefesto_dualsense4unix.core import escritor_cru
 
     rotulo, _base = rotulo_lightbar(dict(ENTRY_DISPUTADA), {})
     assert rotulo is not None and "steam" in rotulo.lower()
 
-    # A RÉGUA LÊ OS CRITÉRIOS, NÃO O TEXTO DO FONTE (06/09/2026,
-    # DAEMON-ACORDADO-01/E2). Até aqui ela fazia `inspect.getsource` e um
-    # `re.findall` atrás de `"pgrep", "-f", ...` — olhava a PALAVRA no lugar do
-    # ATO, que é a forma de defeito que esta casa já nomeou onze vezes. No dia
-    # em que o `pgrep` saiu (a varredura nativa de `/proc` que a
-    # PERF-PROC-SCAN-01 já usava), ela reprovou a MELHORA e não o defeito.
-    #
-    # Ela se salvou pelo desenho: o velho `assert` dizia "a régua ficou
-    # cega" em vez de passar em silêncio, e foi essa linha que apareceu no
-    # vermelho. Régua que sabe anunciar a própria cegueira é o que se pede.
     criterios = [
         escritor_cru._AGULHA_DA_STEAM_NA_CMDLINE,
         escritor_cru._COMM_EXATO_DA_STEAM,

@@ -1,37 +1,4 @@
-"""A ponte do som anda no ritmo do controle — A-PONTE-DO-SOM-ANDA-NO-RITMO-DO-CONTROLE-01.
-
-O QUE ELA OUVIU (29/09/2026, 02h47): o som do jogo no alto-falante do controle
-no rádio cortava a cada ~3 s, só no controle. A ponte lia 480 amostras por
-report de uma fonte a 48 kHz, e o laço não dorme: 48 000 ÷ 480 = **100 reports
-por segundo** (medido pelo `acl_tx` do adaptador, 100,3/s em 45 s, e pelo
-kprobe de 27/09, 100,0/s). O aparelho toca cada quadro de 480 amostras em
-10,667 ms: **93,75 por segundo**. A sobra enche o depósito do aparelho, e ele
-joga fora ~170 ms de uma vez.
-
-A PROVA 0 (29/09, 06h52, sem a orelha dela): um tom de 1300 Hz a 48 kHz pela
-ponte saiu em **1219,35 · 1219,48 · 1219,39 Hz** no microfone de outro
-controle — 1300 x 480/512. É o consumo de 93,75 quadros/s, medido.
-
-A CURA, na origem: a fonte do som entrega no ritmo do aparelho, 45 000 Hz, e o
-PipeWire faz o 512→480 no fluxo. A regra é uma só: **taxa da fonte x 512/48000
-= o que o report lê dela** — 480 para o som, 512 para a háptica.
-
-A REFERÊNCIA DESTA RÉGUA É O FATO MEDIDO, e não a constante do produto: o
-aparelho consome um report a cada **512/48000 s**, digitado aqui com a
-procedência (o ensaio `o_som_pelo_035.py`, 70 s contínuos com a orelha dela em
-10/09/2026, e a prova 0 de 29/09). Medir o produto contra
-``INTERVALO_DE_ENVIO_035`` seria a régua medindo a própria saída.
-
-AS MORDIDAS (cada uma feita e devolvida na entrega, com o md5 conferido)
------------------------------------------------------------------------
-1. a taxa do papel «som» de volta a 48 000 → 512 ≠ 480, e a 1 reprova;
-2. 45 000 para todo papel → a háptica lê 480 ≠ 512, e a 2 reprova;
-3. a chamada do subsystem passando ``taxa=TAXA_DO_ENCODER`` → a 3 reprova;
-4. a fonte a 48 000 → 100/s, e a 4 reprova; e o diário de saída com a
-   constante no lugar do que se mediu → a montagem fora da cadência reprova;
-5. o timbre do ensaio sintetizado a 48 kHz → sai em 1218,75 Hz; e o ritmo do
-   ensaio de volta a ``ms_por_report`` → 100/s. As duas reprovam a 5.
-"""
+"""A ponte do som anda no ritmo do controle — A-PONTE-DO-SOM-ANDA-NO-RITMO-DO-CONTROLE-01."""
 from __future__ import annotations
 
 import argparse
@@ -55,22 +22,11 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: O FATO MEDIDO, com a procedência: o aparelho toca um report a cada 512
-#: amostras de 48 kHz (10,667 ms). O ensaio `scripts/ensaios/o_som_pelo_035.py`
-#: tocou 70 s contínuos assim em 10/09/2026, com a orelha dela; a prova 0 de
-#: 29/09/2026 (06h52) ouviu o tom de 1300 Hz sair em 1219,4 Hz pela ponte que
-#: mandava 100/s — o aparelho toca 480 amostras nesses 10,667 ms.
 SEGUNDOS_POR_REPORT_MEDIDO = Fraction(512, 48_000)
-REPORTS_POR_SEGUNDO_MEDIDO = float(1 / SEGUNDOS_POR_REPORT_MEDIDO)  # 93,75
+REPORTS_POR_SEGUNDO_MEDIDO = float(1 / SEGUNDOS_POR_REPORT_MEDIDO)
 
-#: Faixa forjada da casa: nunca um endereço real.
 UNIQ = "aa:bb:cc:00:00:01"
 SERIAL_DE_MENTIRA = 75833
-
-
-# ---------------------------------------------------------------------------
-# Os dublês — cada um publica o que o real publica
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -102,12 +58,7 @@ class _Abertura:
 
 @pytest.fixture
 def gravadores(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[_Abertura]:
-    """Um `pw-record` e um `parec` de mentira no PATH, que o `shutil.which` acha.
-
-    Eles nunca rodam: o `abrir` só guarda o argv. Estão aqui para que o produto
-    escolha o gravador pelo caminho de verdade (o `which`), sem depender de a
-    máquina ter os dois.
-    """
+    """Um `pw-record` e um `parec` de mentira no PATH, que o `shutil.which` acha."""
     pasta = tmp_path / "bin"
     pasta.mkdir()
     for nome in ("pw-record", "parec"):
@@ -115,8 +66,6 @@ def gravadores(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[_Abe
         caminho.write_text("#!/bin/sh\nexit 1\n", encoding="ascii")
         caminho.chmod(caminho.stat().st_mode | stat.S_IXUSR)
     monkeypatch.setenv("PATH", f"{pasta}{os.pathsep}{os.environ.get('PATH', '')}")
-    # A conferência do alvo responde o que o PipeWire responde quando acerta:
-    # o gravador ligado ao monitor do nó pedido.
     monkeypatch.setattr(
         af, "conferir_o_alvo_do_gravador", lambda rotulo: f"{af.nome_do_sink(UNIQ)}:monitor_FL"
     )
@@ -162,19 +111,11 @@ def _fonte_do_som(abertura: _Abertura, **kw: Any) -> list[str]:
     return abertura.argvs[-1]
 
 
-# ---------------------------------------------------------------------------
-# 1. A fonte do som pede o ritmo do aparelho
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("gravador", ["pw-record", "parec"])
 def test_1_a_fonte_do_som_pede_o_ritmo_do_aparelho(
     gravador: str, gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Taxa da fonte x 512/48000 = as 480 amostras que o report do `0x35` lê.
-
-    MORDIDA: a taxa do papel «som» de volta a 48 000 dá 512 ≠ 480.
-    """
+    """Taxa da fonte x 512/48000 = as 480 amostras que o report do `0x35` lê."""
     (_com_pw_record if gravador == "pw-record" else _com_parec)(monkeypatch)
     argv = _fonte_do_som(gravadores, papel="som")
     assert argv[0] == gravador, f"o produto escolheu {argv[0]}, a régua pediu {gravador}"
@@ -190,21 +131,11 @@ def test_1_a_fonte_do_som_pede_o_ritmo_do_aparelho(
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. A háptica não muda
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("gravador", ["pw-record", "parec"])
 def test_2_a_fonte_da_haptica_fica_em_48_khz(
     gravador: str, gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O bloco háptico lê 512 quadros por report: a fonte dele já anda a 93,75/s.
-
-    MORDIDA: 45 000 para todo papel dá 480 ≠ 512 — a vibração ficaria 6,25%
-    mais lenta que o jogo, e ela sempre andou certa (18/09, «se eu atirei x
-    vezes vibrou x vezes»).
-    """
+    """O bloco háptico lê 512 quadros por report: a fonte dele já anda a 93,75/s."""
     (_com_pw_record if gravador == "pw-record" else _com_parec)(monkeypatch)
     argv = _fonte_do_som(gravadores, papel="haptica", canais=af.CANAIS_DA_HAPTICA)
     assert f"--channels={af.CANAIS_DA_HAPTICA}" in argv
@@ -222,11 +153,6 @@ def test_2b_quem_da_a_taxa_explicita_manda(gravadores: _Abertura,
     _com_parec(monkeypatch)
     argv = _fonte_do_som(gravadores, papel="som", taxa=af.TAXA_DO_ENCODER)
     assert _taxa_do_argv(argv) == af.TAXA_DO_ENCODER
-
-
-# ---------------------------------------------------------------------------
-# 3. Pelo subsystem: a volta de produção que sobe a ponte
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -280,15 +206,7 @@ class _GerenciadorDeMentira:
 def test_3_a_ponte_do_subsystem_sobe_com_o_ritmo_do_aparelho(
     gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A volta de produção, com o `fonte_do_monitor_do_no` VERDADEIRO embrulhado.
-
-    O embrulho só troca o `abrir` (o molde de
-    `test_o_gravador_da_ponte_morre_antes_do_no.py`) e repassa tudo o que o
-    subsystem mandou: um dublê que engolisse os kwargs seria mais pobre que o
-    produto.
-
-    MORDIDA: a chamada do subsystem passando ``taxa=TAXA_DO_ENCODER`` reprova.
-    """
+    """A volta de produção, com o `fonte_do_monitor_do_no` VERDADEIRO embrulhado."""
     from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
     from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
@@ -337,18 +255,12 @@ def test_3_a_ponte_do_subsystem_sobe_com_o_ritmo_do_aparelho(
 def test_3b_os_quatro_controles_do_radio_sobem_no_ritmo_do_aparelho(
     gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P1 a P4 no rádio: cada ponte tem gravador próprio, e os quatro pedem a mesma taxa.
-
-    A régua 3 mede um controle só. A taxa vem do papel, e não do controle, mas
-    a prova que fica só no P1 não diz nada dos outros três: aqui a volta de
-    produção sobe as quatro pontes, e cada argv é conferido.
-    """
+    """P1 a P4 no rádio: cada ponte tem gravador próprio, e os quatro pedem a mesma taxa."""
     from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
     from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
 
     _com_pw_record(monkeypatch)
-    # «Não conferido» é o que o PipeWire responde sem `pw-link`: a ponte sobe.
     monkeypatch.setattr(af, "conferir_o_alvo_do_gravador", lambda _rotulo: None)
     real = af.fonte_do_monitor_do_no
     pedidos: list[tuple[str, str]] = []
@@ -392,11 +304,6 @@ def test_3b_os_quatro_controles_do_radio_sobem_no_ritmo_do_aparelho(
             ponte.descer()
 
 
-# ---------------------------------------------------------------------------
-# 4. No tempo: 180 s de relógio pela ponte de verdade
-# ---------------------------------------------------------------------------
-
-
 class _CodificadorDeMentira:
     """Publica o que o real publica: 200 B por quadro de 1920 B, `None` fora dele."""
 
@@ -436,11 +343,7 @@ SEGUNDOS_DE_RELOGIO = 180.0
 
 
 def _fonte_no_relogio(relogio: _Relogio, taxa: int) -> Any:
-    """Uma fonte com sinal que anda o relógio pelo que entrega: n ÷ (4 x taxa) s.
-
-    É o que o monitor do nó faz: pedir n bytes estéreo s16 bloqueia até o nó
-    ter tocado n ÷ 4 amostras à taxa pedida. Seca em 180 s de relógio.
-    """
+    """Uma fonte com sinal que anda o relógio pelo que entrega: n ÷ (4 x taxa) s."""
 
     def _ler(n: int) -> bytes:
         if relogio.t >= SEGUNDOS_DE_RELOGIO:
@@ -491,13 +394,7 @@ def _taxa_da_regua_1(gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch) -> 
 def test_4_no_tempo_a_ponte_manda_93_75_por_segundo(
     gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """180 s de relógio: 93,75 ± 0,05 reports/s, o `[10]` anda um por report, e o diário o diz.
-
-    O N da fonte é o do argv da régua 1 — a montagem mede a ponte com a taxa
-    que o produto pede, não com um número digitado.
-
-    MORDIDA: a fonte a 48 000 dá 100/s.
-    """
+    """180 s de relógio: 93,75 ± 0,05 reports/s, o `[10]` anda um por report, e o diário o diz."""
     taxa = _taxa_da_regua_1(gravadores, monkeypatch)
     escritos, diario, relogio = _correr_a_ponte(monkeypatch, taxa)
 
@@ -527,15 +424,7 @@ def test_4_no_tempo_a_ponte_manda_93_75_por_segundo(
 def test_4b_o_diario_diz_o_que_a_ponte_fez_e_nao_a_constante(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A mesma ponte com uma fonte FORA da cadência (48 000, explícita): o diário diz 100.
-
-    Com a fonte da cura, o diário e a constante dizem os dois 93,75, e um
-    diário de volta à constante passaria na régua de cima. Esta montagem não
-    depende da cura da taxa.
-
-    MORDIDA: a linha de saída com ``1 / intervalo_de_envio_s`` no lugar das
-    leituras contadas.
-    """
+    """A mesma ponte com uma fonte FORA da cadência (48 000, explícita): o diário diz 100."""
     escritos, diario, relogio = _correr_a_ponte(monkeypatch, 48_000)
     saida = diario.de("som_radio_ponte_saiu")
     assert len(saida) == 1, diario.linhas
@@ -568,16 +457,7 @@ class _VagaDeMentira:
 
 
 def test_4c_a_linha_de_saida_nunca_prende_a_vaga(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Um relógio que levanta na saída: a linha não sai, e a vaga volta ao governador.
-
-    A linha de saída mora no `finally` do laço, ANTES de a vaga voltar. Se o
-    relógio fosse lido fora da guarda dela, a exceção pularia o
-    ``_soltar_a_vaga`` e o adaptador ficaria com uma ponte a menos até o
-    governador reiniciar.
-
-    MORDIDA: ler o relógio na chamada (``relogio() - comeco``) e não dentro da
-    guarda prende a vaga.
-    """
+    """Um relógio que levanta na saída: a linha não sai, e a vaga volta ao governador."""
     monkeypatch.setattr(af, "a_ponte_do_radio_pode_subir", lambda: (True, ""))
     monkeypatch.setattr(af, "CodificadorOpus", _CodificadorDeMentira)
     monkeypatch.setattr(af, "escritor_de_hidraw", lambda _fd: (lambda dados: len(dados)))
@@ -622,11 +502,6 @@ def test_4c_a_linha_de_saida_nunca_prende_a_vaga(monkeypatch: pytest.MonkeyPatch
     assert diario.de("som_radio_ponte_saiu") == []
 
 
-# ---------------------------------------------------------------------------
-# 5. O outro chamador: o ensaio de bancada toca no ritmo e no tom do aparelho
-# ---------------------------------------------------------------------------
-
-
 def _carregar_o_ensaio() -> Any:
     caminho = REPO_ROOT / "scripts" / "ensaios" / "o_som_que_sai.py"
     pasta = str(caminho.parent)
@@ -654,14 +529,7 @@ class _TempoDeMentira:
 
 
 def _frequencia_tocada(pcms: list[bytes]) -> float:
-    """A frequência que o aparelho toca: 480 amostras em 512/48000 s por quadro.
-
-    Conta as trocas de sinal no canal esquerdo e divide pelo tempo em que o
-    aparelho tocou as amostras com som. A porta do pulsado (um trecho longo de
-    zero exato) sai da conta; o zero de uma amostra só, que o seno dá ao passar
-    pelo eixo, fica, porque ele também dura 1/45 000 s no aparelho. Nada aqui
-    usa a taxa do produto.
-    """
+    """A frequência que o aparelho toca: 480 amostras em 512/48000 s por quadro."""
     amostras: list[int] = []
     for pcm in pcms:
         amostras.extend(struct.unpack(f"<{len(pcm) // 2}h", pcm)[0::2])
@@ -684,14 +552,7 @@ def _frequencia_tocada(pcms: list[bytes]) -> float:
 def test_5_o_ensaio_toca_no_ritmo_e_no_tom_do_aparelho(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """`o_som_que_sai.py --escrever` com o `0x35`: 93,75 reports/s e o 1300 Hz que ele anuncia.
-
-    O ensaio inteiro, pela porta dele, com a bancada, o hidraw, o relógio e o
-    codificador de mentira (o codificador guarda o PCM que recebeu).
-
-    MORDIDAS: o timbre sintetizado a 48 kHz sai em 1218,75 Hz; o ritmo de volta
-    a ``ms_por_report`` dá 100/s.
-    """
+    """`o_som_que_sai.py --escrever` com o `0x35`: 93,75 reports/s e o 1300 Hz que ele anuncia."""
     ensaio = _carregar_o_ensaio()
     import hefesto_dualsense4unix.daemon.subsystems.alto_falante as sub
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt_audio

@@ -1,41 +1,8 @@
-"""A4 — "não sei" continua existindo DEPOIS do primeiro clique.
-
-A ``D-A1`` (``docs/process/sprints/2026-08-21-ABA-CONFIGURACOES/DECISOES-ABERTAS.md``)
-diz duas coisas: *"toda declaração nasce em 'não sei'"* e *"'não sei' é resposta
-válida"*. Até 23/08/2026 só a primeira metade existia. O ``SegmentedSelector`` é
-grupo de rádio e IGNORA o clique no botão já afundado
-(``segmented_selector.py``, ``_on_button_toggled``), e não havia gesto de limpar
-em lugar nenhum da aba: quem declarasse "Economia", "Xbox" ou "Vermelho" por
-engano ficava preso àquilo para sempre.
-
-Esta bateria cobre os TRÊS campos que ganharam o botão "Não sei", e cobre cada
-um **até o disco** — não basta o widget mudar de cara. A declaração que sai do
-gesto é a que vai para o ``maquina.json``, e o que se afirma é que o campo
-voltou a ``None`` lá dentro.
-
-Os outros dois campos apontados no achado NÃO estão aqui, e a ausência é
-deliberada:
-
-* **Jogador 1..5** — não existe "desafixado" para onde voltar: o
-  ``identity.number.set`` recusa ``number < 1`` e o daemon PERMUTA em vez de
-  fixar. É decisão dela (verbo IPC novo, ou reescrever a dica), não conserto.
-* **Ambiente** — o que não volta é a AUSÊNCIA de correção, e mora em
-  ``app/ambiente.py``.
-
-AS MORDIDAS, arrancadas e conferidas em 23/08/2026
----------------------------------------------------
-
-Uma por campo, e todas a mesma: tirar o item ``("nao_sei", "Não sei")`` da lista
-do seletor. ``set_active_id`` de um id inexistente é NO-OP (não emite "changed"),
-então o gesto some sem erro nenhum e o valor antigo sobrevive ao disco — que é
-exatamente o defeito que o achado descreve.
-"""
+"""A4 — "não sei" continua existindo DEPOIS do primeiro clique."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: os três campos são widgets de verdade, e "pulei porque não
-# tenho GTK" é reprovação no job `gtk-real`.
 exigir_gi_real("os seletores de declaração da aba Configurações")
 
 from pathlib import Path
@@ -63,28 +30,15 @@ from hefesto_dualsense4unix.utils.maquina import (
     gravar_maquina,
 )
 
-#: O endereço deste controle de bancada, com a máscara da casa (octetos 4 e 5
-#: zerados) e na forma que vai ao disco: doze hexa minúsculos, sem separador.
 ENDERECO = "aabbcc0000d8"
 
 
 @pytest.fixture
 def arquivo(tmp_path: Path) -> Path:
-    """O ``maquina.json`` desta bancada — e a prova de que ele não é o dela.
-
-    CANÁRIO, no molde de ``test_maquina_a_declaracao_persiste.py``: se algum dia
-    o módulo resolver ``config_dir`` no topo, o caminho deixa de cair no
-    ``tmp_path`` e esta asserção é a única coisa entre a suíte e o ``~/.config``
-    da mantenedora.
-    """
+    """O ``maquina.json`` desta bancada — e a prova de que ele não é o dela."""
     caminho = caminho_da_maquina()
     assert tmp_path in caminho.parents, f"{caminho} escapou do tmp da bancada"
     return caminho
-
-
-# ---------------------------------------------------------------------------
-# Orçamento
-# ---------------------------------------------------------------------------
 
 
 class _HostDoOrcamento:
@@ -93,10 +47,6 @@ class _HostDoOrcamento:
     def __init__(self, gravado: str | None) -> None:
         self._maquina_pendente: dict[str, Any] | None = None
         self._orcamento_lido = lambda: gravado
-        #: PENDURADA no hospedeiro de propósito: solta numa local, a caixa é
-        #: coletada ao fim do `_montar`, o GTK destrói os filhos junto e o
-        #: seletor para de emitir "changed" — o teste falharia sem uma linha de
-        #: erro, com o rascunho vazio.
         self._caixa: Any = None
 
     def _get(self, _ident: str) -> Any:
@@ -106,16 +56,7 @@ class _HostDoOrcamento:
 def test_o_orcamento_declarado_volta_a_nao_sei_e_o_disco_esvazia(
     arquivo: Path,
 ) -> None:
-    """MORDIDA 1. Declarou "Bateria longa" por engano; um clique desfaz até o disco.
-
-    NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`. Nesta seção o botão
-    deixou de se chamar "Não sei" e passou a se chamar **"Eu escolho"**: os
-    cinco degraus viraram um perfil de três, e "Eu escolho" é o que significa a
-    ausência de teto de mesa (cada aba manda na sua). O que a `D-A1` protege
-    **não é o rótulo, é o gesto** — e o gesto continua aqui, gravando `None`
-    EXPLÍCITO no rascunho. Nos outros dois campos o rótulo "Não sei" continua
-    valendo letra por letra.
-    """
+    """MORDIDA 1. Declarou "Bateria longa" por engano; um clique desfaz até o disco."""
     assert gravar_maquina({"orcamento": {"teto": "economia"}})
     assert carregar_maquina().orcamento.teto == "economia"
 
@@ -138,18 +79,9 @@ def test_o_orcamento_declarado_volta_a_nao_sei_e_o_disco_esvazia(
 
 
 def test_nao_sei_nao_entra_nas_chaves_do_schema() -> None:
-    """Perfil é palavra de TELA; em `CHAVES` o `Literal` recusaria o documento.
-
-    Os três ids de perfil (`tudo_ligado`, `bateria_longa`, `eu_escolho`) nunca
-    chegam ao disco: quem chega é o valor de `TETO_POR_PERFIL`.
-    """
+    """Perfil é palavra de TELA; em `CHAVES` o `Literal` recusaria o documento."""
     for perfil in secao_orcamento.PERFIS:
         assert perfil not in secao_orcamento.CHAVES
-
-
-# ---------------------------------------------------------------------------
-# Os dois campos do card
-# ---------------------------------------------------------------------------
 
 
 def _dados(**extra: Any) -> DadosDoControle:
@@ -243,23 +175,11 @@ def test_a_cor_declarada_volta_a_nao_sei_e_o_disco_esvazia(arquivo: Path) -> Non
 
 
 def test_os_tres_seletores_oferecem_o_mesmo_botao() -> None:
-    """Os três campos têm gesto de desfazer — e dois deles com a mesma palavra.
-
-    NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`. Este nó afirmava "uma
-    palavra só na tela inteira". A decisão dela quebrou isso de propósito na
-    seção do perfil: lá o botão é **"Eu escolho"**, porque a ausência de teto
-    de mesa não é ignorância ("não sei o que quero"), é uma escolha ("quero
-    decidir aba por aba"). O que a `D-A1` protege é o GESTO, e o teste passa a
-    afirmar o gesto nos três: **todo seletor de declaração oferece um último
-    item que devolve o campo a `None`.**
-    """
+    """Os três campos têm gesto de desfazer — e dois deles com a mesma palavra."""
     assert cores_do_plastico_items()[-1] == (ID_DE_NAO_SEI, "Não sei")
     assert BOTOES_DO_APARELHO[-1] == (ID_DE_NAO_SEI, "Não sei")
     assert secao_orcamento.PERFIS[-1] == secao_orcamento.PERFIL_EU_ESCOLHO
     assert secao_orcamento.TETO_POR_PERFIL[secao_orcamento.PERFIL_EU_ESCOLHO] is None
-    # «Eu escolho» virou «Personalizado» em 26/09/2026, com o mesmo sentido
-    # (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`): o gesto é o mesmo, e é ele que
-    # esta régua protege.
     assert (
         secao_orcamento.ROTULOS_DOS_PERFIS[secao_orcamento.PERFIL_EU_ESCOLHO]
         == "Personalizado"

@@ -1,21 +1,4 @@
-"""R-04 (auditoria 23/07) — o modo do perfil é armado NO LAUNCH, não na janela.
-
-Antes, a seção `mode` de um perfil só existia quando o autoswitch via a JANELA
-`steam_app_<id>` — ou seja, com o jogo já rodando e com a env dele congelada no
-`exec` do wrapper. Duas consequências medidas na máquina dela:
-
-- a troca de máscara chegava tarde e destruía/recriava os vpads no meio da
-  partida (curado pelo gate de `test_r04_gate_destrutivo_vpad.py`);
-- com o gate no lugar, a troca tardia é RECUSADA — logo o arming não é enfeite:
-  é o que faz o perfil valer desde o primeiro frame em vez de não valer nunca.
-
-O gatilho é o marker `last_run`, que o wrapper grava ANTES de qualquer outra
-coisa (inclusive antes do gate de vida por IPC) e ANTES do `exec` do jogo. O
-`.env` por appid NÃO depende deste arming (já nasce com a opinião do perfil,
-com o backend prognosticado pelo R-05), então armar logo depois do ping é
-seguro: o que se conserta aqui é a MÁSCARA, que o jogo só consulta segundos
-depois, ao enumerar os controles.
-"""
+"""R-04 (auditoria 23/07) — o modo do perfil é armado NO LAUNCH, não na janela."""
 
 from __future__ import annotations
 
@@ -32,7 +15,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-APPID = 1599660  # Sackboy: A Big Adventure
+APPID = 1599660
 
 
 def _marker(tmp_path: Path, *, appid: int, epoch: int) -> Path:
@@ -55,8 +38,6 @@ def _perfil(flavor: str = "dualsense", *, suprime: bool = False) -> Profile:
 class _DaemonFalso:
     def __init__(self) -> None:
         self.aplicados: list[tuple[Any, Any, str]] = []
-        # ALLOWLIST-SUPRESSAO-01: a supressão é uma lane SEPARADA da máscara —
-        # é justamente a distinção que o `arm_launch_profile` não fazia.
         self.suprimidos: list[tuple[bool, Any, str]] = []
         self.config = SimpleNamespace(
             gamepad_emulation_enabled=True, gamepad_flavor="xbox"
@@ -114,8 +95,7 @@ class TestArmingPeloMarker:
     def test_mesmo_launch_arma_uma_vez_so(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A reconciliação roda a 1 Hz — sem idempotência isso seria um apply
-        de perfil por segundo durante o carregamento inteiro do jogo."""
+        """A reconciliação roda a 1 Hz — sem idempotência isso seria um apply"""
         _marker(env_dir, appid=APPID, epoch=1000)
         monkeypatch.setattr(
             le, "_steam_profiles", lambda daemon: [(APPID, _perfil())]
@@ -131,8 +111,7 @@ class TestArmingPeloMarker:
     def test_marker_velho_nao_rearma(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`daemon.status` da CLI meia hora depois não pode ressuscitar o
-        perfil de um jogo que ela já fechou."""
+        """`daemon.status` da CLI meia hora depois não pode ressuscitar o"""
         _marker(env_dir, appid=APPID, epoch=1000)
         monkeypatch.setattr(
             le, "_steam_profiles", lambda daemon: [(APPID, _perfil())]
@@ -155,8 +134,7 @@ class TestArmingPeloMarker:
     def test_jogo_sem_perfil_nao_arma(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Mullet Mad Jack sem perfil próprio: nada a impor (R-02 cuida do
-        catch-all — 'sem opinião' não é ordem de reverter)."""
+        """Mullet Mad Jack sem perfil próprio: nada a impor (R-02 cuida do"""
         _marker(env_dir, appid=2111190, epoch=1000)
         monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
@@ -172,18 +150,7 @@ class TestArmingPeloMarker:
     def test_perfil_sem_secao_mode_nao_arma_modo_de_perfil_nenhum(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """R-02 continua de pé: perfil sem `mode` não tem opinião sobre a
-        máscara, e o arming não inventa uma para ele.
-
-        NOTA DATADA — 19/08/2026 (PONTE-ESCADA-LACO-01). Este teste afirmava
-        que o lançamento devolvia `motivo="perfil_sem_modo"` e não aplicava
-        NADA. A primeira metade caducou: o silêncio do perfil passou a ser
-        preenchido pela ESCADA, que arma o primeiro degrau e abre uma
-        tentativa (`tests/unit/test_ponte_escada_laco_01_quem_sobe_a_escada.py`).
-        A segunda metade é a que este teste sempre mediu e continua medindo: o
-        que foi aplicado NÃO é opinião do perfil — é a escada, e ela se
-        identifica no relatório.
-        """
+        """R-02 continua de pé: perfil sem `mode` não tem opinião sobre a"""
         _marker(env_dir, appid=APPID, epoch=1000)
         sem_modo = Profile(
             name="so_cores",
@@ -204,8 +171,7 @@ class TestArmingPeloMarker:
     def test_appid_da_allowlist_do_steam_input_nao_e_armado(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Contradição 11 da §5 do plano: a allowlist é opt-in explícito de 'o
-        Hefesto sai de cena neste jogo' e VENCE para os appids listados."""
+        """Contradição 11 da §5 do plano: a allowlist é opt-in explícito de 'o"""
         _marker(env_dir, appid=2111190, epoch=1000)
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {2111190})
         monkeypatch.setattr(
@@ -221,17 +187,7 @@ class TestArmingPeloMarker:
 
 
 class TestAllowlistPulaSoAMascara:
-    """ALLOWLIST-SUPRESSAO-01 (auditoria 24/07).
-
-    O `return` antecipado da allowlist vinha ANTES de olhar o perfil, então o
-    `suppress_desktop_emulation` — o "modo jogo", que só PARA o mouse/teclado
-    emulados do desktop — nunca era aplicado nesses appids. Foi um dos três
-    bloqueios do sintoma "modo jogo não ativa" no Mullet Mad Jack.
-
-    A allowlist existe para o Hefesto não ROUBAR o controle (máscara/grab/vpad);
-    parar de mexer o cursor enquanto ela joga não disputa nada com o jogo. Logo:
-    a allowlist pula a seção `mode` e SÓ ela.
-    """
+    """ALLOWLIST-SUPRESSAO-01 (auditoria 24/07)."""
 
     def test_allowlist_aplica_a_supressao_do_perfil(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
@@ -246,16 +202,13 @@ class TestAllowlistPulaSoAMascara:
 
         assert resultado is not None
         assert resultado["motivo"] == "allowlist_steam_input"
-        # A MÁSCARA continua fora (é o que a allowlist promete)...
         assert daemon.aplicados == []
-        # ...mas o modo jogo do perfil vale.
         assert daemon.suprimidos == [(True, perfil, "launch")]
 
     def test_supressao_vai_com_origin_launch(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`origin="launch"` NÃO fura o lock manual (R-03): se ela alternou o
-        modo jogo na mão nos últimos 30 s, o gesto dela é mais novo."""
+        """`origin="launch"` NÃO fura o lock manual (R-03): se ela alternou o"""
         _marker(env_dir, appid=APPID, epoch=1000)
         perfil = _perfil(suprime=True)
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
@@ -270,8 +223,7 @@ class TestAllowlistPulaSoAMascara:
     def test_perfil_sem_modo_ainda_aplica_a_supressao(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Perfil só-de-cores com modo jogo ligado: nada a armar na máscara, mas
-        a supressão é opinião dele e vale."""
+        """Perfil só-de-cores com modo jogo ligado: nada a armar na máscara, mas"""
         _marker(env_dir, appid=APPID, epoch=1000)
         so_cores = Profile(
             name="so_cores",
@@ -285,19 +237,13 @@ class TestAllowlistPulaSoAMascara:
 
         resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
 
-        # ALLOWLIST-SUPRESSAO-01 é o que este teste mede, e ele não mudou: a
-        # supressão é opinião do perfil e vale mesmo sem `mode`. (A afirmação
-        # `motivo == "perfil_sem_modo"` que morava aqui caducou em 19/08 — ver
-        # a nota datada em `test_perfil_sem_secao_mode_nao_arma_MODO_DE_
-        # PERFIL_NENHUM`, acima.)
         assert resultado is not None
         assert daemon.suprimidos == [(True, so_cores, "launch")]
 
     def test_jogo_da_allowlist_sem_perfil_nao_suprime(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem perfil não há opinião nenhuma a aplicar — nem máscara, nem
-        supressão (R-02: ausência não é ordem de reverter)."""
+        """Sem perfil não há opinião nenhuma a aplicar — nem máscara, nem"""
         _marker(env_dir, appid=2111190, epoch=1000)
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {2111190})
         monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
@@ -312,8 +258,7 @@ class TestAllowlistPulaSoAMascara:
     def test_applier_que_explode_nao_derruba_o_arming(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A supressão é best-effort: falhar nela não pode custar a máscara do
-        perfil (o arming roda no poll loop do daemon)."""
+        """A supressão é best-effort: falhar nela não pode custar a máscara do"""
         _marker(env_dir, appid=APPID, epoch=1000)
         perfil = _perfil(suprime=True)
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
@@ -335,8 +280,7 @@ class TestFiacaoNoPollLoop:
     def test_dispatch_gamepad_dispara_a_reconciliacao_de_launch(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem esta fiação o arming existiria e nunca rodaria — é o defeito
-        original (o daemon só descobria o jogo pela janela)."""
+        """Sem esta fiação o arming existiria e nunca rodaria — é o defeito"""
         import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
 
         chamadas: list[str] = []
@@ -353,8 +297,7 @@ class TestFiacaoNoPollLoop:
         assert chamadas == ["arm", "si"]
 
     def test_reconciliacao_e_throttada(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """O dispatch roda a cada tick do poll loop: ler o marker do disco em
-        todos eles seria I/O no caminho de input dos 4 jogadores."""
+        """O dispatch roda a cada tick do poll loop: ler o marker do disco em"""
         import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
 
         chamadas: list[str] = []

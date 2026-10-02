@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""A MORDIDA DO PATCH DO UHID — a fila cheia é dita, ou é calada?
-
-RADIO-AFOGADO-02, 22/09/2026. Ver `assets/dkms/uhid/README.md`.
-
-**PRECISA DE `sudo`** (o `/dev/uhid` é root) e **não encosta em controle
-nenhum da mesa**: o aparelho é de mentira, com endereço forjado, e morre no
-fim. O que ele mede:
-
-Cria um aparelho HID de MENTIRA pelo `/dev/uhid`, **não lê** o `/dev/uhid` de
-propósito (é isso que enche a fila de saída, que é o que o rádio saturado faz
-na mesa dela) e então escreve reports de OUTPUT no `hidrawN` que nasceu.
-
-Com o módulo DE FÁBRICA:  toda escrita devolve sucesso, inclusive as que o
-                          kernel jogou fora.
-Com o módulo COM O PATCH: depois de encher (UHID_BUFSIZE-1 = 31), a escrita
-                          devolve EAGAIN.
-
-Não encosta em aparelho nenhum da mesa: o `uniq` é forjado e o aparelho morre
-no fim.
-"""
+"""A MORDIDA DO PATCH DO UHID — a fila cheia é dita, ou é calada?"""
 import glob
 import os
 import struct
@@ -30,21 +11,20 @@ UHID_DESTROY, UHID_CREATE2 = 1, 11
 UHID_DATA_MAX = 4096
 HID_MAX_DESCRIPTOR_SIZE = 4096
 
-# Um descritor mínimo com UM report de OUTPUT de 64 bytes.
 RD = bytes([
-    0x06, 0x00, 0xFF,        # Usage Page (Vendor)
-    0x09, 0x01,              # Usage (1)
-    0xA1, 0x01,              # Collection (Application)
-    0x09, 0x02,              #   Usage (2)
-    0x15, 0x00,              #   Logical Min 0
-    0x26, 0xFF, 0x00,        #   Logical Max 255
-    0x75, 0x08,              #   Report Size 8
-    0x95, 0x40,              #   Report Count 64
-    0x91, 0x02,              #   OUTPUT (Data,Var,Abs)
-    0x09, 0x03,              #   Usage (3)
-    0x95, 0x40,              #   Report Count 64
-    0x81, 0x02,              #   INPUT
-    0xC0,                    # End Collection
+    0x06, 0x00, 0xFF,
+    0x09, 0x01,
+    0xA1, 0x01,
+    0x09, 0x02,
+    0x15, 0x00,
+    0x26, 0xFF, 0x00,
+    0x75, 0x08,
+    0x95, 0x40,
+    0x91, 0x02,
+    0x09, 0x03,
+    0x95, 0x40,
+    0x81, 0x02,
+    0xC0,
 ])
 
 def criar(fd: int, nome: bytes) -> None:

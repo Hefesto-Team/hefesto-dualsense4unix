@@ -1,22 +1,4 @@
-"""Regressão BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03.
-
-Defesa em camadas (pre-pass + post-pass) contra strip de glyphs Unicode
-permitidos por ADR-011. Complementa `test_validar_acentuacao_glyphs.py`
-(camada 1) com cenários de defense-in-depth: linha inteira com glyph
-nunca é tocada e, mesmo que tocada, pós-verificação reverte se glyph
-sumir.
-
-Cenários cobertos:
-- BLACK CIRCLE / WHITE CIRCLE em linha com palavra-alvo do dicionário
-  (pre-pass pula a linha).
-- Par malicioso `_CORRECOES[glyph] = ""` injetado para 5 codepoints
-  reportados (●○◐△□).
-- Glyph dentro de docstring `.py`.
-- D-pad arrows (↑↓←→) em legenda.
-- Face buttons (triangulo, circulo, quadrado) — todos em ranges ADR-011.
-- White-box: post-pass reverte se filtro camada 1 falhar (monkeypatch).
-- White-box: pre-pass pula linha inteira (palavra-alvo permanece intacta).
-"""
+"""Regressão BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03."""
 from __future__ import annotations
 
 import importlib.util
@@ -48,17 +30,9 @@ class TestPrePassPulaLinhaComGlyph:
     def test_validar_acentuacao_preserva_glyph_pontuado(
         self, tmp_path: Path
     ) -> None:
-        """Linha com `●` + palavra-alvo do dicionário é pulada inteira.
-
-        Comportamento intencional: o custo de um falso negativo (palavra
-        sem acento na linha do glyph) é menor que o custo do strip.
-
-        Construímos a palavra-alvo via concat para sobreviver a `--fix`
-        recursivo no source deste teste (o pre-pass do script ignora
-        tokens não casados pelo regex `\\b`-bounded).
-        """
+        """Linha com `●` + palavra-alvo do dicionário é pulada inteira."""
         arq = tmp_path / "exemplo.py"
-        glyph = chr(0x25CF)  # BLACK CIRCLE
+        glyph = chr(0x25CF)
         alvo_sem_acento = "func" + "ao"  # (noqa-acento) — alvo cru para teste do pre-pass
         conteúdo = f'msg = "{glyph} {alvo_sem_acento} status atual"\n'
         arq.write_text(conteúdo, encoding="utf-8")
@@ -148,12 +122,7 @@ class TestParMaliciosoBloqueado:
         codepoint: int,
         name: str,
     ) -> None:
-        """Cinco codepoints reportados na regressão sobrevivem com par malicioso.
-
-        Variante explícita de `test_par_malicioso_bloqueado` (já existente em
-        `_glyphs.py`) cobrindo cada um dos 5 glyphs reportados na 3a
-        reprodução do strip ADR-011.
-        """
+        """Cinco codepoints reportados na regressão sobrevivem com par malicioso."""
         import re
 
         arq = tmp_path / "exemplo.md"
@@ -189,22 +158,11 @@ class TestPostPassReverteSeGlyphPerdido:
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Simula falha das camadas 1+2 (pre-pass) e confirma que post-pass age.
-
-        Estratégia: o pre-pass usa `_contem_glyph_protegido(linha)` antes
-        do loop de pares. Se monkeypatcharmos a função para retornar False
-        durante a fase pre-pass + camada 1, mas True na fase post-pass,
-        forçamos exatamente o cenário hipotético do post-pass.
-
-        Implementação prática: counter via closure que retorna False nas
-        primeiras N invocações e True depois — assim pre-pass e filtro
-        camada 1 deixam passar, mas o post-pass detecta a perda.
-        """
+        """Simula falha das camadas 1+2 (pre-pass) e confirma que post-pass age."""
         import re
 
         arq = tmp_path / "exemplo.md"
         glyph = chr(0x25CF)
-        # Linha com glyph + texto que casa par malicioso.
         arq.write_text(f"{glyph} alvo\n", encoding="utf-8")
 
         original_correcoes = dict(validator._CORRECOES)
@@ -215,10 +173,6 @@ class TestPostPassReverteSeGlyphPerdido:
 
         def contem_falso_nas_primeiras_2(texto: str) -> bool:
             chamadas.append(texto)
-            # Pre-pass (1a chamada com `linha`) e filtro camada 1 (chamadas
-            # com slices) retornam False — passa direto. Post-pass usa
-            # `linha` original e `nova` — neste momento queremos comportamento
-            # verdadeiro para detectar perda.
             if len(chamadas) <= 2:
                 return False
             return original_contem(texto)
@@ -234,13 +188,6 @@ class TestPostPassReverteSeGlyphPerdido:
                 contem_falso_nas_primeiras_2,
             )
 
-            # Cenário: pre-pass deixa passar (1a chamada → False), filtro
-            # camada 1 deixa passar (2a chamada com slice → False), aplica
-            # substituição "alvo" → "" (linha vira `<glyph> `). O glyph
-            # sobrevive nesta substituição específica (estamos removendo
-            # "alvo", não o glyph), então post-pass NÃO precisa reverter.
-            # Para forçar reversão de fato, a substituição precisa REMOVER
-            # o glyph. Trocamos o par para mapear o próprio glyph.
             validator._CORRECOES.clear()
             validator._CORRECOES.update(original_correcoes)
             validator._CORRECOES[glyph] = ""
@@ -269,18 +216,9 @@ class TestPrePassWhiteBox:
     """Pre-pass white-box: verifica comportamento intencional."""
 
     def test_pre_pass_pula_linha_inteira(self, tmp_path: Path) -> None:
-        """Palavra-alvo na mesma linha do glyph permanece intocada.
-
-        Documenta a `Decisão de design` da sprint: pre-pass é conservador.
-        Linhas com glyph não recebem fix de acento — usuário corrige
-        manualmente se necessário.
-
-        Palavras-alvo construídas via concat para sobreviver a `--fix`
-        recursivo no source deste teste.
-        """
+        """Palavra-alvo na mesma linha do glyph permanece intocada."""
         arq = tmp_path / "exemplo.py"
         glyph = chr(0x25CF)
-        # Múltiplas palavras-alvo do dicionário na mesma linha.
         alvo_a = "func" + "ao"  # (noqa-acento) — alvo cru para teste do pre-pass
         alvo_b = "valid" + "acao"  # (noqa-acento) — alvo cru para teste do pre-pass
         alvo_c = "configur" + "acao"  # (noqa-acento) — alvo cru para teste do pre-pass

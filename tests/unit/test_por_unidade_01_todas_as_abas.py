@@ -1,50 +1,4 @@
-"""POR-UNIDADE-01 (10/08/2026) — o override por peça alcança mais que luz e gatilho.
-
-Pedido dela, textual: *"se eu quiser fazer uma guia específica do perfil X pro
-controle branco e outra pro mesmo perfil mas pra um controle preto ele vai
-funcionar pra cada um deles dessa forma."* Perguntada sobre quais seções:
-**todas as abas**.
-
-O que este arquivo vigia, e por quê cada um:
-
-1. **A VIBRAÇÃO da peça chega ao hardware.** A intensidade por unidade vira um
-   FATOR no backend (``set_rumble_scales``), irmão exato da escala de brilho do
-   R-20 — e é aplicado na SAÍDA de cada handle. Sem isso, o número ficaria
-   guardado no perfil dela sem ninguém ler, que é o defeito mais caro desta
-   casa (*a cura escrita e nunca ligada*).
-
-2. **O SOM da peça chega ao controle na ativação.** A fiação por-``uniq`` já
-   existia inteira desde a SOM-02/E4 (``apply_speaker(uniq=...)`` →
-   ``set_speaker_volume(uniq=...)``) e nunca fora ligada: faltava o perfil ter
-   ONDE guardar quem é quem.
-
-3. **O DOWNGRADE continua possível.** O risco central medido desta entrega não
-   é o perfil ANTIGO (que valida sem a chave nova), é o perfil NOVO lido por um
-   hefesto VELHO: ``extra="forbid"`` faz um campo desconhecido rejeitar o
-   ``Profile`` INTEIRO, não só a seção. O antidoto é a OMISSÃO
-   (``exclude_unset=True`` por entrada em ``profiles/loader.save_profile``), e
-   a regra é nunca semear campo novo por default no rascunho. Os dois testes
-   do fim provam a omissão pelos dois lados: o que o disco recebe e o que o
-   rascunho intocado produz.
-
-4. **O que ainda não tem CAMINHO por unidade continua recusado na BORDA.**
-   ``mode``, ``mouse``, ``key_bindings``, ``mic`` e o modo-jogo não entram no
-   mapa, e o ``auto`` do rumble também não.
-
-   **A RAZÃO MUDOU EM 02/09/2026, e a recusa não.** Esta linha dizia *"o que
-   NÃO CABE por unidade"*, e ela derrubou isso: o perfil por controle passa a
-   ser TUDO (*"acelerômetro, giroscópio, e todas as demais features. é tudo
-   mesmo"*). Nenhum dos cinco está fora por não caber — cada um espera um
-   caminho de aplicação por unidade, e a fila deles, ordenada por custo e com a
-   medição de cada um, está na docstring de ``ControllerOverrides``. Enquanto o
-   caminho não existir, aceitar o campo seria guardar um valor que ninguém lê,
-   e a tela passaria a prometer; recusa no load, com mensagem, é a disciplina
-   desta casa. Quem conta os campos contra os consumidores é
-   ``tests/unit/test_perfil_por_controle_o_campo_espera_o_caminho.py``.
-
-MORDIDA (o que arrancar para ver reprovar) — cada teste diz a sua no corpo.
-MAC mascarado pela regra da casa: octetos 4 e 5 zerados.
-"""
+"""POR-UNIDADE-01 (10/08/2026) — o override por peça alcança mais que luz e gatilho."""
 from __future__ import annotations
 
 import json
@@ -81,7 +35,6 @@ from tests.unit.test_backend_multi_controller import (
     _null_evdev,
 )
 
-#: Os dois controles dela, com a máscara da casa (octetos 4 e 5 zerados).
 BRANCO = UNIQ_1
 PRETO = UNIQ_2
 
@@ -110,29 +63,13 @@ def _backend() -> tuple[Any, _FakeHandle, _FakeHandle]:
     return inst, h1, h2
 
 
-# ---------------------------------------------------------------------------
-# 1. A VIBRAÇÃO da peça chega ao hardware
-# ---------------------------------------------------------------------------
-
-
 def test_a_peca_com_intensidade_propria_vibra_diferente_da_outra() -> None:
-    """Um ``set_rumble`` broadcast, dois motores com força DIFERENTE.
-
-    É a metade que faltava: sem escala por peça, o mesmo par (weak, strong)
-    chegava idêntico nos dois controles e "o branco vibra mais fraco que o
-    preto" não tinha como existir.
-
-    MORDIDA: no ``set_rumble`` do backend, trocar
-    ``self._escalar_rumble(key, weak, strong)`` por ``(weak, strong)`` (ou
-    voltar o ``_for_each_com_key`` para o ``_for_each`` sem key) — o branco
-    passa a receber 200 e a igualdade abaixo reprova.
-    """
+    """Um ``set_rumble`` broadcast, dois motores com força DIFERENTE."""
     backend, branco, preto = _backend()
 
     backend.set_rumble_scales({BRANCO: 0.5})
     backend.set_rumble(weak=100, strong=200)
 
-    # setLeftMotor recebe o STRONG; setRightMotor recebe o WEAK (API pydualsense).
     assert branco.left_motor == [100], "a peça com fator próprio não foi escalada"
     assert branco.right_motor == [50]
     assert preto.left_motor == [200], "a peça SEM opinião não pode ser tocada"
@@ -140,17 +77,7 @@ def test_a_peca_com_intensidade_propria_vibra_diferente_da_outra() -> None:
 
 
 def test_peca_sem_opiniao_recebe_o_par_intacto() -> None:
-    """Sem escala registrada, o caminho é byte-idêntico ao de antes de 10/08.
-
-    Não é redundância com o teste acima: ali a segunda peça não tem entrada num
-    mapa que EXISTE; aqui o mapa está vazio, que é o estado de todo perfil já
-    salvo no disco dela. Um arredondamento novo no caminho de quem não pediu
-    nada seria regressão silenciosa em 14 perfis.
-
-    MORDIDA: fazer ``_escalar_rumble`` devolver ``int(weak * 1.0)`` sempre em
-    vez de sair cedo quando não há fator — 255 continua 255, mas troque para
-    ``0.999`` e a asserção pega.
-    """
+    """Sem escala registrada, o caminho é byte-idêntico ao de antes de 10/08."""
     backend, branco, preto = _backend()
 
     backend.set_rumble(weak=255, strong=1)
@@ -162,14 +89,7 @@ def test_peca_sem_opiniao_recebe_o_par_intacto() -> None:
 
 
 def test_o_coop_tambem_respeita_a_intensidade_da_peca() -> None:
-    """``set_rumble_for`` (a rota do co-op) escala pela MESMA regra.
-
-    Sem isto, a mesma peça vibraria diferente conforme a ROTA — forte no
-    co-op, fraca no jogo —, e a incoerência apareceria como "às vezes funciona".
-
-    MORDIDA: no ``set_rumble_for``, voltar a ``handle.setLeftMotor(strong)`` /
-    ``handle.setRightMotor(weak)`` sem passar por ``_escalar_rumble``.
-    """
+    """``set_rumble_for`` (a rota do co-op) escala pela MESMA regra."""
     backend, branco, _preto = _backend()
 
     backend.set_rumble_scales({BRANCO: 0.25})
@@ -180,23 +100,11 @@ def test_o_coop_tambem_respeita_a_intensidade_da_peca() -> None:
 
 
 def test_a_escala_e_relativa_a_politica_global_do_perfil() -> None:
-    """O fator é ``mult_da_peça / mult_global`` — nunca o absoluto.
-
-    O valor que chega ao ``set_rumble`` JÁ vem escalado pela política global
-    (``apply_rumble_policy`` faz isso em todo caminho de rumble). Registrar o
-    absoluto escalaria duas vezes: a peça em "max" dentro de um perfil
-    "economia" ficaria mais FRACA que a que não opinou — o oposto do pedido.
-
-    MORDIDA: em ``_controllers_to_rumble_scales``, trocar ``mult / base`` por
-    ``mult`` — o fator vira 1.0 (== "sem opinião") e a peça some do mapa.
-    """
+    """O fator é ``mult_da_peça / mult_global`` — nunca o absoluto."""
     escalas = _controllers_to_rumble_scales(
         {PRETO: ControllerOverrides(rumble=ControllerRumbleOverride(policy="max"))},
         RumbleConfig(policy="economia"),
     )
-    # A peça precisa do que falta entre os dois degraus — a RAZÃO, nunca o
-    # absoluto. Derivada da escada: os números mudaram em 11/08/2026 (decisão
-    # dela) e um literal aqui reprovaria sem nada estar errado.
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
     assert PRETO in escalas
@@ -206,11 +114,7 @@ def test_a_escala_e_relativa_a_politica_global_do_perfil() -> None:
 
 
 def test_a_peca_que_concorda_com_o_global_nao_entra_no_mapa() -> None:
-    """Fator 1.0 é "sem opinião" — mesma regra da escala de brilho (R-20).
-
-    MORDIDA: tirar o ``if fator == 1.0: continue`` de
-    ``_controllers_to_rumble_scales``.
-    """
+    """Fator 1.0 é "sem opinião" — mesma regra da escala de brilho (R-20)."""
     escalas = _controllers_to_rumble_scales(
         {PRETO: ControllerOverrides(rumble=ControllerRumbleOverride(policy="max"))},
         RumbleConfig(policy="max"),
@@ -219,25 +123,12 @@ def test_a_peca_que_concorda_com_o_global_nao_entra_no_mapa() -> None:
 
 
 def test_global_em_auto_pula_a_peca_em_vez_de_prometer() -> None:
-    """Denominador MÓVEL não vira fator — e a peça fica com o global.
-
-    O ``auto`` resolve pela bateria a cada tick. Um fator contra ele faria a
-    peça vibrar de forma imprevisível; prometer isso seria pior do que não
-    entregar. É o mesmo eixo da recusa do ``auto`` POR UNIDADE, um andar acima.
-
-    MORDIDA: em ``_controllers_to_rumble_scales``, tratar ``base is None`` como
-    ``base = 0.7`` em vez de pular.
-    """
+    """Denominador MÓVEL não vira fator — e a peça fica com o global."""
     escalas = _controllers_to_rumble_scales(
         {PRETO: ControllerOverrides(rumble=ControllerRumbleOverride(policy="max"))},
         RumbleConfig(policy="auto"),
     )
     assert escalas == {}
-
-
-# ---------------------------------------------------------------------------
-# 2. O SOM da peça chega ao controle na ativação
-# ---------------------------------------------------------------------------
 
 
 class _StoreSemTrava:
@@ -248,24 +139,7 @@ class _StoreSemTrava:
 
 
 def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
-    """Duas unidades, dois volumes, um perfil só — o pedido dela, literal.
-
-    O global escreve primeiro e cada override reescreve apenas a SUA peça POR
-    CIMA. A ordem é a entrega: invertê-la faria o global apagar a peça.
-
-    **FATO ERRADO, SUBSTITUÍDO — 03/09/2026.** Esta linha dizia que o global
-    escrevia *"em todo mundo (``uniq=None`` = broadcast)"*. Medido:
-    ``set_speaker_volume(uniq=None)`` chama ``_handle_for(None)``
-    (``core/backend_pydualsense.py:4226``), que devolve **o handle PRIMÁRIO**
-    (``:4611-4623``) — um só. A família de áudio inteira compartilha esse
-    ``_handle_for`` e não tem broadcast, ao contrário da luz e da vibração. A
-    lista abaixo não muda: ela sempre mediu as CHAMADAS, e é o applier que
-    escolhe o handle.
-
-    MORDIDA: apagar a linha ``self.apply_controller_speakers(...)`` de
-    ``_apply_appliers`` (``profiles/manager.py``) — sobra só a chamada global e
-    a lista abaixo perde as duas entradas com ``uniq``.
-    """
+    """Duas unidades, dois volumes, um perfil só — o pedido dela, literal."""
     chamadas: list[tuple[int, bool, str | None]] = []
 
     def applier(
@@ -299,11 +173,10 @@ def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
     manager.apply_controller_speakers(profile, relatorio=relatorio)
 
     assert chamadas == [
-        (120, False, None),  # o global, sem endereço — cai no handle primário
+        (120, False, None),
         (40, False, BRANCO),
         (220, False, PRETO),
     ]
-    # O relatório diz QUAL peça, para a GUI não fundir tudo num rótulo só.
     assert relatorio[f"speaker:{BRANCO}"] == "aplicado"
     assert relatorio[f"speaker:{PRETO}"] == "aplicado"
 
@@ -341,11 +214,6 @@ def test_a_peca_sem_secao_de_som_nao_escreve_nada() -> None:
     assert chamadas == []
 
 
-# ---------------------------------------------------------------------------
-# 3. O DOWNGRADE — a omissão é o antidoto, e ela tem de sobreviver
-# ---------------------------------------------------------------------------
-
-
 def _entradas_do_disco(caminho: Path) -> dict[str, Any]:
     return json.loads(caminho.read_text(encoding="utf-8"))["controllers"]
 
@@ -353,19 +221,7 @@ def _entradas_do_disco(caminho: Path) -> dict[str, Any]:
 def test_a_peca_que_so_opina_sobre_luz_nao_ganha_as_chaves_novas(
     isolated_profiles_dir: Path,
 ) -> None:
-    """O perfil salvo NÃO carrega ``rumble``/``speaker`` em quem não opinou.
-
-    ESTE é o risco central desta entrega, e ele não é o perfil antigo — é o
-    DOWNGRADE. Um hefesto velho tem ``extra="forbid"`` no ``ControllerOverrides``
-    e, ao ver uma chave que não conhece, rejeita o ``Profile`` INTEIRO: não a
-    seção, o perfil. Se toda gravação densificasse as entradas, voltar uma
-    versão significaria "todos os perfis dela quebrados", inclusive os 4 que já
-    têm bloco ``controllers`` hoje.
-
-    MORDIDA: em ``profiles/loader.save_profile``, tirar o ``exclude_unset=True``
-    do dump por entrada — as chaves ``rumble``/``speaker`` aparecem com
-    ``null`` e as duas asserções abaixo reprovam.
-    """
+    """O perfil salvo NÃO carrega ``rumble``/``speaker`` em quem não opinou."""
     profile = Profile(
         name="downgrade",
         match=MatchAny(),
@@ -387,31 +243,17 @@ def test_a_peca_que_so_opina_sobre_luz_nao_ganha_as_chaves_novas(
     assert "speaker" not in entradas[BRANCO]
     assert "speaker" not in entradas[PRETO]
     assert "leds" not in entradas[PRETO]
-    # E o que ELA escreveu continua lá, com o valor dela.
     assert entradas[PRETO]["rumble"] == {"policy": "economia"}
 
 
 def test_o_rascunho_intocado_nao_semeia_campo_novo(
     isolated_profiles_dir: Path,
 ) -> None:
-    """"Salvar Perfil" sem gesto por unidade não inventa mapa nem seção.
-
-    A outra metade da regra: a omissão no disco só protege se o RASCUNHO
-    também não semear. Um default novo no ``DraftConfig`` — uma seção
-    ``rumble``/``speaker`` nascendo preenchida no override — furaria a proteção
-    pela borda de cima, com o ``save_profile`` gravando um campo "explícito"
-    que ninguém pediu.
-
-    MORDIDA: dar a ``ControllerOverrides.rumble`` um
-    ``default_factory=ControllerRumbleOverride`` no esquema — o mapa passa a
-    nascer com a seção e a primeira asserção reprova.
-    """
+    """"Salvar Perfil" sem gesto por unidade não inventa mapa nem seção."""
     draft = DraftConfig.default()
 
-    # Sem NENHUM gesto por unidade: o mapa nem existe.
     assert draft.to_profile("virgem").controllers is None
 
-    # Com um gesto de LUZ numa peça: existe o mapa, e SÓ a luz nele.
     tocado = draft.with_controller_leds(
         BRANCO, draft.leds.model_copy(update={"lightbar_rgb": (200, 0, 0)})
     )
@@ -423,81 +265,27 @@ def test_o_rascunho_intocado_nao_semeia_campo_novo(
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. O que ainda não tem CAMINHO por unidade é recusado na BORDA, com mensagem
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "secao",
     ["mode", "mouse", "key_bindings", "suppress_desktop_emulation"],
     ids=["modo", "mouse", "teclado", "modo_jogo"],
 )
 def test_o_que_ainda_nao_tem_caminho_nao_entra_no_mapa_por_peca(secao: str) -> None:
-    """Os quatro esperam um caminho de aplicação por unidade — e até lá, recusa.
-
-    **NOTA DATADA — 03/09/2026.** Eram CINCO: o ``mic`` saiu desta lista porque
-    ele ENTROU no esquema (MIC-QUINTO-AJUSTE-01, decisão dela — o microfone é o
-    quinto ajuste por controle). A recusa não sumiu, ela desceu de seção para
-    CAMPO: ``ControllerMicOverride`` aceita o ``muted``, cuja escada carrega o
-    ``uniq`` em todo degrau, e recusa na borda o ``volume`` e o
-    ``button_toggles_system``, com a medição de cada um na mensagem. Quem cobre
-    os dois é
-    ``tests/unit/test_perfil_o_microfone_e_o_quinto_ajuste_por_controle.py``.
-
-    **NOTA DATADA — 02/09/2026.** Esta docstring dizia que os cinco *"não são
-    da peça de plástico"*, e ela derrubou a frase: o perfil por controle é
-    TUDO. O que sobra das medições antigas não é recusa, é fila de engenharia,
-    e ela está na docstring de ``ControllerOverrides`` ordenada por custo — o
-    ``mic`` na frente, porque as três primitivas por ``uniq`` dele já existem
-    (MIC-DA-MESA-ELEICAO-01, 01/09/2026, deu endereço ao gesto do microfone) e
-    falta só a costura; a entrada emulada no fim, porque ``read_state`` lê o
-    PRIMÁRIO e há UM device de mouse e UM de teclado no daemon.
-
-    Recusa na BORDA e não no applier, pela razão de sempre: arquivo inválido é
-    rejeitado no load, com mensagem, em vez de virar comportamento errado
-    silencioso meses depois. E o campo aceito ANTES do caminho é o defeito
-    espelhado: a tela acende dizendo "esta peça tem ajuste próprio" e nada
-    aplica.
-
-    MORDIDA: trocar ``extra="forbid"`` por ``extra="allow"`` no
-    ``ControllerOverrides``.
-    """
+    """Os quatro esperam um caminho de aplicação por unidade — e até lá, recusa."""
     with pytest.raises(ValueError, match=r"extra_forbidden|Extra inputs"):
         ControllerOverrides.model_validate({secao: {}})
 
 
 def test_o_auto_do_rumble_e_recusado_por_peca_com_a_razao_escrita() -> None:
-    """``auto`` escala pela BATERIA — e quem a lê é o controle PRIMÁRIO.
-
-    Aceitá-lo por unidade guardaria no perfil dela uma promessa que o caminho
-    do rumble não sabe cumprir: as duas peças escalariam pela bateria da mesma.
-    A mensagem tem de DIZER isso — "Input should be 'economia'..." mandaria
-    quem lê o arquivo procurar no lugar errado.
-
-    MORDIDA: apagar o validador ``_auto_nao_e_por_unidade`` do esquema.
-    """
+    """``auto`` escala pela BATERIA — e quem a lê é o controle PRIMÁRIO."""
     with pytest.raises(ValueError, match="BATERIA"):
         ControllerRumbleOverride.model_validate({"policy": "auto"})
 
 
 def test_o_passthrough_e_da_sessao_e_a_borda_recusa() -> None:
-    """``passthrough`` não descreve a peça: descreve quem manda na vibração.
-
-    Ele solta o rumble que a GUI TRAVOU — e a trava
-    (``DaemonConfig.rumble_active``) é UMA para o daemon inteiro. Duas unidades
-    pedindo passthrough diferente no mesmo perfil não têm resposta honesta.
-
-    MORDIDA: reusar ``RumbleConfig`` (que TEM o campo) no lugar de
-    ``ControllerRumbleOverride``.
-    """
+    """``passthrough`` não descreve a peça: descreve quem manda na vibração."""
     with pytest.raises(ValueError, match=r"extra_forbidden|Extra inputs"):
         ControllerRumbleOverride.model_validate({"passthrough": False})
-
-
-# ---------------------------------------------------------------------------
-# 5. A JANELA: o seletor de alvo é quem decide onde a anotação cai
-# ---------------------------------------------------------------------------
 
 
 class _JanelaFalsa:
@@ -509,15 +297,7 @@ class _JanelaFalsa:
 
 
 def test_com_o_seletor_em_todos_o_som_continua_indo_para_o_global() -> None:
-    """Quem tem UM controle não pode passar a colecionar override por MAC.
-
-    O padrão do seletor é "Todos", e é o estado de quem nunca ouviu falar em
-    alvo de edição. Deduzir a peça do CARD em que ela encostou faria todo gesto
-    de volume virar override e a seção global nunca mais ser escrita.
-
-    MORDIDA: em ``registrar_alto_falante_no_rascunho``, trocar a condição
-    ``alvo and str(alvo) == str(uniq)`` por ``uniq`` sozinho.
-    """
+    """Quem tem UM controle não pode passar a colecionar override por MAC."""
     janela = _JanelaFalsa(alvo=None)
 
     registrar_alto_falante_no_rascunho(janela, volume=180, uniq=BRANCO)
@@ -527,13 +307,7 @@ def test_com_o_seletor_em_todos_o_som_continua_indo_para_o_global() -> None:
 
 
 def test_com_a_peca_escolhida_no_seletor_o_som_vira_override_dela() -> None:
-    """O gesto que ela fez ESCOLHENDO a peça fica preso ao plástico.
-
-    E o global não se mexe: é o que faz "o preto mais alto, o resto como está"
-    ser dizível.
-
-    MORDIDA: a mesma de cima, ao contrário — apagar o ramo por peça inteiro.
-    """
+    """O gesto que ela fez ESCOLHENDO a peça fica preso ao plástico."""
     janela = _JanelaFalsa(alvo=PRETO)
     janela.draft = janela.draft.with_speaker(100)
 
@@ -544,19 +318,11 @@ def test_com_a_peca_escolhida_no_seletor_o_som_vira_override_dela() -> None:
     assert override is not None
     assert override.speaker is not None
     assert override.speaker.volume == 240
-    # E a peça que ela NÃO escolheu segue herdando o global.
     assert janela.draft.effective_speaker_for(BRANCO).volume == 100
 
 
 def test_a_peca_que_volta_a_concordar_com_o_global_perde_o_override() -> None:
-    """Concordância não vira registro — a regra COR-04, aplicada ao som.
-
-    Sem isso, o mapa juntaria entradas idênticas ao global que a ativação
-    teria de reaplicar uma a uma, e "voltei tudo ao normal" deixaria rastro
-    que só um editor de JSON apaga.
-
-    MORDIDA: em ``with_controller_speaker``, tirar o ramo ``igual_ao_global``.
-    """
+    """Concordância não vira registro — a regra COR-04, aplicada ao som."""
     janela = _JanelaFalsa(alvo=PRETO)
     janela.draft = janela.draft.with_speaker(100)
 
@@ -570,14 +336,7 @@ def test_a_peca_que_volta_a_concordar_com_o_global_perde_o_override() -> None:
 
 
 def test_a_aba_rumble_exibe_a_intensidade_da_peca_escolhida() -> None:
-    """O que ela vê no seletor é o que o "Salvar Perfil" grava.
-
-    ``effective_rumble_for`` é o irmão de ``effective_leds_for``: override da
-    peça quando existe, global quando não. Sem ele, trocar de peça no seletor
-    deixaria a tela mostrando a intensidade da ANTERIOR.
-
-    MORDIDA: fazer ``effective_rumble_for`` devolver ``self.rumble`` sempre.
-    """
+    """O que ela vê no seletor é o que o "Salvar Perfil" grava."""
     draft = DraftConfig.default().model_copy(
         update={"rumble": DraftConfig.default().rumble.model_copy(
             update={"policy": "economia"}
@@ -590,20 +349,11 @@ def test_a_aba_rumble_exibe_a_intensidade_da_peca_escolhida() -> None:
     assert draft.effective_rumble_for(PRETO).policy == "max"
     assert draft.effective_rumble_for(BRANCO).policy == "economia"
     assert draft.effective_rumble_for(None).policy == "economia"
-    # weak/strong são o TESTE DE MOTORES e nunca foram do perfil: seguem o global.
     assert draft.effective_rumble_for(PRETO).weak == draft.rumble.weak
 
 
 def test_o_aplicar_leva_a_intensidade_e_o_som_da_peca() -> None:
-    """O payload do botão verde carrega as duas seções novas por peça.
-
-    Sem isto, a escolha por unidade só valeria na PRÓXIMA ativação de perfil —
-    ela clicaria no verde e nada mudaria, que é exatamente a queixa
-    O-VERDE-NAO-LEVAVA-O-SOM-01 reaberta um nível abaixo.
-
-    MORDIDA: apagar os blocos ``if override.rumble is not None`` e
-    ``if override.speaker is not None`` de ``_controllers_to_ipc``.
-    """
+    """O payload do botão verde carrega as duas seções novas por peça."""
     draft = DraftConfig.default().with_speaker(100)
     draft = draft.with_controller_rumble(
         PRETO, draft.rumble.model_copy(update={"policy": "max"})

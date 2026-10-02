@@ -56,8 +56,7 @@ class _FakeDaemonNativo:
 def _server(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: Transport
 ) -> IpcServer:
-    """IpcServer mínimo com um `FakeController` conectado no transporte dado,
-    sem `describe_controllers` — o ramo que este arquivo mede."""
+    """IpcServer mínimo com um `FakeController` conectado no transporte dado,"""
     target = tmp_path / "profiles"
     target.mkdir()
 
@@ -113,8 +112,7 @@ async def test_native_bt_fragil_por_transporte_com_native_ligado(
 async def test_native_bt_fragil_falso_com_native_desligado_mesmo_em_bt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Fora do Modo Nativo não há fragilidade a avisar: o jogo vê o gamepad
-    virtual, não o físico — então BT sozinho não deve acender o aviso."""
+    """Fora do Modo Nativo não há fragilidade a avisar: o jogo vê o gamepad"""
     server = _server(tmp_path, monkeypatch, "bt")
     server.daemon = _FakeDaemonNativo(native=False)  # type: ignore[assignment]
 

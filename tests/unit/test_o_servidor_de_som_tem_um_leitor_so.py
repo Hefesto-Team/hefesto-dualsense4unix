@@ -1,34 +1,4 @@
-"""O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01 — o servidor de som tem um leitor só.
-
-**O DEFEITO, medido em 27/09/2026 no daemon dela:** 22 a 23 `pactl` por
-segundo, cada um um fork e um cliente novo no `pipewire-pulse`. Medido de novo
-em 28/09, antes da cura, com o código de então contra o servidor de mentira
-desta régua (quatro controles no rádio): o canal do microfone custava 20
-`pactl` por volta de 2 s, a luz do mic 3 por segundo, o vigia do alto-falante
-2 a cada 0,4 s, as pontes 12 por volta e o microfone do rádio 4 por segundo.
-
-**AS TRÊS RÉGUAS DA SPRINT, e as três perguntam ao PROCESSO, não ao texto:**
-
-1. **O servidor de mentira que conta os clientes.** Um `pactl` de mentira na
-   frente do `PATH` anota cada pergunta que chega a ele. Cem tiques dos cinco
-   leitores do daemon, com o retrato vivo e sem evento, fazem ZERO perguntas —
-   e as respostas são as mesmas que o servidor daria. Um evento relê UM tipo.
-2. **A exaustiva de dono.** Toda pergunta de leitura escrita em `src/` é
-   achada pela árvore do código e entregue a um executor; cada executor é
-   chamado de verdade com o retrato vivo, e o servidor de mentira diz se
-   alguém além do retrato perguntou. A palavra só ACHA a pergunta; quem julga
-   é o processo que chegou (ou não) ao servidor.
-3. **Sem servidor, «não sei»:** o `subscribe` cai, e os leitores recebem a
-   falha de sempre sem perguntar nada; o servidor volta, e o retrato se refaz.
-
-**MORDIDA DA SPRINT:** devolva o `_ler_o_canal` ao `pactl` (o
-`retrato_do_som.responder` devolvendo sempre `None`) e a régua 1 conta 5
-perguntas por controle por volta.
-
-**NENHUM TESTE DESTE ARQUIVO TOCA O SERVIDOR DE SOM DE QUEM O RODA:** o
-servidor é um script num diretório temporário, na frente do `PATH`, e a
-fixture recusa se o `pactl` que o produto acharia for outro.
-"""
+"""O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01 — o servidor de som tem um leitor só."""
 
 from __future__ import annotations
 
@@ -51,9 +21,6 @@ from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
 SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 
-# ---------------------------------------------------------------------------
-# O servidor de mentira — quatro controles no rádio, faixa forjada
-# ---------------------------------------------------------------------------
 
 HEX = ("0000a1", "0000a2", "0000a3", "0000a4")
 UNIQS = tuple(f"aa:bb:cc:00:00:{h[-2:]}" for h in HEX)
@@ -101,8 +68,7 @@ def _no(cabeca: str, indice: int, nome: str, desc: str, spec: str, estado: str,
 
 
 def _textos(*, mic_mudo: str = "") -> dict[str, str]:
-    """Os arquivos do servidor. O CURTO é escrito à parte, pelo `printf` do `pactl`
-    — nunca pela síntese do retrato, que é o que ele mede."""
+    """Os arquivos do servidor. O CURTO é escrito à parte, pelo `printf` do `pactl`"""
     sinks = [(101, HDMI, "Saida HDMI", "s16le 2ch 48000Hz", "SUSPENDED", _vol(2, 100))]
     sinks += [(201 + i, ENDPOINT.format(h=h), "DualSense wireless controller (PS5)",
                "float32le 4ch 48000Hz", "RUNNING" if i == 0 else "SUSPENDED", _vol(4, 40))
@@ -156,8 +122,6 @@ def _textos(*, mic_mudo: str = "") -> dict[str, str]:
     }
 
 
-#: O `pactl` de mentira. Responde o que o real responde — inclusive a FALHA do
-#: nó que não existe (rc=1), que um dublê mais frouxo esconderia.
 _PACTL = r"""#!/bin/sh
 F=__F__
 printf '%s\n' "$*" >> "$F/chamadas"
@@ -264,8 +228,6 @@ def servidor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Servid
     pactl.write_text(_PACTL.replace("__F__", str(raiz)), encoding="utf-8")
     pactl.chmod(pactl.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     monkeypatch.setenv("PATH", f"{binario}{os.pathsep}{os.environ.get('PATH', '')}")
-    # A GUARDA QUE SAI: o produto tem de achar ESTE pactl, ou a régua mediria
-    # o servidor de quem a roda.
     if shutil.which("pactl") != str(pactl):
         pytest.fail(f"o pactl achado não é o de mentira: {shutil.which('pactl')}")
     rs.RETRATO.soltar()
@@ -310,15 +272,7 @@ async def _ate(condicao: Callable[[], bool], motivo: str, prazo: float = 8.0) ->
 async def _o_ouvinte_subiu(
     daemon: _Daemon, desde: int = 0, motivo: str = "o ouvinte subiu", prazo: float = 8.0
 ) -> None:
-    """A barreira de toda volta do ouvinte: o retrato vivo E o padrão dele publicado.
-
-    O retrato fica vivo no `assumir` do `_carregar_o_retrato`, e a leitura do padrão
-    (numa thread) e a publicação vêm DEPOIS. Esperar só o `RETRATO.vivo` mediria um
-    instante antes do fato cobrado: no runner do CI a thread passa da volta do laço
-    (a corrida 36503520655, no 3.12). A publicação sai em toda volta, com o servidor
-    de pé ou não, por isso a barreira pede o VALOR que o retrato diz, e não só a
-    contagem; e `desde` separa uma volta da anterior (a do servidor que voltou).
-    """
+    """A barreira de toda volta do ouvinte: o retrato vivo E o padrão dele publicado."""
 
     def subiu() -> bool:
         if not rs.RETRATO.vivo:
@@ -337,11 +291,6 @@ def _de_quem_mais(servidor: Servidor, espiao: _Espiao) -> Counter[str]:
     return +fora
 
 
-# ---------------------------------------------------------------------------
-# Os cinco leitores do daemon que a auditoria de 27/09 achou, numa volta
-# ---------------------------------------------------------------------------
-
-
 def _uma_volta_dos_leitores() -> dict[str, Any]:
     """O que o daemon pergunta ao servidor numa volta dos laços — pelas funções REAIS."""
     from hefesto_dualsense4unix.daemon.subsystems import bt_mic, hotkey, luz_do_mic
@@ -350,19 +299,12 @@ def _uma_volta_dos_leitores() -> dict[str, Any]:
 
     endpoints = [ENDPOINT.format(h=h) for h in HEX]
     return {
-        # hotkey._ler_o_canal, a cada CANAL_TTL_S por controle
         "canal": [hotkey._ler_o_canal(u) for u in UNIQS],
-        # luz_do_mic._quem_ouve, a cada INTERVALO_DE_QUEM_OUVE_S
         "quem_ouve": luz_do_mic._quem_ouve(list(UNIQS), {}),
-        # alto_falante._a_mesa_do_som_mudou, quando o retrato avisa (o vigia de
-        # 0,4 s saiu em 28/09, A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01)
         "vigia": afb.sinks_que_tocam([*endpoints, *(afb.nome_do_sink(u) for u in UNIQS)]),
-        # alto_falante._casar_as_pontes, por endpoint
         "pontes": [(afb.sink_esta_tocando(e, na_duvida=True), afb.volumes_do_sink(e))
                    for e in endpoints],
-        # dualsense_bt_audio._talvez_seguir_a_source, por controle no rádio
         "radio": [dba._rodar(["pactl", "list", "sources", "short"]) for _ in UNIQS],
-        # bt_mic, a fonte padrão crua
         "padrão": bt_mic.fonte_padrao_crua(),
     }
 
@@ -378,36 +320,16 @@ def _correr(cenario: Callable[[], Any]) -> None:
 
 
 async def _parar(tarefa: asyncio.Task[Any]) -> None:
-    """Cancela o ouvinte como o `connection.shutdown` do daemon: UMA vez.
-
-    Um ouvinte que engole o cancelamento prende o desligamento do daemon — e
-    prenderia esta régua para sempre, em vez de reprovar. Medido: a mordida do
-    «sem servidor» achou exatamente isso, um `suppress(CancelledError)` em
-    volta do `await` das tarefas da rajada.
-    """
+    """Cancela o ouvinte como o `connection.shutdown` do daemon: UMA vez."""
     tarefa.cancel()
     feitas, _ = await asyncio.wait({tarefa}, timeout=5.0)
     assert feitas, "o ouvinte engoliu o cancelamento: o daemon não conseguiria parar"
 
 
-# ---------------------------------------------------------------------------
-# 1 — O SERVIDOR QUE CONTA OS CLIENTES
-# ---------------------------------------------------------------------------
-
-
 def test_cem_tiques_sem_evento_nao_perguntam_nada_e_respondem_igual(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A régua da sprint: 100 tiques do daemon sem evento = 0 `pactl`.
-
-    E a resposta do retrato é a MESMA que o servidor daria: a volta é medida
-    primeiro com o retrato SOLTO (cada leitor perguntando ao servidor, o
-    mundo de antes da cura) e depois com ele vivo. Um retrato que zerasse as
-    perguntas respondendo outra coisa passaria na conta e mentiria na tela.
-
-    MORDIDA: `retrato_do_som.responder` devolvendo sempre `None` — a conta
-    volta, e o canal do microfone sozinho pergunta 5 vezes por controle.
-    """
+    """A régua da sprint: 100 tiques do daemon sem evento = 0 `pactl`."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
@@ -436,8 +358,6 @@ def test_cem_tiques_sem_evento_nao_perguntam_nada_e_respondem_igual(
                 await asyncio.to_thread(_uma_volta_dos_leitores)
             perguntas = servidor.chamadas()
             servidor.zerar()
-            # O CANAL DO MICROFONE SOZINHO, que é a mordida escrita na sprint:
-            # devolvido ao `pactl`, ele conta 5 perguntas por controle por volta.
             for _ in range(100):
                 await asyncio.to_thread(lambda: [hotkey._ler_o_canal(u) for u in UNIQS])
             do_canal = len(servidor.chamadas())
@@ -457,15 +377,7 @@ def test_cem_tiques_sem_evento_nao_perguntam_nada_e_respondem_igual(
 def test_um_evento_rele_so_o_tipo_que_mudou(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Um evento = UMA releitura, do tipo que mudou — e a tela vê a mudança.
-
-    O servidor cala o microfone do controle 3 e avisa `change on source`. O
-    retrato relê `list sources` (uma vez) e o selo do canal daquele controle
-    passa a dizer mudo, sem nenhum leitor perguntar nada.
-
-    E `client` não relê nada: cada `pactl` é um cliente, inclusive os do
-    próprio retrato — reler por eles seria perguntar por causa das perguntas.
-    """
+    """Um evento = UMA releitura, do tipo que mudou — e a tela vê a mudança."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
@@ -504,10 +416,7 @@ def test_um_evento_rele_so_o_tipo_que_mudou(
 def test_a_rajada_de_eventos_rele_uma_vez(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Um jogo que abre emite uma rajada; reler a cada linha seria a chuva de volta.
-
-    MORDIDA: `RAJADA_S = 0` com uma releitura por linha — a conta vira cinco.
-    """
+    """Um jogo que abre emite uma rajada; reler a cada linha seria a chuva de volta."""
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
     espiao = _Espiao()
@@ -531,21 +440,10 @@ def test_a_rajada_de_eventos_rele_uma_vez(
     _correr(cenario)
 
 
-# ---------------------------------------------------------------------------
-# 3 — SEM SERVIDOR, «NÃO SEI»; ELE VOLTA, E O RETRATO SE REFAZ
-# ---------------------------------------------------------------------------
-
-
 def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O `systemctl --user restart pipewire…` da prova 4, sem o servidor dela.
-
-    Caído: cada leitor recebe a falha de sempre — `None`, e não o conjunto
-    vazio que diria «ninguém toca» — e NENHUM pergunta ao servidor por conta
-    própria (quem tenta religar é só o ouvinte). Voltou: o retrato se relê
-    inteiro e os leitores respondem de novo, sem ninguém mandar.
-    """
+    """O `systemctl --user restart pipewire…` da prova 4, sem o servidor dela."""
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
     from hefesto_dualsense4unix.integrations import alto_falante_bt as afb
 
@@ -586,15 +484,6 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
     _correr(cenario)
 
 
-# ---------------------------------------------------------------------------
-# 2 — A EXAUSTIVA DE DONO: quem pergunta ao servidor, e não a palavra
-# ---------------------------------------------------------------------------
-
-#: Onde cada pergunta de leitura escrita em `src/` é entregue, e ao executor de
-#: quem. A chave é `(arquivo, porta)`: a porta é a chamada que recebe o argv
-#: (``self.runner``, ``correr``…) ou, quando o argv é guardado num nome antes,
-#: a função que o guarda. Um injetável (``runner``, ``correr``) aponta para o
-#: executor PADRÃO do módulo — é ele que roda quando ninguém injeta.
 PORTAS: dict[tuple[str, str], str] = {
     ("app/audio_saida.py", "rodar"): "audio_saida.rodar_leitura",
     ("app/audio_saida.py", "rodar_leitura"): "audio_saida.rodar_leitura",
@@ -625,13 +514,10 @@ PORTAS: dict[tuple[str, str], str] = {
     ("integrations/quem_ouve_o_microfone.py", "_rodar"): "eleicao_de_microfone._rodar",
     ("integrations/teste_do_microfone.py", "fonte_do_controle"):
         "teste_do_microfone.fonte_do_controle",
-    # A janela (nao_toca desta sprint) lê pelo dono da aba 02, que embrulha o
-    # `audio_saida.rodar_leitura`: é ele quem pergunta, e ele pergunta ao retrato.
     ("interface/pacotes/a02_controles.py", "_ler_pelo_dono"): "audio_saida.rodar_leitura",
 }
 
 
-#: A porta que É o retrato: quem pergunta a ele não pergunta ao servidor.
 PORTA_DO_RETRATO = "retrato_do_som.responder"
 
 
@@ -678,13 +564,7 @@ def _e_leitura(elementos: list[str | None]) -> bool:
 
 
 def _censo() -> list[tuple[str, int, str, list[str | None]]]:
-    """Toda pergunta de leitura ao servidor escrita em `src/`: (arquivo, linha, porta, argv).
-
-    Pela árvore, e não pelo texto: prosa pode dizer `pactl list`, e só conta a
-    lista que o interpretador monta. O primeiro elemento pode ser uma variável
-    (`[exe, "get-default-source"]`) — o nome do binário resolvido não esconde a
-    pergunta.
-    """
+    """Toda pergunta de leitura ao servidor escrita em `src/`: (arquivo, linha, porta, argv)."""
     achados: list[tuple[str, int, str, list[str | None]]] = []
     for arquivo in sorted(SRC.rglob("*.py")):
         relativo = arquivo.relative_to(SRC).as_posix()
@@ -722,15 +602,7 @@ def _censo() -> list[tuple[str, int, str, list[str | None]]]:
 
 
 def test_toda_pergunta_de_leitura_tem_um_executor_que_passa_pelo_retrato() -> None:
-    """A metade que ACHA: cada pergunta de leitura de `src/` cai numa porta conhecida.
-
-    Um leitor novo que monte a própria pergunta e a entregue a um
-    `subprocess.run` — ou a um executor novo — aparece aqui com arquivo e linha,
-    antes de virar a 24ª pergunta por segundo.
-
-    MORDIDA: ponha um `subprocess.run(["pactl", "list", "sinks"])` em qualquer
-    módulo de `src/` e esta régua reprova apontando a linha.
-    """
+    """A metade que ACHA: cada pergunta de leitura de `src/` cai numa porta conhecida."""
     sem_dono = [f"{a}:{linha} ({porta}) pergunta {' '.join(str(e) for e in argv[1:3])}"
                 for a, linha, porta, argv in _censo()
                 if porta != PORTA_DO_RETRATO and (a, porta) not in PORTAS]
@@ -752,17 +624,7 @@ def test_o_censo_acha_as_perguntas_que_existem() -> None:
 def test_todo_executor_com_o_retrato_vivo_nao_pergunta_nada(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A metade que JULGA: cada executor, chamado de verdade, com cada pergunta que
-    o censo achou entregue a ele — e o servidor diz se alguém além do retrato
-    perguntou.
-
-    A resposta com o retrato vivo tem de ser a MESMA que o executor dá
-    perguntando ao servidor: a primeira volta roda com o retrato solto e serve
-    de gabarito.
-
-    MORDIDA: tire a consulta ao retrato de qualquer executor (o
-    `mic_monitor._rodar`, por exemplo) e esta régua reprova nomeando-o.
-    """
+    """A metade que JULGA: cada executor, chamado de verdade, com cada pergunta que"""
     executores = _executores()
     formas: dict[str, set[tuple[str, ...]]] = {}
     for a, _l, porta, argv in _censo():
@@ -811,19 +673,8 @@ def test_todo_executor_com_o_retrato_vivo_nao_pergunta_nada(
     assert not diferentes, f"o retrato respondeu diferente do servidor em: {diferentes}"
 
 
-# ---------------------------------------------------------------------------
-# O retrato por dentro
-# ---------------------------------------------------------------------------
-
-
 def test_o_curto_sai_do_longo_como_o_pactl_o_imprime() -> None:
-    """O oráculo é o `printf` do `pactl` 16.1, escrito à parte do retrato.
-
-    Conferido também contra a saída curta da máquina dela em 28/09/2026 (os
-    arquivos ficaram fora do repositório: têm endereço de controle).
-
-    MORDIDA: troque a ordem de duas colunas em `curto_dos_nos`.
-    """
+    """O oráculo é o `printf` do `pactl` 16.1, escrito à parte do retrato."""
     t = _textos()
     for tipo in ("sinks", "sources"):
         assert rs.curto_dos_nos(rs.nos_do_texto(t[f"{tipo}.longo"])) == t[f"{tipo}.curto"]
@@ -895,13 +746,7 @@ def _respostas() -> dict[tuple[str, ...], str | None]:
 
 
 def test_escrever_e_conferir_le_o_servidor_e_nao_a_foto() -> None:
-    """O «escrevi, confiro» de quem elege um microfone.
-
-    Sem a pendência, a conferência que vem logo depois da escrita leria a foto
-    de antes dela — e a eleição concluiria que o servidor recusou.
-
-    MORDIDA: esvazie `escreveu` e a conferência responde o padrão velho.
-    """
+    """O «escrevi, confiro» de quem elege um microfone."""
     respostas = _respostas()
     r, lidas = _retrato_de_mentira(respostas)
     assert r.carregar()
@@ -918,11 +763,7 @@ def test_escrever_e_conferir_le_o_servidor_e_nao_a_foto() -> None:
 
 
 def test_o_tipo_que_nao_releu_diz_nao_sei_e_nao_pergunta_a_cada_tique() -> None:
-    """Releitura que falhou: «não sei», e a próxima tentativa só depois do intervalo.
-
-    Sem o intervalo, um servidor que recusa depressa levaria uma pergunta por
-    leitor por tique — o defeito inteiro, pela porta dos fundos.
-    """
+    """Releitura que falhou: «não sei», e a próxima tentativa só depois do intervalo."""
     respostas = _respostas()
     r, lidas = _retrato_de_mentira(respostas)
     assert r.carregar()
@@ -959,11 +800,7 @@ def test_a_escrita_nunca_e_respondida_pelo_retrato() -> None:
 
 
 def test_servidor_sob_suspeita_nao_responde_pela_foto(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Um servidor TRAVADO não derruba o `subscribe`: quem o percebe é o recuo.
-
-    Em recuo, «não sei» sem perguntar; recuo vencido sem resposta, a leitura
-    vai ao servidor e a primeira que responde zera o recuo.
-    """
+    """Um servidor TRAVADO não derruba o `subscribe`: quem o percebe é o recuo."""
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
 
     respostas = _respostas()
@@ -978,7 +815,6 @@ def test_servidor_sob_suspeita_nao_responde_pela_foto(monkeypatch: pytest.Monkey
     assert r.responder(["pactl", "get-default-sink"]) == f"{HDMI}\n"
     assert lidas == [("pactl", "info")], "sob suspeita, a foto respondeu sem ler"
 
-    # E EM RECUO o leitor do retrato nem pergunta: «não sei», sem processo.
     def nenhum_processo(*_a: Any, **_k: Any) -> Any:
         raise AssertionError("em recuo, o retrato perguntou ao servidor")
 
@@ -1004,20 +840,10 @@ def test_quem_espera_acorda_so_pelo_assunto_dele() -> None:
     assert time.monotonic() - inicio >= 0.04
 
 
-# ---------------------------------------------------------------------------
-# «Os laços deixam de perguntar: eles acordam pelo evento»
-# ---------------------------------------------------------------------------
-
-
 def test_o_canal_do_microfone_acorda_pelo_evento_das_fontes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A prova 2 da sprint, na metade que cabe numa régua: o selo do canal
-    acompanha o gesto em menos de 1 s porque o laço acorda pelo evento — e não
-    na volta de 2 s. Um fluxo de SAÍDA que muda no meio do jogo não o acorda.
-
-    MORDIDA: devolva o `asyncio.sleep(CANAL_TTL_S)` ao laço.
-    """
+    """A prova 2 da sprint, na metade que cabe numa régua: o selo do canal"""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
 
     voltas: list[str] = []
@@ -1065,16 +891,7 @@ def test_o_canal_do_microfone_acorda_pelo_evento_das_fontes(
 def test_o_vigia_do_alto_falante_acorda_pelo_fluxo_que_nasce(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O jogo abre um fluxo no endpoint: a volta do alto-falante acorda na hora.
-
-    Desde 28/09 (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01) não há vigia
-    de 0,4 s: o OUVINTE do alto-falante dorme no retrato e arma o aviso da
-    volta, que olha se o que ela leu mudou. A parada solta os dois sem esperar
-    o relógio — o ouvinte pelo `RETRATO.acordar`, a espera pelo aviso.
-
-    MORDIDA: tire o `self._acordar.set()` de `_ouvir_o_retrato` — o fluxo que
-    nasce espera a volta inteira.
-    """
+    """O jogo abre um fluxo no endpoint: a volta do alto-falante acorda na hora."""
     import threading
 
     from hefesto_dualsense4unix.daemon.subsystems import alto_falante as af
@@ -1128,17 +945,7 @@ def test_o_vigia_do_alto_falante_acorda_pelo_fluxo_que_nasce(
 def test_o_ouvinte_para_quando_mandam_mesmo_com_o_servidor_caido(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O desligamento do daemon cancela o ouvinte UMA vez, em qualquer ponto da volta.
-
-    Com o servidor caído o ouvinte religa sem parar, e o cancelamento pode cair
-    em qualquer `await` da volta — inclusive no que recolhe as tarefas da
-    rajada. Achado pela mordida do «sem servidor» em 28/09/2026: um
-    `suppress(CancelledError)` ali engolia o cancelamento, e o ouvinte (e a
-    régua) ficavam presos para sempre. Quarenta cancelamentos em pontos
-    diferentes da volta.
-
-    MORDIDA: devolva o `await` por tarefa dentro de `suppress(CancelledError)`.
-    """
+    """O desligamento do daemon cancela o ouvinte UMA vez, em qualquer ponto da volta."""
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
     monkeypatch.setattr(ods, "ESPERA_PARA_RELIGAR_S", 0.0)
@@ -1153,22 +960,8 @@ def test_o_ouvinte_para_quando_mandam_mesmo_com_o_servidor_caido(
     _correr(cenario)
 
 
-# ---------------------------------------------------------------------------
-# A conferência de 28/09/2026 — o que as réguas de cima não mordiam
-# ---------------------------------------------------------------------------
-
-
 def test_o_padrao_nao_segura_o_laco_do_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A consulta ao retrato que RELÊ o servidor roda fora do laço do daemon.
-
-    Uma escrita deixou o `server` pendente: o padrão publicado relê o
-    servidor antes de responder, com `subprocess.run`. No laço, esse `pactl`
-    pararia o daemon inteiro pelo tempo dele — a leitura de antes da cura era
-    assíncrona justamente por isso.
-
-    MORDIDA: devolva o corpo de `ler_o_padrao` ao laço (sem o `to_thread`) e o
-    laço fica parado enquanto o retrato relê.
-    """
+    """A consulta ao retrato que RELÊ o servidor roda fora do laço do daemon."""
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
     r, _lidas = _retrato_de_mentira(_respostas())
@@ -1210,15 +1003,7 @@ def test_o_padrao_nao_segura_o_laco_do_daemon(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_a_rajada_que_acabou_nao_fica_guardada(servidor: Servidor) -> None:
-    """Cada rajada é uma tarefa; a que acabou sai da lista da volta.
-
-    Sem a poda, toda rajada ficava guardada até o `subscribe` cair — e ele não
-    cai numa sessão boa. Um jogo que mexe nos fluxos dá uma rajada por
-    segundo: dezenas de milhares por noite, no processo que fica de pé o dia
-    inteiro.
-
-    MORDIDA: tire a poda e a conta vira trinta.
-    """
+    """Cada rajada é uma tarefa; a que acabou sai da lista da volta."""
     import gc
 
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
@@ -1252,23 +1037,7 @@ def test_a_rajada_que_acabou_nao_fica_guardada(servidor: Servidor) -> None:
 def test_o_evento_nao_encurta_o_prazo_de_quem_sai_do_ar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O selo acompanha o evento; o «saiu do ar» segue o relógio de sempre.
-
-    `MicrofonesNoAr.LEITURAS_SEM_CANAL_ATE_SAIR` conta LEITURAS, e o tempo
-    delas vinha do laço, que dormia `CANAL_TTL_S`: duas faltas eram dois a
-    quatro segundos. Acordado pelo evento, o laço dá voltas em milissegundos —
-    a ponte do rádio que refaz o nó (a fonte sai, o monitor do alto-falante
-    sai, a fonte volta) contaria as duas faltas num piscar e tiraria do ar um
-    microfone que ela ligou, sem gesto nenhum.
-
-    E a volta pelo evento que pulou a conferência não a empurra um prazo
-    inteiro para a frente: a seguinte sai na hora devida.
-
-    MORDIDAS: devolva o `_conferir_quem_saiu_do_ar` direto ao laço e as cinco
-    voltas pelo evento conferem cinco vezes; tire o teto do prazo em
-    `_esperar_o_som_mudar` e a segunda conferência atrasa o que o último
-    evento atrasou.
-    """
+    """O selo acompanha o evento; o «saiu do ar» segue o relógio de sempre."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
 
     voltas: list[str] = []
@@ -1306,8 +1075,6 @@ def test_o_evento_nao_encurta_o_prazo_de_quem_sai_do_ar(
             assert len(voltas) == 5
             assert len(conferencias) == 1, (
                 f"cinco voltas pelo evento conferiram {len(conferencias)} vezes quem saiu do ar")
-            # Um evento perto da hora devida: a volta dele pula a conferência,
-            # e a seguinte não pode esperar um prazo inteiro a partir dele.
             laco = asyncio.get_running_loop()
             await asyncio.sleep(max(0.0, conferencias[0] + 0.45 - laco.time()))
             rs.RETRATO._avisar({"sources"})
@@ -1326,14 +1093,7 @@ def test_o_evento_nao_encurta_o_prazo_de_quem_sai_do_ar(
 
 
 def test_o_numero_do_cliente_no_info_nao_e_mudanca(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `Client Index` do `pactl info` é o do PRÓPRIO `pactl` que perguntou.
-
-    Ele muda a cada pergunta, e contá-lo como mudança faria toda releitura do
-    servidor acordar o canal do microfone dos quatro controles — o servidor
-    de mentira de cima não o muda, e por isso não via.
-
-    MORDIDA: compare o `info` inteiro em `_reler_um`.
-    """
+    """O `Client Index` do `pactl info` é o do PRÓPRIO `pactl` que perguntou."""
     respostas = _respostas()
     contador = [1]
     base = respostas[("pactl", "info")]
@@ -1357,23 +1117,7 @@ def test_o_numero_do_cliente_no_info_nao_e_mudanca(monkeypatch: pytest.MonkeyPat
 def test_um_tipo_que_nao_le_nao_cala_os_outros(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch, thread_lenta: bool
 ) -> None:
-    """Um tipo que o servidor não responde não segura o retrato inteiro.
-
-    Numa máquina em que UMA pergunta falha sempre (um servidor que não lista
-    os módulos, por exemplo), o retrato que exigia as seis respostas para
-    assumir ficava solto para sempre: todo leitor voltava a perguntar ao
-    servidor — o defeito inteiro — e o padrão publicado ficava vazio, embora o
-    servidor respondesse o resto. E a insistência relê só o que falta.
-
-    MORDIDAS: exija a leitura inteira para o primeiro dono assumir (o retrato
-    nunca fica vivo); releia todos os tipos na insistência (as saídas voltam a
-    ser perguntadas sem evento).
-
-    A THREAD LENTA (O-CI-DA-DEV-VOLTA-A-VERDE-02): o `_o_padrao_do_retrato` com 50 ms
-    de atraso é o runner do CI, em que a leitura do padrão (depois de o retrato ficar
-    vivo e antes da publicação) passa da volta do laço. MORDIDA: volte a barreira
-    para o `RETRATO.vivo` e este caso reprova com «o padrão não foi publicado».
-    """
+    """Um tipo que o servidor não responde não segura o retrato inteiro."""
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
     if thread_lenta:

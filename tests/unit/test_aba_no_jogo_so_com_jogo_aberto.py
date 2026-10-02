@@ -47,10 +47,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GI-REAL-01: este módulo importa `app/`, que sobe PyGObject no import.
-# Sem esta guarda ele não COLETA num runner sem GTK, e o censo de coleta
-# do `ci.yml` reprova a leva inteira. Medido em 13/08/2026: era um dos
-# três módulos que derrubavam o `lint-test` nas três versões de Python.
 exigir_gi_real("aba No jogo só com jogo aberto (importa app.widgets.painel_no_jogo)")
 
 from hefesto_dualsense4unix.app.widgets.painel_no_jogo import jogo_steam_aberto
@@ -62,38 +58,18 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: O Pragmata, o jogo com que ela mediu o defeito do controle duplicado em
-#: 10/08 — o mesmo appid que já aparece em `test_o_perfil_do_jogo_que_nao_entrou`.
 PRAGMATA = 3357650
 
 
-# ---------------------------------------------------------------------------
-# 1. A leitura da janela: três respostas, e o `None` é uma delas
-# ---------------------------------------------------------------------------
-
-
 def test_com_jogo_aberto_a_resposta_e_sim() -> None:
-    """O caso que faz a aba aparecer.
-
-    Arranque para ver reprovar: fazer `jogo_steam_aberto` devolver sempre
-    `False` (ou ignorar o `appid`).
-    """
+    """O caso que faz a aba aparecer."""
     estado = {"jogo_steam": {"lido": True, "appid": PRAGMATA}}
 
     assert jogo_steam_aberto(estado) is True
 
 
 def test_ainda_nao_perguntei_nao_e_nao_ha_jogo() -> None:
-    """O TRI-ESTADO, que é a razão de o `lido` existir.
-
-    Os dois estados abaixo têm `appid=None` e mandam a janela fazer coisas
-    OPOSTAS: o primeiro é "não mexa na aba", o segundo é "esconda a aba".
-
-    Arranque para ver reprovar: tirar o `lido` da conta em `jogo_steam_aberto`
-    (devolver `isinstance(appid, int)` direto). As duas linhas passam a devolver
-    `False` e a primeira asserção reprova — que é, letra por letra, a aba
-    piscando a cada vez que o daemon sobe.
-    """
+    """O TRI-ESTADO, que é a razão de o `lido` existir."""
     ainda_nao = {"jogo_steam": {"lido": False, "appid": None}}
     nao_ha = {"jogo_steam": {"lido": True, "appid": None}}
 
@@ -102,30 +78,14 @@ def test_ainda_nao_perguntei_nao_e_nao_ha_jogo() -> None:
 
 
 def test_daemon_velho_e_daemon_desligado_nao_decidem_nada() -> None:
-    """Silêncio nunca vira "não há jogo".
-
-    Um daemon anterior a esta versão não conhece a chave `jogo_steam` — e nesta
-    casa o daemon vivo ser mais velho que o código é rotina (install editable: a
-    cura do daemon só vale no próximo start). Um `False` inventado a partir do
-    silêncio faria a aba sumir por causa da IDADE do daemon.
-
-    Arranque para ver reprovar: devolver `False` quando a chave falta.
-    """
+    """Silêncio nunca vira "não há jogo"."""
     assert jogo_steam_aberto({"connected": True}) is None
     assert jogo_steam_aberto(None) is None
     assert jogo_steam_aberto({"jogo_steam": "sim"}) is None
 
 
-# ---------------------------------------------------------------------------
-# 2. O store: quem guarda o tri-estado
-# ---------------------------------------------------------------------------
-
-
 def test_o_store_nasce_sem_ter_perguntado() -> None:
-    """Boot do daemon: ninguém sondou ainda, e o store diz isso.
-
-    Arranque para ver reprovar: nascer com `_steam_jogo_lido = True`.
-    """
+    """Boot do daemon: ninguém sondou ainda, e o store diz isso."""
     store = StateStore()
 
     assert store.steam_jogo_lido is False
@@ -133,11 +93,7 @@ def test_o_store_nasce_sem_ter_perguntado() -> None:
 
 
 def test_sondar_e_nao_achar_jogo_e_uma_resposta() -> None:
-    """`set_steam_jogo_appid(None)` é "não há jogo", não "não sei".
-
-    Arranque para ver reprovar: não marcar `_steam_jogo_lido` quando o appid é
-    `None` (só marcar quando há jogo).
-    """
+    """`set_steam_jogo_appid(None)` é "não há jogo", não "não sei"."""
     store = StateStore()
     store.set_steam_jogo_appid(None)
 
@@ -151,11 +107,6 @@ def test_o_appid_do_jogo_aberto_fica_no_store() -> None:
 
     assert store.steam_jogo_lido is True
     assert store.steam_jogo_appid == PRAGMATA
-
-
-# ---------------------------------------------------------------------------
-# 3. O daemon: sondar, publicar, e estar de fato LIGADO no laço
-# ---------------------------------------------------------------------------
 
 
 class _DaemonDeSonda:
@@ -175,11 +126,7 @@ class _DaemonDeSonda:
 
 
 def test_a_sonda_publica_o_appid_no_store() -> None:
-    """O caminho feliz: o daemon pergunta e o fato entra no store.
-
-    Arranque para ver reprovar: tirar o `set_steam_jogo_appid` de
-    `_sondar_steam_jogo`.
-    """
+    """O caminho feliz: o daemon pergunta e o fato entra no store."""
     daemon = _DaemonDeSonda(PRAGMATA)
     asyncio.run(daemon._sondar_steam_jogo())
 
@@ -189,14 +136,7 @@ def test_a_sonda_publica_o_appid_no_store() -> None:
 
 
 def test_sonda_que_falha_nao_apaga_o_que_se_sabia() -> None:
-    """`pgrep` que estoura não vira "não há jogo".
-
-    É a diferença entre a aba sumir debaixo dela no meio da partida por causa de
-    um susto do sistema, e a aba ficar exatamente como estava.
-
-    Arranque para ver reprovar: trocar o `return` do `except` por
-    `self.store.set_steam_jogo_appid(None)`.
-    """
+    """`pgrep` que estoura não vira "não há jogo"."""
     daemon = _DaemonDeSonda(PRAGMATA)
     asyncio.run(daemon._sondar_steam_jogo())
     daemon._resposta = OSError("fork falhou")
@@ -221,7 +161,7 @@ class _DaemonDeLaco(_DaemonDeSonda):
         self.controller = SimpleNamespace(is_connected=lambda: False)
         self.bus = SimpleNamespace(publish=lambda *a, **k: None)
         self._stop_event: Any = None
-        self._input_ready_at = float("inf")  # sem grace: o co-op fica de fora
+        self._input_ready_at = float("inf")
         self._external_tick_task: Any = None
         self._steam_jogo_task: Any = None
         self._restantes = ticks
@@ -234,22 +174,6 @@ class _DaemonDeLaco(_DaemonDeSonda):
         self._restantes -= 1
         return self._restantes < 0
 
-    # OS STUBS NÃO SÃO DECORAÇÃO — são os OITO métodos que o `_poll_loop` de
-    # PRODUÇÃO chama no caminho que este dublê percorre. Apagar um derruba os
-    # dois testes do laço aqui embaixo com `AttributeError`, e acrescentar uma
-    # chamada nova ao laço sem o irmão aqui derruba os mesmos dois — foi o que
-    # `cacd786cb` (O-NO-NASCE-FECHADO-01, 20/09/2026) fez com o
-    # `_reconciliar_exposicao_do_modo_nativo`, três arquivos longe da causa.
-    #
-    # E NÃO SÃO SÓ OS STUBS: o `_stop_event`, o `_input_ready_at`, o
-    # `_external_tick_task` e o `_steam_jogo_task` do `__init__` estão lá pela
-    # mesma razão — o laço os LÊ, sem nunca chamá-los, e os dois últimos só
-    # DEPOIS do `while`, onde este dublê também passa. Apagar um deles derruba
-    # os mesmos dois testes.
-    #
-    # Quem guarda esta lista sincronizada é
-    # `test_o_duble_do_poll_loop_acompanha_o_produto.py`, que lê o laço por AST
-    # e reprova NOMEANDO o que falta.
     def _sync_identity_registry(self) -> None: ...
     def _seguir_a_carta(self) -> None: ...
     def aplicar_gamepad_para_multiplos_controles(self) -> None: ...
@@ -267,19 +191,7 @@ class _DaemonDeLaco(_DaemonDeSonda):
 
 
 def test_o_poll_loop_agenda_a_sonda() -> None:
-    """A cura tem de estar LIGADA — o defeito mais caro desta casa é a que não está.
-
-    *"A casa sabe e o produto não faz"*: o `_poll_loop` é o único relógio do
-    daemon, e uma sonda que ninguém agenda deixa `steam_jogo_lido` em `False`
-    para sempre — a aba nunca mais apareceria, e todos os outros testes desta
-    bancada continuariam verdes.
-
-    Roda o laço de PRODUÇÃO, com o controle DESCONECTADO: se a sonda for parar
-    depois do gate de conexão, ela nunca acontece e o store fica virgem.
-
-    Arranque para ver reprovar: apagar o bloco do `steam_jogo_next_at` do
-    `_poll_loop`, ou movê-lo para depois do `if not self.controller.is_connected()`.
-    """
+    """A cura tem de estar LIGADA — o defeito mais caro desta casa é a que não está."""
     daemon = _DaemonDeLaco(PRAGMATA)
     asyncio.run(daemon.rodar())
 
@@ -288,23 +200,14 @@ def test_o_poll_loop_agenda_a_sonda() -> None:
 
 
 def test_a_sonda_nao_empilha_a_cada_tique() -> None:
-    """`pgrep` é subprocesso: um tique que não voltou não ganha companhia.
-
-    Quatro voltas do laço, e a sonda de 0,5 Hz acontece UMA vez — a aritmética
-    do `next_at` mais a guarda de reentrância do `_schedule_steam_jogo_tick`.
-
-    Arranque para ver reprovar: tirar o `if task is not None and not task.done()`
-    do `_schedule_steam_jogo_tick` E o `steam_jogo_next_at = tick_started + 2.0`.
-    """
+    """`pgrep` é subprocesso: um tique que não voltou não ganha companhia."""
     daemon = _DaemonDeLaco(PRAGMATA, ticks=4)
     asyncio.run(daemon.rodar())
 
     assert daemon.chamadas == 1
 
 
-# ---------------------------------------------------------------------------
 # 4. O `state_full`: o fato viaja até a janela
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -337,12 +240,7 @@ def ipc_server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
 
 
 async def test_o_state_full_leva_o_tri_estado_inteiro(ipc_server: IpcServer) -> None:
-    """As duas chaves viajam juntas — a `appid` sozinha não responde nada.
-
-    Arranque para ver reprovar: publicar só o `appid` (ou nem publicar: sem a
-    chave `jogo_steam` o teste estoura em `KeyError`, que é o estado do HEAD
-    antes desta leva).
-    """
+    """As duas chaves viajam juntas — a `appid` sozinha não responde nada."""
     antes = await ipc_server._handle_daemon_state_full({})
     assert antes["jogo_steam"] == {"lido": False, "appid": None}
 
@@ -358,12 +256,7 @@ async def test_o_state_full_leva_o_tri_estado_inteiro(ipc_server: IpcServer) -> 
 async def test_a_ponta_a_ponta_o_state_full_faz_a_janela_decidir(
     ipc_server: IpcServer,
 ) -> None:
-    """O que o daemon publica é exatamente o que a janela sabe ler.
-
-    Este é o teste que impede as duas pontas de divergirem em silêncio: o nome
-    da chave está escrito em dois arquivos (o handler e o `painel_no_jogo`), e
-    um `rename` de um lado só passaria por todos os outros testes desta bancada.
-    """
+    """O que o daemon publica é exatamente o que a janela sabe ler."""
     ipc_server.store.set_steam_jogo_appid(PRAGMATA)
     assert jogo_steam_aberto(await ipc_server._handle_daemon_state_full({})) is True
 

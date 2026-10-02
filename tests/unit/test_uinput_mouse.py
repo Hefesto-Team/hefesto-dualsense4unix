@@ -34,11 +34,6 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
 def _fake_uinput_module() -> MagicMock:
     """Fabrica um módulo uinput fake com constantes suficientes para todos os emits."""
     mod = MagicMock()
-    # BUG-TEST-UINPUT-HASH-COLLISION-01: códigos por ÍNDICE sequencial, não
-    # `hash(name) & 0xFFFF` — hash() de str é randomizado por processo
-    # (PYTHONHASHSEED), então dois códigos podiam colidir (ex.: REL_X == REL_Y)
-    # e quebrar os filtros _emits_for de forma flaky não-diagnosticável. O índice
-    # garante unicidade determinística.
     for i, name in enumerate(
         (
             "REL_X", "REL_Y", "REL_WHEEL", "REL_HWHEEL",
@@ -80,8 +75,6 @@ def _emits_for(fake_device: MagicMock, code: Any) -> list:
     ]
 
 
-# --- configuração / constantes -----------------------------------------------
-
 def test_constantes_default_coerentes():
     assert DEFAULT_MOUSE_SPEED == 6
     assert DEFAULT_SCROLL_SPEED == 1
@@ -89,16 +82,10 @@ def test_constantes_default_coerentes():
     assert SCROLL_DEADZONE == 40
     assert SCROLL_RATE_LIMIT_SEC == 0.050
     assert TRIGGER_PRESS_THRESHOLD == 64
-    # FEAT-MOUSE-CURSOR-FEEL-01 — constantes do pipeline float (da spec).
     assert MOUSE_EXPO == 1.6
     assert MOUSE_PX_PER_SEC_STEP == 125.0
     assert DEFAULT_POLL_HZ == 60
-    # A GRAFIA AQUI É A VELHA DE PROPÓSITO — `F6-O-NOME-TEM-UM-DONO`, 11/09/2026.
     # O nome do produto em TEXTO virou `DualSense4Unix`, com o `S` do DualSense;
-    # o nome deste nó NÃO, porque o kernel o publica e alguém de fora casa por
-    # ele: jogos sob Proton por substring, e o compositor guarda configuração por
-    # nome de dispositivo. Trocar a caixa não dá erro — apaga a amarração que a
-    # pessoa já salvou, calado. `scripts/check_a_grafia_do_nome.py` isenta a forma.
     assert DEVICE_NAME == "Hefesto - Dualsense4Unix Virtual Mouse+Keyboard"
 
 
@@ -116,33 +103,21 @@ def test_button_map_canonico():
     }
 
 
-# --- pipeline float do stick (FEAT-MOUSE-CURSOR-FEEL-01) ---------------------
-
 def test_deadzone_movimento_retorna_zero_perto_do_centro():
-    # Dentro da deadzone radial (|offset| <= 20) → velocidade 0 px/s.
     assert _compute_move_px_per_sec(128, 128, 6) == (0.0, 0.0)
     assert _compute_move_px_per_sec(128 + 19, 128, 6) == (0.0, 0.0)
     assert _compute_move_px_per_sec(128 - 19, 128, 6) == (0.0, 0.0)
-    # Exatamente na borda (offset 20): resposta reescalada começa em 0.
     assert _compute_move_px_per_sec(128 + 20, 128, 6) == (0.0, 0.0)
 
 
-# Tabela de regressão do contrato px/s (critério de aceite da spec):
-# deflexão (offset cru do centro) → px/s esperado por speed. Valores derivados
-# das constantes da Decisão (dz=20/128 reescalada, expo 1.6, step 125 px/s).
 @pytest.mark.parametrize(
     ("offset", "speed", "px_per_sec"),
     [
-        # 0% e borda da deadzone (~16%) → parado, em qualquer speed.
         (0, 1, 0.0), (0, 6, 0.0), (0, 12, 0.0),
         (20, 1, 0.0), (20, 6, 0.0), (20, 12, 0.0),
-        # ~30% de deflexão (offset 38).
         (38, 1, 7.110), (38, 6, 42.660), (38, 12, 85.320),
-        # ~60% de deflexão (offset 77).
         (77, 1, 44.961), (77, 6, 269.763), (77, 12, 539.527),
-        # 100% positivo (raw 255, offset 127 — o cru satura em 255).
         (127, 1, 123.153), (127, 6, 738.920), (127, 12, 1477.840),
-        # 100% negativo (raw 0, offset -128) → teto nominal exato da tabela.
         (-128, 1, -125.0), (-128, 6, -750.0), (-128, 12, -1500.0),
     ],
 )
@@ -160,22 +135,19 @@ def test_tabela_regressao_deflexao_para_px_por_segundo(
 @pytest.mark.parametrize("offset", [21, 26, 40, 64, 100, 127])
 @pytest.mark.parametrize("speed", [1, 6, 12])
 def test_simetria_positivo_negativo(offset: int, speed: int):
-    """Mesma deflexão para os dois lados → mesma magnitude de px/s (o pipeline
-    antigo tinha -speed vs speed-1: 360 vs 300 px/s @ 6)."""
+    """Mesma deflexão para os dois lados → mesma magnitude de px/s (o pipeline"""
     pos, _ = _compute_move_px_per_sec(128 + offset, 128, speed)
     neg, _ = _compute_move_px_per_sec(128 - offset, 128, speed)
     assert pos > 0.0
     assert neg == pytest.approx(-pos)
-    # Eixo Y idêntico ao X (radial).
     _, pos_y = _compute_move_px_per_sec(128, 128 + offset, speed)
     assert pos_y == pytest.approx(pos)
 
 
 def test_continuidade_sem_degrau_na_saida_da_deadzone():
-    """Logo após a deadzone a velocidade nasce quase-zero e cresce monotônica —
-    sem o salto 0→60 px/s do pipeline antigo."""
+    """Logo após a deadzone a velocidade nasce quase-zero e cresce monotônica —"""
     logo_apos, _ = _compute_move_px_per_sec(128 + 21, 128, 6)
-    assert 0.0 < logo_apos < 1.0  # ~0.42 px/s; antes era 60 px/s
+    assert 0.0 < logo_apos < 1.0
     velocidades = [
         _compute_move_px_per_sec(128 + off, 128, 6)[0] for off in range(21, 128)
     ]
@@ -183,22 +155,17 @@ def test_continuidade_sem_degrau_na_saida_da_deadzone():
 
 
 def test_diagonal_cheia_nao_ultrapassa_teto_de_px_por_segundo():
-    """Canto diagonal do gate quadrado (raw 255/255): a magnitude radial é
-    clampada ao teto nominal (speed*125), não 1.9x ele."""
+    """Canto diagonal do gate quadrado (raw 255/255): a magnitude radial é"""
     vx, vy = _compute_move_px_per_sec(255, 255, 6)
     assert math.hypot(vx, vy) == pytest.approx(6 * MOUSE_PX_PER_SEC_STEP, rel=0.001)
 
 
 def test_deadzone_scroll_exige_amplitude_maior():
-    # Stick a 30 de offset passa no move (>20) mas não no scroll (<40)
     assert _compute_move_px_per_sec(128 + 30, 128, 6)[0] > 0.0
     assert _compute_scroll_step(128 + 30) == 0
-    # Acima de 40 passa
     assert _compute_scroll_step(128 + 41) == 1
     assert _compute_scroll_step(128 - 41) == -1
 
-
-# --- start / stop ------------------------------------------------------------
 
 def test_start_sem_uinput_retorna_false(monkeypatch: pytest.MonkeyPatch):
     real_import = builtins.__import__
@@ -218,33 +185,27 @@ def test_start_e_stop_idempotente(monkeypatch: pytest.MonkeyPatch):
     dev, fake_mod, fake_device = _started_device(monkeypatch)
     assert dev.is_active() is True
     fake_mod.Device.assert_called_once()
-    # Segunda chamada não recria
     assert dev.start() is True
     fake_mod.Device.assert_called_once()
 
     dev.stop()
     fake_device.destroy.assert_called_once()
     assert dev.is_active() is False
-    # Stop idempotente
     dev.stop()
     fake_device.destroy.assert_called_once()
 
 
 def test_dispatch_sem_start_nao_emite(monkeypatch: pytest.MonkeyPatch):
     dev = UinputMouseDevice()
-    # Sem start, dispatch é no-op (não levanta)
     dev.dispatch(
         lx=200, ly=200, rx=200, ry=200, l2=0, r2=0,
         buttons=frozenset({"cross"}),
     )
 
 
-# --- botões: edge-trigger ----------------------------------------------------
-
 def test_cross_press_release_emite_bt_left(monkeypatch: pytest.MonkeyPatch):
     dev, fake_mod, fake_device = _started_device(monkeypatch)
 
-    # Press
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset({"cross"}), now=0.0,
@@ -254,11 +215,10 @@ def test_cross_press_release_emite_bt_left(monkeypatch: pytest.MonkeyPatch):
         if c[0] == "emit" and c[1][0] == fake_mod.BTN_LEFT
     ]
     assert len(left_emits) == 1
-    assert left_emits[-1][1][1] == 1  # value=1 (press)
+    assert left_emits[-1][1][1] == 1
 
     fake_device.reset_mock()
 
-    # Hold (mesmo estado): sem novo emit de BTN_LEFT
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset({"cross"}), now=0.1,
@@ -269,7 +229,6 @@ def test_cross_press_release_emite_bt_left(monkeypatch: pytest.MonkeyPatch):
     ]
     assert held == []
 
-    # Release
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset(), now=0.2,
@@ -305,7 +264,6 @@ def test_triangle_e_r3_mapeam_right_e_middle(monkeypatch: pytest.MonkeyPatch):
 def test_l2_analogico_acima_do_threshold_dispara_botao_esquerdo(monkeypatch: pytest.MonkeyPatch):
     dev, fake_mod, fake_device = _started_device(monkeypatch)
 
-    # L2 abaixo do threshold: não dispara
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=40, r2=0,
         buttons=frozenset(), now=0.0,
@@ -317,7 +275,6 @@ def test_l2_analogico_acima_do_threshold_dispara_botao_esquerdo(monkeypatch: pyt
 
     fake_device.reset_mock()
 
-    # L2 acima: dispara
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=200, r2=0,
         buttons=frozenset(), now=0.1,
@@ -342,8 +299,6 @@ def test_r2_analogico_acima_do_threshold_dispara_botao_direito(monkeypatch: pyte
     ]
     assert press and press[-1][1][1] == 1
 
-
-# --- movimento ---------------------------------------------------------------
 
 def test_stick_esquerdo_fora_do_centro_emite_rel(monkeypatch: pytest.MonkeyPatch):
     dev, fake_mod, fake_device = _started_device(monkeypatch)
@@ -374,9 +329,9 @@ def test_stick_esquerdo_no_centro_nao_emite(monkeypatch: pytest.MonkeyPatch):
 def test_set_speed_limites():
     dev = UinputMouseDevice()
     dev.set_speed(mouse_speed=100)
-    assert dev.mouse_speed == 12  # clamp superior
+    assert dev.mouse_speed == 12
     dev.set_speed(mouse_speed=-5)
-    assert dev.mouse_speed == 1  # clamp inferior
+    assert dev.mouse_speed == 1
     dev.set_speed(scroll_speed=10)
     assert dev.scroll_speed == 5
     dev.set_speed(scroll_speed=0)
@@ -384,15 +339,13 @@ def test_set_speed_limites():
 
 
 def test_carry_acumula_subpixel_em_deflexao_pequena(monkeypatch: pytest.MonkeyPatch):
-    """20% de deflexão @ speed 6 → ~7,36 px/s (0,12 px/tick @ 60 Hz): os 8
-    primeiros ticks não emitem nada (sub-pixel), o carry fecha 1 px no 9º e
-    60 ticks somam ~7 px — o pipeline antigo truncava tudo a 0 ou saltava."""
+    """20% de deflexão @ speed 6 → ~7,36 px/s (0,12 px/tick @ 60 Hz): os 8"""
     dev, fake_mod, fake_device = _started_device(monkeypatch)
 
     for _ in range(8):
         dev.dispatch(lx=154, ly=128, rx=128, ry=128, l2=0, r2=0,
                      buttons=frozenset(), now=0.0)
-    assert not _emits_for(fake_device, fake_mod.REL_X)  # ainda <1 px acumulado
+    assert not _emits_for(fake_device, fake_mod.REL_X)
 
     dev.dispatch(lx=154, ly=128, rx=128, ry=128, l2=0, r2=0,
                  buttons=frozenset(), now=0.0)
@@ -401,17 +354,16 @@ def test_carry_acumula_subpixel_em_deflexao_pequena(monkeypatch: pytest.MonkeyPa
     assert primeiro[-1][1][1] == 1
 
     fake_device.reset_mock()
-    dev._stick_carry_x = 0.0  # zera para medir 60 ticks limpos
+    dev._stick_carry_x = 0.0
     for _ in range(60):
         dev.dispatch(lx=154, ly=128, rx=128, ry=128, l2=0, r2=0,
                      buttons=frozenset(), now=0.0)
     total = _rel_sum(fake_device, fake_mod.REL_X)
-    assert 6 <= total <= 8  # ~7,36 px em 1s de deflexão constante
+    assert 6 <= total <= 8
 
 
 def test_speed_1_move_em_todas_as_direcoes(monkeypatch: pytest.MonkeyPatch):
-    """speed=1 era INCAPAZ de mover para direita/baixo (int truncava a 0 em
-    todo o range positivo). Agora todas as direções emitem."""
+    """speed=1 era INCAPAZ de mover para direita/baixo (int truncava a 0 em"""
     casos = [
         ("direita", dict(lx=255, ly=128), "REL_X", 1),
         ("esquerda", dict(lx=0, ly=128), "REL_X", -1),
@@ -428,47 +380,39 @@ def test_speed_1_move_em_todas_as_direcoes(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_deadzone_zera_carry_para_nao_virar_drift(monkeypatch: pytest.MonkeyPatch):
-    """Voltar ao repouso descarta o resto fracionário: religar o movimento
-    depois recomeça do zero (sem pixel fantasma acumulado)."""
+    """Voltar ao repouso descarta o resto fracionário: religar o movimento"""
     dev, _fake_mod, _fake_device = _started_device(monkeypatch)
-    # 8 ticks a 20% acumulam ~0,98 px de carry sem emitir.
     for _ in range(8):
         dev.dispatch(lx=154, ly=128, rx=128, ry=128, l2=0, r2=0,
                      buttons=frozenset(), now=0.0)
     assert dev._stick_carry_x > 0.9
-    # Stick de volta ao centro: carry zerado.
     dev.dispatch(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
                  buttons=frozenset(), now=0.0)
     assert dev._stick_carry_x == 0.0
     assert dev._stick_carry_y == 0.0
-    # stop() também zera (start/stop resetam estado).
     dev._stick_carry_x = 0.7
     dev.stop()
     assert dev._stick_carry_x == 0.0
 
 
 def test_poll_hz_define_o_delta_por_tick(monkeypatch: pytest.MonkeyPatch):
-    """O período do tick vem de poll_hz (não hardcodado 60): a MESMA deflexão
-    a 125 Hz emite deltas menores por tick (750/125=6 vs 750/60→12 px)."""
+    """O período do tick vem de poll_hz (não hardcodado 60): a MESMA deflexão"""
     dev60, fake_mod60, fake_device60 = _started_device(monkeypatch)
     dev60.dispatch(lx=128, ly=0, rx=128, ry=128, l2=0, r2=0,
                    buttons=frozenset(), now=0.0)
     tick60 = _rel_sum(fake_device60, fake_mod60.REL_Y)
-    assert tick60 == -12  # -750 px/s / 60 Hz (deflexão negativa cheia)
+    assert tick60 == -12
 
     dev125, fake_mod125, fake_device125 = _started_device(monkeypatch, poll_hz=125)
     dev125.dispatch(lx=128, ly=0, rx=128, ry=128, l2=0, r2=0,
                     buttons=frozenset(), now=0.0)
     tick125 = _rel_sum(fake_device125, fake_mod125.REL_Y)
-    assert tick125 == -6  # -750 px/s / 125 Hz
+    assert tick125 == -6
 
-
-# --- scroll / rate-limit -----------------------------------------------------
 
 def test_scroll_rate_limit_50ms(monkeypatch: pytest.MonkeyPatch):
     dev, fake_mod, fake_device = _started_device(monkeypatch)
 
-    # Primeiro scroll em t=0: passa
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=200, l2=0, r2=0,
         buttons=frozenset(), now=0.0,
@@ -478,7 +422,6 @@ def test_scroll_rate_limit_50ms(monkeypatch: pytest.MonkeyPatch):
 
     fake_device.reset_mock()
 
-    # t=0.020 (20ms): dentro do rate-limit, NÃO emite
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=200, l2=0, r2=0,
         buttons=frozenset(), now=0.020,
@@ -486,7 +429,6 @@ def test_scroll_rate_limit_50ms(monkeypatch: pytest.MonkeyPatch):
     blocked = _emits_for(fake_device, fake_mod.REL_WHEEL)
     assert blocked == []
 
-    # t=0.060 (60ms): fora do rate-limit, emite
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=200, l2=0, r2=0,
         buttons=frozenset(), now=0.060,
@@ -516,8 +458,6 @@ def test_scroll_horizontal_hwheel(monkeypatch: pytest.MonkeyPatch):
     assert hwheel and hwheel[-1][1][1] != 0
 
 
-# --- D-pad → setas -----------------------------------------------------------
-
 def test_dpad_up_emite_key_up_edge_trigger(monkeypatch: pytest.MonkeyPatch):
     dev, fake_mod, fake_device = _started_device(monkeypatch)
 
@@ -530,7 +470,6 @@ def test_dpad_up_emite_key_up_edge_trigger(monkeypatch: pytest.MonkeyPatch):
 
     fake_device.reset_mock()
 
-    # Mantido: sem novo emit
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset({"dpad_up"}), now=0.05,
@@ -538,7 +477,6 @@ def test_dpad_up_emite_key_up_edge_trigger(monkeypatch: pytest.MonkeyPatch):
     held = [c for c in fake_device.method_calls if c[0] == "emit" and c[1][0] == fake_mod.KEY_UP]
     assert held == []
 
-    # Solto: release
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset(), now=0.1,
@@ -565,15 +503,13 @@ def test_dpad_cobre_quatro_direcoes(monkeypatch: pytest.MonkeyPatch):
         key = getattr(fake_mod, key_attr)
         press = [c for c in fake_device.method_calls if c[0] == "emit" and c[1][0] == key]
         assert press and press[-1][1][1] == 1, f"{name} não emitiu {key_attr} press"
-        t += 0.2  # desacopla do rate-limit de scroll
+        t += 0.2
         dev.dispatch(
             lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
             buttons=frozenset(), now=t,
         )
         t += 0.2
 
-
-# --- Circle/Square edge-triggered → Enter/Esc (FEAT-MOUSE-02) ---------------
 
 def test_edge_key_map_canonico():
     assert EDGE_KEY_MAP == {
@@ -586,20 +522,17 @@ def test_circle_edge_trigger_enter(monkeypatch: pytest.MonkeyPatch):
     """Circle False→True emite KEY_ENTER press+release; hold não re-emite."""
     dev, fake_mod, fake_device = _started_device(monkeypatch)
 
-    # Primeiro tick: circle=True → press+release
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset({"circle"}), now=0.0,
     )
     enter = _emits_for(fake_device, fake_mod.KEY_ENTER)
-    # Emite valor 1 (press) e 0 (release) no mesmo dispatch
     assert len(enter) == 2
     assert enter[0][1][1] == 1
     assert enter[1][1][1] == 0
 
     fake_device.reset_mock()
 
-    # Segundo tick com circle=True ainda pressionado: NÃO re-emite
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset({"circle"}), now=0.05,
@@ -635,7 +568,6 @@ def test_release_allows_re_emit(monkeypatch: pytest.MonkeyPatch):
     """Após circle=False, próxima pressão re-emite KEY_ENTER."""
     dev, fake_mod, fake_device = _started_device(monkeypatch)
 
-    # Press inicial
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset({"circle"}), now=0.0,
@@ -643,7 +575,6 @@ def test_release_allows_re_emit(monkeypatch: pytest.MonkeyPatch):
     first = _emits_for(fake_device, fake_mod.KEY_ENTER)
     assert len(first) == 2
 
-    # Release
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset(), now=0.05,
@@ -651,7 +582,6 @@ def test_release_allows_re_emit(monkeypatch: pytest.MonkeyPatch):
 
     fake_device.reset_mock()
 
-    # Nova pressão: re-emite
     dev.dispatch(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset({"circle"}), now=0.10,
@@ -662,12 +592,9 @@ def test_release_allows_re_emit(monkeypatch: pytest.MonkeyPatch):
     assert second[1][1][1] == 0
 
 
-# --- touchpad → cursor (FEAT-DSX-TOUCHPAD-CURSOR-B4) -------------------------
-
 def test_emit_touchpad_move_escala_por_sensibilidade(monkeypatch: pytest.MonkeyPatch):
     """raw delta → REL_X/REL_Y escalado por TOUCHPAD_SENSITIVITY (speed default)."""
     dev, fake_mod, fake_device = _started_device(monkeypatch)
-    # factor = 0.45 * (6/6) = 0.45 → dx=100 vira 45; dy=-50 vira -22 (trunca).
     dev.emit_touchpad_move(100, -50)
     rel_x = _emits_for(fake_device, fake_mod.REL_X)
     rel_y = _emits_for(fake_device, fake_mod.REL_Y)
@@ -685,11 +612,9 @@ def test_emit_touchpad_move_zero_nao_emite(monkeypatch: pytest.MonkeyPatch):
 def test_emit_touchpad_move_carry_subpixel_sem_engasgo(monkeypatch: pytest.MonkeyPatch):
     """Movimentos lentos que truncam a 0 acumulam carry e eventualmente emitem 1px."""
     dev, fake_mod, fake_device = _started_device(monkeypatch)
-    # factor=0.45: cada raw=1 → 0.45 px. Dois ticks somam 0.9 (<1, sem emit),
-    # o terceiro fecha 1.35 → emite exatamente 1px.
     dev.emit_touchpad_move(1, 0)
     dev.emit_touchpad_move(1, 0)
-    assert not _emits_for(fake_device, fake_mod.REL_X)  # ainda <1px acumulado
+    assert not _emits_for(fake_device, fake_mod.REL_X)
     dev.emit_touchpad_move(1, 0)
     rel_x = _emits_for(fake_device, fake_mod.REL_X)
     assert len(rel_x) == 1
@@ -699,7 +624,7 @@ def test_emit_touchpad_move_carry_subpixel_sem_engasgo(monkeypatch: pytest.Monke
 def test_emit_touchpad_move_respeita_mouse_speed(monkeypatch: pytest.MonkeyPatch):
     """mouse_speed maior amplifica o movimento do touchpad."""
     dev, fake_mod, fake_device = _started_device(monkeypatch)
-    dev.set_speed(mouse_speed=12)  # factor = 0.45 * (12/6) = 0.9
+    dev.set_speed(mouse_speed=12)
     dev.emit_touchpad_move(100, 0)
     rel_x = _emits_for(fake_device, fake_mod.REL_X)
     assert rel_x and rel_x[-1][1][1] == 90
@@ -708,11 +633,10 @@ def test_emit_touchpad_move_respeita_mouse_speed(monkeypatch: pytest.MonkeyPatch
 def test_emit_touchpad_move_sem_start_nao_levanta():
     """Sem device criado, emit_touchpad_move é no-op silencioso."""
     dev = UinputMouseDevice()
-    dev.emit_touchpad_move(100, 100)  # não deve levantar
+    dev.emit_touchpad_move(100, 100)
 
 
 def test_touchpad_sensitivity_default():
     assert TOUCHPAD_SENSITIVITY == 0.45
 
 
-# "A liberdade é nada mais que uma chance de ser melhor." — Albert Camus

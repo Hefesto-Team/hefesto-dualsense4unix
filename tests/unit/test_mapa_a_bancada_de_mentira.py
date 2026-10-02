@@ -62,9 +62,6 @@ from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 RAIZ_BT = "/mentira/class/bluetooth"
 RAIZ_USB = "/mentira/bus/usb/devices"
 
-#: Os quatro hubs-raiz. Os barramentos 3 e 4 são os dois lados do MESMO
-#: controlador (medido: `0000:0c:00.3`), e é isso que faz o hub de dois chips
-#: dela enumerar em dois barramentos.
 _PCI_DE_1_E_2 = "0000:0a:00.0"
 _PCI_DE_3_E_4 = "0000:0c:00.3"
 
@@ -73,8 +70,6 @@ USB2 = f"/mentira/devices/pci0000:00/{_PCI_DE_1_E_2}/usb2"
 USB3 = f"/mentira/devices/pci0000:00/{_PCI_DE_3_E_4}/usb3"
 USB4 = f"/mentira/devices/pci0000:00/{_PCI_DE_3_E_4}/usb4"
 
-#: O nó de cada aparelho, pelo nome do kernel. Escrito uma vez para que teste
-#: nenhum precise montar caminho à mão.
 NOS: dict[str, str] = {
     "usb1": USB1,
     "usb2": USB2,
@@ -93,18 +88,12 @@ NOS: dict[str, str] = {
     "4-4": f"{USB4}/4-4",
 }
 
-#: Os dois seriais forjados dos adaptadores Bluetooth. Doze hex, que é a forma
-#: em que o TP-Link UB500 publica o próprio endereço — a coincidência que casa
-#: as duas leituras. Faixa `aa:bb:cc`, que é dado de teste desta casa.
 SERIAL_DO_BT_DO_HUB = "aabbcc0000a1"
 SERIAL_DO_BT_DA_EXTENSAO = "aabbcc0000c4"
 
-#: Como o BlueZ reporta os mesmos dois endereços: maiúsculas, com dois-pontos.
 ENDERECO_DO_BT_DO_HUB = "AA:BB:CC:00:00:A1"
 ENDERECO_DO_BT_DA_EXTENSAO = "AA:BB:CC:00:00:C4"
 
-#: O serial do Archer T3U — MEDIDO, e é o contraexemplo inteiro: seis dígitos
-#: decimais, que não são endereço de coisa nenhuma.
 SERIAL_DO_WIFI = "123456"
 
 
@@ -122,8 +111,6 @@ def _raiz(busnum: str, velocidade: str) -> dict[str, str]:
     }
 
 
-#: `nó -> {atributo: valor}`. Atributo que falta falta de verdade: é assim que
-#: "não sei" chega ao produto pelo mesmo caminho de uma máquina real.
 _APARELHOS: dict[str, dict[str, str]] = {
     USB1: _raiz("1", "480"),
     USB2: _raiz("2", "10000"),
@@ -139,8 +126,6 @@ _APARELHOS: dict[str, dict[str, str]] = {
         "speed": "12",
         "bMaxPower": "98mA",
         "power/control": "on",
-        # MEDIDO, e é a prova de que o mapa não se deduz: as DUAS entradas da
-        # frente respondem exatamente isto, iguais uma à outra.
         "physical_location/panel": "right",
     },
     NOS["1-6"]: {
@@ -238,8 +223,6 @@ _APARELHOS: dict[str, dict[str, str]] = {
     },
 }
 
-#: O Archer T3U. O nó muda de lugar entre os dois estados da mesa e o resto do
-#: descritor é o mesmo — é literalmente o mesmo aparelho noutro buraco.
 _WIFI = {
     "idVendor": "2357",
     "idProduct": "012d",
@@ -250,8 +233,6 @@ _WIFI = {
     "serial": SERIAL_DO_WIFI,
 }
 
-#: `nó -> (classe, subclasse, protocolo)` da interface 0, que é de onde o censo
-#: tira a espécie. O descritor do APARELHO vale `00` em todo aparelho composto.
 _INTERFACES: dict[str, tuple[str, str, str]] = {
     USB1: ("09", "00", "00"),
     USB2: ("09", "00", "00"),
@@ -268,8 +249,6 @@ _INTERFACES: dict[str, tuple[str, str, str]] = {
     NOS["4-1.1"]: ("09", "00", "00"),
 }
 
-#: Onde cada `hciN` aterrissa. No sysfs de verdade o link vai para a INTERFACE
-#: (`3-1.1.1:1.0`), não para o dispositivo — quem sobe é o produto.
 _INTERFACES_BT: dict[str, str] = {
     "hci0": f"{NOS['3-1.1.1']}/3-1.1.1:1.0",
     "hci1": f"{NOS['3-1.1.4']}/3-1.1.4:1.0",
@@ -288,7 +267,6 @@ class Bancada:
     ) -> None:
         self.aparelhos = aparelhos
         self.interfaces_bt = interfaces_bt
-        #: Todo caminho que passou por qualquer um dos quatro leitores.
         self.tocados: list[str] = []
 
         self.conteudo = {
@@ -409,12 +387,7 @@ def bancada_de_agora() -> Bancada:
 
 
 def bancada_com_o_wifi_no_hub() -> Bancada:
-    """A MESMA mesa às 21h de 24/08 — o Wi-Fi no lado 3.0 do hub.
-
-    É o único estado em que o hub de dois barramentos aparece, e por isso é a
-    bancada da ``MAPA-6``. Não é hipótese: é a leitura "antes" do ensaio que a
-    mantenedora executou naquela noite.
-    """
+    """A MESMA mesa às 21h de 24/08 — o Wi-Fi no lado 3.0 do hub."""
     return Bancada(
         aparelhos=_com_o_wifi_em("4-1.1.2"),
         interfaces=_interfaces_com_o_wifi_em("4-1.1.2"),
@@ -423,16 +396,7 @@ def bancada_com_o_wifi_no_hub() -> Bancada:
 
 
 def mapa_dela() -> MapaDaMesa:
-    """O gabinete dela: três faces, quinze entradas, e uma por extensão.
-
-    Os números são os que ela escreveu na foto do gabinete. As duas entradas da
-    frente são as que a máquina não distingue (`1-3` e `1-6`); a entrada 4 é o
-    cabo do hub; a 15a é o dongle na ponta da extensão que sai da 15.
-
-    As entradas 7 e 11 declaram os DOIS lugares por onde o Archer T3U já
-    passou. Só uma delas está ocupada de cada vez, e é assim que uma mesa
-    declarada uma vez continua valendo quando ela troca um cabo de buraco.
-    """
+    """O gabinete dela: três faces, quinze entradas, e uma por extensão."""
     return MapaDaMesa.model_validate(
         {
             "faces": [
@@ -457,16 +421,8 @@ def mapa_dela() -> MapaDaMesa:
     )
 
 
-# --- A régua conferindo a própria régua -------------------------------------
-
-
 def test_a_bancada_devolve_os_dez_aparelhos_da_leitura_de_agora() -> None:
-    """O censo desta bancada é a leitura de 02h30, aparelho por aparelho.
-
-    Instrumento não se usa sem calibrar. Se esta lista deixar de bater, todo
-    teste desta frente passou a medir outra mesa — que é o defeito
-    "medir contra a biblioteca errada produz alarme convincente e falso".
-    """
+    """O censo desta bancada é a leitura de 02h30, aparelho por aparelho."""
     censo = bancada_de_agora().censo()
     nomes = sorted(a.nome_do_kernel for a in censo.conectados())
 
@@ -485,12 +441,7 @@ def test_a_bancada_devolve_os_dez_aparelhos_da_leitura_de_agora() -> None:
 
 
 def test_as_duas_entradas_da_frente_sao_indistinguiveis_para_a_maquina() -> None:
-    """O fato que obriga o mapa a ser declarado, na bancada.
-
-    Medido em 25/08/2026: `1-3` e `1-6` respondem `panel=right` os dois, e a
-    ACPI desta placa nunca diz "front" nem "back". São faces diferentes do
-    metal com a mesma resposta do kernel — deduzir aqui é errar.
-    """
+    """O fato que obriga o mapa a ser declarado, na bancada."""
     censo = bancada_de_agora().censo()
     paineis = {
         a.nome_do_kernel: a.painel

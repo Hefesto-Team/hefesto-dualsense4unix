@@ -100,7 +100,7 @@ Quatro dependências que o plano chamou de «só de posse» eram lógicas:
 - Três deles devolvem o valor cru quando não o reconhecem.
 - O `battery_journal` pega os dígitos hex de qualquer texto, quando a regra da casa é descartar o valor.
 - O endereço do pad virtual continuava reversível mesmo com o 4.º e o 5.º octetos zerados, porque sobram uns dois candidatos. A sprint decide zerar os quatro bytes do hash.
-- Uma régua que reconfigure o structlog global repetiria a cicatriz de `tests/unit/test_reserva_do_posto_01_os_eventos_falam.py:95-111`. A régua 4 embrulha um logger num buffer em vez disso.
+- Uma régua que reconfigure o structlog global repetiria a cicatriz de `tests/unit/test_reserva_do_posto_01_os_eventos_falam.py:74-90`. A régua 4 embrulha um logger num buffer em vez disso.
 
 A máscara do serial também passa a ter o produto como dono, como pede a resposta 13 dela: «a tela mostra inteiro; o Copiar leva mascarado».
 

@@ -59,15 +59,8 @@ import pytest
 from hefesto_dualsense4unix.core import escritor_cru
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-# ---------------------------------------------------------------------------
-# Metade 1 — a varredura de `/proc` do `core/escritor_cru.py`
-# ---------------------------------------------------------------------------
 
-#: O `/proc` sintético da mesa dela: a Steam pelo runtime (o antigo
-#: `pgrep -f steamrt64/steam`), a Steam fora do runtime (o antigo `pgrep -x
-#: steam`, que compara o `comm`) e três vizinhos que não podem casar.
 _PROC_COM_A_STEAM: dict[str, tuple[str, str]] = {
-    # pid: (comm, cmdline)
     "100": ("cosmic-comp", "/usr/bin/cosmic-comp"),
     "4242": (
         "steam",
@@ -79,33 +72,14 @@ _PROC_COM_A_STEAM: dict[str, tuple[str, str]] = {
         "-- /usr/bin/steam",
     ),
     "9000": ("pipewire", "/usr/bin/pipewire"),
-    # A ISCA, e ela é real: um script que PROCURA a Steam carrega a agulha na
-    # própria cmdline. O `pgrep` só se excluía a si mesmo, nunca ao vizinho —
-    # então ele casava esta linha, e a varredura casa igual. Contrato idêntico
-    # é o que esta sprint promete; virar o comportamento aqui em silêncio
-    # seria trocar de contrato dizendo que só se trocou de mecanismo.
     "9100": ("bash", "/bin/bash -c pgrep -f steamrt64/steam"),
 }
 
-#: Quem o produto tem de achar no `/proc` acima — os dois da Steam e a isca.
 _PIDS_ESPERADOS = [4242, 4243, 9100]
 
 
 class _ProcDaSteamContado:
-    """`/proc` sintético que CONTA varreduras e ARQUIVOS abertos — e recusa.
-
-    Conta duas coisas diferentes de propósito:
-
-    * `varreduras` — quantas vezes o produto chamou `os.listdir("/proc")`. É o
-      que o cache promete zerar, e é o que o dublê de `subprocess` contava
-      antes com o nome de `forks`;
-    * `abertos` — a lista de `(pid, arquivo)` que o produto leu. É a asserção
-      que o dublê velho não conseguia fazer: ela prova que o `comm` é LIDO, e
-      não deduzido do `argv[0]`.
-
-    `erro` faz o `listdir` levantar: é o `/proc` ilegível, e é como este dublê
-    sabe RECUSAR.
-    """
+    """`/proc` sintético que CONTA varreduras e ARQUIVOS abertos — e recusa."""
 
     def __init__(
         self,
@@ -174,25 +148,14 @@ def _sem_foto_herdada():
 
 
 def test_a_varredura_acha_a_steam_pelos_dois_criterios(proc_da_steam) -> None:
-    """Antes de contar barato, provar que acha — nos DOIS critérios do `pgrep`.
-
-    Uma varredura que devolvesse `[]` passaria em todos os testes de cache
-    abaixo, e é o defeito que esta casa nomeou seis vezes: a régua que dá verde
-    sobre nada.
-    """
+    """Antes de contar barato, provar que acha — nos DOIS critérios do `pgrep`."""
     proc_da_steam()
 
     assert escritor_cru.pids_da_steam(agora=0.0) == _PIDS_ESPERADOS
 
 
 def test_o_comm_e_lido_e_nao_deduzido_do_argv(proc_da_steam) -> None:
-    """`pgrep -x steam` compara o `comm`, e o produto tem de ler o `comm`.
-
-    O pid 4242 tem `comm == "steam"` e uma cmdline que NÃO contém
-    `steamrt64/steam`: só é achado por quem lê `/proc/<pid>/comm`. Deduzir o
-    nome do `argv[0]` seria uma regra diferente com cara de igual — `comm` é
-    definível por `prctl` e truncado em 15 bytes.
-    """
+    """`pgrep -x steam` compara o `comm`, e o produto tem de ler o `comm`."""
     contador = proc_da_steam()
     escritor_cru.pids_da_steam(agora=0.0)
 
@@ -207,10 +170,7 @@ def test_o_comm_e_lido_e_nao_deduzido_do_argv(proc_da_steam) -> None:
 
 
 def test_a_cmdline_so_e_lida_quando_o_comm_nao_resolveu(proc_da_steam) -> None:
-    """Dois arquivos por pid é o teto, e o `comm` que casa dispensa o segundo.
-
-    É metade da cura: o `pgrep` lia CINCO arquivos por processo.
-    """
+    """Dois arquivos por pid é o teto, e o `comm` que casa dispensa o segundo."""
     contador = proc_da_steam()
     escritor_cru.pids_da_steam(agora=0.0)
 
@@ -228,7 +188,7 @@ def test_cinco_tiques_dentro_da_validade_varrem_uma_vez(proc_da_steam) -> None:
     """A cura, em uma linha: cinco perguntas, uma varredura."""
     contador = proc_da_steam()
 
-    for tique in range(5):  # 0, 1, 2, 3, 4 s — todos dentro dos 5 s de validade
+    for tique in range(5):
         assert escritor_cru.pids_da_steam(agora=float(tique)) == _PIDS_ESPERADOS
 
     assert contador.varreduras == 1, (
@@ -238,11 +198,7 @@ def test_cinco_tiques_dentro_da_validade_varrem_uma_vez(proc_da_steam) -> None:
 
 
 def test_a_regua_sabe_recusar(proc_da_steam, monkeypatch) -> None:
-    """O MESMO contador, com a validade zerada, tem de ver o mundo ruim.
-
-    Sem este caso o teste acima passaria com um dublê cego (um que contasse
-    sempre 1, ou nunca fosse chamado).
-    """
+    """O MESMO contador, com a validade zerada, tem de ver o mundo ruim."""
     contador = proc_da_steam()
     monkeypatch.setattr(escritor_cru, "VALIDADE_DO_VEREDITO_S", 0.0)
 
@@ -280,11 +236,7 @@ def test_forcar_ignora_a_foto(proc_da_steam) -> None:
 def test_o_caminho_da_janela_inteiro_paga_uma_varredura_so(
     proc_da_steam, monkeypatch
 ) -> None:
-    """O caminho REAL: `controller.list` → `holders_de_hidraw` → `pids_da_steam`.
-
-    É este que a medição de 25/08 pegou forkando a cada 3,3 s, e nenhum teste
-    daqui podia afirmar a cura sem exercitá-lo de ponta a ponta.
-    """
+    """O caminho REAL: `controller.list` → `holders_de_hidraw` → `pids_da_steam`."""
     contador = proc_da_steam()
     relogio = _RelogioFalso()
     monkeypatch.setattr(escritor_cru, "time", relogio)
@@ -299,11 +251,7 @@ def test_o_caminho_da_janela_inteiro_paga_uma_varredura_so(
 
 
 def test_o_sentinela_forcado_joga_a_foto_fora(proc_da_steam) -> None:
-    """`sondar(forcar=True)` tem de valer para o cache NOVO também.
-
-    Sem isto, "ignora a validade" passaria a ignorar só metade dela: a chegada
-    de um controle (`connection.py`, `forcar=True`) veria pids de 5 s atrás.
-    """
+    """`sondar(forcar=True)` tem de valer para o cache NOVO também."""
     contador = proc_da_steam()
 
     escritor_cru.pids_da_steam(agora=0.0)
@@ -329,19 +277,7 @@ def test_proc_ilegivel_degrada_e_nao_levanta(proc_da_steam) -> None:
 def test_o_proc_ilegivel_do_escritor_cru_nao_vira_negativo_carimbado(
     proc_da_steam,
 ) -> None:
-    """Ausência de leitura não é "a Steam não está aberta".
-
-    O `pgrep` que estourava o `timeout` carimbava a foto assim mesmo, e cinco
-    segundos de "ninguém segura o hidraw" licenciam repintura da barra por
-    cima da Steam. A varredura que não terminou não carimba.
-
-    **O NOME É LONGO DE PROPÓSITO.** A primeira versão deste teste se chamava
-    `test_proc_ilegivel_nao_vira_cinco_segundos_de_negativo` — o nome EXATO de
-    um teste da metade 2, sobre o outro produto. Python guarda a última
-    definição, então este nunca rodou: a mordida (carimbar a foto no `except`)
-    passou verde, e só apareceu porque a mordida foi conferida uma a uma. É a
-    régua que não mede nada, achada dentro da régua que existe para achá-las.
-    """
+    """Ausência de leitura não é "a Steam não está aberta"."""
     contador = proc_da_steam(erro=OSError("sem /proc"))
 
     escritor_cru.pids_da_steam(agora=0.0)
@@ -353,10 +289,6 @@ def test_o_proc_ilegivel_do_escritor_cru_nao_vira_negativo_carimbado(
     )
 
 
-# ---------------------------------------------------------------------------
-# Metade 2 — a varredura nativa de `/proc` do `steam_launch_options.py`
-# ---------------------------------------------------------------------------
-
 REAPER = (
     "/home/vitoriamaria/.steam/debian-installation/ubuntu12_32/reaper "
     "SteamLaunch AppId=1599660 -- /.../proton waitforexitandrun /.../Launcher.exe"
@@ -364,11 +296,7 @@ REAPER = (
 
 
 class _SemMarker:
-    """`daemon.launch_env` sem marker: força o caminho de varredura.
-
-    É o jogo lançado FORA do wrapper — e é justamente nele que a varredura
-    completa lia a cmdline do jogo a cada 2 s, tomando o `mmap_read_lock` dele.
-    """
+    """`daemon.launch_env` sem marker: força o caminho de varredura."""
 
     @staticmethod
     def read_last_run_marker():
@@ -418,11 +346,7 @@ def proc_contado(monkeypatch):
 
 
 def test_cinco_tiques_sem_jogo_varrem_proc_uma_vez(proc_contado) -> None:
-    """O estado permanente de um daemon 24/7: jogo fechado, e ninguém olhando.
-
-    Era 400 `openat` a cada 2 s, para sempre — e DUAS varreduras por tique,
-    porque o poll loop pergunta duas coisas (`running` e `appid`).
-    """
+    """O estado permanente de um daemon 24/7: jogo fechado, e ninguém olhando."""
     contador = proc_contado({"100": "cosmic-comp", "101": "pipewire"})
 
     for tique in range(5):
@@ -449,13 +373,7 @@ def test_a_regua_da_varredura_sabe_recusar(proc_contado, monkeypatch) -> None:
 
 
 def test_jogo_fora_do_wrapper_custa_um_open_por_tique(proc_contado) -> None:
-    """A camada 2, e é a que morde o engasgo: o jogo aberto SEM o marker.
-
-    Antes: `/proc` inteiro a cada tique, lendo a cmdline do próprio jogo junto
-    com a de todo mundo. Depois: uma varredura na vida, e um `open` por tique
-    — o do jogo. E a resposta continua sendo de AGORA, não de cinco segundos
-    atrás: o pid é reconfirmado contra a agulha toda vez.
-    """
+    """A camada 2, e é a que morde o engasgo: o jogo aberto SEM o marker."""
     contador = proc_contado({"100": "cosmic-comp", "200": REAPER})
 
     for tique in range(5):
@@ -472,15 +390,11 @@ def test_jogo_fora_do_wrapper_custa_um_open_por_tique(proc_contado) -> None:
 
 
 def test_o_jogo_que_fechou_e_notado_no_tique_seguinte(proc_contado) -> None:
-    """Cache de positivo seria mentira: "há jogo" tem de morrer com o jogo.
-
-    O tique seguinte ao fim do jogo está DENTRO da validade — e mesmo assim a
-    resposta muda, porque a camada 2 reconfirma o pid em vez de acreditar nele.
-    """
+    """Cache de positivo seria mentira: "há jogo" tem de morrer com o jogo."""
     contador = proc_contado({"200": REAPER})
     assert slo._steam_launch_cmdline(agora=0.0) == REAPER
 
-    contador.mapa.clear()  # o jogo fechou
+    contador.mapa.clear()
     assert slo._steam_launch_cmdline(agora=1.0) is None, (
         "o produto continuou dizendo que há jogo aberto depois de o jogo "
         "fechar — é a mentira que guarda gesto destrutivo"
@@ -511,18 +425,14 @@ def test_proc_ilegivel_nao_vira_cinco_segundos_de_negativo(monkeypatch) -> None:
 
 
 def test_gesto_destrutivo_varre_de_verdade(proc_contado) -> None:
-    """Fechar a Steam com jogo aberto MATA o jogo: ali não se aceita foto.
-
-    O jogo nasce DEPOIS da varredura que não o viu, e dentro da validade — o
-    caminho destrutivo tem de enxergá-lo assim mesmo.
-    """
+    """Fechar a Steam com jogo aberto MATA o jogo: ali não se aceita foto."""
     contador = proc_contado({"100": "cosmic-comp"})
     assert slo._steam_launch_cmdline(agora=0.0) is None
 
-    contador.mapa["200"] = REAPER  # ela abriu um jogo fora do wrapper
-    assert slo._steam_launch_cmdline(agora=1.0) is None  # a foto ainda vale
+    contador.mapa["200"] = REAPER
+    assert slo._steam_launch_cmdline(agora=1.0) is None
 
-    slo.invalidar_varredura_de_proc()  # o que todo gesto destrutivo faz antes
+    slo.invalidar_varredura_de_proc()
     assert slo.steam_game_running() is True, (
         "o caminho que vai FECHAR a Steam aceitou um negativo velho — com um "
         "jogo aberto, esse é o caminho que mata progresso não salvo dela"

@@ -1,39 +1,4 @@
-"""Auto-switch de perfil conforme janela X11 ativa.
-
-Poll a 2Hz (`poll_interval_sec=0.5`), debounce ASSIMÉTRICO (UX-04): 500ms para
-ENTRAR num perfil específico, `DEFAULT_DEBOUNCE_SAIDA_SEC` para SAIR dele rumo
-a um catch-all. Aplica via ProfileManager.activate quando a escolha muda.
-
-UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese — leitura SEM INFORMAÇÃO
-("não sei qual janela está em foco") pula o tick inteiro e retém o perfil
-corrente. Antes, o backend cego virava `wm_class='unknown'`, o `MatchAny`
-do perfil padrão casava com tudo e a emulação caía no meio do jogo
-(provado ao vivo: journal 03:40:29 e 13:07:18 de 2026-07-16).
-
-FOCO-ERRANTE-01 (18/08/2026): a janela do CLIENTE Steam não tira o perfil de um
-jogo VIVO. A histerese UX-01 cobre a AUSÊNCIA de dado; nada cobria o dado
-ERRADO — e sob XWayland uma janela invisível do `steamwebhelper` (classe
-`steam`) rouba o foco do X no meio da partida. Desde 28/09/2026 a guarda vale
-para QUALQUER janela que não seja a de outro jogo
-(`D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO`: o perfil do jogo entra no
-lançamento, e o foco só confirma). Ver `jogo_do_wrapper_vivo` e
-`AutoSwitcher._recusa_a_troca_com_o_jogo_vivo`.
-
-O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): com o Modo Freestyle ligado o
-tique para ANTES de casar a janela — o Freestyle manda, e o autoswitch não
-troca por perfil de jogo nenhum. Quem decide é `profiles.manager`
-(`o_freestyle_manda`).
-
-`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA` (01/10/2026): numa janela que não é
-jogo e que regra nenhuma casa, o candidato é a escolha dela
-(`utils.session.a_escolha_dela`) — o `match any` saiu da seleção automática —, e
-a volta à escolha paga o debounce de saída mesmo quando a escolha é um perfil de
-jogo. E a troca à mão fica até um evento, nunca até um prazo: ver
-`AutoSwitcher._a_trava_da_mao_segura`.
-
-Desligável via env `HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT=1` (usado pelo unit headless,
-V2-4 / Patch 8).
-"""
+"""Auto-switch de perfil conforme janela X11 ativa."""
 from __future__ import annotations
 
 import asyncio
@@ -72,36 +37,8 @@ logger = get_logger(__name__)
 DEFAULT_POLL_INTERVAL_SEC = 0.5
 DEFAULT_DEBOUNCE_SEC = 0.5
 
-#: UX-04 (auditoria 24/07): debounce ASSIMÉTRICO. ENTRAR num perfil específico
-#: (a regra do jogo que ela abriu) continua custando ~0,5 s — é o que faz o
-#: modo/lightbar/gatilhos valerem desde o começo da partida. SAIR de um perfil
-#: específico rumo a um CATCH-ALL custa isto aqui.
-#:
-#: O porquê está medido: com poll de 0,5 s e debounce de 0,5 s, DOIS ticks
-#: bastavam para trocar de perfil, e a histerese UX-01 só cobre leitura SEM
-#: informação — entre duas janelas CONHECIDAS não havia cooldown nenhum. No
-#: journal de 22-23/07 isso virou `vitoria``Navegação` a cada 18-28 s, com o
-#: controle mudando de cor e de comportamento no meio do jogo ("controles
-#: malucos"). A assimetria é a forma certa: uma pausa de 12 s no jogo (overlay
-#: da Steam, navegador para ver um guia, notificação que rouba o foco) não é
-#: "ela saiu do jogo", e o custo de errar para o lado de ficar é zero — o
-#: perfil só volta ao genérico quando ela REALMENTE ficou fora.
 DEFAULT_DEBOUNCE_SAIDA_SEC = 12.0
 
-#: MISC-08 item 2 (2026-07-18): wm_class da PRÓPRIA GUI/applet do hefesto.
-#: Focar a nossa janela não é evidência de "saiu do jogo" — ao vivo (journal
-#: 20:15:40-51) cada alt-tab jogoGUI flipava vitoriasackboy_nativo, mexendo
-#: em política de rumble/modo no meio da partida. Valores provados no journal
-#: (`Main.py`, `Hefesto-Dualsense4Unix`) + o instance do WM_CLASS e o prgname
-#: ("hefesto-dualsense4unix", app/app.py + app/main.py), o entrypoint da GUI
-#: ("hefesto-dualsense4unix-gui", app/main.py) e o APP_ID do applet COSMIC
-#: (packaging/cosmic-applet/src/app.rs). Comparação case-insensitive.
-#: Tradeoff aceito: "Main.py" é genérico (outro app GTK rodando um Main.py
-#: também seria retido) — é o valor que a nossa GUI de fato reporta sob
-#: XWayland, então precisa estar coberto.
-#:
-#: A lista DERIVA de `utils.identidade` em vez de repetir literais: mudar o
-#: nome do app lá muda esta lista sozinho, e não silenciosamente de fora.
 OWN_GUI_WM_CLASSES: frozenset[str] = frozenset(
     {
         "main.py",
@@ -124,24 +61,7 @@ WindowReader = Callable[[], dict[str, Any]]
 def _cmdline_confirma_appid(
     pid: int, appid: int, proc_dir: Path | None = None
 ) -> bool:
-    """A linha de comando de `pid` anuncia `AppId=<appid>`? (FOCO-ERRANTE-01)
-
-    É a corroboração que SUBSTITUI a janela de frescor de 15 min do
-    `wrapper_game_running` — ver `jogo_do_wrapper_vivo`. O que a janela de
-    tempo cobria era o PID RECICLADO: um marker velho apontando para um número
-    que o núcleo já entregou a outro processo. A linha de comando responde a
-    mesma pergunta sem prazo de validade, porque o processo do marker é o
-    `reaper` da Steam e ele carrega o appid na própria `argv`, medido na
-    máquina dela em 18/08 (`.../reaper SteamLaunch AppId=2497900 -- ...`).
-
-    Consequência declarada: jogo lançado pelo wrapper FORA da Steam não tem
-    `AppId=` na `argv` e não é reconhecido aqui. É o lado seguro do erro — sem
-    corroboração, sem guarda, e o autoswitch segue como sempre seguiu.
-
-    `proc_dir` existe pela mesma razão do `base_dir` das funções de marker do
-    `launch_env`: dar costura de teste hermético. Nunca levanta — leitura de
-    `/proc` que falha vira "não confirmei".
-    """
+    """A linha de comando de `pid` anuncia `AppId=<appid>`? (FOCO-ERRANTE-01)"""
     base = proc_dir if proc_dir is not None else Path("/proc")
     try:
         bruto = (base / str(pid) / "cmdline").read_bytes()
@@ -150,8 +70,6 @@ def _cmdline_confirma_appid(
     except Exception:  # defensivo: sondar /proc jamais derruba o tique
         logger.debug("cmdline_do_jogo_ilegivel", exc_info=True)
         return False
-    # `/proc/<pid>/cmdline` separa os argumentos por NUL; virar espaço mantém a
-    # fronteira entre eles, que é o que o lookbehind abaixo usa.
     texto = bruto.decode("utf-8", "replace").replace("\0", " ")
     return (
         re.search(
@@ -167,28 +85,7 @@ def jogo_do_wrapper_vivo(
     proc_dir: Path | None = None,
     now: float | None = None,
 ) -> int | None:
-    """Appid do jogo do wrapper que ainda está RODANDO agora, ou None.
-
-    FOCO-ERRANTE-01 (18/08/2026). Irmã de `launch_env.launch_session_appid`,
-    e a diferença entre as duas é a única razão de esta existir: aquela exige
-    que o marker `last_run` seja FRESCO (`WRAPPER_MARKER_WINDOW_SEC`, 900 s), e
-    a partida dela dura mais que isso. **Medido:** o marker tinha 1296 s de
-    idade no instante em que o perfil do jogo foi roubado pela janela do
-    cliente Steam (marker de 00:31:38, roubo às 00:53:14). Uma guarda montada
-    sobre `launch_session_appid` teria respondido `None` e não teria evitado o
-    defeito — por isso a janela de frescor SAI, e só ela.
-
-    Tudo o mais é a MESMA decisão pura de sempre: `wrapper_game_running`
-    (NUMA-01) é reusada com `window_sec=inf`, então a correlação por pid entre
-    `last_run` e `last_exit` — a correção pós-auditoria da Onda N — continua
-    valendo byte a byte. Reinventar o critério aqui reabriria a divergência
-    entre predicados que o `profiles/steam_app.py` existe para fechar.
-
-    O que ENTRA no lugar da janela de tempo é a corroboração por `AppId=` na
-    linha de comando do processo (`_cmdline_confirma_appid`): sem prazo de
-    validade e imune a PID reciclado, que era o risco real que os 900 s
-    cobriam. Nunca levanta.
-    """
+    """Appid do jogo do wrapper que ainda está RODANDO agora, ou None."""
     from hefesto_dualsense4unix.daemon.launch_env import (
         pid_is_alive,
         read_last_exit_marker,
@@ -203,9 +100,6 @@ def jogo_do_wrapper_vivo(
         return None
     marker_pid = read_last_run_pid(base_dir)
     if marker_pid is None:
-        # Sem `pid=` no marker não há vitalidade nenhuma para atestar (marker
-        # gravado por um wrapper anterior ao NUMA-01) — e sem PID também não há
-        # linha de comando para corroborar. Recusar é o lado seguro.
         return None
     vivo = wrapper_game_running(
         marker=marker,
@@ -214,8 +108,6 @@ def jogo_do_wrapper_vivo(
         marker_pid=marker_pid,
         exit_pid=read_last_exit_pid(base_dir),
         now=now,
-        # A ÚNICA diferença para `launch_session_appid`, e ela é o assunto
-        # inteiro desta função (ver docstring).
         window_sec=math.inf,
     )
     if not vivo:
@@ -227,16 +119,7 @@ def jogo_do_wrapper_vivo(
 
 
 def _appids_de_jogo_do_perfil(profile: object) -> frozenset[int]:
-    """Os appids de que este perfil é a regra PRÓPRIA (FOCO-ERRANTE-01).
-
-    Lê as `window_class` do `match` e as passa pelo predicado ÚNICO
-    (`steam_app.steam_appid_from_wm_class`) — nada de um sexto predicado de
-    "isto é janela de jogo da Steam", que é a armadilha nº 5 da sprint.
-
-    Vazio quando o perfil não é regra de jogo da Steam (catch-all, regra por
-    título/processo, dublê de teste sem `match`): a guarda que consome isto
-    fica inerte, que é o comportamento histórico.
-    """
+    """Os appids de que este perfil é a regra PRÓPRIA (FOCO-ERRANTE-01)."""
     match = getattr(profile, "match", None)
     classes = getattr(match, "window_class", None)
     if not isinstance(classes, (list, tuple, set, frozenset)):
@@ -255,37 +138,11 @@ class AutoSwitcher:
     window_reader: WindowReader
     poll_interval_sec: float = DEFAULT_POLL_INTERVAL_SEC
     debounce_sec: float = DEFAULT_DEBOUNCE_SEC
-    # UX-04: o lado LENTO do debounce assimétrico (ver DEFAULT_DEBOUNCE_SAIDA_SEC).
-    # Só vale para SAIR de um perfil específico rumo à escolha dela (desde
-    # 01/10/2026; antes, rumo a um catch-all); qualquer outra transição usa
-    # `debounce_sec`.
     debounce_saida_sec: float = DEFAULT_DEBOUNCE_SAIDA_SEC
-    # BUG-MOUSE-TRIGGERS-01: opcional para permitir testes legados que
-    # instanciam AutoSwitcher sem store. Em produção, o Daemon injeta o
-    # store compartilhado para respeitar override de trigger manual.
     store: StateStore | None = None
-    # MODO-01/B3: par de callables do daemon para o MODO JOGO PADRÃO — o modo
-    # que liga quando é um jogo e NENHUM perfil específico opina sobre ele. Os
-    # callsites injetam `daemon.aplicar_modo_jogo_padrao` /
-    # `daemon.reverter_modo_jogo_padrao` (assinatura `(*, wm_class: str)`).
-    # None = sem daemon (CLI/testes legados): o autoswitch segue byte-idêntico
-    # ao comportamento anterior. O autoswitch só reporta o FATO ("é jogo e
-    # ninguém opina" / "não é mais isso"); toda a política — autoridade de
-    # exibição, lock de gesto manual de 30 s, idempotência — mora no daemon.
     modo_jogo_padrao_applier: Callable[..., object] | None = None
     modo_jogo_padrao_reverter: Callable[..., object] | None = None
-    # FOCO-ERRANTE-01: quem responde "que jogo do wrapper está VIVO agora?".
-    # None = `jogo_do_wrapper_vivo()` com os diretórios reais, que é o que o
-    # daemon usa (nenhuma rota de subida precisa ligar fio nenhum). O campo
-    # existe para o teste apontar a leitura para um `tmp_path` — o mesmo motivo
-    # do `base_dir` das funções de marker do `launch_env`.
     jogo_vivo_reader: Callable[[], int | None] | None = None
-    # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E3: o par do daemon para a
-    # LISTA DE EXCLUSÃO (`daemon.aplicar_a_exclusao(*, chave)` /
-    # `daemon.reverter_a_exclusao()`) e quem responde se a janela está nela
-    # (`lista_de_exclusao.contem`). None = sem daemon: byte-idêntico ao de
-    # antes. Como no modo jogo padrão, o autoswitch só reporta o FATO; a
-    # política — o Modo Nativo, a posse, o stash — mora no daemon.
     exclusao_applier: Callable[..., object] | None = None
     exclusao_reverter: Callable[..., object] | None = None
     exclusao_reader: Callable[[str], bool] | None = None
@@ -295,78 +152,22 @@ class AutoSwitcher:
     _current_profile: str | None = None
     _stop_event: asyncio.Event | None = None
     _task: asyncio.Task[Any] | None = None
-    # FEAT-POINT-AND-CLICK-01 (rate-limit): chave (evento, candidato) do último
-    # log de supressão emitido. O poll de 2 Hz chamava `_activate` a cada tick
-    # enquanto suprimido e inundava o journal (~1074 linhas/2h). Loga 1x por
-    # (motivo, candidato); re-loga quando o candidato ou o motivo muda, ou
-    # quando a supressão termina (chave zerada em `_activate` não-suprimido) e
-    # um novo episódio começa. Estado por instância — nada global.
     _suppress_log_key: tuple[str, str] | None = None
-    # UX-01 (SPRINT-UX-AUTOSWITCH-01): episódio de leituras sem informação em
-    # curso (inclui foco na própria GUI/applet — MISC-08 item 2). Serve para
-    # (a) logar `autoswitch_window_info_unavailable` (ou
-    # `autoswitch_janela_propria_ignorada`) 1x por episódio (padrão do
-    # `_log_suppressed_once` — sem flood a 2 Hz) e (b)
-    # resetar o relógio do debounce na PRIMEIRA leitura útil após o gap (o
-    # debounce é wall-time: sem o reset, o tempo pulado contaria como
-    # estabilidade e um glitch idêntico ao de antes do gap ativaria na hora).
     _info_gap_active: bool = False
-    # UX-04: o perfil CORRENTE é uma regra específica (não catch-all)? É o que
-    # arma o lado lento do debounce assimétrico. Guardado no commit da ativação
-    # porque `_current_profile` é só o NOME — reconsultar o disco a cada tick
-    # para descobrir a especificidade do que já está ativo seria I/O a 2 Hz.
     _current_especifico: bool = False
-    # O-FREESTYLE-E-UMA-CAMADA-SO-01: o último `wm_class` em que a parada pelo
-    # Freestyle foi logada. Mesmo motivo do `_suppress_log_key` — a pergunta é
-    # feita a 2 Hz, e o Freestyle fica ligado por horas.
     _freestyle_log_key: str | None = None
-    # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 4: último estado
-    # devolvido pelo par do MODO JOGO PADRÃO (`aplicar_modo_jogo_padrao` /
-    # `reverter_modo_jogo_padrao`), no vocabulário `aplicado`/`adiado_*`/
-    # `ignorado_*` dos outros appliers. O retorno era DESCARTADO: o eixo mexia
-    # (ou recusava mexer) no gamepad da usuária a cada tique e nada disso
-    # entrava no relatório da ativação — a janela não tinha como lhe dizer o que
-    # não entrou. Vazio = o par não foi chamado nesta instância.
     _estado_modo_jogo_padrao: str = ""
-    # E3: a `wm_class` excluída que está em foco agora; None = nenhuma.
     _exclusao_em_foco: str | None = None
-    # FOCO-ERRANTE-01: chave (candidato, perfil corrente) da última recusa
-    # logada. Mesma razão — e o mesmo padrão — do `_freestyle_log_key`: a recusa
-    # é avaliada a 2 Hz e o episódio medido no journal dela durou minutos; sem
-    # dedup seriam 7 200 linhas por hora.
     _recusa_log_key: tuple[str, str] | None = None
-    # FOCO-ERRANTE-01: cache de `_appids_de_jogo_do_perfil` para o perfil
-    # CORRENTE, chaveado pelo nome. `ProfileManager.get` lê o JSON do disco (e
-    # varre o diretório quando o arquivo não bate com o slug); a guarda roda a
-    # 2 Hz enquanto a janela da Steam está na frente. A chave é o NOME, então o
-    # cache se invalida sozinho em toda troca de perfil — inclusive na
-    # sincronização de crença. Custo declarado: editar o `match` do perfil ATIVO
-    # em disco só é visto na próxima troca, e o efeito se limita à guarda.
     _appids_do_perfil_nome: str | None = None
     _appids_do_perfil_valor: frozenset[int] = frozenset()
-    # O-REPOUSO-ESPERA-O-EVENTO-01, família 4: a janela em foco `(pid,
-    # wm_class)` da última vez que o negativo da varredura de `/proc` foi
-    # invalidado. Outra janela em foco é o evento que o «não há jogo» longo da
-    # pergunta de exibição espera.
     _foco_do_negativo: tuple[object, str] | None = None
-    # D-2909, item 5: o perfil da escolha dela, guardado pelo NOME. A pergunta
-    # `a_escolha_dela()` é feita a cada tique numa janela que não é jogo (lê o
-    # `session.json` e o flag, que são dela e mudam por gesto); o perfil só é
-    # relido quando o nome muda.
     _escolha_nome: str | None = None
     _escolha_perfil: Profile | None = None
-    # A TROCA À MÃO FICA ATÉ UM EVENTO (01/10/2026): o episódio da trava que
-    # este autoswitch já viu, e o perfil que estava em cena quando ela armou
-    # (o que a mão dela tirou) com os appids dele. Ver
-    # `_acompanhar_a_trava_da_mao` e `_a_trava_da_mao_segura`.
     _trava_vista: bool = False
     _jogo_da_trava: str | None = None
     _appids_da_trava: frozenset[int] = frozenset()
     _antes_da_mao: str | None = None
-    # O perfil ativo quando o episódio foi lido (a troca à mão seguinte o relê),
-    # se o wrapper já viu o jogo em cena vivo, e a última janela de verdade
-    # (nem a do Hefesto, nem a leitura cega): é ela que diz o jogo em cena
-    # quando o wrapper não sabe. Conferência de 02/10/2026.
     _ativo_da_trava: str | None = None
     _jogo_da_trava_visto_vivo: bool = False
     _ultima_janela: str = ""
@@ -397,28 +198,11 @@ class AutoSwitcher:
                 )
 
     def freestyle_ligado(self) -> bool:
-        """True quando o Modo Freestyle está ligado: o tique não casa a janela.
-
-        O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026). Substitui o `travado()` do
-        cadeado de 23/07 (FEAT-AUTOSWITCH-LOCK-01), que cedia à regra própria do
-        jogo (LOCK-CEDE-01) e por isso nunca valia em jogo. A pergunta é feita
-        ao dono (`profiles.manager.o_freestyle_manda`), a cada tique — ligar e
-        desligar valem na hora. Sem store (testes legados) = desligado, o
-        comportamento histórico.
-        """
+        """True quando o Modo Freestyle está ligado: o tique não casa a janela."""
         return o_freestyle_manda(self._store_de_estado())
 
     def _store_de_estado(self) -> Any | None:
-        """O store onde mora o perfil REALMENTE ativo (nunca `None` em produção).
-
-        PERFIL-REESCRITO-NA-PARTIDA-01, item 1. Prefere o store injetado pelo
-        daemon; cai no store do próprio `ProfileManager` (que é o MESMO objeto
-        em produção — as duas rotas de subida do autoswitch injetam `ctx.store`
-        nos dois) para que a sincronização também valha nas construções legadas
-        `AutoSwitcher(manager=..., window_reader=...)` sem `store`, usadas por
-        boa parte da suíte. Sem esse fallback a cura ficaria sem cobertura
-        justamente onde ela é mais fácil de testar.
-        """
+        """O store onde mora o perfil REALMENTE ativo (nunca `None` em produção)."""
         if self.store is not None:
             return self.store
         return getattr(self.manager, "store", None)
@@ -489,16 +273,7 @@ class AutoSwitcher:
         return self._current_profile
 
     def _outra_janela_invalida_o_negativo(self, info: dict[str, Any]) -> None:
-        """Outra janela em foco joga fora o «não há jogo» da varredura de `/proc`.
-
-        O-REPOUSO-ESPERA-O-EVENTO-01, família 4 (29/09/2026). Com o dono do
-        evento armado, a pergunta de exibição (`steam_game_running_appid`)
-        guarda o negativo até 60 s; o jogo do Proton é uma janela que ganha
-        foco, e ganhar foco é o evento que o encurta. Outro `pid` ou outra
-        `wm_class` chama o `invalidar_varredura_de_proc` que já existe, e a
-        pergunta seguinte varre. A leitura sem informação (o backend cego) não
-        conta: não é outra janela. Sem o dono, nada muda aqui.
-        """
+        """Outra janela em foco joga fora o «não há jogo» da varredura de `/proc`."""
         if not _ode.armado():
             return
         wm_class = str(info.get("wm_class") or "")
@@ -516,31 +291,10 @@ class AutoSwitcher:
         invalidar_varredura_de_proc()
 
     def _tick(self, info: dict[str, Any], now: float) -> None:
-        """Um ciclo de decisão do autoswitch (leitura já feita pelo caller).
-
-        Separado do run-loop para os testes dirigirem o relógio: o debounce é
-        wall-time e o buraco-do-debounce da UX-01 só é testável com `now`
-        controlado.
-        """
-        # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: a PRIMEIRA coisa do tique é
-        # adotar o perfil realmente ativo. Tem de vir antes de tudo — antes da
-        # histerese (que loga `current=`), antes do select, antes do debounce —
-        # senão o resto do tique decide contra uma crença que pode estar horas
-        # atrasada em relação ao que ela escolheu na mão.
+        """Um ciclo de decisão do autoswitch (leitura já feita pelo caller)."""
         self._perfil_corrente()
         self._acompanhar_a_trava_da_mao()
         self._outra_janela_invalida_o_negativo(info)
-        # UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese. Leitura sem informação
-        # (backend cego: janela X morta, foco em janela Wayland nativa) NÃO
-        # significa "é o desktop" — pula o tick INTEIRO: não mexe no candidato,
-        # não reinicia o debounce, não ativa nada. O perfil corrente fica
-        # retido até evidência POSITIVA de outra janela. Sem TTL de propósito:
-        # o EIO de BT já mediu 5,1 s e loading screens duram minutos — TTL
-        # re-introduziria o drop no meio do jogo.
-        # MISC-08 item 2 (2026-07-18): a PRÓPRIA GUI/applet em foco entra no
-        # MESMO caminho — olhar o hefesto não é sair do jogo; tratar como
-        # janela comum fazia o fallback MatchAny flipar o perfil a cada
-        # alt-tab jogoGUI (journal 20:15:40-51).
         eh_propria = self._janela_propria(info)
         if eh_propria or self._tick_sem_informacao(info):
             if not self._info_gap_active:
@@ -552,9 +306,6 @@ class AutoSwitcher:
                     wm_class=str(info.get("wm_class", "")),
                     current=self._current_profile or "",
                 )
-            # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: o reset da chave de supressão
-            # NÃO pode ser pulado junto com o tick — um episódio de supressão
-            # que termina durante o gap deduplicaria o seguinte em silêncio.
             if not self._suppression_active():
                 self._suppress_log_key = None
             return
@@ -563,25 +314,12 @@ class AutoSwitcher:
         self._info_gap_active = False
         self._ultima_janela = str(info.get("wm_class") or "")
 
-        # A LISTA DE EXCLUSÃO VEM ANTES DE TUDO — E3 da
-        # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026. A janela
-        # excluída encerra o tique antes da seleção: nem perfil, nem modo jogo
-        # padrão, nem Freestyle — o jogo que ela excluiu não vê o Hefesto. E sair
-        # dela devolve o que a exclusão tirou ANTES da seleção, para o perfil
-        # da janela seguinte decidir sobre um controle já de volta.
         if self._na_exclusao(info):
             self._last_candidate = None
             if not self._suppression_active():
                 self._suppress_log_key = None
             return
 
-        # O-FREESTYLE-E-UMA-CAMADA-SO-01: com o Freestyle ligado o tique para
-        # ANTES de casar a janela. Nenhum perfil de jogo entra: o Freestyle
-        # manda em tudo, modo e máscara incluídos. O modo jogo padrão só entra
-        # quando o Freestyle NÃO diz o modo — ver `_modo_jogo_padrao_sob_o_
-        # freestyle`. Zera o candidato pela razão do buraco-do-debounce da
-        # UX-01: desligar depois de horas na mesma janela não pode ativar o
-        # perfil no mesmo tique.
         if self.freestyle_ligado():
             self._log_freestyle_uma_vez(info)
             self._modo_jogo_padrao_sob_o_freestyle(info)
@@ -592,55 +330,17 @@ class AutoSwitcher:
         self._freestyle_log_key = None
 
         profile, motivo = self._selecionar_com_motivo(info)
-        # D-2909, item 5: numa janela que não é jogo e que regra nenhuma casa,
-        # o candidato é a escolha dela. Sem escolha, nenhum candidato, e o
-        # perfil corrente fica. Janela de jogo sem perfil próprio não troca de
-        # perfil (o modo jogo padrão, logo abaixo, é que responde a ela).
         veio_da_escolha = False
         if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
             profile = self._perfil_da_escolha()
             veio_da_escolha = profile is not None
         candidate = profile.name if profile else None
 
-        # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: quando o candidato É o perfil
-        # corrente, a especificidade sai de GRAÇA do objeto recém-selecionado —
-        # sem disco e sem custo a 2 Hz. É o que corrige o palpite conservador
-        # que a sincronização acima deixa após uma troca manual dela.
         if candidate is not None and candidate == self._current_profile:
             self._current_especifico = not bool(getattr(profile, "e_catch_all", True))
 
-        # MODO-01/B3: o modo jogo padrão, para a janela de jogo sem perfil
-        # próprio. NOTA DATADA — 28/09/2026: vinha "ANTES do cadeado", porque o
-        # cadeado de 23/07 congelava só o perfil; o cadeado saiu, e o Freestyle
-        # que o substitui para o tique inteiro, lá em cima.
         self._sincronizar_modo_jogo_padrao(motivo, info)
 
-        # FOCO-ERRANTE-01 (18/08/2026), generalizado em 28/09/2026: a janela
-        # que não é a de outro jogo não tira o perfil de um jogo que ainda está
-        # VIVO. Medido no journal dela em 18/08: treze
-        # trocas entre 00:15 e 01:09, todas com `wm_class=steam`, uma delas
-        # cinco segundos depois da anterior — gatilhos e lightbar do jogo
-        # reescritos pelos do desktop no meio da partida, porque uma janela
-        # INVISÍVEL do `steamwebhelper` (instância `steamwebhelper`, classe
-        # `steam`, `WM_NAME` vazio) rouba o foco do X sob XWayland.
-        #
-        # A ironia que originou esta guarda: `lifecycle._janela_de_jogo_em_foco`
-        # (VPAD-NA-JANELA-DA-STEAM-01, 17/08) já sabia que "a janela da Steam
-        # durante a partida não autoriza voltar ao desktop" — e era consultada
-        # DEPOIS da troca, para salvar o modo e a política de rumble. Ninguém a
-        # consultava ANTES, para não trocar.
-        #
-        # E medido de novo em 27/09/2026 (L2 do PRAGMATA): o lançamento pôs o
-        # perfil do jogo às 21:07:37, a janela estava em outra tela, e às
-        # 21:09:06 o autoswitch trocou pelo Freestyle — a volta ao PRAGMATA
-        # adiou o modo com o jogo aberto, e o jogo terminou no Xbox. A decisão
-        # dela, `D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO`: o perfil inteiro
-        # do jogo entra no lançamento, e o foco só confirma.
-        #
-        # A guarda vem aqui, ANTES do bloco de estabilidade: zerando o
-        # candidato, a espera não acumula. Quando o jogo morre, o candidato
-        # renasce e a troca sai no debounce normal (~1 s) — é o ensaio E-4 da
-        # FOCO-ERRANTE-01, e é o que separa esta cura de um cadeado.
         if self._recusa_a_troca_com_o_jogo_vivo(
             candidate, profile, info, veio_da_escolha=veio_da_escolha
         ):
@@ -651,46 +351,23 @@ class AutoSwitcher:
         self._recusa_log_key = None
 
         if candidate != self._last_candidate or resumed:
-            # `resumed`: primeira leitura útil após um gap reinicia o relógio
-            # do debounce — o tempo pulado não conta como estabilidade
-            # (armadilha 1 da UX-01: sem isso, duas leituras-glitch idênticas
-            # separadas por minutos ativariam instantaneamente).
             self._last_candidate = candidate
             self._candidate_since = now
 
-        # UX-04: debounce assimétrico — barato para ENTRAR, caro para SAIR
-        # rumo à escolha dela (ver DEFAULT_DEBOUNCE_SAIDA_SEC).
         limite = self.debounce_sec
         if self._saida_para_a_escolha(profile, veio_da_escolha):
             limite = max(self.debounce_sec, self.debounce_saida_sec)
         stable = now - self._candidate_since >= limite
-        # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: reabre o log de supressão assim que
-        # a supressão CESSA, independente de haver ativação. Antes a chave só
-        # zerava dentro de `_activate` (que só roda com candidate != current),
-        # então um episódio que terminava com o candidato estável == perfil
         # corrente (ex.: trigger.reset com a janela do jogo em foco) deixava a
-        # chave presa e deduplicava em silêncio o episódio seguinte.
         if not self._suppression_active():
             self._suppress_log_key = None
         if stable and candidate and candidate != self._current_profile:
-            # R-01: o objeto Profile já está aqui — propagá-lo evita que o
-            # `_activate` tenha de adivinhar POR QUE o candidato casou.
             self._activate(candidate, info, profile, veio_da_escolha=veio_da_escolha)
 
     def _selecionar_com_motivo(
         self, info: dict[str, Any]
     ) -> tuple[Profile | None, str]:
-        """Seleciona o perfil da janela e traz junto o MOTIVO (MODO-01/B3).
-
-        Prefere `ProfileManager.select_for_window_ex`, que responde o par
-        `(perfil, motivo)`. A leitura do motivo é OPCIONAL por construção: um
-        `manager` que não tenha o método novo — ou que devolva outra coisa
-        (dublê de teste, `MagicMock`, integração de terceiros) — cai no
-        `select_for_window` histórico e o motivo vira `MOTIVO_SEM_CANDIDATO`,
-        que não dispara nada. Nunca vale derrubar o tick por causa do motivo:
-        ele é informação EXTRA, e sem ele o autoswitch precisa seguir exatamente
-        como seguia antes desta sprint.
-        """
+        """Seleciona o perfil da janela e traz junto o MOTIVO (MODO-01/B3)."""
         seletor = getattr(self.manager, "select_for_window_ex", None)
         if callable(seletor):
             resultado = seletor(info)
@@ -701,13 +378,7 @@ class AutoSwitcher:
         return perfil_legado, MOTIVO_SEM_CANDIDATO
 
     def _na_exclusao(self, info: dict[str, Any]) -> bool:
-        """A janela em foco está na lista de exclusão? Aplica ou solta (E3).
-
-        Chamado a cada tique com leitura útil. Com a janela na lista, pede ao
-        daemon a exclusão (idempotente lá) e devolve True; fora dela, se havia
-        uma exclusão de pé, pede para soltar e devolve False. Best-effort dos
-        dois lados, como o modo jogo padrão: falha do daemon vira log.
-        """
+        """A janela em foco está na lista de exclusão? Aplica ou solta (E3)."""
         wm_class = str(info.get("wm_class") or "").strip()
         reader = self.exclusao_reader
         excluida = False
@@ -740,38 +411,7 @@ class AutoSwitcher:
     def _sincronizar_modo_jogo_padrao(
         self, motivo: str, info: dict[str, Any]
     ) -> None:
-        """Liga/solta o MODO JOGO PADRÃO conforme o motivo da seleção (B3).
-
-        MODO-01. O daemon já SABIA que havia um jogo (registrou
-        `game_signal_transition de=daemon para=game` com o Mullet Mad Jack
-        aberto) e não fazia nada com isso em termos de modo: todo o automatismo
-        dependia de ela ter criado, à mão, um perfil com seção `mode` para
-        AQUELE jogo. Aqui o fato vira ação.
-
-        Só o FATO mora neste método, e ele é lido do motivo da seleção:
-
-        - `MOTIVO_JOGO_SEM_PERFIL_PROPRIO` → "é um jogo e ninguém opina": pede o
-          modo jogo padrão. Chamado a cada tique de propósito — o applier do
-          daemon é idempotente e barato (checa autoridade de exibição, lock de
-          gesto manual e se já aplicou), e é ele que sabe quando o pedido pode
-          finalmente ser honrado (a autoridade demora até ~2 s para virar
-          `game`, e um gesto manual dela adia por 30 s);
-        - qualquer outro motivo → há EVIDÊNCIA POSITIVA de outra janela (o tick
-          sem informação já saiu lá em cima, pela histerese UX-01): solta o
-          modo jogo padrão. O gatilho é a janela lida, não a queda do sinal
-          sticky — o sinal cai sozinho 30 s depois com o jogo ainda aberto
-          (defeito B4, registrado e NÃO corrigido nesta sprint), e desligar o
-          vpad no meio da partida por causa disso seria o pior desfecho
-          possível.
-
-        Best-effort dos dois lados: falha do daemon vira log e o tick segue.
-
-        PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o estado devolvido pelo par
-        deixa de ser descartado — fica em `_estado_modo_jogo_padrao` e entra no
-        relatório da ativação seguinte. O daemon já respondia no vocabulário dos
-        outros appliers (`aplicado`, `adiado_lock_manual`, `ignorado_sem_jogo`,
-        `ignorado_gesto_dela`); era o autoswitch que jogava a resposta fora.
-        """
+        """Liga/solta o MODO JOGO PADRÃO conforme o motivo da seleção (B3)."""
         wm_class = str(info.get("wm_class") or "")
         if motivo == MOTIVO_JOGO_SEM_PERFIL_PROPRIO:
             applier = self.modo_jogo_padrao_applier
@@ -797,23 +437,7 @@ class AutoSwitcher:
             logger.warning("modo_jogo_padrao_revert_falhou", err=str(exc))
 
     def _modo_jogo_padrao_sob_o_freestyle(self, info: dict[str, Any]) -> None:
-        """O modo jogo padrão com o Freestyle ligado: só quando ele não diz o modo.
-
-        O-FREESTYLE-E-UMA-CAMADA-SO-01, conferência de 28/09/2026. Ligado, o
-        Freestyle manda no modo — mas só quando TEM opinião sobre ele (a seção
-        `mode`). O Freestyle de fábrica não tem, de propósito (o asset nasce sem
-        `mode`), e perfil sem a seção é ausência de opinião (R-02), não ordem
-        de deixar o jogo sem controle. Parar o modo jogo padrão junto com a troca
-        de perfil devolvia o sintoma que criou a MODO-01: com a flag do botão
-        ligada desde 24/07, o modo jogo não ligava.
-
-        Sem opinião do Freestyle, TODA janela de jogo é "jogo e ninguém opina"
-        — o perfil próprio do jogo não entra, então não opina —, e a pergunta
-        "é janela de jogo?" é a do dono que decide o
-        `MOTIVO_JOGO_SEM_PERFIL_PROPRIO` (`schema.e_endereco_de_jogo`). Fora do
-        jogo, o par solta o que ligou, como sem o Freestyle. Com opinião, nada
-        aqui: o modo é o dele.
-        """
+        """O modo jogo padrão com o Freestyle ligado: só quando ele não diz o modo."""
         if self._o_freestyle_diz_o_modo():
             return
         motivo = (
@@ -825,14 +449,7 @@ class AutoSwitcher:
 
     @staticmethod
     def _o_freestyle_diz_o_modo() -> bool:
-        """O Freestyle do disco tem a seção `mode`? Sem o arquivo, não diz.
-
-        Um arquivo por tique, e só com o Freestyle ligado — o tique desligado
-        lê todos os perfis (`select_for_window_ex`). Ler a cada tique, e não
-        guardar, é o que faz o modo que ela gravar nele valer no tique seguinte.
-        Pelo `perfil_em_disco`, que é o leitor de caminho quente: um arquivo,
-        sem semear e sem varrer, e nunca levanta.
-        """
+        """O Freestyle do disco tem a seção `mode`? Sem o arquivo, não diz."""
         from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO, perfil_em_disco
 
         freestyle = perfil_em_disco(NOME_DO_PADRAO)
@@ -841,32 +458,13 @@ class AutoSwitcher:
     def _saida_para_a_escolha(
         self, profile: Profile | None, veio_da_escolha: bool
     ) -> bool:
-        """True quando a troca é SAÍDA de um perfil específico rumo à escolha dela.
-
-        UX-04: é o único caso que paga o debounce lento. Exige as três coisas —
-        há perfil corrente, ele é ESPECÍFICO (casou por regra de verdade) e o
-        candidato é OUTRO perfil, vindo da escolha dela. Entrar num específico,
-        trocar entre específicos e reentrar no mesmo perfil seguem no debounce
-        curto: só a volta é a decisão cara de desfazer no meio da partida.
-
-        NOTA DATADA — 01/10/2026, item 5 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-
-        DELA`. A pergunta era `e_catch_all` do candidato, porque a volta era ao
-        catch-all. A volta passou a ser à escolha dela, que pode ser um perfil
-        de jogo (o Avatar Legends, regra `steam_app_2424420`): perguntando
-        `e_catch_all`, ela sairia no debounce curto, em ~1 s. A pergunta agora é
-        de onde o candidato veio.
-        """
+        """True quando a troca é SAÍDA de um perfil específico rumo à escolha dela."""
         if profile is None or not veio_da_escolha or not self._current_especifico:
             return False
         return self._current_profile is not None and profile.name != self._current_profile
 
     def _perfil_da_escolha(self) -> Profile | None:
-        """O perfil da escolha dela, pelo dono (`a_escolha_dela`). Nunca levanta.
-
-        Relido do disco só quando o NOME muda (ver `_escolha_nome`); o
-        `manager.get` de um dublê sem o método, ou um perfil que não abre, é
-        «sem escolha» neste tique.
-        """
+        """O perfil da escolha dela, pelo dono (`a_escolha_dela`). Nunca levanta."""
         from hefesto_dualsense4unix.utils.session import a_escolha_dela
 
         nome = a_escolha_dela(freestyle_ligado=self.freestyle_ligado())
@@ -898,38 +496,7 @@ class AutoSwitcher:
         *,
         veio_da_escolha: bool = False,
     ) -> bool:
-        """A troca de perfil tem de ser RECUSADA neste tique? (FOCO-ERRANTE-01)
-
-        Três termos, e os três são obrigatórios — tirar qualquer um deles é o
-        que transforma a cura em defeito:
-
-        1. **o candidato não é o perfil de outro JOGO** — nem a regra própria
-           do jogo em foco (`perfil_e_regra_de_jogo`), nem um perfil que se
-           declara de jogo (`perfil_declara_modo_de_jogo`). Outro jogo em foco
-           troca, como sempre trocou;
-        2. **o perfil CORRENTE é a regra própria de um jogo da Steam** — é o
-           que impede o marker do jogo A de segurar o perfil do jogo B;
-        3. **esse jogo está VIVO agora** (`jogo_do_wrapper_vivo`). Sem o termo
-           de vitalidade, ela fecharia o jogo e o perfil dele ficaria PRESO
-           PARA SEMPRE — um cadeado permanente é pior que o defeito que ele cura.
-
-        NOTA DATADA — 28/09/2026. O termo 1 era *"a janela em foco é o CLIENTE
-        Steam"* (`e_janela_do_cliente_steam`), com a razão escrita: sem ele a
-        guarda valeria para o Firefox e mataria a política de 23/07 (UX-04: uma
-        pausa não é sair do jogo, mas 12 s fora devolvem o perfil genérico). A
-        decisão dela de 27/09 à noite trocou essa política:
-        `D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO` — com a janela do jogo em
-        outra tela, ou no workspace de medida, o perfil do jogo tem de valer.
-        Enquanto o jogo vive, o Firefox não o tira.
-
-        Só recusa uma troca que ia acontecer: candidato ausente, ou candidato
-        que já É o perfil corrente, seguem pelo caminho de sempre.
-
-        A ESCOLHA DELA NÃO É «OUTRO JOGO» (01/10/2026): o candidato que veio da
-        escolha (`veio_da_escolha`) não passa pelo termo 1, mesmo quando é um
-        perfil de jogo — ele não casou a janela em foco, é o que vale fora do
-        jogo. A guarda vale para ele como valia para o catch-all.
-        """
+        """A troca de perfil tem de ser RECUSADA neste tique? (FOCO-ERRANTE-01)"""
         corrente = self._current_profile
         if candidate is None or corrente is None or candidate == corrente:
             return False
@@ -947,12 +514,7 @@ class AutoSwitcher:
         return True
 
     def _appid_do_jogo_vivo(self) -> int | None:
-        """Appid do jogo do wrapper vivo agora, pelo leitor injetado ou o real.
-
-        FOCO-ERRANTE-01. Best-effort declarado: leitor que levanta vira "não
-        sei", e "não sei" NÃO recusa a troca — a guarda é a exceção, e uma
-        exceção que falha tem de devolver o comportamento histórico.
-        """
+        """Appid do jogo do wrapper vivo agora, pelo leitor injetado ou o real."""
         leitor = self.jogo_vivo_reader
         try:
             return jogo_do_wrapper_vivo() if leitor is None else leitor()
@@ -961,12 +523,7 @@ class AutoSwitcher:
             return None
 
     def _appids_do_perfil_corrente(self, nome: str) -> frozenset[int]:
-        """Appids de que o perfil CORRENTE é a regra própria, com cache por nome.
-
-        FOCO-ERRANTE-01 — ver `_appids_do_perfil_nome` para o porquê do cache.
-        Manager sem `get` (dublê de teste) ou perfil que não abre devolvem o
-        conjunto vazio, e conjunto vazio desliga a guarda.
-        """
+        """Appids de que o perfil CORRENTE é a regra própria, com cache por nome."""
         if self._appids_do_perfil_nome == nome:
             return self._appids_do_perfil_valor
         getter = getattr(self.manager, "get", None)
@@ -984,14 +541,7 @@ class AutoSwitcher:
     def _log_recusa_uma_vez(
         self, candidate: str, corrente: str, appid: int, info: dict[str, Any]
     ) -> None:
-        """Loga a recusa 1x por episódio (candidato, perfil corrente).
-
-        FOCO-ERRANTE-01, passo 5 da sprint. O poll é 2 Hz e o episódio medido
-        durou minutos: sem a chave seriam ~7 200 linhas por hora. Mesmo padrão
-        (e mesma razão) do `_log_freestyle_uma_vez` e do `_log_suppressed_once`.
-        A chave é zerada no `_tick` assim que a recusa deixa de valer, para o
-        episódio SEGUINTE voltar a aparecer no journal.
-        """
+        """Loga a recusa 1x por episódio (candidato, perfil corrente)."""
         key = (candidate, corrente)
         if self._recusa_log_key == key:
             return
@@ -1005,12 +555,7 @@ class AutoSwitcher:
         )
 
     def _log_freestyle_uma_vez(self, info: dict[str, Any]) -> None:
-        """Loga a parada pelo Freestyle 1x por janela em foco.
-
-        A pergunta é feita a 2 Hz e o Freestyle fica ligado por horas — sem
-        dedup seriam milhares de linhas. Mesmo padrão (e mesma razão) do
-        `_log_suppressed_once`.
-        """
+        """Loga a parada pelo Freestyle 1x por janela em foco."""
         chave = str(info.get("wm_class") or "")
         if self._freestyle_log_key == chave:
             return
@@ -1023,15 +568,7 @@ class AutoSwitcher:
 
     @staticmethod
     def _tick_sem_informacao(info: dict[str, Any]) -> bool:
-        """True quando a leitura de janela não carrega NENHUMA evidência.
-
-        UX-01: info vazio OU (`wm_class` vazio/'unknown' E `wm_name` vazio E
-        `exe_basename` vazio). A condição é estrita de propósito: janela X com
-        título ou processo preenchidos AINDA entra no select (preserva perfis
-        por `window_title_regex`/`process_name`). Tradeoff residual aceito e
-        coberto por teste: janela X sem WM_CLASS mas com título ativa o
-        fallback MatchAny depois do debounce.
-        """
+        """True quando a leitura de janela não carrega NENHUMA evidência."""
         if not info:
             return True
         wm_class = str(info.get("wm_class") or "")
@@ -1043,14 +580,7 @@ class AutoSwitcher:
 
     @staticmethod
     def _janela_propria(info: dict[str, Any]) -> bool:
-        """True quando a janela em foco é a própria GUI/applet do hefesto.
-
-        MISC-08 item 2: match por `wm_class` normalizado (case-insensitive)
-        contra `OWN_GUI_WM_CLASSES`. Só o wm_class decide — título/processo
-        não entram: a GUI reporta wm_class estável ("Main.py" ou
-        "Hefesto-Dualsense4Unix" conforme o momento do set_wmclass sob
-        XWayland) e é isso que o journal provou.
-        """
+        """True quando a janela em foco é a própria GUI/applet do hefesto."""
         wm_class = str(info.get("wm_class") or "").strip().casefold()
         return wm_class in OWN_GUI_WM_CLASSES
 
@@ -1063,33 +593,7 @@ class AutoSwitcher:
             self._stop_event.set()
 
     def _acompanhar_a_trava_da_mao(self) -> None:
-        """Guarda, a cada troca à mão, o jogo em cena; e solta a trava quando ele fecha.
-
-        A trava da troca à mão (`profiles.manager.armar_a_trava_da_mao`) é
-        armada pela ativação à mão, sem prazo. O que este autoswitch precisa
-        saber para soltá-la no evento certo é o JOGO EM CENA que a mão dela
-        tirou: o `anterior` da sincronização de crença do mesmo tique
-        (`_perfil_corrente`), mas só quando ele é a regra de um jogo da Steam
-        que está aberto — o wrapper o diz vivo, ou, quando o wrapper não sabe,
-        a última janela de verdade era a dele. Chamado logo depois da
-        sincronização, no começo do `_tique`.
-
-        CONFERÊNCIA DE 02/10/2026, dois defeitos medidos nas réguas:
-
-        - o perfil de jogo que a mão tirava SEM o jogo aberto (a escolha dela
-          no Avatar, fora do jogo) virava «o jogo dela»: a janela do navegador
-          soltava a trava com o motivo `o_jogo_em_cena_fechou`, e abrir o
-          próprio Avatar não trocava para o perfil dele;
-        - o jogo em cena que fechava só soltava a trava quando uma troca era
-          tentada. No terminal o candidato é a escolha dela, que já vale, e
-          nada era tentado: a trava ficava, e o mesmo jogo reaberto era
-          segurado para sempre. Agora o fechamento que o wrapper vê solta a
-          trava no tique em que acontece, com a linha.
-
-        Outra troca à mão no mesmo episódio relê o que a mão tirou, e guarda o
-        jogo em cena que já estava guardado: trocar duas vezes dentro do jogo
-        não o esquece.
-        """
+        """Guarda, a cada troca à mão, o jogo em cena; e solta a trava quando ele fecha."""
         store = self.store
         if store is None:
             return
@@ -1143,29 +647,7 @@ class AutoSwitcher:
         info: dict[str, Any],
         veio_da_escolha: bool,
     ) -> bool:
-        """A trava da troca à mão segura ESTA troca? Solta-a no evento, com a linha.
-
-        A medida (a) do tema «Freestyle definitivo», 01/10/2026: a ativação à
-        mão fica até ELA trocar, um jogo com perfil abrir, ou o jogo dela
-        fechar — nunca cai por troca de janela nem por tempo, e toda soltura
-        diz no diário (`trava_da_troca_a_mao_solta motivo=…`). Aqui moram os
-        dois eventos que só a janela mostra:
-
-        - **o jogo que estava em cena fechou** — o perfil que a mão dela tirou
-          era a regra de um jogo da Steam aberto (`_appids_da_trava`, ver
-          `_acompanhar_a_trava_da_mao`), a janela em foco não é a dele, e o
-          wrapper não o diz vivo (`jogo_do_wrapper_vivo`). Com o wrapper, o
-          fechamento já soltou a trava no tique dele; aqui sobra o LIMITE,
-          declarado: o jogo aberto sem o wrapper não tem quem o diga vivo, e
-          conta como fechado quando sai do foco para uma janela com outro
-          perfil;
-        - **outro jogo com perfil em foco** — o candidato é a regra do jogo da
-          janela, ou um perfil que se declara de jogo, e não é o que a mão dela
-          tirou. A escolha dela nunca conta como «outro jogo».
-
-        Qualquer outra troca fica segurada: a janela que muda e o tempo que
-        passa não soltam a trava.
-        """
+        """A trava da troca à mão segura ESTA troca? Solta-a no evento, com a linha."""
         store = self.store
         if store is None or not store.manual_profile_lock_active(time.monotonic()):
             return False
@@ -1193,20 +675,7 @@ class AutoSwitcher:
         return True
 
     def _suppression_active(self) -> bool:
-        """True se alguma fonte de supressão do autoswitch está ativa agora.
-
-        Hoje a fonte é UMA — a trava da troca à mão
-        (`profiles.manager.armar_a_trava_da_mao`, sem prazo desde 01/10/2026).
-        Ela espelha os gates de `_activate`, e é assim que o run-loop sabe
-        quando o episódio de supressão terminou para reabrir o log
-        (BUG-AUTOSWITCH-LOG-KEY-STUCK-01).
-
-        ERAM DUAS ATÉ 14/09/2026: a trava manual por categoria saiu por decisão
-        dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`), e este espelho
-        tinha de sair junto — um espelho que reporta um gate que `_activate` não
-        tem mais deixaria o run-loop segurando a chave de log de um episódio que
-        nunca começa.
-        """
+        """True se alguma fonte de supressão do autoswitch está ativa agora."""
         if self.store is None:
             return False
         return self.store.manual_profile_lock_active(time.monotonic())
@@ -1219,109 +688,37 @@ class AutoSwitcher:
         *,
         veio_da_escolha: bool = False,
     ) -> None:
-        # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: sincroniza a crença também
-        # aqui — `_tick` já o faz, mas `_activate` é chamado direto por outros
-        # caminhos (e pela suíte), e `from_=` no journal mentia exatamente
-        # quando mais importava: `from_=None to=sackboy_nativo` com outro perfil
-        # ativo havia horas. Custa um `getattr` quando não há divergência.
         self._perfil_corrente()
-        # FEAT-NATIVE-MODE-01: em Modo Nativo MANUAL o controle está SOLTO para
-        # o jogo — o autoswitch NÃO ativa perfil (que re-escreveria gatilhos por
-        # cima) até a usuária desligar. Silencioso (estado estável).
-        # FEAT-PROFILE-MODE-01: nativo ligado POR PERFIL não congela — o
-        # autoswitch continua observando a janela para que, ao focar outro app,
-        # o perfil seguinte reverta o nativo (senão o modo por-perfil nunca
-        # sairia do jogo).
         if (
             self.store is not None
             and self.store.native_mode_active
             and getattr(self.store, "native_mode_origin", None) != "profile"
         ):
             return
-        # BUG-MOUSE-TRIGGERS-01: se o usuário tem um override manual aplicado
-        # (gatilho/LED/rumble), autoswitch suspende até o override ser limpo
         # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a
-        # aba Mouse (que move o cursor e muda o foco de janela), o autoswitch
-        # reaplicaria o fallback e zeraria o trigger recém-aplicado.
-        # F2 (auditoria 21/07): EXCEÇÃO única — perfil de JOGO. A janela em
-        # foco casando `steam_app_*` com perfil PRÓPRIO (candidato diferente
-        # do perfil ativo) vence o override: a trava não pode silenciar a
-        # troca de perfil por jogo para sempre (um `led.set` de manhã
-        # bloqueava o perfil do jogo à noite, sem indicador). Ao ceder, as
-        # categorias são limpas — o perfil do jogo reescreve tudo mesmo.
-        # Reaplicação do perfil ATIVO (o "perfil eterno" da Causa A) e
-        # regras de janela comuns seguem suprimidas como sempre.
-        # A SUPRESSÃO POR TRAVA MANUAL SAIU — 14/09/2026,
-        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`.
-        #
-        # Aqui morava o gate `if self.store.manual_trigger_active: … return`,
-        # com a exceção do perfil de jogo (R-01) presa dentro dele: a troca
-        # automática de perfil ficava suspensa enquanto houvesse categoria
-        # carimbada, e só cedia quando o candidato era a regra PRÓPRIA de um
-        # jogo. Ordem dela: *"e pra qualquer outro jogo"*, e em seguida
         # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal dela
-        # A razão inteira está em `profiles/manager.apply`.
-        #
-        # O QUE A EXCEÇÃO DO JOGO PROTEGIA CONTINUA PROTEGIDO, e por quem já
-        # protegia: o que o R-01 evitava era um genérico catch-all pisando na
-        # configuração recém-feita, e quem decide QUAL perfil casa continua sendo
-        # a seleção por prioridade — nada disso passava por esta linha.
-        #
-        # A TRAVA DA TROCA À MÃO LOGO ABAIXO FICA. Ela é outro mecanismo, e é o
-        # que guarda a escolha manual de PERFIL contra uma troca de janela. Não
-        # silencia seção nenhuma. NOTA DATADA — 01/10/2026: ela expirava sozinha
-        # em `MANUAL_PROFILE_LOCK_SEC` (30 s), sem linha no diário, e às
-        # 17h31min19 de 29/09 o terminal em foco levou a escolha dela. Desde a
-        # medida (a) do tema «Freestyle definitivo» ela não tem prazo, e solta
-        # num evento (`_a_trava_da_mao_segura`), sempre dizendo qual.
         if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info
             )
             return
-        # Chegou aqui = sem supressão: zera a chave (reabre o log do próximo
-        # episódio). O run-loop faz o MESMO reset a cada tick — necessário para o
-        # caso candidate == current, em que _activate nem roda
-        # (BUG-AUTOSWITCH-LOG-KEY-STUCK-01). Manter ambos cobre chamadas diretas.
         self._suppress_log_key = None
         from_profile = self._current_profile
-        # R-03 (auditoria 23/07): o relatório da ativação diz QUAIS seções o lock
-        # de gesto manual adiou. O perfil segue COMMITADO (`_current_profile`
-        # abaixo) mesmo assim — a variante "não commitar para tentar de novo no
-        # próximo tick" foi rejeitada: com o poll de 2 Hz ela reescreveria
-        # gatilhos/LEDs ~60x em 30 s. O retry mora na pendência de `mode` do
-        # daemon, drenada UMA vez pelo poll loop.
         relatorio: dict[str, str] = {}
         try:
-            # PERFIL-03: troca AUTOMÁTICA por janela — origin="autoswitch" NÃO
-            # grava session.json. Era o bug provado do autoload: o autoswitch
-            # reescrevia a intenção manual da usuária a cada troca de janela e
-            # o boot restaurava "Navegação" em vez do perfil que ela escolheu.
             self.manager.activate(name, origin="autoswitch", relatorio=relatorio)
         except Exception as exc:
             logger.warning("autoswitch_activate_failed", name=name, err=str(exc))
             return
         self._current_profile = name
-        # FOCO-ERRANTE-01: o objeto do perfil que ACABOU de entrar já está aqui
-        # — carimbar os appids dele agora é de graça e poupa a guarda de reler
-        # o disco a 2 Hz enquanto a janela da Steam segura o foco. Sem o objeto
-        # (chamada direta com só o nome), o cache é INVALIDADO em vez de
-        # carimbado com vazio: vazio desliga a guarda, e desligar a guarda por
-        # falta de dado seria o defeito de volta.
         if profile is not None:
             self._appids_do_perfil_nome = name
             self._appids_do_perfil_valor = _appids_de_jogo_do_perfil(profile)
         else:
             self._appids_do_perfil_nome = None
-        # UX-04: carimba a especificidade do que ACABOU de entrar — é o que
-        # decide, na próxima troca, se o debounce de saída se aplica.
         self._current_especifico = profile is not None and not bool(
             getattr(profile, "e_catch_all", True)
         )
-        # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o MODO JOGO PADRÃO é o único
-        # eixo que o tique mexe FORA do `ProfileManager` (o daemon liga o vpad
-        # quando é jogo e ninguém opina). Entra no relatório como seção própria,
-        # com o mesmo vocabulário, para a janela poder contar essa metade também.
         if self._estado_modo_jogo_padrao:
             relatorio["modo_jogo_padrao"] = self._estado_modo_jogo_padrao
         logger.info(
@@ -1330,20 +727,11 @@ class AutoSwitcher:
             to=name,
             wm_class=info.get("wm_class", ""),
             wm_name=info.get("wm_name", ""),
-            # Sem isto, "perfil trocou mas a máscara não" não tinha rastro
-            # nenhum no journal — era preciso adivinhar.
             adiado=sorted(
                 secao
                 for secao, estado in relatorio.items()
                 if estado.startswith("adiado")
             ),
-            # PERFIL-REESCRITO-NA-PARTIDA-01, item 5: o filtro acima escondia
-            # METADE do relatório. `ignorado_catch_all`, `ignorado_janela_de_jogo`,
-            # `ignorado_trava_manual` e `falhou` NUNCA apareciam no journal — e
-            # são justamente os estados em que a ativação "deu certo" sem aplicar
-            # a seção. `adiado=` fica onde estava (é o campo que a leitura do
-            # journal já procura); `secoes=` diz a verdade INTEIRA, uma entrada
-            # por seção, ordenada para o diff entre dois tiques ser legível.
             secoes=sorted(
                 f"{secao}={estado}" for secao, estado in relatorio.items()
             ),
@@ -1352,13 +740,7 @@ class AutoSwitcher:
     def _log_suppressed_once(
         self, event: str, name: str, info: dict[str, Any]
     ) -> None:
-        """Loga a supressão do autoswitch 1x por (motivo, candidato).
-
-        FEAT-POINT-AND-CLICK-01: o tick de 0,5s repetia o mesmo log enquanto o
-        override manual durasse — journal inundado a ~2 Hz. Deduplica pela
-        chave (evento, candidato); a chave é zerada quando `_activate` roda
-        sem supressão, reabrindo o log para o episódio seguinte.
-        """
+        """Loga a supressão do autoswitch 1x por (motivo, candidato)."""
         key = (event, name)
         if self._suppress_log_key == key:
             return

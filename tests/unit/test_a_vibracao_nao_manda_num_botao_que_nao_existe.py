@@ -102,38 +102,24 @@ FONTES = (
     RAIZ / "src/hefesto_dualsense4unix/app/actions/status_actions.py",
 )
 
-#: O rótulo que a janela GTK tinha e a interface nova nunca teve. Ele fica aqui
-#: NOMEADO porque é a agulha da mordida: quem devolver este valor ao dono tem de
-#: ver esta régua reprovar.
 ROTULO_QUE_SAIU_COM_A_JANELA = "Deixar o jogo controlar a vibração"
 
-#: O que se apaga antes de ler a página: o que não é tela.
 _MUDOS = re.compile(
     r"<!--.*?-->|<style\b[^>]*>.*?</style>|<script\b[^>]*>.*?</script>",
     re.S | re.I,
 )
 _TAG = re.compile(r"<[^>]*>", re.S)
 
-#: O que uma pessoa pode clicar numa página desta casa. `<label>` está aqui
-#: porque os interruptores da aba Jogar e os chips da fita são `<label>`, não
-#: `<button>` — uma régua que só olhasse `<button>` reprovaria a frase que manda
-#: pôr o Status em "Ligado", que é o gesto certo.
 _CLICAVEL = re.compile(
     r"<(button|label|option|a)\b[^>]*>(.*?)</\1>", re.S | re.I
 )
 
-#: COMO SE RECONHECE UMA ORDEM DE CLIQUE. Duas formas, porque o produto escreve
-#: as duas: aspas tipográficas (o padrão desta casa) e ``clique em "…"`` com
-#: aspas retas, que é como o banner do serviço escreve.
 _ENTRE_ASPAS_TIPOGRAFICAS = re.compile(r"[“”]([^“”]{1,80})[“”]")
 _CLIQUE_COM_ASPAS_RETAS = re.compile(
     r"cliqu\w*(?:\s+em)?\s+\"([^\"]{1,80})\"", re.I
 )
 
 
-# ---------------------------------------------------------------------------
-# O DONO DOS RÓTULOS — as dez páginas publicadas
-# ---------------------------------------------------------------------------
 @lru_cache(maxsize=1)
 def rotulos_clicaveis() -> frozenset[str]:
     """O texto visível de tudo que se clica nas dez páginas publicadas."""
@@ -169,9 +155,6 @@ def _acusacao(onde: str, frase: str, alvo: str) -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# LEITURA 1 — O PRODUTO: as frases obtidas chamando quem as escreve
-# ---------------------------------------------------------------------------
 class _RotuloEspiao:
     markup = ""
 
@@ -180,8 +163,7 @@ class _RotuloEspiao:
 
 
 class _HostDaVibracao(RumbleActionsMixin):
-    """O mínimo para o rótulo de estado pintar — o mesmo molde do
-    ``test_tela_so_afirma_o_que_sabe_01``."""
+    """O mínimo para o rótulo de estado pintar — o mesmo molde do"""
 
     def __init__(self) -> None:
         self.rotulo = _RotuloEspiao()
@@ -259,13 +241,7 @@ def test_o_produto_so_manda_clicar_em_botao_que_existe() -> None:
 
 
 def test_o_rotulo_da_janela_aposentada_nao_volta() -> None:
-    """A agulha, dita pelo nome: o rótulo do botão que saiu com a janela GTK
-    não é o rótulo de nada que se clique, e nenhuma frase do produto o cita.
-
-    Ela é redundante com a régua acima **de propósito**: aquela reprova por
-    ausência na lista, esta reprova pelo NOME do defeito, e uma acusação que
-    nomeia o caso poupa a próxima pessoa de reconstruir a história.
-    """
+    """A agulha, dita pelo nome: o rótulo do botão que saiu com a janela GTK"""
     assert ROTULO_QUE_SAIU_COM_A_JANELA not in rotulos_clicaveis(), (
         "o botão voltou às páginas — se ele existe de novo, esta régua e o "
         "valor de `BTN_GIVE_BACK_TO_GAME` mudam juntos."
@@ -283,9 +259,6 @@ def test_o_dono_do_rotulo_aponta_para_um_botao_que_existe() -> None:
     assert "aba Vibração" in COMO_DEVOLVER_AO_JOGO
 
 
-# ---------------------------------------------------------------------------
-# LEITURA 2 — O FONTE: a varredura AST com as constantes resolvidas
-# ---------------------------------------------------------------------------
 def _ids_dos_docstrings(arvore: ast.Module) -> set[int]:
     """Os docstrings de módulo, classe e função — que NÃO são tela."""
     fora: set[int] = set()
@@ -306,12 +279,7 @@ def _ids_dos_docstrings(arvore: ast.Module) -> set[int]:
 
 
 def _texto_da_fstring(no: ast.JoinedStr, constantes: dict[str, str]) -> str:
-    """A f-string com o que se sabe resolvido; o resto vira ``«?»``.
-
-    Resolver as constantes de módulo é o que dá MORDIDA a esta leitura: sem
-    isso o fonte só mostraria ``{COMO_DEVOLVER_AO_JOGO}`` e trocar o valor do
-    dono passaria despercebido.
-    """
+    """A f-string com o que se sabe resolvido; o resto vira ``«?»``."""
     pedacos: list[str] = []
     for parte in no.values:
         if isinstance(parte, ast.Constant) and isinstance(parte.value, str):
@@ -369,13 +337,7 @@ def test_nenhuma_frase_do_fonte_manda_a_botao_inexistente(caminho: Path) -> None
 
 
 def test_a_varredura_do_fonte_realmente_ve_alguma_ordem_de_clique() -> None:
-    """Régua da régua: uma varredura que não acha NADA passa por engano.
-
-    É a armadilha do *instrumento de terceiro sem validar* — em 23/08/2026 um
-    grafo de 24.684 nós não achou nenhuma das três funções que já se sabia sem
-    chamador. Se o dia em que alguém mudar a forma de escrever a instrução
-    fizer esta varredura ficar cega, é aqui que se descobre.
-    """
+    """Régua da régua: uma varredura que não acha NADA passa por engano."""
     vistos = [
         (onde, alvo)
         for caminho in FONTES
@@ -390,13 +352,7 @@ def test_a_varredura_do_fonte_realmente_ve_alguma_ordem_de_clique() -> None:
 
 
 def test_o_docstring_nao_e_tela_e_a_lapide_pode_citar_o_rotulo_morto() -> None:
-    """Guarda (não morde): a história fica escrita sem reprovar.
-
-    Os dois arquivos citam ``ROTULO_QUE_SAIU_COM_A_JANELA`` e *"Ligar o
-    Hefesto"* nos docstrings, como lápide do que custou. Se a varredura
-    passasse a ler docstring, a única saída verde seria apagar a história — e
-    esta casa não apaga decisão medida.
-    """
+    """Guarda (não morde): a história fica escrita sem reprovar."""
     fonte = FONTES[0].read_text(encoding="utf-8")
     assert ROTULO_QUE_SAIU_COM_A_JANELA in fonte, (
         "a lápide do RUM-01 sumiu do dono; sem ela a próxima pessoa refaz a "
@@ -410,9 +366,6 @@ def test_o_docstring_nao_e_tela_e_a_lapide_pode_citar_o_rotulo_morto() -> None:
     assert ROTULO_QUE_SAIU_COM_A_JANELA not in achados
 
 
-# ---------------------------------------------------------------------------
-# A LINHA 182 — "o Aplicar que retrava", e o que a medição fez com ela
-# ---------------------------------------------------------------------------
 def test_o_aplicar_do_rodape_nao_retrava_a_vibracao() -> None:
     """A linha 182 do CSV da paridade CAIU por medição — esta é a régua dela.
 
@@ -454,11 +407,9 @@ def test_o_aplicar_do_rodape_nao_retrava_a_vibracao() -> None:
         RumbleConfig,
     )
 
-    # 1 — o disco não guarda o par
     with pytest.raises(Exception, match=r"[Ee]xtra"):
         RumbleConfig.model_validate({"weak": 160, "strong": 220})
 
-    # 2 — o draft do "Aplicar" nasce zerado
     perfil = Profile(
         name="ensaio-da-regua",
         match=MatchAny(type="any"),
@@ -470,7 +421,6 @@ def test_o_aplicar_do_rodape_nao_retrava_a_vibracao() -> None:
         "disco, o sintoma da ABAS-04 volta com ele."
     )
 
-    # 3 — e o par zerado SOLTA a vibração travada, em vez de re-travá-la
     class _Config:
         rumble_active: Any = (160, 220)
         rumble_active_uniq: Any = "aa:bb:cc:00:00:01"

@@ -1,31 +1,8 @@
-"""P7 — Remover apagava o perfil ATIVO sem uma palavra.
-
-PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/7 (24/08/2026). `on_profile_remove` confirmava
-pelo NOME e nunca perguntava se aquele era o perfil valendo. Com o
-`active_profile.txt` dela em `Sackboy`, apagar o Sackboy era um clique — e
-depois dele o daemon segue com as seções daquele perfil aplicadas no controle,
-o marcador em disco continua apontando para um arquivo que não existe mais, e
-NADA na tela dizia isso. A remoção parecia inconsequente.
-
-**A OUTRA METADE DO P7 JÁ ESTAVA FECHADA, e não por esta frente.** O `.lock`
-órfão (`delete_profile` apagava o `.json` e deixava o `.lock`; três órfãos no
-disco dela) foi curado pela Z4/T15 em 24/08, com régua própria em
-`tests/unit/test_z4_locks_orfaos.py`. Conferido em 25/08 ANTES de escrever uma
-linha — refazer teria dado dois donos para o mesmo conserto.
-
-**O silêncio continua sendo a regra.** Remover um perfil qualquer não ganha
-texto novo: o aviso só existe para o caso em que a consequência é invisível.
-E se ninguém souber dizer qual perfil está valendo (`fonte == "nao_sei"`), a
-tela CALA — afirmar seria transformar falta de informação em aviso, que é o
-alarme falso que o §P1 desta mesma sprint existe para matar.
-"""
+"""P7 — Remover apagava o perfil ATIVO sem uma palavra."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
-# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
-# falso. Sem aquele plantio, a guarda vem antes do import da janela.
 exigir_gi_real("p7: o Remover diz o que apaga")
 
 import types
@@ -49,7 +26,6 @@ class TestAFraseSoFalaDoPerfilQueVale:
         )
         assert frase is not None
         assert "está valendo agora" in frase
-        # As três coisas que a pessoa não tem como adivinhar:
         assert "não desfaz" in frase, "o controle continua com as seções dele"
         assert "marcador" in frase, "o marcador em disco fica órfão"
         assert "ative outro perfil" in frase, "toda frase daqui diz o que fazer"
@@ -61,11 +37,7 @@ class TestAFraseSoFalaDoPerfilQueVale:
         assert frase is not None
 
     def test_o_slug_e_o_nome_sao_o_mesmo_perfil(self) -> None:
-        """O marcador guarda `Sackboy`; a lista pode trazer `sackboy`.
-
-        Um `==` cru deixaria o aviso mudo exatamente no caso que ele existe
-        para cobrir — e o arquivo no disco é nomeado pelo slug.
-        """
+        """O marcador guarda `Sackboy`; a lista pode trazer `sackboy`."""
         for como_esta_na_lista in ("sackboy", "SACKBOY", "Sackboy"):
             assert (
                 pa.frase_da_remocao_do_perfil_ativo(
@@ -105,11 +77,6 @@ class TestOSilencioContinuaSendoARegra:
         )
 
 
-# ---------------------------------------------------------------------------
-# A costura: o botão calcula a frase, e o DIÁLOGO a mostra
-# ---------------------------------------------------------------------------
-
-
 class _Aba(pa.ProfilesActionsMixin):  # type: ignore[misc]
     def __init__(self, selecionado: str = "Sackboy") -> None:
         self._selecionado = selecionado
@@ -139,7 +106,7 @@ def _espiar_o_dialogo(monkeypatch: pytest.MonkeyPatch) -> list[str | None]:
 
     def _falso(parent: Any, name: str, aviso: str | None = None) -> bool:
         vistos.append(aviso)
-        return False  # cancela: nenhum teste daqui encosta no disco dela
+        return False
 
     monkeypatch.setattr(gui_dialogs, "confirm_delete_profile", _falso)
     return vistos

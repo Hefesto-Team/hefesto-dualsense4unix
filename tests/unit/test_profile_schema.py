@@ -52,9 +52,7 @@ class TestMatchCriteria:
             window_class=["steam_app_1091500"],
             process_name=["Cyberpunk2077.exe"],
         )
-        # Só um dos dois — não casa
         assert m.matches({"wm_class": "steam_app_1091500", "exe_basename": "other"}) is False
-        # Ambos — casa
         assert (
             m.matches(
                 {
@@ -91,7 +89,6 @@ class TestTriggerConfig:
         assert t.params == [0, 9, 7, 7, 10]
 
     def test_mode_valido_passa(self):
-        # Todos os modos do registro canônico devem validar.
         from hefesto_dualsense4unix.core.trigger_effects import PRESET_FACTORIES
 
         for mode in PRESET_FACTORIES:
@@ -99,12 +96,10 @@ class TestTriggerConfig:
             assert t.mode == mode
 
     def test_mode_invalido_rejeita(self):
-        # Um typo de modo deve falhar na validação do schema, não só no apply().
         with pytest.raises(ValidationError):
             TriggerConfig(mode="NaoExiste")
 
     def test_mode_invalido_rejeita_no_perfil(self):
-        # O mesmo vale quando o modo inválido chega via TriggersConfig no Profile.
         with pytest.raises(ValidationError):
             Profile.model_validate(
                 {
@@ -117,18 +112,7 @@ class TestTriggerConfig:
 
 class TestProfile:
     def test_construcao_minima(self):
-        """NOTA DATADA — 20/09/2026, NASCE-LIGADO-01.
-
-        Esta linha exigia `mode == "Off"` desde o nascimento do esquema. O que
-        caducou não é a régua: é o valor. Ordem dela, 16/09/2026 — *"os
-        gatilhos deveriam vir como rigidos"*  # noqa-acento: dela — e 17/09:
-        *"os jogos e perfis tem que iniciar com todas as features ativadas por
-        default."*
-
-        A afirmação passou a ser sobre o APARELHO, e não sobre a palavra: um
-        `Rigid` que construísse o mesmo efeito de `off()` já aconteceu nesta
-        casa (TRIGGER-CANON-01) e passaria por um `== "Rigid"` digitado.
-        """
+        """NOTA DATADA — 20/09/2026, NASCE-LIGADO-01."""
         from hefesto_dualsense4unix.core.trigger_effects import build_from_name, off
 
         p = Profile(name="test", match=MatchAny())
@@ -201,11 +185,6 @@ class TestProfile:
         assert restored == original
 
 
-# ---------------------------------------------------------------------------
-# PERFIL-02 (sprint 2026-07-16-perfis-por-controle): mapa `controllers`
-# ---------------------------------------------------------------------------
-
-#: MACs forjados das faixas permitidas (test_anonimato_de_fixtures.py).
 _MAC_CABO = "aabbcc000001"
 _MAC_BT = "aabbcc000002"
 
@@ -234,8 +213,7 @@ class TestControllersMap:
         assert restored.controllers[_MAC_BT].leds.lightbar == (0, 255, 0)
 
     def test_override_parcial_valido(self):
-        """Só triggers no override — leds None herda a seção global (merge
-        POR CAMPO acontece na aplicação, PERFIL-01)."""
+        """Só triggers no override — leds None herda a seção global (merge"""
         p = Profile.model_validate(
             {
                 "name": "x",
@@ -252,8 +230,7 @@ class TestControllersMap:
         assert override.triggers.left.mode == "Rigid"
 
     def test_key_com_separadores_e_caixa_canonizada(self):
-        """JSON editado à mão com "AA:BB:CC:..." casa a key que o backend
-        enumera — mesma normalização do `norm_mac`."""
+        """JSON editado à mão com "AA:BB:CC:..." casa a key que o backend"""
         p = Profile.model_validate(
             {
                 "name": "x",
@@ -286,9 +263,7 @@ class TestControllersMap:
             )
 
     def test_key_degenerada_pro_controller_rejeitada(self):
-        """O uniq `000000000001` (medido no Pro Controller, idêntico entre
-        unidades) tem 12 hex mas NÃO identifica um controle — rejeitar com
-        mensagem clara é o aceite 4 do sprint."""
+        """O uniq `000000000001` (medido no Pro Controller, idêntico entre"""
         with pytest.raises(ValidationError, match="degenerado"):
             Profile.model_validate(
                 {
@@ -309,8 +284,7 @@ class TestControllersMap:
             )
 
     def test_keys_que_colidem_apos_normalizacao_rejeitadas(self):
-        """Duas grafias do mesmo MAC não podem coexistir — uma venceria em
-        silêncio por ordem de inserção."""
+        """Duas grafias do mesmo MAC não podem coexistir — uma venceria em"""
         with pytest.raises(ValidationError, match="duplicadas"):
             Profile.model_validate(
                 {
@@ -324,9 +298,7 @@ class TestControllersMap:
             )
 
     def test_override_rejeita_campo_extra(self):
-        """`extra="forbid"` no override — `label` e `mic_led` ficaram FORA por
-        decisão da revisão adversarial (4P-03 / AUDIT-FINDING-PROFILE-MIC-LED-
-        RESET-01); um campo desconhecido é erro, não silêncio."""
+        """`extra="forbid"` no override — `label` e `mic_led` ficaram FORA por"""
         for campo in ("label", "mic_led"):
             with pytest.raises(ValidationError):
                 Profile.model_validate(

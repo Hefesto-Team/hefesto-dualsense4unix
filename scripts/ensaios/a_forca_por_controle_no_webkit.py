@@ -1,34 +1,5 @@
 #!/usr/bin/env python3
-"""Clica um degrau de força na coluna do P1, DENTRO do WebKit dela, e mede.
-
-POR QUE ELE EXISTE, e é a regra desta casa: os testes de unidade provam que o
-gesto grava o override certo com uma ponte dublê e um disco de mentira. O que
-eles NÃO provam é que o CLIQUE chega — que o botão da coluna tem endereço, que o
-ouvinte o lê como gesto, que o `uniq` da coluna viaja junto, e que a resposta
-volta para a tela. Foi assim que esta casa já deu verde sobre dois botões
-mortos.
-
-**ELE NÃO ESCREVE NO PERFIL DELA, e essa é a primeira coisa a conferir aqui.**
-O ensaio desvia `HOME` e os quatro `XDG_*` para um lar de mentira e COPIA para
-lá a pasta de perfis dela — leitura, nunca escrita. O gesto grava na cópia; o
-original não é aberto para escrita em momento nenhum.
-
-O QUE ELE FAZ, em quatro tempos:
-
-1. abre a `05-vibracao` publicada no `WebKit2.WebView`, oculta, e fotografa;
-2. lê qual degrau está aceso em cada coluna VIVA, antes;
-3. clica um degrau que NÃO é o de agora, na coluna do P1, pelo caminho dela —
-   `element.click()` no DOM, que dispara o ouvinte real do piloto;
-4. relê o DOM (o degrau aceso e os recados), fotografa de novo e abre o
-   arquivo de perfil da CÓPIA para ver o que foi gravado.
-
-Reprova se o clique não mudar o degrau aceso do P1, se ele mexer no de outra
-coluna, ou se o override não aparecer no arquivo.
-
-Uso (sempre oculto; ela tem UMA tela)::
-
-    scripts/ensaios/a_forca_por_controle_no_webkit.py --antes /tmp/a.png --depois /tmp/b.png
-"""
+"""Clica um degrau de força na coluna do P1, DENTRO do WebKit dela, e mede."""
 from __future__ import annotations
 
 import argparse
@@ -41,11 +12,6 @@ import tempfile
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-#: O LAR DE MENTIRA, e ele nasce ANTES de qualquer import que resolva caminho.
-#: `utils.xdg_paths` lê o ambiente a cada chamada (de propósito — ver
-#: `pacotes/perfil.pasta`), então basta o ambiente estar posto antes do gesto.
-#: Pô-lo aqui, e não depois dos imports, é a trava contra um módulo que resolva
-#: o caminho no import de alguém.
 _LAR = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-ensaio-forca-"))
 for _chave, _valor in (("HOME", _LAR),
                        ("XDG_CONFIG_HOME", _LAR / ".config"),
@@ -58,9 +24,6 @@ for _chave, _valor in (("HOME", _LAR),
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -80,8 +43,6 @@ from hefesto_dualsense4unix.interface import hefesto_vivo
 
 ABA = "05-vibracao.html"
 
-#: O QUE SE LÊ NO DOM, e é o que a tela MOSTRA — não o que o pacote emitiu.
-#: O degrau aceso é uma CLASSE (`on`), que é como o desenho o diz.
 LER = r"""
 (function(){
   const fora = {colunas: {}, recados: []};
@@ -106,10 +67,6 @@ LER = r"""
 })()
 """
 
-#: O ARRASTE, e ele é o caminho dela num `<input type=range>`: mudar o `value`
-#: e disparar `change`. É o MESMO evento que o polegar solto dispara — o ouvinte
-#: do piloto escuta `change` desde 01/09 —, e `dispatchEvent` é a única forma de
-#: mover um range sem tocar no mouse dela.
 ARRASTAR = r"""
 (function(){
   const bloco = document.querySelector('[data-controle="__PREF__"]');
@@ -124,9 +81,6 @@ ARRASTAR = r"""
 })()
 """
 
-#: O CLIQUE, e ele é o DELA: `element.click()` no botão que o desenho publica.
-#: Nada aqui chama a função de gesto por dentro — o que se mede é o caminho
-#: inteiro, do pixel ao pacote.
 CLICAR = r"""
 (function(){
   const bloco = document.querySelector('[data-controle="__PREF__"]');
@@ -211,9 +165,6 @@ def main() -> int:
         return False
 
     def _abrir() -> bool:
-        # A BANCADA É OUTRA PASTA, e o dono das duas é o `onde` — nunca um
-        # `RAIZ / "mockup"` escrito à mão. `piloto._ir` abre sempre a publicada,
-        # que é o que o produto faz; aqui a escolha é do ensaio.
         import onde as _onde
 
         piloto.view.load_uri(
@@ -249,9 +200,6 @@ def main() -> int:
 
     alvo = d["colunas"].get(args_meus.pref, {})
     if args_meus.arrasta >= 0:
-        # ARRASTAR PÕE A COLUNA EM `custom`, e `custom` NÃO é um dos quatro
-        # degraus: o alvo `classe` do pintor apaga os quatro, que é a resposta
-        # certa — nenhum botão descreve o que ela escolheu.
         if alvo.get("aceso") is not None:
             print(f"\nREPROVA: depois do arraste a coluna {args_meus.pref} "
                   f"ainda acende {alvo['aceso']!r} — a tela diria que ela "

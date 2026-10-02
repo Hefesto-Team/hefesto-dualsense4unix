@@ -1,19 +1,4 @@
-"""A bancada fala a tela de hoje — A-BANCADA-DELTA-6A, 24/09/2026.
-
-A onda 6a mudou o que a bancada manda olhar, em três frentes: o terceiro botão
-no alto do cartão (a «Mira Virtual», A-MIRA-02), a luz e o número do Hefesto
-também no Modo Nativo (STEAM-NO-FISICO-01), e — achado no caminho — a cor
-escolhida vencendo a do jogo desde 16/09 (PERFIL-MANDA-01), que o gesto da
-réplica contrariava. Os dois arquivos do gesto (`docs/method/…O-COMO-*`) são
-DADO: a página da bancada os lê, e um gesto que descreve a tela de ontem manda
-reprovar um produto certo.
-
-CADA RÉGUA PERGUNTA AO DONO, e não digita a lista: os botões saem da página
-publicada da aba 02, as dicas saem do pacote que as pinta, os ajustes da Mira
-saem da página publicada da Calibrar, e as duas premissas de luz saem do
-backend de verdade. Se o dono mudar, a régua reprova dizendo qual premissa
-caiu — e o gesto se reescreve junto.
-"""
+"""A bancada fala a tela de hoje — A-BANCADA-DELTA-6A, 24/09/2026."""
 
 from __future__ import annotations
 
@@ -36,8 +21,6 @@ _GESTOS = (
     _RAIZ / "docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md",
 )
 
-# O mesmo caminho que as réguas da Mira usam para o pacote da aba 02: o
-# `pacotes` importado PLANO, para ser o mesmo objeto que o piloto carrega.
 if str(_INTERFACE) not in sys.path:
     sys.path.insert(0, str(_INTERFACE))
 
@@ -80,16 +63,7 @@ def _texto_visivel(pagina: str) -> str:
 
 
 def test_quem_manda_nao_clicar_nos_botoes_do_cartao_nomeia_todos() -> None:
-    """O aviso «não clique nos botões do alto do cartão» nomeia TODOS os botões.
-
-    A A-MIRA-02 pôs o terceiro, e a bancada seguia avisando de dois: o clique
-    sem querer na «Mira Virtual» muda o que o jogo recebe no meio do teste, e
-    o aviso que a esquece é o aviso que não protege. Os botões saem da página
-    PUBLICADA — o dono do que ela vê.
-
-    MORDIDA: devolva a uma célula o aviso só com «Giroscópio» e
-    «Acelerômetro» e este teste reprova com o nome dela.
-    """
+    """O aviso «não clique nos botões do alto do cartão» nomeia TODOS os botões."""
     pagina = (_PAGINAS / "02-controles.html").read_text(encoding="utf-8")
     botoes = sorted(set(re.findall(
         r'<button class="sw[^"]*" data-gesto="(?:sensor|mira)"[^>]*>'
@@ -109,21 +83,7 @@ def test_quem_manda_nao_clicar_nos_botoes_do_cartao_nomeia_todos() -> None:
 
 
 def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
-    """A dica do «Giroscópio» que a bancada cita é a que o pacote pinta.
-
-    `D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`: com a Mira acesa, a dica
-    daquele controle muda. A bancada passou a conferi-la por controle — e uma
-    citação que não bate letra por letra com a tela manda procurar uma frase
-    que não existe.
-
-    MORDIDA: tire da bancada a citação da dica nova e a régua reprova («ninguém
-    confere»); troque uma palavra dela e reprova («não é a do pacote»).
-
-    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): com a Mira acesa a dica
-    passou a seguir o destino — o analógico direito, o esquerdo, ou o cursor na
-    Navegação —, e a bancada cita a do cursor. As três são do pacote; a régua
-    continua exigindo a frase letra por letra, agora contra as três.
-    """
+    """A dica do «Giroscópio» que a bancada cita é a que o pacote pinta."""
     import pacotes.a02_controles as a02
 
     donos = {
@@ -148,11 +108,7 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
 
 
 def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
-    """O que a bancada diz morar no bloco «Mira Virtual» mora na Calibrar publicada.
-
-    MORDIDA: troque «Só enquanto eu segurar» por um rótulo que a página não
-    tem e a régua reprova com a célula e o rótulo.
-    """
+    """O que a bancada diz morar no bloco «Mira Virtual» mora na Calibrar publicada."""
     tela = _texto_visivel("calibrar-sensores.html")
     frases_do_bloco = 0
     ausentes = []
@@ -169,23 +125,11 @@ def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
 
 
 def test_o_desligado_nao_tira_mais_o_hefesto_das_lampadas() -> None:
-    """O teste que promete o Linux sozinho para o serviço, e não usa o Nativo.
-
-    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`: no Modo Nativo o
-    Hefesto escreve a barra e o número. O «Desligado» da aba Jogar, que era o
-    gesto que deixava o desenho do Linux no plástico, passou a medir o Hefesto.
-    A PREMISSA SAI DO BACKEND: se o Nativo deixar de escrever o número, esta
-    régua reprova pela premissa, e o gesto volta a poder usar o «Desligado».
-
-    MORDIDA: devolva o «Desligado» aos passos do padrão do driver e a régua
-    reprova com a célula.
-    """
+    """O teste que promete o Linux sozinho para o serviço, e não usa o Nativo."""
     assert "player_leds" in bp._CAMPOS_QUE_O_NATIVO_ESCREVE, (
         "o Modo Nativo deixou de escrever o número do jogador — a premissa desta "
         "régua caiu, e os gestos do padrão do driver podem voltar ao «Desligado»")
 
-    # SÓ AS LÂMPADAS: a linha 18 também diz «com o Hefesto fora do meio», e ali
-    # é o caminho do JOGO até o controle, que o Nativo continua tirando do meio.
     fora_do_meio = 0
     erradas = []
     for titulo, corpo in _secoes().items():
@@ -243,19 +187,7 @@ def _replicas() -> dict[str, str]:
 
 
 def test_o_perfil_novo_ativado_a_mao_devolve_a_barra_ao_jogo() -> None:
-    """O gesto novo da réplica PODE passar — pela ativação de verdade.
-
-    A régua de baixo prova que o gesto velho nunca passaria; esta prova a outra
-    metade. A cor que ela clicou na coluna (a camada da usuária) só se solta com
-    a troca MANUAL de perfil (`ProfileManager.apply`, `origin="manual"`), e o
-    perfil que nasce do «Novo» (`a10_perfis._nascer`: nome, regra e prioridade,
-    mais nada) não traz cor própria em controle nenhum. Com as duas coisas, a
-    cor do jogo passa. Por isso o gesto ATIVA o perfil novo antes de abrir o
-    jogo — deixar a troca automática fazê-lo manteria a cor clicada.
-
-    MORDIDA (premissa): troque `origin="manual"` por `"auto"` e a régua
-    reprova. MORDIDA (gesto): tire o «Ativar» de antes do «Abra o jogo».
-    """
+    """O gesto novo da réplica PODE passar — pela ativação de verdade."""
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -304,18 +236,7 @@ def test_a_replica_termina_apagando_o_perfil_novo_de_verdade() -> None:
 
 
 def test_a_replica_nao_escolhe_antes_a_cor_do_controle_que_mede() -> None:
-    """A réplica da cor do jogo se mede num controle cuja cor ninguém escolheu.
-
-    PERFIL-MANDA-01 (16/09): a cor que ela clica num controle vence a do jogo.
-    O gesto de 24/09 mandava clicar amarelo no controle ANTES de abrir o jogo e
-    esperava o jogo trocá-lo — um teste que o produto certo reprova sempre. A
-    PREMISSA SAI DO BACKEND DE VERDADE, pela porta do clique na coluna
-    (`apply_output_for`, a camada da usuária) e pela porta do jogo
-    (`set_game_output_for`).
-
-    MORDIDA: devolva à réplica o «Clique no quadradinho amarelo» antes do
-    «Abra o jogo» e a régua reprova com a célula.
-    """
+    """A réplica da cor do jogo se mede num controle cuja cor ninguém escolheu."""
     ctl = _controle_com_o_jogo()
     ctl.apply_output_for(_UNIQ, OutputSpec(led=_AMARELO))
     ctl.set_game_output_for(_MAC, led=_COR_DO_JOGO)

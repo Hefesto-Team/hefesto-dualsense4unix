@@ -1,20 +1,4 @@
-"""As seis regras de topologia — o que cada uma acusa, e o que ela CALA.
-
-Uma regra que cala é resultado, não ausência. Metade destes testes afirma
-silêncio: a webcam de cabo que não pode ser acusada, o dongle que não acusa
-outro dongle, o teclado que já está fora do hub. Foi um falso positivo — a
-`HD Pro Webcam C920` publicada como vizinhança apertada — que fez esta sprint
-existir, e um catálogo cujas regras todas disparam não distingue nada.
-
-POR QUE NÃO HÁ ÁRVORE DE ARQUIVOS AQUI
----------------------------------------
-
-Nenhum teste deste arquivo cria diretório nem lê `/sys`. As regras de
-`ordens_da_mesa` são puras sobre um `Censo` e uma lista de `NoDeEntrada`, e os
-dois são dataclasses: montá-los à mão testa a REGRA, e não o leitor de sysfs,
-que tem bateria própria (`test_o_censo_le_o_barramento_inteiro.py` e
-`test_entradas_do_gabinete.py`). A bancada mora em `bancada_das_ordens.py`.
-"""
+"""As seis regras de topologia — o que cada uma acusa, e o que ela CALA."""
 from __future__ import annotations
 
 from tests.unit import bancada_das_ordens as bancada
@@ -38,18 +22,8 @@ def chaves(catalogo: tuple[ordens.Ordem, ...]) -> tuple[str, ...]:
     return tuple(ordem.chave for ordem in catalogo)
 
 
-# ---------------------------------------------------------------------------
-# O catálogo inteiro, contra o que a sprint mediu em 24/08/2026.
-# ---------------------------------------------------------------------------
-
-
 def test_o_catalogo_dispara_exatamente_o_que_foi_medido() -> None:
-    """R1, R3 e R4 acusam; R2, R5 e R6 calam — e o silêncio é o resultado.
-
-    É a medição da §2.7 da sprint: nesta mesa todo `power/control` responde
-    `on` e todo `over_current_count` responde `0`. Se R5 ou R6 aparecerem aqui,
-    a comparação delas foi invertida em algum lugar.
-    """
+    """R1, R3 e R4 acusam; R2, R5 e R6 calam — e o silêncio é o resultado."""
     achadas = chaves(ordens.catalogo(leitura()))
     assert achadas == (
         ordens.R1_RADIO_LARGO_NO_MESMO_HUB,
@@ -64,17 +38,8 @@ def test_uma_regra_produz_no_maximo_uma_ordem() -> None:
     assert len(achadas) == len(set(achadas))
 
 
-# ---------------------------------------------------------------------------
-# R1 — e a régua de "mesmo plástico", que é o coração da sprint.
-# ---------------------------------------------------------------------------
-
-
 def test_r1_ve_atraves_do_busnum() -> None:
-    """O aparelho de 5 Gbps e o dongle estão em `busnum` 3 e 4, e R1 os vê.
-
-    É o par que `mesa_de_radio.vizinhancas_apertadas` recusa no
-    `if primeiro.busnum != segundo.busnum: continue`.
-    """
+    """O aparelho de 5 Gbps e o dongle estão em `busnum` 3 e 4, e R1 os vê."""
     ordem = ordens.radio_largo_no_mesmo_hub(leitura())
     assert ordem is not None
     assert "4-1.1.2" in ordem.arranjo
@@ -82,17 +47,7 @@ def test_r1_ve_atraves_do_busnum() -> None:
 
 
 def test_r1_ve_o_hub_cujos_dois_lados_tem_numeros_diferentes() -> None:
-    """A MORDIDA DA ORDEM-1: quem costura os dois lados é o `peer`, não a conta.
-
-    Medido nesta máquina em 25/08/2026: `usb1-port5 peer -> usb2-port1`,
-    `usb1-port6 -> usb2-port2`, `usb1-port7 -> usb2-port3`. **Os números dos
-    dois lados divergem**, e esses buracos são `hotplug` — são justamente as
-    entradas que R1 recomenda como destino.
-
-    Um hub encaixado ali enumera `1-3` (`devpath` "3") e `2-1` (`devpath` "1").
-    Trocar o `peer` por uma comparação de `devpath` faz R1 ficar cega aqui, e
-    este teste é o que reprova.
-    """
+    """A MORDIDA DA ORDEM-1: quem costura os dois lados é o `peer`, não a conta."""
     censo, entradas = bancada.bancada_do_hub_em_numeros_diferentes()
     ordem = ordens.radio_largo_no_mesmo_hub(
         ordens.Leitura(censo=censo, entradas=entradas)
@@ -104,12 +59,7 @@ def test_r1_ve_o_hub_cujos_dois_lados_tem_numeros_diferentes() -> None:
 
 
 def test_r1_cala_quando_o_peer_nao_costura_nada() -> None:
-    """Sem `peer`, o produto não SABE que os dois hubs são um só — e cala.
-
-    Não saber que dois hubs são o mesmo plástico não é o mesmo que saber que
-    eles são plásticos diferentes, mas a ordem manda uma pessoa se ajoelhar
-    atrás do gabinete: na dúvida ela não nasce.
-    """
+    """Sem `peer`, o produto não SABE que os dois hubs são um só — e cala."""
     sem_peer = tuple(
         no_de_entrada
         for no_de_entrada in bancada.entradas()
@@ -119,13 +69,7 @@ def test_r1_cala_quando_o_peer_nao_costura_nada() -> None:
 
 
 def test_r1_nao_chuta_wifi() -> None:
-    """Classe `ff` e sem declaração dela: a ordem NÃO escreve "Wi-Fi".
-
-    O `product` deste aparelho diz "802.11ac NIC" e isso não o torna Wi-Fi para
-    o produto — o kernel declinou de classificar, e adivinhar por texto é como
-    se erra com confiança. Ler o `product` para nomear faz a palavra aparecer, e
-    este teste reprova.
-    """
+    """Classe `ff` e sem declaração dela: a ordem NÃO escreve "Wi-Fi"."""
     ordem = ordens.radio_largo_no_mesmo_hub(leitura())
     assert ordem is not None
     todo_o_texto = " ".join(
@@ -134,11 +78,6 @@ def test_r1_nao_chuta_wifi() -> None:
     assert "wi-fi" not in todo_o_texto
     assert "wifi" not in todo_o_texto
     assert "802.11" not in todo_o_texto
-    # LIDO DO DONO, e não digitado — 19/09/2026. Esta linha dizia
-    # `"você ainda não identificou"` e reprovou quando a frase encurtou por
-    # ordem dela (*"resume mais pra ter uma linha só"*): a régua olhava o mundo
-    # de ontem. O que ela precisa provar é que o aparelho SEM NOME é chamado
-    # pelo nome-de-ninguém do produto, qualquer que seja a redação.
     assert ordens.SEM_NOME.lower() in todo_o_texto
 
 
@@ -151,18 +90,8 @@ def test_r1_chama_pelo_nome_que_ela_declarou() -> None:
     assert "o adaptador de rede" in ordem.acao
 
 
-# ---------------------------------------------------------------------------
-# R2 — a webcam que fez esta sprint existir.
-# ---------------------------------------------------------------------------
-
-
 def test_r2_nao_acusa_a_webcam() -> None:
-    """Webcam de cabo colada a um dongle: ZERO ordens.
-
-    É o falso positivo real desta bancada — a tela publicou `▲ Vizinhança das
-    portas` acusando uma `HD Pro Webcam C920`, classe `0e/01/00`, que não
-    irradia 2,4 GHz. Tirar o filtro de espécie faz a ordem nascer, e reprova.
-    """
+    """Webcam de cabo colada a um dongle: ZERO ordens."""
     webcam = bancada.aparelho(
         "3-3", pai="usb3", busnum=3, devpath="3", pci=bancada.PCI_DO_HUB,
         classe="0e", subclasse="01", protocolo="00", vid="046d", pid="082d",
@@ -195,18 +124,8 @@ def test_r2_cala_sem_o_desenho_dela() -> None:
     assert ordens.dois_radios_colados(leitura(vizinhas=())) is None
 
 
-# ---------------------------------------------------------------------------
-# R3 — e a contra-regra, que é metade da regra.
-# ---------------------------------------------------------------------------
-
-
 def test_r3_nao_acusa_dongle_de_dongle() -> None:
-    """Três adaptadores no mesmo hub é o arranjo que o GUIA manda comprar.
-
-    R3 conta que o CAMINHO até o computador passa por um hub. Ela nunca diz que
-    um dongle atrapalha outro — comparar dongle com dongle faria três ordens
-    nascerem, e reprova.
-    """
+    """Três adaptadores no mesmo hub é o arranjo que o GUIA manda comprar."""
     ordem = ordens.dongle_atras_de_hub(leitura())
     assert ordem is not None
     texto = " ".join(linha.texto for linha in ordem.linhas).lower()
@@ -216,26 +135,7 @@ def test_r3_nao_acusa_dongle_de_dongle() -> None:
 
 
 def test_r3_diz_uma_frase_de_portugues_inteira() -> None:
-    """A frase MONTADA, palavra por palavra — e ela nasceu de um defeito meu.
-
-    **ELA LEU O DEFEITO NA TELA**, na foto de 19/09/2026 às 15h23: *"2 de 3
-    adaptadores Bluetooth **chegam passam** por um hub"*. O verbo saiu dobrado
-    no mesmo commit que encurtou a frase por ordem dela (*"resume mais pra ter
-    uma linha só"*): o `_plural` já trazia o verbo conjugado e o sufixo trouxe
-    outro.
-
-    **POR QUE NENHUMA RÉGUA PEGOU, e é a lição que esta função guarda:** a
-    régua do comprimento contava caracteres do FONTE
-    (`test_o_checkup_devolve_a_largura...frases_do_exame`, por `regex` sobre o
-    `porque=`), e o `_plural` só resolve em tempo de execução. *Uma régua de
-    tamanho não é uma régua de língua* — e encurtar frase é mexer em gramática.
-
-    Por isso esta afirma a frase INTEIRA, nas duas formas de plural, montada
-    pelo produto. Um `in` de pedaço deixaria o verbo dobrado passar de novo.
-    """
-    # AS DUAS FORMAS, e as duas importam: o singular é o ramo que a bancada
-    # dela nunca exercita (ela tem três adaptadores), e é justamente onde um
-    # plural errado moraria sem ninguém ver.
+    """A frase MONTADA, palavra por palavra — e ela nasceu de um defeito meu."""
     for quantos, esperada in (
         (3, "2 de 3 adaptadores BT passam por um hub."),
         (1, "1 de 1 adaptador BT passa por um hub."),
@@ -253,18 +153,10 @@ def test_r3_diz_uma_frase_de_portugues_inteira() -> None:
 
 
 def test_r3_nao_tem_verbo_dobrado_na_frase_que_vai_para_a_tela() -> None:
-    """A MORDIDA de verdade: a ordem montada pelo produto, sem verbo repetido.
-
-    A anterior mede o molde; esta mede a SAÍDA — `ordens.dongle_atras_de_hub`
-    com a bancada de mentira, que é o que o `porque` publica como `achado` na
-    aba Conexões (`a08_conexoes.py`, `"achado"`).
-    """
+    """A MORDIDA de verdade: a ordem montada pelo produto, sem verbo repetido."""
     ordem = ordens.dongle_atras_de_hub(leitura())
     assert ordem is not None
     texto = " ".join(linha.texto for linha in ordem.linhas)
-    # OS QUATRO VERBOS QUE PODEM DOBRAR — os dois que a frase já teve e as duas
-    # conjugações de cada um. Duas formas verbais coladas é o defeito, não a
-    # palavra: `chega passa`, `chegam passam` e as trocas entre elas.
     for a in ("chega", "chegam"):
         for b in ("passa", "passam"):
             assert f"{a} {b}" not in texto, (
@@ -275,11 +167,7 @@ def test_r3_nao_tem_verbo_dobrado_na_frase_que_vai_para_a_tela() -> None:
 
 
 def test_r3_calada_sem_buraco_livre() -> None:
-    """Sem entrada livre, a ordem nasce SEM AÇÃO — e diz por quê.
-
-    Um imperativo que manda mover para lugar nenhum é pior que silêncio.
-    Ignorar a contagem de livres faz a ação nascer assim mesmo, e reprova.
-    """
+    """Sem entrada livre, a ordem nasce SEM AÇÃO — e diz por quê."""
     ordem = ordens.dongle_atras_de_hub(
         leitura(entradas=bancada.entradas(sem=bancada.NOS_LIVRES))
     )
@@ -291,12 +179,7 @@ def test_r3_calada_sem_buraco_livre() -> None:
 
 
 def test_r3_nao_oferece_destino_dentro_do_proprio_hub() -> None:
-    """O buraco vazio do hub externo NÃO é destino: `unknown` não é `hotplug`.
-
-    `3-1-port3` está vazio e é do mesmo hub de onde a ordem manda tirar o
-    dongle. Oferecê-lo seria mandar mudar de buraco dentro do hub e chamar isso
-    de conserto.
-    """
+    """O buraco vazio do hub externo NÃO é destino: `unknown` não é `hotplug`."""
     ordem = ordens.dongle_atras_de_hub(
         leitura(entradas=bancada.entradas(sem=bancada.NOS_LIVRES))
     )
@@ -305,16 +188,8 @@ def test_r3_nao_oferece_destino_dentro_do_proprio_hub() -> None:
     assert ordem.acao == ""
 
 
-# ---------------------------------------------------------------------------
-# R4 — a única regra que não fala de rádio.
-# ---------------------------------------------------------------------------
-
-
 def test_r4_cala_com_teclado_direto() -> None:
-    """Um teclado fora do hub e R4 cala: a casa não fica sem teclado.
-
-    Contar só os teclados que estão em hub faz a ordem nascer, e reprova.
-    """
+    """Um teclado fora do hub e R4 cala: a casa não fica sem teclado."""
     direto = bancada.aparelho(
         "1-1", pai="usb1", busnum=1, devpath="1", pci=bancada.PCI_DA_PLACA,
         classe="03", subclasse="01", protocolo="01", vid="04d9", pid="0169",
@@ -337,16 +212,8 @@ def test_r4_cala_sem_teclado_nenhum() -> None:
     ) is None
 
 
-# ---------------------------------------------------------------------------
-# R5 e R6 — as duas que calam nesta bancada, e o que as faz falar.
-# ---------------------------------------------------------------------------
-
-
 def test_r5_r6_calam_nesta_bancada() -> None:
-    """Tudo `on` e `over_current_count` zero: nenhuma das duas nasce.
-
-    Inverter a comparação faz as duas nascerem, e reprova.
-    """
+    """Tudo `on` e `over_current_count` zero: nenhuma das duas nasce."""
     assert ordens.dongle_dorme(leitura()) is None
     assert ordens.entrada_reclamou_de_corrente(leitura()) is None
 
@@ -382,17 +249,8 @@ def test_r5_r6_falam_quando_o_numero_muda(
     assert ordem.chave == chave
 
 
-# ---------------------------------------------------------------------------
-# O que NENHUMA ordem pode dizer.
-# ---------------------------------------------------------------------------
-
-
 def test_nenhuma_ordem_publica_serial() -> None:
-    """O serial identifica a unidade dela tão bem quanto o MAC, e a tela é PNG.
-
-    `scripts/check_anonymity.sh` diz isso por escrito, e a tela desta aba é
-    fotografada e versionada por `scripts/gui-captura/retratar_abas.py`.
-    """
+    """O serial identifica a unidade dela tão bem quanto o MAC, e a tela é PNG."""
     seriais = set(bancada.SERIAIS.values())
     for ordem in ordens.catalogo(leitura()):
         texto = " ".join([ordem.acao, ordem.arranjo] + [
@@ -439,11 +297,6 @@ def test_nenhuma_ordem_cita_milimetro_nem_altura() -> None:
             assert palavra not in texto
 
 
-# ---------------------------------------------------------------------------
-# A ausência tem duas palavras, e elas não colapsam.
-# ---------------------------------------------------------------------------
-
-
 def test_nao_medi_e_nao_declarado_sao_frases_diferentes() -> None:
     """F7: "olhei e não sei" não é "só você sabe, e você não me disse"."""
     assert ordens.NAO_MEDI != ordens.NAO_DECLARADO
@@ -466,7 +319,6 @@ def test_com_desenho_a_acao_aponta_o_numero_dela() -> None:
     )
     assert ordem is not None
     assert ordem.destino == "4"
-    # a palavra é a do dono da grafia (O-MAPA-QUE-ELA-CORRIGE-01): «Entrada 4»
     assert ordem.acao.endswith("para a Entrada 4")
     assert ordens.NAO_DECLARADO not in ordem.acao
 
@@ -478,16 +330,8 @@ def test_a_terceira_linha_existe_sempre() -> None:
         assert len(ordem.linhas) == 3
 
 
-# ---------------------------------------------------------------------------
-# O destino da Sugestão — 26/09/2026, a foto dela da Gestão de Controles: a
-# Sugestão mandava o adaptador para a entrada 9, no MESMO hub, e o Wi-Fi e o
-# adaptador para a mesma entrada.
-# ---------------------------------------------------------------------------
-
-
 def test_o_destino_e_uma_entrada_livre_de_outra_controladora() -> None:
-    """A MORDIDA: devolva o `_destino_declarado` à primeira declarada, sem o
-    filtro dos `livres` — a ordem volta a apontar a 9, que é do mesmo hub."""
+    """A MORDIDA: devolva o `_destino_declarado` à primeira declarada, sem o"""
     ordem = ordens.dongle_atras_de_hub(leitura(
         entradas_livres_declaradas=("9", "2"),
         ocupante_da_entrada={"9": "3-1.1.3", "2": "1-2"},

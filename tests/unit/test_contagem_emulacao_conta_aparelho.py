@@ -45,13 +45,8 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_NAME,
 )
 
-#: MAC fictício de controle físico — dois nós do MESMO aparelho o compartilham.
 MAC_FISICO = "aa:bb:cc:dd:ee:ff"
 
-#: O segundo aparelho físico. Fica na MESMA faixa forjada `aa:bb:cc:` que o
-#: primeiro porque `test_anonimato_de_fixtures.py` só reconhece três prefixos
-#: (`02:fe:`, `aa:bb:cc:`, `e8:47:3a:`) e reprova qualquer outro — um MAC de
-#: fantasia fora deles é indistinguível de identidade real vazada.
 MAC_FISICO_SEGUNDO = "aa:bb:cc:11:22:33"
 
 _HID_USB = "/sys/devices/pci0000:00/0000:0c:00.3/usb3/3-4/3-4:1.3/0003:054C:0CE6.0005"
@@ -122,14 +117,7 @@ class TestAgrupamentoPorAparelho:
         assert classificar_joysticks(nos) == (1, 0, 0)
 
     def test_dois_pads_de_uinput_distintos_nao_colapsam(self) -> None:
-        """A correção (b) ao código de origem, medida aqui.
-
-        Sem `uniq`, o commit `0c08e77` subia TRÊS níveis do nó — certo para
-        device HID (``<hid>/input/inputNN/jsN``) e errado para uinput, cuja
-        árvore não tem a camada ``input/``: três níveis chegam em
-        ``/sys/devices/virtual`` e colapsam TODOS os pads de uinput num só.
-        Os dois pads da Steam medidos hoje virariam um.
-        """
+        """A correção (b) ao código de origem, medida aqui."""
         nos = [n for n in _mesa_de_hoje() if not n["uniq"]]
         assert len(nos) == 2
         assert classificar_joysticks(nos) == (0, 0, 2)
@@ -181,10 +169,7 @@ class TestQuemESeparadoPelaIdentidade:
         assert classificar_joysticks(nos) == (0, 1, 0)
 
     def test_dualsense_bluetooth_fisico_mora_no_mesmo_lugar_e_nao_e_nosso(self) -> None:
-        """BLUEZ-UHID-01: o BlueZ cria o HID dos físicos por rádio em
-        `/devices/virtual/misc/uhid/`, exatamente onde mora o nosso vpad. Quem
-        separa é a identidade, nunca o caminho.
-        """
+        """BLUEZ-UHID-01: o BlueZ cria o HID dos físicos por rádio em"""
         nos = [
             _no("/dev/input/js0",
                 "Sony Interactive Entertainment DualSense Wireless Controller",
@@ -193,24 +178,13 @@ class TestQuemESeparadoPelaIdentidade:
         assert classificar_joysticks(nos) == (1, 0, 0)
 
     def test_aparelho_desconhecido_cai_em_fisico(self) -> None:
-        """Mordida 3: a leitura conservadora é o inverso de "nosso".
-
-        Inflar o que dizemos ter criado é o defeito; um nó ilegível (atributos
-        vazios) tem de contar como controle dela.
-        """
+        """Mordida 3: a leitura conservadora é o inverso de "nosso"."""
         nos = [_no("/dev/input/js9", "", "", "")]
         assert classificar_joysticks(nos) == (1, 0, 0)
 
 
 class TestAQuartaRegra:
-    """O buraco do porte: o vpad em uinput (fallback VPAD-05).
-
-    Ele não publica `uniq` e o nome não traz a marca `(Hefesto P` —
-    na máscara dualsense o nome não contém "Hefesto" em lugar nenhum. Sem esta
-    regra o classificador do `0c08e77` responderia "de outro programa (Steam
-    Input)" sobre o NOSSO PRÓPRIO vpad: trocaria o silêncio por uma acusação
-    errada.
-    """
+    """O buraco do porte: o vpad em uinput (fallback VPAD-05)."""
 
     @pytest.mark.parametrize("nome", [XBOX360_NAME, DUALSENSE_EDGE_NAME])
     def test_as_duas_mascaras_de_uinput_sao_nossas(self, nome: str) -> None:
@@ -300,8 +274,4 @@ class TestALeituraDoSysfs:
         fonte = inspect.getsource(EmulationActionsMixin._refresh_emulation_view)
         assert "classificar_joysticks(" in fonte
         assert "rotulo_gamepads(" in fonte
-        # A forma EXATA do rótulo antigo, e não a frase solta: o corpo do método
-        # cita "6 controles detectados" dentro do comentário da medição de
-        # largura, e um `not in` sobre a frase reprovaria a própria memória do
-        # defeito.
         assert 'palavra = "controle detectado"' not in fonte

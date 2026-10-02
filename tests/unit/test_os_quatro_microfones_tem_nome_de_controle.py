@@ -41,12 +41,8 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 
-#: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
-#: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
-#: régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
 _SONY = " (DualSense Wireless Controller)"
 
-#: Quatro controles, quatro endereços — sintéticos, com a máscara da casa.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
@@ -94,20 +90,10 @@ class _Contexto:
 
 @pytest.fixture()
 def numerador_limpo():  # type: ignore[no-untyped-def]
-    """Devolve o numerador global ao que era — ele é estado de PROCESSO.
-
-    Sem isto uma régua que instala o gancho envenena a próxima pela ordem dos
-    testes, que é o defeito `duble-que-nao-muda-resultado-so-esconde` visto do
-    outro lado.
-    """
+    """Devolve o numerador global ao que era — ele é estado de PROCESSO."""
     anterior = bt.registrar_numerador_de_assento(None)
     yield
     bt.registrar_numerador_de_assento(anterior)
-
-
-# ---------------------------------------------------------------------------
-# MORDIDA 1 — o rótulo é o dela, e ele NÃO carrega o endereço do controle
-# ---------------------------------------------------------------------------
 
 
 def test_o_rotulo_do_no_e_microfone_do_controle_n(numerador_limpo) -> None:  # type: ignore[no-untyped-def]
@@ -157,22 +143,15 @@ def test_o_rotulo_nunca_carrega_o_endereco_do_controle(numerador_limpo) -> None:
 
 
 def test_sem_assento_sabido_nao_se_inventa_numero(numerador_limpo) -> None:  # type: ignore[no-untyped-def]
-    """Ninguém atendendo = rótulo sem número, nunca um número chutado.
-
-    Uma lista com dois «Microfone do Controle 1» é pior que uma com dois
-    «Microfone do Controle»: o número repetido MENTE sobre qual é qual.
-    """
+    """Ninguém atendendo = rótulo sem número, nunca um número chutado."""
     assert bt.descricao_do_microfone(P1) == "Microfone do Controle" + _SONY
 
-    # E um numerador que responde bobagem vale como "não sei" — `True` é `int`
-    # em Python e viraria o assento 1 calado.
     for resposta in (0, -3, True, "2", None):
         bt.registrar_numerador_de_assento(lambda _u, r=resposta: r)
         assert bt.descricao_do_microfone(P1) == "Microfone do Controle" + _SONY, (
             f"o numerador respondeu {resposta!r} e virou assento"
         )
 
-    # E um numerador que EXPLODE não pode derrubar a ponte subindo.
     def _explode(_u: str) -> int:
         raise RuntimeError("o daemon caiu no meio")
 
@@ -183,11 +162,7 @@ def test_sem_assento_sabido_nao_se_inventa_numero(numerador_limpo) -> None:  # t
 def test_a_ponte_do_radio_batiza_o_no_com_o_nome_dela(  # type: ignore[no-untyped-def]
     monkeypatch, numerador_limpo
 ) -> None:
-    """O rótulo chega ao NÓ pela ponte — e não só à função que o compõe.
-
-    Régua de PRODUTO e não de texto: sobe a `PonteMicBluetooth` de verdade, com
-    o dono do canal dublado, e lê a descrição com que ela pediu o nó.
-    """
+    """O rótulo chega ao NÓ pela ponte — e não só à função que o compõe."""
     from hefesto_dualsense4unix.integrations import canal_do_microfone
 
     bt.registrar_numerador_de_assento(lambda _u: 2)
@@ -199,8 +174,6 @@ def test_a_ponte_do_radio_batiza_o_no_com_o_nome_dela(  # type: ignore[no-untype
         nome = "hefesto_mic_000002"
 
         def iniciar(self) -> bool:
-            # False de propósito: a régua quer a DESCRIÇÃO com que o canal foi
-            # pedido, não uma thread de áudio de mentira girando na suíte.
             return False
 
     monkeypatch.setattr(
@@ -214,17 +187,12 @@ def test_a_ponte_do_radio_batiza_o_no_com_o_nome_dela(  # type: ignore[no-untype
         no, opener=lambda _c: leitura, decodificador=object()
     )
 
-    assert ponte.iniciar() is False  # o canal dublado recusa; é o combinado
+    assert ponte.iniciar() is False
     assert pedidos, "a ponte não pediu o canal por controle"
     assert pedidos[0][1] == "Microfone do Controle 2" + _SONY, (
         f"a ponte batizou o nó de {pedidos[0][1]!r} — o nome dela não chegou "
         "ao produto"
     )
-
-
-# ---------------------------------------------------------------------------
-# MORDIDA 2 — a palavra dela sobre o microfone do CABO sobrevive à varredura
-# ---------------------------------------------------------------------------
 
 
 class _NoDeRadio:
@@ -233,18 +201,7 @@ class _NoDeRadio:
 
 
 def test_a_palavra_dela_sobre_o_mic_do_cabo_sobrevive_a_varredura() -> None:
-    """Ela aperta o botão do microfone de um controle NO FIO. A palavra fica.
-
-    **O DEFEITO, MEDIDO NESTA ÁRVORE** (`_esquecer_quem_saiu_da_mesa` lendo só
-    o rádio)::
-
-        sub.no_ar(<controle do cabo>, True)   -> palavra: {…: True}
-        sub._esquecer_quem_saiu_da_mesa([<só o do rádio>])
-                                              -> palavra: {}
-
-    **A MORDIDA:** troque `do_radio | self.uniqs_na_mesa()` por `do_radio` em
-    `_esquecer_quem_saiu_da_mesa` e esta régua reprova.
-    """
+    """Ela aperta o botão do microfone de um controle NO FIO. A palavra fica."""
     registro = bt_mic.RegistroDePedidosDeCanal()
     sub = bt_mic.BtMicSubsystem(registro=registro)
     sub._backend = _BackendDaMesa((P1, P2))
@@ -252,7 +209,6 @@ def test_a_palavra_dela_sobre_o_mic_do_cabo_sobrevive_a_varredura() -> None:
     sub.no_ar(P1, True)
     assert registro.no_ar() == {_hex(P1): True}
 
-    # Uma varredura: o rádio só mostra o P2. O P1 está no CABO, na mesa dela.
     sub._esquecer_quem_saiu_da_mesa([_NoDeRadio(P2)])
 
     assert registro.no_ar() == {_hex(P1): True}, (
@@ -265,11 +221,7 @@ def test_a_palavra_dela_sobre_o_mic_do_cabo_sobrevive_a_varredura() -> None:
 
 
 def test_quem_sai_da_mesa_de_verdade_continua_sendo_esquecido() -> None:
-    """A cura não pode virar *"o pedido nunca morre"* — isso é o "liga sozinho".
-
-    O controle que sai do rádio E do backend perde o pedido, como sempre. Sem
-    esta metade, a reconexão dele subiria a ponte sozinha.
-    """
+    """A cura não pode virar *"o pedido nunca morre"* — isso é o "liga sozinho"."""
     registro = bt_mic.RegistroDePedidosDeCanal()
     sub = bt_mic.BtMicSubsystem(registro=registro)
     sub._backend = _BackendDaMesa((P1, P2), desconectado=P1)
@@ -281,11 +233,6 @@ def test_quem_sai_da_mesa_de_verdade_continua_sendo_esquecido() -> None:
         "o controle saiu da mesa e a palavra dela sobre ele ficou de pé"
     )
     assert registro.abertos() == frozenset()
-
-
-# ---------------------------------------------------------------------------
-# MORDIDA 3 — o supervisor ergue o canal do CABO, e só de quem PEDIU
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture()
@@ -314,7 +261,6 @@ def dono_dublado(monkeypatch):  # type: ignore[no-untyped-def]
     return registro
 
 
-#: O nó ALSA do cabo de UM controle. Nome real desta máquina, sem serial.
 FONTE_DO_CABO = "alsa_input.usb-Sony_DualSense_Wireless_Controller-00.iec958-stereo"
 
 
@@ -327,11 +273,7 @@ def _com_uma_fonte(monkeypatch, fontes: list[str]) -> None:
 def test_sem_toque_dela_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado
 ) -> None:
-    """Nada pedido = nada carregado. A privacidade é a mesma do rádio.
-
-    Um canal do cabo carrega um `module-pipe-source` no servidor e um `parec`
-    lendo o microfone dela. Ele não pode nascer por o daemon ter subido.
-    """
+    """Nada pedido = nada carregado. A privacidade é a mesma do rádio."""
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa((P1,))
@@ -346,14 +288,7 @@ def test_sem_toque_dela_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped-de
 def test_o_toque_dela_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """Ela liga o microfone de um controle no FIO: o canal com nome dele sobe.
-
-    **A MORDIDA:** apague a chamada a `_reconciliar_o_cabo` no laço, ou o corpo
-    de `_abrir_os_canais_do_cabo`, e esta régua reprova nomeando o controle.
-
-    E ele sobe alimentado pelo nó ALSA — a resposta de `escolher_fonte` para
-    *"de onde eu leio"*, não a do próprio canal.
-    """
+    """Ela liga o microfone de um controle no FIO: o canal com nome dele sobe."""
     bt.registrar_numerador_de_assento(lambda _u: 1)
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
@@ -371,14 +306,7 @@ def test_o_toque_dela_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-un
 def test_o_supervisor_do_cabo_nao_encosta_em_quem_esta_no_radio(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado
 ) -> None:
-    """Quem está no rádio é da PONTE — o supervisor não sobe nem derruba.
-
-    Os dois transportes publicam o MESMO nó, e quem carrega um
-    `module-pipe-source` com nome que já existe derruba o de pé como órfão
-    (`SourceVirtualPipeWire.iniciar`). Um supervisor que não respeitasse a
-    posse faria o microfone dela entregar zeros perfeitos — o defeito
-    MIC-RADIO-ORFAO-01, de volta por outra porta.
-    """
+    """Quem está no rádio é da PONTE — o supervisor não sobe nem derruba."""
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa((P1,))
@@ -420,12 +348,7 @@ def test_o_canal_do_cabo_cai_quando_ela_desliga(  # type: ignore[no-untyped-def]
 def test_o_canal_do_cabo_passa_de_mao_quando_o_controle_vai_para_o_radio(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """Fio -> rádio: o supervisor SOLTA o nó antes de a ponte nascer.
-
-    A ordem no laço é o que faz a troca ser uma passagem de mão, e não uma
-    disputa: `_reconciliar_o_cabo` roda ANTES do `reconciliar` do gerenciador,
-    então o nó do cabo já saiu quando a ponte tenta subir o dela.
-    """
+    """Fio -> rádio: o supervisor SOLTA o nó antes de a ponte nascer."""
     bt.registrar_numerador_de_assento(lambda _u: 1)
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
@@ -435,26 +358,14 @@ def test_o_canal_do_cabo_passa_de_mao_quando_o_controle_vai_para_o_radio(  # typ
     sub._reconciliar_o_cabo([])
     assert sub._canais_do_cabo
 
-    # O mesmo controle aparece no rádio: o pedido continua aberto, mas o dono
-    # do canal passa a ser a ponte.
     sub._reconciliar_o_cabo([_NoDeRadio(P1)])
 
     assert dono_dublado["fechou"] == [_hex(P1)]
     assert sub._canais_do_cabo == {}
 
 
-# ---------------------------------------------------------------------------
-# O ASSENTO — e por que ele NÃO é o número que o jogo vê
-# ---------------------------------------------------------------------------
-
-
 def test_o_assento_e_a_posicao_na_mesa_e_nao_o_numero_do_coop() -> None:
-    """Quatro controles, quatro assentos — e o co-op não entra nesta conta.
-
-    `coop.resolve_player_numbers` responde `1` para TODOS os controles quando o
-    co-op está desligado. Batizar os nós por ele poria quatro «Microfone do
-    Controle 1» na lista dela.
-    """
+    """Quatro controles, quatro assentos — e o co-op não entra nesta conta."""
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa(OS_QUATRO)
 
@@ -467,27 +378,7 @@ def test_o_assento_e_a_posicao_na_mesa_e_nao_o_numero_do_coop() -> None:
 
 
 def test_um_controle_desligado_nao_ocupa_assento() -> None:
-    """Handle aberto e DESCONECTADO não ganha nome de nó. A invariante é essa.
-
-    `describe_controllers()` devolve uma entrada por HANDLE ABERTO, e o handle
-    de um controle desligado continua na lista com `connected: False` e `index`
-    próprio. Publicar um nó por ele poria na lista de som dela um «Microfone do
-    Controle N» de um aparelho que não está lá — e que ninguém consegue
-    desligar, porque ele não existe.
-
-    **E OS NÚMEROS AQUI SÃO `[2, 3, 4]` DESDE 12/09/2026** (TRES-CONTAS-PARA-UM-
-    NUMERO-01), onde eram `[1, 2, 3]`. Não é regressão: é o nó passando a dizer
-    o número que o CARTÃO diz. Sem `identity_registry` fiado — que é o caso deste
-    dublê — a regra da casa (`app/actions/base.numero_do_controle`) cai no
-    `index + 1`, e é exatamente esse número que a tela imprime nessa mesma
-    situação. O subsystem deixou de ter conta própria; ele lê a da casa. A régua
-    que compara as três está em
-    `test_o_som_por_controle_cai_em_cada_um.py::test_as_tres_contas_do_mesmo_
-    rotulo_viraram_uma`.
-
-    A MORDIDA: pare de filtrar `connected` em
-    `base.numero_do_assento_na_mesa` e o P1 desligado ganha nome.
-    """
+    """Handle aberto e DESCONECTADO não ganha nome de nó. A invariante é essa."""
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa(OS_QUATRO, desconectado=P1)
 
@@ -502,7 +393,6 @@ def test_um_controle_desligado_nao_ocupa_assento() -> None:
         f"o nó deixou de dizer o número do cartão: {assentos}"
     )
 
-    # A INVARIANTE, controle a controle: ter assento é estar na mesa.
     mesa = sub.uniqs_na_mesa()
     for u in OS_QUATRO:
         tem_assento = sub.numero_do_assento(u) is not None
@@ -515,11 +405,7 @@ def test_um_controle_desligado_nao_ocupa_assento() -> None:
 def test_o_gancho_do_assento_sobe_e_desce_com_o_subsystem(  # type: ignore[no-untyped-def]
     numerador_limpo,
 ) -> None:
-    """Instalado no `start`, devolvido no `stop` — como os outros três ganchos.
-
-    Um gancho que ficasse de pé com o subsystem parado responderia sobre uma
-    mesa que ninguém está lendo mais.
-    """
+    """Instalado no `start`, devolvido no `stop` — como os outros três ganchos."""
     import asyncio
 
     sub = bt_mic.BtMicSubsystem(gerenciador=_GerenciadorDeMentira())

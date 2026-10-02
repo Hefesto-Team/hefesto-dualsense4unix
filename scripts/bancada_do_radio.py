@@ -52,7 +52,6 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 
 
-# ── as peças mínimas, sem depender da interface ──────────────────────────────
 def _busctl(*args: str) -> str:
     fim = subprocess.run(
         ["busctl", "--system", *args], capture_output=True, text=True, check=False
@@ -100,25 +99,7 @@ def _tiques() -> int:
 
 
 def _evdev_de_movimento(uniq: str | None = None) -> str | None:
-    """O nó de MOVIMENTO de um controle — o fio que a varredura pode estreitar.
-
-    CASA PELO `uniq`, E NUNCA PELA ORDEM — 19/09/2026, e isto custou uma
-    medição inteira. A primeira versão pegava "o nó de maior número", e na
-    mesa de quatro isso escolheu o `A0:FA:9C` enquanto o adaptador sob medição era o do
-    `14:3A:9A`. O número saiu (184 pacotes/s) e parecia uma resposta.
-
-    É a regra que esta casa já tinha escrito para o som: *propriedade de
-    posse, nunca o rótulo nem a posição*. Aqui a posse é o `uniq` do device.
-
-    O QUE SE MEDE É O NÓ VIRTUAL, e isso é de propósito: o produto ESCONDE o
-    hidraw físico do controle no rádio (é o que o `hide` faz) e publica um
-    `uhid` no lugar. O virtual só emite quando o físico entrega, então ele
-    mede a ponta que o JOGO vê — que é a que importa.
-
-    POR QUE O NÓ DE MOVIMENTO, e não o dos botões: a IMU publica ~500
-    pacotes/s com o controle PARADO em cima da mesa. O nó dos botões fica em
-    0/s enquanto ninguém aperta nada, e mediria o silêncio.
-    """
+    """O nó de MOVIMENTO de um controle — o fio que a varredura pode estreitar."""
     achados: list[tuple[int, str]] = []
     for no in sorted(Path("/dev/input").glob("event*")):
         base = Path(f"/sys/class/input/{no.name}")
@@ -163,7 +144,7 @@ def _taxa_no_fio(caminho: str, segundos: float) -> float:
                 continue
             for i in range(0, len(dados) - 23, 24):
                 tipo = struct.unpack("qqHHi", dados[i:i + 24])[2]
-                if tipo == 0:  # EV_SYN — um pacote completo
+                if tipo == 0:
                     n += 1
     finally:
         os.close(fd)
@@ -179,7 +160,6 @@ def _mascarar(mac: str) -> str:
     return ":".join([p[0], p[1], p[2], "00", "00", p[5]])
 
 
-# ── as etapas ────────────────────────────────────────────────────────────────
 def etapa_estado() -> int:
     print("\n  ESTADO DE PARTIDA\n  " + "─" * 58)
     adps = _adaptadores()
@@ -231,21 +211,7 @@ def etapa_taxa(segundos: float = 6.0) -> int:
 
 
 def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
-    """Liga a varredura em `alvo`, mede a taxa DURANTE, e desliga.
-
-    O `busctl call StartDiscovery` não serve: o BlueZ mata a busca quando o
-    cliente que pediu fecha a conexão — medido em 19/09. Por isso aqui a busca
-    corre num `bluetoothctl` VIVO, e este processo o mantém de pé.
-    """
-    # O RÁDIO DELA NÃO É BANCADA DE SUÍTE — RADIO-DELA-01, 19/09/2026.
-    #
-    # Esta etapa LIGA a varredura num adaptador vivo. A primeira régua escrita
-    # para ela chamava-a de verdade, e o canário do `casa-sabe` acusou na
-    # mesma corrida: o daemon reagiu e regravou `~/.config/.../controllers.json`
-    # na máquina dela, com ela usando a máquina.
-    #
-    # É a TELA-DELA-01 com outro aparelho: *a suíte não toca o que é dela*. O
-    # escape é declarado, e quem o declara assume a responsabilidade.
+    """Liga a varredura em `alvo`, mede a taxa DURANTE, e desliga."""
     if os.environ.get("PYTEST_CURRENT_TEST") and \
             os.environ.get("HEFESTO_BANCADA_PODE_TOCAR_O_RADIO") != "1":
         print("\n  RECUSADO: esta etapa LIGA a varredura num adaptador vivo, e")
@@ -259,11 +225,6 @@ def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
         return 2
     endereco = _prop(f"/org/bluez/{alvo}", "org.bluez.Adapter1", "Address")
 
-    # ZERO COM O ALVO FORA DA MESA NÃO É ZERO. Sem controle CONECTADO neste
-    # adaptador, a varredura não tem o que atrapalhar, e a medição devolve
-    # «sem dano» — que se lê como «a busca não atrapalha». É a armadilha que
-    # esta casa já pagou, e ela custa uma conclusão inteira: quem ler o número
-    # arquiva o assunto.
     no_alvo = [
         mac
         for hci, mac in _devices()
@@ -291,16 +252,6 @@ def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
         return 4
 
     if not no_alvo:
-        # A MEDIÇÃO CRUZADA, e ela é a que DECIDE A RESERVA — 19/09/2026.
-        #
-        # A guarda acima recusa medir sobre mesa vazia, e está certa para o
-        # dano DIRETO. Mas a pergunta da reserva é outra: *varrer no adaptador
-        # A atrapalha o controle que está no B?* Se atrapalhar, pôr os
-        # controles nos dongles não adianta — a interferência seria de
-        # espectro, e o espectro é um só.
-        #
-        # Recusar esta medição por falta de controle NO ALVO seria a guarda
-        # cega justamente para a pergunta que ela existe para proteger.
         if not outros:
             print(f"\n  nem em {alvo} nem em outro adaptador há controle no rádio.")
             print("  A medição cruzada precisa de um controle EM ALGUM lugar.\n")
@@ -311,8 +262,6 @@ def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
         print(f"\n  {len(no_alvo)} controle(s) no rádio de {alvo}: "
               + ", ".join(_mascarar(m) for m in no_alvo))
 
-    # O NÓ É O DO CONTROLE QUE ESTÁ EM JOGO, casado pelo `uniq`. No cruzado,
-    # o controle mora em OUTRO adaptador — é ele quem se mede.
     alvos = no_alvo or [
         mac
         for hci, mac in _devices()
@@ -368,8 +317,6 @@ def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
         durante = _taxa_no_fio(fio, segundos)
         print(f"       {durante:7.1f} pacotes/s")
     finally:
-        # A BUSCA MORRE COM O CLIENTE, e é disso que dependemos para não deixar
-        # o rádio dela varrendo se este processo cair.
         try:
             assert proc.stdin is not None
             proc.stdin.write("scan off\nquit\n")
@@ -415,9 +362,6 @@ def etapa_bonds() -> int:
     print(f"\n  {len(dobrados)} CONTROLE(S) COM CHAVE EM MAIS DE UM ADAPTADOR.")
     print("  A ESCOLHA É DELA: em qual adaptador cada um deve ficar.")
     print("  O gesto, para o que SAI (um por adaptador de origem):\n")
-    # O gesto é a etapa `limpar` deste script, com o endereço MASCARADO: ela
-    # resolve o real sozinha, e o endereço de verdade não chega ao terminal
-    # nem à linha de comando que o sudo registra.
     for mac, hcis in sorted(dobrados.items()):
         for h in sorted(hcis):
             print(f"    # tirar do {h}:")
@@ -429,13 +373,7 @@ def etapa_bonds() -> int:
 
 
 def etapa_limpar(alvo: str, mac_pedido: str) -> int:
-    """Apaga o bond de UM controle em UM adaptador, pela ponte privilegiada.
-
-    Aceita o MAC **mascarado** (`44:46:48:00:00:03`) e resolve o real aqui —
-    assim o endereço de verdade não precisa atravessar a conversa nem o
-    terminal. A máscara da casa zera os octetos 4 e 5, então ela identifica
-    sozinha entre quatro controles.
-    """
+    """Apaga o bond de UM controle em UM adaptador, pela ponte privilegiada."""
     if alvo not in _adaptadores():
         print(f"  {alvo} não existe. Há: {', '.join(_adaptadores())}")
         return 2
@@ -462,8 +400,6 @@ def etapa_limpar(alvo: str, mac_pedido: str) -> int:
     print(f"\n  APAGANDO o bond de {_mascarar(mac)} em {alvo}")
     print("  (o bond E o cache SDP saem na mesma execução — o cache sozinho")
     print("   envenena o pareamento seguinte)\n")
-    # O pedido é o do produto: os dois endereços vão pelo stdin, e o sudo
-    # registra só `esquecer` (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01).
     from hefesto_dualsense4unix.integrations.conexao_zumbi import pedido_a_ponte
 
     try:

@@ -1,24 +1,4 @@
-"""O que a MOVER, a GOVERNADOR-02 e a ENTRADA deixaram entre si — A-COSTURA-DA-ONDA-2-01.
-
-As três foram aprovadas e integradas em 23/09; as conferências deixaram
-costuras entre elas, e quem coordena decidiu todas. Uma régua por item, e cada
-uma MORDE:
-
-1. **um por vez vale também para o arrastar** — com um movimento em curso,
-   nenhum outro começa (``status: "ocupado"``, o botão treme);
-2. **uma chave, um sentido** — no ``radio_central``, ``controle`` é o ``uniq``
-   da proposta; o booleano dos movimentos se chama ``e_controle``;
-3. **o desligamento fecha a central** — o ``Pairable`` do destino não fica
-   ``true`` quando o daemon para no meio da janela;
-4. **o «Ligar aqui» vale enquanto o controle ficar naquele adaptador** — a
-   ponte que desce e sobe não pergunta de novo; o controle que sai, sim;
-5. **as vagas na ordem da D8** — a mesma ``ordem_dos_destinos`` da central;
-6. **um dono do nome da porta** — o da ENTRADA; o governador e a
-   ``secao_mesa`` perguntam a ele.
-
-O mundo é o ``radio_de_mentira`` da MOVER, com o ``DonoVivo`` de verdade por
-cima. Nada aqui fala com o rádio, o BlueZ, o daemon ou o diário dela.
-"""
+"""O que a MOVER, a GOVERNADOR-02 e a ENTRADA deixaram entre si — A-COSTURA-DA-ONDA-2-01."""
 
 from __future__ import annotations
 
@@ -106,28 +86,11 @@ def _o_vermelho_fica_esperando(
     return feito
 
 
-# ---------------------------------------------------------------------------
-# 1. um por vez vale também para o arrastar
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_com_um_movimento_esperando_nenhum_outro_comeca(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """Um por vez vale também para o arrastar. A palavra dela:
-
-    *«moveriamos por exemplo 1 controle por vez»* <!-- noqa-acento: citação literal dela -->
-
-    O vermelho foi pareado no quarto e espera a conferência — a trava já está
-    livre. Arrastar o azul, conectar um controle novo ou mandar o próprio
-    vermelho para outro lugar volta «ocupado» na hora: sem fio, sem janela,
-    sem uma escrita no rádio. O mesmo pedido de novo segue devolvendo o mesmo
-    movimento (a idempotência da MOVER não muda).
-
-    MORDIDA: faça o ``CentralDoRadio._ocupada`` responder só pelo ``_parar``
-    (sem o ``em_curso``) — o azul abre a janela na varanda e esta régua reprova.
-    """
+    """Um por vez vale também para o arrastar. A palavra dela:"""
     from types import SimpleNamespace
 
     central = _central(dono, mundo, relogio)
@@ -144,15 +107,12 @@ async def test_com_um_movimento_esperando_nenhum_outro_comeca(
     for quem, recusa in recusas.items():
         assert (recusa.estado, recusa.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_OCUPADO), quem
 
-    # O mesmo pedido devolve o mesmo movimento.
     assert central.comecar_a_mover(VERMELHO, QUARTO) == primeiro
-    # A tela lê «ocupado»: o botão treme.
     resposta = await _handlers(SimpleNamespace(_central_do_radio=central))._handle_radio_mover(
         {"aparelho": rm.uniq(AZUL), "destino": VARANDA}
     )
     assert resposta["status"] == "ocupado"
 
-    # Nada mudou: a recusa não fica guardada, nenhum fio nasceu, o rádio calado.
     assert [m.aparelho for m in central.movimentos()] == [VERMELHO]
     assert central.movimento_de(VERMELHO) == primeiro
     assert set(central._fios) <= {VERMELHO}, "a recusa abriu um fio"
@@ -169,16 +129,7 @@ def test_quem_esperou_a_trava_confere_de_novo_com_ela_na_mao(
     relogio: rm.Relogio,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dois pedidos quase juntos: os dois passam pela primeira olhada, e só um move.
-
-    Outro motor segura a trava; o vermelho e o azul pedem e ficam esperando
-    por ela — nenhum dos dois viu movimento em curso. A trava sai: o primeiro
-    pareia e fica «esperando» a conferência, já sem a trava; o segundo, com a
-    trava na mão, olha de novo e recusa. Uma janela só.
-
-    MORDIDA: tire do :meth:`CentralDoRadio.mover` a segunda olhada (a de
-    dentro da trava) — o segundo abre outra janela e esta régua reprova.
-    """
+    """Dois pedidos quase juntos: os dois passam pela primeira olhada, e só um move."""
     central = _central(dono, mundo, relogio)
     mundo.pair_mente = True
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
@@ -202,7 +153,6 @@ def test_quem_esperou_a_trava_confere_de_novo_com_ela_na_mao(
     with diario_do_radio.trava_do_radio("vigia"):
         for fio in fios:
             fio.start()
-        # Os dois passaram pela primeira olhada e esperam a trava.
         assert chegaram.acquire(timeout=5) and chegaram.acquire(timeout=5)
     for fio in fios:
         fio.join(timeout=10)
@@ -222,22 +172,9 @@ def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
     relogio: rm.Relogio,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A régua de cima, para o «Conectar»: a segunda olhada vale nele também.
-
-    A régua de cima só exercita o :meth:`CentralDoRadio.mover`, e a conferência
-    arrancou a segunda olhada do :meth:`CentralDoRadio.conectar` sem nenhuma
-    régua reprovar. Dois «Conectar» quase juntos, para o quarto e para a
-    varanda: os dois passam pela primeira olhada e esperam a trava. O que
-    ganha abre a janela, um controle novo aparece, ela clica em «Parear» na
-    linha dele (O-PAREAR-ESPERA-O-CLIQUE-01), e ele fica «esperando». O
-    outro, já com a trava na mão, olha de novo e recusa.
-
-    MORDIDA: tire do :meth:`CentralDoRadio.conectar` a segunda olhada — o
-    segundo abre outra janela e esta régua reprova.
-    """
+    """A régua de cima, para o «Conectar»: a segunda olhada vale nele também."""
     central = _central(dono, mundo, relogio)
     mundo.pair_mente = True
-    # Um controle que ainda não tem bond em lugar nenhum.
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
     rm.ela_pareia(relogio, mundo, central, VERDE)
 
@@ -269,11 +206,6 @@ def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
         (cr.NAO_CHEGOU, cr.MOTIVO_OCUPADO),
     ], desfechos
     assert len(mundo.metodos("StartDiscovery")) == 1, "duas janelas abriram"
-
-
-# ---------------------------------------------------------------------------
-# 2. uma chave, um sentido
-# ---------------------------------------------------------------------------
 
 
 def _controle(u: str, adaptador: str, ponte: str | None = None) -> dict[str, Any]:
@@ -339,11 +271,6 @@ def test_no_radio_central_controle_e_sempre_o_uniq(
     assert all(isinstance(v, bool) for v in _chaves(publicado, "e_controle"))
 
 
-# ---------------------------------------------------------------------------
-# 3. o desligamento fecha a central
-# ---------------------------------------------------------------------------
-
-
 def _daemon_de_mentira() -> Any:
     """O ``Daemon`` de verdade, com o controle de mentira e nada ligado."""
     from hefesto_dualsense4unix.core.controller import ControllerState
@@ -386,16 +313,7 @@ def _esperar(condicao: Any, teto: float = 5.0) -> bool:
 async def test_o_desligamento_fecha_a_central_e_o_pairable_volta(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo
 ) -> None:
-    """O daemon para no meio da janela: o ``Pairable`` do destino volta a ``false``.
-
-    A janela de pareamento liga o ``Pairable`` SÓ durante o gesto, e quem o
-    devolve é o fio da central — que só solta a espera do PS + Create quando vê
-    o ``fechar()``. O relógio aqui é o de verdade, e a janela é de um minuto:
-    sem o ``shutdown`` fechar a central, ela seguiria aberta depois do daemon.
-
-    MORDIDA: tire do ``connection.shutdown`` o bloco da central — o
-    ``Pairable`` do quarto fica ``true`` e esta régua reprova.
-    """
+    """O daemon para no meio da janela: o ``Pairable`` do destino volta a ``false``."""
     import asyncio
 
     from hefesto_dualsense4unix.daemon.connection import shutdown
@@ -424,7 +342,6 @@ async def test_o_desligamento_fecha_a_central_e_o_pairable_volta(
         )
         assert central.movimento_de(VERMELHO).estado == cr.NAO_CHEGOU
         assert not any(fio.is_alive() for fio in central._fios.values())
-        # Fechada, a central não abre outra janela.
         assert central.comecar_a_mover(AZUL, VARANDA).motivo == cr.MOTIVO_OCUPADO
         assert mundo.escritas_no(VARANDA, "Pairable") == []
     finally:
@@ -434,19 +351,7 @@ async def test_o_desligamento_fecha_a_central_e_o_pairable_volta(
 def test_o_fechar_espera_o_fio_da_janela_mesmo_com_a_recusa_da_mesma_chave(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Dois «Conectar» quase juntos, e o daemon para com a janela aberta.
-
-    Os dois pedidos usam a MESMA chave (``CONECTANDO``) e passam os dois pela
-    primeira olhada. O primeiro abre a janela e o segundo recusa, já com a
-    trava, e morre na hora. O ``_no_fio`` guardava o segundo POR CIMA do
-    primeiro. O ``fechar()`` do desligamento esperava só o fio morto e voltava
-    na hora, e o ``Pairable`` do destino ficava ``true`` até o fio da janela
-    acordar sozinho. Se o processo saísse antes disso, ficava para sempre. É
-    o item 3 perdido pelo caminho do item 1.
-
-    MORDIDA: volte o ``_no_fio`` a guardar o fio por cima do que ainda vive —
-    o ``fechar()`` volta antes de a janela fechar e esta régua reprova.
-    """
+    """Dois «Conectar» quase juntos, e o daemon para com a janela aberta."""
     central = cr.CentralDoRadio(
         dono=dono,
         onde_esta=mundo.onde_esta,
@@ -463,14 +368,10 @@ def test_o_fechar_espera_o_fio_da_janela_mesmo_com_a_recusa_da_mesma_chave(
 
     @contextlib.contextmanager
     def em_ordem(quem: str = bd.QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
-        # Só as duas primeiras entradas são os dois pedidos; as de depois são
-        # as escritas do próprio fio da janela, que passam direto.
         vez = next(ordem, None)
         if vez is not None:
             chegaram.release()
         if vez == 0:
-            # O primeiro só pega a trava depois que o segundo passou pela
-            # primeira olhada: é a corrida, posta em fila.
             assert solta_o_primeiro.wait(5)
         elif vez == 1:
             assert _esperar(lambda: central.em_curso), "o primeiro não abriu a janela"
@@ -504,10 +405,6 @@ def test_o_fechar_espera_o_fio_da_janela_mesmo_com_a_recusa_da_mesma_chave(
     finally:
         central.fechar()
 
-
-# ---------------------------------------------------------------------------
-# 4. o «Ligar aqui» vale enquanto o controle ficar naquele adaptador
-# ---------------------------------------------------------------------------
 
 ADAPTADOR_A = "aa:bb:cc:00:00:a1"
 ADAPTADOR_B = "aa:bb:cc:00:00:b2"
@@ -570,14 +467,7 @@ def _ela_liga_aqui_o_terceiro(onde: dict[str, Any], relogio: _Relogio) -> Any:
 
 @pytest.mark.parametrize("longe", [ADAPTADOR_C, ""], ids=["movido", "desconectou"])
 def test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador(longe: str) -> None:
-    """Ele saiu do adaptador cheio — movido, ou desconectado —, e voltou: a R3
-    pergunta de novo. A ponte que desceu no meio NÃO gastou a resposta; quem a
-    gasta é a saída, e quem vê a saída é o tique, pelo ``HID_PHYS``.
-
-    MORDIDA: tire do ``GovernadorDoRadio.tique`` a chamada a
-    ``conferir_as_autorizacoes`` — ele volta ao A e a ponte sobe além do limite
-    sem perguntar, e esta régua reprova.
-    """
+    """Ele saiu do adaptador cheio — movido, ou desconectado —, e voltou: a R3"""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
     onde: dict[str, Any] = {
@@ -587,7 +477,6 @@ def test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador(longe: str) -> None
     relogio = _Relogio()
     governador = _ela_liga_aqui_o_terceiro(onde, relogio)
 
-    # Enquanto ele fica no A, a resposta vale — o tique não a derruba.
     relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
     governador.tique()
     vibracao = governador.pedir_vaga(CONTROLE_3, "haptica")
@@ -608,13 +497,7 @@ def test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador(longe: str) -> None
 
 
 def test_pedir_vaga_em_outro_adaptador_tambem_derruba_a_resposta() -> None:
-    """Movido, ele pediu som no adaptador novo antes de o tique olhar: a
-    resposta do A cai ali mesmo, e na volta ao A a pergunta vem.
-
-    MORDIDA: tire do ``pedir_vaga`` o descarte das autorizações de outro
-    adaptador — sem tique no meio, ele volta ao A sem pergunta, e esta régua
-    reprova.
-    """
+    """Movido, ele pediu som no adaptador novo antes de o tique olhar: a"""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
     onde: dict[str, Any] = {
@@ -654,19 +537,7 @@ def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_dela() -> None:
 def test_o_sysfs_ilegivel_do_leitor_de_verdade_tambem_e_nao_sei(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O «não sei» com o LEITOR DE PRODUÇÃO, e não com um dublê que levanta.
-
-    A régua de cima prova o «não sei» com um ``adaptador_de`` que levanta
-    ``OSError`` — e o leitor de produção nunca levantava:
-    ``radio_da_mesa.adaptador_por_uniq`` engole o erro do ``/sys`` e devolve
-    ``""``, e ``""`` é justamente o que ``conferir_as_autorizacoes`` lê como
-    «desconectou». O ramo da régua era inalcançável no produto, e o hidraw
-    ilegível derrubava a resposta dela. Aqui o leitor é o de verdade, sobre
-    uma árvore de ``/sys`` de mentira.
-
-    MORDIDA: tire do ``_adaptador_pelo_hid_phys`` o ``listar`` que não engole
-    o erro — a raiz ilegível vira «desconectou» e esta régua reprova.
-    """
+    """O «não sei» com o LEITOR DE PRODUÇÃO, e não com um dublê que levanta."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio
 
@@ -690,14 +561,12 @@ def test_o_sysfs_ilegivel_do_leitor_de_verdade_tambem_e_nao_sei(
     governador = gov.GovernadorDoRadio(registrar=_Diario(), relogio=relogio)
     for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_4):
         vaga = governador.pedir_vaga(uniq, "som")
-        # O leitor de verdade leu a árvore: cada um no adaptador do HID_PHYS.
         assert isinstance(vaga, gov.Vaga)
         assert vaga.adaptador == (ADAPTADOR_B if uniq == CONTROLE_4 else ADAPTADOR_A)
         vaga.subiu("som")
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
     assert governador.ligar_aqui(CONTROLE_3) is True
 
-    # O /sys que não se lê — a raiz deixou de ser uma pasta: «não sei».
     ilegivel = tmp_path / "nao-e-pasta"
     ilegivel.write_text("", encoding="utf-8")
     monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(ilegivel))
@@ -705,15 +574,9 @@ def test_o_sysfs_ilegivel_do_leitor_de_verdade_tambem_e_nao_sei(
         "o /sys ilegível foi lido como «desconectou» e a resposta dela caiu"
     )
 
-    # O controle de verdade: legível, e ele foi para o B — agora cai.
     monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(raiz))
     plugar(CONTROLE_3, ADAPTADOR_B)
     assert governador.conferir_as_autorizacoes() == 1
-
-
-# ---------------------------------------------------------------------------
-# 5. as vagas na ordem da D8
-# ---------------------------------------------------------------------------
 
 
 class _MedidorDaMesa:
@@ -747,12 +610,7 @@ def _mesa(
     pontes: dict[str, str | None],
     no_c: tuple[str, ...] = (),
 ) -> tuple[Any, Any]:
-    """A mesma mesa para o governador e para a central.
-
-    ``pontes`` é ``{controle: modo ou None}``; o C1, o C2 e o C3 estão no A, o
-    C4 no B, e o C também existe — vazio, ou com os controles ``no_c``, sem
-    ponte. O C3 é o que pede vaga.
-    """
+    """A mesma mesa para o governador e para a central."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
     onde = {
@@ -767,7 +625,7 @@ def _mesa(
             ADAPTADOR_A: "Entrada 1", ADAPTADOR_B: "Entrada 2", ADAPTADOR_C: "Entrada 3",
         }.get,
     )
-    governador.tique()  # a amostra do ar entra no governador
+    governador.tique()
     for controle, modo in pontes.items():
         if modo is not None:
             vaga = governador.pedir_vaga(controle, modo)
@@ -797,16 +655,10 @@ def _mesa(
 @pytest.mark.parametrize(
     ("pontes", "no_c", "esperada"),
     [
-        # O B tem uma ponte e o C nenhuma: mais vaga de ponte primeiro.
         ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"}, (),
          (ADAPTADOR_C, ADAPTADOR_B)),
-        # Vaga igual; o B tem um controle e o C nenhum: menos controles primeiro.
         ({CONTROLE_1: "som", CONTROLE_2: "haptica", CONTROLE_4: None}, (),
          (ADAPTADOR_C, ADAPTADOR_B)),
-        # A VAGA VENCE OS CONTROLES: o C tem dois controles sem ponte e o B um,
-        # COM ponte. Só a conta das pontes põe o C na frente — contando só os
-        # controles, o B viria primeiro (conferência de 23/09: nas duas mesas de
-        # cima as duas contas davam a mesma ordem, e a das pontes não mordia).
         ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"}, (CONTROLE_5, CONTROLE_6),
          (ADAPTADOR_C, ADAPTADOR_B)),
     ],
@@ -820,17 +672,7 @@ def test_as_vagas_da_recusa_saem_na_ordem_da_d8_da_central(
     no_c: tuple[str, ...],
     esperada: tuple[str, ...],
 ) -> None:
-    """A tela pergunta «Mover para a primeira vaga?», e a central, sem destino
-    pedido, escolhe pela D8. As duas respostas são a MESMA — e a frase diz os
-    nomes nessa ordem.
-
-    Nas três mesas o endereço do B é menor que o do C, e é o C que a D8 escolhe.
-
-    MORDIDA: devolva do ``_adaptadores_com_vaga`` as vagas por endereço (sem o
-    ``_na_ordem_da_d8``) — o B vem primeiro, contra a central, e esta régua
-    reprova. E tire do ``_na_ordem_da_d8`` a conta das pontes (as vagas do
-    governador) — a terceira mesa reprova.
-    """
+    """A tela pergunta «Mover para a primeira vaga?», e a central, sem destino"""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
     governador, central = _mesa(dono, relogio, pontes=pontes, no_c=no_c)
@@ -845,11 +687,6 @@ def test_as_vagas_da_recusa_saem_na_ordem_da_d8_da_central(
     [pedido] = governador.publicar()[ADAPTADOR_A]["pedidos"]
     assert tuple(pedido["vagas"]) == esperada
     assert recusa.frase.endswith("Há vaga na Entrada 3 e na Entrada 2.")
-
-
-# ---------------------------------------------------------------------------
-# 6. um dono do nome da porta
-# ---------------------------------------------------------------------------
 
 
 class _DonoDoNome:
@@ -867,12 +704,7 @@ class _DonoDoNome:
 def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A frase da recusa diz o nome que o DONO diz — o que ela deu à porta.
-
-    MORDIDA: volte o ``governador_do_radio.nome_da_porta`` a compor a palavra
-    com o número do mapa ou o ``devpath`` — a porta vira «Entrada 4.1.4» em vez
-    do nome dela, e esta régua reprova.
-    """
+    """A frase da recusa diz o nome que o DONO diz — o que ela deu à porta."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
@@ -896,7 +728,6 @@ def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
     }
 
     assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Sala"
-    # A porta que ela não nomeou não ganha nome inventado.
     assert gov.nome_da_porta(ADAPTADOR_B, amostra=amostra) == ""
     assert dono_do_nome.perguntas == ["3-4.1.4", "3-1.4"]
 
@@ -904,7 +735,6 @@ def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
         CONTROLE_3, ADAPTADOR_A, "som", gov.MOTIVO_CHEIO, (ADAPTADOR_B,),
         nomear=lambda e: gov.nome_da_porta(e, amostra=amostra),
     )
-    # O artigo concorda com «entrada», e não com o nome (O-MAPA-QUE-ELA-CORRIGE-01).
     assert recusa.frase == (
         "A entrada Sala já tem 2 controles com som ou vibração. Há vaga em outro adaptador."
     )
@@ -913,12 +743,7 @@ def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
 def test_a_secao_mesa_pergunta_o_nome_ao_dono_da_entrada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A coluna «Onde está» diz o nome que o dono diz — e a procedência continua
-    no ``title``, com o número do mapa e o caminho do sistema.
-
-    MORDIDA: volte o ``_onde_esta_o_adaptador`` a compor «Entrada N» com o
-    número do mapa — a coluna ignora o dono, e esta régua reprova.
-    """
+    """A coluna «Onde está» diz o nome que o dono diz — e a procedência continua"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("a coluna 'Onde está' da secao_mesa")
@@ -946,28 +771,13 @@ def test_a_secao_mesa_pergunta_o_nome_ao_dono_da_entrada(
     assert dica is not None and "entrada 9" in dica and "3-1.2" in dica
     assert _onde_esta_o_radio(wifi, None, mapa) == "Rack da TV"
     assert dono_do_nome.perguntas == ["3-1.2", "4-4"]
-    # Sem mapa, a seção nem pergunta: a frase de hoje, letra por letra.
     assert _onde_esta_o_adaptador(adaptador) == ("Barramento 3, porta 1.2 · Direita", None)
 
 
 def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A MESMA porta, as duas telas, o MESMO nome — com o dono de verdade.
-
-    A régua de cima troca o dono por um dublê que ignora o que recebe, e por
-    isso não via o que a coluna PERGUNTAVA: a ``secao_mesa`` montava um
-    ``maquina.json`` só com o ``mapa`` e sem os barramentos, e o dono,
-    perguntado sem os ``lugares``, não achava o nome que ela deu ao lugar.
-    Medido em 23/09 na conferência: a frase da recusa dizia «o Extensor à
-    esquerda já tem 2 controles…» e a coluna «Onde está», sobre o mesmo
-    adaptador, dizia «Entrada 9». Dois nomes para uma porta é o segundo dono
-    que o item 6 existe para matar.
-
-    MORDIDA: volte o ``secao_mesa._nome_da_entrada`` a perguntar com
-    ``MaquinaConfig(mapa=mapa)`` e ``controladores={}`` — a coluna diz
-    «Entrada 9» e esta régua reprova.
-    """
+    """A MESMA porta, as duas telas, o MESMO nome — com o dono de verdade."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("a coluna 'Onde está' da secao_mesa")
@@ -983,17 +793,13 @@ def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
         interface="hci3", no="/mentira/3-4.1.4", vid="2357", pid="0604", busnum=3,
         devpath="4.1.4", controlador_pci=pci,
     )
-    # O nome é da entrada, e a entrada guarda o lugar (A-ENTRADA-TEM-UM-
-    # REGISTRO-SO-01, 28/09/2026: o nome morava em `lugares`).
     documento = maquina.MaquinaConfig(
         mapa=maquina.MapaDaMesa(portas={"9": maquina.PortaDeclarada(
             lugar=maquina.lugar_de(pci, "4.1.4"), nome="Extensor à esquerda")}),
     )
-    # O disco dela e os barramentos deste boot, sem ler nada da máquina dela.
     monkeypatch.setattr(ee, "carregar_maquina", lambda: documento)
     monkeypatch.setattr(secao_mesa, "carregar_maquina", lambda: documento)
     monkeypatch.setattr(ee, "_controladores_do_sistema", lambda: {3: pci})
-    # O governador acha o adaptador pelo kernel; a suíte o calaria.
     monkeypatch.setattr(bd, "a_suite_esta_rodando", lambda: False)
     monkeypatch.setattr(bd, "enderecos_pelo_kernel", lambda *_a, **_k: {})
     monkeypatch.setattr(mesa_de_radio, "adaptadores_bluetooth", lambda **_k: [no_extensor])
@@ -1008,12 +814,7 @@ def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
     )
 
 
-#: Quem pode compor o nome da porta, e por quê. Tudo o mais em ``src/`` que junte
-#: a palavra «Entrada» com um número é um segundo dono. O DONO DA GRAFIA mudou
-#: de casa em 26/09/2026 (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-O-NOME-E-DA-POSICAO):
 #: ``utils/rotulo_da_entrada.py``, só stdlib, para as ordens compor dali sem o
-#: ``pydantic``; o ``entrada_a_entrada`` reexporta a palavra por ``import``, que
-#: não é ``Assign``, e é o dono da LEITURA do nome.
 _O_DONO = "utils/rotulo_da_entrada.py"
 _OS_QUE_PODEM = {
     # fica: é o dono da palavra, e as duas entradas dele são a regra
@@ -1024,9 +825,6 @@ _OS_QUE_PODEM = {
         "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
         "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
     ),
-    # ── os achados da busca SEM MAIÚSCULA (O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026).
-    # Os que diziam a entrada na tela foram curados (as ordens, as recusas da
-    # aba 08, o governador, a página do mapa); estes ficam, cada um pela razão.
     # fica: o contador da calibração conta passos, não nomeia uma entrada
     ("app/widgets/calibrar_entradas.py", "tem um modelo de .format"): (
         "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
@@ -1067,17 +865,11 @@ _OS_QUE_PODEM = {
 
 
 def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
-    """``(arquivo, forma)`` de toda string de CÓDIGO que junta «Entrada» a um valor.
-
-    Docstring não conta: prosa que descreve o padrão não é o padrão.
-    """
+    """``(arquivo, forma)`` de toda string de CÓDIGO que junta «Entrada» a um valor."""
     import ast
     import itertools
     import re
 
-    # SEM DISTINGUIR MAIÚSCULA desde 26/09/2026 (O-MAPA-QUE-ELA-CORRIGE-01): o
-    # «para a entrada {destino}» das ordens compunha a palavra em minúscula, e a
-    # régua não o via.
     palavra_no_fim = re.compile(r"\bEntrada\s*$", re.IGNORECASE)
     achados: set[tuple[str, str]] = set()
     for arquivo in sorted(raiz.rglob("*.py")):
@@ -1132,15 +924,7 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
 
 
 def test_o_nome_da_porta_tem_um_dono_so() -> None:
-    """Um dono do nome da porta: o da ENTRADA. Havia três compositores — o
-    governador, a ``secao_mesa`` e o dono —, com três ``PALAVRA_DA_ENTRADA``.
-
-    A lista de quem pode é FECHADA nos dois sentidos: um compositor novo
-    reprova, e uma exceção que deixou de existir também (tire-a daqui).
-
-    MORDIDA: devolva ao governador a ``PALAVRA_DA_ENTRADA`` e a composição com o
-    ``devpath`` — esta régua reprova nomeando o arquivo.
-    """
+    """Um dono do nome da porta: o da ENTRADA. Havia três compositores — o"""
     achados = _composicoes_da_palavra(RAIZ / "src" / "hefesto_dualsense4unix")
     intrusos = sorted(achados - set(_OS_QUE_PODEM))
     caducos = sorted(set(_OS_QUE_PODEM) - achados)

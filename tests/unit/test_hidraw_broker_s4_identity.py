@@ -1,16 +1,4 @@
-"""S-4 (auditoria 21/07) — identidade race-free contra minor-reuse.
-
-O check rdev(fd)==sysfs(base) do broker prova nó==base, NÃO a identidade do
-device: no minor-reuse (o nome `base` reciclado para OUTRO device no mesmo
-major:minor entre validar e abrir) o broker serviria um fd O_RDWR de ROOT de
-um hidraw alheio (teclado BT = keylogger). Fixes:
-- `open_node`: HIDIOCGRAWINFO no PRÓPRIO fd (bustype/vendor/product do kernel).
-- `_pin` (hide/restore, O_PATH sem ioctl): re-lê o HID_ID do uevent.
-
-Ambos entram DEPOIS do check de char/rdev — os testes de arquivo-comum
-(`TestFsAclOpsPinado`) barram antes, intocados. Aqui exercitamos a lógica de
-identidade isolada (a integração do ioctl é validada ao vivo contra o kernel).
-"""
+"""S-4 (auditoria 21/07) — identidade race-free contra minor-reuse."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -27,19 +15,14 @@ class TestDevinfoIdentity:
         assert _hidraw_devinfo_identity_ok(0x054C, 0x0CE6) is True
 
     def test_o_edge_e_da_familia(self) -> None:
-        # STEAM-NO-FISICO-01 (24/09/2026): o Edge físico (054c:0df2) entrou.
-        # O devinfo não separa o Edge do NOSSO vpad (os dois são 0003:054c:0df2
-        # pelo cabo) — quem separa é o cinto do sysfs, que o `open_node` roda
-        # logo depois deste (ver `TestSysfsHidIdentity`).
         assert _hidraw_devinfo_identity_ok(0x054C, 0x0DF2) is True
 
     def test_outro_device_rejeitado(self) -> None:
-        assert _hidraw_devinfo_identity_ok(0x045E, 0x028E) is False  # Xbox
-        assert _hidraw_devinfo_identity_ok(0x3554, 0xFA09) is False  # receiver
-        assert _hidraw_devinfo_identity_ok(0x057E, 0x2009) is False  # Pro BT
+        assert _hidraw_devinfo_identity_ok(0x045E, 0x028E) is False
+        assert _hidraw_devinfo_identity_ok(0x3554, 0xFA09) is False
+        assert _hidraw_devinfo_identity_ok(0x057E, 0x2009) is False
 
     def test_representacao_s16_negativa_normalizada(self) -> None:
-        # vendor/product vêm do kernel como __s16; a máscara 0xFFFF normaliza.
         assert _hidraw_devinfo_identity_ok(0x054C - 0x10000, 0x0CE6 - 0x10000) is True
         assert _hidraw_devinfo_identity_ok(-1, -1) is False
 
@@ -56,7 +39,6 @@ class TestSysfsHidIdentity:
         sys_hidraw = tmp_path / "sys" / "class" / "hidraw"
         base = "hidraw3"
         if sob_uhid:
-            # O rádio do BlueZ ≥5.73 E o nosso vpad moram aqui.
             alvo = tmp_path / "sys" / "devices" / "virtual" / "misc" / "uhid" / "x.0001"
             alvo.mkdir(parents=True)
             (sys_hidraw / base).mkdir(parents=True)
@@ -81,7 +63,6 @@ class TestSysfsHidIdentity:
         assert ops._sysfs_hid_identity_ok(base) is True
 
     def test_o_edge_fisico_pelo_cabo_ok(self, tmp_path: Path) -> None:
-        # STEAM-NO-FISICO-01: pai USB real, 0df2 = o Edge FÍSICO.
         ops, base = self._ops(tmp_path, "0003:0000054C:00000DF2")
         assert ops._sysfs_hid_identity_ok(base) is True
 
@@ -95,15 +76,12 @@ class TestSysfsHidIdentity:
         assert ops._sysfs_hid_identity_ok(base) is True
 
     def test_o_vpad_sob_uhid_e_rejeitado_mesmo_sem_as_marcas(self, tmp_path: Path) -> None:
-        # D1: USB sob `/misc/uhid/` é o vpad — um nome reciclado para ele
-        # NUNCA recebe chmod (fechar o vpad é tirar o controle do jogo).
         ops, base = self._ops(tmp_path, "0003:0000054C:00000DF2", sob_uhid=True)
         assert ops._sysfs_hid_identity_ok(base) is False
 
     def test_o_vpad_pelas_marcas_e_rejeitado_em_qualquer_topologia(
         self, tmp_path: Path
     ) -> None:
-        # D2: o `phys` do vpad basta, com ou sem a topologia.
         ops, base = self._ops(
             tmp_path, "0003:0000054C:00000DF2", extra="HID_PHYS=hefesto-vpad\n"
         )
@@ -115,8 +93,6 @@ class TestSysfsHidIdentity:
         assert ops._sysfs_hid_identity_ok(base) is False
 
     def test_uevent_ilegivel_prossegue(self, tmp_path: Path) -> None:
-        # Esconder/apagar o uevent exige root; um atacante não-root (a ameaça
-        # do minor-reuse) nunca chega a esse estado → prossegue (True).
         ops, base = self._ops(tmp_path, None)
         assert ops._sysfs_hid_identity_ok(base) is True
 
@@ -135,14 +111,7 @@ class TestSysfsHidIdentity:
 
 
 class TestOOpenNaoServeOVpad:
-    """STEAM-NO-FISICO-01: o `open_node` passa pelo MESMO cinto do sysfs.
-
-    O HIDIOCGRAWINFO do Edge físico pelo cabo e o do nosso vpad são iguais
-    (0003:054c:0df2): depois que o Edge entrou na família, o devinfo sozinho
-    serviria o vpad como físico num nome reciclado. O cinto do sysfs, rodado
-    depois do ioctl, recusa. A MORDIDA: tire o cinto do `open_node` e o vpad
-    sai daqui com fd.
-    """
+    """STEAM-NO-FISICO-01: o `open_node` passa pelo MESMO cinto do sysfs."""
 
     def _abrir(
         self, tmp_path: Path, monkeypatch: Any, *, sob_uhid: bool
@@ -198,7 +167,6 @@ class TestOOpenNaoServeOVpad:
         with pytest.raises(StaleNodeError):
             ops.open_node(f"/dev/{base}", base)
 
-        # E o fd da tentativa foi fechado: nenhum caminho vaza fd.
         assert abertos
         assert not os.path.exists(f"/proc/self/fd/{abertos[0]}")
 

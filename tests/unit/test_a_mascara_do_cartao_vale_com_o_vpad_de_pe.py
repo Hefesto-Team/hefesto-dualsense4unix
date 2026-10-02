@@ -45,7 +45,6 @@ from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileModeConfig
 from hefesto_dualsense4unix.utils import session, xdg_paths
 
-#: A faixa sintética da casa — nada de endereço real em arquivo versionado.
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
@@ -183,7 +182,6 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(coop_mod, "numero_do_nome_do_primario", lambda d, fallback=1: 1)
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
     monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, *, origem=None: None)
-    # O co-op REAL, sem /dev/input: as bordas do `test_mascara_por_controle_manda_no_vpad`.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda self: True
     )

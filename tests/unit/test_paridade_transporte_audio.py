@@ -1,27 +1,4 @@
-"""PARIDADE-BYTE-01 — volume do alto-falante e pré-amp, no cabo e no rádio.
-
-O `common` de 47 bytes é IDÊNTICO nos dois transportes — a frase está no
-cabeçalho de `core/ds_output_report.py` desde o BTREPORT-02, e até 10/08/2026
-nenhum caso de teste a checava. Este arquivo prova as duas metades: **o payload
-é o mesmo** e **o envelope não é**.
-
-O que está coberto, e por que estas duas linhas e não outras:
-
-- **volume do alto-falante** (common[5], autorizado pelo flag0 0x20) — é o
-  controle deslizante que ela mexe na interface;
-- **pré-amplificador** (common[37] bits 0-2, autorizado pelo flag1 0x80) — a
-  SOM-ROTA-01: ela mediu em 01/08 que o deslizante ficava mudo até 38 e saturava
-  em 102, **60% do curso inerte**, porque a árvore escrevia só o volume enquanto
-  o kernel 6.18 escreve TRÊS campos;
-- **AUDIO-OWNER-01**: sem dono declarado, os bits de autorização saem zerados e
-  o firmware conserva o que tinha. Autorizar sem escrever é mandar "volume zero"
-  a 60 Hz com cara de keepalive.
-
-MORDIDA PROVADA (11/08/2026, `src/` copiado para fora da árvore, `PYTHONPATH`
-apontado para a cópia — a árvore de trabalho nunca foi mutada): zerando
-`common[5]` e `common[37]` só quando `conType == BT`, este arquivo reprova
-**5**: quatro com o id `[bt]` e o caso que compara os dois lados.
-"""
+"""PARIDADE-BYTE-01 — volume do alto-falante e pré-amp, no cabo e no rádio."""
 from __future__ import annotations
 
 from typing import Any
@@ -32,7 +9,6 @@ from hefesto_dualsense4unix.core import ds_output_report as rep
 
 from tests.conftest import EnvelopeDeTransporte
 
-#: Volumes de alto-falante distinguíveis, todos dentro do teto (0xFF).
 VOLUMES = [0x00, 0x40, 0xC0, rep.TETO_SPEAKER_VOLUME]
 
 
@@ -75,13 +51,7 @@ def test_o_preamp_sai_no_byte_certo_nos_dois(
 def test_a_posse_do_audio_e_por_byte_nos_dois(
     ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
 ) -> None:
-    """Quem pede só o alto-falante autoriza SÓ o alto-falante — nos dois.
-
-    O byte de roteamento (common[7]) fica de fora de propósito: não sabemos ler
-    o valor vigente nem qual é o neutro, e chutá-lo mudaria o caminho do áudio
-    do controle (foi o SOM-CANAL-01: o microfone dela parou de captar, `parec`
-    de 131072 bytes para ZERO).
-    """
+    """Quem pede só o alto-falante autoriza SÓ o alto-falante — nos dois."""
     ds5_de_bancada.set_audio_volumes(speaker=0xC0)
     common = transporte.extrair_common(ds5_de_bancada.prepareReport())
 
@@ -109,12 +79,7 @@ def test_sem_dono_o_audio_nao_sai_em_nenhum_dos_dois(
 def test_o_common_do_audio_e_identico_e_so_o_envelope_muda(
     transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
 ) -> None:
-    """As duas metades da frase do BTREPORT-02, provadas de uma vez.
-
-    Metade um: o payload de 47 bytes é o MESMO nos dois transportes. Metade
-    dois: o que o embrulha NÃO é — id, tamanho, tag, sequência e CRC diferem, e
-    o rádio tem coisa que o cabo não tem.
-    """
+    """As duas metades da frase do BTREPORT-02, provadas de uma vez."""
     commons: dict[str, bytes] = {}
     reports: dict[str, bytes] = {}
     for envelope in transportes:

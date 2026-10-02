@@ -53,8 +53,6 @@ import tempfile
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-# O LAR DE MENTIRA VEM ANTES DE TUDO: `profiles_dir()` resolve o caminho no
-# primeiro uso, e um import antes desta linha o prenderia na pasta DELA.
 _LAR = pathlib.Path(tempfile.mkdtemp(prefix="ensaio-perfis-"))
 os.environ["HOME"] = str(_LAR)
 for _x in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"):
@@ -64,9 +62,6 @@ os.environ["HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED"] = "1"
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -98,10 +93,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 ABA = "10-perfis.html"
 PERFIL = "Ensaio do Slider"
 
-#: A MESA DE MENTIRA — endereços MASCARADOS (octetos 4 e 5 zerados), a máscara
-#: da casa. Dois lugares, porque é o que a mesa dela tem e porque é com DOIS que
-#: a regra da cor dela pode ser conferida: as duas unidades têm de sair
-#: diferentes.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True},
@@ -109,16 +100,10 @@ MESA = [
      "nome": "White", "via": "BT", "transporte": "bt", "alvo": False},
 ]
 
-#: A PRIORIDADE QUE O ENSAIO ARRASTA. Ela é o valor NOVO; o perfil nasce noutro.
 DE, PARA = 40, 137
-#: E A LARGURA DA BARRA É A CONTA — pelo TETO do esquema, nunca por 100.
 PCT = round(DE * 100 / PRIORIDADE_MAXIMA)
 ESTILO = "Terror"
 
-#: AS FUNÇÕES QUE OS DOIS ROTEIROS COMPARTILHAM. `el.value = …` sozinho NÃO
-#: dispara evento nenhum (é a regra do DOM para escrita programática), e o
-#: ouvinte do piloto é delegado no `document` — por isso o `change` vai com
-#: `bubbles:true`. É o que o navegador faz quando ela solta o punho.
 _FERRAMENTAS = r"""
   function mexer(sel, valor){
     const el = document.querySelector(sel);
@@ -140,13 +125,6 @@ _FERRAMENTAS = r"""
   }
 """
 
-#: O PRIMEIRO TEMPO — a PINTURA e o ARRASTO.
-#:
-#: A pintura é metade da prova: o pacote emite `editor.prioridade.escolha` (o
-#: número cru), `editor.prioridade` (a largura) e `editor.prioridade.n` (a
-#: legenda). `pintar()` devolve QUANTOS valores escreveu — zero seria endereço
-#: que a página não tem, que é o defeito que fez a `06-navegacao` publicar zero
-#: endereços em 01/09 sem ninguém ver.
 ROTEIRO_1 = (r"""
 (function(){
 """ + _FERRAMENTAS + r"""
@@ -163,15 +141,6 @@ ROTEIRO_1 = (r"""
 """).replace("__PARA__", str(PARA)).replace("__DE__", str(DE)) \
     .replace("__PCT__", str(PCT))
 
-#: O SEGUNDO TEMPO — o ESTILO, e ele roda DEPOIS que o primeiro gravou.
-#:
-#: OS DOIS NÃO PODEM IR JUNTOS, e o ensaio mediu por quê: cada gesto roda em
-#: THREAD (`hefesto_vivo._gesto`) e os dois leem o perfil do disco antes de
-#: escrever. Disparados no mesmo instante, o segundo grava por cima do que o
-#: primeiro acabou de salvar — e o `.json` sai com metade da entrega. Isso não
-#: é caminho DELA (ninguém arrasta o punho e escolhe no `<select>` no mesmo
-#: milissegundo), mas é um instrumento que mentiria: ele acusaria de mudo um
-#: gesto que trabalhou.
 ROTEIRO_2 = (r"""
 (function(){
 """ + _FERRAMENTAS + r"""
@@ -239,17 +208,12 @@ def main() -> int:
     ponte.chamar = dubie.chamar                  # type: ignore[assignment]
     ponte.resultado = dubie.resultado            # type: ignore[assignment]
 
-    # O DAEMON DELA FICA FORA — ver o cabeçalho. Com o `estado_do_daemon`
-    # levantando, o tique do piloto sai ANTES de tocar `_mesa_de_agora`, e a
-    # mesa de mentira abaixo sobrevive ao ensaio inteiro.
     def _mudo() -> dict[str, object]:
         raise RuntimeError("ensaio: o daemon dela fica de fora")
     hefesto_vivo.mesa_viva.estado_do_daemon = _mudo  # type: ignore[assignment]
 
     args = argparse.Namespace(**BANDEIRAS, abre=ABA)
     piloto = hefesto_vivo.Piloto(args)
-    # A MESA É IMPOSTA: sem daemon o piloto veria mesa vazia, e o estilo não
-    # teria a quem dar cor — o ensaio daria verde sobre a metade da entrega.
     piloto._mesa_de_agora = list(MESA)
     piloto._ctx_de_agora.mesa = list(MESA)
     piloto._ctx_de_agora.conectados = list(MESA)
@@ -261,8 +225,6 @@ def main() -> int:
         return False
 
     def escolher_o_perfil() -> bool:
-        # O EDITOR AGE SOBRE O PERFIL ESCOLHIDO, e sem isto `_perfil_do_editor`
-        # recusa dizendo "escolha um perfil na lista primeiro" — que é o certo.
         from hefesto_dualsense4unix.interface.pacotes import a10_perfis
         a10_perfis._ESCOLHIDO = PERFIL
         return False
@@ -286,9 +248,6 @@ def main() -> int:
     GLib.timeout_add(400, abrir)
     GLib.timeout_add(2600, escolher_o_perfil)
     GLib.timeout_add(3000, _mandar(ROTEIRO_1, "tela"))
-    # O GESTO RODA EM THREAD (`hefesto_vivo._gesto`), então o laço tem de
-    # continuar vivo depois do clique — senão o ensaio lê o disco antes de o
-    # gesto o escrever, e acusaria a cura de não fazer nada.
     GLib.timeout_add(5500, entre_os_dois)
     GLib.timeout_add(5800, _mandar(ROTEIRO_2, "tela2"))
 
@@ -323,8 +282,6 @@ def main() -> int:
         print(f"\nREPROVA: o endereço do punho não é um `<input>`, e sim "
               f"{tela['punho'].get('tag')!r} — barra não se arrasta.")
         return 1
-    # A PINTURA TEM DE TER ESCRITO OS TRÊS. Zero é endereço que a página não
-    # tem; menos que três é um dos três caindo no vazio.
     if int(tela["escreveu"] or 0) < 3:
         print(f"\nREPROVA: a pintura escreveu {tela['escreveu']} de 3 valores — "
               f"algum endereço da Prioridade não existe na página.")

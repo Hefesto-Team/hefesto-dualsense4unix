@@ -1,32 +1,4 @@
-"""PONTE-CONFIRMADA-01 no ciclo `uninstall` -> `install`: o que o produto
-aprendeu não pode morrer numa reinstalação.
-
-A onda de 19/08/2026 ensinou o produto a CARIMBAR qual ponte funcionou em cada
-jogo — qual ``kind``, qual máscara, se estava na allowlist do Steam Input, quem
-confirmou e quando. Esse carimbo é a única coisa que separa *"nunca tentei"* de
-*"tentei e funciona"*, e é ele que faz a escada de pontes PARAR em vez de
-recomeçar a cada abertura do jogo, arrancando o controle da mão dela a cada
-degrau.
-
-Ele mora DENTRO do perfil, e o `uninstall.sh` preserva config por padrão. Então
-a dedução é fácil e a dedução não basta: **se ela reinstalar e perder o que o
-produto aprendeu, a feature inteira vira decoração**. Este arquivo mede em vez
-de deduzir, e mede os DOIS lados do ciclo:
-
-* o bloco REAL de config do `uninstall.sh` — recortado do arquivo, não
-  reescrito aqui — rodando contra um ``HOME`` de mentira com um perfil
-  carimbado dentro;
-* o `scripts/install_profiles.sh`, que é o ÚNICO passo do `install.sh` que
-  escreve no diretório de perfis. Ele copia preset ausente; a pergunta que este
-  teste faz é se ele passa por cima de um perfil que já existe — e o caso mais
-  perigoso é o perfil que tem NOME DE PRESET (`acao.json`), porque é ali que
-  uma cópia cega apagaria o carimbo sem ninguém notar.
-
-Técnica: o bloco de shell sai do arquivo por âncora de texto e roda em
-subprocess com ``HOME`` apontando para ``tmp_path``. Nada do sistema real é
-tocado, nenhuma linha do `uninstall.sh` é copiada para cá — se o bloco mudar de
-comportamento, este teste vê.
-"""
+"""PONTE-CONFIRMADA-01 no ciclo `uninstall` -> `install`: o que o produto"""
 from __future__ import annotations
 
 import json
@@ -47,13 +19,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 UNINSTALL = RAIZ / "uninstall.sh"
 INSTALL_PROFILES = RAIZ / "scripts" / "install_profiles.sh"
 
-#: Âncoras do bloco de config do `uninstall.sh`. São a primeira linha do
-#: comentário que o explica e o `fi` em coluna 0 que o fecha.
 ANCORA_INICIO = "# Configs e dados do user. PRESERVADOS por padrão"
 
-#: O carimbo de teste, com valores que não são default nenhum: um perfil que
-#: sobrevivesse "por acaso" (recriado do zero, migrado, semeado de novo) não
-#: traria estes valores de volta.
 CARIMBO = {
     "kind": "gamepad",
     "gamepad_flavor": "xbox",
@@ -74,8 +41,6 @@ def _bloco_de_config() -> str:
     fim = re.search(r"^fi$", texto[inicio:], re.MULTILINE)
     assert fim is not None, "fim do bloco de config não encontrado em uninstall.sh"
     bloco = texto[inicio : inicio + fim.end()]
-    # A guarda que impede este teste de virar decoração: se o `rm -rf` sair do
-    # bloco, não é mais o bloco que apaga config, e medir aqui não prova nada.
     assert "rm -rf" in bloco, (
         "o bloco recortado não tem mais o `rm -rf` da config — ou a âncora pegou "
         f"o pedaço errado, ou a remoção mudou de lugar:\n{bloco}"
@@ -84,19 +49,7 @@ def _bloco_de_config() -> str:
 
 
 def _um_nome_de_preset() -> str:
-    """Um nome que o `install_profiles.sh` de fato tentaria copiar.
-
-    Sai de `assets/profiles_default/`, que é a fonte que ele lê — nunca escrito
-    à mão aqui.
-
-    O `personalizado` ESTAVA EXCLUÍDO daqui, e a exclusão caducou em
-    06/09/2026: a PERFIS-SAO-PERFIS-01 tirou os oito gêneros da semeadura, e
-    ele é o único preset que sobrou. A regra própria dele (o slot dela, copiado
-    só se ausente) NÃO muda o que este teste mede — a recusa por
-    `meu_perfil.json` só vale quando esse arquivo está no destino, e aqui o
-    destino tem só o perfil carimbado. O caso continua sendo o perigoso: um
-    perfil dela com o nome de um preset que o instalador copia.
-    """
+    """Um nome que o `install_profiles.sh` de fato tentaria copiar."""
     presets = sorted(
         p.stem for p in (RAIZ / "assets" / "profiles_default").glob("*.json")
     )
@@ -117,12 +70,7 @@ def _grava_perfil(home: Path, nome: str) -> Path:
 
 
 def _roda_bloco(home: Path, *, keep_config: int) -> subprocess.CompletedProcess[str]:
-    """Roda o bloco do uninstall com o ``HOME`` de mentira.
-
-    O ambiente entra LIMPO (`env -i` em espírito: só `HOME` e `PATH`) para que
-    nada da sessão de quem roda a suíte vaze para dentro — inclusive o `HOME` de
-    verdade, que este teste jamais pode alcançar.
-    """
+    """Roda o bloco do uninstall com o ``HOME`` de mentira."""
     script = (
         "set -euo pipefail\n"
         'log() { printf "[uninstall] %s\\n" "$*"; }\n'
@@ -161,22 +109,13 @@ class TestOCarimboSobreviveAoUninstall:
             "o perfil sobreviveu mas o carimbo não voltou igual: "
             f"{_carimbo_de(alvo)!r}"
         )
-        # E o perfil relido pelo esquema do produto — arquivo intacto não basta
-        # se o produto não o aceita mais de volta.
         relido = Profile.model_validate_json(alvo.read_text(encoding="utf-8"))
         assert relido.ponte is not None
         assert relido.ponte.confirmada_por == "gesto"
         assert relido.ponte.steam_input is True
 
     def test_a_allowlist_do_steam_input_sobrevive_junto(self, tmp_path: Path) -> None:
-        """O terceiro termo do carimbo não mora no perfil.
-
-        ``steam_input`` diz "o jogo estava na allowlist quando a ponte foi
-        confirmada", e a allowlist é outro arquivo (`steam_input_apps.txt`). Se
-        ele fosse embora, `mesma_ponte()` passaria a comparar o carimbo com um
-        mundo em que nenhum jogo está na lista — e a ponte confirmada viraria
-        divergente em todo jogo, silenciosamente.
-        """
+        """O terceiro termo do carimbo não mora no perfil."""
         lista = tmp_path / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
         lista.parent.mkdir(parents=True, exist_ok=True)
         lista.write_text("2497900\n2542020\n", encoding="utf-8")
@@ -188,9 +127,7 @@ class TestOCarimboSobreviveAoUninstall:
         assert lista.read_text(encoding="utf-8").split() == ["2497900", "2542020"]
 
     def test_o_purge_e_destrutivo_mas_deixa_backup(self, tmp_path: Path) -> None:
-        """`--purge-config` APAGA — e é para apagar. O que ele não pode é apagar
-        sem rede: o backup é a diferença entre um gesto destrutivo explícito e
-        uma perda irreversível."""
+        """`--purge-config` APAGA — e é para apagar. O que ele não pode é apagar"""
         _grava_perfil(tmp_path, "jogo_de_teste")
 
         r = _roda_bloco(tmp_path, keep_config=0)
@@ -214,15 +151,7 @@ class TestOInstallNaoPassaPorCimaDoCarimbo:
     def test_install_profiles_preserva_o_perfil_que_ja_existe(
         self, tmp_path: Path, e_preset: bool
     ) -> None:
-        """O caso `preset` é o perigoso, e o nome sai da FONTE, não daqui.
-
-        Um perfil cujo nome também existe em `assets/profiles_default/` é o
-        único que uma cópia cega sobrescreveria — e junto iria o carimbo. Ler o
-        nome do diretório de presets em vez de escrevê-lo à mão faz este teste
-        acompanhar a árvore: renomear um preset não deixa o caso apontando para
-        um arquivo que ninguém copia mais. O outro caso é o controle: perfil que
-        só ela tem.
-        """
+        """O caso `preset` é o perigoso, e o nome sai da FONTE, não daqui."""
         nome = _um_nome_de_preset() if e_preset else "jogo_dela_sem_preset"
         alvo = _grava_perfil(tmp_path, nome)
 

@@ -16,7 +16,7 @@ O QUE FOI MEDIDO, e são dois defeitos empilhados
 -------------------------------------------------
 1. `a05_vibracao._par_das_barras` lia `last_weak`/`last_strong` de dentro do
    bloco `per_vpad` do `state_full`. **Aquele bloco não tem essas chaves** —
-   elas moram no TOPO do `rumble_ff` (`daemon/ipc_handlers.py:3529`). As duas
+   elas moram no TOPO do `rumble_ff` (`daemon/ipc_handlers.py:2522`). As duas
    leituras davam `0` em toda execução de produção, e o "Testar" mandava o par
    fixo `(160, 220)` **fizesse ela o que fizesse com as barras**. Medido com a
    barra esquerda em ZERO: `rumble.set(160, 220)`.
@@ -52,22 +52,13 @@ from typing import Any
 
 import pytest
 
-# O HARNESS VEM DA RÉGUA IRMÃ, e não é preguiça: a `PonteDeMentira` de lá é um
-# dublê que SABE RECUSAR, e uma segunda cópia dele aqui divergiria da ponte real
-# no primeiro dia em que uma `*_checked` mudasse de forma. O import também traz
-# o `sys.path` do `interface/`, que aquele arquivo monta.
 from tests.unit.test_a05_a_vibracao_aplica_e_fala import PonteDeMentira
 
-#: Os dois controles da bancada, com a máscara da casa.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 CHAVE_P1 = "aabbcc000001"
 CHAVE_P2 = "aabbcc000002"
 
-#: O `rumble_ff` COMO O DAEMON O PUBLICA — o `per_vpad` cheio de tudo o que ele
-#: tem, e sem `last_weak`/`last_strong`, que moram no topo. Ele está aqui de
-#: propósito: é a prova de que o par do teste **não depende** do que o jogo
-#: pediu, e é o que impede a leitura morta de voltar por outra porta.
 FF_DO_DAEMON: dict[str, Any] = {
     "plays": 12,
     "last_weak": 90,
@@ -137,9 +128,6 @@ def _testar(pac, a05, ctx, uniq: str, controle: str) -> tuple[int, ...]:
     return tuple(pares[0])
 
 
-# ---------------------------------------------------------------------------
-# 1. A BARRA REDUZ O PAR — o caso dela, por extenso
-# ---------------------------------------------------------------------------
 def test_a_barra_esquerda_pela_metade_corta_o_strong_pela_metade(pac, a05) -> None:
     """Motor esquerdo em 50 % -> o `strong` sai pela metade, e o `weak` inteiro.
 
@@ -161,16 +149,7 @@ def test_a_barra_esquerda_pela_metade_corta_o_strong_pela_metade(pac, a05) -> No
 
 
 def test_o_motor_posto_em_zero_nao_treme(pac, a05) -> None:
-    """Barra em 0 -> aquele motor fica PARADO no "Testar".
-
-    O `0` é escolha válida (*"este motor não treme neste perfil"*, o mesmo
-    contrato que `a05_vibracao.motor` declara), e era o caso mais gritante do
-    defeito: o motor que ela mandou calar tremia a 220 igual ao outro. Não é
-    número errado numa tela — é o aparelho fazendo o contrário do pedido.
-
-    MORDIDA: a mesma do caso acima — sem a redução o `strong` volta a 220, e um
-    motor "desligado" treme mais que o ligado.
-    """
+    """Barra em 0 -> aquele motor fica PARADO no "Testar"."""
     ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 0, "fraco_pct": 100}})
 
     assert _testar(pac, a05, ctx, P1, "p1") == (160, 0), (
@@ -178,34 +157,15 @@ def test_o_motor_posto_em_zero_nao_treme(pac, a05) -> None:
 
 
 def test_a_barra_direita_mexe_no_weak_e_nao_no_strong(pac, a05) -> None:
-    """A INVERSÃO, que é a armadilha deste assunto — e ela tem de estar certa.
-
-    `weak` é o motor da DIREITA (`d`) e `strong` o da ESQUERDA (`e`)
-    (`core/backend_pydualsense.py:3918`: `setLeftMotor(eff_strong)`). Uma troca
-    aqui daria uma régua verde sobre um produto que reduz o punho errado — e a
-    mão dela é o único instrumento que veria.
-
-    MORDIDA: troque `barras["d"]` por `barras["e"]` nas duas linhas do `return`
-    de `_par_das_barras`: este caso sai `(160, 110)` onde tem de sair
-    `(80, 220)`.
-    """
+    """A INVERSÃO, que é a armadilha deste assunto — e ela tem de estar certa."""
     ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 100, "fraco_pct": 50}})
 
     assert _testar(pac, a05, ctx, P1, "p1") == (80, 220), (
         "a barra da DIREITA mexeu no motor errado — `weak` é o da direita")
 
 
-# ---------------------------------------------------------------------------
-# 2. O QUE NÃO MUDA — e é metade da prova
-# ---------------------------------------------------------------------------
 def test_sem_barra_escrita_o_par_e_o_de_sempre(pac, a05) -> None:
-    """Peça sem opinião -> `(160, 220)`, byte-idêntico ao de antes desta cura.
-
-    A peça que ninguém ajustou **não entra** no `rumble_motores`, e o padrão
-    chega ao lado (`rumble_motor_pct_padrao`). Uma redução nova no caminho de
-    quem não pediu nada seria regressão silenciosa em toda mesa do mundo — é o
-    mesmo contrato que `TestOQueNaoMuda` cobra do lado do daemon.
-    """
+    """Peça sem opinião -> `(160, 220)`, byte-idêntico ao de antes desta cura."""
     assert _testar(pac, a05, _ctx(pac, {}), P1, "p1") == (160, 220)
 
 
@@ -217,17 +177,7 @@ def test_as_duas_em_cem_entregam_o_par_de_teste_inteiro(pac, a05) -> None:
 
 
 def test_o_par_do_teste_nao_vem_do_que_o_jogo_pediu(pac, a05) -> None:
-    """A régua contra a VOLTA do defeito, e ela mede COMPORTAMENTO.
-
-    O `rumble_ff` desta mesa está cheio — `last_weak=90`, `last_strong=40` no
-    topo e `rumble_no_fisico` em cada vpad. Se alguém religar a leitura do
-    pedido do jogo aqui (foi de lá que veio a chave morta), o par deixa de
-    seguir a barra e passa a seguir o jogo, e este caso reprova.
-
-    Ler o pedido do jogo seria pior que morto: `rumble_no_fisico` é o par **já
-    multiplicado**, e realimentá-lo no `rumble.set` aplicaria o degrau duas
-    vezes.
-    """
+    """A régua contra a VOLTA do defeito, e ela mede COMPORTAMENTO."""
     ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 50, "fraco_pct": 100}})
 
     par = _testar(pac, a05, ctx, P1, "p1")
@@ -237,20 +187,8 @@ def test_o_par_do_teste_nao_vem_do_que_o_jogo_pediu(pac, a05) -> None:
         f"par que siga o JOGO em vez das barras aparece aqui")
 
 
-# ---------------------------------------------------------------------------
-# 3. POR CONTROLE — "cada um com o seu, e trocar um não mexe no outro"
-# ---------------------------------------------------------------------------
 def test_cada_coluna_leva_a_barra_da_peca_dela(pac, a05) -> None:
-    """P1 inteiro e P2 pela metade, na MESMA mesa e no mesmo tique.
-
-    É a terceira exigência da frase dela — *"pra cada controle"* — e o critério
-    de pronto da sprint: `P1 em 100 % e P2 em 50 % ao mesmo tempo, e trocar um
-    não mexe no outro`.
-
-    MORDIDA: em `_barras_dos_motores`, ignore o `uniq` e devolva sempre o mapa
-    da primeira peça — os dois pares saem iguais e este caso nomeia qual coluna
-    recebeu a barra da outra.
-    """
+    """P1 inteiro e P2 pela metade, na MESMA mesa e no mesmo tique."""
     ctx = _ctx(pac, {
         CHAVE_P1: {"forte_pct": 100, "fraco_pct": 100},
         CHAVE_P2: {"forte_pct": 50, "fraco_pct": 100},
@@ -260,28 +198,12 @@ def test_cada_coluna_leva_a_barra_da_peca_dela(pac, a05) -> None:
     assert _testar(pac, a05, ctx, P2, "p2") == (160, 110), "o P2 não levou a sua barra"
 
 
-# ---------------------------------------------------------------------------
-# 4. O "AO VIVO" — o arraste que ainda não voltou do daemon
-# ---------------------------------------------------------------------------
 def test_o_arraste_reenvia_o_valor_que_acabou_de_gravar(pac, a05, monkeypatch) -> None:
-    """Arrastar a barra com o teste ligado manda o valor NOVO, não o do tique.
-
-    O `ctx` de um gesto é o retrato ANTERIOR ao `rumble.motores.set` que acabou
-    de responder: `state.rumble_motores` ainda traz a barra velha. Sem o
-    `acabou_de_gravar`, o reenvio faria a mão dela sentir o valor de antes do
-    arraste — o "ao vivo" atrasado em um tique, que é a forma mais convincente
-    de um ajuste parecer que não funciona.
-
-    MORDIDA: tire o `acabou_de_gravar=(lado, pontos)` da chamada de
-    `_refrescar_o_teste` no gesto `motor` — o reenvio volta a mandar `220`, o
-    valor do estado, e este caso reprova nomeando os dois.
-    """
+    """Arrastar a barra com o teste ligado manda o valor NOVO, não o do tique."""
     from pacotes import a05_vibracao as a05_mod
 
-    # O ESTADO AINDA DIZ 100, que é o retrato de antes do arraste.
     ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 100, "fraco_pct": 100}})
     p = PonteDeMentira()
-    # A ponte responde ao `rumble.motores.set` como a real: `(ok, corpo)`.
     monkeypatch.setattr(
         p, "rumble_motores_set",
         lambda **kw: (p.chamadas.append(("rumble_motores_set", (), kw)),
@@ -289,8 +211,8 @@ def test_o_arraste_reenvia_o_valor_que_acabou_de_gravar(pac, a05, monkeypatch) -
         raising=False)
 
     a05_mod.parar_o_teste()
-    _testar(pac, a05, ctx, P1, "p1")          # (não deixa o teste ligado)
-    a05_mod._EM_TESTE[0] = P1                  # o "Testar" está ligado NESTE
+    _testar(pac, a05, ctx, P1, "p1")
+    a05_mod._EM_TESTE[0] = P1
     fn = pac.gesto_da_pagina("05-vibracao.html", "motor")
     assert fn is not None, "05-vibracao.html:motor perdeu o dono"
     fn(ctx, {"uniq": P1, "lado": "e", "valor": "25"}, p)
@@ -304,11 +226,7 @@ def test_o_arraste_reenvia_o_valor_que_acabou_de_gravar(pac, a05, monkeypatch) -
 
 
 def test_o_arraste_no_p2_nao_sacode_o_p1_em_teste(pac, a05, monkeypatch) -> None:
-    """Teste ligado no P1, barra arrastada no P2 -> o P1 fica quieto.
-
-    Sem esta guarda o "ao vivo" viraria vazamento: ela ajusta a coluna do P2 e
-    quem treme na mão dela é o P1, com um número que não é de nenhum dos dois.
-    """
+    """Teste ligado no P1, barra arrastada no P2 -> o P1 fica quieto."""
     from pacotes import a05_vibracao as a05_mod
 
     ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 100, "fraco_pct": 100},
@@ -331,30 +249,6 @@ def test_o_arraste_no_p2_nao_sacode_o_p1_em_teste(pac, a05, monkeypatch) -> None
         f"no P1")
 
 
-# ---------------------------------------------------------------------------
-# 3. A GUARDA DA CURA PROVISÓRIA — o dia em que o daemon curar
-# ---------------------------------------------------------------------------
-#
-# A CURA DESTA SPRINT É PARTIDA EM DOIS POR DESENHO, e o risco tem nome: a ABA
-# pré-multiplica o par pela barra de cada motor (`_par_das_barras`), e o DAEMON
-# aplica só o degrau (`apply_rumble_policy` no `rumble.set`, `_effective_mult`
-# no reassert de 5 Hz). O produto na mão dela é `base x barra x degrau`, com
-# cada fator aplicado UMA vez, por quem já o aplicava.
-#
-# A CURA DEFINITIVA — as duas portas do rumble FIXADO passando por
-# `gamepad._mults_por_motor`, que é o que cobre o `hef test rumble` e a janela
-# GTK — **dobra a conta**: a barra entraria de novo, e o que ela sentiria seria
-# `base x barra² x degrau`. Com a barra em 50 % o motor cairia para 25 %, e o
-# instrumento que veria isso primeiro seria a MÃO DELA.
-#
-# ESTAS TRÊS RÉGUAS REPROVAM NAQUELE DIA, e é o ponto delas: elas não medem uma
-# feature — medem a REPARTIÇÃO. Quem curar o daemon vê o vermelho, lê o recado,
-# e tira o `_reduzido_pela_barra` da aba no MESMO commit. Sem elas, a descoberta
-# seria por reclamação.
-#
-# Elas não impedem a cura definitiva. Uma régua que impedisse trabalho seria
-# outra coisa: o que elas exigem é que as duas metades andem JUNTAS.
-
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
     BRANCO,
     _Backend,
@@ -366,18 +260,7 @@ from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
 
 
 def test_o_rumble_fixado_aplica_um_fator_so_nos_dois_motores(perfis) -> None:  # noqa: F811
-    """`rumble.set` com barra ASSIMÉTRICA no perfil -> os dois motores, o MESMO fator.
-
-    É a porta por onde o par do "Testar" desta aba entra no daemon
-    (`ipc_handlers._handle_rumble_set` -> `apply_rumble_policy`). Hoje ela
-    aplica o degrau e mais nada, e é POR ISSO que a aba pode pré-multiplicar
-    pela barra sem dobrar a conta.
-
-    MORDIDA (é a cura definitiva, feita de propósito): em
-    `daemon/ipc_rumble_policy.apply_rumble_policy`, troque o `mult` único pelos
-    dois fatores de `gamepad._mults_por_motor` — o `strong` sai 75 onde este
-    caso exige 150, e a régua nomeia a dobra.
-    """
+    """`rumble.set` com barra ASSIMÉTRICA no perfil -> os dois motores, o MESMO fator."""
     from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
 
     _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
@@ -396,17 +279,7 @@ def test_o_rumble_fixado_aplica_um_fator_so_nos_dois_motores(perfis) -> None:  #
 
 
 def test_o_reassert_de_5hz_aplica_um_fator_so_nos_dois_motores(perfis) -> None:  # noqa: F811
-    """A segunda porta do rumble FIXADO — o laço que re-afirma o par a cada 200 ms.
-
-    Ela é o outro caminho que o par da aba percorre, e sozinha bastaria para
-    dobrar a conta: o "Testar" desta aba fica LIGADO (`_EM_TESTE`), então o
-    reassert reescreve aquele par cinco vezes por segundo enquanto a mão dela
-    está no plástico.
-
-    MORDIDA: em `daemon/subsystems/rumble.reassert_rumble`, troque
-    `weak_raw * mult` / `strong_raw * mult` pelos dois fatores de
-    `_mults_por_motor` — o par escrito no controle sai `(150, 75)`.
-    """
+    """A segunda porta do rumble FIXADO — o laço que re-afirma o par a cada 200 ms."""
     from hefesto_dualsense4unix.daemon.subsystems.rumble import reassert_rumble
 
     _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
@@ -453,13 +326,11 @@ def test_a_conta_inteira_da_barra_vale_uma_vez_so(pac, a05, perfis) -> None:  # 
         "a peça da aba e a do perfil no disco deixaram de ser a mesma — esta "
         "régua estaria compondo a barra de um controle com o degrau de outro")
 
-    # 1. A METADE DA ABA: o clique dela sai com a barra aplicada.
     _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
     ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 50, "fraco_pct": 100}})
     da_aba = _testar(pac, a05, ctx, P1, "p1")
     assert da_aba == (160, 110), f"a aba mandou {da_aba}, e devia mandar (160, 110)"
 
-    # 2. A METADE DO DAEMON: o degrau, e SÓ o degrau, sobre o par que chegou.
     d = _daemon(policy="max", perfil_ativo="Bancada")
     no_motor = apply_rumble_policy(d, *da_aba)
 

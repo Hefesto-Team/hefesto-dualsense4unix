@@ -1,44 +1,4 @@
-"""SOM-MIC-REPLUG-01 — o silêncio que ela pediu não pode morrer com o cabo.
-
-A PRIMEIRA DAS SETE DÍVIDAS que a régua das quatro pernas declarou, e a mais
-cara delas porque o preço de errar é de PRIVACIDADE::
-
-    campo         perna   estado em 16/09          o texto da dívida
-    mic.muted     VOLTA   DÍVIDA                   "o LED do mudo volta (está
-                                                    em `_OUTPUT_FIELDS`), mas o
-                                                    MUDO em si não"
-
-**O que acontecia:** ela deixa o microfone mudo, tira e repõe o cabo, e o
-microfone volta ABERTO — o firmware nasce assim, e nenhum caminho de adoção ou
-reconexão chamava `set_microphone_mute`. A pessoa continua achando que está em
-silêncio. Num produto de acessibilidade, em que o microfone do controle é o
-canal de fala de quem o usa, este é o defeito mais grave da família: **o
-silêncio que o produto promete e não entrega.**
-
-A CONCILIAÇÃO, e é ela que esta régua trava
--------------------------------------------
-Havia DUAS decisões medidas em tensão, e as duas continuam de pé:
-
-- o perfil do jogo não rouba o mudo dela no meio de uma gravação — desde
-  28/09/2026 (O-MUDO-E-DO-CONTROLE-01) por uma razão mais forte que a
-  ``MIC-GRAVACAO-01``: o mudo é do CONTROLE e mora no ``maquina.json``, e
-  nenhuma troca de perfil o escreve, nem a explícita;
-- ``AUDIT-FINDING-PROFILE-MIC-LED-RESET-01`` — o LED vermelho do mic jamais se
-  apaga como colateral.
-
-O replug lê o mudo do DONO (``utils.maquina.mudo_do_microfone``); o perfil
-ativo só empresta o volume.
-
-A passagem do replug é ASSIMÉTRICA, e é por isso que cabe entre as duas::
-
-    muted=True   ESCREVE   o firmware voltou aberto; devolver o mudo desfaz uma
-                           escolha que ninguém fez. E ACENDE o LED — o lado
-                           seguro tem sinal visível, o inseguro não tem nenhum.
-    muted=False  não       já é o default do firmware, e escrever APAGARIA o LED.
-
-E a regra mora em UM lugar (`apply_mic`), porque a casa exige que a guarda do
-mudo não tenha duas cópias que possam divergir.
-"""
+"""SOM-MIC-REPLUG-01 — o silêncio que ela pediu não pode morrer com o cabo."""
 from __future__ import annotations
 
 from typing import Any
@@ -76,17 +36,11 @@ class _Applier:
 
 
 def _perfil(mic: dict | None = None, por_peca: dict | None = None):
-    """Um perfil de mentira com só o que estes casos leem.
-
-    `match` e `mic.button_toggles_system` são OBRIGATÓRIOS no esquema e entram
-    com valor neutro — o `Profile` real é quem valida, e usar o dublê do pydantic
-    aqui esconderia um campo que o produto exige.
-    """
+    """Um perfil de mentira com só o que estes casos leem."""
     from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
 
     dados: dict[str, Any] = {"name": "o-perfil-dela", "match": MatchManual()}
     if mic is not None:
-        #: O interruptor é UM por máquina e não é desta cura — vai neutro.
         dados["mic"] = {"button_toggles_system": False, **mic}
     if por_peca is not None:
         dados["controllers"] = por_peca
@@ -118,12 +72,7 @@ def _dono(uniq: str, mudo: bool) -> None:
 
 class TestOMudoVoltaNoReplug:
     def test_o_mudo_dela_atravessa_o_replug(self, mesa) -> None:
-        """**O CASO QUE ORIGINOU ESTA RÉGUA.**
-
-        MORDIDA: trocar `origin="replug"` por `origin="system"` em
-        `reapply_mic_on_connect` — a guarda do `apply_mic` zera o `muted` e o
-        microfone dela volta aberto, calado, como antes da cura.
-        """
+        """**O CASO QUE ORIGINOU ESTA RÉGUA.**"""
         _dono("aabbcc000003", True)
         m = mesa.com(_perfil())
         estado = m.reapply_mic_on_connect(uniq="aabbcc000003")
@@ -134,14 +83,7 @@ class TestOMudoVoltaNoReplug:
         )
 
     def test_o_mudo_desligado_nao_e_escrito_no_replug(self, mesa) -> None:
-        """A outra metade da assimetria, e ela protege o LED.
-
-        `muted=False` já é o default do firmware: escrever não mudaria o som e
-        APAGARIA o LED vermelho, que a AUDIT-FINDING-PROFILE-MIC-LED-RESET-01
-        proíbe fora de pedido explícito dela.
-
-        MORDIDA: deixar `muted` passar sem filtro no ramo `replug`.
-        """
+        """A outra metade da assimetria, e ela protege o LED."""
         _dono("aabbcc000003", False)
         m = mesa.com(_perfil(mic={"volume": 70}))
         m.reapply_mic_on_connect(uniq="aabbcc000003")
@@ -159,10 +101,7 @@ class TestOMudoVoltaNoReplug:
 
 class TestOPerfilEmprestaOVolumeEODonoDizOMudo:
     def test_o_global_escreve_e_o_mudo_do_dono_vem_por_ultimo(self, mesa) -> None:
-        """A MESMA ordem do `apply`, e a mesma da SOM-ROTA-03.
-
-        O global do perfil leva o volume; o mudo vem do dono, na peça.
-        """
+        """A MESMA ordem do `apply`, e a mesma da SOM-ROTA-03."""
         _dono("aabbcc000003", True)
         m = mesa.com(_perfil(mic={"volume": 50}))
         m.reapply_mic_on_connect(uniq="aabbcc000003")
@@ -174,13 +113,7 @@ class TestOPerfilEmprestaOVolumeEODonoDizOMudo:
         )
 
     def test_o_mudo_de_um_perfil_nao_fala_no_replug(self, mesa) -> None:
-        """O `muted` que um perfil ainda carregue não é o mudo do controle.
-
-        O-MUDO-E-DO-CONTROLE-01: o dono não diz nada deste controle, e o perfil
-        (de antes da migração) diz calado no global e na peça. Nada se cala.
-
-        MORDIDA: deixar o `muted` do perfil na vista do replug.
-        """
+        """O `muted` que um perfil ainda carregue não é o mudo do controle."""
         m = mesa.com(
             _perfil(
                 mic={"muted": True, "volume": 50},
@@ -210,14 +143,7 @@ class TestOPerfilEmprestaOVolumeEODonoDizOMudo:
 class TestATrocaDePerfilNaoLevaOMudo:
     @pytest.mark.parametrize("origem", ["autoswitch", "system", "manual"])
     def test_nenhuma_ativacao_leva_o_mudo(self, mesa, origem: str) -> None:
-        """Nem o autoswitch, nem o restore de boot, nem a troca explícita.
-
-        O-MUDO-E-DO-CONTROLE-01 (28/09/2026), resposta 9 dela: o mudo é do
-        controle e vale em todo jogo. Até ali a troca explícita levava o
-        `muted` do perfil (MIC-GRAVACAO-01).
-
-        MORDIDA: o `apply_mic` voltar a deixar o `muted` passar em `manual`.
-        """
+        """Nem o autoswitch, nem o restore de boot, nem a troca explícita."""
         m = mesa.com(_perfil(mic={"muted": True}))
         m.apply_mic(_perfil(mic={"muted": True}), origin=origem)
         assert mesa.applier.chamadas == [], (
@@ -226,17 +152,10 @@ class TestATrocaDePerfilNaoLevaOMudo:
 
 
 class TestACuraEstaLIGADA:
-    """*A cura escrita e nunca ligada* é o defeito mais caro desta casa.
-
-    A `sentinela_do_wrapper` nasceu com 19 testes e `grep` nenhum a chamava.
-    Esta classe existe para que isto não se repita aqui.
-    """
+    """*A cura escrita e nunca ligada* é o defeito mais caro desta casa."""
 
     def test_o_daemon_chama_o_gancho_nos_dois_caminhos_de_replug(self) -> None:
-        """Os DOIS pontos: o laço por alvo e a borda de alvo novo.
-
-        MORDIDA: apagar uma das duas chamadas de `connection.py`.
-        """
+        """Os DOIS pontos: o laço por alvo e a borda de alvo novo."""
         from pathlib import Path
 
         fonte = Path(
@@ -245,20 +164,15 @@ class TestACuraEstaLIGADA:
         assert fonte.count("await reapply_mic_after_connect") == 2, (
             "o gancho do microfone não cobre os dois caminhos de replug"
         )
-        # Onde o alto-falante é reaplicado, o microfone também tem de ser.
         assert fonte.count("await reapply_speaker_after_connect") == 2
 
     def test_cada_um_tem_o_proprio_suppress(self) -> None:
-        """O alto-falante falhar não pode custar o mudo do microfone dela.
-
-        MORDIDA: pôr os dois `await` dentro do mesmo `contextlib.suppress`.
-        """
+        """O alto-falante falhar não pode custar o mudo do microfone dela."""
         from pathlib import Path
 
         fonte = Path(
             "src/hefesto_dualsense4unix/daemon/connection.py"
         ).read_text(encoding="utf-8")
-        # Cada chamada do mic é precedida do SEU `with contextlib.suppress`.
         pedacos = fonte.split("await reapply_mic_after_connect")
         for antes in pedacos[:-1]:
             cauda = antes[-120:]

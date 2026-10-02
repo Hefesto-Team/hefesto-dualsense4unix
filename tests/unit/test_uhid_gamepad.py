@@ -1,37 +1,4 @@
-"""Contrato do vpad uhid (SPRINT-UHID-VPAD-01) — sem tocar /dev/uhid.
-
-O que estes testes travam são as três coisas que custaram um PoC para descobrir e
-que quebram em SILÊNCIO se alguém mexer (o probe do `hid_playstation` simplesmente
-não registra o controle, e a vibração volta a só funcionar na máscara Xbox):
-
-1. **MAC próprio por jogador.** Copiar o feature 0x09 do controle físico faz o
-   probe morrer com ``Duplicate device found for MAC address … / probe failed -17``.
-   Os bytes 1..6 do report 0x09 são o MAC em **little-endian**.
-2. **Responder UHID_GET_REPORT** com o feature capturado (senão não registra).
-3. **Responder UHID_SET_REPORT** (senão o probe trava).
-
-Mais o passthrough de rumble: o report de output 0x02 que o JOGO escreve no hidraw
-do vpad tem os motores em ``body[2]`` (fraco) e ``body[3]`` (forte) — é daí que sai
-o par (weak, strong) entregue ao `rumble_sink`, que vibra o controle físico.
-
-O device é substituído por um fd falso (`os.write`/`os.read` monkeypatchados), então
-o teste roda em CI sem /dev/uhid e sem hardware.
-
-MORDIDA PROVADA (13/08/2026, com o `src/` COPIADO para fora da árvore e o
-`PYTHONPATH` apontado para a cópia — a árvore de trabalho nunca foi mutada):
-
-- arrancando o repasse do FF ao físico — a chamada `self.rumble_sink(weak,
-  strong)` dentro de `_emit_rumble` (`integrations/uhid_gamepad.py`), trocada
-  por um `pass` para que só o REPASSE morresse e nada mais —, este arquivo
-  reprova **6 de 128**: `test_rumble_do_jogo_chega_ao_controle_fisico`,
-  `test_valor_repetido_nao_reenvia`, as três parametrizações de
-  `test_rumble_chega_em_qualquer_firmware` e
-  `test_report_sem_a_flag_de_vibracao_nao_zera_o_rumble`;
-- o nó que o mapa aponta reprova sozinho, e a mensagem diz o que sumiu:
-  `assert [] == [(200, 100), (0, 255), (0, 0)]`. Ou seja, o jogo pediu três
-  pares e NENHUM chegou ao controle físico;
-- com a cura devolvida, `128 passed in 0.39s`.
-"""
+"""Contrato do vpad uhid (SPRINT-UHID-VPAD-01) — sem tocar /dev/uhid."""
 from __future__ import annotations
 
 import struct
@@ -52,9 +19,6 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     player_mac,
 )
 
-#: Feature 0x09 como o controle físico devolve: id + MAC(LE) + resto. O MAC é
-#: FORJADO (aa:bb:cc:00:00:01 em little-endian) — identidade real nunca entra
-#: em fixture (regra de anonimato do repo).
 _FEATURE_09_FISICO = bytes([0x09]) + bytes.fromhex("010000ccbbaa") + bytes(13)
 
 
@@ -108,14 +72,6 @@ def _output_event(report: bytes) -> bytes:
 
 
 #: valid_flag0 que o HARDWARE REAL manda no rumble. Os DualSense da máquina de
-#: teste têm firmware 0x0630 (>= 0x0215), então o hid_playstation usa
-#: `use_vibration_v2`: manda COMPATIBLE_VIBRATION2 no valid_flag2 e o valid_flag0
-#: chega com HAPTICS_SELECT (0x02) SOZINHO — nunca com 0x01.
-#:
-#: O default deste helper já foi 0x01 e por isso a suíte ficou VERDE com um
-#: `& 0x01` na produção que descartava todo o rumble no hardware alvo. Medido ao
-#: vivo (report cru do kernel): rumble -> valid_flag0=0x02 flag2=0x04;
-#: lightbar -> valid_flag0=0x00 flag1=0x04 com motores zerados.
 _HAPTICS_SELECT = 0x02
 
 
@@ -131,8 +87,6 @@ class TestMacProprio:
     def test_cada_jogador_tem_mac_distinto_e_localmente_administrado(self) -> None:
         macs = [player_mac(n) for n in (1, 2, 3, 4)]
         assert len(set(macs)) == 4
-        # Bit 1 do primeiro octeto = faixa localmente administrada (não colide
-        # com hardware real, que é o que faz o probe recusar por duplicidade).
         for mac in macs:
             assert int(mac.split(":")[0], 16) & 0x02
 
@@ -144,7 +98,6 @@ class TestMacProprio:
 
         esperado = bytes(reversed(bytes.fromhex(player_mac(2).replace(":", ""))))
         assert pad._features[0x09][1:7] == esperado
-        # E o report do físico não vazou.
         assert pad._features[0x09][1:7] != _FEATURE_09_FISICO[1:7]
 
     def test_nome_e_mac_identificam_o_jogador(self) -> None:
@@ -177,7 +130,6 @@ class TestProbe:
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         pad.start()
         fake_uhid.writes.clear()
-        # id=7, rnum=0x20 (firmware)
         fake_uhid.reads.append(struct.pack("<IIBB", UHID_GET_REPORT, 7, 0x20, 3))
 
         pad.pump_ff()
@@ -282,17 +234,12 @@ class TestRumblePassthrough:
     def test_report_sem_a_flag_de_vibracao_nao_zera_o_rumble(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """O jogo usa o MESMO report 0x02 para lightbar/gatilhos, com motores em 0.
-
-        Sem checar DS_OUTPUT_VALID_FLAG0_COMPATIBLE_VIBRATION, acender um LED no
-        meio de uma explosão MATAVA a vibração.
-        """
+        """O jogo usa o MESMO report 0x02 para lightbar/gatilhos, com motores em 0."""
         recebido: list[tuple[int, int]] = []
         pad = UhidDualSense(player=1, blueprint=_blueprint(),
                             rumble_sink=lambda w, s: recebido.append((w, s)))
         pad.start()
         fake_uhid.reads.append(_output_event(_rumble_report(220, 180)))
-        # Agora um report SÓ de lightbar: motores zerados, sem a flag de vibração.
         fake_uhid.reads.append(_output_event(_rumble_report(0, 0, valid_flag0=0x04)))
 
         pad.pump_ff()
@@ -322,7 +269,7 @@ class TestRumblePassthrough:
         pad.start()
         fake_uhid.reads.append(_output_event(_rumble_report(10, 20)))
 
-        pad.pump_ff()  # não propaga
+        pad.pump_ff()
 
         assert pad.ff_last_sent == (10, 20)
 
@@ -385,11 +332,7 @@ class TestCicloDeVida:
     def test_stop_concorrente_no_meio_do_pump_nao_explode(
         self, fake_uhid: _FakeFd, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O poll loop bombeia enquanto a GUI troca de modo (stop em outra thread).
-
-        Antes o pump relia self._fd a cada volta: com o fd já None, o os.read(None)
-        levantava TypeError — que, ao contrário do OSError, ninguém pegava.
-        """
+        """O poll loop bombeia enquanto a GUI troca de modo (stop em outra thread)."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         pad.start()
         chamadas = {"n": 0}
@@ -398,28 +341,25 @@ class TestCicloDeVida:
         def _read_que_para_o_pad(fd: int, size: int) -> bytes:
             chamadas["n"] += 1
             if chamadas["n"] == 1:
-                pad.stop()  # outra thread desliga o modo bem aqui
+                pad.stop()
                 return _output_event(_rumble_report(1, 2))
             return real_read(fd, size)
 
         monkeypatch.setattr(uhid_gamepad.os, "read", _read_que_para_o_pad)
 
-        pad.pump_ff()  # não pode levantar
+        pad.pump_ff()
 
         assert pad.is_active() is False
 
     def test_blueprint_com_feature_09_curto_nao_abre_o_device(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """Slice assign em bytearray curto REDIMENSIONA o report em vez de escrever.
-
-        E o fd de /dev/uhid não pode vazar quando a validação reprova.
-        """
+        """Slice assign em bytearray curto REDIMENSIONA o report em vez de escrever."""
         bp = _blueprint()
-        bp["features"][0x09] = bytes([0x09, 0x11])  # 2 bytes: não cabe o MAC
+        bp["features"][0x09] = bytes([0x09, 0x11])
 
         assert UhidDualSense(player=1, blueprint=bp).start() is False
-        assert fake_uhid.writes == []  # nem chegou a abrir/escrever
+        assert fake_uhid.writes == []
 
     def test_blueprint_sem_feature_09_nao_vaza_fd(self, fake_uhid: _FakeFd) -> None:
         bp = _blueprint()
@@ -430,13 +370,7 @@ class TestCicloDeVida:
 
 
 class TestBateria:
-    """Sem o byte de status o vpad anuncia 5% descarregando PARA SEMPRE.
-
-    O `dualsense_parse_report` lê ``battery_data = status & 0x0F`` e
-    ``capacity = min(battery_data * 10 + 5, 100)``: payload zerado = 5%, e o jogo
-    mostra alerta de bateria fraca num controle carregado. Medido: o controle
-    físico manda 0x29 (95%); o vpad mandava 0x00.
-    """
+    """Sem o byte de status o vpad anuncia 5% descarregando PARA SEMPRE."""
 
     def test_sem_dado_nasce_cheio_e_carregando(self, fake_uhid: _FakeFd) -> None:
         """A mentira menos daninha: não dispara alerta de bateria fraca."""
@@ -451,21 +385,17 @@ class TestBateria:
     @pytest.mark.parametrize(
         ("percent", "esperado_kernel"),
         [
-            (100, 100),  # cheio tem de aparecer como cheio (truncar dava 95)
+            (100, 100),
             (95, 95),
-            (30, 35),  # ±5%: o formato só tem 11 níveis
+            (30, 35),
             (5, 5),
-            (0, 5),  # o mínimo representável
+            (0, 5),
         ],
     )
     def test_percentual_vira_o_nivel_representavel_mais_proximo(
         self, fake_uhid: _FakeFd, percent: int, esperado_kernel: int
     ) -> None:
-        """Confere pela CONTA DO KERNEL, não pelo byte cru — é ela que a pessoa vê.
-
-        Validado no hardware: forward_battery(100) -> o power_supply do vpad
-        mostrou 100%; forward_battery(30) -> 35%.
-        """
+        """Confere pela CONTA DO KERNEL, não pelo byte cru — é ela que a pessoa vê."""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_battery(percent)
@@ -494,11 +424,7 @@ class TestBateria:
 
 class TestSendReport:
     def test_manda_o_report_cru_sem_padding_de_4kb(self, fake_uhid: _FakeFd) -> None:
-        """4 KB por evento x 250 Hz x 4 controles = ~4 MB/s de cópia à toa.
-
-        O uhid_char_write copia min(count, sizeof(event)) e zera o resto —
-        verificado no kernel real: o report cru é aceito.
-        """
+        """4 KB por evento x 250 Hz x 4 controles = ~4 MB/s de cópia à toa."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         pad.start()
         fake_uhid.writes.clear()
@@ -511,7 +437,7 @@ class TestSendReport:
         assert tipo == uhid_gamepad.UHID_INPUT2
         assert size == len(report)
         assert event[6:] == report
-        assert len(event) < 200  # não 4 KB
+        assert len(event) < 200
 
     def test_sem_device_devolve_false(self) -> None:
         assert UhidDualSense(player=1, blueprint=_blueprint()).send_report(b"\x01") is False
@@ -527,8 +453,7 @@ class TestBlueprint:
     def test_hidraw_que_nao_e_dualsense_e_recusado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Apontar para o hidraw de um teclado dava um "blueprint" que só
-        quebrava lá na frente, com erro que não diz nada da causa."""
+        """Apontar para o hidraw de um teclado dava um "blueprint" que só"""
         monkeypatch.setattr(uhid_gamepad, "_is_dualsense", lambda _node: False)
 
         assert uhid_gamepad.capture_dualsense_blueprint("/dev/hidraw9") is None
@@ -563,7 +488,6 @@ def _pad_ligado(fake: _FakeFd, **kwargs: Any) -> UhidDualSense:
     return pad
 
 
-#: Neutro do encoder: sticks centrados, gatilhos soltos, nada apertado.
 _NEUTRO = {"lx": 0x80, "ly": 0x80, "rx": 0x80, "ry": 0x80, "l2": 0, "r2": 0}
 _NEUTRO_BYTES = bytes([0x80, 0x80, 0x80, 0x80, 0, 0])
 
@@ -572,11 +496,7 @@ class TestEncoderAnalogico:
     def test_repouso_espelha_o_report_do_controle_fisico(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """Medido no hardware: 01 7f 7f 7d 7c 00 00 <seq> 08 ...
-
-        Sticks perto de 128, gatilhos 0 e d-pad no neutro (8) — não zero, que é o
-        canto do stick.
-        """
+        """Medido no hardware: 01 7f 7f 7d 7c 00 00 <seq> 08 ..."""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_analog(lx=127, ly=127, rx=125, ry=124, l2=0, r2=0)
@@ -586,11 +506,6 @@ class TestEncoderAnalogico:
         assert payload[7] & 0x0F == 0x08
         assert payload[8] == 0
         assert payload[9] == 0
-        # 63 + o report id = 64 = DS_INPUT_REPORT_USB_SIZE. O driver compara o
-        # tamanho e DESCARTA CALADO o que não bate: com 62 (a conta do descriptor
-        # arredondando os campos de bits para baixo) o vpad nascia mudo — o kernel
-        # aceitava o INPUT2 sem erro e o evdev nunca saía do repouso. Só o teste
-        # no hardware pegou; este assert existe para não voltar.
         assert len(payload) == 63
         assert len(payload) + 1 == 64
 
@@ -601,8 +516,7 @@ class TestEncoderAnalogico:
     def test_cada_eixo_vai_no_seu_offset(
         self, fake_uhid: _FakeFd, eixo: str, offset: int
     ) -> None:
-        """Trocar dois offsets dá um controle que anda de lado — e a suíte passa
-        se os testes só olharem "algum byte mudou"."""
+        """Trocar dois offsets dá um controle que anda de lado — e a suíte passa"""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_analog(**{**_NEUTRO, eixo: 200})
@@ -621,15 +535,7 @@ class TestEncoderAnalogico:
         assert _ultimo_payload(fake_uhid)[4:6] == bytes([255, 255])
 
     def test_touchpad_nasce_sem_toque_fantasma(self, fake_uhid: _FakeFd) -> None:
-        """O byte de contato é INVERTIDO no hid_playstation:
-        ``active = !(contact & 0x80)``. Payload zerado = dedo preso em (0,0), e o
-        jogo veria um toque eterno no canto do touchpad.
-
-        Os offsets são **32 e 36** — medidos num report cru do controle físico com
-        o dedo fora do touchpad. O `reserved2` do struct fica no 31 e empurra os
-        pontos; a versão anterior carimbava 31/35 e o assert passava verde
-        justamente nos bytes errados (os dois toques fantasma continuavam).
-        """
+        """O byte de contato é INVERTIDO no hid_playstation:"""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_analog(**_NEUTRO)
@@ -669,15 +575,13 @@ class TestEncoderBotoes:
     def test_cada_botao_liga_so_o_seu_bit(
         self, fake_uhid: _FakeFd, botão: str, offset: int, bit: int
     ) -> None:
-        """Nomes vindos do EvdevReader.BUTTON_MAP — inventar nome aqui daria um
-        botão que nunca acende, sem erro nenhum."""
+        """Nomes vindos do EvdevReader.BUTTON_MAP — inventar nome aqui daria um"""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_buttons(frozenset({botão}))
 
         payload = _ultimo_payload(fake_uhid)
         assert payload[offset] & bit == bit
-        # E não acendeu nada além disso (o d-pad segue neutro).
         assert payload[7] & 0xF0 == (bit if offset == 7 else 0)
         assert payload[7] & 0x0F == 0x08
         assert payload[8] == (bit if offset == 8 else 0)
@@ -731,10 +635,9 @@ class TestEncoderDpad:
     def test_os_oito_sentidos_mais_o_neutro(
         self, fake_uhid: _FakeFd, direcoes: tuple[str, ...], hat: int
     ) -> None:
-        """D-pad é HAT (0=N, horário até 7=NW, 8=neutro), não bitmask — tratar
-        como bitmask da diagonais aleatórias no jogo."""
+        """D-pad é HAT (0=N, horário até 7=NW, 8=neutro), não bitmask — tratar"""
         pad = _pad_ligado(fake_uhid)
-        pad.forward_buttons(frozenset({"cross"}))  # tira o neutro do delta
+        pad.forward_buttons(frozenset({"cross"}))
 
         pad.forward_buttons(frozenset(direcoes))
 
@@ -743,14 +646,12 @@ class TestEncoderDpad:
     def test_opostos_simultaneos_resolvem_igual_ao_uinput(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """O hat não tem como dizer "cima+baixo". Esquerda e cima vencem, que é a
-        precedência do UinputGamepad._dpad_vector: a mesma tecla tem de dar o
-        mesmo resultado nos dois backends, senão trocar de backend vira bug."""
+        """O hat não tem como dizer "cima+baixo". Esquerda e cima vencem, que é a"""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_buttons(frozenset({"dpad_up", "dpad_down", "dpad_left", "dpad_right"}))
 
-        assert _ultimo_payload(fake_uhid)[7] & 0x0F == 7  # NW = (esquerda, cima)
+        assert _ultimo_payload(fake_uhid)[7] & 0x0F == 7
 
     def test_dpad_convive_com_os_botoes_no_mesmo_byte(self, fake_uhid: _FakeFd) -> None:
         """Nibble baixo = hat, nibble alto = cross/circle/square/triangle."""
@@ -796,8 +697,7 @@ class TestSequencia:
 
 class TestDelta:
     def test_estado_parado_nao_reemite(self, fake_uhid: _FakeFd) -> None:
-        """O forward roda a cada tick por vpad: sem delta eram ~250 writes/s no
-        /dev/uhid por controle com tudo parado."""
+        """O forward roda a cada tick por vpad: sem delta eram ~250 writes/s no"""
         pad = _pad_ligado(fake_uhid)
         pad.forward_analog(**_NEUTRO)
         pad.forward_buttons(frozenset())
@@ -812,8 +712,7 @@ class TestDelta:
     def test_analog_e_buttons_no_mesmo_tick_emitem_uma_vez_cada(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """forward_buttons logo após forward_analog não pode reemitir o mesmo
-        payload: o report 0x01 já carrega os dois."""
+        """forward_buttons logo após forward_analog não pode reemitir o mesmo"""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_analog(**{**_NEUTRO, "lx": 5})
@@ -842,8 +741,7 @@ class TestDelta:
         assert len(_payloads(fake_uhid)) == 2
 
     def test_pad_parado_nao_emite_nem_guarda_estado(self, fake_uhid: _FakeFd) -> None:
-        """Sem device os forwards são no-op: o daemon chama por tick e um warning
-        por chamada seria flood no log."""
+        """Sem device os forwards são no-op: o daemon chama por tick e um warning"""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
 
         pad.forward_analog(**_NEUTRO)
@@ -852,8 +750,7 @@ class TestDelta:
         assert _payloads(fake_uhid) == []
 
     def test_stop_zera_o_delta(self, fake_uhid: _FakeFd) -> None:
-        """Depois do stop/start o kernel não sabe nada do estado anterior — o
-        primeiro report tem de sair mesmo que o estado seja igual."""
+        """Depois do stop/start o kernel não sabe nada do estado anterior — o"""
         pad = _pad_ligado(fake_uhid)
         pad.forward_analog(**{**_NEUTRO, "lx": 7})
         pad.stop()
@@ -873,8 +770,7 @@ class TestForFlavor:
         assert pad.player == 2
 
     def test_xbox_devolve_none_para_o_chamador_cair_no_uinput(self) -> None:
-        """O hid_playstation só faz bind em 054c:0ce6: um "Xbox por uhid" não
-        viraria gamepad nenhum. Xbox é trabalho do UinputGamepad."""
+        """O hid_playstation só faz bind em 054c:0ce6: um "Xbox por uhid" não"""
         assert UhidDualSense.for_flavor("xbox") is None
 
     @pytest.mark.parametrize("flavor", ["ps", "playstation", "ds", "DualSense", " ds "])
@@ -886,8 +782,7 @@ class TestForFlavor:
         assert UhidDualSense.for_flavor(flavor) is None
 
     def test_sem_flavor_e_dualsense_e_nao_o_default_xbox_do_uinput(self) -> None:
-        """Armadilha: normalize_flavor(None) == "xbox". Herdar aquele default aqui
-        desligaria o backend uhid em silêncio justo no caso comum."""
+        """Armadilha: normalize_flavor(None) == "xbox". Herdar aquele default aqui"""
         assert UhidDualSense.for_flavor() is not None
         assert UhidDualSense.for_flavor(None) is not None
 
@@ -915,8 +810,7 @@ class TestWaitForBind:
         assert pad.is_bound is True
 
     def test_sem_bind_devolve_false_no_timeout(self, fake_uhid: _FakeFd) -> None:
-        """start() só diz que o CREATE2 foi aceito. Sem esta espera o fallback do
-        UHID-06 seria desonesto: "deu certo" com o jogo sem controle."""
+        """start() só diz que o CREATE2 foi aceito. Sem esta espera o fallback do"""
         relogio = iter([0.0, 0.0, 0.5, 1.5])
         pad = _pad_ligado(fake_uhid, time_fn=lambda: next(relogio),
                           sleep_fn=lambda _s: None)
@@ -925,8 +819,7 @@ class TestWaitForBind:
         assert pad.is_bound is False
 
     def test_bind_que_chega_atrasado_e_esperado(self, fake_uhid: _FakeFd) -> None:
-        """O probe faz várias idas e voltas (GET_REPORT 0x09/0x20/0x05) antes do
-        UHID_START — desistir na primeira bombeada perderia todo bind real."""
+        """O probe faz várias idas e voltas (GET_REPORT 0x09/0x20/0x05) antes do"""
         tempo = [0.0]
 
         def _sleep(segundos: float) -> None:
@@ -946,20 +839,11 @@ class TestWaitForBind:
     def test_probe_que_recusa_depois_do_start_devolve_false(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """O UHID_START chega no COMEÇO do probe, não no fim.
-
-        Medido ao vivo com dois vpads de MAC igual: o segundo recebeu
-        ``START, OPEN, GET_REPORT, GET_REPORT, CLOSE, STOP`` em 2 ms, enquanto o
-        kernel logava ``Failed to create dualsense / probe failed -17``. Parar no
-        START devolvia True para um device natimorto — e o fallback para o uinput,
-        que é a razão de existir deste método, nunca aconteceria: o jogo ficaria
-        sem controle nenhum.
-        """
+        """O UHID_START chega no COMEÇO do probe, não no fim."""
         tempo = [0.0]
 
         def _sleep(segundos: float) -> None:
             tempo[0] += segundos
-            # O probe desiste logo depois do START (CLOSE+STOP), como no hardware.
             if tempo[0] >= 0.02 and not fake_uhid.reads:
                 fake_uhid.reads.append(struct.pack("<I", uhid_gamepad.UHID_STOP)
                                        + bytes(8))
@@ -983,7 +867,7 @@ class TestWaitForBind:
         fake_uhid.reads.append(struct.pack("<I", UHID_START) + bytes(8))
 
         assert pad.wait_for_bind(timeout_s=1.0) is True
-        assert tempo[0] >= uhid_gamepad._BIND_SETTLE_S  # esperou de fato
+        assert tempo[0] >= uhid_gamepad._BIND_SETTLE_S
 
     def test_stop_derruba_o_bind(self, fake_uhid: _FakeFd) -> None:
         pad = _pad_ligado(fake_uhid)
@@ -996,9 +880,7 @@ class TestWaitForBind:
 
     @pytest.mark.parametrize("combo", range(16))
     def test_dpad_concorda_com_o_backend_uinput_em_todo_combo(self, combo: int) -> None:
-        """Trava os dois backends juntos: para QUALQUER combinação de d-pad, o hat
-        do uhid tem de significar o mesmo vetor que o uinput emite. Sem isto, um
-        dos dois pode driftar e só a Vitória descobre, no jogo."""
+        """Trava os dois backends juntos: para QUALQUER combinação de d-pad, o hat"""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import _HAT_BY_VECTOR
         from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 

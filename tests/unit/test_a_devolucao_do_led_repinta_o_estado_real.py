@@ -45,10 +45,6 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MU
 _A = "aabbcc000001"
 _B = "aabbcc000002"
 
-#: Onde o `common[0]` cai DENTRO do report que vai para o fio, por transporte.
-#: USB (0x02): `[0]=id`, common em `[1..47]`. Rádio (0x31): `[0]=id`, `[1]=seq`,
-#: `[2]=tag`, common em `[3..49]` — daí o "report[11] no rádio" para o
-#: `common[8]`, que a linha `luz.led_microfone` do mapa já registrava.
 _BASE_DO_COMMON = {"usb": 1, "bt": 3}
 
 
@@ -137,23 +133,8 @@ def _led_entregue(handle: Any, transporte: str = "usb") -> list[tuple[int, int]]
     ]
 
 
-# ---------------------------------------------------------------------------
-# 1. O report do meio SAI, e carrega o mudo de fato
-# ---------------------------------------------------------------------------
-
-
 def test_a_devolucao_entrega_um_report_com_o_mudo_real_antes_de_soltar() -> None:
-    """Mudo no firmware: a luz é repintada em `1` (a frase do kernel) e ENTREGUE.
-
-    Ela apertou o mudo; sob a LUZ-DO-MIC a nossa luz estava PISCANDO (`2`) para
-    dizer "está entrando som". Devolver a posse sem repintar deixaria o `2` no
-    plástico — um estado que o kernel nunca escreve, e que borda nenhuma
-    explica.
-
-    MORDIDA: tirar a chamada a `_repintar_antes_de_soltar` do
-    `set_microphone_led` — nenhum report é entregue, `escritos` fica vazio e a
-    primeira asserção reprova.
-    """
+    """Mudo no firmware: a luz é repintada em `1` (a frase do kernel) e ENTREGUE."""
     handle = _handle(mudo=True)
     backend = _backend({_A: handle})
 
@@ -182,14 +163,7 @@ def test_a_devolucao_entrega_um_report_com_o_mudo_real_antes_de_soltar() -> None
 
 
 def test_depois_de_repintar_a_posse_e_mesmo_devolvida() -> None:
-    """A repintura não pode custar a devolução: o bit tem de cair no fim.
-
-    A metade que impede a cura de virar "o hefesto ficou dono da luz para
-    sempre" — que é o defeito que a porta de emergência existe para não ter.
-
-    MORDIDA: fazer a repintura ser a última palavra (não chamar `tomar(None)`
-    depois dela) — o bit `0x01` continua ligado e esta régua reprova.
-    """
+    """A repintura não pode custar a devolução: o bit tem de cair no fim."""
     handle = _handle(mudo=True)
     backend = _backend({_A: handle})
     backend.set_microphone_led(2, uniq=_A)
@@ -205,14 +179,7 @@ def test_depois_de_repintar_a_posse_e_mesmo_devolvida() -> None:
 
 
 def test_a_repintura_e_leitura_e_nao_constante() -> None:
-    """Sem mudo no firmware, a luz é deixada APAGADA — o valor vem do report.
-
-    É a metade que prova que o `1` do teste anterior não é um literal escrito à
-    mão. Dois controles em estados diferentes têm de sair com bytes diferentes.
-
-    MORDIDA: trocar a leitura por uma constante (`valor = 1`) — esta régua
-    reprova, e a de cima continua verde. Só as duas juntas medem.
-    """
+    """Sem mudo no firmware, a luz é deixada APAGADA — o valor vem do report."""
     handle = _handle(mudo=False)
     backend = _backend({_A: handle})
     backend.set_microphone_led(1, uniq=_A)
@@ -228,21 +195,8 @@ def test_a_repintura_e_leitura_e_nao_constante() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. A mesa é de quatro, e a devolução tem ENDEREÇO
-# ---------------------------------------------------------------------------
-
-
 def test_cada_controle_repinta_o_seu_proprio_mudo() -> None:
-    """Dois controles, dois estados, dois bytes — e ninguém escreve no vizinho.
-
-    Foi assim que ela mediu a leitura em 03/09/2026: o do cabo devolvendo
-    `mic_mudo: false` e o do rádio `mic_mudo: true`, no mesmo instante. Uma
-    repintura que lesse o primário para todos deixaria a luz do segundo errada.
-
-    MORDIDA: trocar `audio_status_for(uniq)` por `audio_status_for()` — o B
-    passa a ser repintado com o mudo do A e a segunda asserção reprova.
-    """
+    """Dois controles, dois estados, dois bytes — e ninguém escreve no vizinho."""
     a = _handle(mudo=False)
     b = _handle(mudo=True)
     backend = _backend({_A: a, _B: b})
@@ -261,11 +215,7 @@ def test_cada_controle_repinta_o_seu_proprio_mudo() -> None:
 
 
 def test_a_devolucao_de_um_controle_nao_escreve_no_outro() -> None:
-    """A outra metade do endereço: soltar o A não põe byte nenhum no fio do B.
-
-    MORDIDA: fazer a repintura varrer `self._handles` em vez de usar o handle
-    já resolvido — o B recebe um report que ninguém pediu e esta régua reprova.
-    """
+    """A outra metade do endereço: soltar o A não põe byte nenhum no fio do B."""
     a = _handle(mudo=True)
     b = _handle(mudo=True)
     backend = _backend({_A: a, _B: b})
@@ -279,22 +229,8 @@ def test_a_devolucao_de_um_controle_nao_escreve_no_outro() -> None:
     assert b._mic_led_desejado == 2, "e continua dono do próprio byte"
 
 
-# ---------------------------------------------------------------------------
-# 3. O rádio, e o report que o firmware aceita
-# ---------------------------------------------------------------------------
-
-
 def test_no_radio_a_repintura_sai_carimbada_e_com_crc() -> None:
-    """No rádio o report tem de ir pelo `writeReport`, não cru no `device`.
-
-    O preço deste atalho já foi pago uma vez nesta casa e está escrito no
-    `reescrever_lightbar_por_hidraw`: *"o firmware descarta o report fora de
-    sequência e o log diz 'escrito' com a barra apagada"*. Uma repintura
-    descartada é exatamente o defeito que a sprint fecha, com a cura no lugar.
-
-    MORDIDA: escrever direto no `handle.device` (pulando o `writeReport`) — o
-    `seq` sai 0 e o CRC fica o do buffer sem carimbo; a última asserção reprova.
-    """
+    """No rádio o report tem de ir pelo `writeReport`, não cru no `device`."""
     from hefesto_dualsense4unix.core.ds_output_report import bt_crc32
 
     handle = _handle(mudo=True, transporte="bt")
@@ -315,22 +251,8 @@ def test_no_radio_a_repintura_sai_carimbada_e_com_crc() -> None:
     ), "CRC recalculado DEPOIS do carimbo — senão o firmware descarta"
 
 
-# ---------------------------------------------------------------------------
-# 4. As três recusas: sem posse, no escuro e no Modo Nativo
-# ---------------------------------------------------------------------------
-
-
 def test_devolver_o_que_ja_e_do_kernel_nao_escreve_nada() -> None:
-    """A devolução continua IDEMPOTENTE — repintar sem posse é escrever por cima.
-
-    `devolver_a_luz_ao_kernel` varre a mesa inteira e é chamada em transição de
-    perfil; se cada passagem tomasse a posse por um report só para devolvê-la,
-    estaríamos escrevendo por cima do kernel sem ter o que corrigir — que é a
-    forma exata do defeito do `3d9bb7e`, no byte vizinho.
-
-    MORDIDA: apagar a guarda de `_mic_led_desejado is None` — a segunda
-    devolução passa a entregar um report e esta régua reprova.
-    """
+    """A devolução continua IDEMPOTENTE — repintar sem posse é escrever por cima."""
     handle = _handle(mudo=True)
     backend = _backend({_A: handle})
 
@@ -345,21 +267,7 @@ def test_devolver_o_que_ja_e_do_kernel_nao_escreve_nada() -> None:
 
 
 def test_sem_leitura_do_firmware_a_luz_e_deixada_apagada() -> None:
-    """O controle que nunca reportou: repinta-se `0`, e NUNCA `1`.
-
-    A escolha é assimétrica de propósito e o custo está no docstring de
-    `_repintar_antes_de_soltar`. Na convenção do kernel `1` = MUDO: pintar `1`
-    no escuro faria a luz afirmar *"você está mudo"* sobre um microfone que
-    pode estar vivo — ela calaria achando que ninguém a ouve. `0` erra na
-    direção barata, e o primeiro toque no botão põe tudo no lugar.
-
-    Não repintar não é alternativa: deixaria no plástico o `2`/`3` que o kernel
-    jamais escreveria.
-
-    MORDIDA: fazer o desconhecido virar `bool(None) -> False -> 0` por acidente
-    passa; o que reprova é trocar a política para `1` no escuro, ou desistir de
-    escrever quando a leitura falta (a primeira asserção cai).
-    """
+    """O controle que nunca reportou: repinta-se `0`, e NUNCA `1`."""
     handle = _handle(mudo=None)
     backend = _backend({_A: handle})
     backend.set_microphone_led(2, uniq=_A)
@@ -376,14 +284,7 @@ def test_sem_leitura_do_firmware_a_luz_e_deixada_apagada() -> None:
 
 
 def test_no_modo_nativo_a_devolucao_nao_toca_o_hidraw() -> None:
-    """Com o Modo Nativo ligado o JOGO é o dono do hidraw — não se escreve.
-
-    FEAT-NATIVE-OUTPUT-MUTE-01. A posse do byte volta ao kernel do mesmo jeito
-    (é só estado nosso), mas nenhum report sai por cima do jogo.
-
-    MORDIDA: tirar a guarda de `_output_muted` — um report nosso aparece no fio
-    de um controle que o jogo está dirigindo, e esta régua reprova.
-    """
+    """Com o Modo Nativo ligado o JOGO é o dono do hidraw — não se escreve."""
     handle = _handle(mudo=True)
     backend = _backend({_A: handle})
     backend.set_microphone_led(2, uniq=_A)
@@ -394,21 +295,8 @@ def test_no_modo_nativo_a_devolucao_nao_toca_o_hidraw() -> None:
     assert handle._mic_led_desejado is None
 
 
-# ---------------------------------------------------------------------------
-# 5. O que a devolução NÃO faz
-# ---------------------------------------------------------------------------
-
-
 def test_a_repintura_nao_encosta_no_byte_do_mudo() -> None:
-    """`common[9]` é campo de outro dono, e as três recusas medidas são sobre ele.
-
-    BT-E-VPAD-01, MIC-BT-DONO-01, MIC-DOIS-DONOS-01. Repintar a LUZ não pode
-    mutar nem desmutar nada — nem mesmo por tabela, autorizando o
-    `POWER_SAVE_CONTROL_ENABLE` sem valor.
-
-    MORDIDA: forçar uma borda do kernel escrevendo o `common[9]` na repintura
-    (a ideia tentadora que a §3 da spec proíbe) — esta régua reprova.
-    """
+    """`common[9]` é campo de outro dono, e as três recusas medidas são sobre ele."""
     handle = _handle(mudo=True)
     backend = _backend({_A: handle})
     backend.set_microphone_led(2, uniq=_A)
@@ -424,27 +312,11 @@ def test_a_repintura_nao_encosta_no_byte_do_mudo() -> None:
 
 @pytest.mark.parametrize("aceso", [True, False, 0, 1, 2, 3])
 def test_tomar_a_posse_continua_sem_escrever_por_conta_propria(aceso: Any) -> None:
-    """A cura é da DEVOLUÇÃO — acender não pode virar escrita avulsa.
-
-    Quem escreve em regime é a thread de report, com o dedup que evita
-    reafirmar o mesmo valor por cima do kernel a cada ciclo (o defeito do
-    `3d9bb7e`). Se a repintura escapasse para o caminho de acender, cada tique
-    da PEÇA C viraria um write avulso.
-
-    MORDIDA: chamar `_repintar_antes_de_soltar` fora do `aceso is None` — esta
-    régua reprova em todos os seis casos.
-    """
+    """A cura é da DEVOLUÇÃO — acender não pode virar escrita avulsa."""
     handle = _handle(mudo=True)
     backend = _backend({_A: handle})
     backend.set_microphone_led(aceso, uniq=_A)
     assert handle.device.escritos == []
-
-
-# ---------------------------------------------------------------------------
-# 6. OS TRÊS CAMINHOS DA §2 — a repintura não pode valer só para quem chama o
-#    backend direto. As duas réguas abaixo atravessam o handler do IPC e a
-#    palavra da CLI até o FIO, com o controller de verdade no meio.
-# ---------------------------------------------------------------------------
 
 
 class _DaemonDeMentira:
@@ -466,16 +338,7 @@ class _DaemonDeMentira:
 
 
 def test_o_ipc_com_aceso_null_faz_a_repintura_chegar_ao_fio() -> None:
-    """`mic.led.set {aceso: null}` entrega o report da repintura. Ponta a ponta.
-
-    O segundo dos três caminhos da §2. O handler faz UMA chamada ao backend e
-    é de propósito: se ele repintasse por conta própria, cada caminho novo
-    teria de repetir a cura. Esta régua prova que a chamada única basta.
-
-    MORDIDA: tirar a chamada a `_repintar_antes_de_soltar` do
-    `set_microphone_led` — o `status` continua `"ok"` (o handler não sabe da
-    diferença) e o fio fica vazio; a asserção do report reprova.
-    """
+    """`mic.led.set {aceso: null}` entrega o report da repintura. Ponta a ponta."""
     import asyncio
 
     handle = _handle(mudo=True)
@@ -500,18 +363,7 @@ def test_o_ipc_com_aceso_null_faz_a_repintura_chegar_ao_fio() -> None:
 
 
 def test_o_led_release_da_cli_e_a_palavra_que_chega_ao_fio() -> None:
-    """`mic led-release` → `aceso: null` → repintura entregue. O 3º de PRONTO É.
-
-    O primeiro dos três caminhos da §2, e ele é casca sobre o IPC: a CLI não
-    escreve no aparelho, ela traduz a PALAVRA em `None` e manda. Por isso a
-    régua parte do dicionário de ações do produto — se alguém trocar
-    `led-release` por `False` (o defeito do `3d9bb7e`, no byte vizinho), a
-    primeira asserção cai antes de qualquer report.
-
-    MORDIDA: mapear `"led-release"` para `False` em `_ACOES_LED` — o `aceso`
-    do payload deixa de ser `None`, a posse não é devolvida e as duas últimas
-    asserções reprovam.
-    """
+    """`mic led-release` → `aceso: null` → repintura entregue. O 3º de PRONTO É."""
     import asyncio
 
     from hefesto_dualsense4unix.cli.cmd_mic import _ACOES_LED
@@ -522,8 +374,6 @@ def test_o_led_release_da_cli_e_a_palavra_que_chega_ao_fio() -> None:
         "posse mantida, e confundir os dois é o defeito do `3d9bb7e`"
     )
 
-    # O payload é montado como o `_mic_led` monta: `{"aceso": ...}` e o `uniq`
-    # só quando ele existe. Daqui para baixo o caminho é o mesmo do IPC.
     payload: dict[str, Any] = {"aceso": aceso, "uniq": _A}
 
     handle = _handle(mudo=False)

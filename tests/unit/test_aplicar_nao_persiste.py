@@ -1,46 +1,4 @@
-"""APLICAR-NAO-PERSISTE-01 — o botão que a documentação dizia que salvava.
-
-`docs/usage/interface.md`, na seção **O rodapé**, dizia que *"**Aplicar**,
-**Salvar Perfil**, **Importar** e **Restaurar Default** persistem o que está
-editado para o perfil corrente"*. Para três dos quatro é verdade. Para o
-**Aplicar** — o botão mais usado da janela — é falso: ele despacha
-`profile.apply_draft` pelo IPC e **não abre arquivo nenhum**. O efeito é no
-aparelho, e some no próximo perfil que entrar.
-
-Era a linha que a documentação usava para dizer a ela **onde o trabalho fica
-salvo**. O erro custa um perfil: ajustar, apertar Aplicar, ver o controle
-obedecer e fechar a janela.
-
-O que estes testes travam:
-
-- **o `on_apply_draft` continua sem escrever em disco.** É o que sustenta a
-  frase nova; sem esta asserção, um `save_profile` colado ali passa calado e a
-  documentação vira mentira ao contrário;
-- **e continua despachando pelo IPC** — se ele parar de fazer isso, o botão
-  deixou de ser o que a tabela descreve;
-- **os outros três continuam gravando**, e pelo funil único
-  (`GRAVA-POR-UM-FUNIL-01`): a tabela promete "sim" para eles;
-- **a tabela do documento não volta a prometer persistência no Aplicar.**
-  O `interface.md` saiu com a janela antiga; a tabela dos botões mora hoje na
-  página das dez abas (`AS-DEZ-ABAS-o-que-cada-uma-faz.md`), e é ela que se lê.
-
-A mordida: colando uma gravação dentro do `on_apply_draft` — ou devolvendo a
-frase antiga à página das abas — os testes reprovam nomeando o que quebrou.
-
-Nada aqui abre GTK, socket ou controle: é leitura do fonte com `ast` e do
-documento.
-
-E a leitura é do ARQUIVO, não do módulo importado. A distinção não é estilo:
-`app/actions/footer_actions.py` puxa `app/gui_dialogs.py`, que faz `import gi`
-sem guarda (`gui_dialogs.py:16`). No perfil do CI — `setup-python`, que não
-enxerga o `dist-packages` onde moram `PyGObject` e `pycairo` — esse import
-derrubava a COLETA deste módulo, e os quatro testes daqui sumiam sem reprovar
-nada. Medido em 15/08/2026: era o `ERROS=1` do passo "Censo de coleta".
-
-O teste que analisa texto não precisa executar o texto — e esta docstring
-prometia isso desde o primeiro dia, enquanto a linha de import dizia o
-contrário.
-"""
+"""APLICAR-NAO-PERSISTE-01 — o botão que a documentação dizia que salvava."""
 
 from __future__ import annotations
 
@@ -55,8 +13,6 @@ FOOTER_ACTIONS_PY = (
     REPO_ROOT / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "footer_actions.py"
 )
 
-#: Toda forma de deixar bytes no disco que este módulo tem à mão. Se o
-#: `on_apply_draft` chamar qualquer uma, a linha "não persiste" caducou.
 GRAVACOES = (
     r"\bsave_profile\s*\(",
     r"\b_gravar_perfil_async\s*\(",
@@ -69,13 +25,9 @@ GRAVACOES = (
 )
 
 
-#: O caminho INTEIRO do botão verde. O `on_apply_draft` virou despachante em
-#: AGORA-E-DEPOIS-01: quem monta e envia o payload é o `_apply_draft_agora`, e
-#: uma gravação escondida ali seria tão invisível quanto no handler.
 CAMINHO_DO_APLICAR = ("on_apply_draft", "_aplicar_escolha_pendente", "_apply_draft_agora")
 
 
-#: A classe onde os quatro botões do rodapé moram.
 MIXIN = "FooterActionsMixin"
 
 
@@ -126,12 +78,8 @@ def test_aplicar_despacha_pelo_ipc() -> None:
     )
 
 
-#: O funil único por onde TODA gravação de perfil passa (GRAVA-POR-UM-FUNIL-01,
-#: `actions/profile_writer.py`).
 FUNIL = "_gravar_perfil_async"
 
-#: Os três botões que gravam e o degrau deste módulo por onde cada um chega ao
-#: funil. Nenhum deles chama `save_profile` na mão — daí a indireção.
 QUEM_GRAVA_E_POR_ONDE = {
     "on_save_profile": "_persist_profile_async",
     "on_import_profile": "_import_save_async",
@@ -147,7 +95,7 @@ def test_os_outros_tres_gravam_pelo_funil() -> None:
             "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md promete 'sim' para ele"
         )
         if degrau == FUNIL:
-            continue  # este já É o funil
+            continue
         assert re.search(rf"\b{FUNIL}\s*\(", _fonte(degrau)), (
             f"`{degrau}` deixou de passar pelo funil `{FUNIL}` — GRAVA-POR-UM-FUNIL-01"
         )

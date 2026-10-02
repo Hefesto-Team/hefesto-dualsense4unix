@@ -1,22 +1,4 @@
-"""T11, CONFIGURAÇÕES-FECHA-01 — todo campo do caderno tem dono fora da aba.
-
-O defeito mais caro desta casa é a cura escrita e nunca ligada
-(`_refresh_config_controles` pendurado em `30b2d57`; `MaquinaConfig.ambiente`
-sem escritor nem leitor, achado da T1/T2 desta mesma sprint). O portão que
-pegou o primeiro caso é estreito — `NOME_DO_REFRESH` cruzado com
-`_REFRESH_POR_ABA` — e cobre só um refresher, não o caderno inteiro.
-
-Este arquivo generaliza: **todo campo de `MesaDeclarada`, `ControleDeclarado`
-e `OrcamentoDeclarado` tem de ter um consumidor de PRODUÇÃO fora de
-`app/actions/config/` e de `utils/maquina.py` (algo que MUDA comportamento,
-não só repinta o widget que a pessoa acabou de clicar), OU uma isenção
-NOMEADA neste arquivo.** Isenção com nome é decisão registrada; ausência é o
-defeito que este portão existe para pegar.
-
-A lista de campos é lida DINAMICAMENTE dos `model_fields` do pydantic — um
-campo novo no esquema entra na conta sozinho, sem editar este arquivo (mesmo
-desenho de `secoes.SECOES`, `secoes.py:38`).
-"""
+"""T11, CONFIGURAÇÕES-FECHA-01 — todo campo do caderno tem dono fora da aba."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,58 +12,36 @@ from hefesto_dualsense4unix.utils.maquina import (
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src/hefesto_dualsense4unix"
 
-#: campo → citação ``arquivo/relativo/a/src.py:algo`` do consumidor de
-#: PRODUÇÃO — fora de ``app/actions/config/`` e de ``utils/maquina.py``.
-#: Verificado por baixo: o arquivo existe e contém o `algo` citado.
 CONSUMIDOR_DE_PRODUCAO: dict[str, str] = {
     "controles.microfone": "daemon/subsystems/bt_mic.py:def uniqs_declarados",
-    # O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026): quem lê é a ativação do
-    # perfil (`manager._perfil_na_economia`), por este leitor.
     "controles.economia": "profiles/schema.py:def controles_em_economia",
-    # O-MUDO-E-DO-CONTROLE-01 (28/09/2026): o mudo do microfone é do controle;
-    # quem o lê é a reconexão e o nascimento, pelo gerente de perfis.
     "controles.microfone_mudo": "profiles/manager.py:def _mudo_do_controle",
-    # O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026): o nome que ela deu volta
-    # como ``Alias`` do BlueZ em todo ``Pair`` e em toda conexão.
     "controles.nome": "integrations/central_do_radio.py:def cuidar_dos_nomes",
     "orcamento.teto": "core/rumble.py:def _orcamento_declarado",
-    # T3, CONFIGURAÇÕES-FECHA-01 (24/08/2026): o exame da mesa passou a
-    # RECEBER a declaração por argumento e a citar o que falta declarar.
     "mesa.altura_da_antena": "integrations/exame_da_mesa.py:def vizinhanca_das_portas",
     "mesa.linha_de_visada": "integrations/exame_da_mesa.py:def vizinhanca_das_portas",
 }
 
-#: campo → motivo NOMEADO da isenção. Sem consumidor de produção HOJE — a
-#: pergunta se deveria ter um é dela, e está registrada em §9 do
-#: CONFIGURAÇÕES-FECHA-01 (24/08/2026).
 #: sai com: AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01
 ISENTOS: dict[str, str] = {
     "mesa.radios": (
         "RadioDeclarado.tipo/apelido só repintam a própria seção "
-        "(secao_mesa.py:939, achado da CENTRAL-SEM-TELA-01) — sem "
+        "(secao_mesa.py:610, achado da CENTRAL-SEM-TELA-01) — sem "
         "consumidor fora dela hoje"
     ),
     "controles.modo": (
-        "só repinta external_card.py:347 — se deveria trocar o glifo dos "
+        "só repinta external_card.py:246 — se deveria trocar o glifo dos "
         "botões em outras abas é pergunta dela (CONFIG-06, §9 desta sprint)"
     ),
     "controles.botoes": (
-        "só repinta external_card.py:363 — mesma pergunta aberta de "
+        "só repinta external_card.py:262 — mesma pergunta aberta de "
         "controles.modo"
     ),
     "controles.cor": (
-        "só repinta a borda do próprio card (secao_controles.py:791,803) — "
+        "só repinta a borda do próprio card (secao_controles.py:496,803) — "
         "achado NOVO da T11 desta sprint, fora do censo original da T1: a "
         "cor declarada nunca chega a um consumidor fora da seção"
     ),
-    # ORDEM-DE-SERVIÇO-01 · ORDEM-6 (25/08/2026). ISENÇÃO COM PRAZO, e o
-    # consumidor já existe — só não está LIGADO ainda:
-    # `ordens_da_mesa.ordens_novas` e `ordens_caladas` leem exatamente este
-    # campo, e têm bateria própria em `test_a_ordem_confirma_que_ela_moveu.py`.
-    # O que falta é a seção chamá-las, e isso é `secao_exame.py` — texto novo
-    # na tela e dois botões, que PROVA-DE-TELA-01 manda passar pelo olho dela
-    # ANTES. Quando a seção ligar, esta entrada sai daqui e vira
-    # CONSUMIDOR_DE_PRODUCAO apontando para `integrations/ordens_da_mesa.py`.
     "mesa.ordens_dispensadas": (
         "o leitor existe e é testado (ordens_da_mesa.ordens_novas / "
         "ordens_caladas) — falta a seção do exame chamá-lo, e essa metade "

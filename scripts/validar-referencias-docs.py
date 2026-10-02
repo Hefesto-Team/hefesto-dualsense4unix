@@ -1,131 +1,5 @@
 #!/usr/bin/env python3
-"""Reprova documento que cita arquivo, variável de ambiente ou método IPC que
-não existe.
-
-Motivação (sprint PORTÃO-VIVO-01, bloco F): a documentação deste projeto
-descreve garantias que ninguém verifica. O caso canônico está em
-`docs/adr/011-glyphs-vs-emojis.md`, que afirma duas vezes que o hook
-"guardian.py" cobre os proibidos -- e esse arquivo não existe nesta árvore.
-Uma decisão arquitetural inteira se apoia num arquivo imaginário.
-
-Filosofia deste portão: FALSO POSITIVO EM MASSA TORNA O GATE INÚTIL. Por isso
-ele é deliberadamente conservador em todas as três regras.
-
-REGRA 1 -- ARQUIVO (nasceu na PORTÃO-VIVO-01, vale para `docs/` inteiro)
-
-  - o texto precisa estar dentro de crase (`assim`) ou ser o alvo de um link
-    markdown no formato [texto](alvo);
-  - precisa terminar numa extensão da casa (.py, .sh, .md, .yml, .yaml, .toml,
-    .glade, .rules);
-  - nome solto, sem barra, só é cobrado para .py e .sh -- código executável que
-    ou está no repositório ou não está. Nome solto de configuração
-    (`daemon.toml`, `controllers.json`) é artefato de tempo de execução que
-    vive em ~/.config, e por isso fica de fora;
-  - caminho absoluto (/etc/...), caminho de HOME (~/...), variável de shell
-    ($VAR), URL, glob e placeholder entre sinais de menor e maior são
-    ignorados;
-  - bloco de código cercado por três crases é ignorado inteiro: ali mora
-    comando de terminal, não referência a arquivo do repositório.
-
-  A verificação aceita SUFIXO: `gui/main.glade` casa com o caminho real
-  `src/hefesto_dualsense4unix/gui/main.glade`, porque a casa cita caminho
-  encurtado o tempo todo e cobrar o caminho completo seria ruído puro.
-
-  LINK QUE SOBE (`../`) -- curado em 07/08/2026, autorizado por ela.
-
-  Até esta data a linha de filtro descartava TODO token que contivesse `..`, e
-  com isso os 246 links `../` desta árvore podiam apodrecer sem que portão
-  nenhum falasse. MEDIDO por arrancamento: trocado o alvo do link do
-  LUGAR-À-MESA-01 em `docs/usage/modos.md` por um nome inexistente, o portão
-  respondeu "OK: 1 documento(s) sem referência morta" e saiu 0.
-
-  O motivo da exclusão original também foi MEDIDO, sondando a árvore inteira
-  sem o filtro: dos 249 tokens com `..`, 246 eram link de subida legítimo e os
-  outros três eram RETICÊNCIA DE ELISÃO -- `.../painel-de-decisoes.md`,
-  `.venv/lib/.../pydualsense/enums.py` e
-  `2026-08-05-TRAVA-QUE-SOLTA-TARDE-01-...md`. É isso que o `..` segurava, e o
-  terceiro ponto do `...` é a única coisa que separa os dois casos.
-
-  Por isso a cura NÃO reabre o buraco: `..` só passa em PREFIXO DE SUBIDA BEM
-  FORMADO (`../`, `../../`, ...), conferido por `_SUBIDA`. Reticência em
-  qualquer posição, e `..` no meio do caminho (`docs/../scripts/x.sh`),
-  continuam descartados como antes.
-
-  Link de subida NÃO ganha a leniência de sufixo: quem escreve `../` está
-  afirmando uma posição exata no disco, e ela se confere resolvendo o caminho
-  contra a pasta do próprio documento. Se a resolução SAIR da árvore, é achado:
-  não há link legítimo, dentro do repositório, para acima da raiz dele.
-
-  O `cria:` DO PRÓPRIO DOCUMENTO -- decisão dela, 29/08/2026.
-
-  Sprint é proposta: ela nomeia os testes e os módulos que vai escrever QUANDO
-  FOR EXECUTADA, e até lá esses arquivos não existem. Medido em 29/08, este
-  portão era o único vermelho dos 28: das 125 linhas que acusava, 116 eram
-  arquivos que a própria sprint declara criar no `cria:` do frontmatter. O
-  portão estava cobrando do futuro o presente -- o mesmo erro que
-  `PREFIXOS_IGNORADOS` já corrige para o passado.
-
-  A cura: o `cria:` do frontmatter entra como índice, expandido em sufixos
-  igual ao índice do disco, e passa pelas MESMAS duas conferências (resolução
-  posicional e leniência de sufixo). Nada de caminho novo, nada de leniência
-  nova -- só uma segunda fonte para o mesmo conjunto.
-
-  E ela vale SÓ para o documento que está sendo varrido. Ler o `cria:` de
-  qualquer sprint viraria licença geral: bastaria uma sprint em qualquer canto
-  declarar um nome para autorizar esse nome na árvore inteira, e a regra 1
-  morreria. Por isso citar arquivo que NINGUÉM declarou criar continua
-  reprovando, e citar arquivo que OUTRA sprint declara também -- é o que
-  restou dos 125, e está descrito no relatório da frente.
-
-  Pasta declarada (`docs/data/`) NÃO cobre o que está dentro dela: candidato
-  precisa de extensão para chegar até aqui, então uma pasta nunca casa, e
-  inventar cobertura por pasta seria leniência que ninguém mediu precisar.
-
-REGRA 2 -- VARIÁVEL DE AMBIENTE (sprint DOC-VERDADE-02, entrega E10)
-
-  Token entre crases no formato `HEFESTO_[A-Z0-9_]+` conferido contra os
-  literais que existem no CÓDIGO (`src/`, `scripts/`, `assets/`, instaladores,
-  empacotamento). Foi por este buraco que o ADR-017 passou anos ensinando
-  `HEFESTO_PLUGINS_ENABLED` -- variável que nunca existiu, enquanto a real é
-  `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED`. Variável de ambiente não é arquivo,
-  e por isso a regra 1 era cega a ela.
-
-REGRA 3 -- MÉTODO DE IPC (sprint DOC-VERDADE-02, entrega E10)
-
-  Token entre crases no formato `a.b` ou `a.b.c`, todo em minúsculas, cujo
-  PRIMEIRO segmento seja um espaço de nomes que existe de fato no dicionário
-  `_handlers` de `daemon/ipc_server.py` (lido por AST, sem importar o pacote) e
-  cujo token completo NÃO esteja registrado ali. Assim `ctx.controller` nunca é
-  cobrado -- `ctx` não é espaço de nomes de IPC -- e `daemon.toml`/`daemon.pid`
-  saem pelo filtro de extensão de arquivo (`SUFIXOS_DE_ARQUIVO`).
-
-ESCOPO DAS REGRAS 2 E 3: só os documentos que ENSINAM (`PREFIXOS_QUE_ENSINAM`:
-`docs/usage/`, `docs/adr/`, `docs/protocol/` e o `README.md`). `docs/process/`
-fica de fora POR ESCRITO: sprint é registro de proposta, e propor um método que
-ainda não existe (`controller.player.set` na PLAYER-01, `identity.alias.set` na
-IDENT-01) é o trabalho dela, não defeito. A própria DOC-VERDADE-02 cita 16
-vezes as três variáveis mortas que mandou matar -- cobrar dela seria cobrar o
-diagnóstico de conter o diagnosticado.
-
-Escapes, para o portão não virar impossível de satisfazer:
-  - `EXTERNOS`, abaixo: nomes de arquivo que pertencem a projetos de fora;
-  - marcador de linha `<!-- ref-externa -->` (ou `<!-- ref-externa: motivo -->`)
-    no próprio documento, para a linha que fala de um ausente DE PROPÓSITO --
-    por exemplo `docs/usage/metrics.md`, que existe justamente para dizer que
-    `HEFESTO_DUALSENSE4UNIX_METRICS` não existe. Vale para as três regras;
-  - NOTA DE VERIFICAÇÃO DATADA (só regras 2 e 3): se o token aparece em algum
-    ponto do documento a partir de um cabeçalho "Nota de verificação", o
-    documento inteiro fica isento daquele token. É o padrão desta casa para ADR
-    -- não se reescreve a decisão original, acrescenta-se a nota datada que diz
-    o que mudou (ver `docs/adr/003-udp-port-6969-compat.md`). Sem esta isenção
-    o portão reprovaria exatamente quem fez a correção certa, e um gate que
-    castiga a honestidade é pior que gate nenhum.
-
-Uso:
-    python3 scripts/validar-referencias-docs.py --all
-    python3 scripts/validar-referencias-docs.py docs/adr/011-glyphs-vs-emojis.md
-    python3 scripts/validar-referencias-docs.py --root /outro/repo --all
-"""
+"""Reprova documento que cita arquivo, variável de ambiente ou método IPC que"""
 from __future__ import annotations
 
 import argparse
@@ -136,17 +10,12 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
-#: Extensões que contam como "arquivo desta casa" quando o texto tem barra.
 EXTENSOES = frozenset(
     {".py", ".sh", ".md", ".yml", ".yaml", ".toml", ".glade", ".rules"}
 )
 
-#: Extensões cobradas também quando o nome vem solto, sem nenhuma barra.
-#: Restrito a código executável de propósito: é o que gera afirmação falsa do
-#: tipo "o hook guardian.py cobre isso".
 EXTENSOES_NOME_SOLTO = frozenset({".py", ".sh"})
 
-#: Diretórios que não entram no índice de arquivos existentes.
 DIRS_IGNORADOS = frozenset(
     {
         ".git",
@@ -165,53 +34,18 @@ DIRS_IGNORADOS = frozenset(
     }
 )
 
-#: Documentos que não são varridos. `history/` e `research/` são arquivo morto
-#: por definição -- descrevem o repositório como ele era, e cobrar deles o
-#: presente é cobrar o impossível. É a mesma exclusão que o gate de acentuação
-#: já aplica no .pre-commit-config.yaml.
-#:
-#: `process/agentes/` entrou em 06/08/2026 pelo mesmo motivo, e por mais um: é
-#: saída BRUTA de agente, e um relatório cita o caminho que existia no instante
-#: da medição — às vezes em `/tmp`, às vezes num arquivo que a própria leva
-#: depois renomeou. Corrigir esses caminhos falsificaria o registro; cobrá-los
-#: seria cobrar do passado o presente. O que NÃO é isento ali é segurança:
-#: `tests/unit/test_saida_de_agente_sanitizada.py` varre MAC e segredo.
-#: `process/arquivo/` entrou em 24/08/2026 e herda a isenção pela mesma razão,
-#: um degrau adiante: é onde a leva de hoje passou a recolher o que ninguém
-#: mais alcança por navegação (o primeiro lote foram os 57 relatórios de agente
-#: de 06/08, órfãos havia 18 dias). Mover não é apagar — a decisão medida
-#: continua no git e no lugar novo —, mas o conteúdo movido é registro do
-#: passado pelo mesmo motivo que o de `agentes/`: cobrar dele o presente é
-#: cobrar o impossível. Sem esta linha, mover um relatório para cá o tornaria
-#: subitamente reprovável por caminhos que ele nunca teve como manter.
 PREFIXOS_IGNORADOS = (
     "docs/history/",
     "docs/research/",
-    # `docs/process/` INTEIRA desde 15/09/2026: ela saiu do repositório e ficou
-    # no disco dela (ver `FORA_DO_GIT`). O varredor anda pelo DISCO, não pelo
-    # git — sem esta linha ele continuaria cobrando do que não é mais do
-    # repositório, e acusaria um documento que ninguém mais tem como manter.
     "docs/process/",
 )
 
-#: Arquivos que existem, mas em OUTRO projeto. Citar `pydualsense.py` é citar a
-#: biblioteca de terceiros; citar `universal-sanitizer.py` é citar a ferramenta
-#: do ambiente da máquina. Nenhum dos dois deveria estar versionado aqui.
 EXTERNOS = frozenset(
     {
         "pydualsense.py",
         "universal-sanitizer.py",
         "setup.py",
         "conftest.py",
-        # AS FONTES DA PESQUISA DE CANAIS DE RÁDIO — 31/08/2026. Os três
-        # documentos `fontes-r1/r2/r3.md` citam o código dos projetos que
-        # foram LIDOS para conferir o protocolo: o `hid-playstation` do
-        # kernel, o `xpadneo`, o `8bitdo-spec`, o `Pro2`. Citar o arquivo é
-        # citar a fonte, e a fonte é o ponto do documento — ela não deveria
-        # estar versionada aqui.
-        #
-        # Sem estas linhas, 34 referências legítimas contam como mortas, e a
-        # reação natural a um portão que acusa quem está certo é desligá-lo.
         "sony_gamepad.py",
         "checksum.py",
         "enums.py",
@@ -225,28 +59,9 @@ EXTERNOS = frozenset(
     }
 )
 
-#: Os DIRETÓRIOS de projeto externo. Um `README.md` não se distingue pelo nome —
-#: `Pro2/README.md` e `SwitchMode/README.md` são do `8bitdo-spec`, e pôr
-#: `README.md` na lista acima perdoaria o desta casa também.
 EXTERNOS_POR_PASTA = ("Pro2/", "SwitchMode/", "SN30ProPlus/", "xpadneo/",
                       "8bitdo-spec/", "tests_kernel/")
 
-#: O QUE MORA NO DISCO E NÃO VIAJA NO GIT — 15/09/2026, ordem dela: *"Remova
-#: tudo. Arquivos de estudo, esses com metalinguagem e afins. Deixa local vou
-#: compartilhar os arquivos com o André."*
-#:
-#: `docs/process/` saiu do repositório e FICOU no disco dela. As **800**
-#: citações que o resto da árvore faz a ela continuam certas — elas dizem de
-#: onde veio cada cura, e quem tem os arquivos as segue. Apagá-las seria apagar
-#: a procedência de 328 arquivos para agradar uma régua.
-#:
-#: A DIFERENÇA PARA AS DUAS LISTAS ACIMA, e ela é o ponto: `EXTERNOS` é de
-#: arquivo que nunca morou aqui (projeto de fora) e `APOSENTADOS` é de arquivo
-#: que morou e SUMIU. Este é de arquivo que morou, continua no disco e deixou
-#: de ser versionado — por isso a guarda dele é outra, e mede o `git ls-files`
-#: em vez do disco: `conferir_fora_do_git()` reprova se um caminho daqui
-#: VOLTAR a ser rastreado. Sem ela, versionar `docs/process/` de novo deixaria
-#: as citações dela sem conferência para sempre.
 FORA_DO_GIT: dict[str, str] = {
     "docs/process/": (
         "os arquivos de estudo e de metalinguagem. Saíram do git em 15/09/2026 "
@@ -287,32 +102,6 @@ def conferir_fora_do_git(raiz: Path) -> list[str]:
             )
     return problemas
 
-#: OS ARQUIVOS QUE A CASA APOSENTOU POR DECISÃO — 06/09/2026, sprint `GTK-3`.
-#:
-#: São artefatos que EXISTIRAM nesta árvore e foram apagados por decisão dela
-#: (`D-0609-GTK-LEVA-INTEIRA`): *"a ideia sempre foi reaproveitar o que fiz no
-#: gtk e não apontar nada mais pra lá mas pro html"*. A janela GTK saiu; o motor
-#: ficou.
-#:
-#: **POR QUE ELES NÃO SÃO REFERÊNCIA MORTA, e o número é a razão:** apagar os
-#: quatro artefatos deixou **783 citações** mortas em `docs/`, e todas são
-#: PROSA HISTÓRICA DATADA — um relatório de agosto contando o que se mediu no
-#: `main.glade`, uma decisão explicando por que a foto era tirada pelo
-#: `retratar_abas.py`. Esta casa não apaga registro (*"não se apaga decisão
-#: medida"*), e marcar 783 linhas uma a uma com `<!-- ref-externa: … -->` seria
-#: escrever a mesma frase 783 vezes para dizer o que uma linha aqui diz melhor:
-#: **o arquivo saiu, e a data está no git.**
-#:
-#: A DIFERENÇA PARA `EXTERNOS`, e ela é o ponto: `EXTERNOS` é de arquivo que
-#: NUNCA morou aqui (projeto de fora). Este é de arquivo que morou e saiu — e
-#: por isso ele tem uma guarda que `EXTERNOS` não precisa ter.
-#:
-#: **A GUARDA CONTRA APODRECER:** `conferir_aposentados()` reprova se um
-#: caminho declarado aqui VOLTAR a existir na árvore. Sem ela, um
-#: `gui/main.glade` recriado teria todas as suas citações deixadas de conferir
-#: para sempre — um typo no nome passaria batido, que é o defeito inteiro que
-#: este portão existe para pegar.
-#: A razão compartilhada dos cinco arquivos do estúdio de foto da janela.
 _ESTUDIO = (
     "o estúdio de fotografia da JANELA — os cinco arquivos de "
     "`scripts/gui-captura/`. Apagados em 06/09/2026 (GTK-3). Quem fotografa as "
@@ -320,8 +109,6 @@ _ESTUDIO = (
     "--publicado --doc`."
 )
 
-#: E a das oito réguas que mediam a janela e saíram com ela. As que mediam o
-#: MOTOR **não** estão aqui: essas ficaram, com o berço trocado.
 _REGUAS = (
     "régua da JANELA, apagada em 06/09/2026 (GTK-3) com a superfície que ela "
     "media. O veredito de cada uma, uma a uma, está em "  # (noqa-acento: verbo medir, imperfeito)
@@ -362,18 +149,6 @@ APOSENTADOS: dict[str, str] = {
         "`HefestoApp._ALVO_POR_ABA` — a fita da JANELA. Apagado em 06/09/2026 "
         "(GTK-3), junto com o passo do `ci.yml` que o rodava."
     ),
-    # AS SEIS RÉGUAS DO ESTÚDIO — 08/09/2026, e elas são o rastro que a GTK-3
-    # deixou. O Passo 2 daquela sprint apagou `scripts/gui-captura/`; o Passo 1
-    # ("os 62 testes, um a um") não alcançou estas. Ficaram dois dias
-    # VERMELHAS medindo um caminho que não existe — e vermelho constante num
-    # portão se lê como ruído e se desliga, que é o pior destino possível para
-    # uma régua de anonimato.
-    #
-    # A PERGUNTA FOI FEITA UMA A UMA, e não em massa (é a advertência que abre
-    # a própria GTK-3): *o que esta régua provava, e esse fato ainda importa?*
-    # Cinco das onze REAPONTARAM para `interface/olhar.py` e voltaram a morder;
-    # estas seis provavam coisa que só existia dentro da janela, e o herdeiro
-    # de cada uma está escrito na razão.
     "tests/unit/test_a_aba_perfis_na_foto.py": (
         "montava a aba Perfis da JANELA a partir do `.glade` e conferia que a "
         "foto dela não perguntava ao daemon. Apagada em 08/09/2026 — o widget "
@@ -422,13 +197,7 @@ APOSENTADOS: dict[str, str] = {
 
 
 def aposentado(texto: str) -> str | None:
-    """A razão de o caminho ter sido aposentado, ou None se ele não foi.
-
-    Compara pelo FIM do caminho porque `docs/` cita o mesmo arquivo de três
-    jeitos — `src/hefesto_dualsense4unix/gui/main.glade`, `gui/main.glade` e
-    `main.glade` —, que é a mesma leniência de sufixo que o portão já usa para
-    resolver caminho vivo.
-    """
+    """A razão de o caminho ter sido aposentado, ou None se ele não foi."""
     alvo = texto.lstrip("./")
     for caminho, razao in APOSENTADOS.items():
         if caminho.endswith("/"):
@@ -443,12 +212,7 @@ def aposentado(texto: str) -> str | None:
 
 
 def conferir_aposentados(raiz: Path) -> list[str]:
-    """Arquivo declarado APOSENTADO não pode estar de volta na árvore.
-
-    Lista de exceção que envelhece calada vira paisagem, e aqui o preço seria
-    alto: um `gui/main.glade` recriado teria as 302 citações dele deixadas de
-    conferir para sempre.
-    """
+    """Arquivo declarado APOSENTADO não pode estar de volta na árvore."""
     problemas: list[str] = []
     for caminho, razao in APOSENTADOS.items():
         if (raiz / caminho.rstrip("/")).exists():
@@ -461,18 +225,10 @@ def conferir_aposentados(raiz: Path) -> list[str]:
             )
     return problemas
 
-#: Marcador que a autora do documento pode escrever para dizer "eu sei que este
-#: arquivo não existe, e o assunto do parágrafo é exatamente esse".
 MARCADOR_ISENCAO = "<!-- ref-externa"
 
-#: Documentos que ENSINAM -- os únicos varridos pelas regras 2 (variável de
-#: ambiente) e 3 (método de IPC). Quem lê estes arquivos os copia para um
-#: terminal; quem lê `docs/process/` está lendo história e proposta.
 PREFIXOS_QUE_ENSINAM = ("docs/usage/", "docs/adr/", "docs/protocol/", "README.md")
 
-#: Onde o índice de variáveis de ambiente procura literais. Tudo o que EXECUTA:
-#: código, script, unit, empacotamento. Documento fica de fora de propósito --
-#: senão o documento validaria a si mesmo e a regra 2 nasceria morta.
 EXTENSOES_DE_CODIGO = frozenset(
     {
         ".py",
@@ -495,17 +251,8 @@ EXTENSOES_DE_CODIGO = frozenset(
     }
 )
 
-#: Arquivos sem extensão que ainda assim executam (o instalador, o desinstalador
-#: e o lançador ficam na raiz com `.sh`, mas o wrapper POSIX e o PKGBUILD não).
 NOMES_DE_CODIGO = frozenset({"PKGBUILD", "Makefile", "hefesto-launch"})
 
-#: Arquivos que NÃO alimentam o índice de variáveis de ambiente, ainda que
-#: sejam código. Mesmo princípio que o `.pre-commit-config.yaml` já aplica aos
-#: gates de acentuação e de glifos: o próprio validador e o teste dele precisam
-#: escrever os nomes mortos que detectam, e sem esta exclusão o portão
-#: autorizaria justamente o que existe para reprovar. Medido: sem ela,
-#: `HEFESTO_PLUGINS_ENABLED` e `HEFESTO_DUALSENSE4UNIX_METRICS` entravam no
-#: índice pelo cabeçalho DESTE arquivo e a regra 2 ficava cega aos dois.
 ARQUIVOS_FORA_DO_INDICE_DE_ENV = frozenset(
     {
         "scripts/validar-referencias-docs.py",
@@ -514,10 +261,6 @@ ARQUIVOS_FORA_DO_INDICE_DE_ENV = frozenset(
     }
 )
 
-#: Sufixos que descartam um token `a.b` como NOME DE ARQUIVO, não método IPC.
-#: `daemon.toml` e `daemon.pid` são os dois casos reais medidos na árvore de
-#: 31/07 -- o resto é margem barata contra o falso positivo que a regra 3 mais
-#: teme.
 SUFIXOS_DE_ARQUIVO = frozenset(
     {
         "py",
@@ -567,9 +310,6 @@ SUFIXOS_DE_ARQUIVO = frozenset(
     }
 )
 
-#: O registro de métodos vive aqui e é um `dict` de literais -- lido por AST,
-#: sem importar o pacote (importar exigiria as dependências instaladas, e o
-#: portão precisa rodar num runner pelado).
 FONTE_DOS_METODOS_IPC = "src/hefesto_dualsense4unix/daemon/ipc_server.py"
 
 _CRASE = re.compile(r"`([^`\n]{1,120})`")
@@ -580,26 +320,14 @@ _ENV = re.compile(r"\bHEFESTO_[A-Z0-9_]+")
 _METODO = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){1,2}$")
 _NOTA_DE_VERIFICACAO = re.compile(r"^#{1,6}\s*Nota de verifica", re.IGNORECASE)
 
-#: Prefixo de subida BEM FORMADO: um ou mais `../` colados no começo do token.
-#: Arrancar este prefixo e ainda achar `..` no resto denuncia reticência de
-#: elisão (`.../painel.md`, `.venv/lib/.../enums.py`, `FOO-01-...md`) ou `..` no
-#: meio do caminho -- as duas formas que a exclusão original segurava e que
-#: continuam descartadas.
 _SUBIDA = re.compile(r"^(?:\.\./)+")
 
-#: Frontmatter de sprint: a linha que abre e fecha o bloco, a chave de topo, o
-#: item de lista e o comentário colado no fim da linha (` # dona: A`). Só o
-#: `cria:` interessa aqui -- este portão não valida frontmatter, quem faz isso
-#: é `scripts/check_colisao_de_sprints.py`. A leitura é própria, e de
-#: propósito: um portão que importa o parser de outro portão herda as falhas
-#: dele, e este precisa rodar num runner pelado.
 _ABERTURA_DE_FRONTMATTER = "---"
 _CHAVE_DO_CRIA = "cria"
 _CHAVE_DE_TOPO = re.compile(r"^([a-z_]+):\s*(.*)$")
 _ITEM_DE_LISTA = re.compile(r"^\s+-\s+(.+)$")
 _COMENTARIO_INLINE = re.compile(r"\s+#.*$")
 
-#: Rótulo humano de cada regra, para o relatório dizer O QUE está morto.
 REGRA_ARQUIVO = "arquivo"
 REGRA_ENV = "variável de ambiente"
 REGRA_IPC = "método de IPC"
@@ -618,16 +346,7 @@ class Achado(NamedTuple):
 
 
 def indexar(raiz: Path) -> set[str]:
-    """Devolve todo caminho do repositório mais todos os seus sufixos.
-
-    Indexar sufixo é o que faz `gui/main.glade` casar com o caminho real
-    `src/hefesto_dualsense4unix/gui/main.glade`. Diretório entra junto: a
-    documentação cita `docs/process/sprints/` tanto quanto cita arquivo.
-
-    Percorre o disco em vez de perguntar ao git de propósito: `git ls-files` é
-    cego a arquivo novo ainda não adicionado ao índice, e o arquivo recém
-    criado é justamente o que a documentação acabou de passar a citar.
-    """
+    """Devolve todo caminho do repositório mais todos os seus sufixos."""
     sufixos: set[str] = set()
     for pasta, subpastas, arquivos in os.walk(raiz):
         subpastas[:] = [d for d in subpastas if d not in DIRS_IGNORADOS]
@@ -644,16 +363,7 @@ def indexar(raiz: Path) -> set[str]:
 
 
 def nomes_de_raiz(raiz: Path) -> set[str]:
-    """Os nomes de arquivo/pasta que moram NO TOPO do repositório.
-
-    Só ELES podem ser citados por nome solto (sem `/`) sem afirmar posição
-    nenhuma: `install.sh` não é um caminho ENCURTADO -- é o caminho INTEIRO,
-    porque o arquivo mora na raiz e não sobra diretório para encurtar. É o
-    que separa essa citação (legítima de QUALQUER documento, em qualquer
-    pasta) de um nome solto que só bate com o ÚLTIMO PEDAÇO de um caminho
-    mais fundo, tipo `2026-…-….md` para um arquivo que mora em
-    `docs/process/sprints/` -- ver AUDITORIA-DE-PERDA-01/E3.
-    """
+    """Os nomes de arquivo/pasta que moram NO TOPO do repositório."""
     try:
         return {p.name for p in raiz.iterdir() if p.name not in DIRS_IGNORADOS}
     except OSError:  # pragma: no cover - defensivo
@@ -661,12 +371,7 @@ def nomes_de_raiz(raiz: Path) -> set[str]:
 
 
 def indexar_envs(raiz: Path) -> set[str]:
-    """Todo literal `HEFESTO_*` que aparece em código, script ou empacotamento.
-
-    Documento NÃO entra: se `docs/` alimentasse o índice, um documento que
-    inventa uma variável passaria a se autoautorizar, e a regra 2 nasceria
-    morta. O índice é o que EXECUTA.
-    """
+    """Todo literal `HEFESTO_*` que aparece em código, script ou empacotamento."""
     encontrados: set[str] = set()
     for pasta, subpastas, arquivos in os.walk(raiz):
         subpastas[:] = [d for d in subpastas if d not in DIRS_IGNORADOS]
@@ -693,15 +398,7 @@ def indexar_envs(raiz: Path) -> set[str]:
 
 
 def indexar_metodos_ipc(raiz: Path) -> set[str]:
-    """As chaves do dicionário `_handlers` de `daemon/ipc_server.py`, por AST.
-
-    Ler por AST em vez de importar é deliberado: o portão roda em runner sem as
-    dependências do projeto instaladas, e um `ImportError` viraria "zero
-    métodos registrados" -- o que faria a regra 3 acusar TODO método citado. Um
-    gate que reprova tudo quando tropeça é pior que gate nenhum, então a
-    ausência do arquivo devolve conjunto vazio e a regra 3 se desliga sozinha
-    (ver `varrer_documento`).
-    """
+    """As chaves do dicionário `_handlers` de `daemon/ipc_server.py`, por AST."""
     fonte = raiz / FONTE_DOS_METODOS_IPC
     try:
         arvore = ast.parse(fonte.read_text(encoding="utf-8"))
@@ -723,12 +420,7 @@ def indexar_metodos_ipc(raiz: Path) -> set[str]:
 
 
 def _sufixos_de(caminho: str) -> set[str]:
-    """Todo sufixo de um caminho: `a/b/c.py` -> `a/b/c.py`, `b/c.py`, `c.py`.
-
-    A mesma expansão que `indexar` faz com o disco, para que o `cria:` case
-    com a citação encurtada -- a sprint declara `tests/unit/test_x.py` e o
-    corpo dela cita `test_x.py`, que é como esta casa escreve.
-    """
+    """Todo sufixo de um caminho: `a/b/c.py` -> `a/b/c.py`, `b/c.py`, `c.py`."""
     partes = caminho.split("/")
     return {
         "/".join(partes[corte:]) for corte in range(len(partes)) if partes[corte]
@@ -736,14 +428,7 @@ def _sufixos_de(caminho: str) -> set[str]:
 
 
 def _caminhos_do_valor(valor: str) -> list[str]:
-    """Os caminhos de um valor de frontmatter: lista inline ou escalar.
-
-    Aceita `[a.py, b.py]` e o escalar solto. De cada pedaço fica só o PRIMEIRO
-    trecho sem espaço, porque a casa comenta na própria linha
-    (`docs/data/ensaios.csv (três linhas, uma por perfil)`): o caminho é o
-    primeiro trecho, o resto é prosa. Prosa que não vira caminho é inofensiva
-    -- candidato só chega à conferência com extensão, e `nada` não tem.
-    """
+    """Os caminhos de um valor de frontmatter: lista inline ou escalar."""
     texto = valor.strip()
     if not texto:
         return []
@@ -762,16 +447,7 @@ def _caminhos_do_valor(valor: str) -> list[str]:
 
 
 def declarados_no_cria(conteudo: str) -> set[str]:
-    """Os arquivos que o frontmatter DESTE documento declara que vai criar.
-
-    Já expandidos em sufixos, prontos para as mesmas duas conferências que o
-    índice do disco atravessa. Documento sem frontmatter, sem `cria:`, ou com
-    frontmatter que nunca fecha, devolve conjunto vazio -- e aí a regra 1
-    continua exatamente como era antes de 29/08/2026.
-
-    Lê SÓ o `cria:`, e SÓ deste documento: é essa fronteira que impede a cura
-    de virar licença geral (ver o cabeçalho, REGRA 1).
-    """
+    """Os arquivos que o frontmatter DESTE documento declara que vai criar."""
     linhas = conteudo.splitlines()
     if not linhas or linhas[0].strip() != _ABERTURA_DE_FRONTMATTER:
         return set()
@@ -797,8 +473,6 @@ def declarados_no_cria(conteudo: str) -> set[str]:
                 for caminho in _caminhos_do_valor(chave.group(2)):
                     declarados |= _sufixos_de(caminho)
             continue
-        # Dentro de outra chave (o `posse:`, que aninha por agente) não se
-        # lê nada: só a lista do `cria:` conta.
         if not dentro_do_cria:
             continue
         item = _ITEM_DE_LISTA.match(sem_comentario)
@@ -809,13 +483,7 @@ def declarados_no_cria(conteudo: str) -> set[str]:
 
 
 def tokens_isentos_por_nota(conteudo: str) -> set[str]:
-    """Tokens citados a partir de um cabeçalho "Nota de verificação".
-
-    Padrão da casa para ADR: a decisão original não se reescreve; acrescenta-se
-    uma nota datada no fim dizendo o que caducou. Essa nota PRECISA nomear o
-    valor errado -- é a informação inteira dela. Sem esta isenção o portão
-    reprovaria justamente o documento que foi corrigido direito.
-    """
+    """Tokens citados a partir de um cabeçalho "Nota de verificação"."""
     linhas = conteudo.splitlines()
     inicio: int | None = None
     for indice, linha in enumerate(linhas):
@@ -860,29 +528,7 @@ def metodos_da_linha(linha: str, espacos_de_nomes: frozenset[str]) -> list[str]:
 
 
 def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
-    """Extrai da linha os textos com cara de caminho de arquivo.
-
-    Devolve `(texto, veio_de_crase)` -- a origem sai junto porque
-    `varrer_documento` volta a precisar dela (AUDITORIA-DE-PERDA-01/E3): um
-    nome solto entre crases é convenção desta casa, citado sem posição
-    nenhuma o tempo todo (`install.sh`, `secao_mesa.py`); o alvo de um link
-    markdown É uma posição -- `[texto](alvo)` afirma que o arquivo está bem
-    ali, relativo a quem escreveu -- e as duas formas não podem levar a
-    mesma leniência.
-
-    A origem importa também para o FILTRO: texto entre crases é ambíguo --
-    pode ser nome de módulo, de comando ou de conceito -- e por isso passa
-    pelo filtro estreito de `EXTENSOES_NOME_SOLTO`. Já o alvo de um link
-    markdown é inequívoco: quem escreve [texto](alvo) está afirmando que
-    existe algo naquele caminho. Um índice de sprints apontando para arquivo
-    que não existe é justamente um dos defeitos que a sprint mandou pegar, e
-    ele aparece só nessa forma.
-
-    Desde 07/08/2026 o token pode SUBIR (`../`, `../../`). Quem confere a
-    subida é `varrer_documento`, resolvendo contra a pasta do documento; aqui
-    só se separa o prefixo de subida bem formado da reticência de elisão, que
-    era o que a exclusão antiga de `..` de fato segurava (ver o cabeçalho).
-    """
+    """Extrai da linha os textos com cara de caminho de arquivo."""
     brutos = [(m.group(1), True) for m in _CRASE.finditer(linha)]
     brutos += [(m.group(1), False) for m in _LINK.finditer(linha)]
 
@@ -893,7 +539,6 @@ def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
             continue
         if texto.startswith(("http://", "https://", "mailto:", "#")):
             continue
-        # `arquivo.py:551-567` e `doc.md#secao` citam trecho: fica só o caminho.
         texto = texto.split(":", 1)[0].split("#", 1)[0]
         if texto.startswith("./"):
             texto = texto[2:]
@@ -903,8 +548,6 @@ def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
             continue
         if any(ruim in texto for ruim in ("*", "?", "<", ">", "{", "}")):
             continue
-        # `..` só vale como PREFIXO DE SUBIDA. Arrancado o prefixo, sobrar `..`
-        # significa reticência de elisão ou `..` no meio: descarta, como antes.
         if ".." in _SUBIDA.sub("", texto, count=1):
             continue
         if not _TOKEN_LIMPO.fullmatch(texto):
@@ -918,13 +561,8 @@ def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
             continue
         if Path(texto).name in EXTERNOS:
             continue
-        # APOSENTADO: o arquivo existiu e saiu por decisão. A citação é prosa
-        # histórica datada, e esta casa não apaga registro. Ver `APOSENTADOS`.
         if aposentado(texto) is not None:
             continue
-        # FORA DO GIT: o arquivo existe no disco dela e não é versionado.
-        # A citação continua certa; o que ela aponta mora fora. Ver
-        # `FORA_DO_GIT`.
         if fora_do_git(texto) is not None:
             continue
         limpos.append((texto, veio_de_crase))
@@ -939,14 +577,7 @@ def varrer_documento(
     metodos_ipc: set[str] | None = None,
     raiz_nomes: set[str] | None = None,
 ) -> list[Achado]:
-    """Devolve as referências mortas de um documento -- as três regras.
-
-    As regras 2 e 3 só valem para os documentos que ENSINAM
-    (`PREFIXOS_QUE_ENSINAM`) e se desligam sozinhas quando o índice
-    correspondente vem vazio: sem literal de env no código não há como
-    distinguir variável morta de variável nova, e acusar tudo seria o oposto
-    do que este portão existe para fazer.
-    """
+    """Devolve as referências mortas de um documento -- as três regras."""
     if raiz_nomes is None:
         raiz_nomes = nomes_de_raiz(raiz)
     try:
@@ -964,8 +595,6 @@ def varrer_documento(
     isentos_por_nota = (
         tokens_isentos_por_nota(conteudo) if (cobra_env or cobra_ipc) else set()
     )
-    # O que ESTE documento declara que vai criar. Vazio para todo documento
-    # sem frontmatter, que é a maioria -- e aí a regra 1 não muda em nada.
     declarados_aqui = declarados_no_cria(conteudo)
 
     achados: list[Achado] = []
@@ -981,50 +610,11 @@ def varrer_documento(
             continue
 
         for referencia, veio_de_crase in candidatos_da_linha(linha):
-            # AUDITORIA-DE-PERDA-01/E3 (24/08/2026). A resolução contra a
-            # pasta do PRÓPRIO documento roda PRIMEIRO, não como última
-            # chance -- medido: com a checagem contra `sufixos` na frente, um
-            # LINK MARKDOWN com o basename certo e a pasta errada nunca
-            # chegava até aqui, porque o basename sozinho já É um sufixo
-            # válido de algum arquivo real em QUALQUER canto da árvore. Um
-            # `[…](2026-08-22-ELO-MUDO-01-….md)` plantado sem o `sprints/`
-            # que o arquivo de verdade tem passava batido, calado, com
-            # `exit=0`.
-            #
-            # Resolver primeiro pega isso: `[texto](alvo)` afirma uma
-            # POSIÇÃO -- é o mesmo motivo que já valia para `../` -- e para
-            # um alvo sem barra a posição afirmada é "ao lado de quem cita".
-            #
-            # A leniência de sufixo (mais larga) continua valendo para TRÊS
-            # casos, e nenhum deles afirma posição:
-            #   1. o alvo leva barra -- o caminho ENCURTADO deliberado
-            #      (`gui/main.glade`) e o caminho a partir da raiz citado de
-            #      outra pasta: cobrar aqui a posição exata SERIA o ruído
-            #      puro que este portão promete não fazer (ver cabeçalho);
-            #   2. o texto veio de CRASE -- nome solto entre crases é
-            #      convenção desta casa (só .py/.sh chegam aqui, via
-            #      `EXTENSOES_NOME_SOLTO`), citado sem posição nenhuma o
-            #      tempo todo (`secao_mesa.py`, `install.sh`);
-            #   3. o alvo É o nome de algo que mora NA RAIZ do repositório
-            #      (`raiz_nomes`) -- `install.sh` não tem diretório para
-            #      encurtar, então não há "pasta errada" possível para ele.
-            #
-            # É por aqui também que passa o link que SOBE (`../`, `../../`):
-            # ele nunca casa por sufixo -- índice nenhum começa com `..` --
-            # e por isso depende inteiramente desta resolução. Se ela sair
-            # da árvore (`ValueError`), fica achado: não há link legítimo,
-            # dentro do repositório, para acima da raiz dele.
             vizinho = (caminho.parent / referencia).resolve()
             try:
                 relativo = vizinho.relative_to(raiz).as_posix()
             except ValueError:
                 relativo = None
-            #
-            # O `cria:` deste documento entra nas DUAS conferências abaixo,
-            # como segunda fonte do mesmo índice (29/08/2026, decisão dela --
-            # ver o cabeçalho). Ele não abre caminho novo: um arquivo que a
-            # sprint não declarou, e que outra sprint declarou, continua
-            # achado.
             if relativo is not None and (
                 relativo in sufixos or relativo in declarados_aqui
             ):
@@ -1032,21 +622,6 @@ def varrer_documento(
             leniente = "/" in referencia or veio_de_crase or referencia in raiz_nomes
             if leniente and (referencia in sufixos or referencia in declarados_aqui):
                 continue
-            # FORA DO GIT, MEDIDO NO CAMINHO RESOLVIDO — 20/09/2026.
-            #
-            # `candidatos_da_linha` já pergunta a `fora_do_git()`, mas
-            # pergunta sobre o TEXTO CRU, e o texto cru de um link que sobe é
-            # `../process/…`, que não começa com `docs/process/`. A isenção
-            # existia e não alcançava a forma mais comum de citá-la dentro de
-            # `docs/`. Na árvore dela isso nunca apareceu — o arquivo está no
-            # disco, o link resolve, e ninguém reprova; num CLONE LIMPO, onde
-            # a pasta não existe, as 12 citações de `docs/usage/` viravam
-            # referência morta e derrubavam o portão inteiro.
-            #
-            # A decisão de isentar é de 15/09 e continua a mesma; o que muda
-            # é a régua enxergar a citação depois de resolvida, que é a única
-            # forma em que `../process/x.md` e `docs/process/x.md` são a
-            # mesma afirmação.
             if relativo is not None and fora_do_git(relativo) is not None:
                 continue
             achados.append(Achado(relativo_doc, numero, referencia, REGRA_ARQUIVO))
@@ -1067,11 +642,7 @@ def varrer_documento(
 
 
 def documentos_de(raiz: Path) -> list[Path]:
-    """Todos os .md sob docs/ menos o arquivo morto, mais o `README.md`.
-
-    O README entrou na varredura com a DOC-VERDADE-02: ele é a página que mais
-    gente copia e cola, e ficava fora do portão só porque mora na raiz.
-    """
+    """Todos os .md sob docs/ menos o arquivo morto, mais o `README.md`."""
     encontrados = []
     readme = raiz / "README.md"
     if readme.is_file():
@@ -1115,9 +686,6 @@ def main(argv: list[str] | None = None) -> int:
         print("Nenhum documento para varrer.")
         return 0
 
-    # A LISTA DE APOSENTADOS NÃO PODE APODRECER — ver `conferir_aposentados`.
-    # Roda antes da varredura: se um dos caminhos voltou, todas as citações a
-    # ele estão sendo deixadas de conferir, e isso é pior que uma morta.
     ressuscitados = conferir_aposentados(raiz)
     if ressuscitados:
         for problema in ressuscitados:
@@ -1127,8 +695,6 @@ def main(argv: list[str] | None = None) -> int:
               "existem nesta árvore.")
         return 1
 
-    # A MESMA GUARDA PELO OUTRO LADO — ver `conferir_fora_do_git`. O que saiu
-    # do git e voltou a ser rastreado tem de voltar a ser conferido.
     rastreados = conferir_fora_do_git(raiz)
     if rastreados:
         for problema in rastreados:

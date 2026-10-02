@@ -1,11 +1,4 @@
-"""Testes do `desktop_notifications` (FEAT-COSMIC-TRAY-FALLBACK-01).
-
-Cobre:
-  - `notify()` retorna False sem jeepney.
-  - `notify()` deduplica via `once_key`.
-  - `statusnotifierwatcher_available()` retorna bool sem traceback.
-  - Estrutura da chamada D-Bus (signature, args).
-"""
+"""Testes do `desktop_notifications` (FEAT-COSMIC-TRAY-FALLBACK-01)."""
 from __future__ import annotations
 
 import sys
@@ -83,9 +76,6 @@ def _install_fake_jeepney(
     monkeypatch.setitem(sys.modules, "jeepney", jeepney_mod)
     monkeypatch.setitem(sys.modules, "jeepney.io", jeepney_io)
     monkeypatch.setitem(sys.modules, "jeepney.io.blocking", jeepney_io_blocking)
-    # A-SUITE-NAO-AVISA-NA-TELA-DELA-01: com a suíte no ar o `notify` recusa
-    # antes do barramento. O escape anda JUNTO do dublê, e só com ele: quem
-    # atravessa o `notify` inteiro aqui fala com o jeepney de mentira acima.
     monkeypatch.setenv(desktop_notifications.AVISO_DE_VERDADE_NA_SUITE, "1")
 
     return _FakeConn.instances
@@ -93,10 +83,6 @@ def _install_fake_jeepney(
 
 @pytest.fixture(autouse=True)
 def _reset_once_cache() -> None:
-    # Isolamento de testes: zera AMBOS os caches globais entre testes. Sem o
-    # reset do throttle (janela 30s, key fixa "controller_connected"), o 2º teste
-    # que chamasse notify_controller_connected na mesma execução era estrangulado
-    # -> notify retornava False e a suíte falhava por ordem (passava isolado).
     desktop_notifications.reset_once_cache()
     desktop_notifications.reset_throttle_cache()
 
@@ -107,10 +93,6 @@ class TestNotify:
     def test_sem_jeepney_retorna_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         for name in ("jeepney", "jeepney.io", "jeepney.io.blocking"):
             monkeypatch.setitem(sys.modules, name, None)  # type: ignore[arg-type]
-        # A-SUITE-NAO-AVISA-NA-TELA-DELA-01: sem o escape, a trava da suíte
-        # devolve False antes do import, e este caso passaria mesmo sem o
-        # `except ImportError` — mediria a trava, e não o jeepney ausente. Com o
-        # jeepney em `None`, nada chega a barramento nenhum.
         monkeypatch.setenv(desktop_notifications.AVISO_DE_VERDADE_NA_SUITE, "1")
         assert desktop_notifications.notify("titulo", "corpo") is False
 
@@ -154,8 +136,7 @@ class TestNotify:
     def test_actions_kwarg_flatten_para_as_signature(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """FEAT-NOTIFY-ACTION-OPEN-01: actions=[(key, label)] vira list[str]
-        alternada `[key, label, key2, label2, ...]` no argumento `as`."""
+        """FEAT-NOTIFY-ACTION-OPEN-01: actions=[(key, label)] vira list[str]"""
         _install_fake_jeepney(monkeypatch, reply_body=(7,))
         desktop_notifications.notify(
             "titulo",
@@ -164,7 +145,6 @@ class TestNotify:
         )
         captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
         notify_args = captured[-1]["args"][3]
-        # Posição 5 = actions (after summary/body)
         assert notify_args[5] == ["open", "Abrir Hefesto", "dismiss", "Ignorar"]
 
     def test_actions_default_lista_vazia(
@@ -191,7 +171,6 @@ class TestNotify:
         assert r1 is True
         assert r2 is False
         assert r3 is False
-        # Apenas uma conn criada.
         assert len(conns) == 1
 
     def test_once_key_diferentes_keys_passam(
@@ -258,11 +237,6 @@ class TestStatusNotifierWatcherAvailable:
         assert last["args"][3] == ("org.kde.StatusNotifierWatcher",)
 
 
-# ---------------------------------------------------------------------------
-# FEAT-COSMIC-NOTIFICATIONS-01 — helpers opt-in via env var.
-# ---------------------------------------------------------------------------
-
-
 class TestEventNotifications:
     """Helpers notify_controller_*, notify_battery_low, notify_profile_activated."""
 
@@ -272,7 +246,6 @@ class TestEventNotifications:
         monkeypatch.delenv(
             "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", raising=False
         )
-        # Mesmo com jeepney disponivel, não emite.
         _install_fake_jeepney(monkeypatch, reply_body=(1,))
         assert desktop_notifications.notify_controller_connected("usb") is False
         assert desktop_notifications.notify_controller_disconnected() is False
@@ -305,9 +278,7 @@ class TestEventNotifications:
     def test_battery_low_threshold(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
         _install_fake_jeepney(monkeypatch, reply_body=(1,))
-        # 50% > threshold 15 -> não emite
         assert desktop_notifications.notify_battery_low(50) is False
-        # 10% < threshold -> emite
         assert desktop_notifications.notify_battery_low(10) is True
 
     def test_battery_low_dedup_via_once_key(
@@ -316,7 +287,6 @@ class TestEventNotifications:
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
         _install_fake_jeepney(monkeypatch, reply_body=(1,))
         desktop_notifications.notify_battery_low(10)
-        # Segunda chamada com pct ainda baixo: deduped
         assert desktop_notifications.notify_battery_low(8) is False
 
     def test_battery_recovered_reseta_dedup(
@@ -325,9 +295,7 @@ class TestEventNotifications:
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
         _install_fake_jeepney(monkeypatch, reply_body=(1,))
         desktop_notifications.notify_battery_low(10)
-        # Bateria recupera acima do threshold de recuperacao (30)
         desktop_notifications.notify_battery_recovered(50)
-        # Agora emite de novo se cair
         assert desktop_notifications.notify_battery_low(8) is True
 
     def test_controller_connected_traduz_transport(
@@ -338,7 +306,6 @@ class TestEventNotifications:
         desktop_notifications.notify_controller_connected("bt")
         captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
         notify_args = captured[-1]["args"][3]
-        # Body deve conter "Bluetooth" (traducao do "bt")
         assert "Bluetooth" in notify_args[4]
 
     def test_controller_connected_usb_label(

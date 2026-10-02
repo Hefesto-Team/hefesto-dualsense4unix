@@ -1,10 +1,4 @@
-"""DEDUP-05/UX-04: migração e strip das LaunchOptions no localconfig.vdf.
-
-Tudo com FIXTURES — a aplicação no vdf REAL acontece só no ciclo final do
-install (com a Steam fechada). A "linha 914" abaixo é a variante VELHA nossa
-provada persistida ao vivo (2 dos 3 tokens + shader-cache); o critério de
-aceite do sprint doc exige testá-la verbatim.
-"""
+"""DEDUP-05/UX-04: migração e strip das LaunchOptions no localconfig.vdf."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,7 +8,6 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-#: A variante de onda anterior persistida no vdf real (verbatim do sprint doc).
 LINHA_914 = (
     "SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 "
     "__GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%"
@@ -45,12 +38,8 @@ def _vdf(launch_options: dict[str, str]) -> str:
     )
 
 
-# --- migrate_value / strip_value (puras) -----------------------------------
-
-
 def test_migrate_linha_914_vira_a_string_constante_do_wrapper():
-    """O veneno inteiro (assinatura + co-ocorrentes + preload) sai e entra a
-    chamada do wrapper — o preload volta pelo arquivo de env materializado."""
+    """O veneno inteiro (assinatura + co-ocorrentes + preload) sai e entra a"""
     assert slo.migrate_value(LINHA_914) == slo.WRAPPER_LAUNCH
 
 
@@ -62,8 +51,7 @@ def test_migrate_preserva_opcoes_genuinas_do_usuario():
 
 
 def test_migrate_sem_command_explicita_o_placeholder():
-    """LaunchOptions sem %command% são ARGUMENTOS do jogo — a migração
-    explicita o %command% antes deles (semântica idêntica, embrulhada)."""
+    """LaunchOptions sem %command% são ARGUMENTOS do jogo — a migração"""
     valor = f"{slo.IGNORE_SIGNATURE} -fullscreen"
     migrado = slo.migrate_value(valor)
     assert migrado == f"{slo.WRAPPER_LAUNCH} -fullscreen"
@@ -75,16 +63,14 @@ def test_migrate_e_idempotente():
 
 
 def test_strip_da_linha_914_preserva_shader_cache_byte_a_byte():
-    """UX-04 (uninstall): sai a assinatura + SDL_JOYSTICK_HIDAPI=0
-    co-ocorrente; `__GL_SHADER_*` e o %command% ficam intactos."""
+    """UX-04 (uninstall): sai a assinatura + SDL_JOYSTICK_HIDAPI=0"""
     assert slo.strip_value(LINHA_914) == (
         "__GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%"
     )
 
 
 def test_strip_nao_caca_hidapi_solto():
-    """SDL_JOYSTICK_HIDAPI=0 SEM a assinatura é fix legítimo de controle de
-    terceiros (o 8BitDo) — o strip nunca o remove sozinho."""
+    """SDL_JOYSTICK_HIDAPI=0 SEM a assinatura é fix legítimo de controle de"""
     valor = "SDL_JOYSTICK_HIDAPI=0 %command%"
     assert slo.strip_value(valor) == valor
 
@@ -93,37 +79,16 @@ def test_strip_remove_o_wrapper_e_colapsa_linha_que_era_so_nossa():
     assert slo.strip_value(slo.WRAPPER_LAUNCH) == ""
 
 
-# --- lista de IGNORE ESTENDIDA por vírgula (achado MED da revisão) -----------
-
-#: A usuária estendeu a var para esconder um 2º device (Pro Controller 057e).
-#: ELA ERA INTOCÁVEL ATÉ 06/09/2026, e a razão escrita aqui era: *"remover só o
-#: nosso pedaço deixaria `,0x057e/0x2009` (sem `=`) pendurado — o env(1)/sh
-#: tenta EXECUTÁ-lo → ENOENT → o jogo NUNCA MAIS abre"*.
-#:
-#: **A razão era verdadeira sobre UM jeito de mexer.** `subtrair_nosso_ignore`
-#: trata a atribuição como o que ela é — um token só, com lista por vírgula do
-#: lado direito — e a atribuição sai inteira e volta inteira: nunca existe um
-#: instante em que a vírgula fique órfã. Decisão dela (07-Q1): *"Deve aplicar
-#: automaticamente como era no gtk"*.
 LINHA_ESTENDIDA = (
     "SDL_JOYSTICK_HIDAPI=0 "
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x057e/0x2009 %command%"
 )
 
-#: O NOSSO PAR EM SEGUNDO, e ela é o buraco que a ONDA5-07-01 achou LENDO o
-#: fonte e confirmou MEDINDO: `IGNORE_SIGNATURE` cola `VAR=` ao par, então numa
-#: lista que começa pelo device DELA a substring não aparece — `has_poison` e
-#: `has_extended_ignore` respondiam os dois `False`, e `migrate_value`
-#: EMBRULHAVA a linha com o veneno vivo dentro. O jogo continuava cego para o
 #: DualSense dela, com a tela dizendo que o atalho estava no lugar.
 LINHA_NOSSO_PAR_EM_SEGUNDO = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009,0x054c/0x0ce6 %command%"
 )
 
-#: O QUE A SUBTRAÇÃO NÃO ALCANÇA — a lista entre aspas. É para esta forma que
-#: `has_extended_ignore`, o `MOTIVO_ESTENDIDO` do censo e a frase de reparo
-#: manual continuam existindo. As aspas dentro do valor são escapadas ao entrar
-#: no vdf de mentira (`_vdf_escape`), como a Steam faz.
 LINHA_FORA_DO_ALCANCE = (
     'SDL_GAMECONTROLLER_IGNORE_DEVICES="0x054c/0x0ce6,0x057e/0x2009" %command%'
 )
@@ -167,12 +132,7 @@ def test_a_subtracao_devolve_byte_a_byte_a_linha_que_nao_e_nossa():
 
 
 def test_migrate_subtrai_o_nosso_par_da_lista_estendida():
-    """ERA `test_migrate_nao_toca_lista_ignore_estendida`, e ele assertava o
-    DEFEITO: o `return value` que devolvia a linha intacta.
-
-    O que a linha tem de ter depois: o atalho de inicialização na frente, o
-    device DELA preservado, e o nosso par fora.
-    """
+    """ERA `test_migrate_nao_toca_lista_ignore_estendida`, e ele assertava o"""
     migrado = slo.migrate_value(LINHA_ESTENDIDA)
     assert migrado.startswith(slo.WRAPPER_PREFIX + " ")
     assert "0x057e/0x2009" in migrado, "o device que ELA escondeu foi jogado fora"
@@ -180,14 +140,12 @@ def test_migrate_subtrai_o_nosso_par_da_lista_estendida():
 
 
 def test_migrate_nao_embrulha_o_que_nao_alcanca():
-    """A metade da razão antiga que NÃO caiu: embrulhar com o veneno vivo
-    dentro deixaria o jogo cego para o controle dela, calado."""
+    """A metade da razão antiga que NÃO caiu: embrulhar com o veneno vivo"""
     assert slo.migrate_value(LINHA_FORA_DO_ALCANCE) == LINHA_FORA_DO_ALCANCE
 
 
 def test_migrate_ve_o_nosso_par_mesmo_quando_ele_nao_e_o_primeiro():
-    """O buraco do Passo 5: `has_poison` e `has_extended_ignore` diziam os dois
-    `False`, e a linha era EMBRULHADA com o veneno ativo dentro."""
+    """O buraco do Passo 5: `has_poison` e `has_extended_ignore` diziam os dois"""
     migrado = slo.migrate_value(LINHA_NOSSO_PAR_EM_SEGUNDO)
     assert migrado.startswith(slo.WRAPPER_PREFIX + " ")
     assert "0x054c/0x0ce6" not in migrado
@@ -204,29 +162,12 @@ def test_strip_subtrai_o_nosso_par_da_lista_estendida():
 
 
 def _sem_o_atalho(valor: str) -> str:
-    """O valor sem a chamada do wrapper — para tokenizar o que sobra.
-
-    O `WRAPPER_PREFIX` é uma linha de `sh -c` com aspas e colchetes dentro; um
-    `.split()` nele produz `sh`, `-c`, `[`, `]`... e nenhum tem `=`. Sem esta
-    função a régua abaixo acusaria o próprio atalho como fragmento.
-    """
+    """O valor sem a chamada do wrapper — para tokenizar o que sobra."""
     return valor.replace(slo.WRAPPER_PREFIX, "", 1).strip()
 
 
 def test_nenhum_caminho_deixa_fragmento_sem_igual_pendurado():
-    """A regressão exata reproduzida pela revisão: `,0x057e/0x2009` órfão.
-
-    É A RÉGUA MAIS VALIOSA DESTE ARQUIVO — ela é o que separa a cura da
-    catástrofe: um token sem `=` o `env(1)` tenta EXECUTAR, dá ENOENT, e o jogo
-    nunca mais abre.
-
-    O QUE MUDOU NELA EM 06/09/2026, e por quê: até aqui ela olhava para
-    `migrate_value(LINHA_ESTENDIDA)`, que devolvia a linha INTACTA — ela nunca
-    tinha visto uma linha migrada de verdade. Agora vê, e por isso precisa tirar
-    o atalho antes de tokenizar (`_sem_o_atalho`) e passa a rodar sobre a
-    FAMÍLIA de linhas com o nosso par, não sobre uma só. O que ela mede é
-    exatamente o mesmo.
-    """
+    """A regressão exata reproduzida pela revisão: `,0x057e/0x2009` órfão."""
     fontes = (
         LINHA_ESTENDIDA,
         LINHA_NOSSO_PAR_EM_SEGUNDO,
@@ -246,27 +187,13 @@ def test_nenhum_caminho_deixa_fragmento_sem_igual_pendurado():
 
 
 def test_has_poison_ve_o_nosso_par_em_qualquer_posicao():
-    """ERA `test_has_poison_exige_token_completo`, e o que ele exigia era o
-    PONTO CEGO: a `IGNORE_SIGNATURE` cola `VAR=` ao par, então a pergunta só
-    enxergava o nosso pedaço quando ele estava sozinho na lista.
-
-    Medido em 06/09/2026: numa lista que começa pelo device DELA, `has_poison`
-    e `has_extended_ignore` respondiam os DOIS `False` — o produto não via o
-    próprio veneno e EMBRULHAVA a linha com ele vivo dentro.
-
-    A proteção contra o fragmento-comando não estava nesta pergunta e não sai
-    dela: quem nunca remove substring é `subtrair_nosso_ignore`, e quem tranca
-    isso é `test_nenhum_caminho_deixa_fragmento_sem_igual_pendurado`.
-    """
+    """ERA `test_has_poison_exige_token_completo`, e o que ele exigia era o"""
     assert slo.has_poison(LINHA_914) is True
     assert slo.has_poison(LINHA_ESTENDIDA) is True
     assert slo.has_poison(LINHA_NOSSO_PAR_EM_SEGUNDO) is True
     assert slo.has_poison(LINHA_FORA_DO_ALCANCE) is True
-    # A linha que é toda DELA continua fora: sem o nosso par, nada a fazer.
     assert slo.has_poison("SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009") is False
     assert slo.has_poison("MANGOHUD=1 %command%") is False
-    # A LISTA ESTENDIDA DEIXOU DE SER INTOCÁVEL — a subtração a alcança. Quem
-    # continua respondendo `True` é a forma que ela não desmonta.
     assert slo.has_extended_ignore(LINHA_914) is False
     assert slo.has_extended_ignore(LINHA_ESTENDIDA) is False
     assert slo.has_extended_ignore(LINHA_NOSSO_PAR_EM_SEGUNDO) is False
@@ -274,8 +201,7 @@ def test_has_poison_ve_o_nosso_par_em_qualquer_posicao():
 
 
 def test_transform_migra_a_linha_estendida_nos_dois_modos():
-    """ERA `test_transform_pula_linha_estendida_nos_dois_modos`, e ele exigia
-    `mudadas == 0` — o defeito visto do lado do arquivo."""
+    """ERA `test_transform_pula_linha_estendida_nos_dois_modos`, e ele exigia"""
     texto = _vdf({"1599660": LINHA_ESTENDIDA})
     for modo in ("migrate", "strip"):
         novo, mudadas = slo.transform_vdf_text(texto, modo)
@@ -295,12 +221,7 @@ def test_transform_nao_toca_o_que_a_subtracao_nao_alcanca():
 def test_main_migra_a_linha_estendida_preservando_a_parte_dela(
     tmp_path, monkeypatch, capsys
 ):
-    """ERA `test_main_reporta_ignore_estendido_sem_tocar`.
-
-    O nome dele era a promessa que caducou: o produto parou de REPORTAR e
-    passou a CONSERTAR. O que ele guarda agora é a metade que não pode se
-    perder — a parte DELA da lista sobrevive à migração.
-    """
+    """ERA `test_main_reporta_ignore_estendido_sem_tocar`."""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_vdf({"1599660": LINHA_ESTENDIDA}), encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: False)
@@ -333,19 +254,13 @@ def test_strip_remove_o_wrapper_preservando_o_resto():
     assert slo.strip_value(valor) == "MANGOHUD=1 %command%"
 
 
-# --- transform_vdf_text (parse por linha + escaping) ------------------------
-
-
 def test_transform_migrate_so_toca_linhas_envenenadas():
     texto = _vdf({"1599660": LINHA_914, "620": "MANGOHUD=1 %command%"})
     novo, mudadas = slo.transform_vdf_text(texto, "migrate")
     assert mudadas == 1
     assert slo.IGNORE_SIGNATURE not in novo
-    # A linha do usuário fica byte a byte.
     assert '"MANGOHUD=1 %command%"' in novo
-    # O wrapper entra ESCAPADO (aspas viram \" no formato KeyValues da Steam).
     assert slo._vdf_escape(slo.WRAPPER_LAUNCH) in novo
-    # O resto do arquivo permanece intacto.
     assert '"playtime"' in novo
 
 
@@ -370,7 +285,6 @@ def test_transform_strip_remove_novo_e_legado():
     assert slo._vdf_escape(slo.WRAPPER_PREFIX) not in novo
     assert slo.IGNORE_SIGNATURE not in novo
     assert '"MANGOHUD=1 %command%"' in novo
-    # shader-cache da linha legada é preservado (UX-04).
     assert "__GL_SHADER_DISK_CACHE=1" in novo
 
 
@@ -381,16 +295,13 @@ def test_migrate_depois_strip_zera_o_nosso_rastro():
     assert '"LaunchOptions"\t\t""' in limpo
 
 
-# --- process_vdf (arquivo, backup, dry-run, idempotência) -------------------
-
-
 def test_process_vdf_dry_run_nao_toca_no_arquivo(tmp_path: Path):
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf({"1599660": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
     changed, diff = slo.process_vdf(vdf, "migrate", dry_run=True)
     assert changed == 1
-    assert diff  # o diff sai para inspeção
+    assert diff
     assert vdf.read_text(encoding="utf-8") == original
     assert list(tmp_path.glob("*.bak.*")) == []
 
@@ -403,13 +314,9 @@ def test_process_vdf_migra_com_backup_e_e_idempotente(tmp_path: Path):
     backups = list(tmp_path.glob("localconfig.vdf.bak.hefesto-launch-*"))
     assert len(backups) == 1
     assert slo.IGNORE_SIGNATURE in backups[0].read_text(encoding="utf-8")
-    # Aplicar 2x é no-op (não cria segundo backup).
     changed2, _ = slo.process_vdf(vdf, "migrate")
     assert changed2 == 0
     assert len(list(tmp_path.glob("*.bak.*"))) == 1
-
-
-# --- CLI: recusa honesta com a Steam viva + recusa de sandbox ----------------
 
 
 def test_main_recusa_migrar_com_steam_aberta(tmp_path, monkeypatch, capsys):
@@ -423,13 +330,11 @@ def test_main_recusa_migrar_com_steam_aberta(tmp_path, monkeypatch, capsys):
     assert vdf.read_text(encoding="utf-8") == original
     out = capsys.readouterr().out
     assert "Steam está aberta" in out
-    assert "regrava o arquivo ao sair" in out  # a mensagem diz o PORQUÊ
+    assert "regrava o arquivo ao sair" in out
 
 
 def test_main_recusa_com_jogo_da_steam_aberto(tmp_path, monkeypatch, capsys):
-    """DEDUP-05 exigência 2: `steam -shutdown` com jogo aberto MATA o jogo —
-    migrate E strip recusam (rc=3) em vez de derrubar progresso não salvo.
-    Vale inclusive com --stop-steam (o caminho do install/uninstall)."""
+    """DEDUP-05 exigência 2: `steam -shutdown` com jogo aberto MATA o jogo —"""
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf({"1599660": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
@@ -447,7 +352,7 @@ def test_main_recusa_com_jogo_da_steam_aberto(tmp_path, monkeypatch, capsys):
         assert rc == 3, args
         assert vdf.read_text(encoding="utf-8") == original
 
-    assert parou == []  # a Steam NUNCA foi derrubada com o jogo aberto
+    assert parou == []
     out = capsys.readouterr().out
     assert "JOGO" in out
     assert "MATARIA" in out
@@ -466,10 +371,7 @@ def test_main_migra_com_steam_fechada(tmp_path, monkeypatch, capsys):
 
 
 def test_main_migrate_em_vdf_de_sandbox_so_remove_o_veneno(tmp_path, monkeypatch, capsys):
-    """Steam Flatpak/Snap: o wrapper do host é invisível à sandbox — escrever
-    o caminho lá quebraria o launch (DEDUP-04). Em vez de PULAR (deixando o
-    veneno legado gravado para sempre), o migrate faz só o STRIP: o veneno sai
-    e o wrapper NÃO é escrito na sandbox. O strip explícito continua permitido."""
+    """Steam Flatpak/Snap: o wrapper do host é invisível à sandbox — escrever"""
     sandbox = (
         tmp_path / ".var/app/com.valvesoftware.Steam/.steam/steam/userdata"
         / "12345678/config"
@@ -484,8 +386,8 @@ def test_main_migrate_em_vdf_de_sandbox_so_remove_o_veneno(tmp_path, monkeypatch
     rc = slo.main(["--migrate", "--vdf", str(vdf)])
     assert rc == 0
     texto = vdf.read_text(encoding="utf-8")
-    assert slo.IGNORE_SIGNATURE not in texto  # veneno removido
-    assert slo._vdf_escape(slo.WRAPPER_PREFIX) not in texto  # wrapper NÃO entra na sandbox
+    assert slo.IGNORE_SIGNATURE not in texto
+    assert slo._vdf_escape(slo.WRAPPER_PREFIX) not in texto
     assert "sandbox" in capsys.readouterr().out
 
     rc = slo.main(["--strip", "--vdf", str(vdf)])
@@ -497,14 +399,11 @@ def test_main_status_relata_sem_tocar(tmp_path, monkeypatch, capsys):
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf({"1599660": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
-    monkeypatch.setattr(slo, "steam_running", lambda: True)  # status nem liga
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
     rc = slo.main(["--status", "--vdf", str(vdf)])
     assert rc == 0
     assert vdf.read_text(encoding="utf-8") == original
     assert "veneno" in capsys.readouterr().out
-
-
-# --- paridade com o resto da entrega ----------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -512,16 +411,14 @@ def test_main_status_relata_sem_tocar(tmp_path, monkeypatch, capsys):
     ["install.sh", "uninstall.sh", "scripts/doctor.sh", "assets/hefesto-launch.sh"],
 )
 def test_caminho_do_wrapper_e_o_mesmo_em_todo_lugar(arquivo: str):
-    """O caminho estável do wrapper é contrato entre módulo Python, install,
-    uninstall, doctor e o próprio wrapper — drift aqui = wrapper órfão."""
+    """O caminho estável do wrapper é contrato entre módulo Python, install,"""
     root = Path(__file__).resolve().parents[2]
     texto = (root / arquivo).read_text(encoding="utf-8")
     assert slo.WRAPPER_HOME_RELPATH in texto
 
 
 def test_uninstall_desenvenena_antes_de_apagar_o_wrapper():
-    """Ordem obrigatória do DEDUP-04: vdf ANTES do wrapper (a assimetria já
-    quebrou o mic; aqui deixaria veneno sem dono => zero controles)."""
+    """Ordem obrigatória do DEDUP-04: vdf ANTES do wrapper (a assimetria já"""
     root = Path(__file__).resolve().parents[2]
     texto = (root / "uninstall.sh").read_text(encoding="utf-8")
     pos_strip = texto.index("--strip")
@@ -530,24 +427,10 @@ def test_uninstall_desenvenena_antes_de_apagar_o_wrapper():
 
 
 def test_install_migra_fora_do_bloco_do_steam_input():
-    """Achado MED da revisão: a migração DEDUP-05 (P0) é um passo PRÓPRIO —
-    `--keep-steam-input` (opt-out SÓ do PSSupport) e a ausência do
-    disable_steam_input.sh não podem pular o desenvenenamento em silêncio."""
+    """Achado MED da revisão: a migração DEDUP-05 (P0) é um passo PRÓPRIO —"""
     root = Path(__file__).resolve().parents[2]
     texto = (root / "install.sh").read_text(encoding="utf-8")
-    # Passo dedicado existe...
     assert 'step "11b"' in texto
-    # ...e a migração vem DEPOIS do `fi` que fecha o bloco do Steam Input
-    # (a habilitação do guard é a última coisa dentro do bloco).
-    #
-    # A âncora é a linha de CÓDIGO que habilita o guard, não a mensagem que ela
-    # lê. Em 16/08/2026 a mensagem mudou de texto (o guard passou a repor
-    # também o wrapper, CARONA-NO-GUARD-01) e este teste reprovou sem que nada
-    # de estrutural tivesse mudado — mensagem de tela é para ser reescrita, e
-    # um teste que a trava como âncora cobra pedágio por melhorar texto.
-    #
-    # 18/09/2026: a habilitação perdeu o `--now` (o vigia liga no fim do
-    # install, para não correr junto dos passos que editam os mesmos arquivos).
     pos_fim_bloco_steam_input = texto.index(
         "systemctl --user enable hefesto-steam-input-guard"
     )
@@ -589,7 +472,6 @@ def test_apply_wrapper_insere_launch_options_em_jogo_sem_nenhuma():
     assert pulados == []
     valores = slo.read_launch_options_by_appid(novo)
     assert valores["1599660"] == slo.WRAPPER_LAUNCH
-    # O resto do bloco fica intacto (a linha nova NÃO substitui nada).
     assert '"playtime"' in novo
 
 
@@ -611,13 +493,7 @@ def test_apply_wrapper_remove_veneno_legado_junto():
 
 
 def test_apply_wrapper_migra_o_ignore_estendido():
-    """ERA `test_apply_wrapper_pula_ignore_estendido_sem_tocar`, e o nome dele
-    era o defeito: o `skipped.append((appid, "ignore_estendido"))`.
-
-    As TRÊS coisas que a linha resultante tem de ter, e a terceira é a que
-    torna a subtração diferente de reescrever por cima: o atalho chamando, a
-    lista DELA preservada, e o nosso par fora.
-    """
+    """ERA `test_apply_wrapper_pula_ignore_estendido_sem_tocar`, e o nome dele"""
     texto = _vdf({"1599660": LINHA_ESTENDIDA, "620": ""})
     novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
     assert "1599660" in aplicados
@@ -686,7 +562,6 @@ def test_apply_wrapper_to_all_games_dry_run_nao_toca(tmp_path, monkeypatch):
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf_sem_launch_options("1599660")
     vdf.write_text(original, encoding="utf-8")
-    # dry_run é preview (contagem do diálogo da GUI) — nem consulta a Steam.
     monkeypatch.setattr(
         slo, "steam_running", lambda: (_ for _ in ()).throw(AssertionError)
     )
@@ -699,9 +574,7 @@ def test_apply_wrapper_to_all_games_dry_run_nao_toca(tmp_path, monkeypatch):
 def test_apply_wrapper_to_all_games_vdf_nao_utf8_vira_erro_por_vdf(
     tmp_path, monkeypatch
 ):
-    """Achado #6: um localconfig.vdf não-UTF-8 (byte latin-1 legado /
-    multi-usuário) vira erro POR-VDF em vez de abortar a varredura inteira com
-    UnicodeDecodeError — o vdf válido seguinte continua sendo processado."""
+    """Achado #6: um localconfig.vdf não-UTF-8 (byte latin-1 legado /"""
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
     ruim = tmp_path / "ruim" / "localconfig.vdf"
@@ -712,7 +585,6 @@ def test_apply_wrapper_to_all_games_vdf_nao_utf8_vira_erro_por_vdf(
     bom.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
 
     resultado = slo.apply_wrapper_to_all_games(vdfs=[ruim, bom])
-    # O ruim é reportado como erro por-vdf; o bom foi aplicado (não abortou).
     assert [e["vdf"] for e in resultado["errors"]] == [str(ruim)]
     assert [a["appid"] for a in resultado["applied"]] == ["620"]
     assert slo.read_launch_options_by_appid(bom.read_text(encoding="utf-8"))[
@@ -723,9 +595,7 @@ def test_apply_wrapper_to_all_games_vdf_nao_utf8_vira_erro_por_vdf(
 def test_main_strip_vdf_nao_utf8_nao_estoura_traceback(
     tmp_path, monkeypatch, capsys
 ):
-    """Achado #6: no --strip do uninstall, um vdf não-UTF-8 vira ERRO por-vdf
-    (rc=1) e o loop segue limpando os demais — nunca traceback/abort deixando o
-    veneno IGNORE gravado nos vdfs restantes ("zero controles pós-uninstall")."""
+    """Achado #6: no --strip do uninstall, um vdf não-UTF-8 vira ERRO por-vdf"""
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
     ruim = tmp_path / "ruim" / "localconfig.vdf"
@@ -736,11 +606,10 @@ def test_main_strip_vdf_nao_utf8_nao_estoura_traceback(
     bom.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
 
     rc = slo.main(["--strip", "--vdf", str(ruim), "--vdf", str(bom)])
-    assert rc == 1  # houve erro por-vdf...
+    assert rc == 1
     out = capsys.readouterr().out
     assert "ERRO" in out
     assert str(ruim) in out
-    # ...mas o vdf bom foi desenvenenado (a varredura não abortou no ruim).
     assert slo.IGNORE_SIGNATURE not in bom.read_text(encoding="utf-8")
 
 
@@ -763,16 +632,7 @@ def test_apply_wrapper_to_all_games_pula_vdf_de_sandbox(tmp_path, monkeypatch):
     assert vdf.read_text(encoding="utf-8") == original
 
 
-# ---------------------------------------------------------------------------
 # HONESTIDADE-STEAM-01: o CORPO de stop_steam + a janela with_steam_closed
-# ---------------------------------------------------------------------------
-# Débito coberto aqui: `stop_steam` só aparecia em teste MOCKADO INTEIRO
-# (`monkeypatch.setattr(slo, "stop_steam", lambda: ...)`), então o corpo real —
-# loop `range(15)` de `sleep(2)`, fallback `TERM`/`KILL` por PID, `return not
-# steam_running()` — nunca rodava. E é justamente esse corpo que MATA processo
-# da usuária: ele precisa de rede de segurança antes de a GUI passar a
-# chamá-lo. Relógio e subprocess falsos: nenhum processo real é tocado, e a
-# suíte não paga os 30 s do loop.
 
 
 class _RelogioFalso:
@@ -792,7 +652,7 @@ class _SubprocessFalso:
     """`subprocess` falso: registra Popen/run e nunca executa nada."""
 
     SubprocessError = Exception
-    DEVNULL = -3  # mesmo sentinela do stdlib; só é repassado adiante
+    DEVNULL = -3
 
     def __init__(self) -> None:
         self.popen: list[list[str]] = []
@@ -808,11 +668,7 @@ class _SubprocessFalso:
 
 
 def _prepara_stop_steam(monkeypatch, *, vivo_por: int, com_steam_no_path=True):
-    """Instala os dublês e devolve (relogio, subproc, contador de checagens).
-
-    `vivo_por` = quantas consultas a `steam_running()` ainda devolvem True
-    antes de a Steam "sair" (a primeira consulta é a do gate de entrada).
-    """
+    """Instala os dublês e devolve (relogio, subproc, contador de checagens)."""
     relogio = _RelogioFalso()
     subproc = _SubprocessFalso()
     estado = {"restantes": vivo_por, "consultas": 0}
@@ -827,8 +683,6 @@ def _prepara_stop_steam(monkeypatch, *, vivo_por: int, com_steam_no_path=True):
     monkeypatch.setattr(slo, "time", relogio)
     monkeypatch.setattr(slo, "subprocess", subproc)
     monkeypatch.setattr(slo, "steam_running", _steam_running)
-    # Os alvos do sinal saem do `/proc`; aqui, nenhum — a régua não lê a
-    # máquina de quem roda.
     monkeypatch.setattr(slo, "steam_deste_lar", lambda *_a, **_k: [])
     monkeypatch.setattr(
         slo,
@@ -845,7 +699,7 @@ def test_stop_steam_sem_steam_viva_e_no_op(monkeypatch):
     assert slo.stop_steam() is True
     assert subproc.popen == []
     assert subproc.run_args == []
-    assert relogio.dormido == []  # nem o `sleep(2)` de margem
+    assert relogio.dormido == []
 
 
 def test_stop_steam_usa_shutdown_e_nao_escala_para_pkill(monkeypatch):
@@ -855,16 +709,12 @@ def test_stop_steam_usa_shutdown_e_nao_escala_para_pkill(monkeypatch):
     assert slo.stop_steam() is True
 
     assert subproc.popen == [["steam", "-shutdown"]]
-    assert subproc.run_args == []  # zero pkill
-    # 1 volta do loop (2 s) + a margem de 2 s para a Steam gravar o vdf.
+    assert subproc.run_args == []
     assert relogio.dormido == [2, 2]
 
 
 def test_stop_steam_escala_por_pid_e_nunca_pelo_nome(monkeypatch):
-    """A Steam resiste às 15 voltas: TERM primeiro, KILL depois, a cada PID
-    da Steam DESTE lar (A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01). Nenhum
-    `pkill`: pelo nome, o `-x steamwebhelper` derrubava o webhelper da Steam
-    de qualquer `HOME` — inclusive a dela, quando quem pedia era a suíte."""
+    """A Steam resiste às 15 voltas: TERM primeiro, KILL depois, a cada PID"""
     relogio, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=100)
     alvo = slo.ProcessoDaSteam(4242, "cliente", "/lar", "77")
     monkeypatch.setattr(slo, "steam_deste_lar", lambda *_a, **_k: [alvo])
@@ -874,9 +724,8 @@ def test_stop_steam_escala_por_pid_e_nunca_pelo_nome(monkeypatch):
     assert slo.stop_steam(sinalizar=lambda pid, sig: sinais.append((pid, sig))) is False
 
     assert subproc.popen == [["steam", "-shutdown"]]
-    assert subproc.run_args == []  # zero pkill, em qualquer volta
+    assert subproc.run_args == []
     assert sinais == [(4242, slo.signal.SIGTERM), (4242, slo.signal.SIGKILL)]
-    # 15 voltas de 2 s + 2 escalações de 3 s + margem final de 2 s.
     assert relogio.dormido == [2] * 15 + [3, 3, 2]
 
 
@@ -890,7 +739,7 @@ def test_stop_steam_para_no_term_quando_ele_resolve(monkeypatch):
     assert slo.stop_steam(sinalizar=lambda pid, sig: sinais.append((pid, sig))) is True
 
     assert subproc.run_args == []
-    assert sinais == [(4242, slo.signal.SIGTERM)]  # o KILL nem é cogitado
+    assert sinais == [(4242, slo.signal.SIGTERM)]
     assert relogio.dormido == [2] * 15 + [3, 2]
 
 
@@ -902,17 +751,16 @@ def test_stop_steam_sem_binario_steam_vai_direto_ao_sinal(monkeypatch):
 
     assert slo.stop_steam() is False
 
-    assert subproc.popen == []  # nada de `steam -shutdown`
-    assert subproc.run_args == []  # e nada de `pkill`
-    assert relogio.dormido == [3, 3, 2]  # o fallback rodou
+    assert subproc.popen == []
+    assert subproc.run_args == []
+    assert relogio.dormido == [3, 3, 2]
 
 
 # --- with_steam_closed: a janela consentida que a GUI usa -------------------
 
 
 def test_with_steam_closed_recusa_com_jogo_aberto_antes_de_tudo(monkeypatch):
-    """Ordem inegociável: o gate de JOGO vem ANTES de qualquer decisão sobre a
-    Steam — `steam -shutdown` com jogo aberto MATA o jogo."""
+    """Ordem inegociável: o gate de JOGO vem ANTES de qualquer decisão sobre a"""
     chamadas = {"stop": 0, "reopen": 0, "executou": 0}
     monkeypatch.setattr(slo, "steam_game_running", lambda: True)
     monkeypatch.setattr(slo, "steam_running", lambda: True)
@@ -991,15 +839,6 @@ def test_with_steam_closed_reabre_mesmo_com_excecao_na_acao(monkeypatch):
     assert ordem == ["reopen"]
 
 
-# ---------------------------------------------------------------------------
-# STEAM-INPUT-ALLOWLIST-01: a allowlist ganhou um ESCRITOR
-# ---------------------------------------------------------------------------
-# O arquivo era lido por três lados (guard em bash, storm_doctor, launch_env) e
-# escrito por NINGUÉM — editar `~/.config/.../steam_input_apps.txt` na mão era a
-# única via, ou seja, a usuária final nunca a tinha. O botão "Este jogo não
-# funciona" escreve aqui; estas travas cobrem as três armadilhas do formato.
-
-
 def test_allowlist_path_respeita_xdg(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     assert slo.steam_input_allowlist_path() == (
@@ -1025,7 +864,7 @@ def test_allowlist_preserva_cabecalho_e_comentarios_existentes(tmp_path):
     assert slo.add_appid_to_steam_input_allowlist(620, path=alvo) == "adicionado"
 
     texto = alvo.read_text(encoding="utf-8")
-    assert texto.startswith(original)  # byte a byte, só append
+    assert texto.startswith(original)
     assert slo.parse_steam_input_allowlist(texto) == ["2111190", "620"]
 
 
@@ -1036,12 +875,11 @@ def test_allowlist_nao_duplica(tmp_path):
 
     assert slo.add_appid_to_steam_input_allowlist("2111190", path=alvo) == "ja_estava"
 
-    assert alvo.read_text(encoding="utf-8") == antes  # nem reescreve
+    assert alvo.read_text(encoding="utf-8") == antes
 
 
 def test_allowlist_appid_apenas_comentado_e_readicionado(tmp_path):
-    """`# 620` é comentário, não presença — a linha morta não pode fazer o
-    botão dizer "já estava" enquanto o guard segue revertendo o jogo."""
+    """`# 620` é comentário, não presença — a linha morta não pode fazer o"""
     alvo = tmp_path / "steam_input_apps.txt"
     alvo.write_text("# topo\n# 620 desliguei este\n", encoding="utf-8")
 
@@ -1054,7 +892,7 @@ def test_allowlist_appid_apenas_comentado_e_readicionado(tmp_path):
 
 def test_allowlist_sem_quebra_de_linha_final_nao_gruda_appids(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n2111190", encoding="utf-8")  # sem \n final
+    alvo.write_text("# topo\n2111190", encoding="utf-8")
 
     slo.add_appid_to_steam_input_allowlist(620, path=alvo)
 
@@ -1089,16 +927,6 @@ def test_allowlist_grava_a_nota_como_comentario(tmp_path):
     assert slo.parse_steam_input_allowlist(texto) == ["620"]
 
 
-# ---------------------------------------------------------------------------
-# JOGO-01 (Entrega 3): o botão que PÕE ganhou o gêmeo que TIRA
-# ---------------------------------------------------------------------------
-# A allowlist só tinha escritor para um lado: marcar um jogo era um clique,
-# desmarcar exigia editar `~/.config/.../steam_input_apps.txt` num editor de
-# texto — na prática, irreversível para quem não mexe em arquivo de config. E o
-# opt-in ficou mais caro com a JOGO-01: nele o Hefesto retira o gamepad virtual
-# daquele jogo, então um appid marcado por engano custa cor, gatilhos e co-op.
-
-
 def test_allowlist_remove_o_appid_e_preserva_cabecalho_e_comentarios(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
     alvo.write_text(
@@ -1122,10 +950,7 @@ def test_allowlist_remove_leva_o_comentario_inline_junto(tmp_path):
 
 
 def test_allowlist_remove_deixa_a_nota_orfa_de_proposito(tmp_path):
-    """Adivinhar "qual comentário era nosso" acertaria a nota do `add` e uma
-    anotação dela com a mesma facilidade — o cabeçalho da instalação nasce
-    colado no primeiro appid. Nota órfã não muda o comportamento de leitor
-    nenhum; anotação apagada não volta."""
+    """Adivinhar "qual comentário era nosso" acertaria a nota do `add` e uma"""
     alvo = tmp_path / "steam_input_apps.txt"
     slo.add_appid_to_steam_input_allowlist(620, path=alvo, nota="marcado pela GUI")
 
@@ -1147,8 +972,7 @@ def test_allowlist_remove_appid_ausente_nao_reescreve(tmp_path):
 
 
 def test_allowlist_remove_appid_so_comentado_e_nao_estava(tmp_path):
-    """Simetria com o `add`, que RE-ADICIONA um appid comentado: linha morta
-    não é presença nem para um lado nem para o outro."""
+    """Simetria com o `add`, que RE-ADICIONA um appid comentado: linha morta"""
     alvo = tmp_path / "steam_input_apps.txt"
     alvo.write_text("# topo\n# 620 desliguei este\n", encoding="utf-8")
 

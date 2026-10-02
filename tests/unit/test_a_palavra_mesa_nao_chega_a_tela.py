@@ -80,11 +80,7 @@ PACOTES = INTERFACE / "pacotes"
 
 
 def _paginas() -> list[Path]:
-    """As dez abas da bancada — e RECUSA achar menos que dez.
-
-    Régua que acha zero página termina verde sobre nada, que é a armadilha
-    que o `olhar.py` já carrega escrita no `--todas`.
-    """
+    """As dez abas da bancada — e RECUSA achar menos que dez."""
     achadas = sorted(p for p in BANCADA.glob("??-*.html"))
     assert len(achadas) == 10, (
         f"achei {len(achadas)} abas em {BANCADA} e o produto tem dez — "
@@ -94,16 +90,7 @@ def _paginas() -> list[Path]:
 
 
 def _literais_dos_pacotes() -> list[tuple[Path, int, str]]:
-    """Todo literal de string dos dez pacotes que NÃO é docstring.
-
-    O `ast` e não um `grep`, pela mesma razão da régua irmã: a frase viva mora
-    partida em quatro linhas do fonte com o recuo no meio, e o parser junta a
-    concatenação implícita antes de a régua olhar.
-
-    A DOCSTRING FICA DE FORA porque é prosa da casa — o glossário deixa `mesa`
-    viver como nome interno, e é em docstring que esta casa explica o `mesa`
-    de `mesa_viva`. Comentário nem entra: o `ast` não o vê.
-    """
+    """Todo literal de string dos dez pacotes que NÃO é docstring."""
     fora: list[tuple[Path, int, str]] = []
     for arquivo in sorted(PACOTES.glob("a??_*.py")):
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
@@ -134,15 +121,8 @@ def _literais_dos_pacotes() -> list[tuple[Path, int, str]]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# 1. O DESENHO — as dez páginas da bancada
-# ---------------------------------------------------------------------------
 def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_abas() -> None:
-    """Zero, e o erro diz PÁGINA, LINHA e a frase inteira.
-
-    A entrega de uma régua é o endereço do defeito, não o número dele: quem
-    ler esta reprovação tem de saber o que reescrever sem abrir o HTML.
-    """
+    """Zero, e o erro diz PÁGINA, LINHA e a frase inteira."""
     sujas: list[str] = []
     for pagina in _paginas():
         visivel = texto_visivel(pagina.read_text(encoding="utf-8"))
@@ -162,12 +142,7 @@ def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_abas() -> None:
 
 
 def _paginas_do_produto() -> list[Path]:
-    """As dez abas PUBLICADAS — as que o `WebKit2.WebView` carrega.
-
-    A mesma recusa da bancada, e pela mesma razão: as avulsas
-    (`mapa-do-controle`, `calibrar-sensores`) abrem por fora da janela e não são
-    aba, então o filtro é `??-*`, e menos que dez é caminho mudado.
-    """
+    """As dez abas PUBLICADAS — as que o `WebKit2.WebView` carrega."""
     achadas = sorted(p for p in PRODUTO.glob("??-*.html"))
     assert len(achadas) == 10, (
         f"achei {len(achadas)} abas em {PRODUTO} e o produto tem dez — "
@@ -177,18 +152,7 @@ def _paginas_do_produto() -> list[Path]:
 
 
 def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_paginas_do_produto() -> None:
-    """O que a JANELA mostra — com a folha do piloto aplicada.
-
-    Esta é a régua que faltava, e a diferença dela para a irmã de cima é a
-    `.nota`: a bancada ela abre crua no navegador e o bilhete de projeto é texto
-    de verdade; a janela injeta `.nota{display:none !important}` e ele não
-    chega a olho nenhum. Medido em 06/09/2026 num Chrome com a folha posta:
-    ZERO `mesa` nas dez páginas publicadas, contra 34 que a leitura crua conta.
-
-    ELA NÃO SUBSTITUI A IRMÃ. A bancada é o que vira produto no próximo
-    `--publicar`; se só o produto tivesse régua, a palavra voltaria pelo
-    desenho e só apareceria depois de publicada.
-    """
+    """O que a JANELA mostra — com a folha do piloto aplicada."""
     sujas: list[str] = []
     for pagina in _paginas_do_produto():
         visivel = texto_visivel_no_produto(pagina.read_text(encoding="utf-8"))
@@ -205,16 +169,8 @@ def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_paginas_do_produto() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. O TIQUE — o que os dez pacotes escrevem em execução
-# ---------------------------------------------------------------------------
 def test_a_palavra_nao_nasce_em_nenhum_dos_dez_pacotes() -> None:
-    """A página estática não mostra recado nenhum — e é lá que ela morava.
-
-    Cinco frases de `a02_controles.py` diziam *"este controle saiu da mesa"* com
-    a régua da página VERDE, porque um recado só existe quando o gesto falha.
-    Esta metade lê o fonte, que é onde a frase existe antes de acontecer.
-    """
+    """A página estática não mostra recado nenhum — e é lá que ela morava."""
     sujos: list[str] = []
     for arquivo, linha, texto in _literais_dos_pacotes():
         if palavra_banida_em(texto) is None:
@@ -229,9 +185,6 @@ def test_a_palavra_nao_nasce_em_nenhum_dos_dez_pacotes() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. O CONTRATO da lista — e ele é o que deixa a próxima palavra entrar barato
-# ---------------------------------------------------------------------------
 def test_a_borda_de_palavra_deixa_o_nome_interno_em_paz() -> None:
     """O glossário em forma de teste: a palavra sai, o nome fica."""
     for nome in (
@@ -263,43 +216,19 @@ def test_a_borda_de_palavra_deixa_o_nome_interno_em_paz() -> None:
 
 
 def test_o_primeiro_trecho_banido_consulta_as_duas_listas() -> None:
-    """A função que a sprint pediu: frase e palavra numa consulta só.
-
-    O DIA CHEGOU em 06/09/2026: as dezesseis frases de `app/` foram curadas no
-    dono e `hefesto_vivo._json` trocou `frase_banida_em` por esta, de modo que o
-    funil de execução passou a olhar as duas coisas. Ele levantava, e em
-    13/09/2026 a JANELA MORTA que este parágrafo temia aconteceu: uma frase de
-    `integrations/` e o diário do daemon ainda diziam palavras da lista. Desde
-    então o funil denuncia no diário da janela e continua pintando.
-    """
+    """A função que a sprint pediu: frase e palavra numa consulta só."""
     assert primeiro_trecho_banido("nada demais aqui") is None
     assert primeiro_trecho_banido("na mesa inteira") == "mesa"
     assert primeiro_trecho_banido("Alguns jogos derrubam o controle") == (
         "derrubam o controle"
     )
-    # A FRASE VEM PRIMEIRO quando as duas casam: ela é a mais específica, e é
-    # dela que a mensagem de erro do funil fala.
     assert primeiro_trecho_banido("na mesa eles derrubam o controle") == (
         "derrubam o controle"
     )
 
 
 def test_o_funil_de_execucao_consulta_as_duas_listas() -> None:
-    """O `_json` chama `primeiro_trecho_banido`, e não a metade dele.
-
-    Esta régua existe porque a troca é de UMA LINHA e o recuo também seria: o
-    dia em que alguém devolver `frase_banida_em` ao funil, a palavra volta a
-    chegar à tela por `app/` sem nada reprovar — foi o estado do mundo até
-    06/09/2026, e ele era declarado, não esquecido.
-
-    Ela lê o FONTE do funil em vez de exercitá-lo porque o `_json` é interno ao
-    piloto GTK e importá-lo aqui abriria uma janela na tela dela.
-
-    E ela anda pela ÁRVORE, não pelo texto. O `grep` seria a sétima vez nesta
-    casa em que um comentário vira o defeito que descreve: o do `_json` explica
-    a troca e CITA o nome da função, então uma régua que procurasse a palavra
-    daria verde com a chamada arrancada. `ast` só enxerga a chamada.
-    """
+    """O `_json` chama `primeiro_trecho_banido`, e não a metade dele."""
     fonte = (
         Path(__file__).resolve().parents[2]
         / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
@@ -322,13 +251,7 @@ def test_o_funil_de_execucao_consulta_as_duas_listas() -> None:
 
 
 def test_o_stripper_nao_engole_a_dica_nem_inventa_tamanho() -> None:
-    """As duas armadilhas do `texto_visivel`, medidas em vez de afirmadas.
-
-    A dica do `?` mora num `title=`, DENTRO de uma tag: um stripper que só
-    olhasse nó de texto daria verde sobre a palavra escondida ali. E o tamanho
-    tem de bater byte a byte com a entrada, senão a linha que a régua reporta é
-    a linha de outro lugar.
-    """
+    """As duas armadilhas do `texto_visivel`, medidas em vez de afirmadas."""
     pagina = (
         '<style>/* a mesa toda */</style>\n'
         '<!-- na mesa -->\n'
@@ -351,30 +274,15 @@ def test_o_stripper_nao_engole_a_dica_nem_inventa_tamanho() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. A LISTA NÃO SE DIGITA — ela se mede contra o glossário
-# ---------------------------------------------------------------------------
-#: O arquivo que MANDA. A tupla do módulo é a cópia que o produto instalado
-#: carrega, porque o pacote não leva `docs/` junto e um módulo que lesse este
-#: arquivo em execução quebraria na máquina dela.
 GLOSSARIO = RAIZ / "docs" / (
     "A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md")
 
-#: Onde a lista mora dentro do glossário. O trecho vai até a primeira das duas
-#: proibições em forma de FRASE — elas não têm forma de palavra e não entram na
-#: tupla, que casa por borda.
 ABRE = "**Proibido em texto de tela:**"
 FECHA = "qualquer frase que mande"
 
 
 def _do_glossario() -> tuple[str, ...]:
-    """As proibições em forma de PALAVRA, lidas do arquivo que manda.
-
-    O termo vem entre crase ou entre aspas, que é como o glossário escreve os
-    dois registros: crase para o identificador (`uinput`), aspas para a palavra
-    de língua ("mesa", "linha de comando"). Ler as duas formas é o que impede a
-    lista de depender de quem a digitou ter escolhido a mesma.
-    """
+    """As proibições em forma de PALAVRA, lidas do arquivo que manda."""
     texto = GLOSSARIO.read_text(encoding="utf-8")
     inicio = texto.find(ABRE)
     assert inicio >= 0, (
@@ -390,20 +298,7 @@ def _do_glossario() -> tuple[str, ...]:
 
 
 def test_a_lista_do_produto_e_a_do_glossario_nos_dois_sentidos() -> None:
-    """As duas listas são a MESMA — e a checagem vale nos dois sentidos.
-
-    **O DEFEITO QUE ISTO FECHA, medido em 11/09/2026:** a tupla tinha TRÊS
-    palavras e o glossário proibia ONZE. Só a de língua tinha régua, e foi por
-    essa fresta que `uinput` chegou à dica da Navegação e ficou lá.
-
-    O SENTIDO INVERSO não é simetria de enfeite: uma palavra que o produto
-    recusa e o glossário não nomeia manda a próxima pessoa reescrever um texto
-    sem saber por quê — e ninguém acha a razão, porque ela não está escrita
-    onde a casa combinou escrever.
-
-    MORDE: tire uma palavra da tupla e esta linha reprova; acrescente uma que o
-    glossário não tem e ela reprova do outro lado.
-    """
+    """As duas listas são a MESMA — e a checagem vale nos dois sentidos."""
     do_glossario = set(_do_glossario())
     do_produto = set(PALAVRAS_BANIDAS)
     assert len(do_glossario) >= 11, (

@@ -143,36 +143,20 @@ from typing import Any
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-#: `SDL_INIT_GAMECONTROLLER` na SDL2, `SDL_INIT_GAMEPAD` no SDL3: o mesmo bit.
 SDL_INIT_GAMECONTROLLER = 0x00002000
 SDL_SENSOR_ACCEL = 1
 SDL_SENSOR_GYRO = 2
 _SENSORES = ((SDL_SENSOR_GYRO, "giro"), (SDL_SENSOR_ACCEL, "accel"))
 
-#: Abaixo disto o basal não sustenta conclusão nenhuma — o aparelho estava
-#: parado, e "parou de chegar" seria indistinguível de "nunca chegou".
 BASAL_MINIMO = 5
 
-#: Os três eixos do GIROSCÓPIO no nó evdev "… Motion Sensors", já decodificados
-#: pelo kernel. São os mesmos que o `MotionSensorReader` do produto lê.
 EIXOS_DO_GIRO = ("ABS_RX", "ABS_RY", "ABS_RZ")
 
-#: Os três do ACELERÔMETRO, no mesmo nó.
 EIXOS_DO_ACELEROMETRO = ("ABS_X", "ABS_Y", "ABS_Z")
 
-#: A dica que decide se a libSDL2 2.30.x casa o nó de movimento ao gamepad, e o
-#: valor que o jogo recebe do wrapper em toda variante (`compose_env`, em
-#: `daemon/launch_env.py`). A régua
-#: `tests/unit/test_o_jogo_recebe_a_dica_do_acelerometro.py` confere que o
-#: ensaio mede com o mesmo valor que o jogo recebe.
 DICA_DO_ACELEROMETRO = "SDL_ACCELEROMETER_AS_JOYSTICK"
 VALOR_QUE_O_JOGO_RECEBE = "0"
 
-#: O filtro do SDL3 que faz o ``SDL_hid_enumerate`` listar só controles, ligado
-#: por padrão. Medido em 13/09/2026 com o SDL3 3.4.14 do sniper: com o filtro,
-#: 2 nós; sem ele, 17 entradas em 6 nós. A conferência da struct contra o piso
-#: pede a lista inteira — por isso a enumeração roda num processo à parte, com
-#: o filtro desligado, e o processo que abre os controles fica como o do jogo.
 FILTRO_SO_CONTROLES = "SDL_HIDAPI_ENUMERATE_ONLY_CONTROLLERS"
 
 _SEMPRE_NO_PROCESSO = {"SDL_VIDEODRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"}
@@ -180,11 +164,6 @@ _SO_LEITURA = {"SDL_JOYSTICK_HIDAPI": "0", "SDL_HIDAPI_LIBUSB": "0"}
 _SEM_TELA = ("DISPLAY", "WAYLAND_DISPLAY")
 _TETO_DE_ENTRADAS_HID = 512
 
-#: Onde os runtimes da Steam guardam a libSDL, relativo à instalação e às pastas
-#: de biblioteca. São convenções de pasta da própria Steam, não versões: a
-#: versão é lida da biblioteca achada. Só 64 bits (este python é 64), e as
-#: cópias de `var/tmp-*` que o pressure-vessel monta ficam de fora — são do
-#: contêiner em uso, não do runtime.
 _SCOUT = "ubuntu12_32/steam-runtime/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0*"
 _NOS_RUNTIMES = (
     "SteamLinuxRuntime_*/*_platform_*/files/lib/x86_64-linux-gnu/libSDL3.so.0*",
@@ -194,20 +173,13 @@ _NOS_RUNTIMES = (
 
 
 class _InfoHid(ctypes.Structure):
-    """`SDL_hid_device_info` da API da SDL2 (``include/SDL_hidapi.h``), até ``next``.
-
-    OS TRÊS INTS DE INTERFACE SÃO O QUE FALTAVA até 13/09/2026. Sem eles o
-    ``next`` era lido no deslocamento 56 — em cima de dois ints zerados —,
-    virava NULL e a lista parava no primeiro item. Com eles o ``next`` cai no
-    72, que é onde a biblioteca o põe. O sdl2-compat devolve esta mesma forma.
-    """
+    """`SDL_hid_device_info` da API da SDL2 (``include/SDL_hidapi.h``), até ``next``."""
 
 
 _CAMPOS_ATE_A_INTERFACE: list[tuple[str, Any]] = [
     ("path", ctypes.c_char_p),
     ("vendor_id", ctypes.c_ushort),
     ("product_id", ctypes.c_ushort),
-    # O serial identifica o aparelho: fica como ponteiro cru, nunca decodificado.
     ("serial_number", ctypes.c_void_p),
     ("release_number", ctypes.c_ushort),
     ("manufacturer_string", ctypes.c_void_p),
@@ -243,19 +215,13 @@ class Biblioteca:
     """Uma libSDL a medir, classificada SEM carregar — pelo nome e pelos bytes."""
 
     caminho: pathlib.Path
-    api: int  # 2 ou 3: a API que ela exporta
-    compat: bool  # sdl2-compat: a API 2 sobre um SDL3
-    pre_carregar: pathlib.Path | None  # o SDL3 que o sdl2-compat abre por NOME
+    api: int
+    compat: bool
+    pre_carregar: pathlib.Path | None
 
 
 def descrever_biblioteca(caminho: pathlib.Path) -> Biblioteca | str:
-    """A biblioteca pronta para carregar, ou a razão de não carregá-la.
-
-    O sdl2-compat abre o SDL3 pelo nome ``libSDL3.so.0``, e esse nome está nos
-    bytes dele; a SDL2 clássica não o traz. Carregar um sdl2-compat sem SDL3 por
-    perto é pedir falha de carregamento, então ele vai com o SDL3 da mesma pasta
-    (sniper, SLR 4) ou da pasta de cima (`sdl2-compat/`, no soldier) — ou não vai.
-    """
+    """A biblioteca pronta para carregar, ou a razão de não carregá-la."""
     if not caminho.is_file():
         return f"{caminho}: não é um arquivo"
     nome = caminho.name
@@ -322,15 +288,7 @@ def piso_da_enumeracao_hid(
     classe: pathlib.Path = pathlib.Path("/sys/class/hidraw"),
     dev: pathlib.Path = pathlib.Path("/dev"),
 ) -> list[str]:
-    """Os `hidraw` que TODA biblioteca medida lista — o chão da conferência.
-
-    São os que passam em ``access(R_OK|W_OK)`` (a SDL2 clássica testa isso antes
-    de listar) e têm barramento de verdade: USB com pai ``usb_device`` (a SDL2
-    clássica descarta o USB sem pai, que é o vpad `uhid`) ou Bluetooth. O SDL3 e
-    o sdl2-compat, com o filtro de controles desligado, listam um superconjunto
-    disto. Medido em 13/09/2026 nesta máquina: 4 nós no piso; a 2.30.0 lista os
-    4, e o SDL3 3.4.14 lista 6.
-    """
+    """Os `hidraw` que TODA biblioteca medida lista — o chão da conferência."""
     nos: list[str] = []
     for entrada in sorted(classe.glob("hidraw*")):
         no = dev / entrada.name
@@ -350,14 +308,7 @@ def piso_da_enumeracao_hid(
 
 
 def _mascara(uniq: str | None) -> str | None:
-    """O endereço com os octetos 4 e 5 zerados — a máscara desta casa.
-
-    Este ensaio existe para ter a saída COLADA num documento, e documento é
-    arquivo versionado: `AA:BB:CC:DD:EE:FF` sai `AA:BB:CC:00:00:FF`. Quem
-    junta nó com controle aqui dentro usa o endereço INTEIRO; o que SAI é o
-    mascarado. Sem isso o próximo a colar a saída derruba o portão do
-    anonimato — ou, pior, publica o rádio dela.
-    """
+    """O endereço com os octetos 4 e 5 zerados — a máscara desta casa."""
     if not uniq:
         return uniq
     partes = uniq.split(":")
@@ -367,13 +318,7 @@ def _mascara(uniq: str | None) -> str | None:
 
 
 def _uniq_do_no(caminho: str | None) -> str | None:
-    """O `uniq` do nó evdev que o SDL abriu — a propriedade de POSSE.
-
-    Casar nó com controle pelo NOME é cura errada, e é regra dela: nesta
-    bancada os DOIS vpads chegam com o mesmo rótulo, "(Hefesto P1)", e o nome
-    não separa um do outro. O `uniq` separa, e é ele que junta o que o SDL viu
-    com o nó de movimento da MESMA peça.
-    """
+    """O `uniq` do nó evdev que o SDL abriu — a propriedade de POSSE."""
     if not caminho or not caminho.startswith("/dev/input/event"):
         return None
     alvo = (
@@ -552,9 +497,6 @@ def olhar_com_o_sdl(sdl: Any, api: Any, segundos: float) -> list[dict[str, Any]]
     sdl.SDL_PumpEvents()
     buf = (ctypes.c_float * 3)()
     abertos = api.abrir_todos()
-    # O QUE O SDL RESPONDE ANTES DE QUALQUER AMOSTRA, e é a pergunta que o jogo
-    # faz primeiro. Sem isto, "0 amostras" tem duas causas indistinguíveis:
-    # o sensor está calado, ou a biblioteca diz ao jogo que ele NÃO EXISTE.
     expoe: dict[int, dict[str, Any]] = {}
     for c in abertos:
         expoe[c] = {}
@@ -586,7 +528,7 @@ def olhar_com_o_sdl(sdl: Any, api: Any, segundos: float) -> list[dict[str, Any]]
                 "o_sdl_abriu": aberto,
                 "por_hidapi": bool(bruto and b"hidraw" in bruto),
                 "uniq": _mascara(uniq),
-                "_uniq_inteiro": uniq,  # só para juntar aqui dentro; não sai no JSON
+                "_uniq_inteiro": uniq,
                 **expoe[c],
                 "giro_distintos": len(vistos[c]["giro"]),
                 "accel_distintos": len(vistos[c]["accel"]),
@@ -600,19 +542,7 @@ def olhar_com_o_sdl(sdl: Any, api: Any, segundos: float) -> list[dict[str, Any]]
 def olhar_o_no_de_movimento(
     segundos: float, *, sondar_grab: bool = True
 ) -> list[dict[str, Any]]:
-    """O nó "Motion Sensors" de cada peça: dá para abrir? chega evento?
-
-    Ele é o CONTROLE do número do SDL. A contagem de eventos sozinha não serve:
-    um nó pode despejar milhares de eventos repetindo o mesmo valor. Por isso
-    saem daqui **amostras DISTINTAS** de giro e de acelerômetro — se elas são
-    muitas e a biblioteca viu zero, "o controle estava parado" morre como
-    explicação, e o que sobra é a biblioteca.
-
-    Com ``sondar_grab`` o ensaio tenta um ``EVIOCGRAB`` e o solta na hora, para
-    dizer se alguém já segura o nó (o braço evdev do interruptor, ou um rival).
-    O ``--so-medir`` não sonda: um grab, por breve que seja, tira eventos de
-    quem estiver lendo.
-    """
+    """O nó "Motion Sensors" de cada peça: dá para abrir? chega evento?"""
     from evdev import InputDevice, ecodes, list_devices
 
     cod_giro = [ecodes.ecodes[n] for n in EIXOS_DO_GIRO]
@@ -636,7 +566,7 @@ def olhar_o_no_de_movimento(
                 dev.grab()
                 dev.ungrab()
             except OSError:
-                exclusivo = True  # alguém já graba: é o nosso braço, ou um rival
+                exclusivo = True
         os.set_blocking(dev.fd, False)
         eventos = 0
         atual: dict[int, int] = {}
@@ -817,12 +747,7 @@ def _uniq_do_primeiro_fisico() -> str | None:
 def _o_no_da_mesma_peca(
     controle: dict[str, Any], nos: list[dict[str, Any]]
 ) -> dict[str, Any] | None:
-    """O nó "Motion Sensors" da MESMA peça que o SDL abriu — casado por `uniq`.
-
-    Por `uniq` e não pelo nome: nesta bancada os dois vpads chegam rotulados
-    "(Hefesto P1)", e casar por rótulo poria o dado de uma peça ao lado do
-    veredito da outra.
-    """
+    """O nó "Motion Sensors" da MESMA peça que o SDL abriu — casado por `uniq`."""
     alvo = controle.get("_uniq_inteiro")
     if not alvo:
         return None
@@ -848,14 +773,7 @@ def _veredito(
     depois: list[dict[str, Any]] | None,
     nos: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    """As frases do fim — uma por controle POR BIBLIOTECA, e cada uma diz quem respondeu.
-
-    A PRIMEIRA PERGUNTA NÃO É QUANTAS AMOSTRAS CHEGARAM: com a biblioteca
-    respondendo que o controle **não tem** giroscópio, zero amostras é
-    conclusivo — sobre ESTA biblioteca. Até 13/09/2026 a frase atribuía o NÃO
-    ao caminho até o jogo, e quem a leu concluiu sobre o vpad o que era da
-    libSDL2 2.30.0 do sistema.
-    """
+    """As frases do fim — uma por controle POR BIBLIOTECA, e cada uma diz quem respondeu."""
     nos = nos or []
     depois_por_bib = {m["biblioteca"]: m for m in (depois or [])}
     linhas: list[str] = []
@@ -929,12 +847,7 @@ def _algo_nao_confere(medidas: list[dict[str, Any]]) -> bool:
 
 
 def _sem_o_endereco(valor: Any) -> Any:
-    """O relatório sem as chaves de junção — o que SAI não leva endereço real.
-
-    As chaves `_uniq_inteiro` existem para casar nó com controle aqui dentro,
-    em qualquer profundidade do relatório. Elas nunca saem: a saída deste ensaio
-    é feita para ser colada em documento, e documento é arquivo versionado.
-    """
+    """O relatório sem as chaves de junção — o que SAI não leva endereço real."""
     if isinstance(valor, dict):
         return {k: _sem_o_endereco(v) for k, v in valor.items() if not k.startswith("_")}
     if isinstance(valor, list):
@@ -1015,14 +928,12 @@ def main() -> int:
     relatorio["resposta_do_desligar"] = asyncio.run(
         _chamar("sensor.set", {"uniq": uniq, sensor: False})
     )
-    time.sleep(1.5)  # o hub reconcilia a 1 Hz; medir antes disso é medir frio
+    time.sleep(1.5)
     relatorio["depois"] = [
         medir_uma_biblioteca(c, piso, enumerar=False, **opcoes) for c in caminhos
     ]
     relatorio["depois_no_de_movimento"] = olhar_o_no_de_movimento(1.0)
 
-    # SEMPRE RELIGA. A bancada é dela, e um ensaio que sai deixando o
-    # giroscópio desligado é um defeito que alguém vai caçar amanhã no jogo.
     with contextlib.suppress(Exception):
         relatorio["resposta_do_religar"] = asyncio.run(
             _chamar("sensor.set", {"uniq": uniq, sensor: True})

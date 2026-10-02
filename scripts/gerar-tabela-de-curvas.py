@@ -109,25 +109,10 @@ def divergencias(publicado: str, regerado: str) -> list[str]:
 
 
 def frase_do_tamanho(caminho: Path, quantas: int) -> str:
-    """O que a régua mediu, dito em voz alta — ou a confissão de que não mediu.
-
-    26/08/2026 (LEVA-4-E). Este script imprimia `atualizado (0 curva(s) no
-    catálogo)` e saía `rc=0` sobre um catálogo que **não existe no disco**.
-    `rc=0` ali é honesto — o bloco publicado de fato bate com a tabela vazia —,
-    mas a PALAVRA `atualizado` é a mentira: nada foi conferido, porque não há
-    nada para conferir, e quem lê a linha do `portoes.sh` conta um verde a
-    mais. É o padrão que a casa nomeou em 25/08 — *a régua confunde a PALAVRA
-    com o ATO* — e a saída aprovada naquele dia foi a régua do teclado, que
-    disse *"a régua não achou NENHUM valor produzível — ela cegou"*.
-
-    Um catálogo com UMA curva também não é medição: com um único item não há
-    ordenação, nem colisão de nome, nem formatação a divergir.
-    """
+    """O que a régua mediu, dito em voz alta — ou a confissão de que não mediu."""
     try:
         onde = caminho.relative_to(RAIZ).as_posix()
     except ValueError:
-        #: Catálogo fora da árvore só acontece em teste — e ali o endereço
-        #: absoluto é o que ajuda a ler a falha.
         onde = caminho.as_posix()
     if not caminho.is_file():
         return (

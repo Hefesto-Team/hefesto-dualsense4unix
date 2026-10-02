@@ -31,10 +31,7 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
 def _rodar(caminhos: list[str], *, pareados: list[str] | None = None) -> str:
-    """Roda `check_bond_dobrado` com a lista de caminhos dada, e devolve a saída.
-
-    ``pareados`` são os caminhos com ``Paired=true``; sem ele, todos têm chave.
-    """
+    """Roda `check_bond_dobrado` com a lista de caminhos dada, e devolve a saída."""
     falsa = "\n".join(caminhos)
     com_chave = "\n".join(caminhos if pareados is None else pareados)
     roteiro = textwrap.dedent(f"""
@@ -102,9 +99,6 @@ def test_cada_controle_no_seu_adaptador_passa_verde() -> None:
 
 
 def test_caminho_repetido_nao_e_dobra() -> None:
-    # O `busctl tree --list` pode repetir um caminho. Repetição do MESMO
-    # adaptador não é dobra — contar linha em vez de adaptador distinto
-    # acusaria toda máquina.
     saida = _rodar(
         [
             "/org/bluez/hci0/dev_AA_BB_CC_00_00_01",
@@ -117,9 +111,6 @@ def test_caminho_repetido_nao_e_dobra() -> None:
 
 
 def test_mesa_sem_adaptador_nenhum_nao_quebra() -> None:
-    # O produto é de acessibilidade e roda em máquina de outra pessoa:
-    # `mesa_de_radio.py:44-52` registra que zero adaptadores é o caso mais
-    # comum lá fora.
     saida = _rodar([])
     assert "[WARN]" not in saida, f"acusou uma máquina sem adaptador:\n{saida}"
     assert "[OK]" in saida, "calou numa máquina sem adaptador"
@@ -148,11 +139,7 @@ def test_o_recado_diz_o_gesto_e_nao_apaga_sozinho() -> None:
 
 
 def test_o_vizinho_de_busca_nao_e_chave() -> None:
-    """O defeito medido em 25/09: objeto de busca em dois adaptadores não é bond.
-
-    MORDIDA: tire a linha do ``Paired`` do ``_bond_dobrado_por_controle`` — o
-    vizinho visto por hci1 e hci2 volta a ser acusado, e esta régua reprova.
-    """
+    """O defeito medido em 25/09: objeto de busca em dois adaptadores não é bond."""
     vizinho = ["/org/bluez/hci1/dev_AA_BB_CC_00_00_77", "/org/bluez/hci2/dev_AA_BB_CC_00_00_77"]
     dobrado = ["/org/bluez/hci0/dev_AA_BB_CC_00_00_03", "/org/bluez/hci1/dev_AA_BB_CC_00_00_03"]
     saida = _rodar(vizinho + dobrado, pareados=dobrado)

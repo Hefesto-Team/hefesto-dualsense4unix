@@ -1,39 +1,4 @@
-"""ARVORE-ERRADA-02 — o `migrate` plantava a chamada do wrapper onde a Steam
-não lê.
-
-O irmão deste teste, `test_arvore_errada_01_o_censo_lia_o_apps_que_a_steam_nao_le`,
-fechou o LEITOR (`read_apps_by_appid`) e o ESCRITOR em massa
-(`apply_wrapper_vdf_text`) em 16/08/2026: os dois passaram a exigir o caminho
-inteiro ``…/Software/Valve/Steam/apps/<appid>``.
-
-**`transform_vdf_text` ficou para trás.** Ela varria o arquivo LINHA a LINHA,
-sem saber em que bloco estava, e por isso o modo `migrate` reescrevia qualquer
-`LaunchOptions` envenenada — inclusive as das duas árvores `apps` que a Steam
-não consulta.
-
-MEDIDO no `localconfig.vdf` dela em 02/09/2026, com a régua deste arquivo:
-
-===============================================  =========================
-árvore                                           blocos com LaunchOptions
-===============================================  =========================
-``UserLocalConfigStore/Software/Valve/Steam/apps``  63  (a viva)
-``UserLocalConfigStore/apps``                       10
-``UserLocalConfigStore/WebStorage/apps``             3
-===============================================  =========================
-
-As treze de fora nasceram da aplicação em massa de 21/07 e são inertes: a Steam
-nunca as lê. O custo delas não é o jogo — é a leitura humana, e já custou uma
-acusação falsa no `doctor.sh` (*"o censo as conta como cobertura"*, que o censo
-não faz desde 16/08).
-
-**A ASSIMETRIA É O CONTRATO, e é o que este arquivo trava:**
-
-- `migrate` só escreve na árvore canônica. Fora dela, o modo `migrate` age
-  como `strip`: tira o nosso pedaço e devolve o resto do valor a quem escreveu.
-  Plantar a chamada do wrapper onde ninguém lê é criar cobertura de mentira.
-- `strip` continua alcançando TODAS as árvores. É o único caminho de volta do
-  que já foi plantado; ancorá-lo deixaria o lixo lá para sempre.
-"""
+"""ARVORE-ERRADA-02 — o `migrate` plantava a chamada do wrapper onde a Steam"""
 
 from __future__ import annotations
 
@@ -45,7 +10,6 @@ from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 ROOT_DO_MODULO = Path(slo.__file__)
 
-#: A variante de onda anterior persistida no vdf real (a "linha 914").
 LINHA_914 = (
     "SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 "
     "__GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%"
@@ -73,12 +37,7 @@ def _vdf_das_tres_arvores(
     solta: dict[str, str] | None = None,
     web: dict[str, str] | None = None,
 ) -> str:
-    """As TRÊS árvores `apps` do arquivo dela, no mesmo aninhamento medido.
-
-    ``viva``  -> UserLocalConfigStore/Software/Valve/Steam/apps  (a que a Steam lê)
-    ``solta`` -> UserLocalConfigStore/apps
-    ``web``   -> UserLocalConfigStore/WebStorage/apps
-    """
+    """As TRÊS árvores `apps` do arquivo dela, no mesmo aninhamento medido."""
     corpo = (
         f'{_TAB}"Software"\n{_TAB}{{\n'
         f'{_TAB * 2}"Valve"\n{_TAB * 2}{{\n'
@@ -96,11 +55,7 @@ def _vdf_das_tres_arvores(
 
 
 def _valores_por_arvore(texto: str) -> dict[str, dict[str, str]]:
-    """Régua INDEPENDENTE do produto: caminho inteiro -> {appid: valor}.
-
-    Reimplementa a pilha de blocos em vinte linhas de propósito — uma régua que
-    compartilha o parser com o código que ela audita não pode acusá-lo.
-    """
+    """Régua INDEPENDENTE do produto: caminho inteiro -> {appid: valor}."""
     fora: dict[str, dict[str, str]] = {}
     pilha: list[str] = []
     pendente: str | None = None
@@ -159,9 +114,7 @@ class TestOMigrateSoEscreveOndeASteamLe:
         for caminho, appid in ((SOLTA, "620"), (WEB, "440")):
             valor = arvores[caminho][appid]
             assert slo.WRAPPER_PREFIX not in valor, (caminho, valor)
-            # E o veneno saiu: fora da canônica o `migrate` age como `strip`.
             assert slo.IGNORE_SIGNATURE not in valor, (caminho, valor)
-            # O que era dela fica: o shader-cache é escolha de quem escreveu.
             assert "__GL_SHADER_DISK_CACHE=1" in valor, (caminho, valor)
 
     def test_na_arvore_viva_o_migrate_continua_embrulhando(self) -> None:
@@ -183,7 +136,6 @@ class TestOMigrateSoEscreveOndeASteamLe:
 
     def test_o_strip_continua_alcancando_todas_as_arvores(self) -> None:
         """Ancorar o `strip` deixaria o lixo já plantado lá para sempre."""
-        # O wrapper carrega aspas: no arquivo ele vive ESCAPADO (KeyValues).
         plantado = slo._vdf_escape(f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%")
         texto = _vdf_das_tres_arvores(
             viva={"620": plantado}, solta={"620": plantado}, web={"440": plantado}
@@ -199,11 +151,7 @@ class TestOMigrateSoEscreveOndeASteamLe:
             slo.transform_vdf_text("", "apagar_tudo")
 
     def test_linha_alheia_fora_da_canonica_passa_intacta(self) -> None:
-        """A linha VKD3D dela, sem veneno e sem wrapper, não é nossa para mexer.
-
-        É o estado real do `UserLocalConfigStore/apps` dela em 02/09/2026: dez
-        blocos com `VKD3D_CONFIG=no_upload_hvv %command%` e nada de nosso.
-        """
+        """A linha VKD3D dela, sem veneno e sem wrapper, não é nossa para mexer."""
         dela = "VKD3D_CONFIG=no_upload_hvv %command%"
         texto = _vdf_das_tres_arvores(solta={"413080": dela})
         for modo in ("migrate", "strip"):
@@ -213,16 +161,7 @@ class TestOMigrateSoEscreveOndeASteamLe:
 
 
 class TestORecolherEOCaminhoDeVolta:
-    """`recolher` apaga a linha INTEIRA, e só fora da árvore viva.
-
-    É a resposta para o que já foi plantado e não dá mais para reconhecer pelo
-    valor: em 02/09/2026 as dez linhas de `UserLocalConfigStore/apps` dela
-    carregam `VKD3D_CONFIG=no_upload_hvv %command%` — texto DELA, sobrando de
-    um `strip` que comeu a nossa parte. Nem o `strip` nem o `migrate` as veem,
-    porque os dois só tocam linha com veneno ou com o wrapper.
-
-    NUNCA roda sozinho: só pela flag `--recolher-fora-da-arvore-viva`.
-    """
+    """`recolher` apaga a linha INTEIRA, e só fora da árvore viva."""
 
     def test_apaga_a_linha_de_fora_e_nao_a_de_dentro(self) -> None:
         dela = "VKD3D_CONFIG=no_upload_hvv %command%"

@@ -1,38 +1,4 @@
-"""Cada quadrado da janela do mapa diz se o aparelho fica bem ali.
-
-LEVA 3, frente B (26/08/2026). A janela do mapa (``app/widgets/mapa_da_mesa.py``)
-desenhava o gabinete e **cada quadrado ficava mudo**: ela importava
-``censo_do_barramento``, ``i18n``, ``logging_config`` e ``utils.maquina``, e não
-importava ``arranjo_da_mesa`` nem ``mapa_das_portas``. O motor que sabe
-responder — 1.292 linhas portadas do mockup dela, com 114 testes de
-equivalência contra o original em ``node`` — não tinha **uma única linha de
-produção** que o chamasse. Era ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`` na forma mais
-cara: 37 das 87 lápides do portão eram deste motor.
-
-O QUE ESTE ARQUIVO MEDE, E O QUE NÃO
--------------------------------------
-
-Mede **a costura**: que o juízo do motor chega ao quadrado com a razão junto, e
-que o desenho DELA é o que dispara a penalidade de vizinho rádio. Não mede as
-regras do motor — quem faz isso é ``test_arranjo_invariantes.py`` (as duas
-invariantes) e ``test_arranjo_da_mesa_bate_com_o_mockup.py`` (a equivalência com
-o JavaScript), e os dois continuam verdes.
-
-E mede a CONFISSÃO, que é metade da decisão dela: pela
-``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS``, *"com o gabinete não desenhado o motor
-fica sem par e as três penalidades de vizinho rádio não disparam, e a linha do
-mapa passa a DIZER isso em vez de calar — juízo otimista silencioso é pior que
-juízo nenhum"*. Um mapa que julgasse calando o que não sabe passaria neste
-arquivo se ele só cobrasse o veredito; por isso o segundo teste cobra a frase.
-
-A BANCADA É A DE MENTIRA, E ISSO NÃO É DETALHE
------------------------------------------------
-
-``test_mapa_a_bancada_de_mentira`` é o sysfs em memória de 25/08 às 02h30, e o
-``mapa_dela()`` é o gabinete que ela desenhou. Medir contra a bancada de quem
-roda o teste é a armadilha 1 do ``COMO-OLHAR-A-TELA.md`` entrando pela porta do
-``/sys``. Nenhum aparelho é tocado, nenhum daemon é ouvido.
-"""
+"""Cada quadrado da janela do mapa diz se o aparelho fica bem ali."""
 from __future__ import annotations
 
 from typing import Any
@@ -41,7 +7,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("o juízo de cada quadrado do mapa 2D")
 
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
@@ -61,15 +26,10 @@ from tests.unit.test_mapa_a_bancada_de_mentira import (
     mapa_dela,
 )
 
-#: O adaptador Bluetooth que está na ponta da extensão (entrada `15a`). É ele
-#: que ela pega para colocar noutro lugar, e é o caso em que o vizinho importa.
 BT_DA_EXTENSAO = "3-1.1.4"
 
-#: A entrada em que o OUTRO adaptador Bluetooth (`3-1.1.1`) está declarado.
 ENTRADA_DO_BT_DO_HUB = "13"
 
-#: A entrada VAZIA que é irmã da `13` no desenho dela — a fileira do hub é lida
-#: de duas em duas: 9-10, 11-12, 13-14, e a 15 sobra.
 ENTRADA_COLADA_NO_BT = "14"
 
 
@@ -85,11 +45,7 @@ class _Hospedeiro:
 
 
 def _janela(mapa: MapaDaMesa | None = None) -> JanelaDoMapaDaMesa:
-    """A janela sobre a bancada de mentira, sem `show`.
-
-    Ela NÃO é mostrada: sob Xvfb não há gerenciador de janelas e uma
-    `Gtk.Window` mostrada fica 1x1 para sempre (`COMO-OLHAR-A-TELA.md`).
-    """
+    """A janela sobre a bancada de mentira, sem `show`."""
     return JanelaDoMapaDaMesa(
         _Hospedeiro(),
         mapa_dela() if mapa is None else mapa,
@@ -105,21 +61,8 @@ def _dica(janela: JanelaDoMapaDaMesa, numero: str) -> str:
     return str(janela.quadrados[numero].get_tooltip_text() or "")
 
 
-# --- 1. O quadrado publica o veredito, e a razão junto ----------------------
-
-
 def test_quadrado_com_veredito_ruim_nao_sai_verde() -> None:
-    """Com um rádio na entrada colada, o quadrado vizinho reprova — e diz por quê.
-
-    O caso é a mesa dela: a fileira do hub é lida de duas em duas, a `13` tem um
-    adaptador Bluetooth e a `14` é a irmã dela **no metal**. Ela pega o outro
-    adaptador; a `14` tem de dizer que ali não, e dizer que é por causa do que
-    está na `13`.
-
-    É o caminho inteiro numa asserção só: `irmas_de` (o desenho dela, de duas em
-    duas) -> `Entrada.par` -> a penalidade de -45 do Bluetooth -> o veredito ->
-    o rótulo e a dica do quadrado.
-    """
+    """Com um rádio na entrada colada, o quadrado vizinho reprova — e diz por quê."""
     janela = _janela()
     janela.aparelhos[BT_DA_EXTENSAO].emit("clicked")
 
@@ -153,13 +96,7 @@ def test_quadrado_com_veredito_ruim_nao_sai_verde() -> None:
 
 
 def test_o_par_sai_do_desenho_dela_e_nao_da_numeracao_do_kernel() -> None:
-    """Trocar a ORDEM em que ela desenhou a fileira troca quem é vizinho de quem.
-
-    É a prova de que o par vem de `irmas_de` (o desenho dela, de duas em duas) e
-    não de alguma vizinhança do sysfs: com a `14` desenhada em par com a `15` em
-    vez da `13`, o mesmo adaptador na mão deixa de ser vizinho do rádio, e o
-    veredito da `14` muda de "vale evitar" para "melhor lugar".
-    """
+    """Trocar a ORDEM em que ela desenhou a fileira troca quem é vizinho de quem."""
     bruto = mapa_dela().model_dump(mode="json")
     for face in bruto["faces"]:
         if face["nome"] == "Hub":
@@ -169,7 +106,6 @@ def test_o_par_sai_do_desenho_dela_e_nao_da_numeracao_do_kernel() -> None:
 
     for face in bruto["faces"]:
         if face["nome"] == "Hub":
-            # A `13` sai do par com a `14` e passa a fazer par com a `12`.
             face["portas"] = ["9", "10", "11", "13", "12", "14", "15"]
     trocado = _janela(MapaDaMesa.model_validate(bruto))
     trocado.aparelhos[BT_DA_EXTENSAO].emit("clicked")
@@ -189,25 +125,8 @@ def test_o_par_sai_do_desenho_dela_e_nao_da_numeracao_do_kernel() -> None:
     )
 
 
-# --- 2. O que o desenho não diz sai ESCRITO ---------------------------------
-
-
 def test_sem_par_o_mapa_confessa() -> None:
-    """`Entrada.pos` não tem fonte, e a janela DIZ isso em vez de calar.
-
-    Decisão dela, `D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS`: *"a linha do mapa passa a
-    DIZER isso em vez de calar — juízo otimista silencioso é pior que juízo
-    nenhum"*.
-
-    São dois fatos sem fonte na mesa dela, e a confissão nomeia os dois:
-
-    * `Entrada.pos` — a posição do buraco na fileira do metal. Não existe no
-      `MapaDaMesa`, não existe no censo, não existe no `/sys`. Sem ela o
-      `_bonus_separacao` (+6 por posição de folga, teto 6) **nunca dispara**, e
-      dois adaptadores nas pontas opostas do hub recebem o mesmo juízo de dois
-      colados;
-    * o par da entrada `15`, que sobra na fileira de sete do hub.
-    """
+    """`Entrada.pos` não tem fonte, e a janela DIZ isso em vez de calar."""
     janela = _janela()
 
     assert janela.confissao, (
@@ -236,12 +155,7 @@ def test_sem_par_o_mapa_confessa() -> None:
 
 
 def test_a_bancada_do_rascunho_responde_com_o_gabinete_vazio() -> None:
-    """Quem nunca desenhou não recebe juízo nenhum, e também não recebe erro.
-
-    Zero faces é estado legítimo e é como a janela nasce para quem nunca
-    desenhou. A mesa sai vazia, e a confissão da POSIÇÃO cala: não há entrada
-    sobre a qual mentir.
-    """
+    """Quem nunca desenhou não recebe juízo nenhum, e também não recebe erro."""
     bancada = bancada_do_rascunho(LogicaDoMapa(MapaDaMesa()), bancada_de_agora().censo())
 
     assert bancada.mesa.faces == ()
@@ -251,21 +165,8 @@ def test_a_bancada_do_rascunho_responde_com_o_gabinete_vazio() -> None:
     )
 
 
-# --- 3. O fato dela não se perde no caminho ---------------------------------
-
-
 def test_o_rascunho_nao_derruba_o_que_so_ela_sabe_da_face() -> None:
-    """`perto` e `alto` atravessam o rascunho — senão o "Aplicar" os apagaria.
-
-    Os dois são FATO DELA (a face virada para quem senta, a face no alto do
-    rack) e só ela os tem: o `/sys` desta bancada responde `panel=right` para as
-    DUAS entradas da frente. A gravação SUBSTITUI a lista de faces inteira, então
-    um rascunho que os deixasse cair apagaria do disco, no primeiro clique do
-    desenho, o que ela declarou noutra tela.
-
-    E não é só disco: são eles que ligam o bônus de +20 do teclado ("na frente,
-    que é a mais perto de você") no motor.
-    """
+    """`perto` e `alto` atravessam o rascunho — senão o "Aplicar" os apagaria."""
     bruto = mapa_dela().model_dump(mode="json")
     bruto["faces"][0]["perto"] = True
     bruto["faces"][2]["alto"] = True

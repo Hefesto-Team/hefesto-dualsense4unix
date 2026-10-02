@@ -1,33 +1,5 @@
 #!/usr/bin/env python3
-"""As cinco bancadas vivas abrem a página que prometem — e não saem verdes sem ela.
-
-**06/09/2026, costura da ONDA C.** A `ONDA5-07-03` achou que a bancada da aba
-Jogar apontava para `AQUI.parent / "01-jogar.html"` — endereço certo enquanto
-ela morava em `layout/_ferramentas/`, e morto desde a mudança para `src/`. O
-sintoma era o pior possível: ela imprimia *"ERRO DE CARGA"*, ficava em
-`voltas: 0` e **devolvia `rc=0`**. Quem a rodasse num laço, num portão ou num
-relatório leria SUCESSO sobre uma janela vazia.
-
-Quem costurou mediu as outras quatro e achou **a gêmea**: `perfis_vivos.py`
-apontava para `hefesto_dualsense4unix/10-perfis.html`, que também não existe.
-Medido antes da cura, com `--oculta --segundos 2`:
-
-    ERRO DE CARGA: carregou OUTRA página: título ''
-    voltas: 0 · remontagens: 0 · gestos: 0
-    rc=0
-
-Depois: `voltas: 4 · remontagens: 1`, e `rc=2` quando a página não está lá.
-
-**ESTA RÉGUA NÃO IMPORTA AS BANCADAS, e a recusa é medida:** `perfis_vivos.py`
-faz `import aba10` no topo, e os geradores escrevem a bancada dela no disco como
-efeito de um `import` — foi assim que `mockup/05-vibracao.html` mudou durante uma
-COLETA do pytest em 06/09. Uma régua que importasse estes cinco reescreveria o
-desenho aprovado dela a cada volta da suíte. Então ela LÊ O FONTE e resolve o
-caminho, que é o que ela precisa saber de qualquer jeito.
-
-A MORDIDA: troque o `PAGINA` de qualquer uma das cinco por um nome que não
-existe, e esta régua reprova nomeando o arquivo e o caminho.
-"""
+"""As cinco bancadas vivas abrem a página que prometem — e não saem verdes sem ela."""
 from __future__ import annotations
 
 import pathlib
@@ -36,9 +8,6 @@ import re
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
-#: As bancadas vivas: um arquivo por aba que ela abre para OLHAR a tela nova.
-#: Quem acrescentar a sexta acrescenta o nome aqui — uma bancada fora desta
-#: lista é uma bancada sem esta régua.
 BANCADAS = (
     "jogar_vivo.py",
     "controles_vivos.py",
@@ -49,12 +18,7 @@ BANCADAS = (
 
 
 def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
-    """Resolve o `PAGINA = …` do fonte, sem importar o módulo.
-
-    As quatro formas que existem hoje, e todas terminam no mesmo lugar:
-    `onde.PUBLICADO / "NN.html"`, a soletrada com o nome da pasta publicada,
-    a mesma com `RAIZ_DEV`, e a forma morta `AQUI.parent / "NN.html"`.
-    """
+    """Resolve o `PAGINA = …` do fonte, sem importar o módulo."""
     m = re.search(r"^PAGINA = (.+)$", fonte, re.M)
     if m is None:
         return None
@@ -62,11 +26,8 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
     nome = re.search(r'"([\w.-]+\.html)"', expr)
     if nome is None:
         return None
-    # O nome da PASTA no disco entra CRU nas duas linhas abaixo: caminho não
-    # leva acento, e acentuá-lo aqui quebraria o casamento com o fonte.
     if "onde.PUBLICADO" in expr or '"paginas"' in expr:  # noqa-acento (nome de pasta)
         return INTERFACE / "paginas" / nome.group(1)  # noqa-acento (nome de pasta)
-    # `AQUI.parent` é `src/hefesto_dualsense4unix/` — a forma morta.
     return INTERFACE.parent / nome.group(1)
 
 
@@ -89,24 +50,7 @@ def test_as_cinco_bancadas_apontam_para_uma_pagina_que_existe() -> None:
 
 
 def _recusa_a_pagina_ausente(fonte: str) -> bool:
-    """A bancada confere que a página existe e SAI com `rc=2` — pela ÁRVORE.
-
-    **ESTA RÉGUA DIGITAVA O QUE DEVIA LER — 06/09/2026.** Ela procurava a
-    literal `"if not PAGINA.exists():"` no fonte, e a `JOGAR-O-QUE-FALTA-01`
-    deu à `jogar_vivo` a bandeira `--bancada`: a página passou a ser escolhida
-    em tempo de execução (`pagina_de(args)`, o publicado ou o desenho de hoje),
-    a guarda passou a conferir o ALVO RESOLVIDO — que é MAIS certo, porque
-    também alcança a bancada — e a régua reprovou a melhora. É o defeito de
-    forma que esta casa nomeia: *a régua confunde a PALAVRA com o ATO*, e ela
-    desliga exatamente quando alguém escreve bem.
-
-    O que se mede agora é o ATO: existe um `if not <algo>.exists():` cujo corpo
-    devolve `2`. O nome do que se confere é livre — `PAGINA`, `alvo`, o que a
-    bancada resolver —, porque o nome nunca foi o ponto.
-
-    MORDIDA: troque o `return 2` da guarda por um `print`, e esta régua acusa a
-    bancada nomeando-a.
-    """
+    """A bancada confere que a página existe e SAI com `rc=2` — pela ÁRVORE."""
     import ast
 
     for no in ast.walk(ast.parse(fonte)):
@@ -136,11 +80,6 @@ def test_as_cinco_bancadas_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
         fonte = (INTERFACE / nome).read_text(encoding="utf-8")
         if not _recusa_a_pagina_ausente(fonte):
             sem_guarda_da_pagina.append(nome)
-        # A FRASE, e não a forma do contador: a `sistema_viva` guarda os
-        # custos do tique em `janela.valores` e as outras quatro têm um
-        # `self.voltas`. Cobrar a forma faria esta régua reprovar quem está
-        # certo — e cobrar a frase é o que ela quer de fato, porque é a frase
-        # que quem roda a bancada lê.
         if "a bancada não deu uma volta" not in fonte:
             sem_guarda_da_volta.append(nome)
     assert not sem_guarda_da_pagina, (

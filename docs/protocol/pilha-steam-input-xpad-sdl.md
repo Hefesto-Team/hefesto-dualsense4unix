@@ -377,7 +377,7 @@ Leia a ordem: **para o par `28de:11ff`, a função retorna antes de consultar
 
 - com `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` **ausente ou 0**, o SDL
   já ignora os espelhos sozinho — e o par `0x28de/0x11ff` que este projeto
-  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:138`, emitido em `:289-291`) é
+  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:289-291`) é
   **redundante**, não errado;
 - com a variável **em 1**, o SDL usa os espelhos — e aquele par **não os
   esconde**, porque a lista de ignorados nunca é consultada para ele.
@@ -493,7 +493,7 @@ formato documentado do hint, é o que o próprio Proton escreve na variável irm
 lado a lado; a diferença é só de nomes (`controllers` virou `gamepads`,
 `SDL_bool` virou `bool`). **GRAU: ALTA.**
 
-> Isto **promove** a nota de `daemon/launch_env.py:190-199`, que registrava
+> Isto **promove** a nota de `daemon/launch_env.py:126-135`, que registrava
 > honestamente "SUSPEITA COM MECANISMO (forte; nenhum parser do SDL foi
 > executado)". O parser continua não executado — mas o **caminho de decisão**
 > agora está lido linha a linha, nas duas gerações. O que falta para virar
@@ -557,7 +557,7 @@ desta casa afirmava por medição indireta; agora está lido no fonte.
 4. A variável é consultada **antes** da lista de registro e antes de
    `PROTON_ENABLE_HIDRAW` (`main.c:571-578`), então negar vence.
 
-**Isto CONFIRMA, por leitura de fonte, o que `daemon/launch_env.py:193-201`
+**Isto CONFIRMA, por leitura de fonte, o que `daemon/launch_env.py:129-137`
 (a docstring de `compor_lista_vidpid`) registrava como MEDIDO por `strings(1)`.** As mesmas cadeias estão no binário
 dela: `strings -a -el` no
 `Proton 10.0/files/lib/wine/x86_64-windows/winebus.sys` devolve
@@ -595,7 +595,7 @@ Três leituras, e a terceira é a que importa:
    wrapper exportou.
 2. A lista inclui `0x054C/0x0DF2` — o PID do nosso vpad. Se disparar, o vpad
    perde `hidraw`, e com ele rumble, gatilhos e lightbar do jogo. É precisamente
-   o que `daemon/launch_env.py:310` proíbe em letras maiúsculas
+   o que `daemon/launch_env.py:170` proíbe em letras maiúsculas
    (*"NUNCA incluir 0x0DF2"*).
 3. **Ela não pode disparar nesta máquina**: exige `SteamDeck == "1"`, e este PC
    não é um Deck. **GRAU: ALTA** — a condição está no fonte, lida.
@@ -607,7 +607,7 @@ ambiente, não hardware.
 ### 3.5 A escolha do PID `0x0DF2` — os efeitos colaterais que EXISTEM
 
 O vpad se declara **DualSense Edge** (`VPAD_PRODUCT = 0x0DF2`,
-`integrations/uhid_gamepad.py:126`) para se distinguir do físico `0x0CE6` e
+`integrations/uhid_gamepad.py:103`) para se distinguir do físico `0x0CE6` e
 poder ser separado por VID/PID. A pergunta é: **o SDL trata o Edge diferente do
 DualSense comum?**
 
@@ -632,11 +632,11 @@ entrada, e ela é de Bluetooth**:
 
 enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 `050000004c050000e60c...` para BT). O vpad nasce `BUS_USB`
-(`integrations/uhid_gamepad.py:97`), então **não casa com entrada nenhuma do
+(`integrations/uhid_gamepad.py:91`), então **não casa com entrada nenhuma do
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
-este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1570`,
+este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:981`,
 declarado em `:1511`).
 **GRAU: MEDIDO AQUI** para o conteúdo do banco; **BAIXA** para a consequência,
 que não foi exercitada.
@@ -685,8 +685,8 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 | leitor | o que a marca faz ali |
 |---|---|
 | o guard do Steam Input | **não** reverte o `UseSteamControllerConfig` daquele appid no `localconfig.vdf` — ou seja, o degrau 3 fica ligado para aquele jogo |
-| `integrations/storm_doctor.py:50` e `:72` | o diagnóstico deixa de acusar aquele appid como conflito |
-| `daemon/launch_env.py:559-590` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
+| `integrations/storm_doctor.py:46` e `:72` | o diagnóstico deixa de acusar aquele appid como conflito |
+| `daemon/launch_env.py:299-330` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
 
 **O que ela NÃO muda mais, e isto é decisão dela, datada.** Até 09/08 a marca
 tinha um ramo próprio no arquivo de envs: o jogo marcado recebia um ambiente
@@ -1320,12 +1320,12 @@ que ele espera (`0x01`) nunca vem?*
     )
 ```
 
-`integrations/uhid_gamepad.py:880-909` (`_fala_de_vibracao`). O report do SDL
+`integrations/uhid_gamepad.py:476-505` (`_fala_de_vibracao`). O report do SDL
 Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 
 E a parada do SDL tem discriminador próprio, `_e_a_parada_do_sdl`
-(`integrations/uhid_gamepad.py:708-733`), que exige `valid_flag0 == 0`,
+(`integrations/uhid_gamepad.py:341-366`), que exige `valid_flag0 == 0`,
 `valid_flag1 == 0` e motores zerados — exatamente o report que 6.3 descreve.
 
 **Conclusão desta subseção: o formato que o SDL emite para um Edge atravessa o
@@ -1348,7 +1348,7 @@ Escrito como lista de portas, não como hipótese preferida. Nenhuma foi medida.
 3. **Escreve pelo caminho errado.** Sob Proton, o pedido do jogo Windows pode
    sair pelo `winebus` no `hidraw` do **físico** em vez do vpad — e o físico é
    quem o daemon controla. `PROTON_DISABLE_HIDRAW` existe para fechar essa
-   porta, e ele só sai com `cobertura_total` (`daemon/launch_env.py:953-964`).
+   porta, e ele só sai com `cobertura_total` (`daemon/launch_env.py:556-567`).
 4. **A quantidade de bits de autorização.** Sabe-se que o **conjunto**
    funciona; **nunca** se ensaiou de quantos o firmware precisa, um a um. São
    quatro na mesa: `COMPATIBLE_VIBRATION`, `HAPTICS_SELECT`, `MOTOR_POWER` e

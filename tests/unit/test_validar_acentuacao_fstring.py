@@ -1,19 +1,4 @@
-"""Regressão PORTÃO-VIVO-01 Bloco A: o gate de acento era cego a f-string.
-
-A partir do Python 3.12 (PEP 701) o `tokenize` deixou de entregar a f-string
-como um `STRING` único e passou a emitir `FSTRING_START`, `FSTRING_MIDDLE` e
-`FSTRING_END`. Como `_mascara_codigo_python` só aceitava `COMMENT` e `STRING`,
-o texto de toda f-string virava espaço antes da varredura — o gate não via
-nada. Medido nesta máquina (3.12.3): o mesmo erro em duas linhas produzia três
-apontamentos na string normal e **zero** na f-string.
-
-E o efeito colateral caro: o job de acentuação do CI pinava 3.11, onde
-f-string ainda é um `STRING` único e o gate enxerga. Verde na máquina dela,
-vermelho na `main`, pelo mesmo arquivo.
-
-Por isso os testes daqui têm de valer nos **dois** mundos: no 3.11 a simetria
-já existia e continua valendo; no 3.12+ ela só existe com a correção.
-"""
+"""Regressão PORTÃO-VIVO-01 Bloco A: o gate de acento era cego a f-string."""
 from __future__ import annotations
 
 import importlib.util
@@ -64,7 +49,6 @@ def _escreve(sandbox: Path, nome: str, conteudo: str) -> Path:
     return alvo
 
 
-# O texto errado destas fixtures é deliberado: é o insumo do gate, não prosa
 # desta casa. Cada linha carrega o `noqa` para não acusar o próprio arquivo.
 _LINHA_FSTRING = 'msg = f"a configuracao nao tem acao"\n'  # fixture errada (noqa-acento)
 _LINHA_STRING = 'msg =  "a configuracao nao tem acao"\n'  # fixture errada (noqa-acento)
@@ -88,11 +72,7 @@ def test_fstring_com_erro_de_acento_reprova(sandbox: Path) -> None:
 
 
 def test_fstring_e_string_normal_pesam_igual(sandbox: Path) -> None:
-    """A assimetria É o defeito: o mesmo texto errado, dois pesos.
-
-    Vale nas duas versões. No 3.11 as duas linhas são `STRING` e a simetria
-    já existia; no 3.12+ ela só existe com `FSTRING_MIDDLE` na máscara.
-    """
+    """A assimetria É o defeito: o mesmo texto errado, dois pesos."""
     so_fstring = _escreve(sandbox, "src/a.py", _LINHA_FSTRING)
     so_string = _escreve(sandbox, "src/b.py", _LINHA_STRING)
 
@@ -112,14 +92,7 @@ def test_fstring_e_string_normal_pesam_igual(sandbox: Path) -> None:
 def test_nome_de_variavel_dentro_das_chaves_nao_vira_apontamento(
     sandbox: Path,
 ) -> None:
-    """A correção não pode ser larga demais.
-
-    Dentro das chaves é CÓDIGO: `producao`, `acao`, `sessao` (noqa-acento) são
-    nomes de variável, e identificador não leva acento. Aceitar o intervalo
-    inteiro da f-string (ou os tokens de dentro das chaves) ressuscitaria o
-    BUG-VALIDAR-ACENTUACAO-IDENTIFICADOR-PY-01, que deixou o gate vermelho de
-    forma permanente com apontamentos que ninguém podia atender.
-    """
+    """A correção não pode ser larga demais."""
     fonte = (
         "producao = 1\n"  # fixture errada (noqa-acento)
         "acao = 2\n"  # fixture errada (noqa-acento)
@@ -141,12 +114,7 @@ def test_nome_de_variavel_dentro_das_chaves_nao_vira_apontamento(
 def test_mascara_sobrevive_a_tokenize_sem_fstring_middle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Simula o 3.11, onde `tokenize.FSTRING_MIDDLE` não existe.
-
-    O CI ainda roda naquela versão. Ler o atributo direto levantaria
-    `AttributeError` e derrubaria o gate inteiro justamente na versão que
-    guarda a `main` — daí o `getattr` com padrão.
-    """
+    """Simula o 3.11, onde `tokenize.FSTRING_MIDDLE` não existe."""
     monkeypatch.delattr(tokenize, "FSTRING_MIDDLE", raising=False)
 
     conteudo = _LINHA_STRING
@@ -161,13 +129,8 @@ def test_mascara_sobrevive_a_tokenize_sem_fstring_middle(
 
 
 def test_all_enxerga_arquivo_novo_ainda_nao_adicionado(sandbox: Path) -> None:
-    """Bônus do Bloco A: `git ls-files -z` puro só lista o índice.
-
-    Arquivo novo, ainda não adicionado, é exatamente o que ninguém revisou —
-    e era o que o `--all` dava por verde.
-    """
+    """Bônus do Bloco A: `git ls-files -z` puro só lista o índice."""
     _escreve(sandbox, "src/recem_nascido.py", _LINHA_STRING)
-    # de propósito: nada de `git add`.
 
     res = _roda(["--all"], sandbox)
 
@@ -182,15 +145,7 @@ def test_all_enxerga_arquivo_novo_ainda_nao_adicionado(sandbox: Path) -> None:
 def test_o_codigo_longe_da_chave_tem_a_mesma_resposta_nas_tres_versoes(
     sandbox: Path,
 ) -> None:
-    """25/09/2026: o 3.10, o 3.11 e o 3.12 dizem a mesma coisa.
-
-    O teste de cima só põe o nome COLADO na chave (`{producao}`), e esse a
-    heurística de separador já pulava nas três versões. O que reprovava no
-    3.10 e no 3.11 e passava no 3.12 era o nome LONGE dela, `{len(nomes)}`:
-    43 apontamentos na corrida `36119169814` do CI, todos nome de variável.
-    E o texto de verdade continua cobrado nas três: o miolo literal da
-    f-string e a string de DENTRO da expressão.
-    """
+    """25/09/2026: o 3.10, o 3.11 e o 3.12 dizem a mesma coisa."""
     fonte = (
         'a = f"o total de {len(unicos)} textos"\n'  # fixture errada (noqa-acento)
         "b = f\"{', '.join(paginas)}\"\n"  # fixture errada (noqa-acento)

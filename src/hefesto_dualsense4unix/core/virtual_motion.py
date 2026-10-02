@@ -87,39 +87,18 @@ import threading
 from collections.abc import Mapping
 from typing import NamedTuple
 
-#: Faixa do GIROSCÓPIO dentro da janela de 25 B (``payload[15:40]`` do report
-#: 0x01): ``gyro[3] __le16`` são os bytes absolutos 15-20, logo 0..5 aqui.
-#: A fonte é o `struct dualsense_input_report` do `hid-playstation.c`, já
-#: fossilizada em `integrations/uhid_gamepad._MOTION_WINDOW_START`.
 FAIXA_GIROSCOPIO = slice(0, 6)
 
-#: Faixa do ACELERÔMETRO: ``accel[3] __le16``, bytes absolutos 21-26.
 FAIXA_ACELEROMETRO = slice(6, 12)
 
-#: OS DOIS BYTES DE CONTATO DO TOQUE na janela (bytes absolutos 32 e 36): o
-#: primeiro de cada `struct dualsense_touch_point`. O bit 7 aceso é o dedo
-#: AUSENTE (`DS_TOUCH_POINT_INACTIVE`, `hid-playstation.c`) — é assim, e não com
-#: zeros, que o próprio controle diz «ninguém tocando»: zerar o byte diria «o
-#: dedo 0 está apoiado no canto».
 CONTATOS_DO_TOQUE = (17, 21)
 TOQUE_INATIVO = 0x80
 
-#: Tamanho da janela. Repetido aqui de propósito: importar o
-#: `uhid_gamepad` puxaria o backend uhid inteiro (e o `/dev/uhid`) para dentro
-#: de um módulo que é PURO — e é justamente essa pureza que deixa a régua
-#: exercitar o filtro sem hardware nenhum. Há teste que compara as duas
-#: constantes e reprova se elas divergirem.
 TAMANHO_DA_JANELA = 25
 
 
 class EstadoDosSensores(NamedTuple):
-    """O que está LIGADO para uma peça. Ausência = os dois ligados.
-
-    ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08/2026): giroscópio nasce ligado em
-    todo jogo. Um controle sem entrada no registro não é "não sei" — é o
-    default dela, e por isso :meth:`RegistroDeSensores.estado` devolve
-    ``(True, True)`` em vez de ``None``.
-    """
+    """O que está LIGADO para uma peça. Ausência = os dois ligados."""
 
     giroscopio: bool = True
     acelerometro: bool = True
@@ -134,30 +113,7 @@ def janela_com_sensores(
     janela: bytes, *, giroscopio: bool = True, acelerometro: bool = True,
     toque: bool = True,
 ) -> bytes:
-    """A janela de motion com o sensor desligado ZERADO — o resto verbatim.
-
-    Zera SÓ os 6 bytes daquele sensor. O que fica intocado, e cada um por uma
-    razão medida:
-
-    * o ``sensor_timestamp`` (bytes 12-15 da janela) — é o ``dt`` com que o
-      SDL integra o giro. Zerá-lo não desligaria nada e faria o jogo dividir
-      por um intervalo que anda para trás;
-    * o ``reserved2`` (byte 16) e os DOIS pontos de toque (17-24) — o touchpad
-      viaja na mesma janela, e desligar o giroscópio não pode apagar o dedo
-      dela da tela. É a decisão dela de 04/09: *"pedi pra tirar o texto não o
-      touch mostrando os toques"*. <!-- noqa-acento: citação literal dela -->
-
-    Janela de tamanho errado volta **verbatim**: quem a recusa é o vpad
-    (`forward_motion` descarta e registra), e uma segunda política aqui daria
-    duas respostas para o mesmo report torto.
-
-    Com os dois ligados devolve **o mesmo objeto** — ver o custo no cabeçalho.
-
-    ``toque=False`` (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026): a peça cujo
-    touchpad o Hefesto leva ao cursor ou às zonas. Os dois dedos saem da janela
-    marcados AUSENTES (:data:`TOQUE_INATIVO` no byte de contato), e a posição
-    fica: é o que o controle manda quando ninguém toca.
-    """
+    """A janela de motion com o sensor desligado ZERADO — o resto verbatim."""
     if giroscopio and acelerometro and toque:
         return janela
     if len(janela) != TAMANHO_DA_JANELA:
@@ -174,18 +130,7 @@ def janela_com_sensores(
 
 
 def sensores_vivos_na_janela(janela: bytes) -> EstadoDosSensores:
-    """O que a janela AINDA carrega: `(giro tem dado, accel tem dado)`.
-
-    É a régua do ensaio de bancada, e ela lê o que SAIU em vez de perguntar ao
-    produto o que ele acha que fez — a disciplina de 04/09, quando quatro
-    réguas deram verde sobre defeito vivo.
-
-    Cuidado que ela **não** resolve, e está escrito para ninguém confundir:
-    um controle absolutamente parado num sensor de 16 bits também pode
-    entregar seis zeros por um instante. Zero num quadro é indício; a prova é
-    zero em TODOS os quadros de uma janela de tempo com o aparelho se mexendo
-    — que é como o ensaio a usa.
-    """
+    """O que a janela AINDA carrega: `(giro tem dado, accel tem dado)`."""
     if len(janela) != TAMANHO_DA_JANELA:
         return EstadoDosSensores(True, True)
     return EstadoDosSensores(
@@ -195,30 +140,13 @@ def sensores_vivos_na_janela(janela: bytes) -> EstadoDosSensores:
 
 
 class RegistroDeSensores:
-    """Quem está desligado, por peça de plástico. Sem I/O, sem disco.
-
-    Dono único do estado VIVO dos sensores dentro do processo do daemon. O
-    disco é do perfil (`profiles/schema.ControllerSensoresOverride`); aqui é o
-    que vale AGORA, e é o que o caminho quente consulta.
-
-    Thread-safe porque os dois lados batem em threads diferentes: quem escreve
-    é o event loop do IPC, quem lê é a thread do `PhysicalReportReader`, a
-    ~250 Hz.
-    """
+    """Quem está desligado, por peça de plástico. Sem I/O, sem disco."""
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._estado: dict[str, EstadoDosSensores] = {}
-        #: AS PEÇAS QUE MIRAM — A-MIRA-POR-MOVIMENTO-NA-TELA-01. O giro delas
-        #: vai ao jogo como ANALÓGICO (o roteador de movimento), e por isso
-        #: deixa a janela de motion: sem isto, no caminho `uhid`, a câmera do
-        #: jogo que lê o giro nativo andaria em dobro. Quem escreve é
-        #: `roteador_de_movimento.sincronizar_o_filtro`, que é onde o arranjo
-        #: mora; aqui só se guarda a resposta, para a thread do report.
         self._roteado_sem_chip = False
         self._roteado: dict[str, bool] = {}
-        #: AS PEÇAS CUJO TOQUE O HEFESTO LEVA (NO-MODO-XBOX-TUDO-FUNCIONA-01,
-        #: 28/09): o dedo delas vai ao cursor ou às zonas, e sai da janela.
         self._toque_roteado_sem_chip = False
         self._toque_roteado: dict[str, bool] = {}
 
@@ -229,15 +157,7 @@ class RegistroDeSensores:
         giroscopio: bool | None = None,
         acelerometro: bool | None = None,
     ) -> EstadoDosSensores:
-        """Liga/desliga um sensor. ``None`` = **não mexe naquele**.
-
-        Mesmo contrato de `rumble.motores.set`: campo omitido não é campo
-        zerado. Sem isso, desligar o giroscópio ligaria o acelerômetro de
-        volta pelas costas dela.
-
-        Volta a ``(True, True)`` apaga a entrada: o default dela não ocupa
-        lugar, e o caminho quente vê um dicionário vazio no caso normal.
-        """
+        """Liga/desliga um sensor. ``None`` = **não mexe naquele**."""
         chave = chave_de_sensor(uniq)
         with self._lock:
             atual = self._estado.get(chave, EstadoDosSensores())
@@ -261,18 +181,7 @@ class RegistroDeSensores:
             return self._estado.get(chave_de_sensor(uniq), EstadoDosSensores())
 
     def filtrar(self, uniq: str | None, janela: bytes) -> bytes:
-        """A janela como ela deve SAIR para a peça `uniq`.
-
-        O caminho quente inteiro: dois `dict.get` sob lock e, no caso normal,
-        o mesmo objeto de volta. Pergunta a `estado()` e não ao dicionário
-        direto de propósito: é por ele que as réguas dublam o interruptor, e
-        um atalho aqui faria o filtro fugir do dublê.
-
-        A PEÇA QUE MIRA PERDE O GIROSCÓPIO DA JANELA, e só ele (ver
-        :meth:`definir_roteados`). O interruptor dela continua dizendo o que
-        ela escolheu — `estado()` não muda —, porque o sensor segue LIGADO: é
-        ele que move a mira.
-        """
+        """A janela como ela deve SAIR para a peça `uniq`."""
         estado = self.estado(uniq)
         giro = estado.giroscopio and not self.roteado(uniq)
         toque = not self.toque_roteado(uniq)
@@ -293,16 +202,7 @@ class RegistroDeSensores:
         toque_sem_chip: bool = False,
         toque_por_peca: Mapping[str, bool] | None = None,
     ) -> None:
-        """Quais peças mandam o giro à MIRA em vez de ao jogo. TROCA tudo.
-
-        `sem_chip` vale para a peça sem opinião (a mira do perfil, para todos);
-        `por_peca` é quem tem o chip «Mira Virtual» próprio. Chamado só por
-        `roteador_de_movimento.sincronizar_o_filtro`.
-
-        `toque_sem_chip` e `toque_por_peca` são o mesmo par para o TOUCHPAD
-        (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09): a peça cujo dedo o Hefesto leva
-        ao cursor ou às zonas. Omitidos = ninguém, e a troca apaga o anterior.
-        """
+        """Quais peças mandam o giro à MIRA em vez de ao jogo. TROCA tudo."""
         limpo = {chave_de_sensor(k): bool(v) for k, v in por_peca.items() if chave_de_sensor(k)}
         toques = {
             chave_de_sensor(k): bool(v)
@@ -330,13 +230,7 @@ class RegistroDeSensores:
             return self._roteado.get(chave_de_sensor(uniq), self._roteado_sem_chip)
 
     def desligados(self) -> dict[str, EstadoDosSensores]:
-        """Cópia de quem tem sensor desligado — a lista que o hub consulta.
-
-        É por ela que o `SensorHub` sabe que precisa manter vivo o reader do
-        nó de movimento MESMO sem a GUI aberta: sem isso o TTL de 5 s mataria
-        o reader e, com ele, o `EVIOCGRAB` — o interruptor se desligaria
-        sozinho cinco segundos depois de ela fechar a janela.
-        """
+        """Cópia de quem tem sensor desligado — a lista que o hub consulta."""
         with self._lock:
             return dict(self._estado)
 
@@ -351,28 +245,10 @@ class RegistroDeSensores:
 
 
 def chave_de_sensor(uniq: str) -> str:
-    """Normaliza o endereço de rádio: só os dígitos hex, em minúsculas.
-
-    **ESTA LINHA É UM DEFEITO QUE A RÉGUA PEGOU**, e vale escrever por quê.
-    A primeira versão só fazia `strip().lower()`, e passou em tudo até o teste
-    do perfil: a mesma peça de plástico tem DUAS grafias nesta casa — o
-    `uniq` do evdev/hidraw vem com dois-pontos (`aa:bb:cc:00:00:01`) e a chave
-    do perfil vem sem (`aabbcc000001`, por `core.sysfs_leds.norm_mac`). Com a
-    normalização fraca, ela desligava o giro pela tela e o perfil gravava sob
-    outra chave: o interruptor valia até o replug e voltava calado.
-
-    Mesma peneira do `norm_mac`, escrita aqui e não importada dele porque este
-    módulo é PURO e o `sysfs_leds` puxa o caminho de LED. Há régua comparando
-    as duas — se elas divergirem, é a mesma peça com dois donos outra vez.
-    """
+    """Normaliza o endereço de rádio: só os dígitos hex, em minúsculas."""
     return "".join(ch for ch in str(uniq).lower() if ch in "0123456789abcdef")
 
 
-#: O registro do processo. Um só, e por isso é módulo e não injeção: o
-#: `PhysicalReportReader` (thread), o `SensorHub` (outra thread) e o
-#: `ipc_handlers` (event loop) precisam ver o MESMO estado, e passar a
-#: instância por cinco camadas de construtor foi o que fez a barra de motor
-#: precisar de um `esquecer_motores_do_perfil` para valer agora.
 REGISTRO = RegistroDeSensores()
 
 

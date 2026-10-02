@@ -1,64 +1,5 @@
 #!/usr/bin/env python3
-"""o_som_que_sai.py — o MESMO PCM pelos DOIS arranjos, e o nó que nasce.
-
-O QUE ELE É, E O QUE ELE NÃO É
--------------------------------
-Ele é o instrumento da SOM-QUE-SAI-01: monta, mede e mostra. **Ele não conclui
-nada sobre som ter saído de aparelho nenhum** — quem concluiu foi a orelha
-dela, em 10/09/2026: o som saiu pelo rádio no ``0x35`` de 334 B, com um quadro
-só (``integrations/alto_falante_bt.ARRANJO_035``), e não por nenhum dos dois
-arranjos do ``0x39`` que este ensaio nasceu montando lado a lado.
-
-A lição fica no mapa com nome (``audio.saida_dedicada@dualsense``): a
-FALÁCIA DO CANAL QUE RESPONDE — concluir que, porque um canal responde, ele
-FAZ o que se esperava dele. É por ela que o retorno do ``os.write()`` nunca é a
-medição (a armadilha logo abaixo).
-
-AS TRÊS PERGUNTAS QUE ELE RESPONDE
------------------------------------
-``--motor``   (padrão)  a escada pela TABELA, o encoder fechando o quadro de
-                        200 bytes, e os dois arranjos montados do MESMO PCM.
-                        Não toca no servidor de som nem no aparelho.
-``--sink``              carrega o ``module-null-sink`` de um controle
-                        SINTÉTICO, LÊ do servidor o que chegou ao nó
-                        (``priority.session``, estado), confere que a saída
-                        PADRÃO do sistema não mudou, e descarrega. É a medição
-                        que o mapa listava como NÃO MEDIDA: *"module-null-sink
-                        carrega nesta máquina"*.
-``--escrever``          escreve no aparelho. **É o ensaio 1 da
-                        MESA-DE-QUATRO-01**, não deste script sozinho: exige
-                        bancada reservada, ``--exigir-mac`` conferido, o
-                        aparelho no RÁDIO, e a orelha dela do outro lado.
-
-A ARMADILHA QUE ESTE ENSAIO TEM DE RESPEITAR
----------------------------------------------
-``os.write()`` num hidraw devolve sucesso quando o **KERNEL** aceita a entrega;
-ele NÃO espera veredito do firmware. Em 15/08 o kernel aceitou até um pacote de
-tamanho errado que era o controle negativo. **O retorno desta chamada não é a
-medição.** Quem mede é a orelha dela.
-
-E A SEGUNDA, que é do outro lado: um report com o tamanho errado põe o CRC-32
-no lugar errado e o firmware **descarta calado**. O sintoma de *"errei o
-degrau"* é indistinguível do sintoma de *"o protocolo está errado"*. Por isso o
-tamanho vem da TABELA (:data:`TAMANHO_DO_DEGRAU`) e nunca de aritmética.
-
-O QUE ELE RECUSA POR CONSTRUÇÃO
---------------------------------
-* escrever sem ``--exigir-mac`` conferido — para não escrever no controle
-  errado;
-* escrever em aparelho no CABO: a escada só existe no rádio, e escrever ali
-  seria medir outra coisa;
-* qualquer report fora de ``0x31``-``0x39``: a família ``0xF0``-``0xF7`` é o
-  canal de atualização de firmware, e ela está BLOQUEADA por decisão dela de
-  15/08;
-* abrir janela. Ele não tem tela; a tela dela é uma só.
-
-A PROCEDÊNCIA, DECLARADA
--------------------------
-Como todo instrumento desta pasta, ele imprime de qual ARQUIVO veio cada
-biblioteca antes da primeira linha de medição. *"Medir contra a biblioteca
-errada produz alarme convincente e falso"* já aconteceu três vezes aqui.
-"""
+"""o_som_que_sai.py — o MESMO PCM pelos DOIS arranjos, e o nó que nasce."""
 
 from __future__ import annotations
 
@@ -82,27 +23,9 @@ from collections.abc import Sequence
 
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
-# ---------------------------------------------------------------------------
-# O QUE DESCEU DO PRODUTO PARA CÁ — 28/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
-#
-# As duas funções abaixo moravam em `integrations/alto_falante_bt.py` e só este
-# ensaio (e as réguas dele) as chamava: o produto escreve UM degrau, o do
-# arranjo que tocou (`af.ARRANJO_035`), e nunca monta os dois candidatos do
-# `0x39` lado a lado. Elas continuam sendo do ensaio, que ainda roda.
-# ---------------------------------------------------------------------------
-
 
 def degrau_para_payload(bytes_de_payload: int) -> int | None:
-    """O MENOR degrau cujo orçamento comporta este payload. None se não cabe.
-
-    A regra é de TABELA (``af.ORCAMENTO_DO_DEGRAU``), e a leitura é ordenada
-    pelo id. O ``0x31`` fica fora dos candidatos porque ele é do kernel
-    (``af.DEGRAU_DO_KERNEL``).
-
-    **A mordida desta função:** peça 89 bytes e ela tem de devolver ``0x33``.
-    Se devolver ``0x32`` (88 B de orçamento) o CRC cai fora do lugar e o
-    firmware descarta calado.
-    """
+    """O MENOR degrau cujo orçamento comporta este payload. None se não cabe."""
     if bytes_de_payload < 0:
         return None
     for degrau in sorted(af.TAMANHO_DO_DEGRAU):
@@ -119,35 +42,18 @@ def montar_pelos_dois_arranjos(
     seq: int = 0,
     tag_audio: int = af.BLOCO_SPEAKER,
 ) -> dict[str, bytes]:
-    """O MESMO PCM já codificado, montado pelos DOIS arranjos candidatos.
-
-    É o que a rota corrigida da SOM-QUE-SAI-01 pedia: *"mandam o MESMO PCM
-    pelos DOIS arranjos, cada um com a sua régua"*. Devolver os dois de uma
-    vez é o que impede que alguém meça um e conclua sobre o outro. O corpo de
-    cada um é o do produto (``Arranjo.montar``, com CRC e tag); daqui é só o
-    par.
-    """
+    """O MESMO PCM já codificado, montado pelos DOIS arranjos candidatos."""
     return {a.nome: a.montar(quadros, seq=seq, tag_audio=tag_audio) for a in af.ARRANJOS}
 
 
-#: MAC SINTÉTICO da casa, e ele nunca sai deste arquivo. Faixas permitidas:
-#: ``02:fe:00``, ``aa:bb:cc``, ``e8:47:3a``, sem sequência simples. Nada de MAC
-#: real em arquivo versionado — há DOIS portões, e um deles pega por FORMA.
 MAC_SINTETICO = "aa:bb:cc:00:00:01"
 
-#: O tom do PCM de referência: 440 Hz, meia escala. Um seno de verdade, e não
-#: silêncio — silêncio em CBR também fecha 200 bytes, e mediria o bitrate sem
-#: medir o codificador trabalhando.
 TOM_HZ = 440.0
 AMPLITUDE = 12000
 
 
 def pcm_de_referencia(quadros: int = 2) -> list[bytes]:
-    """Quadros de PCM ``s16le`` estéreo de 10 ms — o MESMO para os dois arranjos.
-
-    Estéreo porque a rota do firmware é POR CANAL (``OUTPUT_PATH_SEL`` = 2:
-    L → fone, R → alto-falante). Com um nó mono esse caso é inexprimível.
-    """
+    """Quadros de PCM ``s16le`` estéreo de 10 ms — o MESMO para os dois arranjos."""
     saida: list[bytes] = []
     fase = 0
     for _ in range(quadros):
@@ -160,37 +66,12 @@ def pcm_de_referencia(quadros: int = 2) -> list[bytes]:
     return saida
 
 
-#: O TIMBRE do ensaio de bancada, e ele é escolhido para o RELATO DELA, não
-#: para o osciloscópio: 1300 Hz PULSADO a 2 Hz — o *"bep bep bep"* que ela já
-#: descreveu por três vezes em ensaio cego (`sfx-cabo-com-posse`,
-#: `sfx-canal1-e-o-alto-falante`, `som-no-radio-observado-não-replicado`).
-#:
-#: **POR QUE PULSADO, E NÃO O TOM CONTÍNUO DE 440 Hz** que este arquivo já
-#: gera para medir o encoder: um tom contínuo tem UM relato possível ("ouvi") e
-#: nenhuma forma de distinguir *o nosso som* de *qualquer outra coisa que a
-#: máquina esteja tocando*. O pulsado carrega a resposta dentro do relato dela
-#: — e é exatamente o timbre da observação em aberto, o que faz deste ensaio,
-#: se ele um dia soar, a réplica daquela noite.
 BANCADA_HZ = 1300.0
 BANCADA_PULSOS_HZ = 2.0
 
 
 def pcm_pulsado(taxa: int = af.TAXA_DO_ENCODER) -> Callable[[int], bytes]:
-    """Uma fonte de PCM infinita com o timbre da bancada. `s16le` estéreo, à `taxa`.
-
-    **A TAXA É A DA BOMBA QUE VAI TOCÁ-LO** (``bomba.taxa_da_fonte_hz``) —
-    29/09/2026, A-PONTE-DO-SOM-ANDA-NO-RITMO-DO-CONTROLE-01. O aparelho toca
-    as 480 amostras de um report do `0x35` em 10,667 ms, que é tocá-las a
-    45 000 Hz: um timbre sintetizado a 48 kHz sairia 6,25% grave, o «1300 Hz
-    pulsado a 2 Hz» em 1218,75 Hz pulsado a 1,875 Hz. É a regra da ponte do
-    produto: taxa da fonte x 512/48000 = o que o report lê.
-
-    Fonte SINTÉTICA de propósito: ela não passa pelo servidor de som, não
-    depende de nó publicado e não pode ser confundida com som que já estava
-    tocando na máquina dela. O caminho pelo monitor do nó
-    (:func:`alto_falante_bt.argv_do_gravador`) é o de REGIME; para decidir o
-    arranjo, o que se quer é o menor número de coisas entre o timbre e o fio.
-    """
+    """Uma fonte de PCM infinita com o timbre da bancada. `s16le` estéreo, à `taxa`."""
     fase = itertools.count()
 
     def _ler(quantos: int) -> bytes:
@@ -309,14 +190,7 @@ def medir_motor() -> int:
 
 
 def medir_sink() -> int:
-    """Carrega o nó, LÊ do servidor o que chegou nele, e descarrega.
-
-    **A régua lê o NÓ, não o argv.** A lição é da metade de entrada, paga em
-    06/09/2026: a régua que vigiava a prioridade da source afirmava
-    ``"priority.session=1500" in props[0]`` — a string ESTÁ no argv, dentro do
-    pedaço que o servidor descarta, e o número nunca chegava ao nó. Aqui se
-    pergunta ao servidor.
-    """
+    """Carrega o nó, LÊ do servidor o que chegou nele, e descarrega."""
     diagnostico = af.diagnosticar(uniqs=[MAC_SINTETICO])
     print("O DIAGNÓSTICO — o que impede o nó de subir")
     print(f"  pactl          {diagnostico.pactl}")
@@ -383,25 +257,13 @@ def _propriedade(bloco: str, chave: str) -> str:
     return "(não veio)"
 
 
-#: Teto do ensaio, em segundos. **É uma trava, não um padrão**: ela está na
-#: bancada com quatro aparelhos e um som que não para é um som que atrapalha o
-#: ensaio seguinte. Quinze segundos é mais que o dobro dos ~6 s que ela ouviu
-#: na observação em aberto, que é o comprimento que este ensaio quer replicar.
 TETO_DE_SEGUNDOS = 15.0
 
-#: Quanto o ensaio toca por omissão. Curto de propósito: o relato dela sobre
-#: 4 s de um pulsado é tão bom quanto sobre 40, e o preço de errar é menor.
 SEGUNDOS_PADRAO = 4.0
 
 
 def _linha_do_common(common: bytes | None) -> str:
-    """A linha que DIZ o que vai em [3..49] — ou que ali não vai nada.
-
-    Ela existe porque o defeito de 08/09/2026 era invisível na saída: o corpo
-    saía com 47 zeros e o ensaio imprimia exatamente o mesmo texto que
-    imprimiria com o envelope cheio. Um instrumento que não mostra a variável
-    que ele está variando não é instrumento.
-    """
+    """A linha que DIZ o que vai em [3..49] — ou que ali não vai nada."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
 
     if common is None:
@@ -473,17 +335,6 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         print("RECUSADO: degrau fora da escada 0x31-0x39.")
         return 2
     segundos = min(max(0.0, float(argumentos.segundos)), TETO_DE_SEGUNDOS)
-    # O ENVELOPE DE [3..49], e ele só existe para o corpo que o PRESERVA.
-    #
-    # DEFEITO MEDIDO EM 08/09/2026: o `--arranjo common-preservado` ia ao fio
-    # com 47 ZEROS em [3..49] — a bomba chamava `arranjo.montar` sem `common`.
-    # Um `common` zerado tem os bits de validação apagados, então ele não pede
-    # rota, não pede volume e não pede pré-amp; e o mapa diz que por rádio o
-    # kernel NUNCA escreve os três. A passada teria custado a orelha dela para
-    # medir um corpo que não pedia nada.
-    #
-    # Os dois arranjos externos põem a tag do AudioControl no byte [2] e não
-    # têm onde guardar um `common` — passá-lo a eles seria inventar campo.
     common = af.common_de_audio() if arranjo.common_preservado else None
     linha_do_common = _linha_do_common(common)
     if not argumentos.eu_estou_ouvindo:
@@ -507,9 +358,6 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         print("RECUSADO: a bancada não está reservada. Esperar é a resposta.")
         return 2
 
-    # O QUE VAI SAIR, DITO ANTES — regra da casa para qualquer som no aparelho
-    # dela. Ela está na bancada; um timbre que aparece sem aviso estraga o
-    # ensaio dela tanto quanto estragaria o nosso.
     print(
         "\nO QUE VAI SAIR, E POR QUANTO TEMPO (leia antes de confirmar)\n"
         f"  alvo        {controle.caminho} ({controle.transporte})\n"
@@ -531,17 +379,6 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         print(f"RECUSADO: não deu para abrir {controle.caminho} — {erro}")
         return 2
     try:
-        # O RITMO É OBRIGATÓRIO AQUI, e a razão está em `af.fonte_com_ritmo`:
-        # o timbre é sintético e não bloqueia, então sem ele a bomba escreveria
-        # 2.660 reports/s num degrau que pede 50/s — 53 vezes o necessário, num
-        # rádio que carrega os outros três controles dela. Isso não é ensaio, é
-        # inundação, e ela mediria a fila do kernel.
-        #
-        # O RITMO E O TIMBRE TÊM O MESMO DONO, a bomba (29/09/2026): a cadência
-        # é a do arranjo (`intervalo_de_envio_s`, 93,75/s no `0x35`, e não os
-        # 10 ms do quadro), e o timbre é sintetizado na taxa em que o aparelho
-        # o toca (`taxa_da_fonte_hz`). Os 10 ms davam 100/s, e o timbre a
-        # 48 kHz saía 6,25% grave.
         molde = af.BombaDeSomPeloRadio(
             arranjo=arranjo, fonte=pcm_pulsado(), common=common
         )
@@ -590,11 +427,6 @@ def main(argv: list[str] | None = None) -> int:
     analisador.add_argument("--exigir-mac", default="", help="endereço conferido do alvo")
     analisador.add_argument(
         "--arranjo", default="",
-        # O TERCEIRO É A METADE *COM* DO PAR COM/SEM: `common-preservado`
-        # mantém o `[2] = 0x10` e o `common` em [3..49], que é o único
-        # envelope que esta bancada mediu o firmware aceitar por rádio. As
-        # seis passadas de 07/09 variaram a TAG e o ARRANJO e NÃO variaram
-        # este byte — os dois candidatos externos escrevem 0x91 nele.
         help="ds5dongle | senshi | common-preservado")
     analisador.add_argument("--eu-estou-ouvindo", action="store_true",
                             help="a orelha dela está do outro lado — sem isto, rc=3")

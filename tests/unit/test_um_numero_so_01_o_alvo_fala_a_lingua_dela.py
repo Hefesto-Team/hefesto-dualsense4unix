@@ -34,26 +34,11 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     order_entries,
 )
 
-#: A FAIXA DOS "REAIS" DESTA PROVA, e ela não podia ser a de fixture.
-#:
-#: Aqui há uma tensão que vale escrever: a régua de anonimato desta casa quer
-#: endereço sintético em ``tests/``, e o produto agora EXPURGA endereço
-#: sintético da fila. Um controle de prova escrito em ``aa:bb:cc`` seria comido
-#: pela própria cura, e a régua mediria o nada.
-#:
-#: A saída é ``02:``, o bit localmente administrado: nenhum fabricante o usa,
-#: então ele não identifica aparelho de ninguém — e ``scripts/check_endereco_de_radio``
-#: o isenta por isso mesmo (``sintetico``: *"fabricado pelo driver"*). Do lado
-#: do produto ele é um endereço como outro qualquer, que é o que a prova pede.
-#: O ``02:fe:00`` do vpad fica de fora por três octetos.
 _RAIZ = Path(__file__).resolve().parents[2]
 
 _REAL = "02001a0000"
 
 
-#: A fila EXATA que estava no ``controllers.json`` de produção dela em
-#: 18/09/2026 — os fantasmas ficam como estavam, porque são o objeto da
-#: medição. Os postos são os medidos: os reais em 1, 2, 3 e **8**.
 _FILA_PODRE = {
     "version": 3,
     ORDER_FIELD: [
@@ -69,31 +54,8 @@ _FILA_PODRE = {
 }
 
 
-# ---------------------------------------------------------------------------
-# PONTA 1 — a fila de fixture sai da máquina, e o gesto tem dono
-# ---------------------------------------------------------------------------
-# **A CURA RECUOU NO MESMO DIA, e o recuo é o achado.** A primeira versão
-# descartava a faixa sintética dentro do `identity.order_entries` — a fonte
-# única de leitura da fila —, e a suíte mediu o preço: VINTE E SETE réguas
-# desta casa usam `aa:bb:cc` como endereço de controle de verdade, e 236
-# arquivos de teste a citam. Expurgá-la no produto é uma regra sobre a NOSSA
-# suíte, não sobre o aparelho; o único alcance universal é o do vpad
-# (`02:fe`), que o `load` já recusava.
-#
-# O gesto ficou onde esta casa conserta máquina: `check_faixa_sintetica.py
-# --limpar`, chamado pelo `doctor --fix`. O portão acusava desde 24/08 e não
-# tinha como curar — `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ` na forma mais pura.
-
-
 def test_o_dono_conhece_as_faixas_locais_nas_duas_grafias() -> None:
-    """As três faixas continuam na lista; só as de endereço LOCAL são lixo.
-
-    INSTALL-UNIVERSAL, 18/09/2026: esta régua exigia que ``e8473a`` fosse
-    tratada como lixo — e é a pergunta que o ``--limpar`` do ``doctor --fix``
-    faz antes de TIRAR uma entrada da fila, na máquina de qualquer pessoa.
-    ``e8`` não tem o bit de administração local: é espaço que a IEEE dá a
-    fabricante. Os varredores de texto continuam acusando as três.
-    """
+    """As três faixas continuam na lista; só as de endereço LOCAL são lixo."""
     assert FAIXAS_SINTETICAS == ("aabbcc", "02fe00", "e8473a")
     for faixa in ("aabbcc", "02fe00"):
         colada = f"{faixa}000001"
@@ -105,13 +67,7 @@ def test_o_dono_conhece_as_faixas_locais_nas_duas_grafias() -> None:
 
 
 def test_o_gesto_nao_tira_da_fila_o_endereco_universal(tmp_path) -> None:
-    """A MORDIDA da faixa universal: um controle em ``e8:47:3a`` sobrevive.
-
-    Com o daemon reiniciado depois da limpeza (o ``fix_fila_sem_fixture`` do
-    doctor), a remoção de um controle de verdade passa a ficar — por isso as
-    duas curas entram juntas. Devolva ``e8473a`` à pergunta do dono e esta
-    régua reprova.
-    """
+    """A MORDIDA da faixa universal: um controle em ``e8:47:3a`` sobrevive."""
     import json as _json
     import sys
 
@@ -145,12 +101,7 @@ def test_endereco_real_nunca_e_lixo() -> None:
 
 
 def test_o_produto_nao_expurga_a_faixa_na_leitura_da_fila() -> None:
-    """O RECUO, travado: `order_entries` devolve tudo, inclusive a fixture.
-
-    Esta régua existe para a próxima pessoa não refazer o caminho que a suíte
-    já reprovou. Se um dia o expurgo voltar para dentro do produto, ela cai — e
-    o vermelho é o aviso certo.
-    """
+    """O RECUO, travado: `order_entries` devolve tudo, inclusive a fixture."""
     assert len(order_entries(_FILA_PODRE)) == 8
     payload = merged_order_payload(_FILA_PODRE, "external", {f"{_REAL}e1": 1})
     assert len([e for e in payload if e["kind"] == KIND_DUALSENSE]) == 8
@@ -209,18 +160,12 @@ def test_mordida_da_ponta_1_sem_o_gesto_a_fila_podre_fica(tmp_path) -> None:
     assert len(gravado[ORDER_FIELD]) == 8, "a mordida não morde"
 
 
-# ---------------------------------------------------------------------------
-# PONTAS 2 e 3 — o número no `list`, e a língua dela no `target.set`
-# ---------------------------------------------------------------------------
-
-
 class _MesaDela:
     """A mesa MEDIDA: quatro controles, índice e jogador em ordens diferentes."""
 
-    #: (uniq, índice do handle, lugar na fila de identidade)
     MESA = (
-        (f"{_REAL}01", 0, 2),  # a casca vermelha: índice 0, jogador 2
-        (f"{_REAL}02", 1, 1),  # a casca azul:     índice 1, jogador 1
+        (f"{_REAL}01", 0, 2),
+        (f"{_REAL}02", 1, 1),
         (f"{_REAL}03", 2, 3),
         (f"{_REAL}04", 3, 4),
     )
@@ -277,12 +222,7 @@ async def test_o_list_publica_o_mesmo_numero_que_a_lampada(handlers) -> None:
 
 @pytest.mark.asyncio
 async def test_mordida_da_ponta_2_o_indice_sozinho_mente(handlers) -> None:
-    """Sem o carimbo, o único número publicado seria o índice — e ele mente.
-
-    Esta régua é a razão de ser da ponta 2: ela AFIRMA a divergência. Se um
-    dia o ``index`` passar a seguir a fila, ela reprova — e é o aviso certo,
-    porque aí o carimbo virou redundância e a casa precisa saber.
-    """
+    """Sem o carimbo, o único número publicado seria o índice — e ele mente."""
     r = await handlers._handle_controller_list({})
     indices_mais_um = [c["index"] + 1 for c in r["controllers"]]
     numeros = [c["numero"] for c in r["controllers"]]
@@ -348,15 +288,6 @@ def test_a_fila_podre_desta_regua_e_a_fila_medida() -> None:
     assert bruto.count(_REAL) == 4, "os quatro reais, na faixa que não identifica"
 
 
-# ---------------------------------------------------------------------------
-# PONTA 4 — o roteador do BACKEND, que é onde a classe fecha
-# ---------------------------------------------------------------------------
-# Os nove chamadores de `_handle_for` são os atos de ÁUDIO por controle, e
-# todos caíam no primário sem endereço — enquanto `led.set`, `rumble.set` e
-# `trigger.*` obedeciam ao seletor. MEDIDO na mesa dela: `mic.set`,
-# `mic.led.set` e `speaker.set` respondiam `ok` para o jogador 3 mexendo no 1.
-
-
 class _BackendDeMentira:
     """O `_handle_for` real, com os handles e os locks de mentira."""
 
@@ -371,7 +302,7 @@ class _BackendDeMentira:
     def _key_to_uniq(self, key: str) -> str:
         return {"k1": f"{_REAL}01", "k2": f"{_REAL}02"}[key]
 
-    _handle_for = None  # preenchido abaixo
+    _handle_for = None
 
 
 def _backend():
@@ -412,7 +343,6 @@ def test_mordida_da_ponta_4_sem_o_alvo_o_ato_vai_para_o_primario() -> None:
     """Arranca a consulta ao alvo: volta o defeito medido na mesa dela."""
     b = _backend()
     b._output_target_key = "k2"
-    # o que a versão de antes fazia, em duas linhas:
     antigo = b._handles.get(b._primary_key)
     assert antigo == "handle-do-1"
     assert b._handle_for(None) == "handle-do-2", "a cura não está no lugar"

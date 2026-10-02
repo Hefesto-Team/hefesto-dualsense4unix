@@ -45,8 +45,6 @@ class _FakeSnapComOptions:
     buttons_pressed: ClassVar[list[str]] = ["options"]
 
 
-# --- Ponto 1: slot existe ----------------------------------------------------
-
 def test_daemon_tem_slot_keyboard_device() -> None:
     """Slot `_keyboard_device` faz parte do dataclass do Daemon."""
     fc = FakeController(transport="usb", states=_mk_states(1))
@@ -54,8 +52,6 @@ def test_daemon_tem_slot_keyboard_device() -> None:
     assert hasattr(daemon, "_keyboard_device")
     assert daemon._keyboard_device is None
 
-
-# --- Ponto 2: run() instancia quando habilitado ------------------------------
 
 @pytest.mark.asyncio
 async def test_run_inicia_keyboard_quando_habilitado(
@@ -81,7 +77,6 @@ async def test_run_inicia_keyboard_quando_habilitado(
         "hefesto_dualsense4unix.daemon.subsystems.keyboard.start_keyboard_emulation",
         fake_start,
     )
-    # Evita perfis de sessão bloqueando a sequência de inicialização.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.connection.restore_last_profile",
         noop_restore,
@@ -102,12 +97,10 @@ async def test_run_inicia_keyboard_quando_habilitado(
     )
 
     run_task = asyncio.create_task(daemon.run())
-    # Espera até start ser chamado ou timeout.
     for _ in range(50):
         if calls:
             break
         await asyncio.sleep(0.01)
-    # Ponto 2: start foi chamado.
     assert len(calls) == 1
     assert daemon._keyboard_device is not None
     daemon.stop()
@@ -150,20 +143,11 @@ async def test_run_nao_inicia_keyboard_quando_desabilitado(
     assert calls == []
 
 
-# --- Ponto 3: poll_loop reusa buttons_pressed (A-09) -------------------------
-
 @pytest.mark.asyncio
 async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com _keyboard_device vivo, poll_loop chama dispatch() a cada tick
-    passando o MESMO frozenset resultado de _evdev_buttons_once.
-
-    Garante A-09: snapshot único reaproveitado para keyboard + mouse + hotkey.
-
-    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que dispatch comece no
-    1º tick (o priming durante o settling tem teste dedicado).
-    """
+    """Com _keyboard_device vivo, poll_loop chama dispatch() a cada tick"""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
@@ -184,29 +168,16 @@ async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed(
             udp_enabled=False,
             autoswitch_enabled=False,
             mouse_emulation_enabled=False,
-            keyboard_emulation_enabled=False,  # start manual abaixo
+            keyboard_emulation_enabled=False,
         ),
     )
 
-    # Instala mock diretamente (simula já iniciado).
     dispatch_calls: list[frozenset[str]] = []
     mock_kbd = MagicMock()
     mock_kbd.dispatch.side_effect = lambda bp: dispatch_calls.append(bp)
     daemon._keyboard_device = mock_kbd
 
     run_task = asyncio.create_task(daemon.run())
-    # RELOGIO-NAO-E-ASSERCAO-01 (06/08/2026): este teste dormia 0,06 s fixo e
-    # exigia `ticks >= 8`. A 200 Hz isso são 12 ticks previstos — folga de 4.
-    # MEDIDO em 06/08: com a suíte inteira e a máquina sob carga, o laço perde a
-    # corrida e o teste reprova, enquanto passa sozinho e passa com a máquina
-    # quieta. Duas de quatro execuções completas reprovaram, e a mesma suíte no
-    # commit anterior passou — o que faz o teste acusar de REGRESSÃO quem só
-    # deixou a máquina mais ocupada.
-    #
-    # A invariante que este teste existe para provar é `dispatch` UMA vez por
-    # tick (A-09). Quantos ticks cabem em 60 ms não é asserção, é hardware. Logo
-    # esperamos os ticks acontecerem, com prazo generoso, em vez de apostar que
-    # cabem no relógio de parede.
     prazo = time.monotonic() + 5.0
     while daemon.store.counter("poll.tick") < n_ticks and time.monotonic() < prazo:
         await asyncio.sleep(0.005)
@@ -221,7 +192,6 @@ async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed(
     assert len(dispatch_calls) == ticks, (
         f"dispatch_keyboard chamado {len(dispatch_calls)}x para {ticks} ticks"
     )
-    # Cada chamada recebeu frozenset derivado do snapshot com 'options'.
     for bp in dispatch_calls:
         assert isinstance(bp, frozenset)
         assert "options" in bp
@@ -251,14 +221,9 @@ async def test_poll_loop_nao_chama_dispatch_sem_device() -> None:
     daemon.stop()
     await run_task
 
-    # Sanity: nenhum device foi criado nem dispatch aconteceu. Conta direta não
-    # é possível; a garantia é que o branch `if self._keyboard_device is not None`
-    # filtrou a chamada. Cobertura indireta: rodou sem erro.
     assert daemon._keyboard_device is None
-    assert kbd_mod is not None  # import saudável
+    assert kbd_mod is not None
 
-
-# --- Ponto 4: shutdown libera device ----------------------------------------
 
 @pytest.mark.asyncio
 async def test_shutdown_para_keyboard_device(
@@ -309,8 +274,6 @@ async def test_shutdown_para_keyboard_device(
     assert daemon._keyboard_device is None
 
 
-# --- Reload reage a toggle ---------------------------------------------------
-
 def test_reload_config_liga_keyboard(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -352,7 +315,6 @@ def test_reload_config_liga_keyboard(
     )
     assert daemon._keyboard_device is None
 
-    # Liga via reload
     new_cfg = DaemonConfig(
         poll_hz=200,
         auto_reconnect=False,
@@ -366,7 +328,6 @@ def test_reload_config_liga_keyboard(
     assert len(started) == 1
     assert daemon._keyboard_device is not None
 
-    # Desliga via reload
     new_cfg_off = DaemonConfig(
         poll_hz=200,
         auto_reconnect=False,
@@ -380,4 +341,3 @@ def test_reload_config_liga_keyboard(
     assert len(stopped) == 1
     assert daemon._keyboard_device is None
 
-# "A medida é a melhor das coisas." — Cleóbulo de Lindos

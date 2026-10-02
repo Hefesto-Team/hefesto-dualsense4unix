@@ -1,33 +1,4 @@
-"""MIC-DA-MESA-ELEICAO-01 — as réguas da borda do microfone COM ENDEREÇO.
-
-Quatro perguntas, e cada uma nasceu de um caminho que estava aberto:
-
-1. **O byte de áudio recusa lixo.** Ele era lido de `self.states[54]`, que é o
-   report já digerido pela pydualsense 0.7.5 — sem CRC, sem report id, sem o
-   `INPUT_FLAG_AUDIO`. Com a ponte de mic por BT de pé, o Opus ocupa
-   `raw[3:74]` e o byte cai DENTRO dessa janela. É o PS-PRESO-01 inteiro: foi
-   assim que os botões MIC e PS ficaram presos e ela desligou o controle.
-   Enquanto o byte só pintava um selo, o estrago era cosmético; a partir da
-   eleição, um pacote corrompido de rádio elege microfone sozinho.
-
-2. **A borda tem `uniq`.** O `BUTTON_DOWN` não carrega endereço e o
-   `read_state()` só vê o primário — numa mesa de quatro, três apertos
-   ficariam sem dono.
-
-3. **A borda é CONTADOR, não leitura de estado.** Um toque duplo entre duas
-   amostragens devolveria o mesmo valor de estado e a segunda eleição sumiria.
-   Sumir uma borda é sumir uma eleição dela. E desde 28/09/2026
-   (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01) o contador conta o BOTÃO — o bit de
-   mudo vira com quem escrever o mudo, e virou três vezes no branco sem a mão
-   dela; as réguas do botão parado moram em
-   `test_o_botao_do_mic_so_obedece_a_mao.py`.
-
-4. **O tempo é parte da régua.** Uma régua que roda o tique uma vez mede um
-   INSTANTE, não um comportamento — em 29/08 uma regressão só apareceu aos 181
-   segundos, com 67 testes verdes. Aqui o tempo é simulado report a report,
-   porque o que se mede é o CONTADOR ao longo de uma sessão inteira, não o
-   relógio de parede.
-"""
+"""MIC-DA-MESA-ELEICAO-01 — as réguas da borda do microfone COM ENDEREÇO."""
 
 from __future__ import annotations
 
@@ -44,22 +15,13 @@ _MAC_B = "aabbcc000002"
 
 
 def _handle() -> Any:
-    """Handle com o estado da eleição do mic — pedido AO PRODUTO.
-
-    Este dublê listava os quatro campos à mão, e em 10/09/2026 a cura da
-    sustentação acrescentou dois: sete testes deste arquivo caíram com
-    `AttributeError` porque o dublê ficou mais POBRE que o produto. Agora quem
-    zera é `zerar_estado_da_borda_do_mic`, o dono único — acrescentar campo lá
-    chega aqui de graça.
-    """
+    """Handle com o estado da eleição do mic — pedido AO PRODUTO."""
     h = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
     h._audio_status = None
     h.zerar_estado_da_borda_do_mic()
     return h
 
 
-#: Reports por valor: o laço de leitura entrega dezenas por segundo, e o dedo
-#: dela fica no botão por várias leituras.
 _REPORTS = 8
 
 
@@ -70,8 +32,7 @@ def _segurar(h: Any, status: int, reports: int = _REPORTS, *, botao: bool = Fals
 
 
 def _apertar(h: Any, status: int) -> None:
-    """Um aperto do botão: o dedo desce com o firmware no valor de antes, o
-    kernel passa a segurar `status` (quando é dono do campo), e o dedo sobe."""
+    """Um aperto do botão: o dedo desce com o firmware no valor de antes, o"""
     antes = h._audio_status if isinstance(h._audio_status, int) else 0x00
     _segurar(h, antes, reports=1, botao=True)
     _segurar(h, status, botao=True)
@@ -79,12 +40,7 @@ def _apertar(h: Any, status: int) -> None:
 
 
 def _report_usb(status: int, *, botao: bool = False) -> bytes:
-    """Report `0x01` de USB com `status[1]` valendo `status`.
-
-    `_USB_STRUCT_BASE` é 1 e `JACK_STATUS_OFFSET` é 53, logo o byte mora no
-    índice 54 — o mesmo que o caminho velho lia do `states`. O botão do
-    microfone é o bit 2 de `buttons[2]` (`BUTTONS2_OFFSET`).
-    """
+    """Report `0x01` de USB com `status[1]` valendo `status`."""
     corpo = bytearray(64)
     corpo[0] = prr.INPUT_REPORT_USB
     corpo[1 + prr.JACK_STATUS_OFFSET] = status
@@ -106,11 +62,6 @@ def _report_bt(status: int, *, audio: bool = False, crc_bom: bool = True) -> byt
     return bytes(corpo)
 
 
-# ---------------------------------------------------------------------------
-# 1. O byte de áudio recusa lixo
-# ---------------------------------------------------------------------------
-
-
 def test_report_integro_e_lido() -> None:
     """A metade que prova que a disciplina não é "parar de funcionar"."""
     h = _handle()
@@ -123,11 +74,7 @@ def test_report_integro_e_lido() -> None:
 
 
 def test_report_de_audio_do_bt_nao_mexe_no_cache() -> None:
-    """PS-PRESO-01: com o mic ligado, `raw[3:74]` é Opus e o byte 55 é ruído.
-
-    CURA A ARRANCAR: voltar `_captura_status_audio` a ler `self.states[54]` —
-    o byte passa a acompanhar o lixo e esta régua reprova.
-    """
+    """PS-PRESO-01: com o mic ligado, `raw[3:74]` é Opus e o byte 55 é ruído."""
     h = _handle()
     h._captura_status_audio(_report_bt(0x00))
     assert h._audio_status == 0x00
@@ -150,11 +97,6 @@ def test_report_de_id_desconhecido_nao_mexe_no_cache() -> None:
     h._captura_status_audio(_report_usb(0x00))
     h._captura_status_audio(bytes([0x05, 0xFF, 0xFF]))
     assert h._audio_status == 0x00
-
-
-# ---------------------------------------------------------------------------
-# 2 e 3. A borda tem `uniq`, e é CONTADOR
-# ---------------------------------------------------------------------------
 
 
 class _LockFalso:
@@ -192,11 +134,7 @@ def test_a_borda_carrega_o_uniq_de_quem_apertou() -> None:
 
 
 def test_toque_duplo_entre_duas_leituras_conta_duas_bordas() -> None:
-    """CURA A ARRANCAR: trocar o contador por leitura do estado atual.
-
-    A sequência mudo → não-mudo → mudo devolve o MESMO estado do começo. Quem
-    lê estado vê "nada mudou" e a eleição do meio some; quem CONTA vê duas.
-    """
+    """CURA A ARRANCAR: trocar o contador por leitura do estado atual."""
     h = _handle()
     backend = _backend({_MAC_A: h})
     _segurar(h, STATUS_MIC_MUDO)
@@ -220,10 +158,7 @@ def test_report_repetido_nao_inventa_borda() -> None:
 
 
 def test_handle_sem_uniq_resolvivel_fica_de_fora() -> None:
-    """Key por path ("/dev/hidraw3") não vira pseudo-MAC.
-
-    Eleição sem endereço é eleição do controle errado — melhor não emitir.
-    """
+    """Key por path ("/dev/hidraw3") não vira pseudo-MAC."""
     h = _handle()
     backend = _backend({"/dev/hidraw3": h})
     _segurar(h, 0x00)
@@ -231,19 +166,9 @@ def test_handle_sem_uniq_resolvivel_fica_de_fora() -> None:
     assert backend.bordas_do_mic() == {}
 
 
-# ---------------------------------------------------------------------------
-# 4. O TEMPO é parte da régua
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("apertos", [1, 7, 60])
 def test_o_contador_sobrevive_a_uma_sessao_inteira(apertos: int) -> None:
-    """~200 s de reports a 31 Hz, com apertos espalhados: a conta tem de fechar.
-
-    Existe porque a regressão de 29/08 só apareceu aos 181 segundos, com 67
-    testes verdes. Aqui o tempo é contado em REPORTS (que é o relógio real
-    deste laço) e não em segundos de parede, para a régua ser estável no CI.
-    """
+    """~200 s de reports a 31 Hz, com apertos espalhados: a conta tem de fechar."""
     h = _handle()
     backend = _backend({_MAC_A: h})
     total = 31 * 200
@@ -254,7 +179,7 @@ def test_o_contador_sobrevive_a_uma_sessao_inteira(apertos: int) -> None:
     for i in range(total):
         if i in quando:
             mudo = not mudo
-            dedo = 3  # o dedo fica no botão por três leituras
+            dedo = 3
         h._captura_status_audio(
             _report_usb(STATUS_MIC_MUDO if mudo else 0x00, botao=dedo > 0)
         )
@@ -267,16 +192,7 @@ def test_o_contador_sobrevive_a_uma_sessao_inteira(apertos: int) -> None:
 
 
 def test_o_bit_que_oscila_com_o_botao_parado_nao_e_aperto() -> None:
-    """O gating do rádio: o bit vira e volta SESSENTA vezes, e o dedo não desceu.
-
-    Com o microfone no ar o `MicMuted` oscilava a ~16,7 Hz, e cada oscilação
-    virava *"ela apertou o botão"* — o daemon desligava o microfone sozinho aos
-    1,1 s (10/09/2026). A cura daquele dia exigia que a virada SUSTENTASSE; a de
-    28/09/2026 conta o botão, que o gating não alcança.
-
-    MORDIDA: volte `_registrar_borda_do_mic` a contar a virada do bit de estado
-    e este teste conta apertos que ninguém deu.
-    """
+    """O gating do rádio: o bit vira e volta SESSENTA vezes, e o dedo não desceu."""
     h = _handle()
     backend = _backend({_MAC_A: h})
     _segurar(h, 0x00)

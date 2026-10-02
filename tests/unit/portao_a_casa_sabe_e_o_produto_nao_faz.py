@@ -1,230 +1,4 @@
-"""O portão da PROMESSA SEM CAMINHO — ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01``.
-
-O defeito-mãe desta casa não é o código errado: é a cura ESCRITA e nunca
-LIGADA. Ele já tem nome (``test_perfil_salva_tudo_cobertura_das_secoes.py``:24),
-já tem cor no mapa de canais (``scripts/gerar-mapa.py``, ``--color-lacuna``) e já
-teve inventário (a sprint A NOITE DOS QUATRO INVENTÁRIOS, 09/08/2026). Só não
-tinha portão. Este é o portão.
-
-A PERGUNTA NÃO É "isto é uma cura?" — essa não tem resposta mecânica, e tentar
-respondê-la por convenção de nome foi medido e reprovado em 12/08/2026: 525
-apelidos únicos em ``src/``, 276 deles sem nenhum arquivo em ``docs/``,
-misturando ``BUG-*`` já consertado, ``AUDIT-FINDING-*``, ``FEAT-*`` e frases
-inteiras. Um apelido é CITAÇÃO, não DECLARAÇÃO, e não diz do que a cura precisa.
-
-A pergunta é: **o produto promete isto, e existe caminho de produção que o
-alcance?** Promessa é uma de duas coisas, ambas com sítio de declaração e ambas
-enumeráveis por varredura:
-
-- **P3a — INTERRUPTOR**: uma env ``HEFESTO_*`` que o produto LÊ. O produto
-  promete que isto pode ser ligado. O caminho é qualquer porta que a ESCREVA —
-  ``install.sh``, uma unit de ``assets/``, um empacotamento, ou a janela.
-  **Basta UMA**, nunca a conjunção;
-- **P3b — SÍMBOLO**: uma função ou classe pública de módulo em ``src/``. O
-  produto promete que isto FAZ algo. O caminho é **alcance a partir dos PONTOS
-  DE ENTRADA declarados** (``_PONTOS_DE_ENTRADA``), andando pelo grafo de
-  ``import``, com o nome resolvido ao **MÓDULO de origem**: ``from x.y import
-  f`` seguido de ``f()`` conta para ``x.y::f``, e para mais nada. Conta também
-  o **Python embutido em heredoc** do ``install.sh``/``uninstall.sh``, que é
-  ponto de entrada como qualquer outro.
-
-  A porta do heredoc nasceu em 13/08/2026, e nasceu de o portão ter errado: a
-  varredura só lia ``*.py`` e por isso acusava de órfã a ``strip_quirks_token``,
-  que o ``uninstall.sh``:1243 chama desde julho, dentro de um
-  ``python3 - "${ROOT_DIR}" <<'PYEOF'``. Um portão que acusa de dívida quem está
-  certo é pior que portão nenhum: ensina a próxima pessoa a não acreditar nele.
-
-  Conta também a **PONTE DA INTERFACE NOVA** — o piloto de ``layout/``
-  que a janela de hoje é. Ver a seção logo abaixo: ela nasceu em 31/08/2026 e
-  é a mudança mais recente da definição de "produção" deste arquivo.
-
-A PONTE DA INTERFACE NOVA É PRODUÇÃO — 31/08/2026
---------------------------------------------------
-A decisão ``D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`` (28/08)
-tirou a interface do ``Gtk.Notebook`` e a pôs num ``WebKit2.WebView``: o mockup
-**é** a interface. O produto que ela abre não entra mais só pelos
-``console_scripts`` do ``pyproject.toml`` — entra também por
-``packaging/hefesto-dualsense4unix.desktop``
-(``Exec=env HEFESTO_NA_TELA=1 @RAIZ@/run.sh --gui``) → ``run.sh --gui`` →
-``scripts/abrir_interface.py`` → o piloto
-``src/hefesto_dualsense4unix/interface/controles_vivos.py``, que importa ``src/`` e o chama dez
-vezes por segundo.
-
-Até 31/08 este portão não sabia disso, e o preço estava MEDIDO: 125 promessas
-soltas, 65 delas sem classificação. Com a boca declarada caem para 110 e 53 —
-as 15 que saíram são curas VIVAS na tela dela. TRÊS delas eram lápides de
-``gui/ponte_da_tela.py`` cujo próprio texto já dizia *"O QUE FECHA: … ou, antes
-dela, o lançador da interface nova, o que vier primeiro"*: o lançador veio, e
-as três foram apagadas neste mesmo commit, cobradas por
-``test_nenhuma_lapide_sobreviveu_a_propria_cura``. Um portão que acusa de
-dívida a janela que a usuária tem aberta ensina a próxima pessoa a não
-acreditar nele — é o mesmo defeito de ``strip_quirks_token``, uma migração
-depois.
-
-**A LINHA QUE ISTO NÃO PODE APAGAR, e é o ponto delicado:** se
-``src/hefesto_dualsense4unix/interface/`` inteiro contasse, uma cura chamada só por um
-**instrumento de bancada** (a ``regua.py``, o ``olhar.py``) ou só por um
-**pedaço de mordida** de dentro do próprio piloto (``--prova-gesto``,
-``--sem-ponte``, ``--arranca-enderecos``) passaria a contar como LIGADA — e
-não é. Seria o portão comprando a própria régua como prova, que é a forma da
-dívida que ele existe para acusar.
-
-A distinção é DERIVADA duas vezes, nunca digitada como lista de nomes:
-
-1. **Ponte viva ≠ pasta.** A ponte é o **fecho de import a partir da boca
-   declarada** (``_PILOTO_DA_INTERFACE_NOVA``), dentro de
-   ``src/hefesto_dualsense4unix/interface/``, e é só isso. MEDIDO em 31/08/2026: são QUATRO
-   arquivos — ``controles_vivos``, ``mesa_viva``, ``monta``, ``aba02`` — dos 29
-   da pasta. Os 25 de fora saem por construção, e entre eles estão os cinco
-   instrumentos (``regua``, ``regua_estados``, ``regua_popup``, ``olhar``,
-   ``ver``) e os quatro pilotos de aba que **nenhum lançador abre**
-   (``jogar_vivo``, ``conexoes_vivas``, ``perfis_vivos``, ``sistema_viva``) —
-   o próprio piloto escreve isso em ``controles_vivos.py``:71: *"Quando a
-   MIGRA-JOGAR enxertar o `jogar_vivo.py` no lugar do mockup estático…"*.
-2. **Espinha viva ≠ bancada, DENTRO da ponte.** O ``.desktop`` roda o lançador
-   **sem uma única flag**. Logo toda flag do ``argparse`` do piloto é bancada,
-   e o corpo guardado por ela — ``if self.args.prova_gesto:`` — não é caminho
-   de produção. As flags são colhidas dos ``add_argument`` do próprio arquivo
-   (``_flags_de_bancada``), então uma flag nova nasce coberta; a poda segue as
-   rotinas que **só** a bancada chama (``_marcar_gestos_de_mentira`` e irmãs)
-   até o ponto fixo. ``if not args.X:`` é o contrário e fica INTEIRO: o corpo
-   ali é o que roda sem a flag.
-
-A prova de que a distinção não é decorativa está em
-``TestAPonteDaInterfaceNovaEProducao``: uma cura fabricada chamada só de dentro
-de ``if self.args.prova_gesto:`` continua ACUSADA, e sai da acusação no
-instante em que a chamada é movida para fora da guarda.
-
-``tests/`` NUNCA conta como caminho, e é essa linha que separa as curas soltas
-do resto da árvore: REMEDIDO em 22/08/2026, 52 dos 60 símbolos que este portão
-acusa hoje têm chamador em ``tests/`` e nenhum em produção — pareciam
-entregues.
-
-E a conjunção "install E GUI" está deliberadamente FORA daqui: ela é FALSA para
-quase toda a dívida. ``ExternalMaskRegistry`` quer GUI e não quer install;
-``stop_ipc`` não quer nenhuma das duas, quer um chamador. Portão que exige as
-duas portas grita trinta vezes com três razões, e é desligado na primeira
-semana.
-
-POR QUE É UM TESTE, E NÃO UM ``scripts/check_*.sh``
----------------------------------------------------
-Três razões, e a terceira é medida:
-
-1. o miolo é varredura de AST sobre 171 arquivos mais um registro de lacunas
-   com razão escrita — e o molde que esta casa já tem para exatamente isso
-   (``_SEM_ESCRITOR_HOJE``, em ``test_perfil_salva_tudo_cobertura_das_secoes``)
-   é um teste;
-2. quem precisa vê-lo reprovar é quem ACABOU de escrever um símbolo público
-   novo. Essa pessoa roda a suíte; ela não roda, um a um, os portões de
-   ``scripts/portoes.sh``;
-3. um portão em ``scripts/`` precisa de um job no CI **e** de um hook no
-   pre-commit para existir, e os dois podem ser desligados sem tocar no portão
-   — foi por isso que a ``PORTÃO-VIVO-01`` teve de nascer. O caso medido está
-   ao lado: ``scripts/check_paridade_transporte.py`` é ``continue-on-error`` no
-   ci.yml e, MEDIDO em 12/08/2026 no commit c30c4a2, reprova em 15 linhas e
-   avisa em outras 13 sem que nada mude. Um teste da suíte não tem esse botão:
-   para desligá-lo é preciso apagar o arquivo, e isso aparece no diff.
-
-O QUE ESTE PORTÃO **NÃO** VIGIA, e por quê (decisões medidas, não descuido)
----------------------------------------------------------------------------
-- **Constantes de módulo.** Medi em 12/08/2026: incluí-las levaria a acusação de
-  33 para 59, e as 26 a mais são majoritariamente VOCABULÁRIO DE PROTOCOLO —
-  ``SAIDA_ESTEREO_NO_FONE``, ``VALID_FLAG0_LEFT_TRIGGER_FFB``, ``BLOCO_HAPTICS``
-  — nomes que existem para serem escritos por quem lê a canônica e que não têm
-  chamador POR DESENHO. Uma constante é um VALOR, não um comportamento; a
-  promessa da classe (3) é "isto FAZ algo". Excluí-las dissolve a isenção de
-  vocabulário de protocolo por construção, em vez de por lista de nomes.
-  O PREÇO dessa escolha, declarado: o portão não vê
-  ``daemon/subsystems/__init__.py::SUBSYSTEM_REGISTRY``, que o próprio docstring
-  do módulo confessa na linha 13 (*"não é iterado por ninguém em produção"*),
-  nem ``daemon/ipc_server.py::CODE_CONTROLLER_LOST`` e
-  ``::CODE_CONTROLLER_DISCONNECTED``, que só existem no ``__all__``.
-- **Métodos.** Pela mesma régua: um método não é sítio de promessa ao produto, é
-  detalhe de uma classe que já é vigiada. Isso dissolve o CONTRATO DE PLUGIN
-  (``plugin_api/plugin.py``:53-89, cujos ``on_*`` são chamados por terceiros)
-  sem precisar de regra nenhuma — eles nunca entram na varredura. O preço:
-  ``daemon/lifecycle.py::_stop_metrics``, que a frente B mediu, fica de fora.
-  Mas o DEFEITO dele não escapa: os irmãos públicos do mesmo defeito —
-  ``stop_ipc``, ``stop_udp``, ``stop_autoswitch`` — estão acusados abaixo, e são
-  três instâncias que a varredura anterior não tinha visto.
-
-AS QUATRO ARMADILHAS QUE A VARREDURA ANTERIOR CAIU, e como esta não cai
------------------------------------------------------------------------
-1. **Chamada por string** (``getattr``/despacho por nome) pegou a passada
-   anterior CINCO vezes. Aqui, todo literal de texto de ``src/`` é quebrado em
-   palavras e cada palavra conta como chamador. É por isso que ``_stop_bt_mic``
-   (despachado em ``connection.py``:829) não aparece na lista.
-   Corolário medido em 26/08/2026: uma promessa que ganha chamador de verdade
-   SAI da lista sozinha — foi assim com ``app/fala_do_mapa.py::formata_pt_br``,
-   que virou dono único da vírgula e cuja lápide teve de ser apagada no mesmo
-   commit (``test_nenhuma_lapide_sobreviveu_a_propria_cura``).
-2. **Uso dentro do próprio arquivo.** A regra proposta era "chamador fora do
-   próprio arquivo": medi, e ela acusa **846** símbolos, porque a maioria dos
-   auxiliares é usada no próprio módulo — e o módulo é produção QUANDO ele é
-   alcançado. A régua de hoje é essa condição, escrita: chamador em qualquer nó
-   de um módulo ALCANÇADO, menos o próprio símbolo (o "menos" impede que
-   recursão e auto-citação satisfaçam o portão sozinhas).
-3. **Docstring e ``__all__``.** Um símbolo citado só no próprio docstring, ou só
-   na lista de reexportação, não é alcançado por ninguém. Ambos são descartados
-   — e é por isso que ``RumbleEngine`` aparece aqui apesar de DUAS frases de
-   comentário terem afirmado, por meses, que ele "segue em uso" e que uma rota
-   inteira "depende" dele. Este portão foi a primeira coisa da árvore a
-   discordar das duas; as duas foram substituídas pela informação certa (24/08 e
-   26/08/2026), e ele continua aqui. O comentário não é chamador.
-4. **Alvo de atribuição.** ``X = 1`` não é uso de ``X``. Contar o ``ast.Store``
-   fazia toda constante se satisfazer com a própria linha de definição.
-
-O QUE A RÉGUA PLANA PERDOAVA — SUBSTITUÍDA EM 22/08/2026
----------------------------------------------------------
-Até 21/08/2026 a pergunta era plana: *existe algum chamador deste NOME em
-``src/``, em ``scripts/`` ou num heredoc?* Ela perdoava duas coisas, e as duas
-são a forma mais cara do defeito-mãe:
-
-a. **corrente fechada em si mesma.** ``A`` chama ``B``, ``B`` chama ``A``, e
-   ninguém de fora chama nenhum dos dois — os dois pareciam entregues. MEDIDO
-   em 22/08/2026: o par ``integrations/prontuario_dos_jogos.py`` +
-   ``integrations/api_de_entrada.py`` (19 símbolos) e
-   ``profiles/curva_propria.py`` (3) passavam inteiros assim, e o
-   ``SPRINT_ORDER.md`` já dizia, com outras palavras, que *"o prontuário não é
-   consumido por ninguém"*;
-b. **colisão de nome entre módulos.** ``prontuario_dos_jogos::Censo`` era
-   perdoado por ``sentinela_do_wrapper.py``:302, que usa um ``Censo`` sem
-   relação nenhuma com ele. Um nome não é um endereço.
-
-A régua de hoje resolve as duas de uma vez: alcance a partir dos pontos de
-entrada declarados, pelo grafo de ``import``, com o nome resolvido ao módulo.
-Só dois idiomas continuam PLANOS, e por medição: o **literal de texto**
-(despacho por ``getattr``, a armadilha 1) e o **atributo cuja base não é
-módulo** (``obj.metodo()``, que a varredura não tem como resolver sem inferir
-tipo). Contá-los planos custa perdão ocasional; não contá-los custaria acusar
-quem está certo, que é o defeito que este portão não pode ter.
-
-CONTAGEM da troca, MEDIDA em 22/08/2026: 33 acusações viraram 60. Nenhuma
-saiu; as 27 que entraram são os 22 símbolos das três correntes fechadas acima
-mais os cinco de ``hidraw_broker_client``, que perderam o perdão quando
-``_TERRITORIOS_DE_PRODUCAO`` deixou de ser a pasta ``scripts/`` inteira. São
-27 e não 28 porque o sexto símbolo que a pasta perdoava,
-``curva_propria.py::gerar_tabela_markdown``, já está entre os 22: o módulo
-inteiro dele é corrente fechada, e a régua de alcance o acusaria sozinha.
-Todas estão classificadas abaixo, com endereço.
-
-O CONTRATO DESTE ARQUIVO
--------------------------
-O conjunto de acusações é DERIVADO em runtime. O que é escrito à mão é a
-CLASSIFICAÇÃO de cada acusação, e ela é exaustiva: promessa nova sem caminho
-reprova por estar **SEM CLASSIFICAÇÃO** — não por estar sem chamador. Essa
-inversão é o que evita a denylist por prefixo, que fura calada. Só há dois
-destinos, e os dois exigem razão escrita com data:
-
-- ``_NAO_E_PROMESSA`` — não é promessa ao produto (instrumento de teste,
-  diagnóstico, ou lápide com nota datada). Não é dívida;
-- ``_SEM_CAMINHO_HOJE`` — é promessa, e o caminho não existe. É dívida.
-
-Declarar é honesto e este portão não castiga honestidade (a ``ROTULOS-DE-SPRINT-01``
-fixou que *um gate que castiga a honestidade é pior que gate nenhum*) — ele só
-não deixa a lápide envelhecer calada: no dia em que o caminho nascer, a entrada
-deixa de bater com a árvore e o portão cobra que ela seja APAGADA.
-"""
+"""O portão da PROMESSA SEM CAMINHO — ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01``."""
 from __future__ import annotations
 
 import ast
@@ -241,26 +15,7 @@ import pytest
 _RAIZ = Path(__file__).resolve().parents[2]
 _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: Os PONTOS DE ENTRADA do produto — onde o alcance começa. Cada um traz a
-#: FONTE que o declara, e ``test_todo_ponto_de_entrada_tem_fonte_viva`` confere
-#: que a fonte ainda diz o que esta tabela afirma. Lista adivinhada apodrece
-#: calada; lista com fonte conferida, não.
-#:
-#: ISTO SUBSTITUIU ``_TERRITORIOS_DE_PRODUCAO = ("scripts",)`` em 22/08/2026.
-#: A nota antiga dizia que ``scripts/`` era território de produção *"porque o
-#: instalador roda os helpers de lá"*. MEDIDO: o que o instalador roda de lá é
 #: SHELL — ``install_udev.sh``, ``fix_wireplumber_default_source.sh``,
-#: ``doctor.sh``. Nenhum ``.py`` de ``scripts/`` é rodado por instalador nem
-#: COPIADO para fora do checkout (as 51 varreduras de ``scripts/**/*.py``
-#: caíram todas em citação de comentário). O único Python copiado para fora é
-#: ``broker/hidraw_broker.py`` — e ele está aqui embaixo, como ponto de
-#: entrada. O que a pasta ``scripts/`` de fato guardava era a bancada: um
-#: instrumento de bancada é da mesma espécie que ``tests/``, e ``tests/`` nunca
-#: contou.
-#:
-#: PREÇO declarado dessa troca, MEDIDO em 22/08/2026: seis símbolos que a pasta
-#: perdoava passaram a ser acusados (os cinco de ``hidraw_broker_client`` e o
-#: ``gerar_tabela_markdown``) e estão classificados em ``_NAO_E_PROMESSA``.
 _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "cli/app.py": (
         "pyproject.toml",
@@ -268,20 +23,6 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "console_script da CLI; é também o ExecStart da unit do daemon "
         "(assets/hefesto-dualsense4unix.service:22, `daemon start --foreground`)",
     ),
-    # A BOCA `app/main.py` MORREU em 06/09/2026 (`GTK-3`), e esta entrada saiu
-    # com ela — que é o que a própria régua manda fazer quando a boca morre, e
-    # não muda de arquivo. Em 01/09 ela tinha MUDADO de arquivo (o
-    # console_script `-gui` passou a abrir a interface nova) e por isso ficou;
-    # agora o arquivo foi apagado por decisão dela (`D-0609-GTK-LEVA-INTEIRA`):
-    # *"a ideia sempre foi reaproveitar o que fiz no gtk e não apontar nada
-    # mais pra lá mas pro html"*.
-    #
-    # O `run.sh --gui` não perdeu a boca: ele entrega ao
-    # `scripts/abrir_interface.py`, e essa cadeia inteira está declarada em
-    # `_CADEIA_DA_INTERFACE_NOVA`, elo por elo, com régua própria. O MOTOR
-    # (`app/actions/`, `app/widgets/`, `app/telas/`) continua alcançado a partir
-    # do piloto — o que saiu do alcance foi o que só a JANELA chamava, e cada um
-    # desses está classificado em `_NAO_E_PROMESSA` com a data de hoje.
     "__main__.py": (
         "src/hefesto_dualsense4unix/__main__.py",
         "from hefesto_dualsense4unix.cli.app import main",
@@ -354,65 +95,15 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     ),
 }
 
-#: Roteiros de shell que EMBUTEM Python de produção. Não é caso de borda nem
-#: gambiarra: é a política desta casa — *"quem DECIDE é o módulo puro
-#: integrations/kernel_cmdline.py (100% stdlib, testável); aqui só traduzimos o
-#: plano"* (install.sh:1682-1683). O instalador e o desinstalador abrem um
-#: ``python3 - "${ROOT_DIR}" <<'PYEOF'`` (install.sh:1686, uninstall.sh:1688)
-#: que importa o módulo e chama as funções dele.
-#:
-#: Esse Python É produção: roda na máquina dela, com ``sudo``, mexendo na linha
-#: de comando do kernel. A varredura só olhava ``*.py`` (``_modulos``) e por
-#: isso acusava de órfã a ``strip_quirks_token``, que o desinstalar chama.
-#: MEDIDO em 13/08/2026.
-#:
-#: A CAMADA DE MÁQUINA ENTROU EM 29/09/2026, pela mesma razão: o ``install.sh``
-#: a carrega com ``source`` (as dez curas de HOST moram lá desde 31/08), e o
-#: heredoc dela chama ``censo_do_gabinete.ler_o_gabinete`` e
-#: ``preservar_o_que_ela_disse`` (``scripts/lib/camada_de_maquina.sh``:808-809).
-#: Sem ela na lista, as duas eram lápides de «sem chamador» sobre um caminho que
-#: roda em todo install (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01).
 _ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh", "scripts/lib/camada_de_maquina.sh")
 
-#: A BOCA DA INTERFACE NOVA — o piloto que o ``.desktop`` dela abre.
-#:
-#: NASCEU em 31/08/2026. É o análogo exato de ``_PONTOS_DE_ENTRADA``, do outro
-#: lado da fronteira: um arquivo que roda de FORA do pacote, importa ``src/`` e
-#: o chama — como o Python embutido nos heredocs, e pela mesma razão.
-#: MUDOU EM 01/09/2026, e a mudança é o ponto: até aqui a boca era o
-#: `controles_vivos.py`, o piloto de UMA aba — a Controles ficava viva e as
-#: outras nove eram o mockup estático. `hefesto_vivo.py` é uma janela com as
-#: DEZ, e é o que o `abrir_interface.py` passou a carregar.
-#:
-#: O QUE ISSO MUDA NESTE PORTÃO: o fecho de import a partir da boca passa a
-#: alcançar `pacotes/` — o despachante, a ponte e os dez pacotes de aba. As
-#: camadas de tela do produto que ninguém chamava (`app/telas/vibracao.py`,
 #: `app/actions/perfis_web.py`, `gui/aba_sistema.py`) deixam de ser promessa sem
-#: caminho no dia em que um pacote as chama, que é o que esta leva fez.
 _PILOTO_DA_INTERFACE_NOVA = "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: A pasta onde a ponte mora. O fecho de import NÃO sai daqui: um piloto que
-#: importasse um irmão de outra pasta viraria outra conversa, e esta régua
-#: prefere calar a adivinhar.
 _PASTA_DA_PONTE = "src/hefesto_dualsense4unix/interface"
 
-#: O MESMO LUGAR, dito como MÓDULO. Derivado do caminho acima e não
-#: digitado: os dois nomeiam a mesma pasta, e escrever o segundo à mão é
-#: criar o par que diverge no dia em que a pasta mudar de nome.
 _MODULO_DA_PONTE = _PASTA_DA_PONTE.removeprefix("src/").replace("/", ".")
 
-#: A CADEIA que torna o piloto uma boca, elo por elo, com a agulha de cada um.
-#: ``test_a_cadeia_do_lancador_da_interface_nova_esta_viva`` confere que cada
-#: fonte ainda diz o que esta tabela afirma — a mesma disciplina de
-#: ``test_todo_ponto_de_entrada_tem_fonte_viva``, e pela mesma razão: chão
-#: apodrece calado, e um chão de TRÊS elos apodrece em três lugares.
-#:
-#: Por que a cadeia inteira, e não só o último elo: o ``abrir_interface.py``
-#: sozinho não prova que alguém o roda — ele é um envoltório. Quem o roda é o
-#: ``run.sh --gui``, e quem roda o ``run.sh --gui`` é o ``.desktop`` que o
-#: ``install.sh`` escreve em ``~/.local/share/applications``. Cortado
-#: qualquer elo, o piloto vira instrumento de bancada e a ponte inteira sai da
-#: produção — que é exatamente o que este portão tem de saber dizer.
 _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
     (
         "packaging/hefesto-dualsense4unix.desktop",
@@ -440,21 +131,14 @@ _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
     ),
 )
 
-#: O Python da cadeia que roda de FORA de `src/`: o último elo `.py` antes do
-#: piloto. Sai da própria cadeia, para ter um dono só.
 _LANCADORES: tuple[str, ...] = tuple(
     fonte for fonte, _agulha, _razao in _CADEIA_DA_INTERFACE_NOVA if fonte.endswith(".py")
 )
 
-#: Abertura de heredoc alimentando um interpretador Python — ``python3 - <<'EOF'``,
-#: ``python <<EOF``, ``sudo python3 - "$X" <<-'PY'``. O delimitador é CAPTURADO
-#: para que o fechamento procurado seja o do próprio heredoc, e não o primeiro
-#: ``EOF`` que aparecer no roteiro (um script tem vários, de coisas diferentes).
 _HEREDOC_PYTHON = re.compile(
     r"""\bpython3?\b[^\n<]*<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*$"""
 )
 
-#: Portas capazes de LIGAR um interruptor de ambiente. Basta UMA.
 _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
     "install": ("install.sh", "uninstall.sh"),
     "unit": ("assets",),
@@ -466,14 +150,6 @@ _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
 }
 
 
-# ===========================================================================
-# P3a — O INTERRUPTOR SEM MÃO
-# ===========================================================================
-
-#: Interruptores que NÃO são promessa à usuária: chave de teste, de depuração
-#: ou de ajuste fino que ninguém liga em produção. Cada uma com a razão — e a
-#: razão é o que permite a próxima pessoa discordar com conhecimento de causa.
-#: Interruptor novo que ninguém classificar reprova por estar SEM CLASSIFICAÇÃO.
 _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_RADIO_DE_VERDADE": (
         "22/09/2026 — o ESCAPE da guarda do rádio "
@@ -538,11 +214,11 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_BROKER_SOCKET": (
         "Endereço do socket do broker de hidraw. Não é escolha dela: é ponto de "
         "injeção para o teste apontar o cliente a um socket de mentira "
-        "(integrations/hidraw_broker_client.py:49). Em produção o caminho vem "
+        "(integrations/hidraw_broker_client.py:22). Em produção o caminho vem "
         "do XDG. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_CARONA_WRAPPER": (
-        "Desliga a carona do wrapper da Steam (app/actions/carona_do_wrapper.py:186). "
+        "Desliga a carona do wrapper da Steam (app/actions/carona_do_wrapper.py:183). "
         "A razão está escrita na seção `O DESLIGADOR, e por que ele existe` do "
         "próprio módulo, em maiúsculas: `Ele NÃO é uma flag de produto — a regra "
         "da casa é toda cura entra no install, sem flag, e em produção a carona "
@@ -552,93 +228,87 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "`tests/conftest.py`:1197, em todo teste. MEDIDO em 18/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
-        "Onde procurar os arquivos de `assets/` (daemon/service_install.py:49). "
+        "Onde procurar os arquivos de `assets/` (daemon/service_install.py:35). "
         "Existe para o teste e para a execução a partir do fonte não dependerem "
         "de instalação; em produção o caminho é derivado do pacote. Não abre "
         "feature nenhuma. MEDIDO em 12/08/2026."
     ),
-    # A CHAVE `…_COMPACT_WINDOW` SAIU EM 19/09/2026, com o arquivo que a
-    # lia (`compact_window.py`, hoje o código aposentado, no histórico). A
-    # régua acima é que mandou: *"estas chaves estão classificadas e `src/`
-    # não as lê mais"*. A classificação é do que EXISTE — e a razão de ela
-    # ter existido está no código aposentado (no histórico), com a medição
-    # das três fontes.
     "HEFESTO_DUALSENSE4UNIX_FAKE": (
-        "Sobe o daemon com controle de mentira (daemon/main.py:18 e :113). É a "
+        "Sobe o daemon com controle de mentira (daemon/main.py:13 e :113). É a "
         "chave que permite a suíte inteira rodar sem aparelho na mesa. Ligá-la "
         "em produção seria o defeito, não a cura. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT": (
         "Diz ao controle de mentira se ele deve fingir cabo ou Bluetooth "
-        "(daemon/main.py:21). Irmã da chave FAKE e sem sentido fora dela — é "
+        "(daemon/main.py:16). Irmã da chave FAKE e sem sentido fora dela — é "
         "instrumento de bancada. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC": (
         "Ajuste fino do tempo de espera da inicialização do backend "
-        "(core/backend_pydualsense.py:201). Número de calibração, não escolha "
+        "(core/backend_pydualsense.py:149). Número de calibração, não escolha "
         "dela: não há nada na tela que ela reconheceria como esta chave. "
         "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME": (
-        "Nome do socket de IPC (utils/xdg_paths.py:16). Isola instâncias "
+        "Nome do socket de IPC (utils/xdg_paths.py:15). Isola instâncias "
         "paralelas em teste; o applet do COSMIC apenas LÊ a chave "
         "(packaging/cosmic-applet/src/ipc.rs:54) para achar o mesmo socket. "
         "Ninguém a liga como feature. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LEDS_ROOT": (
-        "Raiz falsa de `/sys/class/leds` (core/external_leds.py:39 e "
-        "core/sysfs_leds.py:31). Existe para o teste ter um sysfs de mentira "
+        "Raiz falsa de `/sys/class/leds` (core/external_leds.py:38 e "
+        "core/sysfs_leds.py:30). Existe para o teste ter um sysfs de mentira "
         "sob si; em produção a raiz é fixa. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_FORMAT": (
-        "Formato do log (utils/logging_config.py:59). Chave de diagnóstico de "
+        "Formato do log (utils/logging_config.py:29). Chave de diagnóstico de "
         "quem lê log, não superfície de produto — não muda o que o aparelho faz. "
         "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL": (
-        "Verbosidade do log (utils/logging_config.py:58). Mesma família da "
+        "Verbosidade do log (utils/logging_config.py:28). Mesma família da "
         "anterior: instrumento de quem investiga um defeito, e o caminho "
         "publicado para investigar é o `doctor`, não esta chave. MEDIDO em "
         "12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_METRICS_PORT": (
-        "Porta do servidor de métricas (daemon/subsystems/metrics.py:48). É "
+        "Porta do servidor de métricas (daemon/subsystems/metrics.py:21). É "
         "parâmetro do instrumento cujo INTERRUPTOR é `..._METRICS_ENABLED` — "
         "afinar a porta sem poder ligar o servidor não é promessa; a promessa "
         "está declarada como lacuna na chave ENABLED. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_NICE": (
-        "Prioridade de escalonamento do processo do daemon (daemon/main.py:84). "
+        "Prioridade de escalonamento do processo do daemon (daemon/main.py:66). "
         "Ajuste de operação, não escolha publicada: a unit é quem decidiria "
         "isso, e decide por outros meios. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_NOTIFY_THROTTLE_SEC": (
         "Intervalo mínimo entre notificações repetidas "
-        "(integrations/desktop_notifications.py:48). Calibração do instrumento "
+        "(integrations/desktop_notifications.py:22). Calibração do instrumento "
         "de notificação; a promessa é a chave `..._DESKTOP_NOTIFICATIONS`, que "
         "está declarada como lacuna. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT": (
-        "Desliga a detecção de janela em foco (cli/app.py:309, "
-        "profiles/autoswitch.py:150). Existe para o teste do autoswitch não "
+        "Desliga a detecção de janela em foco (cli/app.py:265, "
+        "profiles/autoswitch.py:70). Existe para o teste do autoswitch não "
         "depender de um compositor vivo, e para a CLI poder rodar num shell sem "
         "sessão gráfica. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR": (
-        "Onde procurar plugins (daemon/subsystems/plugins.py:157). Aponta o "
+        "Onde procurar plugins (daemon/subsystems/plugins.py:112). Aponta o "
         "carregador a um diretório de mentira no teste; em produção o diretório "
         "é o do XDG. O INTERRUPTOR dos plugins é `..._PLUGINS_ENABLED`, que é "
         "outra chave. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_POLL_HZ": (
-        "Frequência do laço de poll (daemon/main.py:92). Já é escolha publicada "
+        "Frequência do laço de poll (daemon/main.py:69). Já é escolha publicada "
         "por OUTRA porta — `--poll-hz` do subcomando `daemon start` "
-        "(cli/app.py:295). A env é o atalho de bancada para o mesmo número. "
+        "(cli/app.py:251). A env é o atalho de bancada para o mesmo número. "
         "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS": (
         "Quantos milissegundos seguram o PS para contar como pressão longa "
-        "(daemon/main.py:98). Calibração de gesto; afinada por quem mede, não "
+        "(daemon/main.py:73). Calibração de gesto; afinada por quem mede, não "
         "escolhida por quem usa. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS": (
@@ -654,17 +324,17 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC": (
         "Intervalo mínimo entre escritas de report de saída "
-        "(core/backend_pydualsense.py:214). Número de calibração do transporte, "
+        "(core/backend_pydualsense.py:162). Número de calibração do transporte, "
         "medido com o aparelho na mão; não é superfície de escolha. MEDIDO em "
         "12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING": (
-        "Faz o aviso da bandeja ser emitido de novo (app/tray.py:273). Existe "
+        "Faz o aviso da bandeja ser emitido de novo (app/tray.py:171). Existe "
         "para reencenar um aviso já visto durante uma medição de tela; o "
         "caminho publicado é apagar o arquivo de estado. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED": (
-        "Pula a semeadura dos perfis de fábrica (profiles/loader.py:94). Existe "
+        "Pula a semeadura dos perfis de fábrica (profiles/loader.py:79). Existe "
         "para o teste começar de um diretório de perfis vazio; em produção a "
         "semeadura é justamente o que se quer. MEDIDO em 12/08/2026."
     ),
@@ -724,9 +394,6 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
 }
 
-#: Interruptores que SÃO promessa à usuária: abrem uma feature que ela pode
-#: querer. Cada um precisa de UMA porta que o ligue — ou de uma lacuna
-#: declarada em ``_SEM_MAO_HOJE``.
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
         "A chave que DESLIGA o vigia das conexões de rádio "
@@ -750,7 +417,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_BROKER_NO_NASCE_FECHADO": (
         "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
         "regra `assets/73-hefesto-ps5-controller.rules` da cura O-NO-NASCE-FECHADO-01 "
-        "(broker/hidraw_broker.py:92). É promessa dela, decidida em "
+        "(broker/hidraw_broker.py:91). É promessa dela, decidida em "
         "20/09/2026: «o Hefesto tem que ter prioridade em tudo e isso deveria "
         "estar no install por default». Ela acopla as duas metades da cura — "
         "a udev decide o NASCIMENTO do nó, e esta env conta ao broker qual é o "
@@ -768,23 +435,23 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS": (
         "Liga as notificações de desktop "
-        "(integrations/desktop_notifications.py:224). É feature dela — bateria "
+        "(integrations/desktop_notifications.py:140). É feature dela — bateria "
         "baixa, perfil ativado. MEDIDO em 12/08/2026: sem mão."
     ),
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "Declara que ela QUER o DualSense como microfone padrão do sistema "
-        "(core/system_check.py:136), e com isso cala o alarme do doctor. É "
+        "(core/system_check.py:119), e com isso cala o alarme do doctor. É "
         "escolha dela por definição. MEDIDO em 12/08/2026: sem mão."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
-        "Liga/desliga o teclado emulado (daemon/main.py:108). É feature dela e "
+        "Liga/desliga o teclado emulado (daemon/main.py:79). É feature dela e "
         "o próprio comentário de :104 escreve a precedência: default < esta env "
         "< o `keyboard_emulation.flag`, que é a decisão DELA. MEDIDO em "
         "12/08/2026: LIGADA — não pela env, e sim pelo companheiro declarado em "
         "`_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED": (
-        "Liga o servidor HTTP de métricas (daemon/subsystems/metrics.py:47). "
+        "Liga o servidor HTTP de métricas (daemon/subsystems/metrics.py:20). "
         "Publicar métricas é escolha de quem instala. REMEDIDO em 22/08/2026: "
         "sem mão — nenhum `Environment=` em assets/, e o install.sh não menciona "
         "METRICS. Fora de src/ a chave aparece em OITO lugares e nenhum deles a "
@@ -797,23 +464,17 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "linha já apodreceu duas vezes em dez dias."
     ),
     "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": (
-        "Liga o carregamento de plugins (daemon/subsystems/plugins.py:194). É "
+        "Liga o carregamento de plugins (daemon/subsystems/plugins.py:149). É "
         "feature dela: sem isto, plugin instalado não roda. MEDIDO em "
         "12/08/2026: sem mão."
     ),
     "HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY": (
         "Faz os avisos de infraestrutura do boot virarem notificação de desktop "
-        "(daemon/lifecycle.py:3147). É escolha dela: receber ou não o aviso na "
+        "(daemon/lifecycle.py:1993). É escolha dela: receber ou não o aviso na "
         "tela. MEDIDO em 12/08/2026: sem mão."
     ),
 }
 
-#: A mão de uma feature nem sempre é a env: às vezes a env é só o atalho, e
-#: quem de fato liga a feature é um COMPANHEIRO — um arquivo de estado, um
-#: campo de config. Declarar o companheiro pelo nome é o que impede esta saída
-#: de virar desculpa: o portão confere que o símbolo declarado EXISTE e que ele
-#: próprio não é uma promessa sem caminho. Companheiro que apodrecer derruba a
-#: env junto.
 _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
         "daemon/subsystems/conexoes.py::ConexoesSubsystem",
@@ -832,10 +493,10 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "utils/session.py::save_keyboard_emulation",
         "MEDIDO em 12/08/2026: a env é o degrau do MEIO de uma precedência de "
-        "três, escrita em daemon/main.py:104 — default da dataclass (True) < "
+        "três, escrita em daemon/main.py:78 — default da dataclass (True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(daemon/lifecycle.py:1487-1491, dentro de `set_keyboard_emulation`, na "
+        "(daemon/lifecycle.py:743-747, dentro de `set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço era :1300 e caducou; "
         "RECONFERIDO em 26/08/2026, quando a frente da poda o mediu de novo "
         "JUSTAMENTE para saber se podia apagá-lo. Não pode: tem chamador vivo). "
@@ -858,9 +519,6 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     ),
 }
 
-#: Interruptores de feature que NADA liga hoje, com o endereço da lacuna e o
-#: que a fecharia. Quem entregar a cura APAGA a entrada, e é essa a única
-#: manutenção.
 #: sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
 _SEM_MAO_HOJE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
@@ -882,8 +540,8 @@ _SEM_MAO_HOJE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": (
         "MEDIDO em 12/08/2026: nenhuma porta escreve a env, e o campo "
-        "companheiro `DaemonConfig.plugins_enabled` (daemon/lifecycle.py:213) é "
-        "só um default `False` com leitores — subsystems/plugins.py:195 lê os "
+        "companheiro `DaemonConfig.plugins_enabled` (daemon/lifecycle.py:117) é "
+        "só um default `False` com leitores — subsystems/plugins.py:150 lê os "
         "dois em OU e nenhum dos dois tem escritor. Então o subsistema de "
         "plugins não sobe nunca, por caminho nenhum. "
         "O EFEITO EM CASCATA, e é o que torna esta entrada cara: o "
@@ -919,7 +577,7 @@ _SEM_MAO_HOJE: dict[str, str] = {
         "docs/usage/metrics.md, o sprint DOC-QUE-NAO-MENTE-03, "
         "tests/unit/test_metrics.py e este arquivo), e citar não é escrever. "
         "O campo irmão "
-        "`DaemonConfig.metrics_enabled` também só tem leitor (metrics.py:389). "
+        "`DaemonConfig.metrics_enabled` também só tem leitor (metrics.py:294). "
         "O QUE A FECHA: `Environment=` na unit ou uma opção do instalador. "
         "ATENÇÃO ao decidir: enquanto ninguém liga isto, o `MetricsSubsystem` "
         "nunca sobe — e é essa a razão de o defeito irmão (o subsystem que "
@@ -928,7 +586,7 @@ _SEM_MAO_HOJE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY": (
         "MEDIDO em 12/08/2026: nenhuma porta a escreve. O daemon calcula os "
         "avisos de infraestrutura no boot, escreve cada um no log "
-        "(lifecycle.py:3144) e então descarta a notificação porque a chave está "
+        "(lifecycle.py:1990) e então descarta a notificação porque a chave está "
         "vazia — o trabalho é feito e jogado fora. "
         "O QUE A FECHA: a mesma decisão da chave `..._DESKTOP_NOTIFICATIONS`, e "
         "as duas deviam ser decididas juntas: um interruptor só de "
@@ -938,14 +596,6 @@ _SEM_MAO_HOJE: dict[str, str] = {
 }
 
 
-# ===========================================================================
-# P3b — A PROMESSA PÚBLICA SEM CAMINHO
-# ===========================================================================
-
-#: Acusações que NÃO são promessa ao produto. Instrumento de teste, ferramenta
-#: de diagnóstico, ou lápide com nota datada — nenhuma delas deve um chamador.
-#: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
-#: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
     "daemon/ganho_da_haptica.py::linear_do_cru": (
         "29/09/2026, O-GANHO-DA-HAPTICA-TEM-DONO-01 — é o instrumento das "
@@ -1037,7 +687,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "MEDIDO em 01/09/2026."
     ),
     "interface/monta.py::larg_rotulos": (
-        "Auxiliar do gerador do mockup (interface/monta.py:406), chamado só pelos "
+        "Auxiliar do gerador do mockup (interface/monta.py:125), chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
         "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
@@ -1045,7 +695,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
-        "Jogar — `interface/aba01.py:915` e `:1799` —, que é BANCADA e sai da "
+        "Jogar — `interface/aba01.py:629` e `:1799` —, que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "
         "E ISSO ESTÁ CERTO, e a razão é do dado: a lista de máscaras montáveis "
         "é do CÓDIGO, e não do estado da máquina: ela não muda entre dois tiques. "
@@ -1056,11 +706,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "põe a frase no cartão quando alguém clica assim mesmo. "
         "MEDIDO em 04/09/2026, na leva das quinze queixas dela."
     ),
-    # `luzinhas` E `tom_da_casa` SAÍRAM DAQUI EM 02/09/2026, e o portão foi quem
-    # mandou: *"APAGUE a entrada. A cura chegou e a lápide ficou."* As duas
-    # deixaram de ser só da bancada quando `pacotes/a04_iluminacao.desenho_da_luz`
-    # passou a chamá-las a cada tique — as cinco lâmpadas do indicador e o tom da
-    # guia agora são PINTADOS no produto, e não só desenhados no mockup.
     "interface/monta.py::monta": (
         "O gerador do esqueleto das dez páginas. A página que ele escreve É o que o "
         "WebView renderiza, mas quem o chama são os dez `interface/abaNN.py`, que "
@@ -1069,12 +714,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`promessas_sem_caminho` tira os geradores da conta e, com eles, os "
         "chamadores desta função. MEDIDO em 01/09/2026."
     ),
-    # A LÁPIDE DE `interface/monta.py::troca` SAIU EM 04/09/2026, e a cura foi
-    # dela mesma: a ONDA0-F pôs a folha das dez peças (D-02 e D-03) dentro de
-    # `monta()`, e a injeção passa pelo `troca()` — justamente para que um
-    # `</style>` que suma PARE a geração em vez de publicar dez páginas sem as
-    # peças. Com isso a função ganhou chamador estático num módulo alcançado, e
-    # o portão cobrou a lápide, que é o que ele existe para fazer.
     "interface/monta.py::botao_cinza": (
         "Auxiliar do gerador do mockup (a peça S-03 da D-03, 04/09/2026), que "
         "quem chama são os dez `interface/abaNN.py` — BANCADA, e por isso fora da "
@@ -1084,7 +723,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "em `interface/paginas/`. O docstring da função diz o mecanismo, e a "
         "régua `tests/unit/test_o_botao_cinza_diz_a_razao.py` a exercita."
     ),
-    # SENSOR-DE-VERDADE-01 (04/09/2026, ONDA1-D3).
     "core/virtual_motion.py::sensores_vivos_na_janela": (
         "SENSOR-DE-VERDADE-01, 04/09/2026. Régua do ENSAIO de bancada, não "
         "promessa ao produto: ela lê uma janela "
@@ -1095,27 +733,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "docstring dela diz o limite (zero num quadro é indício, não prova) e "
         "`tests/unit/test_o_sensor_desliga_de_verdade.py` a exercita."
     ),
-    # `interface/monta.py::ressalva` SAIU DAQUI EM 04/09/2026, e não porque a
-    # cura chegou — o registro que ela carregava continua verdadeiro: aquela
-    # função é auxiliar do gerador do mockup, chamada pelos dez
-    # `interface/abaNN.py`, que são BANCADA. Quem a tirou foi uma COLISÃO DE
-    # NOME com a SENSOR-DE-VERDADE-01: o `sensor.set` passou a devolver uma
-    # chave `"ressalva"` no corpo (`daemon/ipc_handlers.py`, e a ponte a lê em
-    # `app/ipc_bridge.frase_do_interruptor_de_sensor`), e a régua conta
-    # literal de texto como referência PLANA de propósito — "não dá para
-    # resolver sem inferir tipo, então assuma alcançado". Com o literal em
-    # módulo alcançado, `promessas_sem_caminho` deixou de listar o símbolo, e
-    # a lápide virou lápide de defunto vivo, que é o que
-    # `test_nenhuma_lapide_sobreviveu_a_propria_cura` reprova.
-    #
-    # A NOTA FICA porque o fato não mudou: se um dia aquele literal sumir, o
-    # símbolo volta à lista de não classificados e a entrada tem de voltar com
-    # a razão acima — `tests/unit/test_a_linha_de_ressalva_so_nasce_quando_ha.py`
-    # continua sendo a régua que o exercita.
-    # ── AS CAMADAS DE TELA DA INTERFACE NOVA, 01/09/2026 ──────────────
-    # Elas entraram quando a boca passou a ser o `hefesto_vivo.py`, o
-    # piloto das DEZ abas: o fecho de import alcançou seis módulos que
-    # ninguém chamava, e cada função pública deles virou acusação.
     "daemon/subsystems/identity.py::reset_identity_registry": (
         "MEDIDO em 12/08/2026. Instrumento de isolamento entre casos: o próprio "
         "docstring diz `APENAS testes — isola estado entre casos`, e o corpo "
@@ -1194,39 +811,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "sistema nenhum`. Quem de fato escreve a linha de comando do kernel é "
         "o instalador, em shell; esta função existe para prever o resultado."
     ),
-    # `integrations/kernel_cmdline.py::forbidden_reintroductions` MOROU AQUI, e
-    # saiu em 13/08/2026 porque a classificação estava ERRADA, não porque o
-    # símbolo mudou. A razão dizia "instrumento: o docstring diz `Guarda de
-    # teste`" — e o instalador a chama em produção, dentro do heredoc de
-    # install.sh:1723 (`violations = kc.forbidden_reintroductions(actions)`),
-    # para ABORTAR o passo do cmdline quando a guarda anti-reintrodução dispara.
-    # Ela só parecia instrumento porque a varredura era cega a heredoc. O portão
-    # cobrou o apagamento sozinho, que é exatamente o que ele existe para fazer.
-    # `utils/session.py::load_coop_enabled` MOROU AQUI e a entrada SAIU em
-    # 26/08/2026 porque o SÍMBOLO foi podado — não porque a classificação
-    # mudasse. A entrada dizia que o corpo ficava de pé porque "a assinatura é
-    # contrato público que CLI, applet e testes importam". As duas metades da
-    # razão eram falsas, e foram medidas: nenhum `.py` de `src/` a importa (a
-    # CLI inclusive), e o applet do COSMIC é RUST — `packaging/cosmic-applet/`
-    # tem `Cargo.toml` e `src/{main,app,ipc}.rs`, fala JSON-RPC com o daemon, e
-    # não há um único `.py` sob `packaging/`. Sobrava `tests/`, que nunca foi
-    # caminho. A DECISÃO MEDIDA que a lápide guardava (COOP-SEM-INTERRUPTOR-01,
-    # 06/08/2026: o co-op local não tem mais opt-out) continua escrita, com a
-    # data, no lugar onde a função morava, em `utils/session.py`.
-    # --- A BANCADA (22/08/2026): o que só um instrumento de `scripts/` usa ----
-    # Os cinco do broker entraram quando `_TERRITORIOS_DE_PRODUCAO =
-    # ("scripts",)` saiu; o sexto, `gerar_tabela_markdown`, entraria de todo
-    # jeito — `curva_propria.py` é corrente fechada e nenhum ponto de entrada o
-    # alcança. Não é dívida nova: é a mesma linha que já valia para `tests/`,
-    # aplicada à bancada. A nota de `_PONTOS_DE_ENTRADA` traz a medição.
-    # `abrir_hidraw` SAIU DAQUI em 29/08/2026, e este portão foi quem mandou.
-    # A lápide dizia "API de BANCADA: o único chamador é `scripts/ensaios/
-    # comum.py`" — verdade em 22/08 e falsa hoje: `integrations/
-    # cor_do_plastico._perguntar_ao_hidraw` passou a entrar por ela, que era o
-    # conserto do "Não sei" nos dois cards dela. A lápide sobreviveu à própria
-    # cura, o portão viu, e a entrada foi apagada em vez de atualizada — é a
-    # regra desta casa: fato que a medição derrubou sai, não fica ao lado do
-    # certo.
     "profiles/curva_propria.py::gerar_tabela_markdown": (
         "MEDIDO em 22/08/2026, e isto SUBSTITUI a nota de 15/08 que o dava por "
         "fiado em produção. O docstring (:290) diz o que ele é: gera a tabela de "
@@ -1236,34 +820,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "e instrumento não é caminho de produção — a mesma linha que vale para "
         "`tests/`."
     ),
-    # --- CONFIG-06 (23/08/2026) apagou o único chamador do embrulho estreito -
-    # --- 31/08/2026: as três da aba Jogar que NÃO são promessa à tela --------
-    # As outras cinco do mesmo módulo são dívida e estão em `_SEM_CAMINHO_HOJE`.
-    # A linha entre as duas listas foi MEDIDA uma a uma, e a régua é simples:
-    # existe alguém que PINTA o que ela devolve? Se sim é dívida (falta abrir a
-    # aba); se não, ela nunca foi para a tela.
 
-    # ------------------------------------------------------------------
-    # AS DOZE DA JANELA GTK — 06/09/2026, sprint `GTK-3`
-    # ------------------------------------------------------------------
-    # A janela foi aposentada por decisão dela (`D-0609-GTK-LEVA-INTEIRA`): *"a
-    # ideia sempre foi reaproveitar o que fiz no gtk e não apontar nada mais
-    # pra lá mas pro html"*. `app/app.py` e `app/main.py` saíram, e com eles o
-    # ÚNICO consumidor destes doze símbolos.
-    #
-    # Medido no dia: o fecho de import encolheu de 265 para 261 módulos, e os
-    # quatro que saíram são `app.app`, `app.main`, `app.compact_window` e
-    # `app.tray`. Nenhum outro módulo perdeu alcance.
-    #
-    # **AS SEIS MIXINS SÃO O CASO QUE PRECISA SER LIDO COM CUIDADO.** O que
-    # perdeu chamador é a CLASSE, que era o ponto de montagem do `HefestoApp`
-    # (`class HefestoApp(HomeActionsMixin, RumbleActionsMixin, …)`). Os MÓDULOS
-    # continuam sendo produção e são chamados a cada tique: `home_actions` tem
     # 56 citações em `interface/`, `rumble_actions` 28, `input_actions` 21,
-    # `footer_actions` e `triggers_actions` 16 cada, `launch_wrapper_dialog` 15
-    # — os pacotes das dez abas chamam as FUNÇÕES e as CONSTANTES de módulo,
-    # não a mixin. É por isso que a sprint manda `app/actions/` ficar: o motor
-    # é o módulo, e o que morreu foi o arame que o pendurava na janela.
     "app/actions/footer_actions.py::FooterActionsMixin": (
         "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp`, que saiu com a janela. "
         "O módulo é produção viva: `interface/pacotes/rodape.py` e as dez abas "
@@ -1294,8 +852,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
         "saiu com a janela. O módulo é produção viva: 28 citações em "
         "`src/hefesto_dualsense4unix/interface/`, entre elas "
-        "`texto_do_alcance_da_intensidade` (`interface/aba05.py:834`) e "
-        "`BTN_GIVE_BACK_TO_GAME` (`aba05.py:272`). Evidência: `grep -rn "
+        "`texto_do_alcance_da_intensidade` (`interface/aba05.py:589`) e "
+        "`BTN_GIVE_BACK_TO_GAME` (`aba05.py:90`). Evidência: `grep -rn "
         "rumble_actions src/hefesto_dualsense4unix/interface/`."
     ),
     "app/actions/triggers_actions.py::TriggersActionsMixin": (
@@ -1305,13 +863,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "19 modos de gatilho. Evidência: `grep -rn triggers_actions "
         "src/hefesto_dualsense4unix/interface/`."
     ),
-    # A LÁPIDE DA `CompactWindow` SAIU DAQUI EM 19/09/2026, e ela não foi
-    # apagada: o ARQUIVO inteiro foi para o código aposentado (no
-    # histórico), pela `ORFAOS-DA-MIGRACAO-01`, e a razão dela está escrita
-    # lá com a medição das três fontes. Uma lápide para um arquivo que saiu
-    # do caminho é o próprio defeito que esta sprint nomeia — *vigia de
-    # defunto conta como uso e não é uso*. Se a `compact_window.py` voltar
-    # para `src/`, a lápide volta com ela.
     "integrations/tray.py::TrayController": (
         "19/09/2026 — LÁPIDE, e ela é o efeito direto da `TRAY-ORFAO-01`. Este "
         "era o tray POBRE: clicar no ícone abria a TUI no terminal, a lista de "
@@ -1322,7 +873,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "dela no mesmo dia, com o daemon vivo. Decisão dela: *\"o tray faz o "
         "mesmo mas melhor\"*. "
         "`probe_gi_availability`, do MESMO arquivo, continua vivo e é chamado "
-        "pelo `app/tray.py:38` — por isso a classe ganha lápide em vez de o "
+        "pelo `app/tray.py:21` — por isso a classe ganha lápide em vez de o "
         "arquivo ir para o código aposentado."
     ),
     "app/gui_dialogs.py::presentar_dialogos_em_curso": (
@@ -1339,26 +890,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`app/theme.escalar_css` continua sendo chamado pelas réguas de "
         "geometria. O que morreu foi a janela onde a folha era pendurada."
     ),
-    # A LÁPIDE DO `AppTray` SAIU EM 19/09/2026, e quem mandou foi ESTE PORTÃO:
-    # *"a cura chegou e a lápide ficou — é assim que um registro honesto vira
-    # mentira"*. Ela dizia, em 06/09, que *"a interface nova não tem bandeja
-    # hoje — e isso é linha de fila, não resto"*. A linha da fila era a
-    # `TRAY-ORFAO-01`, e ela fechou: `cli/cmd_tray.py` sobe o `AppTray`, e o
-    # ícone foi visto na bandeja dela (4 ícones sem ele, 5 com ele).
-    #
-    # O QUE A LÁPIDE ACERTOU FICA REGISTRADO: `TRAY_ICON_NAME` continua sendo
-    # contrato de empacotamento, com portão próprio em
-    # `scripts/check_packaging_parity.sh`.
-    #
-    # TRÊS SAÍRAM EM 29/09/2026, quando o lançador passou a contar como produção
-    # (`_LANCADORES`, elo 3 de `_CADEIA_DA_INTERFACE_NOVA`). As duas de
-    # `utils/tela_de_mentira.py` diziam *"o PRODUTO nunca deve chamá-la"*, e o
-    # `scripts/abrir_interface.py` a chama desde 04/09/2026 como guarda
-    # (TELA-DELA-02): o atalho dela passa com `HEFESTO_NA_TELA=1`, e a guarda
-    # deixa. A de `interface/monta.py::svg` (ferramenta dos geradores) saiu
-    # pela régua do nome PLANO: o `"svg"` literal do
-    # `app/arranque.sanear_loaders_do_gdk_pixbuf`, que o lançador chama, a
-    # alcança. Se esse literal sair, o portão pede a lápide de volta.
     "utils/memoria_dos_controles.py::conferir_a_casa": (
         "25/09/2026, ESQUECER-OS-CONTROLES-01 — é o «a máquina está limpa?» da "
         "rotina de controle de qualidade, e quem o chama é "
@@ -1410,10 +941,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/doctor.sh` imprime pela `frase()`. Mesma razão da função: "
         "ferramenta de diagnóstico, e o produto não lê diário."
     ),
-    # AS QUATORZE QUE MUDARAM DE GAVETA EM 29/09/2026, na costura das levas 1 a 3
-    # da onda 3: moravam em `_SEM_CAMINHO_HOJE`, e as sprints que as tirariam
-    # fecharam sem que fossem dívida — são bancada, ensaio, ou a régua cuja
-    # escolha espera a palavra dela.
     "interface/monta.py::folha_das_cores": (
         "29/09/2026, A-TELA-PERGUNTA-AO-DONO-01 — a folha inteira dos 28 modelos "
         "é da BANCADA, não promessa ao produto: quem a chama são os geradores das "
@@ -1571,23 +1098,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
 }
 
-#: As promessas públicas SEM CAMINHO de 12/08/2026 — a dívida, com endereço e
-#: com o que a fecharia. Não são consertos desta leva: consertar qualquer uma
-#: é mudança que ninguém pediu, e pelo menos duas (a máscara por aparelho e as
-#: notificações) dependem de decisão DELA sobre a tela.
-#:
-#: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
-#: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    # CINCO LÁPIDES DA PONTE-SEM-CHAMADOR-01 SAÍRAM EM 23/09/2026, e quem mandou
-    # foi ESTE PORTÃO (`test_nenhuma_lapide_sobreviveu_a_propria_cura`): a
-    # `JanelaDeBusca`, o `Candidato`, o `Resultado`, o `e_controle` e o
-    # `ler_candidato` ganharam caminho pela central do rádio da
-    # MOVER-UM-POR-VEZ-01 (`integrations/central_do_radio.py`, que o daemon sobe
-    # em `_start_central_do_radio` e a tela chama por `radio.mover`). O que as
-    # lápides diziam dos BOTÕES continua valendo: o gesto da tela é da
-    # TRANSPLANTE-DA-SECAO-01. A do `segundos_ate` saiu com a função em
-    # 29/09/2026: o Conectar aprovado não conta para baixo.
     # sai com: A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01
     "integrations/haptica_bt.py::bloco_de_silencio":
         "Irmã da entrada acima, mesma sprint e mesma lacuna: o bloco zerado é "
@@ -1619,141 +1130,13 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "merece a palavra dela sobre 'sem botão, no Salvar' antes de "
         "qualquer linha. No dia em que ela nascer, este portão cobra que "
         "estas entradas sejam APAGADAS. 10/09/2026.",
-    # O `alto_falante_bt` ENTROU EM PRODUÇÃO — 09/09/2026, SOM-POR-CONTROLE-01.
-    #
-    # DEZ entradas deste registro saíram de uma vez, e a razão é uma só: o
-    # módulo `integrations/alto_falante_bt.py` passou a ser IMPORTADO por
-    # `app/audio_saida.py`, que é alcançado. Ele virou a casa da pergunta *"onde
-    # este nó de som entrega?"* — o daemon precisava dela e **não importa nada
-    # de `app/`** (a régua está escrita em `integrations/fontes_de_captura.py`),
-    # então a resposta mudou de endereço em vez de ganhar uma segunda cópia.
-    #
-    # DUAS das dez ganharam chamador de verdade: `nome_do_sink` (o `sink_name`
-    # do nó, agora o único — o `hefesto_alto_falante_<assento>` que morava no
-    # `audio_saida` MORREU) e `propriedades_do_sink` (as aspas duplas sem as
-    # quais «Alto-falante do Controle 1» chegaria ao PipeWire como
-    # «Alto-falante»).
-    #
-    # AS OUTRAS OITO entraram pela porta do módulo: a régua deste portão diz que
-    # um símbolo está alcançado quando **um nó de topo de um módulo alcançado o
-    # cita**, e `Arranjo`, `CodificadorOpus`, `ContagemDaBomba`, `Diagnostico`,
-    # `montar_com_o_common_preservado`, `orcamento_do_degrau`, `tag_tlv` e
-    # `versao_libopus` são citados por definições de topo do próprio
-    # `alto_falante_bt`. **Elas não ganharam chamador de produção**, e a dívida
-    # que a nota de cada uma descrevia continua exatamente onde estava — o
-    # `AltoFalanteSubsystem` fora do `run()` de `daemon/lifecycle.py`, da lista
-    # de `daemon/subsystems/__init__.py` e do `shutdown()` de
-    # `daemon/connection.py`, os três fora da posse daquela sprint e desta. Essa
-    # dívida NÃO se perdeu: ela está escrita no docstring de
-    # `daemon/subsystems/alto_falante.py` (seção *"O ÓRFÃO GANHOU A ROTA"*), com
-    # os três endereços e a receita de três metades. Apagar aqui é o que o
-    # contrato deste portão manda quando a acusação some — manter a entrada
-    # seria a lápide que ele existe para não deixar envelhecer.
-    # A LÁPIDE DE `primeiro_trecho_banido` SAIU EM 06/09/2026, na costura da
-    # ONDA E, e ela previu o próprio fim com o endereço de cada passo: dizia que
-    # o chamador natural era o funil `interface/hefesto_vivo.py::_json`, que ele
-    # não podia adotá-la enquanto DEZESSEIS frases de `app/` dissessem a palavra
-    # banida, e que o que fecharia era "curar as dezesseis no dono e trocar, no
-    # `_json`, `frase_banida_em` por esta — uma linha".
-    #
-    # Foi exatamente isso. As dezesseis foram curadas no dono — as três de
-    # `ipc_bridge.py` e as duas de `textos_de_aplicacao.py` inclusive, que são
-    # as que a tela lê —, e o `_json` passou a consultar as DUAS listas. A
-    # `app/` não era posse da `A-PALAVRA-MESA-SAI-01`, e é por isso que a dívida
-    # nasceu declarada em vez de nascer esquecida.
-    #
-    # **Uma dívida que se anuncia com endereço é uma dívida que alguém paga.**
 
-    # `integrations/canal_do_microfone.py::sufixo_do_canal` MOROU AQUI e a
-    # entrada SAIU em 06/09/2026, no Passo 3 da mesma sprint: a função DESCEU
-    # para `integrations/fontes_de_captura.py::sufixo_do_canal_do_mic`, porque
-    # a regra 0 de `escolher_fonte` passou a precisar dela — e ali ela é
-    # produção alcançada, pelos quatro chamadores de uma vez. Não é cópia: no
-    # `canal_do_microfone` ela não existe mais, e há régua que reprova se
-    # voltar a existir (`test_o_caminho_de_volta_reconhece_so_o_nosso`).
-    # AS SEIS DO `canal_do_microfone` SAÍRAM EM 06/09/2026, e a entrada de
-    # `abrir` PREVIU O PRÓPRIO FIM: ela dizia, com o endereço, que o que faltava
-    # era o GESTO, e que quem o daria seria a ONDA5-MIC-VIRTUAL-02. Deu: a ponte
-    # de rádio (`integrations/dualsense_bt_audio.PonteMicBluetooth.
-    # _abrir_o_canal_por_controle`) chama `abrir` para publicar o canal daquele
-    # controle, e por ele a varredura alcança `nome_do_canal`, `desmutar`,
-    # `sufixo_do_controle`, `argv_do_alimentador` e `propriedades_do_canal`.
-    #
-    # O QUE MUDOU EM RELAÇÃO AO QUE A LÁPIDE PREVIA: ela apostava no CABO
-    # (`eleicao_de_microfone.pedir_canal` chamando `abrir` com o nó ALSA), e
-    # quem chegou primeiro foi o RÁDIO. O cabo continua devendo o gesto, e a
-    # razão está no relatório da MIC-VIRTUAL-02: no rádio a ponte é dona do
-    # ciclo de vida e sabe FECHAR o canal; no cabo ainda não há quem feche.
-    # `alimentando` ficou por isso até 28/09/2026, e saiu com o plano da janela
-    # (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01): o alto-falante tem um caminho só.
-    # AS TRÊS DA ONDA1-D1 MORRERAM — 04/09/2026, e elas previram o próprio fim.
-    # `mic_canal_set`, `frase_do_ato_do_microfone` e `ler_as_duas_camadas`
-    # nasceram declaradas AQUI porque a metade de tela era de outra frente da
-    # mesma onda; as três diziam, com o endereço exato, onde o caminho se
-    # fecharia — no gesto `mudo` e na leitura da rota da `interface/pacotes/
-    # a02_controles.py`. A ONDA2-02 fechou os dois, e o portão cobrou as
-    # lápides de volta ao pó no mesmo dia. **É o desenho funcionando**: uma
-    # dívida que se anuncia com endereço é uma dívida que alguém paga.
 
-    # A LÁPIDE DE `rumble_motores_set` SAIU EM 04/09/2026, no mesmo dia em que
-    # nasceu, e ela dizia exatamente quando: "FECHA quando aquele gesto nascer e
-    # chamar `p.rumble_motores_set(forte_pct=..., fraco_pct=..., uniq=...)`,
     # pintando a volta com `state_full["rumble_motores"]`". A ONDA2-05 fez as
-    # duas coisas — o gesto `motor` de `a05_vibracao` e a leitura de volta em
-    # `_barras_dos_motores` —, e o portão volta a cobrar esta função sozinho.
-    # **Uma dívida que se anuncia com endereço é uma dívida que alguém paga.**
 
 
-    # A LÁPIDE DE `frase_do_interruptor_de_sensor` SAIU EM 04/09/2026, no mesmo
-    # dia em que nasceu, e ela dizia com endereço exato quando fecharia:
-    # "FECHA quando aquele gesto chamar `p.sensor_set_detalhado(giroscopio=...,
-    # uniq=...)` e passar o corpo por esta função, pintando o botão com
     # `state_full["controllers"][i]["sensores"]["giroscopio_ligado"]`".
-    #
-    # A ONDA1-D3 era dona do daemon, do perfil e da ponte; a metade de TELA era
-    # da aba 02, que estava no `nao_toca:` daquela sprint. O gesto `sensor` de
-    # `interface/pacotes/a02_controles.py` fez as três coisas — a chamada, a
-    # frase e os endereços `giro-ligado`/`accel-ligado` —, e o portão volta a
-    # cobrar esta função sozinho.
-    #
-    # **QUEM MEDIU A HORA FOI A RÉGUA-ESTOPIM DA PRÓPRIA RECUSA:**
-    # `test_o_daemon_continua_sem_metodo_de_sensor` guardava a premissa *"não há
-    # método de sensor no daemon"* e reprovou no dia em que `sensor.set` nasceu,
-    # dizendo o que fazer — *"o botão deixou de precisar recusar, e a frase de
-    # recusa virou mentira"*. **Uma dívida que se anuncia com endereço é uma
-    # dívida que alguém paga.**
 
-    # LUZ-DO-MIC-01, 03/09/2026 — NOVE PROMESSAS QUE TINHAM CAMINHO E O
-    # PORTÃO NÃO VIA. OITO SAÍRAM em 06/09/2026 (ver a nota logo abaixo);
-    # a que sobra é `e_stream_do_medidor`, de outro módulo.
-    #
-    # As duas peças de leitura do microfone são importadas pelo laço
-    # da luz com `importlib`, e o portão varre chamadas estáticas. A dívida
-    # aqui não é a ausência de chamador — é a INVISIBILIDADE dele, e ela é
-    # deliberada: o comentário de `luz_do_mic.py:334-338` explica que um
-    # `except Exception` no import existe para que uma peça irmã quebrada não
-    # derrube a luz inteira.
-    # AS OITO DA PEÇA A SAÍRAM EM 06/09/2026, e é a MESMA forma das cinco
-    # irmãs de 05/09 logo abaixo: o caminho que a lápide dizia não existir
-    # passou a existir, e foi este portão que avisou.
-    #
-    # E O MOTIVO NÃO É O QUE A LÁPIDE ESPERAVA, o que é a metade honesta desta
-    # nota. Elas apostavam que fecharia quando alguém provasse que o import
-    # ESTÁTICO é seguro em `luz_do_mic.py:333` — e ninguém provou; o import de
-    # lá continua dinâmico, pela mesma razão de sempre. O que aconteceu foi
-    # outro: `integrations/canal_do_microfone.py` importa
-    # `PREFIXO_PROPRIEDADE_HEFESTO` deste módulo ESTATICAMENTE, e a ponte de
-    # rádio passou a chamar `canal_do_microfone.abrir` — com isso o módulo
-    # inteiro entrou no fecho de import, e as referências internas dele
-    # resolvem. A dívida que sobra, portanto, NÃO é mais a invisibilidade: é a
-    # pergunta que a lápide fazia e que continua sem resposta — *o que acontece
-    # com o daemon se o `pactl` sumir da máquina*. Ela está no relatório da
-    # MIC-VIRTUAL-02, sem instrumento e sem dono.
-    # AS CINCO IRMÃS DESTA ENTRADA SAÍRAM EM 05/09/2026, e não por arrumação:
-    # `integrations/ondas_de_som.py` — as ondas sonoras da aba 02 — importa
-    # `Fluxo` e `abrir_fluxo` ESTATICAMENTE, e por eles a varredura alcança
-    # `argv_do_medidor`, `propriedades_do_medidor` e `Histerese`. O caminho que
-    # a lápide dizia não existir passou a existir, e foi este portão que avisou.
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "integrations/nivel_do_microfone.py::e_stream_do_medidor": (
         "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026), REMEDIDA em 28/09/2026: não tem "
@@ -1763,57 +1146,21 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "dois crivos para a mesma pergunta. FECHA quando a PEÇA A chamar este, ou quando ele "
         "sair junto com a frase do cabeçalho de `nivel_do_microfone.py` que manda usá-lo."
     ),
-    # ROTA-A + ROTA-C (02/09/2026) — OS TRÊS DONOS DE FATO. Eles nasceram sem
-    # chamador de propósito: quem os chama são os dez `interface/pacotes/aNN_*.py`,
-    # e dez frentes estavam dentro deles no mesmo instante. Ligar é a leva
-    # seguinte, e cada uma fecha uma linha desta lista.
-    # `jogador_de` SAIU DAQUI NA INTEGRAÇÃO DE 02/09/2026 — a lápide durou
-    # menos de duas horas. Ela dizia "fecha quando esses pacotes chamarem esta
-    # função", e foi o que aconteceu no merge: a aba 04 migrou na própria
-    # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
-    # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
-    # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
     # `identidade_de` SAIU DAQUI EM 03/09/2026, e fechou pela porta que a própria
-    # lápide nomeava: *"fecha quando os geradores `interface/abaNN.py` derem
-    # `data-campo` ao rótulo e os pacotes o pintarem"*. Foi a
-    # IDENTIDADE-VEM-DE-CIMA-01, e DUAS abas a fecharam no mesmo dia, cada uma
-    # pelo seu caminho — as duas medições ficam porque medem coisas diferentes:
-    #
-    #   aba 02 — `aba02.py` partiu o `<span class="card-nome">` em
     #     `data-campo="peca"` + `data-campo="via"`, e `a02_controles.pacote()`
     #     os escreve com `identidade_de(c, ctx.mesa)`. Com os dois controles
-    #     dela na mesa: o cabeçalho dizia `Cosmic Red · USB` e passou a dizer
-    #     `White · USB`.
-    #
-    #   aba 03 — `a03_gatilhos._identidade_viva` a chama, o chip de cada coluna
-    #     ganhou `data-campo="chip-do-controle"`, e o produto reescreve o
-    #     cabeçalho a cada tique. Fotografado: a coluna que dizia `Cosmic Red`
-    #     passou a dizer `White`, e a do rádio — SEM cor lida — passou a dizer
-    #     só `P2 • BT`, em vez de vestir o plástico de outro. Este segundo caso é
-    #     o que prova a regra dela: campo sem informação não mostra nada.
-    #
     #   aba 06 — `aba06.py` deu `data-campo="identidade"` ao nome do cartão e
-    #     `a06_navegacao.pacote` passou a escrevê-lo com o que leu do daemon.
-    #     Medido: `P1 • Cosmic Red` virou `P1 • White`.
-    #
-    # TRÊS ABAS, TRÊS CAMINHOS, o MESMO dia. A lápide não morreu de uma cura —
-    # morreu porque a lei dela ("a identidade vem de cima") atravessou as dez.
-    # `interface/pacotes/__init__.py::degradacao_de` SAIU DAQUI — 04/09/2026.
-    # A lápide dizia, palavra por palavra: *"fecha quando a aba Controles, que
-    # já lê `vpad_backend`, passar a mostrar o porquê"*. A decisão [07] dela
-    # mandou mostrar (*"uma marca na palavra e o motivo no hover"*), e o
-    # `mascara-degradou` da aba 02 é o chamador que faltava.
     # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "app/audio_saida.py::estado_do_sono": (
         "A leitura completa numa frase só, e ela BLOQUEIA — o docstring manda rodar "
-        "em worker (app/audio_saida.py:1077). O sono da placa de áudio é a causa "
+        "em worker (app/audio_saida.py:678). O sono da placa de áudio é a causa "
         "histórica de o alto-falante do controle não funcionar, e a frase existe "
         "para a tela dizer isso. Nenhuma aba a mostra. Fecha quando a Conexões ou a "
         "Sistema a pedirem, em thread. MEDIDO em 01/09/2026."
     ),
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "core/led_control.py::apply_led_settings": (
-        "Aplica settings no controle (core/led_control.py:167) — o caminho DIRETO, "
+        "Aplica settings no controle (core/led_control.py:128) — o caminho DIRETO, "
         "sem passar pelo daemon. O produto de hoje escreve pela IPC (`led.set`), "
         "que é o certo enquanto o daemon segura o hidraw. Fecha, ou some, quando a "
         "decisão sobre escrita direta for tomada; hoje é caminho vivo sem chamador. "
@@ -1821,7 +1168,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     ),
     "daemon/subsystems/gamepad.py::suspend_vpads_for_steam_input": (
         "Retira o gamepad virtual de cena pelo tempo do jogo da allowlist (JOGO-01, "
-        "daemon/subsystems/gamepad.py:796). É a cura do terceiro controle — o "
+        "daemon/subsystems/gamepad.py:460). É a cura do terceiro controle — o "
         "espelho que o Steam Input faz de CADA gamepad que vê, inclusive do nosso. "
         "Nenhum caminho do daemon a chama. Fecha quando a allowlist de jogo passar "
         "a acioná-la. MEDIDO em 01/09/2026."
@@ -1829,57 +1176,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "interface/mesa_viva.py::estado_do_card": (
         "O estado de UM card da mesa — mic, volume, canal, rota "
-        "(interface/mesa_viva.py:431). O único chamador é o `controles_vivos.py`, o "
+        "(interface/mesa_viva.py:306). O único chamador é o `controles_vivos.py`, o "
         "piloto de UMA aba, que é BANCADA e sai da conta pela poda. O piloto único "
         "(`hefesto_vivo.py`) não a chama: o pacote `a02_controles` monta o estado "
         "do card por outro caminho, e são duas verdades sobre o mesmo dado. Fecha "
         "quando o pacote da aba Controles delegar a ela, como o da Sistema já "
         "delega a `gui/aba_sistema.pacote`. MEDIDO em 01/09/2026."
     ),
-    # `ponte.py::chamar_detalhado` MORAVA AQUI e SAIU em 06/09/2026, pela
-    # `ONDA5-09-02`. A lápide dizia *"nenhum dos 50 gestos a usa… fecha quando
-    # os gestos que podem ser recusados passarem a usá-la"*, e é exatamente o
-    # que aconteceu: o `atualizar` da aba Sistema
-    # (`interface/pacotes/a09_sistema.py:1606`) passou a chamá-la porque o
     # `daemon.reload` que não chega ao serviço fazia a tela dizer **"Pronto."**
-    # sobre zero byte. Medido do outro lado do IPC, com o socket de mentira.
-    # A lápide sai INTEIRA em vez de virar nota: ela descrevia uma ausência que
-    # acabou — não uma decisão que caducou.
-    # `painel.py::hefesto_ligado` e `painel.py::modo_lembrado` MORAVAM AQUI e
-    # SAÍRAM em 03/09/2026, pelo mesmo motivo das duas de `jogar_vivo`: o
-    # caminho nasceu e a lápide ficou. Quem as alcança é
-    # `interface/controles_vivos.py` — `:933` (`painel.hefesto_ligado(state)`) e
-    # `:877`/`:909` (`painel.modo_lembrado()`) —, que é o piloto que os
-    # lançadores abrem. A cura de `hefesto_ligado` é literalmente a que a lápide
-    # pedia (*"fecha quando alguém perguntar a ela — é a dona do terceiro
-    # estado"*); a de `modo_lembrado` é a lembrança do opt-out chegando à tela.
-    # --- 26/08/2026: AS CINCO LÁPIDES DO CATÁLOGO DE ORDENS CAÍRAM.
-    # A ORDEM-5 e a ORDEM-6 fecharam na leva 2
-    # (`app/actions/config/secao_exame.py`): o card de ordem ganhou
-    # `[Já movi — reexaminar]` e `[Ignorar]`, o selo do topo passou a dizer
-    # o texto de `cabecalho()`, a dispensa dela filtra por `ordens_novas` e
-    # é CONTADA por `ordens_caladas`, e `identidades` é quem separa dois
-    # adaptadores de mesmo `vid:pid` pelo serial para que o produto não
-    # diga "Confirmei" sem saber qual dos dois ela moveu.
-    # A mordida está em `test_a_dispensa_volta_quando_o_arranjo_muda.py`.
-    # --- 25/08/2026: TRÊS CURAS DA ONDA 0 NASCERAM SEM CHAMADOR
-    # Achado por quem coordena a leva de 25/08, ao consertar duas lápides
-    # caducas e ver o portão apontar outros quatro símbolos. Cada um destes é
-    # a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` dentro da própria cura que a
-    # combatia, e nenhum é destas frentes: quem liga cada um está nomeado.
-    #
     # `app/textos_de_aplicacao.py::frase_do_desfecho` SAIU daqui em 25/08/2026,
-    # na mesma edição que a ligou: `app/actions/triggers_actions.py` a importa
-    # e o `_toast_trigger` a chama (GATILHOS-APLICADO-COM-PROVA/T3). A entrada
-    # apontava o rodapé como quem a fecharia; quem fechou foi a aba Gatilhos, e
-    # tanto faz — a promessa era ter caminho de produção. Lápide que sobrevive
-    # à própria cura é o defeito que este portão existe para matar.
-    # --- 26/08/2026: a janela de calibrar entradas (L1-F) nasceu inteira, e o
-    #     BOTÃO que a abre chegou na L2-E, no MESMO dia. CINCO das seis lápides
-    #     saíram daqui nessa edição — `LogicaDaCalibracao`, `Pergunta`, `Laudo`,
-    #     `NavegacaoPorControle` e `PosseDoVocabulario` —, junto com
-    #     `entradas_do_gabinete::furo_declarado`, que a janela chama (`:694`).
-    #     A sexta ficou, e a razão dela já dizia por quê: quem tem de perguntar
     #     por ela é o DESPACHO do daemon, não a janela.
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "app/widgets/calibrar_entradas.py::botoes_para_o_jogo": (
@@ -1909,29 +1214,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "réguas passando ao dono que o laço chama (a forma que a sprint dá ao "
         "`extract_motion_window`), ou o laço volta a chamá-la."
     ),
-    # `formata_pt_br` SAIU daqui em 26/08/2026, na edição que o ligou (BG-03):
-    # ele virou o DONO ÚNICO da conversão `260.4` → `260,4`, e as duas cópias
-    # que a árvore mantinha — `app/actions/config/secao_controles.py::_numero` e
-    # `integrations/plano_de_radio.py::_numero`, esta última com um comentário
-    # que prometia "mesma forma que…" enquanto reescrevia a conta — passaram a
-    # chamá-lo. A razão antiga dizia "as abas continuam formatando número à
-    # mão"; era exatamente isso, e é isso que deixou de valer. Não se guarda a
-    # entrada velha ao lado da nova.
-    # `resolver_teclado_emulado` SAIU DAQUI em 17/09/2026 — POINT-AND-CLICK-01.
-    # A lápide dizia "nenhum caminho de produção a executa", e era verdade por
-    # 24 dias: a T14 entregou o campo e a régua, não o fio. O fio é
-    # `Daemon.aplicar_o_arranjo_do_desktop`, o terceiro passo da entrada no modo
-    # Navegação — o único ponto do produto em que o teclado emulado tem
-    # contexto. **O dia em que o caminho nasce é o dia de apagar a entrada**, e
-    # foi esta régua que cobrou.
-    # --- A aba Configurações (23/08/2026): o censo mede, e a tela não pergunta
-    # `hub_em_comum` SAIU daqui em 26/08/2026, na edição que a ligou: a seção
     # "A mesa" (`app/actions/config/secao_mesa.py::_frase_do_hub_em_comum`) a
-    # chama e publica a linha do hub em comum. A razão antiga dizia "NÃO fiz
-    # porque é texto novo na tela"; o texto entrou marcado `PROVISÓRIO — decisão
-    # dela`, que é o caminho que a R-E da leva abriu para não travar a frente.
     # fica: a decisão D-COSTURA-BLUEZ (25/08) deixa o script dono do alias,
-    # e dar chamador a esta função é regressão
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (
         "MEDIDO em 22/08/2026, RECONFERIDO em 23/08 e DECIDIDO em 25/08: é "
         "promessa ao produto e o caminho está DELIBERADAMENTE fechado — a "
@@ -1951,28 +1235,13 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "chamador a esta função é REGRESSÃO até que a decisão seja revertida, "
         "e quando for, o `bt_active_mode.sh` para de costurar NO MESMO commit."
     ),
-    # LÁPIDE — PONTE-NA-TELA-01, e a cura chegou em 25/08/2026.
-    #
-    # Aqui moravam `app/actions/home_actions.py::desfecho_da_troca` e
-    # `::toast_da_troca_de_mascara`, declaradas como dívida em 19/08/2026 com a
-    # razão escrita: *"NÃO fiz porque muda assinatura e o texto que sai na tela
     # dela"*. A assinatura mudou (I1 da INÍCIO NÃO MENTE-01): o `ao_aplicar` do
-    # `footer_actions._transicao_de_modo` passou a RECEBER o resultado, e os
-    # dois chamadores — o "Aplicar" e o "Salvar Perfil" — repassam. As duas
-    # entraram juntas, como a declaração dizia que teria de ser.
-    #
-    # As entradas SAÍRAM porque o `test_nenhuma_lapide_sobreviveu_a_propria_cura`
-    # as reprovaria: registro que sobrevive à cura vira mentira. O texto que sai
-    # na tela continua sendo palavra dela — mas isso é prova de tela, não
-    # dívida de caminho, e não é aqui que se registra.
-    # --- a família mais numerosa: o desligar que ninguém chama --------------
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    # --- subsystems e motores que nada instancia ---------------------------
     "daemon/subsystems/hotkey.py::HotkeySubsystem": (
         "MEDIDO em 12/08/2026: a classe existe, tem `name = 'hotkey'` e um "
         "`start` que o próprio docstring chama de `Noop`, e NÃO está no "
         "`SUBSYSTEM_REGISTRY` de daemon/subsystems/__init__.py:41. Quem sobe o "
-        "hotkey de verdade é lifecycle.py:705, chamando `start_hotkey_manager` "
+        "hotkey de verdade é lifecycle.py:393, chamando `start_hotkey_manager` "
         "direto. A classe é uma sentinela de um registro que ninguém itera. "
         "O QUE A FECHA: ou ela entra no registro e o `lifecycle` para de subir "
         "o hotkey à mão, ou ela sai da árvore. Como o próprio "
@@ -1980,35 +1249,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`não é iterado por ninguém em produção`, fechar isto de verdade é "
         "fechar o registro inteiro — trabalho de desenho, não de uma linha."
     ),
-    # `daemon/subsystems/external_mask.py::ExternalMaskRegistry` MOROU AQUI e
-    # foi APAGADA em 15/08/2026, pelo motivo que a própria entrada mandava:
-    # A MÁSCARA GANHOU CHAMADOR. Ela respondeu a contradição que a entrada
-    # descrevia (a frase de 10/08 em `profiles/schema.py` passa a valer só para
-    # o `mode`), e a máscara por jogador virou código: `registro_de_mascaras()`
-    # e `mascara_efetiva()` são consultados na criação de TODO gamepad virtual
-    # (`integrations/uinput_gamepad.py` e `integrations/uhid_gamepad.py`,
-    # métodos `for_flavor`). O degrau que ainda falta é o de baixo — passar a
-    # IDENTIDADE do jogador — e ele tem lápide própria, logo abaixo, em
-    # `::vpad_ficou_para_tras`. Não se guarda a entrada velha ao lado da nova:
-    # ela mandaria a próxima pessoa procurar um chamador que já existe.
-    # `daemon/subsystems/external_mask.py::vpad_ficou_para_tras` MOROU AQUI e
-    # foi APAGADA em 29/08/2026, pelo motivo que a própria entrada mandava: A
-    # CORRENTE FECHOU. A entrada dizia, palavra por palavra, o que a fecharia —
-    # "`desired_flavor` deixar de ser um valor e passar a ser função do MAC" e
-    # "as mesmas duas linhas que fazem `_promote_player` passar `identity=mac`
-    # ao `make_virtual_pad`" — e foi exatamente isso, sob a decisão dela
-    # `D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`:
-    #   - `integrations/virtual_pad.py::make_virtual_pad` ganhou `identity` e
-    #     resolve `mascara_efetiva` ANTES de escolher o backend (a armadilha que
-    #     `external_mask.py:59-68` descreveu para quem escrevesse este degrau);
-    #   - `daemon/subsystems/gamepad.py` passa `primary_identity(daemon)`;
-    #   - `daemon/subsystems/coop.py::_promote_player` passa `identity=mac`, e o
-    #     laço do `_sync_full` chama `vpad_ficou_para_tras` — que é este símbolo,
-    #     agora com chamador em produção.
-    # A razão de não ter sido feito então ("`coop.py` sob edição de outra frente
-    # no mesmo dia") caducou. Não se guarda a lápide ao lado da cura: ela
-    # mandaria a próxima pessoa procurar um chamador que já existe.
-    # --- as duas metades das notificações ----------------------------------
     # sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
     "integrations/desktop_notifications.py::notify_battery_low": (
         "MEDIDO em 12/08/2026: só `tests/` a chama; em `src/` só existe a "
@@ -2030,128 +1270,13 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "duas juntas ou nenhuma, porque metade da cura é pior que nenhuma aqui."
     ),
     # `core/led_control.py::apply_led_settings` e `::player_bitmask` MORARAM
-    # AQUI e foram RECLASSIFICADOS em 13/08/2026 para `_NAO_E_PROMESSA`. A
-    # pergunta que as duas entradas faziam — "descobrir por onde os LEDs chegam
-    # ao aparelho HOJE" — foi respondida lendo, e a resposta é que chegam: pelo
-    # `OutputSpec` de `profiles/manager.py:392`. Não eram dívida; eram uma
-    # afirmação errada citada como prova. Ver as razões novas lá em cima.
-    # --- a janela pedindo ao daemon ----------------------------------------
-    # ELO-MUDO-01 / P1 (23/08/2026): a ponte já entrega, a aba ainda não pede.
-    # As entradas desta leva nasceram JUNTAS e por decisão dela: o conserto do
-    # lado da ponte é aditivo de propósito, porque os chamadores moram em
-    # arquivos que outras frentes estavam editando no mesmo dia. Cada uma diz
-    # qual linha a fecha.
-    #
     # `trigger_set_detalhado` e `trigger_reset_detalhado` SAÍRAM daqui em
-    # 25/08/2026, na mesma edição que os ligou
-    # (GATILHOS-APLICADO-COM-PROVA/T3): `_apply_trigger`, `_send_trigger_named`
-    # e `_reset_trigger` de `app/actions/triggers_actions.py` chamam os dois, e
     # o `_toast_trigger` decide pelo CORPO do daemon, via `frase_do_desfecho`.
     # `led_set_detalhado` e `player_leds_set_detalhado` saíram pelo mesmo
     # motivo em 26/08/2026 (BG-01): `_aplicar_cor_no_controle`,
-    # `on_lightbar_off`, `_enviar_led_em_todos` e `_enviar_player_leds` de
-    # `app/actions/lightbar_actions.py` chamam os dois.
-    #
-    # PODA DE 26/08/2026 (BG-07, LEVA-3-C): CINCO entradas de
-    # `app/ipc_bridge.py` saíram daqui porque o SÍMBOLO saiu do módulo —
-    # `apply_draft`, `rumble_policy_set`, `rumble_policy_set_detalhado`,
-    # `trigger_reset` e `mouse_emulation_set`. Eram invólucros estreitos, sem
-    # nenhum chamador de produção, e as razões deles mandavam apagar. A trava
-    # que os segurava — "a assinatura pode estar sendo importada pelo applet do
-    # COSMIC" — CAIU: o applet é Rust (`packaging/cosmic-applet/src/`), fala
-    # JSON-RPC por socket (`ipc.rs:3`) e `grep` pelos cinco nomes ali devolve
-    # ZERO. Um processo Rust não importa função Python.
-    #
-    # RESTAM TRÊS, abaixo: as duas da Lightbar e o mic da mesa cheia.
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    # --- preferências de sessão que a janela não lê -------------------------
-    # AS TRÊS ENTRADAS QUE MORAVAM AQUI — `utils/session.py`:
-    # `::save_mouse_emulation_enabled`, `::load_mouse_emulation_enabled` e
     # `::load_keyboard_emulation_enabled` — SAÍRAM em 26/08/2026 porque os três
-    # símbolos foram PODADOS. As duas primeiras eram invólucros legados
-    # (FEAT-MOUSE-PERSIST-01) que o próprio docstring mandava não usar; a
-    # terceira somava um default PRÓPRIO a uma precedência que já tem dono.
-    #
-    # A TRAVA QUE AS SEGURAVA CAIU, e a queda é medida. A entrada do
-    # `save_mouse_emulation_enabled` dizia: *"não apago nesta leva porque as
-    # duas são símbolo público e podem estar sendo importadas por fora de
-    # `src/` — o applet do COSMIC e os plugins de terceiros são os dois lugares
-    # onde este portão é cego por desenho"*. MEDIDO em 26/08/2026: o applet do
-    # COSMIC é RUST (`packaging/cosmic-applet/Cargo.toml` +
-    # `src/{main,app,ipc}.rs`), conversa com o daemon por JSON-RPC no socket, e
-    # NÃO existe um único arquivo `.py` sob `packaging/`. Ele não importa
-    # Python — logo não importa estes nomes. O `plugin_api` continua sendo
-    # ponto cego por desenho, mas ele é contrato de MÉTODO (`on_*`), que este
-    # portão nem varre, e nenhum destes três nomes aparece nele.
-    #
-    # A CORREÇÃO DE FATO da terceira: a entrada mandava fechá-la *"chamando do
     # boot do daemon, onde o `keyboard_emulation.flag` já é lido"*. O boot JÁ
-    # lê o flag, e não por ela: `daemon/lifecycle.py:841-842` chama
-    # `load_keyboard_preference()` direto e só sobrescreve o piso quando há
-    # opinião gravada. Fiá-la seria pôr um segundo default no meio de uma
-    # precedência que já tem um. A ASSIMETRIA que ela documentava (teclado nasce
-    # LIGADO, mouse nasce desligado) NÃO se perdeu: está escrita, com a data,
-    # onde a função morava, em `utils/session.py`.
-    # --- linha de comando do kernel ----------------------------------------
-    # `integrations/kernel_cmdline.py::plan_cmdline` MOROU AQUI, e foi
-    # RECLASSIFICADA para `_NAO_E_PROMESSA` em 26/08/2026 — não é dívida, e a
-    # razão que a punha aqui era um FATO ERRADO, substituído lá.
-    # `integrations/kernel_cmdline.py::ownership_record` MOROU AQUI, e a
-    # entrada SAIU em 26/08/2026 porque o símbolo foi PODADO. A razão longa que
-    # estava aqui já tinha corrigido, em 15/08, o fato errado de que "ninguém
-    # grava esse registro": ele É gravado, em produção, pelo heredoc do passo
-    # `3e` do `install.sh` (que imprime o `a.owner` de cada ação) mais o
-    # `_register_cmdline_owner` do shell, que escreve
-    # `~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf` — o arquivo
-    # que o `uninstall.sh` lê. E ela já dizia o resto: a regra do dono estava
-    # escrita DUAS vezes, e as duas JÁ divergiam (o shell preserva um dono
-    # anterior "hefesto"/"compartilhado" quando o plano novo diz "terceiro";
-    # esta função não tinha essa lógica).
-    # A entrada pedia "decidir de quem é o planejamento" e recusava fechar por
-    # conta própria "porque fechar aqui é mexer no `install.sh`". A poda decide
-    # sem tocar no `install.sh`: sai a forma SEM chamador, fica a que roda na
-    # máquina dela. Quem quiser o par continua tendo `a.param` e `a.owner` em
-    # cada `CmdlineAction` — é exatamente o que o heredoc lê.
-    # `integrations/kernel_cmdline.py::strip_quirks_token` MOROU AQUI, e a
-    # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
-    # cura que "o `uninstall.sh` chamar este caminho". SUBSTITUÍDO em
-    # 13/08/2026, porque o fato era falso e não decisão a preservar: o
-    # `uninstall.sh` já chama, em uninstall.sh:1704 (`rest, changed =
-    # kc.strip_quirks_token(tok)`), dentro do heredoc que importa o módulo. Era
-    # o PORTÃO que não enxergava — ver `_ROTEIROS_DE_PRODUCAO`. A entrada saiu
-    # porque a varredura passou a alcançá-la, e não porque alguém a apagou à
-    # mão: é o que `test_nenhuma_lapide_sobreviveu_a_propria_cura` cobra.
-    # --- relatórios que ninguém pede ---------------------------------------
-    # `profiles/curva_propria.py::gerar_tabela_markdown` FECHOU em 13/08/2026 e
-    # a lápide saiu daqui pela porta certa: a cura que ela mesma prescrevia
-    # ("um passo em `scripts/gerar-mapa.py` ou um script irmão que escreva o
-    # arquivo, mais o `--check` correspondente") nasceu como
-    # `scripts/gerar-tabela-de-curvas.py`, que a chama em `:83`. Quem apagou
-    # esta entrada não foi a mão de ninguém: foi
-    # `test_nenhuma_lapide_sobreviveu_a_propria_cura` reprovando — o portão
-    # pegou a leva que o curou, que é exatamente o que ele existe para fazer.
-    # RETIFICADO em 22/08/2026: o que nasceu em 13/08 foi um GERADOR DE
-    # DOCUMENTAÇÃO, e a régua de alcance não o conta como caminho de produção.
-    # O símbolo voltou à lista, agora em `_NAO_E_PROMESSA`, e a razão está lá.
-    # A lápide fica porque o movimento de 13/08 aconteceu; a conclusão dele —
-    # "o caminho de produção nasceu" — é que era falsa.
-    # `profiles/sanidade.py::verificar_perfis_do_disco` MOROU AQUI, e foi
-    # RECLASSIFICADA para `_NAO_E_PROMESSA` em 26/08/2026: não é dívida, e a
-    # razão que a punha aqui era um FATO ERRADO, substituído lá.
-    # --- a TUI --------------------------------------------------------------
-    # `tui/app.py::main_async` MOROU AQUI, e a entrada SAIU em 26/08/2026
-    # porque o símbolo foi PODADO. A entrada oferecia duas curas — "um console
-    # script em `pyproject.toml`, se a TUI for para ter entrada própria; ou
-    # apagar, se `run_tui` já é a entrada" — e a segunda é a certa: `run_tui` É
-    # a entrada, e o console script novo seria produto novo, que não é decisão
-    # de agente. REMEDIDO em 26/08/2026: zero chamadores em `src/`, `tests/`,
-    # `scripts/`, `pyproject.toml` e nos heredocs Python do
-    # `install.sh`/`uninstall.sh`.
-    # --- AS TRÊS CORRENTES FECHADAS EM SI MESMAS (22/08/2026) ----------------
-    # As 21 entradas abaixo são o que a régua PLANA perdoava e a régua de
-    # alcance acusou. Nenhuma é dívida nova: são três módulos inteiros escritos
-    # e nunca ligados, cujos símbolos se chamavam entre si e por isso pareciam
-    # entregues. É o defeito-mãe desta casa na forma mais cara que ele tem.
     "profiles/curva_propria.py::CurvaPropria": (
         "MEDIDO em 22/08/2026: NENHUM módulo de `src/` importa "
         "`profiles/curva_propria.py`. O formato do efeito de gatilho próprio "
@@ -2171,9 +1296,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "dele é `scripts/gerar-tabela-de-curvas.py`:52, um gerador de "
         "documentação. Nada em `src/` o carrega do disco."
     ),
-    # --- ONDA0-Z7 · O AMBIENTE PRESUMIDO 01 (24/08/2026): primitivas
-    # entregues DELIBERADAMENTE sem fiação — a sprint (§10) nomeia quem
-    # pendura cada uma, para não colidir com as ondas de aba em andamento.
     "app/actions/ambiente_na_tela.py::descrever_teclado_na_tela": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7); a razão foi SUBSTITUÍDA em "
         "26/08/2026 (LEVA-3-D), porque a de antes mandava pendurar esta frase "
@@ -2186,7 +1308,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "(2) o defeito que ela existia para curar FECHOU por outro caminho em "
         "25/08 (`e909b62`, N12): `app/actions/mouse_actions.py:_anotar_teclado"
         "_na_tela` lê a chave do lugar certo e "
-        "`app/actions/input_actions.py:265 frase_do_teclado_na_tela` a "
+        "`app/actions/input_actions.py:179 frase_do_teclado_na_tela` a "
         "transforma na frase da legenda — no gancho exato que a razão antiga "
         "nomeava. Pendurá-la hoje poria DUAS frases sobre o mesmo fato na "
         "mesma legenda, uma delas falsa. O QUE FECHA: a DECISÃO entre as duas "
@@ -2195,16 +1317,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "_nao_tem.py::TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade` trava a "
         "medição e reprova em quem consertar o nível sem escolher."
     ),
-    # A LÁPIDE DE `descrever_display_grafico` SAIU EM 02/09/2026, e foi o
-    # portão que a cobrou: ela dizia que "só falta o chamador, e ele mora fora
-    # do alcance de quem escreveu isto — o cartão é o `storm_card` do
-    # `gui/main.glade:2823`, e uma frase a mais ali pede um `GtkLabel` novo no
-    # Glade". O QUE ELA PREVIA ("O QUE FECHA: a Onda 11 · Sistema") aconteceu,
-    # e por outra porta que não o Glade: a aba 09 da interface NOVA tem a linha
-    # "Como ele enxerga a janela" desenhada, e
-    # `interface/pacotes/a09_sistema._leitura` passou a chamar a função para
-    # preencher `Leitura.ambiente`. O caminho é
-    # `hefesto_vivo` -> `pacotes` -> `a09_sistema` -> `ambiente_na_tela`.
     # sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
     "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
@@ -2216,82 +1328,14 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "deixou à OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01, que a liga ou a tira "
         "junto com o publicador do `steam_layout_achado`."
     ),
-    # AS TRÊS LÁPIDES DE `gui/ponte_da_tela.py` MORARAM AQUI e SAÍRAM em
-    # 31/08/2026 — `PonteDaTela`, `JanelaDaAba` e `literal_js`. Não foi
-    # limpeza: foi o portão cobrando. As três diziam, com estas palavras, que o
-    # que as fecharia era a `MIGRA-CONTROLES-01` *"ou, antes dela, o lançador
-    # da interface nova, o que vier primeiro"*. O lançador veio primeiro — o
-    # `.desktop` do app de dev, o `interface` e o `scripts/abrir_interface.py`,
-    # que estão declarados em `_CADEIA_DA_INTERFACE_NOVA` —, e a partir do
-    # momento em que a ponte virou fonte externa deste portão as três passaram
-    # a ser ALCANÇADAS. `test_nenhuma_lapide_sobreviveu_a_propria_cura`
-    # reprovou nomeando as três, que é exatamente o que ela promete fazer. A
-    # DECISÃO MEDIDA que elas guardavam (a tecnologia da interface é
-    # `evaluate_javascript` + `register_script_message_handler`, e o valor
-    # atravessa a fronteira como DADO e nunca como texto) continua escrita, com
-    # a data, no docstring do próprio `gui/ponte_da_tela.py`.
 
-    # AS SEIS LÁPIDES DA LEVA DE 23/09 QUE A TRANSPLANTE-DA-SECAO-01 CUROU saíram
-    # daqui no mesmo commit que as fiou: `storm_doctor.historico_do_radio`,
-    # `quedas` e `o_fato_da_queda` (o sino de cada adaptador), e
-    # `entrada_a_entrada.o_laco`, `dar_nome` e `com_o_nome_dela` (a cerimônia,
-    # o nome do lugar e o conselho de porta com o nome dela).
-    # A LÁPIDE DO `o_mapa` SAIU em 26/09/2026: a A-08-O-CHECKUP-ABSORVE-A-
-    # GESTAO-01 fiou o botão único do Mapear (`mapear-comecar`, `-gravar`,
-    # `-parar` e o `campos_do_mapear` no tique) ao dono, como a linha pedia.
-    # A LÁPIDE DO `nome_do_adaptador` SAIU em 26/09/2026 com a função: o nome
-    # do adaptador mora no endereço (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO), e a
-    # cena o lê pelo dono (`utils/maquina.nome_dado_ao_adaptador`).
-    # O-MODO-ECONOMIA-POR-CONTROLE-01: as duas pontas do contrato da tela
-    # (`declaracao_da_economia`, `origem_da_economia`) saíram daqui em 25/09/2026 —
-    # o botão da linha do controle (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01) as chama.
 }
 
-#: ONDA0-Z7 (24/08/2026): achado FORA do escopo desta sprint, durante a
 #: execução — `app/ipc_bridge.py::machine_declare` e
-#: `utils/maquina.py::gravar_maquina` JÁ estavam soltos e não-classificados
-#: ANTES de qualquer mudança desta leva (conferido contra `3e7b6cb`, o commit
-#: em que esta árvore nasceu — `git stash -u` + rodar este mesmo teste
-#: devolve os dois, sozinhos, como únicas soltas). Não são meus para
-#: declarar: nenhuma tarefa de ONDA0-Z7 os toca, e uma nota escrita às
-#: pressas por quem não mediu o caminho vale menos que "NÃO VERIFICADO".
-#: Relatado no relatório do executor para quem coordena decidir a régua 1-4.
 
 
-# ===========================================================================
-# A varredura — derivada em runtime, apontável para uma cópia
-# ===========================================================================
-
-#: Um literal de texto conta como chamador quando ele É o nome, INTEIRO — que é
-#: o idioma do despacho por ``getattr``, o falso positivo que pegou a passada
 #: anterior cinco vezes: ``getattr(pp, "lock_proton_for_all_games", None)``
-#: (app/actions/daemon_actions.py:1477).
-#:
-#: MEDIDO em 12/08/2026, e por pouco esta linha não saiu errada: a primeira
-#: versão contava toda PALAVRA de todo literal, e com ela a acusação caía de 33
-#: para 32. O símbolo escondido era ``app/ipc_bridge.py::apply_draft``, salvo
-#: por acaso pela chave de IPC ``"profile.apply_draft"`` — escrita noutro
-#: módulo, para outra coisa, e que por conter a palavra o dava por alcançado.
-#: Casar o literal INTEIRO não perdeu isenção legítima nenhuma (conferido: as
-#: cinco chamadas por string continuam alcançadas) e devolveu uma promessa
-#: solta de verdade. (Esse símbolo foi PODADO em 26/08/2026, pela BG-07; a
-#: medição do instrumento é que fica — é ela que explica por que o casamento
-#: é do literal inteiro, e não de palavra.)
 
-#: Decoradores que ENTREGAM o símbolo a um framework, que passa a ser o
-#: chamador. Derivado do decorador, nunca de uma lista de nomes de função:
-#: hoje isenta 41 subcomandos de CLI (``@app.command``/``@app.callback`` do
-#: typer, em ``cli/app.py`` e nos dez ``cli/cmd_*.py``), e isentará sozinho o
-#: subcomando 42.
-#:
-#: `gesto` e `registrar` entraram em 01/09/2026, e são o MESMO idioma: o
-#: despachante da interface nova (`interface/pacotes/__init__.py`) guarda a
-#: função em `GESTOS` ou `PACOTES` e passa a ser quem a chama — é ele que o
-#: piloto consulta a cada clique e a cada tique. Sem eles, os 50 gestos das
-#: dez abas apareciam como promessa sem chamador: o portão acusando de
-#: dívida exatamente os botões que acabaram de ser LIGADOS, e a resposta
-#: natural a isso é desligar o portão. É a mesma isenção dos 41 subcomandos
-#: do typer, e pelo mesmo motivo — quem chama é o framework.
 _DECORADORES_DE_FRAMEWORK = frozenset(
     {"command", "callback", "hookimpl", "gesto", "registrar"})
 
@@ -2316,16 +1360,7 @@ def _modulos(raiz: Path) -> list[Path]:
 
 
 def trechos_python_embutidos(roteiro: Path) -> list[str]:
-    """Os corpos de heredoc que um roteiro de shell entrega ao Python.
-
-    A varredura anterior era CEGA a isto, e a cegueira tinha consequência
-    escrita: uma função chamada pelo desinstalar desde julho aparecia na lista
-    de dívida. Ler o shell como texto solto não serve — o nome também aparece
-    nos comentários em prosa do próprio roteiro (uninstall.sh:1663 cita
-    ``strip_quirks_token`` numa linha ``#``), e comentário não é chamada. O que
-    vale é o corpo do heredoc, e ele é Python de verdade: sai daqui e entra em
-    ``ast.parse``, pela MESMA régua que mede ``src/``.
-    """
+    """Os corpos de heredoc que um roteiro de shell entrega ao Python."""
     try:
         texto = roteiro.read_text(encoding="utf-8", errors="ignore")
     except OSError:  # pragma: no cover — roteiro ilegível é problema dele
@@ -2343,12 +1378,11 @@ def trechos_python_embutidos(roteiro: Path) -> list[str]:
         while indice < len(linhas) and linhas[indice].strip() != delimitador:
             corpo.append(linhas[indice])
             indice += 1
-        indice += 1  # pula o próprio delimitador de fechamento
+        indice += 1
         trechos.append(textwrap.dedent("\n".join(corpo)))
     return trechos
 
 
-#: O nome do pacote — a raiz de todo import que este portão sabe resolver.
 _PACOTE = "hefesto_dualsense4unix"
 
 
@@ -2370,16 +1404,7 @@ def _nome_de_modulo(alvo: Path, caminho: Path) -> str:
 
 
 def _base_do_import(mapa: _Mapa, modulo: str, no: ast.ImportFrom) -> str:
-    """A que módulo aponta o ``from ... import`` deste nó.
-
-    Trata o import RELATIVO e o idioma do módulo que roda das duas formas —
-    como parte do pacote e como roteiro solto. ``sentinela_do_wrapper.py``:525
-    tem os dois (``from .steam_launch_options import x`` e
-    ``from steam_launch_options import x``, num ``try/except ImportError``), e
-    sem esta tradução o segundo apontaria para um módulo que não existe: os
-    dois símbolos de ``steam_launch_options`` apareceriam órfãos. MEDIDO em
-    22/08/2026.
-    """
+    """A que módulo aponta o ``from ... import`` deste nó."""
     if no.level:
         partes = modulo.split(".")
         e_pacote = mapa.modulos[modulo].name == "__init__.py"
@@ -2429,11 +1454,7 @@ def _mapear(alvo: Path) -> _Mapa:
 
 
 def _canonico(mapa: _Mapa, modulo: str, nome: str) -> tuple[str, str]:
-    """Segue a cadeia de reexportação até o módulo que DEFINE o símbolo.
-
-    Sem isto, ``from hefesto_dualsense4unix.daemon import X`` contaria para o
-    ``__init__.py`` e o símbolo real, uma pasta abaixo, continuaria órfão.
-    """
+    """Segue a cadeia de reexportação até o módulo que DEFINE o símbolo."""
     visto: set[tuple[str, str]] = set()
     while (
         modulo in mapa.modulos
@@ -2544,20 +1565,7 @@ class _Contexto:
 
 
 class _Referencias(ast.NodeVisitor):
-    """Nomes ALCANÇADOS por um trecho de código, em três coleções.
-
-    - ``nomes`` é a régua PLANA de até 21/08/2026. Ela sobrevive por uma razão
-      só: ``_regua_plana`` a usa para as mordidas provarem, lado a lado, o que
-      a régua nova pega e a velha perdoava. Nenhum portão a consulta;
-    - ``resolvidas`` são pares ``(módulo, nome)`` — a régua de hoje;
-    - ``planas`` é o que NÃO dá para resolver sem inferir tipo: literal de
-      texto (o despacho por ``getattr``) e atributo cuja base não é módulo.
-
-    Quatro decisões valem para as três, cada uma nascida de um falso positivo
-    medido (ver o cabeçalho do arquivo): conta literal de texto INTEIRO; NÃO
-    conta docstring; NÃO conta o conteúdo de ``__all__``; NÃO conta alvo de
-    atribuição.
-    """
+    """Nomes ALCANÇADOS por um trecho de código, em três coleções."""
 
     def __init__(self, contexto: _Contexto | None = None) -> None:
         self.nomes: set[str] = set()
@@ -2595,8 +1603,6 @@ class _Referencias(ast.NodeVisitor):
         self.generic_visit(no)
 
     def visit_Assign(self, no: ast.Assign) -> None:
-        # `__all__ = [...]` é DECLARAÇÃO de reexportação, não uso. Contá-la
-        # deixaria todo símbolo se auto-satisfazer citando o próprio nome.
         if any(isinstance(a, ast.Name) and a.id == "__all__" for a in no.targets):
             return
         self.generic_visit(no)
@@ -2618,9 +1624,6 @@ class _Referencias(ast.NodeVisitor):
         if isinstance(no.ctx, ast.Load):
             self.nomes.add(no.attr)
             if self._ctx is not None and not self._resolve_atributo(no):
-                # Base que não é módulo: `self.x.metodo()`, `obj.aplicar()`. Sem
-                # inferir tipo não dá para dizer de quem é o `aplicar` — conta
-                # plano, e o preço está declarado no cabeçalho.
                 self.planas.add(no.attr)
         self.generic_visit(no)
 
@@ -2645,8 +1648,6 @@ class _Referencias(ast.NodeVisitor):
         return True
 
     def visit_ImportFrom(self, no: ast.ImportFrom) -> None:
-        # `from x.y import f` É alcance: o nome fica ligado no módulo que
-        # importa, e um reexportador é justamente um módulo que só faz isso.
         if self._ctx is not None:
             base = _base_do_import(self._ctx.mapa, self._ctx.modulo, no)
             if base in self._ctx.mapa.modulos:
@@ -2666,7 +1667,6 @@ class _Referencias(ast.NodeVisitor):
             self.nomes.add(no.asname)
 
     def visit_Expr(self, no: ast.Expr) -> None:
-        # Literal de texto solto como comando = documentação em prosa.
         if isinstance(no.value, ast.Constant) and isinstance(no.value.value, str):
             return
         self.generic_visit(no)
@@ -2727,23 +1727,8 @@ def _candidatas(mapa: _Mapa, alvo: Path) -> list[tuple[Promessa, str, int]]:
     return saida
 
 
-# --- A ponte da interface nova: a espinha viva, sem a bancada --------------
-
-
 def _flags_de_bancada(arvore: ast.AST) -> frozenset[str]:
-    """As flags de linha de comando que o próprio arquivo declara.
-
-    DERIVADA dos ``add_argument`` dele, nunca de uma lista escrita aqui — uma
-    flag nova nasce coberta, e nenhuma frente precisa lembrar de vir avisar
-    este portão. É a mesma disciplina de ``_DECORADORES_DE_FRAMEWORK``: mede-se
-    o IDIOMA, não os nomes.
-
-    POR QUE TODA FLAG É BANCADA, e não só as três mordidas: o ``.desktop`` roda
-    ``run.sh --gui`` **sem um único argumento a mais**, e o lançador só
-    repassa o que receber. Logo o que ela abre é o piloto com todas as flags
-    ausentes — e qualquer corpo que só roda COM flag é de quem está na bancada,
-    não dela.
-    """
+    """As flags de linha de comando que o próprio arquivo declara."""
     flags: set[str] = set()
     for no in ast.walk(arvore):
         if not isinstance(no, ast.Call):
@@ -2762,21 +1747,7 @@ def _flags_de_bancada(arvore: ast.AST) -> frozenset[str]:
 
 
 def _lado_de_bancada(no: ast.If, flags: frozenset[str]) -> str | None:
-    """Que metade deste ``if`` só roda na BANCADA — ``body``, ``orelse``, ou nada.
-
-    ``if args.prova_gesto:`` → o corpo é bancada. ``if not args.sem_cor:`` → o
-    corpo é o caminho SEM a flag, isto é, o vivo; quem é bancada ali é o
-    ``else``. Confundir os dois seria podar a espinha: MEDIDO em 31/08/2026,
-    ``controles_vivos.py``:790 pendura o tique do interruptor num
-    ``if not args.sem_interruptor:`` — cortar esse corpo apagaria a pintura
-    inteira do interruptor dela e este portão passaria a acusar seis curas
-    vivas.
-
-    Teste composto (``and``/``or``, comparação, chamada) devolve ``None`` de
-    propósito: sem certeza de qual metade é a bancada, a régua não poda. Errar
-    para o lado de PERDOAR custa perdão ocasional; errar para o outro custa
-    acusar quem está certo, que é o que este portão não pode fazer.
-    """
+    """Que metade deste ``if`` só roda na BANCADA — ``body``, ``orelse``, ou nada."""
     teste: ast.expr = no.test
     negado = False
     if isinstance(teste, ast.UnaryOp) and isinstance(teste.op, ast.Not):
@@ -2793,27 +1764,7 @@ def _lado_de_bancada(no: ast.If, flags: frozenset[str]) -> str | None:
 
 
 def _podar_a_bancada(arvore: ast.Module) -> tuple[ast.Module, list[ast.AST]]:
-    """A árvore da ponte SEM os pedaços que só a bancada roda.
-
-    Devolve a árvore podada e os nós podados — os segundos existem para
-    ``test_nenhuma_promessa_e_alcancada_so_pela_bancada`` poder medir o que a
-    poda tirou, em vez de acreditar nela.
-
-    Duas passadas, e a segunda é o que faz a primeira valer alguma coisa:
-
-    1. o corpo (ou o ``else``) de todo ``if`` guardado por uma flag vira
-       ``pass``;
-    2. **ponto fixo** sobre as rotinas que só aquele corpo chamava. Sem ela a
-       poda seria decorativa: ``if self.args.prova_gesto:`` só contém a linha
-       ``self._marcar_gestos_de_mentira()`` — o roteiro de cliques sintéticos
-       inteiro mora no corpo do MÉTODO, que é nó de topo da classe e continuaria
-       sendo lido.
-
-    A régua da passada 2 é estreita de propósito: só cai a função cujo nome é
-    citado pela bancada e por **mais ninguém** na árvore já podada. Uma função
-    que nada cita (despacho por string, retrocompatibilidade) fica de pé — a
-    dúvida sempre resolve a favor de continuar contando.
-    """
+    """A árvore da ponte SEM os pedaços que só a bancada roda."""
     flags = _flags_de_bancada(arvore)
     podados: list[ast.AST] = []
     for no in ast.walk(arvore):
@@ -2851,12 +1802,7 @@ def _podar_a_bancada(arvore: ast.Module) -> tuple[ast.Module, list[ast.AST]]:
 def _definicoes_de_funcao(
     arvore: ast.Module,
 ) -> list[tuple[list[ast.stmt], int, ast.FunctionDef | ast.AsyncFunctionDef]]:
-    """Toda função do módulo e da classe, com o corpo e o índice que a seguram.
-
-    Dois níveis bastam e é medido: um piloto é um módulo com funções soltas e
-    UMA classe ``Janela`` cheia de métodos. Descer mais fundo pagaria por
-    ``closure`` — e uma ``closure`` some junto com a função que a hospeda.
-    """
+    """Toda função do módulo e da classe, com o corpo e o índice que a seguram."""
     saida: list[tuple[list[ast.stmt], int, ast.FunctionDef | ast.AsyncFunctionDef]] = []
     for indice, no in enumerate(arvore.body):
         if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -2869,18 +1815,7 @@ def _definicoes_de_funcao(
 
 
 def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
-    """Os arquivos da ponte da interface nova — o fecho a partir da BOCA.
-
-    Exposta pela mesma razão que ``modulos_alcancados``: uma régua que encolhe
-    calada faz o portão cobrar de quem está certo, e sem poder olhar o fecho
-    ninguém descobre por quê.
-
-    O fecho segue só ``import irmão`` e ``from irmão import x`` dentro de
-    ``src/hefesto_dualsense4unix/interface/`` — que é como um piloto importa o gerador do
-    mockup, e é o único idioma que essa pasta usa (ela não é pacote: os pilotos
-    entram nela pelo ``sys.path``). Nada de ``rglob``: instrumento de bancada
-    não entra em produção por morar na mesma pasta que a ponte.
-    """
+    """Os arquivos da ponte da interface nova — o fecho a partir da BOCA."""
     base = _RAIZ if raiz_do_projeto is None else raiz_do_projeto
     pasta = base / _PASTA_DA_PONTE
     boca = base / _PILOTO_DA_INTERFACE_NOVA
@@ -2907,13 +1842,6 @@ def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
             elif isinstance(no, ast.ImportFrom):
                 if no.module in vizinhos:
                     fila.append(no.module)
-                # O TERCEIRO IDIOMA, e ele é o CERTO desde 01/09/2026:
-                # `from hefesto_dualsense4unix.interface import mesa_viva`. O
-                # fecho seguia só o nome curto do vizinho, herdado de quando
-                # esta pasta vivia em `layout/` e os pilotos entravam nela pelo
-                # `sys.path`. Dentro do pacote o import passou a ser pelo nome
-                # completo — e sem esta linha o fecho encolheu para a boca
-                # sozinha, que é a régua encolhendo calada.
                 elif (no.module or "").startswith(_MODULO_DA_PONTE):
                     resto = (no.module or "")[len(_MODULO_DA_PONTE):].lstrip(".")
                     if resto in vizinhos:
@@ -2926,13 +1854,7 @@ def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
 def _fontes_externas(
     raiz_do_projeto: Path, *, podar_a_bancada: bool = True
 ) -> list[tuple[str, ast.Module]]:
-    """O Python que roda de FORA do pacote: os heredocs, e a ponte da interface.
-
-    ``podar_a_bancada=False`` devolve a ponte INTEIRA, com os pedaços de
-    mordida. Não é o modo do portão: existe só para
-    ``test_nenhuma_promessa_e_alcancada_so_pela_bancada`` medir a diferença
-    entre as duas réguas, em vez de afirmar que ela é zero.
-    """
+    """O Python que roda de FORA do pacote: os heredocs, e a ponte da interface."""
     saida: list[tuple[str, ast.Module]] = []
     for roteiro in _ROTEIROS_DE_PRODUCAO:
         caminho = raiz_do_projeto / roteiro
@@ -2943,12 +1865,6 @@ def _fontes_externas(
                 saida.append((f"{roteiro}#heredoc{indice}", ast.parse(trecho)))
             except SyntaxError:  # pragma: no cover — heredoc quebrado é do roteiro
                 continue
-    # O LANÇADOR É PRODUÇÃO — 29/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01).
-    # É o elo 3 de `_CADEIA_DA_INTERFACE_NOVA`: o `.desktop` roda o `run.sh
-    # --gui`, e o `run.sh` roda este arquivo, que prepara o processo (o cache
-    # de loaders do GdkPixbuf, a instância única por tela) antes de carregar o
-    # piloto. Até aqui só a boca contava, e o que o lançador chama aparecia
-    # como promessa sem caminho.
     for fonte in _LANCADORES:
         caminho = raiz_do_projeto / fonte
         if not caminho.is_file():
@@ -2969,18 +1885,7 @@ def _fontes_externas(
 
 
 def modulos_alcancados(raiz: Path | None = None) -> set[str]:
-    """Os módulos que o produto de fato roda, a partir de ``_PONTOS_DE_ENTRADA``.
-
-    Exposta porque é a metade da régua que mais engana quando quebra: se o
-    fecho encolher, o portão passa a acusar quem está certo, e sem poder olhar
-    o fecho ninguém descobre por quê.
-
-    Desde 31/08/2026 as raízes não são só as do ``pyproject.toml`` e dos
-    heredocs: a ponte da interface nova (``pontes_vivas``) importa ``src/`` de
-    fora do pacote e entra aqui pelo mesmo caminho que o Python embutido no
-    instalador. MEDIDO no dia: 223 módulos alcançados viraram 226, e os três
-    que entraram são a janela do WebView (``gui/ponte_da_tela``) e o que ela usa.
-    """
+    """Os módulos que o produto de fato roda, a partir de ``_PONTOS_DE_ENTRADA``."""
     alvo = _SRC if raiz is None else raiz
     mapa = _mapear(alvo)
     raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
@@ -2997,26 +1902,7 @@ def modulos_alcancados(raiz: Path | None = None) -> set[str]:
 def promessas_sem_caminho(
     raiz: Path | None = None, *, podar_a_bancada: bool = True
 ) -> dict[str, Promessa]:
-    """Funções e classes públicas de módulo que nada em produção alcança.
-
-    A régua, desde 22/08/2026: um símbolo está alcançado quando algum nó de
-    topo de um módulo ALCANÇADO (ver ``modulos_alcancados``) o CITA com o
-    nome resolvido ao módulo que o define — menos o próprio símbolo, para que
-    recursão e auto-citação não satisfaçam o portão sozinhas. O que não dá para
-    resolver sem inferir tipo (literal de texto e atributo de objeto) conta
-    plano, e só a partir de módulo alcançado.
-
-    ``raiz`` existe para o portão poder ser apontado para uma CÓPIA de si mesmo
-    (ver ``TestOPortaoMorde``) — mutilar ou aumentar ``src/`` na árvore viva
-    contamina a medição de quem estiver trabalhando ao lado
-    (``ARVORE-CONGELADA-01``).
-
-    ``podar_a_bancada=False`` mede com a ponte INTEIRA, mordidas incluídas.
-    Não é o portão: é a segunda régua que
-    ``test_nenhuma_promessa_e_alcancada_so_pela_bancada`` compara com a
-    primeira, e a diferença entre as duas é a lista de curas que só a régua
-    chama (31/08/2026).
-    """
+    """Funções e classes públicas de módulo que nada em produção alcança."""
     alvo = _SRC if raiz is None else raiz
     mapa = _mapear(alvo)
     raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
@@ -3044,19 +1930,6 @@ def promessas_sem_caminho(
             refs_por_no.append((modulo, indice, visitante.resolvidas))
             planas |= visitante.planas
     for rotulo, arvore in externas:
-        # A PONTE NÃO É MAIS "EXTERNA" — 01/09/2026. Os heredocs do instalador
-        # continuam sendo (moram num `.sh`), mas os arquivos da ponte da
-        # interface passaram a viver DENTRO de `src/`, e por isso já são
-        # módulos do mapa. Tratá-los como fonte externa apagava a própria
-        # identidade deles: sem `define`, uma referência do módulo a um símbolo
-        # do MESMO módulo não resolvia, e `hefesto_vivo.py::Piloto` — a janela
-        # que ela abre, instanciada em `main()` três telas abaixo — aparecia
-        # como promessa sem chamador.
-        #
-        # Eles entram por aqui e não por `_PONTOS_DE_ENTRADA` de propósito: é
-        # este caminho que passa pela PODA DA BANCADA, e é a poda que impede uma
-        # cura chamada só de dentro de `if self.args.prova_gesto:` de contar
-        # como ligada.
         modulo_da_ponte = ""
         if rotulo.endswith(".py") and "#heredoc" not in rotulo:
             caminho = raiz_do_projeto / rotulo
@@ -3079,30 +1952,6 @@ def promessas_sem_caminho(
         refs_por_no.append((rotulo, -1, visitante.resolvidas))
         planas |= visitante.planas
 
-    # A BANCADA DE DESENHO NÃO É PROMESSA DO PRODUTO, e a lista de quem ela é
-    # sai DERIVADA — nunca escrita aqui. MEDIDO em 01/09/2026, no dia em que a
-    # interface se mudou para dentro do `src/`: a varredura saltou de 76 para
-    # 291, e as ~170 novas eram os auxiliares dos dez geradores de página
-    # (`aba01.cartao`, `aba02.grade`, `aba06.bignum`…) e das réguas de bancada.
-    # Nenhum deles é promessa quebrada: um gerador de mockup NÃO tem chamador em
-    # produção, e não deve ter.
-    #
-    # A REGRA É A MESMA QUE ESTE PORTÃO JÁ USA para separar espinha de bancada:
-    # `pontes_vivas()` é o fecho de import a partir da BOCA. Um arquivo que mora
-    # ao lado do piloto e que o piloto não alcança é bancada — e é exatamente o
-    # que `test_a_ponte_e_o_fecho_da_boca_e_nao_a_pasta_inteira` já cobrava no
-    # outro sentido.
-    #
-    # POR QUE NÃO UMA DENYLIST DE NOMES ou um prefixo `aba*`: prefixo fura
-    # calado. O dia em que um gerador virasse produção, uma lista de nomes o
-    # deixaria isento para sempre; o fecho o traz de volta sozinho. E o
-    # subdiretório `pacotes/` NÃO é podado — ele é o produto, e o piloto o
-    # importa.
-    #
-    # A PODA SÓ VALE COM O FECHO VIVO. Se `pontes_vivas` devolvesse vazio (a
-    # boca sumiu), podar a pasta inteira absolveria também o piloto — então
-    # nesse caso não se poda nada, e o portão volta a acusar tudo, que é o
-    # estado seguro.
     ponte_viva = pontes_vivas(raiz_do_projeto)
     bancada_do_desenho: set[str] = set()
     if ponte_viva:
@@ -3132,14 +1981,7 @@ def promessas_sem_caminho(
 
 
 def _regua_plana(raiz: Path) -> set[str]:
-    """A régua de ATÉ 21/08/2026, viva só para as mordidas mostrarem a troca.
-
-    Ela pergunta "existe algum chamador deste NOME em qualquer lugar da
-    árvore?" — sem alcance e sem módulo. Duas mordidas a chamam para provar,
-    no mesmo caso, que o defeito que a nova pega era APROVADO por ela: a
-    corrente fechada em si mesma e a colisão de nome entre módulos. Sem esta
-    função as duas mordidas ficariam afirmando a troca sem medi-la.
-    """
+    """A régua de ATÉ 21/08/2026, viva só para as mordidas mostrarem a troca."""
     refs_por_no: list[tuple[Path, int, set[str]]] = []
     candidatas: list[tuple[str, Path, int]] = []
     for caminho in _modulos(raiz):
@@ -3166,20 +2008,11 @@ def _regua_plana(raiz: Path) -> set[str]:
     return orfas
 
 
-# --- P3a: a varredura dos interruptores ------------------------------------
-
 _ENV = re.compile(r"""["'](HEFESTO_[A-Z0-9_]+)["']""")
 
-#: Como se ESCREVE uma variável de ambiente, por família de arquivo. Um portão
-#: que só procurasse o NOME acharia comentário: medido em 12/08/2026, das seis
-#: envs que um grep ingênuo dava por ligadas, quatro eram comentário, linha de
-#: changelog ou LEITURA feita por outro programa.
 _ESCRITA_DE_AMBIENTE = (
-    # shell: `NAME=…`, `export NAME=…`, `env NAME=…`
     r"(?:^|[;&|(]|\bexport\s+|\benv\s+)\s*{nome}=",
-    # unidade systemd / .desktop: `Environment=NAME=…`
     r"^\s*Environment=\"?{nome}=",
-    # python: `os.environ["NAME"] = …`, `.setdefault("NAME"`, `putenv("NAME"`
     r"""\[\s*["']{nome}["']\s*\]\s*=[^=]""",
     r"""(?:setdefault|putenv)\(\s*["']{nome}["']""",
 )
@@ -3208,44 +2041,13 @@ def interruptores_lidos_em_src(raiz: Path | None = None) -> dict[str, str]:
 
 @functools.cache
 def _texto_sem_comentario(arquivo: Path) -> str | None:
-    """O arquivo sem comentários, lido UMA vez por caminho.
-
-    CUSTO MEDIDO em 12/08/2026: sem este cache, `portas_que_ligam` relia todos
-    os arquivos de todas as portas para CADA interruptor — I/O quadrático, e a
-    suíte inteira passava de 4m30 para mais de 5 min só neste arquivo, a ponto
-    de parecer travada. O conjunto de arquivos não muda durante a sessão (a
-    guarda ARVORE-CONGELADA-01 existe justamente para garantir isso), então
-    cachear por caminho é seguro e é o que torna este portão pagável.
-    """
+    """O arquivo sem comentários, lido UMA vez por caminho."""
     try:
         return _sem_comentario(arquivo.read_text(encoding="utf-8", errors="ignore"))
     except OSError:
         return None
 
 
-#: Pastas de ARTEFATO DE BUILD — o que o compilador deixou, nunca o que alguém
-#: escreveu. Elas não são porta, e lê-las custa caro nas duas pontas:
-#:
-#: - TEMPO, e este é o custo que JÁ se paga: MEDIDO em 13/08/2026 na árvore
-#:   dela, `packaging/cosmic-applet/target` tem **18G em 42.738 arquivos**. O
-#:   laço abaixo abria e lia cada um deles inteiro, como texto;
-#: - VERDADE, e este é o custo que AINDA NÃO se paga — é o que torna a exclusão
-#:   preventiva e não cosmética. O binário que o `cargo` produz CONTÉM as
-#:   strings do fonte, inclusive os nomes de env que o applet apenas LÊ. Um
-#:   `HEFESTO_…=` caindo no começo de uma linha dentro de um `.rlib`
-#:   transformaria lacuna real em "tem porta", e a dívida sumiria sozinha do
-#:   relatório — o pior desfecho possível para um portão, e o mesmo engano que
-#:   `test_o_detector_de_ambiente_nao_confunde_citacao_com_escrita` já impede do
-#:   lado do texto. MEDIDO em 13/08/2026: hoje nenhum arquivo sob `target/`
-#:   dispara (`grep -rlE '^HEFESTO_[A-Z0-9_]+=' …` não devolve nada). O
-#:   mecanismo é real e está provado em
-#:   `test_o_que_o_build_deixou_nao_e_porta`; o disparo é questão de qual
-#:   binário o próximo `cargo build` deixa lá.
-#:
-#: É poda por NOME de pasta, e não `git ls-files`: um portão da suíte tem de
-#: valer também num sdist desempacotado, onde não há repositório nem `git` — e
-#: chamar subprocesso para responder "isto é fonte?" paga um preço que a poda
-#: já paga de graça.
 _PASTAS_DE_ARTEFATO = frozenset(
     {"target", "build", "dist", "node_modules", ".git", "__pycache__", ".venv"}
 )
@@ -3265,12 +2067,7 @@ def _arquivos_de_porta(caminho: Path) -> list[Path]:
 
 
 def portas_que_ligam(env: str, raiz: Path | None = None) -> list[str]:
-    """Quais portas ESCREVEM este interruptor. Basta uma para a promessa valer.
-
-    ``raiz`` existe pela mesma razão que em ``promessas_sem_caminho``: para a
-    mordida poder plantar um artefato de build numa árvore FABRICADA em vez de
-    sujar a que está sendo medida ao lado (``ARVORE-CONGELADA-01``).
-    """
+    """Quais portas ESCREVEM este interruptor. Basta uma para a promessa valer."""
     base_do_projeto = _RAIZ if raiz is None else raiz
     encontradas: list[str] = []
     for porta, lugares in _PORTAS_DE_AMBIENTE.items():
@@ -3310,66 +2107,13 @@ def _promessas_publicas_por_chave(raiz: Path | None = None) -> set[str]:
     return chaves
 
 
-# ===========================================================================
-# Utilidades das razões — data e tamanho
-# ===========================================================================
-
-#: Toda razão declarada carrega data. Sem data ninguém sabe se ela envelheceu,
-#: e lacuna sem idade vira paisagem.
 _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 
-#: O mesmo piso do molde (``_SEM_ESCRITOR_HOJE``): abaixo disto a razão não
-#: cabe o endereço de onde o caminho se perde, e vira "porque sim" com mais
-#: letras.
 _RAZAO_MINIMA = 120
 
 
-# ---------------------------------------------------------------------------
-# A REGRA DE VARREDURA DESTE ARQUIVO — 25/08/2026 (AUDITORIA-DE-PERDA-01/C2)
-#
-# Toda régua que varre MAIS DE UM registro acumula e falha UMA VEZ, nomeando
-# tudo. `assert` dentro do laço é proibido aqui, e a cicatriz é medida:
-# `test_nenhuma_lapide_sobreviveu_a_propria_cura` varria os dois registros com
-# o `assert` DENTRO do laço, e a primeira falha cortava o laço — o segundo
-# registro nunca era lido. Foi assim que DUAS lápides caducas
-# (`utils/maquina.py::gravar_maquina` e `app/ipc_bridge.py::destinos_da_aplicacao`)
-# conviveram sem que ninguém soubesse que eram duas: quem via o vermelho
-# consertava a primeira, rodava de novo, e só então descobria a segunda — se
-# rodasse de novo.
-#
-# CORREÇÃO DE FATO (25/08/2026, medida por `git log`): a primeira versão desta
-# nota dizia que as duas "conviveram MESES". Não conviveram, e a diferença
-# importa porque muda o diagnóstico. As datas:
-#   - `app/ipc_bridge.py::destinos_da_aplicacao` — lápide escrita em `c4b80da`
-#     (23/08 21:50), VERDADEIRA na hora; o chamador de
-#     `app/textos_de_aplicacao.py` nasceu em `12af679` (24/08 09:45). Caduca
-#     por ~17h44.
-#   - `utils/maquina.py::gravar_maquina` — o chamador `gravar_rascunho_da_mesa`
-#     nasceu em `565a70d` (24/08 03:27) e a lápide foi escrita em `300656c`
-#     (24/08 04:11), QUARENTA E QUATRO MINUTOS DEPOIS. Ela nunca descreveu uma
-#     árvore anterior: nasceu contra um chamador que já estava no disco.
-#   - as duas saíram em `ca481af` (25/08 03:29).
-# O que isto muda: o buraco não é uma lápide que envelheceu no escuro por
-# meses — é uma lápide escrita sobre uma árvore que mudou NA MESMA MADRUGADA,
-# por outra frente. Numa leva com nove árvores em voo, "medi e classifiquei"
-# vale por horas, não por semanas.
-#
-# O custo do defeito não é o laço: é que um portão que mostra metade do que vê
-# ENSINA a subestimar a dívida. Quem lê "1 símbolo acusado" fecha a tarefa; a
-# fila real tinha dois.
-#
-# `TestOPortaoNaoEscondeMetadeDoQueVe` é a régua desta regra, e ela morde: com
-# o `assert` de volta dentro do laço, ela reprova nomeando qual registro ficou
-# escondido.
-# ---------------------------------------------------------------------------
-
-
 def _razoes_mal_escritas(registro: dict[str, str], rotulo: str) -> list[str]:
-    """TODA razão de um registro que não diz onde o caminho se perde.
-
-    Devolve a lista inteira e não levanta: quem levanta é quem chama, uma vez
-    só, depois de somar todos os registros.
-    """
+    """TODA razão de um registro que não diz onde o caminho se perde."""
     queixas: list[str] = []
     for chave, razao in registro.items():
         if len(razao) <= _RAZAO_MINIMA:
@@ -3400,36 +2144,18 @@ def _confere_razoes(*registros: tuple[str, dict[str, str]]) -> None:
 
 
 def _registros_de_promessa() -> tuple[tuple[str, dict[str, str]], ...]:
-    """Os dois registros de classificação de promessa pública.
-
-    Função, e não constante, de propósito: ela relê os globais a cada chamada,
-    e é isso que deixa `TestOPortaoNaoEscondeMetadeDoQueVe` trocá-los por
-    registros fabricados sem tocar na árvore de verdade.
-    """
+    """Os dois registros de classificação de promessa pública."""
     return (
         ("_NAO_E_PROMESSA", _NAO_E_PROMESSA),
         ("_SEM_CAMINHO_HOJE", _SEM_CAMINHO_HOJE),
     )
 
 
-# ===========================================================================
-# P3a — o interruptor sem mão
-# ===========================================================================
-
-
 class TestTodoInterruptorTemMao:
     """Uma env que o produto lê promete que algo pode ser ligado."""
 
     def test_todo_interruptor_lido_esta_classificado(self) -> None:
-        """Chave nova sem classificação reprova por ESTAR SEM CLASSIFICAÇÃO.
-
-        É esta inversão que dispensa a denylist por prefixo (``…_FAKE``,
-        ``…_LEDS_ROOT``, ``…_PROC_MARKERS``) que a passada anterior propôs e
-        declarou não ter validado. Prefixo é denylist, e denylist fura calada:
-        uma chave de feature que por acaso terminasse em ``_FAKE`` sairia
-        isenta em silêncio. Aqui o total é DERIVADO e a classificação é
-        exaustiva por construção.
-        """
+        """Chave nova sem classificação reprova por ESTAR SEM CLASSIFICAÇÃO."""
         lidas = set(interruptores_lidos_em_src())
         classificadas = set(_INSTRUMENTO_DE_AMBIENTE) | set(_PROMESSA_DE_AMBIENTE)
         novas = sorted(lidas - classificadas)
@@ -3444,11 +2170,7 @@ class TestTodoInterruptorTemMao:
         )
 
     def test_nenhuma_classificacao_cita_chave_que_sumiu(self) -> None:
-        """Chave apagada de ``src/`` não pode deixar classificação órfã.
-
-        Sem isto os dois registros virariam cemitério, e a pergunta de cima
-        passaria a ser respondida por entradas mortas.
-        """
+        """Chave apagada de ``src/`` não pode deixar classificação órfã."""
         lidas = set(interruptores_lidos_em_src())
         fantasmas = sorted(
             (set(_INSTRUMENTO_DE_AMBIENTE) | set(_PROMESSA_DE_AMBIENTE)) - lidas
@@ -3468,14 +2190,7 @@ class TestTodoInterruptorTemMao:
         )
 
     def test_toda_promessa_de_ambiente_tem_quem_a_ligue(self) -> None:
-        """Uma feature que ela pode querer, e alguma porta que a vire.
-
-        MORDIDA: a régua está conferida contra contagem independente em
-        ``test_a_varredura_enxerga_a_unica_env_escrita_de_verdade`` e em
-        ``test_o_detector_de_ambiente_nao_confunde_citacao_com_escrita``. Sem
-        essas duas provas, um detector quebrado devolveria "sem mão" para as 29
-        chaves e a lista de lacunas viraria a lista de envs.
-        """
+        """Uma feature que ela pode querer, e alguma porta que a vire."""
         sem_mao = sorted(
             env
             for env in _PROMESSA_DE_AMBIENTE
@@ -3501,12 +2216,7 @@ class TestTodoInterruptorTemMao:
     def test_o_companheiro_declarado_existe_e_nao_e_ele_proprio_uma_lacuna(
         self,
     ) -> None:
-        """Companheiro é escape, e todo escape precisa de guarda.
-
-        Sem este caso, ``_MAO_FORA_DO_AMBIENTE`` seria o lugar onde se escreve
-        "tem mão em outro lugar" sem que ninguém confira o outro lugar — e o
-        portão passaria a aceitar a própria palavra como prova.
-        """
+        """Companheiro é escape, e todo escape precisa de guarda."""
         publicas = _promessas_publicas_por_chave()
         soltas = promessas_sem_caminho()
         for env, (companheiro, _razao) in _MAO_FORA_DO_AMBIENTE.items():
@@ -3557,25 +2267,11 @@ class TestTodoInterruptorTemMao:
         )
 
 
-# ===========================================================================
-# P3b — a promessa pública sem caminho
-# ===========================================================================
-
-
 class TestTodaPromessaPublicaTemCaminho:
     """O produto promete que isto faz algo — e existe por onde chegar nisto?"""
 
     def test_toda_promessa_solta_esta_classificada(self) -> None:
-        """O caso que importa: o portão existe para pegar a PRÓXIMA.
-
-        Não para catalogar as sessenta de hoje — essas já estão escritas
-        acima, com endereço e com o que as fecharia. O valor deste arquivo é
-        que a sexagésima primeira não consegue nascer calada.
-
-        MORDIDA: provada em ``TestOPortaoMorde``, que fabrica um símbolo
-        público novo numa cópia de ``src/`` e cobra que ele apareça acusado E
-        fora dos dois registros.
-        """
+        """O caso que importa: o portão existe para pegar a PRÓXIMA."""
         soltas = set(promessas_sem_caminho())
         declaradas = set(_NAO_E_PROMESSA) | set(_SEM_CAMINHO_HOJE)
         novas = sorted(soltas - declaradas)
@@ -3604,11 +2300,7 @@ class TestTodaPromessaPublicaTemCaminho:
         )
 
     def test_nenhuma_declaracao_cita_simbolo_que_nao_existe(self) -> None:
-        """Registro que cita símbolo apagado é cemitério, não registro.
-
-        Acumula os DOIS registros e acusa uma vez só — ver a regra de varredura
-        de 25/08/2026 no topo de `_razoes_mal_escritas`.
-        """
+        """Registro que cita símbolo apagado é cemitério, não registro."""
         publicas = _promessas_publicas_por_chave()
         fantasmas = [
             f"{rotulo}: {chave}"
@@ -3624,21 +2316,7 @@ class TestTodaPromessaPublicaTemCaminho:
         )
 
     def test_nenhuma_lapide_sobreviveu_a_propria_cura(self) -> None:
-        """O dia em que o caminho nasce é o dia de apagar a entrada.
-
-        É o equivalente do ``xfail(strict=True)`` do molde: a lacuna que passou
-        a ser alcançada REPROVA, para que ninguém herde um registro que
-        descreve uma árvore que não existe mais.
-
-        MEDIDO em 25/08/2026 (AUDITORIA-DE-PERDA-01/C2): esta régua varria os
-        dois registros com o ``assert`` DENTRO do laço, e a primeira falha
-        cortava o laço — o segundo registro nunca era lido. Duas lápides
-        caducas (``utils/maquina.py::gravar_maquina`` e
-        ``app/ipc_bridge.py::destinos_da_aplicacao``) conviveram sem que
-        ninguém soubesse que eram DUAS. Agora acumula e acusa uma vez só.
-        As datas medidas das duas estão no topo deste arquivo, na regra de
-        varredura.
-        """
+        """O dia em que o caminho nasce é o dia de apagar a entrada."""
         soltas = set(promessas_sem_caminho())
         curadas = [
             f"{rotulo}: {chave}"
@@ -3667,15 +2345,7 @@ class TestTodaPromessaPublicaTemCaminho:
         _confere_razoes(*_registros_de_promessa())
 
     def test_todo_ponto_de_entrada_tem_fonte_viva(self) -> None:
-        """A lista de entradas é o chão da régua — e chão apodrece calado.
-
-        Cada entrada declara a FONTE que a torna entrada: o `[project.scripts]`,
-        o `ExecStart`, a linha do instalador. Se a fonte deixar de dizer o que
-        esta tabela afirma, o módulo continuaria alcançado por uma boca que não
-        existe mais — e o portão calaria sobre um módulo inteiro sem que nada o
-        denunciasse. É o mesmo defeito da lápide que sobrevive à cura, do outro
-        lado da régua.
-        """
+        """A lista de entradas é o chão da régua — e chão apodrece calado."""
         for entrada, (fonte, agulha, razao) in _PONTOS_DE_ENTRADA.items():
             alvo = _SRC / entrada
             assert alvo.is_file(), (
@@ -3696,39 +2366,14 @@ class TestTodaPromessaPublicaTemCaminho:
             )
 
 
-# ===========================================================================
-# P4 — a ponte da interface nova é produção, e a bancada não é
-# ===========================================================================
-
-#: Instrumentos de bancada de ``src/hefesto_dualsense4unix/interface/``, escolhidos por MEDIÇÃO:
-#: são os cinco arquivos da pasta que medem a tela em vez de serem a tela — os
-#: três que dirigem o Chrome pelo Playwright (``regua``, ``regua_estados``,
-#: ``regua_popup``, e o ``olhar``) e o visualizador ``ver``. Nenhum deles é
-#: importado pelo piloto, e é por isso que a régua abaixo pode ser uma
-#: CONFERÊNCIA e não uma exclusão: eles ficam de fora por construção, e esta
-#: lista só existe para que o dia em que um deles entrar no fecho seja um dia
-#: de vermelho, e não de silêncio.
 _INSTRUMENTOS_DA_BANCADA = ("regua", "regua_estados", "regua_popup", "olhar", "ver")
 
 
 class TestAPonteDaInterfaceNovaEProducao:
-    """A janela que ela abre conta como caminho — a régua que a mede, não.
-
-    NASCEU em 31/08/2026. As quatro réguas desta classe seguram os quatro
-    lugares por onde a definição de "produção" pode apodrecer depois que a
-    interface migrou para o WebView: a cadeia do lançador, o fecho da ponte, a
-    exclusão da bancada, e a distância entre as duas réguas.
-    """
+    """A janela que ela abre conta como caminho — a régua que a mede, não."""
 
     def test_a_cadeia_do_lancador_da_interface_nova_esta_viva(self) -> None:
-        """Os TRÊS elos, conferidos contra o que cada arquivo diz hoje.
-
-        É a irmã de ``test_todo_ponto_de_entrada_tem_fonte_viva``, e existe pelo
-        mesmo motivo — com um agravante: aqui o chão tem três elos, e basta um
-        apodrecer para a ponte inteira deixar de ser produção sem que nada
-        avise. Um portão que fica MAIS PERMISSIVO em silêncio é pior que um que
-        fica mais estrito, porque a dívida some sozinha do relatório.
-        """
+        """Os TRÊS elos, conferidos contra o que cada arquivo diz hoje."""
         piloto = _RAIZ / _PILOTO_DA_INTERFACE_NOVA
         assert piloto.is_file(), (
             f"a boca declarada da interface nova não existe: {piloto}\n"
@@ -3756,12 +2401,7 @@ class TestAPonteDaInterfaceNovaEProducao:
         )
 
     def test_a_ponte_e_o_fecho_da_boca_e_nao_a_pasta_inteira(self) -> None:
-        """A ponte é o que o piloto IMPORTA — não o que mora ao lado dele.
-
-        Sem esta linha, ``src/hefesto_dualsense4unix/interface/`` inteiro viraria produção e a
-        pasta passaria a absolver por VIZINHANÇA. MEDIDO em 31/08/2026: são 4
-        arquivos de 29.
-        """
+        """A ponte é o que o piloto IMPORTA — não o que mora ao lado dele."""
         ponte = pontes_vivas()
         assert Path(_PILOTO_DA_INTERFACE_NOVA).stem in ponte, (
             "o fecho não contém nem a própria boca — `pontes_vivas` quebrou, e "
@@ -3779,13 +2419,7 @@ class TestAPonteDaInterfaceNovaEProducao:
         )
 
     def test_o_instrumento_de_bancada_nao_entra_no_fecho(self) -> None:
-        """O que MEDE a tela não é a tela — e as duas moram na mesma pasta.
-
-        Esta é a régua da distinção inteira, e ela é conferida nos dois
-        sentidos: os cinco instrumentos TÊM de existir no disco (senão o caso
-        passaria por ausência, que é o modo mais silencioso de um teste deixar
-        de medir) e TÊM de estar fora do fecho.
-        """
+        """O que MEDE a tela não é a tela — e as duas moram na mesma pasta."""
         pasta = _RAIZ / _PASTA_DA_PONTE
         sumidos = [
             nome for nome in _INSTRUMENTOS_DA_BANCADA
@@ -3807,33 +2441,14 @@ class TestAPonteDaInterfaceNovaEProducao:
         )
 
     def test_a_bancada_de_dentro_do_piloto_e_reconhecida(self) -> None:
-        """As flags do piloto são colhidas, e o ``if not`` NÃO é podado.
-
-        Duas metades, e a segunda é a que dói: ``controles_vivos.py``:790
-        pendura o tique do interruptor num ``if not args.sem_interruptor:``. Se
-        a poda tratasse o corpo negado como bancada, ela apagaria a pintura
-        inteira do interruptor dela e o portão passaria a acusar seis curas
-        vivas — a régua reprovando a melhora em vez do defeito.
-        """
+        """As flags do piloto são colhidas, e o ``if not`` NÃO é podado."""
         piloto = _arvore(_RAIZ / _PILOTO_DA_INTERFACE_NOVA)
         flags = _flags_de_bancada(piloto)
-        # AS FLAGS SÃO DO PILOTO DECLARADO, e ele mudou em 01/09/2026: a boca
-        # passou de `controles_vivos.py` (uma aba) para `hefesto_vivo.py` (as
-        # dez). As três de antes — `prova_gesto`, `sem_ponte`,
-        # `arranca_enderecos` — eram mordidas da aba Controles; as do piloto
-        # novo são estas. O que a régua cobra continua o mesmo: que
-        # `_flags_de_bancada` LEIA os `add_argument` em vez de uma lista escrita
-        # à mão, e três nomes conhecidos provam isso sem virar a lista.
         assert {"prova_no_aparelho", "prova_clique", "oculta"} <= flags, (
             f"as mordidas do piloto não foram colhidas dos `add_argument`: "
             f"{sorted(flags)}\n`_flags_de_bancada` parou de ver o idioma, e "
             "com ela toda a poda virou decoração."
         )
-        # AS DUAS FORMAS, com flags que o piloto DECLARADO tem hoje: a guarda
-        # positiva marca o corpo como bancada, a negativa o deixa inteiro. Os
-        # nomes vieram do `hefesto_vivo.py` quando ele virou a boca, em
-        # 01/09/2026 — e é de propósito que saiam das flags COLHIDAS acima, e
-        # não de uma lista à parte que envelheceria sozinha.
         positivo = ast.parse("if self.args.prova_no_aparelho:\n    x()\n").body[0]
         negativo = ast.parse("if not args.sem_cor:\n    x()\n").body[0]
         assert isinstance(positivo, ast.If) and isinstance(negativo, ast.If)
@@ -3847,18 +2462,7 @@ class TestAPonteDaInterfaceNovaEProducao:
         )
 
     def test_nenhuma_promessa_e_alcancada_so_pela_bancada(self) -> None:
-        """A distância entre as duas réguas — e hoje ela é ZERO.
-
-        Com a ponte inteira (mordidas incluídas) o portão perdoa um conjunto;
-        com a ponte podada, outro. A diferença é a lista de curas que **só a
-        régua chama** — escritas, testadas, e nunca ligadas na tela que ela
-        abre. É a forma mais fina do defeito-mãe, porque ela vem embrulhada em
-        verde.
-
-        MEDIDO em 31/08/2026: vazia. Este caso não existe para celebrar o zero;
-        existe para o dia em que alguém fiar uma cura ao `--prova-gesto` e achar
-        que entregou.
-        """
+        """A distância entre as duas réguas — e hoje ela é ZERO."""
         podada = set(promessas_sem_caminho())
         inteira = set(promessas_sem_caminho(podar_a_bancada=False))
         so_a_bancada = sorted(podada - inteira)
@@ -3874,69 +2478,27 @@ class TestAPonteDaInterfaceNovaEProducao:
         )
 
 
-# ===========================================================================
-# O portão apontado para si mesmo
-# ===========================================================================
-
-
 def _copia_de_src(destino: Path, *, sem_a_ponte: bool = False) -> Path:
-    """Uma cópia de ``src/`` onde se pode fabricar defeito sem sujar a árvore.
-
-    ``sem_a_ponte`` deixa ``interface/`` de fora. Ele nasceu em 01/09/2026, e a
-    razão é a mudança de lugar: a interface morava em ``layout/``, FORA de
-    ``src/``, e uma cópia de ``src/`` nascia sem ela por construção. Duas
-    mordidas dependiam disso — a que fabrica um piloto de mentira, e a que
-    confere se a janela do WebView volta a ser dívida quando a boca some. Com a
-    interface dentro do ``src/``, a cópia passou a nascer COM a ponte real: uma
-    morreu em ``FileExistsError`` ao criar a pasta, e a outra deixou de medir a
-    declaração. A ausência voltou a ser DITA, em vez de ser um efeito colateral
-    do lugar em que a pasta estava.
-
-    Mutilar (ou aumentar) ``src/`` na árvore viva contamina a medição de quem
-    estiver trabalhando ao lado — é a ``ARVORE-CONGELADA-01``, e é a mesma
-    razão pela qual o molde copia ``app/`` para um tmp antes de arrancar um
-    escritor.
-    """
+    """Uma cópia de ``src/`` onde se pode fabricar defeito sem sujar a árvore."""
     copia = destino / "src" / "hefesto_dualsense4unix"
     copia.parent.mkdir(parents=True, exist_ok=True)
     padroes = ["__pycache__", "*.pyc"]
     if sem_a_ponte:
         padroes.append(Path(_PASTA_DA_PONTE).name)
     shutil.copytree(_SRC, copia, ignore=shutil.ignore_patterns(*padroes))
-    # Os roteiros de shell vão junto desde 13/08/2026: o Python embutido neles é
-    # caminho de produção (ver `_ROTEIROS_DE_PRODUCAO`), e uma cópia sem eles
-    # mediria uma árvore onde o `uninstall.sh` não existe. A mordida do heredoc
-    # passaria por AUSÊNCIA em vez de por medição — o modo mais silencioso de um
-    # teste deixar de morder.
     for roteiro in (*_ROTEIROS_DE_PRODUCAO, *_LANCADORES):
         origem = _RAIZ / roteiro
         if origem.is_file():
             (destino / roteiro).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(origem, destino / roteiro)
-    # `scripts/` ia junto entre 15/08 e 22/08/2026, quando ele era
-    # `_TERRITORIOS_DE_PRODUCAO`. Parou de ir porque parou de ser porta: a
-    # medição está na nota de `_PONTOS_DE_ENTRADA`. A cópia é mais barata por
-    # isso — 1,7 MB em 81 arquivos a menos.
     return copia
 
 
 class TestOPortaoMorde:
-    """Um portão que nunca reprovou é uma decoração com nome de portão.
-
-    Estes casos exercitam o INSTRUMENTO, não o produto. Se a varredura parasse
-    de enxergar chamadores, TODOS os casos acima ficariam verdes sem medir nada
-    — e é exatamente essa falha que esta classe pega.
-    """
+    """Um portão que nunca reprovou é uma decoração com nome de portão."""
 
     def test_a_varredura_enxerga_os_chamadores_que_existem(self) -> None:
-        """A régua conferida contra contagem independente.
-
-        Se a varredura estivesse quebrada, devolveria "sem caminho" para tudo e
-        a lista de lacunas viraria a lista de símbolos. Os quatro sinais abaixo
-        estão fiados em produção hoje, cada um por um IDIOMA diferente de
-        chamada; se algum aparecer acusado, é a régua que quebrou, não o
-        produto.
-        """
+        """A régua conferida contra contagem independente."""
         soltas = promessas_sem_caminho()
         assert len(soltas) < 150, (
             f"a varredura acusou {len(soltas)} promessas soltas — a régua "
@@ -3956,11 +2518,6 @@ class TestOPortaoMorde:
             "A REGRA CONTINUA: se este número subir sem `_SEM_CAMINHO_HOJE` "
             "crescer junto, É a régua quebrando, não a casa."
         )
-        # O fecho de import é a metade que mais engana quando quebra: se ele
-        # encolher, o portão passa a acusar quem está certo, e a acusação sobe
-        # em bloco. MEDIDO em 22/08/2026: 196 dos 201 módulos são alcançados;
-        # os 5 de fora são as três correntes fechadas classificadas acima mais
-        # `xlib_window` e `tui/screens`.
         alcancados = modulos_alcancados()
         assert len(alcancados) > 150, (
             f"o fecho de import alcançou só {len(alcancados)} módulos — algum "
@@ -3971,21 +2528,15 @@ class TestOPortaoMorde:
             "daemon/subsystems/gamepad.py::resume_vpads_after_steam_input"
             not in soltas
         ), (
-            "a varredura não vê chamada direta (gamepad.py:332) — e é ela que "
+            "a varredura não vê chamada direta (gamepad.py:180) — e é ela que "
             "prova que a saída da ESCONDER-EM-VEZ-DE-SAIR-01 continua viva"
         )
-        # A testemunha do despacho por STRING é escolhida por MEDIÇÃO, não por
-        # plausibilidade: arrancada a leitura de literais, ESTE é o símbolo que
-        # passa a ser acusado. Uma testemunha que continuasse alcançada por
-        # outro caminho deixaria este caso verde para sempre sem medir nada —
-        # foi o que aconteceu com o primeiro candidato (`set_coop_outputs`, que
-        # é MÉTODO e por isso nunca entra na varredura).
         assert (
             "integrations/proton_pin.py::lock_proton_for_all_games" not in soltas
         ), (
             "a varredura não vê despacho por STRING — `getattr(pp, "
             '"lock_proton_for_all_games", None)` em '
-            "app/actions/daemon_actions.py:1477 é o ÚNICO caminho deste "
+            "app/actions/daemon_actions.py:1126 é o ÚNICO caminho deste "
             "símbolo. Foi assim que a passada anterior errou cinco vezes numa "
             "só medição."
         )
@@ -3999,13 +2550,7 @@ class TestOPortaoMorde:
         )
 
     def test_a_varredura_enxerga_a_unica_env_escrita_de_verdade(self) -> None:
-        """O detector de ESCRITA de ambiente, contra contagem independente.
-
-        Um detector que não visse escrita nenhuma devolveria "sem mão" para as
-        29 chaves, e o portão estaria medindo o próprio silêncio. Hoje há
-        exatamente UMA escrita real na árvore — se ela sumir daqui, é o
-        detector que quebrou.
-        """
+        """O detector de ESCRITA de ambiente, contra contagem independente."""
         assert portas_que_ligam("HEFESTO_BROKER_ALLOWED_UID") == ["unit"], (
             "o detector não vê `Environment=HEFESTO_BROKER_ALLOWED_UID=` em "
             "assets/systemd/hefesto-hidraw-broker.service:37 — a régua de "
@@ -4013,14 +2558,7 @@ class TestOPortaoMorde:
         )
 
     def test_o_detector_de_ambiente_nao_confunde_citacao_com_escrita(self) -> None:
-        """Citar não é ligar, e é essa diferença que o portão inteiro mede.
-
-        MEDIDO em 12/08/2026: das seis chaves que um `grep` ingênuo dava por
-        ligadas, quatro eram comentário, linha de changelog, texto de ajuda, ou
-        LEITURA feita por outro programa. Se este caso passar a falhar, o
-        portão voltou a aceitar menção como prova — e a dívida some sozinha do
-        relatório, que é o pior desfecho possível para um portão.
-        """
+        """Citar não é ligar, e é essa diferença que o portão inteiro mede."""
         assert not portas_que_ligam(
             "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED"
         ), "o detector aceitou o COMENTÁRIO de install.sh:227 como escrita"
@@ -4037,14 +2575,7 @@ class TestOPortaoMorde:
     def test_uma_promessa_fabricada_e_acusada_sem_estar_na_lista(
         self, tmp_path: Path
     ) -> None:
-        """A prova que vale: o portão pega a PRÓXIMA, não as já escritas.
-
-        Fabrica-se, numa CÓPIA de ``src/``, um módulo com uma função e uma
-        classe públicas que ninguém chama — exatamente a forma de uma cura
-        escrita e nunca ligada. As duas TÊM de ser acusadas, e TÊM de estar
-        fora dos dois registros: é isso que garante que a entrega seguinte não
-        nasce calada só porque a lista de hoje já está preenchida.
-        """
+        """A prova que vale: o portão pega a PRÓXIMA, não as já escritas."""
         copia = _copia_de_src(tmp_path)
         (copia / "daemon" / "cura_recem_nascida.py").write_text(
             '"""Uma cura escrita e nunca ligada — o defeito-mãe, fabricado."""\n'
@@ -4083,18 +2614,7 @@ class TestOPortaoMorde:
     def test_fiar_a_promessa_fabricada_a_faz_sumir_da_acusacao(
         self, tmp_path: Path
     ) -> None:
-        """A outra metade: o portão CALA quando a cura é entregue.
-
-        Sem este caso, ``promessas_sem_caminho`` poderia estar acusando tudo o
-        que é novo por construção — e um portão que grita sempre é pior que um
-        que nunca grita, porque ensina a ignorá-lo.
-
-        Desde 22/08/2026 "entregue" tem um degrau a mais, e o caso o exercita:
-        não basta existir um chamador, o chamador tem de ser ALCANÇADO. Aqui a
-        borda nova é fiada ao ``cli/app.py``, que é ponto de entrada declarado
-        — e a cura só sai da acusação nesse instante. Um chamador que ninguém
-        alcança é a corrente fechada, não a cura.
-        """
+        """A outra metade: o portão CALA quando a cura é entregue."""
         copia = _copia_de_src(tmp_path)
         (copia / "daemon" / "cura_recem_nascida.py").write_text(
             "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
@@ -4135,13 +2655,7 @@ class TestOPortaoMorde:
     def test_um_chamador_so_em_tests_nao_conta_como_caminho(
         self, tmp_path: Path
     ) -> None:
-        """A linha que separa a dívida solta do resto da árvore.
-
-        REMEDIDO em 22/08/2026: 52 dos 60 acusados têm chamador em ``tests/`` —
-        pareciam entregues. Se ``tests/`` passar a contar, a acusação despenca
-        para 8 e o portão para de ver justamente a forma mais comum do
-        defeito.
-        """
+        """A linha que separa a dívida solta do resto da árvore."""
         copia = _copia_de_src(tmp_path)
         (copia / "daemon" / "cura_recem_nascida.py").write_text(
             "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
@@ -4170,15 +2684,7 @@ class TestOPortaoMorde:
     def test_arrancar_o_unico_chamador_de_uma_cura_viva_a_acusa(
         self, tmp_path: Path
     ) -> None:
-        """A mordida sobre o produto de verdade, e não sobre um exemplo.
-
-        ``resume_vpads_after_steam_input`` está viva por UM chamador
-        (gamepad.py:332), e essa é a saída do ciclo da
-        ``ESCONDER-EM-VEZ-DE-SAIR-01`` — a que devolve o gamepad virtual a um
-        daemon que subiu antes da cura. Arrancada a linha da CÓPIA, o portão
-        TEM de acusar. É a prova de que ele mede a árvore, e não um arquivo
-        fabricado que se comporta bem.
-        """
+        """A mordida sobre o produto de verdade, e não sobre um exemplo."""
         copia = _copia_de_src(tmp_path)
         alvo = copia / "daemon" / "subsystems" / "gamepad.py"
         texto = alvo.read_text(encoding="utf-8")
@@ -4200,14 +2706,7 @@ class TestOPortaoMorde:
     def test_comentar_a_chamada_do_desinstalar_devolve_a_acusacao(
         self, tmp_path: Path
     ) -> None:
-        """A mordida do heredoc, sobre a árvore de verdade.
-
-        Ela prova as DUAS metades de uma vez, e é por isso que ela vale mais que
-        conferir a lista à mão: com o `uninstall.sh` inteiro, o portão CALA
-        sobre `strip_quirks_token`; arrancada a chamada da CÓPIA, ele VOLTA a
-        acusar. Se alguém tivesse "curado" a lacuna apagando a entrada do
-        registro, a segunda metade continuaria calada — e este caso reprovaria.
-        """
+        """A mordida do heredoc, sobre a árvore de verdade."""
         copia = _copia_de_src(tmp_path)
         chave = "integrations/kernel_cmdline.py::strip_quirks_token"
         assert chave not in promessas_sem_caminho(copia), (
@@ -4240,22 +2739,7 @@ class TestOPortaoMorde:
     def test_o_ponto_de_entrada_declarado_e_o_que_abre_o_alcance(
         self, tmp_path: Path
     ) -> None:
-        """A mordida de ``_PONTOS_DE_ENTRADA``, sobre a árvore de verdade.
-
-        Ela SUBSTITUI ``test_o_chamador_em_scripts_e_caminho_de_producao``, que
-        mediu a porta de ``scripts/`` enquanto ela existiu (15→22/08/2026), e
-        prova a mesma coisa que aquela provava, sobre a porta que a substituiu:
-        um ponto de entrada declarado é a ÚNICA coisa entre um módulo inteiro e
-        a lista de dívida. Se a lista esvaziar ou apodrecer, o portão passa a
-        cobrar de quem está certo — que é o defeito que ``strip_quirks_token``
-        já custou uma vez.
-
-        O alvo é ``integrations/steam_input_ponte.py``: onze símbolos públicos
-        que NADA em ``src/`` importa, e que só existem porque
-        ``scripts/disable_steam_input.sh``:283+298 roda o arquivo com
-        ``python3 ${PONTE_PY} --ligar``. É a forma mais pura da entrada por
-        roteiro, e por isso a testemunha certa.
-        """
+        """A mordida de ``_PONTOS_DE_ENTRADA``, sobre a árvore de verdade."""
         copia = _copia_de_src(tmp_path)
         chave = "integrations/steam_input_ponte.py::garantir_ponte"
         assert chave not in promessas_sem_caminho(copia), (
@@ -4264,26 +2748,9 @@ class TestOPortaoMorde:
             "do guarda roda a cada saída da Steam vira dívida"
         )
 
-        # O alvo da mordida é o ARQUIVO do ponto de entrada, não uma chamada:
-        # é a existência dele que faz o fecho começar ali. Apagá-lo é o
-        # equivalente exato de tirá-lo de `_PONTOS_DE_ENTRADA`.
         (copia / "integrations" / "steam_input_ponte.py").unlink()
 
         soltas = promessas_sem_caminho(copia)
-        # CANÁRIO TROCADO DUAS VEZES, e as duas trocas são o próprio portão
-        # funcionando. Era `prontuario_dos_jogos.py::Prontuario`, e aquele
-        # módulo GANHOU CAMINHO em 25/08. Virou
-        # `app/fala_do_mapa.py::formata_pt_br`, e ele ganhou caminho em 26/08
-        # (BG-03: virou o dono único da vírgula, e a lápide dele foi apagada no
-        # mesmo commit) — esta linha reprovou, que é exatamente o que ela
-        # promete fazer. Hoje é `app/fala_do_mapa.py::Numero`, irmão dele no
-        # mesmo módulo, que a medição de 26/08 mostrou NÃO ter caído junto.
-        # E o `Numero` ganhou caminho em 29/09/2026: a aba Conexões o usa
-        # (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01), e esta linha reprovou de
-        # novo. Hoje é `apelido_do_dongle.costurar_a_mesa`, que fica sem
-        # chamador por DECISÃO (D-COSTURA-BLUEZ): o canário não depende de uma
-        # dívida que alguém vai pagar. No dia em que ele cair, o conserto é
-        # trocar o canário de novo, não silenciar.
         assert "integrations/apelido_do_dongle.py::costurar_a_mesa" in soltas, (
             "sem o ponto de entrada a varredura devolveu algo inesperado — a "
             "medição de controle caiu junto e este caso não prova nada"
@@ -4299,27 +2766,13 @@ class TestOPortaoMorde:
     def test_sem_a_boca_da_interface_nova_a_janela_do_webview_e_divida(
         self, tmp_path: Path
     ) -> None:
-        """A mordida da BOCA da interface nova, nas duas pontas.
-
-        ``gui/ponte_da_tela.py::JanelaDaAba`` é a janela GTK3 que hospeda o
-        mockup — a interface que ela abre. NADA em ``src/`` a importa: quem a
-        levanta é o piloto de ``src/hefesto_dualsense4unix/interface/``, e é só a declaração da
-        cadeia do lançador que a tira da lista de dívida. Numa cópia sem
-        ``layout/``, ela TEM de voltar a ser acusada — senão a declaração não
-        está fazendo trabalho nenhum e as três lápides apagadas em 31/08/2026
-        teriam saído por engano.
-        """
+        """A mordida da BOCA da interface nova, nas duas pontas."""
         chave = "gui/ponte_da_tela.py::JanelaDaAba"
         assert chave not in promessas_sem_caminho(), (
             f"{chave!r} está acusada na árvore viva — a boca da interface nova "
             "parou de abrir alcance, e o portão voltou a chamar de dívida a "
             "janela que a usuária tem aberta"
         )
-        # SEM A PONTE, e agora DITO em vez de herdado do lugar: até 01/09/2026
-        # a interface morava em `layout/`, fora do `src/`, e uma cópia de `src/`
-        # nascia sem ela por construção. Com a mudança para dentro do pacote a
-        # cópia passou a trazer o piloto REAL — e esta mordida, que precisa
-        # medir o que acontece SEM a boca, deixou de medir coisa alguma.
         copia = _copia_de_src(tmp_path, sem_a_ponte=True)
         assert not pontes_vivas(tmp_path), (
             "a cópia nasceu com ponte mesmo pedida SEM ela — o `sem_a_ponte` "
@@ -4335,22 +2788,7 @@ class TestOPortaoMorde:
     def test_a_cura_chamada_so_pela_mordida_do_piloto_continua_acusada(
         self, tmp_path: Path
     ) -> None:
-        """O ponto delicado da migração, medido em vez de afirmado.
-
-        Contar a ponte como produção sem separar a ESPINHA da BANCADA faria uma
-        cura chamada só de dentro de ``if self.args.prova_gesto:`` passar por
-        ligada. Aqui a mesma cura é medida três vezes na mesma cópia: acusada
-        sob a guarda, absolvida quando a régua de comparação (a ponte inteira,
-        sem poda) é usada, e absolvida de novo quando a chamada SAI da guarda.
-        A segunda medição é o que prova que quem acusa é a poda, e não a
-        ausência de ponte.
-        """
-        # SEM A PONTE REAL, e agora DITO: o piloto fabricado abaixo mora em
-        # `_PILOTO_DA_INTERFACE_NOVA`, que desde 01/09/2026 é um arquivo que
-        # EXISTE dentro de `src/`. Copiar a pasta inteira e escrever por cima
-        # trocaria a mordida por uma sobrescrita do piloto de verdade — e o
-        # resto da interface continuaria alcançando a cura fabricada, deixando
-        # este caso verde sem medir a poda.
+        """O ponto delicado da migração, medido em vez de afirmado."""
         copia = _copia_de_src(tmp_path, sem_a_ponte=True)
         (copia / "daemon" / "cura_recem_nascida.py").write_text(
             "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
@@ -4423,13 +2861,7 @@ class TestOPortaoMorde:
     def test_a_corrente_fechada_em_si_mesma_nao_passa_mais(
         self, tmp_path: Path
     ) -> None:
-        """DEFEITO (a): ``A`` chama ``B``, ``B`` chama ``A``, e mais ninguém.
-
-        Os dois pareciam entregues, e é a forma mais cara do defeito-mãe —
-        três módulos reais desta árvore passavam assim (a nota do cabeçalho
-        traz a medição). Aqui a diferença é provada no MESMO caso: a régua
-        plana de até 21/08 APROVA a corrente, a régua de alcance REPROVA.
-        """
+        """DEFEITO (a): ``A`` chama ``B``, ``B`` chama ``A``, e mais ninguém."""
         copia = _copia_de_src(tmp_path)
         (copia / "daemon" / "corrente_fechada.py").write_text(
             "def entrar_no_ciclo() -> int:\n"
@@ -4463,13 +2895,7 @@ class TestOPortaoMorde:
     def test_a_colisao_de_nome_entre_modulos_nao_perdoa_mais(
         self, tmp_path: Path
     ) -> None:
-        """DEFEITO (b): um nome não é um endereço.
-
-        A régua plana perguntava se o NOME aparecia em algum lugar. Com isso,
-        um ``Censo`` chamado num módulo absolvia o ``Censo`` órfão de outro —
-        e foi assim, literalmente, que ``prontuario_dos_jogos.py``:549 se
-        escondeu atrás de ``sentinela_do_wrapper.py``:302 por meses.
-        """
+        """DEFEITO (b): um nome não é um endereço."""
         copia = _copia_de_src(tmp_path)
         (copia / "daemon" / "orfa_com_nome_comum.py").write_text(
             "class LevantamentoDaMesa:\n"
@@ -4479,8 +2905,6 @@ class TestOPortaoMorde:
             "        return 0\n",
             encoding="utf-8",
         )
-        # O homônimo mora num módulo ALCANÇADO (o `cli/app.py` é ponto de
-        # entrada declarado) e não tem relação nenhuma com a órfã acima.
         (copia / "cli" / "homonimo_alcancado.py").write_text(
             "class LevantamentoDaMesa:\n"
             "    def valor(self) -> int:\n"
@@ -4519,13 +2943,7 @@ class TestOPortaoMorde:
         )
 
     def test_o_comentario_do_roteiro_nao_conta_como_chamada(self) -> None:
-        """Citar não é chamar — a mesma linha que separa o P3a inteiro.
-
-        O `uninstall.sh` cita `strip_quirks_token` DUAS vezes: numa linha `#` de
-        prosa (:1606) e na chamada dentro do heredoc (:1647). Um portão que
-        lesse o roteiro como texto solto ficaria verde pelo comentário, e a
-        mordida acima passaria a medir nada.
-        """
+        """Citar não é chamar — a mesma linha que separa o P3a inteiro."""
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
@@ -4537,33 +2955,15 @@ class TestOPortaoMorde:
         )
 
     def test_uma_chave_de_ambiente_inventada_aparece_sem_mao(self) -> None:
-        """Se ``portas_que_ligam`` devolvesse algo para qualquer coisa, a
-        metade P3a estaria verde por construção."""
+        """Se ``portas_que_ligam`` devolvesse algo para qualquer coisa, a"""
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_CHAVE_QUE_NAO_EXISTE")
 
     def test_o_que_o_build_deixou_nao_e_porta(self, tmp_path: Path) -> None:
-        """Um `.rlib` não liga interruptor nenhum — e reprova nos dois sentidos.
-
-        O laço lê cada arquivo como TEXTO. O binário que o `cargo` deixa em
-        `packaging/cosmic-applet/target` (18G em 42.738 arquivos, MEDIDO em
-        13/08/2026) carrega as strings do fonte, e basta uma delas parecer
-        escrita de ambiente para uma lacuna real virar "tem porta" — a dívida
-        sumindo sozinha do relatório. Hoje nenhuma dispara; este caso existe
-        para que o dia em que uma disparar não seja um dia de silêncio.
-
-        As duas metades estão aqui de propósito: sem a segunda, a poda poderia
-        ter cegado o detector inteiro e este caso ficaria verde por não achar
-        NADA, que é o modo mais comum de uma exclusão passar despercebida.
-        """
+        """Um `.rlib` não liga interruptor nenhum — e reprova nos dois sentidos."""
         env = "HEFESTO_DUALSENSE4UNIX_CHAVE_QUE_NAO_EXISTE"
         applet = tmp_path / "packaging" / "cosmic-applet"
         artefato = applet / "target" / "debug"
         artefato.mkdir(parents=True)
-        # O formato importa: o que engana o detector é a string do fonte caindo
-        # LOGO DEPOIS de um byte de quebra de linha dentro do blob — e é assim
-        # que ela cai, porque o `cargo` empacota as strings uma por linha na
-        # seção de dados. Um blob onde o nome não começa linha não engana
-        # ninguém, e um caso montado assim ficaria verde sem medir a poda.
         (artefato / "libhefesto_applet.rlib").write_text(
             f"\x7fELF\x00\x00\n{env}=1\n\x00", encoding="utf-8"
         )
@@ -4572,7 +2972,6 @@ class TestOPortaoMorde:
             "a acreditar no que o compilador deixou, e a dívida some sozinha"
         )
 
-        # A outra metade: o MESMO texto, uma pasta acima, CONTINUA sendo porta.
         (applet / "hefesto-applet.service").write_text(
             f"[Service]\nEnvironment={env}=1\n", encoding="utf-8"
         )
@@ -4582,26 +2981,14 @@ class TestOPortaoMorde:
         )
 
     def test_a_unica_porta_real_da_arvore_sobrevive_a_poda(self) -> None:
-        """A poda medida contra a árvore viva, e não contra a plausibilidade.
-
-        `_PASTAS_DE_ARTEFATO` é uma EXCLUSÃO, e toda exclusão pode levar junto o
-        que devia preservar. A conferência barata é a testemunha que já existe:
-        a única escrita de ambiente real desta árvore mora em `assets/`, e ela
-        tem de continuar sendo achada depois da poda. Se um dia uma porta
-        legítima nascer sob um dos nomes podados (um `packaging/*/build/`
-        versionado), é aqui que a conta não vai fechar.
-        """
+        """A poda medida contra a árvore viva, e não contra a plausibilidade."""
         assert portas_que_ligam("HEFESTO_BROKER_ALLOWED_UID") == ["unit"], (
             "a poda de `_PASTAS_DE_ARTEFATO` levou junto a única porta de "
             "verdade da árvore — a exclusão ficou larga demais"
         )
 
     def test_a_razao_curta_demais_reprova(self) -> None:
-        """A guarda das razões, apontada para si mesma.
-
-        Sem este caso, ``_confere_razoes`` poderia estar aceitando qualquer
-        coisa e os registros virariam ``{"x": "ok"}`` sem ninguém notar.
-        """
+        """A guarda das razões, apontada para si mesma."""
         with pytest.raises(AssertionError, match="não diz onde o caminho se perde"):
             _confere_razoes(("_REGISTRO_FABRICADO", {"exemplo": "porque sim"}))
 
@@ -4623,14 +3010,6 @@ class TestOPortaoMorde:
             )
 
 
-# ===========================================================================
-# P5 — o portão não esconde metade do que vê
-# ===========================================================================
-
-#: Duas lápides fabricadas, uma para cada registro. Os caminhos NÃO existem em
-#: `src/`, e é isso que as faz contar como "curadas" (fora de
-#: `promessas_sem_caminho`) e como "fantasmas" (fora de
-#: `_promessas_publicas_por_chave`) ao mesmo tempo.
 _LAPIDE_FABRICADA_A = "fabricado/primeiro.py::cura_alfa_que_nunca_existiu"
 _LAPIDE_FABRICADA_B = "fabricado/segundo.py::cura_beta_que_nunca_existiu"
 
@@ -4642,28 +3021,7 @@ _RAZAO_FABRICADA = (
 
 
 class TestOPortaoNaoEscondeMetadeDoQueVe:
-    """As réguas que varrem DOIS registros nomeiam os dois, não só o primeiro.
-
-    POR QUE ESTA CLASSE EXISTE — MEDIDO em 25/08/2026 (AUDITORIA-DE-PERDA-01,
-    agente C2). As três réguas abaixo varriam mais de um registro com o
-    ``assert`` DENTRO do laço. Em Python, o ``assert`` levanta: a primeira
-    falha aborta o laço e o resto dos registros nunca é lido. O portão ficava
-    vermelho — então parecia estar funcionando — e mostrava METADE do que
-    tinha visto.
-
-    O preço já foi pago: ``utils/maquina.py::gravar_maquina`` e
-    ``app/ipc_bridge.py::destinos_da_aplicacao`` eram DUAS lápides caducas, em
-    registros diferentes, e ninguém soube que eram duas. Quem lê "1 símbolo
-    acusado" fecha a tarefa; a fila real tinha dois. É a família
-    "o portão que não mede o que promete", vista de dentro. As datas medidas
-    das duas estão no topo deste arquivo, na regra de varredura — elas
-    conviveram HORAS, não meses, e é isso que aponta a causa para "árvore que
-    mudou na mesma madrugada, por outra frente".
-
-    MORDIDA de todas as três: devolver o ``assert`` para dentro do laço (ou
-    voltar `_confere_razoes` a levantar na primeira queixa). O caso reprova
-    dizendo exatamente qual registro ficou escondido.
-    """
+    """As réguas que varrem DOIS registros nomeiam os dois, não só o primeiro."""
 
     def test_a_lapide_curada_nomeia_os_dois_registros(
         self, monkeypatch: pytest.MonkeyPatch
@@ -4704,13 +3062,7 @@ class TestOPortaoNaoEscondeMetadeDoQueVe:
         _os_dois_registros_saem_na_acusacao(str(erro.value), "símbolo fantasma")
 
     def test_a_razao_mal_escrita_nomeia_os_dois_registros(self) -> None:
-        """E a guarda das razões: uma queixa em cada registro, as duas na conta.
-
-        Aqui a perda era DUPLA — o ``assert`` cortava dentro do registro E os
-        quatro registros de ambiente eram conferidos em quatro chamadas
-        sequenciais, então a primeira queixa escondia as outras três listas
-        inteiras.
-        """
+        """E a guarda das razões: uma queixa em cada registro, as duas na conta."""
         with pytest.raises(AssertionError) as erro:
             _confere_razoes(
                 ("_REGISTRO_FABRICADO_A", {_LAPIDE_FABRICADA_A: "porque sim"}),
@@ -4720,13 +3072,7 @@ class TestOPortaoNaoEscondeMetadeDoQueVe:
         _os_dois_registros_saem_na_acusacao(str(erro.value), "razão mal escrita")
 
     def test_a_regua_da_acusacao_dupla_sabe_recusar(self) -> None:
-        """O dublê que só sabe passar não é dublê.
-
-        Se `_os_dois_registros_saem_na_acusacao` aceitasse qualquer texto, as
-        três provas acima passariam com o defeito de volta. Aqui ela vê uma
-        mensagem que nomeia SÓ o primeiro — que é exatamente o que o `assert`
-        dentro do laço produzia — e tem de recusar.
-        """
+        """O dublê que só sabe passar não é dublê."""
         with pytest.raises(AssertionError, match="escondeu"):
             _os_dois_registros_saem_na_acusacao(
                 f"_NAO_E_PROMESSA declara: {_LAPIDE_FABRICADA_A}", "fabricado"
@@ -4751,23 +3097,3 @@ def _os_dois_registros_saem_na_acusacao(mensagem: str, regua: str) -> None:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# POR QUE ESTE ARQUIVO NÃO SE CHAMA `test_*` — 12/08/2026
-#
-# Ela decidiu, quando o portão foi proposto: "script duro, no CI e no
-# pre-commit". O agente que o escreveu entregou como teste dentro da suíte, e
-# o preço apareceu na primeira execução: MEDIDO, este arquivo sozinho levava
-# mais de 5 minutos e a suíte inteira (que roda em 4m30) parecia travada. Com
-# o cache de leitura em `_texto_sem_comentario` caiu para ~2 min — ainda caro
-# demais para viver ao lado de 9000 testes que custam 4m30 SOMADOS.
-#
-# Sem o prefixo `test_`, o pytest não o coleta na varredura padrão; ele
-# continua sendo executável — e é executado — quando apontado pelo caminho,
-# que é como o job próprio do CI o chama. O portão NÃO está desligado: está
-# fora do caminho quente.
-#
-# O passo que falta, e que é o que ela pediu desde o começo: convertê-lo em
-# `scripts/check_*.py` de verdade, no molde dos outros portões da casa, com
-# saída que diz o que FAZER. Enquanto isso não acontece, este comentário é a
-# nota datada que impede a mudança de passar por acidente.
-# ─────────────────────────────────────────────────────────────────────────

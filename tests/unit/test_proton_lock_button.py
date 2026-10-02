@@ -20,11 +20,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("o botão da trava do Proton")
 
 import contextlib
@@ -40,9 +35,6 @@ from tests.conftest import skip_sem_gtk_response
 
 
 def _install_gi_stubs() -> None:
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # o merge abaixo mutaria o gi REAL e faria testes de GUI pularem como
-    # "ambiente sem GTK".
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -73,7 +65,6 @@ def _install_gi_stubs() -> None:
     ):
         if not hasattr(gtk_mod, cls_name):
             setattr(gtk_mod, cls_name, type(cls_name, (), {}))
-    # Enums usados pelos handlers de confirmação (valores do GTK real).
     if not hasattr(gtk_mod, "ResponseType"):
         gtk_mod.ResponseType = type(  # type: ignore[attr-defined]
             "ResponseType", (), {"OK": -5, "CANCEL": -6, "DELETE_EVENT": -4}
@@ -109,10 +100,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
 )
 
 _PP_MODNAME = "hefesto_dualsense4unix.integrations.proton_pin"
-
-# ---------------------------------------------------------------------------
-# format_proton_lock_result — pura, o miolo do toast
-# ---------------------------------------------------------------------------
 
 
 class TestFormatDoResultado:
@@ -164,18 +151,12 @@ class TestFormatDoResultado:
         assert "Nada a mudar" in format_proton_lock_result({})
 
     def test_bool_nao_conta_como_int(self) -> None:
-        # blindagem: {"locked": True} não pode virar "1 jogo(s)".
         assert "Nada a mudar" in format_proton_lock_result({"locked": True})
 
     def test_tool_nao_string_e_ignorada(self) -> None:
         msg = format_proton_lock_result({"locked": 1, "tool": 10})
         assert "1 jogo(s)" in msg
         assert "10" not in msg.replace("1 jogo", "")
-
-
-# ---------------------------------------------------------------------------
-# Fluxo do worker (Steam aberta / contrato / módulo ou função ausente / erro)
-# ---------------------------------------------------------------------------
 
 
 class _Stub(DaemonActionsMixin):
@@ -204,11 +185,7 @@ def sincrono(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture()
 def pp_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Módulo proton_pin FAKE injetado em sys.modules (contrato PLAT-01).
-
-    O módulo real nasce em lane paralela (P-A) e o teste do CONTRATO não
-    pode depender de ele existir no disco — `sys.modules` vence o import.
-    """
+    """Módulo proton_pin FAKE injetado em sys.modules (contrato PLAT-01)."""
     caixa: dict[str, Any] = {
         "running": False,
         "result": {"locked": 2, "skipped": 0, "errors": 0,
@@ -242,7 +219,7 @@ class TestWorker:
 
         stub._proton_lock_worker()
 
-        assert pp_fake["chamadas"] == 0  # NÃO tocou em nada
+        assert pp_fake["chamadas"] == 0
         assert any("Steam está aberta" in t for t in stub.toasts)
         assert any("feche-a" in t for t in stub.toasts)
 
@@ -256,16 +233,12 @@ class TestWorker:
         assert pp_fake["chamadas"] == 1
         assert any("2 jogo(s)" in t for t in stub.toasts)
         assert any("GE-Proton10-34" in t for t in stub.toasts)
-        # A ORDEM DE 17/09 CHEGA AO BOTÃO (18/09/2026): ele travava com a
-        # guarda `preservado`, e o conselho do install dizia `--todos`. A
-        # MORDIDA: volte a chamada para `lock_fn()` e isto reprova.
         assert pp_fake["kwargs"].get("todos") is True, pp_fake["kwargs"]
 
     def test_modulo_ausente_recusa_com_o_caminho_do_install(
         self, sincrono: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Instalação sem a lane do pin: `None` em sys.modules faz o import
-        levantar ImportError — recusa honesta, nunca traceback."""
+        """Instalação sem a lane do pin: `None` em sys.modules faz o import"""
         monkeypatch.setitem(sys.modules, _PP_MODNAME, None)
         stub = _Stub()
 
@@ -280,8 +253,7 @@ class TestWorker:
         pp_fake: dict[str, Any],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Módulo presente mas SEM a função de lock (versão antiga): recusa
-        honesta apontando o install — nunca AttributeError."""
+        """Módulo presente mas SEM a função de lock (versão antiga): recusa"""
         monkeypatch.delattr(pp_fake["mod"], "lock_proton_for_all_games")
         stub = _Stub()
 
@@ -297,8 +269,7 @@ class TestWorker:
         pp_fake: dict[str, Any],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Contrato tolerante: proton_pin sem `steam_running` cai no gate de
-        steam_launch_options — a recusa com a Steam viva continua valendo."""
+        """Contrato tolerante: proton_pin sem `steam_running` cai no gate de"""
         from hefesto_dualsense4unix.integrations import (
             steam_launch_options as slo,
         )
@@ -318,7 +289,7 @@ class TestWorker:
         pp_fake["result"] = OSError("disco sumiu")
         stub = _Stub()
 
-        stub._proton_lock_worker()  # não propaga
+        stub._proton_lock_worker()
 
         assert any("Não consegui travar o Proton" in t for t in stub.toasts)
 
@@ -338,11 +309,6 @@ class TestModuloRealExpoeOSimbolo:
         lock_fn = getattr(pp_real, "lock_proton_for_all_games", None)
         assert lock_fn is not None, "o botão da GUI chama exatamente este nome"
         assert callable(lock_fn)
-
-
-# ---------------------------------------------------------------------------
-# Confirmação — só o OK dispara; qualquer outra resposta é no-op
-# ---------------------------------------------------------------------------
 
 
 class _FakeDialog:
@@ -375,7 +341,7 @@ class TestConfirmacao:
         assert dlg.destroyed is True
         assert stub.worker_calls == 1
 
-    @pytest.mark.parametrize("resposta", [-6, -4, 0])  # CANCEL, DELETE, outro
+    @pytest.mark.parametrize("resposta", [-6, -4, 0])
     def test_qualquer_outra_resposta_so_fecha(self, resposta: int) -> None:
         stub = self._stub_com_worker_gravado()
         dlg = _FakeDialog()
@@ -387,8 +353,7 @@ class TestConfirmacao:
 
 
 class TestDialogoDeConfirmacaoPorFonte:
-    """Espelho stub-level (headless): confirmação temada, não-bloqueante e
-    com o texto honesto — o assert GTK-real vive na classe guardada abaixo."""
+    """Espelho stub-level (headless): confirmação temada, não-bloqueante e"""
 
     def test_confirmacao_e_temada_e_nao_bloqueante(self) -> None:
         src = inspect.getsource(
@@ -396,16 +361,16 @@ class TestDialogoDeConfirmacaoPorFonte:
         ) + inspect.getsource(DaemonActionsMixin.on_proton_lock)
         compacto = src.replace("\n", "").replace(" ", "")
         assert 'add_class("hefesto-dualsense4unix-window")' in compacto
-        assert 'connect("response"' in compacto  # nunca run() (imkillable)
+        assert 'connect("response"' in compacto
         assert ".run()" not in src
-        assert "backup" in src  # promessa do PLAT-01 no texto pro leigo
-        assert "FECHADA" in src  # o pré-requisito da Steam explícito
+        assert "backup" in src
+        assert "FECHADA" in src
 
     def test_worker_importa_lazy_dentro_do_handler(self) -> None:
         src = inspect.getsource(DaemonActionsMixin._proton_lock_worker)
         assert "hefesto_dualsense4unix.integrations.proton_pin" in src
         assert "lock_proton_for_all_games" in src
-        assert "getattr" in src  # defensivo contra instalação antiga
+        assert "getattr" in src
 
 
 _DISPLAY_OK = False

@@ -50,7 +50,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-APPID = 1599660  # Sackboy: A Big Adventure — o jogo da medição
+APPID = 1599660
 
 
 def _marker(tmp_path: Path, *, appid: int, epoch: int) -> Path:
@@ -97,21 +97,7 @@ class _DaemonFalso:
 
 
 class _GerenteEspiao:
-    """Substitui o `ProfileManager` e anota o que a ativação recebeu.
-
-    Ele PREENCHE o relatório com as oito seções, como o de verdade faz — sem
-    isso o teste do item 4 passaria com o relatório vazio, que é justamente o
-    estado que o defeito produzia.
-
-    **E ele CHAMA o `mode_applier`, como o `ProfileManager.activate` chama**
-    (22/08/2026). A versão anterior só anotava os kwargs da construção, e por
-    isso mediu a FIAÇÃO e não o EFEITO: com `mode_applier=None` a régua dizia
-    "o modo está pulado" sem nunca ter perguntado o que o applier faria. Foi
-    assim que a allowlist passou horas REMOVENDO a máscara do perfil enquanto o
-    portão ficava verde. A fábrica de verdade injeta
-    `daemon.apply_profile_mode` quando o chamador não sobrescreve — o dublê
-    reproduz isso, senão o ramo de fora da allowlist ficaria mudo aqui.
-    """
+    """Substitui o `ProfileManager` e anota o que a ativação recebeu."""
 
     chamadas: ClassVar[list[tuple[str, str]]] = []
     relatorios: ClassVar[list[dict[str, str]]] = []
@@ -200,9 +186,6 @@ def _armar(
     return daemon, le.arm_launch_profile(daemon, base_dir=env_dir, now=now)
 
 
-# --- 1 e 3. A ativação acontece, com a origem certa -------------------------
-
-
 def test_o_lancamento_chama_a_ativacao_do_perfil(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
@@ -220,28 +203,15 @@ def test_o_lancamento_chama_a_ativacao_do_perfil(
 def test_a_origem_e_launch_e_nao_manual(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """`manual` furaria o lock de 30 s e gravaria `session.json`.
-
-    As duas coisas são erradas para uma ativação automática: a primeira
-    atropelaria um gesto dela de segundos atrás; a segunda faria o jogo de hoje
-    decidir qual perfil abre no boot de amanhã.
-
-    Mordida: trocar `origin="launch"` por `origin="manual"`.
-    """
+    """`manual` furaria o lock de 30 s e gravaria `session.json`."""
     _armar(env_dir, monkeypatch)
     assert [origem for _nome, origem in espiao.chamadas] == ["launch"]
-
-
-# --- 2. A allowlist NÃO tira o Hefesto da frente ----------------------------
 
 
 def test_na_allowlist_o_perfil_e_ativado_do_mesmo_jeito(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """A decisão dela, em código.
-
-    Mordida: mover a chamada para DEPOIS do `if na_allowlist: return`.
-    """
+    """A decisão dela, em código."""
     _daemon, resultado = _armar(env_dir, monkeypatch, na_allowlist=True)
 
     assert resultado is not None
@@ -256,21 +226,7 @@ def test_na_allowlist_o_perfil_e_ativado_do_mesmo_jeito(
 def test_na_allowlist_a_mascara_do_perfil_chega(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """ALLOWLIST-SO-A-MASCARA-01 — a metade que a medição de 22/08 derrubou.
-
-    **SÃO DOIS CAMINHOS ATÉ O MESMO APPLIER.** O `return` do ramo da allowlist
-    pula o `apply_profile_mode` que o arming chama DIRETO; a ativação tem o
-    seu, dentro do `apply_emulation`. Este teste cobra o de DENTRO: com o
-    Sackboy marcado, o perfil pede `gamepad_flavor="dualsense"` e a máscara
-    tem de chegar.
-
-    Por algumas horas de 22/08 a cura foi `mode_applier=None`, e ela está
-    refutada pela medição no daemon dela: `active_profile="Sackboy"`,
-    `mode_from_profile=null`, quatro vpads uinput e `flavor="xbox"` — marcar o
-    jogo REMOVIA touchpad, giroscópio e acelerômetro em vez de preservá-los.
-
-    Mordida: trocar o embrulho de volta por `mode_applier=None`.
-    """
+    """ALLOWLIST-SO-A-MASCARA-01 — a metade que a medição de 22/08 derrubou."""
     daemon, _resultado = _armar(env_dir, monkeypatch, na_allowlist=True)
 
     assert espiao.chamadas == [("Sackboy", "launch")]
@@ -292,14 +248,7 @@ def test_na_allowlist_a_mascara_do_perfil_chega(
 def test_na_allowlist_o_kind_continua_pulado(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """A outra metade: ativar o perfil não pode ressuscitar a disputa pelo vpad.
-
-    Um perfil `kind="native"` marcado na allowlist pediria o release total —
-    largar o físico e desligar o vpad. Isso é disputa pelo controle, e é
-    exatamente o que a allowlist existe para pular.
-
-    Mordida: apagar o `if kind != "gamepad"` de `_mode_applier_so_a_mascara`.
-    """
+    """A outra metade: ativar o perfil não pode ressuscitar a disputa pelo vpad."""
     daemon, resultado = _armar(env_dir, monkeypatch, na_allowlist=True, kind="native")
 
     assert resultado is not None and resultado["motivo"] == "allowlist_steam_input"
@@ -315,14 +264,7 @@ def test_na_allowlist_o_kind_continua_pulado(
 def test_fora_da_allowlist_nada_muda(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """A contraparte: o embrulho é exceção da allowlist, não regra.
-
-    Sem este par, embrulhar todo mundo passaria nos dois testes acima e o
-    perfil deixaria de armar o modo em TODO jogo que a máscara ainda não
-    estivesse de pé — a cura virando o defeito.
-
-    Mordida: passar o embrulho incondicionalmente.
-    """
+    """A contraparte: o embrulho é exceção da allowlist, não regra."""
     _armar(env_dir, monkeypatch, na_allowlist=False)
 
     assert espiao.construidos == [{"store": None}], (
@@ -334,9 +276,6 @@ def test_fora_da_allowlist_nada_muda(
     )
 
 
-# --- 4. O relatório sobe, nos dois caminhos ---------------------------------
-
-
 @pytest.mark.parametrize("na_allowlist", [False, True])
 def test_o_relatorio_da_ativacao_sobe_no_retorno(
     env_dir: Path,
@@ -344,10 +283,7 @@ def test_o_relatorio_da_ativacao_sobe_no_retorno(
     espiao: type[_GerenteEspiao],
     na_allowlist: bool,
 ) -> None:
-    """Sem ele, `armado: True` é resposta de TRANSPORTE.
-
-    Mordida: apagar a chave do payload de um dos dois dicionários de retorno.
-    """
+    """Sem ele, `armado: True` é resposta de TRANSPORTE."""
     _daemon, resultado = _armar(env_dir, monkeypatch, na_allowlist=na_allowlist)
 
     assert resultado is not None
@@ -359,16 +295,10 @@ def test_o_relatorio_da_ativacao_sobe_no_retorno(
     assert set(entrou) == set(_GerenteEspiao.SECOES)
 
 
-# --- 5. Falhar na ativação não derruba o arming -----------------------------
-
-
 def test_ativacao_que_levanta_nao_impede_o_arming_do_modo(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """O modo é o que põe o controle na mão dela — ele não pode cair junto.
-
-    Mordida: tirar o `try/except` de `_ativar_o_perfil_do_lancamento`.
-    """
+    """O modo é o que põe o controle na mão dela — ele não pode cair junto."""
     espiao.levanta = True
     daemon, resultado = _armar(env_dir, monkeypatch)
 
@@ -380,17 +310,10 @@ def test_ativacao_que_levanta_nao_impede_o_arming_do_modo(
     )
 
 
-# --- 6. Uma vez por lançamento ----------------------------------------------
-
-
 def test_a_ativacao_roda_uma_vez_so_por_lancamento(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """A reconciliação anda a 1 Hz. Sem a guarda, seria uma ativação por segundo
-    durante o carregamento inteiro do jogo — e cada uma reescreve gatilho e LED.
-
-    Mordida: apagar o gate do `_launch_armed_for` no topo do arming.
-    """
+    """A reconciliação anda a 1 Hz. Sem a guarda, seria uma ativação por segundo"""
     _marker(env_dir, appid=APPID, epoch=1000)
     monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(APPID, _perfil())])
     monkeypatch.setattr(le, "steam_input_appids", set)
@@ -402,25 +325,8 @@ def test_a_ativacao_roda_uma_vez_so_por_lancamento(
     assert len(espiao.chamadas) == 1
 
 
-# --- A fábrica do gerente ---------------------------------------------------
-
-
 def test_a_fabrica_cobre_todo_applier_que_o_gerente_aceita() -> None:
-    """A régua é o `ProfileManager`, e NÃO a própria lista da fábrica.
-
-    Medido em 22/08/2026, escrevendo este arquivo: a primeira versão deste teste
-    iterava `APPLIERS_DO_DAEMON` para conferir `APPLIERS_DO_DAEMON`. Arrancar um
-    par da lista fazia o teste passar — ele conferia o instrumento contra si
-    mesmo. Nesta casa o instrumento mente mais que o produto, e a regra é
-    validar a régua contra uma contagem independente antes de acreditar nela.
-
-    A contagem independente são os campos do próprio `ProfileManager`: todo
-    campo cujo nome termina em `_applier` é uma seção que o gerente sabe
-    aplicar, e cada um precisa de alguém que o injete. Um applier novo no
-    dataclass e esquecido na fábrica reprova aqui.
-
-    Mordida: tirar um par de `APPLIERS_DO_DAEMON`.
-    """
+    """A régua é o `ProfileManager`, e NÃO a própria lista da fábrica."""
     import dataclasses
 
     from hefesto_dualsense4unix.profiles.manager import (
@@ -445,14 +351,7 @@ def test_a_fabrica_cobre_todo_applier_que_o_gerente_aceita() -> None:
 
 
 def test_a_fabrica_injeta_o_que_o_daemon_tem() -> None:
-    """E o que ela promete injetar, ela injeta mesmo.
-
-    O teste acima cobre a LISTA; este cobre a CONSTRUÇÃO. Os dois juntos são o
-    par: um diz que nenhuma seção ficou de fora do contrato, o outro que o
-    contrato é cumprido.
-
-    Mordida: trocar o laço de injeção por um `pass`.
-    """
+    """E o que ela promete injetar, ela injeta mesmo."""
     from hefesto_dualsense4unix.profiles.manager import (
         APPLIERS_DO_DAEMON,
         gerente_do_daemon,
@@ -482,14 +381,7 @@ def test_a_fabrica_injeta_o_que_o_daemon_tem() -> None:
 
 
 def test_daemon_sem_o_applier_nao_derruba_a_construcao() -> None:
-    """Contrato declarado: `getattr` com default `None`, sempre.
-
-    Esta função é chamada por dublês da suíte e por rotas de CLI que não têm
-    daemon nenhum. Um atributo ausente ali não pode derrubar a ativação — a
-    seção volta a ser ignorada, que é o comportamento histórico.
-
-    Mordida: trocar o `getattr(daemon, atributo, None)` por acesso direto.
-    """
+    """Contrato declarado: `getattr` com default `None`, sempre."""
     from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
     class _DaemonPelado:

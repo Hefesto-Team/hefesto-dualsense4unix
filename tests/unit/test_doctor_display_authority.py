@@ -35,8 +35,7 @@ APP_ID = "hefesto-dualsense4unix"
 
 @pytest.fixture
 def runtime_dir() -> Iterator[Path]:
-    """Diretório CURTO em `/tmp` (não o `tmp_path` do pytest — profundo demais:
-    estoura o limite de ~108 bytes de path de um AF_UNIX socket)."""
+    """Diretório CURTO em `/tmp` (não o `tmp_path` do pytest — profundo demais:"""
     d = Path(tempfile.mkdtemp(prefix="hf-doc-"))
     try:
         yield d
@@ -190,6 +189,5 @@ def test_authority_unknown_degradado_e_warn_com_causa(runtime_dir: Path) -> None
     assert "[WARN]" in saida
     assert "UNKNOWN" in saida
     assert "detector_de_janela_cego" in saida
-    # posse por-controle listada junto (get_players()/get_rgb() x posse).
     assert "player_slot=1" in saida
     assert "lightbar_source=sysfs" in saida

@@ -236,7 +236,7 @@ no de estranhos. Sem ele o id vira
 ``source-output-by-application-id:br.dev.hefesto.luz_do_mic``, que é só nosso.
 
 **O QUE ESTE CRIVO NÃO ALCANÇA, e é dívida declarada:** o outro ``parec`` desta
-casa. `app/mic_monitor.py:645` (`_abrir_captura`) abre um ``parec`` CRU, que
+casa. `app/mic_monitor.py:506` (`_abrir_captura`) abre um ``parec`` CRU, que
 aparece como ``application.name = "parec"`` — indistinguível do ``parec`` de
 qualquer outro programa. Com a janela aberta na aba Status, a PEÇA A vê aquele
 fluxo como ouvinte. A cura é de uma linha (acrescentar as mesmas propriedades
@@ -265,44 +265,24 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# --------------------------------------------------------------------------
-# A IDENTIDADE — dono único, e a PEÇA A lê daqui
-# --------------------------------------------------------------------------
 
-#: Como o servidor de som nos chama (``application.name`` e ``node.name``).
-#: É o único crivo que sobrevive às DUAS formas de cliente (pulse e PipeWire
-#: nativo): a forma nativa não publica ``application.process.id`` nenhum, então
-#: excluir por PID deixaria a luz acesa sozinha.
 NOME_DO_MEDIDOR = "hefesto-medidor-de-nivel"
 
-#: ``media.name`` do fluxo. Aparece na lista como o nome do que estamos ouvindo.
 NOME_DO_FLUXO = "luz-do-mic"
 
-#: ``application.id``. Reverso desta casa, específico da luz.
 APLICACAO_ID = "br.dev.hefesto.luz_do_mic"
 
-#: A chave e o valor do papel — o crivo EXPLÍCITO.
 CHAVE_DO_PAPEL = "hefesto.papel"
 PAPEL_DO_MEDIDOR = "medidor-de-nivel"
 
-#: A chave que carrega DE QUE controle é este medidor. Não serve só para
-#: excluir: deixa a PEÇA A dizer *qual* controle estamos medindo, sem ter de
-#: casar índice de fonte com ``uniq`` uma segunda vez.
 CHAVE_DO_UNIQ = "hefesto.uniq"
 
-#: A propriedade que LIGA o modo de pico do reamostrador — e que é, ao mesmo
-#: tempo, o crivo INTRÍNSECO: quem recebe envelope não consegue ouvir.
 CHAVE_DO_PICO = "resample.peaks"
 VALOR_DO_PICO = "true"
 
 
 def propriedades_do_medidor(uniq: str = "") -> dict[str, str]:
-    """As propriedades que o nosso fluxo publica no servidor de som.
-
-    Medidas chegando verbatim ao ``pactl list source-outputs`` em 03/09/2026.
-    `uniq` vazio quer dizer "não sei de quem é este medidor" e a chave sai da
-    lista — melhor faltar do que publicar um endereço inventado.
-    """
+    """As propriedades que o nosso fluxo publica no servidor de som."""
     props = {
         CHAVE_DO_PICO: VALOR_DO_PICO,
         "application.id": APLICACAO_ID,
@@ -314,18 +294,7 @@ def propriedades_do_medidor(uniq: str = "") -> dict[str, str]:
 
 
 def e_stream_do_medidor(propriedades: Mapping[str, str]) -> bool:
-    """Este fluxo de captura é o NOSSO medidor? — o crivo que a PEÇA A usa.
-
-    Recebe o bloco ``Properties:`` de um ``Source Output`` já em dicionário e
-    responde se ele deve ser DESCONTADO da conta de quem ouve. Três marcas
-    independentes, em OU: basta uma. Ver o cabeçalho do módulo para a ordem e
-    a razão de cada uma.
-
-    Aceitar ``resample.peaks`` de QUALQUER aplicativo é deliberado: um fluxo em
-    modo de pico recebe ``max|x|`` por bloco, não áudio — ele não consegue
-    ouvir ninguém, seja nosso ou de estranho. Contar um medidor alheio como
-    ouvinte acenderia a luz por um aplicativo que também só está medindo.
-    """
+    """Este fluxo de captura é o NOSSO medidor? — o crivo que a PEÇA A usa."""
     if propriedades.get(CHAVE_DO_PICO, "").strip().lower() == VALOR_DO_PICO:
         return True
     if propriedades.get(CHAVE_DO_PAPEL, "").strip() == PAPEL_DO_MEDIDOR:
@@ -333,73 +302,31 @@ def e_stream_do_medidor(propriedades: Mapping[str, str]) -> bool:
     return propriedades.get("application.id", "").strip() == APLICACAO_ID
 
 
-# --------------------------------------------------------------------------
-# A RÉGUA
-# --------------------------------------------------------------------------
-
-#: Amostras por segundo que o servidor entrega. 25 Hz = 100 bytes/s por canal,
-#: e é o passo de 40 ms com que a luz pode reagir.
 TAXA_HZ = 25
 
-#: Pico que ACENDE, se sustentado por :data:`ENTRA_S` (-24,0 dBFS). Onze dB
-#: acima do p99 do piso medido em 605 s de sala real (-35,14 dBFS).
 LIMIAR_ENTRA = 0.0631
 
-#: Por quanto tempo CONTÍNUO o pico tem de ficar acima de :data:`LIMIAR_ENTRA`
-#: para acender — quatro amostras seguidas a 25 Hz. É o degrau que separa
-#: IMPULSO de FALA, e sem ele a luz acende sozinha nove vezes em 605 s de sala
-#: vazia: os 19 estouros que o piso dela tem são de uma amostra cada.
 ENTRA_S = 0.12
 
-#: Pico abaixo do qual começa a contar o apagamento (-30,0 dBFS), 6 dB abaixo
-#: da entrada.
 LIMIAR_SAI = 0.0316
 
-#: Quanto tempo CONTÍNUO abaixo de :data:`LIMIAR_SAI` para apagar. A pausa
-#: entre duas sílabas é bem mais curta que isto — é o que separa "a luz
-#: acompanha a fala" de "a luz acompanha a forma de onda".
 SEGURA_S = 0.6
 
-#: Fluxo vivo que para de entregar amostra por este tempo volta a ser ``None``
-#: **e é fechado**. Um ``parec`` pendurado (vivo, mudo) responderia ``False``
-#: para sempre, com toda a confiança do mundo — e ``False`` é uma afirmação,
-#: não uma ausência. Pior: ele seguraria o microfone DELA aberto, que é o
-#: vazamento medido de 00h36 entrando por outra porta. Ver a §TRAVA DE MORTE.
 MUDEZ_S = 3.0
 
-#: Folga numérica dos degraus de TEMPO, e ela tem razão de ser: os instantes
-#: das amostras são RECONSTRUÍDOS por divisão (ver :meth:`NivelDoMicrofone._comer`)
-#: e o relógio chega em ponto flutuante. "Exatamente :data:`ENTRA_S` decorrido"
-#: erra na 13ª casa decimal e vira cara ou coroa — a quarta amostra de uma
-#: rajada acenderia ou não conforme o arredondamento. Um microssegundo é
-#: quarenta mil vezes menor que o passo de 40 ms: não muda comportamento
-#: nenhum, só tira a moeda do ar.
 _FOLGA_S = 1e-6
 
-_TAM_AMOSTRA = 4  # float32
+_TAM_AMOSTRA = 4
 _LOTE_BYTES = 4096
 _ESPERA_DO_SELETOR_S = 0.2
 _ESPERA_APOS_MORTE_S = 2.0
 
-#: Espera depois de recolher um fluxo que emudeceu. É mais longa que a de
-#: morte de propósito: abrir e fechar em rajada faz o nó da fonte piscar entre
-#: ``RUNNING`` e ``SUSPENDED``, e é esse grafo que a PEÇA A lê para contar
-#: ouvintes — o medidor passaria a tremer a leitura da outra peça.
 _ESPERA_APOS_MUDEZ_S = 10.0
 
 
 @dataclass
 class Histerese:
-    """A régua de TRÊS degraus: amplitude, duração para entrar, tempo para sair.
-
-    Pura, sem relógio próprio. O instante entra por parâmetro de propósito — é
-    o que deixa o teste provar o comportamento no tempo sem dormir, e o que
-    deixa a régua ser exercitada com um relógio falso.
-
-    O degrau do meio, :attr:`entra_s`, é o que a medição de 605 s exigiu: sem
-    ele, os 19 impulsos de uma amostra que a sala dela tem acendem a luz nove
-    vezes com ninguém falando. Ver a §HISTERESE do módulo.
-    """
+    """A régua de TRÊS degraus: amplitude, duração para entrar, tempo para sair."""
 
     limiar_entra: float = LIMIAR_ENTRA
     limiar_sai: float = LIMIAR_SAI
@@ -420,8 +347,6 @@ class Histerese:
             self._ultimo_alto = agora
         if not self._captando:
             if valor < self.limiar_entra:
-                # Caiu abaixo: a contagem de duração RECOMEÇA. É isto que faz
-                # um impulso de 40 ms não acender — ele não tem sucessor.
                 self._acima_desde = None
             else:
                 if self._acima_desde is None:
@@ -432,23 +357,13 @@ class Histerese:
         return self.estado(agora)
 
     def estado(self, agora: float) -> bool | None:
-        """O estado AGORA — e é aqui que o tempo apaga, não só a amostra.
-
-        Sem esta reavaliação, um fluxo que emudece de vez ficaria aceso para
-        sempre: o apagamento depende de tempo decorrido, e tempo passa mesmo
-        quando não chega amostra nenhuma.
-        """
+        """O estado AGORA — e é aqui que o tempo apaga, não só a amostra."""
         if not self._viu:
             return None
         if self._captando and (agora - self._ultimo_alto) >= self.segura_s - _FOLGA_S:
             self._captando = False
             self._acima_desde = None
         return self._captando
-
-
-# --------------------------------------------------------------------------
-# O FLUXO — o que se abre por canal
-# --------------------------------------------------------------------------
 
 
 class Fluxo(Protocol):
@@ -466,18 +381,7 @@ class Fluxo(Protocol):
 
 
 def argv_do_medidor(fonte: str, uniq: str = "") -> list[str]:
-    """O argv do ``parec`` que mede o pico desta fonte.
-
-    Sem ``shell=True`` (invariante do projeto): a fonte entra como argumento e
-    nunca como texto de comando.
-
-    As duas flags que a medição de 03/09 tornou obrigatórias:
-
-    * ``--property=resample.peaks=true`` — sem ela vêm 25 amostras por segundo
-      da onda DECIMADA (57 de 58 negativas, amplitude cem vezes menor), e o
-      limiar nunca dispara: a luz nunca piscaria.
-    * ``--latency-msec=100`` — sem ela a primeira amostra chega aos 2,006 s.
-    """
+    """O argv do ``parec`` que mede o pico desta fonte."""
     argv = [
         "parec",
         f"--device={fonte}",
@@ -490,14 +394,6 @@ def argv_do_medidor(fonte: str, uniq: str = "") -> list[str]:
     ]
     argv += [f"--property={k}={v}" for k, v in propriedades_do_medidor(uniq).items()]
     return argv
-
-
-# `_morrer_com_o_pai` MUDOU DE DONO em 13/09/2026 (SOM-TRAVA-NA-QUEDA-01): ele
-# mora em `integrations/filho_de_som.morrer_com_o_pai`, que os três leitores de
-# som do daemon usam, e chega aqui reexportado pelo import do topo. O `parec`
-# deste medidor foi o primeiro a vazar órfão (03/09/2026, `PPID=1`, 42 s de
-# vida, o microfone dela aberto por um processo que ninguém lia), e a régua
-# `test_o_medidor_de_som_nao_vaza_orfao.py` continua chamando o nome por aqui.
 
 
 def _ambiente_c() -> dict[str, str]:
@@ -535,30 +431,12 @@ class _FluxoParec:
 
 
 def abrir_fluxo(fonte: str, uniq: str = "") -> Fluxo | None:
-    """Abre a captura de pico desta fonte — ``None`` quando não dá.
-
-    ``None`` é resposta: sem ``parec`` na máquina, ou o processo não subiu. Não
-    se inventa um zero nem um falso: quem recebe ``None`` responde "não sei".
-
-    ``bufsize=0`` não é detalhe: o medidor lê o descritor CRU com ``os.read``
-    através de um seletor, e um leitor com buffer esconderia bytes já entregues
-    atrás do próprio buffer — o seletor diria "nada a ler" com dado na mão.
-
-    **``stdout=subprocess.PIPE`` é a TRAVA DE MORTE, e não é escolha de
-    estilo.** Medido em 03/09 matando o pai com SIGKILL: com o cano o ``parec``
-    morre junto (a ponta de leitura fecha, o próximo write toma ``SIGPIPE``, e
-    em modo de pico há write a cada 40 ms); com ``stdout`` para ``/dev/null``
-    ele SOBREVIVE órfão, segurando o microfone dela aberto — foi assim que um
-    ``parec`` deste medidor ficou 39 minutos de pé em 03/09 às 00h36. A sessão
-    não muda nada: os dois desenhos de ``/dev/null`` vazam, os dois de cano
-    morrem. Quem mandar esta saída para outro lugar reabre o vazamento; há
-    teste que morde.
-    """
+    """Abre a captura de pico desta fonte — ``None`` quando não dá."""
     if shutil.which("parec") is None:
         logger.debug("nivel_do_mic_sem_parec", fonte=fonte)
         return None
     try:
-        proc = subprocess.Popen(  # argv fixo, sem shell
+        proc = subprocess.Popen(
             argv_do_medidor(fonte, uniq),
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -588,34 +466,8 @@ class _Canal:
     ultimo_dado: float = 0.0
 
 
-# --------------------------------------------------------------------------
-# O MEDIDOR
-# --------------------------------------------------------------------------
-
-
 class NivelDoMicrofone:
-    """Mede o pico de cada canal pedido e responde com histerese.
-
-    Uso, do lado da PEÇA C (uma chamada por volta do laço)::
-
-        medidor.seguir({uniq: fonte_ou_None, ...})   # quem TEM ouvinte
-        captando = medidor.captando()                # {uniq: True|False|None}
-
-    :meth:`seguir` é o degrau menor da sprint feito desenho: só o que entra
-    nele é aberto, e o que sai é fechado no mesmo instante. Passe apenas os
-    controles que a PEÇA A já disse ter ouvinte — a §1.1 diz que o estado 2 só
-    existe dentro do estado 1, e assim o custo com ninguém ouvindo é zero.
-
-    Um ``uniq`` cujo valor seja ``None`` (o controle do RÁDIO, que não publica
-    canal) é aceito e respondido com ``None``. Isso é deliberado: deixa o
-    chamador passar a tabela inteira de `escolher_fonte` sem filtrar, e o
-    "não há o que medir" não vira um "medi e não há som".
-
-    Todo o trabalho acontece numa thread só, com um seletor: quatro canais são
-    quatro descritores no MESMO ``epoll``, não quatro threads. Quem preferir
-    dirigir o relógio (os testes, ou um chamador que já tem laço próprio)
-    constrói com ``automatico=False`` e chama :meth:`bombear`.
-    """
+    """Mede o pico de cada canal pedido e responde com histerese."""
 
     def __init__(
         self,
@@ -645,15 +497,9 @@ class NivelDoMicrofone:
         self._parar = threading.Event()
         self._thread: threading.Thread | None = None
 
-    # -- o que o chamador usa -------------------------------------------
 
     def seguir(self, alvos: Mapping[str, str | None]) -> None:
-        """Passa a medir exatamente estes controles — nem mais, nem menos.
-
-        Idempotente: o que já estava aberto na MESMA fonte continua aberto (e
-        a régua dele não é zerada, senão a luz recomeçaria do escuro a cada
-        volta do laço). O que saiu da lista é fechado agora.
-        """
+        """Passa a medir exatamente estes controles — nem mais, nem menos."""
         with self._lock:
             self._desejado = dict(alvos)
         if self._automatico:
@@ -693,14 +539,9 @@ class NivelDoMicrofone:
     def __exit__(self, *_exc: object) -> None:
         self.parar()
 
-    # -- o laço ----------------------------------------------------------
 
     def bombear(self, timeout_s: float = _ESPERA_DO_SELETOR_S) -> None:
-        """Uma volta: reconcilia os fluxos e come o que chegou.
-
-        Público de propósito. Um chamador que já tem laço (ou um teste que
-        dirige o relógio) usa isto e dispensa a thread inteira.
-        """
+        """Uma volta: reconcilia os fluxos e come o que chegou."""
         self._reconciliar()
         eventos = self._seletor.select(timeout=timeout_s)
         agora = self._agora()
@@ -711,7 +552,7 @@ class NivelDoMicrofone:
         while not self._parar.is_set():
             try:
                 self.bombear()
-            except Exception as exc:  # defensivo: a thread não pode morrer
+            except Exception as exc:
                 logger.warning("nivel_do_mic_volta_falhou", err=str(exc))
                 time.sleep(_ESPERA_DO_SELETOR_S)
 
@@ -724,7 +565,6 @@ class NivelDoMicrofone:
             )
         self._thread.start()
 
-    # -- as tripas -------------------------------------------------------
 
     def _resposta(self, uniq: str, agora: float) -> bool | None:
         """Chamado SEMPRE com o lock tomado."""
@@ -743,10 +583,6 @@ class NivelDoMicrofone:
                 if desejado.get(uniq) != canal.fonte or not canal.fluxo.vivo():
                     self._fechar(uniq)
                 elif (agora - canal.ultimo_dado) >= self._mudez_s:
-                    # Vivo e mudo: já respondemos `None` por ele, mas ele
-                    # continua com o microfone DELA aberto e o nó em RUNNING.
-                    # Soltar é obrigação — e a espera é longa para não fazer o
-                    # nó piscar na leitura da PEÇA A.
                     self._fechar(uniq)
                     self._proxima_tentativa[uniq] = agora + _ESPERA_APOS_MUDEZ_S
                     logger.warning(
@@ -767,8 +603,6 @@ class NivelDoMicrofone:
     def _abrir_canal(self, uniq: str, fonte: str, agora: float) -> None:
         fluxo = self._abrir(fonte, uniq)
         if fluxo is None:
-            # Ausência é resposta, e não se tenta de novo em rajada: um
-            # `parec` que não existe não passa a existir em 40 ms.
             self._proxima_tentativa[uniq] = agora + _ESPERA_APOS_MORTE_S
             return
         canal = _Canal(
@@ -819,8 +653,6 @@ class NivelDoMicrofone:
         except OSError:
             dados = b""
         if not dados:
-            # Fim de arquivo: o `parec` morreu. Fechar e deixar a resposta
-            # voltar a `None` — nunca a `False`, que seria afirmar silêncio.
             with self._lock:
                 self._fechar(uniq)
             self._proxima_tentativa[uniq] = agora + _ESPERA_APOS_MORTE_S
@@ -831,13 +663,6 @@ class NivelDoMicrofone:
         if not inteiras:
             return
         with self._lock:
-            # CADA AMOSTRA GANHA O SEU INSTANTE, e isso não é preciosismo: a
-            # régua tem um degrau de DURAÇÃO, e carimbar o lote inteiro com um
-            # instante só faria a duração medir a cadência de quem LÊ, não a do
-            # sinal. Um lote de quatro amostras chegado de uma vez pareceria
-            # 0 s de som contínuo; a 25 Hz ele é 160 ms. As amostras deste lote
-            # chegaram entre a leitura anterior e agora, espalhadas em passo
-            # igual — que é como o servidor as emite.
             inicio = canal.ultimo_dado
             passo = (agora - inicio) / inteiras
             for i in range(inteiras):

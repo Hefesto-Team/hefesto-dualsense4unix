@@ -53,11 +53,7 @@ from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 
 
 class PonteDeMentira:
-    """Uma ponte que anota o que foi pedido e nunca fala com o daemon vivo.
-
-    ``profile_switch`` devolve ``True`` de propósito: se o gesto chegar até
-    aqui, ele responderá "aplicado" — que é exatamente o defeito medido.
-    """
+    """Uma ponte que anota o que foi pedido e nunca fala com o daemon vivo."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple[Any, ...]]] = []
@@ -70,10 +66,6 @@ class PonteDeMentira:
         self.chamadas.append((metodo, args))
         return True
 
-    # `resultado` ENTROU EM 03/09/2026 com o ELO-MUDO-01: o `ativar` passou a
-    # ler o CORPO da resposta do daemon (`secoes`) em vez do booleano, que é a
-    # diferença entre "ativado" e "ativado, menos o que o lock manual
-    # descartou". O dublê devolve `{}` — corpo sem relatório, que é o caso do
     # daemon antigo e faz `mensagem_de_ativacao` cair na frase de sempre.
     def resultado(self, metodo: str, *args: Any, **kw: Any) -> Any:
         self.chamadas.append((metodo, tuple(kw.values())))
@@ -92,7 +84,7 @@ def _clicar(ativo: str, escolhido: str) -> tuple[PonteDeMentira, Exception | Non
     ctx = Contexto(state={"active_profile": ativo})
     try:
         a10_perfis.ativar(ctx, {"texto": "Ativar"}, ponte)
-    except Exception as erro:  # é a recusa que a régua quer ver
+    except Exception as erro:
         return ponte, erro
     return ponte, None
 
@@ -111,12 +103,7 @@ def test_reativar_o_mesmo_perfil_e_recusado() -> None:
 
 
 def test_a_recusa_compara_por_slug_e_nao_por_string() -> None:
-    """R-10: "Navegação" no disco e "Navegacao" no daemon são O MESMO perfil.
-
-    Com um ``==`` cru a guarda nunca pegaria este caso — e é o caso que
-    acontece de verdade, porque o nome de arquivo é o slug
-    (``profiles/loader.save_profile``).
-    """
+    """R-10: "Navegação" no disco e "Navegacao" no daemon são O MESMO perfil."""
     ponte, erro = _clicar(ativo="Navegacao", escolhido="Navegação")
     assert isinstance(erro, RuntimeError), (
         "a guarda comparou texto cru: o mesmo perfil passou como se fosse outro"
@@ -132,8 +119,7 @@ def test_ativar_outro_perfil_continua_passando() -> None:
 
 
 def test_sem_perfil_ativo_o_gesto_nao_e_travado() -> None:
-    """Daemon sem perfil ativo (`active_profile` vazio) é estado legítimo, e a
-    guarda não pode confundir "nenhum" com "este mesmo"."""
+    """Daemon sem perfil ativo (`active_profile` vazio) é estado legítimo, e a"""
     ponte, erro = _clicar(ativo="", escolhido="Ação")
     assert erro is None, f"a guarda travou com o daemon sem perfil ativo: {erro}"
     assert ponte.chamadas == [("profile.switch", ("Ação",))]

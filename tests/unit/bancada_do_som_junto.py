@@ -1,25 +1,4 @@
-"""A bancada de mentira do nó de som — o `pactl` que ACEITA, GUARDA e LÊ.
-
-Nascida na SOM-JUNTO-01 (17/09/2026) e compartilhada de propósito: duas réguas
-precisam perguntar *"o que ficou CARREGADO no servidor de som depois da
-varredura?"*, e um dublê por arquivo é como esta casa fabrica duas verdades
-sobre a mesma pergunta. As duas donas são
-``test_som_junto_01_a_fonte_chega_ao_no_vivo.py`` e
-``test_o_sfx_de_cada_um_e_do_dono.py`` — a segunda porque a régua dela olhava
-o CACHE quando prometia olhar o nó.
-
-**NENHUM BYTE VAI A SERVIDOR NENHUM.** Quem desvia é
-``monkeypatch.setattr(alto_falante_bt, "_rodar", Pactl())``: ``_rodar`` é o dono
-único de todo ``pactl`` daquele módulo — o nó, a rota, o ``sink_do_controle`` e
-o ``monitor_da_saida_padrao`` passam por ele —, e é por isso que UM desvio cobre
-a cena inteira sem dublar peça por peça.
-
-**O DUBLÊ MANTÉM A LISTA VIVA**, e não é enfeite: ``sink_do_controle`` devolve o
-PRÓPRIO ``hefesto_som_<hex6>`` como recuo quando não acha placa da Sony, e só
-enxerga esse nó porque ele está na lista de ``pactl list sinks short``. Um dublê
-que respondesse lista fixa esconderia a armadilha do nó que vira alvo de si
-mesmo — que é justamente o que a cura desta sprint tem de recusar.
-"""
+"""A bancada de mentira do nó de som — o `pactl` que ACEITA, GUARDA e LÊ."""
 from __future__ import annotations
 
 import json
@@ -29,34 +8,23 @@ from typing import Any
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 
-#: MACs FORJADOS, da faixa sintética que o portão de fixtures permite. Nenhum
 #: destes é um controle desta bancada: régua que só passa com os DualSense dela
-#: mede a bancada, não a cura.
 P1 = "aa:bb:cc:00:00:c1"
 P2 = "aa:bb:cc:00:00:c2"
 
-#: A saída padrão do sistema, e a outra para onde ela troca.
 HDMI = "alsa_output.pci-0000_0a_00.1.hdmi-stereo"
 FONE = "alsa_output.pci-0000_0a_00.3.analog-stereo"
 
-#: A placa USB do P1 no cabo, no formato que o PipeWire publica.
 SINK_P1 = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-surround-40"
 )
 
-#: O nome do perfil da bancada. Um só: os testes vivem num lar de mentira
-#: (`tests/conftest.py` desvia `HOME` e os quatro `XDG_*`), e reusar o nome
-#: deixa cada teste dono do arquivo dele.
 PERFIL = "mesa-do-som-junto"
 
 
 class Pactl:
-    """Um ``pactl`` que aceita, guarda o que está carregado, e sabe LER.
-
-    Um dublê que só sabe aceitar não mede religação nenhuma: o que interessa
-    aqui não é o argv pedido, é o que continua DE PÉ depois da varredura.
-    """
+    """Um ``pactl`` que aceita, guarda o que está carregado, e sabe LER."""
 
     def __init__(self, *, placas: tuple[str, ...] = ()) -> None:
         self.argvs: list[list[str]] = []
@@ -84,7 +52,6 @@ class Pactl:
             )
         return ""
 
-    # -- leitura: o que está CARREGADO agora, nunca o que foi pedido -------
 
     @property
     def publicados(self) -> list[str]:
@@ -130,11 +97,6 @@ def _caminho_do_perfil(nome: str) -> Path:
 def escrever_perfil(fontes: dict[str, str], nome: str = PERFIL) -> str:
     """Um perfil DE VERDADE no lar de mentira. Devolve o nome."""
     corpo: dict[str, Any] = {
-        # `match` é OBRIGATÓRIO no schema, e `volume` também
-        # (`ProfileSpeakerConfig`, e a razão está escrita lá): sem os dois o
-        # pydantic recusa o perfil inteiro, `_fontes_por_controle` devolve `{}`
-        # pelo `except` — que é o comportamento CERTO do produto — e a régua
-        # mede um dublê inválido em vez da fiação.
         "name": nome,
         "match": {"type": "any"},
         "controllers": {
@@ -147,12 +109,7 @@ def escrever_perfil(fontes: dict[str, str], nome: str = PERFIL) -> str:
 
 
 def ela_clica(uniq: str, fonte: str, nome: str = PERFIL) -> None:
-    """O gesto dela nos três botões: grava a fonte no perfil, e o mtime anda.
-
-    O carimbo que invalida o cache é ``mtime_ns``. Duas escritas no mesmo
-    nanossegundo não existem nesta máquina, mas a régua não pode depender
-    disso — daí o ``utime`` explícito.
-    """
+    """O gesto dela nos três botões: grava a fonte no perfil, e o mtime anda."""
     alvo = _caminho_do_perfil(nome)
     corpo = json.loads(alvo.read_text(encoding="utf-8"))
     corpo["controllers"].setdefault(mod._uniq_de_perfil(uniq), {}).setdefault(
@@ -172,12 +129,7 @@ def radio(uniq: str) -> mod.ControleNaLista:
 
 
 def subsystem_e_gerenciador(nome: str | None, **kw: Any) -> tuple[Any, Any]:
-    """A fiação de PRODUÇÃO: ``fonte_por_controle=sub._fonte_do_controle``.
-
-    É o que ``AltoFalanteSubsystem.start`` monta, e não um ``lambda`` de
-    conveniência — medir a fiação é metade do ponto destas réguas. O
-    ``fonte_por_controle`` já passou meses como parâmetro sem chamador.
-    """
+    """A fiação de PRODUÇÃO: ``fonte_por_controle=sub._fonte_do_controle``."""
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
     sub._store = Store(nome)
     return sub, mod.GerenciadorDeNosDeSom(

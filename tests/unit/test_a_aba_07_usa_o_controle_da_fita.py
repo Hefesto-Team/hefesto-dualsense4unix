@@ -67,22 +67,9 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "07-lancadores.html"
 
-#: Uma mesa de MENTIRA com o defeito que ela viu: um controle lido inteiro (o do
-#: cabo) e um cujo plástico o leitor não conhece (o do rádio). É o estado REAL
-#: desta máquina — `LeitorDeCor.conhecidos()` devolveu zero para o controle de
-#: rádio em 03/09/2026 — e é o único estado em que o defeito aparece.
-#:
 #: As chaves são as de `mesa_viva.mesa_do_estado`, que é quem monta a mesa viva.
 def _palavra(transporte: str) -> str:
-    """A palavra do transporte PERGUNTADA À DONA — nunca digitada aqui.
-
-    ONDA4-S10, 06/09/2026. Estas asserções diziam `"USB"` e `"BT"`, e por isso
-    reprovaram a decisão dela (D-05: *"cabo / rádio, pela função que já
-    existe"*) em vez do defeito. É a forma que esta casa já pegou onze vezes: a
-    régua DIGITAVA o que devia LER. Com a pergunta à dona, ela continua
-    mordendo o chip que perde o transporte — e passa a morder também o chip que
-    inventa uma palavra que a dona não disse.
-    """
+    """A palavra do transporte PERGUNTADA À DONA — nunca digitada aqui."""
     from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 
     return palavra_do_transporte(transporte)
@@ -97,10 +84,8 @@ MESA_COM_UM_SEM_COR = [
 
 
 #: O texto que `mesa_viva.mesa_do_estado` põe em `nome` quando o leitor de cor
-#: não conhece a peça: a AUSÊNCIA de leitura, que o chip não pode escrever.
 SEM_LEITURA_DE_COR = "Não sei"
 
-#: A classe do esqueleto (`interface/topo.html`) que a fita ocupa.
 SELETOR_DA_FITA = ".fita"
 
 
@@ -128,12 +113,7 @@ def ctx():
 
 
 def _bancada() -> str:
-    """A página da BANCADA — o desenho de HOJE, não o congelado.
-
-    Apontar para o publicado daria **verde sobre a página congelada**, que é a
-    armadilha mais cara do `COMO-OLHAR-A-TELA.md`. Publicar é ato dela; enquanto
-    ela não publicar, o publicado é a página com os dois chips do mockup.
-    """
+    """A página da BANCADA — o desenho de HOJE, não o congelado."""
     from hefesto_dualsense4unix.interface import onde
 
     caminho = onde.pagina(PAGINA)
@@ -143,13 +123,7 @@ def _bancada() -> str:
 
 
 def _colorways() -> list[str]:
-    """Os 28 nomes, lidos do CSV que é dono deles.
-
-    Digitá-los aqui criaria a segunda lista que o `cores-do-dualsense.csv`
-    existe para não ter — e ela envelheceria calada no dia em que o desenho
-    trocasse de controle de exemplo. É a mesma leitura que
-    `scripts/check_identidade_vem_de_cima.nomes_de_colorway` faz.
-    """
+    """Os 28 nomes, lidos do CSV que é dono deles."""
     bruto = (RAIZ / "docs/data/cores-do-dualsense.csv").read_text(encoding="utf-8")
     linhas = [ln for ln in bruto.splitlines()
               if ln.strip() and not ln.lstrip().startswith("#")]
@@ -158,32 +132,13 @@ def _colorways() -> list[str]:
 
 
 def _chips(html: str) -> list[str]:
-    """Os `<label class="chip …">` da fita, um por elemento, na ordem.
-
-    POR FATIA E NÃO POR REGEX: o chip tem `<span class="pt">•</span>` DENTRO, e
-    um `.*?</span>` fecha no filho — a primeira versão deste ajudante perdia o
-    último chip e o caso passava medindo dois onde há três. Fatiar pelo começo
-    do próximo chip não tem esse buraco, e `class="pt"` não colide com
-    `class="chip`.
-    """
+    """Os `<label class="chip …">` da fita, um por elemento, na ordem."""
     partes = html.split('<label class="chip')[1:]
     return ['<label class="chip' + p for p in partes]
 
 
-# ---------------------------------------------------------------------------
-# 1. O PILOTO — quem escreve a fita desta aba desde 22/09/2026
-#
-# Estes três casos mediam `a07_lancadores.fita_html`, a fita PRÓPRIA desta aba.
-# Ela saiu (ver a lápide no módulo), e as regras que eles guardam valem para a
-# fita que o produto pinta aqui: `hefesto_vivo._fita(mesa, PAGINA)`.
-# ---------------------------------------------------------------------------
 def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
-    """Regra dela: campo sem informação NÃO MOSTRA NADA.
-
-    O chip do rádio, cuja cor não foi lida, mostra o que a leitura TROUXE — o
-    jogador e o transporte — e cala sobre o que ela não trouxe. Sem isto o
-    caminho fácil é o travessão, o `Não sei` cru ou, pior, o nome do mockup.
-    """
+    """Regra dela: campo sem informação NÃO MOSTRA NADA."""
     chips = _chips(_fita_da_07(MESA_COM_UM_SEM_COR))
     assert len(chips) == 3, (
         f"esperava `Todos` + dois controles, saíram {len(chips)}. Uma fita que "
@@ -203,11 +158,7 @@ def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
 
 
 def test_o_chip_com_cor_lida_diz_o_modelo(a07) -> None:
-    """A outra metade: o que FOI lido aparece.
-
-    Sem este caso, apagar tudo passaria — e um chip que nunca nomeia controle
-    nenhum zera a régua do mesmo jeito que a página vazia zeraria.
-    """
+    """A outra metade: o que FOI lido aparece."""
     do_cabo = _chips(_fita_da_07(MESA_COM_UM_SEM_COR))[1]
     assert "White" in do_cabo, (
         f"o modelo LIDO do aparelho não chegou ao chip:\n{do_cabo}")
@@ -216,12 +167,7 @@ def test_o_chip_com_cor_lida_diz_o_modelo(a07) -> None:
 
 
 def test_a_fita_nao_cai_de_volta_no_desenho(a07) -> None:
-    """Nenhum dos nomes do mapa entra na fita sem ter vindo da LEITURA.
-
-    É a régua que pega o contorno mais provável — cair de volta em
-    `monta.CONECTADOS` quando a leitura falha. `Cosmic Red` e `Starlight Blue`
-    são o desenho, e é exatamente isso que ela viu na tela.
-    """
+    """Nenhum dos nomes do mapa entra na fita sem ter vindo da LEITURA."""
     saiu = _fita_da_07(MESA_COM_UM_SEM_COR)
     lidos = {str(c["nome"]) for c in MESA_COM_UM_SEM_COR if c["cor"]}
     for nome in _colorways():
@@ -234,38 +180,13 @@ def test_a_fita_nao_cai_de_volta_no_desenho(a07) -> None:
 
 
 def test_a_fita_tem_um_dono_so_com_alguem_na_mesa(a07, ctx, monkeypatch) -> None:
-    """ERA `test_o_pacote_escreve_a_fita`, e ele exigia o SEGUNDO dono.
-
-    O QUE MUDOU, e foi medido — ONDA5-07-01, 06/09/2026. Este caso nasceu em
-    03/09 porque `hefesto_vivo._fita` desistia da fita inteira quando um
-    controle estivesse sem cor, e "deixar a fita como está" era deixar a do
-    MOCKUP. **Aquela desistência caiu no mesmo 03/09** — e ninguém veio
-    desligar esta metade. Ficaram DOIS donos escrevendo `.fita` no mesmo tique:
-
-        07-lancadores.html · 120 mutações em 40 tiques · 3,0 por tique
-        — a ÚNICA das dez abas que não zerou na cura do samba
-
-    E QUEM GANHAVA ERA O PACOTE, porque o `blocos` corre por último. A prova
-    está na foto de 06/09: a fita da 07 mostrava `Todos` com UM controle na
-    mesa, e `monta.escolha_da_fita` não emite `Todos` com um só
-    (`cabe_o_todos`: `> 1`). O chip que ela via era o desta aba — sem
-    `data-campo="fita-chip"`, sem cor de plástico e sem a dica do `title`.
-
-    A MORDIDA: devolva o `blocos[SELETOR_DA_FITA]` incondicional em
-    `a07_lancadores.pacote` e este caso reprova nomeando o segundo dono.
-
-    A VIGIA VAI DUBLADA: sem isso `pacote()` dispara a thread que lê o disco
-    dela, e uma régua que acorda o disco de outra é ruído (medido em 02/09/2026
-    no arquivo irmão).
-    """
+    """ERA `test_o_pacote_escreve_a_fita`, e ele exigia o SEGUNDO dono."""
     monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
 
-    # 1. o seletor tem de EXISTIR na página, senão o bloco cairia no nada
     assert 'class="fita' in _bancada(), (
         f"a página não tem `{SELETOR_DA_FITA}` — o `blocos` cairia no chão, "
         f"e `querySelector` devolve `null` sem uma linha de erro")
 
-    # 2. com alguém na mesa, quem escreve é o PILOTO — e esta aba se cala
     blocos = a07.pacote(ctx).get("blocos") or {}
     assert SELETOR_DA_FITA not in blocos, (
         f"a aba 07 voltou a publicar um bloco em {SELETOR_DA_FITA!r} com "
@@ -275,17 +196,7 @@ def test_a_fita_tem_um_dono_so_com_alguem_na_mesa(a07, ctx, monkeypatch) -> None
 
 
 def test_a_fita_da_mesa_vazia_tambem_e_do_piloto(a07, monkeypatch) -> None:
-    """ERA `test_a_fita_da_mesa_vazia_ainda_sai_daqui`, e a premissa dele morreu.
-
-    Ele exigia que esta aba escrevesse a fita da mesa vazia porque
-    `hefesto_vivo._fita` devolvia `""` sem ninguém na mesa. Desde 21/09/2026 o
-    piloto pinta a fita vazia, e esta aba virou o segundo dono daquele caso:
-    ela pintava `Selecionar:` + `Todos` sobre controle nenhum, e em 22/09 ela
-    pediu *"quando não tiver controle Não Aparece o selecionar:"*.
-
-    A MORDIDA: devolva o `if not ctx.mesa:` com o `blocos[SELETOR_DA_FITA]` a
-    `a07_lancadores.pacote` e a primeira asserção reprova.
-    """
+    """ERA `test_a_fita_da_mesa_vazia_ainda_sai_daqui`, e a premissa dele morreu."""
     import pacotes
 
     from hefesto_dualsense4unix.interface import hefesto_vivo
@@ -308,20 +219,8 @@ def test_a_fita_da_mesa_vazia_tambem_e_do_piloto(a07, monkeypatch) -> None:
             f"na tela do produto:\n{fita}")
 
 
-# ---------------------------------------------------------------------------
-# 2. A BANCADA — a `07-lancadores` no disco
-# ---------------------------------------------------------------------------
 def test_a_bancada_da_07_nao_tem_identidade_congelada() -> None:
-    """A régua da aba, na bancada: ZERO.
-
-    Ela repete aqui a regra de `scripts/check_identidade_vem_de_cima.py` porque
-    aquele script mede as DEZ e este arquivo responde por UMA — e porque um
-    portão que ainda não está na lista dos trinta não guarda nada sozinho.
-
-    COMENTÁRIO NÃO CONTA, e é a mesma isenção do script: `<!-- -->` e `/* */`
-    são prosa, e contá-los inflaria o número. Número inflado é a coisa que esta
-    casa mais derruba.
-    """
+    """A régua da aba, na bancada: ZERO."""
     sem_prosa = re.sub(r"<!--.*?-->|/\*.*?\*/", " ", _bancada(), flags=re.S)
     achados = [c for c in _colorways() if c in sem_prosa]
     assert not achados, (
@@ -334,17 +233,7 @@ def test_a_bancada_da_07_nao_tem_identidade_congelada() -> None:
 
 
 def test_a_fita_da_bancada_so_tem_estrutura() -> None:
-    """O que sobra na fita do disco é `Selecionar:` e `Todos`.
-
-    O caso irmão acima passaria com a fita cheia de chips genéricos (`P1 • USB`)
-    escritos à mão pelo gerador — e eles voltariam a afirmar uma mesa que a
-    página estática não conhece. Aqui o que se cobra é a AUSÊNCIA de chip de
-    controle: quem os põe é o produto, no tique.
-    """
-    # AS ASPAS SÃO A CURA, e a razão está em `test_aba03_a_identidade_vem_de_cima`:
-    # o prefixo `class="fita` passou a casar com o `.fita-linha` que a
-    # ALTURA-DA-VISTA-01 pôs em volta, e o recorte pegava o embrulho — com zero
-    # chip dentro, que foi como esta régua reprovou dizendo que a fita esvaziou.
+    """O que sobra na fita do disco é `Selecionar:` e `Todos`."""
     bloco = re.search(r'<div class="fita(?: inerte)?".*?</div>', _bancada(), re.S)
     assert bloco, "não achei a fita na página — a régua ficaria verde sobre nada"
     chips = _chips(bloco.group(0))

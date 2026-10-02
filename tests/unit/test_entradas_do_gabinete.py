@@ -72,8 +72,6 @@ USB3 = f"{PCI_B}/usb3"
 USB4 = f"{PCI_B}/usb4"
 HUB = f"{USB3}/3-1"
 
-#: `nome do hub -> (caminho real, interface, velocidade, quantas entradas)`.
-#: `""` na velocidade = o atributo não é legível, que é o caso "não sei".
 _HUBS: dict[str, tuple[str, str, str, int]] = {
     "usb1": (USB1, "1-0:1.0", "480", 10),
     "usb2": (USB2, "2-0:1.0", "10000", 4),
@@ -82,8 +80,6 @@ _HUBS: dict[str, tuple[str, str, str, int]] = {
     "3-1": (HUB, "3-1:1.0", "", 4),
 }
 
-#: `nó -> atributos`. Atributo que falta falta de verdade: é assim que "não sei"
-#: chega ao produto pelo mesmo caminho de uma máquina real.
 _ATRIBUTOS: dict[str, dict[str, str]] = {
     "usb1-port3": {
         "state": "configured",
@@ -110,26 +106,18 @@ _ATRIBUTOS: dict[str, dict[str, str]] = {
     "usb4-port4": {"state": "configured", "connect_type": "unknown"},
 }
 
-#: Os dois nós que só respondem `configured` COM o hub plugado. Sem ele, o
-#: `usb3-port1` volta a dizer `not attached`, que é o estado real dela desde as
-#: 02h36 — e é o que faz a conta da caminhada subir de 10 para 11.
 _ATRIBUTOS_COM_HUB: dict[str, dict[str, str]] = {
     "usb3-port1": {"state": "configured", "connect_type": "unknown"},
     "3-1-port2": {"state": "configured", "connect_type": "hotplug"},
 }
 
-#: O padrão de todo nó que a tabela acima não nomeia — a entrada VAZIA, que é a
-#: maioria e a razão desta tela existir.
 _VAZIO_DE_RAIZ = {"state": ESTADO_VAZIO, "connect_type": "hotplug"}
 _VAZIO_INTERNO = {"state": ESTADO_VAZIO, "connect_type": "unknown"}
 
-#: Painel dos nós de `usb1` que a tabela não nomeia. As entradas 1, 2 e 7 a 10
-#: dizem `left`; as 3 a 6 dizem `right`.
 _PAINEL_DE_USB1 = {
     numero: "right" if 3 <= numero <= 6 else "left" for numero in range(1, 11)
 }
 
-#: `peer`, nos dois sentidos — o kernel publica sempre os dois lados.
 _PARES: dict[str, str] = {
     "usb1-port5": "usb2-port1",
     "usb1-port6": "usb2-port2",
@@ -141,7 +129,6 @@ _PARES: dict[str, str] = {
 }
 _PARES.update({destino: origem for origem, destino in _PARES.items()})
 
-#: `nó de entrada -> aparelho encaixado`, e o caminho real de cada aparelho.
 _APARELHOS: dict[str, str] = {
     "usb1-port3": "1-3",
     "usb1-port4": "1-4",
@@ -158,13 +145,8 @@ _CAMINHO_DO_APARELHO: dict[str, str] = {
     "3-1.2": f"{HUB}/3-1.2",
 }
 
-#: A interface de um aparelho existe na raiz e **não** hospeda entrada nenhuma.
-#: Ela está aqui para provar que a varredura filtra por FORMA do nome, e não por
-#: sorte de o diretório estar vazio.
 _INTERFACE_DE_APARELHO = "1-3:1.0"
 
-#: Interface que some entre o `listdir` da raiz e o dela — o hub desplugado no
-#: meio da leitura. A varredura tem de seguir, não cair.
 _INTERFACE_QUE_SUMIU = "1-4:1.0"
 
 
@@ -173,7 +155,6 @@ class Bancada:
 
     def __init__(self, *, com_hub: bool = False) -> None:
         self.com_hub = com_hub
-        #: Todo caminho que passou por qualquer um dos três leitores.
         self.tocados: list[str] = []
 
         self.hubs = dict(_HUBS) if com_hub else {
@@ -191,7 +172,6 @@ class Bancada:
                 nome = f"{hub}-port{numero}"
                 self.nos[nome] = f"{caminho}/{interface}/{nome}"
 
-    # -- os três leitores ---------------------------------------------------
 
     def listar(self, raiz: str) -> list[str]:
         self.tocados.append(raiz)
@@ -233,7 +213,6 @@ class Bancada:
             return self._caminho_de(folha)
         return caminho
 
-    # -- interno ------------------------------------------------------------
 
     def _caminho_de(self, nome: str) -> str:
         if nome in self.hubs:
@@ -277,7 +256,6 @@ class Bancada:
             return self.nos.get(par, "") if par else ""
         if folha == "device":
             return _CAMINHO_DO_APARELHO.get(self.aparelhos.get(nome, ""), "")
-        # `port`: o symlink que o APARELHO publica de volta para o nó.
         aparelho = os.path.basename(caminho)
         for no, encaixado in self.aparelhos.items():
             if encaixado == aparelho:
@@ -307,11 +285,6 @@ def _furo_com(lista: tuple[Furo, ...], no: str) -> Furo | None:
     return next((furo for furo in lista if no in furo.nos), None)
 
 
-# ---------------------------------------------------------------------------
-# As duas mordidas nomeadas na sprint
-# ---------------------------------------------------------------------------
-
-
 def test_o_par_2_0_e_3_0_e_um_furo_so() -> None:
     """`usb1-port5` e `usb2-port1` são o MESMO buraco do gabinete.
 
@@ -337,14 +310,7 @@ def test_o_par_2_0_e_3_0_e_um_furo_so() -> None:
 
 
 def test_entrada_vazia_aparece_com_state_not_attached() -> None:
-    """A entrada SEM aparelho existe na lista, e é a razão desta tela existir.
-
-    O nó da entrada responde `state` sempre: `configured` com aparelho,
-    `not attached` sem. É o único jeito de o produto saber que a entrada existe.
-
-    Mordida: arranquei listando só quem tem `device` (filtro `if aparelho`). A
-    lista caiu de 22 para 4 nós, `usb1-port5` sumiu, e o teste reprovou.
-    """
+    """A entrada SEM aparelho existe na lista, e é a razão desta tela existir."""
     entradas = _entradas()
     por_nome = {entrada.no: entrada for entrada in entradas}
 
@@ -361,21 +327,8 @@ def test_entrada_vazia_aparece_com_state_not_attached() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O buraco ocupado, o hub que sumiu, e o resto do contrato
-# ---------------------------------------------------------------------------
-
-
 def test_a_caminhada_nao_visita_o_buraco_onde_o_mouse_dela_esta() -> None:
-    """`usb2-port2` diz `not attached` e o buraco dele tem o mouse dentro.
-
-    O mouse é 2.0 e ocupa `usb1-port6`; o lado 3.x do MESMO buraco continua
-    respondendo `not attached`. Perguntar por nó mandaria ela se ajoelhar para
-    encaixar um cabo onde já tem aparelho — o F-2 da sprint.
-
-    Mordida: arranquei o `all()` de `Furo.vazio` para `any()`. O buraco do mouse
-    entrou na caminhada, a lista foi de 11 para 12, e o teste reprovou.
-    """
+    """`usb2-port2` diz `not attached` e o buraco dele tem o mouse dentro."""
     entradas = _entradas()
     caminhada = vazias(entradas)
     nos_da_caminhada = {no for furo in caminhada for no in furo.nos}
@@ -392,12 +345,7 @@ def test_a_caminhada_nao_visita_o_buraco_onde_o_mouse_dela_esta() -> None:
 
 
 def test_o_hub_que_sumiu_nao_vira_entrada_inexistente() -> None:
-    """Desplugar o hub apaga os nós dele — e o LUGAR continua no mapa.
-
-    `furo_declarado` devolve `None`, e `None` quer dizer "o barramento não
-    mostra isso agora", nunca "essa entrada não existe". É o estado real dela
-    desde as 02h36 de 25/08/2026.
-    """
+    """Desplugar o hub apaga os nós dele — e o LUGAR continua no mapa."""
     com_hub = _entradas(com_hub=True)
     sem_hub = _entradas()
 
@@ -405,18 +353,11 @@ def test_o_hub_que_sumiu_nao_vira_entrada_inexistente() -> None:
     presente = furo_declarado(["3-1-port2"], com_hub)
     assert presente is not None and presente.aparelho == "3-1.2"
     assert furo_declarado(["3-1-port2"], sem_hub) is None
-    # E o que continua plugado não é afetado pela ausência do hub.
     assert furo_declarado(["usb1-port3"], sem_hub) is not None
 
 
 def test_entrada_de_atravessa_o_symlink_do_aparelho() -> None:
-    """Entrada OCUPADA não precisa de caminhada: o aparelho diz onde está.
-
-    `<dispositivo>/port` é o symlink que `censo_do_barramento.py:447` já
-    atravessa. A busca final é pela lista de nós do buraco, nunca por uma chave
-    montada — o F-5 mostrou que chave sem `busnum` colide os dois lados do mesmo
-    controlador.
-    """
+    """Entrada OCUPADA não precisa de caminhada: o aparelho diz onde está."""
     entradas = _entradas()
     bancada = Bancada()
 
@@ -428,13 +369,7 @@ def test_entrada_de_atravessa_o_symlink_do_aparelho() -> None:
 
 
 def test_a_frente_do_gabinete_nao_e_dedutivel() -> None:
-    """As duas entradas da frente dela são IGUAIS nos três campos decodificados.
-
-    Medido em 25/08/2026: `usb1-port3` (teclado) e `usb1-port6` (mouse) dizem
-    `panel=right`, `horizontal_position=left`, `vertical_position=lower` — byte
-    a byte o mesmo. É a prova de que o lugar tem de ser DECLARADO, e este teste
-    existe para que ninguém volte a tentar deduzi-lo.
-    """
+    """As duas entradas da frente dela são IGUAIS nos três campos decodificados."""
     por_nome = {entrada.no: entrada for entrada in _entradas()}
     tres_campos = [
         (
@@ -449,12 +384,7 @@ def test_a_frente_do_gabinete_nao_e_dedutivel() -> None:
 
 
 def test_rapido_tem_tres_estados_e_o_terceiro_e_nao_sei() -> None:
-    """"Esta entrada é azul" não sai do `peer` — sai da velocidade do hub.
-
-    Buraco com um nó em hub de 10 Gbps é rápido; buraco só em hub de 480 não é;
-    e hub cujo `speed` não é legível responde `None`, que é o produto dizendo
-    "não sei" em vez de chutar.
-    """
+    """"Esta entrada é azul" não sai do `peer` — sai da velocidade do hub."""
     lista = furos(_entradas(com_hub=True))
 
     par = _furo_com(lista, "usb1-port5")
@@ -467,11 +397,7 @@ def test_rapido_tem_tres_estados_e_o_terceiro_e_nao_sei() -> None:
 
 
 def test_a_ordem_poe_port10_depois_de_port2() -> None:
-    """Ordem alfabética poria `usb1-port10` entre a 1 e a 2.
-
-    A tela conta "entrada 4 de 15": com a ordem errada, o número aponta para o
-    buraco errado, e a pessoa é mandada ao lugar errado do gabinete.
-    """
+    """Ordem alfabética poria `usb1-port10` entre a 1 e a 2."""
     nomes = [entrada.no for entrada in _entradas() if entrada.hub == "usb1"]
 
     assert nomes == [f"usb1-port{numero}" for numero in range(1, 11)]
@@ -487,11 +413,7 @@ def test_sys_ausente_devolve_lista_vazia_e_nao_levanta() -> None:
 
 
 def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
-    """O portão que protege a foto da janela: a bancada de mentira é total.
-
-    Sem ele, um caminho real que sobrasse no módulo faria o PNG versionado
-    carregar o barramento DELA — e o teste passaria na máquina de quem escreveu.
-    """
+    """O portão que protege a foto da janela: a bancada de mentira é total."""
     bancada = Bancada(com_hub=True)
     listar_entradas(
         raiz_usb=RAIZ, listar=bancada.listar, ler=bancada.ler, real=bancada.real
@@ -505,12 +427,7 @@ def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
 def test_a_leitura_nao_inventa_buraco_a_partir_de_interface_qualquer(
     com_hub: bool,
 ) -> None:
-    """Interface de aparelho está na raiz e não hospeda entrada nenhuma.
-
-    A varredura filtra por FORMA do nome (`<hub>-port<N>`), não por sorte de o
-    diretório estar vazio — e uma interface que some no meio da leitura (hub
-    desplugado) não derruba nada.
-    """
+    """Interface de aparelho está na raiz e não hospeda entrada nenhuma."""
     entradas = _entradas(com_hub=com_hub)
 
     assert all(entrada.no.startswith(entrada.hub + "-port") for entrada in entradas)

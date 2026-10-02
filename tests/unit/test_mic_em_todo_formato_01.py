@@ -1,29 +1,4 @@
-"""MIC-EM-TODO-FORMATO-01 — a voz dela ficava para trás no `exit 0` da linha 941.
-
-O DEFEITO
-=========
-O `install.sh` bifurca por formato e dá `exit 0` antes do caminho nativo. Doze
-passos de cura ficavam para trás, e ao longo do tempo os mais graves foram sendo
-resgatados um a um — broker, DKMS do hid-nintendo, do rtw88 e do hid-playstation,
-initramfs, quirk de áudio USB, e o teclado na tela (352237c).
-
-O microfone não tinha sido. E ele é ortogonal ao formato pelo mesmo motivo que os
-outros: os drop-ins do WirePlumber vivem em `~/.config/wireplumber/` — o HOME
-dela, não o prefixo do pacote — e **nenhum formato os empacota** (conferido: zero
-ocorrências de "wireplumber" em `packaging/` e `flatpak/`; há teste abaixo).
-
-Instalando por `--flatpak`, `--appimage` ou `--deb`, o microfone do controle
-ficava sem o **promotor** (o drop-in 51): a entrada nasce com
-`priority.session = 50`, o monitor da saída ganha a eleição, e o que qualquer
-aplicativo grava é o eco do que sai — não a voz dela. Foi medido em 08/08 e
-curado no MONITOR-QUE-VENCE-01, mas só no caminho nativo.
-
-A REGRA DA CASA QUE ISTO ATENDE
-===============================
-*"tudo tem que focar em funcionar na interface do app e no install"*, e a de
-08/08: **toda cura entra no install, sem flag**. Uma cura que só existe num dos
-quatro formatos não está entregue.
-"""
+"""MIC-EM-TODO-FORMATO-01 — a voz dela ficava para trás no `exit 0` da linha 941."""
 
 from __future__ import annotations
 
@@ -51,10 +26,7 @@ def _linha_do_exit_da_bifurcacao() -> int:
     raise AssertionError("não achei o `exit 0` da bifurcação de formato")
 
 
-#: Os modos do dono que DECIDEM O MICROFONE — e só eles respondem às flags
 #: dela. A lista é a do `case` de `scripts/fix_wireplumber_default_source.sh`.
-#: `--status` não escreve nada; `--nunca-dorme` escreve, mas sobre o
-#: ALTO-FALANTE (ver `_MODOS_FORA_DO_MIC`).
 _MODOS_DO_MIC = (
     "--install",
     "--disable-source",
@@ -64,13 +36,6 @@ _MODOS_DO_MIC = (
     "--unmute-routes",
 )
 
-#: SOM-QUE-NAO-DORME-01 (16/08/2026): modos do MESMO script que não são uma
-#: decisão sobre o microfone e por isso NÃO podem ficar sob flag de mic.
-#: `--nunca-dorme` instala o drop-in 54, que impede o WirePlumber de suspender
-#: o SINK do controle — medido na orelha dela em 15/08 23h45: com o nó
-#: suspenso, o religar do hardware come o começo do som. Quem pediu
-#: `--keep-dualsense-mic` pediu para não rebaixarem a ENTRADA dele; não pediu
-#: para perder o início de cada efeito sonoro.
 _MODOS_FORA_DO_MIC = ("--nunca-dorme",)
 
 
@@ -109,25 +74,7 @@ def test_o_mic_e_curado_antes_do_exit_dos_formatos_nao_nativos() -> None:
 
 
 def test_o_ramo_nao_nativo_respeita_as_flags_dela() -> None:
-    """A cura não pode decidir no lugar dela.
-
-    `--keep-dualsense-mic` (que zera `WITH_WIREPLUMBER_FIX`) e
-    `--with-wireplumber-disable-mic` valem em QUALQUER formato. Chamar o dono
-    incondicionalmente mexeria no áudio de quem pediu para não mexer — e "a
-    vontade na GUI prevalece sempre" vale também para a linha de comando.
-
-    Morde ao trocar o `if` por uma chamada solta.
-
-    O ESCOPO ESTREITOU EM 16/08/2026, e o motivo é um fato novo, não uma
-    conveniência: até 15/08 toda chamada deste script era uma decisão sobre o
-    MICROFONE, e "chamada sob flag de mic" e "chamada legítima" eram a mesma
-    coisa. O `--nunca-dorme` desfez a coincidência — é o mesmo script agindo
-    sobre o ALTO-FALANTE. A regra que este teste guarda sempre foi *"a decisão
-    sobre o mic é dela"*, e não *"tudo que este script faz é sobre o mic"*;
-    quem passa a ser aferido é o conjunto explícito `_MODOS_DO_MIC`. O irmão
-    `test_a_cura_do_alto_falante_nao_fica_sob_flag_de_mic` fecha a outra ponta,
-    para que estreitar aqui não vire porta aberta.
-    """
+    """A cura não pode decidir no lugar dela."""
     linhas = _texto().splitlines()
     exit_linha = _linha_do_exit_da_bifurcacao()
     trecho = "\n".join(linhas[:exit_linha])
@@ -146,8 +93,6 @@ def test_o_ramo_nao_nativo_respeita_as_flags_dela() -> None:
         )
         if modo in _MODOS_FORA_DO_MIC:
             continue
-        # A chamada tem de estar sob um `if` de flag: procura para trás a
-        # condição mais próxima, dentro de poucas linhas.
         antes = "\n".join(linhas[max(0, linha - 6) : linha])
         assert re.search(r"WITH_WIREPLUMBER_(FIX|DISABLE_MIC)", antes), (
             f"a chamada da linha {linha} ({modo}) não está sob a flag dela"
@@ -162,18 +107,7 @@ def test_o_ramo_nao_nativo_respeita_as_flags_dela() -> None:
 
 
 def test_a_cura_do_alto_falante_nao_fica_sob_flag_de_mic() -> None:
-    """SOM-QUE-NAO-DORME-01: sem flag, e nem de carona na flag de outro.
-
-    A regra da casa de 08/08 é *toda cura entra no install, SEM FLAG*, e o
-    MIC-EM-TODO-FORMATO-01 é justamente o que ela custou quando foi violada por
-    acidente de POSIÇÃO. O jeito de repetir o erro aqui é fácil e parece
-    arrumação: encostar a chamada do `--nunca-dorme` dentro do `if` do mic que
-    vive logo abaixo dela. Ninguém veria — o install continuaria verde para
-    quem não passa flag nenhuma — e quem pedisse `--keep-dualsense-mic`
-    perderia o começo de cada efeito sonoro sem nunca ter pedido isso.
-
-    Morde ao mover a chamada do `--nunca-dorme` para dentro do `if` de mic.
-    """
+    """SOM-QUE-NAO-DORME-01: sem flag, e nem de carona na flag de outro."""
     linhas = _texto().splitlines()
     fora = [
         linha
@@ -201,12 +135,7 @@ def test_a_cura_do_alto_falante_nao_fica_sob_flag_de_mic() -> None:
 
 
 def test_as_flags_sao_definidas_antes_da_bifurcacao() -> None:
-    """Guarda contra a armadilha de ORDEM em bash.
-
-    O ramo não-nativo roda antes do grosso do arquivo. Se as flags fossem
-    definidas depois, o `if` leria vazio e, sob `set -u`, o install morreria —
-    trocando "microfone fraco" por "install quebrado".
-    """
+    """Guarda contra a armadilha de ORDEM em bash."""
     linhas = _texto().splitlines()
     definicoes = [
         i + 1
@@ -217,25 +146,11 @@ def test_as_flags_sao_definidas_antes_da_bifurcacao() -> None:
     assert max(definicoes) < _linha_do_exit_da_bifurcacao()
 
 
-#: O drop-in PROMOTOR — quem põe a entrada do controle acima de qualquer monitor.
-#: O nome aparece LITERAL em cinco superfícies que precisam concordar.
 PROMOTOR = "51-hefesto-dualsense-no-default-source.conf"
 
 
 def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
-    """A PREMISSA da cura, travada — se ela cair, a cura vira ruído.
-
-    Este teste existe para o dia em que alguém empacotar os drop-ins: aí a
-    chamada daqui passa a ser redundante no formato empacotado, e quem estiver
-    lendo precisa saber que a premissa mudou. Ele NÃO reprova por a cura existir;
-    reprova por a justificativa dela ter caducado em silêncio.
-    """
-    # As RECEITAS, não o código-fonte que mora ao lado delas. A primeira versão
-    # deste teste varria `packaging/` inteiro e acusou
-    # `packaging/cosmic-applet/src/app.rs` — que apenas LÊ os drop-ins para
-    # desenhar o estado do microfone no applet. Ler não é empacotar, e uma régua
-    # que não distingue os dois produz alarme convincente e falso, que é a
-    # armadilha mais cara desta casa.
+    """A PREMISSA da cura, travada — se ela cair, a cura vira ruído."""
     receitas = [
         RAIZ / "packaging" / "debian" / "control",
         RAIZ / "packaging" / "fedora" / "hefesto-dualsense4unix.spec",
@@ -250,19 +165,7 @@ def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
             continue
         conferidas += 1
         texto = caminho.read_text(encoding="utf-8", errors="ignore").lower()
-        # O QUE CONTA É O DROP-IN, NÃO A PALAVRA — corrigido em 25/08/2026, e
-        # é a SEGUNDA vez que esta régua confunde vizinhança com ato.
-        #
-        # A primeira foi `app.rs`, que apenas LÊ os drop-ins: "ler não é
-        # empacotar". A segunda é a frente BG-04, que passou a empacotar o
         # SCRIPT `fix_wireplumber_default_source.sh` nos cinco formatos — e o
-        # NOME dele contém "wireplumber". **Consertar não é empacotar**, e a
-        # régua acusou os quatro formatos de uma vez.
-        #
-        # A pergunta que ela faz é sobre o ARQUIVO DE CONFIGURAÇÃO: o `.conf`
-        # que vai para `wireplumber.conf.d`. Quem empacota um drop-in cita o
-        # diretório dele ou o nome do arquivo; quem empacota o script cita só
-        # o `.sh`. Duas coisas diferentes, duas escritas diferentes.
         if any(marca in texto for marca in ("wireplumber.conf.d", ".conf.d/wireplumber")):
             achados.append(str(caminho.relative_to(RAIZ)))
             continue
@@ -279,8 +182,6 @@ def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
     )
 
 
-
-#: As cinco, e o que cada uma faz com ele.
 _SUPERFICIES_DO_PROMOTOR = (
     ("scripts/fix_wireplumber_default_source.sh", "instala e mantém"),
     ("scripts/doctor.sh", "confere"),
@@ -291,20 +192,7 @@ _SUPERFICIES_DO_PROMOTOR = (
 
 
 def test_as_cinco_superficies_falam_do_mesmo_drop_in_promotor() -> None:
-    """O nome do promotor é literal em cinco lugares e ninguém os amarrava.
-
-    LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026) mostrou o preço de superfícies que
-    discordam sobre microfone: a janela dizia "Ligado" olhando só o 52/53
-    enquanto o promotor tinha sido apagado, e o applet do COSMIC tinha o MESMO
-    furo. Curados os dois no mesmo dia — e este portão existe para que a próxima
-    renomeação do arquivo não deixe uma das cinco para trás em silêncio.
-
-    É a mesma família do portão que amarra `wvkbd-mobintl`/`onboard` entre
-    instalador, doctor e daemon: quando um produto escreve um caminho literal em
-    N lugares, o teste é quem impede o N-ésimo de divergir.
-
-    Morde ao trocar o nome em qualquer uma das cinco.
-    """
+    """O nome do promotor é literal em cinco lugares e ninguém os amarrava."""
     faltando = [
         f"{caminho} ({papel})"
         for caminho, papel in _SUPERFICIES_DO_PROMOTOR
@@ -317,15 +205,7 @@ def test_as_cinco_superficies_falam_do_mesmo_drop_in_promotor() -> None:
 
 
 def test_o_applet_nao_chama_de_ligado_um_mic_sem_o_promotor() -> None:
-    """O applet do COSMIC tinha o mesmo furo da janela, e foi curado junto.
-
-    Sem o promotor a entrada do controle nasce em `priority.session = 50` e o
-    monitor da saída vence: o que qualquer aplicativo grava é o eco do que sai.
-    Um applet tem um ícone, não três estados, então ele erra para o lado
-    conservador — mas não pode afirmar "ligado".
-
-    Morde ao devolver o `!suppressed` puro ao `mic_is_on` do Rust.
-    """
+    """O applet do COSMIC tinha o mesmo furo da janela, e foi curado junto."""
     fonte = (RAIZ / "packaging/cosmic-applet/src/app.rs").read_text(encoding="utf-8")
     corpo = fonte[fonte.index("fn mic_is_on()") :]
     corpo = corpo[: corpo.index("\n}\n") + 2]

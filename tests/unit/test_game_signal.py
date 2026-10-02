@@ -1,15 +1,4 @@
-"""NUMA-01 — o sinal "jogo real ativo" (`classify` puro + casca `GameSignal`).
-
-Bloco 1 do plano de testes da sprint (2026-07-19-sprint-numeracao-una.md):
-tabela-verdade de `classify()` por ramo de evidência isolado, histerese de
-30s da queda `*→daemon` (não cai antes, sobe/degrada imediato) e os dois
-vetos permanentes anti-regressão do incidente 14:42:
-
-  - sessão-uhid-aberta SOZINHA não é evidência de jogo (`session_open` não
-    entra em `classify` — só modula a histerese em `GameSignal.evaluate`);
-  - `window_detect_last_class` STICKY com a leitura corrente vazia/unknown
-    NÃO é evidência (prenderia `game` para sempre depois do jogo fechar).
-"""
+"""NUMA-01 — o sinal "jogo real ativo" (`classify` puro + casca `GameSignal`)."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.daemon.subsystems.game_signal import (
@@ -49,16 +38,12 @@ def _classify(
     )
 
 
-# --- tabela-verdade de classify() --------------------------------------------
-
-
 class TestSemEvidenciaNenhuma:
     def test_detector_saudavel_sem_evidencia_e_daemon(self) -> None:
         assert _classify(window_healthy=True) == "daemon"
 
     def test_detector_nao_saudavel_sem_evidencia_e_unknown(self) -> None:
-        """Fail-safe: detector cego (Wayland puro/backend null) sem NENHUMA
-        evidência não pode virar `daemon` — nunca pior que hoje."""
+        """Fail-safe: detector cego (Wayland puro/backend null) sem NENHUMA"""
         assert _classify(window_healthy=False) == "unknown"
 
 
@@ -73,9 +58,7 @@ class TestEvidenciaJanela:
         assert _classify(window_class_current="Celeste") == "daemon"
 
     def test_idade_fresca_de_game_window_seen_at_e_evidencia(self) -> None:
-        """Hiccup momentâneo do detector (leitura corrente vazia) tolerado
-        enquanto a idade do último carimbo `steam_app` ainda cabe na
-        histerese — SEM recorrer ao sticky vetado."""
+        """Hiccup momentâneo do detector (leitura corrente vazia) tolerado"""
         assert (
             _classify(
                 window_healthy=False,
@@ -96,12 +79,7 @@ class TestEvidenciaJanela:
         )
 
     def test_sticky_nao_entra_no_classify_nao_e_parametro(self) -> None:
-        """Veto anti-regressão do incidente: `classify()` nem ACEITA o
-        sticky `window_detect_last_class` como parâmetro — só a leitura
-        CORRENTE (`window_class_current`) e a idade que DECAI
-        (`window_seen_age`). Corrente vazia + idade None (nunca visto) ⇒
-        NUNCA `game`, mesmo que uma classe sticky antiga exista em outro
-        lugar do estado — prenderia a autoridade em `game` para sempre."""
+        """Veto anti-regressão do incidente: `classify()` nem ACEITA o"""
         assert (
             _classify(
                 window_healthy=True,
@@ -144,8 +122,7 @@ class TestEvidenciaMarker:
         )
 
     def test_marker_com_exit_mais_novo_nao_e_evidencia(self) -> None:
-        """FEIT-EXIT: o processo daquele launch já terminou — o marker não
-        atesta jogo rodando."""
+        """FEIT-EXIT: o processo daquele launch já terminou — o marker não"""
         assert (
             _classify(
                 marker=(APPID, 990),
@@ -172,8 +149,7 @@ class TestEvidenciaMarker:
 
 class TestQualquerEvidenciaVenceUnknown:
     def test_evidencia_de_jogo_vence_mesmo_com_detector_cego(self) -> None:
-        """Marker/perfil não dependem do detector de janela (Wayland puro
-        COM wrapper é exatamente o caso que a evidência #3 cobre)."""
+        """Marker/perfil não dependem do detector de janela (Wayland puro"""
         assert (
             _classify(
                 window_healthy=False,
@@ -187,8 +163,7 @@ class TestQualquerEvidenciaVenceUnknown:
 
 class TestSessionOpenNaoEntraNoClassify:
     def test_session_open_true_sozinho_nunca_vira_game(self) -> None:
-        """Veto permanente #1 da síntese: sessão uhid aberta (o cliente
-        Steam TAMBÉM abre) JAMAIS é evidência de jogo."""
+        """Veto permanente #1 da síntese: sessão uhid aberta (o cliente"""
         assert _classify(session_open=True) == "daemon"
 
     def test_session_open_false_nao_muda_o_veredito_de_game(self) -> None:
@@ -200,9 +175,6 @@ class TestSessionOpenNaoEntraNoClassify:
             )
             == "game"
         )
-
-
-# --- GameSignal: histerese + telemetria --------------------------------------
 
 
 class _Clock:
@@ -231,13 +203,11 @@ class TestHisterese:
     def test_queda_para_daemon_nao_acontece_antes_de_30s_com_sessao_aberta(
         self,
     ) -> None:
-        """Ticks periódicos (padrão de produção, ~2s): a PRIMEIRA observação
-        de `daemon` arma o relógio; antes de completar `HYSTERESIS_SEC`
-        contínuos de observações `daemon`, a autoridade PERMANECE `game`."""
+        """Ticks periódicos (padrão de produção, ~2s): a PRIMEIRA observação"""
         clock = _Clock()
         signal = GameSignal(time_fn=clock)
         signal.evaluate("game", session_open=True)
-        assert signal.evaluate("daemon", session_open=True) == "game"  # arma
+        assert signal.evaluate("daemon", session_open=True) == "game"
         clock.advance(HYSTERESIS_SEC - 0.01)
         assert signal.evaluate("daemon", session_open=True) == "game"
 
@@ -245,13 +215,12 @@ class TestHisterese:
         clock = _Clock()
         signal = GameSignal(time_fn=clock)
         signal.evaluate("game", session_open=True)
-        assert signal.evaluate("daemon", session_open=True) == "game"  # arma
+        assert signal.evaluate("daemon", session_open=True) == "game"
         clock.advance(HYSTERESIS_SEC)
         assert signal.evaluate("daemon", session_open=True) == "daemon"
 
     def test_sem_sessao_aberta_queda_e_imediata(self) -> None:
-        """Sem sessão uhid aberta não há réplica de exibição a proteger —
-        a histerese é dispensada por completo."""
+        """Sem sessão uhid aberta não há réplica de exibição a proteger —"""
         clock = _Clock()
         signal = GameSignal(time_fn=clock)
         signal.evaluate("game", session_open=True)
@@ -260,9 +229,7 @@ class TestHisterese:
     def test_retorno_a_game_antes_da_janela_reseta_o_relogio_da_queda(
         self,
     ) -> None:
-        """Alt-tab curto: evidência volta antes dos 30s — a queda seguinte
-        precisa esperar os 30s inteiros de novo (não herda o tempo já
-        decorrido)."""
+        """Alt-tab curto: evidência volta antes dos 30s — a queda seguinte"""
         clock = _Clock()
         signal = GameSignal(time_fn=clock)
         signal.evaluate("game", session_open=True)
@@ -286,5 +253,4 @@ class TestHisterese:
         signal = GameSignal(time_fn=clock)
         signal.evaluate("daemon", session_open=False)
         signal.evaluate("daemon", session_open=False)
-        # Não deve levantar nem mudar o estado — idempotente.
         assert signal.authority == "daemon"

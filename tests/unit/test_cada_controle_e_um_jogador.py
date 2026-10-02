@@ -1,36 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO FUNDAMENTO: cada controle é um jogador, e isso não se ajusta.
-
-DECISÃO DELA, 02/09/2026, com estas palavras:
-
-    "isso não é escolha de interface. Ninguem que conecta 2 controles quer usar
-     ambos pra controlar o mesmo personagem. quer usar 2 controles pra ambos
-     serem diferentes e usáveis. Remove ele aqui e impeça que isso retorne de
-     alguma forma. Isso é sempre true. sempre."
-
-<!-- noqa-acento: citação literal dela -->
-
-O QUE ESTA RÉGUA GUARDA: não existe interruptor de co-op em perfil nenhum.
-Quem liga dois controles quer dois jogadores — e o produto não pergunta, não
-grava e não lê nada a respeito.
-
-O DONO ÚNICO DO FATO é `DaemonConfig.coop_enabled`, que nasce `True`. Um
-segundo dono em `ProfileModeConfig` faria a mesma pergunta duas vezes, com duas
-respostas possíveis — e é assim que um perfil passa a desligar, pelas costas,
-algo que ninguém pediu.
-
-AS QUATRO COISAS QUE ELA COBRA:
-
-1. **O esquema do perfil não tem campo de co-op.** Nem esse nome, nem outro.
-2. **Nada no mundo de perfis LÊ um co-op de perfil.** Um leitor sem campo é o
-   caminho de volta pronto: basta alguém acrescentar o campo e ele acorda.
-3. **A tela não oferece a escolha.** Nem no gerador, nem no HTML publicado.
-4. **O dono único continua nascendo ligado.**
-
-A MORDIDA: acrescente `coop: bool = True` ao `ProfileModeConfig` e o caso 1
-reprova; faça qualquer arquivo de `profiles/` ler `mode.coop` e o caso 2
-reprova; ponha um `data-campo="coop"` numa aba e o caso 3 reprova.
-"""
+"""A RÉGUA DO FUNDAMENTO: cada controle é um jogador, e isso não se ajusta."""
 from __future__ import annotations
 
 import pathlib
@@ -42,9 +11,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-#: As grafias que um campo de co-op poderia assumir. Não é lista de nomes
-#: proibidos por superstição: é a pergunta "existe um interruptor para isto?",
-#: e ela tem de ser respondida NÃO em qualquer grafia.
 _GRAFIAS = ("coop", "co_op", "cooperativo", "multiplayer_local", "jogador_unico")
 
 
@@ -112,15 +78,11 @@ def test_o_dono_unico_nasce_ligado() -> None:
 
 @pytest.mark.parametrize("kind", ["native", "gamepad", "desktop"])
 def test_um_mode_de_qualquer_tipo_nao_aceita_coop(kind: str) -> None:
-    """`extra="forbid"` é o que faz a proibição valer no DISCO, não só no código.
-
-    Um perfil que trouxesse `"coop"` seria recusado na validação — e é assim
-    que o campo não volta por um arquivo escrito à mão.
-    """
+    """`extra="forbid"` é o que faz a proibição valer no DISCO, não só no código."""
     from pydantic import ValidationError
 
     from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
-    ProfileModeConfig(kind=kind)  # o caminho normal segue funcionando
+    ProfileModeConfig(kind=kind)
     with pytest.raises(ValidationError):
         ProfileModeConfig(kind=kind, coop=True)

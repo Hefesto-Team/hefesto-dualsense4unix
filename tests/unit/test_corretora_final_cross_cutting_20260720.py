@@ -1,39 +1,4 @@
-"""Corretora final cross-cutting (2026-07-20) — 3 achados de INTERAÇÃO entre ondas.
-
-Cada teste exercita o ESTADO COMBINADO das duas ondas envolvidas, não só uma
-onda isolada (as suítes de cada onda já cobrem o caso isolado):
-
-1. HIGH — `led.set`/`led.player_set` (Onda U) escreviam CRU via
-   `_for_each_led` (gate só `_output_mute`, nunca `_game_wins`/
-   `display_authority` da Onda N) e em seguida armavam a trava manual que
-   suprime o ÚNICO caminho de auto-correção (`AutoSwitcher`/reassert na
-   troca de foco). Combo: `display_authority == 'game'` (jogo real com a
-   camada GAME no merge) + `led.set`/`led.player_set` manual. Fix: reassert
-   imediato (`reassert_resolved_outputs`) dentro do próprio handler, ANTES
-   de a trava armar — o merge de N corrige a escrita crua na hora, com ou
-   sem a trava.
-
-2. MEDIUM — `identity.renumber` tomava o `RLock` de instância de
-   `lock_for_renumber()` direto no ÚNICO event loop do daemon, sem
-   `asyncio.to_thread`/timeout — o MESMO lock que `ExternalLedSync.tick()`
-   (HANG-01) segura durante I/O de disco (`_save_locked`) no pool dedicado
-   `hefesto-ext`. Combo: lock preso por uma thread (simula o worker
-   `hefesto-ext` "wedged") + chamada a `identity.renumber`. Fix: o handler
-   agora roda a seção bloqueante via `asyncio.to_thread` sob
-   `asyncio.wait_for` — o event loop continua respondendo a outras
-   corrotinas e o handler devolve erro em vez de travar para sempre.
-
-3. MEDIUM — `ExternalImuEnabler.tick` (Onda G/GYRO-02) rodava ANTES do laço
-   de repintura/numeração de LED (Onda N/NUMA-03.4) dentro da MESMA chamada
-   síncrona de `ExternalLedSync.tick()` — um travamento na escrita crua de
-   IMU (`os.write` sem timeout) apagava a defesa de LED para TODOS os
-   outros externos conectados nesse tick. Combo: inventário com um Nintendo
-   Pro real (dispara o enable-IMU) + um 8BitDo (precisa da repintura de
-   LED) no MESMO tick, com o enable-IMU travando. Fix: `enable_imu` agora
-   roda no `finally`, DEPOIS do laço de LED (e depois do `return`
-   antecipado do auto-colors OFF) — a repintura dos outros dispositivos já
-   aconteceu antes de a escrita de IMU arriscar travar.
-"""
+"""Corretora final cross-cutting (2026-07-20) — 3 achados de INTERAÇÃO entre ondas."""
 from __future__ import annotations
 
 import asyncio
@@ -61,22 +26,9 @@ from hefesto_dualsense4unix.testing import FakeController
 MAC_1 = "AA:BB:CC:00:00:01"
 UNIQ_1 = "aabbcc000001"
 
-#: MAC forjado com o OUI REAL do Nintendo Pro (via `NINTENDO_REAL_OUI`, nunca
-#: um MAC literal de unidade real) — só o prefixo importa para o gatilho do
-#: enable-IMU, construído em runtime para não fossilizar 12 hex na fonte
-#: (guarda de anonimato, `test_anonimato_de_fixtures.py`).
 NINTENDO_UNIQ = f"{NINTENDO_REAL_OUI}000001"
-#: Faixa sintética `aabbcc` (permitida) — qualquer OUI que NÃO seja o do
-#: Nintendo real já basta para representar "outro externo qualquer" (o teste
-#: não depende do 8BitDo especificamente, só de não disparar o enable-IMU).
 BITDO_UNIQ = "aabbcc000002"
 
-#: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026): o OUI deixou de bastar para
-#: disparar o enable-IMU. `e_pro_genuino` pergunta primeiro se o aparelho SE
-#: APRESENTA como Pro (nome/VID/PID) e só então descarta o clone pelo endereço
-#: — uma faixa sozinha não identifica fabricante. Sem este nome no inventário,
-#: estes dois testes mediriam o contrato antigo e passariam a exigir exatamente
-#: o defeito que a cura tirou.
 _NOME_DO_PRO = "Nintendo Co., Ltd. Pro Controller"
 
 
@@ -140,7 +92,6 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
     async def test_led_set_manual_e_corrigido_pela_cor_do_jogo(self) -> None:
         node = _FakeLedNode()
         server, _store, ctl = self._server(node)
-        # Sessão de jogo ABERTA: a camada GAME já escreveu verde no merge.
         ctl.set_game_authority_provider(lambda: "game")
         assert ctl.set_game_output_for(MAC_1, led=(0, 255, 0)) is True
         node.rgb_calls.clear()
@@ -148,17 +99,9 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
         resultado = await server._handle_led_set({"rgb": [255, 0, 0]})
 
         assert resultado["status"] == "ok"
-        # Falha-sem (achado real): sem o reassert, a ÚLTIMA escrita no
-        # hardware seria a manual (255, 0, 0) — o jogo ficaria com a cor
-        # errada até o próximo alt-tab, que a trava logo abaixo bloqueia.
         assert node.rgb_calls[-1] == (0, 255, 0), (
             "a cor do jogo tem de vencer na hora, não só no próximo reassert"
         )
-        # A trava continua armando (comportamento correto fora de sessão de
-        # jogo / regressão do onda_u_causa_a_trava_manual) — o fix não
-        # remove a trava, só fecha o furo do merge-gate.
-        # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
-        #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
     @pytest.mark.asyncio
     async def test_led_player_set_manual_e_corrigido_pela_cor_do_jogo(self) -> None:
@@ -175,20 +118,12 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
         )
 
         assert resultado["status"] == "ok"
-        # STEAM-NO-FISICO-01 (23/09/2026): até ali o número do JOGO vencia o
-        # gesto dela; a decisão dela (*"Hefesto manda e controla sempre"*)
-        # inverteu — o número do jogo nunca chega ao físico, e o que ela
-        # escolheu fica.
         assert node.player_calls[-1] == (True, False, False, False, False)
         assert (False, False, True, False, False) not in node.player_calls
-        # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
-        #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
     @pytest.mark.asyncio
     async def test_sem_jogo_a_cor_manual_gruda_normalmente(self) -> None:
-        """Regressão: fora de sessão de jogo, `led.set` continua valendo — o
-        reassert não pode reverter a escrita manual quando não há camada
-        GAME nenhuma disputando o merge."""
+        """Regressão: fora de sessão de jogo, `led.set` continua valendo — o"""
         node = _FakeLedNode()
         server, _store, ctl = self._server(node)
         ctl.set_game_authority_provider(lambda: "daemon")
@@ -197,8 +132,6 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
 
         assert resultado["status"] == "ok"
         assert node.rgb_calls[-1] == (10, 20, 30)
-        # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
-        #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
 
 class TestIdentityRenumberNaoPenduraOEventLoop:
@@ -249,9 +182,6 @@ class TestIdentityRenumberNaoPenduraOEventLoop:
             daemon=daemon,
         )
 
-        # Simula o worker `hefesto-ext` travado SEGURANDO o MESMO RLock de
-        # instância que `lock_for_renumber()` expõe (ex.: `os.write` preso
-        # dentro de `_save_locked`, sob o pool dedicado do HANG-01).
         lock = ext.lock_for_renumber()
         lock_preso = threading.Event()
         pode_soltar = threading.Event()
@@ -266,11 +196,6 @@ class TestIdentityRenumberNaoPenduraOEventLoop:
         try:
             assert lock_preso.wait(timeout=1.0), "thread não tomou o lock"
 
-            # Prova de que o event loop CONTINUA respondendo durante a
-            # espera do handler — falha-sem: no HEAD anterior, o acquire()
-            # síncrono no meio da corrotina consumia a ÚNICA thread do loop
-            # e esta tarefa concorrente só rodaria DEPOIS do handler
-            # retornar (nunca, sem o fix).
             batidas = 0
 
             async def _batida() -> None:
@@ -293,8 +218,7 @@ class TestIdentityRenumberNaoPenduraOEventLoop:
     async def test_sem_contencao_continua_funcionando(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Regressão: sem lock disputado, o offload continua compactando
-        normalmente (o fix não quebra o caminho feliz do TestCompactacaoGlobal)."""
+        """Regressão: sem lock disputado, o offload continua compactando"""
         monkeypatch.setattr(ih_mod, "_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC", 2.0)
 
         ext = ExternalIdentityRegistry()
@@ -329,27 +253,16 @@ class TestIdentityRenumberNaoPenduraOEventLoop:
 
 
 class TestEnableImuNaoApagaADefesaDosOutrosExternos:
-    """Achado 3 (MEDIUM): enable-IMU travando não pode apagar a repintura
-    de LED de OUTROS externos no MESMO tick de `ExternalLedSync.tick()`."""
+    """Achado 3 (MEDIUM): enable-IMU travando não pode apagar a repintura"""
 
     def test_enable_imu_trava_mas_o_8bitdo_ja_foi_repintado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # NOTA DATADA — 07/08/2026, E0 da LUGAR-À-MESA-01 (DECISÃO DELA: "calar
-        # a luz até a entrega existir"): em produção o tick não escreve mais LED
-        # nos externos (`EXTERNAL_PLAYER_LED_ENABLED` nasce False). A ORDEM que
-        # este teste mede — repintura ANTES do enable-IMU, para que um `os.write`
-        # travado não prenda o único worker do pool antes da defesa de LED de
-        # TODO MUNDO — continua sendo a ordem correta do código e volta a valer
-        # com a `E3`. Nada caducou: o interruptor é ligado aqui para que a
-        # regressão de ordem continue vigiada.
         monkeypatch.setattr(ei_mod, "EXTERNAL_PLAYER_LED_ENABLED", True)
         travou = threading.Event()
         pode_prosseguir = threading.Event()
 
         def _enable_imu_trava(hidraw: str, *, packet_num: int = 0) -> bool:
-            # Simula o `os.write` cru travando indefinidamente no hidraw do
-            # Nintendo Pro real (URB pendente / USB não respondendo).
             travou.set()
             pode_prosseguir.wait(timeout=5.0)
             return True
@@ -414,11 +327,6 @@ class TestEnableImuNaoApagaADefesaDosOutrosExternos:
         thread.start()
         try:
             assert travou.wait(timeout=2.0), "enable_imu nunca foi chamado"
-            # Com o fix (enable-IMU no `finally`, DEPOIS do laço de LED): a
-            # repintura do 8BitDo (e a numeração do próprio Nintendo) já
-            # aconteceu ANTES de o enable-IMU travar — falha-sem: no HEAD
-            # anterior, `escritas` estaria VAZIA aqui (o laço de LED nunca
-            # tinha rodado, preso atrás do enable-IMU que vem primeiro).
             assert ("/dev/hidraw-8bitdo", 2) in escritas or any(
                 hidraw == "/dev/hidraw-8bitdo" for hidraw, _slot in escritas
             ), "a defesa de LED do 8BitDo não pode ficar presa atrás do enable-IMU"
@@ -433,9 +341,7 @@ class TestEnableImuNaoApagaADefesaDosOutrosExternos:
     def test_auto_colors_off_ainda_assim_dispara_o_enable_imu(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Regressão do invariante documentado (GYRO-02): o enable-IMU é
-        INDEPENDENTE do flag `auto_player_colors` — mesmo com o early-return
-        do laço de LED (linha ~611), o `finally` ainda dispara a IMU."""
+        """Regressão do invariante documentado (GYRO-02): o enable-IMU é"""
         chamou: list[str] = []
 
         def _enable_imu(hidraw: str, *, packet_num: int = 0) -> bool:
@@ -461,8 +367,6 @@ class TestEnableImuNaoApagaADefesaDosOutrosExternos:
         from types import SimpleNamespace
 
         registry = ExternalIdentityRegistry()
-        # `auto_enabled=False` no registro (espelha o flag no daemon real)
-        # dispara o early-return de `_auto_player_colors_enabled` (NUMA-03c).
         registry_ds = SimpleNamespace(auto_enabled=False)
         daemon = SimpleNamespace(identity_registry=registry_ds, display_authority="daemon")
         sync = ExternalLedSync(daemon, registry)

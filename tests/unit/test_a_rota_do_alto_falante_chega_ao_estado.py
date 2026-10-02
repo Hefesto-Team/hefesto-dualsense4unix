@@ -41,11 +41,7 @@ class BackendComRota:
 
 
 def _bloco_do_estado(estado: dict[str, Any] | None) -> dict[str, Any]:
-    """Roda o trecho do `ipc_handlers` que monta o `entry["speaker"]`.
-
-    Chamar o handler inteiro exigiria um daemon; o que importa aqui é a
-    montagem do bloco, e ela é o que a cura mudou.
-    """
+    """Roda o trecho do `ipc_handlers` que monta o `entry["speaker"]`."""
     entry: dict[str, Any] = {}
     speaker = estado
     if not isinstance(speaker, dict):
@@ -87,12 +83,7 @@ def test_o_que_nao_e_inteiro_nao_entra(valor):
 
 
 def test_o_handler_de_verdade_carrega_a_cura():
-    """A régua acima roda uma CÓPIA do trecho — esta cobra o original.
-
-    Sem isto, alguém poderia apagar a cura do `ipc_handlers.py` e os três testes
-    acima continuariam verdes sobre a cópia. É a diferença entre provar a lógica
-    e provar o PRODUTO.
-    """
+    """A régua acima roda uma CÓPIA do trecho — esta cobra o original."""
     import pathlib
 
     fonte = (pathlib.Path(__file__).resolve().parents[2]

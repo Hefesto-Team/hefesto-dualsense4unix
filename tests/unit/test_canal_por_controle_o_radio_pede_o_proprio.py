@@ -48,12 +48,9 @@ from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
 )
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
 
-#: Os da mesa dela, na faixa sintética que o portão de anonimato exige em
-#: `tests/` (`test_anonimato_de_fixtures`).
 UM = "aabbcc000001"
 DOIS = "aabbcc000002"
 
-#: O nome que `PonteMicBluetooth` publica: prefixo mais os TRÊS últimos octetos.
 FONTE_DE_UM = "hefesto_dualsense_bt_000001"
 FONTE_DO_CABO = "alsa_input.usb-Sony_DualSense-00.iec958-stereo"
 FONTE_DA_PLACA = "alsa_input.pci-0000_00_1f.3.analog-stereo"
@@ -79,18 +76,9 @@ def sem_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
 
 
-# ===========================================================================
-# 1. O registro de procura — o que ficou no lugar da declaração à mão
-# ===========================================================================
-
-
 class TestORegistro:
     def test_pedir_normaliza_o_endereco(self) -> None:
-        """A chave é o `uniq` de doze hex, venha ele como vier.
-
-        Um pedido escrito com dois-pontos e outro sem seriam DOIS donos do
-        mesmo microfone, e o segundo subiria uma ponte em cima do primeiro.
-        """
+        """A chave é o `uniq` de doze hex, venha ele como vier."""
         registro = RegistroDePedidosDeCanal()
         assert registro.pedir("AA:BB:CC:00:00:01") is True
         assert registro.abertos() == frozenset({UM})
@@ -103,11 +91,7 @@ class TestORegistro:
         assert registro.abertos() == frozenset()
 
     def test_o_pedido_acorda_quem_dorme(self) -> None:
-        """Sem isto o canal esperaria a varredura inteira depois do toque dela.
-
-        E os segundos entre o botão e o canal no ar apareceriam na tela como
-        "não pegou" — a mentira que a eleição existe para não contar.
-        """
+        """Sem isto o canal esperaria a varredura inteira depois do toque dela."""
         registro = RegistroDePedidosDeCanal()
         registro.novidade.clear()
         registro.pedir(UM)
@@ -150,24 +134,9 @@ class TestORegistro:
         assert erros == []
 
 
-# ===========================================================================
-# 2. AS DUAS METADES — sem pedido nada sobe; com pedido sobe só o dele
-# ===========================================================================
-
-
 class TestAsDuasMetades:
     def test_sem_pedido_a_mesa_do_radio_ganha_canal(self) -> None:
-        """**A INVERSÃO — 18/09/2026**, e é aqui que ela se vê melhor.
-
-        Este teste dizia *"sem pedido nada sobe e a privacidade fica de pé"*, e
-        a trava era `alvos() == []`. A ordem dela derrubou o default: *"todos
-        os controles tem que nascer com tudo mic, giroscopio e afins"*. Quem
-        guarda a escolha dela agora é a RECUSA, medida na régua de baixo.
-
-        `is_enabled` verdadeiro continua sendo o supervisor de pé, e "ligado"
-        continua não sendo "capturando": sem nó de rádio na varredura não há
-        ponte, não há `0x32` e a libopus nem é importada.
-        """
+        """**A INVERSÃO — 18/09/2026**, e é aqui que ela se vê melhor."""
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         config = _config()
         assert subsystem.is_enabled(config) is True
@@ -181,18 +150,7 @@ class TestAsDuasMetades:
         assert [n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
 
     def test_a_recusa_vence_o_pedido_porque_o_interruptor_manda(self) -> None:
-        """A REGRA DA CASA, e ela NÃO mudou com a inversão — só mudou de lado.
-
-        O cabeçalho do `bt_mic` a escreve: *"desligar continua desligando (…)
-        sem isso o gesto mais explícito que ela tem — o interruptor — perderia
-        para um toque de botão feito minutos antes, que é o oposto de quem
-        manda"*. Antes o gesto explícito era TIRAR a marca; agora é PÔR a
-        recusa. A hierarquia é a mesma.
-
-        Esta régua nasceu ERRADA na primeira escrita de 18/09 — afirmava que o
-        pedido vencia — e a suíte a derrubou. Fica assim, com a nota, porque a
-        tentação de inverter a hierarquia junto com o default é real.
-        """
+        """A REGRA DA CASA, e ela NÃO mudou com a inversão — só mudou de lado."""
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
         subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM}))
@@ -208,12 +166,7 @@ class TestAsDuasMetades:
         assert escolhidos == [DOIS]
 
     def test_a_declaracao_antiga_continua_valendo(self) -> None:
-        """Quem já marcou o controle no card não perde nada com a inversão.
-
-        O `True` no disco virou redundância — a ausência já liga —, e é por
-        isso que esta régua mede que ele não ATRAPALHA: a mesa dela tem dois
-        controles declarados e dois não, e os quatro têm de ter microfone.
-        """
+        """Quem já marcou o controle no card não perde nada com a inversão."""
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({UM}))
         assert sorted(n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])) == [UM, DOIS]
@@ -227,19 +180,9 @@ class TestAsDuasMetades:
         assert escolhidos == [UM, DOIS]
 
 
-# ===========================================================================
-# 3. A VIDA DO PEDIDO — ele não caduca no relógio, e não sobrevive à mesa
-# ===========================================================================
-
-
 class TestAVidaDoPedido:
     def test_quem_sai_da_mesa_perde_o_pedido(self) -> None:
-        """Sem isto a RECONEXÃO subiria a ponte sozinha — o "liga sozinho".
-
-        Um pedido não caduca no relógio (*"ninguém perde nada quando outro é
-        eleito"*), mas ele é da sessão daquele controle na mesa. Quem voltar
-        pede de novo, com o botão, se quiser.
-        """
+        """Sem isto a RECONEXÃO subiria a ponte sozinha — o "liga sozinho"."""
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
         registro.pedir(UM)
@@ -248,18 +191,7 @@ class TestAVidaDoPedido:
         assert registro.abertos() == frozenset({DOIS})
 
     def test_desligar_no_aplicar_vence_o_pedido(self) -> None:
-        """O interruptor do card é o gesto mais explícito que ela tem.
-
-        **A BORDA TROCOU DE LADO — 18/09/2026.** Ler só o estado ATUAL nunca
-        bastou: `alvos()` une os conjuntos e a procura manteria de pé o que ela
-        acabou de desligar. Até a inversão, o gesto que desligava era SAIR da
-        declaração, e o que decidia era a borda de DESCIDA dela. Agora sair da
-        declaração volta a LIGAR — a ausência de opinião liga —, e quem desliga
-        é ENTRAR na recusa: é a borda de SUBIDA dela que solta o pedido.
-
-        A hierarquia é a de sempre, e é ela que esta régua trava: o interruptor
-        não perde para um toque de botão feito minutos antes.
-        """
+        """O interruptor do card é o gesto mais explícito que ela tem."""
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
         recusados: set[str] = set()
@@ -267,7 +199,6 @@ class TestAVidaDoPedido:
         subsystem._negados_antes = frozenset(recusados)
         registro.pedir(UM)
 
-        # Ela desliga o microfone deste controle no "Aplicar".
         recusados.add(UM)
         subsystem._soltar_os_que_ela_desmarcou()
 
@@ -290,17 +221,9 @@ class TestAVidaDoPedido:
         assert registro.abertos() == frozenset({DOIS})
         assert [n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
 
-        # E a segunda volta do laço não solta mais nada: o que decide é a
-        # BORDA, não o estado. Sem isso, um controle recusado soltaria o pedido
-        # dos outros a cada varredura.
         subsystem._soltar_os_que_ela_desmarcou()
 
         assert registro.abertos() == frozenset({DOIS})
-
-
-# ===========================================================================
-# 4. O GANCHO — daemon importando `integrations`, nunca o contrário
-# ===========================================================================
 
 
 class TestOGancho:
@@ -341,11 +264,6 @@ class TestOGancho:
         elm.registrar_pedidor_de_canal(subsystem.pedir_canal)
         assert elm.pedir_canal(UM) is True
         assert registro.abertos() == frozenset({UM})
-
-
-# ===========================================================================
-# 5. PONTA A PONTA — o controle do rádio pede o canal dele e elege
-# ===========================================================================
 
 
 class _Pactl:
@@ -399,19 +317,11 @@ class TestPontaAPonta:
     def test_o_controle_do_radio_pede_o_canal_e_elege(
         self, bancada: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O CAMINHO QUE NÃO EXISTIA. Sem a cura, isto é a recusa de sempre.
-
-        Medido em 03/09/2026 na mesa dela: o controle do rádio não publicava
-        fonte nenhuma, e apertar o botão do microfone respondia *"não há canal
-        de captura atribuível a este controle"* — sem nada que ela pudesse
-        fazer a respeito de dentro do produto.
-        """
+        """O CAMINHO QUE NÃO EXISTIA. Sem a cura, isto é a recusa de sempre."""
         publicadas: list[str] = []
         registro = RegistroDePedidosDeCanal()
 
         def _pedidor(uniq: str) -> bool:
-            # A ponte subindo: é o que o `BtMicSubsystem` faz na varredura
-            # seguinte, e o efeito visível é a source no PipeWire.
             if registro.pedir(uniq):
                 publicadas.append(FONTE_DE_UM)
                 return True
@@ -432,11 +342,7 @@ class TestPontaAPonta:
     def test_o_cabo_nao_pede_nada(
         self, bancada: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Quem já tem canal não pede — o toque no cabo custa o mesmo de sempre.
-
-        Pedir aqui gastaria o orçamento de espera inteiro a cada toque, e ainda
-        subiria uma ponte de rádio para um controle que está no cabo.
-        """
+        """Quem já tem canal não pede — o toque no cabo custa o mesmo de sempre."""
         pedidos: list[str] = []
         elm.registrar_pedidor_de_canal(lambda u: pedidos.append(u) or True)
         monkeypatch.setattr(elm, "fontes_de_captura_agora", lambda: [FONTE_DO_CABO])
@@ -450,11 +356,7 @@ class TestPontaAPonta:
     def test_quando_ninguem_atende_a_recusa_e_a_de_sempre(
         self, bancada: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """NENHUMA FRASE NOVA — ela recusou a premissa do recado, não o texto.
-
-        Sem pedidor registrado (o subsystem no chão, ou um processo que não é o
-        daemon), a resposta tem de ser palavra por palavra a que já existia.
-        """
+        """NENHUMA FRASE NOVA — ela recusou a premissa do recado, não o texto."""
         monkeypatch.setattr(elm, "fontes_de_captura_agora", list)
 
         resultado = elm.EleitorDeMicrofone().eleger_o_controle(UM, [UM])
@@ -468,11 +370,7 @@ class TestPontaAPonta:
     def test_o_canal_que_nao_sobe_no_orcamento_nao_inventa_frase(
         self, bancada: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Pedido aceito e canal que não aparece: a recusa continua a de sempre.
-
-        É o caso da libopus ausente ou do hidraw recusado — a ponte foi pedida
-        e não subiu. Nada de tela nova; o texto é o que já havia.
-        """
+        """Pedido aceito e canal que não aparece: a recusa continua a de sempre."""
         elm.registrar_pedidor_de_canal(lambda _u: True)
         monkeypatch.setattr(elm, "fontes_de_captura_agora", list)
         monkeypatch.setattr(elm, "ESPERA_DO_CANAL_PASSOS", 2)
@@ -488,12 +386,7 @@ class TestPontaAPonta:
     def test_o_canal_de_um_nao_e_o_canal_do_outro(
         self, bancada: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Quatro canais quer dizer que a source de UM não serve para DOIS.
-
-        Com a ponte de UM no ar e DOIS pedindo, o canal publicado não pode ser
-        atribuído a DOIS — senão a mesa inteira voltaria a dividir um microfone
-        só, que é a premissa que ela recusou.
-        """
+        """Quatro canais quer dizer que a source de UM não serve para DOIS."""
         elm.registrar_pedidor_de_canal(lambda _u: True)
         monkeypatch.setattr(elm, "fontes_de_captura_agora", lambda: [FONTE_DE_UM])
         monkeypatch.setattr(elm, "ESPERA_DO_CANAL_PASSOS", 2)
@@ -505,11 +398,6 @@ class TestPontaAPonta:
             "não há canal de captura atribuível a este controle — no "
             "rádio ele só aparece com a ponte de microfone de pé"
         )
-
-
-# ===========================================================================
-# 6. O LAÇO ACORDA — a espera não pode aparecer na tela como "não pegou"
-# ===========================================================================
 
 
 class _Gerenciador:

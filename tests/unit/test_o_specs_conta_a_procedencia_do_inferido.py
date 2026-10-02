@@ -1,19 +1,4 @@
-"""O `specs.html` diz QUEM sustenta cada inferência — contando, não digitando.
-
-Até 05/09/2026 a legenda do mapa dizia apenas *"inferido-do-codigo (alguém leu a
-fonte)"*, e as 408 células assim marcadas ficavam todas no mesmo grau. Isso
-nivelava por baixo o trabalho de cerca de trezentos agentes que leram os
-repositórios externos: **201 dessas células apontam para o driver do kernel**
-(`hid-playstation`, `hid-nintendo`, `xpadneo`), e a decisão dela em 05/09/2026
-foi explícita — *"Sim o driver é espec"*.
-
-A resposta já estava no mapa, na coluna `codigo_ref` que eles preencheram (507
-células). Não se acrescentou coluna nenhuma: acrescentar seria pedir que
-refizessem trabalho feito. O gerador passou a LER a que existe.
-
-Esta régua prova as duas metades: que o número publicado é o número de agora, e
-que a contagem responde ao conteúdo — não a um literal no fonte.
-"""
+"""O `specs.html` diz QUEM sustenta cada inferência — contando, não digitando."""
 from __future__ import annotations
 
 import importlib.util
@@ -87,6 +72,6 @@ def test_a_mordida_a_contagem_responde_ao_conteudo():
         return mod.procedencia_do_inferido([lin])
 
     assert conta("assets/dkms/hid-nintendo/hid-nintendo.c:120")["driver"] == 1
-    assert conta("core/backend_pydualsense.py:780")["nosso"] == 1
+    assert conta("core/backend_pydualsense.py:479")["nosso"] == 1
     assert conta("assets/dkms/hid-nintendo/hid-nintendo.c; core/mouse_emulation.py")["os_dois"] == 1
     assert conta("")["sem_referencia"] == 1

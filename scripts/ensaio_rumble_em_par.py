@@ -95,9 +95,6 @@ from comum import declaracao_da_porta, estado_do_grab, linha_do_grab
 BIBLIOTECA = "python-evdev"
 ROTA = "evdev FF (EVIOCSFF) -> hid_playstation -> report de saida"
 
-# Os quatro padrões que o driver produz, do fonte:
-# assets/dkms/hid-playstation/hid-playstation.c:1836-1842 (player_ids[5]).
-# Sao palindromos; não ha como errar por orientacao.
 PADRAO_DO_JOGADOR = {
     "--x--": "P1",
     "-x-x-": "P2",
@@ -106,42 +103,17 @@ PADRAO_DO_JOGADOR = {
     "xxxxx": "P5",
 }
 
-# HID_ID comeca com o barramento: 0003 = USB (cabo), 0005 = Bluetooth (radio).
 TRANSPORTE_POR_BARRAMENTO = {"0003": "cabo", "0005": "radio"}
 
-# O espelho que a Steam cria de CADA controle que enxerga. Tem FF e aceitaria o
-# efeito calado. Ver docs/protocol/pilha-steam-input-xpad-sdl.md.
 VALVE_VID = 0x28DE
 
 DUALSENSE_VID = 0x054C
 DUALSENSE_PIDS = (0x0CE6, 0x0DF2)
 
-#: Onde este instrumento enumera os nós de entrada. É parâmetro só para o teste
-#: poder montar uma mesa de mentira em `tmp_path` — a medição de verdade não
-#: tem por que apontar para outro lugar.
 RAIZ_SYSFS_INPUT = "/sys/class/input"
 
-# --- VPAD-NO-ESPELHO-01: as marcas que o PRODUTO carimba no próprio vpad ----
-#
-# Contrato de fio replicado aqui de propósito, e não importado: este é um
-# instrumento avulso, que tem de rodar mesmo com o pacote quebrado ou fora do
-# venv. A mesma decisão que `app/actions/emulation_actions.py` já tomou, e pela
-# mesma razão. Quem trava as duas pontas é
-# `tests/unit/test_ensaio_em_par_recusa_o_vpad_do_proprio_produto.py`, que
-# compara estas constantes com o que o `uhid_gamepad` de fato emite.
 
-#: RÉGUA ÚNICA (12/08/2026): as três marcas e a função que as lê moram em
-#: `scripts/identidade_do_vpad.py`, importado também pelos outros dois ensaios.
-#: Antes cada instrumento tinha a sua cópia, e a cópia deste era a única que
-#: separava o vpad de verdade — os outros dois escapavam POR ACIDENTE, só
-#: porque aceitam apenas o PID `0CE6` e o vpad se apresenta como `0DF2`
 #: (DualSense Edge). O Edge real existe: no dia em que alguém acrescentar o PID
-#: dele, a imunidade por acidente evapora. Reusar em vez de reimplementar é
-#: regra desta casa — duas leituras do mesmo dado são duas réguas, e uma delas
-#: envelhece calada.
-#: Os nomes ficam reexportados porque
-#: `tests/unit/test_ensaio_em_par_recusa_o_vpad_do_proprio_produto.py` os le
-#: daqui e trava o contrato com o `uhid_gamepad`.
 VPAD_HID_PHYS = identidade_do_vpad.VPAD_HID_PHYS
 VPAD_UNIQ_PREFIXO = identidade_do_vpad.VPAD_UNIQ_PREFIXO
 VPAD_MARCA_NO_NOME = identidade_do_vpad.VPAD_MARCA_NO_NOME
@@ -156,14 +128,7 @@ def _ler(caminho: str) -> str:
 
 
 def _hid_pai(caminho_device: str) -> tuple[str, str, dict[str, str]]:
-    """Sobe a arvore ate o `uevent` com HID_ID; devolve (barramento, dir, campos).
-
-    `campos` são as linhas `CHAVE=valor` desse mesmo `uevent` — de onde saem o
-    `HID_PHYS` e o `HID_UNIQ` que separam o vpad do aparelho (ver as constantes
-    `VPAD_*`). Ler o arquivo uma vez só e devolver tudo evita que a régua de
-    identidade abra um arquivo DIFERENTE do que decidiu o barramento: seriam
-    duas fontes podendo discordar sobre o mesmo device.
-    """
+    """Sobe a arvore ate o `uevent` com HID_ID; devolve (barramento, dir, campos)."""
     atual = caminho_device
     for _ in range(6):
         atual = os.path.dirname(os.path.realpath(atual))
@@ -180,13 +145,7 @@ def _hid_pai(caminho_device: str) -> tuple[str, str, dict[str, str]]:
 
 
 def _e_vpad_do_hefesto(campos: dict[str, str], dir_device: str, nome: str) -> bool:
-    """True quando o nó é um gamepad virtual DESTE produto (VPAD-NO-ESPELHO-01).
-
-    Delega para `identidade_do_vpad.e_vpad_do_hefesto`, a régua única dos três
-    ensaios. A assinatura local sobrevive porque quem chama já tem o diretório
-    do nó em mãos e lê o `uniq` dele de graça; o módulo comum aceita esse valor
-    em vez de reabrir o arquivo.
-    """
+    """True quando o nó é um gamepad virtual DESTE produto (VPAD-NO-ESPELHO-01)."""
     return identidade_do_vpad.e_vpad_do_hefesto(
         campos,
         uniq_do_no=identidade_do_vpad.uniq_do_no_de_entrada(dir_device),
@@ -223,17 +182,6 @@ def inventario(raiz: str = RAIZ_SYSFS_INPUT) -> list[dict[str, object]]:
         virtual = "/devices/virtual/" in os.path.realpath(no)
         barramento, dir_hid, campos = _hid_pai(dir_device)
         # ARMADILHA, paga em 11/08/2026: um DualSense POR BLUETOOTH vive sob
-        # `/sys/devices/virtual/misc/uhid/`, porque o BlueZ cria o dispositivo
-        # HID por uhid. Filtrar por "não e virtual" recusa METADE da mesa —
-        # exatamente os dois controles do radio, que sao o ensaio. O que separa
-        # aparelho de espelho e ter HID_ID de barramento conhecido: os espelhos
-        # da Steam sao uinput puro e não tem HID_ID nenhum.
-        #
-        # VPAD-NO-ESPELHO-01, 12/08/2026: o barramento é condição NECESSÁRIA e
-        # não suficiente. O vpad deste produto também nasce por uhid, e declara
-        # `BUS_USB` — ele é feito para se passar por aparelho. Por isso a
-        # identidade do vpad é perguntada ANTES, e com as marcas que o produto
-        # carimba (`_e_vpad_do_hefesto`), nunca com "é virtual".
         eh_vpad = _e_vpad_do_hefesto(campos, dir_device, nome)
         eh_fisico = (
             not eh_vpad
@@ -241,10 +189,6 @@ def inventario(raiz: str = RAIZ_SYSFS_INPUT) -> list[dict[str, object]]:
             and pid in DUALSENSE_PIDS
             and barramento in TRANSPORTE_POR_BARRAMENTO
         )
-        # O rótulo de transporte do vpad NÃO é `cabo`. "cabo" e "radio" respondem
-        # "por onde o report viaja até o aparelho", e do outro lado do vpad não
-        # há aparelho nenhum: o `0003` dele é parte do disfarce, e imprimi-lo
-        # como cabo é repetir o disfarce para quem está lendo a mesa.
         if eh_vpad:
             transporte = "vpad"
         else:
@@ -327,9 +271,6 @@ def disparar(alvos: list[str], forte: int, fraco: int, segundos: float) -> int:
     print(f"efeito: forte(esquerdo)={forte}  fraco(direito)={fraco}  por {segundos}s\n")
     for _dispositivo, meta in abertos:
         print(f"  ALVO {meta['no']:22} {meta['jogador']:4} {meta['transporte']:6} {meta['nome']}")
-        # O grab do evdev, declarado por alvo: um nó grabado por terceiro pode
-        # aceitar o `upload_effect` e não vibrar, e "não vibrou" seria então a
-        # resposta errada — não sobre o aparelho, mas sobre quem estava lendo.
         print(f"       {linha_do_grab(str(meta['no']), estado_do_grab(str(meta['no'])))}")
     print()
 
@@ -347,8 +288,6 @@ def disparar(alvos: list[str], forte: int, fraco: int, segundos: float) -> int:
             identificador = dispositivo.upload_effect(efeito)
             efeitos.append((dispositivo, identificador))
 
-        # O disparo dos alvos acontece o mais junto possivel: e o que faz deste
-        # ensaio um ensaio de COEXISTENCIA, e não dois ensaios em fila.
         instante = time.monotonic()
         for dispositivo, identificador in efeitos:
             dispositivo.write(ecodes.EV_FF, identificador, 1)
@@ -356,7 +295,6 @@ def disparar(alvos: list[str], forte: int, fraco: int, segundos: float) -> int:
         print(f"  disparados em janela de {espalhamento_ms:.1f} ms")
         time.sleep(segundos + 0.2)
     finally:
-        # Nunca deixar motor preso. A casa ja pagou por isso.
         for dispositivo, identificador in efeitos:
             with contextlib.suppress(OSError):
                 dispositivo.write(ecodes.EV_FF, identificador, 0)

@@ -1,15 +1,4 @@
-"""O balão do rádio vizinho se lê: fundo da faixa e uma palavra ao lado do ícone.
-
-26/09/2026, foto dela da faixa «Dispositivos Conectados»: *«nessa região o svg
-continua em branco não dá pra entender»*. Medido no WebKitGTK da janela: o
-balão é um `<button>`, e o botão nascia com o fundo do sistema
-(`rgb(192,192,192)`) por baixo do ícone cinza — o desenho sumia. E só o balão
-com palpite do kernel dizia uma palavra; o de ninguém era um «?» sozinho.
-
-A MORDIDA: tire a `.radio button.selo-fora{background:transparent…}` do
-gerador (e publique), ou devolva o `palpite` vazio para o balão sem sugestão —
-as réguas de baixo reprovam.
-"""
+"""O balão do rádio vizinho se lê: fundo da faixa e uma palavra ao lado do ícone."""
 
 from __future__ import annotations
 

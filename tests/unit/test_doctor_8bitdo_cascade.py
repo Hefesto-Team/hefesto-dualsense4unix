@@ -1,19 +1,4 @@
-"""8BIT-03 — o doctor aprende a assinatura de morte por BT do clone 8BitDo.
-
-A lógica de detecção vive em shell puro no doctor.sh (`_hid_nintendo_cascade_scan`,
-função testável via `source`); aqui ela é EXECUTADA de verdade com fixtures que
-replicam o journal medido ao vivo em 2026-07-16 nesta máquina:
-
-- morte real (instância ``0005:057E:2009.0014``, 13:23:47->13:24:00): dezenas de
-  ``timeout waiting for input report`` culminando em
-  ``joycon_enforce_subcmd_rate: exceeded max attempts``;
-- caso NÃO-terminal (``.0008`` às 12:38:46: 3x ``exceeded`` com UM timeout — o
-  controle viveu mais ~8 minutos) e o boot seguinte (``.0007``: 3x ``exceeded``
-  com ZERO timeouts): a linha isolada NUNCA pode disparar.
-
-Critério central do aceite: ZERO falso-positivo — journal limpo ou só linhas
-isoladas => saída vazia.
-"""
+"""8BIT-03 — o doctor aprende a assinatura de morte por BT do clone 8BitDo."""
 from __future__ import annotations
 
 import subprocess
@@ -24,7 +9,6 @@ DOCTOR = ROOT / "scripts" / "doctor.sh"
 
 _PREFIX = "jul 16 13:23:47 MeowSystem kernel: nintendo"
 
-# Ruído real presente no journal medido (nenhuma linha destas pode contar).
 _RUIDO = [
     "jul 16 12:38:45 MeowSystem kernel: nintendo 0005:057E:2009.0008: "
     "unknown main item tag 0x0",
@@ -75,8 +59,7 @@ class TestCascataDispara:
         assert saida == f"{inst} 45"
 
     def test_duas_instancias_so_a_cascata_aparece(self) -> None:
-        """Réplica do boot medido: .0014 morreu de cascata; .0008 teve exceeded
-        isolado (1 timeout) e NÃO pode ser citada."""
+        """Réplica do boot medido: .0014 morreu de cascata; .0008 teve exceeded"""
         morta, viva = "0005:057E:2009.0014", "0005:057E:2009.0008"
         linhas = (
             [_exceeded(viva), _exceeded(viva), _timeout(viva), _exceeded(viva)]
@@ -97,8 +80,7 @@ class TestZeroFalsoPositivo:
     """O critério central do aceite: linha isolada ou journal limpo => silêncio."""
 
     def test_exceeded_isolado_nao_terminal_nao_dispara(self) -> None:
-        """Réplica verbatim do caso medido às 12:38:46 (.0008): 3x exceeded com
-        UM timeout no meio — o controle viveu mais ~8 minutos."""
+        """Réplica verbatim do caso medido às 12:38:46 (.0008): 3x exceeded com"""
         inst = "0005:057E:2009.0008"
         linhas = [
             *_RUIDO,
@@ -125,8 +107,7 @@ class TestZeroFalsoPositivo:
         assert _scan([_timeout(a)] * 20 + [_exceeded(b)]) == ""
 
     def test_exceeded_antes_da_serie_nao_dispara(self) -> None:
-        """'Culminando' é literal: exceeded no bind seguido de timeouts (sem um
-        novo exceeded depois da série) não é a cascata."""
+        """'Culminando' é literal: exceeded no bind seguido de timeouts (sem um"""
         inst = "0005:057E:2009.0008"
         assert _scan([_exceeded(inst)] + [_timeout(inst)] * 20) == ""
 
@@ -165,8 +146,7 @@ class TestFiacaoNoDoctor:
                 assert "hidraw" not in linha.lower()
 
     def test_nao_recomenda_blacklist_nem_fechar_o_steam(self) -> None:
-        """Nas linhas de SAÍDA (warn/info/pass/fail) — comentários podem citar
-        a proibição ("'feche o Steam' não é cura"), a saída nunca a recomenda."""
+        """Nas linhas de SAÍDA (warn/info/pass/fail) — comentários podem citar"""
         texto = self._texto()
         assert "blacklist" not in texto.lower()
         for linha in texto.splitlines():

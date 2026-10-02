@@ -73,21 +73,11 @@ from typing import Any
 
 from hefesto_dualsense4unix.integrations.uhid_gamepad import VPAD_HID_PHYS
 
-#: Onde o kernel lista os nós de entrada. Parametrizável só como COSTURA DE
-#: TESTE — a suíte aponta para um diretório temporário, e nenhum teste desta
-#: casa toca `/sys` ou `/dev` de verdade (TEMPESTADE-DE-TECLADOS-01).
 RAIZ_CLASS_INPUT = "/sys/class/input"
 
-#: Onde moram os nós de `/dev` correspondentes. Duas raízes separadas porque a
-#: suíte precisa forjar as duas, e porque `os.stat` só faz sentido nesta.
 RAIZ_DEV_INPUT = "/dev/input"
 RAIZ_DEV = "/dev"
 
-#: O que um bloco de nó devolve quando nada se resolveu. Quatro `None`, nunca
-#: um dicionário vazio: quem lê o payload tem de encontrar as chaves sempre,
-#: senão "o campo não existe" (daemon velho) e "o daemon não sabe" (nó não
-#: resolvido) chegam iguais na tela — o modo de falha do `game_open`, que
-#: existia no objeto desde sempre e nunca saía por IPC.
 NO_DESCONHECIDO: dict[str, Any] = {
     "evdev": None,
     "hidraw": None,
@@ -111,13 +101,7 @@ def _texto_do_sysfs(caminho: str) -> str:
 
 
 def _campos_do_uevent(texto: str) -> dict[str, str]:
-    """As linhas `CHAVE=valor` de um `uevent` como dicionário.
-
-    Mesma forma do `scripts/identidade_do_vpad.py::campos_do_uevent`. A cópia
-    é de três linhas e existe porque `src/` não importa de `scripts/`; o que
-    NÃO se duplica é o critério — o `VPAD_HID_PHYS` usado abaixo é o mesmo
-    objeto que o `_create2_event` carimba no kernel.
-    """
+    """As linhas `CHAVE=valor` de um `uevent` como dicionário."""
     return dict(
         linha.split("=", 1) for linha in texto.splitlines() if "=" in linha
     )
@@ -128,7 +112,7 @@ def _numero_do_evento(entrada: str) -> int:
     try:
         return int(entrada[len("event") :])
     except ValueError:
-        return 1 << 30  # sem número: vai para o fim, nunca ganha o desempate
+        return 1 << 30
 
 
 def _candidatos(
@@ -156,9 +140,6 @@ def _candidatos(
                 continue
             nome_do_no = _texto_do_sysfs(os.path.join(base, "name"))
         else:
-            # Caminho uinput: evdev puro, sem `uniq`. O nome é a única marca
-            # que sobra, e é frágil por natureza (este já mudou uma vez) — por
-            # isso ele só entra quando NÃO há `uniq`, nunca como reforço.
             nome_do_no = _texto_do_sysfs(os.path.join(base, "name"))
             if not nome or nome_do_no != nome:
                 continue
@@ -167,14 +148,7 @@ def _candidatos(
 
 
 def _escolher(candidatos: list[tuple[int, str, str]], nome: str) -> str | None:
-    """Qual dos nós do aparelho é o do JOGO — o gamepad, não o touchpad.
-
-    O `hid_playstation` batiza o gamepad com o nome do `hdev` e os irmãos com
-    sufixo (`ps_gamepad`/`ps_touchpad`/`ps_sensors`), então o nome EXATO é o
-    critério. Sem nome conhecido, o desempate é o menor `eventN`: o gamepad é
-    registrado primeiro, e é o palpite conservador — mas ele é palpite, e por
-    isso perde para o nome sempre que há nome.
-    """
+    """Qual dos nós do aparelho é o do JOGO — o gamepad, não o touchpad."""
     if not candidatos:
         return None
     if nome:
@@ -187,18 +161,7 @@ def _escolher(candidatos: list[tuple[int, str, str]], nome: str) -> str | None:
 def _hidraw_do_no(
     *, entrada: str, uniq: str, raiz_class_input: str
 ) -> str | None:
-    """O `hidrawN` do device HID dono deste nó de entrada, CONFIRMADO.
-
-    `/sys/class/input/eventN/device` resolve em `<device HID>/input/inputM`;
-    dois níveis acima está o device HID, que publica `hidraw/hidrawN` e o
-    `uevent` com `HID_UNIQ`/`HID_PHYS`.
-
-    A confirmação pelo `uevent` é a SEGUNDA RÉGUA, e ela pode reprovar: se o
-    device HID a que este nó pertence não traz o nosso carimbo, a resposta é
-    `None` — "não sei" —, nunca o `hidraw` que estava ali. O caminho uinput cai
-    aqui também e sai `None` por construção: um vpad de uinput não tem hidraw,
-    e é justamente por isso que o SDL não o faz vibrar.
-    """
+    """O `hidrawN` do device HID dono deste nó de entrada, CONFIRMADO."""
     dir_do_no = os.path.join(raiz_class_input, entrada, "device")
     try:
         alvo = os.path.realpath(dir_do_no)
@@ -206,11 +169,11 @@ def _hidraw_do_no(
         return None
     pai = os.path.dirname(alvo)
     if os.path.basename(pai) != "input":
-        return None  # uinput e afins: não há device HID acima
+        return None
     dir_hid = os.path.dirname(pai)
     campos = _campos_do_uevent(_texto_do_sysfs(os.path.join(dir_hid, "uevent")))
     if not campos:
-        return None  # uevent ilegível: não afirmar
+        return None
     hid_uniq = campos.get("HID_UNIQ", "").strip().casefold()
     hid_phys = campos.get("HID_PHYS", "").strip().casefold()
     confirmado = hid_phys.startswith(VPAD_HID_PHYS) or (
@@ -229,13 +192,7 @@ def _hidraw_do_no(
 
 
 def _inode(caminho: str) -> int | None:
-    """`st_ino` do nó, ou `None`. `os.stat` NÃO abre o device.
-
-    Isto não é detalhe de implementação, é a razão de a função existir: abrir o
-    `/dev/hidraw` do vpad dispara `UHID_OPEN` e arma o modo jogo, e fechá-lo
-    por último deixa o controle vibrando (o `_silence_rumble` não roda). O
-    produto publica o inode para que nenhum instrumento precise abrir nada.
-    """
+    """`st_ino` do nó, ou `None`. `os.stat` NÃO abre o device."""
     try:
         return os.stat(caminho).st_ino
     except OSError:
@@ -250,34 +207,7 @@ def resolver_no_do_vpad(
     raiz_dev_input: str | None = None,
     raiz_dev: str | None = None,
 ) -> dict[str, Any]:
-    """`{evdev, hidraw, ino, hidraw_ino}` do vpad com este `uniq`/`nome`.
-
-    `uniq` é o MAC forjado que o vpad VESTE (`vpad.mac`, `02:fe:…`) e é a régua forte;
-    `nome` é o `vpad.name`, que serve para (a) escolher o gamepad entre os
-    irmãos do mesmo aparelho e (b) achar o vpad de uinput, que não tem `uniq`.
-
-    Sem `uniq` E sem `nome` não há o que casar, e a resposta é
-    `NO_DESCONHECIDO` — quatro `None`. Esta função nunca devolve o "primeiro
-    gamepad que achou": um chute aqui viraria uma afirmação sobre o controle
-    FÍSICO dela no payload do produto.
-
-    **E ela também não devolve "o primeiro dos HOMÔNIMOS"** (medido em
-    20/08/2026, na prova de discriminação): sem `uniq`, o casamento é pelo
-    nome, e no co-op de uinput os vpads são todos `XBOX360_NAME` — a mesma
-    palavra, sem número de jogador. Dois candidatos com `uniq` vazio é
-    ambiguidade REAL, não empate a desempatar, e a resposta é
-    `NO_DESCONHECIDO`. Com `uniq` a pluralidade é normal e esperada (gamepad,
-    touchpad e sensores dividem o `uniq` do aparelho), e quem desempata é o
-    nome.
-
-    As três raízes são `None` por default e se resolvem **na hora da chamada**,
-    nunca no `def` — mesmo padrão (e mesma razão) do `dualsense_sem_driver`
-    logo ali no `ipc_handlers`: assim as constantes deste módulo continuam
-    sendo o único lugar onde os caminhos estão escritos, e a suíte as troca por
-    um diretório temporário. Isso não é conforto de teste, é a disciplina da
-    TEMPESTADE-DE-TECLADOS-01: nenhum teste desta casa varre o `/sys` vivo da
-    máquina dela, onde os vpads de VERDADE estão.
-    """
+    """`{evdev, hidraw, ino, hidraw_ino}` do vpad com este `uniq`/`nome`."""
     raiz_class_input = (
         RAIZ_CLASS_INPUT if raiz_class_input is None else raiz_class_input
     )
@@ -291,16 +221,7 @@ def resolver_no_do_vpad(
         uniq=uniq_norm, nome=nome_norm, raiz_class_input=raiz_class_input
     )
     if not uniq_norm and len(candidatos) > 1:
-        # CO-OP NO BACKEND UINPUT, e é o caso vivo na máquina dela hoje.
-        # `XBOX360_NAME` é UMA constante, sem número de jogador: os quatro
-        # vpads de uinput publicam o nome IDÊNTICO, e o kernel não guarda
-        # `uniq` nem device HID onde diferenciá-los. Sem esta recusa,
-        # `_escolher` devolve o de menor `eventN` para TODOS eles, e o
         # `state_full` passa a publicar o inode de P1 dentro do bloco de P2 —
-        # com confiança, sem `None`, sem aviso. A régua irmã de `scripts/`
-        # já recusa este caso com todas as letras
-        # (`o_jogo_segura_o_nosso_no::_rotulo_do_no`: "escolher um deles seria
-        # inventar de qual jogador é o nó"); aqui a recusa faltava.
         return dict(NO_DESCONHECIDO)
     entrada = _escolher(candidatos, nome_norm)
     if entrada is None:
@@ -319,29 +240,10 @@ def resolver_no_do_vpad(
 
 
 def no_ainda_vale(no: dict[str, Any]) -> bool:
-    """O bloco cacheado ainda descreve o MESMO nó? (`stat` de 1 syscall)
-
-    O cache do daemon vale até um nó nascer ou sumir (com o dono do evento) ou
-    2 s (sem ele), e caminho velho é exatamente a mentira que o inode existe
-    para impedir. Esta conferência custa um `stat` e fecha a janela: se o
-    `event22` de agora tem outro inode — porque o vpad morreu e voltou, ou
-    porque o número foi reciclado para outro aparelho —, o bloco sai na hora.
-
-    **Ela cobre um buraco só, e é de propósito.** Bloco sem `evdev` devolve
-    `True`: um bloco que não afirma caminho nenhum não tem caminho a
-    envelhecer, e nada a reconferir. Quem cobre o nó que APARECEU é o evento (ou o TTL) —
-    reprovar aqui faria a varredura inteira rodar a 10 Hz justamente no caso
-    mais comum (vpad de uinput, vpad ainda nascendo, máquina sem controle), que
-    é o oposto do motivo de o cache existir.
-
-    Buraco declarado: um nó destruído e recriado com o MESMO inode passaria. O
-    devtmpfs aloca inode crescente, então isso não acontece com `/dev` de
-    verdade; não acontecer "na prática" é o limite honesto desta conferência, e
-    por isso ela é uma re-checagem barata, nunca a régua principal.
-    """
+    """O bloco cacheado ainda descreve o MESMO nó? (`stat` de 1 syscall)"""
     evdev = no.get("evdev")
     if not isinstance(evdev, str) or not evdev:
-        return True  # nada afirmado: só o evento (ou o TTL) manda aqui
+        return True
     if _inode(evdev) != no.get("ino"):
         return False
     hidraw = no.get("hidraw")

@@ -1,9 +1,4 @@
-"""Cobertura do fallback de import em logging_config.
-
-BUG-DEB-SMOKE-STRUCTLOG-TYPING-02: em Ubuntu 22.04 (Jammy) o python3-structlog
-do apt é versão 21.x, anterior à introdução de `structlog.typing`. O fallback
-para `structlog.types` mantém compatibilidade sem exigir pip install extra.
-"""
+"""Cobertura do fallback de import em logging_config."""
 from __future__ import annotations
 
 import importlib
@@ -18,13 +13,6 @@ def test_logging_config_importa_com_structlog_typing_presente() -> None:
 
     import hefesto_dualsense4unix.utils.logging_config as mod
 
-    # `reload` re-executa o corpo do módulo e zera `_configured` — um efeito
-    # colateral GLOBAL que precisa ser desfeito. Sem restaurar, o próximo
-    # `get_logger()` da sessão reconfigura o structlog com uma LISTA NOVA de
-    # processors; todo logger já cacheado (`cache_logger_on_first_use=True`)
-    # segue apontando para a lista ANTIGA, e o `capture_logs()` dos outros
-    # testes — que mexe na lista NOVA in-place, de propósito — deixa de
-    # interceptá-los (test_profile_loader quebrava assim, à distância).
     configurado_antes = mod._configured
     try:
         importlib.reload(mod)
@@ -36,11 +24,7 @@ def test_logging_config_importa_com_structlog_typing_presente() -> None:
 def test_logging_config_fallback_quando_typing_ausente(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Remove structlog.typing e força reload; o fallback de types deve resolver.
-
-    Reproduz o cenário do Jammy sem precisar rodar o apt: mascara o módulo
-    filho e força a re-importação do logging_config.
-    """
+    """Remove structlog.typing e força reload; o fallback de types deve resolver."""
     original_typing = sys.modules.pop("structlog.typing", None)
     original_logging_config = sys.modules.pop("hefesto_dualsense4unix.utils.logging_config", None)
 
@@ -76,12 +60,7 @@ def test_structlog_types_tem_processor() -> None:
 def test_cascata_tripla_fallback_callable_quando_nem_typing_nem_types(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """structlog 20.x (Jammy apt default) não tem typing NEM types.
-
-    Valida que o 3º nível da cascata (Callable alias) é acionado quando
-    ambos os submódulos de tipo estão ausentes. Simula o cenário bloqueando
-    ambos os imports via sys.modules=None.
-    """
+    """structlog 20.x (Jammy apt default) não tem typing NEM types."""
     original_typing = sys.modules.pop("structlog.typing", None)
     original_types = sys.modules.pop("structlog.types", None)
     original_logging_config = sys.modules.pop("hefesto_dualsense4unix.utils.logging_config", None)

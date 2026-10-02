@@ -31,7 +31,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("lightbar lexico sem leitura")
 
 import csv
@@ -41,9 +40,6 @@ import pytest
 
 gi = pytest.importorskip("gi")
 
-# BUG-TEST-GDK-VERSION-PIN-01: pina Gdk/Gtk 3.0 ANTES de importar módulos da
-# GUI — `lightbar_actions` importa `gi.repository.Gdk` no topo, e sem o pino o
-# gi pode carregar Gdk 4.0 e envenenar o processo inteiro.
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
@@ -55,14 +51,8 @@ from hefesto_dualsense4unix.app.actions.lightbar_actions import (
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
-#: A chave do mapa que responde pela pergunta "dá para LER o desenho aceso?".
 CHAVE_DA_LEITURA = "luz.led_jogador.leitura@dualsense"
 
-#: As palavras que AFIRMAM o estado da lâmpada. Não é lista de estilo: cada uma
-#: só pode aparecer num rótulo desta aba se o mapa registrar canal de leitura.
-#: "apagada"/"acesa" entram porque dizer que a barra está apagada é a mesma
-#: afirmação sem prova que dizer que ela está acesa — foi assim que o card do
-#: controle aprendeu a NUNCA dizer "apagada" com a fonte desconhecida.
 PALAVRAS_QUE_AFIRMAM_ESTADO = (
     "aceso",
     "acesa",
@@ -89,9 +79,6 @@ def _o_mapa_registra_canal_de_leitura() -> bool:
     )
 
 
-#: Todas as frases que o rótulo das 5 luzes sabe produzir, nas quatro
-#: bifurcações de `texto_do_desenho_aceso`. Nenhuma é copiada à mão: são as
-#: saídas da própria função, na hora.
 def _todas_as_frases() -> dict[str, str]:
     return {
         "co-op ligado": texto_do_desenho_aceso((False,) * 5, 1, coop_ligado=True),
@@ -104,13 +91,7 @@ def _todas_as_frases() -> dict[str, str]:
 
 
 def test_o_mapa_continua_sem_canal_de_leitura_de_led_de_jogador() -> None:
-    """A premissa da régua, cobrada em voz alta.
-
-    Se alguém MEDIR um canal de leitura um dia, este teste reprova de
-    propósito: a frase da aba pode voltar a afirmar estado, e quem mediu tem de
-    revisitar este portão em vez de ganhar sinal verde em silêncio. Um portão
-    que se cala quando a premissa muda vira carimbo.
-    """
+    """A premissa da régua, cobrada em voz alta."""
     linha = _linha_do_mapa(CHAVE_DA_LEITURA)
     assert not _o_mapa_registra_canal_de_leitura(), (
         f"o mapa passou a registrar canal de leitura para {CHAVE_DA_LEITURA} "
@@ -121,12 +102,7 @@ def test_o_mapa_continua_sem_canal_de_leitura_de_led_de_jogador() -> None:
 
 
 def test_nenhuma_frase_do_desenho_afirma_estado_da_barra() -> None:
-    """A MORDIDA do L5: devolva o "Aceso agora:" e veja as quatro reprovarem.
-
-    Com o prefixo antigo, cada uma das quatro bifurcações passa a conter
-    "aceso" e a asserção nomeia a bifurcação, a palavra e a célula do mapa que
-    a derruba.
-    """
+    """A MORDIDA do L5: devolva o "Aceso agora:" e veja as quatro reprovarem."""
     for onde, frase in _todas_as_frases().items():
         baixa = frase.lower()
         for palavra in PALAVRAS_QUE_AFIRMAM_ESTADO:
@@ -140,12 +116,7 @@ def test_nenhuma_frase_do_desenho_afirma_estado_da_barra() -> None:
 
 
 def test_as_quatro_bifurcacoes_saem_pelo_mesmo_prefixo() -> None:
-    """Uma porta só, para a régua não ter por onde escapar.
-
-    Sem isto, uma bifurcação nova entraria com prefixo próprio e a asserção
-    acima continuaria verde por cobrir apenas as palavras que alguém lembrou de
-    listar. O prefixo é a superfície única, e ele próprio é checado abaixo.
-    """
+    """Uma porta só, para a régua não ter por onde escapar."""
     for onde, frase in _todas_as_frases().items():
         assert frase.startswith(f"{_PREFIXO_DESENHO}: "), (
             f"a frase de “{onde}” não sai pelo prefixo declarado "

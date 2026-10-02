@@ -43,11 +43,7 @@ VARIAVEL = "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED"
 
 @pytest.fixture
 def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """Um lar de mentira com os dois endereços que a função lê.
-
-    O `XDG_STATE_HOME` é desviado de verdade — e é por isso que a função tem de
-    lê-lo NA HORA. Uma cópia no topo do módulo congelaria o lar real.
-    """
+    """Um lar de mentira com os dois endereços que a função lê."""
     lar = tmp_path / "lar"
     conf = lar / ".config" / "wireplumber" / "wireplumber.conf.d"
     estado = lar / ".local" / "state"
@@ -76,11 +72,7 @@ class TestOsCincoDegraus:
     def test_1_quem_desligou_de_proposito_vence_a_variavel(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O drop-in 52 é «o controle é só-HID», e vem ANTES de tudo.
-
-        MORDIDA: apagar o degrau 1 faz a variável ganhar de quem desligou o
-        microfone de propósito.
-        """
+        """O drop-in 52 é «o controle é só-HID», e vem ANTES de tudo."""
         mesa.dropin(D52)
         monkeypatch.setenv(VARIAVEL, "1")
         assert sc._dualsense_mic_intended() is False
@@ -88,19 +80,12 @@ class TestOsCincoDegraus:
     def test_2_o_opt_in_por_ambiente_continua_valendo(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Quem roda o daemon à mão, ou põe um drop-in de systemd, não se perde.
-
-        O degrau 2 não morre com esta cura — ele deixa de ser o ÚNICO sinal.
-        """
+        """Quem roda o daemon à mão, ou põe um drop-in de systemd, não se perde."""
         monkeypatch.setenv(VARIAVEL, "1")
         assert sc._dualsense_mic_intended() is True
 
     def test_3_o_dropin_51_e_a_politica_default_do_install(self, mesa) -> None:
-        """Com o 51 no lugar, o controle é a ÚLTIMA opção — não a primeira.
-
-        MORDIDA: apagar o degrau 3 faz a marca de uma instalação ANTIGA passar
-        por cima da política que o install acabou de escrever.
-        """
+        """Com o 51 no lugar, o controle é a ÚLTIMA opção — não a primeira."""
         mesa.dropin(D51)
         mesa.marca()
         assert sc._dualsense_mic_intended() is False
@@ -108,22 +93,12 @@ class TestOsCincoDegraus:
     def test_4_a_marca_do_gesto_e_o_que_o_keep_dualsense_mic_deixa(
         self, mesa
     ) -> None:
-        """**O CASO QUE ORIGINOU ESTA RÉGUA.**
-
-        Sem o 51 e com a marca: é o estado de quem instalou com
-        `--keep-dualsense-mic`. Antes da cura isto devolvia False e o daemon
-        avisava a pessoa para desligar o próprio microfone.
-
-        MORDIDA: apagar o degrau 4 devolve exatamente o defeito de 16/09.
-        """
+        """**O CASO QUE ORIGINOU ESTA RÉGUA.**"""
         mesa.marca()
         assert sc._dualsense_mic_intended() is True
 
     def test_5_nao_sei_nunca_e_ela_pediu(self, mesa) -> None:
-        """Nem o 51 nem a marca: a ausência tem DUAS origens e o disco não as separa.
-
-        Lê-las como uma já custou uma noite em 04/08/2026 (DROPIN-AMBIGUO-01).
-        """
+        """Nem o 51 nem a marca: a ausência tem DUAS origens e o disco não as separa."""
         assert sc._dualsense_mic_intended() is False
 
 
@@ -145,10 +120,7 @@ class TestOAvisoNaoMandaDesfazerAEscolhaDela:
     def test_sem_sinal_nenhum_o_aviso_continua_saindo(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A cura não pode calar o aviso legítimo — senão troca um defeito por outro.
-
-        MORDIDA: fazer `_dualsense_mic_intended` devolver True sempre.
-        """
+        """A cura não pode calar o aviso legítimo — senão troca um defeito por outro."""
         monkeypatch.setattr(sc, "_wireplumber_hijacks_mic", lambda: True)
         monkeypatch.setattr(sc, "_udev_hotplug_outdated", lambda: False)
         avisos = sc.system_warnings()
@@ -157,15 +129,7 @@ class TestOAvisoNaoMandaDesfazerAEscolhaDela:
 
 class TestOsDoisLadosDaCasaConcordam:
     def test_o_python_espelha_os_cinco_degraus_do_doctor(self) -> None:
-        """O `doctor.sh` é o DONO da hierarquia; o Python a espelha.
-
-        Se alguém acrescentar um sexto sinal ao doctor e esquecer o Python, a
-        contradição volta — e ela volta calada, que é o pior jeito. Esta régua
-        não compara aritmética: ela confere que os TRÊS endereços que os dois
-        lados leem são os mesmos, por nome.
-
-        MORDIDA: trocar o nome de um drop-in no Python.
-        """
+        """O `doctor.sh` é o DONO da hierarquia; o Python a espelha."""
         texto = DOCTOR.read_text(encoding="utf-8")
         bloco = re.search(
             r"_prefere_mic_do_dualsense\(\)\s*\{(.*?)\n\}", texto, re.S

@@ -44,9 +44,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 MOCKUP = RAIZ / "mockup" / "08-conexoes.html"
 
-#: O nível do meio, pelo nome de máquina (o valor do ``data-nivel``).
 MEDIO = "medio"  # (noqa-acento): nome de máquina, o valor do `data-nivel`
-#: Os controles da cena sintética (a faixa da casa).
 U = ["aabbcc000011", "aabbcc000022", "aabbcc000033", "aabbcc000044", "aabbcc000055"]
 
 
@@ -57,11 +55,6 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(a08_conexoes, "_NIVEL_NA_TELA", {})
     monkeypatch.setattr(a08_conexoes, "_SALA_NA_TELA", {})
     return a08_conexoes
-
-
-# ---------------------------------------------------------------------------
-# 1. os cortes vêm de donos que não são a tela
-# ---------------------------------------------------------------------------
 
 
 def _atribuicoes(caminho: Path) -> dict[str, ast.expr]:
@@ -77,14 +70,7 @@ def _atribuicoes(caminho: Path) -> dict[str, ast.expr]:
 
 
 def test_os_cortes_tem_dono_e_o_dono_nao_e_a_tela() -> None:
-    """O ``HZ_DO_JOGO`` é o NOME do teto do pad virtual, e não um 250 digitado
-    (o ``==`` sozinho não prova o dono: o número igual por coincidência
-    diverge na primeira medição); o engasgo é 8 ms; o piso do salto é 20; e o
-    ``a08`` não atribui corte nenhum nem número 125, 250 ou 79.
-
-    MORDIDAS: ``HZ_DO_JOGO = 250.0`` escrito à mão no ``radio_da_mesa``, e
-    ``CANAIS_DO_BT = 79`` de volta ao ``a08`` — as duas reprovam.
-    """
+    """O ``HZ_DO_JOGO`` é o NOME do teto do pad virtual, e não um 250 digitado"""
     from hefesto_dualsense4unix.core import physical_report_reader as prr
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
     from hefesto_dualsense4unix.integrations import radio_da_mesa as dono
@@ -108,21 +94,15 @@ def test_os_cortes_tem_dono_e_o_dono_nao_e_a_tela() -> None:
     assert not {n: v for n, v in numeros.items() if v in (125, 250, 79)}, numeros
 
 
-# ---------------------------------------------------------------------------
-# 2. o veredito, pelos números da casa
-# ---------------------------------------------------------------------------
-
-#: O esperado de cada linha é o comportamento que a fonte registra — a sprint
-#: cita cada uma (o cabo da canônica, as faixas de 29/09, as fotos dela).
-HZ_LISO = [250.0, 250.88,               # o cabo: 250,0 e 250,88
-           312.0, 523.0, 575.0, 728.0,  # 29/09, sozinho no adaptador
-           338.0, 393.0,                # dois sem voz (01:23 e 21:44)
-           258.0, 293.0,                # dois com voz, quase sempre
-           333.0, 359.0, 387.0]         # as fotos dela
-HZ_MEDIO = [214.0, 171.0, 198.0, 126.0,  # 01:24, 01:35, 02:13, 01:57
-            170.5]                       # o A/B da voz (radio_da_mesa.HZ_INPUT_COM_MIC)
-HZ_ENGASGA = [28.0, 97.0, 35.0, 13.5,   # 01:31, 01:57, 02:02, 02:37
-              55.4, 0.0]                # a janela 4 da canônica, e o nada que chegou
+HZ_LISO = [250.0, 250.88,
+           312.0, 523.0, 575.0, 728.0,
+           338.0, 393.0,
+           258.0, 293.0,
+           333.0, 359.0, 387.0]
+HZ_MEDIO = [214.0, 171.0, 198.0, 126.0,
+            170.5]
+HZ_ENGASGA = [28.0, 97.0, 35.0, 13.5,
+              55.4, 0.0]
 
 
 @pytest.mark.parametrize(("hz", "nivel"), [
@@ -132,8 +112,7 @@ HZ_ENGASGA = [28.0, 97.0, 35.0, 13.5,   # 01:31, 01:57, 02:02, 02:37
     (None, ""), (True, ""), ("359", ""), (float("nan"), ""),
 ])
 def test_o_nivel_do_movimento_pelos_numeros_da_casa(hz: Any, nivel: str) -> None:
-    """MORDIDAS: o verde cortado no ``HZ_INPUT_SEM_MIC`` (260,4) em vez do teto
-    — o 258 com voz reprova; o vermelho com ``<=`` — o 125,0 reprova."""
+    """MORDIDAS: o verde cortado no ``HZ_INPUT_SEM_MIC`` (260,4) em vez do teto"""
     from hefesto_dualsense4unix.integrations import radio_da_mesa as dono
 
     assert dono.nivel_do_movimento(hz) == nivel
@@ -145,25 +124,14 @@ def test_o_nivel_do_movimento_pelos_numeros_da_casa(hz: Any, nivel: str) -> None
     (20, "engasga"), (0, "engasga"), (None, ""), (True, ""), ("74", ""),
 ])
 def test_o_nivel_dos_canais_pelo_piso_do_salto(usados: Any, nivel: str) -> None:
-    """79, 74 e 60 calmos; 59, 52 (02:30), 44, 24 e 21 (01:23) fugindo; 20 no
-    piso da especificação.
-
-    MORDIDAS: os canais com o corte de antes (``< 79``) — o 74 sai no nível do meio; o
-    vermelho em ``<= 21`` — o 21 de 01:23 reprova."""
+    """79, 74 e 60 calmos; 59, 52 (02:30), 44, 24 e 21 (01:23) fugindo; 20 no"""
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
 
     assert ar.nivel_dos_canais(usados) == nivel
 
 
-# ---------------------------------------------------------------------------
-# 3. a cena dos quatro, no pacote
-# ---------------------------------------------------------------------------
-
-
 def _cena_dos_quatro(hz: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Direita com dois (359 e 180), Esquerda com um (60), Meio com um sem
-    número, e um quinto no cabo com 250 — com os aparelhos fora da ordem das
-    caixas (o do Meio antes do da Esquerda)."""
+    """Direita com dois (359 e 180), Esquerda com um (60), Meio com um sem"""
     from hefesto_dualsense4unix.interface import aba08
 
     cena = copy.deepcopy(aba08.CENA_DO_RADIO)
@@ -190,14 +158,7 @@ def _alvos(sala: str, campo: str) -> list[str]:
 
 
 def test_cada_controle_tem_o_nivel_dele_na_ordem_da_sala(a08: Any) -> None:
-    """``hz-nivel`` sai na ordem dos elementos da sala (é assim que o piloto o
-    distribui): Direita liso e médio, Esquerda engasga, Meio sem número. O
-    ``hz-dica`` tem o mesmo tamanho e a mesma ordem; o do cabo não aparece; e
-    nenhuma dica fala em culpa, em distância ou em cabo.
-
-    MORDIDA: monte o ``hz-nivel`` pela ordem de ``cena["aparelhos"]``, e não
-    pela das caixas — o Meio e a Esquerda trocam, e reprova.
-    """
+    """``hz-nivel`` sai na ordem dos elementos da sala (é assim que o piloto o"""
     from hefesto_dualsense4unix.integrations.radio_da_mesa import PALAVRAS_DE_CULPA
 
     campos = a08.campos_da_secao(_cena_dos_quatro())
@@ -216,9 +177,7 @@ def test_cada_controle_tem_o_nivel_dele_na_ordem_da_sala(a08: Any) -> None:
 
 
 def test_a_sala_que_nasce_ja_traz_o_nivel(a08: Any) -> None:
-    """A sala refeita (um aparelho a mais na caixa) já vem com o nível de cada
-    controle no HTML — o piloto só manda de novo a lista que mudou, e sem isto
-    a cor sumiria até o nível mudar."""
+    """A sala refeita (um aparelho a mais na caixa) já vem com o nível de cada"""
     a08.campos_da_secao(_cena_dos_quatro(), segurar=True)
     cena = _cena_dos_quatro()
     cena["aparelhos"].append({**cena["aparelhos"][0], "id": "aabbcc000066",
@@ -228,11 +187,6 @@ def test_a_sala_que_nasce_ja_traz_o_nivel(a08: Any) -> None:
                              r'(?: data-nivel="([^"]*)")?', sala))
     assert niveis == {U[0]: "liso", U[1]: MEDIO, U[3]: "engasga", U[2]: "",
                       "aabbcc000066": "liso"}, niveis
-
-
-# ---------------------------------------------------------------------------
-# 4. o «segura», com relógio injetado
-# ---------------------------------------------------------------------------
 
 
 def _tique(a08: Any, monkeypatch: pytest.MonkeyPatch, t: float, hz: dict[str, Any],
@@ -248,12 +202,7 @@ def _tique(a08: Any, monkeypatch: pytest.MonkeyPatch, t: float, hz: dict[str, An
 def test_a_cor_piora_na_hora_e_melhora_depois_de_tres_segundos(
     a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O vermelho entra na janela em que o Hz cai e só sai com 3 s sem janela
-    nenhuma no vermelho; o vizinho a 359 fica verde em todos os tiques.
-
-    MORDIDA: a memória pela posição na lista, e não pelo ``uniq`` — com o
-    vizinho fora da cena, o vermelho segurado passa para outro, e reprova.
-    """
+    """O vermelho entra na janela em que o Hz cai e só sai com 3 s sem janela"""
     linha = [(0.0, 359.0, "liso"), (1.0, 60.0, "engasga"), (2.0, 359.0, "engasga"),
              (3.9, 359.0, "engasga"), (4.1, 359.0, "liso")]
     for t, hz, esperado in linha:
@@ -263,8 +212,7 @@ def test_a_cor_piora_na_hora_e_melhora_depois_de_tres_segundos(
 
 
 def test_o_segura_e_por_controle(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O mesmo, com o vizinho de antes na lista saindo da cena aos 2 s: o
-    vermelho segurado é do controle que engasgou, e de mais ninguém."""
+    """O mesmo, com o vizinho de antes na lista saindo da cena aos 2 s: o"""
     for t, hz, esperado, sem in [(0.0, 359.0, "liso", ()), (1.0, 60.0, "engasga", ()),
                                  (2.0, 359.0, "engasga", (U[0],)),
                                  (3.9, 359.0, "engasga", (U[0],)),
@@ -273,10 +221,6 @@ def test_o_segura_e_por_controle(a08: Any, monkeypatch: pytest.MonkeyPatch) -> N
         assert niveis[U[1]] == esperado, (t, niveis)
         assert niveis[U[3]] == "engasga" and niveis[U[2]] == "", niveis
 
-
-# ---------------------------------------------------------------------------
-# 5. a tela, no WebKit
-# ---------------------------------------------------------------------------
 
 _ROTEIRO = r"""
 (() => {
@@ -337,19 +281,12 @@ def _rodar_no_webkit(sala: str) -> dict[str, Any]:
 
     view.connect("load-changed", carregou)
     view.load_uri(MOCKUP.as_uri())
-    # O `timeout_add` pendente dispararia no laço do próximo teste de GUI do
-    # mesmo processo: ele sai no `finally`, como nos irmãos.
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
     finally:
         GLib.source_remove(guarda)
         janela.destroy()
-        # O LIXO DO WEBKIT SE RECOLHE NO FIO DO GTK, aqui: o `connect` deixa um
-        # ciclo (a vista, o tratador e o fecho dele), e a coleta que o achasse
-        # num fio da central de um teste seguinte finalizaria a vista fora do
-        # fio dela — e o processo da suíte morre com «Fatal Python error:
-        # Aborted» (medido em 02/10/2026 num lote de vizinhos da 08).
         view = janela = None
         gc.collect()
         while Gtk.events_pending():
@@ -372,15 +309,7 @@ def _rgb(css: str) -> tuple[int, int, int]:
 
 
 def test_a_cor_de_cada_nivel_na_tela(a08: Any) -> None:
-    """No WebKit, com a folha da página: a cor do número de cada nível é a do
-    token do ``:root`` (e não um hexa digitado aqui), com opacidade 1 e
-    contraste de 4,5:1 ou mais contra o painel; os arcos do glifo são 1 1, 1 0,
-    0 0 e, no sem número, 1 0; o ``rd-sinal`` tem os dois caminhos que os
-    leem; e o ``title`` do glifo é a dica do nível.
-
-    MORDIDAS: a opacidade de 0,8 de volta — o vermelho cai a 3,35:1; a regra
-    dos arcos arrancada — os quatro saem 1 1. As duas reprovam.
-    """
+    """No WebKit, com a folha da página: a cor do número de cada nível é a do"""
     from hefesto_dualsense4unix.utils.color_contrast import razao_contraste
 
     sala = a08.html_da_sala(_cena_dos_quatro(), com_hz=True)

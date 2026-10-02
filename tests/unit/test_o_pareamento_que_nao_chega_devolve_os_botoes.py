@@ -1,49 +1,4 @@
-"""O pareamento que não chega devolve os botões — O-RADIO-CONECTA-ONDE-ELA-MANDA-01.
-
-Os relatos dela de 26/09/2026:
-
-    *«Ficou com a mensagem esperando por eternidade (…) e os botões ficaram
-    desabilitados sem resposta nenhuma. Travou num estado morto.»*
-    <!-- noqa-acento: citação literal dela -->
-
-    *«precisamos de um X do lado de cada controle, pra poder remover o pareamento
-    dele»* (item 3) <!-- noqa-acento: citação literal dela -->
-
-E o controle BRANCO (item 5), MEDIDO no ``radio-diario.jsonl`` dela: o ``Pair``
-deu, a busca de serviços caiu em ``Host is down``, e ele ficou ``Paired`` sem
-nunca ficar ``Connected`` — um pareamento pela metade no adaptador, e a tela
-esperando PS + Create para sempre.
-
-O que esta régua segura, sempre com o rádio de mentira de três adaptadores:
-
-1. o «esperando» segura a tela por :data:`ESPERA_NA_TELA_S` — o prazo da
-   central, ``central_do_radio.PRAZO_DO_PENDENTE_S``, desde 26/09/2026 — e NÃO MAIS —
-   depois disso a linha diz «Não Conectou», e «Tentar de Novo» e o X aparecem;
-2. a busca que ninguém respondeu não vira linha nenhuma (desde a
-   O-CONECTAR-E-UM-INTERRUPTOR-01), e o X da linha «Não Conectou» só tira a
-   linha (``dispensar-linha``, desde a ESQUECER-E-LIMPAR-AS-CONEXOES-01);
-3. o branco — ``Pair`` que dá e controle que não conecta — perde a meia chave
-   SÓ naquele adaptador, e «Tentar de Novo» abre outro «Conectar» no mesmo;
-4. o controle que o ``Pair`` já conecta não recebe ``Connect`` (item 5b: o
-   ``Connect`` fica para quando ele não está no ar);
-5. o «Esquecer» do «⋮» esquece o controle ligado ou desligado SÓ no adaptador
-   da linha (era um X até a ESQUECER-E-LIMPAR-AS-CONEXOES-01).
-
-E o que a O-RADIO-CONECTA-ONDE-ELA-MANDA-02 fechou (26/09/2026), os dois
-buracos que a conferência da 01 deixou fora da posse dela:
-
-6. **a zona morta de 60 a 120 s**: a tela soltava o «esperando» aos 60 s e a
-   central recusava com «ocupado» até os 120. Agora o prazo é UM
-   (``central_do_radio.PRAZO_DO_PENDENTE_S``, 60 s, medido no diário dela), e o
-   «não chegou» libera a central e a tela no mesmo instante — sem esperar a
-   volta da vigia;
-7. **a meia chave do lado do daemon**: ela saía só com a janela aberta (quem a
-   tirava era a tela); agora a central a tira no «não chegou», antes de
-   publicá-lo, com a janela fechada — e desde 28/09 só ela
-   (A-CAIXA-FICA-ONDE-ELA-ABRIU-01: a tela só mostra).
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""O pareamento que não chega devolve os botões — O-RADIO-CONECTA-ONDE-ELA-MANDA-01."""
 
 from __future__ import annotations
 
@@ -91,8 +46,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 def _com_a_central(bancada: Bancada, monkeypatch: pytest.MonkeyPatch,
                    *movimentos: cr.Movimento) -> None:
-    """O ``radio_central`` publicado com ESTES movimentos (a hora de parede é a
-    que a régua quer), e os controles da mesa como o daemon publicaria."""
+    """O ``radio_central`` publicado com ESTES movimentos (a hora de parede é a"""
     real = bancada.estado
 
     def estado() -> dict[str, Any]:
@@ -110,33 +64,11 @@ def _linhas(cena: dict[str, Any], lugar: str, **marca: Any) -> list[dict[str, An
             and all(a.get(k) == v for k, v in marca.items())]
 
 
-# ---------------------------------------------------------------------------
-# 1. o «esperando» segura a tela pelo prazo da central, e não mais
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
 def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """Um segundo antes do prazo a janela ainda é dela: a tela está ocupada, a
-    caixa do destino aberta, e nada de «Não Conectou». Um segundo depois os
-    botões voltam: a linha diz
-    «Não Conectou», com «Tentar de Novo» NAQUELE adaptador e o X — e o próximo
-    «Conectar» vai para onde ela abrir, não mais para a janela morta.
-
-    O PRAZO É UM SÓ desde 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01):
-    a tela lê o da central (``ESPERA_NA_TELA_S = PRAZO_DO_PENDENTE_S``), e era
-    de 60 s contra os 120 s dela — a zona morta da régua do contrato abaixo.
-
-    É O «MOVER» DO VERDE DESDE 01/10/2026 (O-CONECTAR-E-UM-INTERRUPTOR-01): a
-    busca SEM aparelho não tem mais idade — com a ``busca`` publicada, quem
-    manda é ela, e o «Não Conectou» por idade fica para quem ela nomeou. A
-    trava da tela que esta régua segura é a do «Mover» (o ``_mover``).
-
-    MORDIDA: tire a idade de ``_ainda_espera`` (o «esperando» vale para sempre)
-    — o caso de depois do prazo reprova, que é o «estado morto» dela.
-    """
+    """Um segundo antes do prazo a janela ainda é dela: a tela está ocupada, a"""
     assert a08.ESPERA_NA_TELA_S == cr.PRAZO_DO_PENDENTE_S, (
         "a tela e a central voltaram a ter dois prazos")
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
@@ -165,15 +97,10 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
         assert linha["aparelho"] == id_da_tela(VERDE)
         assert "Não Conectou" in sala
         assert f'data-gesto="tentar-de-novo" data-alvo="{id_da_tela(destino)}"' in sala
-        # O X da linha «Não Conectou» TIRA A LINHA e não esquece nada
-        # (ESQUECER-E-LIMPAR-AS-CONEXOES-01, D-3009-A-LINHA-TEM-APARELHO): o
-        # gesto dele é o ``dispensar-linha``; o «Esquecer» mora no «⋮» de quem
-        # tem pareamento ali.
         assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
                 f'data-lugar="{id_da_tela(destino)}"') in sala
         assert cena["aberto"] == id_da_tela(destino), "a caixa de quem não chegou fechou"
 
-        # Ela abre outra caixa: o «Conectar» vai para lá, não para a janela morta.
         outro = next(e for e in (SALA, QUARTO, VARANDA) if e != destino)
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(outro))
         assert bancada.cena()["destino_do_conectar"] == id_da_tela(outro)
@@ -184,9 +111,7 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
 def test_com_a_janela_aberta_o_esquecer_treme(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O «Esquecer» segue o um-por-vez do «Mover»: com um controle esperando
-    PS + Create noutro adaptador, o «⋮» e o «Esquecer» do vermelho tremem e nada
-    sai do rádio."""
+    """O «Esquecer» segue o um-por-vez do «Mover»: com um controle esperando"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -205,31 +130,16 @@ def test_com_a_janela_aberta_o_esquecer_treme(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 2. a busca que ninguém respondeu
-# ---------------------------------------------------------------------------
-
-
 def test_a_busca_que_ninguem_respondeu_acaba_sem_nao_conectou(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ela abre a varanda, liga o «Procurar», e não segura PS + Create: a
-    central fecha a janela no teto, sem gesto, e a linha da varanda NÃO diz
-    «Não Conectou» — a busca que acabou não é falha.
-
-    FATO SUBSTITUÍDO (01/10/2026, O-CONECTAR-E-UM-INTERRUPTOR-01,
-    D-3009-A-BUSCA-DESLIGADA-NAO-E-FALHA, a validar por ela): até aqui esta
-    régua cobrava a linha «Não Conectou» dessa busca e o X que a tirava; era o
-    «fantasma» das imagens 6 e 7 dela. O X de uma linha sem aparelho é da
-    ESQUECER-E-LIMPAR-AS-CONEXOES-01."""
+    """Ela abre a varanda, liga o «Procurar», e não segura PS + Create: a"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
         bancada.cena()
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(VARANDA))
         bancada.cena()
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         (feito,) = bancada.central.movimentos()
@@ -245,30 +155,11 @@ def test_a_busca_que_ninguem_respondeu_acaba_sem_nao_conectou(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 3. o controle branco: o Pair dá e ele não conecta
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
 def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """O ``Pair`` do branco dá, e ele não fica ``Connected`` (a física do diário
-    dela). A tela mostra «Não Conectou» com o nome dele, a meia chave sai SÓ
-    naquele adaptador — pelo mesmo verbo do «Esquecer» —, e «Tentar de Novo» abre outro
-    «Conectar» no MESMO adaptador, onde ele chega.
-
-    UM DONO PARA A CHAVE, E UMA LÁPIDE SÓ: a central a tira ANTES de publicar o
-    «não chegou» (``_esquecer_a_meia_chave``, desde a
-    O-RADIO-CONECTA-ONDE-ELA-MANDA-02). Até 28/09 a tela a tirava de novo depois
-    do veredito; saiu na A-CAIXA-FICA-ONDE-ELA-ABRIU-01 (achado 8 da auditoria
-    de 26/09), e a tela só mostra.
-
-    MORDIDA: faça ``_esquecer_a_meia_chave`` devolver ``False`` sem esquecer — o
-    objeto ``Paired`` sem ``Connected`` fica no adaptador e esta régua reprova
-    (até 28/09 ela ficava verde assim, pela tela).
-    """
+    """O ``Pair`` do branco dá, e ele não fica ``Connected`` (a física do diário"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pair_mente = True
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
@@ -277,8 +168,6 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(destino))
         bancada.cena()
         rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         (feito,) = [m for m in bancada.central.movimentos() if m.estado == cr.NAO_CHEGOU]
@@ -295,11 +184,9 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
                 assert mundo.objeto(outro, VERDE) is None
         assert mundo.objeto(SALA, VERMELHO) is not None and mundo.objeto(SALA, AZUL) is not None
 
-        # Uma vez por movimento: o tique seguinte não pede de novo.
         bancada.cena()
         assert mundo.lapides == [(destino, VERDE)]
 
-        # «Tentar de Novo»: agora ele conecta.
         mundo.pair_mente = False
         rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         assert bancada.gesto("tentar-de-novo", alvo=id_da_tela(destino)) == {"armou": True}
@@ -311,11 +198,6 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
         assert cena["aberto"] == id_da_tela(destino)
     finally:
         bancada.fechar()
-
-
-# ---------------------------------------------------------------------------
-# 4. o Connect fica para quem não está no ar
-# ---------------------------------------------------------------------------
 
 
 def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
@@ -335,8 +217,6 @@ def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(QUARTO))
         bancada.cena()
         rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         assert mundo.onde_esta(rm.uniq(VERDE)) == QUARTO
@@ -345,14 +225,8 @@ def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 5. o «Esquecer» tira só no adaptador da linha
-# ---------------------------------------------------------------------------
-
-
 def _mesa_das_chaves() -> rm.RadioDeMentira:
-    """O vermelho no ar na sala, com uma chave velha no quarto; o roxo desligado,
-    com chave na varanda e na sala."""
+    """O vermelho no ar na sala, com uma chave velha no quarto; o roxo desligado,"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, VERMELHO, nome="André")
     mundo.pareado(QUARTO, VERMELHO, host=False)
@@ -364,15 +238,7 @@ def _mesa_das_chaves() -> rm.RadioDeMentira:
 def test_o_desligado_aparece_em_cada_adaptador_em_que_tem_chave(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O «Esquecer» vale para controle ligado ou desligado: o roxo desligado tem
-    uma linha «Desligado» (com o «⋮») em cada adaptador em que tem chave; o
-    vermelho, no ar na sala, não vira «Desligado» no quarto — a linha dele é a
-    viva.
-
-    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-O-ESQUECER-TEM-NOME): o
-    X que esquecia virou o «⋮» (``aparelho-menu``) na linha, e o «Esquecer»
-    (``esquecer-aparelho``) mora no menu dele, nos moldes. O par
-    ``(linha, adaptador)`` é o mesmo."""
+    """O «Esquecer» vale para controle ligado ou desligado: o roxo desligado tem"""
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -387,7 +253,6 @@ def test_o_desligado_aparece_em_cada_adaptador_em_que_tem_chave(
             par = (f'data-alvo="{id_da_tela(ROXO)}" data-lugar="{id_da_tela(lugar)}"')
             assert f'data-gesto="aparelho-menu" {par}' in sala
             assert f'data-gesto="esquecer-aparelho" {par}' in moldes
-        # A linha viva tem o ``uniq`` do daemon como id; a desligada, o endereço.
         par = f'data-alvo="{rm.uniq(VERMELHO)}" data-lugar="{id_da_tela(SALA)}"'
         assert f'data-gesto="aparelho-menu" {par}' in sala
         assert f'data-gesto="esquecer-aparelho" {par}' in moldes
@@ -396,22 +261,15 @@ def test_o_desligado_aparece_em_cada_adaptador_em_que_tem_chave(
 
 
 @pytest.mark.parametrize(("quem", "onde", "fica"), [
-    (ROXO, VARANDA, SALA),      # desligado: sai da varanda, a chave da sala fica
-    (ROXO, SALA, VARANDA),      # desligado: sai da sala, a da varanda fica
-    (VERMELHO, SALA, QUARTO),   # no ar: sai da sala (e desconecta), a do quarto fica
+    (ROXO, VARANDA, SALA),
+    (ROXO, SALA, VARANDA),
+    (VERMELHO, SALA, QUARTO),
 ])
 def test_o_esquecer_tira_so_no_adaptador_da_linha(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     quem: str, onde: str, fica: str,
 ) -> None:
-    """O «Esquecer» do «⋮» abre a pergunta (nada sai), e o «Esquecer» dela tira
-    a chave DAQUELE controle NAQUELE adaptador — o ``RemoveDevice`` e o verbo
-    ``esquecer`` da ponte, que já existia. A chave dele no outro adaptador fica.
-
-    MORDIDA: faça ``esquecer_o_pareamento`` procurar o objeto sem o adaptador
-    (``caminho_do_aparelho(alvo)``) — ele tira a chave do primeiro adaptador da
-    árvore, e os casos em que a linha não é a primeira reprovam.
-    """
+    """O «Esquecer» do «⋮» abre a pergunta (nada sai), e o «Esquecer» dela tira"""
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -440,8 +298,7 @@ def test_o_esquecer_tira_so_no_adaptador_da_linha(
 def test_o_esquecer_que_nao_deu_treme(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem a trava do rádio (outro dono a segura), o «Esquecer» não finge: o
-    botão treme e a linha continua lá."""
+    """Sem a trava do rádio (outro dono a segura), o «Esquecer» não finge: o"""
     from hefesto_dualsense4unix.integrations import diario_do_radio
 
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
@@ -487,31 +344,11 @@ def _esquecer_com_prazo_curto(a08: Any, bancada: Bancada, clique: dict[str, Any]
         a08._esquecer_o_pareamento = antes
 
 
-# ---------------------------------------------------------------------------
-# 6. o conferente, 26/09/2026: o que a primeira entrega deixava passar
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
 def test_a_tela_nao_tira_a_meia_chave_nem_depois_do_veredito(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """Passado o prazo, a TELA solta o «esperando» e diz «Não Conectou»; a CENTRAL ainda
-    diz «esperando» — ela confere o controle até o ``PRAZO_DO_PENDENTE_S`` dela, e
-    o objeto ``Paired`` sem ``Connected`` desse instante é a chave que ela está
-    conferindo. A tela não a apaga no relógio dela.
-
-    E NEM DEPOIS DO VEREDITO (achado 8 da auditoria de 26/09,
-    A-CAIXA-FICA-ONDE-ELA-ABRIU-01): a meia chave é da central, que a tira antes
-    de publicar o «não chegou». Aqui o «não chegou» é publicado sem a central
-    ter rodado — a chave continua no adaptador, e nada sai do rádio pela tela.
-    Quem a tira de verdade é a régua da central,
-    ``test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou``.
-
-    MORDIDA: devolva à tela o fio que esquecia a meia chave depois do veredito
-    (``_esquecer_as_meias_chaves`` no ``cena_do_radio``) — o ``RemoveDevice`` sai
-    pela tela e esta régua reprova nos três adaptadores.
-    """
+    """Passado o prazo, a TELA solta o «esperando» e diz «Não Conectou»; a CENTRAL ainda"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pareado(destino, VERDE, conectado=False)
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
@@ -540,9 +377,7 @@ def test_a_tela_nao_tira_a_meia_chave_nem_depois_do_veredito(
 
 
 def _o_branco_esperando(bancada: Bancada, destino: str, segundos: float) -> None:
-    """O branco no estado em que a central o deixa (o ``Pair`` deu, o ``Connect``
-    e a conferência não confirmaram, e ela vigia), com ``segundos`` de idade nos
-    DOIS relógios: o dela (``comecou``) e o da tela (``quando``)."""
+    """O branco no estado em que a central o deixa (o ``Pair`` deu, o ``Connect``"""
     bancada.central._guardar(cr.Movimento(
         VERDE, destino, cr.ESPERANDO, cr.PASSO_CONFERINDO,
         motivo=cr.MOTIVO_SEM_CONFIRMACAO, pareou_no_destino=True,
@@ -553,27 +388,9 @@ def _o_branco_esperando(bancada: Bancada, destino: str, segundos: float) -> None
 def test_o_nao_chegou_aos_sessenta_segundos_libera_a_central_e_a_tela_juntas(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """E1 da O-RADIO-CONECTA-ONDE-ELA-MANDA-02 — a régua do contrato entre os
-    dois relógios, com a CENTRAL REAL atrás do tratador real do daemon, e o
-    destino em cada posição dos três adaptadores.
-
-    Aos 59 s a tela segura o «esperando» e a central recusa o próximo
-    «Conectar»: as duas dizem «ainda não». Aos 61 s a tela diz «Não Conectou» e
-    acende «Tentar de Novo» — e o clique É ACEITO no mesmo instante, sem
-    nenhuma volta da vigia no meio: o pedido resolve o vencido antes de
-    perguntar se a central está ocupada. E o «não chegou» dela tira a meia
-    chave do branco naquele adaptador (uma lápide, e só ali).
-
-    FOI ESTA A ZONA MORTA DA 01 (era a ``xfail`` desta régua): a tela soltava
-    aos 60 s e a central aos 120, e entre os dois os botões acesos tremiam.
-
-    MORDIDAS: volte ``PRAZO_DO_PENDENTE_S`` a 120 — o clique dos 61 s treme; tire
-    o ``_vencer_os_prazos`` do ``comecar_a_conectar`` — o clique chega antes da
-    vigia e treme também.
-    """
+    """E1 da O-RADIO-CONECTA-ONDE-ELA-MANDA-02 — a régua do contrato entre os"""
     assert a08.ESPERA_NA_TELA_S == cr.PRAZO_DO_PENDENTE_S == 60.0, "dois prazos, dois donos"
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
-    # A meia chave que o Pair do branco deixou: Paired, nunca Connected.
     mundo.pareado(destino, VERDE, conectado=False, host=False)
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -614,14 +431,7 @@ def _central_sem_tela(mundo: rm.RadioDeMentira, relogio: rm.Relogio,
 def test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou(
     diario: Path, destino: str,
 ) -> None:
-    """A meia chave do lado do DAEMON: nenhuma tela aberta, e o branco não
-    chega. O «não chegou» do prazo tira a chave dele SÓ naquele adaptador —
-    ``RemoveDevice`` e a lápide da ponte, uma vez —, e os controles no ar na
-    sala ficam.
-
-    MORDIDA: faça ``_esquecer_a_meia_chave`` devolver ``False`` sem esquecer — a
-    chave fica no adaptador, e esta régua reprova.
-    """
+    """A meia chave do lado do DAEMON: nenhuma tela aberta, e o branco não"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pair_mente = True
     central, dono = _central_sem_tela(mundo, relogio)
@@ -648,14 +458,7 @@ def test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou(
 
 
 def test_o_prazo_que_vence_na_conferencia_fecha_na_hora(diario: Path) -> None:
-    """A conferência não passa do prazo do movimento, que é o da tela: vencido
-    no meio dela, o «não chegou» sai NA HORA (e a meia chave com ele), e não
-    na volta seguinte da vigia.
-
-    MORDIDAS: tire o ``min`` do fim de ``_conferir`` — ela confere os 10 s
-    inteiros e o «não chegou» sai depois do prazo; tire o fecho do prazo depois
-    da conferência em ``_parear_e_conferir`` — o movimento volta «esperando».
-    """
+    """A conferência não passa do prazo do movimento, que é o da tela: vencido"""
     prazo = 8.0
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pair_mente = True
@@ -672,16 +475,8 @@ def test_o_prazo_que_vence_na_conferencia_fecha_na_hora(diario: Path) -> None:
         dono.fechar()
 
 
-# ---------------------------------------------------------------------------
-# A conferência da O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026): as curas que
-# nenhuma régua mordia. Cada uma foi arrancada e a régua inteira do território
-# ficou verde — estas são as que passam a reprovar.
-# ---------------------------------------------------------------------------
-
-
 def _para_onde_move_o_vermelho(destino: str) -> str:
-    """O vermelho mora na sala: o «Mover» dele vai para um adaptador que não é
-    o dele nem o do branco esperando."""
+    """O vermelho mora na sala: o «Mover» dele vai para um adaptador que não é"""
     return next(a for a in (QUARTO, VARANDA, SALA) if a not in (SALA, destino))
 
 
@@ -689,13 +484,7 @@ def _para_onde_move_o_vermelho(destino: str) -> str:
 def test_o_mover_aos_sessenta_e_um_segundos_tambem_e_aceito(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """O E1 não é só do «Conectar»: aos 61 s a tela também devolve o «Mover»
-    (a pergunta da mudança), e a central o aceita no mesmo instante — sem
-    volta da vigia no meio. Aos 59 s, as duas dizem «ainda não».
-
-    MORDIDA: tire o ``_vencer_os_prazos`` do ``comecar_a_mover`` — o «Mover»
-    dos 61 s treme, e o E1 valia só para um dos dois gestos que movem.
-    """
+    """O E1 não é só do «Conectar»: aos 61 s a tela também devolve o «Mover»"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pareado(destino, VERDE, conectado=False, host=False)
     para = _para_onde_move_o_vermelho(destino)
@@ -728,15 +517,7 @@ PARES_DE_ADAPTADORES = [(o, d) for o in (SALA, QUARTO, VARANDA)
 def test_o_que_volta_para_a_origem_leva_embora_a_meia_chave_do_destino(
     diario: Path, origem: str, destino: str,
 ) -> None:
-    """O «não chegou» que não é o do prazo: o branco tem chave na ``origem``,
-    ela clica «Conectar» no ``destino``, o ``Pair`` dá e o HID não vem — e ela
-    aperta PS: ele volta para a origem. A meia chave que o ``Pair`` deixou no
-    destino sai (é o mesmo «não chegou», com a janela fechada), e a chave da
-    origem, onde ele está no ar, fica.
-
-    MORDIDA: devolva o «voltou» de ``_vigiar_um`` ao ``_acabou`` sem a meia
-    chave — o destino fica com o branco ``Paired`` e nunca ``Connected``.
-    """
+    """O «não chegou» que não é o do prazo: o branco tem chave na ``origem``,"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pareado(origem, VERDE, conectado=False)
     mundo.pair_mente = True
@@ -766,15 +547,7 @@ def test_o_que_volta_para_a_origem_leva_embora_a_meia_chave_do_destino(
 def test_no_nao_chegou_quem_esta_no_ar_no_destino_nao_perde_a_chave(
     diario: Path, destino: str, quem_diz: str,
 ) -> None:
-    """A meia chave é a que NUNCA conectou. Vencido o prazo sem confirmação,
-    o branco que o BlueZ diz ``Connected`` no destino (e o kernel ainda não),
-    ou que o kernel diz no destino (e o movimento dele ainda não se mediu),
-    continua com a chave: o «não chegou» sai, e nada se esquece.
-
-    MORDIDAS: tire de ``_esquecer_a_meia_chave`` a guarda do ``Connected`` — o
-    caso ``o-bluez`` reprova; tire a do ``HID_PHYS`` — o caso ``o-kernel``
-    reprova. Nos dois, a chave de um controle no ar sairia.
-    """
+    """A meia chave é a que NUNCA conectou. Vencido o prazo sem confirmação,"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pair_mente = True
     central, dono = _central_sem_tela(mundo, relogio)
@@ -804,15 +577,7 @@ def test_no_nao_chegou_quem_esta_no_ar_no_destino_nao_perde_a_chave(
 def test_o_pair_em_voo_passado_o_prazo_nao_se_fecha_pelo_pedido(
     diario: Path, destino: str,
 ) -> None:
-    """O pedido só resolve o «esperando» da CONFERÊNCIA. Um movimento que ainda
-    está no ``Pair`` (o fio dele segura a trava e o ``Pair`` do BlueZ pode
-    levar até 45 s) não se fecha por fora: o próximo «Conectar» recebe
-    «ocupado», e o movimento em voo fica como estava. Fechá-lo abriria uma
-    segunda janela com a primeira ainda pareando.
-
-    MORDIDA: tire de ``_vencer_os_prazos`` a condição do passo — o pedido
-    fecha o ``Pair`` em voo e o «Conectar» seguinte começa por cima dele.
-    """
+    """O pedido só resolve o «esperando» da CONFERÊNCIA. Um movimento que ainda"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     central, dono = _central_sem_tela(mundo, relogio)
     try:
@@ -830,20 +595,7 @@ def test_o_pair_em_voo_passado_o_prazo_nao_se_fecha_pelo_pedido(
 def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O fone que ela moveu para a varanda não chegou. A linha «Não Conectou» dele
-    tem o X (a linha nunca fica sem saída), e «Tentar de Novo» refaz o MESMO
-    mover — o fone para a varanda —, sem o painel do «Procurando»: a janela do
-    «Conectar» só aceita controle, e seguraria o rádio à toa.
-
-    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-A-LINHA-TEM-APARELHO): o X
-    da linha «Não Conectou» tira a linha (``dispensar-linha``) e não pergunta
-    nada — ele não esquece pareamento. Quem tem chave ali aparece «Desligado»,
-    com o «⋮».
-
-    MORDIDAS: o X só em controle (``_tem_x`` pedindo ``tipo == "controle"``) — a
-    linha fica sem X; e ``tentar_de_novo`` sempre com ``_mover(p, None, …)`` — o
-    pedido sai sem o aparelho.
-    """
+    """O fone que ela moveu para a varanda não chegou. A linha «Não Conectou» dele"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -873,22 +625,7 @@ def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
 def test_todo_menu_na_tela_tem_o_esquecer_e_a_pergunta_dele(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O «Esquecer» não esquece sozinho: o «⋮» da linha abre o menu pelo par
-    ``linha|adaptador``, o «Esquecer» de lá abre a pergunta pelo par ``(linha,
-    adaptador)``, e sem os moldes o clique não faz NADA. Todo «⋮» (o vermelho no
-    ar, o roxo desligado em cada adaptador) tem o menu com o «Esquecer» e a
-    pergunta com o ``confirmar-esquecer``; o X do branco que não chegou não tem
-    pergunta: ele só tira a linha (``dispensar-linha``).
-
-    MORDIDA: tire ``_moldes_de_esquecer`` de ``html_dos_moldes`` — todo «⋮» vira
-    um botão morto, e esta régua reprova.
-
-    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-O-ESQUECER-TEM-NOME e
-    D-3009-A-LINHA-TEM-APARELHO): era «todo X na tela tem a pergunta dele». O X
-    que esquecia virou o «⋮» com o menu, e o X que sobra só tira a linha «Não
-    Conectou». A janela que não abriu (``sem_janela`` sem aparelho) não faz
-    mais linha nenhuma.
-    """
+    """O «Esquecer» não esquece sozinho: o «⋮» da linha abre o menu pelo par"""
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
     bancada = Bancada(a08, monkeypatch, mundo, relogio)

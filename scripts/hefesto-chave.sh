@@ -19,7 +19,7 @@
 #    que fecha o furo que a máscara NÃO fecha, e o furo é real: o botão "Ligar
 #    daemon" da GUI, quando o `systemctl start` falha, cai num
 #    `subprocess.Popen` que levanta o daemon sem passar por systemd nenhum
-#    (`app/actions/daemon_actions.py:2162-2176`). Com só a máscara, apertar o
+#    (`app/actions/daemon_actions.py:1723-1737`). Com só a máscara, apertar o
 #    botão dela ligaria o daemon "desligado".
 #
 # O QUE ELE NÃO TOCA, DE PROPÓSITO

@@ -126,13 +126,7 @@ def test_o_endpoint_le_a_frente_antes_de_escrever() -> None:
 
 
 def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
-    """Publicar o nó e não dizer o volume é o defeito — a chamada tem de estar lá.
-
-    ESTA RÉGUA NASCEU DE UMA MORDIDA QUE NÃO PEGOU: arrancar
-    `self._ligar_os_motores()` do `iniciar()` deixava as outras dez verdes. A
-    função existia, era testada isoladamente, e ninguém provava que ela é
-    CHAMADA — que é a única coisa que importa para o controle vibrar.
-    """
+    """Publicar o nó e não dizer o volume é o defeito — a chamada tem de estar lá."""
     chamadas: list[list[str]] = []
 
     def correr(cmd: list[str]) -> str | None:
@@ -160,16 +154,6 @@ def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
     )
     assert escritas[0][-2:] == [eh.VOLUME_DOS_MOTORES, eh.VOLUME_DOS_MOTORES]
 
-
-# ---------------------------------------------------------------------------
-# A VARREDURA — e ela nasceu de um erro meu, medido no aparelho
-# ---------------------------------------------------------------------------
-#
-# A primeira volta desta cura chamou `nome_do_sink(uniq)`, que devolve
-# `hefesto_som_<uniq>`: o null-sink de SOM por rádio, de DOIS canais. A cura
-# rodou no ciclo, não achou motor nenhum e devolveu `False` — e os volumes na
-# máquina dela ficaram exatamente como estavam. Instalei, medi, e não mudou
-# nada. O NOME DO SINK QUE TEM MOTORES NÃO SE DERIVA DO `uniq`.
 
 LISTA_CURTA = (
     "202\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
@@ -205,12 +189,7 @@ def test_servidor_mudo_devolve_lista_vazia() -> None:
 
 
 def test_o_nome_do_sink_de_som_nao_serve_para_isto() -> None:
-    """A régua do erro: `nome_do_sink` é de SOM, e som não tem motor.
-
-    Sem esta linha, a próxima pessoa repete a volta que eu já paguei.
-    """
-    # FAIXA SINTÉTICA, e não o `uniq` dela: o portão `mac-por-oui` reprova
-    # endereço de hardware real em arquivo versionado, e reprovou esta linha.
+    """A régua do erro: `nome_do_sink` é de SOM, e som não tem motor."""
     de_som = bt.nome_do_sink("aabbcc000001")
     assert de_som == "hefesto_som_000001"
     assert de_som not in bt.sinks_com_motores(lambda _c: LISTA_CURTA)

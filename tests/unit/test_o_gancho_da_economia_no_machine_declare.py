@@ -22,7 +22,6 @@ from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, caminho_da_maquina
 
-#: Um rosto da faixa forjada, na forma em que a chave vai ao disco.
 CHAVE = "aabbcc00beef"
 
 

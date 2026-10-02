@@ -1,10 +1,4 @@
-"""PLAT-01 (Proton pinado): conf, ensure com sha256, CompatToolMapping, gates.
-
-Tudo com FIXTURES/tmp_path — nada aqui toca a Steam real, a rede ou o
-compatibilitytools.d de verdade. Os invariantes inegociáveis do sprint doc:
-checksum errado NUNCA extrai; o lock exige Steam fechada; o unlock reverte
-SÓ o que o registro diz ser nosso.
-"""
+"""PLAT-01 (Proton pinado): conf, ensure com sha256, CompatToolMapping, gates."""
 from __future__ import annotations
 
 import json
@@ -27,15 +21,10 @@ sha256={"ab" * 32}
 _TAB = "\t"
 
 
-# --------------------------------------------------------------------------
-# parse_pin_conf
-# --------------------------------------------------------------------------
-
-
 def test_parse_conf_ignora_comentarios_e_normaliza_sha():
     conf = pp.parse_pin_conf(CONF_OK.replace("ab" * 32, "AB" * 32))
     assert conf["name"] == PIN_NAME
-    assert conf["sha256"] == "ab" * 32  # normalizado p/ minúsculas
+    assert conf["sha256"] == "ab" * 32
 
 
 @pytest.mark.parametrize("faltando", ["name", "url", "sha256"])
@@ -80,23 +69,9 @@ def test_o_asset_real_do_repo_parseia_e_pina_a_versao_validada():
     """
     asset = Path(__file__).resolve().parents[2] / "assets" / "proton-pin.conf"
     conf = pp.parse_pin_conf(asset.read_text(encoding="utf-8"))
-    # 17/09/2026: subiu para o 11-7 a pedido dela. A nota do release diz que a
-    # pilha de áudio/haptics da Sony foi rebaseada "retaining behavior", logo a
-    # feature pela qual o pino existe não se perde; a migração foi simulada
-    # contra cópias do `config.vdf` antes de ser escrita.
     assert conf["name"] == "GE-Proton11-7-x86_64"
     assert "GloriousEggroll/proton-ge-custom" in conf["url"]
-    # A REGRA, e não a literal: `ensure_pinned_proton` procura o tarball em
-    # `cache/<name>.tar.gz` e `_extract_verified_tarball` exige que a raiz do
-    # tarball seja `<name>/`. Nome e URL fora de par quebram o cache offline e
-    # a extração de uma vez — e é o que aconteceria se alguém copiasse a URL do
-    # release e esquecesse o sufixo no `name`.
     assert conf["url"].endswith(f"{conf['name']}.tar.gz")
-
-
-# --------------------------------------------------------------------------
-# ensure_pinned_proton
-# --------------------------------------------------------------------------
 
 
 def _make_tarball(tmp_path: Path, name: str = PIN_NAME) -> Path:
@@ -144,12 +119,11 @@ def test_ensure_extrai_do_cache_e_depois_vira_noop_offline(tmp_path):
     )
     assert manifest["sha256"] == conf["sha256"]
 
-    # 2ª rodada: no-op OFFLINE (memória da casa: "offline antes de online").
     r2 = pp.ensure_pinned_proton(
         conf, compat_dir=compat, cache_dir=cache, downloader=downloader
     )
     assert r2.state == "already"
-    assert chamadas == []  # rede nunca foi tocada
+    assert chamadas == []
 
 
 def test_ensure_respeita_instalacao_preexistente_sem_manifesto(tmp_path):
@@ -170,7 +144,7 @@ def test_ensure_checksum_errado_no_cache_aborta_sem_extrair(tmp_path):
     """O invariante central: NUNCA extrair binário não verificado."""
     tarball = _make_tarball(tmp_path)
     conf = _conf_para(tarball)
-    conf["sha256"] = "00" * 32  # o conf espera OUTRO conteúdo
+    conf["sha256"] = "00" * 32
     compat = tmp_path / "compat"
     cache = tmp_path / "cache"
     cache.mkdir()
@@ -179,7 +153,7 @@ def test_ensure_checksum_errado_no_cache_aborta_sem_extrair(tmp_path):
         conf, compat_dir=compat, cache_dir=cache, downloader=None
     )
     assert r.state == "checksum_mismatch"
-    assert not (compat / PIN_NAME).exists()  # NADA foi extraído
+    assert not (compat / PIN_NAME).exists()
 
 
 def test_ensure_download_verificado_entra_e_alimenta_o_cache(tmp_path):
@@ -196,7 +170,6 @@ def test_ensure_download_verificado_entra_e_alimenta_o_cache(tmp_path):
     )
     assert r.state == "downloaded"
     assert (compat / PIN_NAME / "proton").is_file()
-    # O tarball fica no cache p/ reinstalls offline (PLAT-01 item 2).
     assert (cache / f"{PIN_NAME}.tar.gz").is_file()
 
 
@@ -213,7 +186,7 @@ def test_ensure_download_corrompido_nao_extrai_nem_envenena_o_cache(tmp_path):
     )
     assert r.state == "checksum_mismatch"
     assert not (compat / PIN_NAME).exists()
-    assert list(cache.glob("*.tar.gz")) == []  # cache envenenado nunca nasce
+    assert list(cache.glob("*.tar.gz")) == []
 
 
 def test_ensure_sem_cache_e_sem_rede_e_pendencia_honesta(tmp_path):
@@ -227,17 +200,8 @@ def test_ensure_sem_cache_e_sem_rede_e_pendencia_honesta(tmp_path):
     assert r.state == "unavailable"
 
 
-# --------------------------------------------------------------------------
-# CompatToolMapping (puro)
-# --------------------------------------------------------------------------
-
-
 def _config_vdf(ctm_entries: dict[str, str] | None) -> str:
-    """config.vdf mínimo com a MESMA forma do real (visto ao vivo 2026-07-18).
-
-    `ctm_entries=None` = sem bloco CompatToolMapping; um bloco vizinho
-    (ShaderCacheManager) garante o teste de preservação byte a byte.
-    """
+    """config.vdf mínimo com a MESMA forma do real (visto ao vivo 2026-07-18)."""
     ctm = ""
     if ctm_entries is not None:
         blocos = "".join(
@@ -278,14 +242,10 @@ def test_build_cria_o_bloco_quando_ausente_com_global_e_appids():
     }
     assert changes["0"]["action"] == "added"
     assert changes["0"]["previous_name"] == ""
-    # Achado #7: no ramo sem-CTM o build marca que NÓS criamos o bloco inteiro
-    # (a flag mora na entrada global "0"), para o unlock derrubar o wrapper vazio.
     assert changes["0"]["ctm_created"] == "1"
     assert set(changes) == {"0", "1599660", "1971870"}
-    # Prioridades nativas: global 75, por jogo 250 (observadas ao vivo).
     assert '"priority"\t\t"75"' in texto
     assert '"priority"\t\t"250"' in texto
-    # O vizinho passou intacto.
     assert '"HasCurrentBucket"\t\t"1"' in texto
 
 
@@ -296,7 +256,6 @@ def test_build_troca_entrada_existente_e_registra_o_nome_anterior():
     )
     assert pp.extract_compat_tool_mapping(texto)["0"] == PIN_NAME
     assert changes == {"0": {"action": "replaced", "previous_name": "proton_11"}}
-    # Fora da linha "name" trocada, o arquivo é byte a byte o mesmo.
     diferentes = [
         (a, b)
         for a, b in zip(original.splitlines(), texto.splitlines(), strict=True)
@@ -331,45 +290,40 @@ def test_remove_do_que_foi_adicionado_e_roundtrip_byte_a_byte():
     revertido, n = pp.remove_compat_tool_mapping(
         travado, tool_name=PIN_NAME, changes=changes
     )
-    assert n == 2  # "0" + "1599660" adicionados
+    assert n == 2
     assert revertido == original
 
 
 def test_remove_fecha_roundtrip_no_caso_sem_ctm_previo():
-    """Achado #7: sem CompatToolMapping prévio o lock cria o bloco INTEIRO; o
-    unlock tem que voltar byte a byte ao original — sem deixar um
-    `CompatToolMapping {}` vazio residual (uninstall simétrico)."""
+    """Achado #7: sem CompatToolMapping prévio o lock cria o bloco INTEIRO; o"""
     original = _config_vdf(None)
     travado, changes = pp.build_compat_tool_mapping(
         original, tool_name=PIN_NAME, appids=["1599660", "1971870"]
     )
-    assert "CompatToolMapping" in travado  # o bloco foi criado do zero
+    assert "CompatToolMapping" in travado
     revertido, n = pp.remove_compat_tool_mapping(
         travado, tool_name=PIN_NAME, changes=changes
     )
-    assert n == 3  # global "0" + os 2 jogos
-    assert "CompatToolMapping" not in revertido  # nada de bloco vazio residual
-    assert revertido == original  # roundtrip byte a byte
+    assert n == 3
+    assert "CompatToolMapping" not in revertido
+    assert revertido == original
 
 
 def test_remove_preserva_bloco_criado_por_nos_se_usuaria_assumiu_uma_entrada():
-    """Achado #7 (contra-caso): se a usuária mudou UMA entrada do bloco que
-    criamos, o bloco não fica vazio — o wrapper CompatToolMapping é preservado."""
+    """Achado #7 (contra-caso): se a usuária mudou UMA entrada do bloco que"""
     original = _config_vdf(None)
     travado, changes = pp.build_compat_tool_mapping(
         original, tool_name=PIN_NAME, appids=["1599660"]
     )
-    # A usuária troca a 1ª entrada ("0") por outro tool depois do nosso lock.
     mudado = travado.replace(
         f'"name"\t\t"{PIN_NAME}"', '"name"\t\t"proton_experimental"', 1
     )
     revertido, n = pp.remove_compat_tool_mapping(
         mudado, tool_name=PIN_NAME, changes=changes
     )
-    # O bloco sobrevive (ainda contém a entrada que virou da usuária).
     assert "CompatToolMapping" in revertido
     assert "proton_experimental" in revertido
-    assert n == 1  # só o 1599660 (nosso, intocado) foi revertido
+    assert n == 1
 
 
 def test_remove_restaura_o_nome_anterior_de_entrada_trocada():
@@ -398,11 +352,6 @@ def test_remove_nao_toca_entrada_que_a_usuaria_mudou_depois_do_lock():
     mapping = pp.extract_compat_tool_mapping(revertido)
     assert "proton_experimental" in mapping.values()
     assert n < len(changes)
-
-
-# --------------------------------------------------------------------------
-# lock/unlock de arquivo (gate Steam + backup + estado local)
-# --------------------------------------------------------------------------
 
 
 @pytest.fixture()
@@ -472,7 +421,7 @@ def test_lock_escreve_backup_estado_e_unlock_reverte_tudo(
     assert u["status"] == "unlocked"
     assert u["reverted"] == 2
     assert vdf.read_text(encoding="utf-8") == original
-    assert not state.exists()  # estado consumido — unlock 2x vira noop
+    assert not state.exists()
 
 
 def test_lock_repetido_e_noop_e_preserva_o_registro_original(
@@ -489,7 +438,6 @@ def test_lock_repetido_e_noop_e_preserva_o_registro_original(
         tool_name=PIN_NAME, appids=[], config_vdf=vdf, state_path=state
     )
     assert r2["status"] == "noop"
-    # O previous_name ORIGINAL (pré-hefesto) sobrevive a re-locks.
     registro = json.loads(state.read_text(encoding="utf-8"))
     assert registro["changes"]["0"]["previous_name"] == "proton_11"
 
@@ -509,10 +457,7 @@ def test_unlock_sem_estado_e_noop_sem_tocar_no_vdf(tmp_path, steam_fechada):
 def test_lock_falha_do_estado_nao_deixa_o_vdf_pinado_sem_reversao(
     tmp_path, steam_fechada, monkeypatch
 ):
-    """Achado #5: se a persistência do registro falhar (OSError), o config.vdf
-    NÃO pode ficar pinado sem estado — sem registro o unlock/uninstall nunca
-    reverteria (re-lock é idempotente e não regrava estado). Com o registro
-    ANTES do vdf, a falha deixa o vdf INTACTO e o lock volta 'erro'."""
+    """Achado #5: se a persistência do registro falhar (OSError), o config.vdf"""
     vdf = tmp_path / "config.vdf"
     original = _config_vdf({"0": "proton_11"})
     vdf.write_text(original, encoding="utf-8")
@@ -526,7 +471,6 @@ def test_lock_falha_do_estado_nao_deixa_o_vdf_pinado_sem_reversao(
         tool_name=PIN_NAME, appids=["1599660"], config_vdf=vdf, state_path=state
     )
     assert r["status"] == "erro"
-    # O vdf continua ORIGINAL (não pinado): reversível, sem trava órfã.
     assert vdf.read_text(encoding="utf-8") == original
     assert not state.exists()
 
@@ -534,22 +478,14 @@ def test_lock_falha_do_estado_nao_deixa_o_vdf_pinado_sem_reversao(
 def test_lock_proton_for_all_games_zero_arg_traduz_o_contrato_da_gui(
     tmp_path, steam_fechada
 ):
-    """Achado #4: o botão "Travar Proton validado" chama esta função ZERO-ARG.
-    Descobre tool_name pelo conf + appids instalados, trava e devolve
-    {locked, skipped, errors, tool} que format_proton_lock_result consome."""
+    """Achado #4: o botão "Travar Proton validado" chama esta função ZERO-ARG."""
     steamapps = tmp_path / ".steam/steam/steamapps"
     steamapps.mkdir(parents=True)
     (steamapps / "appmanifest_1599660.acf").write_text(
         '"AppState"\n{\n\t"appid"\t\t"1599660"\n\t"name"\t\t"Sackboy"\n}\n',
         encoding="utf-8",
     )
-    # A PEGADA DO PROTON (18/09/2026): sem `appinfo.vdf` legível, só ganha
-    # entrada nova o jogo que já rodou pelo Proton — e o Sackboy, que só tem
-    # versão Windows, rodou. Sem esta pasta a régua mediria um jogo que pode
-    # ser nativo do Linux, e o lock certo é não criar entrada para ele.
     (steamapps / "compatdata" / "1599660").mkdir(parents=True)
-    # O PINO INSTALADO (18/09/2026): sem ele a trava recusa (`pino_ausente`),
-    # e esta régua mede o caminho em que ele está lá.
     pino = tmp_path / ".steam/steam/compatibilitytools.d" / PIN_NAME
     pino.mkdir(parents=True)
     (pino / "proton").write_text("#!/bin/sh\n", encoding="utf-8")
@@ -565,8 +501,7 @@ def test_lock_proton_for_all_games_zero_arg_traduz_o_contrato_da_gui(
     assert set(result) >= {"locked", "skipped", "errors", "tool"}
     assert result["tool"] == PIN_NAME
     assert result["errors"] == 0
-    assert result["locked"] == 2  # global "0" + o jogo 1599660
-    # Travou de verdade E registrou o estado (reversível).
+    assert result["locked"] == 2
     mapping = pp.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
     assert mapping["0"] == PIN_NAME
     assert mapping["1599660"] == PIN_NAME
@@ -582,11 +517,6 @@ def test_lock_proton_for_all_games_e_chamavel_sem_argumentos():
     for p in inspect.signature(pp.lock_proton_for_all_games).parameters.values():
         assert p.kind in (p.KEYWORD_ONLY, p.VAR_KEYWORD)
         assert p.kind == p.VAR_KEYWORD or p.default is not inspect.Parameter.empty
-
-
-# --------------------------------------------------------------------------
-# doctor: proton_major + proton_pin_report + inventário
-# --------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -630,9 +560,7 @@ def test_report_completo(tmp_path):
     assert report["pinned_present"] is True
     assert report["pinned_manifest_ok"] is True
     assert report["global_is_pinned"] is True
-    # 1599660 sem entrada segue o global pinado → não está fora do pin.
     assert report["games_off_pin"] == ["1245620", "2497900"]
-    # Só o Proton ≤ 9 é risco de vazamento winebus (semântica ENABLE antiga).
     assert report["games_leaky_proton"] == [("1245620", "proton_9")]
 
 
@@ -647,7 +575,6 @@ def test_report_sem_pin_presente_e_global_alheio(tmp_path):
     )
     assert report["pinned_present"] is False
     assert report["global_is_pinned"] is False
-    # Jogo sem entrada herda o global proton_9 → fora do pin E vazável.
     assert report["games_off_pin"] == ["42"]
     assert report["games_leaky_proton"] == [("42", "proton_9")]
 
@@ -670,14 +597,6 @@ def test_list_installed_appids_filtra_ferramentas(tmp_path):
     manifest("228980", "Steamworks Common Redistributables")
     assert pp.list_installed_appids(home=tmp_path) == ["1245620", "1599660"]
 
-
-# ── ESCOLHA-DELA-01 (19/08/2026) ──────────────────────────────────────────────
-# O lock atropelava escolha deliberada. Medido na máquina dela: em 14/08 03:04 o
-# "Travar Proton validado" trocou o Proton de TRÊS jogos que já tinham escolha —
-# o DON'T SCREAM (2497900) saiu de `proton_11` para `GE-Proton10-34`, e nesse
-# Proton o motor Unreal registra "No Audio Capture implementations found" e ZERO
-# `WasapiCapture`: o microfone do jogo, que é a mecânica inteira dele, morreu.
-# Ela zerou o jogo no `proton_11`; o produto lhe tirou o caminho sem avisar.
 
 _VDF_COM_ESCOLHA_DELA = """"UserLocalConfigStore"
 {
@@ -721,9 +640,6 @@ def test_o_lock_nao_atropela_o_proton_que_ela_escolheu() -> None:
         "a linha do Proton DELA foi reescrita no config.vdf: o produto atropelou "
         "uma escolha deliberada, que é exatamente o defeito de 14/08"
     )
-    # O bloco DELE, e só ele: a entrada global "0" também recebe o Proton do
-    # produto e vive depois no arquivo — medir "o que vem depois do 2497900"
-    # pegaria a global e acusaria um atropelo que não houve.
     corpo = texto.split('"2497900"', 1)[1].split("}", 1)[0]
     assert "GE-Proton10-34" not in corpo, (
         "o Proton do produto entrou no bloco do jogo dela"

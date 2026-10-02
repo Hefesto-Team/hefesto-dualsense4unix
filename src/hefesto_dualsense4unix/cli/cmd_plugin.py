@@ -1,13 +1,4 @@
-"""Subcomando `hefesto-dualsense4unix plugin ...`.
-
-Comandos para inspecionar e recarregar plugins do daemon.
-
-- `hefesto-dualsense4unix plugin list`   — lista plugins carregados (nome, perfis, estado).
-- `hefesto-dualsense4unix plugin reload` — recarrega plugins do disco via IPC ou direto.
-
-Nota: requer daemon em execução com plugins_enabled=True para operar
-via IPC. Sem daemon, informa estado indisponivel.
-"""
+"""Subcomando `hefesto-dualsense4unix plugin ...`."""
 from __future__ import annotations
 
 import asyncio

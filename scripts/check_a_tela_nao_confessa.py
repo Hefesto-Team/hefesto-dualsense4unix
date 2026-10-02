@@ -1,89 +1,5 @@
 #!/usr/bin/env python3
-"""check_a_tela_nao_confessa.py — nenhum texto de tela confessa dívida NOSSA.
-
-ORDEM DELA, 07/09/2026, e ela vale para a tela inteira
-------------------------------------------------------
-    *"O app tem que funcionar e não mostrar na tela que o app não presta. Se
-     não tem como, ok. Testamos e criamos o canal. até lá tudo bem, o layout
-     não informa os nossos defeitos."*
-
-O que ela proíbe é a tela AFIRMAR que o Hefesto não faz algo que **devemos** —
-capacidade por entregar, confessada no lugar onde a pessoa está tentando usar o
-produto. O que ela permite é a tela dizer **fato do mundo**, **limite do
-aparelho ou do sistema** e **estado presente**. As quatro que ela nomeou como
-legais, medidas no mesmo dia:
-
-    "o Hefesto não consegue nomear o que o sistema não nomeia"   limite do Linux
-    "sem ela o Hefesto não consegue escrever nos controles"      explica o módulo
-    "o Hefesto não volta a perguntar"                            comportamento
-
-
-A PARTE DIFÍCIL, e por que a régua NÃO é um `grep` de frases proibidas
-----------------------------------------------------------------------
-As duas famílias têm a MESMA forma. Estas duas estão na tela hoje e as duas
-são legítimas::
-
-    "O jogo ainda não recebeu este controle"
-    "Um traço no lugar do número quer dizer que a leitura ainda não chegou"
-
-Eram QUATRO até 11/09/2026, e as duas que saíram caíram no mesmo dia, cada uma
-por uma aprovação dela: a dica do «Acrescentar entrada» dizia *"o menor número
-que ainda não existe em face nenhuma"* — a regra de unicidade é do motor, e
-quem clica não escolhe o número —, e a dica dos modos dizia *"O PS+R3 ainda não
-para aqui"*, que saiu quando ela mandou encurtar as dicas. Nenhuma das duas foi
-tirada por esta peneira: as duas eram legítimas e continuariam podendo ficar.
-
-O que separa não é a palavra — é **de quem é o sujeito**. Quando o sujeito é o
-jogo, a leitura ou o número, `ainda não` é estado do mundo. Quando o sujeito
-somos nós — o Hefesto, o produto, o perfil, ou a primeira pessoa (*"ainda não
-sei olhar"*) —, `ainda não` é uma promessa, e promessa só se faz sobre trabalho
-próprio.
-
-Nenhuma expressão regular decide isso sem errar. **Então a régua não decide: ela
-OBRIGA A DECLARAR.** Toda frase de tela com a FORMA de confissão tem de estar
-numa das duas tabelas abaixo, com a razão escrita e a data:
-
-    `FATOS`      — legítimas. Cada uma diz de quem é o sujeito e por quê.
-    `A_DIVIDA`   — confissões que ainda estão na tela, com o endereço de quem
-                   as tira e a data em que foram medidas. **Esta lista só
-                   encolhe.**
-
-Uma frase nova de qualquer das duas famílias reprova, e quem a escreveu tem de
-parar e classificar. É a frição que a ordem dela pede: escrever "o Hefesto ainda
-não faz X" na tela deixa de ser um ato de um segundo.
-
-**A CHECAGEM É NOS DOIS SENTIDOS**, pela mesma razão que o portão da lista de
-portões: uma frase declarada que a tela não tem mais é uma linha que envelhece
-calada, e a próxima pessoa a lê como se a confissão continuasse lá.
-
-
-O QUE ELE LÊ
-------------
-1. **As páginas**, na bancada (``mockup/``) e no publicado
-   (``interface/paginas/``) — só o que está DENTRO da janela, isto é, tudo
-   antes do ``<div class="nota">``. A `.nota` é a legenda do mockup, que a
-   própria folha declara *"fora da janela"*: é o documento em que a casa conta
-   a ela o que mudou e por quê, e é lá que a dívida DEVE ser nomeada.
-   **RELATADO em 07/09/2026:** essa legenda viaja para o publicado, então o
-   produto instalado carrega o registro de obra do mockup. Se ela deve ou não
-   ir junto é decisão de tela, e a tela é dela.
-
-2. **Toda `Fala`** declarada em ``src/``, pelo campo ``texto=`` — lido por AST,
-   sem importar módulo nenhum, como o ``validar-fala-de-tela.py`` já faz. Uma
-   `Fala` é texto de tela por construção; o ``porque=`` NÃO é lido, e a
-   omissão é o ponto: ele é a razão escrita para quem desenvolve, e é onde a
-   dívida deve continuar.
-
-A LIMPEZA VEM ANTES DE QUALQUER CASAMENTO, e não é asseio
----------------------------------------------------------
-Comentário HTML, ``<style>`` e ``<script>`` saem do texto ANTES de a régua
-olhar. Esta casa pagou a mesma armadilha quatro vezes em quatro dias: *um
-comentário que descreve o padrão proibido vira a primeira ocorrência dele*. O
-CSS do gerador entra INTEIRO na página, e o comentário que explicava uma
-remoção já deixou um portão verde sobre um botão que não existia. Medido: das
-dez frases que a primeira varredura desta régua achou, DUAS estavam dentro de
-comentários — a explicação, não o defeito.
-"""
+"""check_a_tela_nao_confessa.py — nenhum texto de tela confessa dívida NOSSA."""
 from __future__ import annotations
 
 import ast
@@ -97,23 +13,9 @@ PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  #
 FONTE = RAIZ / "src"
 PACOTES = FONTE / "hefesto_dualsense4unix" / "interface" / "pacotes"
 
-#: O que fica no lugar de um pedaço que só existe RODANDO — o nome de um jogo, o
-#: número de um assento, a resposta do daemon. Ele não é enfeite: as letras dele
-#: não casam com `\s+`, então a peneira da confissão não consegue atravessar o
-#: buraco e inventar uma frase que ninguém escreveu.
 VALOR_DE_EXECUCAO = "‹…›"
 
 
-# ---------------------------------------------------------------------------
-# A FORMA DA CONFISSÃO — o que a régua manda declarar
-# ---------------------------------------------------------------------------
-#: `ainda` é o advérbio da dívida: ele promete que a coisa vem. Sobre o mundo
-#: ele também aparece ("o jogo ainda não recebeu"), e é por isso que ele MANDA
-#: DECLARAR em vez de reprovar sozinho.
-#:
-#: A primeira pessoa (`não sei`, `não sabemos`, `não conseguimos`) é o produto
-#: falando de si; `Hefesto não`, `produto não`, `app não` é o produto sendo
-#: falado. As três formas entram na mesma peneira.
 FORMA = re.compile(
     r"(?:"
     r"ainda\s+(?:n[ãa]o|falta|estamos)"
@@ -123,25 +25,7 @@ FORMA = re.compile(
     re.IGNORECASE,
 )
 
-# `não sei` SOZINHO NÃO ENTRA, e a exclusão foi MEDIDA nesta leva: a primeira
-# peneira o tinha, e das 40 acusações 18 eram a PESSOA falando, não o produto —
-# a opção "Não sei" de uma lista da Conexões, o botão "Não sei onde fica" do
-# passo a passo, e a explicação de que *"sem resposta não é o mesmo que Não
-# sei"*. Ali "não sei" é a voz DELA, e é resposta legítima a uma pergunta que só
-# ela pode responder. O `não sei` do PRODUTO vem sempre com o advérbio da
-# dívida (*"Ainda não sei olhar este lançador"*), e esse a primeira alternativa
-# pega. Uma peneira que confunde a voz da pessoa com a voz do produto obrigaria
-# a declarar dezoito frases que nada têm a ver com a ordem dela — e uma tabela
-# assim ninguém lê.
-#
-# `perfil não` TAMBÉM SAIU, pela mesma medição: *"O perfil não guarda uma
-# configuração: guarda uma por controle"* é uma afirmação POSITIVA sobre o
-# desenho do produto. O caso que importava (*"O perfil ainda não tem por onde
-# limitar estes"*) já cai na primeira alternativa, pelo `ainda`.
 
-#: A JANELA DE CONTEXTO que a régua recorta para casar com as tabelas. Frase
-#: inteira seria frágil (o `<br>` e o `<b>` entram no meio); um punhado de
-#: palavras em volta do sinal é o que identifica sem exigir transcrição exata.
 CONTEXTO = 55
 
 
@@ -156,12 +40,6 @@ def _forma(texto: str) -> list[str]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# TABELA 1 — AS LEGÍTIMAS. Cada uma diz DE QUEM é o sujeito, e desde quando.
-# ---------------------------------------------------------------------------
-#: A chave é um pedaço LITERAL da frase, curto e distintivo. O valor é a razão
-#: pela qual ela não é confissão — e ela tem de responder a UMA pergunta: *o
-#: sujeito desta frase somos nós?* Se for, a linha pertence à outra tabela.
 FATOS: dict[str, str] = {
     "o jogo ainda não recebeu este controle":
         "o sujeito é O JOGO. Estado de agora, e o número fica reservado até ele "
@@ -178,78 +56,14 @@ FATOS: dict[str, str] = {
         "cantar «ligado» sobre um arquivo que não mudou é o `excecao_inerte` "
         "que a PONTE-STEAM-INPUT-01 existiu para matar — STEAM-INPUT-01, "
         "20/09/2026",
-    # A IRMÃ DELA — `a01_jogar.STEAM_INPUT_SAIU_MAS_CONTINUA`, *"Tirei este jogo
-    # da lista, mas a Steam continua no comando dele"* — NÃO precisa de linha
-    # aqui: a `FORMA` não a lê como confissão, e declará-la foi tentado e
-    # REPROVOU na direção B (*"uma declaração que sobrevive à frase envelhece
-    # calada"*). Fica o registro para a próxima pessoa não repetir a tentativa.
-    # TRÊS DECLARAÇÕES SAÍRAM DAQUI EM 11/09/2026, e nenhuma porque estivesse
-    # errada: as três frases deixaram a tela por aprovação dela, e foi esta
-    # régua que cobrou as três retiradas — ela confere nos DOIS sentidos, e
-    # *uma classificação que sobrevive à frase envelhece calada*.
-    #
-    #   · *"o menor número que ainda não existe em face nenhuma"* — o sujeito
-    #     era O NÚMERO, fato de aritmética sobre o que o botão faz (07/09).
-    #   · *"O PS+R3 ainda não para aqui"* — o sujeito era O ATALHO, e a frase
-    #     dizia ONDE ele age (07/09). Saiu com a A3-011: ela mandou encurtar as
-    #     dicas dos modos.
-    #   · *"o Hefesto não está entregando o controle ao jogo agora"* — estado
-    #     de agora, que ela mesma nomeou como legítimo em 07/09. A A3-018
-    #     reescreveu a ressalva da máscara, que repetia a entrega duas vezes na
-    #     mesma frase.
     "o Hefesto não volta a perguntar":
         "COMPORTAMENTO, nomeado por ela como legal em 07/09/2026 — a frase diz "
         "o que o botão faz",
     "o Hefesto não consegue nomear o que o sistema não nomeia":
         "LIMITE DO SISTEMA, nomeado por ela como legal em 07/09/2026 — o Linux "
         "não nomeia, e a frase o diz na mesma linha",
-    # A TERCEIRA SAIU EM 25/09/2026, e também não por estar errada: «sem ela o
-    # Hefesto não consegue escrever nos controles» morava no `?` do achado da
-    # regra de permissão, no desenho da aba Sistema, e a A-09-SISTEMA-EM-TRES-
-    # SECOES-01 trocou as dicas longas do exame pela frase inteira no `title`
-    # (pedido dela: *«simplificar cada texto»*). A frase saiu da tela, e a
-    # declaração sai junto.
-    # DUAS DECLARAÇÕES SAÍRAM AQUI EM 11/09/2026, e nenhuma porque estivesse
-    # errada: as duas FRASES deixaram de existir na tela, cada uma por uma
-    # frente diferente da onda da língua — e foi o próprio portão que cobrou as
-    # duas retiradas. Ele confere nos dois sentidos, e *uma declaração que
-    # sobrevive à frase envelhece calada*.
-    #
-    # A PRIMEIRA era
-    #
-    #     "o Hefesto não transforma o clique dele em tecla"
-    #       CONFLITO DE FUNÇÃO, e a frase nomeia a condição na mesma oração
-    #       (*enquanto o touchpad for o mouse do computador*) — 07/09/2026
-    #
-    # e as A5-020 e A5-025, aprovadas por ela, reescreveram os dois lugares em
-    # que ela aparecia (`aba06.D_DEFINICOES` e `aba06.MARCA_DO_TOUCHPAD`) para
-    # *"o clique dele não vira tecla"*: o mesmo fato, com o sujeito no lugar
-    # certo — quem não transforma o clique não somos nós por escolha, é o
-    # touchpad, que já tem outro dono. Sem o "o Hefesto não", a peneira nem a
-    # pega.
-    #
-    # A SEGUNDA era *"O Hefesto não é só para a Steam"*, AFIRMAÇÃO POSITIVA
-    # sobre o alcance do produto, declarada em 07/09/2026 porque a peneira a
-    # pegava pela forma. O `?` da aba Lançadores perdeu os dois parágrafos que
-    # definiam a aba por negação (A2-002, aprovada por ela), e a frase foi
-    # junto.
 
-    # -- SETE DECLARAÇÕES SAÍRAM AQUI, e as sete no mesmo gesto: 11/09/2026 ---
-    # As 352 mudanças de texto que ela aprovou reescreveram as frases que estas
-    # linhas classificavam, e a checagem nos DOIS sentidos cobrou uma a uma —
-    # que é exatamente o trabalho dela. Nenhuma saiu por estar errada.
-    # Duas continuam cobertas por chave mais curta logo acima («o Hefesto não
-    # confirmou», «o Hefesto não gravou esta barra»), porque a família inteira
-    # de recusas passou a dizer o mesmo de um jeito só. As outras cinco não
-    # existem mais em `src/`, conferido por busca antes de sair.
 
-    # -- AS RECUSAS DE EXECUÇÃO, reescritas pela onda da língua de 11/09/2026 --
-    # As quatro chaves abaixo cobrem treze recados que ganharam palavras novas
-    # DEPOIS de a F5 ensinar o portão a ler o `raise RuntimeError` do gesto. O
-    # sujeito gramatical é o produto, e por isso a peneira as pega — mas
-    # nenhuma promete trabalho por fazer: as quatro contam o que aconteceu com
-    # o ato que a pessoa acabou de pedir, e as três primeiras nomeiam as duas
-    # causas possíveis na mesma oração.
     "o Hefesto não confirmou":
         "ESTADO DO ATO: o pedido saiu e a confirmação não voltou. A frase diz "
         "as duas causas na mesma oração (o serviço parou, ou o controle saiu "
@@ -265,10 +79,6 @@ FATOS: dict[str, str] = {
         "o sujeito é O GATILHO, e é estado do que a pessoa escolheu: sem modo "
         "não há ajuste a fazer. A frase diz o passo que falta — 11/09/2026",
 
-    # -- O RECADO DO GESTO, visto pela primeira vez em 11/09/2026 -----------
-    # As dezoito de baixo já estavam na tela antes desta data; o que mudou é
-    # que a régua passou a ler o canal por onde elas chegam. Todas foram
-    # classificadas pela mesma pergunta das de cima: *de quem é o sujeito?*
     "o Hefesto não respondeu":
         "ESTADO DO ATO que acabou de acontecer: o daemon não devolveu resposta, "
         "e a frase diz na mesma linha o que ficou como estava. É a família de "
@@ -300,43 +110,6 @@ FATOS: dict[str, str] = {
         "Fato do que está no disco desta máquina — 11/09/2026",}
 
 
-# ---------------------------------------------------------------------------
-# TABELA 2 — A DÍVIDA QUE AINDA APARECE. Esta lista SÓ ENCOLHE.
-# ---------------------------------------------------------------------------
-#: Cada linha é uma confissão que continua na tela, com o endereço de quem a
-#: tira. Ela existe porque a ordem dela chegou depois destas frases, e apagar
-#: todas no mesmo commit passaria por arquivos de quatro frentes ao mesmo
-#: tempo. **Acrescentar uma linha aqui é dívida nova na tela, e a revisão tem
-#: de perguntar por quê.**
-#: **AS TRÊS SAÍRAM DA TELA EM 08/09/2026, e a lista está VAZIA.** Elas
-#: sobreviveram um dia pela razão escrita acima — apagar todas no mesmo commit
-#: passaria por arquivos de quatro frentes ao mesmo tempo —, e caíram quando as
-#: frentes fecharam e os quatro arquivos ficaram livres:
-#:
-#:   "Ainda não sei olhar este lançador"        `interface/desenho_dos_lancadores.py`
-#:   "O perfil ainda não tem por onde limitar"  `interface/aba09.py`
-#:   "O Hefesto ainda não lê a cor por rádio"   `app/widgets/external_card.py`
-#:
-#: E CAIU UMA QUARTA que não estava declarada aqui: o `DIZ_ACHEI` do mesmo
-#: arquivo dos lançadores dizia *"mas ainda não sei olhar dentro dele: o
-#: produto não lê a biblioteca deste lançador"*. Ela não casava com nenhuma
-#: forma desta régua — a confissão vinha depois de um "Achei", e a régua olha o
-#: começo da frase. **Isso é ponto cego declarado, não linha morta:** quem
-#: acrescentar uma confissão no MEIO de uma frase que começa bem continua
-#: passando. A cura de verdade é a régua olhar a oração, não a frase.
-#:
-#: O FATO ÚTIL SOBREVIVEU NAS QUATRO. Nenhuma virou silêncio: as três primeiras
-#: passaram a dizer o que o produto FAZ (o perfil casa por processo e janela; o
-#: teto não alcança estes; a cor vem da lista), e a dívida continua onde ela
-#: mora — o `docs/data/mapa-controles.csv`.
-#:
-#: **A LISTA VOLTOU A TER LINHA EM 11/09/2026, e nenhuma delas é dívida nova.**
-#: As quatro de baixo estão na tela desde antes desta data; o que mudou é que a
-#: régua passou a ler o canal por onde elas chegam — o `raise RuntimeError` do
-#: gesto. Elas não foram curadas no mesmo gesto porque os quatro arquivos são de
-#: outras frentes hoje (as 352 mudanças de texto dela), e reescrever a frase de
-#: quem está com o arquivo na mão é como se perde trabalho de duas pessoas.
-#: **O endereço de cada uma está aqui, e a lista volta a encolher.**
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 A_DIVIDA: dict[str, str] = {
     "está desenhado na tela e o Hefesto não sabe montar essa máscara":
@@ -352,16 +125,6 @@ A_DIVIDA: dict[str, str] = {
         "`interface/pacotes/a06_navegacao.py` — a lista oferece *Só dentro do "
         "jogo* e o perfil não tem o campo que o sustenta. A opção sai da lista "
         "ou o campo nasce; as duas curas tiram a frase — medida em 11/09/2026",
-    # AS DUAS ÚLTIMAS DESTA LISTA SAÍRAM EM 11/09/2026, e não por serem curadas:
-    # as frases que elas endereçavam foram reescritas pelas 352 aprovadas por
-    # ela. A de `a07_lancadores.py` dizia *"Ainda não sei abrir o …"* com o
-    # «por enquanto» que a ordem dela proíbe; a de `a04_iluminacao.py` era um
-    # laudo nosso no cartão dela. As duas foram medidas por busca em `src/`
-    # antes de sair daqui. **Esta lista só encolhe, e encolheu.**
-    # A LISTA DE EXCLUSÃO — 21/09/2026, o desenho aprovado por ela
-    # (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01). O sujeito é o JOGO que
-    # ela escolheu, e o «não estivesse» é a ESCOLHA dela, não falta nossa: a
-    # frase diz o que a exclusão faz, e o «Tirar da lista» desfaz.
     # fica: a frase descreve a escolha dela, e não uma capacidade que devemos
     "como se o Hefesto não estivesse instalado":
         "o sujeito é o JOGO excluído por ela; a frase descreve a escolha, não "
@@ -369,9 +132,6 @@ A_DIVIDA: dict[str, str] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# A LEITURA
-# ---------------------------------------------------------------------------
 def _limpo(html: str) -> str:
     """A página SEM comentário, `<style>` e `<script>` — nesta ordem, e antes de tudo."""
     html = re.sub(r"<!--.*?-->", " ", html, flags=re.S)
@@ -397,12 +157,7 @@ def _paginas() -> list[tuple[str, str]]:
 
 
 def _falas() -> list[tuple[str, str]]:
-    """Todo `texto=` de todo `Fala(...)` de `src/`, por AST — sem importar nada.
-
-    A LEITURA É POR AST e não por regex pela razão que o `validar-fala-de-tela`
-    já documenta: importar o módulo para ler a declaração faria a régua depender
-    de o pacote inteiro carregar, e um `Fala` mora em arquivo que puxa GTK.
-    """
+    """Todo `texto=` de todo `Fala(...)` de `src/`, por AST — sem importar nada."""
     fora = []
     for p in sorted(FONTE.rglob("*.py")):
         try:
@@ -424,26 +179,7 @@ def _falas() -> list[tuple[str, str]]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# 3. O RECADO DO GESTO — o terceiro canal, e o que esta régua nunca lia
-# ---------------------------------------------------------------------------
-# TRÊS AGENTES O ACHARAM SOZINHOS, cada um numa aba, sem se falarem (LINGUA-A2,
-# A4 e A5, 11/09/2026). O contrato do piloto é explícito: um `RuntimeError`
-# levantado dentro de um gesto quer dizer *"o produto recusou, e a frase VAI PARA
 # A TELA"* — `hefesto_vivo._recusou_dizendo` faz `str(erro)` e deposita o texto
-# no cartão da coluna em que ela clicou, laranja, por 30 segundos.
-#
-# Essa frase nunca passou por peneira nenhuma. Ela não é uma `Fala`, não está no
-# HTML e nasce montada em execução: f-string, concatenação, uma constante do
-# módulo vizinho. A mordida de quem achou foi chamar o casador desta régua com
-# as frases dos gestos — elas CASAM. A régua não falhava em reconhecer; ela não
-# olhava ali.
-#
-# POR QUE A RECONSTRUÇÃO É ESTÁTICA, e por que ela declara o que não alcança:
-# importar o pacote para ler a frase pediria GTK, daemon e perfil da casa. Então
-# a régua monta a frase do jeito que o fonte a escreve, e onde um pedaço só
-# existe rodando ela põe :data:`VALOR_DE_EXECUCAO` no lugar. O que sobra sem uma
-# letra de prosa não passa calado: cai na terceira tabela, :data:`SEM_LETRA`.
 def _arvore(p: pathlib.Path) -> ast.Module | None:
     if p not in _ARVORES:
         try:
@@ -456,16 +192,7 @@ def _arvore(p: pathlib.Path) -> ast.Module | None:
 
 
 def _trecho(p: pathlib.Path, no: ast.AST) -> str:
-    """A expressão como está ESCRITA no fonte, numa linha só.
-
-    É a chave de :data:`SEM_LETRA`, e NÃO é `ast.unparse` — medido em
-    27/09/2026, na corrida 36354426805 do CI: o `unparse` escolhe as aspas de
-    uma f-string aninhada pela VERSÃO do interpretador. O 3.12.3 da mesa dela
-    (e do `gtk-real`) repetia a aspa simples por fora; o 3.10, o 3.11 e o
-    3.12.14 do `setup-python` (o `lint-test`) punham aspa dupla. A mesma chave
-    passava num job e reprovava no outro. O trecho do fonte é o mesmo em
-    qualquer Python, e é o que quem procura a linha acha com um `grep`.
-    """
+    """A expressão como está ESCRITA no fonte, numa linha só."""
     trecho = ast.get_source_segment(_TEXTOS.get(p, ""), no) or ""
     return " ".join(trecho.split())
 
@@ -476,13 +203,7 @@ _ESCOPOS: dict[pathlib.Path, tuple[dict, dict, dict]] = {}
 
 
 def _modulo(nome: str, base: pathlib.Path, nivel: int) -> pathlib.Path | None:
-    """O arquivo de um `import`, se ele morar DENTRO de `src/`.
-
-    O `nivel` é o do `from . import x`: um ponto é o pacote do próprio arquivo.
-    Import de biblioteca de fora devolve `None` e a régua para ali — ler o mundo
-    inteiro para montar uma frase de tela seria trocar um ponto cego por uma
-    varredura que ninguém termina.
-    """
+    """O arquivo de um `import`, se ele morar DENTRO de `src/`."""
     if nivel:
         pasta = base.parent
         for _ in range(nivel - 1):
@@ -499,12 +220,7 @@ def _modulo(nome: str, base: pathlib.Path, nivel: int) -> pathlib.Path | None:
 
 
 def _colher(corpo: list[ast.stmt], p: pathlib.Path) -> tuple[dict, dict, dict]:
-    """O que um corpo declara: constantes, apelidos de import e funções.
-
-    Serve para o módulo e para o corpo de uma função, e o segundo importa: meia
-    dúzia de gestos faz `from ... import x` DENTRO da função, e quem só olhasse
-    o topo do arquivo perderia a frase.
-    """
+    """O que um corpo declara: constantes, apelidos de import e funções."""
     constantes: dict[str, ast.expr] = {}
     apelidos: dict[str, tuple[str, pathlib.Path, str]] = {}
     funcoes: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
@@ -547,13 +263,7 @@ def _escopo(p: pathlib.Path) -> tuple[dict, dict, dict]:
 
 def _dentro(fn: ast.FunctionDef | ast.AsyncFunctionDef,
             p: pathlib.Path) -> tuple[dict, dict, dict]:
-    """O corpo da função INTEIRO, e não só o primeiro nível.
-
-    Um `from ... import` e uma frase de recusa moram com frequência dentro de um
-    `try` ou de um `if`, que são corpos aninhados. Por isso a colheita percorre
-    os filhos — o que se perde é a ORDEM (a régua lê a primeira atribuição a um
-    nome, não a que valia naquela linha), e o que se ganha é a frase.
-    """
+    """O corpo da função INTEIRO, e não só o primeiro nível."""
     partes = [_colher([n], p) for n in ast.walk(fn) if isinstance(n, ast.stmt)]
     constantes: dict = {}
     apelidos: dict = {}
@@ -567,16 +277,7 @@ def _dentro(fn: ast.FunctionDef | ast.AsyncFunctionDef,
 
 def _do_dono(fn: ast.FunctionDef | ast.AsyncFunctionDef, p: pathlib.Path,
              prof: int, vistos: frozenset) -> tuple[str, bool]:
-    """O que uma função DEVOLVE, para a régua perguntar ao dono da frase.
-
-    É a regra desta casa aplicada à leitura: *quando um valor tem dono, a régua
-    PERGUNTA ao dono*. `raise RuntimeError(sem_resposta_do_daemon())` não é frase
-    ilegível — é frase que mora uma porta adiante.
-
-    OS RAMOS ENTRAM TODOS, separados pelo buraco: a régua não sabe qual `return`
-    acontece, e emendá-los sem separador deixaria a peneira casar por cima da
-    costura, inventando uma frase que nenhum caminho produz.
-    """
+    """O que uma função DEVOLVE, para a régua perguntar ao dono da frase."""
     dentro = _dentro(fn, p)
     pedacos, inteiro, achou = [], True, False
     for no in ast.walk(fn):
@@ -595,12 +296,7 @@ _TETO = 12
 
 def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
             prof: int = 0, vistos: frozenset = frozenset()) -> tuple[str, bool]:
-    """A frase como ela CHEGA ao cartão — e se a régua a montou inteira.
-
-    O segundo valor é o que separa *"li tudo"* de *"li o que deu"*: ele é
-    `False` assim que um pedaço vira :data:`VALOR_DE_EXECUCAO`, e é por ele que
-    a régua sabe quando tem de confessar o próprio limite.
-    """
+    """A frase como ela CHEGA ao cartão — e se a régua a montou inteira."""
     if prof > _TETO:
         return VALOR_DE_EXECUCAO, False
     consts, apelidos, funcoes = _escopo(p)
@@ -647,9 +343,6 @@ def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
         return VALOR_DE_EXECUCAO, False
 
     if isinstance(no, ast.Call):
-        # `str(x)` é embrulho, não dono: a frase é o `x`. Sem esta linha a régua
-        # perdia `return str(lightbar_actions._AVISO_HEFESTO_DESLIGADO)`, que é
-        # o recado de três botões da Iluminação.
         if isinstance(no.func, ast.Name) and no.func.id == "str" and len(no.args) == 1:
             return _montar(no.args[0], p, local, prof + 1, vistos)
         if isinstance(no.func, (ast.Name, ast.Attribute)):
@@ -674,8 +367,6 @@ def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
         return a + b, ca and cb
 
     if isinstance(no, ast.BoolOp):
-        # `motivo or "o Hefesto não respondeu"` põe os DOIS na tela, conforme o
-        # dia. Os dois entram, separados pelo buraco.
         pedacos, inteiro = [], True
         for parte in no.values:
             t, c = _montar(parte, p, local, prof + 1, vistos)
@@ -692,14 +383,7 @@ def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
 
 
 def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """Os recados dos gestos: os que a régua LEU, e os que ela não alcançou.
-
-    O primeiro par de cada item é o endereço e a frase montada. O segundo par é
-    a lista do que ficou sem uma letra de prosa: `arquivo:gesto ← expressão`, que
-    é a chave de :data:`SEM_LETRA`. A chave não leva NÚMERO DE LINHA de
-    propósito — uma declaração presa a uma linha envelhece na primeira edição
-    acima dela, e a régua que a cobra passaria a cobrar um lugar que se mudou.
-    """
+    """Os recados dos gestos: os que a régua LEU, e os que ela não alcançou."""
     lidos: list[tuple[str, str]] = []
     mudos: list[tuple[str, str]] = []
     for p in sorted(PACOTES.glob("*.py")):
@@ -729,34 +413,7 @@ def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     return lidos, mudos
 
 
-# ---------------------------------------------------------------------------
-# TABELA 3 — O RECADO QUE A RÉGUA NÃO CONSEGUE LER, e de quem ele é
-# ---------------------------------------------------------------------------
-#: A chave é `arquivo.py:gesto ← expressão`, e o valor diz QUEM é o dono da
-#: frase. Ela existe porque um portão que lê 80% e cala os outros 20% é pior que
-#: um que não lê nada: quem vê o verde conclui que a tela inteira passou.
-#:
-#: **Nenhuma linha aqui é permissão.** É o endereço de uma frase que mora fora
-#: do alcance da reconstrução estática — quase sempre a resposta do daemon ou um
-#: texto do motor (`app/actions/*`) que o gesto só repassa. Quando o dono ganhar
-#: uma leitura própria, a linha sai daqui.
-#:
-#: A CHECAGEM É NOS DOIS SENTIDOS, como nas outras duas tabelas: uma chave que
-#: o fonte não tem mais reprova, para a lista não envelhecer calada.
 SEM_LETRA: dict[str, str] = {
-    # -- A RESPOSTA DO DAEMON, repassada tal como veio ----------------------
-    # O gesto pergunta, o daemon recusa com um `motivo`, e o gesto põe esse
-    # motivo no cartão sem uma palavra própria. Quem escreve a frase é o
-    # `daemon/ipc_handlers.py` e o motor que ele chama.
-    # -- A C4 TROUXE TRÊS, em 11/09/2026, e as três têm dono fora dos pacotes --
-    # O campo «Funciona em:» passou a oferecer os lançadores, e as recusas dele
-    # vêm de dois lugares que a peneira não alcança de dentro do pacote:
-    # `profiles/simple_match.MSG_ESCOLHA_O_JOGO`, que é uma frase com buraco
-    # («Escolha o jogo na lista de baixo — “{procedencia}” mostra os jogos que
-    # vêm de lá pelo nome»), e o `ambiente_recado` que `app/actions/perfis_web`
-    # monta para a procedência que a tela não sabe mostrar. **Nenhuma das duas
-    # confessa dívida nossa**: a primeira diz o passo que falta, a segunda é
-    # estado do perfil que está no disco. Conferidas lendo as duas fontes.
     "a10_perfis.py:editor_ambiente ← MSG_ESCOLHA_O_JOGO.format(procedencia=rotulo)":
         "a frase de `profiles/simple_match`, com o nome do lançador no buraco",
     "a10_perfis.py:editor_ambiente ← recado":
@@ -793,7 +450,6 @@ SEM_LETRA: dict[str, str] = {
     "a02_controles.py:mudo ← acao.dica":
         "a dica da ação de microfone, que mora no dono da ação",
 
-    # -- O TEXTO MORA EM `app/actions/*`, e o gesto só o busca --------------
     "a01_jogar.py:_plano ← painel.porque_nao_aplica(chave)":
         "`app/actions/jogar/painel.py:porque_nao_aplica` — a razão do cinza, "
         "montada por chave",
@@ -803,7 +459,6 @@ SEM_LETRA: dict[str, str] = {
     "a09_sistema.py:restaurar_de_fabrica ← _rodape.frase_do_preset_ausente()":
         "`app/actions/footer_actions.py:frase_do_preset_ausente`",
 
-    # -- A TABELA DO PRÓPRIO ARQUIVO, lida por chave de execução ------------
     'a01_jogar.py:_plano_do_chip ← BOTOES_SEM_DONO.get(f"modo-{chave}", "sem dono no produto")':
         "o valor sai de um dicionário pela chave do clique; as frases estão no "
         "próprio `a01_jogar.py`, e ler qual delas sai pediria saber a chave",

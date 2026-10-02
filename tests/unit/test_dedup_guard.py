@@ -39,7 +39,6 @@ def _daemon(
     players = {
         f"mac{i}": SimpleNamespace(
             player_index=idx,
-            # O pad do co-op veste a máscara da sessão, como o de verdade.
             vpad=SimpleNamespace(backend=b, flavor=flavor) if b is not None else None,
         )
         for i, (idx, b) in enumerate(coop)
@@ -61,8 +60,7 @@ class TestDedupStatus:
         assert motivos == []
 
     def test_jogador_do_coop_degradado_quebra_com_motivo(self) -> None:
-        """O critério de aceite do doc: P1 uhid + P2 uinput → dedup_ok False
-        com motivo `jogador_2_uinput`."""
+        """O critério de aceite do doc: P1 uhid + P2 uinput → dedup_ok False"""
         ok, motivos = dedup_status(_daemon(coop=((2, "uinput"),)))
         assert ok is False
         assert motivos == ["jogador_2_uinput"]
@@ -79,14 +77,12 @@ class TestDedupStatus:
         assert (ok, motivos) == (False, ["sem_uhid"])
 
     def test_emulacao_ligada_sem_vpad_nenhum_e_vpad_ausente(self) -> None:
-        """Start falhou de vez (uhid E uinput inacessíveis): daemon vivo sem
-        vpad — o estado exato do achado HIGH do default.env rançoso."""
+        """Start falhou de vez (uhid E uinput inacessíveis): daemon vivo sem"""
         ok, motivos = dedup_status(_daemon(backend=None))
         assert (ok, motivos) == (False, ["vpad_ausente"])
 
     def test_mascara_xbox_e_ok_por_design(self) -> None:
-        """O vpad Xbox é uinput 045e por design (invariante VPAD-06) — o
-        IGNORE cirúrgico do físico Sony nunca o esconde."""
+        """O vpad Xbox é uinput 045e por design (invariante VPAD-06) — o"""
         ok, motivos = dedup_status(_daemon(flavor="xbox", backend="uinput"))
         assert (ok, motivos) == (True, [])
 
@@ -107,11 +103,7 @@ class TestDedupStatus:
         assert motivos == ["sem_uhid", "jogador_2_uinput"]
 
     def test_o_caminho_xbox_escolhido_nao_e_degradacao(self) -> None:
-        """PS-L3-MASCARA-01 (14/09/2026): o uinput do caminho Xbox é escolha dela.
-
-        MORDE: tirar o `caminho_do_vpad` do `dedup_status` acende o aviso de
-        degradação sobre o modo que ela escolheu.
-        """
+        """PS-L3-MASCARA-01 (14/09/2026): o uinput do caminho Xbox é escolha dela."""
         daemon = _daemon(backend="uinput", coop=((2, "uinput"),))
         daemon._gamepad_device.caminho = "xbox"
         for jogador in daemon._coop_manager._players.values():
@@ -179,18 +171,7 @@ class TestLaunchEnvRefreshHandler:
 
     @skip_sem_gi_real
     def test_gui_avisa_apos_save_delete_import_restore(self) -> None:
-        """save/delete/import/restore de perfil notificam o daemon — sem isso
-        o steam_app_<appid>.env fica rançoso na janela exata que ele existia
-        para fechar (primeira sessão do jogo com perfil novo).
-
-        NOTA DATADA (04/08/2026, GRAVA-POR-UM-FUNIL-01): a contagem exigida no
-        rodapé era ``>= 3`` — uma chamada por botão que grava. Os três botões
-        passaram a gravar pelo MESMO funil
-        (``app/actions/profile_writer.py``), que avisa o daemon uma vez por
-        gravação; contar as chamadas no rodapé passou a medir a forma antiga do
-        código, não a garantia. A garantia continua igual e é o que se cobra
-        agora: o funil avisa, e os três botões passam pelo funil.
-        """
+        """save/delete/import/restore de perfil notificam o daemon — sem isso"""
         from hefesto_dualsense4unix.app.actions import (
             footer_actions,
             profile_writer,

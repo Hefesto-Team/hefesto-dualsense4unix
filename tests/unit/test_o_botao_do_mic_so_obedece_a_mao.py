@@ -44,14 +44,11 @@ from hefesto_dualsense4unix.core import physical_report_reader as prr
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MUDO
 
-#: O leitor do cabo entrega ~250 reports/s; o do rádio, menos. O relógio aqui
-#: anda um report a cada leitura, e o cabo é o caso mais denso.
 _PERIODO_S = 1.0 / 250.0
 
 MUDO = STATUS_MIC_MUDO
 LIVRE = 0x00
 
-#: Os quatro da mesa, na faixa forjada da suíte.
 _QUATRO = ("aabbcc000001", "aabbcc000002", "aabbcc000003", "aabbcc000004")
 
 
@@ -68,15 +65,7 @@ def _relogio(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class _Handle(bp._PinnedPyDualSense):
-    """O handle de produção, sem aparelho.
-
-    Nasce por `__new__` como os outros dezesseis dublês da suíte, com o estado
-    da borda zerado pelo DONO ÚNICO (`zerar_estado_da_borda_do_mic`). Só o
-    `readInput` da pydualsense é trocado: ele não participa da borda, e sem
-    aparelho não há `DSState` para ele escrever. O caminho sob prova — a porta
-    `_consumir_report`, o `_captura_status_audio` e o `_registrar_borda_do_mic`
-    — é o de produção.
-    """
+    """O handle de produção, sem aparelho."""
 
     def __new__(cls) -> Any:
         return object.__new__(cls)
@@ -118,11 +107,7 @@ def _segurar(
 
 
 def _apertar(h: Any, transporte: str, *, antes: int, depois: int | None = None) -> None:
-    """Um aperto: o dedo desce, o kernel (talvez) vira o bit, o dedo sobe.
-
-    `depois` é o que o firmware passa a segurar depois do aperto — o kernel
-    vira o bit quando é dono do campo; com a posse nossa, o bit fica.
-    """
+    """Um aperto: o dedo desce, o kernel (talvez) vira o bit, o dedo sobe."""
     fim = antes if depois is None else depois
     _segurar(h, transporte, status=antes, botao=True, s=0.02)
     _segurar(h, transporte, status=fim, botao=True, s=0.06)
@@ -153,18 +138,8 @@ def _seq(backend: Any, uniq: str) -> int:
 _TRANSPORTES = pytest.mark.parametrize("transporte", ["cabo", "radio"])
 
 
-# ---------------------------------------------------------------------------
-# 0. O bit do botão é UM número, nos três lugares que o conhecem
-# ---------------------------------------------------------------------------
-
-
 def test_o_bit_do_botao_e_o_do_kernel_e_o_do_vpad() -> None:
-    """O leitor, o vpad e o `hid-playstation` falam do MESMO bit de `buttons[2]`.
-
-    O vpad escreve `mic_btn` no report que o jogo lê; o leitor o conta como o
-    dedo dela; o kernel o consome. Três cópias digitadas separadamente é a
-    família de defeito desta casa — aqui elas ficam presas umas às outras.
-    """
+    """O leitor, o vpad e o `hid-playstation` falam do MESMO bit de `buttons[2]`."""
     import re
     from pathlib import Path
 
@@ -181,22 +156,9 @@ def test_o_bit_do_botao_e_o_do_kernel_e_o_do_vpad() -> None:
     assert 1 << int(achado.group(1)) == prr.MIC_BUTTON_BIT
 
 
-# ---------------------------------------------------------------------------
-# 1. O toque fantasma: o bit de estado mudando não é a mão
-# ---------------------------------------------------------------------------
-
-
 @_TRANSPORTES
 def test_o_bit_de_estado_virando_com_o_botao_parado_nao_e_borda(transporte: str) -> None:
-    """A régua da sprint: o LED/o mudo mudando e o botão parado -> zero bordas.
-
-    É o desenho das três bordas fantasma do branco: o bit `MIC_MUTE` virou
-    (a escrita de alguém no mudo do firmware), sustentou, e o leitor de antes
-    contou uma borda por virada.
-
-    MORDIDA: volte `_registrar_borda_do_mic` a contar a virada do bit de
-    estado e esta régua reprova com seis bordas que ninguém deu.
-    """
+    """A régua da sprint: o LED/o mudo mudando e o botão parado -> zero bordas."""
     h = _Handle()
     backend = _backend({_QUATRO[0]: h})
     _segurar(h, transporte, status=LIVRE)
@@ -211,12 +173,7 @@ def test_o_bit_de_estado_virando_com_o_botao_parado_nao_e_borda(transporte: str)
 
 @_TRANSPORTES
 def test_o_aperto_e_uma_borda_com_ou_sem_o_bit_virar(transporte: str) -> None:
-    """Com o botão apertado -> uma. Com o kernel virando o bit, ainda UMA.
-
-    O caso do meio é o que o leitor de antes perdia: com a posse do mudo
-    nossa, o kernel escreve o que ele acredita e o bit pode ficar onde estava
-    — o aperto dela sumia calado.
-    """
+    """Com o botão apertado -> uma. Com o kernel virando o bit, ainda UMA."""
     h = _Handle()
     backend = _backend({_QUATRO[0]: h})
     _segurar(h, transporte, status=LIVRE)
@@ -241,12 +198,7 @@ def test_o_toque_curto_conta(transporte: str) -> None:
 
 @_TRANSPORTES
 def test_o_aperto_pede_o_contrario_do_que_o_firmware_segurava(transporte: str) -> None:
-    """O `mudo` publicado é o que o aperto PEDE: o contrário do bit no instante.
-
-    É o que a tradução de `_o_que_a_borda_pede` (`hotkey.py`) sempre recebeu
-    — o valor do bit DEPOIS da virada do kernel —, agora sem depender de o
-    kernel e o firmware estarem em fase.
-    """
+    """O `mudo` publicado é o que o aperto PEDE: o contrário do bit no instante."""
     h = _Handle()
     backend = _backend({_QUATRO[0]: h})
     _segurar(h, transporte, status=MUDO)
@@ -258,11 +210,7 @@ def test_o_aperto_pede_o_contrario_do_que_o_firmware_segurava(transporte: str) -
 
 @_TRANSPORTES
 def test_o_eco_da_nossa_escrita_nao_e_borda(transporte: str) -> None:
-    """O daemon escreve o mudo e o firmware ecoa: zero bordas, sem fila de marcas.
-
-    E o caso que a fila de marcas errava: uma escrita que não ecoou (o bit já
-    estava lá) deixava a marca viva, e ela engolia o PRÓXIMO aperto dela.
-    """
+    """O daemon escreve o mudo e o firmware ecoa: zero bordas, sem fila de marcas."""
     h = _Handle()
     backend = _backend({_QUATRO[0]: h})
     _segurar(h, transporte, status=LIVRE)
@@ -270,7 +218,7 @@ def test_o_eco_da_nossa_escrita_nao_e_borda(transporte: str) -> None:
     _segurar(h, transporte, status=MUDO)
     assert _seq(backend, _QUATRO[0]) == 0, "o eco da nossa escrita virou gesto dela"
 
-    h.set_microphone_mute(True)  # o bit já está mudo: nada ecoa
+    h.set_microphone_mute(True)
     _segurar(h, transporte, status=MUDO)
     _apertar(h, transporte, antes=MUDO, depois=LIVRE)
     _apertar(h, transporte, antes=LIVRE, depois=MUDO)
@@ -278,11 +226,7 @@ def test_o_eco_da_nossa_escrita_nao_e_borda(transporte: str) -> None:
 
 
 def test_o_quadro_de_audio_do_radio_nao_aperta_o_botao() -> None:
-    """Com o microfone no ar, o rádio manda Opus no mesmo `0x31`: não é dedo.
-
-    O bit do botão cai dentro do Opus (PS-PRESO-01); a porta `_consumir_report`
-    recusa o quadro antes de alguém olhar o botão.
-    """
+    """Com o microfone no ar, o rádio manda Opus no mesmo `0x31`: não é dedo."""
     h = _Handle()
     backend = _backend({_QUATRO[0]: h})
     _segurar(h, "radio", status=LIVRE)
@@ -306,23 +250,9 @@ def test_o_botao_segurado_na_conexao_nao_e_aperto(transporte: str) -> None:
     assert _seq(backend, _QUATRO[0]) == 1
 
 
-# ---------------------------------------------------------------------------
-# 2. A mão devolve a posse do mudo (o microfone do branco em zero)
-# ---------------------------------------------------------------------------
-
-
 @_TRANSPORTES
 def test_o_aperto_solta_a_posse_do_mudo_no_handle_e_no_mapa(transporte: str) -> None:
-    """O «calado» do perfil deixa a posse nossa; o dedo dela a devolve ao kernel.
-
-    Sem isto, o report seguinte do Hefesto (a luz que muda, basta) reafirma
-    o mudo velho por cima do que o kernel fez com o aperto — foi assim que o
-    branco ficou em zero com o ato dizendo «ligado».
-
-    MORDIDA: tire a devolução de `_registrar_borda_do_mic` e o handle segue
-    mandando mudo; tire a de `bordas_do_mic` e o mapa rependura o mudo velho
-    na próxima reconexão.
-    """
+    """O «calado» do perfil deixa a posse nossa; o dedo dela a devolve ao kernel."""
     h = _Handle()
     backend = _backend({_QUATRO[1]: h})
     _segurar(h, transporte, status=MUDO)
@@ -404,14 +334,7 @@ def test_sem_o_laco_das_bordas_quem_manda_no_mudo_diz_a_verdade(transporte: str)
 def test_o_controle_que_sai_leva_ao_mapa_a_posse_que_a_mao_soltou(
     transporte: str, saida: str
 ) -> None:
-    """A mão soltou e o controle caiu antes de alguém ler a marca.
-
-    O handle sai com a marca dentro; sem levá-la ao mapa na saída, a reconexão
-    rependura no handle novo o mudo que ela acabou de desfazer.
-
-    MORDIDA: tire a chamada de `disconnect` (ou a de `_close_handles`) e o mapa
-    guarda o `True` velho.
-    """
+    """A mão soltou e o controle caiu antes de alguém ler a marca."""
     h = _Handle()
     backend = _backend({_QUATRO[3]: h})
     backend._primary_key = None
@@ -431,11 +354,6 @@ def test_o_controle_que_sai_leva_ao_mapa_a_posse_que_a_mao_soltou(
         "o controle saiu com a posse solta pela mão, e o mapa rependura o mudo "
         "velho na volta dele"
     )
-
-
-# ---------------------------------------------------------------------------
-# 3. Nunca só o P1: os quatro, nos dois transportes
-# ---------------------------------------------------------------------------
 
 
 def test_a_mesa_de_quatro_so_conta_o_dedo_de_quem_apertou() -> None:
@@ -460,11 +378,6 @@ def test_a_mesa_de_quatro_so_conta_o_dedo_de_quem_apertou() -> None:
     }
 
 
-# ---------------------------------------------------------------------------
-# 4. No tempo, até a eleição: a borda fantasma não chega ao ato nem ao perfil
-# ---------------------------------------------------------------------------
-
-
 class _Daemon:
     """O mínimo que o laço das bordas lê do daemon — com o `EventBus` real."""
 
@@ -481,14 +394,7 @@ class _Daemon:
 async def test_no_tempo_o_fantasma_nao_chega_a_eleicao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Três segundos de luz/mudo virando nos quatro, e depois UM aperto do P2.
-
-    O laço de produção (`mic_da_mesa_loop`) sobre o controlador de produção:
-    cada `MIC_DA_MESA` é uma eleição e uma gravação do mudo daquele controle
-    (`hotkey.mic_button_loop` -> `ligar_o_microfone` -> `_o_disco_guarda_o_ato`,
-    no `maquina.json` desde a O-MUDO-E-DO-CONTROLE-01).
-    Zero publicações sem mão; uma, com o endereço dela, quando ela aperta.
-    """
+    """Três segundos de luz/mudo virando nos quatro, e depois UM aperto do P2."""
     from hefesto_dualsense4unix.daemon import lifecycle
     from hefesto_dualsense4unix.daemon.subsystems import mic_da_mesa
 
@@ -526,20 +432,8 @@ async def test_no_tempo_o_fantasma_nao_chega_a_eleicao(
     assert evento["mudo"] is False, "o P2 estava mudo: o aperto pede ligar"
 
 
-# ---------------------------------------------------------------------------
-# 5. A prova que fica para ela: o instrumento separa a mão do bit
-# ---------------------------------------------------------------------------
-
-
 def test_o_instrumento_da_bancada_separa_a_mao_de_quem_vira_o_bit() -> None:
-    """Quem virou o bit do branco sem a mão continua sem medida.
-
-    O instrumento `scripts/ensaios/a_permanencia_do_bit_do_mic.py` só lê o
-    hidraw, e passou a contar, pelo MESMO extrator do produto, os apertos e as
-    viradas do bit de mudo com o botão parado. Aqui ele lê reports de verdade
-    do rádio: duas viradas sem ninguém, um aperto com o eco do kernel e do ato
-    logo atrás, e um quadro de áudio com o bit do botão dentro do Opus.
-    """
+    """Quem virou o bit do branco sem a mão continua sem medida."""
     import importlib.util
     import sys
     from pathlib import Path
@@ -564,15 +458,15 @@ def test_o_instrumento_da_bancada_separa_a_mao_de_quem_vira_o_bit() -> None:
             agora += _PERIODO_S
 
     ler(LIVRE)
-    ler(MUDO)  # ninguém apertou: a primeira virada sem a mão
-    ler(MUDO, botao=True, s=0.06)  # o dedo desce
-    ler(LIVRE, s=0.3)  # o kernel escreve
-    ler(MUDO, s=0.5)  # o ato escreve de novo, antes de confirmar
-    ler(LIVRE, s=4.0)  # e confirma: ainda dentro da janela do dedo
+    ler(MUDO)
+    ler(MUDO, botao=True, s=0.06)
+    ler(LIVRE, s=0.3)
+    ler(MUDO, s=0.5)
+    ler(LIVRE, s=4.0)
     cru = bytearray(_report("radio", status=MUDO, botao=True))
     cru[1] |= prr.INPUT_FLAG_AUDIO
-    quem.ler(bytes(cru), agora)  # Opus: nem dedo, nem bit
-    ler(MUDO)  # quatro segundos depois do dedo: sem a mão de novo
+    quem.ler(bytes(cru), agora)
+    ler(MUDO)
 
     assert len(quem.apertos) == 1, quem.apertos
     assert len(quem.sem_mao) == 2, quem.sem_mao

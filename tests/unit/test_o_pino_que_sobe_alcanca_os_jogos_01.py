@@ -1,28 +1,4 @@
-"""PINO-QUE-SOBE-01 — subir o pino tem de ALCANÇAR os jogos.
-
-O DEFEITO, medido na máquina dela em 16/09/2026, no dia em que o pino subiu de
-`GE-Proton10-34` para `GE-Proton11-6-x86_64` para trazer o som do alto-falante
-dentro do jogo: o `--lock` respondeu `locked`, e os **25 jogos continuaram no
-Proton velho**. Cada um com `action="preservado"` — a guarda de 19/08, que
-existe para não atropelar escolha dela, leu como escolha dela o que o PRÓPRIO
-produto tinha escrito. Os backups do `config.vdf` provam a procedência: as
-entradas em `GE-Proton10-34` crescem install a install desde 19/07.
-
-Efeito, dito por inteiro: **subir o pino nunca alcançava jogo nenhum**. Só o
-default global mudava, e a versão nova ficava instalada sem ninguém usar.
-
-E O INSTRUMENTO ESCONDIA ISSO: a linha do CLI imprimia `len(appids)` — o
-tamanho do ALVO — e anunciava *"locked — 25 jogos + default global"* enquanto
-os 25 ficavam onde estavam.
-
-A REGRA: o que este produto pinou antes é NOSSO e migra; qualquer outro valor
-continua sendo escolha dela e é preservado. O histórico dos pinos vive no
-registro do lock e cresce sozinho a cada subida.
-
-AS MORDIDAS: sem `pinos_nossos`, a entrada do pino velho volta a `preservado`;
-sem o histórico no registro, a segunda subida repete o defeito; e a linha do
-CLI volta a dizer o alvo em vez do que aconteceu.
-"""
+"""PINO-QUE-SOBE-01 — subir o pino tem de ALCANÇAR os jogos."""
 from __future__ import annotations
 
 import json
@@ -35,30 +11,11 @@ from hefesto_dualsense4unix.integrations import proton_pin as pp
 
 @pytest.fixture(autouse=True)
 def _sem_o_portao_da_steam(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Neutraliza o gate de "Steam fechada" — ele não é o que estes casos medem.
-
-    **O DEFEITO QUE ISTO FECHA, e ele era DESTA RÉGUA, medido em 16/09/2026:**
-    `lock_games_to_pinned_proton` recusa quando a Steam está de pé
-    (`_steam_gate`), devolve `status="recusado"` e **não grava o registro**. Os
-    casos abaixo escrevem de verdade (não são `dry_run`), então passavam com a
-    Steam fechada e reprovavam com ela aberta, com `FileNotFoundError` no
-    `lock.json` — cinco reprovações que não diziam nada sobre o produto.
-
-    Foi assim que apareceram: a suíte inteira rodou logo depois de a Steam ser
-    reaberta na máquina dela, no meio da mesma sessão. **Uma régua que muda de
-    resposta conforme um aplicativo esteja aberto não mede o produto, mede a
-    máquina.**
-
-    O portão continua coberto onde ele É o assunto — `test_proton_pin.py` tem
-    os casos dele, com o gate exercido de propósito.
-    """
+    """Neutraliza o gate de "Steam fechada" — ele não é o que estes casos medem."""
     monkeypatch.setattr(pp, "_steam_gate", lambda: None)
 
 PINO_VELHO = "GE-Proton10-34"
 PINO_NOVO = "GE-Proton11-6-x86_64"
-#: O Proton que ELA escolheu para o DON'T SCREAM (appid 2497900): o incidente
-#: de 14/08/2026 — noutro Proton, o motor Unreal não acha captura de áudio e o
-#: microfone, que é a mecânica do jogo, morre.
 ESCOLHA_DELA = "proton_11"
 
 
@@ -158,7 +115,6 @@ class TestOHistoricoDePinosCresceSozinho:
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
-        # O pino sobe DE NOVO, e desta vez ninguém semeia nada.
         mais_novo = "GE-Proton12-1-x86_64"
         resultado = pp.lock_games_to_pinned_proton(
             tool_name=mais_novo, appids=["1599660"], config_vdf=vdf,
@@ -196,12 +152,10 @@ class TestOsBaldesSaoContadosSeparados:
         vdf = tmp_path / "config.vdf"
         vdf.write_text(_config_vdf({
             "0": PINO_VELHO,
-            "1599660": PINO_VELHO,      # nosso   -> migrado
-            "2497900": ESCOLHA_DELA,    # dela    -> preservado
+            "1599660": PINO_VELHO,
+            "2497900": ESCOLHA_DELA,
         }))
         # `lock_proton_for_all_games` mira os jogos INSTALADOS, lidos dos
-        # `appmanifest_*.acf` — sem eles a lista nasce vazia e o caso mediria
-        # só o global, passando pelo motivo errado.
         steamapps = pp.default_steam_root(tmp_path) / "steamapps"
         steamapps.mkdir(parents=True, exist_ok=True)
         for appid, nome in (("1599660", "Sackboy"), ("2497900", "DON'T SCREAM")):
@@ -222,17 +176,11 @@ class TestOsBaldesSaoContadosSeparados:
 
         assert resultado["migrated"] == 1
         assert resultado["skipped"] == 1
-        assert resultado["locked"] == 1  # só o global
+        assert resultado["locked"] == 1
 
 
 class TestORegistroDizOQueAconteceu:
-    """O registro do lock tem de descrever a corrida que ACONTECEU.
-
-    Medido na máquina dela em 16/09/2026, depois de os 24 jogos migrarem de
-    verdade: o registro ainda dizia `preservado` para os 24, porque a fusão era
-    por ENTRADA e o registro da corrida que FALHARA vencia inteiro. Registro que
-    conta a corrida errada não desfaz nada.
-    """
+    """O registro do lock tem de descrever a corrida que ACONTECEU."""
 
     def _lock(self, tmp_path: Path, *, tool: str, migrar_de: list[str]) -> Path:
         vdf = tmp_path / "config.vdf"
@@ -249,7 +197,6 @@ class TestORegistroDizOQueAconteceu:
         vdf.write_text(_config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO}))
         estado = tmp_path / "lock.json"
 
-        # A corrida que falhou: sem semente, o jogo é preservado.
         pp.lock_games_to_pinned_proton(
             tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
             state_path=estado,
@@ -258,7 +205,6 @@ class TestORegistroDizOQueAconteceu:
             "preservado"
         )
 
-        # A corrida que curou: o mesmo pino, agora sabendo o que é nosso.
         pp.lock_games_to_pinned_proton(
             tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
@@ -285,16 +231,11 @@ class TestORegistroDizOQueAconteceu:
     def test_o_previous_name_dela_sobrevive_a_subida_de_pino(
         self, tmp_path: Path
     ) -> None:
-        """A MORDIDA: exigir `tool_name` igual apaga isto a cada subida.
-
-        E é o único valor que sabe devolver o jogo ao estado de ANTES de este
-        produto encostar nele.
-        """
+        """A MORDIDA: exigir `tool_name` igual apaga isto a cada subida."""
         vdf = tmp_path / "config.vdf"
         vdf.write_text(_config_vdf({"0": ESCOLHA_DELA, "1599660": ESCOLHA_DELA}))
         estado = tmp_path / "lock.json"
 
-        # A primeira trava, num pino antigo: o valor dela fica registrado.
         pp.lock_games_to_pinned_proton(
             tool_name=PINO_VELHO, appids=["1599660"], config_vdf=vdf,
             state_path=estado, migrar_de=[ESCOLHA_DELA],
@@ -303,15 +244,14 @@ class TestORegistroDizOQueAconteceu:
             "previous_name"
         ] == ESCOLHA_DELA
 
-        # O pino sobe. O appid muda de Proton — a procedência dele, não.
         pp.lock_games_to_pinned_proton(
             tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
         gravado = json.loads(estado.read_text())["changes"]["1599660"]
-        assert gravado["previous_name"] == ESCOLHA_DELA   # desfaz TUDO
-        assert gravado["veio_de"] == PINO_VELHO           # desfaz UMA subida
+        assert gravado["previous_name"] == ESCOLHA_DELA
+        assert gravado["veio_de"] == PINO_VELHO
 
     def test_preservado_nao_promete_desfazer_o_que_nao_fez(
         self, tmp_path: Path

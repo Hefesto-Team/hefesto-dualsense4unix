@@ -40,59 +40,25 @@ class Plugin(ABC):
     name: str
     profile_match: ClassVar[list[str]] = []
 
-    # ------------------------------------------------------------------
-    # Ciclo de vida
-    # ------------------------------------------------------------------
 
     def on_load(self, ctx: PluginContext) -> None:  # noqa: B027
-        """Chamado uma vez quando o plugin e carregado pelo daemon.
-
-        Use para guardar referência ao ctx e realizar inicializacoes.
-        """
+        """Chamado uma vez quando o plugin e carregado pelo daemon."""
 
     def on_unload(self) -> None:  # noqa: B027
-        """Chamado quando o plugin e descarregado (shutdown do daemon
-        ou reload manual).
+        """Chamado quando o plugin e descarregado (shutdown do daemon"""
 
-        Use para liberar recursos (fechar arquivos, sockets, etc.).
-        """
-
-    # ------------------------------------------------------------------
-    # Hooks de estado
-    # ------------------------------------------------------------------
 
     def on_tick(self, state: ControllerState) -> None:  # noqa: B027
-        """Chamado a cada tick do poll loop (~30-120 Hz por padrão).
-
-        IMPORTANTE: manter rapido (< 1 ms ideal, < 5 ms máximo).
-        Hooks lentos sao logados como warning e o plugin pode ser
-        desativado automaticamente pelo watchdog do PluginsSubsystem.
-
-        Args:
-            state: snapshot imutavel do controle neste tick.
-        """
+        """Chamado a cada tick do poll loop (~30-120 Hz por padrão)."""
 
     def on_button_down(self, name: str) -> None:  # noqa: B027
-        """Chamado quando um botao e pressionado.
-
-        Args:
-            name: nome canonico do botao (ex.: "cross", "l1", "mic_btn").
-        """
+        """Chamado quando um botao e pressionado."""
 
     def on_battery_change(self, pct: int) -> None:  # noqa: B027
-        """Chamado quando o nivel de bateria muda (apos debounce).
-
-        Args:
-            pct: percentual 0-100.
-        """
+        """Chamado quando o nivel de bateria muda (apos debounce)."""
 
     def on_profile_change(self, from_name: str | None, to_name: str) -> None:  # noqa: B027
-        """Chamado quando o perfil ativo muda (autoswitch ou manual).
-
-        Args:
-            from_name: slug do perfil anterior (None se era o primeiro).
-            to_name: slug do perfil novo.
-        """
+        """Chamado quando o perfil ativo muda (autoswitch ou manual)."""
 
 
 __all__ = ["Plugin"]

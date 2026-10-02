@@ -47,19 +47,11 @@ import tokenize
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
-#: O trecho do `_FALTAM`, a régua VELHA. As duas mordidas exigem que ela NÃO
-#: seja quem reprovou — senão o teste passaria sem provar nada sobre a nova.
 VELHA = "endereço(s) que o pacote pinta não existem no"
 
 
 def _importar(veneno: str) -> subprocess.CompletedProcess[str]:
-    """Importa o gerador com `um_cartao` envenenado, e devolve o que ele disse.
-
-    `cwd` é a pasta da interface porque o gerador importa `onde` e `monta` como
-    módulos de topo — é como o `regerar.py` o chama. O veneno entra por
-    `sys.modules`: o `aba07` faz `import desenho_dos_lancadores as dl`, e o
-    módulo já está carregado e trocado quando ele chega lá.
-    """
+    """Importa o gerador com `um_cartao` envenenado, e devolve o que ele disse."""
     programa = (
         "import sys, re\n"
         "import desenho_dos_lancadores as dl\n"
@@ -104,12 +96,7 @@ def test_a_regua_morde_o_endereco_que_muda_com_o_estado():
 
 
 def test_a_regua_morde_o_endereco_no_cartao_errado():
-    """O endereço existe na página, mas dentro do cartão de outro lançador.
-
-    O pintor procura DENTRO do bloco (`data-lancador`), então um endereço no
-    cartão vizinho é tão invisível quanto um que não existe — e o `_FALTAM`,
-    que testa substring no miolo inteiro, não tem como ver a diferença.
-    """
+    """O endereço existe na página, mas dentro do cartão de outro lançador."""
     r = _importar(
         "def quebrado(l):\n"
         "    h = _orig(l)\n"
@@ -130,23 +117,11 @@ def test_a_regua_morde_o_endereco_no_cartao_errado():
 
 
 def test_esta_aba_nao_tem_cartao_por_controle():
-    """A evidência de por que a régua daqui não é a das abas 01-06 e 08.
-
-    Se um dia esta aba ganhar cartão por controle, este teste cai — e cair é o
-    recado certo: a régua acima passa a ter de cobrir o eixo conectado/vazio
-    também, que é onde o defeito de 07/09/2026 morava.
-    """
+    """A evidência de por que a régua daqui não é a das abas 01-06 e 08."""
     pagina = (INTERFACE / "paginas" / "07-lancadores.html").read_text(encoding="utf-8")  # noqa-acento: `paginas` é o nome da PASTA
     assert 'data-controle="p' not in pagina, (
         "a página 07 ganhou cartão por controle — ver o docstring")
 
-    # A PROSA NÃO CONTA, e esta linha nasceu de cair nela: o comentário que
-    # EXPLICA por que esta aba não tem `data-controle` escreve a palavra, e uma
-    # busca crua no fonte se reprova a si mesma. É a armadilha registrada três
-    # vezes em três dias — *um comentário que descreve o padrão
-    # proibido vira a primeira ocorrência dele*. Só os COMENTÁRIOS saem: o que
-    # sobra é código, e uma string com `data-controle` aí dentro é emissão de
-    # verdade, que é o que se quer pegar.
     fonte = (INTERFACE / "aba07.py").read_text(encoding="utf-8")
     sem_prosa = "".join(
         "" if tok.type == tokenize.COMMENT else tok.string

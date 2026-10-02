@@ -1,64 +1,9 @@
-"""SOM-ACORDADO-01 — os dois estados do som aparecem na aba Status.
-
-A decisão dela, textual (16/08/2026, 00h): *"precisamos setar o som sempre em
-todos os controles no 100% e garantir que sempre fique acordado e ligar isso a
-interface na aba de status (config default)"*.
-
-Este arquivo afere a metade **"ligar isso a interface"**. As duas outras metades
-têm dono próprio: quem põe o volume é o daemon (a posse de `_volumes_audio`) e
-quem impede o sono é o drop-in 54 do WirePlumber que o `install.sh` põe sem
-flag (SOM-QUE-NAO-DORME-01). O que se prova aqui é que **a casa saber vira o
-produto mostrar** — que é, nesta casa, o defeito mais caro que existe.
-
-OS DOIS FATOS MEDIDOS QUE ORGANIZAM O ARQUIVO
-----------------------------------------------
-
-1. **A posse do volume é a causa do silêncio.** Com a orelha dela, no cabo, em
-   15-16/08/2026: sem ninguém escrever volume o alto-falante fica MUDO (ela:
-   "nenhum"); com `speaker volume 85`, o mesmo comando na mesma rota SOA (ela:
-   "bep bep bep"); com volume 0, cala de novo (ela: "mudo"). Nada mais mudou
-   entre as três passadas. É por isso que a tela precisa dizer **quem manda no
-   volume**, e não só qual é o número.
-
-2. **O PipeWire suspende o nó ocioso, e o religar come o começo do som.** Mesmo
-   canal, mesmo volume, mesma rota: "não saiu" com o nó ocioso, "tuuuuuuuu" com
-   ele acordado segundos depois. Três leituras daquela rodada foram descartadas
-   por causa disto. A pergunta dela, textual: *"como garantimos durante um jogo
-   que o som sempre saia?"*.
-
-O DESENHO, E POR QUE ELE É O RÓTULO DA MOLDURA
------------------------------------------------
-
-Medido nesta bancada, com o card montado e ALOCADO numa `Gtk.OffscreenWindow`
-(widget sem alocação devolve 1x1, e um teste de layout sobre ele passa com
-qualquer desenho):
-
-    =====================================  ============  =================
-    desenho                                bloco mínimo  card mínimo
-    =====================================  ============  =================
-    hoje (`Alto-falante · 100 %`)          183 x 144     1040 x 429
-    `... · acordado` no rótulo             186 x 144     1040 x 429
-    um rótulo NOVO, sempre visível         183 x 163     1040 x 448
-    =====================================  ============  =================
-
-O rótulo da moldura custa **zero altura**. O rótulo novo custa 19px — e a
-altura é o que não há: o `test_status_som_02_controle_de_volume` cobra que a
-coluna do som não passe da maior coluna vizinha por mais de 12px. Foi um teste
-desta casa que escolheu o desenho, e é a razão de o teste de geometria abaixo
-existir: sem ele, o próximo a mexer aqui volta a gastar a altura que não tem.
-
-Cada teste diz no docstring qual é a MORDIDA — o que arrancar do produto para
-vê-lo em vermelho.
-"""
+"""SOM-ACORDADO-01 — os dois estados do som aparecem na aba Status."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules, e sem guarda nenhuma este módulo derruba a COLETA inteira no CI
-# headless em vez de pular.
 exigir_gi_real("som acordado 01")
 
 from typing import Any
@@ -110,9 +55,6 @@ def _gtk_pronto() -> bool:
 pytestmark = pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utilizável")
 
 #: Os nomes REAIS dos dois sinks de DualSense desta bancada, copiados de
-#: `pactl list sinks short` com dois controles no cabo. Nome inventado
-#: esconderia o detalhe que importa: os dois só se distinguem pelo `.2`, que é
-#: desempate posicional do PipeWire e NÃO é identidade.
 SINK_P1 = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-surround-40"
@@ -123,11 +65,8 @@ SINK_P2 = (
 )
 SINK_HDMI = "alsa_output.pci-0000_0a_00.1.hdmi-stereo"
 
-#: A largura com que a janela ABRE. É o orçamento duro da aba Status.
 LARGURA_DE_PROJETO = 1180
 
-#: Volume com posse nossa. 255 é o que a decisão dela pede ("sempre no 100%"),
-#: e é o número que o rótulo da moldura tem de mostrar como `100 %`.
 POSSE_100: dict[str, Any] = {"volume": 255, "muted": False}
 
 _INPUTS: dict[str, Any] = {
@@ -159,9 +98,6 @@ _ENTRY: dict[str, Any] = {
 }
 _ESTADO: dict[str, Any] = {"native_mode": False}
 
-#: A janela offscreen fica viva numa lista de módulo: o Python coleta a
-#: referência local assim que a função retorna, e um card sem toplevel volta a
-#: reportar 1x1 no meio da asserção.
 _janelas_vivas: list[Any] = []
 
 
@@ -203,12 +139,7 @@ def _card(
 
 
 def _lista_curta(**estados: str) -> str:
-    """`pactl list sinks short` de mentira, no formato REAL de cinco colunas.
-
-    Os cinco campos e a ordem são os desta máquina, conferidos com `cat -A`::
-
-        35872<TAB>alsa_output...surround-40<TAB>PipeWire<TAB>s16le 4ch 48000Hz<TAB>SUSPENDED
-    """
+    """`pactl list sinks short` de mentira, no formato REAL de cinco colunas."""
     linhas = [
         f"{100 + i}\t{nome}\tPipeWire\ts16le 4ch 48000Hz\t{estado}"
         for i, (nome, estado) in enumerate(estados.items())
@@ -216,21 +147,8 @@ def _lista_curta(**estados: str) -> str:
     return "\n".join(linhas) + "\n"
 
 
-# ---------------------------------------------------------------------------
-# Parte 1 — a LEITURA: a coluna que ninguém lia
-# ---------------------------------------------------------------------------
-
-
 def test_o_estado_do_canal_sai_da_ultima_coluna_do_pactl() -> None:
-    """`SUSPENDED` vira `dormindo`, `RUNNING` e `IDLE` viram `acordado`.
-
-    `IDLE` conta como acordado de propósito, e não é generosidade: nele o nó
-    continua ABERTO — o hardware não precisa ser religado, e é o religar que
-    come o começo do som. O que a medição condena é a suspensão.
-
-    Mordida: mapear `IDLE` para `dormindo`, ou ler `partes[4]` por índice fixo
-    em vez do último campo. A primeira asserção cai.
-    """
+    """`SUSPENDED` vira `dormindo`, `RUNNING` e `IDLE` viram `acordado`."""
     saida = _lista_curta(
         **{SINK_P1: "SUSPENDED", SINK_P2: "RUNNING", SINK_HDMI: "IDLE"}
     )
@@ -246,16 +164,7 @@ def test_o_estado_do_canal_sai_da_ultima_coluna_do_pactl() -> None:
 
 
 def test_linha_sem_a_coluna_de_estado_vira_nao_sei_e_nunca_acordado() -> None:
-    """A armadilha desta casa: instrumento que mente é pior que instrumento mudo.
-
-    Sem a quinta coluna, o "último campo" da linha é o DRIVER — e `PipeWire`
-    lido como estado produziria uma resposta convincente e falsa. A resposta
-    certa é "não sei", que é o que mantém o rótulo da moldura calado.
-
-    Mordida: baixar a guarda de `len(partes) < 5` para `< 2` em
-    `estados_crus_dos_sinks`. `PipeWire` entra no mapa cru, e qualquer mapeamento
-    generoso amanhã o transforma numa afirmação sobre o som dela.
-    """
+    """A armadilha desta casa: instrumento que mente é pior que instrumento mudo."""
     curta = f"1\t{SINK_P1}\tPipeWire\n"
 
     assert estados_crus_dos_sinks(curta) == {}
@@ -264,42 +173,19 @@ def test_linha_sem_a_coluna_de_estado_vira_nao_sei_e_nunca_acordado() -> None:
 
 
 def test_ha_um_parser_so_da_coluna_de_estado() -> None:
-    """As duas vistas do mesmo dado saem do MESMO parser.
-
-    A vista da tela quer o vocabulário da casa (`acordado`/`dormindo`); a vista
-    do drop-in do WirePlumber quer o literal do `pactl` (`SUSPENDED`) para
-    decidir se a regra pegou. São perguntas diferentes sobre a mesma coluna, e
-    esta casa já pagou caro por leitores paralelos do mesmo dado.
-
-    Mordida: dar a `sono_dos_sinks_do_controle` um laço próprio sobre as linhas.
-    O teste continua passando hoje — e é por isso que a asserção é de
-    IDENTIDADE de resultado sobre uma entrada que os separa: uma linha de
-    quatro campos, que um laço novo quase certamente aceitaria.
-    """
+    """As duas vistas do mesmo dado saem do MESMO parser."""
     saida = _lista_curta(**{SINK_P1: "SUSPENDED", SINK_HDMI: "RUNNING"})
     quatro_campos = f"9\t{SINK_P2}\tPipeWire\ts16le 4ch 48000Hz\n"
 
     crus = estados_crus_dos_sinks(saida + quatro_campos)
     assert crus == {SINK_P1: "SUSPENDED", SINK_HDMI: "RUNNING"}
-    # A vista do sono é um FILTRO do mesmo mapa, não uma segunda leitura.
     assert audio_saida.sono_dos_sinks_do_controle(saida + quatro_campos) == {
         nome: cru for nome, cru in crus.items() if nome == SINK_P1
     }
 
 
 def test_a_rota_traz_o_estado_de_todos_os_canais_numa_leitura_so() -> None:
-    """Um leitor, um subprocesso, e o estado de TODOS os canais.
-
-    É o que torna isto universal: 1 ou 7 controles custam a mesma leitura, e
-    nada aqui depende de MAC, de ordem de conexão nem de número mágico. Ler por
-    card seria um `pactl` por controle por ciclo — quatro por ciclo na mesa
-    dela.
-
-    Mordida: devolver `EstadoDaRota` sem `canais` (ou só quando o som já está
-    no controle, que era como a lista viva era lida antes desta leva). A
-    segunda asserção cai, e a aba perde o dado dos cards que NÃO são o alvo da
-    rota.
-    """
+    """Um leitor, um subprocesso, e o estado de TODOS os canais."""
     chamadas: list[list[str]] = []
 
     def pactl(argv: list[str]) -> str:
@@ -327,11 +213,6 @@ def test_a_rota_traz_o_estado_de_todos_os_canais_numa_leitura_so() -> None:
         f"a lista viva foi lida {len(listas)} vezes num ciclo só: o estado dos "
         "canais tem de pegar carona na leitura que já existia"
     )
-
-
-# ---------------------------------------------------------------------------
-# Parte 2 — a REGRESSÃO DO BIPE: um som de 67 ms num nó suspenso
-# ---------------------------------------------------------------------------
 
 
 def test_o_som_de_confirmacao_acorda_o_canal_antes_de_tocar() -> None:
@@ -384,16 +265,7 @@ def test_o_som_de_confirmacao_acorda_o_canal_antes_de_tocar() -> None:
 
 
 def test_o_canal_ja_acordado_nao_paga_subprocesso_nenhum() -> None:
-    """O caso comum não pode ficar mais caro por causa do caso raro.
-
-    A lista viva já é lida no degrau 5 (a guarda do sink inexistente): o estado
-    sai DELA, sem um `pactl` a mais, e o `set-sink-suspend` só roda no estado
-    que precisa dele.
-
-    Mordida: chamar `acordar_sink` sem olhar o estado antes. Este teste vê dois
-    comandos de escrita que não deviam existir, e a cada gesto dela o produto
-    passa a gastar dois subprocessos para não mudar nada.
-    """
+    """O caso comum não pode ficar mais caro por causa do caso raro."""
     chamadas: list[list[str]] = []
 
     def pactl(argv: list[str]) -> str:
@@ -418,15 +290,7 @@ def test_o_canal_ja_acordado_nao_paga_subprocesso_nenhum() -> None:
 
 
 def test_acordar_confere_relendo_em_vez_de_acreditar_no_pactl() -> None:
-    """A janela que acredita na própria escrita é a janela que mente na tela.
-
-    Mesma disciplina do `RotaDeSaida._trocar`: o `pactl` responde sem erro em
-    casos em que a mudança não vale.
-
-    Mordida: fazer `acordar_sink` devolver `True` logo depois do `set-sink-
-    suspend`. A segunda asserção cai — o sink continuou suspenso e a função
-    disse que acordou.
-    """
+    """A janela que acredita na própria escrita é a janela que mente na tela."""
     teimoso = _lista_curta(**{SINK_P1: "SUSPENDED"})
 
     assert (
@@ -437,23 +301,8 @@ def test_acordar_confere_relendo_em_vez_de_acreditar_no_pactl() -> None:
     assert acordar_sink("", runner=lambda _a: teimoso) is False
 
 
-# ---------------------------------------------------------------------------
-# Parte 3 — a TELA: os dois estados no bloco Alto-falante
-# ---------------------------------------------------------------------------
-
-
 def test_o_rotulo_da_moldura_diz_o_volume_e_o_canal() -> None:
-    """*"ligar isso a interface na aba de status"* — e é aqui que ele aparece.
-
-    `Alto-falante · 100 % · acordado`: o número só existe com POSSE (o daemon
-    só publica a chave `speaker` enquanto nós mandamos o volume), então o
-    rótulo diz as duas coisas que ela pediu de uma vez — que o volume é 100 e
-    que quem o manda somos nós.
-
-    Mordida: apagar o `partes.append(estado)` de `_titulo_do_speaker`. O rótulo
-    volta a `Alto-falante · 100 %` e o canal desaparece da tela — a casa
-    continua sabendo e o produto volta a não mostrar.
-    """
+    """*"ligar isso a interface na aba de status"* — e é aqui que ele aparece."""
     acordado = _card(speaker=POSSE_100, canal=CANAL_ACORDADO, regra=True)
     dormindo = _card(speaker=POSSE_100, canal=CANAL_DORMINDO, regra=True)
 
@@ -463,8 +312,6 @@ def test_o_rotulo_da_moldura_diz_o_volume_e_o_canal() -> None:
     assert dormindo._speaker_titulo.get_text() == (
         f"{TITULO_SPEAKER} · 100 % · {SUFIXO_CANAL_DORMINDO}"
     )
-    # O rótulo de valor continua sendo o DONO do número, cru e sem sufixo: é
-    # ele que o card compacto mostra e é ele que os outros testes leem.
     assert acordado._speaker_label.get_text() == "100 %"
 
 
@@ -500,7 +347,6 @@ def test_o_selo_nao_denuncia_o_canal_parado_e_a_saida_muda_acende() -> None:
     """
     dormindo = _card(speaker=POSSE_100, canal=CANAL_DORMINDO, regra=True)
     assert not dormindo._speaker_selo_saida.get_visible()
-    # O selo cala; a dica do bloco continua dizendo o estado do canal.
     assert DICA_CANAL_DORMINDO in dormindo._speaker_box.get_tooltip_text()
 
     acordado = _card(speaker=POSSE_100, canal=CANAL_ACORDADO, regra=True)
@@ -517,18 +363,7 @@ def test_o_selo_nao_denuncia_o_canal_parado_e_a_saida_muda_acende() -> None:
 
 
 def test_a_dica_do_bloco_diz_que_e_o_padrao_so_com_a_regra_no_lugar() -> None:
-    """*"config default"* — a tela mostra o estado, não pede que ela ligue.
-
-    E a frase do padrão é CONDICIONADA: um nó pode estar acordado por acaso
-    (alguém acabou de tocar algo) com o drop-in do WirePlumber fora do lugar, e
-    chamar isso de "é o padrão" seria a tela dando por curado o que só está
-    momentaneamente de pé. Com a cura arrancada, a tela DENUNCIA — o sintoma
-    no jogo é silencioso, e ninguém o descobre sozinho.
-
-    Mordida: trocar o `if self._speaker_regra_do_sono is True` por um `if`
-    incondicional em `_frases_do_canal`. A terceira asserção cai, e a interface
-    passa a afirmar que está tudo automático numa máquina onde não está.
-    """
+    """*"config default"* — a tela mostra o estado, não pede que ela ligue."""
     com_regra = _card(speaker=POSSE_100, canal=CANAL_ACORDADO, regra=True)
     dica = com_regra._speaker_box.get_tooltip_text()
     assert DICA_CANAL_ACORDADO in dica
@@ -551,16 +386,7 @@ def test_a_dica_do_bloco_diz_que_e_o_padrao_so_com_a_regra_no_lugar() -> None:
 
 
 def test_a_dica_para_de_dizer_que_o_volume_e_do_firmware_quando_e_nosso() -> None:
-    """A frase antiga passaria a MENTIR justamente no estado que vira o normal.
-
-    `DICA_BLOCO_SPEAKER` diz *"o volume é do firmware do controle e ele não o
-    devolve; mover o controle deslizante passa a mandá-lo"*. Ela é verdade sem
-    posse — e com o daemon pondo 100 % em todo controle, o estado sem posse
-    deixa de ser o comum.
-
-    Mordida: voltar a primeira linha da dica para `DICA_BLOCO_SPEAKER` fixo. A
-    segunda asserção cai: a tela pede um gesto que já aconteceu.
-    """
+    """A frase antiga passaria a MENTIR justamente no estado que vira o normal."""
     com_posse = _card(speaker=POSSE_100, canal=CANAL_ACORDADO, regra=True)
     dica = com_posse._speaker_box.get_tooltip_text()
 
@@ -577,17 +403,7 @@ def test_a_dica_para_de_dizer_que_o_volume_e_do_firmware_quando_e_nosso() -> Non
 
 
 def test_os_dois_estados_custam_zero_altura_no_card() -> None:
-    """O teste que ESCOLHEU o desenho, e o que impede o próximo de desfazê-lo.
-
-    A coluna do som é a mais apertada do card, e o
-    `test_status_som_02_controle_de_volume` cobra que ela não passe da maior
-    coluna vizinha por mais de 12px. Um rótulo novo custa 19px (medido nesta
-    bancada) e estoura isso; o rótulo da moldura custa ZERO.
-
-    Mordida: pôr o estado do canal num `Gtk.Label` próprio, sempre visível, no
-    miolo do bloco — que é o desenho "óbvio". A asserção de altura cai aqui e
-    a folga de 12px cai lá.
-    """
+    """O teste que ESCOLHEU o desenho, e o que impede o próximo de desfazê-lo."""
     for compact in (False, True):
         antes = _card(compact=compact, speaker=POSSE_100, canal="")
         depois = _card(
@@ -607,18 +423,6 @@ def test_os_dois_estados_custam_zero_altura_no_card() -> None:
             f"{larg_antes} -> {larg_depois}px, num teto de {LARGURA_DE_PROJETO}"
         )
         assert larg_depois <= LARGURA_DE_PROJETO
-
-
-# `test_o_selo_dormindo_cabe_no_teto_de_largura_do_selo` SAIU EM 23/09/2026
-# com o selo que ele mediu (O-ALTO-FALANTE-DIZ-ATIVO-01). O teto `_SELO_CHARS`
-# continua medido pelos textos que sobram, e a guarda da largura com o canal
-# presente é `test_os_dois_estados_custam_zero_altura_no_card`, logo acima.
-
-
-# ---------------------------------------------------------------------------
-# Parte 4 — a FIAÇÃO: cada card recebe o canal DELE, e ninguém lê o PipeWire
-#           na thread do GTK
-# ---------------------------------------------------------------------------
 
 
 class _CardEspiao:
@@ -681,9 +485,6 @@ class _AbaStatus(StatusActionsMixin):
         self._status_card_keys = list(cards)
 
 
-#: Dois controles com endereços FORJADOS (faixa `aa:bb:cc`, que é a desta
-#: suíte). Nada aqui depende de MAC: eles são só a chave que o `mic_monitor`
-#: usa para dizer qual placa é de qual controle.
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 
@@ -695,17 +496,7 @@ def _estado_com_dois_controles() -> dict[str, Any]:
 
 
 def test_cada_card_recebe_o_canal_do_proprio_controle() -> None:
-    """Universal por construção: vale para 1, 2, 4 ou 7 controles.
-
-    O estado vem de UMA leitura da lista de sinks, e cada card pega dela a
-    linha do SEU sink. Um controle acordado e outro dormindo na mesma mesa é o
-    caso que separa "a aba tem o dado" de "a aba entrega o dado certo".
-
-    Mordida: entregar `self._canais_de_som` inteiro a todos os cards, ou usar o
-    `_rota_sink` (que é o alvo GLOBAL do botão de rota, e fica "" assim que há
-    dois sinks distintos). A segunda asserção cai — os dois cards passam a
-    dizer a mesma coisa, ou a não dizer nada.
-    """
+    """Universal por construção: vale para 1, 2, 4 ou 7 controles."""
     c1, c2 = _CardEspiao(), _CardEspiao()
     aba = _AbaStatus(
         {(0, UNIQ_P1): c1, (1, UNIQ_P2): c2},
@@ -722,19 +513,11 @@ def test_cada_card_recebe_o_canal_do_proprio_controle() -> None:
 
 
 def test_controle_sem_placa_de_som_recebe_nao_sei() -> None:
-    """O caso do RÁDIO, e ele é a maioria da mesa dela.
-
-    Sem sink não há canal a descrever, e o card tem de receber "" — não o
-    estado de outro sink qualquer, e não `acordado` por omissão.
-
-    Mordida: trocar o `if sink_do_card else ""` por um `.get(sink, CANAL_
-    ACORDADO)`. A asserção cai, e o card de um controle no rádio passa a
-    prometer que o som sai inteiro por um alto-falante que o sistema nem vê.
-    """
+    """O caso do RÁDIO, e ele é a maioria da mesa dela."""
     c1, c2 = _CardEspiao(), _CardEspiao()
     aba = _AbaStatus(
         {(0, UNIQ_P1): c1, (1, UNIQ_P2): c2},
-        _MonitorDeMentira({UNIQ_P1: SINK_P1}),  # o P2 está no rádio
+        _MonitorDeMentira({UNIQ_P1: SINK_P1}),
     )
     aba._canais_de_som = {SINK_P1: CANAL_ACORDADO}
 
@@ -746,35 +529,19 @@ def test_controle_sem_placa_de_som_recebe_nao_sei() -> None:
 
 
 def test_a_aba_nao_le_o_pipewire_na_thread_do_gtk() -> None:
-    """A regra desta janela, e ela já congelou por chamada bloqueante num tique.
-
-    O tique dos cards é de 10 Hz: um `pactl` ali seriam dez subprocessos por
-    segundo por controle. A leitura mora na worker de 0,5 Hz da rota, e ao
-    tique de 10 Hz só chega uma consulta a dicionário.
-
-    Mordida: chamar `audio_saida.estado_do_canal(...)` (ou
-    `regra_nunca_dorme_instalada()`) de dentro do `_sync_status_cards`. A
-    asserção do fonte cai — e ela olha o FONTE de propósito, porque um dublê de
-    `pactl` deixaria a versão lenta passar em silêncio.
-    """
+    """A regra desta janela, e ela já congelou por chamada bloqueante num tique."""
     import ast
     import inspect
     import textwrap
 
     fonte = textwrap.dedent(inspect.getsource(StatusActionsMixin._sync_status_cards))
-    # A leitura é por AST e não por texto: comentários e docstrings deste
-    # método falam de `pactl` e de `subprocess` justamente para explicar por que
-    # eles NÃO estão aqui, e uma busca em texto cru reprovaria a explicação.
     nomes = {
         no.id if isinstance(no, ast.Name) else no.attr
         for no in ast.walk(ast.parse(fonte))
         if isinstance(no, (ast.Name, ast.Attribute))
     }
 
-    # `audio_saida` cobre o módulo inteiro de uma vez — é ele que fala com o
-    # `pactl` e com o disco. O nome do MÉTODO do card
     # (`definir_estado_do_canal`) não conta: ele é a entrega do dado já lido,
-    # que é exatamente o que este tique pode fazer.
     for proibido in (
         "audio_saida",
         "rodar_leitura",

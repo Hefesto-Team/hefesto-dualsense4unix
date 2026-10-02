@@ -1,29 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DOS BOTÕES: o clique chega ao daemon, com o método e os parâmetros.
-
-POR QUE ELA EXISTE, e é a diferença entre ligar botão e fingir que ligou: um
-gesto registrado no despachante prova que **existe uma função**. Não prova que
-ela chama o daemon, nem que chama o método certo, nem que manda os parâmetros
-que aquele método lê. As três coisas falham em silêncio — o daemon recusa, ou
-ignora, e a tela não muda; quem clicou conclui que o produto está quebrado.
-
-O QUE ESTA RÉGUA COBRA, e cada item nasceu de um defeito real desta casa:
-
-1. **O método existe no daemon.** `tests/unit/inventario_do_daemon.py` lê os 39 do
-   `ipc_server.py`. Um nome inventado é o defeito mais caro daqui — uma tela que
-   promete um ajuste que o produto não faz.
-2. **Os parâmetros são os que o handler lê.** `led.set` lê `rgb`, `brightness` e
-   `uniq`; mandar `color` seria aceito pelo socket e ignorado pelo daemon.
-3. **O gesto REALMENTE chama.** O `ipc` é injetado, então a régua passa um de
-   mentira e cobra a chamada. Um gesto que não chama nada passa por qualquer
-   régua que só olhe o registro.
-4. **Um clique sem dono é RECUSADO.** Um botão que responde calado quando não há
-   quem atenda é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura.
-
-A MORDIDA: troque `ipc("led.set", …)` por `pass` em qualquer gesto — o teste
-reprova dizendo que ele não chamou nada. Troque `led.set` por `led.color` — o
-teste reprova dizendo que o daemon não atende esse método.
-"""
+"""A RÉGUA DOS BOTÕES: o clique chega ao daemon, com o método e os parâmetros."""
 from __future__ import annotations
 
 import pathlib
@@ -34,32 +10,13 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Um controle de mentira. MAC da faixa sintética da casa — há dois portões de
-#: anonimato nesta árvore e eles não perdoam.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
          "battery_pct": 95, "lightbar_rgb": [0, 0, 255], "is_primary": True,
-         # O DUBLÊ ERA MAIS FROUXO QUE O DAEMON — 05/09/2026. `audio` e
-         # `speaker` vinham VAZIOS, e o daemon vivo publica os dois cheios em
-         # todo controle conectado. Desde que a aba 02 aprendeu a guardar o som
-         # no perfil, o gesto `rota` precisa do volume para escrever a seção
-         # (o esquema recusa rota sem volume) — e com o dublê vazio ele
-         # recusava, dizendo a verdade sobre um estado que não existe na mesa
-         # dela. Dublê mais frouxo que o real é o defeito que esta casa já
-         # pagou três vezes.
          "inputs": {}, "audio": {"mic_mudo": False},
          "speaker": {"volume": 100, "muted": False}}
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
-
-#: O PISO E AS PROVAS MORAM NOS PACOTES, não aqui — e a razão é de processo:
-#: com oito abas sendo ligadas em paralelo, este arquivo seria editado oito
-#: vezes na mesma região, e seriam oito conflitos. Cada `aNN_*.py` declara
-#: `PISO_DA_ABA` (quantos gestos tem) e `PROVAS` (o que cada clique deve
-#: chamar), e esta régua os LÊ.
-#:
-#: Território exclusivo é o que torna o paralelo seguro; foi a mesma razão de o
-#: dicionário de gestos ter virado o decorador `@gesto`.
 
 
 from tests.conftest import exigir_gi_real
@@ -85,17 +42,7 @@ def _provas():
 
 
 class PonteDeMentira:
-    """Um dublê da `pacotes/ponte.py`, que guarda o que foi chamado.
-
-    É o que torna a função de gesto TESTÁVEL: ela não importa o `ipc_bridge`,
-    RECEBE a ponte. Uma função que abrisse o socket por dentro só poderia ser
-    provada com o daemon no ar — e a régua deixaria de rodar no CI.
-
-    O `__getattr__` responde por QUALQUER nome, e isso é de propósito: o dublê
-    não pode virar uma segunda lista das funções da ponte, que envelheceria em
-    silêncio. Quem confere se o nome EXISTE de verdade é
-    `test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem`, contra a ponte real.
-    """
+    """Um dublê da `pacotes/ponte.py`, que guarda o que foi chamado."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple, dict]] = []
@@ -104,13 +51,6 @@ class PonteDeMentira:
         def registrar(*args, **kwargs):
             self.chamadas.append((nome, args, kwargs))
             # `identity_number_set` e a família `*_detalhado` devolvem
-            # `(ok, motivo)`; os outros, `bool`.
-            #
-            # O `_detalhado` ENTROU EM 11/09/2026 (A-PERNA-QUE-FALTA-01) e não é
-            # conforto: um dublê que respondesse `True` a `chamar_detalhado`
-            # seria MAIS FROUXO QUE A PONTE REAL, e o gesto que desempacota
-            # `ok, motivo = …` estouraria só na mão dela. É a cicatriz de 04/09
-            # com a máscara e a de 05/09 com o co-op, pela terceira vez.
             duas = (nome.endswith("_set") and "identity" in nome) or nome.endswith(
                 "_detalhado"
             )
@@ -118,12 +58,6 @@ class PonteDeMentira:
         return registrar
 
 
-#: O PERFIL ATIVO PRECISA EXISTIR NO DISCO — 05/09/2026. Desde que a aba 02
-#: aprendeu a GUARDAR o som por controle, o gesto lê o perfil ativo para
-#: escrever nele; sem arquivo, ele recusa com *"o ajuste chegou ao controle,
-#: mas não consegui ler o perfil"* — e a recusa está CERTA: dizer "Pronto."
-#: sobre um ajuste que amanhã volta ao de ontem seria a mentira que a frase
-#: existe para evitar. O que faltava era esta régua ter um perfil.
 @pytest.fixture(autouse=True)
 def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.profiles import loader
@@ -155,17 +89,8 @@ def _clique(**extra) -> dict:
     return {**base, **extra}
 
 
-# --------------------------------------------------------------------------
-# 1. o inventário do daemon
-# --------------------------------------------------------------------------
 def test_o_inventario_le_os_metodos_do_daemon():
-    """Zero métodos é ERRO, não silêncio.
-
-    E o número importa: o primeiro censo usou o padrão `[a-z_]+\\.[a-z_]+` e
-    achou 30 — os nove que faltavam têm TRÊS níveis, e um deles é justamente o
-    `identity.number.set`, que a aba Iluminação precisa. **Uma régua que procura
-    o padrão errado não acha nada e não reclama.**
-    """
+    """Zero métodos é ERRO, não silêncio."""
     from tests.unit import inventario_do_daemon as daemon
 
     m = daemon.metodos()
@@ -194,15 +119,9 @@ def test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende(pac):
         f"se o método não existe, o botão NÃO tem dono e deve recusar dizendo.")
 
 
-# --------------------------------------------------------------------------
-# 2. o piso por aba
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("nome", [n for n, _ in _pacotes()])
 def test_a_aba_tem_o_piso_de_gestos(pac, nome):
-    """`PISO_DA_ABA` é declarado no pacote e SÓ SOBE.
-
-    Uma queda não aparece na tela: o clique simplesmente não faz nada.
-    """
+    """`PISO_DA_ABA` é declarado no pacote e SÓ SOBE."""
     import importlib
 
     mod = importlib.import_module(f"pacotes.{nome}")
@@ -216,9 +135,6 @@ def test_a_aba_tem_o_piso_de_gestos(pac, nome):
         f"{pagina} tem {quantos} gestos com dono e o piso é {piso}.")
 
 
-# --------------------------------------------------------------------------
-# 3. o gesto CHAMA o daemon — a parte que separa ligar de fingir
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("pacote", "prova"), list(_provas()),
     ids=lambda x: x if isinstance(x, str) else x.get("gesto", "?"))
@@ -266,14 +182,8 @@ def test_o_gesto_chama_a_funcao_certa(pac, ctx, pacote, prova):
                 f"esperava {valor!r}")
 
 
-
 def test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem():
-    """O dublê responde a qualquer nome — quem confere a existência é isto.
-
-    Sem este teste, um gesto podia chamar `p.led_color(...)`, o dublê responder
-    alegremente, e a régua acima passar. Na tela, `AttributeError` no primeiro
-    clique.
-    """
+    """O dublê responde a qualquer nome — quem confere a existência é isto."""
     import importlib
 
     from pacotes import ponte
@@ -288,27 +198,7 @@ def test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem():
                 f"produto não faz isso, e o botão precisa RECUSAR dizendo.")
 
 
-
-# `test_o_automatico_larga_o_claim_e_deixa_a_cor_padrao` SAIU — 08/09/2026.
-#
-# Ele mediu o gesto `auto` — o botão "Automático" de CADA COLUNA —, que
-# saiu da
-# aba em 07/09 com o widget, no mesmo commit, POR ORDEM DELA: *"Olha na real
-# sai todos. Deixa só lá o de cima mesmo o tongle."* O `gesto_da_pagina`
-# devolvia `None` e a régua morria num `TypeError` que não dizia nada.
-#
-# NÃO FOI REAPONTADO PARA `auto-cores`, e a tentação era essa: o nome parece o
-# mesmo ato e não é. `auto-cores` é o interruptor do topo (D-13, 04/09) e
-# escreve `auto_player_colors` NO PERFIL; o botão que saiu largava o claim da
-# barra ao jogo, pintava a cor do número e soltava a trava manual — três
-# chamadas de daemon, nenhuma delas no perfil. Apontar esta régua para lá
-# faria o arquivo dizer que mede o "Automático" enquanto mede outra coisa.
-#
-# A MEDIÇÃO NÃO SE PERDE: o que o gesto fazia, a ordem das três chamadas e o
-# porquê da ordem estão escritos em `a04_iluminacao.py`, no bloco que substitui
-# o gesto — junto com a prova de que a trava CONTINUA sendo solta por
 # `profile.switch` (`clear_manual_trigger_active()` sem argumento), que é o que
-# impediu a poda de reabrir a A-TRAVA-DO-LED-NÃO-SOLTA-01 em silêncio.
 
 
 def test_o_gesto_recusa_o_clique_sem_controle(pac, ctx):
@@ -321,16 +211,7 @@ def test_o_gesto_recusa_o_clique_sem_controle(pac, ctx):
 
 
 def test_um_botao_sem_dono_devolve_none(pac):
-    """`None` é o estado honesto — e quem chama tem de RECUSAR DIZENDO.
-
-    O EXEMPLAR NÃO SE DIGITA: ele sai de `a09_sistema.SEM_MOTOR`, que é onde a
-    aba declara quais botões continuam sem quem os atenda e por quê. Até
-    03/09/2026 esta linha cravava `desligar` — e nesse dia ele GANHOU dono (o
-    par "Parar o serviço"/"Ativar o serviço"), então a régua reprovou a melhora.
-    É a forma de defeito que esta casa nomeia: *a régua digita o que devia
-    perguntar*. Perguntando, ela acompanha a lista sozinha e só some no dia em
-    que não houver mais botão morto nesta página — que é quando ela deve sumir.
-    """
+    """`None` é o estado honesto — e quem chama tem de RECUSAR DIZENDO."""
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
     sem_motor = sorted(a09_sistema.SEM_MOTOR)

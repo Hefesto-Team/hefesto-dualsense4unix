@@ -1,50 +1,5 @@
 #!/usr/bin/env python3
-"""o_envelope_do_som_no_radio.py — o MESMO som por rádio, em DOIS envelopes HID.
-
-A PERGUNTA QUE ELE DECIDE (ensaio 13 do índice do rádio; SOM-POR-CONTROLE-01 §2)
-----------------------------------------------------------------------------------
-Seis passadas em 08/09, silêncio nas seis: o conteúdo (Opus, 200 B por quadro,
-os dois arranjos de TLV, a escada `0x32`-`0x39`) já foi variado de todas as
-formas que o mapa conhece. **O que nunca variou foi o ENVELOPE** — o jeito
-como o report chega ao aparelho pelo ar. E há dois, e o produto só usou um:
-
-    write() no hidraw   ->  HIDP DATA, cabeçalho 0xA2, canal de INTERRUPÇÃO
-                            (PSM 0x13). É o que todas as seis passadas fizeram.
-    ioctl HIDIOCSOUTPUT ->  HIDP SET_REPORT(Output), cabeçalho 0x52, canal de
-                            CONTROLE (PSM 0x11), com resposta HANDSHAKE do
-                            aparelho. Nunca tentado nesta casa.
-
-Um firmware que só aceite áudio por SET_REPORT — ou só por DATA — cala num
-envelope e fala no outro. Este instrumento manda o MESMO PCM, pelos MESMOS dois
-arranjos do produto, pelos DOIS envelopes, e a orelha dela decide.
-
-O QUE É DO PRODUTO, e o que é daqui
-------------------------------------
-O Opus é o `CodificadorOpus` do produto; os reports saem de `Arranjo.montar`
-(`integrations/alto_falante_bt`), pelo arranjo pedido — com CRC, tag e o corpo
-do produto, nunca redigitados aqui. O `common` de [3..49] vai só ao arranjo
-que o preserva, e sai de `af.common_de_audio`. Daqui é só o tom (440 Hz),
-o ritmo (um report a cada `quadros x 10 ms`) e a escolha do envelope.
-
-A MORDIDA
----------
-`--crc-errado` corrompe o CRC de cada report: nenhum envelope pode dar som. E
-o passo 0 (`--so-a-luz`) manda pelo SET_REPORT um `0x31` de COR — se a luz
-acender por esse envelope, ele CHEGA ao firmware, e o silêncio do áudio por
-ele é do áudio, não do envelope. É o controle positivo que separa as duas
-hipóteses, e sem ele o resultado "silêncio nos dois" não diria nada.
-
-Porta: o broker (`comum.abrir_no_hidraw`), com o daemon VIVO. Escreve no
-aparelho? SIM — reports de áudio da escada, e um `0x31` de cor no passo 0.
-Só no RÁDIO: no cabo o som tem placa própria e não passa por aqui.
-
-USO
-    o_envelope_do_som_no_radio.py --listar
-    o_envelope_do_som_no_radio.py --alvo <MAC> --so-a-luz            # passo 0
-    o_envelope_do_som_no_radio.py --alvo <MAC>                        # 2 arranjos x 2 envelopes
-    o_envelope_do_som_no_radio.py --alvo <MAC> --envelope set_report --arranjo <nome>
-    o_envelope_do_som_no_radio.py --alvo <MAC> --crc-errado           # o negativo
-"""
+"""o_envelope_do_som_no_radio.py — o MESMO som por rádio, em DOIS envelopes HID."""
 
 from __future__ import annotations
 
@@ -79,16 +34,12 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
 LINHA_DO_MAPA = "audio.alto_falante@dualsense"
 TAXA = 48000
-AMOSTRAS_POR_QUADRO = 480  #: 10 ms a 48 kHz — o quadro que o encoder do produto fecha em 200 B
+AMOSTRAS_POR_QUADRO = 480
 ENVELOPES = ("data", "set_report")
 
 
 def hidiocsoutput(tamanho: int) -> int:
-    """`HIDIOCSOUTPUT(len)` = `_IOC(_IOC_READ|_IOC_WRITE, 'H', 0x0B, len)` — Linux ≥ 5.11.
-
-    O `0x0B` é o número do comando em `include/uapi/linux/hidraw.h`; o `0x06`
-    ao lado é o SFEATURE que a casa já usa. Não é palpite: é o cabeçalho.
-    """
+    """`HIDIOCSOUTPUT(len)` = `_IOC(_IOC_READ|_IOC_WRITE, 'H', 0x0B, len)` — Linux ≥ 5.11."""
     _IOC_WRITE, _IOC_READ = 1, 2
     return ((_IOC_READ | _IOC_WRITE) << 30) | ((tamanho & 0x3FFF) << 16) | (ord("H") << 8) | 0x0B
 
@@ -233,11 +184,6 @@ def main() -> int:
                     if len(lote) < por_report:
                         break
                     seq = (seq + 1) & 0x0F
-                    # Pelo ARRANJO pedido, e não pelo atalho dos dois
-                    # candidatos: até 28/09/2026 esta linha indexava o par
-                    # (`ds5dongle`, `senshi`) pelo nome, e os outros dois de
-                    # `ARRANJO_POR_NOME` — que a validação acima aceita, e que
-                    # são o padrão — morriam de `KeyError` na montagem.
                     pacote = arranjo.montar(lote, seq=seq, common=common)
                     if args.crc_errado:
                         pacote = corromper_crc(pacote)

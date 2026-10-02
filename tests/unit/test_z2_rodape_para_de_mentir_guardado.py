@@ -1,18 +1,8 @@
-"""Z2-3 — o rodapé para de chamar de "guardado" o que não tem alvo.
-
-24/08/2026. ``alvo_fora_da_mesa`` lia ``_edit_target_uniq`` cru: ``None``
-saía tanto para "ela clicou em Todos" quanto para "a janela não sabe" — e
-os dois casos alimentavam ``frase_de_guardado(...) or _TOAST_COR_ENVIADA``,
-o mesmo padrão ``or`` que deixava a mentira do P3 (``app/alvo_de_edicao.py``)
-sumir em silêncio. Estes testes trancam a distinção pela raiz: agora a
-função lê o dono único e RECUSA alto quando não sabe, em vez de devolver
-``None`` e deixar quem chama compor sucesso por engano.
-"""
+"""Z2-3 — o rodapé para de chamar de "guardado" o que não tem alvo."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("z2 rodape para de mentir guardado")
 
 import pytest
@@ -29,7 +19,6 @@ from hefesto_dualsense4unix.app.textos_de_aplicacao import (
     alvo_fora_da_mesa,
 )
 
-#: MAC forjado da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 UNIQ_1 = "aabbcc000001"
 
 
@@ -67,11 +56,6 @@ def test_alvo_fora_da_mesa_continua_devolvendo_o_nome() -> None:
     definir_alvo(host, UNIQ_1, "Controle 1 (BT)")
     host._target_uniq_by_index = {}  # type: ignore[attr-defined]
     assert alvo_fora_da_mesa(host) == "Controle 1"
-
-
-# ---------------------------------------------------------------------------
-# Z2-4 — o escritor do perfil (alto-falante) migra
-# ---------------------------------------------------------------------------
 
 
 def test_alto_falante_desconhecido_nao_escreve_no_rascunho() -> None:

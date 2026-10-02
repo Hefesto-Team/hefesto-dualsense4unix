@@ -97,46 +97,15 @@ import time
 from collections import deque
 from typing import Any
 
-# A JANELA, AS DUAS PONTES E A GUARDA DE CARGA VÊM DA BIBLIOTECA, e é ela que
-# crava os quatro pinos de `gi.require_version` (com o Gdk DEPOIS do Gtk).
-# Importá-la ANTES de `gi.repository` é o que garante a ordem — não é import
-# decorativo, é a ordem de inicialização do gi.
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
 
-# O INTERRUPTOR É PRODUTO, e vem de `src/` inteiro: `painel` responde qual botão
-# acende, quem o aplica, por que um deles não tem quem o atenda e o que está
-# GRAVADO no disco; `mode_transition` é o dono da sequência de IPC. Nada disso é
-# reescrito aqui — o que sobra para este arquivo é o DOM.
 from hefesto_dualsense4unix.app.actions import mode_transition
 from hefesto_dualsense4unix.app.actions.jogar import painel
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
-#: A raiz é a DESTE arquivo, e é assim que `sistema_viva.py` já fazia.
-#:
-#: FATO ERRADO, SUBSTITUÍDO (30/08/2026). Estava cravado::
-#:
-#:     RAIZ = pathlib.Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
-#:     sys.path.insert(0, str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
-#:
-#: — a ÁRVORE DELA, escrita à mão e inserida no `sys.path` DEPOIS do `AQUI`,
-#: logo NA FRENTE dele. O efeito: rodar este piloto de uma árvore de agente
-#: carregava o `mesa_viva`, o `monta`, o `aba02` e o `02-controles.html` **da
-#: árvore dela**, não os da árvore de quem rodava. A edição do agente não valia
-#: nada e ele via o comportamento antigo — calado, sem erro nenhum.
-#:
-#: MEDIDO em 30/08 às 00:31: curei o socket da variante no `mesa_viva` desta
-#: árvore, rodei o piloto daqui, e ele continuou dizendo "Conexão recusada" —
-#: porque o `mesa_viva.__file__` que ele importou era
-#: `/mnt/Apate/.../hefesto-dualsense4unix/src/hefesto_dualsense4unix/interface/mesa_viva.py`.
-#:
-#: E é a mesma cicatriz que a regra da casa "A ÁRVORE DELA FICA EM `dev`" existe
-#: para proteger, pelo outro lado: lá o perigo é o agente ESCREVER na mesa dela;
-#: aqui era o agente LER dela sem saber.
-# A RAIZ É `parents[2]` — ver a nota em `hefesto_vivo.py`, medida em
-# 04/09/2026: com `[1]` o `RAIZ / "src"` virava `src/src`, que não existe.
 RAIZ = AQUI.parents[2]
 
 import mesa_viva  # noqa: E402
@@ -155,79 +124,22 @@ import aba02  # noqa: E402  isort:skip
 PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "02-controles.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 TITULO_ESPERADO = "Hefesto — aba CONTROLES"
 
-#: O tique rápido: o mesmo período da janela de hoje
-#: (`app/constants.LIVE_POLL_INTERVAL_MS`). Ele lê SÓ o IPC.
 TIQUE_MS = 100
-#: A faixa lenta: o que sai de `pactl` (rota do som, alto-falante acordado,
-#: volume do microfone). São subprocessos — a 10 Hz seriam trinta por segundo,
-#: que é o custo que a carona de 0,5 Hz do produto existe para não pagar.
 TIQUE_LENTO_MS = 2000
 
-#: O tique do INTERRUPTOR, quando a tela está fora da aba Controles. Ele lê só o
 #: `state_full` (a mesma leitura do tique rápido) e pinta quatro botões — a 10 Hz
-#: seria pagar o preço do card inteiro para desenhar uma fileira que muda uma vez
-#: por sessão. Meio segundo é o piso do que se percebe numa fileira de modos.
 TIQUE_DO_INTERRUPTOR_MS = 500
 
-#: Quanto o clique dela continua valendo na tela enquanto o daemon não alcança.
-#: Trocar de modo cria uinput e faz grab — o `MODE_IPC_TIMEOUT_S` do produto é
-#: 2,0 s para a chamada, e o efeito ainda leva um tique de estado para aparecer.
-#:
-#: **O prazo é o que impede o F7 desta casa.** Sem ele o botão clicado ficaria
-#: aceso para sempre, e a tela passaria a afirmar um estado que o daemon recusou
-#: — que é exatamente o defeito que este interruptor nasceu para curar. Passado o
-#: prazo, a verdade do daemon vence e o piloto DIZ, em voz alta, que o modo
-#: pedido não foi alcançado.
 PRAZO_DO_MODO_S = 4.0
 
-#: O ROTEIRO DA `--prova-gesto`: `(ms, seletor CSS dentro do card)`.
-#:
-#: **ELE VIROU DADO EM 08/09/2026, e a razão é um instrumento que mentia.** Dois
-#: dos sete passos clicavam `[data-mudo="mic-liberar"]` — botão que ela mandou
-#: tirar em 30/08 e que aparece **zero vez** em `interface/paginas/02-controles.html`
-#: e no `mockup/`. `querySelector` devolvia `null`, o `.click()` levantava
-#: `TypeError` dentro do WebKit, e `_js` não lê retorno nem erro: **dois dos sete
-#: passos batiam em nada e ninguém ficava sabendo.** É a mesma família que o
-#: comentário abaixo já nomeia ao contrário — só que aqui a régua cobria um botão
-#: que não existe mais, em vez de não cobrir um que existe.
-#:
-#: Como dado, ele ganha DOIS guardas que a lista embutida não podia ter: o portão
-#: de suíte `tests/unit/test_a_prova_de_gesto_nao_clica_no_vazio.py`, que confere
-#: cada seletor contra a página PUBLICADA sem abrir janela nenhuma; e, em tempo de
-#: execução, o :func:`_clique_que_confessa`, que faz cada passo dizer se achou o
-#: alvo em vez de estourar calado.
 ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = (
     (1500, ".faixa"),
     (2000, '.sw[data-sensor="giroscopio"]'),
-    # OS TRÊS BOTÕES DO ALTO-FALANTE, e são três de propósito — 20/09/2026.
-    # O roteiro clicava só o `pc`, e a queixa dela foi sobre os TRÊS: *"os 3
-    # botões do auto falante estão errados também e não estão funcionando"*.
-    # Uma prova que exercita um de três passa verde sobre os outros dois, que
-    # é a família `regua-que-mede-o-arranjo-facil` — a mesma que já mordeu esta
-    # casa neste mesmo dia. Eles vão em ordem de volta: `nada` devolve o som
-    # à TV, `junto` liga o `mix`, `jogo` devolve tudo ao lugar.
-    #
-    # **ERA `pc` ATÉ 21/09/2026**, e o botão saiu da fileira em 20/09, quando
-    # ela trocou o ATO do terceiro (*"O nome está certo, mude o ato."*). Um
-    # roteiro que clica num seletor que a página não tem bate em `null`,
-    # levanta dentro do WebKit e o `_js` não lê o erro: **a prova dá VERDE
-    # sobre um botão morto**, que é exatamente o defeito que ela existe para
-    # pegar.
     (2500, '.rota button[data-rota="nada"]'),
     (2800, '.rota button[data-rota="junto"]'),
     (2950, '.rota button[data-rota="pc"]'),
     (3100, '.rota button[data-rota="jogo"]'),
     (3400, '[data-mudo="alto-falante"]'),
-    # O 🎙 NÃO ENTRA NESTE ROTEIRO, e a ausência é decidida, não esquecimento.
-    # Ele deixou de calar em 20/09 e passou a GRAVAR — abre o microfone de quem
-    # O 🎙 VIROU TRAVA, E O `so-existe` SEGUE SENDO A RÉGUA CERTA — 21/09/2026.
-    # Ele não grava mais três segundos: agora ele LIGA e DESLIGA o retorno
-    # (`mic-retorno`), e um retorno que fica de pé é pior do que uma gravação
-    # que termina sozinha. Clicá-lo aqui abriria o microfone dela e o deixaria
-    # aberto até alguém clicar de novo — e este roteiro roda sem ninguém olhando.
-    # Quem prova o ATO é a suíte (`test_o_teste_do_microfone_ouve.py`, com o
-    # `pw-loopback` dublado); quem prova que o BOTÃO está na página e tem dono é
-    # o passo abaixo.
     (3700, '[data-gesto="mic-retorno"]', "so-existe"),
 )
 
@@ -246,12 +158,6 @@ def _clique_que_confessa(card: str, seletor: str, so_existe: bool = False) -> st
     import json as _json
 
     sel = _json.dumps(seletor)
-    # `so_existe` NÃO É UM CLIQUE MAIS FRACO — é a resposta a um botão cujo ato
-    # toca o aparelho de quem está na frente da máquina. O 🎙 grava o microfone
-    # por até 15 s e devolve a voz pelo alto-falante; dispará-lo num roteiro
-    # automático seria o instrumento usando o aparelho dela sem ela ter pedido.
-    # O passo continua REPROVANDO quando o alvo não existe, que é o que ele
-    # existe para pegar — só não puxa o gatilho.
     clique = "" if so_existe else "if(e){e.click();}"
     return (
         "(function(){var c=" + card + ";"
@@ -262,15 +168,6 @@ def _clique_que_confessa(card: str, seletor: str, so_existe: bool = False) -> st
     )
 
 
-#: O DONO REAL DE CADA GESTO, DECLARADO NUM LUGAR SÓ. Dos onze, **só os quatro
-#: do modo aplicam** (e um dos quatro nem isso: o "Desligado" não tem escritor).
-#: Os outros sete continuam eco — a aba é para ela AVALIAR, e um gesto que grave
-#: sem ela mandar é dano.
-#:
-#: As linhas do modo NÃO SÃO DIGITADAS AQUI: são lidas de
-#: `painel.escritor_do_modo`, que é o dono da resposta. Digitá-las seria a
-#: segunda cópia — e é assim que onze réguas desta casa reprovaram a melhora em
-#: vez do defeito, em 26/08: digitavam o que deviam LER.
 DONOS_DOS_GESTOS = {
     **{
         f"modo:{modo.chave}": painel.escritor_do_modo(modo.chave)
@@ -283,24 +180,6 @@ DONOS_DOS_GESTOS = {
     "sensor:acelerometro": "NÃO TEM DONO, e o dado também não existe: "
     "daemon/sensor_hub.leitura() publica gyro e touchpad, e o mapa de canais "
     "dá movimento.acelerometro como não/não, os dois MEDIDOS.",
-    # OS TRÊS DA FILEIRA, E OS TRÊS TÊM O MESMO DONO — 21/09/2026.
-    #
-    # Até esta data a tabela conhecia `rota:jogo` e `rota:pc`, e o `pc` saiu da
-    # fileira em 20/09, quando ela trocou o ato do terceiro botão. Resultado
-    # medido rodando `--prova-gesto` na máquina dela: dos três botões clicados,
-    # DOIS voltavam com *"SEM LINHA na tabela de donos — este gesto chegou de
-    # um endereço que o gerador não escreve. Nada foi aplicado."*
-    #
-    # E OS DOIS TINHAM DONO. `pacotes/a02_controles.py:4457` registra
-    # `@gesto("02-controles.html", "rota", grava="save_profile")`, e o corpo
-    # aceita `jogo`, `junto`, `nada` e `pc` — recusando qualquer outra com
-    # `ValueError`. O instrumento é que tinha ficado para trás.
-    #
-    # POR QUE ISSO É CARO, e não é detalhe de texto: a queixa dela de 20/09 foi
-    # *"os 3 botões do auto falante estão errados também e não estão
-    # funcionando"*, e a régua que existe para responder essa pergunta
-    # respondia **"nada foi aplicado"** sobre dois botões que funcionam. Uma
-    # tabela de donos velha não erra devagar: ela acusa o produto.
     "rota:jogo": "pacotes/a02_controles.rota (grava=save_profile) — byte "
     "`OUTPUT_PATH_SEL`=2 pelo `speaker.set`, mais `app/audio_saida.RotaDeSaida`"
     " devolvendo a saída padrão do sistema (camada 1).",
@@ -315,9 +194,6 @@ DONOS_DOS_GESTOS = {
     "controles com rotas diferentes é pergunta que o produto ainda não responde.",
     "alvo": "app/alvo_de_edicao.definir_alvo (janela) + controller.target.set "
     "(daemon). Nesta leva o acordeão só RELATA quem está aberto.",
-    # OS TRÊS DE SOM TÊM DONO — e é a diferença que importa em relação aos dois
-    # interruptores de sensor acima: estes três JÁ SÃO produto que funciona na
-    # janela de hoje. O que faltava era a tela nova ter onde ligá-los.
     "mudo:microfone": "mic.set {muted: bool} (daemon/ipc_handlers.py) pela ponte "
     "app/ipc_bridge.mic_set — é o botão de três caras do "
     "app/widgets/controller_card.py. Clicar faz o Hefesto ASSUMIR o registrador "
@@ -330,30 +206,18 @@ DONOS_DOS_GESTOS = {
     "por isso o ícone nasce travado enquanto o volume for desconhecido.",
 }
 
-#: O que se diz de um gesto SEM linha na tabela acima. Era um `KeyError` cru:
-#: `DONOS_DOS_GESTOS[chave]` derrubava a janela inteira quando a chave não
-#: existia — e derrubar a tela dela para relatar um dono desconhecido é o pior
-#: dos dois males. O gerador só emite chaves conhecidas, mas quem lê a tabela
-#: não é só o gerador: é qualquer DOM, inclusive um adulterado por régua.
 SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço que "
             "o gerador não escreve. Nada foi aplicado.")
 
 
-# ---------------------------------------------------------------------------
-# O gerador do mockup, usado como biblioteca
-# ---------------------------------------------------------------------------
-#: A cor do plástico quando o aparelho não a respondeu. O desenho pede um valor
 #: para `--plastico`; a borda neutra do tema é o "não sei" desta linha, e é a
-#: mesma saída que `cor_do_plastico.tom_para_a_borda` dá para tom vazio.
 PLASTICO_DESCONHECIDO = "var(--border-forte)"
 
 _cor_da_zona_real = aba02.cor_da_zona
 
 
 def _cor_da_zona_tolerante(colorway: str, zona: str = "casca-solida") -> str:
-    """`monta.cor_da_zona` PARA a geração quando o colorway não existe — e está
-    certo para o mockup, onde a mesa é escrita à mão. Aqui a mesa vem do
-    aparelho, e "não sei a cor" é resposta legítima: vira a borda neutra."""
+    """`monta.cor_da_zona` PARA a geração quando o colorway não existe — e está"""
     if not colorway:
         return PLASTICO_DESCONHECIDO
     try:
@@ -362,10 +226,6 @@ def _cor_da_zona_tolerante(colorway: str, zona: str = "casca-solida") -> str:
         return PLASTICO_DESCONHECIDO
 
 
-#: Os DOIS nomes, porque são dois: `aba02` importou `cor_da_zona` de `monta`,
-#: e quem desenha o chip da fita é o `monta.fita()`. Trocar um só deixava o card
-#: com a borda neutra e a fita PARANDO a montagem — que foi o primeiro erro
-#: desta leva, e é a cara do defeito de "corrigir pela metade".
 aba02.cor_da_zona = _cor_da_zona_tolerante
 monta.cor_da_zona = _cor_da_zona_tolerante
 
@@ -373,11 +233,7 @@ _luz_real = aba02.luz_do_jogador
 
 
 def _luz_tolerante(c: dict[str, Any]) -> str:
-    """A tabela de cor por jogador só tem cinco entradas; a mesa pode ter mais.
-
-    E o valor é provisório de qualquer jeito: o tique o substitui pela cor VIVA
-    que o daemon leu do sysfs, que é dado melhor do que a tabela.
-    """
+    """A tabela de cor por jogador só tem cinco entradas; a mesa pode ter mais."""
     try:
         return _luz_real(c)
     except Exception:
@@ -387,20 +243,11 @@ def _luz_tolerante(c: dict[str, Any]) -> str:
 aba02.luz_do_jogador = _luz_tolerante
 
 
-#: Os kwargs que `aba02.bloco` aceita, LIDOS DA ASSINATURA DELE. O estado que a
-#: mesa viva monta traz mais campos do que o desenho desenha (`alto_pct`, que é
-#: o "não sei" do volume) — e o dia em que ela acrescentar um argumento ao
-#: `bloco`, esta lista acompanha sozinha, em vez de o gerador levantar
-#: `TypeError` no meio da execução do produto.
 CAMPOS_DO_BLOCO = frozenset(inspect.signature(aba02.bloco).parameters) - {"c"}
 
 
 def html_da_mesa(mesa: list[dict[str, Any]], estados: dict[str, dict[str, Any]]) -> str:
-    """As caixas de controle, pelo gerador do mockup — nunca por HTML meu.
-
-    É o que faz o desenho ACOMPANHAR a mudança por construção: quando ela mudar
-    uma linha do `aba02.py`, esta aba muda junto, sem ninguém reescrever nada.
-    """
+    """As caixas de controle, pelo gerador do mockup — nunca por HTML meu."""
     return "\n".join(
         aba02.bloco(c, **{k: v for k, v in estados[c["uniq"]].items() if k in CAMPOS_DO_BLOCO})
         for c in mesa
@@ -412,21 +259,6 @@ def html_da_fita(mesa: list[dict[str, Any]]) -> str:
     antes_monta, antes_aba = monta.MESA, aba02.MESA
     monta.MESA, aba02.MESA = mesa, mesa
     try:
-        # A MESA VAI COMO ARGUMENTO, e não pelo `monta.MESA` acima. A troca
-        # de `monta.MESA` NÃO alcança a fita: `monta.CONECTADOS` é derivado de
-        # `MESA` no IMPORT (`[c for c in MESA if c.get("conectado", True)]`) e
-        # nunca recalculado, e é sobre ele que `fita()` itera.
-        #
-        # MEDIDO NA TELA em 01/09/2026, com UM controle no cabo: o card dizia
-        # `Starlight Blue · USB` e o topo `1 controle: 1 USB · 0 BT`, enquanto a
-        # fita mostrava `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` —
-        # o controle dela aparecendo no RÁDIO como P2 enquanto estava no cabo.
-        # O `inerte` VAI EXPLÍCITO, e não pelo padrão — 05/09/2026. Esta bancada
-        # serve a aba 02, que ESCOLHE controle, então o padrão `False` acerta
-        # hoje. Mas foi contando com esse padrão que o piloto acendeu a fita das
-        # sete abas de leitura e lhes deu o `title` de quem escolhe. Quem responde
-        # é `monta.a_fita_escolhe`, e passar a resposta aqui faz a bancada seguir
-        # a aba no dia em que ela mudar, em vez de repetir o defeito adormecido.
         bruta = monta.fita(
             ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa,
             inerte=not monta.a_fita_escolhe("02-controles.html"))
@@ -436,28 +268,14 @@ def html_da_fita(mesa: list[dict[str, Any]]) -> str:
 
 
 def css_dos_chips(mesa: list[dict[str, Any]]) -> str:
-    """A regra que acende o chip do controle aberto, para os prefs VIVOS.
-
-    O `aba02.CHIP_ACESO` é gerado da mesa fixa de quatro; com cinco na mesa o
-    quinto chip nunca acenderia, calado.
-    """
+    """A regra que acende o chip do controle aberto, para os prefs VIVOS."""
     ids = ["c-todos"] + [f'c-{c["pref"]}' for c in mesa]
     alvo = ",\n  ".join(f'body:has(#{r}:checked) .chip[for="{r}"]' for r in ids)
     return f"{alvo}{{background:var(--sel-bg);color:var(--fg);font-weight:600}}"
 
 
 def conta_da_altura(n: int) -> tuple[int, int]:
-    """`(px para o card aberto, px de rolagem)` para uma mesa de N.
-
-    A conta é a MESMA do `aba02.py` — mas lá ela roda em tempo de GERAÇÃO, com
-    `len(MESA)` fixo em quatro, e aqui o número de controles é de tempo de
-    EXECUÇÃO. Era a costura central deste piloto.
-
-    Com N ≥ 5 o card aberto não cabe (o `assert` do gerador PARA aí, e está
-    certo em parar: melhor recusar do que esconder um controle calado). Aqui a
-    tela não pode parar — ela é o produto —, então a caixa ROLA, que é o mesmo
-    recurso que o chip "Todos" já usa, e o número de pixels vai para o relato.
-    """
+    """`(px para o card aberto, px de rolagem)` para uma mesa de N."""
     if n <= 0:
         return (aba02.VISIVEL - aba02.PAD_DO_CORPO, 0)
     para_o_card = (
@@ -470,9 +288,6 @@ def conta_da_altura(n: int) -> tuple[int, int]:
     return (aba02.ALTURA_DO_CARD, falta)
 
 
-# ---------------------------------------------------------------------------
-# O JavaScript da ponte — escreve por TIPO, nunca "ponha isto aí"
-# ---------------------------------------------------------------------------
 BOOTSTRAP = r"""
 window.HEF = (function(){
   const qa = (s,r)=>Array.from((r||document).querySelectorAll(s));
@@ -696,16 +511,6 @@ window.HEF = (function(){
 'HEF-PRONTO'
 """
 
-#: O INTERRUPTOR — a fileira `[data-modo]` de QUALQUER página que a tenha.
-#:
-#: Ele é separado do :data:`BOOTSTRAP` de propósito: aquele é da aba Controles e
-#: endereça cards; este é da fileira de modos e endereça `[data-modo]`. A tira
-#: navega, e o que segue com ela é a fileira — não o card.
-#:
-#: **Ele não decide nada.** Qual botão acende, qual está travado e o que o
-#: `title` diz chegam prontos do Python, que os pergunta ao `painel`. Escrever
-#: aqui um `if modo === 'gamepad'` seria o segundo dono da regra, na linguagem
-#: em que ninguém a mede.
 INTERRUPTOR = r"""
 window.HEFSW = (function(){
   const qa = s => Array.from(document.querySelectorAll(s));
@@ -808,12 +613,7 @@ window.HEFSW = (function(){
 
 
 def _unidade_do_hefesto() -> str:
-    """O nome da unidade, LIDO do produto — nunca digitado.
-
-    A variante muda o nome inteiro (`hefesto-dev-dualsense4unix.service` com
-    `HEFESTO_VARIANTE=dev`), e um literal nesta tela mandaria quem lê acordar o
-    daemon da OUTRA casa.
-    """
+    """O nome da unidade, LIDO do produto — nunca digitado."""
     from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL
 
     return str(SERVICE_NORMAL)
@@ -838,8 +638,6 @@ def _leitor_duble(codigos: str | None) -> Any:
     entregues: dict[str, Any] = {}
 
     def leitor(uniq: str) -> Any:
-        # O contrato da fonte (`ler_identidade_pelo_cabo`): um serial de
-        # mentira com o código nos caracteres 5 e 6 é uma RESPOSTA, e fica.
         if uniq not in entregues:
             codigo = fila[len(entregues) % len(fila)][:2].rjust(2, "0")
             serial = f"DUBL{codigo}".ljust(17, "0")
@@ -849,15 +647,11 @@ def _leitor_duble(codigos: str | None) -> Any:
     return leitor
 
 
-# ---------------------------------------------------------------------------
-# A janela
-# ---------------------------------------------------------------------------
 class Janela:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
         self.alvo: str | None = args.abre or None
         self.chaves: tuple = ()
-        #: os `uniq` da mesa de agora — a faixa lenta pergunta por eles
         self.uniqs: tuple[str, ...] = ()
         self.pronto = False
         self.custos: list[float] = []
@@ -868,15 +662,9 @@ class Janela:
         self.remontagens = 0
         self.gestos: list[dict[str, Any]] = []
         self.valores: list[int] = []
-        #: O ECO, e ele mora SÓ AQUI — na memória desta janela, nunca no perfil
-        #: dela. É o que faz o clique continuar valendo no tique seguinte em vez
-        #: de o desenho voltar sozinho meio décimo depois; e é o que some quando
-        #: a janela fecha, que é o contrato desta leva.
         self.eco_sensor: dict[str, dict[str, str]] = {}
         self.eco_rota: dict[str, str] = {}
         #: O eco dos três botões de som, por controle. Ele é o que sobrevive à
-        #: pintura: sem isto o tique seguinte devolveria o estado do daemon e o
-        #: clique dela sumiria em 100 ms — que é o que já acontecia com a rota.
         self.eco_mudo: dict[str, dict[str, Any]] = {}
         self.ondas: dict[str, deque] = {}
         self.lento: dict[str, dict[str, Any]] = {}
@@ -886,40 +674,20 @@ class Janela:
         self.mic = None
         self._roteiro: list[dict[str, Any]] | None = None
         self._t0 = 0.0
-        #: O INTERRUPTOR: se a página à vista AGORA tem a fileira de modos ligada.
         self.interruptor_ligado = False
-        #: O clique dela, valendo até o daemon alcançar — ou até o prazo estourar.
-        #: `None` = a tela mostra o modo VIVO, que é o padrão e o estado honesto.
         self.eco_modo: str | None = None
         self.eco_ate = 0.0
-        #: O que ESTE processo aplicou de verdade, na ordem — a régua do relato.
         self.aplicados: list[str] = []
-        #: `(quando, o que o disco dizia)` a cada leitura do opt-out. É o que
-        #: prova o "se lembre": o flag sumindo e voltando, medido daqui.
         self.lembrancas: list[tuple[str, bool | None]] = []
         self.pinturas_do_interruptor = 0
-        #: Os lados que a TELA mostrou, na ordem, lidos do DOM. É a régua da
-        #: cura de 31/08: com o `hefesto_ligado` arrancado esta lista trava num
-        #: lado só, porque o rádio fica onde o mockup nasceu.
         self.lados_do_interruptor: list[str] = []
         self.recusas_de_modo: list[str] = []
-        #: Quantos cliques SINTÉTICOS a `--prova-interruptor` mandou. Sem este
-        #: número o relato não distingue "o botão estava TRAVADO" de "o botão
-        #: nem foi clicado" — que é o buraco pelo qual o `--prova-gesto` deu
         #: verde sobre dois botões mortos em 29/08.
         self.cliques_do_roteiro = 0
-        #: Os seletores da `--prova-gesto` que NÃO acharam alvo na página. Sem
-        #: esta lista, um passo que bate em `null` some sem uma linha vermelha —
-        #: foi assim que dois dos sete passos ficaram mortos de 30/08 a 08/09.
         self.alvos_mortos_do_roteiro: list[str] = []
-        #: Os que acharam. Os dois números juntos é que separam "o botão estava
-        #: travado" de "o botão nem existe".
         self.alvos_vivos_do_roteiro = 0
 
 
-        # A JANELA, A PONTE E A GUARDA SÃO DA BIBLIOTECA. O que sobra aqui é a
-        # aba: a mesa, a pintura e os gestos. Antes desta leva estas 45 linhas
-        # eram do piloto, e nove cópias delas seriam nove donos do mesmo valor.
         self.tela = JanelaDaAba(
             arquivo=PAGINA,
             titulo_esperado=TITULO_ESPERADO,
@@ -933,69 +701,26 @@ class Janela:
         self.ponte = self.tela.ponte
         self.janela = self.tela.janela
 
-        # O SEGUNDO OUVINTE DE CARGA, e ele precisa ser próprio. O
-        # `ao_sair_da_aba` da biblioteca dispara UMA vez — na saída da aba desta
-        # janela — porque a guarda dela só existe para não matar a janela numa
-        # navegação legítima. Daqui em diante toda página é "fora da aba", e o
-        # callback não volta a ser chamado: Jogar → Gatilhos → Jogar não
-        # produziria evento nenhum, e o interruptor ficaria acreditando que ainda
-        # está na página onde nasceu. `load-changed` é do WebView e chega em
-        # TODAS as cargas; conectar um segundo handler é aditivo no GObject e não
-        # toca numa linha de `ponte_da_tela`, que é de todas as dez abas.
         self.view.connect("load-changed", self._pagina_mudou)
         if not args.sem_interruptor:
             GLib.timeout_add(TIQUE_DO_INTERRUPTOR_MS, self._tique_do_interruptor)
 
-    # -- carga -------------------------------------------------------------
     def _saiu_da_aba(self, titulo: str) -> None:
-        """Ela clicou na tira. Sair da Controles só DESLIGA a pintura.
-
-        As outras nove abas ainda são o mockup estático, e é exatamente o que
-        elas devem parecer até a ordem de migração alcançá-las. Quem garante que
-        isso não mata a janela é a guarda da biblioteca; o que é da aba — parar
-        de pintar — é esta linha.
-        """
+        """Ela clicou na tira. Sair da Controles só DESLIGA a pintura."""
         self.pronto = False
         print(f"[fora da Controles] {titulo} — o mockup estático; a pintura pausou.")
 
-    # -- o interruptor -----------------------------------------------------
     def _pagina_mudou(self, _view: Any, evento: Any) -> None:
-        """Uma página TERMINOU de carregar — qualquer uma, inclusive a de volta.
-
-        A ponte de gesto vive no `window` da PÁGINA: navegar a destrói junto com
-        o `window` antigo. Por isso o estado do interruptor cai para desligado
-        aqui, sempre, e é reinstalado só depois de a página nova responder que
-        tem a fileira.
-        """
+        """Uma página TERMINOU de carregar — qualquer uma, inclusive a de volta."""
         if evento != WebKit2.LoadEvent.FINISHED:
             return
         self.interruptor_ligado = False
         if self.args.sem_interruptor:
             return
-        # Um tique de folga: o `FINISHED` chega antes de o `document` da página
-        # nova estar pronto para responder `querySelector`. É o mesmo motivo pelo
-        # qual a guarda de carga da biblioteca PERGUNTA à página em vez de
-        # acreditar no evento.
         GLib.timeout_add(80, self._talvez_ligar_o_interruptor)
 
     def _talvez_ligar_o_interruptor(self) -> bool:
-        """A página à vista tem a fileira de modos? Então ela ganha a ponte.
-
-        A pergunta é feita ao DOM, nunca ao título: o endereço é `[data-modo]`,
-        que é o que o gerador escreve. Casar por título seria digitar o que se
-        pode LER — e o título do mockup carrega uma DATA ("mockup 26/08/2026"),
-        que envelhece sozinha e desligaria o interruptor calado.
-
-        A RESPOSTA TEM TRÊS VALORES, e o do meio é a ARMADILHA 1 do WebKit2
-        (`ponte_da_tela.AS_QUATRO_ARMADILHAS`): o `FINISHED` chega mais de uma
-        vez para a mesma página. MEDIDO em 31/08: a fileira era instalada DUAS
-        vezes na mesma carga — a segunda respondia `4|0` (nenhum ouvinte novo,
-        porque o `data-ligado` do JS já guardava), mas entre uma e outra o
-        `interruptor_ligado` caía para falso e a pintura parava. Perguntar se a
-        página JÁ tem o `window.HEFSW` separa "página nova" de "mesmo
-        `FINISHED` de novo" sem confiar no evento — que é a mesma disciplina da
-        guarda de carga da biblioteca.
-        """
+        """A página à vista tem a fileira de modos? Então ela ganha a ponte."""
 
         def respondeu(valor: str | None, erro: Exception | None) -> None:
             if erro is not None:
@@ -1035,13 +760,7 @@ class Janela:
         return True
 
     def _pintar_o_interruptor(self) -> None:
-        """O que a fileira mostra AGORA — a verdade do daemon, com prazo do eco.
-
-        O modo VIVO vence sempre, e o clique dela só o cobre enquanto o daemon
-        não teve tempo de alcançá-lo. Passado :data:`PRAZO_DO_MODO_S` o eco cai
-        **em voz alta**: um botão que continuasse aceso sozinho seria a tela
-        afirmando um estado que o daemon recusou.
-        """
+        """O que a fileira mostra AGORA — a verdade do daemon, com prazo do eco."""
         state, _erro = self._estado()
         vivo = painel.modo_vivo(state)
         if self.eco_modo is not None:
@@ -1057,25 +776,12 @@ class Janela:
             "HEFSW.pinta",
             {
                 "modo": self.eco_modo or vivo or "",
-                # OS TRAVADOS SÃO CALCULADOS, NÃO DIGITADOS: quem responde é o
-                # `painel`, e o dia em que o "Desligado" ganhar escritor o botão
-                # destrava sozinho.
                 "travados": {
                     m.chave: painel.porque_nao_aplica(m.chave)
                     for m in painel.MODOS_DA_TELA
                     if painel.porque_nao_aplica(m.chave)
                 },
-                # A DICA DO "JOGAR PELO HEFESTO" É A RESPOSTA À PERGUNTA DELA.
-                # *"não sei se segue desativado"* se responde com o que está
-                # GRAVADO, não com o que está acontecendo: o daemon pode ter
-                # acabado de subir, e o disco é quem diz o que ela decidiu.
                 "dicas": {mode_transition.MODE_GAMEPAD: lembra.frase},
-                # A POSIÇÃO DO INTERRUPTOR, e ela é DERIVADA — nunca a
-                # comparação de um botão só. O Hefesto ligado é `gamepad` OU
-                # `desktop` (a Navegação); comparando `data-modo` um a um, com o
-                # modo vivo em `desktop` as duas posições ficam apagadas e a tela
-                # fica MUDA, que parece defeito. Vem do `state`, e não do eco: a
-                # seção que abre é a verdade do daemon, não o clique dela.
                 "hefesto_ligado": painel.hefesto_ligado(state),
             },
         )
@@ -1112,26 +818,7 @@ class Janela:
         mode_transition.apply_mode(chave, on_done=deu, on_fail=falhou)
 
     def _marcar_o_interruptor_de_mentira(self) -> None:
-        """Cliques SINTÉTICOS na fileira de modos — os TRÊS, e todos aplicam.
-
-        O ENDEREÇO QUE ESTE ROTEIRO PERDEU: até 30/08 ele começava clicando o
-        `data-modo` do botão "Desligado", que era o botão sem dono, e a mordida
-        era a ORDEM — o travado primeiro, com zero gestos. (O endereço não é
-        escrito por extenso aqui de propósito: há régua que colhe os
-        `querySelector` deste arquivo e os confere contra o HTML, e um exemplo
-        citado dentro de um comentário entraria na conta como se fosse clique —
-        é a mesma armadilha que o `01-jogar.html` declara no CSS do interruptor.) **Em 31/08 esse botão saiu
-        do desenho** (ver a lápide `painel.MODO_DESLIGADO`), e `.click()` sobre
-        um `null` levanta `TypeError` dentro do WebKit: a régua morreria calada
-        no primeiro passo. Hoje a fileira não tem nenhum botão travado — os três
-        modos têm leitor e escritor —, então cliques e gestos TÊM de bater, e a
-        régua do "sem ouvinte" mudou de forma: é essa igualdade.
-
-        A ORDEM CONTINUA SENDO MEDIDA: DESLIGA (Modo Nativo), LIGA (Jogar pelo
-        Hefesto) e termina em `desktop` — que é onde a mesa dela estava quando
-        esta prova começou. Deixar a máquina dela noutro modo porque uma régua
-        rodou seria a régua mudando o produto pelas costas.
-        """
+        """Cliques SINTÉTICOS na fileira de modos — os TRÊS, e todos aplicam."""
         jogar = (PAGINA.parent / "01-jogar.html").as_uri()
         roteiro: list[tuple[int, Any]] = [
             (1200, lambda: self.view.load_uri(jogar)),
@@ -1144,7 +831,7 @@ class Janela:
         ]
         for ms, passo in roteiro:
             GLib.timeout_add(ms, lambda p=passo: (p(), False)[1])
-        self.cliques_do_roteiro = len(roteiro) - 1  # o primeiro passo é a navegação
+        self.cliques_do_roteiro = len(roteiro) - 1
 
     def _instalar(self) -> None:
         if self.args.sem_ponte:
@@ -1168,18 +855,6 @@ class Janela:
             if self.args.prova_interruptor:
                 self._marcar_o_interruptor_de_mentira()
             if self.args.arranca_enderecos:
-                # A MORDIDA DO ENDEREÇO: arranca os `data-*` que o `aba02.py`
-                # passou a escrever e vê a pintura DESABAR. Um endereço a menos
-                # não levanta erro nenhum no WebKit — o `querySelector` devolve
-                # `null` e o valor simplesmente não é escrito. Se a conta não
-                # cair, os endereços não estavam sendo usados.
-                #
-                # `campo` E `mudo` ENTRARAM EM 29/08, e a falta deles era o
-                # mesmo buraco do `--prova-gesto` que nunca clicava o ♪: uma
-                # régua que não toca um endereço não pode reprovar quem o
-                # quebrar. `data-controle` fica de fora de propósito — arrancá-lo
-                # derruba a pintura inteira de uma vez e a queda deixaria de
-                # dizer QUAL endereço morreu.
                 GLib.timeout_add(
                     2000,
                     lambda: (
@@ -1200,41 +875,7 @@ class Janela:
         self.ponte.perguntar(BOOTSTRAP, pronto)
 
     def _marcar_gestos_de_mentira(self) -> None:
-        """Cliques SINTÉTICOS, para provar o caminho tela → Python → eco.
-
-        Um clique de verdade não cabe numa prova automática (a janela é
-        Offscreen), e clicar por coordenada é a armadilha que esta casa já pagou
-        duas vezes. `el.click()` percorre o MESMO caminho de eventos do clique
-        do rato: o `addEventListener` do bootstrap é o que responde.
-        """
-        # OS TRÊS BOTÕES DE SOM ENTRARAM NO ROTEIRO EM 29/08, e a ausência deles
-        # era o motivo de o defeito ter atravessado: a régua clicava a faixa, um
-        # interruptor de sensor e um botão de rota, e NUNCA o 🎙 nem o ♪ — dava
-        # verde sobre dois botões mortos porque não os tocava.
-        #
-        # O "LIBERAR" SAIU DO ROTEIRO EM 08/09/2026, e a razão é que ele já
-        # tinha saído da TELA em 30/08, por ordem dela. Dois dos sete passos
-        # clicavam `[data-mudo="mic-liberar"]`, que aparece zero vez na página
-        # publicada e no mockup: `querySelector` devolvia `null`, o `.click()`
-        # levantava dentro do WebKit, e ninguém ficava sabendo. O comentário
-        # aqui descrevia a ordem daquele roteiro — prosa medindo o mundo de
-        # ontem, que é a mesma família do defeito. Ficam SEIS passos, todos com
-        # alvo vivo, e o 🎙 clicado DUAS vezes (liga e volta), que é o que
-        # sobrou da mordida da ordem depois de o "Liberar" sair.
-        # A RÉGUA CLICA O ÚLTIMO CARD, E NÃO O SEGUNDO. FATO ERRADO,
-        # SUBSTITUÍDO (30/08/2026): estava `document.querySelectorAll('.ctl')[1]`
-        # — o SEGUNDO card, escrito quando ela tinha DOIS controles no cabo.
-        #
-        # MEDIDO em 30/08 às 00:37, com o controle dela de hoje: mesa de UM
-        # controle → `.ctl[1]` é `undefined`, os cliques batem em `null`, e
-        # a prova inteira produz **zero gestos** — sem uma linha vermelha. Mesa
-        # de dois → sete cliques, seis gestos, tudo verde. O instrumento
-        # desligava exatamente na mesa dela, e desligava CALADO: é "o
-        # instrumento mente mais que o produto", de novo, e é a mesma forma dos
-        # onze da leva de 26/08 — a régua desliga quando o alvo não está lá.
-        #
-        # `length-1` existe para toda mesa com pelo menos um card, então a prova
-        # vale na mesa de um e continua valendo na de dois.
+        """Cliques SINTÉTICOS, para provar o caminho tela → Python → eco."""
         um = "document.querySelectorAll('.ctl')[document.querySelectorAll('.ctl').length-1]"
         for passo in ROTEIRO_DA_PROVA_DE_GESTO:
             ms, seletor = passo[0], passo[1]
@@ -1252,14 +893,8 @@ class Janela:
             antes=(lambda: self.tela.fotografar(foto)) if foto else None,
         )
 
-    # -- microfone ---------------------------------------------------------
     def _ligar_o_microfone(self) -> None:
-        """O microfone é o ÚNICO item desta aba que NÃO vem do IPC.
-
-        Quem captura é a própria janela (`app/mic_monitor.MicMonitor`), e só
-        enquanto a aba está à vista — sem isso um `parec` por controle ficaria
-        gravando o microfone dela a sessão inteira.
-        """
+        """O microfone é o ÚNICO item desta aba que NÃO vem do IPC."""
         try:
             from hefesto_dualsense4unix.app.mic_monitor import MicMonitor
 
@@ -1268,7 +903,6 @@ class Janela:
         except Exception as erro:  # pragma: no cover
             print(f"aviso: sem medidor de microfone ({erro})", file=sys.stderr)
 
-    # -- os tiques ---------------------------------------------------------
     def _estado(self) -> tuple[dict | None, str]:
         """O `state_full` de agora — do daemon dela, ou do dublê.
 
@@ -1303,12 +937,6 @@ class Janela:
         state, erro = self._estado()
         t_ipc = (time.perf_counter() - t0) * 1000
         if state is None:
-            # O TEXTO MANDAVA PARA UM BOTÃO QUE NÃO EXISTE. Dizia *"abra a aba
-            # Sistema e clique em 'Ligar o Hefesto'"*, e `grep -rn "Ligar o
-            # Hefesto" layout/*.html` devolve ZERO: a aba Sistema tem "Retomar",
-            # "Reiniciar o Hefesto", "Atualizar" e "Desligar o Hefesto" — o
-            # caminho de volta não está desenhado lá. Mandar alguém para um botão
-            # inexistente é a tela afirmando uma saída que ela não tem.
             self._mesa_ausente(
                 "O Hefesto não respondeu. Ele é um serviço do sistema: se estiver "
                 "desligado, quem o liga de volta é o systemd — no terminal, "
@@ -1329,11 +957,6 @@ class Janela:
         mesa = mesa_viva.mesa_do_estado(state, self.leitor_de_cor.conhecidos(), alvo=self.alvo)
         if not mesa:
             self._mesa_ausente(
-                # A FRASE TEM UM DONO SÓ — `a01_jogar.MESA_VAZIA`. Esta era a
-                # TERCEIRA cópia digitada dela, e ela sobreviveu ao fecho de
-                # 04/09 porque a régua (`test_a01_a_mesa_vazia_fala.py`) só
-                # olhava o `jogar_vivo`. Achada em 11/09 ao aplicar a A3-017,
-                # que encurtou a frase: a cópia ficaria falando sozinha.
                 _a01().MESA_VAZIA,
                 bolinha="○",
                 cor="var(--orange)",
@@ -1357,13 +980,6 @@ class Janela:
                 onda_mic=self._onda(c["uniq"]),
             )
 
-        # A CHAVE DA REMONTAGEM É O QUE O GERADOR ESCREVE NO HTML, e não só quem
-        # está na mesa. O produto reconstrói os cards quando o conjunto
-        # `(index, uniq)` muda (`status_actions._status_card_keys_for`) e faz
-        # diff no resto — a mesma disciplina. Aqui entram também a cor, o nome,
-        # o transporte e o número do jogador, porque os quatro estão ASSADOS no
-        # HTML da linha de identidade: sem eles, a cor que chega três segundos
-        # depois (é uma pergunta ao aparelho, em thread) nunca apareceria.
         chaves = tuple(
             (c["uniq"], c["cor"], c["nome"], c["via"], c["jogador"], c["mascara"])
             for c in mesa
@@ -1380,9 +996,6 @@ class Janela:
         self.custos_tela.append(t_tela)
         self.custos.append(t_ipc + t_tela)
         self.voltas += 1
-        # UM VAZAMENTO NÃO APARECE NO RELÓGIO — aparece na memória. O `remonta`
-        # troca o `innerHTML` do corpo inteiro, e um listener não removido por
-        # remontagem seria invisível numa régua de tempo.
         if self.voltas % 50 == 0:
             try:
                 with open("/proc/self/status", encoding="utf-8") as arq:
@@ -1395,12 +1008,7 @@ class Janela:
         return True
 
     def _onda(self, uniq: str) -> list[int]:
-        """As 14 barras do microfone — histórico deslizante, como o produto.
-
-        Sem captura (`nivel is None`) a onda fica no PISO: uma linha baixa e
-        chata, que é "não está entrando nada". Nunca uma onda animada com o
-        último valor, que leria como som vivo.
-        """
+        """As 14 barras do microfone — histórico deslizante, como o produto."""
         fila = self.ondas.setdefault(uniq, deque([mesa_viva.PISO_DA_ONDA] * 14, maxlen=14))
         nivel = None
         if self.mic is not None:
@@ -1431,9 +1039,6 @@ class Janela:
         )
 
     def _mesa_ausente(self, texto: str, *, bolinha: str, cor: str, conta: str) -> None:
-        # O texto do vazio é a CHAVE do estado vazio: trocar de "daemon calado"
-        # para "mesa vazia com daemon vivo" é uma mudança de tela e tem de
-        # repintar. Os dois são estados diferentes, e o produto já os separa.
         if self.chaves != ("vazio", texto):
             self.ponte.dizer("HEF.vazio", {"texto": texto, "fita": html_da_fita([])})
             self.chaves = ("vazio", texto)
@@ -1459,7 +1064,7 @@ class Janela:
             entrada = next(e for e in conectados if str(e.get("uniq") or "") == c["uniq"])
             cards[c["uniq"]] = self._pacote_do_card(c, entrada, estados[c["uniq"]])
         pacote = {
-            "conta": conta[1:],  # o "●" é o `.bolinha`, elemento próprio
+            "conta": conta[1:],
             "conta_b": conta_b,
             "conta_cor": "var(--green)",
             "bolinha": "●",
@@ -1482,28 +1087,12 @@ class Janela:
                 "e pode não ser a acesa."
             )
         alto_pct = e["alto_pct"]
-        # O ECO DOS TRÊS BOTÕES DE SOM, lido UMA vez: o que ela clicou vence a
-        # leitura do daemon nesta tela, porque esta leva não manda um byte e a
-        # leitura devolveria o estado de antes do clique a cada 100 ms.
         eco = self.eco_mudo.get(c["uniq"], {})
         eco_mic_mudo = (eco["microfone"] == "on") if "microfone" in eco else e["mic_mudo"]
-        # A AUSÊNCIA DE LEITURA NÃO VIRA "ATIVO" (MIC-DA-MESA-ELEICAO-01).
         # `mic_sabemos` é falso quando o `state_full` não trouxe a chave `audio`
-        # — o que acontece no instante seguinte a um hotplug-out, porque o byte
-        # é atributo de INSTÂNCIA do handle e o handle novo ainda não leu nada.
-        # Num contrato em que aceso = está no ar, pintar ATIVO ali seria o
-        # controle que acabou de cair anunciando que está capturando.
-        # O eco do clique dela vence, porque aí houve leitura de verdade.
-        # O DEFAULT SEGURO DE "NÃO SEI" É NÃO SEI (auditoria 02/09/2026). Aqui
-        # se lia `e.get("mic_sabemos", True)`: no dia em que o `estado_do_card`
-        # deixasse de emitir a chave, o card voltaria a mentir CALADO — que é o
-        # mesmo `bool(None)` que esta onda foi curar, com outro nome.
         mic_sabemos = ("microfone" in eco) or e.get("mic_sabemos", False)
         eco_alto_mudo = (eco["alto-falante"] == "on") if "alto-falante" in eco else e["alto_mudo"]
         eixos = {}
-        # SÓ O GIROSCÓPIO. O laço percorria também `("acel", e["acel"])` e
-        # endereçava `.eixo[data-eixo="acel-x"]`, que não existe mais na tela —
-        # três buscas por card devolvendo nulo, caladas, a dez vezes por segundo.
         for eixo, texto, estilo in e["giro"]:
             estilo_d = dict(p.split(":", 1) for p in estilo.split(";") if p)
             eixos[f"giro-{eixo.lower()}"] = {"n": texto, "v": estilo_d}
@@ -1517,12 +1106,6 @@ class Janela:
                 "left": f'{e["touch"][0]}%',
                 "top": f'{e["touch"][1]}%',
                 "vis": e["tocando"],
-                # A PALAVRA DO TOUCHPAD MUDOU DE DONO em 02/09/2026, por decisão
-                # dela (item 15): era `aba02.COM_TOQUE`/`SEM_TOQUE`, duas
-                # constantes do pacote, e passou a ser `sensor_widgets.texto_toques`
-                # — a mesma conta que a GTK faz (`controller_card.py:5079`). Lida
-                # do `aba02`, como `pos` e `cor_da_zona` logo abaixo: este piloto
-                # já lê tudo o mais de lá.
                 "estado": aba02.texto_toques(1 if e["tocando"] else 0),
             },
             "sticks": {
@@ -1550,12 +1133,7 @@ class Janela:
                 "hex": hexa,
                 "title": recado,
             },
-            # O ECO DOS BOTÕES DE SOM ENTRA POR CIMA DA LEITURA, do mesmo jeito
-            # que o da rota já entrava: sem isto o tique seguinte devolveria o
-            # estado do daemon e o clique dela sumiria em 100 ms.
             "mic": {
-                # UM DONO SÓ para o selo, nos dois pintores (auditoria
-                # 02/09/2026): `mesa_viva.selo_do_mic`.
                 "selo": mesa_viva.selo_do_mic(eco_mic_mudo, mic_sabemos),
                 "off": eco_mic_mudo and mic_sabemos,
                 "onda": e["mic_v"],
@@ -1564,16 +1142,7 @@ class Janela:
                 "posse": bool(eco.get("mic_posse", e["mic_posse"])),
             },
             "alto": {
-                # O SONO DO CANAL SAIU DAQUI EM 23/09/2026 — O-ALTO-FALANTE-DIZ-
-                # ATIVO-01: esta linha dizia `· 71 % · Dormindo` com o
-                # alto-falante ligado e parado. Canal parado não é estado a
-                # mostrar; quem diz se ele está calado é o ♪.
                 "estado": "· Não ajustado" if alto_pct is None else f"· {alto_pct} %",
-                # A ONDA DO ALTO-FALANTE NÃO TEM FONTE, e não é omissão: o
-                # produto desenha uma barra de VOLUME (`sensor_widgets.SpeakerBar`),
-                # e nível de saída ninguém lê — o mapa dá `audio.alto_falante`
-                # como "o Hefesto NÃO envia PCM". Fica no piso: uma linha baixa e
-                # chata, que é "não estou medindo nada", e nunca uma onda animada.
                 "onda": [mesa_viva.PISO_DA_ONDA] * 14,
                 "vol_w": "0%" if alto_pct is None else f"{alto_pct}%",
                 "vol_n": "—" if alto_pct is None else str(alto_pct),
@@ -1582,17 +1151,11 @@ class Janela:
                 "rota": self.eco_rota.get(
                     c["uniq"], "nada" if e["rota_nada"] else "jogo"),
             },
-            # OS DOIS INTERRUPTORES NASCEM DESLIGADOS, e é a resposta honesta:
-            # não há campo no perfil, método no IPC nem gate no daemon — grep de
-            # `gyro_enab|motion_enab|sensor_enab` em `src/` devolve ZERO. Dizê-los
-            # LIGADOS (como o mockup faz nos oito) seria a tela afirmando um
-            # estado que ninguém guarda. O que o clique muda é o eco.
             "sw": self.eco_sensor.get(
                 c["uniq"], {"giroscopio": "off", "acelerometro": "off"}
             ),
         }
 
-    # -- a faixa lenta (pactl) --------------------------------------------
     def _tique_lento(self) -> bool:
         if self.args.sem_pactl:
             return True
@@ -1606,15 +1169,6 @@ class Janela:
         try:
             from hefesto_dualsense4unix.integrations.audio_control import volume_da_captura
 
-            # A SAÍDA PADRÃO SAIU DESTA FAIXA em 21/09/2026, e o `pactl info`
-            # com ela: ela servia só ao `rota_pc`, que era o botão «Só no
-            # controle» — e esse botão deixou a fileira. Uma leitura de
-            # processo por tique lento para alimentar um campo que ninguém
-            # mostra é custo sem entrega.
-            #
-            # E O `pactl list sinks short` SAIU EM 23/09/2026, pela mesma razão:
-            # ele servia só à palavra do sono do canal (`Acordado`/`Dormindo`),
-            # que saiu da tela — O-ALTO-FALANTE-DIZ-ATIVO-01.
             novo: dict[str, dict[str, Any]] = {}
             for uniq in alvos:
                 fonte = ""
@@ -1622,17 +1176,6 @@ class Janela:
                     leitura = self.mic.leitura(uniq)
                     fonte = getattr(leitura, "fonte", "") if leitura else ""
                 novo[uniq] = {
-                    # **A FAIXA LENTA NÃO SABE O BYTE, e dizer que sabe é o
-                    # defeito.** Ela lê o SERVIDOR DE SOM (`pactl`), e o que
-                    # respondia aqui — *"a saída padrão é este controle?"* —
-                    # era a camada 1, que acendia o botão «Só no controle». Esse
-                    # botão saiu da fileira em 20/09. O terceiro de hoje é o
-                    # byte 0 do firmware, e o firmware não passa por esta faixa.
-                    #
-                    # Quem responde de verdade é o PRODUTO, pelo campo
-                    # `alto-rota` (`audio_saida.botao_da_rota_aceso`, que lê as
-                    # DUAS camadas). Esta bancada mostra o eco do clique, que é
-                    # o que ela existe para exercitar.
                     "rota_nada": False,
                     "mic_vol": volume_da_captura(fonte=fonte) if fonte else None,
                 }
@@ -1644,20 +1187,14 @@ class Janela:
         self.lento.update(novo)
         return False
 
-    # -- a ponte -----------------------------------------------------------
     def _js(self, script: str) -> None:
-        """JavaScript solto — as mordidas e os cliques sintéticos. Para chamar
-        uma função da página com dado, `self.ponte.dizer`, que serializa."""
+        """JavaScript solto — as mordidas e os cliques sintéticos. Para chamar"""
         self.ponte.rodar(script)
 
     def _gesto(self, o: dict) -> None:
-        """tela → Python, já em JSON. Quem lê a mensagem e RECUSA o que não for
-        objeto JSON é a `PonteDaTela`; o que chega aqui é gesto de verdade."""
+        """tela → Python, já em JSON. Quem lê a mensagem e RECUSA o que não for"""
         gesto = o.get("gesto")
         if gesto == "roteiro":
-            # O PASSO CONFESSANDO — e ele NÃO entra em `self.gestos`: ele é o
-            # instrumento falando de si, não gesto da tela. Contá-lo como gesto
-            # inflaria justamente o número que a prova existe para medir.
             alvo = str(o.get("alvo") or "?")
             if o.get("achou"):
                 self.alvos_vivos_do_roteiro += 1
@@ -1673,14 +1210,7 @@ class Janela:
             return
         if gesto == "interruptor-pintou":
             self.pinturas_do_interruptor += 1
-            # O LADO É LIDO DO DOM, e é a régua da cura de 31/08: sem
-            # `painel.hefesto_ligado` o rádio fica onde o mockup nasceu e a tela
-            # abre a seção errada. `aceso` é o `.on` da fileira; `lado` é o
-            # interruptor de verdade.
             lado = str(o.get("lado") or "?")
-            # A LISTA GUARDA AS VIRADAS, não os valores distintos: com um `set`
-            # de dois elementos "foi e voltou" e "foi e ficou" contam igual, e é
-            # a volta que prova que a tela SEGUE o daemon em vez de travar.
             if not self.lados_do_interruptor or lado != self.lados_do_interruptor[-1]:
                 self.lados_do_interruptor.append(lado)
             print(f'[interruptor] {o.get("valores")} valores escritos · '
@@ -1723,9 +1253,6 @@ class Janela:
             uniq = str(o.get("controle") or "")
             estado = self.eco_mudo.setdefault(uniq, {})
             if o.get("bloco") == "mic-liberar":
-                # Liberar DEVOLVE a posse: o eco apaga o que o 🎙 tinha assumido,
-                # e o próprio botão volta a ficar travado. É o único dos três que
-                # muda o estado de OUTRO botão, e por isso ecoa os dois.
                 estado.pop("microfone", None)
                 estado["mic_posse"] = False
                 resposta = {**o, "bloco": "microfone", "estado": "off", "posse": False}
@@ -1742,7 +1269,6 @@ class Janela:
             self.ponte.dizer("HEF.eco", resposta)
             return
 
-    # -- relato ------------------------------------------------------------
     def relato(self) -> str:
         def resumo(nome: str, v: list[float]) -> str:
             if not v:
@@ -1761,18 +1287,12 @@ class Janela:
         linhas = [
             f"voltas: {self.voltas} · remontagens: {self.remontagens} · "
             f"gestos: {len([g for g in self.gestos if g.get('gesto') != 'pintou'])}",
-            # O ROTEIRO CONFESSA, e esta linha é a cura do achado de 08/09: até
-            # aqui um passo que batia em `null` sumia sem uma palavra, e a prova
-            # dava verde sobre dois botões que ela mandou tirar em 30/08.
             f"roteiro: {self.alvos_vivos_do_roteiro} alvo(s) clicado(s) de "
             f"{len(ROTEIRO_DA_PROVA_DE_GESTO)}"
             + (f" · ALVOS MORTOS: {', '.join(self.alvos_mortos_do_roteiro)}"
                if self.alvos_mortos_do_roteiro
                else " · nenhum alvo morto"),
             f"valores escritos por pintura: {sorted(set(self.valores)) or 'NENHUM'}",
-            # O INTERRUPTOR TEM RELATO PRÓPRIO, e ele é a régua desta leva. Uma
-            # prova que só contasse "gestos" não distinguiria o clique que chegou
-            # do clique que APLICOU — e é essa a diferença que ela pediu.
             f"interruptor: {self.pinturas_do_interruptor} pintura(s) · "
             f"{self.cliques_do_roteiro} clique(s) sintético(s) → "
             f"{len([g for g in self.gestos if g.get('gesto') == 'modo'])} gesto(s) "
@@ -1796,10 +1316,6 @@ class Janela:
                 f"orçamento: {med / TIQUE_MS * 100:.1f}% dos {TIQUE_MS} ms do tique rápido · "
                 f"{med / 500 * 100:.1f}% dos 500 ms"
             )
-        # A RÉGUA POR BLOCO, e ela é o que uma volta só esconde: uma régua de
-        # ontem rodou o tique UMA VEZ e não viu uma regressão que só aparecia em
-        # 181 segundos. Aqui o custo é cortado em blocos de 300 voltas, e uma
-        # deriva aparece como a mediana subindo de bloco para bloco.
         if len(self.custos) >= 600:
             passo = 300
             blocos = []
@@ -1854,12 +1370,6 @@ def main() -> int:
         j.mic.stop()
     print("\n" + j.relato())
 
-    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
-    # guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, estendida às cinco
-    # na costura da ONDA C. O defeito que ela cobra é o de rc=0 sobre janela
-    # vazia; aqui a página existe, e a guarda é o que impede o dia em que ela
-    # deixar de existir de passar calado. O `--sem-ponte` é a exceção e é a
-    # MORDIDA: ele desliga a pintura de propósito.
     if j.voltas == 0 and not args.sem_ponte:
         print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1

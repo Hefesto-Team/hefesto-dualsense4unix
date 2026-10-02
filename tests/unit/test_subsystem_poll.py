@@ -1,13 +1,4 @@
-"""Testes unitários do subsystem poll (isolamento de BatteryDebouncer e evdev).
-
-Prova que:
-  - BatteryDebouncer.should_emit retorna True na primeira leitura.
-  - BatteryDebouncer.should_emit respeita min-interval.
-  - BatteryDebouncer.should_emit dispara em delta >= 1%.
-  - evdev_buttons_once retorna frozenset vazio se evdev indisponível.
-  - evdev_buttons_once retorna frozenset vazio em exceção.
-  - PollSubsystem.is_enabled é sempre True.
-"""
+"""Testes unitários do subsystem poll (isolamento de BatteryDebouncer e evdev)."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -30,25 +21,21 @@ class TestBatteryDebouncer:
     def test_min_interval_bloqueia(self) -> None:
         db = BatteryDebouncer()
         db.mark_emitted(80, 100.0)
-        # now = 100.05 → interval < 0.1s
         assert db.should_emit(80, 100.05) is False
 
     def test_delta_dispara(self) -> None:
         db = BatteryDebouncer()
         db.mark_emitted(80, 0.0)
-        # delta = 1 (>= BATTERY_DELTA_THRESHOLD_PCT), interval >= min
         assert db.should_emit(79, 1.0) is True
 
     def test_sem_delta_sem_disparo(self) -> None:
         db = BatteryDebouncer()
         db.mark_emitted(80, 0.0)
-        # delta = 0, elapsed = 1s < BATTERY_DEBOUNCE_SEC
         assert db.should_emit(80, 1.0) is False
 
     def test_debounce_sec_dispara_mesmo_sem_delta(self) -> None:
         db = BatteryDebouncer()
         db.mark_emitted(80, 0.0)
-        # elapsed >= BATTERY_DEBOUNCE_SEC → dispara
         assert db.should_emit(80, BATTERY_DEBOUNCE_SEC + 0.1) is True
 
     def test_mark_emitted_atualiza_estado(self) -> None:
@@ -61,7 +48,7 @@ class TestBatteryDebouncer:
 class TestEvdevButtonsOnce:
     def _make_daemon_sem_evdev(self) -> MagicMock:
         d = MagicMock()
-        d.controller = MagicMock(spec=[])  # sem _evdev
+        d.controller = MagicMock(spec=[])
         return d
 
     def _make_daemon_com_evdev(self, available: bool, snapshot_result: object) -> MagicMock:
@@ -109,9 +96,9 @@ class TestPollSubsystem:
     async def test_start_noop(self) -> None:
         subsystem = PollSubsystem()
         ctx = MagicMock()
-        await subsystem.start(ctx)  # não lança
+        await subsystem.start(ctx)
 
     @pytest.mark.asyncio
     async def test_stop_noop(self) -> None:
         subsystem = PollSubsystem()
-        await subsystem.stop()  # não lança
+        await subsystem.stop()

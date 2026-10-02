@@ -44,8 +44,6 @@ PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 TELA = "point-and-click"  # (noqa-acento) id da pop-up
 TELA_IRMA = "definicoes-mouse"  # (noqa-acento) id da pop-up
 
-#: Um controle de mentira, na faixa sintética da casa — há dois portões de
-#: anonimato nesta árvore e eles não perdoam.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "bt",
          "battery_pct": 95, "is_primary": True, "inputs": {}, "audio": {},
@@ -77,11 +75,7 @@ class _PonteMuda:
 
 
 def _publicado() -> str:
-    """A página que o PRODUTO renderiza — e é ela que tem de estar certa.
-
-    A bancada não serve aqui: o piloto lê `interface/paginas/`, e uma tela
-    endereçada só no `mockup/` é uma tela que continua muda para quem clica.
-    """
+    """A página que o PRODUTO renderiza — e é ela que tem de estar certa."""
     import onde
 
     return onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
@@ -98,14 +92,7 @@ def _linhas_da_tela() -> list[str]:
 
 
 def _perfil(**campos):
-    """Um `Profile` DE VERDADE — o do esquema, nunca um dublê mais frouxo.
-
-    A RAZÃO É MEDIDA E É DESTA CASA: em 06/09/2026 um dublê de device com a
-    assinatura antiga transformou um `TypeError` em "o produto falhou ao
-    aplicar". Aqui o perfil é o pydantic do produto: se um campo desta frente
-    não couber no esquema, a régua estoura na hora em vez de gravar um
-    dicionário que o disco recusaria.
-    """
+    """Um `Profile` DE VERDADE — o do esquema, nunca um dublê mais frouxo."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     return Profile(name="regua", match={"type": "manual"}, **campos)
@@ -113,12 +100,7 @@ def _perfil(**campos):
 
 @pytest.fixture
 def bancada(monkeypatch):
-    """O pacote da 06 com um disco de mentira e a trava sempre limpa.
-
-    A LIMPEZA É OBRIGATÓRIA: `_MEXENDO` é estado de MÓDULO, e um teste que a
-    deixasse suja contaminaria o seguinte — o vazamento seria justamente o
-    defeito que estes casos existem para medir.
-    """
+    """O pacote da 06 com um disco de mentira e a trava sempre limpa."""
     import pacotes
     from pacotes import a06_navegacao as mod
     from pacotes import perfil
@@ -128,9 +110,6 @@ def bancada(monkeypatch):
     disco: dict[str, object] = {}
 
     def _gravar(prof, **_):
-        # O DISCO REVALIDA, e é de propósito: `model_copy` do pydantic **não**
-        # valida, então um dublê que apenas guardasse o objeto seria mais
-        # frouxo que o `save_profile` de verdade, que serializa e relê.
         disco[prof.name] = Profile.model_validate(
             json.loads(prof.model_dump_json()))
 
@@ -148,12 +127,7 @@ def bancada(monkeypatch):
 
 
 def _forma(mod, perfil_dict, **trocas) -> dict[str, str]:
-    """A `forma` que o piloto recolheria de `#point-and-click`, com trocas.
-
-    Ela parte do que a tela PINTADA mostra — que é o perfil —, porque é esse o
-    estado em que o dedo dela encontra a tela. Uma forma montada do desenho
-    mede o instante anterior ao primeiro tique, e é o que o caso da trava usa.
-    """
+    """A `forma` que o piloto recolheria de `#point-and-click`, com trocas."""
     mostra = mod._linhas_dos_botoes(perfil_dict)
     fora = {b: mostra[f"{mod.PREFIXO_DA_ACAO}{b}"] for b in _linhas_da_tela()}
     fora.update(trocas)
@@ -190,9 +164,6 @@ def _trocas_que_o_produto_atende(mod) -> dict[str, str]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# 1 — O ENDEREÇO, na página que o produto renderiza
-# ---------------------------------------------------------------------------
 def test_toda_linha_que_e_botao_do_produto_tem_endereco():
     """Cada `<select>` desta tela cujo assunto é botão do produto ENDEREÇA.
 
@@ -253,16 +224,7 @@ def test_as_duas_telas_falam_do_mesmo_campo_pelo_mesmo_endereco():
 
 
 def test_o_guardar_pede_a_forma_da_propria_pop_up():
-    """Sem `data-hef-forma`, o Guardar não sabe o que está escolhido.
-
-    E o `id` pedido tem de ser o DA PRÓPRIA POP-UP: o piloto recorta a
-    varredura por `getElementById`, e é isso que impede as duas telas que
-    escrevem o mesmo campo de recolherem a forma uma da outra. Um `id` trocado
-    faria o Guardar do estilo gravar as 22 linhas da tela vizinha.
-
-    A MORDIDA: tire o `data-hef-forma` do Guardar, ou aponte-o para
-    `definicoes-mouse` — este caso reprova nos dois casos.
-    """
+    """Sem `data-hef-forma`, o Guardar não sabe o que está escolhido."""
     tela = _recorte(_publicado(), TELA)
     guardar = [a for a in re.findall(r"<a[^>]*>", tela)
                if 'data-gesto="guardar-ponto"' in a]
@@ -274,14 +236,7 @@ def test_o_guardar_pede_a_forma_da_propria_pop_up():
 
 
 def test_o_sair_desta_tela_tem_nome():
-    """O botão de fechar e o `Cancelar` avisam o Python de que ela desistiu.
-
-    São DOIS, e a razão é a mesma que deu nome aos da tela irmã em 02/09: a
-    trava das escolhas pendentes só se solta quando alguém diz que houve
-    desistência.
-
-    A MORDIDA: tire o `data-gesto="fechar-ponto"` de um dos dois e regenere.
-    """
+    """O botão de fechar e o `Cancelar` avisam o Python de que ela desistiu."""
     tela = _recorte(_publicado(), TELA)
     quantas = tela.count('data-gesto="fechar-ponto"')
     assert quantas == 2, (
@@ -290,9 +245,6 @@ def test_o_sair_desta_tela_tem_nome():
         "desistir")
 
 
-# ---------------------------------------------------------------------------
-# 2 — O CLIQUE: o que ela escolhe chega ao disco, e volta à tela
-# ---------------------------------------------------------------------------
 def test_a_escolha_dela_chega_ao_perfil_e_ao_device(bancada):
     """**A MORDIDA DESTA FRENTE.** Ela troca as linhas do estilo; o perfil muda.
 
@@ -327,12 +279,7 @@ def test_a_escolha_dela_chega_ao_perfil_e_ao_device(bancada):
 
 
 def test_a_tela_volta_a_mostrar_o_que_gravou(bancada):
-    """Gravar sem reler é meio gesto: o tique seguinte tem de dizer o mesmo.
-
-    A MORDIDA: tire o `campo=` das listas desta tela em `aba06.py` — a pintura
-    deixa de alcançá-las, e este caso reprova nomeando o endereço que o pacote
-    emite para o vazio.
-    """
+    """Gravar sem reler é meio gesto: o tique seguinte tem de dizer o mesmo."""
     ctx, mod, disco = bancada
     p = _PonteMuda()
     trocas = _trocas_que_o_produto_atende(mod)
@@ -369,8 +316,6 @@ def test_o_guardar_junta_e_nao_substitui(bancada):
 
     ctx, mod, disco = bancada
     p = _PonteMuda()
-    # UMA ESCOLHA DE FORA DESTA TELA, escolhida PERGUNTANDO: um botão que a
-    # pop-up não endereça, com um valor diferente do de fábrica dele.
     de_fora = next(b for b in acoes.BOTOES if b not in _linhas_da_tela())
     outro = next(t for t in acoes.ACOES
                  if t != acoes.padrao()[de_fora] and t not in acoes.SEM_ATENDENTE)
@@ -419,20 +364,8 @@ def test_voltar_uma_linha_ao_de_fabrica_tira_do_perfil(bancada):
         "estado de um perfil que herda")
 
 
-# ---------------------------------------------------------------------------
-# 3 — AS RECUSAS, e todas DIZEM
-# ---------------------------------------------------------------------------
 def test_a_tela_que_ainda_nao_falou_nao_grava(bancada):
-    """A trava contra o desenho — e aqui ela é mais larga que a da tela irmã.
-
-    O desenho desta pop-up **não é o de fábrica**: ele crava a receita do
-    estilo. Logo um clique nos 100 ms entre a página carregar e o primeiro
-    tique pintar gravaria trocas que ela não pediu. Sem nenhuma linha em
-    `_MEXENDO`, qualquer divergência quer dizer *o piloto ainda não falou*.
-
-    A MORDIDA: apague o bloco `if divergem and not _MEXENDO` do `guardar_ponto`
-    — este caso passa a ver a escolha do DESENHO no disco.
-    """
+    """A trava contra o desenho — e aqui ela é mais larga que a da tela irmã."""
     ctx, mod, disco = bancada
     p = _PonteMuda()
     do_desenho = dict(_forma(mod, disco["regua"].model_dump()))
@@ -445,16 +378,7 @@ def test_a_tela_que_ainda_nao_falou_nao_grava(bancada):
 
 
 def test_sem_perfil_ativo_ele_recusa_dizendo(bancada):
-    """Zero controle, zero perfil: a recusa nomeia o que falta.
-
-    É a ordem dela de 11/09 — *"a ideia é que todas as features mesmo do app
-    funcionem nao so pra mim mas pra qualquer outro user"*  (noqa-acento:
-    citação literal dela): o gesto não pode depender de haver controle na mesa,
-    e com perfil nenhum ele diz o caminho.
-
-    A MORDIDA: tire a chamada a `_perfil_ativo_ou_recusa` — este caso vê um
-    `KeyError` cru em vez da frase.
-    """
+    """Zero controle, zero perfil: a recusa nomeia o que falta."""
     import pacotes
 
     _ctx, mod, disco = bancada
@@ -467,11 +391,7 @@ def test_sem_perfil_ativo_ele_recusa_dizendo(bancada):
 
 
 def test_uma_opcao_que_o_produto_nao_conhece_e_recusada(bancada):
-    """Rótulo que não é do produto = o desenho andou sem o gerador.
-
-    A MORDIDA: engula o `nao_reconhecidas` e o rótulo inventado vira uma linha
-    a menos, calada, no perfil dela.
-    """
+    """Rótulo que não é do produto = o desenho andou sem o gerador."""
     ctx, mod, disco = bancada
     alvo = _linhas_da_tela()[0]
     with pytest.raises(ValueError) as erro:
@@ -483,11 +403,7 @@ def test_uma_opcao_que_o_produto_nao_conhece_e_recusada(bancada):
 
 
 def test_o_cancelar_larga_a_escolha_pendente(bancada):
-    """Fechar é o "sair" — a trava não pode ficar presa depois da desistência.
-
-    A MORDIDA: troque o corpo de `fechar_ponto` por `return None` e a linha
-    abandonada continua sendo oferecida ao Guardar seguinte.
-    """
+    """Fechar é o "sair" — a trava não pode ficar presa depois da desistência."""
     ctx, mod, _disco = bancada
     p = _PonteMuda()
     botao, rotulo = next(iter(_trocas_que_o_produto_atende(mod).items()))

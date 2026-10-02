@@ -1,27 +1,4 @@
-"""O microfone pelo rádio pergunta ao driver antes de subir — B1 da O-PRODUTO.
-
-``O-PRODUTO-EM-QUALQUER-MAQUINA-01`` (28/09/2026), a L1 do estudo
-``2026-09-27-o-basico-e-os-jogos/03-qualquer-maquina.md``: o microfone nasce
-ligado, e sem o ``0003`` do ``hid-playstation`` o driver de fábrica lê o quadro
-de áudio como gamepad — desliga o microfone sozinho e MEXE O CURSOR da pessoa
-(medido aqui em 10/09/2026). O ``0003`` não está no Linux, e numa máquina nova
-ele só carrega depois do primeiro reinício, se carregar.
-
-A cura: o ``0003`` ganha a marca ``mic_frames_ignored`` (só de leitura), e a
-ponte do rádio só sobe para o nó que o driver ``playstation`` lê se o módulo
-tiver a marca — ou for o ``0003`` de antes dela, reconhecido pelo
-``srcversion``. Sem isso, ``BtMicSubsystem.motivo`` diz
-``driver_sem_a_guarda_do_audio``.
-
-Nenhum teste daqui lê o ``/sys`` da máquina: o do rádio e o do módulo são de
-mentira, num ``tmp_path``, e nenhum processo roda.
-
-A MORDIDA, feita em 28/09/2026: trocar a primeira linha de ``alvos()``
-(``nos = self._os_que_o_driver_deixa(nos)``) por nada faz
-``test_sem_a_marca_a_ponte_do_radio_nao_sobe`` e
-``test_a_env_nao_passa_por_cima_do_driver`` reprovarem — a ponte sobe sobre o
-driver de fábrica. Devolvido, md5 conferido.
-"""
+"""O microfone pelo rádio pergunta ao driver antes de subir — B1 da O-PRODUTO."""
 
 from __future__ import annotations
 
@@ -36,8 +13,6 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 
-#: O `subprocess` de verdade, guardado ANTES da fixture que recusa processo: só
-#: o doctor (bash, sem aparelho, com o sysfs de mentira) roda por ele, na seção 3.
 _RUN_DE_VERDADE = subprocess.run
 _POPEN_DE_VERDADE = subprocess.Popen
 
@@ -92,11 +67,6 @@ def _no(nome: str, uniq: str) -> bt.NoDualSenseBT:
     return bt.NoDualSenseBT(caminho=f"/dev/{nome}", uniq=uniq, produto=0x0CE6)
 
 
-# ---------------------------------------------------------------------------
-# 1. A pergunta ao módulo
-# ---------------------------------------------------------------------------
-
-
 class TestOModuloTemAGuarda:
     def test_com_a_marca_sim(self, tmp_path: Path) -> None:
         assert bt_mic.o_driver_guarda_o_audio(str(_sys_do_modulo(tmp_path, marca="Y")))
@@ -147,11 +117,6 @@ class TestQuemLeONo:
         assert not bt_mic.o_driver_le_este_no("", str(raiz))
 
 
-# ---------------------------------------------------------------------------
-# 2. O subsystem de verdade, com o sysfs de mentira
-# ---------------------------------------------------------------------------
-
-
 class _GerenciadorDeMentira:
     """Publica o que o real publica: `pontes` por caminho, com o `no` dentro."""
 
@@ -181,8 +146,6 @@ def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(bt, "nos_dualsense_bluetooth", lambda: list(nos))
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._gerenciador = _GerenciadorDeMentira()
-    # O cabo, os órfãos, o rótulo e a fonte padrão falam com o servidor de som:
-    # ficam fora desta régua, que mede só quem ganha ponte no rádio.
     for nome in (
         "_reconciliar_o_cabo", "_varrer_os_orfaos", "_renomear_os_canais_velhos",
     ):
@@ -260,10 +223,6 @@ def test_no_que_o_playstation_nao_le_segue_como_antes(
     assert sub.motivo == ""
 
 
-# ---------------------------------------------------------------------------
-# 3. O doctor faz a mesma pergunta, com a cura na frente
-# ---------------------------------------------------------------------------
-
 DOCTOR = Path(__file__).resolve().parents[2] / "scripts" / "doctor.sh"
 KERNEL_CONFERIDO = "7.1.5-76070105-generic"
 
@@ -303,9 +262,7 @@ def _doctor_hidp(
 
 
 class TestODoctorPerguntaAoDriver:
-    """A MORDIDA: trocar o `pass` da guarda por `warn` (ou tirar o reconhecimento
-    do `srcversion`) reprova os dois primeiros; tirar o ramo do «staged» leva o
-    terceiro ao conselho de instalar, e ele reprova."""
+    """A MORDIDA: trocar o `pass` da guarda por `warn` (ou tirar o reconhecimento"""
 
     def test_com_a_marca_passa(self, tmp_path: Path) -> None:
         saida = _doctor_hidp(tmp_path, modulo=_sys_do_modulo(tmp_path, marca="Y"), staged=True)

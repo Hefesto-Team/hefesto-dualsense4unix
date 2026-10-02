@@ -13,11 +13,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("triggers_actions: os gatilhos na janela")
 
 import sys
@@ -25,10 +20,6 @@ import types
 from typing import Any
 
 import pytest
-
-# --- Fakes headless de widgets Gtk usados pela aba Triggers ------------
-# Módulo-level para servirem tanto ao stub de CI (_install_gi_stubs)
-# quanto ao patch hermético dos bindings do módulo em _build_mixin.
 
 
 class _Orientation:
@@ -120,9 +111,6 @@ class _Scale:
 class _Label:
     def __init__(self, *_a: Any, **kw: Any) -> None:
         self._text = kw.get("label", "")
-        # Espelham o que `_build_param_row` configura no rótulo do slider: uma
-        # linha só, com reticências se não couber (S3 — a coluna encolheu para
-        # 150px e "Intensidade início (1-8)" não pode voltar a quebrar linha).
         self.line_wrap: bool | None = None
         self.ellipsize: Any = None
         self.tooltip: str | None = None
@@ -150,30 +138,18 @@ class _Label:
 
 
 def _install_gi_stubs() -> None:
-    # Se PyGObject real está disponível, não fazemos nada (integração real).
-    # GATE-SKIP-MASK-01: a checagem antiga só valia se "gi" JÁ estivesse em
-    # sys.modules — na coleta a fio frio o stub entrava mesmo com GTK real
-    # instalado e envenenava o processo inteiro.
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
             import gi
 
             gi.require_version("Gtk", "3.0")
-            # CI-TYPELIB-PARCIAL-01: checar só o Gtk deixava passar um `gi`
-            # PELA METADE. No runner do GitHub o Gtk importa e o Pango não
-            # ("unknown location"), então este early-return dispensava os
-            # stubs e o import de `triggers_actions` — que usa Pango —
-            # estourava na COLETA, derrubando a suíte e reprovando o release.
-            # A pergunta certa não é "existe gi?", é "existe TUDO o que o
-            # módulo sob teste importa?".
             from gi.repository import GLib, Gtk, Pango  # noqa: F401
 
             return
         except Exception:  # pragma: no cover — ambientes sem GTK
             pass
 
-    # Reutiliza módulos stub se já criados por testes anteriores (merge de atributos).
     gi_mod = sys.modules.get("gi") or types.ModuleType("gi")
     gi_mod.require_version = lambda _n, _v: None  # type: ignore[attr-defined]
     repo_mod = sys.modules.get("gi.repository") or types.ModuleType(
@@ -186,14 +162,12 @@ def _install_gi_stubs() -> None:
         "gi.repository.GLib"
     )
 
-    # Registrar classes mínimas adicionais (idempotente: só adiciona se ausente).
     for cls_name in (
         "Builder", "Window", "Button", "ToggleButton", "ComboBoxText",
         "Switch", "TextView", "TextBuffer",
     ):
         if not hasattr(gtk_mod, cls_name):
             setattr(gtk_mod, cls_name, type(cls_name, (), {}))
-    # Sempre sobrescrevemos estes com as fakes funcionais desta suite (não são placeholders).
     gtk_mod.Orientation = _Orientation  # type: ignore[attr-defined]
     gtk_mod.PositionType = _PositionType  # type: ignore[attr-defined]
     gtk_mod.Adjustment = _Adjustment  # type: ignore[attr-defined]
@@ -205,8 +179,6 @@ def _install_gi_stubs() -> None:
     glib_mod.idle_add = lambda fn, *a, **kw: fn(*a, **kw)  # type: ignore[attr-defined]
     glib_mod.source_remove = lambda *_a, **_kw: None  # type: ignore[attr-defined]
 
-    # `triggers_actions` importa Pango junto de Gtk/GLib; sem o stub o import
-    # do módulo sob teste falha mesmo com os outros dois no lugar.
     pango_mod = sys.modules.get("gi.repository.Pango") or types.ModuleType(
         "gi.repository.Pango"
     )
@@ -230,34 +202,9 @@ _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import triggers_actions
 
-# --- Fakes de widgets GTK ---------------------------------------------
-
-
-# GATILHO-NÃO-PERDIDO-01 (25/08/2026): aqui morava `_FakeComboBox`, e ele saiu
-# junto com o último uso — o id órfão `trigger_{side}_preset_combo` em
-# `_mk_widgets`. A aba não tem mais combo nenhum desde a
-# FEAT-DSX-COMBO-TO-SEGMENTED-01; guardar um dublê de combo ao lado do de
-# segmentado convidava o próximo teste a escolher o errado, que é exatamente o
-# que aconteceu com os três testes de preset. Apagar não faz ninguém repetir
-# trabalho: o `_FakeSegmentedSelector` cobre a mesma API por-ID, e cobre melhor
-# — ele sabe RECUSAR.
-
 
 class _FakeSegmentedSelector:
-    """Stub do SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01).
-
-    Espelha o subconjunto da API por-ID usado pela aba Triggers — **inclusive
-    a EMISSÃO** de "changed" em ``set_active_id``, que é a semântica do widget
-    real (``app/widgets/segmented_selector.set_active_id``: emite quando o id
-    muda, no-op quando não muda).
-
-    MESA-CHEIA-08 (13/08): o corpo deste método era ``self._active_id = the_id``
-    e nada mais. Com ele mudo, o teste do "Desligar" logo abaixo passava com o
-    defeito de pé — o primeiro degrau da cadeia (o "changed" que agenda o
-    live-preview de 300 ms) simplesmente não existia no dublê. **Um teste que
-    passa com a cura arrancada não testa nada**, e este arquivo era o exemplo
-    dessa regra.
-    """
+    """Stub do SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01)."""
 
     def __init__(self, wrap: bool = False) -> None:
         self.wrap = wrap
@@ -279,9 +226,9 @@ class _FakeSegmentedSelector:
 
     def set_active_id(self, the_id: str) -> None:
         if the_id == self._active_id:
-            return  # no-op: o widget real só emite quando o id MUDA
+            return
         if all(iid != the_id for iid, _label in self._items):
-            return  # id inexistente é no-op no widget real
+            return
         self._active_id = the_id
         for sinal, cb in list(self.handlers):
             if sinal == "changed":
@@ -301,16 +248,7 @@ class _FakeSegmentedSelector:
 
 
 class _Relogio:
-    """O ``GLib.timeout_add`` que GUARDA o callback em vez de engoli-lo.
-
-    MESA-CHEIA-08, mordida 2: o dublê era ``lambda *_a, **_kw: 0``, e o
-    defeito do "Desligar" é TEMPORAL — acontece 300 ms depois do gesto, nunca
-    na chamada. Com o relógio engolido, o teste olhava só o instante
-    em que nada de errado acontece.
-
-    ``source_remove`` tira o pendente do mapa: é assim que se distingue
-    "cancelou o preview" de "o preview vai disparar e ninguém viu".
-    """
+    """O ``GLib.timeout_add`` que GUARDA o callback em vez de engoli-lo."""
 
     def __init__(self) -> None:
         self.pendentes: dict[int, tuple[Any, tuple[Any, ...]]] = {}
@@ -347,33 +285,11 @@ class _FakeStatusBar:
 
 
 def _mk_widgets() -> dict[str, Any]:
-    # GATE-SKIP-MASK-01: fakes headless direto (nada de gi/sys.modules) —
-    # um Gtk.Box REAL rejeitaria o _FakeSegmentedSelector no pack_start.
     widgets: dict[str, Any] = {}
     for side in ("left", "right"):
-        # FEAT-DSX-COMBO-TO-SEGMENTED-01: o combo de modo virou um slot (GtkBox)
-        # onde install_triggers_tab empacota o SegmentedSelector.
         widgets[f"trigger_{side}_mode_slot"] = _Box()
         widgets[f"trigger_{side}_desc"] = _Label()
         widgets[f"trigger_{side}_params_box"] = _Box()
-        # GATILHO-NÃO-PERDIDO-01 (25/08/2026): aqui morava
-        # `trigger_{side}_preset_combo` — **um id que o glade não tem e que o
-        # produto nunca pede**. Sobrou da FEAT-DSX-COMBO-TO-SEGMENTED-01, que
-        # trocou o combo do preset por um segmentado empacotado num SLOT
-        # (`trigger_{side}_preset_slot`, `triggers_actions.py:146`): a troca foi
-        # feita no seletor de MODO e esquecida no de PRESET.
-        #
-        # O preço não era cosmético. O órfão era um `_FakeComboBox`, cujo
-        # `set_active_id` aceita QUALQUER id; o `_FakeSegmentedSelector` — como
-        # o widget real — RECUSA id que não está entre os itens. Três testes
-        # pegavam o órfão, mandavam "rampa_crescente" nele e ficavam verdes
-        # **sem que a aba tivesse publicado esse preset**. É "o dublê que só
-        # sabe passar" (COMO-REGER-AGENTES.md, A2) dentro do arquivo cuja
-        # própria docstring de dublê cita essa regra.
-        #
-        # Com o SLOT no lugar do órfão, o segmentado de preset também é
-        # empacotado e mostrado, como o de modo — e os testes passam a falar
-        # com `self._trigger_preset[side]`, que é o widget que a aba wira.
         widgets[f"trigger_{side}_preset_slot"] = _Box()
         widgets[f"trigger_{side}_preset_row"] = _Box()
     widgets["status_bar"] = _FakeStatusBar()
@@ -381,19 +297,13 @@ def _mk_widgets() -> dict[str, Any]:
 
 
 class _FakeTriggersMixin:
-    # Herdado do mixin real (atributo de classe frozenset).
     _MODES_COM_PRESET = triggers_actions.TriggersActionsMixin._MODES_COM_PRESET
 
     def __init__(self) -> None:
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
-        # Z2-1 (24/08/2026): o alvo "Todos" precisa existir explicitamente —
-        # sem isso `alvo_de_edicao` devolve DESCONHECIDO (P3) e a escrita no
-        # rascunho é recusada. Testes que editam um controle específico
-        # sobrescrevem este atributo (ver `mixin._edit_target_uniq = ...`).
         self._edit_target_uniq = None
-        # M1: guard renomeado por mixin (era _guard_refresh compartilhado).
         self._triggers_guard_refresh = False
         self._trigger_preset_applying = False
         self._trigger_param_widgets = {"left": {}, "right": {}}
@@ -403,11 +313,6 @@ class _FakeTriggersMixin:
         return self._widgets.get(key)
 
 
-#: O corpo que o daemon devolve quando o byte SAIU num destino
-#: (`_destinos_por_uniq`, MESA-CHEIA-09). O dublê precisa devolver um destino
-#: de verdade: com as duas listas vazias a aba diz, corretamente, que nada
-#: aconteceu (T3) — e todo teste daqui que só quer "o pedido saiu" passaria a
-#: medir a frase da mesa vazia sem querer.
 _CORPO_APLICADO: dict[str, Any] = {"status": "ok", "aplicado_em": ["02:fe:00:00:00:33"]}
 
 
@@ -420,16 +325,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
         calls.append((side, mode, list(params)))
         return True, None, _CORPO_APLICADO
 
-    # T3 (25/08/2026): a aba trocou os invólucros que estreitavam a resposta
-    # para `bool` pelos `_detalhado`, que entregam o CORPO do daemon. O dublê
-    # segue o produto — se ele continuasse dublando `trigger_set_checked`, o
-    # `monkeypatch.setattr` explodiria em atributo inexistente, que é como esta
-    # troca se anuncia em vez de passar batida.
     monkeypatch.setattr(triggers_actions, "trigger_set_detalhado", fake_trigger_set)
 
     # R-19: o botão "Desligar" passou a usar `trigger.reset` (LIBERA a trava)
-    # em vez de mandar outro `trigger.set` (que a RE-ARMAVA).
-    # ABAS-06: o "Desligar" passou a levar o `uniq` do alvo, como o "Aplicar".
     resets: list[tuple[str | None, str | None]] = []
 
     def fake_trigger_reset(
@@ -441,15 +339,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
     monkeypatch.setattr(
         triggers_actions, "trigger_reset_detalhado", fake_trigger_reset
     )
-    # FEAT-DSX-COMBO-TO-SEGMENTED-01: install_triggers_tab instancia o
-    # SegmentedSelector real (precisa de display). Troca pelo stub headless.
     monkeypatch.setattr(
         triggers_actions, "SegmentedSelector", _FakeSegmentedSelector
     )
-    # GATE-SKIP-MASK-01: em vez de envenenar sys.modules["gi"], trocamos os
-    # bindings Gtk/GLib DO MÓDULO em teste pelos fakes headless. O
-    # monkeypatch desfaz tudo no teardown — os demais testes do processo
-    # seguem vendo o PyGObject real.
     monkeypatch.setattr(
         triggers_actions,
         "Gtk",
@@ -478,25 +370,6 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
     inst._trigger_set_calls = calls  # type: ignore[attr-defined]
     inst._trigger_reset_calls = resets  # type: ignore[attr-defined]
 
-    # Esta tupla é uma lista de nomes A MANTER À MÃO: o dublê copia UM A UM os
-    # métodos reais do mixin. Esquecer um nome aqui, ou renomear o método no
-    # fonte sem mexer aqui, quebra a suíte — e o modo de falha de cada descuido
-    # é DIFERENTE. Medido nesta árvore em 14/08/2026, porque três agentes já
-    # descreveram esta linha de três jeitos incompatíveis, cada um tendo rodado
-    # um experimento diferente sem saber do outro:
-    #
-    #   nome FORA da tupla, método no fonte -> AttributeError no primeiro uso,
-    #       dentro do código de produção (`triggers_actions.py`, no
-    #       `_reset_trigger`). `_FakeTriggersMixin` não tem `__getattr__` e
-    #       `_reset_trigger` não engole exceção: 6 failed, 26 passed.
-    #   método FORA do fonte, nome na tupla -> KeyError aqui embaixo, no
-    #       `__dict__[name]`, ainda na MONTAGEM do dublê — então cai todo teste
-    #       que chama `_build_mixin`: 29 failed, 3 passed.
-    #
-    # Nenhum dos dois é silencioso, e é por isso que esta tupla não precisa de
-    # portão próprio. A afirmação de que um descuido aqui "passaria por
-    # AttributeError silencioso" foi medida e é FALSA — fica escrito para a
-    # próxima pessoa não pagar a medição pela quarta vez.
     for name in (
         "install_triggers_tab",
         "_refresh_triggers_from_draft",
@@ -537,9 +410,6 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
     return inst
 
 
-# --- Testes -----------------------------------------------------------
-
-
 def test_install_triggers_tab_popula_combo_de_modos(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -551,7 +421,6 @@ def test_install_triggers_tab_popula_combo_de_modos(
     combo_left = mixin._trigger_mode["left"]
     assert combo_left.get_active_id() == "Off"
     assert len(combo_left._items) == len(PRESETS)
-    # O handler "changed" foi conectado no código (não mais via Glade).
     assert any(sig == "changed" for sig, _cb in combo_left.handlers)
 
 
@@ -566,9 +435,6 @@ def test_on_trigger_mode_changed_atualiza_draft(
     mixin.on_trigger_left_mode_changed(combo)
 
     assert mixin.draft.triggers.left.mode == "Rigid"
-    # BUG-TRIGGERS-DRAFT-STALE-01: o draft já nasce com os defaults dos
-    # sliders (antes gravava () — "Salvar Perfil" antes do live-preview
-    # persistia o gatilho zerado). Rigid: position=5, force=200.
     assert mixin.draft.triggers.left.params == (5, 200)
 
 
@@ -583,7 +449,6 @@ def test_on_trigger_mode_changed_guard_refresh_noop(
 
     mixin.on_trigger_left_mode_changed(combo)
 
-    # Draft não mudou porque guard estava ativo.
     assert mixin.draft.triggers.left.mode == "Off"
 
 
@@ -596,7 +461,6 @@ def test_apply_trigger_rigid_persiste_draft_e_chama_ipc(
     combo.set_active_id("Rigid")
     mixin.on_trigger_left_mode_changed(combo)
 
-    # Forçar valores de sliders via _trigger_param_widgets.
     widgets = mixin._trigger_param_widgets["left"]
     widgets["position"].set_value(5)
     widgets["force"].set_value(200)
@@ -627,10 +491,7 @@ def test_apply_trigger_multi_position_feedback_envia_strengths(
     side, mode, params = mixin._trigger_set_calls[0]
     assert side == "right"
     assert mode == "MultiPositionFeedback"
-    # Envia lista de 10 strengths (pos_0..pos_9).
     assert params == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    # BUG-TRIGGER-FLAT-MULTIPOS-01: o draft TAMBÉM precisa guardar a lista plana
-    # (antes gravava () -> perda silenciosa ao salvar/aplicar perfil).
     assert mixin.draft.triggers.right.mode == "MultiPositionFeedback"
     assert mixin.draft.triggers.right.params == (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
 
@@ -644,10 +505,6 @@ def test_reset_trigger_envia_off(monkeypatch: pytest.MonkeyPatch) -> None:
     mixin.on_trigger_left_reset(None)
 
     assert combo.get_active_id() == "Off"
-    # R-19: o "Desligar" tem de LIBERAR a trava manual, não re-armá-la. Antes
-    # ele mandava `trigger.set` modo "Off", e `trigger.set` arma
-    # `mark_manual_trigger_active` — o botão de "voltar ao normal" era mais um
-    # jeito de PAUSAR a troca automática de perfil, sem nada dizendo isso.
     assert mixin._trigger_reset_calls == [("left", None)]
     assert mixin._trigger_set_calls == [], (
         "trigger.set aqui re-armaria a trava que o botão deveria soltar"
@@ -673,15 +530,13 @@ def test_o_desligar_nao_re_arma_a_trava_300ms_depois(
     mixin.install_triggers_tab()
     combo = mixin._trigger_mode["left"]
 
-    # O caso que dói é o normal: aplicar "Rígido" e depois "Desligar".
     combo.set_active_id("Rigid")
-    mixin._relogio.disparar_pendentes()  # o preview do "Rígido" aplica
+    mixin._relogio.disparar_pendentes()
     assert mixin._trigger_set_calls, "o live-preview é feature pedida"
     mixin._trigger_set_calls.clear()
 
     mixin.on_trigger_left_reset(None)
     assert mixin._trigger_reset_calls == [("left", None)]
-    # O tempo passa. É AQUI que o defeito acontecia.
     disparados = mixin._relogio.disparar_pendentes()
 
     assert disparados == 0, (
@@ -697,11 +552,7 @@ def test_o_desligar_nao_re_arma_a_trava_300ms_depois(
 def test_trocar_de_modo_pelo_gesto_normal_continua_aplicando(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """MORDIDA 3 — o caso que NÃO deve mudar.
-
-    Matar o live-preview inteiro "resolveria" o defeito acima e quebraria a
-    feature: hipótese tem de explicar o que JÁ funcionava.
-    """
+    """MORDIDA 3 — o caso que NÃO deve mudar."""
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
     combo = mixin._trigger_mode["right"]
@@ -762,9 +613,7 @@ def test_o_desligar_de_um_lado_nao_deixa_o_outro_re_armar_a_trava(
     mixin.install_triggers_tab()
     ordem = _espiar_ordem(monkeypatch)
 
-    # A usuária mexe no gatilho DIREITO...
     mixin._trigger_mode["right"].set_active_id("Rigid")
-    # ...e, antes dos 300 ms, clica "Desligar" no ESQUERDO.
     mixin.on_trigger_left_reset(None)
 
     assert mixin._trigger_reset_calls == [("left", None)]
@@ -780,13 +629,7 @@ def test_o_desligar_de_um_lado_nao_deixa_o_outro_re_armar_a_trava(
 def test_o_desligar_de_um_lado_nao_engole_o_preview_do_outro(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caso que NÃO deve mudar, do furo do outro lado (14/08).
-
-    Cancelar o preview do gatilho oposto "resolveria" o furo acima matando uma
-    aplicação que ela pediu, num gatilho que ela não mandou desligar — o mesmo
-    contorno que a mordida 3 da sprint já proíbe para o próprio lado. O
-    `trigger.set` da direita tem de acontecer, com os bytes que ela escolheu.
-    """
+    """O caso que NÃO deve mudar, do furo do outro lado (14/08)."""
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
 
@@ -808,7 +651,7 @@ def test_o_desligado_do_seletor_ainda_manda_trigger_set(
 
     A aba tem DOIS gestos que apagam o gatilho e parecem o mesmo: o botão
     «Desligar» (`trigger.reset`, SOLTA a trava) e o botão «Desligado» do
-    seletor de modos (`app/actions/trigger_specs.py:83` — id "Off", rótulo
+    seletor de modos (`app/actions/trigger_specs.py:57` — id "Off", rótulo
     "Desligado"), que passa pelo live-preview e manda `trigger.set` "Off" —
     e `trigger.set` ARMA a trava (`daemon/ipc_handlers._handle_trigger_set`).
     Medido nesta árvore::
@@ -833,7 +676,7 @@ def test_o_desligado_do_seletor_ainda_manda_trigger_set(
     mixin._relogio.disparar_pendentes()
     mixin._trigger_set_calls.clear()
 
-    combo.set_active_id("Off")  # o botão «Desligado» do seletor segmentado
+    combo.set_active_id("Off")
 
     assert mixin._relogio.disparar_pendentes() == 1
     assert mixin._trigger_set_calls == [("left", "Off", [])]
@@ -845,12 +688,7 @@ def test_o_desligado_do_seletor_ainda_manda_trigger_set(
 def test_desligar_com_o_modo_ja_em_off_nao_muda_nada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """MORDIDA 4 — a ressalva honesta, registrada para ninguém "consertá-la".
-
-    Com o modo já em "Off" o `set_active_id` é no-op (o widget real só emite
-    quando o id MUDA), então não há "changed", não há timer e não havia
-    re-arme nem antes nem depois.
-    """
+    """MORDIDA 4 — a ressalva honesta, registrada para ninguém "consertá-la"."""
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
     combo = mixin._trigger_mode["left"]
@@ -866,17 +704,9 @@ def test_desligar_com_o_modo_ja_em_off_nao_muda_nada(
 def test_reset_trigger_leva_o_controle_escolhido(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """ABAS-06 (25/07) — "Desligar" era o último comando da janela em broadcast.
-
-    Com "Controle 2" selecionado no seletor do banner, o "Aplicar" ao lado
-    mandava o MAC (PERFIL-05) e o "Desligar" não — então ele zerava o gatilho
-    dos QUATRO controles. O mesmo defeito já tinha sido corrigido no "Apagar"
-    da aba Lightbar (R-17) e não fora replicado aqui.
-    """
+    """ABAS-06 (25/07) — "Desligar" era o último comando da janela em broadcast."""
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    # É o que o seletor do banner mantém (StatusActionsMixin._edit_target_uniq,
-    # lido pelo `_edit_uniq` que os dois botões da aba consultam).
     mixin._edit_target_uniq = "aabbcc000002"  # type: ignore[attr-defined]
     mixin._edit_uniq = lambda: mixin._edit_target_uniq  # type: ignore[attr-defined]
 
@@ -890,23 +720,7 @@ def test_reset_trigger_leva_o_controle_escolhido(
 def test_os_dois_seletores_chegam_ao_slot_que_o_glade_tem(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Modo e preset têm de ser EMPACOTADOS, não só guardados num atributo.
-
-    GATILHO-NÃO-PERDIDO-01 (25/08/2026), e é a metade que faltava: a aba
-    guarda os dois segmentados em `self._trigger_mode` / `self._trigger_preset`
-    **e** os empacota nos slots do glade (`triggers_actions.py:134` e `:148`).
-    Guardar sem empacotar deixa um seletor que existe para o código e não
-    existe para ela — a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na tela.
-
-    Nenhuma régua desta casa olhava para isso: `install_triggers_tab` pula o
-    `pack_start` em silêncio quando o slot não vem (`if slot is not None`), que
-    é exatamente o caminho que o dublê antigo tomava — ele não trazia o
-    `trigger_{side}_preset_slot`, então o segmentado de preset NUNCA era
-    empacotado em teste nenhum deste arquivo.
-
-    Mordida: apagar `preset_slot.pack_start(preset_sel, True, True, 0)` (ou o
-    par dele no modo) em `install_triggers_tab`.
-    """
+    """Modo e preset têm de ser EMPACOTADOS, não só guardados num atributo."""
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
 
@@ -945,7 +759,6 @@ def test_on_preset_changed_feedback_popula_sliders(
 
     mixin.on_trigger_left_preset_changed(preset_sel)
 
-    # Pelo menos um slider foi alterado (valor != 0 em pos_0).
     widgets = mixin._trigger_param_widgets["left"]
     assert any(widgets[f"pos_{i}"].get_value() > 0 for i in range(10))
 
@@ -971,7 +784,6 @@ def test_on_preset_changed_custom_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     preset_sel.set_active_id("custom")
     mixin.on_trigger_left_preset_changed(preset_sel)
 
-    # Todos continuam 0.
     for i in range(10):
         assert widgets[f"pos_{i}"].get_value() == 0
 
@@ -1035,13 +847,7 @@ def test_apply_trigger_custom_envia_mode_e_forces(
     side, mode, params = mixin._trigger_set_calls[0]
     assert side == "right"
     assert mode == "Custom"
-    # [mode, force_0..force_6] = [2, 10, 11, 12, 13, 14, 15, 16]
     assert params == [2, 10, 11, 12, 13, 14, 15, 16]
-
-
-# ---------------------------------------------------------------------------
-# UI-TRIGGERS-LIVE-PREVIEW-01 — debounce + apply imediato no combobox change
-# ---------------------------------------------------------------------------
 
 
 def test_on_mode_changed_agenda_live_preview(
@@ -1057,7 +863,7 @@ def test_on_mode_changed_agenda_live_preview(
         interval: int, fn: Any, *args: Any, **_kw: Any
     ) -> int:
         agendados.append((interval, fn, args[0] if args else ""))
-        return 42  # handle fictício
+        return 42
 
     monkeypatch.setattr(triggers_actions.GLib, "timeout_add", fake_timeout_add)
 
@@ -1090,10 +896,8 @@ def test_schedule_live_preview_cancela_pendente(
         lambda *_a, **_kw: 99,
     )
 
-    # Primeira agendagem grava handle 99.
     mixin._schedule_live_preview("left")
     assert mixin._trigger_live_preview_timer["left"] == 99
-    # Segunda agendagem deve cancelar o handle anterior (99).
     mixin._schedule_live_preview("left")
     assert 99 in removidos
 
@@ -1110,17 +914,11 @@ def test_fire_live_preview_aplica_e_zera_timer(
     combo.set_active_id("Rigid")
     mixin.on_trigger_right_mode_changed(combo)
     # _on_mode_changed dispara _schedule_live_preview que zera handle local
-    # ao agendar; o teste foca o _fire_live_preview standalone.
     mixin._trigger_live_preview_timer["right"] = 77
     mixin._fire_live_preview("right")
 
     assert mixin._trigger_live_preview_timer["right"] == 0
     assert any(call[0] == "right" for call in mixin._trigger_set_calls)
-
-
-# ---------------------------------------------------------------------------
-# BUG-TRIGGERS-PRESET-DUP-01 — seletor de preset sem "Personalizar" duplicado
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("mode_id", ["MultiPositionFeedback", "MultiPositionVibration"])
@@ -1145,16 +943,9 @@ def test_populate_preset_combo_sem_duplicar_personalizar(
 
     items = mixin._trigger_preset["left"]._items
     ids = [key for key, _label in items]
-    # Exatamente uma entrada "custom", sempre por último (UX: Personalizar no fim).
     assert ids.count("custom") == 1
     assert ids[-1] == "custom"
     assert len(items) == len(labels)
-
-
-# ---------------------------------------------------------------------------
-# BUG-TRIGGERS-DRAFT-STALE-01 — slider/preset atualizam o draft (rodapé salva
-# o que a usuária vê/sente) + agendam o live-preview
-# ---------------------------------------------------------------------------
 
 
 def test_slider_atualiza_draft_e_agenda_live_preview(
@@ -1176,12 +967,10 @@ def test_slider_atualiza_draft_e_agenda_live_preview(
     combo = mixin._trigger_mode["left"]
     combo.set_active_id("Rigid")
     mixin.on_trigger_left_mode_changed(combo)
-    agendados.clear()  # descarta o preview do mode-changed; foco é o do slider
+    agendados.clear()
 
     widgets = mixin._trigger_param_widgets["left"]
     widgets["position"].set_value(7)
-    # O stub de Gtk.Scale não emite "value-changed"; invoca o handler à mão
-    # (é o que o sinal real dispara via _rebuild_params).
     mixin._on_param_slider_changed("left")
 
     assert mixin.draft.triggers.left.mode == "Rigid"
@@ -1250,17 +1039,8 @@ def test_preset_changed_atualiza_draft_e_agenda_preview(
     assert (300, "left") in agendados
 
 
-# --- HARM-19: erro de validação explica o erro, não acusa o daemon ------
-
-
 def _mensagem_real_do_daemon(mode: str, params: list[int]) -> str:
-    """Mensagem que o daemon devolve ao recusar `params` (CODE_INVALID_PARAMS).
-
-    Vem do `build_from_name` de verdade — é o que o `_handle_trigger_set` chama
-    e o `ipc_server` converte em erro JSON-RPC. Assim o teste prova a
-    COEXISTÊNCIA (o texto do daemon casa com o tradutor da aba), não a fantasia
-    do teste sobre esse texto.
-    """
+    """Mensagem que o daemon devolve ao recusar `params` (CODE_INVALID_PARAMS)."""
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 
     with pytest.raises(ValueError) as exc:
@@ -1293,9 +1073,7 @@ def test_humanizar_mensagem_desconhecida_devolve_none() -> None:
 def test_toast_de_validacao_explica_e_nao_culpa_o_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """HARM-19: com o daemon VIVO recusando (Fim <= Início), o toast dizia
-    "falhou (daemon offline?)" — mandava a usuária caçar o problema no lugar
-    errado."""
+    """HARM-19: com o daemon VIVO recusando (Fim <= Início), o toast dizia"""
     mixin = _build_mixin(monkeypatch)
     motivo = _mensagem_real_do_daemon("Bow", [5, 3, 4, 4])
     monkeypatch.setattr(
@@ -1324,8 +1102,7 @@ def test_toast_de_validacao_explica_e_nao_culpa_o_daemon(
 def test_toast_de_daemon_offline_aponta_para_a_aba_sistema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem motivo = ninguém respondeu; JARG-01: em vez de "daemon offline?",
-    o leigo é mandado ligar o Hefesto na aba Sistema."""
+    """Sem motivo = ninguém respondeu; JARG-01: em vez de "daemon offline?","""
     mixin = _build_mixin(monkeypatch)
     monkeypatch.setattr(
         triggers_actions,
@@ -1349,8 +1126,7 @@ def test_toast_de_daemon_offline_aponta_para_a_aba_sistema(
 def test_toast_de_motivo_desconhecido_mostra_o_texto_cru(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Texto cru do daemon ainda diz mais que "offline?" — nunca cair no ramo
-    errado por não reconhecer o formato."""
+    """Texto cru do daemon ainda diz mais que "offline?" — nunca cair no ramo"""
     mixin = _build_mixin(monkeypatch)
     monkeypatch.setattr(
         triggers_actions,

@@ -1,13 +1,4 @@
-"""Testes do AUTOSWITCH-FLOOD-FIX-01.
-
-Cobre:
-  - build_window_reader() instancia o backend UMA vez (não por tick) e converte
-    WindowInfo -> dict legado (ou _UNKNOWN_WINDOW quando None).
-  - detect_window_backend() loga 'autoswitch_compositor_unsupported' uma única
-    vez (once-guard), rebaixando repetições para debug.
-  - _ensure_display_env() importa WAYLAND_DISPLAY/DISPLAY de
-    `systemctl --user show-environment` quando ambos faltam no os.environ.
-"""
+"""Testes do AUTOSWITCH-FLOOD-FIX-01."""
 from __future__ import annotations
 
 import os
@@ -128,24 +119,14 @@ def test_ensure_display_env_noop_quando_ja_presente(
     called.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# AUTOSWITCH-HEAL-01 (22/07) — o backend Null se recupera quando o env aparece
-# ---------------------------------------------------------------------------
-
-
 def test_maybe_recover_troca_backend_quando_env_aparece(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Daemon nasceu sem DISPLAY (race de login) -> NullBackend. Quando o env
-    gráfico aparece, `maybe_recover()` re-detecta e troca o backend em-place —
-    antes o backend era fixado UMA vez e o autoswitch ficava morto a sessão
-    inteira (medido 22/07: `window_detect_diag_seeded backend=null` com o env
-    presente no systemd --user minutos depois)."""
+    """Daemon nasceu sem DISPLAY (race de login) -> NullBackend. Quando o env"""
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     reader = window_detect.build_window_reader()
     assert reader.backend_name == "null"
-    # Env segue ausente: nada a recuperar.
     assert reader.maybe_recover() is False
     assert reader.backend_name == "null"
 
@@ -165,9 +146,7 @@ def test_maybe_recover_nao_toca_backend_saudavel(
 
 
 def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Integração do heal no reader instrumentado: a PRÓPRIA leitura do poll
-    re-tenta a detecção (rate-limitada) e re-semeia o diagnóstico do store
-    quando o backend sai do Null — sem restart do daemon."""
+    """Integração do heal no reader instrumentado: a PRÓPRIA leitura do poll"""
     from hefesto_dualsense4unix.daemon.subsystems.autoswitch import (
         _build_diag_window_reader,
     )
@@ -183,8 +162,6 @@ def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
         def record_window_detect_read(
             self, name: Any, wm_class: Any, *, reason: Any = None
         ) -> None:
-            # JANELA-CEGA-01: o call site de produção passa `reason=` desde
-            # 28/07 — o dublê acompanha a assinatura real do StateStore.
             self.reads.append((name, wm_class))
 
     monkeypatch.delenv("DISPLAY", raising=False)
@@ -193,17 +170,8 @@ def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
     read = _build_diag_window_reader(store)  # type: ignore[arg-type]
     assert store.seeds == [("null", False)]
 
-    # Env aparece (compositor exportou) — a leitura seguinte recupera.
     monkeypatch.setenv("DISPLAY", ":9")
     read()
-    # D-TROCA-DE-PERFIL-CEGA (25/08): a re-semeadura do resgate agora exige
-    # PROVA, como a semeadura inicial já exigia desde a T-01 (ONDA0-Z7).
-    # Esta linha pedia `("xlib", True)` e passava por PRESUNÇÃO: o `:9` deste
-    # teste nunca existiu — o próprio log da suíte imprime
-    # `x11_connect_failed err='Can't connect to display ":9"'` — e mesmo assim
-    # o store era semeado saudável. É a MESMA forma do defeito medido na
-    # máquina dela (`Can't connect to display :1`, `healthy=True`), viva num
-    # segundo lugar depois de a T-01 curar o primeiro.
     assert ("xlib", False) in store.seeds
     assert ("xlib", True) not in store.seeds
     assert store.reads[-1][0] == "xlib"

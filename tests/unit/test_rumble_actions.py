@@ -1,24 +1,8 @@
-"""Testes unitários de RumbleActionsMixin (AUDIT-FINDING-COVERAGE-ACTIONS-ZERO-01).
-
-Cobrem a lógica pura de:
-  - Seleção de política via toggles (economia/balanceado/max/auto).
-  - Sincronização slider de intensidade <-> política.
-  - Aplicar/parar rumble persistindo valores no draft e chamando IPC.
-  - Refresh do draft para widgets.
-
-Usa padrão `_FakeMixin` (descriptor protocol `__get__`) e stubs de
-`gi.repository.{Gtk,GLib}` para rodar sem PyGObject instalado no venv
-(armadilha A-12). Mesmo cenário de `test_status_actions_reconnect.py`.
-"""
+"""Testes unitários de RumbleActionsMixin (AUDIT-FINDING-COVERAGE-ACTIONS-ZERO-01)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("rumble_actions: a vibração na janela")
 
 import sys
@@ -29,9 +13,6 @@ import pytest
 
 
 def _install_gi_stubs() -> None:
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # o merge abaixo mutaria o gi REAL (sobrescreve GLib.idle_add e
-    # require_version) e fazia testes de GUI pularem como "ambiente sem GTK".
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -44,8 +25,6 @@ def _install_gi_stubs() -> None:
         except Exception:  # pragma: no cover — ambientes sem GTK
             pass
 
-    # Reutiliza módulos stub existentes (se outros testes já injetaram) para
-    # merge de atributos — caso contrário cria do zero.
     gi_mod = sys.modules.get("gi") or types.ModuleType("gi")
     gi_mod.require_version = lambda _n, _v: None  # type: ignore[attr-defined]
     repo_mod = sys.modules.get("gi.repository") or types.ModuleType(
@@ -58,7 +37,6 @@ def _install_gi_stubs() -> None:
         "gi.repository.GLib"
     )
 
-    # Classes mínimas (idempotente).
     for cls_name in (
         "Builder", "Window", "Button", "ToggleButton", "ComboBoxText",
         "Switch", "TextView", "TextBuffer", "Scale", "Label", "Box",
@@ -84,14 +62,7 @@ _install_gi_stubs()
 from hefesto_dualsense4unix.app.actions import rumble_actions
 from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
-#: 11/08/2026: os percentuais destes testes eram literais (70 = balanceado,
-#: 100 = max). Com a escada nova (30/100/150, decisão dela) eles passaram a
-#: apontar para o degrau errado — 70 deixou de ser botão nenhum e 100 virou o
-#: balanceado. O que os testes provam é o CASAMENTO deslizador↔botão, não os
-#: números; derivá-los do dono único mantém a prova viva em qualquer escada.
 _PCT = {nome: mult * 100 for nome, mult in RUMBLE_POLICY_MULT.items()}
-
-# --- Fakes de widgets GTK ---------------------------------------------
 
 
 class _FakeScale:
@@ -144,15 +115,11 @@ class _FakeStatusBar:
         return self._ctx_counter
 
     def pop(self, ctx_id: int) -> None:
-        # _status_toast faz pop antes do push (no máx 1 msg por contexto).
         if self.pushed:
             self.pushed.pop()
 
     def push(self, ctx_id: int, msg: str) -> None:
         self.pushed.append((ctx_id, msg))
-
-
-# --- FakeMixin ---------------------------------------------------------
 
 
 class _FakeRumbleMixin:
@@ -162,15 +129,9 @@ class _FakeRumbleMixin:
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
-        # Z2-1 (24/08/2026): o alvo "Todos" precisa existir explicitamente —
-        # sem isso `alvo_de_edicao` devolve DESCONHECIDO (P3) e a escrita no
-        # rascunho é recusada, o mesmo comportamento que a fixture da
-        # Lightbar (`test_lightbar_todos_por_mac_r14.py`) já fixava.
         self._edit_target_uniq = None
-        # M1: guard renomeado por mixin (era _guard_refresh compartilhado).
         self._rumble_guard_refresh = False
         self._rumble_policy = "balanceado"
-        # M6: id do timer do teste de 500ms (atributo de classe no mixin real).
         self._rumble_test_source: int | None = None
 
         self._widgets: dict[str, Any] = {
@@ -199,28 +160,17 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         "rumble_policy_set": [],
         "rumble_policy_custom": [],
         "call_async": [],
-        # Folga de timeout pedida em cada rota (HARM-15/HARM-19): sem ela a aba
-        # declarava o daemon morto/desconhecido com ele VIVO.
         "call_async_timeout": [],
         "rumble_policy_set_timeout": [],
     }
-    # HARM-19: a aba usa a rota "checked" — `(ok, motivo)`. Mutável para o teste
-    # escolher entre daemon que RECUSA (vivo) e daemon que não responde.
     resultado_policy: list[tuple[bool, str | None]] = [(True, None)]
 
-    # NATIVO-RUMBLE-01 (19/08/2026): a aba passou a usar a rota "checked" também
-    # para fixar vibração — `(ok, motivo)`, com o motivo lido do CORPO da
-    # resposta. Mutável para o teste escolher entre daemon que RECUSA (vivo, com
-    # frase) e daemon que aceita.
     resultado_rumble_set: list[tuple[bool, str | None]] = [(True, None)]
 
     def fake_rumble_set_checked(weak: int, strong: int) -> tuple[bool, str | None]:
         calls["rumble_set"].append((weak, strong))
         return resultado_rumble_set[0]
 
-    # NATIVO-RUMBLE-01, segunda metade: o «Parar» também usa a rota "checked" —
-    # no Modo Nativo o daemon devolve `status: "ok"` COM motivo, porque soltou o
-    # par mas não alcança o motor do jogo.
     resultado_rumble_stop: list[tuple[bool, str | None]] = [(True, None)]
 
     def fake_rumble_stop_checked() -> tuple[bool, str | None]:
@@ -277,7 +227,6 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
     instance = _FakeRumbleMixin()
     instance._ipc_calls = calls  # type: ignore[attr-defined]
     instance._policy_result = resultado_policy  # type: ignore[attr-defined]
-    # NATIVO-RUMBLE-01: mesma alavanca para a recusa do `rumble.set`.
     instance._rumble_set_result = resultado_rumble_set  # type: ignore[attr-defined]
     instance._rumble_stop_result = resultado_rumble_stop  # type: ignore[attr-defined]
 
@@ -296,9 +245,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         "on_rumble_test_500ms",
         "on_rumble_stop",
         "on_rumble_passthrough",
-        # ABAS-04: "Parar"/"Deixar o jogo controlar" agora escrevem no rascunho.
         "_zerar_rumble_no_rascunho",
-        # POR-UNIDADE-01: a intensidade passou a ter alvo (global ou peça).
         "_gravar_intensidade_no_rascunho",
         "_rumble_edit_uniq",
         "_refresh_rumble_from_draft",
@@ -317,17 +264,12 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
                 instance, type(instance)
             ),
         )
-    # _toast_rumble delega ao helper compartilhado _status_toast (base.py); como o
-    # fake usa composição (não herda WidgetAccessMixin), ligamos o helper à mão.
     instance._status_toast = (  # type: ignore[attr-defined]
         rumble_actions.RumbleActionsMixin._status_toast.__get__(
             instance, type(instance)
         )
     )
     return instance
-
-
-# --- Testes: política (toggles) ---------------------------------------
 
 
 def test_on_rumble_policy_economia_ativa_preset(
@@ -340,7 +282,6 @@ def test_on_rumble_policy_economia_ativa_preset(
 
     assert mixin._rumble_policy == "economia"
     assert mixin._ipc_calls["rumble_policy_set"] == ["economia"]
-    # Slider move para 30% (0.3 mult).
     assert mixin._widgets["rumble_policy_slider"].get_value() == pytest.approx(30.0)
 
 
@@ -369,16 +310,13 @@ def test_on_rumble_policy_auto_mostra_label(monkeypatch: pytest.MonkeyPatch) -> 
 def test_on_rumble_policy_reafirma_e_reenvia_ipc(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A1: clicar num toggle já-ativo o desmarca (get_active=False); o handler
-    re-afirma o botão e REENVIA o IPC (sem clique morto). Sempre 1 afundado."""
+    """A1: clicar num toggle já-ativo o desmarca (get_active=False); o handler"""
     mixin = _build_mixin(monkeypatch)
     btn = mixin._widgets["rumble_policy_max"]
-    btn.set_active(False)  # simula o clique num já-ativo que o desmarcou
+    btn.set_active(False)
     mixin.on_rumble_policy_max(btn)
 
-    # IPC reenviado mesmo com get_active()==False no clique.
     assert mixin._ipc_calls["rumble_policy_set"] == ["max"]
-    # Exclusão mútua: exatamente 1 política afundada (max re-afirmado).
     assert mixin._widgets["rumble_policy_max"].get_active() is True
     assert mixin._widgets["rumble_policy_economia"].get_active() is False
     assert mixin._widgets["rumble_policy_balanceado"].get_active() is False
@@ -396,9 +334,6 @@ def test_on_rumble_policy_guard_refresh_noop(
     mixin.on_rumble_policy_max(btn)
 
     assert mixin._ipc_calls["rumble_policy_set"] == []
-
-
-# --- Testes: slider de intensidade ------------------------------------
 
 
 def test_on_rumble_policy_slider_changed_preset_balanceado(
@@ -435,9 +370,6 @@ def test_on_rumble_policy_slider_changed_custom(
         assert mixin._widgets[pid].get_active() is False
 
 
-# --- Testes: política persiste no draft (FEAT-RUMBLE-POLICY-PROFILE-01) --
-
-
 def test_set_policy_grava_no_draft(monkeypatch: pytest.MonkeyPatch) -> None:
     """Escolher um preset persiste a política no draft (rodapé salva o que ela vê)."""
     mixin = _build_mixin(monkeypatch)
@@ -472,12 +404,8 @@ def test_preset_apos_custom_zera_custom_mult(
 
     assert mixin.draft.rumble.policy == "economia"
     assert mixin.draft.rumble.custom_mult is None
-    # E o draft com política vira um perfil válido (round-trip do rodapé).
     profile = mixin.draft.to_profile("perfil_rumble", priority=5)
     assert profile.rumble.policy == "economia"
-
-
-# --- Testes: apply / test / stop --------------------------------------
 
 
 def test_on_rumble_apply_persiste_draft_e_chama_ipc(
@@ -511,8 +439,7 @@ def test_on_rumble_stop_zera_scales_e_chama_ipc(
 def test_on_rumble_passthrough_devolve_rumble_ao_jogo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """FEAT-RUMBLE-PASSTHROUGH-GUI-01: o botão chama rumble.passthrough(True) e
-    zera os sliders — antídoto do 'Parar'."""
+    """FEAT-RUMBLE-PASSTHROUGH-GUI-01: o botão chama rumble.passthrough(True) e"""
     mixin = _build_mixin(monkeypatch)
     mixin._widgets["rumble_weak_scale"].set_value(120)
 
@@ -536,9 +463,6 @@ def test_on_rumble_test_500ms_aplica_defaults_quando_zero(
     assert mixin._ipc_calls["rumble_set"] == [(160, 220)]
     assert mixin._widgets["rumble_weak_scale"].get_value() == 160
     assert mixin._widgets["rumble_strong_scale"].get_value() == 220
-
-
-# --- Testes: _apply_policy_to_widgets + refresh ----------------------
 
 
 def test_apply_policy_to_widgets_ativa_toggle_correto(
@@ -586,14 +510,10 @@ def test_install_rumble_tab_chama_state_full(
     assert any(c[0] == "daemon.state_full" for c in mixin._ipc_calls["call_async"])
 
 
-# --- Testes: BUG-RUMBLE-POLICY-DRAFT-DIVERGE-01 -----------------------
-
-
 def test_refresh_com_opiniao_no_draft_reflete_draft_nao_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Perfil com opinião: widgets refletem o DRAFT (o que o rodapé salva),
-    sem consultar o estado vivo do daemon."""
+    """Perfil com opinião: widgets refletem o DRAFT (o que o rodapé salva),"""
     mixin = _build_mixin(monkeypatch)
     new_rumble = mixin.draft.rumble.model_copy(update={"policy": "economia"})
     mixin.draft = mixin.draft.model_copy(update={"rumble": new_rumble})
@@ -603,21 +523,15 @@ def test_refresh_com_opiniao_no_draft_reflete_draft_nao_daemon(
     assert mixin._widgets["rumble_policy_economia"].get_active() is True
     assert mixin._widgets["rumble_policy_max"].get_active() is False
     assert mixin._widgets["rumble_policy_slider"].get_value() == pytest.approx(30.0)
-    # A POLÍTICA veio do draft (não do daemon) — BUG-RUMBLE-POLICY-DRAFT-DIVERGE-01.
     # Feature #4: há UMA leitura de state_full APENAS para o indicador de estado da
-    # vibração (FF/passthrough — dado vivo que não existe no draft); ela NÃO lê a
-    # política do daemon, então o bug do policy-diverge não retorna.
     assert mixin._ipc_calls["call_async"] == [("daemon.state_full", {})]
-    # E o draft segue intocado (economia).
     assert mixin.draft.rumble.policy == "economia"
 
 
 def test_refresh_sem_opiniao_exibe_daemon_sem_gravar_draft(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Perfil SEM opinião: widgets exibem o estado do daemon com indicação na
-    statusbar, mas o draft NÃO ganha opinião (senão todo perfil ganharia
-    política só de abrir a aba)."""
+    """Perfil SEM opinião: widgets exibem o estado do daemon com indicação na"""
     mixin = _build_mixin(monkeypatch)
 
     def call_async_entrega_max(
@@ -632,16 +546,13 @@ def test_refresh_sem_opiniao_exibe_daemon_sem_gravar_draft(
             on_success({"rumble_policy": "max", "rumble_policy_custom_mult": 0.7})
 
     monkeypatch.setattr(rumble_actions, "call_async", call_async_entrega_max)
-    assert mixin.draft.rumble.policy is None  # default: sem opinião
+    assert mixin.draft.rumble.policy is None
 
     mixin._refresh_rumble_from_draft()
 
-    # Widgets refletem o estado vivo do daemon (referência).
     assert mixin._widgets["rumble_policy_max"].get_active() is True
-    # Mas o draft continua sem opinião — o rodapé não salvará política.
     assert mixin.draft.rumble.policy is None
     assert mixin.draft.rumble.custom_mult is None
-    # Indicação de "sem opinião no perfil" na statusbar.
     mensagens = [msg for _ctx, msg in mixin._widgets["status_bar"].pushed]
     assert any("não" in m and "opinião" in m for m in mensagens)
 
@@ -660,9 +571,6 @@ def test_toggle_apos_refresh_sem_opiniao_grava_draft(
     assert mixin.draft.rumble.policy == "auto"
 
 
-# --- Testes: HARM-19 (a faixa do slider = a faixa que o daemon aceita) ----
-
-
 def test_custom_mult_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ida e volta valor/100 no slider, inclusive no round-trip de perfil."""
     mixin = _build_mixin(monkeypatch)
@@ -670,12 +578,9 @@ def test_custom_mult_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
     slider.set_value(_PCT["max"])
     mixin.on_rumble_policy_slider_changed(slider)
 
-    # Em cima de um degrau, a aba afunda o BOTÃO em vez de virar ajuste livre.
     assert mixin._rumble_policy == "max"
     assert mixin.draft.rumble.policy == "max"
 
-    # E meio ponto percentual abaixo dele, vira ajuste livre — a ida e volta
-    # `valor/100` tem de sobreviver ao round-trip de perfil.
     fora_do_degrau = _PCT["max"] - 5.0
     slider.set_value(fora_do_degrau)
     mixin.on_rumble_policy_slider_changed(slider)
@@ -684,7 +589,6 @@ def test_custom_mult_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert mixin.draft.rumble.custom_mult == esperado
     assert mixin._ipc_calls["rumble_policy_custom"] == [esperado]
 
-    # E o caminho de volta: o mult do rascunho repinta o deslizador no lugar.
     mixin._apply_policy_to_widgets("custom", fora_do_degrau / 100.0)
     assert slider.get_value() == pytest.approx(fora_do_degrau)
 
@@ -694,20 +598,7 @@ def test_custom_mult_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_trilho_da_intensidade_vai_ate_o_teto_do_schema() -> None:
-    """O trilho oferece a faixa INTEIRA que o schema aceita (`mult * 100`).
-
-    HARM-19: a faixa teve três donos (2.0 no schema, 1.0 no handler, 200% na
-    tela) e de 101% em diante a usuária levava erro de validação. A cura foi
-    alinhar o HANDLER ao schema — truncar a tela em 100% mataria o que o
-    BUG-RUMBLE-CUSTOM-MULT-CAP-01 entregou de propósito: acima de 100% o
-    multiplicador AMPLIFICA o que o jogo pediu.
-
-    **A FONTE MUDOU EM 06/09/2026** (`GTK-3`): a faixa era lida do
-    `rumble_policy_adj` no `gui/main.glade`, e a janela sai inteira
-    (`D-0609-GTK-LEVA-INTEIRA`). Quem oferece a faixa hoje é o
-    `<input type="range" data-campo="mult-pos">` de
-    `interface/paginas/05-vibracao.html`. A pergunta não mudou.
-    """
+    """O trilho oferece a faixa INTEIRA que o schema aceita (`mult * 100`)."""
     from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 
     import re
@@ -731,11 +622,7 @@ def test_o_trilho_da_intensidade_vai_ate_o_teto_do_schema() -> None:
 
 
 def test_faixa_do_trilho_cabe_no_que_o_handler_do_daemon_aceita() -> None:
-    """A faixa da tela é subconjunto do que `rumble.policy_custom` aceita.
-
-    Prova de coexistência (o par que estava divergente): o topo do trilho
-    (max/100) tem de passar pela validação do handler REAL do daemon.
-    """
+    """A faixa da tela é subconjunto do que `rumble.policy_custom` aceita."""
     import asyncio
     from types import SimpleNamespace
 
@@ -776,11 +663,6 @@ def test_faixa_do_trilho_cabe_no_que_o_handler_do_daemon_aceita() -> None:
     assert handlers.daemon.config.rumble_policy_custom_mult == pytest.approx(topo)
 
 
-# ---------------------------------------------------------------------------
-# HARM-15/HARM-19 — a aba Rumble para de mentir sobre o daemon
-# ---------------------------------------------------------------------------
-
-
 def test_sem_resposta_a_aba_nao_chuta_uma_politica(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -791,7 +673,6 @@ def test_sem_resposta_a_aba_nao_chuta_uma_politica(
     da política real, e o controle passava a fazer o oposto do que a tela dizia.
     """
     mixin = _build_mixin(monkeypatch)
-    # A tela como o daemon a deixou: "Máximo" afundado, slider em 100%.
     mixin._widgets["rumble_policy_balanceado"].set_active(False)
     mixin._widgets["rumble_policy_max"].set_active(True)
     mixin._widgets["rumble_policy_slider"].set_value(100.0)
@@ -810,7 +691,6 @@ def test_sem_resposta_a_aba_nao_chuta_uma_politica(
 
     mixin._sync_policy_from_state()
 
-    # Os widgets ficam como estavam — nada de "Balanceado / 70%" inventado.
     assert mixin._widgets["rumble_policy_max"].get_active() is True
     assert mixin._widgets["rumble_policy_balanceado"].get_active() is False
     assert mixin._widgets["rumble_policy_slider"].get_value() == 100.0
@@ -831,8 +711,7 @@ def test_leitura_da_politica_da_folga_de_timeout(
 def test_recusa_do_daemon_vivo_mostra_o_motivo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`_safe_call` devolve (False, None) também para erro JSON-RPC do servidor —
-    daemon VIVO que recusou. O toast acusava categoricamente "não está rodando"."""
+    """`_safe_call` devolve (False, None) também para erro JSON-RPC do servidor —"""
     mixin = _build_mixin(monkeypatch)
     mixin._policy_result[0] = (False, "mult fora da faixa")  # type: ignore[attr-defined]
 
@@ -866,9 +745,6 @@ def test_troca_de_politica_da_folga_de_timeout(
     assert mixin._ipc_calls["rumble_policy_set_timeout"] == [1.0]
 
 
-# --- NATIVO-RUMBLE-01: a recusa do Modo Nativo chega aos olhos dela ---------
-
-
 def test_apply_no_modo_nativo_mostra_a_recusa_e_nao_diz_travada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -891,20 +767,13 @@ def test_apply_no_modo_nativo_mostra_a_recusa_e_nao_diz_travada(
     msg = [m for _ctx, m in mixin._widgets["status_bar"].pushed][-1]
     assert msg == motivo
     assert "travada" not in msg
-    # E não acusa o daemon de morto: ele respondeu, e o motivo prova isso.
     assert "não está rodando" not in msg
 
 
 def test_teste_de_meio_segundo_recusado_nao_agenda_o_parar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Recusado, o temporizador não nasce.
-
-    Sem esta guarda o `_rumble_test_stop` dispararia um «Parar» 500 ms depois de
-    um pedido que nunca chegou ao aparelho — e dentro do Modo Nativo o «Parar»
-    é justamente o gesto mais traiçoeiro dos três (mede-se `(0,0)`, que não é
-    `None`, e a HARM-16 se desarma).
-    """
+    """Recusado, o temporizador não nasce."""
     mixin = _build_mixin(monkeypatch)
     motivo = "Conexão Nativa (Sony) ligada: quem manda nos motores é o jogo."
     mixin._rumble_set_result[0] = (False, motivo)  # type: ignore[attr-defined]
@@ -921,22 +790,7 @@ def test_teste_de_meio_segundo_recusado_nao_agenda_o_parar(
 def test_parar_no_modo_nativo_diz_a_verdade_em_vez_de_travada_em_silencio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O terceiro botão, e o último a mentir.
-
-    A leva de 19/08 curou o "Aplicar" e o "Testar" e parou ali. O «Parar» dentro
-    do Modo Nativo continuou anunciando "Vibração parada (travada em silêncio)"
-    — e ali o daemon não trava silêncio nenhum: ele SOLTA o par que o Hefesto
-    segurava, e o motor que estiver girando é o do jogo, pelo hidraw, fora do
-    alcance do produto.
-
-    E a leitura de 19/08 não pegava este caso de propósito nenhum: ela olhava só
-    `status == "recusado"`, e esta resposta vem com `status: "ok"`, porque parte
-    do pedido FOI realizada. A regra passou a ser: se o daemon mandou uma frase,
-    ela é para ela.
-
-    **Morde:** devolva `on_rumble_stop` a chamar `rumble_stop()` e o toast volta
-    a prometer silêncio travado sobre um motor girando.
-    """
+    """O terceiro botão, e o último a mentir."""
     mixin = _build_mixin(monkeypatch)
     motivo = (
         "Vibração solta: em Modo Nativo o Hefesto não consegue parar os motores "

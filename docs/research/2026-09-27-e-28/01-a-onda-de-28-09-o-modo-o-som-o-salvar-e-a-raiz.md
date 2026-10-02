@@ -27,35 +27,35 @@ cuja lâmpada acende 1.
 **A cura, por item:**
 
 - **Um dono.** O slot da sessão é o dono do modo:
-  `daemon/subsystems/gamepad.py:2310` (`caminho_da_sessao`). Todo restart do P1
+  `daemon/subsystems/gamepad.py:1515` (`caminho_da_sessao`). Todo restart do P1
   lê dele e grava no diário `p1_reerguido motivo=…` (`ordem_do_coop`,
   `revive_pos_falha_total`, `volta_do_steam_input`, `promocao_uhid`,
   `mascara_do_cartao`, `saida_do_modo_nativo`, `dois_controles_na_mesa`,
   `mascara_reconciliada`). O cartão escolhe máscara, não modo
-  (`caminho_e_escolha=False`, `gamepad.py:2391`). O arquivo do modo passa a ser
+  (`caminho_e_escolha=False`, `gamepad.py:1586`). O arquivo do modo passa a ser
   JSON `{caminho, origem, quando}`, lido por
-  `utils/session.py:574` (`load_gamepad_caminho_com_origem`); o texto antigo é
+  `utils/session.py:410` (`load_gamepad_caminho_com_origem`); o texto antigo é
   devolvido uma vez, com origem `migracao_unica`. O `load_gamepad_caminho`
   antigo saiu.
-- **A máscara antes do modo.** `profiles/manager.py:939` (`apply_emulation`)
+- **A máscara antes do modo.** `profiles/manager.py:507` (`apply_emulation`)
   aplica `apply_controller_mascaras` antes do aplicador do modo. O «por último»
   que o comentário antigo afirmava era falso. O P1 veste a máscara do perfil
   novo na mesma ativação, nas três origens (troca automática, manual e
   lançamento).
-- **O boot no modo do perfil.** `daemon/connection.py:659`
+- **O boot no modo do perfil.** `daemon/connection.py:415`
   (`perfil_que_o_boot_restaura`) semeia caminho e máscara antes do primeiro
   pad: um `gamepad_emulation_started` só, com e sem foco.
 - **O P1 é a carta 1.** O backend elege o primário pela carta menor (a lâmpada;
-  no boot, a fila gravada, via `daemon/subsystems/identity.py:2238`,
+  no boot, a fila gravada, via `daemon/subsystems/identity.py:1583`,
   `posto_na_fila`). O posto ocupado só troca por carta estritamente menor
-  (`core/backend_pydualsense.py:8462`), e o tique lento chama `seguir_a_carta`
-  (`backend_pydualsense.py:8491`; `daemon/lifecycle.py:5026`). Controle novo
+  (`core/backend_pydualsense.py:5640`), e o tique lento chama `seguir_a_carta`
+  (`backend_pydualsense.py:5669`; `daemon/lifecycle.py:3250`). Controle novo
   entra no fim da fila e não rouba o posto. A sprint cita a frase dela de 27/09,
   23h40: «o led do player 1 não é simbólico».
-- **O número não pula.** `daemon/subsystems/coop.py:2773`
+- **O número não pula.** `daemon/subsystems/coop.py:1850`
   (`_numeros_em_duas_passadas`): quem tem carta fica com ela; quem está fora
   (troca de transporte) vai para o assento guardado, o mesmo que dá nome ao
-  microfone. `coop.py:2831` repinta a lâmpada pela camada do co-op quando o
+  microfone. `coop.py:1881` repinta a lâmpada pela camada do co-op quando o
   número muda, sem hotplug. É o caso do controle que acendia 5 e das lâmpadas
   que nunca se repintavam.
 
@@ -66,7 +66,7 @@ cuja lâmpada acende 1.
   modo de um perfil que ninguém ativou.
 - **A terceira porta do contágio (`CAMINHO-CONTAGIO-01`).** Um perfil `gamepad`
   sem `caminho`, ativado depois do Freestyle em Xbox, herdava o Xbox: se a
-  máscara era igual, `apply_profile_mode` (`daemon/lifecycle.py:3189`) não
+  máscara era igual, `apply_profile_mode` (`daemon/lifecycle.py:2033`) não
   pedia nada. As réguas de 17 a 19/09 chamavam o start direto, sem a ativação.
   Agora o perfil sem caminho volta ao de fábrica. Efeito colateral aceito: com
   jogo sem perfil já na autoridade, o modo padrão responde
@@ -92,10 +92,10 @@ máscara DualSense dava o Edge (`054c:0df2`) no uinput, sem hidraw; com máscara
 Nintendo, o Pro (`057e:2009`) no uinput. São os dois pads que o PRAGMATA e o
 Future Knight não usaram sob o Proton.
 
-**A cura.** Uma regra com um dono, `integrations/virtual_pad.py:135`
+**A cura.** Uma regra com um dono, `integrations/virtual_pad.py:91`
 (`mascara_no_jogo(caminho, mascara)`): com o modo Xbox **escolhido**, o jogo vê
 o Xbox 360 (`045e:028e`) em qualquer máscara; fora dele, vê a máscara. A
-fábrica veste o pad antes do start (`integrations/uinput_gamepad.py:784`,
+fábrica veste o pad antes do start (`integrations/uinput_gamepad.py:446`,
 `vestir`): nome, VID/PID, 11 teclas, 8 eixos e a tabela de botões. O `flavor`
 do pad continua sendo a máscara do cartão, porque é o que os juízes de
 recriação comparam: trocar o `flavor` pelo aparelho faria o juiz do P1 recriar
@@ -116,7 +116,7 @@ opção (a), a D-1309 ganha nota datada.
 **A dívida que ficou em régua.** Se o modo muda com um pad Nintendo de pé, o
 Pro não é recriado: os dois juízes comparam o canal por `quer_uhid`, que é
 sempre falso para o Pro (o `ja_estava` em `daemon/subsystems/gamepad.py` e
-`daemon/subsystems/external_mask.py:797`, `vpad_ficou_para_tras`). Curar um
+`daemon/subsystems/external_mask.py:613`, `vpad_ficou_para_tras`). Curar um
 só faz o P1 pedir start a cada 2 s. Ficaram duas réguas `xfail(strict=True)`
 em `tests/unit/test_no_modo_xbox_o_jogo_ve_o_pad.py`, que passam a reprovar no
 dia da cura.
@@ -156,23 +156,23 @@ Pergunta nova de outra sprint que não passe pelo retrato reprova de propósito
 **O que a conferência achou e curou:**
 
 - **O microfone saía do ar rápido demais.** `LEITURAS_SEM_CANAL_ATE_SAIR`
-  (`daemon/subsystems/hotkey.py:2500`) conta duas leituras sem canal, e o
+  (`daemon/subsystems/hotkey.py:1531`) conta duas leituras sem canal, e o
   intervalo entre elas vinha do laço de 2 s. Acordando pelo evento, mediram-se
   cinco conferências em 40 ms: uma ponte do rádio que refaz o nó tiraria do ar
   um microfone ligado. Agora a conferência roda no máximo uma vez por
-  `CANAL_TTL_S` (`hotkey.py:3487`, `_conferir_no_prazo`).
+  `CANAL_TTL_S` (`hotkey.py:2130`, `_conferir_no_prazo`).
 - **Vazamento no ouvinte:** cada rajada virava uma tarefa guardada até o
-  subscribe cair (30 rajadas, 30 tarefas). `ouvinte_do_som.py:315` (`_podar`).
-- **O laço do daemon parado:** `ler_o_padrao` (`ouvinte_do_som.py:112`)
+  subscribe cair (30 rajadas, 30 tarefas). `ouvinte_do_som.py:193` (`_podar`).
+- **O laço do daemon parado:** `ler_o_padrao` (`ouvinte_do_som.py:46`)
   consultava o retrato dentro do asyncio, e uma releitura síncrona de até 4 s
   segurava o daemon inteiro (medido: 0 voltas). Agora roda em
   `asyncio.to_thread`.
 - **O retrato que nunca assumia:** exigia os seis tipos na primeira leitura;
   num servidor em que um tipo não responde, ficava solto para sempre. Agora
   assume com o que respondeu e insiste só no que falta
-  (`retrato_do_som.py:553`, `faltando`).
+  (`retrato_do_som.py:486`, `faltando`).
 - **Uma mordida que não mordia:** a exclusão do `Client Index` do `pactl info`
-  (`retrato_do_som.py:331`) passava com a cura arrancada, porque o servidor de
+  (`retrato_do_som.py:283`) passava com a cura arrancada, porque o servidor de
   mentira nunca muda esse número. No real ele muda a cada pergunta, e sem a
   exclusão toda releitura acordaria o canal dos quatro controles.
 
@@ -194,7 +194,7 @@ rascunho; o Salvar regrava o mesmo rascunho, normalizado, com a prioridade que
 o disco já tinha, o que o torna idempotente (salvar duas vezes dá o mesmo
 sha256). Os símbolos da sobreposição saíram e o `rodape.py` foi de 735 para
 340 linhas. O editor da aba 10 grava o campo editado sobre o disco
-(`interface/pacotes/a10_perfis.py:2630`, `_o_perfil_no_disco`).
+(`interface/pacotes/a10_perfis.py:1496`, `_o_perfil_no_disco`).
 
 **As réguas.** `tests/unit/test_o_salvar_e_o_aplicar_leem_so_o_perfil.py`
 monta P1 a P4 (dois no cabo, dois no rádio) com o aparelho divergindo do disco
@@ -335,11 +335,11 @@ com oito conhecidos, ~10 ms.
   reconstrução). O processo da janela continua perguntando direto.
 - **Salvar:** gravar `D-2709-O-SALVAR-LE-O-PERFIL`. O mudo do microfone é do
   controle (resposta 9 dela: «do controle, vale em todo jogo»), mas ainda mora
-  no perfil, e o `_lembrar_do_som` (`interface/pacotes/a02_controles.py:4491`)
+  no perfil, e o `_lembrar_do_som` (`interface/pacotes/a02_controles.py:2177`)
   ainda o grava no perfil ativo em vez de deixá-lo ao daemon. O
   Aplicar leva menos da metade do que a ativação leva (sprint proposta
   `O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01`). `_secao_do_mouse`
-  (`interface/pacotes/a06_navegacao.py:2198`) faz nascer `mouse.enabled` do
+  (`interface/pacotes/a06_navegacao.py:1453`) faz nascer `mouse.enabled` do
   estado vivo quando o perfil não tem a seção.
 - **Raiz:** encolher o `.gitignore` espera a confirmação de um dos
   mantenedores; o `traduzivel.json` a regerar; nomes velhos (`bancada.py`,

@@ -58,10 +58,8 @@ NOS = {
     SECUNDARIOS[2]: "/dev/input/event11",
 }
 
-#: As decisões dela que deixam passar com o jogo aberto, ESCRITAS AQUI.
 DO_GESTO = "D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR"
 DA_ORDEM = "D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA"
-#: O campo da linha `pad_recriado_com_o_jogo_aberto` que diz a decisão.
 CAMPO_DA_DECISAO = "decisao"  # noqa-acento: nome do campo no diário
 
 
@@ -185,22 +183,10 @@ def _linhas(diario: list[dict[str, Any]], evento: str) -> list[dict[str, Any]]:
     return [x for x in diario if x.get("event") == evento]
 
 
-# =============================================================================
-# RÉGUA 1 — o juiz do co-op espera o jogo
-# =============================================================================
-
 def test_o_juiz_do_co_op_espera_o_jogo_e_converge_quando_ele_fecha(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O registro diz Xbox para o P2 (o perfil automático), e `/dev/input` muda.
-
-    Com o jogo na autoridade, o ciclo não forçado não derruba o pad do P2, e o
-    dono diz a espera uma vez. O jogo fecha, e o `reconciliar_as_mascaras` o
-    refaz em Xbox.
-
-    MORDIDA: tire a pergunta `_a_mascara_espera_o_jogo` do juiz do
-    `CoopManager.sync` e o P2 é recriado com o jogo aberto.
-    """
+    """O registro diz Xbox para o P2 (o perfil automático), e `/dev/input` muda."""
     d = _daemon()
     mesa = _a_mesa(d, monkeypatch, 1)
     p2 = SECUNDARIOS[0]
@@ -226,14 +212,7 @@ def test_o_juiz_do_co_op_espera_o_jogo_e_converge_quando_ele_fecha(
 def test_o_p1_morto_que_renasce_sozinho_leva_a_origem_ao_co_op(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O P1 derrubado pelo kernel renasce por caminho automático, com o jogo aberto.
-
-    Ele renasce (não há o que perder), e o ciclo forçado do co-op recebe a origem
-    do pedido dele: o P2 VIVO, com a máscara para trás, segue com o pad de antes.
-
-    MORDIDA: tire o `origem=origin` do `sync(force=True, …)` do
-    `set_gamepad_emulation_desfecho` e o P2 é recriado.
-    """
+    """O P1 derrubado pelo kernel renasce por caminho automático, com o jogo aberto."""
     d = _daemon()
     mesa = _a_mesa(d, monkeypatch, 1)
     p2 = SECUNDARIOS[0]
@@ -250,24 +229,12 @@ def test_o_p1_morto_que_renasce_sozinho_leva_a_origem_ao_co_op(
         "o P1 morto levou junto o P2 vivo, sem ninguém ter perguntado por ele")
 
 
-# =============================================================================
-# RÉGUA 2 — o gesto e a renumeração passam, e dizem por quê
-# =============================================================================
-
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("secundarios", [0, 1, 2, 3], ids=["1j", "2j", "3j", "4j"])
 def test_o_gesto_dela_recria_e_diz_qual_decisao_deixou(
     secundarios: int, transporte: str, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com o jogo aberto, o gesto dela (`manual`) troca para Xbox, nos quatro.
-
-    Uma linha `pad_recriado_com_o_jogo_aberto` por pad recriado, os secundários
-    incluídos (o ciclo forçado leva a origem do pedido do P1). O dono não lê o
-    transporte: o resultado é o mesmo no cabo e no rádio.
-
-    MORDIDAS: uma trava que segura tudo (o `return False` da tabela trocado por
-    `return True`) → o gesto não recria; tirar a linha → reprova.
-    """
+    """Com o jogo aberto, o gesto dela (`manual`) troca para Xbox, nos quatro."""
     d = _daemon(transporte)
     mesa = _a_mesa(d, monkeypatch, secundarios) if secundarios else None
     if mesa is None:
@@ -288,11 +255,7 @@ def test_o_gesto_dela_recria_e_diz_qual_decisao_deixou(
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_automatico_espera_o_jogo(transporte: str) -> None:
-    """`origin="profile"` com o jogo aberto: o pad fica, e o desfecho diz que esperou.
-
-    MORDIDA: uma trava que não segura nada (o `return True` final trocado por
-    `return False`) → o pad é recriado, e reprova.
-    """
+    """`origin="profile"` com o jogo aberto: o pad fica, e o desfecho diz que esperou."""
     d = _daemon(transporte)
     gp.start_gamepad_emulation(d, "dualsense", origin="profile")
     antes = d._gamepad_device
@@ -305,13 +268,7 @@ def test_o_automatico_espera_o_jogo(transporte: str) -> None:
 
 
 def test_a_ordem_do_co_op_passa_e_diz_a_decisao_dela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A carta renumerada com o jogo aberto: o secundário renasce, e a linha diz a D-2309.
-
-    O plano da ordem é dado (o dono do plano é outra régua); o que se mede é a
-    recriação passando pelo dono da trava.
-
-    MORDIDA: tire a pergunta ao dono do `_ordenar` e a linha não sai.
-    """
+    """A carta renumerada com o jogo aberto: o secundário renasce, e a linha diz a D-2309."""
     d = _daemon()
     mesa = _a_mesa(d, monkeypatch, 2)
     p3 = SECUNDARIOS[1]
@@ -332,16 +289,7 @@ def test_a_ordem_do_co_op_passa_e_diz_a_decisao_dela(monkeypatch: pytest.MonkeyP
 def test_o_aviso_da_espera_e_um_por_origem_e_so_com_o_que_recriar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sessenta tiques com o jogo aberto: uma linha de espera por origem.
-
-    E nenhuma linha nos tiques sem nada para trás.
-
-    MORDIDAS: o latch de uma vaga (`_primeira_vez_no_episodio` guardando só a
-    última chave) → dezenas de linhas; o juiz perguntando antes do
-    `vpad_ficou_para_tras` (o `_recriacao_bloqueada_por_jogo` do
-    `reconciliar_as_mascaras` antes do `if not (p1_para_tras or …)`) → a linha
-    sai nos tiques sem nada para trás.
-    """
+    """Sessenta tiques com o jogo aberto: uma linha de espera por origem."""
     d = _daemon()
     mesa = _a_mesa(d, monkeypatch, 1)
     _jogo(d, "game")
@@ -368,22 +316,16 @@ def test_o_aviso_da_espera_e_um_por_origem_e_so_com_o_que_recriar(
     assert origens == ["coop_tique", "profile", "reconciliacao"], origens
 
 
-# =============================================================================
-# RÉGUA 3 — um dono só, lido pela árvore
-# =============================================================================
-
 DESTRUIDORES = frozenset(
     {"stop_gamepad_emulation", "_teardown_player", "_derrubar_para_renascer", "reerguer_o_p1"})
 LEITORES_DO_JOGO = frozenset({"display_authority", "_autoridade_do_jogo", "_jogo_com_a_autoridade"})
 
-#: Quem chama destruidor E lê o sinal do jogo, e por quê. Cada linha é decisão.
 ISENTOS: dict[tuple[str, str], str] = {
     ("daemon/subsystems/coop.py", "_ordenar"): (
         "a autoridade decide o PLANO da ordem (o P1 fixo e a compactação); a "
         "recriação dos secundários passa pelo dono, com `ordem_do_coop`"),
 }
 
-#: Os chamadores do ciclo forçado do co-op, e os dois que dizem a origem.
 SYNC_FORCADO: dict[tuple[str, str], bool] = {
     ("daemon/ipc_handlers.py", "_repintar_apos_renumeracao"): False,
     ("daemon/ipc_handlers.py", "_handle_coop_sync"): False,
@@ -414,11 +356,7 @@ def _funcoes() -> list[tuple[str, ast.FunctionDef | ast.AsyncFunctionDef]]:
 
 
 def test_quem_destroi_pad_nao_le_o_sinal_do_jogo() -> None:
-    """Nenhuma função que derruba pad lê o sinal do jogo para decidir: pergunta ao dono.
-
-    MORDIDA: devolva o `if _autoridade_do_jogo(daemon): return None` ao
-    `reconciliar_as_mascaras` e a régua nomeia `gamepad.py` e a linha.
-    """
+    """Nenhuma função que derruba pad lê o sinal do jogo para decidir: pergunta ao dono."""
     achados = []
     for rel, func in _funcoes():
         chama = {_nome(x.func) for x in ast.walk(func) if isinstance(x, ast.Call)} & DESTRUIDORES
@@ -443,11 +381,7 @@ def test_o_dreno_da_pendencia_pergunta_ao_dono() -> None:
 
 
 def test_o_ciclo_forcado_do_co_op_tem_os_chamadores_de_hoje() -> None:
-    """Os chamadores de `sync(force=True)` são os sete, e só dois dizem a origem.
-
-    MORDIDA: um `sync(force=True)` novo num caminho automático → reprova com o
-    arquivo, a função e a linha.
-    """
+    """Os chamadores de `sync(force=True)` são os sete, e só dois dizem a origem."""
     achados: dict[tuple[str, str], bool] = {}
     linhas: dict[tuple[str, str], int] = {}
     for rel, func in _funcoes():
@@ -464,20 +398,13 @@ def test_o_ciclo_forcado_do_co_op_tem_os_chamadores_de_hoje() -> None:
     assert achados == SYNC_FORCADO
 
 
-# =============================================================================
-# RÉGUA 4 — cada origem que passa tem a decisão dela
-# =============================================================================
-
 def _decisoes_dela() -> dict[str, dict[str, str]]:
     with (RAIZ / "docs" / "data" / "decisoes-dela.csv").open(encoding="utf-8") as fh:
         return {linha["id"]: linha for linha in csv.DictReader(fh)}
 
 
 def test_toda_origem_que_passa_aponta_uma_decisao_dela() -> None:
-    """Cada chave da tabela aponta um id decidido por ela (não por delegação).
-
-    MORDIDA: ponha `"autoswitch": "D-INVENTADA"` na tabela e reprova.
-    """
+    """Cada chave da tabela aponta um id decidido por ela (não por delegação)."""
     decisoes = _decisoes_dela()
     for origem, decisao in gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.items():
         linha = decisoes.get(decisao)
@@ -489,10 +416,7 @@ def test_toda_origem_que_passa_aponta_uma_decisao_dela() -> None:
 
 
 def test_toda_ativacao_e_mascara_por_peca_dizem_a_origem_pelo_nome() -> None:
-    """O padrão `origin="manual"` do `activate` e do `apply_controller_mascaras` não vira gesto.
-
-    MORDIDA: tire o `origin=` de uma chamada em `src/` e reprova com o arquivo e a linha.
-    """
+    """O padrão `origin="manual"` do `activate` e do `apply_controller_mascaras` não vira gesto."""
     alvos = {"activate", "apply_controller_mascaras"}
     sem = []
     for arq in sorted(SRC.rglob("*.py")):
@@ -509,16 +433,8 @@ def test_toda_ativacao_e_mascara_por_peca_dizem_a_origem_pelo_nome() -> None:
     assert not sem, f"chamadas sem `origin=` por nome: {sem}"
 
 
-# =============================================================================
-# RÉGUA 5 — a sondagem não abre a trava
-# =============================================================================
-
 def test_a_sessao_do_pad_que_fecha_e_reabre_nao_abre_a_trava() -> None:
-    """O jogo pelo processo; a sessão `uhid` do P1 fecha e reabre; o automático espera.
-
-    MORDIDA: faça a sessão contar como evidência em `classify` (a sessão fechada
-    como «sem jogo», antes das evidências) e a autoridade cai no meio.
-    """
+    """O jogo pelo processo; a sessão `uhid` do P1 fecha e reabre; o automático espera."""
     from hefesto_dualsense4unix.daemon.subsystems.game_signal import GameSignal, classify
 
     sinal = GameSignal()
@@ -535,15 +451,6 @@ def test_a_sessao_do_pad_que_fecha_e_reabre_nao_abre_a_trava() -> None:
         assert gp._recriacao_bloqueada_por_jogo(
             d, origin="autoswitch", motivo="troca_de_mascara:dualsense->xbox") is True
 
-
-# =============================================================================
-# A TRAVA DO LANÇAMENTO ACABA QUANDO O JOGO DEVOLVE A AUTORIDADE
-# =============================================================================
-# Medido nesta sprint, no código: a trava do lançamento
-# (`launch_env._travar_o_pad_que_o_jogo_vai_abrir`) só se soltava no lançamento
-# seguinte. Com o jogo fechado, toda troca automática do pad (a volta à escolha
-# dela, o `reconciliar_as_mascaras`, o co-op que converge) seguia recusada pelo
-# dono até o próximo jogo.
 
 def _sinal_que_vai(d: Any, de: str, para_inputs: dict[str, Any]) -> None:
     """O `_sync_game_signal` de verdade, com o sinal em `de` e as evidências dadas."""
@@ -572,11 +479,7 @@ _SEM_JOGO = {
 
 
 def test_o_jogo_que_fecha_solta_a_trava_do_lancamento() -> None:
-    """O jogo devolve a autoridade (`game` → `daemon`): a trava do lançamento acaba, e diz.
-
-    MORDIDA: tire o `_soltar_o_pad_do_lancamento(self)` do `_sync_game_signal`
-    e a troca automática segue recusada com o jogo fechado.
-    """
+    """O jogo devolve a autoridade (`game` → `daemon`): a trava do lançamento acaba, e diz."""
     d = _daemon()
     gp.start_gamepad_emulation(d, "dualsense", origin="profile")
     d._pad_travado_pelo_lancamento = (4235410, 1000)

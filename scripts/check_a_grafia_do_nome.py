@@ -95,20 +95,11 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-#: A GRAFIA ERRADA, e as três guardas que protegem identificador técnico.
-#: É a MESMA expressão de ``scripts/aplicar_a_grafia_do_nome.sh``, de propósito:
-#: a régua e a cura têm de concordar sobre o que é texto e o que é endereço.
 _ERRADA = re.compile(
     r"(?<![-\w])Dualsense4Unix(?! Virtual )(?! virtual\))"
 )
 
-#: Os arquivos que NOMEIAM a grafia errada como defeito — a citação não se
 #: limpa, pela mesma razão do `noqa-acento`: apagar a grafia errada de dentro
-#: do laudo que a achou destrói o laudo.
-#: OS TRÊS DE `docs/process/` SAÍRAM EM 15/09/2026 — o laudo e as duas sprints
-#: que nomeavam a grafia errada deixaram de ser versionados junto com o resto
-#: dos arquivos de estudo (ver `.gitignore`). A régua varre o `git grep`: o que
-#: não é rastreado não é medido, então a isenção deles virou letra morta.
 ISENTOS: dict[str, str] = {
     "scripts/check_a_grafia_do_nome.py":
         "esta régua: a docstring tem de poder escrever o que ela caça.",
@@ -118,8 +109,6 @@ ISENTOS: dict[str, str] = {
         "a mordida: ela fabrica o defeito para ver a régua reprovar.",
 }
 
-#: A MOLDURA — quem mostra o nome tem de LER do dono. Os métodos que põem texto
-#: na barra da janela e na bandeja.
 _MOLDURA = (
     "src/hefesto_dualsense4unix/gui/ponte_da_tela.py",
     "src/hefesto_dualsense4unix/interface/ver.py",
@@ -169,7 +158,7 @@ def o_dono() -> list[tuple[str, int, str]]:
         texto = caminho.read_text(encoding="utf-8")
         for n, linha in enumerate(texto.splitlines(), 1):
             if linha.lstrip().startswith("#"):
-                continue  # comentário é prosa, não é o que a barra mostra
+                continue
             if _METODOS_DE_MOLDURA.search(linha):
                 fora.append((rel, n, linha.strip()[:110]))
         if "nome_longo" not in texto:

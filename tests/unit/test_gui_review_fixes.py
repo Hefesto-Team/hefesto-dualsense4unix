@@ -32,23 +32,18 @@ class TestBuildFromNameFlatMultiPos:
         assert eff is not None
 
     def test_multi_position_vibration_flat(self) -> None:
-        # [frequency, s0..s9]
         eff = build_from_name("MultiPositionVibration", [40, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0])
         assert eff is not None
 
     def test_custom_flat(self) -> None:
-        # [mode, f0..f6]
         eff = build_from_name("Custom", [1, 2, 3, 4, 5, 6, 7, 8])
         assert eff.mode == 1
 
     def test_feedback_flat_invalido_levanta_erro_claro(self) -> None:
-        # menos de 10 strengths -> a factory valida e levanta ValueError claro,
-        # não um TypeError de factory(*params).
         with pytest.raises(ValueError, match="10 strengths"):
             build_from_name("MultiPositionFeedback", [1, 2, 3])
 
     def test_retrocompat_nested_e_dict(self) -> None:
-        # Os formatos antigos seguem funcionando (sem regressão).
         nested = build_from_name(
             "MultiPositionFeedback", [[1, 1, 1, 1, 1], [2, 2, 2, 2, 2]]
         )
@@ -57,14 +52,6 @@ class TestBuildFromNameFlatMultiPos:
         assert dict_form.mode == 3
 
     def test_preset_posicional_normal_intacto(self) -> None:
-        # Presets de assinatura posicional comum não são afetados.
-        #
-        # TRIGGER-CANON-01: o literal `5` que estava aqui era o valor do modo
-        # `RIGID_B` — e `0x05` é o OFF do bloco de gatilho, o que este teste
-        # travava sem saber. O `Rigid` passou a mandar o `FEEDBACK` oficial.
-        # O que ele afere continua sendo o CAMINHO (lista posicional funciona),
-        # e por isso a asserção passou a ser contra a factory: quem trava os
-        # bytes do `Rigid` é o `test_trigger_effects.py`, num lugar só.
         from hefesto_dualsense4unix.core.trigger_effects import rigid
 
         eff = build_from_name("Rigid", [5, 200])
@@ -92,7 +79,7 @@ class TestDraftMultiPosRoundTrip:
         assert recovered.triggers.left.params == flat
 
     def test_to_ipc_dict_preserva_params_planos(self) -> None:
-        flat = (1, 2, 3, 4, 5, 6, 7, 0)  # Custom: [mode, f0..f6]
+        flat = (1, 2, 3, 4, 5, 6, 7, 0)
         draft = DraftConfig.default().model_copy(
             update={
                 "triggers": TriggersDraft(
@@ -102,7 +89,6 @@ class TestDraftMultiPosRoundTrip:
         )
         ipc = draft.to_ipc_dict()
         assert ipc["triggers"]["right"]["params"] == list(flat)
-        # E o daemon consegue construir o efeito a partir desse dict plano.
         eff = build_from_name("Custom", ipc["triggers"]["right"]["params"])
         assert eff.mode == 1
 
@@ -117,16 +103,7 @@ def test_gui_dialogs_confirm_delete_profile_exportado() -> None:
 
 @skip_sem_gi_real
 def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> None:
-    """BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não cita 'Navegação'.
-
-    TESTE-HONESTO-01/E3 (13/08/2026): a medida era um assert de substring sobre
-    o TEXTO-FONTE da função, e isso mede o ARQUIVO, não a tela — a frase certa
-    podia estar escrita ali e o diálogo passar outra string ao
-    `format_secondary_text` sem ninguém reprovar (provado por mutação em
-    13/08/2026: o assert antigo passa com o diálogo exibindo o texto do
-    diálogo de REMOVER). Agora o diálogo é EXECUTADO contra um dublê que
-    grava o que foi exibido.
-    """
+    """BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não cita 'Navegação'."""
     from hefesto_dualsense4unix.app import gui_dialogs
 
     exibidos: list[str] = []
@@ -150,9 +127,6 @@ def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> N
         def destroy(self) -> None:
             pass
 
-    # Só o `MessageDialog` é de mentira; os enums continuam sendo os do GTK
-    # real, senão o "Cancelar" do dublê não teria como ser o mesmo "Cancelar"
-    # que a função compara.
     gtk_falso = SimpleNamespace(
         MessageDialog=_DialogoFalso,
         MessageType=gui_dialogs.Gtk.MessageType,
@@ -164,12 +138,7 @@ def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> N
     assert gui_dialogs.confirm_restore_default(None) is False
 
     (secundario,) = exibidos
-    # A frase enganosa antiga sumiu, e a correta está na TELA.
     assert "Navegação" not in secundario
-    # PERFIL-PADRAO-PERSONALIZADO-01: a régua exigia o nome que ela mandou
-    # aposentar. Invertida — o diálogo tem de citar o perfil pelo nome que
-    # ela LÊ na lista, e o slug antigo passa a ser motivo de reprovação.
-    # O-MODO-FREESTYLE-03: o nome é LIDO do dono, e os dois aposentados reprovam.
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
     assert f"'{NOME_DO_PADRAO}'" in secundario

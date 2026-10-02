@@ -65,9 +65,6 @@ from pathlib import Path
 from typing import Any
 
 RAIZ = Path(__file__).resolve().parents[1]
-#: Os instrumentos que ele orquestra, e as sondas do kernel. Os dois ficam no
-#: lugar em que o pacote os põe (``share/hefesto-dualsense4unix/scripts/``), e
-#: nunca na pasta de estudos: ela é ignorada pelo git e não viaja.
 ENSAIOS = RAIZ / "scripts" / "ensaios"
 SONDAS = RAIZ / "scripts" / "sondas"
 _SRC = RAIZ / "src"
@@ -84,13 +81,7 @@ from hefesto_dualsense4unix.core.o_modo_no_ar import (
     modo_contra_o_ar,
 )
 
-# ---------------------------------------------------------------------------
-# O que ele chama, dito uma vez: a régua dos pacotes lê daqui
-# ---------------------------------------------------------------------------
 
-#: Os instrumentos de ``scripts/ensaios/`` que algum subcomando roda. A régua
-#: 8 de ``tests/unit/test_o_basico_o_contrato.py`` confere que cada um (e cada
-#: módulo que ele importa desta pasta) está em cada empacotamento.
 ENSAIOS_CHAMADOS: tuple[str, ...] = (
     "quem_e_quem.py",
     "os_nos_de_som_por_controle.py",
@@ -104,14 +95,12 @@ ENSAIOS_CHAMADOS: tuple[str, ...] = (
     "microfone_no_cabo.py",
     "o_caminho_do_mic_no_cabo.py",
 )
-#: As sondas do kernel, todas atrás de ``--bpftrace``.
 SONDAS_DO_BASICO: tuple[str, ...] = (
     "trava-por-pad.bt",
     "nucleo-por-processo.bt",
     "uhid-raw-request.bt",
 )
 
-#: Os arquivos dela que a volta confere (01 A7), relativos à config do Hefesto.
 ARQUIVOS_DELA: tuple[str, ...] = (
     "profiles/*.json",
     "controller_masks.json",
@@ -122,8 +111,6 @@ ARQUIVOS_DELA: tuple[str, ...] = (
     "maquina.json",
 )
 
-#: Os campos do estado que um passo que escreve pode deixar para trás (01 A7).
-#: Por jogador, a chave é ``P<n>.<campo>``, nunca o endereço.
 CAMPOS_DA_VOLTA: tuple[str, ...] = (
     "output_target_index",
     "rumble_active",
@@ -139,12 +126,6 @@ CAMPOS_DA_VOLTA: tuple[str, ...] = (
     "controllers[].camada_da_usuaria",
     "mic_da_mesa.eleito",
 )
-#: A volta que o sha256 da config do Hefesto não vê (C12 da contraprova, e o
-#: ``03-roteiro/volta.sh`` da noite de 27/09): a fonte e a saída padrão do
-#: sistema, o wrapper e o Proton de cada jogo da Steam, e o ``GamesConfig`` do
-#: Heroic. A Steam apaga o wrapper sozinha, o vigia do Hefesto reescreve o
-#: ``localconfig.vdf``, e o daemon elege a fonte a cada boot: se algo disso
-#: mudar no meio da medida, o fecho tem de ver.
 VOLTA_FORA_DA_CONFIG: tuple[str, ...] = (
     "som.saida_padrao",
     "som.fonte_padrao",
@@ -157,43 +138,26 @@ ORDEM: tuple[str, ...] = (
     "retrato", "sessao", "eixos", "entrada", "saidas", "som", "haptica",  # (noqa-acento: o nome do subcomando é o do protocolo)
     "movimento", "tudo-junto",
 )
-#: O que precisa da bancada reservada: tudo o que escreve (01 §3.2).
 ESCREVEM: frozenset[str] = frozenset({"saidas", "som", "haptica", "tudo-junto"})
-#: Um vermelho só para o que depende do alvo dele (01 A11): o 1a vermelho tira
-#: o alvo de quem mede por jogador; o 1b (o boot) não tira nada de agora.
 DEPENDE_DO_1A: frozenset[str] = frozenset({"entrada", "saidas", "movimento", "tudo-junto"})
 
-# Os vereditos de uma linha.
 VERDE = "verde"
 VERMELHO = "vermelho"
 NAO_SEI = "nao_sei"
 NAO_COBERTO = "nao_coberto"
 NAO_SE_APLICA = "nao_se_aplica"
 REGISTRO = "registro"
-#: Os que decidem o rc. Registro, «não se aplica» e «não coberto» aparecem e
-#: não reprovam: é o que uma máquina com um controle só mostra.
 VEREDITOS_QUE_CONTAM: frozenset[str] = frozenset({VERDE, VERMELHO, NAO_SEI})
 
 RC_VERDE, RC_VERMELHO, RC_RECUSADO, RC_NAO_SEI = 0, 1, 2, 3
 
-#: Os eventos do diário que NÃO absolvem uma divergência entre o modo pedido e
-#: o do ar. O R-04 (`vpad_recriacao_bloqueada_por_jogo`) recusa recriar o pad
-#: com o jogo vivo: é a razão de o jogo rodar no modo que o perfil dele NÃO
-#: pediu (o L2 de 27/09, o PRAGMATA no Xbox). A interface dela é soberana; um
-#: motivo que explica a desobediência não a torna obediência.
 MOTIVOS_QUE_NAO_ABSOLVEM: tuple[str, ...] = ("vpad_recriacao_bloqueada_por_jogo",)
 
-#: A janela do boot, contada do `daemon_starting`. Os sete pads de 27/09
-#: nasceram em 5,3 s; uma troca de modo pedida depois disto não é o boot.
 JANELA_DO_BOOT_S = 60.0
-#: A espera de um pedido de vibração: 5 ms é o prazo da régua da cura, 50 ms o
-#: teto da prova no aparelho (O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01).
 PRAZO_DA_ESPERA_US = 5_000
 TETO_DA_ESPERA_US = 50_000
-#: Um intervalo de entrada acima disto é um quadro perdido a 30 Hz.
 INTERVALO_DE_BURACO_MS = 33.0
 
-# As colunas de `docs/data/ensaios.csv`, na ordem dele.
 COLUNAS_DO_CADERNO: tuple[str, ...] = (
     "id", "linha_id", "transporte", "degrau", "ponte", "quando", "suspeito",
     "presente", "resultado", "resultado_da_feature", "observado_por", "fonte",
@@ -204,11 +168,6 @@ _RESULTADO_DO_VEREDITO = {VERDE: "obedece", VERMELHO: "não obedece", NAO_SEI: "
 
 class Recusa(Exception):
     """O subcomando não pode seguir sem mentir: sai com rc=2 e o porquê."""
-
-
-# ---------------------------------------------------------------------------
-# Um passo: uma linha da tabela
-# ---------------------------------------------------------------------------
 
 
 @dataclasses.dataclass
@@ -230,12 +189,7 @@ class Passo:
 
 
 def rc_dos_passos(passos: Sequence[Passo], recusas: Sequence[str]) -> int:
-    """O rc de uma corrida: recusado > vermelho > não sei > verde.
-
-    «Não sei» em qualquer linha pedida tira o verde (01 §4.10: o rc=0 só vale
-    com zero vermelho e zero «não sei»). Sem nenhuma linha que conte, é
-    «não sei»: nada verde nem vermelho.
-    """
+    """O rc de uma corrida: recusado > vermelho > não sei > verde."""
     if recusas:
         return RC_RECUSADO
     contam = [p.veredito for p in passos if p.veredito in VEREDITOS_QUE_CONTAM]
@@ -246,21 +200,13 @@ def rc_dos_passos(passos: Sequence[Passo], recusas: Sequence[str]) -> int:
     return RC_VERDE
 
 
-# ---------------------------------------------------------------------------
-# Leituras puras (o dublê da régua passa texto, e o real passa o do aparelho)
-# ---------------------------------------------------------------------------
-
 _ISO = re.compile(
     r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:[.,](\d{1,9}))?"
 )
 
 
 def _segundos_do_dia(achado: re.Match[str]) -> float:
-    """O instante de um carimbo ISO, em segundos desde uma origem fixa.
-
-    Só serve para DIFERENÇAS entre linhas do mesmo diário: o dia entra como
-    número de dias desde o ano zero, sem fuso.
-    """
+    """O instante de um carimbo ISO, em segundos desde uma origem fixa."""
     a, m, d, hh, mi, ss = (int(achado.group(i)) for i in range(1, 7))
     fracao = float("0." + (achado.group(7) or "0"))
     dias = a * 372 + m * 31 + d
@@ -285,11 +231,7 @@ def _desde_o_ultimo_boot(linhas: Sequence[str]) -> list[str]:
 
 
 def pads_no_boot(linhas_do_daemon: Sequence[str], janela_s: float = JANELA_DO_BOOT_S) -> int | None:
-    """Quantos pads o daemon criou no boot: da `daemon_starting` até ``janela_s``.
-
-    ``None`` quando o diário não tem o `daemon_starting` (não medido). É a
-    linha 1b (01 A11): o multiplicador do boot, e não os pads de agora.
-    """
+    """Quantos pads o daemon criou no boot: da `daemon_starting` até ``janela_s``."""
     desde = _desde_o_ultimo_boot(linhas_do_daemon)
     if not desde or "daemon_starting" not in desde[0]:
         return None
@@ -350,7 +292,7 @@ def _nomes_dos_pads_uinput() -> dict[str, tuple[str, str, str]]:
     """``{nome: (máscara, vendor, product)}`` das máscaras do `uinput`, lidos do produto."""
     try:
         from hefesto_dualsense4unix.integrations.uinput_gamepad import FLAVORS
-    except Exception:  # sem o evdev no interpretador: a leitura segue sem eles
+    except Exception:
         return {}
     return {
         str(dados["name"]): (mascara, f"{int(dados['vendor']):04x}", f"{int(dados['product']):04x}")
@@ -410,8 +352,6 @@ def pads_do_produto(texto: str, nomes_uinput: Mapping[str, Any] | None = None) -
     return pads
 
 
-#: A chave do `@hw` que o resumo espera na sonda: sem o `pid` o jogo e a Steam
-#: não se separam (C2 da contraprova).
 _CHAVE_DO_HW = re.compile(r"@hw\[(?P<chave>[^\]]+)\]\s*=")
 
 
@@ -441,13 +381,7 @@ def escritas_por_dono(
     ordem: Sequence[str],
     dono_do_pid: Callable[[int], str],
 ) -> Counter[tuple[str, str, int, int]]:
-    """``(dono, fio, minor, bytes) -> vezes`` de cada `hidraw_write`.
-
-    O dono vem do PROCESSO (o `pid` da chave), casado pela árvore: o jogo, a
-    Steam, o daemon, o teclado na tela. Sem o `pid` na chave o dono é «?», e
-    o fio de mesmo nome da Steam e do jogo cai na mesma conta — é o que a
-    régua 9 morde.
-    """
+    """``(dono, fio, minor, bytes) -> vezes`` de cada `hidraw_write`."""
     contagem: Counter[tuple[str, str, int, int]] = Counter()
     for achado in re.finditer(r"@hw\[(?P<chave>[^\]]+)\]:\s*(?P<n>\d+)", saida_da_sonda):
         partes = [p.strip() for p in achado.group("chave").split(", ")]
@@ -501,13 +435,7 @@ def _hex12(valor: object) -> str | None:
 
 
 def chave_mascarada(valor: object) -> str | None:
-    """O endereço na máscara da casa, com dois-pontos: a chave de casar sem expor.
-
-    O instrumento imprime o endereço já mascarado, e o estado traz o cru; os
-    dois lados passam por aqui e casam pelo que sobra (o fabricante e o último
-    octeto). Dois controles que colidem nessa chave viram «não sei», nunca um
-    palpite.
-    """
+    """O endereço na máscara da casa, com dois-pontos: a chave de casar sem expor."""
     doze = _hex12(valor)
     if doze is None:
         return None
@@ -521,12 +449,7 @@ _ENDERECO_EM_TEXTO = re.compile(
 
 
 def enderecos_em(dado: object) -> set[str]:
-    """Todo endereço de aparelho que aparece num JSON (valores e chaves).
-
-    Os cartões por controle dos perfis e o `maquina.json` são chaveados pelo
-    endereço, e o estado o traz em vários campos: tudo vira conhecido do
-    mascarador, que assim pega até a forma invertida com espaço.
-    """
+    """Todo endereço de aparelho que aparece num JSON (valores e chaves)."""
     achados: set[str] = set()
     pilha: list[object] = [dado]
     while pilha:
@@ -589,8 +512,6 @@ def mesa_de(estado: Mapping[str, Any], dispositivos: str) -> dict[str, Any]:
         if c.get("uniq")
     }
     per_vpad = _lista(_dict(estado.get("rumble_ff")).get("per_vpad"))
-    # Em texto: o `player` ou o `backend` podem vir None (um pad no meio da
-    # recriação), e ordenar None contra int derrubava a sessão na abertura.
     pads = sorted([str(p.get("player")), str(p.get("backend"))] for p in per_vpad)
     no_kernel = sorted(p.backend for p in pads_do_produto(dispositivos))
     return {"controles": controles, "pads": pads, "pads_no_kernel": no_kernel}
@@ -661,11 +582,6 @@ def caminho_do_perfil(perfil: Mapping[str, Any] | None) -> str | None:
     return caminho if caminho in ("dualsense", "xbox") else None
 
 
-# ---------------------------------------------------------------------------
-# A máquina: o mundo, lido (o dublê da régua troca ESTA classe inteira)
-# ---------------------------------------------------------------------------
-
-
 class Maquina:
     """Tudo o que o protocolo lê ou escreve fora dele mesmo.
 
@@ -677,7 +593,6 @@ class Maquina:
 
     TETO_DO_IPC_S = 8.0
 
-    # -- o daemon -------------------------------------------------------------
 
     def chamar(self, metodo: str, params: Mapping[str, Any] | None = None) -> Any:
         from hefesto_dualsense4unix.cli.ipc_client import IpcClient
@@ -695,7 +610,6 @@ class Maquina:
             return None
         return estado if isinstance(estado, dict) else None
 
-    # -- os diários -----------------------------------------------------------
 
     def _journal(self, *argv: str) -> list[str]:
         rc, texto = self.rodar(["journalctl", "--no-pager", "-o", "short-iso-precise", *argv], 30.0)
@@ -713,7 +627,6 @@ class Maquina:
     def kernel_desde(self, epoca: float) -> list[str]:
         return self._journal("-k", "--since", f"@{int(epoca)}")
 
-    # -- o kernel, o /proc e o /sys --------------------------------------------
 
     def ler(self, caminho: str | Path) -> str:
         try:
@@ -800,14 +713,12 @@ class Maquina:
                 return "ligado" if dado and dado[-1] == 1 else "desligado"
         return "sem EFI" if not base.exists() else "não lido"
 
-    # -- a config dela --------------------------------------------------------
 
     def config_dela(self) -> Path:
         from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
         return Path(config_dir())
 
-    # -- o servidor de som ------------------------------------------------------
 
     def pactl(self, *argv: str) -> str | None:
         """Uma leitura do `pactl` em C, pelo leitor do produto; None se não respondeu."""
@@ -819,7 +730,6 @@ class Maquina:
         except Exception:
             return None
 
-    # -- processos filhos -------------------------------------------------------
 
     def rodar(
         self, argv: Sequence[str], teto_s: float, ambiente: Mapping[str, str] | None = None
@@ -858,14 +768,7 @@ class Maquina:
         return saida or ""
 
     def steam_no_disco(self) -> dict[str, Any]:
-        """O wrapper e o Proton de cada jogo, pelos relatórios SÓ DE LEITURA do produto (C12).
-
-        O censo do wrapper (``sentinela_do_wrapper --censo``, sem anotar) e o
-        relatório do pino (``proton_pin --report``). O sha do
-        ``localconfig.vdf`` não serve: a Steam o regrava a cada sessão (o tempo
-        de jogo). Sem a Steam instalada, os dois somem das duas pontas e nada
-        difere.
-        """
+        """O wrapper e o Proton de cada jogo, pelos relatórios SÓ DE LEITURA do produto (C12)."""
         ambiente = {"PYTHONPATH": str(_SRC)} if (_SRC / "hefesto_dualsense4unix").is_dir() else {}
         fora: dict[str, Any] = {}
         rc, texto = self.rodar(
@@ -907,7 +810,6 @@ class Maquina:
     def regra_do_input_remapper(self) -> bool:
         return Path("/usr/lib/udev/rules.d/60-input-remapper-daemon.rules").exists()
 
-    # -- o aparelho: o que escreve ----------------------------------------------
 
     def leitor_dos_fisicos(self) -> LeitorDosFisicos:
         leitor = LeitorDosFisicos()
@@ -998,7 +900,6 @@ class Maquina:
         if processo.poll() is None:
             processo.terminate()
 
-    # -- o relógio --------------------------------------------------------------
 
     def agora(self) -> float:
         return time.time()
@@ -1015,22 +916,12 @@ def pasta_privada() -> Path:
 
 
 def pasta_das_copias() -> Path:
-    """Onde mora a cópia CRUA dos arquivos dela: irmã da saída padrão, nunca dentro dela.
-
-    A cópia de restauração é byte a byte e carrega os endereços (os cartões por
-    controle são chaveados por eles). Dentro da saída padrão, o fecho da sprint
-    («o varre-enderecos.py com zero na pasta de saída») reprovaria toda corrida
-    feita sem ``--saida``.
-    """
+    """Onde mora a cópia CRUA dos arquivos dela: irmã da saída padrão, nunca dentro dela."""
     return pasta_privada().with_name("o-basico-copias")
 
 
 def caminhos_que_ele_mesmo_abre() -> dict[str, Path]:
-    """Todo caminho fixo que o protocolo lê ou escreve por conta própria.
-
-    A régua 7 confere que nenhum fica sob a pasta de estudos (ignorada pelo
-    git). O ``--saida`` é de quem chama, e não entra aqui.
-    """
+    """Todo caminho fixo que o protocolo lê ou escreve por conta própria."""
     fora: dict[str, Path] = {
         "ensaios": ENSAIOS, "sondas": SONDAS, "saida_padrao": pasta_privada(),
         "copias_cruas": pasta_das_copias(),
@@ -1047,11 +938,6 @@ def _pasta_segura(caminho: Path) -> Path:
     with contextlib.suppress(OSError):
         os.chmod(caminho, 0o700)
     return caminho
-
-
-# ---------------------------------------------------------------------------
-# A sessão: o contrato comum
-# ---------------------------------------------------------------------------
 
 
 class Sessao:
@@ -1086,7 +972,6 @@ class Sessao:
         self.reiniciar_o_daemon_no_fim = False
         self.corridas: dict[str, int] = {}
 
-    # -- o mascarador: UM, na saída de tudo ------------------------------------
 
     def conhecer(self, *dados: object) -> None:
         for dado in dados:
@@ -1114,7 +999,6 @@ class Sessao:
     def gravar_json(self, rel: str, dado: object) -> Path:
         return self.gravar(rel, json.dumps(dado, ensure_ascii=False, indent=1, default=str) + "\n")
 
-    # -- abrir: o estado, a mesa, a fotografia ----------------------------------
 
     def abrir(self) -> bool:
         estado = self.maquina.estado()
@@ -1139,13 +1023,7 @@ class Sessao:
         return True
 
     def fotografar(self, *, copiar: bool = False) -> dict[str, str]:
-        """O ``sha256`` dos arquivos dela; com ``copiar``, a cópia byte a byte na pasta privada.
-
-        A cópia crua tem os endereços (os cartões por controle são chaveados
-        por eles): ela mora na pasta privada (:func:`pasta_das_copias`), 0700,
-        e nunca na de saída (C11 da contraprova). Na de saída ficam o
-        ``sha256`` e a cópia mascarada.
-        """
+        """O ``sha256`` dos arquivos dela; com ``copiar``, a cópia byte a byte na pasta privada."""
         base = self.maquina.config_dela()
         achados: dict[str, str] = {}
         for padrao in ARQUIVOS_DELA:
@@ -1176,7 +1054,6 @@ class Sessao:
         fora.update(self.maquina.games_config_do_heroic())
         return fora
 
-    # -- o fecho: a relistagem e a volta ----------------------------------------
 
     def relistar_e_conferir(self) -> None:
         """A mesa do fim contra a do começo. Mudou no meio: rc=2, sem verde."""
@@ -1215,7 +1092,6 @@ class Sessao:
         self.gravar_json("depois/volta.json", difs)
         return difs
 
-    # -- os passos --------------------------------------------------------------
 
     def recusar(self, porque: str) -> None:
         self.recusas.append(porque)
@@ -1237,14 +1113,9 @@ class Sessao:
         """O que o passo mexeu, com o antes e o depois (01 §3.4)."""
         self.mexeu.append({"o_que": o_que, "antes": antes, "depois": depois, "voltou": voltou})
 
-    # -- os ensaios ---------------------------------------------------------------
 
     def rodar_ensaio(self, nome: str, *args: str, teto_s: float = 120.0) -> tuple[int, str]:
-        """Roda ``scripts/ensaios/<nome>``, grava a saída MASCARADA e a devolve crua em memória.
-
-        A crua nunca toca o disco: ela serve só para ler o ``--json`` do
-        ensaio. O arquivo e o terminal recebem o texto mascarado.
-        """
+        """Roda ``scripts/ensaios/<nome>``, grava a saída MASCARADA e a devolve crua em memória."""
         ambiente = {}
         if (_SRC / "hefesto_dualsense4unix").is_dir():
             ambiente["PYTHONPATH"] = os.pathsep.join(
@@ -1252,19 +1123,16 @@ class Sessao:
             )
         rc, texto = self.maquina.rodar([sys.executable, str(ENSAIOS / nome), *args], teto_s, ambiente)
         base = nome.removesuffix(".py")
-        # O mesmo ensaio roda mais de uma vez numa sessão (o quem_e_quem antes e
-        # depois da troca de modo): cada corrida guarda o próprio arquivo.
         self.corridas[base] = self.corridas.get(base, 0) + 1
         rel = f"ensaios/{base}.txt" if self.corridas[base] == 1 else f"ensaios/{base}-{self.corridas[base]}.txt"
         self.gravar(rel, f"$ {nome} {' '.join(args)}\nrc={rc}\n{texto}")
         return rc, texto
 
-    # -- a bancada ------------------------------------------------------------------
 
     def reservar_a_bancada(self) -> None:
         """Reserva a bancada antes de escrever (01 §3.2); ocupada é recusa, nunca contorno."""
         if self.bancada_reservada:
-            return  # o `exigir` diria «ocupada» pela nossa própria reserva
+            return
         bancada = RAIZ / "scripts" / "bancada.sh"
         if not bancada.is_file():
             self.dizer("  (esta instalação não tem o semáforo da bancada: sigo sem reserva, declarado)")
@@ -1286,7 +1154,6 @@ class Sessao:
             self.maquina.rodar(["bash", str(RAIZ / "scripts" / "bancada.sh"), "liberar"], 10.0)
             self.bancada_reservada = False
 
-    # -- fechar ------------------------------------------------------------------------
 
     def fechar(self) -> int:
         self.liberar_a_bancada()
@@ -1345,11 +1212,6 @@ def caderno(passos: Sequence[Passo], carimbo: str, comando: str) -> str:
     return saida.getvalue()
 
 
-# ---------------------------------------------------------------------------
-# Ajudas de linha
-# ---------------------------------------------------------------------------
-
-
 def _passo(s: Sessao, linha: str, jogador: str, transporte: str, veredito: str, porque: str,
            **extra: Any) -> None:
     s.anotar(
@@ -1397,11 +1259,6 @@ def _jogo_vivo(estado: Mapping[str, Any]) -> bool:
 def _pid_do_compositor(maquina: Maquina) -> int | None:
     pids = [pid for pid, (_pai, comm) in maquina.processos().items() if comm == "cosmic-comp"]
     return min(pids) if pids else None
-
-
-# ---------------------------------------------------------------------------
-# retrato (§4.1): só lê
-# ---------------------------------------------------------------------------
 
 
 def sub_retrato(s: Sessao, a: argparse.Namespace) -> None:
@@ -1513,14 +1370,7 @@ def _linha_dos_nos_de_som(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _linha_dos_endpoints(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
-    """O endpoint do APARELHO de cada controle, nos DOIS transportes.
-
-    A-HAPTICA-E-POR-APARELHO-01 (02/10/2026): o endpoint é um por aparelho,
-    com o nome pela marca da chave do controle (``nome_do_endpoint(uniq)``),
-    e o do cabo também passa por ele (um laço do endpoint à placa). O número
-    do cartão não entra na conta: renumerar a mesa não troca o endpoint de
-    ninguém, e a linha confere o nó do aparelho que está na mão.
-    """
+    """O endpoint do APARELHO de cada controle, nos DOIS transportes."""
     rc, texto = s.rodar_ensaio("os_endpoints_de_haptica.py", "--json", teto_s=60.0)
     dado = _json_do_ensaio(texto)
     endpoints = _lista(_dict(dado).get("endpoints")) if isinstance(dado, Mapping) else []
@@ -1577,14 +1427,7 @@ def _linha_da_bateria(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _linhas_da_maquina(s: Sessao) -> None:
-    """As variáveis que mudam o resultado de uma medida de sessão e de vibração.
-
-    O pai do `cosmic-osk` (ele é de toda sessão COSMIC, C19), a regra 60 do
-    `input-remapper` (roda em todo nó de entrada novo, inclusive nos pads), a
-    GPU, as unidades pessoais que reagem à Steam, o compositor contra o pacote,
-    o grupo `input`, o Secure Boot e o chip de cada adaptador. Todas são
-    registro: dizem de que máquina o resultado veio.
-    """
+    """As variáveis que mudam o resultado de uma medida de sessão e de vibração."""
     processos = s.maquina.processos()
     osk = [pid for pid, (_p, comm) in processos.items() if comm == "cosmic-osk"]
     pai = processos.get(processos.get(osk[0], (0, ""))[0], (0, "?"))[1] if osk else None
@@ -1616,11 +1459,6 @@ def _linhas_da_maquina(s: Sessao) -> None:
                json.dumps(valor, ensure_ascii=False, default=str)[:200])
 
 
-# ---------------------------------------------------------------------------
-# a sessão (§4.2): só lê; o --boot e o --bpftrace são declarados
-# ---------------------------------------------------------------------------
-
-
 def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
     e = s.estado_inicio
     jogadores = len(controles_na_mesa(e))
@@ -1628,15 +1466,10 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
     inicio = s.maquina.agora()
 
     if a.boot:
-        # Reiniciar o daemon mexe (recria os pads): reserva a bancada antes (01 §3.2).
         s.reservar_a_bancada()
         _reiniciar_o_daemon(s, "o --boot da sessão")
 
     sondas = _subir_as_sondas(s, a, ("trava-por-pad.bt", "uhid-raw-request.bt"), a.segundos)
-    # A janela é SEMPRE observada (01 §4.2, ~60 s): o compositor a cada 5 s, e
-    # o pânico e a fila cheia contados no diário desde o começo. Sem ela, as
-    # duas contagens leriam uma janela de zero segundo e dariam zero — o
-    # compositor sairia verde sobre nada.
     fim = s.maquina.agora() + a.segundos
     pids_do_compositor = {compositor_antes}
     while s.maquina.agora() < fim:
@@ -1647,7 +1480,6 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
     kernel = s.maquina.diario_do_kernel()
     s.gravar("sessao/diario-do-daemon.txt", "\n".join(_desde_o_ultimo_boot(diario)) + "\n")
 
-    # A hora do pad (01 A9): o dono é o mesmo do doctor.
     horas = hora_do_pad(kernel, diario)
     if not horas:
         _passo(s, "a hora do pad", "todos", "—", NAO_SE_APLICA,
@@ -1658,16 +1490,11 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
                comando="journalctl -k -b × journalctl --user -u hefesto-dualsense4unix -b",
                medida={"atraso_s": h.atraso_s, "limite_s": LIMITE_DO_NASCIMENTO_S})
 
-    # 1b, os pads no boot (01 A11). NÃO se conta os pads de agora: o
-    # multiplicador do boot some depois que os pads sobrando morrem.
     no_boot = pads_no_boot(diario)
     if no_boot is None:
         _passo(s, "1b, os pads no boot", "todos", "—", NAO_SEI,
                "o diário deste boot não tem o daemon_starting")
     else:
-        # O vermelho do 1b é o MULTIPLICADOR (mais pads que jogadores, 01 §4.2).
-        # Menos pads que os jogadores de agora é um controle que chegou depois
-        # da janela do boot: o boot não responde por ele, e isso não é verde.
         if no_boot > jogadores:
             veredito, porque = VERMELHO, f"{no_boot} pad(s) criados no boot para {jogadores} jogador(es)"
         elif no_boot == 0 and _sem_pad_por_desenho(e):
@@ -1682,7 +1509,6 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
                comando="journalctl --user -u hefesto-dualsense4unix -b",
                medida={"pads_no_boot": no_boot, "jogadores": jogadores})
 
-    # O compositor: o mesmo PID e nenhum pânico novo.
     if compositor_antes is None:
         _passo(s, "o compositor", "todos", "—", NAO_SE_APLICA, "a sessão não é COSMIC (sem cosmic-comp)")
     else:
@@ -1709,11 +1535,6 @@ def _reiniciar_o_daemon(s: Sessao, motivo: str) -> None:
     s.declarar(f"o daemon reiniciado ({motivo})", "de pé", "reiniciado" if rc == 0 else texto.strip())
     if rc != 0:
         raise Recusa(f"o reinício do daemon falhou: {texto.strip()}")
-    # Assentar é a MESA DO COMEÇO de volta, duas leituras seguidas: os mesmos
-    # controles, os mesmos pads no daemon e no kernel. «Pads >= jogadores»
-    # voltava no meio do boot, com os pads sobrando do multiplicador ainda
-    # vivos (27/09: sete para quatro), e a relistagem do fim recusava a volta;
-    # e na Conexão Nativa, sem pad nenhum, nunca assentava.
     prazo = s.maquina.agora() + 60.0
     seguidas = 0
     while s.maquina.agora() < prazo:
@@ -1781,11 +1602,6 @@ def _ler_as_sondas_da_espera(s: Sessao, sondas: Mapping[str, Any]) -> None:
                medida={"maior_us": maior, "acima_de_5ms": len(esperas)})
 
 
-# ---------------------------------------------------------------------------
-# eixos (§4.3): só lê; o --trocar-modo mexe na sessão do daemon (A8)
-# ---------------------------------------------------------------------------
-
-
 def sub_eixos(s: Sessao, a: argparse.Namespace) -> None:
     _medir_os_eixos(s, s.estado_inicio, rotulo=None)
     if a.trocar_modo:
@@ -1835,13 +1651,8 @@ def _medir_os_eixos(s: Sessao, estado: Mapping[str, Any], *, rotulo: str | None,
     diario = s.maquina.diario_do_daemon()
     por_numero = {int(c["player"]): c for c in mesa}
 
-    # O modo pedido contra o do ar, por jogador (o dono é o do doctor).
     for linha in modo_contra_o_ar(estado):
         controle = por_numero.get(linha.jogador, {})
-        # A tabela corrigida da sprint: verde é o modo pedido IGUAL ao do ar. O
-        # motivo que o daemon pendura (a queda dita) explica a divergência e
-        # vai na frase; não a absolve — a interface dela é soberana, e perder
-        # o canal pedido é perder feature (NO-MODO-XBOX-TUDO-FUNCIONA-01).
         if linha.veredito == OK:
             veredito = VERDE
         elif linha.veredito == AVISO and linha.pedido is None:
@@ -1863,7 +1674,6 @@ def _medir_os_eixos(s: Sessao, estado: Mapping[str, Any], *, rotulo: str | None,
     _linha_da_mascara_contra_o_pad(s, estado, pads, sufixo, modo)
     _linha_1a(s, estado, pads, sufixo, modo)
 
-    # O movimento declarado (A14): o booleano, não as linhas.
     emulacao = _dict(estado.get("gamepad_emulation"))
     fora_do_uhid = any(c.get("vpad_backend") != "uhid" for c in mesa)
     sem_imu = emulacao.get("canal_sem_imu")
@@ -1878,7 +1688,6 @@ def _medir_os_eixos(s: Sessao, estado: Mapping[str, Any], *, rotulo: str | None,
                f"canal_sem_imu={sem_imu} com {'algum' if fora_do_uhid else 'nenhum'} jogador fora do uhid",
                modo=modo, comando="state_full.gamepad_emulation.canal_sem_imu")
 
-    # A conexão, duas réguas: o transporte dito contra o barramento do físico.
     rc, texto = s.rodar_ensaio("quem_e_quem.py", "--json", teto_s=60.0)
     dado = _json_do_ensaio(texto)
     fisicos = _por_chave(_lista(_dict(dado).get("fisicos")), "uniq") if isinstance(dado, Mapping) else {}
@@ -1908,12 +1717,7 @@ def _esperado_do_pad(backend: str, mascara: str, jogador: int, nomes_uinput: Map
 
 def _linha_da_mascara_contra_o_pad(s: Sessao, estado: Mapping[str, Any], pads: Sequence[PadNoKernel],
                                    sufixo: str, modo: str) -> None:
-    """A máscara de cada jogador contra o pad que o kernel publica (01 A3).
-
-    O `uhid` casa pelo número no nome. Os pads `uinput` são homônimos (A2):
-    casa-se o MULTICONJUNTO — tantos pads daquela máscara quantos jogadores a
-    pedem —, e o jogador que falta sai vermelho.
-    """
+    """A máscara de cada jogador contra o pad que o kernel publica (01 A3)."""
     if _sem_pad_por_desenho(estado):
         _passo(s, "a máscara contra o pad" + sufixo, "todos", "—", NAO_SE_APLICA,
                f"o modo ({modo}) não cria pad: a máscara não chega ao jogo", modo=modo)
@@ -1948,12 +1752,7 @@ def _linha_da_mascara_contra_o_pad(s: Sessao, estado: Mapping[str, Any], pads: S
 
 
 def _sem_pad_por_desenho(estado: Mapping[str, Any]) -> bool:
-    """Conexão Nativa ou emulação desligada (a Navegação): o jogo lê o físico, e não há pad.
-
-    É o mesmo recorte do dono do modo (``o_modo_no_ar.modo_contra_o_ar``):
-    ali, sem pad nesses modos é OK. Toda linha que conta pad tem de valer em
-    todo modo, e não só nos dois que criam pad.
-    """
+    """Conexão Nativa ou emulação desligada (a Navegação): o jogo lê o físico, e não há pad."""
     return modo_de(estado) in ("nativo", "desligado")
 
 
@@ -1983,19 +1782,12 @@ def _linha_1a(s: Sessao, estado: Mapping[str, Any], pads: Sequence[PadNoKernel],
 
 
 def _trocar_o_modo_e_voltar(s: Sessao, destino: str) -> None:
-    """A passada C′: o outro modo SÓ na sessão do daemon, e a volta (01 §6).
-
-    ``gamepad.emulation.set`` sem ``origin`` vira ``origin="profile"``, e o
-    flag global dela só se grava com ``origin == "manual"``. Os ``sha256``
-    conferidos no fim dizem se a hipótese A8 se sustentou.
-    """
+    """A passada C′: o outro modo SÓ na sessão do daemon, e a volta (01 §6)."""
     antes = _dict(s.estado_inicio.get("gamepad_emulation")).get("caminho")
     if antes not in ("dualsense", "xbox"):
         raise Recusa(f"o modo de agora é {antes!r}: a troca só vale entre dualsense e xbox")
     if _jogo_vivo(s.estado_inicio):
         raise Recusa("há jogo aberto: a troca recriaria os pads no meio da partida")
-    # A troca escreve na sessão do daemon e recria os pads: reserva a bancada
-    # antes, como todo passo que escreve (01 §3.2).
     s.reservar_a_bancada()
     compositor = _pid_do_compositor(s.maquina)
     marco = s.maquina.agora()
@@ -2037,12 +1829,7 @@ def _esperar_os_pads(s: Sessao, caminho: str, prazo_s: float = 30.0) -> dict[str
 
 
 def _conferir_a_hora_da_troca(s: Sessao, marco: float, rotulo: str) -> None:
-    """Os pads `uinput` que nasceram na troca, cada um em até 2 s (a sessão de pé).
-
-    O diário do kernel entra só desde o marco: os pads do boot ficam sem a
-    linha da criação e saem «não medido», e só os nascidos na troca contam.
-    Os pads `uhid` não passam pela hora (a trava medida é do `uinput`).
-    """
+    """Os pads `uinput` que nasceram na troca, cada um em até 2 s (a sessão de pé)."""
     horas = hora_do_pad(s.maquina.kernel_desde(marco), s.maquina.diario_do_daemon())
     medidos = [h for h in horas if h.veredito != AVISO]
     lentos = [h for h in medidos if h.veredito == FALHA]
@@ -2056,17 +1843,8 @@ def _conferir_a_hora_da_troca(s: Sessao, marco: float, rotulo: str) -> None:
            else f"{len(medidos)} pad(s) nascidos, nenhum acima de {LIMITE_DO_NASCIMENTO_S:g} s")
 
 
-# ---------------------------------------------------------------------------
-# A parada que segue a dependência de alvo (01 A11)
-# ---------------------------------------------------------------------------
-
-
 def _parar_se_o_1a_caiu(s: Sessao, a: argparse.Namespace) -> bool:
-    """O 1a vermelho tira o alvo de quem mede por jogador: para, a menos que --seguir.
-
-    Devolve True quando o subcomando deve parar. O 1b (o boot) não para nada:
-    os pads de agora são os que a relistagem do fim confere.
-    """
+    """O 1a vermelho tira o alvo de quem mede por jogador: para, a menos que --seguir."""
     estado = s.estado_inicio
     pads = pads_do_produto(s.maquina.dispositivos_de_entrada())
     jogadores = len(controles_na_mesa(estado))
@@ -2081,11 +1859,6 @@ def _parar_se_o_1a_caiu(s: Sessao, a: argparse.Namespace) -> bool:
     return not a.seguir
 
 
-# ---------------------------------------------------------------------------
-# entrada (§4.4): só lê; 30 s parado
-# ---------------------------------------------------------------------------
-
-
 def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
     if _parar_se_o_1a_caiu(s, a):
         return
@@ -2093,9 +1866,6 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
     mesa = controles_na_mesa(e)
     segundos = f"{a.segundos:g}"
     no_uinput = [c for c in mesa if c.get("vpad_backend") == "uinput"]
-    # A sonda dos buracos por escritor sobe ANTES dos ensaios e cobre as quatro
-    # janelas: medida numa janela à parte, depois deles, ela não dizia nada
-    # sobre os pares que a taxa acabou de medir.
     janela_da_sonda = 4 * a.segundos + 60.0
     sondas = _subir_as_sondas(s, a, ("nucleo-por-processo.bt",), janela_da_sonda)
 
@@ -2129,8 +1899,6 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
                    + "; inventa valor em: " + (", ".join(_textos(par.get("inventa"))) or "—"),
                    medida=dict(par))
         elif par.get("fluxo_vivo") is not True:
-            # 01 §4.4: o verde pede os carimbos andando. Um par parado casa pelo
-            # repouso e não prova que o pad entrega entrada nenhuma.
             _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c),
                    VERMELHO if par.get("fluxo_vivo") is False else NAO_SEI,
                    "os carimbos do par não andaram na janela: o pad não está entregando"
@@ -2144,8 +1912,6 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
                                teto_s=a.segundos + 90.0)
     dado = _json_do_ensaio(texto)
     pares = {str(p.get("vpad")): p for p in _lista(_dict(_dict(dado).get("medidas")).get("pares"))}
-    # O ensaio diz rc=2 e «não conclua nada» quando a ligação hidraw -> aparelho
-    # mudou no meio da janela: os pares que ele ainda imprime não valem.
     ligacao_mudou = _textos(_dict(_dict(dado).get("medidas")).get("ligacao_mudou"))
     for c in mesa:
         jogador = f"P{c['player']}"
@@ -2191,19 +1957,8 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
                + " (bluetoothd = a entrada do físico pelo rádio)")
 
 
-# ---------------------------------------------------------------------------
-# O leitor dos físicos (saidas e som): o relatório de ENTRADA, pelo broker
-# ---------------------------------------------------------------------------
-
-
 class LeitorDosFisicos:
-    """O relatório de entrada de cada físico, num fio por nó, com a hora de cada quadro.
-
-    Só lê. A porta é a do broker (``comum.abrir_no_hidraw``), porque os
-    físicos estão escondidos do jogo e um ``open()`` direto colhe ``EACCES``.
-    O acelerômetro do físico é o sensor da vibração (01 §4.5); os bytes de
-    estado do gatilho e o bit de áudio moram no mesmo relatório.
-    """
+    """O relatório de entrada de cada físico, num fio por nó, com a hora de cada quadro."""
 
     def __init__(self) -> None:
         self.quadros: dict[str, list[tuple[float, bytes]]] = {}
@@ -2221,7 +1976,7 @@ class LeitorDosFisicos:
             sys.path.insert(0, str(ENSAIOS))
         try:
             import comum
-        except Exception as erro:  # sem a pasta dos ensaios: nada a ler
+        except Exception as erro:
             self.problemas.append(f"os ensaios não se importam: {erro}")
             return
         for aparelho in comum.fisicos(comum.descobrir_aparelhos()):
@@ -2289,20 +2044,13 @@ def _desvio(valores: Sequence[float]) -> float:
     return math.sqrt(sum((v - media) ** 2 for v in valores) / len(valores))
 
 
-#: Quantos quadros um físico precisa em CADA janela para contar como lido. O
-#: rádio entrega ~250 por segundo: abaixo disto o fio parou, e um desvio de
-#: zero quadros é zero — que se leria «parado» sobre um controle não lido.
 QUADROS_PARA_LER = 20
 
 
 def tremor_por_fisico(
     quadros: Mapping[str, Sequence[tuple[float, bytes]]], base: tuple[float, float], janela: tuple[float, float]
 ) -> dict[str, tuple[float, float]]:
-    """``{físico: (desvio na base, desvio na janela)}`` do módulo do acelerômetro.
-
-    Só entram os físicos com :data:`QUADROS_PARA_LER` nas duas janelas: o
-    que não se leu fica FORA, e quem decide lê a falta como «não sei».
-    """
+    """``{físico: (desvio na base, desvio na janela)}`` do módulo do acelerômetro."""
     fora: dict[str, tuple[float, float]] = {}
     for doze, lista in quadros.items():
         medidas: dict[str, list[float]] = {"base": [], "janela": []}
@@ -2322,12 +2070,7 @@ def tremor_por_fisico(
 def veredito_do_tremor(
     tremores: Mapping[str, tuple[float, float]], alvo: str, esperados: Iterable[str] = ()
 ) -> tuple[str, str]:
-    """Só o alvo treme: ele ≥ 5× a própria base e os vizinhos ≤ 2× (hipótese do limiar).
-
-    Os números de 19/09 foram 2.000 a 3.000 contra 50 a 300. ``esperados``
-    são os físicos da mesa: um vizinho que não se leu não é um vizinho
-    parado, e o verde «só o alvo tremeu» não sai sobre ele.
-    """
+    """Só o alvo treme: ele ≥ 5× a própria base e os vizinhos ≤ 2× (hipótese do limiar)."""
     if alvo not in tremores:
         return NAO_SEI, "o físico do alvo não se leu"
     nao_lidos = sorted(set(esperados) - set(tremores))
@@ -2371,11 +2114,6 @@ def gatilho_mudou(quadros: Sequence[tuple[float, bytes]], antes: tuple[float, fl
     return a != b
 
 
-# ---------------------------------------------------------------------------
-# saidas (§4.5): ESCREVE; a bancada; devolve
-# ---------------------------------------------------------------------------
-
-
 def sub_saidas(s: Sessao, a: argparse.Namespace) -> None:
     if _parar_se_o_1a_caiu(s, a):
         return
@@ -2405,19 +2143,12 @@ def sub_saidas(s: Sessao, a: argparse.Namespace) -> None:
         leitor.fechar()
         s.gravar_json("saidas/marcas.json", leitor.marcas)
         if s.reiniciar_o_daemon_no_fim:
-            # C10: a camada da usuária é memória do daemon, e o estado ainda não
-            # a publica. A volta que não deixa rastro é o reinício, declarado.
             _reiniciar_o_daemon(s, "a volta do gatilho por controle (a camada da usuária, C10)")
     _o_dono_de_cada_escrita(s, sondas)
 
 
 def _linha_da_luz(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
-    """3a, a luz e o número: o estado e o sysfs concordam (dois donos). Só lê.
-
-    ``lightbar_source = "desired"`` quer dizer que o daemon publica o que PEDIU,
-    e não o que leu: a linha diz «não sei», nunca verde. O plástico é do olho
-    dela.
-    """
+    """3a, a luz e o número: o estado e o sysfs concordam (dois donos). Só lê."""
     rc, texto = s.rodar_ensaio("quem_e_quem.py", "--json", teto_s=60.0)
     dado = _json_do_ensaio(texto)
     fisicos = _por_chave(_lista(_dict(dado).get("fisicos")), "uniq") if isinstance(dado, Mapping) else {}
@@ -2486,14 +2217,7 @@ def _vibracao_do_produto(s: Sessao, mesa: Sequence[Mapping[str, Any]], leitor: L
 
 
 def _vibracao_que_o_jogo_pede(s: Sessao, mesa: Sequence[Mapping[str, Any]], leitor: LeitorDosFisicos) -> None:
-    """3c: o pedido de vibração entra pelo pad do jogador, como o jogo o faria.
-
-    No `uhid`, um ``0x02`` USB com os motores no hidraw do pad; no `uinput`, um
-    efeito FF no evdev do pad, casado por pulso (A2): o jogador cujo
-    ``ff_nao_nulo_count`` sobe é o dono do nó. O critério usa o DELTA do
-    ``ff_nao_nulo_count`` e nunca o ``ff_play_count``, que o teclado na tela
-    sobe vinte vezes por segundo (A13).
-    """
+    """3c: o pedido de vibração entra pelo pad do jogador, como o jogo o faria."""
     compositor = _pid_do_compositor(s.maquina)
     pads = pads_do_produto(s.maquina.dispositivos_de_entrada())
     uinput = [p for p in pads if p.backend == "uinput"]
@@ -2610,7 +2334,6 @@ def _o_gatilho(s: Sessao, mesa: Sequence[Mapping[str, Any]], leitor: LeitorDosFi
         _passo(s, "3d, o gatilho", jogador, transporte_de(c), veredito, porque,
                comando='trigger.set {"side":"right","mode":"Rigid","params":[0,255],"uniq":…}',
                mexe=["o gatilho direito, na camada da usuária"])
-        # Sem a camada publicada, a mudança do próximo jogador leria a deste.
         s.maquina.chamar("trigger.set", {"side": "right", "mode": "Off", "params": [],
                                          "uniq": c.get("uniq")})
 
@@ -2675,11 +2398,6 @@ def _o_dono_de_cada_escrita(s: Sessao, sondas: Mapping[str, Any]) -> None:
            comando="bpftrace scripts/sondas/nucleo-por-processo.bt")
 
 
-# ---------------------------------------------------------------------------
-# som (§4.6): ESCREVE som; a bancada
-# ---------------------------------------------------------------------------
-
-#: Um tom por jogador, para a FFT separar quem tocou.
 FREQUENCIA_DO_JOGADOR = {1: 700.0, 2: 900.0, 3: 1100.0, 4: 1300.0}
 
 
@@ -2823,10 +2541,6 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
                "não medido (sem a Forja nesta máquina)")
 
 
-# ---------------------------------------------------------------------------
-# haptica (§4.7) e tudo-junto (§4.9): fecham depois da parte 1 da A-HAPTICA
-# ---------------------------------------------------------------------------
-
 _ESPERA_A_HAPTICA = (
     "não medido: espera a parte 1 da A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01 "
     "(sem ela o portão do evdev fecha a ponte sem jogo; 01 §9)"
@@ -2841,11 +2555,6 @@ def sub_haptica(s: Sessao, a: argparse.Namespace) -> None:
 def sub_tudo_junto(s: Sessao, a: argparse.Namespace) -> None:
     _passo(s, "tudo no mesmo controle", "todos", "—", NAO_SEI,
            _ESPERA_A_HAPTICA + "; a exclusividade som/vibração pelo rádio é o vermelho sabido")
-
-
-# ---------------------------------------------------------------------------
-# movimento (§4.8): só lê; o touchpad com o dedo é da mão dela
-# ---------------------------------------------------------------------------
 
 
 def sub_movimento(s: Sessao, a: argparse.Namespace) -> None:
@@ -2881,8 +2590,6 @@ def sub_movimento(s: Sessao, a: argparse.Namespace) -> None:
                    VERDE if pad.get("motion_streaming") and hz >= 200 else VERMELHO,
                    f"motion_streaming={pad.get('motion_streaming')} a {hz:.0f} Hz")
         else:
-            # Ordem dela de 27/09: no modo Xbox, tudo funciona. A ausência
-            # declarada não é mais o verde com ressalva do 01 §4.8.
             _passo(s, "o movimento chega ao pad", jogador, transporte_de(c), VERMELHO,
                    f"o pad {c.get('vpad_backend')} não leva movimento (canal_sem_imu="
                    f"{emulacao.get('canal_sem_imu')}); no modo Xbox tudo funciona (NO-MODO-XBOX-TUDO-FUNCIONA-01)")
@@ -2909,12 +2616,6 @@ def _a_posse_do_jogo(s: Sessao, mesa: Sequence[Mapping[str, Any]], per_vpad: Map
                f"a árvore do jogo {'tem' if tem else 'NÃO tem'} o hidraw do pad; motion_hz={hz:.0f}")
 
 
-# ---------------------------------------------------------------------------
-# --veredito (§4.10)
-# ---------------------------------------------------------------------------
-
-
-#: A ordem em que uma célula da matriz mostra o pior dos passos dela.
 _GRAVIDADE = {NAO_COBERTO: 0, NAO_SE_APLICA: 0, REGISTRO: 1, VERDE: 2, NAO_SEI: 3, VERMELHO: 4}
 
 
@@ -2926,11 +2627,7 @@ def sessoes_em(pasta: Path) -> list[Path]:
 
 
 def veredito(pasta: Path | None) -> int:
-    """A matriz subcomando × jogador × transporte × modo, e a tabela «mexeu e voltou».
-
-    ``rc=0`` só com zero vermelho, zero «não sei» e nenhuma recusa (a volta
-    inteira). «Não coberto» aparece e não reprova.
-    """
+    """A matriz subcomando × jogador × transporte × modo, e a tabela «mexeu e voltou»."""
     if pasta is None:
         base = pasta_privada()
         todas = sorted(p for p in base.iterdir() if p.is_dir()) if base.is_dir() else []
@@ -2953,9 +2650,6 @@ def veredito(pasta: Path | None) -> int:
             mexeu += [dict(m, sub=resumo.get("sub")) for m in resumo.get("mexeu") or []]
     colunas = sorted({(p["jogador"], p["transporte"], p["modo"]) for p in passos})
     linhas = sorted({(p["sub"], p["linha"]) for p in passos}, key=lambda x: (ORDEM.index(x[0]) if x[0] in ORDEM else 99, x[1]))
-    # Uma célula pode ter vários passos (a hora de cada pad, o 3c por pulso):
-    # ela mostra o PIOR deles. Guardar o último escondia um vermelho da matriz
-    # enquanto o rc o contava.
     celula: dict[tuple[str, ...], str] = {}
     for p in passos:
         chave = (p["sub"], p["linha"], p["jogador"], p["transporte"], p["modo"])
@@ -2984,10 +2678,6 @@ def veredito(pasta: Path | None) -> int:
     print(f"\nveredito: rc={rc} ({len(sessoes)} sessão(ões), {len(passos)} linha(s))")
     return rc
 
-
-# ---------------------------------------------------------------------------
-# main
-# ---------------------------------------------------------------------------
 
 SUBCOMANDOS: dict[str, Callable[[Sessao, argparse.Namespace], None]] = {
     "retrato": sub_retrato,
@@ -3047,7 +2737,7 @@ def executar(argv: Sequence[str], maquina: Maquina | None = None) -> int:
     s = Sessao(maquina, nome, saida=saida, comando="o_basico.py " + " ".join(argv), jogadores=a.jogadores)
     try:
         aberta = s.abrir()
-    except Exception as erro:  # o estado veio numa forma que a sessão não lê
+    except Exception as erro:
         s.recusar(f"a sessão não abriu: {type(erro).__name__}: {erro}")
         return s.fechar()
     if not aberta:
@@ -3057,8 +2747,6 @@ def executar(argv: Sequence[str], maquina: Maquina | None = None) -> int:
     except Recusa as recusa:
         s.recusar(str(recusa))
     except Exception as erro:
-        # Um subcomando que CAI não é vermelho: o rc=1 do Python se leria como
-        # «o aparelho reprovou», e o fecho (o resumo, o caderno) nem sairia.
         s.recusar(f"o subcomando caiu no meio: {type(erro).__name__}: {erro}")
     finally:
         s.liberar_a_bancada()

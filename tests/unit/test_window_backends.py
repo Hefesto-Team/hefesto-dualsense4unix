@@ -1,12 +1,4 @@
-"""Testes dos backends de detecção de janela.
-
-- WaylandPortalBackend: degradação sem jeepney, caminho feliz com jeepney
-  mockado, zero ThreadPoolExecutor/asyncio.run por chamada, propagação de
-  timeout nativo (sprint AUDIT-FINDING-WAYLAND-PORTAL-PERF-01).
-- XlibBackend: gate de foco X contra `_NET_ACTIVE_WINDOW` rançoso do
-  cosmic-comp (UX-02, SPRINT-UX-AUTOSWITCH-01) e, desde o FOCO-01 (auditoria
-  24/07), o DADO derivado da janela do foco REAL — o gate sozinho não bastava.
-"""
+"""Testes dos backends de detecção de janela."""
 from __future__ import annotations
 
 import sys
@@ -20,10 +12,6 @@ from hefesto_dualsense4unix.integrations.window_backends import (
     wayland_portal,
     xlib,
 )
-
-# ---------------------------------------------------------------------------
-# Helpers — stub do pacote `jeepney` injetado via sys.modules
-# ---------------------------------------------------------------------------
 
 
 class _FakeReply:
@@ -59,10 +47,7 @@ def _install_fake_jeepney(
     raise_on_open: Exception | None = None,
     raise_on_send: Exception | None = None,
 ) -> list[_FakeConn]:
-    """Injeta um pacote `jeepney` falso em sys.modules.
-
-    Retorna a lista compartilhada de conexões criadas (para asserts).
-    """
+    """Injeta um pacote `jeepney` falso em sys.modules."""
     _FakeConn.instances = []
 
     def _open_dbus_connection(bus: str = "SESSION") -> _FakeConn:
@@ -93,14 +78,8 @@ def _install_fake_jeepney(
     return _FakeConn.instances
 
 
-# ---------------------------------------------------------------------------
-# Testes
-# ---------------------------------------------------------------------------
-
-
 def test_sem_jeepney_retorna_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """Sem jeepney instalado, get_active_window_info degrada para None."""
-    # Garante que qualquer jeepney em cache seja invisível via ImportError.
     for name in ("jeepney", "jeepney.io", "jeepney.io.blocking"):
         monkeypatch.setitem(sys.modules, name, None)  # type: ignore[arg-type]
 
@@ -174,12 +153,7 @@ def test_conexao_sempre_fechada_mesmo_com_excecao(monkeypatch: pytest.MonkeyPatc
 def test_multiplas_chamadas_nao_criam_threadpoolexecutor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Invariante central da sprint: nenhuma thread extra por chamada.
-
-    Substitui `concurrent.futures.ThreadPoolExecutor` por um sentinela que
-    marca a flag se for instanciado. Roda 20 chamadas de
-    get_active_window_info e confirma que a flag permaneceu False.
-    """
+    """Invariante central da sprint: nenhuma thread extra por chamada."""
     import concurrent.futures as _cf
 
     pool_created = {"flag": False}
@@ -213,7 +187,6 @@ def test_multiplas_chamadas_nao_criam_threads(monkeypatch: pytest.MonkeyPatch) -
     baseline = threading.active_count()
     for _ in range(30):
         backend.get_active_window_info()
-    # Permite flutuação mínima (garbage collector, daemon threads do pytest).
     assert threading.active_count() <= baseline + 1
 
 
@@ -280,12 +253,6 @@ def test_parse_portal_result_app_id_alternativo() -> None:
 
 def test_parse_portal_result_vazio() -> None:
     assert wayland_portal._parse_portal_result({}) is None
-
-
-# ---------------------------------------------------------------------------
-# BUG-COSMIC-PORTAL-UNSUPPORTED-01 (v2.4.0, re-portado v3.1.0)
-# Threshold de 3 falhas → portal entra em modo "unsupported" silencioso.
-# ---------------------------------------------------------------------------
 
 
 def test_threshold_para_de_chamar_dbus_apos_3_falhas(
@@ -368,18 +335,6 @@ def test_compositor_hint_unknown_sem_envs(monkeypatch: pytest.MonkeyPatch) -> No
     assert backend._compositor_hint() == "unknown"
 
 
-# ---------------------------------------------------------------------------
-# UX-02 (SPRINT-UX-AUTOSWITCH-01) — gate de foco X no XlibBackend.
-#
-# Provado ao vivo (2x, independente) na sessão COSMIC: `_NET_ACTIVE_WINDOW`
-# aponta janela X MORTA (BadWindow ao consultar WM_CLASS) enquanto
-# `get_input_focus().focus == 0` — o cosmic-comp não limpa a propriedade
-# quando o foco vai para janela Wayland nativa nem quando a janela X morre.
-# O gate consulta o foco ANTES de confiar na propriedade; sem foco X
-# (None=0 / PointerRoot=1) retorna None e a histerese UX-01 segura o perfil.
-# ---------------------------------------------------------------------------
-
-
 class _FakeProperty:
     def __init__(self, value: list[int]) -> None:
         self.value = value
@@ -400,8 +355,6 @@ class _FakeGameWin:
 
 class _FakeRoot:
     def get_full_property(self, atom: int, _type: int) -> _FakeProperty:
-        # _NET_ACTIVE_WINDOW → id da janela de jogo (0x1200007, o id rançoso
-        # medido ao vivo).
         return _FakeProperty([0x1200007])
 
 
@@ -415,8 +368,7 @@ class _FakeFocusReply:
 
 
 class _FakeWindowHandle:
-    """python-xlib devolve `focus` como objeto Window com `.id` no caminho
-    feliz — o gate precisa normalizar antes de comparar com {0, 1}."""
+    """python-xlib devolve `focus` como objeto Window com `.id` no caminho"""
 
     def __init__(self, wid: int) -> None:
         self.id = wid
@@ -452,8 +404,7 @@ def _xlib_backend_with(display: _FakeXDisplay) -> xlib.XlibBackend:
 def test_focus_gate_focus_zero_int_retorna_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """foco == 0 (int, X.NONE) + _NET_ACTIVE_WINDOW apontando janela VIVA de
-    jogo → None (a propriedade é rançosa; quem decide é o foco)."""
+    """foco == 0 (int, X.NONE) + _NET_ACTIVE_WINDOW apontando janela VIVA de"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "sackboy-bin")
     backend = _xlib_backend_with(_FakeXDisplay(focus=0))
     assert backend.get_active_window_info() is None
@@ -462,8 +413,7 @@ def test_focus_gate_focus_zero_int_retorna_none(
 def test_focus_gate_focus_zero_como_objeto_window_retorna_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Mesmo gate com `focus` vindo como objeto Window de id 0 — a
-    normalização via getattr(focus, 'id', focus) cobre os DOIS tipos."""
+    """Mesmo gate com `focus` vindo como objeto Window de id 0 — a"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "sackboy-bin")
     backend = _xlib_backend_with(_FakeXDisplay(focus=_FakeWindowHandle(0)))
     assert backend.get_active_window_info() is None
@@ -472,9 +422,7 @@ def test_focus_gate_focus_zero_como_objeto_window_retorna_none(
 def test_focus_gate_pointer_root_retorna_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """PointerRoot (1) também é tratado como sem-foco. Tradeoff DECLARADO da
-    UX-02: cega sessões X11 legadas focus-follows-mouse — intencional, o alvo
-    é COSMIC; este teste fixa o comportamento de propósito."""
+    """PointerRoot (1) também é tratado como sem-foco. Tradeoff DECLARADO da"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "sackboy-bin")
     backend = _xlib_backend_with(_FakeXDisplay(focus=1))
     assert backend.get_active_window_info() is None
@@ -483,8 +431,7 @@ def test_focus_gate_pointer_root_retorna_none(
 def test_focus_valido_mantem_comportamento_atual(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Foco numa janela X válida → caminho feliz intocado: a leitura via
-    _NET_ACTIVE_WINDOW continua exatamente como antes do gate."""
+    """Foco numa janela X válida → caminho feliz intocado: a leitura via"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "sackboy-bin")
     backend = _xlib_backend_with(
         _FakeXDisplay(focus=_FakeWindowHandle(0x1200007))
@@ -500,8 +447,7 @@ def test_focus_valido_mantem_comportamento_atual(
 def test_focus_gate_loga_uma_vez_por_episodio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O gate roda no poll de 2 Hz do autoswitch — loga 1x por episódio
-    (sem flood no journal) e reabre quando o foco volta a ser válido."""
+    """O gate roda no poll de 2 Hz do autoswitch — loga 1x por episódio"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "sackboy-bin")
     eventos: list[str] = []
     monkeypatch.setattr(
@@ -511,26 +457,14 @@ def test_focus_gate_loga_uma_vez_por_episodio(
     )
 
     backend = _xlib_backend_with(_FakeXDisplay(focus=0))
-    for _ in range(4):  # episódio 1: 4 ticks sem foco → 1 log
+    for _ in range(4):
         backend.get_active_window_info()
     backend._display = _FakeXDisplay(focus=_FakeWindowHandle(0x1200007))
-    backend.get_active_window_info()  # foco válido fecha o episódio
+    backend.get_active_window_info()
     backend._display = _FakeXDisplay(focus=0)
-    backend.get_active_window_info()  # episódio 2 → mais 1 log
+    backend.get_active_window_info()
 
     assert eventos.count("x11_focus_gate_no_x_focus") == 2
-
-
-# ---------------------------------------------------------------------------
-# Reconexão do XlibBackend (achado MED da revisão adversarial da Fase 2).
-#
-# O XWayland morre/reinicia (crash de jogo + NVIDIA; o cosmic-comp respawna) e
-# o Display do python-xlib fica MORTO: antes, `_init_attempted` congelava a
-# primeira conexão para sempre → todo tick virava 'unknown' e a histerese
-# UX-01 retinha o perfil de jogo INDEFINIDAMENTE (as rampas de saída — Steam e
-# GUI, ambas XWayland — dependem desta mesma conexão). Agora o erro de conexão
-# derruba o Display e `_ensure_connected` tenta um novo.
-# ---------------------------------------------------------------------------
 
 
 class _DisplayMorto:
@@ -557,7 +491,6 @@ def test_conexao_morta_derruba_o_display_na_primeira_falha(
     backend._display = morto
 
     assert backend.get_active_window_info() is None
-    # Erro de CONEXÃO reconhecido → estado zerado já na 1ª falha.
     assert backend._connected is False
     assert backend._init_attempted is False
     assert backend._display is None
@@ -565,8 +498,7 @@ def test_conexao_morta_derruba_o_display_na_primeira_falha(
 
 
 def test_erro_pontual_nao_custa_a_conexao_viva() -> None:
-    """Um erro não-reconhecido isolado (BadWindow e afins) NÃO derruba o
-    Display — só N falhas consecutivas."""
+    """Um erro não-reconhecido isolado (BadWindow e afins) NÃO derruba o"""
     backend = _xlib_backend_with(_FakeXDisplay(focus=0))
     backend._display = _DisplayMorto(exc=RuntimeError("BadWindow pontual"))
 
@@ -604,14 +536,12 @@ def test_leitura_util_zera_o_contador_de_falhas() -> None:
 def test_apos_o_drop_uma_conexao_nova_volta_a_ler(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O ciclo completo do achado: conexão morre → drop → o tick seguinte
-    reconecta (sem esperar backoff — o carimbo é zerado no drop) e a leitura
-    útil volta, destravando a histerese UX-01."""
+    """O ciclo completo do achado: conexão morre → drop → o tick seguinte"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "sackboy-bin")
     monkeypatch.setenv("DISPLAY", ":1")
     backend = _xlib_backend_with(_FakeXDisplay(focus=0))
     backend._display = _DisplayMorto()
-    assert backend.get_active_window_info() is None  # morre + drop
+    assert backend.get_active_window_info() is None
 
     import Xlib.display as _xdisplay
 
@@ -628,12 +558,11 @@ def test_apos_o_drop_uma_conexao_nova_volta_a_ler(
 def test_reconexao_falhada_respeita_o_backoff(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com o X ainda fora do ar, a reconexão tenta 1x e respeita o backoff —
-    nada de connect bloqueante a 2 Hz no tick do autoswitch."""
+    """Com o X ainda fora do ar, a reconexão tenta 1x e respeita o backoff —"""
     monkeypatch.setenv("DISPLAY", ":1")
     backend = _xlib_backend_with(_FakeXDisplay(focus=0))
     backend._display = _DisplayMorto()
-    assert backend.get_active_window_info() is None  # morre + drop
+    assert backend.get_active_window_info() is None
 
     tentativas: list[bool] = []
 
@@ -647,7 +576,7 @@ def test_reconexao_falhada_respeita_o_backoff(
     for _ in range(5):
         assert backend.get_active_window_info() is None
 
-    assert len(tentativas) == 1  # 1 connect; o resto caiu no backoff
+    assert len(tentativas) == 1
 
 
 def test_log_de_reconexao_e_um_por_episodio(
@@ -667,29 +596,11 @@ def test_log_de_reconexao_e_um_por_episodio(
 
     monkeypatch.setattr(_xdisplay, "Display", _connect_falha)
     backend._display = _DisplayMorto()
-    backend.get_active_window_info()  # drop (loga 1x)
-    backend.get_active_window_info()  # reconexão falha; ainda o mesmo episódio
+    backend.get_active_window_info()
+    backend.get_active_window_info()
 
     assert eventos.count("x11_reconnect_attempt") == 1
 
-
-# ---------------------------------------------------------------------------
-# FOCO-01 (auditoria 24/07) — o DADO vem da janela do FOCO REAL, não do
-# `_NET_ACTIVE_WINDOW`.
-#
-# O UX-02 acertou o GATE (pergunta ao servidor X quem tem o foco) mas deixou o
-# DADO vindo da propriedade que ele próprio documentou como rançosa. Medição ao
-# vivo em COSMIC, com a GUI do Hefesto em foco e NENHUMA janela Steam à frente:
-#
-#     get_input_focus().focus = 35651599   (sem WM_CLASS)
-#     _NET_ACTIVE_WINDOW      = 44040223   (steam)
-#
-# As duas fontes DISCORDAM e era a rançosa que o autoswitch obedecia — é a
-# primeira das três causas do ping-pong `vitoria``Navegação` a cada 18-28 s
-# (journal de 22-23/07). Agora: sobe-se a árvore a partir do foco até o
-# top-level com WM_CLASS; se ele discordar do `_NET_ACTIVE_WINDOW`, a resposta é
-# None ("não sei") e a histerese UX-01 retém o perfil corrente.
-# ---------------------------------------------------------------------------
 
 FOCO_MEDIDO = 35651599
 NET_ACTIVE_MEDIDO = 44040223
@@ -771,8 +682,7 @@ def _backend_arvore(display: _FakeArvoreDisplay) -> xlib.XlibBackend:
 def test_foco_em_filha_sobe_ate_o_top_level(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O servidor X entrega o foco à janela-filha do toolkit, dentro do frame
-    reparentado pelo WM — quem tem WM_CLASS é o top-level, dois níveis acima."""
+    """O servidor X entrega o foco à janela-filha do toolkit, dentro do frame"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "mmj-bin")
     topo = _FakeXWin(
         0x400001,
@@ -801,9 +711,7 @@ def test_foco_em_filha_sobe_ate_o_top_level(
 def test_desacordo_medido_ao_vivo_retorna_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caso EXATO da medição: GUI do Hefesto com o foco, `_NET_ACTIVE_WINDOW`
-    ainda dizendo `steam`. Antes o autoswitch lia 'steam' e flipava para
-    `Navegação`; agora a leitura é None e a UX-01 retém o perfil."""
+    """O caso EXATO da medição: GUI do Hefesto com o foco, `_NET_ACTIVE_WINDOW`"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "python3")
     gui = _FakeXWin(
         FOCO_MEDIDO, wm_class=("main.py", "Main.py"), title="Hefesto", pid=7
@@ -821,8 +729,7 @@ def test_desacordo_medido_ao_vivo_retorna_none(
 def test_foco_sem_top_level_na_arvore_retorna_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Subida esgota a árvore sem achar WM_CLASS nenhum (janela override-redirect,
-    tooltip, ou a filha de uma janela X morta) — 'não sei' é a resposta certa."""
+    """Subida esgota a árvore sem achar WM_CLASS nenhum (janela override-redirect,"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
     orfa = _FakeXWin(0x500001, parent=None)
     display = _FakeArvoreDisplay(
@@ -833,8 +740,7 @@ def test_foco_sem_top_level_na_arvore_retorna_none(
 
 
 def test_net_active_ausente_retorna_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem `_NET_ACTIVE_WINDOW` não há corroboração — degrada para None, como
-    antes do FOCO-01 (comportamento histórico preservado de propósito)."""
+    """Sem `_NET_ACTIVE_WINDOW` não há corroboração — degrada para None, como"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
     topo = _FakeXWin(0x600001, wm_class=("a", "steam_app_1599660"))
     display = _FakeArvoreDisplay(
@@ -845,8 +751,7 @@ def test_net_active_ausente_retorna_none(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_subida_para_na_raiz(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A raiz não é janela de aplicação nenhuma: chegar nela é 'não sei',
-    nunca 'a raiz está em foco'."""
+    """A raiz não é janela de aplicação nenhuma: chegar nela é 'não sei',"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
     filha = _FakeXWin(0x700001)
     display = _FakeArvoreDisplay(
@@ -864,7 +769,7 @@ def test_profundidade_maxima_barra_arvore_patologica(
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
     a = _FakeXWin(0x800001)
     b = _FakeXWin(0x800002, parent=a)
-    a._parent = b  # ciclo
+    a._parent = b
     display = _FakeArvoreDisplay(
         foco=a.id, janelas={a.id: a, b.id: b}, net_active=0x800001
     )
@@ -875,8 +780,7 @@ def test_profundidade_maxima_barra_arvore_patologica(
 def test_log_do_desacordo_uma_vez_por_episodio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O poll é de 2 Hz e a GUI aberta em cima do jogo dura minutos — 1 log por
-    episódio, reabrindo quando a leitura volta a ser boa."""
+    """O poll é de 2 Hz e a GUI aberta em cima do jogo dura minutos — 1 log por"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
     eventos: list[str] = []
     monkeypatch.setattr(xlib.logger, "info", lambda evt, **kw: eventos.append(evt))
@@ -890,11 +794,11 @@ def test_log_do_desacordo_uma_vez_por_episodio(
     )
 
     backend = _backend_arvore(discorda)
-    for _ in range(4):  # episódio 1
+    for _ in range(4):
         backend.get_active_window_info()
     backend._display = concorda
-    assert backend.get_active_window_info() is not None  # fecha o episódio
+    assert backend.get_active_window_info() is not None
     backend._display = discorda
-    backend.get_active_window_info()  # episódio 2
+    backend.get_active_window_info()
 
     assert eventos.count("x11_foco_discorda_do_net_active") == 2

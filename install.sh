@@ -863,7 +863,7 @@ _dep_presente() {
             # e é a mesma disciplina do `svg` e do `appindicator` logo abaixo.
             # `ctypes.CDLL` é LITERALMENTE o que o produto faz: o `hidapi` do
             # pip abre por `ffi.dlopen` (`hidapi.py:149`) e o
-            # `integrations/dualsense_bt_audio.py:473-494` abre a libopus por
+            # `integrations/dualsense_bt_audio.py:424-445` abre a libopus por
             # `ctypes.CDLL`. Se abrir aqui, abre lá.
             #
             # POR QUE NÃO O `ldconfig`, e isto é um BLOQUEANTE medido em
@@ -3206,7 +3206,7 @@ if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
     # compositor.
     #
     # E O XWAYLAND COBRA: sob ele o GTK3 **não lê o tema do portal**
-    # (`app/theme.py:327`), e foi assim que o tema dela se perdeu — o defeito
+    # (`app/theme.py:198`), e foi assim que o tema dela se perdeu — o defeito
     # ficou registrado nas quinze queixas de 04/09.
     #
     # MEDIDO EM WAYLAND NATIVO NA MÁQUINA DELA, 19/09, com a interface real:

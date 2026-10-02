@@ -1,41 +1,4 @@
-"""As opções dos módulos têm UM dono: a conf de `assets/modprobe.d/`.
-
-OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01 (25/09/2026), item 7, achado da
-conferência da A-BANCADA-DO-LUGAR-GUARDADO-01: o rótulo do ensaio do install
-anunciava `feature_retries=2`, e a conf entregue manda `feature_retries=1`
-desde 09/08 (a NOTA DATADA dela diz por quê: com 2 tentativas extras o pior
-caso da probe por rádio vai a 27 s).
-
-A CURA FOI À ORIGEM, e a origem era maior que o rótulo. Medido em 25/09: o
-mesmo `2` estava DIGITADO em cinco lugares — o rótulo do ensaio, a fala do
-passo do install e a escrita A QUENTE nos dois instaladores (o `install.sh`,
-pela lib, e o `install-host-udev.sh` dos pacotes). A escrita punha 2 no
-módulo carregado a cada install: até o boot seguinte, o controle que perde a
-probe pagava a contenção uma vez a mais. Agora quem fala e quem escreve
-PERGUNTA à conf (`opcao_do_modprobe`, e a cópia dele no caminho por pacote,
-que não leva a lib), e o número não mora em mais lugar nenhum.
-
-O QUE ESTA RÉGUA MEDE, e nada aqui digita um valor: cada um sai da conf.
-
-- os dois leitores devolvem, para cada opção de cada conf, o valor que ela
-  declara — e recusam (nada, `rc=1`) a opção ausente e o valor com forma
-  estranha, que o caminho por pacote poria entre aspas num comando de root;
-- nenhuma linha que EXECUTA nos instaladores escreve a quente um valor
-  digitado para uma opção que tem conf dona;
-- nenhuma fala ou rótulo que executa digita `opção=valor` de uma opção que
-  tem conf dona;
-- o ensaio de verdade (a função `_ensaio_camada`, recortada do `install.sh`)
-  diz o valor da conf;
-- o comando de root que o `install-host-udev.sh` MONTA (sem executá-lo)
-  escreve a quente, em cada opção com conf dona, o valor dela.
-
-A MORDIDA, medida: devolver o `printf '2' | sudo tee …/feature_retries` à lib
-reprova a da escrita a quente; devolver o `(feature_retries=2 …)` ao rótulo
-reprova a da fala e a do ensaio; tirar a recusa de forma estranha do leitor do
-caminho por pacote reprova a do valor estranho; e perguntar à conf ERRADA no
-caminho por pacote (sem digitar nada) só a do comando de root reprova. md5
-conferido em cada volta.
-"""
+"""As opções dos módulos têm UM dono: a conf de `assets/modprobe.d/`."""
 
 from __future__ import annotations
 
@@ -109,11 +72,6 @@ def _ler(leitor: str, conf: Path, opcao: str) -> subprocess.CompletedProcess[str
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. Os dois leitores respondem o que a conf declara
-# ---------------------------------------------------------------------------
-
-
 def test_as_confs_declaram_as_opcoes_que_a_regua_vai_medir() -> None:
     """Guarda da premissa: sem opções, as réguas de baixo mediriam o vazio."""
     assert ("hid_playstation", "feature_retries") in OPCOES, sorted(OPCOES)
@@ -157,13 +115,6 @@ def test_a_ultima_linha_options_vence_como_no_modprobe(tmp_path: Path) -> None:
         assert _ler(leitor, conf, "feature_retries").stdout.strip() == "3", onde
 
 
-# ---------------------------------------------------------------------------
-# 2. Ninguém digita o número que a conf possui
-# ---------------------------------------------------------------------------
-
-#: Uma escrita a quente com o valor DIGITADO: `printf 'V' | sudo tee <nó>` (o
-#: `install.sh` e a lib) ou `printf 'V' > <nó>` (o comando elevado do
-#: `install-host-udev.sh`).
 _ESCRITA_DIGITADA = re.compile(
     r"printf\s+'([^'%$]*)'\s*(?:\|\s*sudo\s+tee\s+(?:-a\s+)?|>\s*)"
     r"/sys/module/(\w+)/parameters/(\w+)"
@@ -210,11 +161,6 @@ def test_nenhuma_fala_digita_opcao_igual_valor_de_uma_opcao_com_dono(
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. O ensaio de verdade diz o valor da conf
-# ---------------------------------------------------------------------------
-
-
 def test_o_ensaio_do_hid_playstation_diz_o_feature_retries_da_conf(tmp_path: Path) -> None:
     ensaio = _funcao(texto_do_install_sh(), "_ensaio_camada")
     script = "\n".join(
@@ -246,12 +192,6 @@ def test_o_ensaio_do_hid_playstation_diz_o_feature_retries_da_conf(tmp_path: Pat
     assert f"(feature_retries={valor} +" in linha[0], linha[0]
 
 
-# ---------------------------------------------------------------------------
-# 4. O comando elevado do caminho por pacote escreve o valor da conf
-# ---------------------------------------------------------------------------
-
-#: O que `_build_install_cmd` lê do escopo do script. Só strings: a função
-#: MONTA o comando de root e o devolve, e nada dele é executado aqui.
 _ESCOPO_DO_PACOTE = (
     'BROKER_BIN_SRC="" BROKER_INSTALL_OK=0 BROKER_SESSION_GROUP="" BROKER_SESSION_UID=0',
     'BROKER_UNITS_SRC="" BTRES_INSTALL_OK=0 BTRES_SCRIPTS_SRC="" BTRES_UNIT_SRC=""',
@@ -263,13 +203,7 @@ _ESCOPO_DO_PACOTE = (
 
 
 def test_o_comando_de_root_dos_pacotes_escreve_a_quente_o_valor_da_conf() -> None:
-    """A escrita que ia `2` ao `feature_retries` do módulo carregado, medida no
-    comando que o `install-host-udev.sh` monta — sem executá-lo.
-
-    O `backpressure` do uhid é lido da conf INSTALADA (`/etc/modprobe.d/`, só
-    existe com `--uhid-contrapressao`). Aqui ela aponta para a do `assets/`: sem
-    isso a régua mediria a máquina de quem roda — o ramo do uhid aparecia numa
-    e sumia noutra (achado da conferência)."""
+    """A escrita que ia `2` ao `feature_retries` do módulo carregado, medida no"""
     montador = _funcao(HOST_UDEV, "_build_install_cmd")
     assert montador.count("/etc/modprobe.d/hefesto-uhid.conf") == 2, montador
     montador = montador.replace(
@@ -302,8 +236,6 @@ def test_o_comando_de_root_dos_pacotes_escreve_a_quente_o_valor_da_conf() -> Non
     com_dono = {chave: v for chave, v in escritas.items() if chave in OPCOES}
     assert ("hid_playstation", "feature_retries") in com_dono, sorted(escritas)
     assert ("uhid", "backpressure") in com_dono, sorted(escritas)
-    # Todo parâmetro com conf dona que o montador cita tem de sair ESCRITO: um
-    # leitor que pergunta a opção errada devolve nada, e a escrita some calada.
     citados = {
         chave
         for chave in re.findall(
@@ -320,20 +252,6 @@ def test_o_comando_de_root_dos_pacotes_escreve_a_quente_o_valor_da_conf() -> Non
     assert errados == [], errados
 
 
-# ---------------------------------------------------------------------------
-# 5. A lib do install.sh escreve a quente o valor da conf — rodada, não lida
-# ---------------------------------------------------------------------------
-# Achado da conferência: o caminho por PACOTE era medido pelo que o comando de
-# root escreve, e o do `install.sh` (a lib, o caminho da máquina dela) só pela
-# AUSÊNCIA de um número digitado. A mordida que isso deixava passar, medida: a
-# lib perguntar a opção ERRADA (`bt_probe_retries` da conf do hid-nintendo no
-# lugar do `feature_retries`) punha `3` no módulo carregado com as 88 réguas
-# que citam `feature_retries` verdes. Aqui as três funções de DKMS rodam de
-# verdade, no molde da O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01: o `/sys` e o
-# `/etc` trocados por pastas de mentira, o dkms dublado (o que se mede é o
-# rearme a quente, depois dele) e um `sudo` de mentira que executa e RECUSA
-# qualquer argumento que ainda aponte para o `/sys` ou o `/etc` de verdade.
-
 _SUDO_QUE_RECUSA_O_REAL = (
     "#!/usr/bin/env bash\n"
     'for a in "$@"; do\n'
@@ -343,7 +261,6 @@ _SUDO_QUE_RECUSA_O_REAL = (
     'exec "$@"\n'
 )
 
-#: As três funções que escrevem parâmetro a quente, e os módulos de cada uma.
 _FUNCOES_DA_LIB = {
     "install_dkms_hid_nintendo_host": "hid_nintendo",
     "install_dkms_hid_playstation_host": "hid_playstation",

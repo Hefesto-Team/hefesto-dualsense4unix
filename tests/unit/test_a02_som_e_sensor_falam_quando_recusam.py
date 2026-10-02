@@ -1,39 +1,4 @@
-"""As queixas 7 e 8 dela — os botões do alto-falante e os quatro de sensor.
-
-    7. *"e os botoes do autofalante"*
-    8. *"nem giroscopio e acelerometro"*   <!-- noqa-acento: citação literal dela -->
-
-TRÊS DEFEITOS MEDIDOS, e os três são a mesma família — A CASA SABE E O PRODUTO
-NÃO FAZ:
-
-1. **"Todo o som do PC" recusava SEMPRE.** A camada 1 (a saída padrão do
-   PipeWire) não tinha dono fora da janela GTK, que a injeta no card por
-   `definir_pedido_de_rota`. O motor existia inteiro — `RotaDeSaida` mais a
-   resolução de sink de `fontes_de_captura` —, faltava a cola;
-2. **os quatro botões de sensor respondiam CALADOS.** Sem `data-gesto`, o
-   ouvinte monta o nome como `clique`, aba nenhuma o registra, e a recusa sai no
-   **stderr** — que quem clica na janela nunca lê. **E a recusa que os curou
-   durou uma tarde:** ela dizia *"não existe método de sensor"*, a ONDA1-D3 pôs
-   `sensor.set` no daemon no mesmo dia, e a régua-estopim que a recusa deixou
-   armada (`test_o_daemon_continua_sem_metodo_de_sensor`) reprovou pedindo a
-   chamada. Ver `TestOsQuatroBotoesDeSensor`;
-3. **o `♪` era um beco**, porque o daemon só publica `speaker` depois de alguém
-   escrever um volume, e não havia escritor nesta tela. O deslizante da D-08 é o
-   escritor que faltava.
-
-AS MORDIDAS DESTE ARQUIVO
---------------------------
-
-* devolver o `raise RuntimeError("'Todo o som do PC' ainda não tem dono…")` ao
-  gesto `rota` — reprova `test_o_som_do_pc_move_a_saida_do_sistema`;
-* tirar o `data-gesto="sensor"` de `aba02.sensores_da_peca` — reprova
-  `test_os_quatro_botoes_de_sensor_tem_endereco_na_bancada`;
-* devolver o `raise SEM_INTERRUPTOR_DE_SENSOR` ao gesto `sensor` — reprova
-  `test_o_sensor_desliga_pelo_daemon_com_um_campo_so`;
-* mandar os DOIS sensores em cada clique — reprova a mesma;
-* mandar o volume do alto-falante CRU (0-100) ao daemon, em vez de passar pela
-  curva — reprova `test_o_deslizante_do_alto_falante_passa_pela_curva_medida`.
-"""
+"""As queixas 7 e 8 dela — os botões do alto-falante e os quatro de sensor."""
 from __future__ import annotations
 
 import pathlib
@@ -54,20 +19,13 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 UNIQ = "aa:bb:cc:00:00:01"
 
 #: O nome real de um sink de DualSense nesta máquina — é o que
-#: `fontes_de_captura.MARCADORES_DUALSENSE` procura. Sem um nome que case, o
-#: `escolher_sink` devolve `None` e a régua mediria a recusa em vez da rota.
 SINK = ("alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
         "Controller-00.analog-surround-40")
 OUTRO = "alsa_output.pci-0000_00_1f.3.analog-stereo"
 
 
 class PactlDeMentira:
-    """Um `pactl` de papel: guarda o que foi pedido e responde como o de verdade.
-
-    ELE NÃO É UM SEGUNDO PIPEWIRE. As três respostas que ele dá são as três que
-    a `RotaDeSaida` lê — a lista curta de sinks, a saída padrão e o eco da
-    troca —, no formato tabulado que o `pactl` usa quando não está traduzido.
-    """
+    """Um `pactl` de papel: guarda o que foi pedido e responde como o de verdade."""
 
     def __init__(self, *, sinks: list[str], padrao: str) -> None:
         self.sinks = list(sinks)
@@ -119,21 +77,11 @@ def _gesto(nome: str):
     return fn
 
 
-# ===========================================================================
-# 1. "Todo o som do PC" — a camada 1 ganhou dono
-# ===========================================================================
-
-
 class TestATodoOSomDoPC:
     def test_o_som_do_pc_move_a_saida_do_sistema(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: devolva a recusa "ainda não tem dono" e isto reprova.
-
-        A ORDEM IMPORTA E ELA É MEDIDA AQUI: a camada 1 vai ANTES do byte do
-        firmware. *"A camada 1 vence a camada 2: volume e rota perfeitos num
-        sink mudo é trabalho invisível."*
-        """
+        """MORDIDA: devolva a recusa "ainda não tem dono" e isto reprova."""
         pactl = PactlDeMentira(sinks=[OUTRO, SINK], padrao=OUTRO)
         memoria = {"v": ""}
         rota = audio_saida.RotaDeSaida(
@@ -190,17 +138,7 @@ class TestATodoOSomDoPC:
     def test_sons_do_jogo_devolve_a_saida_e_nao_trava_sem_memoria(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A volta existe, e a falta dela não invalida o clique.
-
-        A janela antiga chama `pedir_rota_do_sistema(canal == CANAL_TODO_O_PC)`
-        nos DOIS estados: voltar para "Sons do jogo" DEVOLVE a saída padrão.
-        Fazer só a ida deixaria o som do PC preso no controle sem botão que o
-        soltasse.
-
-        E quando não há memória de volta — o som nunca esteve no controle —,
-        "Sons do jogo" continua sendo só o byte da camada 2, que é o que ele
-        sempre foi.
-        """
+        """A volta existe, e a falta dela não invalida o clique."""
         pactl = PactlDeMentira(sinks=[OUTRO, SINK], padrao=SINK)
         memoria = {"v": OUTRO}
         rota = audio_saida.RotaDeSaida(
@@ -216,7 +154,6 @@ class TestATodoOSomDoPC:
         assert pactl.padrao == OUTRO, "a saída do sistema não voltou"
         assert [c[0] for c in p.chamadas] == ["speaker_set"]
 
-        # E sem memória de volta o gesto NÃO levanta.
         pactl2 = PactlDeMentira(sinks=[OUTRO, SINK], padrao=OUTRO)
         vazia = audio_saida.RotaDeSaida(
             runner=pactl2, ler_memoria=lambda: "", gravar_memoria=lambda _s: None
@@ -228,14 +165,6 @@ class TestATodoOSomDoPC:
         assert [c[0] for c in p2.chamadas] == ["speaker_set"]
 
 
-# ===========================================================================
-# 2. Os quatro botões de sensor
-# ===========================================================================
-
-
-#: O CONTROLE COM O BLOCO `sensores`, que é a chave NOVA do payload — irmã de
-#: `inputs`, publicada por `ipc_handlers._merge_sensores`. Sem ela o gesto
-#: recusa por falta de LEITURA, e é isso que o teste da recusa mede.
 def _com_sensores(*, giro: bool = True, accel: bool = True):
     return {"sensores": {"giroscopio_ligado": giro,
                          "acelerometro_ligado": accel,
@@ -243,13 +172,7 @@ def _com_sensores(*, giro: bool = True, accel: bool = True):
 
 
 class PonteQueDevolveOCorpo(PonteDeMentira):
-    """O dublê ESTRITO: devolve o CORPO do daemon, como a ponte real devolve.
-
-    **A cicatriz de 04/09/2026 obriga a este cuidado:** um dublê mais frouxo
-    que a ponte real deu verde sobre duas máscaras que nunca gravaram um byte.
-    O `PonteDeMentira` de cima responde `True` a todo nome, e um `True` some com
-    a `ressalva` — que é exatamente a metade que esta frente entrega.
-    """
+    """O dublê ESTRITO: devolve o CORPO do daemon, como a ponte real devolve."""
 
     def __init__(self, corpo: dict[str, Any]) -> None:
         super().__init__()
@@ -261,32 +184,10 @@ class PonteQueDevolveOCorpo(PonteDeMentira):
 
 
 class TestOsQuatroBotoesDeSensor:
-    """**O INTERRUPTOR PASSOU A INTERROMPER — 04/09/2026, à tarde.**
-
-    Esta classe cobrava uma RECUSA, e a premissa dela ia à régua a cada volta:
-    *"não há método de sensor no daemon"*. A ONDA1-D3 fechou essa ausência no
-    mesmo dia, por decisão dela contra a recomendação de virar leitura (*"ele
-    tem que funcionar de verdade. ambos independente do modo e da mascara."*),
-    e a régua-estopim reprovou dizendo o que fazer: *"o botão deixou de precisar
-    recusar, e a frase de recusa virou mentira"*.
-
-    **A régua não foi afrouxada — ela mudou de alvo com o fato.** O que era
-    cobrado da recusa passou a ser cobrado da CHAMADA, e a única recusa que
-    sobra é a de falta de leitura, que é a mesma disciplina do 🎙: sem saber o
-    estado atual, alternar é chutar qual é o oposto.
-    """
+    """**O INTERRUPTOR PASSOU A INTERROMPER — 04/09/2026, à tarde.**"""
 
     def test_os_quatro_botoes_de_sensor_tem_endereco_na_bancada(self) -> None:
-        """MORDIDA: tire o `data-gesto="sensor"` do gerador e isto reprova.
-
-        A régua olha a BANCADA — `mockup/02-controles.html` —, que é o desenho
-        de hoje. O publicado só recebe com o OK dela.
-
-        E O ENDEREÇO DE ESTADO ENTROU JUNTO: sem `data-campo`, o `.sw` volta a
-        ser classe fixa do gerador e o botão fica aceso para sempre — inclusive
-        depois de ela desligar o sensor, que é a mentira que o interruptor de
-        verdade tornou possível.
-        """
+        """MORDIDA: tire o `data-gesto="sensor"` do gerador e isto reprova."""
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert doc.count('data-gesto="sensor"') == doc.count('data-sensor="'), (
             "há botão de sensor sem `data-gesto` — o clique volta a chegar ao "
@@ -301,11 +202,6 @@ class TestOsQuatroBotoesDeSensor:
             "há interruptor de sensor sem endereço de ESTADO — o botão volta a "
             "acender por desenho, e fica aceso sobre um sensor desligado"
         )
-        # SÓ OS SENSORES, e não a página inteira — 19/09/2026. `DESLIGADO` é a
-        # palavra da CASA para "não está no ar", e desde que o selo do
-        # alto-falante passou a falar a mesma língua (ordem dela) a contagem
-        # global mediu dois blocos e reprovou por soma. A conta é sobre os
-        # elementos que têm `data-sensor=`, que é do que esta régua trata.
         dos_sensores = sum(
             1 for tag in re.findall(r"<[^>]*data-sensor=\"[^>]*>", doc)
             if 'data-hef-quando="DESLIGADO"' in tag)
@@ -316,13 +212,7 @@ class TestOsQuatroBotoesDeSensor:
         )
 
     def test_o_sensor_desliga_pelo_daemon_com_um_campo_so(self) -> None:
-        """MORDIDA: devolva o `raise SEM_INTERRUPTOR…` ao gesto e isto reprova.
-
-        **UM CAMPO SÓ, e é o contrato do daemon:** campo omitido NÃO mexe
-        naquele sensor (`ipc_handlers._handle_sensor_set`). Mandar os dois faria
-        o clique no Giroscópio reafirmar o Acelerômetro a cada vez — que é o
-        "pelas costas dela" que a `sensor_set_detalhado` documenta.
-        """
+        """MORDIDA: devolva o `raise SEM_INTERRUPTOR…` ao gesto e isto reprova."""
         for qual, ligado_agora in (("giroscopio", True), ("acelerometro", False)):
             p = PonteQueDevolveOCorpo({"status": "ok", "ressalva": None})
             _gesto("sensor")(
@@ -338,12 +228,7 @@ class TestOsQuatroBotoesDeSensor:
             )
 
     def test_o_sensor_sem_leitura_recusa_dizendo(self) -> None:
-        """MORDIDA: troque o `raise` por um `p.sensor_set_detalhado` cego.
-
-        Sem o bloco `sensores` o gesto não sabe qual é o oposto. É a MESMA regra
-        do 🎙 — *"mandar um pedido sem saber o estado atual seria chutar qual é
-        o oposto"* —, e chutar aqui custa o clique dela sem sinal nenhum.
-        """
+        """MORDIDA: troque o `raise` por um `p.sensor_set_detalhado` cego."""
         import pacotes.a02_controles as a02
 
         for qual in ("giroscopio", "acelerometro"):
@@ -354,13 +239,7 @@ class TestOsQuatroBotoesDeSensor:
             assert p.chamadas == [], "recusou e mandou o pedido assim mesmo"
 
     def test_a_ressalva_do_modo_nativo_vira_aviso_no_cartao(self) -> None:
-        """O verde falso que esta linha existe para não cometer.
-
-        Em Modo Nativo o jogo lê o movimento pelo `hidraw` do controle FÍSICO, e
-        o daemon não escreve byte nenhum nesse caminho. O daemon responde
-        `status=ok` COM `ressalva`, e um gesto que olhasse só o `status` diria
-        "aplicado" sobre um giro que continua chegando ao jogo.
-        """
+        """O verde falso que esta linha existe para não cometer."""
         recado = ("Modo Nativo: o jogo lê o movimento pelo hidraw do controle "
                   "FÍSICO, e nesse caminho o daemon não escreve byte nenhum.")
         p = PonteQueDevolveOCorpo({"status": "ok", "ressalva": recado})
@@ -371,18 +250,7 @@ class TestOsQuatroBotoesDeSensor:
         assert p.chamadas, "levantou a ressalva sem ter chamado o daemon"
 
     def test_o_calado_nao_confessa_divida_nossa(self) -> None:
-        """`_corpo(None)` é o serviço que não respondeu — e a frase é curta.
-
-        **A TERCEIRA CAUSA SAIU — 11/09/2026, A3-056, aprovada por ela.** Ela
-        dizia *"o Hefesto instalado é mais velho que esta janela e ainda não
-        conhece `sensor.set`"*: um método de IPC na tela, e a tela confessando
-        dívida nossa — o que a decisão dela de 07/09 proíbe (*a dívida fica no
-        mapa, nunca na tela*). Esta régua cravava aquela redação e teria
-        reprovado a melhora em vez do defeito.
-
-        O QUE SOBRA DE MEDÍVEL são as duas causas sobre as quais ela PODE
-        agir, e a palavra com que a tela chama o serviço.
-        """
+        """`_corpo(None)` é o serviço que não respondeu — e a frase é curta."""
         p = PonteQueDevolveOCorpo({})
         p.corpo = None  # type: ignore[assignment]
         with pytest.raises(RuntimeError) as erro:
@@ -396,14 +264,7 @@ class TestOsQuatroBotoesDeSensor:
             f"a tela voltou a confessar dívida nossa: {frase!r}")
 
     def test_o_daemon_tem_o_metodo_de_sensor(self) -> None:
-        """A premissa da CHAMADA, remedida a cada execução — o estopim invertido.
-
-        Esta régua nasceu ao contrário (*"o daemon continua SEM método de
-        sensor"*) e reprovou em 04/09/2026, que era o desfecho que ela previa
-        por escrito. Agora ela guarda o fato NOVO: no dia em que `sensor.set`
-        sair do daemon, o gesto passa a chamar um fantasma e o clique dela some
-        outra vez — e é esta linha que avisa.
-        """
+        """A premissa da CHAMADA, remedida a cada execução — o estopim invertido."""
         from tests.unit import inventario_do_daemon as daemon
 
         metodos = daemon.metodos()
@@ -416,22 +277,11 @@ class TestOsQuatroBotoesDeSensor:
     def test_o_botao_pinta_pelo_que_o_aparelho_diz(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """São TRÊS estados, e o terceiro é a razão de o campo não ser `bool`.
-
-        Sem o bloco `sensores` a resposta é o travessão — nunca `DESLIGADO`. Um
-        `bool()` cru apagaria o botão de todo controle que ainda não tem leitor
-        de entradas, afirmando "desligado" sobre o que ninguém leu.
-
-        MORDIDA: emita `bool(...)` no lugar de `_selo_do_sensor` e o terceiro
-        caso vira `DESLIGADO`.
-        """
+        """São TRÊS estados, e o terceiro é a razão de o campo não ser `bool`."""
         import mesa_viva
 
         import pacotes.a02_controles as a02
 
-        # O endereço FORÇADO a existir: a página PUBLICADA ainda não tem os dois
-        # campos (a bancada espera o OK dela), e sem este desvio a régua mediria
-        # o `_so_se_a_pagina_tiver` em vez do campo.
         monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
 
         def _campos(**over: Any) -> dict[str, Any]:
@@ -455,40 +305,16 @@ class TestOsQuatroBotoesDeSensor:
         assert mudo["accel-ligado"] == mesa_viva.SEM_LEITOR
 
 
-# ===========================================================================
-# 3. Os dois deslizantes (D-08)
-# ===========================================================================
-
-
 class TestOsDoisDeslizantes:
     def test_o_deslizante_do_microfone_manda_o_numero_cru(self) -> None:
-        """`mic.volume.set` é 0-100 por contrato do daemon.
-
-        E ele NÃO toca no mudo: não apaga a luz vermelha e não tira o botão
-        físico (desde 09/09 leva também o `common[6]`, o ganho do aparelho).
-        É a metade medida da D-12 — o ganho da FONTE é *"o canal específico dele"*.
-
-        **A VARIANTE MUDOU EM 04/09/2026, decisão [03] da ONDA2-02** — de
-        `mic_volume_set` para `mic_volume_set_detalhado`. O número mandado é o
-        MESMO, e é o que esta régua mede; o que o `bool` da primeira apagava é o
-        `por_uniq` do daemon, que separa *"mexi no microfone deste controle"* de
-        *"caí na rota global e mexi no de outra pessoa"* (MIC-DA-MESA-CHEIA-01).
-        Quem cobra a confissão é `test_a_aba_02_controles_fecha_as_linhas.py`,
-        com um dublê que devolve o CORPO — este aqui usa o dublê compartilhado,
-        que responde `True` a todo nome.
-        """
+        """`mic.volume.set` é 0-100 por contrato do daemon."""
         p = PonteDeMentira()
         _gesto("volume")(_ctx(), {"uniq": UNIQ, "volume": "microfone",
                                   "valor": "42"}, p)
         assert p.chamadas == [("mic_volume_set_detalhado", (42,), {"uniq": UNIQ})]
 
     def test_o_deslizante_do_alto_falante_passa_pela_curva_medida(self) -> None:
-        """MORDIDA: mande o número cru e isto reprova.
-
-        A tela fala 0-100 e o registrador é 0-255, com uma curva MEDIDA no
-        hardware. É a mesma que pinta o `alto-num` ao lado — mandar `80` cru
-        faria o número que ela arrasta e o número que ela lê discordarem.
-        """
+        """MORDIDA: mande o número cru e isto reprova."""
         p = PonteDeMentira()
         _gesto("volume")(_ctx(), {"uniq": UNIQ, "volume": "alto-falante",
                                   "valor": "80"}, p)
@@ -502,12 +328,7 @@ class TestOsDoisDeslizantes:
         )
 
     def test_o_click_depois_do_change_nao_manda_um_segundo_pedido(self) -> None:
-        """Um `<input type="range">` clicado na pista dispara três eventos.
-
-        `input`, `change` e `click`, nesta ordem, e o bootstrap escuta os dois
-        últimos. Sem o guarda, cada clique na pista manda DUAS escritas ao
-        aparelho — é o mesmo guarda que o trilho de brilho da aba 04 já tem.
-        """
+        """Um `<input type="range">` clicado na pista dispara três eventos."""
         p = PonteDeMentira()
         _gesto("volume")(_ctx(), {"uniq": UNIQ, "volume": "microfone",
                                   "valor": "42", "tipo": "INPUT",
@@ -522,11 +343,7 @@ class TestOsDoisDeslizantes:
                                           "valor": cru}, PonteDeMentira())
 
     def test_os_dois_deslizantes_estao_na_bancada(self) -> None:
-        """MORDIDA: tire o `<input type="range">` do gerador e isto reprova.
-
-        E o `data-volume` é o que diz de QUAL volume o deslizante fala — sem ele
-        o gesto não sabe se mexe no microfone ou no alto-falante.
-        """
+        """MORDIDA: tire o `<input type="range">` do gerador e isto reprova."""
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert doc.count('data-volume="microfone"') >= 1
         assert doc.count('data-volume="alto-falante"') >= 1
@@ -536,18 +353,9 @@ class TestOsDoisDeslizantes:
         )
 
 
-# ===========================================================================
-# 4. O ♪ acende — decisão [09], e o valor sai do vão invisível
-# ===========================================================================
-
-
 class TestOAltoFalanteMostraOMudo:
     def test_o_alto_estado_saiu_do_vao_invisivel(self) -> None:
-        """Ele era escrito a cada tique dentro de um `<span hidden>`.
-
-        Foi assim que o `"102%"` viveu meses sem ninguém ver: o piloto não mexe
-        no atributo `hidden` em nenhum dos seus alvos.
-        """
+        """Ele era escrito a cada tique dentro de um `<span hidden>`."""
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert "alto-estado" not in doc, (
             "o `alto-estado` voltou ao desenho — valor vivo num vão que ninguém "
@@ -555,11 +363,7 @@ class TestOAltoFalanteMostraOMudo:
         )
 
     def test_o_simbolo_acende_pelo_que_o_aparelho_diz(self) -> None:
-        """MORDIDA: tire o `data-campo="alto-mudo"` do ♪ e isto reprova.
-
-        O aceso dele era classe do GERADOR e valia para sempre. Agora ele lê,
-        pelo mesmo alvo `classe` dos quatro botões que a leva de 03/09 endereçou.
-        """
+        """MORDIDA: tire o `data-campo="alto-mudo"` do ♪ e isto reprova."""
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert doc.count('data-campo="alto-mudo"') >= 1
         import mesa_viva
@@ -571,27 +375,15 @@ class TestOAltoFalanteMostraOMudo:
     def test_o_pacote_emite_os_tres_estados_do_mudo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """São TRÊS, e o terceiro é a razão de o campo não ser um `bool`.
-
-        `speaker_do_entry` devolve `None` quando o daemon nunca publicou
-        `speaker`; e `muted` pode ser `None` dentro de um bloco que traz volume.
-        Um `False` nos dois casos acenderia "não está mudo" sobre um
-        alto-falante que ninguém leu.
-        """
+        """São TRÊS, e o terceiro é a razão de o campo não ser um `bool`."""
         import mesa_viva
 
         import pacotes.a02_controles as a02
 
-        # A CONTA, com o dono que a escreve. Ela é a MESMA do selo do microfone
-        # — `mesa_viva.selo_do_mic` —, e é isso que impede uma segunda gramática
-        # para o mesmo par de palavras a dois blocos de distância na mesma tela.
         assert mesa_viva.selo_do_mic(True, True) == mesa_viva.DESLIGADO
         assert mesa_viva.selo_do_mic(False, True) == "ATIVO"
         assert mesa_viva.selo_do_mic(False, False) == mesa_viva.SEM_LEITOR
 
-        # E O PACOTE, com o endereço FORÇADO a existir: a página PUBLICADA ainda
-        # não tem o `alto-mudo` (a bancada espera o OK dela), e sem este desvio a
-        # régua mediria o `_so_se_a_pagina_tiver` em vez do campo.
         monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
 
         def _campo(speaker: Any) -> str:
@@ -606,9 +398,5 @@ class TestOAltoFalanteMostraOMudo:
 
         assert _campo({"volume": 102, "muted": True}) == mesa_viva.DESLIGADO
         assert _campo({"volume": 102, "muted": False}) == "ATIVO"
-        # Volume conhecido e mudo DESCONHECIDO: `not None` é `True`, e um
-        # `bool()` cru aqui pintaria ATIVO sobre o que ninguém leu.
         assert _campo({"volume": 102}) == mesa_viva.SEM_LEITOR
-        # E o daemon que nunca publicou `speaker` — o estado real de quem nunca
-        # recebeu um `speaker.set`.
         assert _campo(None) == mesa_viva.SEM_LEITOR

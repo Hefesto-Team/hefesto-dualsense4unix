@@ -1,77 +1,5 @@
 #!/usr/bin/env python3
-"""identidade_nos_dois_transportes.py — existe crachá que sirva no cabo E no rádio?
-
-A PERGUNTA, E ELA É DELA
-------------------------
-15/08/2026, textual: *"nos 4 controles via cabo e bt vamos ter sempre
-identificado né?"*
-
-Traduzida para uma pergunta que uma máquina responde:
-
-    existe um identificador que
-      (a) distingue as 4 unidades,
-      (b) é LEGÍVEL nos DOIS transportes, e
-      (c) não exige escrita nenhuma?
-
-A cor do plástico (`cor_do_plastico.py`) responde (a) e (c) mal: ela distingue,
-mas **exige uma escrita** — `SET_FEATURE 0x80` —, e essa escrita foi RECUSADA
-com `EIO` pelo rádio em 15/08. Este instrumento procura o que sobra quando a
-escrita sai da mesa.
-
-POR QUE ELE NÃO É O `censo_features.py`
----------------------------------------
-O censo responde *"este report é o mesmo byte a byte no cabo e no rádio?"* — e,
-com dois aparelhos por braço, essa pergunta é **confundida**: dois MAC
-diferentes fazem o `0x09` "diferir por transporte" sem que o transporte tenha
-nada a ver com isso. É a Lei 4 do PLANO-DA-MESA-2-2.
-
-A escapatória que este instrumento usa é a mesma do E-4 (o acelerômetro contra
-1 g): **régua absoluta, não comparação entre braços.** O `HID_UNIQ` que o
-sysfs publica é a régua externa. Se o conteúdo de um report CONTÉM o MAC da
-própria unidade que o emitiu, então o valor daquele report não é uma opinião do
-braço — é o aparelho dizendo o próprio nome, e a conferência vale unidade por
-unidade, em qualquer transporte, sem precisar de rodada anterior para comparar.
-
-O QUE ELE MEDE, E COMO CADA CRITÉRIO É DECIDIDO POR MÁQUINA
-------------------------------------------------------------
-1. **Legível nos dois transportes.** O descritor daquele transporte declara o
-   report, E o `GET_FEATURE` volta com dado. Declarado sem lido é promessa;
-   lido é medida.
-2. **Distingue as unidades.** Quantos valores distintos o report assume entre
-   os aparelhos da mesa. `4 em 4` distingue; `2 em 4` não serve de crachá.
-3. **Estável.** O mesmo report lido duas vezes, com `--intervalo` segundos de
-   distância, tem de sair IGUAL byte a byte. Um número que muda entre duas
-   leituras não identifica ninguém — e essa checagem é barata demais para
-   ficar de fora.
-4. **Ancorado no MAC.** O conteúdo contém os seis bytes do `HID_UNIQ` daquela
-   unidade (em qualquer das duas ordens)? Se contém, o report é um portador do
-   MAC, e herda dele a invariância de transporte — que é o único jeito de
-   provar (b) sem uma segunda rodada com os braços trocados.
-5. **Não exige escrita.** Todos os candidatos daqui são `GET_FEATURE` puro.
-   Este arquivo **não sabe escrever**: não há `HIDIOCSFEATURE` nele, e isso é
-   estrutural, não promessa.
-
-A MÁSCARA, E POR QUE ELA É MAIS LARGA QUE A DA CASA
-----------------------------------------------------
-O `0x09` e o `0x0b` carregam MAC em BINÁRIO, e em ordem invertida. A regra da
-casa fala do MAC em arquivo versionado, não da palavra "MAC": seis bytes em
-hexadecimal são o endereço dela tanto quanto os seis pares separados por
-dois-pontos. A máscara daqui varre o buffer procurando os seis bytes de **todo**
-MAC conhecido da mesa, nas duas ordens, e zera os octetos 4 e 5 em cada
-ocorrência antes de o hexadecimal virar texto. Na TELA sai inteiro (é a máquina
-dela); no ARQUIVO, nunca. É o mesmo desenho do `cor_do_plastico.py`.
-
-**O MAC DO HOST ENTRA NA MÁSCARA, E ELE NÃO ESTÁ NO SYSFS.** O `0x09` carrega,
-depois do endereço do controle, o endereço do ADAPTADOR pareado — que é a
-máquina dela, e é tão identificador quanto. Não há `address` em
-`/sys/class/bluetooth/hci0` nesta versão do kernel, então perguntar ao sysfs
-devolveria vazio e a máscara passaria por cima calada. Este arquivo o descobre
-do PRÓPRIO buffer, no offset conhecido, e o adiciona à lista de agulhas antes de
-imprimir qualquer coisa — assim ele não depende de um caminho de sysfs existir.
-Escrito depois de o vazamento ter acontecido de verdade, em 15/08/2026: a
-primeira versão deste instrumento perguntou a um caminho inexistente, recebeu
-vazio, e gravou o endereço do adaptador em hexadecimal num arquivo versionado.
-"""
+"""identidade_nos_dois_transportes.py — existe crachá que sirva no cabo E no rádio?"""
 
 from __future__ import annotations
 
@@ -104,20 +32,10 @@ from comum import (
     tamanhos_do_descritor,
 )
 
-#: Os candidatos a crachá. Os cinco primeiros são os que o censo de 15/08 às
-#: 19h26 apurou como "difere em 4 de 4 unidades"; o `0x81` NÃO está aqui de
-#: propósito — sem o `SET_FEATURE 0x80` antes, ele responde um buffer velho, e
-#: pedir escrita é justamente o que esta pergunta quer evitar.
 CANDIDATOS = (0x05, 0x09, 0x0B, 0x20, 0x22)
 
-#: A âncora de sanidade do censo: se ele sair diferente do que 15/08 registrou,
-#: quem mudou foi o instrumento. É o controle negativo do E-8.
 ANCORA = 0x20
 
-# HIDIOCGFEATURE: _IOC(WRITE|READ, 'H', 0x07, tamanho). Montado à mão, como em
-# `censo_features.py` e `cor_do_plastico.py`. **Não existe o de ESCRITA aqui**,
-# e a ausência é a trava: este arquivo não tem como mandar byte a aparelho
-# nenhum, nem por engano de quem o editar depois.
 _IOC_ESCRITA_E_LEITURA = 3
 _IOC_TIPO_HID = ord("H")
 _IOC_NR_GETFEATURE = 0x07
@@ -133,14 +51,7 @@ def _hidiocgfeature(tamanho: int) -> int:
 
 
 def bytes_do_mac(mac: str) -> bytes:
-    """`aa:bb:cc:dd:ee:ff` -> `aa bb cc dd ee ff`. Vazio se não for um MAC.
-
-    O exemplo é forjado, e isso não é estilo: em 15/08/2026 esta docstring foi
-    escrita com o endereço REAL de um controle da bancada dos dois lados da
-    seta, e o portão de anonimato não a pegou. A função que converte MAC em
-    bytes era, ela mesma, o vazamento — o mesmo defeito que
-    `cor_do_plastico.py::mascarar` já registra ter cometido no mesmo dia.
-    """
+    """`aa:bb:cc:dd:ee:ff` -> `aa bb cc dd ee ff`. Vazio se não for um MAC."""
     partes = mac.strip().split(":")
     if len(partes) != 6:
         return b""
@@ -159,11 +70,7 @@ def mascarar(mac: str) -> str:
 
 
 def mascarar_no_buffer(dados: bytes, macs: list[bytes]) -> bytes:
-    """Zera os octetos 4 e 5 de todo MAC conhecido achado DENTRO do buffer.
-
-    Nas duas ordens, porque o firmware guarda o endereço invertido: procurar só
-    a ordem "de leitura" deixaria passar exatamente a forma que o aparelho usa.
-    """
+    """Zera os octetos 4 e 5 de todo MAC conhecido achado DENTRO do buffer."""
     saida = bytearray(dados)
     for cru in macs:
         if len(cru) != 6:
@@ -180,20 +87,11 @@ def mascarar_no_buffer(dados: bytes, macs: list[bytes]) -> bytes:
     return bytes(saida)
 
 
-#: Onde o `0x09` guarda o endereço do ADAPTADOR pareado: seis bytes
-#: invertidos, logo depois do endereço do controle e da constante `08 25 00`.
-#: Conferido nos quatro controles em 15/08/2026, nos dois transportes.
 OFFSET_DO_HOST_NO_0X09 = slice(10, 16)
 
 
 def mac_do_host_no_buffer(dados: bytes, report_id: int) -> bytes:
-    """O endereço do adaptador, tirado do PRÓPRIO relatório — não do sysfs.
-
-    Existe porque o sysfs desta máquina não publica `address` para o `hci0`, e
-    uma máscara que pergunta a um caminho inexistente recebe vazio e deixa
-    passar. Aqui a fonte é o buffer que se vai imprimir, então não há como a
-    agulha faltar: se o endereço está no que se imprime, ele está na lista.
-    """
+    """O endereço do adaptador, tirado do PRÓPRIO relatório — não do sysfs."""
     if report_id != 0x09 or len(dados) < OFFSET_DO_HOST_NO_0X09.stop:
         return b""
     return bytes(reversed(dados[OFFSET_DO_HOST_NO_0X09]))
@@ -226,12 +124,7 @@ class Leitura:
 
 
 def pedir_feature(fd: int, report_id: int, tamanho: int, *, tentativas: int = 4) -> Leitura:
-    """`GET_FEATURE` com validação de id e retry. Leitura pura, sempre.
-
-    A validação de id não é zelo: em 15/08/2026 esta casa mediu um pedido de
-    `0x20` voltar com `0x80` no byte 0. Aceitar resposta trocada aqui seria
-    julgar um crachá a partir de outro report.
-    """
+    """`GET_FEATURE` com validação de id e retry. Leitura pura, sempre."""
     leitura = Leitura(report_id)
     inicio = time.monotonic()
     for _ in range(tentativas):
@@ -477,8 +370,6 @@ def main() -> int:
         print(f"  lendo {mascarar(aparelho.mac)} ({aparelho.hidraw}, {aparelho.transporte}) …")
         medidas.extend(medir_um(aparelho, ids, argumentos.intervalo))
 
-    # A lista de agulhas se completa DEPOIS de ler e ANTES de imprimir. O
-    # endereço do adaptador sai do próprio 0x09 — ver `mac_do_host_no_buffer`.
     for medida in medidas:
         if medida.primeira.ok:
             achado = mac_do_host_no_buffer(medida.primeira.dados, medida.report_id)

@@ -1,30 +1,5 @@
 #!/usr/bin/env python3
-"""Clica "Parar o serviço" NO PRODUTO VIVO e mede a pergunta — sem parar nada.
-
-POR QUE ELE EXISTE, e é a regra desta casa: os testes de unidade provam a CONTA
-do consentimento em dois cliques (`tests/unit/test_a_09_sistema_confirma_em_dois_
-cliques.py`, com o `_invoke_systemctl` dublado). O que prova o PRODUTO é o mesmo
-clique dentro do ``WebKit2.WebView`` que ela usa, com o daemon vivo e a folha de
-estilo real — porque o que ela vê não é um dicionário, é a palavra no botão.
-
-ELE NÃO PARA O DAEMON DELA, e essa é a garantia inteira: o PRIMEIRO clique arma,
-e é só ele que este ensaio dá. O segundo — o único que manda `stop` — nunca é
-disparado aqui; o ensaio confere, ao contrário, que o systemd **não** foi tocado,
-lendo o `MainPID` da unit antes e depois.
-
-Os quatro tempos:
-
-1. lê o rótulo do botão como o desenho o deixou;
-2. clica UMA vez, e relê — tem de dizer "Confirma?";
-3. espera a janela do consentimento passar (`a09_sistema.segundos_para_confirmar`
-   — perguntada, nunca digitada) e relê: o TIQUE tem de ter reposto o rótulo;
-4. confere que o `MainPID` do daemon é o mesmo do começo.
-
-Uso (sempre oculto; ela tem UMA tela)::
-
-    scripts/ensaios/o_botao_pergunta_antes_de_parar.py
-    scripts/ensaios/o_botao_pergunta_antes_de_parar.py --foto /tmp/armado.png
-"""
+"""Clica "Parar o serviço" NO PRODUTO VIVO e mede a pergunta — sem parar nada."""
 from __future__ import annotations
 
 import argparse
@@ -37,9 +12,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -61,8 +33,6 @@ from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 ABA = a09_sistema.PAGINA
 SELETOR = '[data-gesto="desligar"]'
 
-#: LER O BOTÃO, e nada mais — este roteiro não clica. Quem clica é o
-#: `document.querySelector(...).click()`, disparado uma vez só, no tempo 2.
 LER = f"""
 (function(){{
   const el = document.querySelector('{SELETOR}');
@@ -82,11 +52,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
 
 
 def _main_pid() -> str:
-    """O `MainPID` da unit — a prova de que NADA foi parado.
-
-    A unit não se digita: sai de `a09_sistema._unidade()`, que a pede ao dono
-    (`daemon/service_install.SERVICE_NORMAL`).
-    """
+    """O `MainPID` da unit — a prova de que NADA foi parado."""
     try:
         r = subprocess.run(
             ["systemctl", "--user", "show", "-p", "MainPID", "--value",
@@ -132,12 +98,6 @@ def main() -> int:
             piloto.tela.fotografar(escolha.foto)
         return False
 
-    # OS TEMPOS SÃO MEDIDOS, NÃO CHUTADOS — 03/09/2026, nesta máquina: uma volta
-    # de `ponte.perguntar` leva ~2,5 s (o `run_javascript` do WebKit espera o
-    # laço do GTK, que está pintando a cada 500 ms). A primeira versão deste
-    # ensaio lia 1,5 s depois do clique e REPROVOU a cura: o rótulo trocado só
-    # chegou aos 2,3 s. É a armadilha do `COMO-OLHAR-A-TELA.md` — *régua que
-    # pergunta cedo demais produz não-achado convincente*.
     CLIQUE_MS = 5000
     saida["pid-antes"] = _main_pid()
     GLib.timeout_add(400, lambda: piloto._ir(ABA))
@@ -145,8 +105,6 @@ def main() -> int:
     GLib.timeout_add(CLIQUE_MS, clicar)
     GLib.timeout_add(CLIQUE_MS + 3500, ler("armado"))
     GLib.timeout_add(CLIQUE_MS + 4500, fotografar)
-    # O TIQUE TEM DE REPOR, e a espera é a do DONO do consentimento contada A
-    # PARTIR DO CLIQUE, mais folga para duas voltas de leitura.
     GLib.timeout_add(CLIQUE_MS + int((espera + 5) * 1000), ler("reposto"))
     GLib.timeout_add(CLIQUE_MS + int((espera + 9) * 1000), Gtk.main_quit)
     Gtk.main()

@@ -53,7 +53,6 @@ def test_o_script_existe():
 def test_ele_roda_e_relata(mod):
     r = subprocess.run([sys.executable, str(SCRIPT)], capture_output=True, text=True)
     assert "R1" in r.stdout and "R4" in r.stdout, r.stdout[:400]
-    # Hoje há pendência; o dia em que não houver, o rc vira 0 — e é o degrau.
     assert r.returncode in (0, 1)
 
 
@@ -77,10 +76,7 @@ def test_r2_pega_a_afirmacao_sem_lastro(mod):
 
 
 def test_r3_nao_fecha_com_uma_peca_medida(mod):
-    """O critério frouxo dava ZERO onde a escada contava 6 de 7.
-
-    A pergunta dela é sobre a TELA, e uma tela não se sustenta numa linha.
-    """
+    """O critério frouxo dava ZERO onde a escada contava 6 de 7."""
     familia = mod.PERGUNTAS[0][2][0]
     uma_medida = {"chave": "a", "rotulo": "a", "familia": familia,
                   "radio_de_onde_sei": "medido", "radio_aciona": "sim"}
@@ -97,16 +93,11 @@ def test_r4_pega_o_ensaio_de_radio_sem_degrau(mod):
     assert mod.r4([ensaio])
     ensaio["degrau"] = "2"
     assert not mod.r4([ensaio])
-    # o ensaio de CABO não entra nesta régua, e é de propósito
     assert not mod.r4([{"id": "e2", "linha_id": "x", "transporte": "cabo", "degrau": ""}])
 
 
 def test_as_sete_perguntas_sao_as_dela(mod):
-    """São as do `SPRINT_ORDER.md` §2.1, e são SETE — a oitava veio depois.
-
-    A oitava (o preço em bateria) entrou por pedido dela em 24/08, *"pra quando
-    terminarmos de medir tudo no bt"*, e por isso não conta neste degrau.
-    """
+    """São as do `SPRINT_ORDER.md` §2.1, e são SETE — a oitava veio depois."""
     assert len(mod.PERGUNTAS) == 7, (
         f"são {len(mod.PERGUNTAS)} perguntas e a trilha dela tem sete. Se a "
         f"oitava entrou aqui, ela passou a travar um degrau que ela mesma disse "

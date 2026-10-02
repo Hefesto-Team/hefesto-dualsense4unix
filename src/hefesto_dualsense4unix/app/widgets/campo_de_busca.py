@@ -26,7 +26,7 @@ ela.
 
 A ALTURA É LIMITADA, e o limite não é estética: sem teto, digitar uma letra que
 casa com vinte nomes empurraria o card inteiro para baixo e a fileira de cards
-junto com ele (``Gtk.Grid`` com ``row_homogeneous``, ``secao_controles.py:1056``,
+junto com ele (``Gtk.Grid`` com ``row_homogeneous``, ``secao_controles.py:706``,
 iguala as fileiras — um card alto encarece a fileira toda). Seis linhas é o teto,
 e o rolador aparece só quando ele é atingido.
 
@@ -54,31 +54,15 @@ from typing import Any, ClassVar
 from hefesto_dualsense4unix.app.widgets.segmented_selector import _SegmentedLogic
 from hefesto_dualsense4unix.utils.i18n import _
 
-#: Quantas linhas de sugestão cabem antes de a lista virar rolador. Ver a
-#: explicação da altura no topo — é teto de card, não gosto.
 LINHAS_VISIVEIS = 6
 
-#: Altura de referência de uma linha da lista, em pixels. Só é usada para
-#: calcular o teto do rolador; o GTK mede a linha de verdade e o teto vira o
-#: menor dos dois.
 _ALTURA_DA_LINHA = 28
 
-#: A frase do beco sem saída: digitou algo que não casa com nome nenhum. Sem
-#: ela a lista simplesmente some, e sumir é indistinguível de "o campo quebrou".
-#:
-#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo de tela.
 SEM_RESULTADO = "Nenhum nome com essas letras."
 
 
 def achatar(texto: str) -> str:
-    """O texto sem acento e em minúscula, para a busca casar como ela digita.
-
-    Quem procura "cosmic" tem de achar "Cosmic Red", e quem procura "purpura"
-    não pode ser punido por não ter digitado o acento. A comparação é por
-    SUBSTRING e não por prefixo: os nomes de fábrica trazem a cor no fim tantas
-    vezes quanto no começo ("Nova Pink", "Icon Blue Limited Edition"), e uma
-    busca por prefixo esconderia metade da tabela de quem digita a cor.
-    """
+    """O texto sem acento e em minúscula, para a busca casar como ela digita."""
     sem_marca = "".join(
         caractere
         for caractere in unicodedata.normalize("NFD", texto)
@@ -93,30 +77,11 @@ class _BuscaLogic(_SegmentedLogic):
     _sinonimos: dict[str, str]
 
     def set_sinonimos(self, sinonimos: dict[str, str]) -> None:
-        """Palavras que também ACHAM um item, sem nunca aparecer na tela.
-
-        ELAS EXISTEM POR UMA REGRESSÃO QUE A BUSCA CRIARIA SEM ELAS. A lista de
-        botões que a busca substituiu mostrava seis rótulos em português —
-        "Branco", "Preto", "Vermelho", "Rosa", "Roxo", "Azul" —, e os nomes de
-        fábrica são todos em inglês. Quem sabe o nome do próprio controle digita
-        "Cosmic Red" e acha; quem só sabe que *é vermelho* digitaria "vermelho"
-        e não acharia nada — e essa pessoa era justamente a que a lista de seis
-        botões atendia.
-
-        O sinônimo casa, mas não se mostra: a linha continua dizendo "Cosmic
-        Red", que é o que está escrito na caixa e no serial. Trocar o rótulo
-        pelo sinônimo inventaria um nome que a Sony não usa, que é a decisão de
-        21/08/2026 sobre esta tabela.
-        """
+        """Palavras que também ACHAM um item, sem nunca aparecer na tela."""
         self._sinonimos = dict(sinonimos)
 
     def filtrados(self, digitado: str) -> list[tuple[str, str]]:
-        """Os itens que casam com o que foi digitado, no teto de linhas.
-
-        Campo vazio devolve lista vazia, e não a lista inteira: a lista só
-        existe enquanto há texto. Mostrar a tabela inteira ao focar o campo seria
-        devolver ao card a altura que este widget nasceu para tirar dele.
-        """
+        """Os itens que casam com o que foi digitado, no teto de linhas."""
         agulha = achatar(digitado)
         if not agulha:
             return []
@@ -165,8 +130,6 @@ if _GTK_DISPONIVEL:
             Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL, spacing=2)
             self._init_logic(wrap=False)
             self._sinonimos = {}
-            #: A lista filtrada que está DESENHADA agora. Ela é a ponte entre a
-            #: linha clicada e o id dela — ver `_ao_ativar_linha`.
             self._visiveis: list[tuple[str, str]] = []
 
             self._entrada = Gtk.Entry()
@@ -177,9 +140,6 @@ if _GTK_DISPONIVEL:
                 with contextlib.suppress(Exception):
                     self._entrada.get_accessible().set_name(_(nome_acessivel))
             self._entrada.connect("changed", self._ao_digitar)
-            # ESC devolve o campo ao que já estava escolhido e fecha a lista. Sem
-            # isso, quem abre a busca por engano fica com uma lista aberta
-            # empurrando o card e sem gesto para desfazer.
             self._entrada.connect("key-press-event", self._ao_teclar)
             self.pack_start(self._entrada, False, False, 0)
 
@@ -195,15 +155,10 @@ if _GTK_DISPONIVEL:
             )
             self._rolador.set_propagate_natural_height(True)
             self._rolador.add(self._lista)
-            # `no_show_all` para o `show_all()` da aba não revelar a lista de
-            # todo card — é a mesma costura do campo livre da cor
-            # (`external_card.py:448`), e pela mesma razão: um `show_all` numa
-            # aba com quatro cards abriria quatro listas vazias de uma vez.
             self._rolador.set_no_show_all(True)
             self._rolador.set_visible(False)
             self.pack_start(self._rolador, False, False, 0)
 
-        # ---- o que o call site chama, além da API por-ID ----
 
         def get_entrada(self) -> Any:
             """O ``Gtk.Entry`` de dentro — para foco e para o portão medir."""
@@ -216,16 +171,9 @@ if _GTK_DISPONIVEL:
         def lista_visivel(self) -> bool:
             return bool(self._rolador.get_visible())
 
-        # ---- hooks de toolkit ----
 
         def _create_buttons(self, items: list[tuple[str, str]]) -> None:
-            """A lista de sugestões é redesenhada a cada tecla, não aqui.
-
-            Trocar os itens só invalida o que está desenhado; quem redesenha é
-            o `_redesenhar`, chamado pelo texto digitado. Redesenhar aqui
-            mostraria a lista inteira no instante do `set_items`, que é
-            populate — e populate não abre lista.
-            """
+            """A lista de sugestões é redesenhada a cada tecla, não aqui."""
             self._redesenhar()
 
         def _activate_button(self, idx: int) -> None:
@@ -243,7 +191,6 @@ if _GTK_DISPONIVEL:
         def _emit_changed(self) -> None:
             self.emit("changed")
 
-        # ---- o miolo ----
 
         def _escrever(self, texto: str) -> None:
             """Põe texto no campo sob guard, para o filtro não reabrir a lista."""
@@ -313,42 +260,21 @@ if _GTK_DISPONIVEL:
             return linha
 
         def _ao_ativar_linha(self, _lista: Any, linha: Any) -> None:
-            """Qual item a linha clicada é — pelo ÍNDICE, não por um atributo.
-
-            Pendurar `linha.hefesto_id = ident` num `Gtk.ListBoxRow` funciona no
-            PyGObject e o mypy o aceita sem reclamar, mas é um atributo que não
-            existe no tipo: no dia em que o `Gtk.ListBoxRow` ganhar um `__slots__`
-            ou o stub apertar, ele cai calado. O índice da linha na `Gtk.ListBox`
-            É a posição na lista filtrada, porque as duas são redesenhadas juntas
-            e na mesma ordem — não há uma segunda fonte para divergir.
-
-            A linha de "não achei" nunca chega aqui: ela nasce
-            `set_activatable(False)`, e `row-activated` não dispara para ela.
-            """
+            """Qual item a linha clicada é — pelo ÍNDICE, não por um atributo."""
             indice = linha.get_index()
             if not (0 <= indice < len(self._visiveis)):
                 return
             ident = self._visiveis[indice][0]
-            # Pela API por-ID: `set_active_id` é quem marca E emite, e só emite
-            # quando o id MUDA. Clicar duas vezes na mesma linha não é um
-            # segundo gesto.
             anterior = self._active_id
             self.set_active_id(ident)
             if anterior == ident:
-                # Mesmo id: `set_active_id` não fez nada, mas a pessoa clicou —
-                # o campo tem de voltar a mostrar a escolha e a lista, fechar.
                 self._escrever(self.rotulo_de(ident))
                 self._fechar()
 
 else:  # pragma: no cover - CI sem PyGObject
 
     class CampoDeBusca(_BuscaLogic):  # type: ignore[no-redef]
-        """Stub puro para ambientes sem GTK3 — a MESMA API por-ID.
-
-        Ele sabe RECUSAR do mesmo jeito que a versão real: `set_active_id` de um
-        id que não está na lista não emite nada, e `filtrados` de campo vazio
-        devolve vazio. Régua que só sabe passar não é régua.
-        """
+        """Stub puro para ambientes sem GTK3 — a MESMA API por-ID."""
 
         def __init__(
             self,

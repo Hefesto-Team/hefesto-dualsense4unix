@@ -67,37 +67,16 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
     caminho_resolvido,
 )
 
-#: O nome do evento no journal do launch. Literal em UM lugar só: a régua o
-#: importa daqui em vez de redigitar a string, que é como duas grafias do mesmo
-#: evento nascem e o `grep` dela passa a achar metade.
 EVENTO = "canal_sem_imu"
 
 #: A máscara que o produto promete quando o jogo vê um DualSense — o primeiro
-#: degrau da `ESCADA`. Vem de lá porque a lista de pontes tem um dono só.
 MASCARA_QUE_PROMETE = ESCADA[0].ponte.mascara
 
-#: A ponte declarada, no mapa, pelas linhas que só chegam ao jogo por `uhid`.
-#: É a chave do primeiro degrau — `"gamepad/dualsense"` — e ela também vem da
-#: `ESCADA`, nunca redigitada.
 PONTE_DAS_DEZ = ESCADA[0].ponte.chave
 
-#: A raiz da árvore, a partir DESTE arquivo — nunca um caminho escrito à mão.
-#: O mesmo cálculo de `interface/mesa_viva.RAIZ`, e pela mesma razão medida em
-#: 30/08/2026: um literal apontaria para a árvore DELA, e um agente leria o
-#: mapa dela em vez do seu.
 _RAIZ = pathlib.Path(__file__).resolve().parents[3]
 MAPA = _RAIZ / "docs" / "data" / "mapa-controles.csv"
 
-#: A CÓPIA CONGELADA das dez, e ela existe por um motivo estrutural: o
-#: `docs/data/mapa-controles.csv` **não entra no wheel**
-#: (`pyproject.toml`, `[tool.hatch.build.targets.wheel].include`), então no
-#: produto instalado não há mapa no disco para ler. Sem esta cópia o evento
-#: nasceria mudo justamente na máquina dela, que é a única que importa.
-#:
-#: ELA NÃO É UMA SEGUNDA VERDADE: quem manda é o mapa, e há portão que compara
-#: as duas e reprova a divergência
-#: (`tests/unit/test_o_canal_sem_imu_tem_voz.py`). Quem mexer nas linhas `uhid`
-#: do mapa vê esta tupla reprovar no mesmo `git add`.
 DEZ_LINHAS_CONGELADAS: tuple[str, ...] = (
     "audio.jack.deteccao",
     "energia.bateria.jogo",
@@ -148,8 +127,6 @@ def chaves_fora_do_ar() -> tuple[str, ...]:
 
 
 #: Lido UMA vez, no import. O `state_full` roda a 20 Hz e o launch materializa
-#: a cada transição: abrir um CSV de 312 linhas em qualquer um dos dois seria
-#: I/O em caminho quente. É o mesmo molde do `mesa_viva.MAPA`.
 _DO_DISCO: tuple[str, ...] = linhas_do_mapa()
 
 
@@ -189,14 +166,7 @@ def canal_sem_imu(*, mascara: object, caminho: object, backend: object) -> bool:
 
 
 def canal_sem_imu_do_vpad(vpad: object) -> bool:
-    """A mesma pergunta, feita ao vpad que está DE PÉ. Nunca levanta.
-
-    Pergunta ao APARELHO, nunca ao perfil: *a escolha dela morre antes do
-    aparelho* já custou três defeitos num dia (16/09/2026). O caminho vem de
-    `virtual_pad.caminho_do_vpad`, que é quem sabe em que caminho aquele pad
-    nasceu; `None` dali é *"não sei dizer"*, e aí `canal_sem_imu` resolve pela
-    máscara, que é o produto de antes de 13/09.
-    """
+    """A mesma pergunta, feita ao vpad que está DE PÉ. Nunca levanta."""
     from hefesto_dualsense4unix.integrations.virtual_pad import caminho_do_vpad
 
     if vpad is None:
@@ -208,9 +178,7 @@ def canal_sem_imu_do_vpad(vpad: object) -> bool:
             backend=getattr(vpad, "backend", None),
         )
     except Exception:
-        # Diagnóstico nunca derruba quem pergunta: este ramo é chamado de
         # dentro do `state_full` e da materialização do launch, e os dois são
-        # best-effort por contrato.
         return False
 
 

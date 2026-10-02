@@ -42,14 +42,10 @@ from tests.unit.test_no_modo_xbox_a_haptica_fina import _P1 as _X1
 
 P1, P2, P3, P4 = (f"aa:bb:cc:00:00:2{i}" for i in range(1, 5))
 MESA = (P1, P2, P3, P4)
-#: O cliente do servidor de som que é o jogo (a Forja, que abre os dois papéis).
 FORJA = "5150"
 
-#: Um quadro de voz no nó do som (dois canais) e de motor no endpoint (quatro,
-#: os traseiros): o que o gravador entrega quando o jogo toca.
 VOZ = struct.pack("<2h", 12000, -12000)
 MOTOR = struct.pack("<4h", 0, 0, 20000, -20000)
-#: Voz nos canais da FRENTE do endpoint: não é háptica (a ponte leva os traseiros).
 FRENTE = struct.pack("<4h", 20000, -20000, 0, 0)
 
 
@@ -59,11 +55,7 @@ def no_do(uniq: str) -> str:
 
 
 class FonteDeMentira:
-    """O ``stdout`` do gravador de um monitor: blocos no ritmo, até fechar.
-
-    ``quadro`` é o que o jogo toca AGORA (um quadro, repetido até encher o
-    pedido); ``None`` é silêncio exato. ``fechar()`` é o gravador colhido.
-    """
+    """O ``stdout`` do gravador de um monitor: blocos no ritmo, até fechar."""
 
     def __init__(self, largura: int) -> None:
         self.largura = largura
@@ -210,21 +202,8 @@ def sala(monkeypatch: pytest.MonkeyPatch) -> Any:
     m.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 1. O modo segue o sinal
-# ---------------------------------------------------------------------------
-
-
 def test_o_canto_pelo_radio_fica_no_alto_falante_com_a_haptica_aberta_e_muda(sala: Mesa) -> None:
-    """O Canto: a Forja abre os dois papéis, canta no alto-falante e cala a háptica.
-
-    A ponte sobe no ``0x35`` antes de o jogador mexer (é o que o diário de
-    29/09 mostra, nas 13 salas) e FICA nele quando ele mexe, com o canto
-    tocando e na pausa entre dois cantos.
-
-    MORDIDA: volte o modo a ``endpoint_toca and (este_joga or pelo_rumble)``
-    em ``_casar_as_pontes`` — depois de mexer, a ponte vai à háptica.
-    """
+    """O Canto: a Forja abre os dois papéis, canta no alto-falante e cala a háptica."""
     som, endpoint = af.nome_do_sink(P1), no_do(P1)
     sala.fonte(som).quadro = VOZ
     sala.abrir_a_sala(P1)
@@ -234,7 +213,6 @@ def test_o_canto_pelo_radio_fica_no_alto_falante_com_a_haptica_aberta_e_muda(sal
     sala.mexer(P1)
     sala.volta()
     assert sala.arranjo(P1) == af.ARRANJO_035.nome, "o fluxo mudo da háptica tirou o canto"
-    # A pausa entre dois cantos: os dois mudos, e a háptica ESCUTADA.
     sala.fonte(som).quadro = None
     sala.esperar(som, False)
     sala.esperar(endpoint, False)
@@ -243,11 +221,7 @@ def test_o_canto_pelo_radio_fica_no_alto_falante_com_a_haptica_aberta_e_muda(sal
 
 
 def test_o_canto_que_comeca_com_a_ponte_na_haptica_a_devolve_ao_alto_falante(sala: Mesa) -> None:
-    """A ponte está na háptica (o chão tocava) e o canto começa: ela volta ao ``0x35``.
-
-    No modo da háptica o nó do som é lido pelo fio do ouvido da ponte, só
-    para ouvir; é por ele que o canto chega ao dono do sinal.
-    """
+    """A ponte está na háptica (o chão tocava) e o canto começa: ela volta ao ``0x35``."""
     som, endpoint = af.nome_do_sink(P2), no_do(P2)
     sala.fonte(endpoint).quadro = MOTOR
     sala.abrir_a_sala(P2)
@@ -277,17 +251,8 @@ def test_a_voz_nos_canais_da_frente_do_endpoint_nao_e_haptica(sala: Mesa) -> Non
     assert sala.arranjo(P3) == af.ARRANJO_035.nome
 
 
-# ---------------------------------------------------------------------------
-# 2. A háptica ainda ganha quando é ela que tem sinal
-# ---------------------------------------------------------------------------
-
-
 def test_a_haptica_com_sinal_e_o_alto_falante_mudo_vao_a_haptica(sala: Mesa) -> None:
-    """Os Caminhos: sinal nos motores, o alto-falante aberto e mudo.
-
-    MORDIDA: faça ``_modo_pelo_sinal`` devolver sempre ``"som"`` — a ponte
-    fica no ``0x35`` com o chão tocando nos motores.
-    """
+    """Os Caminhos: sinal nos motores, o alto-falante aberto e mudo."""
     som, endpoint = af.nome_do_sink(P4), no_do(P4)
     sala.fonte(endpoint).quadro = MOTOR
     sala.abrir_a_sala(P4)
@@ -305,9 +270,6 @@ def test_a_haptica_com_sinal_e_o_alto_falante_mudo_vao_a_haptica(sala: Mesa) -> 
 
 def test_o_alto_falante_calado_devolve_o_radio_a_haptica_que_tem_sinal(sala: Mesa) -> None:
     """A ponte no som escuta o endpoint de quem pode passar à háptica, e passa quando o chão toca.
-
-    É a volta que acorda na troca de sinal (a régua 5, no fio de verdade): o
-    fluxo não muda, o sinal passa do alto-falante ao endpoint.
     """
     som, endpoint = af.nome_do_sink(P1), no_do(P1)
     sala.fonte(som).quadro = VOZ
@@ -317,7 +279,7 @@ def test_o_alto_falante_calado_devolve_o_radio_a_haptica_que_tem_sinal(sala: Mes
     sala.mexer(P1)
     sala.volta()
     assert sala.arranjo(P1) == af.ARRANJO_035.nome
-    sala.esperar(endpoint, False)  # o ouvido da háptica no modo som
+    sala.esperar(endpoint, False)
     sala.sub._volta_pedida = False
     sala.fonte(som).quadro = None
     sala.fonte(endpoint).quadro = MOTOR
@@ -326,11 +288,6 @@ def test_o_alto_falante_calado_devolve_o_radio_a_haptica_que_tem_sinal(sala: Mes
     assert sala.sub._volta_pedida, "a troca de sinal não acordou a volta"
     sala.volta()
     assert sala.arranjo(P1) == af.ARRANJO_HAPTICA_032.nome
-
-
-# ---------------------------------------------------------------------------
-# 3. A histerese — o relógio é de mentira, os bytes passam pelo ouvido do produto
-# ---------------------------------------------------------------------------
 
 
 class _PonteQueConta:
@@ -359,15 +316,7 @@ class _PonteQueConta:
 def test_tiro_e_fala_alternados_nao_trocam_a_ponte_mais_de_uma_vez(
     sala: Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O motor toca sempre e a fala vem a cada outro bloco: a ponte troca uma vez só.
-
-    Quarenta blocos de 10,667 ms (menos que a janela de um segundo), uma volta
-    por bloco, com o relógio de mentira. Os dois têm sinal, e o alto-falante
-    ganha — sem voltar à háptica a cada respiro da fala.
-
-    MORDIDA: encurte ``JANELA_DO_SINAL_S`` para menos que um bloco (0,005 s)
-    — a ponte troca a cada bloco, e a conta passa de uma.
-    """
+    """O motor toca sempre e a fala vem a cada outro bloco: a ponte troca uma vez só."""
     agora = [100.0]
     sala.ouvido = af.OuvidoDosNos(relogio=lambda: agora[0])
     monkeypatch.setattr(af, "OUVIDO", sala.ouvido)
@@ -383,7 +332,6 @@ def test_tiro_e_fala_alternados_nao_trocam_a_ponte_mais_de_uma_vez(
     ouvir_o_motor = af.fonte_que_ouve(
         lambda n: MOTOR * (n // 8), endpoint, canais=af.CANAIS_DA_HAPTICA
     )
-    # A cena começa: o motor e a fala, e a ponte vai ao alto-falante.
     agora[0] += 0.010667
     ouvir_o_motor(4096)
     ouvir_o_som(1920)
@@ -400,38 +348,22 @@ def test_tiro_e_fala_alternados_nao_trocam_a_ponte_mais_de_uma_vez(
     assert sala.arranjo(P2) == af.ARRANJO_035.nome
 
 
-# ---------------------------------------------------------------------------
-# 4. O espelho no rumble: o fluxo MUDO do alto-falante não segura a ponte
-# ---------------------------------------------------------------------------
-
-
 def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
     mundo: Any, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """Modo Xbox, pelo rádio: o rumble toma a ponte do alto-falante aberto e mudo.
-
-    E com o alto-falante TOCANDO o som fica com ela (a D-2909-NO-RADIO-O-
-    ALTO-FALANTE-GANHA de sempre: a decisão não muda, muda a pergunta).
-
-    MORDIDA: devolva ``sink_esta_tocando(nome_do_sink(uniq), na_duvida=True)``
-    ao ramo do rumble em ``_casar_as_pontes`` — o primeiro caso fica no som.
-    """
+    """Modo Xbox, pelo rádio: o rumble toma a ponte do alto-falante aberto e mudo."""
     monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
     controles = _no_radio_os_quatro(mundo)
     som = af.nome_do_sink(_X1)
     mundo.mesa.servidor.placa(som, "/devices/virtual/som")
     mundo.mesa.servidor.jogo_em.add(som)
     mundo.mesa.volta(*controles)
-    # A ponte do som escuta o fluxo aberto e MUDO: bytes zero no monitor. Na
-    # volta em que ela subiu ninguém o tinha ouvido ainda («não sei»), e o
-    # fluxo segurou; a volta seguinte já sabe que ele é mudo.
     af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     mundo.mesa.volta(*controles)
     af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     mundo.rumble(_X1, 0, 180)
     af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     mundo.mesa.volta(*controles)
-    # O tocador do rumble toca no endpoint do aparelho, e a ponte do som o escuta.
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
     af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
@@ -442,7 +374,6 @@ def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
     assert mundo.sub._pontes[_X1].arranjo is af.ARRANJO_HAPTICA_032, (
         "o fluxo mudo do alto-falante segurou a ponte, e o rumble ficou sem ela"
     )
-    # Ela põe som no alto-falante: o som fica com o rádio, e o HID leva o rumble.
     af.fonte_que_ouve(lambda n: VOZ * (n // 4), som)(1920)
     mundo.mesa.volta(*controles)
     assert mundo.sub._pontes[_X1].arranjo is None
@@ -451,17 +382,7 @@ def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
 def test_o_fluxo_do_alto_falante_que_ninguem_escutou_ainda_segura_o_rumble(
     mundo: Any, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """«Não sei» não é «mudo»: sem ninguém escutando o nó do som, vale o fluxo aberto.
-
-    A ponte ainda não subiu (ou espera vaga) e ninguém leu o monitor do
-    alto-falante: o rumble segue pelo HID e o som fica com o rádio, como antes
-    (a D-2909-NO-RADIO-O-ALTO-FALANTE-GANHA com o ``na_duvida=True`` dela). Só o
-    fluxo ESCUTADO e mudo solta a ponte para o rumble.
-
-    MORDIDA: no ramo do rumble de ``_casar_as_pontes``, pergunte só
-    ``som_toca`` (o «não sei» vira «mudo») — a háptica do rumble toma o rádio de
-    um alto-falante que ninguém ouviu.
-    """
+    """«Não sei» não é «mudo»: sem ninguém escutando o nó do som, vale o fluxo aberto."""
     monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
     controles = _no_radio_os_quatro(mundo)
     mundo.mesa.volta(*controles)
@@ -476,17 +397,8 @@ def test_o_fluxo_do_alto_falante_que_ninguem_escutou_ainda_segura_o_rumble(
     assert mundo.backend.do(_X1)[-1] == (0, 180), "o HID não voltou a levar"
 
 
-# ---------------------------------------------------------------------------
-# 5. A volta acorda na troca de sinal
-# ---------------------------------------------------------------------------
-
-
 def test_a_troca_de_sinal_acorda_a_volta_sem_o_fluxo_mudar(sala: Mesa) -> None:
-    """O fluxo fica o mesmo e o sinal chega: a espera da volta termina antes do relógio.
-
-    MORDIDA: tire ``OUVIDO.escutar(self._acordar_a_volta)`` do ``__init__`` do
-    subsystem — a espera vai até o relógio, e ninguém troca o modo.
-    """
+    """O fluxo fica o mesmo e o sinal chega: a espera da volta termina antes do relógio."""
     som = af.nome_do_sink(P3)
     sala.abrir_a_sala(P3)
     sala.sub._volta_pedida = False
@@ -515,21 +427,8 @@ def test_o_ouvido_diz_nao_sei_quando_ninguem_escuta() -> None:
     assert ouvido.tem_sinal("hefesto_som_000021") is None
 
 
-# ---------------------------------------------------------------------------
-# 6. Os três nós de um controle: desde 02/10 dizem o APARELHO, e a régua mora
-# em ``tests/unit/test_a_haptica_e_por_aparelho.py`` (A-HAPTICA-E-POR-APARELHO-01)
-# ---------------------------------------------------------------------------
-
-
 def test_a_ponte_do_som_que_subiu_antes_do_endpoint_ganha_o_ouvido(sala: Mesa) -> None:
-    """O fluxo do alto-falante abre antes do endpoint (a ponte sobe sem ouvido da
-    háptica); o endpoint abre depois, com o canto calado: a ponte sobe de novo COM o
-    ouvido, e a pausa entre dois cantos não dá o rádio à háptica muda.
-
-    MORDIDA: faça ``sem_ouvido`` ser sempre falso em ``_casar_as_pontes`` — o
-    endpoint fica sem ninguém que o escute («não sei»), e o jogador que mexe na
-    pausa leva a ponte à háptica muda.
-    """
+    """O fluxo do alto-falante abre antes do endpoint (a ponte sobe sem ouvido da"""
     som, endpoint = af.nome_do_sink(P4), no_do(P4)
     sala.servidor.tocar(som, FORJA)
     sala.volta()

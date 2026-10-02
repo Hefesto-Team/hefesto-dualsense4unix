@@ -63,26 +63,16 @@ from hefesto_dualsense4unix.app.usb_pai import (
     usb_pai_por_uniq,
 )
 
-# ---------------------------------------------------------------------------
-# A bancada de 15/08/2026, medida. Dois no cabo, dois no rádio.
-# ---------------------------------------------------------------------------
 
-#: Os dois no CABO. O nó USB de cada um saiu de
-#: `readlink -f /sys/class/hidraw/hidrawN/device`.
-_CABO_A = "aa:bb:cc:00:00:ab"  # hidraw8,  hw 0x0711 -> usb3/3-2 -> card3
-_CABO_B = "aa:bb:cc:00:00:03"  # hidraw10, hw 0x0811 -> usb3/3-3 -> card2
-#: Os dois no RÁDIO. Penduram em `/sys/devices/virtual/misc/uhid/...`, e por
-#: isso o dispositivo USB pai deles é "" — não é falha de medição, é o fato.
-_RADIO_A = "aa:bb:cc:00:00:d8"  # hidraw5, hw 0x1111
-_RADIO_B = "aa:bb:cc:00:00:f0"  # hidraw4, hw 0x0710
+_CABO_A = "aa:bb:cc:00:00:ab"
+_CABO_B = "aa:bb:cc:00:00:03"
+_RADIO_A = "aa:bb:cc:00:00:d8"
+_RADIO_B = "aa:bb:cc:00:00:f0"
 
 _RAIZ = "/sys/devices/pci0000:00/0000:00:08.1/0000:0c:00.3/usb3"
 _USB_DO_CABO_A = f"{_RAIZ}/3-2"
 _USB_DO_CABO_B = f"{_RAIZ}/3-3"
 
-#: Os nomes REAIS dos dois sinks, copiados de `pactl list sinks short` nesta
-#: bancada. Repare que eles só diferem no `.2` — é todo o desempate que o
-#: PipeWire oferece, e ele é posicional.
 _SINK_A = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-surround-40"
@@ -100,8 +90,6 @@ _SOURCE_B = (
     "Controller-00.2.iec958-stereo"
 )
 
-#: `pactl list sinks short` desta bancada, com os dois controles e a saída
-#: HDMI dela no meio.
 _SINKS_CURTO = (
     f"19595\talsa_output.pci-0000_0c_00.4.iec958-stereo\tPipeWire"
     f"\ts32le 2ch 48000Hz\tSUSPENDED\n"
@@ -111,10 +99,6 @@ _SINKS_CURTO = (
     f"\ts16le 2ch 48000Hz\tSUSPENDED\n"
 )
 
-#: `pactl list sinks` (LONGO) desta bancada, recortado nas linhas que importam.
-#: O corte de registro é a linha SEM recuo, como no `pactl` de verdade, e a
-#: `Description:` traduzida fica de propósito: ela prova que o parser não se
-#: apoia em texto localizado.
 _SINKS_LONGO = f"""Sink #19595
 \tState: SUSPENDED
 \tName: alsa_output.pci-0000_0c_00.4.iec958-stereo
@@ -144,8 +128,6 @@ def _casamento(uniqs: dict[str, str], nos: dict[str, str]) -> CasamentoUSB:
     return CasamentoUSB(por_uniq=dict(uniqs), por_no=dict(nos))
 
 
-#: O casamento como ele sai da bancada: os dois do cabo com o seu nó USB, os
-#: dois do rádio com "" — e os sinks CRUZADOS em relação ao número do nome.
 _USB_POR_UNIQ = {
     _CABO_A: _USB_DO_CABO_A,
     _CABO_B: _USB_DO_CABO_B,
@@ -159,35 +141,20 @@ _USB_POR_SINK = {
 }
 
 
-# ---------------------------------------------------------------------------
-# 1. O casamento, no nível da função pura
-# ---------------------------------------------------------------------------
-
-
 def test_cada_placa_vai_para_o_seu_controle_e_nao_para_o_vizinho() -> None:
-    """O par certo, com quatro controles na mesa.
-
-    ARRANQUE PARA VER VERMELHO: tire o ``usb`` da chamada de `escolher_sink`
-    (ou passe ``None``). Os quatro viram ``None`` — que é exatamente o defeito
-    que esta onda curou, e o teste reprova nas duas primeiras asserções.
-    """
+    """O par certo, com quatro controles na mesa."""
     usb = _casamento(_USB_POR_UNIQ, _USB_POR_SINK)
     sinks = sinks_dualsense(_SINKS_CURTO)
     todos = [_CABO_A, _CABO_B, _RADIO_A, _RADIO_B]
 
     assert escolher_sink(sinks, _CABO_A, todos, usb) == _SINK_A
     assert escolher_sink(sinks, _CABO_B, todos, usb) == _SINK_B
-    # O rádio não tem placa. "Nenhuma" é a resposta honesta, não um defeito.
     assert escolher_sink(sinks, _RADIO_A, todos, usb) is None
     assert escolher_sink(sinks, _RADIO_B, todos, usb) is None
 
 
 def test_sem_o_casamento_por_usb_os_quatro_ficam_sem_placa() -> None:
-    """O comportamento ANTES da cura, preservado como controle NEGATIVO.
-
-    Não é nostalgia: é a metade que prova que o teste acima mede o casamento e
-    não outra coisa. Se este passar a devolver sink, a cura virou um chute.
-    """
+    """O comportamento ANTES da cura, preservado como controle NEGATIVO."""
     sinks = sinks_dualsense(_SINKS_CURTO)
     todos = [_CABO_A, _CABO_B, _RADIO_A, _RADIO_B]
     for uniq in todos:
@@ -195,17 +162,10 @@ def test_sem_o_casamento_por_usb_os_quatro_ficam_sem_placa() -> None:
 
 
 def test_o_nome_nao_serve_de_prova_o_par_e_cruzado() -> None:
-    """O ``-00`` é o card 3 e o ``-00.2`` é o card 2 — o inverso do que parece.
-
-    Este teste existe porque o erro mais convincente desta família é o que
-    acerta metade: adivinhar por posição casaria os dois trocados e passaria em
-    qualquer teste que só exigisse "um sink diferente para cada um".
-    """
+    """O ``-00`` é o card 3 e o ``-00.2`` é o card 2 — o inverso do que parece."""
     usb = _casamento(_USB_POR_UNIQ, _USB_POR_SINK)
     sinks = sinks_dualsense(_SINKS_CURTO)
     todos = [_CABO_A, _CABO_B]
-    # O controle do 3-2 fica com o `-00` (card 3); o do 3-3, com o `-00.2`
-    # (card 2). Trocar os dois é o defeito que este teste proíbe.
     assert escolher_sink(sinks, _CABO_A, todos, usb) == _SINK_A
     assert escolher_sink(sinks, _CABO_B, todos, usb) != _SINK_A
 
@@ -222,44 +182,25 @@ def test_um_controle_no_radio_sozinho_nao_herda_a_placa_de_outro_aparelho() -> N
     """
     usb = _casamento({_RADIO_A: ""}, {_SINK_A: _USB_DO_CABO_A})
     assert escolher_sink([_SINK_A], _RADIO_A, [_RADIO_A], usb) is None
-    # E o contraste que prova que a guarda não é um "sempre None": o MESMO
-    # controle, agora no cabo e naquele mesmo nó USB, recebe a placa.
     no_cabo = _casamento({_RADIO_A: _USB_DO_CABO_A}, {_SINK_A: _USB_DO_CABO_A})
     assert escolher_sink([_SINK_A], _RADIO_A, [_RADIO_A], no_cabo) == _SINK_A
 
 
 def test_no_virtual_nao_veta_a_ponte_de_mic_por_bluetooth_continua_valendo() -> None:
-    """Nó sem dispositivo USB não tem dono, e não pode vetar ninguém.
-
-    A ponte de mic por Bluetooth deste projeto publica uma source virtual —
-    sem ``sysfs.path`` — e ela existe justamente para quem está no RÁDIO. Se o
-    veto olhasse "o controle não tem USB" em vez de "o nó tem outro dono", ele
-    mataria o medidor de mic no cenário-alvo do projeto.
-    """
+    """Nó sem dispositivo USB não tem dono, e não pode vetar ninguém."""
     ponte = "hefesto_dualsense_bt_0000d8"
     usb = _casamento({_RADIO_A: ""}, {ponte: ""})
     assert escolher_fonte([ponte], _RADIO_A, [_RADIO_A], usb) == ponte
 
 
 def test_a_mesma_resposta_com_um_dois_e_quatro_controles() -> None:
-    """Nenhum número mágico: a resposta por controle não depende da mesa.
-
-    É a exigência dela de 15/08/2026 posta em teste — o produto tem de servir a
-    quem tem um controle e a quem tem sete, e numa máquina que não é a dela.
-    """
+    """Nenhum número mágico: a resposta por controle não depende da mesa."""
     usb = _casamento(_USB_POR_UNIQ, _USB_POR_SINK)
     sinks = sinks_dualsense(_SINKS_CURTO)
     for mesa in ([_CABO_A], [_CABO_A, _RADIO_A], [_CABO_A, _CABO_B, _RADIO_A, _RADIO_B]):
         assert escolher_sink(sinks, _CABO_A, list(mesa), usb) == _SINK_A
 
 
-# ---------------------------------------------------------------------------
-# 2. As peças do `app/usb_pai.py`, contra um sysfs de mentira
-# ---------------------------------------------------------------------------
-
-#: Um sysfs inventado, com a forma REAL do de cá: o nó do dispositivo tem
-#: `busnum`/`devnum`; a interface, não. É a diferença que faz a subida parar no
-#: lugar certo.
 _FALSO_SYSFS = {
     f"{_USB_DO_CABO_A}/busnum",
     f"{_USB_DO_CABO_A}/devnum",
@@ -346,18 +287,11 @@ def test_o_uniq_do_kernel_leva_ao_dispositivo_usb_sem_olhar_ordem() -> None:
         existe=_existe,
         real=lambda c: reais.get(c, c),
     )
-    # O `HID_UNIQ` do kernel veio em MAIÚSCULAS de propósito num dos dois: a
-    # janela e o sysfs não combinam caixa, e o casamento é por dígito hex.
     assert achado == {
         _CABO_A: _USB_DO_CABO_A,
         _CABO_B: _USB_DO_CABO_B,
         _RADIO_A: "",
     }
-
-
-# ---------------------------------------------------------------------------
-# 3. O monitor inteiro — o que o card e o botão realmente consultam
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -370,8 +304,6 @@ def monitor_da_bancada(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
         if cmd[:3] == ["pactl", "list", "sinks"]:
             return _SINKS_LONGO
         if cmd[:2] == ["pactl", "get-sink-mute"]:
-            # A placa do CABO_A está muda e a do CABO_B não — é o contraste
-            # que mostra em qual card o selo acende.
             return "Mute: yes" if cmd[2] == _SINK_A else "Mute: no"
         return ""
 
@@ -392,11 +324,7 @@ def monitor_da_bancada(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
 def test_o_monitor_publica_um_sink_por_controle_do_cabo(
     monitor_da_bancada: mm.MicMonitor,
 ) -> None:
-    """É esta a porta que o card (`definir_sink_de_saida`) consome.
-
-    Antes da cura os quatro devolviam "" e o bloco Alto-falante não tinha para
-    onde tocar a confirmação.
-    """
+    """É esta a porta que o card (`definir_sink_de_saida`) consome."""
     monitor_da_bancada.reconciliar()
     assert monitor_da_bancada.sink_de(_CABO_A) == _SINK_A
     assert monitor_da_bancada.sink_de(_CABO_B) == _SINK_B
@@ -407,34 +335,20 @@ def test_o_monitor_publica_um_sink_por_controle_do_cabo(
 def test_o_selo_da_saida_muda_acende_no_card_certo(
     monitor_da_bancada: mm.MicMonitor,
 ) -> None:
-    """A carona da camada 1 segue o mesmo casamento — e some no rádio.
-
-    A placa do CABO_A está muda e a do CABO_B não. Acender "saída muda" no card
-    do controle errado seria a interface culpando o PipeWire pelo silêncio do
-    controle que está tocando — e antes desta onda a janela nem tinha como
-    saber de quem era o silêncio.
-    """
+    """A carona da camada 1 segue o mesmo casamento — e some no rádio."""
     monitor_da_bancada.reconciliar()
     leitura = monitor_da_bancada.leitura(_CABO_A)
     assert leitura is not None
     assert leitura.saida_muda is True
     assert leitura.sink == _SINK_A
-    # `Mute: no` no vizinho: nada a dizer, e a leitura nem se materializa —
-    # a regra da casa de nunca inventar presença de sensor para dizer "nada".
     assert monitor_da_bancada.leitura(_CABO_B) is None
-    # E o rádio, de quem não se sabe nada, também fica fora.
     assert monitor_da_bancada.leitura(_RADIO_A) is None
 
 
 def test_sem_pactl_o_monitor_nao_inventa_placa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Degradar não pode virar chute: sem `pactl`, ninguém ganha sink.
-
-    O casamento por USB depende de uma leitura a mais (`pactl list sinks`
-    longo). Se ela falhar, o monitor tem de voltar ao conservador de antes —
-    nunca cair na aritmética do "um para um" com dado pela metade.
-    """
+    """Degradar não pode virar chute: sem `pactl`, ninguém ganha sink."""
     monkeypatch.setattr(mm, "usb_pai_por_uniq", lambda _uniqs: dict(_USB_POR_UNIQ))
     monitor = mm.MicMonitor(
         runner=lambda cmd: (_SINKS_CURTO if cmd[-1] == "short" else ""),

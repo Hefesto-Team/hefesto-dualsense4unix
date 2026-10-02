@@ -1,21 +1,4 @@
-"""A prova botão a botão não pode gravar no perfil DELA.
-
-O DEFEITO, MEDIDO EM 03/09/2026 e não deduzido: a leva que clicou as dez abas
-deixou **dez gravações** em ``~/.config/hefesto-dualsense4unix/profiles/
-meu_perfil.json``, entre 07:14 e 07:47 — uma por aba provada. O rodapé registra
-o botão como ``@gesto("*", "salvar")``, um gesto só vivo nas dez páginas, e
-``PERIGOSOS`` só sabia casar ``(página, gesto)``.
-
-**Nada dela se perdeu naquela vez** — as dez foram re-salvamentos do mesmo
-conteúdo, conferidos campo a campo contra o backup. Mas o caminho para perder
-está nomeado no próprio pacote: desligar a barra de luz e salvar copia a cor
-apagada por cima da que ela escolheu, e isso não se desfaz.
-
-**A MORDIDA:** tire ``("*", "salvar")`` de :data:`hefesto_vivo.PERIGOSOS`, ou
-tire o ramo do coringa de :func:`regua_do_mockup._alvos_a_clicar`, e o primeiro
-teste reprova. As duas metades são uma cura só: a lista sem o casamento não
-alcança as dez abas, e o casamento sem a lista não isenta ninguém.
-"""
+"""A prova botão a botão não pode gravar no perfil DELA."""
 
 from __future__ import annotations
 
@@ -29,10 +12,6 @@ exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import hefesto_vivo, regua_do_mockup
 
-#: AS DEZ PÁGINAS, e a lista é literal de propósito: escrever
-#: ``for n in range(1, 11)`` faria o teste passar numa árvore onde uma aba
-#: sumiu do produto. O que se prova aqui é que o isento vale em TODA aba que
-#: existe hoje, e uma aba nova entra aqui junto com o resto dela.
 PAGINAS = (
     "01-jogar.html", "02-controles.html", "03-gatilhos.html",
     "04-iluminacao.html", "05-vibracao.html", "06-navegacao.html",
@@ -48,7 +27,6 @@ class _Gesto:
         self.nome = nome
 
 
-# O nome do parâmetro abaixo é o de `_alvos_a_clicar`, não prosa.
 @pytest.mark.parametrize("pagina", PAGINAS)  # (noqa-acento): nome do argumento
 def test_o_salvar_fica_de_fora_em_toda_aba(pagina: str) -> None:
     """Em qualquer das dez, a prova pula o ``salvar`` em vez de clicá-lo."""
@@ -62,12 +40,7 @@ def test_o_salvar_fica_de_fora_em_toda_aba(pagina: str) -> None:
 
 
 def test_o_coringa_nao_isenta_o_que_nao_pediu() -> None:
-    """O ``("*", …)`` isenta o gesto NOMEADO, e nada mais.
-
-    Uma isenção coringa que vazasse para os vizinhos apagaria a prova de botões
-    inócuos — e a régua voltaria a dar verde sobre botão que nunca apertou, que
-    é o defeito de 29/08/2026 que ela existe para não repetir.
-    """
+    """O ``("*", …)`` isenta o gesto NOMEADO, e nada mais."""
     vistos, pulados = regua_do_mockup._alvos_a_clicar(
         [_Gesto("aplicar"), _Gesto("exportar"), _Gesto("importar")],
         {"aplicar", "exportar", "importar"},
@@ -77,28 +50,7 @@ def test_o_coringa_nao_isenta_o_que_nao_pediu() -> None:
 
 
 def test_a_isencao_por_pagina_continua_valendo() -> None:
-    """O casamento novo não pode ter apagado o velho.
-
-    ``("10-perfis.html", "detectar")`` grava no perfil DELA; o mesmo
-    ``detectar`` na Lançadores só procura o jogo e não escreve nada. Se o
-    coringa tivesse substituído o casamento por página em vez de somar-se a ele,
-    os dois passariam a ser tratados igual — e a escolha seria entre não provar
-    o seguro ou estragar o trabalho dela.
-
-    **O PAR ERA OUTRO, e o exemplo velho CADUCOU — 05/09/2026.** Este teste
-    usava ``modo`` na Navegação (que mexe no cursor dela) contra ``modo`` nos
-    Gatilhos, descrito como *"inócuo"*. Deixou de ser: pela decisão **D2**, o
-    ``modo`` dos Gatilhos passou a gravar `controllers[uniq].triggers` no perfil
-    ativo a cada clique, e entrou em ``PERIGOSOS`` no mesmo commit. Os dois
-    lados do par viraram isentos e o teste perdeu o contraste — não porque a
-    cura afrouxou, mas porque o fato que ele ilustrava mudou.
-
-    O par novo foi MEDIDO contra o registro e a lista, não escolhido de memória:
-    ``detectar`` e ``tirar-daqui`` são hoje os DOIS únicos nomes de gesto que
-    vivem em duas páginas com isenção de um lado só. Se um dia sobrar zero, esta
-    guarda deixa de ter como se expressar — e aí é ela que precisa de conserto,
-    não o produto.
-    """
+    """O casamento novo não pode ter apagado o velho."""
     _, pulados_perfis = regua_do_mockup._alvos_a_clicar(
         [_Gesto("detectar")], {"detectar"}, "10-perfis.html",
         hefesto_vivo.PERIGOSOS)
@@ -113,30 +65,12 @@ def test_a_isencao_por_pagina_continua_valendo() -> None:
 
 
 def test_incluir_perigosos_continua_alcancando_o_salvar() -> None:
-    """Isento não é inalcançável — quem roda com ``--incluir-perigosos`` clica.
-
-    É a outra metade do contrato de ``PERIGOSOS``, e sem ela a isenção viraria
-    um botão que régua nenhuma cobre. O ``set()`` vazio é exatamente o que
-    ``hefesto_vivo`` passa quando a flag está ligada.
-    """
+    """Isento não é inalcançável — quem roda com ``--incluir-perigosos`` clica."""
     vistos, pulados = regua_do_mockup._alvos_a_clicar(
         [_Gesto("salvar")], {"salvar"}, "10-perfis.html", set())
     assert vistos == ["salvar"] and pulados == []
 
 
-# ---------------------------------------------------------------------------
-# A SEGUNDA PORTA, e ela ficou aberta um mês — 06/09/2026
-# ---------------------------------------------------------------------------
-#: O DEFEITO, achado pela `ONDA5-03-02` MEDINDO o próprio estrago: `PERIGOSOS`
-#: era consultada por UM caminho só (`--prova-no-aparelho`), e o
-#: `--prova-clique` clicava o que a bandeira nomeasse. O clique daquele agente
-#: **gravou no perfil real da dona** — a gravação foi no-op (o valor já era o
-#: mesmo desde as 02:46, e nenhum arquivo nasceu no `.historico/`), mas a porta
-#: estava aberta e nenhum agente da leva sabia.
-#:
-#: A REGRA QUE ISSO DEIXA é a de 04/09 outra vez: *quando a cura conhece a
-#: causa, ela cobre TODOS os chamadores.* Cobrir um deixa a próxima pessoa
-#: remedindo o mesmo defeito — e aqui deixou, por um mês.
 class _PilotoDeMentira:
     """O mínimo que `_provar_cliques` toca: a bandeira e a página de agora."""
 
@@ -157,7 +91,6 @@ def test_a_prova_clique_recusa_o_que_mexe_na_maquina_dela() -> None:
 
 def test_a_prova_clique_recusa_mesmo_quando_o_perigoso_vem_no_meio() -> None:
     """Um gesto inócuo na frente não pode comprar passagem para o perigoso."""
-    # `desligar` virou `parar-ou-retomar` em 25/09/2026 (um botão só).
     piloto = _PilotoDeMentira("09-sistema.html", "atualizar,parar-ou-retomar")
     with pytest.raises(SystemExit):
         hefesto_vivo.Piloto._provar_cliques(piloto)

@@ -89,12 +89,7 @@ class TestDaemonAntigoImprimeTravessao:
 
     @pytest.mark.parametrize("ausente", [None, "3", 1.5, True, -1])
     def test_nenhum_valor_invalido_vira_zero(self, ausente: Any) -> None:
-        """Nem `None`, nem string, nem float, nem `bool`, nem negativo.
-
-        `True` entra na lista de propósito: em Python `isinstance(True, int)`
-        é verdadeiro, e um daemon que publicasse um booleano faria a mesa
-        virar "1 externo" sem que ninguém tivesse contado nada.
-        """
+        """Nem `None`, nem string, nem float, nem `bool`, nem negativo."""
         texto = _texto(1, ausente)
         assert cmd_coop.SEM_DADO in texto
         assert "controles na mesa: 0" not in texto

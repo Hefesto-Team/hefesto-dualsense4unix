@@ -1,23 +1,4 @@
-"""INSTALL-UNIVERSAL (18/09/2026) — a limpeza da fila no `doctor --fix` de qualquer máquina.
-
-O `check_faixa_sintetica.py --casa --limpar` tira da fila de numeração os
-endereços de fixture que uma corrida da suíte deixou na config real. Ele roda
-no `doctor --fix` (`fix_fila_sem_fixture`), e tinha três furos que só apareciam
-na máquina de outra pessoa:
-
-1. **o python** — o `python3` do sistema, com o erro jogado fora. O `--casa`
-   importa `platformdirs`, que só a venv do produto garante; sem ele o script
-   morria e o doctor dizia "sem endereço de fixture" sem ter lido nada. E o
-   `_python_do_produto` preferia `~/.venv` — uma venv qualquer de quem usa a
-   máquina — à venv que o install cria;
-2. **o daemon de pé regravava a fila** tirada, na próxima vez que um controle
-   chegasse (a fila mora na memória dele desde o boot);
-3. **a faixa universal** `e8:47:3a` — coberta em
-   `test_um_numero_so_01_o_alvo_fala_a_lingua_dela.py`, junto do gesto.
-
-Todos os dublês ficam na FRENTE do PATH: o `systemctl` daqui só anota, e o
-socket é um arquivo num diretório temporário. O daemon dela não é tocado.
-"""
+"""INSTALL-UNIVERSAL (18/09/2026) — a limpeza da fila no `doctor --fix` de qualquer máquina."""
 
 from __future__ import annotations
 
@@ -73,8 +54,6 @@ def _fix(
     binario = tmp_path / "bin"
     binario.mkdir(exist_ok=True)
     log = _systemctl_de_mentira(binario, ativo=ativo)
-    # AF_UNIX tem teto de ~108 bytes no caminho: o runtime é um mkdtemp CURTO,
-    # como no teste do gancho, e não o tmp_path.
     runtime = Path(tempfile.mkdtemp(prefix="heffix-"))
     (runtime / "hefesto-dualsense4unix").mkdir(parents=True, exist_ok=True)
     sock = None
@@ -119,11 +98,7 @@ def test_ok_passa_e_nao_toca_o_daemon(tmp_path: Path) -> None:
 
 
 def test_o_script_que_morre_no_import_e_aviso_e_nao_verde(tmp_path: Path) -> None:
-    """A MORDIDA do furo 1: o verde que não leu o arquivo.
-
-    Antes, qualquer resposta sem `LIMPO:` virava "sem endereço de fixture" —
-    inclusive um traceback de `platformdirs` ausente.
-    """
+    """A MORDIDA do furo 1: o verde que não leu o arquivo."""
     binario = tmp_path / "bin"
     binario.mkdir()
     py = _python_que_responde(
@@ -205,13 +180,8 @@ def test_de_ponta_a_ponta_com_o_script_de_verdade(tmp_path: Path) -> None:
     assert restou == ["02001a000001", "e8473a000009"]
 
 
-# ------------------------------------------------ o python do produto
-
-
 def test_uma_venv_qualquer_em_home_nao_e_o_python_do_produto(tmp_path: Path) -> None:
-    """A MORDIDA da ordem: ponha `${HOME}/.venv` de volta na frente e esta
-    régua reprova — numa máquina alheia, `~/.venv` é qualquer coisa.
-    """
+    """A MORDIDA da ordem: ponha `${HOME}/.venv` de volta na frente e esta"""
     home = tmp_path / "home"
     alheia = home / ".venv" / "bin" / "python"
     alheia.parent.mkdir(parents=True)

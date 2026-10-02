@@ -61,7 +61,6 @@ from tests.unit.barramento_de_mentira import (
     montar,
 )
 
-#: A classe sai do barramento como texto — é uma coluna de TSV, não um número.
 CLASSE_NA_COLUNA = str(CLASSE_DO_DUALSENSE)
 
 
@@ -75,8 +74,6 @@ def _ambiente(raiz: Path) -> dict[str, str]:
     return ambiente(raiz)
 
 
-#: O adaptador vai pelo stdin (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01): no
-#: argv, o sudo o gravava no journal. Os segundos seguem no argv.
 ENTRADA = f"{ADAPTADOR}\n"
 
 
@@ -93,8 +90,7 @@ def _descobrir(barramento: Path, segundos: str) -> subprocess.CompletedProcess[s
 
 
 def _abrir_descobrir(barramento: Path, segundos: str) -> subprocess.Popen[str]:
-    """A janela em fluxo, com o adaptador escrito no stdin e o cano FECHADO:
-    a ponte espera o fim do stdin depois dos dados."""
+    """A janela em fluxo, com o adaptador escrito no stdin e o cano FECHADO:"""
     processo = subprocess.Popen(
         ["bash", str(PONTE), "descobrir", segundos],
         stdin=subprocess.PIPE,
@@ -114,9 +110,6 @@ def _linhas(saida: str) -> list[list[str]]:
     return [linha.split("\t") for linha in saida.splitlines() if linha.strip()]
 
 
-# --- a lista que faltava -----------------------------------------------------
-
-
 def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(barramento: Path) -> None:
     """Quatro colunas por candidato: MAC, nome, novo|pareado e a classe."""
     feito = _descobrir(barramento, "3")
@@ -134,19 +127,14 @@ def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(barramento: Path) -> Non
 
 
 def test_o_candidato_ja_pareado_se_declara(barramento: Path) -> None:
-    """`pareado` não é enfeite: é o que impede a tela de mandá-la repetir
-    PS + Create por um controle que já tem bond neste adaptador."""
+    """`pareado` não é enfeite: é o que impede a tela de mandá-la repetir"""
     feito = _descobrir(barramento, "3")
     por_mac = {linha[0]: linha for linha in _linhas(feito.stdout)}
     assert por_mac[VIZINHO.upper()][2] == "pareado"
 
 
 def test_a_classe_ausente_sai_vazia_e_nao_inventada(barramento: Path) -> None:
-    """O vizinho não publica `Class`. A coluna tem de ficar vazia.
-
-    Inventar uma classe aqui poria um aparelho qualquer na lista de controles
-    dela — e quem decide o que é controle é quem chama, a partir desta coluna.
-    """
+    """O vizinho não publica `Class`. A coluna tem de ficar vazia."""
     feito = _descobrir(barramento, "3")
     por_mac = {linha[0]: linha for linha in _linhas(feito.stdout)}
     assert por_mac[VIZINHO.upper()][3] == ""
@@ -164,12 +152,7 @@ def test_o_nome_com_tabulacao_nao_quebra_a_coluna(barramento: Path) -> None:
 def test_o_aparelho_que_aparece_no_meio_da_janela_tambem_sai(
     barramento: Path,
 ) -> None:
-    """Quem chega no segundo 1 é candidato como quem já estava lá.
-
-    Perdê-lo obrigaria a pessoa a repetir o gesto de PS + Create inteiro — e o
-    aparelho que aparece no meio é justamente o controle que ela acabou de pôr
-    em modo de pareamento.
-    """
+    """Quem chega no segundo 1 é candidato como quem já estava lá."""
     assert not (barramento / "marcador").exists()
     feito = _descobrir(barramento, "3")
     assert (barramento / "marcador").exists(), "a janela nem chegou a abrir"
@@ -180,21 +163,7 @@ def test_o_aparelho_que_aparece_no_meio_da_janela_tambem_sai(
 def test_o_candidato_sai_enquanto_a_janela_ainda_esta_aberta(
     barramento: Path,
 ) -> None:
-    """O FLUXO, e é o que torna o `parear` possível.
-
-    O `Pair()` precisa de um objeto `org.bluez.Device1`, e o BlueZ recolhe os
-    dispositivos que a varredura achou quando ela termina. Uma lista impressa
-    no FIM mandaria quem chama parear contra um caminho que pode já não
-    existir.
-
-    O QUE SE OLHA É A VARREDURA, NÃO O PROCESSO — e a diferença foi medida em
-    20/09/2026. Esta régua nasceu olhando `processo.poll() is None`, e com a
-    janela devolvida ao primeiro plano (o defeito exato que ela persegue) ela
-    **passou verde**: a ponte despeja a lista no fim e ainda tem `wait`, `wc` e
-    o diário a correr depois, então o processo continua vivo. O marcador
-    `varrendo` some junto com o `bluetoothctl`, que é o que interessa ao
-    `Pair()`.
-    """
+    """O FLUXO, e é o que torna o `parear` possível."""
     comeco = time.monotonic()
     varrendo = barramento / "varrendo"
     processo = _abrir_descobrir(barramento, "4")
@@ -244,11 +213,7 @@ def test_o_dry_run_anuncia_a_lista_e_nao_abre_janela(barramento: Path) -> None:
 
 
 def test_o_diario_conta_os_candidatos_e_nao_os_nomeia(barramento: Path) -> None:
-    """Uma varredura vê o celular de quem passa na rua.
-
-    O journal desta máquina não é lugar para o endereço de terceiro, e por isso
-    a linha de fecho diz QUANTOS e não QUAIS.
-    """
+    """Uma varredura vê o celular de quem passa na rua."""
     diario = barramento / "diario.txt"
     env = _ambiente(barramento)
     env["HEFESTO_BT_LOG_DEST"] = str(diario)
@@ -268,29 +233,17 @@ def test_o_diario_conta_os_candidatos_e_nao_os_nomeia(barramento: Path) -> None:
 
 
 def test_a_varredura_cai_junto_com_a_ponte(barramento: Path) -> None:
-    """Quem fecha a tela fecha o rádio junto — inclusive por sinal.
-
-    Sem o `trap` de TERM, derrubar este processo deixaria o `bluetoothctl`
-    varrendo o adaptador DELA até o `--timeout` expirar sozinho, com quatro
-    controles em cima. É o custo de rádio que esta sprint existe para não
-    pagar, deixado para trás justamente por quem fechou a janela.
-    """
+    """Quem fecha a tela fecha o rádio junto — inclusive por sinal."""
     processo = _abrir_descobrir(barramento, "60")
     try:
         assert processo.stdout is not None
         assert processo.stdout.readline().strip(), "a ponte não chegou a varrer"
-        #: A janela vai para o fundo ANTES da primeira linha, mas é outro
-        #: processo: a linha não prova que ele já nasceu. Espera com prazo.
         limite = time.monotonic() + 5.0
         while not ainda_varrendo(barramento) and time.monotonic() < limite:
             time.sleep(0.02)
         assert ainda_varrendo(barramento), "a janela de mentira nem abriu"
         processo.terminate()
         processo.wait(timeout=10)
-        #: A queda não é instantânea: o `timeout` repassa o sinal ao filho.
-        #: Cinco segundos é folga de sobra contra um teto de 60 s de janela. O
-        #: que se pergunta é o PROCESSO da janela, e não o arquivo que o `trap`
-        #: dela apaga — ver `ainda_varrendo`.
         limite = time.monotonic() + 5.0
         while ainda_varrendo(barramento) and time.monotonic() < limite:
             time.sleep(0.1)
@@ -304,18 +257,8 @@ def test_a_varredura_cai_junto_com_a_ponte(barramento: Path) -> None:
             processo.wait(timeout=10)
 
 
-# --- a tranca que protege a mesa dela ---------------------------------------
-
-
 def test_sem_o_gancho_a_raiz_de_teste_continua_inerte(barramento: Path) -> None:
-    """A guarda antiga continua inteira: raiz de teste, sem gancho, não fala.
-
-    Esta é a régua que paga o gancho novo. `HEFESTO_BT_BIN` abre uma exceção na
-    guarda de `_hci_do_mac`, e a exceção só é segura porque com ela o `busctl`
-    é o da pasta de teste. Tirado o gancho, a guarda tem de voltar a valer
-    inteira — senão bastaria um MAC de fixture coincidir com um adaptador vivo
-    para um portão abrir varredura na mesa dela.
-    """
+    """A guarda antiga continua inteira: raiz de teste, sem gancho, não fala."""
     env = _ambiente(barramento)
     env.pop("HEFESTO_BT_BIN")
     feito = subprocess.run(
@@ -333,11 +276,7 @@ def test_sem_o_gancho_a_raiz_de_teste_continua_inerte(barramento: Path) -> None:
 
 
 def test_o_gancho_do_barramento_morre_sob_sudo(barramento: Path) -> None:
-    """Contenção 3: os ganchos de teste são inertes sob sudo.
-
-    Quem desligou o `env_reset` do sudo não pode ganhar de brinde um `busctl`
-    escolhido por ele rodando como root.
-    """
+    """Contenção 3: os ganchos de teste são inertes sob sudo."""
     env = _ambiente(barramento)
     env["SUDO_UID"] = "1000"
     feito = subprocess.run(

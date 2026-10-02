@@ -111,7 +111,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-try:  # importado como módulo do pacote (GUI/daemon/testes)
+try:
     from .steam_launch_options import (
         discover_vdfs,
         is_sandboxed_layout,
@@ -132,71 +132,44 @@ except ImportError:  # pragma: no cover - executado como script avulso
         steam_running,
     )
 
-#: A chave por jogo. `"0"` é desligado; `"2"` é o "sempre ligado" que a própria
-#: Steam escreve quando a pessoa marca a caixa em Propriedades > Controle.
 CHAVE = "UseSteamControllerConfig"
 _CHAVE_MIN = CHAVE.lower()
 LIGADO = "2"
 DESLIGADO = "0"
 
-#: A chave global do Steam Input para PlayStation. Ela é IRMÃ da árvore viva
 #: (mora no mesmo bloco que o `apps` que guarda o `UseSteamControllerConfig`),
-#: e é a segunda âncora para achar essa árvore num arquivo que ainda não tem
-#: nenhuma chave por jogo.
 _PS_SUPPORT_GLOBAL = "steamcontroller_pssupport"
 
 _PAR_RE = re.compile(r'^\s*"(?P<chave>[^"]*)"\s+"(?P<valor>.*)"\s*$')
 _SO_CHAVE_RE = re.compile(r'^\s*"([^"]*)"\s*$')
-#: Régua BRUTA: casa a linha da chave sem saber nada de aninhamento.
 _CHAVE_CRUA_RE = re.compile(
     r'^\s*"' + CHAVE + r'"\s+"[^"]*"\s*$', re.IGNORECASE | re.MULTILINE
 )
-#: Decompõe a linha da chave para trocar SÓ o valor, preservando a indentação
-#: e os tabs literais que a Steam usa entre chave e valor.
 _LINHA_CHAVE_RE = re.compile(
     r'^(?P<prefixo>\s*"' + CHAVE + r'"\s+")(?P<valor>[^"]*)(?P<sufixo>"\s*)$',
     re.IGNORECASE,
 )
 
-# --- desfechos ------------------------------------------------------------
 
-#: Ninguém da lista precisava de ponte.
 PONTE_NADA = "nada_a_fazer"
-#: A ponte foi construída (ou seria, em `dry_run`).
 PONTE_LIGADA = "ligado"
-#: Há um JOGO da Steam aberto — nada foi tocado.
 PONTE_ADIADA_JOGO = "adiado_jogo_aberto"
-#: A Steam está viva — a edição seria engolida na saída dela.
 PONTE_ADIADA_STEAM = "adiado_steam_aberta"
-#: As duas réguas discordaram, ou a árvore viva não se deixou provar.
 PONTE_INCERTA = "nao_sei_onde_escrever"
-#: Falha de escrita (disco, permissão).
 PONTE_ERRO = "erro"
 
-#: Motivos de pular UM appid.
 JA_LIGADO = "ja_ligado"
-#: Este vdf não conhece o appid em árvore `apps` nenhuma — a ponte não inventa
-#: entrada de app que a Steam nunca criou.
 JOGO_DESCONHECIDO = "jogo_desconhecido_neste_vdf"
 REGUAS_DIVERGEM = "reguas_divergem"
 ARVORE_DESCONHECIDA = "arvore_viva_desconhecida"
 SANDBOX = "sandbox"
 
-# --- o outro sentido (JOGO-SEM-EXCLUSIVIDADE-01) ---------------------------
 
-#: Os jogos configurados fora da lista foram desligados (ou seriam, em
-#: `dry_run`).
 PONTE_DESLIGADA = "desligado"
 JA_DESLIGADO = "ja_desligado"
-#: A configuração por jogo da Steam não se deixou ler: nada é escrito naquele
-#: vdf. Não diz qual arquivo, de propósito — o nome pode carregar id de aparelho.
 CONFIG_ILEGIVEL = "configuracao_por_jogo_ilegivel"
-#: A lista de exceções existe e não se deixou ler: nada é escrito em vdf
-#: nenhum, porque ler a lista vazia desligaria justamente os jogos dela.
 LISTA_ILEGIVEL = "lista_de_excecoes_ilegivel"
 
-#: Onde a Steam guarda a configuração de Steam Input POR JOGO, a partir da raiz
-#: da instalação. O `<conta>` embaixo dela é o mesmo do `userdata/<conta>`.
 _PASTA_DAS_CONFIGS = ("steamapps", "common", "Steam Controller Configs")
 _AUTOSAVE = "autosave"
 _APPID_RE = re.compile(r"[0-9]+")
@@ -206,44 +179,26 @@ _APPID_RE = re.compile(r"[0-9]+")
 class ArvoreApps:
     """Um dos blocos `apps` do arquivo, e o que ele guarda desta chave."""
 
-    #: Caminho de blocos até o próprio `apps`, ex.: `UserLocalConfigStore/apps`.
     caminho: str
-    #: Caminho do bloco PAI — onde a irmã global é procurada.
     pai: str = ""
-    #: appid -> (valor da chave, índice da linha em que ela está).
     chaves: dict[str, tuple[str, int]] = field(default_factory=dict)
-    #: appid -> (índice da linha `{`, índice da linha `}`) de cada bloco de app.
     blocos: dict[str, tuple[int, int]] = field(default_factory=dict)
-    #: Índice da linha `}` que fecha o PRÓPRIO bloco `apps`.
     fim: int = -1
-    #: O bloco pai também guarda o `SteamController_PSSupport`?
     irma_do_pssupport: bool = False
 
 
 def contar_chave_cru(texto: str) -> int:
-    """RÉGUA BRUTA: quantas linhas da chave existem no arquivo inteiro.
-
-    Não sabe de árvore, de appid nem de aninhamento — e é exatamente por isso
-    que ela serve de contraprova para a régua estrutural.
-    """
+    """RÉGUA BRUTA: quantas linhas da chave existem no arquivo inteiro."""
     return len(_CHAVE_CRUA_RE.findall(texto))
 
 
 def ler_arvores(texto: str) -> list[ArvoreApps]:
-    """RÉGUA ESTRUTURAL: todo bloco `apps` do arquivo, com o que há dentro.
-
-    Devolve uma `ArvoreApps` por bloco `apps` encontrado, na ordem do arquivo.
-    Read-only e tolerante: conteúdo fora do padrão é ignorado em silêncio (o
-    `localconfig.vdf` guarda a biblioteca inteira dela e não é nosso).
-    """
+    """RÉGUA ESTRUTURAL: todo bloco `apps` do arquivo, com o que há dentro."""
     linhas = texto.splitlines()
     pilha: list[str] = []
     pendente: str | None = None
-    #: profundidade do bloco `apps` -> acumulador
     arvores_abertas: dict[int, ArvoreApps] = {}
-    #: chaves escalares vistas em cada caminho de bloco (para achar a irmã)
     escalares: dict[str, set[str]] = {}
-    #: (appid, profundidade, índice da linha `{`)
     app_atual: tuple[str, int, int] | None = None
     saida: list[ArvoreApps] = []
 
@@ -305,10 +260,6 @@ def ler_arvores(texto: str) -> list[ArvoreApps]:
         so_chave = _SO_CHAVE_RE.match(cru)
         if so_chave is not None:
             pendente = so_chave.group(1)
-    # A irmã global só se decide DEPOIS de ler o arquivo inteiro: no vdf dela o
-    # `SteamController_PSSupport` aparece DUAS linhas ABAIXO do `}` que fecha a
-    # árvore viva, e decidir na abertura do bloco daria sempre "não" — o tipo
-    # de detalhe de ordem que faz um portão responder o contrário do que vê.
     return [
         ArvoreApps(
             caminho=a.caminho,
@@ -412,19 +363,10 @@ def _garantir_no_texto(
     if viva is None:
         return texto, [], [(a, ARVORE_DESCONHECIDA) for a in alvos]
 
-    #: Todo appid que este vdf conhece, em QUALQUER das suas árvores `apps`.
-    #: É a prova de que a Steam já viu o jogo — e o limite do que a ponte
-    #: inventa. Um appid que o arquivo inteiro desconhece (erro de digitação na
-    #: lista, jogo de outra conta) sai pulado em vez de virar um bloco fantasma:
-    #: a lista é o gesto dela, mas escrever entrada de app que a Steam nunca
-    #: criou é passar de "obedecer à lista" para "inventar biblioteca".
-    #: A árvore canônica das `LaunchOptions` serve de prova aqui mesmo quando a
-    #: viva ainda não tem bloco nenhum do jogo — é o caso do jogo recém-instalado.
     conhecidos = {appid for arvore in arvores for appid in arvore.blocos}
 
     linhas = texto.splitlines(keepends=True)
     trocas: dict[int, str] = {}
-    #: índice da linha ANTES da qual inserir -> linhas novas
     insercoes: dict[int, list[str]] = {}
     ligados: list[str] = []
     pulados: list[tuple[str, str]] = []
@@ -433,8 +375,6 @@ def _garantir_no_texto(
         atual = viva.chaves.get(appid)
         if atual is not None:
             valor, idx = atual
-            # Ligar respeita qualquer valor que não seja `"0"` (o `"1"` também
-            # é ligado); desligar só respeita o próprio `"0"`.
             if (valor.strip() != DESLIGADO) == (alvo_valor == LIGADO):
                 pulados.append((appid, ja_esta))
                 continue
@@ -484,15 +424,7 @@ def _recuo_de(linhas: Sequence[str], idx: int) -> tuple[str, str]:
 def conferir_escrita(
     original: str, novo: str, ligados: Sequence[str], *, valor: str = LIGADO
 ) -> str | None:
-    """SEGUNDA passada, independente da que escreveu. Motivo do erro, ou `None`.
-
-    Relê o texto PRODUZIDO com a régua estrutural e exige três coisas: a árvore
-    viva continua provável, todo appid que dizemos ter tocado está de fato em
-    `valor` nela (`"2"` para a ponte, `"0"` para o outro sentido), e a contagem
-    bruta subiu exatamente o número de chaves novas.
-    Escrever e acreditar no próprio relatório é o defeito do censo que passou a
-    noite verde com o jogo dela quebrado.
-    """
+    """SEGUNDA passada, independente da que escreveu. Motivo do erro, ou `None`."""
     falha = "nao_ligou" if valor == LIGADO else "nao_desligou"
     arvores = ler_arvores(novo)
     divergencia = conferir_reguas(novo, arvores)
@@ -520,7 +452,6 @@ class Pendencia:
 
     appid: str
     rotulo: str
-    #: Valor atual da chave; `None` = o jogo nem tem a chave no arquivo.
     valor: str | None
     vdf: str
 
@@ -529,15 +460,10 @@ class Pendencia:
 class Estado:
     """Fotografia read-only: a lista dela contra o que o vdf realmente diz."""
 
-    #: appids da lista de exceções.
     lista: list[str] = field(default_factory=list)
-    #: os que já estão ligados — a ponte de pé.
     ligados: list[str] = field(default_factory=list)
-    #: os que a lista promete e o vdf desmente.
     pendentes: list[Pendencia] = field(default_factory=list)
-    #: vdfs pulados por inteiro (Flatpak/Snap: sandbox).
     sandbox: list[str] = field(default_factory=list)
-    #: vdfs em que as réguas discordaram ou a árvore não se provou.
     incertos: list[str] = field(default_factory=list)
     erros: list[str] = field(default_factory=list)
     steam_aberta: bool = False
@@ -596,12 +522,7 @@ class Estado:
 
 
 def ler_allowlist(config_home: Path | None = None) -> list[str]:
-    """Os appids da lista de exceções dela. Lista vazia se o arquivo não existe.
-
-    A leitura é a MESMA do guarda e do daemon (`parse_steam_input_allowlist`
-    sobre `steam_input_allowlist_path`) — duas leituras diferentes do mesmo
-    arquivo é como se constrói uma discordância silenciosa.
-    """
+    """Os appids da lista de exceções dela. Lista vazia se o arquivo não existe."""
     try:
         return parse_steam_input_allowlist(
             steam_input_allowlist_path(config_home).read_text(encoding="utf-8")
@@ -617,11 +538,7 @@ def estado_da_ponte(
     allowlist: Sequence[str] | None = None,
     config_home: Path | None = None,
 ) -> Estado:
-    """Lê (e só lê) o que a lista promete e o que o vdf entrega.
-
-    Read-only de propósito, como o censo do wrapper: roda com a Steam ABERTA,
-    porque só a ESCRITA é que exige a Steam fechada.
-    """
+    """Lê (e só lê) o que a lista promete e o que o vdf entrega."""
     alvos = (
         [str(a).strip() for a in allowlist if str(a).strip()]
         if allowlist is not None
@@ -661,10 +578,6 @@ def estado_da_ponte(
             if appid in vistos:
                 continue
             if appid not in conhecidos:
-                # Jogo que este vdf desconhece (não instalado nesta conta, ou
-                # um número errado na lista). Não é pendência: seria o D-32 de
-                # volta — pré-voo dizendo "precisa" para sempre e a Steam dela
-                # sendo fechada para não mudar byte nenhum.
                 continue
             vistos.add(appid)
             pendentes.append(
@@ -729,9 +642,6 @@ def garantir_ponte(
         try:
             original = vdf.read_text(encoding="utf-8")
         except (OSError, ValueError) as exc:
-            # ValueError cobre UnicodeDecodeError. Sem `errors="replace"`: este
-            # arquivo é REESCRITO adiante, e trocar bytes por U+FFFD corromperia
-            # a biblioteca inteira dela.
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
             houve_erro = True
             continue
@@ -773,30 +683,8 @@ def garantir_ponte(
     return PONTE_NADA, estado, detalhe
 
 
-# --------------------------------------------------------------------------
-# O outro sentido: fora da lista, desligado (JOGO-SEM-EXCLUSIVIDADE-01)
-# --------------------------------------------------------------------------
-
-
 def appids_com_autosave(texto: str) -> set[str] | None:
-    """Os appids que um `configset_*.vdf` guarda com `autosave`. Função PURA.
-
-    O formato não é documentado pela Steam. O que se mediu em 13/09/2026::
-
-        "controller_config"
-        {
-            "<appid>"
-            {
-                "autosave"      "1"
-            }
-        }
-
-    Entradas com `template` ou `workshop` e chaves não numéricas ficam de fora.
-    Texto vazio é "nada configurado". Qualquer outra forma — chave solta na
-    raiz, nome sem bloco, bloco sem nome, linha que não se entende, chaves
-    desbalanceadas, mais de uma raiz — devolve None: não entender é não
-    escrever.
-    """
+    """Os appids que um `configset_*.vdf` guarda com `autosave`. Função PURA."""
     pilha: list[str] = []
     pendente: str | None = None
     raizes = 0
@@ -841,12 +729,7 @@ def appids_com_autosave(texto: str) -> set[str] | None:
 
 
 def pasta_das_configs_por_jogo(vdf: Path) -> Path | None:
-    """Onde a Steam guarda a configuração por jogo da conta DESTE vdf.
-
-    ``<raiz>/userdata/<conta>/config/localconfig.vdf`` corresponde a
-    ``<raiz>/steamapps/common/Steam Controller Configs/<conta>/config``.
-    Layout que não é esse devolve None.
-    """
+    """Onde a Steam guarda a configuração por jogo da conta DESTE vdf."""
     partes = vdf.parts
     if len(partes) < 5 or partes[-4] != "userdata" or partes[-2] != "config":
         return None
@@ -854,13 +737,7 @@ def pasta_das_configs_por_jogo(vdf: Path) -> Path | None:
 
 
 def configuracao_por_jogo(pasta: Path) -> set[str] | None:
-    """Os appids que a Steam configurou POR JOGO nesta pasta, ou None.
-
-    Um appid entra quando tem entrada com `autosave` em algum `configset_*.vdf`
-    OU pasta `<appid>/` própria. Pasta que não existe é "nada configurado".
-    Listagem ou configset que não se deixa ler devolve None — e o motivo NÃO
-    sai daqui: o nome do arquivo pode carregar o id de um aparelho.
-    """
+    """Os appids que a Steam configurou POR JOGO nesta pasta, ou None."""
     try:
         if not pasta.exists():
             return set()
@@ -888,12 +765,7 @@ def configuracao_por_jogo(pasta: Path) -> set[str] | None:
 
 
 def _ler_allowlist_estrita(config_home: Path | None = None) -> list[str] | None:
-    """A lista de exceções, ou None quando ela EXISTE e não se deixa ler.
-
-    `ler_allowlist` devolve lista vazia em qualquer falha, e para ligar isso é
-    inofensivo. Para desligar é o contrário: uma lista lida vazia por engano
-    desligaria justamente os jogos que ela pôs lá.
-    """
+    """A lista de exceções, ou None quando ela EXISTE e não se deixa ler."""
     caminho = steam_input_allowlist_path(config_home)
     try:
         if not caminho.exists():
@@ -911,14 +783,7 @@ def garantir_fora_da_lista_desligado(
     config_home: Path | None = None,
     dry_run: bool = False,
 ) -> tuple[str, list[dict[str, str]]]:
-    """Grava `"0"` em todo jogo que a Steam configurou por jogo FORA da lista.
-
-    Devolve ``(status, detalhe)``, com o mesmo formato de detalhe de
-    `garantir_ponte`. Os jogos da lista não são tocados aqui: quem os liga é o
-    `--ligar`. Mesma ordem de portões da ponte — nada a fazer, jogo aberto,
-    Steam aberta — e a mesma escrita: backup ao lado, `tmp` + `replace`, e a
-    segunda régua conferindo o texto antes de trocar o arquivo.
-    """
+    """Grava `"0"` em todo jogo que a Steam configurou por jogo FORA da lista."""
     detalhe: list[dict[str, str]] = []
     if allowlist is not None:
         lista: list[str] | None = [str(a).strip() for a in allowlist if str(a).strip()]
@@ -1002,13 +867,6 @@ def garantir_fora_da_lista_desligado(
     return PONTE_ERRO, detalhe
 
 
-# --------------------------------------------------------------------------
-# CLI — o guarda consome `--ligar`; `--estado` (JSON) é para a GUI e o doctor.
-# --------------------------------------------------------------------------
-
-#: Códigos de saída. O `3` do adiamento existe pelo mesmo motivo do
-#: `sentinela_do_wrapper`: adiar é o caso NORMAL (ela está jogando), e um
-#: oneshot do systemd trataria qualquer != 0 como unit FAILED.
 _SAIDA = {
     PONTE_NADA: 0,
     PONTE_LIGADA: 0,
@@ -1066,10 +924,6 @@ def main(argv: list[str] | None = None) -> int:
             alvo = item["appid"] or item["vdf"]
             print(f"[steam-input-ponte] {alvo}: {item['desfecho']}")
         if status != PONTE_LIGADA:
-            # A frase descreve o estado de ANTES da escrita. Depois de ligar,
-            # repeti-la seria dizer "posso ligar agora" sobre um jogo que
-            # acabou de ser ligado — mentirinha pequena, da família da que fez
-            # a janela cantar "Steam Input desligado" sobre um no-op.
             print(f"[steam-input-ponte] {estado.frase()}")
         return _SAIDA.get(status, 1)
 

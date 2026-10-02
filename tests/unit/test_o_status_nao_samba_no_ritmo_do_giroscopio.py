@@ -1,60 +1,9 @@
-"""NAO-DANCA-01 — a aba Status parou de sambar no ritmo do giroscópio.
-
-O QUE ELA VIU, em 13/08/2026
-----------------------------
-
-    *"não sei se dá pra ver mas o layout fica sambando aqui na interface"*
-
-Três capturas da aba Status, do mesmo controle, com segundos entre elas:
-
-* 14:11:22 — ``(~160 Hz)``, a frase da verdade em DUAS linhas, a ``Bateria:``
-  abaixo dela, à direita;
-* 14:11:26 — ``(~193 Hz)``, a mesma frase em UMA linha, a ``Bateria:`` sobe
-  para a mesma linha, e todo o conteúdo abaixo sobe junto;
-* 14:11:30 — ``(~190 Hz)``, volta a duas linhas, e tudo desce de novo.
-
-O MECANISMO, MEDIDO
--------------------
-
-A frase mora numa label com quebra de linha, dentro da faixa que é o primeiro
-bloco do corpo do card — frase à esquerda, bateria à direita. A altura dela
-governa a altura da faixa, e a faixa empurra tudo o que vem abaixo.
-
-Com o card na largura da tela dela (1920 → card de 1400px), a frase **recebe
-904px e pede 905px**: um pixel de folga negativa. Nessa lâmina um único dígito
-do ``(~N Hz)`` decide a quebra — `'160'` e `'193'` têm a mesma largura em pixel
-INTEIRO nesta fonte, e o que os separa é fração de pixel. Medido antes da cura,
-com as três frases dela: o Touchpad, os analógicos, o Microfone e o teclado de
-botões sobem e descem **18px**, duas vezes por segundo.
-
-O QUE ESTES TESTES MORDEM
--------------------------
-
-Trocar :class:`RotuloDeAlturaReservada` por uma `Gtk.Label` comum em
-`_montar_estado_global` — que é a cura inteira — faz
-`test_a_frase_curta_e_a_mais_longa_nao_movem_nada` reprovar dizendo quantos
-pixels cada bloco dançou.
-
-DUAS ARMADILHAS DE MEDIÇÃO PAGAS AQUI, para ninguém repagar
------------------------------------------------------------
-
-1. **`apply_theme` COMPÕE.** Chamado quatro vezes no mesmo processo, o
-   `gtk-font-name` foi de "Fira Sans" para 12.25, 14.5, 16.75 e 19 pontos —
-   medido em 13/08. Uma bancada que monta três janelas e aplica o tema em cada
-   uma mede TRÊS fontes diferentes e chama isso de dança do layout. Por isso a
-   fixture de módulo, que é o idioma que o
-   `test_largura_a_mesma_em_todas_as_abas` já usa;
-2. **a classe `hefesto-dualsense4unix-window` é obrigatória na janela.** Quase
-   todo o `theme.css` está escopado nela; o provider é da TELA, mas sem a
-   classe a janela desenha com outra fonte. Medido: sem a classe, a frase de
-   160 Hz cabia em UMA linha e o teste passava com a cura arrancada.
-"""
+"""NAO-DANCA-01 — a aba Status parou de sambar no ritmo do giroscópio."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("o status não samba")
 
 from collections.abc import Iterator
@@ -91,14 +40,10 @@ pytestmark = pytest.mark.skipif(
     not _gtk_pronto(), reason="sem GTK/display utilizável"
 )
 
-#: A tela dela maximizada — a largura em que as fotos foram tiradas.
 LARGURA_DA_TELA_DELA = 1920
 
-#: A classe que o `apply_theme` põe na janela. Ver a armadilha 2 do docstring.
 CLASSE_DA_JANELA = "hefesto-dualsense4unix-window"
 
-#: As janelas ficam vivas numa lista de módulo: o Python coleta a referência
-#: local assim que a função retorna, e um card sem toplevel volta a medir 1x1.
 _janelas_vivas: list[Any] = []
 
 _ENTRY: dict[str, Any] = {
@@ -153,8 +98,6 @@ def _estado_das_fotos_dela(hz: float) -> dict[str, Any]:
     )
 
 
-#: O estado da frase mais CURTA: os seis recursos num grupo só, sem detalhe
-#: numérico nenhum (o giroscópio sem Hz, a vibração sem o par dos motores).
 ESTADO_FRASE_CURTA = _estado(
     {
         "motion_streaming": True,
@@ -170,8 +113,6 @@ ESTADO_FRASE_CURTA = _estado(
     }
 )
 
-#: E o da frase mais LONGA: os três grupos na tela, com os dois detalhes no
-#: maior tamanho que eles têm. É o estado que `frase_mais_longa...` descreve.
 ESTADO_FRASE_LONGA = _estado(
     {
         "motion_streaming": True,
@@ -187,24 +128,8 @@ ESTADO_FRASE_LONGA = _estado(
 
 @pytest.fixture(autouse=True, scope="module")
 def _tema_na_escala_que_sai() -> Iterator[None]:
-    """Aplica o tema pelos DOIS canais de `app.theme.apply_theme`, e desfaz.
+    """Aplica o tema pelos DOIS canais de `app.theme.apply_theme`, e desfaz."""
 
-    Não se chama `apply_theme` aqui de propósito: ele SOMA o delta ao
-    `gtk-font-name` que encontrar, e uma segunda chamada na mesma sessão do
-    pytest mediria uma fonte maior. Ver a armadilha 1 do docstring.
-    """
-
-    # A ESCALA É FIXADA — 25/08/2026. Esta fixture chamava `escala_fonte()`,
-    # que lê o `gui_preferences.json` de QUEM RODA (nesta máquina, 6), e mexe
-    # em `Gtk.Settings`, que é singleton do PROCESSO. Dois efeitos, os dois
-    # medidos: o teste muda de veredito conforme a escala de quem roda, e a
-    # escala vaza para os arquivos que rodam depois na mesma sessão do pytest.
-    # Foi assim que dois testes de `test_layout_orcamento_altura.py`
-    # reprovavam em lote e passavam sozinhos.
-    #
-    # A régua declarada é a `ESCALA_PADRAO`: é com ela que o produto nasce em
-    # quem instala. A escala maior é escolha dela, e o que ela custa é OUTRA
-    # pergunta, com outro teto.
     delta = ESCALA_PADRAO
     tela = Gdk.Screen.get_default()
     provider = Gtk.CssProvider()
@@ -235,9 +160,6 @@ def _assentar(vezes: int = 8) -> None:
             Gtk.main_iteration()
 
 
-#: Os blocos do card que vêm ABAIXO da faixa da frase. São eles que ela viu
-#: subir e descer: *"o Touchpad, os analógicos, o Microfone, o teclado de
-#: botões — a caixa inteira encolhe"*.
 BLOCOS_ABAIXO = (
     "_gyro_box",
     "_miolo_inferior",
@@ -259,17 +181,12 @@ def _geometria(state_global: dict[str, Any]) -> dict[str, int]:
     janela.show_all()
     _janelas_vivas.append(janela)
     card.update(_ENTRY, state_global, LeituraMic(nivel=0.6, muted=False))
-    # `resize` DEPOIS do `update`: sem ele a OffscreenWindow não realoca.
     janela.resize(LARGURA_DA_TELA_DELA, 900)
     _assentar()
 
     medida = {
         "altura da faixa da frase": card._faixa_gyro_bateria.get_allocation().height,
         "altura da frase": card._verdade_label.get_allocation().height,
-        # A BARRA, e não a linha da bateria: a linha preenche a faixa (o topo
-        # dela não se move), e quem sobe e desce é a barra, que fica CENTRADA
-        # dentro dessa altura. Medir a linha deixava passar exatamente o que
-        # ela anotou — *"a Bateria: sobe para a mesma linha"*.
         "topo da barra de bateria": card._battery_bar.get_allocation().y,
         "topo do rótulo Bateria:": card._battery_row.get_children()[
             0
@@ -295,11 +212,6 @@ def _o_que_dancou(
     }
 
 
-# ---------------------------------------------------------------------------
-# A régua: a frase mais longa é a que a função-dona monta mesmo
-# ---------------------------------------------------------------------------
-
-
 def test_a_frase_mais_longa_e_a_que_a_funcao_dona_monta() -> None:
     """A régua da reserva não é ficção — o produto sabe montar aquela frase.
 
@@ -321,36 +233,15 @@ def test_a_frase_mais_longa_nomeia_os_seis_recursos() -> None:
     frase = frase_mais_longa_do_que_chega_ao_jogo()
     faltando = [nome for _r, nome in _NOME_NA_FRASE if nome not in frase]
     assert not faltando, f"a régua não menciona {faltando}"
-    # E os três prefixos, que são o texto fixo mais longo possível.
     for prefixo in ("No jogo agora: ", "pararam: ", "sem pedido ainda: "):
         assert prefixo in frase
 
 
-# ---------------------------------------------------------------------------
-# A mordida: a geometria não pode mudar
-# ---------------------------------------------------------------------------
-
-
 def test_a_frase_curta_e_a_mais_longa_nao_movem_nada() -> None:
-    """**A diferença tem de ser ZERO pixel** — em toda peça do card.
-
-    Esta é a mordida. Com a cura arrancada (uma `Gtk.Label` comum no lugar da
-    :class:`RotuloDeAlturaReservada`), a frase curta ocupa uma linha, a longa
-    ocupa duas, e a mensagem abaixo lista peça por peça quantos pixels cada
-    uma andou.
-
-    Os dois estados são escolhidos para a mordida NÃO depender da escala de
-    fonte: a frase curta tem os seis recursos num grupo só e sem número, a
-    longa tem os três grupos e os dois números no maior tamanho. A razão entre
-    elas e o teto de :data:`_VERDADE_MAX_CHARS` é a mesma em qualquer fonte,
-    porque o teto também é em CARACTERES.
-    """
+    """**A diferença tem de ser ZERO pixel** — em toda peça do card."""
     curta = _geometria(ESTADO_FRASE_CURTA)
     longa = _geometria(ESTADO_FRASE_LONGA)
 
-    # Guarda anti-teste-vazio: se as duas frases ocupassem o mesmo número de
-    # linhas, não haveria dança para detectar e o teste passaria sem medir
-    # nada. Ele tem de acusar isso em vez de ficar verde.
     assert curta["linhas da frase"] != longa["linhas da frase"], (
         "as duas frases ocupam o mesmo número de linhas "
         f"({curta['linhas da frase']}); este teste perdeu os dentes — "
@@ -364,16 +255,7 @@ def test_a_frase_curta_e_a_mais_longa_nao_movem_nada() -> None:
 
 
 def test_as_tres_frases_das_fotos_dela_nao_movem_nada() -> None:
-    """Os três Hz das capturas de 14:11, medidos um contra o outro.
-
-    É o caso REAL, e o mais fino: as três frases têm o mesmo número de
-    caracteres e diferem em um dígito. Antes da cura, ~160 Hz e ~190 Hz
-    quebravam em duas linhas e ~193 Hz não, e tudo abaixo andava 18px.
-
-    Ele não tem a guarda anti-teste-vazio do irmão acima de propósito: aqui a
-    quebra depende de fração de pixel, e exigir que os três Hz continuem
-    caindo de lados diferentes da lâmina seria travar o teste numa fonte.
-    """
+    """Os três Hz das capturas de 14:11, medidos um contra o outro."""
     base = _geometria(_estado_das_fotos_dela(160.0))
     for hz in (193.0, 190.0):
         outra = _geometria(_estado_das_fotos_dela(hz))
@@ -385,12 +267,7 @@ def test_as_tres_frases_das_fotos_dela_nao_movem_nada() -> None:
 
 
 def test_a_bateria_nao_muda_de_linha_com_o_texto_ao_lado() -> None:
-    """A anotação dela: a ``Bateria:`` subia para a linha de cima e voltava.
-
-    Ela é vizinha da frase na mesma faixa, e não deveria mudar de lugar por
-    causa do texto ao lado. Mede-se a BARRA e o RÓTULO — a linha que os contém
-    preenche a faixa e tem topo fixo, então medi-la não acusaria nada.
-    """
+    """A anotação dela: a ``Bateria:`` subia para a linha de cima e voltava."""
     curta = _geometria(ESTADO_FRASE_CURTA)
     longa = _geometria(ESTADO_FRASE_LONGA)
     for peca in ("topo da barra de bateria", "topo do rótulo Bateria:"):
@@ -401,40 +278,15 @@ def test_a_bateria_nao_muda_de_linha_com_o_texto_ao_lado() -> None:
 
 
 def test_a_reserva_cabe_a_frase_mais_longa_sem_sobrar_linha() -> None:
-    """A altura reservada é a do TETO, e não uma folga inventada.
-
-    Duas metades, e as duas importam:
-
-    * a frase mais longa **cabe** na altura reservada (senão a dança volta
-      justamente no estado mais carregado);
-    * a altura reservada é **exatamente** a que essa frase pede — nada de vão
-      decorativo abaixo da linha.
-    """
+    """A altura reservada é a do TETO, e não uma folga inventada."""
     longa = _geometria(ESTADO_FRASE_LONGA)
     curta = _geometria(ESTADO_FRASE_CURTA)
     assert curta["altura da frase"] == longa["altura da frase"]
-    # A frase mais longa é quem define a altura: ela ocupa a reserva inteira.
     assert longa["linhas da frase"] >= curta["linhas da frase"]
 
 
-# ---------------------------------------------------------------------------
-# A aba "No jogo" tem o mesmo número na tela — e NÃO tem o mesmo defeito
-# ---------------------------------------------------------------------------
-
-
 def test_a_aba_no_jogo_nao_samba_com_o_mesmo_numero() -> None:
-    """O outro lugar da janela onde o Hz aparece, medido: 0px de dança.
-
-    Ela mostra ``no jogo agora (~158 Hz)`` numa coluna que TAMBÉM quebra linha
-    (`line_wrap` + `max_width_chars(56)`), então a pergunta é legítima. A
-    resposta medida em 13/08 é que ela é imune, e por desenho, não por sorte:
-    cada recurso tem LINHA FIXA e o valor de cada linha é curto — o mais longo
-    ("no jogo agora (motores: 255/255)") tem 32 caracteres para um teto de 56,
-    e o painel tem largura própria de 700px.
-
-    Este teste existe para que continue assim: quem alargar o texto daquela
-    coluna descobre aqui, e não na tela dela.
-    """
+    """O outro lugar da janela onde o Hz aparece, medido: 0px de dança."""
     from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
         RECURSOS,
         PainelNoJogo,

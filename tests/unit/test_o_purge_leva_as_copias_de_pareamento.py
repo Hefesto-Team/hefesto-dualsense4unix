@@ -1,39 +1,4 @@
-"""O `uninstall.sh --purge-config` leva as cópias de pareamento de uninstalls anteriores.
-
-O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01 (24/09/2026), decisão dela
-D-2409-AS-COPIAS-DE-PAREAMENTO-SAEM-NO-PURGE. Todo uninstall sem
-`--purge-config` guarda o acervo de bonds numa
-`/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-<carimbo>` e diz «para
-apagar de vez: rode o uninstall com --purge-config». O `--purge-config` só
-levava o acervo DESTA vida: as cópias de antes, com as LinkKeys dentro, nunca
-saíam, e o `rmdir` do pai falhava calado por causa delas.
-
-Os blocos são recortados do `uninstall.sh` REAL e rodam com o /var/lib trocado
-por uma pasta de mentira (o caminho de `test_o_uninstall_leva_o_radio.py`), sob
-o mesmo `set -euo pipefail` do script. O `sudo` de mentira executa o comando e
-RECUSA qualquer argumento que ainda aponte para o /var/lib de verdade.
-
-A segunda metade é a medição da sprint virada régua: O QUE TEM CHAVE DE
-PAREAMENTO NASCE SÓ PARA O ROOT. Medido em 24/09 por `git grep` do caminho e
-pelo histórico: só dois escritores do produto põem chave nessa pasta — o
-`bt_bonds_snapshot.sh` (o acervo) e o `uninstall.sh` (as cópias). Os outros
-escrevem sem chave: o diário do rádio (0644 de propósito, porque o daemon o
-lê), a lápide da ponte e o livro do autorestore (0600, só endereços). As
-capturas de Bluetooth de 22/07 e a `bt-bonds-protegidos` de 04/08, na máquina
-dela, não têm escritor no repositório nem no histórico. Os dois escritores rodam
-aqui sob `umask 000`, a pior máscara, com a fonte do BlueZ frouxa de propósito.
-
-A MORDIDA, medida: tirar o laço das cópias reprova os cinco testes do purge e o
-do ensaio; alargar o padrão para `bt-bonds*` reprova o da vizinha; tirar o
-`KEEP_CONFIG` do laço reprova o sem-flag e os dois da cópia guardada (o laço
-levaria a cópia desta vida); tirar a linha da senha, o da senha; tirar o aviso
-sem root, o do aviso; tirar do snapshot o `chmod -R go-rwx` ou o `-m 700` do
-acervo, o do acervo; tirar o `-m700` da pasta guardada, os dois da cópia — o
-`install -d` sem modo abre para 0755 até a pasta que o `mv` trouxe fechada.
-E da conferência: tirar o `sudo` do `rm` do laço reprova só o do ensaio (a
-pasta de mentira é da usuária, e o `rm` sozinho apagaria aqui); tirar o `-L` da
-guarda, ou trocar o `-e` por `-d`, reprova o do link (o quebrado ficaria).
-"""
+"""O `uninstall.sh --purge-config` leva as cópias de pareamento de uninstalls anteriores."""
 
 from __future__ import annotations
 
@@ -51,15 +16,11 @@ UNINSTALL = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
 SNAPSHOT = RAIZ / "scripts" / "bt_bonds_snapshot.sh"
 VAR_LIB = "/var/lib/hefesto-dualsense4unix"
 
-#: Faixa sintética canônica das fixtures (test_anonimato_de_fixtures.py).
 ADAPTADOR = "AA:BB:CC:00:00:01"
 CONTROLE = "AA:BB:CC:00:00:11"
-#: O que faz de um arquivo do BlueZ uma chave: a seção, como o
-#: `bt_bonds_autorestore.sh::_tem_chave` a procura.
 INFO_COM_CHAVE = "[General]\nName=DualSense Wireless Controller\n\n[LinkKey]\nType=4\nPINLength=0\n"
 CACHE_SDP = "[General]\nName=DualSense Wireless Controller\n\n[ServiceRecords]\n0x00010001=3602\n"
 
-#: As cópias que dois uninstalls de agosto deixaram, no formato do carimbo de sempre.
 ANTIGAS = (
     "bt-bonds.pre-uninstall-20260808-101010",
     "bt-bonds.pre-uninstall-20260815-202020",
@@ -89,9 +50,6 @@ BLOCO_DO_ENSAIO = _recorte(
     "# Prime a credencial só se algum passo com root vai rodar",
 )
 
-#: O `sudo` de mentira, com a senha em cache: executa, e recusa o que ainda
-#: apontar para o /var/lib real. As opções da frente (`-n`, `-A`…) saem como no
-#: de verdade, senão o `sudo -n true` viraria `exec -n` e mentiria «sem root».
 SUDO_QUE_RECUSA_O_REAL = (
     'for a in "$@"; do\n'
     '  [[ "$a" == *' + VAR_LIB + '* ]] && { echo "RECUSEI $a" >&2; exit 97; }\n'
@@ -99,7 +57,6 @@ SUDO_QUE_RECUSA_O_REAL = (
     'while [[ "${1:-}" == -[nAEHkS] ]]; do shift; done\n'
     'exec "$@"\n'
 )
-#: O `sudo` de quem não tem senha em cache nem TTY: toda pergunta é «não».
 SUDO_QUE_NEGA = 'echo "NEGUEI $*" >&2\nexit 1\n'
 
 
@@ -180,11 +137,6 @@ def _retrato(pasta: Path) -> dict[str, tuple[str, int]]:
     return retrato
 
 
-# ---------------------------------------------------------------------------
-# 1. O --purge-config leva as cópias de antes; sem ele, nada muda
-# ---------------------------------------------------------------------------
-
-
 def test_com_purge_config_as_copias_de_antes_saem(tmp_path: Path) -> None:
     raiz = _mesa_do_root(tmp_path)
     r = _rodar(tmp_path, BLOCO_DOS_BONDS, purge=True)
@@ -199,8 +151,7 @@ def test_com_purge_config_as_copias_de_antes_saem(tmp_path: Path) -> None:
 
 
 def test_com_purge_config_a_pasta_do_root_sai_mesmo_com_copias_de_antes(tmp_path: Path) -> None:
-    """O `rmdir` do pai é puro: com uma cópia de antes dentro, ele falhava calado
-    e a pasta ficava em /var/lib com as LinkKeys de agosto."""
+    """O `rmdir` do pai é puro: com uma cópia de antes dentro, ele falhava calado"""
     raiz = _mesa_do_root(tmp_path)
     r = _rodar(tmp_path, BLOCO_DOS_BONDS, purge=True, remove_udev=True)
     assert r.returncode == 0, r.stderr
@@ -208,8 +159,7 @@ def test_com_purge_config_a_pasta_do_root_sai_mesmo_com_copias_de_antes(tmp_path
 
 
 def test_so_as_copias_de_antes_sem_acervo_nem_diario_tambem_saem(tmp_path: Path) -> None:
-    """O segundo uninstall de quem seguiu o «para apagar de vez»: o acervo já foi
-    guardado pelo primeiro, e só as cópias sobraram."""
+    """O segundo uninstall de quem seguiu o «para apagar de vez»: o acervo já foi"""
     raiz = _mesa_do_root(tmp_path, com_bonds=False, com_diario=False)
     r = _rodar(tmp_path, BLOCO_DOS_BONDS, purge=True, remove_udev=True)
     assert r.returncode == 0, r.stderr
@@ -229,9 +179,7 @@ def test_sem_purge_config_as_copias_de_antes_ficam_intactas(tmp_path: Path) -> N
 
 
 def test_o_purge_so_leva_o_prefixo_que_o_uninstall_escreve(tmp_path: Path) -> None:
-    """A vizinha de nome parecido fica. A `bt-bonds-protegidos` é a que existe na
-    máquina dela desde 04/08, sem escritor no repositório: ela não é cópia de
-    uninstall, e o uninstall não decide por ela. O pai, com ela dentro, fica."""
+    """A vizinha de nome parecido fica. A `bt-bonds-protegidos` é a que existe na"""
     raiz = _mesa_do_root(tmp_path)
     _um_acervo(raiz / "bt-bonds-protegidos")
     _escrever(raiz / "LEIA-ME.txt", "anotação de alguém\n", 0o644)
@@ -261,11 +209,7 @@ def test_um_link_com_o_nome_da_copia_sai_sem_levar_o_alvo(tmp_path: Path) -> Non
 
 
 def test_o_ensaio_diz_cada_copia_que_apagaria_e_nao_apaga_nenhuma(tmp_path: Path) -> None:
-    """O `--dry-run` é como quem coordena olha o uninstall na máquina dela.
-
-    O «(root)» é a parte que morde: a pasta de mentira é da usuária, e um `rm`
-    sem `sudo` passaria em todos os outros testes daqui — na máquina dela a
-    pasta é de root e ele não apagaria nada."""
+    """O `--dry-run` é como quem coordena olha o uninstall na máquina dela."""
     raiz = _mesa_do_root(tmp_path)
     antes = _retrato(raiz)
     r = _rodar(tmp_path, BLOCO_DO_ENSAIO + BLOCO_DOS_BONDS, purge=True, antes="DRY_RUN=1\n")
@@ -276,11 +220,6 @@ def test_o_ensaio_diz_cada_copia_que_apagaria_e_nao_apaga_nenhuma(tmp_path: Path
         assert any(f"(root) rm -rf -- {raiz}/{nome}" in linha for linha in faria), (
             f"o ensaio não disse que apagaria {nome} como root:\n" + "\n".join(faria)
         )
-
-
-# ---------------------------------------------------------------------------
-# 2. A senha e o aviso: o purge não fica calado sem root
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -327,11 +266,6 @@ def test_com_root_o_aviso_nao_aparece(tmp_path: Path) -> None:
     r = _rodar(tmp_path, AVISO_SEM_ROOT, purge=True)
     assert r.returncode == 0, r.stderr
     assert r.stdout == "", r.stdout
-
-
-# ---------------------------------------------------------------------------
-# 3. O que tem chave de pareamento nasce só para o root
-# ---------------------------------------------------------------------------
 
 
 def _tem_chave(arquivo: Path) -> bool:

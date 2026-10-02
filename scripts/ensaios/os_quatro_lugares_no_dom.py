@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""Os quatro lugares de controle são alcançáveis, aba por aba, no DOM VIVO.
-
-POR QUE ELE EXISTE, e é a regra desta casa: o teste de unidade
-``test_os_quatro_lugares_tem_endereco_em_toda_aba`` lê o HTML no disco. O que
-prova o PRODUTO é o ``WebKit2.WebView`` que ela usa — o piloto pode, em tese,
-remover um endereço em tempo de execução, e o disco continuaria verde.
-
-A DECISÃO É DELA, 03/09/2026: *"tem que aparecer desligado enquanto não tem
-nenhum controle. A partir do momento que tiver, ele aparece o controle
-devidamente conectado. Se isso não ocorre com os 4 controles em cada aba, então
-temos que construir isso e garantir isso."*
-
-Ele passeia pelas sete abas com lugar por controle e pergunta, em cada uma,
-quantos elementos ``[data-controle="pN"]`` existem. Reprova se algum der zero.
-
-Uso (a janela é OCULTA; ela tem UMA tela)::
-
-    scripts/ensaios/os_quatro_lugares_no_dom.py
-"""
+"""Os quatro lugares de controle são alcançáveis, aba por aba, no DOM VIVO."""
 from __future__ import annotations
 
 import argparse
@@ -29,9 +11,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)

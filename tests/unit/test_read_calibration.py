@@ -1,14 +1,4 @@
-"""`read_calibration` do backend (GYRO-01) — feature 0x05 por unidade, fail-safe.
-
-O contrato que o vpad depende: 41 bytes com id 0x05, ou **None** (fallback ao
-canônico — o vpad SEMPRE nasce). A leitura vai por HIDIOCGFEATURE no hidraw do
-handle (id incluído, como o kernel entrega) — NÃO pelo `get_feature_report` da
-hidapi pure-python, que descarta o byte do id (``return buf[1:]``) e
-desmolduraria o report. Modos de falha exercitados sem hardware: EIO do BT
-ocioso (timeout de 5 s do hidp), report torto e — só por BT — o CRC-32 dos 4
-últimos bytes (seed 0xA3, `PS_FEATURE_CRC32_SEED` do kernel): uma calibração
-corrompida pelo rádio carimbada no vpad quebraria o motion inteiro.
-"""
+"""`read_calibration` do backend (GYRO-01) — feature 0x05 por unidade, fail-safe."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -46,7 +36,7 @@ def _backend(handle: _FakeHandle | None) -> PyDualSenseController:
     inst = PyDualSenseController.__new__(PyDualSenseController)
     PyDualSenseController.__init__(inst, evdev_reader=SimpleNamespace())  # type: ignore[arg-type]
     if handle is not None:
-        inst._ds = handle  # seam de compat: vira o primário
+        inst._ds = handle
     return inst
 
 
@@ -61,7 +51,6 @@ def hidraw(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         size: int,
         opener: Any = None,
     ) -> bytes:
-        # S-5: registra o opener injetado (o call site passa `opener=` sempre).
         estado["pedidos"].append((path, report_id, size))
         estado["openers"] = [*estado.get("openers", []), opener]
         payload = estado.get(path, estado.get("payload"))
@@ -79,7 +68,6 @@ class TestReadCalibration:
         hidraw["payload"] = _CALIB_USB
         backend = _backend(_FakeHandle())
         assert backend.read_calibration() == _CALIB_USB
-        # Pediu exatamente o 0x05 de 41 B no hidraw do handle.
         assert hidraw["pedidos"] == [("/dev/hidraw3", 0x05, 41)]
 
     def test_sem_handle_devolve_none(self, hidraw: dict[str, Any]) -> None:
@@ -87,7 +75,6 @@ class TestReadCalibration:
         assert hidraw["pedidos"] == []
 
     def test_handle_sem_hidraw_devolve_none(self, hidraw: dict[str, Any]) -> None:
-        # Path de libusb ("0001:0002:00") não é nó do sysfs — sem ioctl possível.
         backend = _backend(_FakeHandle(path=b"0001:0002:00"))
         assert backend.read_calibration() is None
         assert hidraw["pedidos"] == []
@@ -103,8 +90,6 @@ class TestReadCalibration:
         assert backend.read_calibration() is None
 
     def test_report_com_id_errado_vira_none(self, hidraw: dict[str, Any]) -> None:
-        # É o modo de falha do wrapper hidapi que motivou o caminho ioctl:
-        # payload sem o byte de id na frente NÃO pode ser aceito como report.
         hidraw["payload"] = bytes([0x17]) + bytes(40)
         backend = _backend(_FakeHandle())
         assert backend.read_calibration() is None
@@ -120,8 +105,6 @@ class TestReadCalibration:
         assert backend.read_calibration() is None
 
     def test_usb_nao_exige_crc(self, hidraw: dict[str, Any]) -> None:
-        # O report USB carrega zeros/lixo onde o BT põe CRC — não pode ser
-        # validado como BT (o canônico real termina em zeros).
         hidraw["payload"] = _CALIB_USB
         backend = _backend(_FakeHandle())
         assert backend.read_calibration() == _CALIB_USB
@@ -159,22 +142,19 @@ class TestIoctlHelper:
         def _fake_ioctl(fd: int, request: int, buf: bytearray, mutate: bool) -> int:
             chamadas["fd"] = fd
             chamadas["request"] = request
-            assert buf[0] == 0x05  # report id vai NO buffer, como o kernel exige
+            assert buf[0] == 0x05
             buf[: len(_CALIB_USB)] = _CALIB_USB
             return len(_CALIB_USB)
 
         monkeypatch.setattr(backend_mod.fcntl, "ioctl", _fake_ioctl)
         data = backend_mod._read_feature_via_hidraw("/dev/hidraw3", 0x05, 41)
         assert data == _CALIB_USB
-        assert chamadas["closed"] == 99  # fd efêmero sempre fecha
-        # _IOC(READ|WRITE, 'H', 0x07, 41)
+        assert chamadas["closed"] == 99
         assert chamadas["request"] == (3 << 30) | (41 << 16) | (ord("H") << 8) | 0x07
 
 
 class TestS5FeatureOpener:
-    """S-5 (auditoria 21/07): a calibração 0x05 vai pelo opener broker-aware
-    (fd root via SCM_RIGHTS) quando injetado — sem ele, o `os.open` do hidraw
-    ESCONDIDO (0600 root) dava EACCES → calibração canônica → drift do gyro."""
+    """S-5 (auditoria 21/07): a calibração 0x05 vai pelo opener broker-aware"""
 
     def test_opener_injetado_e_repassado(self, hidraw: dict[str, Any]) -> None:
         hidraw["payload"] = _CALIB_USB
@@ -182,11 +162,9 @@ class TestS5FeatureOpener:
         sentinela = object()
         backend.set_feature_opener(sentinela)  # type: ignore[arg-type]
         assert backend.read_calibration() == _CALIB_USB
-        # O MESMO opener injetado chegou ao _read_feature_via_hidraw.
         assert hidraw["openers"] == [sentinela]
 
     def test_sem_opener_passa_none(self, hidraw: dict[str, Any]) -> None:
-        # Default (backend sem fiação/broker): opener None => os.open histórico.
         hidraw["payload"] = _CALIB_USB
         backend = _backend(_FakeHandle())
         assert backend.read_calibration() == _CALIB_USB

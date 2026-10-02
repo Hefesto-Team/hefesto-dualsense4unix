@@ -10,8 +10,6 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk, Pango
 
-#: Largura da coluna de rótulo dos sliders de parâmetro. Estreita de propósito:
-#: o que sobra vai para o slider, e a linha nunca passa de uma altura de texto.
 _PARAM_LABEL_WIDTH = 150
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
@@ -37,7 +35,6 @@ from hefesto_dualsense4unix.profiles.trigger_presets import (
 )
 
 # HARM-19: formatos de recusa que `core/trigger_effects` levanta (ValueError ->
-# CODE_INVALID_PARAMS no IPC). Traduzidos abaixo para a língua da aba.
 _RE_ERRO_ORDEM = re.compile(r"(\w+) \((-?\d+)\) deve ser > (\w+) \((-?\d+)\)")
 _RE_ERRO_RANGE = re.compile(r"(\w+) fora do range (-?\d+)-(-?\d+): (-?\d+)")
 
@@ -51,13 +48,7 @@ def _rotulo_do_param(spec: Any, nome: str) -> str:
 
 
 def humanizar_erro_gatilho(motivo: str, spec: Any = None) -> str | None:
-    """Traduz a recusa do daemon para português simples (HARM-19).
-
-    O daemon fala a língua do `core/trigger_effects` ("end (3) deve ser > start
-    (5)"); a aba fala a dos próprios sliders ("Fim"/"Início"). Devolve None
-    quando a mensagem não casa com nenhum formato conhecido — aí o chamador
-    mostra o texto cru do daemon, que ainda diz mais que "daemon offline?".
-    """
+    """Traduz a recusa do daemon para português simples (HARM-19)."""
     m = _RE_ERRO_ORDEM.search(motivo)
     if m:
         maior, v_maior, menor, v_menor = m.groups()
@@ -76,25 +67,14 @@ def humanizar_erro_gatilho(motivo: str, spec: Any = None) -> str | None:
 
 
 class TriggersActionsMixin(WidgetAccessMixin):
-    """Controla a aba Triggers (duas colunas L2/R2).
-
-    Assume widgets no builder: trigger_<side>_mode, trigger_<side>_desc,
-    trigger_<side>_params_box, trigger_<side>_apply, trigger_<side>_reset.
-    """
+    """Controla a aba Triggers (duas colunas L2/R2)."""
 
     _trigger_param_widgets: dict[str, dict[str, Gtk.Scale]]
     # FEAT-DSX-COMBO-TO-SEGMENTED-01: seletor de modo por lado (substitui o
-    # GtkComboBoxText `trigger_<side>_mode`, fechado no clique pelo cosmic-comp).
-    # Mesma API por-ID do combo (set_items/get_active_id/set_active_id + "changed").
     _trigger_mode: dict[str, Any]
-    # Guard para evitar loop widget->draft->refresh->widget.
     _triggers_guard_refresh: bool = False
-    # Guard para evitar que a aplicação de preset dispare o handler de slider
-    # e reverta o preset para "custom" imediatamente.
     _trigger_preset_applying: bool = False
     # UI-TRIGGERS-LIVE-PREVIEW-01: handle GLib.timeout pendente por side,
-    # debounce de 300 ms para não inundar o hardware quando o usuário troca
-    # o combobox repetidamente.
     _trigger_live_preview_timer: dict[str, int]
 
     # Modos que ativam o dropdown de preset por posicao.
@@ -112,19 +92,10 @@ class TriggersActionsMixin(WidgetAccessMixin):
         }
         mode_items = [(spec.name, spec.label) for spec in PRESETS]
         # T8 (25/08/2026): a descrição de CADA modo vira dica do botão dele.
-        # Até aqui a aba mostrava a frase de UM modo por vez — o selecionado
-        # (`_rebuild_params` -> `trigger_<side>_desc`) — e ler a de outro
-        # custava clicá-lo, o que APLICA no controle 300 ms depois
         # (`_schedule_live_preview`). São 38 botões e uma frase visível.
-        #
-        # A fonte é o `PRESETS`, nunca uma cópia: uma cópia seria um segundo
-        # dono dos rótulos, que é como as duas versões divergem. E o texto NÃO
-        # é novo — é a mesma frase que a aba já mostra para o modo selecionado,
-        # que é o que mantém isto na classe cosmética pré-aprovada.
         dicas_dos_modos = {spec.name: spec.description for spec in PRESETS}
         for side in ("left", "right"):
             # FEAT-DSX-COMBO-TO-SEGMENTED-01: botões segmentados no lugar do combo.
-            # wrap=True para os 19 modos quebrarem linha sem estourar a coluna.
             sel = SegmentedSelector(wrap=True)
             sel.set_items(mode_items)
             sel.set_tooltips(dicas_dos_modos)
@@ -134,8 +105,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 slot.pack_start(sel, True, True, 0)
                 sel.show_all()
             self._trigger_mode[side] = sel
-            # FEAT-DSX-COMBO-TO-SEGMENTED-01: o combo de PRESET também vira
-            # segmentado (7/6 presets + Personalizar; wrap p/ quebrar linha).
             preset_sel = SegmentedSelector(wrap=True)
             preset_handler = (
                 self.on_trigger_left_preset_changed
@@ -149,11 +118,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 preset_sel.show_all()
             self._trigger_preset[side] = preset_sel
             # set_active_id EMITE "changed" (como o combo). Fazemos sob _triggers_guard_refresh
-            # para o handler curto-circuitar: senão `_on_mode_changed` AGENDA um
-            # live-preview (300ms) que escreve "Off" no hardware ao abrir a GUI e
-            # corre com o bootstrap do perfil, ZERANDO os gatilhos do perfil ativo
-            # (BUG-GUI-OPEN-OFF-TRIGGER-WRITE-01). Montamos os sliders/linha de
-            # preset explicitamente, sem tocar no hardware nem no draft.
             self._triggers_guard_refresh = True
             try:
                 sel.set_active_id("Off")
@@ -163,16 +127,9 @@ class TriggersActionsMixin(WidgetAccessMixin):
             self._update_preset_row_visibility(side, "Off")
             self._populate_preset_combo(side, "MultiPositionFeedback")
 
-    # --- draft integration ---
 
     def _refresh_triggers_from_draft(self) -> None:
-        """Popula widgets da aba Triggers a partir do draft.
-
-        PERFIL-04: exibe os gatilhos EFETIVOS do alvo de edição atual — o
-        override por-controle quando existe, senão a seção global. Protegido
-        por _triggers_guard_refresh para não disparar handlers de signal
-        durante a atualização programatica dos combos.
-        """
+        """Popula widgets da aba Triggers a partir do draft."""
         if self._triggers_guard_refresh:
             return
         draft = getattr(self, "draft", None)
@@ -188,32 +145,23 @@ class TriggersActionsMixin(WidgetAccessMixin):
                     continue
                 combo.set_active_id(trigger_draft.mode)
                 self._rebuild_params(side, trigger_draft.mode)
-                # Restaura valores dos parametros
                 widgets = self._trigger_param_widgets.get(side, {})
                 for i, name in enumerate(widgets):
                     if i < len(trigger_draft.params):
                         widgets[name].set_value(trigger_draft.params[i])
                 # O set_active_id do modo roda sob _triggers_guard_refresh, então
-                # _on_mode_changed retorna cedo e a linha "Preset:" não seria
-                # revelada/escondida ao carregar um perfil. Chamamos explícito:
-                # é seguro sob o guard (o set_active_id("custom") interno do
-                # preset combo re-entra em _on_preset_changed, que sai no guard).
                 self._update_preset_row_visibility(side, trigger_draft.mode)
         finally:
             self._triggers_guard_refresh = False
 
-    # --- signals ---
 
     def on_trigger_left_mode_changed(self, combo: Any) -> None:
-        # `combo` é o SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01); mantém
-        # a API por-ID do GtkComboBoxText (get_active_id).
         self._on_mode_changed("left", combo)
 
     def on_trigger_right_mode_changed(self, combo: Any) -> None:
         self._on_mode_changed("right", combo)
 
     def on_trigger_left_preset_changed(self, combo: Any) -> None:
-        # `combo` é o SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01).
         self._on_preset_changed("left", combo)
 
     def on_trigger_right_preset_changed(self, combo: Any) -> None:
@@ -231,7 +179,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
     def on_trigger_right_reset(self, _btn: Gtk.Button) -> None:
         self._reset_trigger("right")
 
-    # --- helpers ---
 
     def _on_mode_changed(self, side: str, combo: Any) -> None:
         if self._triggers_guard_refresh:
@@ -240,17 +187,8 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if preset_id is None:
             return
         self._rebuild_params(side, preset_id)
-        # Mostra/esconde a linha de preset conforme o modo selecionado.
         self._update_preset_row_visibility(side, preset_id)
-        # BUG-TRIGGERS-DRAFT-STALE-01: grava o novo modo COM os defaults dos
-        # sliders recém-montados (antes gravava params=() — "Salvar Perfil"
-        # antes do live-preview de 300 ms persistia o gatilho zerado). O draft
-        # passa a espelhar exatamente o que o live-preview vai aplicar.
         self._persist_params_to_draft(side)
-        # UI-TRIGGERS-LIVE-PREVIEW-01: aplica o modo no hardware em 300 ms
-        # para o usuário sentir o efeito sem precisar clicar "Aplicar". O
-        # debounce evita inundar o IPC quando o combobox dispara mudanças
-        # rapidamente (autocompletar/scroll do usuário).
         self._schedule_live_preview(side)
 
     def _cancelar_live_preview(self, side: str) -> None:
@@ -315,7 +253,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if not isinstance(timers, dict):
             return
         if not timers.get(side, 0):
-            return  # nada pendente daquele lado: nada a adiantar
+            return
         self._cancelar_live_preview(side)
         self._fire_live_preview(side)
 
@@ -333,11 +271,9 @@ class TriggersActionsMixin(WidgetAccessMixin):
         import contextlib
 
         self._trigger_live_preview_timer[side] = 0
-        # _apply_trigger já chama _toast_trigger com ok=False em paths de IPC
-        # ausente; aqui suprimimos para não derrubar o loop GTK em corner cases.
         with contextlib.suppress(Exception):
             self._apply_trigger(side)
-        return False  # one-shot
+        return False
 
     def _persist_params_to_draft(self, side: str) -> None:
         """Grava modo + params posicionais correntes dos sliders no draft.
@@ -398,7 +334,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if preset_key is None or preset_key == "custom":
             return
 
-        # Determina qual dicionario de presets usar com base no modo atual.
         mode_combo = self._trigger_mode.get(side)
         mode_id = mode_combo.get_active_id() if mode_combo else None
 
@@ -412,15 +347,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if valores is None:
             return
 
-        # Popula os sliders de posicao com guard ativo.
         self._trigger_preset_applying = True
         try:
             widgets = self._trigger_param_widgets.get(side, {})
             for _idx, (nome, scale) in enumerate(widgets.items()):
-                # Pula o slider de frequência em MultiPositionVibration (primeiro param).
                 if mode_id == "MultiPositionVibration" and nome == "frequency":
                     continue
-                # Mapeia nome "pos_N" para o indice N.
                 if nome.startswith("pos_"):
                     try:
                         pos_idx = int(nome[4:])
@@ -432,9 +364,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
         finally:
             self._trigger_preset_applying = False
 
-        # BUG-TRIGGERS-DRAFT-STALE-01: o preset recém-aplicado nos sliders
-        # precisa valer para o "Salvar Perfil" do rodapé e ser sentido no
-        # controle — persiste no draft e agenda o live-preview existente.
         self._persist_params_to_draft(side)
         self._schedule_live_preview(side)
 
@@ -446,7 +375,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
         deve_mostrar = mode_id in self._MODES_COM_PRESET
         preset_row.set_visible(deve_mostrar)
         if deve_mostrar:
-            # Repopula o combo com os labels corretos para o modo atual.
             self._populate_preset_combo(side, mode_id)
 
     def _populate_preset_combo(self, side: str, mode_id: str) -> None:
@@ -461,26 +389,13 @@ class TriggersActionsMixin(WidgetAccessMixin):
         else:
             combo.set_items([])
             return
-        # BUG-TRIGGERS-PRESET-DUP-01: os dicionários de labels JÁ contêm a
-        # entrada "custom" ("Personalizar"); anexar outra fixa duplicava o
-        # botão no segmentado. Reordenamos explicitamente para "Personalizar"
-        # ficar sempre por último (UX), independente da ordem dos dicts.
         items = [(key, label) for key, label in labels.items() if key != "custom"]
         items.append(("custom", labels.get("custom", "Personalizar")))
         combo.set_items(items)
         combo.set_active_id("custom")
 
     def _on_param_slider_changed(self, side: str) -> None:
-        """Handler 'value-changed' dos sliders de parâmetro do lado ``side``.
-
-        Mantém o comportamento existente (reverter o preset para
-        "Personalizar") e, quando o toque é da usuária — fora de refresh
-        programático (``_triggers_guard_refresh``) e de aplicação de preset
-        (``_trigger_preset_applying``, que persiste em lote ao final de
-        ``_on_preset_changed``) —, grava os params correntes no draft e agenda
-        o live-preview (BUG-TRIGGERS-DRAFT-STALE-01: sem isso, ajustar slider
-        sem clicar "Aplicar" salvava o perfil com params defasados).
-        """
+        """Handler 'value-changed' dos sliders de parâmetro do lado ``side``."""
         self._update_preset_to_custom(side)
         if self._triggers_guard_refresh or self._trigger_preset_applying:
             return
@@ -496,11 +411,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
             return
         active = combo.get_active_id()
         if active != "custom":
-            # Salva/restaura o guard em vez de zerar absoluto: este método é o
-            # handler 'value-changed' dos sliders e pode disparar DENTRO de
-            # _refresh_triggers_from_draft (que mantém _triggers_guard_refresh=True ao
-            # chamar set_value). Zerar absoluto quebraria o guard no meio do
-            # refresh e deixaria o resto do laço rodar desprotegido (reentrância).
             prev_guard = self._triggers_guard_refresh
             self._triggers_guard_refresh = True
             try:
@@ -527,9 +437,6 @@ class TriggersActionsMixin(WidgetAccessMixin):
             row = self._build_param_row(param)
             box.pack_start(row, False, False, 0)
             self._trigger_param_widgets[side][param.name] = row.scale
-            # Conecta sinal que reverte o preset para "custom", persiste o
-            # draft e agenda o live-preview ao mover o slider
-            # (BUG-TRIGGERS-DRAFT-STALE-01).
             row.scale.connect(
                 "value-changed",
                 lambda _scale, _side=side: self._on_param_slider_changed(_side),
@@ -540,15 +447,8 @@ class TriggersActionsMixin(WidgetAccessMixin):
     def _build_param_row(self, param: TriggerParamSpec) -> Gtk.Box:
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         row.set_homogeneous(False)
-        # A classe deixa o CSS encolher a trilha e o cursor do slider: são 4
-        # linhas por gatilho e a altura padrão do GtkScale (~40px cada) era o
-        # segundo maior bloco da aba, atrás só da grade de modos.
         row.get_style_context().add_class("hefesto-param-row")
 
-        # Coluna de rótulo estreita e em UMA linha só. Eram 200px, e mesmo assim
-        # "Intensidade início (1-8)" quebrava em duas — cada linha extra some com
-        # espaço que a aba não tem. `ellipsize` garante que um rótulo maior corte
-        # com reticências em vez de voltar a crescer em altura.
         label = Gtk.Label(label=param.label)
         label.set_xalign(0)
         label.set_size_request(_PARAM_LABEL_WIDTH, -1)
@@ -589,32 +489,17 @@ class TriggersActionsMixin(WidgetAccessMixin):
         values = self._collect_values(side)
         args = preset_to_factory_args(spec, values)
 
-        # Persiste params posicionais no draft antes de enviar via IPC.
-        # BUG-TRIGGER-FLAT-MULTIPOS-01: `_persist_params_to_draft` usa SEMPRE a
-        # lista posicional plana na ordem do spec (== ordem dos widgets). Para
-        # MultiPosition*/Custom o `args` é dict e o código antigo gravava () ->
-        # perda silenciosa de TODAS as intensidades ao salvar/aplicar perfil.
         self._persist_params_to_draft(side)
 
-        # PERFIL-05: com um controle selecionado, o MAC viaja no pedido.
-        # Z2-1 (24/08/2026): o alvo vem do dono único, não mais de um
-        # `getattr` no método da Lightbar — `alvo_de_edicao` funciona em
-        # qualquer host, com ou sem o mixin da Lightbar montado.
         estado_alvo = alvo_de_edicao(self)
         if estado_alvo.desconhecido:
-            # Z2-2: recusa em vez de IPC às cegas — a janela não sabe o alvo.
             self._toast_trigger(side, preset_id, False, motivo=estado_alvo.recusa())
             return
         uniq = estado_alvo.uniq
         if isinstance(args, dict):
-            # Custom e MultiPosition_* usam dict; IPC espera posicional
-            # no formato aceito por build_from_name nomeado.
             ok, motivo, corpo = self._send_trigger_named(side, preset_id, args, uniq=uniq)
         else:
             # ELO-MUDO-01/T3: `trigger_set_detalhado` no lugar do
-            # `trigger_set_checked`. O que muda é o CORPO — `aplicado_em` e
-            # `guardado_em`, que o daemon publica desde a MESA-CHEIA-09 e que
-            # o invólucro estreito jogava fora. Ver `_toast_trigger`.
             ok, motivo, corpo = trigger_set_detalhado(side, preset_id, args, uniq=uniq)
 
         self._toast_trigger(side, preset_id, ok, motivo=motivo, spec=spec, corpo=corpo)
@@ -626,15 +511,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         kwargs: dict[str, object],
         uniq: str | None = None,
     ) -> tuple[bool, str | None, dict[str, Any] | None]:
-        """Formato alternativo pra presets com kwargs (custom, multi_pos).
-
-        ELO-MUDO-01/T3: devolve TRÊS coisas, e a terceira é o corpo do daemon.
-        Era `(ok, motivo)`, e por esta porta passam os dois modos por posição —
-        os mesmos que os perfis ``aventura`` e ``corrida`` usam. Deixá-la
-        estreita faria a rota mais usada da aba continuar sem resposta do
-        daemon enquanto a outra já a tinha, que é como uma cura volta pela
-        metade.
-        """
+        """Formato alternativo pra presets com kwargs (custom, multi_pos)."""
         if preset_id == "Custom":
             mode_val = int(kwargs.get("mode", 0) or 0)  # type: ignore[call-overload]
             forces_obj = kwargs.get("forces", ())
@@ -672,28 +549,14 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if combo is not None:
             combo.set_active_id("Off")
         self._rebuild_params(side, "Off")
-        # MESA-CHEIA-08 (13/08): o `set_active_id` acima EMITE "changed"
-        # (`app/widgets/segmented_selector.set_active_id`), e o
-        # `_on_mode_changed` agenda um live-preview de 300 ms. Esse preview
         # manda `trigger.set` DEPOIS do `trigger.reset` de baixo, e o
-        # `trigger.set` RE-ARMA a trava manual que este botão existe para
-        # soltar. Cancelar aqui — depois de trocar o combo, antes de soltar —
-        # é o que faz o "Desligar" desligar.
         self._cancelar_live_preview(side)
-        # 14/08: e o preview pendente do OUTRO gatilho, que não se cancela
         # (é aplicação que ela pediu), sai AGORA — antes do `trigger.reset` —
-        # para não cair depois dele e re-armar a trava, que é uma só para os
-        # dois lados. Ver `_adiantar_live_preview`.
         self._adiantar_live_preview("right" if side == "left" else "left")
         estado_alvo = alvo_de_edicao(self)
         if estado_alvo.desconhecido:
-            # Z2-2: recusa em vez de IPC às cegas.
             self._toast_trigger(side, "Off", False, motivo=estado_alvo.recusa())
             return
-        # ELO-MUDO-01/T3: espelho do "Aplicar" — o "Desligar" também anunciava
-        # sucesso sem saber ONDE pegou. O `motivo`, que aqui era descartado num
-        # `_`, passa a chegar à tela: o daemon vivo que recusa por parâmetro
-        # deixa de ser lido como "o Hefesto pode estar desligado" (HARM-19).
         ok, motivo, corpo = trigger_reset_detalhado(side, uniq=estado_alvo.uniq)
         self._toast_trigger(side, "Off", ok, motivo=motivo, corpo=corpo)
 
@@ -730,32 +593,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if bar is None:
             return
         ctx_id = bar.get_context_id("trigger")
-        # TRG-01: "LEFT -> Off" trocava a fala da usuária (o gatilho que ela
-        # clicou) por id interno + lado em inglês. Nome do lado em PT-BR.
         lado = {
             "left": "Gatilho esquerdo (L2)",
             "right": "Gatilho direito (R2)",
         }.get(side, side)
         if ok:
-            # MESA-CHEIA-09/E3 + D-9: com o alvo FORA da mesa nenhum byte saiu
-            # — o override fica registrado e o hotplug o aplica quando o
-            # controle voltar. Dizer "aplicado" aqui era a mentira que a aba
-            # Gatilhos repetia a cada clique num controle que saiu.
-            #
-            # Conserto 1.3: e o MODO NATIVO é a outra — o backend muta toda
-            # escrita (o jogo é o dono do hidraw), guarda o desejado e o
-            # re-escreve no desmute.
-            #
-            # ELO-MUDO-01/T3: as duas continuam valendo — como EXPLICAÇÃO,
             # dentro de `frase_do_desfecho`, e não mais como a DECISÃO. O
-            # `coop_aplica` fica no padrão `False` de propósito: a camada do
-            # co-op tem vocabulário de um campo só (`player_leds`) e nunca
-            # governou gatilho.
-            #
-            # O que a aba NÃO passa a dizer: "confirmado no aparelho".
-            # `gatilho.leitura` é `não/não` nos dois transportes no mapa de
-            # canais — não existe leitura de estado de gatilho. Isto aqui
-            # entrega "o daemon escreveu", nunca "o controle obedeceu".
             msg = frase_do_desfecho(f"{lado}: {preset_id}", corpo, self)
         elif motivo:
             msg = (

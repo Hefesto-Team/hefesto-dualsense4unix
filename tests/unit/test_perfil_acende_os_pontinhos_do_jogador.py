@@ -25,7 +25,7 @@ docstring uma medição em vez de uma opinião.
 
 A MORDIDA
 ---------
-Arrancado o `player_leds=…` do `OutputSpec` em `profiles/manager.py:392`, os
+Arrancado o `player_leds=…` do `OutputSpec` em `profiles/manager.py:164`, os
 três casos daqui reprovam nomeando o campo. Devolvido, voltam ao verde. É a
 prova de que o caminho medido é ESTE, e não um que passe por outro lugar.
 """
@@ -45,13 +45,8 @@ from tests.unit.test_backend_multi_controller import (
     _null_evdev,
 )
 
-#: Os padrões físicos, e não bits arbitrários: o `PlayerID` da pydualsense só
-#: aceita os valores canônicos (4, 10, 21, 27, 31), porque eles são o desenho da
-#: barra e não uma contagem. Um par escolhido por plausibilidade — `(True, …)`
-#: valendo 1 — estouraria no `PlayerID(mask)` e o caso morreria por ValueError
-#: sem nunca ter medido o caminho.
-SO_O_CENTRAL = (False, False, True, False, False)  # 4  — o Player 1 do PS5
-UM_TRES_CINCO = (True, False, True, False, True)  # 21 — o Player 3 do PS5
+SO_O_CENTRAL = (False, False, True, False, False)
+UM_TRES_CINCO = (True, False, True, False, True)
 
 
 def _backend_com_um_controle() -> tuple[PyDualSenseController, _FakeHandle]:
@@ -79,23 +74,19 @@ def test_trocar_de_perfil_manda_o_bitmask_para_o_controle() -> None:
     assert handle.light.playerNumber is not None, (
         "trocar de perfil NÃO escreveu o padrão de player LED no controle: "
         "`ProfileManager.apply` não emitiu `player_leds` no `OutputSpec` "
-        "(profiles/manager.py:392), ou `_write_partial_output` deixou de "
+        "(profiles/manager.py:164), ou `_write_partial_output` deixou de "
         "convertê-lo. É o BUG-PLAYER-LEDS-APPLY-01 de volta, e desta vez de pé"
     )
     assert int(handle.light.playerNumber) == player_bitmask(UM_TRES_CINCO) == 21, (
         "o bitmask que saiu não é o do perfil: o caminho vivo "
-        "(backend_pydualsense.py:2877) e `player_bitmask` divergiram, e duas "
+        "(backend_pydualsense.py:1906) e `player_bitmask` divergiram, e duas "
         f"conversões que divergem é pior que uma desligada — saiu "
         f"{int(handle.light.playerNumber)}, esperado {player_bitmask(UM_TRES_CINCO)}"
     )
 
 
 def test_o_padrao_do_perfil_e_o_que_sai_e_nao_um_default() -> None:
-    """Um segundo padrão, para o caso não passar por acaso.
-
-    Com um só, um backend que escrevesse sempre o mesmo valor fixo ficaria
-    verde. Dois padrões diferentes, dois bitmasks diferentes.
-    """
+    """Um segundo padrão, para o caso não passar por acaso."""
     inst, handle = _backend_com_um_controle()
     ProfileManager(controller=inst).apply(_perfil_com_pontinhos(SO_O_CENTRAL))
 
@@ -103,7 +94,7 @@ def test_o_padrao_do_perfil_e_o_que_sai_e_nao_um_default() -> None:
     assert saiu is not None, (
         "o segundo padrão não saiu de jeito nenhum — mesma quebra do caso "
         "anterior: `ProfileManager.apply` parou de emitir `player_leds` no "
-        "`OutputSpec` (profiles/manager.py:392)"
+        "`OutputSpec` (profiles/manager.py:164)"
     )
     assert int(saiu) == player_bitmask(SO_O_CENTRAL) == 4, (
         "o segundo padrão saiu igual ao primeiro (ou igual a um default): o "
@@ -113,14 +104,7 @@ def test_o_padrao_do_perfil_e_o_que_sai_e_nao_um_default() -> None:
 
 
 def test_a_conversao_do_backend_e_a_de_led_control_sao_a_mesma() -> None:
-    """As duas implementações do mesmo layout, conferidas uma contra a outra.
-
-    `player_bitmask` (core/led_control.py:85-89) e o `sum(1 << i …)` do
-    `_write_partial_output` (core/backend_pydualsense.py:2877) escrevem a mesma
-    regra duas vezes. Enquanto as duas existirem, é este caso que garante que
-    elas não se separem em silêncio — o dia em que uma mudar sozinha, o padrão
-    que ela vê na barra deixa de ser o que a janela mostra.
-    """
+    """As duas implementações do mesmo layout, conferidas uma contra a outra."""
     for indice in range(32):
         bits = tuple(bool(indice & (1 << posicao)) for posicao in range(5))
         do_backend = sum(1 << i for i, aceso in enumerate(bits) if aceso)
@@ -131,18 +115,7 @@ def test_a_conversao_do_backend_e_a_de_led_control_sao_a_mesma() -> None:
 
 
 def test_o_report_das_luzes_pergunta_ao_dono_da_conta() -> None:
-    """`lightbar_gatilho.mascara_de_player_leds` é `player_bitmask`, e não uma cópia.
-
-    A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. O `common[43]` do report das luzes
-    (o que a arbitragem de cor manda depois de cada conexão) tinha a conta
-    escrita de novo, ao lado do dono que o `casa-sabe` acusava sem chamador. A
-    régua mede as duas coisas: o valor igual nos 32 padrões, e o fonte sem a
-    conta própria.
-
-    A MORDIDA: devolva o `sum(1 << i …)` ao corpo de `mascara_de_player_leds` —
-    o valor continua igual e a segunda asserção reprova, que é o que separa
-    "a mesma conta" de "o mesmo dono".
-    """
+    """`lightbar_gatilho.mascara_de_player_leds` é `player_bitmask`, e não uma cópia."""
     import inspect
 
     from hefesto_dualsense4unix.core import lightbar_gatilho

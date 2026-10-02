@@ -1,26 +1,4 @@
-"""AVISO-DE-MODO-01 — o controle DIZ em que modo está, pela lightbar.
-
-Pedido dela, 19/08/2026: *"um alerta visual no lightbar de todos os controles
-dualsense conectados, seja via bt, seja via cabo. seja com steam aberta ou não.
-(…) entramos no modo steam input azul clarinho, modo xbox verde claro, modo
-sony nativo branco (…) o lightbar de todos pisca 3 vezes rápido"*.
-
-Quatro blocos, e cada um morde uma coisa diferente:
-
-1. **BACKEND** — a piscada sai em TODOS os controles, pelas rotas que o mapa de
-   canais mede (sysfs no cabo, `0x31` avulso no rádio), e DEVOLVE a cor do
-   perfil ao fim. O aviso que rouba a cor dela e não devolve é o defeito, não a
-   cura.
-2. **MODO VIGENTE** — os cinco estados lidos do VIVO, com a precedência certa
-   (nativo > Steam Input > ponte).
-3. **LEVEL-TRIGGERED** — o boot não pisca; a troca pisca; a cor é a do modo
-   novo; e o carimbo só sai quando a piscada saiu.
-4. **GATILHO** — os dois pontos de `daemon/subsystems/gamepad.py`, e a guarda
-   que separa a parada de VERDADE do passo intermediário: `release_grab`, não
-   `persist`. Errar essa guarda deixa o Modo Nativo mudo (ele desliga a
-   emulação com `origin="profile"`, ou seja `persist=False`) ou faz a barra
-   piscar âmbar no meio de uma troca de máscara.
-"""
+"""AVISO-DE-MODO-01 — o controle DIZ em que modo está, pela lightbar."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -47,7 +25,6 @@ from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
     modo_vigente,
 )
 
-#: Keys MAC-formadas (faixa forjada aa:bb:cc — teste-guarda de anonimato).
 KEY_CABO = "AA:BB:CC:00:00:01"
 KEY_RADIO = "AA:BB:CC:00:00:02"
 UNIQ_CABO = "aabbcc000001"
@@ -59,9 +36,6 @@ def _null_evdev() -> EvdevReader:
     reader = EvdevReader(device_path=None)
     reader._device_path = None
     return reader
-
-
-# --- 1. backend: pinta em todos, pelas duas rotas, e devolve ----------------
 
 
 class _FakeLight:
@@ -78,7 +52,6 @@ class _FakeHandle:
         self.light = _FakeLight()
         self.conType = type("CT", (), {"name": transport_name})()
         self.audio = SimpleNamespace(setMicrophoneLED=lambda _v: None)
-        #: Reports `0x31` avulsos escritos no hidraw (a rota do rádio).
         self.reports: list[list[int]] = []
 
     def writeReport(self, out: list[int]) -> None:  # noqa: N802 — API pydualsense
@@ -113,12 +86,7 @@ def _backend_com_dois() -> tuple[PyDualSenseController, _FakeHandle, _FakeHandle
 
 
 def test_a_piscada_alcanca_os_dois_transportes() -> None:
-    """O mapa de canais mede `luz.lightbar.cor` com `aciona=sim` nos DOIS.
-
-    No cabo a rota preferida é o sysfs; no rádio é o `0x31` AVULSO escrito no
-    hidraw (ROTA-BT-EM-REGIME-01), que é o que pinta quando a Steam tem o nó
-    aberto — exatamente o caso "com a steam aberta" que ela pediu.
-    """
+    """O mapa de canais mede `luz.lightbar.cor` com `aciona=sim` nos DOIS."""
     inst, _cabo, radio, node = _backend_com_dois()
     assert inst.pintar_lightbar_sem_lembrar((10, 20, 30)) == 2
     assert (10, 20, 30) in node.escritas, "o do cabo não recebeu pelo sysfs"
@@ -126,19 +94,15 @@ def test_a_piscada_alcanca_os_dois_transportes() -> None:
 
 
 def test_a_piscada_ignora_o_seletor_de_controle() -> None:
-    """Ela pediu "o lightbar de TODOS" — o alvo da janela não pode calar os
-    outros, e é isso que o `broadcast=True` compra."""
+    """Ela pediu "o lightbar de TODOS" — o alvo da janela não pode calar os"""
     inst, _cabo, radio, node = _backend_com_dois()
-    inst.set_output_target(0)  # mira só o primeiro
+    inst.set_output_target(0)
     inst.pintar_lightbar_sem_lembrar((10, 20, 30))
     assert node.escritas and radio.reports, "o aviso ficou preso no alvo"
 
 
 def test_o_aviso_nao_rouba_a_cor_dela() -> None:
-    """A MORDIDA principal. O `set_led` GRAVA a cor no estado desejado — e no
-    broadcast o `_record_desired_locked` ainda LIMPA o campo `led` de todos os
-    overrides por-uniq. Um aviso por ali apagaria o perfil dela de verdade: o
-    reassert seguinte devolveria a cor do AVISO."""
+    """A MORDIDA principal. O `set_led` GRAVA a cor no estado desejado — e no"""
     inst, _cabo, _radio, _node = _backend_com_dois()
     inst._desired_by_uniq[UNIQ_CABO] = _DesiredOutput(led=ROXO_DELA)
 
@@ -160,8 +124,7 @@ def test_a_piscada_devolve_a_cor_do_perfil() -> None:
 
 
 def test_a_piscada_e_por_cor_e_sao_tres() -> None:
-    """`luz.lightbar.brilho` tem `aciona=não` nos dois transportes: apagar é
-    escrever PRETO, nunca mexer no brilho. E ela pediu TRÊS."""
+    """`luz.lightbar.brilho` tem `aciona=não` nos dois transportes: apagar é"""
     inst, _cabo, _radio, node = _backend_com_dois()
     cor = (1, 2, 3)
 
@@ -179,9 +142,7 @@ def test_sem_cor_resolvida_devolve_o_azul_do_kernel() -> None:
 
 
 def test_um_controle_que_nao_obedece_nao_derruba_os_outros() -> None:
-    """O caso MEDIDO do rádio travado: a barra ignora as escritas até o
-    power-off físico. O produto registra e segue com os outros — travar ou
-    mentir seria pior que não avisar."""
+    """O caso MEDIDO do rádio travado: a barra ignora as escritas até o"""
     inst, _cabo, radio, node = _backend_com_dois()
 
     def _explode(_out: list[int]) -> None:
@@ -195,22 +156,12 @@ def test_um_controle_que_nao_obedece_nao_derruba_os_outros() -> None:
 
 
 def test_em_modo_nativo_a_piscada_tambem_sai() -> None:
-    """No Modo Nativo a barra é do Hefesto também — o aviso pinta.
-
-    Era «zero escrita» até 23/09/2026. A decisão dela
-    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01)
-    revogou o «zero write» do Nativo para a luz e o número; e o par que devolve
-    a cor depois da piscada (`restaurar_lightbar_do_perfil`) ficava mudo sob o
-    mute, deixando a barra na cor do aviso.
-    """
+    """No Modo Nativo a barra é do Hefesto também — o aviso pinta."""
     inst, _cabo, radio, node = _backend_com_dois()
     inst._output_mute = True
     assert inst.pintar_lightbar_sem_lembrar((1, 2, 3)) == 2
     assert node.escritas and radio.reports
     assert inst.restaurar_lightbar_do_perfil() == 2
-
-
-# --- 2. modo vigente --------------------------------------------------------
 
 
 class _Store:
@@ -262,9 +213,7 @@ def test_modo_vigente_le_os_cinco_estados() -> None:
 
 
 def test_o_nativo_vence_o_steam_input_que_vence_a_ponte() -> None:
-    """Precedência = quem está NA FRENTE do controle. No nativo não há vpad
-    nosso para consultar; na exceção quem entrega o dispositivo é a Steam,
-    mesmo com o nosso vpad de pé."""
+    """Precedência = quem está NA FRENTE do controle. No nativo não há vpad"""
     d = _Daemon(flavor=PONTE_XBOX, steam_input=True, native=True)
     assert modo_vigente(d) == MODO_NATIVO  # type: ignore[arg-type]
     d.store.native_mode_active = False
@@ -285,15 +234,11 @@ def test_toda_cor_do_lexico_existe_e_nenhuma_se_repete() -> None:
     ):
         assert modo in CORES_DO_MODO, f"modo {modo!r} sem cor"
     assert len(set(CORES_DO_MODO.values())) == len(CORES_DO_MODO)
-    #: Os hex da paleta de `gui/theme.css` — o léxico visual desta casa.
     assert CORES_DO_MODO[PONTE_DUALSENSE] == (0xFF, 0x79, 0xC6), "o rosa da marca"
     assert CORES_DO_MODO[MODO_STEAM_INPUT] == (0x8B, 0xE9, 0xFD)
     assert CORES_DO_MODO[PONTE_XBOX] == (0x50, 0xFA, 0x7B)
     assert CORES_DO_MODO[MODO_NATIVO] == (0xF8, 0xF8, 0xF2)
     assert CORES_DO_MODO[PONTE_MOUSE_TECLADO] == (0xFF, 0xB8, 0x6C)
-
-
-# --- 3. level-triggered -----------------------------------------------------
 
 
 def _sem_thread(monkeypatch: Any) -> None:
@@ -330,8 +275,7 @@ def test_a_troca_pisca_na_cor_do_modo_novo(monkeypatch: Any) -> None:
 
 
 def test_sem_troca_nao_pisca_a_cada_tique(monkeypatch: Any) -> None:
-    """O aviso é chamado do poll loop a cada tique. Piscar por estar chamado
-    seria a barra piscando para sempre."""
+    """O aviso é chamado do poll loop a cada tique. Piscar por estar chamado"""
     _sem_thread(monkeypatch)
     d = _Daemon(flavor=PONTE_DUALSENSE)
     for _ in range(50):
@@ -340,9 +284,7 @@ def test_sem_troca_nao_pisca_a_cada_tique(monkeypatch: Any) -> None:
 
 
 def test_a_janela_pisca_igual_ao_gesto(monkeypatch: Any) -> None:
-    """Ela pediu que valesse "seja com steam aberta ou não" e por qualquer
-    porta. O aviso não sabe QUEM trocou — só que trocou —, então a troca pela
-    janela (que aqui é só o estado vivo mudando) acende igual."""
+    """Ela pediu que valesse "seja com steam aberta ou não" e por qualquer"""
     _sem_thread(monkeypatch)
     d = _Daemon(flavor=PONTE_XBOX)
     avisar_troca_de_modo(d)  # type: ignore[arg-type]
@@ -357,16 +299,12 @@ def test_a_janela_pisca_igual_ao_gesto(monkeypatch: Any) -> None:
 
 
 def test_sem_backend_o_modo_nao_e_carimbado(monkeypatch: Any) -> None:
-    """O carimbo é a prova de que o aviso SAIU, não um "eu vi que mudou" — se
-    fosse carimbado sem piscar, a troca ficaria muda para sempre."""
+    """O carimbo é a prova de que o aviso SAIU, não um "eu vi que mudou" — se"""
     _sem_thread(monkeypatch)
     d = _Daemon(flavor=PONTE_DUALSENSE, com_backend=False)
     d._modo_anunciado = PONTE_XBOX  # type: ignore[attr-defined]
     assert avisar_troca_de_modo(d) is None  # type: ignore[arg-type]
     assert d._modo_anunciado == PONTE_XBOX
-
-
-# --- 4. o gatilho, nos dois pontos de gamepad.py ----------------------------
 
 
 class _DaemonDeGatilho(_Daemon):
@@ -384,8 +322,7 @@ class _DaemonDeGatilho(_Daemon):
 
 
 def test_o_dispatch_dispara_o_aviso(monkeypatch: Any) -> None:
-    """Ponto 1: com vpad de pé, o poll loop passa por aqui a cada tique — é o
-    que cobre a troca vinda da janela, da CLI e do autoswitch."""
+    """Ponto 1: com vpad de pé, o poll loop passa por aqui a cada tique — é o"""
     _sem_thread(monkeypatch)
     chamadas: list[Any] = []
     monkeypatch.setattr(gamepad_sub, "_reconciliar_launch", lambda _d: None)
@@ -398,9 +335,7 @@ def test_o_dispatch_dispara_o_aviso(monkeypatch: Any) -> None:
 
 
 def test_a_troca_de_mascara_nao_anuncia_mouse_teclado(monkeypatch: Any) -> None:
-    """`release_grab=False` é o carimbo de quem recria o vpad no instante
-    seguinte. Anunciar mouse+teclado no meio seria a barra piscando âmbar num
-    modo em que ela nunca esteve."""
+    """`release_grab=False` é o carimbo de quem recria o vpad no instante"""
     _sem_thread(monkeypatch)
     chamadas: list[Any] = []
     monkeypatch.setattr(
@@ -442,8 +377,7 @@ def test_o_release_do_modo_nativo_avisa_mesmo_sem_persist(monkeypatch: Any) -> N
 
 
 def test_o_shutdown_nao_anuncia_modo_nenhum(monkeypatch: Any) -> None:
-    """O vpad cai porque o produto está saindo, não porque o modo mudou —
-    e piscar na saída seria o controle mentindo no último gesto."""
+    """O vpad cai porque o produto está saindo, não porque o modo mudou —"""
     _sem_thread(monkeypatch)
     chamadas: list[Any] = []
     monkeypatch.setattr(

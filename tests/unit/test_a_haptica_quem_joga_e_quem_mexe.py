@@ -58,17 +58,12 @@ from tests.unit.test_haptica_por_radio_01_a_ponte_troca_de_modo import (
     _PonteDeMentira,
 )
 
-#: A mesa de quatro, na grafia do sysfs (a da lista de controles).
 P1, P2, P3, P4 = (f"aa:bb:cc:00:00:0{i}" for i in range(1, 5))
 MESA = (P1, P2, P3, P4)
-#: Os vpads que o produto forja, um por jogador.
 VPADS = {u: f"02:fe:00:00:00:0{i}" for i, u in enumerate(MESA, start=1)}
-#: O hidraw de cada vpad e de cada físico no rádio.
 HIDRAW_DO_VPAD = {u: f"hidraw{i + 2}" for i, u in enumerate(MESA)}
 HIDRAW_DO_FISICO = {u: f"hidraw{i + 10}" for i, u in enumerate(MESA)}
-#: O pid do ``winedevice.exe`` e o do ``.exe`` do jogo; o da Steam, sem Proton.
 PID_WINEDEVICE, PID_DO_EXE, PID_DA_STEAM = 4242, 4243, 100
-#: O cliente do servidor de som que é o jogo — o ``winepulse`` do ``.exe``.
 JOGO = "5150"
 
 
@@ -78,22 +73,13 @@ def assento(uniq: str) -> int | None:
 
 
 def no_do(uniq: str) -> str:
-    """O endpoint do APARELHO deste controle — o dublê de ``_EndpointDeMentira``.
-
-    O endpoint é do aparelho desde 02/10/2026 (A-HAPTICA-E-POR-APARELHO-01; de
-    28/09 a 02/10 era do lugar em que o controle sentava).
-    """
+    """O endpoint do APARELHO deste controle — o dublê de ``_EndpointDeMentira``."""
     return f"endpoint::{uniq}"
 
 
 def colada(uniq: str) -> str:
     """``aa:bb:cc:00:00:02`` → ``aabbcc000002``: a grafia do co-op e do backend."""
     return uniq.replace(":", "")
-
-
-# ---------------------------------------------------------------------------
-# O mundo de mentira: /proc, /sys/class/input e /sys/class/hidraw
-# ---------------------------------------------------------------------------
 
 
 class Mundo:
@@ -118,7 +104,6 @@ class Mundo:
             self._hid(HIDRAW_DO_FISICO[uniq], phys="aa:bb:cc:00:00:ff", uniq=uniq)
             self._hid(HIDRAW_DO_VPAD[uniq], phys="hefesto-vpad", uniq=VPADS[uniq])
         self._hid("hidraw0", phys="usb-0000:0c:00.3-1.1.2/input0", uniq="")
-        # A Steam segura os vpads o tempo todo, e NÃO é jogo.
         self.processo(PID_DA_STEAM, jogo=False, nos=[HIDRAW_DO_VPAD[u] for u in MESA])
 
     def _evento(self, nome: str, uniq: str) -> None:
@@ -157,11 +142,6 @@ class Mundo:
                 pasta.rmdir()
 
 
-# ---------------------------------------------------------------------------
-# A bancada: o subsystem de verdade, com a ponte e o endpoint de mentira
-# ---------------------------------------------------------------------------
-
-
 class Bancada:
     """O ``_casar_as_pontes`` do produto; a fiação de som e o servidor são dublês."""
 
@@ -180,7 +160,6 @@ class Bancada:
         _PonteDeMentira.criadas = []
         _EndpointDeMentira.criados = []
         _EndpointDeMentira.quedas = []
-        #: O servidor de som: quem toca em qual endpoint, e de quem é o fluxo.
         self.servidor = ServidorDeSom()
         monkeypatch.setattr(af, "rodar_pactl", self.servidor)
         monkeypatch.setattr(
@@ -198,7 +177,6 @@ class Bancada:
         monkeypatch.setattr(eh, "endpoints_de_pe", lambda *a, **k: {})
         monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
         monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
-        #: O co-op responde quem alimenta cada vpad — a pista do evdev o consulta.
         coop = SimpleNamespace(
             quem_alimenta_cada_vpad=lambda: {VPADS[u]: colada(u) for u in MESA}
         )
@@ -207,7 +185,6 @@ class Bancada:
         monkeypatch.setattr(
             AltoFalanteSubsystem, "numero_do_assento", lambda _self, u: assento(u)
         )
-        # O aviso de quem entra na partida, como o `start()` o liga.
         self.sub._ouvir_quem_entra_na_partida(self.sub._acordar_a_volta)
         vias = transportes or {}
         self.controles = [
@@ -258,22 +235,11 @@ def bancada(mundo: Mundo, monkeypatch: pytest.MonkeyPatch) -> Bancada:
     return Bancada(mundo, monkeypatch)
 
 
-# ---------------------------------------------------------------------------
-# (a) O mundo medido
-# ---------------------------------------------------------------------------
-
-
 class TestOMundoMedido:
     """O GE segura o hidraw dos quatro vpads e nenhum evdev; só quem mexeu vibra."""
 
     def test_so_o_controle_que_mexeu_entra_em_haptica(self, bancada: Bancada) -> None:
-        """A régua da sprint.
-
-        MORDIDA: troque ``jogando = self._quem_mexeu_na_partida(controles)``
-        por ``set()`` no ``_casar_as_pontes`` — ninguém entra (o defeito de
-        26/09). E trocar o sinal por «o jogo segura o hidraw do vpad» põe os
-        QUATRO: o mundo abaixo prova que o jogo segura os quatro.
-        """
+        """A régua da sprint."""
         bancada.abrir_o_jogo()
         assert bancada.volta() == set(), "a partida abriu agora: ninguém mexeu ainda"
         assert bancada.marcas.jogo_aberto is True, "o fluxo do jogo não abriu a partida"
@@ -287,11 +253,7 @@ class TestOMundoMedido:
         assert bancada.volta() == {P2}
 
     def test_o_primeiro_toque_acorda_a_volta_pelo_aviso(self, bancada: Bancada) -> None:
-        """O toque avisa a volta, sem esperar a seguinte (5 s) e sem vigia perguntando.
-
-        MORDIDA: tire a chamada a ``ao_marcar`` de ``QuemMexe.marcar`` — a volta
-        não é pedida.
-        """
+        """O toque avisa a volta, sem esperar a seguinte (5 s) e sem vigia perguntando."""
         bancada.abrir_o_jogo()
         bancada.volta()
         assert bancada.sub._volta_pedida is False, "sem toque, nada a reconciliar"
@@ -307,31 +269,13 @@ class TestOMundoMedido:
         assert bancada.volta() == set()
 
 
-# ---------------------------------------------------------------------------
-# O fd aberto não vota — A-HAPTICA-QUEM-JOGA-02
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "nos",
     [[f"event{500 + i}" for i in range(4)], [f"event{30 + i}" for i in range(4)]],
     ids=["evdev-dos-quatro-vpads", "evdev-dos-quatro-fisicos"],
 )
 def test_o_evdev_cheio_nao_poe_ninguem_em_haptica(bancada: Bancada, nos: list[str]) -> None:
-    """Um processo de jogo segura o ``eventN`` dos quatro, e só o P2 mexeu: só o P2 vibra.
-
-    O mundo que as réguas acima não montam: nelas o GE não segura evdev nenhum,
-    e uma união com o evdev passaria sem nunca ter sido medida cheia. Em 21/09,
-    às 01:51, com o PRAGMATA de um jogador, o portão pôs os QUATRO em háptica, e
-    o único sinal daquele código era o evdev (conferência de 26/09, §2.1). O
-    detentor não foi achado; se ele voltar — ou se um Proton segurar o evdev dos
-    vpads, como o SDL faz com todo controle —, o evdev diz «o jogo lê os
-    quatro». O primeiro caso é o dos vpads (o tradutor do co-op liga cada um ao
-    físico que o alimenta); o segundo, o de 21/09, com os físicos.
-
-    MORDIDA: devolva ``jogando |= <o que o evdev traduz>`` ao ``_casar_as_pontes``
-    — os quatro entram antes de alguém tocar num controle.
-    """
+    """Um processo de jogo segura o ``eventN`` dos quatro, e só o P2 mexeu: só o P2 vibra."""
     bancada.abrir_o_jogo()
     bancada.mundo.processo(4400, jogo=True, nos=nos)
     with structlog.testing.capture_logs() as registros:
@@ -346,14 +290,7 @@ def test_o_evdev_cheio_nao_poe_ninguem_em_haptica(bancada: Bancada, nos: list[st
 
 
 def test_a_pergunta_ao_coop_que_falha_nao_segura_a_partida(bancada: Bancada) -> None:
-    """O co-op levanta quando o jogo abre, e mesmo assim a partida abre e o P3 entra.
-
-    A partida não precisa do co-op — é o fluxo no endpoint; só a pista do evdev
-    precisa dele, e o erro dela vai ao diário sem levar a volta junto.
-
-    MORDIDA: tire o ``try`` da pergunta ao co-op em ``_quem_o_jogo_le`` — a
-    exceção sobe da linha do portão e a volta cai.
-    """
+    """O co-op levanta quando o jogo abre, e mesmo assim a partida abre e o P3 entra."""
 
     def _falha() -> dict[str, str]:
         raise RuntimeError("a mesa mudou no meio")
@@ -370,21 +307,13 @@ def test_a_pergunta_ao_coop_que_falha_nao_segura_a_partida(bancada: Bancada) -> 
     assert bancada.volta() == {P3}
 
 
-# ---------------------------------------------------------------------------
-# (b) De um a quatro jogadores
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "quem",
     [(P1,), (P3,), (P2, P4), (P1, P2, P3), MESA],
     ids=["p1", "p3", "p2-e-p4", "p1-p2-p3", "os-quatro"],
 )
 def test_cada_um_que_mexe_entra_e_so_ele(bancada: Bancada, quem: tuple[str, ...]) -> None:
-    """Nenhum índice é privilegiado, e a mesa de quatro entra inteira.
-
-    MORDIDA: cravar o P1 (``{P1}``) no lugar da marca — quatro de cinco reprovam.
-    """
+    """Nenhum índice é privilegiado, e a mesa de quatro entra inteira."""
     bancada.abrir_o_jogo()
     bancada.volta()
     for uniq in quem:
@@ -402,18 +331,9 @@ def test_o_do_cabo_mexe_e_nao_ganha_ponte(mundo: Mundo, monkeypatch: pytest.Monk
     assert bancada.volta() == {P2, P3, P4}
 
 
-# ---------------------------------------------------------------------------
-# (c) O jogo fecha, a marca zera
-# ---------------------------------------------------------------------------
-
-
 class TestAPartida:
     def test_o_jogo_que_fecha_zera_a_marca(self, bancada: Bancada) -> None:
-        """O cliente do jogo sai do servidor: a partida fecha e ninguém fica.
-
-        MORDIDA: tire o ramo que fecha de ``acompanhar_o_jogo`` — a partida
-        segue aberta e a marca do P2 vale no próximo jogo.
-        """
+        """O cliente do jogo sai do servidor: a partida fecha e ninguém fica."""
         bancada.abrir_o_jogo()
         bancada.volta()
         bancada.mexer(P2)
@@ -424,11 +344,7 @@ class TestAPartida:
         assert bancada.marcas.quem_joga() == frozenset()
 
     def test_o_jogo_que_reabre_pede_entrada_nova(self, bancada: Bancada) -> None:
-        """A marca é da partida: a de ontem não vale no jogo de hoje.
-
-        MORDIDA: tire as DUAS limpezas (``self._marcas = {}`` do ramo que abre
-        e do que fecha) — o P2 entra na partida nova sem tocar no controle.
-        """
+        """A marca é da partida: a de ontem não vale no jogo de hoje."""
         bancada.abrir_o_jogo()
         bancada.volta()
         bancada.mexer(P2)
@@ -441,11 +357,7 @@ class TestAPartida:
         assert bancada.volta() == {P4}
 
     def test_outro_jogo_sem_passar_pelo_vazio_zera_a_marca(self, bancada: Bancada) -> None:
-        """Um jogo fecha e outro abre entre duas voltas: nenhum dono de antes segue vivo.
-
-        MORDIDA: tire o ``self._abrir(agora)`` do ramo do dono novo sem
-        sobrevivente — a marca do jogo de antes vale no novo.
-        """
+        """Um jogo fecha e outro abre entre duas voltas: nenhum dono de antes segue vivo."""
         bancada.abrir_o_jogo()
         bancada.volta()
         bancada.mexer(P2)
@@ -486,25 +398,13 @@ class TestAPartida:
         assert bancada.marcas.joga(P2)
 
 
-# ---------------------------------------------------------------------------
-# (d) O portão diz por que fechou — uma vez, na mudança
-# ---------------------------------------------------------------------------
-
-
 def _linhas(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [r for r in registros if r["event"] == "haptica_portao_fechado"]
 
 
 class TestOPortaoDizPorQueFechou:
     def test_uma_linha_por_controle_e_so_na_mudanca(self, bancada: Bancada) -> None:
-        """O PRAGMATA de 26/09 ficou sete minutos no estado anômalo sem uma linha.
-
-        MORDIDA: tire o ``if anterior == motivo: return`` de
-        ``_vigiar_o_portao`` — doze linhas em vez de quatro.
-
-        A linha que o PRAGMATA teria escrito é ``evdev_do_jogo=0
-        hidraw_de_vpad=2`` (dois vpads na mesa dela); aqui são quatro.
-        """
+        """O PRAGMATA de 26/09 ficou sete minutos no estado anômalo sem uma linha."""
         bancada.abrir_o_jogo()
         with structlog.testing.capture_logs() as registros:
             for _ in range(3):
@@ -523,8 +423,6 @@ class TestOPortaoDizPorQueFechou:
         with structlog.testing.capture_logs() as registros:
             bancada.volta()
         assert _linhas(registros) == [], "sair do estado anômalo não loga"
-        # O jogo fecha e um módulo segue tocando nos endpoints (sem cliente): o
-        # endpoint toca, e não há jogo.
         bancada.fechar_o_jogo()
         for uniq in MESA:
             bancada.servidor.tocar(no_do(uniq), "-")
@@ -532,7 +430,6 @@ class TestOPortaoDizPorQueFechou:
             bancada.volta()
             bancada.volta()
         motivos = {r["uniq"]: r["motivo"] for r in _linhas(registros)}
-        # O P1 voltou ao estado; os outros três mudaram de motivo. Uma linha cada.
         assert motivos == {u: "sem_jogo" for u in MESA}
         assert len(_linhas(registros)) == len(MESA)
 
@@ -545,11 +442,7 @@ class TestOPortaoDizPorQueFechou:
     def test_o_sysfs_que_falha_nao_derruba_a_volta(
         self, bancada: Bancada, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A linha sai sem a contagem, e a volta segue.
-
-        MORDIDA: tire o ``try`` de ``_o_que_o_jogo_segura`` — a exceção sobe
-        da linha do portão, e na produção a volta inteira cairia.
-        """
+        """A linha sai sem a contagem, e a volta segue."""
 
         def _quebra(_nomes: Any) -> frozenset[str]:
             raise RuntimeError("sysfs sumiu no meio")
@@ -563,10 +456,7 @@ class TestOPortaoDizPorQueFechou:
         assert {(r["evdev_do_jogo"], r["hidraw_de_vpad"]) for r in linhas} == {(None, None)}
 
     def test_o_endereco_sai_mascarado(self, mundo: Mundo, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Octetos 4 e 5 zerados, como o diário da bateria já faz.
-
-        MORDIDA: logue o ``uniq`` cru.
-        """
+        """Octetos 4 e 5 zerados, como o diário da bateria já faz."""
         bancada = Bancada(mundo, monkeypatch)
         bancada.controles = [
             ControleNaLista(uniq="aa:bb:cc:12:34:05", caminho="/dev/hidraw19", transporte="rádio")
@@ -580,11 +470,7 @@ class TestOPortaoDizPorQueFechou:
     def test_o_dono_que_nao_se_le_diz_nao_sei(
         self, bancada: Bancada, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem saber de quem é o fluxo, o motivo é ``nao_sei`` — não ``sem_jogo``.
-
-        MORDIDA: faça ``_por_que_o_portao_fecha`` responder ``nao_mexeu`` com
-        os donos desconhecidos — a linha afirma sobre um jogo que ninguém viu.
-        """
+        """Sem saber de quem é o fluxo, o motivo é ``nao_sei`` — não ``sem_jogo``."""
         from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
         def _quebra(*_a: Any, **_k: Any) -> frozenset[str]:
@@ -597,11 +483,7 @@ class TestOPortaoDizPorQueFechou:
         assert {r["motivo"] for r in _linhas(registros)} == {"nao_sei"}
 
     def test_quem_sai_da_mesa_e_volta_no_mesmo_estado_diz_de_novo(self, bancada: Bancada) -> None:
-        """O controle que cai e volta no meio do jogo é outro endpoint: a linha sai de novo.
-
-        MORDIDA: tire a poda de ``_portao_fechado`` do ``_casar_as_pontes`` — o
-        P4 volta calado, porque a volta ainda lembra o motivo de antes da queda.
-        """
+        """O controle que cai e volta no meio do jogo é outro endpoint: a linha sai de novo."""
         bancada.abrir_o_jogo()
         bancada.volta()
         todos = bancada.controles
@@ -611,11 +493,6 @@ class TestOPortaoDizPorQueFechou:
         with structlog.testing.capture_logs() as registros:
             bancada.volta()
         assert [r["uniq"] for r in _linhas(registros)] == [P4]
-
-
-# ---------------------------------------------------------------------------
-# A fiação: quem marca, e com o que já leu
-# ---------------------------------------------------------------------------
 
 
 class _Leitor:
@@ -644,8 +521,7 @@ def _partida_aberta() -> qm.QuemMexe:
 
 class TestAFiacao:
     def test_o_forward_all_marca_o_secundario_que_mexeu(self) -> None:
-        """MORDIDA: tire o ``marcas.anotar(...)`` do ``forward_all``; ou a zona
-        morta de ``teve_entrada`` (o parado, com 3 de drift, entra)."""
+        """MORDIDA: tire o ``marcas.anotar(...)`` do ``forward_all``; ou a zona"""
         daemon = SimpleNamespace(
             controller=SimpleNamespace(primary_uniq=colada(P1), _evdev=None),
             _gamepad_device=_Vpad(),
@@ -693,11 +569,7 @@ class TestAFiacao:
     async def test_o_laco_do_daemon_marca_o_primario_sem_snapshot_a_mais(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O laço de verdade, com o controle de mentira: o P1 com o gatilho no fundo.
-
-        MORDIDA: tire a chamada a ``anotar_o_primario`` do ``_poll_loop``.
-        E o snapshot segue um por tique (a régua do cache do evdev).
-        """
+        """O laço de verdade, com o controle de mentira: o P1 com o gatilho no fundo."""
         daemon, ticks, chamadas = await _rodar_o_laco(monkeypatch, assentamento_s=0.0)
         assert daemon._quem_mexe.quem_joga() == {colada(P1)}  # type: ignore[attr-defined]
         assert chamadas == ticks, "um snapshot por tique"
@@ -706,17 +578,7 @@ class TestAFiacao:
     async def test_o_fantasma_da_reconexao_nao_marca_o_primario(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Com o assentamento armado, o gatilho no fundo é o fantasma da conexão.
-
-        A-HAPTICA-QUEM-JOGA-02. O BUG-DAEMON-CONNECT-GHOST-INPUT-01 arma o
-        ``_input_ready_at`` na borda desconectado→conectado, e todo input fica
-        suprimido até ele passar. Um controle PARADO que cai e volta no meio da
-        partida entraria em háptica pelo lixo da primeira leitura — o espelhado
-        de 20/09 pela porta da reconexão.
-
-        MORDIDA: tire ``anotar_o_primario`` de dentro do ``if grace_passed:`` —
-        o primário é marcado sem ninguém tocar nele.
-        """
+        """Com o assentamento armado, o gatilho no fundo é o fantasma da conexão."""
         daemon, ticks, _ = await _rodar_o_laco(monkeypatch, assentamento_s=600.0)
         assert ticks >= 5, "o laço não tiquetaqueou dentro do assentamento"
         assert daemon._quem_mexe.quem_joga() == frozenset(), (  # type: ignore[attr-defined]
@@ -727,10 +589,7 @@ class TestAFiacao:
 async def _rodar_o_laco(
     monkeypatch: pytest.MonkeyPatch, *, assentamento_s: float
 ) -> tuple[Any, int, int]:
-    """O ``_poll_loop`` de verdade por cinco tiques, com o P1 de gatilho no fundo.
-
-    Devolve o daemon, os tiques e quantos snapshots do evdev foram pedidos.
-    """
+    """O ``_poll_loop`` de verdade por cinco tiques, com o P1 de gatilho no fundo."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.testing import FakeController
 
@@ -764,8 +623,6 @@ async def _rodar_o_laco(
     )
     daemon._quem_mexe = _partida_aberta()  # type: ignore[attr-defined]
     tarefa = asyncio.create_task(daemon.run())
-    # Espera o LAÇO, e não um relógio: a subida dos subsystems varia com a
-    # máquina, e um tempo fixo mediria a subida em vez do tique.
     for _ in range(300):
         if daemon.store.counter("poll.tick") >= 5:
             break
@@ -775,11 +632,6 @@ async def _rodar_o_laco(
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= 5, "o laço não tiquetaqueou"
     return daemon, ticks, len(chamadas)
-
-
-# ---------------------------------------------------------------------------
-# A entrada que conta, e o dono único
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(

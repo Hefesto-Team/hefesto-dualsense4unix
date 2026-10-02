@@ -1,16 +1,4 @@
-"""NUMA-01 — a fiação do lifecycle que ATIVA o gate NUMA-02/03 dormente.
-
-Não faz parte dos blocos 1/13/14 do plano da spec (esses são cobertos por
-`test_game_signal.py`, `test_wrapper_used.py` e `test_window_detect_diag.py`
-respectivamente) — cobre especificamente o pedaço que só existe em
-`daemon/lifecycle.py`: `_wire_game_signal` (hermeticidade com FakeController,
-fail-safe `hasattr`), `display_authority` (contrato público) e
-`_sync_game_signal` (o tick que aciona `defend_display`/
-`replay_retained_game_outputs` na transição). Falha-sem: antes desta fiação
-o backend NUNCA recebia um provider e o gate do NUMA-02/03 ficava sempre
-aberto (`_game_wins()` sempre True) — os testes aqui provam que a fiação
-governa a autoridade de ponta a ponta.
-"""
+"""NUMA-01 — a fiação do lifecycle que ATIVA o gate NUMA-02/03 dormente."""
 from __future__ import annotations
 
 import os
@@ -51,18 +39,13 @@ def _daemon(controller: Any) -> Daemon:
     )
 
 
-# --- _wire_game_signal / display_authority ------------------------------------
-
-
 def test_display_authority_e_unknown_antes_de_qualquer_fiacao() -> None:
     daemon = _daemon(FakeController(transport="usb"))
     assert daemon.display_authority == "unknown"
 
 
 def test_wire_game_signal_sempre_nasce_mesmo_com_fake_controller() -> None:
-    """Diferente de `_wire_identity_registry`/`_wire_external_registry`: o
-    `GameSignal` SEMPRE existe (sustenta `display_authority`), mesmo sem o
-    backend suportar a injeção."""
+    """Diferente de `_wire_identity_registry`/`_wire_external_registry`: o"""
     daemon = _daemon(FakeController(transport="usb"))
     daemon._wire_game_signal()
     assert daemon._game_signal is not None
@@ -79,9 +62,7 @@ def test_wire_game_signal_injeta_o_provider_quando_o_backend_suporta() -> None:
 
 
 def test_provider_reflete_mudancas_de_autoridade_em_tempo_real() -> None:
-    """O provider é uma leitura viva (`lambda: self._game_signal.authority`)
-    — não um snapshot congelado no momento da injeção (contrato de
-    `set_game_authority_provider`: zero I/O, leitura cacheada)."""
+    """O provider é uma leitura viva (`lambda: self._game_signal.authority`)"""
     ctrl = _AuthorityController(transport="usb")
     daemon = _daemon(ctrl)
     daemon._wire_game_signal()
@@ -89,15 +70,10 @@ def test_provider_reflete_mudancas_de_autoridade_em_tempo_real() -> None:
     assert ctrl.provider() == "game"
 
 
-# --- _sync_game_signal: no-op sem fiação, tick com executor -------------------
-
-
 async def test_sync_game_signal_e_noop_sem_wire() -> None:
-    """Sem `_wire_game_signal` (nunca chamado) — precisa ser no-op
-    silencioso, sem precisar de `_executor` (mesmo padrão de
-    `_sync_external_leds`)."""
+    """Sem `_wire_game_signal` (nunca chamado) — precisa ser no-op"""
     daemon = _daemon(FakeController(transport="usb"))
-    await daemon._sync_game_signal()  # não levanta
+    await daemon._sync_game_signal()
     assert daemon.display_authority == "unknown"
 
 
@@ -152,15 +128,13 @@ async def test_sync_game_signal_dispara_replay_na_volta_de_daemon_para_game() ->
 
 
 async def test_sync_game_signal_callback_ausente_no_controller_e_no_op() -> None:
-    """Backend sem `defend_display`/`replay_retained_game_outputs`
-    (FakeController puro) não pode derrubar o tick — `getattr` + guarda de
-    `callable`."""
+    """Backend sem `defend_display`/`replay_retained_game_outputs`"""
     daemon = _daemon(FakeController(transport="usb"))
     daemon._executor = ThreadPoolExecutor(max_workers=1)
     daemon._wire_game_signal()
     daemon.store.set_window_detect_backend("xlib", healthy=True)
 
-    await daemon._sync_game_signal()  # não levanta
+    await daemon._sync_game_signal()
 
     assert daemon.display_authority == "daemon"
 
@@ -172,33 +146,23 @@ async def test_gather_falhando_degrada_para_unknown_sem_derrubar_o_tick(
     daemon = _daemon(ctrl)
     daemon._executor = ThreadPoolExecutor(max_workers=1)
     daemon._wire_game_signal()
-    daemon._game_signal.evaluate("daemon", session_open=False)  # estado != unknown
+    daemon._game_signal.evaluate("daemon", session_open=False)
 
     def _explode() -> dict[str, Any]:
         raise OSError("disco cheio")
 
     monkeypatch.setattr(daemon, "_gather_game_signal_inputs", _explode)
 
-    await daemon._sync_game_signal()  # não levanta
+    await daemon._sync_game_signal()
 
     assert daemon.display_authority == "unknown"
-    # Fail-safe honra o MESMO callback de abertura de gate da transição
-    # `daemon->game|unknown` (NUMA-02): a queda para `unknown` por I/O
-    # quebrado também chama o replay (desde LIGHTBAR-NA-STEAM-01, descarta o retido).
     assert ctrl.replay_calls == 1
-
-
-# --- _gather_game_signal_inputs: correlação por pid pós-auditoria -------------
 
 
 def test_gather_game_signal_inputs_correlaciona_last_exit_por_pid(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Integração pós-auditoria da Onda N: `_gather_game_signal_inputs` lê
-    `marker_pid`/`exit_pid` do disco e os repassa a `classify()` — fechando
-    a lacuna em que um `last_exit` de OUTRO launch (pid diferente, tardio)
-    invalidava um `last_run` legítimo e mais novo (jogo real rodando).
-    """
+    """Integração pós-auditoria da Onda N: `_gather_game_signal_inputs` lê"""
     import hefesto_dualsense4unix.daemon.launch_env as le_mod
     from hefesto_dualsense4unix.daemon.subsystems.game_signal import classify
 
@@ -206,14 +170,12 @@ def test_gather_game_signal_inputs_correlaciona_last_exit_por_pid(
     launch_dir.mkdir()
     monkeypatch.setattr(le_mod, "launch_env_dir", lambda ensure=False: launch_dir)
 
-    meu_pid = os.getpid()  # garantidamente vivo (o processo deste teste)
-    outro_pid = meu_pid + 1  # garantidamente DIFERENTE de meu_pid
+    meu_pid = os.getpid()
+    outro_pid = meu_pid + 1
     agora = int(time.time())
     (launch_dir / "last_run").write_text(
         f"appid=1599660\nepoch={agora - 10}\npid={meu_pid}\n", encoding="utf-8"
     )
-    # last_exit de um launch CONCORRENTE (pid diferente), mais novo que o
-    # last_run acima — sem a correlação por pid, isto derrubaria a evidência.
     (launch_dir / "last_exit").write_text(
         f"epoch={agora - 5}\npid={outro_pid}\n", encoding="utf-8"
     )
@@ -231,8 +193,7 @@ def test_gather_game_signal_inputs_correlaciona_last_exit_por_pid(
 def test_gather_game_signal_inputs_sem_markers_nao_quebra(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Sem `last_run`/`last_exit` no disco: `marker_pid`/`exit_pid` vêm
-    None e o gather segue funcionando normalmente (fail-safe de base)."""
+    """Sem `last_run`/`last_exit` no disco: `marker_pid`/`exit_pid` vêm"""
     import hefesto_dualsense4unix.daemon.launch_env as le_mod
 
     launch_dir = tmp_path / "launch_env"
@@ -245,9 +206,6 @@ def test_gather_game_signal_inputs_sem_markers_nao_quebra(
     assert inputs["marker"] is None
     assert inputs["marker_pid"] is None
     assert inputs["exit_pid"] is None
-
-
-# --- _any_game_session_open ---------------------------------------------------
 
 
 def test_any_game_session_open_false_sem_vpad() -> None:
@@ -276,9 +234,6 @@ def test_any_game_session_open_true_com_vpad_do_coop() -> None:
     assert daemon._any_game_session_open() is True
 
 
-# --- _profile_rule_matches_game ------------------------------------------------
-
-
 def test_profile_rule_matches_game_false_sem_wm_class() -> None:
     daemon = _daemon(FakeController(transport="usb"))
     assert daemon._profile_rule_matches_game(None) is False
@@ -288,8 +243,7 @@ def test_profile_rule_matches_game_false_sem_wm_class() -> None:
 def test_profile_rule_matches_game_ignora_matchany_catchall(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O perfil fallback (`MatchAny`) SEMPRE casa — não pode virar evidência
-    de jogo por si só (senão QUALQUER janela viraria 'game')."""
+    """O perfil fallback (`MatchAny`) SEMPRE casa — não pode virar evidência"""
     from hefesto_dualsense4unix.profiles import manager as manager_module
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 

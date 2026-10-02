@@ -1,21 +1,4 @@
-"""O gesto dentro de um jogo grava no perfil do jogo, e não na escolha global.
-
-CAMINHO-CONTAGIO-01, pontos 1 e 3 do escopo de 19/09/2026. Decisão dela ao ver
-a causa:
-
-    *"tá mas isso é claramente um vazamento."*  ·  *"sim tudo dualsense, tudo
-    ligado mascara dualsense por default mas esse vazamento me preocupa"*
-    <!-- noqa-acento: citação literal dela -->
-
-**O DEFEITO, medido no log dela de 18/09/2026:**
-
-    11:18:21  hotkey_fired buttons=['ps','r3'] combo=ponte
-    11:18:23  modo_do_gesto_gravado_no_perfil caminho=xbox profile="DON'T SCREAM"
-              gamepad_caminho.flag = xbox (mtime 18/09 11:18)      ← o vazamento
-
-Um aperto dentro de um jogo virou lei sobre os outros 26 perfis que não têm
-`mode.caminho` — o PRAGMATA entre eles, com giroscópio e touchpad fora do jogo.
-"""
+"""O gesto dentro de um jogo grava no perfil do jogo, e não na escolha global."""
 
 from __future__ import annotations
 
@@ -48,11 +31,6 @@ def _gesto_manual(daemon: Any, caminho: str) -> None:
     gp._guardar_o_caminho(daemon, caminho, origin="manual")
 
 
-# ---------------------------------------------------------------------------
-# Ponto 1 — o gesto dentro do jogo fica no jogo
-# ---------------------------------------------------------------------------
-
-
 def test_com_jogo_em_foco_a_escolha_global_nao_e_tocada() -> None:
     """É o defeito de 18/09, medido: o PS + R3 no DON'T SCREAM não vaza."""
     daemon = _Daemon(jogo_em_foco=True)
@@ -63,16 +41,11 @@ def test_com_jogo_em_foco_a_escolha_global_nao_e_tocada() -> None:
     assert daemon.config.gamepad_caminho_global == "dualsense", (
         "o gesto dentro do jogo escreveu na escolha global — é o vazamento"
     )
-    # e o slot da SESSÃO recebeu, porque é dele que vivem a tela e o wrapper
     assert daemon.config.gamepad_caminho == "xbox"
 
 
 def test_sem_jogo_em_foco_a_escolha_global_e_escrita() -> None:
-    """O outro lado, e ele não pode cair junto: no desktop, ela escolhe.
-
-    Sem esta régua a cura viraria *"o gesto nunca escreve no global"*, e o chip
-    de modo dela deixaria de valer no boot seguinte sem ninguém notar.
-    """
+    """O outro lado, e ele não pode cair junto: no desktop, ela escolhe."""
     daemon = _Daemon(jogo_em_foco=False)
 
     _gesto_manual(daemon, "xbox")
@@ -110,11 +83,6 @@ def test_so_o_gesto_manual_escreve_no_global(origem: str) -> None:
     daemon = _Daemon(jogo_em_foco=False)
     gp._guardar_o_caminho(daemon, "xbox", origin=origem)  # type: ignore[arg-type]
     assert daemon.config.gamepad_caminho_global is None
-
-
-# ---------------------------------------------------------------------------
-# Ponto 3 — o arquivo global volta ao default, uma vez
-# ---------------------------------------------------------------------------
 
 
 def test_o_xbox_do_vazamento_e_devolvido(monkeypatch: pytest.MonkeyPatch) -> None:

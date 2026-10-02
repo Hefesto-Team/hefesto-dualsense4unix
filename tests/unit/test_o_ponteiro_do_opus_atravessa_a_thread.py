@@ -1,44 +1,4 @@
-"""O ponteiro do encoder Opus sobrevive a uma thread de trabalho.
-
-O DEFEITO, achado pela conferência em 10/09/2026 e provado nesta máquina
----------------------------------------------------------------------------
-`opus_encoder_ctl` é variádica, então ela não tem `argtypes`. **Sem `argtypes`,
-o ctypes passa um `int` do Python como C `int` de 32 bits** — e
-`opus_encoder_create` está prototipada como `c_void_p`, que chega ao Python
-como um `int` de 64.
-
-Na thread PRINCIPAL isso passa por sorte, e é por isso que ninguém tinha visto:
-o heap do `brk` fica abaixo de 4 GB e a truncagem não perde byte nenhum. **Numa
-thread de trabalho, não** — o glibc aloca numa arena própria, acima de 4 GB.
-Medido::
-
-    thread principal    0x00001ac2da40 -> 0x1ac2da40   (cabe em 32 bits)
-    thread de trabalho  0x706a50000ba0 -> 0x50000ba0   (PERDE os bytes altos)
-
-O ponteiro morto chega em C e o processo INTEIRO cai com `Segmentation fault`.
-Não é exceção: é o daemon dela morrendo.
-
-**A `PonteDeSomPorRadio` é a primeira coisa desta casa a construir o
-`CodificadorOpus` dentro de uma thread** (`subir()` põe o laço numa
-`threading.Thread`, e o codificador nasce preguiçosamente no primeiro report).
-Ou seja: o defeito nasceu junto com a ponte, e a primeira janela de 10 ms de som
-de verdade o teria disparado.
-
-POR QUE NENHUM TESTE PEGAVA
-----------------------------
-Os testes de `PonteDeSomPorRadio` passam `abrir_hidraw=lambda: None`, então a
-thread **nunca nasce**. E todo o resto da casa constrói o codificador na thread
-principal. A cobertura existia; a CONDIÇÃO não.
-
-*Um teste que exercita o caminho no lugar errado da máquina não exercita o
-caminho.*
-
-A MORDIDA
-----------
-Tire o `ctypes.c_void_p(...)` de `CodificadorOpus._ctl` e
-`test_o_codificador_funciona_dentro_de_uma_thread` derruba o processo com
-SIGSEGV — o pytest reporta a corrida inteira como morta, que é o sintoma real.
-"""
+"""O ponteiro do encoder Opus sobrevive a uma thread de trabalho."""
 from __future__ import annotations
 
 import ctypes
@@ -69,11 +29,7 @@ def tem_libopus() -> bool:
 
 
 def test_o_codificador_funciona_dentro_de_uma_thread(tem_libopus: bool) -> None:
-    """O caso EXATO da ponte: encoder construído e usado numa thread.
-
-    Com a cura arrancada, este teste não «reprova» — ele MATA o processo. É o
-    sintoma verdadeiro, e é por isso que ele é o teste que importa.
-    """
+    """O caso EXATO da ponte: encoder construído e usado numa thread."""
     fora: dict[str, object] = {}
 
     def na_thread() -> None:
@@ -97,12 +53,7 @@ def test_o_codificador_funciona_dentro_de_uma_thread(tem_libopus: bool) -> None:
 
 
 def test_o_ponteiro_de_uma_thread_NAO_cabe_em_32_bits(tem_libopus: bool) -> None:  # noqa: N802
-    """A premissa do defeito, medida — e ela é o que torna a cura necessária.
-
-    Se um dia o glibc passar a alocar baixo em toda thread, este teste começa a
-    pular sozinho e diz por quê, em vez de dar verde silencioso sobre uma cura
-    que deixou de ser exercitada.
-    """
+    """A premissa do defeito, medida — e ela é o que torna a cura necessária."""
     lib = _carregar_libopus_encoder()
     erro = ctypes.c_int()
     ponteiros: dict[str, int] = {}
@@ -130,11 +81,7 @@ def test_o_ponteiro_de_uma_thread_NAO_cabe_em_32_bits(tem_libopus: bool) -> None
 
 
 def test_toda_chamada_variadica_passa_pelo_dono(tem_libopus: bool) -> None:
-    """`opus_encoder_ctl` só é chamada de UM lugar, e é o que envelopa.
-
-    Sem esta régua, alguém acrescenta um `ctl` cru amanhã e o SIGSEGV volta —
-    dessa vez sem ninguém procurar, porque «isso já foi curado».
-    """
+    """`opus_encoder_ctl` só é chamada de UM lugar, e é o que envelopa."""
     fonte = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "alto_falante_bt.py"
     ).read_text(encoding="utf-8")
@@ -144,8 +91,6 @@ def test_toda_chamada_variadica_passa_pelo_dono(tem_libopus: bool) -> None:
         for n, linha in enumerate(fonte.splitlines(), 1)
         if "opus_encoder_ctl(" in linha and not linha.lstrip().startswith("#")
     ]
-    # Uma na prototipagem (`lib.opus_encoder_ctl.restype`) não casa com `(`;
-    # o que pode existir é a chamada de dentro de `_ctl`.
     assert len(chamadas) == 1, (
         f"opus_encoder_ctl é chamada em {len(chamadas)} lugares (linhas "
         f"{chamadas}); tem de haver UM dono, `CodificadorOpus._ctl`, porque é "
@@ -161,12 +106,7 @@ def test_toda_chamada_variadica_passa_pelo_dono(tem_libopus: bool) -> None:
 
 
 def test_a_mordida_mata_o_processo_de_verdade(tem_libopus: bool) -> None:
-    """A prova de que a cura é load-bearing: sem ela, SIGSEGV num subprocesso.
-
-    Roda num processo FILHO de propósito — arrancar a cura no processo do
-    pytest mataria a corrida inteira, e uma régua que derruba a suíte para
-    provar seu ponto é pior que a ausência dela.
-    """
+    """A prova de que a cura é load-bearing: sem ela, SIGSEGV num subprocesso."""
     programa = (
         "import ctypes, threading, sys\n"
         f"sys.path.insert(0, {str(RAIZ / 'src')!r})\n"

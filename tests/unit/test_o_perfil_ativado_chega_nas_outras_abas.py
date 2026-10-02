@@ -43,22 +43,9 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface.pacotes import Contexto, perfil
 
-#: OS DOIS PERFIS: o que estava valendo e o que ela ATIVOU. Dois, e não um,
-#: porque o defeito é de TROCA — com um só, uma aba congelada no perfil anterior
-#: mostraria o mesmo dado e a régua ficaria verde sobre ele.
 DE_ONTEM = "Perfil de ontem"
 ATIVADO = "Perfil que ela ativou"
 
-#: QUEM AINDA CURTO-CIRCUITA O DONO — declarado, com a razão e o endereço.
-#:
-#: `a05_vibracao._perfil_ativo:247` faz `return _perfil.ativo(nome) if nome
-#: else {}`: a guarda decide ANTES de chamar o dono, então a cura de
-#: `perfil.ativo` não o alcança e, com o daemon calado, aquela aba volta a ver
-#: `{}` — o teto de vibração e a ressalva da mesa em travessão.
-#:
-#: **ELE ESTÁ FORA DA POSSE DA `PERFIL-MODO-01`** e a cura é de uma linha:
-#: trocar a expressão por `return _perfil.ativo(nome)`. Está no relatório
-#: `docs/process/agentes/2026-09-06/PERFIL-MODO-01.md`.
 CURTO_CIRCUITO_DECLARADO = {"a05_vibracao.py"}
 
 
@@ -98,10 +85,6 @@ def _ctx_com_daemon_calado() -> Contexto:
     """O estado VIVO da máquina dela: o daemon responde, e não sabe o perfil."""
     return Contexto(state={"active_profile": None})
 
-
-# --------------------------------------------------------------------------
-# 1. O DEFEITO, E A CURA — com o daemon calado, as outras abas viam NADA
-# --------------------------------------------------------------------------
 
 def test_com_o_daemon_calado_as_outras_abas_leem_o_perfil_do_disco(
     pasta_de_perfis: Any, marcador: dict[str, str],
@@ -143,19 +126,10 @@ def test_o_ativar_troca_o_que_as_outras_abas_mostram(
         "a aba Iluminação continuaria mostrando o brilho do perfil anterior")
 
 
-# --------------------------------------------------------------------------
-# 2. O DONO É UM SÓ — e o daemon vence quando ele sabe
-# --------------------------------------------------------------------------
-
 def test_o_daemon_vence_quando_ele_sabe(
     pasta_de_perfis: Any, marcador: dict[str, str],
 ) -> None:
-    """A ordem do §P1: o daemon primeiro, o marcador em disco depois.
-
-    Ele é quem APLICOU as seções no controle, e um autoswitch por janela só
-    existe lá. Inverter a ordem faria um perfil trocado pelo jogo em foco
-    aparecer como o de ontem.
-    """
+    """A ordem do §P1: o daemon primeiro, o marcador em disco depois."""
     ctx = Contexto(state={"active_profile": ATIVADO})
     assert perfil.nome_do_ativo(ctx.state) == ATIVADO
     marcador["nome"] = DE_ONTEM
@@ -166,11 +140,7 @@ def test_o_daemon_vence_quando_ele_sabe(
 def test_sem_daemon_e_sem_marcador_a_resposta_e_vazia(
     pasta_de_perfis: Any, marcador: dict[str, str],
 ) -> None:
-    """Régua que só sabe passar não é régua: o caminho do "ninguém sabe".
-
-    `{}` aqui é o estado HONESTO — a tela mostra travessão porque não há
-    perfil, que é diferente de mostrar travessão porque ninguém perguntou.
-    """
+    """Régua que só sabe passar não é régua: o caminho do "ninguém sabe"."""
     marcador["nome"] = ""
     assert perfil.nome_do_ativo({"active_profile": None}) == ""
     assert perfil.ativo(None) == {}
@@ -191,33 +161,17 @@ def test_nome_do_ativo_nunca_levanta(monkeypatch: pytest.MonkeyPatch) -> None:
     assert perfil.nome_do_ativo({"active_profile": None}) == ""
 
 
-# --------------------------------------------------------------------------
-# 3. A CURA COBRE TODOS OS CHAMADORES — o censo, por árvore de sintaxe
-# --------------------------------------------------------------------------
-
 def test_todo_pacote_que_le_o_perfil_passa_pelo_dono() -> None:
-    """O censo dos chamadores de `perfil.ativo`, e quem ainda os guarda.
-
-    A regra de 05/09: *quando a cura conhece a causa, ela cobre TODOS os
-    chamadores*. Aqui a cura mora no dono (`perfil.ativo`), então quem passa o
-    nome CRU já está coberto — o que esta régua persegue é o contrário: um
-    chamador que **curto-circuita** o dono com um `if nome else {}` antes de
-    chamá-lo, porque esse não é alcançado pela cura e volta a ver `{}`.
-
-    O ÚNICO DECLARADO É O `a05_vibracao`, e ele está FORA da posse desta
-    sprint — está no relatório, com a linha exata. Um segundo aparecer aqui é
-    dívida nova e tem de ser declarada junto com a razão.
-    """
+    """O censo dos chamadores de `perfil.ativo`, e quem ainda os guarda."""
     import ast
     import pathlib
 
     pacotes = pathlib.Path(
-        perfil.__file__).resolve().parent  # `interface/pacotes/`
+        perfil.__file__).resolve().parent
     curto_circuito: set[str] = set()
     for arquivo in sorted(pacotes.glob("a*.py")):
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
         for no in ast.walk(arvore):
-            # `X.ativo(nome) if nome else {}` — o `IfExp` com a chamada dentro.
             if not isinstance(no, ast.IfExp):
                 continue
             chamadas = [d for d in ast.walk(no.body) if isinstance(d, ast.Call)]

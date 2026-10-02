@@ -1,33 +1,10 @@
 #!/usr/bin/env python3
-"""svg_para_png.py — rasteriza o SVG dela com o MOTOR QUE ELA VÊ.
-
-DECISÃO DELA, 30/08/2026: *"o nosso install sempre deve corrigir ele pra ter o
-mesmo SVG em qualquer versão, PNG ou afins."*
-
-POR QUE NÃO O `rsvg-convert`, e isto foi medido quatro vezes em 29 e 30/08: o
-editor dela escreve rotação e espelho com `transform-box` e `transform-origin`,
-e o **librsvg IGNORA os dois**. O ícone saía com o anel cortado e o martelo fora
-da arte — ela apontou o defeito três vezes, e as três minhas tentativas de
-"assar" os transforms na matriz erraram o alvo por geometria (o bounding box de
-uma cúbica não são os pontos de controle dela).
-
-A CURA NÃO É REESCREVER O DESENHO — é usar um motor que honra o que ela escreveu.
-O WebKitGTK já está instalado nesta casa, porque é o motor da interface nova, e
-ele renderiza **igual ao editor**: medido, o PNG que ele produz é o desenho que
-ela vê no Boxy, anel completo e tudo dentro da moldura.
-
-    svg_para_png.py entrada.svg saida.png [--tamanho 512]
-
-O ARQUIVO DELA NUNCA É TOCADO. Este script só lê.
-"""
+"""svg_para_png.py — rasteriza o SVG dela com o MOTOR QUE ELA VÊ."""
 from __future__ import annotations
 
 import pathlib
 import sys
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[1] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -46,20 +23,12 @@ gi.require_version("WebKit2", "4.1")
 
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, WebKit2
 
-#: Quanto esperar a carga e a pintura, em passos de 10 ms. O WebKit avisa a
-#: carga antes de pintar — daí os dois laços.
 _PASSOS_CARGA = 500
 _PASSOS_PINTURA = 80
 
 
 def rasterizar(svg: pathlib.Path, png: pathlib.Path, tamanho: int = 512) -> None:
-    # O PISO DA JANELA OFFSCREEN, medido em 30/08: abaixo de 512 ela CORTA em vez
-    # de encolher — a 128 o anel da logo aparecia cortado embaixo. Rasteriza-se
-    # sempre grande e reduz-se depois, que é como se faz ícone de qualquer forma.
     _BASE = 512
-    # A página existe só para dar ao SVG um tamanho exato e fundo transparente.
-    # `background: transparent` no WebView E no CSS: sem os dois, o ícone nasce
-    # com o branco do navegador atrás e a dock mostra um quadrado.
     html = (
         "<html><head><style>"
         f"html,body{{margin:0;padding:0;background:transparent;"
@@ -98,10 +67,6 @@ def rasterizar(svg: pathlib.Path, png: pathlib.Path, tamanho: int = 512) -> None
     pixbuf = janela.get_pixbuf()
     if pixbuf is None:
         raise RuntimeError("o WebView não devolveu imagem")
-    # A JANELA OFFSCREEN TEM PISO, e abaixo dele ela corta em vez de encolher —
-    # medido em 30/08: a 512 o desenho sai inteiro, a 128 o anel aparece cortado.
-    # Por isso a rasterização é SEMPRE grande e a redução vem depois, que é como
-    # se faz ícone de qualquer forma: um raster nítido, reamostrado.
     if pixbuf.get_width() != tamanho or pixbuf.get_height() != tamanho:
         pixbuf = pixbuf.scale_simple(tamanho, tamanho, GdkPixbuf.InterpType.BILINEAR)
     png.parent.mkdir(parents=True, exist_ok=True)

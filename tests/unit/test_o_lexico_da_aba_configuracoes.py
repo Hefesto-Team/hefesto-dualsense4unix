@@ -1,37 +1,4 @@
-"""O portão do LÉXICO da aba Configurações — a régua da leva CONFIGURAÇÕES-O-LÉXICO-01.
-
-A REGRA QUE ESTE ARQUIVO GUARDA, e ela é o produto da leva:
-
-    Fica na página o que MUDA — estado, medição, resposta, seção vazia.
-    Vai para o hover o que EXPLICA — por quê, quando vale, de onde veio.
-
-    O teste: *este parágrafo diria a mesma coisa com a mesa vazia e com a mesa
-    cheia?* Se sim, é explicação; cola no widget que ele explica, e o widget já
-    ganha a marca por `moldura.marcar_afordancias`.
-
-O DEFEITO MEDIDO EM 24/08/2026: doze parágrafos de apoio ocupavam a página
-inteira da aba com texto que nunca muda, e TRÊS deles eram a mesma frase,
-palavra por palavra. Ela: *"tudo isso em azul deveria ser tooltip, não deveria
-poluir a interface"*. Em altura, ≈520px numa foto de 2505px — um quinto da
-página, numa janela de 1080.
-
-O QUE ESTE ARQUIVO COBRA, e cada dente tem a mordida escrita no docstring dele:
-
-1. **parágrafo de apoio novo reprova** — a lista do que fica é explícita, e o
-   que ainda não saiu está declarado como DÍVIDA, com o número da tarefa e o
-   arquivo de quem a paga;
-2. **o recibo responde ao clique** — os dois controles de "A janela" que gravam
-   na hora escrevem "Guardado." e não dependem um do outro;
-3. **o botão que ela mandou tirar não volta**;
-4. **a busca não vira popup** — nem `Gtk.ComboBox` nem `Gtk.EntryCompletion` em
-   `app/widgets/` ou `app/actions/config/`;
-5. **o card do rádio não é mais alto que o card do cabo**;
-6. **o rodapé não guarda cópia do título da seção**.
-
-Bancada: nenhum aparelho, nenhum MAC. Sob `Gtk.OffscreenWindow` onde há medição
-de altura — **nunca `Gtk.Window`**, que sob Xvfb fica 1x1 para sempre
-(`COMO-OLHAR-A-TELA.md`).
-"""
+"""O portão do LÉXICO da aba Configurações — a régua da leva CONFIGURAÇÕES-O-LÉXICO-01."""
 from __future__ import annotations
 
 import ast
@@ -41,7 +8,6 @@ from typing import Any
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("o léxico da aba Configurações")
 
 import pytest
@@ -62,18 +28,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
 
 
-# ---------------------------------------------------------------------------
-# Dente 1 — parágrafo de apoio novo reprova
-# ---------------------------------------------------------------------------
-
-#: O que um "parágrafo de apoio" é, na régua deste portão: rótulo esmaecido,
-#: com quebra de linha, e comprido. Os três juntos, porque cada um sozinho pega
-#: coisa demais — um rótulo de fileira também é `Gtk.Label`, e um selo esmaecido
-#: também tem `dim-label`.
 _TAMANHO_DE_PARAGRAFO = 60
 
-#: Os parágrafos que FICAM na página, e o motivo de cada um. Todos são ESTADO —
-#: mudam com a máquina, com a mesa ou com a resposta do daemon.
 PARAGRAFOS_QUE_FICAM: dict[str, str] = {
     "Nenhum controle ligado agora.": (
         "seção VAZIA: só existe quando não há controle nenhum, logo é o próprio "
@@ -101,27 +57,6 @@ PARAGRAFOS_QUE_FICAM: dict[str, str] = {
     ),
 }
 
-#: O que AINDA está na página e devia ter saído — a dívida desta leva, com nome
-#: e endereço. Não é perdão: é o que permite este portão entrar HOJE sem
-#: derrubar o vermelho por um trabalho que é de outra frente.
-#:
-#: A frente G9 é dona de `secao_janela.py`, `moldura.py`, `external_card.py`,
-#: `external_controllers.py` e `ipc_bridge.py`. As três seções abaixo são de
-#: frentes que rodam ao lado; editá-las daqui desfaria o trabalho delas em
-#: silêncio (R1). Apague a entrada no commit que tirar o parágrafo.
-#: **QUATRO DAS CINCO ENTRADAS FORAM PAGAS EM 26/08/2026** (LEVA-4-A, LEX-2).
-#: Cada uma saiu no commit que moveu a frase da página para o hover, que é o
-#: que esta lista sempre pediu:
-#:
-#: * itens 3/4/5, a `QUANDO_VALE` nas três seções — virou dica da fileira de
-#:   `_linha_declarada` (`secao_mesa`), da frase de capacidade
-#:   (`secao_controles`) e dos três perfis (`secao_orcamento`);
-#: * item 1, a `ESCOPO` — anexada à `DICA` do título "Está tudo certo?", e a
-#:   `QUANDO_VALE` que viajava de carona nela mudou para o selo;
-#: * item 8, a `ALCANCE_DE_HOJE` — anexada à `DICA` de "Desempenho";
-#: * a conta de fatias (`frase_do_preco_por_controle`) — virou dica do título
-#:   da conta, e CONTINUA em `BlocoDaConta.falas`, que é a lista sobre a qual o
-#:   portão das `PALAVRAS_DE_CULPA` varre tudo.
 AINDA_NA_PAGINA: dict[str, str] = {
     "Com o microfone ligado, um controle no BT troca": (
         "LEX-2, item 2 — `secao_controles.montar`. BLOQUEADO EM 26/08/2026, e a "
@@ -140,40 +75,11 @@ AINDA_NA_PAGINA: dict[str, str] = {
     ),
 }
 
-#: O PISO da régua. Zero parágrafos achados é REPROVAÇÃO, não aprovação — é a
-#: armadilha de 19/08 (`o-portao-que-nao-mede-o-que-promete`), e o
-#: `test_afordancia_de_dica_na_aba_configuracoes.py:203` já a paga do mesmo
-#: jeito. Sem este piso, quebrar o coletor deixaria o portão verde e mudo.
-#:
-#: **DESCEU DE 4 PARA 2 EM 26/08/2026, NO MESMO COMMIT QUE PAGOU A LEX-2.** Em
-#: 25/08 a medição nesta árvore era **8 parágrafos únicos, 10 no total**; depois
-#: da LEX-2 são **4 únicos, 4 no total** — três de `PARAGRAFOS_QUE_FICAM` mais a
-#: frase do microfone, que é a última entrada de `AINDA_NA_PAGINA`.
-#:
-#: **SUBIU DE 2 PARA 3 EM 13/09/2026 (`BERCO-SEM-A-BANCADA-01`).** O 2 contava
-#: com a aba lendo a máquina de quem roda: um controle ligado apagava "Nenhum
-#: controle ligado agora." e as entradas mapeadas apagavam "Você ainda não
-#: mapeou as suas entradas.". O berço agora monta sobre uma bancada FIXA, sem
-#: daemon e sem controle, e só a frase do mapa ainda depende do lar de quem
-#: roda (as faces do `maquina.json`). As outras TRÊS nascem em toda montagem:
-#: a capacidade do microfone, "Não sei quem está no rádio" e "Nenhum controle
-#: ligado agora.". Medido em 14/09: 4 achados sob a suíte; num processo solto
-#: com duas faces desenhadas no `maquina.json`, a frase do mapa dá lugar ao
-#: resumo do mapa e dos 4 sobram 3. O piso fica nos três que sobram.
 NUNCA_MENOS_QUE = 3
 
 
 def _aba_montada() -> Any:
-    """Monta a aba em CÓDIGO e devolve a caixa da aba.
-
-    Molde de `test_config_a_palavra_de_tela_da_aba_montada.py` — a aba de
-    verdade, não um dublê: o defeito que esta leva paga só existe na aba
-    montada, porque é lá que os doze parágrafos se somam.
-
-    06/09/2026 (`GTK-3`): o `gui/main.glade` era aberto aqui só para pegar a
-    caixa vazia; o berço agora é `tests/unit/aba_config_sem_a_janela.py`, com
-    régua de fidelidade própria.
-    """
+    """Monta a aba em CÓDIGO e devolve a caixa da aba."""
     return aba_config_montada()
 
 
@@ -212,13 +118,7 @@ def _paragrafos_de_apoio(raiz: Any) -> list[str]:
 
 
 def _conhecido(texto: str) -> bool:
-    """O texto casa com alguma entrada declarada, por PREFIXO ou por trecho.
-
-    Por trecho e não por igualdade porque metade destes parágrafos é composta em
-    tempo de execução — a frase do microfone traz `260,4` e `276,7`, que são
-    contas, e prendê-las na lista faria o portão reprovar no dia em que a conta
-    mudasse. O que se prende é a frase, não o número.
-    """
+    """O texto casa com alguma entrada declarada, por PREFIXO ou por trecho."""
     return any(
         chave in texto
         for chave in (*PARAGRAFOS_QUE_FICAM, *AINDA_NA_PAGINA)
@@ -226,14 +126,7 @@ def _conhecido(texto: str) -> bool:
 
 
 def test_nenhum_paragrafo_de_apoio_novo_na_pagina() -> None:
-    """Explicação nova nasce no hover, nunca na página.
-
-    MORDIDA (rodada em 25/08/2026, não presumida): pus
-    `caixa.pack_start(rotulo_de_apoio("Este texto explica algo e nunca muda, "
-    "então não deveria estar aqui na página ocupando espaço."), False, False, 0)`
-    em `secao_janela.montar` e este teste reprovou nomeando o texto inteiro.
-    Desfeito em seguida.
-    """
+    """Explicação nova nasce no hover, nunca na página."""
     achados = [
         texto for texto in _paragrafos_de_apoio(_aba_montada()) if not _conhecido(texto)
     ]
@@ -248,11 +141,7 @@ def test_nenhum_paragrafo_de_apoio_novo_na_pagina() -> None:
 
 
 def test_a_regua_continua_achando_o_que_promete_achar() -> None:
-    """Zero achados é reprovação, não aprovação.
-
-    MORDIDA: trocar `has_class("dim-label")` por `has_class("nao-existe")` no
-    `_paragrafos_de_apoio` — o dente 1 fica verde e MUDO, e este reprova.
-    """
+    """Zero achados é reprovação, não aprovação."""
     achados = _paragrafos_de_apoio(_aba_montada())
     assert len(achados) >= NUNCA_MENOS_QUE, (
         f"a régua achou {len(achados)} parágrafo(s) de apoio na aba, e o piso é "
@@ -262,22 +151,8 @@ def test_a_regua_continua_achando_o_que_promete_achar() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Dente 2 — o recibo responde ao clique (LEX-3)
-# ---------------------------------------------------------------------------
-
-
 class _HospedeiroVazio:
-    """Sem builder, sem mesa, sem daemon — o dublê mínimo de "A janela".
-
-    ELE PRECISA TER O INTERRUPTOR DE AUTOSTART, e a linha não é enfeite: sem
-    ele, `_fileira_do_autostart` devolve `None` de propósito (espelho sem
-    original é um rótulo que nunca fica certo) e a fileira inteira **não é
-    montada**. Um portão que procurasse o botão "Abrir a aba Sistema" nesse
-    dublê ficaria verde para sempre, medindo uma seção sem a fileira onde o
-    botão morava — medido em 25/08/2026, quando a mordida deste próprio arquivo
-    passou com o botão de volta na tela.
-    """
+    """Sem builder, sem mesa, sem daemon — o dublê mínimo de "A janela"."""
 
     def __init__(self) -> None:
         self.builder = None
@@ -296,13 +171,7 @@ def _janela_montada() -> tuple[Any, Any]:
 
 
 def test_o_duble_monta_a_fileira_do_espelho() -> None:
-    """A régua dos dois testes abaixo tem de estar OLHANDO para a fileira.
-
-    Sem esta linha, `_fileira_do_autostart` devolveria `None`, a fileira não
-    seria montada e o portão do botão ficaria verde sem medir nada. É a mesma
-    armadilha de 19/08 (`o-portao-que-nao-mede-o-que-promete`), paga aqui do
-    jeito barato: uma asserção sobre a existência do que se vai vigiar.
-    """
+    """A régua dos dois testes abaixo tem de estar OLHANDO para a fileira."""
     _host, caixa = _janela_montada()
     rotulos = [
         widget.get_text()
@@ -318,15 +187,7 @@ def test_o_duble_monta_a_fileira_do_espelho() -> None:
 def test_o_tamanho_do_texto_escreve_recibo_ao_clicar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O clique que não muda um pixel do tema tem de dizer que chegou.
-
-    Ela: *"janela ok, muito bom mas os botões não funcionam"*. O handler sempre
-    esteve lá; o que faltava era recibo — e a frase que responderia estava na
-    página ANTES do clique, logo não distinguia "cliquei" de "não cliquei".
-
-    MORDIDA: arranque o `_escrever_o_recibo(...)` do fim de
-    `_ao_trocar_o_tamanho` — reprova dizendo que o recibo continuou vazio.
-    """
+    """O clique que não muda um pixel do tema tem de dizer que chegou."""
     gravados: list[tuple[str, Any]] = []
     monkeypatch.setattr(
         secao_janela, "set_pref", lambda chave, valor: gravados.append((chave, valor))
@@ -347,19 +208,7 @@ def test_o_tamanho_do_texto_escreve_recibo_ao_clicar(
 def test_o_ambiente_escreve_recibo_mesmo_com_a_bandeja_dizendo_o_mesmo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caso DELA: trocar o ambiente não muda a frase da bandeja, e assim mesmo
-    o gesto tem de ter resposta.
-
-    `ambiente.mensagem_da_bandeja` devolve a MESMA frase para os três ambientes
-    quando o ícone sobe (`ambiente.py:143-144`), que é a máquina dela. Antes da
-    LEX-3, repintar a bandeja era a ÚNICA consequência visível do clique — e
-    nessa máquina não havia consequência visível nenhuma.
-
-    MORDIDA, e ela tem duas metades de propósito: arrancar só o repintar da
-    bandeja NÃO pode fazer este teste passar a depender dele. Aqui a bandeja é
-    forçada a devolver sempre a mesma frase, e o recibo tem de aparecer assim
-    mesmo.
-    """
+    """O caso DELA: trocar o ambiente não muda a frase da bandeja, e assim mesmo"""
     monkeypatch.setattr(
         secao_janela, "gravar_correcao_de_ambiente", lambda _escolha: None
     )
@@ -391,10 +240,7 @@ def test_o_ambiente_escreve_recibo_mesmo_com_a_bandeja_dizendo_o_mesmo(
 def test_o_recibo_de_uma_fileira_apaga_o_da_outra(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dois recibos verdes diriam que dois gestos acabaram de acontecer.
-
-    MORDIDA: tirar o laço que apaga os outros em `_escrever_o_recibo`.
-    """
+    """Dois recibos verdes diriam que dois gestos acabaram de acontecer."""
     monkeypatch.setattr(secao_janela, "set_pref", lambda _chave, _valor: None)
     monkeypatch.setattr(
         secao_janela, "gravar_correcao_de_ambiente", lambda _escolha: None
@@ -449,21 +295,8 @@ def test_as_duas_fileiras_que_gravam_na_hora_dizem_isso_no_hover() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Dente 3 — o botão que ela mandou tirar (LEX-4)
-# ---------------------------------------------------------------------------
-
-
 def test_a_janela_nao_tem_botao_de_abrir_a_aba_sistema() -> None:
-    """Ela, literal: *"não deveriam ter o botão de abrir aba sistema"*.
-
-    Ele funcionava — a busca era por id, nunca por índice. O problema era outro:
-    numa fileira que é ESPELHO, um botão de navegação é o único elemento
-    clicável, e lê como o controle que muda o estado ao lado.
-
-    MORDIDA: devolva o `Gtk.Button(label=_("Abrir a aba Sistema"))` a
-    `_fileira_do_autostart` — reprova nomeando o rótulo.
-    """
+    """Ela, literal: *"não deveriam ter o botão de abrir aba sistema"*."""
     _host, caixa = _janela_montada()
     botoes = [
         widget.get_label() or ""
@@ -474,27 +307,13 @@ def test_a_janela_nao_tem_botao_de_abrir_a_aba_sistema() -> None:
     assert not achados, f"o botão que ela mandou tirar voltou: {achados}"
 
 
-# ---------------------------------------------------------------------------
-# Dente 4 — a busca não vira popup (LEX-5)
-# ---------------------------------------------------------------------------
-
-#: Os dois nomes que trariam o popup de volta. `Gtk.ComboBox` está proibido
-#: nesta casa desde o cosmic-epoch#2497; `Gtk.EntryCompletion` É um popup e
-#: cairia no MESMO bug por outro caminho — foi por isso que a LEX-5 desenhou a
-#: lista dentro do card em vez de usar o widget pronto.
 POPUPS_PROIBIDOS = frozenset({"ComboBox", "ComboBoxText", "EntryCompletion"})
 
-#: Onde a proibição vale. São as duas pastas em que a aba Configurações monta
-#: widget; o resto de `app/` tem a própria história e não é desta leva.
 PASTAS_SEM_POPUP = ("widgets", "actions/config")
 
 
 def test_nenhum_popup_nos_widgets_da_aba_configuracoes() -> None:
-    """Por AST, e não por `grep`: um comentário citando o nome não é um uso.
-
-    MORDIDA: escreva `Gtk.ComboBoxText()` em `app/widgets/campo_de_busca.py` —
-    reprova nomeando arquivo e linha.
-    """
+    """Por AST, e não por `grep`: um comentário citando o nome não é um uso."""
     achados: list[str] = []
     for pasta in PASTAS_SEM_POPUP:
         for caminho in sorted((FONTE / pasta).glob("*.py")):
@@ -519,12 +338,7 @@ def test_nenhum_popup_nos_widgets_da_aba_configuracoes() -> None:
 
 
 def test_a_busca_acha_pelo_meio_do_nome_e_sem_acento() -> None:
-    """Quem procura "cosmic" acha "Cosmic Red"; quem digita sem acento também.
-
-    E ela sabe RECUSAR: campo vazio não devolve a lista inteira, e letras que
-    não casam com nada devolvem lista vazia. Régua que só sabe passar não é
-    régua.
-    """
+    """Quem procura "cosmic" acha "Cosmic Red"; quem digita sem acento também."""
     busca = CampoDeBusca()
     busca.set_items([("02", "Cosmic Red"), ("04", "Galactic Purple"), ("Z3", "Astro Bot")])
 
@@ -536,18 +350,7 @@ def test_a_busca_acha_pelo_meio_do_nome_e_sem_acento() -> None:
 
 
 def test_quem_so_sabe_que_e_vermelho_continua_achando() -> None:
-    """A regressão que a busca criaria sem os sinônimos.
-
-    A lista de botões que ela substituiu mostrava seis rótulos EM PORTUGUÊS, e
-    os vinte e um nomes de fábrica são todos em inglês. Trocar uma pela outra
-    sem os sinônimos teria tirado da tela a única palavra em português que a cor
-    tinha — e quem só sabe que *é vermelho* ficaria sem caminho.
-
-    A linha continua dizendo "Cosmic Red": o sinônimo ACHA, nunca aparece.
-
-    MORDIDA: tire o `busca.set_sinonimos(...)` de `_busca_da_cor`, ou o ramo do
-    sinônimo em `_BuscaLogic.filtrados` — reprova.
-    """
+    """A regressão que a busca criaria sem os sinônimos."""
     dados = external_card.DadosDoControle(
         chave="dublê", titulo="Jogador 1", subtitulo="DualSense · Rádio"
     )
@@ -574,31 +377,7 @@ def test_quem_so_sabe_que_e_vermelho_continua_achando() -> None:
 
 
 def test_clicar_numa_linha_escolhe_aquela_linha() -> None:
-    """O gesto inteiro: digitar, ver duas sugestões, clicar na SEGUNDA.
-
-    A segunda e não a primeira de propósito: uma implementação que sempre
-    devolvesse o primeiro achado passaria num teste de uma linha só, e essa
-    implementação existiu aqui — a primeira versão pendurava o id num atributo
-    do `Gtk.ListBoxRow`, e a segunda passou a lê-lo pelo `get_index()` contra a
-    lista desenhada.
-
-    Depois do clique: o campo mostra o nome escolhido e a lista FECHA. Lista que
-    fica aberta depois da escolha continua empurrando o card para baixo, que é a
-    altura que este widget nasceu para devolver.
-
-    MORDIDAS RODADAS (25/08/2026): trocar `self._visiveis[indice]` por
-    `self._visiveis[0]` reprova na primeira asserção; arrancar o `_fechar()`
-    reprova na lista aberta.
-
-    A ÚLTIMA ASSERÇÃO É CONTRATO, NÃO MORDIDA, e a distinção está escrita porque
-    esconder isso seria a régua se gabando. A linha de "não achei" é protegida
-    por DUAS coisas — ela nasce `set_activatable(False)`, e `_ao_ativar_linha`
-    confere o índice contra a lista desenhada. Arrancar qualquer uma das duas
-    sozinha **não** muda o que este teste observa: sem a primeira, a segunda
-    barra; sem a segunda, o `IndexError` é engolido pelo GObject e o id não muda
-    de qualquer jeito. A asserção fica porque o CONTRATO ("a linha morta não é
-    uma escolha") é o que importa; ela só não é o dente que prova a cura.
-    """
+    """O gesto inteiro: digitar, ver duas sugestões, clicar na SEGUNDA."""
     busca = CampoDeBusca()
     busca.set_items(
         [("00", "White"), ("02", "Cosmic Red"), ("07", "Volcanic Red")]
@@ -635,12 +414,7 @@ def test_clicar_numa_linha_escolhe_aquela_linha() -> None:
 
 
 def test_a_busca_nao_grava_sozinha_o_que_ninguem_escolheu() -> None:
-    """`set_active_id` de um id ausente é no-op, e não emite.
-
-    É a mesma semântica do `GtkComboBox` que o `SegmentedSelector` espelha, e a
-    razão é medida: com o handler já ligado, um `set_active_id` que emitisse à
-    toa faria a abertura da janela gravar sozinha.
-    """
+    """`set_active_id` de um id ausente é no-op, e não emite."""
     emitidos: list[str | None] = []
     busca = CampoDeBusca()
     busca.set_items([("02", "Cosmic Red")])
@@ -654,11 +428,6 @@ def test_a_busca_nao_grava_sozinha_o_que_ninguem_escolheu() -> None:
 
     busca.set_active_id("02")
     assert emitidos == ["02"], "o mesmo id duas vezes não é um segundo gesto"
-
-
-# ---------------------------------------------------------------------------
-# Dente 5 — o card do rádio não é mais alto que o card do cabo (LEX-5)
-# ---------------------------------------------------------------------------
 
 
 def _card(*, no_cabo: bool) -> Any:
@@ -686,12 +455,7 @@ def _card(*, no_cabo: bool) -> Any:
 
 
 def _altura(widget: Any) -> int:
-    """A altura pedida pelo widget, medida sob `Gtk.OffscreenWindow`.
-
-    **Nunca `Gtk.Window`**: sob Xvfb não há gerenciador de janelas, e uma
-    `Gtk.Window` fica 1x1 para sempre (`COMO-OLHAR-A-TELA.md`, armadilha 2). A
-    offscreen aloca de verdade e devolve a medida de verdade.
-    """
+    """A altura pedida pelo widget, medida sob `Gtk.OffscreenWindow`."""
     janela = Gtk.OffscreenWindow()
     janela.add(widget)
     janela.show_all()
@@ -702,17 +466,7 @@ def _altura(widget: Any) -> int:
 
 
 def test_o_card_no_radio_nao_e_mais_alto_que_o_card_no_cabo() -> None:
-    """A grade de oito botões encarecia a FILEIRA inteira de cards.
-
-    `grade.set_row_homogeneous(True)` (`secao_controles.py:945`) iguala as
-    fileiras: um card com três fileiras de botões de cor puxa para cima a altura
-    de todos os cards da mesma linha. Medido a olho na foto de 24/08, a barra "A
-    luz não acende" nascia ≈79px mais baixa nos cards do rádio.
-
-    MORDIDA: devolva o `SegmentedSelector(wrap=True)` de oito itens ao ramo sem
-    leitura de `_linha_da_cor` — reprova, e a mensagem imprime os dois números,
-    que é a medição exata que a sprint deixou aproximada.
-    """
+    """A grade de oito botões encarecia a FILEIRA inteira de cards."""
     no_cabo = _altura(_card(no_cabo=True))
     no_radio = _altura(_card(no_cabo=False))
     assert no_radio <= no_cabo, (
@@ -722,26 +476,10 @@ def test_o_card_no_radio_nao_e_mais_alto_que_o_card_no_cabo() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Dente 6 — o rodapé não guarda cópia do título da seção (LEX-1)
-# ---------------------------------------------------------------------------
-
-
 def test_o_rodape_nomeia_a_secao_lendo_o_titulo_dela(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Renomear a seção renomeia a frase do rodapé, sem tocar em `ipc_bridge`.
-
-    Até 25/08/2026 `_CAMPOS_DA_MAQUINA` guardava os rótulos por CÓPIA, com um
-    comentário dizendo que eles eram os `TITULO` de `app/actions/config/`. Eram,
-    mas por cópia — e as duas metades passavam em separado, então nenhum portão
-    via a divergência. Renomear "A mesa" sem tocar aqui faria o rodapé acusar a
-    perda de uma seção que a aba não tem.
-
-    MORDIDA (rodada em 25/08/2026): devolvi o dicionário literal
-    `{"mesa": "A mesa", ...}` a `ipc_bridge` — reprova dizendo que o rodapé
-    nomeia "A mesa" numa aba cuja seção se chama outra coisa.
-    """
+    """Renomear a seção renomeia a frase do rodapé, sem tocar em `ipc_bridge`."""
     monkeypatch.setattr(secao_mesa, "TITULO", "Conexões (dublê)")
     rotulos = ipc_bridge._rotulos_dos_campos()
     assert rotulos["mesa"] == "Conexões (dublê)", (
@@ -754,24 +492,7 @@ def test_o_rodape_nomeia_a_secao_lendo_o_titulo_dela(
 
 
 def test_o_rodape_nao_perde_o_campo_que_nao_tem_secao() -> None:
-    """`mapa` não é `TITULO` de seção nenhuma, e mesmo assim tem rótulo.
-
-    Ele mora numa janela que abre de dentro de "A mesa", e o rótulo nomeia o que
-    se PERDE — o desenho do gabinete —, não a seção de onde ele é aberto.
-
-    MORDIDA: tire `_ROTULOS_SEM_SECAO` da fusão em `_rotulos_dos_campos` — o
-    campo cai no nome cru `mapa` e o portão de cobertura do schema reprova.
-    """
-    # A RÉGUA PERGUNTA AO DONO (08/09/2026): esta linha DIGITAVA "O desenho da
-    # mesa" e virou vermelha quando o rótulo passou a dizer "das entradas" —
-    # "mesa" é palavra banida na tela por decisão dela (06/09). Digitar a frase
-    # dava um SEGUNDO dono a ela, que é exatamente o defeito que o dente 6
-    # acima existe para matar; o dono é `_ROTULOS_SEM_SECAO`.
-    #
-    # A MORDIDA CONTINUA DE PÉ, e não virou tautologia: o lado esquerdo é a
-    # FUSÃO e o direito é a FONTE. Tirando `_ROTULOS_SEM_SECAO` da fusão o
-    # campo cai no nome cru `mapa`, os dois deixam de casar e isto reprova —
-    # que é o que a docstring promete.
+    """`mapa` não é `TITULO` de seção nenhuma, e mesmo assim tem rótulo."""
     fundidos = ipc_bridge._rotulos_dos_campos()
     assert fundidos["mapa"] == ipc_bridge._ROTULOS_SEM_SECAO["mapa"]
     assert fundidos["mapa"] != "mapa", (
@@ -779,13 +500,6 @@ def test_o_rodape_nao_perde_o_campo_que_nao_tem_secao() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Dente 7 — as duas seções dizem a palavra DELA (LEX-1)
-# ---------------------------------------------------------------------------
-
-#: As duas palavras que ela mandou trocar, e o que cada uma virou. Elas são
-#: decisão dela, e o dente 6 acima já garante que o rodapé as segue sozinho —
-#: o que este par de constantes prende é a TROCA, não a derivação.
 RENOMES_DA_LEX_1: dict[str, str] = {
     "A mesa": "Conexões",
     "Orçamento": "Desempenho",
@@ -793,16 +507,7 @@ RENOMES_DA_LEX_1: dict[str, str] = {
 
 
 def test_as_duas_secoes_renomeadas_dizem_a_palavra_dela() -> None:
-    """"A mesa" virou "Conexões" e "Orçamento" virou "Desempenho".
-
-    A primeira porque a casa já usava "a mesa" para o CONJUNTO DE CONTROLES, e
-    a seção fala de adaptadores, rádios e entradas do gabinete: duas coisas com
-    um nome só é o que faz a pessoa procurar controle na seção errada. A
-    segunda é a `D-PERFIL-DE-DESEMPENHO`, que trocou um teto por um perfil.
-
-    MORDIDA: devolva `TITULO = "A mesa"` a `secao_mesa` — reprova nomeando a
-    palavra velha e a seção.
-    """
+    """"A mesa" virou "Conexões" e "Orçamento" virou "Desempenho"."""
     titulos = {
         secao.__name__.rsplit(".", 1)[-1]: secao.TITULO for secao in SECOES_DA_ABA
     }
@@ -823,21 +528,8 @@ def test_as_duas_secoes_renomeadas_dizem_a_palavra_dela() -> None:
     assert titulos["secao_orcamento"] == "Desempenho"
 
 
-# ---------------------------------------------------------------------------
-# Dente 8 — as duas perguntas de rádio em português de gente (LEX-9)
-# ---------------------------------------------------------------------------
-
-#: As palavras que ela disse não entender: *"Eu não sei o que é altura da
-#: antena. nem linha de visada. sinceramente não faço ideia."* (24/08/2026).
 JARGAO_DAS_DUAS_PERGUNTAS = ("antena", "visada")
 
-#: O que cada botão TEM de gravar, depois da troca de redação. É a metade que
-#: impede a reescrita de virar quebra de esquema: `MesaDeclarada` usa `Literal`
-#: com `extra="forbid"`, e um valor novo faria o pydantic recusar o DOCUMENTO
-#: INTEIRO de quem já declarou — o sintoma seria "não consegui gravar".
-#:
-#: A INVERSÃO DA SEGUNDA É DE PROPÓSITO: a pergunta trocou de sinal ("Tem gente
-#: sentada entre o dongle e o sofá?"), então "Sim" grava `com_gente`.
 VALORES_QUE_NAO_MUDAM: dict[str, dict[str, str]] = {
     "altura_da_antena": {"Sim": "acima", "Não": "abaixo", "Não sei": "nao_sei"},
     "linha_de_visada": {"Sim": "com_gente", "Não": "livre", "Não sei": "nao_sei"},
@@ -852,13 +544,7 @@ class _HospedeiroDaMesa:
 
 
 def _declaracoes_montadas() -> tuple[Any, Any]:
-    """`(host, caixa)` com as duas perguntas desenhadas, sem tocar o `/sys`.
-
-    Os três desvios são os do portão vizinho
-    (`test_a_mesa_guarda_o_que_ela_declarou.py:86-99`): sem eles a seção varre
-    o barramento desta máquina e o resultado passa a depender do que está
-    espetado no PC de quem roda.
-    """
+    """`(host, caixa)` com as duas perguntas desenhadas, sem tocar o `/sys`."""
     from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
 
@@ -871,16 +557,7 @@ def _declaracoes_montadas() -> tuple[Any, Any]:
 
 
 def test_as_duas_perguntas_de_radio_nao_falam_antena_nem_visada() -> None:
-    """A redação da `D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO`, na tela.
-
-    O CONTEÚDO não sai — subir o adaptador 40 cm costuma render mais que
-    aproximá-lo 5 m, e é isso que as duas perguntas colhem. O que
-    sai é o jargão: palavra que a pessoa teria de pesquisar é defeito, não
-    precisão.
-
-    MORDIDA: devolva `"Altura da antena:"` ao primeiro `_linha_declarada` —
-    reprova nomeando a palavra e o texto inteiro.
-    """
+    """A redação da `D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO`, na tela."""
     _host, caixa = _declaracoes_montadas()
     falados = [
         texto
@@ -907,28 +584,13 @@ def test_as_duas_perguntas_de_radio_nao_falam_antena_nem_visada() -> None:
 
 
 def test_a_redacao_nova_grava_os_mesmos_valores_de_esquema() -> None:
-    """Trocar a palavra do botão não pode trocar o valor que vai ao disco.
-
-    MORDIDA: troque `("acima", "Sim")` por `("sim", "Sim")` no
-    `_declaracoes` — reprova nomeando a chave e o valor gravado. E é a metade
-    que importa: com o valor errado o pydantic recusa o documento INTEIRO dela,
-    e o sintoma na tela é "não consegui gravar", nunca "valor inválido".
-
-    A SEGUNDA PERGUNTA TROCOU DE SINAL, e o teste cobra a inversão: "Livre"
-    virou "Não". Manter a ordem antiga gravaria o oposto do que ela respondeu,
-    e nada na tela denunciaria.
-    """
+    """Trocar a palavra do botão não pode trocar o valor que vai ao disco."""
     from hefesto_dualsense4unix.app.widgets.segmented_selector import (
         SegmentedSelector,
     )
 
     for chave, esperado in VALORES_QUE_NAO_MUDAM.items():
         _host, caixa = _declaracoes_montadas()
-        # As fileiras vêm na ordem do desenho — altura primeiro, visada depois.
-        # `get_children()` e não `_descer`: aquele empilha e desempilha, então
-        # devolve a árvore ao contrário, e o teste leria a segunda pergunta
-        # achando que lê a primeira. Foi assim que este próprio teste reprovou
-        # na primeira rodada, em 26/08/2026.
         fileiras = list(caixa.get_children())
         assert len(fileiras) == len(VALORES_QUE_NAO_MUDAM), (
             f"a caixa das declarações tem {len(fileiras)} fileira(s) e as "

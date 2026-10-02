@@ -72,7 +72,6 @@ class _Handle:
         preamp: int | None = None,
     ) -> None:
         # Mesma disciplina de posse por byte do `_PinnedPyDualSense`: campo
-        # omitido (None) NÃO vira dono.
         for pos, valor in enumerate((headphone, speaker, microphone, audio_path)):
             if valor is not None:
                 self._volumes_audio[pos] = int(valor)
@@ -102,22 +101,8 @@ def _backend_com_um_handle() -> tuple[PyDualSenseController, _Handle]:
     return inst, handle
 
 
-# ---------------------------------------------------------------------------
-# 1. a adoção escreve, e escreve nos bytes certos
-# ---------------------------------------------------------------------------
-
-
 def test_a_adocao_toma_a_posse_e_poe_o_som_em_cem_por_cento() -> None:
-    """Sem clique nenhum, o controle adotado já sai com volume 100%.
-
-    Este é o coração da cura: antes dela, um controle recém-plugado ficava com
-    `_volumes_audio` em `[None, None, None, None]` até alguém abrir a janela e
-    mexer num controle deslizante — e, enquanto isso, o alto-falante ficava
-    mudo (ensaio `sfx-cabo-sem-posse`, o "nenhum" dela).
-
-    MORDIDA: apagar a chamada a `_escrever_volume_no_handle` de
-    `assumir_volume_padrao_na_adocao`.
-    """
+    """Sem clique nenhum, o controle adotado já sai com volume 100%."""
     inst, handle = _backend_com_um_handle()
 
     assert handle._volumes_audio == [None, None, None, None], (
@@ -131,16 +116,7 @@ def test_a_adocao_toma_a_posse_e_poe_o_som_em_cem_por_cento() -> None:
 
 
 def test_o_fone_vai_junto_porque_ele_manda_por_cima_da_rota() -> None:
-    """Fone e alto-falante recebem o MESMO valor, e isso é medição, não simetria.
-
-    Ensaio `sfx-o-fone-manda-por-cima` (15/08, par com/sem completo): com a
-    MESMA rota e o MESMO canal, o som sai no fone quando há fone e no
-    alto-falante quando não há. Se a cura pusesse só o alto-falante em 100% e
-    deixasse o fone em zero, ela silenciaria exatamente quem plugasse um
-    headset — o caso que o produto mais promete atender.
-
-    MORDIDA: passar `headphone=None` na escrita.
-    """
+    """Fone e alto-falante recebem o MESMO valor, e isso é medição, não simetria."""
     inst, handle = _backend_com_um_handle()
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
@@ -150,28 +126,7 @@ def test_o_fone_vai_junto_porque_ele_manda_por_cima_da_rota() -> None:
 
 
 def test_o_microfone_continua_sem_dono_na_adocao() -> None:
-    """A posse é POR BYTE, e a adoção toma só os que ela precisa.
-
-    `common[6]` é o volume do microfone, cujo dono no Linux é o kernel
-    (AUDIO-OWNER-01). "O som em 100%" não autoriza tocar nele.
-
-    **A ROTA SAIU DESTE CASO EM 16/09/2026 — SOM-ROTA-02, e a decisão de 16/08
-    não se apaga: ela ganha esta nota.** Este teste dizia
-    `handle._volumes_audio[3] is None`, "a rota carrega o caminho do mic", e a
-    premissa era que não escrever fosse o lado neutro. **Não é.** O default do
-    firmware é `SAIDA_ESTEREO_NO_FONE` — não escrever a rota É escolher o fone,
-    e o conector está vazio. Medido com ela do lado do controle em 16/09: os
-    100% desta cura iam inteiros para lugar nenhum e o alto-falante nascia
-    mudo. Mesmo tom, sem rota: nada; com a rota escrita: *"Saiu som"*.
-
-    A prudência que ditava a omissão continua valendo e virou asserção na régua
-    nova (`test_som_rota_02_...::test_os_bits_do_microfone_sobrevivem`): a
-    escrita usa `OUTPUT_PATH_SEL_MASK` e preserva o `FORCE_INTERNAL_MIC` que a
-    regressão de 02/08 apagou.
-
-    MORDIDA: passar `microphone=...` na chamada da adoção — apaga o
-    `FORCE_INTERNAL_MIC` e o microfone do controle para de captar, em silêncio.
-    """
+    """A posse é POR BYTE, e a adoção toma só os que ela precisa."""
     inst, handle = _backend_com_um_handle()
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
@@ -180,15 +135,7 @@ def test_o_microfone_continua_sem_dono_na_adocao() -> None:
 
 
 def test_o_pre_amplificador_entra_na_mesma_posse() -> None:
-    """Volume sem pré-amp é um de três botões — e foi o que deixou 60% do curso inerte.
-
-    SOM-ROTA-01 já tinha estabelecido que quem assume o volume assume o
-    `common[37]`. A adoção usa a MESMA porta, então herda a regra de graça — e
-    este teste é o que impede alguém de "simplificar" a adoção escrevendo
-    direto no `set_audio_volumes` sem o pré-amp.
-
-    MORDIDA: tirar `preamp=` da escrita compartilhada.
-    """
+    """Volume sem pré-amp é um de três botões — e foi o que deixou 60% do curso inerte."""
     inst, handle = _backend_com_um_handle()
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
@@ -196,49 +143,20 @@ def test_o_pre_amplificador_entra_na_mesma_posse() -> None:
     assert handle._preamp_audio == rep.SP_PREAMP_GAIN_PADRAO
 
 
-# ---------------------------------------------------------------------------
-# 2. o número: 100% é o da régua única, não um literal
-# ---------------------------------------------------------------------------
-
-
 def test_o_cem_por_cento_e_o_da_regua_unica_e_relê_cem_na_tela() -> None:
-    """O default sai de `speaker_scale`, e volta como 100% na aba Status.
-
-    Se ele fosse um literal, a tela nasceria mostrando um número que ninguém
-    conseguiria reproduzir arrastando o controle deslizante até o fim — duas
-    contas para a mesma grandeza, que é a classe de defeito que a SOM-03 já
-    pagou uma vez.
-
-    MORDIDA: trocar `volume_do_percentual(100)` por `255` (ou por `0x64`).
-    """
+    """O default sai de `speaker_scale`, e volta como 100% na aba Status."""
     assert volume_do_percentual(100) == VOLUME_PADRAO_DO_SOM
     assert percentual_do_volume(VOLUME_PADRAO_DO_SOM) == 100
 
 
 def test_o_default_nao_e_255_nem_0x64_e_a_curva_medida_e_a_razao() -> None:
-    """102, e não 255: de 102 para cima a curva medida em 01/08 não muda mais.
-
-        51 -> 35    64 -> 172    76 -> 687
-       102 -> 8759  128 -> 8488  255 -> 8793
-
-    Escrever 255 é escrever fora da faixa que o firmware usa na prática (a
-    documentação do report 0x02 anota `0x3D..0x64`) para obter exatamente o
-    mesmo som. E 0x64 — o que o `hid-playstation` escreve — fica dois passos
-    abaixo da saturação medida AQUI e leria 97% na tela, não 100%.
-
-    MORDIDA: qualquer um dos dois outros números reprova aqui.
-    """
+    """102, e não 255: de 102 para cima a curva medida em 01/08 não muda mais."""
     assert VOLUME_PADRAO_DO_SOM == 102
     assert VOLUME_PADRAO_DO_SOM != rep.TETO_SPEAKER_VOLUME
     assert VOLUME_PADRAO_DO_SOM <= rep.TETO_HEADPHONE_VOLUME, (
         "o fone recebe o mesmo valor e satura em 0x7F — acima disso o clamp "
         "por campo faria fone e alto-falante divergirem em silêncio"
     )
-
-
-# ---------------------------------------------------------------------------
-# 3. a MORDIDA principal: o caminho de adoção do backend
-# ---------------------------------------------------------------------------
 
 
 def _connect_com_handles_falsos(
@@ -262,7 +180,6 @@ def _connect_com_handles_falsos(
 
     monkeypatch.setattr(inst, "_enumerate_device_keys", _enumerar)
     monkeypatch.setattr(inst, "_open_one", _abrir)
-    # Fora do escopo desta cura, e caros/ruidosos sem aparelho.
     monkeypatch.setattr(inst, "_refresh_sysfs_leds", lambda: None)
     monkeypatch.setattr(inst, "_reapply_desired", lambda key, handle: None)
     monkeypatch.setattr(inst, "reassert_resolved_outputs", lambda: None)
@@ -296,13 +213,7 @@ def test_o_connect_poe_o_som_em_cem_em_todo_controle_que_ele_adota(
 def test_vale_para_os_sete_controles_e_nao_so_para_o_primeiro(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """UNIVERSAL: nada por MAC, nada por ordem de conexão, nenhum número mágico.
-
-    MORDIDA: escrever só no primário (`self._primary_key`) em vez de em cada
-    handle novo — o P1 soaria e os outros seis ficariam mudos, que é o defeito
-    de multi-controle mais difícil de perceber (ninguém desconfia do silêncio
-    do controle do outro).
-    """
+    """UNIVERSAL: nada por MAC, nada por ordem de conexão, nenhum número mágico."""
     inst = _backend_sem_hardware()
     chaves = [f"AA:BB:CC:00:00:{n:02d}" for n in range(1, 8)]
 
@@ -316,25 +227,7 @@ def test_vale_para_os_sete_controles_e_nao_so_para_o_primeiro(
 def test_o_controle_que_chega_numa_mesa_ja_online_tambem_nasce_em_cem(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Todo controle adotado nasce em 100%, inclusive o 2º numa mesa online.
-
-    **FATO ERRADO, SUBSTITUÍDO — 16/09/2026.** Aqui se lia que
-    `reapply_speaker_after_connect` *"só corre na TRANSIÇÃO offline→online do
-    daemon"* e que por isso o segundo controle "nascia mudo". A primeira metade
-    caiu com a BORDA-DE-QUEDA-01: há um ramo POR ALVO
-    (`daemon/connection.py:707` → `anunciar_bordas_por_alvo` →
-    `reapply_speaker_after_connect(uniq=…)`) que cobre a chave nova sem
-    transição agregada. A segunda guarda — exigir a seção `speaker` GLOBAL —
-    era real e foi o defeito da SOM-ROTA-03, curado em
-    `profiles/manager.reapply_speaker_on_connect`.
-
-    O que este caso trava continua de pé e é o que importa: a adoção é o PISO
-    universal. Ela vale para o 1º e para o 7º controle, com perfil ou sem
-    perfil nenhum — e é a única coisa que responde por quem não tem perfil.
-
-    MORDIDA: mover a escrita para o gancho de transição do daemon; o segundo
-    handle deste teste volta a nascer sem dono.
-    """
+    """Todo controle adotado nasce em 100%, inclusive o 2º numa mesa online."""
     inst = _backend_sem_hardware()
 
     _connect_com_handles_falsos(inst, monkeypatch, ["AA:BB:CC:00:00:01"])
@@ -348,22 +241,13 @@ def test_o_controle_que_chega_numa_mesa_ja_online_tambem_nasce_em_cem(
 def test_a_adocao_nao_reescreve_handle_que_ja_estava_na_mesa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quem já está conectado NÃO tem o volume reescrito a cada tique de hotplug.
-
-    O `connect()` é o tique de reconciliação e roda a cada poucos segundos. Se
-    a adoção escrevesse em TODO handle, ela desfaria a cada tique o volume que
-    ela acabou de escolher na janela — a versão áudio do defeito que o
-    keepalive de LED já causou nesta casa.
-
-    MORDIDA: trocar o laço de `new_handles` por um laço de `self._handles`.
-    """
+    """Quem já está conectado NÃO tem o volume reescrito a cada tique de hotplug."""
     inst = _backend_sem_hardware()
 
     criados = _connect_com_handles_falsos(
         inst, monkeypatch, ["AA:BB:CC:00:00:01"]
     )
     handle = criados["AA:BB:CC:00:00:01"]
-    # Ela baixa o volume na janela, com o controle já na mesa.
     inst._handles = {"AA:BB:CC:00:00:01": handle}  # type: ignore[dict-item]
     inst._primary_key = "AA:BB:CC:00:00:01"
     inst.set_speaker_volume(60)
@@ -377,21 +261,8 @@ def test_a_adocao_nao_reescreve_handle_que_ja_estava_na_mesa(
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. quem tem opinião continua vencendo
-# ---------------------------------------------------------------------------
-
-
 def test_o_pedido_explicito_vence_o_padrao_da_adocao() -> None:
-    """Perfil, janela e linha de comando escrevem DEPOIS, e por cima.
-
-    A adoção é um piso, não uma trava: ela existe para que o silêncio deixe de
-    ser o default, e não para tirar dela a escolha. O `speaker volume 40`
-    continua valendo 40.
-
-    MORDIDA: fazer a adoção grampear o volume (recusar escrita menor que o
-    padrão) — este teste reprova.
-    """
+    """Perfil, janela e linha de comando escrevem DEPOIS, e por cima."""
     inst, handle = _backend_com_um_handle()
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
@@ -404,16 +275,7 @@ def test_o_pedido_explicito_vence_o_padrao_da_adocao() -> None:
 
 
 def test_o_mudo_passa_a_funcionar_de_primeira_por_causa_da_adocao() -> None:
-    """Efeito colateral BOM, e ele merece um teste: `speaker mute` deixa de ser recusado.
-
-    A guarda da SOM-02 recusa `muted` sem volume conhecido — mudo como
-    primeira escrita trancaria o controle em `{'volume': 0, 'muted': True}`
-    sem nada a restaurar. Com a adoção, todo controle já tem volume conhecido,
-    então o botão de mudo funciona desde o primeiro clique.
-
-    MORDIDA: a mesma da adoção — sem ela, `set_speaker_volume(muted=True)`
-    devolve False e não muta nada.
-    """
+    """Efeito colateral BOM, e ele merece um teste: `speaker mute` deixa de ser recusado."""
     inst, handle = _backend_com_um_handle()
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
@@ -429,23 +291,8 @@ def test_o_mudo_passa_a_funcionar_de_primeira_por_causa_da_adocao() -> None:
     assert handle._volumes_audio[1] == VOLUME_PADRAO_DO_SOM
 
 
-# ---------------------------------------------------------------------------
-# 5. a interface: a aba Status deixa de esconder o módulo
-# ---------------------------------------------------------------------------
-
-
 def test_o_alto_falante_passa_a_aparecer_na_aba_status() -> None:
-    """"Tudo chega na interface" — e aqui chega sem tocar em uma linha de `app/`.
-
-    `speaker_state_for` devolve `None` enquanto ninguém escreveu o volume, e
-    `app/widgets/controller_card.speaker_do_entry` faz o módulo inteiro SUMIR
-    quando a chave falta. Com a adoção, todo controle conectado publica o
-    bloco `speaker` — o card mostra a barra em 100% e o botão de mudo, que é a
-    "config default" que ela pediu na aba de status.
-
-    MORDIDA: a da adoção. Sem ela o payload volta a não ter a chave `speaker`
-    e o módulo some da tela de novo.
-    """
+    """"Tudo chega na interface" — e aqui chega sem tocar em uma linha de `app/`."""
     inst, handle = _backend_com_um_handle()
 
     assert inst.speaker_state_for() is None, (
@@ -459,18 +306,9 @@ def test_o_alto_falante_passa_a_aparecer_na_aba_status() -> None:
         "muted": False,
         "rota": ROTA_PADRAO_DO_SOM,
     }
-    # SOM-ROTA-02 (16/09/2026): esta asserção dizia `"rota" not in ...`, "a rota
-    # continua sendo 'não dá para saber' — a adoção não a escreveu". Invertida:
-    # é justamente por ninguém a escrever que o alto-falante nascia mudo, e a
-    # aba Status mostrava 100% sobre um controle calado.
     assert inst.speaker_state_for()["rota"] == ROTA_PADRAO_DO_SOM, (
         "a aba Status sabe para onde o som está indo"
     )
-
-
-# ---------------------------------------------------------------------------
-# 6. o preço, e o que a devolução da posse faz de verdade
-# ---------------------------------------------------------------------------
 
 
 def _handle_real_de_report() -> Any:
@@ -496,13 +334,7 @@ def _handle_real_de_report() -> Any:
 
 
 def test_o_report_carrega_os_cem_por_cento_com_o_bit_de_validacao_ligado() -> None:
-    """O fio, e não só o estado: o byte sai no report E o firmware é autorizado a lê-lo.
-
-    Byte escrito com o bit de validação apagado é byte que o firmware IGNORA —
-    o pior sintoma possível, porque o log diz "escrito" e o som não sai.
-
-    MORDIDA: apagar o `flag0 |= bit` de `_build_common`.
-    """
+    """O fio, e não só o estado: o byte sai no report E o firmware é autorizado a lê-lo."""
     inst = _backend_sem_hardware()
     handle = _handle_real_de_report()
     inst._handles = {"AA:BB:CC:00:00:01": handle}
@@ -516,10 +348,6 @@ def test_o_report_carrega_os_cem_por_cento_com_o_bit_de_validacao_ligado() -> No
     assert common[0] & 0x10, "o bit de validação do fone"
     assert common[0] & 0x20, "o bit de validação do alto-falante"
     assert common[0] & 0x40 == 0, "o microfone continua do kernel"
-    # SOM-ROTA-02 (16/09/2026): esta linha dizia `== 0`, "a rota continua sem
-    # dono". Invertida com a razão medida — sem o `VALID_FLAG0_AUDIO_PATH`
-    # ligado o firmware IGNORA o `common[7]` e fica no default dele, que é o
-    # fone vazio. O bit aceso é o que faz o alto-falante nascer audível.
     assert common[0] & 0x80, "a rota tem dono e o firmware pode lê-la"
     assert (common[7] & 0x30) >> 4 == ROTA_PADRAO_DO_SOM, "«Sons do jogo»"
 

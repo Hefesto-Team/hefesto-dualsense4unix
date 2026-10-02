@@ -1,33 +1,4 @@
 """vigia_do_laco.py — o laço do serviço que para se denuncia (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01).
-
-O QUE SE MEDIU, 30/09/2026, na madrugada dela: o serviço respondia aos trancos
-desde 01h08, parou de vez às 01h12:38 e ficou 3 min 30 s sem uma linha no
-diário; a fila do soquete encheu (551 ``[Errno 11]`` na janela) e o SIGTERM do
-install, que o laço asyncio atende (``lifecycle.py``, o
-``add_signal_handler``), esperou 90 s até o SIGKILL. O laço estava parado, e
-nada dizia ONDE. O que o parou não está provado: o serviço não deixou rastro.
-
-A VIGIA TEM TRÊS PEÇAS, e a terceira é a que o indício pede (as linhas das
-01h13 chegaram ao diário 0,3 a 0,9 s depois da hora que elas mesmas carimbam —
-quem escrevia esperou, e esperar o GIL é um dos jeitos):
-
-1. **a batida** — uma tarefa do laço que guarda a hora (``monotonic``) a cada
-   ``passo_s``;
-2. **o olho** — um fio de Python que olha a batida a cada ``passo_s`` e escreve
-   ``laco_parado`` (uma vez por parada) e ``laco_voltou`` no diário do serviço;
-3. **o relógio de C** — o ``faulthandler.dump_traceback_later``, rearmado a
-   cada batida. Ele escreve a pilha de TODOS os fios no ``stderr`` (que é o
-   ``journalctl``) sem precisar do GIL: pega o laço parado por um fio que
-   segura o GIL, que o olho de Python não pegaria.
-
-A pilha diz arquivo, linha e função, sem valor de variável: nenhum endereço de
-aparelho vai ao diário. Nada de IPC, de aparelho ou de sudo. Ela não é um
-subsistema do ``lifecycle``: mora em ``daemon/subsystems/`` só pela vizinhança,
-e quem a liga é o ``run_daemon`` (``daemon/main.py``), em volta do
-``daemon.run()``.
-
-A CURA DO TRAVAMENTO EM SI é da sprint que a pilha apontar: na próxima vez que o
-serviço parar, o ``journalctl`` diz onde, sem ninguém precisar estar olhando.
 """
 from __future__ import annotations
 
@@ -44,9 +15,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Quanto a batida pode atrasar antes de o laço ser dado por parado.
 LIMITE_S = 10.0
-#: De quanto em quanto tempo a batida bate e o olho olha.
 PASSO_S = 1.0
 
 T = TypeVar("T")
@@ -79,7 +48,6 @@ class VigiaDoLaco:
         self._fio: threading.Thread | None = None
         self._tarefa: asyncio.Task[None] | None = None
 
-    # -- o relógio de C ---------------------------------------------------------
 
     def _armar(self) -> None:
         """Rearma o relógio de C: a pilha sai se a próxima batida não vier no limite."""
@@ -88,7 +56,6 @@ class VigiaDoLaco:
             faulthandler.dump_traceback_later(
                 self.limite_s, repeat=False, file=self._saida or sys.stderr)
 
-    # -- a batida ----------------------------------------------------------------
 
     async def _bater(self) -> None:
         while not self._parar.is_set():
@@ -96,7 +63,6 @@ class VigiaDoLaco:
             self._armar()
             await asyncio.sleep(self.passo_s)
 
-    # -- o olho ------------------------------------------------------------------
 
     def olhar(self) -> None:
         """UMA olhada na batida: diz a parada uma vez, e a volta quando ela vem."""
@@ -115,10 +81,9 @@ class VigiaDoLaco:
         while not self._parar.wait(self.passo_s):
             try:
                 self.olhar()
-            except Exception:  # o olho nunca derruba o serviço
+            except Exception:
                 logger.warning("vigia_do_laco_levantou", exc_info=True)
 
-    # -- ligar e desligar ----------------------------------------------------------
 
     def ligar(self) -> None:
         """Liga as três peças. Chamado DE DENTRO do laço que ela vigia."""

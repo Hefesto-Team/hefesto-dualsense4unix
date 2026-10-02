@@ -74,12 +74,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-#: A ESCADA. Os quatro primeiros decidem a pergunta dela; o `255` é o teto do
-#: `u8` e existe para separar "ignora o que não conhece" de "satura em aceso".
-#:
-#: O `2` está aqui por uma razão de fora desta casa: em vários aparelhos da
-#: família o terceiro estado do LED de mudo é PISCAR. Se ele piscar, a decisão
-#: dela ganha uma terceira palavra de graça.
 ESCADA: tuple[tuple[int, str], ...] = (
     (0, "apagado — o piso, e a prova de que a escrita chega"),
     (1, "aceso — o único valor que o driver conhece"),
@@ -100,12 +94,6 @@ def _controle_do_cabo(uniq_pedido: str | None) -> tuple[str | None, str]:
     if uniq_pedido:
         return uniq_pedido, "escolhido na linha de comando"
 
-    # Quem responde é o DAEMON, e não o `comum`, por uma razão medida em
-    # 02/09/2026: os dois falam vocabulários diferentes. O `comum` devolve o MAC
-    # com dois-pontos e chama o transporte de `cabo`; o daemon devolve o `uniq`
-    # SEM os dois-pontos e chama de `usb`. Pedir com o formato do `comum` não dá
-    # erro — dá `sem_controle`, que se lê como "não há controle na mesa" quando
-    # o que houve foi um endereço que não casa com handle nenhum.
     lista = asyncio.run(_listar())
     cabo = [x for x in lista if x.get("connected") and x.get("transport") == "usb"]
     if cabo:
@@ -175,9 +163,6 @@ def main() -> int:
             marca = "  " if estado == "ok" else " ! "
             print(f"{marca}common[8] = {valor:<3d}  {porque}"
                   f"{'' if estado == 'ok' else f'   [{estado}]'}", flush=True)
-            # `time.sleep` e não `asyncio.sleep`: cada degrau é uma conexão IPC
-            # própria e curta, de propósito — assim uma queda do daemon no meio
-            # aparece como UM degrau falhando, e não como o ensaio inteiro morto.
             import time
             time.sleep(args.pausa)
     except KeyboardInterrupt:

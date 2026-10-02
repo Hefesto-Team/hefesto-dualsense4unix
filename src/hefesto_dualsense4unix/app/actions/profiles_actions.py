@@ -73,49 +73,16 @@ from hefesto_dualsense4unix.utils.markup import escapar_markup
 
 logger = get_logger(__name__)
 
-# Mapeamento radio-id -> chave de preset
-# R-12 (auditoria 23/07): "steam_game" entrou porque o editor simples não tinha
-# como expressar "este perfil é DESTE jogo da Steam" — e é a única regra que o
-# autoswitch reconhece como regra de jogo (R-01, `perfil_e_regra_de_jogo` exige
-# `window_class` com a `steam_app_<id>` em foco) e a única chave do `.env` por
-# appid do launch_env.
 #
-# ONDA5-10-01 (06/09/2026): "janela" é a SEXTA forma — uma `wm_class` só, que é
-# o que o detector de janela entrega para jogo de FORA da Steam. Ela entra aqui
-# porque `_select_radio` cai em "any" para todo id que não esteja nesta tupla:
-# um perfil de janela abriria mostrando "Qualquer", que é o rebaixamento que o
-# R-12 existe para impedir.
 _RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game",
               "steam_game", "janela")
 
-#: R-12: ids do seletor que exigem o campo livre preenchido.
-#:
-#: "janela" entrou em 06/09/2026 com a sexta forma, e não é zelo: sem ele
-#: `_populate_editor` cai no ramo do `else` e escreve `""` no campo livre — o
-#: perfil TEM classe no disco e a tela abriria vazia sobre ela, que é o defeito
-#: que o R-12 já cobrou uma vez do `steam_game`.
 _IDS_COM_CAMPO_LIVRE = ("game", "steam_game", "janela")
 
-#: Teto da escala de prioridade, com dono em `profiles/schema.py` — é lá que se
-#: muda, e é lá que está a história do número (PERFIL-NASCE-CERTO-01, entrega
-#: 2, item 1: 100 -> 200). O glade tem de acompanhar na mão (`upper` do
-#: `profile_priority_adj`), e há portão que reprova a divergência.
-#:
-#: UNIFICA-CONSTANTE-01 (05/08/2026): era um `200` escrito aqui, e este módulo
-#: era a "fonte" que `profiles/sanidade.py` e o comentário do glade citavam —
-#: sem nenhum portão ligando os dois primeiros. Vira reexport em vez de sumir
-#: porque `pa.PRIORIDADE_MAXIMA` é o nome que os testes da aba Perfis usam.
 PRIORIDADE_MAXIMA = _schema.PRIORIDADE_MAXIMA
 
-#: PERFIL-NASCE-CERTO-01 (entrega 1): folga com que um perfil recém-nascido de
-#: JOGO passa por cima do catch-all mais alto do disco. Dez pontos deixam
-#: espaço para ela ajustar para os dois lados sem empatar por acidente.
 _FOLGA_ACIMA_DO_CATCH_ALL = 10
 
-#: R-12: placeholder/tooltip do campo livre por escolha — o glade tem um só
-#: rótulo ("Nome do jogo:") para dois significados MUITO diferentes. Sem isto,
-#: "Jogo específico" continuaria pedindo em silêncio o basename do executável,
-#: que em jogo Proton é o binário do wine e nunca é o nome do jogo.
 _CAMPO_LIVRE_DICAS: dict[str, tuple[str, str]] = {
     "game": (
         "ex.: eldenring",
@@ -123,9 +90,6 @@ _CAMPO_LIVRE_DICAS: dict[str, tuple[str, str]] = {
         "Em jogo da Steam/Proton isso costuma ser o binário do wine — nesse "
         "caso use \"Jogo da Steam\".",
     ),
-    # JOGO-QUE-SE-DIZ-01 (13/08/2026): o placeholder passou a dizer as TRÊS
-    # formas que o campo entende, porque agora são três. Antes ele pedia o
-    # número cru — o único dado que ninguém tem em mãos.
     "steam_game": (
         "nome do jogo, endereço da loja, ou o número (ex.: 1599660)",
         "Digite o nome do jogo e escolha na lista dos que estão nesta máquina, "
@@ -133,9 +97,6 @@ _CAMPO_LIVRE_DICAS: dict[str, tuple[str, str]] = {
         "(store.steampowered.com/app/…), ou escreva o número direto. Com o "
         "jogo aberto, o campo é preenchido sozinho.",
     ),
-    # ONDA5-10-01 (06/09/2026): a sexta forma pede um TERCEIRO significado para
-    # o mesmo campo — a classe da janela do jogo. Sem esta linha o campo herda
-    # o placeholder da escolha anterior, que pede outra coisa.
     "janela": (
         "ex.: GrimFandango",
         "A classe da janela do jogo — o que o detector de janela do Hefesto "
@@ -144,15 +105,7 @@ _CAMPO_LIVRE_DICAS: dict[str, tuple[str, str]] = {
     ),
 }
 
-# FEAT-DSX-COMBO-TO-SEGMENTED-01: itens do seletor "Aplica a:" (id, rótulo curto).
-# Antes vinham do `<items>` do GtkComboBoxText no Glade; agora alimentam o
-# SegmentedSelector no código. Rótulos curtos para caber na aba; o contexto
-# completo fica no tooltip do seletor.
-#
-# ONDA5-10-01 (06/09/2026): a OITAVA linha é a sexta forma, "janela". O rótulo é
 # o MESMO da interface nova (`perfis_web.AMBIENTE_DO_PRESET["janela"]`) de
-# propósito: duas telas que chamam a mesma regra por nomes diferentes obrigam
-# quem lê a decidir se são a mesma coisa.
 _APLICA_A_ITEMS: list[tuple[str, str]] = [
     ("any", "Qualquer"),
     ("steam", "Steam"),
@@ -164,104 +117,33 @@ _APLICA_A_ITEMS: list[tuple[str, str]] = [
     ("janela", "Jogo (pela janela)"),
 ]
 
-# FEAT-PROFILE-MODE-GUI-01: itens da seção "Modo" do editor (id, rótulo curto).
-# "none" = perfil SEM a seção `mode` (ativar não mexe no modo do sistema);
-# os demais ids espelham ProfileModeConfig.kind.
-# UX-MODE-TERMS-01: mesmos rótulos da aba Início (ação da usuária, sem jargão).
-# UX-MODE-TERMS-02 (06/08/2026): "Jogar direto (Sony)" virou "Conexão Nativa
-# (Sony)" por decisão dela — a nota completa está na frase-dona, em
-# `home_actions._MODE_ITEMS`. O id `native` NÃO muda: é chave de perfil.
 _MODE_KIND_ITEMS: list[tuple[str, str]] = [
-    # LEIGO-06: "Sem opinião" é o programa se descrevendo por dentro (o perfil
-    # sem a seção `mode`). O rótulo diz o que ATIVAR o perfil faz — ou melhor,
-    # o que ele NÃO faz.
     ("none", "Não mexer no modo"),
     ("desktop", "Controlar o PC"),
     ("gamepad", "Jogar pelo Hefesto"),
     ("native", "Conexão Nativa (Sony)"),
 ]
 
-#: O `kind` que esta aba OFERECE e que o rádio pode não aguentar. Sai da lista
-#: acima de propósito: o dia em que o id mudar, muda nos dois lugares juntos.
 _KIND_NATIVO = "native"
 
 
 def frase_do_radio_fragil_no_modo(kind: object, state: Any) -> str | None:
-    """O aviso de rádio frágil, **quando o modo escolhido aqui é o Nativo**.
-
-    PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/8 (24/08/2026), medido:
-
-        $ grep -rln "native_bt_fragil" src/hefesto_dualsense4unix/app/
-        src/hefesto_dualsense4unix/app/actions/home_actions.py
-
-    **Um arquivo só.** E é ESTA aba que oferece "Conexão Nativa (Sony)" como um
-    dos quatro botões do editor, sem uma palavra sobre o limite do SDL —
-    inclusive num perfil de co-op, onde Modo Nativo com dois ou mais controles
-    no rádio é exatamente a pergunta que ninguém mediu.
-
-    **A frase é a MESMA da Início, e vem de lá** (`texto_do_radio_fragil`).
-    Escrever uma segunda aqui daria o nono par da F5 na mesma noite em que oito
-    estão sendo curados — e o teste desta função afirma IGUALDADE com a da
-    outra aba, não semelhança.
-
-    O que é próprio daqui é só o gatilho: fora do Modo Nativo o editor cala,
-    porque o aviso fala do modo que ela está escolhendo, não do que o sistema
-    está fazendo agora — esse já tem banner na Início.
-    """
+    """O aviso de rádio frágil, **quando o modo escolhido aqui é o Nativo**."""
     if kind != _KIND_NATIVO:
         return None
     return texto_do_radio_fragil(state if isinstance(state, dict) else None)
 
 
-# Máscara do gamepad virtual (só faz sentido com kind == "gamepad").
 _MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
     ("dualsense", "DualSense (botões PlayStation)"),
     ("xbox", "Xbox 360"),
     ("nintendo", "Nintendo Pro (botões da Nintendo)"),
 ]
 
-# --- MASCARA-QUE-GRUDA-01 (22/08/2026): a etiqueta de preço fica VISÍVEL -----
-#
-# Decisão dela: *"A máscara deve vir da escolha do user. Ele escolhe como quer
-# que o jogo reconheça o controle conectado: se deve aparecer como Xbox ou
 # DualSense."* — e escolher entre dois botões sem saber o que cada um custa não
-# é escolher, é sortear.
-#
-# O preço do Xbox JÁ existia (`texto_do_custo_da_mascara`) e vivia só em
-# TOOLTIP aqui desde a ESCOLHA-DELA-VENCE-01/E4. Tooltip é para quem já
-# desconfia: ela pediu a etiqueta em 01/08 e continuou trocando a máscara à mão
-# perfil a perfil. A frase passa a ficar na tela, embaixo dos dois botões, na
-# máscara que estiver marcada — e o tooltip continua, para o botão NÃO marcado.
-#
-# O texto do Xbox é REUSADO, nunca reescrito: dois donos da mesma frase
-# derivam, e esta casa já pagou por isso.
 
 #: O que a tela diz sobre a máscara DualSense.
 #:
-#: NOTA DATADA — 23/08/2026. Esta linha nasceu em 22/08 dizendo, na tela dela,
-#: que *"há uma anotação de julho de que alguns jogos ignoravam o gamepad
-#: virtual aqui, e ela nunca foi reconferida no desenho de hoje"*. É FALSO, e a
-#: cronologia que o derruba estava toda no repositório:
-#:
-#: * **14/07** (`56564de`) — nasce o portão que impunha `xbox` aos presets,
-#:   citando a "H1 da auditoria pré-release";
-#: * **16/07** (`b0596f0`, `389e429`) — o vpad passa a subir por `uhid`, com PID
-#:   próprio de Edge. O caminho em que a H1 foi medida deixa de existir;
-#: * **22/07** — HARMONIA-MASK-01, **decisão dela**: a máscara dualsense é
-#:   *"validada em jogo real (Sackboy/Mad King/Pragmata)"*, e a razão do xbox é
-#:   *"de antes da máscara dualsense vibrar — **superado** pela validação da
-#:   Onda Harmonia"*. É por causa dessa remedição que
-#:   `DaemonConfig.gamepad_flavor` vale `dualsense` numa instalação nova.
-#:
-#: Ou seja: a H1 foi remedida em julho, em três jogos nomeados, e a tela pedia
-#: que ela pagasse de novo um custo já pago — semeando dúvida sobre a máscara
-#: que a casa validou e empurrando para a Xbox, que é a que custa giroscópio,
-#: acelerômetro e touchpad. O nome da constante carregava a mesma afirmação
-#: (`..._SEM_MEDICAO`) e saiu junto.
-#:
-#: **A REDAÇÃO PEDE O OLHO DELA** (PROVA-DE-TELA-01): o que esta leva corrigiu
-#: foi o FATO, que estava errado e é regra da casa substituir. As palavras
-#: exatas são dela.
 TEXTO_MASCARA_DUALSENSE_VALIDADA: str = (
     "Nesta máscara o jogo recebe tudo: giroscópio, acelerômetro e touchpad. "
     "É a máscara validada em jogo real (Sackboy, Mad King e Pragmata, julho de "
@@ -269,18 +151,6 @@ TEXTO_MASCARA_DUALSENSE_VALIDADA: str = (
     "controle, troque para Xbox 360 e nos conte."
 )
 
-#: E o que a tela diz quando NENHUMA delas está marcada.
-#:
-#: Não é um estado de erro: é o que os presets de gênero passam a shipar e o
-#: que um perfil novo nasce sendo (`gamepad_flavor: null`). A frase existe para
-#: o vazio não parecer defeito — sem ela, os botões apagados leem como "a
-#: janela não carregou".
-#:
-#: FATO SUBSTITUÍDO — 07/09/2026: a frase dizia *"nenhum dos DOIS"*, e as
-#: máscaras passaram a ser TRÊS nesta leva. Um número na tela que conta errado
-#: é a mesma dívida que este arquivo já pagou com o `or "xbox"` — e a correção
-#: aqui é não contar: quem sabe quantas são é o catálogo, e a frase não precisa
-#: do número para dizer o que faz.
 TEXTO_MASCARA_SEM_ESCOLHA: str = (
     "Sem marcar nenhuma delas, este perfil não mexe na máscara: ativar ele "
     "mantém a que estiver valendo. É assim que os perfis de gênero vêm."
@@ -288,74 +158,22 @@ TEXTO_MASCARA_SEM_ESCOLHA: str = (
 
 
 def texto_do_preco_da_mascara(flavor: object) -> str:
-    """A linha VISÍVEL embaixo dos botões de máscara, para o valor marcado.
-
-    Une as três respostas honestas do produto num só lugar, para a aba não ter
-    duas opiniões sobre a mesma escolha:
-
-    * ``"dualsense"`` — o que se ganha, e o endereço da validação de julho;
-    * qualquer máscara COM preço — o preço MEDIDO, perguntado ao dono
-      (`texto_do_custo_da_mascara`), e não a uma lista digitada aqui;
-    * qualquer outra coisa (inclusive ``None``) — o que "sem escolha" faz.
-
-    O ramo final trata `None` e valor desconhecido do MESMO jeito de propósito:
-    um payload estranho não pode virar afirmação sobre giroscópio, que é a
-    família de erro que o `or "xbox"` desta aba já causou.
-
-    DEFEITO MEDIDO E CURADO — 07/09/2026, e ele estava VIVO na tela. Esta
-    função tinha `if flavor == "xbox"` digitado, e por isso a máscara
-    **Nintendo Pro**, que entrou no catálogo nesta leva, caía no ramo final:
-    com ela marcada a linha dizia *"Sem marcar nenhum dos dois, este perfil não
-    mexe na máscara"* — negando a escolha que ela acabara de fazer, e calando
-    os CINCO preços da máscara nova. Não era ausência de frase; era a frase
-    oposta, afirmada.
-
-    E a régua guardava o defeito: `test_payload_desconhecido_nao_vira_afirmacao
-    _sobre_giroscopio` tinha `"nintendo"` DIGITADO na lista de lixo, ao lado de
-    `0`, `[]` e `{}` — a mesma forma que esta casa já nomeou tantas vezes, *a
-    régua digitava o que devia LER*. As duas foram curadas juntas.
-
-    A CURA NÃO É UM `if` A MAIS: quem sabe se uma máscara tem preço é
-    `texto_do_custo_da_mascara`, que devolve `""` para quem não tem e para
-    valor que não reconhece. Perguntando a ele, a quarta máscara do catálogo
-    herda a linha no dia em que nascer, sem uma edição aqui — que é a única
-    forma de esta divergência não voltar.
-    """
+    """A linha VISÍVEL embaixo dos botões de máscara, para o valor marcado."""
     if flavor == "dualsense":
         return TEXTO_MASCARA_DUALSENSE_VALIDADA
     return texto_do_custo_da_mascara(flavor) or TEXTO_MASCARA_SEM_ESCOLHA
 
-# LEIGO-06: a coluna "Quando usar" mostrava o valor CRU do schema ("any",
-# "criteria") — o nome do campo, não uma resposta. `MatchAny` é o fallback que
-# vale sempre; `MatchCriteria` casa por janela/processo.
-#: R-12 item 5: o que a coluna diz de um `criteria` SEM nenhum campo.
 LABEL_SO_MANUAL = "Só manual (nunca ativa sozinho)"
 
 _MATCH_LABELS: dict[str, str] = {
     "any": "Sempre",
     "criteria": "Só neste programa",
-    # R-12 item 3: o sentinel `MatchManual` diz a MESMA coisa que o criteria
-    # vazio, só que de propósito — logo, a mesma frase. A coluna não é o lugar
-    # de ensinar a diferença entre intenção e acidente (isso é o doctor).
     "manual": LABEL_SO_MANUAL,
 }
 
 
 def _match_label(match: object) -> str:
-    """Rótulo da coluna "Quando usar" (função pura — testável sem GTK).
-
-    Aceita o OBJETO ``profile.match`` (contrato novo, R-12) ou o discriminador
-    cru em string (contrato antigo — mantido porque é o que os testes de
-    vocabulário e qualquer chamador de fora usam, e porque um perfil gravado
-    por uma versão mais nova continua caindo no próprio valor em vez de deixar
-    a célula vazia).
-
-    R-12 (auditoria 23/07): ``MatchCriteria`` com TODOS os campos vazios é o
-    caso do preset ``coop_local`` de fábrica — ``MatchCriteria.matches``
-    devolve ``False`` sem condição alguma (schema.py:125), então o perfil é
-    INALCANÇÁVEL pelo autoswitch. A coluna dizia "Só neste programa", o que é
-    falso duas vezes: não há programa nenhum, e ele nunca entra sozinho.
-    """
+    """Rótulo da coluna "Quando usar" (função pura — testável sem GTK)."""
     tipo = getattr(match, "type", None)
     if tipo == "criteria" and not (
         getattr(match, "window_class", None)
@@ -368,53 +186,10 @@ def _match_label(match: object) -> str:
     return _MATCH_LABELS.get(str(match), str(match))
 
 
-# --- EMPATE-01 (E2): a coluna "Quando usar" diz que HÁ disputa e quem ganha --
-# `_match_label` traduz `MatchAny` para "Sempre" e a coluna termina aí. Medido
-# no disco dela em 31/07/2026 — QUATRO perfis dizem "Sempre" ao mesmo tempo:
-#
-#   fallback     prioridade 0     meu_perfil   prioridade 1
-#   vitoria      prioridade 0     Pragmata     prioridade 5
-#
-# (eram cinco até esta madrugada; o `pragmata2.json` virou regra do jogo —
-# `window_class: steam_app_3357650`, prioridade 85 — e saiu da disputa.)
-#
-# Quatro linhas idênticas na coluna, um vencedor, e nenhuma palavra sobre o
-# porquê. É o mecanismo direto da queixa mais antiga desta casa, *"a config que
-# eu deixo nunca é respeitada"*: ela troca a cor no `vitoria`, o `Pragmata`
-# ganha, e a tela não deu um sinal.
-#
-# O desempate REAL vive em `profiles/manager.py` e é o que estas funções
-# espelham — nunca reimplementam com critério próprio:
-#
-#   `_chave_de_selecao` (:632-640)  (not e_catch_all, priority), maior vence;
-#   `_melhor_candidato` (:668-706)  empate → INCUMBENTE; sem incumbente entre
-#                                   os empatados, o primeiro da ordem de carga
-#                                   (`sorted(glob("*.json"))` do loader:568 —
-#                                   a ordem alfabética do ARQUIVO, que não é
-#                                   critério de ninguém);
-#   o veto R-21          (:620-630) em janela de JOGO, se todos os candidatos
-#                                   forem catch-all, NÃO se troca de perfil.
-#
-# Daí a frase do tooltip sobre jogo ser verdade nos dois ramos: ou todos os
-# candidatos são "Sempre" e o veto recusa, ou existe um perfil com regra
-# própria — e aí ele vence qualquer "Sempre" pelo primeiro termo da chave.
-
-#: NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5:
-#: A DISPUTA ACABOU. O `match any` saiu da seleção automática
-#: (`ProfileManager.select_for_window_ex`): nenhum «Sempre» entra sozinho, e numa
-#: janela que regra nenhuma casa vale a escolha dela. Anunciar «N disputam, este
-#: vence» seria a coluna dizer um vencedor que o gerente não elege — o que esta
-#: casa existe para não deixar acontecer. Saíram junto `perfis_em_disputa` e
-#: `vencedor_da_disputa`, que só serviam à frase; o desempate entre REGRAS de
-#: mesma prioridade continua no gerente (`_melhor_candidato`).
 def rotulo_quando_usar(
     profile: Any, perfis: list[Any], incumbente: str | None = None
 ) -> str:
-    """Texto da coluna "Quando usar" — função pura, testável sem GTK.
-
-    `perfis` e `incumbente` ficam na assinatura dos chamadores (a lista da aba
-    e a da janela), que os passavam para a frase da disputa. Ver a nota acima.
-    """
+    """Texto da coluna "Quando usar" — função pura, testável sem GTK."""
     del perfis, incumbente
     return _match_label(getattr(profile, "match", None))
 
@@ -422,74 +197,25 @@ def rotulo_quando_usar(
 def explicacao_da_disputa(
     profile: Any, perfis: list[Any], incumbente: str | None = None
 ) -> str:
-    """Tooltip da linha: vazio desde 01/10/2026 — não há disputa a explicar.
-
-    Até lá ele dizia, do «Sempre» sozinho, *«é o que entra quando nenhuma regra
-    específica casa»*, e dos vários, quem vencia e por quê. As duas coisas
-    deixaram de ser verdade (ver a nota acima), e a frase saiu em vez de virar
-    outra: frase nova de tela é decisão dela.
-    """
+    """Tooltip da linha: vazio desde 01/10/2026 — não há disputa a explicar."""
     del profile, perfis, incumbente
     return ""
 
 
-# --- PERFIL-ATUAL-01 (10/08/2026): a linha do perfil dela tem cor e é a 1ª ---
-# Pedido dela, literal: *"esse perfil inclusive precisa ter uma linha de cor de
-# destaque e aparecer primeiro na guia de perfil pra sempre evidenciar o perfil
-# atual"*.
-#
-# E "esse perfil" tem dono decidido no mesmo dia, também com as palavras dela:
-# *"aquele cujo escolho vir na aba perfis e aperto em ativar"*. Não é o que o
-# autoswitch elegeu pela janela aberta, e não é o `active_profile` do daemon
-# quando ele está vazio — que é o caso VIVO da máquina dela, com o cadeado do
-# autoswitch ligado desde 03:59 de hoje: `daemon.status` responde `null` e o
-# destaque nasceria invisível.
-#
 # O gesto de Ativar, esse, deixa fato em disco: `profile.switch` grava a
-# escolha dela pelo dono (`utils.session.gravar_a_escolha`), manual-only desde
-# o PERFIL-03 — o autoswitch não encosta nela. `resolve_boot_profile()` é a
-# pergunta ao mesmo dono (`a_escolha_dela`, desde 01/10/2026), e é o MESMO
-# nome que o daemon restaura no boot. Por isso a lista parte dele em vez de
-# partir do vazio.
 
 #: A cor do "ligado" desta casa — `@green` do `gui/theme.css:26`, a mesma que a
-#: janela compacta já usa para o perfil ativo (`compact_window.py:320`). Literal
-#: pelo mesmo motivo dela: `@define-color` não chega à célula de um
-#: `GtkTreeView`, que quer uma cor e não um nome do tema.
 COR_DO_PERFIL_ATIVO = "#50fa7b"
 
-#: A cor pronta como atributo de Pango, montada uma vez só. Ver
-#: `realce_do_perfil_ativo` para a razão de não ser uma string de `foreground`.
 _REALCE_DO_ATIVO: Any = None
 
 
 def realce_do_perfil_ativo() -> Any:
-    """A cor da linha dela como `Pango.AttrList` — e o motivo é MEDIDO.
-
-    O caminho óbvio era a coluna `foreground` do `GtkCellRendererText`. Ele foi
-    escrito, fotografado, e a foto reprovou: **o GTK3 descarta o `foreground` da
-    célula quando a linha está SELECIONADA** (`gtkcellrenderertext.c` só aplica
-    o atributo quando o estado não tem `GTK_CELL_RENDERER_SELECTED`). E a linha
-    selecionada é justamente a do perfil ativo — a aba abre com ela selecionada,
-    e o `_sync_selection_with_active_profile` a seleciona de novo a cada volta do
-    daemon. O verde sumia exatamente no caso mais comum, que é o oposto do
-    "**sempre** evidenciar o perfil atual" que ela pediu.
-
-    Medido lado a lado na mesma foto, com todas as linhas selecionadas:
-    `foreground=` some, `cell-background=` fica escondido sob a faixa da seleção,
-    e `markup=`/`attributes=` sobrevivem. Entre os dois sobreviventes, o
-    `attributes` é o que NÃO mexe no conteúdo: a coluna 0 continua sendo o nome
-    cru (a IDENTIDADE que `_selected_profile_name` lê), sem escape de markup e
-    sem um perfil chamado "A & B" quebrar a lista.
-
-    Uma instância só, compartilhada por todas as linhas: `AttrList` é imutável
-    aqui e o modelo só guarda a referência.
-    """
+    """A cor da linha dela como `Pango.AttrList` — e o motivo é MEDIDO."""
     global _REALCE_DO_ATIVO
     if _REALCE_DO_ATIVO is None:
         from gi.repository import Pango
 
-        # `#rrggbb` -> os 16 bits por canal que o Pango quer (0xff -> 0xffff).
         r, g, b = (int(COR_DO_PERFIL_ATIVO[i : i + 2], 16) * 257 for i in (1, 3, 5))
         lista = Pango.AttrList()
         lista.insert(Pango.attr_foreground_new(r, g, b))
@@ -517,33 +243,8 @@ def perfil_que_ela_ativou() -> str | None:
     return None
 
 
-# --- P1: um dono só para "qual perfil está valendo" ------------------------
-# PERFIS-ABRE-O-QUE-GUARDA-01/§2.1/1 (24/08/2026). QUATRO superfícies da mesma
-# janela, DUAS respostas para o mesmo fato, medidas com o daemon vivo:
-#
-#     aba Perfis   lê o DISCO   -> "Sackboy", em verde e no topo   (CERTO)
-#     aba Status   lê o daemon  -> "Nenhum"
-#     aba Início   lê o daemon  -> vazio
-#     aba No jogo  lê o daemon  -> vazio
-#
-# A aba Perfis estava certa e sozinha: a cura é da PERFIL-ATUAL-01 (10/08), e o
-# comentário dela já nomeava o caso — "não é o `active_profile` do daemon
-# quando ele está vazio, que é o caso VIVO da máquina dela". As outras três
-# nunca receberam essa cura, e copiar a lógica para cada uma daria QUATRO
-# respostas em vez de duas. Então o resolvedor vira DONO, e as leitoras o
-# chamam.
-#
-# A DISTINÇÃO QUE A TELA PRECISA CARREGAR, e que não existia em lugar nenhum:
-# *"nenhum perfil ativo"* e *"o daemon não sabe dizer"* são fatos diferentes.
-# O `or "Nenhum"` sobre um `null` funde os dois — é a tela confundindo "não
-# sei" com "não há", e é a mesma disciplina que `secao_controles.py` já aplica
-# ("um 'não sei' não pode virar aviso").
-
-#: O rótulo de "ninguém soube responder". É o travessão que a aba Status já usa
-#: quando o daemon está offline — vocabulário existente, não inventado aqui.
 ROTULO_NAO_SEI = "—"
 
-#: E o rótulo de "o daemon respondeu, e não há perfil ativo".
 ROTULO_NENHUM = "Nenhum"
 
 
@@ -577,30 +278,13 @@ class PerfilQueVale(NamedTuple):
 
 
 def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
-    """O DONO da pergunta "qual perfil está valendo agora?".
-
-    A ordem é deliberada e cada perna tem motivo:
-
-    1. **o daemon primeiro** — ele é quem aplicou as seções no controle, e um
-       autoswitch por janela só existe lá;
-    2. **o disco depois, declarado** — `perfil_que_ela_ativou` pergunta a
-       escolha dela ao MESMO dono que o daemon pergunta no boot
-       (`utils.session.a_escolha_dela`). Sobrevive ao daemon responder
-       ``active_profile: null`` e a fechar e reabrir a janela.
-
-    ``state`` ausente (ou que não é dicionário) significa "o daemon não falou"
-    — nunca "não há perfil". Best-effort em tudo: qualquer falha de I/O do
-    disco vira ``nao_sei``, jamais uma exceção na thread do GTK.
-    """
+    """O DONO da pergunta "qual perfil está valendo agora?"."""
     houve_resposta = isinstance(state, dict)
     if houve_resposta:
         do_daemon = state.get("active_profile")
         if isinstance(do_daemon, str) and do_daemon:
             return PerfilQueVale(do_daemon, "daemon")
     do_disco: str | None = None
-    # Best-effort, e a garantia é DAQUI: `perfil_que_ela_ativou` engole as
-    # falhas dele, mas quem chama este dono é repintura de tela, e uma exceção
-    # aqui derrubaria a thread do GTK por causa de um arquivo de sessão.
     with contextlib.suppress(Exception):
         do_disco = perfil_que_ela_ativou()
     if do_disco:
@@ -608,23 +292,7 @@ def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
     return PerfilQueVale(None, "nenhum" if houve_resposta else "nao_sei")
 
 
-# --- P7: Remover não sabia que estava apagando o que está valendo ----------
-# PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/7 (24/08/2026). `on_profile_remove` confirma
-# pelo NOME e nunca pergunta se aquele é o perfil ativo. Com o
-# `active_profile.txt` valendo `Sackboy`, apagar o Sackboy é um clique — e
-# depois dele: o daemon segue com as seções daquele perfil aplicadas no
-# controle, o marcador em disco continua apontando para um arquivo que não
-# existe mais, e NADA na tela diz isso. A remoção parece inconsequente.
-#
-# A METADE DO RASTRO JÁ ESTÁ FECHADA, e não é desta frente: `delete_profile`
-# apagava o `.json` e deixava o `.lock` (três órfãos no disco dela). A Z4/T15
-# curou em 24/08 (`profiles/loader.py`, o `unlink` FORA do `with`) e tem régua
-# própria em `tests/unit/test_z4_locks_orfaos.py`. Conferido em 25/08 antes de
-# escrever uma linha — refazer teria sido a segunda cura para o mesmo fato.
-
-#: O que a remoção do perfil ATIVO faz, e o que ela NÃO desfaz. Três frases,
 #: na ordem que a casa exige de toda frase de diagnóstico (o quê, por quê, o
-#: que fazer) — ver "Quem é o usuário, e por que a aba ensina".
 _AVISO_DA_REMOCAO_DO_ATIVO = (
     "Este é o perfil que está valendo agora.\n"
     "Remover o arquivo não desfaz o que já está no controle: a cor, os "
@@ -635,23 +303,7 @@ _AVISO_DA_REMOCAO_DO_ATIVO = (
 
 
 def frase_da_remocao_do_perfil_ativo(nome: str, valendo: Any) -> str | None:
-    """O aviso extra do diálogo de Remover. ``None`` é silêncio, e é a regra.
-
-    Só fala quando o perfil que ela mandou remover é **o que está valendo** —
-    e quem responde isso é o dono do §P1 (`perfil_que_esta_valendo`), nunca uma
-    segunda leitura do disco aqui.
-
-    **O ``nao_sei`` cala.** Se ninguém soube dizer qual perfil está valendo, a
-    tela não pode afirmar que este é. É a mesma disciplina do §P1: *"não sei"*
-    e *"não há"* são fatos diferentes, e transformar o primeiro em aviso é o
-    alarme falso que esta casa recusa.
-
-    Compara por SLUG porque é o slug que nomeia o arquivo: o marcador em disco
-    pode guardar `Sackboy` enquanto a lista mostra `sackboy`, e um `==` cru
-    deixaria o aviso mudo exatamente no caso que ele existe para cobrir.
-
-    Função PURA — o teste lê o texto sem GTK e sem disco.
-    """
+    """O aviso extra do diálogo de Remover. ``None`` é silêncio, e é a regra."""
     if not nome:
         return None
     do_dono = getattr(valendo, "nome", None)
@@ -666,21 +318,7 @@ def frase_da_remocao_do_perfil_ativo(nome: str, valendo: Any) -> str | None:
 
 
 def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
-    """A ordem em que as linhas aparecem: o ativo primeiro, o resto como veio.
-
-    Função PURA, e usada SÓ para iterar o `append` — nunca para alimentar
-    `rotulo_quando_usar`/`explicacao_da_disputa`. O terceiro termo do desempate
-    é a ORDEM DE CARGA do loader (ver o bloco EMPATE-01/E2 acima), e o tooltip
-    da disputa lista os concorrentes nessa ordem: passar a lista reordenada
-    faria a GUI recitar a fila numa ordem que não é a do daemon. Medido em
-    10/08 — o vencedor anunciado não muda (mover UM item para a frente preserva
-    a ordem relativa dos outros, e quando o movido está entre os empatados ele é
-    o próprio incumbente, que já ganharia), mas o texto do tooltip muda, e uma
-    frase que diverge do daemon é exatamente o que esta casa não entrega.
-
-    `ativo` que não existe na lista (perfil renomeado, marker de versão antiga)
-    devolve a ordem de carga intacta.
-    """
+    """A ordem em que as linhas aparecem: o ativo primeiro, o resto como veio."""
     if not ativo:
         return list(perfis)
     primeiro = [p for p in perfis if str(getattr(p, "name", "")) == ativo]
@@ -688,20 +326,6 @@ def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
     return primeiro + resto
 
 
-# --- SALVAR-NAO-REBAIXA-02: a prioridade também cai calada ------------------
-# O aviso de rebaixamento desta casa (`confirm_downgrade_match_to_any`) só
-# dispara quando o match ORIGINAL é específico. Os perfis dela JÁ ESTÃO em
-# `MatchAny` — foram rebaixados pelo defeito de 27/07 — e para esses a janela
-# não tinha uma palavra a dizer: o que ainda podia sumir calado era a
-# PRIORIDADE, que é exatamente o termo que decide qual dos "Sempre" vence
-# (ver `explicacao_da_disputa`). Medido em 05/08: salvar por cima levava
-# `prio=200, criteria` para `prio=0, any`.
-
-#: Queda de prioridade a partir da qual a janela PERGUNTA. Dez pontos é a mesma
-#: folga com que um perfil de jogo nasce acima do catch-all
-#: (`_FOLGA_ACIMA_DO_CATCH_ALL`): abaixo disso a queda não muda quem vence
-#: nenhuma disputa desta casa, e um diálogo por ponto perdido viraria o ruído
-#: que se aprende a clicar sem ler — o que mataria também o aviso que importa.
 QUEDA_DE_PRIORIDADE_QUE_PEDE_AVISO = 10
 
 
@@ -712,149 +336,50 @@ def queda_de_prioridade_pede_aviso(antes: int, depois: int) -> bool:
     ) >= QUEDA_DE_PRIORIDADE_QUE_PEDE_AVISO
 
 
-# --- O-AVANCADO-QUE-MOSTRAVA-VAZIO-01: o alvo também some pelo outro lado ---
 # `confirm_downgrade_match_to_any` cobre "o perfil passou a valer para TUDO".
-# O editor avançado com os TRÊS campos em branco escreve o oposto exato —
-# `MatchManual` (R-12 item 3), "nunca ativa sozinho" — e esse caminho não tinha
-# aviso nenhum. Medido em 10/08 no editor dela, antes desta leva: o `Pragmata`
-# (`window_class: ["steam_app_3357650"]`, prioridade 200) virava
-# `{"type": "manual"}` com o toast dizendo "Perfil salvo".
 
 
 def _nunca_entra_sozinho(match: object) -> bool:
-    """O perfil com esta regra nunca casa com janela nenhuma?
-
-    Fonte única: o rótulo da coluna "Quando usar". `MatchManual` (a intenção) e
-    o `MatchCriteria` vazio (o acidente) já dizem a MESMA frase para ela, e um
-    predicado que os separasse aqui faria a janela avisar sobre um e calar
-    sobre o outro — sendo que o efeito no autoswitch é idêntico.
-    """
+    """O perfil com esta regra nunca casa com janela nenhuma?"""
     return _match_label(match) == LABEL_SO_MANUAL
 
 
 def rebaixamento_para_so_manual(antes: object, depois: object) -> bool:
-    """Este Salvar tira do perfil o que o fazia entrar sozinho? (função pura).
-
-    Vale tanto para o perfil de programa específico quanto para o "Sempre": os
-    dois ENTRAVAM, e passam a não entrar. Quem já era só-manual não perde nada
-    e não recebe pergunta — um diálogo por Salvar vira o ruído que se aprende a
-    clicar sem ler, e aí mata também o aviso que importa.
-    """
+    """Este Salvar tira do perfil o que o fazia entrar sozinho? (função pura)."""
     return _nunca_entra_sozinho(depois) and not _nunca_entra_sozinho(antes)
 
 
-# --- ATIVAR-NAO-MENTE-01: a janela passa a LER o relatório do daemon --------
 # `profile.switch` responde a verdade desde a R-03 (`secoes`, `mode_aplicado`,
-# `motivo`) e a janela descartava o resultado inteiro (`lambda _result:`) —
-# os únicos leitores no repositório eram testes. O toast dizia "Perfil ativado"
-# mesmo quando o lock de gesto manual fizera os appliers descartarem a seção
-# que ela SENTE, que é o mecanismo direto da queixa "às vezes pega".
-#
-# `mode_aplicado` e `motivo` NÃO são lidos aqui de propósito: os dois derivam
-# de `secoes["mode"]` (daemon/ipc_handlers.py:862-870), e ler a fonte em vez
-# dos derivados é o que impede as duas leituras de divergirem.
 
 #: Nomes das seções que só o `profile.switch` relata. O mapa do rodapé
-#: (`footer_actions._NOMES_DE_SECAO`) nasceu para o `profile.apply_draft`, que
-#: não tem `mode`/`suppression`/`rumble_policy`/`speaker`. Este dicionário
-#: COMPLEMENTA aquele, nunca o substitui: as seções comuns continuam saindo de
-#: lá, dona única da frase (a lição do `texto_do_custo_da_mascara`).
-#:
-#: BG-07c (26/08/2026), e o que a medição encontrou. O manager escreve ONZE
-#: chaves no relatório e este mapa traduzia QUATRO, com a chave crua como
-#: fallback (`relato_da_ativacao`, abaixo). MEDIDO nesta árvore, seção a seção,
-#: pela frase que a pessoa lê de fato:
-#:
-#:     keyboard  -> "Aplicado, menos: teclado."      <- já traduzia
-#:     mouse     -> "Aplicado, menos: mouse."        <- já traduzia
-#:     mic       -> "Aplicado, menos: microfone."    <- já traduzia
-#:     trigger   -> "Aplicado, menos: trigger."      <- CRU
-#:     led       -> "Aplicado, menos: led."          <- CRU
-#:
-#: CORREÇÃO DE FATO, escrita porque a versão errada custaria a próxima
-#: investigação: `keyboard`, `mouse` e `mic` NÃO chegam crus. O rodapé os tem
-#: em `footer_actions._NOMES_DE_SECAO` desde a APLICAR-VERDADE-01, e a chave
-#: crua que sai daqui atravessa aquele mapa antes de virar frase. Quem chegava
-#: cru eram `trigger` e `led` — **no SINGULAR**, e é aí que está o defeito: o
-#: mapa do rodapé tem `triggers` e `leds`, no plural, porque nasceu para o
-#: `profile.apply_draft`. O manager escreve o singular de propósito (é o
-#: vocabulário que a trava manual já usa, `profiles/manager.py:488`), e as duas
-#: grafias nunca se encontraram. A palavra de tela é a MESMA das plurais —
 #: "gatilhos" e "luzes" — porque é a mesma seção; o que muda é só a chave.
 _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
     "mode": "modo",
     "suppression": "modo jogo",
     "rumble_policy": "vibração",
     "speaker": "alto-falante",
-    # As duas do singular. Mesma palavra de tela das irmãs plurais do rodapé.
     "trigger": "gatilhos",
     "led": "luzes",
-    # PROVISÓRIO — decisão dela. A seção nasceu MUDA (o applier era chamado e o
-    # resultado descartado, `profiles/manager.py`); agora ela relata, e precisa
-    # de nome. "vibração do jogo" deriva do que já existe: "vibração" é o nome
-    # da irmã `rumble_policy` aqui do lado, e o botão que liga esta seção se
-    # chama "Deixar o jogo controlar a vibração" (`gui/main.glade:2028`).
     "rumble_passthrough": "vibração do jogo",
-    # AS TRÊS QUE CHEGAVAM CRUAS — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
     # 01/10/2026. Às 19h15 a janela escreveu «menos: button_actions,
-    # remapeamento, movimento e mais 8». As palavras são as das telas: as
-    # «Definições Controle e Mouse» (o que cada botão faz), a «Trocar os
-    # botões» e a «Mira Virtual».
     "button_actions": "o que cada botão faz",
     "remapeamento": "a troca de botões",
     "movimento": "a mira",
 }
 
-#: PROVISÓRIO — decisão dela. Como nomear o alto-falante DE UM controle quando a
-#: mesa tem quatro. A chave é `speaker:<uniq>` (`profiles/manager.py`), e o
-#: `uniq` é o identificador do aparelho.
-#:
-#: O NOME CARREGA O `uniq`, e não é enfeite — é o que impede as peças de se
-#: fundirem. `relato_da_ativacao` monta `failed` como um dict indexado pelo NOME
-#: traduzido: nome igual é a MESMA entrada, e um rótulo fixo faria os quatro
-#: alto-falantes da mesa virarem um só. Medido em 26/08/2026, com três caídos:
-#: "Aplicado, menos: alto-falante de um controle." — bonito, e dois controles
-#: sumiram da frase. Com o `uniq` os três aparecem, e o quarto vira o "e mais 1"
-#: de `footer_actions._lista_de_secoes`. É a decisão que
-#: `ProfileManager.apply_controller_speakers` já tinha escrito para a chave —
-#: *"para a GUI conseguir dizer QUAL peça foi ignorada pela trava manual em vez
-#: de fundir tudo num rótulo só"* —, e ela vale igual para o nome.
-#:
-#: A frase diz QUAL controle pelo identificador, não pelo número do slot, e a
-#: limitação é honesta em vez de escondida: o léxico da casa é "Controle {N}"
-#: (`widgets/controller_card.py`), e o número NÃO está ao alcance aqui —
-#: `relato_da_ativacao` é função pura, recebe só a resposta do daemon, e o mapa
-#: `uniq -> índice` mora no mixin (`_target_uniq_by_index`). Levar o mapa até
-#: aqui muda a assinatura e os chamadores, e é decisão de desenho, não de
-#: redação. As duas saídas estão relatadas na entrega da L3-E.
 _PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE = "speaker:"
 _NOME_DO_ALTO_FALANTE_POR_CONTROLE = "alto-falante de um controle"
 
 
 def nome_da_secao_da_ativacao(chave: str) -> str:
-    """A palavra de tela desta seção, ou a chave crua quando não há nome.
-
-    Devolver a chave crua continua sendo o certo para o que este mapa não
-    conhece — "melhor um termo estranho do que omitir que algo ficou de fora",
-    como `footer_actions._lista_de_secoes` já escreve. O que deixou de ser
-    certo é chegar cru o que TEM nome.
-    """
+    """A palavra de tela desta seção, ou a chave crua quando não há nome."""
     if chave.startswith(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE):
         uniq = chave[len(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE) :]
         return f"{_NOME_DO_ALTO_FALANTE_POR_CONTROLE} ({uniq})"
     return _NOMES_DAS_SECOES_DA_ATIVACAO.get(chave, chave)
 
 
-#: O QUE NÃO ENTRA NO «MENOS» — `D-0110-SO-A-FALHA-E-MENOS`, por delegação, a
-#: validar por ela (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01). Às 19h15 de
 #: 01/10 a janela escreveu «menos: button_actions, remapeamento, movimento e
-#: mais 8» sobre uma troca que deu certo: a seção que o perfil não diz vale o
-#: de fábrica ou o computador (`de_fabrica`, `do_computador`), a Mira que ela
-#: deixou desligada vai desligada (`desligado`), e o teclado que não existe
-#: nesta máquina não tem o que receber (`ignorado_sem_device`). Isso é o
-#: produto fazendo o que devia, e não perda. O `falhou*` e o `adiado_*` seguem
-#: no «menos»: o que caiu e o que ainda não chegou ao controle são falta
-#: (APLICAR-VERDADE-02).
 NAO_E_FALTA = frozenset({"de_fabrica", "do_computador", "desligado", "ignorado_sem_device"})
 
 
@@ -894,8 +419,6 @@ def mensagem_de_ativacao(name: str, result: Any = None) -> str:
     relato = relato_da_ativacao(result)
     if relato is None or not relato["failed"]:
         return f"Perfil ativado: {name}"
-    # Import adiado: o módulo do rodapé sobe `gui_dialogs`, e a aba Perfis é
-    # importada por testes que montam `gi` falso antes de qualquer diálogo.
     from hefesto_dualsense4unix.app.actions.footer_actions import (
         _mensagem_de_aplicacao,
     )
@@ -954,35 +477,12 @@ def mensagem_do_salvar(
     return f"{cabeca} — {_mensagem_de_aplicacao(relato)}"
 
 
-# --- P2: o carimbo de ponte aparece NESTA aba ------------------------------
-# PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O daemon PUBLICA
-# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:2060`), com o
-# comentário dizendo a intenção em letra: *"para a janela dizer 'este jogo já
-# sabe por onde entra'"*. Medido:
-#
-#     $ grep -rn "pontes_confirmadas" src/hefesto_dualsense4unix/app/
-#     app/draft_config.py:574:    # `manager.pontes_confirmadas()` …  <- comentário
-#     app/actions/profiles_actions.py:4409: # carimbo viaja junto …    <- comentário
-#
-# Dois hits, os dois em COMENTÁRIO. Zero leitores. A aba PRESERVA o carimbo no
-# Salvar e nunca o mostrou — é a cura escrita, o dado publicado, e a tela muda.
-# E é a decisão dela de 19/08: *"o produto CONSTRÓI a ponte, não só preserva"*,
-# parada na última perna.
-#
-# DOIS perfis dela já têm o carimbo hoje (`big_walk.json`, `duskfade.json`), o
-# que dá dado real para provar contra, sem inventar fixture.
+#     app/draft_config.py:382:    # `manager.pontes_confirmadas()` …  <- comentário
 
-#: Como cada `kind` de ponte se chama NA TELA. São os rótulos de
-#: `_MODE_KIND_ITEMS`, que são os mesmos da aba Início (UX-MODE-TERMS-01/02):
-#: um segundo vocabulário para o mesmo fato é como esta casa ganhou os oito
-#: pares da F5.
 _ROTULO_DA_PONTE: dict[str, str] = dict(_MODE_KIND_ITEMS)
 
-#: E como se chama a máscara, quando a ponte é de gamepad.
 _ROTULO_DA_MASCARA: dict[str, str] = dict(_MODE_FLAVOR_ITEMS)
 
-#: COMO a ponte foi confirmada. O vocabulário do esquema
-#: (`gesto`/`silencio`/`escolha_dela`) traduzido para o que ela reconhece.
 _COMO_FOI_CONFIRMADA: dict[str, str] = {
     "gesto": "quando você aplicou o perfil",
     "silencio": "porque funcionou e ninguém precisou mexer",
@@ -991,11 +491,7 @@ _COMO_FOI_CONFIRMADA: dict[str, str] = {
 
 
 def _dia_do_carimbo(iso: object) -> str | None:
-    """``2026-08-19T21:16:55-03:00`` -> ``19/08/2026``. Lixo -> ``None``.
-
-    Só o DIA: a hora do carimbo não muda decisão nenhuma dela, e uma data com
-    segundos numa linha de apoio é ruído que se aprende a não ler.
-    """
+    """``2026-08-19T21:16:55-03:00`` -> ``19/08/2026``. Lixo -> ``None``."""
     from datetime import datetime
 
     if not isinstance(iso, str) or not iso:
@@ -1006,16 +502,7 @@ def _dia_do_carimbo(iso: object) -> str | None:
 
 
 def frase_da_ponte_confirmada(pontes: Any, appid: object) -> str | None:
-    """O carimbo deste jogo, em uma linha. ``None`` é SILÊNCIO, e é de propósito.
-
-    Sem carimbo a linha **não diz nada** — nunca "ponte desconhecida", nunca
-    "ainda não sei". É a mesma disciplina do P1: a ausência da chave já
-    significa "não sei", e escrever isso na tela transforma a falta de
-    informação em aviso. `pontes_confirmadas` só publica os appids COM
-    carimbo, exatamente por isso.
-
-    Função PURA — o teste lê o texto sem daemon e sem GTK.
-    """
+    """O carimbo deste jogo, em uma linha. ``None`` é SILÊNCIO, e é de propósito."""
     if not isinstance(pontes, dict):
         return None
     chave = normalize_appid(str(appid) if appid is not None else None)
@@ -1025,8 +512,6 @@ def frase_da_ponte_confirmada(pontes: Any, appid: object) -> str | None:
     kind = str(ponte.get("kind") or "")
     por_onde = _ROTULO_DA_PONTE.get(kind)
     if por_onde is None:
-        # `kind` que esta versão não conhece: calar é melhor que inventar um
-        # rótulo. O carimbo continua no disco e o Salvar continua o preservando.
         return None
     if kind == "gamepad":
         mascara = _ROTULO_DA_MASCARA.get(str(ponte.get("gamepad_flavor") or ""))
@@ -1047,50 +532,7 @@ def frase_da_ponte_confirmada(pontes: Any, appid: object) -> str | None:
 def texto_da_marca_do_steam_input(
     status: str, appid: object = None, controles: int | None = None
 ) -> str:
-    """Toast da caixinha do Steam Input — pura, testável sem GTK.
-
-    O texto obedece ao que ELA mediu em 06/08/2026
-    (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*), e não à frase antiga da
-    casa: com o jogo marcado, o Hefesto entrega a **entrada** (solta o grab e
-    derruba o gamepad virtual, o que acaba com o controle dobrado) e **mantém a
-    saída** — os gatilhos dela seguraram e a cor dela ficou, com o jogo aberto.
-    Fora da lista é que os ajustes dela perdem para o jogo.
-
-    Por isso aqui não se escreve "o Hefesto sai da frente": é meia verdade
-    medida, e a metade que falta é justamente a que ela usa.
-
-    QUEM-DA-O-JOGADOR-2-01 (08/08/2026) — o que faltava dizer.
-    ----------------------------------------------------------
-    O texto contava a metade da SAÍDA e calava a metade que só aparece com **dois
-    controles na mesa**: a exceção recolhia os gamepads virtuais dos secundários,
-    e o co-op do Hefesto saía de cena junto (`coop_derrubado_pela_excecao_steam_
-    input` no journal dela, sete vezes em 08/08 quando isto foi escrito, vinte no
-    fim do dia). Isso mudava **quem entrega o jogador 2**: passava a ser o Steam
-    Input, não nós.
-
-    Com um controle só, a frase antiga estava completa e nada mudava. Com dois ou
-    mais, ela omitia a troca — e omissão numa caixinha que ela marca no meio da
-    noite custou a ela uma sessão inteira de Sackboy.
-
-    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela)
-    ------------------------------------------------------------------
-    **O aviso acima saiu porque o defeito que ele avisava foi curado, não porque
-    incomodava.** A marca mudou de lado: em vez de recolher os controles
-    virtuais, ela esconde o controle FÍSICO. Os virtuais ficam de pé, um por
-    controle, e o jogador 2 continua sendo do Hefesto — que é justamente o que o
-    aviso dizia que se perdia. Manter a frase agora seria a doença de sempre pelo
-    avesso: a tela avisando de um preço que o produto parou de cobrar.
-
-    O que este texto continua NÃO prometendo, e pelo mesmo motivo de antes: que o
-    jogo vai LISTAR dois jogadores. Isso depende do jogo, ninguém mediu nesta
-    máquina, e a prova é dela — abrir o jogo marcado com dois controles e contar.
-
-    O que ele PASSOU a dizer, e não é enfeite: **"feche e abra o jogo"**, em toda
-    marcação. Metade da marca é a env que o jogo lê UMA vez, na abertura
-    (`assets/hefesto-launch.sh`, `exec env "$@"`); marcar com o jogo aberto muda
-    o daemon e não muda o que aquele processo já enumerou. Foi assim que nasceu o
-    "Jogador 3" fantasma de 08/08.
-    """
+    """Toast da caixinha do Steam Input — pura, testável sem GTK."""
     if status == "appid_invalido":
         return "Esse não é um número de jogo da Steam — nada foi mudado."
     if status == "erro":
@@ -1118,9 +560,6 @@ def texto_da_marca_do_steam_input(
     )
 
 
-#: PROCESSO-CEGO-01: como cada backend cego se chama NA TELA. O nome interno
-#: ("portal", "wlrctl") não diz nada a quem lê a aba, e um aviso que nomeia um
-#: componente que ela não tem como identificar é ruído com aparência de ajuda.
 _BACKEND_NA_TELA = {
     "portal": "pelo portal do sistema (Wayland)",
     "wlrctl": "pelo wlrctl (Wayland)",
@@ -1195,21 +634,12 @@ def texto_do_processo_que_nao_casa(state: dict[str, Any] | None) -> str | None:
     )
 
 
-#: R-10: respostas do diálogo de rename (ids positivos não colidem com os
-#: `Gtk.ResponseType` nativos, que são negativos — mesmo padrão do
-#: `launch_wrapper_dialog`).
 _RESP_RENOMEAR = 201
 _RESP_COPIA = 202
 
 
 def _motivo_do_cancelamento() -> str:
-    """A frase da barra depois de um diálogo que devolveu "não".
-
-    DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): quando o envelope da casa
-    desiste de um diálogo que não conseguiu aparecer, ele responde CANCELAR
-    por ela — e um "Operação cancelada." seco a mandaria procurar um clique
-    que ela nunca deu. Aqui a barra diz o que de fato aconteceu.
-    """
+    """A frase da barra depois de um diálogo que devolveu "não"."""
     from hefesto_dualsense4unix.app import gui_dialogs
 
     if gui_dialogs.ultimo_socorro() is not None:
@@ -1223,24 +653,7 @@ def _motivo_do_cancelamento() -> str:
 def dialogo_renomear_ou_copiar(
     parent: Any, antigo: str, novo: str
 ) -> str | None:
-    """"Renomear" ou "Salvar como cópia" — devolve "renomear"/"copia"/None.
-
-    R-10 (auditoria 23/07): trocar o nome no campo Nome e clicar Salvar
-    gravava `<slug(novo)>.json` e DEIXAVA `<slug(antigo)>.json` no disco. Os
-    dois nascem com o mesmo `match` e a mesma prioridade, então passam a
-    disputar as mesmas janelas e o perfil "que ela renomeou" continua
-    ativando sozinho. Nenhuma das duas leituras possíveis ("quis renomear" ou
-    "quis criar uma variante") pode ser adivinhada — logo, pergunta.
-
-    Mora aqui, e não em `app.gui_dialogs`, para esta correção não colidir com
-    o outro trabalho em curso naquele módulo; a assinatura segue o padrão de
-    lá (parent + strings, sem IPC).
-
-    DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): morar fora do módulo dos
-    diálogos não o dispensa do envelope da casa — este era um dos DEZ
-    `dialog.run()` capazes de deixar a janela dela morta, e agora passa por
-    `gui_dialogs.executar_dialogo` como os outros nove.
-    """
+    """"Renomear" ou "Salvar como cópia" — devolve "renomear"/"copia"/None."""
     from hefesto_dualsense4unix.app import gui_dialogs
 
     dialog = Gtk.MessageDialog(
@@ -1272,105 +685,35 @@ def dialogo_renomear_ou_copiar(
 
 
 class ProfilesActionsMixin(CaronaDoWrapperMixin):
-    """Controla a aba Perfis.
-
-    CARONA-DO-WRAPPER-01 (16/08/2026): a base é o ``CaronaDoWrapperMixin``
-    (que estende o ``WidgetAccessMixin`` de antes) porque os dois gestos desta
-    aba — "Salvar este perfil" e "Ativar" — são metade do pedido dela: *"ao
-    clicarmos em aplicar ou salvar o perfil seja DENTRO ou fora da guia de
-    perfis"*. A outra metade entra pelo funil (``profile_writer``) e pelo botão
-    verde do rodapé.
-    """
+    """Controla a aba Perfis."""
 
     _profiles_store: Gtk.ListStore
-    _mode_advanced: bool = False  # True = editor avançado ativo; default seguro sem GTK
-    # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: cache em memória dos perfis. Evita
+    _mode_advanced: bool = False
     # load_all_profiles() síncrono na thread GTK a cada clique/tecla. Populado
-    # por _reload_profiles_store (thread worker); lido por
     # on_profile_selection_changed e _build_profile_from_editor.
     _profiles_cache: list[Profile]
-    # BUG-ADVANCED-TOGGLE-CLOBBER-01: guard para set_active() programático em
-    # _populate_editor não disparar on_profile_advanced_toggle (que persistiria
-    # 'advanced_editor' indevidamente). Substitui o handler_block dummy que vazava.
     _suppress_advanced_toggle: bool = False
-    # BUG-DUPLICATE-NO-CONFIG-COPY-01: perfil-fonte de uma duplicação em curso;
     # usado como base em _build_profile_from_editor para copiar triggers/LEDs/etc.
     _duplicate_source: Profile | None = None
-    # FEAT-DSX-COMBO-TO-SEGMENTED-01: seletor "Aplica a:" em botões segmentados
-    # (substitui o GtkComboBoxText `profile_aplica_a_combo`, fechado no clique
-    # pelo cosmic-comp). Mesma API por-ID do combo.
     _aplica_a: Any
-    # FEAT-PROFILE-MODE-GUI-01: widgets da seção "Modo" do editor, montados no
-    # código dentro do slot do glade (padrão home_actions). `None` quando o
-    # glade não tem o slot (fallback: o mode do perfil sobrevive por herança).
     _mode_kind_selector: Any = None
     _mode_flavor_selector: Any = None
-    #: MASCARA-QUE-GRUDA-01: a etiqueta de preço embaixo dos botões de máscara.
     _mode_flavor_price_label: Any = None
     _mode_gamepad_opts: Any = None
-    # SALVAR-NAO-REBAIXA-01: fotografia do perfil que o editor está mostrando —
-    # o valor do DISCO e o que a tela conseguiu representar dele. `None` = o
-    # editor não mostra perfil nenhum do disco (perfil novo, dublê de teste),
-    # e aí o que está nos widgets é a fonte, como sempre foi.
     _regra_do_disco: Match | None = None
     _assinatura_da_regra_ao_abrir: tuple[object, ...] | None = None
     _prioridade_do_disco: int | None = None
     _prioridade_ao_abrir: int | None = None
-    # Gesto DELA sobre o seletor "Aplica a" desde a abertura do perfil. Existe
-    # porque comparar valores não basta: num perfil de match complexo a página
-    # simples já abre em "Qualquer", e escolher "Qualquer" precisa contar.
     _regra_tocada: bool = False
-    # Mesmo motivo, na escala de prioridade. A escala tem teto, então um perfil
-    # com prioridade acima dele (escrita à mão no JSON) abre CLAMPADO: 250 no
-    # disco aparece como 200 na tela. Sem esta marca, arrastar a escala até 200
-    # de propósito seria indistinguível de não ter tocado, e o salvamento
-    # devolveria 250 ao disco — a guarda viraria o mesmo cadeado que ela existe
-    # para impedir, só que no outro sentido.
     _prioridade_tocada: bool = False
-    # PERFIL-SALVA-TUDO-01: gesto DELA sobre o seletor de Modo desde que o editor
-    # abriu este perfil. Mesma razão do `_regra_tocada`, agora com um segundo
-    # escritor em cena: o modo passou a ter dono no RASCUNHO (a aba Emulação
-    # escreve por `DraftConfig.with_mode`), e sem esta marca salvar pela aba
-    # Perfis reescreveria o modo com a leitura da tela — que abre com o valor do
-    # DISCO. Seria o SALVAR-NAO-REBAIXA-01 de novo, na seção `mode`: ela liga o
-    # modo jogo na aba Emulação, salva pela aba Perfis e o modo evapora.
     _modo_tocado: bool = False
-    # NUNCA-TROCA-O-ALVO-01 (06/08/2026): a seleção da lista está sendo movida
-    # pelo CÓDIGO, e não pelo dedo dela. Mesmo padrão (e mesma razão) do
-    # `_suppress_advanced_toggle`: o sinal `changed` do GtkTreeSelection não
-    # sabe distinguir quem o emitiu, e o handler repopulava o editor nos dois
-    # casos. Ver `_ha_trabalho_no_editor` para a história inteira.
     _selecao_programatica: bool = False
-    # NUNCA-TROCA-O-ALVO-01: o perfil do DISCO que o editor está editando — o
-    # ALVO do botão "Salvar este perfil". Escrito só por `_populate_editor`
-    # (que só roda por gesto dela ou com o editor limpo) e pelo próprio Salvar.
-    # `None` = o editor não mira arquivo nenhum (perfil novo, cópia, dublê de
-    # teste), e aí quem responde volta a ser a linha selecionada.
     _alvo_do_salvar: str | None = None
-    # PERFIL-ATUAL-01: o perfil que ELA ativou — o que ganha a cor, o negrito e o
-    # primeiro lugar da lista. Semeado do DISCO em `install_profiles_tab`
-    # (`perfil_que_ela_ativou`) e atualizado pelo gesto de Ativar; o
-    # `daemon.status` só o reescreve quando traz um nome, nunca com `null`.
     _active_profile_hint: str | None = None
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
         tree: Gtk.TreeView = self._get("profiles_tree")
-        # UX-PROFILES-ACTIVE-HIGHLIGHT-01: 4ª coluna (peso da fonte) marca o
-        # perfil ATIVO em negrito — a lista não dizia qual estava valendo.
-        # EMPATE-01/E2: a 5ª coluna é o TOOLTIP da linha (nunca desenhada) —
-        # a explicação da disputa não cabe na célula sem empurrar a aba.
-        # PERFIL-ATUAL-01: a 6ª carrega a COR da linha ativa, como `AttrList` do
-        # Pango. Coluna do modelo, e não classe CSS: medido que
-        # `.hefesto-dualsense4unix-window label` vence classe própria por
-        # especificidade, e a célula de um `GtkTreeView` não é um `GtkLabel` para
-        # receber a classe de qualquer jeito. E `AttrList` em vez de uma cor de
-        # `foreground` porque o GTK descarta o `foreground` da linha SELECIONADA
-        # — ver `realce_do_perfil_ativo`, que tem a foto por trás.
-        #
-        # O `Pango` entra aqui dentro, e não no topo do módulo, pela mesma razão
-        # do bloco da elipse logo abaixo: um import de topo derruba a COLETA dos
-        # testes que plantam um `gi` falso com só `Gtk` e `GObject`.
         from gi.repository import Pango
 
         store = Gtk.ListStore(
@@ -1384,33 +727,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         tree.set_model(store)
         self._profiles_store = store
 
-        # LEIGO-06: "Prio" e "Match" eram abreviação de dev + o nome do campo
-        # do schema. O conteúdo da 3ª coluna responde "quando este perfil
-        # entra?", então é esse o título.
         for idx, title in ((0, "Nome"), (1, "Prioridade"), (2, "Quando usar")):
             renderer = Gtk.CellRendererText()
-            # PERFIL-ATUAL-01: `attributes=5` nas TRÊS colunas visíveis — ela
-            # pediu a LINHA de cor, não a célula do nome. Fora da linha ativa a
-            # coluna carrega `None`, que é "nenhum atributo extra": quem escolhe
-            # a cor das outras linhas continua sendo o tema.
-            #
-            # NÃO troque por `foreground=`: é o mesmo desenho, uma linha mais
-            # curto, e some na linha selecionada — que é a do perfil ativo.
-            # A medição está em `realce_do_perfil_ativo`.
             column = Gtk.TreeViewColumn(
                 title, renderer, text=idx, weight=3, attributes=5
             )
             if idx == 2:
-                # EMPATE-01/E2: esta coluna passou a carregar a disputa e é a
-                # única que cresce com o NOME de outro perfil. O scroller da
-                # lista tem `hscrollbar-policy=never` (glade:1562), então
-                # largura demais aqui empurra a aba inteira — LARGURA-01. O
-                # teto + reticências seguram isso; o texto completo está no
-                # tooltip da linha, que nunca é cortado.
-                # O `Pango` entra AQUI, e não no topo do módulo: os testes que
-                # plantam `gi` falso fornecem `Gtk` e `GObject` e mais nada, e um
-                # import de topo derruba a COLETA inteira desses módulos no
-                # runner sem PyGObject — cinco deles, medido no CI de 31/07.
                 with contextlib.suppress(Exception):
                     from gi.repository import Pango
 
@@ -1425,29 +747,18 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             "changed", self.on_profile_selection_changed
         )
 
-        # UI-PROFILES-RADIO-GROUP-REDESIGN-01 + FEAT-DSX-COMBO-TO-SEGMENTED-01:
-        # 6 radios viraram combo e agora viram botões segmentados (sem popup;
-        # imune ao bug do cosmic-comp). Mesma API por-ID; "changed" é emitido por
-        # set_active_id, então os handlers rodam igual ao combo antigo.
         sel = SegmentedSelector(wrap=True)
         sel.set_items(_APLICA_A_ITEMS)
         sel.set_tooltip_text("Contexto em que este perfil será aplicado")
         slot = self._get("profile_aplica_a_slot")
         if slot is not None:
-            # BUG-APLICA-A-CLIP-01: sem expand/fill o SegmentedSelector colapsa
-            # à largura mínima (o ScrolledWindow interno reporta mínimo ~0) e
-            # os botões saem CORTADOS — mesma família do BUG-HOME-MASK-CLIP-01.
             slot.pack_start(sel, True, True, 0)
             sel.show_all()
         self._aplica_a = sel
         sel.connect("changed", self._on_aplica_a_changed)
         sel.set_active_id("any")
 
-        # A caixinha que TIRA um jogo do Steam Input (decisão dela, 07/08).
-        # Ligada em código, e não por `<signal>` no glade, pelo mesmo motivo dos
-        # botões da aba Sistema: o app conecta sinais por dict literal em
         # `_signal_handlers()`, e um handler declarado no glade que não esteja
-        # naquele dicionário faz o `connect_signals` reclamar.
         self._suppress_steam_input_toggle = False
         check = self._get("profile_steam_input_check")
         if check is not None:
@@ -1455,65 +766,37 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 check.connect("toggled", self.on_profile_steam_input_toggled)
         campo_do_jogo = self._get("profile_simple_custom_name")
         if campo_do_jogo is not None:
-            # Trocar o número do jogo troca o jogo de que a caixinha fala; sem
-            # isto ela continuaria mostrando a marca do appid ANTERIOR.
             with contextlib.suppress(Exception):
                 campo_do_jogo.connect("changed", self._on_campo_do_jogo_mudou)
-        # JOGO-QUE-SE-DIZ-01: a lista dos jogos DESTA máquina no próprio campo.
         self._instalar_lista_de_jogos_do_pc()
 
-        # SALVAR-NAO-REBAIXA-01: o gesto dela sobre a escala de prioridade. O
-        # `_populate_editor` zera a marca DEPOIS de posicionar os widgets, então
-        # o `set_value` de abertura não conta como toque.
         escala_prio = self._get("profile_priority_scale")
         if escala_prio is not None:
             with contextlib.suppress(Exception):
                 escala_prio.connect("value-changed", self._on_prioridade_tocada)
 
-        # FEAT-PROFILE-MODE-GUI-01: seção "Modo" (o que o perfil liga ao ativar).
         self._install_mode_section()
 
-        # Estado inicial do toggle a partir das preferências persistidas
         prefs = load_gui_prefs()
         self._mode_advanced = bool(prefs.get("advanced_editor", False))
         switch: Gtk.Switch = self._get("profile_advanced_switch")
-        # T7: set_active programático no boot dispara on_profile_advanced_toggle,
-        # que persistiria a pref no disco na thread GTK. Guard igual ao usado em
-        # _populate_editor / on_profile_new.
         self._suppress_advanced_toggle = True
         try:
             switch.set_active(self._mode_advanced)
         finally:
             self._suppress_advanced_toggle = False
         self._apply_editor_mode()
-        # PROCESSO-CEGO-01: com a preferência do avançado já LIGADA em disco, o
-        # handler do switch nunca roda (o `set_active` acima é programático e o
-        # guard o descarta) — sem esta linha o aviso só apareceria se ela
-        # desligasse e religasse o switch, que é justamente o gesto que quem já
-        # usa o avançado não faz.
         if self._mode_advanced:
             self._atualizar_aviso_do_processo()
 
         self._profiles_cache = []
-        # PERFIL-ATUAL-01: a lista já nasce sabendo qual perfil é o DELA. Sem
-        # esta linha o destaque dependia de `daemon.status` responder um nome, e
-        # na máquina dela ele responde `null` — a linha verde nasceria invisível
-        # e o primeiro lugar não aconteceria nunca. O nome vem do gesto de
-        # Ativar gravado em disco, que é o que ela chamou de perfil atual.
         self._active_profile_hint = perfil_que_ela_ativou()
         self._reload_profiles_store(on_done=self._sync_selection_with_active_profile)
 
     def _install_mode_section(self) -> None:
-        """Monta a seção "Modo" do editor (FEAT-PROFILE-MODE-GUI-01).
-
-        Widgets dinâmicos dentro do slot do glade (padrão home_actions):
-        SegmentedSelector do kind + CheckButton de co-op + seletor de máscara,
-        os dois últimos visíveis/sensíveis só com kind == "gamepad". Nunca
-        GtkComboBox (o cosmic-comp fecha o popup do combo no clique).
-        """
+        """Monta a seção "Modo" do editor (FEAT-PROFILE-MODE-GUI-01)."""
         slot = self._get("profile_mode_slot")
         if slot is None:
-            # Glade desatualizado: editor segue funcional sem a seção — o mode
             # do perfil sobrevive por herança em _build_profile_from_editor.
             self._mode_kind_selector = None
             return
@@ -1527,18 +810,9 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         slot.pack_start(kind_sel, False, False, 0)
         self._mode_kind_selector = kind_sel
 
-        # Opções específicas do gamepad: co-op e máscara em LINHAS separadas —
-        # na mesma HBox o seletor de máscara estourava a largura do frame e era
-        # cortado na borda direita (BUG-HOME-MASK-CLIP-01, visto ao vivo também
         # aqui no editor em 2026-07-13). A linha própria dá a largura toda.
         opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        # LEIGO-01: aqui havia um checkbox "Co-op local (cada controle = um
-        # jogador)" — o MESMO conceito da aba Início com outro nome, e o pior dos
-        # dois: salvar qualquer perfil gravava `coop: false` e desligava o co-op
-        # ao ativá-lo. Cada controle é um jogador sempre, então não há campo.
         mask_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        # LEIGO-06: "Máscara" é a palavra do código (SPRINT-GAME-RUMBLE-01);
-        # a usuária pergunta como o jogo vai mostrar os botões.
         flavor_label = Gtk.Label(label="O jogo vê o controle como:")
         mask_row.pack_start(flavor_label, False, False, 0)
         flavor_sel = SegmentedSelector(wrap=True)
@@ -1546,13 +820,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         flavor_sel.set_tooltip_text(
             "Quais desenhos de botão o jogo mostra na tela"
         )
-        # ESCOLHA-DELA-VENCE-01/E4, pedido dela: *"ao deixar o mouse sobre a
-        # opção Xbox, ele falaria que o Xbox não tem tais features"*.
-        #
-        # O texto do preço JÁ EXISTIA e vivia só na aba Início — que não é
-        # onde ela escolhe por jogo. Ele é REUSADO da função pura, e não
-        # reescrito: dois donos da mesma frase derivam, e esta casa tem a
-        # regra escrita.
         flavor_sel.set_tooltips(
             {
                 sabor: texto_do_custo_da_mascara(sabor)
@@ -1564,21 +831,9 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         mask_row.pack_start(flavor_sel, True, True, 0)
         opts.pack_start(mask_row, False, False, 0)
 
-        # MASCARA-QUE-GRUDA-01: a etiqueta de preço, VISÍVEL, embaixo dos dois
-        # botões. Ela acompanha o que está marcado — inclusive o "nenhum".
         preco = Gtk.Label(label=texto_do_preco_da_mascara(None))
         preco.set_xalign(0.0)
         preco.set_line_wrap(True)
-        # BUG-PERFIS-PRECO-ESTICA-01 (medido na foto, 22/08/2026): sem teto de
-        # largura o natural desta frase empurrou o painel inteiro e comeu a
-        # coluna "Perfis salvos" — de 830px para 460px, com "Só manual (nunca
-        # ativa sozin…" cortado. Um `Gtk.Label` que quebra linha só pede pouco
-        # quando alguém lhe diz onde quebrar.
-        #
-        # 64 é medido, não escolhido: com 84 a coluna ficava em 748px (melhor,
-        # ainda estreitando); com 64 a foto volta aos 830px de antes da linha
-        # existir. Quem mexer aqui refotografe com o modo "Jogar pelo Hefesto"
-        # ligado — é a única situação em que esta linha aparece.
         preco.set_max_width_chars(64)
         preco.get_style_context().add_class("dim-label")
         self._mode_flavor_price_label = preco
@@ -1598,20 +853,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         hint.get_style_context().add_class("dim-label")
         slot.pack_start(hint, False, False, 0)
 
-        # §P8: o aviso de rádio frágil, na seção onde ela escolhe o Modo
-        # Nativo. Nasce em código, como o preço da máscara logo acima — a
-        # seção "Modo" inteira é montada aqui, e um rótulo novo no XML não é
-        # necessário para o dado chegar à tela.
         #
-        # `#ffb86c` é o token de ALERTA da casa, o mesmo do
-        # `profile_process_name_aviso` e da frase do jogo. E `set_markup` em
-        # vez de classe CSS pela razão já medida nesta janela: classe não
-        # pinta rótulo aqui.
         aviso_radio = Gtk.Label()
         aviso_radio.set_xalign(0.0)
         aviso_radio.set_line_wrap(True)
-        # 64, o mesmo teto medido do preço da máscara — pelo mesmo motivo: uma
-        # frase longa sem onde quebrar come a coluna "Perfis salvos".
         aviso_radio.set_max_width_chars(64)
         aviso_radio.set_visible(False)
         aviso_radio.set_no_show_all(True)
@@ -1619,50 +864,28 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         slot.pack_start(aviso_radio, False, False, 0)
         slot.show_all()
 
-        # Contrato do sinal (BUG-HOME-SEGMENTED-SIGNATURE-01): "changed" do
-        # SegmentedSelector é emitido SEM argumentos — o handler recebe só o
-        # seletor e lê get_active_id().
         kind_sel.connect("changed", self._on_mode_kind_changed)
-        # PERFIL-SALVA-TUDO-01: a MÁSCARA também é gesto de modo. Sem este sinal,
-        # trocar só "o jogo vê o controle como" não contava como toque e o
-        # `mode` do rascunho venceria a escolha que ela acabou de fazer aqui.
         flavor_sel.connect("changed", self._on_mode_flavor_changed)
 
         kind_sel.set_active_id("none")
-        # MASCARA-QUE-GRUDA-01: a montagem nascia com **Xbox marcado**, e isso
-        # era a tela afirmando uma escolha que ninguém fez — a mesma família do
-        # `or "xbox"` que a ESCOLHA-DELA-VENCE-01/E1 arrancou das outras duas
-        # pontas. Sobrava um caminho: se algum dia o editor for mostrado sem
-        # passar por `_set_mode_editor`, o Salvar gravaria `xbox` no arquivo
-        # dela — e desde `2b11172` isso GRUDA. Nasce sem nada marcado.
         flavor_sel.limpar_ativo()
         self._atualizar_preco_da_mascara(None)
         self._sync_mode_options_visibility("none")
-        # Os dois `set_active_id` acima são montagem, não gesto dela.
         self._modo_tocado = False
 
     def _sync_mode_options_visibility(self, kind: str) -> None:
         """Mostra/habilita a máscara apenas com kind == "gamepad"."""
-        # §P8: o aviso do rádio acompanha o MESMO gesto — é o único ponto por
-        # onde os três caminhos (montagem, gesto dela e populate) passam.
         self._sincronizar_aviso_do_radio(kind)
         opts = self._mode_gamepad_opts
         if opts is None:
             return
         is_gamepad = kind == "gamepad"
         opts.set_visible(is_gamepad)
-        # no_show_all: um window.show_all() posterior não deve reexibir a linha
-        # escondida (mesmo padrão de profile_game_entry_box / aba Início).
         opts.set_no_show_all(not is_gamepad)
         opts.set_sensitive(is_gamepad)
 
     def _sincronizar_aviso_do_radio(self, kind: str) -> None:
-        """Escreve (ou apaga) o aviso de rádio frágil da seção "Modo".
-
-        Best-effort inteiro: sem o rótulo, sem o estado, ou com o daemon calado,
-        a linha simplesmente não aparece — nunca uma exceção na thread do GTK
-        por causa de um aviso.
-        """
+        """Escreve (ou apaga) o aviso de rádio frágil da seção "Modo"."""
         rotulo = getattr(self, "_aviso_do_radio_fragil", None)
         if rotulo is None:
             return
@@ -1672,8 +895,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         try:
             if frase is None:
                 rotulo.set_text("")
-                # §P9: rearmado ao apagar, pela mesma razão dos outros três
-                # widgets desta aba — ver `_mostrar_caixa_do_steam_input`.
                 with contextlib.suppress(Exception):
                     rotulo.set_no_show_all(True)
                 rotulo.set_visible(False)
@@ -1717,68 +938,35 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                     self._sincronizar_aviso_do_radio(
                         selector.get_active_id() or "none"
                     )
-        return False  # GLib.idle_add: não repetir
+        return False
 
     def _on_mode_kind_changed(self, selector: Any) -> None:
         """Handler do kind: sincroniza a visibilidade das opções do modo."""
         kind = selector.get_active_id() or "none"
-        # §P8: escolher o Modo Nativo é o gesto que faz a pergunta ao daemon.
-        # Fora dele não há aviso a dar, e um poller a mais nesta janela seria
-        # custo permanente por uma linha que quase nunca acende.
         if kind == _KIND_NATIVO:
             self._buscar_o_estado_do_radio()
-        # PERFIL-SALVA-TUDO-01: gesto no seletor conta. O populate programático
-        # (`_set_mode_editor`) também dispara este handler — ele BAIXA a marca
-        # depois, então o que sobra ligado aqui é toque dela.
         self._modo_tocado = True
         self._sync_mode_options_visibility(kind)
 
     def _atualizar_preco_da_mascara(self, flavor: object) -> None:
-        """Põe na etiqueta o preço da máscara ``flavor`` (no-op sem o widget).
-
-        Um só ponto de escrita: os três chamadores (montagem, gesto dela e
-        populate) mandam o valor e não escolhem a frase — quem escolhe é
-        `texto_do_preco_da_mascara`, que é pura e testável sem GTK.
-        """
+        """Põe na etiqueta o preço da máscara ``flavor`` (no-op sem o widget)."""
         rotulo = getattr(self, "_mode_flavor_price_label", None)
         if rotulo is not None:
             rotulo.set_text(texto_do_preco_da_mascara(flavor))
 
     def _on_mode_flavor_changed(self, selector: Any = None) -> None:
-        """Handler da máscara: marca o gesto e atualiza a etiqueta de preço.
-
-        A visibilidade continua sendo do kind — aqui só muda o texto que diz o
-        que a máscara recém-marcada custa.
-        """
+        """Handler da máscara: marca o gesto e atualiza a etiqueta de preço."""
         self._modo_tocado = True
         alvo = selector if selector is not None else self._mode_flavor_selector
         atual = alvo.get_active_id() if alvo is not None else None
         self._atualizar_preco_da_mascara(atual)
 
     def _set_mode_editor(self, mode: ProfileModeConfig | None) -> None:
-        """Preenche a seção "Modo" a partir de ``profile.mode`` (None → "none").
-
-        O único handler de modo que sobrou (`_on_mode_kind_changed`) apenas
-        sincroniza visibilidade — é idempotente, então o populate programático
-        pode dispará-lo à vontade e o guard anti-loop deixou de ser necessário.
-        """
+        """Preenche a seção "Modo" a partir de ``profile.mode`` (None → "none")."""
         kind_sel = self._mode_kind_selector
         if kind_sel is None:
             return
         kind = mode.kind if mode is not None else "none"
-        # ESCOLHA-DELA-VENCE-01/E1 — o `or "xbox"` SAIU daqui, e ele era um
-        # defeito ativo sem teste nenhum que o pegasse.
-        #
-        # Um perfil pode dizer `{"kind": "gamepad", "gamepad_flavor": null}`, e
-        # `null` significa, no applier, "MANTÉM a máscara atual". O editor
-        # convertia isso em "xbox" nas DUAS pontas: ela abria um perfil sem
-        # opinião sobre máscara, salvava qualquer outra coisa nele, e o perfil
-        # passava a EXIGIR Xbox — apagando giroscópio e touchpad naquele jogo.
-        # Ela nunca pediu isso.
-        #
-        # Com `None`, o seletor fica SEM NENHUM ativo (das duas saídas da
-        # sprint, a recomendada): mostrar um dos dois botões marcado seria a
-        # tela afirmando uma escolha que ninguém fez.
         flavor = mode.gamepad_flavor if mode is not None else None
         kind_sel.set_active_id(kind)
         if self._mode_flavor_selector is not None:
@@ -1786,56 +974,24 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 self._mode_flavor_selector.limpar_ativo()
             else:
                 self._mode_flavor_selector.set_active_id(flavor)
-        # MASCARA-QUE-GRUDA-01: `limpar_ativo` não emite "changed", e
-        # `set_active_id` só emite quando o id MUDA — a etiqueta é atualizada
-        # aqui, explicitamente, senão ela mostraria o preço do perfil anterior.
         self._atualizar_preco_da_mascara(flavor)
-        # set_active_id só emite quando o id muda — sincroniza explicitamente
-        # para a visibilidade ficar certa mesmo sem emissão.
         self._sync_mode_options_visibility(kind)
-        # PERFIL-SALVA-TUDO-01: este caminho é o POPULATE (perfil aberto na
-        # lista, prefill do perfil novo). Os `set_active_id` acima acabaram de
-        # disparar os handlers de gesto — baixar a marca AQUI, no fim, é o que
-        # separa "a tela mostrou o que estava no disco" de "ela escolheu".
         self._modo_tocado = False
 
     def _mode_section_from_editor(self) -> dict[str, Any] | None:
-        """Monta o dict da seção ``mode`` a partir dos widgets do editor.
-
-        "none" (sem opinião) → ``None``: a seção é REMOVIDA do perfil salvo.
-        ``gamepad_flavor`` só vale com kind == "gamepad" — para os demais kinds
-        gravamos ``None`` (JSON limpo, sem sobras).
-
-        LEIGO-01: ``coop`` NÃO é emitido. O editor não pergunta mais (cada
-        controle é um jogador, sempre), e omitir a chave faz o perfil HERDAR o
-        default do esquema — gravar o valor de hoje congelaria a decisão no
-        disco de novo, que foi exatamente o defeito que a migração teve de
-        limpar.
-        """
+        """Monta o dict da seção ``mode`` a partir dos widgets do editor."""
         kind_sel = self._mode_kind_selector
         kind = (kind_sel.get_active_id() if kind_sel is not None else None) or "none"
         if kind == "none":
             return None
         flavor: str | None = None
         if kind == "gamepad":
-            # ESCOLHA-DELA-VENCE-01/E1: sem botão marcado, grava `None` — que
-            # é "mantém a máscara atual", e é o que estava no disco. O
-            # `or "xbox"` que estava aqui era a segunda ponta do mesmo defeito:
-            # bastava salvar o perfil para ele passar a exigir Xbox.
             flavor_sel = self._mode_flavor_selector
             flavor = flavor_sel.get_active_id() if flavor_sel is not None else None
         return {"kind": kind, "gamepad_flavor": flavor}
 
     def _sync_selection_with_active_profile(self) -> None:
-        """Consulta o daemon e seleciona a linha do perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01).
-
-        Reusa o handler IPC canônico ``daemon.status`` (que já retorna
-        ``active_profile``). Chama via ``call_async`` para não bloquear a thread
-        GTK. Se o daemon estiver offline, se ``active_profile`` for ``None`` ou
-        se o perfil citado não existir no store atual, a chamada é no-op e a
-        seleção fallback (primeiro da lista) feita por ``_reload_profiles_store``
-        é preservada.
-        """
+        """Consulta o daemon e seleciona a linha do perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01)."""
         call_async(
             method="daemon.status",
             params=None,
@@ -1852,12 +1008,11 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             active = result.get("active_profile")
             if not isinstance(active, str) or not active:
                 return False
-            # UX-PROFILES-ACTIVE-HIGHLIGHT-01: negrito na linha do ativo.
             self._mark_active_profile_row(active)
             self._select_profile_by_name(active)
         except Exception as exc:
             logger.warning("profile_sync_callback_falhou", err=str(exc))
-        return False  # GLib.idle_add: não repetir
+        return False
 
     def _on_daemon_status_sync_failed(self, exc: Exception) -> bool:
         """Callback GTK: falha silenciosa — mantém fallback (primeiro da lista)."""
@@ -1865,21 +1020,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return False
 
     def _select_profile_by_name(self, name: str) -> bool:
-        """Seleciona a linha do store cujo nome bate com ``name``.
-
-        Retorna True se encontrou e selecionou; False caso contrário (perfil não
-        existe no store — ex.: deletado entre refresh e resposta IPC).
-
-        NUNCA-TROCA-O-ALVO-01: com trabalho não salvo no editor, este caminho
-        NÃO mexe na seleção. Ele não é chamado por gesto dela — é o daemon
-        dizendo qual perfil está ativo agora —, e a lista já responde a isso do
-        jeito certo: o NEGRITO de `_mark_active_profile_row`, que é chamado
-        logo antes e não depende da seleção. Mover a barra azul além disso
-        arrastaria junto o editor, o "Ativar", o "Duplicar" e o "Remover", que
-        leem a linha selecionada. Recusar é o menor espanto possível: a lista
-        continua dizendo quem está ativo, e o que ela estava editando continua
-        aberto e apontado para o mesmo arquivo.
-        """
+        """Seleciona a linha do store cujo nome bate com ``name``."""
         if not self._selecao_pode_se_mover_sozinha(name):
             logger.info(
                 "perfis_selecao_automatica_recusada",
@@ -1900,29 +1041,14 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return False
 
     def _selecao_pode_se_mover_sozinha(self, destino: str) -> bool:
-        """A seleção pode pular para ``destino`` sem que ela tenha pedido?
-
-        Pode quando o editor está limpo — ou quando o destino JÁ é o perfil
-        aberto no editor, caso em que "pular" não muda alvo nenhum.
-        """
+        """A seleção pode pular para ``destino`` sem que ela tenha pedido?"""
         alvo = getattr(self, "_alvo_do_salvar", None)
         if alvo and (destino == alvo or mesmo_slug(destino, alvo)):
             return True
         return not self._ha_trabalho_no_editor()
 
     def _mover_selecao_sem_gesto(self, linha: Any) -> None:
-        """Seleciona ``linha`` marcando que quem mexeu foi o CÓDIGO.
-
-        NUNCA-TROCA-O-ALVO-01. ``select_iter`` emite `changed` na hora, e o
-        handler não tem como saber quem o emitiu — a marca é lida por
-        `on_profile_selection_changed`. Mesmo `try/finally` do
-        `_suppress_advanced_toggle`, pelo mesmo motivo: uma exceção no meio
-        deixaria a janela inteira achando que todo clique dela é do código.
-
-        Restaura o valor ANTERIOR em vez de baixar a marca: a repintura de
-        `_populate_profiles_store` já corre marcada e chama isto por dentro —
-        zerar aqui desmarcaria o resto dela pela metade.
-        """
+        """Seleciona ``linha`` marcando que quem mexeu foi o CÓDIGO."""
         tree: Gtk.TreeView = self._get("profiles_tree")
         anterior = self._selecao_programatica
         self._selecao_programatica = True
@@ -1992,32 +1118,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 if bool(checar()):
                     return True
             except Exception as exc:
-                # NUNCA-TROCA-O-ALVO-01/M2 (06/08/2026): este portão FECHA no
-                # escuro. "Não sei responder" não pode virar "não há trabalho a
-                # proteger" — foi medido: forçando `_tem_edicao_pendente` a
-                # estourar, o defeito INTEIRO volta (o editor pula para o perfil
-                # do jogo, o Salvar grava lá, e a cor dela some sem diálogo). Um
-                # falso "sim" custa uma seleção que não acompanha o perfil ativo
-                # até ela clicar; um falso "não" custa o trabalho dela. Não há
-                # gatilho conhecido em produção (`self.draft != baseline` são
-                # dois pydantic), e é por isso mesmo que a resposta é barata.
                 logger.warning("perfis_edicao_pendente_indeterminada", err=str(exc))
                 return True
         return False
 
     def _alvo_do_salvar_do_editor(self) -> str | None:
-        """Qual perfil do disco o "Salvar este perfil" vai gravar por cima.
-
-        NUNCA-TROCA-O-ALVO-01: a pergunta era feita ao WIDGET
-        (`_selected_profile_name`), e por isso a resposta mudava sempre que a
-        janela mexia na lista por conta própria. Passa a ser o alvo memorizado
-        no gesto — o perfil que `_populate_editor` de fato abriu.
-
-        O fallback para a linha selecionada não é preguiça: sem nenhum
-        `_populate_editor` na história (dublê de teste, glade degradado, uma
-        aba montada sozinha) o widget é a única fonte que existe, e era o
-        comportamento de sempre.
-        """
+        """Qual perfil do disco o "Salvar este perfil" vai gravar por cima."""
         alvo = getattr(self, "_alvo_do_salvar", None)
         if alvo:
             return str(alvo)
@@ -2026,7 +1132,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         except Exception:
             return None
 
-    # --- handlers de toggle e radio ---
 
     def on_profile_advanced_toggle(
         self,
@@ -2056,21 +1161,15 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         ou seja, a janela mandava olhar exatamente onde ela mentia.
         """
         # BUG-ADVANCED-TOGGLE-CLOBBER-01: ignora chamadas programáticas (set_active
-        # em _populate_editor) — só persiste quando o usuário move o switch.
         if self._suppress_advanced_toggle:
             return False
         self._mode_advanced = state
         if state:
             self._mostrar_a_regra_nos_campos_crus()
-            # PROCESSO-CEGO-01: a página avançada é a única porta para o campo
-            # `process_name`, então é ao abri-la que a pergunta "ele casa aqui?"
-            # tem de ser refeita — o backend da cascata Wayland MIGRA em runtime
-            # (portal → wlrctl → null), e uma resposta do boot da janela pode
-            # estar velha quando ela finalmente liga o avançado.
             self._atualizar_aviso_do_processo()
         self._apply_editor_mode()
         set_pref("advanced_editor", state)
-        return False  # retorno False = deixa o GTK atualizar o estado visual
+        return False
 
     def _atualizar_aviso_do_processo(self) -> None:
         """Mostra/esconde o aviso de que ``process_name`` não casa (PROCESSO-CEGO-01).
@@ -2098,10 +1197,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 if texto is None:
                     alvo.set_visible(False)
                 else:
-                    # As frases da função não levam `<`, `&` nem aspas retas —
                     # as aspas são as tipográficas “ ”, que o Pango passa
-                    # inteiras. Mesma costura do `rumble_policy_aviso`, e
-                    # `#ffb86c` é o token de ALERTA da casa.
                     alvo.set_markup(f'<span foreground="#ffb86c">{texto}</span>')
                     alvo.set_visible(True)
             except Exception as exc:
@@ -2117,32 +1213,13 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         )
 
     def _on_aplica_a_changed(self, combo: Any) -> None:
-        """Mostra o campo livre nas escolhas que exigem alvo ("game"/"steam_game").
-
-        ``combo`` é o ``SegmentedSelector`` (FEAT-DSX-COMBO-TO-SEGMENTED-01);
-        mantém a mesma API por-ID do GtkComboBoxText anterior.
-
-        R-12: as duas escolhas compartilham o mesmo widget mas pedem coisas
-        MUITO diferentes (basename do executável e appid da Steam) — o
-        placeholder e o tooltip são trocados aqui, porque o rótulo do glade
-        ("Nome do jogo:") serve para as duas e sozinho não desambigua.
-        """
+        """Mostra o campo livre nas escolhas que exigem alvo ("game"/"steam_game")."""
         active_id = combo.get_active_id() or "any"
-        # SALVAR-NAO-REBAIXA-01: trocar o "Aplica a" é um gesto DELA sobre a
-        # regra, e precisa contar mesmo quando o valor final coincide com a
-        # fotografia. O caso: um perfil de match complexo abre no editor
-        # avançado e a página simples mostra "Qualquer" sem ela ter escolhido
-        # nada; sem esta marca, escolher "Qualquer" de propósito seria
-        # indistinguível de não ter tocado, e a guarda viraria um cadeado.
-        # `_populate_editor` zera a marca DEPOIS de posicionar os widgets, então
-        # a seleção programática de abertura não conta.
         self._regra_tocada = True
         entry = self._get("profile_simple_custom_name")
         dica = _CAMPO_LIVRE_DICAS.get(active_id)
         if entry is not None and dica is not None:
             placeholder, tooltip = dica
-            # Widgets fake dos testes não têm as duas APIs — a dica é cosmética
-            # e não pode derrubar a troca de contexto.
             with contextlib.suppress(Exception):
                 entry.set_placeholder_text(placeholder)
             with contextlib.suppress(Exception):
@@ -2151,73 +1228,21 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         if box is None:
             return
         if active_id in _IDS_COM_CAMPO_LIVRE:
-            # CAMPO-QUE-NAO-NASCE-01 (05/08/2026, relatado por ela: "quando eu
-            # clico em jogo da steam não aparece nenhum campo pra digitar").
-            #
-            # O box do glade nasce com `no-show-all=True` — de propósito, para
-            # que o `show_all()` da janela não o revele antes da hora. O efeito
-            # colateral é que esse mesmo `show_all()` **não desce nos filhos**:
-            # o rótulo e o `GtkEntry` nunca são mostrados. Um `box.show()` aqui
-            # revela a CAIXA e mais nada, e ela vê um vão vazio no lugar do
-            # campo — sem erro, sem log, sem jeito de digitar o appid.
-            #
-            # `show_all()` direto também não resolve: a doutrina do GTK é que
-            # `no_show_all` faz o `show_all()` ignorar o widget, inclusive
-            # quando chamado NELE. Por isso a ordem é desarmar e só então
-            # mostrar; o `no_show_all` é redundante depois que o box passa a ser
-            # gerido por este handler, que o esconde de volta no `else`.
             box.set_no_show_all(False)
             box.show_all()
         else:
             box.hide()
-        # MODO-01/B1: escolher "jogo"/"jogo da Steam" num perfil NOVO já
-        # pré-seleciona o modo jogo. O gate de "perfil novo" fica visível AQUI
-        # (e não só dentro do helper) porque é ele que explica por que trocar o
-        # "Aplica a" de um perfil salvo não mexe no modo dele.
         if active_id in _IDS_COM_CAMPO_LIVRE and getattr(self, "_new_profile", False):
             self._prefill_modo_de_jogo()
         if active_id == "steam_game":
             self._prefill_steam_appid()
         self._mostrar_caixa_do_steam_input(active_id == "steam_game")
-        # JOGO-QUE-SE-DIZ-01: o nome do jogo ao lado do número acompanha a
-        # escolha — em "Jogo específico" o campo guarda o basename do programa,
-        # e um nome de jogo da Steam ali seria a tela afirmando outra regra.
         self._atualizar_frase_do_jogo()
 
-    # --- A caixinha que TIRA um jogo do Steam Input ------------------------
-    # DECISÃO DELA, 07/08/2026: "no editor do perfil, logo abaixo do jogo
-    # escolhido". O que faltava era só o gatilho: `add_appid_to_steam_input_
-    # allowlist` já tinha o botão da aba Sistema, e o gêmeo `remove_...` tinha
-    # nove testes, uma linha de comando e ZERO chamadores na janela — pôr um
-    # jogo na lista era um clique, tirar exigia editor de texto.
-    #
-    # A marca é do JOGO (uma linha de appid num txt nosso), não do perfil: ela
-    # vale na hora e não espera o "Salvar este perfil". Por isso a caixa não
     # entra em `_build_profile_from_editor` nem no `Profile` do disco — o que
-    # entraria ali seria um segundo dono do mesmo fato.
 
     def _mostrar_caixa_do_steam_input(self, mostrar: bool) -> None:
-        """Revela (ou esconde) a caixinha, e sincroniza o estado dela.
-
-        A ordem `set_no_show_all(False)` ANTES do `show_all()` não é ornamento:
-        é a cura da CAMPO-QUE-NAO-NASCIA-01 — `no_show_all` faz o `show_all()`
-        ignorar o widget INCLUSIVE quando chamado nele mesmo, e um `show()` seco
-        revelaria a caixa sem descer nos filhos (ela veria um vão vazio).
-
-        E o `set_no_show_all(True)` de volta ao esconder é a OUTRA metade dessa
-        mesma cura, medida em 25/08/2026 (§P9). Sem ela o desarme era
-        PERMANENTE: `app.py:show_window()` — o caminho do ícone da bandeja, da
-        notificação e do `kill -USR1` — chama `window.show_all()`, e um
-        `show_all()` da janela reexibe todo widget que não estiver com o
-        `no_show_all` armado. O resultado é a caixinha do Steam Input
-        reaparecendo sob um "Aplica a:" que não é "Jogo da Steam", com a lista
-        de outros marcados que pertence a outra escolha.
-
-        O molde certo já estava neste arquivo, uma seção acima:
-        `_sync_mode_options_visibility` faz `set_no_show_all(not is_gamepad)`.
-        O glade também já dizia a intenção — `no-show-all: True` nos dois
-        widgets. O que faltava era rearmar.
-        """
+        """Revela (ou esconde) a caixinha, e sincroniza o estado dela."""
         box = self._get("profile_steam_input_box")
         if box is None:
             return
@@ -2225,8 +1250,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._sincronizar_caixa_do_steam_input()
             self._sincronizar_outros_marcados()
             self._sincronizar_exigencia_invisivel()
-            # P2: e o carimbo de ponte do jogo, buscado no daemon por GESTO.
-            # Ver `_buscar_as_pontes_confirmadas` para por que não vem no tique.
             self._buscar_as_pontes_confirmadas()
             with contextlib.suppress(Exception):
                 box.set_no_show_all(False)
@@ -2237,34 +1260,11 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             box.hide()
 
     def _sincronizar_exigencia_invisivel(self) -> None:
-        """Diz o que o perfil exige e esta página NÃO mostra.
-
-        A-REGRA-QUE-A-TELA-NAO-MOSTRA-01 (10/08/2026), de uma foto dela. O editor
-        simples mostrava "Jogo da Steam · 3357650" e o arquivo tinha também
-        `process_name: ["PRAGMATA.exe"]`. O `matches` é AND, então o campo
-        invisível é o que decidia: o perfil não entrava sozinho — medido seis
-        vezes em dois minutos, com ela jogando, e o que ficava valendo era o
-        perfil anterior (o "Navegação", que casa com a janela do Steam).
-
-        Preservar o campo invisível ao salvar continua certo (é o que impede a
-        janela de apagar o que ela não mostra). Esconder que ele EXISTE é que
-        não: a tela afirmava uma regra que não era a regra.
-
-        Lê da fotografia tirada quando o perfil abriu — o mesmo dado que o
-        `_regra_do_disco_ao_salvar` usa para preservar. Sem fotografia (perfil
-        novo) não há nada invisível a declarar, e a linha some.
-
-        `set_markup` com o amarelo do "parou" pela razão já medida nesta casa:
-        classe de CSS não pinta rótulo nesta janela (ver `COR_DA_SITUACAO`).
-        """
+        """Diz o que o perfil exige e esta página NÃO mostra."""
         rotulo = self._get("profile_exigencia_invisivel")
         if rotulo is None:
             return
-        # O CAMINHO É DESTA JANELA, e por isso ele é somado AQUI — 05/09/2026.
-        # O `exigencia_invisivel` devolve só o FATO desde então: nomear o
-        # "Modo avançado" (um interruptor do `main.glade`) dentro de um matcher
         # de `profiles/` fazia a frase mandar a pessoa a um botão que a
-        # interface nova não tem, e obrigava aquela aba a remendar a saída.
         from hefesto_dualsense4unix.profiles.simple_match import (
             CAMINHO_DA_JANELA_GTK,
             exigencia_invisivel,
@@ -2282,20 +1282,13 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 rotulo.set_no_show_all(False)
         else:
             rotulo.set_text("")
-            # §P9: e rearmado ao apagar, senão o `show_all()` da janela devolve
-            # à tela um rótulo VAZIO. Ver `_mostrar_caixa_do_steam_input`.
             with contextlib.suppress(Exception):
                 rotulo.set_no_show_all(True)
         rotulo.set_visible(bool(texto))
 
     @staticmethod
     def _appids_do_steam_input() -> set[str]:
-        """AppIDs marcados hoje, lidos do arquivo dela. Erro = conjunto vazio.
-
-        Fonte única: o mesmo módulo que escreve (`steam_launch_options`), com o
-        mesmo caminho XDG que o guard em bash e o daemon leem. Uma segunda
-        leitura do formato aqui viraria um segundo dono do arquivo.
-        """
+        """AppIDs marcados hoje, lidos do arquivo dela. Erro = conjunto vazio."""
         try:
             from hefesto_dualsense4unix.integrations.steam_launch_options import (
                 parse_steam_input_allowlist,
@@ -2305,17 +1298,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             caminho = steam_input_allowlist_path()
             return set(parse_steam_input_allowlist(caminho.read_text(encoding="utf-8")))
         except Exception:
-            # Arquivo ausente é allowlist vazia — é o mesmo critério do
-            # `remove_appid_from_steam_input_allowlist`, que devolve
-            # "nao_estava" sem criar nada.
             return set()
 
     def _sincronizar_caixa_do_steam_input(self) -> None:
-        """Põe a caixinha no estado do DISCO, sem disparar o handler.
-
-        O guard existe porque `set_active` emite "toggled" igual a um clique: sem
-        ele, abrir um perfil de jogo já marcado reescreveria a allowlist dela.
-        """
+        """Põe a caixinha no estado do DISCO, sem disparar o handler."""
         check = self._get("profile_steam_input_check")
         if check is None:
             return
@@ -2326,29 +1312,14 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             with contextlib.suppress(Exception):
                 check.set_active(marcado)
             with contextlib.suppress(Exception):
-                # Sem appid não há o que marcar — e uma caixa clicável que não
-                # sabe sobre qual jogo age é pior que uma caixa apagada.
                 check.set_sensitive(appid is not None)
         finally:
             self._suppress_steam_input_toggle = False
 
-    #: Como um jogo sem nome no disco aparece na lista. O NÚMERO fica, e a
-    #: razão vem junto — "não encontrado" é resposta, e inventar um nome para
-    #: preencher a coluna seria a tela afirmando o que não sabe.
     SEM_NOME_NO_DISCO = "nome não encontrado"
 
     def _nome_do_appid(self, appid: str) -> str | None:
-        """O nome do jogo pelo appid, do catálogo que a completação já leu.
-
-        Sem leitura de disco AQUI de propósito: `_instalar_lista_de_jogos_do_pc`
-        varre as bibliotecas numa thread no arranque do editor e guarda o mapa
-        em `_nomes_dos_jogos`. Varrer de novo a cada abertura da caixinha seria
-        um segundo leitor do mesmo disco, e na thread errada.
-
-        Devolve `None` quando o catálogo ainda não chegou ou o jogo não tem
-        `appmanifest` — e os dois casos são o MESMO na tela, porque para quem
-        olha a diferença não muda nada: o produto não sabe o nome.
-        """
+        """O nome do jogo pelo appid, do catálogo que a completação já leu."""
         mapa = getattr(self, "_nomes_dos_jogos", None)
         if not isinstance(mapa, dict):
             return None
@@ -2356,24 +1327,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return nome if isinstance(nome, str) and nome.strip() else None
 
     def _sincronizar_outros_marcados(self) -> None:
-        """Desenha os OUTROS jogos marcados, um por linha, com o botão de tirar.
-
-        A-LISTA-QUE-FALTAVA-01 (22/08/2026), decisão dela. A allowlist tinha
-        três caminhos e nenhum mostrava a LISTA: o botão "Este jogo não
-        funciona" da aba Sistema só MARCA, esta caixinha só alcança o jogo do
-        perfil aberto, e o resto era `gamepad steam-input remove` no terminal.
-        O tooltip daquele botão chegava a mandar vir até aqui para desmarcar —
-        marcar era um clique e desmarcar era uma viagem, para um jogo de cada
-        vez, sem nunca ver os outros.
-
-        **"Outros" exclui o jogo deste editor de propósito.** Ele já tem a
-        caixa acima, e listá-lo de novo daria dois controles para o mesmo fato
-        na mesma tela — a classe de defeito que a `ABAS-01` curou.
-
-        A caixa some quando não há outros: uma lista vazia com título é ruído,
-        e o silêncio aqui não esconde nada (a caixa acima continua dizendo o
-        que vale para este jogo).
-        """
+        """Desenha os OUTROS jogos marcados, um por linha, com o botão de tirar."""
         caixa = self._get("profile_steam_input_outros")
         if caixa is None:
             return
@@ -2384,9 +1338,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         deste = self._appid_do_editor()
         outros = sorted(self._appids_do_steam_input() - {deste or ""})
         if not outros:
-            # §P9 (25/08/2026): rearmar antes de esconder — sem isto o
-            # `window.show_all()` do `show_window()` traz de volta uma lista
-            # VAZIA com título. Ver `_mostrar_caixa_do_steam_input`.
             with contextlib.suppress(Exception):
                 caixa.set_no_show_all(True)
             caixa.hide()
@@ -2397,21 +1348,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         titulo = Gtk.Label()
         titulo.set_xalign(0.0)
         titulo.set_markup(
-            # Sem `_()`: este módulo inteiro ainda não tem encanamento de i18n
-            # (o piso está em `test_lingua_do_produto_01`), e meia tradução num
-            # arquivo de quatro mil linhas é pior que nenhuma — some do catálogo
-            # metade das frases da mesma tela.
             f"<i>Outros jogos marcados: {len(outros)}</i>"
         )
         with contextlib.suppress(Exception):
             titulo.get_style_context().add_class("dim-label")
         caixa.pack_start(titulo, False, False, 0)
 
-        # GRADE, e não uma fileira por jogo: com `Gtk.Box` o rótulo precisava de
-        # `hexpand` para o botão não colar no texto, e aí o `hexpand` levava o
-        # botão para a borda direita do painel inteiro — 900px de vão entre o
-        # nome e o "Tirar", medido na foto de 22/08. Numa grade as três colunas
-        # se alinham entre si e param onde o conteúdo acaba.
         grade = Gtk.Grid()
         grade.set_column_spacing(12)
         grade.set_row_spacing(2)
@@ -2426,17 +1368,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         caixa.show_all()
 
     def _celulas_de_outro_marcado(self, appid: str) -> list[Any]:
-        """As três células de uma linha: o nome, o número e o botão que tira.
-
-        O NÚMERO tem coluna própria, e não some quando o nome aparece: é o mesmo
-        critério do `JogoLocal.rotulo` e do `steam_launch_options.rotulo_do_jogo`
-        — o appid é o que ela confere na Steam, e é o único identificador que os
-        cadastros deste projeto compartilham.
-
-        Sem nome no disco, a coluna do nome carrega a RAZÃO em vez de um rótulo
-        genérico. "Jogo desconhecido" seria a tela inventando uma categoria;
-        "nome não encontrado" diz o que houve.
-        """
+        """As três células de uma linha: o nome, o número e o botão que tira."""
         from gi.repository import Gtk
 
         nome = self._nome_do_appid(appid)
@@ -2463,20 +1395,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return [rotulo, numero, tirar]
 
     def _ao_tirar_outro_marcado(self, _botao: Any, appid: str) -> None:
-        """Desmarca um jogo que NÃO é o deste editor.
-
-        Passa pelo mesmo `_gravar_marca_do_steam_input` da caixinha — e não por
-        uma segunda chamada ao `remove` — porque é ele que dá o toast, avisa o
-        daemon e relê o disco. Dois caminhos de escrita para a mesma lista era
-        metade do defeito que esta entrega fecha.
-
-        **Sem a pergunta do RELANCAR-01, e a diferença é medida:** aquela
-        pergunta existe porque marcar/desmarcar o jogo QUE ESTÁ ABERTO tira
-        dele o dispositivo que ele já enumerou. Estes são os OUTROS jogos —
-        nenhum deles é o do editor, e o `_gravar_marca_do_steam_input` continua
-        sendo o único escritor. Se um deles estiver aberto, o efeito é o mesmo
-        de sempre: vale na próxima abertura, que é o que o tooltip promete.
-        """
+        """Desmarca um jogo que NÃO é o deste editor."""
         self._gravar_marca_do_steam_input(appid, marcar=False)
 
     def _appid_do_editor(self) -> str | None:
@@ -2493,52 +1412,19 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return texto if texto.isdigit() else None
 
     def _on_campo_do_jogo_mudou(self, _entry: object = None) -> None:
-        """Digitar outro appid muda de qual jogo a caixinha está falando.
-
-        JOGO-QUE-SE-DIZ-01 acrescentou dois trabalhos ao mesmo sinal, nesta
-        ordem, que não é arbitrária: **primeiro** o endereço colado vira o
-        número (e isso reentra por este mesmo handler, com o campo já
-        normalizado), **depois** a caixinha do Steam Input e a frase do jogo
-        leem um campo que já é um appid.
-        """
+        """Digitar outro appid muda de qual jogo a caixinha está falando."""
         if self._selected_simple_choice() != "steam_game":
             self._atualizar_frase_do_jogo()
             return
         if self._colar_virou_numero():
             return
         self._sincronizar_caixa_do_steam_input()
-        # A-LISTA-QUE-FALTAVA-01: e a LISTA junto. Trocar o appid muda de qual
-        # jogo a caixinha fala E quais são os "outros" — sem esta linha o jogo
-        # do editor aparecia na própria lista de outros, que é o defeito que o
-        # teste `test_a_lista_mostra_os_OUTROS_jogos_marcados` pegou.
         self._sincronizar_outros_marcados()
         self._atualizar_frase_do_jogo()
 
-    # --- O campo que entende o endereço e conhece os jogos daqui ------------
-    # JOGO-QUE-SE-DIZ-01 (13/08/2026), pedido dela: *"ou aplicamos um regex
-    # automático só de colar o link da loja do jogo e ele pega o id, ou ele
-    # pré-apresenta os nomes dos jogos em .desktop localmente instalados no pc,
-    # dessa forma ao digitar o nome do jogo ele apareceria ali."*
-    #
-    # Os dois, porque são complementares: o endereço cobre o jogo que ela ainda
-    # não instalou, e a lista cobre o que já está aqui. O rótulo continua sendo
-    # "Nome do jogo:" — nome novo para um campo que já tem nome seria conceito
-    # errado, e este rótulo já carrega dois significados (ver
-    # `_CAMPO_LIVRE_DICAS`), que é o motivo de a dica trocar por escolha.
 
     def _instalar_lista_de_jogos_do_pc(self) -> None:
-        """Liga a completação do campo do jogo, com o catálogo lido em thread.
-
-        A leitura do disco vai para fora da thread GTK por disciplina, não por
-        medida de dor: nesta máquina o catálogo inteiro (33 `.acf` em duas
-        bibliotecas + 150 `.desktop`) sai em **10 ms**. Numa biblioteca de
-        centenas de jogos, num HD que dormiu, o número é outro — e travar a
-        janela para montar uma sugestão seria trocar um alívio por um defeito.
-
-        Tudo aqui é best-effort: sem Steam, sem `.acf`, sem permissão ou sem
-        `Gtk.EntryCompletion` (dublê de teste), a lista fica vazia e o campo
-        segue aceitando o que ela digitar. Degradar em silêncio é requisito.
-        """
+        """Liga a completação do campo do jogo, com o catálogo lido em thread."""
         self._jogos_do_pc: list[JogoLocal] = []
         self._nomes_dos_jogos: dict[str, str] = {}
         self._jogos_store = None
@@ -2549,10 +1435,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             store = Gtk.ListStore(GObject.TYPE_STRING, GObject.TYPE_STRING)
             completion = Gtk.EntryCompletion()
             completion.set_model(store)
-            # Coluna 0 = o rótulo que ela LÊ ("Sea of Stars (appid 851100)").
-            # Coluna 1 = o appid, que é o que o campo GRAVA — por isso o
-            # "match-selected" é interceptado: o comportamento de fábrica
-            # escreveria o rótulo inteiro no campo, e o perfil nasceria com um
             # `steam_app_Sea of Stars` que nunca casa com janela nenhuma.
             completion.set_text_column(0)
             completion.set_minimum_key_length(1)
@@ -2574,12 +1456,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         )
 
     def _guardar_jogos_do_pc(self, jogos: Any) -> bool:
-        """Recebe o catálogo lido na thread e enche a lista suspensa.
-
-        Método, e não closure, para que o teste possa entregar uma biblioteca
-        de mentira sem GLib nem thread — e para que a leitura do disco DELA
-        nunca precise acontecer num teste.
-        """
+        """Recebe o catálogo lido na thread e enche a lista suspensa."""
         try:
             self._jogos_do_pc = list(jogos or [])
             self._nomes_dos_jogos = nomes_por_appid(self._jogos_do_pc)
@@ -2589,7 +1466,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 for jogo in self._jogos_do_pc:
                     alvo.append([jogo.rotulo, jogo.appid])
             logger.info("jogos_do_pc_lidos", quantos=len(self._jogos_do_pc))
-            # O perfil já aberto pode estar mostrando um número mudo.
             self._atualizar_frase_do_jogo()
         except Exception as exc:
             logger.debug("lista_de_jogos_nao_montou", err=str(exc))
@@ -2619,11 +1495,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
     def _on_jogo_escolhido_na_lista(
         self, _completion: Any, model: Any, iterador: Any
     ) -> bool:
-        """Ela escolheu um jogo: o campo fica com o APPID, não com o rótulo.
-
-        Devolve ``True`` para impedir o comportamento de fábrica, que escreveria
-        o rótulo lido no campo gravado.
-        """
+        """Ela escolheu um jogo: o campo fica com o APPID, não com o rótulo."""
         with contextlib.suppress(Exception):
             appid = model.get_value(iterador, 1)
             entry = self._get("profile_simple_custom_name")
@@ -2634,11 +1506,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return True
 
     def _colar_virou_numero(self) -> bool:
-        """Endereço colado no campo vira o appid. ``True`` = o campo foi reescrito.
-
-        Só reescreve quando o texto NÃO é já o número: sem essa guarda o
-        ``set_text`` reentraria neste mesmo handler para sempre.
-        """
+        """Endereço colado no campo vira o appid. ``True`` = o campo foi reescrito."""
         if getattr(self, "_reescrevendo_o_campo_do_jogo", False):
             return False
         entry = self._get("profile_simple_custom_name")
@@ -2664,13 +1532,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return True
 
     def _atualizar_frase_do_jogo(self) -> None:
-        """Escreve (ou apaga) o rótulo que fica ao lado do campo do jogo.
-
-        A decisão é da função pura `jogos_locais.frase_do_campo_do_jogo`; aqui
-        só a costura e a cor. `#ffb86c` é o token de ALERTA da casa, o mesmo do
-        `profile_process_name_aviso`, e `set_markup` em vez de classe CSS pela
-        razão já medida: classe não pinta rótulo nesta janela.
-        """
+        """Escreve (ou apaga) o rótulo que fica ao lado do campo do jogo."""
         rotulo = self._get("profile_jogo_reconhecido")
         if rotulo is None:
             return
@@ -2683,11 +1545,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             texto = (entry.get_text() or "") if entry is not None else ""
             nomes = getattr(self, "_nomes_dos_jogos", {})
             decisao = frase_do_campo_do_jogo(texto, nomes)
-            # P2 (25/08/2026): o carimbo de ponte entra AQUI, no mesmo rótulo e
-            # logo abaixo, porque é o MESMO jogo do campo ao lado — e é onde
-            # ela escolhe o jogo. Rótulo próprio no glade seria o certo (é o
-            # que a sprint pede), e o arquivo é de outra frente nesta leva;
-            # esta costura entrega o dado sem tocar o XML.
             do_carimbo = frase_da_ponte_confirmada(
                 getattr(self, "_pontes_confirmadas", None), texto
             )
@@ -2698,19 +1555,11 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             linhas: list[str] = []
             if decisao is not None:
                 frase, e_alerta = decisao
-                # `#ffb86c` é o ALERTA da casa; `#8be9fd` é o `cyan` do
-                # `theme.css:25`, cujo comentário o define como "info, valores
-                # numéricos" — que é exatamente o que o nome do jogo é aqui: a
-                # leitura humana do número que está no campo ao lado.
                 cor = "#ffb86c" if e_alerta else "#8be9fd"
                 linhas.append(
                     f'<span foreground="{cor}">{escapar_markup(frase)}</span>'
                 )
             if do_carimbo is not None:
-                # Itálico e sem cor própria: o carimbo é informação de APOIO —
-                # confirmação, não alerta —, e inventar um quarto token de cor
-                # nesta tela seria a aba escrevendo o próprio vocabulário
-                # visual. É o mesmo tratamento de "Outros jogos marcados".
                 linhas.append(f"<i>{escapar_markup(do_carimbo)}</i>")
             rotulo.set_markup("\n".join(linhas))
             with contextlib.suppress(Exception):
@@ -2733,7 +1582,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 
         **Por que `daemon.status` e não o `state_full` que a janela já lê a cada
         tique:** o `state_full` TAMBÉM publica `pontes_confirmadas` desde a
-        BG-02 (`daemon/ipc_handlers.py:2395`, dentro de
+        BG-02 (`daemon/ipc_handlers.py:1814`, dentro de
         `_handle_daemon_state_full`), mas **atrás de um cache de 5 s**
         (`_PONTES_CONFIRMADAS_TTL_SEC`, `:189`) — porque a leitura crua abre
         CADA perfil do disco sob `FileLock` e o tique roda a 10-20 Hz. Quem
@@ -2759,20 +1608,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._pontes_confirmadas = pontes if isinstance(pontes, dict) else {}
             with contextlib.suppress(Exception):
                 self._atualizar_frase_do_jogo()
-        return False  # GLib.idle_add: não repetir
+        return False
 
     def on_profile_steam_input_toggled(self, check: Any = None) -> None:
-        """Marca/desmarca ESTE jogo na allowlist do Steam Input.
-
-        Sem diálogo, pelo mesmo motivo do botão "Este jogo não funciona": a ação
-        não fecha nada, não edita arquivo da Steam, e agora tem volta — a volta
-        é desmarcar a própria caixa, que é o que esta entrega existe para dar.
-
-        Escrita síncrona de propósito: é um txt de poucas linhas no `~/.config`
-        dela, e o `add`/`remove` já fazem escrita atômica (o guard pode estar
-        lendo o arquivo neste instante). O que vai para segundo plano é só o
-        aviso ao daemon, que é best-effort.
-        """
+        """Marca/desmarca ESTE jogo na allowlist do Steam Input."""
         if getattr(self, "_suppress_steam_input_toggle", False):
             return
         if check is None:
@@ -2789,20 +1628,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._sincronizar_caixa_do_steam_input()
             return
         # RELANCAR-01 (08/08/2026): marcar/desmarcar cria uma BORDA em
-        # `sync_steam_input_exception`, que mexe no controle AO VIVO. Com o jogo
-        # aberto essa mudança não chega ao processo dele (o wrapper faz
-        # `exec env`) — foi o que a deixou sem controle nenhum no meio da
-        # partida. Então: sonda primeiro, e se houver jogo aberto, PERGUNTA
-        # antes de escrever no disco.
-        #
-        # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): a frase antiga
-        # dizia que a borda *"faz ungrab e suspende os vpads"*. Não faz mais: a
-        # marca inverteu de lado e a borda agora GRABA o físico e esconde o
-        # hidraw dele. A pergunta continua obrigatória, e a razão ficou mais
-        # forte — com o jogo aberto, marcar tira dele exatamente o dispositivo
-        # que ele já enumerou, e o vpad que o substitui só existe para o
-        # processo seguinte, porque quem apaga o físico da lista do SDL é a env
-        # lida uma vez na abertura.
         if self._perguntar_antes_de_relancar(
             mudanca="steam_input_do_jogo",
             valor="marcado" if marcar else "desmarcado",
@@ -2812,12 +1637,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._gravar_marca_do_steam_input(appid, marcar)
 
     def _gravar_marca_do_steam_input(self, appid: str, marcar: bool) -> None:
-        """Escreve a marca no disco e avisa o daemon. Separado de propósito.
-
-        RELANCAR-01: o gesto e a ESCRITA viraram funções diferentes porque, com
-        um jogo aberto, entre um e outro pode haver um diálogo e uma decisão
-        dela. Enquanto era um bloco só, não havia onde perguntar.
-        """
+        """Escreve a marca no disco e avisa o daemon. Separado de propósito."""
         try:
             from hefesto_dualsense4unix.integrations import (
                 steam_launch_options as slo,
@@ -2837,45 +1657,16 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         )
         if status in ("adicionado", "removido"):
             self._avisar_o_daemon_da_allowlist()
-        # O disco é a verdade: se a escrita não valeu, a caixa volta ao que o
-        # arquivo diz em vez de mentir que valeu. A LISTA relê junto — marcar
-        # este jogo tem de tirá-lo do "outros", e desmarcar tem de devolvê-lo.
         self._sincronizar_caixa_do_steam_input()
         self._sincronizar_outros_marcados()
 
     def _controles_na_mesa(self) -> int | None:
-        """Quantos controles CONECTADOS o daemon reporta, ou None se não der.
-
-        QUEM-DA-O-JOGADOR-2-01: é o que decide se a caixinha precisa avisar da
-        troca de dono do jogador 2. Lê o mesmo campo que a aba Início já usa
-        (`state["controllers"]`, filtrado por `connected`), para não haver duas
-        contagens divergentes na mesma janela.
-
-        **Devolve None em vez de zero quando não consegue ler**, e a diferença
-        importa: zero significaria "não há controle, não avise", e um palpite
-        errado aqui faria a caixinha CALAR justamente quando ela tem dois na
-        mesa. None faz o texto voltar à forma antiga, que é verdadeira para um
-        controle e apenas incompleta para dois — falha para o lado de dizer
-        menos, nunca de dizer errado.
-
-        **Por que não perguntar ao daemon aqui:** o toast é síncrono e a ponte
-        IPC desta janela é assíncrona (`call_async`). Uma chamada nova ou
-        bloquearia a interface, ou chegaria depois do texto já mostrado. A aba
-        Início já busca esse estado a cada tique e agora guarda a contagem — ler
-        dali é de graça e mantém UMA contagem só na janela inteira.
-        """
+        """Quantos controles CONECTADOS o daemon reporta, ou None se não der."""
         contagem = getattr(self, "_controles_conectados", None)
         return contagem if isinstance(contagem, int) else None
 
     def _avisar_o_daemon_da_allowlist(self) -> None:
-        """Faz a marca VALER agora, sem reiniciar nada.
-
-        A allowlist é relida do disco a cada consulta; o que NÃO é relido é a
-        materialização do `steam_app_<appid>.env`. É o mesmo aviso best-effort
-        que `daemon_actions._recarregar_apos_allowlist` manda depois do botão da
-        aba Sistema — reusado quando a janela real tem os dois mixins, e
-        substituído pelo IPC nu quando não tem (host de teste).
-        """
+        """Faz a marca VALER agora, sem reiniciar nada."""
         recarregar = getattr(self, "_recarregar_apos_allowlist", None)
         if callable(recarregar):
             with contextlib.suppress(Exception):
@@ -2890,27 +1681,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             )
 
     def _prefill_modo_de_jogo(self) -> None:
-        """Perfil NOVO de jogo nasce com o modo jogo pré-selecionado (MODO-01/B1).
-
-        Era o maior dos defeitos da sprint: o fluxo simples montava o critério de
-        janela certinho e deixava o modo em `"none"` — *"Não mexer no modo"*. Ela
-        criava o perfil do jogo, ele entrava, e não ligava nada. O caminho que a
-        interface oferece como solução não solucionava.
-
-        Regras, deliberadamente estreitas:
-
-        - só em perfil NOVO (`_new_profile`). Trocar o "Aplica a" de um perfil
-          JÁ SALVO não pode reescrever a escolha de modo que ela fez antes;
-        - só quando o modo está em `"none"`. Um `desktop`/`native` escolhido à
-          mão é opinião dela, não um campo em branco;
-        - a máscara é a CORRENTE do daemon (`gamepad_emulation.flavor`), lida em
-          segundo plano: pré-selecionar uma máscara diferente da que está de pé
-          faria o perfil recriar o vpad ao entrar — e recriar vpad com o jogo
-          aberto invalida os handles que ele já abriu.
-
-        Best-effort: sem widgets de modo (dublê de teste/glade antigo) é no-op;
-        daemon offline mantém a máscara que o seletor já mostra.
-        """
+        """Perfil NOVO de jogo nasce com o modo jogo pré-selecionado (MODO-01/B1)."""
         if not getattr(self, "_new_profile", False):
             return
         kind_sel = getattr(self, "_mode_kind_selector", None)
@@ -2919,9 +1690,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         with contextlib.suppress(Exception):
             if (kind_sel.get_active_id() or "none") != "none":
                 return
-        # Preserva a máscara que o seletor já mostra até a resposta do daemon
-        # chegar — `_set_mode_editor(None)` a deixaria em "xbox" e uma troca
-        # visível para a máscara real logo depois pareceria bug.
         bruto: object = None
         flavor_sel = getattr(self, "_mode_flavor_selector", None)
         if flavor_sel is not None:
@@ -2943,18 +1711,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                     return False
                 gamepad = result.get("gamepad_emulation")
                 flavor = (gamepad or {}).get("flavor") if isinstance(gamepad, dict) else None
-                # A LISTA TEM DONO, e não é esta linha (07/09/2026). Ela era
-                # `("dualsense", "xbox")` digitada, e por isso a máscara nova
-                # chegava do daemon e o editor a descartava CALADO — o seletor
-                # ficava mostrando a anterior, que é perda de gesto dela.
                 if flavor not in mascaras_validas():
                     return False
                 seletor = getattr(self, "_mode_flavor_selector", None)
                 kind_atual = getattr(self, "_mode_kind_selector", None)
                 if seletor is None or kind_atual is None:
                     return False
-                # A resposta pode chegar depois de ela mexer no editor — só
-                # escreve se o modo AINDA é o gamepad que acabamos de propor.
                 if (kind_atual.get_active_id() or "none") != "gamepad":
                     return False
                 seletor.set_active_id(flavor)
@@ -2971,17 +1733,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         )
 
     def _prefill_steam_appid(self) -> None:
-        """Preenche o appid a partir do jogo em foco (R-12 item 1).
-
-        A usuária não tem como saber o appid de cabeça, e digitá-lo errado
-        produz um perfil que nunca entra — exatamente a queixa "o perfil do
-        jogo nunca é respeitado". O daemon já publica a última ``wm_class``
-        útil em ``window_detect_last_class``; com o jogo aberto (ou recém
-        fechado) isso é ``steam_app_<id>``.
-
-        Só preenche campo VAZIO: sobrescrever o que ela digitou seria pior que
-        não ajudar. Best-effort e assíncrono — daemon offline é silêncio.
-        """
+        """Preenche o appid a partir do jogo em foco (R-12 item 1)."""
         entry = self._get("profile_simple_custom_name")
         if entry is None:
             return
@@ -3021,23 +1773,14 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             timeout_s=0.5,
         )
 
-    # --- handlers da lista ---
 
     def on_profile_selection_changed(self, selection: Gtk.TreeSelection) -> None:
         name = self._selected_profile_name(selection)
         if name is None:
             return
-        # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: lê do cache em memória em vez de
-        # reler todos os perfis do disco a cada clique (load_all_profiles travava
-        # a thread GTK).
         profile = self._find_cached_profile(name)
         if profile is None:
             return
-        # NUNCA-TROCA-O-ALVO-01: a janela nunca troca o alvo do Salvar sem gesto
-        # dela. Seleção que o CÓDIGO moveu (repintura da lista depois de
-        # `store.clear()`, sync com o perfil ativo) atualiza a LISTA e para por
-        # aí enquanto houver trabalho não salvo — repintar aqui é apagar o que
-        # ela ainda não gravou e mirar o Salvar noutro arquivo.
         if self._selecao_programatica and self._ha_trabalho_no_editor():
             logger.info(
                 "perfis_editor_preservado_em_selecao_automatica",
@@ -3047,24 +1790,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             return
         self._populate_editor(profile)
 
-    # ONDA-U (U3-B): `on_profile_row_activated` foi REMOVIDO junto com o
-    # binding `row-activated` do glade — duplo-clique na lista ativava o
     # perfil na hora (profile.switch sem confirmação), atropelando edição em
     # andamento (selecionar texto/navegar vira 2 cliques rápidos por
-    # acidente). O botão "Ativar" (`on_profile_activate`) já cobre o gesto
-    # explícito; remover o binding é menos intrusivo que somar uma
-    # confirmação a um segundo caminho para a mesma ação.
 
     def on_profile_new(self, _btn: Gtk.Button | None) -> None:
-        self._duplicate_source = None  # perfil novo parte de defaults, não de cópia
-        # R-09: marca a intenção "perfil NOVO" para o build não cair no
-        # `selected_source` (que existe para rename/duplicação). Sem esta flag,
-        # criar um perfil com "Navegação" selecionado fazia o arquivo novo
-        # nascer com os overrides por-MAC e o `suppress_desktop_emulation` dele.
-        # `unselect_all()` seria o caminho óbvio e está DESCARTADO: dispara
-        # repopulação do editor e apagaria o que ela acabou de digitar.
+        self._duplicate_source = None
         self._new_profile = True
-        # NUNCA-TROCA-O-ALVO-01: um perfil novo não mira arquivo nenhum ainda.
         self._alvo_do_salvar = None
         self._get("profile_name_entry").set_text("Novo perfil")
         self._get("profile_priority_scale").set_value(0)
@@ -3073,13 +1804,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._get("profile_title_regex_entry").set_text("")
         self._get("profile_process_name_entry").set_text("")
         self._get("profile_simple_custom_name").set_text("")
-        # FEAT-PROFILE-MODE-GUI-01: perfil novo nasce "sem opinião" de modo.
         self._set_mode_editor(None)
-        # BUG-PROFILE-NEW-STALE-MODE-01: se o usuário vinha de um perfil de match
-        # COMPLEXO, o editor ficou em modo avançado (stack/switch/_mode_advanced).
-        # Sem resetar, "Salvar" monta um MatchCriteria VAZIO (não casa com nada),
-        # em vez do "Qualquer" que o radio passou a mostrar. Volta ao modo simples
-        # espelhando o ramo simples de _populate_editor.
         self._mode_advanced = False
         stack: Gtk.Stack = self._get("profile_editor_stack")
         if stack is not None:
@@ -3091,30 +1816,13 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 switch.set_active(False)
             finally:
                 self._suppress_advanced_toggle = False
-        # SALVAR-NAO-REBAIXA-01: não há valor de disco a preservar num perfil
-        # que ainda não existe — os widgets voltam a ser a única fonte.
-        #
-        # SALVAR-NAO-REBAIXA-02: e vem POR ÚLTIMO, depois de posicionar os
-        # widgets, exatamente como em `_populate_editor`. Chamado antes (como
-        # estava), o `set_value(0)` e o `set_active_id("any")` logo acima
-        # levantavam as marcas de gesto — e "Novo perfil" nascia dizendo que ela
-        # tinha escolhido prioridade 0 e "Qualquer". Num Salvar por cima de um
-        # arquivo EXISTENTE, essa mentira virava rebaixamento: as guardas
         # reabilitadas em `_build_profile_from_editor` acreditavam nas marcas.
-        # O prefill do jogo em foco (assíncrono, logo abaixo) marca de verdade,
-        # e continua vencendo — ali a escolha É do editor.
         self._esquecer_a_fotografia_do_editor()
         self._toast_profile("Novo perfil: edite e clique Salvar")
-        # PERFIL-NASCE-CERTO-01: com um jogo em foco, criar um perfil JÁ É a
-        # declaração de intenção "quero que isto valha neste jogo".
         self._nascer_com_o_jogo_em_foco()
 
     def _nascer_com_o_jogo_em_foco(self) -> None:
-        """Pergunta ao daemon qual janela está em foco e nasce com a regra dela.
-
-        Assíncrono e best-effort, como os demais prefills desta aba: daemon
-        offline é silêncio, e o perfil nasce catch-all como sempre nasceu.
-        """
+        """Pergunta ao daemon qual janela está em foco e nasce com a regra dela."""
         def _on_state(result: Any) -> bool:
             self._aplicar_nascimento_com_jogo(result)
             return False
@@ -3188,14 +1896,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         if name is None:
             self._toast_profile("Selecione um perfil para duplicar")
             return
-        # BUG-DUPLICATE-NO-CONFIG-COPY-01: guarda o perfil-fonte para que
         # _build_profile_from_editor copie triggers/lightbar/LEDs/etc — antes a
-        # cópia só mudava o nome e o resto virava default (perda da config real).
         self._duplicate_source = self._find_cached_profile(name)
-        # R-09: duplicar É partir de uma fonte — sai do estado "perfil novo".
         self._new_profile = False
         # NUNCA-TROCA-O-ALVO-01: a cópia vai para um arquivo NOVO — o Salvar
-        # deixa de mirar o perfil-fonte no mesmo instante em que ela clica aqui.
         self._alvo_do_salvar = None
         current = self._get("profile_name_entry").get_text()
         self._get("profile_name_entry").set_text(f"{current} (cópia)")
@@ -3206,15 +1910,9 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         if name is None:
             self._toast_profile("Selecione um perfil para remover")
             return
-        # BUG-DELETE-NO-CONFIRM-01: remoção é permanente — pedir confirmação
-        # (espelha o padrão de confirm_restore_default do rodapé e do CLI).
         from hefesto_dualsense4unix.app import gui_dialogs
 
         window = self._get("main_window")
-        # P7: e o diálogo diz quando o alvo é o perfil que está VALENDO. Sem
-        # `state`, de propósito: esta aba não fala com o daemon, e o dono do
-        # §P1 já cai no disco — que é a fonte certa aqui e o caso vivo da
-        # máquina dela (`active_profile: null` no daemon, `Sackboy` no disco).
         aviso = frase_da_remocao_do_perfil_ativo(name, perfil_que_esta_valendo())
         if not gui_dialogs.confirm_delete_profile(
             parent=window, name=name, aviso=aviso
@@ -3226,19 +1924,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         except (FileNotFoundError, OSError) as exc:
             self._toast_profile(f"Falha ao remover: {exc}")
             return
-        # NUNCA-TROCA-O-ALVO-01: aqui NÃO se zera `_alvo_do_salvar`, e a razão
-        # foi medida ao arrancar a cura para ver o teste morder. Zerar faz o
         # alvo cair no fallback (a linha selecionada), que depois da recarga é
         # OUTRO perfil — e um Salvar em seguida viraria um RENAME dele, com o
         # diálogo do R-10 se oferecendo para apagá-lo. Mantido apontado para o
-        # arquivo que morreu, todas as guardas degradam sozinhas: o
-        # `find_by_slug` no cache novo devolve `None` e nenhum perfil vivo é
-        # posto em risco. A repintura logo abaixo reaponta o editor sempre que
         # ele estiver limpo, que é o caso normal.
         self._reload_profiles_store()
         self._toast_profile(f"Perfil removido: {name}")
-        # DEDUP-04: o daemon rematerializa o launch_env (o steam_app_<id>.env
-        # do perfil apagado precisa sumir junto — senão fica rançoso).
         self._notify_launch_env_refresh()
 
     def on_profile_activate(self, _btn: Gtk.Button | None) -> None:
@@ -3247,18 +1938,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._toast_profile("Selecione um perfil para ativar")
             return
         # T4: profile.switch é I/O do daemon (asyncio.run no _safe_call síncrono
-        # travava a thread GTK até o timeout). call_async despacha ao worker e
-        # devolve o toast/refresh via GLib.idle_add — mesmo padrão async da aba.
-        #
-        # ATIVAR-NAO-MENTE-01: o `timeout_s` era o default de LEITURA da ponte
         # (250 ms) e o handler `profile.switch` levou ~1,2 s MEDIDOS no journal
-        # dela. Toda ativação caía no `_on_profile_switch_failure` — "Falha
-        # (daemon offline?)" com o perfil JÁ ativo —, o caminho de sucesso nunca
-        # rodava, e ela clicava de novo: cada clique uma ativação real.
-        #
-        # ATIVAR-NAO-MENTE-01: e o `_result` deixou de ser descartado. A
-        # resposta traz o relatório da R-03 (`secoes`), que é a diferença entre
-        # "ativado" e "ativado, menos o que o lock manual descartou".
         call_async(
             method="profile.switch",
             params={"name": name},
@@ -3266,26 +1946,16 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             on_failure=self._on_profile_switch_failure,
             timeout_s=PROFILE_SWITCH_TIMEOUT_S,
         )
-        # CARONA-DO-WRAPPER-01: "aplicar o perfil" DENTRO da aba Perfis. Fica
-        # FORA do callback de sucesso de propósito — o wrapper da Steam não tem
         # nada a ver com o daemon ter respondido ou não, e com o daemon parado
-        # (o caminho do `_on_profile_switch_failure`) o defeito continua lá,
-        # esperando o próximo jogo. O gesto dela aconteceu; a carona vai junto.
         self.pegar_carona_no_gesto(GESTO_APLICAR)
 
     def _on_profile_switch_success(self, name: str, result: Any = None) -> bool:
         """Callback GTK do switch de perfil: toast + re-sincroniza a seleção."""
-        # ATIVAR-NAO-MENTE-01: o toast diz o que NÃO entrou, no vocabulário do
-        # rodapé (`_mensagem_de_aplicacao`) — nunca um segundo vocabulário.
         self._toast_profile(mensagem_de_ativacao(name, result))
-        # UX-PROFILES-ACTIVE-HIGHLIGHT-01: negrito imediato na linha ativada.
         self._mark_active_profile_row(name)
-        # Preserva o comportamento visível: seleção acompanha o perfil ativo
-        # reportado pelo daemon após o switch.
         self._sync_selection_with_active_profile()
-        # ATIVAR-NAO-MENTE-01: e as abas passam a mostrar o perfil ativado AGORA.
         self._refazer_as_abas_apos_ativar(name)
-        return False  # GLib.idle_add: não repetir
+        return False
 
     def _refazer_as_abas_apos_ativar(self, name: str) -> None:
         """As abas passam a mostrar o perfil ATIVADO, na hora.
@@ -3323,14 +1993,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._recarregar_as_abas_do_perfil_ativo()
 
     def _recarregar_as_abas_do_perfil_ativo(self) -> None:
-        """Repinta as abas com o rascunho em memória. NÃO relê o disco hoje.
-
-        O caminho que RELIA era o `_bootstrap_draft_async` da janela, e ele saiu
-        do disco em `f5311616`: o recuo abaixo chama só `_refresh_all_tabs`, que
-        repinta o `self.draft` de antes, sem tocar no perfil recém-ativado. O que
-        isso perde, e o que fazer no dia em que um compositor chegar, estão
-        medidos na lápide A FAMÍLIA DO R-08, no fim deste arquivo.
-        """
+        """Repinta as abas com o rascunho em memória. NÃO relê o disco hoje."""
         recarregar = getattr(self, "_bootstrap_draft_async", None)
         if callable(recarregar):
             try:
@@ -3350,10 +2013,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
     def _on_profile_switch_failure(self, exc: Exception) -> bool:
         """Callback GTK de falha do switch (daemon offline / erro de transporte)."""
         logger.debug("profile_switch_falhou", err=str(exc))
-        # BG-TOAST-02 (26/08/2026): dizia "Falha (daemon offline?)" — `daemon
-        # offline` é o primeiro termo que a E3 da PALAVRA-01 aposentou, e a
-        # frase sobreviveu porque o portão da palavra não lia toast. A redação
-        # segue a irmã já escrita para o mesmo desfecho em `footer_actions.py`
         # ("Não consegui aplicar o perfil — o Hefesto pode estar desligado.").
         self._toast_profile("Não consegui trocar de perfil — o Hefesto pode estar desligado.")
         return False
@@ -3366,31 +2025,17 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         try:
             profile = self._build_profile_from_editor()
         except (ValueError, ValidationError) as exc:
-            # COR-D: nada de despejar o dump cru do pydantic (nome de campo
-            # interno + URL de erro) no rodapé de uma linha — traduz o erro
-            # para uma frase que o usuário entende e sabe o que fazer.
             self._toast_profile(self._humanize_profile_error(exc))
             return
         # NUNCA-TROCA-O-ALVO-01: quem responde "que perfil eu estou editando?" é
-        # o alvo MEMORIZADO na abertura do editor, não a linha que estiver
         # selecionada agora — a lista se move sozinha (sync com o perfil ativo,
-        # repintura depois de recarregar) e arrastava o Salvar junto.
         selected = self._alvo_do_salvar_do_editor()
-        # R-10 (auditoria 23/07): a identidade do arquivo é o SLUG
-        # (`save_profile` grava `<slugify(name)>.json`), e as duas guardas
-        # comparavam NOME DE EXIBIÇÃO. Com "Navegação" no disco, salvar
-        # "Navegacao" caía fora das duas e substituía `navegacao.json` sem
-        # aviso nenhum. Daqui para baixo quem responde "quem vou sobrescrever?"
-        # é `find_by_slug`, e o diálogo cita o perfil REALMENTE afetado.
         cache: list[Profile] = getattr(self, "_profiles_cache", [])
         selecionado = find_by_slug(selected, cache) if selected else None
         e_novo = bool(getattr(self, "_new_profile", False))
         duplicando = self._duplicate_source is not None
 
-        # R-10: RENAME. Trocar o nome no campo Nome gerava um arquivo NOVO e
-        # deixava o antigo em disco — dois perfis com o mesmo `match` e a mesma
         # prioridade disputando as mesmas janelas, e o "removido" voltando a
-        # ativar sozinho. Pergunta explicitamente o que ela quis dizer.
         renomeando_de: str | None = None
         if (
             not e_novo
@@ -3405,11 +2050,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             if escolha == "renomear":
                 renomeando_de = selecionado.name
 
-        # BUG-PROFILE-SAVE-SILENT-OVERWRITE-01 + R-10: avisa ao gravar por cima
-        # de OUTRO perfil (não na edição in-place do próprio selecionado). Um
-        # perfil NOVO/duplicado nunca é edição in-place, mesmo com uma linha
-        # selecionada na lista — era por aí que "Novo perfil" chamado
-        # "Navegacao" comia a "Navegação" dela em silêncio.
         alvo = find_by_slug(profile.name, cache)
         editando_em_lugar = (
             not e_novo
@@ -3422,22 +2062,9 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             from hefesto_dualsense4unix.app import gui_dialogs
 
             window = self._get("main_window")
-            # `alvo.name` e não `profile.name`: quem some é o perfil do disco.
             if not gui_dialogs.prompt_overwrite_existing(parent=window, name=alvo.name):
                 self._toast_profile(_motivo_do_cancelamento())
                 return
-        # COR-A: salvar um perfil que ANTES valia só num programa específico
-        # (MatchCriteria) como MatchAny apaga o alvo em silêncio — o caminho
-        # clássico é o leigo desligar o "Modo avançado" (a página simples herda
-        # 'Qualquer'/Sempre) e clicar Salvar sem perceber. Confirma a perda.
-        # R-10: num rename, o "antes" é o perfil sendo RENOMEADO, não quem
-        # ocupa o slug de destino.
-        # SALVAR-NAO-REBAIXA-02: a guarda era `isinstance(original.match,
-        # MatchCriteria)` e deixava de fora o perfil "Só manual (nunca ativa
-        # sozinho)" — tanto o `MatchManual` de propósito quanto o `criteria`
-        # vazio. Virar "vale para TUDO" é, nesses dois, a mudança mais violenta
-        # que a aba sabe fazer, e era a única que passava calada. Agora a
-        # pergunta é a certa: o perfil deixa de ter alvo? Então avisa.
         original = selecionado if renomeando_de is not None else alvo
         if (
             isinstance(profile.match, MatchAny)
@@ -3447,8 +2074,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             from hefesto_dualsense4unix.app import gui_dialogs
 
             window = self._get("main_window")
-            # O rótulo do que ele É HOJE é o MESMO da coluna "Quando usar" —
-            # o diálogo não pode chamar de "programas específicos" um perfil
             # que a lista chama de "Só manual".
             if not gui_dialogs.confirm_downgrade_match_to_any(
                 parent=window,
@@ -3457,22 +2082,8 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             ):
                 self._toast_profile(_motivo_do_cancelamento())
                 return
-        # O-AVANCADO-QUE-MOSTRAVA-VAZIO-01 (10/08): o MESMO estrago pelo lado
-        # oposto, e este passava calado. O editor avançado com os três campos
-        # em branco grava `MatchManual` — o perfil deixa de entrar sozinho para
-        # sempre. Com a página avançada mostrando os campos VAZIOS (o defeito
-        # fotografado às 04:34), chegar aqui não exigia gesto nenhum sobre a
         # regra: bastava trocar o número do jogo na página simples e ligar o
-        # switch para conferir.
-        #
-        # A cura de fundo é a página dizer a verdade
         # (`_mostrar_a_regra_nos_campos_crus`). Isto é o cinto para o gesto que
-        # continua legítimo — ela ler os campos cheios e apagá-los de propósito.
-        # PERGUNTA, nunca recusa: a vontade dela na GUI prevalece sempre.
-        #
-        # `if` solto (e não `elif`) porque os dois avisos são exclusivos por
-        # construção — `MatchAny` é "Sempre" e nunca é "Só manual" —, e a
-        # independência deixa cada um responder pela própria pergunta.
         if original is not None and rebaixamento_para_so_manual(
             original.match, profile.match
         ):
@@ -3486,9 +2097,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             ):
                 self._toast_profile(_motivo_do_cancelamento())
                 return
-        # SALVAR-NAO-REBAIXA-02: e a PRIORIDADE, que nos perfis dela (já em
-        # `MatchAny` desde o defeito de 27/07) é a única coisa que ainda podia
-        # cair calada — e é o termo que decide qual dos "Sempre" vence.
         if original is not None and queda_de_prioridade_pede_aviso(
             original.priority, profile.priority
         ):
@@ -3503,8 +2111,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             ):
                 self._toast_profile(_motivo_do_cancelamento())
                 return
-        # R-10: quem estava ativo ANTES do save — é com esse nome que o daemon
-        # conhece o perfil renomeado. Lido aqui (e não depois do delete) porque
         # o `profile.switch` de migração precisa da foto anterior.
         try:
             ativo_antes = active_profile_name()
@@ -3515,9 +2121,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         except OSError as exc:
             self._toast_profile(f"Falha ao salvar: {exc}")
             return
-        # R-10: rename é MOVER, não copiar — o antigo só morre DEPOIS do save
-        # bem-sucedido (o `delete_profile` de um preset é definitivo: o marker
-        # `.seeded_presets` respeita a deleção e ele não volta a ser semeado).
         if renomeando_de is not None:
             try:
                 delete_profile(renomeando_de)
@@ -3529,75 +2132,24 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                     f"Salvo como {profile.name}, mas o antigo "
                     f"'{renomeando_de}' não pôde ser removido: {exc}"
                 )
-        self._duplicate_source = None  # duplicação concluída
-        # R-09: salvo em disco, o perfil deixa de ser "novo" — o próximo Salvar
-        # sobre ele é edição normal e deve reusar a config gravada.
+        self._duplicate_source = None
         self._new_profile = False
-        # NUNCA-TROCA-O-ALVO-01: o que estava no editor VIROU disco. O alvo
-        # passa a ser o arquivo gravado (é o gesto dela que o move, e este é o
-        # gesto), e as marcas de "ela mexeu" caem — sem isso o editor seguiria
-        # dado como sujo pelo resto da sessão e a repintura logo abaixo não
-        # poderia mais mostrar a ele o que acabou de ser gravado.
         self._alvo_do_salvar = profile.name
         self._regra_tocada = False
         self._prioridade_tocada = False
         self._modo_tocado = False
-        # ABAS-01: o disco mudou; o rascunho tem de saber. Sem esta linha, o
-        # "Salvar Perfil" do rodapé reemitia a fotografia do BOOT e apagava a
-        # seção `mode` (e a regra, e a prioridade) recém-gravada aqui.
         self._reconciliar_rascunho_com_perfil_salvo(profile, renomeando_de)
         self._reload_profiles_store(select_name=profile.name)
-        # PERFIL-SAVE-APPLY-01 (22/07): o daemon NÃO relê JSON de perfil por
-        # conta própria (sem watch de arquivo) — salvar o perfil que está
         # ATIVO agora reaplica na hora via `profile.switch` (relê o disco).
-        # Sem isso, "Salvar" só gravava o arquivo e nada mudava no controle,
-        # lido pela usuária como "não está salvando". Best-effort: daemon
-        # offline segue o fluxo antigo (o boot reaplica).
-        #
-        # R-10: no rename, o daemon continua com o nome ANTIGO marcado como
-        # ativo — e o arquivo dele acabou de ser apagado. Sem migrar o marker,
-        # o boot seguinte procuraria um perfil que não existe mais e cairia no
-        # fallback (catch-all), que é justamente o cenário da queixa (1).
         precisa_reaplicar = ativo_antes is not None and (
             ativo_antes == profile.name or ativo_antes == renomeando_de
         )
         self._reaplicar_e_dizer(profile.name, renomeando_de, precisa_reaplicar)
-        # DEDUP-04: perfil novo/editado pode ter steam_app_<id> no match — o
-        # daemon rematerializa a antecipação por appid do launch_env AGORA
-        # (sem isso, o primeiro launch do jogo cairia no default.env rançoso).
         self._notify_launch_env_refresh()
-        # CARONA-DO-WRAPPER-01: e o env materializado acima só é LIDO se a
-        # linha das Opções de Inicialização ainda chamar o `hefesto-launch`.
-        # Rematerializar a antecipação e deixar o wrapper apagado é escrever um
-        # bilhete que ninguém vai abrir — foi exatamente esse o defeito do
         # Pragmata em 16/08. As duas linhas andam juntas por isso.
         self.pegar_carona_no_gesto(GESTO_SALVAR)
 
-    # --- O Salvar solta a thread, e para de prometer (P3 + P3b) -------------
-    # PERFIS-ABRE-O-QUE-GUARDA-01, 25/08/2026. Duas curas na mesma costura,
-    # porque separá-las produziria uma terceira falha:
-    #
-    # **P3 — a thread.** `profile_switch()` é síncrono e o handler `profile.
-    # switch` levou **~1,2 s MEDIDOS no journal dela** — o número está escrito
-    # no comentário do botão vizinho (`on_profile_activate`), e foi por ele que
-    # o **Ativar** virou `call_async` na ATIVAR-NAO-MENTE-01. O Salvar ficou
-    # para trás: cada clique congelava a janela inteira por mais de um segundo.
-    # Aqui ele passa a usar EXATAMENTE o caminho do Ativar.
-    #
-    # **P3b — a promessa.** Ver `mensagem_do_salvar`.
-    #
-    # **Por que juntas, e não uma de cada vez:** a peça que devolve o corpo do
-    # daemon numa chamada síncrona (`_corpo_do_daemon`) sai com o teto de
     # LEITURA de 250 ms, e o `profile.switch` não cabe nele. Trocar só o texto,
-    # mantendo a chamada síncrona, ressuscitaria a ATIVAR-NAO-MENTE-01 pelo
-    # outro lado: todo Salvar cairia no caminho de falha por timeout, com a
-    # ativação acontecendo. `call_async` com `PROFILE_SWITCH_TIMEOUT_S` é o
-    # único caminho que entrega as duas.
-    #
-    # **O que NÃO mudou:** `save_profile` continua na thread do GTK e continua
-    # sendo a exceção DATADA ao `ProfileWriterMixin` (o teste
-    # `test_gravacao_de_perfil_passa_pelo_funil` trava a lista, que só pode
-    # encolher). Esta costura move a chamada de THREAD, nunca de módulo.
 
     def _reaplicar_e_dizer(
         self, nome: str, renomeando_de: str | None, reaplicar: bool
@@ -3625,29 +2177,19 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._toast_profile(
             mensagem_do_salvar(nome, renomeando_de, reaplicou=True, result=result)
         )
-        return False  # GLib.idle_add: não repetir
+        return False
 
     def _ao_nao_reaplicar_o_salvo(
         self, nome: str, renomeando_de: str | None, exc: Exception
     ) -> bool:
-        """Callback GTK: o daemon não confirmou. O disco mudou; o controle não.
-
-        Sem `reaplicou`: o arquivo foi gravado (isso é fato, e já aconteceu) e
-        a frase para por aí. Dizer "falhou" aqui seria pior que calar — o
-        Salvar CUMPRIU, e quem não respondeu foi o daemon.
-        """
+        """Callback GTK: o daemon não confirmou. O disco mudou; o controle não."""
         logger.debug("salvar_reaplicar_falhou", perfil=nome, err=str(exc))
         self._toast_profile(mensagem_do_salvar(nome, renomeando_de))
-        return False  # GLib.idle_add: não repetir
+        return False
 
-    # --- helpers internos ---
 
     def _prompt_rename_or_copy(self, antigo: str, novo: str) -> str | None:
-        """Ponte para o diálogo de rename (R-10) — ponto único de override.
-
-        Método (e não chamada direta) para os testes decidirem a resposta sem
-        subir GTK, do mesmo jeito que o resto da aba faz com `gui_dialogs`.
-        """
+        """Ponte para o diálogo de rename (R-10) — ponto único de override."""
         return dialogo_renomear_ou_copiar(
             self._get("main_window"), antigo, novo
         )
@@ -3672,7 +2214,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         page = "avancado" if self._mode_advanced else "simples"
         stack.set_visible_child_name(page)
 
-    # --- O-AVANCADO-QUE-MOSTRAVA-VAZIO-01: a página avançada diz a verdade ---
 
     def _regra_real_do_perfil_aberto(self) -> Match | None:
         """A regra que o perfil aberto TEM agora — a mesma conta do Salvar.
@@ -3704,8 +2245,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             nome = (self._get("profile_name_entry").get_text() or "").strip()
         regra_do_disco = self._regra_do_disco_ao_salvar(nome)
         # O espelho de `_build_profile_from_editor`: sem fotografia de abertura
-        # (o "Novo perfil" salvando por cima de um arquivo que existe), a única
-        # evidência de intenção é o GESTO — não há assinatura para comparar.
         mexida = (
             self._regra_foi_mexida()
             if self._regra_do_disco is not None
@@ -3725,26 +2264,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 regra_do_disco=regra_do_disco,
             )
         except ValueError:
-            # Página simples incompleta ("Jogo da Steam" sem o número). Quem
-            # reclama disso é o Salvar, com a frase de gente; ligar o switch
-            # para OLHAR não pode virar um erro na cara dela.
             return regra_do_disco
 
     def _mostrar_a_regra_nos_campos_crus(self) -> None:
-        """Escreve nos três campos crus a regra real do perfil aberto.
-
-        A fotografia de abertura é RETIRADA depois de escrever, e só quando ela
-        ainda não tinha mexido na regra. Sem isso, a cura desarmaria a guarda
-        SALVAR-NAO-REBAIXA-01 pela porta dos fundos: `_regra_foi_mexida`
-        compara os campos de agora com os da abertura, e o simples ato de ligar
-        o switch passaria a contar como gesto dela sobre a regra — que é
-        exatamente o que a docstring de `_assinatura_da_regra_no_editor`
-        recusa ("o switch fica DE FORA de propósito").
-
-        E só quando ela ainda não tinha mexido: retirar a fotografia por cima
-        de um gesto dela apagaria a prova do gesto, e o Salvar devolveria a
-        regra do disco por cima do que ela acabou de escolher.
-        """
+        """Escreve nos três campos crus a regra real do perfil aberto."""
         regra = self._regra_real_do_perfil_aberto()
         if regra is None:
             return
@@ -3773,13 +2296,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._assinatura_da_regra_ao_abrir = self._assinatura_da_regra_no_editor()
 
     def _selected_simple_choice(self) -> str:
-        """Retorna o id ativo do seletor "Aplica a:".
-
-        UI-PROFILES-RADIO-GROUP-REDESIGN-01: antes iterava 6 GtkRadioButton.
-        FEAT-DSX-COMBO-TO-SEGMENTED-01: agora lê `get_active_id()` do
-        SegmentedSelector (`self._aplica_a`). Fallback "any" preserva o
-        comportamento anterior quando o seletor ainda não foi populado.
-        """
+        """Retorna o id ativo do seletor "Aplica a:"."""
         combo = getattr(self, "_aplica_a", None)
         if combo is None:
             return "any"
@@ -3789,12 +2306,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return "any"
 
     def _select_radio(self, choice: str) -> None:
-        """Seleciona o id correspondente no seletor "Aplica a:".
-
-        Nome histórico preservado para facilitar grep pelo contexto antigo;
-        a implementação usa `set_active_id()` do SegmentedSelector em vez de
-        `set_active(True)` num radio específico.
-        """
+        """Seleciona o id correspondente no seletor "Aplica a:"."""
         combo = getattr(self, "_aplica_a", None)
         if combo is None:
             return
@@ -3832,35 +2344,15 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._populate_profiles_store(profiles, select_name)
             if on_done is not None:
                 on_done()
-            return False  # GLib.idle_add: não repetir
+            return False
 
         run_in_thread(_load, _on_loaded)
 
     def _populate_profiles_store(
         self, profiles: list[Profile], select_name: str | None
     ) -> None:
-        """Popula o ListStore a partir da lista de perfis (thread GTK).
-
-        NUNCA-TROCA-O-ALVO-01: sem ``select_name``, a linha que volta a ficar
-        selecionada é A MESMA de antes — e o primeiro da lista é fallback só
-        quando não havia nada selecionado (o boot) ou quando o que estava
-        selecionado sumiu do disco (a remoção). Era daqui que saía o "nome
-        aleatório" da queixa: `on_profile_remove`, `on_profile_reload` (o botão
-        "Recarregar lista") e `install_profiles_tab` chamam
-        `_reload_profiles_store()` SEM alvo, e o editor pulava para o PRIMEIRO
-        arquivo em ordem de carga — no disco dela, "Ação". O Salvar seguinte
-        gravava lá.
-
-        A repintura INTEIRA corre marcada como programática, e não só a
-        reseleção do fim. Medido em 06/08: `store.clear()` apaga as linhas uma a
-        uma e o GtkTreeView emite `changed` no meio disso, com a seleção ainda
-        resolvendo para uma linha viva — o editor era repintado ANTES de a
-        função chegar a selecionar coisa alguma. Marcar só o `select_iter`
-        curava o caminho errado e deixava o mesmo defeito entrar pela porta do
-        `clear`.
-        """
+        """Popula o ListStore a partir da lista de perfis (thread GTK)."""
         store = self._profiles_store
-        # Lido ANTES do `clear()`: depois dele não há mais linha selecionada.
         atual: str | None = None
         if select_name is None:
             with contextlib.suppress(Exception):
@@ -3872,10 +2364,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             select_iter = None
             first_iter = None
             active = getattr(self, "_active_profile_hint", None)
-            # PERFIL-ATUAL-01: DUAS listas, e é de propósito. `exibicao` diz a
-            # ORDEM DAS LINHAS (o ativo primeiro, pedido dela); `profiles`
-            # continua na ORDEM DE CARGA e é a única que alimenta as funções da
-            # disputa — ver `ordem_de_exibicao` para o preço de trocar as duas.
             for profile in ordem_de_exibicao(profiles, active):
                 e_o_ativo = profile.name == active
                 weight = 700 if e_o_ativo else 400
@@ -3883,11 +2371,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                     [
                         profile.name,
                         profile.priority,
-                        # R-12: o OBJETO, não o discriminador — só ele distingue
-                        # "criteria com alvo" de "criteria vazio" (só manual).
-                        # EMPATE-01/E2: `profiles` chega na ORDEM DE CARGA do
-                        # loader, e é dela que sai o terceiro termo do desempate
-                        # — reordenar esta lista mudaria o vencedor anunciado.
                         rotulo_quando_usar(profile, profiles, active),
                         weight,
                         explicacao_da_disputa(profile, profiles, active),
@@ -3895,11 +2378,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                     ]
                 )
                 if first_iter is None:
-                    # PERFIL-ATUAL-01: o fallback de seleção (boot, ou o perfil
-                    # selecionado que sumiu do disco) deixou de ser o primeiro
-                    # ARQUIVO em ordem de carga — que era "Ação" no disco dela e
-                    # deu origem à queixa do "nome aleatório" descrita acima — e
-                    # passou a ser o perfil DELA, porque ele é quem está no topo.
                     first_iter = row_iter
                 desejado = select_name if select_name is not None else atual
                 if desejado is not None and profile.name == desejado:
@@ -3948,17 +2426,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._levar_o_ativo_para_o_topo(store, active)
 
     def _levar_o_ativo_para_o_topo(self, store: Any, active: str | None) -> None:
-        """Move a linha do perfil dela para a primeira posição (PERFIL-ATUAL-01).
-
-        A ordem-alvo é a MESMA de `ordem_de_exibicao` calculada sobre o cache em
-        ordem de carga, e não "empurra o novo ativo para a frente do que já
-        estava lá": trocar de perfil três vezes deixaria as três escolhas
-        antigas empilhadas no topo, e a promessa é *o resto na ordem de carga*.
-
-        Desiste em silêncio quando o store e o cache discordam (nomes repetidos,
-        recarga em voo): a cor e o negrito acima já valem sozinhos, e mexer no
-        `reorder` com um mapa incompleto embaralharia a lista dela.
-        """
+        """Move a linha do perfil dela para a primeira posição (PERFIL-ATUAL-01)."""
         cache: list[Profile] = list(getattr(self, "_profiles_cache", []) or [])
         if not cache:
             return
@@ -3975,8 +2443,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         if sorted(desejada) != sorted(nomes):
             return
         posicao = {nome: idx for idx, nome in enumerate(nomes)}
-        # `new_order[nova_posicao] = posicao_antiga` — o contrato do
-        # `gtk_list_store_reorder`, conferido ao vivo em 10/08.
         nova_ordem = [posicao[nome] for nome in desejada]
         if nova_ordem == list(range(len(nova_ordem))):
             return
@@ -4006,39 +2472,26 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         `_alvo_do_salvar` passa a ser este perfil, e é ele — não a linha
         selecionada — que o `on_profile_save` vai gravar por cima.
         """
-        # Selecionar um perfil existente cancela qualquer duplicação em curso.
         self._duplicate_source = None
-        # R-09: e também cancela o estado "perfil novo" — o editor passou a
-        # mostrar um perfil que existe.
         self._new_profile = False
         self._alvo_do_salvar = profile.name
         self._get("profile_name_entry").set_text(profile.name)
         prio = max(0, min(PRIORIDADE_MAXIMA, profile.priority))
         self._get("profile_priority_scale").set_value(prio)
-        # FEAT-PROFILE-MODE-GUI-01: seção "Modo" reflete profile.mode
-        # (None → "Não mexer no modo").
         self._set_mode_editor(profile.mode)
 
         match = profile.match
         preset_key = detect_simple_preset(match)
 
         if preset_key is not None:
-            # Match reconhecido como preset simples — usa modo simples
             self._select_radio(preset_key)
-            # R-12: o campo livre serve "game" (nome do programa) E
-            # "steam_game" (appid) — `simple_extra` é quem sabe extrair cada
-            # um. Sem isso o round-trip de um perfil da Steam mostraria o campo
-            # vazio e salvar por cima levantaria "diga o número do jogo".
             if preset_key in _IDS_COM_CAMPO_LIVRE:
                 self._get("profile_simple_custom_name").set_text(simple_extra(match))
             else:
                 self._get("profile_simple_custom_name").set_text("")
-            # Vai para página simples sem alterar a preferência persistida
             stack: Gtk.Stack = self._get("profile_editor_stack")
             stack.set_visible_child_name("simples")
             switch: Gtk.Switch = self._get("profile_advanced_switch")
-            # BUG-ADVANCED-TOGGLE-CLOBBER-01: guard flag em vez de bloquear um
-            # handler dummy recém-conectado (que vazava e não bloqueava o real).
             self._suppress_advanced_toggle = True
             try:
                 switch.set_active(False)
@@ -4046,11 +2499,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 self._suppress_advanced_toggle = False
             self._mode_advanced = False
         else:
-            # Match complexo — força modo avançado.
-            # BUG-PROFILE-SIMPLE-STALE-01: zera o editor simples para não vazar
-            # estado de um perfil simples anterior ('game' + nome). Sem isso, se o
-            # usuário depois desligar o switch Avançado, a página simples reaparece
-            # com o preset/nome herdados e salvar sobrescreveria este match complexo.
             self._select_radio("any")
             self._get("profile_simple_custom_name").set_text("")
             if isinstance(match, MatchCriteria):
@@ -4077,34 +2525,16 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 self._suppress_advanced_toggle = False
             self._mode_advanced = True
 
-        # SALVAR-NAO-REBAIXA-01: a fotografia do que o editor MOSTRA agora, e o
         # que o disco realmente diz. `_build_profile_from_editor` compara as
-        # duas para saber se ela MEXEU na regra/prioridade nesta edição —
-        # ver `_regra_foi_mexida` / `_prioridade_foi_mexida`.
         self._regra_do_disco = profile.match
         self._assinatura_da_regra_ao_abrir = self._assinatura_da_regra_no_editor()
         self._prioridade_do_disco = profile.priority
         self._prioridade_ao_abrir = prio
-        # Zeradas por ÚLTIMO: as seleções feitas acima são de abertura, não dela.
         self._regra_tocada = False
         self._prioridade_tocada = False
 
     def _assinatura_da_regra_no_editor(self) -> tuple[object, ...]:
-        """Fotografia dos widgets que definem a REGRA de janela do perfil.
-
-        Duas fotografias iguais querem dizer "ela não tocou na regra" — e é só
-        isso que esta assinatura precisa responder. Tolerante a widget ausente
-        (dublê de teste, glade antigo): campo que não dá para ler entra vazio,
-        do mesmo jeito nas duas fotos.
-
-        O switch "Modo avançado" fica DE FORA de propósito: ele escolhe qual
-        página ela está olhando, não o que o perfil casa. Incluí-lo devolveria
-        o BUG-PROFILE-SIMPLE-STALE-01 pelo avesso — desligar o avançado para
-        conferir alguma coisa e clicar Salvar rebaixaria a regra do perfil para
-        "Qualquer", que é justamente o estrago que esta guarda existe para
-        impedir. Mudar de página e MEXER num campo continua contando, porque é
-        o campo que entra na fotografia.
-        """
+        """Fotografia dos widgets que definem a REGRA de janela do perfil."""
         def texto(widget_id: str) -> str:
             widget = self._get(widget_id)
             try:
@@ -4125,13 +2555,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._prioridade_tocada = True
 
     def _regra_foi_mexida(self) -> bool:
-        """Ela mudou a regra de janela desde que este perfil abriu no editor?
-
-        Sem fotografia guardada (perfil novo, duplicação de fonte externa,
-        dublê) a resposta é SIM: o comportamento histórico — gravar o que está
-        nos widgets — continua valendo em todo caminho que esta guarda não
-        conhece.
-        """
+        """Ela mudou a regra de janela desde que este perfil abriu no editor?"""
         ao_abrir = self._assinatura_da_regra_ao_abrir
         if ao_abrir is None:
             return True
@@ -4140,13 +2564,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return self._assinatura_da_regra_no_editor() != ao_abrir
 
     def _prioridade_foi_mexida(self) -> bool:
-        """Ela moveu a escala de prioridade desde que o perfil abriu no editor?
-
-        Duas respostas somadas: o gesto (`_prioridade_tocada`, marcado pelo
-        próprio widget) e a comparação de valor. O gesto cobre o caso em que o
-        valor volta a coincidir com o da abertura — inclusive o perfil clampado,
-        que abre mostrando o teto e cujo "arrastar até o teto" precisa contar.
-        """
+        """Ela moveu a escala de prioridade desde que o perfil abriu no editor?"""
         if self._prioridade_tocada:
             return True
         ao_abrir = self._prioridade_ao_abrir
@@ -4212,16 +2630,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._prioridade_tocada = False
 
     def _prioridade_acima_dos_catch_all(self) -> int:
-        """Prioridade que vence TODO perfil "vale sempre" hoje em disco.
-
-        PERFIL-NASCE-CERTO-01: o perfil do jogo nascia em 0 e perdia até para
-        os presets de fábrica (50-80), quanto mais para o catch-all dela em
-        100. O número é CALCULADO, não digitado — ela não precisa saber que
-        existe prioridade para que o perfil do jogo dela valha no jogo.
-
-        Lê o cache em memória da lista (nunca o disco: este caminho roda na
-        thread do GTK). Sem cache, devolve a folga sozinha.
-        """
+        """Prioridade que vence TODO perfil "vale sempre" hoje em disco."""
         cache: list[Profile] = getattr(self, "_profiles_cache", None) or []
         tetos = [p.priority for p in cache if p.e_catch_all]
         base = max(tetos) if tetos else 0
@@ -4334,13 +2743,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 self._get("profile_process_name_entry").get_text()
             )
             if not wc and not regex and not pn:
-                # R-12 item 3: avançado com os TRÊS campos vazios é a única
-                # forma de dizer "só ativo na mão" pela GUI — grava o sentinel
-                # em vez do `MatchCriteria` vazio. Os dois nunca casam, mas só
-                # o sentinel diz que foi de propósito: o criteria vazio fica
-                # reservado ao ACIDENTE, que é o que o doctor denuncia. Também
-                # é o que fecha o round-trip do perfil manual, que abre no
-                # avançado justamente com os três campos em branco.
                 match = MatchManual()
             else:
                 match = MatchCriteria(
@@ -4351,26 +2753,13 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         else:
             choice = self._selected_simple_choice()
             custom = self._get("profile_simple_custom_name").get_text().strip() or None
-            # ESCONDER-EM-VEZ-DE-SAIR-01: a página simples do jogo da Steam
-            # mostra o NÚMERO e mais nada — a regra do disco vai junto para que
-            # um `process_name` do mesmo jogo sobreviva ao round-trip em vez de
-            # evaporar por falta de campo na tela.
             match = from_simple_choice(
                 choice=choice,
                 custom_name=custom,
                 regra_do_disco=self._regra_do_disco_ao_salvar(name),
             )
 
-        # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: usa o cache — este método roda a
-        # cada montagem do perfil, e reler o disco aqui travava a thread GTK.
         existing = self._find_cached_profile(name)
-        # BUG-DUPLICATE-NO-CONFIG-COPY-01: numa duplicação o nome novo ainda não
-        # existe no cache -> sem o perfil-fonte a config viraria default. Usa a
-        # fonte guardada por on_profile_duplicate como base.
-        # BUG-RENAME-DROPS-CONFIG-01: renomear pelo campo Nome (nome novo, sem
-        # passar por Duplicar) também não pode nascer com config default — o
-        # perfil SELECIONADO na lista é a fonte natural do rename. Best-effort:
-        # sem tree/seleção utilizável (preview cedo, stubs), segue sem fonte.
         selected_source = None
         try:
             selected_source = self._find_cached_profile(
@@ -4378,44 +2767,21 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             )
         except Exception:
             selected_source = None
-        # R-09 item 3 (auditoria 23/07): "Novo perfil" NÃO herda o perfil
-        # selecionado na lista. `selected_source` existe para o RENAME
-        # (BUG-RENAME-DROPS-CONFIG-01) e para a DUPLICAÇÃO; num perfil novo ele
         # fazia o arquivo nascer clonando overrides por-MAC e
-        # `suppress_desktop_emulation` de outro perfil, sem nada dizendo isso.
         if getattr(self, "_new_profile", False):
             source = existing or self._duplicate_source
         else:
             source = existing or self._duplicate_source or selected_source
 
-        # R-09 item 1 (auditoria 23/07): quando o perfil sendo editado é o que
-        # o DRAFT representa, a base é o draft — não o disco.
-        #
-        # As abas Lightbar/Gatilhos/Rumble/Mouse/Teclado gravam EXCLUSIVAMENTE
-        # em `self.draft`, e este módulo não lia o draft em nenhuma linha. Salvar
-        # pela aba Perfis descartava tudo que ela tinha ajustado nas outras abas
         # — e é pior que perder o arquivo: `on_profile_save` chama
-        # `profile_switch` quando o perfil salvo é o ativo, então o daemon relia
-        # o JSON velho e REVERTIA no hardware a cor/gatilho que ela acabara de
-        # ver funcionando. Daí a conclusão dela: "as configs que eu faço não
-        # impactam".
         draft = getattr(self, "draft", None)
         ativo = getattr(self, "_active_profile_name", "") or ""
         base: dict[str, Any]
-        # PERFIL-SALVA-TUDO-01: a base saiu do RASCUNHO? É o que decide se o
-        # `mode` dele pode vencer a leitura da tela mais abaixo.
         base_veio_do_rascunho = False
         if draft is not None and ativo and self._edita_o_perfil_do_rascunho(name):
             try:
-                # ABAS-03: `to_profile(ativo)`, não `to_profile(name)`. Num
-                # RENAME o nome já mudou, e `to_profile` só reemite as seções
-                # que o rascunho não edita (`suppress_desktop_emulation` entre
-                # elas) quando o nome pedido é o do perfil de ORIGEM — pedir
-                # pelo nome novo faria o perfil renomeado nascer sem elas.
-                # Nome, prioridade, regra e modo vêm do EDITOR logo abaixo,
-                # então renomear continua sendo renomear.
                 do_draft = draft.to_profile(ativo)
-            except Exception as exc:  # draft inconsistente não pode travar o save
+            except Exception as exc:
                 logger.warning("profile_build_draft_falhou", erro=str(exc))
                 do_draft = None
             if do_draft is not None:
@@ -4427,69 +2793,14 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 base = source.model_dump(mode="python") if source else {}
         else:
             base = source.model_dump(mode="python") if source else {}
-        # R-09 item 2: `model_dump` DENSIFICA — os defaults do schema saem
-        # marcados como explícitos e o `model_fields_set` original se perde. Num
-        # override por-controle parcial (ex.: só brilho), isso vira
-        # `lightbar:[0,0,0]` e APAGA a lightbar daquele controle, além de matar
-        # a herança do global para sempre. `draft_config.to_profile` já tem essa
-        # guarda (reinjetar as INSTÂNCIAS validadas, que pydantic com
-        # `revalidate_instances="never"` preserva); aqui faltava.
         if source is not None:
             base["controllers"] = source.controllers
 
-        # PONTE-CONFIRMADA-01 (19/08/2026): o carimbo de ponte chega até aqui por
-        # passthrough — do rascunho (via `to_profile`, gateado pelo R-11) ou do
-        # perfil-base do disco —, e é isso que faz salvar pela aba Perfis parar
-        # de apagar qual ponte já funcionou naquele jogo.
-        #
-        # Mas ele é REGISTRO de uma confirmação, não configuração que se copia, e
-        # um arquivo que ESTREIA ainda não confirmou nada. Quem herdava de fato
-        # era o "Duplicar": `_edita_o_perfil_do_rascunho` já devolve `False` para
-        # ele e para o "Novo perfil", então a base vem do `_duplicate_source` —
-        # o perfil-fonte, com o carimbo dele dentro. A cópia sai com a mesma
-        # regra, mas o gesto seguinte é repontar a cópia para OUTRO jogo: aí o
         # carimbo viaja junto, `pontes_confirmadas()` publica uma ponte que
-        # ninguém provou naquele appid e a escada para num jogo nunca testado —
-        # o produto jurando que sabe o que não sabe. É a MESMA resposta que o
-        # rodapé dá ao nome novo (`DraftConfig.to_profile`), e as duas
-        # superfícies não podem divergir num gesto que a tela nem nomeia.
-        #
-        # Quem já EXISTE em disco mantém o próprio carimbo, pelo argumento
-        # medido da REGRA-NAO-SE-PERDE-01: estrear por cima de um arquivo que
-        # está lá não apaga o que ele sabia. O jogo não perde nada com a cópia
-        # sem carimbo — `manager.perfil_do_appid` desempata por
-        # `(ponte is not None, priority, name)` e continua achando o original.
-        #
-        # PONTE-SOBREVIVE-A-CORRIDA-01 (28/08/2026) — esta consulta ao disco era
-        # `if estreia:`, e a guarda era o defeito. `estreia` é FALSO no gesto
         # mais comum que existe (salvar por cima de si mesmo), e ali o carimbo
-        # vinha só do passthrough: uma FOTOGRAFIA que a janela tirou quando
-        # abriu. Quem carimba é o daemon, escrevendo direto no arquivo — então
-        # todo carimbo nascido DEPOIS da abertura da janela era apagado pelo
-        # Salvar seguinte. MEDIDO no histórico dela, duas vezes: o Sackboy de
-        # 26/08 (carimbado 03:49:47, apagado 03:54:01 — 4 min 14 s de vida, os
-        # snapshots consecutivos são 1238 B com `ponte` e 1053 B sem) e o DON'T
-        # SCREAM de 19/08, cujo carimbo era `confirmada_por: escolha_dela`.
-        #
-        # Agora a escada é a mesma dos dois botões que gravam
         # (`profile_writer.carimbo_que_o_save_leva`, o dono único): DISCO, depois
-        # a fotografia. `estreia` continua valendo, e é só o que ela sempre foi
-        # — o corte do degrau 2, para a cópia do "Duplicar" não herdar o carimbo
-        # da fonte. Ela nunca precisou governar o degrau 1.
-        #
-        # E a pergunta vai ao ARQUIVO, não ao `_perfil_que_o_salvar_sobrescreve`:
-        # o cache em memória é a OUTRA fotografia da janela (recarregado no boot
-        # e depois de gravar/apagar, nunca quando o disco muda por fora), então
-        # curar pelo cache deixaria a corrida de pé. `perfil_em_disco` lê UM
-        # arquivo, sem semear e sem varrer, que é o que cabe na thread do GTK
         # (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01) — e `on_profile_save` já grava
-        # nela, logo abaixo.
-        #
-        # O degrau 2 sai de `source.ponte`, e não de `base["ponte"]`: `base` é
-        # um `model_dump`, onde a seção já virou `dict` — e o degrau tem de
         # entregar o objeto validado que `carimbo_que_o_save_leva` promete.
-        # `source` é o `Profile` de onde `base` saiu em TODOS os ramos acima
-        # (inclusive o do rascunho, que o reaponta para `do_draft`).
         estreia = bool(getattr(self, "_new_profile", False)) or (
             getattr(self, "_duplicate_source", None) is not None
         )
@@ -4498,30 +2809,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             None if estreia or source is None else source.ponte,
         )
 
-        # FEAT-LED-BRIGHTNESS-03: brightness pendente do slider só é aplicado
-        # quando o perfil-base NÃO tem brilho próprio. BUG-PROFILE-BRIGHTNESS-OVERWRITE-01:
-        # antes sobrescrevia incondicionalmente com o global (default 1.0),
-        # apagando o brilho persistido do perfil ao salvar pela aba Perfis.
         pending_brightness: float = getattr(self, "_pending_brightness", 1.0)
         leds_base: dict[str, Any] = dict(base.get("leds") or {})
         leds_base.setdefault("lightbar_brightness", pending_brightness)
         base["leds"] = leds_base
 
         # FEAT-PROFILE-MODE-GUI-01: a seção `mode` vem dos widgets do editor.
-        # kind "none" (sem opinião) REMOVE a seção (mode=None). Sem a seção
-        # montada (glade antigo), o mode do perfil-base sobrevive por herança,
-        # como antes desta sprint.
-        #
-        # PERFIL-SALVA-TUDO-01: com uma exceção, do mesmo tamanho da do
-        # SALVAR-NAO-REBAIXA-01 logo abaixo. O `mode` ganhou um segundo escritor
-        # — a aba Emulação, por `DraftConfig.with_mode` — e o seletor daqui abre
-        # com o valor do DISCO. Reescrever sempre significaria: ela liga o modo
-        # jogo na aba Emulação, salva pela aba Perfis, e o modo evapora. Então o
-        # editor só reescreve quando ELA mexeu no seletor nesta edição
-        # (`_modo_tocado`) ou quando o rascunho não tem opinião pendente. A
-        # exceção só vale com a base VINDA DO RASCUNHO: em perfil novo/duplicação
-        # a base é o disco e o editor (inclusive o prefill do modo jogo) segue
-        # sendo a fonte, como antes.
         if self._mode_kind_selector is not None:
             modo_do_rascunho_vence = (
                 base_veio_do_rascunho
@@ -4531,39 +2824,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             if not modo_do_rascunho_vence:
                 base["mode"] = self._mode_section_from_editor()
 
-        # SALVAR-NAO-REBAIXA-01 (sprint 27/07): o `base.update` abaixo
-        # sobrescrevia `match` e `priority` SEMPRE, com o que estivesse nos
-        # widgets. Isso reduz todo salvamento a um rebaixamento silencioso do
-        # que ela consertou fora da janela — evidência datada no disco dela:
-        # `Pragmata` era regra de jogo com prioridade 100 em 26/07 às 23h40 e
-        # amanheceu catch-all em 27/07 às 23h04; o `vitoria` caiu de 100 para 0.
-        # O caminho é banal: a escala tinha teto 100 (uma prioridade 110 do
-        # disco já abria clampada) e o editor simples mostra "Qualquer" para
-        # todo match que ele não reconhece — salvar a cor pela aba Perfis
-        # gravava de volta a leitura empobrecida da tela.
-        #
-        # Agora regra e prioridade só são reescritas quando ela MEXEU nelas
-        # nesta edição. Mexer continua valendo na hora, e num perfil novo (sem
-        # fotografia) nada muda: os widgets seguem sendo a fonte.
-        #   — nota de 05/08: essa última frase CADUCOU pela metade. Vale quando
-        #   o perfil novo estreia um arquivo; quando o Salvar vai por cima de um
-        #   que EXISTE, a fotografia é relida logo abaixo e as guardas voltam a
-        #   valer. Ver SALVAR-NAO-REBAIXA-02, a seguir.
-        #
-        # SALVAR-NAO-REBAIXA-02 (leva 2, 05/08): as guardas acima DESLIGAVAM
-        # sozinhas. `on_profile_new` chama `_esquecer_a_fotografia_do_editor`, e
-        # com as duas fotografias em `None` os dois `if` eram pulados e os
-        # widgets venciam — inclusive quando o Salvar ia por cima de um arquivo
-        # que EXISTE. Medido em 05/08: um perfil `prio=200, criteria` no disco
-        # virava `prio=0, any`, que é o defeito de 27/07 de volta por outra
-        # porta.
-        #
-        # A cura é de ESCOPO, não de remoção: esquecer a fotografia continua
-        # certo (perfil que não existe não tem valor de disco a preservar), e o
-        # que faltava era reler a fotografia NA HORA DE SALVAR, quando o alvo já
-        # existe. Aí a única evidência de intenção é o GESTO dela — não há
-        # assinatura de abertura para comparar, porque o editor nunca mostrou
-        # este perfil.
         prioridade_do_disco = self._prioridade_do_disco
         regra_do_disco = self._regra_do_disco
         prioridade_mexida = self._prioridade_foi_mexida()
@@ -4599,15 +2859,8 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 
     @staticmethod
     def _humanize_profile_error(exc: Exception) -> str:
-        """Traduz erros de validação do perfil para frase de gente (COR-D).
-
-        O ``str`` de uma ``ValidationError`` do pydantic traz o nome do campo
-        interno e uma URL de documentação — ilegível no rodapé de uma linha.
-        Mapeia os casos comuns; só cai no texto genérico quando não reconhece.
-        """
+        """Traduz erros de validação do perfil para frase de gente (COR-D)."""
         text = str(exc)
-        # R-12 item 2: as frases do editor simples já são para gente — traduzi-las
-        # de novo viraria o genérico "Revise os campos", que não diz O QUE falta.
         if text in MENSAGENS_DE_GENTE:
             return text
         if "name não pode ser vazio" in text:
@@ -4657,100 +2910,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         return tem_edicao_pendente(self)
 
 
-# ===========================================================================
-# A FAMÍLIA DO R-08 — o que voltou, o que não voltou, e o que ainda aponta
-# para fora. Medido em 08/09/2026, com a janela GTK já fora do disco
-# (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`).
-# ===========================================================================
-#
-# O R-08 NUNCA FOI UMA REGRA — ERA UMA MÁQUINA DE TRÊS PEÇAS, e só uma voltou:
-#
-#  1. A REGRA — *"o rascunho diverge do que veio do disco?"*. Morava em
-#     `HefestoApp._tem_edicao_pendente`. VOLTOU em 08/09 como
-#     `profile_writer.tem_edicao_pendente`, com o método logo acima (o último
-#     deste arquivo) que os dois consumidores procuram por `getattr`. É MOTOR:
-#     duas linhas comparando dois `DraftConfig`, sem um `Gtk` dentro — por isso
-#     pôde voltar fiel ao original.
-#
-#  2. O CARREGADOR — `HefestoApp._bootstrap_draft_async`
-#     (`f5311616^:app/app.py:960`). NÃO VOLTOU, e ainda há um
-#     `getattr(self, "_bootstrap_draft_async", None)` apontando para ele, em
-#     `_recarregar_as_abas_do_perfil_ativo`.
-#
-#  3. O RECONCILIADOR — `HefestoApp._reconciliar_draft_com_perfil_ativo`, que a
-#     peça 1 protegia e que o tique de 2 Hz chamava
-#     (`f5311616^:app/app.py:490`). NÃO VOLTOU, e ninguém aponta para ele:
-#     quem o chamava era o `_render_slow_state` DA JANELA, um override que saiu
-#     junto. O `_render_slow_state` que ficou é o do `StatusActionsMixin`
-#     (`status_actions.py:2892`) e nunca teve essas linhas.
-#
-# O QUE O RECUO DA PEÇA 2 PERDE, lido nas duas pontas. O original fazia QUATRO
-# coisas; `_refresh_all_tabs` sozinho faz a última, sobre um `self.draft` que
-# ninguém releu:
-#
-#     o original (`f5311616^:app/app.py:960`)   |  o recuo de hoje
-#     ------------------------------------------+------------------------
 #     relê o perfil ATIVO — IPC `state_full` +   |  não lê disco nenhum
-#       `load_all_profiles` — e põe em `draft`   |
-#     move `_active_profile_name`                |  não move
-#     refaz `_draft_baseline` (a régua da peça 1)|  não refaz
-#     chama `_refresh_all_tabs(self)`            |  chama `_refresh_all_tabs`
-#
-# Logo o recuo NÃO é "o mesmo, mais devagar": **ele repinta o perfil ANTERIOR**.
-# E quem chama é `_refazer_as_abas_apos_ativar`, que existe por causa da queixa
-# literal dela em ATIVAR-NAO-MENTE-01 — *"o perfil que eu ativei não aplica
-# imediatamente as features das abas"*. O recuo entrega, calado, o defeito que o
-# chamador existe para curar.
-#
-# POR QUE ISTO É LÁPIDE E NÃO CÓDIGO NOVO — e os três são medição, não suposição:
-#
-#  * NENHUM caminho vivo passa por aquela linha. Zero classes de `src/` herdam
-#    `ProfilesActionsMixin`; a aba Perfis web toma emprestado UM método por um
-#    `SimpleNamespace` de um atributo só (`interface/pacotes/a10_perfis.py:novo`)
-#    e nunca compõe o mixin.
-#  * A MÁQUINA INTEIRA SAIU: `_compute_draft_from_active_profile`,
-#    `EstadoIndisponivelError`, `_draft_reload_inflight` e `_draft_reload_for`
-#    têm ZERO ocorrências em `src/`. Repor a peça 2 seria repor as quatro.
-#  * A PREMISSA DELA FOI DECIDIDA CONTRA. A interface nova é de ação imediata
-#    (decisão dela, 01/09) e não guarda `self.draft` nenhum: quem lê o perfil
 #    ativo lá é `rodape._draft_do_ativo`, que monta o `DraftConfig` do disco na
-#    hora. Reconstruir aqui a arquitetura da janela seria reescrita de memória —
-#    justamente o que a volta da peça 1 evitou ao ser fiel ao original.
-#
-# NO DIA EM QUE UM COMPOSITOR CHEGAR (a aba Perfis web compondo o mixin, ou
-# outro qualquer): o `getattr` continua degradando para o recuo, e o recuo
-# continua repintando o perfil anterior. Quem compuser tem de LIGAR uma
-# releitura antes de confiar em `_refazer_as_abas_apos_ativar`, e o candidato
 # pronto é `rodape._draft_do_ativo` — não o carregador da janela. O original
-# fica endereçado aqui para ser LIDO, nunca copiado.
-#
-# A COERÊNCIA COM O `TestFiacaoNoApp`, que saiu no mesmo dia em que a peça 1
-# voltou: *"mixin sem compositor vivo em `src/`"* decidiu os dois casos em
-# sentidos opostos, e a régua que os separa é esta —
-#
-#     um teste sobre objeto morto não custa nada ao sair;
-#     uma regra sob um ramo vivo custa trabalho DELA no dia em que o ramo rodar.
-#
-# Os dois testes daquela classe perguntavam ao `HefestoApp`: que ele compunha o
-# `LaunchWrapperDialogMixin` na MRO, e que o `_render_slow_state` DELE chamava o
-# render da Status antes do lembrete. O sujeito das duas perguntas é o
-# compositor, e ele saiu — nenhum compositor futuro herda a pergunta, porque a
-# aba web não terá aquela MRO nem aquele tique. A peça 1 não é pergunta: é a
-# RESPOSTA que dois ramos deste arquivo procuram por `getattr`, e sem ela os
-# dois tomam o caminho do "não há nada a proteger". As duas esperavam
-# compositor; só uma estava armada.
-#
-# O QUE SE PERDEU COM `TestFiacaoNoApp` E NÃO TEM SUBSTITUTO: a ORDEM
-# `super()._render_slow_state(state)` → `_maybe_prompt_wrapper_dialog(state)`
-# não é cobrada por ninguém, e não pode ser — o método que a continha era do
-# compositor. O `_maybe_prompt_wrapper_dialog` em si continua medido direto em
-# `tests/unit/test_launch_wrapper_dialog.py`, e a peça 3 desta lápide é o
-# terceiro elo da mesma ordem que ficou sem dono. Os dois voltam a ser
-# cobráveis no dia do compositor, e é este parágrafo que diz o que cobrar.
-#
-# A RÉGUA QUE ACHOU A PEÇA 2, e que agora é permanente:
-# `tests/unit/test_a_familia_do_getattr_sem_dono.py` varre TODO
-# `getattr`/`hasattr(self, "_…")` de `src/` e reprova o nome que módulo nenhum
-# de `src/` define. É teste e não portão de propósito: a lista dos portões tem
-# um dono só (`scripts/portoes.sh`) e o CI tem de bater com ela, e esta pergunta
-# é da CAUDA — em 08/09 os 50 portões ficaram verdes com a peça 1 já sem dono.

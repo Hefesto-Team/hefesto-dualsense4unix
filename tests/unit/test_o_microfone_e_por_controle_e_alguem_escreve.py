@@ -65,8 +65,6 @@ from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils.maquina import ControleDeclarado, MaquinaConfig
 
-#: Os quatro da mesa dela, na faixa sintética que o portão de anonimato exige em
-#: `tests/` — a máscara da casa não basta aqui (`test_anonimato_de_fixtures`).
 UM = "aabbcc000001"
 DOIS = "aabbcc000002"
 TRES = "aabbcc000003"
@@ -127,19 +125,9 @@ def _maquina(**controles: ControleDeclarado) -> MaquinaConfig:
     return MaquinaConfig(controles=dict(controles))
 
 
-# ===========================================================================
-# 1. A declaração da mesa — e só `True` conta
-# ===========================================================================
-
-
 class TestADeclaracaoDaMesa:
     def test_so_true_liga_a_ponte(self) -> None:
-        """`False` e ausência deixam a ponte no chão do mesmo jeito.
-
-        É por isso que DESLIGAR grava `None` e não `False`: um `false` em disco
-        seria um valor de catálogo para o silêncio, e é por essa porta que o
-        default entra disfarçado de escolha dela.
-        """
+        """`False` e ausência deixam a ponte no chão do mesmo jeito."""
         maquina = _maquina(
             **{
                 UM: ControleDeclarado(microfone=True),
@@ -164,18 +152,8 @@ class TestADeclaracaoDaMesa:
         assert uniqs_pedidos(_config(bt_mic_uniqs=_explode)) == frozenset()
 
     def test_um_magicmock_no_lugar_da_fonte_nao_liga_microfone(self) -> None:
-        """Dublê de teste que responde tudo é o caso mais fácil de vazar.
-
-        `MagicMock()` é chamável e devolve outro `MagicMock` — se `uniqs_pedidos`
-        aceitasse qualquer retorno, meia bateria desta casa passaria a subir
-        microfone sem pedir.
-        """
+        """Dublê de teste que responde tudo é o caso mais fácil de vazar."""
         assert uniqs_pedidos(MagicMock()) == frozenset()
-
-
-# ===========================================================================
-# 2. O gate — o `bool` não servia, e é por isso que ele saiu
-# ===========================================================================
 
 
 class TestOGate:
@@ -215,22 +193,12 @@ class TestOGate:
     def test_sem_fonte_nenhuma_o_controle_ainda_ganha_canal(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Fonte ausente é *"ninguém declarou"*, e isso deixou de calar.
-
-        O lado seguro INVERTEU junto com o default: com a ausência LIGANDO, um
-        erro de leitura que responda "vazio" não pode mais apagar o microfone
-        de ninguém.
-        """
+        """Fonte ausente é *"ninguém declarou"*, e isso deixou de calar."""
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         assert subsystem.is_enabled(_config()) is True
         subsystem._config = _config()
         assert len(subsystem.alvos([_No(UM), _No(DOIS)])) == 2
-
-
-# ===========================================================================
-# 3. O CORAÇÃO: ligar um microfone não liga os quatro
-# ===========================================================================
 
 
 class TestPorControle:
@@ -278,11 +246,7 @@ class TestPorControle:
         assert subsystem.alvos([_No("")]) == []
 
     def test_o_mac_com_dois_pontos_casa_com_os_doze_hex(self) -> None:
-        """O uevent escreve `aa:bb:cc:00:00:01`; o `maquina.json` escreve 12 hex.
-
-        Sem normalizar os dois lados, o conjunto nunca casa e o microfone nunca
-        sobe — falha CALADA, que é a pior classe.
-        """
+        """O uevent escreve `aa:bb:cc:00:00:01`; o `maquina.json` escreve 12 hex."""
         subsystem = BtMicSubsystem()
         subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({UM}))
         assert [no.uniq for no in subsystem.alvos([_No("aa:bb:cc:00:00:01")])] == [
@@ -292,12 +256,7 @@ class TestPorControle:
     def test_a_env_a_mao_vale_para_a_mesa_inteira(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A env sempre significou "a mesa inteira", e continua significando.
-
-        Quem a exporta está pedindo os quatro de propósito. Ela não filtra por
-        `uniq` porque não tem como: é uma variável de ambiente, não uma escolha
-        por aparelho.
-        """
+        """A env sempre significou "a mesa inteira", e continua significando."""
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
         subsystem = BtMicSubsystem()
         subsystem._config = _config(bt_mic_uniqs=frozenset)
@@ -307,24 +266,12 @@ class TestPorControle:
         assert sorted(no.uniq for no in escolhidos) == [UM, DOIS]
 
 
-# ===========================================================================
-# 4. O relato — o produto responde pelo EFEITO, não pelo pedido
-# ===========================================================================
-
-
 class TestOQueOProdutoRelata:
     def test_a_ponte_relatada_e_a_que_subiu_e_nao_a_que_ela_pediu(self) -> None:
-        """Uma ponte pedida que não subiu não ocupa fatia de rádio nenhuma.
-
-        libopus ausente, hidraw recusado: o pedido está no `maquina.json` e o
-        rádio está limpo. Pintar áudio na barra nesse caso seria o produto
-        respondendo pelo pedido em vez de pelo efeito — o padrão que a queixa do
-        Sackboy revelou em 22/08.
-        """
+        """Uma ponte pedida que não subiu não ocupa fatia de rádio nenhuma."""
         subsystem = BtMicSubsystem()
         subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({UM, DOIS}))
         gerenciador = _Gerenciador()
-        # Só o UM subiu de verdade.
         gerenciador.reconciliar([_No(UM)])
         subsystem._gerenciador = gerenciador
 
@@ -347,23 +294,12 @@ class TestOQueOProdutoRelata:
         assert subsystem.uniqs_com_ponte() == frozenset()
 
 
-# ===========================================================================
-# 5. O elo que faltava: alguém ESCREVE
-# ===========================================================================
-
-
 class TestAlguemEscreve:
     @pytest.mark.asyncio
     async def test_o_run_fia_a_fonte_no_maquina_json(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida principal: sem esta linha o campo volta a ser órfão.
-
-        O `run()` tem de fiar `DaemonConfig.bt_mic_uniqs` a partir do
-        `maquina.json`, e a fonte tem de ser CHAMÁVEL — o `machine.declare`
-        rebinda `daemon._maquina` no "Aplicar", e uma cópia tirada no boot
-        ficaria velha no instante exato em que ela acabou de escolher.
-        """
+        """A mordida principal: sem esta linha o campo volta a ser órfão."""
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         monkeypatch.setattr(
             "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
@@ -403,17 +339,11 @@ class TestAlguemEscreve:
             "de novo, e a ponte só sobe por variável de ambiente"
         )
         assert config.bt_mic_uniqs() == frozenset({DOIS})
-        # E A FONTE DA RECUSA FOI FIADA JUNTO — 18/09/2026. É ela que o
-        # "por controle" usa depois da inversão, e é o campo que nasceu órfão
-        # se ninguém o amarrar no `run()` (o mesmo defeito que esta régua já
-        # cobrava do `bt_mic_uniqs`).
         assert config.bt_mic_recusados is not None, (
             "`bt_mic_recusados` continua `None` depois do boot: ela não teria "
             "como desligar microfone nenhum"
         )
         assert config.bt_mic_recusados() == frozenset()
-        # E o "por controle" chegou até o gerenciador: dois nós no rádio,
-        # nenhum RECUSADO, duas pontes — a inversão, medida na ponta do laço.
         assert gerenciador.chamadas, "o laço nunca reconciliou"
         assert sorted(no.uniq for no in gerenciador.chamadas[0]) == sorted([UM, DOIS])
 
@@ -421,11 +351,7 @@ class TestAlguemEscreve:
     async def test_uma_fonte_ja_montada_nao_e_sobrescrita(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Quem fia a própria fonte manda — e é o que a bateria faz.
-
-        Sobrescrever aqui apagaria a única forma de exercer o gate sem escrever
-        um `maquina.json` no disco de quem roda os testes.
-        """
+        """Quem fia a própria fonte manda — e é o que a bateria faz."""
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         monkeypatch.setattr(
             "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
@@ -456,11 +382,6 @@ class TestAlguemEscreve:
 
         assert config.bt_mic_uniqs is not None
         assert config.bt_mic_uniqs() == frozenset({QUATRO})
-
-
-# ===========================================================================
-# 6. O "Aplicar" vale AGORA — sobe e desce sem reiniciar o daemon
-# ===========================================================================
 
 
 class TestOAplicarValeAgora:
@@ -495,20 +416,15 @@ class TestOAplicarValeAgora:
         daemon._start_bt_mic = _sobe  # type: ignore[method-assign]
         daemon._stop_bt_mic = _desce  # type: ignore[method-assign]
 
-        # O supervisor sobe já — é o que faz o primeiro toque no botão ter a
-        # quem pedir canal.
         await daemon.reconciliar_bt_mic()
         assert subidas == ["start"]
 
-        # Ela liga o primeiro e o segundo: já está de pé, e o laço cuida.
         ligados.add(UM)
         await daemon.reconciliar_bt_mic()
         ligados.add(DOIS)
         await daemon.reconciliar_bt_mic()
         assert subidas == ["start"]
 
-        # Ela desliga os dois: o supervisor FICA, e quem derruba as pontes é o
-        # `alvos()` da varredura seguinte.
         ligados.clear()
         await daemon.reconciliar_bt_mic()
         assert subidas == ["start"]
@@ -524,18 +440,13 @@ class TestOAplicarValeAgora:
             raise RuntimeError("libopus sumiu")
 
         daemon._start_bt_mic = _explode  # type: ignore[method-assign]
-        await daemon.reconciliar_bt_mic()  # não levanta
+        await daemon.reconciliar_bt_mic()
 
     @pytest.mark.asyncio
     async def test_o_aplicar_reconcilia_a_ponte_sem_reiniciar_o_daemon(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
     ) -> None:
-        """O `machine.declare` CHAMA a reconciliação depois de gravar.
-
-        Sem esta chamada a escolha dela só valeria no próximo início do Hefesto —
-        a forma mais cara do defeito-mãe desta casa: gravado no disco, nenhum
-        efeito na mesa.
-        """
+        """O `machine.declare` CHAMA a reconciliação depois de gravar."""
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
         chamou: list[str] = []

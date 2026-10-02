@@ -36,29 +36,19 @@ from hefesto_dualsense4unix.core.led_control import PRETO, cor_escolhida
 from hefesto_dualsense4unix.profiles.manager import _controllers_to_specs
 from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
 
-#: A faixa sintética da casa — octetos 4 e 5 zerados.
 UNIQ = "aa:bb:cc:00:00:01"
-#: A cor global do perfil dela, para a peça ter de que divergir.
 AZUL = (40, 80, 180)
 
 
-# ---------------------------------------------------------------------------
-# 1. a leitura
-# ---------------------------------------------------------------------------
 def test_o_preto_nao_e_escolha_e_a_cor_de_verdade_e() -> None:
     """MORDIDA: faça `cor_escolhida` devolver `rgb` sempre — reprova aqui."""
     assert cor_escolhida(PRETO) is None
     assert cor_escolhida((0, 0, 0)) is None
     assert cor_escolhida(AZUL) == AZUL
     assert cor_escolhida(None) is None
-    # Um canal aceso já é escolha: o quase-preto NÃO é banido, porque ele só
-    # pode ter vindo de alguém escolhendo.
     assert cor_escolhida((0, 0, 1)) == (0, 0, 1)
 
 
-# ---------------------------------------------------------------------------
-# 2. a peça por controle — o caso DELA
-# ---------------------------------------------------------------------------
 def _spec_da_peca(rgb: tuple[int, int, int], *, brilho: float = 1.0) -> Any:
     peca = ControllerOverrides(
         leds=LedsConfig(lightbar=rgb, lightbar_brightness=brilho)
@@ -68,11 +58,7 @@ def _spec_da_peca(rgb: tuple[int, int, int], *, brilho: float = 1.0) -> Any:
 
 
 def test_a_peca_preta_nao_escreve_cor_nenhuma() -> None:
-    """A peça do Starlight Blue, como estava no disco dela.
-
-    MORDIDA: tire o `cor_escolhida(rgb) is None` de `_controllers_to_specs` e
-    a barra volta a receber `(0, 0, 0)` em toda conexão.
-    """
+    """A peça do Starlight Blue, como estava no disco dela."""
     spec = _spec_da_peca(PRETO)
     assert spec is None or spec.led is None, (
         "a peça preta voltou a mandar cor para o aparelho")
@@ -91,9 +77,6 @@ def test_o_brilho_zero_continua_apagando_a_peca() -> None:
         "o brilho 0 parou de apagar — o banimento comeu o apagar dela")
 
 
-# ---------------------------------------------------------------------------
-# 3. o global — os sete perfis de jogo dela
-# ---------------------------------------------------------------------------
 class _ControleDeMentira:
     """Só o que a ativação do perfil chama, e guardando o que recebeu."""
 
@@ -127,10 +110,7 @@ def _led_do_global(rgb: tuple[int, int, int], *, brilho: float = 1.0) -> Any:
 
 
 def test_o_global_preto_nao_apaga_os_quatro() -> None:
-    """Sete perfis de jogo dela guardavam isto — e apagavam a mesa inteira.
-
-    MORDIDA: devolva `led=effective.lightbar` ao `ProfileManager.apply`.
-    """
+    """Sete perfis de jogo dela guardavam isto — e apagavam a mesa inteira."""
     assert _led_do_global(PRETO) is None
 
 
@@ -142,15 +122,8 @@ def test_o_brilho_zero_continua_apagando_o_global() -> None:
     assert _led_do_global(AZUL, brilho=0.0) == (0, 0, 0)
 
 
-# ---------------------------------------------------------------------------
-# 4. a gravação — a porta por onde o preto entrou
-# ---------------------------------------------------------------------------
 def test_sem_cor_lida_o_arquivo_fica_sem_o_campo() -> None:
-    """`lightbar_rgb is None` é *"não sei"*, e não vira byte no disco.
-
-    MORDIDA: devolva `leds.lightbar_rgb or (0, 0, 0)` ao
-    `_leds_draft_to_config` — o campo volta, preto, e a peça nasce apagando.
-    """
+    """`lightbar_rgb is None` é *"não sei"*, e não vira byte no disco."""
     from hefesto_dualsense4unix.app.draft_config import (
         LedsDraft,
         _leds_draft_to_config,
@@ -163,14 +136,7 @@ def test_sem_cor_lida_o_arquivo_fica_sem_o_campo() -> None:
 
 
 def test_o_preto_que_ja_esta_no_disco_chega_a_tela_como_sem_cor() -> None:
-    """Os sete perfis de jogo dela — o preto já gravado não vira escolha.
-
-    Sem esta linha o círculo se fecharia: o arquivo velho pintaria a tela de
-    preto e o Salvar seguinte o reescreveria, com o banimento de pé.
-
-    MORDIDA: devolva o `(int(rgb_raw[0]), …)` direto ao `LedsDraft` em
-    `_leds_config_to_draft`.
-    """
+    """Os sete perfis de jogo dela — o preto já gravado não vira escolha."""
     from hefesto_dualsense4unix.app.draft_config import _leds_config_to_draft
 
     assert _leds_config_to_draft(LedsConfig(lightbar=PRETO)).lightbar_rgb is None
@@ -178,10 +144,7 @@ def test_o_preto_que_ja_esta_no_disco_chega_a_tela_como_sem_cor() -> None:
 
 
 def test_sem_cor_lida_nao_nasce_peca_por_controle() -> None:
-    """O Salvar com um controle sem leitura não inventa peça para ele.
-
-    MORDIDA: tire o `leds.lightbar_rgb is not None` de `with_controller_leds`.
-    """
+    """O Salvar com um controle sem leitura não inventa peça para ele."""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig, LedsDraft
 
     draft = DraftConfig()

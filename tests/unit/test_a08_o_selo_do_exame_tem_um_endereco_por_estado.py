@@ -1,48 +1,5 @@
 #!/usr/bin/env python3
-"""A COR DA PÍLULA DO CHECK-UP É DO ACHADO, e não da posição no desenho.
-
-**03/09/2026.** A régua do mockup acusava três ENDEREÇOS MORTOS na aba
-Conexões — *"o pacote declara 'certo' e a tela continua em ''"* —, e por trás
-deles havia um defeito que ninguém via na conta: com os **três achados `certo`**
-que o exame devolve na mesa dela, a **segunda linha** mostrava a palavra
-**CERTO** dentro da pílula **LARANJA**. A palavra vinha do produto; a cor, do
-mockup, cravada por posição.
-
-AS DUAS METADES DA CURA, e nenhuma vale sozinha:
-
-    (a) O DESENHO TEM UM ENDEREÇO POR ESTADO   três `<i class="est">` invisíveis
-        (`aba08.exame`)                        antes da pílula, e a folha de
-                                               estilo lê a cor do IRMÃO (`~`)
-
-    (b) O PACOTE FALA A LÍNGUA DO ELEMENTO     `_selos_por_estado`: um nó que
-        (`a08_conexoes.pacote`)                pergunta *"é `problema`?"* só
-                                               recebe `problema` ou o vazio
-
-Sem (a), o pacote emite num endereço que não existe e o produto pinta zero.
-Sem (b), o pacote responde a pergunta errada: emitir `certo` num elemento que
-só sabe dizer `problema` é o que fazia a régua chamar de endereço morto o
-que a tela mostrava CERTO.
-
-**POR QUE UM ELEMENTO NÃO BASTAVA:** o alvo `classe` do
-`hefesto_vivo.BOOTSTRAP` acende UMA classe por elemento, e o vocabulário de
-endereço é UM `data-campo` por nó. Quatro estados não cabem num interruptor só.
-
-O TERCEIRO CASO, e ele é da RÉGUA: o alvo `html` era comparado COM as tags de
-um lado e SEM do outro. `p1·teto-explica` e `p2·teto-explica` saíam como
-endereço morto com o produto pintando os dois a cada tique. É o terceiro alvo
-da decisão 15 dela — *"a régua aprende os alvos que faltam (`largura`, `valor`,
-`html`)"* —, e ele tinha ficado de fora.
-
-A MORDIDA, medida:
-
-* devolva o `"selo-estado": [i["estado"] for i in itens]` do pacote →
-  `test_o_pacote_so_responde_a_pergunta_do_elemento` e
-  `test_o_estado_cru_num_elemento_de_um_estado_so_e_endereco_morto` reprovam;
-* apague o ramo `campo.alvo == "html"` da `regua_do_mockup` →
-  `test_a_regua_le_o_html_declarado_como_a_tela_o_mostra` reprova;
-* tire um `<i class="est">` do `aba08.exame` e regenere →
-  `test_o_desenho_tem_um_interruptor_por_estado` reprova.
-"""
+"""A COR DA PÍLULA DO CHECK-UP É DO ACHADO, e não da posição no desenho."""
 from __future__ import annotations
 
 import pathlib
@@ -67,16 +24,12 @@ def _regua():  # type: ignore[no-untyped-def]
     return regua_do_mockup
 
 
-#: Os quatro estados do `exame_da_mesa.Item`, como o dono os nomeia.
 def _estados() -> list[str]:
     from hefesto_dualsense4unix.gui.aba_conexoes import SELO_DO_ESTADO
 
     return list(SELO_DO_ESTADO)
 
 
-# ---------------------------------------------------------------------------
-# (b) O PACOTE FALA A LÍNGUA DO ELEMENTO
-# ---------------------------------------------------------------------------
 def test_o_pacote_so_responde_a_pergunta_do_elemento() -> None:
     """Cada lista traz o SEU estado ou o vazio — nunca o de outro endereço."""
     p = _pacote()
@@ -101,7 +54,6 @@ def _ctx():  # type: ignore[no-untyped-def]
     """Uma mesa de dois — o bastante para `pacote()` correr inteiro."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    # A FAIXA SINTÉTICA DA CASA — há dois portões de anonimato nesta árvore.
     p1, p2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
     mesa = [
         {"pref": "p1", "uniq": p1, "jogador": 1, "cor": "white",
@@ -119,15 +71,7 @@ def _ctx():  # type: ignore[no-untyped-def]
 
 
 def test_o_pacote_liga_os_quatro_enderecos() -> None:
-    """A METADE QUE FALTAVA NESTE ARQUIVO, e ela é a que morde.
-
-    MEDIDO EM 03/09/2026, arrancando a cura: com o
-    `"selo-estado": [i["estado"] for i in itens]` de volta no `pacote()`, a
-    régua do mockup voltou a acusar os três endereços mortos — e **os testes
-    deste arquivo continuaram os nove verdes**, porque todos chamavam
-    `_selos_por_estado` DIRETO. Um teste que prova a peça e não a ligação dá
-    verde sobre um fio solto; é o defeito de régua que esta casa mais paga.
-    """
+    """A METADE QUE FALTAVA NESTE ARQUIVO, e ela é a que morde."""
     p = _pacote()
     saiu = p.pacote(_ctx())
     for endereco in p.ENDERECO_DO_ESTADO.values():
@@ -154,9 +98,6 @@ def test_um_achado_certo_nao_acende_o_vermelho_de_problema() -> None:
         "o interruptor do `certo` não acendeu com três achados `certo`")
 
 
-# ---------------------------------------------------------------------------
-# A RÉGUA — a prova de que (b) muda o VEREDITO, e não só o texto emitido
-# ---------------------------------------------------------------------------
 def _pilula(quando: str, classe: str = "on", aceso: bool = False):  # type: ignore[no-untyped-def]
     r = _regua()
     return r._Campo(chave="selo-x", dono="", alvo="classe",
@@ -188,9 +129,6 @@ def test_o_interruptor_aceso_e_produto() -> None:
     assert fora[0].classe == r.PRODUTO
 
 
-# ---------------------------------------------------------------------------
-# A RÉGUA APRENDE O `html` — o terceiro alvo da decisão 15 dela
-# ---------------------------------------------------------------------------
 def test_a_regua_le_o_html_declarado_como_a_tela_o_mostra() -> None:
     """Uma declaração com `<b>` chega à comparação SEM as tags, como o DOM."""
     r = _regua()
@@ -230,23 +168,8 @@ def test_o_html_que_o_produto_nao_pintou_continua_acusado() -> None:
         "nunca perdoar a diferença")
 
 
-# ---------------------------------------------------------------------------
-# (a) O DESENHO — e ele é o que alcança a tela dela
-# ---------------------------------------------------------------------------
 def test_o_desenho_tem_um_interruptor_por_estado() -> None:
-    """Toda linha do exame sabe mostrar os QUATRO estados, e um só de cada vez.
-
-    **O SELETOR ACHA A LINHA PELA CLASSE, e não pelo `data-campo` — 06/09/2026,
-    `ONDA5-08-01`.** Ele digitava `<div class="exame" data-campo="exame">`, e no
-    dia em que a 08-Q5 trocou aquele endereço por `exame-calada` (para a linha
-    calada acender a classe `apagada`) a régua devolveu **zero linha** e
-    reprovou a melhora em vez do defeito. É a forma que esta casa já pagou onze
-    vezes em 26/08: *a régua digitava o que devia LER*.
-
-    `class="exame"` é o que a folha de estilo escova e o que não muda com o
-    endereço; o `data-campo` é justamente o que esta sprint move. Um seletor que
-    casa zero continua sendo ERRO aqui embaixo — silêncio, não.
-    """
+    """Toda linha do exame sabe mostrar os QUATRO estados, e um só de cada vez."""
     p = _pacote()
     html = BANCADA.read_text(encoding="utf-8")
     linhas = re.findall(r'<div class="exame"[^>]*>.*?</div>', html, re.S)
@@ -264,7 +187,6 @@ def test_o_desenho_tem_um_interruptor_por_estado() -> None:
                 f"estado `{estado}`")
             assert tag and 'data-hef-alvo="classe"' in tag.group(0), (
                 f"o endereço `{endereco}` da linha {i} não usa o alvo `classe`")
-        # UM ACESO POR LINHA, no máximo: o desenho mostra UM estado.
         acesos = len(re.findall(r'<i class="est [a-z-]+ on"', linha))
         assert acesos <= 1, (
             f"a linha {i} do exame nasce com {acesos} interruptores acesos")

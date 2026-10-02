@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-"""Fecha o cartão do P2 no DOM VIVO, manda o controle de volta, e mede a altura.
-
-POR QUE ELE EXISTE, e é a regra desta casa: o teste de unidade
-``test_o_cartao_do_controle_que_chega_reabre`` roda o passo `1b`/`1c` do piloto
-no ``node``, contra um DOM de mentira. Isso prova a CONTA. O que prova o
-PRODUTO é o mesmo passo dentro do ``WebKit2.WebView`` que ela usa, com a folha
-de estilo real aplicando o `off` — porque o que ela via não era um atributo, era
-um cartão de 24 px.
-
-O ensaio faz o caminho dela, em três tempos:
-
-1. lê a altura do cartão do P2 como está;
-2. manda ``window.__hef.pintar({vazios:['p2']})`` — o controle SAIU;
-3. manda ``window.__hef.pintar({ocupados:['p2']})`` — o controle VOLTOU.
-
-Reprova se o terceiro tempo não devolver a altura do primeiro.
-
-Uso (sempre oculto; ela tem UMA tela)::
-
-    scripts/ensaios/o_cartao_reabre_no_webkit.py
-"""
+"""Fecha o cartão do P2 no DOM VIVO, manda o controle de volta, e mede a altura."""
 from __future__ import annotations
 
 import argparse
@@ -31,9 +11,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -51,13 +28,9 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.interface import hefesto_vivo
 
-#: A ABA ESCOLHIDA é a Controles: é a que tem os quatro cartões grandes, e é
-#: onde a frente 1 mediu os 64% de bateria num assento vazio.
 ABA = "02-controles.html"
 LUGAR = "p2"
 
-#: OS TRÊS TEMPOS, num JS só — para que nada aconteça ENTRE eles. Cada um
-#: devolve a altura do cartão e o que a folha está vestindo.
 ROTEIRO = r"""
 (function(){
   const sel = '[data-controle="__LUGAR__"]';
@@ -128,8 +101,6 @@ def main() -> int:
         print(f"  {tempo:7s} altura {d['altura']:4d} px · largura {d['largura']:4d} px"
               f" · data-conectado={d['conectado']!r:8s} · off={d['off']}")
 
-    # A GUARDA DE VACUIDADE: se fechar não encolhe, os três números são iguais
-    # e a comparação de baixo passa sem medir nada.
     if m["fechado"]["altura"] >= m["aberto"]["altura"]:
         print("\nATENÇÃO: fechar o cartão não mudou a altura — ou a folha desta "
               "aba não encolhe o `off`, ou o passo `1b` do piloto não pegou. O "

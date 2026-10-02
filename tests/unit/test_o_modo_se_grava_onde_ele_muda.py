@@ -58,17 +58,12 @@ from hefesto_dualsense4unix.utils.xdg_paths import config_dir, profiles_dir
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: A faixa forjada da casa: nada de endereço real em arquivo versionado.
 P1 = "aabbcc000001"
 FREESTYLE = loader.NOME_DO_PADRAO
-#: O jogo da régua. O appid é o do Spacewar, o app de teste da própria Steam.
 JOGO = "Jogo da Régua"
 JANELA_DO_JOGO = "steam_app_480"
 
 
-# ---------------------------------------------------------------------------
-# A borda dublada
-# ---------------------------------------------------------------------------
 class _Vpad:
     """O pad de mentira. O canal sai da regra do produto (`quer_uhid`)."""
 
@@ -106,13 +101,7 @@ class _Bancada:
 
 
 class _DaemonDaCasa(Daemon):
-    """SUBCLASSE do daemon real. Só a borda que tocaria aparelho é interceptada.
-
-    O mouse, o teclado e a supressão só anotam (nenhum nó uinput nasce); a
-    exposição do Modo Nativo não fala com o broker; e a reaplicação do perfil
-    na saída do Nativo só anota, porque ela manda o perfil inteiro ao aparelho
-    (a luz, o som, o microfone) e esta régua mede o modo.
-    """
+    """SUBCLASSE do daemon real. Só a borda que tocaria aparelho é interceptada."""
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -254,9 +243,6 @@ def _chip(h: _Handlers, caminho: str) -> dict[str, Any]:
         {"enabled": True, "caminho": caminho, "origin": "manual"}))
 
 
-# ---------------------------------------------------------------------------
-# 1. O chip grava sem a resposta
-# ---------------------------------------------------------------------------
 def test_o_chip_grava_no_freestyle_sem_depender_da_janela(bancada: _Bancada) -> None:
     """O Freestyle ligado em Xbox: o «Sony DualSense» vai ao disco pelo daemon.
 
@@ -284,9 +270,6 @@ def test_o_chip_grava_no_freestyle_sem_depender_da_janela(bancada: _Bancada) -> 
         "a gravação não deixou a versão de antes no `.historico`")
 
 
-# ---------------------------------------------------------------------------
-# 2. A escolha sobrevive à ativação e ao boot
-# ---------------------------------------------------------------------------
 def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(bancada: _Bancada) -> None:
     """Depois do chip, o «Ativar» do Freestyle não para nem recria o pad.
 
@@ -313,18 +296,8 @@ def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(bancada: _Bancada) -> None:
         f"o boot restauraria {nome!r} em {caminho_do_boot!r}")
 
 
-# ---------------------------------------------------------------------------
-# 3. O recusado não grava
-# ---------------------------------------------------------------------------
 def test_o_modo_que_o_aparelho_recusou_nao_vai_ao_disco(bancada: _Bancada) -> None:
-    """A fábrica do pad recusa: o desfecho é `falhou`, e o disco não muda.
-
-    É a recusa que a origem `manual` alcança. O `bloqueado_por_jogo` não sai
-    para ela (`gamepad.ORIGENS_GESTO_DELA`), e forçar a trava num dublê mediria
-    um estado que o produto não produz.
-
-    MORDIDA: grave antes do `start`, sem olhar o desfecho, e o `sha256` muda.
-    """
+    """A fábrica do pad recusa: o desfecho é `falhou`, e o disco não muda."""
     d = _daemon()
     _freestyle_ligado_em(d, "xbox")
     h = _Handlers(d, _gerente(d))
@@ -340,20 +313,8 @@ def test_o_modo_que_o_aparelho_recusou_nao_vai_ao_disco(bancada: _Bancada) -> No
     assert _versoes(FREESTYLE) == versoes
 
 
-# ---------------------------------------------------------------------------
-# 4. Só a porta grava
-# ---------------------------------------------------------------------------
 def test_so_a_porta_grava_o_cartao_e_a_chamada_direta_nao(bancada: _Bancada) -> None:
-    """Um perfil sem `mode`, e o pad de pé.
-
-    O cartão do P1 (`vestir_a_mascara_do_aparelho`) chama o setter com
-    `origin="manual"` e escolhe MÁSCARA, e o arranjo do desktop chamado direto
-    tem `origin="manual"` por padrão. Nenhum dos dois escolheu modo, e um
-    perfil sem opinião de modo não ganha uma por eles.
-
-    MORDIDA: grave por `origin == "manual"` em vez do `grava_o_modo` (no setter
-    ou no arranjo) e o perfil ganha `kind`.
-    """
+    """Um perfil sem `mode`, e o pad de pé."""
     d = _daemon()
     _perfil(JOGO, mode=None)
     d.store.set_active_profile(JOGO)
@@ -370,21 +331,10 @@ def test_so_a_porta_grava_o_cartao_e_a_chamada_direta_nao(bancada: _Bancada) -> 
     assert _sha(_arquivo(JOGO)) == antes
 
 
-# ---------------------------------------------------------------------------
-# 5. O perfil que recebe
-# ---------------------------------------------------------------------------
 def test_com_o_freestyle_desligado_o_perfil_do_jogo_recebe(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O Freestyle desligado, o perfil de um jogo ativo e a janela dele em foco.
-
-    O chip grava no perfil do jogo. O `freestyle.json` não muda, e o
-    `gamepad_caminho.flag` (a escolha para todo jogo) também não: o gesto
-    dentro do jogo fica no jogo (CAMINHO-CONTAGIO-01).
-
-    MORDIDA: grave em `loader.o_perfil_de_fora_do_jogo()` em vez do perfil
-    ativo e a régua reprova.
-    """
+    """O Freestyle desligado, o perfil de um jogo ativo e a janela dele em foco."""
     d = _daemon()
     _perfil(FREESTYLE, mode={"kind": "gamepad", "caminho": "xbox"})
     _perfil(JOGO, mode={"kind": "gamepad", "caminho": "xbox"},
@@ -407,9 +357,6 @@ def test_com_o_freestyle_desligado_o_perfil_do_jogo_recebe(
     assert _sha(flag) == flag_antes, "o chip dentro do jogo virou lei para todo jogo"
 
 
-# ---------------------------------------------------------------------------
-# 6. Os outros modos
-# ---------------------------------------------------------------------------
 def test_o_nativo_a_mao_grava_native(bancada: _Bancada) -> None:
     """`native.mode.set {enabled: true, origin: "manual"}` grava `kind: native`.
 
@@ -503,18 +450,7 @@ def test_ligar_sem_caminho_saindo_do_nativo_grava_gamepad(bancada: _Bancada) -> 
 
 
 def test_desligar_o_pad_e_sair_do_nativo_nao_gravam(bancada: _Bancada) -> None:
-    """Quem grava é o modo que ENTRA: os passos que saem não escrevem nada.
-
-    O plano da Navegação desliga o Nativo e o pad antes do arranjo, os dois com
-    `origin: "manual"`; se eles gravassem, cada troca deixaria duas versões a
-    mais no `.historico`, e um perfil sem opinião ganharia uma.
-
-    MORDIDA: grave também no desligar — tire o `enabled and` do
-    `_handle_native_mode_set` e dos dois `if` do `set_native_mode` — e o
-    perfil sem opinião ganha `kind: native`. (Tirar só o do handler do pad não
-    morde, e é de propósito: o ramo que desliga de
-    `set_gamepad_emulation_desfecho` volta antes do escritor.)
-    """
+    """Quem grava é o modo que ENTRA: os passos que saem não escrevem nada."""
     d = _daemon()
     _perfil(JOGO, mode=None)
     d.store.set_active_profile(JOGO)
@@ -527,9 +463,6 @@ def test_desligar_o_pad_e_sair_do_nativo_nao_gravam(bancada: _Bancada) -> None:
     assert _modo_no_disco(JOGO) is None
 
 
-# ---------------------------------------------------------------------------
-# 7. Um escritor só, lido pela árvore
-# ---------------------------------------------------------------------------
 def _chamadas(arvore: ast.AST, nome: str) -> list[int]:
     linhas = []
     for no in ast.walk(arvore):
@@ -550,17 +483,7 @@ def _arvores(pasta: Path) -> Iterator[tuple[Path, ast.AST]]:
 
 
 def test_o_escritor_do_modo_e_um_so() -> None:
-    """`gravar_o_modo_no_perfil_ativo` tem UM chamador no produto: o do daemon.
-
-    E nada em `interface/` escreve a seção `mode`: nem chama
-    `secao_do_modo_com_o_caminho`, nem constrói `ProfileModeConfig`, nem
-    atribui ao atributo `mode` de um perfil. A palavra `"mode"` sozinha não
-    serve: a seção dos gatilhos também a usa.
-
-    MORDIDA: devolva a gravação ao gesto do chip (um `prof.mode = ...` ou um
-    `ProfileModeConfig(...)` em `a01_jogar.py`) e a régua nomeia o arquivo e a
-    linha.
-    """
+    """`gravar_o_modo_no_perfil_ativo` tem UM chamador no produto: o do daemon."""
     chamadores = [
         f"{py.relative_to(SRC)}:{linha}"
         for py, arvore in _arvores(SRC)
@@ -585,9 +508,6 @@ def test_o_escritor_do_modo_e_um_so() -> None:
         "é o daemon, depois do aparelho:\n  " + "\n  ".join(escritores))
 
 
-# ---------------------------------------------------------------------------
-# 8. O diário diz a porta
-# ---------------------------------------------------------------------------
 def _gravacoes(registros: list[dict[str, Any]]) -> list[tuple[str, str]]:
     """`(porta, origem do profile_salvo)` de cada gravação do modo, na ordem."""
     portas = [r.get("porta") for r in registros
@@ -597,14 +517,7 @@ def _gravacoes(registros: list[dict[str, Any]]) -> list[tuple[str, str]]:
 
 
 def test_o_diario_diz_por_qual_porta_o_modo_chegou(bancada: _Bancada) -> None:
-    """O clique pelo IPC grava com `porta=ipc`; o PS + R3, com `porta=controle`.
-
-    O `profile_salvo` leva a mesma porta: antes dizia `ps_r3` fixo, e o diário
-    diria PS + R3 sobre um clique.
-
-    MORDIDA: devolva a origem fixa (`save_profile(novo, origem="ps_r3")` em
-    `manager.gravar_o_modo_no_perfil_ativo`) e a régua reprova.
-    """
+    """O clique pelo IPC grava com `porta=ipc`; o PS + R3, com `porta=controle`."""
     d = _daemon()
     _freestyle_ligado_em(d, "xbox")
     h = _Handlers(d, _gerente(d))
@@ -622,23 +535,10 @@ def test_o_diario_diz_por_qual_porta_o_modo_chegou(bancada: _Bancada) -> None:
     assert modo is not None and modo.caminho == "xbox"
 
 
-# ---------------------------------------------------------------------------
-# 9. O «Salvar» logo depois do chip não devolve o modo velho (resposta [2] dela)
-# ---------------------------------------------------------------------------
 def test_o_salvar_logo_depois_do_chip_nao_devolve_o_modo_velho(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O Freestyle em Xbox no disco; o «Salvar» antes do chip e depois dele.
-
-    A resposta [2] dela, de 29/09: *«Tem que respeitar o que eu decidir na
-    interface e eu clicar em salvar.»* O «Salvar» (`rodape.salvar`) regrava o
-    perfil como o disco o tem (`D-2709-O-SALVAR-LE-O-PERFIL`); o chip grava
-    pelo daemon. Nas duas ordens, o disco termina no modo que ela escolheu.
-
-    MORDIDA: um «Salvar» que guarda o rascunho lido no primeiro clique e o
-    regrava no seguinte (lido antes do escritor, gravado depois dele) deixa o
-    disco em `xbox`, e a régua reprova.
-    """
+    """O Freestyle em Xbox no disco; o «Salvar» antes do chip e depois dele."""
     from hefesto_dualsense4unix.interface.pacotes import perfil as pacote_perfil
     from hefesto_dualsense4unix.interface.pacotes import rodape
 
@@ -659,26 +559,11 @@ def test_o_salvar_logo_depois_do_chip_nao_devolve_o_modo_velho(
         f"o «Salvar» logo depois do chip devolveu {modo!r} ao disco")
 
 
-# ---------------------------------------------------------------------------
-# 10. O perfil sem `mode` volta à base da máquina, e não abaixo dela
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("pad_da_maquina", [True, False])
 def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
     bancada: _Bancada, pad_da_maquina: bool
 ) -> None:
-    """O Freestyle (gamepad) valendo, e ela ativa à mão um jogo sem `mode`.
-
-    Medido às 22:40:34 de 01/10: o «Ativar» do Bail or Jail (sem `mode`) depois
-    do Freestyle parou o pad, com o `gamepad_emulation.flag` dela dizendo
-    `dualsense`; o controle caiu no mouse e teclado e a aba Vibração passou a
-    dizer que a vibração não chegava a jogo nenhum. Perfil sem `mode` não tem
-    opinião: o modo volta à BASE (a preferência dela no disco). Com o pad
-    ligado de propósito, ele fica; desligado de propósito, a reversão de sempre
-    o desliga.
-
-    MORDIDA: tire o `_a_maquina_deixa_o_pad_ligado()` do ramo `kind is None` de
-    `apply_profile_mode` e a célula `True` reprova com uma parada.
-    """
+    """O Freestyle (gamepad) valendo, e ela ativa à mão um jogo sem `mode`."""
     from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
     save_gamepad_emulation(pad_da_maquina, "dualsense")

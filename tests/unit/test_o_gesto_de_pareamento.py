@@ -72,8 +72,6 @@ from tests.unit.barramento_de_mentira import (
     montar,
 )
 
-#: Classes lidas de aparelho real ou da tabela de *assigned numbers* do
-#: Bluetooth. Nenhuma delas é montada a partir das constantes do módulo.
 CLASSE_DO_TECLADO = 0x002540
 CLASSE_DO_FONE = 0x240404
 CLASSE_DO_CELULAR = 0x5A020C
@@ -82,12 +80,7 @@ CLASSE_DO_JOYSTICK = 0x002504
 
 @pytest.fixture()
 def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """O BlueZ de mentira da bancada — ver `tests/unit/barramento_de_mentira.py`.
-
-    O ambiente da ponte vai ao ``os.environ``: os executores do PRÓPRIO produto
-    (``_abrir_de_verdade`` e ``_correr_de_verdade``) não recebem ambiente, e a
-    ponte herda o de quem a abre.
-    """
+    """O BlueZ de mentira da bancada — ver `tests/unit/barramento_de_mentira.py`."""
     raiz = montar(tmp_path)
     for chave in ("SUDO_UID", "SUDO_USER"):
         monkeypatch.delenv(chave, raising=False)
@@ -97,15 +90,8 @@ def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return raiz
 
 
-# --- quem é controle se pergunta à CLASSE ------------------------------------
-
-
 def test_a_classe_do_dualsense_medida_na_mesa_dela_e_controle() -> None:
-    """9480 (0x2508) — o que os seis objetos do BlueZ responderam em 20/09.
-
-    O BlueZ concorda por outro caminho: para esta mesma classe ele publica
-    `Icon` = `input-gaming`. Duas leituras independentes do mesmo aparelho.
-    """
+    """9480 (0x2508) — o que os seis objetos do BlueZ responderam em 20/09."""
     assert CLASSE_DO_DUALSENSE == 9480
     assert ICONE_DO_DUALSENSE == "input-gaming"
     assert gp.e_controle(CLASSE_DO_DUALSENSE) is True
@@ -115,8 +101,6 @@ def test_o_que_nao_e_controle_fica_de_fora() -> None:
     """Fone, celular e teclado não entram na lista de controles dela."""
     assert gp.e_controle(CLASSE_DO_FONE) is False
     assert gp.e_controle(CLASSE_DO_CELULAR) is False
-    #: O teclado é periférico como o controle — o que o separa é o tipo, e é
-    #: por isso que olhar só a classe MAIOR não bastaria.
     assert gp.e_controle(CLASSE_DO_TECLADO) is False
 
 
@@ -128,9 +112,6 @@ def test_o_joystick_tambem_entra() -> None:
 def test_sem_classe_nao_se_chuta() -> None:
     """Ausência não é dúvida a favor: chutar poria o fone da vizinha na lista."""
     assert gp.e_controle(None) is False
-
-
-# --- a linha de TSV ----------------------------------------------------------
 
 
 def test_a_linha_da_ponte_vira_candidato() -> None:
@@ -145,12 +126,7 @@ def test_a_linha_da_ponte_vira_candidato() -> None:
 
 
 def test_o_que_nao_e_endereco_nao_vira_candidato() -> None:
-    """O endereço vira argumento de um comando privilegiado.
-
-    `/dev/hidraw4` é o caso que esta casa já pagou: `core.sysfs_leds.norm_mac`
-    recolhe os hexadecimais de QUALQUER texto e devolve `'deda4'`. Aqui o que
-    não é endereço tem de sair como `None`, nunca como um endereço aproximado.
-    """
+    """O endereço vira argumento de um comando privilegiado."""
     assert gp.ler_candidato("/dev/hidraw4\tx\tnovo\t9480") is None
     assert gp.ler_candidato("") is None
     assert gp.ler_candidato("aa:bb:cc:00:00\tcurto\tnovo\t") is None
@@ -174,16 +150,8 @@ def test_o_endereco_inteiro_nao_vai_para_a_tela() -> None:
     assert candidato.mascara == "aa:bb:cc:00:00:ff"
 
 
-# --- os estados --------------------------------------------------------------
-
-
 def test_nao_deu_nunca_e_ninguem() -> None:
-    """A linha inteira deste módulo mora aqui.
-
-    Uma busca que RODOU e não achou ninguém sabe que não achou. Uma que não
-    rodou não sabe de nada — e ler a segunda como a primeira manda a pessoa
-    repetir PS + Create contra uma varredura que nunca aconteceu.
-    """
+    """A linha inteira deste módulo mora aqui."""
     assert gp.Resultado(gp.ESTADO_NINGUEM, gp.FRASE_NINGUEM).deu is True
     assert gp.Resultado(gp.ESTADO_NAO_DEU, gp.FRASE_NAO_DEU).deu is False
     assert gp.Resultado(gp.ESTADO_SEM_PORTA, "").deu is False
@@ -223,26 +191,14 @@ def test_o_adaptador_sem_forma_de_endereco_nao_chega_ao_sudo() -> None:
     assert chamou == []
 
 
-# --- de ponta a ponta, contra a ponte DE VERDADE -----------------------------
-
-
 def _sem_sudo(pedido: PedidoAPonte) -> PedidoAPonte:
-    """O único dublê: o ``sudo -n --`` sai da frente do argv, e fica ``bash <ponte> <verbo>``.
-
-    A entrada (os endereços pelo stdin) segue a do pedido, e quem a escreve é
-    o executor do produto.
-    """
+    """O único dublê: o ``sudo -n --`` sai da frente do argv, e fica ``bash <ponte> <verbo>``."""
     assert pedido.argv[:3] == ("sudo", "-n", "--"), pedido.argv
     return dataclasses.replace(pedido, argv=("bash", *pedido.argv[3:]))
 
 
 def _janela_contra_a_ponte(barramento: Path, segundos: int) -> gp.JanelaDeBusca:
-    """Uma `JanelaDeBusca` que dirige o script de verdade, sem `sudo`.
-
-    O único dublê é a troca de `sudo -n -- <ponte>` por `bash <ponte>`: o resto
-    do caminho — os executores do produto, o stdin, o TSV, o fluxo — é o do
-    produto. O ambiente da ponte é o do ``barramento`` (a fixture).
-    """
+    """Uma `JanelaDeBusca` que dirige o script de verdade, sem `sudo`."""
     assert (barramento / "bin").is_dir()
     return gp.JanelaDeBusca(
         ADAPTADOR,
@@ -254,11 +210,7 @@ def _janela_contra_a_ponte(barramento: Path, segundos: int) -> gp.JanelaDeBusca:
 
 
 def test_a_ponte_de_verdade_alimenta_a_janela(barramento: Path) -> None:
-    """O contrato do TSV medido dos dois lados: shell emite, Python lê.
-
-    Se a coluna da classe mudar de lugar no script, esta régua cai — que é
-    exatamente o que uma régua com dublê de processo não conseguiria fazer.
-    """
+    """O contrato do TSV medido dos dois lados: shell emite, Python lê."""
     janela = _janela_contra_a_ponte(barramento, 3)
     with janela:
         janela.esperar()
@@ -280,19 +232,7 @@ def test_a_ponte_de_verdade_alimenta_a_janela(barramento: Path) -> None:
 
 
 def test_o_candidato_chega_antes_de_a_janela_fechar(barramento: Path) -> None:
-    """É o que torna o `parear` possível — e é o do lado do Python.
-
-    A régua da ponte mede o fluxo no processo; esta mede que ele CHEGA à lista
-    do módulo enquanto a VARREDURA vive. Sem as duas, a lista poderia estar
-    correta e chegar tarde demais para servir ao `Pair()`.
-
-    O QUE SE OLHA É O `varrendo`, NÃO O PROCESSO, e a diferença foi medida em
-    20/09/2026: com a janela devolvida ao primeiro plano — o defeito exato que
-    esta régua persegue — a ponte despeja a lista no FIM e ainda tem um
-    punhado de comandos a correr depois, então `janela.aberta` continua
-    `True` e a régua passava verde sobre o defeito. O marcador da varredura
-    some junto com o `bluetoothctl`, que é o que interessa ao `Pair()`.
-    """
+    """É o que torna o `parear` possível — e é o do lado do Python."""
     varrendo = barramento / "varrendo"
     janela = _janela_contra_a_ponte(barramento, 6)
     with janela:
@@ -309,11 +249,7 @@ def test_o_candidato_chega_antes_de_a_janela_fechar(barramento: Path) -> None:
 
 
 def test_o_parear_corre_dentro_da_janela_e_chama_o_pair(barramento: Path) -> None:
-    """O gesto composto, de ponta a ponta — e o `Pair` no caminho certo.
-
-    O caminho D-Bus carrega o adaptador (`/org/bluez/hciN/dev_…`), e parear no
-    adaptador errado é o defeito que o `esquecer` do §6.3 existe para desfazer.
-    """
+    """O gesto composto, de ponta a ponta — e o `Pair` no caminho certo."""
     janela = _janela_contra_a_ponte(barramento, 8)
     with janela:
         limite = time.monotonic() + 6.0
@@ -342,12 +278,7 @@ def test_o_controle_ja_pareado_nao_gasta_um_pair(barramento: Path) -> None:
 
 
 def test_o_parear_fora_da_janela_recusa_com_motivo(barramento: Path) -> None:
-    """O segundo risco da sprint, virado guarda.
-
-    O BlueZ recolhe os dispositivos da varredura quando ela termina. Tentar
-    depois entregaria a mensagem do BlueZ, que não diz o que fazer; recusar
-    aqui manda a pessoa procurar de novo.
-    """
+    """O segundo risco da sprint, virado guarda."""
     janela = _janela_contra_a_ponte(barramento, 2)
     with janela:
         janela.esperar()
@@ -360,10 +291,7 @@ def test_o_parear_fora_da_janela_recusa_com_motivo(barramento: Path) -> None:
 def test_o_pair_que_falha_vira_nao_deu_com_a_frase_do_gesto(
     barramento: Path,
 ) -> None:
-    """Falhar é caso normal: o controle pode ter saído do modo de pareamento.
-
-    A frase tem de dizer o gesto, não repetir o erro do BlueZ.
-    """
+    """Falhar é caso normal: o controle pode ter saído do modo de pareamento."""
     (barramento / "pair-recusa").write_text("", encoding="utf-8")
     janela = _janela_contra_a_ponte(barramento, 8)
     with janela:
@@ -377,30 +305,17 @@ def test_o_pair_que_falha_vira_nao_deu_com_a_frase_do_gesto(
 
 
 def test_fechar_derruba_a_varredura(barramento: Path) -> None:
-    """Sair do `with` fecha o rádio, não só o objeto.
-
-    Uma varredura esquecida aberta custa de 32% a 43% dos pacotes do adaptador
-    que a hospeda — é o custo que este módulo existe para não pagar.
-    """
+    """Sair do `with` fecha o rádio, não só o objeto."""
     janela = _janela_contra_a_ponte(barramento, 60)
     with janela:
         limite = time.monotonic() + 5.0
         while not ainda_varrendo(barramento) and time.monotonic() < limite:
             time.sleep(0.05)
         assert ainda_varrendo(barramento), "a janela nem chegou a abrir"
-    #: O PROCESSO da janela, e não o arquivo que o `trap` dela apaga: o bash
-    #: não garante esse `trap` sob os sinais do `timeout` — ver `ainda_varrendo`.
     limite = time.monotonic() + 5.0
     while ainda_varrendo(barramento) and time.monotonic() < limite:
         time.sleep(0.1)
     assert not ainda_varrendo(barramento), "a varredura ficou de pé depois do fechar"
-
-
-# --- o relógio da tela -------------------------------------------------------
-#
-# `segundos_ate` SAIU em 28/09/2026 (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01):
-# o desenho aprovado do «Conectar» não conta para baixo. A régua abaixo prova que
-# a conta não voltou calada — um relógio sem tela é a cura sem caminho de novo.
 
 
 def test_a_conta_da_janela_saiu_com_a_tela_que_nao_conta() -> None:

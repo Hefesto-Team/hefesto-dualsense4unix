@@ -56,19 +56,9 @@ RAIZ_REAL = Path(__file__).resolve().parents[2]
 APP_REAL = RAIZ_REAL / "src" / "hefesto_dualsense4unix" / "app"
 PORTAO_REAL = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 
-#: O módulo que é DONO do campo `texto` — o único lugar onde lê-lo é legítimo,
-#: porque é ele quem implementa `frase_de_exibicao`.
 _DONO_DO_CAMPO = "fala_do_mapa.py"
 
-#: As `Fala` declaradas que ainda não chegaram à tela, uma a uma, com a razão
-#: escrita e quem as fecha. **Nasce vazio**, e é para continuar assim.
-#:
-#: Chaveada por `arquivo::NOME`. Uma entrada que não casa mais com nenhuma
-#: `Fala` órfã REPROVA — lápide que sobrevive à própria cura é o defeito que
-#: este tipo de lista existe para matar, medido em 25/08/2026 no
 #: `portao_a_casa_sabe_e_o_produto_nao_faz`, onde duas notas datadas seguiram
-#: dizendo "nada de produção chama" sobre funções que a produção passou a
-#: chamar.
 _FALA_SEM_TELA_HOJE: dict[str, str] = {}
 
 
@@ -167,9 +157,6 @@ def leituras_cruas_do_texto(app_dir: Path, raiz: Path) -> list[str]:
     return cruas
 
 
-# ── o portão, sobre a árvore de verdade ──────────────────────────────────
-
-
 def test_toda_fala_declarada_chega_a_tela() -> None:
     orfas = {fala.endereco: fala for fala in falas_orfas(APP_REAL, RAIZ_REAL)}
     sem_razao = sorted(set(orfas) - set(_FALA_SEM_TELA_HOJE))
@@ -210,19 +197,8 @@ def test_ninguem_le_o_texto_cru_de_uma_fala() -> None:
     )
 
 
-# ── o mesmo defeito, aplicado ao PRÓPRIO portão ──────────────────────────
-
-
 def test_toda_checagem_do_portao_e_chamada_pelo_main() -> None:
-    """Uma checagem escrita e nunca ligada é o defeito-mãe dentro da cura.
-
-    MEDIDO em 25/08/2026, e é por isso que este teste existe: a árvore
-    amanheceu com ``valida_abas_promovidas`` escrita, testada em prosa no
-    próprio docstring e **nunca chamada** por ``main()``. Promover uma aba não
-    teria feito nada, e o portão diria OK. Uma checagem que ninguém chama é
-    indistinguível de uma checagem que não existe — só custa mais caro,
-    porque quem lê o arquivo acredita nela.
-    """
+    """Uma checagem escrita e nunca ligada é o defeito-mãe dentro da cura."""
     arvore = ast.parse(PORTAO_REAL.read_text(encoding="utf-8"), filename=str(PORTAO_REAL))
     checagens = {
         no.name
@@ -245,9 +221,6 @@ def test_toda_checagem_do_portao_e_chamada_pelo_main() -> None:
         f"{soltas}. Ligue-as ou apague-as: uma checagem que ninguém roda deixa o "
         "portão verde sobre exatamente o que ela media."  # (noqa-acento: verbo medir, imperfeito)
     )
-
-
-# ── as mordidas, em árvore de mentira ────────────────────────────────────
 
 
 def _monta(tmp_path: Path, arquivos: dict[str, str]) -> Path:
@@ -301,12 +274,7 @@ def test_mordida_a_mesma_fala_exibida_deixa_de_ser_acusada(tmp_path: Path) -> No
 
 
 def test_mordida_exibida_de_outro_arquivo_tambem_conta(tmp_path: Path) -> None:
-    """Declarar num módulo e exibir noutro é o desenho de hoje.
-
-    `external_card.py` declara e exibe no mesmo arquivo, mas nada obriga isso —
-    uma régua por arquivo acusaria falso na primeira separação, e portão que
-    grita falso é desligado na semana seguinte.
-    """
+    """Declarar num módulo e exibir noutro é o desenho de hoje."""
     outro = """\
 from hefesto_dualsense4unix.app.fala_do_mapa import frase_de_exibicao
 

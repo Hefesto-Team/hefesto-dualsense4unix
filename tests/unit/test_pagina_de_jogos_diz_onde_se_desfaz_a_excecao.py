@@ -1,29 +1,4 @@
-"""A página que ela lê não pode voltar a negar o botão de desfazer.
-
-Defeito de origem: até 07/08/2026 a marca do Steam Input era mesmo de mão única
-— a função que desmarca (`remove_appid_from_steam_input_allowlist`) tinha ZERO
-chamadores em `src/`, e por isso os textos do produto AVISAVAM que não havia
-volta. Nesse dia, por decisão dela, a volta nasceu em dois lugares: a caixinha
-`profile_steam_input_check` no editor da aba Perfis, e o subcomando
-`gamepad steam-input remove`.
-
-O aviso caducou, mas frase antiga sobrevive em página — foi o que a varredura de
-11/08 achou nesta mesma página, com a promessa de perda de co-op. Este arquivo
-existe para que a negação do desfazer não faça o mesmo caminho.
-
-Os casos não comparam o texto com uma constante: eles conferem que o alvo citado
-EXISTE. A caixinha é lida do `gui/main.glade`; os subcomandos são lidos dos
-decoradores `@app.command(...)` do `cli/cmd_steam.py`. Assim uma renomeação de
-rótulo ou de subcomando também reprova, em vez de passar calada.
-
-A MORDIDA, provada em 21/08/2026
-================================
-Trocada a frase do desfazer por *"não há como desfazer"*,
-`test_a_pagina_nao_nega_o_desfazer` reprova nomeando a linha. Apagado o nome da
-caixinha do parágrafo, `test_a_pagina_aponta_a_caixinha_que_existe_na_janela`
-reprova. Trocado `remove` por um subcomando inventado,
-`test_a_pagina_cita_comandos_que_existem` reprova. Desfeitas, verde.
-"""
+"""A página que ela lê não pode voltar a negar o botão de desfazer."""
 from __future__ import annotations
 
 import ast
@@ -34,9 +9,6 @@ _RAIZ = Path(__file__).resolve().parents[2]
 _PAGINA = Path("docs/usage/jogos-e-mascaras.md")
 _CMD_STEAM = _RAIZ / "src" / "hefesto_dualsense4unix" / "cli" / "cmd_steam.py"
 
-#: A negação que caducou em 07/08/2026. Procurada só FORA de bloco de citação:
-#: uma nota datada que cite o aviso antigo para explicar o que mudou é o que a
-#: casa manda escrever.
 _NEGACAO = re.compile(
     r"(não (há|existe|tem) (como |jeito de |botão |maneira de )?desfaz"
     r"|não dá para desfaz"
@@ -45,7 +17,6 @@ _NEGACAO = re.compile(
     re.IGNORECASE,
 )
 
-#: Os comandos citados na página, como `gamepad steam-input <sub>`.
 _COMANDO_CITADO = re.compile(r"gamepad steam-input (\w[\w-]*)")
 
 

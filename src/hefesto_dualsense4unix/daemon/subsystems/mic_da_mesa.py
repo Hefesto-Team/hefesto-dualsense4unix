@@ -77,20 +77,11 @@ if TYPE_CHECKING:  # pragma: no cover - só para tipo
 
 logger = get_logger(__name__)
 
-#: Cadência da varredura das bordas. Não é polling de DADO: o contador vive no
-#: handle e sobe sozinho na thread de leitura dele; isto só pergunta "subiu?".
-#: 20 Hz é a metade da janela de sossego — perto o bastante para o gesto dela
-#: parecer imediato, e longe o bastante para não custar nada.
 INTERVALO_S: float = 0.05
 
 
 def _bordas(backend: Any) -> dict[str, tuple[int, bool, float | None]]:
-    """`backend.bordas_do_mic()` quando o backend sabe responder; `{}` senão.
-
-    `getattr` porque nem todo backend é o de produção — os dublês da suíte e o
-    backend de um controle só não conhecem a pergunta, e um backend que não
-    conhece a pergunta não pode virar portão silencioso.
-    """
+    """`backend.bordas_do_mic()` quando o backend sabe responder; `{}` senão."""
     ler = getattr(backend, "bordas_do_mic", None)
     if not callable(ler):
         return {}
@@ -164,10 +155,6 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
                 repiques_engolidos=repiques,
             )
             repiques = 0
-            # O `em` é o instante do APERTO (`bordas_do_mic`, `time.monotonic`),
-            # o mesmo relógio do `em` do pedido do jogo: é por ele que a luz e o
-            # ato decidem quem mandou por último, e não pela hora em que o
-            # Hefesto processa a borda (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
             daemon.bus.publish(
                 _TOPICO, {"uniq": uniq, "mudo": mudo, "seq": seq, "em": quando}
             )

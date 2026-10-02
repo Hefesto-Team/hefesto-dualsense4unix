@@ -1,10 +1,4 @@
-"""Subcomando `hefesto-dualsense4unix doctor` — health-check no CLI.
-
-Reusa `scripts/doctor.sh` (infra: daemon, udev, uinput, applet COSMIC, WirePlumber,
-controle) e adiciona checks "do daemon" via IPC (responde? pausado? perfis
-listáveis?), generalizando a sacada do doctor para as features que só o daemon
-conhece em runtime. FEAT-DOCTOR-CLI-AND-CHECKS-01.
-"""
+"""Subcomando `hefesto-dualsense4unix doctor` — health-check no CLI."""
 from __future__ import annotations
 
 import asyncio
@@ -38,19 +32,7 @@ def _find_doctor_sh() -> Path | None:
 
 
 def _avisar_ausente(relpath: str, consequencia: str) -> None:
-    """Diz que um script não veio nesta instalação — e ONDE se procurou.
-
-    A frase antiga era "`{relpath}` não encontrado — pulado", e ela deixava
-    quem lê sem saber se o arquivo não foi instalado ou se o produto procurou
-    no lugar errado. Como o defeito desta frente foi exatamente o segundo
-    caso, a lista dos diretórios consultados é o dado que fecha a pergunta —
-    e é o próprio doctor, cujo trabalho é diagnosticar, quem a imprime.
-
-    Só os DIRETÓRIOS-base saem na lista: o nome do arquivo já está na primeira
-    linha, e repeti-lo seis vezes só faz o `rich` quebrar caminho no meio. Por
-    isso também o `soft_wrap` — caminho partido ao meio não se copia nem se
-    cola.
-    """
+    """Diz que um script não veio nesta instalação — e ONDE se procurou."""
     console.print(f"[yellow]{relpath} não veio nesta instalação — {consequencia}[/yellow]")
     console.print("[dim]       procurei o share do Hefesto em:[/dim]")
     for base in bases_de_instalacao():
@@ -68,9 +50,9 @@ async def _daemon_checks() -> list[tuple[str, str]]:
                 rows.append(
                     ("[WARN]", "daemon PAUSADO — input suspenso ('daemon resume' p/ retomar)")
                 )
-            profiles = await client.call("profile.list")  # sem o Freestyle (02/10/2026)
+            profiles = await client.call("profile.list")
             lista = profiles.get("profiles") if isinstance(profiles, dict) else None
-            if isinstance(lista, list):  # vazia na máquina nova, e é o estado certo
+            if isinstance(lista, list):
                 rows.append(("[ OK ]", f"perfis listáveis via IPC ({len(lista)})"))
             else:
                 rows.append(("[WARN]", "o daemon não respondeu a lista de perfis"))
@@ -106,8 +88,6 @@ def _print_storm_block() -> None:
     from hefesto_dualsense4unix.integrations import storm_doctor
 
     # MESA-CHEIA-11/E3: o check de áudio conta as placas DualSense contra os
-    # controles NO CABO. O denominador vem do daemon; sem daemon ele é None e o
-    # check volta a responder presente/ausente, sem inventar fração.
     no_cabo = storm_doctor.controles_no_cabo(asyncio.run(_state_full_ou_none()))
     console.print("\n== anti-storm / sistema ==")
     for tag, message in storm_doctor.storm_report(controles_no_cabo=no_cabo):
@@ -115,13 +95,7 @@ def _print_storm_block() -> None:
 
 
 def _linhas_perfis() -> tuple[list[tuple[str, str]], bool]:
-    """Verificação SEMÂNTICA dos perfis. Devolve (linhas, houve_erro).
-
-    PERFIL-NASCE-CERTO-01/E4 — o detector de armadilha que a sprint desenhou e
-    ninguém escreveu. Read-only e sem daemon: lê o diretório de perfis e
-    compara os perfis ENTRE SI (catch-all vencendo perfil de jogo, prioridade
-    fora da faixa da janela, empates). Ver `profiles/sanidade.py`.
-    """
+    """Verificação SEMÂNTICA dos perfis. Devolve (linhas, houve_erro)."""
     from hefesto_dualsense4unix.profiles import sanidade
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
 
@@ -150,22 +124,7 @@ def doctor_cmd(
     fix_safe: bool = False,
     perfis: bool = False,
 ) -> None:
-    """Roda `scripts/doctor.sh` (infra) + diagnóstico storm + checks do daemon.
-
-    FEAT-DSX-UNIFY-01:
-    - `--fix-safe`: aplica só o SEGURO (sem sudo) — Steam Input OFF (se a Steam
-      não estiver rodando) + drop-in do WirePlumber + cura de raiz a quente.
-      Reversível/idempotente.
-
-    O antigo `--reapply-all` (que invocava o dsx.sh) foi REMOVIDO: o dsx.sh era
-    baseado na teoria de HW já refutada (I/O die / power). A cura real é o quirk
-    do snd_usb_audio, instalado por padrão e aplicável por `--fix-safe`.
-
-    PERFIL-NASCE-CERTO-01/E4:
-    - `--perfis`: SÓ a coerência dos perfis entre si, sem doctor.sh, sem storm
-      e sem IPC. É o caminho rápido para responder "meus perfis estão sãos?" —
-      e sai com código 1 quando há achado grave, para poder virar portão.
-    """
+    """Roda `scripts/doctor.sh` (infra) + diagnóstico storm + checks do daemon."""
     if perfis:
         raise typer.Exit(code=1 if _print_bloco_perfis() else 0)
 
@@ -184,9 +143,6 @@ def doctor_cmd(
     _print_storm_block()
 
     # PERFIL-NASCE-CERTO-01/E4: o detector também roda no doctor COMPLETO — a
-    # armadilha de perfil não avisa sozinha, e quem só roda `doctor` uma vez
-    # por mês precisa ouvir dela ali. Não mexe no `rc` (mesma política do bloco
-    # de storm): quem quiser portão usa `doctor --perfis`.
     _print_bloco_perfis()
 
     console.print("\n== daemon (via IPC) ==")
@@ -195,11 +151,9 @@ def doctor_cmd(
 
     if fix_safe:
         console.print("\n== fix-safe (sem sudo) ==")
-        # --apply-quiet: só edita se a Steam NÃO estiver rodando (não a fecha).
         _run_script("scripts/disable_steam_input.sh", "--apply-quiet")
         # --install: DualSense não-default, microfone preservado.
         _run_script("scripts/fix_wireplumber_default_source.sh", "--install")
-        # Cura de raiz do storm a quente (sysfs) — best-effort, sem senha.
         _run_script("scripts/install_snd_quirk.sh", "--runtime")
         _print_storm_block()
 

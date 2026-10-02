@@ -23,11 +23,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("o aviso do pad virtual degradado")
 
 import sys
@@ -40,9 +35,6 @@ import pytest
 
 def _install_gi_stubs() -> None:
     """Instala stubs mínimos de gi.repository para rodar sem GTK real."""
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
-    # "ambiente sem GTK" mesmo com o GTK real presente.
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -74,9 +66,6 @@ def _install_gi_stubs() -> None:
     glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     glib_mod.timeout_add_seconds = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     glib_mod.idle_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
-    # GUARDA-GI-REAL-01: o Gdk faltava aqui, e o módulo só coletava porque
-    # OUTRO arquivo de teste (anterior no alfabeto) tinha plantado um. Com a
-    # poluição cortada entre arquivos, este stub tem de se bastar sozinho.
     gdk_mod = types.ModuleType("gi.repository.Gdk")
     gdk_mod.RGBA = object  # type: ignore[attr-defined]
     gdk_mod.Screen = object  # type: ignore[attr-defined]
@@ -138,11 +127,6 @@ def _state(
     }
 
 
-# ---------------------------------------------------------------------------
-# Função pura — a tabela-verdade do critério de aceite do doc
-# ---------------------------------------------------------------------------
-
-
 class TestVpadDegradationText:
     def test_dualsense_uinput_gamepad_acende(self) -> None:
         """(dualsense, uinput, gamepad) → o texto de degradação, verbatim."""
@@ -186,21 +170,16 @@ class TestVpadDegradationText:
         ) is None
 
     def test_texto_honesto_sem_o_conselho_refutado(self) -> None:
-        """"Reconecte o controle" foi REFUTADO: reconectar não promove a uhid.
-
-        O conselho que funciona no código atual é reiniciar o Hefesto (a
-        promoção só roda no boot do daemon) — e o texto diz onde: aba Sistema.
-        """
+        """"Reconecte o controle" foi REFUTADO: reconectar não promove a uhid."""
         texto = VPAD_DEGRADED_TEXT
         assert "aba Sistema" in texto
         assert "modo simples" in texto
         assert "vibração" in texto
-        assert "econecte" not in texto  # cobre "Reconecte" e "reconecte"
+        assert "econecte" not in texto
 
 
 class TestGuardDedup06NoBanner:
-    """DEDUP-06: o banner também fala pelos jogadores do co-op e pelo estado
-    BT+Nativo — a dedup quebrada nunca mais é silenciosa (P0 do sprint doc)."""
+    """DEDUP-06: o banner também fala pelos jogadores do co-op e pelo estado"""
 
     def _com_dedup(
         self, *, dedup_ok: bool, motivo: str | None, backend: str = "uhid"
@@ -212,15 +191,6 @@ class TestGuardDedup06NoBanner:
         return state
 
     def test_jogador_do_coop_degradado_acende_mesmo_com_p1_saudavel(self) -> None:
-        # MESA-CHEIA-11/E2 (14/08/2026): o banner passou a NOMEAR o jogador —
-        # até aqui ele dizia "um dos jogadores" com o número em mãos. O texto
-        # genérico continua existindo, e o teste dele é o do rótulo sem número.
-        #
-        # A asserção contra `texto_coop_degradado([2])` sozinha seria
-        # implementação contra implementação: se o molde degenerasse para o
-        # genérico, os dois lados empatariam e o teste ficaria vazio (dois
-        # céticos mediram isso em 14/08 — esvaziaram a função e este teste
-        # continuou verde). Por isso o literal vem antes da igualdade.
         state = self._com_dedup(dedup_ok=False, motivo="jogador_2_uinput")
         texto = vpad_degradation_text(state)
         assert texto is not None
@@ -238,9 +208,7 @@ class TestGuardDedup06NoBanner:
         assert vpad_degradation_text(state) is None
 
     def test_vpad_ausente_e_transitorio_sem_alarme_falso(self) -> None:
-        """`vpad_ausente` acontece por instantes no boot (device None com a
-        emulação ligada) — o banner não pode piscar alarme falso; quem fala
-        desse estado é o doctor (rodado à mão, sem flicker)."""
+        """`vpad_ausente` acontece por instantes no boot (device None com a"""
         state = self._com_dedup(dedup_ok=False, motivo="vpad_ausente")
         assert vpad_degradation_text(state) is None
 
@@ -252,8 +220,7 @@ class TestGuardDedup06NoBanner:
         assert vpad_degradation_text(state) == VPAD_DEGRADED_TEXT
 
     def test_bt_mais_nativo_tem_aviso_proprio(self) -> None:
-        """Achado novo da revisão: físico BT + Modo Nativo = o SDL pode não
-        enxergar o controle nem sem launch option — aviso específico."""
+        """Achado novo da revisão: físico BT + Modo Nativo = o SDL pode não"""
         state = _state(native_mode=True)
         state["native_bt_fragil"] = True
         assert vpad_degradation_text(state) == NATIVE_BT_FRAGIL_TEXT
@@ -270,11 +237,6 @@ class TestGuardDedup06NoBanner:
     def test_texto_do_coop_diz_o_risco_e_a_saida(self) -> None:
         assert "aba Sistema" in VPAD_COOP_DEGRADED_TEXT
         assert "jogador" in VPAD_COOP_DEGRADED_TEXT
-
-
-# ---------------------------------------------------------------------------
-# Aba Início — _render_home liga/desliga o banner
-# ---------------------------------------------------------------------------
 
 
 class _StyleCtx:
@@ -337,14 +299,8 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    # PONTE-NA-TELA-01: o `_render_home` também rege a linha "Ponte com o jogo"
-    # + o aviso de divergência
-    # de máscara (cobertos em `test_home_ponte_e_divergencia.py`).
     _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
     _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
-    # I3 (25/08/2026): o render passou a perguntar TAMBÉM de onde a máscara
-    # veio (gesto dela x perfil). O dublê empresta o método do mixin, como
-    # empresta os outros — reimplementá-lo aqui mediria o dublê.
     _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
 
     def __init__(self) -> None:
@@ -360,22 +316,14 @@ class _HomeStub:
         self._home_session_label = _FakeWidget()
         self._home_gamepad_opts = _FakeWidget()
         self._home_vpad_banner = _FakeWidget()
-        # GUI-05 item 3: o _render_home também rege o banner "jogo sem wrapper".
         self._home_wrapper_banner = _FakeWidget()
-        # ONDA-U (U1): botão único de energia (toggle in-place).
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
-        # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): botão
-        # "Reconciliar jogadores" + aviso de jogo aberto. (O par nasceu como
-        # "Renumerar agora"; o `_render_home` de hoje só conhece o nome
-        # `reconciliar`, então é este que o duplo tem de ter.)
         self._home_reconciliar_btn = _FakeWidget()
         self._home_reconciliar_hint = _FakeWidget()
-        # PONTE-NA-TELA-01: linha "Ponte com o jogo" + banner da divergência.
         self._home_ponte_label = _FakeWidget()
         self._home_divergencia_banner = _FakeWidget()
         self._home_flavor_pedido: str | None = None
-        # Estado inicial do widget real: invisível até o render decidir.
         self._home_vpad_banner.visible = False
 
 
@@ -403,7 +351,7 @@ class TestBannerAbaInicio:
 
     def test_estado_saudavel_uhid_esconde_banner(self, fake_gtk: None) -> None:
         host = _HomeStub()
-        host._home_vpad_banner.visible = True  # estava degradado antes
+        host._home_vpad_banner.visible = True
 
         host._render_home(_state(backend="uhid"))
 
@@ -418,16 +366,11 @@ class TestBannerAbaInicio:
 
     def test_offline_esconde_banner(self, fake_gtk: None) -> None:
         host = _HomeStub()
-        host._home_vpad_banner.visible = True  # estava degradado antes
+        host._home_vpad_banner.visible = True
 
         host._render_home(None)
 
         assert host._home_vpad_banner.visible is False
-
-
-# ---------------------------------------------------------------------------
-# Aba Status — _render_slow_state/_render_offline ligam/desligam o banner
-# ---------------------------------------------------------------------------
 
 
 class _FakeLabel:
@@ -466,8 +409,6 @@ class _StatusHost(StatusActionsMixin):
 
 @pytest.fixture()
 def status_host(monkeypatch: pytest.MonkeyPatch) -> _StatusHost:
-    # O render lento consulta o grab global do Gtk (BUG-COMBO-POPUP-FLICKER-02);
-    # aqui não há popup nenhum — força o caminho de render.
     monkeypatch.setattr(
         StatusActionsMixin, "_popup_is_open", staticmethod(lambda: False)
     )
@@ -491,7 +432,7 @@ class TestBannerAbaStatus:
         self, status_host: _StatusHost
     ) -> None:
         banner = status_host.builder.get_object("status_vpad_banner")
-        banner.visible = True  # estava degradado antes
+        banner.visible = True
 
         state = _state(backend="uhid")
         state.update({"connected": True, "transport": "usb"})
@@ -501,7 +442,7 @@ class TestBannerAbaStatus:
 
     def test_offline_esconde_banner(self, status_host: _StatusHost) -> None:
         banner = status_host.builder.get_object("status_vpad_banner")
-        banner.visible = True  # estava degradado antes
+        banner.visible = True
 
         status_host._render_offline()
 

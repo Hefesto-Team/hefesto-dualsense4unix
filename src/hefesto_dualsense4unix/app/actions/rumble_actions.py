@@ -58,34 +58,13 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     sem_dono_do_rumble,
 )
 
-#: Mapeamento política -> mult canônico (para mover o deslizador ao clicar num
-#: dos quatro botões).
-#:
-#: 11/08/2026: era uma CÓPIA à mão da tabela do daemon, e as duas divergiam no
-#: dia em que um degrau mudasse — a classe de defeito que o HARM-19 já pagou no
-#: teto do multiplicador. Agora deriva do dono único
-#: (`daemon.subsystems.rumble.RUMBLE_POLICY_MULT`); o daemon é quem multiplica
-#: de verdade, e a tela não pode oferecer um número que ele não aplique.
-#: Precedente do import GUI→daemon: `app.actions.daemon_actions`, que importa
-#: de `daemon.service_install` no topo.
-#:
-#: O ``auto`` é o único que não vem de lá, e de propósito: ele não tem mult
-#: fixo (varia com a bateria em `core.rumble._effective_mult`) e este 1,0 é só
-#: onde o deslizador para — o teto do Auto, que NUNCA amplifica.
 _POLICY_MULT: dict[str, float] = {
     **RUMBLE_POLICY_MULT,
     "auto": 1.0,
 }
 
-#: O degrau que vale quando não se sabe qual é. Era o literal ``0.7`` repetido
-#: em quatro lugares deste arquivo; quando o Balanceado virou 1,0 (11/08/2026),
-#: o 0,7 deixou de ser degrau de coisa alguma e virou âncora morta — um número
-#: que a tela mostrava sem nenhum botão correspondente.
 _MULT_PADRAO = _POLICY_MULT["balanceado"]
 
-#: LEIGO-06: o toast ecoava a CHAVE interna ("max", "economia") — palavra
-#: diferente da que a usuária acabou de clicar no botão ("Máximo"). Os rótulos
-#: são os do glade (main.glade, card "Intensidade da vibração").
 _POLICY_LABEL: dict[str, str] = {
     "economia": "Economia",
     "balanceado": "Balanceado",
@@ -93,54 +72,16 @@ _POLICY_LABEL: dict[str, str] = {
     "auto": "Auto",
 }
 
-#: CONFIG-05 (22/08/2026): os MESMOS quatro rótulos, públicos, porque a seção
-#: "Orçamento" da aba Configurações oferece as mesmas quatro opções — e o
-#: vocabulário da mesa não pode divergir do vocabulário da aba de origem.
-#:
-#: Público em vez de importar o privado acima pelo mesmo motivo do
-#: `BTN_GIVE_BACK_TO_GAME` logo abaixo: quem depende de um nome de outro módulo
-#: precisa de um nome que aquele módulo se comprometeu a manter. Redigitar os
-#: quatro seria a alternativa, e é a que a casa já pagou — duas listas de
-#: rótulos divergem na primeira edição.
 ROTULOS_DO_ORCAMENTO: dict[str, str] = dict(_POLICY_LABEL)
 
-#: RUM-01: o texto dos toasts/estado mandava clicar "Devolver ao jogo" — botão
-#: que NÃO existe. Um único dono aqui impede a dessincronia de voltar.
 #: Rótulo do botão que devolve a vibração ao jogo. Público porque o banner
-#: (status_actions) manda clicar nele — as duas telas não podem divergir no
-#: nome do botão.
-#:
-#: **O VALOR MUDOU EM 06/09/2026, e é o RUM-01 acontecendo pela segunda vez.**
-#: Ele era ``"Deixar o jogo controlar a vibração"``, o rótulo do botão do
-#: ``gui/main.glade``. O glade foi apagado na `GTK-3`
-#: (``D-0609-GTK-LEVA-INTEIRA``) e a interface nova **nunca teve** esse botão:
-#: na aba Vibração são dois por coluna — "Testar" e "Parar" —, e o "Parar"
-#: faz os DOIS atos num clique (``a05_vibracao.parar``: ``rumble_stop_checked``
 #: e em seguida ``rumble_passthrough(True)``), exatamente porque o botão de
-#: devolver não existe. Medido em 06/09/2026 varrendo o texto de todo
-#: ``<button>`` das dez páginas publicadas: ``"Parar"`` está lá; ``"Deixar o
-#: jogo controlar a vibração"``, em nenhuma.
-#:
-#: O nome da constante FICA — três arquivos a citam pelo nome em prosa
-#: (``interface/aba05.py:285``, ``app/telas/vibracao.py:157``,
 #: ``tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py``), e trocá-lo
-#: quebraria citações sem curar defeito nenhum. O que estava errado era o
-#: VALOR: um rótulo é a promessa de um botão, e este apontava para um botão
-#: que ninguém pode clicar.
 BTN_GIVE_BACK_TO_GAME = "Parar"
 
-#: ONDE ESSE BOTÃO FICA — e o rótulo sozinho não bastava. "Parar" é uma palavra
-#: curta que aparece em mais de uma tela; a frase que manda clicar tem de dizer
-#: a aba, senão manda procurar. A aba se chama **Vibração** (o glossário, §1:
-#: a palavra da tela é *vibração*, nunca *rumble*), e é o nome do arquivo
-#: publicado ``interface/paginas/05-vibracao.html``.
-#:
-#: Frase pronta e não pedaço, para que os quatro pontos que a usam não montem
-#: quatro ordens de palavras diferentes para a mesma instrução.
 COMO_DEVOLVER_AO_JOGO = f"clique “{BTN_GIVE_BACK_TO_GAME}” na aba Vibração"
 
 #: JARG-01/LB-02: "daemon offline?" vaza jargão + palpite. O resto do app já
-#: fala "ligue na aba Sistema" — a fronteira da GUI traduz aqui também.
 _MSG_HEFESTO_OFF = "não consegui — o Hefesto pode estar desligado (ligue na aba Sistema)."
 
 
@@ -208,7 +149,6 @@ def _pedidos_por_jogador(ff: dict[str, Any]) -> str | None:
     linhas.sort(key=lambda par: par[0])
     corpo = " · ".join(texto for _, texto in linhas)
     if algum_nao_nulo:
-        # A mesma oração final do agregado, e pelo mesmo motivo: quem pediu
         # força e não sentiu tem de saber que a caça é do nosso lado.
         return f"o jogo pediu vibração — {corpo} — se não sentiu, é aqui dentro"
     return f"o jogo pediu vibração — {corpo}"
@@ -298,15 +238,11 @@ def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
             f"o jogo pediu vibração {descartados}x num formato que o Hefesto "
             "não reconheceu — é defeito nosso, mande esta tela para o suporte"
         )
-    # RUM-9: com a mesa cheia, a resposta é POR JOGADOR. `None` = a soma
-    # responde melhor (os quatro casos estão no docstring de lá), e aí a função
-    # segue exatamente como sempre foi.
     por_jogador = _pedidos_por_jogador(ff)
     if por_jogador is not None:
         return por_jogador
     nao_nulos = _inteiro(ff.get("nao_nulos"))
     if nao_nulos is None:
-        # Daemon antigo: só o número ambíguo, e nenhuma afirmação além dele.
         if plays > 0:
             return f"o jogo pediu vibração {plays}x"
     elif nao_nulos > 0:
@@ -319,52 +255,29 @@ def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
     return "o jogo ainda não pediu vibração nenhuma"
 
 
-#: A PRIMEIRA METADE DO AVISO DO ALCANCE, e ela NÃO muda com o caso: é estado
-#: presente do sistema, e a pessoa precisa saber. A regra da casa (decisão dela,
-#: 07/09/2026) julga a SEGUNDA — a instrução.
 _ALCANCE_O_QUE_ACONTECE = "A intensidade não está chegando a jogo nenhum: "
 
-#: A ÚLTIMA ORAÇÃO, e ela também não muda: sem dizer o que a intensidade AINDA
-#: faz, o aviso vira "esta parte da tela não serve para nada", que é falso — ela
-#: vale para a vibração fixada em "Testar motores" (`reassert_rumble` /
-#: `apply_rumble_policy`, que não dependem de gamepad virtual nenhum).
 _ALCANCE_O_QUE_SOBRA = " Aqui embaixo ela ainda vale."
 
-#: O INTERRUPTOR NÃO DIZ "Ligado" — e é a ÚNICA posição em que mandar ligá-lo
-#: não contradiz o que ela está vendo na aba Jogar.
 _CAUSA_O_INTERRUPTOR_NAO_DIZ_LIGADO = (
     "falta o gamepad virtual, por onde ela passa. Ponha o Status em “Ligado” "
     "na aba Jogar."
 )
 
-#: NAVEGAÇÃO (``desktop``) — o chip que mora DENTRO do lado Ligado. Não é
-#: defeito: é o modo entregando teclado e mouse, como ela pediu. A frase nomeia
-#: o modo e diz por onde se troca, no molde da frase do nativo.
 _CAUSA_O_CAMINHO_E_A_NAVEGACAO = (
     "na Navegação o controle é teclado e mouse, não um gamepad. Troque o Modo "
     "na aba Jogar."
 )
 
-#: VPAD-09, a falha TOTAL: o interruptor em pé e ``make_virtual_pad``
-#: devolvendo ``None``. Seguir a instrução velha aqui nunca resolvia.
 _CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU = (
     "o Status já está em “Ligado”, e o sistema não deixou o Hefesto criar o "
     "gamepad virtual."
 )
 
-#: CAMINHO QUE ESTA JANELA NÃO CONHECE — um modo novo em ``MODOS_LIGADOS``,
-#: vindo de um daemon mais novo. Diz o fato e não manda mexer em nada:
-#: inventar um gesto para um caminho que não se leu é o defeito que a
-#: RECADO-VPAD-01 existe para matar. **Não é prefixo de nenhuma das outras
-#: três**, de propósito — a régua distingue os ramos pela frase.
 _CAUSA_O_CAMINHO_E_DESCONHECIDO = (
     "o caminho de agora não tem gamepad virtual, e é por ele que ela passa."
 )
 
-#: AS QUATRO SEGUNDAS METADES, pelo nome do ramo. Existe para a régua da
-#: RECADO-VPAD-01 poder perguntar *qual ramo saiu* sem digitar uma frase de
-#: tela — foi digitando o texto que a régua velha ficou verde sobre a
-#: instrução errada.
 CAUSAS_DO_ALCANCE_PERDIDO: dict[str, str] = {
     "interruptor-nao-diz-ligado": _CAUSA_O_INTERRUPTOR_NAO_DIZ_LIGADO,
     "navegacao": _CAUSA_O_CAMINHO_E_A_NAVEGACAO,
@@ -531,54 +444,16 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     if not isinstance(vpads, int) or isinstance(vpads, bool):
         return None
     native = bool(state.get("native_mode"))
-    # A tradução da fronteira: o predicado quer a sequência de backends e a
-    # tela só tem quantos gamepads virtuais existem. Ele pergunta "há algum?".
     backends = ("vpad",) * max(0, vpads)
     if sem_dono_do_rumble(native=native, backends=backends):
-        # "NA ABA INÍCIO" MANDAVA A UM LUGAR QUE NÃO EXISTE — achado em
-        # 03/09/2026, na foto da aba Vibração do produto, e CURADO em 06/09
-        # (VIBRACAO-O-QUE-SOBROU-01). As abas são Jogar · Controles · Gatilhos ·
-        # Iluminação · Vibração · Navegação · Lançadores · Conexões · Sistema ·
-        # Perfis: "Início" não é uma delas, e "Jogar pelo Hefesto" não é rótulo
-        # de coisa nenhuma que se clique.
-        #
         # O QUE ADIOU A CURA CADUCOU. O comentário de 03/09 dizia que a frase
-        # "está CERTA na janela GTK, que tem a aba Início" — é UMA string com
-        # DUAS telas — e por isso não a reescreveu. A janela GTK saiu inteira em
-        # 06/09 (`D-0609-GTK-LEVA-INTEIRA`, o `main.glade` não está mais no
-        # disco): a segunda tela não existe, e o que sobrava era uma frase VIVA
-        # na aba Vibração (`app/telas/vibracao.textos_do_estado` →
-        # `a05_vibracao.pacote`, o bloco `#vib-estado`) mandando a pessoa
-        # procurar duas coisas inexistentes.
-        #
-        # O DESTINO NOVO É MEDIDO, não lembrado: `interface/paginas/01-jogar.html`
-        # tem a linha `Status` com as duas posições `Ligado` / `Desligado`
         # (`data-gesto="hefesto"`, `data-modo="gamepad"` no `Ligado`) — e é
-        # `gamepad` que cria o gamepad virtual cuja falta esta frase denuncia.
-        # O glossário escreve o mesmo par: *"Status: Ligado / Desligado"*.
-        #
-        # O TAMANHO FOI CONFERIDO, porque ele já custou uma aba rolando: a frase
-        # nova tem 161 caracteres contra os 162 da anterior, e quem mede de
-        # verdade é `tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`, no
-        # navegador — contar caractere é proxy, e proxy fica verde na hora errada.
-        #
-        # A SEGUNDA METADE DEIXOU DE SER DIGITADA AQUI — RECADO-VPAD-01
-        # (17/09/2026). Ela mandava pôr em "Ligado" um Status que já estava em
-        # Ligado nos DOIS caminhos em que este aviso aparece; quem responde onde
-        # o interruptor está é o painel da aba Jogar, e é a ele que se pergunta.
-        # A razão inteira, com a medição, está em `_causa_do_alcance_perdido`.
         return (
             _ALCANCE_O_QUE_ACONTECE
             + _causa_do_alcance_perdido(state)
             + _ALCANCE_O_QUE_SOBRA
         )
     if vpads == 0 and native:
-        # NATIVO-RUMBLE-01 (19/08/2026): a oração final desta frase dizia "Ela
-        # continua valendo para a vibração que você fixar aqui embaixo" — e a
-        # medição do mesmo dia mostrou que essa vibração produz **zero write no
-        # fio** sob Modo Nativo. Era a frase mais precisa da aba a afirmar
-        # exatamente o contrário do que o aparelho faz. Substituída, e não
-        # anotada ao lado: número errado não é decisão medida.
         return (
             "Conexão Nativa (Sony): o jogo fala direto com o controle, e a "
             "intensidade acima não passa por ele. Enquanto o modo estiver "
@@ -611,7 +486,7 @@ def texto_do_teto_do_orcamento(
     2. **O orçamento não impõe teto** — ``balanceado``, ``max``, e também o
        ``auto``, cujo teto é MÓVEL: ele muda a cada tique com a bateria, e a
        casa já decidiu não prometer número móvel na tela
-       (`profiles/manager.py:3107-3109`). Um "limitado a 70%" que vira 30% no
+       (`profiles/manager.py:1818-1820`). Um "limitado a 70%" que vira 30% no
        minuto seguinte ensina a desconfiar da tela inteira.
     3. **Não se sabe o que a aba está pedindo** (``pedido is None``): política
        fora dos degraus conhecidos, deslizador ainda não lido.
@@ -635,42 +510,13 @@ def texto_do_teto_do_orcamento(
     )
 
 
-#: RUM-1 (25/08/2026) — a frase que a docstring de
-#: :meth:`RumbleActionsMixin._gravar_intensidade_no_rascunho` já escreveu em
-#: 10/08 e que nunca chegou à tela: *"o que ela ouve na hora é o global; o que
-#: ela SALVA é da peça"*.
-#:
-#: **O defeito que ela confessa.** Com um controle escolhido no seletor, o
-#: clique grava a intensidade no override daquela peça E manda
-#: ``rumble.policy_set`` **sem endereço** — que é da máquina inteira. A tela
-#: afirmava o alvo três centímetros acima e não dizia uma palavra sobre isso.
-#:
-#: **Isto é o ramo "rótulo honesto agora" da D-G dela**, e não a cura da
-#: divergência: a intensidade por peça ao vivo é a E1 da MESA-CHEIA-05
-#: (~11 h medidas) e a palavra é dela. A mentira é o que fere; a granularidade
-#: é conforto.
-#:
-#: Público porque a mordida de ``tests/unit/test_rumble_por_jogador_01.py`` o
-#: lê daqui em vez de redigitar a frase — duas cópias de um texto de tela
-#: divergem na primeira edição, e esta casa já pagou por isso.
 TEXTO_ONDE_GRAVA_E_ONDE_MANDA = (
     "Com um controle escolhido: a intensidade acima vale agora para todos os "
     "controles ligados — só o que você salvar no perfil fica deste controle."
 )
 
 
-#: RUM-3 (25/08/2026) — a oração que o toast ganha quando o gesto APAGOU o
-#: ajuste próprio da peça escolhida.
-#:
-#: **O defeito, medido em 24/08.** Com uma peça no seletor, clicar "Auto"
 #: limpa o override dela (``draft_config.with_controller_rumble``: o esquema
-#: recusa ``auto`` por unidade, porque ele escala pela bateria do controle
-#: PRINCIPAL). A regra está certa e é deliberada; o que a tela fazia era
-#: afundar o botão, mandar ``auto`` global e dizer só *"Intensidade da
-#: vibração: Auto"* — indistinguível do caso "Todos", com o ajuste daquela
-#: peça apagado em silêncio.
-#:
-#: Começa com " — " porque é sufixo do toast, e o toast é uma linha só.
 TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL = (
     " — e este controle voltou ao ajuste geral: o Auto escala pela bateria do "
     "controle principal, então ele vale para todos, nunca para um só."
@@ -678,20 +524,7 @@ TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL = (
 
 
 def texto_de_onde_grava_e_onde_manda(alvo: AlvoDeEdicao) -> str | None:
-    """O aviso de alcance do GESTO; ``None`` = não há divergência a confessar.
-
-    Três estados, três respostas — o contrato do
-    :mod:`app.alvo_de_edicao`, na letra:
-
-    * ``CONTROLE`` → a frase. É o único estado em que a aba grava num lugar
-      (o override da peça) e manda em outro (a política global do daemon);
-    * ``TODOS`` → ``None``. Ali o que ela grava e o que ela manda são a mesma
-      coisa: não há divergência, e um aviso permanente viraria ruído crônico —
-      a mesma disciplina do :func:`texto_do_alcance_da_intensidade`;
-    * ``DESCONHECIDO`` → ``None``. A janela não sabe o alvo, e portanto não
-      escreve nada no rascunho (``_gravar_intensidade_no_rascunho`` recusa).
-      Prometer "fica deste controle" sem saber qual seria inventar um fato.
-    """
+    """O aviso de alcance do GESTO; ``None`` = não há divergência a confessar."""
     if alvo.estado is EstadoDoAlvo.CONTROLE:
         return TEXTO_ONDE_GRAVA_E_ONDE_MANDA
     return None
@@ -760,9 +593,6 @@ def _pintar_a_linha_do_teto(host: Any, policy: str, custom_mult: float | None) -
     if texto is None:
         rotulo.set_visible(False)
         return
-    # `#ffb86c` é o token de ALERTA da casa (`gui/theme.css`), o mesmo do aviso
-    # de alcance logo acima. O texto não leva `<`, `&` nem aspas, então entra
-    # inteiro no markup do Pango — mesma costura do rótulo de estado.
     rotulo.set_markup(f'<span foreground="#ffb86c">{texto}</span>')
     rotulo.set_visible(True)
 
@@ -823,19 +653,12 @@ def _pintar_a_linha_do_alcance_do_gesto(host: Any) -> None:
         rotulo.set_visible(False)
         return
     # `#8be9fd` é o token de INFO da casa (`gui/theme.css`): a frase explica,
-    # não alarma — quem alarma é o aviso de alcance, em laranja, logo acima. O
-    # texto não leva `<`, `&` nem aspas retas, então entra inteiro no markup do
-    # Pango, mesma costura dos outros dois rótulos deste card.
     rotulo.set_markup(f'<span foreground="#8be9fd">{texto}</span>')
     rotulo.set_visible(True)
 
 
 def _inteiro(valor: Any) -> int | None:
-    """O inteiro do payload, ou ``None`` quando o campo não veio (daemon velho).
-
-    RUMBLE-QUE-NAO-SE-SENTE-01. `bool` é `int` em Python e entraria como 0/1 —
-    a mesma blindagem que o resto desta aba já faz.
-    """
+    """O inteiro do payload, ou ``None`` quando o campo não veio (daemon velho)."""
     if isinstance(valor, int) and not isinstance(valor, bool):
         return valor
     return None
@@ -844,12 +667,9 @@ def _inteiro(valor: Any) -> int | None:
 class RumbleActionsMixin(WidgetAccessMixin):
     """Controla a aba Rumble."""
 
-    # Guard para evitar loop widget->draft->refresh->widget.
     _rumble_guard_refresh: bool = False
-    # Política corrente (espelhada localmente para guard de toggle).
     _rumble_policy: str = "balanceado"
 
-    # --- instalação ---
 
     def install_rumble_tab(self) -> None:
         """Inicializa estado da aba Rumble a partir de state_full ou defaults.
@@ -877,7 +697,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self._apply_policy_to_widgets(str(policy), float(custom_mult))
             # Feature #4 (auditoria): consome rumble_passthrough / rumble_active /
             # rumble_ff do state_full — antes nada na GUI mostrava se a vibração
-            # estava DEVOLVIDA ao jogo ou FIXA, nem se o jogo pediu FF.
             self._update_rumble_state_label(result if isinstance(result, dict) else {})
             if indicar_sem_opiniao:
                 self._toast_rumble(
@@ -887,10 +706,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
             return False
 
         def _on_err(_exc: Exception) -> bool:
-            # Sem resposta, a aba NÃO SABE a política — e afirmar uma é mentir.
-            # Pintava "Balanceado / 70%" por cima da política real (repro: daemon
             # em "max", state_full passando dos 250ms durante um hotplug), e o
-            # que ela via passava a divergir do que o controle faz.
             return False
 
         call_async(
@@ -899,7 +715,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
             on_success=_on_state,
             on_failure=_on_err,
             # HARM-15: o daemon monta o state_full varrendo os controles; sob
-            # carga (hotplug, co-op subindo) não cabe nos 0.25s default.
             timeout_s=STATE_IPC_TIMEOUT_S,
         )
 
@@ -910,7 +725,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._rumble_guard_refresh = True
         self._rumble_policy = policy
         try:
-            # Ativa o toggle correto.
             btn_id = {
                 "economia": "rumble_policy_economia",
                 "balanceado": "rumble_policy_balanceado",
@@ -925,7 +739,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 if btn is not None:
                     btn.set_active(pid == btn_id)
 
-            # Slider de intensidade.
             slider: Gtk.Scale = self._get("rumble_policy_slider")
             if slider is not None:
                 if policy == "custom":
@@ -939,25 +752,13 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 lbl.set_visible(policy == "auto")
         finally:
             self._rumble_guard_refresh = False
-        # CONFIG-05: FORA do guard. O guard existe para não reentrar em handler
-        # de sinal, e pintar um rótulo não dispara nenhum; dentro dele, uma
-        # exceção da pintura deixaria o guard preso em True e a aba inteira
-        # muda para sempre.
         _pintar_a_linha_do_teto(self, policy, custom_mult)
         # RUM-1: e a mesma pintura para o alcance do GESTO — é aqui que a aba
-        # se monta, e é montada que ela precisa confessar onde grava e onde
-        # manda. Sem esta linha a frase só apareceria depois de um clique.
         _pintar_a_linha_do_alcance_do_gesto(self)
 
-    # --- handlers dos toggles de política ---
 
     def on_rumble_policy_economia(self, _btn: Gtk.ToggleButton) -> None:
-        # A1: NÃO curto-circuitar em get_active()==False. Os 4 toggles são
-        # GtkToggleButton independentes: clicar num já-ativo o desmarca
         # (get_active()==False), e o antigo `not btn.get_active(): return`
-        # virava clique morto (nenhuma política afundada + IPC não reenviado).
-        # Agora todo clique cai em _set_policy, que re-afirma o botão certo
-        # (desmarcando os irmãos) e reenvia o IPC — sempre exatamente 1 afundado.
         if self._rumble_guard_refresh:
             return
         self._set_policy("economia")
@@ -981,10 +782,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
         """Envia política ao daemon e atualiza slider para valor canônico."""
         self._rumble_policy = policy
         slider: Gtk.Scale = self._get("rumble_policy_slider")
-        # A1: exclusão mútua ANTES do IPC — desmarca os irmãos e re-afirma o
-        # botão certo (mesmo quando o clique num já-ativo o desmarcou), sob guard
-        # para os "toggled" reentrantes dos irmãos não reentrarem nos handlers de
-        # política. Junto, move o slider para o valor canônico (feedback visual).
         self._rumble_guard_refresh = True
         try:
             self._activate_policy_toggle(policy)
@@ -999,28 +796,16 @@ class RumbleActionsMixin(WidgetAccessMixin):
         if lbl is not None:
             lbl.set_visible(policy == "auto")
 
-        # CONFIG-05: o degrau novo pode passar a bater no teto do orçamento (ou
-        # deixar de bater), e a linha tem de acompanhar o clique — não só a
-        # entrada na aba.
         _pintar_a_linha_do_teto(self, policy, None)
-        # RUM-1: o seletor pode ter mudado desde a montagem, e a confissão de
-        # alcance vale para o clique de AGORA.
         _pintar_a_linha_do_alcance_do_gesto(self)
 
         # FEAT-RUMBLE-POLICY-PROFILE-01: além do daemon vivo, grava a escolha
-        # no draft — o "Salvar Perfil" do rodapé persiste a política que a
         # usuária vê. Preset zera custom_mult (o valor só faz sentido em
-        # policy="custom"; o schema do perfil rejeita a combinação).
         apagou_o_ajuste_da_peca = self._gravar_intensidade_no_rascunho(policy, None)
 
-        # HARM-19: recusa do daemon VIVO (motivo preenchido) não pode virar
-        # acusação de daemon morto — é o tratamento que os gatilhos já têm.
         ok, motivo = rumble_policy_set_checked(policy, timeout=STATE_IPC_TIMEOUT_S)
         if ok:
             texto = f"Intensidade da vibração: {_POLICY_LABEL.get(policy, policy)}"
-            # RUM-3: o gesto apagou o ajuste próprio daquela peça. O toast tem
-            # de NOMEAR o apagamento — sem esta oração ele é indistinguível do
-            # caso "Todos", e o override some sem uma palavra.
             if apagou_o_ajuste_da_peca:
                 texto += TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL
         elif motivo:
@@ -1050,7 +835,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
         if self._rumble_guard_refresh:
             return
         mult = slider.get_value() / 100.0
-        # Se o mult coincide exatamente com um preset, escolhê-lo.
         for policy, canon_mult in _POLICY_MULT.items():
             if policy == "auto":
                 continue
@@ -1064,7 +848,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
                     self._set_policy(policy)
                 return
 
-        # Mult não é preset: modo custom.
         self._rumble_guard_refresh = True
         try:
             for pid in ("rumble_policy_economia", "rumble_policy_balanceado",
@@ -1079,13 +862,8 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self._rumble_guard_refresh = False
 
         self._rumble_policy = "custom"
-        # CONFIG-05: o deslizador é o caminho que mais bate no teto — ele sobe
-        # até 200%, e o Economia da mesa limita em 30%.
         _pintar_a_linha_do_teto(self, "custom", mult)
-        # RUM-1: o ajuste do deslizador grava na peça e manda na mesa pelo
-        # MESMO par de caminhos do clique num botão — a confissão vale igual.
         _pintar_a_linha_do_alcance_do_gesto(self)
-        # FEAT-RUMBLE-POLICY-PROFILE-01: persiste o custom no draft (mesma
         # razão do preset em `_set_policy` — o rodapé salva o que ela vê).
         self._gravar_intensidade_no_rascunho("custom", mult)
         ok = rumble_policy_custom(mult)
@@ -1096,17 +874,9 @@ class RumbleActionsMixin(WidgetAccessMixin):
             else "O Hefesto não está rodando — ligue na aba Sistema."
         )
 
-    # --- POR-UNIDADE-01 (10/08/2026): a intensidade é da PEÇA ---
 
     def _rumble_edit_uniq(self) -> AlvoDeEdicao:
-        """O alvo de edição escolhido no seletor (PERFIL-04).
-
-        MESMA fonte da Lightbar e dos Gatilhos (`app/alvo_de_edicao.py`, o
-        dono único) — o seletor é UM só, e o selo ao lado dele já diz qual
-        peça está sendo editada. Z2-1 (24/08/2026): antes lia o atributo
-        legado por `getattr` cru — o `None` da janela que não sabia o alvo
-        virava, silenciosamente, "Todos".
-        """
+        """O alvo de edição escolhido no seletor (PERFIL-04)."""
         return alvo_de_edicao(self)
 
     def _gravar_intensidade_no_rascunho(
@@ -1143,8 +913,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
             return False
         estado_alvo = self._rumble_edit_uniq()
         if estado_alvo.desconhecido:
-            # Z2-1: a janela não sabe o alvo — zero escrita no rascunho, e
-            # nunca cai no ramo "Todos" (que limparia os overrides de peça).
             return False
         uniq = estado_alvo.uniq
         if uniq is None:
@@ -1157,12 +925,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
             )
             return False
         # RUM-3: o ANTES da peça, lido antes de escrever. `with_controller_rumble`
-        # LIMPA o override em três casos (igual ao global, `policy=None` e
-        # `auto`), e o "Auto" é o que a tela não contava: o botão afunda, o
-        # daemon recebe `auto` global, o toast diz "Auto" — e o ajuste próprio
-        # daquela peça sumiu sem uma palavra. A regra está certa (o esquema
-        # recusa `auto` por unidade, porque ele escala pela bateria do controle
-        # PRINCIPAL); o que faltava era contar.
         antes = getattr(draft.controller_override(uniq), "rumble", None)
         base = draft.effective_rumble_for(uniq)
         novo = draft.with_controller_rumble(
@@ -1186,11 +948,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
             if btn is not None:
                 btn.set_active(pid == target_id)
 
-    # --- handlers de teste de motores ---
 
-    # M6 (auditoria): id do timer do teste de 500ms em curso (GLib source), para
-    # cancelá-lo se a usuária clicar Parar/Aplicar/Devolver ou testar de novo
-    # dentro da janela — senão o `_rumble_test_stop` pendente desfazia a ação.
     _rumble_test_source: int | None = None
 
     def _cancel_rumble_test_timer(self) -> None:
@@ -1203,17 +961,10 @@ class RumbleActionsMixin(WidgetAccessMixin):
     def on_rumble_apply(self, _btn: Gtk.Button) -> None:
         self._cancel_rumble_test_timer()
         weak, strong = self._read_scales()
-        # Persiste no draft antes de enviar via IPC.
         draft = getattr(self, "draft", None)
         if draft is not None:
             new_rumble = draft.rumble.model_copy(update={"weak": weak, "strong": strong})
             self.draft = draft.model_copy(update={"rumble": new_rumble})
-        # NATIVO-RUMBLE-01 (19/08/2026): o `ok` mudo dizia "travada" com o motor
-        # parado. A recusa do daemon vem no CORPO da resposta (`status`), não
-        # como erro JSON-RPC — por isso `rumble_set_checked` e não o
-        # `_call_checked` da aba Gatilhos. Com motivo preenchido o daemon está
-        # VIVO e recusou: acusá-lo de desligado mandaria ela caçar o problema no
-        # lugar errado, que é o defeito que o HARM-19 já pagou uma vez.
         ok, motivo = rumble_set_checked(weak, strong)
         if motivo:
             self._toast_rumble(motivo)
@@ -1226,16 +977,12 @@ class RumbleActionsMixin(WidgetAccessMixin):
             )
 
     def on_rumble_test_500ms(self, _btn: Gtk.Button) -> None:
-        # Cancela um teste anterior ainda em curso antes de armar o novo.
         self._cancel_rumble_test_timer()
         weak, strong = self._read_scales()
         if weak == 0 and strong == 0:
             weak = 160
             strong = 220
             self._set_scales(weak, strong)
-        # NATIVO-RUMBLE-01: e o teste não arma o temporizador de 500 ms quando o
-        # daemon recusou — sem isso o `_rumble_test_stop` dispararia um `Parar`
-        # sobre um pedido que nunca existiu.
         ok, motivo = rumble_set_checked(weak, strong)
         if motivo:
             self._toast_rumble(motivo)
@@ -1282,24 +1029,10 @@ class RumbleActionsMixin(WidgetAccessMixin):
         )
 
     def on_rumble_stop(self, _btn: Gtk.Button) -> None:
-        """Para rumble via rumble.stop (BUG-RUMBLE-APPLY-IGNORED-01).
-
-        Usa rumble_stop() em vez de rumble_set(0, 0) para que o daemon
-        persista (0, 0) e o poll loop re-afirme silêncio continuamente,
-        evitando que write HID residual reative os motores.
-
-        ABAS-04: zera o rascunho junto — sem isso o próximo "Aplicar" de
-        qualquer aba re-travava a vibração parada (ver
-        ``_zerar_rumble_no_rascunho``).
-        """
+        """Para rumble via rumble.stop (BUG-RUMBLE-APPLY-IGNORED-01)."""
         self._cancel_rumble_test_timer()
         self._set_scales(0, 0)
         self._zerar_rumble_no_rascunho()
-        # NATIVO-RUMBLE-01, segunda metade (20/08/2026): este era o terceiro
-        # botão, e o único que ficou mentindo depois da leva de 19/08. No Modo
-        # Nativo o daemon não trava silêncio — ele SOLTA o par e diz que não
-        # alcança o motor do jogo. Anunciar "travada em silêncio" ali era prometer
-        # exatamente o que não aconteceu.
         _ok, motivo = rumble_stop_checked()
         self._toast_rumble(
             motivo
@@ -1335,7 +1068,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
             else f"Vibração {_MSG_HEFESTO_OFF}"
         )
 
-    # --- refresh do draft ---
 
     def _refresh_rumble_from_draft(self) -> None:
         """Popula widgets da aba Rumble a partir de self.draft.rumble e state_full.
@@ -1348,10 +1080,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        # POR-UNIDADE-01: a aba exibe a intensidade EFETIVA do alvo escolhido
         # no seletor — o override da peça quando existe, senão o global. Mesma
-        # regra de `_refresh_lightbar_from_draft`. `weak`/`strong` (o teste de
-        # motores) vêm sempre do global: nunca foram do perfil.
         rumble = draft.effective_rumble_for(self._rumble_edit_uniq().uniq)
         self._rumble_guard_refresh = True
         try:
@@ -1363,24 +1092,15 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 strong_scale.set_value(float(rumble.strong))
         finally:
             self._rumble_guard_refresh = False
-        # BUG-RUMBLE-POLICY-DRAFT-DIVERGE-01: a política destacada na tela tem
-        # de ser a MESMA que o "Salvar Perfil" do rodapé grava (draft.policy).
         if rumble.policy is not None:
-            # Perfil tem opinião (ou a usuária já tocou): widgets refletem o
-            # DRAFT — não o daemon, que pode estar noutra política (CLI/applet).
             mult = (
                 rumble.custom_mult
                 if rumble.custom_mult is not None
                 else _POLICY_MULT.get(rumble.policy, _MULT_PADRAO)
             )
             self._apply_policy_to_widgets(rumble.policy, mult)
-            # Feature #4: mesmo com política do perfil, o indicador de estado da
-            # vibração (jogo controla / fixo + FF do jogo) vem do daemon VIVO.
             self._refresh_rumble_state_label_async()
         else:
-            # Perfil SEM opinião: exibe o estado vivo do daemon como referência
-            # (async — não bloqueia GTK), com indicação na statusbar e SEM
-            # gravar o valor do daemon no draft. (Já atualiza o indicador.)
             self._sync_policy_from_state(indicar_sem_opiniao=True)
 
     def _refresh_rumble_state_label_async(self) -> None:
@@ -1394,16 +1114,11 @@ class RumbleActionsMixin(WidgetAccessMixin):
             {},
             on_success=_on_state,
             on_failure=lambda _e: False,
-            # HARM-15: mesma leitura, mesma folga (o indicador some por um tick
-            # em vez de mostrar estado inventado).
             timeout_s=STATE_IPC_TIMEOUT_S,
         )
 
-    # --- helpers ---
 
     def _read_scales(self) -> tuple[int, int]:
-        # B1-rumble: None-guard — _get pode devolver None se o widget não existe
-        # no builder (evita AttributeError ao desreferenciar).
         w = self._get("rumble_weak_scale")
         s = self._get("rumble_strong_scale")
         weak = int(w.get_value()) if w is not None else 0
@@ -1411,7 +1126,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
         return weak, strong
 
     def _set_scales(self, weak: int, strong: int) -> None:
-        # B1-rumble: None-guard antes de desreferenciar cada scale.
         w = self._get("rumble_weak_scale")
         if w is not None:
             w.set_value(weak)
@@ -1420,17 +1134,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
             s.set_value(strong)
 
     def _rumble_test_stop(self) -> bool:
-        # SPRINT-GAME-RUMBLE-01: fim do teste = zera os motores E DEVOLVE o
-        # rumble ao jogo (passthrough). Antes fixava (0, 0), o que deixava o
-        # rumble "travado em silêncio" e o FF do jogo IGNORADO (apply_game_rumble
-        # só passa com rumble_active is None) até a usuária clicar "Devolver ao
-        # jogo" na mão — era a origem do "testei os motores e aí o jogo não
-        # vibra mais". rumble_stop() zera o motor primeiro; passthrough solta.
-        # ABAS-04: o fim do teste também escreve no rascunho. Ele termina em
-        # passthrough, então é o mesmo gesto do botão "Deixar o jogo controlar
-        # a vibração" — e sem isto o "Aplicar" seguinte reenviava os 160/220
-        # do teste como se fossem escolha dela.
-        self._rumble_test_source = None  # o timer disparou; não há o que cancelar
+        self._rumble_test_source = None
         rumble_stop()
         rumble_passthrough(True)
         self._set_scales(0, 0)
@@ -1472,10 +1176,6 @@ class RumbleActionsMixin(WidgetAccessMixin):
             if alcance is None:
                 aviso.set_visible(False)
             else:
-                # As duas frases da função não levam `<`, `&` nem aspas retas —
-                # as aspas são as tipográficas “ ”, que o Pango passa inteiras.
-                # Mesma costura do rótulo de estado logo abaixo. `#ffb86c` é o
-                # token de ALERTA da casa, o mesmo da vibração travada.
                 aviso.set_markup(f'<span foreground="#ffb86c">{alcance}</span>')
                 aviso.set_visible(True)
 

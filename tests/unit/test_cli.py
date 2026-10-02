@@ -23,7 +23,6 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         return target
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
-    # Também aponta config_dir para tmp para active_profile marker.
     from hefesto_dualsense4unix.utils import xdg_paths
 
     fake_cfg = tmp_path / "config"
@@ -85,9 +84,7 @@ def test_profile_delete_com_yes(isolated_profiles_dir: Path):
 
 
 def test_battery_sem_hardware():
-    # Sem daemon e sem hardware: retorna exit code 1 com mensagem.
     result = runner.invoke(app, ["battery"])
-    # O fallback tenta ler hardware; se não disponível, sai com 1.
     assert result.exit_code in (0, 1)
 
 
@@ -98,8 +95,6 @@ def test_status_roda_sem_daemon():
 
 
 def test_daemon_install_service_dry_command_help():
-    # Apenas valida que subcomando existe e aceita --help.
-    # SIMPLIFY-UNIT-01: unit única, sem flag --headless aqui.
     result = runner.invoke(app, ["daemon", "install-service", "--help"])
     assert result.exit_code == 0
     assert "install-service" in result.stdout
@@ -110,5 +105,4 @@ def test_test_trigger_sem_hardware_nao_explode():
         app,
         ["test", "trigger", "--side", "right", "--mode", "Rigid", "--params", "5,200"],
     )
-    # Sem hardware: não explode; saída pode indicar erro mas exit code controlado.
     assert result.exit_code in (0, 1)

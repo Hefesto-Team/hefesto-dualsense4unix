@@ -1,42 +1,5 @@
 #!/usr/bin/env python3
-"""A 05 DESENHA O CONTROLE DELA, e não o do mockup — os 28 modelos do mapa.
-
-A LEI, e ela é dela (03/09/2026):
-
-    (noqa-acento: as duas citações abaixo são literais dela)
-
-    "imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-    entende? nada hardcoded."
-
-    "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
-    players com cada controle — tudo isso muda de acordo com o controle
-    identificado no canto superior. é white no p1, mas a borda de tudo é
-    cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
-
-A BORDA JÁ OBEDECIA — o alvo `plastico` entrou na manhã de 03/09 e a régua irmã
-(`test_a_aba05_veste_a_cor_do_controle_lido`) a vigia. O DESENHO dentro dela,
-não: cada `<svg>` nascia com o `data-colorway` da `monta.MESA` e não havia como
-reescrevê-lo.
-
-AS DUAS METADES, e uma sem a outra não pinta um pixel:
-
-1. o ENDEREÇO no `<svg>` — `data-campo="colorway"` mais o par
-   `data-hef-alvo="atributo"` / `data-hef-atributo="data-colorway"`;
-2. a FOLHA DOS 28 publicada na página. `monta._so_o_colorway` guarda dentro de
-   cada SVG só as regras do modelo pedido, então escrever `white` num desenho
-   que só embute `cosmic-red` **não casa regra nenhuma** e o controle cai nos
-   `fill` crus. Sem esta metade, o endereço troca uma cor errada por um cinza.
-
-MEDIDO NO CHROME, com a página desta bancada e os 28 `id` do mapa escritos um a
-um no `data-colorway` do P1: **28 de 28 pintam**, nenhum cai no cinza cru
-`rgb(58, 63, 75)`, e os doze que pintam por `url(#…)` acham a tinta. Arrancar o
-bloco da tinta muda o raster do desenho (15.690 → 12.807 bytes), que é a prova
-de que ele não é enfeite.
-
-NENHUMA COR É DIGITADA AQUI: os 28 `id` saem de `docs/data/cores-do-dualsense.csv`,
-o HTML sai do gerador e os alvos saem do próprio piloto.
-"""
+"""A 05 DESENHA O CONTROLE DELA, e não o do mockup — os 28 modelos do mapa."""
 from __future__ import annotations
 
 import csv
@@ -56,8 +19,6 @@ for _p in (str(RAIZ / "src"),):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# O import do PACOTE é o que põe `interface/` no `sys.path` (`pacotes/__init__`
-# faz o `insert`) — a mesma porta pela qual o piloto entra.
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a05_vibracao
 
@@ -65,25 +26,16 @@ BANCADA = RAIZ / "mockup/05-vibracao.html"
 CORES_CSV = RAIZ / "docs/data/cores-do-dualsense.csv"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: O colorway que o cabo respondeu, e o do controle que ninguém leu. `""` não é
 #: descuido: é o que `mesa_viva.mesa_do_estado` põe quando o mapa de canais diz
-#: que aquele transporte não entrega a cor — o caso do rádio, que é metade da
-#: mesa dela.
 LIDO = "white"
 SEM_LEITURA = ""
 
-#: O que o `escrever()` do piloto precisa ver no elemento para trocar o modelo.
 ALVO = "atributo"
 PARAMETRO = "data-hef-atributo"
 
 
 def modelos_do_mapa() -> set[str]:
-    """Os 28 `id` do CSV dela — `white`, `cosmic-red`, `ghost-of-yotei`…
-
-    É a coluna `id`, e não `nome`: o `id` é o que o
-    `scripts/gerar_cores_do_dualsense.py` escreve em `svg[data-colorway="…"]`.
-    Digitá-los aqui seria a segunda lista que esse CSV existe para não ter.
-    """
+    """Os 28 `id` do CSV dela — `white`, `cosmic-red`, `ghost-of-yotei`…"""
     linhas = [
         linha
         for linha in CORES_CSV.read_text(encoding="utf-8").splitlines()
@@ -96,13 +48,8 @@ def modelos_do_mapa() -> set[str]:
     }
 
 
-#: O VALOR DO `data-conectado` NUM LUGAR SEM CONTROLE. Ele é chave de
-#: máquina, e por isso não leva acento.
 SEM_CONTROLE = "nao"  # (noqa-acento) valor de atributo
 
-#: O TOKEN QUE ESTA RÉGUA USA PARA DIZER "estou dentro de um lugar sem
-#: controle". Ele NÃO é uma classe do HTML: a `vazia` morreu em 07/09/2026 com a
-#: fusão dos dois ramos de coluna (`aba05._coluna`), e a marca verdadeira é o
 #: `data-conectado="nao"` — a mesma que o piloto põe e tira.
 MARCA_DO_LUGAR_VAZIO = "lugar-sem-controle"
 
@@ -124,7 +71,6 @@ class _Pagina(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.pilha: list[dict[str, str]] = []
-        #: `(tag, atributos, classes dos ancestrais)`
         self.elementos: list[tuple[str, dict[str, str], list[str]]] = []
         self.folhas: list[str] = []
         self._folha: list[str] | None = None
@@ -133,11 +79,7 @@ class _Pagina(HTMLParser):
         d = {k: (v or "") for k, v in attrs}
         heranca = [c for pai in self.pilha
                    for c in (pai.get("class") or "").split()]
-        # A MARCA DO LUGAR VAZIO ENTRA NA HERANÇA — 07/09/2026. Ela não é uma
         # classe: é o `data-conectado="nao"`, que é o que o piloto escreve e
-        # apaga. Traduzi-la para um token aqui deixa o resto desta régua
-        # perguntando "estou dentro de um lugar vazio?" na mesma língua de
-        # sempre, sem que a resposta dependa de uma classe que morreu.
         heranca += [MARCA_DO_LUGAR_VAZIO for pai in self.pilha
                     if (pai.get("data-conectado") or "") == SEM_CONTROLE]
         self.elementos.append((tag, d, heranca))
@@ -211,20 +153,8 @@ def _mesa(*cores: str) -> list[dict[str, Any]]:
     ]
 
 
-# ---------------------------------------------------------------------------
-# 1. O ENDEREÇO — o desenho pode virar outro modelo
-# ---------------------------------------------------------------------------
 def test_todo_desenho_de_controle_pede_o_alvo_de_atributo() -> None:
-    """Os quatro `<svg>` da mesa trazem o par alvo/parâmetro, e o nome certo.
-
-    O NOME DO ATRIBUTO É COBRADO À PARTE, e não é zelo: um
-    `data-hef-atributo="data-modelo"` deixa o `escrever()` trocar outra coisa e
-    o `data-colorway` fica cravado — presença de string não é funcionamento.
-
-    A CONTA SAI DA PÁGINA: são tantos quantos forem os desenhos de controle que
-    a mesa publicar. No dia em que a mesa mudar de tamanho, a régua acompanha em
-    vez de reprovar a mudança.
-    """
+    """Os quatro `<svg>` da mesa trazem o par alvo/parâmetro, e o nome certo."""
     desenhos = _desenhos(_bancada())
     assert desenhos, "a bancada da 05 não tem um desenho de controle sequer"
 
@@ -282,19 +212,8 @@ def test_o_lugar_vazio_nao_afirma_modelo_nenhum() -> None:
         f"um lugar COM controle deixou de trazer o modelo do desenho: {mudos}")
 
 
-# ---------------------------------------------------------------------------
-# 2. A FOLHA — os 28 modelos dela, uma vez, na página
-# ---------------------------------------------------------------------------
 def test_a_pagina_publica_os_28_modelos_dela() -> None:
-    """A página traz as regras dos 28 do mapa, e nenhum SVG guarda a podada.
-
-    AS DUAS METADES SÃO A MESMA COISA e por isso moram juntas: enquanto cada
-    `<svg>` embutir a folha de UM modelo, o desenho não tem como virar outro; e
-    publicar as 28 sem tirar a podada seria carregar a mesma folha cinco vezes.
-
-    A MORDIDA está no fim desta função: com as regras de um modelo só, ela
-    acusa — que é o estado em que a página estava até 03/09/2026.
-    """
+    """A página traz as regras dos 28 do mapa, e nenhum SVG guarda a podada."""
     html = _bancada()
     esperados = modelos_do_mapa()
     assert len(esperados) >= 28, (
@@ -311,8 +230,6 @@ def test_a_pagina_publica_os_28_modelos_dela() -> None:
     assert not podadas, (
         f"{len(podadas)} desenho(s) ainda carregam a folha de um modelo só")
 
-    # A MORDIDA, e ela roda toda vez: uma página com as regras de um modelo só é
-    # o que esta régua existe para acusar.
     so_um = re.sub(r'svg\[data-colorway="(?!cosmic-red)[^"]+"\][^\n]*\n', "", html)
     assert modelos_do_mapa() - set(
         re.findall(r'svg\[data-colorway="([^"]+)"\]', so_um)), (
@@ -320,18 +237,7 @@ def test_a_pagina_publica_os_28_modelos_dela() -> None:
 
 
 def test_a_tinta_dos_modelos_por_url_existe_na_pagina() -> None:
-    """Os `url(#…)` da folha acham o elemento — e ele NÃO é o de um controle.
-
-    Doze dos 28 pintam por referência: a hachura dos que ela não amostrou e os
-    dois gradientes de casca. Esses `id` moram no `<defs>` do desenho, e
-    `monta.svg()` PREFIXA todo id por controle (`vb-p1-hachura-sem-hex`) — uma
-    folha de página que dissesse `url(#hachura-sem-hex)` não acharia nada, e os
-    doze ficariam com uma referência morta: nem a cor do aparelho, nem o cinza
-    do "não sei", um terceiro estado que não quer dizer nada.
-
-    MEDIDO: arrancar o bloco da tinta do documento muda o raster do desenho em
-    `ghost-of-yotei` (15.690 → 12.807 bytes no Chrome desta máquina).
-    """
+    """Os `url(#…)` da folha acham o elemento — e ele NÃO é o de um controle."""
     html = _bancada()
     pedidos = set(re.findall(r"url\(#([^)]+)\)", html))
     assert pedidos, "a folha desta página não pede tinta nenhuma"
@@ -343,20 +249,8 @@ def test_a_tinta_dos_modelos_por_url_existe_na_pagina() -> None:
         "pintam por referência ficariam sem casca")
 
 
-# ---------------------------------------------------------------------------
-# 3. O PACOTE — escreve o modelo lido, cala o que não leu
-# ---------------------------------------------------------------------------
 def test_o_pacote_emite_o_modelo_lido_e_cala_o_que_nao_leu() -> None:
-    """`colorway` sai do pacote com o `id` do mapa, ou vazio.
-
-    O VAZIO É METADE DA RÉGUA, e é a metade que a mesa dela exercita todo dia:
-    pelo rádio o mapa de canais responde `identidade.cor_do_aparelho = não`, o
-    `LeitorDeCor` guarda `None` e o item chega com `cor = ""`. O alvo
-    `atributo` APAGA o `data-colorway` nesse caso, e o desenho cai no cinza
-    neutro — o controle sem identidade. Um pacote que caísse no colorway do
-    mockup manteria o Cosmic Red sobre um aparelho que é outro, que é o defeito
-    que esta leva existe para matar.
-    """
+    """`colorway` sai do pacote com o `id` do mapa, ou vazio."""
     mesa = _mesa(LIDO, SEM_LEITURA)
     ctx = Contexto(
         state={"controllers": []},
@@ -378,13 +272,7 @@ def test_o_pacote_emite_o_modelo_lido_e_cala_o_que_nao_leu() -> None:
 
 
 def test_o_modelo_emitido_e_um_dos_do_mapa_dela() -> None:
-    """O que o pacote emite é um `id` do CSV — nunca um nome de vitrine.
-
-    `mesa_viva.CORES` traduz o código de fábrica no `id` do mapa (`white`), e é
-    esse `id` que a folha usa no seletor. Emitir `White` (o `nome`) casaria zero
-    regras e apagaria o desenho em silêncio — a mesma classe de defeito que o
-    `data-hef-atributo` errado, um andar acima.
-    """
+    """O que o pacote emite é um `id` do CSV — nunca um nome de vitrine."""
     conhecidos = modelos_do_mapa()
     for slug in sorted(conhecidos)[:6] + sorted(conhecidos)[-6:]:
         mesa = _mesa(slug)
@@ -400,22 +288,8 @@ def test_o_modelo_emitido_e_um_dos_do_mapa_dela() -> None:
             f"o pacote emitiu {emitido!r}, que não é um modelo do mapa dela")
 
 
-# ---------------------------------------------------------------------------
-# 4. O ELO — o alvo que a página pede é um que o pintor sabe escrever
-# ---------------------------------------------------------------------------
 def test_o_pintor_sabe_escrever_atributo() -> None:
-    """O `escrever()` tem o ramo `atributo`, e ele respeita a guarda de nome.
-
-    É O ELO QUE FAZ ISTO SER ENTREGA E NÃO MAQUIAGEM. Um endereço com um alvo
-    que o pintor não implementa deixa a tela igualmente mentindo: o `escrever()`
-    cai no ramo padrão e escreve o nome do modelo como TEXTO por cima do
-    desenho.
-
-    ELA PODE FICAR VERMELHA POR ESPERA, e isso está declarado: o alvo `atributo`
-    nasceu numa frente irmã em 03/09/2026 e chega ao `dev` pelo merge. Enquanto
-    não chegar, esta função é o relógio dessa espera — e ela reprova dizendo
-    exatamente isso, em vez de deixar a aba parecer pronta.
-    """
+    """O `escrever()` tem o ramo `atributo`, e ele respeita a guarda de nome."""
     fonte = PILOTO.read_text(encoding="utf-8")
     sabidos = set(re.findall(r"alvo === '([a-z]+)'", fonte))
     assert ALVO in sabidos, (

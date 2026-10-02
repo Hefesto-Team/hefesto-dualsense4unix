@@ -37,8 +37,6 @@ from hefesto_dualsense4unix.app.actions.jogar import painel
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: SEM GAMEPAD E SEM NATIVO — o desfecho *"nenhuma"*, que é o que a máquina dela
-#: diria hoje. É o caso que a decisão dela cita textualmente.
 SEM_PONTE: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
@@ -47,7 +45,6 @@ SEM_PONTE: dict[str, Any] = {
     "controllers": [{"uniq": "aa:bb:cc:00:00:01", "connected": True,
                      "player_slot": 1}],
 }
-#: O GAMEPAD DE PÉ COM CONTROLE NA MESA — o desfecho BOM (*"pelo Hefesto"*).
 PONTE_BOA: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
@@ -67,15 +64,8 @@ NATIVO: dict[str, Any] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# 1. A CORREÇÃO DE FATO — duas das três órfãs já estavam na coluna
-# ---------------------------------------------------------------------------
 def test_a_pausa_e_o_cadeado_ja_eram_fontes_da_coluna() -> None:
-    """As outras duas frases da D-10 não precisavam de trabalho nenhum.
-
-    Se esta régua reprovar um dia, o fato mudou de novo e a D-10 volta a ter
-    trabalho — que é exatamente a notícia que se quer ter.
-    """
+    """As outras duas frases da D-10 não precisavam de trabalho nenhum."""
     nomes = {a.nome for a in painel.AVISOS_DA_TELA}
     assert "home_actions.texto_da_pausa" in nomes, (
         "a PAUSA saiu da coluna Atenção — ela era uma das três órfãs da D-10")
@@ -88,15 +78,8 @@ def test_a_pausa_e_o_cadeado_ja_eram_fontes_da_coluna() -> None:
         "nesta coluna — o de lá e o `_aviso_da_ponte` daqui")
 
 
-# ---------------------------------------------------------------------------
-# 2. A PONTE ENTRA — e só quando é má notícia
-# ---------------------------------------------------------------------------
 def test_a_ponte_sem_jogo_vira_aviso() -> None:
-    """*"nenhuma — nenhum jogo está recebendo controle do Hefesto"*.
-
-    A MORDIDA: troque o `if ruim not in frase` por `if True` e a frase deixa de
-    virar aviso, reprovando aqui.
-    """
+    """*"nenhuma — nenhum jogo está recebendo controle do Hefesto"*."""
     achado = aba._aviso_da_ponte(SEM_PONTE)
     assert achado is not None, "a ponte sem jogo não virou aviso"
     assert achado["selo"] == aba.SELO_DA_PONTE
@@ -105,22 +88,7 @@ def test_a_ponte_sem_jogo_vira_aviso() -> None:
 
 
 def test_a_ponte_chega_a_COLUNA_e_nao_so_a_funcao() -> None:  # noqa: N802
-    """A OUTRA METADE, e ela é a que faltava — medida na mordida de 04/09.
-
-    A régua acima prova que `_aviso_da_ponte` sabe responder; ela **passa com o
-    `fora.append(ponte)` arrancado de `_avisos`**, porque nunca olha a coluna.
-    Uma régua assim daria verde sobre o estado exato que esta sprint veio curar:
-    a frase existindo no produto e não chegando a tela nenhuma.
-
-    A MORDIDA: apague o `fora.append(ponte)` de `_avisos_com_outra_casa` —
-    esta reprova, e a de cima continua verde. É por isso que as duas existem.
-
-    O CANAL, E NÃO A LISTA DA 09 — conferência de 28/09/2026. A ponte tem casa
-    na tela (a fileira da Jogar acende o caminho vivo), e na 09 ela saía como
-    «AVISO · Nenhuma», fixa para quem escolheu a Navegação. Ela continua no
-    canal (`_avisos`), que é a lista inteira do que o produto sabe avisar; a
-    régua abaixo mede que ela não vai à 09.
-    """
+    """A OUTRA METADE, e ela é a que faltava — medida na mordida de 04/09."""
     ctx = Contexto(state=SEM_PONTE, mesa=[], conectados=[], estados={})
     fora = aba._avisos(ctx)
     selos = [a["selo"] for a in fora]
@@ -130,17 +98,7 @@ def test_a_ponte_chega_a_COLUNA_e_nao_so_a_funcao() -> None:  # noqa: N802
 
 
 def test_a_ponte_nao_vira_linha_sem_assunto_na_09() -> None:
-    """Na 09 a ponte virava «AVISO · Nenhuma» — a cabeça da frase, sem o assunto.
-
-    O `_aviso_da_ponte` tira o prefixo «Ponte com o jogo:» porque, na coluna, o
-    selo PONTE dizia o assunto; no exame da 09 o selo é AVISO e a tela mostra só
-    a cabeça da frase (`a09_sistema.frase_curta_do_exame`). E o «nenhuma» é o
-    modo Navegação, que a fileira da Jogar já acende: na 09 ele era um aviso fixo
-    para quem escolheu a Navegação.
-
-    A MORDIDA: devolva a ponte a `_avisos_sem_outra_casa` e esta reprova com a
-    linha «Nenhuma» no exame da 09.
-    """
+    """Na 09 a ponte virava «AVISO · Nenhuma» — a cabeça da frase, sem o assunto."""
     from pacotes import a09_sistema
 
     ctx = Contexto(state=SEM_PONTE, mesa=[], conectados=[], estados={})
@@ -154,12 +112,7 @@ def test_a_ponte_nao_vira_linha_sem_assunto_na_09() -> None:
 
 
 def test_a_boa_noticia_da_ponte_nao_entra() -> None:
-    """A coluna chama-se **Atenção** — a mesma disciplina dos `certo` do exame.
-
-    A MORDIDA: troque o `if ruim not in frase: return None` por `if False:` e
-    os dois desfechos bons passam a aparecer sob o cabeçalho laranja — que é o
-    defeito fotografado em 02/09 com o selo `CERTO`.
-    """
+    """A coluna chama-se **Atenção** — a mesma disciplina dos `certo` do exame."""
     assert aba._aviso_da_ponte(PONTE_BOA) is None, (
         "'pelo Hefesto' é boa notícia e entrou na coluna Atenção")
     assert aba._aviso_da_ponte(NATIVO) is None, (
@@ -167,20 +120,12 @@ def test_a_boa_noticia_da_ponte_nao_entra() -> None:
 
 
 def test_sem_daemon_a_ponte_nao_afirma_nada() -> None:
-    """*"não sei — o Hefesto está desligado"* não é aviso: é ausência de dado.
-
-    Mesma guarda do `_estado_da_tela` e do `autoswitch_lock_text`: offline é
-    "não sei", nunca "nenhuma".
-    """
+    """*"não sei — o Hefesto está desligado"* não é aviso: é ausência de dado."""
     assert aba._aviso_da_ponte({}) is None
 
 
 def test_o_markup_do_pango_nao_chega_a_tela() -> None:
-    """O piloto escreve `textContent`: um `<span foreground=…>` iria LITERAL.
-
-    A MORDIDA: tire o `sem_markup(...)` e o texto do aviso passa a conter
-    ``<span foreground="#ffb86c">``, reprovando aqui.
-    """
+    """O piloto escreve `textContent`: um `<span foreground=…>` iria LITERAL."""
     achado = aba._aviso_da_ponte(SEM_PONTE)
     assert achado is not None
     assert "<" not in achado["texto"] and ">" not in achado["texto"], (
@@ -192,26 +137,12 @@ def test_o_markup_do_pango_nao_chega_a_tela() -> None:
 
 def test_se_a_cor_do_produto_sumir_a_regua_cala_em_vez_de_alarmar(
         monkeypatch: Any) -> None:
-    """A guarda que impede um `"" in frase` de casar com TUDO.
-
-    Sem ela, o dia em que `_COR_AVISO` mudar de nome encheria a coluna de boa
-    notícia vestida de alerta — que é o defeito que o `_do_exame` já custou
-    nesta aba, e o mais caro de diagnosticar, porque parece funcionar.
-
-    A MORDIDA: apague o `if not ruim: return None` e este teste reprova com a
-    boa notícia virando aviso.
-    """
+    """A guarda que impede um `"" in frase` de casar com TUDO."""
     monkeypatch.setattr(home_actions, "_COR_AVISO", "", raising=False)
     assert aba._aviso_da_ponte(SEM_PONTE) is None
     assert aba._aviso_da_ponte(PONTE_BOA) is None
 
 
 def test_a_ponte_tem_lugar_na_escada_de_gravidade() -> None:
-    """Um selo fora da escada cai para o fim da coluna, e some no `+N`.
-
-    A MORDIDA: tire ``"PONTE"`` de `ORDEM_DA_GRAVIDADE` e a linha passa a
-    disputar as vagas com os achados do exame — numa máquina com três avisos, a
-    frase que responde *"por onde o jogo está recebendo o controle"* é a que
-    fica de fora.
-    """
+    """Um selo fora da escada cai para o fim da coluna, e some no `+N`."""
     assert aba.SELO_DA_PONTE in aba.ORDEM_DA_GRAVIDADE

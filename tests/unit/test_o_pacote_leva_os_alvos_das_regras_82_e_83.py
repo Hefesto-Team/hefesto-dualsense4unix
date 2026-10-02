@@ -1,57 +1,4 @@
-"""O pacote leva os ALVOS das regras 82 e 83, não só as regras.
-
-O DEFEITO QUE ESTE PORTÃO EXISTE PARA IMPEDIR
-----------------------------------------------
-
-As regras 82 e 83 são REGRAS-COLA: não fazem nada sozinhas, só chamam um alvo
-pelo ``RUN+=``. Medido em 22/08/2026 —
-``grep -rn 'bt_nosniff_now|bt_bonds_snapshot' packaging/`` voltava VAZIO — os
-cinco formatos entregavam as duas regras e o ``install-host-udev.sh``, e NENHUM
-entregava os três alvos:
-
-* ``scripts/bt_nosniff_now.sh``
-* ``scripts/bt_bonds_snapshot.sh``
-* ``assets/systemd/hefesto-bt-bonds-snapshot.service``
-
-Sem eles o helper cai no ramo ``BTRES_INSTALL_OK=0`` e AVISA que não dá — o
-comportamento correto, e ainda assim aviso onde podia ser cura: quem instalou
-por pacote nunca teve o salva-vidas de bonds (a cura do crash do ``bluetoothd``
-que comeu 2 dos 3 pareamentos dela em 24/07) nem o no-sniff na borda da conexão
-do Pro genuíno.
-
-AS TRÊS RÉGUAS, E POR QUE NENHUMA É CÓPIA
-------------------------------------------
-
-1. **os diretórios de origem saem do helper**, lidos dos dois laços de
-   candidatos de ``scripts/install-host-udev.sh``. Um formato que largue os
-   arquivos num caminho bonito que o helper não varre entrega zero;
-2. **os destinos da remoção saem do helper também**, lidos do
-   ``_build_install_cmd``. É lá que se decide que o script vai para
-   ``/usr/local/lib`` e a unit para ``/etc/systemd/system``;
-3. **a lacuna é declarada, e a lápide não envelhece calada** — molde do
-   ``_ARTEFATO_SEM_DONO_HOJE`` de ``scripts/check_packaging_parity.sh`` e do
-   ``_SEM_ESCRITOR_HOJE`` de
-   ``tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py``: entrada que já
-   ganhou dono REPROVA até alguém apagá-la.
-
-A REMOÇÃO ENTRA JUNTO, E O MOTIVO É NOVO
------------------------------------------
-
-O helper grava os três FORA do manifesto do gerenciador de pacotes, e também
-copia as regras para ``/etc/udev/rules.d``, que o ``apt remove`` não apaga.
-Entregar o alvo sem entregar a remoção deixaria a cura ARMADA depois de o pacote
-sair — que é pior que o buraco de hoje. Os snapshots de bonds em ``/var/lib``
-ficam: são o salva-vidas dela, e desinstalar o produto não é motivo para
-queimá-lo.
-
-A MORDIDA, EXERCIDA EM 22/08/2026
-----------------------------------
-
-Apagadas as duas linhas do ``bt_nosniff_now.sh``/``bt_bonds_snapshot.sh`` do
-``packaging/fedora/hefesto-dualsense4unix.spec``, o
-``test_todo_formato_leva_os_tres_alvos`` reprovou nomeando o formato e os dois
-arquivos. Cura devolvida, verde de novo.
-"""
+"""O pacote leva os ALVOS das regras 82 e 83, não só as regras."""
 from __future__ import annotations
 
 import re
@@ -62,17 +9,12 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 HELPER = RAIZ / "scripts" / "install-host-udev.sh"
 
-#: Os três alvos, pelo caminho de ORIGEM na árvore. `familia` diz em qual dos
-#: dois diretórios de candidato do helper o arquivo tem de aterrissar.
 ALVOS = (
     ("scripts/bt_nosniff_now.sh", "scripts"),
     ("scripts/bt_bonds_snapshot.sh", "scripts"),
     ("assets/systemd/hefesto-bt-bonds-snapshot.service", "systemd"),
 )
 
-#: Os formatos que já levam as regras 82 e 83 — conferido no arquivo de cada um
-#: pelo `test_todo_formato_conferido_realmente_leva_as_regras` abaixo, para que
-#: esta lista não vire uma segunda verdade.
 FORMATOS = {
     "deb": Path("scripts/build_deb.sh"),
     "arch": Path("packaging/arch/PKGBUILD"),
@@ -81,19 +23,12 @@ FORMATOS = {
     "nix": Path("packaging/nix/package.nix"),
 }
 
-#: Onde cada formato desfaz o que o helper gravou fora do manifesto. O flatpak
-#: não tem gancho de remoção NENHUM (o bundle nunca escreve no host: quem
-#: escreve é o helper rodando elevado lá fora), e é a mesma forma que o broker
-#: root já tem nesta casa — por isso ele não entra nesta régua.
 GANCHOS_DE_REMOCAO = {
     "deb": Path("packaging/debian/prerm"),
     "arch": Path("packaging/arch/hefesto-dualsense4unix.install"),
     "fedora": Path("packaging/fedora/hefesto-dualsense4unix.spec"),
 }
 
-#: A DÍVIDA DECLARADA — `formato: razão com data`. Declarar é honesto e este
-#: portão não castiga honestidade; ele só não deixa a lápide envelhecer calada.
-#: A conferência da morte está em `test_lacuna_declarada_que_ja_nao_vale_reprova`.
 #: sai com: O-NIX-LEVA-AS-REGRAS-DO-HOST-01
 LACUNA_HOJE = {
     "nix": (
@@ -129,14 +64,7 @@ def _destino_da_remocao(basename: str) -> str:
 
 
 def _recorte_de_instalacao(nome: str, texto: str) -> str:
-    """Só a parte da receita que CONSTRÓI o pacote.
-
-    Medido ao provar a mordida em 22/08/2026: o ``%preun`` do spec cita os mesmos
-    três nomes para APAGÁ-LOS, então procurar o nome no arquivo inteiro dava
-    verde com o ``%install`` esvaziado — a régua olhava a remoção e jurava que
-    era a instalação. Nos outros formatos a remoção mora em arquivo separado e o
-    recorte é o arquivo todo.
-    """
+    """Só a parte da receita que CONSTRÓI o pacote."""
     if nome != "fedora":
         return texto
     inicio = texto.index("\n%install")
@@ -149,11 +77,7 @@ def _secao_files(texto: str) -> str:
 
 
 def _macros_expandidas(texto: str) -> str:
-    """O spec do Fedora escreve o destino em macro; aqui ele vira caminho.
-
-    Sem isto a régua do destino não enxergaria o Fedora, e um `%{_datadir}` para
-    o lugar errado passaria batido.
-    """
+    """O spec do Fedora escreve o destino em macro; aqui ele vira caminho."""
     app_id = re.search(r"^%global\s+app_id\s+(\S+)", texto, re.M)
     if app_id:
         texto = texto.replace("%{app_id}", app_id.group(1))
@@ -172,11 +96,7 @@ class TestOAlvoViajaComARegra:
     def test_todo_formato_conferido_realmente_leva_as_regras(
         self, receitas: dict[str, str]
     ) -> None:
-        """A lista de formatos não é opinião: cada um destes cita as duas regras.
-
-        Por nome OU por glob: o ``build_deb.sh`` escreve ``assets/82-*.rules``, e
-        cobrar o nome inteiro reprovaria quem entrega.
-        """
+        """A lista de formatos não é opinião: cada um destes cita as duas regras."""
         for nome, texto in receitas.items():
             for numero in ("82", "83"):
                 assert re.search(rf"\b{numero}-[A-Za-z0-9_.*-]*\.rules", texto), (

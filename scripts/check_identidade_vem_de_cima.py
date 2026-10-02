@@ -68,27 +68,16 @@ RAIZ = pathlib.Path(__file__).resolve().parents[1]
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 CORES_CSV = RAIZ / "docs/data/cores-do-dualsense.csv"
 
-#: Os atributos que dão ao produto o direito de reescrever o elemento. São os
-#: MESMOS da `regua_do_mockup` de propósito: duas réguas com vocabulários
-#: diferentes seria uma terceira forma de mentir.
 ENDERECOS = ("data-campo", "data-papel", "data-hef")
 
 COMENTARIO = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
 PLASTICO = re.compile(r"--plastico\s*:\s*(#[0-9a-fA-F]{3,8}|var\([^)]*\))")
 
-#: Isenções declaradas, com a razão. `(arquivo, agulha) -> por quê`.
-#: Vazia hoje, e isso é uma afirmação: nenhum congelado desta árvore se
-#: justificou ainda. Quem acrescentar uma linha aqui está dizendo "este valor
-#: NÃO é identidade de aparelho", e tem de poder defender isso.
 ISENCOES: dict[tuple[str, str], str] = {}
 
 
 def nomes_de_colorway() -> list[str]:
-    """Os nomes de cor, lidos do CSV que é dono deles.
-
-    Digitá-los aqui criaria uma segunda lista que envelhece sozinha — o defeito
-    que o `cores-do-dualsense.csv` existe para não ter.
-    """
+    """Os nomes de cor, lidos do CSV que é dono deles."""
     linhas = [
         linha
         for linha in CORES_CSV.read_text(encoding="utf-8").splitlines()
@@ -98,32 +87,18 @@ def nomes_de_colorway() -> list[str]:
         (linha.get("nome") or "").strip()
         for linha in csv.DictReader(linhas)
     }
-    # Os mais longos primeiro: senão "White" casa dentro de nada, mas um nome
-    # composto que contenha outro daria dois achados no mesmo texto.
     return sorted((n for n in nomes if len(n) >= 4), key=len, reverse=True)
 
 
 class _Varredor(HTMLParser):
-    """Percorre a página guardando a PILHA de ancestrais de cada posição.
-
-    POR QUE UMA PILHA, E NÃO A TAG MAIS PRÓXIMA À ESQUERDA: a primeira versão
-    desta régua olhava o `<` anterior, e isso a fazia acusar texto que vem
-    depois de um `</span>` mesmo com o endereço correto no elemento PAI. Num
-    `<span data-campo="x">P1 <span class="pt">•</span> White</span>` o "White"
-    tem à esquerda um `</span>` sem endereço — e a régua velha o acusava.
-
-    Acusar quem já está curado é o pior defeito que uma régua pode ter: ela
-    manda consertar o que está certo. Foi pego na mordida, antes de despachar
-    ninguém para caçar o fantasma.
-    """
+    """Percorre a página guardando a PILHA de ancestrais de cada posição."""
 
     def __init__(self, nomes: list[str]) -> None:
         super().__init__(convert_charrefs=True)
         self.nomes = nomes
-        self.pilha: list[bool] = []          # cada nível: tem endereço?
+        self.pilha: list[bool] = []
         self.achados: list[tuple[int, str, str]] = []
 
-    #: Tags que não fecham — sem elas a pilha desanda e tudo depois fica errado.
     VAZIAS = frozenset(
         ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]
     )
@@ -137,14 +112,11 @@ class _Varredor(HTMLParser):
         linha = self.getpos()[0]
 
         # O `--plastico` mora no atributo `style` do PRÓPRIO elemento, então ele
-        # é julgado pelo endereço DELE, não pelo dos ancestrais: um pai
-        # endereçado não dá ao filho o direito de trazer cor congelada.
         estilo = dicio.get("style", "")
         if not tem:
             for m in PLASTICO.finditer(estilo):
                 self._registrar(linha, "--plastico cravado", m.group(0))
 
-        # O `title` é texto que a tela mostra (a dica), então conta.
         for atributo in ("title", "aria-label"):
             if atributo in dicio and not (tem or self._coberto()):
                 self._nomes_em(linha, dicio[atributo], f"no {atributo}")
@@ -170,20 +142,15 @@ class _Varredor(HTMLParser):
         for nome in self.nomes:
             if nome in texto:
                 self._registrar(linha, f"nome de cor congelado {onde} ({nome})", nome)
-                return          # o mais longo já casou; não conta duas vezes
+                return
 
     def _registrar(self, linha: int, o_que: str, trecho: str) -> None:
         self.achados.append((linha, o_que, " ".join(trecho.split())[:90]))
 
 
 def congelados_de(caminho: pathlib.Path, nomes: list[str]) -> list[tuple[int, str, str]]:
-    """Os valores de identidade congelados nesta página.
-
-    Devolve `(linha, o quê, o trecho)`, sem repetição.
-    """
+    """Os valores de identidade congelados nesta página."""
     bruto = caminho.read_text(encoding="utf-8", errors="replace")
-    # As quebras de linha sobrevivem ao apagador de prosa; sem isso um
-    # comentário de vinte linhas vira uma só e todo número depois dele erra.
     limpo = COMENTARIO.sub(
         lambda m: "".join(c if c == "\n" else " " for c in m.group(0)), bruto
     )
@@ -201,12 +168,6 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--censo", action="store_true",
                    help="só o retrato de hoje, sem reprovar")
-    #: A BANCADA existe aqui por causa do fluxo que ELA decidiu: os geradores
-    #: escrevem em `mockup/`, e PUBLICAR é ato dela. Sem esta opção, quem
-    #: conserta uma aba não teria como provar o conserto — a página publicada só
-    #: fica verde no minuto em que ela mandar publicar. Medir a bancada é medir o
-    #: trabalho; medir o publicado é medir a tela dela. São coisas diferentes e
-    #: as duas importam.
     p.add_argument("--bancada", action="store_true",
                    help="mede `mockup/` em vez das páginas publicadas")
     p.add_argument("--aba", default="", help="só esta aba (ex.: 04)")

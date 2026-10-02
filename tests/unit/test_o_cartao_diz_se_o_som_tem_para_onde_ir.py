@@ -1,56 +1,5 @@
 #!/usr/bin/env python3
-"""O CARTÃO DIZ SE O SOM TEM PARA ONDE IR — CONTROLES-OS-TRES-SELOS-01.
-
-Quatro linhas do CSV da paridade fecham aqui, e as quatro são **LEITURA de
-estado que já existe**: nenhuma delas oferece um botão novo, e nenhuma reescreve
-a regra de um dono.
-
-===========  =======================================================
-linha 45     a dica do título — QUAL gamepad virtual este controle alimenta
-linha 57     a guarda "sem endereço" — as peças que MANDAM som apagam
-linha 89     o selo ``Saída muda`` — a camada 1 do PipeWire
-linha 90     ``acordado`` / ``dormindo`` no rótulo da moldura
-===========  =======================================================
-
-**E O QUARTO SELO**, que é a T6 da ``STATUS-DIZ-O-QUE-VE-01``, viva desde 25/08
-e nunca executada: a guarda do bloco de som ganha a SEGUNDA pergunta — o
-TRANSPORTE —, e a resposta vem do MAPA, nunca da cabeça de quem escreve. A
-célula ``audio.alto_falante@dualsense`` diz, no rádio, ``aciona=não`` com causa
-``divida``; com ``divida`` a única ``Fala`` legal é ``AFIRMA_NADA`` com
-``porque=``, e a frase honesta é *"o Hefesto ainda não faz"* — nunca *"o
-controle não faz"*.
-
-**A RÉGUA QUE PROVA QUE ISSO É LEITURA E NÃO FRASE DIGITADA** é a
-``TestOQuartoSelo``: ela troca a célula num dublê do mapa e vê a frase TROCAR.
-No dia em que a ``SOM-QUE-SAI-01`` virar aquela célula, o selo muda sozinho e
-esta régua continua verde — que é o fluxo inteiro da ``PAREAMENTO-01``.
-
-AS MORDIDAS, todas feitas e devolvidas antes deste arquivo ser commitado:
-
-* tire a guarda de endereço de ``porques_do_som`` — ``TestAGuardaSemEndereco``
-  reprova nas duas metades (a razão e o cinza);
-* devolva o sono do canal ao alarme (``selo_do_som``) ou à pílula
-  (``mesa_viva.selo_do_alto_falante``) — os casos do canal PARADO reprovam
-  (O-ALTO-FALANTE-DIZ-ATIVO-01, 23/09/2026; a régua dona é
-  ``test_o_alto_falante_diz_ativo.py``);
-* faça ``sufixo_do_canal("")`` devolver a palavra de acordado —
-  ``test_sem_leitura_o_rotulo_nao_afirma_nada`` reprova;
-* tire o ``card-vpad`` do pacote — ``TestADicaDoTitulo`` reprova;
-* faça ``ressalva_do_transporte`` digitar a frase em vez de ler o mapa —
-  ``test_a_celula_que_vira_apaga_a_ressalva`` reprova;
-* tire o ``[data-bloco]`` do seletor da guarda no gerador —
-  ``test_a_guarda_nao_alcanca_a_moldura_do_led`` reprova.
-
-**O MICROFONE SEM FONTE** (MIC-SEM-FONTE-01, 13/09/2026) tem a seção 8, e as
-mordidas dela estão na entrega da sprint: tire a pergunta da fonte de
-``microfone_apagado``; devolva a moldura do microfone ao endereço da outra com a
-fonte dentro dele; ponha o botão do microfone no seletor do ``sem-fonte``.
-
-**O ALTO-FALANTE SEM ENDEREÇO** (RESTOS-DA-ONDA-DOIS-01, 13/09/2026) deixou o
-``title`` da moldura pelo ``alto-apagado``, na forma do microfone: a camada da
-dica da casa levava o ``title`` para ``data-hef-dica``, e a guarda nunca acendeu
-no WebKit. A prova no piloto oculto está em ``test_os_restos_da_onda_dois.py``.
-"""
+"""O CARTÃO DIZ SE O SOM TEM PARA ONDE IR — CONTROLES-OS-TRES-SELOS-01."""
 from __future__ import annotations
 
 import pathlib
@@ -90,16 +39,12 @@ from hefesto_dualsense4unix.interface.pacotes import a02_controles as mod
 
 PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
 
-#: Endereços da faixa forjada da casa — nunca o do aparelho dela.
 UNIQ = "aa:bb:cc:00:00:02"
 SINK = "alsa_output.pci-0000_00_1f.3.analog-stereo"
 
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "cosmic-red", "mascara": "DualSense"}]
 
-#: Os quatro endereços que a BANCADA tem e a página publicada ainda não —
-#: publicar é ato dela. Sem forçá-los, a régua mediria a espera pela publicação
-#: em vez da cura, e daria verde com o pacote apagado.
 DA_BANCADA = frozenset({"alto-apagado", "card-vpad", "alto-selo",
                         "alto-canal", "alto-canal-porque"})
 
@@ -137,28 +82,7 @@ def _card(entrada: dict[str, Any], *, state: dict[str, Any] | None = None,
 
 @pytest.fixture
 def sono_lido():
-    """Escreve direto no cache do sono — sem thread, sem `pactl`, sem relógio.
-
-    É o mesmo ponto de injeção que a `_CAMADA_1` já declara: *"quem quiser medir
-    o desacordo das duas camadas escreve no cache e não espera thread nenhuma —
-    uma régua que dependesse de um relógio seria uma corrida, e corrida na suíte
-    é vermelho que aparece uma vez em dez"*.
-
-    ESCREVER NO CACHE NÃO BASTA: O RELÓGIO TAMBÉM É DA RÉGUA (27/09/2026).
-    `mod.pacote()` chama `_camada_1`, e com o relógio vencido (`_CAMADA_1_QUANDO`
-    zerado, ou mais de `CAMADA_1_S` desde a última volta) ela dispara a thread
-    `renovar`, que PUBLICA com `_SONO.clear()` — na suíte o `pactl` é o dublê
-    que responde rc=1, e o sono volta vazio. Medido num clone limpo com o GTK
-    real: este arquivo sozinho reprovava 10 em 10 no
-    `test_o_canal_parado_nao_desliga_o_selo` (o selo saía `NADA_A_DIZER`, e não
-    ATIVO); na suíte de 24 partes dependia de a volta da régua anterior ter
-    sido há menos de 2 s — verde em casa, vermelho no CI.
-
-    O relógio adiantado é o que impede a thread de nascer (a forma de
-    `test_a02_o_volume_do_microfone_tem_endereco.py`), e o selo que sobe
-    descarta a volta que já estava no ar quando a régua escreveu (a guarda
-    `_CAMADA_1_SELO` do próprio produto). Nenhuma função do produto é trocada.
-    """
+    """Escreve direto no cache do sono — sem thread, sem `pactl`, sem relógio."""
     import time
 
     guardado = dict(mod._SONO), mod._REGRA_DO_SONO[0], mod._CAMADA_1_QUANDO[0]
@@ -180,12 +104,6 @@ def _bancada() -> str:
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# 1. A LEITURA DO SONO — um `pactl` para a mesa inteira, e o dono é quem traduz
-# ---------------------------------------------------------------------------
-
-#: A lista curta do `pactl`, no formato que `estados_crus_dos_sinks` parseia:
-#: índice, nome, driver, formato, ESTADO — separados por TAB.
 LISTA_CURTA = (
     f"35872\t{SINK}\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED\n"
     "35873\talsa_output.outro\tPipeWire\ts16le 2ch 48000Hz\tIDLE\n"
@@ -198,12 +116,7 @@ class TestALeituraDoSono:
     def test_o_sink_suspenso_e_o_ocioso_sao_lidos_pelo_dono(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Quem traduz `SUSPENDED`/`IDLE` é `audio_saida.estado_do_canal`.
-
-        MORDE: escreva um `if cru == "SUSPENDED"` dentro de `_ler_o_sono` e este
-        teste continua verde — por isso ele NÃO basta sozinho, e o irmão
-        `test_o_vocabulario_tem_um_dono_so` é quem tranca a segunda gramática.
-        """
+        """Quem traduz `SUSPENDED`/`IDLE` é `audio_saida.estado_do_canal`."""
         monkeypatch.setattr(audio_saida, "rodar_leitura", lambda argv: LISTA_CURTA)
         lido = mod._ler_o_sono({
             UNIQ: audio_saida.RotaDasDuasCamadas(byte=2, sink_do_controle=SINK),
@@ -214,11 +127,7 @@ class TestALeituraDoSono:
                         "outro": audio_saida.CANAL_ACORDADO}
 
     def test_sem_sink_nao_entra_chave(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """O caso do RÁDIO: não há placa ALSA, logo não há canal a descrever.
-
-        A ausência da chave é o "não sei" honesto — um `""` gravado seria
-        indistinguível de "li a coluna e não reconheci o estado".
-        """
+        """O caso do RÁDIO: não há placa ALSA, logo não há canal a descrever."""
         monkeypatch.setattr(audio_saida, "rodar_leitura", lambda argv: LISTA_CURTA)
         assert mod._ler_o_sono(
             {UNIQ: audio_saida.RotaDasDuasCamadas(byte=None, sink_do_controle="")}
@@ -237,63 +146,28 @@ class TestALeituraDoSono:
         ) == {}
 
     def test_o_vocabulario_tem_um_dono_so(self) -> None:
-        """As duas pontas dizem a MESMA palavra, e isso é medido, não confiado.
-
-        `audio_saida` PRODUZ (`CANAL_ACORDADO`/`CANAL_DORMINDO`) e o card da GTK
-        CONSOME (`SUFIXO_CANAL_*`). Se um dos dois trocar de palavra sem o
-        outro, o selo desta aba para de acender CALADO — comparação de string
-        que não casa não dá erro nenhum.
-        """
+        """As duas pontas dizem a MESMA palavra, e isso é medido, não confiado."""
         assert audio_saida.CANAL_ACORDADO == SUFIXO_CANAL_ACORDADO
         assert audio_saida.CANAL_DORMINDO == SUFIXO_CANAL_DORMINDO
 
 
-# ---------------------------------------------------------------------------
-# 2. OS DOIS SELOS — a prioridade é a da GTK, e ela não é arbitrária
-# ---------------------------------------------------------------------------
-
-
 class TestOsSelos:
-    """O alarme do bloco é UM: a saída muda (a camada 1).
-
-    O SEGUNDO INFORMANTE SAIU EM 23/09/2026 — O-ALTO-FALANTE-DIZ-ATIVO-01. O
-    alarme acendia também `Canal dormindo` num canal PARADO, e a foto dela
-    mostrou duas pílulas num alto-falante que ninguém calou. O caso que prova a
-    saída mora em `test_o_alto_falante_diz_ativo.py`, pelo pacote inteiro.
-    """
+    """O alarme do bloco é UM: a saída muda (a camada 1)."""
 
     def test_a_saida_muda_acende_o_alarme(self) -> None:
         assert mod.selo_do_som(True) == TEXTO_SELO_SAIDA_MUDA
 
     @pytest.mark.parametrize("muda", [False, None])
     def test_so_true_acende_a_saida_muda(self, muda: bool | None) -> None:
-        """`False` é "a saída está aberta" e `None` é "não sei" — os dois calam.
-
-        Um selo "saída viva" seria ruído em cima do que a barra já diz, e um
-        selo aceso a partir de `None` seria alarme sobre o que ninguém mediu.
-        """
+        """`False` é "a saída está aberta" e `None` é "não sei" — os dois calam."""
         assert mod.selo_do_som(muda) == ""
 
 
 class TestOSeloDoAltoFalante:
-    """O selo do rótulo — `sufixo_do_canal` morreu aqui em 19/09/2026.
-
-    A PEÇA QUE ESTA CLASSE MEDIA devolvia a palavra do daemon
-    (`acordado`/`dormindo`) para um chip cinza. Por ordem dela o chip virou o
-    SELO do alto-falante, com a mesma cara e a mesma língua do selo do
-    microfone: *"Ativo e Desligado pros dois não seria melhor que dormindo?"*
-    <!-- noqa-acento: citação literal dela -->
-
-    AS DUAS REGRAS QUE ELA GUARDAVA CONTINUAM, e por isso a classe fica em vez
-    de sair: a palavra não se digita (vem do dono), e a AUSÊNCIA de leitura não
-    vira afirmação.
-    """
+    """O selo do rótulo — `sufixo_do_canal` morreu aqui em 19/09/2026."""
 
     def test_os_dois_estados_entram_no_rotulo(self) -> None:
-        """As duas palavras saem do dono, e são DIFERENTES entre si.
-
-        MORDE: faça `selo_do_alto_falante` devolver a mesma palavra nos dois.
-        """
+        """As duas palavras saem do dono, e são DIFERENTES entre si."""
         import mesa_viva
 
         assert mesa_viva.selo_do_alto_falante(False, True) == mesa_viva.ATIVO
@@ -301,17 +175,7 @@ class TestOSeloDoAltoFalante:
         assert mesa_viva.ATIVO != mesa_viva.DESLIGADO
 
     def test_o_canal_parado_nao_desliga_o_selo(self, sono_lido) -> None:
-        """Canal PARADO é ATIVO; só o mudo do ♪ desliga — 23/09/2026.
-
-        FATO ERRADO, SUBSTITUÍDO: este teste cobrava o contrário (*"os DOIS
-        fatos entram na mesma palavra"*), e era a régua do defeito que ela
-        fotografou: todo controle no rádio nascia DESLIGADO, porque o nó dele
-        dorme sempre que ninguém toca. A régua dona agora é
-        `test_o_alto_falante_diz_ativo.py`.
-
-        MORDE: devolva o sono do canal à pílula e o canal parado volta a
-        aparecer como DESLIGADO ao lado de um ♪ ligado.
-        """
+        """Canal PARADO é ATIVO; só o mudo do ♪ desliga — 23/09/2026."""
         import mesa_viva
 
         sono_lido(audio_saida.CANAL_DORMINDO)
@@ -321,39 +185,20 @@ class TestOSeloDoAltoFalante:
         assert calado["alto-canal"] == mesa_viva.DESLIGADO
 
     def test_sem_leitura_o_rotulo_nao_afirma_nada(self) -> None:
-        """`sabemos=False` é NÃO SEI, e não "está tocando".
-
-        Sem placa de som — o caso do rádio, medido em 15/08/2026 — afirmar que o
-        som sai prometeria o que o controle não tem por onde fazer. É a mesma
-        regra do terceiro estado do selo do microfone.
-
-        MORDE: faça `selo_do_alto_falante` cair no ATIVO por padrão.
-        """
+        """`sabemos=False` é NÃO SEI, e não "está tocando"."""
         import mesa_viva
 
         assert mesa_viva.selo_do_alto_falante(False, False) == mesa_viva.SEM_LEITOR
         assert mesa_viva.selo_do_alto_falante(True, False) == mesa_viva.SEM_LEITOR
 
     def test_o_cartao_cala_quando_o_canal_nao_foi_lido(self, sono_lido) -> None:
-        """E no CARTÃO a ausência vira o marcador, não uma palavra.
-
-        MORDE: faça o campo `alto-canal` chamar o dono mesmo com o canal sem
-        leitura, e o rótulo do rádio passa a exibir um selo.
-        """
+        """E no CARTÃO a ausência vira o marcador, não uma palavra."""
         sono_lido("", False)
         assert _card(_entrada())["alto-canal"] == mod.NADA_A_DIZER
 
 
 class TestADicaDoCanal:
-    """A dica da pílula não fala do canal — 23/09/2026.
-
-    VIROU RÓTULO EM 13/09/2026 (FRASES-E-DICAS-02) e SAIU EM 23/09/2026
-    (O-ALTO-FALANTE-DIZ-ATIVO-01): ela dizia `Canal de áudio dormindo`, a última
-    porta por onde a palavra do servidor de som chegava à tela. O endereço fica
-    na página publicada e recebe o VAZIO, que apaga a dica — o alvo é
-    `atributo`, e ali o marcador de nada viraria texto; a pílula fica como a do
-    microfone, sem dica.
-    """
+    """A dica da pílula não fala do canal — 23/09/2026."""
 
     def test_a_funcao_saiu_do_pacote(self) -> None:
         """MORDE: devolva `dica_do_canal` ao pacote e esta linha reprova."""
@@ -371,34 +216,18 @@ class TestADicaDoCanal:
             assert frase not in dita, f"a dica do canal voltou a narrar: {dita!r}"
 
 
-# ---------------------------------------------------------------------------
-# 3. A GUARDA SEM ENDEREÇO — linha 57
-# ---------------------------------------------------------------------------
-
-
 class TestAGuardaSemEndereco:
     """Sem MAC, todo comando de som deste card cai no controle PRIMÁRIO."""
 
     @pytest.mark.parametrize("uniq", [None, "", "   "])
     def test_a_razao_dos_dois_botoes_e_a_do_endereco(self, uniq: object) -> None:
-        """As três formas de "sem endereço" viram a MESMA frase, a do dono.
-
-        `""` e `"   "` valem `None` de propósito: um endereço em branco viaja no
-        IPC como "sem alvo" e o daemon cai no primário — o defeito que a guarda
-        existe para impedir. Quem decide isso é `uniq_do_entry`, na GTK.
-
-        MORDE: tire o `if uniq_do_entry(entry) is None` de `porques_do_som`.
-        """
+        """As três formas de "sem endereço" viram a MESMA frase, a do dono."""
         porques = mod.porques_do_som(_entrada(uniq=uniq))
         assert porques == {"mic-porque": DICA_AUDIO_SEM_ENDERECO,
                            "alto-porque": DICA_AUDIO_SEM_ENDERECO}
 
     def test_o_endereco_ganha_da_razao_da_posse(self) -> None:
-        """Sem endereço, "arraste o volume ao lado" manda fazer o estrago.
-
-        O deslizante aplicaria no controle ERRADO. A frase da posse só pode ser
-        dita quando há a quem aplicar.
-        """
+        """Sem endereço, "arraste o volume ao lado" manda fazer o estrago."""
         assert mod.DICA_ALTO_SEM_POSSE not in mod.porques_do_som(
             _entrada(uniq=None)).values()
 
@@ -409,42 +238,21 @@ class TestAGuardaSemEndereco:
         assert DICA_AUDIO_SEM_ENDERECO not in porques.values()
 
     def test_o_cartao_apaga_as_pecas_que_mandam_som(self) -> None:
-        """A metade VISÍVEL: o `data-apagado` da moldura do alto-falante.
-
-        A do microfone lê `mic-apagado` desde 13/09/2026 — ver a seção 8. A do
-        alto-falante escrevia o `title` da moldura até o mesmo dia, e a camada da
-        dica da casa o levava para `data-hef-dica`: no WebKit a folha nunca o
-        casou (RESTOS-DA-ONDA-DOIS-01, com a prova no piloto em
-        `test_os_restos_da_onda_dois.py`). Agora é valor de atributo, sem frase.
-
-        MORDE: tire o `alto-apagado` do pacote e este caso reprova.
-        """
+        """A metade VISÍVEL: o `data-apagado` da moldura do alto-falante."""
         card = _card(_entrada(uniq=None))
         assert card["alto-apagado"] == mod.MIC_SEM_ALVO
         assert TEXTO_AUDIO_SEM_ENDERECO not in card.values()
 
     def test_com_endereco_o_campo_volta_vazio_e_a_guarda_solta(self) -> None:
-        """Vazio faz o piloto REMOVER o `data-apagado`, e a folha devolve as peças.
-
-        A volta acontece sozinha — a guarda não precisa lembrar quem apagou.
-        """
+        """Vazio faz o piloto REMOVER o `data-apagado`, e a folha devolve as peças."""
         assert _card(_entrada())["alto-apagado"] == ""
 
     def test_a_leitura_fica_ligada(self) -> None:
-        """Sem endereço, o que o daemon publicou sobre ESTE controle continua.
-
-        Quem mente sem endereço é o COMANDO. Apagar a leitura junto seria
-        esconder o que continua verdadeiro.
-        """
+        """Sem endereço, o que o daemon publicou sobre ESTE controle continua."""
         card = _card(_entrada(uniq=None, battery_pct=64,
                               speaker={"volume": 60, "muted": False}))
         assert card["bateria"] == "64 %"
         assert card["alto-num"] != ""
-
-
-# ---------------------------------------------------------------------------
-# 4. A DICA DO TÍTULO — linha 45
-# ---------------------------------------------------------------------------
 
 
 class TestADicaDoTitulo:
@@ -463,34 +271,20 @@ class TestADicaDoTitulo:
         assert "Jogador 3" in dica
 
     def test_o_fisico_sem_virtual_diz_ainda_nao(self) -> None:
-        """"Ainda não" e "não sei" são respostas diferentes, e o card já pagou
-        caro por dizê-las igual."""
+        """"Ainda não" e "não sei" são respostas diferentes, e o card já pagou"""
         estado = {"coop": {"mesa": [{"uniq": UNIQ, "player": 1}]}}
         assert _card(_entrada(), state=estado)["card-vpad"] == DICA_TITULO_SEM_VPAD
 
     def test_sem_lista_o_cartao_nao_inventa_par(self) -> None:
-        """Daemon velho, ou controle fora da mesa de jogadores: o `title` some.
-
-        `""` faz o piloto remover o atributo — nada aparece, em vez de o card
-        afirmar um par que ninguém montou.
-        """
+        """Daemon velho, ou controle fora da mesa de jogadores: o `title` some."""
         assert _card(_entrada())["card-vpad"] == ""
         assert _card(_entrada(uniq=None), state={"coop": {"mesa": []}})[
             "card-vpad"] == ""
 
 
-# ---------------------------------------------------------------------------
-# 5. OS SELOS NO CARTÃO — linhas 89 e 90 chegando ao endereço
-# ---------------------------------------------------------------------------
-
-
 class TestOsSelosNoCartao:
     def test_o_canal_parado_pinta_ativo_e_cala_o_resto(self, sono_lido) -> None:
-        """O canal PARADO chega ao cartão como UMA pílula, ATIVO — 23/09/2026.
-
-        FATO ERRADO, SUBSTITUÍDO: este caso cobrava `Canal dormindo` no alarme e
-        DESLIGADO na pílula — as duas pílulas da foto dela.
-        """
+        """O canal PARADO chega ao cartão como UMA pílula, ATIVO — 23/09/2026."""
         import mesa_viva
 
         sono_lido(audio_saida.CANAL_DORMINDO, False)
@@ -507,72 +301,20 @@ class TestOsSelosNoCartao:
         assert card["alto-selo"] == TEXTO_SELO_SAIDA_MUDA
 
     def test_sem_leitura_os_tres_mandam_o_marcador_de_nada(self) -> None:
-        """A chave vai em TODO tique, com o marcador — nunca omitida.
-
-        Omitir deixaria a frase velha na tela para sempre, e mandar `""` faria
-        o piloto escrever um travessão solto no rótulo da moldura.
-        """
+        """A chave vai em TODO tique, com o marcador — nunca omitida."""
         card = _card(_entrada())
         for campo in ("alto-selo", "alto-canal"):
             assert card[campo] == mod.NADA_A_DIZER, campo
-        # A DICA É ATRIBUTO, e para atributo o nada é o VAZIO, que apaga — o
-        # marcador viraria texto (O-ALTO-FALANTE-DIZ-ATIVO-01, 23/09/2026).
         assert card["alto-canal-porque"] == ""
 
     # `test_o_estado_e_o_porque_apagam_juntos` SAIU EM 23/09/2026: o porquê
-    # (`alto-canal-porque`) não diz mais nada em estado nenhum — ver
-    # `TestADicaDoCanal` —, e a régua de "os dois apagam juntos" passaria a
-    # cobrar que a pílula apagasse com uma dica que não existe.
-
-
-# ---------------------------------------------------------------------------
-# 6. O QUARTO SELO SAIU DA TELA — 07/09/2026, e a dívida ficou no mapa
-# ---------------------------------------------------------------------------
 
 
 class TestOQuartoSeloSaiuDaTela:
-    """A ordem dela, e ela vale para a tela inteira:
-
-        *"O app tem que funcionar e não mostrar na tela que o app não presta. Se
-         não tem como, ok. Testamos e criamos o canal. até lá tudo bem, o layout
-         não informa os nossos defeitos."*
-
-    **SEIS TESTES MORAVAM AQUI**, e mediam bem o que a peça fazia: que a frase
-    era uma `Fala` com `AFIRMA_NADA`, que só o rádio a ganhava, que trocar a
-    célula num dublê a apagava. Eles saem com a peça, e a razão de sair em vez
-    de serem adaptados é a mesma que a casa já pagou: *um teste que continua
-    exigindo a peça reprova a ordem dela em vez do defeito*.
-
-    O QUE FICA NO LUGAR são as DUAS metades que a ordem dela cria — e é o par
-    que nenhuma metade sozinha prova:
-
-    1. **A TELA CALOU.** O campo do cartão não carrega mais aquela frase, e o
-       pacote não a declara mais.
-    2. **A DÍVIDA NÃO SUMIU.** A célula do mapa continua dizendo `aciona=não`
-       com causa `divida`, e virá-la para calar a tela seria mentir ao
-       contrário. É esta segunda metade que separa *"tiramos da tela"* de
-       *"fingimos que fechou"*.
-    """
+    """A ordem dela, e ela vale para a tela inteira:"""
 
     def test_a_celula_do_mapa_so_vira_com_a_prova(self) -> None:
-        """**A METADE QUE IMPEDE A CURA DE VIRAR MENTIRA.**
-
-        Calar a tela é ordem dela; virar a célula sem prova não é. Esta régua
-        dizia *"Quem fechar a `SOM-QUE-SAI-01` vira esta célula, e é esta régua
-        que reprova se alguém a virar antes"* — e o canal FECHOU: o som saiu do
-        plástico pelo rádio em 10/09 (report `0x35`, 70 s com a orelha dela) e
-        a háptica passou pelo mesmo fio em 18/09. O commit `9f1920152` virou a
-        célula com a régua que morde, e até 18/09/2026 esta asserção exigia
-        `aciona != "sim"` — um fato que a casa derrubou.
-
-        O QUE ELA COBRA AGORA: com a célula em `sim`, a procedência é
-        `medido`; com a célula em `não`, a causa continua NOSSA. É a mesma
-        honestidade dos dois lados — nem fingir que fechou, nem fingir que
-        continua aberto.
-
-        MORDE: troque `radio.de_onde_sei` para qualquer coisa que não seja
-        `medido` com a célula em `sim`, e esta linha reprova.
-        """
+        """**A METADE QUE IMPEDE A CURA DE VIRAR MENTIRA.**"""
         celula = FATOS["audio.alto_falante@dualsense"]["radio"]
         assert isinstance(celula, dict)
         if celula["aciona"] == "sim":
@@ -585,10 +327,7 @@ class TestOQuartoSeloSaiuDaTela:
             "medição tem de vir junto")
 
     def test_o_pacote_nao_declara_mais_a_frase(self) -> None:
-        """A peça saiu inteira: a `Fala` e a função que a lia.
-
-        MORDE: devolva a `Fala` ou a função ao pacote e esta linha reprova.
-        """
+        """A peça saiu inteira: a `Fala` e a função que a lia."""
         for morto in ("RESSALVA_DO_ALTO_NO_RADIO", "ressalva_do_transporte",
                       "lado_do_mapa", "CHAVE_DO_ALTO_FALANTE"):
             assert not hasattr(mod, morto), (
@@ -596,15 +335,7 @@ class TestOQuartoSeloSaiuDaTela:
                 f"esta dívida em 07/09/2026")
 
     def test_o_cartao_nao_confessa_no_radio(self) -> None:
-        """O cartão não confessa dívida nossa no rádio — 07/09/2026.
-
-        **E O CAMPO INTEIRO SAIU EM 22/09/2026, por ordem dela.** Aqui estava
-        escrito que ele continuava existindo com o outro informante — o
-        desacordo das duas camadas de som. Esse informante mandava clicar num
-        botão que a fileira não tem desde 21/09, e ela pediu a frase fora. O
-        que esta régua cobra hoje é que nenhum campo do alto-falante volte a
-        falar do Hefesto.
-        """
+        """O cartão não confessa dívida nossa no rádio — 07/09/2026."""
         card = _card(_entrada(transport="bt"))
         assert "alto-ressalva" not in card, (
             "a ressalva do alto-falante voltou ao cartão — ela saiu inteira em "
@@ -614,23 +345,12 @@ class TestOQuartoSeloSaiuDaTela:
             "o cartão voltou a confessar dívida nossa no rádio")
 
     def test_os_gestos_nao_apagam_por_uma_divida_nossa(self) -> None:
-        """A dívida é NOSSA: apagar quatro gestos por ela é empurrá-la para ela.
-
-        A célula da ROTA é `aciona=sim` nos dois lados, e o mudo do microfone é
-        `parcial` — nenhum dos dois autoriza apagar coisa nenhuma. Isto não
-        mudou com a saída do selo: a tela deixou de DIZER, e continua sem
-        apagar nada.
-        """
+        """A dívida é NOSSA: apagar quatro gestos por ela é empurrá-la para ela."""
         rota = FATOS["audio.alto_falante.rota@dualsense"]["radio"]
         assert isinstance(rota, dict) and rota["aciona"] == "sim"
         card = _card(_entrada(transport="bt"))
         assert card["alto-apagado"] == ""
         assert card["alto-porque"] == mod.DICA_ALTO_SEM_POSSE
-
-
-# ---------------------------------------------------------------------------
-# 7. O DESENHO — o que a bancada ganhou, e o que ela NÃO ganhou
-# ---------------------------------------------------------------------------
 
 
 class TestODesenho:
@@ -671,17 +391,12 @@ class TestODesenho:
             assert f">{mesa_viva.ATIVO}</span>" in chip, c["pref"]
             assert 'class="selo-ativo no-rotulo on"' in chip, c["pref"]
             assert mod.NADA_A_DIZER not in chip, c["pref"]
-        # O LUGAR VAZIO não tem controle, logo não tem canal: a pílula some.
         vazios = [c for c in MESA_DO_DESENHO if not c.get("conectado", True)]
         assert vazios, "a cena precisa de um lugar vazio"
         assert all(mod.NADA_A_DIZER in aba02.sufixo_do_canal(c) for c in vazios)
 
     def test_a_palavra_do_sufixo_vem_do_produto(self) -> None:
-        """O gerador não digita a palavra do canal: ele chama o dono.
-
-        Se digitasse, a cena e a tela viva divergiriam CALADAS na primeira troca
-        de palavra do `audio_saida` — um texto que não casa não dá erro nenhum.
-        """
+        """O gerador não digita a palavra do canal: ele chama o dono."""
         fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba02.py").read_text(
             encoding="utf-8")
         assert "mesa_viva.selo_do_alto_falante(" in fonte, (
@@ -690,10 +405,7 @@ class TestODesenho:
             "vão divergir CALADAS na primeira troca de palavra")
 
     def test_a_guarda_nao_alcanca_a_moldura_do_led(self) -> None:
-        """A moldura do LED tem `title` FIXO — um `.moldura[title]` solto a apaga.
-
-        MORDE: troque os seletores por `.moldura[title]` e este caso reprova.
-        """
+        """A moldura do LED tem `title` FIXO — um `.moldura[title]` solto a apaga."""
         doc = _bancada()
         assert re.search(r'class="moldura led"[^>]*title="', doc), (
             "a moldura do LED perdeu o `title` fixo — o risco que este caso "
@@ -706,10 +418,6 @@ class TestODesenho:
     def test_o_sufixo_e_o_selo_somem_com_o_marcador(self) -> None:
         """As três regras da folha: o marcador, a dica vazia e o `:empty`."""
         doc = _bancada()
-        # SÃO DOIS BLOCOS DESDE 19/09/2026: o alarme (`.selo-som`) guardou os
-        # seletores dele, e o chip do canal virou selo — com as mesmas três
-        # regras, sob o nome novo. O que a régua guarda é o COMPORTAMENTO: nem
-        # um nem outro deixa vão no rótulo quando não há o que dizer.
         assert ".rot .selo-som:has(.nada){display:none}" in doc
         assert ".rot .selo-som:empty{display:none}" in doc
         assert ".rot .selo-ativo.no-rotulo:has(.nada){display:none}" in doc
@@ -723,16 +431,6 @@ class TestODesenho:
         assert "alimenta o gamepad virtual" not in doc.lower()
 
 
-# ---------------------------------------------------------------------------
-# 8. O MICROFONE SEM FONTE — MIC-SEM-FONTE-01, 13/09/2026
-# ---------------------------------------------------------------------------
-# O deslizante do microfone de um controle no rádio arrastava, e só DEPOIS o
-# daemon respondia `sem_fonte`; a resposta já viajava no tique anterior, em
-# `audio.canal_fonte` nulo. A ROTA CORRIGIDA da sprint pede o cinza ANTES do
-# arrasto, num endereço só do microfone, e sem frase nenhuma.
-
-#: A MESA MISTA da §1 da sprint, na faixa forjada: dois no cabo com a fonte
-#: publicada e dois no rádio com a fonte nula.
 MISTA = (
     ("p1", "aa:bb:cc:00:00:3a", "usb", "alsa_input.usb-regua-00.iec958-stereo"),
     ("p2", "aa:bb:cc:00:00:7d", "bt", None),
@@ -762,11 +460,7 @@ class TestOMicrofoneSemFonte:
     """O cinza chega ANTES do arrasto, e só na moldura do microfone."""
 
     def test_a_fonte_nula_apaga_o_microfone_e_nao_o_alto_falante(self) -> None:
-        """A mordida da ROTA CORRIGIDA, na metade do pacote.
-
-        MORDE: tire a pergunta da fonte de `microfone_apagado` (o microfone
-        acende) ou ponha a fonte no `alto-apagado` (o alto-falante apaga).
-        """
+        """A mordida da ROTA CORRIGIDA, na metade do pacote."""
         card = _card(_com_fonte(None, transport="bt"))
         assert card["mic-apagado"] == mod.MIC_SEM_FONTE
         assert card["alto-apagado"] == ""
@@ -776,10 +470,7 @@ class TestOMicrofoneSemFonte:
         assert _card(_com_fonte("alsa_input.usb-regua"))["mic-apagado"] == ""
 
     def test_sem_a_chave_nao_ha_cinza(self) -> None:
-        """Chave ausente é "não sei": o laço do canal ainda não perguntou.
-
-        MORDE: faça `microfone_apagado` apagar na ausência da chave.
-        """
+        """Chave ausente é "não sei": o laço do canal ainda não perguntou."""
         assert _card(_entrada(audio={"mic_mudo": False}))["mic-apagado"] == ""
 
     def test_sem_endereco_o_microfone_apaga_inteiro(self) -> None:
@@ -789,10 +480,7 @@ class TestOMicrofoneSemFonte:
         assert card["alto-apagado"] == mod.MIC_SEM_ALVO
 
     def test_a_mesa_mista_apaga_so_os_dois_do_radio(self) -> None:
-        """POR CONTROLE: um teste de um controle só passaria com a leitura global.
-
-        MORDE: responda o cinza pela primeira entrada da mesa, para todos.
-        """
+        """POR CONTROLE: um teste de um controle só passaria com a leitura global."""
         entradas = [
             _entrada(uniq=uniq, player=n, is_primary=n == 1, transport=via,
                      audio={"mic_mudo": False, "canal_fonte": fonte})
@@ -810,14 +498,7 @@ class TestOMicrofoneSemFonte:
 
     @pytest.mark.parametrize("publicado", [False, True])
     def test_a_moldura_do_microfone_tem_endereco_proprio(self, publicado: bool) -> None:
-        """Na bancada e no publicado: cada moldura de som lê o seu `data-apagado`.
-
-        O microfone lê `mic-apagado` (MIC-SEM-FONTE-01) e o alto-falante lê
-        `alto-apagado` (RESTOS-DA-ONDA-DOIS-01). Sem a página publicada o pacote
-        nem emite o campo (`_so_se_a_pagina_tiver`), e a cura ficaria só no código.
-
-        MORDE: devolva a moldura de uma das duas ao endereço da outra.
-        """
+        """Na bancada e no publicado: cada moldura de som lê o seu `data-apagado`."""
         doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
         mics = re.findall(r'<div class="moldura"[^>]*data-bloco="microfone"[^>]*>', doc)
         altos = re.findall(r'<div class="moldura"[^>]*data-bloco="alto-falante"[^>]*>',
@@ -833,18 +514,7 @@ class TestOMicrofoneSemFonte:
             assert "mic-apagado" not in tag, tag
 
     def test_sem_fonte_so_o_deslizante_apaga(self) -> None:
-        """O botão do microfone pede o canal: apagá-lo trancaria a única saída.
-
-        MORDE: ponha `.mudo-i` ou `.rota` num seletor que case o `sem-fonte`, ou
-        tire o `.trilho` da regra de opacidade.
-
-        O ALVO É UMA LISTA DO QUE PODE APAGAR, e não uma lista do que não pode
-        (validação, 13/09/2026). Procurar só `.mudo-i` e `.rota` no alvo deixava
-        passar `[data-apagado] .vol`, que apaga a LINHA onde o 🎙 mora, e o
-        seletor de prefixo `[data-apagado^="sem"]`: as duas sabotagens
-        passaram verdes. Toda regra que casa um `data-apagado` que não seja só o
-        `sem-alvo` tem de terminar numa peça do deslizante.
-        """
+        """O botão do microfone pede o canal: apagá-lo trancaria a única saída."""
         so_sem_alvo = re.compile(r'(?<!:not\()\[data-apagado="sem-alvo"\]')
         casa_sem_fonte = [
             (seletor, declaracao)

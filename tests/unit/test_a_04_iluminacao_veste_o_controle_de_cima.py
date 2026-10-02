@@ -49,9 +49,6 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
 
 
 #: A MESA DELA DE 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve: um
-#: White no cabo e um por rádio cuja COR NÃO FOI LIDA — que é o estado real na
-#: ponta de `dev`, porque a leitura de cor por rádio ainda não chegou.
-#: MAC da faixa sintética da casa: há dois portões de anonimato nesta árvore.
 MESA_DELA = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb"},
@@ -68,9 +65,6 @@ NO_RADIO = {"uniq": "aa:bb:cc:00:00:02", "transport": "bt", "connected": True,
             "lightbar_rgb": [255, 0, 0], "lightbar_on": True,
             "lightbar_source": "sysfs", "battery_pct": 85}
 
-#: O hex da casca White, LIDO do dono (`monta.cor_da_zona`) e não digitado — se
-#: a amostragem mudar, o teste acompanha. Digitá-lo aqui criaria a segunda
-#: verdade que o `cores-do-dualsense.csv` existe para matar.
 BRANCO = "#e4e0d8"
 
 
@@ -100,19 +94,11 @@ def bancada():
 
 
 def _miolo(doc: str) -> str:
-    """Só o que a JANELA mostra, sem comentário HTML e sem a legenda do rodapé.
-
-    O corte é o mesmo do `aba04._conferir`, e pela mesma razão medida: a régua da
-    Jogar nasceu errada duas vezes por casar um token dentro do comentário que o
-    explicava.
-    """
+    """Só o que a JANELA mostra, sem comentário HTML e sem a legenda do rodapé."""
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     return re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
 
 
-# ---------------------------------------------------------------------------
-# 1. a moldura — a cor que ela mandou vir do aparelho
-# ---------------------------------------------------------------------------
 def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(bancada):
     """A borda do desenho deixou de ser a cor do mockup.
 
@@ -148,16 +134,7 @@ def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(bancada):
 
 
 def test_a_folha_le_a_borda_de_currentcolor_e_o_desenho_nao_herda(bancada):
-    """As duas metades da cura, e uma sem a outra estraga a tela.
-
-    Sem `currentColor` na borda, o alvo `cor` escreve e nada muda. Sem pinar a
-    cor do `.ds-svg`, a cor que vai à borda TINGE os glifos que desenham com
-    `stroke="currentColor"` e não têm classe — o PS, o share, o options, o mic e
-    os analógicos. Medido no Chrome, dentro desta página, em 03/09/2026.
-
-    A MORDIDA: tire `.luz-grade .moldura .ds-svg{color:var(--fg)}` do CSS e
-    a segunda asserção reprova.
-    """
+    """As duas metades da cura, e uma sem a outra estraga a tela."""
     assert ".luz-grade .moldura{color:var(--linha);border:1px solid currentColor;" in bancada, (
         "a borda voltou a sair de `--plastico`: o alvo `cor` do pintor escreve "
         "`style.color`, e nenhum alvo dele escreve variável CSS.")
@@ -168,11 +145,7 @@ def test_a_folha_le_a_borda_de_currentcolor_e_o_desenho_nao_herda(bancada):
 
 
 def test_o_pacote_manda_a_cor_da_casca_do_controle_da_mesa(carga):
-    """O White dela chega à coluna como `#e4e0d8`.
-
-    A MORDIDA: troque `casa.get("cor")` por `""` no pacote e esta linha reprova
-    com vazio — que é a tela de novo sem cor nenhuma.
-    """
+    """O White dela chega à coluna como `#e4e0d8`."""
     import monta
 
     col = carga()["colunas"][NO_CABO["uniq"]]
@@ -184,15 +157,7 @@ def test_o_pacote_manda_a_cor_da_casca_do_controle_da_mesa(carga):
 
 
 def test_sem_cor_lida_o_pacote_manda_vazio_e_nunca_a_do_mockup(carga):
-    """Campo sem informação não mostra nada — a regra é dela.
-
-    A cor do plástico chega pelo broker, uma vez por endereço e em thread; o
-    controle por RÁDIO na ponta de `dev` chega sem ela. O honesto é a moldura
-    ficar neutra, e nunca cair de volta no desenho.
-
-    A MORDIDA: faça `_cor_do_plastico("")` devolver `cor_da_zona("cosmic-red")`
-    e esta linha reprova — que é exatamente a queda que a lei dela proíbe.
-    """
+    """Campo sem informação não mostra nada — a regra é dela."""
     col = carga()["colunas"][NO_RADIO["uniq"]]
     assert col["plastico"] == "", (
         f"o controle de rádio, sem cor lida, mandou {col['plastico']!r}. "
@@ -206,9 +171,6 @@ def test_a_coluna_nunca_manda_a_cor_de_um_controle_que_nao_e_o_dela(carga):
     assert colunas[NO_CABO["uniq"]]["plastico"] != colunas[NO_RADIO["uniq"]]["plastico"]
 
 
-# ---------------------------------------------------------------------------
-# 2. o anelzinho do dono — o congelado que mora dentro de um bloco vivo
-# ---------------------------------------------------------------------------
 def test_o_anel_do_dono_declara_de_quem_e():
     """O `<i class="dono">` carrega `--plastico` e mora num bloco reescrito.
 
@@ -228,11 +190,6 @@ def test_o_anel_do_dono_declara_de_quem_e():
         "um dono SEM cor lida não pode desenhar anel — seria inventar a casca.")
     com_cor = pac.um_botao_de_player(
         "Não sei", 2, 1, {"nome": "White", "via": "USB", "cor": "white"}, quantos=2)
-    # O ENDEREÇO É POR JOGADOR, e quem o monta é `endereco_do_anel` — 03/09.
-    # Esta linha digitava a CONSTANTE `ANEL_DO_DONO`, que é só o prefixo; o
-    # produto emite `players.dono.<n>`, um por botão, porque a pintura precisa
-    # alcançar cada anel sozinha. Perguntar ao dono é o que faz a régua
-    # sobreviver à próxima mudança de forma do endereço.
     assert f'data-hef="{pac.endereco_do_anel(1)}"' in com_cor, (
         "o anel perdeu o endereço: a régua da identidade volta a contá-lo como "
         "cor congelada, em todas as colunas.")
@@ -243,12 +200,7 @@ def test_o_anel_do_dono_declara_de_quem_e():
 
 
 def test_o_anel_nao_repete_o_endereco_da_fileira():
-    """Um nome próprio, e nunca `players`.
-
-    O pintor acha por `querySelectorAll`, então um `<i>` que repetisse `players`
-    receberia a fileira INTEIRA como `innerHTML` — quatro botões dentro de um
-    anelzinho, a cada tique.
-    """
+    """Um nome próprio, e nunca `players`."""
     from pacotes import a04_iluminacao as pac
 
     assert pac.ANEL_DO_DONO != "players"
@@ -256,9 +208,6 @@ def test_o_anel_nao_repete_o_endereco_da_fileira():
         "o nome do anel deixou de dizer a que bloco ele pertence.")
 
 
-# ---------------------------------------------------------------------------
-# 3. o antes/depois do rodapé — um `blocos:` vivo
-# ---------------------------------------------------------------------------
 def test_o_antes_e_depois_nomeia_quem_esta_na_mesa(carga):
     """O exemplo da troca é o caso REAL dela, com os controles REAIS.
 
@@ -276,7 +225,6 @@ def test_o_antes_e_depois_nomeia_quem_esta_na_mesa(carga):
         assert do_mockup not in html, (
             f"o antes/depois do rodapé ainda nomeia {do_mockup!r} — um controle "
             f"que não está na mesa dela.")
-    # A permutação: o P1 vira P2 e o P2 vira P1, e ninguém mais se mexe.
     assert html.count('class="troca-item') == 4, (
         "o antes e o depois têm de mostrar os DOIS controles, nas duas linhas.")
     assert 'data-hef="troca.item"' in html, (
@@ -285,12 +233,7 @@ def test_o_antes_e_depois_nomeia_quem_esta_na_mesa(carga):
 
 
 def test_a_troca_precisa_de_dois_e_diz_isso_em_vez_de_inventar(carga):
-    """Com um controle só não há troca — e a seção fala, em vez de mentir.
-
-    A MORDIDA: apague o `if len(ordenada) < 2` de `secao_da_troca` e a função
-    levanta `IndexError` no primeiro tique de uma mesa com um controle — que é
-    a mesa dela toda vez que ela desliga um.
-    """
+    """Com um controle só não há troca — e a seção fala, em vez de mentir."""
     from pacotes import a04_iluminacao as pac
 
     html = carga(mesa=MESA_DELA[:1], conectados=[NO_CABO])["blocos"][pac.SECAO_DA_TROCA]
@@ -303,12 +246,7 @@ def test_a_troca_precisa_de_dois_e_diz_isso_em_vez_de_inventar(carga):
 
 
 def test_a_bancada_tem_onde_pousar_o_antes_e_depois(bancada):
-    """O `blocos:` pousa por `document.querySelector` — sem o contêiner, nada.
-
-    A MORDIDA: tire o `<div class="nota-troca" data-hef="troca">` do `LEGENDA`,
-    rode o gerador, e esta linha reprova. Sem ele o pacote emitiria a seção viva
-    a cada tique e o rodapé continuaria com o texto do mockup, calado.
-    """
+    """O `blocos:` pousa por `document.querySelector` — sem o contêiner, nada."""
     from pacotes import a04_iluminacao as pac
 
     assert '<div class="nota-troca" data-hef="troca">' in bancada
@@ -317,12 +255,7 @@ def test_a_bancada_tem_onde_pousar_o_antes_e_depois(bancada):
 
 
 def test_o_gerador_e_o_produto_desenham_a_mesma_secao_de_troca(bancada):
-    """Um dono, dois chamadores — e é o que impede os dois lados de divergirem.
-
-    É a mesma régua que já vale para a fileira de players e para o desenho da
-    luz. Enquanto fossem duas escritas, o desenho e o produto podiam divergir
-    sem ninguém ver — que foi como a `novo-layout/` divergiu 25 KB calada.
-    """
+    """Um dono, dois chamadores — e é o que impede os dois lados de divergirem."""
     import monta
     from pacotes import a04_iluminacao as pac
 
@@ -331,12 +264,6 @@ def test_o_gerador_e_o_produto_desenham_a_mesma_secao_de_troca(bancada):
         "segunda escrita da mesma seção.")
 
 
-# ---------------------------------------------------------------------------
-# 4. as dicas — `title` é atributo, e atributo o pintor não alcança
-# ---------------------------------------------------------------------------
-#: Os nomes que a mesa do DESENHO usa. Eles são os que apareciam nas dicas —
-#: lidos de `monta.MESA` e não digitados, para que uma mesa de desenho nova não
-#: deixe este teste medindo o vazio.
 def _nomes_do_desenho() -> list[str]:
     import monta
 
@@ -345,24 +272,8 @@ def _nomes_do_desenho() -> list[str]:
 
 @pytest.mark.parametrize("nome", _nomes_do_desenho())
 def test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle(bancada, nome):
-    """O `title` fica no que o gerador soube, e o gerador só sabe o mockup.
-
-    O piloto pinta `texto`, `largura`, `fundo`, `valor`, `html`, `classe` e
-    `cor` — e nenhum deles escreve atributo. Toda frase escrita num `title` do
-    miolo é congelada PARA SEMPRE, mesmo num elemento que já tem endereço: a
-    régua da identidade nem a acusa nesse caso, porque ela pula o `title` de
-    quem já tem endereço. Era assim que os oito botões de cor diziam *"pinta a
-    barra do Cosmic Red"* na coluna de um controle branco.
-
-    O QUE SOBRA SÃO OS `title` DENTRO DE BLOCO VIVO — a fileira de players e o
-    desenho da luz —, e esses o pacote reescreve a cada tique.
-
-    A MORDIDA: devolva `do {c["nome"]}` ao `title` do "Desligar" ou dos oito
-    tons, rode o gerador, e este teste reprova nomeando o arquivo.
-    """
+    """O `title` fica no que o gerador soube, e o gerador só sabe o mockup."""
     corpo = _miolo(bancada)
-    # Os dois blocos que o produto TROCA INTEIROS saem da conta: o que está
-    # dentro deles é semente, e o pacote a reescreve com a mesa viva.
     for marca in ('data-campo="players" data-hef-alvo="html"',
                   'data-campo="luz" data-hef-alvo="html"'):
         while marca in corpo:
@@ -378,23 +289,7 @@ def test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle(bancada, nome):
 
 
 def test_a_dica_do_jogador_diz_a_regra_e_nao_o_exemplo(bancada):
-    """A coluna de RÓTULOS é uma só para as quatro — não há a quem endereçar.
-
-    A dica dizia *"pôr o Starlight Blue no 1 faz o Cosmic Red virar 2"*: dois
-    nomes do mockup num texto que vale para as quatro colunas. Aqui a cura não
-    é endereço, é dizer a REGRA em vez do exemplo — quem nomeia os dois de
-    verdade é a dica de cada botão da fileira, que o pacote reescreve.
-
-    ELA PERGUNTA PELO ATO, E NÃO PELA FRASE — 11/09/2026. Até hoje ela digitava
-    *"quem tem aquele número hoje fica com o deste"*, e a leva de língua (A4-049,
-    aprovada por ela) encurtou a dica para *"faz os dois trocarem: ninguém repete
-    e ninguém fica sem"* — a MESMA regra, em menos palavras. Uma régua que digita
-    o texto que mede reprova a melhora em vez do defeito, que é a família que
-    esta casa mais paga. O que se mede agora é o que a régua sempre quis: a dica
-    DIZ a troca e NÃO NOMEIA controle nenhum do desenho.
-
-    A MORDIDA: devolva um `{...["nome"]}` à dica e esta linha reprova.
-    """
+    """A coluna de RÓTULOS é uma só para as quatro — não há a quem endereçar."""
     corpo = _miolo(bancada)
     dica = corpo.split("o número do jogador a este controle", 1)[-1][:600]
     assert "os dois trocarem" in dica, (

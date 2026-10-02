@@ -1,33 +1,8 @@
-"""TECLADO-QUE-NAO-DIGITA-01 — a aba passa a dizer o que NÃO digita.
-
-O relato dela, 09/08/2026, depois de ligar "Controlar o PC", ligar o mouse
-(funcionou: o analógico move o cursor) e ligar o teclado emulado:
-
-    *"o botão emular teclado não funciona"*
-
-O journal do daemon dela contradiz o "não funciona" no motor: o teclado virtual
-subiu (`keyboard_emulator_opened`), despachou e emitiu 34 teclas entre 23:52:05
-e 23:52:37 — Delete e Enter das regiões do touchpad, Alt+Tab do R1, Alt+Shift+
-Tab do L1. O que não existia era a TELA dizendo a verdade sobre o mapa:
-
-1. a lista da aba só cria linha para botão COM tecla, então os onze botões sem
-   tecla (X, Círculo, Triângulo, Quadrado, os quatro direcionais, L2, R2, PS)
-   simplesmente NÃO APARECEM — a lista parece completa, e apertá-los esperando
-   que digitem é a conclusão natural, e errada;
-2. nenhum atalho de fábrica digita um CARACTERE: são Super, PrintScreen,
-   Alt+Tab, Alt+Shift+Tab, Backspace, Enter, Delete e os dois tokens do teclado
-   na tela. "O teclado emulado não digita" é literalmente verdade de fábrica, e
-   a legenda dizia o contrário ("cada botão do controle pode digitar uma tecla").
-
-Estes testes MORDEM: cada um reprova se a frase correspondente for arrancada.
-"""
+"""TECLADO-QUE-NAO-DIGITA-01 — a aba passa a dizer o que NÃO digita."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi`, pelo mesmo motivo
-# declarado em `test_input_actions.py` — o stub que outro arquivo planta em
-# `sys.modules` passaria pelo `importorskip` e derrubaria a coleta.
 exigir_gi_real("teclado que não digita")
 
 from typing import Any
@@ -48,9 +23,6 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     is_virtual_token,
 )
 
-#: Teclas que produzem um CARACTERE visível ao digitar. Se algum default passar
-#: a incluir uma destas, a promessa da legenda ("nenhum atalho de fábrica digita
-#: letra") caduca e tem de ser reescrita junto — é para isso que o teste existe.
 _TECLAS_QUE_DIGITAM: frozenset[str] = frozenset(
     [f"KEY_{c}" for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"]
     + [f"KEY_{d}" for d in "0123456789"]
@@ -58,15 +30,8 @@ _TECLAS_QUE_DIGITAM: frozenset[str] = frozenset(
 )
 
 
-# --- o fato que a legenda afirma ---------------------------------------
-
-
 def test_nenhum_atalho_de_fabrica_digita_caractere() -> None:
-    """A frase "nenhum atalho de fábrica digita letra" é verificável, não retórica.
-
-    Guarda a AFIRMAÇÃO da tela, não o mapa: quem quiser pôr uma letra num
-    default pode — mas reprova aqui, e a legenda tem de mudar no mesmo commit.
-    """
+    """A frase "nenhum atalho de fábrica digita letra" é verificável, não retórica."""
     digitam = {
         botao: tokens
         for botao, tokens in DEFAULT_BUTTON_BINDINGS.items()
@@ -91,15 +56,11 @@ def test_o_unico_caminho_de_fabrica_para_escrever_e_o_teclado_na_tela() -> None:
     assert "wvkbd-mobintl" in BINDINGS_LEGEND
 
 
-# --- a frase que nomeia o que não digita -------------------------------
-
-
 def test_a_frase_nomeia_os_botoes_sem_tecla_dos_defaults() -> None:
     """Com o mapa de fábrica, os onze órfãos aparecem pelo nome humano."""
     frase = frase_dos_botoes_sem_tecla(dict(DEFAULT_BUTTON_BINDINGS))
     for esperado in ("X (Cruz)", "Círculo", "Triângulo", "Quadrado", "Botão PS"):
         assert esperado in frase, f"{esperado!r} sumiu da frase: {frase!r}"
-    # Quem TEM tecla no mapa de fábrica não entra na lista de órfãos.
     assert "L1" not in frase
     assert "Options" not in frase
     assert "Touchpad" not in frase
@@ -135,9 +96,6 @@ def test_botoes_do_mouse_saem_do_uinput_mouse_e_nao_de_copia_a_mao() -> None:
 
     esperado = frozenset({*BUTTON_TO_UINPUT, *DPAD_TO_KEY, *EDGE_KEY_MAP, "l2", "r2"})
     assert esperado == BOTOES_JA_DO_MOUSE
-
-
-# --- a legenda chega à tela a cada refresh ------------------------------
 
 
 class _FakeLabel:
@@ -216,4 +174,4 @@ def test_o_refresh_nao_quebra_sem_a_legenda_no_glade() -> None:
     """Glade sem o rótulo (janela reduzida, teste) segue funcionando."""
     mixin = _build_mixin()
     mixin.legend = None  # type: ignore[assignment]
-    mixin._refresh_key_bindings_from_draft()  # não levanta
+    mixin._refresh_key_bindings_from_draft()

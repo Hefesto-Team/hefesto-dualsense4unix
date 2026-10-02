@@ -111,48 +111,25 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Como este gesto assina na trava e no diário comuns do rádio.
 QUEM = "pareamento"
 
-#: Quanto tempo a janela de busca fica aberta, por padrão. Trinta segundos é o
-#: que cabe entre segurar PS + Create e a barra piscar sem a pessoa achar que
-#: travou — e é bem menos que o teto de 120 s do lado de lá, que existe porque
-#: janela sem teto é root parado.
 SEGUNDOS_DA_JANELA = 30
 
-#: O teto do outro lado (``bt_ponte_privilegiada.sh``: ``SEGUNDOS_MAX``).
-#: Repetido aqui de propósito: mandar 121 faria a ponte recusar com código 2, e
-#: recusar antes de gastar um ``sudo`` é mais honesto que descobrir depois.
 SEGUNDOS_MAX = 120
 
-#: Teto de tempo para o ``parear``, em segundos. O verbo do outro lado já põe
-#: 45 s no ``Pair()``; este é a folga de fora, pelo mesmo motivo que o de lá é
-#: cinto do ``bluetoothctl``: quem fica pendurado é um processo com ``sudo``.
 ESPERA_DO_PAREAR_S = 60.0
 
-# --- a classe do aparelho ----------------------------------------------------
-#
-# *Class of device* do Bluetooth: 24 bits, dos quais os bits 12-8 são a classe
-# maior e os bits 7-2 a menor. Periférico com tipo de gamepad é o que um
-# controle anuncia, e é o que o BlueZ usa para escolher o ícone `input-gaming`.
 
-#: Bits 12-8: `0x05` é *Peripheral*.
 CLASSE_MAIOR_PERIFERICO = 0x05
 
-#: Bits 5-2 da classe menor: `0x01` é *Joystick* e `0x02` é *Gamepad*. Os dois
 #: entram — o Pro Controller e o 8BitDo desta casa não são DualSense, e o
-#: produto os atende.
 CLASSES_MENORES_DE_CONTROLE = (0x01, 0x02)
 
-#: Os quatro estados da busca. Nenhum é acento: são chaves de máquina.
 ESTADO_ACHOU = "achou"
 ESTADO_NINGUEM = "ninguem"  # (noqa-acento): chave de máquina
 ESTADO_SEM_PORTA = "sem_porta"
 ESTADO_NAO_DEU = "nao_deu"  # (noqa-acento): chave de máquina
 
-#: Os do pareamento. `ja_pareado` não é sucesso nem falha: é o caso comum de um
-#: controle que já tem bond NESTE adaptador, e mandá-la repetir PS + Create por
-#: causa dele seria pedir trabalho por nada.
 ESTADO_PAREOU = "pareou"
 ESTADO_JA_PAREADO = "ja_pareado"  # (noqa-acento): chave de máquina
 ESTADO_JANELA_FECHADA = "janela_fechada"
@@ -176,24 +153,15 @@ FRASE_NAO_PAREOU = (
     "Não consegui parear este controle. Ele ainda está em PS + Create, com a "
     "barra piscando?"
 )
-#: O X da tela (O-RADIO-CONECTA-ONDE-ELA-MANDA-01): o pareamento saiu daquele
-#: adaptador, e só dele.
 ESTADO_ESQUECEU = "esqueceu"
 FRASE_ESQUECEU = "O pareamento deste controle saiu deste adaptador."
 FRASE_NAO_ESQUECEU = "O Bluetooth não esqueceu este controle agora. Tente de novo."
 
-#: Quanto o X espera a trava do rádio: um gesto de TELA, como o da central
-#: (`central_do_radio.PRAZO_DA_TRAVA_DO_GESTO_S`) — passou disso, o botão treme.
 PRAZO_DA_TRAVA_DO_ESQUECER_S = 5.0
 
 
 def e_controle(classe: int | None) -> bool:
-    """Esta *class of device* é a de um controle? ``None`` (ausente) é ``False``.
-
-    A ausência não é dúvida a favor: um aparelho que não publica classe é, na
-    prática, um aparelho só-LE, e o controle desta casa fala BR/EDR. Chutar que
-    sim colocaria o fone da vizinha na lista de controles dela.
-    """
+    """Esta *class of device* é a de um controle? ``None`` (ausente) é ``False``."""
     if classe is None:
         return False
     if (classe >> 8) & 0x1F != CLASSE_MAIOR_PERIFERICO:
@@ -205,15 +173,9 @@ def e_controle(classe: int | None) -> bool:
 class Candidato:
     """Um aparelho que a varredura achou. Imutável: é uma foto, não estado."""
 
-    #: O endereço INTEIRO, em minúsculas. Ele existe para ir à ponte, e é o
-    #: único lugar do módulo onde ele aparece inteiro.
     endereco: str
-    #: O nome que o BlueZ publica. Vem de terceiro — já higienizado do outro
-    #: lado, e nunca usado para decidir nada.
     nome: str = ""
-    #: Este endereço já tem bond NESTE adaptador?
     ja_pareado: bool = False
-    #: A *class of device*, ou ``None`` quando o BlueZ não a publica.
     classe: int | None = None
 
     @property
@@ -231,22 +193,13 @@ class Candidato:
 class Resultado:
     """O que aconteceu. Imutável, e nunca uma exceção."""
 
-    #: Um dos ``ESTADO_*``.
     estado: str
-    #: A frase que a tela mostra, em português e escrita para ela.
     porque: str
-    #: Os candidatos, quando houve busca. Vazio nos outros estados.
     candidatos: tuple[Candidato, ...] = ()
 
     @property
     def deu(self) -> bool:
-        """A operação chegou ao fim sabendo o que aconteceu?
-
-        :data:`ESTADO_NINGUEM` conta: uma busca que rodou e não achou ninguém
-        SABE que não achou. :data:`ESTADO_NAO_DEU` não conta, e essa é a linha
-        inteira deste módulo — um ``False`` aqui significa *"não sei"*, e quem
-        chama não pode lê-lo como *"não havia"*.
-        """
+        """A operação chegou ao fim sabendo o que aconteceu?"""
         return self.estado not in (ESTADO_NAO_DEU, ESTADO_SEM_PORTA)
 
     @property
@@ -256,14 +209,7 @@ class Resultado:
 
 
 def ler_candidato(linha: str) -> Candidato | None:
-    """Uma linha de TSV da ponte vira um :class:`Candidato`, ou ``None``.
-
-    O contrato é ``MAC \\t NOME \\t novo|pareado \\t CLASSE``. Recusar em vez de
-    adivinhar é deliberado: o endereço vira dado de um comando
-    privilegiado, e o que não é um endereço tem de sair como ``None``, nunca
-    como um endereço aproximado. É a mesma régua de
-    ``conexao_zumbi.mac_limpo``, e é dela que este módulo a pega.
-    """
+    """Uma linha de TSV da ponte vira um :class:`Candidato`, ou ``None``."""
     partes = linha.rstrip("\n").split("\t")
     if not partes:
         return None
@@ -280,14 +226,8 @@ def ler_candidato(linha: str) -> Candidato | None:
     return Candidato(endereco=endereco, nome=nome, ja_pareado=ja_pareado, classe=classe)
 
 
-#: O que abre um processo: recebe o pedido à ponte (o ``argv`` que o sudo vê e
-#: a ``entrada`` que vai pelo stdin) e devolve algo com ``stdout`` (linhas),
-#: ``poll()``, ``terminate()``, ``kill()`` e ``wait()``. É por este tipo que o
-#: módulo inteiro fica exercitável sem ponte instalada, sem ``sudo`` e sem
-#: adaptador na mesa.
 Abrir = Callable[[PedidoAPonte], "subprocess.Popen[str]"]
 
-#: O que roda um pedido até o fim e devolve ``(código, stderr)``. Mesma razão.
 Correr = Callable[[PedidoAPonte], "tuple[int, str]"]
 
 
@@ -297,12 +237,7 @@ def _segundos_validos(segundos: int) -> int:
 
 
 def _abrir_de_verdade(pedido: PedidoAPonte) -> subprocess.Popen[str]:
-    """Abre a ponte de verdade, com a saída em linhas e os dados pelo stdin.
-
-    O stdin é um cano NOSSO, e nunca o de quem chamou: a entrada é escrita e o
-    cano FECHA antes de a saída ser lida. A ponte espera o fim do stdin depois
-    dos dados; sem o fechar, a busca esperaria 10 s e seria recusada.
-    """
+    """Abre a ponte de verdade, com a saída em linhas e os dados pelo stdin."""
     processo = subprocess.Popen(
         list(pedido.argv),
         stdin=subprocess.PIPE,
@@ -312,9 +247,6 @@ def _abrir_de_verdade(pedido: PedidoAPonte) -> subprocess.Popen[str]:
         bufsize=1,
     )
     if processo.stdin is not None:
-        # A ponte que morreu antes de ler (recusa, sudo sem regra) fecha o
-        # cano do lado de lá: o fio de leitura vê o fim da saída, e o motivo
-        # vem do código de saída — não daqui.
         with contextlib.suppress(OSError):
             processo.stdin.write(pedido.entrada)
         with contextlib.suppress(OSError):
@@ -323,11 +255,7 @@ def _abrir_de_verdade(pedido: PedidoAPonte) -> subprocess.Popen[str]:
 
 
 def _dono_que_pareia(dono: bluez_dbus.LeitorDoBluez | None) -> bluez_dbus.LeitorDoBluez | None:
-    """O dono do BlueZ, se ele pode manter uma busca e atender um ``Pair``.
-
-    Só o dono VIVO pode: a busca é por cliente e morre com um ``busctl`` que
-    sai, e o agente próprio precisa de uma conexão que fica.
-    """
+    """O dono do BlueZ, se ele pode manter uma busca e atender um ``Pair``."""
     leitor = dono if dono is not None else bluez_dbus.dono()
     return leitor if leitor.atende_o_proprio_pareamento else None
 
@@ -338,8 +266,7 @@ def _limpo(nome: str) -> str:
 
 
 def _correr_de_verdade(pedido: PedidoAPonte) -> tuple[int, str]:
-    """Roda a ponte até o fim, com os dados pelo stdin. Os três jeitos de não
-    dar viram ``(1, motivo)``."""
+    """Roda a ponte até o fim, com os dados pelo stdin. Os três jeitos de não"""
     try:
         feito = subprocess.run(
             list(pedido.argv),
@@ -355,12 +282,7 @@ def _correr_de_verdade(pedido: PedidoAPonte) -> tuple[int, str]:
 
 
 class JanelaDeBusca:
-    """Uma janela de busca aberta num adaptador, lida em fio próprio.
-
-    Use como gerenciador de contexto — a saída fecha a janela mesmo quando
-    alguém levanta no meio, e uma varredura esquecida aberta é justamente o
-    custo de rádio que este módulo existe para evitar.
-    """
+    """Uma janela de busca aberta num adaptador, lida em fio próprio."""
 
     def __init__(
         self,
@@ -382,8 +304,6 @@ class JanelaDeBusca:
         self._tranca = threading.Lock()
         self._achados: list[Candidato] = []
         self._vistos: set[str] = set()
-        #: O dono vivo, quando a janela é nossa; ``None`` quando é a da ponte.
-        #: Quem injeta a ponte (``abrir``/``correr``) escolhe a ponte.
         self._dono = _dono_que_pareia(dono) if abrir is None and correr is None else None
         self._no_do_adaptador = ""
         self._fim: float | None = None
@@ -396,14 +316,9 @@ class JanelaDeBusca:
         """A janela é a NOSSA (dono vivo e agente próprio), e não a da ponte."""
         return self._dono is not None
 
-    # -- abrir e fechar -------------------------------------------------------
 
     def abrir_a_janela(self) -> str:
-        """Começa a varredura. Devolve ``""`` quando deu, ou o motivo.
-
-        Nunca levanta: um erro ao abrir o processo vira motivo, e o motivo vira
-        :data:`ESTADO_NAO_DEU` lá em cima.
-        """
+        """Começa a varredura. Devolve ``""`` quando deu, ou o motivo."""
         if not self.adaptador:
             return "o endereço do adaptador não tem forma de endereço"
         if self._dono is not None:
@@ -416,8 +331,6 @@ class JanelaDeBusca:
             pedido = pedido_a_ponte(
                 "descobrir", self.adaptador, segundos=self.segundos, caminho=self.caminho
             )
-            # A trava cobre o NASCIMENTO da busca da ponte: ela não começa a
-            # varrer no meio do gesto de outro motor.
             with bluez_dbus.na_trava(QUEM):
                 self._processo = self._abrir(pedido)
         except TravaOcupadaError as ocupada:
@@ -447,8 +360,6 @@ class JanelaDeBusca:
             return f"o BlueZ não abriu a busca: {escrita.erro or escrita.mensagem}"
         self._no_do_adaptador = no
         self._fim = time.monotonic() + self.segundos
-        # A busca é da conexão do dono, que vive o processo inteiro: sem este
-        # relógio, uma janela esquecida varreria até o daemon sair.
         self._relogio = threading.Timer(self.segundos, self.fechar)
         self._relogio.daemon = True
         self._relogio.start()
@@ -480,13 +391,7 @@ class JanelaDeBusca:
                 )
 
     def _ler(self) -> None:
-        """O fio que lê o fluxo da ponte. Engole tudo, de propósito.
-
-        O ``except`` largo é o contrato do fio: uma exceção aqui não tem quem a
-        receba — o fio morre calado e o traceback vai para o ``stderr`` de
-        ninguém. Engolir e deixar a lista como está devolve a tela ao estado de
-        "ninguém apareceu ainda", que é degradação, não quebra.
-        """
+        """O fio que lê o fluxo da ponte. Engole tudo, de propósito."""
         processo = self._processo
         if processo is None or processo.stdout is None:
             return
@@ -549,12 +454,9 @@ class JanelaDeBusca:
         if dono is not None:
             if self._relogio is not None and self._relogio is not threading.current_thread():
                 self._relogio.cancel()
-            # O relógio e quem chama podem fechar juntos: um só para a busca.
             with self._tranca_de_fechar:
                 if not self._no_do_adaptador or self._fechada:
                     return
-                # Colhe antes de parar: sem a busca, o BlueZ recolhe os
-                # aparelhos que ela achou e que ninguém pareou.
                 self._colher()
                 self._fechada = True
                 dono.parar_busca(self._no_do_adaptador, quem=QUEM)
@@ -581,17 +483,9 @@ class JanelaDeBusca:
     def __exit__(self, *_: object) -> None:
         self.fechar()
 
-    # -- o gesto que ela pede -------------------------------------------------
 
     def parear(self, endereco: str) -> Resultado:
-        """Pareia ESTE endereço, e só enquanto a janela estiver aberta.
-
-        A recusa com a janela fechada não é zelo: o BlueZ recolhe os
-        dispositivos que a varredura achou quando ela termina, e o ``Pair()``
-        cairia num caminho D-Bus que não existe mais. Recusar com a frase certa
-        manda a pessoa procurar de novo; deixar tentar entregaria a mensagem do
-        BlueZ, que não diz o que fazer.
-        """
+        """Pareia ESTE endereço, e só enquanto a janela estiver aberta."""
         alvo = mac_limpo(endereco)
         if alvo is None:
             return Resultado(ESTADO_NAO_DEU, FRASE_NAO_PAREOU)
@@ -644,11 +538,7 @@ class JanelaDeBusca:
 
 
 def _esquecer_pela_ponte(adaptador: str, aparelho: str) -> tuple[bool, str]:
-    """O verbo ``esquecer`` da ponte root — o mesmo que a central usa no mover.
-
-    Import tardio: a central importa ESTE módulo, e o dono do embrulho do verbo
-    é ela (``central_do_radio.esquecer_pela_ponte``, que recusa sob a suíte).
-    """
+    """O verbo ``esquecer`` da ponte root — o mesmo que a central usa no mover."""
     from hefesto_dualsense4unix.integrations.central_do_radio import esquecer_pela_ponte
 
     return esquecer_pela_ponte(adaptador, aparelho)
@@ -663,26 +553,7 @@ def esquecer_o_pareamento(
     quem: str = QUEM,
     prazo_s: float = PRAZO_DA_TRAVA_DO_ESQUECER_S,
 ) -> Resultado:
-    """O X da tela: o pareamento DESTE aparelho NESTE adaptador sai — e só ele.
-
-    O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026), item 3 dela: *«precisamos
-    de um x pra indicar que vamos desconectar tal controle (Limpar a chave de
-    registro de tal controle ali)»*. A «chave de registro» é a chave do
-    pareamento no BlueZ, e ela sai pelos dois caminhos que a central já usa no
-    mover (``_esquecer``): o ``RemoveDevice`` do dono, que tira o objeto e a
-    pasta do bond, e o verbo ``esquecer`` da ponte privilegiada — o cache SDP
-    e a LÁPIDE, sem a qual o autorestore ressuscita o bond. Nada daqui escreve
-    em ``/var/lib/bluetooth``: quem escreve lá é o ``bluetoothd`` e a ponte.
-
-    **Nunca em lote, e nunca noutro adaptador**: o endereço do adaptador é
-    parte do pedido, e o objeto é resolvido POR ELE (o ``hciN`` é sorteio de
-    enumeração). Vale com o controle ligado (o ``RemoveDevice`` o derruba) ou
-    desligado, e vale para a meia chave que um ``Pair`` deixou sem o HID chegar.
-
-    Idempotente: sem objeto no BlueZ, só a ponte age (a lápide não duplica o
-    efeito). Deu quando o BlueZ tirou o objeto OU a ponte esqueceu — uma lápide
-    que faltou fica no log, como no mover. Nunca levanta.
-    """
+    """O X da tela: o pareamento DESTE aparelho NESTE adaptador sai — e só ele."""
     from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
     alvo_adaptador = mac_limpo(adaptador)
@@ -715,14 +586,7 @@ def esquecer_o_pareamento(
 def impedimentos(
     caminho: str = PONTE_INSTALADA, segundos: int = SEGUNDOS_DA_JANELA
 ) -> list[str]:
-    """Por que o pareamento pelo Hefesto não pode acontecer agora. Vazio = pode.
-
-    Delega à porta que a ``CONEXAO-ZUMBI-01`` já escreveu: ponte instalada,
-    ``sudo`` presente e a regra do ``sudoers.d`` no lugar. Escrever a mesma
-    sonda de novo aqui deixaria duas verdades sobre a mesma porta, que é o
-    defeito que esta casa mais paga. A sonda pergunta à regra as duas linhas
-    que este gesto vai pedir: o ``descobrir <segundos>`` e o ``parear``.
-    """
+    """Por que o pareamento pelo Hefesto não pode acontecer agora. Vazio = pode."""
     return PontePrivilegiada(caminho=caminho).impedimentos_do_pedido(
         pedido_a_ponte("descobrir", segundos=_segundos_validos(segundos), caminho=caminho),
         pedido_a_ponte("parear", caminho=caminho),
@@ -739,15 +603,7 @@ def procurar(
     conferir_a_porta: bool = True,
     dono: bluez_dbus.LeitorDoBluez | None = None,
 ) -> Resultado:
-    """Abre a janela, espera ela fechar e devolve os candidatos.
-
-    **Bloqueia pelos segundos pedidos.** Não existe para o tique: existe para o
-    fio que a aba já sabe abrir. Quem quiser mostrar a lista crescendo usa a
-    :class:`JanelaDeBusca` direto.
-
-    A porta privilegiada só é conferida quando a janela é a da PONTE: pelo
-    dono vivo não há ``sudo`` no caminho.
-    """
+    """Abre a janela, espera ela fechar e devolve os candidatos."""
     janela = JanelaDeBusca(
         adaptador, segundos, caminho=caminho, abrir=abrir, correr=correr, dono=dono
     )
@@ -770,11 +626,6 @@ def procurar(
     if not achados:
         return Resultado(ESTADO_NINGUEM, FRASE_NINGUEM)
     return Resultado(ESTADO_ACHOU, "", achados)
-
-
-# A CONTA DA JANELA (`segundos_ate`) SAIU EM 28/09/2026: o desenho aprovado do
-# «Conectar» não conta para baixo — diz «Segure PS + Create» e, sem chegada,
-# «Não Conectou» (decisões de 23/09). Uma contagem seria tela nova.
 
 
 __all__ = [

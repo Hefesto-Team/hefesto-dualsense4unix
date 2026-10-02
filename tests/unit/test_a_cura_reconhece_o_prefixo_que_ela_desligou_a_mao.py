@@ -1,36 +1,8 @@
-"""O estado REAL da máquina dela em 23/08/2026, e a cura tem de conviver com ele.
-
-ENGASGO-VULKAN-01. Para medir o A/B, os dois manifestos do Epic foram
-renomeados **à mão** no prefixo do Sackboy (appid 1599660):
-
-    EOSOverlayVkLayer-Win64.json  ->  EOSOverlayVkLayer-Win64.json.desligado
-    EOSOverlayVkLayer-Win32.json  ->  EOSOverlayVkLayer-Win32.json.desligado
-
-O `system.reg` NÃO mudou: as duas entradas continuam lá, nas duas chaves, em
-`dword:00000000` — que é **LIGADA**. Conferido no arquivo de verdade nesta
-data, com `grep`, antes de escrever este teste.
-
-É um estado meio-termo que engana fácil, e por isso tem portão próprio:
-
-- pelo **registro**, a camada está ligada e é candidata — e é ela que volta a
-  carregar no instante em que alguém desfizer a renomeação;
-- pelo **disco**, ela é inerte agora, porque o carregador Vulkan não acha o
-  manifesto no caminho registrado.
-
-Dizer só "ligada" seria mentira de instrumento; dizer só "desligada" seria
-pior, porque esconderia que a volta é um `mv` de distância. E a instrução foi
-explícita: **não desfazer** o que ela deixou — a cura age no registro, nunca no
-arquivo dela.
-"""
+"""O estado REAL da máquina dela em 23/08/2026, e a cura tem de conviver com ele."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES de qualquer import de
-# `emulation_actions`, que faz `import gi` incondicional no próprio módulo
-# (`emulation_actions.py:15`). Sem ela, este arquivo nunca plantava stub nem
-# pulava — estourava ERRO DE COLETA no CI sem PyGObject (medido: simulação do
-# job `lint-test` com `gi`/`cairo` bloqueados via `sys.meta_path`).
 exigir_gi_real("frase do censo do modo jogo")
 
 from pathlib import Path
@@ -40,8 +12,6 @@ import pytest
 from hefesto_dualsense4unix.app.actions.emulation_actions import frase_do_censo
 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
-#: Os dois caminhos como estão no `system.reg` dela (a pasta longa do EOS foi
-#: encurtada; o que morde é o nome do manifesto e as DUAS larguras).
 WIN64 = (
     r"C:\Program Files (x86)\Epic Games\Epic Online Services"
     r"\managedArtifacts\98bc04bc842e4906993fd6d6644ffb8d"
@@ -49,8 +19,6 @@ WIN64 = (
 )
 WIN32 = WIN64.replace("Win64", "Win32")
 
-#: O sufixo que ela usou. É o nome real no disco — não `-para-medir`, não
-#: `.disabled`.
 SUFIXO_DELA = ".desligado"
 
 
@@ -79,7 +47,6 @@ def prefixo_dela(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         ),
         encoding="utf-8",
     )
-    # Os manifestos EXISTEM, mas com o sufixo dela — que é o ponto todo.
     pasta = cv.caminho_no_prefixo(raiz, WIN64)
     assert pasta is not None
     pasta.parent.mkdir(parents=True)
@@ -96,11 +63,6 @@ def _manifestos_no_disco(raiz: Path) -> set[str]:
     alvo = cv.caminho_no_prefixo(raiz, WIN64)
     assert alvo is not None
     return {p.name for p in alvo.parent.iterdir()}
-
-
-# ---------------------------------------------------------------------------
-# 1. A leitura conta a verdade inteira: viva no registro, ausente no disco
-# ---------------------------------------------------------------------------
 
 
 def test_a_camada_renomeada_a_mao_esta_ligada_no_registro_e_ausente_no_disco(
@@ -131,11 +93,6 @@ def test_o_produto_diz_pendurada_e_nao_ligada_seco(prefixo_dela: Path) -> None:
             )
 
 
-# ---------------------------------------------------------------------------
-# 2. A cura age no REGISTRO — e não encosta no que ela renomeou
-# ---------------------------------------------------------------------------
-
-
 def test_curar_desliga_as_duas_entradas_sem_tocar_nos_arquivos_dela(
     prefixo_dela: Path, tmp_path: Path
 ) -> None:
@@ -159,7 +116,6 @@ def test_curar_desliga_as_duas_entradas_sem_tocar_nos_arquivos_dela(
 
     texto = (prefixo_dela / "pfx" / "system.reg").read_text(encoding="utf-8")
     assert texto.count("=dword:00000001") == 2
-    # O driver, na chave dele, intocado.
     assert '"C:\\\\windows\\\\system32\\\\winevulkan.json"=dword:00000000' in texto
 
     assert _manifestos_no_disco(prefixo_dela) == antes, (
@@ -188,11 +144,6 @@ def test_devolver_volta_byte_a_byte_e_os_arquivos_dela_seguem_como_estavam(
     assert _manifestos_no_disco(prefixo_dela) == arquivos
 
 
-# ---------------------------------------------------------------------------
-# 3. O gancho de lançamento não briga com a escolha dela
-# ---------------------------------------------------------------------------
-
-
 def test_o_lancamento_seguinte_nao_desfaz_a_devolucao_dela(
     prefixo_dela: Path, tmp_path: Path
 ) -> None:
@@ -205,7 +156,6 @@ def test_o_lancamento_seguinte_nao_desfaz_a_devolucao_dela(
         cv.prefixo_de_jogo(prefixo_dela, appid="1599660"), religar=True, home=casa
     )
 
-    # É por aqui que o `hefesto-launch.sh` entra, e ele nunca força.
     resultado = cv.curar_um_prefixo(prefixo_dela, appid="1599660", home=casa)
     assert resultado.desligadas == ()
     assert sorted(resultado.respeitadas) == [

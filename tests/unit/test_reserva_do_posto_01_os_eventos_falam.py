@@ -1,23 +1,4 @@
-"""RESERVA-DO-POSTO-01 §5 — os três desfechos da reserva falam no journal.
-
-O defeito, medido em 26/08/2026: dos três eventos do mecanismo que decide QUEM
-é o Jogador 1 depois de uma piscada no rádio, só o BEM-SUCEDIDO aparecia numa
-instalação normal.
-
-    primario_deposto_reservado   -> logger.debug   (invisível em INFO)
-    primario_reserva_caducou     -> logger.debug   (invisível em INFO)
-    primario_retomou_o_posto     -> logger.info    (o único que aparecia)
-
-O nível padrão do produto é INFO (`utils/logging_config.py`). Perguntar a esse
-journal com que frequência o posto se perde seria contar apenas as amostras que
-confirmam a resposta desejada — e a decisão que espera essa medição é o valor
-de `PRIMARIO_RESERVA_SEC`, que **não se mexe aqui**: ele só se decide depois da
-bancada, e a bancada é dela.
-
-A régua deste arquivo é o CONFIG REAL do produto, no nível PADRÃO: se os
-eventos voltarem a `debug`, eles somem daqui exatamente como sumiam do journal
-dela.
-"""
+"""RESERVA-DO-POSTO-01 §5 — os três desfechos da reserva falam no journal."""
 from __future__ import annotations
 
 import io
@@ -34,7 +15,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
     PyDualSenseController,
 )
 
-#: Endereços didáticos da casa — máscara de octetos 4 e 5 zerados.
 P1 = "aabbcc0000f1"
 P2 = "aabbcc0000f2"
 
@@ -85,7 +65,6 @@ def _backend(handles: dict[str, _HandleFalso], primario: str | None) -> PyDualSe
     ctrl._evdev = _EvdevMudo()
     ctrl._transport = None
     ctrl._relogio = _Relogio()
-    # O transporte real abriria o handle; aqui o que se mede é o journal.
     ctrl._detect_transport = lambda handle: "bt"  # type: ignore[method-assign]
     return ctrl
 
@@ -136,15 +115,7 @@ def _nomes(buf: io.StringIO) -> list[str]:
 
 
 def test_a_regua_recusa_o_que_esta_abaixo_do_padrao(journal: io.StringIO) -> None:
-    """Valida o INSTRUMENTO antes de acreditar nele: em INFO, `debug` não passa.
-
-    Sem esta linha, um buffer que capturasse TUDO faria os três eventos
-    aparecerem mesmo em `debug`, e a régua diria "verde" para o defeito.
-
-    Se ESTA linha reprovar, o produto não está no nível padrão: alguém exportou
-    `HEFESTO_DUALSENSE4UNIX_LOG_LEVEL=DEBUG`, e a pergunta deste arquivo — "o
-    que o journal dela guarda sem ninguém pedir nada" — não tem como ser feita.
-    """
+    """Valida o INSTRUMENTO antes de acreditar nele: em INFO, `debug` não passa."""
     bp.logger.info("evento_de_teste_em_info", key=P1)
     bp.logger.debug("evento_de_teste_em_debug", key=P1)
 
@@ -156,26 +127,19 @@ def test_a_regua_recusa_o_que_esta_abaixo_do_padrao(journal: io.StringIO) -> Non
 
 
 def test_a_queda_aparece_no_nivel_padrao(journal: io.StringIO) -> None:
-    """A MORDIDA: os três desfechos da reserva, todos visíveis em INFO.
-
-    Devolvendo qualquer um deles a `logger.debug`, sobra só o desfecho
-    bem-sucedido e o teste reprova nomeando os que sumiram.
-    """
-    # 1. o primário cai e o posto fica reservado a ele
+    """A MORDIDA: os três desfechos da reserva, todos visíveis em INFO."""
     reserva = _backend({P1: _HandleFalso()}, primario=P1)
     reserva._reservar_o_posto_de_primario(P1)
 
-    # 2. ele não volta a tempo — a reserva caduca
     caduca = _backend({P2: _HandleFalso()}, primario=P2)
     caduca._reservar_o_posto_de_primario(P1)
     caduca._relogio.agora += PRIMARIO_RESERVA_SEC + 1.0
     assert caduca._posto_reservado_de_volta() is None
 
-    # 3. e o desfecho que sempre apareceu: ele volta dentro da janela
     handles = {P2: _HandleFalso(), P1: _HandleFalso()}
     retoma = _backend(handles, primario=P1)
     retoma._reservar_o_posto_de_primario(P1)
-    retoma._primary_key = P2  # o outro sentou no posto enquanto ele estava fora
+    retoma._primary_key = P2
     retoma._recompute_primary()
     assert retoma._primary_key == P1
 
@@ -196,11 +160,7 @@ def test_a_queda_aparece_no_nivel_padrao(journal: io.StringIO) -> None:
 def test_os_tres_eventos_correlacionam_pelo_mesmo_endereco(
     journal: io.StringIO,
 ) -> None:
-    """Os três carregam a chave `key` — é ela que casa reserva com desfecho.
-
-    Sem a chave em comum, três linhas soltas no journal não dizem se o controle
-    que caiu foi o mesmo que voltou.
-    """
+    """Os três carregam a chave `key` — é ela que casa reserva com desfecho."""
     handles = {P2: _HandleFalso(), P1: _HandleFalso()}
     backend = _backend(handles, primario=P1)
     backend._reservar_o_posto_de_primario(P1)
@@ -217,7 +177,7 @@ def test_os_tres_eventos_correlacionam_pelo_mesmo_endereco(
         for evento in _eventos(journal)
         if str(evento.get("event")).startswith("primario_")
     ]
-    assert len(dos_tres) == 4  # duas reservas + a retomada + a caducidade
+    assert len(dos_tres) == 4
     sem_chave = [e["event"] for e in dos_tres if e.get("key") != P1]
     assert not sem_chave, (
         f"{sem_chave} não trouxe `key={P1}` — sem a chave de correlação as "

@@ -60,25 +60,15 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
-#: A mesa dela, com endereços da faixa sintética que o portão de anonimato
-#: exige em `tests/`. A divisão é a real: 1 / 2 / 1 em três adaptadores.
 UM = "aabbcc000001"
 DOIS = "aabbcc000002"
 TRES = "aabbcc000003"
 QUATRO = "aabbcc000004"
 
-#: Os três adaptadores, na MESMA faixa sintética `aa:bb:cc` (a única que o
-#: `test_anonimato_de_fixtures` aceita em `tests/`). O OUI comum não é acidente
-#: do cenário, é o caso que interessa: os dois 5.4 da bancada dela também
-#: compartilham o OUI, e um instrumento que trunque o endereço os funde num só —
-#: foi o que aconteceu com um `grep` de `HID_PHYS` em 22/08, que contou 3/1/0
-#: onde o produto contava 1/2/1. Aqui os TRÊS compartilham, e o produto continua
-#: tendo de contar três.
 ADAPTADOR_A = "aa:bb:cc:00:00:0a"
 ADAPTADOR_B = "aa:bb:cc:00:00:41"
 ADAPTADOR_C = "aa:bb:cc:00:00:ce"
 
-#: `{uniq: adaptador}` — a divisão 1/2/1 da bancada.
 MESA = {UM: ADAPTADOR_A, DOIS: ADAPTADOR_B, TRES: ADAPTADOR_B, QUATRO: ADAPTADOR_C}
 
 
@@ -106,9 +96,7 @@ def _controles() -> list[dict[str, Any]]:
     ]
 
 
-# ===========================================================================
 # 1. O elo do daemon: o `state_full` diz de QUEM é cada ponte
-# ===========================================================================
 
 
 class _Ponte:
@@ -171,12 +159,7 @@ class TestOStateFullDizDeQuemEACadaPonte:
     async def test_sem_subsystem_o_bloco_diz_desligado_e_a_lista_vem_vazia(
         self, servidor: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O controle negativo: a chave EXISTE, e é uma lista vazia.
-
-        Ausência da chave e lista vazia dizem a mesma coisa para o medidor, mas
-        só a chave presente permite à seção da mesa distinguir "daemon velho" de
-        "nenhuma ponte de pé" sem inventar um terceiro estado.
-        """
+        """O controle negativo: a chave EXISTE, e é uma lista vazia."""
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         socket_path, _daemon = servidor
         bloco = (await _state_full(socket_path))["bt_mic"]
@@ -189,16 +172,9 @@ class TestOStateFullDizDeQuemEACadaPonte:
     async def test_o_state_full_publica_de_quem_e_cada_ponte(
         self, servidor: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida principal desta entrega.
-
-        Sem esta chave a seção "A mesa" lê ausência, vira conjunto vazio, e a
-        barra pinta áudio zero com quatro microfones abertos.
-        """
+        """A mordida principal desta entrega."""
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         socket_path, daemon_mock = servidor
-        # A fonte mora no `DaemonConfig` — é dela que o `enabled` sai. O
-        # subsystem guarda a MESMA config no `start`, e é dela que o filtro por
-        # controle sai. Montar as duas é montar o daemon como ele é.
         daemon_mock.config.bt_mic_uniqs = lambda: frozenset({UM, TRES})
         subsystem = BtMicSubsystem()
         subsystem._config = daemon_mock.config
@@ -218,17 +194,13 @@ class TestOStateFullDizDeQuemEACadaPonte:
     async def test_o_pedido_que_nao_subiu_nao_pinta_a_barra(
         self, servidor: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O produto responde pelo EFEITO, nunca pelo pedido.
-
-        libopus ausente, hidraw recusado: dois pedidos no `maquina.json`, uma
-        ponte de pé. Só a que subiu ocupa fatia de rádio, e só ela é relatada.
-        """
+        """O produto responde pelo EFEITO, nunca pelo pedido."""
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         socket_path, daemon_mock = servidor
         daemon_mock.config.bt_mic_uniqs = lambda: frozenset({UM, DOIS})
         subsystem = BtMicSubsystem()
         subsystem._config = daemon_mock.config
-        subsystem._gerenciador = _Gerenciador(UM)  # só o UM subiu
+        subsystem._gerenciador = _Gerenciador(UM)
         daemon_mock._bt_mic_subsystem = subsystem
 
         bloco = (await _state_full(socket_path))["bt_mic"]
@@ -263,11 +235,6 @@ class TestOStateFullDizDeQuemEACadaPonte:
         assert bloco["motivo"] == bt_mic.MOTIVO_SEM_A_GUARDA
 
 
-# ===========================================================================
-# 2. O elo da janela: a seção "A mesa" lê a chave e a barra se mexe
-# ===========================================================================
-
-
 def _com_mic_da_secao(estado: dict[str, Any]) -> frozenset[str]:
     """O que a seção "A mesa" extrai do `state_full`, pelo código de produção.
 
@@ -279,7 +246,7 @@ def _com_mic_da_secao(estado: dict[str, Any]) -> frozenset[str]:
     painel = _PainelDaMesa.__new__(_PainelDaMesa)
     painel._controles = []
     painel._com_mic = frozenset()
-    with contextlib.suppress(Exception):  # o redesenho pede widgets que não há
+    with contextlib.suppress(Exception):
         painel._aplicar_estado(estado)
     return painel._com_mic
 
@@ -346,12 +313,7 @@ class TestABarraSeMexe:
     def test_com_os_quatro_microfones_o_pior_radio_continua_abaixo_do_teto(
         self,
     ) -> None:
-        """A pergunta que ela vai fazer ao ver o interruptor: *cabe em quatro?*
-
-        Com três adaptadores e a divisão 1/2/1, a resposta é sim, e com folga —
-        é a conta que justificou a compra do terceiro dongle. Uma mesa cheia num
-        adaptador só não caberia, e é por isso que o número importa.
-        """
+        """A pergunta que ela vai fazer ao ver o interruptor: *cabe em quatro?*"""
         listar, ler = _bancada()
         ocupacoes = ocupacao_por_adaptador(
             _controles(), com_ponte_de_mic=list(MESA), listar=listar, ler=ler
@@ -373,13 +335,7 @@ class TestABarraSeMexe:
         assert ocupacoes[ADAPTADOR_C].slots_audio == 0.0
 
     def test_dois_adaptadores_do_mesmo_oui_nao_se_fundem(self) -> None:
-        """O aviso de produto que a bancada deu em 22/08.
-
-        Os dois 5.4 dela têm o mesmo OUI. Qualquer leitura que trunque o
-        endereço os conta como um só — o `grep` de `HID_PHYS` daquela passagem
-        contou 3/1/0 onde o produto contava 1/2/1. O produto acerta porque usa o
-        endereço INTEIRO, e este caso é o que impede a regressão.
-        """
+        """O aviso de produto que a bancada deu em 22/08."""
         assert ADAPTADOR_A[:8] == ADAPTADOR_B[:8] == ADAPTADOR_C[:8], (
             "o cenário perdeu o OUI comum, que é a coisa toda que ele mede"
         )

@@ -1,58 +1,4 @@
-"""aba_conexoes — as frases, os desenhos e as contas da aba 08, sem GTK.
-
-A aba **Conexões** no motor novo: o mockup aprovado (`08-conexoes.html`) rodando
-num ``WebKit2.WebView``. Quem a PINTA é o pacote
-``interface/pacotes/a08_conexoes.py``; este módulo é o que ele e o gerador do
-desenho pedem — o selo de cada estado, o controle de uma linha, o teto da
-vibração, o mapa do gabinete. A pintura e o ouvinte próprios desta camada
-saíram em 28/09/2026 (ver o bloco «O pacote de um tique»). A janela, as duas
-pontes e a guarda de carga **não estão aqui**: são de
-:mod:`hefesto_dualsense4unix.gui.ponte_da_tela`, que nasceu para as dez abas.
-
-POR QUE ELE NÃO IMPORTA GTK, NEM LÊ ``/sys``, NEM FALA COM O DAEMON
--------------------------------------------------------------------
-Tudo aqui é função pura sobre dado já lido. Quem lê é quem chama — o piloto, a
-GUI ou a régua —, e passa o resultado por argumento. São três consequências
-medidas, não gosto:
-
-1. **A régua mede este código, não uma cópia dele.** A régua da aba Controles
-   herda o piloto justamente para isso; aqui ela nem precisa herdar: chama a
-   mesma função que a interface chama.
-2. **Os portões alcançam.** Os comandos exatos do CI são ``ruff check src/
-   tests/`` e ``mypy src/hefesto_dualsense4unix``, e nenhum dos dois alcança
-   ``scripts/`` ou ``novo-layout/`` (que é ``.gitignore:108`` e não viaja em
-   worktree nenhum).
-3. **O dublê é o caso normal, não um modo de teste.** Os três quadros desta aba
-   são alimentáveis por injeção — ``mesa_de_radio.ler_a_mesa`` recebe os
-   leitores, ``radio_da_mesa.ocupacao_por_adaptador`` também, e o exame recebe os
-   :class:`~hefesto_dualsense4unix.integrations.exame_da_mesa.Item` prontos. Foi
-   assim que esta aba se ligou inteira com o daemon dela DESLIGADO.
-
-A GRAMÁTICA DOS ENDEREÇOS
--------------------------
-Proposta na ``MIGRA-CONEXOES-03`` e adotada aqui sem mudança, porque duas
-gramáticas de endereço seriam a segunda verdade que a regra do fato errado existe
-para matar:
-
-* ``data-v="<família>.<campo>"`` — o endereço de um valor;
-* o ``data-g="<gesto>"`` e a lista ``GESTOS`` saíram em 28/09/2026 com a
-  pintura da bancada: a página aprovada fala ``data-gesto``, e quem recusa o
-  gesto sem dono é o registro ``interface/pacotes``;
-* a chave de um controle é o ``uniq``, **nunca** o ``p1``/``p2`` do mockup. O
-  ``p1..p4`` é posição na mesa de exemplo, e endereço por posição é o "jogador 3
-  fantasma" voltando pela porta dos atributos. :func:`endereco_por_posicao`
-  existe para uma régua poder reprovar isso.
-
-**O endereço nasce na mesma f-string do valor** (:func:`html_da_ordem`), e é
-por isso que ele não pode divergir dele: não há uma tabela de endereços de um
-lado e uma pintura do outro.
-
-O QUE ESTA ABA MOSTRA E O PRODUTO NÃO SABE
-------------------------------------------
-Está em :data:`SEM_FONTE`, com o motivo de cada um. **Um número plausível e falso
-é pior que um traço honesto**, porque ela confia nele: o que não tem fonte é
-pintado como :data:`TRACO` e a régua exige que continue assim.
-"""
+"""aba_conexoes — as frases, os desenhos e as contas da aba 08, sem GTK."""
 from __future__ import annotations
 
 import html
@@ -60,24 +6,13 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-#: O que se escreve onde não há dado. Um traço é uma resposta; um número
-#: inventado é uma mentira que ninguém audita depois.
 TRACO = "—"
 
-#: As famílias de endereço desta aba. Uma família por bloco da tela, e o
-#: conjunto é FECHADO: endereço fora dele é endereço órfão — alguém o escreveu e
-#: ninguém o pinta —, e :func:`familia_de` o recusa.
 FAMILIAS: frozenset[str] = frozenset(
     {"mesa", "controle", "exame", "ordem", "adaptador", "vizinho", "pista", "rodape"}
 )
 
 
-#: O QUE A TELA MOSTRA E O PRODUTO NÃO TEM DE ONDE TIRAR — declarado, nunca
-#: inventado. Cada linha é ``(endereço, o que falta, quem fecha)``.
-#:
-#: Isto não é lápide calada: as três primeiras têm sprint com dono, e as duas
-#: últimas são contradições entre dois documentos que ela aprovou — quem as fecha
-#: é uma frase dela, não um agente.
 SEM_FONTE: tuple[tuple[str, str, str], ...] = (
     (
         "exame.quando",
@@ -102,7 +37,7 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
     (
         "controle.*.vibracao.sem-teto",
         "'Sem teto' é a única das TRÊS opções sem representação possível: "
-        "`ControllerRumbleOverride` (`profiles/schema.py:1198`) só diz QUAL "
+        "`ControllerRumbleOverride` (`profiles/schema.py:752`) só diz QUAL "
         "política a peça usa, nunca 'esta peça ignora o teto do orçamento'; e o "
         "`min` que imporia um teto de verdade vive em "
         "`core.rumble._effective_mult`, que não conhece `uniq` e roda antes de a "
@@ -130,12 +65,7 @@ class EnderecoInvalido(ValueError):  # noqa: N818 — o projeto é em português
 
 
 def familia_de(endereco: str) -> str:
-    """A família de um ``data-v``, recusando o que está fora do conjunto fechado.
-
-    Recusar aqui, e não na régua, é o que impede um endereço órfão de nascer:
-    quem escrever ``data-v="controles.p1"`` (plural, e por posição) descobre no
-    ato, não três abas depois.
-    """
+    """A família de um ``data-v``, recusando o que está fora do conjunto fechado."""
     familia = endereco.split(".", 1)[0]
     if familia not in FAMILIAS:
         raise EnderecoInvalido(
@@ -145,12 +75,7 @@ def familia_de(endereco: str) -> str:
 
 
 def endereco_por_posicao(endereco: str) -> bool:
-    """O endereço fala de POSIÇÃO na mesa em vez de identidade?
-
-    ``controle.p1.bateria`` é o jogador fantasma voltando: o ``p1..p4`` do mockup
-    é a ordem da mesa de exemplo, e a mesa de verdade muda de ordem quando um
-    controle sai. A chave tem de ser o ``uniq``.
-    """
+    """O endereço fala de POSIÇÃO na mesa em vez de identidade?"""
     return any(
         pedaco[:1] == "p" and pedaco[1:].isdigit() for pedaco in endereco.split(".")
     )
@@ -169,40 +94,18 @@ def v(*partes: str) -> str:
 
 
 def _e(texto: object) -> str:
-    """Escapa para HTML. Todo texto que vem de fora passa por aqui.
-
-    Um adaptador chamado ``Sala <do fundo>`` não pode virar tag, e um apelido com
-    aspas não pode fechar o atributo em que ele está.
-    """
+    """Escapa para HTML. Todo texto que vem de fora passa por aqui."""
     return html.escape(str(texto), quote=True)
 
 
-# ---------------------------------------------------------------------------
-# Quadro 1 — Gestão Controles
-# ---------------------------------------------------------------------------
-#: Como a tela chama cada transporte. O produto diz ``usb``/``bt``.
-#:
-#: É A PALAVRA DA TELA DESDE 21/09/2026, decisão dela (a I9 revogada): USB e
-#: BT, nunca cabo e rádio. O dono da casa é
-#: ``home_actions._PALAVRA_DO_TRANSPORTE``, e este módulo não o importa porque
-#: nasceu puro (o gerador da 08 roda sem o ``structlog``): quem impede as duas
-#: tabelas de divergirem é ``tests/unit/test_as_frases_que_a_bancada_achou.py``,
-#: que pergunta ao dono.
 NOME_DO_TRANSPORTE = {"usb": "USB", "bt": "BT", "bluetooth": "BT"}
 
-#: Como a tela chama cada máscara. É o ``flavor`` do produto, e ele é GLOBAL —
-#: veja :data:`SEM_FONTE`.
 NOME_DA_MASCARA = {"dualsense": "DualSense", "xbox": "Xbox 360", "nintendo": "Nintendo Pro"}
 
 
 @dataclass(frozen=True)
 class Controle:
-    """Uma linha do quadro "Gestão Controles" — só o que ESTA aba mostra.
-
-    ``plastico`` é a cor lida do aparelho, ``""`` quando ninguém a leu. A borda
-    fica neutra nesse caso, e é a regra da tela: *uma borda colorida seria uma
-    cor que ninguém leu*.
-    """
+    """Uma linha do quadro "Gestão Controles" — só o que ESTA aba mostra."""
 
     uniq: str
     jogador: int
@@ -250,23 +153,7 @@ class Controle:
 
 
 def texto_da_contagem(controles: Sequence[Controle]) -> str:
-    """``4 controles • 2 USB • 2 BT`` — o canto do quadro 1.
-
-    A PALAVRA DO TRANSPORTE É USB E BT DESDE 24/09/2026
-    (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Ela era «2 no cabo • 2 no rádio», e a
-    razão de a contagem não ter acompanhado a tela — *"2 cabo · 0 rádio" não é
-    português*, a D-05 — caiu com a decisão dela de 21/09 (a I9 revogada): a
-    tela diz USB e BT, e «2 USB» é português. A palavra é a de
-    :data:`NOME_DO_TRANSPORTE`, a mesma do nome da linha.
-
-    O TRANSPORTE SEM CONTROLE NÃO APARECE, pela decisão dela de 17/09 que o
-    canto de cima já segue (``mesa_viva.frase_dos_transportes``): o que não
-    está lá não se escreve. E um controle só é «1 controle».
-
-    A PALAVRA "mesa" SAIU EM 05/09/2026, ordem dela: *"não é pra ter mesa em
-    nada da interface"*. O número já dizia o que ela precisava; a palavra só
-    acrescentava um jargão desta casa à tela de quem joga.
-    """
+    """``4 controles • 2 USB • 2 BT`` — o canto do quadro 1."""
     radio = sum(1 for c in controles if c.pelo_radio)
     usb = len(controles) - radio
     pedacos = [f"{len(controles)} {'controle' if len(controles) == 1 else 'controles'}"]
@@ -277,18 +164,8 @@ def texto_da_contagem(controles: Sequence[Controle]) -> str:
     return " • ".join(pedacos)
 
 
-#: A opção que NÃO grava nada. O merge do perfil é POR CAMPO
-#: (`profiles/manager._controllers_to_rumble_scales:1864-1866` pula quem não tem
-#: `policy` em `model_fields_set`), então "seguir o global" é a ausência da
-#: chave — não um valor a escrever.
 SEGUE_O_GLOBAL = "Segue o global"
 
-#: A CLÁUSULA DE QUANDO A FORÇA NÃO É CALCULÁVEL, e ela nunca é "Sem teto".
-#: Acontece em três casos, todos honestos: o serviço não publicou o
-#: `rumble_policy`, ele está em `auto` (degrau que muda com a bateria a cada
-#: tique), ou o `maquina.json` não deu para ler. Antes de 01/09/2026 os três
-#: viravam a afirmação em negrito **"Sem teto"** — a ausência de notícia lida
-#: como sucesso, no campo que ela clica.
 NAO_SEI_A_FORCA = "e não dá para dizer quanta força chega ao motor agora"
 
 
@@ -305,31 +182,7 @@ def por_cento(fracao: float) -> str:
 
 
 def fala_do_teto(chave: str | None) -> str:
-    """A frase de tela do teto que uma chave de ORÇAMENTO DA MESA impõe.
-
-    **ELA RESPONDE PELO ORÇAMENTO, E NÃO PELO "GLOBAL"** — a distinção custou os
-    quatro bloqueantes de 01/09/2026. O orçamento é o `maquina.json`, e o único
-    valor dele que impõe teto é o `economia`; a política de vibração que o
-    daemon está APLICANDO é outra coisa (`state['rumble_policy']`), e é ela que
-    multiplica o que chega ao motor. Chamar esta função de "o global" fez o `?`
-    da aba escrever *"o global vale Sem teto"* com o daemon cortando a 0,3.
-    Quem quer saber o que o global entrega hoje chama
-    :func:`~hefesto_dualsense4unix.core.rumble.forca_do_global`.
-
-    O NÚMERO NÃO SE CALCULA AQUI — 01/09/2026, segunda correção. Esta função
-    fazia `if chave != _ORCAMENTO_COM_TETO` e ia direto ao `RUMBLE_POLICY_MULT`,
-    que é a QUARTA grafia de um desvio que `core.rumble.teto_do_orcamento` já é
-    dono. Medido: com o dono mordido para 0,5, a aba Sistema dizia "50% da
-    força" e esta dizia "30%" — duas abas do mesmo produto, dois números para o
-    mesmo fato.
-
-    O IMPORT É TARDIO pela mesma razão dos outros dois desta casa
-    (:func:`_turnos` e o `ROTULO_SEM_FACE`): o topo deste arquivo é
-    `import html` e mais nada de produto. **Ele não puxa mais GTK**: o
-    `SEM_TETO` mudou-se para `core.rumble` justamente porque
-    `app.actions.config.secao_orcamento` arrasta `gi.repository.Gtk` no import,
-    e o docstring da linha 1 promete *"sem GTK"*.
-    """
+    """A frase de tela do teto que uma chave de ORÇAMENTO DA MESA impõe."""
     from hefesto_dualsense4unix.core.rumble import SEM_TETO, teto_do_orcamento
 
     teto = teto_do_orcamento(chave)
@@ -337,43 +190,18 @@ def fala_do_teto(chave: str | None) -> str:
 
 
 def opcoes_do_teto() -> tuple[str, str, str]:
-    """As três opções do campo, NA ORDEM DA TELA — o desenho que ela aprovou.
-
-    A ordem é a do mockup (`mockup/08-conexoes.html`), e ela não é alfabética:
-    primeiro a que não grava nada, depois as duas que sobrepõem. Quem confere um
-    clique confere contra esta lista, nunca contra três literais soltos — foi
-    assim que o `mic-existe` se protegeu de um rótulo traduzido.
-    """
+    """As três opções do campo, NA ORDEM DA TELA — o desenho que ela aprovou."""
     from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
 
     return (SEGUE_O_GLOBAL, fala_do_teto(""), fala_do_teto(_ORCAMENTO_COM_TETO))
 
 
-#: ONDE O TETO GLOBAL SE MUDA — e não é nesta aba. Decisão dela, 28/08/2026:
-#: *"Teto da Vibração, que na verdade é Perfil de Bateria"*. O dropdown dos três
-#: perfis do produto (`app/actions/config/secao_orcamento.py`) mora na aba
-#: **Sistema**; esta aba é LEITORA do global e sobrepõe-no por controle.
 CASA_DO_TETO_GLOBAL = "Perfil de Bateria"
 ABA_DO_TETO_GLOBAL = "Sistema"
 
 
 def politica_do_rotulo(rotulo: str) -> str | None:
-    """A ``policy`` de disco que uma opção do campo grava. ``None`` = não grava.
-
-    DUAS DAS TRÊS TÊM TRADUÇÃO, e a terceira não tem — está em :data:`SEM_FONTE`,
-    linha ``controle.*.vibracao.sem-teto``. Esta função **levanta** para ela em
-    vez de escolher uma tradução: cada escolha possível faz o rótulo mentir num
-    dos casos, e a frase que falta é dela.
-
-    O 0,667 DA RECUSA É DERIVADO, e não digitado — corrigido em 01/09/2026. Ele
-    estava escrito à mão em TRÊS lugares (aqui, no :data:`SEM_FONTE` acima e num
-    ``assert`` da régua), e a régua guardava o número DIGITADO: com o degrau
-    ``max`` mordido para 2,0 — quando a conta verdadeira vira 0,5 — os 18 casos
-    ficavam verdes e a frase mentia na tela dela. É a mesma forma do defeito que
-    :func:`fala_do_teto` cita como lição.
-
-    :raises ValueError: para "Sem teto" e para qualquer coisa fora da lista.
-    """
+    """A ``policy`` de disco que uma opção do campo grava. ``None`` = não grava."""
     from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
@@ -410,7 +238,7 @@ def rotulo_da_politica(policy: str | None) -> str | None:
     por controle, ela traduziria `balanceado` e `max` — os dois — como "Sem
     teto", que é justamente a opção sem tradução. Aqui a pergunta é outra: das
     quatro políticas que `ControllerRumbleOverride` aceita
-    (`profiles/schema.py:1198`), **uma só** tem opção no campo.
+    (`profiles/schema.py:752`), **uma só** tem opção no campo.
     """
     from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
 
@@ -435,10 +263,10 @@ class Vibracao:
     :param do_controle: ``controllers[uniq].rumble.policy`` do perfil — o
         override desta peça, ``None`` quando ela não sobrepõe nada.
     :param do_perfil: ``Profile.rumble.policy`` — **o DENOMINADOR**. O fator por
-        peça é RELATIVO a ele (`profiles/manager.py:3330`), e não à política que
+        peça é RELATIVO a ele (`profiles/manager.py:1959`), e não à política que
         multiplica. Sem opinião, o produto assume ``balanceado``.
     :param a_viva: ``state['rumble_policy']`` — **o que MULTIPLICA**, e é o único
-        "global" que o motor sente (`daemon/ipc_handlers.py:3439` publica o
+        "global" que o motor sente (`daemon/ipc_handlers.py:2493` publica o
         ``DaemonConfig.rumble_policy`` que `core.rumble._effective_mult` lê).
         ``None`` = o serviço não disse, e aí a tela não afirma número nenhum.
     :param orcamento: a chave do ``maquina.json`` — o teto por CIMA da viva,
@@ -463,18 +291,7 @@ class Vibracao:
 
 
 def forca_no_motor(v: Vibracao) -> float | None:
-    """A fração do que o JOGO pediu que chega ao motor DESTE controle.
-
-    ``None`` = não dá para afirmar, e a tela tem de dizer isso em vez de
-    escolher um número plausível.
-
-    **NENHUMA ARITMÉTICA NASCE AQUI.** Os dois fatores vêm dos donos que o
-    produto já usa — `core.rumble.forca_do_global` (o mesmo corpo que
-    `_effective_mult` roda no funil) e `profiles.manager.fator_da_unidade` (o
-    mesmo que `_controllers_to_rumble_scales` publica no backend). É o que faz a
-    régua da tela poder ser a régua do motor: morda um dos dois e as duas
-    reprovam juntas.
-    """
+    """A fração do que o JOGO pediu que chega ao motor DESTE controle."""
     from hefesto_dualsense4unix.core.rumble import forca_do_global
     from hefesto_dualsense4unix.profiles.manager import fator_da_unidade
 
@@ -490,27 +307,7 @@ def forca_no_motor(v: Vibracao) -> float | None:
 
 
 def teto_que_vale(v: Vibracao) -> tuple[str | None, str]:
-    """``(o que o CAMPO mostra, a frase de quem manda neste controle)``.
-
-    O QUE ELA DIZ É O QUE CHEGA AO MOTOR, e não o degrau nominal do rótulo —
-    corrigido em 01/09/2026, e é a diferença inteira. Com um override
-    ``economia`` (rótulo "30% da força"), o motor recebe **9%** se a política
-    viva for ``economia`` e **45%** se for ``max``: o fator da peça é RELATIVO
-    ao global do perfil e o global VIVO multiplica por cima. Medido, com a
-    cadeia inteira até ``_escalar_rumble``. A frase que dizia só o rótulo era um
-    campo chamado teto entregando acima do teto que promete.
-
-    O PRIMEIRO ITEM É ``None`` quando o campo não sabe mostrar a política
-    guardada. Quem pinta NÃO escreve nada no ``<select>`` nesse caso, e a razão
-    é medida: escrever num ``<select>`` um valor que não é opção nenhuma deixa
-    ``selectedIndex = -1``, e o ``escrever()`` do piloto contaria uma pintura
-    NOVA a cada tique para sempre — um contador que mente é pior que um campo
-    parado. A frase do ``?``, essa, diz o que há.
-
-    UMA FRASE POR CASO, não três pedaços costurados. Costurada, o texto saía
-    *"vale Sem teto, do global, na aba Sistema. O global hoje é Sem teto…"* —
-    "Sem teto" duas vezes na mesma dica.
-    """
+    """``(o que o CAMPO mostra, a frase de quem manda neste controle)``."""
     no_motor = forca_no_motor(v)
     entrega = (NAO_SEI_A_FORCA if no_motor is None
                else f"e o motor recebe <b>{por_cento(no_motor)}</b>")
@@ -522,10 +319,6 @@ def teto_que_vale(v: Vibracao) -> tuple[str | None, str]:
             f"o perfil guarda <code>{_e(v.do_controle)}</code> para este "
             f"controle, e este campo não sabe mostrar essa política — o perfil "
             f"manda, a caixa fica como está, {entrega}")
-    # O DEGRAU DA CAIXA SÓ APARECE QUANDO DIVERGE do que chega ao motor, e é aí
-    # que ele precisa ser explicado: repeti-lo quando os dois coincidem seria
-    # "30% da força" duas vezes na mesma frase, que é o defeito de costura que
-    # esta função já tinha corrigido uma vez.
     if no_motor is not None and meu == por_cento(no_motor):
         return meu, f"este controle <b>sobrepõe</b> o global, {entrega}"
     return meu, (f"este controle <b>sobrepõe</b> o global com <b>{meu}</b>, que é "
@@ -533,17 +326,7 @@ def teto_que_vale(v: Vibracao) -> tuple[str | None, str]:
 
 
 def dica_do_teto(v: Vibracao) -> str:
-    """A frase inteira do ``?`` do campo, com marcação — dono único das duas telas.
-
-    Ela nasceu no gerador do mockup (`interface/aba08.teto_dica`) e mudou-se
-    para cá em 01/09/2026, quando o `?` ganhou endereço de pintura
-    (``data-campo="teto-explica"``). Enquanto a frase vivesse só lá, o pacote
-    da interface nova teria de escrevê-la de novo — e a segunda grafia é a que
-    fica para trás no dia em que a primeira mudar.
-
-    TRAZ `<b>` E `<code>`, de propósito: quem a pinta usa o alvo ``html`` do
-    `hefesto_vivo.BOOTSTRAP`, e não o ``texto`` padrão.
-    """
+    """A frase inteira do ``?`` do campo, com marcação — dono único das duas telas."""
     return (f"O teto da vibração <b>deste controle</b>. O global manda e o do controle "
             f"sobrepõe: hoje {teto_que_vale(v)[1]}. Quem muda o global é o "
             f"<b>{CASA_DO_TETO_GLOBAL}</b>, na aba <b>{ABA_DO_TETO_GLOBAL}</b> — ele decide "
@@ -552,12 +335,6 @@ def dica_do_teto(v: Vibracao) -> str:
             f"recurso com teto real hoje.")
 
 
-# ---------------------------------------------------------------------------
-# Quadro 2 — Está tudo certo?
-# ---------------------------------------------------------------------------
-#: O selo de cada estado do exame. As chaves são as de
-#: `integrations/exame_da_mesa`, e a tradução mora aqui porque é palavra de TELA:
-#: o módulo do exame responde por máquina, não por vocabulário.
 SELO_DO_ESTADO = {
     "certo": ("ok", "CERTO"),
     "atencao": ("warn", "AJUSTAR"),  # (noqa-acento): chave de máquina, ASCII por contrato
@@ -567,16 +344,7 @@ SELO_DO_ESTADO = {
 
 
 def html_da_ordem(ordem: Any | None) -> str:
-    """A ordem de serviço — o imperativo, o de→para e o ganho.
-
-    ``None`` é uma resposta e tem texto próprio: "nenhuma ordem pendente" é o que
-    a pessoa precisa ler, e um quadro vazio a deixaria sem saber se o exame não
-    achou nada ou se ele não correu.
-
-    A chave dos dois ``data-v`` é ENDEREÇO DE DADO, não texto de tela: ela vai
-    crua para o atributo e o JS a compara byte a byte. Acentuá-la trocaria o
-    endereço — daí o ``noqa-acento`` nas duas linhas.
-    """
+    """A ordem de serviço — o imperativo, o de→para e o ganho."""
     if ordem is None:
         return (
             f'<div class="ordem">'
@@ -598,13 +366,6 @@ def html_da_ordem(ordem: Any | None) -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# Quadro 3 — Rádio e adaptadores
-# ---------------------------------------------------------------------------
-
-
-#: As respostas do "— O que é? —". A primeira é a pergunta em si: enquanto ela
-#: estiver escolhida, o produto NÃO sabe, e a tela diz isso em vez de chutar.
 RESPOSTAS_DO_VIZINHO = (
     "— O que é? —",
     "Wi-Fi",
@@ -617,59 +378,10 @@ RESPOSTAS_DO_VIZINHO = (
 )
 
 
-# ---------------------------------------------------------------------------
-# O pacote de um tique — SAIU EM 28/09/2026
-# ---------------------------------------------------------------------------
-# `Pintura`, `pintura`, `sobraram`, `chave_da_mesa` e `gesto_valido` montavam o
-# tique da bancada `interface/conexoes_vivas.py` na gramática `data-v`/`data-g`
-# de 26/08. A página aprovada da aba 08 fala a língua das dez abas
-# (`data-campo`/`data-gesto`), quem a pinta é o pacote
-# `interface/pacotes/a08_conexoes.py`, e quem recusa gesto sem dono é o
-# registro `interface/pacotes`. Medido na página publicada de 28/09: nenhum
-# `data-v` da pintura existe mais nela, e os blocos `.gc`, `.col-exame` e
-# `.col-ordem`, sim — a remontagem trocava o `innerHTML` deles pelo HTML velho.
-# Era um segundo pintor da mesma tela.
-
-
-# ---------------------------------------------------------------------------
-# O MAPA DO GABINETE — o desenho ÚNICO, 01/09/2026
-# ---------------------------------------------------------------------------
-# POR QUE ELE MUDOU DE CASA: o desenho das faces e dos quadrados vivia no
-# GERADOR (`interface/aba08.py`), e junto com ele vivia uma SEGUNDA CÓPIA do
-# motor — uma função `veredito()` que reescrevia à mão o
-# `arranjo_da_mesa.julgar`, com os mesmos cinco vereditos ("ocupada", "vale
-# evitar", "melhor lugar"…) digitados como constantes.
-#
-# O PREÇO DISSO ERA DUPLO, e os dois lados foram medidos em 01/09/2026:
-#
-#   1. O JUÍZO DA TELA NÃO ERA O DO PRODUTO. A cópia julgava por uma tabela de
-#      vizinhos do mockup; o motor julga pela mesa real, sabe de entrada azul,
-#      de folga na fileira e de extensor, e ainda CONFESSA o que não sabe
 #      (`confissao_do_desenho`). A tela mostrava menos e podia mostrar diferente.
-#   2. O GABINETE DESENHADO NÃO ERA O DELA. `FACES`, `QUEM_ESTA` e `EXTENSAO`
-#      eram constantes de bancada — duas faces e dez entradas de exemplo —, e o
-#      `maquina.json` dela **não existe**: o mapa declarado está vazio. A aba
-#      mostrava um gabinete que não é o dela, e por isso os seis botões que
-#      mexem no mapa não podiam ser ligados: clicar declararia no disco DELA o
-#      desenho de uma bancada de exemplo.
-#
-# AQUI O DESENHO É UM SÓ e recebe DADO: o gerador o chama com a cena do mockup,
-# o piloto com o que ela declarou. É a mesma disciplina dos outros `html_*`
-# deste módulo — função pura sobre dado já lido, sem GTK, sem `/sys`, sem IPC.
 
 
-#: AS DUAS DICAS DOS BOTÕES DO MAPA. Elas são da tela WEB — a janela GTK põe os
-#: mesmos gestos em botões sem tooltip —, e por isso moram aqui, no lado Python
-#: dela, e não em `mapa_da_mesa.py`. O gerador do mockup e o piloto leem daqui:
-#: eram duas grafias até 01/09/2026.
-#: ENCOLHEU EM 11/09/2026, aprovado por ela: a regra de unicidade é do motor,
-#: e quem clica não escolhe o número. A dica passa a dizer o ATO.
 DICA_NOVA_ENTRADA = "Cria uma entrada nova nesta face, com o próximo número livre."
-#: A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. Aqui ela dizia ONDE
-#: o hub entra, e o lugar certo não é o móvel: é o MAPA — o que este botão
-#: acrescenta é uma linha no desenho, não um objeto na sala.
-#: E ENCOLHEU JUNTO, no mesmo dia e pela mesma razão: «descritor USB» é o nome
-#: do kernel, e quem lê a dica só precisa saber que o sistema não vê o cabo.
 DICA_NOVO_HUB = (
     "Acrescenta um hub ou uma extensão. O sistema não os enxerga — quem diz "
     "onde estão é você."
@@ -723,13 +435,9 @@ def html_do_mapa(
                 f'data-gesto="escolher-entrada" data-entrada="{_e(numero)}" '
                 f'title="{_e(" ".join(dizeres))}">' + "".join(linhas) + "</button>")
 
-    #: DE QUAL FACE É CADA ENTRADA — para o hub poder dizer onde está ligado.
-    #: Sai das próprias faces, nunca digitado.
     face_da_entrada = {n: str(f.get("nome", "")) for f in faces for n in f.get("portas", [])}
 
     if not faces:
-        # O ESTADO VAZIO TEM FRASE, e ela é do produto: `ROTULO_SEM_FACE`. Sem
-        # ela o mapa de quem nunca desenhou o gabinete seria uma caixa em
         # branco — e "não há nada aqui" é indistinguível de "isto quebrou".
         from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import ROTULO_SEM_FACE
 

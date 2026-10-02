@@ -1,13 +1,4 @@
-"""Subsystem Hotkey — gerencia HotkeyManager e hotkey de microfone.
-
-Responsabilidades:
-  - Instanciar HotkeyManager com callback on_ps_solo (leitura de config em runtime).
-  - Iniciar e parar a task _mic_button_loop que ouve BUTTON_DOWN para mic_btn.
-  - Expor funções utilitárias usadas pelo Daemon como thin wrappers.
-  - FEAT-HOTKEY-PONTE-CYCLE-01: o gesto PS+R3 cicla a PONTE (a forma
-    como o jogo enxerga o controle) — ver `build_next_bridge_callback`, que
-    também registra o que o gesto NÃO pode prometer.
-"""
+"""Subsystem Hotkey — gerencia HotkeyManager e hotkey de microfone."""
 from __future__ import annotations
 
 import asyncio
@@ -38,48 +29,21 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: Sossego do botão de microfone, contado a partir do FIM do toggle anterior
-#: (MIC-REPIQUE-01). Não é um debounce de teclinha: o que está do outro lado é
-#: um mudo LATCHED do sistema inteiro, e o botão é o único jeito de desfazê-lo
-#: com o controle na mão. Um segundo é mais que qualquer repique elétrico e
-#: menos que qualquer segundo toque DELIBERADO — ninguém muta e desmuta de
 #: propósito em menos de um segundo. Ver o docstring de `mic_button_loop` para
-#: por que o debounce de 200 ms do `AudioControl` não cobre este caso.
 MIC_SOSSEGO_S = 1.0
 
 
-#: ONDA5-06-01 — ONDE MORA A ESCOLHA DO PS ENQUANTO O DAEMON VIVE.
-#:
 #: O PS tem DOIS donos, e a precedência é escrita: `Profile.button_actions["ps"]`
-#: vence, e `DaemonConfig.ps_button_action` é o degrau da máquina, que vale para
-#: o perfil que não diz nada. Este atributo é o primeiro dos dois, EM MEMÓRIA —
 #: `profiles/manager.apply_button_actions` o escreve a cada ativação, pelo
-#: `ps_action_sink` que `gerente_do_daemon` injeta.
-#:
-#: EM MEMÓRIA, E NÃO POR LEITURA DE DISCO: o `_on_ps_solo` roda inline no poll
-#: loop, e um `pgrep` ali já travou input, IPC e co-op por até 2 s
-#: (REVIEW-M5-PGREP-BLOCK-01). `daemon.store.active_profile` devolve só o NOME —
-#: carregar o perfil daqui seria disco dentro do laço.
 _ATRIBUTO_DA_ACAO_DO_PS = "_acao_do_ps_do_perfil"
 
-#: OS TOKENS VIRTUAIS QUE O TECLADO VIRTUAL SABE ENTREGAR. São os três do
-#: teclado na tela, e só eles: `_delegate_virtual_tokens`
-#: (`integrations/uinput_keyboard.py`) os manda ao `_OSKController`. Os outros
-#: `__*__` do vocabulário da tela (`__STEAM__`, `__SAIR_DO_JOGO__`,
-#: `__PROGRAMA__`, `__CURSOR__`, `__ROLAGEM__`) NÃO são tecla, e mandá-los ao
-#: device viraria um `keyboard_key_unknown` calado por toque.
 _TOKENS_QUE_O_TECLADO_ENTREGA: Final[frozenset[str]] = frozenset({
     "__OPEN_OSK__", "__CLOSE_OSK__", "__TOGGLE_OSK__",
 })
 
 
 def definir_acao_do_ps(daemon: Any, token: str | None) -> None:
-    """Guarda o que o PERFIL ATIVO deu ao botão PS. `None` = o perfil não opinou.
-
-    Chamado por `profiles/manager.ProfileManager._empurrar_o_ps` a cada
-    ativação, inclusive com `None` — e o `None` é metade do contrato: sem ele a
-    escolha do perfil de ontem continuaria digitando no perfil de hoje.
-    """
+    """Guarda o que o PERFIL ATIVO deu ao botão PS. `None` = o perfil não opinou."""
     setattr(daemon, _ATRIBUTO_DA_ACAO_DO_PS, token)
 
 
@@ -90,12 +54,7 @@ def acao_do_ps_do_perfil(daemon: Any) -> str | None:
 
 
 def _o_ps_digita(token: str | None) -> bool:
-    """O token escolhido é coisa que o teclado virtual sabe entregar?
-
-    `KEY_*` (inclusive combos colados com `+`) e os três tokens do teclado na
-    tela. Tudo o mais é escolha SEM ATENDENTE para o PS hoje — e quem a nomeia
-    é o journal, não o silêncio.
-    """
+    """O token escolhido é coisa que o teclado virtual sabe entregar?"""
     if not token:
         return False
     partes = token.split("+")
@@ -105,37 +64,9 @@ def _o_ps_digita(token: str | None) -> bool:
 
 
 def _digitar_o_ps(daemon: Any, token: str) -> bool:
-    """Emite, UMA vez, a tecla que o perfil deu ao PS. Devolve se emitiu.
-
-    PELO TECLADO VIRTUAL QUE JÁ EXISTE, e não por um device novo: é o mesmo
-    `UinputKeyboardDevice` que atende as outras linhas da tabela, então um combo
-    (`KEY_LEFTALT+KEY_TAB`) e os tokens do teclado na tela saem daqui do mesmo
-    jeito que sairiam de qualquer outro botão.
-
-    POR QUE `_emit_sequence_*` E NÃO `dispatch()`, e a razão é medida no código
-    do device: `dispatch()` é SNAPSHOT — ele faz
-    `newly_released = self._pressed_buttons - now_mapped`. Chamá-lo com
-    `{"ps"}` soltaria toda tecla que estivesse segurada no instante do toque, e
-    o tique seguinte a pressionaria de novo: um caractere dobrado no meio do que
-    ela estivesse digitando. O par `_emit_sequence_press`/`_release` é o único
-    emissor que não mexe no rastreador de bordas.
-
-    O `bindings` VOLTA AO QUE ERA no `finally`, e isso não é zelo: deixar `"ps"`
-    no mapa do device faria o `dispatch()` do poll loop emitir a tecla uma
-    SEGUNDA vez no dia em que o latch do combo
-    (`integrations/hotkey_daemon.combo_buttons_active`) deixar o PS passar para
-    `emu_buttons`. Hoje ele não deixa — e o produto não pode depender disso para
-    não digitar duas vezes.
-
-    RELATO (arquivo de outra posse): a cura de verdade é um método público de
-    TOQUE no `UinputKeyboardDevice` — `integrations/uinput_keyboard.py` — e
-    enquanto ele não existir este é o caminho que não estraga o que já funciona.
-    """
+    """Emite, UMA vez, a tecla que o perfil deu ao PS. Devolve se emitiu."""
     teclado = getattr(daemon, "_keyboard_device", None)
     if teclado is None:
-        # SEM TECLADO VIRTUAL NÃO É "APLICOU" NEM "FALHOU": é a escolha estar no
-        # perfil e não ter onde pousar, que é a mesma frase do
-        # `ignorado_sem_device` do `apply_keyboard`.
         logger.info("ps_digita_sem_teclado", token=token)
         return False
     if not getattr(teclado, "is_active", lambda: True)():
@@ -157,28 +88,7 @@ def _digitar_o_ps(daemon: Any, token: str) -> bool:
 
 
 def _a_metade_da_maquina(cfg: Any, escolha: str | None, do_computador: Any = None) -> str:
-    """Qual ato do computador o toque no PS dispara: um token do ⑥, ou ``custom``.
-
-    O ATO DO COMPUTADOR É O ⑥ DA TABELA DOS GESTOS (OS-GESTOS-DO-CONTROLE-01,
-    01/10/2026): ``do_computador`` é a ``EscolhaDoGesto`` do PS sozinho, lida
-    do ``maquina.json`` em memória. Sem declaração, vale o degrau antigo
-    (``cfg.ps_button_action``: ``steam`` → ``abrir_a_steam``, ``none`` →
-    ``nada``, ``custom`` → o ``ps_button_command``), que é o de fábrica e o do
-    ambiente. A precedência do perfil vem por cima, como antes:
-
-        escolha do perfil        o que o computador faz
-        ---------------------    -------------------------------------------
-        None (perfil calado)     o ⑥
-        tecla / teclado na tela  o ⑥ — *"digita SEM parar de abrir a Steam"*
-        qualquer outro token     o ⑥ + linha no journal: escolha que o PS
-                                 não atende
-
-    A LINHA DO PS SÓ DIGITA desde 01/10/2026
-    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
-    `D-0110-A-LINHA-DO-PS-SO-DIGITA`): o `__NADA__` e o `__STEAM__` dela
-    saíram, e o ⑥ é o único dono do que o PS faz no computador. Um perfil que
-    ainda os guarde cai na última linha da tabela (a migração os tira).
-    """
+    """Qual ato do computador o toque no PS dispara: um token do ⑥, ou ``custom``."""
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 
     if do_computador is not None and getattr(do_computador, "declarada", False):
@@ -194,18 +104,7 @@ def _a_metade_da_maquina(cfg: Any, escolha: str | None, do_computador: Any = Non
 
 
 def _a_acao_da_maquina(da_maquina: str, comando: Any, **ato: Any) -> None:
-    """A metade do PS que fala com o sistema: o ⑥ da tabela, ou o programa dela.
-
-    Corre no ``FioDeTrabalho`` do gesto, nunca no laço de leitura: o
-    ``pgrep`` e o ``wmctrl`` do ``open_or_focus_steam`` e o ``systemd-run``
-    do ``fora_do_servico.abrir`` esperam processos de fora (teto de 2 s cada).
-
-    COM UM JOGO ABERTO, O PS SOZINHO É DO JOGO (``D-0110-NO-JOGO-O-PS-SOZINHO-E-DO-JOGO``,
-    dela em 01/10, ~23h55): antes de qualquer ato do ⑥, o jogo do wrapper vivo
-    (:func:`_jogo_aberto_agora`) — o sinal que o autoswitch usou para recusar a
-    troca nos 17 toques da noite dela. Ele lê disco e ``/proc``, e por isso
-    mora aqui, no fio, e não no laço (REVIEW-M5-PGREP-BLOCK-01).
-    """
+    """A metade do PS que fala com o sistema: o ⑥ da tabela, ou o programa dela."""
     appid = _jogo_aberto_agora()
     if appid is not None:
         logger.info("hotkey_ps_solo_skip_jogo_vivo", appid=appid, sinal="wrapper")
@@ -224,9 +123,6 @@ def _a_acao_da_maquina(da_maquina: str, comando: Any, **ato: Any) -> None:
             atos.fazer_pelo_ps(da_maquina, ato.get("escolha"), ato.get("quem"),
                                ato.get("laco"), ato.get("contexto"))
         return
-    # STEAM-FORA-DO-SERVICO-01: o programa dela nasce FORA do serviço do
-    # daemon, como a Steam — senão herda o nice e o oom dele e morre no
-    # restart da unit. O `Popen` de sempre é o fallback.
     from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 
     try:
@@ -246,11 +142,7 @@ def _a_acao_da_maquina(da_maquina: str, comando: Any, **ato: Any) -> None:
 
 @dataclass
 class _GestoDoPs:
-    """O callback do PS solo: ``fazer`` no laço, a ação da máquina no ``fio``.
-
-    Chamável como a função que era; ``esperar`` é o que as réguas usam para
-    saber que o toque em voo terminou (a parada não espera o que é dela).
-    """
+    """O callback do PS solo: ``fazer`` no laço, a ação da máquina no ``fio``."""
 
     fazer: Any
     fio: fora_do_servico.FioDeTrabalho
@@ -263,38 +155,7 @@ class _GestoDoPs:
 
 
 def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
-    """Cria o callback on_ps_solo que lê self.config em runtime (REFACTOR-DAEMON-RELOAD-01).
-
-    Leitura em runtime — não em closure — para que reload_config funcione sem
-    recriar closures manualmente.
-
-    ONDA5-06-01: E ELE FAZ AS DUAS COISAS, NESTA ORDEM — digita o que o perfil
-    deu ao PS e **continua** fazendo o que a máquina manda. A ordem é a decisão:
-    `open_or_focus_steam()` muda o foco da janela, e uma tecla emitida depois
-    disso chegaria à Steam em vez de chegar ao que estava na frente dela.
-
-    AS TRÊS GUARDAS DE HOJE FICAM INTEIRAS, e agora valem para as DUAS metades:
-    modo nativo e modo jogo pulam o solo (com o controle dedicado a um jogo,
-    digitar seria pior que abrir a Steam), e o teto do toque curto
-    (PS-TOQUE-CURTO-01) é anterior a tudo — ele mora em `hotkey_daemon.py` e
-    decide antes de este callback existir, então segurar o PS para religar o
-    controle no rádio continua não digitando.
-
-    O LAÇO SÓ DISPARA (TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01): as
-    guardas e a tecla são memória e ficam aqui, na ordem de sempre; a Steam e
-    o programa dela vão para um fio próprio, um toque em voo por vez. Medido
-    em 27/09 (auditoria, 02 achado 9): cada toque segurava o laço dos quatro
-    controles por cerca de 11 ms, com teto de 2 s no ``pgrep`` e de 2 s por
-    forma no ``systemd-run``.
-
-    O QUE ELE FAZ É O ⑥ DA TABELA DOS GESTOS (OS-GESTOS-DO-CONTROLE-01): o
-    ``maquina.json`` em memória, e não um ato cravado. ``atos`` é quem atende
-    os atos que não são a Steam (:class:`_AtosDoGesto`); sem ele, nasce aqui
-    na primeira vez que for preciso. COM UM JOGO NA FRENTE, O ⑥ NÃO DISPARA
-    (``D-0110-NO-JOGO-O-PS-SOZINHO-E-DO-JOGO``): ``display_authority == "game"``
-    aqui, em memória, e o jogo do wrapper vivo no fio (:func:`_a_acao_da_maquina`).
-    A tecla do perfil segue: ela é do jogo, e não rouba o foco.
-    """
+    """Cria o callback on_ps_solo que lê self.config em runtime (REFACTOR-DAEMON-RELOAD-01)."""
     fio = fora_do_servico.FioDeTrabalho(
         "hefesto-acao-do-ps",
         ao_falhar=lambda erro: logger.warning("hotkey_ps_solo_acao_falhou", err=str(erro)),
@@ -309,16 +170,6 @@ def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
         da_maquina = _a_metade_da_maquina(cfg, escolha, do_computador)
         if da_maquina == _NADA_DO_GESTO and not digita:
             return
-        # FEAT-PARITY-REVIEW-01 + M5: com o controle dedicado a um JOGO, o PS já
-        # vai cru como BTN_MODE (guide/overlay) e disparar TAMBÉM a ação de sistema
-        # roubaria o foco. O sinal de "está em jogo" é o MODO JOGO — Modo Nativo
-        # (native_mode_active) ou emulação suprimida (_emulation_suppressed, que os
-        # perfis de jogo ligam e o long-press do PS alterna). Ambos são flags EM
-        # MEMÓRIA — nada de subprocess aqui (o callback roda inline no poll loop; um
-        # pgrep bloqueava input/IPC/co-op por até 2s — REVIEW-M5-PGREP-BLOCK-01).
-        # Cobre também jogos NÃO-Steam (Lutris/Heroic/nativo), que a checagem por
-        # processo Steam deixava passar (REVIEW-M5-NONSTEAM-FOCUS-01). No desktop
-        # (sem modo jogo) a ação roda normal — abre a Steam. Combos PS+* seguem.
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("hotkey_ps_solo_skip_native_mode")
@@ -326,8 +177,6 @@ def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
         if getattr(daemon, "_emulation_suppressed", False):
             logger.info("hotkey_ps_solo_skip_modo_jogo")
             return
-        # A TECLA PRIMEIRO — ver o docstring: a Steam rouba o foco, e o que vier
-        # depois dela chega à Steam.
         if digita and escolha is not None:
             _digitar_o_ps(daemon, escolha)
         if da_maquina == _NADA_DO_GESTO:
@@ -342,9 +191,6 @@ def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
                 logger.warning("hotkey_ps_solo_custom_sem_comando")
                 return
         ato = _o_ato_do_ps_para_o_fio(daemon, quem_atende, do_computador)
-        # O LAÇO SÓ DISPARA: a Steam e o programa dela esperam processos de
-        # fora, e quem espera é o fio. Um toque em voo por vez — o segundo,
-        # com o primeiro ainda abrindo, abriria outra Steam.
         if not fio.disparar(lambda: _a_acao_da_maquina(da_maquina, comando, **ato)):
             logger.info("hotkey_ps_solo_acao_em_voo", acao=da_maquina)
 
@@ -352,8 +198,7 @@ def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
 
 
 def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
-    """Cria o callback on_ps_long_press: alterna o modo jogo (supressao da
-    emulacao de mouse/teclado). FEAT-EMULATION-GAMEMODE-LONGPRESS-01."""
+    """Cria o callback on_ps_long_press: alterna o modo jogo (supressao da"""
 
     def _on_ps_long_press() -> None:
         daemon.set_emulation_suppressed()
@@ -361,43 +206,18 @@ def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
     return _on_ps_long_press
 
 
-#: FEAT-HOTKEY-PONTE-CYCLE-01 — as PONTES que o gesto PS+R3 percorre.
-#: Ponte = a forma como o jogo enxerga o controle. A ordem é a de "chance de
 #: pegar": máscara Xbox primeiro não, porque a casa parte do DualSense — a
-#: ordem abaixo começa na máscara nativa e só depois cai no XInput.
-#:
-#: NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. O ciclo é de CAMINHOS, e não de
 #: máscaras: Sony DualSense → Xbox → Navegação → Sony DualSense, os mesmos três
-#: chips da aba Jogar. Os nomes não mudaram (`"dualsense"`, `"xbox"`), e o que
-#: eles nomeiam, sim: o canal por onde o controle chega ao jogo. A máscara do
-#: vpad não muda em aperto nenhum — com máscara no cartão, o ciclo de máscaras
-#: travava em cinco pulsos vermelhos, porque o cartão vencia todo pedido.
 PONTE_DUALSENSE = "dualsense"
 PONTE_XBOX = "xbox"
 PONTE_MOUSE_TECLADO = "mouse_teclado"
 CICLO_DE_PONTES: tuple[str, ...] = (PONTE_DUALSENSE, PONTE_XBOX, PONTE_MOUSE_TECLADO)
 
-#: AVISO-DE-MODO-01 — os DOIS modos que NÃO são ponte e que ela mesma nomeou
-#: no pedido de 19/08/2026: *"entramos no modo steam input azul clarinho, modo
-#: xbox verde claro, modo sony nativo branco"*. Não entram no `CICLO_DE_PONTES`
-#: (o gesto não liga Steam Input nem entra em Modo Nativo — ver
-#: `build_next_bridge_callback`), mas o AVISO vale para eles igual: quem troca
-#: pela janela tem de ver a mesma coisa que quem troca pelo gesto.
 MODO_STEAM_INPUT = "steam_input"
 MODO_NATIVO = "nativo"
 
-#: Cor da lightbar de cada MODO — o ÚNICO canal que ela enxerga sem sair do
-#: jogo. Os hex saem da paleta de `gui/theme.css`, que é o léxico visual desta
-#: casa: `cyan` #8be9fd, `green` #50fa7b, `fg` #f8f8f2, `pink` #ff79c6 (a cor de
-#: MARCA do produto) e `orange` #ffb86c. Inventar cor nova aqui seria dizer na
-#: barra uma coisa que a janela não diz.
-#:
-#: SUBSTITUI (19/08/2026) o `CORES_DA_PONTE` de 18/08, em que a máscara
 #: DualSense era AZUL (0, 60, 255). Não é decisão apagada, é fato corrigido: o
-#: azul claro passou a significar **Steam Input** por decisão dela, e deixar os
-#: dois azuis lado a lado tornaria a barra ilegível justamente no par que ela
 #: mais precisa distinguir. A máscara DualSense é o "Hefesto na frente", e a
-#: cor do Hefesto é o rosa da marca.
 CORES_DO_MODO: dict[str, tuple[int, int, int]] = {
     MODO_STEAM_INPUT: (139, 233, 253),
     PONTE_XBOX: (80, 250, 123),
@@ -405,29 +225,12 @@ CORES_DO_MODO: dict[str, tuple[int, int, int]] = {
     PONTE_DUALSENSE: (255, 121, 198),
     PONTE_MOUSE_TECLADO: (255, 184, 108),
 }
-#: Aviso de RISCO: a troca de máscara destrói e recria o vpad, e foi MEDIDO
-#: (R-04) que isso invalida o handle que o jogo abriu. Dois pulsos vermelhos
-#: antes de aplicar = "isto pode derrubar o controle dentro do jogo".
-#: Falha ao construir a ponte (o vpad não subiu): os mesmos pulsos vermelhos
-#: seguidos de um vermelho longo — "pedi e não consegui", que é diferente de
-#: "consegui e pode ter derrubado o jogo".
 COR_AVISO_RISCO = (255, 0, 0)
-#: Duração de um pulso, em segundos.
 PULSO_SEG = 0.14
 
-#: Sentinela do "ainda não anunciei nada". O boot NÃO é troca de modo: um
 #: daemon que sobe já em máscara DualSense não pode piscar como se ela tivesse
-#: acabado de mexer em alguma coisa. `None` não serve de sentinela porque
-#: `modo_vigente` nunca devolve `None` — mas um daemon dublado sem o atributo e
-#: um daemon que já anunciou têm de ser distinguíveis, e é isso que o objeto
-#: único abaixo faz.
 _NUNCA_ANUNCIADO = object()
 
-#: Uma piscada por vez. O aviso é level-triggered e quem o chama passa de novo
-#: no tique seguinte, então uma troca que caiu em cima de outra piscada não se
-#: perde: ela só não CARIMBA o modo anunciado, e a próxima passada tenta outra
-#: vez. Enfileirar meio segundo de piscada por apertada seria o aviso ficando
-#: para trás da mão dela.
 _AVISO_EM_CURSO = threading.Lock()
 
 
@@ -461,17 +264,7 @@ def ponte_atual(daemon: DaemonProtocol) -> str:
 
 
 def _cor_do_degrau(degrau: Any) -> tuple[int, int, int] | None:
-    """A cor de `CORES_DO_MODO` que anuncia um degrau da `ESCADA`.
-
-    Serve ao aviso do degrau PULADO, e por isso ela é a cor do MODO, não a da
-    máscara: o que ela precisa distinguir é *"o Nativo ficou para o
-    lançamento"* de *"o Steam Input ficou para o lançamento"*. Steam Input
-    primeiro de propósito — o degrau `gamepad/dualsense+steam_input` é as duas
-    coisas, e quem manda nele é a Steam, não a máscara que viaja por baixo.
-
-    `None` para o que não tem cor, e o chamador simplesmente não pisca: um
-    degrau sem cor não pode derrubar a troca que ela pediu.
-    """
+    """A cor de `CORES_DO_MODO` que anuncia um degrau da `ESCADA`."""
     ponte = getattr(degrau, "ponte", None)
     if ponte is None:
         return None
@@ -494,31 +287,7 @@ def proxima_ponte(atual: str) -> str:
 async def _sinalizar_lightbar(
     daemon: DaemonProtocol, cores: list[tuple[tuple[int, int, int], float]]
 ) -> None:
-    """Pinta uma sequência (cor, segundos) na lightbar e devolve a cor resolvida.
-
-    A lightbar é o único canal que ela enxerga sem sair do jogo — não há
-    notificação de desktop que apareça por cima de um jogo em tela cheia.
-    Best-effort: falha de HID aqui NUNCA pode derrubar a troca de ponte, que
-    é o que ela pediu.
-
-    **CONSERTO de 19/08/2026 (AVISO-DE-MODO-01): o aviso ROUBAVA a cor dela.**
-    Esta função pintava com `controller.set_led`, e o `set_led` GRAVA a cor no
-    estado desejado — no caminho broadcast o `_record_desired_locked` ainda
-    LIMPA o campo `led` de todos os overrides por-uniq. O
-    `reassert_resolved_outputs` do fim, então, devolvia fielmente… a cor do
-    AVISO, porque era ela que estava gravada. Duas voltas do gesto e a cor do
-    perfil dela tinha sumido de vez. Agora o par usado é o
-    `pintar_lightbar_sem_lembrar` / `restaurar_lightbar_do_perfil`, que não
-    grava nada e por isso tem o que devolver.
-
-    Também passa a pintar em TODOS os controles (o `set_led` obedecia ao
-    seletor da janela) e a sair pelas três rotas — inclusive o `0x31` avulso
-    por rádio, que é o que pinta com a Steam segurando o nó.
-
-    HONESTIDADE: com um jogo que pinta a lightbar sozinho (a defesa de
-    exibição do backend repassa o que o jogo escreve), este aviso pode ser
-    sobrepintado em seguida. É sinal, não garantia.
-    """
+    """Pinta uma sequência (cor, segundos) na lightbar e devolve a cor resolvida."""
     pintar = getattr(daemon.controller, "pintar_lightbar_sem_lembrar", None)
     for cor, segundos in cores:
         if pintar is not None:
@@ -535,26 +304,7 @@ async def _sinalizar_lightbar(
 
 
 def modo_vigente(daemon: DaemonProtocol) -> str:
-    """O MODO de pé AGORA, lido do estado VIVO. AVISO-DE-MODO-01.
-
-    Superconjunto de `ponte_atual`: acrescenta os dois estados que não são
-    ponte e que mudam o que o jogo enxerga tanto quanto uma máscara.
-
-    A ordem de precedência é a de quem está NA FRENTE do controle:
-
-    1. **Modo Nativo** primeiro, porque nele o dono do aparelho é o jogo — não
-       há vpad para consultar e não há máscara nossa em lugar nenhum;
-    2. **Steam Input** depois: com a exceção por appid valendo, quem entrega o
-       dispositivo ao jogo é a Steam, mesmo com o nosso vpad de pé. Os dois
-       flags são lidos (`_steam_input_excecao` e `_steam_input_vpad_suspenso`)
-       porque eles não andam sempre juntos — o par distingue "exceção ativa com
-       o vpad recolhido" de "exceção ativa e a suspensão não pôde ser armada",
-       e nos DOIS quem está na frente é a Steam;
-    3. **a ponte**, que é o caso comum.
-
-    Tudo por `getattr`/`suppress`: daemons dublados de teste não têm store nem
-    os flags, e um aviso NUNCA pode derrubar o laço que o chama.
-    """
+    """O MODO de pé AGORA, lido do estado VIVO. AVISO-DE-MODO-01."""
     store = getattr(daemon, "store", None)
     if store is not None and getattr(store, "native_mode_active", False):
         return MODO_NATIVO
@@ -576,18 +326,9 @@ def modo_vigente(daemon: DaemonProtocol) -> str:
 def _disparar_piscada(
     daemon: DaemonProtocol, cor: tuple[int, int, int], *, modo: str
 ) -> bool:
-    """Manda a piscada para uma thread. True = saiu daqui. AVISO-DE-MODO-01.
-
-    A piscada é BLOQUEANTE (meio segundo de `time.sleep` no backend) e quem
-    chama o aviso é o poll loop — segurar o laço do controle por meio segundo
-    para acender uma luz seria trocar a rota do jogo por um enfeite. Thread
-    `daemon=True`: um aviso no ar nunca segura o desligamento do produto.
-    """
+    """Manda a piscada para uma thread. True = saiu daqui. AVISO-DE-MODO-01."""
     piscar = getattr(getattr(daemon, "controller", None), "piscar_aviso_de_modo", None)
     if not callable(piscar):
-        # Backend sem a piscada (fake da bancada, controle desconectado): o
-        # modo mudou do mesmo jeito e o journal registra — o produto não trava
-        # nem finge que avisou.
         logger.debug("aviso_de_modo_sem_backend", modo=modo)
         return False
     if not _AVISO_EM_CURSO.acquire(blocking=False):
@@ -602,11 +343,6 @@ def _disparar_piscada(
             return
         finally:
             _AVISO_EM_CURSO.release()
-        # `escritas` = controles que RECEBERAM a escrita, não que acenderam. A
-        # barra por rádio pode nascer travada (medido: ignora as escritas do
-        # kernel até o power-off físico), e não há leitura que desminta isso —
-        # o `multi_intensity` é a memória do que se PEDIU. Dizer "acendeu" aqui
-        # seria o journal mentindo.
         logger.info(
             "aviso_de_modo_piscado", modo=modo, cor=cor, controles_escritos=escritas
         )
@@ -654,8 +390,6 @@ def avisar_troca_de_modo(daemon: DaemonProtocol) -> str | None:
         return None
     cor = CORES_DO_MODO.get(modo)
     if cor is None:
-        # Modo sem cor no léxico: registrar e seguir. Piscar uma cor inventada
-        # seria a barra dizendo uma coisa que a janela não diz.
         logger.warning("aviso_de_modo_sem_cor", modo=modo, de=anterior)
         with contextlib.suppress(Exception):
             daemon._modo_anunciado = modo  # type: ignore[attr-defined]
@@ -669,76 +403,20 @@ def avisar_troca_de_modo(daemon: DaemonProtocol) -> str | None:
 
 
 def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
-    """Constrói a ponte `alvo`. True = de pé ao final.
-
-    Chamado SÍNCRONO (não pelo executor) de propósito: é a decisão já
-    registrada em `ipc_handlers._handle_gamepad_emulation_set` (Achado Onda S
-    #6) — a parte bloqueante da cadeia já foi para o executor do broker, e
-    jogar o setter inteiro numa thread criaria corrida real com o
-    `coop.sync()` do poll loop.
-
-    `origin="manual"` é o que faz o gesto valer: é a ÚNICA origem que o gate
-    R-04 (`gamepad._recriacao_bloqueada_por_jogo`) deixa passar com o jogo
-    aberto, e a casa já decidiu por escrito que "trocar de máscara com o jogo
-    aberto é uma escolha legítima dela; a última palavra é sempre da usuária".
-    O kwarg é chamado por `getattr` porque o `DaemonProtocol` ainda não o
-    declara (existe no Daemon real — `lifecycle.py:1701`) e o Protocol é
-    arquivo de outra frente nesta leva.
-    """
+    """Constrói a ponte `alvo`. True = de pé ao final."""
     setter = getattr(daemon, "set_gamepad_emulation", None)
     if setter is None:
         logger.warning("ponte_sem_setter_de_gamepad")
         return False
     if alvo in (PONTE_DUALSENSE, PONTE_XBOX):
-        # MODO-DE-CONEXAO-01 (13/09/2026): o alvo é o CAMINHO, e vai no campo
-        # dele. Ele ia como `flavor`, a máscara padrão, e a máscara do cartão a
-        # vencia — o gesto pedia, o daemon respondia `ja_estava`, e o ciclo
-        # parava. A máscara fica como está: `flavor` vai `None`.
-        #
-        # `grava_o_modo="controle"` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01,
-        # 29/09/2026): o gesto é escolha dela, e o setter grava o modo no
-        # perfil ativo depois de o aparelho trocar — o mesmo escritor do chip.
         return bool(
             setter(True, None, origin="manual", caminho=alvo, grava_o_modo="controle")
         )
-    # Ponte mouse+teclado (point and click): sem vpad, o controle vira
-    # cursor/teclas.
-    #
-    # POINT-AND-CLICK-01 (17/09/2026) — O GESTO E O CLIQUE PASSAM PELA MESMA
-    # PORTA. Aqui havia QUATRO chamadas escritas à mão (supressão, mouse
-    # sempre ligado, teclado sempre ligado e persistido), e o chip da aba Jogar
     # fazia `mouse.emulation.restore` e mais nada. O mesmo modo com DOIS donos
-    # que discordavam — o HARM-01 outra vez, e agora do lado do gesto: o
-    # `plan_mode_transition` nasceu dono único do modo em 08/2026 e o gesto no
-    # controle nunca passou a usá-lo. *Quando a cura conhece a causa, ela cobre
-    # TODOS os chamadores*; cobrir só o chip deixaria o gesto ligando o teclado
-    # que o clique não liga.
-    #
-    # AS DUAS PORTAS FAZEM O MESMO — O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026),
-    # D-2909-A-NAVEGACAO-LIGA-O-MOUSE. Aqui ia `forcar_mouse=True`, o socorro
-    # que ligava o mouse mesmo com o perfil dizendo desligado, enquanto o
-    # clique no chip obedecia ao perfil e entrava sem cursor. Agora entrar na
-    # Navegação liga o mouse pelas duas, e o PS + R3 segue sendo a saída de
-    # emergência da dica dos gestos (`06-navegacao.html`) sem regra própria.
-    #
-    # `origin="manual"` porque É gesto dela: é o único origin que atravessa o
-    # gate R-04 (`_recriacao_bloqueada_por_jogo`) e o lock de 30 s do
-    # `apply_profile_mouse`.
-    #
-    # O SEGUNDO-ESCRITOR-01 (22/08/2026) FECHOU AQUI, e é mudança de
-    # comportamento: este ponto era o segundo escritor da
     # `keyboard_emulation.flag`, porque `set_keyboard_emulation` persiste por
-    # padrão. O arranjo chama com `persist=False`, e a razão está no método:
-    # gravar o valor RESOLVIDO faria a opinião do PERFIL virar a preferência
-    # GLOBAL, e a precedência da T14 deixaria de existir na ativação seguinte.
-    # O teclado continua ligando no gesto; o que não acontece mais é a escolha
-    # daquele perfil passar a mandar em todos os outros.
     setter(False, origin="manual")
     arranjo = getattr(daemon, "aplicar_o_arranjo_do_desktop", None)
     if not callable(arranjo):
-        # Daemon enxuto (CLI, dublê antigo) — a ponte sobe assim mesmo, e o
-        # journal diz o que ela não carregou. Devolver False aqui seria dizer
-        # que a ponte não subiu, e ela subiu: o vpad já caiu.
         logger.warning("ponte_sem_arranjo_do_desktop")
         return True
     with contextlib.suppress(Exception):
@@ -747,19 +425,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
 
 
 def _appid_do_jogo_do_wrapper() -> int | None:
-    """O appid do jogo que o wrapper lançou e que ainda roda, ou None.
-
-    Fachada de UMA linha sobre `launch_env.launch_session_appid`, e ela existe
-    para que o gesto não ganhe uma terceira definição de *"que jogo é este"*:
-    é o mesmo sinal que sustenta o `game_signal`, a exceção do R-06 e o desvio
-    da allowlist. Import local porque `launch_env` é do pacote de cima e este
-    módulo é carregado pelo poll loop — a mesma disciplina dos vizinhos que
-    importam `profiles` dentro da função.
-
-    `None` quando não há jogo do wrapper rodando, e isso é uma RECUSA, não uma
-    falta: sem appid não há perfil de jogo para receber a máscara, e escrever
-    no perfil errado é pior que não escrever.
-    """
+    """O appid do jogo que o wrapper lançou e que ainda roda, ou None."""
     from hefesto_dualsense4unix.daemon.launch_env import launch_session_appid
 
     return launch_session_appid()
@@ -837,7 +503,7 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
 
     O QUE O GESTO NÃO PROMETE (medido, não suposto):
       - NÃO garante que o jogo sobreviva à troca. A troca de máscara destrói e
-        recria o vpad (`gamepad.py:2720` para, `:2494` cria — slot único, sem
+        recria o vpad (`gamepad.py:1799` para, `:2494` cria — slot único, sem
         double-buffer na árvore), e foi medido em 23/07 que recriar o vpad com
         o jogo rodando invalida os handles que ele abriu: a Steam não reabre o
         hidraw do vpad do P1. Jogo que já estava com o controle na mão pode
@@ -858,29 +524,15 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
     """
 
     async def _ciclar_ponte() -> None:
-        # Cinto e suspensório: em Modo Nativo o gesto nem chega aqui (o gate do
-        # poll loop congela o dispatch antes do `observe`). Se um dia chegar —
-        # outro caller, outro gate — a resposta é não fazer nada, pelo motivo
-        # do docstring: o nativo não tem porta de volta pelo controle.
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("ponte_ciclo_skip_native_mode")
             return
 
         atual = ponte_atual(daemon)
-        # `display_authority == "game"` é o MESMO sinal que o R-04 consulta
-        # (`gamepad._autoridade_do_jogo`) — quem responde "há jogo com o
-        # controle na mão AGORA?".
         jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
 
-        # PONTE-ESCADA-LACO-01, momento 2 (19/08/2026). O gesto TROCA de
-        # qualquer jeito — a linha abaixo não decide SE troca, decide PARA
-        # ONDE. Com uma tentativa de escada em curso (jogo sem carimbo), o
-        # próximo degrau da `ESCADA` vence o `CICLO_DE_PONTES`, porque é ele
         # que carrega o dado: o mapa de canais diz por que a máscara DualSense
-        # vem antes da Xbox, e o ciclo fixo não dizia nada. Sem tentativa —
-        # jogo com carimbo, ou nenhum jogo — `passo` é `None` e o gesto faz
-        # exatamente o que fazia ontem.
         passo = None
         with contextlib.suppress(Exception):
             passo = ponte_tentativa.avancar_por_gesto(
@@ -911,12 +563,6 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
         # acabou de pular um degrau que só o LANÇAMENTO alcança, e ela tem de
         # saber disso sem sair do jogo — senão a única diferença visível entre
         # "pulei o Nativo" e "o ciclo de sempre" é nenhuma.
-        #
-        # A cor é a do MODO pulado, e ela não é nova: são as três que ela mesma
-        # nomeou em 19/08 — *"modo steam input azul clarinho, modo xbox verde
-        # claro, modo sony nativo branco"*. Até hoje `MODO_NATIVO` e
-        # `MODO_STEAM_INPUT` estavam em `CORES_DO_MODO` sem ninguém que as
-        # pintasse; este é o caminho que faltava.
         for degrau_pulado in passo.pulados if passo is not None else ():
             cor_pulada = _cor_do_degrau(degrau_pulado)
             if cor_pulada is None:
@@ -932,9 +578,6 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
             )
 
         if jogo_no_controle:
-            # Aviso ANTES de aplicar: dois pulsos vermelhos = "o jogo pode
-            # perder o controle nesta troca". Prometer troca ao vivo indolor
-            # seria mentir — a medição do R-04 não sustenta isso.
             await _sinalizar_lightbar(
                 daemon,
                 [
@@ -948,25 +591,9 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
         ok = _aplicar_ponte(daemon, alvo)
         efetiva = ponte_atual(daemon)
         if degrau_da_escada is not None and efetiva == alvo:
-            # A escada só anda depois que o APARELHO concorda. `ok` vale True
-            # para três desfechos diferentes (aplicou, já-estava, bloqueado —
-            # MASCARA-01), e avançar a tentativa por ele faria o gesto
-            # seguinte pular o degrau que nunca chegou a ser tentado.
             with contextlib.suppress(Exception):
                 ponte_tentativa.degrau_subiu(daemon, degrau_da_escada)
         if efetiva == alvo:
-            # A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026). Aqui, e só
-            # aqui, porque a prova é o APARELHO: a comparação acima é a mesma
-            # disciplina da MASCARA-01, e anotar pelo retorno do applier
-            # anotaria uma ponte que não subiu.
-            #
-            # `gesto_deixou_de_pe` recusa sozinho o que não é dele — sem jogo
-            # vivo, sem appid, máscara fora das duas, ou tentativa de escada em
-            # curso (esse caminho já tem dono). O que sobra é o caso que mais
-            # custa a ela: o jogo que o produto JÁ "sabia", em que a escada não
-            # roda e o gesto dela não deixava rastro nenhum. Medido: 24 apertos
-            # em 7 dias, porque os 23 perfis de jogo dela pedem `dualsense` e
-            # ela joga em `xbox`.
             with contextlib.suppress(Exception):
                 ponte_tentativa.gesto_deixou_de_pe(
                     daemon,
@@ -974,10 +601,7 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
                     caminho=efetiva,
                     jogo_vivo=jogo_no_controle,
                 )
-            # O PERFIL ATIVO JÁ RECEBEU O MODO — MODO-DE-CONEXAO-01, §D.4, pelo
             # setter do daemon (`grava_o_modo="controle"` em `_aplicar_ponte`,
-            # O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01). O registro de cima é o carimbo
-            # por jogo, que continua separado.
         logger.info(
             "ponte_trocada_por_gesto",
             de=atual,
@@ -991,18 +615,8 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
                 store.bump("hotkey.ponte.cycled")
 
         if ok and efetiva == alvo:
-            # QUEM PINTA A COR DO MODO NÃO É DAQUI (AVISO-DE-MODO-01,
-            # 19/08/2026). O gesto pintava a cor da ponte nova aqui mesmo, e
-            # por isso a barra só dizia a verdade quando a troca vinha DO
-            # GESTO — trocar pela janela não acendia nada. O aviso passou a ser
-            # level-triggered em `avisar_troca_de_modo`, disparado do ponto por
-            # onde toda troca passa; pintar de novo aqui daria piscada dupla no
-            # único caminho que já estava certo.
             return
-        # A ponte NÃO subiu (vpad recusado, uinput/uhid fora do ar). Dizer isso
-        # é obrigatório: `set_gamepad_emulation` devolve True para três
         # desfechos diferentes (aplicou, já-estava, bloqueado), então o sinal
-        # honesto é comparar com o estado VIVO, e não confiar no retorno.
         logger.warning("ponte_nao_subiu", pedida=alvo, efetiva=efetiva, retorno=ok)
         await _sinalizar_lightbar(
             daemon,
@@ -1041,21 +655,12 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         from hefesto_dualsense4unix.daemon.state_store import MANUAL_PROFILE_LOCK_SEC
         from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon, os_perfis_de_escolher
 
-        # FEAT-NATIVE-MODE-01: em Modo Nativo o controle está solto para o jogo —
-        # o ciclo de perfil (PS+dpad) NÃO troca de perfil (re-escreveria gatilhos).
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("profile_cycle_skip_native_mode")
             return
 
-        # A-FÁBRICA-COM-UM-CLIENTE-01 (22/08/2026): a lista de appliers vem da
         # FÁBRICA — paridade com o `profile.switch` (IPC), o autoswitch e o
-        # lançamento por ser a MESMA lista, não por ser uma cópia fiel dela.
-        # O que este gesto tem de próprio é o `origin="manual"` lá embaixo: o
-        # ciclo PS+D-pad é troca explícita dela. O mudo do microfone NÃO
-        # atravessa, nem aqui: ele é do controle (O-MUDO-E-DO-CONTROLE-01).
-        # O Freestyle não entra na roda (ordem dela de 02/10/2026): ele é o botão
-        # «Modo Freestyle», e ativá-lo à mão o acenderia a cada volta.
         manager = gerente_do_daemon(daemon, store=daemon.store)
         profiles = os_perfis_de_escolher(await daemon._run_blocking(manager.list_profiles))
         if len(profiles) < 2:
@@ -1066,61 +671,29 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         idx = names.index(active) if active in names else 0
         target = names[(idx + direction) % len(names)]
 
-        # Feedback visual imediato; activate() repinta a cor do perfil a seguir.
         with contextlib.suppress(Exception):
             await daemon._run_blocking(daemon.controller.set_led, (255, 255, 255))
             await asyncio.sleep(0.12)
 
-        # Gesto explícito do usuário: libera o autoswitch e arma o lock manual
-        # (paridade com _handle_profile_switch) — senão o autoswitch desfaz a
-        # troca no próximo tick por causa da janela ativa.
-        #
-        # TRAVA-QUE-SOLTA-TARDE-01 (medido ao vivo, 05/08): estas duas linhas
-        # vinham DEPOIS do `activate`, e o comentário acima ("paridade com
-        # _handle_profile_switch") era literal — a paridade copiou a ordem
-        # errada do irmão. Com a trava ainda armada durante o `activate`, o
-        # `manager.apply` pulava as categorias travadas, e a promessa do
-        # `speaker_applier` logo acima (SOM-02/E4: *"limpa as categorias
-        # travadas (inclusive `audio`) e portanto aplica o volume do perfil que
-        # entra"*) não se cumpria. Este é o gesto que ela usa DENTRO do jogo.
-        # A TRAVA MANUAL SAIU DAQUI — 14/09/2026,
-        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Este gesto (PS +
-        # D-pad, o ciclo de perfil no controle) soltava as quatro categorias
-        # antes de ativar, e as devolvia se a ativação falhasse. Sem trava não há
-        # o que soltar nem o que devolver — o lock de 30 s continua com as duas
-        # metades, logo abaixo.
         lock_antes = getattr(daemon.store, "_manual_profile_lock_until", 0.0)
         daemon.store.mark_manual_profile_lock(
             _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
         )
-        # PERFIL-03: botão físico no controle = gesto MANUAL — origin="manual"
         # persiste a intenção em session.json (paridade com o profile.switch).
-        # `functools.partial` porque `_run_blocking(fn, *args)` só aceita
-        # posicionais e `origin` é keyword-only.
         try:
             profile = await daemon._run_blocking(
                 functools.partial(manager.activate, target, origin="manual")
             )
         except Exception:
-            # Ativação que falhou não é gesto cumprido — devolve o lock que ela
-            # tinha, como faz o `_handle_profile_switch`. Sem o lock de volta, um
-            # ciclo que falha congelaria a troca automática por 30 s sem gesto
-            # nenhum cumprido.
             daemon.store.mark_manual_profile_lock(lock_antes)
             raise
-        # O espelho da escolha é do dono, dentro do `activate` à mão (01/10/2026).
         logger.info("profile_cycled", direction=direction, to=profile.name)
 
     return _cycle
 
 
 def start_hotkey_manager(daemon: DaemonProtocol) -> None:
-    """Instancia HotkeyManager e atribui a daemon._hotkey_manager.
-
-    BUGFIX: o HotkeyManager era criado sem config, ignorando
-    `daemon.config.ps_long_press_ms` (ficava preso no default 1000ms). Agora a
-    config do daemon é propagada — inclusive 0 = desliga o long-press do PS.
-    """
+    """Instancia HotkeyManager e atribui a daemon._hotkey_manager."""
     from hefesto_dualsense4unix.integrations.hotkey_daemon import (
         DEFAULT_COMBO_NEXT,
         DEFAULT_COMBO_PONTE,
@@ -1129,23 +702,13 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         HotkeyManager,
     )
 
-    # FEAT-HOTKEY-PROFILE-CYCLE-01: os combos next/prev (PS+D-pad) agora estão
-    # LIGADOS — on_next/on_prev ciclam o perfil via ProfileManager.activate (o
     # mesmo caminho do profile.switch). Antes ficavam disabled_until_wired: o
-    # observe() disparava com cb=None (no-op) mas ainda comia o D-pad. Com o cb
-    # de verdade, suprimir o D-pad durante o hold do PS é o comportamento certo
-    # (você está trocando de perfil, não mirando). Modo-jogo segue no PS+Options.
     hotkey_config = HotkeyConfig(
         ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 0),
         next_profile=DEFAULT_COMBO_NEXT,
         prev_profile=DEFAULT_COMBO_PREV,
-        next_bridge=DEFAULT_COMBO_PONTE,  # FEAT-HOTKEY-PONTE-CYCLE-01: PS+R3; o PS+L3 é default
+        next_bridge=DEFAULT_COMBO_PONTE,
     )
-    # OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026): cada lugar do
-    # gerente chama o ato que a TABELA DA MÁQUINA diz (`_AtosDoGesto`), lida em
-    # memória a cada gesto. Os atendentes são os de sempre, montados uma vez;
-    # o que muda por gesto é só qual deles se chama. O long-press do PS (desligado
-    # de fábrica) divide o lugar com o PS + Options, como sempre dividiu.
     atos = _AtosDoGesto(daemon)
     daemon._hotkey_manager = HotkeyManager(
         on_ps_solo=build_ps_solo_callback(daemon, atos),
@@ -1172,30 +735,16 @@ def stop_hotkey_manager(daemon: DaemonProtocol) -> None:
 
 
 def start_mic_hotkey(daemon: DaemonProtocol) -> None:
-    """Sobe os DOIS laços do microfone: as bordas com endereço, e a eleição.
-
-    MIC-DA-MESA-ELEICAO-01: são dois de propósito. O primeiro só LÊ (dá `uniq`
-    à borda, aplica sossego e carência) e o segundo só AGE (elege, confere,
-    acende). Separá-los é o que permite recusar a eleição — que toca no áudio
-    da máquina dela — sem perder a leitura do gesto.
-
-    O `AudioControl` continua sendo criado aqui porque outros gestos ainda o
-    usam; o gesto do microfone **não** o usa mais (ver `mic_button_loop`).
-    """
+    """Sobe os DOIS laços do microfone: as bordas com endereço, e a eleição."""
     from hefesto_dualsense4unix.daemon.subsystems.mic_da_mesa import start_mic_da_mesa
     from hefesto_dualsense4unix.integrations.audio_control import AudioControl
 
     if daemon._audio is None:
         daemon._audio = AudioControl()
     start_mic_da_mesa(daemon)
-    for laco in (mic_button_loop, mic_do_jogo_loop):  # o 2º: o mudo que o jogo pede
+    for laco in (mic_button_loop, mic_do_jogo_loop):
         daemon._tasks.append(asyncio.create_task(laco(daemon), name=laco.__name__))
-    # A QUARTA FACE DO ESTADO (MICROFONE-UM-ATO-01): o que o PipeWire diz sobre
-    # o canal deste controle. Laço próprio, e não leitura no tique: o
     # `state_full` roda a 20 Hz e só LÊ o que o laço já leu. O laço acorda pelo
-    # evento do servidor de som, e as respostas saem do retrato do som, sem
-    # `pactl` nenhum (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01; ver
-    # `_esperar_o_som_mudar`, no fim do módulo).
     tarefa_do_canal = asyncio.create_task(
         canal_do_microfone_loop(daemon), name="canal_do_microfone_loop"
     )
@@ -1203,17 +752,9 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     logger.info("mic_hotkey_iniciado")
 
 
-#: O prazo máximo entre duas releituras do canal de cada controle; o laço acorda
-#: antes, pelo evento do servidor de som. Cada releitura custava CINCO `pactl`
-#: por controle (medido em 28/09/2026 — aqui dizia dois); com o retrato do som
-#: vivo, custa zero. O prazo sobra para o controle que entra ou sai da mesa.
 CANAL_TTL_S: float = 2.0
 
-#: `{uniq: {fonte, canal_ativo, canal_mudo, volume_captura}}` — a última
-#: leitura do PipeWire por controle. Nasce VAZIO de propósito: até a primeira
 #: varredura o `state_full` não publica as chaves, e ausência é a resposta
-#: honesta de quem ainda não perguntou. Inventar `false` aqui seria dizer "o
-#: canal não está ativo" sobre um canal que ninguém olhou.
 _CANAL_POR_UNIQ: dict[str, dict[str, Any]] = {}
 
 
@@ -1265,12 +806,7 @@ def _ler_o_canal(uniq: str) -> dict[str, Any]:
 
 
 def _fonte_esta_muda(fonte: str) -> bool | None:
-    """`pactl get-source-mute` — `None` quando a pergunta não teve resposta.
-
-    `None` NÃO é `False`: "não sei se está muda" e "não está muda" levam a
-    telas diferentes, e colapsá-las é o hábito que faz o selo prometer o que
-    ninguém mediu. Pergunta ao retrato do som antes (`_mudo_pelo_retrato`).
-    """
+    """`pactl get-source-mute` — `None` quando a pergunta não teve resposta."""
     import os
     import subprocess
 
@@ -1296,14 +832,7 @@ def _fonte_esta_muda(fonte: str) -> bool | None:
 
 
 async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
-    """Relê o canal de cada controle quando o som muda, ou a cada `CANAL_TTL_S`.
-
-    **A ARMADILHA QUE ELE EVITA, medida em 04/09/2026:** leitura sob demanda
-    mede ausência. Quem pergunta uma vez e lê na mesma linha recebe vazio
-    sempre — vale para toda leitura sob demanda deste daemon, não só a do
-    sensor. Aqui o laço já correu antes de alguém perguntar, e a primeira
-    varredura acontece no primeiro ciclo, não no primeiro pedido.
-    """
+    """Relê o canal de cada controle quando o som muda, ou a cada `CANAL_TTL_S`."""
     while not daemon._is_stopping():
         await _esperar_o_som_mudar(CANAL_TTL_S, daemon)
         uniqs = _uniqs_conectados(daemon)
@@ -1315,9 +844,6 @@ async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
                 return
             with contextlib.suppress(Exception):
                 _CANAL_POR_UNIQ[uniq] = await _ler_o_canal_deste(daemon, uniq)
-        # Controle que saiu da mesa perde a leitura: publicar o canal de quem
-        # não está mais aqui é o nono caso desta casa de nomear um controle
-        # fora da mesa.
         for fora in [u for u in _CANAL_POR_UNIQ if u not in uniqs]:
             _CANAL_POR_UNIQ.pop(fora, None)
         await _conferir_no_prazo(daemon, uniqs)
@@ -1383,40 +909,16 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
                 continue
             uniq = payload.get("uniq")
             if not isinstance(uniq, str) or not uniq:
-                # O gesto EXIGE endereço. Cair no primário quando o clique não
-                # diz o controle é o que faria a mesa de quatro eleger sempre
-                # o mesmo — recusar é a resposta certa.
                 logger.warning("mic_da_mesa_sem_endereco")
                 continue
             if not getattr(daemon.config, "mic_button_toggles_system", True):
                 logger.debug("mic_hotkey_desligado_por_config")
                 continue
             mudo = bool(payload.get("mudo"))
-            # A BORDA QUE NÓS MESMOS CAUSAMOS NÃO É GESTO — MICROFONE-UM-ATO-01
-            # (04/09/2026). O ato do microfone escreve o bit do mudo no
-            # firmware, e o firmware devolve essa mudança no report de INPUT
-            # ~550 ms depois (medido na bancada: o `report_thread` só põe o
-            # byte no fio no ciclo do keepalive). O laço das bordas não tem
-            # como saber, sozinho, se o bit mudou pelo dedo dela ou pela nossa
-            # escrita — e tratar o eco como gesto executa o ato DUAS vezes.
-            #
-            # A segunda execução não é inócua: com `ligado=False`, a primeira
-            # devolve o canal e zera o eleito, e o eco chega em `mudo=True`
-            # sobre `eleito is None` — que é o ramo da RECUSA, e ele deposita
-            # no cartão dela uma frase dizendo que o microfone está com outro
-            # controle. Medido em 04/09 pelo caminho do `mic.set` da tela.
             if _borda_e_eco_do_ato(uniq, mudo):
                 logger.debug("mic_da_mesa_eco_do_ato_engolido", uniq=uniq, mudo=mudo)
                 continue
-            # A FASE DO TOGGLE DO KERNEL NÃO É A INTENÇÃO DELA — MIC-FASE-01.
-            # Aqui estava `ligado=not mudo`, uma tradução de uma linha que dava
-            # ao bit do firmware o poder de dizer o que ela quis. Ver
-            # `_o_que_a_borda_pede`.
             ligado = _o_que_a_borda_pede(daemon, uniq, mudo)
-            # O JOGO QUE RESPONDEU A ESTE APERTO GANHA O SENTIDO DELE
-            # (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01): o pedido de
-            # mudo do jogo mais novo que o aperto é a resposta a ele, e o ato
-            # a adota, com o canal, a eleição e o disco do mesmo lado.
             em = _instante_da_borda(payload.get("em"))
             resposta = _a_resposta_do_jogo(uniq, em)
             if resposta is not None:
@@ -1431,102 +933,10 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
 
 
 def _o_que_a_borda_pede(daemon: DaemonProtocol, uniq: str, mudo: bool) -> bool:
-    """A borda do plástico traduzida em ATO. MIC-FASE-01 (17/09/2026).
-
-    **O DEFEITO, medido no journal DELA às 01:47:13 de 17/09/2026.** O
-    `hid-playstation` não entrega o botão do microfone como evento: ele
-    CONSOME a borda e faz um toggle cego do próprio estado —
-    ``ds->mic_muted = !ds->mic_muted`` (`assets/dkms/hid-playstation/
-    hid-playstation.c:1673`), sobre um campo que vive numa struct zerada e
-    portanto **nasce `false` = NÃO-mudo** (`:279`).
-
-    A consequência é aritmética: o **primeiro** aperto depois de cada conexão
-    chega sempre como ``mudo=True``. E a tradução que estava escrita aqui era
-    ``ligado = not mudo`` — isto é, DESLIGAR. Ela apertou para falar e o
-    produto leu "me cale"::
-
-        01:47:13  mic_da_mesa_borda  mudo=True seq=1
-                  mic_da_mesa_mudo_de_quem_nao_elegeu  dono=None eleito=None
-                  mic_ato  canal=False feito=False ligado=False
-        01:52:42  mic_da_mesa_borda  mudo=False seq=2      (o SEGUNDO aperto)
-                  eleicao_mic_ok  alvo=hefesto_mic_000003
-                  mic_ato  canal=True feito=True firmware=True ligado=True
-
-    Ela precisou apertar duas vezes, e a primeira ainda apagou o LED que o
-    kernel acabara de acender. A queixa dela chegou como
-    *"o mic se eu apertar o botao fisico de ligar ele ele  # (noqa-acento) dela
-    tem que ligar o canal lá"*.
-
-    **O CONTRATO É DELA, de 17/09/2026:** o botão físico *"alterna o mudo"*
-    DESTE controle. E a frase seguinte dela — *"A ideia é termos 4 controles
-    BT cada qual com seu Mic ligado"* — descreve o desenho que JÁ é o de hoje
-    (OS-QUATRO-NO-AR-01, 13/09/2026). São DUAS perguntas distintas, e
-    confundi-las é a raiz da fase errada: *"está no ar"* é de cada controle,
-    até quatro; *"é a fonte padrão"* é de um só. O botão responde à primeira.
-
-    **A REGRA, e ela se justifica sozinha:**
-
-    ==============  ==============  ====================================
-    borda           está no ar?     o gesto significa
-    ==============  ==============  ====================================
-    ``mudo=True``   **não**         **LIGAR** — o kernel virou o bit, mas
-                                    não há canal dela para calar
-    ``mudo=True``   sim             sair do ar (o que já fazia, e certo)
-    ``mudo=False``  qualquer        ligar / entrar no ar (já funcionava)
-    ==============  ==============  ====================================
-
-    **A CONDIÇÃO NÃO É NOVA, e isso é o ponto.** ``fora_do_padrao and not
-    no_ar.esta(uniq)`` é a MESMA de `_eleger_ou_devolver`, onde ela escolhe a
-    recusa. Reusá-la é o que garante que a linha do meio da tabela não se mexa:
-    quem está no ar continua caindo no ramo que o tira do ar.
-
-    **O RISCO DE PRIVACIDADE SE DESFAZ NESTE RECORTE, não é ignorado.**
-    Inverter o ramo da recusa SEM distinguir faria um aperto de calar virar um
-    aperto de ligar — o defeito de privacidade com o sinal trocado. Mas quem
-    não está no ar **não está sendo ouvido**, logo não há nada a calar:
-    apertar só pode significar *"quero entrar"*. O caso perigoso é o inverso —
-    ligar o microfone de quem pediu silêncio — e esse é a segunda linha da
-    tabela, que não muda uma vírgula.
-
-    **E SÓ A BORDA DO PLÁSTICO PASSA POR AQUI.** O 🎙 da tela chama
-    `ligar_o_microfone` com o `ligado` que ela clicou, e um clique não tem fase
-    para reancorar: ele JÁ é a intenção. Costurar isto dentro de
-    `_eleger_ou_devolver` alcançaria os dois chamadores e reabriria o risco de
-    cima pela porta da tela, onde o *"me cale"* de quem nunca elegeu é um
-    gesto legítimo com frase de recusa escrita por ela.
-
-    **O QUE NÃO SE FEZ, e foi medido:** normalizar a fase escrevendo o bit do
-    mudo na CONEXÃO. Escrever ``common[9]`` toma a posse do campo do
-    `hid-playstation` (`core/backend_pydualsense.set_microphone_mute`), e
-    enquanto a posse for nossa o botão dela **deixa de valer** — a cura mataria
-    o botão que ela veio consertar.
-    """
+    """A borda do plástico traduzida em ATO. MIC-FASE-01 (17/09/2026)."""
     if not mudo:
         return True
 
-    # A RECANCORAGEM VALE SÓ COM A MESA SEM DONO — correção de 17/09/2026,
-    # apanhada pela suíte antes de chegar nela.
-    #
-    # A primeira escrita desta regra perguntava apenas "este controle é o
-    # padrão?", e com isso REABRIU o defeito de privacidade que o ramo de
-    # recusa existe para fechar: com a J1 no ar, a J2 apertando o botão DELA
-    # para se calar entrava no ar e **tomava o microfone da J1**. Medido:
-    # `eleitor.eleito` ia de `…0011` para `…0022`
-    # (`test_mic_da_mesa_o_ipc_a_tela_e_o_gesto`).
-    #
-    # A pergunta certa é sobre a MESA, não sobre este controle: quando NINGUÉM
-    # está com o microfone, uma borda de `mudo=True` de quem não está no ar não
-    # pode ser "me cale" — não há o que calar —, logo é "quero entrar", que é a
-    # queixa dela. Quando OUTRO está com o microfone, a mesma borda volta a
-    # significar o que sempre significou, e o ramo de recusa segue intacto com
-    # a frase dela.
-    #
-    # ISTO NÃO CONTRADIZ A RÉGUA DE 02/09 (`test_sem_ninguem_eleito_o_mudo_nao_
-    # reelege_a_melhor_fonte`): o que ela proibia era a eleição CEGA — o
-    # `devolver_o_microfone()` global escolhendo "a melhor fonte elegível" e
-    # trocando o padrão do sistema sem ninguém ter pedido. Aqui quem é eleito é
-    # QUEM APERTOU, que é escolha explícita de uma pessoa no plástico. A régua
-    # de 02/09 é reapontada junto, para medir a eleição cega e não esta.
     if _eleitor(daemon).eleito is not None:
         return False
     if not _no_ar_da_sessao(daemon).esta(uniq):
@@ -1535,30 +945,13 @@ def _o_que_a_borda_pede(daemon: DaemonProtocol, uniq: str, mudo: bool) -> bool:
     return False
 
 
-# ---------------------------------------------------------------------------
-# O ATO DO MICROFONE — uma função, dois chamadores (MICROFONE-UM-ATO-01)
-# ---------------------------------------------------------------------------
-
-#: Teto da espera pela CONFIRMAÇÃO do byte do mudo no aparelho. Medido na
-#: bancada em 04/09/2026, com o controle no cabo: o `mic.set` leva **547 ms e
 #: 548 ms** (duas medições, nos dois sentidos) até o `state_full` publicar o
-#: valor novo — o `report_thread` só escreve no ciclo do keepalive, que é de
-#: 0,5 s. Três segundos é seis vezes isso, e continua curto o bastante para a
-#: posse não ficar nossa por engano quando o aparelho responde.
 CONFIRMACAO_DO_MUDO_S: float = 3.0
 
-#: De quanto em quanto se relê, esperando a confirmação. 100 ms é um décimo do
-#: sossego das bordas e cinco vezes o intervalo do laço que as vê.
 PASSO_DA_CONFIRMACAO_S: float = 0.1
 
-#: Janela em que uma borda do bit de mudo é ECO da nossa própria escrita.
-#: Maior que a confirmação medida (~550 ms) com folga, e menor que qualquer
-#: segundo toque deliberado de quem está com o controle na mão.
 ECO_DO_ATO_S: float = 2.0
 
-#: `{uniq: (instante, mudo_que_escrevemos)}` — o registro das escritas que o
-#: ATO fez no byte do mudo. Só ele; o que o kernel escreve na borda do botão
-#: físico não passa por aqui, que é justamente a diferença que o laço precisa.
 _ECO_DO_ATO: dict[str, tuple[float, bool]] = {}
 
 
@@ -1575,13 +968,7 @@ def _marcar_eco_do_ato(uniq: str, mudo: bool) -> None:
 
 
 def _borda_e_eco_do_ato(uniq: str, mudo: bool) -> bool:
-    """A borda que chegou é o eco da nossa escrita, e não um gesto dela?
-
-    Exige as DUAS coisas — a janela de tempo **e** o mesmo valor. Só o tempo
-    engoliria o gesto de quem apertasse o plástico para desfazer o que acabou
-    de fazer pela tela, que é o uso mais provável do botão logo depois de um
-    clique. O valor casa porque o eco só pode trazer de volta o que mandamos.
-    """
+    """A borda que chegou é o eco da nossa escrita, e não um gesto dela?"""
     marca = _ECO_DO_ATO.get(uniq)
     if marca is None:
         return False
@@ -1591,18 +978,13 @@ def _borda_e_eco_do_ato(uniq: str, mudo: bool) -> bool:
     if (_relogio() - quando) >= ECO_DO_ATO_S:
         _ECO_DO_ATO.pop(uniq, None)
         return False
-    # O eco só vale UMA vez: a próxima borda com o mesmo valor é gesto dela.
     _ECO_DO_ATO.pop(uniq, None)
     return True
 
 
 @dataclass(frozen=True)
 class MetadeDoAto:
-    """Uma das duas metades do ato, e o motivo quando ela não aconteceu.
-
-    `motivo` vazio com `feita=False` é proibido por construção: quem constrói
-    uma metade não-feita passa a frase, porque é ela que vai para o cartão.
-    """
+    """Uma das duas metades do ato, e o motivo quando ela não aconteceu."""
 
     feita: bool
     motivo: str = ""
@@ -1644,12 +1026,7 @@ class AtoDoMicrofone:
 
     @property
     def motivo(self) -> str:
-        """A frase que diz QUAL metade faltou — vazia quando o ato está feito.
-
-        As duas metades falhando viram UMA frase com as duas razões, e não a
-        primeira delas: quem lê o cartão precisa saber que não foi só um
-        pedaço. O texto de tela é dela; o que se monta aqui é a junção.
-        """
+        """A frase que diz QUAL metade faltou — vazia quando o ato está feito."""
         faltou = [
             m.motivo
             for m in (self.canal_no_sistema, self.firmware)
@@ -1675,27 +1052,7 @@ class AtoDoMicrofone:
 async def ligar_o_microfone(
     daemon: DaemonProtocol, uniq: str, *, ligado: bool, em: float | None = None
 ) -> AtoDoMicrofone:
-    """O ATO — e é a MESMA função para o botão do plástico e o da tela.
-
-    Uma função, dois chamadores, por nome: `mic_button_loop` (a borda do
-    plástico) e `ipc_handlers._handle_mic_canal_set` (o 🎙 da tela). A régua
-    `tests/unit/test_o_microfone_e_um_estado_so.py` confere isso arrancando o
-    chamador — se os dois deixarem de apontar para este nome, ela reprova.
-
-    **ELE NÃO CONSULTA O MODO**, e é a segunda regra dela. Não há um `if
-    native_mode` neste caminho nem em nenhuma das duas metades: o ato é o
-    mesmo em Nativo e em Virtual. O que muda é o que o APARELHO consegue
-    fazer, e isso o ato RELATA em vez de esconder — ver a metade do firmware.
-
-    A ORDEM É O CANAL PRIMEIRO, e ela é medida: a metade do canal é a que
-    funciona em qualquer modo (o PipeWire não passa pelo hidraw) e é a que ela
-    nomeou — *"ele ser ouvido no canal específico dele"*. A do firmware pode
-    ficar represada; fazê-la primeiro atrasaria a metade que sempre pega.
-
-    **O ATO É ORDEM DELA, com o instante dela** (A-LUZ-E-O-MUDO-DO-MICROFONE-
-    OBEDECEM-AO-JOGO-01): `em` é o do aperto (a borda), e `None` é o clique da
-    tela, que é agora. O pedido do jogo mais velho que ele cai.
-    """
+    """O ATO — e é a MESMA função para o botão do plástico e o da tela."""
     from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import a_pessoa_mandou
 
     a_pessoa_mandou(uniq, em)
@@ -1722,41 +1079,7 @@ async def ligar_o_microfone(
 
 
 async def _o_disco_guarda_o_ato(daemon: DaemonProtocol, ato: AtoDoMicrofone) -> None:
-    """O último ato vale, e o DONO do mudo o guarda: o controle, no `maquina.json`.
-
-    **O ACHADO, 25/09/2026**, no journal dela: o P4 calava de novo a cada
-    restart depois de ela o ligar pelo botão — o registro de um ato velho
-    vencia o novo (O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01). A cura daquele dia
-    gravou o ato no perfil ativo e o lembrou na sessão, e ficaram TRÊS cópias
-    do mudo (o perfil, a sessão e o aparelho) com dois escritores no mesmo
-    clique.
-
-    **O DONO, 28/09/2026 — O-MUDO-E-DO-CONTROLE-01.** A decisão é dela
-    (resposta 9 da noite de 27/09): *o mudo do microfone é do controle, e vale
-    em todo jogo*. O ato grava em `utils.maquina.gravar_o_mudo_do_microfone`,
-    e só ali: a reconexão e o nascimento leem dali
-    (`ProfileManager.reapply_mic_on_connect` e `o_controle_pede_silencio`), a
-    troca de perfil não mexe nele, e o restart o encontra no disco.
-
-    **AQUI, E NÃO NO LAÇO DO BOTÃO**, pela razão de sempre deste arquivo: o
-    ato é UMA função com dois chamadores (a borda do plástico e o 🎙 da tela),
-    e gravar só no laço do botão deixaria a tela fora. O nascimento NÃO passa
-    por aqui: ele chama `_metade_do_canal` direto, e nascer não é ato dela — a
-    regra de 18/09 (todo controle nasce com o microfone; só o calado que ela
-    deu desliga) continua de pé.
-
-    **O QUE SE GRAVA É A PALAVRA DELA, quando alguma metade ficou de pé.**
-    Calar grava sempre que o firmware ou o canal obedeceram — o silêncio que
-    ela pediu não pode depender da eleição, e é a mesma assimetria da SEXTA
-    PORTA de `_metade_do_canal`. Ligar também: o canal recusado por rádio
-    (a ponte que demora a publicar) é o desfecho COMUM, e sem a gravação a
-    reconexão seguinte a calaria outra vez — que é a queixa inteira. Só o ato
-    em que NADA aconteceu (as duas metades recusadas) não vai ao disco: o
-    arquivo não pode dizer o que o aparelho nunca teve.
-
-    Nunca levanta: o ato já aconteceu no aparelho, e um `.json` ilegível não
-    pode transformá-lo em traceback no laço do botão.
-    """
+    """O último ato vale, e o DONO do mudo o guarda: o controle, no `maquina.json`."""
     if not (ato.canal_no_sistema.feita or ato.firmware.feita):
         logger.info("mic_ato_nao_gravado", uniq=ato.uniq, motivo="nada_ficou_de_pe")
         return
@@ -1863,18 +1186,7 @@ async def _metade_do_canal(
 
 
 def _devolver_a_palavra(uniq: str, antes: bool | None, ligado: bool) -> None:
-    """O ato foi RECUSADO: o registro volta a ser o que era antes dele.
-
-    A SEXTA PORTA do pedido dela, e é a única que se fecha depois do ato em vez
-    de antes — as cinco de 08/09 são condições sobre quando a palavra nasce e
-    morre; esta é sobre o ato que NÃO aconteceu.
-
-    `ligado=False` sai pela porta sem tocar em nada, e o porquê está em
-    `_metade_do_canal`: calar não depende de eleição.
-
-    Nunca levanta — `dizer_no_ar` e `esquecer_a_palavra` já engolem o que der
-    errado, e este caminho é o do gesto dela.
-    """
+    """O ato foi RECUSADO: o registro volta a ser o que era antes dele."""
     if not ligado:
         return
     if antes is None:
@@ -1929,9 +1241,6 @@ async def _metade_do_firmware(
         and mudo_agora == mudo_desejado
         and _a_posse_nao_desdiz(controller, uniq, mudo_desejado)
     ):
-        # Já está como o ato pede. É o caminho do BOTÃO DO PLÁSTICO, e não
-        # escrever aqui é o que deixa a posse com o kernel — ou seja, o que
-        # deixa o botão dela continuar funcionando no toque seguinte.
         return MetadeDoAto(True)
     setter = getattr(controller, "set_microphone_mute", None)
     if not callable(setter):
@@ -1943,9 +1252,6 @@ async def _metade_do_firmware(
         ok = bool(await daemon._run_blocking(_mutar, setter, mudo_desejado, uniq))
     if not ok:
         return MetadeDoAto(False, MOTIVO_FIRMWARE_REPRESADO)
-    # O PEDIDO DO JOGO não marca eco (o aperto dela logo depois é gesto) nem
-    # deixa recado de represamento, cuja frase fala do botão
-    # (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
     if marcar_eco:
         _marcar_eco_do_ato(uniq, mudo_desejado)
     _agendar_a_devolucao_da_posse(daemon, uniq, mudo_desejado, recado=recado)
@@ -1953,19 +1259,7 @@ async def _metade_do_firmware(
 
 
 def _a_posse_nao_desdiz(controller: Any, uniq: str, mudo_desejado: bool) -> bool:
-    """A posse do mudo deste controle é do kernel, ou já pede o mesmo que o ato?
-
-    O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01, item 2, pelo lado da tela (a
-    conferência de 28/09 deixou para a O-MUDO-E-DO-CONTROLE-01): o bit lido
-    pode estar momentaneamente no valor que o ato pede com a POSSE do Hefesto
-    pedindo o contrário — a posse velha que um calado deixou. Pular a escrita
-    ali deixa o report seguinte do Hefesto reescrever a posse velha, e o 🎙
-    responde «feito» sobre um microfone que volta a calar. Só a posse `None`
-    (do kernel) ou igual ao desejado deixa a escrita ser pulada.
-
-    Backend sem o leitor da posse (dublê enxuto, controle genérico) responde
-    como a posse do kernel: é o que ele era antes desta guarda.
-    """
+    """A posse do mudo deste controle é do kernel, ou já pede o mesmo que o ato?"""
     leitor = getattr(controller, "microphone_mute_for", None)
     if not callable(leitor):
         return True
@@ -2044,7 +1338,6 @@ async def _confirmar_e_devolver(
         lido = estado.get("mic_mudo") if isinstance(estado, dict) else None
         if isinstance(lido, bool) and lido == mudo_desejado:
             with contextlib.suppress(Exception):
-                # POSICIONAIS: `_run_blocking(self, fn, *args)`. Ver `_mutar`.
                 await daemon._run_blocking(_mutar, devolver, None, uniq)
             logger.info(
                 "mic_ato_posse_devolvida", uniq=uniq, esperou_s=round(esperou, 2)
@@ -2053,17 +1346,7 @@ async def _confirmar_e_devolver(
     logger.info("mic_ato_represado", uniq=uniq, mudo_desejado=mudo_desejado)
     if not recado:
         return
-    # `recusa` E NÃO UMA PALAVRA NOVA. `recado_do_microfone.GESTOS` é uma
-    # tupla FECHADA e `anotar` LEVANTA em gesto desconhecido — de propósito,
-    # para a tela nunca receber uma palavra que não sabe pintar. Medido na
-    # bancada em 04/09: a primeira redação disto mandava
-    # `gesto="firmware-represado"`, o `ValueError` subiu dentro da task e o
     # recado do represamento nunca chegou ao `state_full` — o log dizia
-    # `mic_ato_represado` e a tela não recebia nada.
-    #
-    # `recusa` é a palavra certa e não é remendo: ela já significa *"o produto
-    # não fez, e a razão é esta"*. O que muda é o `motivo`, que é o que a tela
-    # pinta.
     with contextlib.suppress(Exception):
         recado_do_microfone.anotar(
             daemon,
@@ -2074,11 +1357,6 @@ async def _confirmar_e_devolver(
         )
 
 
-#: A frase de quando o byte do mudo não chega ao aparelho. Ela NÃO nomeia o
-#: modo por adivinhação — nomeia o que foi medido: o pedido ficou de pé e o
-#: controle não confirmou. Em Modo Nativo o hidraw é do jogo e o daemon não
-#: escreve nada nele; é o caso conhecido, e é o que a frase descreve sem
-#: prometer que é o único.
 MOTIVO_FIRMWARE_REPRESADO: Final[str] = (
     "o microfone foi ligado no canal deste controle, mas o Hefesto não "
     "conseguiu escrever o mudo no aparelho — enquanto um jogo estiver com o "
@@ -2090,106 +1368,15 @@ MOTIVO_FIRMWARE_REPRESADO: Final[str] = (
 async def _eleger_ou_devolver(
     daemon: DaemonProtocol, uniq: str, mudo: bool
 ) -> ResultadoDaEleicao:
-    """O controle passou a NÃO-MUDO: elege. O ELEITO passou a MUDO: devolve.
-
-    **DEVOLVE O RESULTADO desde 04/09/2026 (MICROFONE-UM-ATO-01).** Ele já
-    tinha um: as cinco frases de `ResultadoDaEleicao.motivo` iam para o log e
-    para o recado, e o chamador ficava sem saber se a metade do canal tinha
-    acontecido. O ato precisa saber — é metade dele.
-
-    O caminho de VOLTA não é opcional: sem ele, o desfecho padrão de ela tirar
-    o mic do controle é o `.monitor` do sink ou o `auto_null` — o sistema
-    gravando o som que SAI no lugar da voz dela
-    (FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01).
-
-    **SÓ O ELEITO DEVOLVE** (auditoria de 02/09/2026). `devolver_o_microfone()`
-    é GLOBAL — não recebe `uniq` —, e aqui se decidia só pelo bit `mudo`. Numa
-    mesa de quatro isso é o defeito inteiro: a J1 elege, o J2 aperta o botão
-    DELE, e o microfone sai da J1, que fica com o LED aceso dizendo "estou no
-    ar". Quem não é o eleito e vai a mudo apaga só a própria luz.
-
-    **E A LUZ DE QUEM PERDEU O CANAL TAMBÉM É DESTE LAÇO** (segunda auditoria
-    de 02/09/2026). Este método escrevia o LED de `uniq` e de mais ninguém — e
-    a posse pode sair de OUTRO controle no mesmo gesto, seja porque o novo
-    eleito ganhou o canal, seja porque o WirePlumber deu o canal a um terceiro.
-    Ver `_apagar_a_luz_de_quem_perdeu_o_canal`.
-    """
+    """O controle passou a NÃO-MUDO: elege. O ELEITO passou a MUDO: devolve."""
     eleitor = _eleitor(daemon)
-    # QUEM ESTAVA COM O CANAL ANTES DESTE TOQUE. Ele é lido AQUI porque o
-    # gesto de um controle pode tirar o microfone de OUTRO, e depois da
-    # chamada não há mais como saber quem era. Ver o bloco da luz no fim.
     dono_antes = eleitor.eleito
-    # QUEM ESTÁ NO AR, EM ORDEM DE CHEGADA — OS-QUATRO-NO-AR-01 (13/09/2026).
-    # Ser o padrão do sistema é de um só; estar no ar é de cada controle. Ver
-    # `MicrofonesNoAr`.
     no_ar = _no_ar_da_sessao(daemon)
     fora_do_padrao = not _mesmo_controle(eleitor.eleito, uniq)
     if mudo:
-        # SÓ QUEM ESTÁ COM O MICROFONE PODE DEVOLVÊ-LO (auditoria 02/09/2026).
-        #
-        # Aqui se decidia só pelo bit `mudo`, sem perguntar de QUEM ele era. Na
-        # mesa de quatro que ela nomeou, isso é o defeito inteiro: a J1 elege e
-        # o plástico dela acende; o J2 aperta o botão DELE, o mudo do firmware
-        # dele vira `True`, e o `devolver_o_microfone()` — que é GLOBAL, não
-        # recebe `uniq` — tirava o padrão do sistema da J1, que continuava com
-        # o LED aceso dizendo "estou no ar". É a mentira que esta onda existe
-        # para matar, e era alcançável no PRIMEIRO toque.
-        #
-        # Quem não elegeu e vai a mudo só apaga a PRÓPRIA luz: o mudo do
-        # firmware é dele, a luz é dele, e o microfone da mesa não é.
-        #
-        # `eleito is None` cai no mesmo ramo, e de propósito: ninguém tomou o
-        # microfone, logo não há o que devolver. Devolver ali reelegeria a
-        # "melhor fonte" e trocaria o padrão do sistema dela sem que ela tivesse
-        # elegido nada — na bancada de hoje isso não aparece só porque não há
-        # fonte elegível, o que é sorte, não cura.
-        #
-        # E SÓ É RECUSA PARA QUEM NÃO ESTÁ NO AR — OS-QUATRO-NO-AR-01
-        # (13/09/2026). Com os quatro no ar juntos, quem aperta o botão sem ser
-        # o padrão pode estar no ar no canal DELE: aí o toque o tira do ar, e
-        # isso é o gesto certo, não recusa (o ramo `fora_do_padrao` abaixo). A
-        # recusa fica para quem não está no ar nem é o padrão. A comparação é
-        # NORMALIZADA: a tela manda `aa:bb:…` e o plástico `aabb…`, e o eleito
-        # que desligava pelo plástico recebia a recusa de quem não elegeu.
         if fora_do_padrao and not no_ar.esta(uniq):
-            # A RECUSA CHEGA À TELA — MIC-RECUSA-NA-TELA-01 (02/09/2026).
-            # Este ramo voltava só com o `logger.info` abaixo: o jogador que
-            # apertou o botão via a luz apagar, o microfone continuar no
-            # vizinho, e o produto não dizia uma palavra. É quem MAIS precisa
-            # da frase — a dona do canal pelo menos tem o LED aceso dizendo
-            # que está no ar.
-            #
-            # E A FRASE FALA DA MESA, NÃO DA MEMÓRIA DO ELEITOR (auditoria de
-            # 02/09/2026). O eleito pode ter SAÍDO da mesa: nada em `src/`
-            # devolve o microfone no hotplug-out — as únicas escritas de
-            # `EleitorDeMicrofone.eleito` são caminhos de eleição. Com a J1
-            # fora do cabo, `recusa_de_quem_nao_elegeu(eleitor.eleito)` dizia
-            # ao J2 *"o microfone da mesa está com outro controle"* e mandava
-            # ele procurar um dono que não tem card na tela — a nona vez que
-            # esta casa nomeia um controle fora da mesa.
-            #
-            # Com o dono fora da mesa a notícia certa é a que ela já escreveu
-            # para `eleito is None`: da mesa, ninguém está com o microfone.
-            # Nenhuma frase nova nasce aqui — texto de tela é dela.
-            #
-            # E QUEM DIZ QUEM ESTÁ NA MESA É UMA FUNÇÃO SÓ, que é a mesma que
             # o `state_full` usa: `recado_do_microfone.mesa_de_agora`. Esta
-            # linha perguntava a `_uniqs_conectados`, que **não exige o
-            # `connected`** — a lista dele vai para a ELEIÇÃO, e lá a pergunta
-            # é outra. O backend real devolve uma entrada POR HANDLE e mantém
-            # o `uniq` preenchido com `connected: False`
-            # (`core/backend_pydualsense.py:7987`), então o controle que saiu
-            # DE VERDADE continuava na lista e o dono não caía.
-            #
-            # Medido com o laço deste arquivo e um backend que faz o que o real
             # faz: o MESMO `state_full` saía com `eleito_na_mesa: false` e o
-            # recado do J2 dizendo *"o microfone da mesa está com outro
-            # controle"*. Duas leituras do mesmo estado, dois vereditos.
-            #
-            # Mesa `None` (backend que não sabe listar) e mesa VAZIA deixam o
-            # dono de pé: quem apertou o botão está na mesa por construção,
-            # logo o vazio só pode ser instrumento cego — e "não sei" nunca
-            # vira "saiu".
             dono = eleitor.eleito
             mesa = recado_do_microfone.mesa_de_agora(daemon)
             if dono is not None and mesa and dono not in mesa:
@@ -2214,69 +1401,20 @@ async def _eleger_ou_devolver(
             if callable(acender_outro):
                 await daemon._run_blocking(_acender, acender_outro, False, uniq)
             return recusa
-        # ANOTADO porque `_run_blocking` devolve `Any` e este método passou a
-        # DEVOLVER o resultado (MICROFONE-UM-ATO-01): sem a anotação o `Any`
-        # vazaria para o ato inteiro e o mypy pararia de conferir as metades.
         resultado: ResultadoDaEleicao
         if fora_do_padrao:
-            # FORA DO PADRÃO E NO AR: O TOQUE O TIRA DO AR, E SÓ A ELE —
-            # OS-QUATRO-NO-AR-01 (13/09/2026). A palavra dele já foi dita
-            # `False` (`_metade_do_canal`), a luz apaga no fim deste método, e
-            # o padrão do sistema não é tocado: nenhum `set-default-source`.
             resultado = ResultadoDaEleicao(ok=True)
         else:
-            # O PADRÃO PASSA AO ÚLTIMO QUE CONTINUA NO AR; sem ninguém no ar,
-            # volta à captura da máquina que não é controle; sem as duas, fica.
-            # Ver `_passar_o_padrao_ou_devolver`.
             resultado = await _passar_o_padrao_ou_devolver(daemon, eleitor, no_ar, uniq)
-        # A LUZ SEGUE A POSSE, e a posse é do eleitor. A luz segue a leitura
-        # CONFERIDA, nunca o que mandamos: `eleger` acende quando o ativo relido
-        # é o controle, e a volta só apaga quando a posse cai. `eleitor.eleito`
-        # é essa resposta, e é a ÚNICA — quem a escreve é
-        # `integrations/eleicao_de_microfone`, e este ramo só é alcançado com
-        # `eleitor.eleito == uniq` (a guarda acima). A auditoria de 02/09/2026
-        # trocou aqui o `aceso = not bool(resultado.ok)`, que confundia as três
-        # recusas de `_eleger_nome`: no `eleicao_mic_nao_pegou` (a escrita
-        # aceita com o ativo relido virando um TERCEIRO) o plástico ficava
-        # aceso sobre um canal que a própria medição dizia não ser mais dele.
-        #
-        # A posse cai em dois casos: o ativo relido deixou de ser o canal dele,
-        # e o ato de calar dele ficou sem destino (`passar_o_padrao`, o «fica»):
-        # ela calou, ninguém está no ar e a máquina não tem outro microfone,
-        # então o padrão fica no canal que ela calou, gravando silêncio por
-        # escolha dela, com a luz apagada. As falhas de `_eleger_nome` na volta
-        # seguem com a posse de pé.
-        #
-        # FATO SUBSTITUÍDO (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-
-        # CONTROLE-01). Aqui estava *"A LUZ FICA ACESA QUANDO A DEVOLUÇÃO É
-        # RECUSADA — decisão dela"*, escrito para este caso: com a volta sem
-        # destino, *"o padrão do sistema continua sendo o canal DESTE controle
-        # — logo o microfone dele está no ar, logo a luz fica acesa"*. Era a
-        # regra de 02/09, sem linha no `docs/data/decisoes-dela.csv`, aplicando
-        # o contrato de 01/09 (*"aceso = este mic está no ar"*). A premissa
-        # caiu com a palavra dela na ponte (08/09), e no «fica» a decisão é a
-        # dela de 19/09 (A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01): *"a luz do
-        # controle: o estado do MEU microfone. Mudo → apagada"*. No aparelho a
-        # luz já apagava um tique depois (`luz_do_mic`); a regra de 02/09
-        # segurava a posse e um tique de luz acesa.
         aceso = _mesmo_controle(eleitor.eleito, uniq)
         if not aceso:
             no_ar.saiu(uniq)
     else:
-        # A LISTA DA ELEIÇÃO É CALCULADA AQUI, e não antes do `if` (auditoria
-        # de 02/09/2026). Ela era, e o ramo `mudo` não a usava mais desde que a
-        # recusa passou a perguntar a `recado_do_microfone.mesa_de_agora` —
-        # então todo toque de botão pagava DOIS `describe_controllers()`, com
-        # duas aquisições do `_io_lock`, para jogar o primeiro fora. É caminho
-        # de BORDA e não os 10 Hz, mas duas leituras do mesmo estado é o que
-        # este arquivo acabou de gastar uma cura inteira para deixar de fazer.
         conectados = _uniqs_conectados(daemon)
         resultado = await daemon._run_blocking(
             eleitor.eleger_o_controle, uniq, conectados
         )
         aceso = bool(resultado.ok)
-        # ENTRA NO AR SÓ O ATO CONFERIDO: a eleição recusada desfaz a palavra
-        # (`_metade_do_canal`), e quem não entrou não pode herdar o padrão.
         if resultado.ok:
             no_ar.entrou(uniq)
     logger.info(
@@ -2287,13 +1425,6 @@ async def _eleger_ou_devolver(
         ativo=resultado.ativo,
         motivo=resultado.motivo,
     )
-    # ...E A MESMA FRASE VAI PARA A TELA. As frases de
-    # `ResultadoDaEleicao.motivo` ("não há canal de captura atribuível a este
-    # controle", "o WirePlumber reelegeu por cima"…) saíam SÓ no `logger.info`
-    # acima (o «não há para onde voltar» não chega mais aqui: é o «fica»).
-    # O docstring do tipo já prometia que elas eram "o texto que vai para a
-    # tela". O recado sobrevive ao tique seguinte porque fica GUARDADO — ver
-    # `daemon/subsystems/recado_do_microfone`.
     recado_do_microfone.anotar(
         daemon,
         uniq,
@@ -2320,66 +1451,9 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
     quem_tocou: str,
     eleitor: Any,
 ) -> None:
-    """O plástico de quem perdeu o microfone SEM TER TOCADO EM NADA.
-
-    ACHADO DA AUDITORIA DE 02/09/2026, e é a outra metade do defeito que
-    `EleitorDeMicrofone.eleger_por_uniq` acabou de fechar do lado da posse. O
-    contrato do LED é dela, de 01/09: *"aceso = este mic está no ar"*. Este
-    laço acendia e apagava a luz de **quem apertou o botão**, e só dele — o
-    ex-dono do canal nunca era tocado. Nas duas cenas em que a posse muda por
-    gesto alheio, o plástico dele continuava afirmando o que a posse já negava:
-
-    * o J2 elege e DÁ CERTO — o canal é do J2, e a J1 seguia acesa;
-    * o J2 elege, a escrita PASSA e o WirePlumber reelege um TERCEIRO — o canal
-      não é de ninguém, e a J1 seguia acesa.
-
-    Só apaga, nunca acende: quem ganha o canal é `quem_tocou`, e a luz dele já
-    foi escrita acima. E só quando a posse REALMENTE saiu do ex-dono — se ela
-    continuar com ele (a escrita nem aconteceu, ou o WirePlumber devolveu o
-    canal a ele), a luz dele está certa e mexer nela seria fabricar a mentira
-    ao contrário.
-
-    **NÃO NASCE FRASE DE TELA AQUI.** O que o card da J1 deveria dizer quando
-    ela perde o canal num gesto de outra pessoa é texto novo, e texto de tela é
-    decisão dela — está no relato desta frente. O LED, não: ele já tem
-    contrato escrito, e obedecê-lo é o trabalho.
-
-    **E O MICROFONE SAI DO AR COM A LUZ — 08/09/2026.** Desde que o `0x32` do
-    rádio passou a ter um segundo dono (a palavra dela, ver
-    `_metade_do_canal`), apagar só o LED abriria a mesma mentira pelo lado de
-    dentro: o plástico dizendo *"saí do ar"* com o microfone ainda
-    transmitindo. Quem perde o canal por gesto alheio deixa de ter dito
-    qualquer coisa — a decisão volta ao ouvinte da source, que é o
-    comportamento de 06/09. Não é `dizer_no_ar(False)`: ela não pediu para ser
-    calada, ela só deixou de ser a dona do canal.
-
-    **E QUEM CONTINUA NO AR NÃO PERDE NADA — 13/09/2026 (OS-QUATRO-NO-AR-01).**
-    O parágrafo acima tratava *"perder o padrão"* como *"sair do ar"*, e era
-    essa a porta por onde ligar o segundo microfone desligava o primeiro. Os
-    quatro ficam no ar juntos; esta função só apaga a luz e esquece a palavra
-    do ex-dono que já NÃO está em `MicrofonesNoAr` — o que o canal sumindo
-    tirou de lá (`_conferir_quem_saiu_do_ar`), ou a posse que nasceu fora do
-    ato.
-    """
-    # OS TRÊS ENDEREÇOS SE NORMALIZAM ANTES DE SE COMPARAREM — 10/09/2026, e o
+    """O plástico de quem perdeu o microfone SEM TER TOCADO EM NADA."""
     # defeito é de FORMA, não de lógica. Medido na bancada dela com o DualSense
-    # do rádio, o log desta função saiu assim:
-    #
-    #     ex_dono=aa:bb:cc:dd:ee:d8   por=aabbccddeed8   eleito_agora=aabbccddeed8
-    #
-    # (o endereço acima é a faixa FORJADA da casa; o real da bancada não
-    #  entra em arquivo versionado)
-    #
-    # É O MESMO CONTROLE nos três campos. `dono_antes` vem com os dois-pontos e
-    # `quem_tocou` vem normalizado, então as duas guardas acima falhavam e o
-    # controle PERDIA O CANAL PARA SI MESMO: `esquecer_a_palavra` apagava o
-    # pedido dela 49 ms depois de ela o ter feito, e o microfone do rádio nunca
     # (noqa-acento: a citação literal dela vem na linha seguinte)
-    # ficava no ar. Ela viu como *"algo tava bugando"* — o nó `hefesto_mic_<hex>`
-    # nascendo, sumindo e voltando.
-    #
-    # As duas guardas EXISTIAM e estavam certas na intenção; o que faltava era
-    # comparar a mesma coisa dos dois lados.
     antes = norm_mac(dono_antes) or dono_antes
     tocou = norm_mac(quem_tocou) or quem_tocou
     eleito_agora = norm_mac(eleitor.eleito) or eleitor.eleito
@@ -2387,13 +1461,7 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
         return
     if eleito_agora == antes:
         return
-    # PERDER O PADRÃO NÃO É SAIR DO AR — OS-QUATRO-NO-AR-01 (13/09/2026). O
-    # ex-dono que continua no ar fica com a luz e com a palavra: o canal DELE
-    # continua publicado, e só a fonte padrão do sistema passou a outro. Medido
     # em 10/09/2026 com dois DualSense no rádio: sem esta guarda, ligar o
-    # segundo microfone escrevia `bt_mic_pedido ligar=False` no primeiro.
-    # Quem tira do ar de fato é `_conferir_quem_saiu_do_ar`, e ele tira a
-    # palavra e a luz juntas — o mesmo par desta função.
     if _no_ar_da_sessao(daemon).esta(dono_antes):
         logger.info(
             "mic_da_mesa_ex_dono_continua_no_ar",
@@ -2413,12 +1481,7 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
 
 
 def _acender(acender: Any, aceso: bool, uniq: str) -> None:
-    """Chama `set_mic_led(aceso, uniq=...)`, tolerando backend sem endereço.
-
-    O `TypeError` é o backend antigo (ou um dublê) que não aceita `uniq`. Cair
-    para a chamada sem endereço é degradar declarado — e o log diz qual foi,
-    porque "degradou calado" é como esta casa fabrica o LED do controle errado.
-    """
+    """Chama `set_mic_led(aceso, uniq=...)`, tolerando backend sem endereço."""
     try:
         acender(aceso, uniq=uniq)
     except TypeError:
@@ -2427,39 +1490,10 @@ def _acender(acender: Any, aceso: bool, uniq: str) -> None:
 
 
 def devolver_a_luz_ao_kernel(daemon: DaemonProtocol) -> int:
-    """Devolve a POSSE do `common[8]` de todos os controles da mesa.
-
-    ACHADO DA AUDITORIA DE 02/09/2026, e ele é sobre uma frase que ficou falsa.
-    O comentário de `mic_button_toggles_system` em `daemon/lifecycle.py`
-    prometia: *"Desligado, não elegemos e não acendemos: o kernel segue dono do
-    mudo E da luz do próprio controle"*. A segunda metade era falsa depois da
-    primeira eleição, e o caminho é REENTRANTE em runtime —
-    `daemon/ipc_draft_applier.py` escreve o campo sem restart.
-
-    Medido nesta árvore, sobre o `_build_common` de verdade:
-
-        1. de fabrica                   : flag1&0x01=0  common[8]=0  -> kernel
-        2. depois de UMA eleicao ok     : flag1&0x01=1  common[8]=1  -> hefesto
-        3. perfil desliga o interruptor : flag1&0x01=1  common[8]=1  -> hefesto
-        4. so a devolucao de posse      : flag1&0x01=0  common[8]=0  -> kernel
-
-    Cena real: ela joga, aperta o mic (LED acende, posse nossa), depois carrega
-    um perfil de gravação com `mic.button_toggles_system: false`. Daí em diante
-    o botão físico não mexe mais na luz, e a luz fica CONGELADA no que a última
-    eleição deixou. Havia porta de emergência (`hefesto-dualsense4unix mic
-    led-release`), mas ela é comando de terminal e a prosa prometia que não
-    precisava dela.
-
-    Devolve quantos controles tiveram a posse devolvida. É idempotente: um
-    `set_microphone_led(None)` sobre quem já devolveu não muda nada.
-    """
+    """Devolve a POSSE do `common[8]` de todos os controles da mesa."""
     devolver = getattr(daemon.controller, "set_microphone_led", None)
     if not callable(devolver):
-        # NÃO É HIPÓTESE: medido em 02/09/2026, nem `core/controller.IController`
-        # nem o `FakeController` da suíte declaram `set_microphone_led` — só o
         # `PyDualSenseController`. Num daemon dublado a devolução não acontece,
-        # e sair calado daqui seria a tela e o log dizendo que a luz voltou ao
-        # kernel quando ela não voltou.
         logger.warning("mic_da_mesa_posse_sem_backend")
         return 0
     quantos = 0
@@ -2470,9 +1504,6 @@ def devolver_a_luz_ao_kernel(daemon: DaemonProtocol) -> int:
             else:
                 devolver(None, uniq=uniq)
         except TypeError:
-            # Backend (ou dublê) sem endereço: degradar é declarado, e o log
-            # diz qual foi — "degradou calado" é como esta casa fabrica o LED
-            # do controle errado.
             logger.warning("mic_da_mesa_posse_sem_endereco", uniq=uniq)
             with contextlib.suppress(Exception):
                 devolver(None)
@@ -2524,60 +1555,17 @@ def _uniqs_conectados(daemon: DaemonProtocol) -> list[str]:
     return out
 
 
-# ---------------------------------------------------------------------------
-# OS QUATRO NO AR — OS-QUATRO-NO-AR-01 (13/09/2026)
-# ---------------------------------------------------------------------------
-
-
 def _mesmo_controle(a: str | None, b: str | None) -> bool:
-    """Os dois endereços são o MESMO controle? Compara normalizado.
-
-    A tela entrega `aa:bb:…` e a borda do plástico `aabb…`. Comparar as duas
-    grafias cruas é a família do defeito de 10/09/2026, o controle que perdia o
-    canal para si mesmo. Vazio nunca é o mesmo que nada.
-    """
+    """Os dois endereços são o MESMO controle? Compara normalizado."""
     if not a or not b:
         return False
     return (norm_mac(a) or a) == (norm_mac(b) or b)
 
 
 class MicrofonesNoAr:
-    """Quem está com o microfone NO AR agora — por controle, em ordem de chegada.
+    """Quem está com o microfone NO AR agora — por controle, em ordem de chegada."""
 
-    **O DESENHO, e ele é de quem coordena, por delegação dela.** Estar no ar é
-    de cada controle, os quatro juntos; a fonte padrão do sistema é de um só, e
-    é o último que ela ligou e continua no ar. A resposta dela à pergunta de
-    13/09/2026 está citada no topo da sprint.
-
-    **POR QUE NÃO MORA NO `EleitorDeMicrofone`.** A eleição decide UMA coisa —
-    quem é o padrão (`integrations/eleicao_de_microfone`, CANAL-POR-CONTROLE-01)
-    —, e a pergunta *"quem está no ar"* não é dela. Guardá-la lá juntaria de
-    novo as duas coisas que aquela sprint separou.
-
-    **POR QUE NÃO É A PALAVRA DO REGISTRO** (`bt_mic.RegistroDePedidosDeCanal`).
-    A palavra é o PEDIDO, e a ponte de rádio obedece a ele antes de a eleição
-    responder; esta lista é a PÓS-CONDIÇÃO — só entra quem o ato conferiu — e
-    tem ORDEM, que é o que decide para quem o padrão passa. As duas andam
-    juntas por construção: entrar é o ato feito, sair é o ato de desligar ou o
-    canal sumindo de fato, e nos dois a palavra muda no mesmo gesto.
-
-    Vive na SESSÃO do daemon e não vai ao disco: *"nada novo vai ao disco"* é o
-    critério da sprint. Só a corrotina do laço do daemon a toca — o gesto, o
-    laço do canal e o nascimento —, então não há lock.
-
-    **QUEM A ESCREVE PASSOU A SER TRÊS — NASCE-LIGADO-MIC-01 (17/09/2026).**
-    Aqui estava escrito que *"um microfone não pode voltar ao ar num boot sem
-    gesto"*, e essa regra é dela e ela a REVOGOU: `docs/data/decisoes-dela.csv`
-    id 37 e id 38 (25/08/2026), reafirmadas em 17/09. Hoje `nascer_no_ar`
-    escreve aqui na CHEGADA do controle, sem gesto nenhum. O que continua de
-    pé é o resto do contrato — não há persistência, a lista morre com a sessão,
-    e sair do ar continua sendo o canal sumir de fato.
-    """
-
-    #: Quantas leituras SEGUIDAS sem canal publicado tiram um microfone do ar.
-    #: Uma não basta: é a janela da reconexão de rádio, em que a ponte velha cai
     #: e a nova sobe no mesmo nó (`bt_mic._aplicar_a_palavra_dela`). Com o laço
-    #: do canal a cada `CANAL_TTL_S`, duas são dois segundos de ausência medida.
     LEITURAS_SEM_CANAL_ATE_SAIR: int = 2
 
     def __init__(self) -> None:
@@ -2664,78 +1652,19 @@ def _no_ar_da_sessao(daemon: Any) -> MicrofonesNoAr:
     return no_ar
 
 
-# ---------------------------------------------------------------------------
-# O NASCIMENTO DO MICROFONE — NASCE-LIGADO-MIC-01 (17/09/2026)
-# ---------------------------------------------------------------------------
-#
-# A QUEIXA, com as palavras dela e sem corrigi-las:
-#
-#     *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
 #     ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
 #     ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
-#
-# E É A TERCEIRA VEZ QUE ELA PEDE. A decisão já estava assinada havia 23 dias,
-# duas vezes, em `docs/data/decisoes-dela.csv`: a id 37
-# (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO,
-# 25/08/2026) — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO O
-# PREÇO… o que caduca é o padrão desligado"*. Nunca foi implementada.
-#
-# O QUE ESTAVA MUDO NÃO ERA O APARELHO. Medido no journal dela em 17/09/2026,
-# às 10:33:27, na partida do daemon::
-#
-#     bt_mic_subsystem_iniciado declarados=2 pedidos=0
-#     bt_mic_source_publicada   source=hefesto_mic_000003     (+30 ms)
-#     bt_mic_pedido             ligar=False seq=1             (+34 ms)
-#
-# O nó SOBE e o `0x32` sai DESLIGADO na mesma respiração. O firmware está
-# ABERTO no nascimento (`microphone_led_repintado mudo=False` no mesmo journal,
-# e `profiles/manager.apply_mic` recusa `muted=False` justamente por ser *"já o
-# default do firmware"*). Quem estava calado era a metade do SISTEMA: quatro
-# estados de sessão que nascem vazios e que só a MÃO DELA escrevia — os dois do
-# `RegistroDePedidosDeCanal`, o `MicrofonesNoAr` daqui e o `_pedido_dela` da
-# ponte. Com os quatro vazios `canal_ativo` é `False`, o selo pinta MUDO, e o
-# 🎙 vira o único caminho — TODA VEZ, porque o registro morre com a saída do
-# controle (`bt_mic.esquecer_ausentes`) e com o daemon.
-#
-# POR QUE AQUI, E NÃO NO PERFIL. O perfil não leva o mudo: `apply_mic` zera o
-# `muted` em toda ativação de perfil, e o journal prova (jogo aberto às
-# 10:45:02, `origin=launch`, só o volume passou); desde a
-# O-MUDO-E-DO-CONTROLE-01 o mudo nem mora mais no perfil, e sim no
-# `maquina.json`. E mesmo que atravessasse, o mudo fala com o `common[9]`
-# do FIRMWARE — a camada que já nasce aberta. O ponto UNIVERSAL é a conexão do
-# controle: vale para o 1º e para o 4º, no cabo e no rádio, no boot e no
-# hotplug. É a mesma razão escrita em
-# `core/backend_pydualsense.assumir_volume_padrao_na_adocao`.
-#
-# POR QUE NÃO NA TELA. `interface/pacotes/a02_controles._faces_do_microfone` e
 # `app/widgets/controller_card.acao_mic` são LEITURA pura do que o `state_full`
-# publica — não há byte a escrever ali, e o nascimento acontece com o daemon,
-# janela aberta ou não.
-#
-# O QUE NÃO SE FAZ AQUI, e a trava é medida: escrever o `common[9]`. Tomar a
-# posse do bit do mudo mata o botão físico dela enquanto a posse durar
-# (`_metade_do_firmware`, e `_o_que_a_borda_pede` diz o mesmo). E é
-# desnecessário: o firmware já nasce ABERTO.
 
 
 def _o_firmware_esta_mudo(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O bit do mudo DESTE controle está ligado agora? `None` não é silêncio.
-
-    O segundo cinto do nascimento, e ele cobre o que o perfil não cobre: ela
-    apertou o botão do plástico, o daemon reabriu o handle, e o controle volta
-    com o mudo aceso. Pôr esse microfone no ar seria a mesma mentira de sinal
-    trocado que a SOM-MIC-REPLUG-01 fechou.
-
-    *"Não sei"* (backend enxuto, leitura que explode, controle sem status) vale
-    como *"não pediu silêncio"* — do contrário o nascimento não aconteceria em
-    nenhum dublê, e a régua ficaria verde sobre nada.
-    """
+    """O bit do mudo DESTE controle está ligado agora? `None` não é silêncio."""
     leitor = getattr(getattr(daemon, "controller", None), "audio_status_for", None)
     if not callable(leitor):
         return False
     try:
         estado = leitor(uniq)
-    except Exception:  # best-effort: a conexão dela não vira traceback
+    except Exception:
         logger.debug("mic_nascimento_leitura_do_mudo_falhou", exc_info=True)
         return False
     mudo = estado.get("mic_mudo") if isinstance(estado, dict) else None
@@ -2743,54 +1672,25 @@ def _o_firmware_esta_mudo(daemon: DaemonProtocol, uniq: str) -> bool:
 
 
 async def _o_controle_pede_silencio(daemon: DaemonProtocol, uniq: str) -> bool:
-    """Ela calou ESTE microfone? Pergunta ao dono da resposta.
-
-    Quem responde é `profiles/manager.ProfileManager.o_controle_pede_silencio`,
-    que lê o mudo do controle no `maquina.json` (O-MUDO-E-DO-CONTROLE-01) — a
-    MESMA leitura de `reapply_mic_on_connect`. Uma segunda leitura do dono
-    aqui seria a segunda cópia dele.
-
-    Vai por `_run_blocking` quando o daemon tem um: ler o `maquina.json` é
-    disco, e disco dentro do laço do daemon é a família
-    REVIEW-M5-PGREP-BLOCK-01.
-    """
+    """Ela calou ESTE microfone? Pergunta ao dono da resposta."""
     controller = getattr(daemon, "controller", None)
     if controller is None:
         return False
     try:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
-        # O DONO NÃO DEPENDE DO PERFIL ATIVO, e por isso a pergunta não pede o
-        # `store`: um daemon sem perfil ativo também respeita o calado dela.
         manager = ProfileManager(controller=controller)
         correr = getattr(daemon, "_run_blocking", None)
         if callable(correr):
             return bool(await correr(manager.o_controle_pede_silencio, uniq))
         return bool(manager.o_controle_pede_silencio(uniq))
-    except Exception:  # best-effort: a conexão dela não vira traceback
+    except Exception:
         logger.debug("mic_nascimento_leitura_do_mudo_do_controle_falhou", exc_info=True)
         return False
 
 
 def _fila_do_nascimento(daemon: Any) -> asyncio.Lock:
-    """UM nascimento por vez nesta sessão do daemon. Molde de `_eleitor`.
-
-    **A FILA NÃO É ZELO — ELA É O DEFEITO DE PRIVACIDADE, MEDIDO.** O caminho
-    da conexão solta um nascimento POR ALVO no mesmo tique, e os dois correm
-    soltos. Sem fila, os dois leem `eleitor.eleito is None` antes de qualquer
-    um escrever, os DOIS elegem, e o último a responder fica com a fonte
-    padrão da máquina — que é exatamente o que a condição *"a mesa sem dono"*
-    existe para impedir, acontecendo por corrida em vez de por regra.
-
-    Medido pela régua desta cura, com a mesa de dois::
-
-        mic_da_mesa_eleicao  uniq=…0011 ok=True
-        mic_da_mesa_eleicao  uniq=…0022 ok=True      ← os dois elegeram
-        eleitor.eleito == …0022                      ← o último venceu
-
-    O `asyncio.Lock` é FIFO, então a ordem de chegada da mesa é a ordem em que
-    os microfones nascem — e o primeiro controle é o que fica com o padrão.
-    """
+    """UM nascimento por vez nesta sessão do daemon. Molde de `_eleitor`."""
     fila = getattr(daemon, "_fila_do_nascimento_do_mic", None)
     if not isinstance(fila, asyncio.Lock):
         fila = asyncio.Lock()
@@ -2799,64 +1699,7 @@ def _fila_do_nascimento(daemon: Any) -> asyncio.Lock:
 
 
 async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O microfone deste controle NASCE NO AR, sem gesto nenhum dela.
-
-    As DUAS ESCRITAS do sistema, e nenhuma no firmware:
-
-    1. `dizer_no_ar(uniq, True)` — a PALAVRA, que acende o `0x32` sem esperar
-       um aplicativo gravando. Sem ela o nó sobe e o aparelho fica mudo, que é
-       exatamente o `bt_mic_pedido ligar=False seq=1` do journal dela. **E ela
-       traz o PEDIDO DE CANAL junto**, por dentro de `BtMicSubsystem.no_ar` —
-       que é o que levanta a ponte no rádio e põe o `uniq` no registro lido
-       por `bt_mic._reconciliar_o_cabo` para publicar o `hefesto_mic_<hex6>`
-       do fio. Uma palavra, os dois transportes;
-    2. `MicrofonesNoAr.entrou` — é ele que faz `_ler_o_canal_deste` publicar
-       `canal_ativo=True`, e é o `canal_ativo` que o selo da aba Controles lê.
-       As duas têm de andar juntas: sem a 2 o chip continua dizendo MUDO sobre
-       um microfone no ar; sem a 1 a tela diz ATIVO sobre zeros.
-
-    **ESTAR NO AR E SER A FONTE PADRÃO SÃO COISAS DIFERENTES** — é a separação
-    que o commit `ec2309c92` nomeou como *"o que falta"*, e o nascimento é
-    quem precisava dela. Estar no ar é de cada controle, os quatro juntos
-    (OS-QUATRO-NO-AR-01); a fonte padrão da máquina é de UM só. Então a eleição
-    só acontece **com a mesa sem dono**, e a condição não é escrita aqui: é a
-    mesma `_eleitor(daemon).eleito is None` que `_o_que_a_borda_pede` já usa.
-    Com dono, os outros nascem no ar e não roubam nada — sem isso, o quarto
-    controle a conectar tomaria a fonte padrão da máquina dela sem ela ter
-    tocado em coisa alguma. E a mesa sem dono não basta desde 18/09/2026: o
-    microfone padrão que ela GRAVOU não pode ser o de outro controle da mesa
-    (`_a_escolha_gravada_e_de_outro_controle`), e a máquina tem de não ter
-    OUTRO microfone que a pessoa não trocou pelo do controle
-    (`_microfone_que_ja_e_da_maquina`).
-
-    **E ELEGER É O CAMINHO DE SEMPRE, NÃO UMA CÓPIA.** Com a mesa sem dono
-    quem elege é `_metade_do_canal` — a mesma metade por onde passam o 🎙 da
-    tela e a borda do plástico —, com a palavra dita antes, o LED seguindo a
-    leitura conferida, o recado na tela e a SEXTA PORTA desfazendo a palavra se
-    a eleição recusar. O nascimento é o TERCEIRO chamador do ato, e escrever
-    aqui uma segunda eleição é o defeito que esta casa já pagou onze vezes.
-
-    **O SILÊNCIO DELA VENCE, e por isso há três perguntas antes das escritas.**
-    O `microfone: false` do `maquina.json` (o "Desligar" dela, que vence
-    qualquer pedido), o mudo do controle no mesmo arquivo (`microfone_mudo`,
-    O-MUDO-E-DO-CONTROLE-01) e o bit do mudo já aceso no aparelho são as três
-    formas de ela ter pedido silêncio; o nascimento recua nas três. Deixar a ORDEM contra o
-    `reapply_mic_after_connect` resolver isso não bastaria: aquele caminho
-    escreve o FIRMWARE, e este levanta o CANAL — o microfone de quem pediu
-    silêncio iria ao ar do mesmo jeito, que é a SOM-MIC-REPLUG-01 voltando pela
-    porta da frente.
-
-    **NÃO HÁ PERSISTÊNCIA NOVA.** As portas de saída do latch continuam todas
-    de pé — quem sai da mesa perde o pedido e a palavra, e nada volta do disco.
-    O que muda é que a CHEGADA volta a dizer a palavra, e é isso que responde
-    ao *"toda vez"* da queixa dela.
-
-    **UM POR VEZ**, e a razão está em `_fila_do_nascimento`: a conexão solta um
-    nascimento por alvo no mesmo tique, e sem fila os dois leem *"a mesa está
-    sem dono"* antes de qualquer um escrever.
-
-    Devolve `True` quando este microfone ficou no ar por causa desta chamada.
-    """
+    """O microfone deste controle NASCE NO AR, sem gesto nenhum dela."""
     if not uniq or not norm_mac(str(uniq)):
         logger.debug("mic_nascimento_sem_endereco", uniq=uniq)
         return False
@@ -2865,22 +1708,7 @@ async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
 
 
 def _ela_desligou_este_microfone(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O `maquina.json` diz `microfone: false` para ESTE controle?
-
-    A ordem dela de 18/09/2026 tem duas metades: todo controle nasce com o
-    microfone (a ausência de opinião liga), e **só o `False` gravado no disco
-    desliga — e a recusa vence qualquer pedido**. A primeira metade chegou ao
-    nascimento; a segunda não: ele perguntava ao perfil e ao bit do firmware, e
-    nunca à recusa. No hotplug seguinte ao "Desligar" dela, a palavra era dita e
-    o canal pedido para o controle que ela tinha acabado de calar — no cabo isso
-    reabria o `hefesto_mic_<hex6>` dele, e com a mesa sem dono ainda o elegia
-    fonte padrão da máquina.
-
-    Quem responde é `bt_mic.uniqs_negados`, a MESMA régua que `alvos()` e
-    `_varrer_os_orfaos` já usam — uma leitura nova do `maquina.json` aqui seria
-    a terceira cópia dela. O import é PREGUIÇOSO no molde das outras pontes
-    entre as camadas deste arquivo.
-    """
+    """O `maquina.json` diz `microfone: false` para ESTE controle?"""
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import uniqs_negados
 
     chave = norm_mac(str(uniq)) or ""
@@ -2982,9 +1810,6 @@ def _a_escolha_gravada_e_de_outro_controle(uniq: str, conectados: list[str]) -> 
     outros = [c for c in conectados if c and not _mesmo_controle(c, uniq)]
     if not outros:
         return None
-    # A mesa INTEIRA vai como `uniqs_com_audio`, com este controle dentro
-    # mesmo que a lista ainda não o traga: com um só na lista, a regra do "um
-    # para um" de `escolher_fonte` entregaria o nó ao vizinho sem prova.
     mesa = [*outros, uniq]
     usb = None
     baixa = gravada.lower()
@@ -2997,18 +1822,7 @@ def _a_escolha_gravada_e_de_outro_controle(uniq: str, conectados: list[str]) -> 
 
 
 async def _o_nascimento_pode_tomar_o_padrao(daemon: DaemonProtocol, uniq: str) -> bool:
-    """`True` = este nascimento pode eleger o controle fonte padrão da máquina.
-
-    DUAS PERGUNTAS, em ordem: a escolha gravada dela é de outro controle da
-    mesa (`_a_escolha_gravada_e_de_outro_controle`)? a máquina tem outro
-    microfone (`_microfone_que_ja_e_da_maquina`)? Qualquer SIM deixa este
-    microfone no ar sem tomar o padrão.
-
-    Na dúvida a resposta é NÃO — a pergunta explodiu, ou o dono do critério não
-    pôde ser consultado (`ConsultaIndisponivelError`): não eleger deixa o microfone
-    no ar e custa um toque no 🎙; eleger por engano troca o microfone de quem
-    tem headset e o WirePlumber GRAVA a troca.
-    """
+    """`True` = este nascimento pode eleger o controle fonte padrão da máquina."""
     from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
         ConsultaIndisponivelError,
     )
@@ -3021,11 +1835,6 @@ async def _o_nascimento_pode_tomar_o_padrao(daemon: DaemonProtocol, uniq: str) -
         return pergunta(*args)
 
     try:
-        # "QUEM ESTÁ NA MESA" é `mesa_de_agora`, que exige o `connected`, e não
-        # `_uniqs_conectados`: o backend real mantém o handle de quem saiu com
-        # o `uniq` preenchido, e a escolha gravada de um controle que já largou
-        # a mesa seguraria a vez para sempre. `None` (backend que não sabe
-        # listar) não sabe de vizinho nenhum.
         gravada = await _perguntar(
             _a_escolha_gravada_e_de_outro_controle,
             uniq,
@@ -3038,7 +1847,7 @@ async def _o_nascimento_pode_tomar_o_padrao(daemon: DaemonProtocol, uniq: str) -
     except ConsultaIndisponivelError as exc:
         logger.info("mic_nasce_sem_tomar_o_padrao", uniq=uniq, consulta_indisponivel=str(exc))
         return False
-    except Exception:  # best-effort: a conexão dela não vira traceback
+    except Exception:
         logger.warning("mic_nascimento_pergunta_do_padrao_falhou", uniq=uniq, exc_info=True)
         return False
     if outro:
@@ -3049,9 +1858,6 @@ async def _o_nascimento_pode_tomar_o_padrao(daemon: DaemonProtocol, uniq: str) -
 
 async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     """O corpo de `nascer_no_ar`, já com a vez na fila. Ver o docstring de lá."""
-    # A RECUSA VEM PRIMEIRO, e antes de qualquer escrita: com ela nenhuma
-    # palavra, nenhum pedido de canal, nenhum `MicrofonesNoAr.entrou` e nenhuma
-    # eleição acontecem. Ver `_ela_desligou_este_microfone`.
     if _ela_desligou_este_microfone(daemon, uniq):
         logger.info("mic_nasce_calado_por_recusa", uniq=uniq)
         return False
@@ -3061,25 +1867,7 @@ async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     if _o_firmware_esta_mudo(daemon, uniq):
         logger.info("mic_nasce_calado_por_gesto", uniq=uniq)
         return False
-    # AS ESCRITAS SÃO IDEMPOTENTES DE PROPÓSITO, e não é zelo: a reconexão
-    # rápida devolve um controle que o `esquecer_ausentes` já apagou do
-    # registro mas que o `MicrofonesNoAr` ainda não tirou do ar (ele espera
-    # DUAS leituras sem canal). Sair cedo por "já está no ar" deixaria o pedido
-    # e a palavra no chão, com a tela dizendo ATIVO — a mentira de segunda
-    # geração que o `_apagar_a_luz_de_quem_perdeu_o_canal` fecha do outro lado.
-    #
-    # O PEDIDO DE CANAL NÃO É CHAMADO AQUI, e isso foi MEDIDO: a mordida desta
-    # cura arrancou um `pedir_canal(uniq)` que existia nesta linha e NENHUMA
-    # régua reprovou. A razão está escrita no dono — `BtMicSubsystem.no_ar`
-    # pede o canal junto quando a palavra é `True` (*"sem ponte de pé não há a
-    # quem entregar a palavra"*) —, então a chamada daqui era uma segunda porta
-    # para o mesmo ato. `dizer_no_ar` cobre os dois ramos abaixo: o de eleição
-    # pelo `_metade_do_canal`, e o outro por si mesmo.
     no_ar = _no_ar_da_sessao(daemon)
-    # A MESA SEM DONO JÁ NÃO BASTA PARA ELEGER (18/09/2026): a escolha gravada
-    # dela não pode ser de outro controle da mesa, e a máquina tem de não ter
-    # OUTRO microfone que a pessoa usa. Sem isso, o ramo de baixo é o de sempre
-    # — no ar, sem tomar o padrão. Ver `_o_nascimento_pode_tomar_o_padrao`.
     if _eleitor(daemon).eleito is None and await _o_nascimento_pode_tomar_o_padrao(
         daemon, uniq
     ):
@@ -3094,18 +1882,12 @@ async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
         )
         return bool(metade.feita)
     dizer_no_ar(uniq, True)
-    # `entrou` MOVE para o fim da ordem de chegada, e a ordem decide para quem
-    # o padrão passa quando o dono sair. Repetir isso a cada reconexão
-    # reescreveria a fila sem ninguém ter ligado nada.
     if not no_ar.esta(uniq):
         no_ar.entrou(uniq)
     logger.info("mic_nasceu_no_ar", uniq=uniq, padrao_da_maquina=False, feito=True)
     return True
 
 
-#: As tarefas de nascimento em voo. O `create_task` devolve uma referência
-#: FRACA no coletor: sem guardá-las, um nascimento pode ser colhido no meio.
-#: Mesmo molde de estado-de-processo do `_ECO_DO_ATO`.
 _NASCIMENTOS_EM_VOO: set[asyncio.Task[bool]] = set()
 
 
@@ -3121,21 +1903,7 @@ async def _nascimento_best_effort(daemon: DaemonProtocol, uniq: str) -> bool:
 def agendar_o_nascimento_do_microfone(
     daemon: DaemonProtocol, *, uniq: str | None
 ) -> asyncio.Task[bool] | None:
-    """Põe o nascimento NUM FIO PRÓPRIO. Devolve a tarefa, ou `None`.
-
-    **POR QUE NÃO AWAIT NO CAMINHO DA CONEXÃO.** Eleger custa um `pactl
-    set-default-source`, o assentamento do grafo e — quando o canal ainda não
-    subiu — até três segundos esperando o PipeWire publicar a source da ponte
-    (`eleicao_de_microfone.ESPERA_DO_CANAL_PASSOS`). Esse orçamento dentro de
-    `connect_with_retry` seria a partida do daemon inteira parada atrás do
-    microfone, vezes o número de controles na mesa. É a mesma família do
-    travamento que a leva de 15/09 mediu na janela: *"as DUAS VIAGENS de IPC
-    são SÍNCRONAS — elas seguram o laço do GTK inteiro"*.
-
-    Sem laço rodando (CLI, dublê síncrono) devolve `None` em vez de explodir: o
-    nascimento é um acréscimo, e nunca pode derrubar o caminho que reconecta o
-    controle dela.
-    """
+    """Põe o nascimento NUM FIO PRÓPRIO. Devolve a tarefa, ou `None`."""
     if not uniq:
         return None
     try:
@@ -3152,18 +1920,7 @@ def agendar_o_nascimento_do_microfone(
 def _quem_herda_o_padrao(
     daemon: DaemonProtocol, no_ar: MicrofonesNoAr, *, exceto: str | None
 ) -> list[str]:
-    """Quem está no ar e pode herdar a fonte padrão, na ordem em que herda.
-
-    Do mais novo ao mais velho, sem `exceto` (quem acabou de se calar), e só
-    quem está na mesa AGORA (`recado_do_microfone.mesa_de_agora`): pedir canal
-    a quem saiu custaria a espera inteira do `_canal_no_ar` por um nó que não
-    vai subir. Mesa `None` ou vazia é instrumento cego, e «não sei» nunca vira
-    «saiu»: a ordem vai inteira.
-
-    **LÊ O `MicrofonesNoAr`, e por isso roda SÓ no laço do daemon** — ele não
-    tem lock. Sem ninguém no ar, a mesa nem é lida: a volta à máquina não
-    precisa dela.
-    """
+    """Quem está no ar e pode herdar a fonte padrão, na ordem em que herda."""
     ordem = (
         no_ar.do_mais_novo_ao_mais_velho(exceto)
         if exceto
@@ -3180,21 +1937,7 @@ def _quem_herda_o_padrao(
 async def _passar_o_padrao_ou_devolver(
     daemon: DaemonProtocol, eleitor: Any, no_ar: MicrofonesNoAr, uniq: str
 ) -> ResultadoDaEleicao:
-    """A PORTA DO BOTÃO: o eleito se calou, e a fonte padrão sai dele.
-
-    Para onde ela vai é UMA pergunta, e o dono é a eleição
-    (`EleitorDeMicrofone.passar_o_padrao`): quem continua no ar, do último
-    ligado ao primeiro; sem ninguém, a captura da máquina que não é controle
-    nenhum; sem as duas, o padrão fica no canal que ela calou, a posse cai e o
-    ato de calar está feito. Aqui só se lê a ordem do no ar — no laço, que é
-    onde o `MicrofonesNoAr` mora — e se entrega a lista.
-
-    A porta do nó que morre faz a mesma pergunta ao mesmo dono
-    (`passar_o_padrao_do_no_morto`). A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01
-    (29/09/2026): até aqui esta porta chamava `devolver_o_microfone` com a
-    pergunta do install, e calar o único no ar elegia o canal do controle cujo
-    nó nasceu primeiro no PipeWire — calado, ou o próprio que calou.
-    """
+    """A PORTA DO BOTÃO: o eleito se calou, e a fonte padrão sai dele."""
     ordem = _quem_herda_o_padrao(daemon, no_ar, exceto=uniq)
     conectados = _uniqs_conectados(daemon) if ordem else []
     resultado: ResultadoDaEleicao = await daemon._run_blocking(
@@ -3206,22 +1949,7 @@ async def _passar_o_padrao_ou_devolver(
 def _o_herdeiro_e_de_quem_esta_no_ar(
     herdeiro: str, no_ar: list[str], mesa: list[str]
 ) -> bool | None:
-    """A fonte que o WirePlumber pôs no padrão é o canal de quem está no ar?
-
-    `True` = é, e ela o ligou: o padrão fica. `False` = é o canal de um
-    controle fora do ar (um calado, ou um nó que sobrou), e a porta do nó
-    pergunta ao dono. `None` = não dá para saber, e o «não sei» nunca escreve.
-
-    Quem responde *"de que controle é este nó"* é `escolher_fonte`, a mesma
-    resolução da eleição: a identidade no nome (o `hefesto_mic_<hex6>`) e,
-    para o nó do kernel no cabo, que não traz identidade nenhuma, o casamento
-    pelo dispositivo USB — o mesmo molde de
-    `_a_escolha_gravada_e_de_outro_controle`.
-
-    Recebe as listas por VALOR, lidas no laço: roda em worker, e o
-    `MicrofonesNoAr` não sai do laço. Bloqueia (só quando o nó não traz
-    identidade no nome: um `pactl list sources` e o sysfs).
-    """
+    """A fonte que o WirePlumber pôs no padrão é o canal de quem está no ar?"""
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
         escolher_fonte,
@@ -3246,20 +1974,7 @@ async def passar_o_padrao_do_no_morto(
     *,
     herdeiro_e_de_controle: bool,
 ) -> ResultadoDaEleicao | None:
-    """A PORTA DO NÓ QUE MORRE, do lado do laço. `None` = o padrão fica.
-
-    Quem a chama é `bt_mic.BtMicSubsystem._devolver_a_fonte_padrao`, pela
-    ponte fio→laço (`call_soon_threadsafe`): o fio do `bt_mic` classifica a
-    herança e nunca lê nem escreve o no ar, que é do laço e não tem lock. A
-    pergunta é a do botão, ao mesmo dono (`EleitorDeMicrofone.passar_o_padrao`),
-    sem `calou`: ninguém se calou, um nó morreu.
-
-    **O HERDEIRO CALADO — 29/09/2026.** Os canais nascem todos com a mesma
-    prioridade no WirePlumber, e quando o nó do padrão morre ele dá o padrão
-    sozinho a um deles, pela ordem dele. Um herdeiro que é o canal de quem
-    está no ar fica como está: foi ela quem o ligou. O de um controle fora do
-    ar abre a porta, e a pergunta passa o padrão a quem está no ar.
-    """
+    """A PORTA DO NÓ QUE MORRE, do lado do laço. `None` = o padrão fica."""
     no_ar = _no_ar_da_sessao(daemon)
     if herdeiro_e_de_controle and herdeiro:
         mesa = recado_do_microfone.mesa_de_agora(daemon) or []
@@ -3282,15 +1997,7 @@ async def passar_o_padrao_do_no_morto(
 
 
 async def _ler_o_canal_deste(daemon: DaemonProtocol, uniq: str) -> dict[str, Any]:
-    """`_ler_o_canal` numa thread — e o `canal_ativo` de quem está NO AR.
-
-    `canal_ativo` é a face do selo que diz *"o som dele chega ao PC pelo canal
-    dele"* (`interface/pacotes/a02_controles._faces_do_microfone`, pela D-12).
-    Ela só acendia para a fonte padrão do sistema, e com dois no ar o selo do
-    que não é o padrão dizia MUDO sobre um microfone no ar — medido nesta
-    sprint, antes da cura. Acende agora também para quem o ato pôs no ar e
-    tem o canal PUBLICADO: sem `fonte` lida, continua apagada.
-    """
+    """`_ler_o_canal` numa thread — e o `canal_ativo` de quem está NO AR."""
     lido: dict[str, Any] = await daemon._run_blocking(_ler_o_canal, uniq)
     if lido.get("fonte") and _no_ar_da_sessao(daemon).esta(uniq):
         lido["canal_ativo"] = True
@@ -3298,20 +2005,7 @@ async def _ler_o_canal_deste(daemon: DaemonProtocol, uniq: str) -> dict[str, Any
 
 
 async def _conferir_quem_saiu_do_ar(daemon: DaemonProtocol, uniqs: list[str]) -> list[str]:
-    """Tira do ar quem saiu DE FATO — o canal sumiu, ou o controle saiu da mesa.
-
-    É o §1.3 da sprint: a luz apaga e a palavra é esquecida quando o canal
-    DAQUELE controle saiu do ar, e nunca porque outro virou o padrão. Os outros
-    no ar não são tocados.
-
-    Roda no fim de cada volta do `canal_do_microfone_loop`, com as leituras que
-    a volta acabou de fazer. Um canal lido como publicado é prova de que está
-    de pé; sem ele, a pergunta vai ao dono (`eleicao_de_microfone.
-    canal_publicado`), que separa *"não há"* de *"não sei"*. Só duas faltas
-    seguidas tiram do ar (`MicrofonesNoAr.LEITURAS_SEM_CANAL_ATE_SAIR`).
-
-    Nunca levanta: é o laço do canal, e ele alimenta a tela a cada dois segundos.
-    """
+    """Tira do ar quem saiu DE FATO — o canal sumiu, ou o controle saiu da mesa."""
     no_ar = _no_ar_da_sessao(daemon)
     if not no_ar.todos():
         return []
@@ -3323,7 +2017,6 @@ async def _conferir_quem_saiu_do_ar(daemon: DaemonProtocol, uniqs: list[str]) ->
         mesa = recado_do_microfone.mesa_de_agora(daemon)
         sairam: list[str] = []
         for uniq in no_ar.todos():
-            # Mesa `None` ou vazia é instrumento cego: "não sei" nunca vira "saiu".
             na_mesa = any(_mesmo_controle(uniq, m) for m in mesa) if mesa else None
             lido = next(
                 (v for k, v in _CANAL_POR_UNIQ.items() if _mesmo_controle(k, uniq)), None
@@ -3351,31 +2044,17 @@ async def _conferir_quem_saiu_do_ar(daemon: DaemonProtocol, uniqs: list[str]) ->
         return []
 
 
-# ---------------------------------------------------------------------------
-# PS-L3-MASCARA-01 — o PS + L3 anda pelas MÁSCARAS (14/09/2026)
-# ---------------------------------------------------------------------------
-# Pedido dela, na grafia dela: *"preciso que o ps+ l3 funcione igual o ps /+ r3 que muda o
 # modo porém para as máscaras. a ideia é que eu nao precise fechar o jogo (noqa-acento)
-# pra ajustar ingame isso e continuar a jogar."* O MODO é a base (PS + R3); a MÁSCARA é
-# como o jogo reconhece o controle, por cima do modo (D-1309-O-MODO-E-A-BASE-E-A-
-# MASCARA-VEM-POR-CIMA). Os dois gestos são as duas fileiras da aba Jogar.
 
-#: A ordem dos chips do cartão na aba Jogar (`interface/monta.MASCARAS`). A
-#: régua confere que o ciclo cobre `external_mask.mascaras_validas()` inteiro:
-#: uma máscara nova não pode ficar fora do gesto sem ninguém ver.
 CICLO_DE_MASCARAS: tuple[str, ...] = ("dualsense", "xbox", "nintendo")
 
-#: A cor de cada máscara na lightbar, da mesma paleta dos modos (`CORES_DO_MODO`).
 #: DualSense e Xbox repetem a cor do modo de mesmo nome, para a barra dizer uma
-#: palavra só; o Nintendo Pro leva o `purple` #bd93f9, o acento da janela — o
-#: vermelho é do aviso de risco (`COR_AVISO_RISCO`).
 CORES_DA_MASCARA: dict[str, tuple[int, int, int]] = {
     "dualsense": CORES_DO_MODO[PONTE_DUALSENSE],
     "xbox": CORES_DO_MODO[PONTE_XBOX],
     "nintendo": (189, 147, 249),
 }
 
-#: Os mesmos pulsos do PS + R3: "isto pode derrubar o controle dentro do jogo".
 _PULSOS_DE_RISCO: list[tuple[tuple[int, int, int], float]] = [
     (COR_AVISO_RISCO, PULSO_SEG),
     ((0, 0, 0), PULSO_SEG),
@@ -3396,24 +2075,13 @@ def _pulsos_de_falha() -> list[tuple[tuple[int, int, int], float]]:
 
 
 def mascara_atual(daemon: DaemonProtocol, uniq: str | None = None) -> str:
-    """A máscara do cartão `uniq` AGORA: a que o vpad veste, ou a que ele vestiria.
-
-    Com o vpad de pé, é o `flavor` dele — a prova é o aparelho. Sem vpad (na
-    Navegação), é a do cartão herdando a da sessão (`external_mask.
-    mascara_efetiva`): a que o próximo vpad veste e a que a aba Jogar acende.
-
-    `uniq` omitido é o cartão do jogador 1. O PS + L3 passa o de quem segura os
-    atalhos (OS-ATALHOS-NA-ESPERA-01, ver `build_next_mask_callback`).
-    """
+    """A máscara do cartão `uniq` AGORA: a que o vpad veste, ou a que ele vestiria."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         mascara_efetiva,
         mascara_vestida,
     )
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
 
-    # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a pergunta "o que o aparelho veste"
-    # tem UM leitor (`external_mask.mascara_vestida`). Aqui havia uma cópia dele,
-    # quase igual à da env — e as duas divergiam no estado de falha.
     vivo = mascara_vestida(daemon, uniq)
     if isinstance(vivo, str) and vivo in CICLO_DE_MASCARAS:
         return vivo
@@ -3430,11 +2098,7 @@ def _e_o_cartao_do_posto(daemon: DaemonProtocol, uniq: str) -> bool:
 
 
 def _vpad_do_cartao_de_pe(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O vpad do cartão `uniq` está de pé? O do jogador 1 é o `_gamepad_device`.
-
-    Os outros são do co-op, e quem responde por eles é o leitor único do que o
-    aparelho veste (`external_mask.mascara_vestida`): sem vpad, None.
-    """
+    """O vpad do cartão `uniq` está de pé? O do jogador 1 é o `_gamepad_device`."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_vestida
 
     if _e_o_cartao_do_posto(daemon, uniq):
@@ -3442,33 +2106,12 @@ def _vpad_do_cartao_de_pe(daemon: DaemonProtocol, uniq: str) -> bool:
     return mascara_vestida(daemon, uniq) is not None
 
 
-#: Quanto a prova do PS + L3 espera o vpad de um jogador do co-op voltar de pé.
-#: Passa do prazo em que o co-op desiste da calibração e promove o vpad assim
-#: mesmo (`coop._CALIB_PRAZO_S`, 2 s) — o pior caso em que ele volta — com um
-#: segundo de folga; a régua confere a relação. Na volta comum, um tique basta.
 _ESPERA_DO_VPAD_DO_COOP_S = 3.0
-#: O passo da espera: cede o laço, que é quem promove o vpad (`forward_all`).
 _PASSO_DA_ESPERA_DO_VPAD_S = 0.02
 
 
 async def _o_vpad_do_cartao_volta(daemon: DaemonProtocol, uniq: str) -> bool:
-    """Espera, com prazo, o vpad do cartão `uniq` voltar de pé. True = voltou.
-
-    **O DEFEITO (conferência da OS-ATALHOS-NA-ESPERA-01, 24/09/2026).** A prova
-    do aparelho olhava o vpad do cartão logo depois do ato. O do posto renasce
-    dentro do próprio ato (`start_gamepad_emulation_desfecho` cria o novo na
-    mesma chamada); o de um jogador do co-op, não: o `sync(force=True)` do
-    `vestir_a_mascara_do_aparelho` derruba o jogador e o senta de novo com o
-    EVIOCGRAB PENDENTE — a thread do leitor ainda não abriu o device —, e o
-    vpad nasce no `forward_all` de um tique seguinte
-    (`CoopManager._promote_pending`). Na espera do lugar guardado, o PS + L3 do
-    P2 trocava a máscara dele e piscava os pulsos de falha: a luz dizia «não
-    chegou ao aparelho» sobre uma troca que pegou, e o segundo aperto que isso
-    convida anda o ciclo mais um passo, recriando o vpad dele de novo no meio
-    do jogo. A bancada de queda não via: o leitor dela confirmava o grab na hora.
-
-    O do posto não espera: se não voltou dentro do ato, não volta.
-    """
+    """Espera, com prazo, o vpad do cartão `uniq` voltar de pé. True = voltou."""
     import time
 
     if _vpad_do_cartao_de_pe(daemon, uniq):
@@ -3492,32 +2135,7 @@ def proxima_mascara(atual: str) -> str:
 
 
 def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
-    """Cria o callback do gesto PS + L3: PRÓXIMA MÁSCARA do cartão de quem o faz.
-
-    O GESTO É O CHIP DO CARTÃO, pelo controle. Ele chama o MESMO handler que o
-    clique chama (`IpcHandlersMixin._handle_gamepad_mask_set`), no mesmo laço:
-    o registro vivo, o perfil ATIVO (`controllers[uniq].mascara`) e o vpad
-    recriado na hora com origem manual (`Daemon.vestir_a_mascara_do_aparelho`).
-    Um segundo escritor da máscara faria o que ela escolhe numa porta sumir na
-    outra.
-
-    O MODO NÃO MUDA: o caminho fica como estava, e quem o troca é o PS + R3.
-
-    A LUZ: dois pulsos vermelhos ANTES quando há jogo com o controle na mão e o
-    vpad de pé (recriá-lo pode derrubar o handle do jogo, R-04); depois, três
-    piscadas na cor da máscara que ficou (`CORES_DA_MASCARA`). Pedido que o
-    aparelho não alcançou dá os pulsos vermelhos com o longo no fim, como no
-    PS + R3.
-
-    O CARTÃO É O DE QUEM FAZ O GESTO — quem segura os atalhos do PS
-    (`poll.quem_segura_os_atalhos`, o dono único da pergunta). É o jogador 1;
-    com o jogo aberto e o P1 fora dentro do prazo do lugar guardado, é o
-    próximo da fila que está na mesa (OS-ATALHOS-NA-ESPERA-01, 24/09/2026), e
-    o gesto anda o cartão DELE: o do P1 ausente não se mexe, e o vpad parado
-    no lugar dele não é recriado (recriá-lo com o jogo aberto o derrubaria, a
-    R-04). Sem o MAC de quem segura não há cartão a gravar, e o gesto recusa
-    pela luz em vez de trocar a máscara da sessão calado.
-    """
+    """Cria o callback do gesto PS + L3: PRÓXIMA MÁSCARA do cartão de quem o faz."""
 
     async def _ciclar_mascara() -> None:
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
@@ -3536,15 +2154,6 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
             await _sinalizar_lightbar(daemon, _pulsos_de_falha())
             return
 
-        # O AVISO VEM ANTES DA ESCOLHA, E A ESCOLHA É LIDA DEPOIS DELE —
-        # TROCA-DENTRO-DO-JOGO-01, 14/09/2026. Os pulsos de risco duram ~0,56 s e
-        # cedem o laço; enquanto eles piscavam, um segundo PS + L3 lia a máscara
-        # de ANTES (nada tinha sido gravado ainda) e mirava o MESMO alvo. Ela
-        # apertava duas vezes esperando o Nintendo Pro, ficava no Xbox 360, e o
-        # vpad era recriado duas vezes no meio do jogo. Lida DEPOIS dos pulsos, a
-        # segunda troca parte do que a primeira deixou. A leitura e a escrita não
-        # têm `await` entre elas, e é isso que as mantém no mesmo pedaço de laço:
-        # se o ato virar assíncrono um dia, aqui precisa de trava.
         jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
         if mascara_vestida(daemon, identidade) is not None and jogo_no_controle:
             await _sinalizar_lightbar(daemon, _PULSOS_DE_RISCO)
@@ -3562,16 +2171,10 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
 
         resposta: dict[str, Any] | None = None
         try:
-            # O MESMO ATO DO CHIP DA ABA JOGAR, pela mesma porta. Antes isto era
-            # `daemon._ipc_server._handle_gamepad_mask_set`, um método privado de
-            # um handler de socket, achado por string.
             resposta = escolher_a_mascara(daemon, identidade, alvo)
         except Exception as exc:
             logger.warning("mascara_do_gesto_falhou", para=alvo, err=str(exc))
 
-        # A PROVA É O APARELHO, como no PS + R3: o vpad que existia tem de
-        # continuar existindo, e vestindo o alvo. O de um jogador do co-op volta
-        # num tique seguinte, e a prova espera por ele (`_o_vpad_do_cartao_volta`).
         vpad_depois = (
             await _o_vpad_do_cartao_volta(daemon, identidade)
             if vpad_antes
@@ -3602,12 +2205,7 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
 
 
 class HotkeySubsystem:
-    """Subsystem sentinela para hotkey no registry.
-
-    A lógica real está nas funções start_hotkey_manager / start_mic_hotkey
-    porque o Daemon precisa de referências diretas para backcompat de testes
-    que acessam daemon._hotkey_manager e daemon._audio.
-    """
+    """Subsystem sentinela para hotkey no registry."""
 
     name = "hotkey"
 
@@ -3623,36 +2221,13 @@ class HotkeySubsystem:
         return True
 
 
-# ---------------------------------------------------------------------------
-# O CANAL DO MICROFONE PELO RETRATO DO SOM — O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01
-# (28/09/2026)
-#
-# NO FIM DO MÓDULO de propósito: o mapa e outros módulos citam linhas deste
-# arquivo, e código novo enfiado lá em cima envelhece as citações.
-# ---------------------------------------------------------------------------
-
-#: O que o canal lê no retrato do som: as fontes (a do controle, o mudo, o
-#: volume) e o servidor (quem é a entrada padrão). Um fluxo de SAÍDA que muda
-#: no meio do jogo não acorda o laço.
 _O_QUE_O_CANAL_LE: tuple[str, ...] = ("sources", "server")
 
-#: A marca do retrato que o laço do canal viu por último. `None` até a
-#: primeira espera, que parte da marca de agora.
 _MARCA_DO_CANAL: list[int | None] = [None]
 
 
 async def _esperar_o_som_mudar(prazo: float, daemon: Any = None) -> None:
-    """Dorme até o retrato do som mudar nas fontes ou no padrão, ou até o prazo.
-
-    **O LAÇO ACORDA PELO EVENTO**: o microfone de um controle nasceu, alguém
-    calou uma fonte, o padrão trocou — e o selo acompanha na hora, sem esperar
-    a volta. Sem retrato vivo (fora do daemon, ou sem servidor de som), nada
-    muda nele, e a espera é o prazo de sempre.
-
-    E não dorme além da hora da próxima conferência de quem saiu do ar
-    (:func:`_conferir_no_prazo`): a volta pelo evento que a pulou não a empurra
-    um prazo inteiro para a frente.
-    """
+    """Dorme até o retrato do som mudar nas fontes ou no padrão, ou até o prazo."""
     from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
     conferido = getattr(daemon, "_canal_conferido_em", None)
@@ -3666,25 +2241,12 @@ async def _esperar_o_som_mudar(prazo: float, daemon: Any = None) -> None:
 
 
 async def _conferir_no_prazo(daemon: Any, uniqs: list[str]) -> list[str]:
-    """A conferência de quem saiu do ar, no máximo uma vez por `CANAL_TTL_S`.
-
-    **A CONTA DE `MicrofonesNoAr.LEITURAS_SEM_CANAL_ATE_SAIR` É DE LEITURAS, e
-    o tempo dela vinha do laço**: duas faltas seguidas eram dois a quatro
-    segundos quando o laço dormia `CANAL_TTL_S` inteiro. Acordado pelo evento
-    do servidor de som, o laço dá voltas em milissegundos — a ponte do rádio
-    que refaz o nó (a fonte sai, o monitor do alto-falante sai, a fonte volta)
-    contaria as duas faltas num piscar e tiraria do ar um microfone que ela
-    ligou, sem gesto nenhum dela. O selo acompanha o evento; o «saiu do ar»
-    segue o relógio de sempre.
-
-    A hora fica no daemon, como o `_microfones_no_ar` (`_no_ar_da_sessao`): é
-    estado da sessão, e não do módulo.
-    """
+    """A conferência de quem saiu do ar, no máximo uma vez por `CANAL_TTL_S`."""
     agora = asyncio.get_running_loop().time()
     conferido = getattr(daemon, "_canal_conferido_em", None)
     if isinstance(conferido, float) and agora - conferido < CANAL_TTL_S:
         return []
-    with contextlib.suppress(Exception):  # daemon de mentira sem atributo livre
+    with contextlib.suppress(Exception):
         daemon._canal_conferido_em = agora
     return await _conferir_quem_saiu_do_ar(daemon, uniqs)
 
@@ -3709,23 +2271,8 @@ def _mudo_pelo_retrato(fonte: str) -> _sp.CompletedProcess[str] | None:
 
 
 # ---------------------------------------------------------------------------
-# O MUDO OBEDECE AO JOGO — A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01
-# (29/09/2026, a D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que revoga a recusa)
-# ---------------------------------------------------------------------------
-#
 # Com pad virtual DualSense, o 0x10 do `common[9]` que o jogo pede cala ou abre
-# o microfone DAQUELE jogador no firmware, pelo dono do mudo, que é este
-# módulo: a metade do firmware do ato, sem marcar eco nem deixar recado, e a
-# palavra do rádio. O jogo NÃO passa pelo `ligar_o_microfone`: ele elegeria a
-# fonte do sistema e gravaria o disco, e o pedido do jogo não é palavra dela.
-#
-# CALAR diz «não» ao rádio (`dizer_no_ar(uniq, False)`: cala e vence quem
-# grava, como o mudo do firmware). ABRIR não diz «sim»: abrir o microfone é o
-# que o jogo pede, pôr no ar é de quem ouve. Se a palavra de pé era o «não»,
-# ela é esquecida e a ponte do rádio volta a seguir quem ouve a fonte.
 
-#: `{chave: (em, mudo)}` — o último pedido de mudo do jogo por controle. O
-#: aperto dela o consulta: mais novo que a borda, é a resposta a ela.
 _MUDO_DO_JOGO: dict[str, tuple[float, bool]] = {}
 
 
@@ -3751,12 +2298,7 @@ def _a_resposta_do_jogo(uniq: str, em_da_borda: float | None) -> bool | None:
 async def o_jogo_pede_o_mudo(
     daemon: DaemonProtocol, uniq: str, mudo: bool, em: float
 ) -> MetadeDoAto | None:
-    """O jogo pediu para calar (`True`) ou abrir o microfone deste controle.
-
-    `None` = o pedido é mais velho que a última ordem dela e não se aplica (o
-    aperto ou o 🎙 dela mandaram depois). Nunca levanta pelo caminho da
-    palavra: `dizer_no_ar` e `esquecer_a_palavra` engolem o que der errado.
-    """
+    """O jogo pediu para calar (`True`) ou abrir o microfone deste controle."""
     from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import (
         chave_do_mic,
         quando_a_pessoa_mandou,
@@ -3813,14 +2355,6 @@ async def mic_do_jogo_loop(daemon: DaemonProtocol) -> None:
         daemon.bus.unsubscribe(EventTopic.MIC_DO_JOGO, queue)
 
 
-# ---------------------------------------------------------------------------
-# A MESA VAZIA NÃO TEM CONFERÊNCIA — o achado de 02/10/2026, provado com o
-# instrumento da O-TRAVAMENTO-SE-SEPARA-UM-FATOR-POR-VEZ-01
-#
-# NO FIM DO MÓDULO pela razão do bloco do retrato: o mapa cita linhas daqui.
-# ---------------------------------------------------------------------------
-
-
 def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
     """Com a mesa vazia, o canal esquece as leituras E o relógio da conferência.
 
@@ -3849,23 +2383,12 @@ def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
     Vale para o cabo e para o rádio, de um a quatro: a mesa vazia é uma só.
     """
     _CANAL_POR_UNIQ.clear()
-    with contextlib.suppress(Exception):  # daemon de mentira sem atributo livre
+    with contextlib.suppress(Exception):
         daemon._canal_conferido_em = None
 
 
-# ---------------------------------------------------------------------------
-# OS GESTOS FAZEM O QUE A TABELA DIZ — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01
-# (01/10/2026)
-#
-# NO FIM DO MÓDULO pela razão escrita acima do canal do microfone: o mapa cita
-# linhas deste arquivo, e código novo lá em cima envelhece as citações.
-#
 # A tabela é `core/acoes_do_gesto.tabela(daemon._maquina)`, lida EM MEMÓRIA a
-# cada gesto: o `machine.declare` grava o `maquina.json` e relê o `_maquina` no
-# mesmo pedido, então a escolha vale no gesto seguinte, sem disco no laço.
-# ---------------------------------------------------------------------------
 
-#: O token do «— Nada —», comparado no laço do PS sem importar o vocabulário ali.
 _NADA_DO_GESTO = "nada"
 
 
@@ -3882,17 +2405,12 @@ def _o_ps_do_computador(daemon: Any) -> Any:
 
 
 def _jogo_aberto_agora() -> int | None:
-    """O appid do jogo do wrapper que está rodando agora, ou None. Nunca levanta.
-
-    É o ``profiles/autoswitch.jogo_do_wrapper_vivo``, o sinal que o autoswitch
-    usou para recusar a troca nos 17 toques da noite de 01/10. Ele lê disco e
-    ``/proc``: só se chama do fio do gesto.
-    """
+    """O appid do jogo do wrapper que está rodando agora, ou None. Nunca levanta."""
     try:
         from hefesto_dualsense4unix.profiles.autoswitch import jogo_do_wrapper_vivo
 
         return jogo_do_wrapper_vivo()
-    except Exception as exc:  # defensivo: a pergunta não derruba o gesto
+    except Exception as exc:
         logger.debug("jogo_aberto_ilegivel", err=str(exc))
         return None
 
@@ -3907,13 +2425,7 @@ def _o_laco_de_agora() -> asyncio.AbstractEventLoop | None:
 def _o_ato_do_ps_para_o_fio(
     daemon: Any, quem_atende: list[Any], do_computador: Any
 ) -> dict[str, Any]:
-    """O que o fio do PS precisa para fazer o ⑥ fora do laço.
-
-    O ``quem`` e o contexto são lidos AQUI, no laço: o fio é outra thread, e a
-    pergunta «de quem é o gesto» (``hotkey_daemon.quem_faz_o_gesto``) só vale
-    dentro do ``observe``. O laço vai junto para os atos que são dele (trocar
-    de perfil, de modo, de máscara, suspender o mouse).
-    """
+    """O que o fio do PS precisa para fazer o ⑥ fora do laço."""
     from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
 
     if quem_atende[0] is None:
@@ -3928,19 +2440,7 @@ def _o_ato_do_ps_para_o_fio(
 
 
 class _AtosDoGesto:
-    """Quem atende cada ato da tabela. Montado UMA vez, no ``start_hotkey_manager``.
-
-    Os atendentes são os de antes da tabela, sem cópia: o ciclo de perfil, o de
-    modo e o de máscara (``build_*``), a suspensão do mouse e do teclado
-    (``set_emulation_suppressed``), a Steam (``open_or_focus_steam``), e os
-    novos — os três da bandeja (``app/actions/atos_da_bandeja``, num processo
-    de fora, porque reiniciar o serviço de dentro dele mataria o pedido no
-    meio) e o script dela (:func:`_rodar_o_script_do_gesto`).
-
-    Os que esperam processo de fora (a Steam, a bandeja, o script) correm num
-    ``FioDeTrabalho`` POR GESTO: um por vez em cada gesto, e o laço dos quatro
-    controles nunca espera.
-    """
+    """Quem atende cada ato da tabela. Montado UMA vez, no ``start_hotkey_manager``."""
 
     def __init__(self, daemon: Any) -> None:
         self.daemon = daemon
@@ -3974,11 +2474,7 @@ class _AtosDoGesto:
         return fio
 
     def callback(self, gesto: str) -> Any:
-        """O que o ``HotkeyManager`` chama para ``gesto``: lê a tabela e faz.
-
-        Devolve o que o atendente devolve — a corrotina do ciclo de perfil, de
-        modo e de máscara vira tarefa no ``HotkeyManager._fire``, como antes.
-        """
+        """O que o ``HotkeyManager`` chama para ``gesto``: lê a tabela e faz."""
         from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
 
         def _ato() -> Any:
@@ -4033,12 +2529,7 @@ class _AtosDoGesto:
         laco: asyncio.AbstractEventLoop | None,
         contexto: contextvars.Context | None,
     ) -> None:
-        """O ⑥ que não é a Steam, já no fio do PS e depois da guarda do jogo.
-
-        Os atos do LAÇO (perfil, modo, máscara, mouse) voltam a ele com o
-        contexto do gesto — é por ele que o PS + L3 pergunta de quem é o
-        cartão. Os de fora correm aqui mesmo, no fio do PS.
-        """
+        """O ⑥ que não é a Steam, já no fio do PS e depois da guarda do jogo."""
         from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 
         if faz not in self._corrotinas and faz not in (
@@ -4051,9 +2542,6 @@ class _AtosDoGesto:
         def _no_laco() -> None:
             resultado = self.fazer(ag.GESTO_DO_PS, escolha, quem)
             if asyncio.iscoroutine(resultado):
-                # A tarefa copia o contexto de quem a cria, e quem a cria já
-                # roda em `ctx` (o `call_soon_threadsafe` abaixo): o
-                # `create_task(context=)` só existe do Python 3.11 em diante.
                 asyncio.get_running_loop().create_task(resultado)
 
         if laco is not None and not laco.is_closed():
@@ -4064,9 +2552,6 @@ class _AtosDoGesto:
             ctx.run(asyncio.run, resultado)
 
 
-#: Os três atos da bandeja que o gesto alcança, no verbo do `__main__` de
-#: `app/actions/atos_da_bandeja`. «Ativar o serviço» não está aqui de propósito:
-#: parado, o serviço não ouve o gesto (D-2909-PARAR-O-SERVICO-NAO-VOLTA-PELO-CONTROLE).
 _ATO_DA_BANDEJA: dict[str, str] = {
     "abrir_o_hefesto": "abrir",
     "reiniciar_o_servico": "reiniciar",
@@ -4075,12 +2560,7 @@ _ATO_DA_BANDEJA: dict[str, str] = {
 
 
 def _abrir_o_ato_da_bandeja(ato: str, gesto: str) -> None:
-    """Roda o ato da bandeja NOUTRO processo, fora do serviço.
-
-    ``reiniciar`` e ``parar`` matariam o daemon no meio do pedido se ele
-    chamasse o ``systemctl`` de dentro de si; o processo novo nasce fora do
-    grupo do serviço (``fora_do_servico.abrir``), que o restart derruba.
-    """
+    """Roda o ato da bandeja NOUTRO processo, fora do serviço."""
     from hefesto_dualsense4unix.app.actions.atos_da_bandeja import argv_do_ato
     from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 
@@ -4097,12 +2577,7 @@ def _abrir_o_ato_da_bandeja(ato: str, gesto: str) -> None:
 
 
 def _quem_e_por_onde(daemon: Any, quem: str | None) -> tuple[int | None, str | None]:
-    """O número do jogador e o transporte (`usb`/`bt`) de quem fez o gesto.
-
-    O número é a conta da casa (``subsystems/base.numero_do_assento_na_mesa``),
-    a mesma do cartão da tela; sem MAC (o backend de mentira), o primário.
-    Nunca levanta: o script roda sem as duas variáveis, e não deixa de rodar.
-    """
+    """O número do jogador e o transporte (`usb`/`bt`) de quem fez o gesto."""
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
     from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 
@@ -4140,14 +2615,7 @@ def _o_script_falhou(nome: str, motivo: str, gesto: str) -> None:
 def _rodar_o_script_do_gesto(
     daemon: Any, gesto: str, caminho: str | None, quem: str | None
 ) -> None:
-    """Roda o script que ela escolheu para ``gesto``, com as seis guardas.
-
-    ``D-2909-O-SCRIPT-E-UM-ARQUIVO-ESCOLHIDO`` (dela, 29/09): conferido de novo
-    aqui (o arquivo pode ter mudado de dono ou sumido desde a escolha); rodado
-    como ela, sem shell (o caminho é UM argumento), fora do serviço e com teto
-    (``fora_do_servico.rodar_e_esperar``); e, se falhar, o recado. Recebe quem
-    fez o gesto (1 a 4) e por onde, em duas variáveis; o endereço, nunca.
-    """
+    """Roda o script que ela escolheu para ``gesto``, com as seis guardas."""
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
     from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 

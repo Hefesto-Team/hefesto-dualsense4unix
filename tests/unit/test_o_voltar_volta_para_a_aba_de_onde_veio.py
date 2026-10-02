@@ -1,34 +1,4 @@
-"""O «← Voltar» do mapa do controle volta para a aba de onde ela veio.
-
-O-VOLTAR-DO-MAPA-VOLTA-PARA-A-ABA-DE-ONDE-VEIO-01. A fala dela, 29/09/2026:
-*«Clicar em Mapa do Controle e clicar em voltar volta pra abra Controles
-ao invés da Aba Conexões.»*
-
-A CAUSA, medida no WebKitGTK (o motor dela): o «Voltar» perguntava a origem ao
-`document.referrer`, que de `file://` para `file://` vem vazio; o clique caía
-sempre no `href` de reserva, a Controles. A cura é do dono,
-`caixa_da_janela.voltar`, que pergunta à lista de volta do WebView.
-
-A RÉGUA abre cada página que leva ao mapa (achadas pelo `href` no disco, não
-numa lista digitada), clica o link, clica o «← Voltar» e exige terminar na
-página que ELA abriu. E o caso sem origem: o mapa aberto direto vai para a
-reserva que o próprio `a.voltar` declara.
-
-E UMA ORIGEM QUE NÃO É A RESERVA (conferência de 02/10/2026). Desde 29/09 só a
-Conexões abre o mapa, e ela é também a reserva: voltar pela lista de volta e
-cair na reserva dão a MESMA página, e a régua ficava verde com o
-`document.referrer` devolvido ao dono (medido). Por isso uma viagem sai de uma
-aba que não é a reserva, indo ao mapa pelo endereço, e tem de voltar a ela.
-
-A PÁGINA LIDA: enquanto o mapa estiver declarado em trabalho no
-`mockup/DIVERGENCIAS.md` (a licença do portão `desenho-aprovado`), a régua lê a
-BANCADA; depois do `--publicar`, a publicada.
-
-A MORDIDA: devolver o `if (document.referrer)` ao `onclick` do dono reprova a
-viagem que sai de uma aba que não é a reserva (ela cai na reserva).
-
-Sem tela o WebKit não abre e a régua PULA: rode com `xvfb-run -a`.
-"""
+"""O «← Voltar» do mapa do controle volta para a aba de onde ela veio."""
 from __future__ import annotations
 
 import importlib.util
@@ -131,7 +101,7 @@ def viagens() -> dict[str, dict]:
         def fim(v, res) -> None:
             try:
                 vez["reg"][chave] = v.evaluate_javascript_finish(res).to_string()
-            except Exception as erro:  # a falha vira mensagem de régua
+            except Exception as erro:
                 vez["reg"][chave] = f"ERRO {erro}"
         vez["view"].evaluate_javascript(js, -1, None, None, None, fim)
 
@@ -188,8 +158,7 @@ def test_o_mapa_aberto_direto_vai_para_a_reserva(viagens) -> None:
 
 
 def test_o_voltar_volta_para_uma_aba_que_nao_e_a_reserva(viagens) -> None:
-    """A origem que distingue a lista de volta da reserva: sem ela, a régua de
-    cima é cega ao `document.referrer` (a única origem hoje é a reserva)."""
+    """A origem que distingue a lista de volta da reserva: sem ela, a régua de"""
     origem = _fora_da_reserva()
     reg = viagens.get("(endereço)", {})
     assert reg.get("link") == "clicou" and reg.get("voltar") == "clicou", (

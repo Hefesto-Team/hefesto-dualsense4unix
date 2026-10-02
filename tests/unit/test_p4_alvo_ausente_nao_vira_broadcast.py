@@ -86,8 +86,7 @@ class _FakeLight:
 
 
 class _FakeTrigger:
-    """Gatilho mínimo: `mode`/`forces`, no mesmo par que `_apply_trigger`
-    grava no handle real (`trigger.mode = ...`, `trigger.setForce(idx, v)`)."""
+    """Gatilho mínimo: `mode`/`forces`, no mesmo par que `_apply_trigger`"""
 
     def __init__(self) -> None:
         self.mode: object | None = None
@@ -142,8 +141,6 @@ class _Mesa:
             )
         )
         self.config = DaemonConfig()
-        # "balanceado" = 1,0: a política não entra na conta e o que sai do
-        # motor é o que ela pediu.
         self.config.rumble_policy = "balanceado"
 
         self.daemon = MagicMock()
@@ -191,8 +188,7 @@ class _Mesa:
         return {u: h.motors for u, h in self.handles.items() if h.motors}
 
     def gatilho_tocou(self, uniq: str) -> bool:
-        """True quando ALGUM force chegou em qualquer lado do gatilho deste
-        controle — o mesmo teto de verdade do `_apply_trigger` real."""
+        """True quando ALGUM force chegou em qualquer lado do gatilho deste"""
         h = self.handles[uniq]
         return bool(h.triggerL.forces) or bool(h.triggerR.forces)
 
@@ -230,10 +226,9 @@ class TestOExemplar:
         """
         dois = mesa.uniqs[1]
         mesa.backend.set_output_target(mesa.indice_de(dois))
-        assert mesa.backend.alvo_de_output_ausente() is None  # presente
+        assert mesa.backend.alvo_de_output_ausente() is None
         mesa.desligar(dois)
         assert mesa.backend.alvo_de_output_ausente() == dois
-        # "Todos" nunca é ausência de destinatário.
         mesa.backend.set_output_target(None)
         assert mesa.backend.alvo_de_output_ausente() is None
 
@@ -285,13 +280,7 @@ class TestOsOutrosSetores:
         assert acesos == {}, f"o LED de mic dos outros mudou: {acesos}"
 
     def test_o_gatilho_nao_vai_para_os_outros(self, mesa: _Mesa) -> None:
-        """Z3-6: a terceira família do aceite (§0.2) — faltava gatilho.
-
-        `set_trigger` passa pelo `_for_each` (já curado pelo F4) e por isso
-        NÃO tinha rede: um refactor que reintroduzisse o `else` histórico só
-        aqui não reprovaria nada, porque nenhum teste chamava `set_trigger`
-        com o alvo ausente.
-        """
+        """Z3-6: a terceira família do aceite (§0.2) — faltava gatilho."""
         dois = mesa.uniqs[1]
         mesa.backend.set_output_target(mesa.indice_de(dois))
         mesa.desligar(dois)
@@ -303,13 +292,7 @@ class TestOsOutrosSetores:
         assert tocaram == set(), f"o gatilho dos outros mexeu: {tocaram}"
 
     def test_o_valor_fica_guardado_no_alvo_que_voltou(self, mesa: _Mesa) -> None:
-        """Não escrever não é esquecer: o campo vira override POR-UNIQ dele.
-
-        É a palavra que a casa já usa (`"registrado"` de `apply_output_for`):
-        *guardado — vai valer quando o Controle 2 voltar*. O defeito antigo
-        gravava no DEFAULT do perfil (porque zerava o `target` antes do
-        `record`), então o valor mirado num ausente virava o padrão de TODOS.
-        """
+        """Não escrever não é esquecer: o campo vira override POR-UNIQ dele."""
         um, dois = mesa.uniqs[0], mesa.uniqs[1]
         mesa.backend.set_output_target(mesa.indice_de(dois))
         mesa.desligar(dois)
@@ -355,11 +338,7 @@ class TestAMiraContinuaMirando:
 
 
 class TestOBroadcastLegitimoContinua:
-    """Controle do caminho feliz: "Todos" continua sendo todos.
-
-    Sem esta classe, "nunca mandar nada" passaria na mordida — e a hipótese
-    tem de explicar o que JÁ funcionava.
-    """
+    """Controle do caminho feliz: "Todos" continua sendo todos."""
 
     @pytest.mark.asyncio
     async def test_sem_alvo_o_rumble_vai_para_os_quatro(self, mesa: _Mesa) -> None:
@@ -383,11 +362,7 @@ class TestOBroadcastLegitimoContinua:
             assert mesa.cores_de(u) == [(1, 2, 3)], f'"Todos" deixou {u} de fora'
 
     def test_o_perfil_continua_ignorando_o_seletor(self, mesa: _Mesa) -> None:
-        """PERFIL-01: `broadcast=True` passa por cima do alvo, presente ou não.
-
-        Ativar perfil com um alvo AUSENTE no seletor não pode virar no-op —
-        seria trocar um defeito por outro (o perfil deixaria de pintar a mesa).
-        """
+        """PERFIL-01: `broadcast=True` passa por cima do alvo, presente ou não."""
         from hefesto_dualsense4unix.core.backend_pydualsense import OutputSpec
 
         dois = mesa.uniqs[1]
@@ -432,13 +407,7 @@ class TestAReplicaDoJogoContinuaChegando:
             )
 
     def test_mesa_de_um_controle_so_continua_vibrando(self, mesa: _Mesa) -> None:
-        """Sem MAC pedido (`target_uniq=None`), broadcast e mira são a MESMA
-        coisa numa mesa de um controle só — é a ressalva que Z3-1 fixou para
-        a cura não virar "nunca vibra". A MORDIDA desta classe (§5 da
-        sprint): arrancar a ressalva `target_uniq is None` de
-        `apply_game_rumble` faz este teste reprovar dizendo que o produto
-        parou de vibrar — provado em Z3-1/Z3-2, reproduzido aqui numa régua
-        independente."""
+        """Sem MAC pedido (`target_uniq=None`), broadcast e mira são a MESMA"""
         sobrevivente = mesa.uniqs[0]
         for outro in mesa.uniqs[1:]:
             mesa.desligar(outro)
@@ -451,13 +420,7 @@ class TestAReplicaDoJogoContinuaChegando:
 
 
 class TestOReleaseLedsAchaOAlvoPeloMac:
-    """FORMA 4 do censo: mira que erra o FORMATO do endereço.
-
-    `enviar_release_leds` indexava `self._handles` com o `uniq` 12-hex CRU,
-    enquanto a key do handle é "AA:BB:CC:...". Para um controle CONECTADO a
-    busca devolvia `{}` — que o docstring do método manda ler como "nenhum
-    handle aberto, que é informação, não falha". Instrumento mentindo.
-    """
+    """FORMA 4 do censo: mira que erra o FORMATO do endereço."""
 
     def test_uniq_12_hex_casa_o_handle(self, mesa: _Mesa, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         import hefesto_dualsense4unix.core.lightbar_reset as reset

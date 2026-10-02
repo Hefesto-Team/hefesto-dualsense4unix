@@ -60,13 +60,9 @@ from hefesto_dualsense4unix.gui import aba_sistema
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 
-#: A palavra que não pode aparecer onde o rótulo nomeia o serviço.
 PALAVRA = "Hefesto"
 
 
-# ---------------------------------------------------------------------------
-# O que a PÁGINA diz — lido, nunca digitado
-# ---------------------------------------------------------------------------
 def _html() -> str:
     if not PAGINA.is_file():
         pytest.fail(
@@ -79,9 +75,6 @@ def _html() -> str:
 
 def _rotulos_das_linhas() -> dict[str, str]:
     """``data-id`` → o rótulo que a pessoa LÊ naquela linha de estado."""
-    # DESDE 25/09/2026 a linha de estado é a do Status, na forma do exame
-    # (A-09-SISTEMA-EM-TRES-SECOES-01): o rótulo mora no `.txt`, e o `.txt` leva
-    # a frase da linha no `title` desde que o `?` saiu (22h13 do mesmo dia).
     achados: dict[str, str] = {}
     for linha in re.findall(r'<(?:div|a) class="saude[^"]*"[^>]*data-id="[^"]+".*?</(?:div|a)>',
                             _html(), re.S):
@@ -102,12 +95,6 @@ def _rotulos_dos_botoes() -> dict[str, str]:
     }
 
 
-# ---------------------------------------------------------------------------
-# O que o PRODUTO escreve — o mesmo código que a interface roda
-# ---------------------------------------------------------------------------
-#: Toda leitura alcançável desta aba, para varrer TODOS os ramos das dicas.
-#: Um portão que medisse um estado só mediria um INSTANTE: foi assim que a
-#: dica de "Desligado" e a de "Ligado" divergiram sem ninguém ver.
 def _leituras() -> list[tuple[str, aba_sistema.Leitura]]:
     estados: list[str | None] = [None, "estado-que-esta-tela-nao-conhece"]
     estados += list(aba_sistema._ESTADO_DO_HEFESTO)
@@ -130,9 +117,6 @@ def _onde_diz(pacote: dict[str, Any], ident: str) -> list[str]:
     return [] if linha is None else [linha["txt"], linha["dica"]]
 
 
-# ---------------------------------------------------------------------------
-# 0. O ANTÍDOTO DO VAZIO: a régua sabe achar antes de acusar
-# ---------------------------------------------------------------------------
 def test_a_regua_sabe_onde_olhar() -> None:
     """Sem isto, um rótulo renomeado calaria o portão em silêncio."""
     linhas = _rotulos_das_linhas()
@@ -152,7 +136,6 @@ def test_a_regua_sabe_onde_olhar() -> None:
         "NENHUM botão desta aba diz 'serviço' — mesma pergunta da linha acima. "
         f"Botões vistos: {botoes}"
     )
-    # Desde 25/09/2026 as linhas moram numa lista só (`status-lista`), e quem
     # as nomeia é `aba_sistema.linhas_do_status` — é com ela que a página casa.
     do_produto = {linha["id"] for linha in aba_sistema.linhas_do_status(
         aba_sistema.Leitura())}
@@ -162,9 +145,6 @@ def test_a_regua_sabe_onde_olhar() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. ONDE O RÓTULO DIZ "SERVIÇO", A DICA NÃO DIZ "HEFESTO"
-# ---------------------------------------------------------------------------
 class TestOQueONomeDaLinhaObriga:
     def test_a_dica_nao_contradiz_o_rotulo(self) -> None:
         rotulos = _rotulos_das_linhas()
@@ -205,11 +185,7 @@ class TestOQueONomeDaLinhaObriga:
         )
 
     def test_o_titulo_do_botao_pode_dizer_hefesto(self) -> None:
-        """O ``title`` explica a DIFERENÇA — e para isso precisa da palavra.
-
-        Se este teste reprovar, alguém varreu a aba inteira e apagou a frase
-        que existe para desfazer a confusão. É o erro ao contrário.
-        """
+        """O ``title`` explica a DIFERENÇA — e para isso precisa da palavra."""
         titulos = re.findall(
             r'<button[^>]*title="([^"]*)"[^>]*data-gesto="parar-ou-retomar"', _html())
         assert titulos, "o botão de parar o serviço perdeu o `title` que explica a diferença"
@@ -221,14 +197,8 @@ class TestOQueONomeDaLinhaObriga:
         )
 
 
-# ---------------------------------------------------------------------------
-# 2. A OUTRA METADE DO CENSO: o que fica com o Hefesto, e MORDE se sumir
-# ---------------------------------------------------------------------------
 class TestOQueFicaComOHefesto:
-    """Onde "Hefesto" é o PROGRAMA, a palavra fica — e um "trocar tudo" reprova.
-
-    Se ela decidir o contrário, o lugar de escrever isso é aqui, com data.
-    """
+    """Onde "Hefesto" é o PROGRAMA, a palavra fica — e um "trocar tudo" reprova."""
 
     def test_quem_enxerga_a_janela_e_o_programa(self) -> None:
         vendo = ambiente_na_tela.descrever_display_grafico(
@@ -250,16 +220,8 @@ class TestOQueFicaComOHefesto:
         )
 
 
-# ---------------------------------------------------------------------------
-# 3. QUEM NÃO RESPONDEU FOI O SERVIÇO — as frases de "não consegui ler"
-# ---------------------------------------------------------------------------
 class TestQuemNaoRespondeuEOServico:
-    """Estas três caem na COLUNA DE VALORES da aba, dentro da faixa "O serviço".
-
-    ``linha_do_ambiente`` corta a frase nos dois-pontos e põe o predicado no
-    valor: com o daemon calado, a coluna passava a dizer "o Hefesto pode estar
-    desligado" debaixo da faixa "O serviço".
-    """
+    """Estas três caem na COLUNA DE VALORES da aba, dentro da faixa "O serviço"."""
 
     @pytest.mark.parametrize(
         "funcao",  # (noqa-acento): nome do parâmetro, casado por pytest

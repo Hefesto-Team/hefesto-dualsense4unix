@@ -49,14 +49,9 @@ from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 RAIZ = Path(__file__).resolve().parents[2]
 DROPIN = RAIZ / "assets" / "wireplumber" / "51-hefesto-dualsense-no-default-source.conf"
 
-#: MEDIDO em 08/08/2026 e RECONFERIDO em 03/09/2026 na máquina dela: o monitor
 #: mais alto que existe lá é o do alto-falante do próprio DualSense. É o piso
-#: que o canal do rádio precisa vencer.
 MONITOR_MAIS_ALTO_MEDIDO = 1109
 
-#: MEDIDO no mesmo instante: a captura REAL da placa do PC. É o teto — acima
-#: disto o controle voltaria a roubar o posto de um microfone de verdade, que é
-#: a queixa que criou o drop-in 51.
 CAPTURA_REAL_MEDIDA = 2009
 
 
@@ -68,8 +63,6 @@ class _RunnerQueSoAnota:
 
     def __call__(self, argv: list[str]) -> str | None:
         self.chamadas.append(list(argv))
-        # `42` é o id de módulo que o `pactl load-module` devolveria; o
-        # `iniciar()` segue em frente e falha no fifo, que é o que se quer.
         return "42\n"
 
 
@@ -89,11 +82,7 @@ def _prioridade_da_entrada_no_dropin() -> int | None:
 
 
 def test_o_canal_do_radio_vence_qualquer_monitor() -> None:
-    """A voz dela, pelo rádio, nunca pode perder para o laço do que sai.
-
-    ARRANQUE A CURA (devolva `PRIORIDADE_SESSAO_DA_PONTE` para 200) e este
-    teste REPROVA — é o estado em que a ponte viveu de 25/07 a 03/09/2026.
-    """
+    """A voz dela, pelo rádio, nunca pode perder para o laço do que sai."""
     assert bt.PRIORIDADE_SESSAO_DA_PONTE > MONITOR_MAIS_ALTO_MEDIDO, (
         f"a source da ponte nasce em {bt.PRIORIDADE_SESSAO_DA_PONTE}, e o "
         f"monitor mais alto desta bancada foi MEDIDO em "
@@ -104,11 +93,7 @@ def test_o_canal_do_radio_vence_qualquer_monitor() -> None:
 
 
 def test_o_canal_do_radio_nao_rouba_de_um_microfone_de_verdade() -> None:
-    """O contrapeso: curar não pode virar pôr o controle no topo.
-
-    Sem esta asserção, a cura viraria a queixa original de volta — *"o controle
-    fica mexendo no microfone"* —, agora com o produto tendo escolhido isso.
-    """
+    """O contrapeso: curar não pode virar pôr o controle no topo."""
     assert bt.PRIORIDADE_SESSAO_DA_PONTE < CAPTURA_REAL_MEDIDA, (
         f"a source da ponte nasce em {bt.PRIORIDADE_SESSAO_DA_PONTE}, acima da "
         f"captura real medida ({CAPTURA_REAL_MEDIDA}). O controle voltaria a "
@@ -117,13 +102,7 @@ def test_o_canal_do_radio_nao_rouba_de_um_microfone_de_verdade() -> None:
 
 
 def test_a_faixa_do_radio_e_a_mesma_faixa_do_cabo() -> None:
-    """Os dois sítios do mesmo número não podem divergir em silêncio.
-
-    O `.conf` do WirePlumber não importa Python, e a source virtual da ponte é
-    invisível para `monitor.alsa.rules` — então o número tem de existir duas
-    vezes. Duas cópias sem portão é como esta casa fabrica divergência
-    silenciosa; o portão é este teste.
-    """
+    """Os dois sítios do mesmo número não podem divergir em silêncio."""
     do_cabo = _prioridade_da_entrada_no_dropin()
     assert do_cabo is not None, (
         "nenhuma regra do drop-in 51 casa `alsa_input.*DualSense` com "
@@ -137,21 +116,13 @@ def test_a_faixa_do_radio_e_a_mesma_faixa_do_cabo() -> None:
 
 
 def test_a_prioridade_viaja_de_verdade_no_load_module() -> None:
-    """A constante não pode ser decorativa: ela tem de estar no argv do `pactl`.
-
-    Sem esta asserção, alguém poderia corrigir a constante e deixar o literal
-    velho na chamada — a régua ficaria verde sobre um canal que continua em
-    último lugar. É a mesma classe de defeito do `--prova-gesto` que dava verde
-    sobre dois botões que ele nunca clicava.
-    """
+    """A constante não pode ser decorativa: ela tem de estar no argv do `pactl`."""
     runner = _RunnerQueSoAnota()
     fonte = bt.SourceVirtualPipeWire(
         nome="hefesto_dualsense_bt_aabbcc",
         descricao="Microfone do controle",
         runner=runner,
     )
-    # Sem PipeWire de verdade o `_abrir_fifo` falha e o `iniciar()` recua — o
-    # que interessa já foi anotado: a linha de comando do `load-module`.
     fonte.iniciar()
     carregas = [c for c in runner.chamadas if len(c) > 1 and c[1] == "load-module"]
     assert carregas, "a ponte não chegou a pedir o `module-pipe-source`"
@@ -166,12 +137,7 @@ def test_a_prioridade_viaja_de_verdade_no_load_module() -> None:
 
 
 def test_o_porque_esta_junto_do_numero() -> None:
-    """Os números medidos moram junto da regra que eles justificam.
-
-    Sem eles, `1500` é número mágico — e número mágico é o primeiro a ser
-    "simplificado" de volta para 200 por quem leu só o nome da constante. Foi
-    exatamente assim que o 200 sobreviveu catorze dias à medição que o derrubou.
-    """
+    """Os números medidos moram junto da regra que eles justificam."""
     fonte = Path(bt.__file__).read_text(encoding="utf-8")
     assert "MONITOR-QUE-VENCE-01" in fonte, (
         "sumiu do módulo o registro de qual medição fixou esta faixa"

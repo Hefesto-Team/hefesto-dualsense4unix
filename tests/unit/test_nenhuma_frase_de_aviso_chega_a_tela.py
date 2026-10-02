@@ -1,54 +1,5 @@
 #!/usr/bin/env python3
-"""FRASES-E-DICAS-02 — nenhuma frase de aviso chega à tela nas abas 02, 03, 07 e 08.
-
-A PALAVRA DELA, 13/09/2026, no índice da terceira lista
-(`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`): ela colou
-a frase da Steam e escreveu *"esse tipo de info segue aparecendo nas abas"*. A
-regra da sprint: frase de aviso não chega à tela em forma nenhuma — recado,
-faixa, caixa, dica flutuante, `title`. Ficam o ESTADO e a AJUDA (o `?`).
-
-AS ÂNCORAS SÃO LIDAS DOS DONOS onde o dono continua de pé:
-
-    âncora                                 dono
-    -------------------------------------  ------------------------------------
-    a abertura da confissão do desenho     `mapa_da_mesa.CONFISSAO_ABERTURA`
-    o ganho que não foi medido             `ordens_da_mesa.NAO_MEDI`
-    o prefixo da cura                      `secao_exame.PREFIXO_DA_CURA`
-    as quatro frases do canal de áudio     `controller_card.DICA_CANAL_*`
-
-DUAS PERDERAM O DONO nesta sprint e ficam como FRASE QUE SAIU — o molde é o
-`test_o_cartao_da_steam_nao_narra.test_a_regua_recusa_as_frases_que_sairam`:
-o aviso da mesa suja (a constante saiu de `secao_controles`) e o trecho da cor
-não lida (a literal saiu de `monta.py` e de `a03_gatilhos.py`; a da aba 09 é da
-SISTEMA-BOTOES-01 e fica fora desta régua, como o «O que fazer» da 09).
-
-MAIS DUAS ENTRARAM NA FRASES-E-DICAS-03 (13/09/2026), também como FRASE QUE
-SAIU, porque nenhuma tem constante de dono: a razão do nascimento na dica da luz
-da 08 (a frase vem montada do daemon, e a reserva `FRASE_NASCEU_CONDENADO` saiu)
-e a narração depois do travessão no sufixo das exceções do Steam Input, na 07.
-
-AS DUAS METADES, com pontos cegos diferentes de propósito:
-
-1. **o que os pacotes ESCREVEM por tique** — é onde as frases moravam, e a
-   página estática não mostra nenhuma delas;
-2. **as dez páginas, a publicada e a da bancada** — o que ela vê antes do
-   primeiro tique, pelo motor de `frases_que_ela_baniu` (o `title` entra na
-   leitura) e SEM o conteúdo dos `.ajuda`, que é ajuda aberta de propósito.
-
-Os três ramos do cartão da Steam têm régua própria, com a de estado da
-TELA-CALADA-02: `test_o_cartao_da_steam_nao_narra.
-test_os_tres_ramos_que_narravam_viram_rotulo_de_estado`.
-
-O PASSEIO NO PILOTO OCULTO pelas dez abas, com `sem_cor=True`, está na entrega
-da sprint (a entrega de 13/09/2026 da `FRASES-E-DICAS-02`), com a
-saída e as fotos: ele abre WebKit e fala com o daemon vivo, e a suíte não faz
-nenhum dos dois. A sonda da mesa saiu do produto nesta sprint, então o passeio
-não tem onde dublar o controle segurado; quem o dubla é esta régua, na sonda de
-verdade (`sinal_da_barra.limpo_para_conectar`), passando pelo tique inteiro.
-
-NADA AQUI TOCA A MÁQUINA DELA: o `conftest.py` desvia `HOME` e os `XDG_*`, a
-sonda é dublada e a mesa é de mentira, na faixa sintética `aa:bb:cc`.
-"""
+"""FRASES-E-DICAS-02 — nenhuma frase de aviso chega à tela nas abas 02, 03, 07 e 08."""
 from __future__ import annotations
 
 import html
@@ -64,27 +15,16 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
 
-#: O MIOLO DA FRASE QUE SAIU de `secao_controles.AVISO_DA_MESA_SUJA`, 13/09/2026.
-#: Sem a abertura nem a instrução, para morder também uma redação nova que só
-#: troque uma das duas.
 AVISO_QUE_SAIU = "outro programa está segurando controle"
 
-#: O TRECHO QUE SAIU das dicas da cor da fita e da aba 03, 13/09/2026.
 COR_QUE_SAIU = "não foi lida"
 
-#: O MIOLO DA RAZÃO DO NASCIMENTO que saiu da dica da luz, 13/09/2026. Comum às
-#: duas redações que chegavam à tela: a do daemon (`sinal_da_barra`, montada na
-#: hora) e a reserva que saiu de `secao_controles`.
 RAZAO_QUE_SAIU = "a barra não obedece"
 
-#: A NARRAÇÃO DO SUFIXO DO STEAM INPUT, que saiu em 13/09/2026: o travessão
-#: depois da contagem das exceções. Morde qualquer redação nova depois dele.
 NARRACAO_QUE_SAIU = "jogo(s) —"
 
-#: A âncora que só vale na 08: o «O que fazer» da aba Sistema é de outra sprint.
 SO_NA_08 = "o prefixo da cura"
 
-#: A mesa de mentira: um controle com a cor lida e um sem.
 UNIQ_1, UNIQ_2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
 MESA = [
     {"pref": "p1", "uniq": UNIQ_1, "jogador": 1, "cor": "white", "nome": "White",
@@ -127,9 +67,6 @@ def _sem_etiqueta(marcacao: str) -> str:
     return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", marcacao)).split())
 
 
-# --------------------------------------------------------------------------
-# a régua sabe recusar
-# --------------------------------------------------------------------------
 def test_a_regua_acha_cada_ancora_e_deixa_o_estado_passar() -> None:
     """Uma régua que só sabe passar não é régua — e uma que recusa estado também não."""
     for nome, trecho in _ancoras().items():
@@ -141,9 +78,6 @@ def test_a_regua_acha_cada_ancora_e_deixa_o_estado_passar() -> None:
         assert _achadas(estado, com_a_cura=True) == [], estado
 
 
-# --------------------------------------------------------------------------
-# 08 — a dica da luz, com outro programa segurando o controle
-# --------------------------------------------------------------------------
 def _ctx() -> Any:
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
@@ -157,11 +91,7 @@ def _ctx() -> Any:
 
 def test_a_dica_da_luz_nao_avisa_com_outro_programa_segurando_o_controle(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A sonda de verdade dublada em SUSPEITA, e a dica continua sem o aviso.
-
-    As duas portas: a função e o tique inteiro (`pacote()`), que é quem a chama
-    para cada controle. A razão do nascimento tem régua própria, logo abaixo.
-    """
+    """A sonda de verdade dublada em SUSPEITA, e a dica continua sem o aviso."""
     from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
@@ -176,12 +106,7 @@ def test_a_dica_da_luz_nao_avisa_com_outro_programa_segurando_o_controle(
 
 
 def test_a_dica_da_luz_nao_traz_a_razao_do_nascimento() -> None:
-    """Os dois controles chegam condenados no estado, e o tique não escreve a razão.
-
-    FRASES-E-DICAS-03, 13/09/2026. O carimbo de cada controle traz o miolo que a
-    tela mostrava. MORDIDA: devolva a razão à `dica_da_luz` e o `nascimento` à
-    chamada dela no `pacote()`, e esta régua reprova nos dois controles.
-    """
+    """Os dois controles chegam condenados no estado, e o tique não escreve a razão."""
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
     ctx = _ctx()
@@ -195,9 +120,6 @@ def test_a_dica_da_luz_nao_traz_a_razao_do_nascimento() -> None:
     assert not [d for d in dicas if _achadas(d)], dicas
 
 
-# --------------------------------------------------------------------------
-# 08 — a linha da confissão e a coluna da direita
-# --------------------------------------------------------------------------
 def test_a_linha_da_confissao_diz_a_conta_e_nao_confessa(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Fica a contagem; a abertura e os itens não chegam ao `title`."""
@@ -248,15 +170,7 @@ def _cena(destino: str) -> list[Any]:
 @pytest.mark.parametrize("destino", ["", "Entrada 9"])
 def test_a_coluna_da_direita_da_08_nao_instrui_nem_confessa(
         monkeypatch: pytest.MonkeyPatch, destino: str) -> None:
-    """Sem o ganho, sem a procedência e sem o prefixo da cura — fica a instrução numerada.
-
-    A CAIXA DIZ O QUE FAZER DESDE 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01,
-    `D-2609-A-SUGESTAO-FICA-LARGA-E-COM-TITULO`: *«sumida, a tela sem controle
-    mostrava três AJUSTAR sem dizer o que fazer»*): uma linha por AJUSTAR, com
-    a instrução da ordem (ou a cura da conferência, sem o «O que fazer:») e o
-    de→para quando há destino. O título mora fora da coluna, e nada fica de
-    fora — o `+N` das ordens saiu com o card único.
-    """
+    """Sem o ganho, sem a procedência e sem o prefixo da cura — fica a instrução numerada."""
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
     cena = _cena(destino)
@@ -281,9 +195,6 @@ def test_o_interrogacao_do_exame_continua_dizendo_o_que_fazer() -> None:
         assert str(PREFIXO_DA_CURA).strip() in dica and item.cura in dica, dica
 
 
-# --------------------------------------------------------------------------
-# a fita e a 03 — a cor não lida diz o nome, ou nada
-# --------------------------------------------------------------------------
 def test_a_cor_nao_lida_diz_o_nome_ou_nada() -> None:
     import monta
 
@@ -302,31 +213,13 @@ def test_a_cor_nao_lida_diz_o_nome_ou_nada() -> None:
     assert "title=" not in p3.chip_do_controle(2, "", "BT", "", True)
 
 
-# --------------------------------------------------------------------------
-# 02 — o canal do alto-falante
-# --------------------------------------------------------------------------
 def test_a_dica_do_canal_nao_chega_a_tela() -> None:
-    """A dica do canal SAIU EM 23/09/2026 — O-ALTO-FALANTE-DIZ-ATIVO-01.
-
-    Ela era rótulo de estado desde 13/09 (`Canal de áudio dormindo`), e foi a
-    última porta por onde a palavra do servidor de som chegava à tela. O que o
-    endereço da dica recebe hoje é medido pelo pacote inteiro em
-    `test_o_alto_falante_diz_ativo.py`; aqui fica a porta fechada.
-
-    MORDE: devolva `dica_do_canal` ao pacote.
-    """
+    """A dica do canal SAIU EM 23/09/2026 — O-ALTO-FALANTE-DIZ-ATIVO-01."""
     from hefesto_dualsense4unix.interface.pacotes import a02_controles as p2
 
     assert not hasattr(p2, "dica_do_canal")
 
 
-# O «07 — o sufixo das exceções do Steam Input» SAIU em 21/09/2026: a linha do
-# Steam Input deixou o cartão da Steam, e não há mais sufixo na tela a medir.
-
-
-# --------------------------------------------------------------------------
-# as dez páginas — a publicada e a da bancada
-# --------------------------------------------------------------------------
 def _paginas() -> list[pathlib.Path]:
     publicadas = sorted((INTERFACE / "paginas").glob("??-*.html"))  # (noqa-acento) nome de pasta
     bancada = sorted((RAIZ / "mockup").glob("??-*.html"))
@@ -354,17 +247,9 @@ def test_nenhuma_pagina_traz_aviso_fora_do_interrogacao(arquivo: pathlib.Path) -
     assert not achadas, f"{arquivo.parent.name}/{arquivo.name}: {trechos}"
 
 
-# --------------------------------------------------------------------------
-# 08 — a coluna da ordem que a página CRAVA antes do primeiro tique
-# --------------------------------------------------------------------------
-#: Os elementos sem etiqueta de fecho: não abrem nível.
 _VAZIOS = frozenset({"area", "base", "br", "col", "embed", "hr", "img", "input",
                      "link", "meta", "source", "track", "wbr"})
 
-#: As classes do cartão da ordem que saíram da coluna visível em 13/09/2026: o
-#: imperativo, a linha do ganho, a marca de procedência e o cartão de cura.
-#: O `faca` VOLTOU em 26/09/2026: a instrução da ordem, com o título «Sugestão
-#: de conexão», é decisão dela olhando o desenho novo da 08.
 CLASSES_QUE_SAIRAM_DA_COLUNA = frozenset({"ganho", "proc", "cura"})
 
 
@@ -405,14 +290,7 @@ def _campo_da_ordem() -> str:
                          ids=lambda p: f"{p.parent.name}/{p.name}")
 def test_a_coluna_da_ordem_cravada_na_08_nao_traz_imperativo_nem_ganho(
         arquivo: pathlib.Path) -> None:
-    """A §D da sprint vale também para o que a página crava antes do primeiro tique.
-
-    O imperativo e o ganho cravados no desenho são prosa do mockup, sem âncora
-    de dono, e a régua de cima não os via. MEDIDO NA VALIDAÇÃO, 13/09/2026: com o
-    `div.faca` e o `div.ganho` de volta no gerador da 08, sem o cartão de cura
-    (que traz o «O que fazer» e morde lá em cima), e a página regerada, as 76
-    réguas da coluna passavam. Esta lê a CLASSE, que é o endereço do desenho.
-    """
+    """A §D da sprint vale também para o que a página crava antes do primeiro tique."""
     leitor = _ClassesDoCampo(_campo_da_ordem())
     leitor.feed(arquivo.read_text(encoding="utf-8"))
     assert leitor.achou and leitor.classes, (

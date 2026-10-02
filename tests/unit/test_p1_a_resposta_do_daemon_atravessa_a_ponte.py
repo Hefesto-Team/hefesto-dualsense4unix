@@ -39,9 +39,7 @@ from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.cli.ipc_client import IpcError
 from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS
 
-# --- as respostas LITERAIS do daemon ---------------------------------------
 
-#: Medido na bancada viva em 23/08/2026 com a mesa VAZIA. Nenhum byte no fio,
 #: nada guardado — e a tela dizia "SimpleRigid aplicado".
 TRIGGER_MESA_VAZIA: dict[str, Any] = {
     "status": "ok",
@@ -49,7 +47,6 @@ TRIGGER_MESA_VAZIA: dict[str, Any] = {
     "guardado_em": [],
 }
 
-#: Mesa com um controle presente e outro só registrado (MESA-CHEIA-09).
 TRIGGER_UM_APLICOU_UM_GUARDOU: dict[str, Any] = {
     "status": "ok",
     "aplicado_em": ["e8:47:3a:00:00:f6"],
@@ -69,16 +66,12 @@ PLAYER_LEDS_GUARDADO: dict[str, Any] = {
     "guardado_em": ["e8:47:3a:00:00:f6"],
 }
 
-#: `_handle_mic_volume_set`: sem ponte de áudio no rádio não há fonte de
-#: captura. NÃO é falha — é resposta, e o daemon está vivo.
 MIC_VOLUME_SEM_FONTE: dict[str, Any] = {
     "status": "sem_fonte",
     "fonte": None,
     "volume": None,
 }
 
-#: O gesto caiu na ROTA GLOBAL: mexeu no microfone de outra pessoa
-#: (MIC-DA-MESA-CHEIA-01). `por_uniq: False` é o único jeito de saber.
 MIC_VOLUME_ROTA_GLOBAL: dict[str, Any] = {
     "status": "ok",
     "fonte": "alsa_input.usb-Sony_Wireless_Controller-00.analog-stereo",
@@ -98,10 +91,6 @@ SPEAKER_SEM_CONTROLE: dict[str, Any] = {"status": "sem_controle", "speaker": Non
 
 RUMBLE_POLICY_OK: dict[str, Any] = {"status": "ok", "policy": "economia"}
 
-#: A outra forma de o daemon dizer não: a frase dentro de um corpo bem-sucedido
-#: (`_recusa_no_corpo`). Hoje nenhuma rota de gatilho a usa; o contrato tem de
-#: aguentá-la mesmo assim, porque foi assim que o rumble sob Modo Nativo
-#: apareceu e ninguém quer descobrir isso duas vezes.
 TRIGGER_RECUSADO: dict[str, Any] = {
     "status": "recusado",
     "motivo": "O Modo Nativo está ligado e o jogo manda nos gatilhos",
@@ -134,11 +123,6 @@ def daemon_diz(monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
         return espiao
 
     return _instalar
-
-
-# ---------------------------------------------------------------------------
-# Gatilhos — a mentira medida ao vivo
-# ---------------------------------------------------------------------------
 
 
 class TestGatilhoEntregaOsDestinos:
@@ -239,11 +223,6 @@ class TestGatilhoEntregaOsDestinos:
         )
 
 
-# ---------------------------------------------------------------------------
-# Lightbar — mesmo payload, outro arquivo de aba
-# ---------------------------------------------------------------------------
-
-
 class TestLightbarEntregaOsDestinos:
     def test_led_set_detalhado_traz_as_duas_listas(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
         espiao = daemon_diz(LED_MESA_VAZIA)
@@ -274,11 +253,6 @@ class TestLightbarEntregaOsDestinos:
 
         assert ipc_bridge.led_set_detalhado((1, 2, 3)) is None
         assert ipc_bridge.player_leds_set_detalhado((False,) * 5) is None
-
-
-# ---------------------------------------------------------------------------
-# Microfone e alto-falante — "sem fonte" deixa de ser "daemon offline"
-# ---------------------------------------------------------------------------
 
 
 class TestMicrofoneEntregaAResposta:
@@ -346,21 +320,6 @@ class TestMicrofoneEntregaAResposta:
         assert espiao.chamadas == [], "a guarda tem de barrar ANTES do socket"
 
 
-#: PODADAS em 26/08/2026 (`c2e6a81a`, "as cinco pontes sem travessia saem"):
-#: `rumble_policy_set_detalhado`, `rumble_policy_set` e `trigger_reset` não
-#: existem mais. Não é regressão — nenhuma linha de tela as chamava, e o portão
-#: de lápides as tinha declaradas. Os testes que as exercitavam saíram JUNTO com
-#: elas: guardar régua de função que não existe é o mesmo defeito ao contrário —
-#: a régua vira mentira e a próxima pessoa perde uma tarde. As irmãs VIVAS
-#: (`rumble_policy_set_checked`, `trigger_set_checked`, `trigger_set`) continuam
-#: medidas logo abaixo, e são elas que o produto chama.
-
-
-# ---------------------------------------------------------------------------
-# O CAMINHO FELIZ INTACTO — nenhum chamador de hoje muda de resposta
-# ---------------------------------------------------------------------------
-
-
 class TestOsInvolucrosDeHojeNaoMudaram:
     """A leva é ADITIVA: quem já chamava continua recebendo o que recebia."""
 
@@ -375,11 +334,7 @@ class TestOsInvolucrosDeHojeNaoMudaram:
         )
 
     def test_trigger_set_checked_ignora_a_frase_do_corpo(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
-        """O invólucro antigo é NARROWING puro — não ganhou motivo novo.
-
-        Se ele passasse a devolver a frase do corpo, a aba Gatilhos começaria a
-        pintar recusa onde hoje pinta sucesso sem ninguém ter olhado a tela.
-        """
+        """O invólucro antigo é NARROWING puro — não ganhou motivo novo."""
         daemon_diz(TRIGGER_RECUSADO)
         assert ipc_bridge.trigger_set_checked("left", "Off", []) == (True, None)
 

@@ -1,41 +1,4 @@
-"""O gancho de lançamento REFAZ a cura das camadas Vulkan — e o botão continua mandando.
-
-VULKAN-REFAZ-01 (16/09/2026). O módulo `camadas_vulkan` prometia, no próprio
-docstring, que *"se ainda assim um `wineserver` sobrescrever, a mudança se perde
-e o próximo lançamento a refaz"*. **Seiscentas linhas abaixo, o código dizia o
-contrário**, e a colisão é o defeito que este arquivo trava.
-
-A regra 2 de `aplicar_no_prefixo` (pedido dela de 09/08/2026) dizia: *"religar
-por fora também conta como escolha — se o registro mostra LIGADA uma camada que
-NÓS desligamos, alguém a religou sem passar por aqui; marque `manter` e saia"*.
-A premissa era que só uma PESSOA poderia ter religado. Ela é falsa: o Wine
-mantém o registro do prefixo em MEMÓRIA e o regrava ao sair, devolvendo a
-camada a `dword:00000000` sozinho — **byte por byte o mesmo** que uma edição à
-mão do `system.reg`. Os dois casos são indistinguíveis no registro, e o
-desempate caía sempre no lado que aposentava a cura: um prefixo curado uma vez
-e reaberto uma vez ganhava `manter` PERMANENTE e nunca mais era curado.
-
-Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o botão
-devolver é permanente. O botão vira a única voz de escolha e o wineserver perde
-o voto."* Com a restrição dura que veio junto: **sem adicionar nada novo na
-interface** — o botão «devolver» já existia, e nenhuma tela mudou.
-
-O que cada bloco trava:
-
-1. **o gancho refaz** — camada que reaparece ligada é desligada de novo;
-2. **o botão continua permanente** — `manter` vindo de `religar=True` é
-   respeitado por quantos lançamentos vierem;
-3. **o botão continua vencendo** — `forcar=True` limpa o `manter` e desliga;
-4. **o estado antigo destrava** — `religada-por-fora` já gravado na máquina de
-   quem usou o produto entre 09/08 e 16/09 deixa de travar o gancho, **sem**
-   derrubar junto o `religada` que veio do botão. Este é o bloco que separa os
-   dois `manter` que convivem no arquivo de estado real dela.
-
-O estado real dela em 16/09/2026 às 01:31 tem DUAS camadas do Epic Online
-Services no appid 1599660 com `{"feito": "religada", "escolha": "manter"}` —
-gravadas pelo BOTÃO. Essas são escolha de verdade e o bloco 4 prova que
-continuam respeitadas.
-"""
+"""O gancho de lançamento REFAZ a cura das camadas Vulkan — e o botão continua mandando."""
 from __future__ import annotations
 
 import json
@@ -46,21 +9,15 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
-#: O overlay do Epic, que é a sobra real que originou o módulo.
 EPIC = r"C:\Program Files (x86)\Epic Games\EOSOverlayVkLayer-Win64.json"
 
-#: A chave de 64 bits, como o `system.reg` a escreve (desescapada).
 CHAVE64 = "Software\\Khronos\\Vulkan\\ImplicitLayers"
 
 _CABECALHO = "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n"
 
 
 def _registro(dword: str = "00000000") -> str:
-    """Um `system.reg` com o driver do Wine e UMA sobra do Epic.
-
-    O driver entra sempre, na chave dele: nenhum teste daqui pode rodar contra
-    um registro mais fácil que o da máquina dela.
-    """
+    """Um `system.reg` com o driver do Wine e UMA sobra do Epic."""
     return "\n".join(
         [
             _CABECALHO,
@@ -105,12 +62,7 @@ def _estado_cru(casa: Path) -> str:
 
 
 def _plantar_estado(casa: Path, feito: str, escolha: str = "manter") -> None:
-    """Grava à mão um estado como o de uma máquina que já usou o produto.
-
-    Escreve pelo `gravar_estado` do módulo para que a forma do arquivo (o
-    `formato`, o envelope `prefixos`) seja a real, e não uma imitação que
-    envelhece sozinha.
-    """
+    """Grava à mão um estado como o de uma máquina que já usou o produto."""
     marca = cv.chave_de_estado(CHAVE64, EPIC)
     cv.gravar_estado(
         {
@@ -126,11 +78,6 @@ def _plantar_estado(casa: Path, feito: str, escolha: str = "manter") -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O gancho REFAZ — é a decisão (c) dela, e é o ponto inteiro
-# ---------------------------------------------------------------------------
-
-
 def test_a_camada_que_reaparece_ligada_e_desligada_de_novo(
     prefixo: Path, casa: Path
 ) -> None:
@@ -139,7 +86,6 @@ def test_a_camada_que_reaparece_ligada_e_desligada_de_novo(
     assert primeiro.desligadas == ("EOSOverlayVkLayer-Win64.json",)
     assert "dword:00000001" in _texto(prefixo)
 
-    # O `wineserver` regrava o que tinha em memória: a camada volta a LIGADA.
     (prefixo / "pfx" / "system.reg").write_text(_registro("00000000"), encoding="utf-8")
 
     segundo = cv.curar_um_prefixo(prefixo, appid="222", home=casa)
@@ -152,11 +98,7 @@ def test_a_camada_que_reaparece_ligada_e_desligada_de_novo(
 
 
 def test_refazer_dez_vezes_nunca_grava_manter(prefixo: Path, casa: Path) -> None:
-    """A cura tem de aguentar o ciclo inteiro sem se aposentar por cansaço.
-
-    Um `manter` gravado por engano em QUALQUER volta encerra a cura para
-    sempre; por isso a régua vive no tempo, e não num instante só.
-    """
+    """A cura tem de aguentar o ciclo inteiro sem se aposentar por cansaço."""
     for volta in range(10):
         (prefixo / "pfx" / "system.reg").write_text(
             _registro("00000000"), encoding="utf-8"
@@ -192,11 +134,6 @@ def test_o_valor_antes_continua_o_de_antes_da_nossa_escrita(
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. O BOTÃO continua sendo permanente — a única voz de escolha
-# ---------------------------------------------------------------------------
-
-
 def test_o_manter_vindo_do_botao_e_respeitado(prefixo: Path, casa: Path) -> None:
     """Ela clicou em «devolver»: nenhum lançamento pode desfazer isso."""
     cv.curar_um_prefixo(prefixo, appid="222", home=casa)
@@ -223,11 +160,6 @@ def test_o_botao_aguenta_lancamentos_seguidos(prefixo: Path, casa: Path) -> None
     assert "dword:00000000" in _texto(prefixo)
 
 
-# ---------------------------------------------------------------------------
-# 3. `forcar=True` continua limpando o `manter` — regra dela de 09/08/2026
-# ---------------------------------------------------------------------------
-
-
 def test_o_botao_forcar_limpa_o_manter_e_desliga(prefixo: Path, casa: Path) -> None:
     """A vontade da tela prevalece: o clique explícito vence a memória."""
     cv.curar_um_prefixo(prefixo, appid="222", home=casa)
@@ -248,19 +180,10 @@ def test_o_botao_forcar_limpa_o_manter_e_desliga(prefixo: Path, casa: Path) -> N
     assert "escolha" not in gravado, "o `manter` sobreviveu ao gesto explícito dela"
 
 
-# ---------------------------------------------------------------------------
-# 4. O estado JÁ GRAVADO: `religada-por-fora` destrava, `religada` fica
-# ---------------------------------------------------------------------------
-
-
 def test_o_estado_antigo_com_religada_por_fora_deixa_de_travar(
     prefixo: Path, casa: Path
 ) -> None:
-    """A linha que a regra caduca escreveu não prova escolha nenhuma.
-
-    Ela nasceu de uma inferência que o registro não sustenta, então o gancho
-    passa a ignorá-la — sem reescrever o arquivo do usuário para isso.
-    """
+    """A linha que a regra caduca escreveu não prova escolha nenhuma."""
     _plantar_estado(casa, feito="religada-por-fora")
 
     resultado = cv.curar_um_prefixo(prefixo, appid="222", home=casa)
@@ -273,12 +196,7 @@ def test_o_estado_antigo_com_religada_por_fora_deixa_de_travar(
 def test_o_estado_antigo_com_religada_do_botao_continua_valendo(
     prefixo: Path, casa: Path
 ) -> None:
-    """As DUAS camadas do Epic no estado real dela têm `feito: religada`.
-
-    Foram gravadas às 01:31 de 16/09/2026 pelo BOTÃO, e são escolha de verdade.
-    Se a cura da regra caduca as alcançasse junto, ela desfaria na primeira
-    abertura de jogo o que ela acabara de pedir.
-    """
+    """As DUAS camadas do Epic no estado real dela têm `feito: religada`."""
     _plantar_estado(casa, feito="religada")
 
     resultado = cv.curar_um_prefixo(prefixo, appid="222", home=casa)
@@ -290,11 +208,7 @@ def test_o_estado_antigo_com_religada_do_botao_continua_valendo(
 
 
 def test_o_campo_feito_e_o_que_separa_os_dois_manter(casa: Path) -> None:
-    """A régua da distinção, isolada: mesmo `escolha`, veredictos opostos.
-
-    É o que permite conviver com o estado já gravado sem migração — o `feito`
-    já carrega quem escreveu a linha.
-    """
+    """A régua da distinção, isolada: mesmo `escolha`, veredictos opostos."""
     do_botao = {"feito": "religada", "escolha": "manter"}
     da_regra_caduca = {"feito": "religada-por-fora", "escolha": "manter"}
 
@@ -305,19 +219,7 @@ def test_o_campo_feito_e_o_que_separa_os_dois_manter(casa: Path) -> None:
 
 
 def test_nada_mais_escreve_o_marcador_caduco(prefixo: Path, casa: Path) -> None:
-    """O `religada-por-fora` só pode existir no passado, nunca ser criado hoje.
-
-    **A CONFERÊNCIA É FASE A FASE, e isso é conserto de uma régua que NÃO
-    MORDIA** — medido em 16/09/2026, arrancando a cura de propósito. A primeira
-    versão deste caso olhava o estado só NO FIM, depois de um `forcar=True`; só
-    que o `forcar` regrava a linha com `feito: desligada` e **apagava o
-    marcador antes da asserção chegar nele**. Com a regra 2 de volta no lugar,
-    o teste passava igual: dava verde sobre o defeito que existe para pegar.
-
-    Quem escreveria o marcador é o GANCHO, então é logo depois de cada passada
-    do gancho que se olha — e não no fim, quando outro caminho já cobriu o
-    rastro.
-    """
+    """O `religada-por-fora` só pode existir no passado, nunca ser criado hoje."""
     for volta in range(3):
         (prefixo / "pfx" / "system.reg").write_text(
             _registro("00000000"), encoding="utf-8"
@@ -338,20 +240,8 @@ def test_nada_mais_escreve_o_marcador_caduco(prefixo: Path, casa: Path) -> None:
     assert cv._FEITO_CADUCO not in _estado_cru(casa), "o «tirar» gravou o marcador"
 
 
-# ---------------------------------------------------------------------------
-# 5. A restrição dura dela: NADA novo na interface
-# ---------------------------------------------------------------------------
-
-
 def test_a_interface_nao_ganhou_gesto_novo_por_causa_disto() -> None:
-    """*"sem adicionar nada novo na interface"* — ela, 16/09/2026.
-
-    O caminho de volta continua sendo UM gesto só. Desde 25/09/2026 ele é o
-    ligável «Corrigir Vulkan» (`corrigir-vulkan`), que ela pediu no lugar do
-    «Tirar a sobreposição Vulkan» (A-09-SISTEMA-EM-TRES-SECOES-01): desligar
-    é o «devolver» de antes. Esta régua trava a tentação de resolver a decisão
-    dela com mais um controle na tela.
-    """
+    """*"sem adicionar nada novo na interface"* — ela, 16/09/2026."""
     aba = (
         Path(__file__).resolve().parents[2]
         / "src"
@@ -363,15 +253,9 @@ def test_a_interface_nao_ganhou_gesto_novo_por_causa_disto() -> None:
     texto = aba.read_text(encoding="utf-8")
     gestos = texto.count('@gesto("09-sistema.html", "corrigir-vulkan"')
     assert gestos == 1, f"o gesto das camadas deixou de ser um só: {gestos}"
-    # A CHAMADA GANHOU UM ARGUMENTO em 21/09/2026 (`excluir=`, a lista de
-    # exclusão do Hefesto), e a régua olha os DOIS que ela protege, não a
-    # linha inteira digitada.
     chamada = re.search(r"cv\.curar_todos\(([^)]*)\)", texto)
     assert chamada is not None, "o botão não chama mais o curar_todos"
     assert re.search(r"\bforcar=True\b", chamada.group(1)), (
         "o botão parou de forçar; a regra dela de 09/08/2026 caiu junto"
     )
-    # DESDE 28/09/2026 O BOTÃO SÓ DEVOLVE PELO REGISTRO — ligar é a escolha que
-    # o lançador lê (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01), e o tirar do
-    # registro mora no gancho, só no jogo que traz o carregador da Khronos.
     assert re.search(r"\breligar=True\b", chamada.group(1)), chamada.group(1)

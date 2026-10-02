@@ -134,14 +134,7 @@ def test_com_vpad_de_pe_a_env_continua_sendo_a_do_aparelho(pasta: Path) -> None:
 
 
 def test_emulacao_ligada_sem_vpad_e_falha_e_deixa_o_fisico_a_vista(pasta: Path) -> None:
-    """O único estado sem vpad que NÃO promete a troca.
-
-    Emulação ligada e nenhum vpad é falha de subida (`vpad_ausente`), não a
-    Navegação. Esconder o físico aí seria abrir o jogo sem controle nenhum — e
-    ela escolheu "só o virtual", não "nenhum".
-
-    MORDE: tirar o ramo `if enabled:` de `modo_do_estado_vivo`.
-    """
+    """O único estado sem vpad que NÃO promete a troca."""
     le.materialize_launch_env(_daemon(ligado=True))
 
     env = _env(pasta / "default.env")
@@ -152,8 +145,7 @@ def test_emulacao_ligada_sem_vpad_e_falha_e_deixa_o_fisico_a_vista(pasta: Path) 
 def test_o_perfil_nativo_fora_da_antecipacao_ainda_arranca_o_ignore(
     pasta: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O guarda de 09/08 continua valendo para o NATIVO — lá o vpad não existe
-    de propósito, e esconder o físico seria o jogo sem controle nenhum."""
+    """O guarda de 09/08 continua valendo para o NATIVO — lá o vpad não existe"""
     nativo = SimpleNamespace(
         name="rdr2",
         mode=SimpleNamespace(kind="native"),
@@ -172,12 +164,7 @@ def test_o_perfil_nativo_fora_da_antecipacao_ainda_arranca_o_ignore(
 def test_um_perfil_de_navegacao_nao_derruba_o_ignore_de_todo_jogo(
     pasta: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O outro lado do guarda: a Navegação SAIU da lista de arriscados.
-
-    Enquanto ela contava, um perfil `desktop` casado por processo — e é o PS + R3
-    que grava `desktop` no perfil ativo ao parar na Navegação — deixava o
-    `default.env` de TODO jogo sem IGNORE, em qualquer modo.
-    """
+    """O outro lado do guarda: a Navegação SAIU da lista de arriscados."""
     navegacao = SimpleNamespace(
         name="navegacao",
         mode=SimpleNamespace(kind="desktop"),
@@ -208,11 +195,7 @@ def test_a_mesa_de_dois_promete_a_cobertura_que_o_coop_entrega(
 
 
 def test_a_cura_por_estrada_herda_a_regra(pasta: Path) -> None:
-    """Heroic, Lutris e os outros lançadores copiam o `default.env`.
-
-    Eles nunca têm `steam_app_<id>`, então é este arquivo que a cura por estrada
-    grava no config deles — a mesma conta, num lugar só.
-    """
+    """Heroic, Lutris e os outros lançadores copiam o `default.env`."""
     le.materialize_launch_env(_daemon())
 
     ambiente = cura_por_estrada.ambiente_da_ponte(pasta)

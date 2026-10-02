@@ -110,81 +110,39 @@ from hefesto_dualsense4unix.integrations.portas_do_barramento import (
 from hefesto_dualsense4unix.utils.lugar import caminho_do_no
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
 
-# ---------------------------------------------------------------------------
-# Os três selos.
-# ---------------------------------------------------------------------------
 
-#: Medi nesta máquina, agora. É o selo mais forte e o mais barato de perder:
-#: basta a frase falar de outra máquina que ele deixa de valer.
 MEDIDO_AQUI = "medido-aqui"
 
-#: Sai de uma conta sobre o que foi medido — contagem, soma, consequência
-#: lógica. Não existe no ``de_onde_sei`` do mapa de canais porque o CSV não faz
-#: aritmética.
 DERIVADO_DA_CONTA = "derivado-da-conta"
 
-#: Alguém de fora afirmou, e este selo **exige nomear quem**. Sem ``fonte`` a
-#: linha não existe — há portão.
 ESPECIFICACAO_DE_TERCEIRO = "especificacao-de-terceiro"
 
-#: Os três, na ordem de força. É contra esta tupla que o portão de AST confere.
 SELOS = (MEDIDO_AQUI, DERIVADO_DA_CONTA, ESPECIFICACAO_DE_TERCEIRO)
 
-#: A palavra de tela de cada selo. Chave de máquina em ASCII com hífen (a
-#: convenção do ``de_onde_sei``), texto de gente à parte — pelo mesmo motivo de
-#: sempre: a chave é contrato e o texto é da frente do léxico.
 TEXTO_DO_SELO = {
     MEDIDO_AQUI: "medido aqui",
     DERIVADO_DA_CONTA: "derivado da conta",
     ESPECIFICACAO_DE_TERCEIRO: "especificação de terceiro",
 }
 
-# ---------------------------------------------------------------------------
-# As duas ausências, e elas NÃO são a mesma — ``D-O-QUE-O-PRODUTO-DIZ-SEM-SABER``.
-# ---------------------------------------------------------------------------
 
-#: "Olhei e não sei quanto." O aparelho está aqui, a medição é possível, e ela
-#: não foi feita nesta máquina.
 NAO_MEDI = "Não medi o ganho nesta máquina."
 
-#: "Só você sabe, e você ainda não me disse." Nenhuma medição fecha isto: o
-#: desenho do gabinete não está em lugar nenhum do sistema.
 NAO_DECLARADO = "Para eu dizer qual, use o «Mapear Entradas»."
 
-#: A frase que fecha uma ordem sem destino — e ela diz por que não há destino,
-#: em vez de calar. Calar é o F7.
 SEM_DESTINO = "Não achei entrada livre para onde mandar."
 
-# ---------------------------------------------------------------------------
-# Os números que o catálogo compara.
-# ---------------------------------------------------------------------------
 
-#: A partir daqui o aparelho negocia em SuperSpeed, que é a velocidade cujo
-#: sinal emite ruído de banda larga em cima de 2,4 GHz. Mesmo valor de
-#: ``entradas_do_gabinete.VELOCIDADE_SUPERSPEED_MBPS`` — repetido e não
-#: importado de lá porque ali ele responde "este buraco é azul?" e aqui ele
-#: responde "este sinal faz ruído?": duas perguntas que podem divergir.
 VELOCIDADE_LARGA_MBPS = 5000.0
 
-#: A classe de interface de um adaptador Bluetooth, na tripla do kernel.
-#: ``e0/01/01`` — a mesma régua de ``censo_do_barramento._especie``, e ela é o
-#: ÚNICO jeito de o produto saber que um aparelho é Bluetooth sem adivinhar por
-#: nome de produto.
 _CLASSE_BLUETOOTH = ("e0", "01", "01")
 
-#: A classe de interface de um teclado: ``03/01/01``.
 _CLASSE_TECLADO = ("03", "01", "01")
 
-#: O ``connect_type`` de uma entrada que uma pessoa alcança com a mão. As
-#: internas respondem ``hard-wired`` ou ``unknown``, e mandar alguém encaixar um
-#: cabo numa entrada soldada dentro do gabinete é pior que não mandar nada.
 ENCAIXE_DE_GENTE = "hotplug"
 
-#: Doze hex é a forma em que um serial USB carrega endereço. Aqui ele nunca é
-#: guardado: só entra na comparação que decide se a tripla ficou ambígua.
 _TAMANHO_DO_SERIAL_DE_ENDERECO = 12
 
-#: Onde mora o serial de um nó USB, relativo ao caminho do nó.
 _ARQUIVO_DO_SERIAL = "serial"
 
 # ---------------------------------------------------------------------------
@@ -202,13 +160,7 @@ R6_ENTRADA_RECLAMOU_DE_CORRENTE = "entrada_reclamou_de_corrente"
 
 @dataclass(frozen=True)
 class Linha:
-    """Uma das três frases de uma ordem, com de onde ela veio.
-
-    ``fonte`` é OBRIGATÓRIA quando ``selo == ESPECIFICACAO_DE_TERCEIRO``, e é um
-    caminho de arquivo desta árvore — não um nome de empresa solto. Há dois
-    portões: um confere o selo e a presença da fonte por AST, o outro confere
-    que o arquivo apontado existe em disco.
-    """
+    """Uma das três frases de uma ordem, com de onde ela veio."""
 
     texto: str
     selo: str
@@ -221,14 +173,7 @@ class Linha:
 
 @dataclass(frozen=True)
 class Identidade:
-    """Quem é o aparelho que a ordem manda mover — **sem o serial dele**.
-
-    ``ambigua`` é o que impede o produto de dizer "Confirmei" quando não pode:
-    dois aparelhos com a MESMA tripla ``(vid, pid, serial)`` na mesa são
-    indistinguíveis, e a resposta honesta é "não consegui confirmar", nunca um
-    chute. O serial que decidiu isso foi lido em :func:`identidades`, comparado
-    e descartado — ele não está aqui, e não pode estar.
-    """
+    """Quem é o aparelho que a ordem manda mover — **sem o serial dele**."""
 
     vid: str = ""
     pid: str = ""
@@ -238,21 +183,7 @@ class Identidade:
 
 @dataclass(frozen=True)
 class Ordem:
-    """Uma ordem de serviço: o imperativo, as três linhas, e o alvo.
-
-    ``chave`` é o slug da regra, e é a chave de dispensa: uma regra produz no
-    máximo UMA ordem por leitura. Duas ordens da mesma regra na mesma tela
-    dariam duas linhas para o mesmo fato e duas dispensas para a mesma decisão.
-
-    ``arranjo`` é a assinatura do que a regra viu — os caminhos de barramento do
-    alvo e de quem o acusou, na ordem em que a regra os viu. É ele, e não o
-    serial, que responde "você moveu?" e "isto é fato novo?". Não carrega
-    serial, não carrega endereço.
-
-    ``destino`` vazio é uma ordem **sem ação**: ela conta o que viu e não manda
-    nada, porque não há para onde mandar. ``acao`` acompanha, e fica vazia  # (noqa-acento)
-    junto — uma ordem que manda mover para lugar nenhum é pior que silêncio.
-    """
+    """Uma ordem de serviço: o imperativo, as três linhas, e o alvo."""
 
     chave: str
     acao: str
@@ -288,28 +219,7 @@ class Ordem:
 
 @dataclass(frozen=True)
 class Leitura:
-    """Tudo que o catálogo lê, num objeto só — um ponto de injeção, não seis.
-
-    Nenhum campo é buscado por este módulo: quem chama já leu o barramento
-    (``censo_do_barramento.ler_o_barramento``), já leu as entradas
-    (``entradas_do_gabinete.listar_entradas``) e, se ela desenhou a mesa, já
-    calculou a vizinhança pelo desenho
-    (``mapa_das_portas.vizinhas_de_verdade``). É o contrato que mantém este
-    arquivo 100% stdlib e testável sem tocar em ``/sys``.
-
-    ``vizinhas`` são pares de NÚMEROS de entrada, do desenho dela — tupla vazia
-    quando ela não desenhou, que é o caso mais comum e é uma resposta.
-    ``ocupante_da_entrada`` diz qual caminho de barramento está em cada número.
-
-    ``nomes_declarados`` é ``{"vid:pid": "o nome que ela deu"}``: é o que
-    autoriza a ordem a chamar o aparelho de 5 Gbps pelo nome. Sem declaração, a
-    ordem diz "um aparelho que você ainda não identificou" — e nunca "Wi-Fi".
-
-    ``entradas_livres_declaradas`` são os NÚMEROS que ela escreveu no gabinete e
-    que estão vazios agora (``mapa_das_portas.portas_livres``). Elas são a única
-    fonte de um DESTINO: o ``/sys`` sabe contar buracos livres e não sabe onde
-    eles ficam no metal, e ``usb1-port5`` não é um lugar que uma pessoa ache.
-    """
+    """Tudo que o catálogo lê, num objeto só — um ponto de injeção, não seis."""
 
     censo: Censo = field(default_factory=Censo)
     entradas: tuple[NoDeEntrada, ...] = ()
@@ -318,53 +228,14 @@ class Leitura:
     entradas_livres_declaradas: tuple[str, ...] = ()
     nomes_declarados: Mapping[str, str] = field(default_factory=dict)
     tipos_declarados: Mapping[str, str] = field(default_factory=dict)
-    #: ``{"1": "Meio"}`` — o nome que ela deu a cada entrada que tem nome
-    #: (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-O-NOME-E-DA-POSICAO). Quem o lê é o
-    #: dono (``entrada_a_entrada.nome_da_entrada``), e quem preenche é
-    #: ``secao_exame.leitura_das_ordens``; aqui só se compõe a frase, pelo dono
     #: da grafia (``utils/rotulo_da_entrada``): «para a entrada Meio».
     nomes_das_entradas: Mapping[str, str] = field(default_factory=dict)
-
-
-# ---------------------------------------------------------------------------
-# A topologia que o `busnum` esconde.
-# ---------------------------------------------------------------------------
 
 
 def mesmo_hub_fisico(
     leitura: Leitura, primeiro: Aparelho, segundo: Aparelho
 ) -> bool:
-    """Os dois aparelhos penduram no MESMO plástico de hub?
-
-    **É a função que faz R1 enxergar.** ``mesa_de_radio.vizinhancas_apertadas``
-    recusa qualquer par cujos ``busnum`` diferem, e o arranjo suspeito desta
-    bancada é exatamente esse: um aparelho de 5 Gbps em ``4-1.1.2`` e um
-    adaptador Bluetooth em ``3-1.1.4`` — dois buracos do MESMO chip de hub, em
-    barramentos diferentes porque o hub tem um lado 2.0 e um lado 3.0.
-
-    QUEM DIZ QUE DOIS HUBS SÃO O MESMO PLÁSTICO É O KERNEL, E NÃO UMA CONTA
-    ----------------------------------------------------------------------
-
-    A resposta sai de ``portas_do_barramento.hubs_do_mesmo_plastico``, que
-    agrupa os hubs pelo symlink ``peer`` das entradas deles. **Não** de uma
-    comparação de ``devpath``, e a diferença foi medida nesta máquina em
-    25/08/2026::
-
-        usb1-port5  peer -> usb2-port1
-        usb1-port6  peer -> usb2-port2
-        usb1-port7  peer -> usb2-port3
-
-    **Os números dos dois lados divergem.** Um hub encaixado no buraco que é
-    ``usb1-port5`` do lado 2.0 enumera como ``1-5`` (``devpath`` ``"5"``) e como
-    ``2-1`` (``devpath`` ``"1"``) do lado 3.0 — e uma régua que compara
-    ``devpath`` declara que os dois lados do MESMO hub são plásticos diferentes.
-    R1 ficaria cega exatamente no buraco que ela recomenda como destino, porque
-    ``usb1-port5``, ``-port6`` e ``-port7`` são ``hotplug``: são as entradas que
-    uma pessoa alcança com a mão. Há teste que reprova se a conta voltar.
-
-    O ``peer`` não tem esse ponto cego: ele é o que o kernel costurou a partir
-    do firmware, buraco a buraco, e não depende de os números baterem.
-    """
+    """Os dois aparelhos penduram no MESMO plástico de hub?"""
     classes = hubs_do_mesmo_plastico(leitura.entradas)
     de_um = _plastico_dos_hubs(leitura.censo, primeiro, classes)
     de_outro = _plastico_dos_hubs(leitura.censo, segundo, classes)
@@ -374,15 +245,7 @@ def mesmo_hub_fisico(
 def _plastico_dos_hubs(
     censo: Censo, aparelho: Aparelho, classes: Mapping[str, frozenset[str]]
 ) -> set[str]:
-    """Os hubs acima deste aparelho, cada um expandido no plástico dele.
-
-    ``cadeia_de_hubs`` já deixa os hubs-raiz de fora: eles não são aparelho de
-    bancada, e incluí-los faria dois aparelhos quaisquer do mesmo controlador
-    parecerem "no mesmo hub".
-
-    Um hub que o ``peer`` não costurou a ninguém responde por si mesmo — não
-    saber que ele tem outro lado não é o mesmo que saber que ele não tem.
-    """
+    """Os hubs acima deste aparelho, cada um expandido no plástico dele."""
     por_no = {a.no: a for a in censo.aparelhos}
     saida: set[str] = set()
     for no in cadeia_de_hubs(censo, aparelho.no):
@@ -394,31 +257,10 @@ def _plastico_dos_hubs(
     return saida
 
 
-# ---------------------------------------------------------------------------
-# A identidade, e as duas armadilhas medidas.
-# ---------------------------------------------------------------------------
-
-
 def identidades(
     censo: Censo, *, ler_serial: Callable[[str], str] | None = None
 ) -> dict[str, Identidade]:
-    """``{nome do kernel: Identidade}`` — e o serial morre aqui dentro.
-
-    Duas armadilhas, as duas medidas em 24/08/2026 nesta bancada:
-
-    1. **``vid:pid`` não identifica.** Os três adaptadores Bluetooth desta casa
-       são ``2357:0604``. Quem separa é o ``serial``, e ele vem de graça no
-       sysfs — sem BlueZ, sem D-Bus, sem endereço;
-    2. **``serial`` também mente.** O aparelho de 5 Gbps declara ``123456``, e
-       o ``product`` diverge entre dois dongles idênticos. Quando a tripla
-       ``(vid, pid, serial)`` aparece DUAS vezes na mesa, ela deixa de
-       identificar — e a ordem que dependia dela desiste de confirmar em vez de
-       chutar.
-
-    O serial lido não sai desta função: ele entra na contagem que decide
-    ``ambigua`` e é descartado. Nenhum atributo de :class:`Identidade` o
-    carrega, e é assim que ele não chega ao PNG que o retrato das abas versiona.
-    """
+    """``{nome do kernel: Identidade}`` — e o serial morre aqui dentro."""
     leitor = _serial_do_no if ler_serial is None else ler_serial
     triplas: dict[str, tuple[str, str, str]] = {}
     for aparelho in censo.conectados():
@@ -442,24 +284,13 @@ def identidades(
 
 
 def _serial_normalizado(serial: str) -> str:
-    """O serial em minúsculas e sem separador — ``""`` quando não há serial.
-
-    Não é validação de forma: um serial de fábrica pode ser qualquer coisa, e
-    aqui ele só precisa comparar consigo mesmo. O que importa é que dois
-    aparelhos SEM serial colapsem na mesma tripla, porque é o que eles são: dois
-    aparelhos que o sysfs não sabe separar.
-    """
+    """O serial em minúsculas e sem separador — ``""`` quando não há serial."""
     limpo = serial.strip().replace(":", "").replace("-", "").lower()
     return limpo[:_TAMANHO_DO_SERIAL_DE_ENDERECO] if limpo else ""
 
 
 def _serial_do_no(no: str) -> str:
-    """O ``serial`` de um nó USB; ``""`` em qualquer erro.
-
-    É o único leitor de arquivo deste módulo, e ele existe para ser trocado por
-    um dublê em teste. O valor que ele devolve **não sai** de
-    :func:`identidades`.
-    """
+    """O ``serial`` de um nó USB; ``""`` em qualquer erro."""
     try:
         with open(
             os.path.join(no, _ARQUIVO_DO_SERIAL), encoding="utf-8", errors="replace"
@@ -469,23 +300,8 @@ def _serial_do_no(no: str) -> str:
         return ""
 
 
-# ---------------------------------------------------------------------------
-# As seis regras de topologia. Uma função pura por regra, no molde de uma
-# função por linha de `exame_da_mesa.py`.
-# ---------------------------------------------------------------------------
-
-
 def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
-    """R1 — um aparelho de banda larga no mesmo hub que um adaptador Bluetooth.
-
-    O gatilho é ``velocidade_mbps >= 5000`` num aparelho que divide o plástico
-    de hub com um adaptador Bluetooth. É a regra que **só existe** porque
-    :func:`mesmo_hub_fisico` atravessa o ``busnum``.
-
-    A ordem nomeia o aparelho pelo que ELA declarou, e nunca pelo ``product``:
-    com classe ``ff`` e sem declaração, ele é "um aparelho que você ainda não
-    identificou". Ler o ``product`` para escrever "Wi-Fi" é adivinhar por texto.
-    """
+    """R1 — um aparelho de banda larga no mesmo hub que um adaptador Bluetooth."""
     largos = [
         aparelho
         for aparelho in leitura.censo.conectados()
@@ -512,10 +328,6 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
                    leitura.nomes_das_entradas),
         o_que_eu_vi=Linha(
             texto=(
-                # «que você ainda não identificou» saiu do nome em 19/09
-                # (`_nome_do_aparelho`), e não daqui: é lá que a frase nasce.
-                # ENCURTADA em 26/09/2026, pedido dela: *«talvez encurtar
-                # as frases da primeira seção ajude a limpar mais o nosso
                 # layout»*. (noqa-acento: citação literal dela)
                 f"{_com_maiuscula(nome)} ({_velocidade(alvo.velocidade_mbps)}) "
                 "divide o hub com "
@@ -547,21 +359,7 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
 
 
 def dois_radios_colados(leitura: Leitura) -> Ordem | None:
-    """R2 — duas entradas coladas NO DESENHO DELA, as duas irradiando.
-
-    Consome ``mapa_das_portas.vizinhas_de_verdade``, que já veio calculada em
-    :attr:`Leitura.vizinhas` — a vizinhança ficou com a frente do mapa 2D de
-    propósito, porque a entrada por extensão muda o cálculo e só o desenho dela
-    sabe onde a extensão está.
-
-    **O filtro é o ponto da regra.** Só conta como irradiando o que o kernel
-    classificou como Bluetooth (``e0/01/01``) ou o que ELA declarou como rádio.
-    Sem ele, a webcam de cabo colada a um dongle vira acusação — foi o que a
-    tela publicou nesta bancada, e webcam de cabo não irradia 2,4 GHz.
-
-    Sem desenho, a regra cala. Isso **não** é "está tudo certo": é
-    :data:`NAO_DECLARADO`, e quem escreve o cabeçalho sabe a diferença.
-    """
+    """R2 — duas entradas coladas NO DESENHO DELA, as duas irradiando."""
     acusados = [
         (primeira, segunda)
         for primeira, segunda in leitura.vizinhas
@@ -603,20 +401,7 @@ def dois_radios_colados(leitura: Leitura) -> Ordem | None:
 
 
 def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
-    """R3 — o adaptador Bluetooth chega ao computador por dentro do hub.
-
-    **A contra-regra é obrigatória, e é metade da regra:** três adaptadores no
-    mesmo hub é o arranjo que o próprio
-    ``docs/usage/bluetooth-varios-adaptadores.md`` §3.4 sugere.
-    R3 **nunca** acusa um dongle de atrapalhar outro; o que ela conta é que o
-    caminho até o computador passa por um hub, e o hub tem uma velocidade só
-    para tudo que estiver nele.
-
-    O destino só nasce quando há entrada de gente (``hotplug``) livre numa
-    controladora PCI **diferente** — mandar mover para outra entrada do mesmo
-    hub não mudaria nada. Sem destino, a ordem nasce **sem ação**: ela conta o
-    que viu, e cala sobre o que fazer, porque não há o que fazer.
-    """
+    """R3 — o adaptador Bluetooth chega ao computador por dentro do hub."""
     atras = [
         aparelho
         for aparelho in _bluetooth_do_censo(leitura.censo)
@@ -641,28 +426,6 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
                     "adaptador BT passa",
                     "adaptadores BT passam",
                 )
-                # RESUMIDO EM 19/09/2026 — ordem dela: *"resume mais pra ter
-                # uma linha só"*. Era *"…chegam ao computador por dentro de um
-                # hub, e há N entradas livres no próprio computador."*: 121
-                # caracteres, que quebravam em duas linhas mesmo com a coluna
-                # alargada. O que saiu — «ao computador», «no próprio
-                # computador» — é a mesma informação dita duas vezes: a ordem
-                # de serviço ao lado já nomeia a entrada de destino.
-                #
-                # O VERBO SAIU DOBRADO NESSE MESMO CORTE, e ela leu o defeito
-                # na tela: *"2 de 3 adaptadores Bluetooth CHEGAM PASSAM por um
-                # hub"* (foto de 19/09, 15h23). O `_plural` já trazia o verbo
-                # conjugado — «chega»/«chegam» — e o sufixo trouxe outro. A
-                # cura é o verbo morar num lugar só: o `_plural` conjuga
-                # «passa»/«passam» e o sufixo começa na preposição.
-                #
-                # A LIÇÃO, e ela é a de sempre nesta casa: **encurtar frase é
-                # mexer em gramática**, e a régua do comprimento não
-                # lia a frase MONTADA — ela contava caracteres do fonte. Uma
-                # régua de tamanho não é uma régua de língua.
-                #
-                # E «e sobram N entradas livres» SAIU em 26/09/2026, no corte
-                # seguinte dela: a Sugestão ao lado já diz para qual entrada.
                 + " por um hub."
             ),
             selo=MEDIDO_AQUI,
@@ -692,13 +455,7 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
 
 
 def teclado_so_no_hub(leitura: Leitura) -> Ordem | None:
-    """R4 — o único teclado da casa depende do hub.
-
-    É a única regra do catálogo que **não fala de rádio**, e a terceira linha
-    dela diz isso com todas as letras. Uma ordem que promete ganho de rádio onde
-    não há é exatamente o raciocínio se vestindo de medição que o selo existe
-    para impedir.
-    """
+    """R4 — o único teclado da casa depende do hub."""
     teclados = [
         aparelho
         for aparelho in leitura.censo.conectados()
@@ -747,17 +504,7 @@ def teclado_so_no_hub(leitura: Leitura) -> Ordem | None:
 
 
 def dongle_dorme(leitura: Leitura) -> Ordem | None:
-    """R5 — o adaptador Bluetooth está autorizado a dormir.
-
-    ``power/control == "auto"`` num aparelho sem fio: o sistema pode desligá-lo
-    para poupar energia, e o controle cai sozinho no meio do jogo. É o mesmo
-    fato que ``exame_da_mesa.energia_das_portas`` já conta em número; o que a
-    ordem acrescenta é o imperativo e o selo.
-
-    **Nesta bancada ela CALA**, e isso é resultado, não ausência: em 24/08/2026
-    os dez aparelhos responderam ``on``. Um catálogo cujas regras todas disparam
-    é um catálogo que não distingue nada.
-    """
+    """R5 — o adaptador Bluetooth está autorizado a dormir."""
     dormindo = [
         aparelho
         for aparelho in leitura.censo.conectados()
@@ -797,12 +544,7 @@ def dongle_dorme(leitura: Leitura) -> Ordem | None:
 
 
 def entrada_reclamou_de_corrente(leitura: Leitura) -> Ordem | None:
-    """R6 — a entrada de um adaptador já acusou excesso de corrente.
-
-    ``port/over_current_count > 0`` é o único número que o sysfs dá sem root e
-    que registra um EVENTO real, e não uma declaração de descritor. Zero em toda
-    a mesa é uma resposta; maior que zero é um aparelho que já foi cortado.
-    """
+    """R6 — a entrada de um adaptador já acusou excesso de corrente."""
     reclamaram = [
         aparelho
         for aparelho in leitura.censo.conectados()
@@ -845,9 +587,6 @@ def entrada_reclamou_de_corrente(leitura: Leitura) -> Ordem | None:
     )
 
 
-#: As seis regras, na ordem em que elas aparecem na tela. A ordem é a de
-#: gravidade percebida, não a de escrita: R1 e R2 falam de rádio ruim agora, R3
-#: fala de caminho, R4 não fala de rádio nenhum.
 REGRAS: tuple[Callable[[Leitura], Ordem | None], ...] = (
     radio_largo_no_mesmo_hub,
     dois_radios_colados,
@@ -859,15 +598,7 @@ REGRAS: tuple[Callable[[Leitura], Ordem | None], ...] = (
 
 
 def catalogo(leitura: Leitura) -> tuple[Ordem, ...]:
-    """Todas as ordens que as seis regras acharam, na ordem da tela.
-
-    Uma regra que não dispara devolve ``None`` e some daqui. Catálogo vazio é
-    resposta: quer dizer que as seis regras rodaram e nenhuma achou nada — o que
-    é diferente de nenhuma regra ter rodado, e é o cabeçalho que separa os dois.
-    """
-    # UM DESTINO POR ORDEM (26/09/2026): com o desenho dela, R1 e R3 mandavam
-    # o Wi-Fi e o adaptador para a MESMA entrada. A entrada que uma ordem já
-    # usou sai da lista das seguintes.
+    """Todas as ordens que as seis regras acharam, na ordem da tela."""
     achadas: list[Ordem] = []
     for regra in REGRAS:
         ordem = regra(leitura)
@@ -878,11 +609,6 @@ def catalogo(leitura: Leitura) -> tuple[Ordem, ...]:
             leitura = replace(leitura, entradas_livres_declaradas=tuple(
                 n for n in leitura.entradas_livres_declaradas if n != ordem.destino))
     return tuple(achadas)
-
-
-# ---------------------------------------------------------------------------
-# A dispensa — ``D-ORDEM-IGNORADA-VOLTA``.
-# ---------------------------------------------------------------------------
 
 
 def ordens_novas(
@@ -935,27 +661,14 @@ def ordens_caladas(
     )
 
 
-# ---------------------------------------------------------------------------
-# "Já movi — reexaminar": as quatro respostas, e nenhuma é repetir a ordem.
-# ---------------------------------------------------------------------------
-
-#: A regra parou de disparar. Verde, e **fica na tela** até ela sair da aba: um
-#: card que simplesmente some é indistinguível de um card que nunca foi
-#: desenhado, e ela apertou um botão e precisa ver o que ele fez.
 CONFIRMEI = "confirmei"
 
-#: A regra ainda dispara, com outro arranjo. Ela moveu, e continua apertado.
 MOVEU_E_CONTINUA = "moveu_e_continua"
 
-#: A regra dispara com o MESMO arranjo. O card fica, com essa linha somada.
 SEM_MUDANCA = "sem_mudanca"
 
-#: A tripla do alvo ficou ambígua — dois aparelhos iguais na mesa. **Nunca**
-#: "Confirmei": o produto não sabe qual dos dois ela moveu.
 NAO_CONSEGUI_CONFIRMAR = "nao_consegui_confirmar"
 
-#: A frase de cada resposta. Texto provisório da frente do léxico; o que é
-#: contrato é a chave, e é ela que o teste afirma.
 FRASE_DA_RESPOSTA = {
     CONFIRMEI: "Confirmei: o aparelho saiu de perto do adaptador.",
     MOVEU_E_CONTINUA: "Você moveu, e continua apertado:",
@@ -967,16 +680,7 @@ FRASE_DA_RESPOSTA = {
 
 
 def resposta_ao_ja_movi(anterior: Ordem, agora: Ordem | None) -> str:
-    """O que a tela diz depois do "Já movi — reexaminar".
-
-    ``anterior`` é a ordem que estava na tela quando ela apertou o botão;
-    ``agora`` é o que a MESMA regra devolveu na leitura nova — ``None`` quando
-    ela parou de disparar.
-
-    A ambiguidade vence tudo, e vence antes: com dois aparelhos de tripla igual
-    na mesa, o produto não sabe qual deles ela moveu, e "Confirmei" ali seria
-    uma afirmação sem base. Só depois vêm as três respostas do arranjo.
-    """
+    """O que a tela diz depois do "Já movi — reexaminar"."""
     if anterior.alvo.ambigua or (agora is not None and agora.alvo.ambigua):
         return NAO_CONSEGUI_CONFIRMAR
     if agora is None:
@@ -986,35 +690,18 @@ def resposta_ao_ja_movi(anterior: Ordem, agora: Ordem | None) -> str:
     return SEM_MUDANCA
 
 
-# ---------------------------------------------------------------------------
-# O cabeçalho — o estado bom sabe se dizer (F7).
-# ---------------------------------------------------------------------------
-
-#: Há ordens: a tela conta quantas.
 TOPO_HA_ORDENS = "ha_ordens"
 
-#: Zero ordens e tudo respondeu. É o único verde, e ele diz QUANTA coisa foi
-#: conferida — a queixa dela era que "está tudo certo" não fala nada.
 TOPO_NADA_A_MUDAR = "nada_a_mudar"
 
-#: Zero ordens e alguma checagem não soube. **Cinza, nunca verde.** É o F7: o
-#: estado em que o produto não sabe se disfarçando do estado em que está tudo
-#: bem.
 TOPO_ALGUMA_NAO_SOUBE = "alguma_nao_soube"
 
-#: Zero ordens novas, e há dispensa dela. Verde, e conta a decisão dela.
 TOPO_NADA_NOVO = "nada_novo"
 
 
 @dataclass(frozen=True)
 class Cabecalho:
-    """O selo do topo da seção — a frase, a chave de estado e o botão.
-
-    A chave de estado é a de ``exame_da_mesa`` (``certo``/``atencao``/  # (noqa-acento)
-    ``nao_sei``) e vem CALCULADA AQUI, num lugar só: um segundo lugar decidindo
-    a cor do topo é exatamente como o verde volta a conviver com o vermelho
-    (cicatriz de ``6c86e295``, 16/08/2026).
-    """
+    """O selo do topo da seção — a frase, a chave de estado e o botão."""
 
     chave: str
     texto: str
@@ -1029,18 +716,7 @@ def cabecalho(
     sem_resposta: int,
     dispensadas: int,
 ) -> Cabecalho:
-    """Os quatro cabeçalhos da seção, derivados **numa função só**.
-
-    ``conferidas`` é quantas checagens responderam alguma coisa;
-    ``sem_resposta`` é quantas rodaram e não souberam. As duas contagens são
-    diferentes de propósito: "conferi 5 coisas" e "5 coisas não deram resposta"
-    são afirmações opostas, e a tela que as colapsa é a tela que mente de verde.
-
-    A precedência é de honestidade, não de gravidade: ordem primeiro (há o que
-    fazer), depois o que **não soube** (nunca verde), depois a decisão dela, e
-    só então o verde. O ``sem_resposta`` passar à frente da dispensa é o que
-    impede o terceiro caso de se disfarçar do quarto.
-    """
+    """Os quatro cabeçalhos da seção, derivados **numa função só**."""
     if ordens:
         return Cabecalho(
             chave=TOPO_HA_ORDENS,
@@ -1086,22 +762,12 @@ def cabecalho(
     )
 
 
-# ---------------------------------------------------------------------------
-# Interno
-# ---------------------------------------------------------------------------
-
-
 def _classe_de(aparelho: Aparelho) -> tuple[str, str, str]:
     return (aparelho.classe, aparelho.subclasse, aparelho.protocolo)
 
 
 def _e_bluetooth(aparelho: Aparelho) -> bool:
-    """A tripla do kernel diz Bluetooth — e nada mais diz.
-
-    Não há caminho por nome de produto, e é de propósito: o ``product`` de dois
-    dongles idênticos desta bancada diverge ("UB500 Adapter" e "Bluetooth USB
-    Adapter"), e adivinhar por texto é como se erra com confiança.
-    """
+    """A tripla do kernel diz Bluetooth — e nada mais diz."""
     return _classe_de(aparelho) == _CLASSE_BLUETOOTH
 
 
@@ -1110,13 +776,7 @@ def _bluetooth_do_censo(censo: Censo) -> tuple[Aparelho, ...]:
 
 
 def _irradia(leitura: Leitura, numero: str) -> bool:
-    """O que está NESTA entrada usa 2,4 GHz?
-
-    Duas fontes, e as duas são afirmação de alguém: o kernel, que classificou o
-    aparelho como Bluetooth; e ela, que declarou o que o aparelho é. Nada de
-    heurística — a webcam de cabo desta bancada estava sendo acusada por uma
-    régua que só olhava a distância.
-    """
+    """O que está NESTA entrada usa 2,4 GHz?"""
     caminho = leitura.ocupante_da_entrada.get(numero, "")
     if not caminho:
         return False
@@ -1130,26 +790,12 @@ def _irradia(leitura: Leitura, numero: str) -> bool:
     return False
 
 
-#: COMO A FRASE CHAMA O APARELHO QUE NINGUÉM NOMEOU — e ela tem dono desde
-#: 19/09/2026, porque uma régua a digitava e reprovou o encurtamento em vez do
-#: defeito (é a forma que esta casa já nomeou onze vezes: *a régua digita o que
-#: devia LER*). Quem a mudar de novo mexe aqui, e a régua vem junto de graça.
 SEM_NOME = "um aparelho sem nome"
 
 
 def _nome_do_aparelho(leitura: Leitura, aparelho: Aparelho) -> str:
-    """Como a ordem chama o aparelho — pelo que ELA declarou, ou pela ausência.
-
-    Com declaração, o nome dela. Sem declaração, "um aparelho que você ainda não
-    identificou" — e **nunca** o ``product``. É a diferença entre a tela repetir
-    o que o fabricante escreveu e a tela afirmar o que a máquina sabe.
-    """
+    """Como a ordem chama o aparelho — pelo que ELA declarou, ou pela ausência."""
     nome = leitura.nomes_declarados.get(f"{aparelho.vid}:{aparelho.pid}", "").strip()
-    # ENCURTADO EM 19/09/2026 — ordem dela: *"resume mais pra ter uma linha
-    # só"*. Era *"um aparelho que você ainda não identificou"* (41 caracteres);
-    # o «ainda» e o «você» eram a mesma cortesia dita duas vezes, e o que a
-    # frase precisa dizer é que o aparelho não tem nome. O convite a nomeá-lo
-    # continua onde sempre esteve: na coluna «O que é» do Rádio e Adaptadores.
     return nome or SEM_NOME
 
 
@@ -1162,13 +808,7 @@ def _identidade_de(leitura: Leitura, aparelho: Aparelho) -> Identidade:
 
 
 def _identidade_do_caminho(leitura: Leitura, caminho: str) -> Identidade:
-    """A identidade do aparelho que está neste caminho — sem ler serial nenhum.
-
-    A ambiguidade que importa aqui é a que :func:`identidades` calcula com o
-    serial; quem quiser essa resposta chama aquela função e a costura. O que
-    esta devolve é a identidade CRUA, e a ambiguidade dela é a que se enxerga
-    sem abrir arquivo: dois aparelhos de mesmo ``vid:pid`` na mesa.
-    """
+    """A identidade do aparelho que está neste caminho — sem ler serial nenhum."""
     for aparelho in leitura.censo.conectados():
         if aparelho.nome_do_kernel != caminho:
             continue
@@ -1194,14 +834,7 @@ def _velocidade_do_hub(censo: Censo, aparelho: Aparelho) -> float:
 
 
 def _furos_livres(leitura: Leitura) -> tuple[Furo, ...]:
-    """Os BURACOS vazios que uma pessoa alcança com a mão.
-
-    Buraco, e nunca nó: um buraco USB 3.x aparece no ``/sys`` como dois nós
-    amarrados pelo ``peer``, e o lado 3.0 do buraco onde o mouse dela está
-    responde ``not attached``. Mandar encaixar ali seria mandá-la ao buraco que
-    já tem aparelho. Quem agrupa é ``entradas_do_gabinete.furos`` — a régua é
-    uma só, e não se reimplementa aqui.
-    """
+    """Os BURACOS vazios que uma pessoa alcança com a mão."""
     return tuple(
         furo
         for furo in furos(leitura.entradas)
@@ -1212,18 +845,9 @@ def _furos_livres(leitura: Leitura) -> tuple[Furo, ...]:
 def _livres_fora_da_controladora(
     leitura: Leitura, controlador_pci: str
 ) -> tuple[Furo, ...]:
-    """Os buracos livres que NÃO pendem da mesma controladora do aparelho.
-
-    É a contra-regra em forma de filtro: mover o dongle para outro buraco do
-    mesmo hub não muda o caminho que ele divide, e mover um dongle para perto de
-    outro dongle é o que R3 nunca faz. Sem ``controlador_pci`` legível (o campo
-    pode faltar), nenhum buraco é oferecido — silêncio é melhor que um destino
-    que não ajuda.
-    """
+    """Os buracos livres que NÃO pendem da mesma controladora do aparelho."""
     if not controlador_pci:
         return ()
-    # O HUB RAIZ (`usb3`) é um barramento, e não um aparelho: sem ele, toda
-    # entrada da placa-mãe passava por «outra controladora».
     controlador_por_hub = {
         barramento.nome_do_kernel: barramento.controlador_pci
         for barramento in leitura.censo.barramentos
@@ -1243,20 +867,7 @@ def _livres_fora_da_controladora(
 
 
 def _destino_declarado(leitura: Leitura, livres: Sequence[Furo]) -> str:
-    """A primeira entrada livre, pelo NÚMERO dela, que é um dos ``livres``.
-
-    Vem de ``mapa_das_portas.portas_livres``, já calculada por quem chama. É a
-    ÚNICA fonte possível de um destino: o desenho é declarado, nunca deduzido —
-    as duas entradas da frente do gabinete desta bancada são byte a byte iguais
-    nos três campos que o kernel decodifica.
-
-    O NÚMERO TEM DE SER UM DOS ``livres`` (26/09/2026): a primeira livre do
-    desenho, sem filtro, mandava o adaptador para outra entrada do MESMO hub —
-    a Sugestão dizia «Entrada 3 → Entrada 9» com as duas no hub. O caminho que
-    ela declarou para a entrada casa com um dos nós do buraco (os dois lados
-    do USB 3). A entrada desenhada sem caminho não tem lugar sabido, e só vale
-    quando nenhuma com lugar serve.
-    """
+    """A primeira entrada livre, pelo NÚMERO dela, que é um dos ``livres``."""
     caminhos = {caminho_do_no(no) for furo in livres for no in furo.nos} - {""}
     sem_lugar = ""
     for numero in leitura.entradas_livres_declaradas:
@@ -1282,32 +893,11 @@ def _acao(
     desenhou: bool = False,
     nomes: Mapping[str, str] | None = None,
 ) -> str:
-    """O imperativo da ordem — e ele diz o que falta para virar um endereço.
-
-    Três formas, e a diferença entre a segunda e a terceira é
-    ``D-O-QUE-O-PRODUTO-DIZ-SEM-SABER``:
-
-    * **com destino**: "… para a Entrada 4" (ou "… para a entrada Meio", com o
-      nome que ela deu, pelo dono da grafia). Ela desenhou, e o produto aponta;
-    * **sem destino e com buraco livre**: "… para uma entrada do próprio
-      computador — há 9 livres." mais :data:`NAO_DECLARADO`. O produto CONTA o
-      que mediu e diz exatamente o que falta para ele conseguir apontar. Isso
-      não é "não sei": é "só você sabe";
-    * **sem buraco livre**: string vazia. A ordem nasce **sem ação** — ela conta
-      o que viu, e cala sobre o que fazer, porque não há o que fazer. Um
-      imperativo que manda mover para lugar nenhum é pior que silêncio.
-
-    O ``/sys`` sabe CONTAR buracos livres e não sabe onde eles ficam no metal:
-    ``usb1-port5`` não é um lugar que uma pessoa ache atrás do gabinete, e
-    publicá-lo seria trocar uma ausência honesta por jargão.
-    """
+    """O imperativo da ordem — e ele diz o que falta para virar um endereço."""
     if not quantos_livres:
         return ""
     if destino:
         return f"{verbo} para {com_artigo(na_frase(destino, (nomes or {}).get(destino)))}"
-    # ELA JÁ DESENHOU (26/09/2026): o «você ainda não desenhou» saía com as 15
-    # entradas mapeadas. Com desenho e sem número que sirva, a ordem manda para
-    # outra controladora e não cobra o desenho de novo.
     if desenhou:
         return f"{verbo} para uma entrada de outra controladora"
     return (
@@ -1324,12 +914,7 @@ def _assinatura(pares: Sequence[tuple[Aparelho, Aparelho]]) -> str:
 
 
 def _assinatura_de_caminhos(pares: Iterable[tuple[str, str]]) -> str:
-    """A assinatura do arranjo: os caminhos de barramento, e nada mais.
-
-    Não carrega serial, não carrega endereço, não carrega o número da entrada —
-    ela precisa mudar quando os CABOS mudam, e o número da entrada é o desenho
-    dela, que pode mudar sem nenhum cabo sair do lugar.
-    """
+    """A assinatura do arranjo: os caminhos de barramento, e nada mais."""
     partes = sorted(
         "|".join(parte for parte in par if parte) for par in pares
     )
@@ -1337,12 +922,7 @@ def _assinatura_de_caminhos(pares: Iterable[tuple[str, str]]) -> str:
 
 
 def _velocidade(mbps: float) -> str:
-    """A velocidade do kernel na palavra que a pessoa lê no cabo.
-
-    O sysfs responde em Mb/s (``5000``); o que está escrito na embalagem e no
-    conector é ``5 Gbps``. Traduzir é a tela falando a língua do metal — não é
-    arredondar medição, porque o número é exatamente o mesmo.
-    """
+    """A velocidade do kernel na palavra que a pessoa lê no cabo."""
     if mbps >= 1000:
         gbps = mbps / 1000
         inteiro = int(gbps)
@@ -1351,8 +931,7 @@ def _velocidade(mbps: float) -> str:
 
 
 def _plural(quantos: int, singular: str, plural: str) -> str:
-    """Uma das duas palavras, pela contagem. ``0`` usa o plural, como em
-    português: "0 entradas livres"."""
+    """Uma das duas palavras, pela contagem. ``0`` usa o plural, como em"""
     return singular if quantos == 1 else plural
 
 

@@ -1,31 +1,4 @@
-"""A porta de entrada das specs parou de digitar número à mão.
-
-`docs/data/LEIA-PRIMEIRO.md` é o caminho barato até o mapa, e ele publica um
-censo: o tamanho de dez arquivos, quantas colunas o CSV tem, quantos pares
-`cabo_*`/`radio_*` existem, até onde vai a docstring do portão. Tudo isso era
-DIGITADO À MÃO, com um carimbo de data que dizia *"este carimbo é a data da
-última medição"* — e o próprio arquivo já confessava a cura de raiz que ninguém
-tinha feito.
-
-O preço, medido em 26/08/2026, quatro dias depois do carimbo de 22/08: **sete
-dos dez tamanhos estavam errados** (o mapa em 700.602 contra 696.546
-publicados; o portão em 102.818 contra 85.063; o METODO em 63.404 contra
-60.445), as colunas diziam 47 contra as 49 que o `csv.reader` devolve, os pares
-diziam 13 contra 14, `177 ensaios` contra 178, e o `specs.html` era listado na
-raiz, de onde saiu em 25/08. Corrigir os números à mão seria pagar o mesmo
-preço de novo amanhã — é literalmente o que já se fez uma vez.
-
-A cura: cada número mora entre marcas HTML que a renderização não mostra, e
-quem o mede é `check_paridade_transporte.py --leia-primeiro`. Este arquivo é a
-régua que cobra o frescor — ela vive na SUÍTE, e não na lista de portões, que
-tem dono único (`scripts/portoes.sh`).
-
-PROVA DE QUE MORDE (arrancar, ver reprovar, devolver) — 26/08/2026, colada em
-`docs/process/agentes/2026-08-26/LEVA-4-D.md`. Cura arrancada: as marcas do
-documento desfeitas (os números de volta a literal). Reprovaram
-`test_nenhum_numero_do_censo_e_literal` e
-`test_o_documento_confere_com_a_medicao_de_agora`. Cura devolvida, tudo verde.
-"""
+"""A porta de entrada das specs parou de digitar número à mão."""
 from __future__ import annotations
 
 import re
@@ -41,9 +14,6 @@ DOCUMENTO = RAIZ_REAL / "docs" / "data" / "LEIA-PRIMEIRO.md"
 
 _MARCA = re.compile(r"<!--@([A-Za-z0-9:/._-]+)-->(.*?)<!--/-->")
 
-#: Os números que a seção 2 publica fora da tabela e que também têm de ser
-#: gerados. Lista fechada de propósito: uma régua que exigisse "todo número"
-#: brigaria com a prosa, onde número é argumento, não censo.
 CHAVES_EXIGIDAS = {
     "colunas-do-mapa",
     "colunas-em-pares",
@@ -75,12 +45,7 @@ def _rodar(*extra: str, raiz: Path = RAIZ_REAL) -> subprocess.CompletedProcess[s
 
 
 def _arvore_de_brinquedo(tmp_path: Path) -> Path:
-    """Uma cópia do que o gerador lê: o documento, e todo arquivo que ele mede.
-
-    A lista de arquivos sai das PRÓPRIAS marcas do documento — nunca de uma
-    cópia à mão aqui dentro, que é o defeito que este arquivo inteiro existe
-    para curar.
-    """
+    """Uma cópia do que o gerador lê: o documento, e todo arquivo que ele mede."""
     texto = DOCUMENTO.read_text(encoding="utf-8")
     relativos = {"docs/data/mapa-controles.csv", "docs/data/ensaios.csv"}
     relativos |= {
@@ -117,16 +82,8 @@ def _troca_a_mao(documento: Path, chave: str, valor: str) -> None:
     documento.write_text(texto[:inicio] + valor + texto[fim:], encoding="utf-8")
 
 
-# --------------------------------------------------------------------------
-# A régua da ordem
-# --------------------------------------------------------------------------
 def test_nenhum_numero_do_censo_e_literal() -> None:
-    """Os dez tamanhos, as colunas e os pares vêm de geração, não de literal.
-
-    Reprova NOMEANDO: se alguém acrescentar uma linha à tabela com o tamanho
-    digitado, a mensagem diz qual linha, e se alguém tirar uma marca da seção
-    2, a mensagem diz qual chave sumiu.
-    """
+    """Os dez tamanhos, as colunas e os pares vêm de geração, não de literal."""
     texto = DOCUMENTO.read_text(encoding="utf-8")
 
     sem_marca = []
@@ -140,13 +97,6 @@ def test_nenhum_numero_do_censo_e_literal() -> None:
         "cada linha da tabela de arquivos tem de tirar o tamanho da medição:\n"
         + "\n".join(sem_marca)
     )
-    # O PISO DA TABELA — nove, e o número desceu de dez em 05/09/2026. Ele não
-    # é uma folga: existe para a régua reprovar se a tabela inteira sumir, em vez
-    # de dar verde sobre zero linha. Desceu porque TRÊS arquivos foram apagados
-    # no mesmo dia — `scripts/migrar-mapa-v2.py`, `docs/data/mapa-controles-v1.csv`
-    # e `docs/data/ensaios-v1.csv` —, por ordem dela: *"a ideia é termos menos
-    # arquivos, se algo vira a v2 deveria ser o mesmo arquivo sobrescrevendo o
-    # anterior"*. A medição que os justificava está no próprio LEIA-PRIMEIRO.
     assert len(_tabela_da_secao_1(texto)) >= 9
 
     presentes = {chave for chave, _ in _MARCA.findall(texto)}
@@ -160,9 +110,6 @@ def test_o_documento_confere_com_a_medicao_de_agora() -> None:
     assert processo.returncode == 0, processo.stdout + processo.stderr
 
 
-# --------------------------------------------------------------------------
-# A mordida da régua: ela tem de saber RECUSAR
-# --------------------------------------------------------------------------
 def test_numero_trocado_a_mao_reprova_nomeando(tmp_path: Path) -> None:
     """As colunas de volta às 47 que o documento publicava — e ele grita."""
     documento = _arvore_de_brinquedo(tmp_path)
@@ -220,16 +167,7 @@ def test_documento_sem_marca_nenhuma_reprova(tmp_path: Path) -> None:
 
 
 def test_a_marcacao_arrancada_reprova(tmp_path: Path) -> None:
-    """O buraco medido em 08/09/2026, e ele é o que deixou NOVE envelhecerem.
-
-    A régua das marcas confere só o que está MARCADO. Tirar a marcação de um
-    número passava verde — e o que não é conferido não é medido. Foi assim que o
-    aviso de custo do documento publicou *"661.177 caracteres, ~165 mil
-    tokens"* contra 1.396.169 e ~349 mil medidos: **um aviso de custo que erra
-    pela metade convida exatamente a leitura que ele existe para impedir.**
-
-    *Uma régua que só olha o que alguém lembrou de marcar não trava nada.*
-    """
+    """O buraco medido em 08/09/2026, e ele é o que deixou NOVE envelhecerem."""
     documento = _arvore_de_brinquedo(tmp_path)
     texto = documento.read_text(encoding="utf-8")
     alvo = _MARCA.search(texto)
@@ -254,12 +192,7 @@ def test_um_numero_novo_e_solto_reprova(tmp_path: Path) -> None:
 
 
 def test_a_declaracao_nao_vira_ponto_cego(tmp_path: Path) -> None:
-    """Toda entrada declarada tem de estar VIVA no documento.
-
-    Uma isenção que sobrevive ao trecho que a justificava é a régua se
-    desligando sem ninguém decidir isso — a mesma espécie de defeito que o
-    `ESPERANDO_A_PUBLICACAO` da aba 10 pagou em 08/09.
-    """
+    """Toda entrada declarada tem de estar VIVA no documento."""
     texto = DOCUMENTO.read_text(encoding="utf-8")
     mortas = [d for d in _declaradas() if d not in texto]
     assert not mortas, (

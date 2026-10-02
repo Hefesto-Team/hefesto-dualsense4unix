@@ -47,11 +47,8 @@ import pytest
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 
-# Os dois bytes de motor dentro do bloco `common` de 47 bytes, do fonte do
-# driver desta máquina (assets/dkms/hid-playstation/hid-playstation.c) e da
-# linha `vibracao.rumble.esquerdo@dualsense` do mapa de canais.
-COMMON_MOTOR_DIREITO = 2  # weak
-COMMON_MOTOR_ESQUERDO = 3  # strong
+COMMON_MOTOR_DIREITO = 2
+COMMON_MOTOR_ESQUERDO = 3
 
 BITS_QUE_AUTORIZAM_VIBRACAO = (
     ("flag0", 0, rep.VALID_FLAG0_COMPATIBLE_VIBRATION),
@@ -62,11 +59,7 @@ BITS_QUE_AUTORIZAM_VIBRACAO = (
 
 @pytest.fixture
 def backend_sem_hardware():
-    """Um handle da pydualsense com o suficiente para montar o `common`.
-
-    Não abre hidraw, não fala com aparelho nenhum: `_build_common` é função do
-    estado desejado, e é exatamente esse estado que queremos afirmar.
-    """
+    """Um handle da pydualsense com o suficiente para montar o `common`."""
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 
     handle = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
@@ -85,8 +78,6 @@ def backend_sem_hardware():
         value = 0x00
 
     class _Luz:
-        # Os nomes são os do upstream (`pydualsense.DSLight`) e `_build_common`
-        # os lê por atributo — renomeá-los aqui seria dublar outra classe.
         ledOption = _Valor()  # noqa: N815
         pulseOptions = _Valor()  # noqa: N815
         brightness = _Valor()
@@ -109,12 +100,7 @@ def backend_sem_hardware():
 
 
 def test_sem_rumble_nosso_o_keepalive_nao_autoriza_vibracao(backend_sem_hardware):
-    """A cura em si: report neutro não pede vibração ao firmware.
-
-    Este é o teste que morde. Com o bloco `if not rumble_asserted:` arrancado de
-    `_build_common`, os bits saem ligados com os motores em zero — que é
-    literalmente "pare o motor" — e este teste reprova.
-    """
+    """A cura em si: report neutro não pede vibração ao firmware."""
     common = backend_sem_hardware._build_common(rumble_asserted=False)
 
     for nome, indice, bit in BITS_QUE_AUTORIZAM_VIBRACAO:
@@ -126,11 +112,7 @@ def test_sem_rumble_nosso_o_keepalive_nao_autoriza_vibracao(backend_sem_hardware
 
 
 def test_com_rumble_nosso_a_vibracao_volta_a_ser_autorizada(backend_sem_hardware):
-    """O outro lado da cura: quando o rumble é NOSSO, os bits têm de sair.
-
-    Sem este par, alguém 'curaria' o teste acima desligando os bits para sempre,
-    e o rumble do produto pararia de funcionar sem nenhum teste reclamar.
-    """
+    """O outro lado da cura: quando o rumble é NOSSO, os bits têm de sair."""
     backend_sem_hardware.leftMotor = 200
     common = backend_sem_hardware._build_common(rumble_asserted=True)
 
@@ -146,13 +128,7 @@ def test_com_rumble_nosso_a_vibracao_volta_a_ser_autorizada(backend_sem_hardware
 def test_o_rumble_de_terceiros_por_evdev_nao_e_zerado_pelo_keepalive(
     backend_sem_hardware, transporte
 ):
-    """O envelope de CADA transporte carrega o mesmo `common` neutro.
-
-    A paridade é o ponto: o defeito de 11/08 apareceu nos DOIS transportes, e um
-    envelope que ligasse os bits de vibração por conta própria — ou que
-    reposicionasse os bytes de motor — devolveria o defeito só de um lado, que é
-    a forma de regressão que este mapa existe para pegar.
-    """
+    """O envelope de CADA transporte carrega o mesmo `common` neutro."""
     common = backend_sem_hardware._build_common(rumble_asserted=False)
     assert len(common) == rep.COMMON_LEN
 

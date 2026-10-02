@@ -13,7 +13,7 @@ identidade é versionada aqui, e o piloto é carregado sem uma linha de mudança
 
 O QUE FALTAVA, MEDIDO
 ---------------------
-``controles_vivos.py:554`` cria ``Gtk.Window(title="Hefesto — Controles")`` sem
+``controles_vivos.py:369`` cria ``Gtk.Window(title="Hefesto — Controles")`` sem
 ``prgname``, sem ``program_class`` e sem ícone. Medido em Xvfb lendo do
 servidor X com ``xprop``, a janela publicava::
 
@@ -109,22 +109,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Este lançador roda o piloto no PRÓPRIO processo (`runpy`), então a janela dele
-# é uma janela de verdade — e não nasce na tela dela (TELA-DELA-02). Quem quer
-# VER a interface declara `HEFESTO_NA_TELA=1`.
-#
-# FATO ERRADO, SUBSTITUÍDO — 06/09/2026. Esta linha dizia *"o produto que ela
-# usa é o lançador instalado, e não passa por aqui"*, e foi com essa premissa
-# que a guarda entrou aqui em 04/09. O `.desktop` instalado aponta o `Exec=`
-# para `run.sh --gui`, que chama ESTE arquivo: o atalho dela PASSA por aqui, e
-# passou desviado por dois dias — ela clicou, o WebKit pintou as dez abas num
-# `Xvfb` e a tela dela não recebeu nada.
-#
-# Quem declara o escape é o que ela clica: o `Exec=` do `.desktop` e o
-# lançador de `~/.local/bin`, os dois escritos pelo `install.sh` com
-# `HEFESTO_NA_TELA=1`. O `run.sh` não o declara, e a guarda FICA aqui: os
-# instrumentos que chamam este script, ou o `run.sh --gui`, continuam sem tela.
-# Há régua: `test_o_lancador_dela_nasce_na_tela_dela.py`.
 import pathlib as _pathlib
 
 _RAIZ_TELA = str(_pathlib.Path(__file__).resolve().parents[1] / "src")
@@ -139,28 +123,10 @@ garantir_tela_de_mentira()
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 
-#: O PILOTO DAS DEZ ABAS VEM PRIMEIRO — 01/09/2026. Até aqui o lançador abria o
-#: `controles_vivos.py`, que é o piloto de UMA aba: a Controles ficava viva e as
-#: outras nove eram o mockup ESTÁTICO, sem um dado do daemon. Clicar na tira
-#: levava a uma tela bonita e morta.
-#:
-#: `hefesto_vivo.py` é uma janela com as dez, a navegação entre elas funcionando
-#: e a pintura por página — 122 valores escritos por travessia, medidos com o
-#: controle dela no cabo e os 33 perfis no disco.
-#:
-#: O `controles_vivos.py` FICA como segunda tentativa, e não é nostalgia: se
-#: esta cópia da árvore estiver incompleta, abrir a aba Controles viva é melhor
-#: que não abrir nada. A ordem é a que importa.
-#:
-#: TUDO SAI DESTA ÁRVORE (`RAIZ`), e é ordem dela: *"tudo tem que apontar pro
-#: nosso lancher html e tudo tem que apontar pros arquivos na nossa pasta"*.
-#: Havia um segundo caminho apontando para uma árvore vizinha, e é assim que a
-#: interface abre a versão de anteontem sem ninguém perceber.
 CANDIDATOS_DO_PILOTO = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py",
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py",
 )
-#: O PNG que vira `_NET_WM_ICON` quando o tema ainda não conhece o nome.
 CANDIDATOS_DO_ICONE = (
     RAIZ / "assets" / "appimage" / "Hefesto-Dualsense4Unix.png",
 )
@@ -177,12 +143,7 @@ def achar_o_icone() -> Path | None:
 
 
 def vestir_a_identidade(casa: object) -> list[str]:
-    """Põe nome, classe e ícone no PROCESSO, antes da primeira janela.
-
-    Devolve a lista do que conseguiu fazer, para o lançador imprimir — sem
-    isso, um ícone que não sobe some sem uma linha de aviso, que é justamente
-    o defeito desta casa ("ausência de notícia é lida como sucesso").
-    """
+    """Põe nome, classe e ícone no PROCESSO, antes da primeira janela."""
     import gi
 
     gi.require_version("Gtk", "3.0")
@@ -214,54 +175,18 @@ def vestir_a_identidade(casa: object) -> list[str]:
 
 
 def nome_da_vez() -> str:
-    """O nome do lock de instância única: um por TELA.
-
-    A tela é a do Wayland quando há uma (é nela que o GTK abre, salvo o opt-in
-    do XWayland, que continua na mesma sessão), senão a do X. Um ``Xvfb`` de
-    instrumento tem ``DISPLAY`` próprio e nenhum ``WAYLAND_DISPLAY``: o lock dele
-    é outro, e ele nunca manda a janela dela para a frente.
-    """
+    """O nome do lock de instância única: um por TELA."""
     tela = os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY") or "sem-tela"
     return "gui-" + re.sub(r"[^A-Za-z0-9_.-]", "_", tela)
 
 
 def a_janela_vai_para_a_tela(args: list[str]) -> bool:
-    """A janela deste processo nasce numa tela de verdade?
-
-    ``HEFESTO_NA_TELA=1`` é o que o atalho e o lançador de ``~/.local/bin``
-    declaram; sem ele, a guarda TELA-DELA-02 já desviou a janela para um
-    ``Xvfb`` próprio. ``--oculta`` é o ``Gtk.OffscreenWindow`` das réguas, que
-    não aparece em tela nenhuma. Nos dois casos não há o que trazer à frente.
-    """
+    """A janela deste processo nasce numa tela de verdade?"""
     return os.environ.get("HEFESTO_NA_TELA") == "1" and "--oculta" not in args
 
 
 def tomar_a_vez(args: list[str]) -> str | None:
-    """Toma a vez de ser A janela desta tela, no modelo *primeira vence*.
-
-    Devolve o nome do lock quando este processo é a janela (e aí quem chama
-    arma ``armar_a_volta_a_frente`` depois do GTK), ``""`` quando não há lock a
-    tomar (instrumento, janela oculta), e ``None`` quando uma janela já aberta
-    ATENDEU o pedido e veio para a frente: quem chama sai com ``rc=0``.
-
-    A PORTA ABRE LOGO DEPOIS DO LOCK, antes do GTK: um segundo clique no meio do
-    arranque fica na fila do kernel e é atendido quando o laço da janela
-    escutar. Nada aqui mexe em sinal do processo.
-
-    A INSTÂNCIA ÚNICA NUNCA IMPEDE A JANELA DE ABRIR. É conforto: o produto é a
-    janela. Por isso as três saídas abaixo caem em ``""`` (abrir como antes de
-    28/09, sem lock) em vez de em ``None``:
-
-    * a janela aberta não respondeu (``pedir_a_frente`` devolveu ``False``): o
-      dono está vivo com o laço do GTK parado, ou já saindo. Sair com ``rc=0``
-      aí deixaria o clique dela sem janela nenhuma;
-    * o lock ou a porta falharam (runtime sem escrita, disco cheio): sem porta,
-      o lock seria pior que nenhum, porque os cliques seguintes não teriam a
-      quem pedir e nenhum abriria nada — então ele se solta;
-    * o lock estava preso por um vizinho que ainda não escreveu o PID (os dois
-      cliques de um duplo no mesmo milissegundo): uma segunda volta já acha o
-      PID e pede a ele, e só se ela também falhar a janela abre sem lock.
-    """
+    """Toma a vez de ser A janela desta tela, no modelo *primeira vence*."""
     if not a_janela_vai_para_a_tela(args):
         return ""
     from hefesto_dualsense4unix.utils import single_instance as si
@@ -295,12 +220,7 @@ def tomar_a_vez(args: list[str]) -> str | None:
 
 
 def janelas_de_frente(janelas: list[Any]) -> list[Any]:
-    """As janelas que um pedido de vir à frente apresenta.
-
-    As de primeiro nível, visíveis e sem dona: a janela das abas. Um diálogo
-    (``transient_for``) vem junto com a dona, e uma ``Gtk.OffscreenWindow`` não
-    está em tela nenhuma.
-    """
+    """As janelas que um pedido de vir à frente apresenta."""
     from gi.repository import Gtk
 
     return [
@@ -327,7 +247,7 @@ def vir_a_frente(porta: Any) -> bool:
             janela.present()
         print(f"  a janela veio para a frente ({len(janelas)} apresentada(s)"
               f"{', com o token de quem pediu' if token else ''})")
-    return True  # o GLib mantém a escuta para o próximo pedido
+    return True
 
 
 def armar_a_volta_a_frente(nome: str) -> None:
@@ -345,40 +265,16 @@ def armar_a_volta_a_frente(nome: str) -> None:
     )
 
 
-#: O TETO DO DIÁRIO DA JANELA, em bytes. 1 MiB dá ~10 mil linhas de recado —
-#: mais do que uma sessão dela produz, e pouco o bastante para nunca aparecer
-#: numa conta de disco. Passou disso, o arquivo vira `.1` e recomeça: UMA volta
-#: só, porque o que interessa é a sessão de agora e a anterior.
 TETO_DO_DIARIO = 1 << 20
 
 
 def diario_da_janela() -> object:
-    """O arquivo onde a janela dela deixa rastro, ou ``None`` se há terminal.
-
-    **A-TELA-SAMBA-01, 06/09/2026, e é o Passo 5 dela.** Quando ela abre a
-    interface pelo atalho da dock, o ``stdout`` e o ``stderr`` do processo vão
-    para lugar nenhum — o ``.desktop`` não tem terminal atrás. Tudo o que o
-    piloto diz some: o ``[tique lento]``, o ``[daemon mudo]``, o ``a pintura
-    falhou``, o ``ERRO DE CARGA``. **Nenhum dos quatro sintomas de "a interface
-    tá sambando" tinha uma linha em lugar nenhum**, e o diagnóstico saiu de
-    foto — que é o instrumento que menos enxerga este defeito.
-
-    O DESVIO SÓ ACONTECE SEM TERMINAL, e é a metade que impede o remédio de
-    virar doença: quem roda o piloto à mão, numa régua ou num ensaio, continua
-    vendo tudo na tela — desviar ali esconderia a saída de quem está olhando
-    para ela. ``isatty()`` é a pergunta certa, e é a mesma que o ``rich`` e o
-    ``pytest`` fazem.
-
-    O LUGAR É O MESMO ``XDG_STATE_HOME`` que a suíte já desvia para um lar de
-    mentira (``tests/conftest.py``), então uma régua que chame esta função não
-    escreve no ``~/.local/state`` DELA.
-    """
+    """O arquivo onde a janela dela deixa rastro, ou ``None`` se há terminal."""
     fluxo = sys.stderr
     try:
         if fluxo is not None and hasattr(fluxo, "isatty") and fluxo.isatty():
             return None
     except (ValueError, OSError):
-        # Um fluxo já fechado responde levantando. Sem terminal, então.
         pass
 
     from hefesto_dualsense4unix.utils.xdg_paths import state_dir
@@ -390,8 +286,6 @@ def diario_da_janela() -> object:
             diario.replace(casa / "interface.log.1")
         return diario.open("a", buffering=1, encoding="utf-8", errors="replace")
     except OSError as erro:
-        # DISCO CHEIO NÃO IMPEDE A JANELA DE ABRIR. O diário é conforto de
-        # diagnóstico; a interface é o produto.
         print(f"  sem diário da janela ({erro})", file=sys.stderr)
         return None
 
@@ -399,8 +293,6 @@ def diario_da_janela() -> object:
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
 
-    # ANTES DE QUALQUER `gi.repository`: depois dele o GdkPixbuf já leu o cache
-    # de loaders, e a correção chegaria tarde.
     from hefesto_dualsense4unix.app.arranque import sanear_loaders_do_gdk_pixbuf
 
     loaders_saneados = sanear_loaders_do_gdk_pixbuf()
@@ -409,11 +301,6 @@ def main(argv: list[str] | None = None) -> int:
     if diario is not None:
         import datetime
 
-        # AS DUAS SAÍDAS VÃO PARA O MESMO ARQUIVO, e em ordem: o piloto imprime
-        # o relato no `stdout` e os recados no `stderr`, e ler os dois em
-        # arquivos separados obrigaria a próxima pessoa a costurar dois
-        # relógios. `sys.stderr` também é trocado para que o `print(...,
-        # file=sys.stderr)` de dentro do piloto pouse aqui.
         sys.stdout = diario  # type: ignore[assignment]
         sys.stderr = diario  # type: ignore[assignment]
         print(f"\n===== a janela abriu em "
@@ -430,31 +317,22 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  procurei em: {c}", file=sys.stderr)
         return 1
 
-    # O produto tem de estar importável para a identidade sair de um dono só.
-    # Numa árvore sem `pip install -e`, `src/` entra no path à mão.
     src = RAIZ / "src"
     if src.is_dir() and str(src) not in sys.path:
         sys.path.insert(0, str(src))
     from hefesto_dualsense4unix.utils import identidade
 
-    # UMA JANELA POR TELA: se já há uma aberta, ela vem para a frente e este
-    # processo sai aqui, sem ter importado o GTK.
     vez = tomar_a_vez(args)
     if vez is None:
         print("  já havia uma janela aberta nesta tela: ela veio para a frente")
         return 0
 
-    # A IDENTIDADE VEM DO DONO DELA, nunca de um literal aqui: um nome digitado
-    # neste arquivo põe no WM_CLASS algo que o `.desktop` não declara, e a dock
-    # não acha o ícone quando os dois divergem.
     for linha in vestir_a_identidade(identidade.atual()):
         print(f"  {linha}")
     print()
     if vez:
         armar_a_volta_a_frente(vez)
 
-    # `run_name="__main__"` para o piloto executar o próprio bloco de entrada.
-    # `sys.argv[0]` passa a ser o piloto: é o que ele espera ver.
     sys.argv = [str(piloto), *args]
     runpy.run_path(str(piloto), run_name="__main__")
     return 0

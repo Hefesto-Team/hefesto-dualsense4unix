@@ -80,9 +80,6 @@ MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 MESA = RAIZ / "scripts" / "mesa_de_medicao.py"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
-# O DONO DA PERGUNTA, e a razão de importar em vez de copiar está na docstring
-# acima: duas leituras das mesmas colunas divergem CALADAS no dia em que o mapa
-# muda de forma.
 from check_paridade_transporte import (
     LADOS,
     PONTEIRO_QUE_NAO_SE_SEGUE,
@@ -90,22 +87,10 @@ from check_paridade_transporte import (
     procedencia_da_celula,
 )
 
-#: O que conta como AFIRMAÇÃO. `desconhecido` fica de fora de propósito: ele é
-#: uma resposta honesta ("olhamos e não sabemos"), não uma afirmação — e
-#: castigá-lo seria cobrar procedência de quem está justamente confessando que
-#: não tem.
 AFIRMA = frozenset({"sim", "parcial"})
 
-#: A palavra mais forte do vocabulário do mapa.
 MEDIDO = "medido"
 
-#: O PISO, e ele é ZERO desde 06/09/2026. Este número existe para o dia em que
-#: alguém acrescentar uma linha nova ao mapa sem o ponteiro: a régua nomeia a
-#: célula, e não deixa o mapa voltar a crescer em afirmação sem prova.
-#:
-#: Ele NÃO é um teto móvel para conveniência. Se uma leva precisar subi-lo, a
-#: subida é uma decisão escrita — e o commit que a fizer tem de dizer qual
-#: célula ficou sem prova e por quê.
 CELULAS_SEM_PONTEIRO_HOJE = 0
 
 
@@ -132,12 +117,7 @@ def _celulas(linhas: list[dict[str, str]]):
 
 
 def test_a_celula_que_afirma_diz_de_onde_sabe(linhas: list[dict[str, str]]) -> None:
-    """Afirmar sem dizer de onde se sabe é o defeito que esta sprint nomeou.
-
-    A regra 19 do `check_paridade_transporte.py` já cobra o caso em que há
-    CONTEÚDO escrito naquele lado. Esta cobre o outro: a célula que responde
-    `aceita`/`aciona` e não escreve mais nada — o `sim` pelado, que passava.
-    """
+    """Afirmar sem dizer de onde se sabe é o defeito que esta sprint nomeou."""
     mudas = [
         f"{linha['id']} [{lado}]: aceita={linha[f'{lado}_aceita']!r} "
         f"aciona={linha[f'{lado}_aciona']!r} e `{lado}_de_onde_sei` vazia"
@@ -178,14 +158,7 @@ def test_a_celula_medida_aponta_a_prova(
 def test_o_ponteiro_da_procedencia_se_pode_seguir(
     linhas: list[dict[str, str]],
 ) -> None:
-    """`idem` na coluna do ponteiro ocupa o lugar do endereço sem apontar.
-
-    Medido em 06/09/2026: SETE células de `radio_codigo_ref` diziam `idem`, e as
-    sete eram justamente as que ninguém conseguiria seguir abrindo só o lado do
-    rádio. `—` e `não-localizado` NÃO caem aqui de propósito — as duas dizem
-    *"não há endereço"*, que é resposta; `idem` diz *"o endereço está noutro
-    lugar"* sem dizer onde.
-    """
+    """`idem` na coluna do ponteiro ocupa o lugar do endereço sem apontar."""
     escondidos = [
         f"{linha['id']} [{lado}]: `{lado}_codigo_ref` = "
         f"{(linha[f'{lado}_codigo_ref'] or '').strip()!r}"
@@ -224,20 +197,7 @@ def test_a_mesa_e_a_procedencia_leem_as_mesmas_colunas(
     linhas: list[dict[str, str]],
     ensaios: dict[tuple[str, str], list[dict]] | None,
 ) -> None:
-    """A mesa de medição e o dono da procedência não podem divergir.
-
-    A `scripts/mesa_de_medicao.py` responde *como se exercita esta célula* e
-    esta régua responde *de onde se sabe esta célula*. As duas leem as MESMAS
-    colunas para dois dos campos — o endereço no código e o teste que morde —, e
-    a mesa hoje as lê por conta própria (`_como_da_celula`).
-
-    Esta guarda existe para o dia em que uma delas mudar: se a mesa passar a ler
-    outra coluna, ou se o dono passar a ler outra, o desacordo aparece AQUI, com
-    nome de célula, em vez de aparecer numa página que ela abre na bancada
-    dizendo a coisa errada. **O melhor desfecho é a mesa importar o dono** — o
-    endereço está na entrega desta sprint; enquanto isso não acontece, esta
-    régua é a rede.
-    """
+    """A mesa de medição e o dono da procedência não podem divergir."""
     if not MESA.is_file():  # pragma: no cover - a mesa é de 06/09/2026
         pytest.skip("scripts/mesa_de_medicao.py não existe nesta árvore")
 
@@ -254,9 +214,6 @@ def test_a_mesa_e_a_procedencia_leem_as_mesmas_colunas(
         ):
             da_mesa = como.get(rotulo_da_mesa, "")
             do_dono = ponteiros.get(rotulo_do_dono, "")
-            # O dono RECUSA `idem` (é o que a terceira regra cobra) e a mesa não
-            # sabe recusar nada — então uma diferença só é divergência quando o
-            # valor da mesa não é um ponteiro que o dono descartou de propósito.
             if da_mesa.lower() in PONTEIRO_QUE_NAO_SE_SEGUE:
                 continue
             if da_mesa != do_dono:

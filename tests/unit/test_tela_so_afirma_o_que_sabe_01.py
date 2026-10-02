@@ -47,7 +47,6 @@ from typing import Any
 import gi
 import pytest
 
-# BUG-TEST-GDK-VERSION-PIN-01: pina Gdk/Gtk 3.0 ANTES de importar a GUI.
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
@@ -60,15 +59,9 @@ from hefesto_dualsense4unix.app.actions.rumble_actions import (
 )
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 
-#: MACs forjados (faixa aa:bb:cc — o portão de anonimato reprova MAC real).
 UNIQ_1 = "aabbcc000001"
 
 ROXO = (129, 61, 156)
-
-
-# ---------------------------------------------------------------------------
-# (b) Lightbar — a frase do caminho feliz
-# ---------------------------------------------------------------------------
 
 
 class _HostLightbar(LightbarActionsMixin):
@@ -96,11 +89,7 @@ class _HostLightbar(LightbarActionsMixin):
 
 
 def _draft() -> draft_mod.DraftConfig:
-    """Rascunho com o automático DESLIGADO de propósito.
-
-    Com ele ligado o aviso D4 prefixa o toast, e a palavra "desligadas" dele
-    entraria na frase que estes testes leem.
-    """
+    """Rascunho com o automático DESLIGADO de propósito."""
     perfil = Profile(
         name="vitoria",
         match=MatchAny(),
@@ -152,10 +141,7 @@ def _ultimo_toast(host: _HostLightbar) -> str:
 def test_a_rota_por_mac_diz_enviada_e_nao_aplicada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Alvo "Todos" com controle conhecido: ``led.set`` por MAC (R-14).
-
-    O ``ok`` aqui é o aceite do daemon para o pedido — ele não olha a barra.
-    """
+    """Alvo "Todos" com controle conhecido: ``led.set`` por MAC (R-14)."""
     _selar_led_set(monkeypatch)
     host = _HostLightbar(_draft(), conectados={0: UNIQ_1})
     host._current_brightness = 0.6
@@ -168,11 +154,7 @@ def test_a_rota_por_mac_diz_enviada_e_nao_aplicada(
 def test_a_rota_do_rascunho_diz_enviada_e_nao_aplicada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Caminho degradado COR-04: a cor viaja no ``apply_draft`` parcial.
-
-    Aqui o ``ok`` é ainda mais indireto — significa que a seção ``leds`` entrou
-    no rascunho aplicado, o que continua não sendo a lâmpada.
-    """
+    """Caminho degradado COR-04: a cor viaja no ``apply_draft`` parcial."""
     _selar_apply_draft(monkeypatch)
     host = _HostLightbar(_draft())
     host._current_brightness = 1.0
@@ -205,19 +187,7 @@ def test_a_rota_do_controle_selecionado_diz_enviada_e_nao_aplicada(
 def test_nenhuma_rota_de_sucesso_afirma_que_a_barra_acendeu(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A palavra proibida, nas três rotas de uma vez.
-
-    Um teste por rota pega a frase; este pega a REGRA, e é o que sobrevive a
-    uma quarta rota nascer: nenhum caminho de escrita da cor pode anunciar um
-    efeito que o produto não mediu. A única leitura de volta que existe é o nó
-    sysfs ``multi_intensity``, e ele é o eco do nosso pedido, não a lâmpada
-    (``core/sysfs_leds.get_rgb``).
-
-    CONSERTO 1.5: as três rotas aqui são as do CAMINHO FELIZ, e por isso o
-    terceiro host (alvo no seletor) ganhou o mapa de conectados. Sem ele o
-    alvo está fora da mesa — a escrita fica *guardada*, e a frase honesta
-    daquele caso não tem por que dizer "enviada".
-    """
+    """A palavra proibida, nas três rotas de uma vez."""
     _selar_led_set(monkeypatch)
     _selar_apply_draft(monkeypatch)
     hosts = (
@@ -240,12 +210,7 @@ def test_nenhuma_rota_de_sucesso_afirma_que_a_barra_acendeu(
 def test_a_cura_nao_troca_uma_mentira_por_outra_no_daemon_desligado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Guarda (não morde): sem resposta nenhuma, a frase de sempre.
-
-    Está aqui porque a metade fácil de estragar ao mexer no texto do sucesso é
-    a do fracasso: a aba Sistema É o lugar certo quando o Hefesto está mesmo
-    desligado, e a APLICAR-VERDADE-01/E2 pagou por essa distinção.
-    """
+    """Guarda (não morde): sem resposta nenhuma, a frase de sempre."""
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
         "_safe_call",
@@ -256,11 +221,6 @@ def test_a_cura_nao_troca_uma_mentira_por_outra_no_daemon_desligado(
     host.on_lightbar_apply(None)
 
     assert _ultimo_toast(host) == lightbar_actions._AVISO_HEFESTO_DESLIGADO
-
-
-# ---------------------------------------------------------------------------
-# (c) Rumble — a linha dos pedidos do jogo
-# ---------------------------------------------------------------------------
 
 
 class _RotuloEspiao:
@@ -290,12 +250,7 @@ def _estado(**campos: Any) -> dict[str, Any]:
 
 
 def test_jogo_calado_com_vpad_deixa_de_ser_silencio() -> None:
-    """O caso da mesa dela: há caminho, e ninguém pediu nada por ele.
-
-    Esta é a frase que teria poupado quatro agentes: com ela na tela, ela
-    saberia sozinha que o problema não está na vibração do Hefesto, e sim em
-    que o jogo nunca pediu.
-    """
+    """O caso da mesa dela: há caminho, e ninguém pediu nada por ele."""
     texto = texto_dos_pedidos_de_vibracao(
         _estado(rumble_ff={"plays": 0, "vpads": 1})
     )
@@ -304,11 +259,7 @@ def test_jogo_calado_com_vpad_deixa_de_ser_silencio() -> None:
 
 
 def test_sem_vpad_a_frase_e_outra_porque_a_conclusao_e_outra() -> None:
-    """``vpads == 0`` não é o jogo calado: é jogo NENHUM tendo onde pedir.
-
-    As duas levam a caças opostas — uma manda olhar o jogo, a outra manda
-    ligar a emulação —, então a tela não pode dizer a mesma coisa nas duas.
-    """
+    """``vpads == 0`` não é o jogo calado: é jogo NENHUM tendo onde pedir."""
     sem_vpad = texto_dos_pedidos_de_vibracao(
         _estado(rumble_ff={"plays": 0, "vpads": 0})
     )
@@ -322,12 +273,7 @@ def test_sem_vpad_a_frase_e_outra_porque_a_conclusao_e_outra() -> None:
 
 
 def test_conexao_nativa_nao_conta_pedidos_ao_vpad_que_nao_existe() -> None:
-    """Ordem da verdade, pergunta 1 (a mesma de ``estado_do_recurso``).
-
-    Em "Conexão Nativa (Sony)" não há gamepad virtual porque não deve haver —
-    o jogo abre o hidraw do controle físico. Dizer "ninguém pediu" ou "não há
-    gamepad virtual" ali seria mandar caçar um defeito onde há um desenho.
-    """
+    """Ordem da verdade, pergunta 1 (a mesma de ``estado_do_recurso``)."""
     texto = texto_dos_pedidos_de_vibracao(
         _estado(native_mode=True, rumble_ff={"plays": 0, "vpads": 0})
     )
@@ -359,30 +305,19 @@ def test_o_numero_continua_aparecendo_quando_o_jogo_pede() -> None:
 def test_dado_ausente_continua_calado_em_vez_de_afirmar_zero(
     estado: dict[str, Any], porque: str
 ) -> None:
-    """Guarda (não morde): "não sei" não pode virar "ninguém pediu".
-
-    É a família de erro que o ``gyro_do_inputs`` já paga para não cometer —
-    três barras paradas no centro dizem "o controle está em repouso", não "eu
-    não sei". Aqui seria pior: "o jogo nunca pediu" manda ela caçar no jogo um
-    problema que pode ser do transporte.
-    """
+    """Guarda (não morde): "não sei" não pode virar "ninguém pediu"."""
     assert texto_dos_pedidos_de_vibracao(_estado(**estado)) is None, porque
 
 
 def test_vpads_ausente_nao_autoriza_afirmar_que_nao_ha_vpad() -> None:
-    """Com ``plays == 0`` e ``vpads`` ausente, a tela só afirma o que o
-    contador prova — que ninguém pediu; nada sobre haver ou não gamepad."""
+    """Com ``plays == 0`` e ``vpads`` ausente, a tela só afirma o que o"""
     texto = texto_dos_pedidos_de_vibracao(_estado(rumble_ff={"plays": 0}))
 
     assert texto == "o jogo ainda não pediu vibração nenhuma"
 
 
 def test_a_linha_da_aba_carrega_a_frase_do_zero() -> None:
-    """A fiação: a função pura só vale se o rótulo da aba a exibir.
-
-    Sem esta ligação a cura ficaria bonita no módulo e invisível na tela — e é
-    a tela que ela olha.
-    """
+    """A fiação: a função pura só vale se o rótulo da aba a exibir."""
     host = _HostRumble()
 
     host._update_rumble_state_label(_estado(rumble_ff={"plays": 0, "vpads": 1}))
@@ -392,8 +327,7 @@ def test_a_linha_da_aba_carrega_a_frase_do_zero() -> None:
 
 
 def test_a_linha_da_aba_fica_sem_o_pedaco_quando_nao_sabe() -> None:
-    """Guarda (não morde): sem dado, o separador nem aparece — a linha não
-    fica com um "·" pendurado no vazio."""
+    """Guarda (não morde): sem dado, o separador nem aparece — a linha não"""
     host = _HostRumble()
 
     host._update_rumble_state_label(_estado())

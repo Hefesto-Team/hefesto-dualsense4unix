@@ -21,10 +21,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-# ---------------------------------------------------------------------------
 # Presets para Feedback por posicao (MultiPositionFeedback)
-# Range 0-8 por posicao, 10 posicoes (Pos 0 a Pos 9).
-# ---------------------------------------------------------------------------
 
 FEEDBACK_POSITION_PRESETS: dict[str, list[int]] = {
     "rampa_crescente":   [0, 1, 2, 3, 4, 5, 6, 7, 8, 8],
@@ -35,10 +32,6 @@ FEEDBACK_POSITION_PRESETS: dict[str, list[int]] = {
     "linear_medio":      [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 }
 
-# ---------------------------------------------------------------------------
-# Presets para Vibração por posição (MultiPositionVibration)
-# Mesmo shape: 10 posições, range 0-8.
-# ---------------------------------------------------------------------------
 
 VIBRATION_POSITION_PRESETS: dict[str, list[int]] = {
     "pulso_crescente": [0, 0, 1, 2, 4, 5, 6, 7, 8, 8],
@@ -48,9 +41,6 @@ VIBRATION_POSITION_PRESETS: dict[str, list[int]] = {
     "vibracao_final":  [0, 0, 0, 0, 0, 0, 2, 5, 7, 8],
 }
 
-# ---------------------------------------------------------------------------
-# Labels PT-BR para os dropdowns (inclui "custom", que não está nos dicts acima)
-# ---------------------------------------------------------------------------
 
 FEEDBACK_POSITION_LABELS: dict[str, str] = {
     "rampa_crescente":   "Endurece no fim",
@@ -71,9 +61,6 @@ VIBRATION_POSITION_LABELS: dict[str, str] = {
     "custom":          "Personalizar",
 }
 
-# ---------------------------------------------------------------------------
-# Tipos Literal para type-checkers (exclui "custom" — não é resolvível)
-# ---------------------------------------------------------------------------
 
 FeedbackPositionPreset = Literal[
     "rampa_crescente",
@@ -92,24 +79,14 @@ VibrationPositionPreset = Literal[
     "vibracao_final",
 ]
 
-# ---------------------------------------------------------------------------
-# Função utilitaria: resolve preset por nome
-# ---------------------------------------------------------------------------
-
 
 def resolve_feedback_preset(key: str) -> list[int] | None:
-    """Retorna lista de 10 intensidades para o preset de feedback.
-
-    Retorna None quando key == 'custom' (não altera sliders).
-    """
+    """Retorna lista de 10 intensidades para o preset de feedback."""
     return FEEDBACK_POSITION_PRESETS.get(key)
 
 
 def resolve_vibration_preset(key: str) -> list[int] | None:
-    """Retorna lista de 10 intensidades para o preset de vibracao.
-
-    Retorna None quando key == 'custom' (não altera sliders).
-    """
+    """Retorna lista de 10 intensidades para o preset de vibracao."""
     return VIBRATION_POSITION_PRESETS.get(key)
 
 

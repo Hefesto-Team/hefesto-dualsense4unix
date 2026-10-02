@@ -180,12 +180,12 @@ e é o que as levas pagaram: as curas foram desproporcionalmente daqui, e hoje o
 maior bloco é o `DIFERENTE`.
 
 - **`05-vibracao` · qual degrau está aceso.** A GTK tem
-  `_apply_policy_to_widgets` (`app/actions/rumble_actions.py:699`) fazendo a
+  `_apply_policy_to_widgets` (`app/actions/rumble_actions.py:532`) fazendo a
   exclusão mútua entre os quatro. No HTML a classe `on` está cravada da cena do
   mockup: com `rumble_policy = 'balanceado'` no daemon, a tela mostra `Máximo`
   aceso no P1. Ela clica, o daemon obedece, e a tela não muda. **O produto já
   sabe disso por escrito** — `SEM_DONO["degrau-aceso"]`
-  (`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:49`) — e o
+  (`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:36`) — e o
   pintor já tem o alvo `classe`. Falta o endereço no HTML e a emissão no pacote.
 - **`02-controles` · os 16 glifos.** `_refresh_glyphs` no card da GTK; no HTML,
   três glifos com a classe `on` do mockup, acesos o tempo todo.
@@ -319,9 +319,9 @@ uma linha que a árvore já tinha movido, e os três foram lidos e corrigidos:
 
 | era | é | o que está lá |
 | --- | --- | --- |
-| `app/actions/relancar.py:2794` | `app/actions/home_actions.py:2794` | `render_pendente(self)` — o arquivo velho tem 301 linhas |
-| `interface/pacotes/a03_gatilhos.py:864` | `.../a03_gatilhos.py:1084` | `def pacote(ctx: Contexto)` |
-| `interface/pacotes/a08_conexoes.py:1966` | `.../a08_conexoes.py:2333` | a frase da recusa do cabo |
+| `app/actions/relancar.py:2794` | `app/actions/home_actions.py:1804` | `render_pendente(self)` — o arquivo velho tem 301 linhas |
+| `interface/pacotes/a03_gatilhos.py:524` | `.../a03_gatilhos.py:628` | `def pacote(ctx: Contexto)` |
+| `interface/pacotes/a08_conexoes.py:1266` | `.../a08_conexoes.py:1476` | a frase da recusa do cabo |
 
 É o que a regra `endereco-morto` existe para pegar antes da próxima pessoa.
 
@@ -452,7 +452,7 @@ produto para o mesmo campo.
 O que fechou: o `mesa_viva` passou a LER `pacotes.VIA_DO_TRANSPORTE`, cujo
 `.get(..., "")` já respondia certo na aba 02 — e cujo comentário AFIRMAVA (sem
 ser verdade) que as duas traduções eram a mesma. Agora são. A razão continua
-sendo a do dono da frase longa (`app/actions/home_actions.py:1333`): *"'?' não é
+sendo a do dono da frase longa (`app/actions/home_actions.py:804`): *"'?' não é
 resposta — é a tela encolhendo os ombros"*.
 
 Régua: `tests/unit/test_a_tela_nao_inventa_o_transporte.py`, com mordida.

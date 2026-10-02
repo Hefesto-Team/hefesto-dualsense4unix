@@ -72,19 +72,11 @@ from comum import (
 
 USBID_DUALSENSE = "054c:0ce6"
 
-# A escada de OUTPUT do rádio. Reports de saída grandes demais para LED ou
-# rumble — é a hipótese viva do túnel de áudio por HID.
 ESCADA_DE_AUDIO = range(0x32, 0x3A)
 
 
 def _dispositivo_usb_pai(caminho: str) -> str:
-    """Sobe o sysfs até o nó do DISPOSITIVO USB (o que tem `busnum`/`devnum`).
-
-    É esse nó que amarra a placa de som ao hidraw: no cabo, o áudio pendura na
-    interface `:1.0` e o HID na `:1.3`, e as duas são filhas do mesmo
-    dispositivo. Sem essa subida não se sabe qual placa é de qual controle —
-    e com dois controles no cabo, adivinhar por ordem erraria metade das vezes.
-    """
+    """Sobe o sysfs até o nó do DISPOSITIVO USB (o que tem `busnum`/`devnum`)."""
     atual = os.path.realpath(caminho)
     while atual and atual != "/":
         if os.path.exists(os.path.join(atual, "busnum")) and os.path.exists(

@@ -48,15 +48,11 @@ from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     gravar_o_arquivo_de_antes,
 )
 
-#: A página PUBLICADA do mapa, pelo endereço que o produto usa.
 PAGINA = onde.pagina(arranjo_desta_maquina.PAGINA, publicado=True)
 
-#: Um literal de texto que termina na palavra e é somado a um VALOR — o segundo
-#: dono. Somado a outro literal (a frase que continua na linha de baixo) não conta.
 _COMPOE_NO_JS = re.compile(
     r"""(["'])[^"'\n]*\bentradas?\s*\1\s*\+(?=\s*[^\s"'])""", re.IGNORECASE)
 
-#: O que a tela nunca diz depois do passo 2: o número como nome, e o gênero chutado.
 _O_QUE_NAO_SE_DIZ = ("O 13", "o 13", "Entrada: 2", "<b>2</b>", "no Meio", "O Meio")
 
 
@@ -70,9 +66,6 @@ def _limpo(texto: str) -> None:
         assert proibido not in texto, f"a tela disse {proibido!r}: {texto!r}"
 
 
-# ── (a) pelo fonte ────────────────────────────────────────────────────────
-
-
 def _o_script() -> str:
     html = PAGINA.read_text(encoding="utf-8")
     blocos = re.findall(r"<script>(.*?)</script>", html, re.DOTALL)
@@ -81,8 +74,7 @@ def _o_script() -> str:
 
 
 def test_o_script_do_mapa_so_compoe_pela_palavra_do_dono() -> None:
-    """Nenhum literal «entrada » + valor no JavaScript da página; a palavra que
-    compõe é a que o gerador injeta, lida do Python."""
+    """Nenhum literal «entrada » + valor no JavaScript da página; a palavra que"""
     script = _o_script()
     achados = [m.group(0) for m in _COMPOE_NO_JS.finditer(script)]
     assert not achados, f"a página compõe a palavra fora do dono: {achados}"
@@ -92,9 +84,6 @@ def test_o_script_do_mapa_so_compoe_pela_palavra_do_dono() -> None:
     assert f"var PALAVRA_NA_FRASE = {na_frase};" in script
     assert "PALAVRA_DA_ENTRADA + \" \" + n" in script, (
         "a reserva do rótulo não é mais a palavra injetada — a régua mediria o vazio")
-
-
-# ── (b) pelo comportamento ────────────────────────────────────────────────
 
 
 def test_a_linha_de_radio_e_adaptadores_diz_o_nome_da_entrada(
@@ -111,8 +100,7 @@ def test_a_linha_de_radio_e_adaptadores_diz_o_nome_da_entrada(
 
 
 def test_o_ja_mapeadas_diz_o_nome_e_a_face(documento: MaquinaConfig) -> None:
-    """O «Já mapeadas» do Mapear: «<b>Meio</b>», a palavra do número e a face,
-    como no desenho aprovado; nunca «<b>2</b>» nem o endereço do sistema."""
+    """O «Já mapeadas» do Mapear: «<b>Meio</b>», a palavra do número e a face,"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -181,8 +169,7 @@ def test_a_recusa_do_governador_concorda_com_entrada() -> None:
 def test_a_leitura_das_ordens_leva_o_nome_das_entradas(
     documento: MaquinaConfig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``secao_exame.leitura_das_ordens`` preenche ``nomes_das_entradas`` pelo
-    dono — sem ele, a ordem nunca diria «Meio»."""
+    """``secao_exame.leitura_das_ordens`` preenche ``nomes_das_entradas`` pelo"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa a seção do exame, que carrega o GTK")
@@ -198,15 +185,7 @@ def test_a_leitura_das_ordens_leva_o_nome_das_entradas(
 def test_o_nome_dado_no_mapa_chega_a_sugestao_e_a_ordem(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """De ponta a ponta: o nome que ela dá no editor do mapa (``dar_nome_a_entrada``,
-    no disco) é o que a caixinha da Sugestão e o imperativo da ordem dizem.
-
-    A conferência da O-MAPA-QUE-ELA-CORRIGE-01: as réguas de cima leem o
-    «Meio» que mora no LUGAR (a reserva); nenhuma gravava um nome pelo gesto
-    e o seguia até a 08. MORDIDAS: tire o ``maquina=dela`` do destino em
-    ``a08_conexoes._card_da_ordem``, ou o ``nomes_das_entradas`` de
-    ``secao_exame.leitura_das_ordens`` — esta reprova.
-    """
+    """De ponta a ponta: o nome que ela dá no editor do mapa (``dar_nome_a_entrada``,"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")

@@ -1,27 +1,4 @@
-"""A trava comum do rádio: o install a cria, na ordem certa, e o doctor sabe dizer.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-2 da O-DIARIO-DO-RADIO-01:
-o watchdog do Bluetooth (root) e o daemon (a sessão) só se põem em fila se
-abrirem o MESMO arquivo, `/run/hefesto-dualsense4unix/radio.lock` — e até esta
-sprint ninguém o criava. Medido na máquina dela em 23/09: a pasta não existia.
-
-O que se tranca aqui:
-
-1. o `install_trava_do_radio_host` grava o `tmpfiles.d` e o APLICA na hora, e
-   respeita o `--no-udev` e a falta do grupo `hefesto` (sem ele o `tmpfiles`
-   recusaria a linha);
-2. a posição: ANTES da resiliência nos dois lados da cerca — a resiliência roda
-   o `bt_active_mode.sh` como root na hora, e ele abre a trava; com a pasta de
-   pé e o arquivo ausente, o root o criaria 0644 root:root;
-3. o asset diz o que a sprint pediu: pasta 0755 do root, arquivo 0660 com o
-   grupo `hefesto` (0664 deixaria qualquer conta segurar a trava);
-4. o `doctor` distingue as quatro respostas, e a pasta gravável pela sessão é
-   FALHA, não aviso.
-
-A MORDIDA, medida: trocar a ordem das duas chamadas do lado nativo reprova o
-teste 2; trocar o 0660 do asset por 0664, o 3; tirar o `fail` da pasta
-gravável do doctor, o 4.
-"""
+"""A trava comum do rádio: o install a cria, na ordem certa, e o doctor sabe dizer."""
 
 from __future__ import annotations
 
@@ -128,14 +105,7 @@ def test_o_asset_diz_o_que_a_sprint_pediu() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O doctor
-# ---------------------------------------------------------------------------
-
-
 def _doctor(tmp_path: Path, conf: Path, pasta: Path, *, com_motor_root: bool = True) -> str:
-    # O motor root (watchdog, drop-in do bluetoothd, ponte) é desviado para o
-    # berço: a régua não depende do /etc de quem a roda.
     motor = tmp_path / "motor-root"
     if com_motor_root:
         motor.write_text("", encoding="utf-8")
@@ -162,9 +132,7 @@ class TestODoctor:
         assert "[WARN] a trava comum do rádio não está instalada" in saida, saida
 
     def test_sem_motor_root_a_falta_da_trava_nao_e_aviso(self, tmp_path: Path) -> None:
-        """Pacote ou `--no-udev`: sem watchdog, drop-in nem ponte, a trava da
-        sessão basta (P-2.9), e mandar «atualizar» era mandar repetir o que não
-        entrega. MORDIDA: tirar o ramo `com_motor` volta o WARN."""
+        """Pacote ou `--no-udev`: sem watchdog, drop-in nem ponte, a trava da"""
         saida = _doctor(
             tmp_path, tmp_path / "nao-existe.conf", tmp_path / "run", com_motor_root=False
         )

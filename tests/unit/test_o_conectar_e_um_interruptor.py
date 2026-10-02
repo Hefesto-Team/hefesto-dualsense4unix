@@ -1,31 +1,4 @@
-"""O «Conectar» é um interruptor — O-CONECTAR-E-UM-INTERRUPTOR-01.
-
-As duas frases dela, de 30/09/2026: *«pq tá aparecendo o conectar ali?»*, sobre
-a pílula verde «Segure PS + Create» acesa na raia Direita com o painel fechado;
-e *«falta um switch ali no lado esquerdo do conectar pra clicar e ativar igual
-o botão modo freestyle na aba jogar»*. <!-- noqa-acento: citação literal dela -->
-
-MEDIDO antes da cura (01/10, sobre ``da7d842a5``): o gesto ``conectar-aparelho``
-sem alvo mandava ``radio.mover`` e a central abria ``StartDiscovery`` no
-adaptador aberto; não havia verbo que parasse a busca; a janela tinha os 30 s
-do «Mover»; a pílula e o «ocupado» liam a IDADE do movimento; e a busca que
-ninguém respondeu virava «Não Conectou».
-
-A decisão (D-3009-O-CONECTAR-E-UM-INTERRUPTOR, D-3009-O-TETO-DA-BUSCA e
-D-3009-A-BUSCA-DESLIGADA-NAO-E-FALHA, quem coordena, 30/09/2026, a validar por
-ela): a busca é um estado da central, publicado (``busca``), com o verbo
-``radio.busca.set`` de valor absoluto e o interruptor «Procurar» à esquerda do
-«+ Conectar», que só abre o painel.
-
-A central é a ``CentralDoRadio`` de verdade, com o ``DonoVivo`` de verdade por
-cima do rádio de mentira com física, e o pedido atravessa o tratador real do
-daemon. A tela é o pacote da 08 com o que a central PUBLICOU. **Nenhuma régua
-lê o HTML que a tela montou a partir do que ela mesma disse:** a central é
-medida pelos métodos que chegam ao BlueZ de mentira, e a tela pelo pedido que
-chega ao daemon.
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""O «Conectar» é um interruptor — O-CONECTAR-E-UM-INTERRUPTOR-01."""
 
 from __future__ import annotations
 
@@ -54,7 +27,6 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-#: O fio do movimento, o único que a parada segura.
 FIO_DA_CENTRAL = "hefesto-central-mover"
 
 
@@ -69,13 +41,11 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 class RadioComHora(rm.RadioDeMentira):
-    """O rádio de mentira que anota a hora DO RELÓGIO DA CENTRAL em toda chamada
-    e em toda escrita — é assim que «em até 1 s» e «aos 120 s» se medem."""
+    """O rádio de mentira que anota a hora DO RELÓGIO DA CENTRAL em toda chamada"""
 
     def __init__(self, relogio: rm.Relogio, **extra: Any) -> None:
         super().__init__(**extra)
         self.relogio = relogio
-        #: ``(método ou propriedade, adaptador, valor, hora)``.
         self.com_hora: list[tuple[str, str, Any, float]] = []
 
     def _anotar(self, nome: str, caminho: str, valor: Any) -> None:
@@ -100,12 +70,7 @@ class RadioComHora(rm.RadioDeMentira):
 
 
 class Parada:
-    """Segura o fio da central quando o relógio de mentira chega a um instante.
-
-    Sem isto a janela de 120 s passaria num piscar — o relógio anda meio
-    segundo a cada volta da espera. ``segurar_em(0)`` segura na primeira volta
-    (a janela já aberta e publicada); ``soltar`` deixa o fio ir até o fim.
-    """
+    """Segura o fio da central quando o relógio de mentira chega a um instante."""
 
     def __init__(self, relogio: rm.Relogio) -> None:
         self.relogio = relogio
@@ -155,8 +120,7 @@ def montar(a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: RadioComHora | None
 
 
 def ligar(bancada: Bancada, parada: Parada, onde: str) -> dict[str, Any]:
-    """O «Procurar» ligado em ``onde`` pelo tratador real, com o fio da central
-    seguro dentro da janela já aberta."""
+    """O «Procurar» ligado em ``onde`` pelo tratador real, com o fio da central"""
     parada.segurar_em(0.0)
     resposta = bancada.ponte.resultado("radio.busca.set", ligada=True, destino=id_da_tela(onde))
     assert isinstance(resposta, dict)
@@ -165,8 +129,7 @@ def ligar(bancada: Bancada, parada: Parada, onde: str) -> dict[str, Any]:
 
 
 def desligar(bancada: Bancada, parada: Parada) -> dict[str, Any]:
-    """O «Procurar» desligado pelo tratador real; o fio solto logo depois, para
-    acabar o movimento como ele acaba no produto."""
+    """O «Procurar» desligado pelo tratador real; o fio solto logo depois, para"""
     soltura = threading.Timer(0.3, parada.soltar)
     soltura.start()
     try:
@@ -185,9 +148,7 @@ def tique(a08: Any, ctx: Any) -> dict[str, Any]:
 
 
 def aos(ctx: Any, segundos: float) -> Any:
-    """O que a central publica ``segundos`` depois do começo: o ``quando`` dos
-    movimentos e a hora da busca vão para trás — a tela vive em hora de parede,
-    e o relógio de mentira só anda dentro da central."""
+    """O que a central publica ``segundos`` depois do começo: o ``quando`` dos"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     estado = dict(ctx.state)
@@ -211,23 +172,11 @@ def posicao(onde: str) -> int:
     return ADAPTADORES.index(onde)
 
 
-# ---------------------------------------------------------------------------
-# 1. abrir o painel não liga o rádio
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("aberto", ADAPTADORES)
 def test_abrir_o_painel_nao_liga_o_radio(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, aberto: str,
 ) -> None:
-    """O «+ Conectar» só abre o painel: nenhum pedido ao daemon, nenhum
-    ``StartDiscovery``, nenhum movimento; o painel diz «Conectar», e não
-    «Procurando», e o interruptor segue apagado. No desenho, o «Procurar» fica
-    à esquerda do «+ Conectar», que não apaga mais com a busca.
-
-    MORDIDA: devolva o ``_mover`` ao ``conectar_aparelho`` sem alvo — o pedido
-    sai, e a busca abre.
-    """
+    """O «+ Conectar» só abre o painel: nenhum pedido ao daemon, nenhum"""
     bancada, _parada = montar(a08, monkeypatch)
     try:
         a08._ABERTO["lugar"] = id_da_tela(aberto)
@@ -250,24 +199,11 @@ def test_abrir_o_painel_nao_liga_o_radio(
     assert "radio-ocupado" not in cabecalho.group(2), "o «+ Conectar» ainda apaga com a busca"
 
 
-# ---------------------------------------------------------------------------
-# 2. desligar para o rádio
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("onde", ADAPTADORES)
 def test_desligar_para_o_radio_em_ate_um_segundo(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde: str,
 ) -> None:
-    """Ligada e desligada pelo ``radio.busca.set``: o ``StopDiscovery`` e o
-    ``Pairable`` falso chegam ao MESMO adaptador em até 1 s do relógio da
-    central, a central publica ``busca: None``, e o movimento acaba
-    ``desligada``, não ``sem_gesto``. A tela não faz «Não Conectou» dele (a
-    régua 5, primeira metade).
-
-    MORDIDA: faça o ``ligada: false`` só apagar o campo publicado, sem fechar a
-    janela — o ``StopDiscovery`` só vem no teto.
-    """
+    """Ligada e desligada pelo ``radio.busca.set``: o ``StopDiscovery`` e o"""
     bancada, parada = montar(a08, monkeypatch)
     mundo = bancada.mundo
     try:
@@ -311,23 +247,11 @@ def test_desligar_sem_busca_nao_toca_no_radio(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 3. o interruptor e a pílula mostram o que a central publica
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("onde", ADAPTADORES)
 def test_o_interruptor_e_a_pilula_leem_a_busca_da_central(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde: str,
 ) -> None:
-    """Com a busca ligada num dos três adaptadores, o interruptor diz LIGADO e
-    a ``radio-conectando`` acende só na posição dele; desligada, em 30 tiques
-    seguidos, nenhum dos dois — mesmo com um movimento «esperando» sem
-    aparelho, de 5 s, no que a central publica.
-
-    MORDIDA: volte o ``conectando`` para a idade do movimento — a pílula acende
-    com a busca já desligada.
-    """
+    """Com a busca ligada num dos três adaptadores, o interruptor diz LIGADO e"""
     bancada, parada = montar(a08, monkeypatch)
     try:
         ligar(bancada, parada, onde)
@@ -354,26 +278,11 @@ def test_o_interruptor_e_a_pilula_leem_a_busca_da_central(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 4 e 5. o teto, só do «Conectar», e a busca que acaba não é «Não Conectou»
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("onde", ADAPTADORES)
 def test_o_teto_apaga_a_busca_sozinho_aos_cento_e_vinte_segundos(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde: str,
 ) -> None:
-    """Aos 90 s a janela da busca ainda está aberta, o interruptor aceso, a
-    tela segue ``ocupado`` e não há «Não Conectou» (a idade não vale para a
-    busca). Aos 120 s a central fecha a janela (o ``StopDiscovery``), publica
-    ``busca: None``, e o interruptor apaga no tique seguinte — sem «Não
-    Conectou», porque ninguém escolheu ninguém.
-
-    MORDIDAS, uma por vez: tire o teto (a busca com os 30 s do «Mover») — aos
-    90 s ela já fechou; volte o ramo da idade no ``_os_que_nao_conectaram`` —
-    aos 90 s a linha aparece; tire a busca do ``_ainda_espera`` — aos 90 s a
-    tela solta o ``ocupado``; tire o filtro do motivo — o teto vira linha.
-    """
+    """Aos 90 s a janela da busca ainda está aberta, o interruptor aceso, a"""
     bancada, parada = montar(a08, monkeypatch)
     mundo = bancada.mundo
     try:
@@ -408,13 +317,7 @@ def test_o_teto_apaga_a_busca_sozinho_aos_cento_e_vinte_segundos(
 def test_o_mover_segue_com_os_trinta_segundos_dele(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O teto é só da busca do «Procurar»: o «Mover» do vermelho para o quarto,
-    sem o gesto dela, fecha a janela aos 30 s do mesmo relógio, e é «Não
-    Conectou» (ela mandou um controle, e ele não chegou).
-
-    MORDIDA: ponha os 120 s no ``self._segundos`` da central — o «Mover» espera
-    o teto da busca.
-    """
+    """O teto é só da busca do «Procurar»: o «Mover» do vermelho para o quarto,"""
     bancada, parada = montar(a08, monkeypatch)
     mundo = bancada.mundo
     try:
@@ -435,9 +338,7 @@ def test_o_mover_segue_com_os_trinta_segundos_dele(
 def test_o_parear_que_nao_chega_faz_a_linha(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Não Conectou» fica para o que ela mandou e não chegou: com a busca
-    ligada no quarto, ela segura PS + Create no verde e clica em «Parear», e o
-    ``Pair`` falha — a linha do verde aparece no quarto."""
+    """«Não Conectou» fica para o que ela mandou e não chegou: com a busca"""
     bancada, _parada = montar(a08, monkeypatch)
     mundo = bancada.mundo
     try:
@@ -455,25 +356,10 @@ def test_o_parear_que_nao_chega_faz_a_linha(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 6. a busca própria não é «Outro programa»
-# ---------------------------------------------------------------------------
-
-
 def test_a_busca_do_hefesto_nao_e_outro_programa(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O ``Discovering`` do adaptador da busca não acende a marca «varrendo» e
-    não manda o adaptador para o fim da D8 — nem na tela, nem na central. Outro
-    programa procurando noutro adaptador (as Configurações do COSMIC) acende a
-    marca nele, com ou sem a busca dela.
-
-    A busca liga no adaptador que a D8 escolhe sem ela (um dos dois vazios):
-    é ali que «quem varre vai para o fim» mudaria a escolha.
-
-    MORDIDAS, uma por vez: tire a subtração da tela (a marca acende na busca
-    dela, e a D8 da tela foge dela); tire a da central (a D8 da central foge).
-    """
+    """O ``Discovering`` do adaptador da busca não acende a marca «varrendo» e"""
     bancada, parada = montar(a08, monkeypatch)
     mundo = bancada.mundo
     try:
@@ -490,11 +376,10 @@ def test_a_busca_do_hefesto_nao_e_outro_programa(
         cena = dict(a08._CENA_NA_TELA)
         assert campos["radio-varrendo"] == ["", "", ""], "a busca dela virou «outro programa»"
         assert cena["destino_da_central"] == sem_busca, "a D8 da tela fugiu da busca dela"
-        bancada.relogio.agora += cr.VALIDADE_DOS_ADAPTADORES_S  # a foto da central venceu
+        bancada.relogio.agora += cr.VALIDADE_DOS_ADAPTADORES_S
         assert id_da_tela(bancada.central.escolher_destino() or "") == sem_busca, (
             "a D8 da central fugiu da busca dela")
 
-        # As Configurações do COSMIC procuram no outro adaptador: aquela marca é de outro.
         mundo._mudar(rm.HCIS[outro], bd.ADAPTADOR, "Discovering", True)
         esperado = ["", "", ""]
         esperado[posicao(outro)] = "sim"
@@ -507,22 +392,10 @@ def test_a_busca_do_hefesto_nao_e_outro_programa(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 7. valor absoluto, nos três estados
-# ---------------------------------------------------------------------------
-
-
 def test_o_mesmo_clique_entregue_duas_vezes_deixa_a_busca_como_pedida(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A tela diz DESLIGADO e o clique chega duas vezes antes do tique (a
-    segunda entrega do piloto): os dois pedidos dizem ``ligada: true`` no
-    quarto, o rádio abre UMA busca, e ela fica ligada. O que não é ``click``
-    não manda nada.
-
-    MORDIDA: faça a tela inverter o que mostra a cada clique (o «inverta») —
-    a segunda entrega desliga a busca.
-    """
+    """A tela diz DESLIGADO e o clique chega duas vezes antes do tique (a"""
     bancada, parada = montar(a08, monkeypatch)
     try:
         a08._ABERTO["lugar"] = id_da_tela(QUARTO)
@@ -552,13 +425,7 @@ def test_o_mesmo_clique_entregue_duas_vezes_deixa_a_busca_como_pedida(
 def test_com_o_daemon_mudo_o_interruptor_e_o_travessao_e_nao_manda_nada(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem ``radio_central`` no estado (o daemon não respondeu), o campo é o
-    travessão — nenhuma classe casa, a pílula fica apagada sem afirmar nada — e
-    o gesto levanta sem mandar pedido.
-
-    MORDIDA: trate o travessão como DESLIGADO — o clique liga uma busca que
-    ninguém viu.
-    """
+    """Sem ``radio_central`` no estado (o daemon não respondeu), o campo é o"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     bancada, _parada = montar(a08, monkeypatch)
@@ -573,22 +440,10 @@ def test_com_o_daemon_mudo_o_interruptor_e_o_travessao_e_nao_manda_nada(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 8. os quatro no ar
-# ---------------------------------------------------------------------------
-
-
 def test_ligar_e_desligar_nao_tira_ninguem_do_ar_nem_do_lugar(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quatro controles em três adaptadores (P1 e P2 na sala, P3 no quarto, P4
-    na varanda): ligar e desligar a busca em cada um não gera ``Disconnect``
-    nem ``RemoveDevice``, ninguém sai do adaptador em que está, e o número de
-    cada um na tela é o mesmo.
-
-    MORDIDA: faça o ligar desconectar quem está no adaptador da busca (a forma
-    do ``_desligar_e_esquecer_a_origem``) — o rádio recebe ``Disconnect``.
-    """
+    """Quatro controles em três adaptadores (P1 e P2 na sala, P3 no quarto, P4"""
     relogio = rm.Relogio()
     mundo = RadioComHora(relogio)
     for onde, quem in ((SALA, VERMELHO), (SALA, AZUL), (QUARTO, VERDE), (VARANDA, ROXO)):
@@ -619,11 +474,6 @@ def test_ligar_e_desligar_nao_tira_ninguem_do_ar_nem_do_lugar(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 9. a peça é a do «Modo Freestyle»
-# ---------------------------------------------------------------------------
-
-
 def _folha(fonte: str, prefixo: str) -> dict[str, dict[str, str]]:
     """As regras ``.cadeado…`` de uma folha, por seletor, sem o ``prefixo``."""
     regras: dict[str, dict[str, str]] = {}
@@ -637,22 +487,12 @@ def _folha(fonte: str, prefixo: str) -> dict[str, dict[str, str]]:
 
 
 def test_a_peca_e_a_do_modo_freestyle() -> None:
-    """A folha ``.cadeado`` da seção do rádio tem os mesmos valores da aba
-    Jogar — a altura, o ponto e o verde de ``ligada`` —, lidos dos dois
-    arquivos: a peça é copiada, e não importada de outra aba.
-
-    MORDIDA: mude a altura de uma das duas — reprova.
-    """
+    """A folha ``.cadeado`` da seção do rádio tem os mesmos valores da aba"""
     jogar = _folha((INTERFACE / "aba01.py").read_text(encoding="utf-8"), "")
     radio = _folha((INTERFACE / "aba08.py").read_text(encoding="utf-8"), ".radio ")
     assert set(jogar) == {".cadeado", ".cadeado .p", ".cadeado.ligada", ".cadeado.ligada .p"}
     assert radio == jogar
     assert jogar[".cadeado"]["height"] == "26px"
-
-
-# ---------------------------------------------------------------------------
-# 10. o verbo não segura o laço
-# ---------------------------------------------------------------------------
 
 
 class _JanelaQueDorme:
@@ -674,12 +514,7 @@ class _CentralQueDemora:
 
 @pytest.mark.asyncio
 async def test_o_verbo_nao_segura_o_laco_do_servico() -> None:
-    """Uma tarefa do laço que acorda a cada 10 ms continua rodando durante o
-    ``radio.busca.set`` — o tratador roda a central num fio.
-
-    MORDIDA: chame a central direto, sem ``asyncio.to_thread`` — o laço para
-    os 2 s inteiros.
-    """
+    """Uma tarefa do laço que acorda a cada 10 ms continua rodando durante o"""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
     class _Daemon(IpcHandlersMixin):

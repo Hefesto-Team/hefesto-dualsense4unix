@@ -54,15 +54,12 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
 
-#: A MESA — endereço MASCARADO (octetos 4 e 5 zerados).
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
      "mascara": "DualSense"},
 ]
 
-#: O endereço da tira. Ele é UM só nos dois lados — o pacote o emite e o
-#: `aba10.py` o escreve na página —, e é o mesmo nome que a régua irmã usa.
 DESFECHO = "perfis.desfecho"
 
 
@@ -77,8 +74,6 @@ class PonteDeMentira:
         return True
 
     def profile_reaplicar(self, nome: str) -> dict[str, Any]:
-        # 01/10/2026: o gravar-e-reaplicar e o «voltar à de ontem» reaplicam
-        # pelo `profile.reaplicar`, que não grava a escolha dela.
         self.chamadas.append(("profile_reaplicar", (nome,)))
         return {"active_profile": nome}
 
@@ -100,13 +95,7 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _sem_a_biblioteca_dela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O catálogo de jogos vem VAZIO — a régua não lê a Steam desta máquina.
-
-    `_jogo_reconhecido` abre a biblioteca dela (os `.acf` e os `.desktop`) para
-    traduzir o número em nome. Numa régua isso seria medir a máquina de quem
-    roda: a mesma linha passaria aqui e reprovaria no CI, onde não há Steam.
-    O teste que PRECISA do nome semeia o catálogo ele mesmo.
-    """
+    """O catálogo de jogos vem VAZIO — a régua não lê a Steam desta máquina."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     monkeypatch.setattr(jogos_locais, "catalogo_de_jogos", lambda *a, **k: [])
@@ -120,30 +109,7 @@ def _perfis(*nomes: str) -> list[Any]:
 
 
 def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> list[Any]:
-    """A pasta de perfis, sem escrever no disco.
-
-    SEM ISTO A PASTA É VAZIA: a ``conftest.py`` põe
-    ``HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`` em TODO teste.
-
-    **O `save_profile` GUARDA, e até 06/09/2026 ele descartava.** Ele era
-    ``lambda *a, **k: None``, e as duas réguas que conferem a regra gravada
-    liam ``todos[0].match`` — a instância que o `load_profile` deste dublê
-    devolve. Elas passavam por ALIASING: o gesto fazia ``prof.match = …`` no
-    objeto que ESTE dublê guarda, e a mutação aparecia na lista sem ninguém
-    ter gravado nada.
-
-    **No produto esse aliasing não existe:** `load_profile` lê um `.json` e
-    devolve instância nova a cada chamada, então ``todos[0]`` nunca foi o
-    objeto que o gesto escreveu. A régua estava medindo o dublê, não a
-    escrita — e ela ficou vermelha no dia em que um gesto passou a montar o
-    perfil em vez de mutar o que leu (`a10_perfis._com_o_que_esta_valendo`),
-    que é a forma normal e a que o produto usa.
-
-    Agora o dublê **substitui a entrada pelo perfil salvo**, por slug (R-10:
-    a identidade em disco é o slug, e é assim que `save_profile` grava). As
-    duas réguas passam a ler o que foi ESCRITO, que é o que elas sempre
-    quiseram perguntar.
-    """
+    """A pasta de perfis, sem escrever no disco."""
     from hefesto_dualsense4unix.profiles.slug import slugify
 
     todos = _perfis(*nomes)
@@ -177,30 +143,15 @@ def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
 
 
 def _frase(fora: Any) -> str:
-    """A frase que o gesto mandou para a tira, ou ``""`` se ele ficou mudo.
-
-    Ela é lida do EMBRULHO que o gesto devolveu — ``{"mesa": {…}}`` —, e não do
-    ``_DESFECHO`` do módulo, de propósito: o ``_anotar`` sozinho enche o
-    ``_DESFECHO`` e a tela continua esperando o tique. O que o piloto pinta no
-    ato é o RETORNO.
-    """
+    """A frase que o gesto mandou para a tira, ou ``""`` se ele ficou mudo."""
     if not isinstance(fora, dict):
         return ""
-    # A NOTÍCIA MUDOU DE CHAVE EM 13/09/2026: a tira não fala mais, e o relato
-    # do gesto viaja em `relato`, que o `pintar` não lê.
     assert not (fora.get("mesa") or {}).get(DESFECHO), "a tira voltou a falar"
     return str(fora.get("relato") or "")
 
 
-# --------------------------------------------------------------------------
-# 1. RENOMEAR — a frase é a do produto, `mensagem_do_salvar`
-# --------------------------------------------------------------------------
 def test_o_renomear_diz_de_onde_para_onde(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O gesto apaga um `.json` e cria outro, e dizia NADA.
-
-    MORDIDA: apague o ``return _dizer(…)`` do fim de ``editor_nome`` e este
-    teste reprova com a frase vazia.
-    """
+    """O gesto apaga um `.json` e cria outro, e dizia NADA."""
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         mensagem_do_salvar,
     )
@@ -225,12 +176,7 @@ def test_o_renomear_diz_de_onde_para_onde(monkeypatch: pytest.MonkeyPatch) -> No
 def test_o_renomear_que_nao_mudou_nada_continua_mudo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Clicar dentro do campo manda o valor que já estava lá — e não é notícia.
-
-    O ``_so_mudou`` já barrava o `click`; o que esta linha guarda é que a tira
-    não passe a acender por um clique que não gravou nada. Um desfecho que
-    aparece sem gesto é a tela afirmando um trabalho que ninguém fez.
-    """
+    """Clicar dentro do campo manda o valor que já estava lá — e não é notícia."""
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, "Pragmata")
     ctx, ponte = _ctx(), PonteDeMentira()
@@ -242,17 +188,10 @@ def test_o_renomear_que_nao_mudou_nada_continua_mudo(
         "o mesmo nome de novo não é um renomear, e não pode virar notícia")
 
 
-# --------------------------------------------------------------------------
-# 2. O CAMPO DO JOGO — diz a REGRA nova, no vocabulário da coluna "Quando usar"
-# --------------------------------------------------------------------------
 def test_o_campo_do_jogo_diz_em_que_o_perfil_passou_a_valer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ele reescreve o `match` INTEIRO e movia o seletor junto, calado.
-
-    MORDIDA: apague o ``return _dizer(_agora_vale_em(…))`` de ``editor_jogo`` e
-    este teste reprova com a frase vazia.
-    """
+    """Ele reescreve o `match` INTEIRO e movia o seletor junto, calado."""
     from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
 
     todos = _o_disco_tem(monkeypatch, "Pragmata")
@@ -263,9 +202,6 @@ def test_o_campo_do_jogo_diz_em_que_o_perfil_passou_a_valer(
         ctx, {"valor": "1599660", "evento": "change"}, ponte)
 
     assert _frase(fora), "o campo do jogo gravou a regra e ficou mudo"
-    # O RÓTULO É LIDO DO DONO, e não digitado: `_match_label` é a mesma função
-    # pura que alimenta a coluna "Quando usar". Cravar "Só neste programa" aqui
-    # faria esta régua reprovar no dia em que a coluna mudasse de palavra.
     assert _match_label(todos[0].match) in _frase(fora), (
         f"o desfecho não fala o mesmo idioma da coluna 'Quando usar' — ela diz "
         f"{_match_label(todos[0].match)!r} e a tira diz {_frase(fora)!r}")
@@ -274,15 +210,7 @@ def test_o_campo_do_jogo_diz_em_que_o_perfil_passou_a_valer(
 def test_o_campo_do_jogo_traduz_o_numero_no_nome_do_jogo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`1599660` sozinho não diz a ela que aquele é o Mortal Kombat 1.
-
-    JOGO-QUE-SE-DIZ-01. A janela estável põe o nome ao lado do campo
-    (``profile_jogo_reconhecido``); esta aba não tem esse rótulo no desenho, e
-    até ter, o nome chega pelo desfecho — que é o instante em que a pergunta
-    "é esse jogo mesmo?" existe.
-
-    MORDIDA: troque o ``_jogo_reconhecido`` por ``""`` e este teste reprova.
-    """
+    """`1599660` sozinho não diz a ela que aquele é o Mortal Kombat 1."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     _o_disco_tem(monkeypatch, "Pragmata")
@@ -329,17 +257,8 @@ def test_a_biblioteca_ilegivel_nao_vira_recusa(
     assert _frase(fora), "a leitura da biblioteca derrubou o desfecho inteiro"
 
 
-# --------------------------------------------------------------------------
-# 3. DETECTAR — grava um appid que ela não digitou, e agora diz qual
-# --------------------------------------------------------------------------
 def test_o_detectar_diz_o_jogo_que_achou(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O botão grava a regra a partir de uma janela que ela não está olhando.
-
-    A recusa já nomeava a classe que o detector viu; o SUCESSO não dizia nada —
-    e é o caso em que dizer vale mais.
-
-    MORDIDA: apague o ``return _dizer(_agora_vale_em(…))`` de ``detectar``.
-    """
+    """O botão grava a regra a partir de uma janela que ela não está olhando."""
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, "Pragmata")
     ctx, ponte = _ctx(classe="steam_app_1599660"), PonteDeMentira()
@@ -355,22 +274,7 @@ def test_o_detectar_diz_o_jogo_que_achou(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_o_detectar_que_recusa_continua_recusando_dizendo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A metade que já falava não pode ter sido trocada pela nova.
-
-    Sem NENHUMA janela em foco o gesto levanta ``RuntimeError`` — que o piloto
-    vira TARJA. Um desfecho no lugar da recusa seria a tela dizendo que gravou.
-
-    **ESTA RÉGUA MEDIA O MUNDO DE ONTEM — reescrita em 06/09/2026,
-    ONDA5-10-01.** Ela dava ``classe="firefox"`` e cobrava a recusa: até 05/09
-    o ``detectar`` recusava TODO jogo de fora da Steam e mandava a pessoa para a
-    linha de comando, e a decisão 10-Q2 dela sobre isso foi *"Isso é erro do
-    produto"*. Agora aquela classe GRAVA (ver o teste logo abaixo), e a recusa
-    que sobra é a única honesta: o detector não viu janela nenhuma.
-
-    O caso ``"unknown"`` vai junto porque é o valor que o detector publica
-    quando está vivo e sem resposta — recusar só no vazio deixaria o gesto
-    gravar a regra ``window_class=["unknown"]``, que nunca casa com nada.
-    """
+    """A metade que já falava não pode ter sido trocada pela nova."""
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, "Pragmata")
 
@@ -383,11 +287,7 @@ def test_o_detectar_que_recusa_continua_recusando_dizendo(
 def test_o_detectar_grava_a_janela_do_jogo_de_fora_da_steam(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A outra metade do ``title`` do botão, e ela nasceu em 06/09/2026.
-
-    MORDIDA: devolva o ``raise`` ao ramo do ``appid is None`` e este teste
-    reprova — a classe volta a virar recusa em vez de regra.
-    """
+    """A outra metade do ``title`` do botão, e ela nasceu em 06/09/2026."""
     from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset
 
     todos = _o_disco_tem(monkeypatch, "Grim")
@@ -406,24 +306,10 @@ def test_o_detectar_grava_a_janela_do_jogo_de_fora_da_steam(
         "o desfecho não nomeia o perfil que mudou")
 
 
-# --------------------------------------------------------------------------
-# 4. VOLTAR À DE ONTEM — o desfazer mudo era indistinguível do que não pegou
-# --------------------------------------------------------------------------
 def test_o_voltar_a_de_ontem_diz_qual_versao_voltou(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ele substitui o arquivo INTEIRO e a tela não mudava nada visível.
-
-    O editor mostra nome e regra; o que volta é gatilho, luz, vibração e
-    máscara — nada disso está na tela desta aba. Um desfazer mudo é
-    indistinguível de um desfazer que não pegou.
-
-    O CARIMBO VAI SEM O `.json`: é a forma que o ``--em`` do ``profile
-    restore`` aceita (``loader.py`` casa as duas), então a frase é copiável
-    para o comando que volta a OUTRA versão.
-
-    MORDIDA: apague o ``return _dizer(…)`` de ``voltar_a_de_ontem``.
-    """
+    """Ele substitui o arquivo INTEIRO e a tela não mudava nada visível."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Sackboy")
     monkeypatch.setattr(
@@ -444,22 +330,10 @@ def test_o_voltar_a_de_ontem_diz_qual_versao_voltou(
         "nome sem `.json`")
 
 
-# --------------------------------------------------------------------------
-# 5. REMOVER — falava, mas só no tique seguinte
-# --------------------------------------------------------------------------
 def test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`_anotar` guarda; só `_dizer` DEVOLVE para o piloto pintar no ato.
-
-    É o gesto mais destrutivo da aba, e meio segundo de silêncio é o intervalo
-    em que ela clica de novo achando que o primeiro não pegou — com a diferença
-    de que aqui o segundo clique acerta a linha SEGUINTE.
-
-    MORDIDA: troque o ``return _dizer(…)`` do fim de ``remover`` de volta pelo
-    ``_anotar(…)`` (que é como ele era) e este teste reprova: o ``_DESFECHO``
-    do módulo continua cheio e o RETORNO volta a ser ``None``.
-    """
+    """`_anotar` guarda; só `_dizer` DEVOLVE para o piloto pintar no ato."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Sackboy")
     ctx, ponte = _ctx(), PonteDeMentira()
@@ -472,42 +346,16 @@ def test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte(
     assert _frase(fora) == "Perfil removido: Pragmata", (
         f"o Remover não devolveu a frase da janela estável: {_frase(fora)!r}")
     # E A ORDEM CONTINUA: o `launch_env.refresh` é o que impede o
-    # `steam_app_<id>.env` do perfil morto de ficar rançoso (DEDUP-04).
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 
-# --------------------------------------------------------------------------
-# 6. O INVENTÁRIO — nenhum gesto que grava no disco pode voltar a ficar mudo
-# --------------------------------------------------------------------------
-#: OS GESTOS DESTA ABA QUE ESCREVEM NO DISCO DELA, e por isso devem notícia.
-#:
-#: A LISTA É CURTA E DECLARADA de propósito: ela é o inventário que a próxima
-#: pessoa lê antes de acrescentar um gesto. Quem escrever o sexto escritor e não
-#: lhe der desfecho tem de vir aqui apagar o nome — e apagar um nome é um ato
-#: que se vê no diff, ao contrário de esquecer um `return`.
-#:
-#: `selecionar` NÃO ESTÁ AQUI e não é esquecimento: ele grava um nome num
-#: módulo, não no disco, e a janela estável também não dá toast por seleção.
-#:
-#: **ONZE DESDE 03/09/2026.** `editor.prioridade` nasceu com o slider que ela
-#: pediu, e `editor.estilo` deixou de ser a exceção desta lista: ele estava fora
-#: porque *"SEMPRE levanta — o desfecho dele é a recusa"*, e com o motor ele
-#: grava três coisas no `.json` dela.
 ESCRITORES = ("editor.nome", "editor.jogo", "editor.prioridade",
               "editor.estilo", "detectar", "voltar-a-de-ontem",
               "novo", "duplicar", "remover", "ativar", "recarregar")
 
 
 def test_todo_gesto_que_grava_devolve_o_embrulho_que_a_pintura_le() -> None:
-    """Nenhum dos nove pode ficar sem o caminho de volta.
-
-    Esta régua lê a ANOTAÇÃO DE RETORNO do handler, e não o corpo: um gesto que
-    volte a devolver só ``None`` não tem por onde a tira acender no ato — e é
-    exatamente a forma do defeito que os cinco tinham.
-
-    MORDIDA: troque a anotação de qualquer um dos nove para ``-> None`` e este
-    teste reprova nomeando o gesto.
-    """
+    """Nenhum dos nove pode ficar sem o caminho de volta."""
     import inspect
 
     from hefesto_dualsense4unix.interface.pacotes import GESTOS

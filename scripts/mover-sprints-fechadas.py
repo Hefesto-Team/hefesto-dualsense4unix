@@ -1,78 +1,5 @@
 #!/usr/bin/env python3
-"""Move para `arquivados/` a sprint cujo frontmatter diz que ela fechou — e
-RECUSA mover a que alguém ainda alcança pelo caminho.
-
-A ORDEM DELA, repetida duas vezes
----------------------------------
-17/09/2026: *"Temos que ter um hook pra isso não? Corrigir, sobrescrever e
-encurtar info datada."*
-
-20/09/2026: *"temos que ter um hook pra pegar o frontmatter tudo que tiver
-concluido e mover pro arquivo automaticamente não?"* e *"temos que mover os
-testes tambem inclusive."*  <!-- noqa-acento: citação literal dela -->
-
-O PREÇO JÁ PAGO, e é a razão de a trava existir
------------------------------------------------
-Mover sprint fechada JÁ APAGOU o gesto de 199 testes, calado. A leva que tirou
-as 732 fechadas da pasta viva levou junto os dois donos do gesto da mesa de
-medição; `scripts/mesa_de_medicao.py` digitava o caminho, não achou e devolveu
-`{}` sem uma linha de aviso. As células caíram no fallback da procedência e
-sete réguas ficaram vermelhas sem que nenhuma soubesse dizer por quê. A raiz
-está curada em `06396e232` — `_o_dono_do_gesto` procura nos dois lugares e
-LEVANTA quando o dono some de verdade.
-
-A lição manda no desenho deste script: *mover um arquivo quebra todo caminho
-que o cita, e o silêncio é o que custa.* Por isso a varredura de citação não é
-um extra — é metade da ferramenta, e ela roda ANTES de qualquer renomeação.
-
-AS DUAS CLASSES DE CITAÇÃO, e só uma trava
-------------------------------------------
-Depois da mudança o arquivo existe em `<pasta>/arquivados/<nome>.md`, e o que
-some é o caminho antigo. Então:
-
-``caminho``  a citação fixa uma PASTA antes do nome (`…/sprints/X.md`), ou é
-             alvo de link markdown (`](X.md)`). As duas quebram no ato.
-             **TRAVA: não move, e nomeia quem cita, com `arquivo:linha`.**
-
-``nome``     o nome aparece solto, sem pasta. Sobrevive: `referencias-docs`
-             confere por SUFIXO, e `arquivados/X.md` termina em `X.md`.
-             **Não trava — mas sai no relatório**, porque quem lê a lista
-             decide melhor que quem a esconde.
-
-Uma citação que já aponta para `arquivados/` é o destino, não o passado: ela
-não trava.
-
-O QUE ESTE SCRIPT NÃO FAZ
--------------------------
-**Não move nada em `tests/`.** `--testes` MEDE as duas leituras da ordem dela e
-recusa mover as duas, pelo motivo impresso na saída: um teste não morre porque
-a sprint dele fechou — ele passa a ser a única coisa que impede a regressão
-daquele trabalho, e *teste tem de MORDER* é regra desta casa.
-
-**Não roda em timer.** Mover arquivo por trás de quem está trabalhando é a
-família de defeito que esta casa persegue. Lugar dele é o gancho de commit ou
-o `portoes.sh`, onde há alguém olhando.
-
-**Não julga conteúdo.** A fronteira é o `estado:` do frontmatter e nada mais —
-`feita`, `absorvida` e `caducou` descem; `aberta` e sprint SEM frontmatter
-ficam onde estão.
-
-Uso::
-
-    scripts/mover-sprints-fechadas.py            # relata, não move (o padrão)
-    scripts/mover-sprints-fechadas.py --mover    # move o que passou na trava
-    scripts/mover-sprints-fechadas.py --testes   # mede `tests/`, nunca move
-    scripts/mover-sprints-fechadas.py --raiz DIR # outra árvore (bancada)
-    scripts/mover-sprints-fechadas.py --exigir   # a forma de PORTÃO
-
-`--exigir` é o que o `portoes.sh` roda, e ele reprova **só o que tem
-conserto**: a fechada LIVRE, que um `--mover` derruba. A presa por citação sai
-nomeada e não reprova — segurá-la é o trabalho da trava, e puni-la seria um
-vermelho sem conserto. Sem a pasta no disco ele diz NÃO MEDIDO, nunca «OK».
-
-`--seco` existe e é o padrão: escrever o nome dele não muda nada, e é assim
-que se pede o relatório sem medo em qualquer dúvida.
-"""
+"""Move para `arquivados/` a sprint cujo frontmatter diz que ela fechou — e"""
 
 from __future__ import annotations
 
@@ -86,26 +13,17 @@ from pathlib import Path
 
 RAIZ_PADRAO = Path(__file__).resolve().parents[1]
 
-#: A gaveta. O nome é o mesmo que `scripts/mesa_de_medicao.py` procura quando o
-#: dono do gesto sai da pasta viva — os dois têm de concordar, senão arquivar
-#: volta a apagar o gesto em silêncio.
 ARQUIVADOS = "arquivados"
 
-#: A fronteira, e ela é só esta. `aberta` é o padrão de quem não escreveu nada.
 FECHADOS = ("feita", "absorvida", "caducou")
 
-#: Onde as sprints moram, relativo à raiz.
 SUBPASTA_DAS_SPRINTS = Path("docs") / "process" / "sprints"
 
-#: Pastas que a varredura de citação não abre. `.git` guarda a história em
-#: binário; as outras são artefato que ninguém cita de volta.
 PASTAS_FORA = frozenset({
     ".git", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache",
     ".ruff_cache", "node_modules", "build", "dist", ".eggs", ".tox",
 })
 
-#: Extensões que não guardam prosa. Ler 1,8 MB de PNG atrás de um nome de
-#: arquivo é gastar relógio para não achar nada.
 SUFIXOS_FORA = frozenset({
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip", ".gz",
     ".xz", ".bz2", ".tar", ".whl", ".so", ".o", ".a", ".bin", ".hid", ".pcap",
@@ -113,8 +31,6 @@ SUFIXOS_FORA = frozenset({
     ".mp3", ".mp4", ".pyc",
 })
 
-#: Teto por arquivo. O `specs.html` tem 1,3 MB e é prosa legítima; acima disso
-#: é dado gerado, e dado gerado que cita sprint é defeito de outro portão.
 TETO_DE_LEITURA = 8 * 1024 * 1024
 
 
@@ -122,20 +38,11 @@ class SprintSumida(FileNotFoundError):
     """A pasta está no disco e o alvo não. Isto GRITA, nunca devolve vazio."""
 
 
-# ---------------------------------------------------------------------------
-# O frontmatter — o mesmo formato que `check_colisao_de_sprints.py` lê
-# ---------------------------------------------------------------------------
-
 _ESTADO = re.compile(r"^estado:\s*([A-Za-zÀ-ÿ]+)\s*$")
 
 
 def estado_da_sprint(texto: str) -> str | None:
-    """O `estado:` do bloco de frontmatter, ou ``None`` se não houver bloco.
-
-    Devolver ``None`` NÃO é o mesmo que devolver `aberta`: sprint sem
-    frontmatter nunca é candidata, porque quem não declarou não pediu para
-    descer. Os dois casos saem separados no relatório.
-    """
+    """O `estado:` do bloco de frontmatter, ou ``None`` se não houver bloco."""
     linhas = texto.splitlines()
     if not linhas or linhas[0].strip() != "---":
         return None
@@ -149,12 +56,7 @@ def estado_da_sprint(texto: str) -> str | None:
 
 
 def campo_de_lista(texto: str, campo: str) -> list[str]:
-    """Os itens de um campo de lista do frontmatter (`cria:`, `nao_toca:`).
-
-    Analisador pequeno de propósito, igual ao da casa: lê o bloco entre os dois
-    ``---`` e só as duas formas que as sprints usam — a lista em linhas com
-    ``-`` e a lista em colchetes na mesma linha.
-    """
+    """Os itens de um campo de lista do frontmatter (`cria:`, `nao_toca:`)."""
     linhas = texto.splitlines()
     if not linhas or linhas[0].strip() != "---":
         return []
@@ -183,10 +85,6 @@ def campo_de_lista(texto: str, campo: str) -> list[str]:
     return itens
 
 
-# ---------------------------------------------------------------------------
-# As candidatas
-# ---------------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class Sprint:
     arquivo: Path
@@ -195,12 +93,7 @@ class Sprint:
 
     @property
     def destino(self) -> Path:
-        """A gaveta é irmã do arquivo, não um caminho escrito à mão.
-
-        Assim uma sprint que more numa subpasta (`ABA-CONFIGURACOES/`) desce
-        para a gaveta DELA, e `mesa_de_medicao._o_dono_do_gesto`, que procura
-        em `<pasta do citado>/arquivados/`, continua achando.
-        """
+        """A gaveta é irmã do arquivo, não um caminho escrito à mão."""
         return self.arquivo.parent / ARQUIVADOS / self.arquivo.name
 
 
@@ -227,15 +120,11 @@ def _texto(arquivo: Path) -> str:
         return ""
 
 
-# ---------------------------------------------------------------------------
-# A TRAVA — quem ainda alcança o arquivo pelo caminho
-# ---------------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class Citacao:
     citador: str
     linha: int
-    classe: str          # "caminho" (trava) | "nome" (avisa)
+    classe: str
     trecho: str
 
     def __str__(self) -> str:
@@ -269,12 +158,7 @@ def _arquivos_de_prosa(raiz: Path):
 
 
 def quem_cita(raiz: Path, nomes: list[str]) -> dict[str, list[Citacao]]:
-    """Para cada nome de arquivo, quem o alcança e de que forma.
-
-    Uma passada só pela árvore, por mais candidatas que haja: a alternância dos
-    nomes vira UMA expressão, e o pré-filtro literal descarta de saída o
-    arquivo que não menciona nenhum deles.
-    """
+    """Para cada nome de arquivo, quem o alcança e de que forma."""
     if not nomes:
         return {}
     achado: dict[str, list[Citacao]] = {nome: [] for nome in nomes}
@@ -306,35 +190,23 @@ _ANTES_DE_PASTA = re.compile(r"([A-Za-z0-9_./~-]+)/$")
 
 
 def _classe_da_citacao(linha: str, inicio: int, fim: int) -> str | None:
-    """`caminho` trava; `nome` avisa; ``None`` não é citação.
-
-    O que separa as duas é uma pergunta só: *depois da mudança, este texto
-    ainda alcança o arquivo?* Pasta escrita antes do nome não alcança mais.
-    Nome solto alcança, porque a conferência da casa é por sufixo.
-    """
+    """`caminho` trava; `nome` avisa; ``None`` não é citação."""
     antes = linha[:inicio]
     depois = linha[fim:]
 
-    # Continuação de nome (`X.md.bak`, `X.mdx`) não é citação do arquivo.
     if depois[:1] and (depois[0].isalnum() or depois[0] in "_-"):
         return None
 
     pasta = _ANTES_DE_PASTA.search(antes)
     if pasta:
-        # Já aponta para a gaveta: é o destino, não o passado.
         if pasta.group(1).rstrip("/").endswith(ARQUIVADOS):
             return None
         return "caminho"
 
-    # Alvo de link markdown sem pasta: posicional, quebra na mudança.
     if antes.endswith("]("):
         return "caminho"
     return "nome"
 
-
-# ---------------------------------------------------------------------------
-# A mudança
-# ---------------------------------------------------------------------------
 
 def mover(sprint: Sprint, raiz: Path) -> str:
     """Leva a sprint para a gaveta. Só é chamada depois da trava."""
@@ -358,12 +230,7 @@ def mover(sprint: Sprint, raiz: Path) -> str:
 
 
 def _versionada(arquivo: Path, raiz: Path) -> bool:
-    """`docs/process/` é `.gitignore`, mas o script não confia nisso.
-
-    Numa bancada de teste não há repositório nenhum, e numa árvore onde a pasta
-    passe a viajar o `git mv` é o certo. Perguntar custa um processo por
-    arquivo movido, e movem-se poucos.
-    """
+    """`docs/process/` é `.gitignore`, mas o script não confia nisso."""
     try:
         pronto = subprocess.run(
             ["git", "ls-files", "--error-unmatch", "--",
@@ -373,10 +240,6 @@ def _versionada(arquivo: Path, raiz: Path) -> bool:
         return False
     return pronto.returncode == 0
 
-
-# ---------------------------------------------------------------------------
-# EIXO 4 — `tests/`, medido nas duas leituras e movido em nenhuma
-# ---------------------------------------------------------------------------
 
 _PREFIXOS_DA_ARVORE = (
     "src/", "scripts/", "tests/", "docs/", "layout/", "mockup/", "assets/",
@@ -391,19 +254,7 @@ _PACOTE = "hefesto_dualsense4unix"
 
 @dataclass
 class TesteMedido:
-    """Um teste e o que ele mede que não está mais lá.
-
-    As duas listas ficam separadas porque valem coisas diferentes, e somá-las
-    esconderia o mais fraco dentro do mais forte:
-
-    ``simbolos``  o endereço de um símbolo do pacote que não resolve. É o
-                  achado forte — o alvo mudou de lugar ou de nome, e a régua
-                  ficou medindo o mundo de ontem.
-    ``caminhos``  um caminho da árvore que não existe. É o achado FRACO: boa
-                  parte dos testes desta casa nomeia arquivo inexistente DE
-                  PROPÓSITO, para provar que a régua recusa o que não está lá.
-                  Sai no relatório como triagem, nunca como veredito.
-    """
+    """Um teste e o que ele mede que não está mais lá."""
 
     arquivo: str
     simbolos: list[str] = field(default_factory=list)
@@ -429,16 +280,7 @@ _ABRIGOS = (ast.If, ast.Try, ast.With, ast.AsyncWith, ast.For, ast.AsyncFor,
 
 
 def _nomes_do_topo(arquivo: Path) -> set[str] | None:
-    """Todo nome que o módulo publica, inclusive o que nasce sob guarda.
-
-    PRIMEIRA MEDIÇÃO, ARRANCADA E REFEITA: só os filhos diretos de `Module`
-    acusavam 65 testes, e a amostra era falsa — `ExternalCard` nasce dentro de
-    `if _GTK_DISPONIVEL:`, `StickPreviewGtk` idem. Toda a camada de tela desta
-    casa se define sob guarda de importação, e uma régua que não entra nos
-    abrigos mede um módulo que não existe. Por isso a descida entra em `if`,
-    `try` e `with`, e para nos corpos de função e classe — ali o nome é local,
-    e contá-lo abriria o buraco do outro lado.
-    """
+    """Todo nome que o módulo publica, inclusive o que nasce sob guarda."""
     try:
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
     except (SyntaxError, OSError, UnicodeDecodeError):
@@ -452,8 +294,6 @@ def _nomes_do_topo(arquivo: Path) -> set[str] | None:
                 nomes.add(no.name)
             elif isinstance(no, ast.Assign):
                 for alvo in no.targets:
-                    # `MOUSE_SPEED_MIN, MOUSE_SPEED_MAX = 1, 12` publica DOIS
-                    # nomes, e ler só `ast.Name` acusava os dois como mortos.
                     for nome in _nomes_do_alvo(alvo):
                         nomes.add(nome)
                         if nome == "__all__":
@@ -496,22 +336,12 @@ def _literais_de_lista(no: ast.expr) -> set[str]:
 
 
 def _alvo_pontilhado_morto(raiz: Path, alvo: str) -> str | None:
-    """Resolve `a.b.c` contra o disco. Devolve o motivo, ou ``None``.
-
-    É o que pega a família que esta casa mais caçou: a régua que digita o
-    endereço de um símbolo que mudou de lugar. Conservador de propósito — só
-    responde sobre o pacote da casa, e só quando o módulo pai existe.
-    """
+    """Resolve `a.b.c` contra o disco. Devolve o motivo, ou ``None``."""
     partes = alvo.split(".")
     if not partes or partes[0] != _PACOTE or len(partes) < 2:
         return None
-    # `core.rumble:_effective_mult` é citação `arquivo:símbolo`, que tem dono
-    # próprio (`scripts/validar-citacoes-de-linha.py`). Aqui ela só produziria
-    # um falso positivo com cara de achado.
     if not all(p.isidentifier() for p in partes):
         return None
-    # O corte desce até 1 porque `hefesto_dualsense4unix.__version__` é
-    # atributo do PACOTE, e parar em 2 o acusava de módulo inexistente.
     for corte in range(len(partes), 0, -1):
         modulo = ".".join(partes[:corte])
         arquivo = _modulo_no_disco(raiz, modulo)
@@ -537,7 +367,6 @@ def _caminho_morto(raiz: Path, bruto: str) -> str | None:
         return None
     if (raiz / bruto).exists():
         return None
-    # A gaveta salva a citação de sprint, igual à leniência da mesa de medição.
     p = Path(bruto)
     if (raiz / p.parent / ARQUIVADOS / p.name).exists():
         return None
@@ -598,20 +427,10 @@ def mede_os_testes(raiz: Path) -> tuple[list[TesteMedido], dict[str, list[str]]]
     return leitura_a, leitura_b
 
 
-# ---------------------------------------------------------------------------
-# A SEPARAÇÃO — um dono só, porque dois chamadores a fazem
-# ---------------------------------------------------------------------------
-
 def separa_presas_e_livres(
     fechadas: list[Sprint], citacoes: dict[str, list[Citacao]],
 ) -> tuple[list[Sprint], list[Sprint]]:
-    """(as que a citação por caminho segura, as que podem descer agora).
-
-    Ela vive fora dos dois chamadores de propósito. `--seco` e `--exigir`
-    precisam da MESMA fronteira, e duas cópias dela é a forma de defeito que
-    esta casa nomeia desde o `validar-caducos.py`: duas listas para a mesma
-    coisa divergem, e a que reprova diverge calada.
-    """
+    """(as que a citação por caminho segura, as que podem descer agora)."""
     presas: list[Sprint] = []
     livres: list[Sprint] = []
     for sprint in fechadas:
@@ -620,17 +439,9 @@ def separa_presas_e_livres(
     return presas, livres
 
 
-# ---------------------------------------------------------------------------
-# A fala
-# ---------------------------------------------------------------------------
-
 def _relata(raiz: Path, mover_de_verdade: bool) -> int:
     pasta = raiz / SUBPASTA_DAS_SPRINTS
     if not pasta.is_dir():
-        # SEM A PASTA NÃO É DEFEITO: `docs/process/` é `.gitignore`, e um clone
-        # limpo não a tem. É o que mantém a esteira de pé onde o `release.yml`
-        # já caiu uma vez. O que É defeito — a pasta no disco e o alvo fora
-        # dela — grita em `mover()`.
         print(f"sem {SUBPASTA_DAS_SPRINTS}/ nesta árvore — nada a medir.")
         return 0
 
@@ -713,33 +524,8 @@ def _relata_testes(raiz: Path) -> int:
     return 0
 
 
-# ---------------------------------------------------------------------------
-# `--exigir` — a forma de PORTÃO, e ela só reprova o que tem conserto
-# ---------------------------------------------------------------------------
-
 def _exige(raiz: Path) -> int:
-    """rc=1 só quando há sprint fechada que PODE descer agora.
-
-    OS DOIS DEFEITOS QUE ESTA FUNÇÃO SUBSTITUI, medidos em 20/09/2026 na
-    árvore viva, contra a versão que ela troca:
-
-    1. **Verde sobre nada.** Sem `docs/process/` no disco — e um clone limpo
-       nunca a tem, porque ela é `.gitignore:178` — a versão anterior imprimia
-       *"OK: nenhuma sprint fechada na pasta viva"* e devolvia 0. Afirmava
-       sobre 46 sprints que não tinha lido. *Ausência de pasta é ausência de
-       medição*, e um portão que confunde as duas é a família que esta casa
-       mais caçou em 2026: o instrumento respondendo sobre outra coisa.
-
-    2. **Vermelho eterno sobre quem está certo.** Ela reprovava as 21 fechadas
-       da pasta viva; **13 delas estão presas por citação de caminho**, e a
-       trava as segura DE PROPÓSITO — soltá-las quebraria o `SPRINT_ORDER.md`
-       e o comentário de `luz_do_mic.py`. Um portão que reprova o estado certo
-       não tem conserto, e portão sem conserto é portão que se desliga.
-
-    O que sobra é o que tem dono: as LIVRES. Quem vê este vermelho roda
-    `--mover` e ele apaga. As presas saem nomeadas e não reprovam — o reaponte
-    delas é ato humano, e `referencias-docs` já diz o endereço.
-    """
+    """rc=1 só quando há sprint fechada que PODE descer agora."""
     pasta = raiz / SUBPASTA_DAS_SPRINTS
     if not pasta.is_dir():
         print(f"NÃO MEDIDO: não há {SUBPASTA_DAS_SPRINTS}/ nesta árvore.")

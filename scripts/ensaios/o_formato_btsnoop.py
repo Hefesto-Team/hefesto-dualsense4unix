@@ -1,26 +1,5 @@
 #!/usr/bin/env python3
-"""o_formato_btsnoop.py — o arquivo do ``btmon -w``, lido por um dono só.
-
-Nasceu dentro do ``byte_no_fio.py`` e saiu dele em 25/09/2026
-(AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01), por duas razões:
-
-1. **A lightbar lia a captura com um parser que não lê.** O
-   ``scripts/capturar_a_probe_da_lightbar.sh`` passava o ``btmon -r`` num
-   ``awk`` que exige um deslocamento de oito dígitos no começo da linha, e o
-   ``packet_hexdump`` do BlueZ não imprime deslocamento: é o parser que, em
-   12/08/2026, "não venceu o formato". Enquanto a captura crua ficava no
-   ``/tmp``, isso só atrasava a leitura; agora que ela sai depois de lida, ler
-   nada e apagar seria destruir a prova. A leitura passou a ser esta, a mesma
-   que o ``byte_no_fio`` confere pela cor mágica.
-2. **A lightbar lê como root**, logo depois de gravar, para a captura crua
-   nunca sair das mãos do root. O ``byte_no_fio`` importa o ``comum``, que põe
-   o ``src/`` no caminho e tenta o pacote da casa — nada disso deve rodar como
-   root. Este arquivo é só biblioteca padrão, e roda com ``python3 -I -B``.
-
-Uso (o que a lightbar chama)::
-
-    python3 -I -B scripts/ensaios/o_formato_btsnoop.py --reports-de-saida <captura>
-"""
+"""o_formato_btsnoop.py — o arquivo do ``btmon -w``, lido por um dono só."""
 
 from __future__ import annotations
 
@@ -29,24 +8,13 @@ import struct
 import sys
 import zlib
 
-# ---------------------------------------------------------------------------
-# Constantes do protocolo — cada uma com a procedência que a autoriza
-# ---------------------------------------------------------------------------
 
-#: HID-over-BT, cabeçalho de transação: `(HANDSHAKE<<4)`... o que interessa é
-#: que `0xA2` é `DATA` no sentido host->device e `0xA1` é `DATA` no sentido
-#: device->host. É por este byte, e não pelo opcode do btsnoop, que este
-#: instrumento decide o SENTIDO de cada quadro.
 HID_BT_SAIDA = 0xA2
 HID_BT_ENTRADA = 0xA1
 
-#: `DS_OUTPUT_REPORT_BT` / `_SIZE` = `0x31` / 78, de
-#: `docs/protocol/driver-hid-playstation.md`, lido no fonte C em 11/08/2026.
 DS_OUTPUT_BT_ID = 0x31
 DS_OUTPUT_BT_TAM = 78
 
-#: Offsets ABSOLUTOS dentro do report `0x31` de saída. A mesma página da casa:
-#: "BT, report `0x31`: o corpo começa em `data[2]`. Somar 2."
 OFF_SEQ_TAG = 1
 OFF_TAG = 2
 OFF_VALID_FLAG0 = 3
@@ -58,13 +26,8 @@ OFF_PLAYER_LEDS = 46
 OFF_R, OFF_G, OFF_B = 47, 48, 49
 OFF_CRC = 74
 
-#: `PS_OUTPUT_CRC32_SEED` do `hid-playstation`. O CRC-32 é semeado com este
-#: byte e calculado sobre os `len - 4` primeiros bytes do report.
 CRC32_SEED_SAIDA = 0xA2
 
-#: Só os offsets que TÊM nome no driver. O resto é reservado, e o diff diz
-#: isso em vez de inventar um rótulo — um campo com nome errado num relatório
-#: de protocolo custa mais caro que um campo sem nome.
 NOME_DO_OFFSET = {
     OFF_SEQ_TAG: "seq_tag (contador rotativo do driver)",
     OFF_TAG: "tag",
@@ -78,10 +41,6 @@ NOME_DO_OFFSET = {
     OFF_G: "lightbar_green",
     OFF_B: "lightbar_blue",
 }
-
-# ---------------------------------------------------------------------------
-# O parser de btsnoop/monitor — pequeno, e conferido pela mordida
-# ---------------------------------------------------------------------------
 
 
 class Quadro:
@@ -97,20 +56,7 @@ class Quadro:
 
 
 def ler_btsnoop(caminho: str) -> tuple[list[Quadro], list[str]]:
-    """Os quadros ACL de um arquivo do `btmon -w`, e as queixas do caminho.
-
-    Formato: cabeçalho de 16 bytes (`btsnoop\\0` + versão + datalink), depois
-    registros big-endian de 24 bytes de cabeçalho + payload. Para o datalink
-    2001 (o "monitor" do BlueZ) o campo `flags` é `(índice << 16) | opcode`.
-
-    Este parser NÃO usa o opcode para decidir sentido — ele o ignora de
-    propósito e lê o `0xA1`/`0xA2` do próprio HID. O opcode entraria como uma
-    lembrança minha sobre um formato; o byte do HID é o protocolo.
-
-    Uma captura que não existe ou não se lê (o ``sudo -n`` não pôs o ``btmon``
-    de pé, a entrega a quem mede falhou) volta como QUEIXA, não como exceção:
-    quem chama responde «não medi» em vez de morrer com o relatório pela metade.
-    """
+    """Os quadros ACL de um arquivo do `btmon -w`, e as queixas do caminho."""
     queixas: list[str] = []
     try:
         with open(caminho, "rb") as arq:
@@ -136,30 +82,19 @@ def ler_btsnoop(caminho: str) -> tuple[list[Quadro], list[str]]:
         pacote = dados[pos : pos + incl]
         pos += incl
 
-        # Um pacote ACL tem, no mínimo, 4 bytes de cabeçalho + 4 de L2CAP.
         if len(pacote) < 9:
             continue
         hf, dlen = struct.unpack_from("<HH", pacote, 0)
         handle, pb = hf & 0x0FFF, (hf >> 12) & 0x03
         if dlen != len(pacote) - 4:
-            # Não é ACL (é comando, evento, nota de sistema...). Silencioso: o
-            # monitor multiplexa tudo no mesmo arquivo, e a maioria não é ACL.
             continue
         if pb == 0x01:
-            # Continuação de um L2CAP fragmentado. O `0x31` tem 79 bytes com o
-            # cabeçalho HID e nunca fragmenta num ACL de MTU normal; se
-            # aparecer, é para sair na queixa e não em silêncio.
             fragmentos += 1
             continue
         l2_len, _cid = struct.unpack_from("<HH", pacote, 4)
         corpo = pacote[8 : 8 + l2_len]
         if not corpo:
             continue
-        # O `ts` do btsnoop é microssegundo desde uma época que NÃO é a do
-        # Unix, e o deslocamento é uma constante mágica do BlueZ. Este parser
-        # se recusa a depender de uma constante que eu teria de lembrar: ele
-        # guarda o carimbo CRU e, mais adiante, normaliza pelo primeiro
-        # quadro. O veredito não usa tempo nenhum — usa a cor mágica.
         quadros.append(Quadro(ts / 1e6, handle, corpo[0], corpo))
 
     if incompletos:
@@ -181,11 +116,7 @@ def reports_de_saida(quadros: list[Quadro]) -> list[Quadro]:
 
 
 def crc_confere(report: bytes) -> bool | None:
-    """O CRC-32 dos quatro últimos bytes bate? `None` se o tamanho não permite.
-
-    `crc32_le(0xFFFFFFFF, &seed, 1)` seguido de `~crc32_le(crc, data, len-4)`,
-    que é exatamente o `zlib.crc32` do Python com a semente encadeada.
-    """
+    """O CRC-32 dos quatro últimos bytes bate? `None` se o tamanho não permite."""
     if len(report) != DS_OUTPUT_BT_TAM:
         return None
     calc = zlib.crc32(bytes([CRC32_SEED_SAIDA]))
@@ -214,13 +145,7 @@ def descreve(report: bytes) -> list[str]:
 
 
 def assinaturas_de_saida(quadros: list[Quadro]) -> list[tuple[int, int, bytes]]:
-    """``(handle, quantos, report)`` de cada 0x31 de saída DISTINTO, na ordem.
-
-    Distinto pelo que decide a barra — ``valid_flag1``, ``valid_flag2``,
-    ``lightbar_setup`` e R/G/B —, e não pelo report inteiro, que muda o
-    ``seq_tag`` e o CRC a cada quadro. É a pergunta da lightbar: *um report
-    presente no braço sujo e ausente no limpo é o que apaga a barra.*
-    """
+    """``(handle, quantos, report)`` de cada 0x31 de saída DISTINTO, na ordem."""
     ordem: list[tuple[int, bytes]] = []
     contas: dict[tuple[int, bytes], int] = {}
     exemplar: dict[tuple[int, bytes], bytes] = {}
@@ -239,19 +164,11 @@ def assinaturas_de_saida(quadros: list[Quadro]) -> list[tuple[int, int, bytes]]:
     return [(h, contas[(h, a)], exemplar[(h, a)]) for h, a in ordem]
 
 
-#: Quantos 0x31 distintos a leitura guarda byte a byte. A captura crua sai
-#: depois de lida, e o que não estiver na leitura não volta: o teto só existe
-#: para uma rajada que varia a cada quadro não virar um arquivo de megabytes.
 TETO_DE_REPORTS_BYTE_A_BYTE = 40
 
 
 def reports_distintos(quadros: list[Quadro]) -> list[tuple[int, int, bytes]]:
-    """``(handle, quantos, report)`` de cada 0x31 de saída distinto BYTE A BYTE.
-
-    Distinto pelo report inteiro menos o que muda a cada quadro por desenho —
-    o ``seq_tag`` e o CRC. É a outra metade da pergunta da lightbar: *que
-    report* a Steam manda, e não só o que ele diz da barra.
-    """
+    """``(handle, quantos, report)`` de cada 0x31 de saída distinto BYTE A BYTE."""
     ordem: list[tuple[int, bytes]] = []
     contas: dict[tuple[int, bytes], int] = {}
     exemplar: dict[tuple[int, bytes], bytes] = {}
@@ -271,13 +188,7 @@ def reports_distintos(quadros: list[Quadro]) -> list[tuple[int, int, bytes]]:
 
 
 def texto_dos_reports_de_saida(caminho: str) -> str:
-    """O que a lightbar grava como leitura de um braço: só os 0x31 de saída.
-
-    Duas vistas do mesmo conteúdo: a tabela dos campos da barra (o que decide
-    a cor) e os reports distintos byte a byte (o que mais eles dizem). O 0x31
-    de saída não leva chave nem endereço, e a leitura guarda tudo o que a
-    captura tinha dele — a captura crua, que pode levar a chave, não fica.
-    """
+    """O que a lightbar grava como leitura de um braço: só os 0x31 de saída."""
     quadros, queixas = ler_btsnoop(caminho)
     assinaturas = assinaturas_de_saida(quadros)
     total = sum(n for _, n, _ in assinaturas)

@@ -1,9 +1,4 @@
-"""CLI do histórico de perfis e do `doctor --perfis`.
-
-PERFIL-SEM-RASTRO-01 (histórico/restauração) e PERFIL-NASCE-CERTO-01/E4 (o
-detector de armadilha). Um backup que ela não consegue restaurar sozinha não é
-backup; um detector que não aparece em lugar nenhum não detecta nada.
-"""
+"""CLI do histórico de perfis e do `doctor --perfis`."""
 from __future__ import annotations
 
 import json
@@ -50,9 +45,7 @@ def _perfil(nome: str = "pragmata", *, match: Match | None = None, priority: int
     )
 
 
-# ---------------------------------------------------------------------------
 # `profile historico` / `profile restore`  (noqa-acento: nomes de subcomando)
-# ---------------------------------------------------------------------------
 
 
 def test_historico_lista_as_versoes_com_match_e_prioridade(dir_perfis: Path) -> None:
@@ -109,17 +102,8 @@ def test_restore_sem_historico_sai_com_erro_e_aponta_o_caminho(dir_perfis: Path)
     assert "profile historico pragmata" in resultado.output  # (noqa-acento)
 
 
-# ---------------------------------------------------------------------------
-# `doctor --perfis`
-# ---------------------------------------------------------------------------
-
-
 def test_doctor_perfis_acusa_o_arranjo_corrompido(dir_perfis: Path) -> None:
-    """O detector chega à tela, e o comando SAI 1 quando o achado é grave.
-
-    MORDIDA: arrancar `_print_bloco_perfis` (ou o `raise typer.Exit`) faz o
-    comando sair 0 num diretório em que o catch-all vence o perfil do jogo.
-    """
+    """O detector chega à tela, e o comando SAI 1 quando o achado é grave."""
     save_profile(_perfil("desktop_dela", match=MatchAny(), priority=100))
     save_profile(_perfil("pragmata", priority=80))
 
@@ -141,11 +125,7 @@ def test_doctor_perfis_sai_zero_no_disco_saudavel(dir_perfis: Path) -> None:
 def test_doctor_perfis_nao_chama_o_doctor_sh_nem_o_ipc(
     dir_perfis: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`--perfis` é o caminho RÁPIDO: sem script de infra, sem daemon.
-
-    MORDIDA: deixar o `--perfis` cair no fluxo completo faz o `subprocess.run`
-    ser chamado e este teste reprova.
-    """
+    """`--perfis` é o caminho RÁPIDO: sem script de infra, sem daemon."""
 
     def _proibido(*_a: object, **_k: object) -> object:
         raise AssertionError("doctor --perfis não pode rodar subprocesso")

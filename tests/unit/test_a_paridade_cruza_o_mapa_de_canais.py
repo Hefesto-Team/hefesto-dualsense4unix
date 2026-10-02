@@ -1,33 +1,4 @@
-"""A PARIDADE CRUZA O MAPA — e o mapa INFORMA, nunca VETA.
-
-O achado que este arquivo fecha é da A-TELA-NOVA-ENTRA-NA-RÉGUA-DO-MAPA-01
-(§5.4, 06/09/2026): ``docs/data/paridade-gtk-html.csv`` e
-``docs/data/mapa-controles.csv`` eram lidos juntos por DOIS arquivos do produto
-(``interface/aba02.py`` e ``interface/mesa_viva.py``) e por **portão nenhum**.
-Uma linha podia dizer ``IGUAL`` — a tela nova faz o que a janela fazia — enquanto
-o mapa dizia que o CANAL embaixo dela só aciona num transporte. Os dois números
-concordavam consigo mesmos, e ninguém perguntava ao outro.
-
-O cruzamento mora em ``scripts/check_paridade_gtk_html.py`` (regras 10, 11 e 12),
-e **de propósito**: pôr um portão novo em ``scripts/`` obrigaria a mexer no
-``portoes.sh`` E no ``ci.yml``, e a lista de portões desta casa tem UM dono —
-``tests/unit/test_portao_a_lista_de_portoes_e_uma_so.py`` reprova quem a duplica.
-O portão da paridade já roda nos dois; o cruzamento entrou nele.
-
-ESTE ARQUIVO É O PORTÃO DO PORTÃO, e prova as duas metades:
-
-1. **ELE SABE RECUSAR** — cada regra nova é arrancada por dublê, com um mapa e
-   uma ponte forjados. Régua que reprova nada é indistinguível de régua
-   desligada.
-2. **ELE SABE NÃO RECUSAR** — e esta metade é a que a decisão dela exige.
-   ``D-0609-O-MAPA-INFORMA-NUNCA-VETA``, palavra dela em 06/09/2026: *"Esse mapa
-   é funcional e real. tá desatualizado no sentido de não ter sido medido. foi e
-   tudo funciona."*  Uma célula ``nao-medido`` vira AVISO, e o ``rc`` continua
-   ZERO. ``test_a_causa_nao_medido_avisa_e_nao_reprova`` é o teste mais
-   importante daqui: sem ele, um portão que só sabe reprovar transformaria um
-   mapa ATRASADO em freio — que foi exatamente a ordem que ela reverteu a dois
-   agentes em voo no mesmo dia.
-"""
+"""A PARIDADE CRUZA O MAPA — e o mapa INFORMA, nunca VETA."""
 
 from __future__ import annotations
 
@@ -64,10 +35,6 @@ def linhas_reais() -> list[dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
-# ---------------------------------------------------------------------------
-# OS DUBLÊS — uma linha de paridade e uma célula de mapa, forjadas
-# ---------------------------------------------------------------------------
-
 _LINHA = {
     "aba": "05-vibracao",
     "feature": "dublê",
@@ -75,8 +42,8 @@ _LINHA = {
     "sinal": "rumble_ff",
     "sinal_espera": "PRESENTE",
     "sinal_escopo": "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py",
-    "gtk_onde": "src/hefesto_dualsense4unix/app/actions/rumble_actions.py:773",
-    "html_onde": "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:332",
+    "gtk_onde": "src/hefesto_dualsense4unix/app/actions/rumble_actions.py:603",
+    "html_onde": "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:233",
     "gtk_faz": "—", "html_faz": "—", "porque": "—",
 }
 
@@ -104,11 +71,6 @@ def _familias(falhas: list[str]) -> set[str]:
     return {f.split(":", 1)[0] for f in falhas}
 
 
-# ---------------------------------------------------------------------------
-# 1. O DUBLÊ INTACTO PASSA — senão nada abaixo prova coisa alguma
-# ---------------------------------------------------------------------------
-
-
 def test_o_duble_intacto_passa(regua) -> None:
     falhas, avisos = _cruza(regua)
     assert falhas == []
@@ -122,17 +84,8 @@ def test_o_mapa_que_sustenta_os_dois_transportes_nao_cobra_nada(regua) -> None:
     assert avisos == []
 
 
-# ---------------------------------------------------------------------------
-# 2. A METADE QUE ELA MANDOU EXISTIR — `nao-medido` avisa e NÃO reprova
-# ---------------------------------------------------------------------------
-
-
 def test_a_causa_nao_medido_avisa_e_nao_reprova(regua) -> None:
-    """`D-0609-O-MAPA-INFORMA-NUNCA-VETA`, e é o teste que segura a decisão dela.
-
-    Célula atrasada NÃO veta trabalho: ela vira fila de bancada. Se este teste
-    ficar vermelho, alguém transformou o mapa em freio.
-    """
+    """`D-0609-O-MAPA-INFORMA-NUNCA-VETA`, e é o teste que segura a decisão dela."""
     falhas, avisos = _cruza(
         regua,
         mapa=_celula(radio_aciona="não", radio_por_que_nao_aciona="nao-medido"),
@@ -166,11 +119,6 @@ def test_um_lado_nao_medido_e_o_outro_com_causa_so_cobra_o_segundo(regua) -> Non
     assert "cabo" not in falhas[0].split("restringe")[1].split("\n")[0]
 
 
-# ---------------------------------------------------------------------------
-# 3. A REGRA 11 SABE RECUSAR — e sabe aceitar quem declara
-# ---------------------------------------------------------------------------
-
-
 def test_recusa_quem_afirma_paridade_sem_dizer_o_transporte(regua) -> None:
     falhas, _ = _cruza(
         regua,
@@ -183,14 +131,10 @@ def test_recusa_quem_afirma_paridade_sem_dizer_o_transporte(regua) -> None:
 @pytest.mark.parametrize("declaracao", [
     "vale no cabo, e só nele",
     "pelo rádio o aparelho não publica placa de som",
-    "no RÁDIO isso depende da ponte",   # a caixa não decide
+    "no RÁDIO isso depende da ponte",
 ])
 def test_aceita_a_linha_que_nomeia_o_transporte(regua, declaracao: str) -> None:
-    """Acento e caixa não podem desligar a régua.
-
-    É o defeito que esta casa já pagou onze vezes: *a régua desliga exatamente
-    quando alguém escreve bem*. `Rádio` é a grafia correta, e ela conta.
-    """
+    """Acento e caixa não podem desligar a régua."""
     falhas, _ = _cruza(
         regua,
         mapa=_celula(radio_aciona="não", radio_por_que_nao_aciona="divida"),
@@ -246,11 +190,6 @@ def test_so_quem_afirma_paridade_e_cobrado(regua, veredito: str) -> None:
     assert falhas == []
 
 
-# ---------------------------------------------------------------------------
-# 4. A REGRA 10 — as duas pontas da ponte têm de existir
-# ---------------------------------------------------------------------------
-
-
 def test_recusa_ponte_para_feature_que_saiu_do_csv(regua) -> None:
     falhas, _ = _cruza(regua, ponte={("05-vibracao", "outra qualquer"): "canal.do.duble@dualsense"})
     assert _familias(falhas) == {"ponte-morta"}
@@ -261,11 +200,6 @@ def test_recusa_ponte_para_id_que_nao_existe_no_mapa(regua) -> None:
     falhas, _ = _cruza(regua, ponte={("05-vibracao", "dublê"): "canal.inventado@dualsense"})
     assert _familias(falhas) == {"ponte-morta"}
     assert "canal.inventado@dualsense" in falhas[0]
-
-
-# ---------------------------------------------------------------------------
-# 5. A REGRA 12 — a catraca. A ponte só cresce.
-# ---------------------------------------------------------------------------
 
 
 def test_recusa_ponte_que_encolheu(regua) -> None:
@@ -281,11 +215,6 @@ def test_crescer_passa_e_o_piso_nao_pune_quem_melhora(regua) -> None:
     linhas = [dict(_LINHA), dict(_LINHA) | {"feature": "dublê 2"}]
     falhas, _ = regua.cruzar_com_o_mapa(linhas, _celula(), pontes=ponte, piso=1)
     assert falhas == []
-
-
-# ---------------------------------------------------------------------------
-# 6. O MAPA DE VERDADE — a régua não pode se desligar sozinha
-# ---------------------------------------------------------------------------
 
 
 def test_o_mapa_ausente_e_falha_e_nao_silencio(regua, tmp_path: Path) -> None:
@@ -319,11 +248,6 @@ def test_o_mapa_desta_arvore_abre_e_tem_as_colunas(regua) -> None:
     assert len(mapa) > 100
 
 
-# ---------------------------------------------------------------------------
-# 7. NESTA ÁRVORE, AGORA
-# ---------------------------------------------------------------------------
-
-
 def test_a_ponte_desta_arvore_tem_as_duas_pontas_vivas(regua, linhas_reais) -> None:
     """Regra 10 contra o dado real: nenhuma ponte aponta para o vazio."""
     mapa, _ = regua.ler_mapa()
@@ -337,12 +261,7 @@ def test_a_ponte_esta_no_piso_e_o_piso_e_o_tamanho_dela(regua) -> None:
 
 
 def test_o_cruzamento_roda_verde_nesta_arvore(regua, linhas_reais) -> None:
-    """Verde AQUI, hoje. Os avisos NÃO entram nesta conta — é a decisão dela.
-
-    E não se afirma nada sobre a QUANTIDADE de avisos de propósito: no dia em que
-    a bancada medir `luz.lightbar.brilho@dualsense`, o aviso some — e um teste
-    que exigisse avisos puniria quem fechou a medição.
-    """
+    """Verde AQUI, hoje. Os avisos NÃO entram nesta conta — é a decisão dela."""
     mapa, falhas_do_mapa = regua.ler_mapa()
     falhas, _ = regua.cruzar_com_o_mapa(linhas_reais, mapa)
     assert falhas_do_mapa == []

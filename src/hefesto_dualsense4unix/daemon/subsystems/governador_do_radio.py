@@ -145,168 +145,59 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: De quanto em quanto tempo o governador olha o ar. É a janela do medidor:
-#: 250 ms são ~23 quadros de uma ponte.
 PERIODO_S = 0.25
 
-#: Acima disto (pacotes na fila do host) as pontes do adaptador cedem. ~200 ms
-#: de uma ponte: sem o patch do bluetoothd, o socket de uma ponte enche em
-#: ~1,8 s de crédito parado (estudo de 23/09, críticos) e o primeiro EAGAIN
-#: derruba o controle — o governador tem de ceder na primeira janela.
 LIMIAR_DO_DEFICIT = 20
 
-#: Abaixo disto as pontes voltam a escrever. A metade do limiar: sem folga, o
-#: governador alternaria ceder e escrever a cada janela sobre um adaptador que
-#: escoa no limite.
 FOLGA_PARA_VOLTAR = 10
 
-#: Quanto um adaptador que parou de escoar espera antes de aceitar ponte de
-#: novo. Uma volta do subsystem do som (``RECONCILIA_S``): a tentativa seguinte
-#: é a prova de que ele voltou a drenar.
 ESPERA_DA_FILA_PARADA_S = 5.0
 
-#: O teto da espera crescente — GOVERNADOR-DO-RADIO-02. Cada queda seguida pela
-#: fila parada dobra a espera a partir de :data:`ESPERA_DA_FILA_PARADA_S`
-#: (5 → 10 → 20 → 40 → 60 s), e ela fica aqui até a fila andar. Sem teto a
-#: religação de um 2B de horas viraria «nunca»; sem crescer, ela era uma
-#: tentativa a cada 7 a 12 s, com ~4 linhas de diário por volta.
 TETO_DA_ESPERA_DA_FILA_S = 60.0
 
-#: Escritas aceitas pelo kernel que provam que a fila ANDA: o dobro da fila do
-#: ``/dev/uhid`` (``UHID_BUFSIZE`` = 32, ``assets/dkms/uhid/uhid.c``). Com o
-#: uhid que devolve ``EAGAIN`` de fila cheia, só o ``bluetoothd`` lendo deixa
-#: uma ponte passar disso. É a prova que vale sem o medidor de ar; com ele, a
-#: janela medida (:meth:`GovernadorDoRadio._medir`) chega antes.
 ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA = 64
 
-#: De quanto em quanto tempo um episódio de ceder entra no diário, por
-#: adaptador. CONFERÊNCIA DE 23/09/2026: só a borda não bastava. Três pontes
-#: num adaptador que escoa duas (a R4, que é o caso deste governador) alternam
-#: ceder e voltar a cada janela — medido no dublê, 240 linhas por minuto, e o
-#: diário de meio mega girava em minutos, levando junto o ``PONTE_SUBIU`` que o
-#: ``storm_doctor.o_fato_da_queda`` precisa e as frases dos outros motores. O
-#: episódio que não entra é CONTADO, e a próxima linha diz quantos foram.
-#: Desde 28/09 (O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01) dentro do episódio só cede
-#: quem não cabe, e os episódios são mais longos; o teto do diário fica.
 INTERVALO_DAS_BORDAS_NO_DIARIO_S = 60.0
 
-#: Um pedido que a tela não respondeu e que ninguém renovou some. O subsystem
-#: renova a cada volta enquanto há som esperando; sem som, a pergunta perde o
-#: sentido.
 VALIDADE_DO_PEDIDO_S = 15.0
 
-#: Uma vaga que não virou ponte neste tempo foi esquecida por quem pediu (uma
-#: exceção entre o pedido e a subida). O governador a recolhe, para ela não
-#: ocupar o adaptador para sempre.
 PRAZO_PARA_SUBIR_S = 30.0
 
-#: De quanto em quanto tempo o tique pergunta onde está cada controle que ela
-#: mandou «Ligar aqui» (A-COSTURA-DA-ONDA-2-01). Uma varredura do ``HID_PHYS``
-#: por controle autorizado — nenhuma quando não há resposta dela de pé, que é
-#: o caso comum. Um segundo é menos que um controle leva para cair e voltar.
 INTERVALO_DAS_AUTORIZACOES_S = 1.0
 
-#: Os dois tipos que o diário conhece (``diario_do_radio.PONTE_SUBIU``).
 TIPO_SOM = "som"
 TIPO_VIBRACAO = "vibracao"
 
-#: Quem escreve no diário.
 QUEM = "governador"
 
-# --- o vocabulário do governador no diário ---------------------------------
-#: A terceira ponte pediu vaga num adaptador cheio, e há vaga em outro.
 ADAPTADOR_CHEIO = "adaptador cheio"
-#: As pontes do adaptador começaram a ceder na fonte (a borda de subida).
 CEDEU_NA_FONTE = "cedeu na fonte"
-#: E voltaram a escrever (a borda de descida).
 VOLTOU_A_ESCREVER = "voltou a escrever"
-#: Ceder passou do teto: o adaptador não escoa. A FAMÍLIA DEPENDE DE QUEM
-#: MEDIU, e é o que :meth:`GovernadorDoRadio._fila_parada` escreve:
-#:
-#: * ``pelo="kernel"`` — o ``uhid`` com contrapressão devolveu ``EAGAIN`` por
-#:   mais que o teto: a fila do ``/dev/uhid`` cheia é o ``bluetoothd`` sem ler,
-#:   a família 2B, e é isso que o diário diz;
-#: * ``pelo="governador"`` — o ``acl_tx`` não andou. Isso não separa o
-#:   ``bluetoothd`` parado (2B) do controlador sem devolver crédito (o regime
-#:   que antecede o 2A): o diário diz o que foi medido, o adaptador que não pôs
-#:   no ar, na família 2 (enlace parado). Conferência de 23/09/2026: esta linha
-#:   dizia «Família 2B» para os dois, e o ramo do governador afirmava o
-#:   ``bluetoothd`` sem ter olhado para ele.
 FILA_PARADA = "fila parada"
-#: O adaptador que parou de escoar voltou a pôr no ar: acaba a espera
-#: crescente, e o diário diz quantas tentativas ficaram caladas no meio.
 FILA_ANDOU = "fila voltou a andar"
 
-#: O ``por_que`` do ``PONTE_DESCEU`` que o arranque escreve pela ponte que o
-#: daemon anterior deixou de pé no diário ao morrer sem ``stop()``.
 MOTIVO_DO_REINICIO = "o daemon reiniciou"
 
-#: Os motivos de uma :class:`Recusa`.
 MOTIVO_CHEIO = "cheio"
 MOTIVO_PARADO = "parado"
-#: O adaptador está cheio e o governador ainda não sabe se há vaga em outro:
-#: a ponte espera a medida, e a tela não pergunta nada.
 MOTIVO_SEM_MEDIDA = "sem medida"
 
-#: Quanto a ponte espera a medida que diz se há vaga em outro adaptador antes de
-#: valer a R4. Oito janelas do medidor: a primeira amostra chega no primeiro
-#: tique (250 ms depois do arranque), e o teto cobre um arranque lento sem
-#: deixar o som de quem joga mudo por mais que isso quando o medidor não
-#: responde nunca.
 TETO_DO_NAO_SEI_S = 8 * PERIODO_S
 
-#: O ``por_que`` do ``PONTE_SUBIU`` da R4 — medida e sem medida.
 POR_QUE_NAO_HA_VAGA = "não há vaga em outro adaptador"
 POR_QUE_NAO_SEI_SE_HA_VAGA = "não sei se há vaga em outro adaptador"
 
-#: O peso da janela nova na média do que uma ponte escreve por janela
-#: (:meth:`GovernadorDoRadio._a_vez`). A contagem de uma janela oscila de um
-#: quadro (23 ou 24 a 93,75 por segundo), e a conta de quantas cabem não pode
-#: oscilar junto. A média só vale para BAIXO: na rajada (a vibração do jogo), a
-#: janela que escreve mais que a média manda na conta — a média sozinha ficava
-#: atrás da rajada e deixava a fila do host passar do que o ceder de antes
-#: deixava.
 PESO_DA_JANELA_NA_MEDIA = 0.25
 
-#: O que o medidor diz quando o adaptador não pode receber ponte — não é
-#: «vaga», por mais que ele não tenha ponte nenhuma.
 _ADAPTADOR_FORA = frozenset({ADAPTADOR_DESLIGADO, ADAPTADOR_SUMIU, IOCTL_FALHOU, SEM_BLUETOOTH})
 
-#: A frase do adaptador que parou de escoar — a mesma na recusa e no diário.
 FRASE_DA_FILA_PARADA = "Este adaptador parou de enviar. O som volta sozinho."
 
-#: Um endereço de rádio em qualquer grafia com dois-pontos. A frase de tela
-#: NUNCA o leva (GOVERNADOR-DO-RADIO-02): um nome que vier com ele é «não sei».
 _ENDERECO_DE_RADIO = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{2}(?::[0-9a-f]{2}){5}(?![0-9a-f])")
 
 
 def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) -> str:
-    """O nome que a tela dá a este adaptador — o que ela deu, «Entrada 3» ou
-    «Entrada 4.1.4» —, ou ``""``.
-
-    UM DONO DO NOME DA PORTA (A-COSTURA-DA-ONDA-2-01, item 6): o nome é do
-    «Mapear Entrada a Entrada» (``entrada_a_entrada.nome_da_porta``, que traduz
-    pelo ``utils/maquina.py``). Este governador só acha QUAL porta é, e pergunta:
-
-    * o ``hciN`` do endereço é o do KERNEL — a amostra do medidor de ar, que já
-      traz ``hci`` e ``endereco`` da mesma leitura, e, sem ela,
-      ``bluez_dbus.enderecos_pelo_kernel`` (o mesmo ioctl);
-    * o caminho do ``hciN`` é o do ``mesa_de_radio.adaptadores_bluetooth``;
-    * o NOME é o do dono, pelo caminho — ele o traduz no lugar (D3), e a
-      entrada que ela numerou na outra janela também vale.
-
-    FATO SUBSTITUÍDO DUAS VEZES EM 23/09: aqui se compunha a palavra com o
-    número dela ou, sem ele, com o ``devpath`` — um segundo dono do nome, que a
-    A-COSTURA-DA-ONDA-2-01 tirou daqui. A TRANSPLANTE-DA-SECAO-01 (item 4 de quem
-    coordena) devolveu o «Entrada 4.1.4» à porta que ela não nomeou nem
-    numerou, como o desenho aprovado mostra — mas NO DONO
-    (``entrada_a_entrada.nome_da_porta``): este governador recebe a palavra
-    pronta e não compõe nada.
-
-    ``""`` é «não sei»: adaptador embutido (sem USB), endereço que o kernel não
-    conhece, ou a suíte no ar — que não lê a mesa dela por aqui. Quem chama diz
-    «este adaptador», nunca o endereço.
-    """
+    """O nome que a tela dá a este adaptador — o que ela deu, «Entrada 3» ou"""
     try:
         from hefesto_dualsense4unix.integrations import bluez_dbus
 
@@ -335,7 +226,7 @@ def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) ->
         from hefesto_dualsense4unix.integrations import entrada_a_entrada
 
         return entrada_a_entrada.nome_da_porta(lugar.caminho) or ""
-    except Exception:  # o nome nunca derruba a recusa: sem ele, «este adaptador»
+    except Exception:
         logger.debug("governador_nome_da_porta_ilegivel", exc_info=True)
         return ""
 
@@ -380,14 +271,7 @@ def _tipo(tipo: str) -> str:
 
 
 class _HidrawIlegivelError(RuntimeError):
-    """A raiz do ``hidraw`` no ``/sys`` não se leu: onde o controle está é «não sei».
-
-    NÃO é ``OSError`` de propósito: ``radio_da_mesa.adaptador_por_uniq`` engole
-    o ``OSError`` do ``listar`` e devolve ``""`` — que para a admissão é «sem
-    casa» e para :meth:`GovernadorDoRadio.conferir_as_autorizacoes` é
-    «desconectou». Levantando, a admissão continua igual (ela já trata o erro
-    como ``""``) e a conferência pode dizer «não sei».
-    """
+    """A raiz do ``hidraw`` no ``/sys`` não se leu: onde o controle está é «não sei»."""
 
 
 def _listar_o_hidraw(raiz: str) -> list[str]:
@@ -399,17 +283,7 @@ def _listar_o_hidraw(raiz: str) -> list[str]:
 
 
 def _adaptador_pelo_hid_phys(uniq: str) -> str:
-    """O endereço do adaptador do controle, pelo ``HID_PHYS`` — ``""`` = não está no rádio.
-
-    A raiz do sysfs é a MESMA da varredura do som e do microfone
-    (``dualsense_bt_audio._SYSFS_HIDRAW``), lida na CHAMADA: é ela que a suíte
-    aponta para o vazio, e um default resolvido no import leria o hidraw da
-    mesa dela no meio de um teste.
-
-    A raiz que não se lê LEVANTA :class:`_HidrawIlegivelError` (conferência da
-    A-COSTURA-DA-ONDA-2-01): antes ela saía ``""``, e a conferência do «Ligar
-    aqui» lia o ``/sys`` ilegível como «ele desconectou».
-    """
+    """O endereço do adaptador do controle, pelo ``HID_PHYS`` — ``""`` = não está no rádio."""
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio
     from hefesto_dualsense4unix.integrations.radio_da_mesa import adaptador_por_uniq
 
@@ -419,51 +293,31 @@ def _adaptador_pelo_hid_phys(uniq: str) -> str:
 
 @dataclass(eq=False)
 class Vaga:
-    """A licença de UMA ponte para escrever num adaptador.
-
-    A bomba lê :attr:`cedendo` e :attr:`derrubar` a cada quadro e chama
-    :meth:`contar_escrita` a cada escrita aceita; a ponte chama :meth:`subiu` e
-    :meth:`soltar`. Os campos que a bomba lê são escritos só pelo governador, e
-    :attr:`escritas` só pela bomba — um escritor por campo, sem trava no
-    caminho de 93,75 quadros por segundo.
-    """
+    """A licença de UMA ponte para escrever num adaptador."""
 
     uniq: str
     adaptador: str
     tipo: str
     alem_do_limite: bool = False
-    #: «Além do limite» porque ELA respondeu «Ligar aqui» (R3 → R4), e não
-    #: porque não havia vaga em outro adaptador (R4 sozinha). O diário não
-    #: pode atribuir a ela uma escolha que ela não fez.
     por_escolha_dela: bool = False
-    #: «Além do limite» porque o teto do «não sei» passou sem medida
     #: (:data:`TETO_DO_NAO_SEI_S`): o diário diz «não sei», nunca «não há».
     sem_medida: bool = False
     pedida_em: float = 0.0
-    #: Escritas aceitas pelo kernel — o lado «nosso» do déficit.
     escritas: int = 0
-    #: O governador mandou ceder na fonte.
     cedendo: bool = False
-    #: O governador mediu o adaptador parado além do teto: a ponte cai.
     derrubar: bool = False
     subiu_em: float | None = None
     solta: bool = False
     _vistas: int = 0
-    #: Subiu durante a espera crescente de uma fila parada (item 3 da
-    #: GOVERNADOR-DO-RADIO-02): é uma TENTATIVA, e o ``PONTE_SUBIU`` dela só vai
-    #: ao diário se a fila andar. Calada na subida, calada na descida — o par
-    #: SUBIU/DESCEU nunca fica pela metade.
     _calada: bool = False
     _dono: Any = field(default=None, repr=False)
 
     def contar_escrita(self) -> None:
         self.escritas += 1
-        # A PROVA DE QUE A FILA ANDA, pelo kernel: uma vez por vaga, no número
-        # exato — uma comparação por quadro, e nada mais no caminho da bomba.
         if self.escritas == ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA and self._dono is not None:
             try:
                 self._dono._a_fila_andou(self.adaptador)
-            except Exception:  # o governador nunca derruba a bomba
+            except Exception:
                 logger.debug("governador_fila_andou_falhou", exc_info=True)
 
     def subiu(self, tipo: str | None = None) -> None:
@@ -484,16 +338,7 @@ class Vaga:
 
 @dataclass(frozen=True)
 class Recusa:
-    """A ponte não sobe agora. ``vagas`` são os adaptadores onde caberia.
-
-    As ``vagas`` saem na ordem da D8 (``plano_de_radio.ordem_dos_destinos``, a
-    mesma da central — A-COSTURA-DA-ONDA-2-01): a primeira é o «para onde» que a
-    tela pergunta, e a frase diz os nomes nessa ordem.
-
-    ``adaptador`` e ``vagas`` são ENDEREÇOS: dado para quem chama (a tela
-    endereça o pedido por eles). A :attr:`frase` não os leva — ela pergunta o
-    nome a ``nomear`` (GOVERNADOR-DO-RADIO-02, item 4), na hora em que é lida.
-    """
+    """A ponte não sobe agora. ``vagas`` são os adaptadores onde caberia."""
 
     uniq: str
     adaptador: str
@@ -501,18 +346,15 @@ class Recusa:
     motivo: str
     vagas: tuple[str, ...] = ()
     n_max: int = N_MAX_PONTES
-    #: Quem diz o nome de tela de um adaptador (:func:`nome_da_porta`).
-    #: ``None`` = ninguém: a frase diz «este adaptador».
     nomear: Callable[[str], str] | None = field(default=None, repr=False, compare=False)
 
     def nome_de(self, endereco: str) -> str:
-        """O nome de tela deste adaptador, ou ``""``. NUNCA o endereço: um nome
-        que traga um endereço de rádio é «não sei», venha de quem vier."""
+        """O nome de tela deste adaptador, ou ``""``. NUNCA o endereço: um nome"""
         if self.nomear is None or not endereco:
             return ""
         try:
             nome = str(self.nomear(endereco) or "").strip()
-        except Exception:  # o nome nunca derruba a recusa
+        except Exception:
             return ""
         if not nome or _ENDERECO_DE_RADIO.search(nome):
             return ""
@@ -520,18 +362,13 @@ class Recusa:
 
     @property
     def frase(self) -> str:
-        """O que a tela diz — curto, sem culpa, e só o que foi medido.
-
-        As palavras são as da pergunta do desenho aprovado (R3): «A Entrada
-        4.1.4 já tem 2 controles com som ou vibração.» E a vaga, pelo nome.
-        """
+        """O que a tela diz — curto, sem culpa, e só o que foi medido."""
         if self.motivo == MOTIVO_PARADO:
             return FRASE_DA_FILA_PARADA
         nome = self.nome_de(self.adaptador)
         sujeito = _o_lugar(nome, maiuscula=True) if nome else "Este adaptador"
         cheio = f"{sujeito} já tem {self.n_max} controles com som ou vibração."
         if self.motivo == MOTIVO_SEM_MEDIDA:
-            # Sem medida não se afirma vaga nem falta dela.
             return cheio
         onde = [_o_lugar(n, com_em=True) for n in dict.fromkeys(map(self.nome_de, self.vagas)) if n]
         if onde:
@@ -549,22 +386,12 @@ class _Estado:
     fila: float = 0.0
     cedendo: bool = False
     cedendo_desde: float | None = None
-    #: Segundos de janela MEDIDA em que as pontes seguiram cedendo — o relógio
-    #: do teto. Janela de «não sei» não soma: ela não mediu parada nenhuma.
     cedendo_medido_s: float = 0.0
-    #: O episódio de agora entrou no diário? O «voltou» só entra se o «cedeu»
-    #: entrou (:data:`INTERVALO_DAS_BORDAS_NO_DIARIO_S`).
     episodio_escrito: bool = False
     ultimo_ar: Any = None
     deficit_medido: bool = False
-    #: A média do que UMA ponte com escrita escreve numa janela — o divisor da
-    #: conta de quantas cabem. ``None`` = nenhuma janela com escrita ainda.
     por_ponte: float | None = None
-    #: De quem é a vez de ceder: a posição na ordem da vaga. Fica entre os
-    #: episódios, para a mesma ponte não abrir todos.
     vez: int = 0
-    #: A última decisão cedeu o adaptador INTEIRO (não coube nenhuma). Só a
-    #: janela que segue uma decisão dessas anda o relógio do teto.
     inteiro: bool = False
 
 
@@ -572,12 +399,9 @@ class _Estado:
 class _JanelaMedida:
     """O que uma janela medida disse de um adaptador — a entrada da vez."""
 
-    #: As pontes que escreveram nesta janela, na ordem da vaga.
     com_escrita: list[Any]
-    #: Pacotes que o adaptador pôs no ar na janela (a saída vezes a janela).
     no_ar: float
     janela_s: float
-    #: O que cada ponte com escrita escreveu nesta janela, em média.
     por_ponte_na_janela: float = 0.0
 
 
@@ -612,12 +436,7 @@ class _EsperaDaMedida:
 
 @dataclass
 class _EpisodioDaFila:
-    """Um adaptador que parou de escoar e ainda não provou que voltou a andar.
-
-    Fora do :class:`_Estado` pelo mesmo motivo do :class:`_BordasNoDiario`: o
-    estado sai quando o adaptador fica sem ponte — e é exatamente isso que a
-    fila parada faz com ele a cada tentativa.
-    """
+    """Um adaptador que parou de escoar e ainda não provou que voltou a andar."""
 
     espera_s: float
     desde: float
@@ -625,11 +444,7 @@ class _EpisodioDaFila:
 
 
 class GovernadorDoRadio:
-    """Admissão por adaptador e contrapressão pelo contador ``acl_tx``.
-
-    Tudo é injetável — o medidor, o relógio, o diário e quem diz o adaptador —
-    e a suíte não toca rádio, sysfs nem o diário dela.
-    """
+    """Admissão por adaptador e contrapressão pelo contador ``acl_tx``."""
 
     def __init__(
         self,
@@ -649,14 +464,9 @@ class GovernadorDoRadio:
         self._registrar = registrar or diario.registrar
         self._relogio = relogio
         self._periodo_s = periodo_s
-        #: Quem diz o nome de tela de um adaptador (item 4). O padrão pergunta
-        #: aos donos, com a amostra DESTE governador — o ``hciN`` já lido.
         self._nomear: Callable[[str], str] = nomear or (
             lambda endereco: nome_da_porta(endereco, amostra=self.ultima_amostra())
         )
-        #: Quem lê o diário no arranque (item 5). O MESMO diário em que
-        #: ``registrar`` escreve: com ``registrar`` injetado e sem leitor, não
-        #: há o que fechar — um governador de régua nunca lê o diário dela.
         if ler_o_diario is not None:
             self._ler_o_diario: Callable[[], Iterable[dict[str, Any]]] = ler_o_diario
         elif registrar is None:
@@ -665,45 +475,24 @@ class GovernadorDoRadio:
             self._ler_o_diario = _nenhum_diario
         self._fantasmas_fechadas = False
         self._trava = threading.RLock()
-        #: A ORDEM DO PAR NO DIÁRIO. Quem decide um ``PONTE_SUBIU`` ou um
-        #: ``PONTE_DESCEU`` segura esta trava da decisão até a linha estar
-        #: escrita. Sem ela, a ponte que desce na thread dela ENQUANTO outra
-        #: thread escreve a subida da mesma ponte (o ``_a_fila_andou`` do
-        #: tique, o ``_subiu`` do subsystem) deixava no diário o DESCEU antes
-        #: do SUBIU — e o ``pontes_de_pe`` passava a contar, até o próximo
-        #: arranque, uma ponte fantasma criada em vida. Sempre por fora da
-        #: :attr:`_trava`: esta primeiro, aquela dentro.
         self._trava_do_par = threading.RLock()
         self._vagas: list[Vaga] = []
         self._estados: dict[str, _Estado] = {}
         self._pedidos: dict[str, _Pedido] = {}
-        #: ``(chave do controle, adaptador)`` que ela mandou «Ligar aqui» → o
-        #: ``uniq`` como veio, que é o que o ``adaptador_de`` pergunta. Sai quando
-        #: o controle SAI daquele adaptador (item 1, revisto pela A-COSTURA).
         self._autorizados: dict[tuple[str, str], str] = {}
         self._autorizacoes_vistas_em = -math.inf
         self._parado_ate: dict[str, float] = {}
-        #: A espera crescente de cada adaptador que parou de escoar (item 3).
         self._episodios: dict[str, _EpisodioDaFila] = {}
         self._bordas_no_diario: dict[str, _BordasNoDiario] = {}
         self._amostra: dict[str, Any] | None = None
-        #: O kernel listou os adaptadores na última amostra? ``False`` quando o
-        #: medidor disse :data:`~hefesto_dualsense4unix.integrations.
-        #: ar_do_adaptador.SEM_BLUETOOTH` — a lista é «não sei», não vazia.
         self._lista_lida = True
-        #: Desde quando a admissão precisa da medida e não a tem — o relógio do
         #: :data:`TETO_DO_NAO_SEI_S`. Volta a ``None`` quando a medida chega.
         self._nao_sei_desde: float | None = None
-        #: Quem ouviu :data:`MOTIVO_SEM_MEDIDA`, pela chave do controle: o tique
-        #: acorda a volta quando a medida chega ou o teto passa.
         self._esperando_medida: dict[str, _EsperaDaMedida] = {}
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
-        #: Quem quer saber que ela respondeu «Ligar aqui» — o subsystem do
-        #: som, para acordar a volta em vez de esperar os cinco segundos dela.
         self.ao_autorizar: Callable[[str], None] | None = None
 
-    # -- o medidor, que é um só ----------------------------------------------
 
     @classmethod
     def de_producao(cls) -> GovernadorDoRadio:
@@ -723,16 +512,7 @@ class GovernadorDoRadio:
             return None if self._amostra is None else dict(self._amostra)
 
     def iniciar(self) -> None:
-        """Sobe o tique numa thread — que, antes do primeiro tique, fecha as
-        pontes fantasmas (:meth:`fechar_as_pontes_fantasmas`).
-
-        Na thread, e não aqui: quem chama é o ``start()`` assíncrono do som, e
-        ler dois diários de meio mega seguraria o laço de eventos do daemon.
-
-        Sem medidor não há o que medir — e não há o que fechar: sem medidor é o
-        modo falso (a suíte, o smoke), e um daemon de mentira rodando ao lado do
-        dela veria as pontes VIVAS do dela como fantasmas.
-        """
+        """Sobe o tique numa thread — que, antes do primeiro tique, fecha as"""
         if self._medidor is None:
             return
         if self._thread is not None and self._thread.is_alive():
@@ -753,50 +533,26 @@ class GovernadorDoRadio:
     def _laco(self) -> None:
         try:
             self.fechar_as_pontes_fantasmas()
-        except Exception:  # o arranque nunca derruba o governador
+        except Exception:
             logger.debug("governador_fantasmas_falhou", exc_info=True)
         while not self._parar.wait(self._periodo_s):
             try:
                 self.tique()
-            except Exception:  # o governador nunca derruba o daemon
+            except Exception:
                 logger.debug("governador_tique_falhou", exc_info=True)
 
-    # -- o arranque: a ponte fantasma não conta (item 5) ----------------------
 
     def fechar_as_pontes_fantasmas(self) -> int:
-        """``PONTE_DESCEU`` «o daemon reiniciou» por ponte que o diário diz de pé
-        e que este governador não tem. Uma vez por governador; devolve quantas.
-
-        O daemon que morre sem ``stop()`` (um ``SIGKILL``, a sessão que caiu)
-        não escreve o ``PONTE_DESCEU``, e o ``diario_do_radio.pontes_de_pe``
-        passaria a contar, no fato de toda queda seguinte, pontes que não
-        existem. POR QUE AQUI, E NÃO NO LEITOR: o governador é o único escritor
-        de ponte no diário. Fechando no arranque, o diário diz a verdade e o
-        ``pontes_de_pe`` segue uma dobra pura de SUBIU e DESCEU — o sino, o
-        ``storm_doctor`` e quem vier leem a mesma coisa. Ensinar o leitor a
-        ignorar o que veio antes do arranque daria a cada leitor a MESMA regra
-        para repetir, e o diário continuaria dizendo que a ponte está de pé.
-        """
+        """``PONTE_DESCEU`` «o daemon reiniciou» por ponte que o diário diz de pé"""
         with self._trava:
             if self._fantasmas_fechadas:
                 return 0
             self._fantasmas_fechadas = True
         try:
             de_pe = diario.pontes_de_pe(list(self._ler_o_diario()), math.inf)
-        except Exception:  # diário ilegível: não há o que fechar, e o daemon sobe
+        except Exception:
             logger.debug("governador_diario_ilegivel_no_arranque", exc_info=True)
             return 0
-        # AS NOSSAS SÃO LIDAS DEPOIS DO DIÁRIO: a ponte que subir no meio marca o
-        # ``subiu_em`` ANTES de escrever o SUBIU, então toda subida nova que a
-        # leitura viu já está aqui. E a chave é a do ``pontes_de_pe`` — o texto
-        # do ``controle`` como foi escrito, não os dígitos: uma subida velha
-        # grafada de outro jeito é OUTRA ponte para o leitor, e ficaria de pé.
-        #
-        # E AS NOSSAS E AS DESCIDAS VÃO SOB A TRAVA DO PAR (conferência de
-        # 23/09/2026): uma subida que escrevesse o SUBIU entre a leitura das
-        # nossas e a linha do reinício seria apagada por ela — a ponte no ar, e
-        # o diário dizendo que desceu. A leitura do diário fica de fora: é a
-        # parte cara, e o que ela perde a leitura das nossas cobre.
         fechadas = 0
         with self._trava_do_par:
             with self._trava:
@@ -817,7 +573,6 @@ class GovernadorDoRadio:
             logger.info("governador_fechou_pontes_fantasmas", pontes=fechadas)
         return fechadas
 
-    # -- a admissão ----------------------------------------------------------
 
     def _adaptadores_com_vaga(self, exceto: str) -> tuple[str, ...]:
         """Os adaptadores de pé onde uma ponte a mais ainda cabe."""
@@ -836,20 +591,7 @@ class GovernadorDoRadio:
         return self._na_ordem_da_d8(livres, exceto)
 
     def _nao_sei_se_ha_vaga(self, exceto: str) -> bool:
-        """«Não sei» se há vaga em outro adaptador. Chamado com a trava.
-
-        O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01: o :meth:`_adaptadores_com_vaga`
-        só conhece os adaptadores das vagas e da última amostra do medidor, e
-        a lista vazia de quem não mediu se lia como «não há». É «não sei»:
-
-        * o medidor existe e ainda não deu amostra (o daemon que acabou de
-          subir, o medidor que falha desde o arranque);
-        * a última amostra não listou os adaptadores (``SEM_BLUETOOTH``);
-        * outro adaptador está na amostra com a leitura falhada
-          (``IOCTL_FALHOU``): ele existe, e se tem vaga ninguém sabe.
-
-        Sem medidor (o modo falso) nada se mede, e nada se espera.
-        """
+        """«Não sei» se há vaga em outro adaptador. Chamado com a trava."""
         if self._medidor is None:
             return False
         if self._amostra is None or not self._lista_lida:
@@ -911,7 +653,7 @@ class GovernadorDoRadio:
         adaptador = ""
         try:
             adaptador = str(self._adaptador_de(uniq) or "").lower()
-        except Exception:  # sysfs some sob a mão: é «não sei»
+        except Exception:
             logger.debug("governador_adaptador_ilegivel", uniq=uniq, exc_info=True)
         tipo = _tipo(tipo)
         chave = _chave(uniq)
@@ -919,11 +661,7 @@ class GovernadorDoRadio:
         with self._trava:
             self._recolher(agora)
             if not adaptador:
-                # Sem casa não há adaptador a proteger: a ponte sobe como
-                # sempre subiu, e o diário a conta sem adaptador.
                 return self._conceder(uniq, "", tipo, alem=False, agora=agora)
-            # ELE ESTÁ EM OUTRO ADAPTADOR: a resposta que ela deu lá caiu (item 1,
-            # revisto pela A-COSTURA). Quando ele voltar, a R3 pergunta de novo.
             for par in [p for p in self._autorizados if p[0] == chave and p[1] != adaptador]:
                 self._autorizados.pop(par, None)
             if self._parado_ate.get(adaptador, 0.0) > agora:
@@ -939,10 +677,6 @@ class GovernadorDoRadio:
             autorizado = (chave, adaptador) in self._autorizados
             sem_medida = False
             if not autorizado and not vagas and self._nao_sei_se_ha_vaga(adaptador):
-                # «NÃO SEI» NÃO É «NÃO HÁ»: a ponte espera a medida, calada e
-                # sem pergunta na tela, até o teto. O relógio do teto é da
-                # FALTA DE MEDIDA, e não do pedido: a ponte do som sob demanda
-                # que desce e sobe de novo não espera outra vez.
                 if self._nao_sei_desde is None:
                     self._nao_sei_desde = agora
                 if agora - self._nao_sei_desde < TETO_DO_NAO_SEI_S:
@@ -971,8 +705,6 @@ class GovernadorDoRadio:
             self._pedidos[chave] = _Pedido(uniq, tipo, adaptador, vagas, agora)
             pergunta_nova = anterior is None or anterior.adaptador != adaptador
             ocupadas_n = len(ocupadas)
-        # O diário e o NOME saem FORA da trava: a frase pergunta o nome aos donos
-        # (sysfs, o mapa dela), e o tique não espera por isso.
         if pergunta_nova:
             self._escrever(
                 ADAPTADOR_CHEIO,
@@ -1011,15 +743,7 @@ class GovernadorDoRadio:
         return vaga
 
     def ligar_aqui(self, uniq: str) -> bool:
-        """«Ligar aqui» (R3 → R4): a ponte deste controle sobe além do limite.
-
-        Vale para o controle NESTE adaptador, ENQUANTO ELE FICAR NELE (item 1,
-        revisto pela A-COSTURA-DA-ONDA-2-01): a ponte que desce e sobe de novo
-        — o som que para, a troca som → vibração — não pergunta outra vez. Ele
-        desconecta ou é movido, a resposta cai (:meth:`conferir_as_autorizacoes`),
-        e na volta ao adaptador cheio a R3 pergunta de novo. ``False`` = o
-        adaptador dele não se lê.
-        """
+        """«Ligar aqui» (R3 → R4): a ponte deste controle sobe além do limite."""
         chave = _chave(uniq)
         with self._trava:
             pedido = self._pedidos.pop(chave, None)
@@ -1038,21 +762,12 @@ class GovernadorDoRadio:
         if avisar is not None:
             try:
                 avisar(uniq)
-            except Exception:  # quem escuta nunca desfaz a resposta dela
+            except Exception:
                 logger.debug("governador_aviso_falhou", uniq=uniq, exc_info=True)
         return True
 
     def conferir_as_autorizacoes(self) -> int:
-        """O «Ligar aqui» cai do controle que SAIU do adaptador. Devolve quantos.
-
-        A-COSTURA-DA-ONDA-2-01, item 4: a resposta dela vale enquanto o controle
-        ficar naquele adaptador. Quem diz onde ele está é o ``HID_PHYS`` (o mesmo
-        ``adaptador_de`` da admissão): outro adaptador é «foi movido»; ``""`` é
-        «desconectou» — o nó do rádio sumiu ou ele foi para o cabo. Um erro de
-        leitura é «não sei», e a resposta dela fica. Chamado pelo tique, a cada
-        :data:`INTERVALO_DAS_AUTORIZACOES_S`, e fora da trava: ler o sysfs não
-        segura a admissão.
-        """
+        """O «Ligar aqui» cai do controle que SAIU do adaptador. Devolve quantos."""
         with self._trava:
             autorizados = dict(self._autorizados)
         if not autorizados:
@@ -1061,7 +776,7 @@ class GovernadorDoRadio:
         for par, uniq in autorizados.items():
             try:
                 onde = str(self._adaptador_de(uniq) or "").lower()
-            except Exception:  # sysfs que some sob a mão: não sei
+            except Exception:
                 logger.debug("governador_autorizacao_ilegivel", uniq=uniq, exc_info=True)
                 continue
             if onde != par[1]:
@@ -1078,7 +793,6 @@ class GovernadorDoRadio:
             )
         return len(sairam)
 
-    # -- a ponte diz: subiu, desceu ------------------------------------------
 
     def _subiu(self, vaga: Vaga, tipo: str | None) -> None:
         with self._trava_do_par:
@@ -1090,8 +804,6 @@ class GovernadorDoRadio:
                 vaga.subiu_em = self._relogio()
                 episodio = self._episodios.get(vaga.adaptador) if vaga.adaptador else None
                 if episodio is not None:
-                    # UMA TENTATIVA DURANTE A ESPERA CRESCENTE (item 3): contada,
-                    # não escrita. Se a fila andar, o `_a_fila_andou` a escreve.
                     vaga._calada = True
                     episodio.tentativas += 1
                     logger.debug(
@@ -1139,9 +851,6 @@ class GovernadorDoRadio:
                     self._vagas.remove(vaga)
                 subiu = vaga.subiu_em is not None
                 calada = vaga._calada
-                # A PONTE QUE DESCE NÃO GASTA O «LIGAR AQUI» (item 1, revisto pela
-                # A-COSTURA-DA-ONDA-2-01): quem o gasta é o controle SAIR do
-                # adaptador, e quem vê isso é :meth:`conferir_as_autorizacoes`.
                 self._recalcular_o_limite(vaga.adaptador)
             if subiu and not calada:
                 self._escrever(
@@ -1153,13 +862,7 @@ class GovernadorDoRadio:
                 )
 
     def _recalcular_o_limite(self, adaptador: str) -> None:
-        """ITEM 2: a marca «além do limite» sai de quem voltou a caber.
-
-        As :attr:`n_max` primeiras vagas do adaptador, na ordem em que chegaram,
-        cabem; só as que passam delas seguem marcadas. Só TIRA a marca — quem a
-        põe é a admissão. Sem isto a tela mostraria «além do limite» com 2 de 2.
-        Chamado com a trava, a cada descida.
-        """
+        """ITEM 2: a marca «além do limite» sai de quem voltou a caber."""
         if not adaptador:
             return
         no_adaptador = [v for v in self._vagas if v.adaptador == adaptador]
@@ -1193,12 +896,7 @@ class GovernadorDoRadio:
             self._esperando_medida.pop(chave, None)
 
     def _quem_a_medida_acorda(self, agora: float) -> list[str]:
-        """As pontes que esperavam a medida e já têm resposta. Chamado com a trava.
-
-        A resposta é a medida que chegou (o «não sei» deixou de valer para o
-        adaptador dela) ou o teto que passou. Cada uma sai da espera e é
-        acordada UMA vez: o próximo ``pedir_vaga`` dela decide.
-        """
+        """As pontes que esperavam a medida e já têm resposta. Chamado com a trava."""
         teto_passou = (
             self._nao_sei_desde is not None
             and agora - self._nao_sei_desde >= TETO_DO_NAO_SEI_S
@@ -1210,7 +908,6 @@ class GovernadorDoRadio:
         ]
         return [self._esperando_medida.pop(chave).uniq for chave in prontas]
 
-    # -- o tempo real --------------------------------------------------------
 
     def tique(self) -> None:
         """Uma janela: amostra o ar e decide, por adaptador, ceder ou escrever."""
@@ -1223,7 +920,7 @@ class GovernadorDoRadio:
                     str(getattr(a, "motivo", "") or "") == SEM_BLUETOOTH for a in crua.values()
                 )
                 amostra = {e: a for e, a in crua.items() if e}
-            except Exception:  # medidor que falhou é «não sei», não zero
+            except Exception:
                 logger.debug("governador_medidor_falhou", exc_info=True)
         agora = self._relogio()
         bordas: list[tuple[str, dict[str, Any]]] = []
@@ -1236,7 +933,6 @@ class GovernadorDoRadio:
                 if lista_lida and not any(
                     str(getattr(a, "motivo", "") or "") == IOCTL_FALHOU for a in amostra.values()
                 ):
-                    # A medida chegou inteira: o próximo «não sei» conta do zero.
                     self._nao_sei_desde = None
             self._recolher(agora)
             acordar = self._quem_a_medida_acorda(agora)
@@ -1255,11 +951,6 @@ class GovernadorDoRadio:
                     andaram.append(endereco)
                 if estado.cedendo and estado.cedendo_medido_s > TETO_DE_CEDER_S:
                     paradas.append((endereco, list(vagas), estado.cedendo_medido_s))
-            # A VAGA SÓ CEDE DENTRO DO EPISÓDIO DO ADAPTADOR DELA. A vaga
-            # concedida no meio de um episódio nasce cedendo (:meth:`_conceder`),
-            # e o fim do episódio só alcança as pontes que já subiram: a que
-            # subia depois dele ficava cedendo para sempre, muda, sem escrita
-            # que abrisse o episódio seguinte.
             cedendo = {e for e, s in self._estados.items() if s.cedendo}
             for vaga in self._vagas:
                 if vaga.cedendo and vaga.adaptador not in cedendo:
@@ -1268,12 +959,10 @@ class GovernadorDoRadio:
             self._escrever(o_que, **dados)
         avisar = self.ao_autorizar
         for uniq in acordar:
-            # O MESMO GANCHO DO «LIGAR AQUI»: quem esperava sai da espera e a
-            # volta do som acorda, em vez de esperar o ``RECONCILIA_S`` dela.
             if avisar is not None:
                 try:
                     avisar(uniq)
-                except Exception:  # quem escuta nunca derruba o tique
+                except Exception:
                     logger.debug("governador_aviso_da_medida_falhou", uniq=uniq, exc_info=True)
         for endereco in andaram:
             self._a_fila_andou(endereco)
@@ -1292,24 +981,9 @@ class GovernadorDoRadio:
         agora: float,
         bordas: list[tuple[str, dict[str, Any]]],
     ) -> bool:
-        """O déficit de uma janela e as duas bordas. Chamado com a trava.
-
-        Devolve ``True`` quando a janela MEDIDA provou que a fila ANDA: as
-        pontes escreveram nela ao menos o :data:`LIMIAR_DO_DEFICIT` — o que
-        faria o adaptador parado ceder — e a fila ficou na folga. Janela de
-        «não sei» nunca prova nada.
-
-        CONFERÊNCIA DE 23/09/2026: a prova era «um pacote no ar e as pontes sem
-        ceder», e o contador é do ADAPTADOR inteiro. Num 2B com um fio de ar
-        alheio (um pacote por janela), a primeira janela de cada tentativa —
-        meia janela, dez escritas — passava por prova: 77 «fila voltou a andar»
-        em dez minutos, e a espera nunca saiu dos 5 s, que é o defeito que a
-        espera crescente existe para curar.
-        """
+        """O déficit de uma janela e as duas bordas. Chamado com a trava."""
         if ar is None or ar is estado.ultimo_ar:
             if ar is None:
-                # «NÃO SEI»: as escritas desta janela não têm com o que se
-                # comparar, e não viram déficit nem folga.
                 for vaga in vagas:
                     vaga._vistas = vaga.escritas
                 estado.deficit_medido = False
@@ -1351,30 +1025,7 @@ class GovernadorDoRadio:
         )
 
     def _a_vez(self, estado: _Estado, vagas: list[Vaga], janela: _JanelaMedida) -> None:
-        """Cede só quem não cabe, e cada um na sua vez. Chamado com a trava.
-
-        O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01. Quantas CABEM é a saída medida da
-        janela dividida pelo que uma ponte com escrita escreve: a média de
-        :attr:`_Estado.por_ponte` (a contagem de uma janela oscila de um
-        quadro), ou a desta janela quando ela escreveu mais. Na rajada a média
-        fica atrás, e a conta por ela deixava a fila do host passar do que o
-        ceder do adaptador inteiro deixava (conferência de 29/09/2026: pico de
-        106 pacotes contra 73, no dublê que escoa duas). Com o maior dos dois,
-        as que cabem nunca escrevem mais que a saída da janela.
-
-        Entram na vez as pontes COM ESCRITA na janela e as que estavam
-        cedendo (quem cede não escreve, e segue querendo). A ponte sem escrita
-        que não estava cedendo fica fora: ela não pesa no ar, e dar a ela a vez
-        de ceder tiraria a vez de quem escreve. A vez gira pela ORDEM DA VAGA
-        (a ordem de :attr:`GovernadorDoRadio._vagas`), nunca pelo número do
-        jogador, e anda quantas cederam — na volta inteira, cada uma cede o
-        mesmo número de janelas.
-
-        No episódio cede ao menos uma: a fila está acima da folga, e é o ceder
-        que a escoa. Quando não cabe nenhuma — o adaptador parado, o 2B —, cede
-        o adaptador inteiro, como antes, e :attr:`_Estado.inteiro` diz ao
-        relógio do teto que esta janela conta.
-        """
+        """Cede só quem não cabe, e cada um na sua vez. Chamado com a trava."""
         com_escrita = janela.com_escrita
         na_vez = [v for v in vagas if v.cedendo or any(v is e for e in com_escrita)]
         por_ponte = max(estado.por_ponte or 0.0, janela.por_ponte_na_janela)
@@ -1405,15 +1056,10 @@ class GovernadorDoRadio:
         if estado.cedendo and estado.fila > FOLGA_PARA_VOLTAR:
             por_ponte = estado.por_ponte or 0.0
             if estado.inteiro:
-                # O adaptador inteiro seguiu cedendo numa janela MEDIDA: só
-                # esta anda o relógio do teto.
                 estado.cedendo_medido_s += janela.janela_s
             elif por_ponte > 0 and janela.no_ar >= por_ponte:
-                # A janela pôs no ar ao menos o que uma ponte escreve: o
-                # adaptador escoa, e o que o relógio somou não era parada.
                 estado.cedendo_medido_s = 0.0
         if estado.cedendo and estado.fila > FOLGA_PARA_VOLTAR:
-            # O episódio segue: a vez anda.
             self._a_vez(estado, vagas, janela)
         if not estado.cedendo and estado.fila > LIMIAR_DO_DEFICIT:
             estado.cedendo = True
@@ -1421,8 +1067,6 @@ class GovernadorDoRadio:
             estado.cedendo_medido_s = 0.0
             self._a_vez(estado, vagas, janela)
             diario_das_bordas = self._bordas_no_diario.setdefault(endereco, _BordasNoDiario())
-            # Durante a espera crescente de uma fila parada (item 3), ceder é a
-            # TENTATIVA falhando de novo: o diário já disse a espera, e a borda
             # é contada com os calados em vez de escrita.
             estado.episodio_escrito = endereco not in self._episodios and (
                 diario_das_bordas.escrita_em is None
@@ -1475,16 +1119,10 @@ class GovernadorDoRadio:
     def _fila_parada(
         self, adaptador: str, vagas: Iterable[Vaga], cedendo_s: float, *, pelo: str
     ) -> None:
-        """Ceder passou do teto: as pontes caem e o adaptador espera.
-
-        A ESPERA CRESCE a cada queda seguida (item 3 da GOVERNADOR-DO-RADIO-02):
-        5, 10, 20, 40 e 60 s, até a fila andar (:meth:`_a_fila_andou`). O diário
-        ganha uma linha por DEGRAU — a espera, não a tentativa; no teto, as
-        tentativas seguem contadas e caladas.
-        """
+        """Ceder passou do teto: as pontes caem e o adaptador espera."""
         vagas = list(vagas)
         agora = self._relogio()
-        escrever = not adaptador  # sem casa não há espera: diz a cada queda, como antes
+        escrever = not adaptador
         espera_s, tentativas = ESPERA_DA_FILA_PARADA_S, 0
         with self._trava:
             ja_parado = self._parado_ate.get(adaptador, 0.0) > agora
@@ -1540,17 +1178,7 @@ class GovernadorDoRadio:
         )
 
     def _a_fila_andou(self, adaptador: str) -> None:
-        """A fila do adaptador ANDA: acaba a espera crescente dele (item 3).
-
-        Duas provas chegam aqui, e as duas são medida, nunca relógio: a janela do
-        medidor em que as pontes escreveram o limiar e a fila ficou na folga
-        (:meth:`_medir`), e a ponte que passou de
-        :data:`ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA` escritas aceitas
-        (:meth:`Vaga.contar_escrita`). A próxima queda volta a esperar 5 s.
-
-        As tentativas que estão de pé ganham AGORA o ``PONTE_SUBIU`` que ficou
-        calado: a ponte está no ar, e o fato de uma queda tem de contá-la.
-        """
+        """A fila do adaptador ANDA: acaba a espera crescente dele (item 3)."""
         if not adaptador:
             return
         agora = self._relogio()
@@ -1581,12 +1209,9 @@ class GovernadorDoRadio:
                 depois={"tentativas": episodio.tentativas, "parada_s": parada_s},
                 adaptador=adaptador,
             )
-            # SOB A TRAVA DO PAR: a tentativa que cai agora, na thread dela,
-            # espera esta subida estar escrita para escrever a descida.
             for vaga in caladas:
                 self._escrever_a_subida(vaga, no_adaptador)
 
-    # -- o que a tela lê -----------------------------------------------------
 
     def publicar(self) -> dict[str, Any]:
         """``state_full["radio_governador"]``: o que o governador decidiu agora.
@@ -1634,7 +1259,7 @@ class GovernadorDoRadio:
     def _escrever(self, o_que: str, por_que: str = "", **campos: Any) -> None:
         try:
             self._registrar(QUEM, o_que, por_que, **campos)
-        except Exception:  # o diário nunca derruba o governador
+        except Exception:
             logger.debug("governador_diario_falhou", o_que=o_que, exc_info=True)
 
 

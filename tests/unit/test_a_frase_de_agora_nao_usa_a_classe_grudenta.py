@@ -1,18 +1,4 @@
-"""A frase *"na frente agora"* não pode nomear um jogo que já fechou.
-
-MEDIDO EM 05/09/2026, no retrato das abas: o cartão da aba Sistema dizia
-*"Trocar de perfil ao abrir o jogo: funcionando (na frente agora:
-pragmata.exe)"* com a máquina sem um único processo de Steam, Proton ou Wine.
-
-A CAUSA estava escrita no próprio docstring da função, uma linha acima do
-defeito: `window_detect_last_class` é **sticky** — guarda a última classe vista
-e nunca se apaga. O código recuava para ele quando a classe de AGORA vinha
-`unknown`, e assim uma frase que diz "agora" passava a publicar passado.
-
-É a mesma família do que ela pegou em 03/09, quando o `doctor` contava eventos
-de 24 dias atrás no presente. A regra que sobra: **campo grudento não entra em
-frase de presente.**
-"""
+"""A frase *"na frente agora"* não pode nomear um jogo que já fechou."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -23,8 +9,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
     descrever_deteccao_de_janela,
 )
 
-#: O estado que o daemon dela publicava no instante do retrato: vendo uma
-#: janela, sem conseguir classificá-la, e com o último jogo ainda no `last`.
 VENDO_SEM_SABER_QUAL = {
     "window_detect_backend": "xlib",
     "window_detect_seeing": True,
@@ -60,14 +44,10 @@ class TestAClasseGrudentaNaoEntraNaFraseDeAgora:
         assert "na frente agora: steam" in frase
 
     def test_o_docstring_continua_avisando_que_o_last_e_grudento(self) -> None:
-        """Se alguém apagar o aviso, o próximo recuo nasce sem contradição
-        visível — e foi o aviso ao lado do defeito que revelou a causa."""
+        """Se alguém apagar o aviso, o próximo recuo nasce sem contradição"""
         assert "sticky" in (descrever_deteccao_de_janela.__doc__ or "")
 
 
-#: A INTERFACE NOVA TINHA O MESMO RECUO, e o docstring dela dizia, com todas as
-#: letras, que seguia *"a MESMA regra da GTK"* — então curar uma só deixaria as
-#: duas telas discordando sobre o mesmo fato.
 class TestAAbaNovaSegueAMesmaRegra:
     def test_a_aba_09_nao_nomeia_o_jogo_de_ontem(self) -> None:
         from hefesto_dualsense4unix.interface.pacotes.a09_sistema import (

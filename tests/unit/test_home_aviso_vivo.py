@@ -1,31 +1,8 @@
-"""AVISO-VIVO-01 — o aviso do rodapé para de ficar preso mentindo.
-
-Defeito medido na tela (27/07, 17:14): o cadeado de autoswitch foi religado por
-fora da janela (chamada IPC direta) e o rodapé continuou MINUTOS escrito "Troca
-automática de perfil LIBERADA — o Hefesto volta a escolher o perfil ao abrir
-cada jogo", com o cadeado LIGADO e a frase de causa, logo acima, dizendo o
-contrário. A janela se contradizia em dois lugares ao mesmo tempo.
-
-Causa: o toast era o registro de "o que eu pedi uma vez" (escrito só pelo
-handler do cadeado) e o `_render_home` não tocava na statusbar em ponto nenhum
-— a frase ficava até outro toast do mesmo contexto sobrescrever.
-
-Segundo sintoma, mesma origem: uma reconciliação de 2 s levou 78 s. O latch
-`_home_inflight` não tinha prazo de validade: chamada que não volta prendia a
-aba parada, em silêncio.
-
-Hermético: statusbar dublê FIEL (pilha por contexto, como a Gtk.Statusbar de
-verdade, para que "apagar" seja testado como apagar e não como empilhar), Gtk
-falso em ``sys.modules`` e `call_async` monkeypatchado.
-"""
+"""AVISO-VIVO-01 — o aviso do rodapé para de ficar preso mentindo."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_aviso_vivo: importa código da janela GTK")
 
 import sys
@@ -40,9 +17,6 @@ from hefesto_dualsense4unix.app.actions import home_actions
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 
-#: O texto EXATO que o handler do cadeado deixa no rodapé ao destravar — é ele
-#: que ficou preso na tela dela com o cadeado já ligado. Desde 28/09/2026 o
-#: cadeado é o Modo Freestyle, e a frase diz «desligado» (era «LIBERADA»).
 FRASE_DO_CLIQUE_ANTIGO = (
     "Modo Freestyle desligado — o Hefesto volta a escolher o perfil ao abrir "
     "cada jogo."
@@ -50,14 +24,7 @@ FRASE_DO_CLIQUE_ANTIGO = (
 
 
 class _StatusbarFalsa:
-    """Dublê fiel do ``Gtk.Statusbar``.
-
-    Importa reproduzir a PILHA: ``pop`` tira a mensagem mais recente daquele
-    contexto e quem aparece é o topo da pilha inteira. É por causa disso que o
-    aviso de estado tem de morar no MESMO contexto do handler do cadeado — um
-    contexto próprio só cobriria a frase velha, e ela ressurgiria ao ser
-    apagada.
-    """
+    """Dublê fiel do ``Gtk.Statusbar``."""
 
     def __init__(self) -> None:
         self.pilha: list[tuple[str, str]] = []
@@ -156,20 +123,10 @@ class _HomeStub:
 
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    # COOP-SEM-INTERRUPTOR-01 (06/08/2026): o `_render_coop_prep` e o botão
-    # "Preparar co-op" NÃO existem mais — cada controle conectado já é um
-    # jogador, sempre. `test_home_render_state.py` tem portão que exige a
-    # ausência dos dois. Não reponha.
-    # PONTE-NA-TELA-01: parte do `_render_home` como os outros reconciliadores.
     _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
     _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
-    # I3 (25/08/2026): o render passou a perguntar TAMBÉM de onde a máscara
-    # veio (gesto dela x perfil). O dublê empresta o método do mixin, como
-    # empresta os outros — reimplementá-lo aqui mediria o dublê.
     _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
     _refresh_home_tab = HomeActionsMixin._refresh_home_tab
-    # O helper REAL (pop antes do push): o teste não pode inventar uma
-    # semântica de statusbar mais gentil do que a que roda na máquina dela.
     _status_toast = WidgetAccessMixin._status_toast
 
     def __init__(self) -> None:
@@ -194,7 +151,6 @@ class _HomeStub:
         self._home_reconciliar_hint = _WidgetFalso()
         self._home_autoswitch_lock = _WidgetFalso()
         self._home_autoswitch_lock_hint = _WidgetFalso()
-        # PONTE-NA-TELA-01: linha "Ponte com o jogo" + banner da divergência.
         self._home_ponte_label = _WidgetFalso()
         self._home_divergencia_banner = _WidgetFalso()
         self._home_flavor_pedido: str | None = None
@@ -232,15 +188,11 @@ class TestRodapeSegueOEstado:
     def test_cadeado_religado_por_fora_apaga_a_frase_do_clique_antigo(
         self, gtk_falso: None
     ) -> None:
-        """O defeito medido: a frase do clique antigo some no primeiro render
-        que vê o cadeado ligado (antes, ficava minutos)."""
+        """O defeito medido: a frase do clique antigo some no primeiro render"""
         host = _HomeStub()
-        # Ela destravou pela janela em algum momento — o handler do cadeado
-        # deixou a frase no contexto "home".
         host._status_toast("home", FRASE_DO_CLIQUE_ANTIGO)
         assert host.barra.visivel == FRASE_DO_CLIQUE_ANTIGO
 
-        # Alguém religou o cadeado por fora (IPC direto); chega o tick.
         host._render_home(_estado(cadeado=True, perfil="Pragmata2"))
 
         assert "desligado" not in host.barra.visivel
@@ -273,8 +225,7 @@ class TestRodapeSegueOEstado:
     def test_daemon_desligado_nao_deixa_afirmacao_viva(
         self, gtk_falso: None
     ) -> None:
-        """Offline não é "destravado", é "não sei" — e nada pode continuar
-        afirmado (mesma regra que a frase de causa já seguia)."""
+        """Offline não é "destravado", é "não sei" — e nada pode continuar"""
         host = _HomeStub()
         host._render_home(_estado(cadeado=True, perfil="Pragmata2"))
 
@@ -285,8 +236,7 @@ class TestRodapeSegueOEstado:
     def test_toast_de_outra_acao_sobrevive_ao_tick_seguinte(
         self, gtk_falso: None
     ) -> None:
-        """A escrita é por BORDA: com o estado parado, o aviso não come o
-        retorno das outras ações (era o risco de dar o rodapé ao render)."""
+        """A escrita é por BORDA: com o estado parado, o aviso não come o"""
         host = _HomeStub()
         host._render_home(_estado(cadeado=True, perfil="Pragmata2"))
         host._status_toast("home", "Numeração compactada — 2 controle(s).")
@@ -299,8 +249,7 @@ class TestRodapeSegueOEstado:
     def test_abrir_a_janela_sem_cadeado_nao_escreve_no_rodape(
         self, gtk_falso: None
     ) -> None:
-        """Sem cadeado não há o que explicar — e o primeiro render não pode
-        apagar o rodapé de quem já estava lá."""
+        """Sem cadeado não há o que explicar — e o primeiro render não pode"""
         host = _HomeStub()
         host._status_toast("outra_aba", "Perfil salvo.")
 
@@ -368,8 +317,7 @@ class TestLatchComPrazoDeValidade:
     def test_o_prazo_reinicia_a_cada_chamada_nova(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem recarimbar, a chamada nova nasceria já vencida e o tick seguinte
-        dispararia outra — o latch viraria enfeite."""
+        """Sem recarimbar, a chamada nova nasceria já vencida e o tick seguinte"""
         chamadas: list[str] = []
         monkeypatch.setattr(
             home_actions, "call_async", self._falso_call_async(chamadas)

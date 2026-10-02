@@ -65,8 +65,6 @@ from hefesto_dualsense4unix.app.actions import perfis_web
 from hefesto_dualsense4unix.interface import onde, regua_do_mockup
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 
-#: A MESA DA RÉGUA — dois controles, com os endereços MASCARADOS (octetos 4 e 5
-#: zerados). Nenhum endereço real de rádio entra em arquivo versionado.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "BT", "transporte": "bt", "alvo": True,
@@ -78,12 +76,7 @@ MESA = [
 
 
 def _gerador() -> Any:
-    """O ``aba10.py`` importado como o gerador se importa — só no TESTE.
-
-    Ele insere a própria pasta no ``sys.path`` e lê o ``monta``, que abre seis
-    arquivos do repositório no import. É barato aqui e é justamente o que o
-    produto não pode fazer — por isso o pacote copia a forma em vez de importar.
-    """
+    """O ``aba10.py`` importado como o gerador se importa — só no TESTE."""
     pytest.importorskip(
         "hefesto_dualsense4unix.interface.monta",
         reason="o gerador lê o repositório no import; num pacote instalado não há",
@@ -119,12 +112,7 @@ def _perfil(**overrides: Any) -> Any:
 
 @pytest.fixture(autouse=True)
 def _lar(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O perfil da régua no lugar da pasta dela, e a resposta da página LIMPA.
-
-    ``_SECAO_POR_CLASSE`` é estado de módulo (a página publicada é lida uma vez
-    por processo). Sem zerá-lo, um teste herdaria a resposta do anterior — que é
-    pior que não ter prova nenhuma.
-    """
+    """O perfil da régua no lugar da pasta dela, e a resposta da página LIMPA."""
     from hefesto_dualsense4unix.profiles import loader
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
@@ -145,9 +133,6 @@ def _emitidos(**overrides: Any) -> dict[str, Any]:
     return a10_perfis.pacote(ctx)
 
 
-# ---------------------------------------------------------------------------
-# 1. O DESENHO DECLARA O ALVO
-# ---------------------------------------------------------------------------
 def test_a_bancada_declara_o_alvo_classe_em_toda_celula() -> None:
     """Sem ``data-hef-alvo="classe"`` o pintor cai no ramo padrão e apaga o SVG.
 
@@ -177,23 +162,10 @@ def test_a_bancada_declara_o_alvo_classe_em_toda_celula() -> None:
 
 
 def test_o_glifo_aceso_e_o_apagado_sao_o_mesmo_desenho() -> None:
-    """A classe é a cura COMPLETA, e é isto que o prova.
-
-    Se um dia o par ``X_active.svg`` passar a ter FORMA diferente (e não só cor),
-    trocar a classe deixaria de bastar: a célula acenderia com o desenho errado
-    dentro. Esta régua reprova nesse dia, antes de a tela mentir.
-
-    MORDIDA: mude um ``<rect>`` de ``assets/glyphs/lightbar_active.svg`` e ela
-    reprova nomeando a peça.
-    """
+    """A classe é a cura COMPLETA, e é isto que o prova."""
     aba10 = _gerador()
     from hefesto_dualsense4unix.interface import monta
 
-    # A FORMA DE `SECOES` É LIDA, E NÃO SUPOSTA — 03/09/2026. Estas três linhas
-    # desempacotavam `(campo, pecas, dica)`; a decisão nº4 dela tirou as oito
-    # dicas das células e a tupla virou um PAR. O `ValueError` que isso produzia
-    # não é reprovação, é a régua morta — quatro testes deste arquivo caíram
-    # assim, e a coluna ficou sem guarda no dia em que mais precisava dela.
     diferentes = [
         peca
         for _campo, pecas in aba10.SECOES
@@ -206,20 +178,8 @@ def test_o_glifo_aceso_e_o_apagado_sao_o_mesmo_desenho() -> None:
         "de ser a diferença inteira, e pintar só ela mostraria a forma errada")
 
 
-# ---------------------------------------------------------------------------
-# 2. A ORDEM É O CONTRATO
-# ---------------------------------------------------------------------------
 def test_o_produtor_e_o_desenho_dizem_as_secoes_na_mesma_ordem() -> None:
-    """O piloto distribui a lista pelos elementos na ordem do DOM.
-
-    ``perfis_web.SECOES_POR_CONTROLE`` decide a ordem dos VALORES e
-    ``aba10.SECOES`` a das CÉLULAS. Se as duas discordarem, a tela acende a luz
-    onde a vibração está guardada — e nada acusa, porque o número de valores
-    continua batendo.
-
-    MORDIDA: troque duas linhas de ``aba10.SECOES`` (ou de
-    ``SECOES_POR_CONTROLE``) e este teste reprova mostrando as duas sequências.
-    """
+    """O piloto distribui a lista pelos elementos na ordem do DOM."""
     aba10 = _gerador()
     do_desenho = tuple(campo for campo, _pecas in aba10.SECOES)
     assert do_desenho == perfis_web.SECOES_POR_CONTROLE, (
@@ -228,46 +188,20 @@ def test_o_produtor_e_o_desenho_dizem_as_secoes_na_mesma_ordem() -> None:
         f"  produto (SECOES_POR_CONTROLE)  {perfis_web.SECOES_POR_CONTROLE}")
 
 
-# ---------------------------------------------------------------------------
-# 3. O PACOTE MANDA O ESTADO, e não o nome da seção
-# ---------------------------------------------------------------------------
 def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_dela(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O defeito que ``NAO_PINTAVEIS`` escondia — e ele acenderia tudo.
-
-    Com o perfil guardando SÓ a vibração do primeiro controle, a coluna tem de
-    dizer: apagado, apagado, ACESO, apagado, apagado · e cinco apagados no
-    segundo.
-
-    O ESPERADO É CALCULADO, e não digitado — 03/09/2026. Este ``assert`` trazia
-    oito booleanos cravados; a emissão passou a mandar ``"sim"``/``""`` (o alvo
-    ``classe`` lê string) e a coluna ganhou a quinta seção, e a régua morreu
-    duas vezes na mesma linha.
-
-    MORDIDA: volte a ``[s for g in guarda for s in (g.get("secoes") or [])]`` e
-    este teste reprova com ``['leds', 'triggers', …]`` no lugar dos estados.
-
-    O DISCO É O PONTO DESDE 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
-    a emissão medida aqui é a do ``guarda.proprio``; o ``guarda.secao`` diz o
-    controle agora e tem régua própria
-    (``test_a_coluna_status_diz_o_controle_de_agora.py``).
-    """
+    """O defeito que ``NAO_PINTAVEIS`` escondia — e ele acenderia tudo."""
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
     fora = _emitidos(rumble={"policy": "economia"})
     quantas = len(a10_perfis.SECOES_DA_COLUNA)
     onde_acende = a10_perfis.SECOES_DA_COLUNA.index("rumble")
     esperado = ["sim" if i == onde_acende else "" for i in range(quantas)]
-    # AS LINHAS QUE SOBRAM DA TABELA SÃO VAZIAS — a `_emitidos` põe DOIS
-    # controles na mesa e a tabela tem quatro lugares (05/09/2026: o pacote
-    # emite os quatro para o lugar vazio poder acender a marca que esconde os
-    # glifos do mockup).
     esperado += [""] * quantas * (a10_perfis.LUGARES_DA_TABELA - 1)
     assert fora["guarda.proprio"] == esperado, (
         f"a coluna não conta o que o perfil guarda: {fora['guarda.proprio']!r} "
         f"em vez de {esperado!r}")
 
-    # E O QUE A TELA FARIA COM ISSO — a mesma lista que o `ligado()` do JS lê.
     acesos = [regua_do_mockup._ligado(str(v)) for v in fora["guarda.proprio"]]
     assert acesos == [v == "sim" for v in esperado], (
         "o que o pacote emite não é lido como aceso/apagado pelo alvo `classe`")
@@ -283,34 +217,14 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
     comparam duas listas de nomes, aqui se compara o VALOR com a POSIÇÃO.
     """
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
-    # O MENOR CORPO QUE CADA SEÇÃO ACEITA. O contrato de `ControllerOverrides`
     # é *"campo `None` = sem opinião"*, e `_secoes_do_controle` pergunta
-    # exatamente `is not None` — o conteúdo não importa aqui. Três das quatro
-    # aceitam `{}`; o `speaker` exige `volume`, e a razão está no próprio
-    # schema (SOM-02: `muted` sem `volume` mandaria volume ZERO e tomaria a
-    # posse do alto-falante).
     menor_corpo: dict[str, Any] = {
         "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
-        # A `mascara` é a SÉTIMA, desde 08/09/2026 (MASCARA-NO-PERFIL-01,
-        # decisão dela: *"pode entrar sim"*) — e a primeira que NÃO é uma
-        # sub-seção: o campo é um valor só. Por isso o tipo deste mapa é `Any`.
         # Para a coluna a diferença não existe: `_secoes_do_controle` pergunta
-        # `is not None`, e `"xbox"` responde igual a um objeto.
         "mascara": "xbox",
-        # O `mic` é o QUINTO ajuste desde a decisão nº20 dela (03/09/2026). Ele
-        # aceita `{}` como os três primeiros — `ControllerMicOverride.muted`
         # nasce `None`, e `_secoes_do_controle` pergunta `is not None` sobre a
-        # SEÇÃO, não sobre o campo de dentro.
         "mic": {},
-        # O `sensores` é o SEXTO desde 04/09/2026 (SENSOR-DE-VERDADE-01), e ele
-        # atravessou este arquivo por um dia exatamente como o aviso acima
-        # previa: o campo entrou no esquema em `8f9589ba` e a coluna só nasceu
-        # em 05/09, com esta régua VERMELHA no `dev` no meio. `{}` basta —
-        # `ControllerSensoresOverride.giroscopio`/`.acelerometro` nascem `None`.
         "sensores": {},
-        # O `movimento` é o OITAVO desde 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-
-        # TELA-01). `{}` basta: `ProfileMovimentoConfig` nasce com a mira
-        # desligada, e a coluna pergunta pela SEÇÃO.
         "movimento": {},
     }
     faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(menor_corpo)
@@ -319,57 +233,20 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
         f"corpo mínimo dessa seção — acrescente-o a `menor_corpo`, senão a coluna "
         f"nova atravessa este arquivo sem ser medida (foi o que aconteceu com "
         f"o `mic` em 03/09/2026)")
-    # A POSIÇÃO É A DA COLUNA QUE O PACOTE DISTRIBUI (`SECOES_DA_COLUNA`), e a
-    # seção do esquema que espera a sessão dela não acende NADA: a página
-    # publicada não tem a célula, e acender uma vizinha é o defeito que esta
-    # régua existe para pegar.
     colunas = a10_perfis.SECOES_DA_COLUNA
     quantas = len(colunas)
     for secao in perfis_web.SECOES_POR_CONTROLE:
         fora = _emitidos(**{secao: menor_corpo[secao]})
         esperado = ["sim" if s == secao else "" for s in colunas]
-        # As três linhas que sobram da tabela vêm vazias — ver a nota no teste
-        # acima, 05/09/2026.
         esperado += [""] * quantas * (a10_perfis.LUGARES_DA_TABELA - 1)
-        # O PONTO, desde 02/10/2026 — ver a nota do teste acima.
         assert fora["guarda.proprio"] == esperado, (
             f"com só `{secao}` guardado, a coluna acendeu "
             f"{fora['guarda.proprio']!r} em vez de {esperado!r}")
 
 
-# ---------------------------------------------------------------------------
-# 4. A CURA VALIA NOS DOIS MUNDOS — E OS DOIS MUNDOS VIRARAM UM (03/09/2026)
-#
-# Aqui viviam QUATRO testes sobre `a10_perfis._a_pagina_acende_a_secao_por_classe`:
 # o pacote perguntava à página PUBLICADA se ela trazia `data-hef-alvo="classe"` e
-# calava enquanto não trouxesse, porque escrever texto num `<span>` com `<svg>`
-# dentro apaga o glifo.
-#
-# ESSA GUARDA NÃO EXISTE MAIS, e a remoção foi certa: `7e64c2e3` mediu que o
-# `--publicar-enderecos` nunca copiava página nenhuma (o ramo `shutil.copy2` era
-# INALCANÇÁVEL — o `elif` de cima comparava por `soma()`, o sha256 que APAGA os
-# atributos de endereço, então duas páginas que diferem só num `data-hef-alvo`
-# caíam em "já igual"). Corrigido isso, o alvo chegou à página publicada e a
-# espera acabou.
-#
-# O QUE ELES GUARDAVAM CONTINUA GUARDADO, e por isso não foram substituídos:
-# `test_a_pagina_publicada_sabe_receber_a_pintura`, em
-# `test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`, exige o alvo em TODA
-# célula da página publicada. Uma publicação futura que o perdesse reprova lá.
-#
-# POR QUE ISTO ESTÁ ESCRITO EM VEZ DE APAGADO: os quatro ficaram QUEBRADOS no
-# `dev` por um dia inteiro (`AttributeError`, e mais cinco irmãos deste arquivo),
-# e uma régua quebrada não reprova nada — foi sob ela que a coluna do microfone
-# passou apagada à força. Quem apagar em silêncio a próxima régua caduca deixa a
-# mesma armadilha.
-# ---------------------------------------------------------------------------
 def test_o_endereco_saiu_de_nao_pintaveis_e_nao_voltou_calado() -> None:
-    """``guarda.secao`` não é mais um nome cravado — quem decide é a MEDIÇÃO.
-
-    Se alguém o devolver a ``NAO_PINTAVEIS``, o ``pop`` do fim de ``pacote()``
-    apagaria a emissão mesmo depois de ela publicar, e as dezesseis células
-    voltariam a mostrar o desenho — calado, porque nada mais acusa.
-    """
+    """``guarda.secao`` não é mais um nome cravado — quem decide é a MEDIÇÃO."""
     assert "guarda.secao" not in a10_perfis.NAO_PINTAVEIS, (
         "`guarda.secao` voltou a `NAO_PINTAVEIS`; quem decide hoje é "
         "`_a_pagina_acende_a_secao_por_classe()`, que se cura sozinha no dia "

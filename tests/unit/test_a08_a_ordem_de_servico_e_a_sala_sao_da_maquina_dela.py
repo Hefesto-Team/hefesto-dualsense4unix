@@ -53,9 +53,6 @@ sys.path.insert(0, str(RAIZ / "src"))
 
 BANCADA = RAIZ / "mockup/08-conexoes.html"
 
-#: A FRASE CRAVADA NO MOCKUP. Ela é a régua desta leva: enquanto ela puder sair
-#: na tela sobre uma máquina que não tem Entrada 3 nem Entrada 9, a aba está
-#: afirmando o que não mediu.
 FRASE_DO_MOCKUP = "Mova o adaptador Bluetooth da Entrada 3 para a Entrada 9"
 
 
@@ -67,12 +64,7 @@ def _pacote():  # type: ignore[no-untyped-def]
 
 def _uma_ordem(acao: str = "Leve o adaptador para uma entrada do computador.",
                destino: str = ""):  # type: ignore[no-untyped-def]
-    """Uma `Ordem` do produto, montada com os campos que ela TEM.
-
-    Os selos são os do dono (`ordens_da_mesa.SELOS`); montar a ordem à mão aqui
-    é o que faz este teste medir o DESENHO do card e não a varredura do
-    barramento, que depende da máquina de quem roda.
-    """
+    """Uma `Ordem` do produto, montada com os campos que ela TEM."""
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
         DERIVADO_DA_CONTA,
         MEDIDO_AQUI,
@@ -107,19 +99,8 @@ class _DeclaracaoFalsa:
         self.mesa = _MesaFalsa(altura, visada)
 
 
-# ---------------------------------------------------------------------------
-# 1. A ORDEM DE SERVIÇO — a mentira mais cara desta aba
-# ---------------------------------------------------------------------------
 def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
-    """O card traz o de→para da ordem viva, e NADA do mockup.
-
-    A COLUNA ENXUGOU EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui este teste
-    exigia no card o imperativo da ordem e a linha do ganho, inclusive a que
-    confessa que o ganho não foi medido. A ordem dela de 13/09
-    (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, §0 item
-    4: «Tirar e enxugar pode») e a §D da sprint tiram os dois da coluna visível;
-    o `?` da linha do exame guarda os dois — ver o teste abaixo.
-    """
+    """O card traz o de→para da ordem viva, e NADA do mockup."""
     p = _pacote()
     ordem = _uma_ordem(destino="Entrada 9")
     antes = p._ORDENS_NA_TELA
@@ -137,23 +118,12 @@ def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
     assert ordem.ganho_esperado.texto not in card, (
         f"{ordem.ganho_esperado.texto!r} voltou à coluna visível — ele mora no `?` "
         f"da linha do exame desde 13/09/2026")
-    # A INSTRUÇÃO VOLTOU em 26/09/2026, por decisão dela olhando o desenho novo:
-    # *«dá pra aceitar a instrução nisso»*. É a instrução da ordem VIVA —
-    # nunca a frase do mockup. O título que ela nomeou mora fora da coluna
-    # (`.sugestao > .ordem-tit`), porque o tique repinta a coluna inteira.
     assert ordem.acao in card, card  # (noqa-acento) campo da Ordem
     assert p.TITULO_DA_ORDEM not in card, card
 
 
 def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
-    """O `?` que fica é o da linha do exame, e ele traz o que saiu do card.
-
-    MUDOU DE `?` EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui o card da ordem
-    tinha o próprio `?` (`_dica_da_ordem`), com *O que eu vi aqui* e *Por que
-    importa*. O card enxugou até o de→para, e o `?` que contém o imperativo e o
-    ganho é o da linha do exame (`_dica_da_linha`): *Por que importa*, *Ganho
-    esperado* e *O que fazer*. *O que eu vi aqui* é o texto da própria linha.
-    """
+    """O `?` que fica é o da linha do exame, e ele traz o que saiu do card."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
     from hefesto_dualsense4unix.integrations.exame_da_mesa import (
         ESTADO_ATENCAO,
@@ -205,21 +175,7 @@ def test_sem_ordem_a_coluna_diz_a_frase_do_produto() -> None:
 
 
 def test_o_dono_ainda_nao_desenha_a_ordem_da_mesa() -> None:
-    """A CATRACA DA SEGUNDA GRAFIA — e ela fica VERMELHA quando o dono curar.
-
-    `gui.aba_conexoes.html_da_ordem` lê `ordem.alvo.onde`, e
-    `ordens_da_mesa.Identidade` nunca teve `onde` — tem `vid`, `pid`, `caminho`
-    e `ambigua`. A função **jamais correu com uma `Ordem`**: o único chamador
-    era `aba_conexoes.pintura` (saiu em 28/09/2026), e o padrão dela era
-    `ordem=None`. Ramo morto por construção, achado em 03/09/2026 ao ligá-la ao
-    produto.
-
-    Enquanto for assim, `a08_conexoes._card_da_ordem` desenha aqui. No dia em
-    que alguém curar o dono — `gui/aba_conexoes.py` é de outro — este teste
-    reprova, e quem o ler apaga a segunda grafia e volta a chamar o dono.
-    Uma duplicação que sabe a data da própria morte é dívida com prazo; uma que
-    não sabe é só dívida.
-    """
+    """A CATRACA DA SEGUNDA GRAFIA — e ela fica VERMELHA quando o dono curar."""
     p = _pacote()
     assert not p._dono_sabe_desenhar_a_ordem(), (
         "`gui.aba_conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade. "
@@ -227,21 +183,8 @@ def test_o_dono_ainda_nao_desenha_a_ordem_da_mesa() -> None:
         "`_html_da_ordem` — a segunda grafia existia só por causa do defeito.")
 
 
-# ---------------------------------------------------------------------------
-# 1b. O EXAME DE ENTRADA — uma vez, e NUNCA na thread que pinta
-# ---------------------------------------------------------------------------
 def test_o_exame_de_entrada_nao_corre_na_thread_do_tique() -> None:
-    """O tique tem 500 ms e `busctl` tem teto de 5 s. Ele TEM de ir para fora.
-
-    A cicatriz é da janela estável e tem endereço:
-    BUG-GUI-SYSTEMCTL-SYNC-NA-THREAD-GTK-01 — um `subprocess.run` síncrono
-    travou a janela dela e, em D-state, nem o `kill` chegava. Aqui a thread que
-    chama `pacote()` é a do GTK do piloto, e a regra é a mesma.
-
-    A RÉGUA NÃO DEPENDE DO ESCALONADOR, que é a armadilha número um desta casa:
-    ela troca `_correr_o_exame_completo` por um dublê que ANOTA em qual thread
-    foi chamado, e compara com a thread do teste.
-    """
+    """O tique tem 500 ms e `busctl` tem teto de 5 s. Ele TEM de ir para fora."""
     import threading
 
     p = _pacote()
@@ -295,9 +238,6 @@ def test_o_exame_de_entrada_e_uma_vez_so_mesmo_falhando() -> None:
         "**Examinar Portas**, que é gesto dela — nunca a falha")
 
 
-# ---------------------------------------------------------------------------
-# 2. A SALA — a tela dizia que ela não respondeu o que ela respondeu
-# ---------------------------------------------------------------------------
 def test_a_sala_pinta_o_que_ela_ja_declarou() -> None:
     p = _pacote()
     na_tela = p._sala_na_tela(_DeclaracaoFalsa("acima", "com_gente"))
@@ -307,12 +247,7 @@ def test_a_sala_pinta_o_que_ela_ja_declarou() -> None:
 
 
 def test_o_none_da_sala_nao_acende_o_nao_sei() -> None:
-    """`None` é "nunca respondeu" E "respondeu Não sei" — o produto não separa.
-
-    A regra é do dono: `secao_mesa:672` só chama `set_active_id` quando o valor
-    gravado não é `None`. Acender o "Não sei" aqui poria na boca dela uma
-    resposta que ela pode não ter dado.
-    """
+    """`None` é "nunca respondeu" E "respondeu Não sei" — o produto não separa."""
     p = _pacote()
     na_tela = p._sala_na_tela(_DeclaracaoFalsa(None, None))
     assert na_tela == {"sala-altura": "", "sala-visada": ""}, (
@@ -342,9 +277,6 @@ def test_os_tres_botoes_da_sala_tem_o_seu_proprio_quando() -> None:
             "é o modo booleano do `escrever()` — ele acenderia sozinho")
 
 
-# ---------------------------------------------------------------------------
-# 3. A TIRA DO CHECK-UP — o que sobra tem de ser o mais barato de perder
-# ---------------------------------------------------------------------------
 class _ItemFalso:
     def __init__(self, chave: str, ordem: object | None) -> None:
         self.chave = chave
@@ -388,9 +320,6 @@ def test_as_ordens_vem_antes_das_conferencias() -> None:
         "que vem depois das ordens é a ordem dos cinco rótulos da janela")
 
 
-# ---------------------------------------------------------------------------
-# 4. OS DOIS NÚMEROS QUE A LINHA FECHADA MOSTRAVA DO DESENHO
-# ---------------------------------------------------------------------------
 def test_a_bateria_sem_leitura_vira_o_travessao_do_produto() -> None:
     from hefesto_dualsense4unix.gui.aba_conexoes import TRACO
 
@@ -414,9 +343,6 @@ def test_a_contagem_e_do_dono() -> None:
         tela.Controle(uniq="aa:bb:cc:00:00:02", jogador=2, via="bt", bateria=None),
         tela.Controle(uniq="aa:bb:cc:00:00:03", jogador=3, via="bt", bateria=10)]
     frase = tela.texto_da_contagem(controles)
-    # A PALAVRA DO TRANSPORTE SE PERGUNTA AO DONO, nunca se digita — 24/09/2026,
-    # AS-FRASES-QUE-A-BANCADA-ACHOU-01. Esta linha digitava «no cabo»/«no
-    # rádio», e foi ela que teria de mudar de novo na próxima troca de palavra.
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte as palavra,
     )
@@ -427,11 +353,7 @@ def test_a_contagem_e_do_dono() -> None:
 
 
 def _ctx():  # type: ignore[no-untyped-def]
-    """Uma mesa de dois, um sem leitura de bateria — o caso que morde.
-
-    A FAIXA SINTÉTICA DA CASA nos `uniq`: há dois portões de anonimato nesta
-    árvore, e um MAC de bancada num arquivo versionado reprova nos dois.
-    """
+    """Uma mesa de dois, um sem leitura de bateria — o caso que morde."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     p1, p2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
@@ -476,17 +398,11 @@ def test_o_pacote_liga_os_cinco_enderecos() -> None:
         "endereço de texto escreve `100` onde o desenho promete `100%`, e "
         "`null` onde ele promete o travessão")
 
-    # A BATERIA NO NOME — 26/09/2026: «nome do modelo - tipo de conexão -
-    # Percentual de bateria». Sem leitura, o nome fica sem o número (o
-    # travessão de «não sei» não cabe no meio do nome).
     nomes = [c.get("nome") for c in saiu["colunas"].values()]
     assert nomes[0].endswith('<span class="pt">•</span> 100%'), nomes
     assert "%" not in nomes[1] and TRACO not in nomes[1], nomes
 
 
-# ---------------------------------------------------------------------------
-# 5. O DESENHO TEM ONDE ESCREVER — sem endereço, o pacote pinta zero, calado
-# ---------------------------------------------------------------------------
 def test_o_desenho_tem_endereco_para_os_cinco() -> None:
     """O `bateria` VALE 4 DESDE 07/09/2026, e o número não é digitado.
 
@@ -507,8 +423,6 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
 
     html = BANCADA.read_text(encoding="utf-8")
     esperado = {"ordem": 1, "sala-altura": 3, "sala-visada": 3,
-                # A BATERIA FOI PARA O NOME em 26/09/2026 («Cosmic Red • BT •
-                # 85%»): um `nome` por lugar da mesa.
                 "nome": len(MESA)}
     for campo, quantos in esperado.items():
         achados = html.count(f'data-campo="{campo}"')

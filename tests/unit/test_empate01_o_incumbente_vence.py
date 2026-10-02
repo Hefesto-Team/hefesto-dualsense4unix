@@ -1,31 +1,4 @@
-"""EMPATE-01 — o desempate entre perfis deixa de ser a ordem do alfabeto.
-
-O caso REAL, medido no disco dela em 27/07:
-
-    pragmata.json    name="Pragmata"    match:any    priority 5
-    pragmata2.json   name="Pragmata2"   match:any    priority 5
-
-Os dois arquivos são idênticos fora o campo `name`. Os dois empatam na chave
-de ordenação `(not e_catch_all, priority)`. E o desempate não era escolha de
-ninguém:
-
-  - `loader.load_all_profiles` entrega em `sorted(directory.glob("*.json"))`;
-  - `manager.select_for_window_ex` ordenava com `sort(..., reverse=True)`, que
-    é ESTÁVEL e preserva a ordem de entrada entre empatados;
-  - logo, quem vencia era quem tinha o nome de ARQUIVO mais cedo no alfabeto.
-
-Resultado: vencia o `Pragmata`. O perfil que ela deixou ativo era o
-`Pragmata2`. É um mecanismo direto para a queixa mais antiga desta casa — *"a
-config que eu deixo nunca é respeitada"*.
-
-O terceiro termo agora é declarado: **em empate, o incumbente continua**.
-
-NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5): o
-`match any` saiu da seleção automática — ele só entra pela mão dela —, então o
-empate entre dois «Sempre» não acontece mais. O desempate continua valendo entre
-REGRAS de mesma prioridade, e é isso que estas réguas medem agora: os dois
-gêmeos casam a mesma janela por `window_class` (`_REGRA_DO_DESKTOP`).
-"""
+"""EMPATE-01 — o desempate entre perfis deixa de ser a ordem do alfabeto."""
 from __future__ import annotations
 
 import types
@@ -45,7 +18,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 WM_DESKTOP = "firefox"
-#: A regra que os gêmeos dividem (ver a nota datada no topo).
 _REGRA_DO_DESKTOP = MatchCriteria(window_class=[WM_DESKTOP])
 
 
@@ -80,10 +52,7 @@ def _semear_o_disco_dela() -> None:
 
 class TestOCasoRealDosDoisPragmata:
     def test_o_ativo_continua_valendo(self, isolated_profiles_dir: Path) -> None:
-        """O caso medido, inteiro: ativo = Pragmata2, vencedor = Pragmata2.
-
-        Com a cura arrancada, o vencedor é `Pragmata` — o alfabeto.
-        """
+        """O caso medido, inteiro: ativo = Pragmata2, vencedor = Pragmata2."""
         _semear_o_disco_dela()
         escolhido = _manager("Pragmata2").select_for_window({"wm_class": WM_DESKTOP})
 
@@ -97,11 +66,7 @@ class TestOCasoRealDosDoisPragmata:
     def test_o_outro_lado_do_empate_tambem_vale(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Com `Pragmata` ativo, é ele quem fica — o critério não tem lado.
-
-        Este é o par do teste acima: se a cura fosse "o último do alfabeto" (ou
-        qualquer outra reordenação cega), este ficaria vermelho.
-        """
+        """Com `Pragmata` ativo, é ele quem fica — o critério não tem lado."""
         _semear_o_disco_dela()
         escolhido = _manager("Pragmata").select_for_window({"wm_class": WM_DESKTOP})
 
@@ -111,11 +76,7 @@ class TestOCasoRealDosDoisPragmata:
     def test_renomear_o_arquivo_nao_muda_o_vencedor(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """A mordida do E4 da sprint: o teste não pode estar travando o alfabeto.
-
-        O perdedor histórico ganha um nome que vem ANTES no alfabeto. Se a
-        escolha ainda fosse a ordem de arquivo, o vencedor mudaria.
-        """
+        """A mordida do E4 da sprint: o teste não pode estar travando o alfabeto."""
         save_profile(Profile(name="Pragmata", match=_REGRA_DO_DESKTOP, priority=5))
         save_profile(Profile(name="Aaa Pragmata2", match=_REGRA_DO_DESKTOP, priority=5))
 
@@ -129,12 +90,7 @@ class TestOCasoRealDosDoisPragmata:
     def test_sem_incumbente_o_comportamento_historico_fica(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Nenhum perfil ativo: nada muda — segue o primeiro da ordem de carga.
-
-        Deliberado. O incumbente é um terceiro termo, não uma reordenação: sem
-        ele não há critério novo, e inventar um mudaria comportamento já
-        validado sem ninguém ter pedido.
-        """
+        """Nenhum perfil ativo: nada muda — segue o primeiro da ordem de carga."""
         _semear_o_disco_dela()
         escolhido = _manager(None).select_for_window({"wm_class": WM_DESKTOP})
 
@@ -161,12 +117,7 @@ class TestOCasoRealDosDoisPragmata:
     def test_o_incumbente_nao_fura_prioridade(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """O terceiro termo é TERCEIRO: só age quando os dois primeiros empatam.
-
-        Um perfil ativo de prioridade menor NÃO segura o lugar contra um de
-        prioridade maior — senão o incumbente viraria um cadeado, e a escala de
-        prioridade deixaria de significar o que diz.
-        """
+        """O terceiro termo é TERCEIRO: só age quando os dois primeiros empatam."""
         save_profile(Profile(name="Baixo", match=_REGRA_DO_DESKTOP, priority=5))
         save_profile(Profile(name="Alto", match=_REGRA_DO_DESKTOP, priority=80))
 
@@ -196,12 +147,7 @@ class TestOCasoRealDosDoisPragmata:
     def test_desempata_por_slug_e_nao_por_string_crua(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """R-10: a identidade do perfil em disco é o SLUG.
-
-        O `active_profile` do store guarda o nome de EXIBIÇÃO. Comparar string
-        crua deixaria "Navegação" e "Navegacao" como perfis diferentes — a
-        mesma classe de bug que já custou um arquivo sobrescrito em silêncio.
-        """
+        """R-10: a identidade do perfil em disco é o SLUG."""
         save_profile(Profile(name="Aaa", match=_REGRA_DO_DESKTOP, priority=5))
         save_profile(Profile(name="Navegação", match=_REGRA_DO_DESKTOP, priority=5))
 
@@ -212,13 +158,7 @@ class TestOCasoRealDosDoisPragmata:
 
 
 class TestOSegundoSeletorTambemSabeQuemEstaAtivo:
-    """O sinal de jogo tem um seletor PRÓPRIO (`Daemon._manager_de_selecao`).
-
-    Ele nascia com um `StateStore` novo e vazio. Curar só o seletor do
-    autoswitch deixaria o caminho do sinal de jogo continuar decidindo no
-    alfabeto — dois seletores, uma cura só, e a metade não curada é a que roda
-    com o jogo aberto.
-    """
+    """O sinal de jogo tem um seletor PRÓPRIO (`Daemon._manager_de_selecao`)."""
 
     def test_o_seletor_de_leitura_recebe_o_store_do_daemon(self) -> None:
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon

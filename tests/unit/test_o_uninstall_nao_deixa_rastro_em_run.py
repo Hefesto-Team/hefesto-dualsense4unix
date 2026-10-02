@@ -1,30 +1,4 @@
-"""O `uninstall.sh` tira de `/run` tudo o que o produto põe lá.
-
-OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01 (25/09/2026), item 4. A conferência da
-STORM-USB-02 achou que o uninstall não apagava `/run/hefesto-bt-rebind`, onde o
-`bt_rebind_orphans.sh` guarda os contadores do tique e, desde a STORM-USB-02,
-os `evento-*` do aviso do kernel. É tmpfs e some no boot, mas o produto não
-deixa rastro: a `/run/hefesto-bt-ponte`, vizinha dela, já saía.
-
-A cura foi à ORIGEM, e a régua também: medido em 25/09 com a lista abaixo,
-eram TRÊS as raízes de `/run` que o produto escreve e o uninstall esquecia —
-a do religar, a do watchdog (`promoted-*` e o carimbo do reinício, desde
-sempre) e a pasta do socket do broker, que o systemd cria e não apaga no stop.
-Uma lista digitada esqueceria a próxima; por isso a primeira régua LÊ o
-produto: toda raiz `/run/hefesto-*` citada em `scripts/`, `src/` ou
-`assets/` tem de ter um `rm` ou `rmdir` no código do uninstall.
-
-As outras são as do item 4, com o molde da O-PURGE-LEVA-AS-COPIAS-DE-
-PAREAMENTO-01: os blocos são recortados do `uninstall.sh` REAL e rodam com o
-`/run` e o `/etc` trocados por pastas de mentira, sob o mesmo
-`set -euo pipefail`; o `sudo` de mentira executa e RECUSA qualquer argumento
-que ainda aponte para o `/run` de verdade. Nada aqui roda o uninstall inteiro,
-nada pede senha e nada toca o `/run` da máquina.
-
-A MORDIDA, medida: tirar `/run/hefesto-bt-rebind` do `rm` do bloco da
-resiliência reprova a da raiz, a do `rm` e a do ensaio; tirá-lo da conta do
-`_NEEDS_SUDO`, a da senha; tirar o `rm` da pasta do broker, a da raiz.
-"""
+"""O `uninstall.sh` tira de `/run` tudo o que o produto põe lá."""
 
 from __future__ import annotations
 
@@ -37,9 +11,7 @@ BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 UNINSTALL = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
 
-#: Uma raiz de `/run` do produto: `/run/hefesto-<nome>`, até a primeira barra.
 _RAIZ_DE_RUN = re.compile(r"/run/(hefesto[A-Za-z0-9_.-]*)")
-#: Onde o produto escreve. O `uninstall.sh` fica de fora: ele é quem responde.
 _ONDE_O_PRODUTO_ESCREVE = ("scripts", "src", "assets", "install.sh")
 
 
@@ -50,11 +22,7 @@ def _recorte(inicio: str, fim: str) -> str:
 
 
 def _codigo(texto: str) -> str:
-    """O que EXECUTA: sem as linhas de comentário nem as falas (`log`).
-
-    A continuação por `\\` vira uma linha só: um `rm` que quebra a lista de
-    caminhos em duas linhas continua sendo UM `rm`.
-    """
+    """O que EXECUTA: sem as linhas de comentário nem as falas (`log`)."""
     return "\n".join(
         linha
         for linha in texto.replace("\\\n", " ").splitlines()
@@ -76,11 +44,6 @@ def _raizes_que_o_produto_escreve() -> set[str]:
                 continue
             raizes.update(m.group(1).rstrip(".") for m in _RAIZ_DE_RUN.finditer(texto))
     return raizes
-
-
-# ---------------------------------------------------------------------------
-# 1. Toda raiz de /run do produto tem quem a tire
-# ---------------------------------------------------------------------------
 
 
 def test_a_lista_de_raizes_nao_esta_vazia() -> None:
@@ -107,10 +70,6 @@ def test_toda_raiz_de_run_que_o_produto_escreve_sai_no_uninstall() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. O religar: a senha, o rm e o ensaio
-# ---------------------------------------------------------------------------
-
 LINHAS_DA_SENHA = _recorte(
     "# O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01)",
     "compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*'",
@@ -124,8 +83,6 @@ BLOCO_DO_ENSAIO = _recorte(
     "# Prime a credencial só se algum passo com root vai rodar",
 )
 
-#: O `sudo` de mentira, com a senha em cache: executa, e recusa o que ainda
-#: apontar para o /run de verdade.
 SUDO_QUE_RECUSA_O_REAL = (
     'for a in "$@"; do\n'
     '  [[ "$a" == /run/* ]] && { echo "RECUSEI $a" >&2; exit 97; }\n'

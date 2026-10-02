@@ -1,14 +1,4 @@
-"""MIC-DA-MESA-ELEICAO-01 — as réguas do eleitor de microfone.
-
-A ARMADILHA, medida em três lugares independentes desta casa: **o WirePlumber
-não honra nó eleito que não se sustenta.** Ele reelege sozinho, e a preferência
-que acabamos de gravar vira lixo. A pós-condição canônica é o ATIVO RELIDO,
-nunca o `configured`.
-
-Declarar sucesso pela escrita é o *"silêncio não é sucesso"* na forma mais cara
-que ele tem aqui: o LED do controle passaria a mentir sobre o microfone dela —
-plástico aceso, `pactl` gravando outra coisa.
-"""
+"""MIC-DA-MESA-ELEICAO-01 — as réguas do eleitor de microfone."""
 
 from __future__ import annotations
 
@@ -50,8 +40,6 @@ class _Pactl:
                 return (0, self.ativo)
             if argv[1] == "set-default-source":
                 self.escritas.append(argv[2])
-                # O ponto INTEIRO: aceitar a escrita e devolver OUTRA coisa na
-                # leitura seguinte é o que o WirePlumber faz de verdade.
                 self.ativo = (
                     self.ativo_depois if self.ativo_depois is not None else argv[2]
                 )
@@ -63,7 +51,6 @@ class _Pactl:
                     return (1, "")
                 return (0, argv[-1] if self.sustenta else "")
             if "--outra-captura-elegivel" in argv:
-                # A pergunta da VOLTA: a captura que não é controle nenhum.
                 return (0, _OUTRO if self.sustenta else "")
         return (0, "")
 
@@ -71,9 +58,6 @@ class _Pactl:
 @pytest.fixture()
 def pactl(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     dublê = _Pactl()
-    # Um script de mentira que DECLARA as duas flags que o eleitor pergunta:
-    # sem isso o `_script_conhece` recusaria antes de chegar ao dublê, e todas
-    # as réguas deste arquivo passariam pelo motivo errado.
     script = tmp_path / "fix_wireplumber_default_source.sh"
     script.write_text(
         "#!/usr/bin/env bash\n--fonte-se-sustenta) :;;\n--outra-captura-elegivel) :;;\n"
@@ -83,17 +67,8 @@ def pactl(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     return dublê
 
 
-# ---------------------------------------------------------------------------
-# 7. A eleição não acredita na própria escrita
-# ---------------------------------------------------------------------------
-
-
 def test_escrita_aceita_com_ativo_diferente_e_fracasso(pactl: Any) -> None:
-    """CURA A ARRANCAR: declarar sucesso pela escrita.
-
-    Sem esta régua o LED vira mentira de segunda geração: aceso sobre um nó que
-    o WirePlumber já desfez.
-    """
+    """CURA A ARRANCAR: declarar sucesso pela escrita."""
     pactl.ativo_depois = _OUTRO
     eleitor = elm.EleitorDeMicrofone()
 
@@ -119,11 +94,7 @@ def test_escrita_com_ativo_igual_e_sucesso(pactl: Any) -> None:
 def test_as_tres_nao_respostas_nao_contam_como_ativo(
     pactl: Any, nao_resposta: str
 ) -> None:
-    """Vazio, `auto_null` e `.monitor` são "não sei", nunca "é este".
-
-    Um `.monitor` de padrão é o defeito de gravar o áudio que SAI em vez da voz
-    dela — e o medidor de nível mostra sinal, então PARECE que funciona.
-    """
+    """Vazio, `auto_null` e `.monitor` são "não sei", nunca "é este"."""
     pactl.ativo_depois = nao_resposta
     eleitor = elm.EleitorDeMicrofone()
     r = eleitor._eleger_nome(_ALVO)
@@ -131,20 +102,10 @@ def test_as_tres_nao_respostas_nao_contam_como_ativo(
     assert r.ativo is None
 
 
-# ---------------------------------------------------------------------------
-# 8. O critério de "se sustenta" tem UM dono só
-# ---------------------------------------------------------------------------
-
-
 def test_sem_o_script_a_eleicao_recusa_em_vez_de_inventar_criterio(
     monkeypatch: pytest.MonkeyPatch, pactl: Any
 ) -> None:
-    """CURA A ARRANCAR: um filtro de porta escrito em Python.
-
-    Esta régua reprova a EXISTÊNCIA da segunda régua. Do lado Python não há uma
-    linha que olhe porta de captura, e escrever uma é o defeito RECEITA-ERRADA-01
-    — duas réguas contando coisas diferentes sobre o mesmo estado.
-    """
+    """CURA A ARRANCAR: um filtro de porta escrito em Python."""
     monkeypatch.setattr(elm, "_script_do_wireplumber", lambda: None)
     eleitor = elm.EleitorDeMicrofone()
 
@@ -158,33 +119,7 @@ def test_sem_o_script_a_eleicao_recusa_em_vez_de_inventar_criterio(
 def test_flag_que_o_script_do_disco_nao_conhece_nao_e_chamada(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """UMA ELEIÇÃO NÃO PODE VIRAR UMA INSTALAÇÃO. Medido em 01/09/2026.
-
-    Arrancando a flag do shell para ver a régua reprovar, o que se mediu foi
-    pior do que a reprovação esperada: o `for arg in "$@"` daquele script
-    termina em ``*) printf 'aviso: argumento desconhecido'`` e o `MODE`
-    **continua sendo o default, que é `install`**. Chamar o script com uma flag
-    que ele não conhece não devolve erro — ele roda o INSTALADOR, escreve
-    drop-in e reinicia o WirePlumber da sessão dela. (Aconteceu: a fonte padrão
-    passou por `auto_null.monitor` antes de reassentar.)
-
-    E o caso é real, não hipotético: o script instalado em `~/.local/bin` é UM
-    por máquina e pode ser mais velho que este pacote.
-
-    CURA A ARRANCAR: tirar o `_script_conhece` e chamar o script direto — a
-    régua reprova, porque o dublê registra a chamada que não podia acontecer.
-
-    **AS DUAS PERGUNTAS, e a segunda é a mais cara** (18/09/2026): a
-    `--outra-captura-elegivel` é feita pelo NASCIMENTO do microfone, a cada
-    controle que conecta com a mesa sem dono — sem pedido nenhum dela —, e,
-    desde 29/09/2026, pela VOLTA do microfone. Uma guarda arrancada ali roda o
-    instalador a cada conexão. E o script velho não é "não há outro
-    microfone": é *"não deu para perguntar"*, que levanta.
-
-    FATO SUBSTITUÍDO (29/09/2026): eram TRÊS perguntas, e a
-    `--melhor-fonte-elegivel` era a da volta. Ela é a pergunta do install, e
-    saiu do Python com a A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01.
-    """
+    """UMA ELEIÇÃO NÃO PODE VIRAR UMA INSTALAÇÃO. Medido em 01/09/2026."""
     script = tmp_path / "fix_wireplumber_default_source.sh"
     script.write_text("#!/usr/bin/env bash\n# um script velho, sem as flags novas\n")
     chamadas: list[list[str]] = []
@@ -215,11 +150,7 @@ def test_alvo_que_nao_se_sustenta_nao_e_escrito(pactl: Any) -> None:
 
 
 def test_sem_para_onde_voltar_nao_elege_nada(pactl: Any) -> None:
-    """`--outra-captura-elegivel` vazio: não se elege monitor, não se elege nada.
-
-    É o estado desta bancada em 01/09/2026 — a webcam fora e as três portas
-    analógicas `not available`. Cair no `.monitor` é MONITOR-QUE-VENCE-01.
-    """
+    """`--outra-captura-elegivel` vazio: não se elege monitor, não se elege nada."""
     pactl.sustenta = False
     eleitor = elm.EleitorDeMicrofone()
 
@@ -238,18 +169,8 @@ def test_o_caminho_de_volta_elege_a_melhor_que_nao_e_o_controle(pactl: Any) -> N
     assert pactl.escritas == [_OUTRO]
 
 
-# ---------------------------------------------------------------------------
-# 9. A eleição GUARDA o anterior
-# ---------------------------------------------------------------------------
-
-
 def test_a_primeira_eleicao_guarda_o_microfone_de_antes(pactl: Any) -> None:
-    """CURA A ARRANCAR: apagar a memória.
-
-    Ela existe porque eleger PERSISTE e empurra a preferência anterior pilha
-    abaixo (medido com backup do antes e do depois). Numa mesa em turnos,
-    quatro eleições empurram o microfone real dela quatro degraus, caladas.
-    """
+    """CURA A ARRANCAR: apagar a memória."""
     pactl.ativo = _OUTRO
     eleitor = elm.EleitorDeMicrofone()
 
@@ -274,29 +195,8 @@ def test_a_memoria_e_gravada_uma_vez_por_sessao(pactl: Any) -> None:
     assert eleitor.anterior == _OUTRO, "a segunda eleição não pode reescrever a memória"
 
 
-# ---------------------------------------------------------------------------
-# 10. O eleitor SABE QUEM ELEGEU — e é isso que impede o J2 de tirar o mic da J1
-# ---------------------------------------------------------------------------
-#
-# ACHADO DA AUDITORIA DE 02/09/2026. `devolver_o_microfone()` é GLOBAL: não
-# recebe `uniq`. Sem um campo dizendo quem está com o microfone, o laço decidia
-# a devolução só pelo bit `mudo` — e na mesa de quatro que ela nomeou o botão
-# do Jogador 2 tirava o padrão do sistema da Jogadora 1, que ficava com o LED
-# aceso dizendo "estou no ar".
-#
-# ESTAS RÉGUAS SÃO SOBRE O ELEITOR DE VERDADE, e o motivo é o defeito nº 5 desta
-# própria onda: *"o portão não mordia porque o dublê trazia o mesmo default
-# falso"*. As réguas de cena em `test_mic_da_mesa_o_ipc_a_tela_e_o_gesto.py`
-# usam um `EleitorDeMicrofone` dublado, que mantém o campo por conta própria —
-# arrancar a linha do produto não as faria reprovar.
-
-
 def test_a_eleicao_conferida_registra_quem_esta_com_o_microfone(pactl: Any) -> None:
-    """CURA A ARRANCAR: `self.eleito = uniq` em `eleger_por_uniq`.
-
-    Sem ela o `_eleger_ou_devolver` volta a devolver o microfone da mesa na
-    borda de QUALQUER controle.
-    """
+    """CURA A ARRANCAR: `self.eleito = uniq` em `eleger_por_uniq`."""
     eleitor = elm.EleitorDeMicrofone()
     assert eleitor.eleito is None, "ninguém elegeu ainda"
 
@@ -309,11 +209,7 @@ def test_a_eleicao_conferida_registra_quem_esta_com_o_microfone(pactl: Any) -> N
 
 
 def test_a_eleicao_que_o_wireplumber_desfez_nao_registra_dono(pactl: Any) -> None:
-    """A escrita não basta: a posse só vale com o ATIVO relido batendo.
-
-    É o mesmo contrato do LED — registrar como dono quem o WirePlumber já
-    reelegeu por cima seria a mentira de segunda geração com outro nome.
-    """
+    """A escrita não basta: a posse só vale com o ATIVO relido batendo."""
     pactl.ativo_depois = _OUTRO
     eleitor = elm.EleitorDeMicrofone()
 
@@ -326,28 +222,7 @@ def test_a_eleicao_que_o_wireplumber_desfez_nao_registra_dono(pactl: Any) -> Non
 
 
 def test_a_devolucao_solta_a_posse_so_quando_ela_foi_conferida(pactl: Any) -> None:
-    """A posse muda pela RELEITURA DO ATIVO — e pelo ato de calar sem destino.
-
-    FATO SUBSTITUÍDO (02/09/2026). Este teste se chamava
-    `..._com_ou_sem_para_onde_voltar` e exigia que a posse caísse também no
-    fracasso, com a razão *"o controle saiu do ar nos dois casos"*. A premissa
-    era falsa para as FALHAS: sem fonte que se sustente, o `set-default-source`
-    **nunca roda** — o padrão do sistema continua sendo o canal daquele
-    controle. Soltar a posse numa volta que falhou é declarar sucesso pela
-    intenção.
-
-    FATO SUBSTITUÍDO (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01).
-    Aqui se lia *"é o que a decisão dela de 02/09 exige por baixo do LED —
-    quando a devolução é recusada, o canal continua sendo daquele controle,
-    logo o microfone está no ar, logo a luz fica acesa"*. Não há decisão dela
-    de 02/09 no `docs/data/decisoes-dela.csv`: era a regra de 02/09, e a
-    premissa dela (*"o padrão é o canal dele, logo está no ar"*) caiu com a
-    palavra dela na ponte (08/09) e com a decisão dela de 19/09 — a luz é o
-    estado do microfone dela, e mudo é apagada. Hoje as duas portas se
-    separam: a volta sozinha (`devolver_o_microfone`, a do nó que morre) sem
-    destino deixa a posse de pé; o ATO DE CALAR do eleito sem destino
-    (`passar_o_padrao` com `calou`, a do botão) a solta, sem escrever nada.
-    """
+    """A posse muda pela RELEITURA DO ATIVO — e pelo ato de calar sem destino."""
     eleitor = elm.EleitorDeMicrofone()
     eleitor.eleger_por_uniq(
         "aabbcc000011", fontes=[_ALVO], uniqs_com_audio=["aabbcc000011"]
@@ -361,7 +236,7 @@ def test_a_devolucao_solta_a_posse_so_quando_ela_foi_conferida(pactl: Any) -> No
         "aabbcc000011", fontes=[_ALVO], uniqs_com_audio=["aabbcc000011"]
     )
     assert eleitor.eleito == "aabbcc000011"
-    pactl.sustenta = False  # não há para onde voltar
+    pactl.sustenta = False
     escritas = list(pactl.escritas)
 
     assert eleitor.devolver_o_microfone().ok is False

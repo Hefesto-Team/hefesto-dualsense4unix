@@ -32,10 +32,6 @@ from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core import ds_output_report as rep
 
 
-#: Dublê e montagem vêm da régua IRMÃ, `test_som_sempre_01_...`: as duas medem
-#: o mesmo caminho de adoção e não podem divergir na definição do que é um
-#: handle adotado — duas noções de "adotado" dariam verde sobre produtos
-#: diferentes.
 from tests.unit.test_som_sempre_01_o_volume_nasce_em_cem import (
     _backend_com_um_handle,
 )
@@ -80,21 +76,12 @@ class TestOAltoFalanteNasceRoteado:
         assert handle._volumes_audio[1] == bp.VOLUME_PADRAO_DO_SOM
 
     def test_o_padrao_nao_cala_a_televisao_dela(self) -> None:
-        """A MORDIDA: trocar o padrão por 3 manda TODO o som para o controle.
-
-        Decisão dela de 16/09/2026, e é sobre o som que sai na sala: um controle
-        que conecta não pode emudecer a TV sem ela ter pedido.
-        """
+        """A MORDIDA: trocar o padrão por 3 manda TODO o som para o controle."""
         assert bp.ROTA_PADRAO_DO_SOM != rep.SAIDA_SO_NO_ALTO_FALANTE
         assert bp.ROTA_PADRAO_DO_SOM == rep.SAIDA_L_FONE_R_ALTO_FALANTE
 
     def test_os_bits_do_microfone_sobrevivem(self) -> None:
-        """A razão que tornava a omissão prudente continua honrada.
-
-        `common[7]` carrega a rota (bits 4-5) e o caminho do microfone (o
-        resto). Escrever a rota não pode apagar o `FORCE_INTERNAL_MIC` — foi
-        assim que o microfone ficou mudo em 2026-08, com o `parec` em ZERO.
-        """
+        """A razão que tornava a omissão prudente continua honrada."""
         inst, handle = _backend_com_um_handle()
 
         inst.assumir_volume_padrao_na_adocao(CHAVE, handle)

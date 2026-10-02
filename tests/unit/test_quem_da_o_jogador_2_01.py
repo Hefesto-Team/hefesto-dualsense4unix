@@ -1,46 +1,9 @@
-"""QUEM DÁ O JOGADOR 2 — a pergunta ficou; a resposta virou "o Hefesto".
-
-QUEM-DÁ-O-JOGADOR-2-01 (08/08/2026). Com **dois** controles na mesa, marcar um
-jogo na allowlist recolhia os gamepads virtuais dos secundários — e o co-op do
-Hefesto saía de cena junto. MEDIDO no journal dela: `coop_derrubado_pela_
-excecao_steam_input`, sete vezes quando esta sprint foi escrita, **vinte** no fim
-do dia.
-
-O defeito daquela sprint era o SILÊNCIO: com um controle, a frase da caixinha
-estava completa; com dois, ela omitia a troca do dono do jogador 2 — e a omissão
-custou a ela uma sessão inteira de Sackboy. A cura foi o aviso.
-
-NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela)
-===================================================================
-**O aviso saiu porque o defeito que ele avisava foi CURADO, não porque
-incomodava.** A marca inverteu de lado: em vez de recolher os controles
-virtuais, ela esconde o controle FÍSICO. Os virtuais ficam de pé, um por
-controle, e o jogador 2 continua sendo do Hefesto — que é exatamente o que o
-aviso dizia que se perdia.
-
-Manter a frase agora seria a doença de sempre pelo avesso: **a tela avisando de
-um preço que o produto parou de cobrar.** É a mesma classe de erro que a
-`AVISO-FALSO-DO-COOP-01` está curando no badge, e por isso este arquivo não foi
-apagado — ele passou a travar a fronteira do outro lado:
-
-1. a caixinha **não pode** avisar de uma perda que não acontece mais;
-2. a caixinha **não pode** prometer que o jogo vai LISTAR dois jogadores —
-   isso depende do jogo, ninguém mediu nesta máquina, e a prova é dela (§6 do
-   desenho: abrir o jogo marcado com dois controles e contar);
-3. a metade MEDIDA da `CONTROLE-SONY-MEDIDO-01` (dentro da marca, a saída
-   continua sendo do Hefesto) tem de continuar dita;
-4. toda marcação tem de mandar **fechar e abrir o jogo** — metade da marca é a
-   env que o jogo lê UMA vez, na abertura (`assets/hefesto-launch.sh`, `exec env
-   "$@"`), e foi marcar com o jogo aberto que produziu o "Jogador 3" fantasma.
-"""
+"""QUEM DÁ O JOGADOR 2 — a pergunta ficou; a resposta virou "o Hefesto"."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
-# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
-# falso. Sem aquele plantio, a guarda vem antes do import da janela.
 exigir_gi_real("quem dá o jogador 2")
 
 import pytest
@@ -51,8 +14,6 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import (
 
 APPID = 1599660
 
-#: O que a caixinha dizia até 08/08 e não pode voltar a dizer: a troca do dono
-#: do jogador 2. Cada trecho é uma frase que ERA verdadeira e hoje é mentira.
 _AVISOS_QUE_MORRERAM = (
     "quem passa a dar o jogador 2",
     "steam input, não o hefesto",
@@ -60,19 +21,11 @@ _AVISOS_QUE_MORRERAM = (
 )
 
 
-# --- o aviso da perda morreu com a perda -------------------------------------
-
-
 @pytest.mark.parametrize("controles", [None, 0, 1, 2, 3, 4])
 def test_a_caixinha_nao_avisa_mais_de_um_preco_que_nao_e_cobrado(
     controles: int | None,
 ) -> None:
-    """A MORDIDA: devolva `suspend_vpads_for_steam_input` à borda de entrada da
-    marca e este teste continua verde — e passa a estar MENTINDO, que é o
-    ponto. Ele não é o guarda do daemon (esse é
-    `test_esconder_em_vez_de_sair_01.py`); é o guarda da TELA, e o que ele
-    trava é que ninguém traga o texto do preço de volta sem trazer o preço.
-    """
+    """A MORDIDA: devolva `suspend_vpads_for_steam_input` à borda de entrada da"""
     texto = texto_da_marca_do_steam_input("adicionado", APPID, controles).lower()
 
     for morto in _AVISOS_QUE_MORRERAM:
@@ -88,12 +41,7 @@ def test_a_caixinha_nao_avisa_mais_de_um_preco_que_nao_e_cobrado(
 def test_com_dois_ou_mais_a_caixinha_diz_que_os_jogadores_ficam(
     controles: int,
 ) -> None:
-    """O que substituiu o aviso: a boa notícia, com o número que ela tem na mesa.
-
-    ARRANQUE o ramo `jogadores` de `texto_da_marca_do_steam_input` e o texto
-    volta a ser mudo sobre a mesa dela — verdadeiro, mas incompleto exatamente
-    onde a sprint anterior mediu que a incompletude custa caro.
-    """
+    """O que substituiu o aviso: a boa notícia, com o número que ela tem na mesa."""
     texto = texto_da_marca_do_steam_input("adicionado", APPID, controles)
 
     assert "Hefesto" in texto, "a tela não diz de quem continuam sendo os controles"
@@ -108,12 +56,7 @@ def test_com_dois_ou_mais_a_caixinha_diz_que_os_jogadores_ficam(
 
 
 def test_a_caixinha_manda_conferir_em_vez_de_prometer() -> None:
-    """A fronteira do que é MEDIDO não se moveu: dizer o que o PRODUTO faz, e
-    nunca garantir o que o JOGO vai listar.
-
-    O produto sustenta "os dois vpads ficam de pé" — isso tem teste. Quantos
-    jogadores o jogo mostra depende do jogo, e a prova é dela, no aparelho.
-    """
+    """A fronteira do que é MEDIDO não se moveu: dizer o que o PRODUTO faz, e"""
     texto = texto_da_marca_do_steam_input("adicionado", APPID, 2)
 
     assert "confira" in texto.lower(), (
@@ -126,35 +69,22 @@ def test_a_caixinha_manda_conferir_em_vez_de_prometer() -> None:
         )
 
 
-# --- e cala quando não há o que dizer ----------------------------------------
-
-
 @pytest.mark.parametrize("controles", [None, 0, 1])
 def test_com_um_controle_ou_sem_saber_o_texto_nao_fala_de_jogadores(
     controles: int | None,
 ) -> None:
-    """Com um controle não há jogador 2 — nem para perder, nem para prometer.
-
-    E `None` (não deu para ler a contagem) cai no mesmo lugar de propósito:
-    falhar para o lado de dizer menos nunca inventa; falhar para o lado de falar
-    sempre encheria a tela de frase irrelevante.
-    """
+    """Com um controle não há jogador 2 — nem para perder, nem para prometer."""
     texto = texto_da_marca_do_steam_input("adicionado", APPID, controles)
 
     assert "um jogador cada" not in texto, (
         f"com controles={controles!r} a frase da mesa apareceu sem mesa."
     )
-    # o essencial da frase continua lá
     assert "controle dobrado" in texto
     assert "gatilhos" in texto and "continuam valendo" in texto
 
 
 def test_tirar_a_marca_diz_o_que_volta_a_acontecer() -> None:
-    """NOTA DATADA — 09/08/2026: aqui se exigia *"o co-op volta a ser do
-    Hefesto"*. Não volta: ele nunca saiu. O que desmarcar devolve agora é o
-    contrário — o jogo volta a enxergar TAMBÉM o controle físico, que é o
-    controle dobrado de volta, e é isso que a tela tem de dizer.
-    """
+    """NOTA DATADA — 09/08/2026: aqui se exigia *"o co-op volta a ser do"""
     texto = texto_da_marca_do_steam_input("removido", APPID, 2)
 
     assert "físico" in texto, (
@@ -165,9 +95,6 @@ def test_tirar_a_marca_diz_o_que_volta_a_acontecer() -> None:
         "o co-op voltou ao texto — com a inversão ele não sai em momento nenhum, "
         "e citá-lo aqui sugere que sai."
     )
-
-
-# --- o que a cura não pode quebrar -------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -185,12 +112,7 @@ def test_os_outros_estados_nao_falam_de_jogador_nenhum(status: str) -> None:
 
 
 def test_a_inversao_medida_continua_no_texto() -> None:
-    """A metade da SAÍDA, que a medição dela de 06/08 fixou, não pode sumir.
-
-    O contrapeso desta sprint e da anterior: mexer no texto não pode custar a
-    frase que a `CONTROLE-SONY-MEDIDO-01` conquistou — dentro da marca o Hefesto
-    mantém cor, gatilhos e vibração. É a metade que ela usa.
-    """
+    """A metade da SAÍDA, que a medição dela de 06/08 fixou, não pode sumir."""
     for controles in (None, 1, 2):
         texto = texto_da_marca_do_steam_input("adicionado", APPID, controles)
         assert "cor" in texto and "gatilhos" in texto and "vibração" in texto, (
@@ -201,13 +123,7 @@ def test_a_inversao_medida_continua_no_texto() -> None:
 
 @pytest.mark.parametrize("status", ["adicionado", "removido"])
 def test_toda_marcacao_manda_fechar_e_abrir_o_jogo(status: str) -> None:
-    """A metade que o daemon NÃO entrega ao vivo, dita na tela.
-
-    O `SDL_GAMECONTROLLER_IGNORE_DEVICES` do `steam_app_<appid>.env` é lido UMA
-    vez, na abertura. Marcar com o jogo aberto muda o daemon e não muda o que
-    aquele processo já enumerou — foi assim que nasceu o "Jogador 3" fantasma
-    de 08/08.
-    """
+    """A metade que o daemon NÃO entrega ao vivo, dita na tela."""
     texto = texto_da_marca_do_steam_input(status, APPID, 2)
     assert "Feche e abra o jogo" in texto, (
         "sumiu a única instrução que faz a marca valer inteira. Sem ela, ela "

@@ -1,34 +1,4 @@
-"""Onda T (T2.2/T2.3) — assets DKMS do hid-nintendo patchado.
-
-Desenho e premissas vivem no arquivo de processo, fora da `main`:
-``docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md``
-(e ``…-estudo-premissas-onda-t-hid-nintendo.md``).
-
-Contrato dos assets (falha-sem/passa-com; SEM root, SEM kernel vivo — só
-arquivos e ferramentas de usuário):
-
-- dkms.conf com os campos exatos (PACKAGE_NAME/BUILT_MODULE_NAME[0]/
-  DEST_MODULE_LOCATION[0]=/updates/dkms/AUTOINSTALL) — é a precedência
-  updates/dkms que faz o patchado vencer o in-tree SEM blacklist;
-- Makefile kbuild mínimo com -DCONFIG_NINTENDO_FF=1 (o in-tree tem
-  CONFIG_NINTENDO_FF=y; sem a flag o rumble sumiria — provado no build-test);
-- hid-nintendo.c com os 5 module_param uint + 1 bool (defaults == vanilla,
-  zero regressão) e o -EAGAIN no enforce_subcmd_rate GATEADO por
-  skip_tx_on_rate_exceeded (achado #1 do corretor: mudança de comportamento
-  não pode ser incondicional), com a string "exceeded max attempts"
-  preservada byte a byte (kernel-watch/doctor atuais continuam casando);
-- BASELINE verificável por sha256 recalculado AQUI: o .c shipping bate
-  SHA256_PATCHED_C e o patch REVERTIDO (`patch -R -p3`) devolve exatamente
-  SHA256_VANILLA_C — o invariante `.c == vanilla + 0001-*.patch` pega
-  qualquer edição manual que não passou pelo .patch (e vice-versa);
-- conf do modprobe.d com a cura opt-in (bt_probe_retries=3 +
-  skip_tx_on_rate_exceeded=1) e NADA mais.
-
-As claims corrigidas do desenho (achados #2, #3 e #10 do corretor: precedente
-do resume, escopo HZ=1000 e manifesto com o lote packaging) eram travadas aqui
-por leitura do .md; com o processo fora da `main` o documento é imutável na tag
-de arquivo e a trava não tem mais o que guardar.
-"""
+"""Onda T (T2.2/T2.3) — assets DKMS do hid-nintendo patchado."""
 
 from __future__ import annotations
 
@@ -47,25 +17,12 @@ HID_IDS_PATH = ASSET_DIR / "hid-ids.h"
 PATCH_PATH = (
     ASSET_DIR / "patch" / "0001-HID-nintendo-do-not-transmit-after-rate-limit-exhaus.patch"
 )
-# Fix 21/07: 0002 registra os LEDs mesmo com o SET inicial falho (-110 em BT
-# congestionado) — sem ele o controle fica sem LEDs de player pela conexão
-# inteira. O invariante de paridade passa a ser a SEQUÊNCIA dos dois patches.
 PATCH2_PATH = (
     ASSET_DIR / "patch" / "0002-HID-nintendo-register-leds-even-when-initial-set-fai.patch"
 )
-# 25/07: 0003 cura a morte de probe do CLONE USB (8BitDo Pro em modo Switch,
-# mesmo 057E:2009 e mesmo serial do genuíno) — comando USB no tamanho de report
-# que o próprio descritor declara, status de conexão antes do handshake, e
-# probe que degrada em vez de deixar o device sem driver nenhum.
 PATCH3_PATH = (
     ASSET_DIR / "patch" / "0003-HID-nintendo-pad-USB-commands-and-survive-no-dev-inf.patch"
 )
-# 25/07: 0004 corta o PREÇO de um controle mudo. O clone que sobe degradado
-# (0003) nunca responde subcomando, e como ele não gera "report deltas
-# válidos" o rate limiter roda sempre até o teto: 1 subcomando = 4 tries x 25
-# tentativas x 500 ms = 50 s segurando o output_mutex e 100 linhas de dmesg,
-# de novo a cada escrita de LED/rumble. Medido: 500 linhas a 1,99 linha/s por
-# 4 minutos; com subcmd_silence_streak_max=3 caiu para 3 linhas + 1 aviso.
 PATCH4_PATH = (
     ASSET_DIR / "patch" / "0004-HID-nintendo-stop-waiting-on-a-controller-that-has-g.patch"
 )
@@ -119,8 +76,7 @@ def _baseline() -> dict[str, str]:
 
 
 def _baseline_patches() -> list[str]:
-    """Linhas PATCH= do BASELINE, NA ORDEM (o dict de `_baseline` colapsa
-    chaves repetidas; a ordem dos patches é parte do invariante)."""
+    """Linhas PATCH= do BASELINE, NA ORDEM (o dict de `_baseline` colapsa"""
     return [
         linha.strip().partition("=")[2]
         for linha in BASELINE.splitlines()
@@ -129,8 +85,7 @@ def _baseline_patches() -> list[str]:
 
 
 def _funcao_c(assinatura: str) -> str:
-    """Fatia do .c da assinatura dada até o início da próxima função
-    top-level (`\\nstatic `) — suficiente para asserções de ordem."""
+    """Fatia do .c da assinatura dada até o início da próxima função"""
     ini = C.index(assinatura)
     fim = C.index("\nstatic ", ini + 1)
     return C[ini:fim]
@@ -139,9 +94,7 @@ def _funcao_c(assinatura: str) -> str:
 def _aplica_um_patch(
     cwd: Path, reverso: bool, patch_path: Path
 ) -> subprocess.CompletedProcess[str]:
-    """Aplica UM .patch em cwd (contra hid-nintendo.c local), com `patch`
-    se existir, senão `git apply` — sem skip: sem nenhuma das duas
-    ferramentas o teste FALHA (as duas são baseline de CI/dev)."""
+    """Aplica UM .patch em cwd (contra hid-nintendo.c local), com `patch`"""
     if shutil.which("patch"):
         cmd = ["patch", "-p3", "-s", "-i", str(patch_path)]
         if reverso:
@@ -154,8 +107,7 @@ def _aplica_um_patch(
 
 
 def _aplica_serie(cwd: Path, reverso: bool) -> subprocess.CompletedProcess[str]:
-    """Série completa: forward na ordem do BASELINE, reverso na inversa.
-    Para no primeiro erro (returncode != 0)."""
+    """Série completa: forward na ordem do BASELINE, reverso na inversa."""
     serie = tuple(reversed(PATCH_PATHS)) if reverso else PATCH_PATHS
     resultado = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
     for patch_path in serie:
@@ -191,8 +143,6 @@ class TestDkmsConf:
         )
 
     def test_built_module_name_e_o_mesmo_do_in_tree(self) -> None:
-        # O nome do módulo NÃO muda (hid-nintendo): é isso que faz o
-        # updates/dkms vencer o in-tree por precedência do depmod.
         assert 'BUILT_MODULE_NAME[0]="hid-nintendo"' in DKMS_CONF
 
     def test_dest_module_location_updates_dkms(self) -> None:
@@ -240,8 +190,6 @@ class TestModuleParamsC:
         assert "static unsigned int probe_info_timeout_ms = 2000;" in C
 
     def test_bt_probe_retries_default_zero_sem_inicializador(self) -> None:
-        # default 0 (sem retry) == comportamento vanilla; a CURA (3) entra
-        # só pela conf do modprobe.d — opt-in auditável e reversível.
         assert re.search(r"^static unsigned int bt_probe_retries;$", C, re.MULTILINE)
 
     def test_params_realmente_lidos_nos_pontos_certos(self) -> None:
@@ -262,10 +210,6 @@ class TestPatchBNaoTransmitirNoPiorMomento:
         assert "return -EAGAIN;" in corpo, "esgotou == -EAGAIN (não transmitir)"
 
     def test_skip_tx_e_gateado_por_param_default_vanilla(self) -> None:
-        # Achado #1 do corretor: o skip-TX mudava comportamento observável
-        # com TODOS os defaults, sem opt-out — a UX (rumble) mais sensível a
-        # congestionamento BT do projeto. O gate devolve o default ao
-        # vanilla (transmitir) e torna o skip opt-in/reversível via /sys.
         assert re.search(r"^static bool skip_tx_on_rate_exceeded;$", C, re.MULTILINE), (
             "param-gate ausente: default TEM de ser 0 (== vanilla, transmitir)"
         )
@@ -284,7 +228,6 @@ class TestPatchBNaoTransmitirNoPiorMomento:
         )
 
     def test_string_exceeded_preservada_byte_a_byte(self) -> None:
-        # kernel-watch/doctor atuais casam nessa string — não pode mudar.
         assert 'hid_warn(ctlr->hdev, "%s: exceeded max attempts", __func__);' in C
 
     def test_send_sync_consome_a_try_sem_transmitir(self) -> None:
@@ -333,19 +276,12 @@ class TestPatchAProbeResiliente:
 
 
 class TestPatchECloneUsb:
-    """[E] 0003: o clone 057E:2009 deixa de morrer na probe — sem tocar o genuíno.
-
-    A causa medida NÃO é timeout (4 tentativas x 4000 ms já falharam): o
-    handshake USB não é respondido, o driver cai no ramo "assume ble pro
-    controller" e pede REQ_DEV_INFO a um controle que nunca foi posto em modo
-    USB. O -110 é consequência.
-    """
+    """[E] 0003: o clone 057E:2009 deixa de morrer na probe — sem tocar o genuíno."""
 
     PARAMS_USB = ("usb_cmd_pad_to_report", "usb_send_conn_status", "usb_probe_degrade")
 
     def test_os_tres_params_sao_bool_default_vanilla_e_ajustaveis_a_quente(self) -> None:
         for nome in self.PARAMS_USB:
-            # sem inicializador == false == vanilla (convenção do módulo)
             assert re.search(rf"^static bool {nome};$", C, re.MULTILINE), (
                 f"{nome} precisa nascer FALSE (default == vanilla, zero regressão)"
             )
@@ -356,9 +292,6 @@ class TestPatchECloneUsb:
             assert re.search(rf"^MODULE_PARM_DESC\({nome},$", C, re.MULTILINE)
 
     def test_padding_usa_o_tamanho_declarado_pelo_descritor(self) -> None:
-        # O descritor do próprio controle declara 63 bytes de dados para o
-        # report 0x80 (95 3f) e o endpoint OUT é wMaxPacketSize=0x40: um
-        # comando é UM pacote cheio. O vanilla manda 2 bytes.
         assert "#define JC_USB_CMD_REPORT_SIZE\t\t 64" in C
         corpo = _funcao_c("static int joycon_send_usb")
         assert "u8 buf[JC_USB_CMD_REPORT_SIZE] = {JC_OUTPUT_USB_CMD};" in corpo
@@ -367,33 +300,24 @@ class TestPatchECloneUsb:
         )
 
     def test_conn_status_limpa_o_buffer_antes_de_ler_o_mac(self) -> None:
-        # joycon_hid_send_sync só limpa input_buf em FALHA, e o receive path
-        # copia só o que chegou sem zerar a cauda: sem o memset, uma resposta
-        # curta deixaria lixo de um exchange anterior onde o MAC é lido.
         corpo = _funcao_c("static void joycon_query_usb_conn_status")
         assert "memset(ctlr->input_buf, 0, JC_MAX_RESP_SIZE);" in corpo
         assert "JC_USB_CMD_CONN_STATUS" in corpo
         assert "ctlr->usb_conn_mac_valid = true;" in corpo
 
     def test_degrade_e_so_usb_nunca_bluetooth(self) -> None:
-        # Em BT a cura é o bt_probe_retries; fingir que o controle respondeu
-        # mascararia link degradado.
         corpo = _funcao_c("static inline bool joycon_may_degrade")
         assert "usb_probe_degrade && joycon_using_usb(ctlr)" in corpo
 
     def test_identidade_sintetica_e_estavel_e_nao_finge_ser_real(self) -> None:
         corpo = _funcao_c("static int joycon_synthesize_info")
-        # tipo pelo PID (sempre conhecido), nunca chute
         assert "case USB_DEVICE_ID_NINTENDO_PROCON:" in corpo
         assert "JOYCON_CTLR_TYPE_PRO;" in corpo
-        # CHRGGRIP fora: o tipo dele é ambíguo (segura dois joycons distintos)
         assert "USB_DEVICE_ID_NINTENDO_CHRGGRIP" not in corpo, (
             "o charging grip não pode ser adivinhado — tipo errado constrói "
             "input device com os controles errados"
         )
-        # MAC localmente administrado: nunca colide com OUI de fabricante
         assert "ctlr->mac_addr[0] = 0x02;" in corpo
-        # estável entre replugs: nada de contador/porta USB na composição
         assert "hdev->id" not in corpo, (
             "hdev->id muda a cada replug — a numeração por-MAC do hefesto "
             "precisa de um endereço ESTÁVEL"
@@ -403,13 +327,9 @@ class TestPatchECloneUsb:
         corpo = _funcao_c("static int joycon_init")
         assert "if (!joycon_may_degrade(ctlr)) {" in corpo
         assert "ret = joycon_synthesize_info(ctlr);" in corpo
-        # com o gate desligado, o caminho vanilla (hid_err + goto) fica intacto
         assert 'hid_err(hdev,\n\t\t\t\t"Failed to retrieve controller info; ret=%d\\n",' in corpo
 
     def test_handshake_usb_falho_deixa_de_ser_silencioso(self) -> None:
-        # A linha que faltava para o bug ser auto-diagnosticável: o vanilla
-        # cai no ramo "assume ble" sem UMA palavra no log (joycon_send_usb só
-        # reporta em hid_dbg). Isso vale mesmo com todos os gates desligados.
         corpo = _funcao_c("static int joycon_init")
         assert "USB handshake got no reply" in corpo
 
@@ -462,8 +382,6 @@ class TestBaselineEParidadeDoPatch:
         )
 
     def test_patch_reaplicado_devolve_o_patchado_exato(self, tmp_path: Path) -> None:
-        # Os dois sentidos: vanilla + série == shipping (rebase e upstream
-        # partem daqui).
         trabalho = tmp_path / "fwd"
         trabalho.mkdir()
         alvo = trabalho / "hid-nintendo.c"
@@ -490,8 +408,6 @@ class TestFormatoDoPatchUpstream:
             assert "+++ b/drivers/hid/hid-nintendo.c" in corpo
 
     def test_signed_off_by_placeholder_anonimo(self) -> None:
-        # Gate check_anonymity: o repo fica anônimo; a submissão real troca o
-        # SoB (DCO exige pessoa) — decisão da mantenedora, fora do repo.
         for corpo in PATCHES:
             assert SOB_ANONIMO in corpo
 
@@ -518,12 +434,6 @@ class TestFormatoDoPatchUpstream:
 
 class TestModprobeConf:
     def test_cura_opt_in_completa(self) -> None:
-        # As pontas da cura são opt-in daqui (defaults do módulo == vanilla):
-        # retry de probe BT + não-transmitir após exceeded + registrar LEDs
-        # com SET inicial falho (fix 21/07 — medido: -110 no probe deixava o
-        # Pro Controller sem LEDs de player pela conexão inteira) + as três
-        # do clone USB 057E:2009 (25/07 — o 8BitDo Pro clona VID:PID E serial
-        # do genuíno e morre na probe, deixando o device sem driver nenhum).
         assert re.search(
             r"^options hid_nintendo bt_probe_retries=3 skip_tx_on_rate_exceeded=1"
             r" register_leds_on_set_failure=1"
@@ -535,10 +445,6 @@ class TestModprobeConf:
         ), "a cura entra pela conf: retries + skip_tx + regleds + tuning BT + clone USB"
 
     def test_degrade_usb_depende_do_register_leds(self) -> None:
-        # Armadilha real: com usb_probe_degrade=1 e register_leds_on_set_failure=0
-        # a probe do clone AINDA morreria, agora em joycon_leds_create — o
-        # degrade cobre read_info/IMU/report-mode/rumble, não os LEDs. Os dois
-        # andam juntos, e a conf tem que DIZER isso (senão alguém desliga um).
         linha_options = next(
             linha for linha in MODPROBE_CONF.splitlines() if linha.startswith("options ")
         )
@@ -549,8 +455,6 @@ class TestModprobeConf:
         )
 
     def test_params_do_clone_usb_documentados_com_o_porque(self) -> None:
-        # Números/flags órfãos são dívida: cada param do clone precisa de
-        # justificativa em comentário, além do valor na linha options.
         for nome in ("usb_cmd_pad_to_report", "usb_send_conn_status", "usb_probe_degrade"):
             assert MODPROBE_CONF.count(nome) >= 2, (
                 f"{nome} precisa de justificativa em comentário, não só o valor"
@@ -562,11 +466,6 @@ class TestModprobeConf:
         )
 
     def test_tuning_persistido_e_medido_e_documentado(self) -> None:
-        # Decisão 21/07 (supersede "só a cura, nada de tuning" da Onda T):
-        # com 4 controles BT o rádio congestionado derrubou o probe (13x
-        # timeout + -110); os limiares maiores SÃO parte da cura e ficam
-        # persistidos — mas cada um precisa estar JUSTIFICADO no comentário
-        # da conf (sem números órfãos) e reversível ao vivo via /sys.
         linhas_options = [
             linha
             for linha in MODPROBE_CONF.splitlines()

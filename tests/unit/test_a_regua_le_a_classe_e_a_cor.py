@@ -62,8 +62,6 @@ sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.interface import regua_do_mockup as regua
 
-#: OS QUATRO DEGRAUS DA VIBRAÇÃO, na forma em que a página os desenha: um
-#: endereço só, quatro elementos, e a classe ``on`` dizendo qual está aceso.
 DEGRAUS = (
     '<div data-controle="p1"><div class="seg">'
     '<button data-campo="degrau" data-hef-alvo="classe" '
@@ -78,7 +76,6 @@ DEGRAUS = (
 )
 
 
-# -- o que o ARQUIVO crava -----------------------------------------------
 def test_a_classe_cravada_e_lida_do_arquivo():
     """O valor de um campo ``classe`` é o ESTADO, não o rótulo do botão."""
     campos = regua._campos_cravados(DEGRAUS)
@@ -107,12 +104,7 @@ def test_a_classe_nomeada_e_respeitada():
 
 
 def test_a_cor_cravada_e_lida_do_estilo_e_nao_do_texto():
-    """O clique do analógico é COR — e o texto ``L3`` continua sendo ``L3``.
-
-    Se este teste passar a ver ``'L3'``, a régua voltou a ler o campo pelo
-    texto e um campo de cor vira INDECIDÍVEL para sempre: pintar uma cor não
-    mexe numa letra.
-    """
+    """O clique do analógico é COR — e o texto ``L3`` continua sendo ``L3``."""
     campos = regua._campos_cravados(
         '<span class="rotl" data-campo="l3" data-hef-alvo="cor" '
         'style="color:#6272a4">L3</span>'
@@ -120,7 +112,6 @@ def test_a_cor_cravada_e_lida_do_estilo_e_nao_do_texto():
     assert [c.valor for c in campos] == ["rgb(98, 114, 164)", ""]
 
 
-# -- a cor DECLARADA atravessa a mesma normalização -----------------------
 def test_a_cor_declarada_pelo_pacote_passa_pela_mesma_normalizacao():
     """O terceiro lado do casamento, e era o que faltava.
 
@@ -160,12 +151,7 @@ def test_a_cor_que_o_pacote_erra_continua_acusada():
 
 
 def test_a_cor_vazia_declarada_e_a_cor_apagada_na_tela():
-    """`None` num campo de cor APAGA a cor de linha — não escreve travessão.
-
-    O `escrever()` do piloto faz `el.style.color = ''` no vazio, e `''` é o que
-    o leitor devolve. Traduzir o vazio para `'—'`, como o texto faz, acusaria
-    endereço morto sobre o analógico que acabou de ser solto.
-    """
+    """`None` num campo de cor APAGA a cor de linha — não escreve travessão."""
     cravados = regua._campos_cravados(
         '<span data-campo="l3" data-hef-alvo="cor">L3</span>')
     for declarado in (None, ""):
@@ -173,14 +159,8 @@ def test_a_cor_vazia_declarada_e_a_cor_apagada_na_tela():
         assert v.classe == regua.PRODUTO, f"{declarado!r}: {v.nota}"
 
 
-# -- a declaração de um GRUPO ---------------------------------------------
 def test_uma_declaracao_de_grupo_apaga_as_irmas_sem_virar_endereco_morto():
-    """O pacote declara ``'max'`` UMA vez, e os quatro elementos são visitados.
-
-    Sem a localização, os três não-``max`` teriam ``declarado='max'`` e
-    ``vivo=''`` — e a régua acusaria TRÊS endereços mortos toda vez que o
-    produto acertasse. Este é o teste que impede a régua de reprovar a cura.
-    """
+    """O pacote declara ``'max'`` UMA vez, e os quatro elementos são visitados."""
     cravados = regua._campos_cravados(DEGRAUS)
     vereditos = regua._classificar(
         cravados, [c.valor for c in cravados],
@@ -213,21 +193,7 @@ def test_o_grupo_que_o_produto_declara_errado_continua_acusado():
 
 
 def test_o_token_que_nenhum_degrau_conhece_e_endereco_morto():
-    """O DETECTOR DE ENDEREÇO MORTO ESTAVA DESARMADO neste alvo.
-
-    Medido em 02/09/2026: com o pacote emitindo ``'maximo'`` (noqa-acento, é
-    valor de máquina) — um token que NENHUM dos quatro degraus conhece —, a
-    tela fica INTEIRAMENTE APAGADA, e a régua dava os MESMOS ``4 PRODUTO`` da
-    tela que acende certo. A causa: a
-    localização do grupo colapsava toda declaração que não casa para ``''``, e
-    ``''`` é exatamente o que um degrau apagado mostra.
-
-    O defeito que o enunciado desta cura manda impedir — *"o segundo clique
-    deixa dois degraus acesos"* — tem um irmão que ninguém via: **nenhum aceso**.
-
-    A MORDIDA: tire o ramo do token desconhecido de
-    ``_declarado_neste_elemento`` e este teste reprova com quatro PRODUTO.
-    """
+    """O DETECTOR DE ENDEREÇO MORTO ESTAVA DESARMADO neste alvo."""
     cravados = regua._campos_cravados(DEGRAUS)
     apagada = ["", "", "", ""]
     vereditos = regua._classificar(cravados, apagada,
@@ -241,8 +207,6 @@ def test_o_token_que_nenhum_degrau_conhece_e_endereco_morto():
         "a nota tem de NOMEAR o token que o pacote emitiu — senão quem lê o "
         "relato não sabe o que procurar no código")
 
-    # e o token CERTO continua dando os quatro do produto: a régua nova não
-    # pode acusar quem acerta.
     acesa = ["", "", "max", ""]
     certos = regua._classificar(cravados, acesa, {("p1", "degrau"): "max"},
                                 [True] * 4)
@@ -250,13 +214,7 @@ def test_o_token_que_nenhum_degrau_conhece_e_endereco_morto():
 
 
 def test_apagar_o_grupo_inteiro_continua_sendo_legitimo():
-    """Um lugar VAZIO da mesa apaga os quatro degraus, e isso não é defeito.
-
-    O molde do lugar sem dono escreve travessão, e o ``ligado()`` dos dois lados
-    trata o travessão como DESLIGADO. Se esta régua nova acusasse aqui, ela
-    reprovaria a cura do estado vazio — o defeito que esta casa já nomeou onze
-    vezes num dia.
-    """
+    """Um lugar VAZIO da mesa apaga os quatro degraus, e isso não é defeito."""
     cravados = regua._campos_cravados(DEGRAUS)
     for declarado in ("—", "", None, False):
         vereditos = regua._classificar(cravados, ["", "", "", ""],

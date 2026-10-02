@@ -1,14 +1,4 @@
-"""Backend fake para testes sem hardware.
-
-Implementa `IController` com comportamento determinístico:
-- Inicia desconectado; `connect()` marca conectado e carrega um snapshot.
-- `read_state()` avança entre snapshots pré-definidos (ou um padrão único).
-- `set_trigger/set_led/set_rumble` gravam em listas internas pra inspeção.
-
-Replay de captures binários (V2-13, V3-8, INFRA.2): formato é JSONL
-comprimido com gzip; `FakeController.from_capture(path)` carrega e
-cada `read_state()` avança pela trilha temporal.
-"""
+"""Backend fake para testes sem hardware."""
 from __future__ import annotations
 
 import gzip
@@ -37,25 +27,14 @@ class FakeControllerCommand:
 
 @dataclass
 class FakeLedState:
-    """Último estado de LED aplicado via set_led — inspecionado em testes.
-
-    - `color`: RGB (r, g, b) enviado ao hardware (ja com brightness escalado).
-    - `brightness`: valor float [0.0, 1.0] do último set_led_with_brightness.
-      Fica em None se set_led foi chamado sem brightness (compatibilidade).
-    """
+    """Último estado de LED aplicado via set_led — inspecionado em testes."""
 
     color: tuple[int, int, int]
     brightness: float | None = None
 
 
 class FakeController(IController):
-    """Controle fake para testes unit e integration.
-
-    Parâmetros:
-      transport: "usb" ou "bt".
-      states: sequência de `ControllerState` retornados em cada `read_state`.
-        Após esgotar, repete o último indefinidamente.
-    """
+    """Controle fake para testes unit e integration."""
 
     DEFAULT_STATE: ClassVar[ControllerState] = ControllerState(
         battery_pct=75,
@@ -76,21 +55,13 @@ class FakeController(IController):
         self._connected: bool = False
         self.commands: list[FakeControllerCommand] = []
         self.last_player_leds: tuple[bool, bool, bool, bool, bool] | None = None
-        # Último estado de LED gravado — inspecionado em testes de brightness.
         self.last_led: FakeLedState | None = None
-        # Histórico de chamadas set_mic_led (INFRA-SET-MIC-LED-01).
         self.mic_led_history: list[bool] = []
-        # Conjunto de botões a injetar no próximo read_state (INFRA-BUTTON-EVENTS-01).
         self._next_buttons: frozenset[str] = frozenset()
-        # Simular botão Mic via mic_btn_pressed (INFRA-MIC-HID-01).
         self.mic_btn_pressed: bool = False
 
     def set_buttons(self, names: Iterable[str]) -> None:
-        """Define o conjunto de botões pressionados injetado no próximo read_state.
-
-        Útil em testes para simular botões sem precisar construir ControllerState
-        manualmente. Acumula com `mic_btn_pressed` se este for True.
-        """
+        """Define o conjunto de botões pressionados injetado no próximo read_state."""
         self._next_buttons = frozenset(names)
 
     def connect(self) -> None:
@@ -115,12 +86,7 @@ class FakeController(IController):
         return self._connected
 
     def read_state(self) -> ControllerState:
-        """Retorna próximo estado da lista (ou repete o último).
-
-        Se o estado já tiver `buttons_pressed` populado (via construtor), usa
-        esse valor. Caso contrário, injeta os botões definidos via `set_buttons`
-        e acrescenta ``"mic_btn"`` se `mic_btn_pressed` for True.
-        """
+        """Retorna próximo estado da lista (ou repete o último)."""
         if not self._connected:
             raise RuntimeError("FakeController não conectado — chamar connect() antes")
         if self._idx < len(self._states):
@@ -128,7 +94,6 @@ class FakeController(IController):
             self._idx += 1
         else:
             state = self._states[-1]
-        # Propagar botões simulados se o estado não tiver buttons_pressed explícito.
         if not state.buttons_pressed:
             extra: frozenset[str] = frozenset()
             if self.mic_btn_pressed:
@@ -155,11 +120,7 @@ class FakeController(IController):
         self.commands.append(FakeControllerCommand("set_player_leds", bits))
 
     def set_mic_led(self, aceso: bool) -> None:
-        """Grava histórico de chamadas para inspeção em testes (INFRA-SET-MIC-LED-01).
-
-        `aceso` = o que a LUZ faz. Nesta casa, aceso = mic VIVO
-        (MIC-DA-MESA-ELEICAO-01) — ver `IController.set_mic_led`.
-        """
+        """Grava histórico de chamadas para inspeção em testes (INFRA-SET-MIC-LED-01)."""
         self.mic_led_history.append(bool(aceso))
         self.commands.append(FakeControllerCommand("set_mic_led", bool(aceso)))
 
@@ -174,13 +135,7 @@ class FakeController(IController):
 
     @classmethod
     def from_capture(cls, path: Path | str) -> FakeController:
-        """Carrega capture .bin gerado por record_hid_capture.py.
-
-        Lê header (transport, version, sample_hz), converte cada sample em
-        `ControllerState` e devolve `FakeController` pronto com a sequência
-        cronológica. Testes chamam `connect()` e depois `read_state()` em
-        loop pra iterar pelos snapshots.
-        """
+        """Carrega capture .bin gerado por record_hid_capture.py."""
         p = Path(path)
         with gzip.open(p, "rb") as f:
             raw = f.read().decode("utf-8")

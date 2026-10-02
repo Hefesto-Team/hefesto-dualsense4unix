@@ -1,27 +1,4 @@
-"""Os endereços que a frente COMBINAÇÃO escreveu no mapa têm de bater com o
-envelope que o produto REALMENTE monta.
-
-POR QUE ESTE ARQUIVO EXISTE (03/09/2026): as sete linhas de
-``familia = combinacao`` do ``dualsense`` ganharam ``report_id`` e ``offset``
-nesta data, e nada disso foi ao aparelho — é leitura de fonte
-(``assets/dkms/hid-playstation/hid-playstation.c``, o SDL3 e a
-``pydualsense``), cruzada em
-``docs/protocol/combinacao-varios-controles-o-que-e-do-aparelho.md``.
-
-Texto de célula não morde nada sozinho. O que morde é AMARRAR o número escrito
-no mapa ao número que ``core/ds_output_report.py`` produz de verdade: se
-alguém deslocar um byte no CSV, ou deslocar o envelope no código, um destes nós
-reprova.
-
-A MORDIDA, provada em 03/09/2026 (espelho da árvore em ``/tmp``, ``PYTHONPATH``
-apontado para a cópia — a árvore de trabalho nunca foi mutada):
-
-- trocando ``buf[3 : 3 + COMMON_LEN]`` por ``buf[2 : 2 + COMMON_LEN]`` em
-  ``build_bt_report`` (o erro que a ``pydualsense`` comete no caminho BT),
-  reprovam os nós do envelope de rádio;
-- trocando um ``report[46]`` por ``report[45]`` no CSV, reprova o nó da
-  aritmética do ``common``.
-"""
+"""Os endereços que a frente COMBINAÇÃO escreveu no mapa têm de bater com o"""
 
 from __future__ import annotations
 
@@ -49,12 +26,8 @@ DOC = (
     / "combinacao-varios-controles-o-que-e-do-aparelho.md"
 )
 
-#: Onde o `common` começa dentro do buffer absoluto, por transporte. Não é
-#: constante mágica: é o que `build_usb_report` e `build_bt_report` fazem, e o
-#: nó `test_a_base_declarada_e_a_que_o_produto_monta` prova que é.
 BASE_POR_LADO = {"cabo": 1, "radio": 3}
 
-#: As sete linhas desta frente.
 CHAVES = (
     "combinacao.cabo_e_radio.entrada",
     "combinacao.cabo_e_radio.saida",
@@ -65,32 +38,10 @@ CHAVES = (
     "combinacao.tres_na_mesa",
 )
 
-#: Os graus que declaram que NINGUÉM tocou o aparelho. É contra este conjunto
-#: que `test_nada_desta_frente_afirma_ter_ido_ao_aparelho` mede, e não contra um
-#: literal — o que sobrou de uma régua que envelheceu em 03/09/2026.
-#:
-#: A RÉGUA CRAVAVA `afirmado-no-doc`, E ISSO A PÔS EM GUERRA COM OUTRA. A mesma
-#: célula (`combinacao.slot_jogador.estabilidade@dualsense · radio_de_onde_sei`)
-#: é cobrada por `test_a_mesa_e_cega_ao_transporte.py:206`, que exige
-#: `inferido-do-codigo` — o lado dela leu `daemon/subsystems/coop.py` e provou,
-#: por AST, que não há gate de transporte em ponto nenhum. **Nenhum valor
-#: deixava as duas verdes**, e trocar a célula para agradar esta régua
-#: derrubava a outra: as duas frentes escreveram na mesma coluna escalar, e
-#: uma coluna escalar não carrega dois graus.
-#:
-#: QUEM CEDE É ESTA, e a razão está no próprio nome dela: o contrato é *nada
-#: desta frente afirma ter ido ao APARELHO*. `inferido-do-codigo` também não foi
-#: ao aparelho. Cravar um literal era pedir mais do que o contrato — e o que o
-#: contrato proíbe (`medido`) continua proibido, porque ele está de fora deste
-#: conjunto. A régua não afrouxou: ela passou a medir o que promete.
 GRAUS_SEM_APARELHO = frozenset({"afirmado-no-doc", "inferido-do-codigo"})
 
-#: `common[N] = report[M]` — a forma que esta casa usa para escrever offset.
 PAR_COMMON_REPORT = re.compile(r"common\[(\d+)\]\s*=\s*report\[(\d+)\]")
 
-#: Os cinco desenhos do LED de jogador, centrados como o console faz. A tabela
-#: é RECALCULADA aqui a partir da regra, não copiada: jogador N acende N LEDs
-#: centrados na fileira de cinco.
 LEDS_DE_JOGADOR = {
     1: 0b00100,
     2: 0b01010,
@@ -121,11 +72,7 @@ def test_as_sete_linhas_existem() -> None:
 
 
 def test_a_base_declarada_e_a_que_o_produto_monta() -> None:
-    """`BASE_POR_LADO` não é constante mágica — é o que o produto faz.
-
-    Carimba um byte reconhecível em cada posição do `common` e confere onde ele
-    cai no buffer absoluto dos dois envelopes.
-    """
+    """`BASE_POR_LADO` não é constante mágica — é o que o produto faz."""
     for posicao in (0, 2, 3, 43, 46):
         common = bytearray(COMMON_LEN)
         common[posicao] = 0xA7
@@ -149,12 +96,7 @@ def test_a_base_declarada_e_a_que_o_produto_monta() -> None:
 @pytest.mark.parametrize("chave", CHAVES)
 @pytest.mark.parametrize("lado", sorted(BASE_POR_LADO))
 def test_a_aritmetica_do_common_no_mapa(chave: str, lado: str) -> None:
-    """Todo `common[N] = report[M]` escrito no mapa tem de fechar a conta.
-
-    É o nó que reprova quem deslocar um byte na célula — inclusive quem
-    conferir um offset de rádio contra a `pydualsense`, que erra por -1 no
-    caminho BT (ver §2.1 do documento desta frente).
-    """
+    """Todo `common[N] = report[M]` escrito no mapa tem de fechar a conta."""
     linha = MAPA_DA_FRENTE[chave]
     base = BASE_POR_LADO[lado]
     texto = " ".join(
@@ -191,12 +133,7 @@ def test_o_mostrador_do_numero_de_jogador_esta_no_lugar() -> None:
 
 
 def test_os_cinco_desenhos_do_led_de_jogador() -> None:
-    """Os cinco valores do mapa recalculados pela regra de centralizar.
-
-    Duas implementações independentes (o `hid-playstation` desta máquina e o
-    SDL3) escrevem os MESMOS cinco bytes; a tabela aqui é recalculada da regra,
-    e não copiada de nenhuma das duas.
-    """
+    """Os cinco valores do mapa recalculados pela regra de centralizar."""
     texto = (
         MAPA_DA_FRENTE["combinacao.slot_jogador.estabilidade"]["cabo_comando"]
         or ""
@@ -217,11 +154,7 @@ def test_os_cinco_desenhos_do_led_de_jogador() -> None:
 
 
 def test_o_dualsense_nao_tem_canal_de_taxa_e_o_mapa_diz_isso() -> None:
-    """A ausência é ACHADO, e ela precisa de rede.
-
-    Se alguém preencher a linha da taxa com um `report_id` inventado, ou apagar
-    o contraste com o DualShock 4 que sustenta a ausência, este nó reprova.
-    """
+    """A ausência é ACHADO, e ela precisa de rede."""
     linha = MAPA_DA_FRENTE["combinacao.cabo_e_radio.taxa"]
     for lado in BASE_POR_LADO:
         texto = (linha[f"{lado}_offset"] or "") + (linha[f"{lado}_comando"] or "")
@@ -239,12 +172,7 @@ def test_o_dualsense_nao_tem_canal_de_taxa_e_o_mapa_diz_isso() -> None:
 
 
 def test_nada_desta_frente_afirma_ter_ido_ao_aparelho() -> None:
-    """Nesta leva ninguém escreveu no aparelho: `ate_onde_foi` não pode ter
-    crescido, e nenhuma célula NOVA pode dizer `medido`.
-
-    O que já estava medido antes de 03/09 continua onde estava — o que este nó
-    proíbe é a frente da busca externa se promover a bancada.
-    """
+    """Nesta leva ninguém escreveu no aparelho: `ate_onde_foi` não pode ter"""
     linha = MAPA_DA_FRENTE["combinacao.slot_jogador.estabilidade"]
     assert linha["radio_de_onde_sei"] in GRAUS_SEM_APARELHO, (
         "o lado rádio do número de jogador nunca foi ao aparelho; o grau tem de "

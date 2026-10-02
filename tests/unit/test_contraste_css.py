@@ -1,51 +1,4 @@
-"""Contraste WCAG dos PARES texto x fundo do `theme.css`.
-
-Contraste é propriedade de PAR, e o projeto não tinha teste de par nenhum:
-
-* `test_color_contrast.py` não lê o CSS — ele afere um auxiliar de runtime que
-  corrige cores de lightbar vindas do IPC, com piso `3.0` (a régua de
-  NÃO-texto). Nenhum par do tema passa por lá.
-* `test_paleta_unica.py` valida o CONJUNTO: exige que todo hex pertença às 26
-  cores oficiais. `color: @comment` sobre `background-color: @chrome` é 100%
-  aprovado por ele — as duas cores são da paleta. **É possível reprovar WCAG
-  usando exclusivamente cores aprovadas**, e era o que acontecia em dez lugares.
-
-Este arquivo fecha esse furo. Ele extrai os tokens `@define-color`, monta os
-pares texto x fundo que a interface realmente produz e exige 4,5:1 (3,0:1 para
-texto grande, na definição do WCAG 1.4.3: >= 18,66px, ou >= 14px em negrito).
-
-## Como o par é montado
-
-O CSS diz a cor do texto; quem diz o FUNDO é a árvore de widgets, que o CSS
-sozinho não conhece. As três regras abaixo cobrem os casos reais sem inventar
-hierarquia:
-
-1. **Fundo próprio.** O bloco declara `background-color`: o par é com a cor
-   daquele mesmo bloco. Quando o bloco não declara `color`, a cor vem do bloco
-   irmão sem a pseudo-classe (`button:hover` herda o `color` de `button`) e, em
-   último caso, de `@fg` — o texto padrão da janela.
-2. **`<seletor> label`.** Um `GtkLabel` dentro de um widget pintado casa com o
-   fundo DAQUELE widget (`button.btn-apply label` x o verde do botão). É o
-   caminho que o BUG-GUI-FOOTER-LABEL-BRANCO-01 tornou obrigatório: a cor do
-   texto dos botões do rodapé só chega pelo seletor que casa o label.
-3. **Texto solto.** Sem fundo próprio e sem pai pintado, o rótulo pode cair em
-   qualquer uma das três superfícies que CONTÊM texto corrente — a janela
-   (`@app_bg`), o cromo (`@chrome`) e o card (`@bg`) — e precisa passar nas
-   três. `@elevated` fica fora de propósito: é superfície de CONTROLE (trilha
-   de slider, cabeçalho de tabela, corpo de botão), e todo texto que cai nela
-   chega por uma regra com fundo próprio, coberta pelo caso 1.
-
-`CONTEXTOS` restringe o caso 3 aos poucos seletores cujo fundo é ÚNICO e
-demonstrável — cada entrada diz onde a prova está.
-
-Nós que não pintam texto (trilha, cursor, seta, marcador de check) ficam de
-fora: `check:checked` pinta `color: @app_bg` sobre roxo, mas isso é o desenho
-do "visto", não uma letra.
-
-Estado `:disabled` fica isento do piso pelo próprio WCAG 1.4.3 ("Incidental:
-texto que é parte de um componente de interface INATIVO não tem requisito de
-contraste") — o que não impede o tema de melhorá-lo, e ele melhorou.
-"""
+"""Contraste WCAG dos PARES texto x fundo do `theme.css`."""
 from __future__ import annotations
 
 import re
@@ -59,30 +12,19 @@ CSS_PATH = (
     / "theme.css"
 )
 
-#: Pisos do WCAG 2.1 nível AA para contraste de texto.
 PISO_TEXTO_NORMAL = 4.5
 PISO_TEXTO_GRANDE = 3.0
 
-#: Tamanho que o texto SEM regra de `font-size` recebe. `gtk-font-name` é
-#: definido sem número, então o Pango entrega o padrão dele — 10pt a 96 dpi =
-#: 13,33px. É o tamanho de ~90% da janela, e é por isso que ele é o default
-#: aqui em vez de um dos degraus da escala tipográfica.
 PX_HERDADO = 13.33
 
-#: Fronteiras de "texto grande" do WCAG 1.4.3 (em px, a 96 dpi).
 PX_GRANDE = 18.66
 PX_GRANDE_NEGRITO = 14.0
 PESO_NEGRITO = 700
 
-#: Cor do texto quando nenhuma regra manda: `.hefesto-dualsense4unix-window`
-#: (e o `label` escopado nela) pintam tudo de `@fg`.
 COR_HERDADA = "@fg"
 
-#: As superfícies que CONTÊM texto corrente — o caso 3 do cabeçalho.
 SUPERFICIES_DE_TEXTO = ("@app_bg", "@chrome", "@bg")
 
-#: Nós GTK que desenham forma, não letra. Uma regra cujo último nó é um destes
-#: nunca produz par de texto.
 NOS_SEM_TEXTO = frozenset(
     {
         "trough",
@@ -102,16 +44,11 @@ NOS_SEM_TEXTO = frozenset(
     }
 )
 
-#: Seletores cujo fundo é ÚNICO e demonstrável — cada um com a prova.
 CONTEXTOS: dict[str, tuple[str, str]] = {
-    # O único uso da classe é o `app_subtitle` do glade, filho direto do
-    # `header_bar`, que carrega `.hefesto-barra-titulo` (fundo @chrome).
     ".hefesto-dualsense4unix-window label.hefesto-subtitulo": (
         "@chrome",
         "subtítulo do cabeçalho (glade: dentro de box.hefesto-barra-titulo)",
     ),
-    # A tira de abas é @chrome por regra deste mesmo arquivo, e o `tab` é
-    # filho obrigatório do `header`.
     ".hefesto-dualsense4unix-window notebook > header > tabs > tab": (
         "@chrome",
         "aba do notebook (o próprio CSS pinta notebook > header de @chrome)",
@@ -124,7 +61,6 @@ CONTEXTOS: dict[str, tuple[str, str]] = {
         "@chrome",
         "aba sob o mouse (mesma tira @chrome)",
     ),
-    # O GtkStatusbar do rodapé está dentro do box `.hefesto-rodape` (@chrome).
     ".hefesto-dualsense4unix-window statusbar": (
         "@chrome",
         "nota do rodapé (glade: dentro de box.hefesto-rodape)",
@@ -133,8 +69,6 @@ CONTEXTOS: dict[str, tuple[str, str]] = {
         "@chrome",
         "nota do rodapé (glade: dentro de box.hefesto-rodape)",
     ),
-    # O nó `text` do GtkProgressBar é IRMÃO de `progress` e mora sobre a
-    # trilha, que este arquivo pinta de @elevated.
     ".hefesto-dualsense4unix-window progressbar text": (
         "@elevated",
         "porcentagem da bateria (o nó text fica sobre a trilha @elevated)",
@@ -148,7 +82,6 @@ CONTEXTOS: dict[str, tuple[str, str]] = {
 _COMENTARIO = re.compile(r"/\*.*?\*/", re.DOTALL)
 _DEFINE = re.compile(r"@define-color\s+(\w+)\s+(#[0-9a-fA-F]{3,8})\s*;")
 _REGRA = re.compile(r"([^{}]+)\{([^{}]*)\}")
-#: Pseudo-classes/estados que o GTK empilha no fim de um seletor simples.
 _PSEUDO = re.compile(r":[a-z-]+$")
 
 
@@ -198,8 +131,6 @@ def _carregar() -> tuple[dict[str, str], list[Regra]]:
             chave, valor = pedaco.split(":", 1)
             decls[chave.strip()] = _expandir(valor)
         if seletores and decls:
-            # A linha do PRIMEIRO caractere do seletor: `m.start()` cai no fim
-            # do bloco anterior e reportaria a linha de cima.
             bruto = m.group(1)
             inicio = m.start(1) + (len(bruto) - len(bruto.lstrip()))
             regras.append(Regra(seletores, decls, _linha_de(inicio)))
@@ -207,11 +138,6 @@ def _carregar() -> tuple[dict[str, str], list[Regra]]:
 
 
 TOKENS, REGRAS = _carregar()
-
-
-# ---------------------------------------------------------------------------
-# WCAG 2.1 — luminância relativa e razão de contraste
-# ---------------------------------------------------------------------------
 
 
 def _para_rgb(valor: str) -> tuple[int, int, int] | None:
@@ -246,11 +172,6 @@ def razao(frente: str, fundo: str) -> float | None:
     la, lb = luminancia(a), luminancia(b)
     claro, escuro = max(la, lb), min(la, lb)
     return (claro + 0.05) / (escuro + 0.05)
-
-
-# ---------------------------------------------------------------------------
-# Montagem dos pares
-# ---------------------------------------------------------------------------
 
 
 def _partes(seletor: str) -> list[str]:
@@ -332,8 +253,6 @@ def _tamanho_efetivo(seletor: str) -> tuple[float, int]:
     """`(px, peso)` do texto daquele seletor."""
     px_txt = _buscar(TAMANHOS, seletor)
     if px_txt is None:
-        # A escala tipográfica mora em classes próprias: se o seletor carrega
-        # uma delas, o tamanho vem de lá.
         for parte in _partes(seletor):
             for classe in parte.split(".")[1:]:
                 declarado = _buscar(TAMANHOS, f".{classe}")
@@ -359,9 +278,6 @@ def _fundos_do_texto(seletor: str) -> list[tuple[str, str]]:
 
     partes = _partes(seletor)
     if partes and _PSEUDO.sub("", partes[-1]) == "label":
-        # Caso 2: um GtkLabel dentro de um widget pintado casa com o fundo
-        # DAQUELE widget. A raiz não conta como widget pintado — sobre ela o
-        # rótulo pode estar dentro de qualquer card.
         pai = _pai(seletor)
         while pai:
             fundo = _buscar(FUNDOS, pai)
@@ -439,19 +355,8 @@ def pares() -> list[Par]:
     return achados
 
 
-# ---------------------------------------------------------------------------
-# Testes
-# ---------------------------------------------------------------------------
-
-
 def test_todo_token_referenciado_existe() -> None:
-    """`@token` desconhecido DERRUBA A CARGA DO ARQUIVO INTEIRO no GTK3.
-
-    O projeto já tropeçou duas vezes no mesmo mecanismo com at-rules
-    (`theme.css:105` e `:805`): o parser trata o token que não conhece como
-    erro de sintaxe e desiste do CSS todo — a janela abre com o tema do
-    sistema, clara, e nada no log diz qual linha era.
-    """
+    """`@token` desconhecido DERRUBA A CARGA DO ARQUIVO INTEIRO no GTK3."""
     conhecidos = set(TOKENS)
     orfaos: dict[str, set[str]] = {}
     for regra in REGRAS:
@@ -486,14 +391,7 @@ def test_todo_par_texto_fundo_passa_no_wcag_aa() -> None:
 
 
 def test_a_paleta_tem_par_legivel_para_cada_superficie() -> None:
-    """Cada superfície de texto precisa de um degrau apagado que se leia nela.
-
-    O achado que motivou a sprint: `@comment` (#6272a4) é cor de BORDA, não de
-    texto — ele reprova sobre TODAS as superfícies do aplicativo. E `@text_muted`
-    passa sobre a janela e o cromo, mas NÃO sobre o card: dentro de card o
-    degrau apagado tem de ser `@text_soft`. Este teste trava as duas conclusões
-    para que a próxima edição não as desfaça sem perceber.
-    """
+    """Cada superfície de texto precisa de um degrau apagado que se leia nela."""
     for superficie in SUPERFICIES_DE_TEXTO:
         medida = razao("@comment", superficie)
         assert medida is not None and medida < PISO_TEXTO_NORMAL, (

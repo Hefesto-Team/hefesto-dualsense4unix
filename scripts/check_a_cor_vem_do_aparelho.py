@@ -120,64 +120,30 @@ RAIZ = pathlib.Path(__file__).resolve().parents[1]
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 CORES_CSV = RAIZ / "docs/data/cores-do-dualsense.csv"
 
-#: Os atributos que dão endereço a um elemento. São os MESMOS da
-#: ``regua_do_mockup`` e da régua irmã de propósito: uma terceira lista seria
-#: uma terceira forma de divergir em silêncio.
 ENDERECOS = ("data-campo", "data-papel", "data-hef")
 
-#: Comentário é prosa, e contá-lo inflaria o número — que é a coisa que esta
-#: casa mais derruba. As quebras de linha sobrevivem: sem isso um comentário de
-#: vinte linhas vira uma só e toda linha depois dele erra.
 COMENTARIO = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
 
 #: Só o HEXADECIMAL conta. Um ``--plastico:var(--border-forte)`` é o tom NEUTRO
-#: da folha de estilo — o que a página mostra quando não há cor lida —, e é
-#: exatamente o que a regra dela pede: campo sem informação não mostra nada.
 PLASTICO = re.compile(r"--plastico\s*:\s*(#[0-9a-fA-F]{3,8})")
 
-#: Uma declaração de zona dentro da folha do SVG.
 ZONA = re.compile(r"--z-[a-z0-9_-]+\s*:\s*#[0-9a-fA-F]{3,8}")
 
-#: O seletor com que a folha escolhe o modelo.
 REGRA_DE_COLORWAY = re.compile(r'svg\[data-colorway="([^"]+)"\]')
 
-#: O BLOCO QUE O PILOTO TROCA INTEIRO, por CLASSE e não por endereço.
-#:
-#: ``hefesto_vivo.pintar`` faz ``document.querySelector('.fita').outerHTML =``
-#: a cada tique, com o HTML que ``monta.fita(mesa=…)`` monta da mesa VIVA — e
-#: depois carimba o selo da visita em cada ``[data-campo]`` de dentro. Um chip
 #: com ``--plastico:#ae335a`` ali é o que o PRODUTO acabou de escrever, não o
-#: que o desenho cravou.
-#:
-#: Não dá para inferir isto do HTML: a troca é por SELETOR, e o seletor mora no
-#: JavaScript. Por isso é uma lista, curta, com a razão escrita — e o
-#: ``test_a_fita_e_a_unica_isenta_por_bloco`` cobra que ela continue sendo uma.
 TROCADOS_INTEIROS = ("fita",)
 
-#: Os alvos que ALCANÇAM cada família. Um endereço com o alvo errado não é
-#: cura: o ``escrever()`` cai no ramo padrão e escreve a cor como TEXTO.
 ALVO_DA_FAMILIA = {
     "plastico": ("plastico", "html"),
     "colorway": ("atributo", "html"),
 }
 
-#: Isenções declaradas, com a razão. ``(arquivo, família, trecho) -> por quê``.
-#: Vazia hoje, e isso é uma afirmação: nenhum congelado desta árvore se
-#: justificou ainda fora da ``.fita``.
 ISENCOES: dict[tuple[str, str, str], str] = {}
 
 
 def colorways_do_mapa() -> set[str]:
-    """Os 28 modelos, lidos do CSV que é dono deles.
-
-    Digitá-los aqui criaria uma segunda lista que envelhece sozinha — o defeito
-    que o ``cores-do-dualsense.csv`` existe para não ter.
-
-    A coluna é ``id`` (``white``, ``cosmic-red``…), e não ``nome`` (``White``,
-    ``Cosmic Red``): é o ``id`` que o ``gerar_cores_do_dualsense.py`` põe no
-    ``svg[data-colorway="…"]``. A régua irmã lê a coluna ``nome`` pela razão
-    oposta — ela procura o que a TELA mostra.
-    """
+    """Os 28 modelos, lidos do CSV que é dono deles."""
     linhas = [
         linha
         for linha in CORES_CSV.read_text(encoding="utf-8").splitlines()
@@ -191,19 +157,8 @@ def colorways_do_mapa() -> set[str]:
 
 
 class _Varredor(HTMLParser):
-    """Percorre a página guardando a PILHA de ancestrais.
+    """Percorre a página guardando a PILHA de ancestrais."""
 
-    A pilha é o que responde as duas perguntas que decidem um achado: *este
-    elemento está dentro de um bloco que o produto troca inteiro?* e *ele — ou
-    um ancestral — tem endereço com o alvo que alcança esta cor?*
-
-    POR QUE UMA PILHA, E NÃO A TAG MAIS PRÓXIMA À ESQUERDA: é a mesma lição que
-    a régua irmã pagou. Um chip dentro da ``.fita`` tem, à esquerda, um
-    ``</span>`` sem classe nenhuma — e uma régua que olhasse só isso acusaria
-    quem já está curado, que é o pior defeito que uma régua pode ter.
-    """
-
-    #: Tags que não fecham — sem elas a pilha desanda e tudo depois fica errado.
     VAZIAS = frozenset([
         "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
         "meta", "param", "source", "track", "wbr",
@@ -212,14 +167,12 @@ class _Varredor(HTMLParser):
     def __init__(self, colorways: set[str]) -> None:
         super().__init__(convert_charrefs=True)
         self.colorways = colorways
-        #: cada nível: ``(trocado_inteiro, alvo_vivo)``
         self.pilha: list[tuple[bool, str]] = []
         self.achados: list[tuple[int, str, str, str]] = []
         self._folha: list[str] | None = None
         self._folha_linha = 0
         self._folha_viva = False
 
-    # -- as duas perguntas da pilha ---------------------------------------
     def _trocado(self) -> bool:
         return any(t for t, _ in self.pilha)
 
@@ -231,12 +184,7 @@ class _Varredor(HTMLParser):
 
     @staticmethod
     def _alvo_deste(d: dict[str, str]) -> str:
-        """O alvo com que o produto reescreve ESTE elemento, ou ``""``.
-
-        Endereço sem alvo não conta, e alvo sem endereço também não: são as duas
-        metades da mesma fechadura. ``achar()`` acha pelo endereço; o
-        ``data-hef-alvo`` diz o que ele escreve quando chega lá.
-        """
+        """O alvo com que o produto reescreve ESTE elemento, ou ``""``."""
         if not any(a in d for a in ENDERECOS):
             return ""
         return (d.get("data-hef-alvo") or "texto").strip().lower()
@@ -250,16 +198,11 @@ class _Varredor(HTMLParser):
         coberto = self._trocado() or trocado
 
         # O `--plastico` mora no `style` do PRÓPRIO elemento, e é ele quem tem
-        # de ter o alvo: um pai endereçado não dá ao filho o direito de trazer
-        # cor congelada — o `escrever()` escreve no elemento que ACHOU.
         if not coberto and alvo not in ALVO_DA_FAMILIA["plastico"]:
             for m in PLASTICO.finditer(d.get("style", "")):
                 self._registrar(linha, "plastico", m.group(0),
                                 self._porque(alvo, "plastico"))
 
-        # O `data-colorway`, idem — e aqui o alvo tem de nomear O ATRIBUTO, não
-        # só ser `atributo`: um `data-hef-atributo="data-modelo"` escreve outra
-        # coisa e deixa o colorway cravado.
         if "data-colorway" in d and not coberto:
             nomeia = (d.get("data-hef-atributo") or "").strip().lower() == "data-colorway"
             if not (alvo == "atributo" and nomeia) and alvo != "html":
@@ -269,8 +212,6 @@ class _Varredor(HTMLParser):
         if tag == "style":
             self._folha = []
             self._folha_linha = linha
-            # Uma folha VIVA é a que o produto troca por dentro (alvo `html`) ou
-            # que mora num bloco trocado inteiro.
             self._folha_viva = coberto or alvo == "html" or herdado == "html"
 
         if tag not in self.VAZIAS:
@@ -292,19 +233,11 @@ class _Varredor(HTMLParser):
         if self._folha is not None:
             self._folha.append(data)
 
-    # -- a folha das zonas -------------------------------------------------
     def _fechar_folha(self, css: str) -> None:
-        """Julga uma folha de cores: tabela publicada, ou escolha cravada?
-
-        A folha que traz os 28 modelos do mapa É a tabela dela — o produto
-        escolhe por seletor, que é o mecanismo certo. A folha podada é uma
-        escolha: o SVG não tem como virar outro modelo, e é isso que se conta.
-        """
+        """Julga uma folha de cores: tabela publicada, ou escolha cravada?"""
         declarados = set(REGRA_DE_COLORWAY.findall(css))
         if not declarados:
             # Um `--plastico` de REGRA CSS (`.ctl[data-controle="p1"]{…}`) não
-            # tem elemento a que pertencer, e por isso não tem como ter alvo:
-            # ele é a página decidindo qual controle é de que cor.
             if not self._folha_viva:
                 for m in PLASTICO.finditer(css):
                     self._registrar(self._folha_linha, "plastico", m.group(0),
@@ -321,7 +254,6 @@ class _Varredor(HTMLParser):
                 f"({n} hexes de zona)",
                 f"faltam {len(faltam)} modelos do mapa dela", n)
 
-    # -- o registro --------------------------------------------------------
     @staticmethod
     def _porque(alvo: str, familia: str) -> str:
         if not alvo:
@@ -344,14 +276,7 @@ class _Varredor(HTMLParser):
 
 def cravados_no_texto(bruto: str, colorways: set[str],
                       nome: str = "") -> list[tuple[int, str, str, str, int]]:
-    """As cores de aparelho cravadas neste HTML.
-
-    Devolve ``(linha, família, trecho, razão, peso)`` — e quem conta soma os
-    PESOS, não as linhas.
-
-    Recebe TEXTO, e não caminho, porque é assim que a régua se morde: o teste
-    arranca a cura de uma página real em memória e exige ver a acusação voltar.
-    """
+    """As cores de aparelho cravadas neste HTML."""
     limpo = COMENTARIO.sub(
         lambda m: "".join(c if c == "\n" else " " for c in m.group(0)), bruto)
     varredor = _Varredor(colorways)
@@ -374,9 +299,6 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--censo", action="store_true",
                    help="só o retrato de hoje, sem reprovar")
-    #: A BANCADA existe aqui pela mesma razão da régua irmã: os geradores
-    #: escrevem em `mockup/` e PUBLICAR é ato dela. Quem conserta uma aba precisa
-    #: poder provar o conserto antes de ela mandar publicar.
     p.add_argument("--bancada", action="store_true",
                    help="mede `mockup/` em vez das páginas publicadas")
     p.add_argument("--aba", default="", help="só esta aba (ex.: 04)")

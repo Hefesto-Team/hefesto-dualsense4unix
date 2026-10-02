@@ -135,8 +135,6 @@ def _o_disco(caso: str) -> str:
     if caso != "sem-jogo":
         appid = 999999 if caso == "jogo-sem-perfil" else APPID
         pasta = xdg_paths.launch_env_dir(ensure=True)
-        # O jogo abriu há cinco minutos: além da janela do arme do lançamento,
-        # e dentro do frescor do marcador.
         (pasta / "last_run").write_text(
             f"appid={appid}\nepoch={int(time.time()) - 300}\npid={os.getpid()}\n",
             encoding="utf-8")
@@ -173,8 +171,6 @@ async def _o_reinicio(nome: str) -> lifecycle.Daemon:
             await asyncio.sleep(0.01)
         assert store.active_profile == nome, (
             f"o boot abriu em {store.active_profile!r}, e o caso pede {nome!r}")
-        # O autoswitch com a janela do jogo, nove segundos depois (03:06:59):
-        # com o Freestyle ligado ele não troca nada.
         if not session.load_freestyle_ligado():
             jogo_na_janela = JOGO if nome == JOGO else nome
             gerente_do_daemon(daemon, store=store).activate(jogo_na_janela, origin="autoswitch")
@@ -183,10 +179,6 @@ async def _o_reinicio(nome: str) -> lifecycle.Daemon:
         await corrida
     return daemon
 
-
-# =============================================================================
-# RÉGUA 6 — o boot nasce no modo do jogo
-# =============================================================================
 
 CASOS = {
     "jogo-com-perfil": "xbox",
@@ -222,16 +214,8 @@ def test_o_reinicio_nasce_no_modo_do_jogo_em_cena(caso: str, _lar: list[str]) ->
         "a trava segurou a troca: o pad nasceu num modo que ninguém escolheu para o jogo")
 
 
-# =============================================================================
-# RÉGUA 7 — o sinal antes do pad
-# =============================================================================
-
 def test_o_sinal_e_avaliado_antes_do_primeiro_pad(_lar: list[str]) -> None:
-    """No boot, a primeira avaliação do sinal de jogo vem antes da criação do pad do P1.
-
-    MORDIDA: devolva o `_wire_game_signal()` e o `_sync_game_signal()` do começo
-    do `run` para depois do `_safe_start("gamepad", …)` e reprova.
-    """
+    """No boot, a primeira avaliação do sinal de jogo vem antes da criação do pad do P1."""
     nome = _o_disco("jogo-com-perfil")
 
     asyncio.run(_o_reinicio(nome))
@@ -240,16 +224,8 @@ def test_o_sinal_e_avaliado_antes_do_primeiro_pad(_lar: list[str]) -> None:
     assert _lar.index("sinal") < _lar.index("pad"), f"a ordem do boot foi {_lar[:4]}"
 
 
-# =============================================================================
-# RÉGUA 8 — a escolha dela não é gravada pelo boot
-# =============================================================================
-
 def test_o_jogo_em_cena_nao_vira_a_escolha_dela(_lar: list[str]) -> None:
-    """Depois do reinício no jogo, a escolha dela segue no terceiro perfil.
-
-    MORDIDA: restaure com `origin="manual"` (o `partial(manager.activate, name,
-    origin="system")` do `restore_last_profile`) e a escolha vira o jogo.
-    """
+    """Depois do reinício no jogo, a escolha dela segue no terceiro perfil."""
     nome = _o_disco("jogo-com-perfil")
 
     asyncio.run(_o_reinicio(nome))

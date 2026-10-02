@@ -1,42 +1,8 @@
-"""DIÁLOGO-QUE-MATA-A-JANELA-01 — o aviso que deixou a janela dela morta (06/08).
-
-Em 06/08/2026, às 20h22, ela baixava a prioridade do perfil "Vitória" de 78
-para 0 na aba Perfis quando a janela morreu: *"interface travou legal aqui. nem
-consigo fazer nada nem fechar"*. O ``py-spy`` (PID 3878063) pegou a thread
-principal parada em ``dialog.run()`` dentro do ``confirm_downgrade_priority`` —
-e a foto da tela dela, tirada no mesmo minuto, **não tinha diálogo nenhum**.
-
-Este módulo guarda as três testemunhas da cura e o portão da classe:
-
-- **as três testemunhas rodam com GTK de verdade, sob ``xvfb-run``, num
-  subprocesso.** Não é preciosismo: o envelope da casa chama ``present()`` num
-  toplevel real, e um teste que fizesse isso no processo do ``pytest`` abriria
-  uma janela **na tela dela** — o defeito que estamos curando, repetido pelo
-  teste. O subprocesso também é o que dá a MORDIDA principal: arrancado o
-  vigia, o ``run()`` nunca retorna, o subprocesso estoura o prazo e o teste
-  reprova com a frase do defeito;
-- **o portão** (por AST) reprova qualquer ``.run()`` bloqueante novo em
-  ``app/`` fora do envelope, no idioma da casa: lista de autorizados que só
-  encolhe (precedente: ``test_gravacao_de_perfil_passa_pelo_funil.py``).
-
-A CONDIÇÃO REPRODUZIDA, E POR QUE ESTA
----------------------------------------
-Não dá para trazer o ``cosmic-comp`` para a bancada. O que dá — e foi MEDIDO em
-06/08/2026 — é reproduzir o ESTADO em que a janela dela morreu: um diálogo que
-o GTK jura ter mostrado e que o servidor gráfico não exibe. Retirando o
-``GdkWindow`` do diálogo (``get_window().hide()`` -> ``WITHDRAWN``), o GTK
-responde ``get_mapped()=True`` e ``get_visible()=True`` (as duas mentiras) e
-``is_active()=False`` (a verdade). É exatamente o quadro dela: processo vivo,
-laço rodando, nada na tela, nenhuma resposta possível.
-"""
+"""DIÁLOGO-QUE-MATA-A-JANELA-01 — o aviso que deixou a janela dela morta (06/08)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira no CI
-# headless, em vez de pular.
 exigir_gi_real("diálogo que não mata a janela")
 
 import ast
@@ -53,14 +19,8 @@ import pytest
 _RAIZ = Path(__file__).resolve().parents[2]
 _APP = _RAIZ / "src" / "hefesto_dualsense4unix" / "app"
 
-#: Prazo do subprocesso. Generoso para máquina carregada e MUITO menor que
-#: "para sempre": é ele que transforma um estrangulamento em teste vermelho.
 _PRAZO_S = 30.0
 
-
-# ---------------------------------------------------------------------------
-# Aparelhagem: GTK de verdade, display descartável, longe da tela dela
-# ---------------------------------------------------------------------------
 
 _PRELUDIO = """
 import json, sys, time
@@ -96,17 +56,12 @@ print("HEFESTO_JSON " + json.dumps(marcas))
 
 
 def _sob_xvfb(corpo: str, tmp_path: Path) -> dict:
-    """Roda ``corpo`` com GTK real num display descartável; devolve as marcas.
-
-    Nunca no processo do ``pytest`` e nunca no display dela: o envelope mostra
-    e presenteia um toplevel de verdade.
-    """
+    """Roda ``corpo`` com GTK real num display descartável; devolve as marcas."""
     if shutil.which("xvfb-run") is None:  # pragma: no cover — máquina sem xvfb
         pytest.skip("sem `xvfb-run` — este teste exige um display descartável")
 
     script = _PRELUDIO.format(raiz=str(_RAIZ / "src")) + corpo + _EPILOGO
     ambiente = dict(os.environ)
-    # CANÁRIO-FS-01: o subprocesso não escreve no home de verdade.
     ambiente["HOME"] = str(tmp_path)
     ambiente["XDG_CONFIG_HOME"] = str(tmp_path / "config")
     ambiente["XDG_DATA_HOME"] = str(tmp_path / "data")
@@ -136,23 +91,10 @@ def _sob_xvfb(corpo: str, tmp_path: Path) -> dict:
     pytest.fail(f"o subprocesso não imprimiu as marcas:\n{proc.stdout}\n{proc.stderr}")
 
 
-# ---------------------------------------------------------------------------
-# 1. O caminho feliz: o diálogo NASCE visível, focado e com pai transiente
-# ---------------------------------------------------------------------------
-
-
 def test_o_dialogo_nasce_visivel_focado_e_com_pai_transiente(
     tmp_path: Path,
 ) -> None:
-    """O aviso de rebaixamento chega a ela — e o vigia não atrapalha.
-
-    Três coisas na mesma foto, tirada de DENTRO do laço, no instante em que ela
-    veria o diálogo: pai transiente (sem ele o compositor não tem relação de
-    empilhamento para respeitar), ``GdkWindow`` visível, e foco de teclado —
-    que é o critério de `dialogo_alcancavel`, porque sem foco nem o ``Esc``
-    chega. E o quarto: `ultimo_socorro()` continua `None`, ou seja, um diálogo
-    que aparece direito nunca é cancelado pelo remédio.
-    """
+    """O aviso de rebaixamento chega a ela — e o vigia não atrapalha."""
     marcas = _sob_xvfb(
         """
 # FOTO-QUE-ESPERA-01 (13/08/2026): a foto era tirada UMA vez, 120 ms depois de
@@ -205,32 +147,15 @@ marcas["socorro"] = gui_dialogs.ultimo_socorro()
     assert marcas["tem_foco"] is True
     assert marcas["alcancavel"] is True
     assert marcas["modal"] is True
-    assert marcas["retorno"] is False  # respondemos CANCELAR
+    assert marcas["retorno"] is False
     assert marcas["socorro"] is None
     assert marcas["dialogos_restantes"] == 0
-
-
-# ---------------------------------------------------------------------------
-# 2. A CONDIÇÃO DELA: o diálogo não consegue aparecer — e a janela volta
-# ---------------------------------------------------------------------------
 
 
 def test_a_janela_volta_para_ela_quando_o_dialogo_nao_pode_aparecer(
     tmp_path: Path,
 ) -> None:
-    """O teste central: nada na tela, e mesmo assim a janela não fica presa.
-
-    A sabotagem é CONTÍNUA (a cada 20 ms o ``GdkWindow`` do diálogo é retirado
-    do servidor) porque é assim que um compositor que se recusa a mostrar a
-    janela se comporta: não adianta pedir de novo. É o único jeito honesto de
-    exercitar a desistência — com sabotagem única o socorro RESSUSCITA o
-    diálogo, e é isso que o teste seguinte prova.
-
-    De quebra, as marcas registram as duas MENTIRAS medidas: ``get_mapped()``
-    e ``get_visible()`` continuam dizendo "está lá" com a janela retirada do
-    servidor. Se alguém trocar o critério de `dialogo_alcancavel` por um
-    desses, este teste reprova.
-    """
+    """O teste central: nada na tela, e mesmo assim a janela não fica presa."""
     marcas = _sob_xvfb(
         """
 gui_dialogs.PRAZO_ATE_O_SOCORRO_MS = 80
@@ -258,35 +183,18 @@ marcas["socorro"] = gui_dialogs.ultimo_socorro()
 """,
         tmp_path,
     )
-    # Ela recuperou a janela — e nada foi rebaixado (o VETO: o aviso não some,
-    # e a resposta segura é a que não muda nada).
     assert marcas["retorno"] is False
     assert marcas["socorro"] == "rebaixar_prioridade"
     assert marcas["segundos"] < 5.0, (
         f"o laço durou {marcas['segundos']:.1f}s — o vigia demorou demais"
     )
     assert marcas["dialogos_restantes"] == 0
-    # As duas mentiras, medidas dentro do próprio teste.
     assert marcas["mente_get_mapped"] is True
     assert marcas["mente_get_visible"] is True
 
 
-# ---------------------------------------------------------------------------
-# 3. O socorro é SOCORRO: quando dá para ressuscitar, não se cancela nada
-# ---------------------------------------------------------------------------
-
-
 def test_o_socorro_ressuscita_o_dialogo_em_vez_de_cancelar(tmp_path: Path) -> None:
-    """Um sumiço passageiro não pode custar o gesto dela.
-
-    Aqui o diálogo é retirado do servidor UMA vez. O socorro
-    (``deiconify``/``show_all``/``present``) o traz de volta, a desistência vê
-    um diálogo alcançável e se cala, e ela responde "Baixar a prioridade" —
-    que é o que o produto tem de honrar.
-
-    Este é o contrapeso do teste anterior: sem ele, "curar" o defeito
-    cancelando todo diálogo passaria nos outros dois.
-    """
+    """Um sumiço passageiro não pode custar o gesto dela."""
     marcas = _sob_xvfb(
         """
 gui_dialogs.PRAZO_ATE_O_SOCORRO_MS = 80
@@ -333,21 +241,8 @@ marcas["socorro"] = gui_dialogs.ultimo_socorro()
     assert marcas["retorno"] is True
 
 
-# ---------------------------------------------------------------------------
-# O PORTÃO: nenhum `.run()` bloqueante novo em app/ fora do envelope
-# ---------------------------------------------------------------------------
-
-#: Receptores cujo ``.run()`` não tem nada com diálogo — a lista de quem o
-#: portão IGNORA. Deliberadamente curta: qualquer nome novo aqui é uma decisão,
-#: não um acidente.
 _RECEPTORES_QUE_NAO_SAO_DIALOGO = {"subprocess", "asyncio"}
 
-#: ``arquivo::função`` autorizados a chamar ``.run()`` em ``app/``.
-#:
-#: São TRÊS, e nenhum é diálogo: os dois ``app.run()`` são o laço principal do
-#: GTK, e o ``executar_dialogo`` é o envelope da casa — o único lugar do
-#: produto onde um diálogo pode bloquear, porque é o único que vigia.
-#: **Esta lista só pode ENCOLHER**: o teste abaixo trava o conteúdo dela.
 _AUTORIZADOS_A_BLOQUEAR = {
     "app.py::main",
     "gui_dialogs.py::executar_dialogo",
@@ -356,14 +251,7 @@ _AUTORIZADOS_A_BLOQUEAR = {
 
 
 def _chamadas_a_run(caminho: Path, raiz: Path | None = None) -> dict[str, list[int]]:
-    """``{"arquivo::função": [linhas]}`` para cada ``x.run()`` de ``caminho``.
-
-    Por AST, e não por texto, pelo mesmo motivo do portão irmão do funil de
-    gravação: texto acusaria a docstring que CITA ``dialog.run()`` — e este
-    módulo, o ``gui_dialogs`` e o ``daemon_actions`` citam de propósito, porque
-    é assim que a casa lembra por que o envelope existe. Portão com falso
-    positivo em massa vira portão desligado.
-    """
+    """``{"arquivo::função": [linhas]}`` para cada ``x.run()`` de ``caminho``."""
     relativo = caminho.relative_to(raiz or _APP).as_posix()
     arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
     achados: dict[str, list[int]] = {}
@@ -390,12 +278,7 @@ def _chamadas_a_run(caminho: Path, raiz: Path | None = None) -> dict[str, list[i
 
 
 def test_nenhum_dialogo_bloqueante_fora_do_envelope_da_casa() -> None:
-    """Quem escrever o próximo aviso não precisa lembrar de nada.
-
-    Se este teste reprovar, a resposta NÃO é acrescentar o arquivo à lista: é
-    chamar ``gui_dialogs.executar_dialogo(dialog, nome="...")``, que mostra o
-    diálogo de verdade e devolve a janela a ela se ele não conseguir aparecer.
-    """
+    """Quem escrever o próximo aviso não precisa lembrar de nada."""
     ofensores: dict[str, list[int]] = {}
     for caminho in sorted(_APP.rglob("*.py")):
         for chave, linhas in _chamadas_a_run(caminho).items():
@@ -412,11 +295,7 @@ def test_nenhum_dialogo_bloqueante_fora_do_envelope_da_casa() -> None:
 
 
 def test_a_lista_de_autorizados_a_bloquear_nao_cresce_em_silencio() -> None:
-    """Sem esta trava o portão se dissolveria por acréscimo.
-
-    Bastaria escrever o nome da função nova na lista para voltar a bloquear a
-    thread GTK com um diálogo cru.
-    """
+    """Sem esta trava o portão se dissolveria por acréscimo."""
     assert sorted(_AUTORIZADOS_A_BLOQUEAR) == [
         "app.py::main",
         "gui_dialogs.py::executar_dialogo",
@@ -425,12 +304,7 @@ def test_a_lista_de_autorizados_a_bloquear_nao_cresce_em_silencio() -> None:
 
 
 def test_o_portao_pegaria_um_dialogo_novo_com_run_cru(tmp_path: Path) -> None:
-    """O portão MORDE — provado contra um arquivo forjado, não por fé.
-
-    Sem esta prova, um portão quebrado (um ``ast.walk`` que perdesse o nome da
-    função, por exemplo) passaria despercebido justamente por estar sempre
-    verde.
-    """
+    """O portão MORDE — provado contra um arquivo forjado, não por fé."""
     forjado = tmp_path / "aviso_novo.py"
     forjado.write_text(
         "import subprocess\n"
@@ -442,23 +316,12 @@ def test_o_portao_pegaria_um_dialogo_novo_com_run_cru(tmp_path: Path) -> None:
     )
     achados = _chamadas_a_run(forjado, raiz=tmp_path)
 
-    # O `subprocess.run` da linha 4 é ignorado; o `dialog.run()` da 5 não.
     assert achados == {"aviso_novo.py::confirmar_algo": [5]}
     assert "aviso_novo.py::confirmar_algo" not in _AUTORIZADOS_A_BLOQUEAR
 
 
-# ---------------------------------------------------------------------------
-# A cobertura da CLASSE: os dez diálogos, não só o que a derrubou
-# ---------------------------------------------------------------------------
-
-
 def test_todo_dialogo_publico_da_casa_passa_pelo_envelope() -> None:
-    """Não curar um caso e deixar nove irmãos de pé.
-
-    Espelho por FONTE das funções públicas de `gui_dialogs` (o portão por AST
-    acima cobre o app inteiro; esta é a granularidade por função, no idioma que
-    `test_gui_dialogs_theme.py` já usa para o tema).
-    """
+    """Não curar um caso e deixar nove irmãos de pé."""
     from hefesto_dualsense4unix.app import gui_dialogs
     from hefesto_dualsense4unix.app.actions import footer_actions, profiles_actions
 
@@ -486,23 +349,6 @@ def test_todo_dialogo_publico_da_casa_passa_pelo_envelope() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# DIÁLOGO-QUE-MATA-A-JANELA-01, segunda metade (06/08/2026)
-#
-# A verificação adversarial refutou a primeira cura por um caminho que o portão
-# acima não enxerga: um diálogo `modal=True` mostrado com `show()`/`show_all()`
-# cru, respondendo por `connect("response")`. Ele NÃO chama `run()`, então
-# passava — e MEDIDO: o `show()` de um modal já instala o grab do GTK, e com a
-# janela fora do servidor a principal perde clique, tecla e o "X" do gerenciador
-# (0/0/0 contra 2/1/1 no controle). Nem o vigia nem o `SIGUSR1` o alcançavam.
-#
-# Era o "Desligar o Hefesto?" da aba Início — um botão que ela usa.
-#
-# Não bloquear NÃO salva: quem prende é a modalidade, não o laço. Por isso o
-# portão passou a olhar o PAR (modal + mostrar), e não só o `run()`.
-# ---------------------------------------------------------------------------
-
-#: Quem pode mostrar um diálogo modal por conta própria — só o envelope.
 _AUTORIZADOS_A_MOSTRAR_MODAL = frozenset({
     "gui_dialogs.py::_mostrar_e_vigiar",
 })
@@ -511,14 +357,7 @@ _AUTORIZADOS_A_MOSTRAR_MODAL = frozenset({
 def _dialogos_modais_mostrados_crus(
     caminho: Path, raiz: Path | None = None
 ) -> dict[str, list[int]]:
-    """Acha `Gtk.MessageDialog(... modal=True ...)` cujo `show()` é cru.
-
-    Heurística deliberada e declarada: dentro de uma mesma função, se há uma
-    construção de diálogo com `modal=True` E uma chamada `.show()`/`.show_all()`
-    que não seja do envelope, é ofensa. Não tenta provar que o objeto é o mesmo
-    — provar isso exigiria análise de fluxo, e o falso positivo aqui custa uma
-    linha de código, enquanto o falso negativo custou a sessão dela.
-    """
+    """Acha `Gtk.MessageDialog(... modal=True ...)` cujo `show()` é cru."""
     relativo = caminho.relative_to(raiz or _APP).as_posix()
     arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
     achados: dict[str, list[int]] = {}
@@ -532,14 +371,7 @@ def _dialogos_modais_mostrados_crus(
         )
 
     def _delega_ao_envelope(no: ast.AST) -> bool:
-        """A função entrega o diálogo ao envelope? Então o `show_all` é preparo.
-
-        MEDIDO ao escrever este portão: `prompt_profile_name` e
-        `show_external_controller` fazem `content.show_all()` / `dialog.show_all()`
-        e na linha SEGUINTE chamam `executar_dialogo`. São preparação de widget,
-        não a mostra final — acusá-las seria o falso positivo em massa que
-        transforma portão em portão desligado.
-        """
+        """A função entrega o diálogo ao envelope? Então o `show_all` é preparo."""
         for f in ast.walk(no):
             if isinstance(f, ast.Call):
                 alvo = f.func.attr if isinstance(f.func, ast.Attribute) else (
@@ -575,12 +407,7 @@ def _dialogos_modais_mostrados_crus(
 
 
 def test_nenhum_dialogo_modal_e_mostrado_fora_do_envelope() -> None:
-    """O par que a primeira cura não viu: modal + show, sem `run()`.
-
-    Se reprovar, a resposta é `gui_dialogs.mostrar_dialogo_assincrono(dialog,
-    nome="...")` no lugar do `show()` — ele mostra de verdade, arma o mesmo
-    vigia e registra o diálogo para o `SIGUSR1` alcançar.
-    """
+    """O par que a primeira cura não viu: modal + show, sem `run()`."""
     ofensores: dict[str, list[int]] = {}
     for caminho in sorted(_APP.rglob("*.py")):
         ofensores.update(_dialogos_modais_mostrados_crus(caminho))
@@ -593,11 +420,7 @@ def test_nenhum_dialogo_modal_e_mostrado_fora_do_envelope() -> None:
 
 
 def test_o_portao_pegaria_um_modal_mostrado_cru(tmp_path: Path) -> None:
-    """A mordida do portão novo, com arquivo forjado.
-
-    Foi assim que a verificação adversarial provou que o portão ANTIGO era cego:
-    com o padrão do `home_actions` os quatro testes ficavam verdes.
-    """
+    """A mordida do portão novo, com arquivo forjado."""
     forjado = tmp_path / "acoes_novas.py"
     forjado.write_text(
         "from gi.repository import Gtk\n"

@@ -56,8 +56,6 @@ for _p in (str(RAIZ / "src"),
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-#: A MESA DELA DE 03/09/2026 — um White no cabo e um por rádio sem cor lida.
-#: MAC da faixa sintética da casa: há dois portões de anonimato nesta árvore.
 MESA_DELA = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb"},
@@ -66,16 +64,11 @@ MESA_DELA = [
 ]
 
 #: A COR CONHECIDA E ACESA — o único ramo em que `rotulo_lightbar` não tem
-#: ressalva, e por isso o único em que o desenho PODE afirmar uma cor.
 NO_CABO = {"uniq": "aa:bb:cc:00:00:01", "transport": "usb", "connected": True,
            "player": 1, "player_slot": 1, "is_primary": True,
            "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
            "lightbar_source": "sysfs", "battery_pct": 95}
 
-#: A STEAM SEGURANDO O `fd` — a ressalva que estava viva na mesa dela quando
-#: este trabalho foi medido. O motor devolve a última cor NOSSA e um recado, e a
-#: regra dela manda o desenho calar: *"se não tá mostrando agora, não tem info
-#: pra mostrar no produto"*.
 NO_RADIO_DISPUTADO = {"uniq": "aa:bb:cc:00:00:02", "transport": "bt",
                       "connected": True, "player": 2, "player_slot": 2,
                       "is_primary": False, "lightbar_rgb": [255, 0, 0],
@@ -113,19 +106,8 @@ def _regra(folha: str, seletor: str) -> str:
     return achadas[-1] if achadas else ""
 
 
-# ---------------------------------------------------------------------------
-# 1. as duas cores das lâmpadas, no escopo do desenho e LIDAS do dono
-# ---------------------------------------------------------------------------
 def test_o_par_das_lampadas_e_lido_do_dono_e_nao_digitado(pacote04):
-    """`--led-apagado` e `--led-aceso` saem do `monta.CSS_LUZINHAS`.
-
-    Duas cópias divergem no primeiro ajuste, e a lâmpada PEQUENA e a GRANDE da
-    mesma célula passariam a ter dois brancos.
-
-    A MORDIDA: troque `token_das_luzinhas('--led-aceso')` por um `"#fff"`
-    escrito à mão em `tokens_da_luz` e este teste reprova — ele compara com o
-    que o dono declara, não com um valor que alguém digitou aqui.
-    """
+    """`--led-apagado` e `--led-aceso` saem do `monta.CSS_LUZINHAS`."""
     import monta
 
     dono = dict(re.findall(r"(--led-[a-z]+)\s*:\s*([^;}]+)", monta.CSS_LUZINHAS))
@@ -139,14 +121,7 @@ def test_o_par_das_lampadas_e_lido_do_dono_e_nao_digitado(pacote04):
 
 
 def test_o_par_nao_e_declarado_so_em_luzinhas(pacote04):
-    """O escopo é `.luz-grade`, e não `.luzinhas` — é isso que estava errado.
-
-    `.luzinhas` é o indicador PEQUENO; um `<rect>` dentro do SVG não desce dele.
-
-    A MORDIDA: ponha `ESCOPO_DO_DESENHO = ".luzinhas"` e este teste reprova —
-    foi exatamente esse escopo que deixou as cinco lâmpadas do desenho grande
-    apagadas na tela dela.
-    """
+    """O escopo é `.luz-grade`, e não `.luzinhas` — é isso que estava errado."""
     assert pacote04.ESCOPO_DO_DESENHO == ".luz-grade", (
         f"o escopo da folha do desenho virou {pacote04.ESCOPO_DO_DESENHO!r}; a "
         f"grade é quem envolve os SVGs, e é ela que tem de declarar o par.")
@@ -155,9 +130,6 @@ def test_o_par_nao_e_declarado_so_em_luzinhas(pacote04):
         "pequeno — as lâmpadas do desenho grande não descem dele.")
 
 
-# ---------------------------------------------------------------------------
-# 2. e 3. a barra — a cor que o motor afirma, e o silêncio quando ele não afirma
-# ---------------------------------------------------------------------------
 def test_a_barra_acende_a_cor_do_aparelho_e_vence_a_cravada(pacote04):
     """A cor da barra vem do dado, e a regra é `!important`.
 
@@ -179,17 +151,7 @@ def test_a_barra_acende_a_cor_do_aparelho_e_vence_a_cravada(pacote04):
 
 
 def test_sem_cor_a_afirmar_a_barra_apaga_com_initial(pacote04):
-    """Apagar é `initial`, e não um cinza escrito na folha viva.
-
-    Uma propriedade personalizada em `initial` fica *guaranteed-invalid*, e é
-    isso que faz o `fill:var(--luz,var(--luz-apagada))` da página cair no
-    SEGUNDO argumento — o mesmo caminho de uma coluna que nasce sem `--luz`. Com
-    um hexadecimal no lugar haveria um segundo "apagado" ao lado do que a aba já
-    declara, e o `drop-shadow(… var(--luz))` continuaria ACESO em volta de uma
-    barra apagada.
-
-    A MORDIDA: troque `BARRA_APAGADA` por `LUZ_APAGADA` e este teste reprova.
-    """
+    """Apagar é `initial`, e não um cinza escrito na folha viva."""
     assert pacote04.BARRA_APAGADA == "initial"
     folha = pacote04.folha_da_luz({"p1": ("", 1)})
     corpo = _regra(folha, f'.ctrl[data-controle="p1"] {pacote04.ALVO_DA_BARRA}')
@@ -212,9 +174,6 @@ def test_o_travessao_tambem_apaga(pacote04):
         f"o travessão virou cor de barra: {corpo!r}")
 
 
-# ---------------------------------------------------------------------------
-# 4. as cinco lâmpadas — o padrão do DAEMON, e a ordem que decide
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, 5, 6, 7, 8, 9])
 def test_as_lampadas_seguem_o_padrao_do_daemon(pacote04, numero):
     """Quem diz quais acendem é `core/led_control.player_led_pattern`.
@@ -238,15 +197,7 @@ def test_as_lampadas_seguem_o_padrao_do_daemon(pacote04, numero):
 
 
 def test_apaga_as_cinco_antes_de_acender_as_do_padrao(pacote04):
-    """A ordem é o que decide: as duas regras valem (0,3,0) e as duas são
-    `!important`, então quem vem por último ganha.
-
-    Escrever na ordem inversa apagaria a lâmpada que acabou de acender — e a
-    tela ficaria como estava antes desta cura, com as cinco iguais.
-
-    A MORDIDA: mova o laço do padrão para ANTES da regra que apaga as cinco e
-    este teste reprova.
-    """
+    """A ordem é o que decide: as duas regras valem (0,3,0) e as duas são"""
     folha = pacote04.folha_da_luz({"p1": ("#0000FF", 1)})
     apaga = folha.index(f'.ctrl[data-controle="p1"] {pacote04.ALVO_DAS_LAMPADAS}')
     acende = folha.index('.ctrl[data-controle="p1"] [id$="-led-jogador-3"]')
@@ -257,29 +208,15 @@ def test_apaga_as_cinco_antes_de_acender_as_do_padrao(pacote04):
 
 
 def test_sem_numero_nenhuma_lampada_acende(pacote04):
-    """`None` quer dizer "não sei o número", e não "player 1".
-
-    A MORDIDA: troque o guarda por um `numero or 1` e este teste reprova — a
-    tela passaria a afirmar um número que ninguém leu.
-    """
+    """`None` quer dizer "não sei o número", e não "player 1"."""
     folha = pacote04.folha_da_luz({"p1": ("#0000FF", None)})
     assert "--led-aceso" not in folha.split("led-jogador-\"]", 1)[-1], (
         "sem número a folha acendeu lâmpada — o desenho estaria dizendo um "
         "número que a mesa não deu.")
 
 
-# ---------------------------------------------------------------------------
-# 5. o lugar sem controle — o `--luz` do mockup não sobrevive a ele
-# ---------------------------------------------------------------------------
 def test_um_lugar_sem_controle_apaga(pacote04):
-    """Os quatro lugares recebem regra, e não só os que têm dono.
-
-    O `il-p2-lightbar` do desenho nasce com `--luz:#FF5555`; sem uma regra que o
-    apague, um "P2 Desconectado" fica com a barra vermelha do mockup acesa.
-
-    A MORDIDA: troque `TODOS_OS_LUGARES | set(luzes)` por `set(luzes)` e este
-    teste reprova — foi assim que a coluna vazia guardou a luz do mockup.
-    """
+    """Os quatro lugares recebem regra, e não só os que têm dono."""
     from pacotes import TODOS_OS_LUGARES
 
     folha = pacote04.folha_da_luz({"p1": ("#0000FF", 1)})
@@ -293,9 +230,6 @@ def test_um_lugar_sem_controle_apaga(pacote04):
                 f"{corpo!r}")
 
 
-# ---------------------------------------------------------------------------
-# 6. a folha chega à página — pelo seletor que o PUBLICADO tem
-# ---------------------------------------------------------------------------
 def test_o_pacote_manda_a_folha_da_luz_no_bloco_publicado(carga, pacote04):
     """A folha viva sai no `blocos:` do `#plastico-vivo`.
 
@@ -316,13 +250,7 @@ def test_o_pacote_manda_a_folha_da_luz_no_bloco_publicado(carga, pacote04):
 
 
 def test_a_pagina_publicada_tem_a_ancora_da_folha_viva():
-    """`<style id="plastico-vivo">` existe no PUBLICADO, e é o que faz a cura
-    chegar hoje. Sem ele o `blocos:` não acha onde pousar e some calado.
-
-    A MORDIDA: aponte o `blocos` para um `#luz-viva` que a página não tem e este
-    teste continua verde — por isso ele mede a PÁGINA, e o de cima mede o
-    pacote. Os dois juntos é que dizem "o valor sai e tem onde chegar".
-    """
+    """`<style id="plastico-vivo">` existe no PUBLICADO, e é o que faz a cura"""
     import onde
 
     publicado = onde.pagina("04-iluminacao.html",
@@ -358,14 +286,7 @@ def test_a_cor_da_barra_e_a_que_o_motor_afirma(carga):
 
 
 def test_a_bancada_declara_o_par_no_escopo_do_desenho():
-    """O HTML da bancada — o que ELA olha — traz a declaração na folha da página.
-
-    A folha VIVA só existe com o daemon; a bancada é um arquivo que ela abre no
-    navegador, e lá as cinco lâmpadas têm de acender do mesmo jeito.
-
-    A MORDIDA: tire o `CSS_DA_LUZ_NO_DESENHO` do `CSS` do gerador, rode
-    `aba04.py`, e este teste reprova.
-    """
+    """O HTML da bancada — o que ELA olha — traz a declaração na folha da página."""
     import onde
     from pacotes import a04_iluminacao as a04
 

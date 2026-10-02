@@ -1,59 +1,4 @@
-"""A memória dos controles: onde ela mora, e como se guarda e se devolve.
-
-ESQUECER-OS-CONTROLES-01 (25/09/2026). Pedido dela: simular a primeira vez que
-uma pessoa conecta os controles, para ver se algo está amarrado à máquina dela
-ou a um controle específico — *«meu medo é o programa hoje não estar preparado
-como produto»*. E o alcance cresceu no mesmo dia: guardar a casa inteira,
-desinstalar, conferir que a máquina está limpa, instalar de novo, testar tudo
-e devolver.
-
-ESTE MÓDULO É O DONO DO INVENTÁRIO, e é o único
------------------------------------------------
-O :data:`INVENTARIO` diz cada lugar onde o produto grava algo que identifica um
-controle (alcance ``controles``) ou que é da pessoa e tem de atravessar um
-uninstall (alcance ``casa``), com o dono no código. Quem move, quem copia, quem
-devolve e quem pergunta «a máquina está limpa?» leem DAQUI — o comando da CLI
-(``cli/cmd_esquecer.py``), o script da casa inteira
-(``scripts/guardar-e-devolver-a-casa.py``) e a régua
-(``tests/unit/test_esquecer_os_controles.py``). Uma lista digitada em qualquer
-um dos três seria a segunda lista, e a segunda lista envelhece calada.
-
-SÓ BIBLIOTECA PADRÃO, e é estrutural
-------------------------------------
-Depois do ``uninstall.sh`` o comando do Hefesto não existe mais, e o devolver
-tem de rodar assim mesmo: o script da casa carrega ESTE arquivo pelo caminho,
-com o ``python3`` do sistema. E a parte do root roda este mesmo arquivo como
-script (``sudo -A python3 -I <este arquivo> raiz ...``), sem o pacote no
-``sys.path``. Por isso nada aqui importa ``platformdirs`` nem o resto do pacote:
-os caminhos XDG são resolvidos pela mesma regra que o ``platformdirs`` usa no
-Linux, e a régua confere que as duas respostas são a mesma.
-
-MOVER, NUNCA APAGAR
--------------------
-Nada sai do disco. O esquecer MOVE para uma pasta datada; o devolver põe o que
-estiver no lugar (o que o teste produziu) numa subpasta ``depois-do-teste`` e só
-então devolve a cópia guardada. As duas voltas são reversíveis.
-
-O PAREAMENTO NO BLUEZ, medido contra o ``RemoveDevice``
--------------------------------------------------------
-O ``RemoveDevice`` do BlueZ apaga a pasta do aparelho (e tira os registros SDP do
-cache): não tem volta. Mover a pasta com o ``bluetoothd`` parado tem volta DO
-LADO DA MÁQUINA — e só dela. O controle guarda UMA chave de pareamento: se ele
-for pareado de novo (nesta máquina, em outro adaptador, num console) ou
-resetado pelo botão de trás, a chave antiga morreu nele, e devolver a pasta
-antiga seria plantar uma chave que o controle recusa (o laço de autenticação que
-o ``bt_bonds_autorestore.sh`` descreve). Por isso o devolver do BlueZ NÃO põe a
-pasta antiga por cima de um pareamento vivo do mesmo controle, em adaptador
-nenhum: o pareamento vivo é o que o controle conhece.
-
-O ``bluetoothd`` é parado pelo MESMO roteiro do ``bt_bonds_restore.sh`` (máscara
-de execução, parada irreversível, espera, e na volta o agente de pareamento
-religado com ``reset-failed`` — a AGENTE-QUE-NAO-VOLTA-01 custou oito horas).
-Uma parada limpa não dispara o ``bt_bonds_autorestore.sh`` (ele só age na
-MORTE), e o acervo de cópias do Hefesto sai JUNTO com os pareamentos, depois
-deles: nenhum instantâneo de antes do esquecer sobra para ressuscitar o que foi
-esquecido.
-"""
+"""A memória dos controles: onde ela mora, e como se guarda e se devolve."""
 from __future__ import annotations
 
 import configparser
@@ -75,12 +20,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-# ══ 0. A identidade do app, do dono ═════════════════════════════════════════
-#
-# «O nome do app não se digita» (``utils/identidade.py``). Como pacote, o import
-# normal; como script avulso (a parte do root, o script da casa), o irmão pelo
-# caminho — ele é só biblioteca padrão.
-
 
 def _carregar_irmao(nome: str, arquivo: Path) -> ModuleType:
     """Carrega um módulo stdlib pelo caminho, sem o pacote no ``sys.path``."""
@@ -98,7 +37,7 @@ def _carregar_irmao(nome: str, arquivo: Path) -> ModuleType:
 
 try:
     from hefesto_dualsense4unix.utils import identidade as _identidade
-except ImportError:  # script avulso: python3 -I <este arquivo>
+except ImportError:
     _identidade = _carregar_irmao(
         "_hefesto_identidade", Path(__file__).with_name("identidade.py")
     )
@@ -107,58 +46,34 @@ _ID = _identidade.atual()
 SLUG: str = _ID.slug
 UNIT_DO_DAEMON: str = _ID.unit_daemon
 
-#: A pasta do root que o install cria (``scripts/install_udev.sh``) e onde moram
-#: o acervo de cópias de pareamento e o diário do root.
 VARLIB_DO_PRODUTO = Path("/var/lib") / SLUG
 
-#: O armazenamento do BlueZ.
 BLUEZ_REAL = Path("/var/lib/bluetooth")
 
-#: Onde a parte do root guarda — AO LADO do original, fora da pasta do produto:
-#: o ``uninstall.sh --purge-config`` apaga ``/var/lib/<slug>`` e não pode levar a
-#: cópia junto. Árvore 700, porque leva chave de pareamento.
 GUARDADO_DO_ROOT_REAL = Path("/var/lib/hefesto-memoria-guardada")
 
-#: O nome da pasta do lado dela, dentro do ``XDG_STATE_HOME``. Fora da pasta do
-#: produto pelo mesmo motivo: o uninstall não a vê, e o «limpa?» não a confunde
-#: com rastro.
 NOME_DO_GUARDADO = "hefesto-memoria-guardada"
 
-#: Os dois alcances.
 CONTROLES = "controles"
 CASA = "casa"
 ALCANCES = (CONTROLES, CASA)
 
-#: De quem é o lugar.
 USUARIO = "pessoa"
 ROOT = "root"
 
-#: O que se faz com cada lugar ao guardar.
 MOVER = "mover"
 COPIAR = "copiar"
 TIRAR_A_CHAVE = "tirar-a-chave-dos-perfis"
 PAREAMENTOS = "pareamentos-do-bluez"
 
-#: Forma do manifesto (sobe quando o formato mudar de um jeito que o devolver
-#: precise saber).
 FORMA_DO_MANIFESTO = 1
 
-#: A chave dos ajustes por controle no perfil — ``profiles/schema.py``
-#: (``Profile.controllers``), um mapa MAC → ajustes.
 CHAVE_DOS_AJUSTES_POR_CONTROLE = "controllers"
 
-#: Endereço como o BlueZ grava no disco (maiúsculas, com dois-pontos).
 _FORMA_DO_MAC = re.compile(r"^[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}$")
 
-#: O nome de uma pasta guardada: ``AAAAMMDD-HHMMSS-<alcance>``.
 _FORMA_DA_PASTA = re.compile(r"^\d{8}-\d{6}-(?:controles|casa)$")
 
-#: As variáveis que o produto exporta para os jogos — espelho de
-#: ``daemon/launch_env.ENV_ALLOWLIST`` e, no fim, das
-#: ``integrations/cura_por_estrada.CORRECOES_DA_CARONA`` (a régua confere que são
-#: iguais). É por elas que o «limpa?» reconhece o rastro do Hefesto no
-#: ``config.json`` do Heroic e nos ``overrides`` do Flatpak, que o
-#: ``uninstall.sh`` não visita.
 VARIAVEIS_DO_PRODUTO: tuple[str, ...] = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES",
     "SDL_JOYSTICK_HIDAPI",
@@ -172,45 +87,25 @@ VARIAVEIS_DO_PRODUTO: tuple[str, ...] = (
     "PROTON_USE_XALIA",
 )
 
-#: As que uma pessoa costuma pôr sozinha — o cache de shader da NVIDIA e o
-#: ``PROTON_USE_XALIA``, que o desfazer deixa quando é dela: no «limpa?» elas
-#: contam como «pode ser sua», e não como rastro certo.
 _VARIAVEIS_QUE_PODEM_SER_DELA = frozenset(
     {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP", "PROTON_USE_XALIA"}
 )
 
-#: As pastas do Heroic num lar sem XDG desviado — espelho de
-#: ``integrations/camadas_vulkan._CONFIG_DO_HEROIC`` e das casas do censo
-#: (``integrations/censo_dos_lancadores._casas``), de onde a carona as tira (a
-#: régua confere). A nativa do ``XDG_CONFIG_HOME`` entra em :func:`_achar_heroic`.
 PASTAS_DO_HEROIC: tuple[str, ...] = (
     ".var/app/com.heroicgameslauncher.hgl/config/heroic",
     ".config/heroic",
 )
 
-#: Onde o Hefesto escreve o ambiente do Flatpak de cada lançador — espelho de
-#: ``integrations/cura_por_estrada.estradas_do_cartao`` e de
-#: ``integrations/sandbox_dos_lancadores._raizes`` (a régua confere): o lar, e
-#: não o ``XDG_DATA_HOME``, porque é assim que os dois donos escrevem e leem.
 PASTA_DOS_OVERRIDES = ".local/share/flatpak/overrides"
 
-#: Os ids de Flatpak do próprio Hefesto — os mesmos que o ``uninstall.sh``
-#: desinstala (``HEFESTO_FLATPAK_APP_IDS``): o de hoje e o de antes de 25/08.
 IDS_DE_FLATPAK_DO_HEFESTO: tuple[str, ...] = (
     "io.github.hefesto_team.hefesto_dualsense4unix",
     "br.andrefarias.Hefesto",
 )
 
-#: A marca que o produto grava nos prefixos Wine (``audio_ks_dualsense``).
 MARCA_DO_DEVICE_KS = "HEFESTOKS"
 
-#: A variável da guarda de ensaio: com ela, qualquer caminho que resolva para o
-#: lar ou para o ``/var/lib`` de verdade faz o comando RECUSAR antes de tocar em
-#: qualquer coisa.
 ENV_ENSAIO = "HEFESTO_MEMORIA_ENSAIO"
-
-
-# ══ 1. As raízes ═══════════════════════════════════════════════════════════
 
 
 class RecusaError(RuntimeError):
@@ -231,8 +126,6 @@ class Raizes:
     varlib: Path
     guardado_do_root: Path
     sistema: Path
-    #: O repositório do produto, quando este arquivo roda de dentro dele — é de
-    #: lá que o «limpa?» lê a lista de regras udev (``assets/``).
     repositorio: Path | None = None
 
     @property
@@ -257,13 +150,7 @@ class Raizes:
 
     @classmethod
     def do_ambiente(cls, env: dict[str, str] | None = None) -> Raizes:
-        """As raízes pela regra XDG (a do ``platformdirs`` no Linux).
-
-        Os desvios do lado do root (``HEFESTO_MEMORIA_BLUEZ``,
-        ``HEFESTO_MEMORIA_VARLIB``, ``HEFESTO_MEMORIA_GUARDADO_ROOT``,
-        ``HEFESTO_MEMORIA_SISTEMA``) são ganchos de ensaio: sob root eles morrem
-        (:func:`raizes_do_root`).
-        """
+        """As raízes pela regra XDG (a do ``platformdirs`` no Linux)."""
         e = dict(os.environ if env is None else env)
         lar = Path(e.get("HOME") or pwd.getpwuid(os.getuid()).pw_dir)
 
@@ -295,12 +182,7 @@ class Raizes:
 
 
 def conferir_o_ensaio(raizes: Raizes, env: dict[str, str] | None = None) -> None:
-    """Com ``HEFESTO_MEMORIA_ENSAIO=1``, recusa qualquer raiz de verdade.
-
-    É a guarda que sai da régua: um lar de mentira que esquecesse de desviar UMA
-    raiz escreveria no disco dela. Sem a variável, não faz nada — o comando de
-    verdade aponta para as raízes de verdade, que é o trabalho dele.
-    """
+    """Com ``HEFESTO_MEMORIA_ENSAIO=1``, recusa qualquer raiz de verdade."""
     e = os.environ if env is None else env
     if e.get(ENV_ENSAIO) != "1":
         return
@@ -320,17 +202,9 @@ def conferir_o_ensaio(raizes: Raizes, env: dict[str, str] | None = None) -> None
         raise RecusaError("ensaio: a raiz do sistema é a de verdade — recusado")
 
 
-# ══ 2. O inventário ════════════════════════════════════════════════════════
-
-
 @dataclass(frozen=True)
 class Lugar:
-    """Um lugar do inventário.
-
-    ``raiz`` é o nome de um campo de :class:`Raizes` (``config``, ``estado``,
-    ``bluez``, ``varlib``, ``lar``); ``caminho`` é relativo a ela e pode ter
-    curinga (``*``). ``dono`` é o endereço do código que grava ali.
-    """
+    """Um lugar do inventário."""
 
     chave: str
     raiz: str
@@ -340,18 +214,12 @@ class Lugar:
     alcance: str
     ato: str
     guarda: str
-    #: No devolver da casa inteira: ``True`` = volta; ``False`` = fica só na
-    #: pasta (o install ou o daemon o recriam, e devolver por cima dessincroniza
-    #: o registro que o próximo uninstall lê).
     devolve: bool = True
 
 
-_C = SLUG  # a pasta do app dentro de config/estado/dados/cache
+_C = SLUG
 
-#: TODO lugar que o produto grava e que importa aqui, com o dono. A ordem é a
-#: ordem em que o comando os percorre.
 INVENTARIO: tuple[Lugar, ...] = (
-    # ── alcance CONTROLES, lado dela ──────────────────────────────────────
     Lugar(
         "fila-dos-numeros", "config", f"{_C}/controllers.json",
         "daemon/subsystems/identity.py:_CONTROLLERS_FILE e "
@@ -417,7 +285,6 @@ INVENTARIO: tuple[Lugar, ...] = (
         "o diário do rádio (endereços de controle e de adaptador), com o "
         "girado (.1) e os que um uninstall anterior guardou",
     ),
-    # ── alcance CONTROLES, lado do root ───────────────────────────────────
     Lugar(
         "pareamentos-dos-controles", "bluez", "<adaptador>/<controle>",
         "bluetoothd (BlueZ); lido por integrations/bluez_dbus.py",
@@ -443,7 +310,6 @@ INVENTARIO: tuple[Lugar, ...] = (
         ROOT, CONTROLES, MOVER,
         "o diário dos motores root do rádio",
     ),
-    # ── alcance CASA: a pessoa e os lançadores (copiados; o uninstall remove) ─
     Lugar(
         "configuracao-inteira", "config", _C,
         "utils/xdg_paths.py:config_dir",
@@ -519,13 +385,7 @@ def lugares(alcance: str, de_quem: str | None = None) -> tuple[Lugar, ...]:
 
 
 def _constante_do_dono(dono: str, nome: str) -> str:
-    """Uma constante de texto de ``integrations/<dono>.py``, lida sem importar.
-
-    O caminho da allowlist tem UM dono (``steam_launch_options``, régua
-    ``test_t15_a_allowlist_tem_um_caminho_so``), e aquele arquivo não é só
-    biblioteca padrão: importá-lo quebraria o script avulso do uninstall. A
-    árvore sintática lê o valor do dono sem executá-lo.
-    """
+    """Uma constante de texto de ``integrations/<dono>.py``, lida sem importar."""
     import ast
 
     arquivo = Path(__file__).resolve().parents[1] / "integrations" / f"{dono}.py"
@@ -547,15 +407,7 @@ _ALLOWLIST_DA_STEAM = _constante_do_dono(
     "steam_launch_options", "STEAM_INPUT_ALLOWLIST_RELPATH")
 
 
-#: O que o produto grava no lar e NÃO é memória de controle — cada nome que a
-#: régua acha no código tem de estar aqui ou no inventário, com a razão. É o que
-#: impede um arquivo novo de nascer fora do comando sem ninguém decidir.
-#: ``casa``: da pessoa, vai na pasta da casa inteira (dentro da configuração).
-#: ``install``: o install ou o daemon recriam; não se guarda.
-#: ``fora``: não é arquivo do lar dela (dado do pacote, arquivo de terceiro só
-#: lido, nome de exemplo).
 CLASSIFICACAO: dict[str, tuple[str, str]] = {
-    # memória dos controles — o inventário acima
     "controllers.json": (CONTROLES, "fila-dos-numeros"),
     "controller_masks.json": (CONTROLES, "mascaras-por-aparelho"),
     "maquina.json": (CONTROLES, "declaracao-da-mesa"),
@@ -563,7 +415,6 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "conexao-zumbi.json": (CONTROLES, "conexao-zumbi"),
     "radio-diario.jsonl": (CONTROLES, "diario-do-radio"),
     "profiles": (CONTROLES, "ajustes-por-controle (a chave controllers de cada perfil)"),
-    # da pessoa, sem endereço de controle: vão na configuração inteira
     "session.json": (CASA, "o nome do último perfil ativado; não identifica controle"),
     "active_profile.txt": (CASA, "o marcador do perfil ativo; não identifica controle"),
     "paused.flag": (CASA, "o daemon pausado"),
@@ -594,7 +445,6 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "personalizado.json": (CASA, "um perfil semeado"),
     "camadas-vulkan.json": (CASA, "camadas-vulkan: guardado, não devolvido"),
     "kernel.log": (CASA, "historico-do-kernel: guardado, não devolvido"),
-    # recriados pelo install ou pelo daemon
     "gabinete.json": ("install", "o censo do gabinete: o install o grava lendo o SMBIOS"),
     "proton-pin-lock.json": ("install", "o registro do pino: o install novo grava o dele"),
     "wrapper-visto.json": ("install", "o registro da sentinela do atalho"),
@@ -607,13 +457,9 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "51-hefesto-dualsense-no-default-source.conf": ("install", "drop-in do WirePlumber"),
     "54-hefesto-dualsense-alto-falante-nunca-dorme.conf": ("install", "drop-in do WirePlumber"),
     ".hefesto-proton-pin.json": ("install", "o manifesto do Proton que o install extrai"),
-    # não são arquivos do lar dela
     "winevulkan.json": ("fora", "o driver Vulkan do Wine, lido no prefixo"),
     "PROVA-DA-FOTO.txt": ("fora", "saída da bancada de fotos (olhar.py)"),
 }
-
-
-# ══ 3. Pareamentos do BlueZ ════════════════════════════════════════════════
 
 
 def _ler_ini(texto: str) -> configparser.ConfigParser:
@@ -659,8 +505,7 @@ def e_controle_pelo_info(texto: str) -> bool:
 
 
 def _tem_chave(pasta: Path) -> bool:
-    """A pasta é um pareamento VIVO — tem ``info`` com chave? (a pergunta do
-    ``_bond_com_chave`` da ponte privilegiada)."""
+    """A pasta é um pareamento VIVO — tem ``info`` com chave? (a pergunta do"""
     info = pasta / "info"
     if not info.is_file() or info.is_symlink():
         return False
@@ -702,9 +547,6 @@ def pareamentos_de_controle(bluez: Path) -> list[Pareamento]:
     return achados
 
 
-# ══ 4. Mover, copiar e conferir ════════════════════════════════════════════
-
-
 def sha256_de(caminho: Path) -> str:
     h = hashlib.sha256()
     with caminho.open("rb") as fh:
@@ -714,11 +556,7 @@ def sha256_de(caminho: Path) -> str:
 
 
 def retrato(caminho: Path) -> dict[str, str]:
-    """``{relativo: sha256}`` de cada arquivo (e ``->alvo`` de cada link).
-
-    É o que o manifesto guarda e o que a régua compara: devolver «exatamente
-    como estava» se mede aqui, arquivo por arquivo.
-    """
+    """``{relativo: sha256}`` de cada arquivo (e ``->alvo`` de cada link)."""
     saida: dict[str, str] = {}
     if caminho.is_symlink():
         return {".": "->" + os.readlink(caminho)}
@@ -772,11 +610,7 @@ def copiar(origem: Path, destino: Path) -> None:
 
 
 def mover(origem: Path, destino: Path) -> None:
-    """Move sem apagar nada antes de a cópia estar conferida.
-
-    No mesmo disco é um ``rename`` (atômico, preserva tudo). Entre discos: copia,
-    confere o retrato e só então remove a origem.
-    """
+    """Move sem apagar nada antes de a cópia estar conferida."""
     destino.parent.mkdir(parents=True, exist_ok=True)
     if destino.exists() or destino.is_symlink():
         raise RecusaError(f"o destino já existe, não sobrescrevo: {destino}")
@@ -784,7 +618,7 @@ def mover(origem: Path, destino: Path) -> None:
         os.rename(origem, destino)
         return
     except OSError as erro:
-        if erro.errno != 18:  # EXDEV: outro disco
+        if erro.errno != 18:
             raise
     antes = retrato(origem)
     copiar(origem, destino)
@@ -800,9 +634,6 @@ def _preparar_pasta(pasta: Path) -> None:
     pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
     with contextlib.suppress(OSError):
         os.chmod(pasta, 0o700)
-
-
-# ══ 5. O manifesto ═════════════════════════════════════════════════════════
 
 
 @dataclass
@@ -828,14 +659,7 @@ class Manifesto:
     root: str = ""
     devolvido_em: list[str] = field(default_factory=list)
     forma: int = FORMA_DO_MANIFESTO
-    #: Os lugares do inventário que NÃO existiam no guardar (``origem``). O que
-    #: o teste criar ali sai no devolver — «exatamente como estava» inclui o
-    #: que não estava.
     ausentes: list[str] = field(default_factory=list)
-    #: Os curingas do inventário (``{"base", "glob", "existiam"}``): no
-    #: devolver, o que casa com eles e NÃO existia no guardar nasceu no teste, e
-    #: sai também. A lista do que existia é a do guardar, e não a dos itens: uma
-    #: guarda que caiu no meio não pode fazer o devolver tirar o que nunca saiu.
     curingas: list[dict[str, Any]] = field(default_factory=list)
 
     def gravar(self, pasta: Path) -> None:
@@ -890,14 +714,7 @@ def _ja_devolvida(pasta: Path) -> bool:
 
 
 def escolher_pasta(raizes: Raizes, pedida: str | None, alcance: str | None = None) -> Path:
-    """A pasta pedida (nome ou caminho), ou a mais nova AINDA NÃO devolvida.
-
-    Sem pasta pedida, cada comando olha só as do seu alcance (o
-    ``esquecer-controles --restaurar`` não devolve a casa inteira por engano, e
-    vice-versa), e a escolha é a mais nova que ainda não voltou: quem esqueceu
-    duas vezes seguidas desfaz na ordem certa só repetindo o comando — a
-    segunda pasta primeiro, a primeira depois. Tudo devolvido, a mais nova.
-    """
+    """A pasta pedida (nome ou caminho), ou a mais nova AINDA NÃO devolvida."""
     if pedida:
         candidata = Path(pedida)
         if not candidata.is_absolute():
@@ -914,22 +731,9 @@ def escolher_pasta(raizes: Raizes, pedida: str | None, alcance: str | None = Non
     return (pendentes or todas)[-1]
 
 
-# ══ 6. O sistema: daemon, Steam, root ══════════════════════════════════════
-
-
 class Sistema:
-    """O que o comando pede à máquina. A régua troca por um de mentira.
+    """O que o comando pede à máquina. A régua troca por um de mentira."""
 
-    Nenhum método pede senha no terminal: a parte do root passa por
-    ``sudo -A`` quando há ``SUDO_ASKPASS`` (o caminho do install) e por
-    ``sudo -n`` quando não há — e sem nenhum dos dois ela RECUSA antes de tocar
-    em qualquer coisa, dizendo o que fazer.
-    """
-
-    #: No ensaio (a régua, o lar de mentira) o sistema é INERTE: o daemon e a
-    #: Steam por que ele perguntaria são os DELA, não os do lar de mentira —
-    #: parar o daemon dela no meio de uma régua é o estrago que esta guarda
-    #: existe para impedir.
     @property
     def ensaio(self) -> bool:
         return os.environ.get(ENV_ENSAIO) == "1"
@@ -968,10 +772,6 @@ class Sistema:
         if raizes.raizes_do_root_desviadas:
             return executar_parte_do_root(raizes, verbo, pasta_root, seco=seco)
         if self.ensaio:
-            # A guarda do ensaio vale AQUI também, e não só na entrada do
-            # guardar e do devolver: o «limpa?» chega à parte do root por
-            # outro caminho, e um ensaio nunca fala com o sudo nem com o
-            # BlueZ de verdade.
             raise RecusaError("ensaio: a parte do root só roda com as raízes desviadas")
         if not raizes.raizes_do_root_sao_as_reais:
             raise RecusaError("as raízes do root estão meio desviadas — recuso misturar")
@@ -1019,11 +819,7 @@ def _raiz_das_integracoes() -> Path:
 
 
 def _modulo_de_integracao(nome: str) -> ModuleType | None:
-    """Um módulo stdlib de ``integrations/`` (os que o uninstall roda avulsos).
-
-    Como pacote, o import normal; como script, pelo caminho, com a pasta das
-    integrações no ``sys.path`` para o import de irmão que eles fazem.
-    """
+    """Um módulo stdlib de ``integrations/`` (os que o uninstall roda avulsos)."""
     try:
         return importlib.import_module(f"hefesto_dualsense4unix.integrations.{nome}")
     except ImportError:
@@ -1038,9 +834,6 @@ def _modulo_de_integracao(nome: str) -> ModuleType | None:
         return importlib.import_module(nome)
     except ImportError:
         return None
-
-
-# ══ 7. Achar o que existe ══════════════════════════════════════════════════
 
 
 def _raiz_de(raizes: Raizes, nome: str) -> Path:
@@ -1064,12 +857,7 @@ def _achar_steam(raizes: Raizes, lugar: Lugar) -> list[Path]:
 
 
 def _achar_heroic(raizes: Raizes) -> list[Path]:
-    """O ``config.json`` de toda casa do Heroic em que a carona pode ter escrito.
-
-    As do lar e, com o ``XDG_CONFIG_HOME`` desviado, a nativa de lá: desde
-    02/10/2026 a carona escreve onde o Heroic nativo guarda a casa, e o
-    desfazer limpa a mesma rede (``cura_por_estrada._casas_do_heroic_na_rede``).
-    """
+    """O ``config.json`` de toda casa do Heroic em que a carona pode ter escrito."""
     casas = [raizes.lar / rel for rel in PASTAS_DO_HEROIC]
     if raizes.config / "heroic" not in casas:
         casas.append(raizes.config / "heroic")
@@ -1140,7 +928,6 @@ def _relativo_na_pasta(raizes: Raizes, caminho: Path) -> str:
             return f"pessoa/{nome}/{caminho.relative_to(base)}"
         except ValueError:
             continue
-    # Uma biblioteca da Steam em outro disco (o link resolvido sai do lar).
     return "pessoa/fora/" + str(caminho).lstrip("/")
 
 
@@ -1158,8 +945,7 @@ def _perfil_com_ajustes(caminho: Path) -> dict[str, Any] | None:
 
 
 def _gravar_perfil_sem_ajustes(caminho: Path, dado: dict[str, Any]) -> None:
-    """Regrava o perfil sem a chave, no formato do ``profiles/loader.py``
-    (``_atomic_write_json``: indentação 2, sem escapar acento, quebra no fim)."""
+    """Regrava o perfil sem a chave, no formato do ``profiles/loader.py``"""
     limpo = {k: v for k, v in dado.items() if k != CHAVE_DOS_AJUSTES_POR_CONTROLE}
     texto = json.dumps(limpo, indent=2, ensure_ascii=False) + "\n"
     tmp = caminho.with_name("." + caminho.name + ".esquecer")
@@ -1167,9 +953,6 @@ def _gravar_perfil_sem_ajustes(caminho: Path, dado: dict[str, Any]) -> None:
     with contextlib.suppress(OSError):
         os.chmod(tmp, caminho.stat().st_mode & 0o7777)
     os.replace(tmp, caminho)
-
-
-# ══ 8. O plano ═════════════════════════════════════════════════════════════
 
 
 @dataclass(frozen=True)
@@ -1180,13 +963,7 @@ class Passo:
 
 
 def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
-    """O que o guardar faria do lado dela, sem tocar em nada.
-
-    No alcance dos controles tudo é MOVIDO (o produto passa a não ter a
-    memória). Na casa inteira tudo é COPIADO: quem remove é o ``uninstall.sh``
-    — e ele PRECISA dos registros no lugar para saber o que desfazer (o
-    ``proton-pin-lock.json``, o ``camadas-vulkan.json``).
-    """
+    """O que o guardar faria do lado dela, sem tocar em nada."""
     plano: list[Passo] = []
     vistos: set[Path] = set()
     for lugar in lugares(alcance, USUARIO):
@@ -1194,9 +971,6 @@ def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
             if caminho in vistos:
                 continue
             if lugar.ato == TIRAR_A_CHAVE:
-                # O perfil SEM ajuste por controle também leva cópia: o teste
-                # pode gravar um ajuste nele (o botão do mic grava no perfil),
-                # e sem os bytes de antes o devolver não o poria como estava.
                 com_ajustes = _perfil_com_ajustes(caminho) is not None
                 como = TIRAR_A_CHAVE if com_ajustes and alcance == CONTROLES else COPIAR
             elif alcance == CASA:
@@ -1206,8 +980,6 @@ def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
             vistos.add(caminho)
             plano.append(Passo(lugar, caminho, como))
     if alcance == CASA:
-        # Na casa inteira a configuração vai inteira: os passos que moram dentro
-        # dela já estão na cópia, e copiá-los de novo seria o mesmo byte duas vezes.
         cfg = raizes.config / SLUG
         plano = [
             p for p in plano
@@ -1219,14 +991,7 @@ def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
 def o_que_nao_existia(
     raizes: Raizes, alcance: str
 ) -> tuple[list[str], list[dict[str, Any]]]:
-    """Os lugares do lado dela que o devolver tem de deixar como NÃO estavam.
-
-    ``(ausentes, curingas)``: os caminhos do inventário que não existem agora, e
-    cada curinga com o que casa com ele AGORA (``existiam``). Ficam de fora os
-    lugares dos lançadores (o arquivo é do lançador, não do produto), os que o
-    install recria (``devolve=False``) e, na casa inteira, o que mora dentro da
-    configuração — ela volta inteira.
-    """
+    """Os lugares do lado dela que o devolver tem de deixar como NÃO estavam."""
     cfg = raizes.config / SLUG
     ausentes: list[str] = []
     curingas: list[dict[str, Any]] = []
@@ -1247,9 +1012,6 @@ def o_que_nao_existia(
     return ausentes, curingas
 
 
-# ══ 9. Guardar ═════════════════════════════════════════════════════════════
-
-
 @dataclass
 class Relato:
     """O que o comando fez, em linhas curtas para o terminal."""
@@ -1258,9 +1020,7 @@ class Relato:
     linhas: list[str] = field(default_factory=list)
     sobrescritos: list[str] = field(default_factory=list)
     pulados: list[str] = field(default_factory=list)
-    #: O que o teste criou onde antes não havia nada (foi para depois-do-teste).
     tirados: list[str] = field(default_factory=list)
-    #: O que já estava byte a byte como fora guardado (nada a fazer).
     iguais: list[str] = field(default_factory=list)
 
     def diz(self, texto: str) -> None:
@@ -1276,19 +1036,7 @@ def guardar(
     agora: float | None = None,
     parar_o_daemon: bool = True,
 ) -> Relato:
-    """Guarda (move ou copia) a memória do alcance numa pasta datada.
-
-    Ordem, e cada passo tem razão:
-
-    1. pergunta à parte do root, a SECO, se há o que fazer — e se ela não roda
-       (sem privilégio), recusa ANTES de mover um byte;
-    2. para o daemon (ninguém regrava o que está sendo movido);
-    3. a parte do root (pareamentos com o ``bluetoothd`` parado, as cópias de
-       pareamento, o diário do root);
-    4. o lado dela, item por item, com o manifesto regravado a cada item — uma
-       queda no meio deixa a pasta dizendo exatamente o que já saiu;
-    5. sobe o daemon de novo, se ele estava de pé.
-    """
+    """Guarda (move ou copia) a memória do alcance numa pasta datada."""
     conferir_o_ensaio(raizes)
     relato = Relato()
     plano = montar_plano(raizes, alcance)
@@ -1370,9 +1118,6 @@ def _guardar_um(raizes: Raizes, passo: Passo, pasta: Path, manifesto: Manifesto)
                                 USUARIO, devolve=devolve, retrato=depois))
 
 
-# ══ 10. Devolver ═══════════════════════════════════════════════════════════
-
-
 def devolver(
     raizes: Raizes,
     sistema: Sistema,
@@ -1382,12 +1127,7 @@ def devolver(
     agora: float | None = None,
     alcance: str | None = None,
 ) -> Relato:
-    """Devolve o que uma pasta guardou, byte a byte, por cima do que houver.
-
-    O que estiver no lugar (o que o teste produziu) vai antes para
-    ``<pasta>/depois-do-teste/<carimbo>/`` — nada se perde nas duas voltas. A
-    pasta guardada FICA (o devolver copia): dá para devolver de novo.
-    """
+    """Devolve o que uma pasta guardou, byte a byte, por cima do que houver."""
     conferir_o_ensaio(raizes)
     pasta = escolher_pasta(raizes, pedida, alcance)
     manifesto = Manifesto.ler(pasta)
@@ -1455,13 +1195,7 @@ def devolver(
 
 
 def _o_que_apareceu(manifesto: Manifesto) -> list[Path]:
-    """O que existe agora num lugar do inventário que o guardar achou vazio.
-
-    Um ausente que passou a existir, ou um casamento de curinga que não existia
-    no guardar: nasceu no teste (a fila de números nova, um perfil criado, o
-    ajuste que o botão do mic gravou num perfil que não tinha nenhum) — e
-    «exatamente como estava» é sem ele.
-    """
+    """O que existe agora num lugar do inventário que o guardar achou vazio."""
     achados: list[Path] = []
     for ausente in manifesto.ausentes:
         caminho = Path(ausente)
@@ -1512,14 +1246,6 @@ def _dizer_as_escolhas_de_camada(pasta: Path, manifesto: Manifesto, relato: Rela
                                    f"{prefixo}: devolva-a de novo pela aba Lançadores")
 
 
-# ══ 11. A parte do root ════════════════════════════════════════════════════
-#
-# Roda como root (``sudo -A python3 -I <este arquivo> raiz <verbo> --pasta P``)
-# ou, com as três raízes desviadas, no próprio processo da régua. Sob root os
-# desvios morrem: só as raízes reais, e a pasta tem de morar dentro do
-# ``/var/lib/hefesto-memoria-guardada`` com o nome na forma de um carimbo.
-
-
 def raizes_do_root(env: dict[str, str] | None = None) -> Raizes:
     """As raízes que a parte do root pode usar."""
     raizes = Raizes.do_ambiente(env)
@@ -1540,10 +1266,7 @@ def _conferir_pasta_do_root(raizes: Raizes, pasta: Path) -> None:
 
 
 class Bluetooth:
-    """Parar e subir o ``bluetoothd`` pelo roteiro do ``bt_bonds_restore.sh``.
-
-    Com as raízes desviadas não toca em serviço nenhum (a régua).
-    """
+    """Parar e subir o ``bluetoothd`` pelo roteiro do ``bt_bonds_restore.sh``."""
 
     def __init__(self, raizes: Raizes) -> None:
         self.de_verdade = raizes.raizes_do_root_sao_as_reais and os.geteuid() == 0
@@ -1558,8 +1281,6 @@ class Bluetooth:
                               capture_output=True).returncode
 
     def parar(self) -> None:
-        # RESTORE-MASK-01: sem a máscara, qualquer cliente do D-Bus reativa o
-        # serviço e cancela a parada.
         self.parado = True
         self._systemctl("mask", "--runtime", "bluetooth.service")
         self._systemctl("stop", "--job-mode=replace-irreversibly", "bluetooth.service")
@@ -1576,8 +1297,6 @@ class Bluetooth:
             return
         self._systemctl("unmask", "--runtime", "bluetooth.service")
         self._systemctl("start", "bluetooth.service")
-        # AGENTE-QUE-NAO-VOLTA-01: o agente cai junto (Requires=) e não volta
-        # sozinho — sem ele todo pareamento novo nasce meio-salvo.
         self._systemctl("reset-failed", "hefesto-bt-agent.service")
         self._systemctl("start", "hefesto-bt-agent.service")
         self.parado = False
@@ -1617,8 +1336,7 @@ def _apelidos_dos_adaptadores(bluez: Path) -> dict[str, str]:
 
 
 def _olhar_no_root(raizes: Raizes) -> dict[str, Any]:
-    """O verbo ``olhar``: só LÊ o BlueZ — os pareamentos de controle e os nomes
-    dos adaptadores. É o que o «limpa?» pergunta e a pessoa não enxerga."""
+    """O verbo ``olhar``: só LÊ o BlueZ — os pareamentos de controle e os nomes"""
     pares = pareamentos_de_controle(raizes.bluez)
     return {
         "linhas": [f"pareamento do controle {p.controle} no adaptador {p.adaptador}"
@@ -1632,10 +1350,7 @@ def executar_parte_do_root(
     raizes: Raizes, verbo: str, pasta: Path | None, *, seco: bool,
     bluetooth: Bluetooth | None = None,
 ) -> dict[str, Any]:
-    """O verbo do root: ``esquecer``, ``restaurar`` ou ``olhar`` (só lê).
-
-    Devolve ``{"linhas": [...]}``; o ``olhar`` não tem pasta e não escreve nada.
-    """
+    """O verbo do root: ``esquecer``, ``restaurar`` ou ``olhar`` (só lê)."""
     if verbo == "olhar":
         return {**_olhar_no_root(raizes), "bluetooth": []}
     if pasta is None:
@@ -1690,10 +1405,6 @@ def _esquecer_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth)
     if pasta.exists():
         raise RecusaError(f"a pasta do root {pasta} já existe")
     _preparar_pasta(pasta)
-    # O manifesto nasce ANTES do primeiro mover e é regravado a cada item, como
-    # o do lado dela: uma queda no meio (o bluetoothd que não para, um disco
-    # cheio) deixa a pasta dizendo exatamente o que já saiu — e o devolver da
-    # outra metade não tropeça numa pasta do root sem manifesto.
     manifesto = Manifesto(CONTROLES, pasta.name, raizes.em_texto())
     manifesto.gravar(pasta)
 
@@ -1704,7 +1415,6 @@ def _esquecer_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth)
                                     retrato=antes, nota=nota))
         manifesto.gravar(pasta)
 
-    # 1. Os pareamentos, com o bluetoothd parado.
     with _bluetooth_parado(bt, bool(pares or caches)):
         for p in pares:
             _mover_e_anotar("pareamentos-dos-controles", raizes.bluez / p.adaptador / p.controle,
@@ -1712,8 +1422,6 @@ def _esquecer_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth)
         for c in caches:
             _mover_e_anotar("pareamentos-dos-controles", c,
                             f"bluez/{c.relative_to(raizes.bluez)}", c.name)
-        # 2. As cópias de pareamento e o diário do root, DEPOIS dos pareamentos:
-        #    nenhum instantâneo de antes sobra para o autorestore ressuscitar.
         for lugar, caminho in outros:
             _mover_e_anotar(lugar.chave, caminho,
                             f"varlib/{caminho.relative_to(raizes.varlib)}")
@@ -1735,7 +1443,6 @@ def _restaurar_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth
     depois = pasta / "depois-do-teste" / carimbo_agora()
     linhas: list[str] = []
     pular: set[str] = set()
-    #: (adaptador antigo, controle) de cada pareamento que NÃO volta.
     enterrar: list[tuple[str, str]] = []
     plano: list[Item] = []
     for item in manifesto.itens:
@@ -1777,19 +1484,7 @@ def _restaurar_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth
 
 
 def _gravar_lapides(lapides: Path, enterrar: list[tuple[str, str]]) -> None:
-    """A lápide do pareamento que o devolver deixou de fora — a MESMA do verbo
-    ``esquecer`` da ponte privilegiada: ``<epoch> <adaptador> <controle>`` em
-    ``bt-bonds/.lapides``.
-
-    Sem ela, o acervo de cópias que acabou de voltar traz a chave VELHA desse
-    controle, e o ``bt_bonds_autorestore.sh`` a plantaria no adaptador antigo
-    na próxima morte do ``bluetoothd`` (ele só confere o mesmo adaptador) — o
-    controle, que só conhece a chave nova, ficaria com casa em dois
-    adaptadores. É a regra do devolver («chave velha nunca por cima de um
-    pareamento vivo, em adaptador nenhum») valendo também para quem restaura
-    depois dele. A lápide só enterra cópia de ANTES dela: o pareamento vivo,
-    copiado dali em diante, volta como qualquer outro.
-    """
+    """A lápide do pareamento que o devolver deixou de fora — a MESMA do verbo"""
     if not enterrar or not lapides.parent.is_dir() or lapides.parent.is_symlink():
         return
     if lapides.is_symlink():
@@ -1802,21 +1497,13 @@ def _gravar_lapides(lapides: Path, enterrar: list[tuple[str, str]]) -> None:
         os.chmod(lapides, 0o600)
 
 
-# ══ 12. «A máquina está limpa?» ════════════════════════════════════════════
-
-
 @dataclass(frozen=True)
 class Rastro:
     """Uma sobra do Hefesto depois do uninstall."""
 
     onde: str
     o_que: str
-    #: ``True`` quando o próprio uninstall deixa de propósito (um backup, o
-    #: Proton extraído que é dado dela) — dito, mas não é defeito.
     de_proposito: bool = False
-    #: ``True`` quando o lugar não pôde ser olhado (só o root o lê, e não havia
-    #: privilégio). «Não sei» não é «sobrou» nem «limpo»: é dito à parte, com o
-    #: que fazer, e não conta como defeito do uninstall.
     nao_sei: bool = False
 
 
@@ -1858,9 +1545,6 @@ def _globs_do_sistema(raizes: Raizes) -> list[tuple[str, str]]:
     return globs
 
 
-#: O prefixo que o Hefesto põe no nome de um adaptador (``bt_active_mode.sh`` e
-#: ``integrations/apelido_do_dongle.py``). O ``uninstall.sh`` o tira de TODO
-#: adaptador — um nome que ainda começa assim depois dele é rastro.
 PREFIXO_DO_ADAPTADOR = "Nintendo "
 
 _O_QUE_FAZER_SEM_ROOT = (
@@ -1869,14 +1553,7 @@ _O_QUE_FAZER_SEM_ROOT = (
 
 
 def _rastros_do_bluez(raizes: Raizes, sistema: Sistema | None) -> list[Rastro]:
-    """Os pareamentos de controle e os nomes dos adaptadores — que só o root lê.
-
-    O armazenamento do BlueZ é ``700`` do root: como pessoa, a pergunta não tem
-    resposta. Ela vai à parte do root (o mesmo ``sudo -A``/``sudo -n`` do
-    guardar); sem privilégio, a resposta é «não sei», dita com o que fazer —
-    nunca «sobrou», que faria toda máquina de verdade reprovar, e nunca
-    «limpa», que esconderia um controle ainda pareado.
-    """
+    """Os pareamentos de controle e os nomes dos adaptadores — que só o root lê."""
     try:
         olhado: dict[str, Any] | None = _olhar_no_root(raizes)
     except PermissionError:
@@ -1983,12 +1660,6 @@ def _rastros_do_lar(raizes: Raizes) -> list[Rastro]:
     return rastros
 
 
-#: Os sufixos das cópias que o produto tira AO LADO de um arquivo de terceiro
-#: antes de mexer nele: ``steam_launch_options`` (``hefesto-launch``),
-#: ``opcoes_por_jogo`` (``hefesto-opcoes``), ``proton_pin``
-#: (``hefesto-proton``), ``audio_ks_dualsense`` (``hefesto-audio-ks``),
-#: ``camadas_vulkan`` (``hefesto-camadas``) e o ``disable_steam_input.sh``
-#: (``steam-input``). O uninstall as deixa de propósito — são o desfazer.
 _SUFIXOS_DAS_COPIAS = (".bak.hefesto-", ".bak.steam-input")
 
 
@@ -2065,17 +1736,9 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
 
 
 def conferir_a_casa(raizes: Raizes, sistema: Sistema | None = None) -> list[Rastro]:
-    """Depois do uninstall: o que sobrou do Hefesto, lugar por lugar.
-
-    É também a prova de que o uninstall é honesto — o que sobra e não é de
-    propósito é defeito dele. O ``sistema`` é por onde a pergunta chega ao que
-    só o root lê (o BlueZ); sem ele, esse pedaço volta «não sei».
-    """
+    """Depois do uninstall: o que sobrou do Hefesto, lugar por lugar."""
     return (_rastros_do_lar(raizes) + _rastros_nos_lancadores(raizes)
             + _rastros_do_sistema(raizes, sistema))
-
-
-# ══ 13. Linha de comando da parte do root ═════════════════════════════════
 
 
 def _principal_do_root(argv: Sequence[str]) -> int:

@@ -1,56 +1,4 @@
-"""Backend de janela ativa para o COSMIC, falando `zcosmic_toplevel_info_v1`.
-
-**POR QUE ESTE ARQUIVO EXISTE, e a frase que ele derruba.** O `doctor.sh` dizia,
-desde que a seção nasceu:
-
-    veredito: DEGRADADO — só XWayland: (…) apps Wayland nativos aparecem como
-    'unknown'. Limitação do compositor (COSMIC exigiria zcosmic_toplevel_info_v1),
-    não do hefesto.
-
-A frase se desculpava nomeando o protocolo que resolveria — e **o compositor
-dela EXPÕE esse protocolo**. Medido em 02/09/2026 na sessão COSMIC dela, com
-`wayland-info`: entre os 58 globais publicados estão
-``zcosmic_toplevel_info_v1`` (versão 3) e ``ext_foreign_toplevel_list_v1``
-(versão 1). Não está lá o ``zwlr_foreign_toplevel_manager_v1``, que é o que o
-`wlr_toplevel.py` procura. A limitação era do produto, não do compositor.
-
-**POR QUE FALAR O PROTOCOLO NA MÃO, sem `pywayland`.** Não há binding de
-Wayland na venv nem no `pyproject.toml`, e não há CLI de terceiro que fale o
-protocolo do COSMIC (o `wlrctl`, que está instalado nesta máquina, fala o do
-wlroots e por isso responde *"Foreign Toplevel Management interface not
-found"*). O protocolo de fio do Wayland é pequeno o bastante para ser lido
-direto: cabeçalho de 8 bytes (id do objeto, tamanho e opcode empacotados),
-strings com prefixo de tamanho e enchimento para múltiplo de 4.
-
-**ESTE CLIENTE NÃO CRIA SUPERFÍCIE NENHUMA.** Ele liga o `wl_registry` e o
-``zcosmic_toplevel_info_v1``, e mais nada — não existe `wl_compositor`, não
-existe `wl_surface`, logo **não há janela que possa nascer na tela dela**. Isso
-é contrato, não descuido, e há teste que lê este arquivo procurando as
-interfaces proibidas (`test_a_janela_ativa_do_cosmic.py`).
-
-**POR QUE LIGAR NA VERSÃO 1 de uma interface que anuncia 3.** Na versão 1 o
-``zcosmic_toplevel_info_v1`` emite os `toplevel` direto, e cada
-``zcosmic_toplevel_handle_v1`` emite `title`, `app_id` e `state` por conta
-própria: uma ligação, zero requisições depois dela, e é tudo o que a detecção
-de janela precisa. Da versão 2 em diante o caminho passa a exigir o
-``ext_foreign_toplevel_list_v1`` — outro global, outro objeto por janela e uma
-requisição `get_cosmic_toplevel` para cada — em troca de nada que se use aqui.
-Medido: ligado na versão 1, o cosmic-comp 0.1 desta máquina respondeu com as
-cinco janelas abertas, uma delas com o estado `activated`.
-
-**O QUE ELE VÊ E O QUE NÃO VÊ.** Vê `app_id` (que vira `wm_class`) e `title`.
-**Não vê o PID**, logo não vê `exe_basename` — igual ao portal e ao wlrctl, e
-declarado em `window_detect.BACKENDS_CEGOS_AO_PROCESSO`. Perfil que casa por
-`process_name` continua sem casar por este caminho; quem cobre isso é o
-`xlib`, e é por isso que o `_XlibComCosmicBackend` prefere o xlib sempre que
-ele enxerga.
-
-**A CONEXÃO É PERMANENTE, de propósito.** O `AutoSwitcher` lê a 2 Hz. Reabrir
-o soquete e refazer o aperto de mão a cada tique custaria duas idas ao
-compositor por leitura; em vez disso o soquete fica aberto e cada leitura só
-esvazia o que chegou (o compositor **empurra** o `state` quando o foco muda).
-Com nada para ler, uma leitura é um `recv` que devolve `EAGAIN`.
-"""
+"""Backend de janela ativa para o COSMIC, falando `zcosmic_toplevel_info_v1`."""
 from __future__ import annotations
 
 import contextlib
@@ -66,10 +14,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# --- o protocolo, em números ------------------------------------------------
-# Opcodes nascem da ORDEM no XML (requisições e eventos numerados à parte).
-# Fonte: pop-os/cosmic-protocols, `unstable/cosmic-toplevel-info-unstable-v1.xml`
-# (interface versão 3) e o `wayland.xml` de `/usr/share/wayland`.
 
 _WL_DISPLAY = 1
 _WL_DISPLAY_SYNC = 0
@@ -81,45 +25,27 @@ _WL_REGISTRY_BIND = 0
 _WL_REGISTRY_EV_GLOBAL = 0
 
 _INTERFACE = "zcosmic_toplevel_info_v1"
-#: A versão em que ligamos. Ver a explicação no cabeçalho — não é a maior.
 _VERSAO_LIGADA = 1
 
-#: `zcosmic_toplevel_info_v1`, eventos: toplevel=0, finished=1, done=2.
 _INFO_EV_TOPLEVEL = 0
 _INFO_EV_FINISHED = 1
 
-#: `zcosmic_toplevel_handle_v1`, eventos na ordem do XML.
 _TOP_EV_CLOSED = 0
 _TOP_EV_TITLE = 2
 _TOP_EV_APP_ID = 3
 _TOP_EV_STATE = 8
-#: e a única requisição dele.
 _TOP_REQ_DESTROY = 0
 
-#: `zcosmic_toplevel_handle_v1.state`: o valor que responde "esta é a de cima".
 _ESTADO_ATIVADO = 2
 
-# --- as folgas --------------------------------------------------------------
-#: Segundos de paciência no aperto de mão (é a ÚNICA parte bloqueante).
 _APERTO_DE_MAO_S = 2.0
-#: Espera antes de tentar reconectar depois que o soquete morreu.
 _ESPERA_PARA_RELIGAR_S = 5.0
-#: Teto do que se lê num tique. O compositor empurra pouco; o teto existe para
-#: que uma tempestade de eventos não segure o poll de 2 Hz.
 _TETO_POR_TIQUE = 64 * 1024
 
-# --- os motivos de leitura cega (JANELA-CEGA-01) ----------------------------
-#: O compositor não publica o protocolo — desligado DE VEZ (não é COSMIC).
 MOTIVO_SEM_PROTOCOLO = "cosmic_sem_protocolo"
-#: Não há `WAYLAND_DISPLAY`/soquete para ligar.
 MOTIVO_SEM_SOQUETE = "cosmic_sem_soquete"
-#: O soquete caiu (compositor reiniciou, sessão trocada) e ainda estamos na
-#: espera antes de religar.
 MOTIVO_SEM_CONEXAO = "cosmic_sem_conexao"
-#: Conectado, a lista chegou, e nenhuma janela se declara `activated`.
 MOTIVO_NENHUMA_ATIVA = "cosmic_nenhuma_ativa"
-#: O compositor devolveu `wl_display.error` — defeito nosso ou dele, e ele é
-#: DITO em vez de virar um None mudo.
 MOTIVO_ERRO_DO_PROTOCOLO = "cosmic_erro_do_protocolo"
 
 
@@ -156,11 +82,7 @@ def _le_vetor(corpo: bytes, pos: int) -> tuple[bytes, int]:
 
 
 def caminho_do_soquete() -> str | None:
-    """Onde mora o soquete do compositor, ou ``None`` se não há sessão Wayland.
-
-    `WAYLAND_DISPLAY` absoluto é usado como está (o protocolo permite); relativo
-    pende de `XDG_RUNTIME_DIR`, e sem ele não há o que tentar.
-    """
+    """Onde mora o soquete do compositor, ou ``None`` se não há sessão Wayland."""
     tela = os.environ.get("WAYLAND_DISPLAY")
     if not tela:
         return None
@@ -184,12 +106,7 @@ class _Janela:
 
 
 class CosmicToplevelBackend:
-    """Janela ativa via `zcosmic_toplevel_info_v1`, sem binário de terceiro.
-
-    Ligar é preguiçoso: nada acontece no `__init__`, para que construir o
-    backend num ambiente sem Wayland (CI, teste, sessão X11 pura) não custe
-    soquete nenhum. A primeira leitura é a que abre a conexão.
-    """
+    """Janela ativa via `zcosmic_toplevel_info_v1`, sem binário de terceiro."""
 
     backend_name: str = "cosmic"
 
@@ -204,24 +121,15 @@ class CosmicToplevelBackend:
         self._anunciado: bool = False
         self.last_failure_reason: str | None = None
 
-    # -- o que a cascata pergunta -------------------------------------------
 
     @property
     def available(self) -> bool:
-        """Este backend ainda pode produzir leitura?
-
-        ``False`` só depois de o compositor ter DITO que não publica o
-        protocolo. Soquete caído não desliga o backend: o compositor volta e
-        ele volta junto.
-        """
+        """Este backend ainda pode produzir leitura?"""
         return not self._desligado_de_vez
 
     @property
     def protocol_unsupported(self) -> bool:
-        """O compositor não publica ``zcosmic_toplevel_info_v1``?
-
-        Distingue, no diagnóstico, *"não é COSMIC"* de *"é, e o soquete caiu"*.
-        """
+        """O compositor não publica ``zcosmic_toplevel_info_v1``?"""
         return self._desligado_de_vez
 
     def get_active_window_info(self) -> WindowInfo | None:
@@ -254,16 +162,9 @@ class CosmicToplevelBackend:
         """Larga o soquete. Existe para o teste e para quem quiser ser limpo."""
         self._largar_conexao()
 
-    # -- a conexão ----------------------------------------------------------
 
     def _ligar(self) -> bool:
-        """Aperto de mão completo: registry, ligação e a primeira lista.
-
-        Esta é a única parte bloqueante, e ela tem teto (`_APERTO_DE_MAO_S`).
-        Ela é bloqueante de propósito: a alternativa seria a primeira leitura
-        devolver ``None`` mesmo com o compositor respondendo — um "não sei"
-        falso, que é o defeito que esta casa mais persegue.
-        """
+        """Aperto de mão completo: registry, ligação e a primeira lista."""
         agora = time.monotonic()
         if agora < self._proxima_tentativa:
             self.last_failure_reason = MOTIVO_SEM_CONEXAO
@@ -341,7 +242,7 @@ class CosmicToplevelBackend:
     def _pedir_o_registro(self) -> dict[str, tuple[int, int]]:
         """`get_registry` + `sync`, e lê até a volta do `sync`."""
         soquete = self._exigir_soquete()
-        registro = self._novo_id()  # sempre 2, o primeiro que o cliente aloca
+        registro = self._novo_id()
         soquete.sendall(
             _mensagem(_WL_DISPLAY, _WL_DISPLAY_GET_REGISTRY, struct.pack("<I", registro))
         )
@@ -386,15 +287,9 @@ class CosmicToplevelBackend:
             raise OSError(errno.ENOTCONN, "sem conexão com o compositor")
         return self._soquete
 
-    # -- ler do fio ---------------------------------------------------------
 
     def _ler_ate(self, eco: int, trata: Callable[[int, int, bytes], None]) -> None:
-        """Lê mensagens até o `wl_callback.done` de `eco`, ou até o teto de tempo.
-
-        `wl_display.error` interrompe: o compositor não vai mandar o `done`
-        depois de reclamar, e esperar por ele seria segurar o aperto de mão
-        pelos dois segundos inteiros.
-        """
+        """Lê mensagens até o `wl_callback.done` de `eco`, ou até o teto de tempo."""
         soquete = self._exigir_soquete()
         fim = time.monotonic() + _APERTO_DE_MAO_S
         while time.monotonic() < fim:
@@ -460,20 +355,12 @@ class CosmicToplevelBackend:
             yield objeto, palavra & 0xFFFF, corpo
 
     def _digerir(self, objeto: int, opcode: int, corpo: bytes) -> None:
-        """Aplica um evento ao estado. Ignora o que não é nosso, de propósito.
-
-        O que se ignora aqui não é descuido: `wl_display.delete_id`, os
-        `wl_registry.global` que continuam chegando e os eventos de geometria e
-        de área de trabalho da janela não mudam a resposta de "quem está em
-        cima" — e cada `if` a mais é uma chance a mais de errar o opcode.
-        """
+        """Aplica um evento ao estado. Ignora o que não é nosso, de propósito."""
         if objeto == self._info and self._info:
             if opcode == _INFO_EV_TOPLEVEL:
                 (identidade,) = struct.unpack_from("<I", corpo, 0)
                 self._janelas[identidade] = _Janela()
             elif opcode == _INFO_EV_FINISHED:
-                # O compositor aposentou a interface; a lista que temos morreu
-                # com ela e não haverá outra nesta conexão.
                 self._janelas.clear()
                 self._info = 0
             return
@@ -495,12 +382,7 @@ class CosmicToplevelBackend:
             self._destruir_janela(objeto)
 
     def _destruir_janela(self, objeto: int) -> None:
-        """Devolve ao compositor o objeto da janela que fechou.
-
-        Sem isto, cada janela que ela abre e fecha deixa um objeto vivo do
-        lado do compositor — uma sessão longa é justamente onde o vazamento
-        apareceria, e uma sessão longa é o caso normal deste daemon.
-        """
+        """Devolve ao compositor o objeto da janela que fechou."""
         soquete = self._soquete
         if soquete is None:
             return
@@ -535,12 +417,7 @@ class CosmicToplevelBackend:
 
 
 def sondar_o_compositor() -> dict[str, object]:
-    """Uma leitura, do zero, para quem só quer o veredito (o `doctor.sh`).
-
-    Existe para que o diagnóstico pergunte ao MESMO código que o daemon roda,
-    em vez de reescrever o protocolo num `python3 -c` embutido no bash — que é
-    como uma régua desta casa passa a medir outra coisa que não o produto.
-    """
+    """Uma leitura, do zero, para quem só quer o veredito (o `doctor.sh`)."""
     backend = CosmicToplevelBackend()
     try:
         info = backend.get_active_window_info()

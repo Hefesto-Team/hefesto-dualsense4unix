@@ -53,11 +53,7 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 DISABLE = "PROTON_DISABLE_HIDRAW"
 
-#: O appid do Sackboy, que é o jogo do ensaio `coop-ignore-avaliado-cedo`.
 APPID_SACKBOY = 1599660
-
-
-# --- instrumentos ------------------------------------------------------------
 
 
 class _LoggerEspiao:
@@ -134,9 +130,6 @@ def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-# --- 1. cobertura incompleta DURANTE a subida --------------------------------
-
-
 class TestCoberturaIncompletaDuranteASubida:
     """O instante 00:15:42.219 do journal: `fisicos=4 vpads=2`."""
 
@@ -162,30 +155,12 @@ class TestCoberturaIncompletaDuranteASubida:
             "o arquivo por appid escondeu 4 DualSense com 2 vpads vivos"
         )
         assert IGNORE not in default
-        # O DISABLE continua saindo: ele impede o winebus de entregar o hidraw
-        # do físico e não esconde nada do SDL (GUERRA-01, defeito já pago).
         assert DISABLE in por_appid
 
     def test_o_prognostico_de_outra_mascara_segue_intacto(
         self, mesa: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """R-05 não pode ser reaberto pela cura.
-
-        Quando o perfil pede máscara DIFERENTE da vigente, a lista de backends é
-        um símbolo de TIPO (`["uhid"]`), não um censo de vpads. Exigir cobertura
-        contra ela diria "sem cobertura" sobre uma mesa que ainda nem existe, e
-        o arquivo por appid voltaria a ficar PIOR que o `default.env` — o
-        defeito que o prognóstico foi escrito para curar.
-        """
-        # UHID-DO-RUNNER-01 (13/08/2026): `permite_uhid=True` é METADE da
-        # condição — `launch_env.py:1414` faz
-        # `prognostico_uhid = uhid_available() and permite_uhid`, e o
-        # `uhid_available()` pergunta ao SISTEMA. Na máquina dela `/dev/uhid`
-        # existe e o teste passava; no runner do CI não existe, a função
-        # devolvia `None` e o `unpack` estourava nas três versões de Python.
-        # O teste quer exercitar a lógica do prognóstico, não o hardware de
-        # quem o roda — então a condição entra declarada, e o `monkeypatch`
-        # some junto com o teste.
+        """R-05 não pode ser reaberto pela cura."""
         monkeypatch.setattr(
             "hefesto_dualsense4unix.integrations.uhid_gamepad.uhid_available",
             lambda: True,
@@ -201,9 +176,6 @@ class TestCoberturaIncompletaDuranteASubida:
         assert IGNORE in env
 
 
-# --- 2. cobertura completa no FIM --------------------------------------------
-
-
 class TestCoberturaCompletaNoFim:
     """00:15:42.401: o quarto vpad sobe e a mesa fecha."""
 
@@ -216,18 +188,10 @@ class TestCoberturaCompletaNoFim:
             assert DISABLE in env, nome
 
     def test_a_conta_da_cobertura_e_uma_so(self) -> None:
-        """`cobertura_total` é a função que o `compose_env` e o vigia leem.
-
-        Duas cópias da mesma conta é como esta casa reintroduz defeito pago.
-        """
+        """`cobertura_total` é a função que o `compose_env` e o vigia leem."""
         assert le.cobertura_total(backends=["uhid"] * 4, fisicos=4) is True
         assert le.cobertura_total(backends=["uhid"], fisicos=4) is False
-        # "NÃO SEI" (backend sem `describe_controllers`) é permissivo por
-        # decisão de 03/08 — apertar sem informação é regressão, não cura.
         assert le.cobertura_total(backends=["uhid"], fisicos=0) is True
-
-
-# --- 3. a rematerialização quando a mesa sossega -----------------------------
 
 
 class TestRematerializacaoNoSossego:
@@ -251,7 +215,6 @@ class TestRematerializacaoNoSossego:
         le.materialize_launch_env(daemon)
         assert IGNORE in _env_do_arquivo(mesa / "default.env")
 
-        # O quarto controle chega; nenhuma borda de vpad acontece.
         daemon.controller.describe_controllers = lambda: [{"connected": True}] * 4
         assert IGNORE in _env_do_arquivo(mesa / "default.env"), (
             "pré-condição: o arquivo ainda afirma a cobertura antiga"
@@ -270,12 +233,7 @@ class TestRematerializacaoNoSossego:
         assert IGNORE not in _env_do_arquivo(mesa / f"steam_app_{APPID_SACKBOY}.env")
 
     def test_o_disparo_espera_o_ultimo_evento_da_rajada(self, mesa: Path) -> None:
-        """"Agir sobre TUDO": rearmar empurra o vencimento para a frente.
-
-        A rajada medida de P2→P3→P4 durou 183 ms. Decidir no primeiro evento
-        dela é o defeito inteiro; o relógio tem de andar a cada evento e vencer
-        depois do último.
-        """
+        """"Agir sobre TUDO": rearmar empurra o vencimento para a frente."""
         daemon = _daemon(vpads=1, fisicos=4)
         janela = le.JANELA_DE_SOSSEGO_SEC
 
@@ -307,11 +265,7 @@ class TestRematerializacaoNoSossego:
         assert (mesa / "default.env").read_text(encoding="utf-8") == antes
 
     def test_o_vigia_nao_empurra_o_proprio_vencimento(self, mesa: Path) -> None:
-        """Rearmar a cada tique de 1 Hz faria o disparo nunca acontecer.
-
-        O vigia só arma quando NÃO há relógio andando. Quem rearma numa rajada
-        são as bordas de vpad, que é o lugar certo.
-        """
+        """Rearmar a cada tique de 1 Hz faria o disparo nunca acontecer."""
         daemon = _daemon(vpads=3, fisicos=3)
         le.materialize_launch_env(daemon)
         daemon.controller.describe_controllers = lambda: [{"connected": True}] * 4
@@ -322,31 +276,24 @@ class TestRematerializacaoNoSossego:
         assert daemon._launch_env_sossego_em == prazo
 
 
-# --- a fiação: a reconciliação de 1 Hz é quem consome o vencimento -----------
-
-
 class TestFiacaoNaReconciliacaoDeUmHertz:
     def test_reconciliar_launch_regrava_quando_a_mesa_sossega(
         self, mesa: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA da fiação: tire as duas chamadas de `_reconciliar_launch`.
-
-        Sem elas nada consome o vencimento e o arquivo fica rançoso para sempre.
-        """
+        """A MORDIDA da fiação: tire as duas chamadas de `_reconciliar_launch`."""
         monkeypatch.setattr(le, "JANELA_DE_SOSSEGO_SEC", 0.0)
         daemon = _daemon(vpads=3, fisicos=3)
         le.materialize_launch_env(daemon)
         daemon.controller.describe_controllers = lambda: [{"connected": True}] * 4
 
-        gp._reconciliar_launch(daemon)  # tique 1: nota a mudança e ARMA
-        daemon._launch_reconcile_next_at = 0.0  # solta o throttle de 1 Hz
-        gp._reconciliar_launch(daemon)  # tique 2: sossegou -> regrava
+        gp._reconciliar_launch(daemon)
+        daemon._launch_reconcile_next_at = 0.0
+        gp._reconciliar_launch(daemon)
 
         assert IGNORE not in _env_do_arquivo(mesa / "default.env")
 
     def test_borda_de_vpad_escreve_agora_e_arma_o_sossego(self, mesa: Path) -> None:
-        """A borda continua escrevendo NA HORA — deixar o arquivo velho durante
-        a subida faria um jogo lançado no meio dela ler outra sessão."""
+        """A borda continua escrevendo NA HORA — deixar o arquivo velho durante"""
         daemon = _daemon(vpads=1, fisicos=4)
         gp._materialize_launch_env(daemon)
 
@@ -358,11 +305,7 @@ class TestFiacaoNoCoop:
     def test_jogador_com_grab_pendente_arma_o_sossego(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`coop_player_grab_pending` é o ramo que não materializa NADA.
-
-        E é o ramo em que a mesa fica desequilibrada: mais um físico, nenhum
-        vpad novo. Sem armar aqui, ninguém reabre a conta.
-        """
+        """`coop_player_grab_pending` é o ramo que não materializa NADA."""
         from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 
         class _ReaderPendente:
@@ -392,9 +335,6 @@ class TestFiacaoNoCoop:
         )
 
 
-# --- o que a cura NÃO conserta, dito em voz alta -----------------------------
-
-
 class TestOAvisoHonesto:
     """O jogo congela a env no `exec`; regravar o arquivo não o alcança."""
 
@@ -403,7 +343,6 @@ class TestOAvisoHonesto:
     ) -> None:
         espiao = _LoggerEspiao()
         monkeypatch.setattr(le, "logger", espiao)
-        # Marker do wrapper: launch NOSSO, deste segundo, com pid vivo.
         (mesa / "last_run").write_text(
             f"appid={APPID_SACKBOY}\nepoch={int(le.time.time())}\npid={os.getpid()}\n",
             encoding="utf-8",

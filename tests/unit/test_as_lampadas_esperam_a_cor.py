@@ -53,14 +53,12 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     ControllerIdentityRegistry,
 )
 
-#: A mesa de quatro, na ordem em que ela os liga.
 PRIMEIRO = "aa:bb:cc:00:00:01"
 SEGUNDO = "aa:bb:cc:00:00:02"
 TERCEIRO = "aa:bb:cc:00:00:03"
 QUARTO = "aa:bb:cc:00:00:04"
 UNIQS = (PRIMEIRO, SEGUNDO, TERCEIRO, QUARTO)
 
-#: O que sobra quando o P3 sai — o gesto exato da medição de 20/09.
 SOBRAM = (PRIMEIRO, SEGUNDO, QUARTO)
 
 BOOT = "boot-teste-as-lampadas-esperam-a-cor"
@@ -120,16 +118,13 @@ class TestOAparelhoNaoSeContradiz:
     """O número do aparelho não anda sem a cor — a decisão dela de 20/09."""
 
     def test_o_gatilho_ainda_nao_disparou_e_o_numero_nao_se_mexe(self) -> None:
-        """P3 sai; até a liberação, o P4 continua sendo o jogador 4.
-
-        É o cenário medido, e é a metade que custou 27 segundos.
-        """
+        """P3 sai; até a liberação, o P4 continua sendo o jogador 4."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
-        assert reg.liberar_as_lampadas() is True  # a mesa estreia liberada
+        assert reg.liberar_as_lampadas() is True
         assert numeros_das_lampadas(reg)[QUARTO] == 4
 
-        reg.sync_connected(list(SOBRAM))  # o tique de 2 s viu o P3 sair
+        reg.sync_connected(list(SOBRAM))
         passar_o_prazo(relogio)
 
         assert numeros_das_lampadas(reg)[QUARTO] == 4, (
@@ -148,15 +143,10 @@ class TestOAparelhoNaoSeContradiz:
         assert reg.liberar_as_lampadas() is True
         assert numeros_das_lampadas(reg)[QUARTO] == 3, (
             "a liberação não chegou ao número que o aparelho mostra")
-        # E ela é idempotente: sem mesa nova, não há o que soltar.
         assert reg.liberar_as_lampadas() is False
 
     def test_a_cor_e_o_numero_saem_do_mesmo_slot(self) -> None:
-        """A camada automática resolve os dois campos com UM número.
-
-        É esta linha que torna a contradição impossível por construção: fossem
-        dois números, a cura seria uma corrida entre duas rotas de escrita.
-        """
+        """A camada automática resolve os dois campos com UM número."""
         from hefesto_dualsense4unix.core.led_control import (
             player_led_pattern,
             player_slot_color,
@@ -186,12 +176,7 @@ class TestOQueJaFuncionavaContinua:
     """A hipótese tem de explicar o que já funcionava — regra da casa."""
 
     def test_a_tela_nao_espera_nada(self) -> None:
-        """`numeros_da_mesa` é a mesa de AGORA, e é ela que a tela lê.
-
-        A decisão dela é sobre o APARELHO não se contradizer. A tela continua
-        se refazendo em 0,2 s — e é por isso que o vão tela↔aparelho MUDA DE
-        LUGAR em vez de sumir, o que a sprint declara.
-        """
+        """`numeros_da_mesa` é a mesa de AGORA, e é ela que a tela lê."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.liberar_as_lampadas()
@@ -202,11 +187,7 @@ class TestOQueJaFuncionavaContinua:
             "aabbcc000001": 1, "aabbcc000002": 2, "aabbcc000004": 3}
 
     def test_sem_liberacao_nenhuma_a_resposta_e_a_de_sempre(self) -> None:
-        """Tabela vazia = comportamento byte a byte igual ao de antes.
-
-        Cobre o daemon recém-subido, o registro de teste e todo dublê sem
-        gatilho: quem nunca liberou nada nunca congela nada.
-        """
+        """Tabela vazia = comportamento byte a byte igual ao de antes."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.sync_connected(list(SOBRAM))
@@ -227,12 +208,7 @@ class TestOQueJaFuncionavaContinua:
             "contradizer")
 
     def test_a_estreia_nunca_senta_no_colo_de_ninguem(self) -> None:
-        """Congelar não pode ressuscitar a colisão de 27/08/2026.
-
-        O caminho é real: o P1 sai, e um controle novo chega ANTES do gatilho.
-        A mesa de agora daria a ele o número que outro ainda está congelado
-        mostrando. A resposta certa é "sem opinião" até a liberação.
-        """
+        """Congelar não pode ressuscitar a colisão de 27/08/2026."""
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         for uniq in (PRIMEIRO, SEGUNDO):
@@ -241,9 +217,9 @@ class TestOQueJaFuncionavaContinua:
         reg.liberar_as_lampadas()
         assert reg.numero_da_lampada(SEGUNDO, assign=False) == 2
 
-        reg.sync_connected([SEGUNDO])            # o P1 saiu
-        passar_o_prazo(relogio)                  # e o lugar dele se liberou
-        reg.sync_connected([SEGUNDO, TERCEIRO])  # e o novo chegou antes do gatilho
+        reg.sync_connected([SEGUNDO])
+        passar_o_prazo(relogio)
+        reg.sync_connected([SEGUNDO, TERCEIRO])
 
         vistos = [n for n in numeros_das_lampadas(reg).values() if n is not None]
         assert len(vistos) == len(set(vistos)), (
@@ -256,24 +232,16 @@ class TestAMordida:
     """Arranque a cura e veja a régua reprovar. Sem isto, ela não mede nada."""
 
     def test_o_caminho_pre_cura_deixa_a_lampada_andar_sozinha(self) -> None:
-        """A cura arrancada = `numero_da_lampada` respondendo pela mesa de agora.
-
-        É EXATAMENTE o código anterior a esta sprint (uma linha:
-        ``_numeros_da_mesa_locked`` no lugar de ``_numeros_das_lampadas_locked``),
-        e com ele a asserção do primeiro teste desta régua cai.
-        """
+        """A cura arrancada = `numero_da_lampada` respondendo pela mesa de agora."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.liberar_as_lampadas()
         reg.sync_connected(list(SOBRAM))
         passar_o_prazo(relogio)
 
-        # Com a cura no lugar: o aparelho não se contradiz.
         assert reg.numero_da_lampada(QUARTO, assign=False) == 4
 
-        # Com a cura ARRANCADA: o número anda sem a cor — a contradição de
-        # 20/09 de volta, e a asserção acima reprovaria.
-        sem_cura = reg._numeros_da_mesa_locked()  # é a mordida: o caminho velho
+        sem_cura = reg._numeros_da_mesa_locked()
         assert sem_cura["aabbcc000004"] == 3, (
             "a mordida não reproduziu o mundo pré-cura: se os dois caminhos "
             "respondem igual, esta régua está medindo a si mesma")

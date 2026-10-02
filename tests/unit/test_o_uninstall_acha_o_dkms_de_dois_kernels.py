@@ -1,26 +1,4 @@
-"""O uninstall acha o módulo DKMS mesmo quando o `dkms status` tem mais de uma linha.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), achado lendo o ensaio do
-uninstall na máquina dela: o plano tirava o `hefesto-rtw88-usb` e o
-`hefesto-hid-playstation`, e NÃO o `hefesto-hid-nintendo`. A causa é a forma
-que o `scripts/dkms_lib.sh` já documenta desde 19/08 — com `set -o pipefail`,
-um `dkms status X | grep -q .` devolve 141 exatamente quando ACHA: o `grep -q`
-sai na primeira linha, o `dkms` morre de SIGPIPE escrevendo a segunda, e o
-`if` lê «não instalado». O hid-nintendo dela está em DOIS kernels (duas
-linhas); os outros dois, em um. O do uhid (`dkms status | grep -q
-'^hefesto-uhid'`) cairia igual, com a lista inteira da máquina atrás dele.
-
-A régua roda o ensaio (`--dry-run`) num lar de mentira com um `dkms` que dá
-duas linhas com uma pausa entre elas, e exige o `dkms remove` dos quatro no
-plano.
-
-A mesma forma morava no `flatpak list --user --app | grep -q <id>`: com os
-dois listados, o id de hoje, que vem primeiro, nunca saía.
-
-A MORDIDA, medida: devolver o `| grep -q .` ao bloco do hid-nintendo (ou o
-`| grep -q '^hefesto-uhid'` ao do uhid, ou o `| grep -q` ao do Flatpak) tira a
-linha dele do plano, e o teste reprova.
-"""
+"""O uninstall acha o módulo DKMS mesmo quando o `dkms status` tem mais de uma linha."""
 
 from __future__ import annotations
 
@@ -34,8 +12,6 @@ from tests.unit.test_o_ensaio_do_uninstall_nao_escreve import (
     _dublar,
 )
 
-# Duas linhas com uma pausa entre elas: é o que faz o `grep -q` fechar o
-# cano antes de o `dkms` terminar de escrever, como o de verdade faz.
 _DKMS_DE_DOIS_KERNELS = """#!/bin/sh
 [ "$1" = "status" ] || exit 0
 if [ -n "$2" ]; then pkg="${2%%/*}"; else pkg="hefesto-uhid"; fi

@@ -1,35 +1,4 @@
-"""PARIDADE-TRANSPORTE — giroscópio, acelerômetro e touchpad, cabo E rádio.
-
-O QUE ESTE ARQUIVO TRAVA, e por que ele nasceu em 03/09/2026
-------------------------------------------------------------
-Ela pediu para achar *"o que no código tá setado pra funcionar só via cabo e
-não BT"*. Na área de movimento e toque a resposta foi medida na mesa dela, com
-os dois controles ao mesmo tempo (um no cabo, um no rádio), e são DUAS metades
-que este arquivo separa de propósito:
-
-1. **A LEITURA NÃO TEM RAMO DE TRANSPORTE, e isso é para ficar assim.** O nó
-   ``… Motion Sensors`` e o nó ``… Touchpad`` nascem nos dois barramentos, com
-   nomes diferentes (o BlueZ não põe o prefixo do fabricante) e com os mesmos
-   eixos. Quem descobre é ``_discover_dualsense_por_nome``, que casa por
-   vendor + PID + SUBSTRING do nome e **nunca** consulta ``bustype``. Medido em
-   03/09: o ``MotionSensorReader`` abriu o nó de bluetooth do segundo controle e
-   devolveu 0,9966 g de módulo de gravidade e o bias de repouso do giroscópio.
-   Os três primeiros testes reprovam no dia em que alguém puser um porteiro de
-   barramento nessa descoberta;
-
-2. **O QUE RECUSA É OUTRO PORTÃO, E ELE NÃO É DE TRANSPORTE — É DE CONTROLE.**
-   ``daemon/ipc_handlers.py`` publica ``entry["inputs"] = None`` para todo
-   controle que não seja o primário nem tenha instantâneo de co-op, e
-   ``_merge_sensores`` desiste na hora quando ``inputs`` não é dicionário. O
-   segundo controle da mesa fica sem giro, sem acelerômetro e sem toque **nos
-   dois transportes** — mas como o segundo controle da mesa dela é o do rádio,
-   isso se apresenta como "cabo sim, rádio não". A cura mora em arquivo de
-   outra frente; o que este arquivo faz é impedir que o achado se perca: o mapa
-   tem de continuar contando a história, e o código tem de continuar batendo com
-   o que o mapa conta.
-
-MORDIDA PROVADA (03/09/2026) — ver a docstring de cada caso.
-"""
+"""PARIDADE-TRANSPORTE — giroscópio, acelerômetro e touchpad, cabo E rádio."""
 from __future__ import annotations
 
 import csv
@@ -51,20 +20,13 @@ RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 IPC = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_handlers.py"
 
-#: Barramentos como o kernel os numera (`linux/input.h`). Os dois nós de
 #: sensor do DualSense nascem nos DOIS — é o que a bancada de 03/09 mediu.
 BUS_USB = 0x03
 BUS_BLUETOOTH = 0x05
 
-#: MACs de mentira na convenção da casa (`aa:bb:cc:00:00:NN`). O que importa
-#: aqui é serem DOIS, um por barramento.
 MAC_CABO = "aa:bb:cc:00:00:01"
 MAC_RADIO = "aa:bb:cc:00:00:02"
 
-#: Os nomes REAIS dos nós, como esta bancada os leu em 03/09/2026: por USB o
-#: kernel põe o prefixo do fabricante, por Bluetooth o BlueZ não põe. É por
-#: isso que a descoberta casa por SUBSTRING — um match exato pelo nome de USB
-#: nunca acharia o nó do rádio (foi o defeito TOUCHPAD-76-BT-VPAD-01).
 NOME_MOTION_USB = (
     "Sony Interactive Entertainment DualSense Wireless Controller Motion Sensors"
 )
@@ -76,14 +38,7 @@ NOME_TOUCH_BT = "DualSense Wireless Controller Touchpad"
 
 
 def _no(nome: str, uniq: str, bus: int, path: str) -> str:
-    """Publica o nó no sysfs de mentira, COM barramento, e devolve o caminho.
-
-    A descoberta lê vendor, product, nome e endereço no sysfs, sem abrir o nó
-    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). O `id/bustype`
-    vai junto de propósito, como vai no aparelho: um porteiro de barramento
-    introduzido no produto tem o que ler, e a régua reprova pela cura, não
-    por um arquivo que faltou.
-    """
+    """Publica o nó no sysfs de mentira, COM barramento, e devolve o caminho."""
     publicar_no(evdev_reader.SYS_CLASS_INPUT, path, nome=nome, uniq=uniq, bus=bus)
     return path
 
@@ -105,27 +60,7 @@ def _sem_open(caminho: Any) -> Any:
 
 
 def _com_a_mesa(marcador: str) -> Any:
-    """Os dois nós sintéticos, e o TERCEIRO dublê sem o qual esta régua mentia.
-
-    `_is_virtual_evdev` NÃO era dublada, e ela não olha o objeto `InputDevice` —
-    ela lê o `/sys` da máquina que roda o teste. Para um caminho que não existe
-    aqui (`/dev/input/event256`, o do rádio) os atributos são ilegíveis, e ela
-    devolve `True` de propósito: *"na dúvida, o risco maior é o feedback loop de
-    auto-adoção"*. Medido em 04/09/2026 nesta bancada:
-
-        _is_virtual_evdev("/dev/input/event28")   -> False
-        _is_virtual_evdev("/dev/input/event256")  -> True    <- o nó do rádio
-
-    Então o nó do rádio era descartado ANTES do casamento por nome, e a régua
-    acusava o produto por uma recusa que era do PRÓPRIO INSTRUMENTO. Ela nasceu
-    vermelha em 03/09 e ficou assim, com o defeito atribuído ao lugar errado.
-
-    O dublê diz `False` para os dois porque é isso que eles SÃO — dois controles
-    físicos, um em cada barramento. O filtro de virtual tem régua própria
-    (`_is_virtual_evdev` e o BLUEZ-UHID-01); dublá-lo aqui não afrouxa nada:
-    afrouxaria se esta régua alegasse medi-lo, e ela mede outra coisa — que o
-    casamento por vendor + PID + nome não consulta `bustype`.
-    """
+    """Os dois nós sintéticos, e o TERCEIRO dublê sem o qual esta régua mentia."""
     nos = _mesa_de_dois(marcador)
     return (
         patch("evdev.list_devices", return_value=nos),
@@ -147,13 +82,7 @@ def _com_a_mesa(marcador: str) -> Any:
 def test_a_descoberta_do_no_acha_o_do_radio_igual_ao_do_cabo(
     marcador: str, descobre: Any
 ) -> None:
-    """Os DOIS nós saem da descoberta — o do cabo e o do rádio.
-
-    MORDIDA PROVADA em 03/09/2026 (`and dev.info.bustype == 0x03` no
-    casamento de `_discover_dualsense_por_nome`) e de novo em 28/09/2026, com a
-    descoberta lendo o sysfs: um porteiro que leia o `id/bustype` e só aceite
-    `0003` reprova os quatro casos deste arquivo que dependem do nó de rádio.
-    """
+    """Os DOIS nós saem da descoberta — o do cabo e o do rádio."""
     lista, dispositivo, nao_virtual = _com_a_mesa(marcador)
     with lista, dispositivo, nao_virtual:
         achados = descobre()
@@ -168,14 +97,7 @@ def test_a_descoberta_do_no_acha_o_do_radio_igual_ao_do_cabo(
 
 
 def test_o_nome_do_no_do_radio_vem_sem_o_prefixo_do_fabricante() -> None:
-    """A descoberta casa por SUBSTRING, e é isso que salva o nó do rádio.
-
-    Não é detalhe de implementação: por Bluetooth o BlueZ nomeia o nó sem
-    "Sony Interactive Entertainment", e um match EXATO pelo nome de USB é
-    exatamente o defeito que a `assets/76-dualsense-touchpad-libinput-ignore.rules`
-    pagou em 21/07/2026. Se alguém trocar a substring por igualdade, este caso
-    reprova antes de a mesa dela reprovar.
-    """
+    """A descoberta casa por SUBSTRING, e é isso que salva o nó do rádio."""
     assert NOME_MOTION_BT != NOME_MOTION_USB
     assert NOME_MOTION_BT in NOME_MOTION_USB
 
@@ -183,11 +105,6 @@ def test_o_nome_do_no_do_radio_vem_sem_o_prefixo_do_fabricante() -> None:
     with patch("evdev.list_devices", return_value=nos), patch(
         "evdev.InputDevice", side_effect=_sem_open
     ), patch(
-        # O TERCEIRO DUBLÊ — a razão inteira está em `_com_a_mesa`: sem ele,
-        # `_is_virtual_evdev` lê o `/sys` desta máquina, não acha o caminho
-        # sintético do rádio e devolve `True` na dúvida. O nó era descartado
-        # antes do casamento por nome, e a régua acusava o produto pela recusa
-        # do próprio instrumento.
         "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
         return_value=False,
     ):
@@ -199,22 +116,12 @@ def test_o_nome_do_no_do_radio_vem_sem_o_prefixo_do_fabricante() -> None:
 
 
 def test_o_leitor_de_movimento_resolve_o_alvo_do_radio() -> None:
-    """`MotionSensorReader(target_uniq=<mac do rádio>)` acha o nó do rádio.
-
-    É a rota do PRODUTO, não um instrumento à parte: foi esta classe que, em
-    03/09/2026, leu 0,9966 g de gravidade e o bias de repouso do giroscópio no
-    controle de Bluetooth da mesa dela.
-    """
+    """`MotionSensorReader(target_uniq=<mac do rádio>)` acha o nó do rádio."""
     nos = _mesa_de_dois("Motion Sensors")
     leitor = MotionSensorReader(target_uniq="aabbcc000002")
     with patch("evdev.list_devices", return_value=nos), patch(
         "evdev.InputDevice", side_effect=_sem_open
     ), patch(
-        # O TERCEIRO DUBLÊ — a razão inteira está em `_com_a_mesa`: sem ele,
-        # `_is_virtual_evdev` lê o `/sys` desta máquina, não acha o caminho
-        # sintético do rádio e devolve `True` na dúvida. O nó era descartado
-        # antes do casamento por nome, e a régua acusava o produto pela recusa
-        # do próprio instrumento.
         "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
         return_value=False,
     ):
@@ -225,18 +132,12 @@ def test_o_leitor_de_movimento_resolve_o_alvo_do_radio() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# A evidência no mapa, e o código que ela cita
-# ---------------------------------------------------------------------------
 def _linhas_do_mapa() -> dict[tuple[str, str], dict[str, str]]:
     csv.field_size_limit(10_000_000)
     with open(MAPA, encoding="utf-8", newline="") as fh:
         return {(r["chave"], r["controle"]): r for r in csv.DictReader(fh)}
 
 
-#: As linhas desta área que têm de carregar o caminho do RÁDIO por escrito. É o
-#: mecanismo que ela descreveu: *"quando colocarmos o caminho certo no specs o
-#: script original vai fazer uso desse place holder"*.
 LINHAS_COM_CAMINHO_DE_RADIO = [
     ("movimento.giroscopio", "dualsense"),
     ("movimento.acelerometro", "dualsense"),
@@ -249,12 +150,7 @@ LINHAS_COM_CAMINHO_DE_RADIO = [
 
 @pytest.mark.parametrize(("chave", "controle"), LINHAS_COM_CAMINHO_DE_RADIO)
 def test_o_mapa_guarda_o_caminho_do_radio_desta_area(chave: str, controle: str) -> None:
-    """Canal, offset, comando e endereço de código do RÁDIO, preenchidos.
-
-    MORDIDA: apagar qualquer uma das quatro células reprova o caso — e é isso
-    que impede o `specs.html` de voltar a publicar uma linha muda no lado do
-    rádio depois de alguém ter escrito o caminho.
-    """
+    """Canal, offset, comando e endereço de código do RÁDIO, preenchidos."""
     linha = _linhas_do_mapa().get((chave, controle))
     assert linha is not None, f"linha {chave}@{controle} sumiu do mapa"
     for coluna in ("radio_canal", "radio_offset", "radio_comando", "radio_codigo_ref"):

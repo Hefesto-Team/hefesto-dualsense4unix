@@ -67,18 +67,12 @@ FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "cosmic-red", "mascara": "DualSense"}]
 
-#: O MÉTODO DO INTERRUPTOR DESDE 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01):
 #: o «Status do Modo» manda `desktop.status.set` uma vez, e o daemon liga o
-#: mouse e o teclado. A memória do clique é a mesma, e é ela que se mede.
 STATUS = "desktop.status.set"
 
 
 class _Ponte:
-    """Um daemon de mentira que responde o CORPO. Sem `chamar`, de propósito.
-
-    Um gesto que volte ao caminho que perde o motivo da recusa levanta
-    `AttributeError` aqui, e a régua o nomeia.
-    """
+    """Um daemon de mentira que responde o CORPO. Sem `chamar`, de propósito."""
 
     def __init__(self, corpo: dict | None = None) -> None:
         self.corpo = corpo if corpo is not None else {"status": "ok"}
@@ -104,11 +98,7 @@ def _ctx(**mouse: object):
 
 @pytest.fixture(autouse=True)
 def _memoria_limpa():
-    """A memória é de MÓDULO — cada régua parte do zero.
-
-    Sem isto a ordem dos testes decidiria o resultado, que é a forma de régua
-    que dá verde por acidente.
-    """
+    """A memória é de MÓDULO — cada régua parte do zero."""
     from pacotes import a06_navegacao as mod
 
     mod._PEDIDO.clear()
@@ -117,10 +107,7 @@ def _memoria_limpa():
 
 
 class _Relogio:
-    """Um `time` de mentira, para a expiração ser medida e não esperada.
-
-    Só `monotonic` é substituído; é o único membro que `_partir_de` usa.
-    """
+    """Um `time` de mentira, para a expiração ser medida e não esperada."""
 
     def __init__(self) -> None:
         self.agora = 1000.0
@@ -129,16 +116,8 @@ class _Relogio:
         return self.agora
 
 
-# ---------------------------------------------------------------------------
-# 1. O INTERRUPTOR NÃO ENGOLE O SEGUNDO CLIQUE
-# ---------------------------------------------------------------------------
 def test_dois_cliques_no_interruptor_no_mesmo_tique_desfazem() -> None:
-    """O `ctx` não muda entre eles — é exatamente o caso medido.
-
-    O segundo clique é *desfaça*, e não *ande mais*: um interruptor tem UM
-    gesto, e repetir o pedido é o que fazia a tela ficar dizendo "Ligado" sem
-    ela ter querido.
-    """
+    """O `ctx` não muda entre eles — é exatamente o caso medido."""
     from pacotes import a06_navegacao as mod
 
     ctx, ponte = _ctx(enabled=False, speed=6, scroll_speed=1), _Ponte()
@@ -172,21 +151,14 @@ def test_quando_o_tique_chega_o_interruptor_parte_do_daemon() -> None:
 
     ponte = _Ponte()
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
-    # O daemon aplicou e o tique trouxe `True`: o clique seguinte desliga.
     mod.modo(_ctx(enabled=True), {"gesto": "modo"}, ponte)
     assert ponte.pedidos(STATUS, "enabled") == [True, False]
-    # E de novo, com o tique acompanhando: liga.
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
     assert ponte.pedidos(STATUS, "enabled") == [True, False, True]
 
 
 def test_o_interruptor_recusado_nao_deixa_rastro() -> None:
-    """Recusa não é confirmação: o clique seguinte volta a pedir a mesma coisa.
-
-    Era o pior lado do defeito, porque a recusa do mouse já PARA o gesto antes
-    do teclado — guardar o pedido faria o clique seguinte pedir o contrário do
-    que ela quis.
-    """
+    """Recusa não é confirmação: o clique seguinte volta a pedir a mesma coisa."""
     from pacotes import a06_navegacao as mod
 
     ctx = _ctx(enabled=False)
@@ -200,33 +172,6 @@ def test_o_interruptor_recusado_nao_deixa_rastro() -> None:
     assert aceitou.pedidos(STATUS, "enabled") == [True], (
         "depois de uma recusa, o clique seguinte pediu o contrário do que ela "
         "quis — a memória guardou um pedido que não aconteceu.")
-
-
-# ---------------------------------------------------------------------------
-# 2. A MEMÓRIA SÓ GUARDA O QUE O HEFESTO CONFIRMOU
-# ---------------------------------------------------------------------------
-# **AS SEIS RÉGUAS DESTA SEÇÃO E DA SEGUINTE MUDARAM DE CLIENTE — 05/09/2026.**
-# Elas mediam a memória através das VELOCIDADES, e as velocidades deixaram de
-# usá-la: decisão dela, *"velocidade do cursor e da rolagem coloca um slicer
-# pra cada"*. Uma barra manda o número INTEIRO — não há de onde partir, logo não
-# há passo engolido a curar, e `_velocidade` não chama `_partir_de` nem
-# `_reservar`.
-#
-# A MEMÓRIA NÃO MORREU: ela tem exatamente UM cliente hoje, o interruptor
-# "Status do Modo", que tem UM gesto e por isso depende dela para o segundo
-# clique ser *desfaça*. Todo comportamento que estas réguas mediam continua
-# existindo e continua importando — o que muda é o gesto que as exercita.
-#
-# O QUE NÃO SOBREVIVEU, e é honesto dizer: o caso NUMÉRICO
-# (`+` recusado, o clique seguinte não pode pular o 7). Com um booleano não há
-# número a pular. A prova numérica do aparo na faixa mudou de casa e está em
-# `test_a_06_a_recusa_diz_o_motivo_e_o_clique_anda.py`, sobre a barra.
-#
-# UMA DELAS ERA VERDE PELO MOTIVO ERRADO. `test_o_silencio_do_hefesto_tambem_
-# nao_e_confirmacao` chamava `vel_cursor` com o gesto dos botões, e depois da
-# troca ele levantava `RuntimeError("a barra não mandou número nenhum")` — um
-# `pytest.raises(RuntimeError)` genérico aceitava isso e o teste passava sem
-# nunca chegar ao daemon. Aqui ele mede o silêncio de verdade.
 
 
 def test_o_silencio_do_hefesto_tambem_nao_e_confirmacao() -> None:
@@ -248,17 +193,7 @@ def test_o_silencio_do_hefesto_tambem_nao_e_confirmacao() -> None:
 
 
 def test_a_reserva_ja_esta_de_pe_durante_a_chamada() -> None:
-    """Os gestos rodam em THREAD — anotar só na volta reabre o buraco.
-
-    `hefesto_vivo.trabalhar` dispara uma thread por clique, *"um gesto síncrono
-    congelaria a janela inteira por nove segundos e meio"*. Se a memória só
-    fosse escrita DEPOIS da resposta, um segundo clique chegado dentro do tempo
-    de ida e volta do IPC leria a memória vazia e repetiria o pedido do
-    primeiro — que é exatamente a janela em que ela clica duas vezes.
-
-    A ponte olha `_PEDIDO` de dentro da chamada: é o único jeito de medir
-    "antes" sem depender de escalonamento de thread.
-    """
+    """Os gestos rodam em THREAD — anotar só na volta reabre o buraco."""
     from pacotes import a06_navegacao as mod
 
     visto: dict = {}
@@ -278,19 +213,15 @@ def test_a_reserva_ja_esta_de_pe_durante_a_chamada() -> None:
 
 
 def test_a_recusa_nao_apaga_o_pedido_anterior() -> None:
-    """Largar a reserva devolve o que estava lá — não esvazia a memória.
-
-    Um clique aceito seguido de um recusado tem de deixar o primeiro alvo de
-    pé: apagá-lo faria o clique seguinte repetir o que já aconteceu.
-    """
+    """Largar a reserva devolve o que estava lá — não esvazia a memória."""
     from pacotes import a06_navegacao as mod
 
     ctx = _ctx(enabled=False)
     aceitou = _Ponte()
-    mod.modo(ctx, {"gesto": "modo"}, aceitou)                     # desligado -> ligado
+    mod.modo(ctx, {"gesto": "modo"}, aceitou)
     negou = _Ponte({"status": "failed", "bloqueio": "sem_device"})
     with pytest.raises(RuntimeError):
-        mod.modo(ctx, {"gesto": "modo"}, negou)                   # ligado -> desligado, não
+        mod.modo(ctx, {"gesto": "modo"}, negou)
     de_novo = _Ponte()
     mod.modo(ctx, {"gesto": "modo"}, de_novo)
     assert de_novo.pedidos(STATUS, "enabled") == [False], (
@@ -299,12 +230,7 @@ def test_a_recusa_nao_apaga_o_pedido_anterior() -> None:
 
 
 def test_o_clique_aceito_continua_andando() -> None:
-    """A guarda de vacuidade: mover a anotação não pode matar a cura de 02/09.
-
-    Três cliques dentro do mesmo tique alternam três vezes — que é o defeito
-    que a memória nasceu para curar, e que continua curado depois de ela virar
-    confirmação.
-    """
+    """A guarda de vacuidade: mover a anotação não pode matar a cura de 02/09."""
     from pacotes import a06_navegacao as mod
 
     ctx, ponte = _ctx(enabled=False), _Ponte()
@@ -313,18 +239,9 @@ def test_o_clique_aceito_continua_andando() -> None:
     assert ponte.pedidos(STATUS, "enabled") == [True, False, True]
 
 
-# ---------------------------------------------------------------------------
-# 3. A MEMÓRIA NÃO ATRAVESSA UMA VOLTA INTEIRA
-# ---------------------------------------------------------------------------
 def test_a_memoria_expira_e_a_volta_pela_janela_gtk_nao_pula_numero(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Concordar POR ACASO não é concordar.
-
-    Ela clica aqui (desligado -> ligado), desliga de novo pela janela GTK, e
-    clica aqui outra vez. O daemon diz `desligado` das duas vezes e o sentido é
-    o mesmo — as duas condições de 02/09 casavam, e o clique mandava DESLIGAR
-    uma emulação que já estava desligada. O relógio é a terceira condição.
-    """
+    """Concordar POR ACASO não é concordar."""
     from pacotes import a06_navegacao as mod
 
     relogio = _Relogio()
@@ -332,8 +249,6 @@ def test_a_memoria_expira_e_a_volta_pela_janela_gtk_nao_pula_numero(
 
     ponte = _Ponte()
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
-    # Ela foi à janela GTK e desligou de novo. Isso leva mais que a janela do
-    # tique — é um gesto humano, noutra janela.
     relogio.agora += mod.MEMORIA_DE_UM_CLIQUE + 1.0
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
     assert ponte.pedidos(STATUS, "enabled") == [True, True], (
@@ -343,11 +258,7 @@ def test_a_memoria_expira_e_a_volta_pela_janela_gtk_nao_pula_numero(
 
 def test_dentro_da_janela_do_tique_a_memoria_vale(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A outra ponta: expirar cedo demais devolveria o defeito de 02/09.
-
-    Um daemon lento não pode fazer o segundo clique parar de andar — a janela é
-    de quatro tiques justamente por isso.
-    """
+    """A outra ponta: expirar cedo demais devolveria o defeito de 02/09."""
     from pacotes import a06_navegacao as mod
 
     relogio = _Relogio()
@@ -381,4 +292,3 @@ def test_a_janela_da_memoria_cobre_mais_de_um_tique() -> None:
         "a viagem do pedido leva para voltar lida pelo tique")
 
 
-# "O homem é a medida de todas as coisas." — Protágoras

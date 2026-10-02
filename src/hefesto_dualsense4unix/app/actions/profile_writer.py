@@ -1,40 +1,4 @@
-"""O ÚNICO ponto por onde a janela grava perfil em disco (GRAVA-POR-UM-FUNIL-01).
-
-A INVARIANTE desta casa, escrita uma vez para valer em todo botão:
-
-    Toda gravação de perfil feita pela janela termina com o rascunho apontando
-    para o que ficou em DISCO — ``draft.source_name == profile.name`` e os
-    demais ``source_*`` iguais aos do perfil gravado.
-
-Por que ela precisa de um funil, e não de disciplina:
-
-O ``DraftConfig`` guarda uma FOTOGRAFIA do perfil de onde veio (os ``source_*``)
-e o ``to_profile`` decide por ela — o gate ``mesmo_perfil``
-(``draft_config.py``) pergunta se o nome que está sendo salvo é o mesmo da
-fotografia. Enquanto a fotografia envelhece, o gate responde ``False`` para
-sempre, e cada save seguinte grava ``MatchAny()`` com prioridade
-``max(catch-all) + folga``. MEDIDO no caminho do rodapé em 04/08/2026: o
-primeiro "Salvar Perfil" nasce com prioridade 10, o SEGUNDO com o mesmo nome
-nasce com 20, o terceiro com 30 — uma catraca que empurra o perfil dela para
-cima a cada gesto e apaga a regra de janela no caminho. É a queixa crônica
-("a config que eu deixo nunca é respeitada") entrando por uma porta nova.
-
-``DraftConfig.with_profile_identity`` existe desde a ABAS-01 (25/07) para curar
-exatamente isto, e a docstring dele descreve o caminho do rodapé como o defeito
-— mas tinha UM único chamador em produção (a aba Perfis). O rodapé, que grava
-por três botões diferentes (Salvar, Importar, Restaurar Padrão), não chamava
-nenhum. Lembrar de chamar não é engenharia: quem escrever o quarto botão vai
-esquecer de novo.
-
-Então o caminho de gravação passa a ser um só, e ele é quem se lembra. O portão
-``tests/unit/test_gravacao_de_perfil_passa_pelo_funil.py`` reprova qualquer
-``save_profile(`` novo dentro de ``app/`` fora daqui — quem escrever o quinto
-botão não precisa lembrar de nada, porque não consegue gravar por fora.
-
-Thread: o I/O de disco corre no worker de ``ipc_bridge.run_in_thread``
-(PERF-FOOTER-ASYNC-IO-01) e todo o resto na thread GTK. Cada gancho declara em
-qual das duas roda — a documentação disso é o motivo de os nomes serem longos.
-"""
+"""O ÚNICO ponto por onde a janela grava perfil em disco (GRAVA-POR-UM-FUNIL-01)."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -57,64 +21,17 @@ logger = get_logger(__name__)
 def carimbo_que_o_save_leva(
     existente: Profile | None, do_rascunho: PonteConfirmada | None
 ) -> PonteConfirmada | None:
-    """Carimbo de ponte que um perfil leva ao disco. UM dono, os dois botões.
-
-    PONTE-CONFIRMADA-01 (19/08/2026). O carimbo diz qual ponte já FUNCIONOU
-    naquele jogo — é o que faz a escada de ``integrations/ponte_escada.py``
-    parar em vez de recomeçar do primeiro degrau a cada lançamento, e recomeçar
-    significa recriar o vpad com o jogo aberto (R-04, 23/07).
-
-    Degrau 1 — ``existente.ponte``, o DISCO, pelo argumento medido da
-    REGRA-NAO-SE-PERDE-01: quem já existe tem carimbo, e carimbo não se perde
-    por um gesto que a tela nem sabe nomear. Cobre os dois casos que o
-    passthrough do rascunho NÃO cobre: salvar por cima de um perfil DIFERENTE
-    daquele de onde o rascunho veio (o gate ``mesmo_perfil`` de ``to_profile``
-    responde ``False``), e o carimbo que o daemon escreveu DEPOIS de a janela
-    fotografar o perfil.
-
-    Degrau 2 — o que ``to_profile`` já reemitiu (``draft.source_ponte`` gateado
-    pelo R-11), que é o caso comum: salvar por cima de si mesmo.
-
-    Não há degrau 3, e a ausência é a entrega: nome novo sem nada em disco nasce
-    SEM carimbo. A janela nunca inventa uma confirmação — quem carimba é
-    ``profiles.manager.confirmar_ponte``, depois de a ponte ter sido confirmada
-    de verdade.
-
-    PONTE-SOBREVIVE-A-CORRIDA-01 (28/08/2026) — por que esta escada saiu do
-    ``footer_actions`` e virou função de módulo: ela vivia como método privado
-    de um mixin que a aba Perfis NÃO herda (``ProfilesActionsMixin`` não
-    descende de ``ProfileWriterMixin``), então os dois botões que gravam perfil
-    respondiam à mesma pergunta por caminhos diferentes — e o da aba estava
-    errado. Aqui ela é importável pelos dois, e a divergência não tem onde
-    nascer de novo.
-    """
+    """Carimbo de ponte que um perfil leva ao disco. UM dono, os dois botões."""
     if existente is not None and existente.ponte is not None:
         return existente.ponte
     return do_rascunho
 
 
 class ProfileWriterMixin(CaronaDoWrapperMixin):
-    """Funil de gravação de perfil compartilhado pelos mixins da janela.
+    """Funil de gravação de perfil compartilhado pelos mixins da janela."""
 
-    Herdar daqui (em vez de importar uma função solta) é o que dá ao funil
-    acesso ao ``self.draft``, ao ``_active_profile_name`` e aos irmãos de mixin
-    — os mesmos que o defeito atravessava.
+    draft: Any
 
-    CARONA-DO-WRAPPER-01 (16/08/2026): a base deixou de ser o
-    ``WidgetAccessMixin`` cru e passou a ser o ``CaronaDoWrapperMixin`` (que o
-    estende). Pelo mesmo argumento que criou este arquivo — *"lembrar de chamar
-    não é engenharia"* —, o pedido dela de que salvar um perfil reponha o
-    wrapper `hefesto-launch` que a Steam comeu é atendido **aqui dentro**, no
-    passo 9 do funil, e não em cada botão: quem escrever o quinto botão de
-    gravação ganha a carona sem saber que ela existe.
-    """
-
-    # Referência ao rascunho central (definida em HefestoApp.__init__).
-    draft: Any  # DraftConfig — evita import circular; validado em runtime
-
-    # ------------------------------------------------------------------
-    # O funil
-    # ------------------------------------------------------------------
 
     def _gravar_perfil_async(
         self,
@@ -160,20 +77,12 @@ class ProfileWriterMixin(CaronaDoWrapperMixin):
 
         def _trabalho() -> tuple[Profile, Path, Any]:
             profile = construir()
-            # `origem` carimba o `profile_salvo` do journal com QUEM gravou.
-            # Sem isto o registro cai no basename do processo, que para a GUI
-            # é sempre o mesmo — e foi exatamente essa cegueira que impediu, na
-            # madrugada de 05/08, decidir se a prioridade 191 do disco dela veio
-            # da catraca do rodapé ou do controle deslizante. Aqui a resposta
-            # passa a estar na linha, junto do `match_antes`/`match_depois`.
             path = save_profile(profile, origem=f"janela:{evento}")
             extra: Any = None
             if depois_no_worker is not None:
                 try:
                     extra = depois_no_worker(profile)
                 except Exception as exc:
-                    # O arquivo JÁ está no disco: transformar isto em "falha ao
-                    # salvar" seria mentir para ela sobre o que aconteceu.
                     logger.warning(
                         "gravar_perfil_pos_gravacao_falhou",
                         evento=evento,
@@ -185,30 +94,19 @@ class ProfileWriterMixin(CaronaDoWrapperMixin):
         def _ao_gravar(resultado: tuple[Profile, Path, Any]) -> bool:
             profile, path, extra = resultado
             self._toast_de_gravacao(mensagem_ok(profile, path))
-            # `evento` é a RAIZ do nome: os dois lados (`_ok`/`_falhou`) saem
-            # dela, e os nomes que o journal já conhecia continuam iguais.
             logger.info(f"{evento}_ok", nome=profile.name, path=str(path))
             self._reapontar_rascunho(profile, adotar_como_ativo=adotar_como_ativo)
             recarregar = getattr(self, "_reload_profiles_store", None)
             if recarregar is not None:
                 recarregar(select_name=profile.name)
-            # DEDUP-04: o conjunto de perfis mudou — o daemon rematerializa o
-            # `steam_app_<appid>.env` de antecipação AGORA, senão o primeiro
-            # launch do jogo cai no `default.env` rançoso.
             avisar = getattr(self, "_notify_launch_env_refresh", None)
             if avisar is not None:
                 avisar()
             if depois_na_janela is not None:
                 depois_na_janela(profile, path, extra)
             self._conferir_invariante_de_gravacao(profile)
-            # CARONA-DO-WRAPPER-01: o passo 9, e ele é DELA — *"nem precisa ter
-            # um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar
-            # ou salvar o perfil"*. Por último de propósito: o perfil já está em
-            # disco e a janela já está coerente, então nada aqui pode custar a
-            # gravação. Fica silencioso quando não há nada para repor, que é o
-            # caso comum.
             self.pegar_carona_no_gesto(GESTO_SALVAR)
-            return False  # GLib.idle_add não repete
+            return False
 
         def _ao_falhar(exc: Exception) -> bool:
             self._toast_de_gravacao(mensagem_erro(exc))
@@ -217,31 +115,15 @@ class ProfileWriterMixin(CaronaDoWrapperMixin):
 
         ipc_bridge.run_in_thread(_trabalho, on_success=_ao_gravar, on_failure=_ao_falhar)
 
-    # ------------------------------------------------------------------
-    # Peças do funil (separadas para serem legíveis, não para serem chamadas
-    # de fora — quem grava chama `_gravar_perfil_async` e mais nada)
-    # ------------------------------------------------------------------
 
     def _reapontar_rascunho(
         self, profile: Profile, *, adotar_como_ativo: bool
     ) -> None:
-        """Faz o rascunho descrever o perfil que ACABOU de ir para o disco.
-
-        É a linha que faltava no rodapé. Sem ela o ``source_name`` continua
-        apontando para o perfil anterior, o gate ``mesmo_perfil`` do
-        ``to_profile`` responde ``False`` para sempre e o save seguinte grava
-        ``MatchAny()`` com a prioridade recalculada — a catraca 10 → 20 → 30.
-
-        ``_draft_baseline`` acompanha (R-08): o que estava em memória virou
-        disco, então a edição deixa de ser "pendente" e a reconciliação com o
-        perfil ativo volta a rodar pelo resto da sessão.
-        """
+        """Faz o rascunho descrever o perfil que ACABOU de ir para o disco."""
         draft = getattr(self, "draft", None)
         if draft is None:
             return
         ativo = getattr(self, "_active_profile_name", "") or ""
-        # Gravar OUTRO perfil (importar um arquivo que não é o que as abas
-        # editam) não pode mexer no rascunho dela — a mesma guarda que a aba
         # Perfis usa em `_reconciliar_rascunho_com_perfil_salvo`.
         e_do_rascunho = adotar_como_ativo or (
             bool(ativo) and mesmo_slug(profile.name, ativo)
@@ -253,41 +135,7 @@ class ProfileWriterMixin(CaronaDoWrapperMixin):
         self._draft_baseline = self.draft
 
     def _conferir_invariante_de_gravacao(self, profile: Profile) -> None:
-        """Assert barato: o rascunho aponta para o que ficou em disco.
-
-        Só cobra quando a gravação É a do rascunho (o import de OUTRO perfil
-        deixa o rascunho onde estava, de propósito). Se disparar, o defeito é
-        alguém ter trocado a ordem dos passos do funil — e o lugar de descobrir
-        isso é a suíte, não o disco dela.
-
-        NOTA DATADA — 07/08/2026: ESTA REDE MORDE, E ESTÁ MEDIDO.
-
-        Circulava a leitura de que "nenhum teste viola a invariante para vê-la
-        disparar". É FALSO, e foi medido por arrancamento em 07/08: trocado o
-        ``draft.with_profile_identity(profile)`` do ``_reapontar_rascunho`` por
-        um ``self.draft = draft`` cru, este ``assert`` dispara OITO vezes em
-        ``test_gravacao_de_perfil_passa_pelo_funil.py`` — sete no ``source_name``
-        e um no ``source_priority`` —, com a mensagem por extenso e o par de
-        nomes que divergiu. A cura foi devolvida byte a byte (``sha256``
-        conferido). GRAU: MEDIDO. A docstring daquele arquivo já registrava
-        "quatro reprovam pelo assert de invariante do funil"; a recontagem de
-        hoje bate com ela e a torna mais precisa.
-
-        O QUE É VERDADE, e continua sendo: isto é uma REDE DE TESTE, não uma
-        guarda de produção. ``assert`` some inteiro sob ``python -O`` — medido
-        na venv desta árvore: a mesma função levanta ``AssertionError`` sem a
-        flag e PASSA RETO com ela. Nada neste repositório roda otimizado hoje
-        (``PYTHONOPTIMIZE``, ``python -O`` e ``compileall`` com otimização: zero
-        ocorrências em ``scripts/``, ``packaging/`` e nas unidades ``systemd``),
-        então o risco é LATENTE, não vivo: ele nasce no dia em que alguém
-        empacotar com otimização. GRAU: MEDIDO para os dois fatos; SUSPEITA COM
-        MECANISMO para a consequência futura.
-
-        A decisão pedida desde a ``E4.2`` da ``FIACAO-QUE-FALTA-01`` — virar
-        exceção de verdade ou ficar como rede de teste — continua ABERTA e não
-        é tomada aqui. O que esta nota fecha é a metade barata dela: está
-        escrito, no próprio lugar, que é rede de teste.
-        """
+        """Assert barato: o rascunho aponta para o que ficou em disco."""
         draft = getattr(self, "draft", None)
         if draft is None:
             return
@@ -304,12 +152,7 @@ class ProfileWriterMixin(CaronaDoWrapperMixin):
         )
 
     def _toast_de_gravacao(self, msg: str) -> None:
-        """Mensagem na statusbar pelo caminho que o mixin dono já usa.
-
-        ``_footer_toast`` quando existe (é o que os dublês de teste substituem
-        e o que o rodapé instrumenta); a statusbar crua quando o funil é usado
-        por um mixin que não tem rodapé.
-        """
+        """Mensagem na statusbar pelo caminho que o mixin dono já usa."""
         toast = getattr(self, "_footer_toast", None)
         if callable(toast):
             toast(msg)

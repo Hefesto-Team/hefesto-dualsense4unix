@@ -1,17 +1,4 @@
-"""Forma das regras udev 81 (PLAT-03: USB sem economia de energia).
-
-Estudo 2026-07-18-estudo-kernel-hardening.md §2. Dois assets NOVOS:
-
-- ``81-hefesto-usb-power.rules``: controles (Sony/Nintendo/8BitDo/Microsoft) e
-  adaptadores BT (classe e0) com power/control=on + autosuspend_delay_ms=-1;
-- ``81-hefesto-usb-host-power.rules``: HOSTS USB PCI por CLASSE (0x0c03*) com
-  power/control=on — a economia no host derruba o barramento INTEIRO.
-
-Contratos travados: ACTION add|change, guarda TEST=="power/control", DEVTYPE
-usb_device nos devices, match por classe PCI nos hosts, nada de uaccess (a
-restrição "<73" da memória só vale para TAG+="uaccess"), e a justificativa
-"udev e não tmpfiles" registrada no arquivo dos hosts.
-"""
+"""Forma das regras udev 81 (PLAT-03: USB sem economia de energia)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,7 +9,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEVICES_RULE = REPO_ROOT / "assets" / "81-hefesto-usb-power.rules"
 HOSTS_RULE = REPO_ROOT / "assets" / "81-hefesto-usb-host-power.rules"
 
-# Vendors cobertos (PLAT-03 item 1): Sony, Nintendo, 8BitDo, Microsoft.
 VENDORS = ("054c", "057e", "2dc8", "045e")
 
 
@@ -100,7 +86,6 @@ class TestRegraHosts:
             assert 'ATTR{power/control}="on"' in ln, f"sem power/control=on: {ln}"
 
     def test_nao_usa_driver_xhci_hcd(self, hosts_lines: list[str]) -> None:
-        # A Aurora usa DRIVER=="xhci_hcd"; a nossa pega o host ANTES do bind.
         blob = "\n".join(hosts_lines)
         assert 'DRIVER=="xhci_hcd"' not in blob
 
@@ -113,8 +98,6 @@ class TestRegraHosts:
 
 
 def test_nenhuma_regra_81_usa_uaccess() -> None:
-    # uaccess exige número < 73 (memória reference_udev_uaccess_ordem_73);
-    # estas regras não concedem ACL — não podem usar a TAG.
     for path in (DEVICES_RULE, HOSTS_RULE):
         assert "uaccess" not in path.read_text(encoding="utf-8"), (
             f"{path.name}: TAG uaccess proibida numa regra 81"
@@ -122,7 +105,6 @@ def test_nenhuma_regra_81_usa_uaccess() -> None:
 
 
 def test_nomes_distintos_mesmo_numero_nao_colidem() -> None:
-    # Escolha documentada: ambos 81 (nomes distintos; udev ordena léxico).
     assert DEVICES_RULE.name != HOSTS_RULE.name
     assert DEVICES_RULE.name.startswith("81-")
     assert HOSTS_RULE.name.startswith("81-")

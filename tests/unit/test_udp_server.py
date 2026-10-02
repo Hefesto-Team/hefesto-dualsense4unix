@@ -16,10 +16,6 @@ from hefesto_dualsense4unix.daemon.udp_server import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-# ---------------------------------------------------------------------------
-# RateLimiter
-# ---------------------------------------------------------------------------
-
 
 def test_rate_limiter_aceita_ate_o_limite():
     rl = RateLimiter(rate_global=100, rate_per_ip=10)
@@ -49,7 +45,6 @@ def test_rate_limiter_sweep_remove_ips_inativos():
     rl = RateLimiter(rate_global=100, rate_per_ip=3)
     rl.allow("volatile", now=0.0)
     assert "volatile" in rl.per_ip
-    # Avança >1s sem atividade e força sweep
     rl._sweep(now=2.0)
     assert "volatile" not in rl.per_ip
 
@@ -59,13 +54,7 @@ def test_rate_limiter_janela_desliza():
     for _ in range(5):
         rl.allow("x", now=0.0)
     assert rl.allow("x", now=0.5) is False
-    # Após janela de 1s passar, deve permitir de novo
     assert rl.allow("x", now=1.1) is True
-
-
-# ---------------------------------------------------------------------------
-# UdpHandler (dispatch lógico, sem socket real)
-# ---------------------------------------------------------------------------
 
 
 def _mk_handler() -> tuple[UdpHandler, FakeController, StateStore]:
@@ -154,7 +143,6 @@ def test_instrucao_erro_captura_e_bump():
     payload = {
         "version": 1,
         "instructions": [
-            # mode invalido -> build_from_name levanta
             {"type": "TriggerUpdate", "parameters": ["right", "ModeInexistente"]}
         ],
     }
@@ -168,25 +156,17 @@ def test_rate_limit_drop_conta_em_store():
     fc = FakeController(transport="usb")
     fc.connect()
     store = StateStore()
-    # Rate limit bem restrito
     rl = RateLimiter(rate_global=2, rate_per_ip=2)
     handler = UdpHandler(controller=fc, store=store, rate_limiter=rl)
     payload = _datagram({"version": 1, "instructions": []})
     for _ in range(5):
         handler.handle_datagram(payload, ("127.0.0.1", 1))
-    # 2 aceitos + 3 dropados
     assert store.counter("udp.rate_limited") == 3
-
-
-# ---------------------------------------------------------------------------
-# Handlers UDP propagam ao hardware — AUDIT-FINDING-UDP-PLACEHOLDER-HANDLERS-01
-# ---------------------------------------------------------------------------
 
 
 def test_player_led_propaga_bitmask_ao_controller():
     """PlayerLED decodifica bitmask em tuple[bool x5] e chama set_player_leds."""
     handler, fc, store = _mk_handler()
-    # 0b10101 = 21 decimal: bits 0, 2, 4 acesos; 1 e 3 apagados.
     payload = {
         "version": 1,
         "instructions": [{"type": "PlayerLED", "parameters": [0, 21]}],
@@ -221,23 +201,12 @@ def test_rgb_update_clampa_valores_fora_de_range():
     handler, fc, _ = _mk_handler()
     payload = {
         "version": 1,
-        # -10 abaixo de 0, 300 acima de 255, 128 ok, 999 acima.
         "instructions": [{"type": "RGBUpdate", "parameters": [0, -10, 300, 128]}],
     }
     handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
     leds = [c for c in fc.commands if c.kind == "set_led"]
     assert len(leds) == 1
     assert leds[-1].payload == (0, 255, 128)
-
-
-# ---------------------------------------------------------------------------
-# TriggerThreshold — UDP-TRIGGER-THRESHOLD-01
-#
-# A instrução era um contador vazio: validava o lado, fazia `bump` e descartava.
-# Um mod recebia "sucesso" e nada acontecia. Agora ela é a deadzone do gatilho
-# no gamepad virtual — o MESMO que a instrução significa no DSX
-# (`L2_Analog >= threshold ? L2_Analog : 0`, corte seco, sem reescala).
-# ---------------------------------------------------------------------------
 
 
 def test_trigger_threshold_grava_limiar_no_store():
@@ -252,12 +221,7 @@ def test_trigger_threshold_grava_limiar_no_store():
 
 
 def test_trigger_threshold_aceita_layout_canonico_do_dsx():
-    """`[controllerIndex, side, value]` com side no ordinal do enum `Trigger`.
-
-    É o que o SDK C# do DSX emite (`Instruction.TriggerThreshold`): 1=Left,
-    2=Right. Antes isso virava `udp.error.TriggerThreshold` porque o parser
-    fazia `str(0).lower()` e não achava "left"/"right".
-    """
+    """`[controllerIndex, side, value]` com side no ordinal do enum `Trigger`."""
     handler, _, store = _mk_handler()
     payload = {
         "version": 1,
@@ -298,25 +262,14 @@ def test_reset_to_user_settings_zera_a_deadzone():
 
 
 def test_envelope_dsx_autentico_sem_version_e_type_inteiro():
-    """O pacote que o SDK do DSX emite de verdade, byte a byte.
-
-    `Packet.cs` do SDK não tem campo `version`, e `type` é o ordinal do enum
-    `InstructionType` (1=TriggerUpdate, 2=RGBUpdate, 3=PlayerLED, 4=Trigger
-    Threshold, 5=MicLED). Antes, ESTE pacote morria em
-    `udp.unsupported_version` sem nenhuma instrução ser sequer lida.
-    """
+    """O pacote que o SDK do DSX emite de verdade, byte a byte."""
     handler, fc, store = _mk_handler()
     pkt = {
         "instructions": [
-            # Instruction.Galloping(Trigger.Right, 0, 9, 6, 7, 10)
             {"type": 1, "parameters": [0, 2, 15, 0, 9, 6, 7, 10]},
-            # Instruction.RGBUpdate(255, 80, 0)
             {"type": 2, "parameters": [0, 255, 80, 0]},
-            # Instruction.PlayerLED(true, false, true, false, true)
             {"type": 3, "parameters": [0, True, False, True, False, True]},
-            # Instruction.TriggerThreshold(Trigger.Left, 128)
             {"type": 4, "parameters": [0, 1, 128]},
-            # Instruction.MicLED(MicLEDMode.On)
             {"type": 5, "parameters": [0, 0]},
         ]
     }
@@ -343,8 +296,8 @@ def test_trigger_update_dsx_traduz_modos_com_assinatura_identica():
     handler, fc, store = _mk_handler()
     pkt = {
         "instructions": [
-            {"type": 1, "parameters": [0, 1, 13, 5, 6]},  # Resistance(5, 6)
-            {"type": 1, "parameters": [0, 2, 15, 0, 9, 6, 7, 10]},  # Galloping
+            {"type": 1, "parameters": [0, 1, 13, 5, 6]},
+            {"type": 1, "parameters": [0, 2, 15, 0, 9, 6, 7, 10]},
         ]
     }
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
@@ -357,34 +310,24 @@ def test_trigger_update_dsx_traduz_modos_com_assinatura_identica():
 def test_trigger_update_dsx_custom_value_vira_custom_do_hefesto():
     """`CustomTriggerValue` (12): o 1º param é o `CustomTriggerValueMode`."""
     handler, fc, _ = _mk_handler()
-    # CustomTriggerValueMode.RigidB = 3 -> modo HID 0x01|0x04 = 5.
     pkt = {"instructions": [{"type": 1, "parameters": [0, 1, 12, 3, 10, 200]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
     efeito = [c for c in fc.commands if c.kind == "set_trigger"][-1].payload[1]
     assert efeito.mode == 0x05
-    # Forças completadas com zero até 7, como o servidor do DSX faz.
     assert efeito.forces == (10, 200, 0, 0, 0, 0, 0)
 
 
 def test_trigger_update_dsx_modo_pronto_falha_alto_sem_aproximar():
-    """`Hard`, `Soft`, `Rigid` & cia são curvas fechadas do DSX.
-
-    Sem tabela de bytes sob licença utilizável, aproximar mudaria a sensação
-    no gatilho sem o mod saber. Erro barulhento é a resposta honesta.
-    """
+    """`Hard`, `Soft`, `Rigid` & cia são curvas fechadas do DSX."""
     handler, fc, store = _mk_handler()
-    pkt = {"instructions": [{"type": 1, "parameters": [0, 1, 4]}]}  # Hard
+    pkt = {"instructions": [{"type": 1, "parameters": [0, 1, 4]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
     assert store.counter("udp.error.TriggerUpdate") == 1
     assert [c for c in fc.commands if c.kind == "set_trigger"] == []
 
 
 def test_ordinal_ambiguo_do_racingdsx_nao_age_errado():
-    """O fork RacingDSX usa 6=TriggerThreshold; a maioria usa 6=PlayerLEDNew.
-
-    Com a divergência sem desempate seguro, 6 não é mapeado: vira instrução
-    desconhecida (barulhenta) em vez de mexer no que o mod não pediu.
-    """
+    """O fork RacingDSX usa 6=TriggerThreshold; a maioria usa 6=PlayerLEDNew."""
     handler, fc, store = _mk_handler()
     pkt = {"instructions": [{"type": 6, "parameters": [0, 1, 128]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
@@ -395,7 +338,7 @@ def test_ordinal_ambiguo_do_racingdsx_nao_age_errado():
 
 def test_mic_led_pulse_degrada_com_contador_proprio():
     handler, fc, store = _mk_handler()
-    pkt = {"instructions": [{"type": 5, "parameters": [0, 1]}]}  # MicLEDMode.Pulse
+    pkt = {"instructions": [{"type": 5, "parameters": [0, 1]}]}
     handler.handle_datagram(_datagram(pkt), ("127.0.0.1", 12345))
     assert store.counter("udp.mic_led.pulse_degradado") == 1
     assert fc.mic_led_history == [True]
@@ -442,7 +385,6 @@ def test_parse_side_cobre_os_dois_dialetos():
     assert parse_side(1) == "left"
     assert parse_side(2) == "right"
     assert parse_side("2") == "right"
-    # 0 é `Trigger.Invalid` no DSX; True não pode virar "left" por ser int.
     assert parse_side(0) is None
     assert parse_side(True) is None
     assert parse_side("meio") is None
@@ -450,11 +392,7 @@ def test_parse_side_cobre_os_dois_dialetos():
 
 
 def test_deadzone_corta_o_gatilho_no_gamepad_virtual():
-    """Prova o efeito REAL: o limiar muda o que o jogo recebe do pad virtual.
-
-    Sem este teste a instrução seria de novo um valor guardado que ninguém lê
-    — que era exatamente o defeito original.
-    """
+    """Prova o efeito REAL: o limiar muda o que o jogo recebe do pad virtual."""
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
@@ -471,8 +409,6 @@ def test_deadzone_corta_o_gatilho_no_gamepad_virtual():
 
     handler, _, store = _mk_handler()
     pad = _Pad()
-    # `_launch_reconcile_next_at` no infinito: a reconciliação de launch é um
-    # extra do dispatch (lê marker no disco) e não é o que este teste mede.
     daemon = SimpleNamespace(
         store=store, _gamepad_device=pad, _launch_reconcile_next_at=float("inf")
     )
@@ -480,11 +416,9 @@ def test_deadzone_corta_o_gatilho_no_gamepad_virtual():
         raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128, l2_raw=100, r2_raw=100
     )
 
-    # Sem limiar o valor bruto passa intacto.
     gp.dispatch_gamepad(daemon, estado, frozenset())
     assert (pad.analog["l2"], pad.analog["r2"]) == (100, 100)
 
-    # Mod pede limiar 150 no esquerdo: 100 < 150 -> o jogo lê zero.
     handler.handle_datagram(
         _datagram(
             {
@@ -499,23 +433,13 @@ def test_deadzone_corta_o_gatilho_no_gamepad_virtual():
     gp.dispatch_gamepad(daemon, estado, frozenset())
     assert (pad.analog["l2"], pad.analog["r2"]) == (0, 100)
 
-    # No limiar em diante o valor bruto passa SEM reescala (corte seco do DSX).
     estado.l2_raw = 150
     gp.dispatch_gamepad(daemon, estado, frozenset())
     assert pad.analog["l2"] == 150
 
 
-# ---------------------------------------------------------------------------
-# DsxProtocol.connection_made — BUG-UDP-01 (A-02)
-# ---------------------------------------------------------------------------
-
-
 def test_connection_made_nao_levanta_assertion_com_mock_transport():
-    """Regressão BUG-UDP-01: em Python 3.10 o objeto real é
-    `_SelectorDatagramTransport`, que falhava no `isinstance` contra
-    `asyncio.DatagramTransport`. A atribuição direta deve aceitar qualquer
-    `BaseTransport` sem levantar AssertionError.
-    """
+    """Regressão BUG-UDP-01: em Python 3.10 o objeto real é"""
     handler, _, _ = _mk_handler()
     proto = DsxProtocol(handler)
 
@@ -523,14 +447,8 @@ def test_connection_made_nao_levanta_assertion_com_mock_transport():
         pass
 
     fake = _FakeTransport()
-    # Não deve levantar AssertionError nem qualquer outra exceção.
     proto.connection_made(fake)
     assert proto.transport is fake
-
-
-# ---------------------------------------------------------------------------
-# UdpServer ponta-a-ponta
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -539,10 +457,8 @@ async def test_udp_server_recebe_datagrama_real(tmp_path):
     fc.connect()
     store = StateStore()
     UdpServer(controller=fc, store=store, host="127.0.0.1", port=0)
-    # Sobrescreve porta 0 (auto-atribui) — vamos descobrir
     loop = asyncio.get_running_loop()
 
-    # Re-implementa start para capturar a porta
     from hefesto_dualsense4unix.daemon.udp_server import DsxProtocol
     from hefesto_dualsense4unix.daemon.udp_server import UdpHandler as UdpHandlerCls
 
@@ -555,7 +471,6 @@ async def test_udp_server_recebe_datagrama_real(tmp_path):
         addr = transport.get_extra_info("sockname")
         port = addr[1]
 
-        # Manda um datagrama
         send_transport, _ = await loop.create_datagram_endpoint(
             asyncio.DatagramProtocol, remote_addr=("127.0.0.1", port)
         )
@@ -566,7 +481,6 @@ async def test_udp_server_recebe_datagrama_real(tmp_path):
             ],
         }
         send_transport.sendto(json.dumps(payload).encode("utf-8"))
-        # Dá tempo pro datagrama chegar
         await asyncio.sleep(0.05)
         send_transport.close()
 

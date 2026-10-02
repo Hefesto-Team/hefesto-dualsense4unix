@@ -85,34 +85,21 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
 )
 from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
-#: A mesa forjada da casa (octetos 4 e 5 zerados — regra do anonimato).
 MAC_P1 = "aa:bb:cc:00:00:01"
 MAC_P2 = "aa:bb:cc:00:00:02"
 MAC_P3 = "aa:bb:cc:00:00:03"
 
-#: Formato NORMALIZADO (o que `discover_dualsense_evdevs` e `primary_uniq`
-#: devolvem, e o que o co-op usa como chave do `_players`).
 UNIQ_P1 = "aabbcc000001"
 UNIQ_P2 = "aabbcc000002"
 UNIQ_P3 = "aabbcc000003"
 
-#: Quantas voltas do laço uma régua de COMPORTAMENTO precisa. Ver o item 3 do
-#: cabeçalho: uma volta mede um instante. 200 tiques do co-op são ~400 s de
-#: produto rodando (o `sync` do poll loop roda a cada ~2 s).
 VOLTAS = 200
-#: Applies repetidos — o toggle da aba Início, o perfil reaplicando o mesmo
-#: modo, o autoswitch de janela. 50 é mais que uma sessão inteira dela.
 APLICARES = 50
 
 
 @pytest.fixture(autouse=True)
 def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """``config_dir`` em tmp + registro do processo ZERADO antes e depois.
-
-    O zerar não é higiene genérica: o registro guarda o disco em memória e só o
-    lê uma vez (`_loaded`). Sem isto o segundo teste herdaria as máscaras do
-    primeiro e a bateria mediria a si mesma.
-    """
+    """``config_dir`` em tmp + registro do processo ZERADO antes e depois."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     target = tmp_path / "config"
@@ -130,16 +117,7 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture(autouse=True)
 def _sem_no_de_kernel(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Nenhum `/dev/uinput` e nenhum `/dev/uhid` são tocados nesta bateria.
-
-    `UinputGamepad.for_flavor` roda INTEIRO (é ele que consulta o registro e
-    carimba nome/VID/PID/flavor) — só o `start`, que abriria o nó do kernel,
-    vira um `True`. É a diferença entre medir a corrente e medir um dublê: o
-    `flavor` que os testes leem é o que a resolução real produziu.
-
-    A suíte desta casa já derrubou a sessão gráfica dela criando 1289 nós
-    uinput de verdade num dia (20/08/2026). Esta bateria não cria nenhum.
-    """
+    """Nenhum `/dev/uinput` e nenhum `/dev/uhid` são tocados nesta bateria."""
     monkeypatch.setattr(UinputGamepad, "start", lambda self: True)
 
 
@@ -148,11 +126,6 @@ def _cria(flavor: str | None, identity: str | None) -> Any:
     pad = make_virtual_pad(flavor, identity=identity, allow_uhid=False)
     assert pad is not None, "a factory devolveu None — o stub do start caiu"
     return pad
-
-
-# ===========================================================================
-# 1 — A MORDIDA: duas identidades, duas máscaras, dois flavors
-# ===========================================================================
 
 
 def test_dois_controles_com_mascaras_diferentes_nascem_com_flavors_diferentes() -> None:
@@ -174,28 +147,13 @@ def test_dois_controles_com_mascaras_diferentes_nascem_com_flavors_diferentes() 
         "dois controles com máscaras DIFERENTES gravadas nasceram com o MESMO "
         "flavor — a identidade não chegou ao `mascara_efetiva`"
     )
-    # A máscara não é só um rótulo: é o VID/PID que o jogo lê para escolher os
-    # prompts. Se só o campo `flavor` divergisse e o device fosse o mesmo, o
-    # jogo veria dois Xbox e a escolha dela não teria saído do papel.
     assert (pad1.vendor, pad2.vendor) == (XBOX360_VENDOR, DUALSENSE_VENDOR)
     assert pad1.product != pad2.product
     assert pad1.name != pad2.name
 
 
 def test_arrancar_a_identidade_faz_os_dois_nascerem_iguais() -> None:
-    """A MORDIDA, provada por arrancar a cura — com os números.
-
-    Regra desta casa: *um teste que passa com a cura arrancada não testa nada*.
-    A cura aqui é o parâmetro `identity`. Arrancá-lo é chamar a MESMA factory,
-    com as MESMAS máscaras gravadas, sem ele — e é exatamente o código que
-    estava na árvore até 29/08/2026, quando `make_virtual_pad` nem aceitava o
-    parâmetro.
-
-    Medido: COM identidade → 2 flavors distintos (`xbox`, `dualsense`) e 2
-    vendors distintos. SEM identidade → 1 flavor (`xbox` nos dois) e 1 vendor.
-    A escolha dela some inteira, sem erro nenhum e sem uma linha de log —
-    que é o modo de falha caro, o silencioso.
-    """
+    """A MORDIDA, provada por arrancar a cura — com os números."""
     registro_de_mascaras().set_mask(MAC_P1, "xbox")
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
 
@@ -204,7 +162,6 @@ def test_arrancar_a_identidade_faz_os_dois_nascerem_iguais() -> None:
 
     assert com == {"xbox", "dualsense"}, f"com a identidade: {sorted(com)}"
     assert len(com) == 2
-    # A cura arrancada: os dois colapsam na máscara do jogo.
     assert sem == {"xbox"}, f"sem a identidade: {sorted(sem)}"
     assert len(sem) == 1, (
         "sem `identity` os dois vpads TÊM de nascer iguais — se este número "
@@ -214,22 +171,12 @@ def test_arrancar_a_identidade_faz_os_dois_nascerem_iguais() -> None:
 
 
 def test_quem_nao_escolheu_herda_a_mascara_do_jogo_mesmo_com_a_mesa_marcada() -> None:
-    """O contrato do padrão herdado, com a mesa toda marcada em volta.
-
-    A garantia que torna o recurso seguro: ninguém precisa escolher para nada
-    mudar. O P3 não tem entrada no registro e recebe a máscara da sessão,
-    ombro a ombro com dois vizinhos que escolheram o contrário.
-    """
+    """O contrato do padrão herdado, com a mesa toda marcada em volta."""
     registro_de_mascaras().set_mask(MAC_P1, "xbox")
     registro_de_mascaras().set_mask(MAC_P2, "xbox")
 
     assert _cria("dualsense", UNIQ_P3).flavor == "dualsense"
     assert _cria("dualsense", UNIQ_P1).flavor == "xbox"
-
-
-# ===========================================================================
-# 2 — A ARMADILHA: o gate do uhid recebe a máscara EFETIVA
-# ===========================================================================
 
 
 def test_o_gate_do_uhid_recebe_a_mascara_efetiva_e_nao_a_do_jogo(
@@ -288,22 +235,10 @@ def test_o_uhid_e_vetado_para_quem_escolheu_xbox_numa_sessao_dualsense(
 
     pad = make_virtual_pad("dualsense", identity=UNIQ_P1, allow_uhid=True)
 
-    # AJUSTADA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o `_try_uhid`
-    # recebia `"xbox"` e recusava sozinho. AGORA o gate do canal mora ANTES dele
-    # (`virtual_pad.quer_uhid`, o par caminho + máscara EFETIVA), e o `_try_uhid`
-    # nem é chamado para a máscara Xbox. A mordida é a mesma: se a resolução da
-    # máscara voltasse a vir DEPOIS do gate, `quer_uhid` veria a `"dualsense"` da
-    # sessão e o espião receberia uma chamada.
     assert recebido == []
     assert pad is not None
     assert pad.flavor == "xbox"
-    # Uinput com máscara xbox NÃO é degradação: nada de `fallback_motivo`.
     assert getattr(pad, "fallback_motivo", None) is None
-
-
-# ===========================================================================
-# 3 — O VPAD NÃO É RECRIADO FORA DO APLICAR
-# ===========================================================================
 
 
 class _VpadDeMentira:
@@ -358,14 +293,7 @@ class _ReaderDeMentira:
 
 @pytest.fixture()
 def coop(monkeypatch: pytest.MonkeyPatch) -> CoopManager:
-    """Um `CoopManager` REAL com dois secundários na mesa, sem tocar em nada.
-
-    Só as bordas de I/O viram dublê — o `discover` de /dev/input, o reader, a
-    factory de vpad, o sysfs de LED e a leitura de calibração (R-22, que
-    ADIARIA a promoção esperando o 0x05 e faria a contagem medir o adiamento em
-    vez da máscara). O laço do `_sync_full`, que é o objeto da medição, roda
-    inteiro e de verdade.
-    """
+    """Um `CoopManager` REAL com dois secundários na mesa, sem tocar em nada."""
     _VpadDeMentira.criados = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll",
@@ -383,9 +311,6 @@ def coop(monkeypatch: pytest.MonkeyPatch) -> CoopManager:
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
         lambda flavor, *, identity=None, **_kw: _VpadDeMentira(
-            # A factory REAL resolve a máscara efetiva; aqui o dublê a resolve
-            # do mesmo jeito, para o laço enxergar o mesmo `flavor` que veria
-            # em produção. Sem isto a régua mediria a si mesma.
             _mascara_efetiva_de_teste(identity, flavor),
             identity,
         ),
@@ -414,23 +339,7 @@ def _mascara_efetiva_de_teste(identity: str | None, flavor: str | None) -> str:
 def test_duzentos_tiques_do_coop_nao_recriam_o_vpad_de_quem_escolheu(
     coop: CoopManager,
 ) -> None:
-    """O CORAÇÃO DO RISCO: 200 voltas, e as criações continuam sendo 2.
-
-    A sessão é `xbox` e o P2 escolheu `dualsense`. O laço do `_sync_full`
-    derruba todo vpad cujo flavor divirja do desejado — e essa cura
-    (SPRINT-GAME-RUMBLE-01) é MEDIDA, não descuido. Com a máscara por
-    aparelho ligada e o `desired_flavor` ainda sendo um VALOR global, o P2
-    divergiria em TODO tique: teardown + respawn a cada ~2 segundos, para
-    sempre, com o jogo aberto. A cura vira o defeito.
-
-    `vpad_ficou_para_tras` é o que separa os dois casos, e é por isso que ela
-    existe desde 15/08 sem chamador nenhum. Aqui ela ganhou o primeiro.
-
-    UMA VOLTA NÃO MEDIRIA NADA: na primeira o vpad ainda está sendo criado, e
-    a contagem daria 2 com o churn vivo. O defeito só aparece a partir da
-    segunda volta — e é exatamente a forma da regressão de 29/08 que só
-    apareceu aos 181 segundos com 67 testes verdes.
-    """
+    """O CORAÇÃO DO RISCO: 200 voltas, e as criações continuam sendo 2."""
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
 
     for _ in range(VOLTAS):
@@ -457,23 +366,10 @@ def test_duzentos_tiques_do_coop_nao_recriam_o_vpad_de_quem_escolheu(
 def test_arrancar_o_ficou_para_tras_faz_o_churn_aparecer(
     coop: CoopManager, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A cura arrancada, com os números — e o custo por segundo.
-
-    Aqui a comparação volta a ser a de antes (`flavor != desired_flavor`, um
-    VALOR global) e se mede o mesmo laço. A régua acima passa a valer: sem
-    `vpad_ficou_para_tras`, cada tique derruba e recria o vpad de quem
-    escolheu, e a conta cresce LINEARMENTE com as voltas.
-
-    Com 20 voltas: 2 criações no primeiro tique + 1 por tique depois. É por
-    isso que a régua boa roda 200 e não 1.
-    """
+    """A cura arrancada, com os números — e o custo por segundo."""
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
-    # A cura arrancada: `vpad_ficou_para_tras` volta a ser a comparação crua
-    # contra o valor global, que é o código de antes de 29/08/2026.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.subsystems.external_mask.vpad_ficou_para_tras",
-        # `**_kw`: desde a MODO-DE-CONEXAO-01 o co-op manda também o `vpad` e o
-        # `caminho` — a comparação arrancada os ignora, como a de antes.
         lambda flavor_do_vpad, identity, flavor_do_jogo, **_kw: (
             flavor_do_vpad != flavor_do_jogo
         ),
@@ -494,8 +390,6 @@ def test_arrancar_o_ficou_para_tras_faz_o_churn_aparecer(
         f"{criados}. Menos que uma por volta significa que o laço não está "
         "chegando na comparação de flavor."
     )
-    # E quem NÃO escolheu nada nunca entra no churn — o defeito é exclusivo de
-    # quem exerceu a decisão dela, que é o que o torna traiçoeiro.
     do_p3 = [v for v in _VpadDeMentira.criados if v.identity == UNIQ_P3]
     assert len(do_p3) == 1, f"o P3 (sem escolha) foi recriado {len(do_p3)}x"
 
@@ -503,13 +397,7 @@ def test_arrancar_o_ficou_para_tras_faz_o_churn_aparecer(
 def test_a_mascara_que_ficou_para_tras_de_verdade_ainda_recria(
     coop: CoopManager,
 ) -> None:
-    """A cura da SPRINT-GAME-RUMBLE-01 SOBREVIVE — trocar defeito por defeito não vale.
-
-    O vpad nasce numa sessão `xbox` sem escolha nenhuma. Aí a máscara do JOGO
-    muda para `dualsense` (aba Início / perfil): agora o vpad ficou para trás
-    de verdade, e TEM de ser recriado — senão volta o `P2+ presos no flavor
-    antigo, rumble morto e prompts divergentes do P1`.
-    """
+    """A cura da SPRINT-GAME-RUMBLE-01 SOBREVIVE — trocar defeito por defeito não vale."""
     for _ in range(5):
         coop.sync(force=True)
     antes = len(_VpadDeMentira.criados)
@@ -526,15 +414,9 @@ def test_a_mascara_que_ficou_para_tras_de_verdade_ainda_recria(
     assert all(v.stopped for v in criados[:2])
     assert [v.flavor for v in criados[2:]] == ["dualsense", "dualsense"]
 
-    # E, recriado, ele PARA de ser recriado: o churn não pode entrar por aqui.
     coop.sync(force=True)
     coop.sync(force=True)
     assert len(_VpadDeMentira.criados) == 4
-
-
-# ===========================================================================
-# 3b — o Aplicar do P1: idempotente mesmo com máscara própria
-# ===========================================================================
 
 
 class _ControleComMac:
@@ -552,10 +434,6 @@ class _ControleComMac:
         return True
 
     def set_rumble(self, weak: int, strong: int) -> None:
-        # HARM-16: `stop_gamepad_emulation` zera os motores na troca de máscara
-        # (o dono do FF — o jogo, via vpad — some). Sem este método a cura
-        # falharia com um `warning` por apply, e o log do teste passaria a
-        # esconder o que ele deveria mostrar.
         return
 
 
@@ -565,9 +443,6 @@ def _daemon_do_p1(uniq: str | None, flavor: str) -> Any:
             gamepad_flavor=flavor,
             gamepad_emulation_enabled=False,
             coop_enabled=False,
-            # HARM-16: `stop_gamepad_emulation` zera os motores ao trocar a
-            # máscara (o dono do FF some na troca). `(0, 0)` = ninguém fixou
-            # rumble pela aba — o caminho quieto, fora do assunto daqui.
             rumble_active=(0, 0),
         ),
         controller=_ControleComMac(uniq),
@@ -600,20 +475,7 @@ def p1(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def test_cinquenta_aplicares_identicos_nao_recriam_o_vpad_do_p1(p1: Any) -> None:
-    """A OUTRA metade do risco: o Aplicar repetido, com o P1 marcado.
-
-    O P1 escolheu `dualsense`, a sessão é `xbox`. O primeiro Aplicar cria o
-    vpad com a máscara DELE. Do segundo em diante o desfecho tem de ser
-    `ja_estava` — mesmo objeto, zero criações novas.
-
-    Se a comparação de idempotência olhasse `key` (a máscara do JOGO) em vez
-    da efetiva, o vpad `dualsense` nunca casaria com o `xbox` da sessão e
-    TODO apply recriaria: o perfil do jogo aplicando ao trocar de janela, o
-    autoswitch, o restore do boot. É a recriação que a R-04 mediu, disparada
-    pelo caminho automático — exatamente o que a decisão dela mantém
-    bloqueado (*"o que o produto bloqueia de propósito é a troca automática
-    pelo PERFIL"*).
-    """
+    """A OUTRA metade do risco: o Aplicar repetido, com o P1 marcado."""
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
         EMU_APLICADO,
         EMU_JA_ESTAVA,
@@ -649,13 +511,7 @@ def test_cinquenta_aplicares_identicos_nao_recriam_o_vpad_do_p1(p1: Any) -> None
 
 
 def test_o_aplicar_recria_quando_a_escolha_dela_muda(p1: Any) -> None:
-    """E o Aplicar CONTINUA aplicando — a decisão dela vale no gesto.
-
-    `D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`. Idempotência não pode virar
-    surdez: mudada a escolha do aparelho, o Aplicar seguinte recria o vpad com
-    a máscara nova. Ela assume o risco do handle do jogo aberto, e a tela avisa
-    antes.
-    """
+    """E o Aplicar CONTINUA aplicando — a decisão dela vale no gesto."""
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
         EMU_APLICADO,
         start_gamepad_emulation_desfecho,
@@ -674,24 +530,8 @@ def test_o_aplicar_recria_quando_a_escolha_dela_muda(p1: Any) -> None:
     assert p1._gamepad_device.flavor == "xbox"
 
 
-# ===========================================================================
-# 5 — a máscara da SESSÃO não é contaminada pela escolha do aparelho
-# ===========================================================================
-
-
 def test_a_escolha_do_aparelho_nao_vira_a_mascara_da_sessao(p1: Any) -> None:
-    """SÃO DUAS MÁSCARAS, e confundi-las destrói dado dela.
-
-    O P1 marcado `dualsense` numa sessão `xbox`: o vpad veste `dualsense`, mas
-    `config.gamepad_flavor` — que é o que a GUI mostra, o que o co-op herda em
-    `_flavor()` e o que o `save_gamepad_emulation` grava em disco — continua
-    `xbox`.
-
-    Carimbar a escolha de UM aparelho como a máscara da sessão apagaria a
-    escolha dela do disco (o defeito do Sackboy, 22/08, pelo avesso: *"ela
-    escolhia Xbox, abria o jogo e a flag em disco virava dualsense"*) e ainda
-    contaminaria todo secundário que herda o valor global.
-    """
+    """SÃO DUAS MÁSCARAS, e confundi-las destrói dado dela."""
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
         start_gamepad_emulation_desfecho,
     )
@@ -709,12 +549,7 @@ def test_a_escolha_do_aparelho_nao_vira_a_mascara_da_sessao(p1: Any) -> None:
 def test_o_que_o_disco_recebe_e_a_mascara_do_jogo(
     p1: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A mesma verdade, medida no ponto onde o dano seria permanente.
-
-    R-07: só o gesto manual persiste. O que ele persiste tem de ser a máscara
-    do JOGO — a escolha do aparelho já tem arquivo próprio
-    (`controller_masks.json`), com versão própria e sem bump de esquema.
-    """
+    """A mesma verdade, medida no ponto onde o dano seria permanente."""
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
     gravado: list[tuple[bool, str]] = []
@@ -733,12 +568,7 @@ def test_o_que_o_disco_recebe_e_a_mascara_do_jogo(
 
 
 def test_sem_mac_do_primario_o_p1_segue_a_sessao(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`primary_uniq` None (boot antes do connect, `run.sh --fake`) = máscara do jogo.
-
-    O invariante VPAD-03/BT-01 é que o vpad SEMPRE nasce, inclusive antes de
-    qualquer controle conectar. Sem MAC não há a quem perguntar, e a resposta
-    honesta é a máscara da sessão — nunca uma exceção, nunca um vpad a menos.
-    """
+    """`primary_uniq` None (boot antes do connect, `run.sh --fake`) = máscara do jogo."""
     _VpadDeMentira.criados = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
@@ -759,7 +589,6 @@ def test_sem_mac_do_primario_o_p1_segue_a_sessao(monkeypatch: pytest.MonkeyPatch
         start_gamepad_emulation_desfecho,
     )
 
-    # A mesa inteira marcada — e mesmo assim nada muda para quem não tem MAC.
     registro_de_mascaras().set_mask(MAC_P1, "dualsense")
     daemon = _daemon_do_p1(None, "xbox")
 

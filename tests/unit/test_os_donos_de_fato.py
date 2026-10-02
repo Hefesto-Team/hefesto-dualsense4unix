@@ -30,9 +30,6 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
 
-#: Os dois da mesa dela, com a máscara da casa. O `AZUL` está no RÁDIO e é o
-#: primário; o `VERMELHO` está no CABO e NÃO é jogador do co-op — é a
-#: configuração exata que derrubou o fato "no rádio o player volta None".
 AZUL = "aabbcc000001"
 VERMELHO = "aabbcc000002"
 
@@ -46,9 +43,6 @@ def _controle(
     return base
 
 
-# ---------------------------------------------------------------------------
-# RÉGUA 3 — o caso que motivou tudo, escrito SOZINHO
-# ---------------------------------------------------------------------------
 def test_o_controle_que_nao_e_jogador_ainda_tem_numero() -> None:
     """`{"player": None, "player_slot": 2}` é jogador **2**.
 
@@ -87,12 +81,7 @@ class TestJogadorDe:
         assert pacotes.jogador_de({"player_slot": "não sei", "player": 2}) == 2
 
     def test_nao_olha_a_posicao(self) -> None:
-        """`index` é POSIÇÃO. A GTK cai nele; esta função NUNCA.
-
-        `app/actions/base.numero_do_controle` devolve `index + 1` quando não há
-        slot — e é essa queda que fez o mesmo controle mudar de nome quando o
-        segundo entrou na mesa. Aqui a resposta honesta é `None`.
-        """
+        """`index` é POSIÇÃO. A GTK cai nele; esta função NUNCA."""
         assert pacotes.jogador_de({"index": 1}) is None
 
 
@@ -110,9 +99,6 @@ def test_a_ordem_das_chaves_e_a_mesma_da_gtk() -> None:
     assert pacotes.jogador_de({"player_slot": 3, "player": 1, "index": 9}) == 3
 
 
-# ---------------------------------------------------------------------------
-# RÉGUAS 1 e 2 — a identidade não olha a posição, e `None` vira travessão
-# ---------------------------------------------------------------------------
 def _palavra_do_transporte(chave: str) -> str:
     """A palavra da TELA, LIDA do dono — nunca digitada aqui.
 
@@ -130,11 +116,7 @@ def _palavra_do_transporte(chave: str) -> str:
 
 class TestIdentidadeDe:
     def test_o_nome_acompanha_o_uniq_e_nao_o_indice(self) -> None:
-        """RÉGUA 1: dois controles em ordem TROCADA, e o nome não troca.
-
-        É a reprodução direta do que ela viu: com um controle o do cabo era
-        "Starlight Blue"; com dois, o MESMO cabo virou "Cosmic Red".
-        """
+        """RÉGUA 1: dois controles em ordem TROCADA, e o nome não troca."""
         azul = _controle(AZUL, modelo="Starlight Blue", transport="bt", index=0)
         vermelho = _controle(VERMELHO, modelo="Cosmic Red", index=1)
 
@@ -199,59 +181,13 @@ class TestIdentidadeDe:
 
 
 def test_o_nao_sei_da_mesa_e_o_mesmo_texto_das_duas_bandas() -> None:
-    """A literal repetida em `pacotes` tem de ser a MESMA do `mesa_viva`.
-
-    Duas cópias de uma string de comparação é o defeito clássico desta casa: uma
-    delas muda, a comparação para de casar em silêncio, e "Não sei" volta a
-    passar por nome de aparelho.
-    """
+    """A literal repetida em `pacotes` tem de ser a MESMA do `mesa_viva`."""
     from hefesto_dualsense4unix.interface import mesa_viva
 
     assert pacotes.NOME_SEM_LEITURA == mesa_viva.COR_DESCONHECIDA
 
 
-# A LEITURA DE `vpad_motivo` SAIU DAQUI — 13/09/2026, A-MARCA-DA-DEGRADACAO-01.
-# `pacotes.degradacao_de` só servia à marca da emulação degradada das abas 01 e
-# 02, e a marca saiu. A frase continua com dono e régua na GTK
-# (`controller_card.texto_degradacao`, em `tests/unit/test_status_cards.py`).
-
-
-# ---------------------------------------------------------------------------
-# RÉGUA 4 — nenhum pacote lê `.get("player")` cru
-# ---------------------------------------------------------------------------
-#: AS EXCEÇÕES, DATADAS (02/09/2026) E COM A RAZÃO. Esta lista existe para a
-#: próxima leva ZERÁ-LA: os donos nasceram hoje e as abas ainda não migraram —
-#: dez frentes estão dentro dos `aNN_*.py` neste momento e mudá-los aqui seria
-#: conflito garantido.
-#:
-#: `a05_vibracao.py:52` é diferente das outras TRÊS e não se resolve com
-#: `jogador_de`: ali o dicionário não é um controle, é uma entrada de
-#: `rumble_ff.per_vpad`, cuja chave `player` é o número do GAMEPAD VIRTUAL.
 #: Trocá-la por `player_slot` casaria o vpad errado.
-#: ATUALIZADA NA INTEGRAÇÃO DE 02/09/2026, e a dívida CAIU de sete para três.
-#: As quatro que morreram (`a01_jogar.py:48`, `a04_iluminacao.py:89`, `:90` e
-#: `:221`) morreram porque as frentes das abas 01 e 04 migraram para os donos na
-#: MESMA leva — o `or 1` do `:221`, que era POSIÇÃO disfarçada de default, foi
-#: junto. As três que sobram mudaram só de LINHA, e as razões são as mesmas.
-#:
-#: A ÂNCORA DEIXOU DE SER `arquivo:linha` EM 03/09/2026, e a razão está medida.
-#: A âncora por número de linha cobrava ALUGUEL: ela reprovava toda vez que um
-#: pacote CRESCIA, sem que uma leitura crua nova tivesse nascido. A linha do
-#: `a04_iluminacao.py` andou CINCO vezes — 413, 638, 768, 780 e 1656 — e nenhuma
-#: dessas mudanças foi um defeito; era docstring e função nova empurrando o
-#: mesmo `o.get("player")` para baixo. O relato pedindo âncora por NOME DE
-#: FUNÇÃO estava escrito aqui mesmo, e é o que esta versão faz.
-#:
-#: A ÂNCORA DE HOJE É `função: <o texto da linha>`. Ela não tem menos precisão
-#: que a antiga — tem mais: o número de linha dizia ONDE, e o texto diz O QUÊ.
-#: Uma leitura crua nova na mesma função continua reprovando, porque o texto
-#: dela não vai casar com nenhuma chave da lista; e uma exceção que morre
-#: continua sendo pega pelo teste do fantasma.
-#:
-#: O QUE ELA CUSTA, escrito para quem vier: duas leituras cruas IDÊNTICAS na
-#: MESMA função colapsam numa âncora só, e a segunda passaria de graça. É um
-#: caso estreito — a mesma linha, letra por letra, duas vezes no mesmo corpo —
-#: e o preço de fechá-lo seria trazer de volta o número de linha e o aluguel.
 EXCECOES_DATADAS: dict[str, str] = {
     # fica: nenhuma das duas lê o jogador do controle (medido em 02/09 e 09/09)
     '_jogador_esperando: return "" if c.get("player") is not None else "1"': (
@@ -266,17 +202,6 @@ EXCECOES_DATADAS: dict[str, str] = {
         "cartão dizer `Player 2` para um controle que o jogo não recebeu — o "
         "dano medido na mesa dela em 02/09."
     ),
-    # AS DUAS EXCEÇÕES DO `_do_vpad` SAÍRAM EM 09/09/2026, e a dívida ficou
-    # MENOR do que esta lista dizia. A VIBRA-MULT-01 matou a leitura de
-    # `last_weak`/`last_strong` do `per_vpad` — ela era MORTA: as chaves moram
-    # no TOPO do `rumble_ff` (`ipc_handlers.py:3529-3530`) e os blocos de
-    # `per_vpad` nunca as tiveram. Sem a leitura, não há o que casar por número
-    # de vpad, e as duas linhas passaram a descrever código que não existe.
-    #
-    # É a régua trabalhando na direção que quase nenhuma trabalha: ela reprova
-    # quando a dívida ENCOLHE, para a lista não virar propaganda do que já foi
-    # curado. Foi ela que nomeou as duas, com a frase *"apague a linha — a
-    # dívida é menor do que ela diz"*.
     'player: n = int(str(o.get("player") or "0"))': (
         "a04_iluminacao.py — lê o `player` do CLIQUE (`o`), não do controle — "
         "não é state_full"
@@ -284,7 +209,6 @@ EXCECOES_DATADAS: dict[str, str] = {
 }
 
 #: A leitura crua a caçar. `player_slot` está de fora: ele é a chave que a GTK lê
-#: PRIMEIRO, e lê-lo sozinho não é o defeito — o defeito é ler `player` sozinho.
 _CRU = re.compile(r'\.get\(\s*["\']player["\']')
 
 
@@ -293,12 +217,7 @@ def _pacotes() -> list[pathlib.Path]:
 
 
 def _dono_de_cada_linha(fonte: str) -> dict[int, str]:
-    """Para cada linha do arquivo, o nome da função que a contém.
-
-    Percorre a árvore de sintaxe em vez de contar `def` no texto, para que uma
-    função aninhada responda pelo próprio nome e não pelo do pai. Linha fora de
-    qualquer função responde `<módulo>`.
-    """
+    """Para cada linha do arquivo, o nome da função que a contém."""
     dono: dict[int, str] = {}
     try:
         arvore = ast.parse(fonte)
@@ -309,8 +228,6 @@ def _dono_de_cada_linha(fonte: str) -> dict[int, str]:
             continue
         fim = no.end_lineno or no.lineno
         for n in range(no.lineno, fim + 1):
-            # A mais INTERNA vence: `ast.walk` visita o pai antes do filho, e o
-            # filho sobrescreve as linhas que são dele.
             dono[n] = no.name
     return dono
 
@@ -330,10 +247,7 @@ def _leituras_cruas() -> list[str]:
 
 
 def test_nenhum_pacote_le_player_cru_fora_da_lista_datada() -> None:
-    """RÉGUA 4, e ela NOMEIA função e texto — uma contagem não serviria.
-
-    Quando a lista datada esvaziar, apague-a e este teste passa a ser absoluto.
-    """
+    """RÉGUA 4, e ela NOMEIA função e texto — uma contagem não serviria."""
     novos = [a for a in _leituras_cruas() if a not in EXCECOES_DATADAS]
     assert not novos, (
         f"leitura crua de `player` sem dono: {novos}. Use `pacotes.jogador_de`, "
@@ -350,9 +264,7 @@ def test_a_lista_datada_nao_guarda_fantasma() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
 # RÉGUA 5 — se a chave sumir do `state_full`, reprova
-# ---------------------------------------------------------------------------
 class _Vazio:
     """Um daemon sem `maquina.json` declarado."""
 
@@ -360,11 +272,7 @@ class _Vazio:
 
 
 class _Handler:
-    """O mixin com o mínimo que `_enrich_controllers_per_controller` toca.
-
-    Os auxiliares que NÃO são o assunto desta régua são substituídos por
-    respostas fixas — o que sobra medindo é a fiação da identidade.
-    """
+    """O mixin com o mínimo que `_enrich_controllers_per_controller` toca."""
 
     def __init__(self, daemon: Any = None) -> None:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -375,7 +283,6 @@ class _Handler:
         self._identidade_de_fabrica_cache: dict[str, Any] | None = None
         self._perguntas: list[str] = []
 
-    # --- os auxiliares fora do assunto ---
     def _player_slot_for(self, uniq: Any) -> None:
         return None
 
@@ -400,7 +307,6 @@ class _Handler:
     def _merge_audio(self, *_a: Any) -> None:
         return None
 
-    # --- o assunto: a leitura de aparelho NÃO acontece no tique ---
     def _perguntar_identidade(self, uniq: str) -> None:
         self._perguntas.append(uniq)
         cache = self._identidade_de_fabrica_cache
@@ -408,7 +314,6 @@ class _Handler:
             cache = {}
             self._identidade_de_fabrica_cache = cache
         cache[uniq] = {"serial": None, "modelo": "Cosmic Red"}
-        # A volta da pergunta solta o voo na agenda de verdade, como o produto.
         from hefesto_dualsense4unix.integrations.cor_do_plastico import (
             IdentidadeDeFabrica,
         )
@@ -420,7 +325,6 @@ class _Handler:
     def enriquecer(self, entradas: list[dict[str, Any]]) -> None:
         self._mixin._enrich_controllers_per_controller(self, entradas, None)  # type: ignore[arg-type]
 
-    # os métodos de verdade, tomados emprestados do mixin
     def __getattr__(self, nome: str) -> Any:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
@@ -491,9 +395,6 @@ def test_o_modelo_lido_chega_ao_payload_no_tique_seguinte() -> None:
     assert segundo[0]["modelo"] == "Cosmic Red"
 
 
-# ---------------------------------------------------------------------------
-# O transporte do serial — sem encostar em aparelho nenhum
-# ---------------------------------------------------------------------------
 def _resposta(serial: str) -> bytes:
     from hefesto_dualsense4unix.integrations import cor_do_plastico as cp
 

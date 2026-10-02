@@ -1,37 +1,4 @@
-"""fala_do_mapa.py — onde a tela declara de que célula do mapa está falando.
-
-Executa Z6-03 (docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01…
-.md), a Peça 2 do contrato desenhado na
-docs/process/sprints/arquivados/2026-08-24-PAREAMENTO-01-a-medicao-nova-tem-de-chegar-sozinha-na-tela.md.
-
-Escrito à mão — este módulo NÃO é gerado. É o único lugar onde uma frase de
-tela declara "estou falando da chave X, do lado Y, e afirmo Z" — o endereço
-que faltava entre o mapa de canais e a interface (§1 da Z6).
-
-O VOCABULÁRIO DE `afirma`, E O PORQUÊ DE `AFIRMA_NAO_ACIONA` EXIGIR CAUSA
----------------------------------------------------------------------------
-`aciona = não` sozinho não diz de quem é a culpa: as duas colunas de causa
-do mapa (`cabo_por_que_nao_aciona`/`radio_por_que_nao_aciona`) falam o domínio
-que tem UM dono, `DOMINIO_POR_SUFIXO["por_que_nao_aciona"]` em
-`scripts/check_paridade_transporte.py`, e SÓ as causas de `CAUSA_DE_FORA`,
-abaixo, nomeiam algo fora do nosso código — o portão (Z6-04) checa isso antes
-de aceitar `AFIRMA_NAO_ACIONA`, para nunca licenciar uma frase que culpa o
-aparelho pelo que é nosso.
-
-FATO ERRADO, SUBSTITUÍDO em 25/09/2026 (O-MAPA-QUE-A-6E-DEIXOU-01): este
-parágrafo listava os valores à mão — «quatro», e «as duas primeiras»
-(`nada-a-acionar` e `decisao-tomada`) como as de fora — enquanto o código dizia
-`nada-a-acionar` e `o-aparelho-recusa`, num domínio de seis. A lista saiu da
-prosa: quem quer os valores lê o dono, e a prosa não tem mais o que envelhecer.
-
-A REGRA QUE MORA NO TIPO, NÃO NUM DOCUMENTO
-----------------------------------------------
-"Ausência de medição se declara, nunca se preenche com zero, porque zero
-pinta verde." `Fala.__post_init__` recusa `texto` numérico ou booleano
-incondicionalmente, e recusa a combinação `pendente=` + texto que não seja a
-sentinela `NAO_MEDIDO` (e vice-versa) — a régua está no construtor, não numa
-convenção que alguém tem de lembrar de seguir.
-"""
+"""fala_do_mapa.py — onde a tela declara de que célula do mapa está falando."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -40,11 +7,7 @@ from typing import Final
 
 
 class _NaoMedidoSentinela:
-    """O tipo da sentinela `NAO_MEDIDO`. Nunca instancie um segundo — use a
-    constante do módulo. `isinstance(x, str)` é `False` de propósito: quem
-    tenta tratar `NAO_MEDIDO` como texto comum (`.strip()`, concatenar) quebra
-    alto, em vez de produzir uma tela com "None" ou string vazia por engano.
-    """
+    """O tipo da sentinela `NAO_MEDIDO`. Nunca instancie um segundo — use a"""
 
     __slots__ = ()
 
@@ -52,18 +15,13 @@ class _NaoMedidoSentinela:
         return "NAO_MEDIDO"
 
 
-#: A sentinela. Não é `""`, não é `None`, não é `0` — as três formas que
-#: pintariam verde ou sumiriam da tela em vez de declarar a ausência.
 NAO_MEDIDO: Final = _NaoMedidoSentinela()
 
-#: A frase única da casa, por lado — nunca escrita de novo por quem declara
-#: uma `Fala` com `pendente=`. Ver Z6-11 (a fila) e P-02(a) da PAREAMENTO-01.
 FRASE_NAO_MEDIDO: Final[dict[str, str]] = {
     "cabo": "Ainda não medimos isto no cabo.",
     "radio": "Ainda não medimos isto no rádio.",
 }
 
-# ── O vocabulário de `afirma` — minúsculo, mapeado 1:1 em coluna do mapa ──
 AFIRMA_EXISTE: Final = "existe"
 AFIRMA_NAO_EXISTE: Final = "nao-existe"
 AFIRMA_ACIONA: Final = "aciona"
@@ -82,10 +40,6 @@ AFIRMA_VALIDOS: Final[frozenset[str]] = frozenset(
     }
 )
 
-#: As causas, entre as do domínio de `*_por_que_nao_aciona`, que nomeiam algo
-#: FORA do nosso código (Z6-05/P-07). Todas as outras são nossas ou ninguém
-#: mediu — com elas o único `afirma` legal é `AFIRMA_NADA` com `porque=`
-#: explícito.
 CAUSA_DE_FORA: Final[frozenset[str]] = frozenset({"nada-a-acionar", "o-aparelho-recusa"})
 
 LADOS_VALIDOS: Final[frozenset[str]] = frozenset({"cabo", "radio"})
@@ -93,11 +47,7 @@ LADOS_VALIDOS: Final[frozenset[str]] = frozenset({"cabo", "radio"})
 
 @dataclass(frozen=True)
 class Pendencia:
-    """O que falta para uma `Fala` deixar de ser `NAO_MEDIDO`.
-
-    `pendente is not None` é o que `--fila` (Z6-11) varre por AST — a lista de
-    compras da bancada, gerada pela própria interface.
-    """
+    """O que falta para uma `Fala` deixar de ser `NAO_MEDIDO`."""
 
     aberta_em: str
     prazo_dias: int
@@ -116,8 +66,6 @@ class Pendencia:
                     "ausência de medição se declara em prosa, nunca em número ou "
                     "booleano."
                 )
-        # `bool` é subclasse de `int` em Python: sem o `isinstance(..., bool)`
-        # primeiro, `prazo_dias=True` passaria como `1` silenciosamente.
         if isinstance(self.prazo_dias, bool) or not isinstance(self.prazo_dias, int):
             raise TypeError(
                 f"Pendencia.prazo_dias tem de ser int, não {self.prazo_dias!r} "
@@ -135,13 +83,7 @@ class Pendencia:
 
 @dataclass(frozen=True)
 class Fala:
-    """Uma frase de tela declarando de que célula do mapa ela fala.
-
-    `chave` é o `id` do mapa (`chave@controle` — nunca `chave` sozinha, que
-    não é endereço). `lado` é `"cabo"` ou `"radio"`. `afirma` é um dos seis
-    `AFIRMA_*`. `porque=` é obrigatório (não-vazio) quando `afirma=AFIRMA_NADA`
-    — é o que impede a tela de ficar muda sem dizer por quê.
-    """
+    """Uma frase de tela declarando de que célula do mapa ela fala."""
 
     chave: str
     lado: str
@@ -170,8 +112,6 @@ class Fala:
                 "tela não pode ficar muda sem dizer por quê."
             )
 
-        # A regra que mora no tipo: nunca número, nunca booleano, porque zero
-        # pinta verde e False some da tela como se não houvesse nada a dizer.
         if isinstance(self.texto, (bool, int, float)):
             raise TypeError(
                 f"Fala.texto={self.texto!r} é número/booleano — proibido. Use "
@@ -206,17 +146,7 @@ def frase_de_exibicao(fala: Fala) -> str:
 
 @dataclass(frozen=True)
 class Numero:
-    """Amarra uma constante Python MEDIDA a uma célula em prosa do mapa (Z6-08).
-
-    O número medido tem um dono só: a constante Python é o valor de verdade,
-    e o portão (Z6-04) confere que a célula `coluna` do mapa cita esse mesmo
-    valor, no formato pt-BR (`260,4`), na chave `chave`. Trocar a constante
-    sem atualizar a célula reprova, nomeando os dois endereços.
-
-    Quem publica é `integrations/radio_da_mesa.NUMEROS_MEDIDOS_NO_MAPA`, uma
-    tupla de `Numero` desde 28/09/2026: o construtor roda ao importar aquele
-    módulo, e o portão lê só esta forma.
-    """
+    """Amarra uma constante Python MEDIDA a uma célula em prosa do mapa (Z6-08)."""
 
     constante: str
     valor: float
@@ -231,24 +161,5 @@ class Numero:
 
 
 def formata_pt_br(valor: float) -> str:
-    """`260.4` → `"260,4"` — uma casa decimal, vírgula. **O DONO ÚNICO.**
-
-    Toda a árvore passa por aqui desde 26/08/2026: o portão do mapa
-    (`scripts/validar-fala-de-tela.py`, que importa esta função em vez de
-    redigitá-la — ver `tests/unit/test_a_regua_e_a_legenda_sao_a_mesma_peca.py`),
-    o `_numero` da seção "Controles" (`app/actions/config/secao_controles.py`) e
-    o `_numero` do plano de rádio (`integrations/plano_de_radio.py`).
-
-    **Eram três implementações independentes da mesma regra**, e a do plano de
-    rádio ainda dizia em comentário *"mesma forma que…"* enquanto reescrevia a
-    conta. A saída das três era idêntica, então **nada mudou na tela** — o que
-    mudou é que no dia em que o arredondamento mudar, duas células param de
-    discordar. É o mesmo motivo do `pedido_mais_forte` em `core/rumble.py`: duas
-    cópias divergem na primeira mudança.
-
-    A forma da linha abaixo é travada por
-    `tests/unit/test_a_regua_e_a_legenda_sao_a_mesma_peca.py`, que a reescreve
-    para provar que o portão segue a tela. Mudar o literal sem mudar o teste faz
-    a mordida dele parar de morder — em voz alta, de propósito.
-    """
+    """`260.4` → `"260,4"` — uma casa decimal, vírgula. **O DONO ÚNICO.**"""
     return f"{valor:.1f}".replace(".", ",")

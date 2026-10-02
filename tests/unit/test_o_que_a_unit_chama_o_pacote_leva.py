@@ -1,27 +1,4 @@
-"""Todo caminho absoluto que uma unit invoca existe em TODOS os formatos.
-
-A FAMÍLIA, e hoje ela apareceu TRÊS vezes — 22/08/2026:
-
-1. de manhã, as regras udev 82 e 83 viajavam nos cinco instaladores e os alvos
-   do ``RUN+=`` delas, em nenhum. A 83 mandava iniciar uma unit inexistente a
-   cada conexão Bluetooth;
-2. à tarde, os mesmos alvos não estavam nos PACOTES — só o `install.sh` do
-   checkout os gravava;
-3. à noite, o ``bt_active_mode.sh`` (o ``ExecStartPost`` do drop-in do
-   ``bluetooth.service``) e o ``bt_ponte_privilegiada.sh`` (o helper que a
-   janela chama) repetiram a três: instalados só pelo checkout, e quem usava
-   pacote tinha o drop-in apontando para um arquivo que nunca existiu — a cura
-   ``BT-NINTENDO-ACTIVE-01``, a que impede o Pro Controller de cair sob carga,
-   simplesmente não rodava.
-
-Três vezes é padrão, e padrão pede portão. **A régua é a UNIT, não uma lista.**
-Toda unit em ``assets/systemd/`` é lida, cada caminho absoluto sob
-``/usr/local/lib/hefesto-dualsense4unix/`` é extraído dela, e o script de mesmo
-nome tem de estar em ``scripts/`` E ser levado pelos quatro formatos.
-
-Uma lista escrita à mão caducaria no próximo ``ExecStartPost``, que é exatamente
-o modo como as três aconteceram.
-"""
+"""Todo caminho absoluto que uma unit invoca existe em TODOS os formatos."""
 from __future__ import annotations
 
 import re
@@ -29,8 +6,6 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Onde cada formato declara o que empacota. O `install.sh` fica de FORA: ele é
-#: o checkout, e o defeito das três vezes foi justamente "só o checkout leva".
 FORMATOS: dict[str, Path] = {
     "deb": RAIZ / "scripts" / "build_deb.sh",
     "arch": RAIZ / "packaging" / "arch" / "PKGBUILD",
@@ -81,10 +56,7 @@ def test_o_script_que_a_unit_invoca_existe_no_repositorio() -> None:
 
 
 def test_todo_formato_leva_o_que_as_units_invocam() -> None:
-    """A régua das três ocorrências de hoje.
-
-    Mordida: tirar `bt_active_mode.sh` de qualquer um dos quatro formatos.
-    """
+    """A régua das três ocorrências de hoje."""
     conteudo = {
         formato: caminho.read_text(encoding="utf-8", errors="replace")
         for formato, caminho in FORMATOS.items()

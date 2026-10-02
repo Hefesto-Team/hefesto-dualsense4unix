@@ -1,58 +1,5 @@
 #!/usr/bin/env python3
-"""Gera a aba JOGAR — `src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`.
-
-POR QUE ELA PASSOU A TER GERADOR — 29/08/2026, e o custo foi MEDIDO nos dois
-sentidos antes de escrever uma linha.
-
-**O preço de não ter, e ele já foi pago quatro vezes.** A 01 era a única das dez
-escrita à mão, e a divergência não é hipótese — está contada:
-
-1. **A cura do logotipo de 28/08 chegou a UMA das dez páginas.** Ela mandou tirar
-   os quatro `<title>` minúsculos do logo (passar o mouse na bolinha rosa escrevia
-   "bolinha-rosa" na tela dela). Quem curou editou o arquivo que tinha na frente —
-   a 01, à mão — e não o `topo.html`, que é a fonte das outras nove. Medido em
-   29/08, antes desta volta: `grep -c` dos quatro rótulos dava **0 na 01-jogar e 4
-   em cada uma das outras nove**. Trinta e seis instâncias vivas do defeito que ela
-   mandou caçar.
-2. **Trinta linhas do esqueleto compartilhado não existem na 01.** Contadas contra
-   o `topo.html`: as outras abas deixam de fora 4 a 6 linhas (as que o `monta()`
-   substitui — título, fita, tira); a 01 deixa **34**, e **30** delas estão nas
-   outras nove.
-3. **A folha de estilo tem duas cópias mantidas à mão, e elas divergiram em nove
-   blocos** — 18 linhas do `topo.html` trocadas por 107 da 01. Duas dessas
-   divergências não são inofensivas, porque a classe é COMPARTILHADA: `.pecas` é
-   usada pela 01 e pela **10-perfis** (5 vezes), e `.cartao` pela 01 e pela
-   **08-conexoes** (3 vezes). A mesma classe quer dizer duas coisas em dois
-   arquivos, e quem corrigir uma corrige metade.
-4. **O rodapé era declaradamente uma cópia gêmea.** O comentário dele dizia, com
-   todas as letras: *"Esta aba é mantida à MÃO: a cópia gêmea está no
-   `_ferramentas/fim.html`, e as duas mudam juntas."* Duas versões vivas, com o
-   aviso escrito ao lado.
-
-E um fato errado que a 01 carregava e o `topo.html` já tinha corrigido: o
-comentário dos SVGs dizia *"32 peças nomeadas e as cinco cores de plástico"*.
-Medido nos CSVs donos: **28 peças** (`docs/data/pecas-do-dualsense.csv`) e **28
-modelos de cor** (`docs/data/cores-do-dualsense.csv`).
-
-**O preço de ter, e ele é baixo.** O miolo da 01, com os nove `<svg>` trocados
-por um marcador, tem **181 linhas** — os SVGs são 66% do arquivo e já eram
-gerados (o `regerar.py` chamava `monta.svg()` para os quatro cartões). O que
-sobra é: 83 linhas antes dos cartões, os quatro cartões (que viram um laço de
-uma função de 14 linhas) e 32 depois. O `monta()` já escrevia o esqueleto, a
-tira, a fita, a contagem do cabeçalho, o rodapé e a legenda — de graça, porque
-as outras nove já o usam.
-
-Este arquivo tem menos linhas que o `aba04.py` e mais que o `aba07.py`, que é o
-menor dos nove (225).
-
-**O que a `regerar.jogar()` fazia, e onde foi parar.** Ela existia para trocar
-NA MÃO o que num gerador não precisa de troca: o desenho dos quatro cartões, a
-caixa de máscara de cada um e a frase da legenda. As três coisas nascem aqui
-agora, e a `jogar()` sai do `regerar.py` — remendar um arquivo escrito à mão era
-o preço de ele ser escrito à mão.
-
-Uso:  aba01.py
-"""
+"""Gera a aba JOGAR — `src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`."""
 import collections
 import pathlib
 import re
@@ -61,21 +8,8 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import onde  # noqa: E402
 import monta  # noqa: E402
-# `rotulo` SAIU DA LISTA em 03/09/2026: o único uso desta aba era o `title` do
-# cartão, que era identidade cravada e foi removido (ver `cartao`). O rótulo
-# VISÍVEL continua montado à mão aqui, campo a campo, porque cada pedaço dele
-# tem `data-campo` próprio — que é o que `rotulo()` não sabe fazer.
-# `ressalva` SAIU DAQUI em 06/09/2026: o único uso era o bloco dos externos, e a
-# escolha dela mandou o bloco para dentro da grade dos assentos, onde a caixa é
-# a `.ext-vaga` e não a `.ressalva` (ver o CSS: `display:contents`, que a
-# `.ressalva` não pode ter sem brigar com o `:has(.nada)` do esqueleto).
 from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 
-# O `AVISOS_VIVOS` SAIU DAQUI — 07/09/2026, ordem dela: *"em jogar remover essa
-# seção do atenção, nenhum aviso esse — deixar só o reconectar controles."* A
-# constante continua viva no pacote (é ela que diz quantas linhas o canal
-# publica), e a página desta aba deixou de ser o lugar onde elas pousam. O
-# destino novo do canal está declarado em `pacotes/a01_jogar._avisos`.
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (  # noqa: E402
     FRASES_BANIDAS,
 )
@@ -91,216 +25,31 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     mascaras_montaveis,
 )
 
-# ---------------------------------------------------------------------------
-# A CENA
-# ---------------------------------------------------------------------------
-#: A bateria de cada controle — **o único dado inventado desta aba**, e a
-#: legenda o declara desde 26/08. Tudo o mais sai da `monta.MESA` (quem está na
-#: mesa, o número, a cor, o transporte, a máscara) ou do desenho (o hexadecimal
-#: do plástico). Na mesa viva dela agora há DOIS controles, com 85% e 95%.
 BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 
-#: A CENA DO AVISO MORREU COM A SEÇÃO — 07/09/2026. Aqui morava
-#: ``AVISOS = [("RÁDIO", "Dois rádios da bancada estão em portas vizinhas.")]``,
-#: o único aviso que a cena aprovada mostrava. Ele era DESENHO, e ia embora com
-#: a faixa; o que NÃO foi embora são as onze fontes vivas que escreviam nela —
-#: ver `pacotes/a01_jogar._avisos`, que continua de pé e declara para onde elas
-#: vão.
 
-#: O QUE O MODO NATIVO DIZ SOBRE JOGADORES — **PROVISÓRIO, decisão dela**
-#: (PROVA-DE-TELA-01), COOP-NA-CONEXAO-NATIVA-01 / Caminho A, 06/09/2026.
-#:
-#: **UMA CONSTANTE PORQUE A PÁGINA DIZ ISTO EM DOIS LUGARES**, e a sprint nomeia
-#: o defeito que isso evita: *"Uma frase, com dono único — a mesma situação não
-#: pode ter duas redações"*. Os dois lugares são o ``title`` da posição
-#: Desligado e o ``?`` da linha Status, que hoje já repetiam palavra por palavra
-#: a metade velha da frase; acrescentar a metade nova a um só deixaria o ``?``
-#: explicando o modo e calando justamente sobre o que mudou.
-#:
-#: **A TERCEIRA REDAÇÃO É VIVA E MORA NO PRODUTO** —
-#: ``app/actions/jogar/painel.FRASE_DO_MODO_NATIVO``, a linha da coluna Atenção,
-#: que nomeia QUANTOS controles estão ligados e por isso não pode ser esta
-#: string. **A divergência entre as duas morre pela régua**
-#: (``tests/unit/test_o_coop_vive_na_conexao_nativa.py``), que cobra a mesma
-#: oração de quem conta nas duas — é a escolha que ``MARCA_DO_PRIMARIO`` e
 #: ``SERVICO_DESLIGADO`` já fizeram, e pelo mesmo motivo.
 NATIVO_E_OS_JOGADORES = "quem conta os jogadores passa a ser o jogo."
 
-#: O INTERRUPTOR — **HEFESTO LIGADO / DESLIGADO**, decisão dela de 31/08/2026.
-#:
-#: A PERGUNTA QUE ABRIU ISTO É DELA, e ela era boa: *"qual a diferença de nativo
-#: pra dualsense?"*. A tela antiga punha os dois na MESMA fileira, como
-#: alternativas do mesmo tipo — e não são. Um é **sem** o Hefesto no meio; o
-#: outro é uma **cópia virtual** que ele controla. A resposta dela foi
-#: redesenhar:
-#:
-#:   *"vamos desconfundir isso que tal? Hefesto Ligado/Desligado, Modo Navegação
-#:   (Teclado e mouse), Modo Nativo (Dualsense da Forma como veio ao Mundo). Modo
 #:   Hefesto se Ligado Abre as seções de Modo, Steam Input, Xbox, Sony DualSense,
-#:   Point And Click. Esses 4 modos independente de tudo. Vão utilizar as
-#:   features do hefesto. E em Baixo temos a parte das Mascaras dos Controles."*
-#:
-#: **CADA POSIÇÃO É UM MODO REAL DO PRODUTO, com leitor E escritor** — e é isso
-#: que faz esta forma valer mais do que a fileira que ela substitui:
-#:
 #:   - **Ligado** = `mode_transition.MODE_GAMEPAD`. Lê por `mode_of_state`,
-#:     escreve por `apply_mode('gamepad')` (`painel.ESCRITOR_DOS_MODOS`), e o que
-#:     ele grava no disco é o `gamepad_disabled.flag` — a resposta à pergunta dela
-#:     de 31/08, *"não sei se segue desativado"* (`painel.modo_lembrado`);
-#:   - **Desligado** = `MODE_NATIVE`, que é também o **degrau 3** da
-#:     `ponte_escada.ESCADA`. Também tem leitor e também tem escritor.
-#:
-#: **O BOTÃO SEM DONO MORREU AQUI, e não por eu ter tirado.** A fileira antiga
 #: tinha um quarto botão "Desligado" que era um estado INVENTADO: `mode_of_state`
-#: é o ponto único de leitura do modo vivo e devolve TRÊS valores, nunca um
-#: quarto (`painel.MODOS_DA_TELA` declara o porquê, e a MIGRA-JOGAR-06 levava a
-#: pergunta a ela). A decisão dela responde a pergunta **sem construir nada**:
-#: "Desligado" passa a querer dizer **Modo Nativo**, que existe, lê e escreve.
-#: Parar o Hefesto INTEIRO continua sendo "Parar o serviço", na aba Sistema.
-#:
-#: A PALAVRA É "PARAR", E FOI ESCOLHA DELA EM 31/08/2026. Esta linha dizia
-#: "encerrar" e a aba Sistema passou a escrever "Parar o serviço" — contradição
-#: no VERBO, criada no mesmo dia em que a do substantivo foi desfeita. Ela
-#: escolheu "parar": é o que o `systemctl stop` faz, é o par natural de
-#: "Ligado", e "encerrar" sugeria fim definitivo quando o serviço volta no
-#: próximo login.
-#:
-#: A chave do meio é o `data-modo`, e ela casa com `mode_transition.MODES` —
-#: é por ele que `controles_vivos.INTERRUPTOR` acende, trava e aplica.
 INTERRUPTOR = [
     ("ligado", "gamepad", "Ligado",
      "O Hefesto acende a luz, faz o controle vibrar, numera os jogadores e "
      "escolhe como o jogo vê o controle."),
-    # O TEXTO ENCOLHEU — decisão dela, 31/08/2026, e ela deu a regra em duas frases:
-    #
-    #     "o modo nativo já existe ali (…) e se eu quiser desligar modo hefesto
-    #      clico em desligado e o modo nativo fica online. Qualquer coisa fora
-    #      isso tá incorreta."
-    #
-    # SAIU: *"os gatilhos ficam duros como no PS5. Alguns jogos derrubam o
-    # controle no meio da partida assim."* — a segunda metade é AFIRMAÇÃO FORTE
-    # sem régua: nenhum ensaio deste repositório mede "alguns jogos derrubam".
-    # Alarme sem medição é o que esta casa cobra no `check_paridade_transporte`.
-    # E ELE GANHOU A SEGUNDA FRASE — COOP-NA-CONEXAO-NATIVA-01, Caminho A
-    # (06/09/2026). **PROVISÓRIO — decisão dela** (PROVA-DE-TELA-01): é texto
-    # novo de tela, e a palavra final é dela.
-    #
-    # O QUE ELA FECHA, medido na §2.4 da sprint: esta dica é a herdeira do
-    # `painel_no_jogo.TEXTO_NATIVO`, que enumerava movimento, toque, vibração e
-    # som e concluía que *"não há aqui o que medir"* — verdadeiro sobre as
-    # quatro coisas que enumera, e **mudo sobre a única que muda de
-    # comportamento: quantos jogadores existem**. O modo mais fiel ao aparelho
-    # era o único em que a tela não dizia uma palavra sobre co-op.
-    #
-    # ELA DIZ O MECANISMO E NÃO AFIRMA O JOGO. *"O jogo vê dois jogadores"*
-    # seria alarme invertido sem régua — a §4.2 é **inferido do código**, e quem
     # a fecha é a bancada dela (dois DualSense num jogo de co-op local, no cabo
-    # e no rádio), na MESA-DE-QUATRO-01. A frase diz de quem é a conta.
-    #
-    # A LINHA VIVA É OUTRA, e as duas são de propósito: esta é `title`, cravada
-    # no desenho e sempre disponível; a da coluna Atenção
-    # (`painel.aviso_do_modo_nativo`) só acende com DOIS ou mais controles, que
-    # é quando a pergunta existe.
     ("desligado", "native", "Desligado",
      "Modo Nativo: o jogo fala direto com o controle, e "
      + NATIVO_E_OS_JOGADORES),
 ]
-#: Em qual posição a cena nasce.
 HEFESTO_LIGADO = True
-#: O "AUTOMÁTICO" CONTINUA FORA — 31/08/2026, palavra dela: *"na aba jogar o
-#: Botão Automático não existe."*, e a regra que a frase fixou
-#: (`docs/process/2026-08-30-RETOMADA-o-estado-real-e-o-que-fazer.md` §1.2) é
-#: **botão sem dono no produto não vai para a tela**. Ele não tinha os dois:
 #: `painel.CHIPS_DA_ESCADA` o declara com `ponte=None`, e `degrau_vivo` acende
-#: comparando pontes — nenhuma `Ponte` é igual a `None`, então nenhum estado do
-#: produto podia acendê-lo; e não há IPC que fixe um degrau.
-#: **O MECANISMO NÃO SAIU — só o botão:** "tenta na ordem e para quando acerta" é
-#: o que `integrations/ponte_tentativa` faz sozinho, sempre, e está dito na dica.
-#: (Não confundir com o "Automático" da MÁSCARA, que caducou em 29/08 por
-#: ERRAR — 13 dos 14 jogos dela.)
-#:
-#: OS CINCO MODOS DE DENTRO DO HEFESTO LIGADO — decisão dela, 31/08/2026:
-#: *"Modo Hefesto se Ligado Abre as seções de Modo, Steam Input, Xbox, Sony
 #: DualSense, Point And Click"*, mais a **Navegação**, que ela pôs aqui dentro
-#: respondendo à dúvida que sobrou: quem emula teclado e mouse é o daemon do
-#: Hefesto, então com ele desligado não existe teclado nem mouse.
-#:
-#: O QUE A ESCADA PLANA DE QUATRO ESCONDIA, medido hoje contra
-#: `integrations/ponte_escada.ESCADA`:
-#:
-#:   - o chip chamado **"Hefesto"** era `Ponte(KIND_GAMEPAD, MASCARA_DUALSENSE)`
-#:     — o nome do PRODUTO no lugar do nome da máscara, numa tela em que os
 #:     outros três também são o Hefesto. Vira **Sony DualSense**;
-#:   - o degrau **Xbox** (`Ponte(KIND_GAMEPAD, MASCARA_XBOX)`), que é o
-#:     **segundo** que o produto tenta, **nunca chegou à tela** — era o que
-#:     `painel.degraus_sem_chip()` denunciava. Entra agora;
-#:   - **"Teclado + Mouse"** não existe na `ESCADA` (`KIND_DESKTOP` é constante,
-#:     e `indice_do_degrau` devolve -1). Vira **Navegação**;
-#:   - **"Nativo"** sai da fileira: é o interruptor DESLIGADO.
-#:
-#: NÃO HÁ ALGARISMO — decisão dela, 31/08/2026, e ela resolveu uma contradição
-#: de três pontas que a própria tela carregava:
-#:
-#:   a tela escrevia   ③ Steam Input
-#:   o produto tenta   em QUARTO (`indice_do_degrau + 1` == 4)
-#:   a legenda dizia   que o número É `indice_do_degrau + 1`
-#:
-#: Os três não podiam estar certos, e a causa era a decisão dela do mesmo dia: o
-#: terceiro degrau é o **Nativo**, que saiu da fileira para virar a posição
-#: DESLIGADO do interruptor. Sobravam três saídas — numerar 1·2·4 com um buraco
-#: no 3, numerar pela posição na tela (e a legenda passar a mentir), ou tirar os
-#: números. **Ela escolheu tirar.**
-#:
-#: A ORDEM NÃO SE PERDEU: ela mora no «?» do quadro Modo (*"O Hefesto tenta na
-#: ordem desta lista"*), que é para onde ela subiu quando o interruptor saiu do
-#: quadro (31/08, à tarde); até ali ela morava no rótulo "Modo", lá dentro.
-#: FATO SUBSTITUÍDO — 13/09/2026 (MODO-DE-CONEXAO-01): aqui se dizia que a ordem
-#: morava também na dica de cada modo; a LINGUA-A3 a tirou das dicas em 11/09.
-#: O que saiu foi o número, que era a única peça que podia divergir do produto
-#: sem ninguém notar — e tinha divergido.
-#:
-#: `sem_dono` é o que a casa exige desde 30/08 (*botão sem dono no produto não
-#: vai para a tela como se funcionasse*) casado com a ordem dela de MANTER os
-#: dois: eles aparecem, e **dizem** que ainda não têm quem os atenda.
-#: O POINT AND CLICK SAIU DA FILEIRA — decisão dela, 31/08/2026: *"nos mockups
-#: tira o point and click e deixa só o navegação."* Confirmada no mesmo dia: sai
-#: **só da fileira**. O perfil de fábrica `assets/profiles_default/point_and_click.json`
-#: continua, e o `Estilo Point-and-click` da aba Navegação continua. É o MODO que sai.
-#:
-#: DE QUEBRA, `sem_dono` FICOU SEM USO: o `pointclick` era o único chip marcado
-#: assim. A regra CSS `.degrau.sem-dono` fica de pé de propósito, e não é
 #: esquecimento — ela é a gramática desta casa para *"botão que aparece e diz que
-#: ainda não tem quem o atenda"*, e a próxima fileira que precisar dela não vai
-#: ter de reinventá-la. O campo continua no dicionário pelo mesmo motivo.
-#:
-#: AS DICAS FORAM REESCRITAS — pedido dela, 31/08/2026, com estas palavras:
-#:
-#:     "independente do modo, todas as features vão funcionar. Então o tooltip
-#:      falando o contrário é sem nexo."
-#:     "todos os tooltips tem que ser corrigidos e simplificados."
-#:
-#: DUAS AFIRMAÇÕES CAÍRAM, e elas se sustentavam uma na outra:
-#:
-#:   o Xbox dizia        "sem giroscópio e sem touchpad para o jogo"
 #:   o DualSense dizia   "dez linhas do mapa-controles.csv só chegam ao jogo por aqui"
-#:
-#: Se a feature chega em todo modo, "só por aqui" cai junto com "sem giroscópio".
-#: O que sobra em cada dica é o que de fato MUDA entre os modos: **como o jogo
-#: desenha os botões** e **em que ordem o Hefesto tenta**. Luz, vibração, gatilho,
-#: giroscópio, áudio e o número do jogador seguem por conta do Hefesto nos quatro
-#: — e isso se diz UMA vez, na dica do quadro, não quatro vezes aqui.
-#:
-#: NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. A queixa dela: *"o texto do modo
 #: do xbox tá errado aquilo é o texto da mascara do xbox"*. Como o jogo desenha  # (noqa-acento): citação literal dela
-#: os botões é assunto da MÁSCARA, e ele mora no «?» do cartão de cada controle.
-#: As dicas dos modos dizem o CAMINHO — por onde o Hefesto entrega o controle ao
-#: jogo —, e o «?» do quadro perdeu três metades: o «Vale no próximo jogo que
-#: abrir» (os dois valem com o jogo aberto, palavra dela do mesmo dia), o
-#: «como o jogo desenha os botões» e a lista de features «do Hefesto em todos»,
-#: que não tem medição hoje. Os textos são os do §D.9 da sprint.
-#:
-#: E ELAS ENCOLHERAM: as cinco dicas somavam 1.147 caracteres e passaram a somar
-#: 396. A dica que ocupa meia tela não é lida — é fechada.
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
@@ -318,48 +67,13 @@ MODOS = [
      "sem_dono": False,
      "dica": "O controle vira teclado e mouse do computador."},
 ]
-#: O MODO ACESO. `ponte_escada.ESCADA[0]` é `Ponte(KIND_GAMEPAD,
-#: MASCARA_DUALSENSE)`, que é este chip — a cena acende o que o produto acenderia.
 MODO_ACESO = "dualsense"
 
-#: A pendência da faixa de baixo — o que o **Aplicar** vai gravar.
-#:
-#: ELA ESTAVA CRAVADA E CONTRADIZIA A PRÓPRIA TELA. Ela viu, em 31/08/2026:
-#: *"'Vai mudar para Modo Nativo quando você clicar em Aplicar' essa frase tá
-#: errada também. viu?"* — e estava. A tela desenha o interruptor em **Ligado**
 #: com **Sony DualSense** marcado, e a faixa anunciava **Modo Nativo**, que é a
-#: posição **Desligado**. Os dois estados na mesma foto, um contradizendo o outro.
-#:
-#: A CURA NÃO É TROCAR O LITERAL: é DEIXAR DE TER UM. A frase passa a sair de
-#: `MODO_ACESO`, que é o mesmo dado que acende o chip — então ela não tem como
-#: discordar do que está desenhado. É a mesma cura que a `frase_das_mascaras()`,
-#: o padrão das lâmpadas e a contagem do cabeçalho já receberam nesta casa.
-#:
-#: NOTA DATADA — 02/09/2026, E ELA É SOBRE O QUE ESTA CURA NÃO ALCANÇOU. Derivar
-#: a palavra de `MODO_ACESO` matou a CONTRADIÇÃO que ela viu (a faixa dizendo
-#: "Modo Nativo" com o interruptor em Ligado) e deixou uma TAUTOLOGIA no lugar:
-#: colada no chip aceso, a frase só sabe prometer o que já está valendo. E a
-#: outra metade dela — *"quando você clicar em Aplicar"* — é falsa nesta
-#: interface em TODO estado: o Aplicar daqui manda `profile.apply_draft`, e
-#: `app/draft_config.to_ipc_dict` declara que **`mode` não viaja no "Aplicar"**
-#: (PERFIL-SALVA-TUDO-01).
-#:
-#: QUEM PASSOU A DIZER A VERDADE É O PRODUTO, não este desenho: a faixa é pintada
-#: por `pacotes/a01_jogar._faixa_do_pendente`, que escreve por cima da frase toda
-#: a cada tique. O texto CRAVADO continua sendo o que ela aprovou e o que a
-#: bancada mostra sem daemon — trocá-lo é decisão dela, não deste arquivo.
 PENDENTE = next(m["rot"] for m in MODOS if m["chave"] == MODO_ACESO)
 
 
-# ---------------------------------------------------------------------------
-# O CSS QUE É SÓ DESTA ABA
-#
-# Ele entra DEPOIS do `<style>` do esqueleto (é o que o `monta()` faz com o
-# `css_extra`), então cada regra daqui vence a homônima de lá pela cascata — que
 # é como as outras nove abas já fazem. A alternativa era editar o `topo.html`, e
-# ela é o defeito: `.pecas` e `.cartao` são de mais de uma aba, e mudar a regra
-# compartilhada para servir a esta mudaria a 10-perfis e a 08-conexoes junto.
-# ---------------------------------------------------------------------------
 CSS = """
   /* ---------- A ABA JOGAR ---------- */
 
@@ -914,7 +628,7 @@ CSS = """
      viajaria junto — marca de régua não é coisa que se publica.)
 
      POR QUE A REDE DA CASA NÃO OS PEGA, e isto não é falha dela: a S-04 mira
-     `button, input, select, textarea, [contenteditable]` (`monta.py:1225`), e o
+     `button, input, select, textarea, [contenteditable]` (`monta.py:544`), e o
      chip desta aba é um `<span>` — nenhum dos cinco. O comentário da S-04 diz
      por que ela some com o WIDGET em vez de o apagar, e a razão vale letra por
      letra para o chip: *"um botão cinza num lugar vazio ainda promete que ali
@@ -924,7 +638,7 @@ CSS = """
 
      A MARCA É `data-conectado`, E NÃO A CLASSE `off`, e a escolha decide se a
      cura vale AO VIVO: é o atributo que o piloto compara e vira nos passos `1b`
-     e `1c` (`hefesto_vivo.py:1440` e `:1380`), e é a mesma chave da S-04. Com
+     e `1c` (`hefesto_vivo.py:1262` e `:1380`), e é a mesma chave da S-04. Com
      os quatro DualSense dela na mesa, o P3 chega, o passo `1c` escreve
      `conectado="sim"`, e os três chips voltam a existir no mesmo tique — sem
      recarregar a página, porque quem os escondia era o seletor e não um nó
@@ -1083,54 +797,15 @@ CSS = """
 """
 
 
-# ---------------------------------------------------------------------------
 # OS CARTÕES — um por controle da MESA
-# ---------------------------------------------------------------------------
-#: O GLIFO DA BATERIA VAI SEM `<title>`, e a linha existe para não desfazer
-#: calado o que ela pediu. O `monta.glifo()` põe o nome da peça no `<title>` de
-#: propósito (é como um SVG diz o nome dele, e foi a cura do `title="cross"` que
-#: a Controles mostrava 64 vezes). Aqui ele sai, porque este glifo está DENTRO
-#: da frase `100%` — o rótulo já diz o que é, e o tooltip repetiria "Bateria" em
-#: cima de um número que se lê sozinho. Medido: nenhuma das dez páginas tem
-#: `<title>Bateria</title>` hoje. **É decisão dela reverter**, não minha: pôr o
-#: `<title>` de volta é apagar `.replace(...)` desta linha.
 _BATERIA_GLIFO = glifo("bateria", tam=13).replace("<title>Bateria</title>", "")
 
 
-#: O BLOCO DAS CORES DELA dentro do `ds_limpo.svg`: o `<pattern>`, os dois
-#: gradientes e a folha com os 28 modelos. Ele é AUTOCONTIDO — medido em
-#: 03/09/2026: 46.236 dos 94.505 bytes do arquivo, e **nada fora dele cita um
-#: id de dentro dele**. É isso que permite tirá-lo dos quatro desenhos e
-#: publicá-lo uma vez para a página inteira.
 _BLOCO_DAS_CORES = re.compile(r'<defs id="[^"]*cores-do-dualsense">.*?</defs>', re.S)
 
 
 def _tabela_das_cores():
-    """As 28 cores dela, publicadas UMA vez — 03/09/2026, e é a lei dela.
-
-        *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as
-        cores, glifos, controles, id e tudo mais. é pro projeto usar esse meu  # noqa-acento: citação literal dela
-        trabalho entende? nada hardcoded."*
-
-    O ALVO DE ATRIBUTO NÃO BASTA SOZINHO, e este é o fato que obrigou esta
-    função a existir. `monta._so_o_colorway` guarda, na folha de CADA desenho,
-    só as regras do modelo pedido — 3.082 bytes dos 45.452 dos 28. Escrever
-    `galactic-purple` num SVG cuja folha só traz `cosmic-red` não pinta roxo:
-    **nenhuma regra casa**, e o desenho cai nos `fill` crus do `ds_limpo.svg`
-    (`rgb(58, 63, 75)`). Ligar o endereço sem isto trocaria uma cor errada por
-    um cinza.
-
-    A SAÍDA ESCOLHIDA É A DA PÁGINA, e não a de `monta.svg()` deixar de podar:
-    a poda existe porque quatro cópias dos 28 dariam ~180 KB de CSS repetido
-    quatro vezes. Publicada uma vez, a tabela custa **uma** cópia e serve os
-    quatro — as regras são `svg[data-colorway="…"] .z-casca …`, que valem para
-    o documento inteiro, e não para o SVG em que a folha está escrita.
-
-    ISTO NÃO É CRAVAR COR: é a TABELA dela publicada, que é o mecanismo que o
-    `mapa-do-controle.html` já usa para ela ver os 28 clicando. O que a lei
-    proíbe é a página ESCOLHER um modelo; aqui ela publica os 28 e deixa o
-    aparelho escolher.
-    """
+    """As 28 cores dela, publicadas UMA vez — 03/09/2026, e é a lei dela."""
     achou = _BLOCO_DAS_CORES.search(monta.DS)
     if not achou:
         raise SystemExit(
@@ -1140,9 +815,6 @@ def _tabela_das_cores():
     return achou.group(0)
 
 
-#: A tabela na página, fora do fluxo e fora do leitor de tela. `width/height` a
-#: zero e `position:absolute` porque ela não desenha nada: é só o `<defs>` e a
-#: folha, que os quatro cartões consultam pelo atributo.
 TABELA_DAS_CORES = f'''    <!-- AS 28 CORES DELA, PUBLICADAS UMA VEZ — ver `_tabela_das_cores`.
          Sem esta tabela o alvo de atributo escreve um colorway que regra
          nenhuma casa, e o desenho fica cinza. -->
@@ -1154,36 +826,7 @@ TABELA_DAS_CORES = f'''    <!-- AS 28 CORES DELA, PUBLICADAS UMA VEZ — ver `_t
 
 
 def _desenho(c):
-    """O desenho de um controle da MESA, pronto para o cartão.
-
-    **O PRÓLOGO XML SAI.** `svg()` devolve o arquivo inteiro, e ele começa com
-    `<?xml ...?>`; empilhado a cada volta ele dava quinze prólogos por cartão na
-    versão à mão, e o navegador os engolia calado.
-
-    **E O CARTÃO NÃO TEM AS CINCO LÂMPADAS DO JOGADOR** — decisão dela, 28/08,
-    com o número no CSS acima.
-
-    O DESENHO SEGUE O APARELHO — 03/09/2026, e é a queixa dela em uma linha:
-    *"é white no p1, mas a borda de tudo é cosmic red e os svgs não são os que
-    o meu mapa cataloga. isso tá errado"*. Três coisas mudam aqui:
-
-    1. **a folha podada SAI** — quem a publica agora é a página, com os 28
-       (`_tabela_das_cores`). Sem isso o endereço abaixo escreveria um modelo
-       que regra nenhuma casa;
-    2. **o `<svg>` ganha ENDEREÇO com o alvo `atributo`**, que é o que o piloto
-       usa para escrever o `data-colorway` do controle daquela coluna. Vazio e
-       travessão APAGAM o atributo — e é o certo: sem cor lida o desenho vai ao
-       neutro, em vez de manter na tela o modelo do mockup sobre um aparelho
-       que é outro. Vale também para os dois lugares vazios, que recebem
-       travessão de `pacotes.apagar_os_lugares_sem_dono`;
-    3. **o `data-controle="dualsense"` do arquivo SAI.** Ele diz o tipo do
-       desenho, não o controle da coluna — e é ancestral de si mesmo para o
-       `el.closest('[data-controle],[data-uniq]')` que o piloto e a
-       `regua_do_mockup` usam para achar o dono de um campo. Com ele, o campo
-       `desenho` sairia das duas leituras com dono `"dualsense"`, que não é
-       coluna nenhuma da carga: o endereço nasceria morto na régua. Quem diz de
-       quem é o cartão é o `<div class="cartao" data-controle="…">` em volta.
-    """
+    """O desenho de um controle da MESA, pronto para o cartão."""
     x = re.sub(r"<\?xml[^>]*\?>\s*", "",
                svg(f'jg-{c["pref"]}', c["cor"], lampadas=False))
     x = _BLOCO_DAS_CORES.sub("", x, count=1)
@@ -1194,76 +837,13 @@ def _desenho(c):
         ' data-hef-atributo="data-colorway" ', 1)
 
 
-#: O MARCADOR DE CAMPO VAZIO, num lugar só. É o travessão, não o hífen: ela
-#: escreveu *"algo como `-`"*, e o travessão é o que esta janela já usa para
-#: "não há valor" (a tabela de bateria da própria aba escreve `— `).
 _VAZIO = "—"
 
 
 def _chips_de_mascara(escolhida):
-    """Os três chips de máscara de UM cartão — os mesmos nos QUATRO lugares.
-
-    A DECISÃO É DELA, 03/09/2026: *"É uma máscara por controle. (…) Se isso não
-    ocorre com os 4 controles em cada aba, então temos que construir isso e
-    garantir isso."*
-
-    O QUE ESTAVA ERRADO, e era invisível no desenho: os chips existiam nos
-    quatro cartões, mas só os dois CONECTADOS tinham endereço. Medido no
-    publicado de hoje — ``grep -c 'data-gesto="mascara"'`` devolvia **6**, que é
-    dois cartões vezes três chips. No produto a página é ESTÁTICA: os quatro
-    lugares nascem do arquivo e o piloto só os pinta (quem remonta cartão é a
-    bancada, `jogar_vivo.html_dos_cartoes`). Então, com um terceiro controle na
-    mesa dela, o cartão do P3 REABRIA com o dado certo — passo `1c` do piloto —
-    e os três chips dele continuavam **mudos**: clicar não mudava nada e não
-    dizia nada.
-
-    O GESTO JÁ SABIA RESPONDER PELO LUGAR VAZIO, e o ramo estava inalcançável:
-    `a01_jogar.mascara_do_controle` levanta *"Não há controle no lugar P3"*
-    quando o clique chega sem `uniq`. Sem `data-gesto` naquele chip, nenhum
-    clique chegava — o ramo era código morto, e é a prova de que este endereço é
-    o que faltava, e não uma invenção deste arquivo.
-
-    O `data-campo` VAI JUNTO, e não acende nada em repouso: o lugar sem dono
-    recebe travessão de `pacotes.apagar_os_lugares_sem_dono`, e o alvo `classe`
-    com `data-hef-quando` só acende no que CASA — travessão não casa com rótulo
-    nenhum. A cena que ela aprovou continua idêntica; o que muda é que o chip
-    passa a ter onde a verdade chegar quando um controle ocupar o lugar.
-
-    `escolhida` é ``None`` no lugar vazio: máscara é escolha por controle, e sem
-    controle não há escolha. Marcar uma seria desenhar um ajuste que não existe.
-
-    TRÊS CHIPS, DUAS MÁSCARAS — e isto não muda aqui. `mascaras_validas()`
-    devolve `{dualsense, xbox}`; o **Nintendo Pro** está no desenho por ordem
-    dela e o gesto RECUSA DIZENDO o nome, que é melhor que sumir calado. O
-    desenho é dela: este arquivo não tira nem acrescenta chip.
-
-    O QUE MUDOU EM 04/09/2026: o chip que o produto NÃO SABE MONTAR nasce
-    **cinza, com a razão na dica** — a D-03 dela (*"cinza antes, com a razão na
-    dica"*) aplicada ao único botão desta aba que recusa em TODO modo. Até
-    aqui ele parecia igual aos outros dois em repouso, e só falava depois do
-    clique; a tela não distinguia o botão que funciona do que vai recusar.
-
-    **QUEM É "O QUE O PRODUTO NÃO SABE MONTAR" NÃO SE DIGITA:** a lista sai de
-    `a01_jogar.mascaras_montaveis()`, que pergunta ao catálogo do vpad. No dia
-    em que o Hefesto aprender a montar um Nintendo Pro, o chip acende sozinho na
-    próxima geração — e é isso que separa esta cura de apagar o chip à mão.
-
-    O CLIQUE FICA. `data-gesto` continua nos três: o gesto recusa DIZENDO o nome
-    e as máscaras que existem, e tirar o endereço faria o clique sumir calado —
-    o defeito que o cinza veio curar, repetido do outro lado.
-    """
-    # A RAZÃO DEIXOU DE CONFESSAR — 07/09/2026, ordem dela sobre a tela inteira:
-    # *"o layout não informa os nossos defeitos."* O texto que estava aqui dizia
-    # que o Hefesto NÃO SABE montar a máscara — a ignorância do produto,
-    # declarada por ele mesmo, sobre uma capacidade que devemos. O que ficou diz
-    # o ESTADO PRESENTE (o que está disponível agora), que é o que ela permite.
-    #
-    # E ELA JÁ NÃO APARECIA, medido hoje: `mascaras_montaveis()` devolve as TRÊS
+    """Os três chips de máscara de UM cartão — os mesmos nos QUATRO lugares."""
     # (`DualSense`, `Nintendo Pro`, `Xbox 360`) desde que a Nintendo Pro foi
-    # construída, então nenhum dos três chips nasce inerte e este `title` não
     # chega à página. **Ele fica assim mesmo**, e não sai: no dia em que um
-    # quarto chip entrar no desenho dela antes de o catálogo aprender a montá-lo,
-    # é este texto que aparece — e é aí que a ordem dela vale.
     montaveis = mascaras_montaveis()
     razao = ("Esta máscara não está disponível. As que estão: "
              + ", ".join(sorted(montaveis)) + ".")
@@ -1296,11 +876,11 @@ def cartao(c, bateria=None):
     o `P2 = Xbox 360` / `P3 = DualSense` da MESA, porque a fonte única existia e
     a tela de referência ficava de fora dela.
 
-    OS ENDEREÇOS (29/08/2026, e o vocabulário é o do `aba02.py:484`)
+    OS ENDEREÇOS (29/08/2026, e o vocabulário é o do `aba02.py:373`)
     ----------------------------------------------------------------
     `data-controle` é o `uniq` do aparelho quando há um (a mesa viva) e o `pref`
     quando não há (o mockup, cuja mesa é escrita à mão) — a MESMA linha do
-    `aba02.py:769`, e não uma segunda regra.
+    `aba02.py:658`, e não uma segunda regra.
 
     **Os três `data-campo` do rótulo existem porque o rótulo TEM FILHOS.**
     Escrever `textContent` num elemento com filho apaga os filhos e força
@@ -1378,44 +958,19 @@ def cartao(c, bateria=None):
     inclusive. O gerador não decide nada disso: ele só garante que há onde
     escrever.
     """
-    # O LUGAR VAZIO — decisão dela, 31/08/2026: *"Vamos deixar os outros dois
-    # controles desconectados, só colocamos algo como `-` nos campos que deveriam
-    # ter algo e escurecemos tudo."*
-    #
-    # O CARTÃO CONTINUA NA TELA, e é isso que ela comprou: um controle que SOME
-    # não ensina nada — quem olha não sabe se a aba tem dois lugares ou quatro. O
-    # lugar apagado ensina que ali cabe um e que ele não está.
-    #
-    # NENHUMA MÁSCARA FICA `on`: máscara é escolha por controle, e sem controle
-    # não há escolha. Marcar uma seria desenhar um ajuste que não existe.
     conectado = c.get("conectado", True)
 
-    # AS DUAS COISAS QUE `conectado` DECIDE — e são SÓ estas duas.
-    #
-    # (a) A CLASSE E O ATRIBUTO. `off` e `alvo` não convivem: quem não tem dono
-    #     não é alvo de edição das outras abas, e é exatamente o que o piloto
-    #     faz no passo `1b` (`classList.remove('alvo')` em todo lugar vazio).
-    #     Escrever os dois aqui seria o gerador afirmando um estado que o
-    #     produto desfaz no primeiro tique.
     classe = ("cartao off" if not conectado
               else "cartao alvo" if c["alvo"] else "cartao")
-    #     O VALOR DO `data-conectado` É DA TELA, e não prosa: é ele que o
-    #     piloto compara nos passos `1b` e `1c` (`el.dataset.conectado`).
     marca_de_conexao = "sim" if conectado else "nao"  # (noqa-acento) valores
     dica_do_lugar = "" if conectado else (
         '\n                   title="Lugar vazio: nenhum controle conectado aqui."')
-    # (b) O TEXTO INICIAL DE CADA CAMPO. O `%` e o `•` moram DENTRO do campo de
-    #     propósito — quem escreve o valor escreve a unidade junto, senão o
-    #     lugar vazio sairia com um "—%" pendurado.
     jogador = f'Player {c["jogador"]}' if conectado else _VAZIO
     identidade = (f'{c["nome"]} <span class="pt">•</span> {c["via"]}'
                   if conectado else _VAZIO)
     carga = (f'{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%'
              if conectado else _VAZIO)
 
-    # OS TRÊS CHIPS SÃO OS MESMOS NOS QUATRO CARTÕES — ver `_chips_de_mascara`,
-    # que é o dono da forma desde 03/09/2026. Aqui o único argumento é a máscara
-    # DAQUELE aparelho, que a mesa viva já traz por controle
     # (`mesa_viva.mesa_do_estado`, lendo `gamepad_emulation.por_aparelho`).
     return f'''              <div class="{classe}"
                    data-controle="{c.get("uniq") or c["pref"]}" data-conectado="{marca_de_conexao}"{dica_do_lugar}>
@@ -1438,9 +993,6 @@ def frase_das_mascaras():
     """
     partes = []
     for m in MASCARAS:
-        # SÓ OS CONECTADOS — 31/08/2026. Um lugar vazio não tem máscara
-        # escolhida (o cartão dele não marca nenhuma), e listá-lo aqui faria a
-        # legenda prometer um ajuste que a tela não mostra.
         ps = [f'P{c["jogador"]}' for c in monta.CONECTADOS if c["mascara"] == m]
         if not ps:
             continue
@@ -1451,35 +1003,7 @@ def frase_das_mascaras():
 
 CARTOES = "\n".join(cartao(c) for c in MESA)
 
-# AS DUAS POSIÇÕES DO INTERRUPTOR. O `for=` do `<label>` é o que muda o rádio no
-# mockup; o `data-modo` é o endereço da pintura viva. São dois mecanismos com
-# alvos diferentes no MESMO elemento, de propósito — a alternativa era a tela
-# ter um estado no desenho e outro no daemon, que é o defeito que a pintura
-# existe para não ter.
-#
-# E DESDE 01/09/2026 SÃO TRÊS: o `data-gesto` é o endereço do CLIQUE. O ouvinte
-# único do piloto (`hefesto_vivo.py`) monta o nome do gesto por
-# `d.gesto || d.hefGesto || d.papel` — sem ele o clique nas duas posições chegava
-# ao Python com o nome `clique`, que não é gesto de aba nenhuma, e o despachante
-# devolvia "sem dono". O `data-modo` continua sendo o que diz QUAL posição: ele
-# viaja no mesmo recado (`o["modo"]`), então um gesto só atende as duas.
-#
-# POR QUE UM SÓ, E NÃO UM POR POSIÇÃO: o que muda entre Ligado e Desligado é a
-# chave do modo, e a sequência de IPC de cada um já é de
-# `mode_transition.plan_mode_transition`. Dois gestos escreveriam duas vezes a
-# mesma delegação.
-#
-# E DESDE 03/09/2026 SÃO CINCO, porque o quinto é o que faz a posição dizer o
-# ESTADO e não o último clique. `data-campo="hef-posicao"` com alvo `classe` e
-# `data-hef-quando` é o mecanismo que o piloto já tem (`hefesto_vivo.escrever`):
-# o Python manda a POSIÇÃO viva — "ligado", "desligado" ou vazio — e cada rótulo
-# decide por si se acende. O comentário do CSS acima já prometia este `.on`
-# desde 31/08; o que faltava era o endereço por onde ele chega.
-#
-# MEDIDO ANTES DE ESCREVER: com o daemon dela em `native_mode false` e
 # `gamepad_emulation.enabled false` — logo `mode_of_state` = **desktop** —, esta
-# página mostrava **Ligado** aceso porque o `<input>` do arquivo nasce
-# `checked`. Não era atraso de tique: não havia quem repintasse.
 _INTERRUPTOR = "\n".join(
     f'        <label class="hef-pos {lado}" for="hef-{lado}"'
     f' data-gesto="hefesto" data-modo="{modo}"\n'
@@ -1488,18 +1012,9 @@ _INTERRUPTOR = "\n".join(
     f'               title="{dica}"><span class="pino"></span>{rot}</label>'
     for lado, modo, rot, dica in INTERRUPTOR)
 
-# A CLASSE `auto` NÃO É MAIS ESCRITA (31/08): ela existia só para o algarismo "A"
-# do "Automático" ganhar o ciano (`.degrau.auto i`, no `topo.html`). A regra órfã
-# continua no esqueleto — ela é de lá, e tirá-la é mexer em arquivo de outro dono.
 
-
-#: O CAMPO EXCLUSIVO DO STEAM INPUT. Ele existe como constante porque TRÊS
-#: lugares precisam concordar: este gerador, o `pacotes/a01_jogar.DA_PAGINA` e o
-#: emissor (`_estado_da_tela`). Um endereço digitado em três arquivos é um typo
-#: à espera de virar linha que nunca pinta, calada.
 CAMPO_DO_STEAM_INPUT = "steam-input-aceso"
 
-#: O campo que os OUTROS chips compartilham — um por vez, por construção.
 CAMPO_DO_MODO = "modo-aceso"
 
 
@@ -1535,54 +1050,12 @@ def _campo_do_chip(m):
 
 
 def _chip_do_modo(m):
-    """Um dos cinco chips de dentro do Hefesto ligado.
-
-    QUATRO ENDEREÇOS, e cada um responde a uma pergunta diferente:
-
-    - ``data-degrau`` — a identidade na fileira que o PS+R3 gira. Todos têm;
-    - ``data-modo`` — só quem É um modo de ``mode_transition.MODES``. Hoje é a
-      **Navegação** e só ela (``desktop``): é ela que `apply_mode` sabe aplicar.
-      Escrever este endereço nos outros quatro seria oferecer um escritor que
-      não existe;
-    - ``data-gesto`` — o endereço do CLIQUE (01/09/2026). Todos têm, e o valor é
-      ``modo-<chave>``, que é o que o piloto lê para achar quem atende;
-    - ``title`` — o que este modo é, em uma linha, e se ele tem quem o atenda.
-
-    **O `data-degrau` NÃO SERVIA PARA O CLIQUE, e é por isso que o quarto
-    endereço precisou existir.** O ouvinte único do piloto
-    (`hefesto_vivo.py`) transporta um conjunto fechado de atributos, e
-    ``data-degrau`` não está nele — o clique chegava ao Python com o nome
-    `clique` e sem dizer em qual chip. Pôr a chave dentro do próprio
-    ``data-gesto`` resolve sem inventar um vocabulário novo: é o mesmo atributo
-    que a Iluminação e a Sistema já usam, e é um dos que o portão do desenho
-    conta como invisível (`check_o_desenho_aprovado.INVISIVEIS`), então marcar
-    os chips não move um pixel nem reprova a régua do mockup.
-
-    **MARCAR NÃO ERA LIGAR, E AGORA É — STEAM-INPUT-01, 20/09/2026.** Aqui se
-    dizia que o ``modo-steam`` saía marcado e **sem `@gesto`**, porque *"não há
-    IPC que ligue o Steam Input"*. A premissa era verdadeira e a conclusão era
-    falsa: o Steam Input não passa por IPC nenhum — é um arquivo da Steam, e o
-    produto sabe escrevê-lo desde 19/08/2026. O gesto existe
-    (`pacotes/a01_jogar.modo_steam`); o que ele guarda da frase antiga é a
-    pergunta, porque ligar continua exigindo a Steam fechada.
-
-    **E O CAMPO DELE NÃO É O `modo-aceso`** — ver :func:`_campo_do_chip`.
-    """
+    """Um dos cinco chips de dentro do Hefesto ligado."""
     classe = ("degrau"
               + (" on" if m["chave"] == MODO_ACESO else "")
               + (" sem-dono" if m["sem_dono"] else ""))
     modo = f' data-modo="{m["modo"]}"' if m["modo"] else ""
-    # SEM `<i>`: os algarismos saíram em 31/08 (ver o comentário do `MODOS`).
-    #
-    # O QUINTO ENDEREÇO — 03/09/2026, e é o que tira o chip aceso das mãos do
     # gerador. `data-campo="modo-aceso"` com alvo `classe` e `data-hef-quando`
-    # igual à chave do chip: o pacote manda QUAL chip está vivo e cada um decide
-    # por si. Um segundo clique não pode deixar dois acesos porque não há
-    # caminho em que duas chaves casem — os cinco compartilham o mesmo campo.
-    #
-    # POR QUE ELE FALTAVA E O QUE CUSTOU: o chip aceso era `MODO_ACESO`, cravado
-    # na geração. Ele coincidia com o `flavor` vivo por acaso do desenho, e
-    # nenhuma troca — pela CLI, pelo applet, por um perfil que entra sozinho — o
     # movia. Medido em 03/09 contra o daemon dela: `mode_of_state` = `desktop`,
     # logo o chip vivo é **Navegação**, e a tela mostrava **Sony DualSense**.
     return (f'            <span class="{classe}" data-degrau="{m["chave"]}"'
@@ -1594,22 +1067,6 @@ def _chip_do_modo(m):
 
 
 _MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
-
-
-# A COLUNA ATENÇÃO SAIU DESTA PÁGINA — 07/09/2026, ordem dela: *"em jogar
-# remover essa seção do atenção, nenhum aviso esse — deixar só o reconectar
-# controles."*
-#
-# AQUI MORAVAM `aviso()`, `_AVISOS` e `_CONTA`: a função que montava uma linha
-# da coluna, as `AVISOS_VIVOS` linhas que a página publicava (uma acesa, as
-# outras endereço) e a conta ao lado. As três eram DESENHO, e desenho vai
-# embora com a seção.
-#
-# O QUE NÃO FOI EMBORA SÃO AS ONZE FONTES VIVAS. `pacotes/a01_jogar._avisos`
-# continua de pé, com as onze, e o docstring dele diz para onde elas vão. NÃO
-# APAGUE `_avisos` achando que é resto desta seção: apagá-lo fecha o único
-# caminho por que o serviço calado, o cadeado cego, a ponte com o jogo e a
-# divergência de máscara já souberam chegar a uma tela.
 
 
 MIOLO = f'''
@@ -1671,7 +1128,7 @@ MIOLO = f'''
              na coluna dos modos e no fluxo de leitura deles — e ali ela lia como
              um QUINTO modo. Não é modo nenhum: é uma trava sobre o perfil.
 
-             O MODELO É O QUE ELA APONTOU, `aba06.py:2664`, a `.porta` do *"Banco
+             O MODELO É O QUE ELA APONTOU, `aba06.py:1738`, a `.porta` do *"Banco
              de provas: o mapa do controle ↗"*: **a coisa que pertence ao bloco
              mas não é o miolo dele mora no canto, na linha do título.**
 
@@ -1903,10 +1360,6 @@ MIOLO = f'''
 '''
 
 
-#: A LEGENDA. A frase das máscaras NÃO É DIGITADA — ela sai da `MESA`, pela
-#: `frase_das_mascaras()`. Era escrita à mão aqui e repetia o erro dos chips:
-#: quando a MESA passou a mandar na máscara de cada cartão, a legenda ficou
-#: dizendo o contrário do que a tela mostrava.
 LEGENDA = f'''<div class="nota">
   <h2>O que mudou, e por quê</h2>
   <ul>
@@ -2141,17 +1594,7 @@ LEGENDA = f'''<div class="nota">
 
 
 def _dentro_da_grade_dos_assentos(corpo: str) -> str:
-    """O `<div class="pecas">…</div>` INTEIRO, contado por `div` aberto e fechado.
-
-    ELA EXISTE POR CAUSA DA ESCOLHA DELA de 06/09/2026 — *os externos no mesmo
-    frame dos assentos* —, e a régua que a guarda precisa saber onde a grade
-    ACABA. Um `split` no primeiro `</div>` pararia dentro do primeiro cartão
-    (cada `.cartao` tem três `<div>` dentro), e um `split` por recuo casaria com
-    qualquer linha que alguém reindentasse.
-
-    Devolve `""` quando a grade não abre — e aí a régua que a chama reprova, que
-    é o comportamento certo: sem grade não há frame para o externo estar dentro.
-    """
+    """O `<div class="pecas">…</div>` INTEIRO, contado por `div` aberto e fechado."""
     marca = '<div class="pecas"'
     inicio = corpo.find(marca)
     if inicio < 0:
@@ -2175,21 +1618,7 @@ def _dentro_da_grade_dos_assentos(corpo: str) -> str:
 
 
 def _campos_por_lugar(fileira: str) -> dict[str, list[str]]:
-    """Os `data-campo` de DENTRO de cada cartão, por `data-controle`.
-
-    Ela existe para a régua §15, que é a que impede o defeito de 07/09 de
-    voltar: o lugar vazio ter menos endereço que o lugar cheio.
-
-    A FRONTEIRA SE CONTA, e não se adivinha por recuo — a mesma disciplina do
-    `_dentro_da_grade_dos_assentos` acima, e pela mesma razão: cada `.cartao`
-    tem três `<div>` dentro, então um `split` no primeiro `</div>` pararia no
-    `.peca-topo` e a régua leria três endereços onde há nove. Um `split` por
-    recuo casaria com qualquer linha que alguém reindentasse.
-
-    Devolve a LISTA, e não o conjunto: `mascara-cartao` aparece três vezes por
-    cartão, e um lugar que perdesse dois dos três chips passaria por uma régua
-    que só comparasse conjuntos.
-    """
+    """Os `data-campo` de DENTRO de cada cartão, por `data-controle`."""
     fora: dict[str, list[str]] = {}
     marca = '<div class="cartao'
     i = fileira.find(marca)
@@ -2218,10 +1647,6 @@ def _campos_por_lugar(fileira: str) -> dict[str, list[str]]:
     return fora
 
 
-#: AS TAGS QUE NÃO FECHAM. Quem as empilha nunca as desempilha, e a partir da
-#: primeira toda profundidade fica alta demais — um apagão silencioso, que é o
-#: mesmo defeito que o parser vem curar, só que ao contrário. A lista é a mesma
-#: de `frases_que_ela_baniu._SEM_FECHO`, e pela mesma razão.
 _SEM_FECHO = frozenset((
     "area", "base", "br", "col", "embed", "hr", "img", "input",
     "link", "meta", "param", "source", "track", "wbr",
@@ -2280,7 +1705,6 @@ def _ancestrais(html: str, classe: str) -> set[str] | None:
                 self.pilha.append(self._classes(atributos))
 
         def handle_startendtag(self, _tag, atributos):
-            # abre e fecha no mesmo ponto: olha, e NÃO mexe na pilha
             self._olhar(atributos)
 
         def handle_endtag(self, tag):
@@ -2293,34 +1717,7 @@ def _ancestrais(html: str, classe: str) -> set[str] | None:
 
 
 def _conferir(doc):
-    """As decisões dela de 31/08, conferidas NA SAÍDA. O gerador para se caírem.
-
-    POR QUE NA SAÍDA, e não sobre as constantes: uma régua que lê `MODOS` prova
-    que a LISTA está certa, não que a PÁGINA está. As duas já divergiram nesta
-    casa — a fita viva morreu em silêncio quando o texto do chip mudou e o
-    remendo deixou de casar, com o gerador imprimindo OK. Aqui a régua lê o HTML
-    que acabou de ser escrito, que é o que ela vai abrir.
-
-    E CADA UMA MORDE NOS DOIS SENTIDOS: além de exigir o que ela pediu, exigem
-    que o que devia sair tenha saído. Uma régua que só confere presença dá verde
-    sobre uma página onde nada foi removido.
-    """
-    # SÓ O MIOLO, e esta linha é a régua da régua. A primeira volta leu a página
-    # INTEIRA e reprovou três rótulos que estavam certos: `>Hefesto</span>` casava
-    # com o `<h1>` do cabeçalho — o NOME DO PRODUTO — e "Quando o jogo abrir" e
-    # "Conectado agora" casavam **oito vezes cada** dentro da `<div class="nota">`,
-    # que é a legenda contando a história da mudança. Citação não é rótulo, e
-    # apagar a citação para calar a régua seria apagar o registro.
-    #
-    # É a armadilha nomeada no `COMO-OLHAR-A-TELA.md` — *"régua que casa um token
-    # em QUALQUER lugar do texto, em vez do campo que o significa"* —, e ela
-    # produziu aqui exatamente o sintoma que a página descreve: três alarmes
-    # convincentes e falsos.
-    #
-    # E OS COMENTÁRIOS HTML SAEM JUNTO, pela mesma razão: comentário não é tela.
-    # Achado na volta seguinte — o comentário que explica a fusão das dicas cita o
-    # rótulo "O jogo vê cada controle como:", e a régua contou 2 e reprovou o
-    # texto que ela mesma tinha acabado de exigir.
+    """As decisões dela de 31/08, conferidas NA SAÍDA. O gerador para se caírem."""
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
     if len(corpo) < 2000:
@@ -2333,39 +1730,26 @@ def _conferir(doc):
         if not cond:
             falhas.append(oquê)
 
-    # 1. O POINT AND CLICK SAIU DA FILEIRA — *"nos mockups tira o point and click
-    #    e deixa só o navegação."* O `Point-and-click` da aba Navegação e o perfil
-    #    de fábrica continuam: por isso a régua olha o DEGRAU, não a palavra solta.
     exigir('data-degrau="pointclick"' not in corpo, "o Point And Click voltou à fileira")
     exigir(corpo.count('class="degrau') >= 4, "a fileira perdeu degrau")
 
-    # 2. NENHUM TOOLTIP NEGA FEATURE POR MODO — *"independente do modo, todas as
-    #    features vão funcionar. Então o tooltip falando o contrário é sem nexo."*
-    #    As duas frases que caíram, e elas se sustentavam uma na outra.
     for frase in ("sem giroscópio", "só chegam ao jogo por aqui",
                   "só chegam ao jogo pelo", "sem touchpad para o jogo"):
         exigir(frase not in corpo, f"um tooltip voltou a negar feature: {frase!r}")
 
-    # 3. OS TRÊS RÓTULOS QUE ELA TROCOU, e o antigo não pode ter sobrado.
     for novo, velho in (("<span class=\"linha-rot\">Status</span>", ">Hefesto</span>"),
                         (">Modo</span>", ">Quando o jogo abrir<"),
                         (">O controle é visto como:</span>", ">Conectado agora<")):
         exigir(novo in corpo, f"o rótulo novo sumiu: {novo!r}")
         exigir(velho not in corpo, f"o rótulo antigo voltou: {velho!r}")
-    # e o rótulo interno não pode ter ficado junto com o título novo
     exigir(corpo.count("O controle é visto como:") == 1,
            "o rótulo interno das máscaras voltou (o texto aparece 2×)")
     exigir("O jogo vê cada controle como" not in corpo,
            "o título anterior voltou — ela o trocou em 31/08")
 
-    # 4. A MESA — dois na mesa, dois lugares vazios, e o cabeçalho contando os
-    #    conectados. *"Todas as abas tem que ter só dois controles conectados."*
     exigir(corpo.count('data-conectado="sim"') == 2, "não são 2 controles conectados")
     exigir(corpo.count('data-conectado="nao"') == 2, "não são 2 lugares vazios")
-    # O CABEÇALHO CONTA PELO TRANSPORTE desde 22/09/2026 — o «N controles:»
     # saiu por pedido dela (*"cai fora pra ganharmos espaçço Lateral"*),  # (noqa-acento): dela
-    # e quem conta é o `x USB · y BT`. A trava cobra as duas metades da decisão: a
-    # palavra que saiu não volta, e a conta dos conectados continua na tela.
     exigir(f"{len(monta.CONECTADOS)} controles:" not in doc,
            "o «N controles:» voltou ao cabeçalho — ela o tirou em 22/09")
     from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva_
@@ -2375,69 +1759,32 @@ def _conferir(doc):
     exigir(f'<b data-campo="conta-b">{_mesa_viva_.frase_dos_transportes(_usb, _bt)}</b>' in doc,
            "o cabeçalho não conta os conectados pelo transporte")
 
-    # 5. LUGAR VAZIO NÃO TEM MÁSCARA ESCOLHIDA. Sem controle não há escolha, e
-    #    marcar uma desenharia um ajuste que não existe.
     for pedaco in corpo.split('class="cartao off"')[1:]:
         exigir('class="chip on"' not in pedaco.split("</div>\n              </div>")[0],
                "um lugar vazio tem máscara marcada")
 
-    # 5-bis. A IDENTIDADE VEM DA FITA, NÃO DO DESENHO — 03/09/2026, e é a lei
-    #    dela: *"se no topo tá mostrando controle white player 1, então cada aba
-    #    vai usar os controles lá de cima."* O cartão trazia a cor do plástico
-    #    numa custom property e o nome dele num `title`, e o piloto não tem alvo
-    #    de pintura para nenhum dos dois — logo os dois só sabiam dizer o mockup.
-    #
-    #    A RÉGUA OLHA SÓ A FILEIRA DE CARTÕES, e não o `corpo`: a FITA também
     #    traz `--plastico`, e ela é do `monta.py` — das dez abas. Acusá-la aqui
-    #    mandaria consertar o que esta aba não pode.
-    #    O CORTE DE BAIXO ERA `class="col-atencao"` ATÉ 07/09/2026, e mudou
-    #    para a `.faixa-final` porque a coluna Atenção saiu. Um delimitador que
-    #    some faz o `split` devolver o RESTO DA PÁGINA: a régua continuaria
-    #    verde, medindo cartão mais faixa mais legenda como se fosse a fileira.
     fileira = corpo.split('data-lista="cartoes"', 1)[-1].split('class="faixa-final', 1)[0]
     exigir(len(fileira) > 2000, "a régua não achou a fileira de cartões")
     exigir("--plastico" not in fileira, "o cartão voltou a cravar a cor do plástico")
-    #    ERA `len(monta.CONECTADOS)` ATÉ 07/09/2026, pelo mesmo motivo dos
-    #    chips de máscara em 03/09: a conta trancava o defeito em vez do
-    #    contrato. A pele só existia no ramo do lugar cheio, e quando o P3
-    #    conectava — o cartão REABRE, passo `1c` do piloto — a borda dele ficava
-    #    na cor neutra para sempre, porque não havia onde a cor pousar.
     exigir(fileira.count('data-campo="plastico" data-hef-alvo="cor"')
            == len(MESA),
            "não há uma pele endereçada por LUGAR da mesa — os quatro, e não só "
            "os conectados: quem chega depois entra num cartão que já existe")
-    #    O NOME DO PLÁSTICO NO RÓTULO CONTINUA, e tem de continuar: ele mora em
     #    `<span data-campo="identidade">`, e o pacote o reescreve todo tique —
-    #    fotografado em 03/09 dizendo `White · USB` com o controle no cabo. O que
-    #    NÃO pode voltar é o nome num ATRIBUTO, que congela no que o gerador
-    #    soube. Cobrar o nome em qualquer lugar da fileira mandaria apagar o
-    #    rótulo que está certo — a armadilha nomeada trinta linhas acima.
     for dica in re.findall(r'title="([^"]*)"', fileira):
         for c in monta.CONECTADOS:
             exigir(c["nome"] not in dica,
                    f"uma dica do cartão voltou a nomear o plástico: {dica!r}")
 
-    # 5-ter. E O DESENHO TAMBÉM VEM DE CIMA — 03/09/2026. A borda já era lida
-    #    desde a régua acima; o CONTROLE DESENHADO continuava Cosmic Red um
-    #    centímetro abaixo dela. Ela, com todas as letras: *"os svgs do
-    #    dualsense (…) não são os que o meu mapa cataloga. isso tá errado"*.
-    #
-    #    SÃO TRÊS EXIGÊNCIAS, e nenhuma sozinha basta:
     exigir(fileira.count('data-campo="desenho" data-hef-alvo="atributo"'
                          ' data-hef-atributo="data-colorway"') == len(MESA),
            f"esperava {len(MESA)} desenhos endereçados com o alvo `atributo` "
            "e o atributo NOMEADO — sem os três juntos o piloto escreve o hex "
            "como texto por cima do controle")
-    #    2. A FOLHA SAIU DE DENTRO DOS DESENHOS. Enquanto cada SVG carregar só
-    #       as regras do SEU modelo, escrever outro colorway não pinta nada —
-    #       cai no `fill` cru do arquivo, medido em `rgb(58, 63, 75)`.
     exigir("cores-do-dualsense-folha" not in fileira,
            "um desenho voltou a carregar a folha podada: o endereço acima "
            "passaria a escrever um modelo que regra nenhuma casa")
-    #    3. E A PÁGINA PUBLICA OS 28 — UMA VEZ. O número não se digita: sai do
-    #       `monta.DS`, que é a folha que o gerador de cores escreveu do
-    #       `docs/data/cores-do-dualsense.csv`. Cravar `28` aqui seria a segunda
-    #       lista que esta casa derruba desde que a cor virou dado.
     dela = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', monta.DS))
     tela = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', corpo))
     exigir(corpo.count('<style id="cores-do-dualsense-folha">') == 1,
@@ -2446,56 +1793,16 @@ def _conferir(doc):
            f"a página publica {len(tela)} modelos e o mapa dela tem "
            f"{len(dela)} — faltam {sorted(dela - tela)[:4]}")
 
-    # 6-bis. NENHUM ALARME SEM MEDIÇÃO. Ela, 31/08: *"qualquer coisa fora isso
-    #    tá incorreta"* — a regra do Nativo é só "Desligado põe o Nativo online".
-    #    As duas frases que caíram alarmavam sobre número que ensaio nenhum deste
-    #    repositório mede.
-    # A LISTA MORA EM UM LUGAR SÓ (`frases_que_ela_baniu`), e esta régua a LÊ.
-    # Ela estava DIGITADA aqui, e por isso a proibição alcançava só o HTML
-    # estático — a coluna Atenção é escrita em tempo de execução, e a frase
-    # passava por baixo com o gerador verde. Ver o módulo, que conta o caso.
     for frase in FRASES_BANIDAS:
         exigir(frase not in corpo, f"um texto voltou a alarmar sem medição: {frase!r}")
 
-    # 6. A PENDÊNCIA DIZ O QUE ESTÁ MARCADO — ela viu a contradição: a tela em
     #    Ligado + Sony DualSense e a faixa anunciando Modo Nativo.
     exigir(f"<b data-campo=\"pendente-alvo\">{PENDENTE}</b>" in corpo,
            "a faixa de pendência não diz o modo marcado")
     exigir(PENDENTE != "Modo Nativo",
            "a pendência voltou a ser Modo Nativo com o interruptor em Ligado")
 
-    # 7. O QUE A TELA MOSTRA TEM DE SER LIDO, E NÃO CRAVADO — 03/09/2026.
-    #    Cada uma destas linhas é um valor que a página afirmava sozinha,
-    #    fotografado mentindo contra o daemon dela. A régua cobra o ENDEREÇO,
-    #    que é o que separa "a tela concorda por acaso" de "a tela leu".
-    #
-    #    ELA MORDE PELO NÚMERO, e não pela presença: `hef-posicao` tem de
-    #    aparecer nas DUAS posições do interruptor (uma só deixaria a outra
-    #    acesa para sempre), `modo-aceso` nos CINCO chips da fileira, e
-    #    `mascara-cartao` em três chips por LUGAR DA MESA — os quatro, e não só
-    #    os conectados.
-    #
-    #    ERA `len(monta.CONECTADOS)` ATÉ 03/09/2026, e a régua trancava o
-    #    defeito em vez do contrato: o lugar vazio ficava sem endereço "de
-    #    propósito", e no produto — onde a página é ESTÁTICA e o cartão do P3
-    #    REABRE quando um terceiro controle chega — os três chips dele
-    #    continuavam mudos ao clique e cegos à pintura. A decisão dela é *"uma
-    #    máscara por controle (…) se isso não ocorre com os 4 controles em cada
-    #    aba, então temos que construir isso e garantir isso"*.
-    #    E O NÚMERO DE CADA UM SAI DO `MODOS`, NÃO DE UM LITERAL —
-    #    STEAM-INPUT-01, 20/09/2026. O `modo-aceso` deixou de cobrir os quatro
-    #    chips: o Steam Input ganhou campo próprio, porque ele NÃO é exclusivo
-    #    dos outros (ver `_campo_do_chip`). Escrever `len(MODOS) - 1` aqui
-    #    seria uma aritmética que envelhece no dia em que um quinto chip
-    #    nascer; a conta pergunta ao mesmo `_campo_do_chip` que gera a página,
-    #    e um chip novo entra na régua sozinho.
     _por_campo = collections.Counter(_campo_do_chip(m) for m in MODOS)
-    #    E A CONTA MORDE ANTES DE CONTAR. Uma régua que deriva o número da
-    #    MESMA função que gera a página passa com qualquer resposta: se
-    #    `_campo_do_chip` voltasse a devolver `modo-aceso` para todos, o
-    #    esperado do Steam Input viraria ZERO e a linha ficaria verde sobre o
-    #    defeito. É a trava-que-se-mede-contra-a-própria-saída, de 07/09. Esta
-    #    linha crava o único número que NÃO sai da função medida.
     exigir(_por_campo[CAMPO_DO_STEAM_INPUT] == 1,
            f"o chip do Steam Input não tem campo próprio: esperava 1 chip em "
            f"`{CAMPO_DO_STEAM_INPUT}`, a tabela dá "
@@ -2515,47 +1822,21 @@ def _conferir(doc):
         exigir(achei == quantos,
                f"{oque}: esperava {quantos} endereços `{campo}` com alvo "
                f"`classe`, achei {achei}")
-    #    E O CLIQUE ALCANÇA OS QUATRO, que é a OUTRA metade e não a mesma:
-    #    `data-campo` é por onde a verdade CHEGA, `data-gesto` é por onde o dedo
-    #    dela SAI. Um chip com endereço de pintura e sem endereço de clique
-    #    mostra a máscara e não deixa trocá-la — e era exatamente o estado do P3
-    #    e do P4 até hoje. Os dois números saem da mesma conta de propósito: no
-    #    dia em que um cartão perder um dos dois lados, esta linha o diz.
     cliques = corpo.count('data-gesto="mascara"')
     exigir(cliques == len(MASCARAS) * len(MESA),
            f"o clique da máscara não alcança os quatro lugares: esperava "
            f"{len(MASCARAS) * len(MESA)} `data-gesto=\"mascara\"`, achei {cliques}")
-    #    E A COLUNA ATENÇÃO NÃO VOLTA — 07/09/2026, ordem dela: *"em jogar
-    #    remover essa seção do atenção, nenhum aviso esse — deixar só o
-    #    reconectar controles."* A régua trocou de sinal: até hoje ela cobrava
-    #    que a coluna publicasse as `AVISOS_VIVOS` linhas; agora ela cobra que
-    #    nenhuma delas exista.
-    #
-    #    OS QUATRO ENDEREÇOS, E NÃO SÓ A CLASSE: a `.col-atencao` é o CSS e some
-    #    com ele, mas um endereço que sobrasse num elemento qualquer faria o
-    #    piloto continuar pintando aviso numa tela que não tem coluna — e a
-    #    frase apareceria solta, sem o cabeçalho que a explicava.
     for morto in ("col-atencao", 'data-campo="aviso-vivo"',
                   'data-campo="aviso-selo"', 'data-campo="aviso-texto"',
                   'data-campo="atencao-conta"', 'data-lista="avisos"'):
         exigir(morto not in corpo, f"a coluna Atenção voltou à Jogar: {morto!r}")
-    #    E O QUE ELA MANDOU FICAR, FICA. Uma régua que só proíbe passa com a
-    #    seção inteira apagada — inclusive o botão que era a razão do pedido.
     exigir(corpo.count('data-gesto="reconectar"') == 1,
            "o botão Reconectar Controles sumiu junto com a coluna Atenção — ele "
            "é justamente o que ela mandou deixar")
-    #    E A FAIXA LARANJA TEM O INTERRUPTOR DE EXISTÊNCIA. Sem ele, a caixa
-    #    tracejada fica com um travessão solto quando não há pendência.
     exigir(corpo.count('data-campo="pendente-ha" data-hef-alvo="classe"') == 1,
            "a faixa da pendência perdeu o `pendente-ha` — ela volta a mostrar um "
            "travessão solto quando não há o que anunciar")
 
-    # 8. AS DUAS LINHAS POR CIMA DOS LUGARES — 04/09/2026, D-07 dela e a queixa
-    #    1 dela. CADA UMA PRECISA DOS DOIS ELEMENTOS, e a régua cobra os dois
-    #    separados porque cada um sozinho é um defeito diferente: só o de fora e
-    #    a linha aparece VAZIA (o piloto escreve o travessão no texto que não
-    #    existe); só o de dentro e a linha fica ACESA PARA SEMPRE, escrevendo
-    #    "nenhum controle na mesa" com dois controles na mesa.
     for campo, oque in (("mesa-frase", "a frase da mesa vazia"),
                         ("mascara-ressalva", "a ressalva da máscara")):
         de_fora = corpo.count(f'data-campo="{campo}"\n                 '
@@ -2565,46 +1846,19 @@ def _conferir(doc):
         exigir(corpo.count(f'data-campo="{campo}"') == 2,
                f"{oque}: esperava DOIS elementos com `{campo}` — o de fora que "
                f"a acende e o de dentro que a escreve")
-    #    E ELAS NASCEM APAGADAS: a cena que ela aprovou tem dois controles na
-    #    mesa e o modo jogo ligado, então nenhuma das duas tem o que dizer. Uma
-    #    linha que nascesse com a classe `ha` mudaria o desenho aprovado.
     exigir('class="mesa-notas ha"' not in corpo,
            "uma das linhas por cima dos lugares nasce acesa — ela mudaria a cena "
            "que ela aprovou, que tem a mesa cheia e o modo jogo ligado")
 
-    # 9. O CHIP QUE O PRODUTO NÃO SABE MONTAR NASCE CINZA — D-03 dela, e o
-    #    número não se digita: é a diferença entre o que o DESENHO tem
-    #    (`monta.MASCARAS`) e o que o PRODUTO monta (`mascaras_montaveis`),
-    #    vezes os quatro lugares da mesa.
     sem_motor = [m for m in MASCARAS if m not in mascaras_montaveis()]
     cinzas = corpo.count('class="chip inerte"')
     exigir(cinzas == len(sem_motor) * len(MESA),
            f"esperava {len(sem_motor) * len(MESA)} chips cinza ({sem_motor} por "
            f"{len(MESA)} lugares), achei {cinzas}")
-    #    E O CINZA VEM COM A RAZÃO. Um botão apagado sem dizer por quê troca
-    #    "clico e não acontece nada" por "não deixa clicar e não diz por quê".
     for pedaco in corpo.split('class="chip inerte"')[1:]:
         exigir(pedaco.lstrip().startswith('title="'),
                "um chip cinza saiu sem a razão na dica")
-    #    E O CLIQUE FICA NOS TRÊS: a contagem de `data-gesto="mascara"` acima já
-    #    o exige, e é ela que impede a cura de virar "o chip sumiu".
 
-    # 10. O "PLAYER N" ESMAECIDO — 04/09/2026, decisão [02] desta aba.
-    #
-    #    SÃO DOIS ELEMENTOS ANINHADOS, e a régua cobra os dois porque cada um
-    #    sozinho é um defeito diferente: só o de fora e o cartão perde o número
-    #    (o piloto escreveria a classe onde deveria haver texto); só o de dentro
-    #    e o número nunca esmaece — que é o estado de hoje.
-    #
-    #    E O DE DENTRO TEM DE SER FOLHA. `escrever()` no elemento com filho
-    #    apaga os filhos e força layout: é a armadilha medida do piloto da
-    #    Controles, e é por isso que o `<b>` leva a CLASSE e o `<span>` de dentro
-    #    leva o TEXTO.
-    #
-    #    E SÃO OS QUATRO LUGARES desde 07/09/2026 — era `len(monta.CONECTADOS)`,
-    #    e a conta era a do mundo de ontem: o P3 que conectava depois recebia
-    #    "Player 3" numa folha que não existia, e o cartão dele ficava com o
-    #    travessão enquanto a fita do topo já o contava.
     esmaece = corpo.count('data-campo="jogador-espera" data-hef-alvo="classe"'
                           ' data-hef-classe="espera"')
     exigir(esmaece == len(MESA),
@@ -2615,34 +1869,12 @@ def _conferir(doc):
            "o número do jogador deixou de ser FOLHA em algum dos quatro "
            "lugares: com `data-campo=\"jogador\"` num elemento que tem filho, a "
            "pintura apaga os filhos")
-    #    E NENHUM NASCE ESMAECIDO: a cena que ela aprovou tem os dois controles
-    #    numerados PELO JOGO. Um cartão que nascesse com a classe mudaria o
-    #    desenho aprovado — e diria, no desenho, que o jogo não recebeu um
-    #    controle que a própria cena mostra jogando.
     exigir("<b data-campo=\"jogador-espera\" data-hef-alvo=\"classe\""
            " data-hef-classe=\"espera\" class=" not in corpo
            and 'class="espera"' not in corpo,
            "um número de jogador nasce esmaecido — a cena que ela aprovou tem os "
            "dois controles recebidos pelo jogo")
 
-    # 11. O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026, decisão [03] desta aba, e
-    #    pedido nomeado dela de 23/07.
-    #
-    #    OS DOIS LADOS, e são o mesmo par de sempre: `data-campo` é por onde a
-    #    verdade CHEGA e `data-gesto` é por onde o dedo dela SAI. Um sem o outro
-    #    é uma trava que mostra e não deixa mudar, ou que deixa mudar e não
-    #    mostra o que o daemon guardou.
-    #
-    #    **O ALVO MUDOU EM 19/09/2026 — `TRAVA-PILULA-01`, pedido dela.** Esta
-    #    guarda exigia `data-hef-alvo="marcado"`, o décimo alvo e o único que
-    #    escreve `el.checked`. A trava virou `<button class="cadeado">` com a
-    #    gramática do `.sw` da aba Controles, e um botão não tem `checked`: o
-    #    alvo é `classe` + `data-hef-quando`, como o do Giroscópio.
-    #
-    #    **O `data-hef-quando` ENTRA NA CONTA, e não é zelo.** Sem ele o alvo
-    #    `classe` cai no ramo booleano e a pílula nasce ACESA e nunca apaga —
-    #    o defeito que esta casa mediu na `a02` em 19/09 (o R2 que nascia
-    #    pintado). A guarda que só conta o `data-campo` passaria por cima dele.
     exigir(corpo.count('data-campo="cadeado" data-hef-alvo="classe"') == 1,
            "o cadeado perdeu o endereço de pintura (`cadeado` com alvo "
            "`classe`) — a trava deixaria de dizer o que o daemon guardou")
@@ -2653,39 +1885,14 @@ def _conferir(doc):
     exigir(corpo.count('data-gesto="cadeado"') == 1,
            "o cadeado perdeu o endereço do clique — a caixa mudaria de marca e "
            "não mudaria nada no produto")
-    #    A PALAVRA É A DA JANELA ANTIGA, e ela não se digita duas vezes: o
-    #    literal tem dono em `pacotes/a01_jogar`, e a régua da suíte confere
-    #    aquele literal contra o `Gtk.CheckButton` do `home_actions`.
     exigir(CADEADO_ROTULO in corpo, "o rótulo do cadeado sumiu da tela")
     exigir(CADEADO_DICA in corpo, "o cadeado ficou sem a razão na dica")
-    #    ELE NASCE DESMARCADO: destravado é o padrão do produto, e marcá-lo no
-    #    desenho afirmaria uma escolha dela que ela não fez.
     exigir('data-hef-alvo="marcado" checked' not in corpo
            and 'checked data-campo="cadeado"' not in corpo,
            "o cadeado nasce marcado — o desenho afirmaria uma escolha dela")
-    #    ONDE O CADEADO MORA — 08/09/2026, e a régua foi REESCRITA junto com a
     #    mudança porque a de antes media o mundo de ontem.  (noqa-acento: medir)
-    #
-    #    ELA MEDIA A ORDEM NO ARQUIVO: *"o cadeado vem depois de
     #    `so-desligado`, com dois `</div>` no meio"* — verdadeiro enquanto ele
-    #    morava no rodapé do quadro, e falso no minuto em que ele subiu para a
-    #    linha do título a pedido dela. A régua reprovou a MUDANÇA, não um
-    #    defeito. É a forma de instrumento falso que esta casa mais paga, e
-    #    desta vez ela custou uma volta de gerador: a exigência real nunca foi
-    #    *"depois de"*, foi **"fora das duas seções"**.
-    #
-    #    AGORA ELA MEDE O ANINHAMENTO, que é o requisito: `so-ligado` e
     #    `so-desligado` trocam com o Hefesto, e a troca automática de PERFIL
-    #    vale nos dois. Dentro de uma delas a caixa sumiria justamente no Modo
-    #    Nativo, onde ela continua valendo — e sumiria em SILÊNCIO, que é o modo
-    #    de falhar que esta casa persegue. A cadeia de ancestrais responde isso
-    #    em qualquer posição futura; a ordem no arquivo, só na de ontem.
-    #
-    #    E ELA MEDE O PEDIDO NOVO: o cadeado está DENTRO do `.quadro-topo`, que
-    #    é a linha do título — *"no canto superior direito do bloco tipo esse
-    #    banco de provas na guia navegação"*. A prova de GEOMETRIA (que ele está
-    #    de fato à direita, e na altura do título) é da suíte, medida no Chrome
-    #    sobre a página publicada: `tests/unit/test_o_cadeado_mora_no_canto_do_bloco.py`.
     if 'class="cadeado"' in corpo:
         familia = _ancestrais(corpo, "cadeado")
         exigir(familia is not None,
@@ -2700,46 +1907,22 @@ def _conferir(doc):
                "canto superior direito, e embaixo dos modos ele lê como um "
                "quinto modo")
 
-    # 12. O MARCADOR "primário" — JOGAR-O-QUE-FALTA-01, Passo 3 (06/09/2026),
-    #     linha 18 do CSV. O SINAL daquela linha é este endereço, e ele é
-    #     EXCLUSIVO dela: nenhuma outra frente pode acendê-lo.
     principais = corpo.count('data-campo="marcador-principal" '
                              'data-hef-alvo="classe" data-hef-classe="ha"')
-    #     E SÃO OS QUATRO LUGARES desde 07/09/2026 (era `monta.CONECTADOS`): o
-    #     primário ANDA — quem chega no P3 pode virar primário no tique
-    #     seguinte, e um cartão sem o endereço nunca acenderia a palavra.
     exigir(principais == len(MESA),
            f"esperava {len(MESA)} marcadores de primário endereçados "
            f"(`marcador-principal` com alvo `classe`), achei {principais}")
-    #     A PALAVRA É A DA JANELA ANTIGA e a dica está do lado. Sem a dica, um
-    #     rótulo de uma palavra numa linha secundária não diz o que ele decide.
     exigir(MARCA_DO_PRIMARIO in corpo, "a palavra do marcador sumiu da tela")
     exigir(PRIMARIO_DICA in corpo, "o marcador ficou sem a razão na dica")
-    #     E NENHUM NASCE ACESO. A cena que ela aprovou não escolheu primário
-    #     nenhum, e acender um no desenho afirmaria um fato do serviço que o
-    #     desenho não tem como saber — a mesma disciplina do `jogador-espera`,
-    #     que também nasce apagado.
     exigir('class="e-primario ha"' not in corpo
            and 'data-hef-classe="ha" class=' not in corpo,
            "um cartão nasce marcado como primário — quem decide isso é o "
            "serviço, e o desenho estaria afirmando por ele")
-    #     E O ALVO DE EDIÇÃO DA FITA NÃO SE MOVEU: `.cartao.alvo` é outra
-    #     pergunta (qual controle os ajustes das outras abas tocam), e ela
-    #     continua sendo escrita pelo piloto. Se o marcador tivesse reusado
-    #     aquela classe, a conta abaixo mudaria — é ela que prende os dois
-    #     significados em pixels diferentes.
     exigir(corpo.count('class="cartao alvo"')
            == sum(1 for c in MESA if c.get("alvo")),
            "o número de cartões com a classe `alvo` mudou — o marcador do "
            "primário não pode andar junto com o alvo de edição da fita")
 
-    # 13. A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01.
-    #     Ela nunca acendeu no WebKit (a folha a mostrava por `[title]`, e a
-    #     camada de dicas do piloto tira o `title`), e acesa seria aviso numa
-    #     dica. A régua cobra os DOIS lados, porque cada um volta sozinho: o
-    #     cartão sem o `<sup>` e sem o endereço, e as folhas sem a regra
-    #     `.degradou` e sem seletor nenhum por `[title]`. Comentário não conta:
-    #     a nota que explica a saída cita os dois nomes.
     exigir('class="degradou"' not in corpo and "degradou-cartao" not in corpo,
            "a marca da emulação degradada voltou ao cartão — ela nunca acende "
            "no WebKit, e acesa seria frase de aviso numa dica")
@@ -2751,72 +1934,29 @@ def _conferir(doc):
            "a camada de dicas tira o `title` do elemento, e no WebKit o "
            "seletor nunca casa")
 
-    # 14. OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026), linha 16
-    #     do CSV. UM endereço, com o alvo `html`, e nascendo VAZIO.
     exigir('data-campo="externos" data-hef-alvo="html"' in corpo,
            "o bloco dos controles que o Hefesto só vê ficou sem endereço — "
            "sem ele o pacote emite e o `querySelector` devolve `null`, que é "
            "zero escrito e zero erro")
-    #     E O ENDEREÇO MORA DENTRO DA GRADE DOS ASSENTOS — escolha dela,
-    #     06/09/2026: *no mesmo frame*, e não numa faixa à parte embaixo. A
-    #     régua casa o PEDAÇO DE DOCUMENTO entre a abertura da `.pecas` e o
-    #     `</div>` que a fecha, porque a diferença entre as duas maquetes é
-    #     exatamente essa fronteira: com a faixa de volta, o endereço continua
-    #     na página e some daqui — e uma régua que só procurasse o endereço no
-    #     `corpo` inteiro ficaria VERDE sobre a maquete que ela recusou.
-    #
-    #     A FRONTEIRA SE CONTA, e não se adivinha por recuo: `{CARTOES}` traz
-    #     quatro `<div>` aninhados cada um, e um `split` no primeiro `</div>`
-    #     pararia dentro do primeiro cartão — a régua ficaria VERMELHA sobre a
-    #     maquete certa, que é o pior dos dois erros.
     exigir('data-campo="externos" data-hef-alvo="html"'
            in _dentro_da_grade_dos_assentos(corpo),
            "o bloco dos externos saiu de dentro da grade dos assentos — ela "
            "escolheu o MESMO frame em 06/09/2026, e uma faixa à parte é a "
            "maquete que ela recusou")
-    #     E A VAGA É `display:contents`, senão os externos todos caem numa
-    #     célula só — a quinta coluna de uma grade que tem quatro. A régua olha
-    #     o documento INTEIRO, e não o miolo, porque é uma regra de CSS.
     exigir(".pecas .ext-vaga{display:contents}" in doc,
            "a vaga dos externos deixou de ser `display:contents` — sem ela os "
            "cartões voltam a empilhar dentro de uma célula, que é a faixa à "
            "parte com outro nome")
-    #     E NENHUM APARELHO DE EXEMPLO NASCE DENTRO DELE. Um card cravado aqui
-    #     afirmaria um 8BitDo na mesa dela que ninguém mediu — que é o defeito
-    #     que esta aba já pagou com a fita e com os lugares vazios.
-    #     A MARCAÇÃO, E NÃO O TOKEN SOLTO: o `corpo` aqui já é só o miolo (ver
-    #     o topo desta função), mas a régua irmã da aba 08 lê o documento
-    #     inteiro e reprovou a própria regra de CSS. As duas casam a mesma coisa.
     exigir('class="ext-cartao"' not in corpo,
            "um cartão de controle externo nasceu no desenho — a tela estaria "
            "afirmando um aparelho que ninguém mediu")
 
-    # 15. OS QUATRO LUGARES CARREGAM OS MESMOS ENDEREÇOS — 07/09/2026,
-    #     QUATRO-NA-MESA-01, e é esta régua que impede o defeito de voltar.
-    #
-    #     O QUE ELA MEDE, e por que ela é diferente das catorze acima: cada uma
-    #     daquelas cobra UM endereço pelo nome, e foi assim que sete deles
-    #     entraram no cartão cheio sem que ninguém percebesse que o cartão vazio
-    #     ficara para trás — a régua nasce junto com o endereço e conta só
-    #     aquele. Esta não nomeia nenhum: ela compara os quatro lugares ENTRE
-    #     SI, então o endereço número quinze é coberto no dia em que for
-    #     escrito, sem que alguém se lembre de vir aqui.
-    #
-    #     PELA LISTA E NÃO PELO CONJUNTO: `mascara-cartao` são três por cartão,
-    #     e um lugar que perdesse dois dos três chips passaria por uma régua de
-    #     conjuntos. E o modelo é o PRIMEIRO lugar da mesa, não uma lista
-    #     digitada aqui — digitá-la seria a décima primeira lista que esta casa
-    #     derruba por divergir do que ela mede.
     lugares = _campos_por_lugar(fileira)
     esperados = [c.get("uniq") or c["pref"] for c in MESA]
     exigir(sorted(lugares) == sorted(esperados),
            f"a fileira não tem um cartão por lugar da mesa: esperava "
            f"{sorted(esperados)}, achei {sorted(lugares)}")
     modelo = collections.Counter(lugares.get(esperados[0], []))
-    #     E A RÉGUA MORDE ANTES DE COMPARAR: dois lugares vazios são IGUAIS
-    #     entre si, e uma comparação de listas vazias fica verde sobre um cartão
-    #     que perdeu todos os endereços — que é exatamente o defeito de hoje,
-    #     com o sinal trocado.
     exigir(sum(modelo.values()) > 0,
            f"o lugar {esperados[0]} não tem endereço nenhum — uma régua que "
            f"compara listas vazias passa com qualquer desenho")
@@ -2839,9 +1979,6 @@ if __name__ == "__main__":
     import shutil
     import tempfile
 
-    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
-    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
-    # no fim do `aba04.py`.
     _real = onde.saida()
     _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-01-"))
     for _vizinha in _real.glob("*.html"):

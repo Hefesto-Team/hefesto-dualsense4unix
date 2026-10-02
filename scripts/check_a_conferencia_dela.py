@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""A CONFERÊNCIA DELA — a tabela de 07/09, medida no PUBLICADO, uma linha por item.
-
-Ela mandou: *"Rodo essa conferência de novo antes do merge, com as duas levas
-dentro — se alguma [ficar n]a direita, ela não passa para o dev."*
-
-Então isto não é relatório: é o PORTÃO do merge. Sai `rc=1` se alguma linha
-continuar na coluna da direita.
-
-O que ele NÃO faz, e é de propósito: ele não olha o `mockup/`. O que decide é o
-que o produto RENDERIZA — `src/hefesto_dualsense4unix/interface/paginas/`.
-"""
+"""A CONFERÊNCIA DELA — a tabela de 07/09, medida no PUBLICADO, uma linha por item."""
 from __future__ import annotations
 
 import pathlib
@@ -29,22 +19,7 @@ ABAS = {
 
 
 def corpo_visivel(nome: str) -> str:
-    """O que ELA LÊ DENTRO DA JANELA.
-
-    Sem comentário, sem `<style>`, sem `<script>`, sem tag — e **sem a
-    `.nota`**, que é a legenda do mockup e a própria folha declara *"fora da
-    janela"*. Esta régua nasceu SEM esse corte, e o preço foi imediato: ela
-    acusou nove vazamentos de id de sprint que estavam todos na legenda, isto é,
-    no documento em que a casa conta a ela o que mudou. *Uma régua que mede o
-    documento de obra junto com o produto acusa o produto pelo que o documento
-    diz.*
-
-    A LEGENDA VIAJA PARA O PUBLICADO, e isso é fato relatado em 07/09/2026: o
-    produto instalado carrega o registro de obra do mockup. **Se ela deve ou
-    não ir junto é decisão de tela, e a tela é dela** — por isso esta régua não
-    a julga, e a pergunta fica escrita aqui em vez de virar um vermelho que
-    finge ser defeito de código.
-    """
+    """O que ELA LÊ DENTRO DA JANELA."""
     bruto = (PAGINAS / nome).read_text(encoding="utf-8")
     corte = bruto.find('<div class="nota"')
     if corte > 0:
@@ -58,8 +33,6 @@ def corpo_visivel(nome: str) -> str:
 def html(nome: str) -> str:
     return (PAGINAS / nome).read_text(encoding="utf-8")
 
-
-# ---------------------------------------------------------------- as linhas
 
 def os_quatro_players() -> tuple[bool, str]:
     """Os quatro lugares carregam o mesmo conjunto de `data-campo`, nas dez."""
@@ -115,21 +88,7 @@ def frases_que_confessam() -> tuple[bool, str]:
 
 
 def mascara_nintendo_pro() -> tuple[bool, str]:
-    """A máscara do Pro Controller existe no FLAVORS do uinput. PERGUNTA AO DONO.
-
-    ESTA RÉGUA DEU VERDE FALSO ATÉ 08/09/2026, e o advogado do diabo a pegou.
-    Ela lia o arquivo como TEXTO e procurava `nintendo.pro` — que casa no
-    comentário da linha 89 e no `__all__` da 1144. Pior: ela imprimia
-    *"(42 entradas indentadas)"*, contando toda linha `"chave":` indentada do
-    arquivo, inclusive as DE DENTRO de cada máscara. O `FLAVORS` tem **três**
-    entradas. *A régua respondia sobre o próprio texto do código, não sobre o
-    produto* — a assinatura dos seis instrumentos falsos de 05/09, escrita duas
-    vezes neste mesmo arquivo e repetida aqui mesmo assim.
-
-    Agora ela IMPORTA o dicionário e confere a entrada pelos números do
-    aparelho: o Pro Controller da Nintendo é `057e:2009`, e é isso que o jogo
-    lê. Comentário nenhum satisfaz esta pergunta.
-    """
+    """A máscara do Pro Controller existe no FLAVORS do uinput. PERGUNTA AO DONO."""
     import sys as _sys
     _sys.path.insert(0, str(RAIZ / "src"))
     try:
@@ -148,24 +107,7 @@ def mascara_nintendo_pro() -> tuple[bool, str]:
 
 
 def o_virtual_liga_o_microfone() -> tuple[bool, str]:
-    """O ato dela conta como ouvinte na ponte do rádio. EXERCITA A PONTE REAL.
-
-    ESTA RÉGUA DEU VERDE FALSO ATÉ 08/09/2026, e o advogado do diabo a pegou
-    com a prova na mão: ela lia o arquivo como TEXTO e procurava
-    `pedido_dela|ato_dela|…`. Das NOVE ocorrências que a faziam fechar, **três
-    eram comentário e docstring** — apagar o corpo de `dizer_o_pedido_dela` e
-    deixar a docstring mantinha a linha verde sobre um microfone que não liga.
-
-    Agora ela monta a `PonteMicBluetooth` de verdade, com uma source que diz
-    `SUSPENDED` (isto é: NINGUÉM gravando), diz a palavra dela, e cobra que o
-    `0x32` seja PEDIDO assim mesmo. É a pergunta inteira em três linhas:
-    *sem ouvinte, o ato dela liga o microfone?*
-
-    O NEGATIVO VEM JUNTO e é o que separa medir de torcer: com a palavra dela
-    em `False`, o pedido tem de cair mesmo com a source em `RUNNING` — o mudo
-    dela vence um aplicativo gravando. Uma régua que só sabe dizer sim não
-    distingue a cura de um `return True`.
-    """
+    """O ato dela conta como ouvinte na ponte do rádio. EXERCITA A PONTE REAL."""
     import sys as _sys
     _sys.path.insert(0, str(RAIZ / "src"))
     try:
@@ -210,24 +152,7 @@ def o_virtual_liga_o_microfone() -> tuple[bool, str]:
 
 
 def cor_unica() -> tuple[bool, str]:
-    """Dois controles na mesa não acendem a mesma cor. MEDIDO NO APARELHO.
-
-    DUAS VERSÕES DESTA RÉGUA DERAM VERDE FALSO em 08/09/2026, e as duas pelo
-    mesmo motivo: elas casavam TEXTO. A primeira achou `desempate` de ordem de
-    jogador; a segunda achou `"os fundos das três colunas não são cores
-    diferentes"`, que é CSS da aba Perfis. *O instrumento respondia sobre outra
-    coisa que não o produto* — a assinatura dos seis instrumentos falsos que
-    esta casa arrancou em 05/09.
-
-    A régua agora PERGUNTA AO DONO: o daemon vivo diz que cor está acesa em cada
-    controle da mesa (`lightbar_rgb`, com `lightbar_source` dizendo de onde veio
-    a leitura). Duas iguais é vermelho. Foi assim que ELA viu o defeito — dois
-    azuis lado a lado —, e é a única leitura que não pode mentir sobre o
-    plástico.
-
-    SEM DAEMON VIVO A RÉGUA NÃO INVENTA: ela devolve o que não pôde medir. "Não
-    sei" nunca vira "está bom" — é a mesma regra do `_talvez_seguir_a_source`.
-    """
+    """Dois controles na mesa não acendem a mesma cor. MEDIDO NO APARELHO."""
     import asyncio
     import json
 
@@ -263,16 +188,6 @@ def cor_unica() -> tuple[bool, str]:
         f"jogadores {sorted(j for j in js if j is not None)} todos em #{r:02X}{g:02X}{b:02X}"
         for (r, g, b), js in colisoes.items())
 
-    # O DAEMON VIVO É DE ANTES DO INSTALL, e essa é a única leitura desta régua
-    # que NÃO fecha antes dele. A cura mora na árvore; o aparelho só muda quando
-    # o daemon reinicia — e reiniciar o daemon dela é o `install.sh`, que derruba
-    # os quatro controles e por isso não acontece sozinho.
-    #
-    # A régua NÃO fica verde por isso. Ela DIZ o que mediu e o que falta para
-    # fechar, porque "curado na árvore" e "curado no plástico" são duas coisas, e
-    # confundi-las é o verde falso que esta casa mais arranca. A ordem dela é
-    # `dev` depois install depois conferência de novo — e é nessa terceira volta
-    # que esta linha fecha.
     daqui = pathlib.Path(__file__).resolve().parents[1] / "src/hefesto_dualsense4unix/core/led_control.py"
     curado_na_arvore = daqui.exists() and "cores_sem_colisao" in daqui.read_text(encoding="utf-8")
     if curado_na_arvore:
@@ -299,7 +214,7 @@ def main() -> int:
     for titulo, regua in LINHAS:
         try:
             ok, nota = regua()
-        except Exception as erro:  # a régua que quebra é vermelha, não verde
+        except Exception as erro:
             ok, nota = False, f"a régua quebrou: {erro!r}"
         (esquerda if ok else direita).append((titulo, nota))
         print(f"  {'✓' if ok else '✗'}  {titulo}\n       {nota}")

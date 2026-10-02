@@ -1,34 +1,4 @@
-"""O `mapa-das-portas` deixou de ser a tela de UMA máquina — e as réguas disso.
-
-O DEFEITO, medido em 11/09/2026
---------------------------------
-
-A página dizia **"o arranjo de agora"** sobre um censo de 24/08/2026 **cravado
-em JavaScript**: oito aparelhos, três faces, um mapa e duas leituras digitados
-dentro do HTML, todos de um gabinete só. Quem abrisse o produto noutro
-computador lia a máquina de outra pessoa e não tinha como saber disso — a única
-defesa da página era um `<p class="nota">`, e a primeira regra de
-`folha_da_casa.FOLHA_DA_CASA` é `.nota{display:none !important}`.
-
-A ordem dela, do mesmo dia, é o contrário:
-
-    "a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento)
-     mim mas pra qualquer outro user"   — citação literal dela, 11/09/2026
-
-AS TRÊS PEÇAS QUE ESTE ARQUIVO MEDE
-------------------------------------
-
-* `interface/pagina_do_mapa.py` — o gerador. A página nasce da origem congelada
-  mais `EDICOES` datadas, e o censo de exemplo tem dono em vez de estar
-  digitado no HTML;
-* `interface/arranjo_desta_maquina.py` — o produtor. Monta o gabinete de quem
-  abriu a partir do que a pessoa declarou mais o que o kernel leu, ou devolve
-  `None` quando não há o que desenhar;
-* `interface/hefesto_vivo.py` — o piloto, que entrega um ao outro.
-
-A igualdade entre as duas casas versionadas da página está em
-`test_arranjo_invariantes.py`, que é onde ela sempre morou.
-"""
+"""O `mapa-das-portas` deixou de ser a tela de UMA máquina — e as réguas disso."""
 
 from __future__ import annotations
 
@@ -47,18 +17,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     PortaDeclarada,
 )
 
-# ── os dublês: um gabinete que não é o de ninguém ────────────────────────
-#
-# O CENSO É O DA PRODUÇÃO, não uma classe escrita aqui. A primeira versão deste
-# arquivo montou um `_Aparelho` à mão com os campos que pareciam bastar, e ele
-# era MAIS POBRE que o do produto: faltava `e_hub`, que é a primeira coisa que
-# `_classe_do_motor` pergunta. Um dublê mais pobre que o produto é a armadilha
-# que esta casa já pagou várias vezes — ele responde o que o autor do teste
-# imaginou, não o que o código encontra.
 
-#: A tripla do kernel que faz do aparelho um adaptador Bluetooth, para o motor:
-#: `mapa_das_portas._CLASSE_DO_MOTOR_POR_TRIPLA`. Ela é citada e não copiada —
-#: se aquela tabela mudar, esta régua acusa em vez de seguir medindo o de antes.
 _TRIPLA_BT = ("e0", "01", "01")
 _TRIPLA_TECLADO = ("03", "01", "01")
 _TRIPLA_MOUSE = ("03", "01", "02")
@@ -74,9 +33,7 @@ def _aparelho(no: str, especie: str, produto: str,
 
 
 def _documento(mapa: MapaDaMesa) -> MaquinaConfig:
-    """O documento de VERDADE com este mapa — um dublê que só tinha ``mapa`` era
-    mais pobre que o produto, e caiu no dia em que o arranjo passou a perguntar
-    o nome da entrada (O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026)."""
+    """O documento de VERDADE com este mapa — um dublê que só tinha ``mapa`` era"""
     return MaquinaConfig(mapa=mapa)
 
 
@@ -93,20 +50,8 @@ def _gabinete() -> tuple[MaquinaConfig, Censo]:
     return _documento(mapa), censo
 
 
-# ── 1. sem declaração não há gabinete, e isso se DIZ ─────────────────────
-
-
 def test_sem_face_declarada_o_arranjo_nao_existe() -> None:
-    """`None` é a resposta honesta — e a outra metade prova que não é vacuidade.
-
-    O número da entrada no metal (`9`, `15a`) não sai de leitura nenhuma: está
-    medido em `integrations/mapa_das_portas` que duas entradas da frente de uma
-    mesma placa respondem `panel`, `horizontal_position` e `vertical_position`
-    IDÊNTICOS. Sem face declarada, desenhar um gabinete seria inventá-lo.
-
-    UMA RÉGUA QUE SÓ MEDE O `None` MEDIRIA UM IMPORT QUEBRADO com a mesma cara.
-    Por isso o caso de baixo: com uma face declarada, o arranjo VEM.
-    """
+    """`None` é a resposta honesta — e a outra metade prova que não é vacuidade."""
     vazio = _documento(MapaDaMesa())
     _, censo = _gabinete()
     assert arranjo_desta_maquina.arranjo(
@@ -121,12 +66,7 @@ def test_sem_face_declarada_o_arranjo_nao_existe() -> None:
 
 
 def test_a_leitura_que_falha_nao_vira_gabinete_vazio() -> None:
-    """Censo que estourou é `None`, nunca um gabinete sem nada ligado.
-
-    A diferença é a que `a08_conexoes._censo` já escreve: um censo VAZIO faria
-    toda entrada parecer livre, e a página publicaria "nada está plugado" sobre
-    uma leitura que não aconteceu.
-    """
+    """Censo que estourou é `None`, nunca um gabinete sem nada ligado."""
     documento, _ = _gabinete()
 
     def estourou() -> Any:
@@ -136,17 +76,8 @@ def test_a_leitura_que_falha_nao_vira_gabinete_vazio() -> None:
         carregar=lambda: documento, ler_o_barramento=estourou) is None
 
 
-# ── 2. a forma que a página LÊ, medida na página ─────────────────────────
-
-
 def _a_porta() -> str:
-    """O JavaScript da porta, conferido contra a página que foi gerada.
-
-    Ele é lido do dono (`pagina_do_mapa.ABRE_A_PORTA`) e não recortado do HTML
-    por marcadores: recortar por marcador dá `""` calado no dia em que o
-    marcador mudar, e uma régua que lê o vazio passa por vacuidade. O `assert`
-    abaixo é o que garante que o dono e a página não se separaram.
-    """
+    """O JavaScript da porta, conferido contra a página que foi gerada."""
     porta = pagina_do_mapa.ABRE_A_PORTA
     assert porta in pagina_do_mapa.pagina(), (
         "o JavaScript da porta não está na página gerada — ou a edição que o "
@@ -155,16 +86,7 @@ def _a_porta() -> str:
 
 
 def test_o_arranjo_traz_tudo_o_que_a_pagina_le_e_nada_alem() -> None:
-    """Os campos do produtor e os que o desenho consome são os MESMOS.
-
-    Esta é a régua que impede as duas pontas de se afastarem sem um erro: a
-    página lê `f.faces` e o produtor manda `faces`. Se alguém renomear de um
-    lado, o outro recebe `undefined` — e `undefined` desenha um gabinete sem
-    entrada nenhuma, calado, que se lê como *"não tenho nada ligado"*.
-
-    Os dois lados são LIDOS, nunca digitados aqui: os campos saem do JavaScript
-    da página e as chaves saem de uma chamada de verdade ao produtor.
-    """
+    """Os campos do produtor e os que o desenho consome são os MESMOS."""
     documento, censo = _gabinete()
     veio = arranjo_desta_maquina.arranjo(
         carregar=lambda: documento, ler_o_barramento=lambda: censo)
@@ -175,8 +97,6 @@ def test_o_arranjo_traz_tudo_o_que_a_pagina_le_e_nada_alem() -> None:
     assert len(lidos) >= 5, (
         f"li {len(lidos)} campos na porta — o seletor ficou cego e a régua "
         "passaria por vacuidade")
-    # `controles` é o simulador: a página o aceita e o produtor não o manda,
-    # de propósito — ver `pagina_do_mapa.CENSO_DE_EXEMPLO["controles"]`.
     assert lidos - {"controles"} == set(veio), (
         "o que a página lê e o que o produtor manda se afastaram.\n"
         f"  a página lê: {sorted(lidos)}\n"
@@ -188,13 +108,7 @@ def test_o_arranjo_traz_tudo_o_que_a_pagina_le_e_nada_alem() -> None:
 
 
 def test_a_entrada_esticada_leva_o_cabo_que_o_desenho_escreve() -> None:
-    """Sem o `cabo`, o desenho escreve `undefined` ao lado da entrada.
-
-    `porta.filho.cabo` é lido sem defesa no JavaScript: ele vai direto para o
-    HTML da linha do extensor. O exemplo diz "extensor de 1 m" porque alguém
-    mediu aquele cabo; aqui o comprimento não se sabe, e a frase diz só o que é
-    verdade.
-    """
+    """Sem o `cabo`, o desenho escreve `undefined` ao lado da entrada."""
     mapa = MapaDaMesa(
         faces=[FaceDeclarada(nome="Hub", portas=["1", "1a"])],
         portas={"1": PortaDeclarada(caminho="9-1"),
@@ -215,11 +129,7 @@ def test_a_entrada_esticada_leva_o_cabo_que_o_desenho_escreve() -> None:
 
 
 def test_uma_face_so_e_dona_da_faixa_do_pc() -> None:
-    """Duas donas mostrariam a mesma bandeja duas vezes; zero a esconderia.
-
-    A bandeja é onde aparecem os aparelhos que estão numa entrada direta do PC
-    sem lugar declarado — os que precisam exatamente de um clique dela.
-    """
+    """Duas donas mostrariam a mesma bandeja duas vezes; zero a esconderia."""
     mapa = MapaDaMesa(
         faces=[FaceDeclarada(nome="Frente", portas=["1"]),
                FaceDeclarada(nome="Traseira", portas=["2", "3"])],
@@ -240,26 +150,8 @@ def test_uma_face_so_e_dona_da_faixa_do_pc() -> None:
     assert donas[0] == "Traseira", "a dona é a face do PC com mais entradas"
 
 
-# ── 3. o cabeçalho diz de QUANDO é o que está na tela ────────────────────
-
-
 def test_o_cabecalho_diz_de_quando_e_o_que_esta_na_tela() -> None:
-    """A única defesa da página contra ser lida como verdade de qualquer máquina.
-
-    O EXEMPLO SE DIZ EXEMPLO; A LEITURA DESTA MÁQUINA NÃO SE ANUNCIA. Em
-    26/09/2026 ela pediu que a linha saísse do cabeçalho — *«leitura deste
-    computador · 26/09/2026 03h13 essa info some»* —, e a primeira publicação
-    tirou a linha INTEIRA, o que devolvia a quem ainda não mapeou nada o
-    gabinete de outra pessoa sem aviso (o defeito de 11/09). A conferência da
-    O-MAPA-DAS-CONEXOES-NO-PRODUTO-01 devolveu a linha SÓ ao exemplo: o
-    `dizerDeQuando` a tira quando o produto entrega a leitura desta máquina.
-    Quem mede a retirada no WebKit é
-    `test_a_entrada_declarada_vence_o_firmware.py`.
-
-    E A CLASSE NÃO PODE SER `.nota`: a folha do produto apaga `.nota` com
-    `!important`, e no Chrome o aviso aparecia enquanto na tela dela não. Quem
-    responde o que o produto esconde é o dono da folha.
-    """
+    """A única defesa da página contra ser lida como verdade de qualquer máquina."""
     from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
 
     pagina = pagina_do_mapa.pagina()
@@ -289,19 +181,9 @@ def test_o_cabecalho_diz_de_quando_e_o_que_esta_na_tela() -> None:
     assert "11/09/2026 23h04" in veio["quando"]
 
 
-# ── 4. a porta, e o que ela recusa ───────────────────────────────────────
-
-
 def test_a_pagina_abre_a_porta_e_recusa_meio_arranjo() -> None:
-    """`window.hefestoArranjo` existe, e confere o que recebe antes de desenhar.
-
-    Meio arranjo desenharia um gabinete sem entradas, e isso se lê como *"não
-    tenho nada ligado"* — o vazio mais convincente que existe.
-    """
+    """`window.hefestoArranjo` existe, e confere o que recebe antes de desenhar."""
     pagina = pagina_do_mapa.pagina()
-    # O segundo argumento (`comoReexame`) entrou em 26/09/2026, com o
-    # «Examinar» que relê (O-MAPA-DAS-CONEXOES-NO-PRODUTO-02): a régua cobra a
-    # porta e o primeiro argumento, não a lista inteira.
     assert "window.hefestoArranjo = function (dado" in pagina
     assert "CAMPOS_DO_ARRANJO.filter" in pagina, (
         "a porta parou de conferir o que recebe")
@@ -312,11 +194,7 @@ def test_a_pagina_abre_a_porta_e_recusa_meio_arranjo() -> None:
 
 
 def test_o_piloto_entrega_o_arranjo_a_esta_pagina_e_so_a_ela() -> None:
-    """O piloto tem o gesto, e ele é disparado pelo nome DESTA página.
-
-    A ligação é lida do fonte do próprio método em vez de digitada: uma régua
-    que escrevesse a condição aqui estaria conferindo a si mesma.
-    """
+    """O piloto tem o gesto, e ele é disparado pelo nome DESTA página."""
     import inspect
 
     from hefesto_dualsense4unix.interface import hefesto_vivo
@@ -329,23 +207,14 @@ def test_o_piloto_entrega_o_arranjo_a_esta_pagina_e_so_a_ela() -> None:
     assert "self._entregar_o_arranjo()" in fonte
     assert arranjo_desta_maquina.PAGINA == "mapa-das-portas.html"
 
-    # e a falha não pode ser calada: ela vai para o relato, como a da dica
     entrega = inspect.getsource(hefesto_vivo.Piloto._arranjo_entregue)
     assert "cegueiras" in entrega, (
         "uma entrega que falha calada deixa a página com o exemplo e ninguém "
         "sabendo que a leitura desta máquina não chegou")
 
 
-# ── 5. o gerador não deixa uma edição errar o alvo ───────────────────────
-
-
 def test_o_gerador_recusa_a_edicao_que_erra_o_alvo() -> None:
-    """A MORDIDA do gerador: `str.replace` que não acha nada não levanta nada.
-
-    É assim que uma edição envelhece em silêncio — a frase muda de lado na
-    origem, a troca deixa de acontecer, e a declaração continua no lugar
-    dizendo que aconteceu.
-    """
+    """A MORDIDA do gerador: `str.replace` que não acha nada não levanta nada."""
     inteiras = pagina_do_mapa.EDICOES
     fantasma = pagina_do_mapa.Edicao(
         antes="isto não está na origem congelada em lugar nenhum",
@@ -365,12 +234,7 @@ def test_o_gerador_recusa_a_edicao_que_erra_o_alvo() -> None:
 
 
 def test_a_cor_de_cada_especie_e_lida_do_censo_e_nao_digitada() -> None:
-    """Uma segunda tabela de cor divergiria da primeira, e ninguém veria.
-
-    O desenho pinta o chip com `ap.cor`; o arranjo vivo precisa da mesma cor.
-    A tabela sai do censo de exemplo por leitura — a mordida é trocar a cor no
-    censo e ver a tabela acompanhar sozinha.
-    """
+    """Uma segunda tabela de cor divergiria da primeira, e ninguém veria."""
     do_censo = {a["classe"]: a["cor"] for a in pagina_do_mapa.CENSO_DE_EXEMPLO["aparelhos"]}
     assert do_censo == pagina_do_mapa.CORES_POR_CLASSE
     assert do_censo["hub"] == pagina_do_mapa.COR_SEM_CLASSE

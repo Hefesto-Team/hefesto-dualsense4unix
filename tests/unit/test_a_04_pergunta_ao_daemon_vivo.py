@@ -45,14 +45,10 @@ from tests.unit.test_a_marca_da_cor_nao_some import (
 )
 from tests.unit.ponte_do_rodape import PonteDoRodape
 
-#: O perfil para onde a troca AUTOMÁTICA vai: o mesmo global, sem opinião
-#: por controle, e as luzes no Fraco.
 NOME_B = "regua-a04-b"
 IDS = ["P1", "P2", "P3", "P4"]
 ROXO = player_slot_color(8)
 
-#: O CLIQUE DO RODAPÉ NA ABA ILUMINAÇÃO, como o piloto o manda: todo clique
-#: carrega a aba de onde veio (o «Salvar» é o mesmo em toda aba desde 27/09).
 CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
                 "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
@@ -146,7 +142,6 @@ class MesaViva(Mesa):
         return None if dele is None else dele.leds
 
 
-#: O handle falso da A-MARCA, guardado antes de o transporte o trocar.
 _HANDLE_DA_MESA = marca._handle_falso
 
 
@@ -184,20 +179,9 @@ MATRIZ = [pytest.param(n, via, alvo, id=f"P{n}-{via}-{alvo}")
           for n in (1, 2, 3, 4) for via in ("usb", "bt") for alvo in ("todos", "um")]
 
 
-# ---------------------------------------------------------------------------
-# 1. A pílula das luzes de número
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("n", "via", "alvo"), MATRIZ)
 def test_a_pilula_acende_o_degrau_que_o_aparelho_recebe(mesa_de, n, via, alvo):
-    """O Forte clicado atravessa a troca AUTOMÁTICA, e a pílula diz Forte.
-
-    A troca MANUAL solta a camada da usuária, e aí vale o Fraco do perfil B —
-    no aparelho e na pílula.
-
-    **A MORDIDA:** faça `brilho_das_luzes_acesas` devolver o disco
-    (`brilho_das_luzes_do_controle`) e a pílula acende Fraco com o aparelho
-    no Forte.
-    """
+    """O Forte clicado atravessa a troca AUTOMÁTICA, e a pílula diz Forte."""
     forte, fraco = BRILHOS_DAS_LUZES["forte"], BRILHOS_DAS_LUZES["fraco"]
     mesa = mesa_de(alvo, via)
     mesa.clicar_na_pilula(n, "forte")
@@ -212,9 +196,6 @@ def test_a_pilula_acende_o_degrau_que_o_aparelho_recebe(mesa_de, n, via, alvo):
     assert mesa.pilula(n) == ["fraco"]
 
 
-# ---------------------------------------------------------------------------
-# 2. O trilho da barra
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("paleta", [True, False], ids=["com-paleta", "sem-paleta"])
 @pytest.mark.parametrize(("n", "via", "alvo"), MATRIZ)
 def test_o_trilho_mostra_o_brilho_aceso(mesa_de, n, via, alvo, paleta):
@@ -229,8 +210,6 @@ def test_o_trilho_mostra_o_brilho_aceso(mesa_de, n, via, alvo, paleta):
     """
     mesa = mesa_de(alvo, via)
     if not paleta:
-        # Sem a paleta, os quatro escolhem cor no perfil A; no B (sem opinião
-        # por controle) quem não passou pelo trilho vai ao global.
         mesa.clicar_no_tom(1, COR_DELE[1])
         mesa.clicar_no_tom(4, COR_DELE[4])
         mesa.desligar_a_paleta(GLOBAL)
@@ -251,11 +230,7 @@ def test_o_trilho_mostra_o_brilho_aceso(mesa_de, n, via, alvo, paleta):
 
 @pytest.mark.parametrize(("n", "via", "alvo"), MATRIZ[::3])
 def test_o_clique_depois_do_autoswitch_age_so_naquele_controle(mesa_de, n, via, alvo):
-    """Depois da troca automática, a pílula e o trilho respondem ao clique.
-
-    O Médio vai só ao P<n>; o trilho a 40% acende a cor dele a 40% e grava no
-    perfil ATIVO, que agora é o B.
-    """
+    """Depois da troca automática, a pílula e o trilho respondem ao clique."""
     mesa = mesa_de(alvo, via)
     mesa.clicar_na_pilula(n, "forte")
     mesa.soltar(n, 60)
@@ -272,22 +247,11 @@ def test_o_clique_depois_do_autoswitch_age_so_naquele_controle(mesa_de, n, via, 
     assert mesa.fora_do_lugar() == []
 
 
-# ---------------------------------------------------------------------------
-# 3. Sem a paleta, o gesto de brilho manda a cor acesa
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize(("n", "para"), [(2, 3), (3, 1), (4, 1)], ids=["P2", "P3", "P4"])
 def test_sem_a_paleta_o_trilho_manda_a_cor_que_o_daemon_acende(mesa_de, via, n, para, alvo):
-    """O fóssil sem a paleta: o daemon o desloca, e o trilho não o ressuscita.
-
-    O P4 entra com a cor do número dele escolhida à mão (a conferência, 25/09:
-    o fóssil só era medido no P2 e no P3, e só com «Todos» no seletor).
-
-    **A MORDIDA:** devolva o `return guardada` sem a pergunta do fóssil no
-    ramo sem a paleta de `_a_cor_guardada_que_vale`, e o trilho manda o
-    laranja, o ciano ou o rosa fóssil.
-    """
+    """O fóssil sem a paleta: o daemon o desloca, e o trilho não o ressuscita."""
     mesa = mesa_de(alvo, via)
     if n == 4:
         mesa.clicar_no_tom(4, COR_DELE[4])
@@ -304,16 +268,9 @@ def test_sem_a_paleta_o_trilho_manda_a_cor_que_o_daemon_acende(mesa_de, via, n, 
     assert mesa.luz(n) == _na(tom, 0.50)
 
 
-# ---------------------------------------------------------------------------
-# 4. Sem o daemon dizer, a aba cai no disco
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("sem", ["daemon-velho", "nao-sei"])
 def test_sem_o_daemon_dizer_a_aba_cai_no_disco(mesa_de, sem):
-    """Daemon de outra versão (sem as chaves) ou o «não sei» dele: o disco.
-
-    **A MORDIDA:** faça `brilho_aceso` devolver `None` sem o daemon, e o
-    trilho vira travessão.
-    """
+    """Daemon de outra versão (sem as chaves) ou o «não sei» dele: o disco."""
     mesa = mesa_de()
     mesa.clicar_na_pilula(3, "forte")
     mesa.soltar(1, 60)
@@ -346,9 +303,6 @@ def test_o_state_full_publica_os_dois_brilhos(mesa_de):
         (BRILHO_GLOBAL, "fraco")]
 
 
-# ---------------------------------------------------------------------------
-# 5. O «Desligar» é o brilho em 0%
-# ---------------------------------------------------------------------------
 CAMINHOS = ["autoswitch", "manual", "boot", "salvar", "aplicar"]
 
 
@@ -414,12 +368,7 @@ def test_o_trilho_acende_de_novo_na_cor_dele(mesa_de, n):
 
 @pytest.mark.parametrize("n", [1, 2], ids=["P1-sem-cor", "P2-laranja"])
 def test_um_tom_numa_barra_apagada_a_acende_no_brilho_do_perfil(mesa_de, n):
-    """O tom da guia não aceita o toque sem agir: a barra apagada acende no brilho do perfil.
-
-    O 0% do controle sai do disco junto, e o trilho diz o brilho do perfil.
-
-    **A MORDIDA:** tire o `religar` de `_escrever_a_cor` e o roxo sai a 0%.
-    """
+    """O tom da guia não aceita o toque sem agir: a barra apagada acende no brilho do perfil."""
     mesa = mesa_de()
     mesa.a04.apagar(mesa.ctx(), {"uniq": UNIQS[n - 1]}, mesa.ponte)
     mesa.trocar(NOME, "manual")
@@ -433,20 +382,8 @@ def test_um_tom_numa_barra_apagada_a_acende_no_brilho_do_perfil(mesa_de, n):
     assert mesa.luz(n) == _na(ROXO, BRILHO_GLOBAL), "o perfil reaplicado apagou o tom"
 
 
-# ---------------------------------------------------------------------------
-# 6. Os outros dois chamadores do brilho: o Salvar e o Aplicar do rodapé
-# ---------------------------------------------------------------------------
 def test_o_salvar_depois_do_autoswitch_nao_leva_a_camada_dela_ao_outro_perfil(mesa_de):
-    """O P1 a 60% atravessou o autoswitch; o Salvar do B grava o B como estava.
-
-    O trilho gravou os 60% no perfil A no clique, e é lá que a escolha dela
-    mora. A camada da mão atravessa a troca automática (é estado de sessão),
-    e o Salvar lê o disco, e só ele (`D-2709-O-SALVAR-LE-O-PERFIL`): até 27/09
-    ele gravava a luz acesa no B, e a escolha de um perfil ia parar noutro.
-
-    **A MORDIDA:** devolva ao Salvar do rodapé a luz acesa (a cor e o brilho
-    do aparelho no override) e o B ganha o P1 a 60%.
-    """
+    """O P1 a 60% atravessou o autoswitch; o Salvar do B grava o B como estava."""
     from pacotes import rodape
 
     from hefesto_dualsense4unix.profiles.loader import load_profile
@@ -491,15 +428,8 @@ def test_o_aplicar_diz_o_brilho_da_cor_que_acendeu(mesa_de):
     assert mesa.coluna(2)["brilho"] == "40%"
 
 
-# ---------------------------------------------------------------------------
-# 7. O brilho da cor, no dono do merge
-# ---------------------------------------------------------------------------
 def test_o_brilho_da_cor_so_explica_a_mesma_cor(mesa_de):
-    """O carimbo vale enquanto o override guardar a MESMA cor, e morre com ela.
-
-    **A MORDIDA:** tire a comparação `carimbo[0] == tuple(cor)` de
-    `brilho_da_barra_para`, e a cor que chegou sem brilho herda o de outra.
-    """
+    """O carimbo vale enquanto o override guardar a MESMA cor, e morre com ela."""
     from hefesto_dualsense4unix.core.controller import OutputSpec
 
     mesa = mesa_de()
@@ -508,8 +438,6 @@ def test_o_brilho_da_cor_so_explica_a_mesma_cor(mesa_de):
     assert ctl.brilho_da_barra_para(u) == 0.5
     ctl.apply_output_for(u, OutputSpec(led=(10, 20, 30)))
     assert ctl.brilho_da_barra_para(u) is None, "a cor sem brilho herdou o da cor de antes"
-    # O OUTRO ESCRITOR DA CAMADA DA USUÁRIA, o `set_led` com o seletor no
-    # controle, não passa pelo carimbo: a cor que ele deixa não herda o brilho.
     ctl.apply_output_for(u, OutputSpec(led=_na(ROXO, 0.5)), brilho_da_cor=0.5)
     with ctl._io_lock:
         ctl._record_desired_locked(MACS[0], {"led": (10, 20, 30)})
@@ -525,21 +453,10 @@ def test_o_brilho_da_cor_so_explica_a_mesma_cor(mesa_de):
     assert ctl.brilho_das_luzes_para("sem-mac") is None
 
 
-# ---------------------------------------------------------------------------
-# 8. As portas que a conferência achou sem régua (25/09/2026)
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("paleta", [True, False], ids=["com-paleta", "sem-paleta"])
 @pytest.mark.parametrize("n", [1, 2], ids=["P1-sem-cor", "P2-laranja"])
 def test_o_desligar_sem_a_paleta_tambem_sobrevive(mesa_de, n, paleta):
-    """Sem a paleta, o controle «Desligado» fica apagado na troca manual e no Aplicar.
-
-    A base do merge sem a paleta é o global do perfil, e não a cor do número:
-    é ela que o 0% do override tem de apagar. Com e sem a paleta, porque a
-    régua dos cinco caminhos acima só mede com ela.
-
-    **A MORDIDA:** devolva o preto como a cor gravada do «Desligar» e a troca
-    manual acende o global (ou o laranja) de novo.
-    """
+    """Sem a paleta, o controle «Desligado» fica apagado na troca manual e no Aplicar."""
     mesa = mesa_de("um", "bt")
     if not paleta:
         mesa.desligar_a_paleta(GLOBAL)
@@ -556,16 +473,7 @@ def test_o_desligar_sem_a_paleta_tambem_sobrevive(mesa_de, n, paleta):
 @pytest.mark.parametrize("paleta", [True, False], ids=["com-paleta", "sem-paleta"])
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_o_preto_de_um_desligar_antigo_nao_e_a_cor_dele(mesa_de, via, paleta):
-    """O perfil gravado por um «Desligar» de antes de 25/09 guarda o PRETO como a cor.
-
-    Desde 22/09 o daemon lê esse preto como «não opinou» e acende a cor que o
-    controle teria sem ele (`led_control.cor_escolhida`). A aba responde o
-    mesmo: a caixa não diz preto, e o trilho sobe a luz que está acesa — e
-    não o preto, que apagaria pelo gesto de brilho a barra que o daemon acende.
-
-    **A MORDIDA:** faça `_a_cor_guardada` devolver o preto como cor, e o
-    trilho manda `(0,0,0)`.
-    """
+    """O perfil gravado por um «Desligar» de antes de 25/09 guarda o PRETO como a cor."""
     mesa = mesa_de("todos", via)
     if not paleta:
         mesa.desligar_a_paleta(GLOBAL)
@@ -604,15 +512,7 @@ def test_o_todos_do_led_set_publica_o_brilho_de_cada_um(mesa_de, via):
 
 
 def test_a_cor_do_perfil_publica_o_brilho_do_controle(mesa_de):
-    """A cor gravada no perfil (a camada do PERFIL) acende no brilho do controle.
-
-    A troca manual solta a camada da usuária, e o laranja do P2 volta pelo
-    disco, escalado pelo brilho próprio dele (40%): é o brilho que o daemon
-    publica, e não o do perfil (82%) nem «não sei».
-
-    **A MORDIDA:** faça `brilho_da_barra_para` devolver `None` para toda cor
-    de override sem carimbo, e o P2 publica `None`.
-    """
+    """A cor gravada no perfil (a camada do PERFIL) acende no brilho do controle."""
     mesa = mesa_de()
     mesa.gravar_o_brilho(2, 0.40)
     mesa.trocar(NOME, "manual")
@@ -624,16 +524,7 @@ def test_a_cor_do_perfil_publica_o_brilho_do_controle(mesa_de):
 
 
 def test_o_tom_religa_no_brilho_que_o_perfil_do_jogo_guarda(mesa_de):
-    """O «Desligar» atravessou a troca automática para um perfil que guarda o P2 a 40%.
-
-    A barra segue apagada (a camada viva), e o tom da guia a religa no brilho
-    que o perfil ATIVO dá ao P2 — os 40% dele, e não o do perfil (82%). E o
-    disco do perfil do jogo continua com os 40%: só o 0% sai.
-
-    **A MORDIDA:** faça `_o_brilho_de_religar` ler só o brilho do perfil, ou o
-    `_com_a_cor_gravada` tirar do override qualquer brilho próprio, e o roxo
-    acende a 82% e os 40% somem do disco do jogo.
-    """
+    """O «Desligar» atravessou a troca automática para um perfil que guarda o P2 a 40%."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
 

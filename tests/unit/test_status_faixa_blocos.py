@@ -1,25 +1,9 @@
-"""A faixa da aba Status medida como ELA vê: blocos, tetos e vazios.
-
-STATUS-SIMETRIA-02 nasceu de uma frase dela olhando a tela: *"só distanciou
-as coisas mas um nome dos analógicos tem 3 linhas outro dois. não tem a parte
-do som, o touchpad não tem um espaço próprio, os botões não tão bem
-distribuídos e tem vários espaços vazios."* Distanciar não é organizar.
-
-Os testes daqui medem o card MONTADO numa `Gtk.OffscreenWindow` com a largura
-da tela dela (1920 maximizada), porque foi assim que os defeitos apareceram:
-widget sem alocação devolve 1x1 em tudo, e um teste de geometria sobre ele
-passaria com qualquer layout. Cada um deles cai quando a cura correspondente é
-arrancada — está escrito no docstring de cada um qual é a mordida.
-"""
+"""A faixa da aba Status medida como ELA vê: blocos, tetos e vazios."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("status faixa blocos")
 
 from itertools import pairwise
@@ -31,7 +15,6 @@ gi.require_version("Gtk", "3.0")
 
 import pytest
 
-# CI headless sem libcairo cai no stub do card (sem sub-widgets de desenho).
 pytest.importorskip("cairo")
 
 from gi.repository import Gtk
@@ -53,15 +36,8 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     hex_para_rgb,
 )
 
-#: A largura que a aba Status recebe na tela dela, maximizada em 1920x1080.
-#: É esta medida que produziu os "vários espaços vazios": o card esticava até
-#: aqui com ~700px de conteúdo dentro.
 LARGURA_DA_TELA_DELA = 1870
 
-#: Teto do vão entre dois blocos vizinhos da faixa, em px. Sai do critério de
-#: aceite 4 da STATUS-SIMETRIA-02: *"não há faixa de mais de 200 px sem nada
-#: entre dois módulos"*. Medido antes da cura: 673px de nada entre o fim do
-#: microfone e o começo do grid de botões, e outros 673 do outro lado.
 VAO_MAXIMO_ENTRE_BLOCOS = 200
 
 _INPUTS: dict[str, Any] = {
@@ -74,9 +50,6 @@ _INPUTS: dict[str, Any] = {
     "buttons": ["cross"],
     "gyro": {"x": 143.2, "y": -412.0, "z": 22.8},
     # ONDA-CONTROLES-04: os números são MEDIDOS, não inventados — um DualSense
-    # desta bancada largado na mesa, 29/08/2026 (|v| = 0,996 g, a gravidade).
-    # Este `_ENTRY` também alimenta o `retratar_abas.py`, então é ele que decide
-    # se a foto da documentação mostra o bloco novo ou uma tela sem ele.
     "accel": {"x": -0.005, "y": 0.981, "z": 0.172},
     "touchpad": {
         "touching": True,
@@ -104,18 +77,9 @@ _ENTRY: dict[str, Any] = {
 }
 _ESTADO: dict[str, Any] = {"native_mode": False}
 
-#: A janela offscreen fica viva numa lista de módulo: o Python coleta a
-#: referência local assim que a função retorna, e um card sem toplevel volta a
-#: reportar 1x1 no meio da asserção.
 _janelas_vivas: list[Any] = []
 
 
-#: FOLGA-DE-RENDERIZACAO-01 (19/08/2026) — quantos pixels de diferença de
-#: MÉTRICA DE FONTE o teste aceita entre duas máquinas. Medido: com as fontes da
-#: identidade instaladas nos dois lados, a bancada dela pede ~1030px e o runner
-#: do CI pede 1043px para o MESMO card. A diferença é hinting e DPI do
-#: fontconfig, que ninguém fixa nem deveria — fixá-los faria o teste medir uma
-#: tela que nenhuma pessoa vê.
 FOLGA_DE_RENDERIZACAO: int = 10
 
 
@@ -141,38 +105,8 @@ def _faixa(widget: Any) -> tuple[int, int]:
     return (alloc.x, alloc.x + alloc.width)
 
 
-# ---------------------------------------------------------------------------
-# Entrega 1 — o microfone não sai da faixa (MIC-PRESENTE-01/E3)
-# ---------------------------------------------------------------------------
-
-
 def test_a_faixa_nao_muda_de_lugar_quando_o_mic_muda_de_estado() -> None:
-    """MIC-PRESENTE-01/E3 — **a diferença tem de ser zero pixel.**
-
-    Este teste substitui a muralha que estava em
-    `test_status_cards_sensores.py`, que exigia
-    ``card._mic_box.get_visible() is False`` sem sinal: ela AFIRMAVA o defeito
-    que a mantenedora relatou, e travava a correção — enquanto existisse, a
-    única forma de passar era continuar escondendo o microfone.
-
-    O que importa não é o widget e sim a FAIXA: esconder um bloco de uma caixa
-    horizontal muda o lugar de todos os vizinhos, então o microfone sumindo
-    não fazia só ele desaparecer — os analógicos pulavam 42px para a direita a
-    cada vez que ele saía ou voltava. E por Bluetooth ele sai quase sempre (a
-    captura é Opus tunelado em HID, instável), então esse pulo era o estado
-    normal da tela dela.
-
-    Duas armadilhas de medição estão desarmadas aqui, e as duas foram
-    medidas antes de o teste ficar de pé:
-
-    * o card tem de ser o LARGO (um controle). No compacto, a folga é pequena
-      e o `Gtk.Box` não redistribui o suficiente para o pulo aparecer — o
-      teste passaria com o `hide()` de volta;
-    * cada estado monta a sua própria janela, e o `update` vem DEPOIS do
-      `show_all`. Aplicar o estado antes faria o `show_all` revelar de novo um
-      bloco que o `hide()` tinha escondido, e o teste voltaria a passar com a
-      cura arrancada.
-    """
+    """MIC-PRESENTE-01/E3 — **a diferença tem de ser zero pixel.**"""
 
     def geometria(mic: Any) -> dict[str, tuple[int, int]]:
         card = ControllerCard(compact=False)
@@ -204,26 +138,8 @@ def test_a_faixa_nao_muda_de_lugar_quando_o_mic_muda_de_estado() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Entrega 5 — o vazio vira margem, não distância entre as coisas
-# ---------------------------------------------------------------------------
-
-
 def test_o_card_de_um_controle_nao_estica_pela_tela_inteira() -> None:
-    """Defeito 4 — o card recebia 1870px para ~700px de conteúdo.
-
-    A sobra não sumia: virava buraco DENTRO da faixa (dois vãos de 673px, um
-    de cada lado dos analógicos, medidos na captura maximizada). Com teto de
-    largura e o card centrado, a mesma sobra vira margem da página.
-
-    SOM-01 trocou o teto RÍGIDO (960px fixos, com ~950px de margem morta na
-    tela dela) por um ELÁSTICO: o que este teste cobra agora é o teto de cima,
-    e o de baixo está no teste seguinte. Sem os dois lados a medida não vale —
-    um card travado em 960 passa por este assert e reprova no outro.
-
-    A mordida: tirar o corte do `do_size_allocate` faz a largura alocada saltar
-    para a da janela (1870) e este teste cai.
-    """
+    """Defeito 4 — o card recebia 1870px para ~700px de conteúdo."""
     card = _card_na_tela_dela()
 
     largura = card.get_allocated_width()
@@ -236,21 +152,7 @@ def test_o_card_de_um_controle_nao_estica_pela_tela_inteira() -> None:
 
 
 def test_o_card_de_um_controle_cresce_com_a_janela_larga() -> None:
-    """SOM-01, pedido 3 — *"permitir a expansão da janela"*.
-
-    O outro lado do teste acima, e o que ele sozinho não pega: com o teto
-    rígido de 960px o card ficava do mesmo tamanho numa janela de 1180 e numa
-    de 1920, e sobravam ~950px de margem morta na tela dela. A janela crescia
-    e o conteúdo não.
-
-    Mede o card nas DUAS larguras, e cobra as duas coisas: que ele seja maior
-    na tela larga, e que chegue ao teto elástico (crescer 10px também seria
-    "maior", e não é o que ela pediu).
-
-    A mordida: devolver `set_size_request(LARGURA_CARD_UNICO, -1)` com
-    `halign=CENTER` (o desenho da rodada anterior) faz as duas medidas
-    empatarem em 1040 e este teste cai.
-    """
+    """SOM-01, pedido 3 — *"permitir a expansão da janela"*."""
     largo = _card_na_tela_dela().get_allocated_width()
     estreito = _card_na_tela_dela(largura=1180).get_allocated_width()
 
@@ -263,30 +165,11 @@ def test_o_card_de_um_controle_cresce_com_a_janela_larga() -> None:
         f"o card devia usar o teto elástico inteiro ({LARGURA_CARD_ELASTICA}px)"
         f" e usou {largo}px"
     )
-    # E o piso continua valendo: numa janela estreita ele não encolhe abaixo
-    # do que o conteúdo pede, que é o número repetido no glade.
     assert estreito >= LARGURA_CARD_UNICO
 
 
 def test_nenhum_vao_de_mais_de_200px_entre_os_blocos_da_faixa() -> None:
-    """Critério de aceite 4 da sprint, medido bloco a bloco.
-
-    Percorre a faixa da esquerda para a direita — sensores, analógico
-    esquerdo, analógico direito, microfone, botões — e cobra o vão entre cada
-    par de vizinhos. Antes da cura, o vão entre o microfone e o grid de botões
-    era de 673px.
-
-    **É este teste que impede o teto elástico da SOM-01 de desfazer a cura da
-    rodada anterior.** O card agora chega a 1400px na tela dela, e não a 960:
-    se o conteúdo não crescesse junto (glifos de 58px, analógicos de 140,
-    medidores maiores) e se a sobra não fosse repartida entre os TRÊS blocos da
-    faixa, os 440px a mais voltariam a ser buraco. Medido depois da leva:
-    143px de vão máximo, contra 112px antes dela e 673px antes da anterior.
-
-    A mordida: sem o teto elástico do `do_size_allocate`, os dois vãos voltam
-    aos 673px; devolvendo `expand=False` à coluna de sensores e ao grid de
-    botões, eles vão a ~215px. A mensagem de erro diz entre quais blocos.
-    """
+    """Critério de aceite 4 da sprint, medido bloco a bloco."""
     card = _card_na_tela_dela()
 
     blocos = [
@@ -310,30 +193,7 @@ def test_nenhum_vao_de_mais_de_200px_entre_os_blocos_da_faixa() -> None:
 
 @pytest.mark.parametrize("compact", [False, True])
 def test_a_barra_do_gatilho_nao_toma_a_largura_do_card(compact: bool) -> None:
-    """Defeito 4 — 881px de barra para um valor de 0 a 255.
-
-    O "0 / 255" é desenhado no MEIO da barra, então a largura da barra é a
-    distância entre o número e as duas pontas: com 881px ele ficava boiando
-    no vazio, longe do "L2" que o nomeia.
-
-    Vale nos DOIS cards. Com quatro controles em co-op — o caso normal desta
-    casa — os cards vão lado a lado e cada um continuava com uma barra de
-    ~800px na tela de 1920: o mesmo defeito, no caminho que ela não estava
-    olhando naquele dia.
-
-    ALINHA-DUAS-LINHAS-01 (01/08) trocou o TETO, e não a regra. Ela pediu,
-    olhando a tela: *"alinha a seção do L2 e R2 pra ficar entre o touchpad e o
-    analógico direito"*. O teto deixa de ser o número fixo de
-    ``largura_da_barra_de_gatilho()`` e passa a ser a METADE ESQUERDA da faixa
-    de baixo — que é bem menor que o card (medido: 698 de 1400 na tela dela) e
-    por isso continua curando o defeito 4.
-
-    A mordida é a mesma de antes, e continua valendo: devolver o
-    ``set_hexpand(True)`` SEM o ``SizeGroup`` — ou tirar o ``SizeGroup``
-    deixando o ``hexpand`` — faz a barra voltar a receber a largura inteira do
-    card, e a primeira asserção cai. Um teste que só afirmasse "a barra é
-    menor que o card" não morderia: 881px também é menor que 1400.
-    """
+    """Defeito 4 — 881px de barra para um valor de 0 a 255."""
     card = _card_na_tela_dela(compact=compact)
     metade = card._metade_esquerda.get_allocated_width()
     fim_da_metade = _faixa(card._metade_esquerda)[1]
@@ -344,8 +204,6 @@ def test_a_barra_do_gatilho_nao_toma_a_largura_do_card(compact: bool) -> None:
             f"a barra do {nome} mede {largura}px e a metade esquerda da faixa "
             f"tem {metade}px: a barra saiu da coluna que a limita"
         )
-        # A tolerância é a borda da moldura do bloco vizinho, não folga de
-        # conveniência: o alvo é o fim do analógico direito.
         fim_da_barra = _faixa(barra)[1]
         assert abs(fim_da_barra - fim_da_metade) <= 12, (
             f"a barra do {nome} termina em {fim_da_barra} e a metade esquerda "
@@ -361,42 +219,12 @@ def test_a_barra_do_gatilho_nao_toma_a_largura_do_card(compact: bool) -> None:
 def test_o_numero_do_giroscopio_fica_perto_do_nome_do_eixo(
     compact: bool,
 ) -> None:
-    """Defeito 4 — os números do giroscópio a ~880px dos rótulos X/Y/Z.
-
-    O desenho punha a letra do eixo na borda ESQUERDA do widget e o número
-    colado na borda DIREITA (`fim_barra + 4`, em `sensor_widgets`), então a
-    largura alocada ERA a distância entre os dois. Ela leu isso como "rótulos
-    apertados à esquerda e números jogados na borda direita".
-
-    **ALINHA-DUAS-LINHAS-01 (01/08) curou a causa em vez do sintoma.** Até
-    aqui a cura era estreitar o desenho — e ela deixou de ser possível quando
-    ela pediu, olhando a tela, *"alinha e estica a seção do giroscópio pra
-    ficar entre o microfone e o triângulo"*. Um desenho de 640px com o número
-    na borda direita seria o defeito de volta, pior.
-
-    O número mudou de lado: agora ele fica logo DEPOIS da letra do eixo
-    (`inicio_valor`, em `sensor_widgets`), e a barra ocupa todo o resto. A
-    distância entre o nome e o número passou a ser uma constante do desenho —
-    não muda mais com a largura, em nenhuma janela.
-
-    Por isso este teste deixou de medir largura e passou a medir A DISTÂNCIA,
-    que é o que o título dele sempre disse. A mordida: devolver o
-    `ctx.move_to(fim_barra + 4, ...)` no `_on_draw` faz a distância voltar a
-    ser a largura inteira do desenho e a primeira asserção cai — em qualquer
-    largura, inclusive na antiga.
-
-    E a moldura tem de acompanhar o desenho: uma moldura larga com um
-    desenho estreito dentro só mudaria o vazio de lugar, para DENTRO do
-    bloco — que é a definição do defeito que ela nomeou.
-    """
+    """Defeito 4 — os números do giroscópio a ~880px dos rótulos X/Y/Z."""
     from hefesto_dualsense4unix.app.widgets.sensor_widgets import _ROTULO_GYRO_PX
 
     card = _card_na_tela_dela(compact=compact)
 
     largura = card._gyro_bars.get_allocated_width()
-    # O número nasce em `_ROTULO_GYRO_PX` e a letra em x=0: a distância entre
-    # os dois é essa constante, e nada mais. O teto de 40px é generoso de
-    # propósito — o que este teste recusa é a distância CRESCER com a janela.
     distancia = _ROTULO_GYRO_PX
 
     assert distancia <= 40, (
@@ -415,12 +243,6 @@ def test_o_numero_do_giroscopio_fica_perto_do_nome_do_eixo(
     )
 
 
-
-# ---------------------------------------------------------------------------
-# Entrega 3 — cada assunto num bloco, não seis itens numa lista
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("nome", "atributo"),
     [
@@ -434,22 +256,7 @@ def test_o_numero_do_giroscopio_fica_perto_do_nome_do_eixo(
 def test_cada_sensor_tem_moldura_propria_no_card_de_um_controle(
     nome: str, atributo: str
 ) -> None:
-    """Defeito 2 — *"o touchpad não tem um espaço próprio"*.
-
-    Touchpad, o retângulo dele, "sem toque", Lightbar, a barra de cor e o
-    o hex dela eram SEIS elementos empilhados numa coluna, sem nada separando
-    os dois assuntos — lidos de cima para baixo, uma lista só. Agora cada
-    assunto é um bloco com moldura e o próprio nome no alto dela.
-
-    A mordida: fazer `_bloco` devolver a caixa nua (o que ele faz no card
-    compacto, onde a moldura não cabe na largura) derruba os cinco casos.
-
-    A comparação é por PREFIXO desde 01/08 (SOM-ROTA-NO-CARD-01): o rótulo do
-    alto-falante passou a carregar o valor — "Alto-falante · 71 %" — porque o
-    lugar onde esse valor morava foi cedido ao botão da rota, a pedido dela. O
-    nome do bloco continua sendo a primeira coisa que se lê, e é isso que este
-    teste guarda; um rótulo que começasse por outra coisa continua reprovando.
-    """
+    """Defeito 2 — *"o touchpad não tem um espaço próprio"*."""
     card = _card_na_tela_dela()
 
     bloco = getattr(card, atributo)
@@ -466,30 +273,16 @@ def test_cada_sensor_tem_moldura_propria_no_card_de_um_controle(
 
 
 def test_o_card_compacto_nao_paga_moldura_porque_nao_cabe() -> None:
-    """A contrapartida medida da moldura: ela custa largura, e com 2+ cards
-    lado a lado não há largura.
-
-    Não é preferência — é o orçamento de
-    `test_dois_cards_lado_a_lado_cabem_na_largura_da_janela`, que dá 26px de
-    folga para a aba inteira. A moldura custa ~50px por coluna. Este teste
-    existe para que a diferença entre os dois cards seja uma decisão escrita,
-    e não um esquecimento.
-    """
+    """A contrapartida medida da moldura: ela custa largura, e com 2+ cards"""
     card = _card_na_tela_dela(compact=True, largura=600)
 
     assert not isinstance(card._touch_box, Gtk.Frame)
-    # E o assunto continua nomeado, agora numa linha dentro da caixa.
     textos = [
         filho.get_text()
         for filho in card._touch_box.get_children()
         if isinstance(filho, Gtk.Label)
     ]
     assert "Touchpad" in textos
-
-
-# ---------------------------------------------------------------------------
-# Entrega 4 — o alto-falante existe na tela
-# ---------------------------------------------------------------------------
 
 
 def test_o_alto_falante_aparece_mesmo_sem_ninguem_ter_ajustado() -> None:
@@ -521,53 +314,22 @@ def test_o_alto_falante_aparece_mesmo_sem_ninguem_ter_ajustado() -> None:
     assert card._speaker_label.get_text() == TEXTO_SPEAKER_SEM_DADO
 
 
-# ---------------------------------------------------------------------------
-# Entrega 6 — a bateria aparece UMA vez
-# ---------------------------------------------------------------------------
-
-
 def test_a_bateria_aparece_uma_vez_so_na_tela_em_qualquer_modo() -> None:
-    """Com UM controle, a bateria aparecia duas vezes na mesma tela.
-
-    **A regra que este teste trava nunca mudou: a bateria aparece UMA vez.**
-    O que mudou, na CARD-ÚNICO-01, foi qual das duas sai — e por isso o
-    teste passou a medir o comportamento em vez do mecanismo (ele exigia,
-    literalmente, que a linha do card estivesse invisível).
-
-    Antes: o frame "Estado" mostrava a bateria com 0 ou 1 controle, e a linha
-    do card único se escondia para não repetir. Agora o frame Estado inteiro
-    some quando há um controle só — ela pediu, *"apaga estado"* — e quem
-    mostra a bateria passou a ser o card, nos DOIS modos.
-
-    A mordida: devolver o `_esconder_modulo(linha_bateria)` ao card único faz
-    a bateria sumir da tela dela por inteiro (o frame que a mostrava não está
-    mais lá), e a primeira asserção cai.
-    """
+    """Com UM controle, a bateria aparecia duas vezes na mesma tela."""
     unico = _card_na_tela_dela()
     dois = _card_na_tela_dela(compact=True, largura=600)
 
     assert unico._battery_row.get_visible() is True
     assert dois._battery_row.get_visible() is True
-    # E o valor continua sendo calculado nos dois.
     assert dois._battery_bar.get_text() == "80 %"
     assert unico._battery_bar.get_text() == "80 %"
-    # No card único quem MOSTRA o número é o rótulo ao lado, e não a barra: o
-    # GtkProgressBar centra o próprio texto, e centrado numa barra larga o
-    # "80 %" fica no meio do vazio — o defeito que ela apontou nas barras de
-    # L2/R2, na mesma tela. Mordida: religar o `show-text` da barra do card
-    # único e apagar o rótulo.
     assert unico._battery_bar.get_show_text() is False
     assert unico._battery_pct_label is not None
     assert unico._battery_pct_label.get_text() == "80 %"
 
 
 def test_o_frame_estado_e_o_card_param_no_mesmo_numero_com_a_janela_larga() -> None:
-    """SOM-01 (segunda passada): os dois têm de casar na tela maximizada.
-
-    Este é o teste que MEDE — o de cima só lê o glade. Sem a
-    `CaixaDeTetoElastico` em volta do frame, o card vai a 1400px e o frame fica
-    no piso de 1040px: 360px de degrau, que é o que ela veria.
-    """
+    """SOM-01 (segunda passada): os dois têm de casar na tela maximizada."""
     from gi.repository import Gtk
 
     from hefesto_dualsense4unix.app.widgets.controller_card import (
@@ -600,37 +362,11 @@ def test_o_frame_estado_e_o_card_param_no_mesmo_numero_com_a_janela_larga() -> N
     )
 
 
-# ---------------------------------------------------------------------------
-# CARD-OCUPA-01 — o desenho ocupa o vão que o teto devolveu
-# ---------------------------------------------------------------------------
-
-#: Piso do aceite da CARD-OCUPA-01 para o touchpad e para o medidor do
-#: microfone na tela dela, em px. Sai da entrega E1 da sprint ("o touchpad
-#: recebe pelo menos 300px"); o número que a bancada mediu depois da cura é
-#: 360, e a folga entre os dois é de propósito — o teste cobra o ACEITE, não a
-#: constante, e continua valendo se a próxima medição mudar o teto.
 PISO_DO_DESENHO_NA_TELA_LARGA = 300
 
 
 def test_os_quatro_desenhos_ocupam_a_faixa_na_tela_larga() -> None:
-    """CARD-OCUPA-01, E1 e E2 — *"tem muito espaço vazio aqui, dava pra
-    aumentar a largura do touchpad e lightbar e do microfone e alto falante
-    pra ocuparem os espaços laterais vazios"*.
-
-    Medido na tela dela ANTES da cura, com a janela em tela cheia de 1920 e o
-    card no teto elástico de 1400: touchpad, lightbar, medidor do microfone e
-    alto-falante parados em 180px cada, e 148px de vão de cada lado do miolo.
-    O card cresceu na SOM-01 e os desenhos não foram junto.
-
-    As duas barras finas não têm teto próprio: elas preenchem a coluna em que
-    vivem, então medir "a barra tem a largura do desenho de cima" é medir que
-    a coluna se lê alinhada — uma lightbar curta debaixo de um touchpad largo
-    seria o vazio mudando de lugar, para dentro do bloco.
-
-    A mordida: tirar as duas chamadas de `definir_largura_natural` (a cura)
-    devolve os quatro a 180px e as quatro asserções caem — foi assim que este
-    teste foi conferido.
-    """
+    """CARD-OCUPA-01, E1 e E2 — *"tem muito espaço vazio aqui, dava pra"""
     card = _card_na_tela_dela()
 
     touch = card._touch_view.get_allocated_width()
@@ -658,44 +394,11 @@ def test_os_quatro_desenhos_ocupam_a_faixa_na_tela_larga() -> None:
 
 
 def test_o_piso_de_largura_do_card_nao_subiu_com_os_desenhos_maiores() -> None:
-    """A outra metade da cura, e a que impede a cura ERRADA.
-
-    `set_size_request` no GTK3 é MÍNIMO, não tamanho: um número maior ali
-    sobe direto para o mínimo do card e daí para o mínimo da janela inteira
-    (1062px medidos em `test_a_janela_inteira_cabe_na_largura_de_projeto`),
-    que não tem rolagem horizontal para onde fugir. É o defeito que o
-    comentário do piso do card documenta desde a SOM-01, e é a tentação mais
-    próxima de quem for mexer nestes desenhos de novo.
-
-    Por isso a medida é um PAR: o mínimo não pode subir e o natural TEM de
-    ser maior que ele — é no natural que o crescimento mora.
-
-    A mordida, nos dois sentidos: trocar a cura por
-    ``set_size_request(360, ...)`` leva o mínimo do card a 1400 e derruba a
-    primeira asserção; arrancar a cura inteira empata mínimo e natural em
-    1040 e derruba a segunda.
-    """
+    """A outra metade da cura, e a que impede a cura ERRADA."""
     card = _card_na_tela_dela()
 
     minimo, natural = card.get_preferred_width()
 
-    # FOLGA-DE-RENDERIZACAO-01 (19/08/2026). Esta asserção compara uma medida
-    # RENDERIZADA (o que o Pango devolve para o texto do card) contra uma
-    # constante de DESENHO — e essa comparação só vale se as duas máquinas
-    # renderizarem igual. Elas não renderizam.
-    #
-    # Medido: com as fontes da identidade instaladas nos dois lados (a leva de
-    # 19/08 as pôs no job de interface do CI), a bancada dela pede ~1030px e o
-    # runner pede 1043px para o MESMO card. São 13px de diferença de métrica —
-    # hinting e DPI do fontconfig, que ninguém fixa nem deveria: fixá-los faria
-    # o teste medir uma tela que nenhuma pessoa vê.
-    #
-    # A folga NÃO afrouxa a mordida, e a razão é a distância entre os números.
-    # O defeito que esta asserção existe para pegar está escrito no docstring
-    # acima: trocar a cura por `set_size_request(360, ...)` leva o mínimo a
-    # **1400px**. Contra um teto de 1050 isso reprova por 350px — trinta e
-    # cinco vezes a folga. Uma deriva de fonte não é o defeito, e o defeito não
-    # cabe na deriva.
     teto = LARGURA_CARD_UNICO + FOLGA_DE_RENDERIZACAO
     assert minimo <= teto, (
         f"o card de um controle passou a pedir {minimo}px de MÍNIMO (o piso "
@@ -715,24 +418,7 @@ def test_o_piso_de_largura_do_card_nao_subiu_com_os_desenhos_maiores() -> None:
 
 
 def test_com_a_janela_no_tamanho_de_projeto_os_desenhos_encolhem_sem_atropelo() -> None:
-    """O outro lado do elástico: apertado, ele volta para o piso.
-
-    O risco real de crescer o NATURAL numa faixa com ``expand=True,
-    fill=False`` é o filho receber o natural inteiro numa fatia menor que
-    ele e passar por cima do vizinho. Medido na bancada com três filhos de
-    mínimo 180 e natural 360: 1400px de caixa dá 360 a cada um, 900px dá 311,
-    800px dá 261 e 620px devolve os 180 do piso — o GtkBox aloca
-    ``min(natural, fatia)`` e o encolhimento é contínuo.
-
-    Aqui isso é medido no card montado, na largura em que a janela ABRE
-    (`default-width` do glade) e no MENOR tamanho em que ela existe: nenhum
-    vão pode ficar negativo (dois blocos ocupando o mesmo pixel) e o
-    touchpad nunca cai abaixo do piso de hoje nem passa do teto.
-
-    A mordida: sem a cura o desenho fica no piso em QUALQUER largura, e a
-    última asserção — o mesmo touchpad tem de ser maior na tela dela do que
-    na janela mínima — empata em 180x180 e cai.
-    """
+    """O outro lado do elástico: apertado, ele volta para o piso."""
     for largura in (1180, 1062):
         card = _card_na_tela_dela(largura=largura)
         blocos = [
@@ -767,20 +453,7 @@ def test_com_a_janela_no_tamanho_de_projeto_os_desenhos_encolhem_sem_atropelo() 
 
 
 def test_alargar_o_touchpad_nao_muda_o_lugar_do_dedo() -> None:
-    """O aceite 3 da sprint, medido nos PIXELS que o Cairo pintou.
-
-    O `TouchpadView` normaliza o toque por fração
-    (``px = 2 + fx * (largura - 4)``), então o ponto continua no lugar
-    relativo certo em qualquer largura — mas isso é o que o código diz, e o
-    que ela vai olhar é a tela. Aqui o desenho é renderizado de verdade numa
-    `Gtk.OffscreenWindow`, e o ponto ciano é PROCURADO nos pixels: a fração
-    onde ele apareceu tem de ser a mesma no desenho estreito e no largo.
-
-    A mordida: trocar a fração por pixel absoluto no `_on_draw` (o jeito
-    "óbvio" de desenhar um toque) faz o ponto ficar parado no mesmo pixel
-    enquanto o retângulo dobra de largura, e as duas frações deixam de
-    bater.
-    """
+    """O aceite 3 da sprint, medido nos PIXELS que o Cairo pintou."""
 
     def fracao_do_ponto(largura: int) -> float:
         painel = TouchpadView()
@@ -794,11 +467,6 @@ def test_alargar_o_touchpad_nao_muda_o_lugar_do_dedo() -> None:
         while Gtk.events_pending():
             Gtk.main_iteration()
 
-        # Pixbuf, e NÃO `get_surface().get_data()`: com backend X11 (o Xvfb do
-        # job "Interface com GTK REAL") a superfície é uma `cairo.XlibSurface`,
-        # que não tem `get_data` — o teste passava na máquina de
-        # desenvolvimento, onde a superfície é de imagem, e reprovava só no CI.
-        # O pixbuf sai em RGB(A) direto e é igual nos dois backends.
         pixbuf = janela.get_pixbuf()
         assert pixbuf is not None, "a OffscreenWindow não devolveu pixbuf"
         dados = pixbuf.get_pixels()

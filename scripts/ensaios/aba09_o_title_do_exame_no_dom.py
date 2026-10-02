@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-"""Lê no DOM VIVO o `title` de cada linha do exame da aba Sistema.
-
-POR QUE ELE EXISTE, e é a regra desta casa: a cura de 03/09/2026 põe a frase
-inteira num `title`, e um teste de unidade só prova a STRING que o pacote
-devolve. O que prova o produto é o atributo estar no `WebKit2.WebView` que ela
-usa, depois de o piloto escrever o bloco por `innerHTML`.
-
-Uso (sempre `--oculta`; ela tem UMA tela):
-
-    scripts/ensaios/aba09_o_title_do_exame_no_dom.py
-
-Sai uma linha por achado: quantos caracteres a frase tem, quantos o `title`
-guarda, e se os dois batem.
-"""
+"""Lê no DOM VIVO o `title` de cada linha do exame da aba Sistema."""
 from __future__ import annotations
 
 import json
@@ -23,9 +10,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -43,8 +27,6 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.interface import hefesto_vivo
 
-#: O que se pergunta ao DOM: para cada linha do exame, o texto que a tela mostra
-#: e o `title` que a segura. O `textContent` é o que corta; o `title`, o que não.
 LER = r"""
 (function(){
   const fora = [];
@@ -56,9 +38,6 @@ LER = r"""
 """
 
 
-#: AS BANDEIRAS QUE O PILOTO LÊ, e o `oculta` é a única que não se negocia: ela
-#: tem UMA tela. Um `Namespace` à mão em vez de `main()` porque este ensaio não
-#: quer a linha de comando do piloto — quer a janela dele.
 BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
                  espera=1200, incluir_perigosos=False, prova_clique="",
                  prova_de_mockup=False, sem_cravado=False, sem_selo=False,
@@ -75,7 +54,7 @@ def main() -> int:
 
     def perguntar() -> bool:
         if not piloto.pronto:
-            return True  # a página ainda não instalou o bootstrap
+            return True
 
         def respondeu(texto: str | None, erro: Exception | None) -> None:
             saida["linhas"] = json.loads(texto) if texto and not erro else []

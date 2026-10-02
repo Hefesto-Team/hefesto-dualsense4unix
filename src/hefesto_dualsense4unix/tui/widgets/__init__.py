@@ -1,12 +1,4 @@
-"""Widgets visuais da TUI (W5.2).
-
-- `TriggerBar`: barra de pressão L2/R2 (0-255) com faixa colorida por
-  intensidade. Cor verde até 85, amarelo até 170, vermelho acima.
-- `BatteryMeter`: percentual + barra de nível com cor por faixa.
-- `StickPreview`: mini-mapa do stick (posição x/y relativa ao centro).
-
-Todos são `Static` reativos: mudar a propriedade dispara re-render.
-"""
+"""Widgets visuais da TUI (W5.2)."""
 from __future__ import annotations
 
 from textual.reactive import reactive
@@ -15,20 +7,12 @@ from textual.widgets import Static
 MAX_ANALOG = 255
 CENTER_STICK = 128
 
-# GATE-EMOJI-01 (27/07/2026): nenhum glifo deste módulo aparece desenhado no
-# arquivo — todos nascem de `chr()` sobre o codepoint. Os desenhos abaixo estão
-# nos blocos que o ADR-011 manda PRESERVAR (Geometric Shapes e Block Elements),
-# e mesmo assim o higienizador do ambiente os apaga. Escritos como caractere,
-# uma passada dele transformaria `_icon_for_level` em string vazia; escritos
-# como codepoint, ele não tem o que casar. Ver
-# docs/process/sprints/2026-07-27-GATE-EMOJI-01-*.md.
-_BLOCO_CHEIO = chr(0x2588)  # FULL BLOCK — parte preenchida da barra
-_BLOCO_VAZIO = chr(0x2591)  # LIGHT SHADE — parte vazia da barra
-_PILHA_CHEIA = chr(0x25AE)  # BLACK VERTICAL RECTANGLE — célula de bateria cheia
-_PILHA_VAZIA = chr(0x25AF)  # WHITE VERTICAL RECTANGLE — célula de bateria vazia
-_PONTO_GRADE = chr(0x00B7)  # MIDDLE DOT — fundo da grade do stick
+_BLOCO_CHEIO = chr(0x2588)
+_BLOCO_VAZIO = chr(0x2591)
+_PILHA_CHEIA = chr(0x25AE)
+_PILHA_VAZIA = chr(0x25AF)
+_PONTO_GRADE = chr(0x00B7)
 
-#: Quantas células a barra de bateria desenha.
 _CELULAS_BATERIA = 4
 
 
@@ -102,11 +86,7 @@ class BatteryMeter(Static):
 
     @staticmethod
     def _icon_for_level(value: int) -> str:
-        """Desenho de 4 células: cheias à esquerda, vazias à direita.
-
-        As faixas são as mesmas de sempre (80/60/40/20); o que mudou é que o
-        desenho é montado a partir dos codepoints, não copiado de um literal.
-        """
+        """Desenho de 4 células: cheias à esquerda, vazias à direita."""
         if value >= 80:
             cheias = 4
         elif value >= 60:

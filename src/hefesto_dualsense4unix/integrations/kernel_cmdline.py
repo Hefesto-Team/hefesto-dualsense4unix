@@ -1,49 +1,22 @@
-"""Plano de merge do cmdline de kernel para o install (PLAT-03 item 2).
-
-Núcleo TESTÁVEL e PURO (zero I/O, zero root): dado o cmdline atual (string do
-/proc/cmdline ou a lista de kernel_options do /etc/kernelstub/configuration),
-produz o PLANO de mudanças que a lane de wiring executa via
-`kernelstub --delete-options/--add-options` (fallback GRUB). Este módulo NUNCA
-chama kernelstub — quem toca o sistema é o install.
-
-REGRAS (estudo 2026-07-18-estudo-kernel-hardening.md §1, provadas ao vivo):
-
-- O kernel respeita SÓ UM token ``usbcore.quirks=`` no cmdline. O plano NUNCA
-  produz um segundo token: se já existe QUALQUER ``usbcore.quirks=``, ele FUNDE
-  (entradas existentes + IDs nossos que faltarem, sem duplicar) num único token
-  — delete dos antigos + add do fundido.
-- Registro de dono (estado local ``cmdline.<param>=<dono>``): já presente =
-  "terceiro" (Aurora/manual — o uninstall NÃO remove); ausente = "hefesto"
-  (nosso — o uninstall remove); token fundido = "compartilhado" (o uninstall
-  remove SÓ os IDs nossos, via :func:`strip_quirks_token`, re-fundindo o resto).
-  O dono reportado pelo plano vale para a PRIMEIRA instalação: a lane de wiring
-  preserva o registro anterior (o que um install passado marcou como "hefesto"
-  continua "hefesto" num re-install).
-- NUNCA reintroduzir ``054c:0ce6:k`` (NO_LPM), ``processor.max_cstate`` nem
-  ``threadirqs`` — removidos DE PROPÓSITO pela Aurora v3.24.
-"""
+"""Plano de merge do cmdline de kernel para o install (PLAT-03 item 2)."""
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
-# Parâmetros de interesse do hefesto (PLAT-03).
 AUTOSUSPEND_PARAM = "usbcore.autosuspend"
 AUTOSUSPEND_TOKEN = "usbcore.autosuspend=-1"
 QUIRKS_PARAM = "usbcore.quirks"
 HEFESTO_QUIRK_IDS: tuple[str, ...] = ("054c:0ce6:gn", "054c:0df2:gn")
 
-# Donos possíveis do registro de estado.
 OWNER_HEFESTO = "hefesto"
 OWNER_TERCEIRO = "terceiro"
 OWNER_COMPARTILHADO = "compartilhado"
 
-# Operações do plano.
 OP_NONE = "none"
 OP_ADD = "add"
 OP_REPLACE = "replace"
 
-# Removidos de propósito pela Aurora (v3.24) — o plano jamais os recria.
 NEVER_REINTRODUCE: tuple[str, ...] = (
     "054c:0ce6:k",
     "processor.max_cstate",
@@ -53,14 +26,7 @@ NEVER_REINTRODUCE: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class CmdlineAction:
-    """Uma decisão do plano para um parâmetro do cmdline.
-
-    A lane de wiring traduz assim:
-    - ``op == "none"``: nada a fazer (só registrar o dono);
-    - ``op == "add"``: ``kernelstub --add-options token``;
-    - ``op == "replace"``: ``kernelstub --delete-options`` de CADA item de
-      ``remove_tokens`` e depois ``--add-options token``.
-    """
+    """Uma decisão do plano para um parâmetro do cmdline."""
 
     param: str
     op: str
@@ -101,17 +67,7 @@ def merge_quirks_token(
     existing_tokens: Sequence[str],
     desired_ids: Sequence[str] = HEFESTO_QUIRK_IDS,
 ) -> tuple[str, bool]:
-    """Funde os IDs desejados no token ÚNICO ``usbcore.quirks=``.
-
-    ``existing_tokens``: todos os tokens ``usbcore.quirks=...`` já no cmdline
-    (0, 1 ou — caso patológico — vários; TODOS são fundidos num só, porque o
-    kernel só respeita um). Entradas de terceiros são preservadas NA ORDEM.
-    Entrada com o MESMO VID:PID e flags diferentes (ex.: o ``:k`` morto) é
-    substituída pelas flags provadas — nunca duplicada.
-
-    Retorna ``(token_fundido, mudou)``; ``mudou=False`` significa que o token
-    existente já contém tudo (e era um só).
-    """
+    """Funde os IDs desejados no token ÚNICO ``usbcore.quirks=``."""
     result: list[str] = []
     keys: dict[str, int] = {}
     for token in existing_tokens:
@@ -126,7 +82,7 @@ def merge_quirks_token(
         if key in keys:
             index = keys[key]
             if result[index] != want:
-                result[index] = want  # flags divergentes → as provadas (gn)
+                result[index] = want
                 changed = True
         else:
             keys[key] = len(result)
@@ -139,13 +95,7 @@ def strip_quirks_token(
     existing_token: str,
     ids_to_remove: Sequence[str] = HEFESTO_QUIRK_IDS,
 ) -> tuple[str | None, bool]:
-    """Inverso do merge, para o UNINSTALL de um token "compartilhado".
-
-    Remove SÓ as entradas EXATAMENTE iguais às nossas (se alguém alterou as
-    flags depois, a entrada deixou de ser nossa — fica). Retorna
-    ``(token_restante, mudou)``; ``token_restante=None`` = o token ficou vazio
-    e deve ser deletado por inteiro.
-    """
+    """Inverso do merge, para o UNINSTALL de um token "compartilhado"."""
     ours = set(ids_to_remove)
     remaining = [e for e in _quirks_entries(existing_token) if e not in ours]
     changed = len(remaining) != len(_quirks_entries(existing_token))
@@ -228,31 +178,12 @@ def plan_cmdline(
     cmdline: str,
     desired_quirk_ids: Sequence[str] = HEFESTO_QUIRK_IDS,
 ) -> list[CmdlineAction]:
-    """Como :func:`plan_tokens`, recebendo a string crua (/proc/cmdline).
-
-    NOTA DATADA — 26/08/2026, e ela SUBSTITUI um fato errado. O portão de
-    lápides dizia que, *"enquanto o shell do install for o dono, este módulo é
-    uma segunda implementação da mesma regra em outra linguagem"*. É FALSO, e
-    foi medido: o instalador **importa este próprio módulo** num heredoc Python
-    (`install.sh`, passo `3e` — `sys.path.insert(0, root/"src")`, depois
-    `kc.plan_tokens(tokens)` e `kc.forbidden_reintroductions(actions)`). Não
-    existe segunda implementação da regra: existe UMA, que é esta, e o shell só
-    traduz o plano — como o próprio `install.sh` declara (*"quem DECIDE é o
-    módulo puro integrations/kernel_cmdline.py; aqui só traduzimos o plano"*).
-    O que sobra desta função é uma diferença de FORMA, não de regra: a produção
-    nunca tem a string crua na mão (lê tokens do JSON do kernelstub ou da linha
-    do GRUB) e por isso chama `plan_tokens` direto. Esta é a porta de string
-    crua, que quem tem um `/proc/cmdline` inteiro usa — hoje, os testes.
-    """
+    """Como :func:`plan_tokens`, recebendo a string crua (/proc/cmdline)."""
     return plan_tokens(parse_cmdline(cmdline), desired_quirk_ids)
 
 
 def apply_plan(tokens: Sequence[str], actions: Iterable[CmdlineAction]) -> list[str]:
-    """SIMULA o plano sobre os tokens (para testes e para o doctor comparar).
-
-    Não toca sistema nenhum: remove os ``remove_tokens`` e apensa o ``token``
-    de cada ação add/replace, preservando a ordem do resto.
-    """
+    """SIMULA o plano sobre os tokens (para testes e para o doctor comparar)."""
     result = list(tokens)
     for action in actions:
         if action.op == OP_NONE:
@@ -262,28 +193,8 @@ def apply_plan(tokens: Sequence[str], actions: Iterable[CmdlineAction]) -> list[
     return result
 
 
-# `ownership_record` MOROU AQUI, e foi PODADA em 26/08/2026. Ela montava
-# `{"cmdline.<param>": "<dono>"}` — e esse registro É gravado em produção, só
-# que por OUTRO caminho, que é o vivo: o heredoc do passo `3e` do `install.sh`
-# imprime o `a.owner` de cada ação do plano, e o shell o repassa a
-# `_register_cmdline_owner cmdline.<param> <dono>`, que escreve
-# `~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf` — o mesmo arquivo
-# que o `uninstall.sh` lê para reverter só o que é nosso.
-#
-# Ou seja: esta função era uma SEGUNDA forma da mesma regra, sem chamador de
-# produção, e as duas JÁ divergiam — o shell preserva um dono anterior
-# "hefesto"/"compartilhado" quando o plano novo diz "terceiro" (a lane de
-# wiring), e esta não tinha essa lógica. Manter as duas era guardar a
-# divergência; o dono agora é um só, e é o que roda.
-# Quem quiser o par continua tendo `a.param` e `a.owner` em cada `CmdlineAction`
-# — é exatamente o que o heredoc lê.
-
-
 def forbidden_reintroductions(actions: Iterable[CmdlineAction]) -> list[str]:
-    """Violações da regra "nunca reintroduzir" nos tokens que o plano ADICIONA.
-
-    Lista vazia = plano seguro. Guarda de teste (e a wiring pode re-checar).
-    """
+    """Violações da regra "nunca reintroduzir" nos tokens que o plano ADICIONA."""
     violations: list[str] = []
     for action in actions:
         if action.op == OP_NONE:

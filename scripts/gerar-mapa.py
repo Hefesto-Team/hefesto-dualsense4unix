@@ -67,17 +67,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import eliminacao  # o caderno de eliminação de suspeitos
+import eliminacao
 from carimbo_da_casa import CSS as CARIMBO_CSS
 from carimbo_da_casa import carimbo, sem_carimbo
 
-# A escada de `ate_onde_foi` NÃO se redigita aqui. Até 19/08/2026 a legenda
-# abaixo trazia os três degraus escritos à mão, e o portão trazia os mesmos três
-# num `frozenset` — duas listas do mesmo vocabulário, que é a doença que este
-# mapa existe para não ter. Quem manda é `check_paridade_transporte.ESCADA`,
-# porque é ele que REPROVA: régua e legenda divergirem quer dizer publicar uma
-# página que descreve um domínio diferente do que o portão aceita. O caminho
-# da página publicada também é do portão (`SPECS_RELATIVO`), pela mesma razão.
 from check_paridade_transporte import (
     DIRECAO_ENTRADA,
     DIRECAO_SAIDA,
@@ -105,29 +98,14 @@ MODELO = {
 }
 LADOS = (("cabo", "cabo_"), ("radio", "radio_"))
 
-#: TUDO o que entra na página. O caderno de ensaios está aqui porque ELE ENTRA
-#: (`le_csv` o lê via `eliminacao.carrega_por_lado`) — a lista anterior o
-#: esquecia, e essa omissão é metade do verde falso que o `--check` dava. Hoje
-#: a lista não decide nada sozinha (quem decide é a comparação de conteúdo):
-#: ela é o que o erro mostra a quem precisa saber o que regerar.
 FONTES = (CSV, eliminacao.ENSAIOS, *SVGS.values())
 
 
 def svg_inline(caminho: Path, controle: str) -> str:
-    """Injeta o SVG prefixando TODO id com o controle.
-
-    Sem o prefixo a página quebra de um jeito silencioso e convincente: os três
-    desenhos trazem os mesmos ids da norma (`corpo`, `stick_l`, `touchpad`...)
-    para o espaço global do documento, e o `<tbody id="mp-corpo">` da tabela perde
-    a disputa para o `<g id="mp-corpo">` do primeiro SVG — que aparece antes. O
-    resultado medido: `document.getElementById('mp-corpo')` devolvia o CORPO DO
-    DESENHO, as linhas eram escritas dentro dele, e a tabela ficava vazia
-    sem um único erro de JavaScript. Prefixar resolve a colisão com a página e
-    a colisão entre os três desenhos de uma vez.
-    """
+    """Injeta o SVG prefixando TODO id com o controle."""
     bruto = caminho.read_text(encoding="utf-8")
     bruto = re.sub(r"<\?xml[^>]*\?>", "", bruto)
-    bruto = re.sub(r"<!--.*?-->", "", bruto, flags=re.S)   # os comentários da norma
+    bruto = re.sub(r"<!--.*?-->", "", bruto, flags=re.S)
     bruto = re.sub(r'\bid="([^"]+)"', lambda m: f'id="{controle}__{m.group(1)}"', bruto)
     bruto = re.sub(r'\b(href|xlink:href)="#([^"]+)"',
                    lambda m: f'{m.group(1)}="#{controle}__{m.group(2)}"', bruto)
@@ -163,18 +141,7 @@ def caderno_de(ens: list[dict]) -> dict:
 
 
 def pecas_orfas(linhas: list[dict]) -> list[tuple[str, str, list[str]]]:
-    """As peças que o CSV cita e o desenho não tem mais. UMA régua, dois donos.
-
-    Devolve `(controle, chave, ids que sumiram)`. Quem chama são `le_csv` (para
-    dizer em stderr) e `main` (para REPROVAR) — de propósito a mesma função, e
-    não duas contagens parecidas: nesta casa duas réguas para o mesmo dado é a
-    forma como uma delas envelhece calada.
-
-    O que uma órfã significa: a peça é o alvo que o `specs.html` acende no
-    desenho quando a pessoa clica na linha. Um id que sumiu do SVG não acende
-    nada, e não acende EM SILÊNCIO — foi assim que 67 alvos apontaram para ids
-    inexistentes na versão anterior do mapa sem um único erro visível.
-    """
+    """As peças que o CSV cita e o desenho não tem mais. UMA régua, dois donos."""
     presentes = {c: ids_do_svg(p) for c, p in SVGS.items()}
     orfas = []
     for lin in linhas:
@@ -193,18 +160,7 @@ def reclama_das_orfas(orfas: list[tuple[str, str, list[str]]]) -> None:
 
 
 def reprova_por_orfas(orfas: list[tuple[str, str, list[str]]]) -> bool:
-    """PECA-ORFA-01 (13/08/2026) — a órfã deixa de ser aviso e vira reprovação.
-
-    Até 13/08 as órfãs eram acumuladas, impressas em stderr como "aviso", e o
-    processo devolvia 0 — inclusive no `--check`, que é o passo do pre-commit e
-    do CI. Ou seja: a única régua que confere o CSV contra os desenhos não
-    reprovava nada, e um id que sumisse do SVG passaria por ela em silêncio.
-
-    Medido na árvore em 13/08/2026: ZERO linhas órfãs nas 293 do mapa. Ligar a
-    reprovação custou zero reprovações — o dia mais barato que existe para ligar.
-
-    Devolve True quando há órfã (e então já disse por quê em stderr).
-    """
+    """PECA-ORFA-01 (13/08/2026) — a órfã deixa de ser aviso e vira reprovação."""
     if not orfas:
         return False
     print("specs.html: PEÇA ÓRFÃ — o CSV cita id de desenho que sumiu do SVG",
@@ -218,14 +174,7 @@ def reprova_por_orfas(orfas: list[tuple[str, str, list[str]]]) -> bool:
 
 
 def le_csv(reclamar: bool = False) -> list[dict]:
-    """Lê o CSV do v2 e confere a coluna `peca` contra os ids reais do desenho.
-
-    Casar por texto e torcer produziria um mapa que parece funcionar e não
-    acende nada — na versão anterior 67 alvos apontavam para ids inexistentes
-    (`microfone` quando o desenho chama `mic`) sem um único erro visível. Agora
-    a peça é dado, resolvido na migração; aqui ela é RECONFERIDA, porque um
-    desenho pode ser reeditado depois e levar o id embora sem avisar ninguém.
-    """
+    """Lê o CSV do v2 e confere a coluna `peca` contra os ids reais do desenho."""
     presentes = {c: ids_do_svg(p) for c, p in SVGS.items()}
     cadernos = eliminacao.carrega_por_lado()
     with open(CSV, encoding="utf-8", newline="") as fh:
@@ -265,13 +214,7 @@ def placar(linhas: list[dict], controle: str) -> dict:
 
 
 def assimetrias(linhas: list[dict]) -> int:
-    """Linhas cujo veredicto MUDA entre cabo e rádio.
-
-    No v1 isto era uma junção por texto de feature, e 34 linhas não pareavam —
-    entre elas assimetrias reais, que o contador da tela não estava vendo. Com o
-    grão em (chave, controle) a conta é do próprio registro: os dois lados estão
-    na mesma linha.
-    """
+    """Linhas cujo veredicto MUDA entre cabo e rádio."""
     n = 0
     for lin in linhas:
         if not (tem_lado(lin, "cabo_") and tem_lado(lin, "radio_")):
@@ -281,11 +224,6 @@ def assimetrias(linhas: list[dict]) -> int:
     return n
 
 
-#: A paleta mora em `scripts/paleta_da_casa.py` desde 23/08/2026, dividida com
-#: as outras páginas geradas. Duas cópias do mesmo hexadecimal divergem no dia
-#: em que alguém corrige uma delas.
-#: O `--check` desta página compara CONTEÚDO, então mexer lá deixa esta
-#: vermelha, que é o comportamento certo.
 from paleta_da_casa import TOKENS
 
 ESTILO = """
@@ -797,11 +735,7 @@ SCRIPT = """
 
 
 def degraus_em_prosa(direcao: str) -> str:
-    """Os degraus de uma direção da escada, para a legenda do `specs.html`.
-
-    Lê `ESCADA` do portão. Acrescentar um degrau lá aparece aqui sozinho — e é
-    por isso que esta função existe em vez de um parágrafo escrito à mão.
-    """
+    """Os degraus de uma direção da escada, para a legenda do `specs.html`."""
     return " · ".join(
         f"<em>{html.escape(degrau.valor)}</em> ({html.escape(degrau.resumo)})"
         for degrau in ESCADA
@@ -810,12 +744,7 @@ def degraus_em_prosa(direcao: str) -> str:
 
 
 def _bloco_fila_no_specs() -> str:
-    """Z6-11 (24/08/2026) — os placeholders abertos, ao lado do
-    `teste_que_morde`: a lista invertida `id` → onde a `Fala` aparece na
-    tela, que a PAREAMENTO-01 pediu em vez de uma coluna nova no CSV
-    (`"A decisão que reconcilia as duas frentes"`). Importa
-    `validar-fala-de-tela.py` em vez de reimplementar a descoberta.
-    """
+    """Z6-11 (24/08/2026) — os placeholders abertos, ao lado do"""
     try:
         import importlib.util
 
@@ -825,13 +754,11 @@ def _bloco_fila_no_specs() -> str:
         if spec is None or spec.loader is None:
             return '<p class="quieto">fila indisponível: não consegui carregar o portão.</p>'
         mod = importlib.util.module_from_spec(spec)
-        # Sem registrar em sys.modules ANTES do exec_module, o @dataclass do
-        # módulo estoura ao resolver a anotação em string.
         sys.modules[spec.name] = mod
         spec.loader.exec_module(mod)
         falas = mod.descobre_falas(RAIZ / mod.APP_RELATIVO, RAIZ)
         fila = mod.monta_fila(falas)
-    except Exception as exc:  # o specs.html nunca pode morrer por causa desta seção
+    except Exception as exc:
         return f'<p class="quieto">fila indisponível: {html.escape(f"{type(exc).__name__}: {exc}")}</p>'
 
     if not fila:
@@ -850,11 +777,6 @@ def _bloco_fila_no_specs() -> str:
     )
 
 
-#: O que sustenta cada `inferido-do-codigo` — LIDO da coluna `codigo_ref`, que
-#: os agentes preencheram, e nunca digitado aqui. Decisão dela, 05/09/2026:
-#: *"Sim o driver é espec"* — ler o `hid-playstation` não é palpite, é
-#: especificação. A legenda dizia só "alguém leu a fonte", e nivelava por baixo
-#: as duzentas células que apontam para o driver do kernel.
 _DRIVER = re.compile(
     r"hid[-_](playstation|nintendo|sony)|xpadneo|drivers/hid|linux|kernel"
     r"|dualsense\.c|sony_gamepad|8bitdo|SDL|steam|dualshock|ds4|joycon|\.c:|\.h:",
@@ -868,13 +790,7 @@ _NOSSO = re.compile(
 
 
 def procedencia_do_inferido(linhas: list[dict]) -> dict[str, int]:
-    """Conta, por procedência, as células `inferido-do-codigo` do mapa inteiro.
-
-    A pergunta que ela fez em 05/09/2026 é *quem* sustenta a inferência. A
-    resposta já estava no mapa — em `cabo_codigo_ref` / `radio_codigo_ref` e em
-    `fonte_externa` — e esta função a LÊ. Acrescentar coluna seria pedir que
-    refizessem trabalho já feito.
-    """
+    """Conta, por procedência, as células `inferido-do-codigo` do mapa inteiro."""
     conta = {"driver": 0, "os_dois": 0, "nosso": 0, "sem_referencia": 0}
     for lin in linhas:
         for _lado, pref in LADOS:
@@ -1108,42 +1024,20 @@ def monta() -> str:
 """
 
 
-#: O selo do rodapé — uma das partes da página que não saem das fontes (a outra
-#: é o carimbo da casa, tirado por `sem_carimbo`). Ignorá-lo é o que torna a
-#: comparação possível: com ele, todo `--check` reprovaria pelo relógio, que é
-#: exatamente o defeito de onde estamos saindo.
 SELO = re.compile(r"gerado em \d{2}/\d{2}/\d{4} \d{2}:\d{2} a partir de")
 
-#: Quantas linhas de divergência o erro imprime. O corte não é frescura: uma
-#: das linhas da página é o JSON inteiro do mapa, com quase um megabyte.
 LIMITE_DIFF = 24
 LARGURA_DIFF = 200
 
 
 def normaliza(pagina: str) -> list[str]:
-    """A página em linhas, sem o que não é dado.
-
-    Três normalizações, cada uma com um defeito medido atrás:
-
-    - `rstrip()`: a saída do gerador tem ~20 linhas com espaço sobrando dentro
-      dos `<style>` herdados dos SVG, e o arquivo commitado não tem — alguma
-      ferramenta da casa as apara depois. Um comparador byte a byte reprovaria
-      sempre, e um portão que reprova sempre é desligado na semana seguinte.
-    - o selo: a hora da geração muda a cada execução. Comparar relógio já é o
-      erro do qual este `--check` está saindo.
-    - o carimbo da casa: traz o commit, que muda a CADA commit. Sem tirá-lo,
-      este portão ficaria vermelho no segundo commit de qualquer leva.
-    """
+    """A página em linhas, sem o que não é dado."""
     return [SELO.sub("gerado em <momento> a partir de", linha).rstrip()
             for linha in sem_carimbo(pagina)]
 
 
 def recorta(linha: str) -> str:
-    """Uma linha do relatório, cortada — e DIZENDO que cortou.
-
-    Sem o aviso, as duas metades do JSON do mapa aparecem idênticas nos
-    primeiros 200 caracteres e o relatório parece acusar linha igual.
-    """
+    """Uma linha do relatório, cortada — e DIZENDO que cortou."""
     if len(linha) <= LARGURA_DIFF:
         return linha
     return f"{linha[:LARGURA_DIFF]}… (+{len(linha) - LARGURA_DIFF} caracteres)"
@@ -1165,10 +1059,6 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.check:
-        # PECA-ORFA-01 (13/08/2026), e vem ANTES da comparação de conteúdo de
-        # propósito: órfã é defeito de DADO, e regerar não conserta. Dizer
-        # "DESATUALIZADO" mandaria a pessoa rodar o gerador, que devolveria a
-        # mesma órfã — e o erro apontaria para o remédio errado.
         if reprova_por_orfas(pecas_orfas(le_csv())):
             return 1
         if not SAIDA.exists():
@@ -1191,14 +1081,6 @@ def main() -> int:
               "e com os três desenhos)")
         return 0
 
-    # A página sai SEM espaço no fim de linha, e a razão é briga medida em
-    # 22/08/2026: o `universal-sanitizer` do pre-commit apara essas caudas na
-    # hora do commit, e o gerador as reemitia na execução seguinte. Resultado —
-    # `specs.html` ficava PERMANENTEMENTE sujo no `git status` depois de todo
-    # `gerar-mapa.py`, e um arquivo que nunca fica limpo ensina a próxima pessoa
-    # a ignorar o `git status` inteiro. Os SVGs interpolados são a fonte das
-    # caudas; apará-las aqui é mais barato que caçá-las nos três desenhos.
-    # A pasta de saída é do GERADOR: a árvore de brinquedo dos testes não a tem.
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text(
         "\n".join(linha.rstrip() for linha in monta().split("\n")), encoding="utf-8"
@@ -1206,10 +1088,6 @@ def main() -> int:
     kb = SAIDA.stat().st_size / 1024
     linhas = le_csv()
     print(f"{SAIDA.relative_to(RAIZ)}: {kb:.0f} KB, {len(linhas)} linhas")
-    # A página é ESCRITA antes de reprovar, e essa ordem é decisão: quem acabou
-    # de mexer no CSV quer ver o estado quebrado no desenho para consertá-lo. O
-    # que não pode é sair 0 — foi assim que 67 alvos apontaram para ids
-    # inexistentes na versão anterior do mapa sem um único erro visível.
     return 1 if reprova_por_orfas(pecas_orfas(linhas)) else 0
 
 

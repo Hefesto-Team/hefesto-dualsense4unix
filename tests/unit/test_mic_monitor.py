@@ -35,7 +35,6 @@ from hefesto_dualsense4unix.app.mic_monitor import (
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import selo_mic
 
-# Saída real do `pactl list sources short` (índice, nome, driver, formato,
 # estado — separados por TAB), com um DualSense no meio.
 _PACTL = (
     "645\talsa_output.pci-0000_0c_00.4.iec958-stereo.monitor\tPipeWire\ts32le 2ch\tIDLE\n"
@@ -43,11 +42,6 @@ _PACTL = (
     "651\talsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00."
     "mono-fallback\tPipeWire\ts16le 1ch\tSUSPENDED\n"
 )
-
-
-# ---------------------------------------------------------------------------
-# Descoberta e atribuição da source
-# ---------------------------------------------------------------------------
 
 
 def test_fontes_dualsense_pega_so_a_captura_do_controle() -> None:
@@ -58,10 +52,7 @@ def test_fontes_dualsense_pega_so_a_captura_do_controle() -> None:
 
 
 def test_monitor_de_saida_nunca_entra() -> None:
-    """`.monitor` é o áudio que SAI pelo alto-falante do controle.
-
-    Medir aquilo faria o "nível do mic" subir com a trilha do jogo.
-    """
+    """`.monitor` é o áudio que SAI pelo alto-falante do controle."""
     saida = (
         "12\talsa_output.usb-Sony_Interactive_Entertainment_Wireless_Controller-00."
         "analog-stereo.monitor\tPipeWire\ts16le\tIDLE\n"
@@ -94,20 +85,9 @@ def test_fonte_bluez_casa_pelo_mac_mesmo_com_varios_controles() -> None:
 
 
 def test_nome_alsa_nunca_casa_por_acaso_com_um_mac() -> None:
-    """O "hex" que sobra de um nome ALSA é lixo de palavra, não MAC.
-
-    A busca por MAC é restrita a nomes `bluez` de propósito: sem isso, um
-    casamento por acaso apontaria o mic do controle errado.
-    """
+    """O "hex" que sobra de um nome ALSA é lixo de palavra, não MAC."""
     fontes = fontes_dualsense(_PACTL)
-    # "eae" existe dentro de "...Entertainment..."; com dois candidatos, a
-    # regra do "um para um" não vale e a resposta certa é não saber.
     assert escolher_fonte(fontes, "eae", ["eae", "outro"]) is None
-
-
-# ---------------------------------------------------------------------------
-# Mute e selo
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -115,28 +95,18 @@ def test_nome_alsa_nunca_casa_por_acaso_com_um_mac() -> None:
     [("Mute: yes", True), ("Mute: no", False), ("Mudo: não", None), ("", None)],
 )
 def test_muted_de_saida(saida: str, esperado: bool | None) -> None:
-    """A saída traduzida ("Mudo: não") vira None: é sinal de que o LC_ALL=C
-    não pegou, e chutar ali seria inventar estado de microfone."""
+    """A saída traduzida ("Mudo: não") vira None: é sinal de que o LC_ALL=C"""
     assert muted_de_saida(saida) is esperado
 
 
 def test_selo_ativo_e_mudo_usam_as_cores_do_guia() -> None:
     assert selo_mic(False) == ("ATIVO", "#50fa7b", "#21222c")
-    # LEGIBILIDADE-01: o texto do selo MUDO era `#6272a4` sobre a trilha
-    # `#2b2d3a` — 2,85:1, o pior par da interface, e justamente a palavra que
-    # diz se o microfone está aberto. Passou a `#c8ccda` (8,51:1).
     assert selo_mic(True) == ("MUDO", "#2b2d3a", "#c8ccda")
 
 
 def test_selo_sem_mute_lido_nao_afirma_ativo() -> None:
-    """`None` = ainda não li. Cravar "ATIVO" diria que o mic está aberto sem
-    ter lido nada — é a diferença entre não saber e afirmar."""
+    """`None` = ainda não li. Cravar "ATIVO" diria que o mic está aberto sem"""
     assert selo_mic(None) is None
-
-
-# ---------------------------------------------------------------------------
-# Nível
-# ---------------------------------------------------------------------------
 
 
 def _pcm(amplitude: int, amostras: int = 800) -> bytes:
@@ -152,15 +122,13 @@ def test_rms_de_fundo_de_escala_e_um() -> None:
 
 
 def test_rms_de_bloco_truncado_nao_vira_pico() -> None:
-    """Um `read()` cortado no encerramento do `parec` não pode acender o
-    medidor no talo."""
+    """Um `read()` cortado no encerramento do `parec` não pode acender o"""
     assert rms_de_pcm_s16le(b"") == 0.0
     assert rms_de_pcm_s16le(b"\x01") == 0.0
 
 
 def test_escala_em_db_e_nao_linear() -> None:
-    """Escala linear é inútil num medidor de voz: fala normal ficaria em 3%
-    de barra e só um grito encheria."""
+    """Escala linear é inútil num medidor de voz: fala normal ficaria em 3%"""
     meia_escala = nivel_para_fracao(rms_de_pcm_s16le(_pcm(16384)))
 
     assert 0.85 < meia_escala < 1.0
@@ -169,12 +137,7 @@ def test_escala_em_db_e_nao_linear() -> None:
 
 
 def test_abaixo_do_piso_o_medidor_fica_vazio() -> None:
-    assert nivel_para_fracao(0.0005) == 0.0  # ~-66 dBFS
-
-
-# ---------------------------------------------------------------------------
-# Captura (thread) e ciclo de vida
-# ---------------------------------------------------------------------------
+    assert nivel_para_fracao(0.0005) == 0.0
 
 
 class _Stdout:
@@ -210,7 +173,7 @@ def test_captura_publica_nivel_e_mute() -> None:
         mute_intervalo_s=1.0,
     )
 
-    captura._loop()  # síncrono: sem corrida de thread no teste
+    captura._loop()
 
     assert len(publicados) == 1
     assert publicados[0].muted is True
@@ -238,34 +201,12 @@ def test_captura_sem_parec_nao_levanta_e_nao_publica() -> None:
 
 @pytest.fixture(autouse=True)
 def _sem_conhecimento_de_usb(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Este arquivo NÃO sabe nada de USB — e agora diz isso em voz alta.
-
-    MIC-QUE-DEPENDIA-DA-MAQUINA-01 (19/08/2026). Os testes daqui dublam o
-    `pactl` e o capturador, e ainda assim `MicMonitor.reconciliar` chamava
-    `usb_pai_por_uniq`, que lê o **sysfs de verdade** da máquina que estiver
-    rodando. O resultado passava a depender do host: verde aqui, vermelho no
-    runner do CI, sempre no mesmo teste. Medido — com um casamento por USB que
-    dá dono ao nó de áudio, `reconciliar` devolve ZERO captura e a asserção
-    `1 == 0` sai igualzinha à do CI.
-
-    O casamento por USB tem casa própria (`test_a_placa_e_o_controle_pelo_usb_pai`),
-    com sysfs dublado inteiro. Aqui ele fica de fora por escolha, não por
-    esquecimento — que é a diferença entre um dublê e um buraco.
-    """
+    """Este arquivo NÃO sabe nada de USB — e agora diz isso em voz alta."""
     monkeypatch.setattr(mic_monitor, "usb_pai_por_uniq", lambda _uniqs, **_kw: {})
 
 
 def _esperar_capturas(abertos: list[str], quantas: int, limite_s: float = 5.0) -> None:
-    """Espera as capturas NASCEREM — elas abrem em thread, não no `reconciliar`.
-
-    `_Captura.iniciar()` dá `Thread.start()` e volta na hora; quem chama o
-    `capturador` é o `_loop` já na thread. Afirmar sobre `abertos` na linha
-    seguinte é afirmar sobre uma corrida — e o teste passava porque o GIL
-    costuma ceder rápido, não porque o código garantisse algo.
-
-    A espera é pelo EFEITO, com teto: cinco segundos é mil vezes o que ela leva
-    aqui, e ainda assim termina em milissegundos no caso bom.
-    """
+    """Espera as capturas NASCEREM — elas abrem em thread, não no `reconciliar`."""
     limite = time.monotonic() + limite_s
     while len(abertos) < quantas and time.monotonic() < limite:
         time.sleep(0.002)
@@ -277,7 +218,7 @@ def _monitor(saida_pactl: str = _PACTL) -> tuple[MicMonitor, list[str]]:
 
     def capturador(fonte: str) -> Any:
         abertos.append(fonte)
-        return _Proc([])  # EOF na hora: a thread nasce e morre sem publicar
+        return _Proc([])
 
     monitor = MicMonitor(
         runner=lambda argv: saida_pactl if "list" in argv else "Mute: no",

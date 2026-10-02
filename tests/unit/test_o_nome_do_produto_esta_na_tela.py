@@ -1,25 +1,4 @@
-"""O nome do produto está na tela das dez abas — O-NOME-DO-PRODUTO-NA-TELA-01.
-
-**O pedido dela, 21/09/2026:** *"sumiu o Hefesto Dualsense4Linux (o 4 era verde
-se não me engano) do banner. ao menos tinha no gtk em nenhum momento da tela
-temos o nosso produto a disposição do user"*. <!-- noqa-acento: citação literal dela -->
-
-**A escolha dela, 22/09/2026, sobre os mockups:** a opção A2 (o nome em duas
-linhas ao lado da logo), com três ajustes:
-
-1. *"o card dos controles ali do selecionar deixa em uma linha como os do B"* —
-   o chip da fita não quebra de linha;
-2. *"Esse x controles cai fora pra ganharmos espaçço Lateral"*  (noqa-acento: dela)
-   — o cabeçalho diz só `x USB · y BT`, e `Nenhum controle` com a mesa vazia;
-3. *"aumentar um pouco a fonte do Selecionar no banner tambem pq ele tá  (noqa-acento: dela)
-   meio invisível"*.
-
-A RÉGUA LÊ A PÁGINA PUBLICADA, que é o que o produto renderiza. O esqueleto das
-dez é um só (`topo.html`), mas uma página que não foi regerada ou publicada
-seria a cura que não chegou à tela.
-
-AS MORDIDAS estão em cada docstring.
-"""
+"""O nome do produto está na tela das dez abas — O-NOME-DO-PRODUTO-NA-TELA-01."""
 
 from __future__ import annotations
 
@@ -33,7 +12,6 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import onde, pacotes
 
-#: As dez abas, pelo nome do arquivo, da pasta que o produto renderiza.
 ABAS = sorted(p.name for p in onde.paginas(publicado=True) if p.name[:2].isdigit())
 
 
@@ -54,19 +32,12 @@ def test_sao_as_dez() -> None:
 
 @pytest.mark.parametrize("arquivo", ABAS)
 def test_o_nome_esta_ao_lado_da_logo_com_o_4_verde(arquivo: str) -> None:
-    """Uma vez por aba, depois da logo e antes da fita, com o `4` à parte.
-
-    A MORDIDA: tire o `marca-nome` do `topo.html`, regere e publique — as dez
-    reprovam. Tire só o `<span class="m-4">` e a segunda asserção diz que o
-    verde sumiu.
-    """
+    """Uma vez por aba, depois da logo e antes da fita, com o `4` à parte."""
     linha = _linha_da_fita(_pagina(arquivo))
     assert linha.count('class="marca-nome"') == 1, f"{arquivo}: o nome não está no banner"
     assert '<span class="m-hef">Hefesto</span>' in linha, arquivo
     assert 'DualSense<span class="m-4">4</span>Unix' in linha, (
         f"{arquivo}: o 4 de DualSense4Unix perdeu o elemento próprio — o verde sumiu")
-    # `fita` como classe inteira: `fita-linha` contém a palavra, e sete abas
-    # levam `fita inerte`.
     fita = re.search(r'<div class="fita[ "]', linha)
     assert fita, f"{arquivo}: a fita sumiu da linha"
     assert linha.index('class="logo"') < linha.index('class="marca-nome"') < fita.start(), (
@@ -83,11 +54,7 @@ def test_as_cores_do_nome_sao_as_da_gtk(arquivo: str) -> None:
 
 @pytest.mark.parametrize("arquivo", ABAS)
 def test_o_chip_da_fita_nao_quebra_de_linha(arquivo: str) -> None:
-    """Com quatro controles numa janela estreita o chip partia em duas linhas.
-
-    A MORDIDA: tire o `white-space:nowrap` da regra `.fita .chip` do
-    `topo.html` e esta régua reprova nas dez.
-    """
+    """Com quatro controles numa janela estreita o chip partia em duas linhas."""
     regra = re.search(r"\.fita \.chip\{[^}]*\}", _pagina(arquivo))
     assert regra and "white-space:nowrap" in regra.group(0), (
         f"{arquivo}: o chip da fita voltou a poder quebrar de linha")

@@ -1,30 +1,4 @@
-"""TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01 — o que o daemon abre, e onde nasce.
-
-A frase de 26/09 era «todo aplicativo que o daemon abre nasce fora do serviço»,
-e era falsa: o teclado na tela abria por ``Popen`` de dentro do serviço, com o
-``nice 5`` e o ``oom 200`` do daemon. E ninguém dizia, de cada processo que o
-daemon abre, se ele é PROGRAMA DELA (sai do serviço, pelo dono) ou AJUDANTE do
-daemon (fica dentro, e morre com ele).
-
-As réguas:
-
-1. **A lista de quem abre processo** em ``daemon/`` e ``integrations/``, cada
-   um com veredito e a contagem, exaustiva nos dois sentidos: um ``Popen``
-   novo sem veredito reprova, e um veredito sem ``Popen`` também;
-2. **os programas dela passam pelo dono** — a lista de quem chama
-   ``fora_do_servico.abrir`` em ``src/``, exaustiva nos dois sentidos, e o
-   teclado na tela está nela;
-3. **o teclado pela unidade**: aberto por um ``systemd-run`` de mentira que faz
-   nascer o programa de verdade e o publica no ``cgroup.procs`` da unidade,
-   onde o real publica; o PID se pergunta a ela, e o R3 fecha;
-4. **o laço de leitura não espera o gerenciador**: com um ``systemd-run`` que
-   leva dois segundos, o toque do PS e o do L3 voltam na hora, e o laço segue
-   dando tique.
-
-Nenhum caso daqui chega ao gerenciador de usuário de quem roda a suíte: o
-``_executar_de_verdade`` é sempre trocado, e o de verdade recusa sob a suíte
-(``test_steam_fora_do_servico_01.py``).
-"""
+"""TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01 — o que o daemon abre, e onde nasce."""
 from __future__ import annotations
 
 import ast
@@ -54,30 +28,10 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyConfig, Hotk
 
 _PACOTE = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 
-#: O ``Popen`` de verdade, guardado antes de qualquer fixture proibir o do
-#: teclado (o ``subprocess`` é um módulo só): é com ele que o gerenciador de
-#: mentira faz nascer o programa.
 _POPEN_DE_VERDADE = subprocess.Popen
 _PASTAS_DO_DAEMON = ("daemon", "integrations")
 
-# ---------------------------------------------------------------------------
-# 1 — a lista de quem abre processo, com veredito
-# ---------------------------------------------------------------------------
 
-#: Os vereditos. A chave é ``pasta/arquivo.py::função``; o valor é
-#: ``(veredito, quantos, por quê)``, e ``quantos`` conta as chamadas e as
-#: referências ao ``Popen`` naquela função — um segundo ``Popen`` numa função
-#: que já tinha veredito também reprova.
-#:
-#: - ``ajudante``: processo do daemon (ou da janela), que vive e morre com
-#:   quem o abriu. Fica dentro, e é o certo;
-#: - ``o dono``: o ``Popen`` de reserva do próprio ``fora_do_servico.abrir``;
-#: - ``reserva do dono``: um ``Popen`` que só existe para ser o ``popen=`` do
-#:   dono;
-#: - ``outro processo``: não roda no daemon.
-#:
-#: «Programa dela» NÃO é veredito desta lista: programa dela abre pelo dono, e
-#: é a régua 2 que o conta.
 VEREDITOS: dict[str, tuple[str, int, str]] = {
     "daemon/subsystems/ouvinte_do_som.py::_uma_volta": (
         "ajudante", 1,
@@ -117,9 +71,6 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "o `Popen` de reserva: quem chama já é da pessoa, ou não há systemd de "
         "usuário, ou ele recusou",
     ),
-    # O SCRIPT DO GESTO — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01, 01/10/2026:
-    # o «Escolher um script…» de um gesto roda pelo `systemd-run --wait`, e o
-    # `Popen` daqui é a reserva quando não há gerenciador (ou ele recusou).
     "integrations/fora_do_servico.py::rodar_e_esperar": (
         "o dono", 1,
         "o `Popen` de reserva do script de um gesto: espera o fim, com teto",
@@ -137,7 +88,6 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
 
 VEREDITOS_VALIDOS = frozenset({"ajudante", "o dono", "reserva do dono", "outro processo"})
 
-#: Os programas dela: quem chama ``fora_do_servico.abrir`` em ``src/``.
 PROGRAMAS_DELA: dict[str, str] = {
     "daemon/subsystems/keyboard.py::_OSKController._abrir": "o teclado na tela (L3)",
     "daemon/subsystems/hotkey.py::_a_acao_da_maquina": "o programa do PS personalizado",
@@ -213,7 +163,7 @@ def varrer(fonte: str, rel: str) -> tuple[Counter[str], set[str]]:
     """``(quem abre processo, quem chama o dono)`` de um fonte, por função."""
     arvore = ast.parse(fonte)
     modulos, funcoes = _nomes_do_dono(arvore)
-    fora: set[int] = set()  # anotações e o `popen=` entregue ao dono
+    fora: set[int] = set()
     for no in ast.walk(arvore):
         if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
             a = no.args
@@ -279,11 +229,7 @@ def _varrer_pastas(pastas: Sequence[str]) -> tuple[Counter[str], set[str]]:
 
 
 def test_todo_processo_que_o_daemon_abre_tem_veredito() -> None:
-    """A régua 1, nos dois sentidos, com a contagem.
-
-    MORDE: devolva o ``subprocess.Popen`` ao ``_OSKController`` e ela reprova
-    com ``daemon/subsystems/keyboard.py::_OSKController…`` sem veredito.
-    """
+    """A régua 1, nos dois sentidos, com a contagem."""
     abridores, _ = _varrer_pastas(_PASTAS_DO_DAEMON)
     sem_veredito = {k: n for k, n in abridores.items() if k not in VEREDITOS}
     sem_popen = sorted(set(VEREDITOS) - set(abridores))
@@ -301,11 +247,7 @@ def test_todo_processo_que_o_daemon_abre_tem_veredito() -> None:
 
 
 def test_todo_programa_dela_passa_pelo_dono() -> None:
-    """A régua 2: quem chama ``fora_do_servico.abrir`` em ``src/``, nos dois sentidos.
-
-    MORDE: troque o ``fora_do_servico.abrir`` do teclado na tela pelo
-    ``subprocess.Popen`` de antes e o teclado sai desta lista.
-    """
+    """A régua 2: quem chama ``fora_do_servico.abrir`` em ``src/``, nos dois sentidos."""
     pastas = [p.name for p in sorted(_PACOTE.iterdir()) if p.is_dir()]
     _, donos = _varrer_pastas(pastas)
     assert donos == set(PROGRAMAS_DELA), (
@@ -315,8 +257,7 @@ def test_todo_programa_dela_passa_pelo_dono() -> None:
 
 
 def test_o_teclado_na_tela_abre_pelo_dono_e_so_por_ele() -> None:
-    """O item 3 da sprint, dito do arquivo: nenhum ``Popen`` no teclado, e o
-    ``_abrir`` chama o dono."""
+    """O item 3 da sprint, dito do arquivo: nenhum ``Popen`` no teclado, e o"""
     arquivo = _PACOTE / "daemon" / "subsystems" / "keyboard.py"
     abridores, donos = varrer(
         arquivo.read_text(encoding="utf-8"), "daemon/subsystems/keyboard.py")
@@ -325,12 +266,7 @@ def test_o_teclado_na_tela_abre_pelo_dono_e_so_por_ele() -> None:
 
 
 def test_a_varredura_ve_o_popen_escondido() -> None:
-    """A régua não é cega ao ``Popen`` guardado num nome, nem ao do ``os``.
-
-    Sem isto, ``f = subprocess.Popen; f([...])`` passaria por fora das duas
-    listas — e o ``popen=`` entregue ao dono e a anotação de tipo, que não
-    abrem nada, têm de continuar de fora.
-    """
+    """A régua não é cega ao ``Popen`` guardado num nome, nem ao do ``os``."""
     fonte = (
         "import os, subprocess\n"
         "from hefesto_dualsense4unix.integrations import fora_do_servico\n"
@@ -347,30 +283,17 @@ def test_a_varredura_ve_o_popen_escondido() -> None:
     assert donos == {"x.py::pelo_dono"}
 
 
-# ---------------------------------------------------------------------------
-# 2 — o teclado pela unidade, com um gerenciador de mentira fiel
-# ---------------------------------------------------------------------------
-
 _DENTRO_DO_SERVICO = fds.Contexto(
     gerenciador=True,
     herdaria="dentro do serviço hefesto-dualsense4unix.service",
     oom_do_gerenciador=100,
 )
 
-#: O dublê do binário do teclado na tela: tem ``/proc/<pid>/comm`` de verdade,
-#: e morre com SIGTERM sem janela nenhuma na tela de quem roda a suíte.
 _DUBLE = "sleep"
 
 
 class _GerenciadorDeMentira:
-    """O ``systemd-run`` de mentira, e ele não é mais frouxo que o real.
-
-    O real faz nascer o programa numa unidade e o publica no ``cgroup.procs``
-    dela, sob ``app.slice`` (medido na árvore de cgroup da máquina dela em
-    28/09/2026, com o systemd 255). Este faz o mesmo numa árvore de mentira:
-    o programa nasce de verdade, e o PID do ``systemd-run`` nunca é o dele.
-    ``segurar`` prende a volta até alguém soltar — é o gerenciador lento.
-    """
+    """O ``systemd-run`` de mentira, e ele não é mais frouxo que o real."""
 
     def __init__(self, raiz: Path, *, nascer: bool = True) -> None:
         self.raiz = raiz
@@ -469,11 +392,7 @@ def gerenciador(
 def test_o_teclado_nasce_numa_unidade_e_o_pid_vem_dela(
     gerenciador: _GerenciadorDeMentira,
 ) -> None:
-    """Prova 1 da sprint, em bancada: a linha é a do dono, e o PID é o da unidade.
-
-    MORDE: no ``_abrir``, deixe de perguntar o PID à unidade e o arquivo de
-    sessão não nasce — o daemon seguinte não adotaria o teclado.
-    """
+    """Prova 1 da sprint, em bancada: a linha é a do dono, e o PID é o da unidade."""
     ctrl = teclado._OSKController()
     ctrl.open()
     assert len(gerenciador.chamadas) == 1
@@ -493,13 +412,7 @@ def test_o_teclado_nasce_numa_unidade_e_o_pid_vem_dela(
 def test_sem_o_arquivo_de_sessao_a_unidade_responde(
     gerenciador: _GerenciadorDeMentira, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Sem ``XDG_RUNTIME_DIR`` gravável o arquivo de sessão não nasce, e o
-    daemon não guarda processo nenhum: quem sabe do teclado é a unidade.
-
-    MORDE: tire o ramo da unidade de ``_pid_vivo`` e o ``aberto()`` responde
-    «fechado» com o teclado de pé — o L3 seguinte empilharia outro, e o R3
-    não fecharia nada.
-    """
+    """Sem ``XDG_RUNTIME_DIR`` gravável o arquivo de sessão não nasce, e o"""
     monkeypatch.setattr(teclado, "_gravar_sessao", lambda *_a, **_k: None)
     ctrl = teclado._OSKController()
     ctrl.open()
@@ -524,12 +437,7 @@ def test_o_r3_fecha_o_teclado_da_unidade(gerenciador: _GerenciadorDeMentira) -> 
 def test_o_r3_fecha_o_teclado_e_nao_o_vizinho_da_unidade(
     gerenciador: _GerenciadorDeMentira,
 ) -> None:
-    """Na unidade pode haver mais de um processo; o R3 fecha o que tem o nome
-    do teclado, e não o primeiro da lista.
-
-    MORDE: tire a pergunta do ``comm`` de ``_pid_na_unidade`` e o SIGTERM vai
-    para o vizinho — o teclado fica de pé na tela dela.
-    """
+    """Na unidade pode haver mais de um processo; o R3 fecha o que tem o nome"""
     ctrl = teclado._OSKController()
     ctrl.open()
     teclado_de_pe = gerenciador.nascidos[0]
@@ -564,32 +472,18 @@ def test_o_teclado_fechado_por_fora_faz_o_l3_abrir_de_novo(
 
 
 def test_a_parada_nao_deixa_teclado_sem_dono(gerenciador: _GerenciadorDeMentira) -> None:
-    """Um L3 na fila não abre o teclado DEPOIS da parada do daemon.
-
-    O primeiro L3 está em voo (o gerenciador segura a volta); o segundo espera
-    na fila. A parada (``close`` de fora do fio) tira o da fila, espera o em
-    voo e fecha. Sem o ``descartar``, o toque da fila corre inteiro antes do
-    ``close`` — e abre um segundo teclado que a parada só fecha por sorte.
-
-    MORDE: tire o ``self._fio.descartar()`` do ``close`` e o gerenciador conta
-    DUAS aberturas.
-    """
+    """Um L3 na fila não abre o teclado DEPOIS da parada do daemon."""
     gerenciador.segurar = threading.Event()
     ctrl = teclado._OSKController()
-    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")  # abre (em voo, preso)
-    # O primeiro tem de estar EM VOO (no gerenciador) antes dos outros: se a
-    # parada o achasse ainda na fila, ela o descartaria junto, e o caso seria
-    # outro.
+    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     limite = time.monotonic() + 5.0
     while not gerenciador.chamadas and time.monotonic() < limite:
         time.sleep(0.01)
     assert gerenciador.chamadas, "o primeiro L3 nem chegou ao gerenciador"
-    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")  # fecharia
-    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")  # abriria de novo
+    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     parada = threading.Thread(target=ctrl.close)
     parada.start()
-    # Solta o gerenciador só depois de a parada ter mexido na fila (ou de
-    # cinco segundos, quando ela não mexe — é a mordida).
     limite = time.monotonic() + 5.0
     while ctrl._fio._fila and time.monotonic() < limite:
         time.sleep(0.02)
@@ -605,15 +499,7 @@ def test_a_parada_nao_deixa_teclado_sem_dono(gerenciador: _GerenciadorDeMentira)
 def test_a_parada_espera_o_toque_que_ja_saiu_da_fila(
     gerenciador: _GerenciadorDeMentira, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O toque que o fio já tirou da fila termina antes de a parada fechar.
-
-    Entre o ``popleft`` do fio e a tranca do ``_atender`` há uma janela, e o
-    fio pode perder a vez ali. Sem a espera do ``close``, a parada pega a
-    tranca primeiro, não acha teclado nenhum, e o toque abre o teclado DEPOIS
-    dela: na tela, sem dono para fechá-lo. O dublê só alarga a janela.
-
-    MORDE: tire a espera do ``close`` e o teclado fica de pé.
-    """
+    """O toque que o fio já tirou da fila termina antes de a parada fechar."""
     ctrl = teclado._OSKController()
     atender = ctrl._atender
     saiu_da_fila = threading.Event()
@@ -633,24 +519,12 @@ def test_a_parada_espera_o_toque_que_ja_saiu_da_fila(
         "o toque abriu o teclado depois da parada, e ninguém o fecha")
 
 
-# ---------------------------------------------------------------------------
-# 3 — o laço de leitura não espera o gerenciador
-# ---------------------------------------------------------------------------
-
-#: O que o gerenciador de mentira leva, e o que um tique pode custar aqui. O
-#: laço lê a 60 Hz; o teto do tique é um quarto da demora, folga de sobra para
-#: a cobertura e a carga do CI, e um tique que esperasse o gerenciador passa
-#: dele inteiro.
 _DEMORA_DO_GERENCIADOR_S = 2.0
 _TIQUE_S = _DEMORA_DO_GERENCIADOR_S / 4
 
 
 def test_o_l3_nao_segura_o_laco(gerenciador: _GerenciadorDeMentira) -> None:
-    """Com o gerenciador lento, o toque volta na hora.
-
-    MORDE: faça o ``dispatch_token`` chamar ``self._atender(token)`` direto e
-    o toque leva a demora inteira.
-    """
+    """Com o gerenciador lento, o toque volta na hora."""
     gerenciador.demora_s = _DEMORA_DO_GERENCIADOR_S
     ctrl = teclado._OSKController()
     t0 = time.monotonic()
@@ -688,16 +562,7 @@ def steam_lenta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Gerenciador
 
 
 def test_o_ps_nao_segura_o_laco(steam_lenta: _GerenciadorDeMentira) -> None:
-    """A régua do achado 9 da auditoria, pelo detector de verdade.
-
-    O toque curto do PS dispara no release; com o ``systemd-run`` lento,
-    o tique do release volta na hora e os seguintes também, e a Steam sai pelo
-    dono uma vez só.
-
-    MORDE: troque o ``fio.disparar(...)`` do ``_on_ps_solo`` pela chamada
-    direta ``_a_acao_da_maquina(da_maquina, comando)`` e o tique do release
-    leva a demora inteira.
-    """
+    """A régua do achado 9 da auditoria, pelo detector de verdade."""
     gesto = hotkey.build_ps_solo_callback(_daemon_do_ps())
     mgr = HotkeyManager(on_ps_solo=gesto, config=HotkeyConfig(buffer_ms=0))
     mgr.observe(["ps"], now=0.0)
@@ -717,10 +582,7 @@ def test_o_ps_nao_segura_o_laco(steam_lenta: _GerenciadorDeMentira) -> None:
 def test_o_segundo_ps_com_o_primeiro_em_voo_nao_abre_outra_steam(
     steam_lenta: _GerenciadorDeMentira,
 ) -> None:
-    """Um toque em voo por vez: o segundo, com a Steam ainda nascendo, sai.
-
-    MORDE: dê ``espera=1`` ao fio do PS e o gerenciador conta duas Steam.
-    """
+    """Um toque em voo por vez: o segundo, com a Steam ainda nascendo, sai."""
     gesto = hotkey.build_ps_solo_callback(_daemon_do_ps())
     gesto()
     gesto()
@@ -728,17 +590,8 @@ def test_o_segundo_ps_com_o_primeiro_em_voo_nao_abre_outra_steam(
     assert len(steam_lenta.chamadas) == 1
 
 
-# ---------------------------------------------------------------------------
-# 4 — o fio e a unidade, por dentro
-# ---------------------------------------------------------------------------
-
-
 def test_um_pedido_que_levanta_nao_trava_o_fio() -> None:
-    """Um toque que levanta não pode deixar o fio «ocupado» para sempre.
-
-    MORDE: tire o ``try`` do ``_drenar`` e o segundo pedido é recusado — o PS
-    morreria no primeiro erro até o daemon reiniciar.
-    """
+    """Um toque que levanta não pode deixar o fio «ocupado» para sempre."""
     avisos: list[str] = []
     fio = fds.FioDeTrabalho("hefesto-teste", ao_falhar=lambda e: avisos.append(str(e)))
 
@@ -791,12 +644,7 @@ def test_pids_da_unidade_pelo_proc_quando_a_fatia_e_outra(tmp_path: Path) -> Non
 
 
 def test_pids_da_unidade_no_cgroup_v1(tmp_path: Path) -> None:
-    """Numa máquina só com o cgroup v1 não há linha ``0::``: quem diz a
-    unidade é a da ``systemd`` (``1:name=systemd:/…``).
-
-    MORDE: leia só a linha ``0::`` no ``/proc`` de cada processo e o teclado
-    na tela fica sem PID ali — cada L3 abriria outro por cima do primeiro.
-    """
+    """Numa máquina só com o cgroup v1 não há linha ``0::``: quem diz a"""
     proc = tmp_path / "proc"
     (proc / "self").mkdir(parents=True)
     fatia = "/user.slice/user-1000.slice/user@1000.service/app.slice"
@@ -815,15 +663,7 @@ def test_pids_da_unidade_no_cgroup_v1(tmp_path: Path) -> None:
 
 
 def test_pids_da_unidade_so_para_nome_nosso(tmp_path: Path) -> None:
-    """Um nome que não é de ``nome_da_unidade`` não vira caminho de arquivo, nem
-    pergunta ao ``/proc``.
-
-    O ``/proc`` é de mentira, e nele o serviço do daemon está de pé: a régua
-    não depende de a máquina que roda a suíte ter o daemon no ar.
-
-    MORDE: tire a guarda do nome e o PID do daemon volta como se fosse o
-    teclado — o R3 mandaria SIGTERM no próprio daemon.
-    """
+    """Um nome que não é de ``nome_da_unidade`` não vira caminho de arquivo, nem"""
     proc = tmp_path / "proc"
     (proc / "self").mkdir(parents=True)
     servico = (

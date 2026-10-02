@@ -1,17 +1,4 @@
-"""As citações `arquivo:linha` andam com o código — o `scripts/reapontar-citacoes.py`.
-
-A ordem dela, 25/09/2026: *«erro no install e durante o Merge quero q vc mesmo
-corrija na origem melhorando o produto e o tornando cada vez mais inteligente e
-integrado»*. O erro do merge que mais se repete nesta casa é a citação que
-apodrece quando o código anda: 27 reapontadas à mão em 10/09, 30 no merge da
-6e. <!-- noqa-acento: citação literal dela -->
-
-O ORÁCULO É O HISTÓRICO DELA: no commit de antes de cada reapontamento à mão de
-25/09 (`5cab10b84`, 20 citações do mapa; `f6627f119`, 2), o script chega ao
-MESMO arquivo, byte a byte, que foi commitado à mão. Isso foi medido ao escrever
-esta régua; aqui ele roda num repositório de mentira, com a mesma física: o
-código anda num commit, e a citação fica para trás.
-"""
+"""As citações `arquivo:linha` andam com o código — o `scripts/reapontar-citacoes.py`."""
 
 from __future__ import annotations
 
@@ -46,7 +33,6 @@ def segunda():
 def terceira():
     return 3
 '''
-#: `segunda` ocupa as linhas 10-12, `terceira` as 15-16.
 
 CSV = (
     "id,prosa\n"
@@ -140,12 +126,7 @@ def _validar(raiz: Path) -> subprocess.CompletedProcess[str]:
 
 @pytest.mark.parametrize("commitar", [True, False], ids=["andou-num-commit", "andou-sem-commit"])
 def test_o_codigo_anda_e_as_citacoes_vao_junto(repo: Path, commitar: bool) -> None:
-    """O caso de toda costura: código inserido acima do que se cita.
-
-    MORDIDA: faça o ``levar`` olhar só a árvore de trabalho (tire o laço do
-    ``git log``) — com o deslocamento já commitado não há versão verdadeira para
-    levar, e esta régua reprova no «andou-num-commit».
-    """
+    """O caso de toda costura: código inserido acima do que se cita."""
     _inserir_no_topo(repo, 3, commitar=commitar)
     assert _validar(repo).returncode == 1, "a premissa: as citações apodreceram"
 
@@ -159,16 +140,11 @@ def test_o_codigo_anda_e_as_citacoes_vao_junto(repo: Path, commitar: bool) -> No
     assert "alvo.py:18-19`" in md, md
     citante = (repo / "src" / "hefesto_dualsense4unix" / "citante.py").read_text(encoding="utf-8")
     assert "`alvo.py:13-15`" in citante, citante
-    # Nada além do número mudou no CSV.
     assert csv == CSV.replace(":10-12", ":13-15").replace(":15 (", ":18 ("), csv
 
 
 def test_a_funcao_que_mudou_de_lugar_e_achada_pelo_bloco(repo: Path) -> None:
-    """``segunda`` vai para o fim do arquivo: nenhum hunk a leva, o bloco idêntico sim.
-
-    MORDIDA: tire a busca pelo bloco do ``_mapear`` — a citação vai para a lista
-    à mão, e esta régua reprova.
-    """
+    """``segunda`` vai para o fim do arquivo: nenhum hunk a leva, o bloco idêntico sim."""
     alvo = repo / "src" / "hefesto_dualsense4unix" / "alvo.py"
     texto = alvo.read_text(encoding="utf-8")
     bloco = "def segunda():\n    x = 2\n    return x\n\n\n"
@@ -185,12 +161,7 @@ def test_a_funcao_que_mudou_de_lugar_e_achada_pelo_bloco(repo: Path) -> None:
 
 
 def test_o_que_sumiu_nao_se_chuta(repo: Path) -> None:
-    """``segunda`` apagada: não há onde apontar, e o documento não muda.
-
-    MORDIDA: faça o ``levar`` devolver a faixa velha levada pelo deslocamento
-    sem conferir o símbolo — o CSV passa a apontar para ``terceira``, e esta
-    régua reprova.
-    """
+    """``segunda`` apagada: não há onde apontar, e o documento não muda."""
     alvo = repo / "src" / "hefesto_dualsense4unix" / "alvo.py"
     alvo.write_text(
         alvo.read_text(encoding="utf-8").replace("def segunda():\n    x = 2\n    return x\n", ""),
@@ -199,8 +170,6 @@ def test_o_que_sumiu_nao_se_chuta(repo: Path) -> None:
     _git(repo, "commit", "-q", "-am", "segunda sai")
     antes = (repo / "docs" / "data" / "mapa.csv").read_text(encoding="utf-8")
 
-    # A seco a conferência depois de escrever não roda: o plano tem de estar
-    # certo sozinho — a outra camada (``_quebradas_pela_troca``) tem a mordida dela.
     plano, _ = _rodar(repo, escrever=False)
     assert not any("alvo.py:10-12" in linha for linha in plano), plano
 
@@ -213,16 +182,7 @@ def test_o_que_sumiu_nao_se_chuta(repo: Path) -> None:
 
 
 def test_endereco_que_serve_a_duas_promessas_volta_como_estava(repo: Path) -> None:
-    """O mesmo endereço, escrito antes e depois de o código andar, com duas promessas.
-
-    ``primeira`` em ``alvo.py:6`` foi escrito antes das três linhas novas (podre);
-    ``VALOR`` em ``alvo.py:6`` foi escrito depois (verdadeiro). Trocar o número
-    curaria a primeira e quebraria a segunda: o documento volta como estava e
-    vai à mão.
-
-    MORDIDA: tire a conferência do ``_quebradas_pela_troca`` — o documento é
-    gravado com a promessa de ``VALOR`` quebrada, e esta régua reprova.
-    """
+    """O mesmo endereço, escrito antes e depois de o código andar, com duas promessas."""
     md = repo / "docs" / "protocol" / "x.md"
     md.write_text(
         "# Doc\n\nO `primeira` em `src/hefesto_dualsense4unix/alvo.py:6`.\n", encoding="utf-8"
@@ -244,15 +204,7 @@ def test_endereco_que_serve_a_duas_promessas_volta_como_estava(repo: Path) -> No
 
 
 def test_a_funcao_inteira_a_deriva_volta_ao_lugar(repo: Path) -> None:
-    """A citação de ``segunda`` nasceu uma linha acima: 9-11, e a função é 10-12.
-
-    O validador passa essa citação verde — o ``def`` está na faixa —, e ela
-    aponta uma linha errada. Nenhuma versão do histórico a tem exata: é o caso
-    das 33 medidas no mapa em 25/09, e só o tamanho diz que é a função inteira.
-
-    MORDIDA: tire a regra do tamanho do ``pelo_simbolo`` — a citação fica em
-    9-11, e esta régua reprova.
-    """
+    """A citação de ``segunda`` nasceu uma linha acima: 9-11, e a função é 10-12."""
     csv = repo / "docs" / "data" / "mapa.csv"
     csv.write_text(
         csv.read_text(encoding="utf-8").replace(
@@ -270,14 +222,7 @@ def test_a_funcao_inteira_a_deriva_volta_ao_lugar(repo: Path) -> None:
 
 
 def test_a_funcao_que_cresceu_e_achada_no_historico(repo: Path) -> None:
-    """``segunda`` ganha duas linhas por dentro e uma no topo: 11-15, com 10-12 ainda verde.
-
-    O tamanho não bate mais; a versão do histórico em que 10-12 ERA a função
-    inteira é que diz que a citação é da função.
-
-    MORDIDA: tire o laço do histórico do ``pelo_simbolo`` — a citação fica em
-    10-12, e esta régua reprova.
-    """
+    """``segunda`` ganha duas linhas por dentro e uma no topo: 11-15, com 10-12 ainda verde."""
     alvo = repo / "src" / "hefesto_dualsense4unix" / "alvo.py"
     alvo.write_text(
         alvo.read_text(encoding="utf-8").replace(
@@ -297,11 +242,7 @@ def test_a_funcao_que_cresceu_e_achada_no_historico(repo: Path) -> None:
 
 
 def test_o_trecho_de_dentro_da_funcao_nao_e_desta_pergunta(repo: Path) -> None:
-    """Citar as duas primeiras linhas de ``segunda`` não é citar a função inteira.
-
-    MORDIDA: troque a regra do tamanho por «a faixa encosta no def» — o trecho
-    vira a função inteira, e esta régua reprova.
-    """
+    """Citar as duas primeiras linhas de ``segunda`` não é citar a função inteira."""
     csv = repo / "docs" / "data" / "mapa.csv"
     csv.write_text(
         csv.read_text(encoding="utf-8").replace(
@@ -318,16 +259,7 @@ def test_o_trecho_de_dentro_da_funcao_nao_e_desta_pergunta(repo: Path) -> None:
 
 
 def test_o_trecho_que_abraca_o_def_de_fora_anda_com_a_funcao(repo: Path) -> None:
-    """As duas primeiras linhas de ``segunda`` (10-11), e uma linha nasce em cima dela.
-
-    Hoje ``segunda`` mora em 11-13, e 10-11 ainda tem o ``def`` dentro: a
-    pergunta 2 passa verde, e a faixa abre numa linha de código que não é
-    dela. É a forma de ``coop.py:1032-1065`` (`_spawn_player`) e de
-    ``uinput_mouse.py:458-487`` (`_emit_move`), medidas em 25/09/2026.
-
-    MORDIDA: tire a pergunta 3 do ``_contem`` — a citação fica em 10-11, e esta
-    régua reprova.
-    """
+    """As duas primeiras linhas de ``segunda`` (10-11), e uma linha nasce em cima dela."""
     csv = repo / "docs" / "data" / "mapa.csv"
     csv.write_text(
         csv.read_text(encoding="utf-8").replace(
@@ -358,15 +290,7 @@ MD_CURTA = (
 
 
 def test_a_forma_curta_da_mesma_linha_anda_junto(repo: Path) -> None:
-    """A forma curta ``:N`` herda o arquivo da citação inteira da mesma linha.
-
-    O validador a lê assim e devolve o endereço com o arquivo; o texto não o
-    tem. Antes, a troca pelo endereço inteiro dava zero e saía nos feitos como
-    «(0x)» — medido na costura da 6e-4, na `dualsense-referencia-canonica.md`.
-
-    MORDIDA: tire a queda para ``_trocar_curta`` em ``reapontar`` — o `:15-16`
-    fica onde estava e esta régua reprova.
-    """
+    """A forma curta ``:N`` herda o arquivo da citação inteira da mesma linha."""
     doc = repo / "docs" / "protocol" / "curta.md"
     doc.write_text(MD_CURTA, encoding="utf-8")
     _git(repo, "add", ".")
@@ -385,11 +309,7 @@ def test_a_forma_curta_da_mesma_linha_anda_junto(repo: Path) -> None:
 def test_o_endereco_que_nao_esta_escrito_vai_para_a_mao(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Troca que não escreveu nada não entra nos feitos.
-
-    MORDIDA: devolva o ``feitos.append`` para antes do teste de ``n == 0`` —
-    o endereço sai como reapontado sem ter sido escrito, e esta régua reprova.
-    """
+    """Troca que não escreveu nada não entra nos feitos."""
     doc = repo / "docs" / "protocol" / "curta.md"
     doc.write_text(MD_CURTA, encoding="utf-8")
     _git(repo, "add", ".")

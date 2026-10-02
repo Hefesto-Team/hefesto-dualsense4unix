@@ -1,26 +1,4 @@
-"""ONDA-R2 — assets de resiliência do bluetoothd (camada 1+2 da sprint BlueZ).
-
-Sprint: docs/process/sprints/2026-07-21-sprint-pesquisa-bluez-estabilidade.md.
-Diagnóstico: docs/process/estudos/2026-07-22-diagnostico-dualsense-bt-bonds-fantasma.md.
-
-Contrato dos assets (falha-sem/passa-com; SEM root, SEM systemd vivo — só
-arquivos e `bash -n`):
-
-- bloco unificado do main.conf (hefesto-bt.block) com UMA seção [General]
-  contendo FastConnectable E JustWorksRepairing, entre as sentinelas do bloco
-  unificado — e o install.sh reescrevendo de forma idempotente (remove os
-  blocos legados E o unificado antes de apensar; bug real: 3x [General]);
-- drop-in do bluetooth.service com Restart=on-failure + WatchdogSec +
-  ExecStopPost do snapshot (o "-" na frente: falha do snapshot nunca pode
-  poluir o resultado do stop do serviço);
-- scripts bt_* executáveis, com sintaxe bash válida e as invariantes de
-  segurança do desenho: snapshot NUNCA fotografa estado vazio; restore é
-  manual e avisa sobre chave rotacionada; watchdog nunca reinicia com device
-  conectado e promove bond temporário no máximo 1x/boot; captura forense é
-  opt-in com --on/--off simétricos;
-- units/timers com os nomes que install/uninstall/doctor referenciam;
-- simetria: todo artefato que o install.sh instala aparece no uninstall.sh.
-"""
+"""ONDA-R2 — assets de resiliência do bluetoothd (camada 1+2 da sprint BlueZ)."""
 
 from __future__ import annotations
 
@@ -42,10 +20,6 @@ UNITS = [
 SCRIPTS = [
     REPO_ROOT / "scripts" / "bt_bonds_snapshot.sh",
     REPO_ROOT / "scripts" / "bt_bonds_restore.sh",
-    # BONDS-QUE-SOBREVIVEM-01 (15/08/2026): a VOLTA automática, armada no
-    # ExecStopPost do drop-in. Entra aqui para herdar a simetria
-    # install/uninstall e o `bash -n`; as invariantes dele têm portão próprio em
-    # tests/unit/test_bonds_que_sobrevivem_01_o_gatilho_da_volta.py.
     REPO_ROOT / "scripts" / "bt_bonds_autorestore.sh",
     REPO_ROOT / "scripts" / "bt_health_watchdog.sh",
     REPO_ROOT / "scripts" / "bt_crash_capture.sh",
@@ -54,7 +28,6 @@ SCRIPTS = [
 INSTALL = REPO_ROOT / "install.sh"
 UNINSTALL = REPO_ROOT / "uninstall.sh"
 DOCTOR = REPO_ROOT / "scripts" / "doctor.sh"
-#: Dono da config do BlueZ desde RADIO-ABERTO-01/E1-bis (06/08/2026).
 BLUEZ_CONFIG = REPO_ROOT / "scripts" / "bluez_config.sh"
 
 
@@ -75,27 +48,15 @@ class TestAssetsExistem:
 class TestBlocoUnificadoMainConf:
     def test_uma_unica_secao_general_com_as_duas_chaves(self) -> None:
         text = BT_BLOCK.read_text(encoding="utf-8")
-        # Conta só linhas-cabeçalho reais (o comentário do bloco também cita
-        # "[General]" em prosa — não vale).
         headers = re.findall(r"^\[General\]$", text, re.M)
         assert len(headers) == 1, "o bloco unificado deve ter UMA seção [General]"
         assert re.search(r"^FastConnectable=true$", text, re.M)
-        # RADIO-ABERTO-01 (05/08/2026): era `always`. O `always` remove a última
-        # recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond —
-        # ver tests/unit/test_radio_aberto_01.py, que é o portão da regra.
         assert re.search(r"^JustWorksRepairing=confirm$", text, re.M)
         assert "# >>> hefesto bluetooth >>>" in text
         assert "# <<< hefesto bluetooth <<<" in text
 
     def test_install_reescreve_removendo_blocos_anteriores(self) -> None:
-        # RADIO-ABERTO-01/E1-bis (06/08/2026): o mecanismo saiu do install.sh
-        # para scripts/bluez_config.sh — este teste de TEXTO nunca conseguiu
-        # acusar que a cura de `confirm` não chegava ao disco (o que aconteceu,
-        # e foi medido). Quem prova hoje é tests/unit/test_bluez_config_sh.py,
-        # que roda o mecanismo contra raiz falsa. O contrato de texto continua
-        # aqui, mirando o dono novo, e ganhou a fiação.
         text = BLUEZ_CONFIG.read_text(encoding="utf-8")
-        # O awk de reescrita precisa cobrir o bloco unificado E os dois legados.
         assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing)" in text, (
             "bluez_config.sh deve remover os três blocos sentinelados antes de apensar"
         )
@@ -104,8 +65,6 @@ class TestBlocoUnificadoMainConf:
 
     def test_uninstall_remove_o_bloco_unificado(self) -> None:
         text = BLUEZ_CONFIG.read_text(encoding="utf-8")
-        # Um alternador que cobre o bloco unificado de hoje E os dois legados
-        # de instalações anteriores a 21/07.
         assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>" in text
         assert 'scripts/bluez_config.sh" remover' in UNINSTALL.read_text(encoding="utf-8")
 
@@ -114,15 +73,6 @@ class TestDropinResilience:
     def test_dropin_tem_watchdog_restart_e_snapshot_na_parada(self) -> None:
         text = DROPIN.read_text(encoding="utf-8")
         assert re.search(r"^Restart=on-failure$", text, re.M)
-        # BLUETOOTHD-MORTO-POR-NOS-01 (08/08/2026): este portão aceitava
-        # `WatchdogSec=\d+` — QUALQUER número — e por isso ficou verde enquanto o
-        # valor 30 matava o bluetoothd dela com SIGABRT às 00:27:35, levando os
-        # quatro pareamentos junto. Um portão que aceita qualquer valor não trava
-        # valor nenhum: ele trava a PRESENÇA da linha, que nunca foi o risco.
-        #
-        # Agora exige o zero, e exige que ele esteja escrito: o pacote do BlueZ
-        # entrega a linha COMENTADA, e ligá-la foi decisão nossa — desligar
-        # também tem de ser, por escrito.
         assert re.search(r"^WatchdogSec=0$", text, re.M), (
             "o `WatchdogSec` do drop-in não é 0. Ligar o watchdog do systemd "
             "sobre o bluetoothd faz o systemd MATAR o daemon quando ele demora a "
@@ -130,7 +80,6 @@ class TestDropinResilience:
             "medido em 35 s). Ver "
             "docs/process/sprints/2026-08-08-BLUETOOTHD-MORTO-POR-NOS-01-*.md"
         )
-        # "-" prefixado: falha do snapshot nunca contamina o stop do serviço.
         assert re.search(
             r"^ExecStopPost=-/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot\.sh",
             text,
@@ -138,12 +87,7 @@ class TestDropinResilience:
         )
 
     def test_dropin_aplica_modo_ativo_nintendo_no_start(self) -> None:
-        """BT-NINTENDO-ACTIVE-01: ExecStartPost aplica nome+link-policy a cada
-        (re)start do bluetoothd. "-" prefixado = não-fatal (adaptador pode não
-        estar pronto no start; o watchdog reafirma). O "+" (23/09/2026, pedido
-        da onda 3a) tira o gancho do sandbox do bluetoothd, para o nome do
-        lugar chegar no start — a régua dele mora em
-        `test_o_que_era_do_zsh_mora_no_hefesto.py`."""
+        """BT-NINTENDO-ACTIVE-01: ExecStartPost aplica nome+link-policy a cada"""
         text = DROPIN.read_text(encoding="utf-8")
         assert re.search(
             r"^ExecStartPost=-\+/usr/local/lib/hefesto-dualsense4unix/bt_active_mode\.sh",
@@ -152,14 +96,8 @@ class TestDropinResilience:
         )
 
     def test_active_mode_prefixa_nintendo_no_alias(self) -> None:
-        """O NOME é do adaptador — vale para todos os controles.
-
-        Medido em 23/07: com o alias aplicado e o SNIFF devolvido, o 8BitDo
-        probou normalmente. Ou seja, o nome não atrapalha o clone.
-        """
+        """O NOME é do adaptador — vale para todos os controles."""
         text = (REPO_ROOT / "scripts" / "bt_active_mode.sh").read_text(encoding="utf-8")
-        # ENTRADA-A-ENTRADA-02: a base do prefixo passou a ser o nome do lugar
-        # (ou o alias atual) — a régua lê a FORMA, não o nome da variável.
         prefixado = re.search(r'(\w+)="Nintendo \$\{\w+\}"', text)
         assert prefixado, "deve prefixar 'Nintendo' no alias"
         assert f'Alias s "${{{prefixado.group(1)}}}"' in text, (
@@ -167,24 +105,11 @@ class TestDropinResilience:
         )
 
     def test_no_sniff_e_por_dispositivo_nao_do_adaptador(self) -> None:
-        """BT-SNIFF-PER-OUI-01 (23/07) — o escopo do no-sniff é POR CONTROLE.
-
-        Os dois da linhagem Nintendo têm requisitos INCOMPATÍVEIS e nenhum
-        ajuste global satisfaz os dois:
-
-            SNIFF permitido -> Pro cai sob carga  | 8BitDo FUNCIONA
-            SNIFF recusado  -> Pro ESTÁVEL        | 8BitDo probe morre (-110)
-
-        Aplicar como default do adaptador (o que fb5e3ad fazia) quebrava a
-        probe do clone: 4 falhas / 0 sucessos, sempre em
-        `Failed to get joycon info; ret=-110`. Devolvido o sniff, ele probou em
-        54 s na primeira tentativa.
-        """
+        """BT-SNIFF-PER-OUI-01 (23/07) — o escopo do no-sniff é POR CONTROLE."""
         text = (REPO_ROOT / "scripts" / "bt_active_mode.sh").read_text(encoding="utf-8")
         codigo = "\n".join(
             linha for linha in text.splitlines() if not linha.lstrip().startswith("#")
         )
-        # O default do adaptador PRECISA manter o SNIFF (é o que o clone usa).
         assert "lp rswitch,hold,sniff,park" in codigo, (
             "o default do adaptador tem de permitir SNIFF — sem ele o 8BitDo "
             "não completa a probe"
@@ -192,40 +117,11 @@ class TestDropinResilience:
         assert "lp rswitch 2" not in codigo and "lp rswitch\n" not in codigo, (
             "no-sniff como default do ADAPTADOR é a regressão medida em 23/07"
         )
-        # E o no-sniff por-conexão tem de mirar o ENDEREÇO do controle — é isto
-        # que faz dele "por dispositivo" e não "do adaptador".
         assert 'hcitool lp "${MAC}" RSWITCH' in codigo, (
             "o no-sniff deixou de mirar o endereço do controle: se o alvo virar "
             "um `hciN`, ele volta a ser default do adaptador e a probe do "
             "8BitDo morre de novo em ret=-110"
         )
-        # NOTA DATADA — 25/08/2026 (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01).
-        #
-        # Aqui havia mais duas asserções, e as duas FOSSILIZARAM o defeito que
-        # aquela frente curou:
-        #
-        #   - uma exigia a constante `OUI_NINTENDO_REAL` no script;
-        #   - a outra exigia a faixa do Pro DESTA bancada escrita por extenso,
-        #     com a mensagem "a OUI é a fonte da verdade, nunca VID/PID".
-        #
-        # (a faixa não se repete aqui, nem como exemplo: escrevê-la de novo é
-        # o convite para ela voltar a ser a definição.)
-        #
-        # A faixa do Pro DESTA bancada tinha virado a DEFINIÇÃO de "Pro". A
-        # Nintendo tem 82 faixas MA-L registradas: quem tem um Pro de outra
-        # safra ficava com o link caindo sob carga a cada sessão de quatro
-        # jogadores, calado, com o `doctor` aprovando a cura. A constante foi
-        # apagada e ganhou LÁPIDE própria — `test_a_oui_separa_o_clone_do_
-        # genuino.py::test_a_faixa_desta_bancada_nao_voltou_a_ser_a_definicao_
-        # de_pro` reprova se ela voltar. Ou seja: as duas réguas desta árvore
-        # estavam exigindo o contrário uma da outra, e esta era a errada.
-        #
-        # O QUE NÃO CADUCOU é o que este teste sempre mediu: o ESCOPO. Quem
-        # decide agora é `_e_pro_genuino`, POR CONTROLE, e é a existência desse
-        # filtro guardando o laço que separa "por dispositivo" de "no adaptador
-        # inteiro". O comportamento — que Pro entra e que clone fica de fora —
-        # é medido ao vivo em `test_o_no_sniff_alcanca_todo_pro.py`, que roda o
-        # script de verdade contra uma mesa de mentira.
         assert re.search(r"^\s*_e_pro_genuino\b.*\|\|\s*continue\s*$", codigo, re.M), (
             "o laço por-conexão perdeu o filtro por controle: sem ele o "
             "`hcitool lp` alcança TODO mundo que estiver conectado, e o clone "
@@ -233,26 +129,16 @@ class TestDropinResilience:
         )
 
     def test_watchdog_reafirma_modo_ativo(self) -> None:
-        """O watchdog (2 min) delega ao bt_active_mode.sh — cobre adaptador que
-        resetou (rfkill/suspend zeram a link policy) e conexões novas."""
+        """O watchdog (2 min) delega ao bt_active_mode.sh — cobre adaptador que"""
         text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(
             encoding="utf-8"
         )
         assert "bt_active_mode.sh" in text
 
     def test_uninstall_reverte_sniff_e_nome(self) -> None:
-        """Uninstall simétrico: volta o SNIFF default e tira o prefixo Nintendo.
-
-        A lista do `hciconfig lp` tem de ir separada por VÍRGULA. Com espaços
-        ele lê só o primeiro token e a reversão vira NO-OP silencioso — medido
-        ao vivo em 23/07: `lp rswitch hold sniff park` deixou a policy em
-        RSWITCH, e só `rswitch,hold,sniff,park` devolveu RSWITCH HOLD SNIFF
-        PARK. O uninstall estava deixando o adaptador sem SNIFF para sempre.
-        """
+        """Uninstall simétrico: volta o SNIFF default e tira o prefixo Nintendo."""
         text = UNINSTALL.read_text(encoding="utf-8")
         assert "lp rswitch,hold,sniff,park" in text
-        # Só linhas de CÓDIGO — os comentários citam a sintaxe errada de
-        # propósito, para explicar o que foi consertado.
         codigo = "\n".join(
             linha for linha in text.splitlines() if not linha.lstrip().startswith("#")
         )
@@ -272,9 +158,6 @@ class TestInvariantesDosScripts:
     def test_restore_avisa_sobre_chave_rotacionada(self) -> None:
         text = (REPO_ROOT / "scripts" / "bt_bonds_restore.sh").read_text(encoding="utf-8")
         assert "bluetoothctl remove" in text
-        # RESTORE-MASK-01: o stop precisa sobreviver à bus-activation (clientes
-        # consultando org.bluez cancelavam o job e o restore abortava com o
-        # serviço vivo) — mask --runtime + job irreversível + gate pós-stop.
         assert "mask --runtime" in text
         assert "systemctl stop --job-mode=replace-irreversibly bluetooth.service" in text
 
@@ -282,33 +165,12 @@ class TestInvariantesDosScripts:
         text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(encoding="utf-8")
         assert "nunca derrubo sessão viva" in text
         assert "rate-limit" in text
-        # Promoção de bond temporário: no máximo uma tentativa por device/boot,
-        # via modo interativo com quit segurado (pair é assíncrono —
-        # COMPAT BLUEZ-586-CTL-01: o one-shot do cliente 5.86 é mudo).
         assert "promoted-" in text
         assert "_btctl_lento 25 pair" in text
         assert "COMPAT BLUEZ-586-CTL-01" in text
 
     def test_trust_nao_depende_de_conexao(self) -> None:
-        """WATCHDOG-TRUST-DEADLOCK-01 (23/07) — o deadlock do trust.
-
-        A vigia 2b vivia DENTRO do laço da vigia 2, atrás do gate
-        `Connected == true`, e por isso era inalcançável justamente para quem
-        mais precisa dela:
-
-            sem trust    -> BlueZ RECUSA a reconexão entrante
-                            ("Refusing connection from <MAC>: unknown device")
-            recusado     -> nunca fica Connected
-            não conectado-> a vigia nunca o alcança -> segue sem trust
-
-        Medido ao vivo em 23/07 22h58: 8BitDo e Pro Nintendo com Bonded=true e
-        Trusted=false, ambos desconectados, o log martelando "unknown device" a
-        cada toque no sync. Nenhum tick resolvia, por construção.
-
-        Trust é idempotente e não depende do link — tem de rodar sobre TODO
-        device com bond. Já a promoção de bond temporário (vigia 2) SEGUE
-        exigindo conexão: o Pair() explícito corre sobre o link vivo.
-        """
+        """WATCHDOG-TRUST-DEADLOCK-01 (23/07) — o deadlock do trust."""
         text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(
             encoding="utf-8"
         )
@@ -324,7 +186,6 @@ class TestInvariantesDosScripts:
             "scan seria autorizar quem nunca foi pareado)"
         )
         assert "Trusted b true" in codigo
-        # E a vigia 2 (promoção de bond) segue exigindo conexão.
         vigia2 = text.split("vigia 2: bond temporário", 1)[1]
         assert '"${OBJ}" Connected)" == "true" ]] || continue' in vigia2
 
@@ -332,8 +193,6 @@ class TestInvariantesDosScripts:
         text = (REPO_ROOT / "scripts" / "bt_crash_capture.sh").read_text(encoding="utf-8")
         for flag in ("--on", "--off", "--status"):
             assert flag in text
-        # O install NUNCA liga a captura: pode CITAR o comando em mensagem de
-        # ajuda, mas nenhuma linha pode EXECUTÁ-LO (sudo/execução direta).
         install_text = texto_do_instalador()
         assert not re.search(
             r"^\s*(sudo\s+)?(/[\w/.-]*)?bt_crash_capture\.sh\s+--on", install_text, re.M
@@ -357,7 +216,6 @@ class TestSimetriaInstallUninstall:
             )
             assert script.name in uninstall_text, f"uninstall.sh não remove {script.name}"
         assert "10-hefesto-resilience.conf" in uninstall_text
-        # O uninstall também precisa desarmar uma janela forense esquecida.
         assert "90-hefesto-debug.conf" in uninstall_text
         assert "99-hefesto-bt-coredump.conf" in uninstall_text
 
@@ -371,16 +229,9 @@ class TestSimetriaInstallUninstall:
 class TestAlvoBluez586:
     def test_install_aponta_para_o_alvo_586(self) -> None:
         text = texto_do_instalador()
-        # 22/07: o alvo virou a VERSÃO COMPLETA ~hefesto24.04.2 (patch BOND-KEEP-01)
-        # — o compare-versions precisa distinguir .1 de .2; um "5.86" nu pularia
-        # o upgrade. Aceita 5.86 base OU a versão hefesto completa.
         assert re.search(r'_BZ_TARGET="5\.86', text), (
             "passo 3f deve mirar o BlueZ 5.86 (sprint 2026-07-21: retry-limit 17a227b7)"
         )
-        # A REVISÃO É LIDA do BASELINE, que é o dono dela e o que o
-        # `scripts/construir_bluez_backport.sh` constrói (INSTALL-E-UNINSTALL-
-        # DO-RADIO-01, 23/09/2026): esta linha DIGITAVA o ".3", e o install
-        # seguiu mirando o .3 com o .4 — o do hefesto-0002 — pronto no cache.
         baseline = (
             Path(__file__).resolve().parents[2] / "assets" / "bluez-backport" / "BASELINE"
         ).read_text(encoding="utf-8")

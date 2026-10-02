@@ -40,15 +40,9 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     HotkeyManager,
 )
 
-# --- 1. despacho: o combo novo NÃO pode cair no on_prev ---------------------
-
 
 def test_combo_da_ponte_nao_dispara_o_perfil_anterior() -> None:
-    """MORDE a cadeia de ifs do `_fire`.
-
-    Com o `else: cb = self.on_prev`, o combo "ponte" chamava on_prev — trocar
-    de ponte viraria trocar de perfil para trás no meio da partida dela.
-    """
+    """MORDE a cadeia de ifs do `_fire`."""
     eventos: list[str] = []
     mgr = HotkeyManager(
         on_next=lambda: eventos.append("next"),
@@ -74,32 +68,22 @@ def test_combo_desconhecido_nao_dispara_callback_nenhum() -> None:
 
 
 def test_todo_combo_configurado_tem_despacho() -> None:
-    """Rede para o próximo combo: registrar em `_combos_configurados` sem
-    registrar no despacho volta a ser um gesto que cai no callback errado."""
+    """Rede para o próximo combo: registrar em `_combos_configurados` sem"""
     mgr = HotkeyManager()
     for nome in mgr._combos_configurados():
         conhecido, _cb = mgr._callback_do_combo(nome)
         assert conhecido, f"combo {nome!r} não tem entrada no despacho"
 
 
-# --- combo: default, vazamento e desligamento -------------------------------
-
-
 def test_default_do_combo_da_ponte() -> None:
-    """Pedido dela, 19/08/2026: o gesto é `PS + R3`.
-
-    SUBSTITUI o `PS + seta direita` de 18/08. `PS + Options` não serve — já é o
-    modo jogo (`DEFAULT_COMBO_GAMEMODE`), e foi ela quem apontou a colisão.
-    """
+    """Pedido dela, 19/08/2026: o gesto é `PS + R3`."""
     assert DEFAULT_COMBO_PONTE == ("ps", "r3")
     assert HotkeyConfig().next_bridge == ("ps", "r3")
     assert DEFAULT_COMBO_PONTE != DEFAULT_COMBO_GAMEMODE, "colide com o modo jogo"
 
 
 def test_ponte_nao_vaza_para_o_desktop() -> None:
-    """FEAT-HOTKEY-COMBO-NO-LEAK: sem isto o 'r3' do gesto vira clique do meio
-    no desktop (`uinput_mouse`) ou fecha o teclado virtual
-    (`keyboard_mappings`) — os dois donos que o R3 já tem fora do combo."""
+    """FEAT-HOTKEY-COMBO-NO-LEAK: sem isto o 'r3' do gesto vira clique do meio"""
     mgr = HotkeyManager()
     assert mgr.should_passthrough(["ps", "r3"], emulation_active=True) is False
     assert "r3" in mgr.combo_buttons_active(["ps", "r3"])
@@ -117,9 +101,7 @@ def test_tupla_vazia_desliga_o_gesto_da_ponte() -> None:
 
 
 def test_combo_vazio_nao_dispara_com_nenhum_botao() -> None:
-    """MORDE: `frozenset()` vazio é subconjunto de tudo. Antes só o `gamemode`
-    tinha guarda de tupla vazia — `next_profile=()` disparava a CADA tick, sem
-    ninguém tocar em botão."""
+    """MORDE: `frozenset()` vazio é subconjunto de tudo. Antes só o `gamemode`"""
     eventos: list[str] = []
     mgr = HotkeyManager(
         on_next=lambda: eventos.append("next"),
@@ -128,9 +110,6 @@ def test_combo_vazio_nao_dispara_com_nenhum_botao() -> None:
     mgr.observe([], now=0.0)
     assert mgr.observe([], now=0.5) is None
     assert eventos == []
-
-
-# --- 2. ciclo de pontes -----------------------------------------------------
 
 
 class _FakeDevice:
@@ -147,10 +126,6 @@ class _FakeController:
         return 1
 
     def set_led(self, color: tuple[int, int, int]) -> None:
-        # AVISO-DE-MODO-01: rota PROIBIDA para aviso — o `set_led` GRAVA a cor
-        # no estado desejado e o broadcast ainda limpa os overrides por-uniq.
-        # O dublê registra separado para o teste poder reprovar quem voltar a
-        # usá-la.
         self._trilha.append(("led_gravado", color))
 
     def restaurar_lightbar_do_perfil(self) -> int:
@@ -192,12 +167,7 @@ class _FakeDaemon:
         self.teclado: list[bool] = []
         self.supressao: list[bool | None] = []
         self.arranjo: list[dict[str, Any]] = []
-        #: A porta que o setter recebeu em cada pedido — O-MODO-SE-GRAVA-ONDE-
-        #: ELE-MUDA-01 (29/09/2026): o gesto diz `grava_o_modo="controle"`, e é
-        #: o setter do daemon que grava o modo no perfil ativo.
         self.grava_o_modo: list[Any] = []
-        # MODO-DE-CONEXAO-01 (13/09/2026): o caminho vivo mora na config, escrito
-        # só DEPOIS de o vpad alcançar o pedido — é o que `ponte_atual` lê.
         self.config = SimpleNamespace(gamepad_caminho=None)
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
@@ -212,9 +182,6 @@ class _FakeDaemon:
         caminho: str | None = None,
         grava_o_modo: Any = False,
     ) -> bool:
-        # A TRILHA GANHOU O CAMINHO — MODO-DE-CONEXAO-01. Antes a 3ª posição era
-        # o alvo do gesto, e ele ia como MÁSCARA; agora a máscara vai `None` (o
-        # gesto não a troca) e o alvo vai na 5ª, como caminho.
         self.trilha.append(("gamepad", enabled, flavor, origin, caminho))
         self.grava_o_modo.append(grava_o_modo)
         if not self._aplica:
@@ -231,10 +198,6 @@ class _FakeDaemon:
     def set_mouse_emulation(
         self, enabled: bool, *, origin: str = "profile"
     ) -> bool:
-        # ORIGEM-QUE-MENTE-01 (08/08): o protocolo exige `origin` explícito, e o
-        # dublê tem de exigir também — senão a chamada real estoura, o
-        # `contextlib.suppress` do produto engole, e o teste vira verde sobre uma
-        # ponte que não subiu. Guardamos o par para PROVAR que a origem viaja.
         self.mouse.append(enabled)
         self.mouse_origem.append(origin)
         return enabled
@@ -253,10 +216,6 @@ class _FakeDaemon:
         origin: str = "manual",
         grava_o_modo: Any = False,
     ) -> dict[str, str]:
-        # POINT-AND-CLICK-01 (17/09/2026): o gesto parou de escrever a própria
-        # sequência de quatro chamadas e passou pela porta única do clique. O
-        # dublê tem de ter o método, senão o produto cai no ramo do "daemon
-        # enxuto" e o teste vira verde sobre um gesto que não carregou nada.
         self.arranjo.append({"origin": origin, "grava_o_modo": grava_o_modo})
         return {"mouse": "aplicado"}
 
@@ -268,8 +227,7 @@ def _sem_espera(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_ponte_atual_le_o_estado_vivo() -> None:
-    """Lê o vpad, não a config: foi o papel dizer `xbox` e o vivo dizer
-    `dualsense` que pôs o daemon em laço na noite de 18/08."""
+    """Lê o vpad, não a config: foi o papel dizer `xbox` e o vivo dizer"""
     assert ponte_atual(_FakeDaemon(flavor="xbox")) == PONTE_XBOX  # type: ignore[arg-type]
     assert ponte_atual(_FakeDaemon(flavor=None)) == PONTE_MOUSE_TECLADO  # type: ignore[arg-type]
 
@@ -283,30 +241,19 @@ def test_proxima_ponte_da_a_volta() -> None:
 
 @pytest.mark.asyncio
 async def test_gesto_troca_a_mascara_com_origin_manual() -> None:
-    """MORDE o item 3: só `origin="manual"` atravessa o gate R-04 com o jogo
-    aberto. Com origin="profile" a troca é RECUSADA e o gesto vira nada.
-
-    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o
-    gesto pedia a MÁSCARA `xbox` (`flavor`). AGORA confere que ele pede o CAMINHO
-    `xbox` e deixa a máscara em `None`: *"a máscara do vpad não muda em aperto
-    nenhum"* (§D.5 da sprint). A origem manual continua sendo a mordida.
-    """
+    """MORDE o item 3: só `origin="manual"` atravessa o gate R-04 com o jogo"""
     d = _FakeDaemon(flavor=PONTE_DUALSENSE)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     chamadas = [t for t in d.trilha if t[0] == "gamepad"]
     assert chamadas == [("gamepad", True, None, "manual", PONTE_XBOX)]
     assert d._gamepad_device.flavor == PONTE_DUALSENSE, "o gesto trocou a máscara"
-    # A PORTA VAI JUNTO — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026): é por
-    # ela que o setter do daemon grava o modo no perfil ativo.
     assert d.grava_o_modo == ["controle"], (
         f"o gesto não disse a porta ao setter: {d.grava_o_modo}")
 
 
 @pytest.mark.asyncio
 async def test_gesto_avisa_pela_lightbar_antes_de_derrubar_o_jogo() -> None:
-    """HONESTIDADE (item 5): com o jogo na autoridade, a troca recria o vpad e
-    pode invalidar o handle do jogo. O aviso vermelho tem de vir ANTES da
-    troca — depois já não é aviso, é laudo."""
+    """HONESTIDADE (item 5): com o jogo na autoridade, a troca recria o vpad e"""
     d = _FakeDaemon(flavor=PONTE_DUALSENSE, authority="game")
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
@@ -317,16 +264,12 @@ async def test_gesto_avisa_pela_lightbar_antes_de_derrubar_o_jogo() -> None:
     )
     indice_troca = next(i for i, t in enumerate(d.trilha) if t[0] == "gamepad")
     assert indice_vermelho < indice_troca, "o aviso saiu depois da troca"
-    # A COR DO MODO não sai daqui (AVISO-DE-MODO-01): quem pinta é o aviso
-    # level-triggered, para a barra dizer a mesma coisa quando a troca vem da
-    # janela. Pintar aqui também era piscada dupla no caminho do gesto.
     assert ("led", hotkey_sub.CORES_DO_MODO[PONTE_XBOX]) not in d.trilha
 
 
 @pytest.mark.asyncio
 async def test_sem_jogo_na_autoridade_nao_ha_aviso_vermelho() -> None:
-    """Aviso é para risco real. No desktop a troca não derruba nada, e piscar
-    vermelho à toa ensinaria a ignorar o vermelho."""
+    """Aviso é para risco real. No desktop a troca não derruba nada, e piscar"""
     d = _FakeDaemon(flavor=PONTE_DUALSENSE, authority="daemon")
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("led", hotkey_sub.COR_AVISO_RISCO) not in d.trilha
@@ -334,26 +277,10 @@ async def test_sem_jogo_na_autoridade_nao_ha_aviso_vermelho() -> None:
 
 @pytest.mark.asyncio
 async def test_ponte_mouse_teclado_derruba_o_vpad_e_carrega_o_arranjo() -> None:
-    """A ponte de point-and-click sobe MUDA se o modo jogo continuar ligado —
-    é a supressão que gateia o dispatch de mouse/teclado no poll loop.
-
-    POINT-AND-CLICK-01 (17/09/2026) — O QUE ESTA RÉGUA MEDIA E O QUE ELA MEDE.
-    Ela cobrava as TRÊS chamadas que o gesto escrevia à mão (`supressao`,
-    `mouse`, `teclado`), e era essa mão própria o defeito: o mesmo modo tinha
-    dois donos e eles discordavam — o gesto ligava o teclado que o clique no
-    chip não ligava, e ligava o mouse que o clique deixava conforme a flag.
-    Agora os dois passam por `aplicar_o_arranjo_do_desktop`, e as três chamadas
-    acontecem LÁ DENTRO, medidas por
-    `test_o_point_and_click_ativa_o_que_a_navegacao_gravou`. Cobrá-las aqui
-    obrigaria o dublê a reimplementar o arranjo — e dublê que reimplementa o
-    produto mede a si mesmo.
-    """
+    """A ponte de point-and-click sobe MUDA se o modo jogo continuar ligado —"""
     d = _FakeDaemon(flavor=PONTE_XBOX)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("gamepad", False, None, "manual", None) in d.trilha
-    # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o `forcar_mouse` saiu — entrar
-    # na Navegação liga o mouse pelas duas portas (D-2909-A-NAVEGACAO-LIGA-O-
-    # MOUSE), e o gesto pede o mesmo arranjo do chip, com a porta que grava.
     assert d.arranjo == [{"origin": "manual", "grava_o_modo": "controle"}], (
         f"o gesto não pediu o arranjo do desktop como o chip pede: {d.arranjo}"
     )
@@ -366,9 +293,7 @@ async def test_ponte_mouse_teclado_derruba_o_vpad_e_carrega_o_arranjo() -> None:
 
 @pytest.mark.asyncio
 async def test_modo_nativo_fica_fora_do_ciclo() -> None:
-    """Item 4: o `observe` roda DEPOIS do gate do nativo no poll loop, e o
-    nativo mata o vpad sem consultar o R-04 — seria queda sem porta de volta
-    pelo controle. Nenhuma ponte do ciclo pode entrar nele."""
+    """Item 4: o `observe` roda DEPOIS do gate do nativo no poll loop, e o"""
     assert "nativo" not in CICLO_DE_PONTES
     assert "native" not in CICLO_DE_PONTES
     d = _FakeDaemon(flavor=PONTE_DUALSENSE, native=True)
@@ -378,9 +303,7 @@ async def test_modo_nativo_fica_fora_do_ciclo() -> None:
 
 @pytest.mark.asyncio
 async def test_ponte_que_nao_sobe_avisa_em_vez_de_mentir() -> None:
-    """`set_gamepad_emulation` devolve True para três desfechos diferentes
-    (aplicou, já-estava, bloqueado). O sinal honesto compara com o estado
-    VIVO — e, se a ponte não subiu, a lightbar diz isso."""
+    """`set_gamepad_emulation` devolve True para três desfechos diferentes"""
     d = _FakeDaemon(flavor=PONTE_DUALSENSE, aplica=False)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("led", hotkey_sub.CORES_DO_MODO[PONTE_XBOX]) not in d.trilha
@@ -392,9 +315,6 @@ async def test_gesto_deixa_rastro_no_store() -> None:
     d = _FakeDaemon(flavor=PONTE_DUALSENSE)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert "hotkey.ponte.cycled" in d.store.bumps
-
-
-# --- wiring no subsystem ----------------------------------------------------
 
 
 class _Cfg:
@@ -416,5 +336,4 @@ def test_start_hotkey_manager_liga_o_gesto_da_ponte() -> None:
     mgr = d._hotkey_manager
     assert mgr.config.next_bridge == DEFAULT_COMBO_PONTE
     assert mgr.on_next_bridge is not None
-    # E o despacho leva o combo ao callback certo — não ao on_prev.
     assert mgr._callback_do_combo("ponte")[1] is mgr.on_next_bridge

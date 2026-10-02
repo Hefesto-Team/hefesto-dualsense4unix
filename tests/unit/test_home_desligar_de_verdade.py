@@ -7,7 +7,7 @@ INÍCIO NÃO MENTE-01, §2.2i. O botão que PARA o produto, arma
 **nunca rodou dentro de um teste**. Os três arquivos que o citam fazem outra
 coisa:
 
-* ``test_home_render_state.py:379`` e ``:391`` **substituem** o método por um
+* ``test_home_render_state.py:321`` e ``:391`` **substituem** o método por um
   ``lambda`` — medem o dispatcher do botão único, não o desligar;
 * ``test_gui_dialogs_theme.py`` lê o **texto-fonte** dele com
   ``inspect.getsource`` procurando a classe de tema;
@@ -43,19 +43,11 @@ from hefesto_dualsense4unix.app import gui_dialogs
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 
 
-#: Os diálogos que o clique criou. Lista de MÓDULO, e não atributo de
-#: classe: uma lista como default de classe é compartilhada por toda
-#: instância, e o que se quer aqui é exatamente isso — mas dito de um jeito
-#: que não pareça estado por objeto.
 _DIALOGOS_CRIADOS: list[Any] = []
 
 
 class _Dialogo:
-    """O `Gtk.MessageDialog` do desligar, o bastante para o método rodar.
-
-    Guarda o handler de "response" para o teste poder RESPONDER — é isso que
-    faz este arquivo executar o corpo do desligar em vez de só montar a caixa.
-    """
+    """O `Gtk.MessageDialog` do desligar, o bastante para o método rodar."""
 
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
@@ -82,13 +74,7 @@ class _Dialogo:
 
 
 class _HostDoDesligar:
-    """O host mínimo do `_on_home_shutdown_clicked`, e nada além.
-
-    Dublê PARCIAL de propósito (mesmo desenho do `_HomeStub` de
-    `test_home_render_state.py`): o método só toca `_get`, `_status_toast`,
-    `_refresh_home_tab` e o flag. Montar a aba inteira aqui faria a régua
-    depender de widget que este caminho não usa.
-    """
+    """O host mínimo do `_on_home_shutdown_clicked`, e nada além."""
 
     _on_home_shutdown_clicked = HomeActionsMixin._on_home_shutdown_clicked
 
@@ -98,8 +84,6 @@ class _HostDoDesligar:
         self.user_stopped_registros: list[bool] = []
 
     def _get(self, _nome: str) -> None:
-        # `main_window` não existe num dublê: o diálogo aceita `transient_for`
-        # nulo, e é assim que a janela real se comporta antes do bootstrap.
         return None
 
     def _status_toast(self, contexto: str, msg: str) -> None:
@@ -109,9 +93,6 @@ class _HostDoDesligar:
         self.refreshs += 1
 
     def __setattr__(self, nome: str, valor: Any) -> None:
-        # O flag é o objeto da medição: guardar a SEQUÊNCIA de escritas separa
-        # "armou e desarmou" de "nunca armou" — e é essa diferença que a cura
-        # do falso-OK produz.
         if nome == "_user_stopped_daemon":
             self.user_stopped_registros.append(bool(valor))
         object.__setattr__(self, nome, valor)
@@ -119,13 +100,7 @@ class _HostDoDesligar:
 
 @pytest.fixture()
 def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Gtk falso, diálogo capturado, worker SÍNCRONO e `systemctl` de mentira.
-
-    O worker roda na hora (nada de thread) porque o que se mede é a DECISÃO
-    tomada com o resultado na mão, não a mecânica do `run_in_thread` — que tem
-    régua própria. E o `subprocess.run` é trocado para nenhum teste desta casa
-    parar o daemon de verdade: a bancada é dela (R3).
-    """
+    """Gtk falso, diálogo capturado, worker SÍNCRONO e `systemctl` de mentira."""
     _DIALOGOS_CRIADOS.clear()
     repo = types.ModuleType("gi.repository")
     repo.Gtk = SimpleNamespace(  # type: ignore[attr-defined]
@@ -152,11 +127,6 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     }
 
     def _run_in_thread(worker: Any, ok: Any, _erro: Any) -> None:
-        # O worker RODA, e o que chega ao `ok` é o retorno DELE — não um
-        # resultado inventado aqui. É essa a diferença entre medir a decisão do
-        # produto e medir o dublê: com o worker pulado, o `subprocess.run` de
-        # verdade nunca é montado e o comando que o botão dispara fica sem
-        # régua.
         estado["comandos"].append(worker)
         ok(worker())
 
@@ -184,13 +154,7 @@ def _clicar_e_responder(
 
 
 def test_a_pergunta_sai_antes_de_qualquer_coisa(bancada: dict[str, Any]) -> None:
-    """Clicar NÃO desliga: primeiro pergunta, e o diálogo é assíncrono.
-
-    `dialog.show()` cru num diálogo `modal=True` instala o grab do GTK e, se a
-    janela não chegar ao servidor, prende a janela dela inteira — clique, tecla
-    e o "X", os três (DIALOGO-QUE-MATA-A-JANELA-01). Por isso quem mostra é o
-    `mostrar_dialogo_assincrono`, e é isso que se mede aqui.
-    """
+    """Clicar NÃO desliga: primeiro pergunta, e o diálogo é assíncrono."""
     host = _HostDoDesligar()
 
     host._on_home_shutdown_clicked(object())
@@ -201,13 +165,10 @@ def test_a_pergunta_sai_antes_de_qualquer_coisa(bancada: dict[str, Any]) -> None
 
 
 def test_resposta_nao_nao_faz_nada(bancada: dict[str, Any]) -> None:
-    """O caminho mais barato de errar: desligar quem disse que não quer.
-
-    Nada de flag, nada de `systemctl`, nada de toast — e o diálogo fecha.
-    """
+    """O caminho mais barato de errar: desligar quem disse que não quer."""
     host = _HostDoDesligar()
 
-    _clicar_e_responder(host, bancada, -9)  # ResponseType.NO
+    _clicar_e_responder(host, bancada, -9)
 
     (dialogo,) = bancada["mostrados"]
     assert dialogo.destruido is True
@@ -222,7 +183,7 @@ def test_rc_zero_arma_o_flag_e_diz_desligado(bancada: dict[str, Any]) -> None:
     host = _HostDoDesligar()
     bancada["resultado"] = SimpleNamespace(returncode=0, stderr=b"")
 
-    _clicar_e_responder(host, bancada, -8)  # ResponseType.YES
+    _clicar_e_responder(host, bancada, -8)
 
     assert host.user_stopped_registros == [True], (
         "o flag tem de ficar ARMADO: é ele que o `ensure_daemon_running` "
@@ -262,7 +223,7 @@ def test_rc_diferente_de_zero_desarma_o_flag_e_nao_diz_desligado(
         returncode=1, stderr=b"Failed to stop hefesto-dualsense4unix.service"
     )
 
-    _clicar_e_responder(host, bancada, -8)  # ResponseType.YES
+    _clicar_e_responder(host, bancada, -8)
 
     assert host.user_stopped_registros == [True, False], (
         "o flag foi armado antes de o worker sair (é o desenho) e tinha de ser "
@@ -283,13 +244,7 @@ def test_rc_diferente_de_zero_desarma_o_flag_e_nao_diz_desligado(
 def test_o_texto_da_falha_ainda_manda_para_a_aba_sistema(
     bancada: dict[str, Any],
 ) -> None:
-    """MEDIÇÃO, não aprovação: a **D-F** está em aberto e é dela.
-
-    Este teste existe para que a decisão dela tenha um lugar onde aterrissar —
-    e para que, se alguém mudar o texto antes de ela decidir, o vermelho apareça
-    aqui em vez de na tela. Hoje o forte manda para o fraco: a aba Sistema roda
-    o MESMO `systemctl --user stop` e vai falhar igual.
-    """
+    """MEDIÇÃO, não aprovação: a **D-F** está em aberto e é dela."""
     host = _HostDoDesligar()
     bancada["resultado"] = SimpleNamespace(returncode=1, stderr=b"")
 

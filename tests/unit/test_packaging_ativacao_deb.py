@@ -1,29 +1,4 @@
-"""Testes do caminho de ATIVACAO dos pacotes (.deb, Arch, Fedora, Nix).
-
-A leva de restauro de 2026-07-29 achou o caminho de ativação do .deb MORTO e
-três pacotes incompletos. Cada teste aqui pina uma dessas curas:
-
-(A) BUG-DEB-MIRROR-RULES-INCOMPLETO-01 — o build_deb.sh copiava as regras udev
-    para DOIS destinos: o diretório VIVO (/usr/lib/udev/rules.d) e o ESPELHO
-    (/usr/share/hefesto-dualsense4unix/udev-rules), que o install-host-udev.sh
-    PREFERE como origem. O espelho tinha um glob próprio que parava na 81, e o
-    pre-flight do helper exige TODAS as regras com exit 1 -> o postinst mandava
-    rodar o helper e ele ABORTAVA antes de tudo: usuário de .deb ficava sem o
-    grupo hefesto, sem broker e sem nenhum dos três módulos DKMS.
-(D) O TERCEIRO módulo DKMS (hid-playstation) sobrevivia ao apt remove/pacman -R
-    registrado — e o dkms.conf dele tem AUTOINSTALL="yes", logo se reconstruía a
-    cada kernel novo e vencia o in-tree para sempre.
-(E) O spec do Fedora não compilava: instalava dkms/hid-playstation/ e não o
-    listava em %files (rpmbuild aborta com "Installed (but unpackaged) file(s)").
-(F) O package.nix instalava as regras 73/74, REMOVIDAS do repo em 2026-07-18.
-(G) PACKAGING-ICON-NAME-MISMATCH-01 — o .desktop compartilhado pede
-    Icon=hefesto e três dos cinco formatos instalavam o PNG com outro nome.
-(H) PACKAGING-EPOCH-DOWNGRADE-01 — a numeração voltou de 4.0.0 para 0.1.0 em
-    2026-07-24; sem epoch, apt/dnf/pacman tratam 0.3.0 como DOWNGRADE e RECUSAM
-    o upgrade.
-(I) O prerm do .deb matava 'hefesto\\.app\\.main', módulo que não existe desde o
-    rebrand da v3.0.0 (hefesto_dualsense4unix.app.main).
-"""
+"""Testes do caminho de ATIVACAO dos pacotes (.deb, Arch, Fedora, Nix)."""
 from __future__ import annotations
 
 import re
@@ -76,13 +51,8 @@ def _globs_do_build_deb() -> list[str]:
     return re.findall(r"(assets/\S+\.rules)", bloco.group(1))
 
 
-# --- (A) o espelho do .deb recebe as MESMAS regras que o diretório vivo -------
-
-
 def test_espelho_do_deb_cobre_todas_as_regras_do_preflight() -> None:
-    """Cada regra que o install-host-udev.sh EXIGE tem de nascer da lista única
-    do build_deb.sh — senão o espelho fica incompleto e o helper aborta,
-    derrubando a ativação inteira do .deb (grupo, broker e os três DKMS)."""
+    """Cada regra que o install-host-udev.sh EXIGE tem de nascer da lista única"""
     exigidas = set(_regras_exigidas_pelo_helper())
     empacotadas: set[str] = set()
     for glob in _globs_do_build_deb():
@@ -95,8 +65,7 @@ def test_espelho_do_deb_cobre_todas_as_regras_do_preflight() -> None:
 
 
 def test_build_deb_popula_os_dois_destinos_da_mesma_lista() -> None:
-    """O diretório vivo E o espelho iteram UDEV_RULES_GLOBS — uma fonte de
-    verdade. Foi a divergência entre os dois globs que matou a ativação."""
+    """O diretório vivo E o espelho iteram UDEV_RULES_GLOBS — uma fonte de"""
     texto = _ler(BUILD_DEB)
     usos = texto.count("UDEV_RULES_GLOBS[@]")
     assert usos >= 2, (
@@ -104,8 +73,6 @@ def test_build_deb_popula_os_dois_destinos_da_mesma_lista() -> None:
     )
     assert "usr/lib/udev/rules.d" in texto
     assert MIRROR_DIR in texto
-    # O espelho não pode ter glob próprio: nenhuma linha `for rules_file in
-    # assets/...` fora da lista única.
     lacos_com_glob_literal = [
         linha
         for linha in texto.splitlines()
@@ -115,9 +82,6 @@ def test_build_deb_popula_os_dois_destinos_da_mesma_lista() -> None:
     assert not lacos_com_glob_literal, (
         f"laço de regras com glob próprio (fora da lista única): {lacos_com_glob_literal}"
     )
-
-
-# --- (C) as 82/83/84 nos formatos que ficavam fora do gate -------------------
 
 
 @pytest.mark.parametrize(
@@ -135,16 +99,11 @@ def test_regras_novas_no_pkgbuild_e_no_spec(regra: str) -> None:
     assert f"%{{_udevrulesdir}}/{regra}" in spec, f"{regra} fora da seção %files"
 
 
-# --- (D) o terceiro módulo DKMS morre no remove de TODO formato ---------------
-
-
 @pytest.mark.parametrize(
     "hook", [DEB_PRERM, DEB_POSTRM, ARCH_INSTALL, SPEC], ids=lambda p: p.name
 )
 def test_remocao_desregistra_o_hid_playstation(hook: Path) -> None:
-    """AUTOINSTALL="yes" no dkms.conf: sem o `dkms remove` em cada hook de
-    pacote, o patchado se reconstrói a cada kernel e vence o in-tree para
-    sempre numa máquina que removeu o app."""
+    """AUTOINSTALL="yes" no dkms.conf: sem o `dkms remove` em cada hook de"""
     texto = _ler(hook)
     assert "hefesto-hid-playstation" in texto, (
         f"{hook.name} não menciona o módulo hefesto-hid-playstation"
@@ -152,9 +111,6 @@ def test_remocao_desregistra_o_hid_playstation(hook: Path) -> None:
     assert re.search(
         r'dkms remove "hefesto-hid-playstation/', texto
     ), f"{hook.name} não desregistra o hefesto-hid-playstation do DKMS"
-
-
-# --- (E) o spec do Fedora compila (nada instalado fora de %files) -------------
 
 
 def test_spec_lista_o_dkms_hid_playstation_em_files() -> None:
@@ -168,9 +124,6 @@ def test_spec_lista_o_dkms_hid_playstation_em_files() -> None:
     )
 
 
-# --- (F) o package.nix não instala regra que não existe mais ------------------
-
-
 def test_nix_instala_apenas_regras_que_existem() -> None:
     nix = _ler(NIX)
     referidas = sorted(set(re.findall(r"assets/([0-9]{2}-\S+\.rules)", nix)))
@@ -180,9 +133,6 @@ def test_nix_instala_apenas_regras_que_existem() -> None:
         f"package.nix instala regra inexistente em assets/: {ausentes} "
         "(as 73/74 foram removidas do repo em 2026-07-18)"
     )
-
-
-# --- (G) o nome do arquivo de icone casa o Icon= do .desktop -----------------
 
 
 @pytest.mark.parametrize(
@@ -198,14 +148,8 @@ def test_icone_instalado_casa_o_desktop(formato: Path) -> None:
     )
 
 
-# --- (H) epoch em apt, dnf e pacman ------------------------------------------
-
-
 def test_deb_compoe_version_com_epoch() -> None:
-    """No mundo Debian o epoch vive DENTRO do campo Version (`1:0.3.0`), e não
-    pode ficar hardcoded no control (o check_version_consistency.py cobra
-    `Version:` == versão canonica do pyproject). Por isso ele e declarado em
-    campo próprio e COMPOSTO pelo build_deb.sh."""
+    """No mundo Debian o epoch vive DENTRO do campo Version (`1:0.3.0`), e não"""
     control = _ler(DEB_CONTROL)
     epoch = re.search(r"^X-Hefesto-Deb-Epoch:\s*(\d+)$", control, re.MULTILINE)
     assert epoch, "packaging/debian/control sem X-Hefesto-Deb-Epoch"
@@ -242,24 +186,8 @@ def test_spec_tem_epoch_e_changelog_coerente() -> None:
     )
 
 
-# --- (I) o prerm mata o módulo que existe de verdade -------------------------
-
-
 def test_prerm_usa_o_nome_real_do_modulo_da_gui() -> None:
-    """O prerm mata padrão que casa processo VIVO — e quem diz quais são é o dono.
-
-    O padrão original era `hefesto\\.app\\.main` e NUNCA casou (o módulo se
-    chamava `hefesto_dualsense4unix.app.main` desde o rebrand da v3.0.0). Em
-    06/09/2026 o mesmo defeito quase voltou pelo outro lado: a `GTK-3` apagou
-    `app/main.py` por decisão dela (`D-0609-GTK-LEVA-INTEIRA`) e o padrão
-    passaria a nunca casar de novo, com a tela sobrevivendo ao `apt remove`.
-
-    **POR ISSO A RÉGUA PERGUNTA AO DONO em vez de digitar a lista.** Quem sabe
-    como se reconhece um processo desta casa é
-    `utils.identidade.atual().padroes_de_matanca` — digitar os nomes aqui criava
-    o par que diverge no dia seguinte, que é o defeito que acabou de acontecer
-    duas vezes.
-    """
+    """O prerm mata padrão que casa processo VIVO — e quem diz quais são é o dono."""
     from hefesto_dualsense4unix.utils import identidade
 
     prerm = _ler(DEB_PRERM)

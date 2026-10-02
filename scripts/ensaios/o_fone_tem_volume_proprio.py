@@ -98,7 +98,6 @@ from hefesto_dualsense4unix.core.ds_output_report import (
 
 LINHA_DO_MAPA = "audio.jack.volume@dualsense"
 
-#: passo -> (volume do fone, com o bit?, o que ela deve esperar)
 PASSOS: dict[int, tuple[int, bool, str]] = {
     1: (0x7F, True, "CONTROLE POSITIVO: tem de sair som no fone"),
     2: (0x40, True, "metade — mais baixo que o passo 1?"),
@@ -245,8 +244,6 @@ def main() -> int:
             print(f"  {feitas} escrita(s) em {time.monotonic() - inicio:.1f} s")
             respostas[passo] = perguntar("  -> o que o fone fez? (verbatim)  ")
     finally:
-        # Devolve o fone ao teto com o bit: é o que o produto manda hoje
-        # (fone = alto-falante), e deixa o daemon reassumir na próxima escrita dele.
         escritor.escrever(common_do_passo(TETO_HEADPHONE_VOLUME, com_bit=True, alto_falante=None))
         escritor.fechar()
         if wav:

@@ -54,23 +54,13 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPTS = RAIZ / "scripts"
 
-#: O nome do subcomando que lê a sessão do daemon, como o protocolo o escreve.
 SUB_DA_SESSAO = "sessao"  # (noqa-acento: o nome do subcomando é o do protocolo)
 
-#: A mesa de mentira: dois no cabo, dois no rádio. Faixa forjada, 4º e 5º
-#: octetos diferentes de zero de propósito (é o que a máscara tem de comer).
 UNIQS = tuple(f"02:00:1a:4b:5c:0{n}" for n in range(1, 5))
 
-#: O endereço que NINGUÉM conhece (nem o estado, nem os arquivos): só a
-#: camada da forma o pega. Octetos soltos, para a régua gerar as formas.
 DESCONHECIDO = ("02", "00", "1a", "6d", "7e", "9f")
 
 APPID_DO_JOGO = 3050
-
-
-# ---------------------------------------------------------------------------
-# O protocolo, carregado do arquivo (ele mora em scripts/, fora do pacote)
-# ---------------------------------------------------------------------------
 
 
 def _carregar(nome: str, caminho: Path) -> ModuleType:
@@ -93,11 +83,6 @@ def ob() -> ModuleType:
 def _estado_no_berco(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """A pasta privada do protocolo (``$XDG_STATE_HOME/.../o-basico``) vai para o tmp."""
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "estado"))
-
-
-# ---------------------------------------------------------------------------
-# A máquina de mentira
-# ---------------------------------------------------------------------------
 
 
 class Sonda:
@@ -236,11 +221,6 @@ def fazer_maquina(ob: ModuleType, estado: dict[str, Any], config: Path, **extra:
     return MaquinaDeMentira()
 
 
-# ---------------------------------------------------------------------------
-# A mesa, o diário e o kernel de mentira
-# ---------------------------------------------------------------------------
-
-
 def estado_da_mesa(
     *, caminho: str = "dualsense", backend: str = "uhid", fonte_da_luz: str = "sysfs",
     perfil: str = "Freestyle", jogo: bool = False,
@@ -375,19 +355,10 @@ def da_linha(saida: Path, linha: str) -> list[dict[str, Any]]:
     return [p for p in passos(saida) if p["linha"] == linha]
 
 
-# ---------------------------------------------------------------------------
-# Régua 1 — o boot de sete pads para quatro jogadores
-# ---------------------------------------------------------------------------
-
-
 def test_regua_1_sete_pads_no_boot_para_quatro_jogadores_e_vermelho(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """Os sete pads de 27/09 nasceram em 5,3 s e três morreram depois.
-
-    Agora há quatro, e a linha 1b tem de ler o BOOT: contar os pads de agora
-    daria verde sobre o multiplicador que derrubou a sessão.
-    """
+    """Os sete pads de 27/09 nasceram em 5,3 s e três morreram depois."""
     diario = [linha_do_diario(1.0, "daemon_starting version=3")]
     diario += [
         linha_do_diario(1.5 + 0.6 * i, f"uhid_device_created name='(Hefesto P{i % 4 + 1})'")
@@ -423,11 +394,6 @@ def test_regua_1_a_troca_de_modo_depois_do_boot_nao_conta(ob: ModuleType) -> Non
     assert ob.pads_no_boot(["sem o começo do daemon"]) is None
 
 
-# ---------------------------------------------------------------------------
-# Régua 2 — o jogo no modo que o perfil dele não pediu
-# ---------------------------------------------------------------------------
-
-
 def test_regua_2_o_motivo_dito_explica_e_nao_absolve(ob: ModuleType, tmp_path: Path) -> None:
     """O L2 de 27/09: o PRAGMATA pediu o DualSense e a partida correu no Xbox.
 
@@ -456,7 +422,6 @@ def test_regua_2_o_motivo_dito_explica_e_nao_absolve(ob: ModuleType, tmp_path: P
     assert "não pediu" in linha["porque"]
     assert linha["medida"]["bloqueios"] == ["dualsense"]
     assert rc == ob.RC_VERMELHO
-    # O resto da mesa estava certo: o vermelho é dessa linha, e não de um dublê torto.
     vermelhos = [p["linha"] for p in passos(saida) if p["veredito"] == ob.VERMELHO]
     assert vermelhos == ["o modo do perfil contra o ar, também com o jogo aberto"]
 
@@ -468,11 +433,6 @@ def test_regua_2_o_modo_pedido_que_esta_no_ar_e_verde(ob: ModuleType) -> None:
         estado, {"Freestyle": {"name": "Freestyle", "mode": {"caminho": "xbox"}}}, []
     )
     assert veredito == ob.VERDE
-
-
-# ---------------------------------------------------------------------------
-# Régua 3 — o sha256 que não voltou
-# ---------------------------------------------------------------------------
 
 
 def _mexer_no_perfil(argv: Sequence[str], maquina: Any) -> None:
@@ -506,11 +466,6 @@ def test_regua_3_a_mordida_sem_a_volta_o_arquivo_passa_calado(
     assert not any("freestyle.json" in r for r in resumo(saida)["recusas"])
 
 
-# ---------------------------------------------------------------------------
-# Régua 4 — a mesa que mudou no meio
-# ---------------------------------------------------------------------------
-
-
 def _o_p2_sai(argv: Sequence[str], maquina: Any) -> None:
     if len(argv) > 1 and Path(argv[1]).name == "quem_e_quem.py":
         maquina.estado_de_agora["controllers"] = [
@@ -536,7 +491,6 @@ def test_regua_4_o_controle_que_saiu_da_mesa_recusa_dizendo_quem(
     assert any(
         "a mesa mudou no meio da medida" in r and "o P2 saiu da mesa" in r for r in recusas
     ), recusas
-    # A recusa fala por jogador, nunca pelo endereço.
     assert not any(u in json.dumps(recusas) for u in UNIQS)
 
 
@@ -546,11 +500,6 @@ def test_regua_4_a_mordida_sem_a_relistagem_ninguem_diz_quem_saiu(
     monkeypatch.setattr(ob.Sessao, "relistar_e_conferir", lambda self: None)
     _rc, saida = _rodar_com_o_p2_saindo(ob, tmp_path, "mordida")
     assert not any("saiu da mesa" in r for r in resumo(saida)["recusas"])
-
-
-# ---------------------------------------------------------------------------
-# Régua 5 — a luz que o daemon PEDIU não é a que o aparelho mostra
-# ---------------------------------------------------------------------------
 
 
 def test_regua_5_a_luz_desejada_e_nao_sei_e_nunca_verde(ob: ModuleType, tmp_path: Path) -> None:
@@ -565,7 +514,6 @@ def test_regua_5_a_luz_desejada_e_nao_sei_e_nunca_verde(ob: ModuleType, tmp_path
     assert [p["jogador"] for p in linhas] == ["P1", "P2", "P3", "P4"]
     assert {p["veredito"] for p in linhas} == {ob.NAO_SEI}
     assert rc == ob.RC_NAO_SEI
-    # Nada foi escrito: a luz só lê, e a bancada nem foi pedida.
     assert [m for m, _p in maquina.chamados if m != "daemon.state_full"] == []
 
 
@@ -579,10 +527,6 @@ def test_regua_5_o_controle_positivo_a_luz_lida_do_sysfs_e_verde(
     assert ob.executar(["--saida", str(saida), "saidas", "--so", "luz"], maquina) == ob.RC_VERDE
     assert {p["veredito"] for p in da_linha(saida, "3a, a luz e o número")} == {ob.VERDE}
 
-
-# ---------------------------------------------------------------------------
-# Régua 6 — as seis formas do endereço, pelo dono da máscara
-# ---------------------------------------------------------------------------
 
 _SEPARADORES = (":", "-", "_", ".", " ", "")
 
@@ -606,16 +550,16 @@ def _janelas_que_vazam(texto: str, octetos: Sequence[str]) -> list[str]:
 def _as_seis_formas(octetos: Sequence[str], *, conhecido: bool) -> list[str]:
     seis = "".join(octetos[3:])
     formas = [
-        ":".join(octetos),                              # 1, a separada (e as outras grafias)
+        ":".join(octetos),
         "-".join(octetos).upper(),
-        "dev_" + "_".join(octetos).upper(),             # o caminho do BlueZ
-        "".join(octetos),                               # 2, a colada
-        f"hefesto_som_{seis}",                          # 3, o sufixo do nó
-        f"HEFESTO{seis.upper()}",                       # 4, o endpoint da háptica
-        f"hefesto-ponte-{seis}",                        # 6, o rótulo do gravador
+        "dev_" + "_".join(octetos).upper(),
+        "".join(octetos),
+        f"hefesto_som_{seis}",
+        f"HEFESTO{seis.upper()}",
+        f"hefesto-ponte-{seis}",
     ]
     if conhecido:
-        formas.append(" ".join(reversed(octetos)))      # 5, a invertida com espaço
+        formas.append(" ".join(reversed(octetos)))
     return formas
 
 
@@ -644,7 +588,6 @@ def test_regua_6_nenhuma_janela_com_o_quarto_ou_o_quinto_octeto_sobra(
     (sessao,) = sessoes(saida)
     gravado = sessao / "ensaios" / "quem_e_quem.txt"
     assert gravado.is_file()
-    # O ensaio chegou ao arquivo (a régua não mede um arquivo vazio).
     assert "desconhecido: hefesto-ponte-" in gravado.read_text(encoding="utf-8")
     for texto in [*textos, tela]:
         assert _janelas_que_vazam(texto, UNIQS[0].split(":")) == []
@@ -656,15 +599,9 @@ def test_regua_6_a_mordida_sem_a_sexta_forma_o_rotulo_do_gravador_vaza(
 ) -> None:
     from hefesto_dualsense4unix.core import formas_do_endereco
 
-    # Os dois grupos ficam (a substituição do dono os cita); o padrão nunca casa.
     monkeypatch.setattr(formas_do_endereco, "_ROTULO_DO_GRAVADOR", re.compile(r"(?!x)(x)(x)"))
     _saida, textos = _rodar_com_as_formas(ob, tmp_path, "mordida")
     assert any(_janelas_que_vazam(texto, DESCONHECIDO) for texto in textos)
-
-
-# ---------------------------------------------------------------------------
-# Régua 7 — nada sob a pasta de estudos
-# ---------------------------------------------------------------------------
 
 
 def test_regua_7_nenhum_caminho_dele_mora_na_pasta_de_estudos(
@@ -675,12 +612,10 @@ def test_regua_7_nenhum_caminho_dele_mora_na_pasta_de_estudos(
     assert {"ensaios", "sondas", "saida_padrao"} <= set(caminhos)
     for nome, caminho in caminhos.items():
         assert not Path(caminho).resolve().is_relative_to(estudos), f"{nome} mora em {caminho}"
-    # E todos existem no que o git carrega: o pacote os leva, o clone limpo os tem.
     for nome, caminho in caminhos.items():
         if nome.startswith(("sonda:", "ensaio:")):
             assert Path(caminho).is_file(), f"{nome}: {caminho} não existe"
 
-    # Sem --saida, a sessão inteira vai para o estado do Hefesto (aqui, o berço).
     estado = estado_da_mesa()
     maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uhid(4))
     sessao = ob.Sessao(maquina, "retrato")
@@ -688,12 +623,6 @@ def test_regua_7_nenhum_caminho_dele_mora_na_pasta_de_estudos(
     assert not sessao.saida.resolve().is_relative_to(estudos)
 
 
-# ---------------------------------------------------------------------------
-# Régua 8 — os pacotes levam o protocolo inteiro
-# ---------------------------------------------------------------------------
-
-#: Os formatos, e como cada um escreve o caminho de origem. O `.spec` escreve
-#: duas vezes: no %install e no %files (sem o segundo, o rpmbuild aborta).
 FORMATOS: dict[str, tuple[str, ...]] = {
     "packaging/arch/PKGBUILD": ("{rel}",),
     "scripts/build_deb.sh": ("{rel}",),
@@ -703,8 +632,6 @@ FORMATOS: dict[str, tuple[str, ...]] = {
     "scripts/build_appimage_gui.sh": ('"$HERE/{rel}"',),
 }
 
-#: O formato que espera a sprint dona do arquivo, com a razão. A régua abaixo
-#: reprova quando ele passar a levar o protocolo — a isenção caducou.
 FORA_POR_POSSE = {"packaging/nix/package.nix": "O-NIX-LEVA-AS-REGRAS-DO-HOST-01"}
 
 
@@ -750,7 +677,6 @@ def _linhas_de_codigo(texto: str) -> Iterator[str]:
 
 def test_regua_8_cada_formato_leva_cada_arquivo_do_protocolo(ob: ModuleType) -> None:
     exigidos = arquivos_do_protocolo(ob)
-    # O controle positivo da própria régua: o fecho dos imports alcança o dono comum.
     assert {"scripts/o_basico.py", "scripts/ensaios/comum.py", "scripts/identidade_do_vpad.py",
             "scripts/sondas/nucleo-por-processo.bt"} <= set(exigidos)
     faltas = []
@@ -771,10 +697,6 @@ def test_regua_8_a_isencao_do_nix_caduca_quando_ele_levar_o_protocolo() -> None:
             "tire-o de FORA_POR_POSSE e ponha em FORMATOS"
         )
 
-
-# ---------------------------------------------------------------------------
-# Régua 9 — o jogo e a Steam, com o mesmo nome de fio, separados pelo processo
-# ---------------------------------------------------------------------------
 
 PID_DA_STEAM = 100
 PID_DO_JOGO = 300
@@ -808,7 +730,6 @@ def test_regua_9_o_resumo_separa_o_jogo_da_steam_pelo_processo(
     escritas = ob.escritas_por_dono(texto, ordem, dono)
     assert escritas == {("steam", FIO, 5, 48): 12, ("jogo", FIO, 5, 48): 30}
 
-    # E o resumo do saidas, de ponta a ponta, com a sessão do protocolo aberta.
     estado = estado_da_mesa(jogo=True)
     maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
                             processos=processos, jogo=[PID_DO_JOGO])
@@ -819,11 +740,6 @@ def test_regua_9_o_resumo_separa_o_jogo_da_steam_pelo_processo(
     assert linha.veredito == ob.VERMELHO
     assert "a Steam escreveu 12 vez(es)" in linha.porque
     assert "jogo=30" in linha.porque and "steam=12" in linha.porque
-
-
-# ---------------------------------------------------------------------------
-# O pad uinput de toda máscara é nosso (o L2 de 27/09 saía «NÃO SONDADO»)
-# ---------------------------------------------------------------------------
 
 
 def _no_de_entrada(raiz: Path, evento: str, nome: str, morada: str) -> Path:
@@ -854,11 +770,6 @@ def test_o_pad_uinput_da_mascara_dualsense_e_nosso_e_o_edge_de_verdade_nao(tmp_p
     assert identidade.e_pad_uinput_do_hefesto(DUALSENSE_EDGE_NAME, str(nosso), nomes)
     assert not identidade.e_pad_uinput_do_hefesto(DUALSENSE_EDGE_NAME, str(edge), nomes)
     assert not identidade.e_pad_uinput_do_hefesto("Microsoft X-Box 360 pad 0", str(espelho), nomes)
-
-
-# ---------------------------------------------------------------------------
-# O comando da CLI acha o protocolo, ou diz que ele não veio
-# ---------------------------------------------------------------------------
 
 
 def test_o_comando_da_cli_sem_o_protocolo_na_instalacao_e_nao_sei(
@@ -893,20 +804,10 @@ def test_o_comando_da_cli_passa_os_argumentos_e_o_rc_inteiros(
     assert argv[2:] == ["eixos", "--trocar-modo", "xbox"]
 
 
-# ---------------------------------------------------------------------------
-# O que a conferência de 28/09 achou: o subcomando que cai não é vermelho
-# ---------------------------------------------------------------------------
-
-
 def test_o_subcomando_que_cai_no_meio_e_recusa_e_nunca_vermelho(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """Um erro do IPC no meio da troca de modo saía como traceback e rc=1.
-
-    O rc=1 do Python se lê como «o aparelho reprovou», e o resumo e o caderno
-    nem saíam. Mordida: tirar o ``except Exception`` do ``executar`` — a
-    exceção atravessa e esta régua cai.
-    """
+    """Um erro do IPC no meio da troca de modo saía como traceback e rc=1."""
     estado = estado_da_mesa(caminho="xbox", backend="uinput")
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos=pads_uinput_xbox(ob),
@@ -970,13 +871,7 @@ def _estado_sem_pad(modo: str) -> dict[str, Any]:
 def test_o_modo_sem_pad_nao_sai_vermelho_por_nao_ter_pad(
     ob: ModuleType, tmp_path: Path, modo: str
 ) -> None:
-    """Toda linha que conta pad vale em todo modo, não só nos dois que criam pad.
-
-    Na Conexão Nativa e na Navegação o jogo lê o físico: zero pad é o certo, e
-    o dono do modo (``modo_contra_o_ar``) já diz OK. O ``eixos`` dava o 1a
-    vermelho, a máscara «não sei», o ``movimento`` vermelho em todo jogador e o
-    1b vermelho. Mordida: tirar o ``_sem_pad_por_desenho`` de uma das linhas.
-    """
+    """Toda linha que conta pad vale em todo modo, não só nos dois que criam pad."""
     estado = _estado_sem_pad(modo)
     diario = [linha_do_diario(1.0, "daemon_starting")]
     maquina = fazer_maquina(
@@ -1015,11 +910,7 @@ def test_o_1b_com_menos_pads_que_jogadores_e_nao_sei_e_nunca_vermelho(
 def test_a_celula_da_matriz_mostra_o_pior_dos_passos_dela(
     ob: ModuleType, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A hora de cada pad cai na MESMA célula («todos»): um vermelho no meio sumia da matriz.
-
-    Mordida: voltar ao dicionário em que o último passo da célula vence — a
-    matriz diz «verde» sobre o pad que levou 30 s.
-    """
+    """A hora de cada pad cai na MESMA célula («todos»): um vermelho no meio sumia da matriz."""
     pasta = tmp_path / "corrida"
     pasta.mkdir()
     comum = {"sub": SUB_DA_SESSAO, "linha": "a hora do pad", "jogador": "todos",
@@ -1045,15 +936,7 @@ def _par_da_taxa(n: int) -> dict[str, Any]:
 def test_a_entrada_nao_da_verde_sobre_par_parado_nem_sobre_ligacao_que_mudou(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """Duas respostas dos ensaios que o protocolo lia por cima.
-
-    * o repouso casou o par, mas os carimbos do P2 não andaram (01 §4.4 pede
-      os carimbos andando): o pad não entrega nada, e isso não é verde;
-    * a taxa disse que a ligação hidraw -> aparelho mudou no meio da janela
-      («não conclua nada»): os pares que ela ainda imprime não valem.
-
-    Mordidas: tirar o ramo do ``fluxo_vivo``, ou o da ``ligacao_mudou``.
-    """
+    """Duas respostas dos ensaios que o protocolo lia por cima."""
     repouso = {"veredito": "", "medidas": {"mao_na_janela": False, "pares": [
         _par_do_repouso(n, fluxo_vivo=n != 2) for n in range(1, 5)
     ]}}
@@ -1078,13 +961,7 @@ def test_a_entrada_nao_da_verde_sobre_par_parado_nem_sobre_ligacao_que_mudou(
 
 
 def test_sem_saida_a_copia_crua_nao_mora_na_pasta_de_saida(ob: ModuleType, tmp_path: Path) -> None:
-    """Sem ``--saida`` a saída padrão ERA a pasta da cópia crua, e o fecho reprovava.
-
-    O fecho da sprint pede o ``varre-enderecos.py`` com zero na pasta de saída.
-    A cópia de restauração é byte a byte (os cartões por controle são chaveados
-    pelo endereço), e mora na irmã ``o-basico-copias``. Mordida: devolver a
-    cópia para dentro da saída padrão — o endereço cru aparece nela.
-    """
+    """Sem ``--saida`` a saída padrão ERA a pasta da cópia crua, e o fecho reprovava."""
     config = config_com_perfil(tmp_path, "Freestyle", "dualsense")
     perfil = config / "profiles" / "freestyle.json"
     dado = json.loads(perfil.read_text(encoding="utf-8"))
@@ -1109,8 +986,6 @@ def test_um_pad_sem_jogador_no_meio_da_recriacao_nao_derruba_a_abertura(
     ob: ModuleType, tmp_path: Path
 ) -> None:
     """``per_vpad`` com ``player`` None (um pad no meio da recriação): ordenar None contra int caía.
-
-    Mordida: voltar a ordenar a lista crua — a sessão não abre (TypeError).
     """
     estado = estado_da_mesa()
     estado["rumble_ff"]["per_vpad"].append({"player": None, "backend": None})
@@ -1126,9 +1001,6 @@ def test_a_sessao_observa_a_janela_e_ve_o_panico_que_chega_nela(
     ob: ModuleType, tmp_path: Path
 ) -> None:
     """Sem ``--bpftrace`` a sessão não esperava: o pânico e a fila eram contados numa janela de 0 s.
-
-    Aqui o compositor entra em pânico aos 30 s da janela. Mordida: voltar a
-    esperar só com ``--bpftrace`` — a contagem sai zero e o compositor, verde.
     """
     estado = estado_da_mesa()
     maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
@@ -1163,12 +1035,7 @@ def _rodar_a_troca(ob: ModuleType, tmp_path: Path, bancada: str | None) -> tuple
 def test_a_troca_de_modo_reserva_a_bancada_antes_de_escrever(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """A troca escreve na sessão do daemon e recria os pads: é escrita (01 §3.2).
-
-    Com a bancada tomada (o ``exigir`` sai rc=1), nada é escrito e a corrida
-    é recusada. Mordida: tirar o ``reservar_a_bancada`` da troca — o
-    ``gamepad.emulation.set`` sai com a bancada de outro.
-    """
+    """A troca escreve na sessão do daemon e recria os pads: é escrita (01 §3.2)."""
     rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "tomada", bancada=None)
     assert rc == ob.RC_RECUSADO
     assert any("bancada" in r for r in resumo(saida)["recusas"])
@@ -1178,7 +1045,6 @@ def test_a_troca_de_modo_reserva_a_bancada_antes_de_escrever(
     rodados = [Path(a[1]).name + " " + a[2] for a in maquina.rodados if len(a) > 2]
     assert "bancada.sh exigir" in rodados and "bancada.sh liberar" in rodados
     assert [m for m, _p in maquina.chamados if m == "gamepad.emulation.set"]
-    # O quem_e_quem roda antes e depois da troca, e cada corrida guarda o seu arquivo.
     (sessao,) = sessoes(saida)
     assert (sessao / "ensaios" / "quem_e_quem.txt").is_file()
     assert (sessao / "ensaios" / "quem_e_quem-2.txt").is_file()
@@ -1187,16 +1053,12 @@ def test_a_troca_de_modo_reserva_a_bancada_antes_de_escrever(
 def test_o_reinicio_assenta_quando_a_mesa_do_comeco_volta_em_todo_modo(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """«Pads >= jogadores» nunca assentava na Conexão Nativa, que não cria pad.
-
-    Assentar é a mesa do começo de volta, duas leituras seguidas. Mordida:
-    voltar à contagem de pads — a Nativa recusa com «não assentou».
-    """
+    """«Pads >= jogadores» nunca assentava na Conexão Nativa, que não cria pad."""
     estado = _estado_sem_pad("nativo")
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos="",
         diario=[linha_do_diario(1.0, "daemon_starting")],
-        ensaios={"bancada.sh": "", "--user": ""},  # o systemctl --user restart responde 0
+        ensaios={"bancada.sh": "", "--user": ""},
     )
     saida = tmp_path / "saida"
     ob.executar(["--saida", str(saida), SUB_DA_SESSAO, "--boot"], maquina)
@@ -1212,13 +1074,7 @@ def _a_steam_apaga_o_wrapper(argv: Sequence[str], maquina: Any) -> None:
 
 
 def test_a_volta_ve_o_wrapper_que_a_steam_apagou_no_meio(ob: ModuleType, tmp_path: Path) -> None:
-    """C12: o sha256 da config do Hefesto não vê a Steam apagar o wrapper de um jogo.
-
-    A lista da volta da noite de 27/09 (``03-roteiro/volta.sh``) leva o wrapper
-    e o Proton de cada jogo, a fonte e a saída padrão, e o ``GamesConfig`` do
-    Heroic. Mordida: tirar o ``steam_no_disco`` da volta — o jogo que perdeu o
-    wrapper passa calado.
-    """
+    """C12: o sha256 da config do Hefesto não vê a Steam apagar o wrapper de um jogo."""
     estado = estado_da_mesa()
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
@@ -1242,24 +1098,14 @@ def _quadro_usb(aceleracao: int = 0, gatilho: int = 0) -> bytes:
 
 
 def _fio(base: int, janela: int, *, quadros: int = 50) -> list[tuple[float, bytes]]:
-    """Um fio lido: ``quadros`` na base (0 a 2 s) e na janela (2,3 a 3,5 s).
-
-    O eixo x alterna entre zero e a amplitude (o MÓDULO é o que se mede, e ±a
-    dá o mesmo módulo).
-    """
+    """Um fio lido: ``quadros`` na base (0 a 2 s) e na janela (2,3 a 3,5 s)."""
     fora = [(0.01 * i, _quadro_usb(base if i % 2 else 0)) for i in range(quadros)]
     fora += [(2.4 + 0.01 * i, _quadro_usb(janela if i % 2 else 0)) for i in range(quadros)]
     return fora
 
 
 def test_o_vizinho_que_nao_se_leu_nao_conta_como_parado(ob: ModuleType) -> None:
-    """3b/3c: um vizinho com o fio parado tem desvio ZERO — e se lia «não tremeu».
-
-    O verde «só o alvo tremeu» sobre um vizinho não lido é verde sobre nada, e
-    um alvo não lido saía «não tremeu» (vermelho) em vez de «não sei».
-    Mordida: devolver o piso de quadros ou os ``esperados`` — o vizinho mudo
-    vira parado e a linha sai verde.
-    """
+    """3b/3c: um vizinho com o fio parado tem desvio ZERO — e se lia «não tremeu»."""
     base, janela = (0.0, 2.0), (2.3, 3.5)
     lidos = {"a1": _fio(40, 4000), "a2": _fio(40, 40), "a3": []}
     tremores = ob.tremor_por_fisico(lidos, base, janela)
@@ -1268,11 +1114,6 @@ def test_o_vizinho_que_nao_se_leu_nao_conta_como_parado(ob: ModuleType) -> None:
     assert veredito == ob.NAO_SEI and "não se leram" in porque
     assert ob.veredito_do_tremor(tremores, "a1", {"a1", "a2"})[0] == ob.VERDE
     assert ob.veredito_do_tremor(tremores, "a3", {"a1", "a2", "a3"})[0] == ob.NAO_SEI
-
-
-# ---------------------------------------------------------------------------
-# O endpoint do APARELHO, nos dois transportes — 02/10/2026
-# ---------------------------------------------------------------------------
 
 
 def _endpoints_dos_aparelhos(uniqs: Sequence[str]) -> str:
@@ -1288,15 +1129,7 @@ def _endpoints_dos_aparelhos(uniqs: Sequence[str]) -> str:
 def test_o_endpoint_do_aparelho_e_medido_no_cabo_e_no_radio(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """A-HAPTICA-E-POR-APARELHO-01: o cabo também passa pelo endpoint do aparelho.
-
-    A mesa de mentira tem P1 e P2 no cabo e P3 e P4 no rádio; o ensaio devolve
-    os endpoints dos aparelhos 1, 2 e 4. O P3 sai vermelho, dizendo quem, e o
-    cabo sai MEDIDO — e não «não se aplica».
-
-    MORDIDA: volte `_linha_dos_endpoints` a pular o cabo («no cabo a háptica é
-    a placa do próprio controle») — P1 e P2 deixam de ser verdes.
-    """
+    """A-HAPTICA-E-POR-APARELHO-01: o cabo também passa pelo endpoint do aparelho."""
     estado = estado_da_mesa()
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
@@ -1320,15 +1153,7 @@ def test_o_endpoint_do_aparelho_e_medido_no_cabo_e_no_radio(
 def test_o_endpoint_segue_o_aparelho_e_nao_o_numero_do_cartao(
     ob: ModuleType, tmp_path: Path
 ) -> None:
-    """Renumerar o cartão não muda o endpoint que a linha confere.
-
-    Na mesa de quatro medida (MESA-CHEIA-11) o cartão diz ``[4, 1, 3, 2]``
-    contra ``[1, 2, 3, 4]`` do jogo. O endpoint é do aparelho: sem o do
-    quarto aparelho, quem sai vermelho é ele, qualquer que seja o número.
-
-    MORDIDA: devolva a linha ao número do cartão (``nome_do_endpoint`` do
-    lugar) — o vermelho cai em outro controle, e reprova.
-    """
+    """Renumerar o cartão não muda o endpoint que a linha confere."""
     estado = estado_da_mesa()
     for controle, cartao in zip(estado["controllers"], (4, 1, 3, 2), strict=True):
         controle["player_slot"] = cartao
@@ -1350,10 +1175,7 @@ def test_o_endpoint_segue_o_aparelho_e_nao_o_numero_do_cartao(
 
 
 def test_sem_a_chave_do_controle_o_endpoint_e_nao_sei(ob: ModuleType, tmp_path: Path) -> None:
-    """Sem a chave (``uniq`` vazio) o estado não diz o aparelho.
-
-    A linha é «não sei», e não um endpoint inventado.
-    """
+    """Sem a chave (``uniq`` vazio) o estado não diz o aparelho."""
     estado = estado_da_mesa()
     for controle in estado["controllers"]:
         controle["uniq"] = ""

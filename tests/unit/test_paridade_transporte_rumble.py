@@ -1,33 +1,4 @@
-"""PARIDADE-BYTE-01 — os dois motores, nos dois transportes.
-
-O rumble por BT foi **no-op durante meses** e ninguém viu: o report 0x31 que a
-pydualsense 0.7.5 monta é malformado (off-by-one no envelope) e o firmware o
-descarta inteiro. O BTREPORT-02 curou o envelope; o que continuava sem prova era
-o andar de cima — que os bytes dos MOTORES e os bits que os autorizam saem
-iguais no cabo e no rádio.
-
-Três afirmações do produto vivem aqui, e nenhuma delas era checada nos dois
-transportes:
-
-- os motores caem em common[2] (direito/fraco) e common[3] (esquerdo/forte);
-- **GUERRA-01 item 2**, o keepalive neutro: sem rumble NOSSO ativo, os bits de
-  vibração saem DESLIGADOS (flag0 0x01|0x02, flag1 0x40, flag2 0x04) — senão o
-  keepalive a 2 Hz zera o rumble de um jogo que escreve direto no hidraw;
-- e a transição ativa→0 manda **um** report com os flags ligados e os motores em
-  zero, para o firmware parar o motor de verdade.
-
-ACHADO DE 11/08/2026, ao escrever esta camada: o bit `flag2 0x04`
-(`COMPATIBLE_VIBRATION2`) **nunca é ligado por este projeto**, em transporte
-nenhum — o `_build_common` só sabe DESLIGÁ-LO. Está registrado em
-`test_o_bit_de_vibracao_v2_e_o_mesmo_nos_dois_transportes`, que trava a
-PARIDADE do bit e não o valor de hoje: petrificar uma ausência seria pior que
-não medi-la.
-
-MORDIDA PROVADA (11/08/2026, `src/` copiado para fora da árvore, `PYTHONPATH`
-apontado para a cópia — a árvore de trabalho nunca foi mutada): zerando
-`common[2:4]` só quando `conType == BT`, este arquivo reprova **5**, quatro com
-o id `[bt]` e o caso que compara os dois lados. Os `[usb]` seguem verdes.
-"""
+"""PARIDADE-BYTE-01 — os dois motores, nos dois transportes."""
 from __future__ import annotations
 
 from typing import Any
@@ -38,11 +9,8 @@ from hefesto_dualsense4unix.core import ds_output_report as rep
 
 from tests.conftest import EnvelopeDeTransporte
 
-#: Offsets dos motores dentro do common.
 MOTOR_DIREITO, MOTOR_ESQUERDO = 2, 3
 
-#: Pares (fraco/direito, forte/esquerdo) distinguíveis entre si — um par
-#: simétrico passaria com os dois motores trocados e não provaria nada.
 PARES_DE_MOTOR = [
     (0xFF, 0x00),
     (0x00, 0xFF),
@@ -100,20 +68,7 @@ def test_com_rumble_nosso_os_bits_de_vibracao_ligam_nos_dois(
 def test_o_bit_de_vibracao_v2_e_o_mesmo_nos_dois_transportes(
     transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
 ) -> None:
-    """O flag2 0x04 (`COMPATIBLE_VIBRATION2`) tem de valer o mesmo dos dois lados.
-
-    NOTA DATADA DE 11/08/2026, medida ao escrever esta camada: hoje esse bit
-    **nunca liga**, nem no cabo nem no rádio. O `_build_common` monta o flag2 a
-    partir do `light.ledOption` (que vale no máximo 3) e só sabe DESLIGAR o
-    0x04 quando não há rumble nosso — ninguém o LIGA em lugar nenhum. Ou seja:
-    a vibração v2 nunca é autorizada, e a assimetria aqui é ZERO porque a
-    feature está ausente dos dois lados.
-
-    Por isso o caso trava a PARIDADE, e não o valor: no dia em que alguém ligar
-    o bit — e ele tem dono no `hid-playstation` — este teste continua valendo e
-    reprova se a autorização sair num transporte só. Travar o valor de hoje
-    seria petrificar uma ausência.
-    """
+    """O flag2 0x04 (`COMPATIBLE_VIBRATION2`) tem de valer o mesmo dos dois lados."""
     vistos: dict[str, int] = {}
     for envelope in transportes:
         handle = fabrica_de_bancada(envelope)
@@ -132,12 +87,7 @@ def test_o_bit_de_vibracao_v2_e_o_mesmo_nos_dois_transportes(
 def test_sem_rumble_nosso_o_keepalive_e_neutro_nos_dois(
     ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
 ) -> None:
-    """GUERRA-01 item 2 — e a regra vale nos DOIS transportes.
-
-    O defeito original foi sentido no Sackboy com o jogo escrevendo direto no
-    hidraw: nosso keepalive, com os bits de vibração sempre ligados e motores
-    em zero, zerava o rumble de terceiros a cada meio segundo.
-    """
+    """GUERRA-01 item 2 — e a regra vale nos DOIS transportes."""
     common = transporte.extrair_common(ds5_de_bancada.prepareReport())
     assert _bits_de_vibracao(common) == (0, 0, 0), (
         f"{transporte.nome}: o keepalive saiu asserindo vibração sem ter "
@@ -149,12 +99,7 @@ def test_sem_rumble_nosso_o_keepalive_e_neutro_nos_dois(
 def test_a_transicao_ativa_para_zero_manda_um_stop_nos_dois(
     ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
 ) -> None:
-    """Ao zerar, UM report sai com flags ligados e motores 0; o seguinte é neutro.
-
-    Sem esse report o motor não para de verdade — e sem ele nos dois
-    transportes, o rumble "cola" no rádio e não no cabo (ou o contrário), que é
-    a assimetria que esta camada existe para pegar.
-    """
+    """Ao zerar, UM report sai com flags ligados e motores 0; o seguinte é neutro."""
     ds5_de_bancada.setLeftMotor(0xA0)
     ds5_de_bancada.prepareReport()
     ds5_de_bancada.setLeftMotor(0)

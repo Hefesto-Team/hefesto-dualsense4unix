@@ -1,30 +1,4 @@
-"""P-09 — o portão de fala cresce de "avisa" para "reprova", uma aba por vez.
-
-Este arquivo é o que o docstring de ``ABAS_COM_FALA_DECLARADA``
-(``scripts/validar-fala-de-tela.py``) nomeia como dono da catraca. Ele
-existe por duas razões, e a segunda é a que decide:
-
-1. **A trava por aba tem de MORDER hoje**, com o conjunto ainda vazio. Um
-   mecanismo que só será exercitado no dia em que alguém promover a primeira
-   aba nasce sem prova, e a promoção acontece meses depois, por outra pessoa,
-   que vai acreditar nele. As mordidas abaixo promovem uma aba NUMA ÁRVORE DE
-   MENTIRA e provam cada regra.
-2. **O conjunto de referência da catraca é literal DESTE ARQUIVO**, nunca
-   lido de ``scripts/``. É a lição que a ADR-016 pagou por um mês e que
-   ``tests/unit/test_o_mapa_separa_divida_de_decisao.py`` deixou escrita: um
-   teto lido da própria fonte passa sempre. Despromover uma aba exige editar
-   este arquivo, e isso aparece no diff.
-
-COMO A ÁRVORE DE MENTIRA PROMOVE UMA ABA
------------------------------------------
-``ABAS_COM_FALA_DECLARADA``, ``ARQUIVOS_DA_ABA`` e ``FRASES_SEM_FALA`` são
-constantes de módulo do portão, não coisas que a árvore analisada carrega —
-então ``--raiz`` sozinho não promove nada. ``_portao_com_promocao`` copia o
-roteiro real para dentro da árvore de mentira trocando as três linhas, e
-**afirma que trocou**: uma substituição que não casa devolveria um portão com
-o conjunto vazio, que passa em tudo. Instrumento que falha calado é pior que
-instrumento nenhum (a lição de ``portoes-em-serie-enganam``).
-"""
+"""P-09 — o portão de fala cresce de "avisa" para "reprova", uma aba por vez."""
 from __future__ import annotations
 
 import ast
@@ -37,16 +11,6 @@ from tests.unit.test_validar_fala_de_tela import FATOS_BASE, monta_arvore
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT_REAL = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 
-#: O conjunto de abas promovidas de HOJE, escrito à mão aqui. Quando uma aba
-#: for promovida em ``scripts/validar-fala-de-tela.py``, esta linha ganha o
-#: nome dela junto — e nunca perde nenhum, porque
-#: ``test_o_conjunto_de_abas_promovidas_so_cresce`` compara os dois conjuntos
-#: nessa direção.
-#:
-#: **Nasce vazio**, e isso é o desenho da PAREAMENTO-01: no dia 1 o registro
-#: tem uma ``Fala`` só, e promover uma aba agora exigiria editar arquivos de
-#: outras frentes. As duas primeiras a promover estão nomeadas na sprint:
-#: **Início** e **Status**.
 ABAS_PROMOVIDAS_ATE_HOJE: frozenset[str] = frozenset()
 
 
@@ -91,9 +55,6 @@ def _roda(portao: Path, raiz: Path, *args: str) -> subprocess.CompletedProcess[s
     )
 
 
-#: Uma frase de tela que cita transporte e não declara nada. É a forma exata
-#: do defeito de 17/08 e da dica da cor de 22/08: prosa que afirma o que o
-#: aparelho faz, sem endereço no mapa.
 FRASE_SOLTA = "Funciona igual no cabo e no rádio, sempre."
 
 ARQUIVO_COM_FRASE_SOLTA = f'''\
@@ -119,18 +80,8 @@ DICA = Fala(
 '''
 
 
-# ── a catraca ────────────────────────────────────────────────────────────
-
-
 def _abas_promovidas_no_portao() -> frozenset[str]:
-    """Lê `ABAS_COM_FALA_DECLARADA` por AST — nunca importando o roteiro.
-
-    Importar o portão dentro da suíte funcionaria, e é justamente o que não se
-    quer: uma catraca que lê o valor pelo mesmo caminho que ele é escrito
-    aceita qualquer coisa que o roteiro decida chamar de conjunto. Aqui a
-    forma tem de ser `frozenset({...})` com literal dentro, e qualquer outra
-    coisa reprova em voz alta.
-    """
+    """Lê `ABAS_COM_FALA_DECLARADA` por AST — nunca importando o roteiro."""
     arvore = ast.parse(SCRIPT_REAL.read_text(encoding="utf-8"), filename=str(SCRIPT_REAL))
     for no in arvore.body:
         alvo = None
@@ -164,9 +115,6 @@ def test_o_conjunto_de_abas_promovidas_so_cresce() -> None:
         "se a decisão foi mesmo essa, ela tem de sair TAMBÉM da lista literal "
         "deste arquivo, com nota datada de por quê"
     )
-
-
-# ── as mordidas da trava por aba ─────────────────────────────────────────
 
 
 def test_aba_livre_com_frase_solta_passa(tmp_path: Path) -> None:
@@ -250,12 +198,7 @@ def test_isencao_que_nao_casa_mais_com_frase_nenhuma_reprova(tmp_path: Path) -> 
 
 
 def test_aba_promovida_sem_arquivos_declarados_reprova_alto(tmp_path: Path) -> None:
-    """Promover sem dizer quais arquivos são da aba desligaria a trava calada.
-
-    É a mesma razão que ``anonymity-check.yml``:67-70 escreveu: um portão que
-    se desliga por omissão de configuração é a forma silenciosa de portão
-    nenhum.
-    """
+    """Promover sem dizer quais arquivos são da aba desligaria a trava calada."""
     raiz = monta_arvore(tmp_path, FATOS_BASE, {"aba_inicio.py": ARQUIVO_COM_FRASE_SOLTA})
     portao = _portao_com_promocao(raiz, abas={"Início"}, arquivos_da_aba={})
     processo = _roda(portao, raiz, "--all")
@@ -274,15 +217,8 @@ def test_arquivo_declarado_que_sumiu_reprova(tmp_path: Path) -> None:
     assert "não existe" in processo.stdout, processo.stdout
 
 
-# ── a régua, e onde ela declara que mente ────────────────────────────────
-
-
 def test_a_palavra_de_transporte_tem_fronteira_de_palavra(tmp_path: Path) -> None:
-    """Sem a fronteira, `cabo` casa dentro de `acabou` e o portão grita falso.
-
-    Portão que grita falso é desligado na semana seguinte — é o motivo escrito
-    na própria PAREAMENTO-01 para a trava ser por aba.
-    """
+    """Sem a fronteira, `cabo` casa dentro de `acabou` e o portão grita falso."""
     arquivo = '''\
 """Uma aba de mentira, sem uma palavra de transporte."""
 from __future__ import annotations
@@ -298,11 +234,7 @@ DICA = "O ajuste acabou de ser gravado no perfil."
 
 
 def test_docstring_nao_entra_no_censo(tmp_path: Path) -> None:
-    """Docstring é prosa para quem lê o código, não fala de tela.
-
-    Contá-la levaria o censo de 38 para bem acima de cem — a PAREAMENTO-01
-    mediu 31 de piso e 135 de teto justamente por causa disto.
-    """
+    """Docstring é prosa para quem lê o código, não fala de tela."""
     arquivo = '''\
 """Este módulo desenha a aba, e explica o cabo e o rádio para quem o lê."""
 from __future__ import annotations
@@ -320,13 +252,7 @@ def desenha() -> None:
 
 
 def test_censo_de_transporte_conta_a_arvore_viva(tmp_path: Path) -> None:
-    """`--censo-de-transporte` é o único lugar de onde o número sai.
-
-    O docstring de `descobre_falas` publica um número de 25/08/2026, e diz na
-    própria linha que ele envelhece. Este teste prova que existe instrumento
-    para o de hoje — sem ele, o número do docstring viraria a única fonte, que
-    é como um fato errado se instala.
-    """
+    """`--censo-de-transporte` é o único lugar de onde o número sai."""
     raiz = monta_arvore(tmp_path, FATOS_BASE, {"aba_inicio.py": ARQUIVO_COM_FRASE_SOLTA})
     processo = _roda(SCRIPT_REAL, raiz, "--censo-de-transporte")
     assert processo.returncode == 0, processo.stdout

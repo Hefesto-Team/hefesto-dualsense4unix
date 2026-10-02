@@ -1,44 +1,4 @@
-"""ROTA-BT-EM-REGIME-01 — por rádio, a cor do perfil sai TAMBÉM pelo hidraw.
-
-O DEFEITO, medido na bancada dela em 12/08/2026
-===============================================
-Por Bluetooth o produto tinha UMA rota de LED **em regime** — o `sysfs` — e é
-justamente a que perde. As duas linhas de `docs/data/ensaios.csv`, medidas no
-mesmo instante com os mesmos três controles:
-
-- `cor-rota-sysfs-com-steam` → **não obedece**. Com a Steam viva, escrever
-  `multi_intensity` não muda a barra;
-- `cor-rota-hidraw-com-steam` → o report `0x31` escrito no `/dev/hidraw*`
-  **pintou os três**. Literal dela: *"todos tão magenta"*.
-
-O caderno de eliminação já julga a ROTA como **e-a-causa** nesta linha
-(`scripts/eliminacao.py`, `luz.lightbar.cor@dualsense [radio]`).
-
-A rota existia e não era alcançável: o fallback pydualsense que o
-`_for_each_led` e o `_write_partial_output` carregam é CÓDIGO MORTO por rádio,
-porque `_suppress_leds` é True para todo handle BT (`LIGHTBAR-BT-NEVER-01`) e o
-`report_thread` remove os bits de LED. O `reescrever_lightbar_por_hidraw`
-(GATILHO-DA-COR-01) sabia escrever o report certo, mas só era chamado pelo
-gatilho de CONEXÃO — trocar de perfil ou mexer na cor na GUI não passava por
-ele.
-
-O QUE ESTE ARQUIVO TRAVA
-========================
-- por rádio, `set_led` e `set_player_leds` emitem o `0x31` estreito, **além**
-  de tentarem o sysfs (que continua sendo a primeira rota);
-- o caminho do PERFIL/hotplug (`_write_partial_output`) faz o mesmo;
-- por CABO nada sai — lá a barra obedece (ensaio `lightbar-usb-1`) e escrever
-  seria trabalho sem defeito para curar. É a resposta à regra da casa
-  ("a hipótese tem de explicar o que JÁ funcionava");
-- em Modo Nativo / Conexão Nativa (Sony) é **no-op**: o dono é o jogo;
-- o report NÃO carrega `RELEASE_LEDS` (0x08, o culpado 7/7 do
-  `LIGHTBAR-BT-CULPADO-01`) nem os bits de SETUP/BRILHO do `flag2` (o
-  `LIGHTBAR-BT-KEEPALIVE-01` mediu que reengatá-los trava a exibição).
-
-O método é o do `test_gatilho_da_cor_escrita.py`: o método exercitado é o DO
-PRODUTO, emprestado a um objeto mínimo. Um dublê que reimplementasse a regra
-mediria o dublê.
-"""
+"""ROTA-BT-EM-REGIME-01 — por rádio, a cor do perfil sai TAMBÉM pelo hidraw."""
 from __future__ import annotations
 
 import threading
@@ -49,7 +9,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
     _DesiredOutput,
 )
 
-#: Offsets DENTRO do envelope 0x31 (o common começa em [3]).
 POS_FLAG0 = 3 + 0
 POS_FLAG1 = 3 + 1
 POS_FLAG2 = 3 + 38
@@ -80,12 +39,7 @@ class _Handle:
 
 
 class _NoSysfs:
-    """Nó de LED que ACEITA a escrita — o caso em que o sysfs "deu certo"...
-
-    ...e a barra mesmo assim não muda, que é exatamente o que a bancada mediu
-    com a Steam viva. Se a segunda rota dependesse do sysfs FALHAR, ela nunca
-    dispararia no defeito real.
-    """
+    """Nó de LED que ACEITA a escrita — o caso em que o sysfs "deu certo"..."""
 
     def __init__(self) -> None:
         self.escritas = 0
@@ -116,10 +70,6 @@ class _BackendMinimo:
         self._output_target_key: str | None = None
         self._suprimir_player_leds = False
         self._desired = _DesiredOutput()
-        # ESCRITOR-CRU-01: o contador de pinturas que o `_pintar_por_hidraw_bt`
-        # incrementa. É o sinal com que o daemon arma a reafirmação quando há
-        # outro escritor segurando o `hidraw` — o dublê precisa dele porque
-        # empresta o método de verdade.
         self._pinturas_de_lightbar = 0
 
     def _record_desired_locked(self, _alvo: str | None, _campos: dict) -> None:
@@ -129,8 +79,6 @@ class _BackendMinimo:
 _METODOS = (
     "_for_each_led",
     "_pintar_por_hidraw_bt",
-    # O brilho das luzes de número (24/09/2026) sai pelo mesmo
-    # `_write_partial_output`, e o método emprestado o chama.
     "_levar_o_brilho_das_luzes",
     "_write_partial_output",
     "_apply_trigger",
@@ -145,7 +93,6 @@ def _backend(handles: dict[str, Any], **kw: Any) -> Any:
     alvo = _BackendMinimo(handles, **kw)
     for nome in _METODOS:
         metodo = getattr(PyDualSenseController, nome)
-        # `_detect_transport` e `_apply_trigger` são staticmethods.
         if nome in ("_detect_transport", "_apply_trigger"):
             setattr(alvo, nome, metodo)
         else:
@@ -154,11 +101,7 @@ def _backend(handles: dict[str, Any], **kw: Any) -> Any:
 
 
 def test_a_cor_por_radio_sai_pelo_hidraw_mesmo_com_o_sysfs_aceitando() -> None:
-    """O defeito inteiro em um teste.
-
-    `cor-rota-sysfs-com-steam`: o `multi_intensity` ACEITA a escrita e a barra
-    não muda. Por isso a segunda rota não pode depender de o sysfs falhar.
-    """
+    """O defeito inteiro em um teste."""
     handle = _Handle("bt")
     no = _NoSysfs()
     backend = _backend({"aa:bb": handle}, sysfs={"aa:bb": no})
@@ -205,12 +148,7 @@ def test_o_perfil_e_o_hotplug_tambem_usam_a_segunda_rota() -> None:
 
 
 def test_pelo_cabo_nada_sai_porque_pelo_cabo_a_barra_obedece() -> None:
-    """A regra da casa: a cura tem de explicar o que JÁ funcionava.
-
-    O report `0x02` do USB não tem janela nem máquina de estados de lightbar, e
-    o fallback pydualsense do cabo nunca foi suprimido. Escrever ali seria
-    trabalho sem defeito para curar — e um segundo escritor de graça.
-    """
+    """A regra da casa: a cura tem de explicar o que JÁ funcionava."""
     handle = _Handle("usb")
     backend = _backend({"aa:bb": handle})
 
@@ -220,13 +158,7 @@ def test_pelo_cabo_nada_sai_porque_pelo_cabo_a_barra_obedece() -> None:
 
 
 def test_modo_nativo_escreve_a_luz_pelo_radio() -> None:
-    """Era *"no modo nativo devolvemos o controle pra steam"* — zero escrita.
-
-    Caducou em 23/09/2026 para a luz e o número: decisão dela
-    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01),
-    *"no Modo Nativo, o Hefesto escreve a barra e o número SEMPRE"*. O report
-    é o mesmo estreito de sempre — sem vibração, sem gatilho, sem áudio.
-    """
+    """Era *"no modo nativo devolvemos o controle pra steam"* — zero escrita."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle}, mute=True)
 
@@ -243,12 +175,7 @@ def test_modo_nativo_escreve_a_luz_pelo_radio() -> None:
 
 
 def test_o_report_nao_carrega_o_0x08_nem_o_setup_da_lightbar() -> None:
-    """As duas medições que o report estreito respeita.
-
-    `LIGHTBAR-BT-CULPADO-01` (03/08): o `0x08` (RELEASE_LEDS) dentro da janela
-    travou a barra 7 de 7. `LIGHTBAR-BT-KEEPALIVE-01` (22/07): os bits de
-    SETUP/BRILHO do flag2 travam a exibição no firmware.
-    """
+    """As duas medições que o report estreito respeita."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle})
 

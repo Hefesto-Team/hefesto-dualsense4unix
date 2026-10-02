@@ -87,12 +87,8 @@ from typing import BinaryIO
 
 logger = logging.getLogger(__name__)
 
-#: Teto de entradas da tabela de importação. Um PE legítimo tem dezenas; o teto
-#: existe para que um arquivo corrompido (ou hostil) não vire laço infinito.
 _TETO_IMPORTS = 1024
 
-#: Quanto do cabeçalho se lê de uma vez. `e_lfanew` mora em 0x3C, e nenhum PE
-#: real põe o cabeçalho PE além de alguns KB.
 _TAM_CABECALHO = 0x400
 
 
@@ -106,14 +102,6 @@ class Familia(str, Enum):
     DUALSHOCK = "dualshock"
 
 
-#: As agulhas de cada família, em bytes, como aparecem dentro do PE.
-#:
-#: Por que varrer o arquivo inteiro e não só os imports: **medido em
-#: 16/08/2026**, o `Duskfade-Win64-Shipping.exe` não importa XInput em lugar
-#: nenhum da tabela de importação, e ainda assim carrega `XINPUT1_4.dll` por
-#: `LoadLibrary` — a string está lá, o import não. Um detector que só lesse a
-#: tabela de importação diria "este jogo não fala XInput" sobre um jogo cujo
-#: ÚNICO caminho de gamepad é XInput. A varredura é o que fecha esse buraco.
 AGULHAS: dict[Familia, tuple[bytes, ...]] = {
     Familia.SDL: (b"SDL2.dll", b"SDL3.dll", b"libSDL2-2.0.so", b"libSDL3.so"),
     Familia.XINPUT: (b"xinput1_", b"XINPUT1_", b"XInput1_", b"Xinput1_"),
@@ -126,14 +114,9 @@ AGULHAS: dict[Familia, tuple[bytes, ...]] = {
 class Veredito(str, Enum):
     """O que o disco sustenta dizer sobre um jogo — e nada além disso."""
 
-    #: Há SDL ou o plugin DualShock da Sony no binário. O SDL mapeia o
     #: `054c:0df2` do nosso vpad nativamente, então a máscara DualSense chega.
     ENTENDE_DUALSENSE = "entende_dualsense"
-    #: Há XInput e NÃO há SDL nem DualShock. Parece "só XInput" — e é
-    #: exatamente aqui que o censo mostrou que a aparência mente: Duskfade
-    #: (quebrado) e DON'T SCREAM (funciona) caem os dois neste balde.
     INDECISO = "indeciso"
-    #: Nenhuma agulha, ou nenhum executável legível.
     SEM_EVIDENCIA = "sem_evidencia"
 
 
@@ -142,12 +125,8 @@ class Evidencia:
     """O que se achou no executável de UM jogo. Fatos, e depois o veredito."""
 
     executavel: Path | None
-    #: Nomes de DLL na tabela de importação do PE, em minúsculas.
     imports: tuple[str, ...] = ()
-    #: Famílias cujas agulhas apareceram na varredura do arquivo.
     familias: frozenset[Familia] = field(default_factory=frozenset)
-    #: True quando a família apareceu na varredura mas NÃO na tabela de
-    #: importação — isto é, o jogo carrega a DLL por `LoadLibrary`.
     carrega_xinput_dinamicamente: bool = False
 
     @property
@@ -157,9 +136,6 @@ class Evidencia:
         if Familia.SDL in self.familias or Familia.DUALSHOCK in self.familias:
             return Veredito.ENTENDE_DUALSENSE
         if Familia.XINPUT in self.familias:
-            # NUNCA `SO_XINPUT`. Ver o cabeçalho: esta é a assinatura que
-            # Duskfade e DON'T SCREAM compartilham, e os dois se comportam
-            # diferente. O disco não sabe qual é qual.
             return Veredito.INDECISO
         return Veredito.SEM_EVIDENCIA
 
@@ -182,7 +158,6 @@ def _secoes_e_diretorio(
     if len(opcional) < 2:
         return None
     (magic,) = struct.unpack_from("<H", opcional, 0)
-    # PE32 põe os data directories em 96; PE32+ (64 bits) em 112.
     base = 96 if magic == 0x10B else 112
     if len(opcional) < base + 16:
         return None
@@ -198,12 +173,7 @@ def _secoes_e_diretorio(
 
 
 def ler_imports(executavel: Path) -> tuple[str, ...]:
-    """Os nomes de DLL da tabela de importação de um PE, em minúsculas.
-
-    Devolve tupla vazia para qualquer coisa que não seja um PE legível — um ELF
-    nativo, um script, um arquivo truncado. Degradar calado aqui é requisito:
-    a biblioteca dela tem lançadores de 400 KB e jogos nativos no meio.
-    """
+    """Os nomes de DLL da tabela de importação de um PE, em minúsculas."""
     try:
         with executavel.open("rb") as fh:
             achado = _secoes_e_diretorio(fh)
@@ -226,7 +196,6 @@ def ler_imports(executavel: Path) -> tuple[str, ...]:
             for i in range(_TETO_IMPORTS):
                 fh.seek(offset + i * 20)
                 entrada = fh.read(20)
-                # A tabela termina numa entrada toda zerada.
                 if len(entrada) < 20 or entrada == b"\0" * 20:
                     break
                 (rva_nome,) = struct.unpack_from("<I", entrada, 12)
@@ -246,11 +215,7 @@ def ler_imports(executavel: Path) -> tuple[str, ...]:
 
 
 def varrer_agulhas(executavel: Path) -> frozenset[Familia]:
-    """As famílias cujas agulhas aparecem em qualquer ponto do arquivo.
-
-    Usa `mmap`, então o custo é de página tocada, não de arquivo copiado — foi
-    o que manteve o pior caso medido (379 MB) em 2,15 s.
-    """
+    """As famílias cujas agulhas aparecem em qualquer ponto do arquivo."""
     achadas: set[Familia] = set()
     try:
         if executavel.stat().st_size == 0:
@@ -283,12 +248,6 @@ def examinar(executavel: Path) -> Evidencia:
     )
 
 
-#: Nomes de executável que NUNCA são o jogo. Medido em 16/08/2026: sem esta
-#: lista o censo elegia `UnityCrashHandler64.exe` em **sete** jogos Unity, e o
-#: handler não tem entrada nenhuma dentro — o censo dizia "sem evidência" sobre
-#: sete jogos por estar lendo o arquivo errado. A lista é de INFRAESTRUTURA de
-#: engine, não de jogos: nada aqui é o nome de um título, e um jogo lançado
-#: amanhã não precisa entrar nela.
 _NAO_SAO_O_JOGO = (
     "unitycrashhandler",
     "unitycrashhandler64",
@@ -311,19 +270,7 @@ def parece_infraestrutura(nome: str) -> bool:
 
 
 def escolher_executavel(raiz: Path) -> Path | None:
-    """O executável que MELHOR representa o jogo dentro de uma pasta.
-
-    A ordem é medida, não gosto (16/08/2026, nos 24 jogos instalados dela):
-
-    1. `*-Win64-Shipping.exe` — o binário monolítico do Unreal. Quando existe,
-       é sempre o jogo, e nunca é o lançador.
-    2. o maior `.exe` que não seja infraestrutura — pega Unity, Godot e os
-       feitos à mão. O critério de TAMANHO é o que separa o jogo do lançador
-       de 400 KB que algumas publicadoras põem na raiz.
-
-    A pasta que não tem `.exe` nenhum devolve None em silêncio: pode ser um
-    jogo nativo Linux, ou uma pasta que a Steam ainda não terminou de baixar.
-    """
+    """O executável que MELHOR representa o jogo dentro de uma pasta."""
     try:
         candidatos = [p for p in raiz.rglob("*.exe") if p.is_file()]
     except OSError:
@@ -343,18 +290,7 @@ def escolher_executavel(raiz: Path) -> Path | None:
     return max(alvos, key=tamanho)
 
 
-#: Os runtimes de engine que carregam a entrada NO LUGAR do executável.
-#:
-#: **Medido em 16/08/2026:** o `.exe` de um jogo Unity não tem agulha nenhuma
-#: dentro — quem fala com o controle é o `UnityPlayer.dll` ao lado dele, e lá
-#: estão `xinput1_3.dll`, `xinput1_4.dll` e `HID.DLL`. Sem esta lista o censo
-#: dizia `sem_evidencia` sobre PEAK, Big Walk e Scarlet Deer Inn por estar
-#: lendo o arquivo errado — e Big Walk **funciona** hoje com a máscara
 #: DualSense, o que faz dele mais uma contraprova da heurística derrubada.
-#:
-#: Como `_NAO_SAO_O_JOGO`, isto é uma lista de INFRAESTRUTURA DE ENGINE, não de
-#: jogos: são três nomes de runtime, e um título lançado amanhã sobre qualquer
-#: uma dessas engines já nasce coberto sem ninguém editar nada.
 _RUNTIMES_DE_ENGINE = ("UnityPlayer.dll", "GameAssembly.dll", "fmod.dll")
 
 
@@ -369,13 +305,7 @@ def _runtimes_ao_lado(raiz: Path) -> list[Path]:
 
 
 def examinar_pasta(raiz: Path) -> Evidencia:
-    """A evidência de disco de um jogo, a partir da pasta dele.
-
-    Varre o executável do jogo E os runtimes de engine ao lado dele, e UNE as
-    famílias achadas: numa engine como a Unity a entrada mora no runtime, não
-    no `.exe`, e olhar só o executável responde "não achei nada" sobre um jogo
-    que fala XInput e HID.
-    """
+    """A evidência de disco de um jogo, a partir da pasta dele."""
     executavel = escolher_executavel(raiz)
     if executavel is None:
         return Evidencia(executavel=None)

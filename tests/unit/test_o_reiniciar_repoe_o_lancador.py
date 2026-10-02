@@ -1,21 +1,4 @@
-"""REPOR-O-LANCADOR-01 — o «Reiniciar o serviço» fecha e reabre o lançador.
-
-**Decisão dela, 21/09/2026.** A pergunta foi dela — *"seria importante ele
-fechar e reabrir o launcher, seja steam, epic, heroic ou qualquer outro"* —, e
-posta entre três formas (automático · oferecido num segundo clique · botão
-separado), ela escolheu a primeira: *"Faz automático mesmo"*.
-<!-- noqa-acento: citação literal dela -->
-
-**A RÉGUA QUE MAIS IMPORTA É A DO PGREP**, e ela nasceu de um defeito vivo
-medido na mesma hora: a primeira versão de `pids_de` perguntava
-`pgrep -f com.heroicgameslauncher.hgl`, e a resposta foi **o shell que estava
-perguntando** — o id da aplicação estava na cmdline dele. Numa máquina com os
-dois lançadores FECHADOS o módulo respondeu "Heroic e Lutris abertos", e um
-`fechar()` ali teria mandado `SIGTERM` no terminal de quem chamou.
-
-Nenhum teste deste arquivo toca processo de verdade: o que se mede é a
-DECISÃO — quem é perguntado, em que ordem, e o que se recusa a fazer.
-"""
+"""REPOR-O-LANCADOR-01 — o «Reiniciar o serviço» fecha e reabre o lançador."""
 
 from __future__ import annotations
 
@@ -39,19 +22,8 @@ def _sem_jogo(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(rl, "jogo_aberto", lambda: False)
 
 
-# ---------------------------------------------------------------------------
-# 1 — NENHUMA PERGUNTA LÊ LINHA DE COMANDO
-# ---------------------------------------------------------------------------
 def test_ninguem_pergunta_por_pgrep_dash_f(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O DEFEITO VIVO DE 21/09/2026, preso por régua.
-
-    `pgrep -f <id>` casa a cmdline de quem pergunta — e este módulo manda
-    `SIGTERM` no que ele achar. Um `-f` aqui é um tiro no próprio pé, e a régua
-    não deixa voltar.
-
-    MORDE: troque o `flatpak ps` de `_pids_de_flatpak` por um
-    `pgrep -f lancador.flatpak` e esta régua reprova.
-    """
+    """O DEFEITO VIVO DE 21/09/2026, preso por régua."""
     vistos: list[list[str]] = []
 
     def _espiao(args: list[str], **_k: Any) -> _Saida:
@@ -108,18 +80,8 @@ def test_a_leitura_prende_o_idioma(monkeypatch: pytest.MonkeyPatch) -> None:
     assert ambientes and ambientes[0].get("LC_ALL") == "C"
 
 
-# ---------------------------------------------------------------------------
-# 2 — O JOGO ABERTO VEM ANTES DE QUALQUER DECISÃO
-# ---------------------------------------------------------------------------
 def test_com_jogo_aberto_nada_e_fechado(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fechar o lançador fecharia o jogo junto.
-
-    Não é ressalva desta leva: é o contrato que
-    `steam_launch_options._fechar_a_steam_uma_vez` aplica desde 18/09/2026.
-
-    MORDE: tire o `if jogo_aberto()` de `repor` e a régua reprova, porque
-    `fechar` passa a ser chamado.
-    """
+    """Fechar o lançador fecharia o jogo junto."""
     monkeypatch.setattr(rl, "jogo_aberto", lambda: True)
     monkeypatch.setattr(rl, "abertos", lambda: list(rl.LANCADORES))
     monkeypatch.setattr(rl, "fechar", lambda _x: pytest.fail(
@@ -148,15 +110,9 @@ def test_a_pergunta_do_jogo_invalida_a_foto_antes(
     assert passos == ["invalidou", "perguntou"]
 
 
-# ---------------------------------------------------------------------------
-# 3 — O ATO INTEIRO, E A ORDEM
-# ---------------------------------------------------------------------------
 def test_fecha_todos_antes_de_reabrir_qualquer_um(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fechar-e-reabrir um a um faria o segundo subir disputando o físico.
-
-    MORDE: junte o fechar e o abrir num laço só e a ordem medida aqui muda.
-    """
+    """Fechar-e-reabrir um a um faria o segundo subir disputando o físico."""
     ordem: list[str] = []
     dois = [rl.LANCADORES[1], rl.LANCADORES[2]]
     monkeypatch.setattr(rl, "abertos", lambda: dois)
@@ -196,9 +152,6 @@ def test_sem_lancador_aberto_nao_se_faz_nada(
     assert "Nenhum lançador estava aberto" in rl.frase_do_recibo(recibo)
 
 
-# ---------------------------------------------------------------------------
-# 4 — A STEAM TEM DONO, E ELE É CHAMADO
-# ---------------------------------------------------------------------------
 def test_a_steam_fecha_pelo_dono_dela(monkeypatch: pytest.MonkeyPatch) -> None:
     """`stop_steam` salva a nuvem e fecha o runtime; TERM seria outro dono."""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
@@ -226,19 +179,7 @@ def test_a_steam_abre_pelo_dono_dela(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_o_lancador_abre_com_ambiente_limpo(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Herdar o interpretador de quem chamou contamina TODO jogo dali em diante.
-
-    **O QUE O DONO PROMETE É O AMBIENTE DE INTERPRETADOR**, e só ele:
-    `ambiente_do_jogo.VARIAVEIS_DO_INTERPRETADOR`. É o que quebra jogo — o
-    `/usr/bin/env python3` do `proton` acha o da venv. Um marcador de sessão
-    qualquer no ambiente não quebra nada, e cobrá-lo aqui seria régua medindo
-    outra coisa que não o produto.
-
-    A LISTA NÃO SE DIGITA: ela é LIDA do dono, senão esta régua envelhece no
-    dia em que ele aprender uma variável nova.
-
-    MORDE: tire o `env=ambiente_limpo(...)` do `Popen` e a régua reprova.
-    """
+    """Herdar o interpretador de quem chamou contamina TODO jogo dali em diante."""
     from hefesto_dualsense4unix.integrations.ambiente_do_jogo import (
         VARIAVEIS_DO_INTERPRETADOR,
     )
@@ -261,16 +202,9 @@ def test_o_lancador_abre_com_ambiente_limpo(
             f"{nome} atravessou para o lançador — e daí para todo jogo dele")
 
 
-# ---------------------------------------------------------------------------
-# 5 — O REINICIAR CHAMA A REPOSIÇÃO, E A FALHA DELA NÃO DESFAZ O REINÍCIO
-# ---------------------------------------------------------------------------
 def test_o_reiniciar_da_aba_repoe_depois_do_restart(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ORDEM É A ENTREGA: o lançador nasce com o daemon já de pé.
-
-    MORDE: chame `_repor_o_lancador()` antes do `_systemctl("restart")` e a
-    régua reprova — o lançador pegaria o físico de novo.
-    """
+    """A ORDEM É A ENTREGA: o lançador nasce com o daemon já de pé."""
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
     passos: list[str] = []
@@ -297,7 +231,7 @@ def test_a_reposicao_que_falha_nao_derruba_o_reiniciar(
 
     monkeypatch.setattr(rl, "repor", _explode)
 
-    a09_sistema.reiniciar(None, {}, None)  # não levanta
+    a09_sistema.reiniciar(None, {}, None)
 
 
 def test_a_trava_continua_vindo_antes_de_tudo(
@@ -353,9 +287,6 @@ def test_parar_o_servico_nao_mexe_no_lancador(
     assert cmd_tray._servico("stop") is True
 
 
-# ---------------------------------------------------------------------------
-# 6 — A FRASE TEM UM DONO SÓ
-# ---------------------------------------------------------------------------
 def test_a_frase_diz_o_que_aconteceu() -> None:
     frase = rl.frase_do_recibo(rl.Recibo(
         estavam_abertos=("Steam", "Heroic"),

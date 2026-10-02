@@ -43,38 +43,13 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "03-gatilhos.html"
 
-#: O `data-campo` do CABEÇALHO não é desta aba. `conta`, `conta-b` e `perfil`
-#: moram no `topo.html`, o esqueleto das dez, e quem os pinta é
 #: `pacotes.topo()` — cobrá-los do pacote da aba faria a régua reprovar o
-#: pacote por não fazer o trabalho de outro. Medido em 01/09/2026, quando os
-#: três apareciam vazios em TODAS as abas porque ninguém cuidava do que era de
-#: todas.
-#:
-#: `fita-chip` ENTROU EM 03/09/2026, e pelo mesmo motivo: os chips da fita
-#: ganharam endereço em `monta.fita()`, que é o esqueleto das DEZ páginas, e
-#: quem os escreve é a troca do bloco `fita` no `hefesto_vivo.pintar` — não o
-#: pacote da aba. Sem esta linha a régua cobrava do `a03` a pintura da fita do
-#: topo, que não é dele. **Não foi esta frente que abriu o vermelho** — ele já
-#: estava no `dev` no momento em que ela começou; foi consertado aqui porque o
-#: arquivo é desta aba.
-#: E ELE É PERGUNTADO, NUNCA DIGITADO — corrigido em 03/09/2026, e é a terceira
-#: régua da casa a cair na MESMA forma no mesmo dia. A lista literal envelheceu
 #: no instante em que o rodapé ganhou endereço: `pacotes.topo()` passou a emitir
-#: `rodape.salvar` e `rodape.exportar`, e esta régua os acusou de "sem dono"
-#: — reprovando a MELHORA em vez do defeito, que é o modo mais caro de errar
-#: que esta casa conhece.
-#:
-#: `topo()` é o dono do cabeçalho das dez páginas. Perguntar a ele é o que faz
-#: a lista acompanhar quem a escreve, em vez de precisar de alguém que se
-#: lembre de vir aqui.
 def _do_cabecalho() -> set[str]:
     import pacotes  # noqa: F401  (registra os dez)
     from pacotes import Contexto, topo
 
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
-    # OS QUATRO À MÃO CONTINUAM, e não são redundância: `conta`, `conta-b`,
-    # `perfil` e `fita-chip` saem de `monta.fita()` e da troca do bloco `fita`
-    # no `hefesto_vivo.pintar` — não de `topo()`. Quem os escreve é o piloto.
     return set(topo(ctx)) | {"conta", "conta-b", "perfil", "fita-chip"}
 
 
@@ -95,8 +70,6 @@ def publicada() -> str:
     return caminho.read_text(encoding="utf-8")
 
 
-#: UM CONTROLE DE MENTIRA, com a forma que o daemon devolve. O MAC é da faixa
-#: sintética da casa (`aa:bb:cc`): há dois portões de anonimato nesta árvore.
 FALSO = {
     "uniq": "aa:bb:cc:00:00:01", "player": 1, "transport": "usb", "is_primary": True,
     "inputs": {"l2_raw": 0, "r2_raw": 0},
@@ -107,13 +80,7 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": "aa:bb:cc:00:00:01",
 
 
 def _coluna(a03, modo_esq: str = "Off", modo_dir: str = "Off") -> dict:
-    """A coluna que o pacote devolve para um perfil com aqueles dois modos.
-
-    O PERFIL É INJETADO PELA PORTA DE CIMA (`perfil.ativo`), e não por um
-    arquivo de mentira no disco: o que esta régua mede é a TRADUÇÃO do perfil
-    para endereços de tela, e escrever um `.json` faria a régua medir também o
-    leitor de perfis — que tem régua própria em `test_o_perfil_chega_na_tela.py`.
-    """
+    """A coluna que o pacote devolve para um perfil com aqueles dois modos."""
     from pacotes import Contexto, perfil
 
     guardado = perfil.ativo
@@ -132,13 +99,7 @@ def _coluna(a03, modo_esq: str = "Off", modo_dir: str = "Off") -> dict:
 
 
 def _pacote_com(a03, modo_esq="Off", modo_dir="Off", ps_esq=None, ps_dir=None):
-    """O pacote INTEIRO para um perfil com aqueles dois modos.
-
-    O irmão `_coluna` devolve só a coluna, e ela deixou de ser suficiente em
-    02/09/2026: a caixa de ajustes saiu de `colunas` e virou `blocos`, porque o
-    número de barras é o do MODO e não o da página. Uma régua que só olhasse a
-    coluna passaria a dar verde sobre uma caixa que ninguém troca.
-    """
+    """O pacote INTEIRO para um perfil com aqueles dois modos."""
     from pacotes import Contexto, perfil
 
     guardado = perfil.ativo
@@ -156,14 +117,7 @@ def _pacote_com(a03, modo_esq="Off", modo_dir="Off", ps_esq=None, ps_dir=None):
 
 
 def _bloco(a03, r, pref, sigla):
-    """O HTML da caixa de ajustes daquela coluna, do `blocos` que o pacote devolve.
-
-    É POR AQUI QUE ESTA RÉGUA PASSOU A OLHAR, e a mudança é de 02/09/2026: a
-    caixa deixou de ser pintada campo a campo e virou um bloco trocado inteiro,
-    porque o número de barras é o do MODO — de zero a onze — e a página só
-    reservava quatro e duas. *Não há endereço para um filho que ainda não
-    existe*, e o bloco é o mecanismo que esta casa tem para isso.
-    """
+    """O HTML da caixa de ajustes daquela coluna, do `blocos` que o pacote devolve."""
     chave = f'[data-controle="{pref}"] .ajustes.{sigla}'
     assert chave in r["blocos"], (
         f"o pacote não emitiu a caixa de ajustes de {pref}·{sigla}. Sem ela a "
@@ -173,13 +127,7 @@ def _bloco(a03, r, pref, sigla):
 
 
 def test_o_modo_sem_ajuste_nao_deixa_barra_nenhuma(a03):
-    """`Off` não tem ajuste — logo a caixa NÃO pode ter barra nenhuma.
-
-    É o defeito D3 numa asserção. A cura da manhã de 02/09 enchia as quatro
-    barras do desenho com travessão; a de agora não deixa barra nenhuma, que é
-    o que o modo diz. Arranque o `blocos` de `pacote()` e esta régua reprova
-    nomeando a coluna.
-    """
+    """`Off` não tem ajuste — logo a caixa NÃO pode ter barra nenhuma."""
     r = _pacote_com(a03)
     for sigla in ("e", "d"):
         html = _bloco(a03, r, "p1", sigla)
@@ -193,12 +141,7 @@ def test_o_modo_sem_ajuste_nao_deixa_barra_nenhuma(a03):
 
 
 def test_o_modo_com_ajuste_traz_os_dele_e_so_os_dele(a03):
-    """A cura não pode ter apagado o caso que já funcionava.
-
-    `Rigid` tem DOIS parâmetros: a caixa vem com duas barras, com os nomes e os
-    valores do DISCO — nem uma a menos (o dado sumiria) nem uma a mais (voltavam
-    as casas vazias do desenho).
-    """
+    """A cura não pode ter apagado o caso que já funcionava."""
     r = _pacote_com(a03, modo_esq="Rigid", ps_esq=[0, 180])
     html = _bloco(a03, r, "p1", "e")
     quantas = html.count('class="barra"')
@@ -264,25 +207,9 @@ def test_a_caixa_do_lugar_sem_aparelho_tambem_e_trocada(a03):
 
 
 def test_nenhum_endereco_da_pagina_fica_sem_dono(a03, publicada):
-    """Todo `data-campo` da página tem quem o escreva. É a catraca da aba.
-
-    Ela conta os endereços da PÁGINA, não os do pacote — e é essa direção que
-    faz dela uma régua e não um espelho. Um `data-campo` novo no desenho entra
-    aqui vermelho até alguém ligá-lo.
-    """
+    """Todo `data-campo` da página tem quem o escreva. É a catraca da aba."""
     r = _pacote_com(a03, modo_esq="Rigid", modo_dir="Rigid")
     col = next(iter(r["colunas"].values()))
-    # UM BLOCO É DONO DO CONTÊINER, e não de um endereço por vez. A caixa de
-    # ajustes é trocada INTEIRA: os `aj-*` que a página traz deixam de existir
-    # no instante em que o bloco pousa, e os que passam a existir são os do
-    # MODO — dois no `Rigid`, onze no `MultiPositionVibration`. Cobrar deles um
-    # escritor campo a campo faria esta régua reprovar exatamente a cura, e foi
-    # o que ela fez na primeira volta: acusou `aj-nome-e-2` e `aj-nome-e-3`,
-    # que são as casas que o `Rigid` não tem.
-    #
-    # Então o dono se confere em dois tempos: quem está DENTRO de uma caixa é do
-    # bloco daquela caixa (e o teste cobra que o bloco exista); quem está fora
-    # continua tendo de sair em `colunas`.
     da_caixa = set()
     for m in re.finditer(r'<div class="ajustes ([ed])">(.*?)\n {10}</div>',
                          publicada, re.S):
@@ -302,9 +229,6 @@ def test_nenhum_endereco_da_pagina_fica_sem_dono(a03, publicada):
         f"{len(sem_dono)} endereço(s) da página que ninguém escreve: {sem_dono}. "
         f"Cada um continua mostrando o valor que o gerador desenhou.")
 
-    # E O BLOCO TEM DE TRAZER ENDEREÇO, senão a caixa vira um desenho novo no
-    # lugar do velho — sem endereço, a régua do mockup e o "Guardar esse efeito"
-    # ficam os dois cegos ali dentro.
     dos_blocos = set()
     for html in r["blocos"].values():
         dos_blocos |= set(re.findall(r'data-campo="([^"]+)"', str(html)))
@@ -315,15 +239,7 @@ def test_nenhum_endereco_da_pagina_fica_sem_dono(a03, publicada):
 
 
 def test_a_cobertura_conta_o_que_a_pagina_recebe(a03, publicada):
-    """A nota da aba é o que PINTA, não o que o dicionário tem.
-
-    Medido em 02/09/2026 contra a mesa dela: o pacote devolvia 20 chaves por
-    controle e o piloto escrevia 8 valores — as doze restantes (`l2-raw`,
-    `l2-pct`, `r2-raw`, `r2-pct`, `modo-e`, `modo-d`, vezes as duas colunas) são
-    endereços que a página não tem. Contá-las era esta aba dando-se nota por
-    escrever no vazio, que é a forma exata do `77%` falso que a medição de 02/09
-    derrubou.
-    """
+    """A nota da aba é o que PINTA, não o que o dicionário tem."""
     from pacotes import Contexto, perfil
 
     guardado = perfil.ativo
@@ -334,10 +250,6 @@ def test_a_cobertura_conta_o_que_a_pagina_recebe(a03, publicada):
     finally:
         perfil.ativo = guardado  # type: ignore[assignment]
 
-    # A CONTA É DE TODAS AS COLUNAS, e não da primeira — mudado em 02/09/2026,
-    # quando a coluna do LUGAR VAZIO passou a ser escrita também (o defeito D4).
-    # Ler só `next(iter(...))` faria esta régua reprovar a cura: ela compararia
-    # a nota da aba INTEIRA com os endereços de UM controle.
     na_pagina = set(re.findall(r'data-campo="([^"]+)"', publicada))
     devia = sum(1 for col in r["colunas"].values() for k in col if k in na_pagina)
     sobra = sum(1 for col in r["colunas"].values() for k in col if k not in na_pagina)
@@ -402,13 +314,7 @@ def test_o_lugar_vazio_recusa_dizendo_que_esta_vazio(a03):
 
 
 class _PonteDeMentira:
-    """Um dublê que responde a qualquer nome e guarda o que foi chamado.
-
-    O DAEMON VIVO NÃO ENTRA AQUI, e a razão é de bancada: há dois controles na
-    mesa dela e um `trigger.set` de régua mudaria o aparelho debaixo de quem
-    estiver jogando. O que esta régua mede é se o gesto CHEGA à ponte — e para
-    isso o dublê basta, porque a ponte é injetada, não importada.
-    """
+    """Um dublê que responde a qualquer nome e guarda o que foi chamado."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []
@@ -422,13 +328,7 @@ class _PonteDeMentira:
 
 @pytest.mark.parametrize("nome_do_gesto", ["modo", "pronto", "guardar"])
 def test_o_lugar_vazio_nao_alcanca_a_ponte(a03, nome_do_gesto):
-    """Os TRÊS gestos da aba recusam antes de falar com o daemon.
-
-    É o que separa esta cura de uma mensagem bonita: um `trigger.set` com
-    `uniq` vazio vai em BROADCAST e zera o gatilho dos QUATRO — foi o defeito
-    ABAS-06 (25/07), descrito no próprio `ipc_bridge.trigger_reset_detalhado`.
-    A régua conta as chamadas: zero é o único número aceitável.
-    """
+    """Os TRÊS gestos da aba recusam antes de falar com o daemon."""
     from pacotes import Contexto, gesto_da_pagina
 
     fn = gesto_da_pagina(PAGINA, nome_do_gesto)
@@ -448,16 +348,7 @@ def test_o_lugar_vazio_nao_alcanca_a_ponte(a03, nome_do_gesto):
 
 
 def test_a_contagem_de_casas_sai_da_pagina_e_nao_do_codigo(a03, publicada):
-    """As casas CRAVADAS são as do desenho, lidas dele. Nenhum número digitado.
-
-    O que este número QUER DIZER mudou em 02/09/2026, e a régua muda com ele:
-    ele já mandou no pacote (quantas casas escrever) e agora é DIAGNÓSTICO —
-    quantas barras a página publicada ainda traz do desenho velho, e que o
-    bloco tem de sobrescrever. Vai a zero no dia em que ela publicar a bancada.
-
-    Digitar `4` e `2` aqui criaria a segunda cópia de um número que o gerador
-    decide, e ela envelheceria calada.
-    """
+    """As casas CRAVADAS são as do desenho, lidas dele. Nenhum número digitado."""
     casas = a03._casas_cravadas()
     for sigla, quantas in casas.items():
         indices = {int(i) for i in re.findall(
@@ -471,26 +362,6 @@ def test_a_contagem_de_casas_sai_da_pagina_e_nao_do_codigo(a03, publicada):
         "outro — o diagnóstico da publicação pendente deixou de ser lido")
 
 
-# ---------------------------------------------------------------------------
-# O DEFEITO D4 — A COLUNA DO LUGAR VAZIO, e ele é o D3 numa coluna que ninguém
-# olhava. Medido em 02/09/2026 pela `--prova-de-mockup` com a mesa dela:
-#
-#     03-gatilhos.html (8):
-#         p3·modo-chave-e = 'Off'     <- ENDERECO MORTO
-#         p3·pronto-e     = 'custom'  <- ENDERECO MORTO   (e os seis irmãos)
-#
-# "ENDEREÇO MORTO" na régua quer dizer: **o pacote declara um valor e a tela
-# mostra outro**. O piloto preenche todo lugar que a mesa não tem com um
-# travessão (`hefesto_vivo.py:1029-1039`) e `escrever()` RECUSA pôr num
-# `<select>` um valor que ele não oferece (`:145-151`) — a recusa é certa, e o
-# desfecho é que a coluna vazia continua com o que o gerador escreveu.
-#
-# ENQUANTO O CRAVADO É `Off`/`custom` ISSO PASSA POR INOFENSIVO. Não é: no dia
-# em que um controle sair do P3 com `Rígido` aplicado, o `Rígido` FICA — a
-# coluna de um lugar sem aparelho afirmando um efeito.
-# ---------------------------------------------------------------------------
-
-#: A MESA DE DOIS, que é a dela. Os `uniq` são da faixa sintética da casa.
 MESA_DE_DOIS = [*MESA, {"pref": "p2", "jogador": 2, "uniq": "aa:bb:cc:00:00:02",
                         "nome": "Régua", "via": "BT", "cor": "cosmic-red",
                         "mascara": "DualSense", "alvo": False}]
@@ -515,15 +386,7 @@ def _com_a_mesa(a03, mesa, conectados, modo: str = "Rigid") -> dict:
 
 
 def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
-    """A coluna sem aparelho é ESCRITA, e com valor que o `<select>` aceita.
-
-    ARRANQUE o laço dos vazios em `pacote()` e esta régua reprova nomeando a
-    coluna: sem ele o pacote não devolve `p3` nenhum, e o único valor que chega
-    àqueles quatro campos é o travessão que o `<select>` recusa.
-
-    O VALOR TEM DE SER OFERECIDO PELA PÁGINA — não basta ser honesto. É a
-    segunda asserção, e é ela que separa esta cura de escrever `'—'` de novo.
-    """
+    """A coluna sem aparelho é ESCRITA, e com valor que o `<select>` aceita."""
     r = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])
     vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
     assert vazios, "a página não marca lugar vazio nenhum — a régua ficou cega"
@@ -533,16 +396,6 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             f'a coluna {pref} não foi escrita. A página a marca '
             f'`data-conectado="nao"`, e o que o pacote não escreve continua '
             f"mostrando o desenho — é o ENDEREÇO MORTO da régua do mockup.")
-        # A RÉGUA PERGUNTA PELO QUE ELA VEIO MEDIR — 04/09/2026, e a mudança é
-        # do escopo, não do rigor. Ela era uma IGUALDADE de conjunto, e o que a
-        # motivou está escrito na própria mensagem: a coluna vazia não tem barra
-        # de ajuste, então **emitir `aj-*` ali** é se dar nota por escrever no
-        # vazio. A igualdade cobrava mais do que isso: ela congelava o conjunto
-        # inteiro, e por isso reprovava toda cura que acrescentasse um endereço
-        # honesto — a dica do modo e a do efeito pronto (decisões [01] e [02] do
-        # PO) reprovaram aqui já nascendo certas, com o lugar vazio dizendo
-        # "Nenhum controle neste lugar." Um portão que acusa quem está certo
-        # ensina a próxima pessoa a ignorá-lo.
         assert not [k for k in col if k.startswith("aj-")], (
             f"{pref} recebeu {sorted(k for k in col if k.startswith('aj-'))}. A "
             f"coluna vazia do desenho não tem barra de ajuste nenhuma — ela traz "
@@ -552,13 +405,6 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
                 a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO} <= set(col), (
             f"{pref} recebeu {sorted(col)} e falta um dos seis que a coluna "
             f"vazia precisa: as quatro escolhas e os dois do cabeçalho.")
-        # O CABEÇALHO NÃO É `<select>`, e por isso sai da conta abaixo. São DOIS
-        # campos: o miolo do chip (que entrou na coluna em 03/09/2026 para ganhar
-        # o SELO da visita) e a COR do plástico, que no lugar vazio vai vazia
-        # para APAGAR a borda de quem saiu. As DICAS saem pela mesma razão: elas
-        # pousam no `title` do EMBRULHO do campo de escolha, pelo alvo
-        # `atributo`, e não numa `<option>`. As quatro escolhas continuam com a
-        # régua de valor oferecido que este teste sempre cobrou.
         escolhas = {k: v for k, v in col.items()
                     if k not in (a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO)
                     and not k.startswith(a03.PREFIXO_DA_DICA_DO_MODO)
@@ -567,10 +413,6 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             oferece = re.search(
                 rf'data-campo="{campo}"(.*?)</select>', publicada, re.S)
             assert oferece, f"{pref}·{campo} não é um `<select>` da página"
-            # O VALOR QUE PROCURAMOS É O QUE O PILOTO VAI ESCREVER, e não o que
-            # o pacote emite: `escrever()` troca vazio por `—` ANTES de escolher
-            # a opção. Comparar o emitido cru daria verde sobre um `''` que a
-            # página não oferece — e o campo nasceria em branco.
             na_tela = valor if valor != "" else a03.TRAVESSAO
             assert f'value="{na_tela}"' in oferece.group(1), (
                 f"{pref}·{campo} = {valor!r} (na tela: {na_tela!r}), e o "
@@ -583,7 +425,7 @@ def test_o_lugar_vazio_nao_rouba_a_marca_do_piloto(a03):
     """O pacote NÃO escreve numa coluna que o desenho dá por conectada.
 
     POR QUE ISTO É UMA RÉGUA E NÃO UM DETALHE: o piloto deduz "lugar vazio" de
-    "coluna que ninguém emitiu" (`hefesto_vivo.py:1029-1039`) e é essa dedução
+    "coluna que ninguém emitiu" (`hefesto_vivo.py:851-861`) e é essa dedução
     que põe o `data-conectado="nao"` — o atributo de que pende o
     `pointer-events:none` do lugar vazio (`03-gatilhos.html:899`). Emitir a
     coluna do P2 com um controle só na mesa tiraria o P2 daquela conta, e a
@@ -601,11 +443,7 @@ def test_o_lugar_vazio_nao_rouba_a_marca_do_piloto(a03):
 
 
 def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
-    """Com o controle na mesa, `Rigid`; sem ele, o travessão. É o D4 inteiro.
-
-    Esta é a asserção que dá o CUSTO do defeito em vez do nome dele: o mesmo
-    perfil, a mesma aba, o controle saindo do lugar — e o campo tem de mudar.
-    """
+    """Com o controle na mesa, `Rigid`; sem ele, o travessão. É o D4 inteiro."""
     mesa_de_tres = [
         *MESA_DE_DOIS,
         {"pref": "p3", "jogador": 3, "uniq": "aa:bb:cc:00:00:03",
@@ -617,9 +455,6 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
     assert com_ele["modo-chave-e"] == "Rigid"
 
     sem_ele = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])["colunas"]["p3"]
-    # DECISÃO DELA, 02/09/2026: o lugar vazio mostra o travessão, e não `Off`.
-    # A razão é que `Desligado` é também uma escolha legítima de um controle
-    # CONECTADO — a mesma palavra para duas coisas, e só o cabeçalho as separa.
     assert sem_ele["modo-chave-e"] != "Rigid", (
         "o P3 esvaziou e o campo continuou dizendo `Rigid`. É a tela afirmando "
         "um efeito num lugar onde não há aparelho.")
@@ -628,13 +463,7 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
         "travessão desde a decisão dela de 02/09")
 
 
-# ---------------------------------------------------------------------------
-# A RECUSA DO DAEMON NA LÍNGUA DA TELA — LEI 0: a tradução já existia.
 # `app/actions/triggers_actions.humanizar_erro_gatilho` é a HARM-19, escrita e
-# testada para a aba Gatilhos da GUI estável. Conferido em 02/09/2026: ZERO
-# pacotes da interface nova a chamavam, e o daemon falava com ela na língua do
-# `core/trigger_effects`.
-# ---------------------------------------------------------------------------
 
 
 class _PonteQueRecusa:
@@ -664,11 +493,7 @@ class _PonteQueRecusa:
     ],
 )
 def test_a_recusa_do_daemon_chega_na_lingua_da_tela(a03, gesto_, clique, cru, esperado):
-    """A frase que vai para a tela dela é a humanizada, não a do `core`.
-
-    ARRANQUE o `_na_lingua_da_tela` das duas linhas de `raise` e esta régua
-    reprova mostrando a frase crua — que é exatamente o que ela via.
-    """
+    """A frase que vai para a tela dela é a humanizada, não a do `core`."""
     from pacotes import Contexto, gesto_da_pagina
 
     fn = gesto_da_pagina(PAGINA, gesto_)
@@ -703,30 +528,8 @@ def test_a_recusa_que_o_tradutor_nao_conhece_volta_inteira(a03):
     assert str(recusa.value) == "o hidraw sumiu no meio do caminho"
 
 
-# ---------------------------------------------------------------------------
-# AS DUAS DECISÕES DELA DE 02/09/2026 QUE SOBRAM, e as duas viram régua aqui.
-#
-# 13 — *"o lugar vazio mostra travessão"*, com a razão dela: `Desligado` É uma
-#      escolha legítima de um controle conectado, e usar a mesma palavra para
-#      as duas coisas confunde as duas.
-# 17 — *"Isso é pra quando o user salva algum efeito. É assim que tem que
-#      aparecer. O nome que o user deixar lá. Ali é só exemplo."*
-# ---------------------------------------------------------------------------
-
-
 def test_o_travessao_espera_a_publicacao_dela(a03):
-    """O pacote NÃO manda travessão numa página que não o oferece.
-
-    É a metade de que ninguém se lembra: `escrever()` do piloto recusa em
-    SILÊNCIO pôr num `<select>` um valor que ele não tem, e a recusa é certa —
-    escrever qualquer outra coisa deixaria o campo em branco somando uma
-    pintura por tique, para sempre. Então o pacote PERGUNTA à página, e a
-    resposta muda sozinha no dia da publicação.
-
-    A MORDIDA é o dublê abaixo: com a página oferecendo `—`, o valor tem de
-    virar vazio (que o piloto pinta como travessão); sem, tem de continuar o
-    que o produto de hoje sabe mostrar.
-    """
+    """O pacote NÃO manda travessão numa página que não o oferece."""
     guardado = a03._OFERECE
     try:
         a03._OFERECE = {"modo": frozenset({"Off"}), "pronto": frozenset({"custom"})}
@@ -744,17 +547,7 @@ def test_o_travessao_espera_a_publicacao_dela(a03):
 
 
 def test_o_travessao_esta_no_desenho_de_hoje(a03):
-    """A BANCADA oferece `—` nos dois campos de escolha, e ele é `disabled`.
-
-    A régua olha o desenho, e não o publicado: publicar é ato dela, e cobrar do
-    produto uma decisão que ainda espera o OK dela faria esta régua reprovar por
-    algo que não é defeito. A divergência está declarada em
-    `mockup/DIVERGENCIAS.md`.
-
-    `disabled` NÃO impede a pintura — `select.value = '—'` escolhe pelo `value`
-    sem olhar o `disabled`. O que ele impede é o contrário: que alguém escolha
-    "nada" com o rato e mande isso ao daemon como se fosse um efeito.
-    """
+    """A BANCADA oferece `—` nos dois campos de escolha, e ele é `disabled`."""
     from hefesto_dualsense4unix.interface import onde
 
     bancada = onde.pagina(PAGINA).read_text(encoding="utf-8")
@@ -796,7 +589,6 @@ def test_o_efeito_com_nome_nasce_e_volta(a03, tmp_path, monkeypatch):
         "`data-campo` de cada barra, e sem eles o efeito nasce com os PADRÕES "
         "do modo em vez do que ela ajustou")
 
-    # 2. O NOME APARECE NA LISTA, e antes de salvar não aparecia.
     opcoes = a03.html_das_opcoes_de_pronto()
     assert f'value="{a03.PREFIXO_DO_MEU}Recuo do MK"' in opcoes, (
         f"o efeito salvo não entrou no campo de escolha:\n{opcoes}")
@@ -805,7 +597,6 @@ def test_o_efeito_com_nome_nasce_e_volta(a03, tmp_path, monkeypatch):
         "o gesto não devolveu a lista nova — ela só veria o nome no tique "
         "seguinte, e um botão que parece não fazer nada é clicado duas vezes")
 
-    # 3. ESCOLHÊ-LO APLICA A METADE DAQUELE GATILHO.
     ponte = _PonteQueGuarda()
     pronto = gesto_da_pagina(PAGINA, "pronto")
     pronto(ctx, {"uniq": FALSO["uniq"], "lado": "e",
@@ -814,21 +605,13 @@ def test_o_efeito_com_nome_nasce_e_volta(a03, tmp_path, monkeypatch):
         f"escolher o efeito dela não chegou ao daemon com o que ela salvou: "
         f"{ponte.chamadas}")
 
-    # 4. O CAMPO RECONHECE O QUE ESTÁ NO GATILHO. Sem isto ela salva "Recuo do
-    #    MK", o campo continua em "— Nenhum —" e ela não sabe que é o dela.
     assert a03._meu_efeito_que_casa("left", {"mode": "Rigid", "params": [3, 180]}) \
         == "Recuo do MK"
     assert a03._meu_efeito_que_casa("left", {"mode": "Rigid", "params": [0, 0]}) == ""
 
 
 def test_a_lista_nao_promete_efeito_que_nao_existe(a03):
-    """Sem efeito salvo, NÃO nasce separador de "Meus efeitos".
-
-    É o princípio geral dela de 02/09: *"se não tá mostrando agora, não tem info
-    pra mostrar no produto"*. Um separador com nada embaixo é uma promessa vazia
-    — e os dois nomes que o DESENHO traz são exemplos, que é o que ela disse
-    (*"Ali é só exemplo"*).
-    """
+    """Sem efeito salvo, NÃO nasce separador de "Meus efeitos"."""
     opcoes = a03.html_das_opcoes_de_pronto()
     assert a03.SEPARADOR_DOS_MEUS not in opcoes, (
         f"a lista trouxe o separador sem nenhum efeito salvo:\n{opcoes}")
@@ -851,25 +634,6 @@ class _PonteQueGuarda:
         return anotar
 
 
-# ---------------------------------------------------------------------------
-# A CURA VALE NOS DOIS MUNDOS — 02/09/2026, e ela nasceu de um estrago medido.
-#
-# A decisão 2 dela tem DUAS metades e elas caem em lados diferentes da fronteira
-# da publicação: a que ENCHE a caixa é este pacote e vale hoje; a que a faz
-# CRESCER é o desenho, e desenho só chega à tela quando ELA publica.
-#
-# MEDIDO NO CHROME sobre o arquivo PUBLICADO, injetando o HTML que
-# `html_dos_ajustes` emite e exatamente a operação do piloto
-# (`alvo.innerHTML = html`), com os perfis do disco dela:
-#
-#     aventura  L2 `Curva de força`       10 barras em 92px → vaza  58px
-#               R2 `Curva de força`       10 barras em 46px → vaza 104px
-#     corrida   R2 `Vibração por posição` 11 barras em 46px → vaza 119px
-#
-# E o que vaza cai POR CIMA do `<select>` de Modo do R2 e do "Guardar esse
-# efeito". Dos CINCO perfis dela com gatilho, DOIS estouram — os outros três
-# pedem três barras onde a página reserva duas e cabem espremidos.
-# ---------------------------------------------------------------------------
 _GRANDES = ("Machine", "Custom", "MultiPositionFeedback", "MultiPositionVibration")
 
 
@@ -890,17 +654,9 @@ def test_a_caixa_nao_vaza_na_pagina_que_o_produto_renderiza_hoje(a03):
     e some sozinho no dia em que ela publicar a bancada — ver
     `test_a_caixa_cresce_no_dia_em_que_ela_publicar`.
     """
-    # ELA PUBLICOU A 03 EM 02/09/2026, e a página passou a comportar. Esta
-    # régua deixou de poder ler o teto da página — mas o que ela guarda não é a
-    # página, é a REGRA: com teto, nenhum modo põe mais barras do que cabe.
-    # Então o teto vira dublê, e a régua sobrevive à publicação em vez de virar
-    # paisagem. O caso "sem teto" é o `test_a_caixa_cresce_no_dia_em_que_ela_
-    # publicar", que mede a página de verdade.
     casas = {"e": 4, "d": 2}
     grandes = 0
     for nome in _GRANDES:
-        # Quantos ajustes o modo tem, pelo dono do dado — `_padroes` devolve os
-        # parâmetros posicionais do preset, que é o que a caixa desenha.
         quantos = len(a03._padroes(nome))
         assert quantos > 2, (
             f"{nome} devolveu {quantos} parâmetros e esta régua existe para os "
@@ -920,17 +676,7 @@ def test_a_caixa_nao_vaza_na_pagina_que_o_produto_renderiza_hoje(a03):
 
 
 def test_o_aviso_do_que_nao_coube_saiu_por_decisao_dela(a03):
-    """Ela mandou tirar o aviso, e a casa que ele ocupava voltou a ser barra.
-
-    O aviso dizia `+N não cabem nesta caixa ainda` na última casa reservada.
-    Era texto de tela que ela não tinha visto, e texto de tela é dela:
-    perguntado em 02/09/2026, a resposta foi tirar. Ela publicou a 03 no mesmo
-    minuto, então o teto nem age — mas a régua guarda as duas coisas.
-
-    O QUE ISTO MEDE, e é o oposto de medir a ausência de uma frase: com teto, o
-    número de barras à vista é EXATAMENTE o que a página reserva. Antes era
-    `cabem - 1`, porque uma casa ia para o aviso.
-    """
+    """Ela mandou tirar o aviso, e a casa que ele ocupava voltou a ser barra."""
     assert not hasattr(a03, "NAO_COUBE"), (
         "a constante do aviso voltou. Ela saiu por decisão dela em 02/09/2026, "
         "e uma frase de tela não volta sem a palavra dela")
@@ -947,21 +693,7 @@ def test_o_aviso_do_que_nao_coube_saiu_por_decisao_dela(a03):
             f"o aviso voltou ao HTML com teto {teto}:\n{html}")
 
 def test_o_que_nao_coube_continua_no_dom_para_o_guardar_nao_destruir(a03):
-    """O que a tela não mostra o "Guardar" ainda tem de LER.
-
-    O botão lê os `aj-val-*` DA TELA — o daemon não devolve o modo do gatilho —,
-    e `_ajustes_da_coluna` cai no PADRÃO do modo para o índice que não achar.
-    Emitir só as barras visíveis faria um clique em "Guardar esse efeito"
-    gravar os padrões por cima das sete posições que ela salvou: destruir dado
-    dela em silêncio, num botão que diz guardar.
-
-    A MORDIDA: tire o `escondida=` de `html_dos_ajustes` (emita só as visíveis)
-    e a segunda asserção reprova com os índices que sumiram.
-    """
-    # TETO POR DUBLÊ, e não pela página: ela publicou a 03 em 02/09/2026 e a
-    # página passou a comportar, então o caminho real não corta mais nada. O
-    # que esta régua guarda não é o corte — é que o CORTADO continue no DOM
-    # para o "Guardar" ler. A regra sobrevive à publicação; a página, não.
+    """O que a tela não mostra o "Guardar" ainda tem de LER."""
     html = a03.html_dos_ajustes(
         "e",
         [{"nome": f"Posição {i}", "valor": str(i), "pct": 10 * i}
@@ -1020,16 +752,7 @@ def test_a_caixa_cresce_no_dia_em_que_ela_publicar(a03, monkeypatch):
 
 
 def test_a_regua_do_css_nao_le_o_proprio_comentario(a03):
-    """Uma régua que procura a declaração no documento INTEIRO acha a prosa.
-
-    MEDIDO em 02/09/2026: arrancada `grid-template-rows:subgrid` de
-    `.duas-colunas > div` — e SÓ ela —, o gerador continuou dizendo `OK`, porque
-    o comentário CSS que EXPLICA a cura escreve a declaração por extenso e
-    comentário vai para dentro do `<style>`. É a régua lendo a si mesma.
-
-    A MORDIDA: troque `sem_comentarios_de_css(doc)` por `doc` em `aba03.py` e o
-    gerador volta a dar verde sobre uma página sem a cura.
-    """
+    """Uma régua que procura a declaração no documento INTEIRO acha a prosa."""
     doc = ("/* A CURA É `grid-template-rows:subgrid`: as trilhas passam a ser "
            "da GRADE */\n  .duas-colunas > div{display:grid;grid-row:1/-1}")
     assert "grid-template-rows:subgrid" in doc, "o caso de teste perdeu a isca"

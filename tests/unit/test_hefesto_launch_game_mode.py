@@ -1,22 +1,4 @@
-"""PLAT-05: Game Mode COSMIC no wrapper `hefesto-launch` — best-effort puro.
-
-Cada teste roda o wrapper POSIX-sh REAL via subprocess com um
-`system76-power` FAKE na frente do PATH (nunca o daemon de energia real da
-máquina — o fake sombreia o binário; nos cenários de ausência o PATH é
-RESTRITO a um diretório controlado, para o fallback busctl/dbus-send jamais
-alcançar o D-Bus de verdade):
-
-- perfil anterior != performance => pede Performance na largada e RESTAURA o
-  perfil anterior depois que o jogo termina (restaurador em background — o
-  `exec env` preserva o PID, trap de EXIT morre no exec);
-- já em Performance => só consulta, não seta nada (nada a restaurar);
-- system76-power/busctl/dbus-send AUSENTES => no-op silencioso;
-- `set` falhando => o jogo abre do mesmo jeito (nenhum rastro de restore);
-- fallback busctl => métodos REAIS da interface (Performance/Balanced +
-  GetProfile — introspecção ao vivo 2026-07-18; SetProfile NÃO existe).
-
-Em TODOS os casos o comando embrulhado executa — o jogo sempre abre.
-"""
+"""PLAT-05: Game Mode COSMIC no wrapper `hefesto-launch` — best-effort puro."""
 from __future__ import annotations
 
 import os
@@ -66,8 +48,7 @@ def _write_exec(path: Path, body: str) -> None:
 
 
 def _restricted_bin(tmp_path: Path, tools: list[str]) -> Path:
-    """PATH mínimo: só as ferramentas listadas (por symlink) — garante que o
-    fallback D-Bus NUNCA encontra o busctl/dbus-send reais da máquina."""
+    """PATH mínimo: só as ferramentas listadas (por symlink) — garante que o"""
     bindir = tmp_path / "bin-restrito"
     bindir.mkdir(exist_ok=True)
     for tool in tools:
@@ -91,7 +72,6 @@ def _run_wrapper(
         "XDG_RUNTIME_DIR": str(tmp_path / "run"),
         "XDG_STATE_HOME": str(tmp_path / "state"),
         "SteamAppId": "1599660",
-        # Poll curto do restaurador — o default (2 s) deixaria o teste lento.
         "HEFESTO_GM_POLL_SECS": "0.2",
     }
     env.update(extra_env or {})
@@ -133,15 +113,14 @@ def _s76_env(tmp_path: Path, perfil: str) -> tuple[Path, Path, dict[str, str]]:
 
 
 def test_pede_performance_e_restaura_o_perfil_anterior(tmp_path: Path) -> None:
-    """Caminho feliz: Balanced → Performance na largada; jogo termina →
-    o restaurador devolve Balanced (sem segurar o stdout do jogo)."""
+    """Caminho feliz: Balanced → Performance na largada; jogo termina →"""
     fakebin, log, extra = _s76_env(tmp_path, "Balanced")
     path_env = f"{fakebin}:{os.environ.get('PATH', '/usr/bin:/bin')}"
 
     result = _run_wrapper(tmp_path=tmp_path, path_env=path_env, extra_env=extra)
 
     assert result.returncode == 0
-    assert result.stdout == "jogo-abriu"  # o jogo SEMPRE abre
+    assert result.stdout == "jogo-abriu"
     conteudo = _wait_for_log(log, "set balanced")
     linhas = conteudo.strip().splitlines()
     assert linhas[0] == "get"
@@ -157,10 +136,10 @@ def test_ja_em_performance_so_consulta_e_nao_seta(tmp_path: Path) -> None:
 
     assert result.returncode == 0
     assert result.stdout == "jogo-abriu"
-    time.sleep(0.6)  # janela para um restaurador indevido aparecer
+    time.sleep(0.6)
     conteudo = log.read_text(encoding="utf-8")
     assert "get" in conteudo
-    assert "set" not in conteudo  # nada a trocar, nada a restaurar
+    assert "set" not in conteudo
 
 
 def test_perfil_desconhecido_nao_vira_comando(tmp_path: Path) -> None:
@@ -180,16 +159,14 @@ def test_perfil_desconhecido_nao_vira_comando(tmp_path: Path) -> None:
 
 
 def test_ausencia_total_e_noop_silencioso(tmp_path: Path) -> None:
-    """Sem system76-power NEM busctl NEM dbus-send no PATH: o Game Mode
-    inteiro é no-op e o jogo abre — PATH restrito prova que o fallback
-    D-Bus nunca alcança o barramento real."""
+    """Sem system76-power NEM busctl NEM dbus-send no PATH: o Game Mode"""
     bindir = _restricted_bin(tmp_path, ["sh", "env", "date", "mkdir"])
 
     result = _run_wrapper(tmp_path=tmp_path, path_env=str(bindir))
 
     assert result.returncode == 0
     assert result.stdout == "jogo-abriu"
-    assert result.stderr == ""  # nem ruído de ferramenta ausente
+    assert result.stderr == ""
 
 
 def test_set_falhando_nao_derruba_nem_atrasa_o_jogo(tmp_path: Path) -> None:
@@ -207,16 +184,13 @@ def test_set_falhando_nao_derruba_nem_atrasa_o_jogo(tmp_path: Path) -> None:
     time.sleep(0.6)
     conteudo = log.read_text(encoding="utf-8")
     assert "set-fail performance" in conteudo
-    # set falhou => NÃO agenda restauração (não há o que restaurar).
     assert "set-fail balanced" not in conteudo
 
 
 def test_fallback_busctl_usa_os_metodos_reais_da_interface(
     tmp_path: Path,
 ) -> None:
-    """Sem o binário system76-power, o wrapper fala com o fake busctl usando
-    os métodos REAIS (GetProfile / Performance / Balanced) — nunca o
-    SetProfile imaginado (não existe na interface)."""
+    """Sem o binário system76-power, o wrapper fala com o fake busctl usando"""
     tools = ["sh", "env", "date", "mkdir", "sed", "head", "tr", "sleep", "cat"]
     bindir = _restricted_bin(tmp_path, tools)
     _write_exec(bindir / "busctl", _FAKE_BUSCTL)
@@ -232,5 +206,5 @@ def test_fallback_busctl_usa_os_metodos_reais_da_interface(
     assert result.stdout == "jogo-abriu"
     conteudo = _wait_for_log(log, "com.system76.PowerDaemon Balanced")
     assert "com.system76.PowerDaemon GetProfile" in conteudo
-    assert "com.system76.PowerDaemon Performance" in conteudo  # a ida
-    assert "SetProfile" not in conteudo  # o método que NÃO existe
+    assert "com.system76.PowerDaemon Performance" in conteudo
+    assert "SetProfile" not in conteudo

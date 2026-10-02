@@ -23,10 +23,6 @@ from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.testing import FakeController
 
-# ---------------------------------------------------------------------------
-# Handler _handle_mouse_emulation_set
-# ---------------------------------------------------------------------------
-
 
 class _FakeConfig:
     mouse_emulation_enabled = False
@@ -112,9 +108,7 @@ async def test_sem_daemon_erro() -> None:
         await _Handlers(None)._handle_mouse_emulation_set({"speed": 9})
 
 
-# ---------------------------------------------------------------------------
 # Daemon.set_mouse_speed (lifecycle)
-# ---------------------------------------------------------------------------
 
 
 def _make_daemon() -> Daemon:
@@ -145,8 +139,7 @@ def test_set_mouse_speed_com_device_vivo_aplica_sem_recriar() -> None:
 
 
 def test_set_mouse_speed_sem_device_nao_liga_nem_cria(monkeypatch) -> None:
-    """Mouse DESLIGADO: atualiza config, NÃO liga emulação, NÃO cria device e
-    NÃO persiste flag — regressão do A4 (slider religava a emulação)."""
+    """Mouse DESLIGADO: atualiza config, NÃO liga emulação, NÃO cria device e"""
     from hefesto_dualsense4unix.utils import session
 
     persist_calls: list[object] = []
@@ -169,8 +162,7 @@ def test_set_mouse_speed_sem_device_nao_liga_nem_cria(monkeypatch) -> None:
 
 
 def test_set_mouse_speed_com_emulacao_ligada_re_persiste_flag(monkeypatch) -> None:
-    """FEAT-MOUSE-CURSOR-FEEL-01 (A5): com a emulação LIGADA, mudar a
-    velocidade re-salva o flag JSON — o speed novo sobrevive a restart."""
+    """FEAT-MOUSE-CURSOR-FEEL-01 (A5): com a emulação LIGADA, mudar a"""
     from hefesto_dualsense4unix.utils import session
 
     saved: list[tuple[bool, int | None, int | None]] = []
@@ -202,8 +194,7 @@ def test_set_mouse_speed_clampa_ao_contrato() -> None:
 def test_set_mouse_emulation_ligar_ja_ligado_re_persiste_velocidades(
     monkeypatch,
 ) -> None:
-    """FEAT-MOUSE-CURSOR-FEEL-01 (A5): 'ligar' com device JÁ vivo (start
-    retorna cedo sem salvar) re-persiste o flag com as velocidades novas."""
+    """FEAT-MOUSE-CURSOR-FEEL-01 (A5): 'ligar' com device JÁ vivo (start"""
     from hefesto_dualsense4unix.utils import session
 
     saved: list[tuple[bool, int | None, int | None]] = []

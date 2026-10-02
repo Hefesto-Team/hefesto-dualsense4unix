@@ -44,8 +44,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: Um controle de mentira, na faixa sintética da casa — há dois portões de
-#: anonimato nesta árvore e eles não perdoam.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "bt",
          "battery_pct": 95, "is_primary": True, "inputs": {}, "audio": {},
@@ -53,7 +51,6 @@ FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "bt",
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "BT", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: O estado com o portão ABERTO: sem `gamepad_emulation` nem `native_mode`,
 #: `mode_of_state` responde `desktop` — que é o modo em que o mouse pode ligar.
 NO_DESKTOP = {
     "active_profile": "regua",
@@ -62,9 +59,7 @@ NO_DESKTOP = {
     "keyboard_emulation": {"enabled": True, "osk_disponivel": True},
     "controllers": [FALSO],
 }
-#: E o mesmo estado com o portão FECHADO. A chave é a do produto
 #: (`mode_transition.mode_of_state` lê `gamepad_emulation.enabled`), não uma
-#: inventada aqui.
 NO_JOGO = {**NO_DESKTOP, "gamepad_emulation": {"enabled": True}}
 
 
@@ -92,19 +87,8 @@ def _bancada() -> str:
     return onde.pagina(PAGINA, publicado=False).read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# [01] O PORTÃO DE MODO — apaga o interruptor e escreve ao lado
-# ---------------------------------------------------------------------------
 def test_a_razao_do_portao_e_a_mesma_no_aviso_e_na_recusa(aba, monkeypatch):
-    """Um fato, uma frase: a linha permanente e o `RuntimeError` são o MESMO texto.
-
-    O DEFEITO QUE ISTO IMPEDE é o que a decisão do PO chama de segundo canal:
-    duas grafias do mesmo fato divergem na primeira correção, e quem clicasse
-    leria uma coisa depois de ter lido outra ao lado do interruptor.
-
-    A MORDIDA: escreva um literal no `raise` do gesto `modo` em vez de
-    `RAZAO_DO_PORTAO` — este caso reprova mostrando as duas frases.
-    """
+    """Um fato, uma frase: a linha permanente e o `RuntimeError` são o MESMO texto."""
     import pacotes
 
     linha = _carga(aba, NO_JOGO, {}, monkeypatch)["modo-portao"]
@@ -120,45 +104,16 @@ def test_a_razao_do_portao_e_a_mesma_no_aviso_e_na_recusa(aba, monkeypatch):
 
 
 def test_a_linha_do_portao_so_nasce_quando_ha_portao(aba, monkeypatch):
-    """Fora do modo "Controlar o PC" ela fala; dentro dele, some.
-
-    É a metade que faz o interruptor voltar ao normal: o cinza sai desta MESMA
-    linha, por `:has()` na folha da aba, então uma linha que não some deixaria o
-    interruptor apagado para sempre.
-
-    A MORDIDA: faça `_a_razao_do_portao` devolver a frase sempre — este caso
-    reprova dizendo que a tela afirma um bloqueio que não existe.
-    """
+    """Fora do modo "Controlar o PC" ela fala; dentro dele, some."""
     aberto = _carga(aba, NO_DESKTOP, {}, monkeypatch)["modo-portao"]
     assert aberto == aba.NADA_A_DIZER, (
         f"no modo desktop a linha do portão saiu {aberto!r} — ela tem de sumir, "
         "e com ela o cinza do interruptor.")
-    # E SEM ESTADO ela também não afirma: um daemon que não respondeu não é um
-    # portão fechado. Apagar o interruptor por silêncio seria inventar o fato.
     assert aba._a_razao_do_portao({}) == aba.NADA_A_DIZER
 
 
 def test_a_folha_apaga_o_interruptor_pela_propria_linha():
-    """O cinza do interruptor sai do ENDEREÇO da razão — um só, zero divergência.
-
-    A régua lê o CSS gerado, e não o Python: é a folha que decide, e é ela que
-    tem de mencionar as duas pontas na mesma regra.
-
-    A ÂNCORA MUDOU EM 07/09/2026, e a mudança é a lição. A regra partia de
-    `.quadro-corpo:has(.estado.portao .laranja)` — duas classes que só existiam
-    porque a razão morava na tira de `.estados`. Ela saiu da tira por ordem dela
-    (*"navegacao tem essas 3 frases aqui na parte de baixo que quebram o
-    layout"*) e foi para o `?` do "Status do Modo"; ancorada na classe, a regra
-    teria parado de apagar o interruptor **em silêncio** — a razão continuaria
-    chegando e o interruptor voltaria a parecer clicável, sem uma régua
-    reprovando. O `data-campo` é o que não muda de lugar.
-
-    A MORDIDA: tire a regra `.quadro-corpo:has([data-campo="modo-portao"]
-    .laranja)` do CSS da aba e rode — este caso reprova nomeando o que sumiu. (A
-    prova de que a regra PINTA está no relatório da frente, medida no WebKit:
-    `cursor` vai de `pointer` a `not-allowed` e a borda de `--border-forte` a
-    `--border-sutil`.)
-    """
+    """O cinza do interruptor sai do ENDEREÇO da razão — um só, zero divergência."""
     doc = _bancada()
     regra = re.search(
         r'\.quadro-corpo:has\(\[data-campo="modo-portao"\] \.laranja\)'
@@ -173,19 +128,8 @@ def test_a_folha_apaga_o_interruptor_pela_propria_linha():
         "escrever a razão nem como apagar o interruptor.")
 
 
-# ---------------------------------------------------------------------------
-# [02] AS TRÊS REGIÕES DO TOUCHPAD — ficam, com a marca
-# ---------------------------------------------------------------------------
 def _botao_da_linha(tr: str) -> str:
-    """Qual botão aquela `<tr>` endereça — `""` quando ela não endereça nenhum.
-
-    SÃO TRÊS FORMAS, e as três são endereço de verdade nesta aba: `data-linha`
-    (as 22 listas das duas telas de botões), `data-campo="acao-<botão>"` (as
-    mesmas 22, do outro lado) e `data-campo="tecla-<botão>"` (os oito campos de
-    texto da tela "Teclas do teclado", nascida em 06/09/2026). Perguntar só ao
-    `data-linha` faria toda régua daqui ficar CEGA para a tela nova — e cega dá
-    verde.
-    """
+    """Qual botão aquela `<tr>` endereça — `""` quando ela não endereça nenhum."""
     from pacotes.a06_navegacao import PREFIXO_DA_ACAO, PREFIXO_DA_TECLA
 
     alvo = re.search(r'data-linha="([^"]+)"', tr)
@@ -197,14 +141,7 @@ def _botao_da_linha(tr: str) -> str:
 
 
 def _sem_a_troca(doc: str) -> str:
-    """O documento sem a tela "Trocar os botões".
-
-    A MARCA SAIU DA TROCA — 13/09/2026, RESTOS-DA-ONDA-DOIS-01. A dica dela diz
-    «A escolha fica guardada.», e na troca a lista ao lado das três regiões está
-    apagada e não guarda escolha nenhuma. As duas réguas abaixo continuam
-    cobrando a marca em toda outra tela; quem cobra que ela NÃO esteja na troca é
-    `test_os_restos_da_onda_dois.py`, junto com a autoconferência do gerador.
-    """
+    """O documento sem a tela "Trocar os botões"."""
     antes, achou, depois = doc.partition('id="remapeamento"')
     assert achou, "a tela 'Trocar os botões' sumiu do desenho"
     _troca, fim, resto = depois.partition('class="tela-nova"')
@@ -213,54 +150,13 @@ def _sem_a_troca(doc: str) -> str:
 
 
 def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
-    """A marca acompanha as três linhas do touchpad, e nenhuma outra.
-
-    AS TRÊS SÃO LIDAS DO PRODUTO (`input_actions.REGIOES_DO_TOUCHPAD`), nunca
-    digitadas: uma lista à mão aqui envelheceria no dia em que uma quarta
-    região nascesse, e a régua daria verde sobre a linha nova sem marca.
-
-    A CONTA DEIXOU DE SER `2 vezes` — 06/09/2026, NAVEGACAO-TECLAS-01. Ela dizia
-    *"seis ocorrências e não três: a primeira coluna é a MESMA nas duas telas de
-    botões (Definições e Remapeamento)"* — verdade enquanto as telas eram duas.
-    A tela **Teclas do teclado** nasceu com uma linha por região do touchpad, e
-    a marca foi junto porque a marca é VERDADE lá também: o touchpad continua
-    sendo o ponteiro do sistema, e a tecla escrita naquela linha não dispara.
-    A régua reprovou a MELHORA — a forma de defeito que esta casa já pagou onze
-    vezes em 26/08 —, e a cura é a de sempre: **PERGUNTAR À PÁGINA quantas
-    linhas de região existem**, em vez de digitar quantas telas há.
-
-    A MORDIDA: tire o `+ MARCA_DO_TOUCHPAD` de uma das três linhas de `BOTOES`
-    — este caso reprova com a conta errada.
-    """
+    """A marca acompanha as três linhas do touchpad, e nenhuma outra."""
     from hefesto_dualsense4unix.app.actions.input_actions import REGIOES_DO_TOUCHPAD
 
     doc = _sem_a_troca(_bancada())
-    # A CONTA É POR CÉLULA, e ela se descobre sozinha. A primeira coluna é a
-    # MESMA em toda tela que lista botões — o gerador cola a marca no rótulo
-    # dentro de `BOTOES`, então cada região aparece como uma célula IDÊNTICA em
-    # cada tela. Três células distintas com a marca, e as três com a mesma
-    # contagem: é isso que diz "nenhuma região ficou para trás", sem digitar
-    # quantas telas existem hoje.
-    # A CONTA ERA POR IGUALDADE E DEIXOU DE PODER SER — 11/09/2026,
-    # F2-POINT-AND-CLICK. Ela exigia que as três regiões aparecessem o MESMO
-    # número de vezes, e essa igualdade era um PROXY que só valia enquanto toda
-    # tela que lista botões listasse as TRÊS. O *Estilo Point-and-click* lista
-    # DUAS (o clique esquerdo e o direito, e nenhum outro) — a igualdade passou
-    # a reprovar uma tela correta.
-    #
-    # A REGRA SEM PROXY É ESTA: **nenhuma célula de região do touchpad sem a
-    # marca.** Ela cobre o mesmo que a igualdade cobria (uma região esquecida
-    # numa tela) e ainda cobre o que a igualdade não via — as três esquecidas
-    # de uma vez na mesma tela. Quem diz quais são as regiões é `TOUCH_REGIOES`,
-    # do gerador, que por sua vez as tira da nota de `pecas-do-dualsense.csv`:
-    # a lista continua sem ser digitada aqui.
     from aba06 import TOUCH_REGIOES
 
     celulas = re.findall(r'<td class="b">(.*?)</td>', doc, re.S)
-    # O RÓTULO VAI CAPITALIZADO NA TELA (`aba06._rot`: *"o qualificador ao lado
-    # do glifo é capitalizado, como o nome da peça no `pecas-do-dualsense.csv`"*)
-    # e a constante o guarda em minúscula. Comparar sem baixar a caixa acharia
-    # ZERO células — e régua que acha zero é erro, não silêncio.
     de_regiao_na_celula = [
         c for c in celulas
         if any(f">{rot}</span>".lower() in c.lower() for rot in TOUCH_REGIOES)]
@@ -282,10 +178,6 @@ def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
         f"achei {len(distintas)} célula(s) distinta(s) com a marca e as regiões "
         f"do touchpad são {len(REGIOES_DO_TOUCHPAD)} — ou uma perdeu a marca em "
         "todas as telas, ou a marca foi parar numa linha que não é região.")
-    # E CADA LINHA ENDEREÇADA DE REGIÃO TEM A SUA. A tela de Remapeamento não
-    # endereça as linhas dela (o Guardar de lá não tem dono no produto), então
-    # esta metade cobre as que endereçam — e é ela que pega a marca posta na
-    # tela certa e na LINHA errada, que a contagem sozinha não vê.
     de_regiao = [tr for tr in re.findall(r"<tr>(.*?)</tr>", doc, re.S)
                  if _botao_da_linha(tr) in REGIOES_DO_TOUCHPAD]
     assert de_regiao, (
@@ -295,20 +187,11 @@ def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
         assert "marca-nao-dispara" in tr, (
             f"a linha de {_botao_da_linha(tr)} ficou sem a marca — a tela volta "
             f"a PROMETER um clique que o produto não dispara.")
-    # E ELA NÃO PROMETE: a marca diz que a região NÃO dispara. Uma marca que
-    # dissesse o contrário seria pior que nenhuma.
     assert "não dispara" in doc
 
 
 def test_a_marca_nao_encosta_em_linha_que_dispara():
-    """Nenhuma das outras dezoito linhas leva a marca.
-
-    A régua parte a tabela em linhas e confere botão a botão — marcar o Círculo
-    seria a tela mentindo pelo outro lado.
-
-    A MORDIDA: ponha a marca numa linha qualquer de `BOTOES` — este caso a
-    nomeia.
-    """
+    """Nenhuma das outras dezoito linhas leva a marca."""
     from hefesto_dualsense4unix.app.actions.input_actions import REGIOES_DO_TOUCHPAD
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
@@ -324,9 +207,6 @@ def test_a_marca_nao_encosta_em_linha_que_dispara():
             f"marca, e devia ser o contrário.")
 
 
-# ---------------------------------------------------------------------------
-# [03] O BOTÃO PS — ENTRA, e a dica diz o que ele faz
-# ---------------------------------------------------------------------------
 def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
     """O `?` da tela de Definições diz O QUE O PS FAZ — não por que ele falta.
 
@@ -362,15 +242,6 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
     doc = _bancada()
     dica = re.search(
         r'<span class="tn-tit">Definições Controle e Mouse</span>\s*'
-        # O `?` GANHOU ATRIBUTOS EM 07/09/2026 (`tabindex="0"`, e a classe
-        # `tem-viva` quando ele carrega frase do produto), e esta régua DIGITAVA
-        # a marcação inteira — `class="ajuda">`, sem espaço para mais nada. Ela
-        # reprovou a cura que torna o `?` alcançável pelo controle, que é o
-        # oposto do que existe para medir.
-        #
-        # O QUE ELA PERGUNTA CONTINUA IGUAL: é a dica daquela tela, e o texto
-        # dela. O que ela deixa de cravar é a lista de atributos do ícone, que
-        # nunca foi assunto deste teste.
         r'<span class="ajuda[^"]*"[^>]*>\?<span class="dica"[^>]*>(.*?)</span></span>',
         doc, re.S)
     assert dica is not None, "não achei a dica da tela de Definições na bancada"
@@ -378,16 +249,6 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
     assert "não entra" not in texto, (
         f"a dica voltou a dizer que o PS fica de fora, e ele está na lista do "
         f"produto: {texto!r}")
-    # AS DUAS METADES, cada uma pelo pedaço que a nomeia. Cobrar a frase inteira
-    # travaria a redação; cobrar só "PS" passaria com o parágrafo antigo.
-    #
-    # `"modo jogo"` SAIU DA LISTA — 11/09/2026, e ele nunca foi uma das duas
-    # metades: o docstring acima diz quais são (a tecla escolhida e a saída de
-    # emergência), e esta palavra era pedaço de uma TERCEIRA afirmação — *"e
-    # segurá-lo alterna o modo jogo"* —, que a medição de 10/09 classificou como
-    # DESATUALIZADA e que a A5-020, aprovada por ela, tirou da dica. Cobrar aqui
-    # a palavra de uma frase que o produto não faz mais é a régua obrigando a
-    # tela a mentir para ficar verde.
     faltam = [p for p in ("PS", "saída de emergência", "junto")
               if p not in texto]
     assert not faltam, (
@@ -395,9 +256,6 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
         f"{texto!r}")
 
 
-# ---------------------------------------------------------------------------
-# [04] A TIRA SOB A TABELA — e o defeito §3-1 dito
-# ---------------------------------------------------------------------------
 def test_o_aviso_nomeia_o_que_o_guardar_vai_substituir(aba, monkeypatch):
     """A tira nomeia os atalhos que `apply_button_actions` vai reescrever.
 
@@ -465,24 +323,16 @@ def test_a_tira_nomeia_as_duas_coisas_que_o_ps_faz(aba, monkeypatch):
 
     nome = humanize_button(acoes.BOTAO_PS)
 
-    # 1. `— Nada —` cala as duas metades: não há duas coisas acontecendo.
     calado = _carga(aba, NO_DESKTOP, {"button_actions": {acoes.BOTAO_PS: acoes.TOKEN_NADA}},
                     monkeypatch)["aviso-da-tabela"]
     assert "duas coisas" not in calado, (
         f"com o PS em “{acoes.rotulo(acoes.TOKEN_NADA)}” a tira ainda promete "
         f"duas coisas:\n{calado!r}")
 
-    # 2. sem escolha nenhuma, o PS é o que sempre foi — e a tira não fala dele.
     quieto = _carga(aba, NO_DESKTOP, {}, monkeypatch)["aviso-da-tabela"]
     assert nome not in quieto, (
         f"a tira fala do PS num perfil que não opinou sobre ele:\n{quieto!r}")
 
-    # 3. com uma TECLA, ela nomeia as duas — e o rótulo vem do produto.
-    #
-    # DUAS TECLAS, E NÃO UMA: com uma só, cravar o texto (`rotulo = "Enter"`)
-    # passava — medido em 06/09/2026, mordendo esta própria régua. Uma régua que
-    # sobrevive à sua mordida não mede nada; com duas, o valor cravado aparece
-    # na segunda, nomeado.
     for tecla in ("KEY_ENTER", "KEY_F11"):
         dito = _carga(aba, NO_DESKTOP, {"button_actions": {acoes.BOTAO_PS: tecla}},
                       monkeypatch)["aviso-da-tabela"]
@@ -530,17 +380,6 @@ def test_o_que_o_nada_nao_cala_e_dito_e_o_produto_e_quem_decide(aba, monkeypatch
 
     aviso = _carga(aba, NO_DESKTOP, {"button_actions": calados},
                    monkeypatch)["aviso-da-tabela"]
-    # A FRASE CERTA, e não qualquer frase: um nome que aparecesse só na linha
-    # dos que ficam sem efeito diria o CONTRÁRIO — que o botão calou. A régua
-    # recorta o `<div>` que fala de não-calar e cobra ali.
-    #
-    # OS DOIS RECORTES MUDARAM DE PALAVRA — 11/09/2026, A5-030 e A5-031,
-    # aprovadas por ela: as duas frases confessavam dívida nossa (*"é feature
-    # que falta, não erro seu"*, *"o Hefesto ainda não sabe distinguir…"*), que
-    # é o que a ordem dela de 07/09 proíbe na tela. O ATO que a régua mede é o
-    # mesmo — uma tira diz quem continua digitando, a outra diz quem fica
-    # guardado sem efeito —, e o recorte passa a ser o pedaço de cada frase que
-    # NOMEIA esse ato, não a confissão que saiu.
     dita = next((x for x in re.findall(r"<div>(.*?)</div>", aviso)
                  if "não cala estes" in x), "")
     for botao in ainda_falam:
@@ -552,8 +391,6 @@ def test_o_que_o_nada_nao_cala_e_dito_e_o_produto_e_quem_decide(aba, monkeypatch
             "o device passou a calar de verdade e a tela continua avisando que "
             "não cala.")
     else:
-        # E O CONTRÁRIO TAMBÉM: quem continua falando não pode aparecer na
-        # frase que promete silêncio.
         calou = next((x for x in re.findall(r"<div>(.*?)</div>", aviso)
                       if "sem efeito hoje" in x), "")
         for botao in ainda_falam:
@@ -563,17 +400,7 @@ def test_o_que_o_nada_nao_cala_e_dito_e_o_produto_e_quem_decide(aba, monkeypatch
 
 
 def test_a_confirmacao_do_voltar_ao_padrao_usa_a_palavra_atalhos():
-    """O defeito §3-2 dito na tela: o botão apaga atalhos e a pergunta dizia outra coisa.
-
-    O ATO NÃO MUDOU — zerar os dois campos continua sendo o certo, porque zerar
-    só um deixaria a tabela metade de fábrica. O que estava errado era a
-    PERGUNTA: ela falava só das "21 linhas de o que cada botão faz" e nunca
-    usava a palavra atalhos, sendo que apaga `key_bindings` inteiro, direto no
-    disco e sem desfazer.
-
-    A MORDIDA: tire a frase dos atalhos do `confirma` de `TELA_DEFINICOES` —
-    este caso reprova.
-    """
+    """O defeito §3-2 dito na tela: o botão apaga atalhos e a pergunta dizia outra coisa."""
     doc = _bancada()
     tela = re.search(r'<div class="tela-nova" id="definicoes-mouse">(.*?)\n</div>',
                      doc, re.S)
@@ -587,27 +414,12 @@ def test_a_confirmacao_do_voltar_ao_padrao_usa_a_palavra_atalhos():
         f"diz a palavra: {frase!r}")
 
 
-# ---------------------------------------------------------------------------
-# [05] O CUSTO DE DESLIGAR O TECLADO
-# ---------------------------------------------------------------------------
 def test_o_custo_do_teclado_e_o_que_a_gtk_diz():
-    """A frase desta aba não pode divergir do toast da janela antiga.
-
-    A DUPLICAÇÃO É DECLARADA e não evitável sem tocar arquivo de outra frente:
-    o original é um literal DENTRO de
-    `emulation_actions.on_keyboard_toggle_set`. Esta régua lê o FONTE da GTK e
-    reprova no dia em que a lista de lá mudar — que é o que impede as duas
-    janelas do mesmo produto de dizerem coisas diferentes.
-
-    A MORDIDA: troque uma palavra em `O_QUE_SAI_COM_O_TECLADO` — este caso
-    reprova mostrando as duas.
-    """
+    """A frase desta aba não pode divergir do toast da janela antiga."""
     from pacotes import a06_navegacao
 
     fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/emulation_actions.py"
              ).read_text(encoding="utf-8")
-    # O toast quebra a frase em duas linhas de fonte; a comparação é feita sobre
-    # o texto sem quebra, que é o que chega à tela dela nos dois lados.
     achatado = re.sub(r'"\s*\n\s*"', "", fonte)
     assert a06_navegacao.O_QUE_SAI_COM_O_TECLADO in achatado, (
         "o que esta aba diz que sai com o teclado não está mais escrito na "
@@ -637,16 +449,8 @@ def test_a_linha_do_custo_e_tri_estado(aba, bloco, fala):
         assert saiu == aba.NADA_A_DIZER, saiu
 
 
-# ---------------------------------------------------------------------------
-# OS DOIS GESTOS QUE GRAVAM — e o recibo do que eles apagam
-# ---------------------------------------------------------------------------
 class _PerfilDeMentira:
-    """O mínimo de um `Profile` que os dois gestos tocam.
-
-    Instanciar o modelo do pydantic exigiria um `match` válido, e a régua
-    passaria a medir o esquema em vez do botão — mesma disciplina de
-    `test_a_06_nao_manda_para_o_vazio.py`.
-    """
+    """O mínimo de um `Profile` que os dois gestos tocam."""
 
     def __init__(self, nome, button_actions=None, key_bindings=None):
         self.name = nome
@@ -680,11 +484,6 @@ def disco(monkeypatch):
     monkeypatch.setattr(loader, "save_profile",
                         lambda prof, **_: gravados.append(prof), raising=False)
 
-    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): os gestos
-    # da tabela gravam por `gravar_pelo_gesto`, que escolhe entre o perfil e o
-    # computador. Aqui o disco de mentira é o de um perfil que já sobrepõe o
-    # cartão: o que se mede é o que o gesto grava, e não onde. O onde tem
-    # régua própria em `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
     def _pelo_gesto(_cartao, nome, muda, **_k):
         novo = muda(estado[nome])
         if novo is not None:
@@ -697,15 +496,7 @@ def disco(monkeypatch):
 
 
 def test_o_voltar_ao_padrao_da_recibo_do_que_apagou(aba, disco):
-    """Quem apaga diz o que apagou — pelo canal de SUCESSO da D-01.
-
-    ATÉ 04/09/2026 ele zerava os `key_bindings` que ela escreveu na janela
-    antiga e voltava sem uma palavra: o piloto imprimia `aplicado` no terminal
-    de quem lançou a janela, e quem clica não lê terminal.
-
-    A MORDIDA: faça o gesto voltar `None` sempre — este caso reprova dizendo
-    que o botão voltou a apagar calado.
-    """
+    """Quem apaga diz o que apagou — pelo canal de SUCESSO da D-01."""
     import pacotes
     from hefesto_dualsense4unix.app.actions.input_actions import humanize_button
 
@@ -723,11 +514,7 @@ def test_o_voltar_ao_padrao_da_recibo_do_que_apagou(aba, disco):
 
 
 def test_o_voltar_ao_padrao_sem_atalhos_nao_inventa_recibo(aba, disco):
-    """Sem atalho guardado não há o que dizer — e o piloto diz "Pronto." sozinho.
-
-    Um recibo que nomeasse zero atalhos seria ruído com cara de dado, que é o
-    mesmo defeito do travessão solto na linha de estado.
-    """
+    """Sem atalho guardado não há o que dizer — e o piloto diz "Pronto." sozinho."""
     import pacotes
 
     estado, gravados = disco
@@ -781,20 +568,8 @@ def test_o_guardar_nomeia_os_atalhos_que_param_de_valer(aba, disco):
     assert humanize_button("cross") in str(caiu.value), str(caiu.value)
 
 
-# ---------------------------------------------------------------------------
-# A TIRA NÃO MENTE POR EXCESSO
-# ---------------------------------------------------------------------------
 def test_a_tira_so_diz_o_que_o_perfil_de_hoje_justifica(aba, monkeypatch):
-    """Com um perfil de fábrica ela não fala de atalhos nem de linhas caladas.
-
-    A decisão do PO é explícita: *"a tira só ocupa espaço nos perfis em que há
-    mesmo algo a perder"*. O que sobra num perfil de fábrica é a colisão do R3,
-    que é verdade sempre — e é a primeira das três verdades que a tabela
-    escondia.
-
-    A MORDIDA: faça as três frases nascerem sem condição — este caso reprova
-    nomeando a que sobrou.
-    """
+    """Com um perfil de fábrica ela não fala de atalhos nem de linhas caladas."""
     aviso = _carga(aba, NO_DESKTOP, {}, monkeypatch)["aviso-da-tabela"]
     assert "Dois donos" in aviso, aviso
     assert "atalhos que esta lista não diz" not in aviso, aviso

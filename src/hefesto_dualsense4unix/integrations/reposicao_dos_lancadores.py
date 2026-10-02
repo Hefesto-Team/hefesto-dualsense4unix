@@ -55,44 +55,22 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Quanto se espera um lançador fechar com jeito antes de insistir. A Steam tem
-#: caminho próprio (`stop_steam`, até 30 s); os outros são aplicações comuns e
-#: fecham em segundos.
 ESPERA_PARA_FECHAR_S: float = 12.0
 
-#: O passo entre as perguntas de "já fechou?". Não é `sleep(12)`: um lançador
-#: que fecha em 1 s não pode custar 12 ao reinício dela.
 PASSO_DA_ESPERA_S: float = 0.5
 
 
 @dataclass(frozen=True)
 class Lancador:
-    """Um lançador que esta casa sabe fechar e reabrir.
-
-    `processos` são nomes EXATOS para `pgrep -x`. `flatpak` é o id da
-    aplicação, e quando ele existe é por ele que se pergunta e se abre — um
-    flatpak não tem o nome do processo que o `.desktop` sugere.
-    """
+    """Um lançador que esta casa sabe fechar e reabrir."""
 
     chave: str
     nome: str
     processos: tuple[str, ...]
     flatpak: str | None = None
-    #: O executável da instalação NATIVA (fora do flatpak). Sem acento no nome
-    #: do campo de propósito: nenhum identificador desta casa leva acento, e o
-    #: portão da acentuação cobra a palavra em português do comentário — não do
-    #: símbolo.
     nativo: str | None = None
 
 
-#: A TABELA É EXPLÍCITA, e não um glob por `.desktop`: acrescentar um lançador
-#: é um ato que se vê no diff. Um glob passaria a fechar, sozinho e sem
-#: ninguém decidir, qualquer coisa que se parecesse com um lançador — e fechar
-#: é destrutivo.
-#:
-#: A Steam não declara executável nativo porque o abrir dela tem dono
-#: (`steam_launcher.open_or_focus_steam`), que ainda FOCA a janela quando ela
-#: já está de pé.
 LANCADORES: tuple[Lancador, ...] = (
     Lancador("steam", "Steam", ("steamwebhelper",)),
     Lancador("heroic", "Heroic", ("heroic",),
@@ -103,11 +81,7 @@ LANCADORES: tuple[Lancador, ...] = (
 
 
 def _rodar(args: list[str], *, timeout: float = 5.0) -> subprocess.CompletedProcess[str] | None:
-    """Um comando de LEITURA, com o idioma preso em C.
-
-    `LC_ALL=C` em toda leitura, e é regra desta casa desde que um leitor
-    traduzido respondeu *"não há"* sobre aparelho de pé — duas vezes.
-    """
+    """Um comando de LEITURA, com o idioma preso em C."""
     try:
         return subprocess.run(
             args, capture_output=True, text=True, timeout=timeout, check=False,
@@ -117,17 +91,7 @@ def _rodar(args: list[str], *, timeout: float = 5.0) -> subprocess.CompletedProc
 
 
 def _pids_de_flatpak(app_id: str) -> list[int]:
-    """Os pids de wrapper das instâncias vivas desta aplicação flatpak.
-
-    `flatpak ps` lista INSTÂNCIAS, não texto de cmdline — por isso ele não tem
-    como casar quem pergunta. O `pid` é o do processo **wrapper**, e é nele que
-    o `SIGTERM` fecha a aplicação inteira.
-
-    `LC_ALL=C` porque o `flatpak` desta máquina responde em português (o `help`
-    das colunas sai traduzido); as linhas de dado não são, mas um leitor que
-    depende do idioma da máquina já respondeu *"não há"* sobre aparelho de pé
-    duas vezes nesta casa.
-    """
+    """Os pids de wrapper das instâncias vivas desta aplicação flatpak."""
     if shutil.which("flatpak") is None:
         return []
     proc = _rodar(["flatpak", "ps", "--columns=application,pid"])
@@ -142,13 +106,7 @@ def _pids_de_flatpak(app_id: str) -> list[int]:
 
 
 def pids_de(lancador: Lancador) -> list[int]:
-    """Os pids vivos deste lançador — lista vazia quando ele não está aberto.
-
-    DUAS PERGUNTAS, e nenhuma delas lê linha de comando: `pgrep -x` casa o
-    nome EXATO do processo (a instalação nativa) e o `flatpak ps` responde pela
-    instalação em flatpak. Ver o cabeçalho do módulo para o que aconteceu com a
-    terceira, que lia cmdline.
-    """
+    """Os pids vivos deste lançador — lista vazia quando ele não está aberto."""
     achados: set[int] = set()
     for nome in lancador.processos:
         proc = _rodar(["pgrep", "-x", nome])
@@ -156,16 +114,7 @@ def pids_de(lancador: Lancador) -> list[int]:
             achados.update(int(x) for x in proc.stdout.split() if x.isdigit())
     if lancador.flatpak:
         achados.update(_pids_de_flatpak(lancador.flatpak))
-    # O PRÓPRIO PROCESSO NUNCA ENTRA NA LISTA, e é cinto de segurança: hoje
-    # nenhuma das duas perguntas pode devolvê-lo, e a terceira que puder tem de
-    # esbarrar aqui antes de chegar ao `os.kill`.
     achados.discard(os.getpid())
-    # SÓ O LANÇADOR DESTE LAR — 01/10/2026,
-    # A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01. O `pgrep -x` casa o nome
-    # em qualquer `HOME` e de qualquer usuário: com o `HOME` trocado (a suíte,
-    # o `sudo`) a foto via o lançador DELA, o fechar mirava a Steam dela, e o
-    # reabrir punha uma segunda por cima. O processo de outro lar não está
-    # «aberto» para quem pergunta, e não leva sinal.
     from hefesto_dualsense4unix.integrations.steam_launch_options import e_deste_lar
 
     return sorted(pid for pid in achados if e_deste_lar(pid))
@@ -181,18 +130,7 @@ def abertos() -> list[Lancador]:
 
 
 def jogo_aberto() -> bool:
-    """Há jogo rodando? — a pergunta que vem ANTES de qualquer fechamento.
-
-    DELEGADA ao dono, e é o mesmo que o install consulta: `steam_game_running`
-    varre `/proc` procurando o `reaper SteamLaunch AppId=<id>` que embrulha
-    todo jogo lançado pela Steam. **E ele alcança o Heroic e o Lutris**, porque
-    os dois lançam pelo `umu`, que se anuncia como Steam — medido em
-    20/09/2026, `steam_app_<N>`.
-
-    A FOTO É INVALIDADA ANTES, e isso não é zelo: a varredura vale 5 s por
-    desempenho, e decidir um ato destrutivo sobre uma foto de 5 s atrás é
-    decidir sobre um jogo que já fechou — ou não ver um que acabou de abrir.
-    """
+    """Há jogo rodando? — a pergunta que vem ANTES de qualquer fechamento."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import (
         invalidar_varredura_de_proc,
         steam_game_running,
@@ -203,17 +141,7 @@ def jogo_aberto() -> bool:
 
 
 def fechar(lancador: Lancador) -> bool:
-    """Fecha com jeito e confirma. `True` = está fechado quando esta função sai.
-
-    A STEAM TEM CAMINHO PRÓPRIO (`stop_steam`): ela responde a `steam
-    -shutdown`, que salva a nuvem e fecha o runtime inteiro. Mandar TERM nos
-    processos dela seria um segundo dono de um ato que já tem um.
-
-    OS OUTROS LEVAM `SIGTERM` NOS PIDS CONFERIDOS, um a um. Não há `SIGKILL`
-    aqui de propósito: um lançador morto à força pode deixar a biblioteca a
-    meio caminho, e esta função é chamada por um botão de CONSERTO. Quem não
-    fechar em :data:`ESPERA_PARA_FECHAR_S` fica aberto, e o recibo o nomeia.
-    """
+    """Fecha com jeito e confirma. `True` = está fechado quando esta função sai."""
     if lancador.chave == "steam":
         from hefesto_dualsense4unix.integrations.steam_launch_options import stop_steam
 
@@ -235,12 +163,7 @@ def fechar(lancador: Lancador) -> bool:
 
 
 def abrir(lancador: Lancador) -> bool:
-    """Reabre, com o ambiente LIMPO. `True` = o pedido de abertura saiu.
-
-    NÃO ESPERA A JANELA. Um lançador leva de segundos a dezenas de segundos
-    para pintar, e segurar o reinício dela nisso faria o botão parecer travado
-    — que é o defeito que a leva de 15/09 curou na janela inteira.
-    """
+    """Reabre, com o ambiente LIMPO. `True` = o pedido de abertura saiu."""
     if lancador.chave == "steam":
         from hefesto_dualsense4unix.integrations.steam_launcher import (
             open_or_focus_steam,
@@ -258,9 +181,6 @@ def abrir(lancador: Lancador) -> bool:
         return False
 
     try:
-        # STEAM-FORA-DO-SERVICO-01: de dentro de um serviço (a bandeja do
-        # autostart é um), o lançador nasce numa unidade própria; da janela
-        # aberta pelo painel, pelo `Popen` de sempre.
         fora_do_servico.abrir(
             comando,
             env=ambiente_limpo(os.environ),
@@ -278,25 +198,15 @@ def abrir(lancador: Lancador) -> bool:
 class Recibo:
     """O que aconteceu — para a tela dizer, e para o registro guardar."""
 
-    #: Nomes dos lançadores que estavam abertos quando se olhou.
     estavam_abertos: tuple[str, ...] = ()
-    #: Os que fecharam e reabriram.
     repostos: tuple[str, ...] = ()
-    #: Os que não fecharam no prazo (e por isso não foram reabertos).
     nao_fecharam: tuple[str, ...] = ()
-    #: Os que fecharam mas não reabriram.
     nao_reabriram: tuple[str, ...] = ()
-    #: `True` quando havia jogo rodando e NADA foi fechado.
     barrado_por_jogo: bool = False
 
 
 def repor() -> Recibo:
-    """Fecha e reabre todo lançador que estava aberto. O ato inteiro.
-
-    A ORDEM É: pergunta pelo jogo, tira a foto de quem está aberto, fecha
-    todos, reabre os que fecharam. Fechar-e-reabrir um a um faria o segundo
-    lançador subir enquanto o primeiro ainda disputa o controle físico.
-    """
+    """Fecha e reabre todo lançador que estava aberto. O ato inteiro."""
     if jogo_aberto():
         return Recibo(barrado_por_jogo=True)
 
@@ -321,12 +231,7 @@ def repor() -> Recibo:
 
 
 def frase_do_recibo(recibo: Recibo) -> str:
-    """O recibo em português — função PURA, e o único lugar onde ele vira texto.
-
-    Escrever a frase na aba criaria o segundo dono que esta casa enterra toda
-    semana: a aba Sistema e o registro diriam coisas diferentes sobre o mesmo
-    ato.
-    """
+    """O recibo em português — função PURA, e o único lugar onde ele vira texto."""
     if recibo.barrado_por_jogo:
         return ("Tem jogo aberto, então não mexi no lançador — fechá-lo "
                 "fecharia o jogo junto. O reinício vale a partir do próximo "

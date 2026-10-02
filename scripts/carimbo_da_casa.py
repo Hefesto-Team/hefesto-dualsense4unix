@@ -1,63 +1,4 @@
-"""carimbo_da_casa.py — o MESMO rodapé nas páginas HTML geradas desta casa.
-
-Este módulo nasceu em 25/08/2026, irmão do ``paleta_da_casa.py`` e pelo mesmo
-motivo: o que as páginas geradas dividem precisa ter **um dono**. A paleta dá a
-elas a mesma cara; o carimbo dá a elas a mesma **procedência**.
-
-O defeito que ele cura (HTML-2 da sprint ``A-CASA-ARRUMADA-01``): páginas que
-se dizem irmãs não tinham como dizer se estavam em dia **ao mesmo tempo**.
-Uma gerada hoje e outra de três commits atrás pareciam iguais, e a diferença só
-aparecia quando alguém acreditasse num número velho. Com o carimbo, duas páginas
-que discordam **declaram isso no próprio rodapé**, lado a lado, em vez de a
-divergência ser descoberta por acidente.
-
-Quem lê daqui: ``scripts/gerar-mapa.py``, que escreve ``docs/specs.html`` (a
-única página gerada que o repositório carrega), e os geradores locais que
-escrevem em ``PASTA``, fora do git.
-
-**A REGRA DOS IRMÃOS VALE AQUI TAMBÉM: nada de rede.** O carimbo sai de ``git``
-local; se o ``git`` não responder, ele diz ``?`` em vez de inventar — ausência
-de medição é declarada, nunca preenchida.
-
-O CARIMBO NÃO CARREGA O ESTADO DA ÁRVORE DE QUEM GEROU — 20/09/2026
-===================================================================
-De 25/08 a 20/09/2026 ele trouxe a contagem de arquivos com mudança não
-commitada. Essa frase **muda de comprimento com a contagem**, e o tamanho da
-página passava a depender de como estava a mesa de quem apertou o botão: o
-``docs/data/LEIA-PRIMEIRO.md`` publicava 2.280.044 bytes para o mapa de
-canais enquanto o disco dizia 2.280.091, sem que uma vírgula do
-dado tivesse mudado. A medição inteira está em ``procedencia()``, e quem trava
-isto é ``tests/unit/test_o_carimbo_nao_muda_o_tamanho.py``.
-
-**O NOME DA BRANCH SAIU JUNTO, E A MEDIÇÃO É DA MESMA TARDE.** A sprint
-mandou tirar só a contagem de sujos e escreveu *"o commit e a branch FICAM:
-eles dizem de que fonte o arquivo saiu, e o hash tem comprimento fixo"* — a
-razão é sobre o HASH, e a branch veio junto na mesma frase. O nome da branch
-**não** tem largura fixa, e a primeira leva que curou a contagem provou isso
-nela mesma: regeradas na worktree ``worktree-wf_7917c453-7ab-2``, as páginas
-ficaram de **23 a 92 bytes** maiores que em ``dev`` (o mapa de canais, 23) — e
-o ``docs/data/LEIA-PRIMEIRO.md`` passou a publicar **2.280.067**
-onde ``dev`` mede 2.280.044, que era o número que o documento já trazia certo.
-
-A branch também não é FONTE: a página nasce de um commit e é publicada em
-``dev``; dizer que ela saiu de ``worktree-wf_7917c453-7ab-2`` é declarar a mesa
-de quem passou por ali, que é exatamente o que a sprint mandou tirar. O commit
-identifica a fonte sozinho, e quem compara as páginas irmãs continua vendo-as
-concordarem ou discordarem POR COMMIT, que é a razão de o carimbo existir.
-
-A própria sprint fecha o argumento sem precisar de mais nada: ela escreveu que,
-*"se a casa quiser manter a contagem, então o ``LEIA-PRIMEIRO`` não pode
-publicar o TAMANHO desse arquivo"*. A casa manteve o tamanho publicado. Logo
-nada de largura variável cabe no carimbo — nem a contagem, nem a branch.
-
-O CARIMBO NÃO ENTRA NO ``--check``, E ISSO É DE PROPÓSITO
-=========================================================
-O commit e a hora mudam a cada geração. Se o comparador de conteúdo os visse,
-todo ``--check`` reprovaria pelo relógio — que é exatamente o defeito de onde o
-``gerar-mapa.py`` já saiu uma vez (ver o ``SELO`` de lá). Por isso a linha
-carrega a marca ``data-carimbo``, e ``sem_carimbo()`` é o que os
-``--check`` usam para tirá-la antes de comparar.
-"""
+"""carimbo_da_casa.py — o MESMO rodapé nas páginas HTML geradas desta casa."""
 from __future__ import annotations
 
 import subprocess
@@ -67,13 +8,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-#: A pasta das páginas geradas que NÃO se versionam, relativa à raiz. O mapa
-#: de canais não mora aqui: o caminho dele é ``SPECS_RELATIVO``, do portão.
 PASTA = "html"
 
-#: A marca que identifica a linha do carimbo em qualquer página gerada. É por
-#: ela que ``sem_carimbo()`` acha o que tirar, e é por ela que as réguas
-#: conferem que a página carimbou.
 MARCA = "data-carimbo"
 
 
@@ -89,27 +25,7 @@ def _git(*args: str, raiz: Path = RAIZ) -> str:
 
 
 def procedencia(raiz: Path = RAIZ) -> dict[str, str]:
-    """O commit — a única coisa que o carimbo declara sobre a FONTE da página.
-
-    A CONTAGEM DE ARQUIVOS SUJOS SAIU EM 20/09/2026, E O QUE ELA CUSTOU ESTÁ
-    MEDIDO. A chave ``sujos`` virava ``· árvore com N mudança(s) não
-    commitada(s)`` dentro do arquivo gerado, e essa frase muda de comprimento
-    com N — «2» e «13» não ocupam o mesmo espaço, e ela some inteira quando a
-    árvore está limpa. Medido num repositório de brinquedo, com o mesmo commit,
-    a mesma branch e o mesmo gerador, variando só a sujeira: **0 sujos davam um
-    carimbo de 223 bytes, 2 davam 270 e 13 davam 271.**
-
-    Os 47 bytes entre a árvore limpa e a suja são exatamente o que separava o
-    tamanho do mapa publicado no ``docs/data/LEIA-PRIMEIRO.md``
-    (2.280.044) do tamanho do arquivo em disco (2.280.091): o ``git status`` de
-    quem gerou virava bytes do produto, e o número publicado caducava sem que o
-    dado tivesse mudado.
-
-    O argumento de quem a pôs ali — *"o commit sozinho MENTE numa árvore
-    suja"* — continua verdadeiro, e continua respondido: quem pergunta se a
-    página está em dia usa o ``--check`` de cada gerador, que regenera em
-    memória e compara CONTEÚDO. Essa resposta não custa um byte do artefato.
-    """
+    """O commit — a única coisa que o carimbo declara sobre a FONTE da página."""
     return {"commit": _git("rev-parse", "--short", "HEAD", raiz=raiz) or "?"}
 
 
@@ -119,25 +35,7 @@ def agora() -> str:
 
 
 def carimbo(gerador: str, *, indice: bool = True, raiz: Path = RAIZ) -> str:
-    """A linha de rodapé, IDÊNTICA em toda página gerada.
-
-    ``gerador`` é o caminho do script que escreveu a página, para quem olhar o
-    rodapé saber onde ficar reclamando. ``indice=False`` onde o link para o
-    ``index.html`` de ``PASTA`` não teria alvo: no ``docs/specs.html``, que
-    viaja sem a pasta, e no próprio índice.
-
-    O QUE ESTA LINHA NÃO PODE CARREGAR: nada de LARGURA VARIÁVEL, porque o
-    ``docs/data/LEIA-PRIMEIRO.md`` publica o TAMANHO de ``docs/specs.html`` e há
-    portão que confere esse número. O commit e a hora mudam a cada geração, mas
-    não mudam de comprimento, e ``sem_carimbo()`` os tira antes de qualquer
-    comparação de conteúdo. Já caíram daqui duas coisas que mudavam:
-
-      - a contagem de arquivos sujos (20/09/2026, ver ``procedencia()``);
-      - o nome da branch (20/09/2026, ver o topo do módulo) — de 23 a 92
-        bytes por página entre ``dev`` e uma worktree de agente.
-
-    Ambas descreviam a MESA de quem apertou o botão, não a fonte da página.
-    """
+    """A linha de rodapé, IDÊNTICA em toda página gerada."""
     p = procedencia(raiz)
     volta = ' · <a href="index.html">índice dos instrumentos</a>' if indice else ""
     return (
@@ -148,18 +46,10 @@ def carimbo(gerador: str, *, indice: bool = True, raiz: Path = RAIZ) -> str:
 
 
 def sem_carimbo(pagina: str) -> list[str]:
-    """As linhas da página SEM a linha do carimbo — o que o ``--check`` compara.
-
-    Um ``--check`` que enxergasse o carimbo reprovaria a cada commit e a cada
-    minuto do relógio, e portão que reprova sempre é desligado na semana
-    seguinte.
-    """
+    """As linhas da página SEM a linha do carimbo — o que o ``--check`` compara."""
     return [linha for linha in pagina.splitlines() if MARCA not in linha]
 
 
-#: O estilo da linha, para entrar no ``<style>`` de cada página. Usa só tokens
-#: do ``paleta_da_casa.py`` — o carimbo tem de parecer parte de cada página, não
-#: um adesivo colado nelas.
 CSS = """
 /* ── o carimbo da casa · scripts/carimbo_da_casa.py ──────────── */
 .carimbo { font-family: var(--font-dado); font-size: var(--text-xs);

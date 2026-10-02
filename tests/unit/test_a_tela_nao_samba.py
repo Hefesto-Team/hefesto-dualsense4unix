@@ -58,17 +58,11 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: OS DOIS CONTROLES DA MESA DUBLÊ, na faixa sintética da casa. Nada de MAC real
-#: em arquivo versionado — há dois portões, e eles não perdoam.
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 
-#: A PÁGINA QUE A RÉGUA DE PRODUTO MEDE. É a `01-jogar`, que é a que o `.desktop`
-#: dela abre — o defeito foi relatado nela.
 PAGINA = "01-jogar.html"
 
-#: QUANTOS TIQUES A RÉGUA DE PRODUTO OLHA. Quarenta são quatro segundos: tempo
-#: para o defeito de 06/09 aparecer 2.840 vezes, se ele voltar.
 TIQUES = 40
 
 
@@ -77,8 +71,6 @@ def _ctl(uniq: str, transporte: str, jogador: int) -> dict[str, Any]:
             "player": jogador, "battery": 64, "audio": {"mic_mudo": False}}
 
 
-#: A MESA PARADA. Um `dict` LITERAL e imutável durante a medição — se o estado
-#: mudasse, uma mutação seria correta e a régua não saberia distinguir.
 ESTADO = {
     "active_profile": "regua",
     "gamepad_emulation": {"flavor": "dualsense"},
@@ -86,11 +78,6 @@ ESTADO = {
 }
 
 
-# -- a bancada de JS: o BOOTSTRAP de verdade numa página de verdade -------
-
-#: O ROTEIRO É PARAMETRIZADO PELO QUE SE QUER PINTAR, e o observador é o mesmo
-#: das seis medições. Ele conta por tipo e por atributo, que é o que separa
-#: "o piloto mexeu" de "o piloto mexeu no `title`".
 ROTEIRO = r"""
 (function(){
   const fora = {contas: [], pintou: [], detalhe: []};
@@ -137,12 +124,7 @@ ROTEIRO = r"""
 
 def _no_webkit(montagem: str, cargas: list[dict[str, Any]], *,
                preparo: str = "", raiz: str = "alvo") -> dict[str, Any]:
-    """Abre uma página PUBLICADA num WebKit offscreen, com o BOOTSTRAP dentro.
-
-    `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
-    janelas e uma janela comum fica 1x1 para sempre. E offscreen também porque
-    ela tem UMA tela.
-    """
+    """Abre uma página PUBLICADA num WebKit offscreen, com o BOOTSTRAP dentro."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -183,14 +165,10 @@ def _no_webkit(montagem: str, cargas: list[dict[str, Any]], *,
 
     def carregou(v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
-            # O BOOTSTRAP É O DO PILOTO, lido do módulo — nunca copiado. Uma
-            # cópia aqui viraria a segunda verdade sobre o `escrever()`.
             v.evaluate_javascript(hv.BOOTSTRAP, -1, None, None, None, bootou)
 
     view.connect("load-changed", carregou)
     view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do mesmo
-    # processo, e já matou onze medições nesta casa.
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -202,27 +180,13 @@ def _no_webkit(montagem: str, cargas: list[dict[str, Any]], *,
     return dict(json.loads(saiu[0]))
 
 
-# -- 1. o alvo `atributo` -------------------------------------------------
-
 def test_atributo_igual_nao_muta() -> None:
-    """Um `title` reescrito com o MESMO texto não produz mutação nenhuma.
-
-    É a régua do item que ela escreveu com todas as letras — *"algo ativa o
-    tooltip mas ele se desativa"*. A dica nativa do WebKit fecha na mutação do
-    atributo que a alimenta; com o `title` trocado dez vezes por segundo ela
-    não sobrevive ao tempo de ler.
-
-    A MORDIDA: devolva ao ramo `atributo` do BOOTSTRAP a forma de antes — o
-    `setAttribute`/`removeAttribute` incondicional seguido da releitura — e a
-    segunda pintura volta a contar 1.
-    """
+    """Um `title` reescrito com o MESMO texto não produz mutação nenhuma."""
     fora = _no_webkit(
         '<b data-campo="dica" data-hef-alvo="atributo" '
         'data-hef-atributo="title">?</b>',
         [{"mesa": {"dica": "o que este botão faz"}}] * 3,
     )
-    # DUAS na primeira: o selo da visita (que nasce ausente) e o `title`. É a
-    # única pintura honesta desta medição — daí em diante o valor é o mesmo.
     assert fora["contas"][0] == 2, (
         "a primeira pintura tinha de escrever o selo e o `title` — "
         f"contou {fora['contas'][0]}")
@@ -234,37 +198,19 @@ def test_atributo_igual_nao_muta() -> None:
 
 
 def test_o_atributo_apagado_nao_muta_de_novo() -> None:
-    """Apagar um atributo que já não existe também não é mutação.
-
-    O ramo tem dois caminhos e o vazio é o outro. Sem esta régua, a cura podia
-    curar metade — que é a forma de conserto que esta casa nomeou em 05/09.
-    """
+    """Apagar um atributo que já não existe também não é mutação."""
     fora = _no_webkit(
         '<b data-campo="dica" data-hef-alvo="atributo" '
         'data-hef-atributo="title">?</b>',
         [{"mesa": {"dica": ""}}] * 3,
     )
-    # UMA na primeira, e ela é o SELO — o `title` nunca existiu, então apagá-lo
-    # não pode escrever nada, nem na primeira volta.
     assert fora["contas"] == [1, 0, 0], (
         f"apagar o que não existe mexeu no DOM — {fora['contas']}, "
         f"detalhe {fora.get('detalhe')}")
 
 
-# -- 2. o selo da visita --------------------------------------------------
-
 def test_o_selo_da_visita_escreve_uma_vez_so() -> None:
-    """`data-hef-visto` é `'1'` ou é ausência — reescrevê-lo é samba puro.
-
-    Era a MAIOR parcela do defeito: 6.700 das 7.100 mutações que a aba Jogar
-    fazia em 100 tiques com a mesa parada.
-
-    O SELO NÃO PERDE NADA: a visita sem mudança continua deixando rastro,
-    porque o rastro é o atributo ESTAR lá.
-
-    A MORDIDA: tire a guarda `if(el.dataset.hefVisto !== '1')` do `escrever()`
-    e a conta vira 1 por pintura, para sempre.
-    """
+    """`data-hef-visto` é `'1'` ou é ausência — reescrevê-lo é samba puro."""
     fora = _no_webkit(
         '<b data-campo="quieto">—</b>',
         [{"mesa": {"quieto": "o mesmo texto"}}] * 4,
@@ -277,24 +223,8 @@ def test_o_selo_da_visita_escreve_uma_vez_so() -> None:
         "o selo sumiu: a régua do mockup perde o que decide um INDECIDÍVEL")
 
 
-# -- 3. cor, plástico e html ---------------------------------------------
-
 def test_a_cor_e_o_plastico_repetidos_nao_mutam() -> None:
-    """Repetir a mesma cor e o mesmo plástico não mexe no DOM.
-
-    **ESTA RÉGUA NÃO MORDE CONTRA A CURA DE 06/09, PORQUE NÃO HOUVE CURA
-    AQUI**, e dizê-lo é a metade honesta dela. A sprint supunha que estes dois
-    ramos fossem culpados do samba por escreverem antes de comparar; a medição
-    com o observador ligado por 100 tiques, mesa parada, nas dez abas, não
-    achou **uma** mutação vinda deles. O CSSOM só reescreve o atributo `style`
-    quando a DECLARAÇÃO muda, e escrever a mesma cor não muda declaração
-    nenhuma. Os dois ramos ficaram como estavam.
-
-    **O QUE ELA GUARDA É O CONTRATO**, e ele morde: troque o CSSOM por um
-    `setAttribute('style', …)` — a forma que qualquer um escreveria sem saber
-    disto — e a conta vira 1 por pintura, porque `setAttribute` muta sempre.
-    Foi assim que ela foi provada em 06/09.
-    """
+    """Repetir a mesma cor e o mesmo plástico não mexe no DOM."""
     fora = _no_webkit(
         '<b data-campo="clique" data-hef-alvo="cor">L3</b>'
         '<div data-campo="plastico" data-hef-alvo="plastico">.</div>',
@@ -306,21 +236,7 @@ def test_a_cor_e_o_plastico_repetidos_nao_mutam() -> None:
 
 
 def test_o_bloco_reserializado_nao_e_reescrito() -> None:
-    """Um bloco cujo HTML o navegador REESCREVE ao guardar não volta todo tique.
-
-    É o mesmo defeito do alvo `html` um tamanho acima, e foi ele que fazia a
-    lista dos 33 perfis (`perfis.lista`, aba 10) ser reconstruída inteira dez
-    vezes por segundo — 132 nós por tique, 4.000 mutações em 40 tiques com a
-    mesa parada. Clicar numa linha daquela lista era clicar num nó que ia
-    deixar de existir.
-
-    AQUI A DIFERENÇA É PROVOCADA de propósito — indentação e aspas simples, que
-    é o que o serializador do WebKit normaliza —, porque no produto ela nasce do
-    selo da visita, que a pintura carimba DEPOIS do bloco entrar.
-
-    A MORDIDA: tire o `alvo.__hefBloco === html` do laço de blocos e a conta
-    vira 1 por pintura.
-    """
+    """Um bloco cujo HTML o navegador REESCREVE ao guardar não volta todo tique."""
     fora = _no_webkit(
         "<div id='regua-bloco'>.</div>",
         [{"blocos": {"#regua-bloco": "\n  <b class='x'>a&amp;b</b>\n"}}] * 3,
@@ -332,15 +248,7 @@ def test_o_bloco_reserializado_nao_e_reescrito() -> None:
 
 
 def test_o_html_repetido_nao_muta_mesmo_reserializado() -> None:
-    """O navegador devolve a SERIALIZAÇÃO dele, não o texto que entrou.
-
-    A indentação some, as aspas mudam, a entidade vira caractere — e onde uma
-    dessas diferenças existir, `el.innerHTML !== t` é verdade para sempre. É o
-    que fazia `luz` e `players` (aba 04) e `adaptadores-tabela` (aba 08)
-    recriarem o miolo dez vezes por segundo.
-
-    A MORDIDA: tire o `el.__hefHtml`.
-    """
+    """O navegador devolve a SERIALIZAÇÃO dele, não o texto que entrou."""
     fora = _no_webkit(
         '<div data-campo="miolo" data-hef-alvo="html">.</div>',
         [{"mesa": {"miolo": "\n  <b class='x'>a&amp;b</b>\n"}}] * 3,
@@ -348,8 +256,6 @@ def test_o_html_repetido_nao_muta_mesmo_reserializado() -> None:
     assert fora["contas"][1:] == [0, 0], (
         f"o miolo foi recriado com o mesmo desenho — {fora['contas']}")
 
-
-# -- 4. o bloco e o botão em voo ------------------------------------------
 
 def test_o_bloco_nao_destroi_um_botao_em_voo() -> None:
     """Um botão trabalhando nunca é arrancado debaixo do dedo dela.
@@ -379,13 +285,7 @@ def test_o_bloco_nao_destroi_um_botao_em_voo() -> None:
 
 
 def test_o_bloco_volta_a_pintar_quando_o_voo_pousa() -> None:
-    """Adiar não é desistir: assim que o voo pousa, o bloco entra inteiro.
-
-    Sem esta metade, a cura acima seria pior que o defeito — um bloco congelado
-    para sempre é a tela afirmando o que deixou de ser verdade, que é o F7
-    desta casa. O pouso é o `voltouDoVoo` do próprio BOOTSTRAP, o mesmo que o
-    piloto chama quando o gesto responde.
-    """
+    """Adiar não é desistir: assim que o voo pousa, o bloco entra inteiro."""
     fora = _no_webkit(
         '<div id="regua-bloco"><button class="hef-em-voo" '
         'data-hef-voo="7">clicado</button></div>',
@@ -402,8 +302,6 @@ def test_o_bloco_volta_a_pintar_quando_o_voo_pousa() -> None:
         f"o bloco entrou DUAS vezes com o mesmo desenho — {fora['pintou']}")
     assert "miolo novo" in fora["html"], "o miolo novo nunca chegou à tela"
 
-
-# -- 5. a régua de PRODUTO: a página inteira, com a mesa parada -----------
 
 @pytest.fixture(scope="module")
 def parada() -> dict[str, Any]:
@@ -441,15 +339,7 @@ def parada() -> dict[str, Any]:
 
 
 def test_a_pagina_parada_nao_muta_nada(parada: dict[str, Any]) -> None:
-    """ZERO. É o número certo, e é o que o produto entrega desde 06/09/2026.
-
-    Esta é a régua que mede o PRODUTO — as outras medem uma peça. Ela abre a
-    página publicada, com o piloto de verdade e a mesa congelada, e conta o que
-    o DOM sofreu em quarenta tiques.
-
-    A MORDIDA: qualquer uma das seis curas arrancada faz esta reprovar, e a
-    mensagem nomeia o endereço culpado.
-    """
+    """ZERO. É o número certo, e é o que o produto entrega desde 06/09/2026."""
     assert parada, "o observador não devolveu tabela — a régua ficaria verde sobre nada"
     linhas = parada.get("linhas") or []
     culpados = ", ".join(
@@ -460,37 +350,18 @@ def test_a_pagina_parada_nao_muta_nada(parada: dict[str, Any]) -> None:
 
 
 def test_o_observador_sabe_acusar(parada: dict[str, Any]) -> None:
-    """A régua acima só vale se o instrumento souber ver alguma coisa.
-
-    *Antes de acreditar num vazio, prove que a régua sabe achar.* Aqui a prova
-    é do outro lado: o mesmo observador, mexendo no DOM de propósito, TEM de
-    contar. Sem isto, um observador que nunca ligou daria o mesmo zero.
-    """
+    """A régua acima só vale se o instrumento souber ver alguma coisa."""
     fora = _no_webkit(
         '<b data-campo="anda">—</b>',
         [{"mesa": {"anda": "um"}}, {"mesa": {"anda": "dois"}},
          {"mesa": {"anda": "três"}}],
     )
-    # 2 na primeira (o selo + o texto) e 1 em cada uma das duas seguintes.
     assert fora["contas"] == [2, 1, 1], (
         f"o observador não viu três mudanças de verdade — {fora['contas']}")
 
 
-# -- 6. o tique não enfileira --------------------------------------------
-
 def test_o_tique_nao_enfileira_com_a_ponte_lenta() -> None:
-    """Com a ponte lenta, o piloto PULA — ele não empilha pintura sobre pintura.
-
-    O DEFEITO É DE FORMA: a pintura é assíncrona, então dez tiques podem ter
-    dez `run_javascript` no ar ao mesmo tempo, cada um com uma carga inteira, e
-    o WebKit os executa em ordem, todos com dado velho. É o *"trava por
-    instantes"* dela.
-
-    A CONTA: com a ponte a 300 ms e o tique a 100 ms, três segundos cabem ~10
-    pinturas se o piloto esperar e ~30 se ele empilhar.
-
-    A MORDIDA: tire o `if(self._pintura_no_ar)` do `_tique` e a conta triplica.
-    """
+    """Com a ponte lenta, o piloto PULA — ele não empilha pintura sobre pintura."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -551,18 +422,7 @@ def test_o_tique_nao_enfileira_com_a_ponte_lenta() -> None:
 
 
 def test_a_fita_nao_e_trocada_com_um_chip_em_voo() -> None:
-    """A fita é o caso EXTREMO do bloco: ela troca o próprio nó, não o miolo.
-
-    `f.outerHTML = desejado` mata tudo o que está dentro dela — e os chips da
-    fita são clicáveis: são eles que escolhem em qual controle o gesto age. Um
-    chip clicado veste `hef-em-voo` até o gesto responder, e sem esta guarda ele
-    desaparece no primeiro tique, com o clique dela no meio do caminho.
-
-    Achado pela ONDA4-S10-O-TRANSPORTE-01 e confirmado aqui em 06/09/2026.
-
-    A MORDIDA: tire a guarda do ramo `p.fita` e a fita volta a ser trocada com o
-    chip em voo dentro.
-    """
+    """A fita é o caso EXTREMO do bloco: ela troca o próprio nó, não o miolo."""
     fora = _no_webkit(
         "",
         [{"fita": '<div class="fita">a fita nova</div>'}] * 3,
@@ -572,37 +432,12 @@ def test_a_fita_nao_e_trocada_com_um_chip_em_voo() -> None:
     )
     assert fora["pintou"] == [0, 0, 0], (
         f"a fita foi trocada com um chip em voo dentro — {fora['pintou']}")
-    # A PRIMEIRA VOLTA CARIMBA O SELO nos chips da fita da página — é uma vez
-    # só, e é o que o laço de selos faz de propósito. O que esta régua cobra é
-    # o REGIME: da segunda volta em diante, com o chip em voo, nada se move.
     assert fora["contas"][1:] == [0, 0], (
         f"a fita mexeu no DOM com um chip em voo dentro — {fora['contas']}")
 
 
 def test_a_largura_normalizada_pelo_cssom_nao_reconta() -> None:
-    """`5.0%` escrito volta `5%` lido — e o contador não pode somar por isso.
-
-    ACHADO EM 11/09/2026 (F3-CALIBRAR), na página de calibração, com a bancada
-    PARADA e um dublê de daemon::
-
-        60 tiques · 60 pinturas · 69 valores   ← e ZERO mutações de DOM
-
-    O DEFEITO NÃO É SAMBA, e é por isso que ele atravessou as réguas deste
-    arquivo: o DOM não se mexe. O `style` serializado é o mesmo, então nenhum
-    `MutationRecord` nasce. O que mente é o CONTADOR — e ele é O instrumento com
-    que esta casa prova que um endereço existe, e o que separa "pintou uma vez e
-    sossegou" de "esta aba repinta para sempre".
-
-    A CAUSA: `mesa_viva._barra_bipolar` emite `f"{largura:.1f}"`, então toda
-    barra de número redondo vai como `5.0`; o CSSOM guarda `5%`. Com a
-    comparação ANTES da escrita (`el.style.width !== t + '%'`), os dois nunca
-    casam. Paga QUEM USAR O ALVO: os eixos da `02-controles`, os da calibração, e
-    toda barra futura com uma casa decimal.
-
-    A MORDIDA: devolva ao ramo `largura` a forma de antes —
-    `if(el.style.width !== t + '%'){ …; return 1 } return 0` — e as duas últimas
-    pinturas voltam a contar 1 cada.
-    """
+    """`5.0%` escrito volta `5%` lido — e o contador não pode somar por isso."""
     fora = _no_webkit(
         '<i data-campo="barra" data-hef-alvo="largura" style="width:0%"></i>'
         '<i data-campo="alto" data-hef-alvo="altura" style="height:0%"></i>',
@@ -617,14 +452,7 @@ def test_a_largura_normalizada_pelo_cssom_nao_reconta() -> None:
 
 
 def test_a_largura_invalida_nao_conta_pintura() -> None:
-    """O travessão de um lugar sem dono não é largura, e não soma pintura.
-
-    `molde_do_lugar` escreve `—` em todo campo de um lugar sem aparelho. Numa
-    barra isso vira `width: —%`, que o CSSOM RECUSA: nada muda na tela, e com a
-    comparação antes da escrita o contador somava +1 por tique **para sempre**.
-
-    A MORDIDA: a mesma do teste acima.
-    """
+    """O travessão de um lugar sem dono não é largura, e não soma pintura."""
     fora = _no_webkit(
         '<i data-campo="barra" data-hef-alvo="largura" style="width:0%"></i>',
         [{"mesa": {"barra": None}}] * 3,

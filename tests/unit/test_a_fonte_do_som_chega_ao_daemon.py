@@ -43,7 +43,6 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     FONTE_SFX,
 )
 
-#: Faixa sintética desta casa — há DOIS portões de anonimato nesta árvore.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
@@ -81,18 +80,8 @@ def _pedir(h: _Handlers, **params: Any) -> dict[str, Any]:
     return asyncio.run(h._handle_speaker_set(params))
 
 
-# ---------------------------------------------------------------------------
-# O CAMINHO NOVO
-# ---------------------------------------------------------------------------
-
-
 def test_o_ipc_leva_a_fonte_ao_dono_do_no(sub: AltoFalanteSubsystem) -> None:
-    """`speaker.set {uniq, fonte}` muda o que o nó DAQUELE controle vai ouvir.
-
-    MORDIDA: apague o ramo `if fonte is not None` do `_handle_speaker_set` — o
-    `fonte_escolhida` volta a `sfx` e a escolha dela morre no caminho, que é o
-    defeito de 20/09 inteiro.
-    """
+    """`speaker.set {uniq, fonte}` muda o que o nó DAQUELE controle vai ouvir."""
     h = _Handlers(sub)
     assert sub.fonte_escolhida(P1) == FONTE_PADRAO
 
@@ -104,14 +93,7 @@ def test_o_ipc_leva_a_fonte_ao_dono_do_no(sub: AltoFalanteSubsystem) -> None:
 
 
 def test_a_fonte_e_de_um_controle_so(sub: AltoFalanteSubsystem) -> None:
-    """Escolher para o P1 não põe o som da máquina no ouvido do P2.
-
-    É a mesma família do `_handle_for(None)` de 18/09, que caía no primário: um
-    ato de áudio sem endereço é um ato no jogador errado.
-
-    MORDIDA: guarde a fonte numa variável única em vez do dicionário por
-    controle.
-    """
+    """Escolher para o P1 não põe o som da máquina no ouvido do P2."""
     h = _Handlers(sub)
     _pedir(h, uniq=P1, fonte=FONTE_MIX)
 
@@ -120,11 +102,7 @@ def test_a_fonte_e_de_um_controle_so(sub: AltoFalanteSubsystem) -> None:
 
 
 def test_sem_endereco_ninguem_escolhe(sub: AltoFalanteSubsystem) -> None:
-    """`fonte` sem `uniq` não vira uma escolha no primário.
-
-    MORDIDA: tire o `not uniq` da guarda de `_speaker_fonte` e deixe o pedido
-    cair no controle de sempre.
-    """
+    """`fonte` sem `uniq` não vira uma escolha no primário."""
     h = _Handlers(sub)
     corpo = _pedir(h, fonte=FONTE_MIX)
 
@@ -134,15 +112,7 @@ def test_sem_endereco_ninguem_escolhe(sub: AltoFalanteSubsystem) -> None:
 
 
 def test_um_pedido_so_de_fonte_nao_toma_a_posse(sub: AltoFalanteSubsystem) -> None:
-    """A camada 1 não escreve byte nenhum no aparelho — é a armadilha 1 da SOM-02.
-
-    `set_speaker_volume` sem volume e sem mudo TOMA A POSSE e manda ZERO: o
-    alto-falante trancaria em zero porque ela escolheu por onde o som ENTRA no
-    nó.
-
-    MORDIDA: apague o `if volume is None and muted is None and rota is None` e
-    deixe o pedido seguir para o bloco do backend.
-    """
+    """A camada 1 não escreve byte nenhum no aparelho — é a armadilha 1 da SOM-02."""
     h = _Handlers(sub)
     _pedir(h, uniq=P1, fonte=FONTE_MIX)
 
@@ -151,10 +121,7 @@ def test_um_pedido_so_de_fonte_nao_toma_a_posse(sub: AltoFalanteSubsystem) -> No
 
 
 def test_a_fonte_viaja_junto_do_volume(sub: AltoFalanteSubsystem) -> None:
-    """Pedir os dois no mesmo payload faz os dois — e a resposta diz os dois.
-
-    MORDIDA: devolva antes do bloco do backend sempre que houver `fonte`.
-    """
+    """Pedir os dois no mesmo payload faz os dois — e a resposta diz os dois."""
     h = _Handlers(sub)
     corpo = _pedir(h, uniq=P1, fonte=FONTE_MIX, volume=102)
 
@@ -162,67 +129,34 @@ def test_a_fonte_viaja_junto_do_volume(sub: AltoFalanteSubsystem) -> None:
     assert h.controller.escritas and h.controller.escritas[0]["volume"] == 102
 
 
-# ---------------------------------------------------------------------------
-# O TIPO É FECHADO — a mesma disciplina da `rota`
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("valor", ["hdmi", "", "MIX", 2, True, None.__class__])
 def test_valor_que_o_no_nao_sabe_tratar_nao_passa(
     sub: AltoFalanteSubsystem, valor: Any
 ) -> None:
-    """Só `mix` e `sfx`, e o erro é de VALIDAÇÃO, não clamp.
-
-    Um terceiro nome escolhido em silêncio mandaria o áudio para um arranjo que
-    `rota_do_no` não monta, e o nó ficaria mudo sem ninguém saber por quê.
-
-    MORDIDA: troque a conferência por um `str(fonte)` e deixe passar.
-    """
+    """Só `mix` e `sfx`, e o erro é de VALIDAÇÃO, não clamp."""
     h = _Handlers(sub)
     with pytest.raises(ValueError, match="'fonte' precisa ser"):
         _pedir(h, uniq=P1, fonte=valor)
 
 
 def test_a_lista_fechada_sai_do_dono_e_nao_da_regua(sub: AltoFalanteSubsystem) -> None:
-    """Os dois nomes que o IPC aceita são os do `alto_falante_bt`, não literais.
-
-    Esta casa já pagou por régua que DIGITA o que devia LER. Se nascer um
-    terceiro modo no dono, este teste é quem denuncia o IPC que ficou para trás.
-    """
+    """Os dois nomes que o IPC aceita são os do `alto_falante_bt`, não literais."""
     h = _Handlers(sub)
     for nome in (FONTE_MIX, FONTE_SFX):
         assert _pedir(h, uniq=P1, fonte=nome)["fonte"] == nome
 
 
 def test_release_nao_se_mistura_com_fonte(sub: AltoFalanteSubsystem) -> None:
-    """"Pare de mandar E escolha isto" não tem significado honesto.
-
-    É a mesma precedência que a SOM-02 decidiu para `volume`/`muted`, estendida
-    ao campo novo — escolher um vencedor em silêncio esconderia um chamador
-    confuso.
-
-    MORDIDA: tire `fonte` da guarda do `release`.
-    """
+    """"Pare de mandar E escolha isto" não tem significado honesto."""
     h = _Handlers(sub)
     with pytest.raises(ValueError, match="release"):
         _pedir(h, uniq=P1, release=True, fonte=FONTE_MIX)
 
 
-# ---------------------------------------------------------------------------
-# A PRECEDÊNCIA: a escolha VIVA vence o perfil, e o perfil continua existindo
-# ---------------------------------------------------------------------------
-
-
 def test_a_escolha_viva_vence_o_perfil(
     sub: AltoFalanteSubsystem, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Com o perfil dizendo `sfx`, o clique de agora vale `mix`.
-
-    É o que faz a cura chegar ao nó ANTES do "Salvar" — e é exatamente o
-    intervalo em que a escolha dela se perdia.
-
-    MORDIDA: apague o `if viva:` de `_fonte_do_controle` e leia só o perfil.
-    """
+    """Com o perfil dizendo `sfx`, o clique de agora vale `mix`."""
     chave = P1.replace(":", "")
     monkeypatch.setattr(sub, "_fontes_do_perfil", lambda: {chave: FONTE_SFX})
     assert sub.fonte_escolhida(P1) == FONTE_SFX
@@ -236,11 +170,7 @@ def test_a_escolha_viva_vence_o_perfil(
 def test_sem_escolha_viva_o_perfil_continua_mandando(
     sub: AltoFalanteSubsystem, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O caminho novo não atropela o antigo: quem não clicou lê o perfil.
-
-    MORDIDA: faça `_fonte_do_controle` devolver o padrão sem consultar o
-    perfil — a escolha dela deixaria de sobreviver ao reinício do daemon.
-    """
+    """O caminho novo não atropela o antigo: quem não clicou lê o perfil."""
     chave = P2.replace(":", "")
     monkeypatch.setattr(sub, "_fontes_do_perfil", lambda: {chave: FONTE_MIX})
 
@@ -251,40 +181,15 @@ def test_sem_escolha_viva_o_perfil_continua_mandando(
 
 
 def test_um_daemon_sem_o_subsystem_responde_em_vez_de_quebrar() -> None:
-    """Ausência é resposta — a mesma disciplina de todo o bloco de áudio.
-
-    `FakeController` e daemon antigo não têm o subsystem do som; um
-    `AttributeError` aqui viraria erro vermelho na tela dela sobre um clique
-    que a gravação no perfil resolveu.
-
-    MORDIDA: chame `self.daemon._alto_falante_subsystem.escolher_a_fonte`
-    direto, sem `getattr`.
-    """
+    """Ausência é resposta — a mesma disciplina de todo o bloco de áudio."""
     h = _Handlers(None)
     corpo = _pedir(h, uniq=P1, fonte=FONTE_MIX)
 
     assert corpo["status"] == "sem_controle" and "fonte" not in corpo
 
 
-# ---------------------------------------------------------------------------
-# A ORDEM DAS DUAS METADES — o comentário afirmava, e faltava a régua
-# ---------------------------------------------------------------------------
-#
-# `_handle_speaker_set` põe a `fonte` ANTES do bloco de volume, e diz por quê
-# por extenso: *"ela vem antes do bloco de volume para que uma recusa de posse
-# não deixe a escolha da camada 1 pelo caminho"*. Medido em 20/09/2026,
-# movendo a recusa da SOM-02 para cima da `fonte`: **161 réguas verdes**. A
-# afirmação estava no arquivo e não estava em régua nenhuma — que é a forma de
-# comentário que esta casa já viu envelhecer sozinho.
-
-
 class _SemVolumeConhecido(_Backend):
-    """O controle que nunca recebeu um `speaker.set` de volume.
-
-    `speaker_state_for` devolvendo `None` é a resposta HONESTA do produto até
-    a primeira escrita: o registrador de volume não tem caminho de leitura, e
-    publicar um número ali seria inventá-lo (AUDIO-OWNER-01).
-    """
+    """O controle que nunca recebeu um `speaker.set` de volume."""
 
     def speaker_state_for(self, uniq: Any) -> dict[str, Any] | None:
         return None
@@ -293,17 +198,7 @@ class _SemVolumeConhecido(_Backend):
 def test_a_recusa_da_posse_nao_leva_a_escolha_da_camada_1_junto(
     sub: AltoFalanteSubsystem,
 ) -> None:
-    """Ela escolhe a fonte e o mudo no mesmo clique; o mudo é recusado.
-
-    A recusa é a armadilha 2 da SOM-02, e ela é CERTA: mudo como primeira
-    escrita tranca o alto-falante em zero e o próprio mudo não o solta. O que
-    não pode acontecer é a camada 1 morrer junto — são dois pedidos
-    independentes no mesmo payload, como a `rota` e o `volume` já eram.
-
-    MORDIDA: mova a guarda do `sem_volume_conhecido` para antes do bloco da
-    `fonte`. O `ValueError` continua igual, a mensagem continua igual, e a
-    escolha dela some no caminho sem uma palavra.
-    """
+    """Ela escolhe a fonte e o mudo no mesmo clique; o mudo é recusado."""
     h = _Handlers(sub)
     h.controller = _SemVolumeConhecido()  # type: ignore[assignment]
 
@@ -320,16 +215,7 @@ def test_a_recusa_da_posse_nao_leva_a_escolha_da_camada_1_junto(
 def test_o_byte_recusado_tambem_nao_leva_a_fonte(
     sub: AltoFalanteSubsystem,
 ) -> None:
-    """O firmware diz não; o nó continua ouvindo o que ela escolheu.
-
-    A camada 2 pode recusar por mil razões que não são dela — controle que
-    caiu, backend sem suporte, posse não assumida. Fazer a camada 1 depender
-    disso é atar o PipeWire ao hidraw, que é a separação que esta fileira
-    inteira existe para manter.
-
-    MORDIDA: devolva antes do bloco do backend quando `ok` for falso, sem pôr
-    `fonte` no corpo.
-    """
+    """O firmware diz não; o nó continua ouvindo o que ela escolheu."""
 
     class _Recusa(_Backend):
         def set_speaker_volume(self, volume: Any, **k: Any) -> bool:
@@ -350,15 +236,7 @@ def test_o_byte_recusado_tambem_nao_leva_a_fonte(
 def test_um_valor_de_fonte_recusado_para_antes_de_tocar_o_aparelho(
     sub: AltoFalanteSubsystem,
 ) -> None:
-    """A validação da `fonte` é ANTES de qualquer escrita, e não depois.
-
-    Um payload com a fonte errada e um volume certo não pode deixar o volume
-    aplicado e a chamada em erro: quem lê o `ValueError` conclui que nada
-    aconteceu.
-
-    MORDIDA: mova a conferência de `fonte` para junto de `_speaker_fonte`,
-    depois das outras validações.
-    """
+    """A validação da `fonte` é ANTES de qualquer escrita, e não depois."""
     h = _Handlers(sub)
 
     with pytest.raises(ValueError, match="'fonte' precisa ser"):

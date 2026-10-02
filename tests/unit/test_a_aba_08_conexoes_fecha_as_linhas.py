@@ -1,26 +1,5 @@
 #!/usr/bin/env python3
-"""As decisões do PO sobre a aba `08-conexoes`, medidas na SAÍDA do produto.
-
-**A RÉGUA LÊ, NÃO DIGITA.** Cada teste aqui pergunta ao produto (a função do
-pacote, a página gravada) e compara com o que os DONOS dizem — nunca com uma
-segunda cópia da frase escrita no teste. Esta casa pagou onze vezes em 26/08 por
-réguas que digitavam o que deviam ler, e elas reprovavam a melhora em vez do
-defeito.
-
-As decisões cobertas, todas de `docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`,
-§2, aba `08-conexoes`:
-
-* **[03]** cartão de cura na coluna da direita;
-* **[04]** selo de procedência só nas frases que não foram medidas aqui;
-* **[07]** o `+N` no fim de cada lista;
-* **[08]** a frase do rodapé do Mapa, trocada pela verdade.
-
-**[03] E [04] CAÍRAM EM 13/09/2026** (FRASES-E-DICAS-02) — a nota está na seção
-deles, e a régua agora mede que não voltam.
-
-E o defeito da §3 desta aba: **o campo de nome do adaptador promete e não
-guarda.**
-"""
+"""As decisões do PO sobre a aba `08-conexoes`, medidas na SAÍDA do produto."""
 
 from __future__ import annotations
 
@@ -40,12 +19,7 @@ def pacote():
 
 @pytest.fixture()
 def cena():
-    """Uma cena de exame com as DUAS formas que a coluna da direita desenha.
-
-    Ela imita o que esta bancada mediu em 03/09/2026 — duas ordens abertas e
-    conferências com cura — sem tocar no barramento: os objetos são os do
-    produto (`exame_da_mesa.Item`, `ordens_da_mesa.Ordem`), montados à mão.
-    """
+    """Uma cena de exame com as DUAS formas que a coluna da direita desenha."""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
         DERIVADO_DA_CONTA,
@@ -66,9 +40,6 @@ def cena():
             arranjo="3-1|3-2",
         )
 
-    # OS ESTADOS SÃO LIDOS DO DONO, e não digitados: `exame_da_mesa` exporta as
-    # chaves de máquina (ASCII por contrato), e uma cena que as digitasse
-    # continuaria verde no dia em que uma delas mudasse de grafia.
     from hefesto_dualsense4unix.integrations.exame_da_mesa import (
         ESTADO_ATENCAO,
         ESTADO_CERTO,
@@ -90,17 +61,6 @@ def cena():
     ]
 
 
-# ---------------------------------------------------------------------------
-# [04] O SELO DE PROCEDÊNCIA e [03] O CARTÃO DE CURA — CAÍRAM EM 13/09/2026
-# ---------------------------------------------------------------------------
-# FRASES-E-DICAS-02. A §D da sprint tira da coluna visível o imperativo e o
-# ganho da ordem, e com eles saem o `?` do card (onde a marca de procedência
-# morava) e o cartão de cura, que era «O que fazer: …» visível sem clique. A
-# base é a ordem dela de 13/09 no índice da terceira lista
-# (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, §0 item
-# 4: «Tirar e enxugar pode»). A cura e as frases da ordem continuam no `?` da
-# linha do exame (`_dica_da_linha`). As réguas de antes mediam o que saiu; esta
-# mede que não volta.
 def _coluna(pacote, cena) -> str:
     """A coluna da direita como o produto a emite, com a cena na mão."""
     pacote._ORDENS_NA_TELA = tuple(i.ordem for i in cena)
@@ -114,19 +74,7 @@ def _com_destino(cena, destino: str):  # type: ignore[no-untyped-def]
 
 
 def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None:
-    """A cena tem cura, imperativo e frase derivada — e nada disso sai na coluna.
-
-    O QUE A CENA TEM É LIDO, não afirmado: sem uma cura de conferência e sem um
-    selo diferente de `medido aqui`, esta régua ficaria verde sobre nada.
-
-    MORDE: devolva o cartão de cura ou o ganho a `_html_da_ordem`.
-
-    A INSTRUÇÃO SAIU DAS PROIBIDAS em 26/09/2026: ela voltou à caixa por
-    decisão dela (*«dá pra aceitar a instrução nisso»*), com o título
-    «Sugestão de Conexão». E A CURA DA CONFERÊNCIA TAMBÉM, na mesma data
-    (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): cada AJUSTAR ganha a sua linha, e
-    sem ordem a instrução é o «O que fazer» dela — sem o prefixo, que é do `?`.
-    """
+    """A cena tem cura, imperativo e frase derivada — e nada disso sai na coluna."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
 
     from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_CERTO
@@ -154,13 +102,7 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
 
 
 def test_toda_ordem_aberta_tem_a_sua_linha(pacote, cena) -> None:
-    """Decisão [07] — a segunda ordem de 03/09 deixa de sumir.
-
-    O CARD ÚNICO SAIU EM 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): a
-    Sugestão de Conexão tem uma linha numerada por ajuste, e nenhuma ordem
-    aberta fica de fora — com ou sem destino. O `+N` desta caixa não tem mais o
-    que contar. O número sai da cena.
-    """
+    """Decisão [07] — a segunda ordem de 03/09 deixa de sumir."""
     abertas = [i.ordem.acao for i in cena if i.ordem is not None]
     for destino in ("", "Entrada 9"):
         coluna = _coluna(pacote, _com_destino(cena, destino))
@@ -175,37 +117,19 @@ def test_o_mais_n_cala_quando_tudo_cabe(pacote) -> None:
 
 
 def test_o_mais_n_concorda_em_numero(pacote) -> None:
-    """Uma coisa que não coube fala no singular; duas, no plural.
-
-    Português com acentuação é regra desta casa, e uma tela que diz "+1 curas"
-    é a mesma falta de cuidado que um número errado.
-    """
+    """Uma coisa que não coube fala no singular; duas, no plural."""
     assert "1 cura não coube" in pacote._sobraram(5, 4, "cura", "curas")
     assert "2 curas não couberam" in pacote._sobraram(6, 4, "cura", "curas")
 
 
 def test_a_coluna_sem_a_lista_continua_sendo_so_o_card(pacote) -> None:
-    """O padrão não mudou: `_html_da_ordem()` sem cena é o que ela era.
-
-    Isto é a garantia de que a decisão nova não vaza para quem ainda chama a
-    função com a assinatura velha — e há um chamador assim: a régua de gestos.
-    """
+    """O padrão não mudou: `_html_da_ordem()` sem cena é o que ela era."""
     pacote._ORDENS_NA_TELA = ()
     assert "cura" not in pacote._html_da_ordem()
 
 
-# ---------------------------------------------------------------------------
-# [08] A FRASE DO RODAPÉ DO MAPA
-# ---------------------------------------------------------------------------
 def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
-    """Decisão [08] — *"Trocar pela verdade."*
-
-    A frase velha mandava apertar um "Aplicar" que faz OUTRA coisa: a dica dele
-    diz *"Vale agora: envia a configuração aos controles na hora. NÃO grava"*.
-    Os seis gestos do mapa gravam no clique desde 01/09.
-
-    A RÉGUA LÊ A BANCADA, que é onde o desenho de hoje mora.
-    """
+    """Decisão [08] — *"Trocar pela verdade."*"""
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
@@ -215,13 +139,7 @@ def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
 
 
 def test_o_rodape_do_mapa_diz_que_o_clique_ja_gravou() -> None:
-    """E a frase nova é a do DONO desta aba, lida no ato.
-
-    **O ENDEREÇO MUDOU EM 06/09/2026, `ONDA5-08-02`, e o TEXTO não.** Até aqui a
-    régua lia `aba08.MAPA_JA_GRAVOU` — um literal DIGITADO no gerador, que é a
-    dívida que aquela sprint pagou. Agora lê o dono, `mapa_da_mesa`, e a frase
-    na página continua byte a byte a mesma.
-    """
+    """E a frase nova é a do DONO desta aba, lida no ato."""
     from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import GRAVA_NO_CLIQUE
     from hefesto_dualsense4unix.interface import onde
 
@@ -230,24 +148,7 @@ def test_o_rodape_do_mapa_diz_que_o_clique_ja_gravou() -> None:
 
 
 def test_o_rodape_do_mapa_vem_do_dono() -> None:
-    """A frase do rodapé tem UM dono, e o gerador não guarda uma segunda cópia.
-
-    **A DÍVIDA QUE ISTO FECHA:** entre 04/09 e 06/09 a linha era um literal em
-    `interface/aba08.py`, enquanto os quatro rótulos vizinhos da mesma
-    janelinha já saíam do produto por AST. Uma frase digitada no gerador vira a
-    segunda versão dela no dia em que o produto a corrigir — e **régua nenhuma
-    desta casa compara HTML com Python**, então o desvio seria silencioso. Esta
-    é a régua que faltava.
-
-    Ela cobra as DUAS pontas, porque uma sozinha passa por acidente:
-
-    1. **o dono chega às duas páginas** — a bancada e a publicada; e a
-       comparação é de IGUALDADE com o texto do nó `.mm-aplicar`, não um `in`
-       frouxo sobre o arquivo inteiro;
-    2. **o gerador não digita a frase** — nem no corpo nem em comentário. O
-       `MAPA` continua sendo a única porta, e o `_constantes` que o monta
-       derruba a geração quando o nome some do produto.
-    """
+    """A frase do rodapé tem UM dono, e o gerador não guarda uma segunda cópia."""
     import pathlib
 
     from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import GRAVA_NO_CLIQUE
@@ -274,21 +175,8 @@ def test_o_rodape_do_mapa_vem_do_dono() -> None:
         "do `_constantes`, renomear no produto some da tela em silêncio")
 
 
-# ---------------------------------------------------------------------------
-# O `?` DA QUINTA LINHA — um fato errado, e fato errado se SUBSTITUI
-# ---------------------------------------------------------------------------
 def test_o_exame_nao_manda_procurar_um_botao_que_nao_existe() -> None:
-    """*"Ver as ordens ignoradas"* saiu da tela em 31/08 e a frase ficou.
-
-    O `?` da quinta linha do Check-up e a dica do ⊘ mandavam procurar um botão
-    que não existe mais. Isto não é decisão medida a preservar: é uma frase que
-    a medição derrubou, e ela sai de TODO lugar em que fala do PRESENTE.
-
-    **A RÉGUA MEDE O QUE A TELA DIZ, e não o arquivo inteiro:** o nome do botão
-    sobrevive na retrospectiva do fim da página e nos comentários do gerador, e
-    ali ele é verdadeiro — conta por que a fileira de quatro botões existiu. O
-    que se cobra é que nenhuma DICA e nenhum `?` do miolo o cite.
-    """
+    """*"Ver as ordens ignoradas"* saiu da tela em 31/08 e a frase ficou."""
     from hefesto_dualsense4unix.interface import aba08, onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
@@ -303,29 +191,15 @@ def test_o_exame_nao_manda_procurar_um_botao_que_nao_existe() -> None:
 
 
 def test_a_frase_nova_diz_o_que_o_produto_faz() -> None:
-    """E o que entrou no lugar é o que `ordens_da_mesa.ordens_novas` faz.
-
-    A dispensa é gravada com o ARRANJO, e a linha volta sozinha quando o arranjo
-    muda. As DUAS dicas passam a dizer isso — a do ⊘ e a da quinta linha.
-    """
+    """E o que entrou no lugar é o que `ordens_da_mesa.ordens_novas` faz."""
     from hefesto_dualsense4unix.interface import onde
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    # A RÉGUA CONTAVA A FRASE INTEIRA ATÉ 11/09/2026, e a A1-066 a quebrou sem
-    # tocar numa linha daqui: as duas frases têm sujeitos de GÊNEROS diferentes
-    # («a linha volta sozinha» · «o aviso volta sozinho»), e a constante única
-    # obrigava uma das duas a errar a concordância. Nasceu `VOLTA_QUANDO` com a
-    # metade que é a mesma nas duas, e é ela que esta régua conta — o que se
-    # mede é *as duas dicas dizerem quando a linha volta*, não a palavra com
-    # que cada uma o diz.
     assert html.count(a08_conexoes.VOLTA_QUANDO) >= 2
     assert "A linha fica apagada aqui" not in html
 
 
-# ---------------------------------------------------------------------------
-# O DEFEITO DA §3 — o nome do adaptador promete e não guarda
-# ---------------------------------------------------------------------------
 def test_o_campo_do_nome_do_adaptador_tem_gesto(pacote) -> None:
     """Ela digita e o produto tem onde ouvir — o defeito da §3 desta aba.
 
@@ -356,14 +230,7 @@ def test_renomear_recusa_dizendo_sem_o_alvo(pacote) -> None:
 
 
 def test_renomear_nao_escreve_quando_o_nome_nao_mudou(pacote, monkeypatch) -> None:
-    """O mesmo nome não é gravado de novo — a regra é a da janela estável.
-
-    E O CLIQUE QUE SÓ POSICIONA O CURSOR NÃO GRAVA: o ouvinte do piloto ouve
-    `click` e `change` no mesmo campo, e o nome só vale no `change`.
-
-    MORDE: sem a comparação, este teste vê o escritor ser chamado com o nome
-    que já estava lá.
-    """
+    """O mesmo nome não é gravado de novo — a regra é a da janela estável."""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     chamou: list[tuple[str, str]] = []
@@ -413,25 +280,9 @@ def test_o_escritor_do_nome_chama_o_dono_com_a_assinatura_dele(
     assert visto == {"endereco": "E8:47:3A:00:00:09", "nome": "Sala do fundo"}
 
 
-# ---------------------------------------------------------------------------
-# 08-Q5 — A ORDEM CALADA FICA NA TELA, E O MESMO ⊘ DESFAZ
-#
-# Palavra dela, 05/09/2026: *"A recomendação calada continua no lugar dela, em
-# cinza, e o mesmo botão desfaz."* A trava que ela leu era a medição desta casa:
-# *"Hoje não há caminho de volta nenhum."*
-#
-# O `_DISPENSADAS` É GLOBAL DE MÓDULO, e por isso todo teste daqui para baixo
-# passa pelo `mesa` abaixo: salvar e devolver os três globais é o que impede que
-# uma cena vaze para o teste seguinte — o defeito de ordem de teste que esta
-# casa mediu três vezes em 05/09.
-# ---------------------------------------------------------------------------
 @pytest.fixture()
 def mesa(pacote):
-    """Põe uma cena na tira e devolve a máquina ao que era. Sempre.
-
-    Devolve uma função `(itens, dispensadas) -> None`; o `finally` repõe
-    `_conferencias`, `_EXTRAS` e `_DISPENSADAS` mesmo quando o teste falha.
-    """
+    """Põe uma cena na tira e devolve a máquina ao que era. Sempre."""
     antes = (pacote._conferencias, pacote._EXTRAS, dict(pacote._DISPENSADAS),
              pacote._ORDENS_NA_TELA)
 
@@ -453,14 +304,7 @@ def _dispensa_a_primeira(cena) -> dict[str, str]:
 
 
 def test_a_ordem_calada_continua_na_tira(pacote, cena, mesa) -> None:
-    """08-Q5 — a linha que ela calou **não sai da lista**.
-
-    MORDE: devolva o `continue` que `_itens_da_tela` tinha até 05/09 e a tira
-    volta a ter um item a menos — a porta de mão única sobre um clique dela.
-
-    O NÚMERO SAI DA CENA, e não de um literal: com a cena trocada ele muda
-    junto.
-    """
+    """08-Q5 — a linha que ela calou **não sai da lista**."""
     mesa(cena, _dispensa_a_primeira(cena))
     tira = pacote._itens_da_tela()
     assert len(tira) == len(cena), (
@@ -496,18 +340,7 @@ def test_a_ordem_calada_com_arranjo_vazio_nao_cala(pacote, cena, mesa) -> None:
 
 
 def test_a_aba_jogar_nao_recebe_a_ordem_calada(pacote, cena, mesa) -> None:
-    """Passo 2 — `_exame()` é CONTRATO, e o consumidor é outra aba.
-
-    `a01_jogar._do_exame` leva tudo o que for `grave` para a coluna **Atenção**.
-    Sem este filtro, calar um alarme na Conexões o deixaria aceso na Jogar — a
-    mesma contradição de duas telas que o `_do_exame` de lá existe para não ter.
-
-    A RÉGUA CHAMA A ABA 01, e não o `_exame` daqui: o que se prova é o contrato
-    inteiro, não a função de um lado dele.
-
-    MORDE: tire o filtro de `_exame()` e a chave calada reaparece na lista que a
-    Jogar consome.
-    """
+    """Passo 2 — `_exame()` é CONTRATO, e o consumidor é outra aba."""
     from hefesto_dualsense4unix.interface.pacotes import a01_jogar
 
     dispensada = _dispensa_a_primeira(cena)
@@ -520,21 +353,12 @@ def test_a_aba_jogar_nao_recebe_a_ordem_calada(pacote, cena, mesa) -> None:
 
 
 def test_a_linha_que_voltou_apaga_a_tinta(pacote, cena, mesa) -> None:
-    """Passo 3 — a chave `calada` vai em TODO tique, inclusive vazia.
-
-    É a mesma regra do botão cinza da ONDA0-F: a chave que só aparece quando há
-    o que dizer deixa na tela a tinta do tique anterior — e a linha que VOLTOU
-    ficaria cinza para sempre.
-
-    MORDE: emita `calada` só quando for `"sim"` e a segunda leitura perde a
-    chave, que é a linha continuando cinza depois do desfazer.
-    """
+    """Passo 3 — a chave `calada` vai em TODO tique, inclusive vazia."""
     dispensada = _dispensa_a_primeira(cena)
     mesa(cena, dispensada)
     antes = [pacote._linha(i)["calada"] for i in pacote._itens_da_tela()]
     assert antes.count("sim") == 1, f"a cena não calou uma linha só: {antes}"
 
-    # O DESFAZER, como o gesto o escreve: `arranjo=""` na mesma chave.
     pacote._DISPENSADAS[next(iter(dispensada))] = ""
     depois = [pacote._linha(i)["calada"] for i in pacote._itens_da_tela()]
     assert len(depois) == len(antes), "a tira mudou de tamanho no desfazer"
@@ -584,19 +408,7 @@ def test_o_desenho_tem_endereco_para_a_linha_apagada() -> None:
 
 
 def test_a_dica_do_ignorar_vem_do_produto() -> None:
-    """Passo 4 — o ⊘ muda de sentido, e a dica tem de mudar com ele.
-
-    Até 05/09 o `title` era CRAVADO no gerador e mentia duas vezes: dizia *"A
-    recomendação sai desta lista"* (a linha passou a ficar) e continuava dizendo
-    a mesma coisa depois do clique. **Um botão que muda de sentido com uma dica
-    congelada é a cicatriz da trava da luz, medida em 04/09.**
-
-    A RÉGUA LÊ A PÁGINA e compara com o DONO da frase (`a08_conexoes`), nunca
-    com uma segunda cópia escrita aqui.
-
-    MORDE: tire o `data-campo="ignorar-dica"` do `<button>` e a dica volta a ser
-    a congelada do desenho.
-    """
+    """Passo 4 — o ⊘ muda de sentido, e a dica tem de mudar com ele."""
     from hefesto_dualsense4unix.interface import onde
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
@@ -616,18 +428,7 @@ def test_a_dica_do_ignorar_vem_do_produto() -> None:
 
 
 def test_o_mesmo_gesto_desfaz(pacote, cena, mesa) -> None:
-    """Passo 5 — o ⊘ é um INTERRUPTOR, e o segundo clique traz de volta.
-
-    *"o mesmo botão desfaz"* (08-Q5). O desfazer grava `arranjo=""` na mesma
-    chave, porque `machine.declare` não tem verbo de remoção — e um arranjo
-    vazio guardado não casa com arranjo nenhum, logo a ordem volta a falar.
-
-    O DUBLÊ GUARDA O QUE FOI GRAVADO, e a régua lê o disco de mentira: contar
-    chamadas provaria que a função rodou, não que ela escreveu a coisa certa.
-
-    MORDE: faça o gesto gravar sempre a dispensa (o de 05/09) e o segundo
-    clique deixa a linha calada em vez de trazê-la de volta.
-    """
+    """Passo 5 — o ⊘ é um INTERRUPTOR, e o segundo clique traz de volta."""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     mesa(cena, {})
@@ -650,9 +451,6 @@ def test_o_mesmo_gesto_desfaz(pacote, cena, mesa) -> None:
     posicao = next(i for i, item in enumerate(cena) if item.ordem is not None)
     ordem = cena[posicao].ordem
 
-    # `_reler_a_declaracao` VAI AO DISCO. O que este teste mede é o gesto, e
-    # deixá-lo ler o `maquina.json` do lar de mentira faria a régua depender de
-    # um arquivo que ela não escreveu.
     antes_reler = pacote._reler_a_declaracao
     pacote._reler_a_declaracao = lambda: None
     try:
@@ -673,12 +471,7 @@ def test_o_mesmo_gesto_desfaz(pacote, cena, mesa) -> None:
 
 
 def test_o_desfazer_passa_no_esquema_do_disco() -> None:
-    """E os dois vazios têm de sobreviver ao pydantic, senão o desfazer é teoria.
-
-    `OrdemDispensada._so_a_data` só cobra a forma do que NÃO é vazio, e
-    `_assinatura_sem_identidade` só cobra teto e cara de endereço. A régua
-    pergunta ao DONO do esquema em vez de afirmar que ele aceita.
-    """
+    """E os dois vazios têm de sobreviver ao pydantic, senão o desfazer é teoria."""
     from hefesto_dualsense4unix.utils.maquina import MesaDeclarada
 
     mesa = MesaDeclarada.model_validate(
@@ -687,19 +480,7 @@ def test_o_desfazer_passa_no_esquema_do_disco() -> None:
 
 
 def test_a_recusa_do_disco_nao_cala_a_linha(pacote, cena, mesa) -> None:
-    """Passo 5 — a ordem disco→memória não se inverte.
-
-    `_declarar` LEVANTA quando o daemon recusa. Se a memória mudasse primeiro, a
-    tela ficaria num estado que o disco não tem — e a linha voltaria sozinha no
-    tique seguinte, sem uma palavra. É perder decisão dela em silêncio.
-
-    **O DUBLÊ TEM DE SABER RECUSAR**, e é por isso que este teste existe
-    separado: um dublê que só sabe dizer `{"ok": True}` nunca exercita o caminho
-    de erro, e três vermelhos de 05/09 foram exatamente isso.
-
-    MORDE: ponha o `_DISPENSADAS[...] = …` antes do `_declarar` e a linha
-    aparece calada mesmo com o disco tendo recusado.
-    """
+    """Passo 5 — a ordem disco→memória não se inverte."""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     mesa(cena, {})
@@ -718,10 +499,7 @@ def test_a_recusa_do_disco_nao_cala_a_linha(pacote, cena, mesa) -> None:
 
 
 def test_o_ignorar_numa_conferencia_continua_recusando_dizendo(pacote, cena, mesa) -> None:
-    """Nada se perdeu: uma conferência não tem arranjo, e o ⊘ nela recusa.
-
-    Gravar ali criaria uma chave que regra nenhuma consulta.
-    """
+    """Nada se perdeu: uma conferência não tem arranjo, e o ⊘ nela recusa."""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     mesa(cena, {})
@@ -731,33 +509,14 @@ def test_o_ignorar_numa_conferencia_continua_recusando_dizendo(pacote, cena, mes
 
 
 def test_o_mais_n_do_exame_cala_sem_travessao(pacote) -> None:
-    """Passo 6 — quando cabe tudo, a linha não pode virar um `—` na tela dela.
-
-    O `escrever()` do piloto troca valor vazio por travessão ANTES de olhar o
-    alvo. Um `""` daqui poria um `—` solto sob a quinta linha do exame todo dia,
-    que é ruído com cara de dado — e é para isso que o `monta.NADA_A_DIZER`
-    existe, com a folha escondendo a linha por `:has(.nada)`.
-
-    O `vizinho-mais` SAIU EM 23/09/2026 com a fileira dos vizinhos
-    (TRANSPLANTE-DA-SECAO-01): os vizinhos viraram selos na régua do espectro,
-    que não tem teto.
-
-    MORDE: mande `""` em vez do `NADA_A_DIZER` e a asserção reprova.
-    """
+    """Passo 6 — quando cabe tudo, a linha não pode virar um `—` na tela dela."""
     nada = pacote._monta().NADA_A_DIZER
     fora = pacote._o_que_nao_coube([1] * pacote.TETO_DO_EXAME)
     assert fora == {"exame-mais": nada}, fora
 
 
 def test_o_mais_n_do_exame_nao_conta_o_que_rola(pacote) -> None:
-    """Passo 6 — o `+N` do exame CALOU em 19/09/2026, e não é regressão.
-
-    A decisão 08-Q7 dela foi ATENDIDA MELHOR: o piloto passou a clonar o molde
-    da linha (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) e todo achado aparece
-    — palavra dela no mesmo dia, *a lista rola, sem teto*.
-
-    MORDE: se alguém devolver o teto do exame sem reabrir esta régua, ela pega.
-    """
+    """Passo 6 — o `+N` do exame CALOU em 19/09/2026, e não é regressão."""
     fora = pacote._o_que_nao_coube([1] * (pacote.TETO_DO_EXAME + 2))
     assert fora["exame-mais"] == pacote._monta().NADA_A_DIZER, (
         "o `+N` do exame voltou a falar. Se o teto voltou de propósito, esta "
@@ -768,11 +527,7 @@ def test_o_mais_n_do_exame_nao_conta_o_que_rola(pacote) -> None:
 
 
 def test_o_desenho_tem_onde_dizer_o_que_nao_coube() -> None:
-    """E o endereço tem de existir na página — senão a conta não chega.
-
-    A peça é a `monta.ressalva`, que a folha esconde por `:empty` e `:has(.nada)`
-    — a linha só existe no dia em que sobra.
-    """
+    """E o endereço tem de existir na página — senão a conta não chega."""
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
@@ -785,12 +540,7 @@ def test_o_desenho_tem_onde_dizer_o_que_nao_coube() -> None:
 
 
 def test_o_veredito_continua_cego_para_a_calada(pacote, cena, mesa) -> None:
-    """Nada se perdeu: a linha cinza não pinta o topo.
-
-    Se o veredito passasse a contar as caladas, uma ordem dispensada prenderia o
-    topo em laranja para sempre e o ⊘ voltaria a ser botão morto — a definição
-    que `_veredito_do_exame` escreve.
-    """
+    """Nada se perdeu: a linha cinza não pinta o topo."""
     mesa(cena, {})
     falando = pacote._veredito_do_exame(pacote._itens_da_tela())
     mesa(cena, _dispensa_a_primeira(cena))
@@ -801,14 +551,6 @@ def test_o_veredito_continua_cego_para_a_calada(pacote, cena, mesa) -> None:
         "alguma coisa visível, que é a definição de botão morto")
 
 
-# ---------------------------------------------------------------------------
-# CONEXOES-LIGAR-TUDO-01 (06/09/2026) — as linhas do balde `LIGAR` desta aba
-#
-# As cinco daqui para baixo têm a mesma forma: **o dono existe no produto, com
-# a frase ou o número prontos, e o HTML não tinha onde escrever**. Cada teste
-# pergunta ao PRODUTO e compara com o DONO — nunca com uma segunda cópia da
-# frase escrita aqui.
-# ---------------------------------------------------------------------------
 def _ctx_de_alvo(pacote, indice, quantos=2):
     """Um `Contexto` com `quantos` controles e o alvo de saída em `indice`.
 
@@ -821,12 +563,7 @@ def _ctx_de_alvo(pacote, indice, quantos=2):
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     # O `player_slot` DESCE com a posição e o `index` SOBE: é o cruzamento que
-    # faz as duas ordens divergirem, e sem ele o teste passaria com a conversão
     # errada. **O CAMPO É `player_slot`, e não `player`** — quem decide a
-    # identidade é `actions/base.numero_do_controle`, e ele lê o SLOT DE SESSÃO;
-    # `player` responde outra pergunta ("está jogando agora, e como quem?") e é
-    # `None` fora do co-op. Medido em 06/09/2026: com `player` a mesa saiu
-    # `p1→index 0`, as duas ordens coincidiram e a mordida NÃO mordeu.
     controles = [
         {"uniq": f"aa:bb:cc:00:00:{n:02x}", "connected": True, "index": n,
          "transport": "usb", "player_slot": quantos - n}
@@ -851,7 +588,6 @@ def test_o_alvo_de_saida_e_lido_de_volta_do_daemon(pacote) -> None:
     aqui as duas estão trocadas de propósito.
     """
     ctx, mesa = _ctx_de_alvo(pacote, indice=0)
-    # O `index: 0` é o `player: 2` desta cena, e o produto o põe em `p2`.
     esperado = next(m["pref"] for m in mesa
                     if m["uniq"] == ctx.state["controllers"][0]["uniq"])
     assert pacote._pref_do_alvo(ctx) == esperado, (
@@ -865,12 +601,7 @@ def test_o_alvo_de_saida_e_lido_de_volta_do_daemon(pacote) -> None:
 
 
 def test_o_alvo_todos_marca_o_primeiro_radio(pacote) -> None:
-    """`index: null` é o broadcast, e ele marca o "todos" — nunca um controle.
-
-    MORDE: trate o `None` como "não sei" e devolva a lista toda vazia; a tela
-    fica sem afirmar nada onde o daemon disse, com todas as letras, que a saída
-    vale para a mesa inteira.
-    """
+    """`index: null` é o broadcast, e ele marca o "todos" — nunca um controle."""
     ctx, _ = _ctx_de_alvo(pacote, indice=None)
     marcado = pacote._alvo_de_saida(ctx)
     assert marcado[0] == "sim", marcado
@@ -878,15 +609,7 @@ def test_o_alvo_todos_marca_o_primeiro_radio(pacote) -> None:
 
 
 def test_um_alvo_que_o_estado_nao_traduz_nao_marca_nada(pacote) -> None:
-    """Índice fora da lista desmarca os cinco — e isso NÃO é o "todos".
-
-    A DIFERENÇA É O PONTO: marcar o "todos" afirmaria um broadcast que o daemon
-    não disse; deixar os cinco vazios não afirma nada, que é o único estado
-    honesto quando a conversão falha.
-
-    MORDE: devolva `TODOS_NA_TELA` no ramo do não-traduzido e a primeira posição
-    acende sobre um alvo que ninguém leu.
-    """
+    """Índice fora da lista desmarca os cinco — e isso NÃO é o "todos"."""
     ctx, _ = _ctx_de_alvo(pacote, indice=97)
     assert pacote._pref_do_alvo(ctx) == ""
     assert not any(pacote._alvo_de_saida(ctx)), pacote._alvo_de_saida(ctx)
@@ -918,14 +641,7 @@ def test_a_lista_do_alvo_vai_em_todo_tique_inclusive_vazia(pacote) -> None:
 
 
 def test_o_desenho_tem_um_endereco_por_radio_do_acordeao() -> None:
-    """Os cinco `<input>` do acordeão têm o endereço, e só um nasce `checked`.
-
-    A LISTA É DISTRIBUÍDA POR POSIÇÃO no DOM. Um rádio sem `data-campo` faria o
-    valor do P1 cair no P2 e a tela apontar o controle errado — pior que o
-    defeito que esta cura fecha.
-
-    MORDE: tire o `data-campo` de um dos cinco e a contagem cai.
-    """
+    """Os cinco `<input>` do acordeão têm o endereço, e só um nasce `checked`."""
     from hefesto_dualsense4unix.interface import onde
     from hefesto_dualsense4unix.interface.pacotes import TODOS_OS_LUGARES
 
@@ -955,14 +671,7 @@ def test_o_aviso_do_controle_nao_adotado_vem_do_dono(pacote) -> None:
 
 
 def test_sem_controle_orfao_a_linha_do_aviso_some(pacote) -> None:
-    """Zero órfão vira `monta.NADA_A_DIZER`, e a folha esconde a linha.
-
-    NUNCA `""`: o `escrever()` do piloto troca vazio por travessão ANTES de
-    olhar o alvo, e a tela ganharia uma linha com um `—` — altura para não
-    dizer nada.
-
-    MORDE: devolva `""` no ramo vazio e a asserção do marcador cai.
-    """
+    """Zero órfão vira `monta.NADA_A_DIZER`, e a folha esconde a linha."""
     nada = str(pacote._monta().NADA_A_DIZER)
     assert pacote._frase_do_sem_driver({}) == nada
     assert pacote._frase_do_sem_driver(
@@ -992,29 +701,14 @@ def test_o_aviso_do_radio_fragil_nomeia_os_controles(pacote) -> None:
 
 
 def test_sem_radio_fragil_a_linha_some(pacote) -> None:
-    """Booleano apagado é silêncio — e o silêncio não ocupa pixel.
-
-    MORDE: tire a guarda do `native_bt_fragil` e o aviso acende em toda mesa que
-    não publique a chave, que é o alarme sem medição que ela baniu.
-    """
+    """Booleano apagado é silêncio — e o silêncio não ocupa pixel."""
     nada = str(pacote._monta().NADA_A_DIZER)
     assert pacote._frase_do_radio_fragil({}) == nada
     assert pacote._frase_do_radio_fragil({"native_bt_fragil": False}) == nada
 
 
 def test_as_ressalvas_tem_endereco_na_pagina() -> None:
-    """As linhas existem no desenho, com o alvo `html`.
-
-    A RÉGUA COBRA O ENDEREÇO, não a frase: a frase é do dono e muda quando ele
-    mudar; o que não pode sumir é o lugar onde ela cabe. Endereço que some é
-    campo que o piloto não acha e escreve zero.
-
-    ERAM QUATRO ATÉ 23/09/2026: `hub-em-comum` e `gabinete-contagens` saíram com
-    a tabela dos adaptadores (TRANSPLANTE-DA-SECAO-01) — o «junto» do cartão e
-    o selo de cada porta dizem o que elas diziam, no lugar do adaptador.
-
-    MORDE: tire uma das duas do gerador, regere, e a linha dela cai aqui.
-    """
+    """As linhas existem no desenho, com o alvo `html`."""
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")

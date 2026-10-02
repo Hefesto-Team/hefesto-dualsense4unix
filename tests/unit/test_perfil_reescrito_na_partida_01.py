@@ -1,51 +1,4 @@
-"""PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08) — o perfil dela era reescrito
-sozinho no meio da partida.
-
-Seis defeitos medidos no journal dela, um bloco de testes cada. Todos herméticos:
-`FakeController`, `StateStore` real, `ProfileManager` real e o diretório de
-perfis isolado em `tmp_path` — nenhum toca hardware, D-Bus ou a `~/.config` dela.
-
-1. **a crença do autoswitch nunca era sincronizada.** `_current_profile` só era
-   escrito pelo commit do próprio `_activate`; uma troca MANUAL dela não o
-   atualizava, e o autoswitch "entrava" num perfil que já era o ativo, pisando
-   tudo de novo. Prova no journal: `profile_autoswitch from_=None
-   to=sackboy_nativo` com outro perfil ativo havia horas.
-2. **a supressão de emulação era uma armadilha de mão única.** O ramo que LIGA
-   não tinha o gate de catch-all que o ramo que LIBERA tem. `sackboy_nativo`
-   (catch-all, `suppress_desktop_emulation: true`, o disco dela hoje) ligava a
-   supressão e nenhum outro catch-all conseguia desligá-la.
-3. **a política de rumble não tinha guarda nenhuma** — nem `catch_all_sem_opiniao`
-   nem `janela_de_jogo_em_foco`, que o `mode` e a supressão já tinham. Medido:
-   `profile_rumble_policy_reverted` DENTRO da sessão de jogo dela.
-4. **o relatório da ativação omitia o que não entrou** — as categorias travadas
-   na mão e o modo jogo padrão. A janela respondia "ativado" e a usuária não
-   tinha como saber que o gatilho dela não fora aplicado.
-5. **o log só contava metade**: `profile_autoswitch` filtrava por `adiado*`, e
-   `ignorado_*`/`falhou` nunca apareciam no journal.
-6. **sair do Modo Nativo não restaurava modo, política de rumble nem
-   alto-falante** — a rota do `_reapply_last_profile` era a única das quatro que
-   montava o `ProfileManager` sem esses appliers.
-
-**Mordida verificada em 05/08**, arrancando cada cura e devolvendo. Reprovam com
-o produto de ontem, nesta ordem: item 1 →
-`test_ativacao_manual_seguida_de_tique_com_o_mesmo_candidato_nao_reativa`;
-item 2 → `test_catch_all_com_suppress_true_nao_liga_a_supressao` e
-`test_o_disco_dela_dois_catch_all_nao_prendem_a_emulacao`; item 3 →
-`test_catch_all_nao_reverte_a_politica_de_rumble` e
-`test_janela_de_jogo_em_foco_nao_reverte_a_politica_de_rumble`; item 4 →
-`test_relatorio_registra_as_categorias_travadas_na_mao` e
-`test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao`; item 5 →
-`test_log_do_autoswitch_reporta_estados_ignorados`; item 6 →
-`test_sair_do_nativo_restaura_a_politica_de_rumble_do_perfil` e
-`test_sair_do_nativo_aplica_as_demais_secoes_de_modo`.
-
-**Honestidade sobre o resto.** Os demais casos deste arquivo passam nos DOIS
-estados, e não é esquecimento: são GUARDAS da cura — o que ela não pode ter
-quebrado (a troca automática continua acontecendo, quem tem opinião continua
-mandando, a reversão legítima no desktop continua ocorrendo, o lock de gesto
-manual continua vencendo, o relatório não inventa seção, e sair do Modo Nativo
-continua sem religar o nativo). Estão marcados como tal na docstring de cada um.
-"""
+"""PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08) — o perfil dela era reescrito"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -81,19 +34,12 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-#: A janela do jogo dela no journal (Sackboy, `steam_app_1599660`).
 JANELA_DO_JOGO = {"wm_class": "steam_app_1599660", "wm_name": "Sackboy"}
 
 
 @pytest.fixture
 def perfis_isolados(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Diretório de perfis em `tmp_path` (mesmo padrão do `test_autoswitch`).
-
-    Obrigatório em todo teste que carregue ou salve perfil: `xdg_paths` resolve
-    o `config_dir` num `PlatformDirs` de módulo, avaliado no import, e o
-    isolamento XDG do `conftest` não o alcança — sem este monkeypatch a suíte
-    escreve `.lock` no diretório de perfis REAL dela (CANÁRIO-FS-01).
-    """
+    """Diretório de perfis em `tmp_path` (mesmo padrão do `test_autoswitch`)."""
     alvo = tmp_path / "profiles"
     alvo.mkdir()
 
@@ -108,9 +54,7 @@ def perfis_isolados(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture(autouse=True)
 def _sem_notificacao(monkeypatch: pytest.MonkeyPatch) -> None:
-    """BUG-TEST-DBUS-NOTIFY-NONHERMETIC-01: `set_emulation_suppressed` notifica
-    SEMPRE. Sem este stub, cada teste abre uma conexão real com o D-Bus de
-    sessão e joga um popup na tela dela no meio da suíte."""
+    """BUG-TEST-DBUS-NOTIFY-NONHERMETIC-01: `set_emulation_suppressed` notifica"""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.desktop_notifications."
         "notify_emulation_suppressed",
@@ -153,22 +97,10 @@ def _daemon() -> Daemon:
     return Daemon(controller=FakeController(), config=DaemonConfig())
 
 
-# ---------------------------------------------------------------------------
-# 1) A crença do autoswitch é sincronizada com o estado REAL
-# ---------------------------------------------------------------------------
-
-
 def test_ativacao_manual_seguida_de_tique_com_o_mesmo_candidato_nao_reativa(
     perfis_isolados: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA do item 1: ela escolhe o perfil na mão, o autoswitch tica com
-    o MESMO candidato e não reescreve nada.
-
-    Sem a cura, `_current_profile` continua `None` (o autoswitch nunca ativou
-    nada nesta sessão) e o tique estável ativa `sackboy_nativo` de novo —
-    gatilhos, LEDs, modo e política de rumble por cima do que ela acabou de
-    escolher. É o `profile_autoswitch from_=None to=sackboy_nativo` do journal.
-    """
+    """A MORDIDA do item 1: ela escolhe o perfil na mão, o autoswitch tica com"""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_last_profile",
         lambda _nome: None,
@@ -205,11 +137,7 @@ def test_a_crenca_adota_o_perfil_ativo_antes_de_decidir(
 def test_sincronizar_nao_congela_a_troca_para_outro_perfil(
     perfis_isolados: Path,
 ) -> None:
-    """A guarda da cura: sincronizar não pode virar "o autoswitch parou".
-
-    Com OUTRO perfil ativo no store, focar a janela do jogo continua trocando —
-    senão a cura do item 1 teria matado o automatismo inteiro.
-    """
+    """A guarda da cura: sincronizar não pode virar "o autoswitch parou"."""
     manager, store = _bancada(
         [
             _perfil("sackboy_nativo", janela="steam_app_1599660"),
@@ -226,11 +154,6 @@ def test_sincronizar_nao_congela_a_troca_para_outro_perfil(
     assert store.counter("profile.activated") == 1
 
 
-# ---------------------------------------------------------------------------
-# 2) A armadilha de mão única da supressão
-# ---------------------------------------------------------------------------
-
-
 def test_catch_all_com_suppress_true_nao_liga_a_supressao() -> None:
     """MORDIDA do item 2, metade A: ausência de regra não é ordem para LIGAR."""
     daemon = _daemon()
@@ -243,14 +166,7 @@ def test_catch_all_com_suppress_true_nao_liga_a_supressao() -> None:
 
 
 def test_o_disco_dela_dois_catch_all_nao_prendem_a_emulacao() -> None:
-    """MORDIDA do item 2, metade B: o estado medido no disco dela.
-
-    `sackboy_nativo` é catch-all e pede `suppress: true`; `vitoria` é catch-all
-    e não pede nada. Antes da cura, o primeiro ligava a supressão e o segundo
-    era barrado pelo gate de reversão (R-02) — a emulação de mouse/teclado
-    ficava morta até um gesto manual dela. Simétrico, o estado nem chega a
-    existir.
-    """
+    """MORDIDA do item 2, metade B: o estado medido no disco dela."""
     daemon = _daemon()
     daemon.apply_profile_suppression(
         True, profile=_perfil("sackboy_nativo", catch_all=True)
@@ -281,11 +197,6 @@ def test_chamada_direta_sem_perfil_preserva_o_comportamento_historico() -> None:
     assert daemon._emulation_suppressed is True
 
 
-# ---------------------------------------------------------------------------
-# 3) A política de rumble ganha as guardas dos irmãos
-# ---------------------------------------------------------------------------
-
-
 def test_catch_all_nao_reverte_a_politica_de_rumble() -> None:
     """MORDIDA do item 3, guarda A (`catch_all_sem_opiniao`)."""
     daemon = _daemon()
@@ -302,15 +213,9 @@ def test_catch_all_nao_reverte_a_politica_de_rumble() -> None:
 
 
 def test_janela_de_jogo_em_foco_nao_reverte_a_politica_de_rumble() -> None:
-    """MORDIDA do item 3, guarda B (`janela_de_jogo_em_foco`).
-
-    O evento medido: `profile_rumble_policy_reverted` DENTRO da sessão de jogo,
-    com a vibração mudando por causa de um perfil que só passou por ali.
-    """
+    """MORDIDA do item 3, guarda B (`janela_de_jogo_em_foco`)."""
     daemon = _daemon()
     daemon.apply_profile_rumble_policy("max", None, profile=_perfil("jogo"))
-    # A leitura CRUA da janela é o que `_janela_de_jogo_em_foco` consulta
-    # (NUMA-01) — o mesmo caminho por onde o poll do autoswitch a grava.
     daemon.store.record_window_detect_read("xlib", "steam_app_1599660")
 
     estado = daemon.apply_profile_rumble_policy(
@@ -349,28 +254,10 @@ def test_o_lock_de_gesto_manual_continua_vencendo_as_guardas_novas() -> None:
     assert estado == ADIADO_LOCK_MANUAL
 
 
-# ---------------------------------------------------------------------------
-# 4) O relatório conta o que NÃO entrou
-# ---------------------------------------------------------------------------
-
-
 def test_o_relatorio_nao_diz_mais_que_uma_secao_foi_travada(
     perfis_isolados: Path,
 ) -> None:
-    """O item 4 mudou de resposta em 14/09/2026, e o teste mudou com ele.
-
-    ELE MEDIA A MORDIDA DO ITEM 4: com `trigger` e `led` carimbados na mão, o
-    relatório da ativação tinha de dizer `ignorado_trava_manual` nas duas — a
-    cura de 05/08 para a janela que respondia "ativado" sem poder contar que o
-    gatilho e a cor do perfil não haviam entrado.
-
-    A TRAVA SAIU INTEIRA por decisão dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-
-    APLICA-TUDO`, e a razão está em `tests/unit/test_a_trava_que_ninguem_solta_01`),
-    então nenhuma seção é silenciada assim e a palavra deixou de existir. O item 4
-    continua valendo pelo que ele é — *o relatório conta o que aconteceu com cada
-    seção* —, e é isso que este teste passa a afirmar: a ativação por autoswitch
-    escreve as duas seções e diz que escreveu.
-    """
+    """O item 4 mudou de resposta em 14/09/2026, e o teste mudou com ele."""
     manager, _store = _bancada([_perfil("sackboy_nativo")])
 
     relatorio: dict[str, str] = {}
@@ -386,22 +273,7 @@ def test_o_relatorio_nao_diz_mais_que_uma_secao_foi_travada(
 def test_sem_trava_o_relatorio_nao_inventa_secao_ignorada(
     perfis_isolados: Path,
 ) -> None:
-    """A guarda: o relatório só afirma o que este código de fato silenciou.
-
-    ATUALIZADO EM 22/08/2026 pela `ELO-MUDO-01/E2`, e a mudança é de CONTRATO,
-    não de asserção. Até aqui este teste exigia a AUSÊNCIA das duas chaves, e a
-    ausência era o defeito irmão daquele que ele guarda: gatilho e luz eram
-    aplicados e nunca apareciam no relatório, então quem lia concluía que não
-    tinham entrado. Medido no daemon dela no mesmo dia, ativando o perfil do
-    Sackboy pelo lançamento — `secoes={'suppression': 'aplicado',
-    'rumble_policy': 'aplicado', 'speaker': 'aplicado'}`, com gatilho e luz
-    escritos naquele instante.
-
-    O que este teste guarda continua o mesmo, e é o nome dele: **não inventar
-    seção IGNORADA**. Sem trava, as duas dizem `aplicado`; com trava, dizem
-    `IGNORADO_TRAVA_MANUAL` (é o teste logo acima). O que mudou é que o silêncio
-    deixou de ser uma das respostas possíveis.
-    """
+    """A guarda: o relatório só afirma o que este código de fato silenciou."""
     manager, _store = _bancada([_perfil("sackboy_nativo")])
 
     relatorio: dict[str, str] = {}
@@ -415,12 +287,7 @@ def test_sem_trava_o_relatorio_nao_inventa_secao_ignorada(
 def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
     perfis_isolados: Path,
 ) -> None:
-    """MORDIDA do item 4, segunda metade: o MODO JOGO PADRÃO deixa rastro.
-
-    É o único eixo que o tique mexe fora do `ProfileManager` — o daemon liga o
-    vpad quando é jogo e ninguém opina. O estado devolvido pelo par era jogado
-    fora; agora entra no relatório da ativação, com o mesmo vocabulário.
-    """
+    """MORDIDA do item 4, segunda metade: o MODO JOGO PADRÃO deixa rastro."""
     manager, store = _bancada(
         [
             _perfil("navegacao", janela="firefox"),
@@ -435,13 +302,9 @@ def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
         modo_jogo_padrao_reverter=lambda **_kw: IGNORADO_GESTO_DELA,
     )
 
-    # Tique 1: jogo sem perfil próprio — o veto R-21 recusa o catch-all e o
-    # daemon liga o modo jogo padrão.
     sw._tick(dict(JANELA_DO_JOGO), 0.0)
     assert sw._estado_modo_jogo_padrao == APLICADO
 
-    # Ela sai do jogo: o par SOLTA o modo, e o estado entra no relatório da
-    # ativação que acontece neste mesmo tique.
     with structlog.testing.capture_logs() as registros:
         sw._tick({"wm_class": "firefox"}, 10.0)
         sw._tick({"wm_class": "firefox"}, 20.0)
@@ -451,28 +314,10 @@ def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
     assert f"modo_jogo_padrao={IGNORADO_GESTO_DELA}" in trocas[-1]["secoes"]
 
 
-# ---------------------------------------------------------------------------
-# 5) O log do autoswitch para de esconder metade do relatório
-# ---------------------------------------------------------------------------
-
-
 def test_log_do_autoswitch_reporta_estados_ignorados(
     perfis_isolados: Path,
 ) -> None:
-    """MORDIDA do item 5: `ignorado_*` aparece no `profile_autoswitch`.
-
-    O filtro só deixava passar `adiado*` — justamente os estados em que a
-    ativação "deu certo" sem aplicar a seção ficavam invisíveis no journal.
-
-    O VEÍCULO MUDOU EM 14/09/2026, e o que ele prova não: este teste carimbava a
-    trava manual para produzir um `ignorado_trava_manual` no relatório, e a trava
-    saiu inteira por decisão dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-
-    TUDO`). O item 5 é sobre o FILTRO do log, não sobre a trava — qualquer
-    `ignorado_*` serve de prova, e o que sobrou no produto é o
-    `IGNORADO_GESTO_DELA` do modo jogo padrão. Trocar o veículo mantém a régua
-    medindo o que ela sempre mediu; mantê-la presa ao veículo morto a mataria
-    junto com ele.
-    """
+    """MORDIDA do item 5: `ignorado_*` aparece no `profile_autoswitch`."""
     manager, store = _bancada(
         [
             _perfil("navegacao", janela="firefox"),
@@ -498,24 +343,13 @@ def test_log_do_autoswitch_reporta_estados_ignorados(
         "o log do autoswitch voltou a filtrar os `ignorado_*` e a contar só "
         f"metade do relatório: {trocas[-1]['secoes']!r}"
     )
-    # O campo histórico continua onde estava (é o que a leitura do journal já
-    # procura), e continua sendo só o subconjunto dos adiamentos.
     assert trocas[-1]["adiado"] == []
-
-
-# ---------------------------------------------------------------------------
-# 6) Sair do Modo Nativo restaura as seções que faltavam
-# ---------------------------------------------------------------------------
 
 
 def test_sair_do_nativo_restaura_a_politica_de_rumble_do_perfil(
     perfis_isolados: Path,
 ) -> None:
-    """MORDIDA do item 6: a política de rumble do perfil volta ao sair.
-
-    Sem os appliers injetados, `_reapply_last_profile` reaplicava só gatilhos,
-    LEDs e teclado — a política de rumble ficava como o jogo a deixou.
-    """
+    """MORDIDA do item 6: a política de rumble do perfil volta ao sair."""
     daemon = _daemon()
     save_profile(_perfil("sackboy_nativo", rumble={"policy": "max"}))
     daemon.store.set_active_profile("sackboy_nativo")
@@ -529,12 +363,7 @@ def test_sair_do_nativo_restaura_a_politica_de_rumble_do_perfil(
 def test_sair_do_nativo_nao_religa_o_modo_nativo_do_perfil(
     perfis_isolados: Path,
 ) -> None:
-    """A decisão da FEAT-PROFILE-MODE-01 continua de pé, e agora tem teste.
-
-    Este caminho roda ao DESLIGAR o Modo Nativo (`_native_mode` já é False
-    quando chegamos aqui): um perfil com `mode.kind=native` seria religado no
-    mesmo instante, desfazendo o gesto dela. O embrulho barra só esse caso.
-    """
+    """A decisão da FEAT-PROFILE-MODE-01 continua de pé, e agora tem teste."""
     daemon = _daemon()
     save_profile(_perfil("sackboy_nativo", mode={"kind": "native"}))
     daemon.store.set_active_profile("sackboy_nativo")

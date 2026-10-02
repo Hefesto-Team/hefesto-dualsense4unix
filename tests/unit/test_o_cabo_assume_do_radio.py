@@ -89,24 +89,15 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
 RAIZ = Path(__file__).resolve().parents[2]
 REGRA = RAIZ / "assets" / "85-hefesto-o-cabo-assume.rules"
 
-#: A mesa de quatro. Faixa forjada, octetos 4 e 5 zerados.
 MACS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
 UNIQS = tuple(m.replace(":", "") for m in MACS)
 MAC_DE = dict(zip(UNIQS, MACS, strict=True))
 
-#: O tique lento da casa (o `sync` do co-op, o registro de identidade).
 TIQUE = 2.0
 
-#: O `derrubar_o_radio` do produto, guardado antes de qualquer monkeypatch.
 _DERRUBAR_REAL = oce.derrubar_o_radio
 
-#: O `InputDirWatch.poll` do produto, pela mesma razão.
 _POLL_REAL = InputDirWatch.poll
-
-
-# ---------------------------------------------------------------------------
-# O mundo: o kernel, o BlueZ, os leitores e os handles
-# ---------------------------------------------------------------------------
 
 
 class Kernel:
@@ -115,30 +106,21 @@ class Kernel:
     def __init__(self, raiz: Path) -> None:
         self.raiz = raiz
         raiz.mkdir(parents=True, exist_ok=True)
-        #: instância -> {uniq, barramento, preso, evdev, hidraw}
         self.aparelhos: dict[str, dict[str, Any]] = {}
-        #: a `ps_devices_list`: uniq -> a instância que segura o endereço.
         self.presos: dict[str, str] = {}
         self.diario: list[str] = []
         self.dono_do_grab: dict[str, str] = {}
         self.ebusy: list[str] = []
         self.regra_instalada = True
-        #: a probe da regra 85 só acontece depois do próximo `connect()` — o vão
-        #: em que o controle está fora da mesa, que o tique VÊ.
         self.regra_atrasa = False
         self._probes_pendentes = False
-        #: o handle só percebe que o aparelho saiu na volta seguinte (o
-        #: `report_thread` da pydualsense vira `connected=False` no erro de
-        #: leitura seguinte). `False` = percebe na hora.
         self.handles_atrasam = False
         self.nao_percebidos: set[str] = set()
-        #: quem está com energia de fora (o cabo no PC ou numa tomada).
         self.na_tomada: set[str] = set()
         self._seq = 0x20
         self._evento = 40
         self._hidraw = 20
 
-    # -- o mundo muda -----------------------------------------------------
 
     def conectar(self, uniq: str, barramento: str) -> str:
         pid_bus = "0003" if barramento == "usb" else "0005"
@@ -201,7 +183,6 @@ class Kernel:
         self._evento += 1
         self._hidraw += 1
 
-    # -- o que o produto lê ------------------------------------------------
 
     @property
     def nodes(self) -> dict[str, str]:
@@ -263,7 +244,6 @@ class _Handle:
 
     @property
     def battery(self) -> SimpleNamespace:
-        # nibble alto do byte de bateria: 0x0 descarregando, 0x1 carregando.
         return SimpleNamespace(Level=55, State=1 if self._uniq in self._kernel.na_tomada else 0)
 
     def close(self) -> None:
@@ -393,11 +373,6 @@ def _connect_na_mesa(inst: PyDualSenseController, kernel: Kernel) -> None:
         inst.connect()
 
 
-# ---------------------------------------------------------------------------
-# A mesa: o backend, o co-op, o registro e o laço do cabo, de verdade
-# ---------------------------------------------------------------------------
-
-
 class MesaDoCabo:
     """Backend real + co-op real + registro real + o vigia do cabo, sobre o :class:`Kernel`."""
 
@@ -462,8 +437,6 @@ class MesaDoCabo:
         mesa = self
 
         def _poll(watch: Any) -> bool:
-            # O watch do barramento HID (o do laço, `_o_barramento_hid_mudou`)
-            # olha a pasta forjada de verdade: é ela que o cabo recusado muda.
             if getattr(watch, "_root", None) == str(self.kernel.raiz):
                 return bool(_POLL_REAL(watch))
             return mesa._o_watch_de_verdade(watch) if watch_de_verdade else True
@@ -488,26 +461,14 @@ class MesaDoCabo:
         return "\n".join(self.kernel.diario) if self.diario_legivel else None
 
     def _o_watch_de_verdade(self, watch: Any) -> bool:
-        """O `InputDirWatch.poll` como o real: "mudou" só quando os nós mudaram.
-
-        É o padrão da mesa desde a conferência de 25/09. O `True` de antes
-        fazia o co-op refazer o ciclo cheio a cada tique — um co-op mais atento
-        que o do produto, que só olha a mesa de novo quando `/dev/input` muda
-        (ou quando alguém pede, `_retry_spawn`): com ele, o jogador segurado na
-        troca que não termina era solto no prazo; com o watch de verdade ficava
-        para sempre. `watch_de_verdade=False` sobra para quem quiser comparar.
-        """
+        """O `InputDirWatch.poll` como o real: "mudou" só quando os nós mudaram."""
         foto = frozenset(self.kernel.nodes.values())
         antes = getattr(watch, "_foto_da_bancada", None)
         watch._foto_da_bancada = foto
         return foto != antes
 
     def o_co_op_ve_antes(self) -> None:
-        """O co-op (laço de leitura, ~2 s) percebe a mesa ANTES do `connect()`.
-
-        Os dois laços do daemon não têm ordem entre si: o `tique` da bancada
-        roda o `connect()` primeiro, e esta é a outra metade do sorteio.
-        """
+        """O co-op (laço de leitura, ~2 s) percebe a mesa ANTES do `connect()`."""
         self.kernel.os_handles_percebem()
         for leitor in list(_LeitorQueSegueOMac.vivos):
             leitor.a_thread_anda()
@@ -515,7 +476,6 @@ class MesaDoCabo:
         self.coop.forward_all()
         self.conferir_invariantes()
 
-    # -- os laços do daemon, na ordem do `reconnect_loop` ---------------------
 
     def connect(self) -> None:
         _connect_na_mesa(self.inst, self.kernel)
@@ -524,8 +484,6 @@ class MesaDoCabo:
         self.relogio.avancar(segundos)
         self.kernel.os_handles_percebem()
         self.connect()
-        # A probe atrasada da regra 85 cai DEPOIS deste `connect()`: ele viu o
-        # controle fora da mesa, que é o vão que esta bancada quer medir.
         self.kernel.a_regra_atrasada_roda()
         asyncio.run(
             conn_mod.vigiar_o_cabo_em_espera(
@@ -551,7 +509,6 @@ class MesaDoCabo:
         macs = [v.mac for v in self.vpads if getattr(v, "vivo", False)]
         assert len(macs) == len(set(macs)), f"dois vpads vivos com o mesmo MAC: {macs}"
 
-    # -- a leitura ------------------------------------------------------------
 
     def transporte_de(self, uniq: str) -> str | None:
         for item in self.inst.describe_controllers():
@@ -624,10 +581,6 @@ def plugar_o_cabo_e_esperar(
     return fotos
 
 
-# ---------------------------------------------------------------------------
-# A matriz: de 1 a 4 jogadores, o controle em qualquer lugar, rádio e misto
-# ---------------------------------------------------------------------------
-
 OUTROS = {
     "todos-no-radio": ("bt", "bt", "bt", "bt"),
     "mesa-mista": ("usb", "bt", "usb", "bt"),
@@ -680,7 +633,6 @@ class TestOCaboAssume:
 
         fotos = plugar_o_cabo_e_esperar(mesa, alvo)
 
-        # A MORDIDA PRINCIPAL: a escolha de antes (o rádio fica) reprova aqui.
         assert mesa.transporte_de(alvo) == "usb", (
             f"o controle {posicao + 1} continua no {mesa.transporte_de(alvo)} com o cabo "
             "plugado — o rádio devia ter saído para o cabo assumir"
@@ -694,9 +646,7 @@ class TestOCaboAssume:
         assert mesa.o_jogo_ve() == jogo_antes, "o jogo viu a mesa mudar"
         assert mesa.mortes_de_vpad() == mortes_antes, "um vpad morreu na troca de transporte"
         for foto in fotos:
-            # Em NENHUM instante outro controle dirige o jogador de alguém.
             assert foto["jogo"] == jogo_antes, f"no meio da troca o jogo viu {foto['jogo']}"
-            # Sozinho na mesa, o vão é mesa vazia: sem posto, e sem ninguém para tomá-lo.
             assert foto["primário"] == UNIQS[0] or (quantos == 1 and foto["primário"] is None), (
                 f"o posto de P1 passou para {foto['primário']} no meio da troca"
             )
@@ -705,7 +655,6 @@ class TestOCaboAssume:
         if alvo == UNIQS[0]:
             assert mesa.dono_do_vpad_do_p1() == alvo
             assert mesa.inst.get_transport() == "usb"
-        # Os outros não saíram do transporte deles.
         for n, uniq in enumerate(UNIQS[:quantos]):
             if uniq != alvo:
                 assert mesa.transporte_de(uniq) == transportes[n]
@@ -722,8 +671,6 @@ class TestOCaboAssume:
         mesa = montar(monkeypatch, tmp_path, _transportes(quantos, posicao, outros), jogo=False)
         alvo = UNIQS[posicao]
         plugar_o_cabo_e_esperar(mesa, alvo)
-        # Ela joga um tempo no cabo: a folga da ida acaba antes de o cabo sair,
-        # e quem segura a volta é a volta, não a sobra da ida.
         for _ in range(int(FOLGA_DEPOIS_DA_TROCA_S / TIQUE) + 1):
             mesa.tique()
         assert not mesa.inst.em_troca_de_transporte(alvo)
@@ -733,7 +680,7 @@ class TestOCaboAssume:
 
         inst = mesa.kernel.instancia(alvo, "usb")
         assert inst is not None
-        mesa.kernel.desconectar(inst)  # ela tira o cabo
+        mesa.kernel.desconectar(inst)
         mesa.tique()
         assert mesa.inst.em_troca_de_transporte(alvo), (
             "o cabo saiu de um controle que veio do rádio e o lugar dele não espera"
@@ -743,7 +690,7 @@ class TestOCaboAssume:
         assert mesa.inst.primary_uniq == (None if quantos == 1 else UNIQS[0]), (
             "com o controle fora, o posto de P1 foi para outro"
         )
-        mesa.kernel.conectar(alvo, "bt")  # e o controle volta sozinho pelo pareamento
+        mesa.kernel.conectar(alvo, "bt")
         for _ in range(3):
             mesa.tique()
 
@@ -781,13 +728,7 @@ class TestOCaboAssume:
         posicao: int,
         diario_legivel: bool,
     ) -> None:
-        """Conferência de 25/09: pôr, tirar e pôr de novo dentro do teto.
-
-        O teto de uma derrubada por controle a cada `TETO_POR_CONTROLE_S` é
-        contra o LAÇO (o rádio cai e o cabo não sobe). Com a troca que deu
-        certo ele não pode valer: ela ajeitou o cabo, e o controle ficaria no
-        rádio carregando — a queixa de 25/09 inteira, de volta.
-        """
+        """Conferência de 25/09: pôr, tirar e pôr de novo dentro do teto."""
         mesa = montar(
             monkeypatch,
             tmp_path,
@@ -801,15 +742,14 @@ class TestOCaboAssume:
         primeira_derrubada = mesa.relogio.t
         inst = mesa.kernel.instancia(alvo, "usb")
         assert inst is not None
-        mesa.kernel.desconectar(inst)  # ela tira o cabo
+        mesa.kernel.desconectar(inst)
         mesa.tique()
-        mesa.kernel.conectar(alvo, "bt")  # e o controle volta pelo pareamento
+        mesa.kernel.conectar(alvo, "bt")
         for _ in range(3):
             mesa.tique()
         assert mesa.transporte_de(alvo) == "bt"
-        # A régua só mede o teto se o segundo cabo cair DENTRO dele.
         assert mesa.relogio.t - primeira_derrubada < oce.TETO_POR_CONTROLE_S
-        plugar_o_cabo_e_esperar(mesa, alvo, tiques=6)  # e põe de novo, logo depois
+        plugar_o_cabo_e_esperar(mesa, alvo, tiques=6)
 
         assert mesa.transporte_de(alvo) == "usb", (
             "o cabo posto de novo dentro do teto deixou o controle no rádio carregando"
@@ -831,14 +771,7 @@ class TestOCaboAssume:
         posicao: int,
         jogo: bool,
     ) -> None:
-        """Conferência de 25/09: a outra metade do sorteio de fase dos dois laços.
-
-        O co-op olha a mesa no laço de leitura e o `connect()` no laço de
-        reconexão, sem ordem entre eles. Quando o co-op vê o nó do cabo sumir
-        primeiro, a marca da volta ainda não existe (ela nasce na poda do
-        `connect()`), e o vpad do jogador caía — o jogo perdia o controle
-        justamente na volta que devia ser invisível.
-        """
+        """Conferência de 25/09: a outra metade do sorteio de fase dos dois laços."""
         mesa = montar(
             monkeypatch,
             tmp_path,
@@ -858,11 +791,11 @@ class TestOCaboAssume:
 
         inst = mesa.kernel.instancia(alvo, "usb")
         assert inst is not None
-        mesa.kernel.desconectar(inst)  # ela tira o cabo
+        mesa.kernel.desconectar(inst)
         mesa.o_co_op_ve_antes()
         assert mesa.mortes_de_vpad() == mortes, "o co-op derrubou o vpad antes da poda"
         mesa.tique()
-        mesa.kernel.conectar(alvo, "bt")  # e ele volta pelo pareamento
+        mesa.kernel.conectar(alvo, "bt")
         mesa.o_co_op_ve_antes()
         for _ in range(3):
             mesa.tique()
@@ -880,18 +813,12 @@ class TestOCaboAssume:
     def test_a_troca_que_nao_termina_solta_o_jogador_no_prazo(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, posicao: int, caso: str
     ) -> None:
-        """Conferência de 25/09: o lugar espera o PRAZO, e não para sempre.
-
-        Com o watch de verdade, o co-op só refaz o ciclo cheio quando
-        `/dev/input` muda. O jogador segurado fora da mesa não muda nó nenhum,
-        e sem pedir a próxima olhada o vpad dele ficava de pé no jogo para
-        sempre — um controle fantasma parado, de alguém que foi embora.
-        """
+        """Conferência de 25/09: o lugar espera o PRAZO, e não para sempre."""
         mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt", "bt"), watch_de_verdade=True)
         alvo = UNIQS[posicao]
         if caso == "a-ida-que-nao-sobe":
             boneco = mesa.boneco_de(alvo)
-            mesa.kernel.regra_instalada = False  # instalada no disco, e a probe não vem
+            mesa.kernel.regra_instalada = False
             plugar_o_cabo_e_esperar(mesa, alvo)
             assert mesa.bluez.desconectados == [alvo]
         else:
@@ -901,7 +828,7 @@ class TestOCaboAssume:
             boneco = mesa.boneco_de(alvo)
             inst = mesa.kernel.instancia(alvo, "usb")
             assert inst is not None
-            mesa.kernel.desconectar(inst)  # ela tira o cabo, e o controle não volta
+            mesa.kernel.desconectar(inst)
             mesa.tique()
         assert boneco is not None and getattr(boneco, "vivo", False)
         assert mesa.inst.em_troca_de_transporte(alvo), "o lugar não esperou"
@@ -943,7 +870,6 @@ class TestQuandoOCaboNaoAssume:
     def test_sem_o_diario_a_borda_da_carga_acha_o_par(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        # O P3 está na base de carga desde antes: energia de fora, sem borda.
         mesa = montar(
             monkeypatch,
             tmp_path,
@@ -991,9 +917,8 @@ class TestQuandoOCaboNaoAssume:
     def test_a_troca_que_nao_volta_vence_no_prazo(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        # Sem jogo: o posto só espera pela troca, e não pelo lugar guardado.
         mesa = montar(monkeypatch, tmp_path, ("bt", "bt"), jogo=False)
-        mesa.kernel.regra_instalada = False  # o cabo NÃO entra: nada religa
+        mesa.kernel.regra_instalada = False
         assert mesa.inst.iniciar_troca_de_transporte(UNIQS[0], motivo="teste")
         inst = mesa.kernel.instancia(UNIQS[0], "bt")
         assert inst is not None
@@ -1016,13 +941,7 @@ class TestQuandoOCaboNaoAssume:
         falha: str,
         diario_legivel: bool,
     ) -> None:
-        """Conferência de 25/09: uma recusa PASSAGEIRA do BlueZ não é desistência.
-
-        O `Disconnect` vai pela trava do rádio, que a central do rádio também
-        segura. Uma recusa ali (a trava ocupada, o BlueZ que não respondeu)
-        marcava o cabo como resolvido para sempre: ele ficava esperando sem
-        driver, e o controle no rádio carregando, até alguém tirar e pôr o cabo.
-        """
+        """Conferência de 25/09: uma recusa PASSAGEIRA do BlueZ não é desistência."""
         mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt"), diario_legivel=diario_legivel)
         desconectar = mesa.bluez.desconectar
         aparelhos = mesa.bluez.aparelhos
@@ -1054,22 +973,17 @@ class TestQuandoOCaboNaoAssume:
         assert mesa.bluez.desconectados == [UNIQS[2]]
 
 
-# ---------------------------------------------------------------------------
-# As peças, uma a uma
-# ---------------------------------------------------------------------------
-
-
 class TestOCaboEmEspera:
     def test_so_o_hid_do_cabo_sem_driver_espera(self, tmp_path: Path) -> None:
         raiz = tmp_path / "hid"
-        (raiz / "0003:054C:0CE6.001B").mkdir(parents=True)  # o cabo recusado
+        (raiz / "0003:054C:0CE6.001B").mkdir(parents=True)
         (raiz / "0003:054C:0CE6.0010").mkdir()
-        (raiz / "0003:054C:0CE6.0010" / "driver").write_text("")  # cabo com driver
-        (raiz / "0005:054C:0CE6.0011").mkdir()  # rádio órfão: é do bt_rebind_orphans
+        (raiz / "0003:054C:0CE6.0010" / "driver").write_text("")
+        (raiz / "0005:054C:0CE6.0011").mkdir()
         virtual = tmp_path / "devices" / "virtual" / "misc" / "uhid" / "0003:054C:0DF2.0012"
         virtual.mkdir(parents=True)
-        (raiz / "0003:054C:0DF2.0012").symlink_to(virtual)  # o vpad do produto
-        (raiz / "0003:3554:FA07.0013").mkdir()  # um teclado
+        (raiz / "0003:054C:0DF2.0012").symlink_to(virtual)
+        (raiz / "0003:3554:FA07.0013").mkdir()
         assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0CE6.001B")]
 
     def test_a_linha_do_kernel_da_o_endereco(self) -> None:
@@ -1106,12 +1020,7 @@ class TestOCaboEmEspera:
         assert oce.impedimentos_da_troca() == []
 
     def test_o_bluez_da_bancada_tem_a_forma_do_real(self) -> None:
-        """O dublê :class:`BlueZ` fala a língua do dono de verdade (conferência de 25/09).
-
-        O `derrubar_o_radio` é real nesta régua, e o dono do BlueZ é da outra
-        frente da leva (A-CONEXOES): se a assinatura de lá andar, a bancada
-        seguiria verde falando com um BlueZ que não existe mais.
-        """
+        """O dublê :class:`BlueZ` fala a língua do dono de verdade (conferência de 25/09)."""
         import dataclasses
         import inspect
 
@@ -1131,7 +1040,6 @@ class TestOCaboEmEspera:
         assert {"caminho", "endereco", "conectado"} <= campos
         escrita = {c.name for c in dataclasses.fields(bluez_dbus.Escrita)}
         assert {"feita", "erro", "mensagem"} <= escrita
-        # E o endereço do real é minúsculo com dois-pontos, como o da bancada.
         assert bluez_dbus.endereco_do_aparelho("/org/bluez/hci0/dev_AA_BB_CC_00_00_01") == MACS[0]
 
     def test_derrubar_so_desconecta_e_so_quem_esta_ligado(self) -> None:
@@ -1204,29 +1112,24 @@ class TestOCaboEmEspera:
         diario = {cabo.instancia: UNIQS[0]}
         no_radio: dict[str, str | None] = {UNIQS[0]: None}
         vigia.derrubou(UNIQS[0], 0.0)
-        vigia.observar_quem_esta_no_cabo([UNIQS[1]])  # outro controle no cabo não solta
+        vigia.observar_quem_esta_no_cabo([UNIQS[1]])
         assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0).desistir
-        vigia.observar_quem_esta_no_cabo([UNIQS[0]])  # a troca dele deu certo
+        vigia.observar_quem_esta_no_cabo([UNIQS[0]])
         assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0).par == UNIQS[0]
 
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOLacoAcordaPeloCabo:
-    """Conferência de 25/09: o que acorda o laço, e régua nenhuma conferia.
-
-    O cabo recusado não cria nó em `/dev/input` (a probe falha antes), e o
-    `InputDirWatch` do laço não o vê: sem o olhar no barramento HID, o cabo só
-    seria decidido no fallback de 30 s — meio minuto carregando pelo rádio.
-    """
+    """Conferência de 25/09: o que acorda o laço, e régua nenhuma conferia."""
 
     def test_o_cabo_recusado_acorda_o_laco_pelo_barramento_hid(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         mesa = montar(monkeypatch, tmp_path, ("bt", "bt"))
         nos_antes = dict(mesa.kernel.nodes)
-        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False  # a linha de base
-        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False  # nada mudou
-        mesa.kernel.conectar(UNIQS[1], "usb")  # recusado: nenhum nó novo
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
+        mesa.kernel.conectar(UNIQS[1], "usb")
         assert mesa.kernel.nodes == nos_antes, "a bancada criou nó para o cabo recusado"
         assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is True
         assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
@@ -1248,7 +1151,7 @@ class TestOLacoAcordaPeloCabo:
         async def _dormir(_daemon: Any, passo: float) -> None:
             fatias.append(passo)
             if len(fatias) == 1:
-                mesa.kernel.conectar(UNIQS[1], "usb")  # ela pluga o cabo
+                mesa.kernel.conectar(UNIQS[1], "usb")
 
         monkeypatch.setattr(conn_mod, "_wait_or_stop", _dormir)
         mesa.daemon._is_stopping = lambda: False  # type: ignore[attr-defined]
@@ -1257,7 +1160,7 @@ class TestOLacoAcordaPeloCabo:
             def poll(self) -> bool:
                 return False
 
-        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False  # a linha de base
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
         acordou = asyncio.run(
             conn_mod._wait_online_or_hotplug(mesa.daemon, _DevInputParado())  # type: ignore[arg-type]
         )
@@ -1303,11 +1206,6 @@ class TestAEnumeracaoPrefereOCabo:
     def test_o_mesmo_controle_nos_dois_barramentos_abre_o_cabo(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, ordem: str
     ) -> None:
-        # O barramento sai do `uevent` de uma árvore de mentira, pela raiz do
-        # backend (O-BACKEND-NAO-LE-O-HIDRAW-DA-MAQUINA-NA-SUITE-01): o
-        # `_hidraw_uevent` e o `_is_virtual_hidraw` de verdade leem o que ela diz.
-        # Nós com número que nenhuma máquina tem: com o caminho fixo de volta, o
-        # `hidraw1` da máquina (USB na dela) dava o cabo por sorte e não mordia.
         raiz = tmp_path / "class-hidraw"
         for no, barramento in (("hidraw910", "0005"), ("hidraw911", "0003")):
             pai = tmp_path / "devices" / "pci0000:00" / no
@@ -1342,7 +1240,7 @@ class TestONoQueMudaNumTiqueSo:
         assert inst is not None
         mesa.kernel.regra_instalada = False
         mesa.kernel.desconectar(inst)
-        mesa.kernel.conectar(UNIQS[0], "usb")  # o cabo entra antes do próximo connect()
+        mesa.kernel.conectar(UNIQS[0], "usb")
         reaplicados: list[tuple[str, Any]] = []
         reaplicar = mesa.inst._reapply_desired
 
@@ -1365,11 +1263,6 @@ class TestONoQueMudaNumTiqueSo:
         )
         mesa.relogio.avancar(FOLGA_DEPOIS_DA_TROCA_S)
         assert not mesa.inst.em_troca_de_transporte(UNIQS[0])
-
-
-# ---------------------------------------------------------------------------
-# O laço de verdade: sem queda publicada, e o som de volta no controle
-# ---------------------------------------------------------------------------
 
 
 class _DaemonDoLaco:
@@ -1418,14 +1311,7 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
     vao: bool,
     handles_atrasam: bool,
 ) -> None:
-    """Ponta a ponta no `reconnect_loop`: com um controle só, a mesa fica vazia no vão.
-
-    Os três caminhos da volta: o controle fora da mesa por um tique (a probe
-    da regra atrasa), o handle trocado no mesmo lugar (a probe na hora), e o
-    handle do rádio que ainda diz `connected` quando o cabo já está lá (o
-    `report_thread` só percebe no erro de leitura seguinte) — este último é
-    a borda que nenhum `alvo_sumiu` vê, e só a foto do transporte pega.
-    """
+    """Ponta a ponta no `reconnect_loop`: com um controle só, a mesa fica vazia no vão."""
     mesa = montar(monkeypatch, tmp_path, ("bt", "bt")[:quantos])
     mesa.kernel.regra_atrasa = vao
     mesa.kernel.handles_atrasam = handles_atrasam
@@ -1445,7 +1331,6 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
     monkeypatch.setattr(conn_mod, "armar_gatilho_da_cor_por_numeracao", lambda d: False)
     monkeypatch.setattr(conn_mod, "vigiar_escritor_cru", _nada)
     monkeypatch.setattr(conn_mod, "carimbar_o_nascimento", _nada)
-    # O re-hide fala com o broker: nesta bancada ele não existe, e o dela não se toca.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.subsystems.gamepad.rehide_physical_hidraw",
         lambda _d: None,
@@ -1460,13 +1345,11 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
         daemon_.voltas += 1
         mesa.relogio.avancar(TIQUE)
         mesa.kernel.os_handles_percebem()
-        # A probe atrasada cai uma espera DEPOIS da derrubada: o `connect()` do
-        # meio vê o controle fora da mesa.
         if estado["armada"]:
             mesa.kernel.a_regra_atrasada_roda()
         estado["armada"] = mesa.kernel._probes_pendentes
         if daemon_.voltas == 1:
-            mesa.kernel.conectar(UNIQS[0], "usb")  # ela pluga o cabo no P1
+            mesa.kernel.conectar(UNIQS[0], "usb")
         return True
 
     esperas_offline: list[float] = []
@@ -1505,18 +1388,11 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
         f"o som foi reaplicado em {reaplicados} — o handle do cabo nasce sem a posse do áudio"
     )
     if quantos == 1 and vao:
-        # Sozinho na mesa, o vão é mesa vazia: a espera offline é a curta da
-        # troca, e não os 5 s do probe (conferência de 25/09: sem régua).
         assert esperas_offline, "a mesa vazia do vão não passou pela espera offline"
         passo = conn_mod.PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC
         assert max(esperas_offline) <= passo, (
             f"o jogador ficou parado {max(esperas_offline)} s no vão da troca"
         )
-
-
-# ---------------------------------------------------------------------------
-# A regra 85: o texto que o udev roda, rodado de verdade num barramento forjado
-# ---------------------------------------------------------------------------
 
 
 def _programas_da_regra() -> list[tuple[str, str]]:
@@ -1527,7 +1403,6 @@ def _programas_da_regra() -> list[tuple[str, str]]:
             continue
         casou = re.search(r"RUN\+=\"/bin/sh -c '(?P<prog>[^']*)'\"", linha)
         assert casou is not None, f"linha da regra sem o RUN esperado: {linha}"
-        # O udev troca `$$` por `$` antes de executar.
         achados.append((linha, casou.group("prog").replace("$$", "$")))
     return achados
 
@@ -1546,16 +1421,14 @@ class TestARegraQueReligaOCabo:
         hid = tmp_path / "sys" / "bus" / "hid"
         devices = hid / "devices"
         devices.mkdir(parents=True)
-        (devices / "0003:054C:0CE6.001B").mkdir()  # o cabo que espera
-        (devices / "0005:054C:0CE6.0011").mkdir()  # um rádio órfão
+        (devices / "0003:054C:0CE6.001B").mkdir()
+        (devices / "0005:054C:0CE6.0011").mkdir()
         (devices / "0005:054C:0CE6.0012").mkdir()
-        (devices / "0005:054C:0CE6.0012" / "driver").write_text("")  # quem tem driver
-        (devices / "0003:3554:FA07.0013").mkdir()  # um teclado sem driver: não é nosso
+        (devices / "0005:054C:0CE6.0012" / "driver").write_text("")
+        (devices / "0003:3554:FA07.0013").mkdir()
         sondas = hid / "drivers_probe"
         for _linha, programa in _programas_da_regra():
             sondas.write_text("", encoding="utf-8")
-            # O `drivers_probe` do kernel recebe UMA escrita por vez; aqui ele é
-            # arquivo comum, e o `>>` guarda todas para contar.
             forjado = programa.replace("/sys/bus/hid", str(hid)).replace(" > ", " >> ")
             feito = subprocess.run(
                 ["sh", "-c", forjado], capture_output=True, text=True, check=False

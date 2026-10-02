@@ -40,8 +40,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 SERVIDOR = RAIZ / "src/hefesto_dualsense4unix/daemon/ipc_server.py"
 HANDLERS = RAIZ / "src/hefesto_dualsense4unix/daemon/ipc_handlers.py"
 
-#: Os dois níveis NÃO bastam: `identity.number.set` tem três, e foi o que o
-#: primeiro censo perdeu.
 ROTA = re.compile(r'"([a-z_]+(?:\.[a-z_]+)+)"\s*:\s*self\._handle_([a-z_]+)')
 
 
@@ -57,12 +55,7 @@ def metodos() -> dict[str, str]:
 
 @functools.lru_cache(maxsize=128)
 def parametros(metodo: str) -> tuple[str, ...]:
-    """Os `params.get("…")` que o handler daquele método lê, na ordem.
-
-    É aproximado de propósito — lê o corpo do handler por texto — e serve para
-    UMA coisa: quem liga um botão vê que nomes o daemon espera, em vez de
-    adivinhar. A prova de que a chamada funciona é o clique chegando, não isto.
-    """
+    """Os `params.get("…")` que o handler daquele método lê, na ordem."""
     nome = metodos().get(metodo)
     if not nome or not HANDLERS.exists():
         return ()
@@ -70,7 +63,6 @@ def parametros(metodo: str) -> tuple[str, ...]:
     inicio = texto.find(f"def {nome}(")
     if inicio < 0:
         return ()
-    # até o próximo `def` no mesmo nível, ou 8000 caracteres — o que vier antes
     fim = texto.find("\n    async def ", inicio + 10)
     if fim < 0:
         fim = texto.find("\n    def ", inicio + 10)
@@ -84,9 +76,5 @@ def existe(metodo: str) -> bool:
 
 
 def confere(usados: set[str]) -> list[str]:
-    """Os métodos citados que o daemon NÃO atende. Lista vazia = todos existem.
-
-    É a régua da ligação: cada gesto declara o método que chama, e um nome
-    inventado aparece aqui antes de chegar à mão de quem clica.
-    """
+    """Os métodos citados que o daemon NÃO atende. Lista vazia = todos existem."""
     return sorted(m for m in usados if m not in metodos())

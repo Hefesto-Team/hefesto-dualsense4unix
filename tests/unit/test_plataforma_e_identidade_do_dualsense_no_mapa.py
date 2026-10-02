@@ -46,12 +46,7 @@ def mapa() -> dict[str, dict[str, str]]:
 
 @pytest.fixture(scope="module")
 def defines_do_driver() -> dict[str, int]:
-    """Os `#define DS_FEATURE_REPORT_*` do driver, lidos do fonte.
-
-    O dono desta lista é o driver, nunca esta régua: por isso o dicionário é
-    EXTRAÍDO, e um `#define` renumerado por um `apt upgrade` do DKMS aparece
-    aqui como teste vermelho, e não como mapa silenciosamente velho.
-    """
+    """Os `#define DS_FEATURE_REPORT_*` do driver, lidos do fonte."""
     fonte = DRIVER.read_text(encoding="utf-8", errors="replace")
     achados = dict(
         re.findall(
@@ -79,13 +74,7 @@ def test_o_driver_desta_maquina_ainda_declara_os_tres_reports_da_probe(
 def test_a_probe_cita_os_tres_reports_com_os_numeros_do_driver(
     mapa: dict[str, dict[str, str]], defines_do_driver: dict[str, int], lado: str
 ) -> None:
-    """Os dois lados da probe têm de nomear os MESMOS três que o driver pede.
-
-    O lado do rádio cita os três por herança explícita («os MESMOS três»), então
-    a cobrança de número recai no cabo e a do rádio recai na palavra que declara
-    a herança — cobrar hex repetido ali empurraria quem escreve a duplicar o
-    dono, que é o defeito que esta casa já pagou.
-    """
+    """Os dois lados da probe têm de nomear os MESMOS três que o driver pede."""
     linha = mapa["plataforma.probe@dualsense"]
     celula = linha[f"{lado}_report_id"]
     assert celula, f"`{lado}_report_id` de plataforma.probe voltou a ficar mudo"
@@ -193,15 +182,7 @@ def test_o_fallback_de_identidade_nao_finge_ter_endereco(
 def test_o_censo_de_features_do_clone_bate_com_o_descritor_declarado(
     mapa: dict[str, dict[str, str]],
 ) -> None:
-    """As duas listas são a impressão digital do transporte — e são exatas.
-
-    Os dois conjuntos abaixo foram lidos em 03/09/2026 dos `report_descriptor`
-    que o kernel guarda no sysfs para os dois controles da mesa dela — leitura de
-    arquivo cacheado, sem um byte de tráfego para o aparelho. Escrevê-los aqui é
-    o preço de não ter o aparelho dentro da suíte: se o firmware mudar, ou se
-    alguém copiar a lista errada para o mapa, os dois lados divergem e isto
-    fica vermelho.
-    """
+    """As duas listas são a impressão digital do transporte — e são exatas."""
     censo_por_cabo = {
         "0x05",
         "0x08",
@@ -250,10 +231,6 @@ def test_o_censo_de_features_do_clone_bate_com_o_descritor_declarado(
 
     linha = mapa["plataforma.distinguir_clone@dualsense"]
 
-    #: O censo é a ÚNICA corrida de hex separada por espaço dentro de uma crase.
-    #: Ler assim, e não «todo hex da célula», é o que separa a LISTA da prosa em
-    #: volta dela — que cita `0x03` e `0x0A` de propósito, para dizer que não
-    #: estão lá.
     corrida = re.compile(r"`((?:0x[0-9A-F]{2} )+0x[0-9A-F]{2})`")
 
     def censo(celula: str) -> set[str]:

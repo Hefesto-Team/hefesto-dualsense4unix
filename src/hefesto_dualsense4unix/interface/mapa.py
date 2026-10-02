@@ -1,54 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""O MAPA DO CONTROLE — a fonte da verdade das peças, funcional.
-
-Pedido dela, 27/08/2026:
-  "vamos fazer um mapa svg totalmente funcional com cada botão desenhado no lado
-   mas com os botões da tela acendendo quando passamos o mouse por cima. Vamos
-   fazer isso separado. botões svg do lado direito e o controle fullscream no lado
-   esquerdo com botões quadrado, bola...todos os botões no controle iguais os svgs
-   glifos nosso."
-e, logo depois:
-  "isso sempre vai dar problema vamos criar uma fonte da verdade universal."
-
-POR QUE ELE EXISTE. O SVG chamava de `l2` e `r2` duas peças que são o Share e o
-Options — elas ficam ao lado do touchpad, e o gatilho não fica. Nenhuma régua
-comparava o NOME da peça com o LUGAR dela, então o erro atravessou dois meses.
-Aqui os dois aparecem juntos: passe o mouse num glifo e a peça acende no desenho;
-passe na peça e o glifo acende. Nome e lugar ficam na mesma tela, e a divergência
-salta aos olhos.
-
-Sem uma linha de script: o cruzamento é `:has()`.
-
-    python3 mapa.py      -> mockup/mapa-do-controle.html (a bancada; ver `SAIDA`)
-"""
+"""O MAPA DO CONTROLE — a fonte da verdade das peças, funcional."""
 import csv, json, pathlib, re, sys
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
-# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
-# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
-# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
-# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
-# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
-# segunda árvore de trabalhar sem tocar na primeira.
-# A RAIZ TEM DONO, e é o `onde.py`. Era `parents[2]` — o que, desde a mudança
-# da interface para dentro do pacote em 01/09/2026, dá a pasta `src/` e faz
-# toda leitura de `docs/data/` procurar em `src/docs/data/`.
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
 from onde import RAIZ as R  # noqa: E402
 
-#: O `docs/data/` do repositório. Dono único, para não voltar a ser montado
-#: à mão a partir de um contador de níveis.
 DADOS_DO_REPO = R / "docs/data"
 CSV = DADOS_DO_REPO / "pecas-do-dualsense.csv"
 CSV_CORES = DADOS_DO_REPO / "cores-do-dualsense.csv"
 
-# O PADRÃO DAS CINCO LÂMPADAS E A COR DE CADA JOGADOR VÊM DO PRODUTO, e não de
-# uma tabela digitada aqui. O `monta.py` tinha uma cópia, e nela o jogador 3
-# estava escrito "234" quando o canônico é "135" — as duas pontas e o centro.
-# Ninguém tinha visto porque os mockups só usam os jogadores 1 e 2. Banco de
-# provas com tabela própria prova a tabela dele, não o produto.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(R / "src"))
 import onde  # noqa: E402
@@ -58,10 +20,6 @@ from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
 )
 GLIFOS = R / "assets/glyphs"
 SVG = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
-# A SAÍDA É A BANCADA — 31/08/2026. Este gerador tinha ficado de fora quando o
-# escopo foi reduzido a "só o mockup"; ele voltou porque ela pediu mudança no
-# mapa (a linha de instrução do hover). Escrever em `layout/` trocaria o
-# produto que ela usa, sem ela ver.
 SAIDA = onde.pagina("mapa-do-controle.html")
 
 REGIOES = [("face", "Botões da face"), ("direcional", "Direcional"),
@@ -84,29 +42,16 @@ def glifo(nome, tam=30, ativo=False):
     x = arq.read_text()
     x = re.sub(r"<\?xml[^>]*\?>\s*", "", x)
     x = re.sub(r"<!--.*?-->", "", x, flags=re.S)
-    # TODA cor do glifo vira `currentColor`, e não só duas. A lista fixa de dois
-    # hexadecimais deixava de fora os glifos escritos com outra cor — e ali o glifo
-    # ficava CRAVADO em cinza claro: no hover a peça acendia em rosa e o símbolo
-    # sumia por baixo contraste. Ela viu: "ao passar o mouse em cima de um botão o
-    # glifo some". Medido no triângulo: stroke rgb(200,204,218) sobre rgb(255,121,198).
     x = re.sub(r'(stroke|fill)="#[0-9a-fA-F]{3,8}"', r'\1="currentColor"', x)
     x = re.sub(r'\s+width="32"\s+height="32"', "", x)
     return x.replace("<svg ", f'<svg width="{tam}" height="{tam}" ', 1).strip()
 
 
-# O LIGHTBAR é a única peça cuja caixa não é a peça: são DUAS tiras, e o vão entre
-# elas é o touchpad. As faixas abaixo saem da medição das tiras no navegador — cada
-# uma segue a borda do touchpad, da esquerda 39,9–44,1 e da direita 83,9–88,3.
 CAIXAS_PROPRIAS = {
     "lightbar": [(38.9, 30.0, 45.1, 52.0), (82.9, 30.0, 89.3, 52.0)],
 }
 
 
-# QUAL SUBPATH É O CONTORNO EXTERNO, medido no navegador por `medir_subpaths.py`.
-# Em 8 das 23 peças de vários subpaths o externo NÃO é o primeiro — nos quatro
-# botões da face e nos quatro braços do d-pad o `d` começa pelo FURO. Duas
-# heurísticas minhas erraram nisso, e a segunda deixou as 27 peças sem responder ao
-# ponteiro. Path com arco relativo não se mede por regex: mede-se renderizando.
 EXTERNO = {}
 _ext = pathlib.Path(__file__).with_name("subpath-externo.json")
 if _ext.exists():
@@ -114,15 +59,7 @@ if _ext.exists():
 
 
 def subpath_externo(d, pid=None, k=0):
-    """De um path de vários subpaths, o que CONTÉM os outros.
-
-    Não é o primeiro: no triângulo o `d` começa pelo arco de r=2,5, que é o FURO, e
-    o contorno de r=3,5 vem depois. Pegar o primeiro deu um alvo do tamanho do
-    buraco, e nenhuma das 27 peças respondia ao ponteiro.
-
-    A escolha é pela EXTENSÃO: o subpath cujos números cobrem a maior área é o de
-    fora. Serve para faixa, anel e cápsula, que é tudo o que este desenho usa.
-    """
+    """De um path de vários subpaths, o que CONTÉM os outros."""
     partes = [p for p in re.split(r"(?<=Z)\s*(?=M)|\s(?=M\s)", d.strip()) if p.strip()]
     if len(partes) < 2:
         return d
@@ -144,17 +81,7 @@ def bloco_fim(s, i):
 
 
 def forma_cheia(svg_txt, pid):
-    """O desenho da peça, com cada path reduzido ao seu contorno EXTERNO.
-
-    O ALVO É A PEÇA. Ela, 27/08: "as áreas que acendem não estão perfeitamente
-    sobrepostas ... eu to falando das partes transparentes que servem pra acender".
-    Estava certo — o alvo era um retângulo com 1 unidade de folga em volta da
-    caixa, e para o d-pad, o triângulo ou o casco a caixa não é a peça.
-
-    O motivo de ter sido retângulo: o segundo subpath de uma faixa ou de um anel é
-    o FURO, e com ele o ponteiro passava pelo meio do botão. Guardando só o
-    primeiro subpath, o furo some e a área fica exatamente a da peça.
-    """
+    """O desenho da peça, com cada path reduzido ao seu contorno EXTERNO."""
     marca = f'id="mp-{pid}"'
     if marca not in svg_txt:
         return ""
@@ -170,17 +97,13 @@ def forma_cheia(svg_txt, pid):
         if prof == 0:
             break
     bloco = svg_txt[ini:j]
-    # TODOS os transforms da cadeia viajam junto, não só o do próprio grupo.
-    # Ela fez o Options espelhando o Share com `matrix(-1,0,0,1,...)`, e o espelho
-    # vive num ANCESTRAL: lendo só o transform do grupo da peça, o alvo do Options
-    # nascia em x negativo, do outro lado da tela.
     cadeia = []
     k = ini
     while True:
         p = svg_txt.rfind("<g ", 0, k)
         if p < 0:
             break
-        if bloco_fim(svg_txt, p) > j:          # é ancestral de verdade
+        if bloco_fim(svg_txt, p) > j:
             t = re.search(r'\stransform="([^"]*)"', svg_txt[p:svg_txt.index(">", p)])
             if t:
                 cadeia.insert(0, t.group(1))
@@ -190,25 +113,15 @@ def forma_cheia(svg_txt, pid):
         cadeia.append(tg_self.group(1))
     tg = type("M", (), {"group": lambda s, i: " ".join(cadeia)})() if cadeia else None
     fora, k = [], -1
-    # TAG COM FILHO TAMBÉM CONTA. O ciclo exportar->importar deu <title> a cada
-    # sub-peça, e com isso `<circle .../>` virou `<circle ...><title/></circle>`.
-    # O regex exigia `/>`: os 9 furos do alto-falante, as 5 lâmpadas, as 2 tiras do
-    # lightbar e a bateria ficaram SEM ALVO NENHUM, e o portão as reprovou.
     for mm in re.finditer(r"<(rect|path|circle|ellipse|polygon)\b[^>]*?/?>", bloco):
         t = mm.group(0)
         if not t.endswith("/>"):
             t = t[:-1] + "/>"
         if mm.group(1) == "path":
             k += 1
-        # a peça do PS é `sem-tinta` — o glifo é o botão —, mas o ALVO dela existe:
-        # é por ele que se aponta o botão no desenho.
         d_ = re.search(r'\sd="([^"]*)"', t)
         if d_:
             t = t.replace(d_.group(0), f' d="{subpath_externo(d_.group(1), pid, k)}"')
-        # O `style` sai — mas o que dele POSICIONA fica. Ela desenhou o Options
-        # espelhando o Share, e o `transform-origin` da matriz vive no style: sem
-        # ele a matriz aplica a partir de (0,0) e o alvo voa para x=166, fora do
-        # desenho. Cor sai, geometria fica.
         st = re.search(r'\sstyle="([^"]*)"', t)
         posicao = ""
         if st:
@@ -229,24 +142,6 @@ def caixas(pid, x1, y1, x2, y2):
     return CAIXAS_PROPRIAS.get(pid, [(x1, y1, x2, y2)])
 
 
-# ---------------------------------------------------------------------------
-# SOBRE O DESENHO, O GLIFO NÃO REPETE O QUE A PEÇA JÁ DIZ.
-# Três defeitos, a mesma causa: o glifo foi feito para viver SOZINHO numa lista, e
-# por isso carrega a moldura da peça junto. Por cima da peça, essa moldura vira uma
-# segunda borda.
-#   - o anel do stick_l/r sobre o analógico dava as "várias voltas" que ela reprovou;
-#   - o retângulo do l1/r1/l2/r2 é um crachá boiando dentro do botão (0,0% de
-#     interseção com a peça, medido);
-#   - a seta do l2/r2 saía da peça, entrava 15,1px no L1 e pousava no crachá dele:
-#     os dois lidos juntos viravam um fluxograma "L2 -> L1";
-#   - o anel do `circle` era a TERCEIRA volta concêntrica do mesmo botão.
-# Sobre o desenho fica só a LETRAGEM; a moldura continua na lista, onde faz falta.
-# O CENTRO DA TINTA de cada glifo, medido uma vez no navegador com getBBox().
-# O gerador centrava o ponto (16,16) da caixa; glifo com tinta fora do centro da
-# própria caixa nascia deslocado (o pior, 2,25px).
-# A POSIÇÃO QUE ELA DEU A CADA GLIFO, quando existe. Nasce do ciclo
-# exportar -> ela arruma no editor -> importar. Quando o arquivo existe, ele MANDA:
-# o cálculo é só o ponto de partida, e ela é quem decide onde o símbolo fica.
 POS_GLIFO = {}
 _pos = pathlib.Path(__file__).with_name("posicao-dos-glifos.json")
 if _pos.exists():
@@ -257,85 +152,26 @@ _tinta = pathlib.Path(__file__).with_name("centro-da-tinta.json")
 if _tinta.exists():
     TINTA = {k: tuple(v) for k, v in __import__("json").loads(_tinta.read_text()).items()}
 
-# PEÇAS QUE NÃO GANHAM ALVO NO DESENHO, e por quê.
-# O giroscópio e o acelerômetro medem o movimento do CONTROLE INTEIRO — a região
-# deles É o corpo. Três alvos sobre a mesma área não se apontam: um cobre o outro,
-# e o que a pessoa aponta passa a ser sorteio. Eles acendem a partir da LISTA, que
-# é o sentido que importa; no desenho, quem responde ali é o corpo.
-# A BATERIA entra junto: a peça dela É o lightbar (decisão dela, 27/08 — as
-# duas tiras são o medidor). Dois alvos sobre a mesma forma viram sorteio.
 SEM_ALVO = {"feat-giroscopio", "feat-acelerometro", "feat-bateria"}
 
-# O PS ACENDE PELO GLIFO, e só. Ela, 27/08: "no PS. Remove o circulo e Deixa só o
-# Glifo do PS pra ser o Botão." A peça dele já é `sem-tinta`, mas o ALVO — que
-# existe para o mouse — recebia tinta no hover e o disco voltava por baixo do
-# símbolo. Aqui ele fica transparente sempre; quem acende é o glifo.
 SO_O_GLIFO_ACENDE = {"ps"}
 
-# NO HOVER O GLIFO FICA CLARO, e não escuro. Escurecê-lo resolvia o símbolo que
-# cai sobre a MASSA da peça acesa, e criava o inverso no que cai sobre o FURO:
-# os botões da face são anéis, o símbolo mora no miolo, e o miolo é o fundo
-# escuro — escuro sobre escuro some igual. Claro aparece nos dois: 15:1 contra o
-# furo, 2,1:1 contra o rosa, e é no furo que o símbolo mora.
-# O MICROFONE fica AO LADO da peça, não em cima. A peça dele é uma fresta de
-# 7,0 x 1,0; qualquer glifo alto por cima dela é riscado no meio pelo próprio
-# traço, e o composto lê MUDO — um estado que não está na tela.
-# ONDE O GLIFO NÃO CABE DENTRO, ELE VAI PARA FORA. Ela, 27/08: "esses dois glifos
-# ficam acima dos botões não dentro" (Share e Options) — as peças deles têm 3 x 6 e
-# o glifo por dentro sai da cápsula por todos os lados.
 AO_LADO = {"mic": (0, 3.4)}
-# O y ABSOLUTO do glifo, quando ele mora fora da peça e precisa correr na mesma
-# linha do irmão do outro lado. O botão do Share e o do Options ocupam y 32,96 a
-# 38,98; o glifo fica logo acima, em 32,0.
 MESMA_LINHA = {"share": 31.4, "options": 31.4}
-# E CADA UM PARA O SEU LADO. Ela, 27/08: "options o glifo move pra direita, share
-# glifo move pra esquerda, ambos pra alinharem com os botões que representam". As
-# duas peças são cápsulas inclinadas 14°, e o centro da CAIXA delas não é o centro
-# da cápsula — alinhar pela caixa deixava os dois puxados para o meio da tela.
 DESLOCA_X = {"share": -1.4, "options": 1.4}
 
-# O TAMANHO, quando a conta pela peça não serve. Ela pediu, uma a uma:
-#   "aumentar glifo do ps, R, L"  ·  "diminuir os glifos do opções"
-#   "glifo do microfone tá muito grande"
 TAMANHO = {"ps": 8.6, "stick_l": 14.0, "stick_r": 14.0,
            "share": 3.4, "options": 3.4, "mic": 3.0,
-           # os quatro da face são ANÉIS de r=2,5 a 3,5: o símbolo tem de caber no
-           # FURO, que tem 5,0 de diâmetro. O piso de 5,2 os fazia transbordar o
-           # anel e, no hover, o composto virava um borrão em vez de um triângulo.
            "triangle": 4.2, "circle": 4.2, "square": 4.2, "cross": 4.2,
-           # o d-pad é uma pétala de 7 x 8,5 com miolo vazado de ~4,5
            "dpad_up": 4.4, "dpad_down": 4.4, "dpad_left": 4.4, "dpad_right": 4.4}
-# A BOLA VOLTA. Eu a tinha tirado porque o glifo do ○ é um anel sobre um botão que
-# já é um anel — mas ela reparou na ausência ("o glifo de bola tá apagado"), e a
-# ausência confunde mais que a repetição: era o único botão da face sem símbolo.
 SEM_GLIFO_NO_DESENHO = set()
 
 
-# A LETRA DO OMBRO SOBE. Ela, 27/08/2026: "o l1 e o r1 precisam subir um pouco
-# (as letras apenas) pois estão sendo cortadas também".
-#
-# A causa NÃO é a fonte, e a primeira hipótese errou por isso. Medido: o `<text>`
-# está exatamente no centro do glifo (`getBBox` devolve 16,00 de 32 nas quatro
-# peças). **O que não está no centro é a CAIXA.** As quatro cápsulas dos ombros
-# são inclinadas, e a letra é horizontal: no x onde ela mora, o miolo da cápsula
-# já subiu, e o centro do bounding box cai abaixo dele. É a mesma lição do
-# `medir_subpaths.py` desta casa — path inclinado não se mede por caixa.
-#
-# Por isso o ajuste é POR PEÇA: os analógicos são círculos, o centro da caixa É o
-# centro da peça, e o mesmo `dy` os desalinharia. `em` e não unidade do viewBox
-# porque o glifo é escalado para caber na peça, e a correção tem de escalar junto.
 SOBE_A_LETRA = {"l1": "-0.2em", "r1": "-0.2em", "l2": "-0.2em", "r2": "-0.2em"}
 
 
 def sobe_a_letra(svg_txt):
-    """Acrescenta o `dy` ao `<text>` dos glifos que pedem, e a nenhum outro.
-
-    FATO SUBSTITUÍDO: aqui existia `so_a_letra(pid, g)`, que fazia isto e mais —
-    arrancava a moldura do glifo e recentrava o texto. Ela **nunca era chamada**:
-    virou código morto no dia em que `controle()` parou de redesenhar peça a peça
-    e passou a usar o arquivo dela. Foi por isso que a primeira tentativa de subir
-    a letra não mudou um pixel na tela.
-    """
+    """Acrescenta o `dy` ao `<text>` dos glifos que pedem, e a nenhum outro."""
     for pid, dy in SOBE_A_LETRA.items():
         alvo = f'id="glifo-{pid}"'
         if alvo not in svg_txt:
@@ -350,65 +186,20 @@ def sobe_a_letra(svg_txt):
 
 
 def controle(pecas, trocam=()):
-    """O desenho — que É o arquivo dela — com os alvos do ponteiro por cima.
-
-    Ela, 27/08/2026: "ué pq o svg que vc gerou do trabalho que eu fiz tá perfeito e
-    o do site tá horrível? pq não estamos conseguindo trazer ele?"
-
-    A resposta era boba: o mapa reconstruía peça a peça num arquivo próprio e, na
-    cópia, cada grupo perdia a hierarquia e os transforms dos ancestrais — o
-    espelho do L1, a inclinação do Options. Agora `ds_limpo.svg` É o arquivo dela,
-    e esta função não redesenha nada. Ela faz duas coisas:
-
-      1. marca cada `glifo-*` com a classe que o cruzamento com a lista usa;
-      2. gera, para cada peça, um ALVO transparente com a forma dela.
-
-    E, desde 01/10/2026 (O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01),
-    duas coisas para o produto: o endereço da cor da barra de luz no
-    `#mp-lightbar`, e, para cada peça de ``trocam``, a MARCA DA TROCA — o
-    contorno de fora da peça, tracejado e escondido, que a folha mostra quando a
-    troca de botões alcança aquela peça. Ela é uma forma à parte, e não um
-    traço na peça: as peças são faixas e anéis, e traçá-las dá a linha dupla
-    que ela reprovou em 27/08.
-    """
+    """O desenho — que É o arquivo dela — com os alvos do ponteiro por cima."""
     x = sobe_a_letra(SVG.read_text())
-    # ids únicos, para o desenho conviver com os glifos da lista à direita
     for i in sorted(set(re.findall(r'id="([^"]+)"', x)), key=len, reverse=True):
         x = (x.replace(f'id="{i}"', f'id="mp-{i}"')
               .replace(f"url(#{i})", f"url(#mp-{i})").replace(f"#{i} ", f"#mp-{i} ")
-              # AS TRÊS FORMAS COM ASPAS, e é por elas que o touchpad sumia.
-              # Medido em 30/08/2026: ela perguntou *"pq a área do touchpad
-              # sumiu?"* e a resposta estava aqui. O editor dela escreve o
-              # filtro de contorno como `style="filter: url(&quot;#outline-
-              # filter-1&quot;)"` — com aspas ESCAPADAS dentro do atributo. O
-              # `url(#id)` acima não casa essa forma, então o `id` ganhava o
-              # prefixo `mp-` e a REFERÊNCIA não: ela ficava pendurada, o filtro
-              # nunca se aplicava, e o `g#mp-touchpad` (410x231px, `fill:#000`,
-              # `stroke:none`) caía no preenchimento preto cru sobre fundo
-              # escuro. A peça estava lá o tempo todo — invisível.
-              # Nas dez abas o defeito não aparece porque lá o id NÃO é
-              # prefixado, e a referência crua resolve.
               .replace(f"url(&quot;#{i}&quot;)", f"url(&quot;#mp-{i}&quot;)")
               .replace(f'url("#{i}")', f'url("#mp-{i}")')
               .replace(f"url('#{i}')", f"url('#mp-{i}')"))
-    # O `data-colorway` JÁ VEM do arquivo (scripts/gerar_cores_do_dualsense.py o
-    # escreve, para o SVG abrir colorido sozinho). Escrever um segundo aqui daria
-    # dois atributos iguais na mesma tag, e o navegador ignora o segundo em
-    # silêncio — o dropdown mexeria num atributo que ninguém lê.
     x = x.replace("<svg ", '<svg class="ds" ', 1)
-    # A COR DA BARRA DE LUZ É DO APARELHO no produto (`luz-cor`, alvo `cor`): o
-    # tique escreve o `color` do grupo, e as tiras pintam com `currentColor`
-    # quando o banco de provas não pôs a cor dele (`--luz`).
     x = x.replace('id="mp-lightbar"',
                   'id="mp-lightbar" data-campo="luz-cor" data-hef-alvo="cor"', 1)
     if "data-colorway=" not in x[: x.index(">")]:
         x = x.replace("<svg ", '<svg data-colorway="cosmic-red" ', 1)
 
-    # ---- OS GLIFOS SÃO OS DELA ----------------------------------------
-    # FUNDE com a classe que já estiver na tag. Os quatro glifos da face carregam
-    # `z-simbolos`, escrita pelo gerador de cores; acrescentar um SEGUNDO atributo
-    # `class` faz o navegador ignorar o segundo, sem erro e sem aviso — e os
-    # símbolos ficariam fora do cruzamento com a lista.
     for pid in re.findall(r'\bid="mp-glifo-([^"]+)"', x):
         alvo = f'id="mp-glifo-{pid}"'
         i = x.index(alvo)
@@ -419,10 +210,6 @@ def controle(pecas, trocam=()):
             x = x[:i] + tag.replace(ja.group(0), f' class="{ja.group(1)} sobre s-{pid}"', 1) + x[fim:]
         else:
             x = x.replace(alvo, f'{alvo} class="sobre s-{pid}"', 1)
-    # A COR DO GLIFO É DA FOLHA. Os dela vêm com `fill` e `stroke` dentro do
-    # `style`, e style inline vence qualquer folha: no hover o símbolo continuava
-    # cinza-claro sobre a peça acesa e sumia. Aqui só as declarações de COR saem
-    # do style; transform, origin e o resto do desenho dela ficam intactos.
     def _sem_cor(mm):
         dentro = re.sub(r"(^|;)\s*(fill|stroke)\s*:[^;]*", r"\1", mm.group(1))
         dentro = re.sub(r";\s*;", ";", dentro).strip(" ;")
@@ -443,7 +230,6 @@ def controle(pecas, trocam=()):
         bloco = x[i0:j0]
         x = x[:i0] + re.sub(r'\sstyle="([^"]*)"', _sem_cor, bloco) + x[j0:]
 
-    # ---- OS ALVOS: a forma da peça, transparente ----------------------
     alvos = []
     for p in pecas:
         pid = p["id"]
@@ -456,9 +242,6 @@ def controle(pecas, trocam=()):
         alvos.append(((x2 - x1) * (y2 - y1), (x1, y1, x2, y2),
                       f'  <g class="alvo a-{pid}">{corpo}</g>'))
 
-    # POR CONTENÇÃO, e só depois por área: quem cabe dentro de outro nasce por
-    # cima dele. Ordenar só por área punha o L2, que apenas ENCOSTA no L1, na
-    # frente do L1 inteiro.
     def dentro(a, b):
         return (a[1][0] >= b[1][0] and a[1][1] >= b[1][1]
                 and a[1][2] <= b[1][2] and a[1][3] <= b[1][3])
@@ -474,21 +257,13 @@ def controle(pecas, trocam=()):
 
     marcas = []
     for pid in trocam:
-        # SÓ O CONTORNO: a tampa do analógico (a `<ellipse>` de dentro) faria a
-        # segunda volta tracejada no mesmo botão.
         corpo = re.sub(r"<ellipse\b[^>]*/>", "", forma_cheia(x, pid))
         if corpo:
             marcas.append(f'  <g class="marca-troca m-{pid}">{corpo}</g>')
     return x.replace("</svg>", "\n".join(marcas + [t[2] for t in saida]) + "\n</svg>", 1)
 
 def cores_do_csv():
-    """Os 28 modelos do `cores-do-dualsense.csv`, agrupados por modelo.
-
-    O dropdown mostra os 28, e não os cinco que o desenho conhecia. Os que não
-    cabem num hexadecimal — iridescente, camuflado, metálico, arte — vão MARCADOS
-    na lista: eles pintam com hachura, e a lista tem de dizer por quê antes de
-    ela clicar e achar que o desenho quebrou.
-    """
+    """Os 28 modelos do `cores-do-dualsense.csv`, agrupados por modelo."""
     linhas = [x for x in CSV_CORES.read_text().splitlines()
               if x and not x.startswith("#")]
     fora = {}
@@ -497,28 +272,12 @@ def cores_do_csv():
     return fora
 
 
-# As oito zonas de superfície, na ordem em que a prova as lista. `detalhe` não
-# entra: é arte impressa, e o desenho não tem superfície para ela — está
-# declarado em scripts/gerar_cores_do_dualsense.py, em ZONAS_SEM_ALVO.
 ZONAS_NA_PROVA = ("casca_esq", "casca_dir", "painel", "touch", "botoes_face",
                   "simbolos", "dpad", "analogicos", "gatilhos")
 
 
 def banco_de_provas():
-    """A barra de provas: cor do plástico, o controle e a barra de luz.
-
-    Ela decide VENDO. Um CSV de 233 linhas não se confere lendo — se confere
-    clicando no modelo e olhando o desenho. É por isso que esta barra existe, e é
-    por isso que ela fica no topo do mapa e não numa página à parte.
-
-    O «JOGADOR» VIROU «CONTROLE» — 01/10/2026, O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-
-    O-REMAPEAMENTO-01. Ela: *«Falta um filtro pro controle conectado que está
-    sendo visto ali.»* Os chips são os da mesa, com o gesto da fita das abas, e
-    o dono deles é o pacote (`a13_mapa_do_controle.chips_do_controle`): aqui
-    com a mesa do desenho, no produto com a de verdade. O `data-jogador` fica em
-    cada chip, e o «Nenhum» é o `data-jogador="0"`: é o que o portão das cores
-    clica.
-    """
+    """A barra de provas: cor do plástico, o controle e a barra de luz."""
     import monta
     from pacotes import a13_mapa_do_controle as a13
 
@@ -538,17 +297,12 @@ def banco_de_provas():
         elif sem_hex:
             marca = f" · {ls[0]['acabamento']} em {len(sem_hex)}"
         rot = f"{ls[0]['nome']} · {cod}{marca}"
-        # O DESENHO NASCE COMO O PRIMEIRO CHIP DA MESA, e não num modelo
-        # escolhido aqui: o script da página aplica o chip aceso ao carregar.
         op = (f'<option value="{mid}"'
               + (' data-parcial="1"' if (faltam or sem_hex) else "")
               + (" selected" if mid == primeiro["cor"] else "")
               + f">{rot}</option>")
         (especiais if cod[0] == "Z" else fabrica).append(op)
 
-    # O padrão canônico e a cor de cada jogador saem do PRODUTO. `1 | vão | 3 |
-    # vão | 1`: as cinco lâmpadas não são igualmente espaçadas, e o jogador 1 é a
-    # CENTRAL. Medido nesta casa em 11/08.
     padroes = {n: [i + 1 for i, on in enumerate(player_led_pattern(n)) if on]
                for n in range(1, 5)}
     chips = a13.chips_do_controle(monta.MESA, str(primeiro["pref"]), vivo=False)
@@ -576,11 +330,6 @@ def banco_de_provas():
   </div>
 """
 
-    # O SCRIPT VAI NO FIM DO BODY, e não junto da barra. Ele nasceu ao lado dos
-    # controles e quebrou inteiro: `document.querySelector("svg.ds")` devolvia
-    # null porque o desenho ainda não existia no DOM quando o script rodou. Foram
-    # 14 exceções de `reading 'dataset'` no console, e a página parecia sã — o
-    # dropdown estava lá, só não fazia nada. Régua que não lê o console não pega.
     script = f"""  <script>
   // O PADRÃO DAS LÂMPADAS É DO PRODUTO — `core/led_control.py`. Copiar a tabela
   // para cá seria criar a segunda verdade que este mapa existe para matar.
@@ -673,22 +422,8 @@ def banco_de_provas():
     return barra_html, script
 
 
-# DUAS LINHAS SAÍRAM DO RODAPÉ — 11/09/2026, aprovado por ela. «N propostas, a
-# conferir» era o estado de revisão interna do CSV, e os dois caminhos de
-# `docs/data/` eram endereço do repositório na tela de quem usa o produto. Os
-# dois números continuam existindo — no CSV, que é o dono deles; o que saiu foi
-# a confissão na tela.
-#
-# E ESTA NOTA MORA AQUI, e não dentro da f-string: comentário de HTML escrito lá
-# VIAJA para a página publicada. O mesmo vale para qualquer bilhete de projeto —
-# a folha do produto só apaga `.nota`, não comentário.
 def gestos_do_ps():
-    """Os seis gestos do PS, com o número da linha da tabela da Navegação.
-
-    O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01: o mapa em comunhão com
-    a aba Navegação. A lista e o nome de cada peça são os do gerador dela
-    (`aba06.COMBOS`, `aba06.nome_de`), que o importa sem efeito.
-    """
+    """Os seis gestos do PS, com o número da linha da tabela da Navegação."""
     import aba06
 
     linhas = []
@@ -704,48 +439,32 @@ def main():
     pecas = le_csv()
     ds = controle(pecas, trocam=a13.TROCAM)
     provas, script_provas = banco_de_provas()
-    # O que cada botão faz na Navegação com o perfil de fábrica: a dica de cada
-    # linha nasce com ele, e o produto a troca pela do perfil ativo no tique.
     na_navegacao = a13._acoes({})
 
-    # ---- as regras de cruzamento, geradas peça a peça ----
     regras = []
     for p in pecas:
         i = p["id"]
-        # o glifo da direita aponta -> a peça acende no desenho
-        # `:is(.peca, rect, circle, path)` porque o indicador de jogador é feito de
-        # cinco <rect> com fill próprio, e não de `.peca` como as outras peças.
         alvo_css = f'#mp-{i} :is(.peca, rect, circle, path, ellipse)'
-        # !important: o desenho dela traz cor no `style` inline em várias peças, e
-        # style inline vence folha. Sem isto o microfone (e quem mais tivesse cor
         # própria) não acendia — o portão dava verde porque media o CSS computado  # (noqa-acento: verbo medir, imperfeito)
-        # da peça, que de fato não mudava, mas ninguém tinha reparado no ']'.
         if i not in SO_O_GLIFO_ACENDE:
             regras.append(f'.mapa:has(.item-{i}:hover) {alvo_css}'
                           f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
         regras.append(f'.mapa:has(.item-{i}:hover) .s-{i}{{color:var(--fg) !important;opacity:1}}')
-        # a peça do desenho aponta -> o glifo da direita acende
         regras.append(f'.mapa:has(.a-{i}:hover) .item-{i}'
                       f'{{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}}')
         regras.append(f'.mapa:has(.a-{i}:hover) .s-{i}{{color:var(--fg) !important;opacity:1}}')
         if i not in SO_O_GLIFO_ACENDE:
             regras.append(f'.mapa:has(.a-{i}:hover) {alvo_css}'
                           f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
-        # O PISCA — o botão apertado no controle acende a peça e o glifo, como o
-        # ponteiro. A classe `on` vem do produto (`aceso-<peça>`); com o
-        # «Nenhum» (`.sem-controle`) o desenho é o sem controle, e não acende.
         if i in a13.PISCAM:
             if i not in SO_O_GLIFO_ACENDE:
                 regras.append(f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on) {alvo_css}'
                               f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
             regras.append(f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on) .s-{i}'
                           f'{{color:var(--fg) !important;opacity:1}}')
-        # A TROCA NO DESENHO: a peça trocada ganha o contorno tracejado junto
-        # com a linha «No jogo» do item dela (a classe `tem`, `trocada-<peça>`).
         if i in a13.TROCAM:
             regras.append(f'.mapa:has(.item-{i} .troca.tem) .m-{i}{{display:inline}}')
 
-    # ---- a lista da direita, por região ----
     blocos = []
     for chave, titulo in REGIOES:
         na_regiao = [p for p in pecas if p["regiao"] == chave]
@@ -758,9 +477,6 @@ def main():
             prop = ' <span class="prop">proposto</span>' if p["grau"] == "PROPOSTO" else ""
             nota = f'<span class="nota-peca" title="{p["nota"]}">i</span>' if p["nota"] else ""
             pid = p["id"]
-            # OS ENDEREÇOS DO PRODUTO (`pacotes/a13_mapa_do_controle.py`): o
-            # pisca na linha inteira, o que o botão faz na Navegação na dica do
-            # nome, e a troca de botões numa linha que só aparece quando troca.
             aceso = (f' data-campo="{a13.ACESO}{pid}" data-hef-alvo="classe"'
                      if pid in a13.PISCAM else "")
             acao = (f' data-campo="{a13.ACAO}{pid}" data-hef-alvo="atributo"'
@@ -1126,9 +842,6 @@ def main():
 </body>
 </html>
 '''
-    # A ESCRITA TEM DONO, o `onde.gravar`, que tira o espaço do fim da linha.
-    # O gancho de commit dela o tira do arquivo gravado, e com o `write_text`
-    # cru o gerador e o disco divergiam em 126 linhas que ninguém via.
     onde.gravar(SAIDA.name, html)
     print(f"mapa-do-controle.html: {len(pecas)} peças, {len(regras)} regras de cruzamento")
     if faltam:

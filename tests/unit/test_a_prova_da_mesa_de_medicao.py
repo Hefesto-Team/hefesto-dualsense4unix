@@ -52,11 +52,6 @@ import mesa_de_medicao as med
 
 CHROME = "/usr/bin/google-chrome"
 
-#: O piso de conteúdo. Cada número foi MEDIDO na página de 06/09/2026 e escrito
-#: bem abaixo do medido, porque um piso colado no medido reprova no dia em que
-#: alguém acrescenta um teste — e um piso longe do medido não morde. Os medidos,
-#: para quem for mexer: 2036 elementos · 148 testes · 2635 palavras · 212 formas
-#: nos quatro desenhos · 252 regras `data-colorway` · 148 linhas de índice.
 PISO = {
     "elementos": 400,
     "testes": 140,
@@ -66,18 +61,8 @@ PISO = {
     "linhas_do_indice": 140,
 }
 
-# ---------------------------------------------------------------------------
-# O servidor de verdade, em processo à parte — é o que permite MATÁ-LO
-# ---------------------------------------------------------------------------
 class _Servidor:
-    """Sobe `mesa_de_medicao.py --servir` num processo próprio.
-
-    POR QUE UM PROCESSO E NÃO A `servir()` NA MESMA MEMÓRIA: a prova da §7.5 é
-    que a resposta está **em disco, não só no navegador**. Com o servidor na
-    mesma memória do teste, o `estado.json` relido poderia estar vindo de um
-    cache do processo e ninguém veria a diferença. Matando o processo e subindo
-    outro, o que sobrevive é só o que o disco guardou.
-    """
+    """Sobe `mesa_de_medicao.py --servir` num processo próprio."""
 
     def __init__(self, lar: pathlib.Path, mentira: pathlib.Path | None = None):
         env = dict(os.environ)
@@ -100,8 +85,7 @@ class _Servidor:
         self.registro = lar / "hefesto-dualsense4unix/mesa-de-medicao"
 
     def morrer(self) -> None:
-        """Por PID CONFERIDO, nunca `pkill -f` — um `pkill -f` já derrubou o
-        compositor dela."""
+        """Por PID CONFERIDO, nunca `pkill -f` — um `pkill -f` já derrubou o"""
         self.proc.terminate()
         try:
             self.proc.wait(timeout=10)
@@ -117,26 +101,13 @@ class _Servidor:
 
 
 def _abre_o_como(pg) -> None:
-    """Abre a gaveta do campo do COMO, CLICANDO — nunca pelo `.open`.
-
-    O campo `#gesto` deixou de nascer na tela em 07/09/2026: ele repetia, em
-    prosa, os mesmos passos que já estavam na cara do teste, e ela escreveu
-    *"quanto texto (…) tá impossível ler ou fazer algo aqui"*. Agora ele mora
-    numa gaveta com nome. Três réguas quebraram no `fill` — e a quebra estava
-    CERTA: o campo está escondido para ela também. Abrir aqui pelo clique é o
-    gesto dela; abrir pelo `.open` mediria um caminho que a mão não tem.
-    """
+    """Abre a gaveta do campo do COMO, CLICANDO — nunca pelo `.open`."""
     if not pg.evaluate("() => !!document.querySelector('#caixa-do-gesto')?.open"):
         pg.click("#caixa-do-gesto > summary")
     pg.wait_for_selector("#gesto", state="visible")
 
 def _mentira_dos_quatro(alvo: pathlib.Path) -> pathlib.Path:
-    """Quatro modelos DIFERENTES, pela porta declarada da régua.
-
-    O endereço é FICTÍCIO (OUI `AA:BB:CC`, que não é de fabricante nenhum) e
-    entra **sem máscara de propósito**: a prova é que ele sai com os octetos 4 e
-    5 zerados nos dois lados — na tela e no disco.
-    """
+    """Quatro modelos DIFERENTES, pela porta declarada da régua."""
     modelos = [("P1", "cosmic-red", "Cosmic Red", "USB", 87, "charging"),
                ("P2", "starlight-blue", "Starlight Blue", "USB", 64, "discharging"),
                ("P3", "nova-pink", "Nova Pink", "BT", 41, "discharging"),
@@ -157,8 +128,6 @@ def _testes_da_pagina(url: str) -> list[dict]:
     return json.loads(re.search(r"window\.__TESTES__ = (\[.*?\]);\n", corpo, re.S).group(1))
 
 
-#: A MEDIDA DO CONTEÚDO, e ela é UMA função porque a mordida a chama também.
-#: Duas cópias e a mordida mediria outra coisa que a régua.
 _MEDIR = """() => ({
   elementos: document.querySelectorAll('*').length,
   testes: (window.__TESTES__ || []).length,
@@ -191,7 +160,7 @@ def pw():
         "playwright.sync_api", reason="playwright não está no pyproject",
     ).sync_playwright
     with sync_playwright() as p:
-        nav = p.chromium.launch(executable_path=CHROME)  # headless é o padrão
+        nav = p.chromium.launch(executable_path=CHROME)
         try:
             yield nav
         finally:
@@ -202,19 +171,9 @@ pytestmark = pytest.mark.skipif(
     not pathlib.Path(CHROME).exists(), reason="sem Chrome")
 
 
-# ---------------------------------------------------------------------------
-# 0. A RÉGUA CONTRA A CURA PREGUIÇOSA — e ela vem primeiro de propósito
-# ---------------------------------------------------------------------------
 def test_a_pagina_tem_conteudo_real_e_a_regua_morde_a_pagina_vazia(
         pw, lar, mentira, tmp_path) -> None:
-    """O PISO DE CONTEÚDO, com a mordida ao lado no MESMO teste.
-
-    Uma página que não renderiza nada passa em quase toda prova de ausência —
-    e é assim que uma cura preguiçosa atravessa uma leva inteira. Esta régua
-    exige NÚMERO: elementos, testes, palavras, formas de desenho, regras de cor
-    e linhas de índice. A mordida é uma página vazia medida pela **mesma
-    função** — duas cópias e a mordida mediria outra coisa que a régua.
-    """
+    """O PISO DE CONTEÚDO, com a mordida ao lado no MESMO teste."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
         alvo = next(t for t in _testes_da_pagina(s.url) if t["pecas"])
@@ -228,7 +187,6 @@ def test_a_pagina_tem_conteudo_real_e_a_regua_morde_a_pagina_vazia(
         abaixo = {k: (medido[k], v) for k, v in PISO.items() if medido[k] < v}
         assert not abaixo, f"a página não tem conteúdo real: {abaixo}"
 
-        # A MORDIDA: a mesma medida, numa página que não renderiza nada.
         vazia = tmp_path / "vazia.html"
         vazia.write_text("<!doctype html><html><body></body></html>",
                          encoding="utf-8")
@@ -241,33 +199,9 @@ def test_a_pagina_tem_conteudo_real_e_a_regua_morde_a_pagina_vazia(
         pg.close()
 
 
-# ---------------------------------------------------------------------------
-# §7.2 — NADA acontece antes do INICIAR, medido em TRÊS camadas
-# ---------------------------------------------------------------------------
 def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
         pw, lar, mentira) -> None:
-    """A inércia do TEMPO 1 — e o que ela alcança NÃO é o desenho.
-
-    O construtor conferia a TELA. Uma página que já tivesse gravado uma linha em
-    disco passaria numa régua mais frouxa — e o registro dela nasceria com uma
-    resposta que ela nunca deu. Aqui se conferem as três camadas: o que está na
-    tela, o que saiu pela rede e o que encostou no disco.
-
-    O QUE ESTA RÉGUA COBRAVA A MAIS, E DEIXOU DE COBRAR — 06/09/2026: ela exigia
-    ZERO desenho antes do INICIAR, lendo *"botão de INICIAR antes de qualquer
-    coisa acontecer"* como se alcançasse a ilustração. Não alcança, e a mesma
-    encomenda diz o contrário duas frases depois: *"O botão mostra o que vai
-    acontecer E O QUE OBSERVAR"*, e *"Faça os svgs brilharem mostrando o que
-    observar de cada controle em cada rodada"*. O desenho com a peça acesa É o
-    "o que observar" — ele é a INSTRUÇÃO, não o recibo. Com ele preso ao TEMPO 3
-    ela lia o texto, apertava INICIAR e ia mexer no aparelho SEM NUNCA TER VISTO
-    onde olhar; o desenho só chegava depois, quando a hora de observar já tinha
-    passado. Agora o teste cobra o oposto: os quatro ESTÃO na tela no TEMPO 1.
-
-    O que "nada acontece" alcança de verdade continua cobrado abaixo, inteiro: o
-    timer não corre sozinho, as respostas por controle não aparecem antes de ela
-    ter o que responder, e NADA encosta no disco.
-    """
+    """A inércia do TEMPO 1 — e o que ela alcança NÃO é o desenho."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
         pedidos: list[str] = []
@@ -286,9 +220,6 @@ def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
             "mexer no aparelho sem ter visto onde olhar")
         assert pg.eval_on_selector_all(".ctl g.marcada", "e=>e.length") > 0, (
             "nenhuma peça acesa no TEMPO 1: o desenho está lá e não diz nada")
-        # A RESPOSTA fica escondida no TEMPO 1, e o desenho não: as duas moram
-        # no mesmo cartão, e o corte é por tempo (`body[data-tempo]`). Marcar
-        # "obedeceu" antes de aplicar é gravar uma resposta sobre nada.
         assert pg.eval_on_selector_all(
             "input[type=radio]", "e=>e.filter(x=>x.offsetParent!==null).length") == 0, (
             "as respostas por controle estão CLICÁVEIS antes do INICIAR")
@@ -296,8 +227,6 @@ def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
         assert not s.registro.exists() or not list(s.registro.iterdir()), (
             "a página encostou no disco antes de ela clicar em INICIAR")
 
-        # E o INICIAR existe em TODO teste, não só neste: o primeiro, o do meio
-        # e o último. Um botão que só nasce na primeira linha não é o contrato.
         for t in (todos[0], todos[len(todos) // 2], todos[-1]):
             pg.goto(s.url + "#" + t["id"])
             pg.wait_for_selector("#iniciar")
@@ -305,18 +234,9 @@ def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
         pg.close()
 
 
-# ---------------------------------------------------------------------------
-# §7.3 — o timer CONTA, e conta ANTES
-# ---------------------------------------------------------------------------
 def test_o_timer_desce_e_nada_e_aplicado_enquanto_ele_corre(
         pw, lar, mentira) -> None:
-    """O relógio DESCENDO, não só presente.
-
-    Um relógio parado em "5" passa numa régua que pergunta se o texto não está
-    vazio. Aqui se lê o número duas vezes, com 2,4 s entre elas, e se cobra a
-    diferença — e, no mesmo intervalo, que nenhum desenho tenha sido pedido: é
-    isso que faz o timer estar ANTES de aplicar, e não ao lado.
-    """
+    """O relógio DESCENDO, não só presente."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
         alvo = next(t for t in _testes_da_pagina(s.url)
@@ -346,9 +266,7 @@ def test_o_timer_desce_e_nada_e_aplicado_enquanto_ele_corre(
 
 
 def test_o_timer_longo_sai_do_arquivo_e_nao_de_um_numero_fixo(lar) -> None:
-    """A linha 10 do roteiro diz *"volta neles aos 20 min"*, e o timer conta
-    1200 s por causa disso. Se o tempo fosse um literal desta página, os 148
-    testes contariam o mesmo número."""
+    """A linha 10 do roteiro diz *"volta neles aos 20 min"*, e o timer conta"""
     testes = med.todos_os_testes()
     tempos = sorted({t.segundos for t in testes})
     assert len(tempos) >= 3, f"todos os testes contam o mesmo tempo: {tempos}"
@@ -357,18 +275,9 @@ def test_o_timer_longo_sai_do_arquivo_e_nao_de_um_numero_fixo(lar) -> None:
         f"pede vinte minutos não chegou até aqui")
 
 
-# ---------------------------------------------------------------------------
-# §7.5 — a resposta sobrevive à MORTE DO SERVIDOR
-# ---------------------------------------------------------------------------
 def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
         pw, lar, mentira) -> None:
-    """O disco, separado da memória do processo.
-
-    Recarregar a aba com o mesmo servidor de pé não separa as duas coisas: o
-    `estado.json` poderia estar vindo de um cache e a régua não veria. Aqui o
-    processo é MORTO por PID, outro sobe no lugar, e o que aparece na tela é só
-    o que o disco guardou.
-    """
+    """O disco, separado da memória do processo."""
     gesto = "prova: interface.sh > aba 03 > efeito Arma no P3 · report 0x02"
     s = _Servidor(lar, mentira)
     try:
@@ -381,10 +290,6 @@ def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
         pg.click("#pular-timer")
         pg.wait_for_selector(".ctl svg")
         pg.check(f'.ctl[data-posto="{reage}"] input[value="obedeceu"]')
-        # O CAMPO GERAL SAIU em 07/09/2026 — palavra dela: *"O que eu vi no
-        # conjunto não deve existir assim, demos 4 opções pra cada controle
-        # uma 5 deveria ser um campo pra eu descrever por controle o que
-        # ocorreu"*. O que ela escreve mora no campo DO CONTROLE.
         pg.fill('textarea[name="n-P3"]', "so o P3 endureceu")
         _abre_o_como(pg)
         pg.fill("#gesto", gesto)
@@ -397,7 +302,6 @@ def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
 
     assert s.proc.poll() is not None, "o servidor não morreu"
 
-    # O ENDEREÇO, mascarado nas duas camadas.
     assert "AA:BB:CC:00:00:01" in na_tela
     assert not re.search(r"AA:BB:CC:D\d:E\d", na_tela), (
         "o endereço cru chegou à tela")
@@ -408,7 +312,6 @@ def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
     assert not re.search(r"AA:BB:CC:D\d:E\d", bruto), (
         "o endereço cru chegou à fita")
 
-    # E AGORA UM PROCESSO NOVO. Só o disco atravessa daqui.
     s2 = _Servidor(lar, mentira)
     try:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
@@ -425,19 +328,9 @@ def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
         s2.morrer()
 
 
-# ---------------------------------------------------------------------------
-# §7.6 — os quatro desenhos, com a lâmpada CANÔNICA
-# ---------------------------------------------------------------------------
 def test_os_quatro_trazem_transporte_modelo_e_a_lampada_do_padrao_do_produto(
         pw, lar, mentira) -> None:
-    """As lâmpadas conferidas contra o PADRÃO, e o padrão vem do produto.
-
-    "Alguma lâmpada acesa" passa mesmo quando os quatro acendem a mesma. O
-    padrão canônico é `1→3 · 2→24 · 3→135 · 4→1245` e quem o diz é
-    `core/led_control.py::player_led_pattern` — ele é LIDO daqui, nunca
-    digitado: a tabela já foi digitada uma vez nesta casa e o jogador 3 estava
-    errado por um mês.
-    """
+    """As lâmpadas conferidas contra o PADRÃO, e o padrão vem do produto."""
     sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
     import monta
 
@@ -474,50 +367,21 @@ def test_os_quatro_trazem_transporte_modelo_e_a_lampada_do_padrao_do_produto(
         pg.close()
 
 
-# ---------------------------------------------------------------------------
-# O VEREDITO — o verde sobre nada que o índice mostrava
-# ---------------------------------------------------------------------------
 def test_mordida_os_quatro_disseram_nada_e_o_indice_dizia_obedeceu() -> None:
-    """DEFEITO MEDIDO E CURADO NESTA PROVA, e ele era um verde sobre nada.
-
-    Medido em 06/09/2026, com a função como o construtor a entregou:
-
-        veredito({P1..P4: "nada"})  ->  "obedeceu"
-
-    Os quatro controles disseram *"não aconteceu nada"* e o índice — que é o
-    instrumento que ela lê para saber o que ainda falta — pintava a linha de
-    VERDE. A regra era `all(v in ("obedeceu", "nada"))`, e um conjunto só de
-    `nada` a satisfaz.
-
-    E `falhou` era INALCANÇÁVEL: a docstring nomeia quatro estados, o CSS tem a
-    classe `.e-falhou` e o JS tem o ramo que a escolhe — e nenhum caminho da
-    função jamais o devolvia. Uma paleta com quatro cores para três estados é o
-    instrumento afirmando uma medida que ele não faz.
-
-    A cura não julga papel, que é a decisão do construtor e continua de pé:
-    `obedeceu` só exige que **ao menos um** controle tenha obedecido.
-    """
+    """DEFEITO MEDIDO E CURADO NESTA PROVA, e ele era um verde sobre nada."""
     assert med.veredito({p: "nada" for p in med.POSTOS}) == "falhou"
     assert med.veredito({"P1": "nada"}) == "falhou"
-    # e o que já valia continua valendo
     assert med.veredito({}) == "não feito"
     assert med.veredito({"P1": "nao-vi", "P2": "nao-vi"}) == "não feito"
     assert med.veredito({"P1": "obedeceu", "P2": "nada"}) == "obedeceu"
     assert med.veredito({"P1": "outra-coisa"}) == "parcial"
-    # a resposta `obedeceu` num controle que devia ficar calado continua sendo
-    # um ACHADO, não um "falhou" automático
     assert med.veredito({p: "obedeceu" for p in med.POSTOS}) == "obedeceu"
 
 
 def test_todo_estado_que_o_indice_pinta_e_alcancavel() -> None:
-    """A paleta e a função têm de falar dos MESMOS estados.
-
-    O JS do índice escolhe entre quatro classes. Se um dos quatro estados não
-    tem caminho em :func:`veredito`, a página declara uma medida que ela não
-    faz — e foi exatamente o caso de `falhou` até esta prova.
-    """
+    """A paleta e a função têm de falar dos MESMOS estados."""
     do_js = set(re.findall(r"v === '([^']+)'", med._JS))
-    do_js.add("não feito")  # o `else` do encadeado, que o `e-nao` pinta
+    do_js.add("não feito")
     alcancaveis = {
         med.veredito(r) for r in (
             {}, {"P1": "nao-vi"}, {"P1": "nada"}, {"P1": "obedeceu"},
@@ -528,16 +392,8 @@ def test_todo_estado_que_o_indice_pinta_e_alcancavel() -> None:
         f"{sorted(do_js - alcancaveis)}")
 
 
-# ---------------------------------------------------------------------------
-# O que o servidor recusa — o COMO, pela porta HTTP, com o disco conferido
-# ---------------------------------------------------------------------------
 def test_a_recusa_do_como_nao_deixa_rastro_no_disco(lar) -> None:
-    """400 é metade da prova; a outra metade é o disco continuar vazio.
-
-    Um servidor que devolvesse 400 DEPOIS de escrever a linha teria a régua
-    verde e o defeito vivo — e o defeito é justamente uma resposta gravada sem
-    o modo de chegar nela.
-    """
+    """400 é metade da prova; a outra metade é o disco continuar vazio."""
     with _Servidor(lar) as s:
         pedido = urllib.request.Request(
             s.url + "registro",
@@ -552,26 +408,8 @@ def test_a_recusa_do_como_nao_deixa_rastro_no_disco(lar) -> None:
         "a recusa deixou rastro em disco")
 
 
-# ---------------------------------------------------------------------------
-# O QUE ELA PEDIU EM 06/09/2026, olhando a primeira versão da página:
-#
-#   *"tá péssimo o layout e usabilidade da página de testes. mantém o mesmo
-#   tema que vemos aplicando. coloca em baixo de cada controle as opções do que
-#   selecionar e um campo extra. após responder e clicar em verificar ele mostra
-#   se deu certo ou errado pra cada controle. deixa mais clean o layout e começa
-#   na parte superior explicando o que está sendo testado e afins."*
-#
-# Cada régua abaixo cobra UMA dessas frases, no navegador.
-# ---------------------------------------------------------------------------
 def test_o_tema_e_o_da_casa_e_nao_uma_paleta_desta_pagina(pw, lar, mentira) -> None:
-    """*"mantém o mesmo tema que vemos aplicando"*.
-
-    A mesa nasceu com nove hex CLAROS digitados nela — a quinta cópia da mesma
-    decisão de paleta, e a única fora de dia. A régua não compara hex: ela cobra
-    que o texto do CSS venha do DONO (`paleta_da_casa.TOKENS`, o mesmo de que o
-    `specs.html`, o `painel.html`, o `frases-de-tela.html` e o `index.html`
-    leem) e que a página renderize ESCURO de verdade.
-    """
+    """*"mantém o mesmo tema que vemos aplicando"*."""
     assert med.paleta_da_casa.TOKENS in med._CSS, (
         "o CSS da mesa não contém os tokens da casa — alguém voltou a digitar "
         "a paleta aqui")
@@ -590,14 +428,7 @@ def test_o_tema_e_o_da_casa_e_nao_uma_paleta_desta_pagina(pw, lar, mentira) -> N
 
 
 def test_cada_controle_tem_as_opcoes_e_um_campo_so_dele(pw, lar, mentira) -> None:
-    """*"coloca em baixo de cada controle as opções do que selecionar e um campo
-    extra"*.
-
-    O campo geral continua existindo e é sobre o conjunto; este é sobre ESTE
-    controle. A régua cobra os dois: quatro campos próprios, e o que ela digita
-    em cada um chegando ao DISCO com o nome do controle — um campo que a tela
-    mostra e o registro não guarda é pior que campo nenhum.
-    """
+    """*"coloca em baixo de cada controle as opções do que selecionar e um campo"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
         alvo = next(t for t in _testes_da_pagina(s.url) if t["pecas"])
@@ -613,19 +444,11 @@ def test_cada_controle_tem_as_opcoes_e_um_campo_so_dele(pw, lar, mentira) -> Non
             assert len(cartao.query_selector_all("input[type=radio]")) == len(med.RESPOSTAS)
             assert cartao.query_selector("textarea.extra"), (
                 f"o {posto} não tem campo próprio")
-            # E EMBAIXO, não em cima: a caixa das opções começa depois do
-            # desenho terminar. Um cartão que empilhasse ao contrário passaria
-            # numa régua que só conta elementos.
             svg = cartao.query_selector("svg").bounding_box()
             resp = cartao.query_selector(".resp").bounding_box()
             extra = cartao.query_selector("textarea.extra").bounding_box()
             assert resp["y"] >= svg["y"] + svg["height"] - 2, (
                 f"as opções do {posto} não estão abaixo do desenho")
-            # O CAMPO É A QUINTA OPÇÃO, e por isso mora DENTRO da lista das
-            # quatro — dela: *"demos 4 opções pra cada controle uma 5 deveria
-            # ser um campo pra eu descrever por controle o que ocorreu"*. A
-            # régua cobrava o contrário (o campo DEPOIS da caixa) e passaria
-            # com ele solto no fim do cartão, que é onde ele NÃO deve estar.
             quatro = cartao.query_selector_all(".resp input[type=radio]")
             ultimo = quatro[-1].bounding_box()
             assert cartao.query_selector(".resp textarea.extra"), (
@@ -652,17 +475,9 @@ def test_cada_controle_tem_as_opcoes_e_um_campo_so_dele(pw, lar, mentira) -> Non
 
 
 def test_o_verificar_diz_certo_ou_errado_por_controle(pw, lar, mentira) -> None:
-    """*"após responder e clicar em verificar ele mostra se deu certo ou errado
-    pra cada controle"*.
-
-    E o veredito NÃO PODE aparecer antes do clique: um laudo na tela antes de
-    ela responder é um laudo sobre nada. A régua vai aos dois lados — o que
-    não se vê antes, e o que se vê depois, por controle.
-    """
+    """*"após responder e clicar em verificar ele mostra se deu certo ou errado"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
-        # um teste com papéis DISTINTOS: sem isso o "certo ou errado" não se
-        # distingue, e a régua passaria medindo quatro vereditos iguais.
         alvo = next(t for t in _testes_da_pagina(s.url)
                     if med.PAPEL_REAGE in t["papeis"].values()
                     and med.PAPEL_CALADO in t["papeis"].values())
@@ -676,7 +491,6 @@ def test_o_verificar_diz_certo_ou_errado_por_controle(pw, lar, mentira) -> None:
             ".laudo", "e=>e.filter(x=>x.offsetParent!==null).length") == 0, (
             "o laudo apareceu antes de ela clicar em verificar")
 
-        # Responde ERRADO em quem devia reagir e CERTO em quem devia calar.
         reage = next(p for p, v in alvo["papeis"].items() if v == med.PAPEL_REAGE)
         calado = next(p for p, v in alvo["papeis"].items() if v == med.PAPEL_CALADO)
         pg.check(f'input[name="r-{reage}"][value="nada"]')
@@ -700,13 +514,7 @@ def test_o_verificar_diz_certo_ou_errado_por_controle(pw, lar, mentira) -> None:
 
 def test_a_capa_explica_o_teste_e_ela_sobrevive_aos_tres_tempos(
         pw, lar, mentira) -> None:
-    """*"começa na parte superior explicando o que está sendo testado e afins"*.
-
-    E ela fica. O defeito que isto cura tinha DUAS metades: a explicação vinha
-    DEPOIS dos quatro desenhos (ela via os controles antes de saber para quê) e
-    era pintada só no TEMPO 1 — some justamente no TEMPO 3, que é a hora de
-    julgar o que aconteceu.
-    """
+    """*"começa na parte superior explicando o que está sendo testado e afins"*."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
         alvo = next(t for t in _testes_da_pagina(s.url)
@@ -732,9 +540,7 @@ def test_a_capa_explica_o_teste_e_ela_sobrevive_aos_tres_tempos(
         pg.close()
 
 
-# ---------------------------------------------------------------------------
 # O QUE ELA PEDIU EM 07/09/2026, com quatro DualSense na mesa e o daemon parado
-# ---------------------------------------------------------------------------
 def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     """*"não estamos usando o nosso mapa? pq até agora ele não entendeu qual
     player deveria aparecer, nem qual controle (…) nem o modo de conexão (qual
@@ -747,16 +553,7 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     A RÉGUA RODA NA MÁQUINA REAL e pula quando não há DualSense — ela mede o
     que o kernel publica, e um dublê de `sysfs` mediria o dublê.
     """
-    # A RÉGUA CONTA OS NÓS PRIMEIRO, e só pula se não houver nenhum. Sem esta
-    # metade a mordida não mordia: arrancar a leitura fazia `pelo_sysfs()`
-    # devolver vazio, e a régua PULAVA em vez de reprovar — verde sobre uma
-    # cura arrancada, que é a família que esta casa caça.
-    # O NOME NÃO SERVE PARA CONTAR, e isto custou um vermelho: com o daemon
     # VIVO existe um segundo nó chamado "DualSense Wireless Controller
-    # (Hefesto P1)" — o controle VIRTUAL que o próprio daemon publica, com PID
-    # 0x0DF2 e endereço de mentira. Contar por nome somava o emulado ao de
-    # plástico e acusava a leitura de estar cega, quando ela estava certa: ela
-    # filtra pelo par VID/PID do aparelho real. A régua conta pelo mesmo par.
     def _e_dualsense(no: pathlib.Path) -> bool:
         texto = (no / "device" / "uevent").read_text(
             encoding="utf-8", errors="replace")
@@ -772,9 +569,6 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     assert len(vistos) == len(nos), (
         f"o kernel mostra {len(nos)} DualSense e a leitura devolveu "
         f"{len(vistos)} — a segunda fonte não está lendo")
-    # E O EMULADO NÃO ENTRA NA MESA. Ele existe sempre que o daemon está de pé,
-    # e um cartão a mais na bancada seria ela medindo o próprio produto contra
-    # um controle que não está na mesa.
     emulados = [n for n in todos
                 if "Hefesto" in (n / "device" / "uevent").read_text(
                     encoding="utf-8", errors="replace")]
@@ -792,13 +586,11 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
         assert v["uniq"], "sem endereço"
         assert v["uniq"].split(":")[3] == "00", f"MAC sem máscara: {v['uniq']}"
         assert v["uniq"].split(":")[4] == "00", f"MAC sem máscara: {v['uniq']}"
-    # E A COR NÃO VEM DAQUI, de propósito: ela exige escrita no aparelho.
     assert all("colorway" not in v for v in vistos)
 
 
 def test_a_cor_que_ela_disse_fica_guardada_pelo_endereco(lar, monkeypatch) -> None:
-    """A cor do plástico não se lê sem escrever no controle, e esta página não
-    escreve. Então ELA diz qual é, uma vez, e a mesa lembra pelo endereço."""
+    """A cor do plástico não se lê sem escrever no controle, e esta página não"""
     monkeypatch.setenv("XDG_STATE_HOME", str(lar))
     monkeypatch.setattr(med, "pasta_do_registro",
                         lambda: lar / "mesa-de-medicao")
@@ -811,13 +603,7 @@ def test_a_cor_que_ela_disse_fica_guardada_pelo_endereco(lar, monkeypatch) -> No
 
 
 def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
-    """*"coisas que eu precisa fazer todos separados um por vez (…) afinal
-    podemos ter 4 controles mas só tenho um par de mãos"*.
-
-    Vibração se sente com a MÃO e som se ouve com a ORELHA: medir quatro ao
-    mesmo tempo ali não é difícil, é impossível. Luz e bateria não entram,
-    porque se leem com os olhos e os olhos pegam os quatro de uma vez.
-    """
+    """*"coisas que eu precisa fazer todos separados um por vez (…) afinal"""
     ts = med.todos_os_testes()
     por_id = {t.id: t for t in ts}
     assert por_id["roteiro-06"].um_por_vez, "a vibração tem de ser um por vez"
@@ -831,14 +617,7 @@ def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
 
 
 def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
-    """*"O COMO é obrigatório (…) isso aqui me quebra. isso eu espero que a
-    página descreva"*.
-
-    O COMO já existe nos arquivos — as colunas da própria célula do mapa —, e
-    cobrar dela que o digitasse era pedir que redigitasse o que o repositório
-    publica. A régua cobra que o campo chegue PREENCHIDO, e que salvar funcione
-    sem ela tocar nele.
-    """
+    """*"O COMO é obrigatório (…) isso aqui me quebra. isso eu espero que a"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
         alvo = next(t for t in _testes_da_pagina(s.url)
@@ -852,18 +631,11 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
         _abre_o_como(pg)
         gesto = pg.input_value("#gesto")
         assert gesto.strip(), "o COMO chegou vazio — ela teria de digitar"
-        # O CAMPO NASCE COM OS PASSOS, não com o primeiro campo do gesto —
-        # mudou em 07/09/2026. Esta linha cravava `como[0]`, que era o gesto
-        # inteiro quando ele tinha um campo só; hoje são sete, e o primeiro é
-        # "o que isto prova" — que não é gesto nenhum, é o porquê. O que ela
-        # aplicou são os passos, e é isso que o campo tem de trazer.
         passos = dict(alvo["como"]).get("os passos", "")
         primeiro = next((x.strip() for x in passos.split("\n") if x.strip()), "")
         assert primeiro, f"o teste {alvo['id']} não publica passos"
         assert primeiro[:30] in gesto, (gesto[:160], primeiro[:60])
 
-        # E SALVA SEM ELA TOCAR NO CAMPO: era exatamente isto que a recusa
-        # impedia, e é o que a fez dizer que a página a quebrava.
         pg.check('input[name="r-P1"][value="obedeceu"]')
         pg.click("#so-salvar")
         pg.wait_for_timeout(700)
@@ -875,13 +647,7 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
 
 def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
         pw, lar, mentira) -> None:
-    """*"a ideia é ficar fácil pra validarmos as teses, a grande maioria ali já
-    foi validada uns 80%"*.
-
-    A mesa listava só o que FALTAVA, então ela não tinha como CONFIRMAR nada.
-    Agora as duas famílias estão na página: abre no que falta, e o já medido
-    vem com o selo e a resposta do mapa pré-marcada.
-    """
+    """*"a ideia é ficar fácil pra validarmos as teses, a grande maioria ali já"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
         pg.goto(s.url)
@@ -897,10 +663,8 @@ def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
         pg.wait_for_timeout(500)
         assert pg.evaluate("() => TESTES.every(t => t.ja_medido)")
         assert pg.is_visible("#selo"), "o selo do que já foi medido não aparece"
-        # o CSS o põe em maiúsculas; a régua lê sem caso, senão mede a folha
         assert "medido" in pg.inner_text("#selo").lower()
 
-        # A RESPOSTA DO MAPA VEM MARCADA, e marcada como VINDA DO MAPA.
         i = pg.evaluate("() => TESTES.findIndex(t => t.resposta_do_mapa)")
         assert i >= 0, "nenhum medido traz a resposta que o mapa implica"
         pg.evaluate("(i) => ir(i, 3)", i)
@@ -916,12 +680,7 @@ def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
 
 
 def _so_o_codigo(fonte: str) -> str:
-    """O fonte sem comentários e sem literais de texto.
-
-    Uma régua que varre o arquivo cru não distingue o que o código FAZ do que
-    o comentário DESCREVE — e nesta casa os comentários descrevem exatamente o
-    que não se pode fazer. `tokenize` faz a separação que a `str` não faz.
-    """
+    """O fonte sem comentários e sem literais de texto."""
     import io
     import tokenize as _tk
 
@@ -934,12 +693,7 @@ def _so_o_codigo(fonte: str) -> str:
 
 
 def test_as_21_estao_nas_seis_secoes_do_roteiro() -> None:
-    """*"cadê as seções das 21?"* — 07/09/2026, ela olhando o seletor.
-
-    A especificação da mesa trazia seis seções desde 06/09 (§4) e a página as
-    ignorava: jogava as 21 numa gaveta só. A tabela mora no ROTEIRO, e a régua
-    cobra que ela seja lida de lá — não seis nomes digitados nesta página.
-    """
+    """*"cadê as seções das 21?"* — 07/09/2026, ela olhando o seletor."""
     secoes = med.secoes_do_roteiro()
     assert len(secoes) == 21, secoes
     assert len(set(secoes.values())) == 6, sorted(set(secoes.values()))
@@ -947,39 +701,21 @@ def test_as_21_estao_nas_seis_secoes_do_roteiro() -> None:
     assert len({t.secao for t in das_21}) == 6, {t.secao for t in das_21}
     assert all(t.secao.startswith("O roteiro ·") for t in das_21), (
         [t.secao for t in das_21 if not t.secao.startswith("O roteiro ·")])
-    # E CADA UMA DAS SEIS TEM LINHA: uma seção vazia no seletor é uma gaveta
-    # que ela abre para nada.
     for nome in set(secoes.values()):
         assert any(nome in t.secao for t in das_21), nome
 
 
 def test_a_cor_se_le_do_aparelho_sob_o_comando_dela() -> None:
-    """*"A cor exige escrita mesmo. Mas ler uma vez, sob seu comando, é o que o
-    daemon faz. então por favor faz isso. é o que eu venho pedindo."*
-
-    A leitura é a ÚNICA escrita que esta página faz, e ela não se monta aqui:
-    `integrations.cor_do_plastico` é o dono, com uma função sem parâmetro para
-    o payload e outra que o confere byte a byte antes de sair — porque `0x80` é
-    a família em que `[1, 1]` RESETA o controle.
-
-    A RÉGUA NÃO ESCREVE NO APARELHO: ela prova que a página PERGUNTA AO DONO em
-    vez de montar o pedido, e que a leitura não roda sozinha.
-    """
+    """*"A cor exige escrita mesmo. Mas ler uma vez, sob seu comando, é o que o"""
     fonte = pathlib.Path(med.__file__).read_text(encoding="utf-8")
     assert "cor_do_plastico.ler_pelo_cabo" in fonte, (
         "a mesa deixou de perguntar ao dono da leitura")
-    # A RÉGUA LÊ O CÓDIGO, NÃO A PROSA — e esta linha é a cicatriz de 07/09:
-    # a primeira versão varria o arquivo inteiro e reprovou no COMENTÁRIO que
-    # avisa para não montar o pedido, porque ele cita o byte que descreve. É a
-    # mesma armadilha do `BOOTSTRAP` de 05/09, e ela não é de digitação: um
-    # aviso escrito bem é indistinguível do defeito para quem varre texto cru.
     codigo = _so_o_codigo(fonte)
     for proibido in ("montar_pedido", "0x80", "SET_FEATURE", "ioctl",
                      "HIDIOCSFEATURE"):
         assert proibido not in codigo, (
             f"a mesa passou a montar o pedido ela mesma (`{proibido}`) — a "
             f"trava do byte tem UM dono, e não é esta página")
-    # E NÃO RODA SOZINHA: a única chamada está atrás da rota do POST.
     corpo = fonte.split("def ler_a_cor_no_aparelho", 1)[1]
     chamadas = corpo.count("ler_a_cor_no_aparelho()")
     assert chamadas == 1, (
@@ -989,12 +725,7 @@ def test_a_cor_se_le_do_aparelho_sob_o_comando_dela() -> None:
 
 
 def test_a_borda_do_cartao_e_a_cor_do_plastico(pw, lar, mentira) -> None:
-    """*"a borda de cada controle deve ter a borda na cor do model"*.
-
-    E o PAPEL não pode cobri-la: a primeira volta pôs um `outline` roxo em quem
-    devia reagir, e os quatro cartões ficavam roxos — a cor do plástico, que é
-    o que ela usa para casar a tela com o controle na mão, sumia da moldura.
-    """
+    """*"a borda de cada controle deve ter a borda na cor do model"*."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
         alvo = next(t for t in _testes_da_pagina(s.url)
@@ -1007,7 +738,6 @@ def test_a_borda_do_cartao_e_a_cor_do_plastico(pw, lar, mentira) -> None:
         assert len(set(bordas)) == 4, (
             f"os quatro cartões têm a mesma borda: {bordas} — a cor do "
             f"plástico não chegou à moldura")
-        # e ela é a COR DA CASCA daquele modelo, perguntada ao dono
         import monta
         cores = pg.eval_on_selector_all(
             ".ctl svg", "es=>es.map(e=>e.getAttribute('data-colorway'))")
@@ -1020,15 +750,7 @@ def test_a_borda_do_cartao_e_a_cor_do_plastico(pw, lar, mentira) -> None:
 
 
 def test_a_peca_em_foco_acende_como_no_mapa_do_controle(pw, lar, mentira) -> None:
-    """*"as bordas ou coisas a serem observadas ficam com o foco o mesmo que
-    temos no mapa dos controles (…) touchpad lightbar e afins tudo isso também,
-    fora motor e gatilhos tal como é no mapa"*.
-
-    O mapa acende a peça em foco em `--pink`, e é o rosa que ela já associa a
-    "olhe aqui" em toda a casa. A régua vai a peça por peça — incluindo as
-    OCULTAS (motores, sensores, bateria), que são as que somem quando alguém
-    mexe na folha de realce sem saber que elas existem.
-    """
+    """*"as bordas ou coisas a serem observadas ficam com o foco o mesmo que"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
         pg.goto(s.url)
@@ -1060,52 +782,24 @@ def test_a_peca_em_foco_acende_como_no_mapa_do_controle(pw, lar, mentira) -> Non
 
 
 def test_a_folha_do_desenho_vem_do_mapa_do_controle() -> None:
-    """*"e cara o contorno não tá pintado (…) abra o playwright e mude o tipo
-    de controle no mapa dos controles e veja a diferença"* — 07/09/2026.
-
-    Ela estava certa duas vezes. O desenho é DE LINHA, e quem dá cor à linha é
-    o `stroke` — a folha dos 28 pinta as ZONAS, e o contorno vivia numa segunda
-    folha que só existia dentro do `mapa-do-controle.html`. A mesa emitia o
-    mesmo SVG e não pintava nada.
-
-    A CURA NÃO É COPIAR, é LER: `folha_do_desenho` vai à página que é dona das
-    regras e reescreve só o endereço. A régua cobra as duas metades — que as
-    regras venham de lá, e que as VARIÁVEIS venham junto (a primeira volta
-    trouxe `fill:var(--led-apagado)` sem o `--led-apagado`, e os cinco LEDs de
-    jogador ficaram pretos).
-    """
+    """*"e cara o contorno não tá pintado (…) abra o playwright e mude o tipo"""
     folha = med.folha_do_desenho(["p1", "p2"])
     assert "stroke:var(--z-casca-solida)" in folha, (
         "a folha do desenho perdeu o contorno na cor do plástico")
-    # AS DUAS QUEIXAS DELA, cada uma com a regra que a responde
     assert ".sem-tinta{fill:none !important" in folha.replace(" ", " "), (
         "sem a `sem-tinta` o círculo do PS volta — *\"o do PS não tem esse "
         "círculo no meio\"*")
-    # AS VARIÁVEIS VIAJAM JUNTO
     for var in ("--led-apagado", "--led-aceso", "--luz-apagada"):
         assert f"{var}:" in folha, (
             f"`{var}` é usada e não é declarada — um valor que não resolve não "
             f"herda o de trás, cai no preto")
-    # E O ENDEREÇO É O DESTA PÁGINA, não o do mapa: quatro desenhos na mesma
-    # página só não colidem porque cada um leva o prefixo do seu posto.
     assert "#p1-corpo" in folha and "#p2-corpo" in folha, folha[:400]
     assert "mp-" not in folha, "sobrou endereço do mapa na folha da mesa"
-    # O QUE NÃO PODE VIR: o realce de LÁ, cujo gatilho é o mouse. Aqui quem
-    # manda acender é o roteiro.
     assert ":hover" not in folha, "veio o realce do mapa, e ele é do ponteiro"
 
 
 def test_o_desenho_da_mesa_pinta_o_contorno_como_o_mapa(pw, lar, mentira) -> None:
-    """O contorno, medido: cor do plástico e ESPESSURA que se enxerga.
-
-    A cor sozinha não bastava, e a foto provou: o `stroke-width:.42` vem em
-    unidades do `viewBox` (116,68 de largura). O mapa desenha o SVG com 1160 px
-    e o traço sai com 4,2 px de tela; a mesa desenhava com 190 e o traço dava
-    **0,68 px**. Abaixo de um pixel o navegador não desenha linha, desenha um
-    cinza fraco — e a borda de cima do touchpad sumia inteira.
-
-    Por isso a régua mede as DUAS coisas, e a espessura em pixels de TELA.
-    """
+    """O contorno, medido: cor do plástico e ESPESSURA que se enxerga."""
     import monta
 
     with _Servidor(lar, mentira) as s:
@@ -1132,7 +826,6 @@ def test_o_desenho_da_mesa_pinta_o_contorno_como_o_mapa(pw, lar, mentira) -> Non
             r, g, b = (int(esperado[i:i + 2], 16) for i in (1, 3, 5))
             assert c["stroke"] == f"rgb({r}, {g}, {b})", (
                 f"o contorno de {c['colorway']} não é a cor do plástico: {c}")
-            # A ESPESSURA É DE TELA, e não some quando o cartão encolhe
             assert c["efeito"] == "non-scaling-stroke", (
                 f"o traço voltou a escalar com o desenho: {c}")
             assert float(c["w"].rstrip("px")) >= 1.4, (
@@ -1141,16 +834,7 @@ def test_o_desenho_da_mesa_pinta_o_contorno_como_o_mapa(pw, lar, mentira) -> Non
 
 
 def test_o_ps_nao_acende_o_circulo_que_ela_mandou_tirar(pw, lar, mentira) -> None:
-    """*"o do PS não tem esse círculo no meio"* — 07/09/2026.
-
-    Decisão dela de 27/08: *"Remove o circulo e Deixa só o Glifo do PS pra ser
-    o Botão"*. O desenho obedece com a classe `sem-tinta`, e o REALCE a
-    atropelava: com o PS marcado nascia de volta o círculo que ela mandou
-    tirar. Quem acende ali é o glifo, pelo `color`.
-
-    A cura foi no DONO (`monta.folha_de_realce`), não nesta página — o produto
-    inteiro usa `apertados=` e sofria do mesmo.
-    """
+    """*"o do PS não tem esse círculo no meio"* — 07/09/2026."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1440, "height": 1000})
         pg.goto(s.url)
@@ -1170,26 +854,11 @@ def test_o_ps_nao_acende_o_circulo_que_ela_mandou_tirar(pw, lar, mentira) -> Non
         assert medido, "o PS sumiu do desenho"
         assert medido["fill"] == "none" and medido["stroke"] == "none", (
             f"o círculo do PS acendeu: {medido} — ela mandou tirá-lo em 27/08")
-        # E O GLIFO CONTINUA ACENDENDO: tirar o círculo não pode apagar o botão
         assert medido["cor_do_grupo"] != "none", medido
 
 
 def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
-    """*"quais desses são os mais importantes? não fez separação dos 21 mais?"*
-    — 07/09/2026, ela olhando o seletor aberto.
-
-    A separação EXISTIA: as seis seções do roteiro já vinham antes das onze do
-    mapa. Mas dezessete linhas seguidas não DIZEM qual bloco é a bancada e qual
-    é o acervo — a ordem é uma informação que só quem a escreveu enxerga.
-
-    Duas coisas curam, e as duas são de leitura: os `optgroup` nomeiam os
-    blocos, e uma linha fecha as 21 num corte só — *"o prioritários são os 16
-    (…) faço eles e na sequência vou fazendo os demais"*.
-
-    A RÉGUA NÃO DIGITA 21: ela pergunta ao roteiro quantas são. No dia em que
-    uma linha for acrescentada à sprint, a página muda junto e esta régua não
-    reprova a mudança.
-    """
+    """*"quais desses são os mais importantes? não fez separação dos 21 mais?"*"""
     quantas = len(med.secoes_do_roteiro())
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1600, "height": 1100})
@@ -1209,7 +878,6 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
         assert str(quantas) in visto["primeiras"][1], (
             f"a linha do roteiro inteiro não diz quantas são: {visto}")
 
-        # E O CORTE CORTA: escolher a linha deixa exatamente as do roteiro.
         pg.select_option("#secao-filtro", visto["valor_do_corte"])
         pg.wait_for_timeout(500)
         depois = pg.evaluate(
@@ -1218,7 +886,6 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
         assert depois["n"] == quantas, (
             f"o corte das {quantas} deixou {depois['n']} na tela")
         assert depois["so_roteiro"], "entrou célula do acervo no corte da bancada"
-        # E O CABEÇALHO CONTA O QUE SOBROU, senão ela procura teste que não está
         assert f"1 de {quantas}" in pg.inner_text("header, main").replace(
             "\n", " ") or f"1 DE {quantas}" in pg.inner_text("body").upper(), (
             "a página não diz que agora são as do roteiro")
@@ -1226,18 +893,7 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
 
 
 def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
-    """*"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,
-    ela olhando a linha 10 da bancada.
-
-    A tela mostrava **19:55 correndo em 52 px** e, logo acima, a ordem *"tire os
-    olhos da tela e ponha nos controles"*. Vinte minutos parada diante de um
-    cronômetro que ela não deve olhar — a instrução contradizia o próprio
-    instrumento que a dava.
-
-    SÃO DUAS ESPERAS, e a régua cobra que a tela as trate como duas: a curta é
-    o gesto acontecendo, e ela fica de pé com o controle na mão; a longa é ela
-    sair e voltar. A régua não digita o limiar — pergunta ao módulo.
-    """
+    """*"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1400, "height": 1050})
         pg.goto(s.url)
@@ -1266,18 +922,15 @@ def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
 
         longa, curta = espera("longa"), espera("curta")
 
-        # A LONGA MANDA SAIR, e diz quantos minutos
         assert "volte" in longa["titulo"].lower(), longa
         assert str(round(longa["segundos"] / 60)) in longa["titulo"], longa
         assert not longa["recado_escondido"], (
             "a espera longa não explica que ela pode sair — e é justamente o "
             "que ela precisa saber")
-        # A CURTA MANDA OLHAR O APARELHO
         assert "olhos" in curta["titulo"].lower(), curta
         assert curta["recado_escondido"], (
             "a espera curta ganhou o recado da longa — mandar sair da tela por "
             "dez segundos é perder o gesto")
-        # E O RELÓGIO ENCOLHE quando deixa de ser o que ela olha
         assert longa["relogio"] < curta["relogio"] / 2, (
             f"o relógio da espera longa continua grande ({longa['relogio']}px "
             f"contra {curta['relogio']}px) — ele volta a ser a coisa que ela "
@@ -1286,20 +939,7 @@ def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
 
 
 def test_as_21_trazem_o_gesto_e_ele_vem_do_arquivo_dono() -> None:
-    """*"O COMO é obrigatório: escreva o gesto exato que foi aplicado. isso aqui
-    me quebra. isso eu espero que seja descrito."* (a frase dela nomeia
-    quem descreve; o nome fica no arquivo do gesto, que é `docs/`.)
-
-    E o defeito que ela apontou olhando a linha 10: *"sinceramente não entendi
-    o que diabos é pra fazer aqui"*. O COMO saía como `linha do roteiro: 10`
-    mais `passa quando: mudaram` — o roteiro repetido, não o gesto. Um roteiro
-    escrito em telegrama serve a quem o escreveu e a mais ninguém.
-
-    A RÉGUA COBRA AS TRÊS COISAS: que as 21 tenham gesto, que ele venha do
-    ARQUIVO e não da página, e que ele diga o mínimo para executar — onde
-    olhar e os passos. Um gesto sem "onde olhar" manda ela fazer o movimento
-    certo olhando para o lugar errado.
-    """
+    """*"O COMO é obrigatório: escreva o gesto exato que foi aplicado. isso aqui"""
     das_21 = [t for t in med.todos_os_testes() if t.id.startswith("roteiro-")]
     assert len(das_21) == 21, len(das_21)
     obrigatorios = {"o que isto prova", "onde olhar", "os passos",
@@ -1312,43 +952,22 @@ def test_as_21_trazem_o_gesto_e_ele_vem_do_arquivo_dono() -> None:
     assert not sem_gesto, (
         f"{len(sem_gesto)} das 21 não trazem o gesto inteiro: {sem_gesto}")
 
-    # E OS PASSOS SÃO PASSOS, não um parágrafo picado: o arquivo os traz com o
-    # marcador que a tela vira lista, e sem ele a tela mostra uma parede.
     for teste in das_21:
         passos = dict(teste.como)["os passos"]
-        # O SEPARADOR É `\n`, NÃO `·` — e esta régua mediu o mundo de ontem
-        # por uma volta: o produto tem um rótulo cujo texto É "· acordado", e
-        # com `·` de separador o passo que mandava conferi-lo chegava partido
-        # em três na tela dela. Trocado o separador, o `count` caiu a zero e
-        # a régua reprovou a CURA. Ver `enxuga_os_passos`.
         quantos = len([x for x in passos.split("\n") if x.strip()])
         assert quantos >= 3, (
             f"{teste.id} tem {quantos} passos — um teste de bancada "
             f"com menos de três passos é um título, não um gesto")
 
-    # O DONO É O ARQUIVO. A régua arranca a leitura e exige que a queda seja
-    # DECLARADA: um COMO vazio some da tela e ela fica sem saber se ninguém
-    # escreveu ou se a leitura quebrou.
     fonte = pathlib.Path(med.__file__).read_text(encoding="utf-8")
     assert "como_das_21()" in fonte, "a mesa deixou de ler o dono do gesto"
     assert med._O_COMO_DAS_21.endswith(".md")
-    # PELO DONO, NÃO PELO CAMINHO: arquivar a sprint move o arquivo para
-    # `arquivados/` e não apaga o gesto — ver o irmão em `_o_dono_do_gesto`.
     assert med._o_dono_do_gesto(med._O_COMO_DAS_21) is not None, (
         f"o arquivo do gesto sumiu: {med._O_COMO_DAS_21}")
 
 
 def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
-    """O gesto vivia dentro de um `details` FECHADO.
-
-    O rótulo era *"a célula que isto fecha, e o COMO que o arquivo já
-    publica"* — e nada ali dizia que o que fazer estava lá dentro. Ela abriu a
-    linha 10, não entendeu, e a resposta estava na tela, dobrada.
-
-    A régua cobra as duas coisas que curam: o gesto VISÍVEL sem clique, e ANTES
-    dos quatro desenhos — a instrução precede o ato, que é a mesma razão pela
-    qual os desenhos saíram de dentro do tempo 3.
-    """
+    """O gesto vivia dentro de um `details` FECHADO."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1500, "height": 1200})
         pg.goto(s.url)
@@ -1386,24 +1005,13 @@ def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
         assert visto["texto"] > 500, (
             f"o gesto tem {visto['texto']} caracteres; a linha 10 sozinha tem "
             f"mais que isso no arquivo — a leitura não chegou à tela")
-        # E O SEPARADOR DO MARKDOWN NÃO É TEXTO
         assert "---" not in pg.inner_text("#como-do-arquivo"), (
             "o `---` que divide as seções do arquivo vazou para a tela")
         pg.close()
 
 
 def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
-    """*"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra
-    remodelar os demais testes via agentes."* — 07/09/2026.
-
-    As 21 da bancada ganharam gesto primeiro porque são a hora dela. As 178
-    células do mapa vêm no MESMO molde, de um segundo arquivo dono — dois, e
-    não um só, porque os donos são outros: as 21 são a aceitação que ela
-    escreveu; as 178 são o acervo.
-
-    A RÉGUA NÃO DIGITA 178: pergunta ao arquivo quantas ele publica, e cobra
-    que a página não perca nenhuma pelo caminho.
-    """
+    """*"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra"""
     do_arquivo = med.como_do_mapa()
     assert len(do_arquivo) > 150, (
         f"o arquivo do gesto do mapa publica {len(do_arquivo)} células — "
@@ -1417,20 +1025,10 @@ def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
         f"o COMO volta a ser a procedência repetida, que é o defeito que ela "
         f"apontou na linha 10 do roteiro")
 
-    # OS DOIS ARQUIVOS SÃO DOIS, e a régua cobra que continuem sendo: fundi-los
-    # faria a aceitação dela e o acervo mudarem juntos, e eles não mudam pelas
-    # mesmas razões.
     assert med._O_COMO_DAS_21 != med._O_COMO_DO_MAPA
-    # E A RÉGUA PERGUNTA AO DONO, em vez de digitar o caminho. Ela digitava
-    # `(med.RAIZ / caminho).exists()` até 20/09/2026, e por isso ficou
-    # VERMELHA quando as sprints fechadas foram para `arquivados/` — medindo o
-    # mundo de ontem enquanto o gesto continuava no disco, dois diretórios
-    # adiante. Quem sabe onde o dono mora é `_o_dono_do_gesto`.
     for caminho in (med._O_COMO_DAS_21, med._O_COMO_DO_MAPA):
         assert med._o_dono_do_gesto(caminho) is not None, caminho
 
-    # E NENHUM GESTO DO MAPA CAI NA CÉLULA DE OUTRA: o endereço é a chave mais
-    # o lado, e trocar um por outro mandaria ela testar o cabo lendo o rádio.
     for x in do_mapa[:40]:
         onde = dict(x.como).get("onde olhar", "")
         assert onde, x.id
@@ -1441,26 +1039,10 @@ def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
             f"{x.id} fala só do {outro} — o gesto caiu na célula errada")
 
 
-
 def test_todo_token_de_cor_sem_reserva_esta_definido() -> None:
-    """`var(--x)` sem reserva tem de existir — senão a regra some calada.
-
-    07/09/2026: escrevi `color:var(--color-ink-muted)` em quatro lugares e
-    `--color-danger` na trava. Nenhum dos dois existe nesta folha. O navegador
-    não reclama de `var()` que não resolve: a propriedade inteira é
-    DESCARTADA, e o texto herda a cor de cima. Passou por um commit e por 45
-    portões verdes, porque o que se vê é uma tela plausível — a conferência
-    ficava com a cor do ato, que é exatamente o contraste que a cura existia
-    para criar.
-
-    A RÉGUA SÓ COBRA QUEM NÃO TEM RESERVA. `var(--cor-do-modelo,
-    var(--color-rule))` é legítimo: a cor vem do atributo `style` de cada
-    cartão, e a reserva é o que a folha promete quando ela não vier. Quem
-    escreve `var(--x)` seco está afirmando que `--x` existe aqui.
-    """
+    """`var(--x)` sem reserva tem de existir — senão a regra some calada."""
     css = med._CSS
     definidos = set(re.findall(r"(--[\w-]+)\s*:", css))
-    # `var(--x)` seguido de `)` — sem vírgula, logo sem reserva
     secos = set(re.findall(r"var\(\s*(--[\w-]+)\s*\)", css))
     orfaos = sorted(secos - definidos)
     assert not orfaos, (
@@ -1469,43 +1051,16 @@ def test_todo_token_de_cor_sem_reserva_esta_definido() -> None:
 
 
 def test_a_mascara_pega_as_duas_formas_de_endereco() -> None:
-    """Com dois-pontos e COLADO — o daemon publica a segunda.
-
-    07/09/2026: `_mascarar` fazia `split(":")` e, sem os seis pedaços,
-    devolvia o argumento INTACTO. O `sysfs` usa dois-pontos e o daemon usa a
-    forma colada, então a página passou o dia inteiro mascarando certo — no
-    caminho de emergência — e teria vazado o endereço real no caminho
-    principal, para a tela e para o registro em disco, assim que o daemon
-    subisse.
-
-    A ASSINATURA É A DE SEMPRE: uma régua que não reconhece a entrada não
-    reclama, devolve o original. Quem lê vê um endereço e supõe mascarado.
-    """
+    """Com dois-pontos e COLADO — o daemon publica a segunda."""
     assert med._mascarar("aa:bb:cc:dd:ee:ff") == "aa:bb:cc:00:00:ff"
     assert med._mascarar("aabbccddeeff") == "aabbcc0000ff"
     assert med._mascarar("AABBCCDDEEFF") == "AABBCC0000FF"
-    # o que não é endereço atravessa sem invenção
     assert med._mascarar("") == ""
     assert med._mascarar("sem endereço") == "sem endereço"
 
 
 def test_o_daemon_vivo_nao_e_mais_pobre_que_o_kernel(monkeypatch) -> None:
-    """Transporte e carga têm de sobreviver aos DOIS caminhos.
-
-    07/09/2026, ligando o daemon dela: o cartão passou de "cabo · 100% ·
-    cheia" (kernel) para "sem transporte · 100%" (daemon). O daemon chama o
-    campo de `transport` e diz `usb`; a página lia `transporte`. E a carga o
-    daemon não publica — ela mora no `power_supply/*/status` do kernel.
-
-    *O caminho principal ficou mais pobre que o de emergência*, e ninguém viu
-    porque a bancada rodou o dia com o daemon parado.
-
-    A RÉGUA MEDE A SAÍDA, não o texto do fonte. A primeira versão desta
-    procurava `c.get("transport")` no código e reprovou a própria cura — o
-    `_so_o_codigo` arranca as cadeias justamente para que ninguém meça prosa.
-    Aqui entra um daemon de mentira com o formato REAL que ele publica, medido
-    no socket dela, e sai o cartão.
-    """
+    """Transporte e carga têm de sobreviver aos DOIS caminhos."""
     daemon = {"controllers": [{
         "index": 0, "connected": True, "transport": "usb", "player_slot": 1,
         "uniq": "aabbccddeeff", "battery_pct": 100, "modelo": "Galactic Purple",
@@ -1524,23 +1079,12 @@ def test_o_daemon_vivo_nao_e_mais_pobre_que_o_kernel(monkeypatch) -> None:
     assert p1["uniq"] == "aabbcc0000ff", (
         f"o endereço saiu sem máscara: {p1['uniq']!r}")
 
-    # E O RÁDIO, que é a outra metade da bancada dela.
     daemon["controllers"][0]["transport"] = "bt"
     assert med.quem_esta_na_mesa()["postos"]["P1"]["transporte"] == "rádio"
 
 
-# ---------------------------------------------------------------------------
-# O GESTO É DADO, E DADO VIAJA NO GIT — 20/09/2026
-# ---------------------------------------------------------------------------
 def test_os_dois_donos_do_gesto_sao_rastreados_pelo_git() -> None:
-    """O gesto das 199 células viaja no clone, ou não é gesto de ninguém.
-
-    Enquanto os donos moravam em `docs/process/` (`.gitignore:178`), eles
-    faltavam em TODO clone limpo e em TODA worktree de agente — e o motor
-    devolvia `{}` calado, porque a ausência era legítima. A ordem dela de
-    20/09 separou DADO de PROCESSO: *"mover o que as réguas precisam"*. Esta
-    régua cobra a metade que o `git` garante; a de baixo cobra o grito.
-    """
+    """O gesto das 199 células viaja no clone, ou não é gesto de ninguém."""
     for relativo in (med._O_COMO_DAS_21, med._O_COMO_DO_MAPA):
         assert relativo.startswith("docs/method/"), (
             f"o dono do gesto voltou para uma pasta de processo: {relativo}")
@@ -1555,38 +1099,21 @@ def test_os_dois_donos_do_gesto_sao_rastreados_pelo_git() -> None:
 
 
 def test_o_dono_que_some_grita_e_nao_devolve_vazio(tmp_path, monkeypatch) -> None:
-    """A ausência virou defeito duro, e é a mudança de 20/09/2026.
-
-    ANTES: sem a pasta `docs/process` inteira o motor devolvia `{}` — e tinha
-    de devolver, porque um clone limpo não a tem. Aquele `{}` legítimo é o que
-    escondeu, por seis dias, o dono arquivado por baixo do leitor: as 199
-    células caíram no fallback da procedência (canal, report, offset), que é
-    literalmente o defeito que ela apontou na linha 10 (*"sinceramente não
-    entendi o que diabos é pra fazer aqui"*).
-
-    DEPOIS: o dono é versionado. Faltar não é mais ambiente — é remoção. Então
-    não há caso em que calar seja certo, e o motor levanta sempre.
-    """
+    """A ausência virou defeito duro, e é a mudança de 20/09/2026."""
     monkeypatch.setattr(med, "RAIZ", tmp_path)
     relativo = "docs/method/UM-DONO.md"
 
-    # 1 · NO LUGAR — o caso de sempre.
     (tmp_path / "docs" / "method").mkdir(parents=True)
     dono = tmp_path / relativo
     dono.write_text("## um-id — título\n\n**O que isto prova.** algo\n",
                     encoding="utf-8")
     assert med._o_dono_do_gesto(relativo) == dono
 
-    # 2 · SUMIU, com a pasta no disco — alguém o moveu.
     dono.unlink()
     assert med._o_dono_do_gesto(relativo) is None
     with pytest.raises(FileNotFoundError, match="o dono do gesto sumiu"):
         med._gesto_do_arquivo(relativo, r"##\s+(\S+)", lambda m: m.group(1))
 
-    # 3 · SEM A PASTA INTEIRA — o caso que ANTES era silêncio legítimo. Um
-    #     checkout sem `docs/method/` não é um clone limpo: é uma árvore
-    #     quebrada, e ela tem de dizer isso em vez de desenhar a página sem
-    #     gesto nenhum.
     shutil.rmtree(tmp_path / "docs" / "method")
     with pytest.raises(FileNotFoundError, match="o dono do gesto sumiu"):
         med._gesto_do_arquivo(relativo, r"##\s+(\S+)", lambda m: m.group(1))

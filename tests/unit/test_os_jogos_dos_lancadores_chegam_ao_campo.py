@@ -1,28 +1,5 @@
 #!/usr/bin/env python3
-"""JOGOS-DOS-LANCADORES-01 — os jogos dos outros cinco chegam ao campo do jogo.
-
-**A FRASE DELA, 09/09/2026** (noqa-acento: citação literal): *"aí a ideia é
-cada um dos lançadores passarem a ter os jogos com perfis dentro da aba
-perfis."*
-
-**E A PREMISSA DA SPRINT CAIU NA MEDIÇÃO DE 10/09/2026, como o topo dela
-previa.** O enunciado dizia que *"a Steam entrega uma CHAVE; os outros cinco
-entregam um NOME"*, e que no Heroic não havia campo com `exe`/`executable`. Era
-verdade sobre uma biblioteca com **zero** jogos baixados. Ela deixou um jogo
-baixando (*"deixei baixando um jogo já"*), e com ele no disco o
-`legendary_library.json` passou a trazer::  # noqa-acento: citação dela
-
-    "is_installed": true,
-    "install": {"executable": "retail/gotg.exe", "install_path": "…"}
-
-O basename disso — ``gotg.exe`` — é a `wm_class`, que é o MESMO campo do perfil
-que a Steam usa (`window_class`), pela sexta forma do `simple_match`.
-
-**NENHUMA RÉGUA AQUI TOCA A BIBLIOTECA DELA.** Todas passam `lar=tmp_path` ou
-substituem a fonte — a §4 da sprint exige isso com todas as letras, e o lar de
-mentira da suíte é um ESPELHO por symlink, então `Path.home()` num teste
-alcançaria o Heroic de verdade.
-"""
+"""JOGOS-DOS-LANCADORES-01 — os jogos dos outros cinco chegam ao campo do jogo."""
 from __future__ import annotations
 
 import json
@@ -49,19 +26,7 @@ def _heroic(
     itens: list[dict[str, Any]],
     umu: dict[str, str] | None = None,
 ) -> pathlib.Path:
-    """Uma biblioteca da Epic de mentira, na árvore de flatpak que é a dela.
-
-    **O `umu.json` ENTROU EM 21/09/2026, e ele é de onde a chave de janela vem
-    hoje.** Até então esta fixture escrevia só a biblioteca, e a chave era
-    DERIVADA do `install.executable` — uma derivação que a janela viva do GotG
-    derrubou no mesmo dia. Uma fixture sem o `umu.json` mede o mundo de ontem.
-
-    `umu=None` escreve o mapa REAL medido no disco dela; `umu={}` escreve o
-    caso legítimo de um jogo que o umu não conhece.
-
-    O instalado é o registro da Epic (`legendary/installed.json`), que o Heroic
-    lê (02/10/2026): o item com `is_installed` entra nele, com o `is_dlc` dele.
-    """
+    """Uma biblioteca da Epic de mentira, na árvore de flatpak que é a dela."""
     pasta = lar / ".var/app" / HEROIC_ID / "config/heroic"
     alvo = pasta / "store_cache/legendary_library.json"
     alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -74,20 +39,15 @@ def _heroic(
     return pasta
 
 
-#: O `store_cache/umu.json` dela, medido em 21/09/2026 — com o `__timestamp`
-#: que o Heroic guarda no mesmo dicionário e que NÃO é jogo.
 UMU_DO_DISCO_DELA: dict[str, Any] = {
     "legendary_63a665088eb1480298f1e57943b225d8": "umu-1088850",
     "__timestamp": {"legendary_63a665088eb1480298f1e57943b225d8":
                     "Thu Sep 10 2026 00:17:23 GMT-0300"},
 }
 
-#: A `wm_class` que a janela do GotG anuncia DE VERDADE — medida com `xprop` na
-#: tela dela em 21/09/2026, com o jogo aberto pelo Heroic.
 JANELA_DO_GOTG = "steam_app_1088850"
 
 
-#: O jogo baixado dela, com os campos EXATOS que o disco trouxe em 10/09/2026.
 BAIXADO: dict[str, Any] = {
     "app_name": "63a665088eb1480298f1e57943b225d8",
     "title": "Marvel's Guardians of the Galaxy",
@@ -96,37 +56,22 @@ BAIXADO: dict[str, Any] = {
                 "install_path": "/casa/Games/Heroic/MarvelGOTG",
                 "is_dlc": False},
 }
-#: A roupa que veio junto com ele — `is_dlc: true`, e INSTALADA.
 A_ROUPA: dict[str, Any] = {
     "app_name": "9596620d263b40c083ddf1f0c662c8ff",
     "title": "Marvel's Guardians of the Galaxy: Social-Lord Outfit",
     "is_installed": True,
     "install": {"executable": "", "is_dlc": True},
 }
-#: Um jogo que ela tem na conta e não baixou — o caso dos outros 28.
 SO_NA_CONTA: dict[str, Any] = {
     "app_name": "Catnip", "title": "Borderlands 3",
     "is_installed": False, "install": {"install_size": "0", "is_dlc": False},
 }
 
 
-# ---------------------------------------------------------------------------
-# 1. O ACESSÓRIO NÃO É JOGO — e o campo que diz isso é declarado, não adivinhado
-# ---------------------------------------------------------------------------
 def test_o_dlc_e_o_redistribuivel_saem_da_contagem(
     tmp_path: pathlib.Path,
 ) -> None:
-    """`install.is_dlc` é quem manda — nunca uma lista de nomes.
-
-    Medido no disco dela em 10/09/2026: **8** acessórios, não o `gog-redist`
-    sozinho que a §2 da sprint contava — sete DLC da Epic (trilha sonora, art
-    book, roupa, wallpaper) mais o redistribuível da GOG, que também traz
-    `is_dlc: true`. Sobram **29** jogos de 37.
-
-    **MORDIDA:** tire o `if jogo.e_acessorio: continue` de `_heroic` e a roupa
-    volta a contar como jogo INSTALADO — o cartão passa a prometer dois jogos
-    jogáveis onde há um, e a lista oferece uma roupa como se fosse jogo.
-    """
+    """`install.is_dlc` é quem manda — nunca uma lista de nomes."""
     _heroic(tmp_path, [BAIXADO, A_ROUPA, SO_NA_CONTA])
 
     b = censo.biblioteca_de("Heroic", lar=tmp_path)
@@ -139,12 +84,7 @@ def test_o_dlc_e_o_redistribuivel_saem_da_contagem(
 def test_o_redistribuivel_da_gog_cai_pela_mesma_regua(
     tmp_path: pathlib.Path,
 ) -> None:
-    """*Galaxy Common Redistributables* — `app_name: gog-redist`, `is_dlc: true`.
-
-    Ele está no disco dela e é o item que a sprint nomeava. Cai pelo CAMPO, e
-    não por um nome cravado — que é o que faz esta régua alcançar também os
-    sete DLC da Epic que a sprint não tinha visto.
-    """
+    """*Galaxy Common Redistributables* — `app_name: gog-redist`, `is_dlc: true`."""
     pasta = tmp_path / ".var/app" / HEROIC_ID / "config/heroic/store_cache"
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "gog_library.json").write_text(json.dumps({"games": [
@@ -153,7 +93,6 @@ def test_o_redistribuivel_da_gog_cai_pela_mesma_regua(
         {"app_name": "1421309312", "title": "Worms Revolution Gold Edition",
          "is_installed": False, "install": {"is_dlc": False}},
     ]}), encoding="utf-8")
-    # O registro da GOG dela, lido em 02/10/2026: vazio (o `gog-redist` não está nele).
     plantar_o_registro(pasta.parent, [], loja="gog")
 
     b = censo.biblioteca_de("Heroic", lar=tmp_path)
@@ -161,28 +100,10 @@ def test_o_redistribuivel_da_gog_cai_pela_mesma_regua(
     assert [j.nome for j in b.jogos] == ["Worms Revolution Gold Edition"]
 
 
-# ---------------------------------------------------------------------------
-# 2. A CHAVE — e o basename, que é o que a janela anuncia
-# ---------------------------------------------------------------------------
 def test_a_chave_de_janela_vem_do_umu_e_nao_do_executavel(
     tmp_path: pathlib.Path,
 ) -> None:
-    """**FATO SUBSTITUÍDO — 21/09/2026, e esta régua cravava o errado.**
-
-    Ela dizia: *"``retail/gotg.exe`` → ``gotg.exe``, que é o que a `wm_class`
-    traz"*. A segunda metade era DERIVAÇÃO, e o próprio código declarava isso
-    (a nota de 11/09 em `classe_de_janela`: *"ninguém abriu Guardiões da
-    Galáxia e leu a classe da janela viva"*).
-
-    Ela abriu, e o `xprop` respondeu ``steam_app_1088850``: o Heroic lança por
-    `umu`, que monta a pilha da Steam e exporta `SteamAppId`; o Proton batiza a
-    janela por ele. **Uma régua de texto de tela cobra a PROPRIEDADE, nunca o
-    literal** — e esta cravava um literal que impedia a cura.
-
-    **MORDIDA:** devolva o basename do executável em `classe_de_janela`. O
-    perfil volta a nascer com `window_class=["gotg.exe"]`, que nunca casa —
-    e era esse o estado do perfil dela entre 10 e 21/09.
-    """
+    """**FATO SUBSTITUÍDO — 21/09/2026, e esta régua cravava o errado.**"""
     _heroic(tmp_path, [BAIXADO])
 
     jogo = censo.biblioteca_de("Heroic", lar=tmp_path).instalados[0]
@@ -198,20 +119,7 @@ def test_a_chave_de_janela_vem_do_umu_e_nao_do_executavel(
 def test_quem_nao_tem_chave_nao_e_oferecido_mesmo_instalado(
     tmp_path: pathlib.Path,
 ) -> None:
-    """Duas ausências diferentes, e nenhuma das duas vira oferta.
-
-    * *Borderlands 3* — ela tem na conta e não baixou. É o caso dos outros 28.
-    * o jogo da GOG — instalado (no registro da GOG) e **sem `executable`**,
-      nem na biblioteca nem no registro: nada ali diz o binário.
-
-    É a metade honesta da §3: uma linha sem chave é uma linha que nunca
-    reconhece jogo nenhum. Os dois continuam CONTANDO na biblioteca — o cartão
-    da aba Lançadores diz os dois números —, e só não viram sugestão de campo.
-
-    **MORDIDA:** tire o `and jogo.classe_de_janela` de
-    `jogos_com_chave_de_janela` e o jogo da GOG passa a ser oferecido com
-    `value=""` — o campo grava vazio e o Salvar recusa sem ela entender por quê.
-    """
+    """Duas ausências diferentes, e nenhuma das duas vira oferta."""
     _heroic(tmp_path, [BAIXADO, SO_NA_CONTA])
     gog = tmp_path / ".var/app" / HEROIC_ID / "config/heroic/store_cache"
     (gog / "gog_library.json").write_text(json.dumps({"games": [
@@ -230,16 +138,7 @@ def test_quem_nao_tem_chave_nao_e_oferecido_mesmo_instalado(
 def test_o_emulador_nao_finge_ter_uma_janela_por_rom(
     tmp_path: pathlib.Path,
 ) -> None:
-    """As 7 ROMs do RetroArch dela são UM processo — não sete janelas.
-
-    O RetroArch marca `instalado=True` em toda ROM da playlist (o arquivo está
-    no disco), e a `chave` dele é o CAMINHO da ROM. Se o caminho virasse chave
-    de janela, sete perfis nasceriam mirando classes que não existem.
-
-    **MORDIDA:** faça `classe_de_janela` cair para o `chave` quando não há
-    executável e as ROMs voltam a ser oferecidas, cada uma com o basename do
-    arquivo (`240pSuite.sfc`) no lugar de uma `wm_class`.
-    """
+    """As 7 ROMs do RetroArch dela são UM processo — não sete janelas."""
     pasta = tmp_path / ".var/app/org.libretro.RetroArch/config/retroarch"
     (pasta / "playlists").mkdir(parents=True, exist_ok=True)
     (pasta / "playlists/Nintendo - SNES.lpl").write_text(json.dumps({"items": [
@@ -253,18 +152,10 @@ def test_o_emulador_nao_finge_ter_uma_janela_por_rom(
     assert censo.jogos_com_chave_de_janela(lar=tmp_path) == []
 
 
-# ---------------------------------------------------------------------------
-# 3. A SEGUNDA ORIGEM CHEGA AO CAMPO — e o que ela grava FUNCIONA
-# ---------------------------------------------------------------------------
 def test_o_jogo_do_lancador_vira_oferta_com_a_wm_class_no_value(
     tmp_path: pathlib.Path,
 ) -> None:
-    """A mesma divisão da Steam: `value` é o ENDEREÇO, `label` é o que ela lê.
-
-    **MORDIDA:** troque `jogo.valor` por `jogo.nome` no `<option>` de
-    `_html_dos_jogos` e escolher a linha escreveria *Marvel's Guardians of the
-    Galaxy* no campo, virando `window_class=["Marvel's Guardians…"]`.
-    """
+    """A mesma divisão da Steam: `value` é o ENDEREÇO, `label` é o que ela lê."""
     _heroic(tmp_path, [BAIXADO, A_ROUPA, SO_NA_CONTA])
 
     ofertas = jl.jogos_dos_lancadores(lar=tmp_path)
@@ -298,16 +189,7 @@ def test_o_que_o_campo_grava_casa_com_a_janela_de_verdade() -> None:
 
 
 def test_a_steam_desempata_quando_o_mesmo_jogo_vem_das_duas_origens() -> None:
-    """Um jogo em duas lojas não pode virar duas linhas na sugestão.
-
-    E a junção é PURA — recebe as duas listas, não lê disco: quem chama é a
-    pintura da aba, dez vezes por segundo, e cada origem já vem memoizada pela
-    assinatura da sua biblioteca.
-
-    **MORDIDA:** tire o filtro `if chave_de_busca(j.nome) not in vistos` de
-    `ofertas_do_campo_do_jogo` e a lista oferece o mesmo nome duas vezes, com
-    endereços diferentes — e ela não tem como saber qual escolher.
-    """
+    """Um jogo em duas lojas não pode virar duas linhas na sugestão."""
     steam = [jl.JogoLocal(appid="1245620", nome="ELDEN RING", fonte="steam")]
     dos_lancadores = [
         jl.JogoLocal(appid="", nome="Elden Ring", fonte="heroic",
@@ -321,37 +203,19 @@ def test_a_steam_desempata_quando_o_mesmo_jogo_vem_das_duas_origens() -> None:
     assert [j.valor for j in ofertas] == ["1245620", "outro.exe"]
 
 
-# ---------------------------------------------------------------------------
-# 4. O RÓTULO AO LADO DO CAMPO — a lista ofereceu, a tela confirma
-# ---------------------------------------------------------------------------
 def test_o_rotulo_diz_o_nome_do_jogo_do_lancador() -> None:
-    """Escolher a linha e o campo ficar mudo é a lista mentindo por omissão.
-
-    É a decisão 10-Q4 dela — *"à direita do campo aparece o nome do jogo"* — e
-    até 10/09 ela valia só para a Steam.
-
-    **MORDIDA:** tire o ramo `do_lancador` de `frase_do_campo_do_jogo` e a
-    terceira asserção reprova: o rótulo volta ao silêncio sobre um valor que o
-    próprio produto acabou de oferecer.
-    """
+    """Escolher a linha e o campo ficar mudo é a lista mentindo por omissão."""
     chaves = {"gotg.exe": "Marvel's Guardians of the Galaxy"}
 
     assert jl.frase_do_campo_do_jogo("gotg.exe", {}, chaves) == (
         "Marvel's Guardians of the Galaxy", False)
-    # SEM as chaves, o silêncio continua sendo o certo: não há o que afirmar.
     assert jl.frase_do_campo_do_jogo("gotg.exe", {}) is None
-    # E o alarme de endereço colado não muda — ele tem barra, o nome não tem.
     assert jl.frase_do_campo_do_jogo("https://x/y", {}, chaves) == (
         jl.MSG_NAO_RECONHECI, True)
 
 
 def test_a_busca_do_campo_acha_pelo_endereco_do_lancador() -> None:
-    """Depois de escolher, o campo tem `gotg.exe` — e a lista tem de segurá-lo.
-
-    **MORDIDA:** volte `casa_com_o_que_ela_digitou` a olhar só `jogo.appid` e
-    esta linha reprova: reabrir a lista com o campo preenchido não mostraria a
-    linha que está escrita nele.
-    """
+    """Depois de escolher, o campo tem `gotg.exe` — e a lista tem de segurá-lo."""
     jogo = jl.JogoLocal(appid="", nome="Marvel's Guardians of the Galaxy",
                         fonte="heroic", lancador="Heroic", chave="gotg.exe")
 
@@ -363,30 +227,15 @@ def test_a_busca_do_campo_acha_pelo_endereco_do_lancador() -> None:
 def test_nenhum_lancador_instalado_e_lista_so_da_steam(
     tmp_path: pathlib.Path,
 ) -> None:
-    """Máquina sem Heroic: a oferta é a de sempre, e nada quebra.
-
-    É a exigência da §4 da sprint com todas as letras — *"nenhuma régua desta
-    sprint pode depender de a máquina ter Heroic instalado"* —, e aqui ela é
-    medida em vez de prometida: um `lar` vazio devolve lista vazia.
-    """
+    """Máquina sem Heroic: a oferta é a de sempre, e nada quebra."""
     assert jl.jogos_dos_lancadores(lar=tmp_path) == []
     assert censo.jogos_com_chave_de_janela(lar=tmp_path) == []
     assert jl.jogos_com_janela(lar=tmp_path, pastas=[tmp_path]) == []
 
 
-# ---------------------------------------------------------------------------
-# 5. O ALVO DE 11/09 — o «Detectar» que acha jogo de fora da Steam
-#
-# A FOTO DELA: o botão responde `PRAGMATA` para `steam_app_3357650` e **não
-# responde nada** para um jogo que não é da Steam. *"em perfil falta detectar
-# os jogos dos demais lançadores. dando exemplo do guardi]ães da galáxia."*
 # (noqa-acento: citação literal dela, com a digitação dela)
-# ---------------------------------------------------------------------------
 LUTRIS_ID = "net.lutris.Lutris"
 
-#: As 23 colunas do `pga.db` dela, medidas em 11/09/2026. A régua cria a tabela
-#: INTEIRA de propósito: um `SELECT` por nome de coluna tem de sobreviver a
-#: colunas que ele não pede, que é o caso real.
 _ESQUEMA_LUTRIS = (
     "CREATE TABLE games (id INTEGER PRIMARY KEY, name TEXT, sortname TEXT, "
     "slug TEXT, installer_slug TEXT, parent_slug TEXT, platform TEXT, "
@@ -421,18 +270,7 @@ def _atalho(pasta: pathlib.Path, arquivo: str, corpo: str) -> None:
 def test_a_biblioteca_do_lutris_sai_do_banco_e_nao_da_pasta_vazia(
     tmp_path: pathlib.Path,
 ) -> None:
-    """O LEITOR OLHAVA O ARQUIVO ERRADO, e o sintoma era a AUSÊNCIA de dado.
-
-    Medido no disco dela em 11/09/2026: `config/lutris` é symlink para
-    `data/lutris`, `games/` tem **0** arquivos e a biblioteca inteira mora no
-    `pga.db`. O cartão dizia *"A biblioteca está vazia"* sobre um Lutris que
-    podia estar cheio — e, pior para esta sprint, o `.yml` não traz
-    `executable`, que é a ETIQUETA que o perfil precisa.
-
-    **MORDIDA:** volte `_lutris` a ler só `games/*.yml` e as três asserções
-    reprovam: zero jogos, zero chaves, e o «Detectar» continua sem nome para
-    um jogo do Lutris.
-    """
+    """O LEITOR OLHAVA O ARQUIVO ERRADO, e o sintoma era a AUSÊNCIA de dado."""
     _lutris(tmp_path, [
         ("Celeste", "celeste", "/casa/Games/celeste/Celeste.bin.x86_64", 1),
         ("Hollow Knight", "hollow-knight", "/casa/Games/hk/hollow_knight.x86_64", 1),
@@ -452,14 +290,7 @@ def test_a_biblioteca_do_lutris_sai_do_banco_e_nao_da_pasta_vazia(
 def test_o_yml_de_configuracao_propria_nao_some_com_a_leitura_nova(
     tmp_path: pathlib.Path,
 ) -> None:
-    """A leitura nova não pode ENCOLHER o que já funcionava.
-
-    Um jogo configurado à mão tem `.yml` e pode não estar no banco. Ele
-    continua entrando, e não duplica quando está nos dois.
-
-    **MORDIDA:** tire o bloco do `games/*.yml` de `_lutris` e o jogo só de
-    `.yml` some da biblioteca — uma regressão silenciosa contra o leitor velho.
-    """
+    """A leitura nova não pode ENCOLHER o que já funcionava."""
     _lutris(tmp_path, [("Celeste", "celeste", "/casa/celeste/Celeste", 1)])
     games = tmp_path / ".var/app" / LUTRIS_ID / "config/lutris/games"
     games.mkdir(parents=True, exist_ok=True)
@@ -474,19 +305,7 @@ def test_o_yml_de_configuracao_propria_nao_some_com_a_leitura_nova(
 def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
     tmp_path: pathlib.Path,
 ) -> None:
-    """`StartupWMClass=` é a etiqueta — e não é invenção nossa, é a spec XDG.
-
-    Medido nas quatro pastas dela em 11/09/2026: 221 `.desktop`, 59 com
-    `StartupWMClass`, 31 com `Categories=Game` — e **23 desses 31 são os
-    `meow-steam-*.desktop` dela, que escrevem `StartupWMClass=steam_app_<id>`**.
-    É a prova de que este campo é o MESMO endereço que o perfil da Steam já
-    guarda.
-
-    **MORDIDA:** tire o `if steam_appid_de_texto(classe) is not None: continue`
-    e a segunda asserção reprova — os 23 jogos da Steam voltam pela porta dos
-    fundos, com o nome CORTADO do atalho (medido: `ORPHEUS` no lugar de
-    `ORPHEUS: TO HELL AND BACK`) e sem o appid que o produto inteiro usa.
-    """
+    """`StartupWMClass=` é a etiqueta — e não é invenção nossa, é a spec XDG."""
     _atalho(tmp_path, "celeste.desktop",
             "[Desktop Entry]\nType=Application\nName=Celeste\n"
             "Exec=/casa/celeste/Celeste\nCategories=Game;\n"
@@ -513,8 +332,6 @@ def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
 
     diretos = jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])
 
-    # O EMULADOR FICA: ele é UM processo para todas as ROMs (§4 da sprint), e
-    # a linha por emulador é a única que existe — e é a certa.
     assert [(j.chave, j.nome) for j in diretos] == [
         ("Celeste", "Celeste"), ("retroarch", "RetroArch")]
     assert all(j.appid == "" for j in diretos)
@@ -524,18 +341,7 @@ def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
 def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
     tmp_path: pathlib.Path,
 ) -> None:
-    """**A FALTA QUE ELA NOMEOU, medida nas três origens de uma vez.**
-
-    `steam_appid_from_wm_class("steam_app_3357650")` já devolvia `3357650`, e
-    daí o botão dizia `PRAGMATA`. Do outro lado não havia função nenhuma: a
-    regra era gravada certa (forma "janela", ONDA5-10-01) e o NOME ficava em
-    branco — que é o que ela leu como *"não acha"*.
-
-    **MORDIDA:** faça `jogo_da_janela` devolver `None` sempre (ou compare com
-    `==` sem `casefold`) e o `GOTG.EXE` do `pga.db` deixa de reconhecer a
-    janela `steam_app_1088850` do Heroic — o mesmo jogo deixa de se reconhecer conforme
-    o lançador por onde ela o abriu.
-    """
+    """**A FALTA QUE ELA NOMEOU, medida nas três origens de uma vez.**"""
     _heroic(tmp_path, [BAIXADO])
     _lutris(tmp_path, [("Celeste", "celeste", "/casa/celeste/Celeste.x86_64", 1)])
     _atalho(tmp_path, "super-zsnes.desktop",
@@ -550,13 +356,8 @@ def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
     assert achar("steam_app_1088850").lancador == "Heroic"
     assert achar("Celeste.x86_64").lancador == "Lutris"
     assert achar("SUPERZSNES").lancador == jl.LANCADOR_DIRETO
-    # A CAIXA DOBRA DOS DOIS LADOS, e não é gosto: `MatchCriteria.matches` já
-    # compara `window_class` sem caixa (`_casa_sem_caixa`), e o compositor pode
-    # anunciar a classe com a caixa que o toolkit escolheu.
     assert achar("STEAM_APP_1088850").nome == "Marvel's Guardians of the Galaxy"
-    # A STEAM TEM DONO, e não é este: quem traduz appid é `catalogo_de_jogos`.
     assert achar("steam_app_3357650") is None
-    # AS DUAS RECUSAS HONESTAS do «Detectar» continuam de pé.
     assert achar("unknown") is None
     assert achar("") is None
     assert achar(None) is None
@@ -565,32 +366,16 @@ def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
 def test_o_nome_da_janela_chega_ao_rotulo_sem_a_tela_ler_disco_duas_vezes(
     tmp_path: pathlib.Path,
 ) -> None:
-    """A PONTA: `nomes_das_janelas` + `frase_do_campo_do_jogo` = o nome do jogo.
-
-    É o caminho inteiro que a aba Perfis vai chamar numa linha, e ele responde
-    ao `steam_app_1088850` exatamente como responde ao `3357650`: com o NOME.
-
-    **E ELE É MEMOIZADO**, porque quem chama é PINTURA — dez vezes por
-    segundo, sobre um `pga.db` e 221 `.desktop`.
-
-    **MORDIDA:** tire o freio da assinatura de `nomes_das_janelas` e a última
-    asserção reprova — o segundo `dict` deixa de ser o MESMO objeto, que é o
-    sinal de que o disco foi relido sem nada ter mudado.
-    """
+    """A PONTA: `nomes_das_janelas` + `frase_do_campo_do_jogo` = o nome do jogo."""
     jl._NOMES_DAS_JANELAS = None
     _heroic(tmp_path, [BAIXADO])
 
     chaves = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
 
-    # **O NÚMERO ENTRA JUNTO — 21/09/2026.** O caderno responde pela classe E
-    # pelo appid que ela contém, porque o «Detectar» pergunta pelo número (ele
-    # extrai o appid da classe pela fonte única do produto). Sem o alias, o
-    # botão dizia *"Não instalado aqui"* sobre o jogo aberto na tela dela.
     assert chaves == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
                       "1088850": "Marvel's Guardians of the Galaxy"}
     assert jl.frase_do_campo_do_jogo("steam_app_1088850", {}, chaves) == (
         "Marvel's Guardians of the Galaxy", False)
-    # O QUE O DETECTOR ENTREGA vem como o compositor anunciou; a consulta dobra.
     assert jl.frase_do_campo_do_jogo("STEAM_APP_1088850", {}, chaves) == (
         "Marvel's Guardians of the Galaxy", False)
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) is chaves
@@ -599,12 +384,7 @@ def test_o_nome_da_janela_chega_ao_rotulo_sem_a_tela_ler_disco_duas_vezes(
 def test_o_rotulo_nunca_derruba_a_aba_por_causa_de_um_disco_torto(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Isto é PINTURA sobre o disco dela — e o contrato é não levantar NUNCA.
-
-    **MORDIDA:** tire o `try/except` de `nomes_das_janelas` e o `OSError` sobe
-    até `a10_perfis._jogo_reconhecido`, que o converte em tarja de recusa — a
-    aba Perfis inteira para de pintar por causa de um rótulo.
-    """
+    """Isto é PINTURA sobre o disco dela — e o contrato é não levantar NUNCA."""
     def _explode(*_a: object, **_k: object) -> list[Any]:
         raise OSError("um `pga.db` com byte torto")
 
@@ -614,49 +394,20 @@ def test_o_rotulo_nunca_derruba_a_aba_por_causa_de_um_disco_torto(
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) == {}
 
 
-# ---------------------------------------------------------------------------
-# 5. O REPARO DE 11/09 — as quatro réguas que o conferente cobrou
-# ---------------------------------------------------------------------------
 def test_o_caderno_releu_o_disco_quando_ela_instalou_o_segundo_jogo(
     tmp_path: pathlib.Path,
 ) -> None:
-    """**A TRAVA MEDIDA CONTRA A PRÓPRIA SAÍDA, e ela atravessou 17 réguas.**
-
-    A única asserção de assinatura desta suíte era o caderno BATENDO
-    (``nomes_das_janelas(...) is chaves``) — o ACERTO. Um caderno que nunca
-    mais relê o disco passa nela, e passava: `assinatura_das_bibliotecas`
-    fazia `os.stat()` na RAIZ de configuração do lançador, e a biblioteca do
-    Heroic mora em `store_cache/legendary_library.json`. **O `mtime` de um
-    diretório não muda quando um arquivo de um SUBdiretório é reescrito.**
-
-    O que isso custava na tela dela: a aba Perfis é PINTURA num processo
-    longo, então a resposta CONGELAVA até ela reiniciar o produto — e o
-    gatilho era exatamente o passo que a sprint manda ela dar, *instalar um
-    jogo do Heroic*.
-
-    **MORDIDA:** troque o corpo de `censo._FONTES["Heroic"]` por `()` — a
-    assinatura volta a ser só a pasta de cima, e as três últimas asserções
-    reprovam: o segundo jogo existe no disco, `jogos_com_janela` o vê, e o
-    caderno continua devolvendo o primeiro sozinho.
-    """
+    """**A TRAVA MEDIDA CONTRA A PRÓPRIA SAÍDA, e ela atravessou 17 réguas.**"""
     jl._NOMES_DAS_JANELAS = None
     _heroic(tmp_path, [BAIXADO])
 
     antes = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
     assert antes == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
                      "1088850": "Marvel's Guardians of the Galaxy"}
-    # O MESMO DISCO DUAS VEZES continua sendo o MESMO objeto — o freio existe.
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) is antes
 
-    #: Ela instala o segundo jogo: o Heroic REESCREVE o mesmo arquivo, dentro
-    #: do mesmo `store_cache`, sem criar nem apagar nada na pasta de cima.
     segundo = dict(BAIXADO, app_name="outro", title="Hades II",
                    install={"executable": "bin/hades2.exe", "is_dlc": False})
-    # **O `umu.json` VEM JUNTO — 21/09/2026.** Um `.exe` sem umu-id não tem
-    # chave de janela (o Proton é quem batiza a janela, não o nome do arquivo),
-    # e uma régua que instalasse o segundo jogo SEM o umu mediria o caderno
-    # relendo o disco e não achando nada — verde sobre o freio, e nada sobre a
-    # releitura.
     _heroic(tmp_path, [BAIXADO, segundo], umu=dict(
         UMU_DO_DISCO_DELA, legendary_outro="umu-1145350"))
 
@@ -674,22 +425,7 @@ def test_o_caderno_releu_o_disco_quando_ela_instalou_o_segundo_jogo(
 def test_o_caderno_releu_quando_o_lutris_ganhou_uma_linha_no_banco(
     tmp_path: pathlib.Path,
 ) -> None:
-    """O `pga.db` é um ARQUIVO dentro da pasta — a pasta não muda de `mtime`.
-
-    Mesma forma do defeito do Heroic, e a segunda metade da cura: o sqlite
-    reescreve o banco NO LUGAR (e, em modo WAL, escreve num `pga.db-wal` que
-    a assinatura também precisa ver — por isso os dois estão em `_FONTES`).
-
-    **O `journal_mode=MEMORY` É A RÉGUA, e não um detalhe do Lutris.** No
-    modo padrão o sqlite cria e apaga um `pga.db-journal` DENTRO da pasta, e
-    isso muda o `mtime` do diretório sozinho: a régua passaria pelo caminho
-    errado e não mediria nada — que é exatamente o defeito que ela existe para
-    fechar. Com o diário na memória, o único byte que muda no disco é o do
-    `pga.db`, e é ele que a assinatura tem de enxergar.
-
-    **MORDIDA:** tire `"pga.db"` de `censo._FONTES["Lutris"]` e a última
-    asserção reprova — a segunda linha do banco nunca chega ao campo.
-    """
+    """O `pga.db` é um ARQUIVO dentro da pasta — a pasta não muda de `mtime`."""
     jl._NOMES_DAS_JANELAS = None
     _lutris(tmp_path, [("Celeste", "celeste", "/casa/celeste/Celeste.x86_64", 1)])
 
@@ -706,7 +442,6 @@ def test_o_caderno_releu_quando_o_lutris_ganhou_uma_linha_no_banco(
                     "VALUES (?, ?, ?, ?)",
                     ("Hollow Knight", "hk", "/casa/hk/hollow_knight.x86_64", 1))
     con.close()
-    # A PROVA DE QUE A RÉGUA MEDE O ARQUIVO: a pasta de cima não se mexeu.
     assert pasta.stat().st_mtime_ns == antes_da_pasta
 
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) == {
@@ -717,22 +452,7 @@ def test_o_caderno_releu_quando_o_lutris_ganhou_uma_linha_no_banco(
 def test_o_cliente_de_loja_nao_entra_na_lista_de_jogos_e_o_emulador_entra(
     tmp_path: pathlib.Path,
 ) -> None:
-    """**O QUE A TERCEIRA ORIGEM ACHA NO DISCO DELA HOJE É ZERO JOGO.**
-
-    Medido em 11/09/2026, e corrige o que esta entrega publicou primeiro: os
-    cinco `.desktop` que passavam eram `azahar`, `mGBA`, `retroarch`,
-    `SUPERZSNES` — quatro EMULADORES — e `rare`, que é o cliente alternativo
-    da Epic e escapava por declarar só `Categories=Game;`. Nenhum jogo.
-
-    * **o Rare SAI** (`_CLIENTES_DE_LOJA`): a biblioteca que ele abre é a
-      MESMA que `censo._heroic` já lê pelo `legendary_library.json`, jogo por
-      jogo — deixá-lo entrar é oferecer a VITRINE no campo «Nome do Jogo»;
-    * **o emulador FICA**, e é decisão com razão escrita: ele é UM processo
-      para todas as ROMs, então a janela dele é a única que existe.
-
-    **MORDIDA:** tire o `if classe.casefold() in _CLIENTES_DE_LOJA` e a
-    primeira asserção reprova — o `rare` volta à lista de jogos dela.
-    """
+    """**O QUE A TERCEIRA ORIGEM ACHA NO DISCO DELA HOJE É ZERO JOGO.**"""
     _atalho(tmp_path, "io.github.dummerle.rare.desktop",
             "[Desktop Entry]\nType=Application\nName=Rare\n"
             "Exec=/usr/bin/flatpak run io.github.dummerle.rare\n"
@@ -752,34 +472,12 @@ def test_o_cliente_de_loja_nao_entra_na_lista_de_jogos_e_o_emulador_entra(
 def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**A PONTA, e ela é a queixa dela — medida nas funções REAIS da aba.**
-
-    Até o reparo de 11/09/2026 nada em `src/` alcançava o motor desta sprint:
-    o «Detectar» respondia `PRAGMATA` a um jogo da Steam e **NADA** a um do
-    Heroic, que é a foto que ela mandou. As quatro respostas abaixo são as
-    quatro pontas, e cada uma tem a sua mordida:
-
-    * arranque o 3º argumento de `frase_do_campo_do_jogo`
-      (`_jogo_reconhecido`) → o rótulo ao lado do campo volta a `("", False)`;
-    * arranque a `classe` de `_agora_vale_em(prof, classe)` (`detectar`) → o
-      desfecho para de nomear o jogo (ver a régua logo abaixo, que o prova
-      pelo GESTO);
-    * arranque `ofertas_do_campo_do_jogo` de `_html_dos_jogos` → o
-      `<datalist>` deixa de oferecer `gotg.exe`;
-    * arranque `_forma_do_que_ela_escolheu` de `editor_jogo` → a `wm_class`
-      que a própria lista ofereceu é gravada como `process_name`.
-
-    A FONTE É SUBSTITUÍDA, e não a `HOME`: o lar de mentira da suíte é um
-    espelho por symlink, e `Path.home()` aqui alcançaria o Heroic DELA.
-    """
+    """**A PONTA, e ela é a queixa dela — medida nas funções REAIS da aba.**"""
     from hefesto_dualsense4unix.interface.pacotes import a10_perfis as a10
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
 
     jl._NOMES_DAS_JANELAS = None
-    #: **O NATIVO ENTRA JUNTO — 21/09/2026.** Ele é o terceiro degrau da
     #: `identidade_de_janela`: sem umu-id e sem appid, um binário que NÃO é
-    #: `.exe` roda direto e o toolkit batiza a janela com o basename. É o caso
-    #: que a cura do Heroic não podia encolher.
     nativo = dict(BAIXADO, app_name="nativo", title="Celeste",
                   install={"executable": "Celeste.x86_64", "is_dlc": False})
     _heroic(tmp_path, [BAIXADO, nativo])
@@ -788,44 +486,23 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
         lar=tmp_path, pastas=[tmp_path]))
     monkeypatch.setattr(jl, "assinatura_das_janelas", lambda *_a, **_k: assinar(
         lar=tmp_path, pastas=[tmp_path]))
-    #: A OUTRA ORIGEM É DUBLÊ porque ela é da Steam e já tem régua própria —
-    #: o que se mede aqui é o lado que NÃO tinha caminho.
     monkeypatch.setattr(a10, "_nomes_dos_jogos", lambda: {"3357650": "PRAGMATA"})
 
-    # 1. O RÓTULO ao lado do campo (`a10_perfis.py`, dentro de `_jogo_reconhecido`)
     assert a10._jogo_reconhecido("steam_app_1088850") == (
         "Marvel's Guardians of the Galaxy", False)
     assert a10._jogo_reconhecido("3357650") == ("PRAGMATA", False)
 
-    # 2. O DESFECHO do «Detectar» (o último `return` de `detectar`)
     prof = SimpleNamespace(name="Perfil",
                            match=from_simple_choice("janela", "steam_app_1088850"))
     assert a10._agora_vale_em(prof, "steam_app_1088850").endswith(
         "· Marvel's Guardians of the Galaxy")
 
-    # 3. O `<datalist>` do campo «Nome do Jogo» — as DUAS origens
     html = a10._html_dos_jogos()
-    #: O APÓSTROFO NÃO É ESCAPADO, e é o `_atr` que manda: escapar o que o
-    #: serializador do navegador não escapa faria a tela reescrever o bloco a
-    #: cada 500 ms para sempre. `DON'T SCREAM` está no catálogo desta casa.
-    # **O `label` DEIXOU DE REPETIR O LANÇADOR EM 11/09/2026** — C4-FUNCIONA-EM.
-    # Quem responde *"de onde vem este jogo?"* passou a ser o campo de CIMA
-    # («Funciona em:»), e repetir «(Heroic)» em cada linha de uma lista que só
-    # tem jogos do Heroic é ruído. O jogo da Steam ganhou o número com o
-    # separador da casa, que é o item 12 da segunda lista dela.
-    # O `value` NÃO MUDOU, e é ele que o campo grava.
     assert ('<option value="steam_app_1088850" '
             'label="Marvel\'s Guardians of the Galaxy"></option>') in html
     assert '<option value="3357650" label="PRAGMATA · 3357650">' in html
 
-    # 4. A FORMA que o Salvar grava para o que a lista ofereceu
-    #
-    # **AS DUAS FORMAS GERAM A MESMA REGRA — medido em 21/09/2026**, e é o que
-    # torna a cura da LANCADOR-AGNOSTICO-01 aditiva: a chave do jogo do Heroic
-    # é `steam_app_<N>`, que `normalize_appid` lê como appid, então a forma é
     # `steam_game`; e `from_simple_choice("steam_game", "1088850")` produz
-    # exatamente `window_class=["steam_app_1088850"]` — a mesma regra que a
-    # forma «janela» produziria, e ela casa com a janela viva.
     assert a10._forma_do_que_ela_escolheu("steam_app_1088850") == "steam_game"
     assert a10._forma_do_que_ela_escolheu("Celeste.x86_64") == "janela"
     assert a10._forma_do_que_ela_escolheu("3357650") == "steam_game"
@@ -838,31 +515,14 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
 def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**O GESTO INTEIRO, pelo botão — e é a foto dela, com o outro desfecho.**
-
-    A régua acima mede as quatro pontas uma a uma; esta chama o GESTO
-    `a10_perfis.detectar`, que é o que o dedo dela aciona, e confere as duas
-    coisas que ele devolve: a regra gravada e a frase.
-
-    Até o reparo de 11/09/2026 a frase era *"«Perfil» agora vale em: Só neste
-    programa"* e parava ali — sobre uma `wm_class` que ela não digitou, vinda
-    de uma janela que ela não está mais olhando. Que é a mesma coisa que não
-    achar o jogo.
-
-    **MORDIDA:** devolva `_agora_vale_em(prof)` sem a `classe` no último
-    `return` de `detectar` e a última asserção reprova — a regra continua
-    certa e a tela volta a calar o nome.
-    """
+    """**O GESTO INTEIRO, pelo botão — e é a foto dela, com o outro desfecho.**"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
     from hefesto_dualsense4unix.interface.pacotes import a10_perfis as a10
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     jl._NOMES_DAS_JANELAS = None
-    #: **O NATIVO ENTRA JUNTO — 21/09/2026.** Ele é o terceiro degrau da
     #: `identidade_de_janela`: sem umu-id e sem appid, um binário que NÃO é
-    #: `.exe` roda direto e o toolkit batiza a janela com o basename. É o caso
-    #: que a cura do Heroic não podia encolher.
     nativo = dict(BAIXADO, app_name="nativo", title="Celeste",
                   install={"executable": "Celeste.x86_64", "is_dlc": False})
     _heroic(tmp_path, [BAIXADO, nativo])
@@ -875,7 +535,6 @@ def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
     monkeypatch.setattr(a10, "_DESFECHO", None, raising=False)
     monkeypatch.setattr(a10, "_ESCOLHIDO", "", raising=False)
 
-    #: A pasta de perfis, sem escrever no disco — mesmo dublê da régua irmã.
     todos = [Profile(name="Perfil", match=MatchAny(), priority=100)]
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: todos)
     monkeypatch.setattr(loader, "load_profile", lambda *a, **k: todos[0])
@@ -885,34 +544,19 @@ def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
         def profile_switch(self, nome: str) -> bool:
             return True
 
-        # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
         def profile_reaplicar(self, nome: str) -> bool:
             return True
 
         def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
             return True
 
-    # **A JANELA É A REAL, medida com `xprop` na tela dela em 21/09/2026.** Até
-    # esta data a régua mandava `gotg.exe`, que era a DERIVAÇÃO pelo executável
-    # — e o «Detectar» gravava fielmente um valor que nunca casaria. Medir o
-    # botão contra o que a janela NÃO diz é a régua respondendo sobre outra
-    # coisa que não o produto.
     ctx = Contexto(state={"active_profile": "Perfil",
                           "window_detect_last_class": "steam_app_1088850"},
                    mesa=[], conectados=[], estados={})
 
     fora = a10.detectar(ctx, {}, _Ponte())
 
-    # A REGRA continua a que a ONDA5-10-01 gravava — nada regrediu.
     assert list(todos[0].match.window_class) == ["steam_app_1088850"]
-    # O CAMPO se corrige com o NÚMERO, e não com o nome: a chave do jogo do
-    # Heroic é `steam_app_<N>`, o «Detectar» a lê como appid (a fonte única
-    # `steam_appid_from_wm_class`) e o campo mostra o número — exatamente como
-    # faz com um jogo da Steam. As duas origens ficaram indistinguíveis na
-    # tela, que é o que ela pediu: *"qualquer outro lançador o funcionamento
-    # segue igual"*.
     assert fora["mesa"]["editor.jogo"] == "1088850"
-    # E A FRASE nomeia o jogo, que é a queixa dela de 11/09/2026.
-    # Desde 13/09/2026 a frase viaja em `relato`: a tira da aba não fala mais.
     frase = str(fora.get("relato") or "")
     assert frase.endswith("· Marvel's Guardians of the Galaxy"), frase

@@ -69,16 +69,12 @@ def _doctor_sem_ucm(tmp_path: Path, cards: Path) -> str:
     return r.stdout + r.stderr
 
 
-# ------------------------------------------------------------ 2. o doctor
-
-
 def test_sem_ucm_conf_com_dualsense_no_cabo_e_aviso(tmp_path: Path) -> None:
     """A MORDIDA: volte ao `info` incondicional e esta régua reprova."""
     saida = _doctor_sem_ucm(tmp_path, _cards(tmp_path, NOME_MEDIDO))
     assert "[WARN] DualSense no cabo e sem" in saida
     assert "alsa-ucm-conf" in saida
     assert "esta distro não usa UCM" not in saida
-    # O `--fix` não instala pacote: o conselho diz a ordem dos dois gestos.
     assert "Depois de instalar o pacote, rode scripts/doctor.sh --fix" in saida
 
 
@@ -86,9 +82,6 @@ def test_sem_ucm_conf_e_sem_dualsense_continua_informacao(tmp_path: Path) -> Non
     saida = _doctor_sem_ucm(tmp_path, _cards(tmp_path))
     assert "[WARN]" not in saida
     assert "esta distro não usa UCM" in saida
-
-
-# ------------------------------------------------------ 3. o --fix refaz
 
 
 def _corpo(nome: str) -> str:
@@ -115,11 +108,7 @@ def test_o_fix_refaz_o_gancho_antes_de_reiniciar_o_wireplumber() -> None:
 
 
 def _sem_sudo(tmp_path: Path) -> Path:
-    """Um `sudo` que recusa, na FRENTE do PATH: régua nenhuma daqui pede senha.
-
-    As árvores UCM de mentira moram no tmp, que é gravável — o roteiro nem
-    chega a chamar o `sudo`. Este dublê é a trava para o dia em que chegar.
-    """
+    """Um `sudo` que recusa, na FRENTE do PATH: régua nenhuma daqui pede senha."""
     binario = tmp_path / "bin-sem-sudo"
     binario.mkdir(exist_ok=True)
     falso = binario / "sudo"
@@ -150,19 +139,13 @@ def _fix_ucm(
 
 
 def test_o_fix_sem_ucm_conf_nao_diz_ok(tmp_path: Path) -> None:
-    """A MORDIDA do furo 5: o roteiro sai 0 sem gravar, e o `--fix` dizia OK.
-
-    Volte a ler só o código de saída (ou a saída para /dev/null) e esta régua
-    reprova — é a máquina sem `alsa-ucm-conf`, exatamente a que a leva expõe.
-    """
+    """A MORDIDA do furo 5: o roteiro sai 0 sem gravar, e o `--fix` dizia OK."""
     sysfs, _ = _mesa(tmp_path)
     saida = _fix_ucm(tmp_path, tmp_path / "sem-ucm", sysfs)
     assert "[ OK ]" not in saida, saida
     assert "[WARN]" not in saida, "a falta do pacote é o check que acusa, com o DualSense no cabo"
     assert "perfil UCM do DualSense não gravado" in saida
     assert "ucm.conf ausente" in saida
-    # O `[ucm] aviso:` do roteiro sai inteiro: dentro da linha do doctor ele
-    # dizia "não gravado: aviso: …". MORDIDA: tire o `${fecho#aviso: }`.
     assert "aviso:" not in saida, saida
 
 
@@ -214,11 +197,7 @@ def test_o_fix_que_falha_e_aviso_com_o_motivo(tmp_path: Path) -> None:
 
 
 def test_o_fix_sem_o_roteiro_fica_calado(tmp_path: Path) -> None:
-    """Pacote que leva o doctor sem o roteiro não pode virar "falhou" mudo.
-
-    O `ROOT_DIR` é `readonly` e nasce do lugar do próprio doctor: a cópia
-    solitária numa pasta `scripts/` sem o irmão é o layout desse pacote.
-    """
+    """Pacote que leva o doctor sem o roteiro não pode virar "falhou" mudo."""
     sysfs, ucm = _mesa(tmp_path)
     sozinho = tmp_path / "pacote" / "scripts" / "doctor.sh"
     sozinho.parent.mkdir(parents=True)
@@ -226,9 +205,6 @@ def test_o_fix_sem_o_roteiro_fica_calado(tmp_path: Path) -> None:
     saida = _fix_ucm(tmp_path, ucm, sysfs, doctor=sozinho)
     assert saida == ""
     assert _ganchos(ucm) == {"Alheio de outra placa.conf"}
-
-
-# -------------------------------------------------- 1. o censo do install
 
 
 def test_o_censo_declara_o_ucm_do_sistema_pelo_arquivo() -> None:
@@ -262,14 +238,7 @@ def _campo_debian(nome: str) -> str:
 
 
 def test_os_pacotes_declaram_o_ucm_do_sistema_com_o_nome_do_censo() -> None:
-    """O censo só roda no fluxo nativo: o `.deb`, o `.rpm` e o `PKGBUILD` não
-    passavam por ele e não declaravam o UCM. O nome vem do `_pkg_nome`, e não
-    digitado aqui — se a tabela mudar, os pacotes têm de mudar junto.
-
-    A MORDIDA: tire o `alsa-ucm-conf` do `Recommends:` do `debian/control` (ou
-    o `Recommends: alsa-ucm` do `.spec`, ou a linha do `optdepends` do
-    `PKGBUILD`) e esta régua reprova, nomeando o formato.
-    """
+    """O censo só roda no fluxo nativo: o `.deb`, o `.rpm` e o `PKGBUILD` não"""
     faltam = []
     apt = _nome_no_censo("apt")
     recomendados = [p.strip() for p in _campo_debian("Recommends").split(",")]
@@ -289,9 +258,7 @@ def test_os_pacotes_declaram_o_ucm_do_sistema_com_o_nome_do_censo() -> None:
 
 
 def test_a_checagem_por_arquivo_responde_pelo_efeito(tmp_path: Path) -> None:
-    """A MORDIDA: sem o ramo `arquivo:`, o `*)` do `_dep_presente` responde
-    "presente" para o que não conhece, e o pacote nunca seria pedido.
-    """
+    """A MORDIDA: sem o ramo `arquivo:`, o `*)` do `_dep_presente` responde"""
     existe = tmp_path / "ucm.conf"
     existe.write_text("Syntax 4\n", encoding="utf-8")
     proc = _roda(
@@ -301,9 +268,6 @@ def test_a_checagem_por_arquivo_responde_pelo_efeito(tmp_path: Path) -> None:
     )
     assert "TEM" in proc.stdout, proc.stdout + proc.stderr
     assert "FALTA" in proc.stdout, proc.stdout + proc.stderr
-
-
-# ------------------------------------------------ 4. o /usr só de leitura
 
 
 def _findmnt_de_mentira(tmp_path: Path, opcoes: str) -> str:
@@ -329,9 +293,7 @@ def _rodar_com_path(ucm: Path, sysfs: Path, caminho: str) -> subprocess.Complete
 
 
 def test_usr_so_de_leitura_nao_grava_e_sai_limpo(tmp_path: Path) -> None:
-    """A MORDIDA: tire o `usr_so_leitura` e o roteiro volta a gravar (aqui, onde
-    o tmp é gravável) — numa distro imutável, o `install -D` falharia.
-    """
+    """A MORDIDA: tire o `usr_so_leitura` e o roteiro volta a gravar (aqui, onde"""
     sysfs, ucm = _mesa(tmp_path)
     r = _rodar_com_path(ucm, sysfs, _findmnt_de_mentira(tmp_path, "ro,relatime"))
     assert r.returncode == 0, r.stderr

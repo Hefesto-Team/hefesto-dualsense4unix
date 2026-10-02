@@ -25,10 +25,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("r06 status honesto")
 
 from typing import Any
@@ -39,7 +35,6 @@ pytest.importorskip("gi")
 
 from hefesto_dualsense4unix.app.actions import emulation_actions as ea
 from hefesto_dualsense4unix.broker import hidraw_broker as hb
-
 
 
 class _OpsFalso:
@@ -58,7 +53,6 @@ class TestExposicaoDoFisico:
             (tmp_path / base).mkdir()
 
         def _validator(node: str) -> str | None:
-            # hidraw9 é o vpad/teclado: NUNCA entra na conta.
             base = node.rsplit("/", 1)[-1]
             return base if base in ("hidraw0", "hidraw1") else None
 
@@ -129,24 +123,10 @@ class TestStatusDaAba:
         markup, varridas = self._refresh(
             monkeypatch, appids=[], exposicao={"/dev/hidraw0": True}
         )
-        # PALAVRA-01: o rótulo era "desligado (ok)" — minúsculo no meio da
-        # frase dela e com jargão ("per-app"). O que ela lê agora e o que
-        # este teste trava é a frase em português.
         assert "Desligado — tudo certo" in markup
         assert "xceção" not in markup
         assert varridas == []
 
-    # NOTA DATADA — 13/09/2026 (FRASES-E-DICAS-03). Os três casos abaixo
-    # cobravam o estado da exceção NARRADO na linha, depois de um travessão. A
-    # ordem dela de 13/09, no índice da terceira lista
-    # (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`),
-    # deixa na tela só estado: a linha conta as exceções e cala o resto.
-    #
-    # NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01). Eles cobravam também
-    # que a leitura (`_steam_input_excecao_status`) distinguisse configurada de
-    # efetiva, varrendo os hidraw. Nada vivo lia a efetiva, e a leitura virou
-    # `_steam_input_excecoes`. Os três estados do físico ficam, e agora cobram
-    # o contrário: a mesma contagem nos três, e nenhuma varredura.
     def test_excecao_configurada_e_efetiva(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -161,8 +141,7 @@ class TestStatusDaAba:
     def test_excecao_configurada_mas_o_fisico_segue_escondido(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Era exatamente este estado — configurada e sem efeito — que a GUI
-        não sabia contar. A tela só conta, e a leitura não pergunta mais."""
+        """Era exatamente este estado — configurada e sem efeito — que a GUI"""
         markup, varridas = self._refresh(
             monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": False}
         )

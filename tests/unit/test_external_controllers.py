@@ -1,8 +1,4 @@
-"""8BIT-02 — helpers PUROS da superfície read-only de controles externos.
-
-Tradução da identidade crua do inventário (8BIT-01) para linguagem de gente +
-o aviso honesto do Nintendo/8BitDo por Bluetooth. Sem GTK, sem IPC.
-"""
+"""8BIT-02 — helpers PUROS da superfície read-only de controles externos."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.app.actions.external_controllers import (
@@ -37,11 +33,6 @@ _8BITDO_CABO = {
 _8BITDO_BT = {**_8BITDO_CABO, "bus": "bluetooth", "hidraw": "/dev/hidraw6"}
 _XBOX = {"name": "X360 Controller", "vid": "045e", "pid": "028e", "bus": "usb"}
 _DESCONHECIDO = {"name": "Marca Xpto Pad", "vid": "abcd", "pid": "0001", "bus": "usb"}
-#: 8BitDo em modo DualShock4: MENTE o VID (054c=Sony) e o nome ("Wireless
-#: Controller"), IDÊNTICO a um DS4 Sony real — só o OUI do MAC o denuncia.
-#: Caso vivo da mantenedora. MAC FORJADO (faixa e8:47:3a do gate de anonimato);
-#: o OUI sintético é injetado em `_BRAND_BY_OUI` nos testes do mecanismo — a
-#: entrada REAL da tabela (e417d8) é travada por assert próprio, sem MAC.
 _8BITDO_DS4 = {
     "name": "Wireless Controller",
     "vid": "054c",
@@ -52,10 +43,7 @@ _8BITDO_DS4 = {
     "evdev_path": "/dev/input/event9",
     "hidraw": "/dev/hidraw7",
 }
-#: DualShock4 Sony GENUÍNO: mesmo VID:PID e nome do 8BitDo-DS4, mas OUI
-#: desconhecido — deve continuar "Sony" (o OUI não desambigua a favor do 8BitDo).
 _DS4_SONY = {**_8BITDO_DS4, "uniq": "aa:bb:cc:00:00:09"}
-#: 8BitDo-DS4 por CABO: uniq vazio (USB não expõe MAC) — sem OUI, degrada p/ VID.
 _8BITDO_DS4_CABO = {**_8BITDO_DS4, "bus": "usb", "uniq": ""}
 
 
@@ -100,12 +88,7 @@ class TestBotaoCurto:
 
 
 class TestMarcaPorOUI:
-    """O OUI do MAC desambigua o 8BitDo-em-modo-DS4 do DualShock4 Sony real.
-
-    O mecanismo é exercitado com OUI SINTÉTICO (e8473a, faixa forjada do gate
-    de anonimato) injetado na tabela — nunca com o MAC real do controle da
-    mantenedora. A entrada REAL da tabela é travada à parte, só pelo OUI.
-    """
+    """O OUI do MAC desambigua o 8BitDo-em-modo-DS4 do DualShock4 Sony real."""
 
     def _com_oui_sintetico(self, monkeypatch) -> None:
         from hefesto_dualsense4unix.app.actions import external_controllers as ec
@@ -113,14 +96,11 @@ class TestMarcaPorOUI:
         monkeypatch.setitem(ec._BRAND_BY_OUI, "e8473a", "8BitDo")
 
     def test_tabela_real_tem_o_oui_da_8bitdo(self) -> None:
-        # Trava a entrada de produção: OUI e417d8 (registro IEEE público da
-        # 8BITDO TECHNOLOGY HK — 6 hex, não é MAC de device) → "8BitDo".
         from hefesto_dualsense4unix.app.actions import external_controllers as ec
 
         assert ec._BRAND_BY_OUI.get("e417d8") == "8BitDo"
 
     def test_oui_vence_vid_para_8bitdo_ds4(self, monkeypatch) -> None:
-        # VID mente "054c" (Sony); OUI conhecido na tabela → marca = 8BitDo.
         self._com_oui_sintetico(monkeypatch)
         assert brand_of(_8BITDO_DS4) == "8BitDo"
         assert friendly_type(_8BITDO_DS4) == "8BitDo"
@@ -131,35 +111,29 @@ class TestMarcaPorOUI:
         assert button_labels_for([_8BITDO_DS4], dualsense_count=2) == ["8BitDo 3 · BT"]
 
     def test_ds4_sony_genuino_continua_sony(self, monkeypatch) -> None:
-        # mesmo VID:PID/nome, mas OUI fora da tabela → NÃO vira 8BitDo.
         self._com_oui_sintetico(monkeypatch)
         assert brand_of(_DS4_SONY) == "Sony"
 
     def test_sem_uniq_usb_degrada_para_vid(self, monkeypatch) -> None:
-        # por cabo o uniq vem vazio (sem OUI) → cai no fabricante por VID.
         self._com_oui_sintetico(monkeypatch)
         assert brand_of(_8BITDO_DS4_CABO) == "Sony"
 
     def test_oui_desconhecido_preserva_comportamento_antigo(self) -> None:
-        # fixtures com OUI forjado (aabbcc) seguem pelo VID, como antes.
         assert brand_of(_8BITDO_CABO) == "Nintendo"
         assert brand_of(_XBOX) == "Xbox"
 
 
 class TestAvisoBluetooth:
     def test_nintendo_bt_avisa(self) -> None:
-        # A PALAVRA DO TRANSPORTE SE PERGUNTA AO DONO (decisão dela de 21/09:
-        # USB e BT na tela). Digitar `"cabo"` aqui prendia a palavra revogada.
         from hefesto_dualsense4unix.app.actions.home_actions import (
             palavra_do_transporte as palavra,
         )
 
         aviso = nintendo_bt_warning(_8BITDO_BT)
         assert aviso is not None
-        assert f"pelo {palavra('usb')}" in aviso  # aponta a saída estável
-        assert palavra("bt") in aviso  # e diz o transporte que trava
-        assert "driver" in aviso  # deixa claro que a morte é do kernel
-        # HARM-GUI-01: aviso de UMA frase — a parede de texto foi vetada.
+        assert f"pelo {palavra('usb')}" in aviso
+        assert palavra("bt") in aviso
+        assert "driver" in aviso
         assert len(aviso) < 120
 
     def test_nintendo_cabo_nao_avisa(self) -> None:
@@ -178,7 +152,6 @@ class TestFicha:
         assert "não mexe" in rows["Gerenciado por"]
 
     def test_detail_rows_sem_caminho_cru_de_dev(self) -> None:
-        # Nada de /dev/input ou /dev/hidraw na ficha do leigo.
         texto = " ".join(v for _, v in detail_rows(_8BITDO_CABO))
         assert "/dev/" not in texto
 
@@ -199,8 +172,7 @@ class TestModo:
         assert guia is not None
         atual, orient = guia
         assert atual == "Nintendo (modo Switch)"
-        assert "Xbox" in orient  # aponta a raiz estável
-        # HARM-GUI-01: trade-off em UMA frase; o risco de BT mora no aviso
+        assert "Xbox" in orient
         # dedicado (nintendo_bt_warning), não repetido aqui.
         assert len(orient) < 120
 
@@ -215,8 +187,7 @@ class TestModo:
         assert mode_guidance(_DESCONHECIDO) is None
 
     def test_detail_rows_nao_duplica_o_modo(self) -> None:
-        """GUI-05/P4: a linha "O jogo vê como" saiu da grade — o modo mora no
-        seletor segmentado read-only (`mode_selector_state`), fonte única."""
+        """GUI-05/P4: a linha "O jogo vê como" saiu da grade — o modo mora no"""
         rows = dict(detail_rows(_8BITDO_CABO))
         assert "O jogo vê como" not in rows
 
@@ -225,8 +196,6 @@ class TestSeletorSegmentadoReadOnly:
     """GUI-05/P4: camada PURA do segmentado read-only da ficha (Nintendo|Xbox)."""
 
     def test_itens_casam_com_input_mode(self) -> None:
-        # Os ids do seletor são exatamente os retornos possíveis de
-        # `input_mode` para controles de dois modos.
         assert [iid for iid, _ in MODE_SELECTOR_ITEMS] == ["nintendo", "xbox"]
 
     def test_nintendo_marca_nintendo(self) -> None:
@@ -245,8 +214,6 @@ class TestSeletorSegmentadoReadOnly:
         assert mode_selector_state(_DESCONHECIDO) is None
 
     def test_mesmo_gate_do_mode_guidance(self) -> None:
-        # Seletor e texto de orientação aparecem JUNTOS (mesma condição) —
-        # nunca um segmentado sem a explicação, nem o contrário.
         for entry in (_8BITDO_CABO, _8BITDO_BT, _XBOX, _DESCONHECIDO):
             assert (mode_selector_state(entry) is None) == (
                 mode_guidance(entry) is None
@@ -306,12 +273,10 @@ class TestSlotOfFimDoPosicional:
 
     def test_player_slot_inteiro_vence(self) -> None:
         entry = {**_8BITDO_CABO, "player_slot": 4}
-        # index/dualsense_count diferentes do slot -> o valor do daemon vence.
         assert slot_of(entry, dualsense_count=0, index=0) == 4
 
     def test_player_slot_none_devolve_none_falha_sem(self) -> None:
-        """FALHA-SEM: no HEAD pré-NUMA-05, isto devolvia o posicional (1)
-        em vez de None — reembaralhando a numeração a cada refresh."""
+        """FALHA-SEM: no HEAD pré-NUMA-05, isto devolvia o posicional (1)"""
         entry = {**_8BITDO_CABO, "player_slot": None}
         assert slot_of(entry, dualsense_count=0, index=0) is None
 
@@ -330,8 +295,6 @@ class TestSlotOfFimDoPosicional:
         assert slot_of(entry, dualsense_count=2, index=1) == external_slot(2, 1)
 
     def test_player_slot_zero_ou_negativo_degrada_pra_none(self) -> None:
-        # Payload malformado (nunca deveria acontecer, mas não pode virar
-        # "Controle 0"): trata como sem opinião, não como posicional.
         entry = {**_8BITDO_CABO, "player_slot": 0}
         assert slot_of(entry, dualsense_count=0, index=0) is None
 
@@ -346,8 +309,5 @@ class TestSlotLabel:
 
 class TestButtonLabelsForToleraSlotNone:
     def test_none_omite_o_slot_no_rotulo(self) -> None:
-        # SELETOR-UNO-01 (22/07): registry sem opinião ainda -> botão limpo
-        # "Nintendo · cabo" (o "Nintendo — · cabo" antigo parecia quebrado);
-        # o número entra no tick seguinte, quando o daemon numerar.
         entry = {**_8BITDO_CABO, "player_slot": None}
         assert button_labels_for([entry], dualsense_count=2) == ["Nintendo · cabo"]

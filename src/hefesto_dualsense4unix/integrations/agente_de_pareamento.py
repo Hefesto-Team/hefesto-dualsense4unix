@@ -1,33 +1,4 @@
-"""agente_de_pareamento.py — o ``org.bluez.Agent1`` NOSSO (R5).
-
-BLUEZ-UM-DONO-01 (23/09/2026). A decisão R5 dela revoga a D2 de 22/09: o
-``hefesto-bt-agent`` (bt-agent ``NoInputNoOutput``, root, desde o install)
-continua de PISO, para o que chega sozinho; o parear que ELA inicia — o mover,
-o conectar da tela — é atendido por um agente do próprio Hefesto.
-
-COMO ISSO FUNCIONA SEM BRIGAR COM O PADRÃO, lido no fonte do BlueZ 5.86:
-
-* ``pair_device`` (``src/device.c:3374``) escolhe o agente com
-  ``agent_get(sender)``: o agente registrado pelo MESMO remetente do ``Pair``
-  vence o padrão. E a autenticação do bond usa esse agente
-  (``device.c:7599``). Então o agente mora na conexão do dono do D-Bus
-  (``bluez_dbus.DonoVivo``) e o ``Pair`` sai por ela;
-* **nunca** ``RequestDefaultAgent``. O padrão é quem atende o que chega sem
-  ninguém ter pedido (``adapter.c:7798``), e é também quem dita a capacidade
-  dos adaptadores (``adapter.c:9400``). Sem pedir, os dois ficam como estão;
-* a capacidade deste agente é a do piso, ``NoInputNoOutput``: o pareamento que
-  ele atende sai IGUAL ao de hoje, só que respondido por nós.
-
-O QUE ELE ACEITA: só o aparelho que alguém do Hefesto está pareando AGORA
-(:meth:`AgenteDePareamento.esperando`), e só quando quem pergunta é o
-``bluetoothd`` de agora. Pedido de PIN ou de chave é recusado — não há onde
-digitar, e a tela não ganha janela nova. Nada disso pede a trava do rádio: o
-``Pair`` que trouxe o BlueZ até aqui já a segura.
-
-AO SAIR, desregistra (``UnregisterAgent``). Se o ``bluetoothd`` reinicia, o
-registro dele some junto; o dono avisa (:meth:`AgenteDePareamento.invalidar`) e
-o próximo parear registra de novo.
-"""
+"""agente_de_pareamento.py — o ``org.bluez.Agent1`` NOSSO (R5)."""
 
 from __future__ import annotations
 
@@ -53,14 +24,10 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Onde o agente mora na nossa conexão. Caminho de objeto só aceita
-#: ``[A-Za-z0-9_]`` entre as barras.
 CAMINHO_DO_AGENTE = "/io/github/hefesto_team/hefesto_dualsense4unix/agente"
 
-#: A capacidade do piso — o ``bt-agent --capability=NoInputNoOutput``.
 CAPACIDADE = "NoInputNoOutput"
 
-#: A interface ``Agent1``, como o BlueZ a chama (``doc/org.bluez.Agent.rst``).
 _XML = (
     f"<node><interface name='{AGENTE}'>"
     "<method name='Release'/>"
@@ -81,13 +48,10 @@ _XML = (
     "</interface></node>"
 )
 
-#: Os pedidos que se ACEITAM para o aparelho esperado. Os três pedem só um sim.
 _ACEITA_O_ESPERADO = frozenset({"RequestConfirmation", "RequestAuthorization", "AuthorizeService"})
 
-#: Os que pedem um número digitado: ``NoInputNoOutput`` não tem onde digitar.
 _PEDE_DIGITAR = frozenset({"RequestPinCode", "RequestPasskey"})
 
-#: Os que só MOSTRAM um número. Não há onde mostrar — e a tela não ganha recado.
 _SO_MOSTRA = frozenset({"DisplayPinCode", "DisplayPasskey"})
 
 
@@ -98,11 +62,7 @@ def _mascara(caminho: str) -> str:
 
 
 class AgenteDePareamento:
-    """Um ``Agent1`` exportado na conexão do dono, sem virar o padrão.
-
-    ``dono_do_bluez`` devolve o nome único do ``bluetoothd`` de agora: só ele
-    pode chamar este agente, e uma chamada de outro remetente é recusada.
-    """
+    """Um ``Agent1`` exportado na conexão do dono, sem virar o padrão."""
 
     def __init__(
         self,
@@ -117,7 +77,6 @@ class AgenteDePareamento:
         self._tranca = threading.Lock()
         self._registrado = False
         self._esperado = ""
-        #: O que o agente atendeu, para quem depura: ``(método, aceitou)``.
         self.historico: deque[tuple[str, bool]] = deque(maxlen=32)
 
     @property
@@ -125,11 +84,7 @@ class AgenteDePareamento:
         return self._registrado
 
     def registrar(self) -> bool:
-        """Exporta o objeto e pede ``RegisterAgent`` — nunca ``RequestDefaultAgent``.
-
-        Sob a suíte, no barramento de sistema, recusa: o registro é uma escrita
-        no BlueZ dela como qualquer outra.
-        """
+        """Exporta o objeto e pede ``RegisterAgent`` — nunca ``RequestDefaultAgent``."""
         with self._tranca:
             if self._registrado:
                 return True

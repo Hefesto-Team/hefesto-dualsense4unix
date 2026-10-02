@@ -1,29 +1,4 @@
-"""POINT-AND-CLICK-01 — o chip da tela e o PS + R3 pela MESMA porta.
-
-O mesmo modo tinha DOIS donos e eles discordavam. É o HARM-01 outra vez, e o
-próprio `a01_jogar` conta a história: *"o sprint que nasceu porque o modo tinha
-DOIS donos e eles discordavam"*. A cura de então criou `plan_mode_transition`
-como dono único — **e o gesto no controle nunca passou a usá-lo**.
-
-O que cada um fazia, medido em 17/09/2026:
-
-    | efeito                | chip da aba Jogar          | PS + R3           |
-    | vpad cai              | sim                        | sim               |
-    | mouse liga            | conforme a FLAG GLOBAL     | SEMPRE            |
-    | teclado liga          | NUNCA                      | sempre, e grava   |
-    | supressão cai         | NUNCA                      | sempre            |
-
-*Quando a cura conhece a causa, ela cobre TODOS os chamadores.* Cobrir só o
-chip deixaria o gesto no controle ligando o teclado que o clique não liga — e a
-próxima pessoa remedindo o mesmo defeito, que foi o que aconteceu duas vezes num
-dia em 05/09.
-
-O FURO DESTA RÉGUA, dito porque a casa exige: ela prova que os dois chamam o
-MESMO, e **não** prova que o que eles chamam está certo. Sem a
-`test_o_point_and_click_ativa_o_que_a_navegacao_gravou` ao lado, ela daria verde
-sobre dois caminhos igualmente errados — que é exatamente a forma do defeito que
-o HARM-01 curou.
-"""
+"""POINT-AND-CLICK-01 — o chip da tela e o PS + R3 pela MESMA porta."""
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -41,9 +16,6 @@ class _DaemonDoGesto:
     def __init__(self, *, com_arranjo: bool = True) -> None:
         self.recebeu: list[tuple[str, dict[str, Any]]] = []
         if not com_arranjo:
-            # O DAEMON ENXUTO: sem o método, e o `getattr` do gesto tem de ver
-            # isso. `None` no atributo de instância é o que o `callable()` do
-            # produto recusa — apagar da CLASSE envenenaria as outras instâncias.
             self.aplicar_o_arranjo_do_desktop = None  # type: ignore[assignment]
 
     def set_gamepad_emulation(
@@ -55,10 +27,6 @@ class _DaemonDoGesto:
         caminho: str | None = None,
         grava_o_modo: Literal[False, "ipc", "controle"] = False,
     ) -> bool:
-        # SEM DEFAULT em `origin`, como no `DaemonProtocol`. O protocolo exige o
-        # parâmetro justamente para ninguém trocar de ponte "por engano" no meio
-        # da partida: um dublê com default aceitaria a chamada que o daemon real
-        # recusa, e a régua daria verde sobre uma ponte que não subiu.
         self.recebeu.append(
             ("gamepad", {"enabled": enabled, "origin": origin, "caminho": caminho,
                          "grava_o_modo": grava_o_modo})
@@ -81,12 +49,7 @@ class _DaemonDoGesto:
 
 
 def _efeitos_do_chip() -> list[str]:
-    """O que o CLIQUE no chip Navegação pede, traduzido para o mesmo vocabulário.
-
-    A asserção é sobre o CONJUNTO de efeitos, não sobre a lista literal: o gesto
-    não passa pelo `native.mode.set` (o ciclo já saiu do nativo), e exigir
-    igualdade byte a byte faria a régua reprovar uma diferença legítima.
-    """
+    """O que o CLIQUE no chip Navegação pede, traduzido para o mesmo vocabulário."""
     traducao = {
         "gamepad.emulation.set": "gamepad",
         "desktop.arranjo.apply": "arranjo",
@@ -111,7 +74,6 @@ def test_os_dois_caminhos_terminam_no_mesmo_arranjo() -> None:
     assert "arranjo" in do_chip, (
         f"o clique no chip não passa pelo arranjo: {_efeitos_do_chip()}"
     )
-    # O que os dois têm de ter em comum, e a diferença legítima fica de fora.
     comum = {"gamepad", "arranjo"}
     assert comum <= do_gesto, f"o gesto perdeu um efeito: {sorted(do_gesto)}"
     assert comum <= do_chip, f"o chip perdeu um efeito: {sorted(do_chip)}"
@@ -122,20 +84,7 @@ def test_os_dois_caminhos_terminam_no_mesmo_arranjo() -> None:
 
 
 def test_o_gesto_e_o_chip_pedem_o_mesmo_arranjo() -> None:
-    """Nenhum parâmetro só do gesto: as duas portas pedem o MESMO arranjo.
-
-    AJUSTADA À D-2909-A-NAVEGACAO-LIGA-O-MOUSE — O-MOUSE-SEGUE-A-NAVEGACAO-01,
-    29/09/2026, decidida pelo padrão dela com ela dormindo. ANTES esta régua cobrava que o
-    `forcar_mouse` era a ÚNICA diferença: o PS + R3 ligava o mouse com o perfil
-    dizendo desligado (o socorro), e o clique no chip obedecia. Na bancada de
-    29/09 o chip entrou na Navegação sem cursor (achado 13). AGORA entrar na
-    Navegação liga o mouse pelas duas portas, e o socorro saiu: o que sobra de
-    diferença é a porta que grava (`grava_o_modo`), que diz por onde o modo
-    chegou ao perfil.
-
-    MORDIDA: devolva ao gesto um parâmetro que só ele mande (o
-    `forcar_mouse=True` de antes) e a régua reprova.
-    """
+    """Nenhum parâmetro só do gesto: as duas portas pedem o MESMO arranjo."""
     d = _DaemonDoGesto()
     hotkey._aplicar_ponte(d, hotkey.PONTE_MOUSE_TECLADO)
 
@@ -151,11 +100,7 @@ def test_o_gesto_e_o_chip_pedem_o_mesmo_arranjo() -> None:
 
 
 def test_o_gesto_derruba_o_vpad_antes_de_carregar_o_arranjo() -> None:
-    """A ordem é a mesma do plano, e pelo mesmo motivo (HARM-06).
-
-    Ligar o mouse antes de o gamepad sair faria a exclusão mútua do daemon
-    derrubar o mouse recém-ligado.
-    """
+    """A ordem é a mesma do plano, e pelo mesmo motivo (HARM-06)."""
     d = _DaemonDoGesto()
     hotkey._aplicar_ponte(d, hotkey.PONTE_MOUSE_TECLADO)
 
@@ -168,11 +113,7 @@ def test_o_gesto_derruba_o_vpad_antes_de_carregar_o_arranjo() -> None:
 
 
 def test_daemon_sem_arranjo_ainda_sobe_a_ponte_e_deixa_rastro() -> None:
-    """Daemon enxuto (CLI, dublê antigo) não pode derrubar o gesto.
-
-    Devolver `False` aqui seria dizer que a ponte não subiu — e ela subiu: o
-    vpad já caiu. O journal é quem diz o que não foi carregado.
-    """
+    """Daemon enxuto (CLI, dublê antigo) não pode derrubar o gesto."""
     d = _DaemonDoGesto(com_arranjo=False)
     assert hotkey._aplicar_ponte(d, hotkey.PONTE_MOUSE_TECLADO) is True
     assert d.efeitos() == ["gamepad"]

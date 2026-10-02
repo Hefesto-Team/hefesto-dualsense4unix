@@ -1,14 +1,4 @@
-"""Z6-08 — o número medido tem um dono só.
-
-A mordida da sprint (o segundo item do aceite): "Trocar `HZ_INPUT_SEM_MIC`
-para outro valor **sem** atualizar a `radio_ressalva` → reprova nomeando a
-constante, o arquivo, a linha do CSV e os dois valores. Arrancar a
-comparação → o teste que a prova reprova."
-
-Roda contra uma árvore de mentira (um `integrations/radio_da_mesa.py` e um
-`mapa-controles.csv` sintéticos) — nunca a árvore real, para o teste não
-precisar acompanhar o dia em que a bancada remedir os três números.
-"""
+"""Z6-08 — o número medido tem um dono só."""
 from __future__ import annotations
 
 import csv
@@ -22,8 +12,6 @@ RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 FALA_DO_MAPA_REAL = RAIZ_REAL / "src" / "hefesto_dualsense4unix" / "app" / "fala_do_mapa.py"
 
-#: A FORMA É A DO PRODUTO desde 28/09/2026: a tupla é de `Numero`, e o portão
-#: só lê essa forma (`_campos_do_numero`). O dublê publica o que o real publica.
 RADIO_DA_MESA_MENTIROSA = '''\
 """radio_da_mesa.py de MENTIRA — só para teste."""
 from __future__ import annotations
@@ -112,17 +100,6 @@ def test_celula_sem_nenhum_dos_tres_numeros_reprova(tmp_path: Path) -> None:
     processo = rodar(raiz)
     assert processo.returncode == 1
     assert "HZ_INPUT_SEM_MIC" in processo.stdout
-
-
-# ===========================================================================
-# A TUPLA É DE `Numero` — 28/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
-# ===========================================================================
-#
-# Até aqui a tupla era de tuplas cruas de quatro campos, e o construtor que
-# recusa valor que não é número (`Numero.__post_init__`) nunca rodava sobre ela.
-# O portão passou a ler só `Numero(...)`: uma forma só, para a tupla crua não
-# voltar calada. A MORDIDA: devolva ao `_campos_do_numero` a leitura da tupla
-# crua de quatro, e `test_a_tupla_crua_nao_conta_mais` reprova.
 
 
 def _portao() -> Any:

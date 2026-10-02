@@ -1,9 +1,4 @@
-"""LIGHTBAR-BT-RESET-01 — o report "Reset LED state" que destrava a lightbar.
-
-Formato validado contra o layout do hid-playstation DESTA máquina (estudo
-2026-07-18, por desmontagem do módulo): header 0x31/seq<<4/tag 0x10, common em
-[3..49] (flag1=0x08 em [4]), CRC-32 seed 0xA2 little-endian em [74..77].
-"""
+"""LIGHTBAR-BT-RESET-01 — o report "Reset LED state" que destrava a lightbar."""
 from __future__ import annotations
 
 import zlib
@@ -16,28 +11,26 @@ from hefesto_dualsense4unix.core.lightbar_reset import (
     should_reclaim_on_wake,
 )
 
-_KDEF = (0, 0, 128)  # KERNEL_DEFAULT_BLUE do backend
+_KDEF = (0, 0, 128)
 
 
 class TestBuildReport:
     def test_header_e_tamanho(self) -> None:
         r = build_bt_release_leds_report()
         assert len(r) == BT_REPORT_LEN == 78
-        assert r[0] == 0x31  # report id BT
-        assert r[1] == 0x00  # seq 0 no nibble alto
-        assert r[2] == 0x10  # tag mágico obrigatório
+        assert r[0] == 0x31
+        assert r[1] == 0x00
+        assert r[2] == 0x10
 
     def test_flag1_reset_leds_e_resto_zerado(self) -> None:
         r = build_bt_release_leds_report()
-        assert r[3] == 0x00  # valid_flag0: nada de rumble/haptics
-        assert r[4] == 0x08  # valid_flag1: SÓ o Reset LED state
-        # nenhum outro byte do common ligado (não toca cor/player/mute/rumble).
+        assert r[3] == 0x00
+        assert r[4] == 0x08
         assert all(b == 0 for b in r[5:74])
 
     def test_seq_no_nibble_alto_com_mascara(self) -> None:
         assert build_bt_release_leds_report(seq=3)[1] == 0x30
         assert build_bt_release_leds_report(seq=15)[1] == 0xF0
-        # >15 é mascarado (wrap de 4 bits), nunca vaza para o nibble baixo.
         assert build_bt_release_leds_report(seq=16)[1] == 0x00
 
     def test_crc_confere_com_a_receita_0xa2(self) -> None:
@@ -67,7 +60,6 @@ class TestSendReleaseLeds:
         assert dev.reports[0] == build_bt_release_leds_report()
 
     def test_write_none_conta_como_sucesso(self) -> None:
-        # hidapi pode devolver None em write OK (binding sem retorno).
         class _D(_FakeDevice):
             def write(self, data: bytes) -> None:
                 self.reports.append(bytes(data))
@@ -91,33 +83,26 @@ class TestShouldReclaimOnWake:
     apagada até desconectar/reconectar."""
 
     def test_borda_do_wake_bt_dispara(self) -> None:
-        # BT + nó voltou ao default do kernel + desired é vermelho → reclaim.
         assert should_reclaim_on_wake("bt", (255, 0, 0), _KDEF, _KDEF) is True
 
     def test_usb_nunca_dispara(self) -> None:
-        # USB não tem o claim da lightbar — mesma assinatura, mas não mexe.
         assert should_reclaim_on_wake("usb", (255, 0, 0), _KDEF, _KDEF) is False
 
     def test_claim_intacto_nao_dispara(self) -> None:
-        # A cor atual ainda é a desejada (claim OK) → não pisca à toa.
         assert should_reclaim_on_wake("bt", (255, 0, 0), (255, 0, 0), _KDEF) is False
 
     def test_desired_igual_ao_default_e_indistinguivel(self) -> None:
-        # Se o próprio desired É o default do kernel, a assinatura não distingue
-        # "wake" de "cor correta" → não mexe.
         assert should_reclaim_on_wake("bt", _KDEF, _KDEF, _KDEF) is False
 
     def test_desired_ausente_nao_dispara(self) -> None:
         assert should_reclaim_on_wake("bt", None, _KDEF, _KDEF) is False
 
     def test_no_ilegivel_nao_dispara(self) -> None:
-        # get_rgb() devolveu None (nó ilegível) → não afirma a borda.
         assert should_reclaim_on_wake("bt", (255, 0, 0), None, _KDEF) is False
 
 
 class TestOndaLFiadaNoBackend:
-    """Guarda de fiação: o backend chama a função nova no connect() e loga o
-    reenvio de wake — sem isso, a função pura existiria sem efeito."""
+    """Guarda de fiação: o backend chama a função nova no connect() e loga o"""
 
     def test_connect_chama_should_reclaim_on_wake(self) -> None:
         from pathlib import Path
@@ -130,8 +115,6 @@ class TestOndaLFiadaNoBackend:
 
     def test_reclaim_de_wake_gateado_por_modo_nativo(self) -> None:
         # O laço de reclaim NÃO pode reenviar o 0x08 em Modo Nativo (output
-        # mutado = o jogo é dono do LED). O gate `_output_mute` precisa estar
-        # no bloco do reclaim, antes de montar os candidatos.
         import re
         from pathlib import Path
 
@@ -188,12 +171,7 @@ class _FakeBtHandle:
 
 
 class TestReset01AdocaoSobModoNativo:
-    """LIGHTBAR-BT-RESET-01 x FEAT-NATIVE-OUTPUT-MUTE-01: a adoção de handle
-    BT novo NÃO pode enviar o 0x08 com o output mutado (Modo Nativo = o jogo é
-    dono do hidraw; contrato de ZERO write nosso). Falha-sem: um drop+reconnect
-    BT com jogo em foco reabre o handle (key/MAC estável → cai em new_handles)
-    e o write cru saía por baixo do jogo — mesmo gate que o irmão RESET-02
-    (wake) já tinha."""
+    """LIGHTBAR-BT-RESET-01 x FEAT-NATIVE-OUTPUT-MUTE-01: a adoção de handle"""
 
     @staticmethod
     def _connect_um_bt_novo(*, mute: bool) -> _FakeBtHandle:
@@ -224,21 +202,7 @@ class TestReset01AdocaoSobModoNativo:
         )
 
     def test_a_adocao_bt_nao_envia_mais_o_0x08(self) -> None:
-        """LIGHTBAR-BT-CULPADO-01 (03/08/2026): o `0x08` SAIU da adoção.
-
-        Este teste era o inverso — exigia que o Reset LED state CONTINUASSE
-        saindo, como "não-regressão da cura original". **A medição de 03/08 no
-        hardware dela provou que aquela cura é a CAUSA**: o `0x08` enviado
-        dentro da janela de ~3,4 s pós-conexão trava a lightbar até o
-        power-off, com correlação perfeita em 7 eventos (dois controles no
-        mesmo rádio; o único que não recebeu o report é o único que obedeceu).
-
-        Fora da janela ele não trava a barra — mas **apaga os player-LEDs**,
-        sempre, e o daemon o mandava em toda adoção de handle novo.
-
-        Mordida: devolver a chamada de `send_release_leds` ao
-        `_adopt_new_handles` faz este teste reprovar.
-        """
+        """LIGHTBAR-BT-CULPADO-01 (03/08/2026): o `0x08` SAIU da adoção."""
         handle = self._connect_um_bt_novo(mute=False)
         assert build_bt_release_leds_report() not in handle.device.reports, (
             "o 0x08 voltou à adoção — ele TRAVA a lightbar dentro da janela de "
@@ -264,10 +228,7 @@ class _FakeNode:
 
 
 class TestReset02WakeSobModoNativo:
-    """LIGHTBAR-BT-RESET-02 x FEAT-NATIVE-OUTPUT-MUTE-01 (comportamental): o
-    reclaim de wake (handle EXISTENTE cujo nó voltou ao default do kernel) não
-    pode escrever o 0x08 sob Modo Nativo — e precisa continuar escrevendo sem
-    ele. Cobre o gate por execução real do connect(), não só por texto-fonte."""
+    """LIGHTBAR-BT-RESET-02 x FEAT-NATIVE-OUTPUT-MUTE-01 (comportamental): o"""
 
     @staticmethod
     def _connect_com_wake(*, mute: bool) -> _FakeBtHandle:
@@ -285,9 +246,8 @@ class TestReset02WakeSobModoNativo:
         key = "AA:BB:CC:00:00:01"
         inst._handles = {key: handle}  # type: ignore[dict-item]
         inst._primary_key = key
-        inst.set_led((255, 0, 0))  # desired ≠ default do kernel
-        handle.device.reports.clear()  # só interessa o que o connect() escrever
-        # Assinatura do wake: o kernel resetou a classe LED para o default.
+        inst.set_led((255, 0, 0))
+        handle.device.reports.clear()
         inst._sysfs = {key: _FakeNode(_KDEF)}  # type: ignore[dict-item]
         inst._output_mute = mute
         with patch.object(
@@ -295,7 +255,7 @@ class TestReset02WakeSobModoNativo:
             "_enumerate_device_keys",
             return_value=[(key, b"/dev/hidraw9", False)],
         ):
-            inst.connect()  # handle já presente → NÃO é new_handle → rota wake
+            inst.connect()
         return handle
 
     def test_wake_em_nativo_nao_reenvia_o_0x08(self) -> None:
@@ -305,16 +265,7 @@ class TestReset02WakeSobModoNativo:
         )
 
     def test_o_wake_nao_reenvia_mais_o_0x08(self) -> None:
-        """LIGHTBAR-BT-CULPADO-01: o `0x08` saiu do reclaim de wake também.
-
-        O gate (`should_reclaim_on_wake`) FICA, com a instrumentação em DEBUG —
-        ele já era código morto em regime, e a medição de 03/08 explicou por
-        quê de verdade: ele exige `current_sysfs_rgb == KERNEL_DEFAULT_BLUE`, e
-        o `multi_intensity` mostra o valor PEDIDO, nunca o ACESO. Provado nesse
-        dia, quando o nó de LED nasceu `0 0 0` com a barra **acesa em azul**.
-
-        Mordida: devolver `send_release_leds` ao ramo do reclaim faz reprovar.
-        """
+        """LIGHTBAR-BT-CULPADO-01: o `0x08` saiu do reclaim de wake também."""
         handle = self._connect_com_wake(mute=False)
         assert build_bt_release_leds_report() not in handle.device.reports, (
             "o 0x08 voltou ao reclaim de wake (ver LIGHTBAR-BT-CULPADO-01)"
@@ -322,12 +273,7 @@ class TestReset02WakeSobModoNativo:
 
 
 class TestResetViaWriteReport:
-    """LIGHTBAR-BT-RESET-03 (22/07, regressão medida ao vivo): desde o
-    BTREPORT-02 todo 0x31 sai com nibble de sequência POR-HANDLE (writeReport
-    carimba e incrementa). O reset escrevia DIRETO no device com seq=0 — com o
-    keepalive já rodado, o firmware descartava o report como fora de sequência
-    e o claim nunca era devolvido (lightbar BT apagada, sintoma pré-cura).
-    Falha-sem: send_release_leds ignorava o writeReport do handle."""
+    """LIGHTBAR-BT-RESET-03 (22/07, regressão medida ao vivo): desde o"""
 
     def test_prefere_o_writereport_do_handle(self) -> None:
         class _Handle:
@@ -340,15 +286,11 @@ class TestResetViaWriteReport:
 
         h = _Handle()
         assert send_release_leds(h) is True
-        # O report viajou pelo writeReport (que carimba seq+CRC na ordem real
-        # do fluxo) — NÃO pelo device cru.
         assert len(h.stamped) == 1
         assert bytes(h.stamped[0]) == build_bt_release_leds_report()
         assert h.device.reports == []
 
     def test_fallback_para_device_cru_segue_vivo(self) -> None:
-        # Objetos sem writeReport (testes/handles antigos) usam o caminho
-        # clássico — coberto também por TestSendReleaseLeds acima.
         dev = _FakeDevice()
         assert send_release_leds(dev) is True
         assert dev.reports == [build_bt_release_leds_report()]

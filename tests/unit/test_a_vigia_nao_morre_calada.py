@@ -34,8 +34,6 @@ SET_E = re.compile(r"^\s*set\s+-[a-zA-Z]*e[a-zA-Z]*\b|^\s*set\s+-o\s+errexit", r
 CABECALHO = re.compile(r"^(\s*)(?:function\s+)?[A-Za-z_]\w*\s*\(\)\s*\{?\s*(?:#.*)?$")
 FECHAMENTO = re.compile(r"^\s*(?:done|\}|fi|esac|;;)(?:\s|;|$|<|>|\))")
 HEREDOC = re.compile(r"<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?")
-# O que vem depois do `&&` e ainda é pergunta: aí o `&&` é o predicado que a
-# função devolve de propósito (`e_microfone() { [[ a ]] && [[ b ]]; }`).
 PERGUNTA = re.compile(r"^\s*(?:!\s*)?(?:\[\[|\[\s|test\s|grep\s+-\w*q|true\b|false\b)")
 
 
@@ -48,8 +46,7 @@ def _sem_texto(linha: str) -> str:
 
 
 def _significativas(linhas: list[str]) -> list[tuple[int, str]]:
-    """As linhas que o bash executa: sem branco, sem comentário, sem heredoc e
-    sem o miolo de aspas simples que atravessam linhas (o programa do `awk`)."""
+    """As linhas que o bash executa: sem branco, sem comentário, sem heredoc e"""
     sig: list[tuple[int, str]] = []
     fim_do_heredoc: str | None = None
     em_aspas = False
@@ -195,20 +192,16 @@ class TestNenhumScriptTemAForma:
         )
 
 
-# A mesa de mentira, na ordem em que o kernel numera: as entradas da máquina
-# primeiro, depois os controles, depois os bonecos. O glob do script é
-# lexicográfico (hidraw10 vem antes de hidraw2), então o «último» muda com o
-# tamanho da mesa, e a matriz cobre isso sem escolher o caso.
 MODOS = ("nativo", "dualsense", "xbox")
 TRANSPORTES = ("usb", "bt", "misto")
 
 
 def _mesa(modo: str, transporte: str, jogadores: int) -> list[str]:
-    uniqs = ["", "", "", ""]  # mouse e teclado USB: UNIQ vazio
+    uniqs = ["", "", "", ""]
     for n in range(1, jogadores + 1):
         pelo_bt = transporte == "bt" or (transporte == "misto" and n % 2 == 0)
         uniqs.append(f"aa:bb:cc:00:00:1{n}" if pelo_bt else "")
-    if modo == "dualsense":  # o boneco é uhid e tem hidraw; o do xbox é uinput
+    if modo == "dualsense":
         uniqs.extend(f"02:fe:00:00:00:0{n}" for n in range(1, jogadores + 1))
     return uniqs
 

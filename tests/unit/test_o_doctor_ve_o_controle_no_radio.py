@@ -28,12 +28,11 @@ from hefesto_dualsense4unix.integrations.exame_da_mesa import VIDS_DE_CONTROLE
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
-#: ``(vid, pid)`` de quatro famílias que o produto adota.
 CONTROLES = (
     ("054c", "0ce6"),  # DualSense
     ("054c", "0df2"),  # DualSense Edge
-    ("057e", "2009"),  # Pro Controller
-    ("2dc8", "6012"),  # 8BitDo
+    ("057e", "2009"),
+    ("2dc8", "6012"),
 )
 
 
@@ -59,10 +58,7 @@ def _rodar(
     pareados: dict[str, int] | None = None,
     corpo: str = "check_controller",
 ) -> str:
-    """Roda ``corpo`` com as funções do doctor e um BlueZ de mentira.
-
-    ``pareados`` é ``{caminho do objeto: classe}`` dos que têm ``Paired=true``.
-    """
+    """Roda ``corpo`` com as funções do doctor e um BlueZ de mentira."""
     pareados = pareados or {}
     tabela = "\n".join(f"{c} {k}" for c, k in pareados.items())
     roteiro = textwrap.dedent(f"""
@@ -101,12 +97,7 @@ def _rodar(
 
 
 def test_o_dualsense_no_radio_e_visto(tmp_path: Path) -> None:
-    """O caso da mesa dela, 25/09.
-
-    MORDIDA: troque o ``0005)`` do ``_controles_no_kernel`` por outro barramento —
-    o controle no rádio some, o doctor volta a dizer «não detectado», e esta
-    régua reprova.
-    """
+    """O caso da mesa dela, 25/09."""
     raiz = _sys(
         tmp_path, [_uevent("0005", "054c", "0ce6", "aa:bb:cc:00:00:a1", "aa:bb:cc:00:00:01")]
     )
@@ -150,8 +141,7 @@ def test_a_mesa_inteira(tmp_path: Path, jogadores: int, transporte: str, mascara
 
 
 def test_o_vpad_sozinho_nao_e_controle(tmp_path: Path) -> None:
-    """MORDIDA: tire o ``hefesto-vpad``/``02:fe`` do ``_controles_no_kernel`` — o
-    boneco vira controle conectado, e esta régua reprova."""
+    """MORDIDA: tire o ``hefesto-vpad``/``02:fe`` do ``_controles_no_kernel`` — o"""
     raiz = _sys(tmp_path, [_uevent("0003", "054c", "0df2", "hefesto-vpad", "02:fe:00:00:00:01")])
     saida = _rodar(raiz)
     assert "[WARN] controle não detectado agora" in saida, saida
@@ -171,8 +161,7 @@ def test_desligado_e_pareado_passa_com_o_pareado(tmp_path: Path) -> None:
 
 
 def test_o_vizinho_e_o_teclado_pareados_nao_sao_controle(tmp_path: Path) -> None:
-    """MORDIDA: tire a conta da classe do ``_controles_pareados_no_bluez`` — o
-    teclado pareado vira «controle pareado», e esta régua reprova."""
+    """MORDIDA: tire a conta da classe do ``_controles_pareados_no_bluez`` — o"""
     saida = _rodar(
         tmp_path,
         caminhos=["/org/bluez/hci1/dev_AA_BB_CC_00_00_77", "/org/bluez/hci0/dev_AA_BB_CC_00_00_09"],
@@ -182,10 +171,7 @@ def test_o_vizinho_e_o_teclado_pareados_nao_sao_controle(tmp_path: Path) -> None
 
 
 def test_a_lista_de_fabricantes_e_a_do_produto() -> None:
-    """Uma pergunta, uma lista: a do doctor é a de ``exame_da_mesa``.
-
-    MORDIDA: tire um fabricante do ``_VIDS_DE_CONTROLE`` — esta régua reprova.
-    """
+    """Uma pergunta, uma lista: a do doctor é a de ``exame_da_mesa``."""
     texto = DOCTOR.read_text(encoding="utf-8")
     achado = re.search(r'^_VIDS_DE_CONTROLE="([^"]*)"', texto, re.MULTILINE)
     assert achado, "a lista sumiu do doctor"
@@ -193,12 +179,7 @@ def test_a_lista_de_fabricantes_e_a_do_produto() -> None:
 
 
 def test_nenhum_bluetoothctl_escapa_do_embrulho() -> None:
-    """A forma do defeito: um comando externo na frente executa o BINÁRIO e pula
-    a função ``bluetoothctl`` que sombreia o 5.86 mudo.
-
-    MORDIDA: devolva o ``timeout 4 bluetoothctl devices`` a qualquer check — esta
-    régua reprova.
-    """
+    """A forma do defeito: um comando externo na frente executa o BINÁRIO e pula"""
     forma = re.compile(
         r"\b(timeout|env|xargs|sudo|nice|stdbuf|command)(\s+-\S+)*(\s+\d+[smh]?)?\s+bluetoothctl\b"
     )
@@ -211,8 +192,6 @@ def test_nenhum_bluetoothctl_escapa_do_embrulho() -> None:
             dentro_do_embrulho = False
         if dentro_do_embrulho or linha.lstrip().startswith("#"):
             continue
-        # `command -v bluetoothctl` só pergunta se existe; tirado ele, o resto
-        # da linha ainda é medido (a linha do defeito começava por ele).
         if forma.search(linha.replace("command -v bluetoothctl", "")):
             fora.append(f"{n}: {linha.strip()}")
     assert not fora, "bluetoothctl chamado por fora do embrulho:\n" + "\n".join(fora)

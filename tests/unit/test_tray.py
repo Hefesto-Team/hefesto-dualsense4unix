@@ -114,8 +114,6 @@ def test_tray_update_profiles(monkeypatch: pytest.MonkeyPatch):
 
     calls: list[str] = []
     ctrl.update_profiles(["shooter", "driving"], on_select=calls.append)
-    # Deve ter criado 2 MenuItem novos (um por perfil)
-    # Contamos as chamadas a MenuItem do gtk: 1 pra status, 1 open_tui, 1 quit, 2 perfis = 5
     assert fake_gtk.MenuItem.call_count >= 2
     assert len(ctrl._profile_items) == 2
 
@@ -129,15 +127,8 @@ def test_tray_stop_marca_passive(monkeypatch: pytest.MonkeyPatch):
     assert ctrl._indicator is None
 
 
-# --- Testes de AppTray (app/tray.py) — CLUSTER-TRAY-POLISH-01 -------------
-
 def _setup_fake_gi_for_apptray(monkeypatch: pytest.MonkeyPatch):
-    """Aparelha mocks de gi para `app/tray.py`.
-
-    `app/tray.py` importa `GLib, Gtk` do `gi.repository` no topo do módulo.
-    Cada `Gtk.MenuItem(...)` precisa retornar uma instância nova (rastreável)
-    para que os testes possam validar `set_use_underline` e labels.
-    """
+    """Aparelha mocks de gi para `app/tray.py`."""
     fake_gtk = MagicMock()
 
     created_menu_items: list[MagicMock] = []
@@ -158,7 +149,7 @@ def _setup_fake_gi_for_apptray(monkeypatch: pytest.MonkeyPatch):
     )
     fake_gtk.Menu.return_value = MagicMock()
     fake_gtk.SeparatorMenuItem.return_value = MagicMock()
-    fake_gtk.IconTheme.get_default.return_value = None  # cai no fallback
+    fake_gtk.IconTheme.get_default.return_value = None
 
     fake_glib = MagicMock()
 
@@ -204,11 +195,6 @@ def _make_apptray():
 
 
 def _patch_apptray_module(monkeypatch: pytest.MonkeyPatch, fake_gtk, fake_glib_module=None):
-    # FEAT-COSMIC-TRAY-FALLBACK-01: por default os testes existentes assumem
-    # path síncrono (start cria indicator imediato). Em sessão COSMIC real,
-    # a criação é deferida via GLib.timeout_add. Limpamos as env vars aqui
-    # para preservar a semântica antiga. Testes COSMIC-específicos setam
-    # XDG_CURRENT_DESKTOP=COSMIC explicitamente.
     monkeypatch.delenv("XDG_CURRENT_DESKTOP", raising=False)
     monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
 
@@ -222,39 +208,29 @@ def _patch_apptray_module(monkeypatch: pytest.MonkeyPatch, fake_gtk, fake_glib_m
     monkeypatch.setattr(apptray_mod, "Gtk", fake_gtk)
     if fake_glib_module is not None:
         monkeypatch.setattr(apptray_mod, "GLib", fake_glib_module)
-    # probe_gi_availability vira sempre OK (já que gi mockado).
     monkeypatch.setattr(apptray_mod, "probe_gi_availability", lambda: (True, "ok"))
 
 
 def test_apptray_render_profiles_remove_placeholder_inicial(monkeypatch: pytest.MonkeyPatch):
-    """TRAY-LOADING-ZOMBIE-01: nenhum item residual com label '(carregando)'.
-
-    Após `start()` (que agora chama `_render_profiles([])`) e depois um
-    `_render_profiles([{"name": "X"}])`, validar que nenhum dos items
-    criados ficou com label '(carregando)' permanente.
-    """
+    """TRAY-LOADING-ZOMBIE-01: nenhum item residual com label '(carregando)'."""
     fake_gtk, created = _setup_fake_gi_for_apptray(monkeypatch)
     _patch_apptray_module(monkeypatch, fake_gtk, MagicMock())
 
     tray = _make_apptray()
     assert tray.start() is True
 
-    # Após start, deve haver "(nenhum perfil)" controlado por _profile_menu_items.
     labels_em_lista = [it._label for it in tray._profile_menu_items]
     assert labels_em_lista == ["(nenhum perfil)"], (
         f"start deve popular submenu via _render_profiles([]); achei {labels_em_lista}"
     )
 
-    # Render de perfis reais.
     tray._render_profiles([{"name": "perfil_a", "active": True}])
 
-    # Nenhum item criado pelo módulo pode ter label '(carregando)'.
     labels_carregando = [it._label for it in created if it._label == "(carregando)"]
     assert labels_carregando == [], (
         f"nenhum item zumbi com '(carregando)' permitido; achei {labels_carregando}"
     )
 
-    # _profile_menu_items reflete o último render (1 perfil).
     final_labels = [it._label for it in tray._profile_menu_items]
     assert final_labels == ["> perfil_a"], (
         f"_profile_menu_items deve refletir o render atual; achei {final_labels}"
@@ -285,7 +261,6 @@ def test_apptray_render_perfil_vazio_aplica_use_underline_false(monkeypatch: pyt
 
     tray = _make_apptray()
     tray.start()
-    # `start` já chama `_render_profiles([])` — basta inspecionar.
 
     nenhum_item = next(
         (it for it in tray._profile_menu_items if it._label == "(nenhum perfil)"),
@@ -295,16 +270,10 @@ def test_apptray_render_perfil_vazio_aplica_use_underline_false(monkeypatch: pyt
     nenhum_item.set_use_underline.assert_called_once_with(False)
 
 
-# ---------------------------------------------------------------------------
-# FEAT-COSMIC-TRAY-FALLBACK-01 (v3.1.0)
-# ---------------------------------------------------------------------------
-
-
 def test_apptray_em_cosmic_difere_indicator_via_glib_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Em XDG_CURRENT_DESKTOP=COSMIC, start() registra GLib.timeout_add em vez
-    de criar o indicator sincronamente, e retorna True imediatamente."""
+    """Em XDG_CURRENT_DESKTOP=COSMIC, start() registra GLib.timeout_add em vez"""
     fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
     fake_glib = MagicMock()
     _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
@@ -315,11 +284,9 @@ def test_apptray_em_cosmic_difere_indicator_via_glib_timeout(
 
     fake_glib.timeout_add.assert_called_once()
     args, _kwargs = fake_glib.timeout_add.call_args
-    # BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01: defer tunado p/ COSMIC (1500ms).
-    # Referência a constante para não regredir se o valor for ajustado de novo.
     from hefesto_dualsense4unix.app.tray import _INDICATOR_DEFERRED_MS
     assert args[0] == _INDICATOR_DEFERRED_MS
-    assert tray._indicator is None  # ainda não criado
+    assert tray._indicator is None
 
 
 def test_apptray_em_gnome_cria_indicator_imediato(monkeypatch: pytest.MonkeyPatch):
@@ -332,9 +299,7 @@ def test_apptray_em_gnome_cria_indicator_imediato(monkeypatch: pytest.MonkeyPatc
     tray = _make_apptray()
     assert tray.start() is True
 
-    # Não deferiu — indicator existe e timeout_add não foi chamado pelo defer.
     assert tray._indicator is not None
-    # GLib.timeout_add_seconds é usado para refresh, mas timeout_add (defer) não.
     fake_glib.timeout_add.assert_not_called()
 
 
@@ -342,13 +307,7 @@ def test_apptray_cosmic_emite_notification_se_watcher_ausente(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    """Em COSMIC sem watcher StatusNotifier, emite notification orientadora.
-
-    BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01: a notify NÃO é mais imediata — só
-    dispara após esgotar os retries do probe (_WATCHER_PROBE_RETRIES) e apenas
-    se a flag persistente ainda não existir. Isolamos a flag num tmp_path para
-    o teste não depender (nem sujar) o runtime_dir real.
-    """
+    """Em COSMIC sem watcher StatusNotifier, emite notification orientadora."""
     fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
     fake_glib = MagicMock()
     _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
@@ -357,7 +316,6 @@ def test_apptray_cosmic_emite_notification_se_watcher_ausente(
     from hefesto_dualsense4unix.app import tray as apptray_mod
     from hefesto_dualsense4unix.utils import xdg_paths
 
-    # Flag persistente isolada e garantidamente ausente.
     monkeypatch.setattr(xdg_paths, "runtime_dir", lambda ensure=False: tmp_path)
     notify_calls: list[dict] = []
 
@@ -369,7 +327,6 @@ def test_apptray_cosmic_emite_notification_se_watcher_ausente(
     monkeypatch.setattr(apptray_mod, "statusnotifierwatcher_available", lambda: False)
 
     tray = _make_apptray()
-    # Simula o ÚLTIMO retry falho do probe -> dispara _maybe_notify_tray_missing.
     tray._probe_watcher_with_retries(apptray_mod._WATCHER_PROBE_RETRIES - 1)
 
     assert notify_calls

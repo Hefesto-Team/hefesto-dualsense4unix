@@ -1,16 +1,4 @@
-"""A varredura da canônica desce para as subpastas.
-
-ENDURECIMENTO, não conserto de defeito vivo — e a distinção está escrita aqui
-de propósito. Medido em 26/08/2026 (LEVA-4-E): `docs/protocol/` é PLANO hoje,
-e `glob("*.md")` e `rglob("*.md")` devolviam os mesmos 13 documentos e as
-mesmas 123 citações conferidas. **Nada estava sendo perdido.**
-
-O que se fecha é o defeito de FORMA: `pasta.glob("*.md")` fica verde por não
-olhar no dia em que a canônica ganhar uma subpasta, e um portão que emudece
-quando o território cresce é o mesmo defeito que a casa achou em 25/08 no
-`test_nome_citado_como_sprint`. Este arquivo é o que impede a forma rasa de
-voltar.
-"""
+"""A varredura da canônica desce para as subpastas."""
 from __future__ import annotations
 
 import subprocess
@@ -20,7 +8,6 @@ from pathlib import Path
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "validar-citacoes-de-linha.py"
 
-#: Duas linhas — qualquer endereço acima de 2 é podre por construção.
 FONTE_CURTA = "primeira linha\nsegunda linha\n"
 
 
@@ -83,13 +70,7 @@ def test_a_raiz_plana_continua_varrida(tmp_path: Path) -> None:
 
 
 def test_arquivo_de_subpasta_passado_a_mao_nao_e_descartado(tmp_path: Path) -> None:
-    """MORDIDA do modo por argumento, que tinha o MESMO defeito de forma.
-
-    O filtro era `p.resolve().parent == (raiz / PASTA).resolve()` — um `.md` de
-    subpasta era jogado fora sem uma palavra, e o script imprimia "Nenhum
-    documento para varrer" com `rc=0`. Recusa silenciosa é a forma mais barata
-    de um portão mentir.
-    """
+    """MORDIDA do modo por argumento, que tinha o MESMO defeito de forma."""
     raiz = monta_arvore(tmp_path)
     sub = raiz / "docs" / "protocol" / "dualsense"
     sub.mkdir(parents=True)

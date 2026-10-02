@@ -1,32 +1,4 @@
-"""DADO e PROCESSO são coisas diferentes — a régua da decisão de 20/09/2026.
-
-A ORDEM DELA, escolhida entre três opções: *"Mover o que as réguas precisam"*.
-Ela recusou versionar `docs/process/` inteira (1.607 arquivos, 77 MB de prosa)
-e recusou fazer as réguas pularem sem a pasta (*régua que pula é régua que não
-mede*).
-
-O QUE ISSO DEIXA DE CONTRATO, e é o que este arquivo cobra:
-
-1. o que uma régua LÊ mora em `docs/method/` e **viaja no git**;
-2. `docs/method/LEIA-PRIMEIRO.md` diz de cada um de onde veio e quem o lê;
-3. **nada em `src/`, `scripts/` ou `tests/` que viaje no git volta a ler a
-   árvore real `docs/process/`** — salvo as ferramentas de PROCESSO,
-   declaradas aqui com a razão de cada uma.
-
-O PREÇO QUE PAGOU POR ESTA RÉGUA, e ele é de 20/09/2026: os dois donos do
-gesto das 199 células da mesa de medição foram arquivados junto com 732
-sprints fechadas. `_gesto_do_arquivo` digitava o caminho, não achava e
-devolvia `{}` — **calado**. As 199 células caíram no fallback da procedência
-(canal, report, offset), que é literalmente o defeito que ela apontou em 07/09
-olhando a linha 10: *"sinceramente não entendi o que diabos é pra fazer
-aqui"*. Voltou inteiro seis dias depois, e sete réguas ficaram vermelhas sem
-que nenhuma soubesse dizer por quê.
-
-A REGRA 3 É A QUE MORDE DE VERDADE. As duas primeiras conferem o estado de
-hoje; a terceira impede o estado de amanhã — o dia em que alguém escrever
-`RAIZ / "docs" / "process" / "algo.md"` num teste novo e recriar o defeito
-inteiro, com a árvore dela verde, porque na árvore dela o arquivo está lá.
-"""
+"""DADO e PROCESSO são coisas diferentes — a régua da decisão de 20/09/2026."""
 
 from __future__ import annotations
 
@@ -40,14 +12,8 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PASTA = RAIZ / "docs" / "method"
 INDICE = PASTA / "LEIA-PRIMEIRO.md"
 
-#: A PASTA QUE NÃO VIAJA. `docs/process/` é `.gitignore:178` por ordem dela de
-#: 15/09/2026 — *"não quero que as pessoas tenham acesso a isso"*.
 PROCESSO = "docs/process"
 
-#: AS FERRAMENTAS DE PROCESSO, que leem `docs/process/` porque o PROCESSO é o
-#: assunto delas. Cada uma sabe viver sem a pasta: nenhuma é portão do CI.
-#: Quem entrar nesta lista entra com a razão escrita, e a razão é conferida
-#: pela régua (linha vazia reprova).
 LEITORES_DE_PROCESSO: dict[str, str] = {
     "scripts/mover-sprints-fechadas.py":
         "o movedor de sprints fechadas: o que ele move são as sprints, que "
@@ -72,9 +38,6 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
         "ainda está aberta, e o estado de uma sprint é processo",
 }
 
-#: OS NOMES DE RAIZ. Uma expressão só é leitura da ÁRVORE REAL quando a
-#: corrente começa num destes; `tmp_path / "docs" / "process"` é árvore de
-#: brinquedo, e árvore de brinquedo é o jeito certo de testar um varredor.
 RAIZES_REAIS = frozenset({
     "RAIZ", "RAIZ_REAL", "REPO_ROOT", "RAIZ_DO_REPO", "ROOT", "RAIZ_REPO",
 })
@@ -83,13 +46,7 @@ PASTAS_VARRIDAS = ("src", "scripts", "tests")
 
 
 def _modulos() -> list[pathlib.Path]:
-    """Os `.py` de `src/`, `scripts/` e `tests/` que VIAJAM no git.
-
-    O que o git ignora não viaja, e pode ler a pasta que também não viaja: é
-    ferramenta de processo por definição (o gerador do painel das sprints saiu
-    do git em 28/09/2026 e continua no disco, lendo `docs/process/`). Sem
-    `git`, a lista é o disco inteiro, que é o lado estrito.
-    """
+    """Os `.py` de `src/`, `scripts/` e `tests/` que VIAJAM no git."""
     nao_viajam = _ignorados_pelo_git()
     fora: list[pathlib.Path] = []
     for pasta in PASTAS_VARRIDAS:
@@ -115,9 +72,6 @@ def _rastreado(relativo: str) -> bool:
     return saida.returncode == 0
 
 
-# ---------------------------------------------------------------------------
-# 1 · O QUE A RÉGUA LÊ VIAJA NO GIT
-# ---------------------------------------------------------------------------
 def test_a_pasta_do_metodo_existe_e_e_rastreada() -> None:
     """Cada arquivo de `docs/method/` é rastreado — o oráculo é o git."""
     assert PASTA.is_dir(), (
@@ -135,16 +89,8 @@ def test_a_pasta_do_metodo_existe_e_e_rastreada() -> None:
             "calado é o defeito inteiro que esta pasta existe para matar.")
 
 
-# ---------------------------------------------------------------------------
-# 2 · O ÍNDICE DIZ DE ONDE VEIO E QUEM LÊ
-# ---------------------------------------------------------------------------
 def test_o_indice_nomeia_cada_arquivo_da_pasta() -> None:
-    """Arquivo novo na pasta sem linha no índice reprova.
-
-    Sem isto, a pasta vira depósito: daqui a um mês ninguém sabe se um
-    arquivo ali ainda é lido por alguma coisa, e o critério de entrada — *ser
-    LIDO* — deixa de ser conferível.
-    """
+    """Arquivo novo na pasta sem linha no índice reprova."""
     assert INDICE.is_file(), f"o índice sumiu: {INDICE.relative_to(RAIZ)}"
     texto = INDICE.read_text(encoding="utf-8")
     sem_linha = [
@@ -165,9 +111,6 @@ def test_o_indice_registra_o_endereco_velho() -> None:
         "velho, quem procurar pelo caminho de ontem não acha o de hoje")
 
 
-# ---------------------------------------------------------------------------
-# 3 · NINGUÉM VOLTA A LER A ÁRVORE REAL `docs/process/`
-# ---------------------------------------------------------------------------
 def _raiz_da_corrente(no: ast.AST) -> str | None:
     """O nome que está na ponta esquerda de `A / "b" / "c"`, se houver um."""
     while isinstance(no, ast.BinOp) and isinstance(no.op, ast.Div):
@@ -180,21 +123,7 @@ def _raiz_da_corrente(no: ast.AST) -> str | None:
 
 
 def _le_o_processo_real(arvore: ast.AST) -> list[int]:
-    """As linhas em que o módulo monta um caminho para a `docs/process` REAL.
-
-    Duas formas, e só elas, porque só elas leem a árvore de verdade:
-
-    * `RAIZ / "docs" / "process" / …` — a corrente de `pathlib` ancorada num
-      nome de raiz;
-    * a string `"docs/process/…"` passada a `Path(...)`/`open(...)`, ou
-      dividida por `/` a partir de uma raiz.
-
-    O que NÃO conta, de propósito: prosa, docstring, comentário, e
-    `tmp_path / "docs" / "process"`. Uma régua que confundisse a árvore de
-    brinquedo com a real proibiria justamente o jeito CERTO de testar um
-    varredor de sprints — e régua que proíbe o certo é desligada na semana
-    seguinte.
-    """
+    """As linhas em que o módulo monta um caminho para a `docs/process` REAL."""
     linhas: list[int] = []
     for no in ast.walk(arvore):
         if isinstance(no, ast.BinOp) and isinstance(no.op, ast.Div):
@@ -257,29 +186,12 @@ def test_toda_isencao_traz_a_razao() -> None:
     for relativo in LEITORES_DE_PROCESSO
 ])
 def test_todo_arquivo_isento_existe(relativo: str) -> None:
-    """Isenção de arquivo morto engana.
-
-    O ISENTO PODE SER UM ARQUIVO QUE O GIT NÃO CARREGA (27/09/2026, corrida
-    36354426805 do CI): `scripts/check_colisao_de_sprints.py` saiu do
-    repositório com o despacho de leva, e num clone limpo — o `lint-test`, o
-    `gtk-real`, o `release.yml` — ele não existe. O `insumo_fora_do_git` pula
-    SÓ esse caso, com a linha do `.gitignore` que o explica; um isento
-    versionado que suma continua reprovando aqui, porque o `.gitignore` não
-    explica a ausência dele. Onde o arquivo mora — a mesa dela e a árvore de
-    integração, que recebe os scripts ignorados antes de medir — a régua roda
-    inteira, no `scripts/rodar-a-suite.sh` de quem coordena.
-
-    **A MORDIDA:** tire o `marks=` do `pytest.param` e rode num clone limpo:
-    reprova em `scripts/check_colisao_de_sprints.py`, como no CI.
-    """
+    """Isenção de arquivo morto engana."""
     assert (RAIZ / relativo).is_file(), (
         f"`{relativo}` está isento de ler `{PROCESSO}/` e não existe "
         "mais — a isenção virou letra morta e esconde o próximo caso")
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA DA REGRA 3 — a régua tem de ACUSAR o caso que ela existe para pegar
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("fonte", [
     'ALVO = RAIZ / "docs" / "process" / "UM-GESTO.md"',
     'ALVO = REPO_ROOT / "docs/process/sprints/UM-GESTO.md"',

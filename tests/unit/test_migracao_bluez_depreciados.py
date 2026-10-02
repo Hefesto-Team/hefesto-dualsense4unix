@@ -1,35 +1,4 @@
-"""MIGRACAO-BLUEZ-DEPRECIADOS-01 — o diagnóstico não pode calar quando a
-ferramenta velha some.
-
-O BlueZ DEPRECIOU ``hciconfig``, ``hcitool`` e ``sdptool``, e cada família de
-distribuição os mudou de pacote (``bluez-deprecated``,
-``bluez-deprecated-tools``). Os scripts desta casa os chamavam sempre no mesmo
-molde::
-
-    if command -v hciconfig >/dev/null 2>&1; then
-        ... mede ...
-    fi                      # <- e, sem a ferramenta, NADA acontecia
-
-Numa máquina sem o pacote, o check inteiro sumia da saída: nenhuma linha, nenhum
-aviso, e a conferência final saía verde **sem ter medido**. Mentir por omissão é
-pior que não medir, porque quem lê conclui "está tudo bem".
-
-O que este arquivo trava, por pergunta migrada:
-
-* **quem é o adaptador** e **quem está conectado** têm sucessor VIVO — sysfs do
-  kernel e D-Bus do BlueZ. Migrados, com a depreciada como plano B (quem AINDA
-  a tem não pode perder leitura: isso seria regressão).
-* **contadores RX/TX errors**, **link policy** (adaptador e conexão) e **browse
-  SDP sob demanda** NÃO têm sucessor vivo — conferido nos ``--help`` do
-  ``btmgmt`` e do ``bluetoothctl`` 5.86 desta casa em 19/08/2026. Onde a
-  depreciada falta, a leitura SE PERDE e o código tem de **dizer que não sabe**.
-
-O molde dos testes é o dos irmãos (``test_doctor_radio_pareamento.py``): fakes
-no PATH, nada do sistema real é tocado. A novidade é o ``sandbox_sem_velhas``,
-um PATH montado com links para tudo do sistema **menos** as três depreciadas —
-sem ele não há como exercitar a máquina que não as tem, que é justamente a que
-recebia o diagnóstico mudo.
-"""
+"""MIGRACAO-BLUEZ-DEPRECIADOS-01 — o diagnóstico não pode calar quando a"""
 
 from __future__ import annotations
 
@@ -57,43 +26,20 @@ MEDIR_W3 = REPO_ROOT / "scripts" / "medir_w3_coex.sh"
 
 BASH = shutil.which("bash") or "/bin/bash"
 
-#: Depreciadas do BlueZ — as três que a upstream aposentou.
 VELHAS = ("hciconfig", "hcitool", "sdptool")
 
 def _oui_do_pro_genuino() -> str:
-    """A OUI do Pro sai do PRODUTO — nunca escrita aqui.
-
-    Mesma guarda de `test_a_oui_separa_o_clone_do_genuino.py`: forma de MAC em
-    `tests/` só nas faixas forjadas (test_anonimato_de_fixtures.py), e OUI real
-    não é faixa forjada.
-
-    Até 25/08/2026 ela era lida do `OUI_NINTENDO_REAL` do `bt_active_mode.sh`.
-    Aquela constante MORREU com a UMA-FAIXA-NÃO-É-UM-FABRICANTE-01: decidir
-    "quem é um Pro" por uma faixa era o defeito, e o script passou a decidir por
-    negativa. O dono da resposta agora é `core/linhagem_nintendo`, e é de lá que
-    ela sai — este teste não precisa da definição de Pro, só de um endereço de
-    Pro plausível para a bancada dele.
-    """
+    """A OUI do Pro sai do PRODUTO — nunca escrita aqui."""
     return sorted(com_dois_pontos(OUIS_NINTENDO_VISTAS))[0].upper()
 
 
-#: MAC do Pro Controller genuíno na máscara da casa (octetos 4 e 5 zerados —
-#: test_docs_mac_anonimato.py é o portão dessa convenção).
 MAC_PRO = f"{_oui_do_pro_genuino()}:00:00:11"
 PATH_PRO = "/org/bluez/hci0/dev_" + MAC_PRO.replace(":", "_")
 
 
-# ---------------------------------------------------------------------------
-# Bancada
-# ---------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def sandbox_sem_velhas(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Um PATH com TUDO do sistema menos `hciconfig`, `hcitool` e `sdptool`.
-
-    Simula a máquina em que as depreciadas não estão instaladas — a única em
-    que o defeito aparece. Links, não cópias: o teste continua rodando os
-    binários de verdade (grep, awk, date...), só não enxerga as três.
-    """
+    """Um PATH com TUDO do sistema menos `hciconfig`, `hcitool` e `sdptool`."""
     alvo = tmp_path_factory.mktemp("bin-sem-velhas")
     for origem in ("/usr/bin", "/bin", "/usr/sbin", "/sbin"):
         d = Path(origem)
@@ -123,14 +69,7 @@ def _fake(dirbin: Path, nome: str, corpo: str) -> Path:
 
 
 def _sysfs_bt_hci0(tmp_path: Path) -> Path:
-    """Um `/sys/class/bluetooth` de mentira com UM adaptador: `hci0`.
-
-    `_bt_adaptadores()` (`scripts/doctor.sh`) lê `HEFESTO_BT_SYSFS_ROOT` antes
-    do sysfs real — sem isto, numa bancada com Bluetooth físico plugado, ela
-    devolve os adaptadores REAIS da máquina em vez do `hci0` único que
-    `_busctl_fake` (logo abaixo) simula, e a leitura da link policy erra o
-    adaptador certo. Achado em 24/08/2026.
-    """
+    """Um `/sys/class/bluetooth` de mentira com UM adaptador: `hci0`."""
     raiz = tmp_path / "sysfs-bt"
     (raiz / "hci0").mkdir(parents=True, exist_ok=True)
     return raiz
@@ -187,16 +126,8 @@ def _rodar_check(check: str, *dirs: Path, **env_extra: str) -> str:
     return res.stdout
 
 
-# ---------------------------------------------------------------------------
-# 1. Contadores de erro do rádio — leitura SEM sucessor vivo.
-# ---------------------------------------------------------------------------
 class TestContadoresDeErroDoRadio:
-    """`hciconfig hciN` -> `errors:N`. Pergunta: o rádio acumulou erro?
-
-    Não tem sucessor: os contadores são o `hci_dev_stats` do kernel, entregue só
-    pelo ioctl HCIGETDEVINFO. `btmgmt` e `bluetoothctl` não têm comando para
-    isso. Então o dever do doctor é DIZER que não sabe.
-    """
+    """`hciconfig hciN` -> `errors:N`. Pergunta: o rádio acumulou erro?"""
 
     def test_sem_hciconfig_o_doctor_diz_que_nao_sabe(
         self, tmp_path: Path, sandbox_sem_velhas: Path
@@ -226,12 +157,6 @@ class TestContadoresDeErroDoRadio:
             "\\tTX bytes:1 acl:0 sco:0 commands:1 errors:7\\n'\nexit 0\n",
         )
         saida = _rodar_check("check_bt_radio", fakes, "/usr/bin", "/bin")
-        # A FRASE MUDOU EM 22/08/2026, e a mudança é a entrega (N-IGUAL-A-UM-01).
-        # O texto antigo dizia "adaptador BT" no singular porque o check lia UM
-        # adaptador — `_bt_adaptadores | head -1`. Numa mesa de três, hci1 e hci2
-        # hospedavam quatro dos cinco controles e o rádio sujo deles nunca era
-        # lido. Agora o aviso NOMEIA cada um, e sai uma linha por adaptador
-        # sujo — sem o nome, ela não sabe em qual mexer.
         assert "com erros acumulados (RX/TX: 42/7)" in saida, saida
         assert "adaptador hci" in saida, (
             "o aviso tem de NOMEAR o adaptador: numa mesa de três, 'adaptador "
@@ -239,9 +164,6 @@ class TestContadoresDeErroDoRadio:
         )
 
 
-# ---------------------------------------------------------------------------
-# 2. Link policy — leitura SEM sucessor vivo (adaptador e conexão).
-# ---------------------------------------------------------------------------
 class TestLinkPolicyDoModoAtivoNintendo:
     def _systemctl_fake(self, dirbin: Path) -> Path:
         return _fake(
@@ -257,12 +179,7 @@ class TestLinkPolicyDoModoAtivoNintendo:
     def test_sem_as_velhas_nao_afirma_modo_ativo(
         self, tmp_path: Path, sandbox_sem_velhas: Path
     ) -> None:
-        """Alias certo + SNIFF ilegível não é "modo ativo OK" — é meia medida.
-
-        A link policy não existe na mgmt API, então nem btmgmt nem bluetoothctl
-        a leem. Antes, sem `hciconfig`, o bloco inteiro era pulado e a ausência
-        de aviso passava por saúde.
-        """
+        """Alias certo + SNIFF ilegível não é "modo ativo OK" — é meia medida."""
         fakes = tmp_path / "fakes"
         _busctl_fake(fakes, alias="Nintendo meowsystem", connected="true")
         self._systemctl_fake(fakes)
@@ -302,9 +219,6 @@ class TestLinkPolicyDoModoAtivoNintendo:
         assert "[ OK ] modo ativo p/ Nintendo (nome 'Nintendo meowsystem'" in saida, saida
 
 
-# ---------------------------------------------------------------------------
-# 3. Quem está conectado — pergunta COM sucessor vivo (D-Bus), com plano B.
-# ---------------------------------------------------------------------------
 class TestQuemEstaConectado:
     def test_sai_do_dbus_sem_hcitool(
         self, tmp_path: Path, sandbox_sem_velhas: Path
@@ -341,9 +255,6 @@ class TestQuemEstaConectado:
         assert saida.strip() == ""
 
 
-# ---------------------------------------------------------------------------
-# 4. Browse SDP sob demanda — leitura SEM sucessor vivo.
-# ---------------------------------------------------------------------------
 _INFO_HID = """[General]
 Name=DualSense Wireless Controller
 Services=00001124-0000-1000-8000-00805f9b34fb;
@@ -413,8 +324,7 @@ class TestConselhoDoCacheSdpEnvenenado:
 
 
 class TestVigiaSdpDoWatchdogNaoAfirmaOQueNaoMediu:
-    """O `else` da vigia 3 dizia "o device responde ao browse direto" — também
-    quando o `sdptool` não existia, ou seja, sem ter perguntado nada."""
+    """O `else` da vigia 3 dizia "o device responde ao browse direto" — também"""
 
     def _rodar_vigia(
         self, tmp_path: Path, *dirs: Path, sdptool: str | None = None
@@ -422,8 +332,6 @@ class TestVigiaSdpDoWatchdogNaoAfirmaOQueNaoMediu:
         storage = tmp_path / "bluetooth"
         _arvore_bluez_falsa(storage, "AA:BB:CC:00:00:11")
         fakes = tmp_path / "fakes"
-        # Connected=true na 1ª pergunta (entra na cura) e false depois: a vigia
-        # desiste no 1º tick em vez de gastar 12 s de tentativas.
         contador = tmp_path / "n"
         _fake(
             fakes,
@@ -486,24 +394,15 @@ exit 0
         assert "reset de hardware" in saida
 
 
-# ---------------------------------------------------------------------------
-# 5. bt_active_mode.sh — a cura que sumia inteira por causa de uma ferramenta
-#    que ela nem usava.
-# ---------------------------------------------------------------------------
 class TestModoAtivoNaoDesisteInteiro:
     def _rodar(self, tmp_path: Path, *dirs: Path, com_velhas: bool = False) -> str:
         fakes = tmp_path / "fakes"
-        _fake(fakes, "id", "echo 0\n")  # o script exige root; aqui ele "é" root
+        _fake(fakes, "id", "echo 0\n")
         _busctl_fake(fakes, connected="true")
         if com_velhas:
             _fake(fakes, "hciconfig", "echo 'Link policy: RSWITCH HOLD PARK'\nexit 0\n")
             _fake(fakes, "hcitool", "exit 0\n")
         log = tmp_path / "active.log"
-        #: N-IGUAL-A-UM-01 (22/08/2026): sem estas duas raízes desviadas o
-        #: teste lia o `/sys/class/bluetooth` DA MÁQUINA — três adaptadores na
-        #: bancada dela, zero no CI — e a saída mudava conforme quem rodava. O
-        #: que se quer aqui é o plano B do D-Bus, que é o que o `busctl` de
-        #: mentira responde.
         vazio = tmp_path / "sem-adaptador-no-sysfs"
         vazio.mkdir(exist_ok=True)
         subprocess.run(
@@ -525,16 +424,8 @@ class TestModoAtivoNaoDesisteInteiro:
     def test_sem_hciconfig_o_alias_nintendo_ainda_e_aplicado(
         self, tmp_path: Path, sandbox_sem_velhas: Path
     ) -> None:
-        """A medida (1) sai pelo D-Bus e nunca precisou do `hciconfig`.
-
-        O script saía no `command -v hciconfig` da linha 64 — e com isso perdia
-        também o alias, que é a metade da cura BT-NINTENDO-ACTIVE-01 que
-        funciona sem ferramenta nenhuma do pacote depreciado.
-        """
+        """A medida (1) sai pelo D-Bus e nunca precisou do `hciconfig`."""
         saida = self._rodar(tmp_path, sandbox_sem_velhas)
-        #: A frase NOMEIA o adaptador desde N-IGUAL-A-UM-01 (22/08/2026):
-        #: "alias do adaptador -> 'X'" falava pelo rádio inteiro numa mesa com
-        #: três, e era impossível saber em qual deles a cura tinha caído.
         assert "alias do adaptador hci0 -> 'Nintendo meowsystem'" in saida, saida
         assert "NÃO apliquei o SNIFF default" in saida, (
             "e o que NÃO foi aplicado tem de aparecer no diário, não sumir"
@@ -577,9 +468,6 @@ class TestNoSniffNaBordaNaoSaiCalado:
         assert "bluez-deprecated" in saida
 
 
-# ---------------------------------------------------------------------------
-# 6. kernel-watch: ausência de [BT-ERR] não é rádio limpo.
-# ---------------------------------------------------------------------------
 class TestKernelWatchSemContador:
     def test_o_hook_emite_a_marca(self, tmp_path: Path) -> None:
         res = subprocess.run(
@@ -608,9 +496,6 @@ class TestKernelWatchSemContador:
         assert "é ausência de medida, não medida de ausência" in saida
 
 
-# ---------------------------------------------------------------------------
-# 7. O instrumento de coexistência declara a régua que perdeu.
-# ---------------------------------------------------------------------------
 class TestMedirW3DeclaraOBracoPerdido:
     def test_sem_hciconfig_o_plano_avisa_que_nao_mede_contador(
         self, tmp_path: Path, sandbox_sem_velhas: Path
@@ -628,9 +513,6 @@ class TestMedirW3DeclaraOBracoPerdido:
         assert "DRY-RUN" in res.stdout, "o gate humano continua no lugar"
 
 
-# ---------------------------------------------------------------------------
-# 8. O ensaio do byte no fio: handle -> MAC pelo kernel, e a régua declarada.
-# ---------------------------------------------------------------------------
 def _carregar_byte_no_fio() -> object:
     """`scripts/ensaios/` não é pacote — carrega pelo caminho, como os irmãos."""
     import importlib.util
@@ -649,18 +531,12 @@ def _carregar_byte_no_fio() -> object:
 
 
 class TestMapaDeHandlesSaiDoKernel:
-    """`hcitool con` respondia "que handle ACL é de qual MAC".
-
-    A fonte viva é o próprio kernel: cada conexão ACL vira um device
-    `hciN:<handle>` em /sys/class/bluetooth, com o `address` ao lado. O
-    `hcitool` fica como plano B, e o relatório DIZ de qual régua o mapa saiu —
-    sem isso, um mapa vazio viraria "SEM HANDLE" em todo mundo, sem explicação.
-    """
+    """`hcitool con` respondia "que handle ACL é de qual MAC"."""
 
     def test_le_handle_e_mac_do_sysfs(self, tmp_path: Path) -> None:
         modulo = _carregar_byte_no_fio()
         raiz = tmp_path / "bluetooth"
-        (raiz / "hci0").mkdir(parents=True)  # o adaptador, que NÃO é conexão
+        (raiz / "hci0").mkdir(parents=True)
         conn = raiz / "hci0:256"
         conn.mkdir()
         (conn / "address").write_text(MAC_PRO.lower() + "\n", encoding="utf-8")

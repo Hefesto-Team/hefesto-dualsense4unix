@@ -1,27 +1,4 @@
-"""Todo botão da tela começa com maiúscula.
-
-O-VOLTAR-DO-MAPA-VOLTA-PARA-A-ABA-DE-ONDE-VEIO-01. A fala dela, 29/09/2026:
-*«Fora que apagar nenhum tá escrito de forma incorreta.»* E a regra dela, de
-30/08 (no cabeçalho do `scripts/check_a_maiuscula_decorativa.py`): a primeira
-letra é capitalizada, é o padrão do projeto.
-
-O QUE SE MEDE: o texto visível de todo `<button>` e de todo `<a>` com classe
-das páginas da tela (sem `<script>`, `<style>` e `<svg>`), e o PRIMEIRO
-CARACTERE, quando é letra, tem de ser maiúsculo. É o primeiro caractere, e não
-a primeira letra: os botões de entrada da Conexões começam pelo número
-(«6», e depois «vazia» noutro `<span>`), e a primeira letra os reprovaria sem
-defeito. Medido em 01/10/2026, antes da cura: 505 rótulos nas páginas
-publicadas, dois minúsculos, «nenhum» e «apagar», os dois no mapa do controle.
-
-A PÁGINA LIDA: a publicada; a declarada em trabalho no `mockup/DIVERGENCIAS.md`
-(a licença do portão `desenho-aprovado`), lida da bancada até o `--publicar`.
-
-O QUE ELA NÃO VÊ, declarado: o rótulo que um pacote escreve no tique (alvo
-`html`); ela lê o HTML estático.
-
-A MORDIDA: devolver «Nenhum» a «nenhum» no `mapa.py` e regerar reprova com o
-nome da página e o rótulo.
-"""
+"""Todo botão da tela começa com maiúscula."""
 from __future__ import annotations
 
 import html.parser

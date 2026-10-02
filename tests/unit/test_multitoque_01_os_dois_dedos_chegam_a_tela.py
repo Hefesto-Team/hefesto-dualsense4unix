@@ -45,13 +45,7 @@ class _Ecodes:
 
 
 class _EcodesPobre:
-    """Um dublê SEM os códigos MT — o que as réguas de antes desta data usam.
-
-    Ele não é hipótese: `tests/unit/test_sensores_status.py::_Ecodes` é
-    exatamente assim. Se o produto lesse `ecodes.ABS_MT_SLOT` direto, o
-    `AttributeError` subiria no meio do laço de eventos — e o laço de eventos
-    é o do aparelho dela, não o do teste.
-    """
+    """Um dublê SEM os códigos MT — o que as réguas de antes desta data usam."""
 
     EV_ABS = 3
     EV_KEY = 1
@@ -66,8 +60,6 @@ def _evento(tipo: int, code: int, value: int) -> Any:
 
 
 def _reader() -> TouchpadReader:
-    # `device_path` explícito e inexistente: sem ele o construtor VARRE o
-    # sysfs procurando touchpad de verdade, e a suíte passaria a depender de
     # haver (ou não haver) um DualSense na mesa de quem roda.
     return TouchpadReader(
         device_path=Path("/dev/input/event-que-nao-existe"),
@@ -96,17 +88,8 @@ def _levantar(reader: TouchpadReader, slot: int) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# ELO 1 — o reader
-# ---------------------------------------------------------------------------
-
-
 def test_os_dois_dedos_saem_do_reader_com_slot_e_posicao() -> None:
-    """O defeito exato: com dois dedos apoiados, `pontos` tinha de ter dois.
-
-    A MORDIDA desta régua é o `_handle_multitoque` inteiro: sem ele,
-    `pontos` volta `()` e esta asserção reprova com 0 != 2.
-    """
+    """O defeito exato: com dois dedos apoiados, `pontos` tinha de ter dois."""
     reader = _reader()
 
     _dedo(reader, 0, 210, 478, ident=7)
@@ -118,12 +101,7 @@ def test_os_dois_dedos_saem_do_reader_com_slot_e_posicao() -> None:
 
 
 def test_levantar_o_primeiro_dedo_nao_renumera_o_segundo() -> None:
-    """Medido no aparelho dela: `1: [(1, 1865, 28)]` — o slot 1, sozinho.
-
-    É o caso que separa "lista de dedos" de "lista de slots". Quem guardasse
-    os dedos por ordem de chegada faria o dedo que ficou pular para a
-    bolinha 1 no quadro seguinte — um salto na tela que o dedo não deu.
-    """
+    """Medido no aparelho dela: `1: [(1, 1865, 28)]` — o slot 1, sozinho."""
     reader = _reader()
     _dedo(reader, 0, 210, 478, ident=7)
     _dedo(reader, 1, 1865, 28, ident=8)
@@ -142,7 +120,6 @@ def test_o_dedo_levantado_nao_deixa_a_posicao_velha_para_tras() -> None:
 
     assert reader.touch_state().pontos == ()
 
-    # O kernel reusa o slot 0 com identidade NOVA — e a posição vem depois.
     reader._handle_event(
         _evento(_Ecodes.EV_ABS, _Ecodes.ABS_MT_SLOT, 0), _Ecodes
     )
@@ -156,12 +133,7 @@ def test_o_dedo_levantado_nao_deixa_a_posicao_velha_para_tras() -> None:
 
 
 def test_o_ecodes_sem_multitouch_nao_derruba_o_laco_de_eventos() -> None:
-    """Dublê pobre: o caminho de um dedo continua inteiro, e nada levanta.
-
-    Esta é a régua que protege as OUTRAS réguas da casa — e o aparelho
-    junto: o `ecodes` chega como parâmetro, e um `AttributeError` aqui
-    subiria dentro do `for event in dev.read()` do produto.
-    """
+    """Dublê pobre: o caminho de um dedo continua inteiro, e nada levanta."""
     reader = _reader()
 
     reader._handle_event(
@@ -173,7 +145,6 @@ def test_o_ecodes_sem_multitouch_nao_derruba_o_laco_de_eventos() -> None:
     reader._handle_event(
         _evento(_EcodesPobre.EV_ABS, _EcodesPobre.ABS_Y, 300), _EcodesPobre
     )
-    # Um código MT chegando com um ecodes que não o conhece: ignorado, não erro.
     reader._handle_event(_evento(_EcodesPobre.EV_ABS, 47, 1), _EcodesPobre)
 
     estado = reader.touch_state()
@@ -193,11 +164,7 @@ def test_a_queda_do_controle_apaga_os_dedos() -> None:
 
 
 def test_o_multitoque_nao_mexe_no_delta_do_cursor() -> None:
-    """Os dois dedos são OBSERVAÇÃO — o cursor é do `ABS_X`/`ABS_Y`.
-
-    Sem esta separação, uma rolagem de dois dedos empurraria o ponteiro para
-    o meio do caminho entre eles a cada quadro.
-    """
+    """Os dois dedos são OBSERVAÇÃO — o cursor é do `ABS_X`/`ABS_Y`."""
     reader = TouchpadReader(
         device_path=Path("/dev/input/event-que-nao-existe"),
         acumular_movimento=True,
@@ -206,11 +173,6 @@ def test_o_multitoque_nao_mexe_no_delta_do_cursor() -> None:
     _dedo(reader, 1, 1603, 470, ident=8)
 
     assert reader.consume_motion() == (0, 0)
-
-
-# ---------------------------------------------------------------------------
-# ELO 3 — a leitura do payload
-# ---------------------------------------------------------------------------
 
 
 def _payload(pontos: list[dict[str, int]] | None, **extra: Any) -> dict[str, Any]:
@@ -228,12 +190,7 @@ def _payload(pontos: list[dict[str, int]] | None, **extra: Any) -> dict[str, Any
 
 
 def test_as_tres_respostas_do_payload_sao_diferentes() -> None:
-    """`None` (não sei) · `()` (ninguém toca) · N dedos. Nunca confundir.
-
-    Um `()` lido como `None` esconderia o touchpad inteiro da tela; um
-    `None` lido como `()` afirmaria "ninguém está tocando" sobre um controle
-    de que não se sabe nada.
-    """
+    """`None` (não sei) · `()` (ninguém toca) · N dedos. Nunca confundir."""
     assert dedos_do_inputs({}) is None
     assert dedos_do_inputs({"touchpad": "nada disso"}) is None
     assert dedos_do_inputs(_payload([])) == ()
@@ -244,11 +201,7 @@ def test_as_tres_respostas_do_payload_sao_diferentes() -> None:
 
 
 def test_payload_velho_sem_pontos_cai_para_o_dedo_principal() -> None:
-    """Daemon anterior a 18/09: um dedo é o que ele SABE dizer.
-
-    Devolver `()` aqui apagaria o toque na tela de quem ainda não reiniciou
-    o serviço — a tela mentiria sobre um dedo que está apoiado.
-    """
+    """Daemon anterior a 18/09: um dedo é o que ele SABE dizer."""
     velho = {"touchpad": {"touching": True, "x": 960, "y": 540}}
     assert dedos_do_inputs(velho) == ((0.5, 0.5),)
     velho_sem_dedo = {"touchpad": {"touching": False, "x": 960, "y": 540}}
@@ -262,11 +215,6 @@ def test_ponto_torto_no_payload_nao_derruba_os_outros() -> None:
                   {"slot": 1, "x": 1440, "y": 810, "id": 8}])
     )
     assert lido == ((0.75, 0.75),)
-
-
-# ---------------------------------------------------------------------------
-# ELO 4 — a tela
-# ---------------------------------------------------------------------------
 
 
 def test_a_palavra_e_a_posicao_saem_por_dedo() -> None:
@@ -292,12 +240,7 @@ def test_a_palavra_e_a_posicao_saem_por_dedo() -> None:
 
 
 def test_a_pagina_tem_uma_bolinha_por_dedo_em_todo_card() -> None:
-    """A página publicada, medida no disco — não o gerador, o resultado.
-
-    A MORDIDA é dupla e barata: tirar o segundo `<span>` derruba esta régua,
-    e derruba antes o `_conferir` do próprio `aba02.py`, que conta os
-    pontinhos card a card.
-    """
+    """A página publicada, medida no disco — não o gerador, o resultado."""
     import re
 
     pagina = (
@@ -314,11 +257,6 @@ def test_a_pagina_tem_uma_bolinha_por_dedo_em_todo_card() -> None:
         "um card perdeu a segunda e o dedo some naquele assento"
     )
     assert segundas >= 1, "nenhuma bolinha para o segundo dedo na página"
-    # Os endereços são DISTINTOS por dedo: o mesmo endereço nos dois faria o
-    # tique escrever a posição de um em cima do outro. Desde a
-    # A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01 (25/09/2026) a posição é o
-    # alvo `posicao` de um endereço por dedo, e não mais uma regra por bolinha
-    # numa folha trocada inteira a cada tique.
     por_dedo = {
         dedo: len(re.findall(
             rf'data-campo="pos-touch{sufixo}" data-hef-alvo="posicao"', html))

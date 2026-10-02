@@ -8,7 +8,7 @@ regra do SISTEMA (`/usr/lib/udev/rules.d/70-uaccess.rules`) só marca
 
 Este módulo trava o INSTRUMENTO, não a cura: `check_input_uaccess` no
 `scripts/doctor.sh`. Ele existe porque o sintoma da falta de permissão é a
-AUSÊNCIA de dado — `core/evdev_reader.py:1396` engole a `PermissionError` num
+AUSÊNCIA de dado — `core/evdev_reader.py:1154` engole a `PermissionError` num
 `except Exception: continue`, o nó some do mapa de descoberta e o daemon relata
 "esse controle não tem sensor". Sem alguém que confira a permissão e diga o
 nome dela, o defeito é indistinguível de hardware sem sensor.
@@ -75,12 +75,6 @@ def _sem_comentarios(texto: str) -> str:
     return "\n".join(linhas)
 
 
-# ---------------------------------------------------------------------------
-# A cena: /dev, /sys e /etc de mentira
-# ---------------------------------------------------------------------------
-#: Os nós que a função tem de enxergar, e os que tem de ignorar. O `nome` é o
-#: que o kernel `hid_playstation`/`hid-nintendo` publica em
-#: /sys/class/input/<base>/device/name.
 FISICO = "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-3/3-3:1.0/0003:054C:0CE6.0042"
 VIRTUAL = "/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F"
 
@@ -92,12 +86,7 @@ def _monta_cena(
     com_regra: bool = True,
     com_acl: tuple[str, ...] = (),
 ) -> dict[str, str]:
-    """Monta a árvore falsa.
-
-    ``nos`` é uma lista de ``(base, vendor, nome, pai_sysfs, modo)`` —
-    ``pai_sysfs`` decide se o nó é FÍSICO ou VIRTUAL, e ``modo`` é o modo do
-    arquivo em ``/dev/input`` (0 = ilegível).
-    """
+    """Monta a árvore falsa."""
     (raiz / "dev" / "input").mkdir(parents=True, exist_ok=True)
     (raiz / "sys" / "class" / "input").mkdir(parents=True, exist_ok=True)
     if com_regra:
@@ -122,12 +111,7 @@ def _monta_cena(
 
 
 def _stub_getfacl(raiz: Path) -> Path:
-    """`getfacl` de mentira: só diz `user:<eu>:` para quem está em COM_ACL.
-
-    É o coração da distinção que a função faz — ACL da sessão (a cura) versus
-    grupo do nó (o acidente desta máquina). Com o getfacl real não haveria como
-    encenar as duas, porque a árvore falsa não tem ACL nenhuma.
-    """
+    """`getfacl` de mentira: só diz `user:<eu>:` para quem está em COM_ACL."""
     binario = raiz / "bin"
     binario.mkdir(parents=True, exist_ok=True)
     stub = binario / "getfacl"
@@ -175,7 +159,6 @@ def _roda(raiz: Path, env_extra: dict[str, str]) -> subprocess.CompletedProcess[
     )
 
 
-#: A cena SÃ: os dois nós auxiliares do controle FÍSICO, com ACL da sessão.
 _SAUDAVEL = [
     ("event7", "054c", "DualSense Wireless Controller Motion Sensors", FISICO, 0o660),
     ("event8", "054c", "DualSense Wireless Controller Touchpad", FISICO, 0o660),
@@ -209,16 +192,10 @@ class TestOInstrumentoAcusa:
         r = _roda(tmp_path, env)
         assert "[FAIL]" in r.stdout, r.stdout
         assert "event7" in r.stdout and "event8" in r.stdout
-        # A dica certa vem primeiro: a ACL nasce no (re)add do device.
         assert "reconecte" in r.stdout.lower()
 
     def test_legivel_so_pelo_grupo_e_warn_nunca_pass(self, tmp_path: Path) -> None:
-        """O ACIDENTE desta máquina, dito com todas as letras.
-
-        Legível sem ACL da sessão = legível pelo grupo `input`, em que a
-        usuária está por fora do produto. Funciona aqui e não funciona numa
-        máquina limpa — e um PASS aqui teria mantido a OQ-6 invisível.
-        """
+        """O ACIDENTE desta máquina, dito com todas as letras."""
         env = _monta_cena(tmp_path, _SAUDAVEL, com_acl=())
         r = _roda(tmp_path, env)
         assert "[WARN]" in r.stdout, r.stdout
@@ -281,11 +258,7 @@ class TestOVpadNaoRespondePeloFisico:
         assert "event7" in r.stdout or "event8" in r.stdout
 
     def test_vpad_sem_acesso_e_fail_proprio(self, tmp_path: Path) -> None:
-        """Sem ACL no vpad o JOGO não lê giroscópio nem touchpad na máscara PS.
-
-        É defeito de outra natureza (afeta o jogo, não a interface), e por isso
-        tem mensagem própria em vez de sumir dentro da contagem do físico.
-        """
+        """Sem ACL no vpad o JOGO não lê giroscópio nem touchpad na máscara PS."""
         cena = [
             *_SAUDAVEL,
             (
@@ -305,11 +278,7 @@ class TestOVpadNaoRespondePeloFisico:
 
 class TestOEscopoEEstreito:
     def test_touchpad_de_notebook_nao_vira_alarme(self, tmp_path: Path) -> None:
-        """Sem a âncora de fabricante, o instrumento inventaria defeito.
-
-        A regra casa `ATTRS{id/vendor}=="054c"` — um touchpad Synaptics jamais
-        ganha ACL por ela, então cobrá-la nele seria alarme falso garantido.
-        """
+        """Sem a âncora de fabricante, o instrumento inventaria defeito."""
         cena = [
             ("event3", "06cb", "SynPS/2 Synaptics TouchPad", FISICO, 0o000),
         ]
@@ -319,11 +288,7 @@ class TestOEscopoEEstreito:
         assert "[INFO]" in r.stdout
 
     def test_o_gamepad_principal_nao_entra(self, tmp_path: Path) -> None:
-        """O nó do gamepad já é coberto pela 70-uaccess do sistema.
-
-        Ele casa `ID_INPUT_JOYSTICK`, nunca esteve quebrado, e não é assunto
-        desta regra — incluí-lo confundiria o diagnóstico.
-        """
+        """O nó do gamepad já é coberto pela 70-uaccess do sistema."""
         cena = [("event6", "054c", "DualSense Wireless Controller", FISICO, 0o000)]
         env = _monta_cena(tmp_path, cena)
         r = _roda(tmp_path, env)
@@ -352,12 +317,7 @@ class TestContratoComORestoDaCasa:
         )
 
     def test_roda_junto_do_irmao_que_confere_a_outra_regra(self) -> None:
-        """A 77 (nó de LED gravável) e esta fazem a MESMA pergunta.
-
-        "A regra desta casa chegou a valer no nó vivo?" — uma para o LED, outra
-        para os nós de entrada. Andam juntas para que o diagnóstico de
-        permissão saia num bloco só.
-        """
+        """A 77 (nó de LED gravável) e esta fazem a MESMA pergunta."""
         assert re.search(
             r"^\s*check_led_sysfs_gravavel\n(\s*#.*\n)*\s*check_input_uaccess\s*$",
             DOCTOR,
@@ -365,13 +325,7 @@ class TestContratoComORestoDaCasa:
         ), "check_input_uaccess vem logo depois de check_led_sysfs_gravavel"
 
     def test_a_regra_entrou_na_lista_canonica_do_check_udev(self) -> None:
-        """`check_udev` confere PRESENÇA; `check_input_uaccess` confere EFEITO.
-
-        As duas são necessárias: a regra pode estar no disco sem ter pegado
-        (udev só age no re-add do device). Faltar na lista canônica faria o
-        doctor dar [OK] para quem instalou antes de a regra existir — o mesmo
-        falso-negativo permanente que a nota de 06/08 já pagou com as 82/83/84.
-        """
+        """`check_udev` confere PRESENÇA; `check_input_uaccess` confere EFEITO."""
         corpo = _extrai_funcao_bash(DOCTOR, "check_udev")
         assert REGRA_NOME in corpo, (
             f"{REGRA_NOME} fora da lista canônica de check_udev — quem instalou "
@@ -396,13 +350,7 @@ class TestContratoComORestoDaCasa:
         assert "install_udev.sh" in corpo, "as mensagens têm de nomear a cura"
 
     def test_nunca_sugere_o_grupo_input_como_solucao(self) -> None:
-        """Item 3.3 de `docs/history/RESPOSTAS_V1.md`: grupo `input` jamais.
-
-        Membro de `input` lê TODOS os `/dev/input/event*` da máquina, o teclado
-        dela inclusive — primitiva de keylogger para resolver um problema de
-        touchpad de controle. O doctor citar o grupo como DIAGNÓSTICO é
-        correto; sugeri-lo como CURA seria ensinar o defeito.
-        """
+        """Item 3.3 de `docs/history/RESPOSTAS_V1.md`: grupo `input` jamais."""
         corpo = _extrai_funcao_bash(DOCTOR, "check_input_uaccess")
         assert not re.search(r"usermod\s+-aG?\s+\w*input", corpo), (
             "o doctor não pode ensinar a entrar no grupo input"

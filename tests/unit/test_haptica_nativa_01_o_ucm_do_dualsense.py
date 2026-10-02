@@ -29,7 +29,6 @@ ROTEIRO = RAIZ / "scripts" / "install_ucm_dualsense.sh"
 ASSETS = RAIZ / "assets" / "ucm"
 
 #: O nome longo da placa do DualSense da bancada, lido em /proc/asound/cards
-#: em 18/09/2026 — o controlador USB é `0000:0c:00.3`.
 NOME_MEDIDO = "Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0c:00."
 
 PADRAO = f"{NOME_MEDIDO}.conf"
@@ -190,9 +189,6 @@ def test_o_uninstall_chama_o_mesmo_dono() -> None:
     assert 'install_ucm_dualsense.sh" --remover' in texto
 
 
-# --- o doctor e o boot do daemon fazem a mesma pergunta -------------------
-
-
 def _cards(raiz: Path, *nomes_longos: str) -> Path:
     """`/proc/asound/cards` no formato do kernel: o nome longo na 2ª linha."""
     linhas = [" 0 [Generic        ]: HDA-Intel - HD-Audio Generic",
@@ -296,20 +292,6 @@ def test_o_doctor_roda_a_checagem() -> None:
     corpo = corpo[: corpo.index("\n}\n")]
     assert "\n    check_ucm_do_dualsense\n" in corpo
 
-
-# ---------------------- o passo do UCM é anunciado em DOIS fluxos do install
-#
-# A MORDIDA QUE REVELOU, na conferência de 20/09/2026: apagada a linha
-# `install_ucm_dualsense_host` do fluxo NATIVO — o que ela usa —, os 108 testes
-# do UCM e do doctor, os 42 portões da camada rápida e os dois portões mais
-# pesados da camada completa (`casa-sabe` e `citacoes-no-codigo`, 3min27) todos
-# seguiram VERDES. Teste nenhum desta casa citava a função. O install anunciaria
-# o passo na tela, não gravaria gancho nenhum, e numa máquina nova a vibração
-# pelo cabo morreria sem uma linha vermelha.
-#
-# Nem o passo nem a chamada são digitados: os dois saem do `install.sh`, e o
-# que se cobra é que cada anúncio tenha a sua chamada logo abaixo, no mesmo
-# recuo.
 
 _PASSO_DO_UCM = r'^[ \t]*step "(?P<passo>[^"]+)" "[^"]*perfil UCM do DualSense[^"]*"$'
 

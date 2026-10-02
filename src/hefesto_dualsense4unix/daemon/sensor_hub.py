@@ -94,16 +94,8 @@ logger = get_logger(__name__)
 class SensorHub:
     """Registro de leitores de sensores por controle, movido a demanda."""
 
-    #: Sem pedido por este tempo, os readers do controle são desligados. Cinco
-    #: segundos cobrem com folga o tick de 10 Hz da GUI e ainda derrubam tudo
-    #: em poucos segundos quando ela fecha.
     _DEMANDA_TTL_S: ClassVar[float] = 5.0
-    #: Período da thread de manutenção. Um segundo é imperceptível para quem
-    #: acabou de abrir a aba e barato o bastante para rodar o dia inteiro
-    #: (a volta é um comparativo de conjuntos quando nada mudou).
     _MANUTENCAO_INTERVALO_S: ClassVar[float] = 1.0
-    #: Os três tipos de leitor administrados. "gamepad" (STATUS-04) tem
-    #: registro de demanda PRÓPRIO — ver :meth:`entradas`.
     _TIPOS: ClassVar[tuple[str, ...]] = ("motion", "touchpad", "gamepad")
 
     def __init__(
@@ -118,15 +110,7 @@ class SensorHub:
         relogio: Callable[[], float] | None = None,
         auto_manutencao: bool = True,
     ) -> None:
-        """As fábricas e os descobridores são injetáveis para teste.
-
-        Sem hardware não há como abrir um node de verdade; com dublês, toda
-        a máquina de demanda/expiração/reconciliação fica exercitável.
-
-        `auto_manutencao=False` deixa a thread de fora e o teste chama
-        `reconciliar()` na mão — sem isso, a thread rodaria a mesma
-        reconciliação em paralelo e o teste viraria uma corrida.
-        """
+        """As fábricas e os descobridores são injetáveis para teste."""
         self._relogio = relogio or time.monotonic
         self._auto_manutencao = auto_manutencao
         self._motion_factory = motion_factory or self._motion_reader_real
@@ -137,21 +121,13 @@ class SensorHub:
         self._descobrir_gamepad = descobrir_gamepad or self._descobrir_gamepad_real
 
         self._lock = threading.RLock()
-        #: Demanda dos SENSORES (`leitura`) — vale para motion e touchpad.
         self._demanda: dict[str, float] = {}
-        #: Demanda das ENTRADAS (`entradas`), separada de propósito: o
         #: `state_full` pede sensor de TODO controle que já tem `inputs`, e
-        #: pediria um reader de gamepad inútil para cada um deles. Aqui só
-        #: entra quem ficaria mudo sem ele.
         self._demanda_entradas: dict[str, float] = {}
-        #: Demanda do TOQUE ROTEADO (`toque_da_peca`, NO-MODO-XBOX, 28/09).
         self._demanda_do_toque: dict[str, float] = {}
         self._motion: dict[str, Any] = {}
         self._touch: dict[str, Any] = {}
         self._gamepad: dict[str, Any] = {}
-        #: Pares `(identidade, tipo)` já procurados sem sucesso. Por TIPO
-        #: porque os dois nodes são independentes: um controle pode ter
-        #: touchpad e não ter motion, e marcar só a identidade faria o hub
         #: varrer `/dev/input` inteiro a cada segundo por causa do que falta.
         #: Só saem daqui quando `/dev/input` muda de verdade.
         self._sem_node: set[tuple[str, str]] = set()
@@ -299,21 +275,7 @@ class SensorHub:
         return out
 
     def entradas(self, uniq: str) -> dict[str, Any] | None:
-        """Analógicos, gatilhos e botões de `uniq` agora; `None` sem reader.
-
-        STATUS-04. Mesmo contrato de `leitura`: registra a demanda (é o que
-        mantém o reader vivo), só toca dicionário sob lock e NUNCA levanta.
-        A primeira chamada devolve `None` — o reader nasce na volta seguinte
-        da thread de manutenção, porque a descoberta é cara e o event loop é
-        único (regra 1 do módulo).
-
-        **`None` não é falha, é a verdade daquele instante**, e a interface já
-        sabe lê-la: é o mesmo `None` que o card desenha como "—". O erro que
-        esta função não pode cometer é o contrário — devolver os `128` de
-        fábrica de um reader que nunca vai receber evento. Ver o cabeçalho do
-        módulo: quem decide QUANDO perguntar é o `ipc_handlers`, e ele só
-        pergunta por controle que não tem outra fonte.
-        """
+        """Analógicos, gatilhos e botões de `uniq` agora; `None` sem reader."""
         agora = self._relogio()
         with self._lock:
             self._demanda_entradas[uniq] = agora
@@ -338,15 +300,7 @@ class SensorHub:
             return None
 
     def hz_do_movimento(self, uniq: str) -> float | None:
-        """Pacotes por segundo que o nó de movimento de `uniq` recebe AGORA.
-
-        AR-MEDIDO-01 (23/09/2026), R10 dela: os Hz reais de cada controle. O
-        número é do reader (`MotionSensorReader.hz_do_movimento`); aqui só se
-        pergunta a ele. REGISTRA A DEMANDA pela mesma razão da irmã acima: é o
-        que abre o reader de um controle cujo card ainda não pediu sensor.
-
-        `None` = não sei (sem reader, ou reader aberto há menos de uma janela).
-        """
+        """Pacotes por segundo que o nó de movimento de `uniq` recebe AGORA."""
         agora = self._relogio()
         with self._lock:
             self._demanda[uniq] = agora
@@ -384,7 +338,6 @@ class SensorHub:
             with contextlib.suppress(Exception):
                 reader.stop()
 
-    # -- Thread de manutenção --------------------------------------------
 
     def _garantir_manutencao(self) -> None:
         """Sobe a thread de manutenção na primeira demanda (idempotente)."""
@@ -407,20 +360,13 @@ class SensorHub:
         while not self._parar.is_set():
             try:
                 self.reconciliar()
-            except Exception as exc:  # nunca derruba a thread
+            except Exception as exc:
                 logger.debug("sensor_hub_reconciliacao_falhou", err=str(exc))
             self._parar.wait(self._MANUTENCAO_INTERVALO_S)
 
     def reconciliar(self) -> None:
-        """Casa os readers vivos com a demanda atual. Roda FORA do event loop.
-
-        Público de propósito: é o passo que o teste chama direto para
-        exercitar nascimento e morte de reader sem depender de timing de
-        thread.
-        """
+        """Casa os readers vivos com a demanda atual. Roda FORA do event loop."""
         agora = self._relogio()
-        # Uma pergunta por volta, e ela vale para os dois que dependem dela: o
-        # `_sem_node` lá embaixo e a procura das peças com sensor desligado.
         mudou = self._input_dir_mudou()
         desligados = self._sensores_desligados(mudou)
         with self._lock:
@@ -433,17 +379,6 @@ class SensorHub:
                 u: t for u, t in self._demanda_entradas.items() if u in vivos_entradas
             }
             desejados: dict[str, set[str]] = {
-                # SENSOR-DE-VERDADE-01 — A LINHA QUE FAZ O INTERRUPTOR DURAR.
-                # Quem tem sensor desligado entra na lista dos motion MESMO sem
-                # ninguém pedir leitura: é o reader do nó "Motion Sensors" que
-                # segura o EVIOCGRAB, e sem esta união o TTL de 5 s derrubaria
-                # o reader — e com ele o grab — CINCO SEGUNDOS depois de ela
-                # fechar a janela. O interruptor se desligaria sozinho, calado,
-                # e a próxima tela ainda diria "desligado".
-                #
-                # Só o `motion`: o touchpad não tem interruptor e manter um
-                # reader dele de graça seria uma thread por controle, o dia
-                # inteiro, pelo nada.
                 "motion": vivos_sensores | desligados,
                 "touchpad": vivos_sensores,
                 "gamepad": vivos_entradas,
@@ -470,8 +405,6 @@ class SensorHub:
                     reader.stop()
                 logger.debug("sensor_hub_reader_parado", identity=uniq, tipo=tipo)
 
-        # O que já foi dado como inexistente só volta à fila quando
-        # `/dev/input` muda — replug, hotplug, re-enumeração pós-storm.
         if mudou:
             sem_node = set()
             with self._lock:
@@ -482,34 +415,9 @@ class SensorHub:
         self._reconciliar_grabs(desligados)
         self._reconciliar_grabs_do_toque(agora)
 
-    # -- O BRAÇO EVDEV do interruptor de sensor (SENSOR-DE-VERDADE-01) -----
 
     def _sensores_desligados(self, mudou: bool = False) -> set[str]:
-        """Os `uniq` (na grafia da DESCOBERTA) com algum sensor desligado.
-
-        Duas grafias da mesma peça convivem nesta casa: o `uniq` do evdev vem
-        com dois-pontos (`aa:bb:cc:00:00:01`) e a chave do perfil vem sem
-        (`aabbcc000001`). O registro indexa pela forma normalizada; este hub
-        precisa da forma que os DESCOBRIDORES usam, senão pediria reader para
-        um endereço que `/dev/input` não conhece — e o interruptor daquela peça
-        nunca abriria nó nenhum.
-
-        A DESCOBERTA SÓ É PAGA quando há sensor desligado de peça sem reader —
-        o caso raro. No caso normal (dicionário vazio) o custo é um `if`, e
-        essa é a regra 1 deste módulo: a enumeração de `/dev/input` não pode
-        entrar no ritmo de 1 s por precaução.
-
-        **E a peça procurada e não achada só é procurada de novo quando
-        `/dev/input` muda** — na volta da mudança e na seguinte (`mudou`,
-        A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Era o caso
-        raro virando o de todo segundo: no diário de 26/09, depois do reinício
-        das 10h42, o controle com o acelerômetro desligado estava fora da mesa,
-        e esta procura rodou a cada volta (1 s mais a descoberta) das 10h42 às
-        11h47 — 3.023 pedidos ao broker em cada nó de movimento dos outros
-        dois, que a descoberta daquele dia abria.
-
-        Import tardio pela mesma razão de todos os outros daqui.
-        """
+        """Os `uniq` (na grafia da DESCOBERTA) com algum sensor desligado."""
         from hefesto_dualsense4unix.core.virtual_motion import (
             REGISTRO,
             chave_de_sensor,
@@ -528,40 +436,19 @@ class SensorHub:
             for uniq in self._chamar_descobridor(self._descobrir_motion):
                 if chave_de_sensor(uniq) in faltando:
                     achados.add(uniq)
-            # Sem broker, o nó nasce antes de o udev lhe dar dono e permissão, e
-            # essa troca não muda a pasta: só a volta SEM mudança marca a peça.
             if not mudou:
                 self._desligados_procurados |= faltando
         return achados
 
     def _reconciliar_grabs(self, desligados: set[str]) -> None:
-        """O nó "Motion Sensors" fica GRABADO enquanto houver sensor desligado.
-
-        **É a metade que a medição de 04/09/2026 obrigou a existir**, e ela
-        alcança o que o filtro do report não alcança: quem lê o nó do FÍSICO (`evtest`,
-        emulador com backend evdev, quem abriu o físico). O zero em Modo Virtual era da libSDL2
-        2.30.0 do sistema; nas bibliotecas dos runtimes da Steam o vpad expõe os dois sensores,
-        e o SDL pareia o nó «Motion Sensors» pelo `uniq`. Nenhum braço sozinho é o interruptor.
-
-        POR QUE O NÓ INTEIRO, e não um sensor por vez: giroscópio e
-        acelerômetro viajam no MESMO nó (`ABS_RX/RY/RZ` e `ABS_X/Y/Z`,
-        `hid-playstation.c`), e o EVIOCGRAB é do descritor de arquivo, não do
-        eixo. Desligar UM esconde os dois de quem lê evdev — e é por isso que a
-        resposta do `sensor.set` DIZ isso, em vez de deixar a tela prometer
-        precisão que o kernel não oferece. O braço do report, esse sim, separa
-        os dois byte a byte.
-
-        O grab não some quando a GUI fecha: quem mantém o reader vivo é a
-        união lá em cima. E não some no replug nem na troca de máscara: o
-        `_reapply_grab` do loop o reaplica ao reabrir o nó.
-        """
+        """O nó "Motion Sensors" fica GRABADO enquanto houver sensor desligado."""
         with self._lock:
             readers = dict(self._motion)
         for uniq, reader in readers.items():
             querido = uniq in desligados
             aplicar = getattr(reader, "set_grab", None)
             if not callable(aplicar):
-                continue  # dublê de teste sem grab: nada a fazer, e sem erro
+                continue
             estado = getattr(reader, "grab_state", "off")
             if querido and estado == "held":
                 continue
@@ -571,19 +458,7 @@ class SensorHub:
                 aplicar(querido)
 
     def grab_do_movimento(self, uniq: str) -> str:
-        """Estado do EVIOCGRAB no nó de movimento de `uniq`.
-
-        `off | pending | held | failed`, e `sem_reader` quando não há nó aberto
-        para aquela peça. Quem chama é o `sensor.set`, para dizer na resposta
-        **qual metade do interruptor pegou** — a lição de 04/09/2026: quando o
-        instrumento e o aparelho discordam, o aparelho ganha, e a única forma
-        de saber é PERGUNTAR ao aparelho em vez de afirmar pelo desenho.
-
-        Aceita as DUAS grafias do endereço (com e sem dois-pontos): quem
-        pergunta é o handler do IPC, que já converteu para a chave do perfil,
-        e o card, que tem a do evdev. Casar só uma delas devolveria
-        `sem_reader` sobre um nó grabado — o instrumento mentindo de novo.
-        """
+        """Estado do EVIOCGRAB no nó de movimento de `uniq`."""
         from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
 
         alvo = chave_de_sensor(uniq)
@@ -621,7 +496,7 @@ class SensorHub:
 
             watch = InputDirWatch()
             self._watch = watch
-            watch.poll()  # baseline; a 1ª volta já tenta abrir de qualquer jeito
+            watch.poll()
             return True
         resultado = watch.poll()
         return bool(resultado)
@@ -633,10 +508,6 @@ class SensorHub:
             "touchpad": self._descobrir_touch,
             "gamepad": self._descobrir_gamepad,
         }
-        # SÓ o tipo que falta paga a descoberta. Cada descobridor varre
-        # `/dev/input` (o do gamepad abre os nós de gamepad; os outros dois leem
-        # o sysfs) e o caso normal é faltar um tipo só; pagar os três era desperdício desde
-        # antes do "gamepad", e com ele passaria a custar 50% a mais.
         nodes = {
             tipo: self._chamar_descobridor(descobridores[tipo])
             for tipo in {t for _, t in pendentes}
@@ -667,15 +538,7 @@ class SensorHub:
         nodes: dict[str, Any],
         factory: Callable[[str, Any], Any],
     ) -> bool:
-        """Abre UM reader; False quando este controle não tem esse node.
-
-        O `node` já descoberto viaja para a fábrica DE PROPÓSITO: o
-        construtor dos readers re-localiza o device quando não recebe path,
-        e isso é uma varredura completa de `/dev/input` por reader (medido:
-        ~150-200 ms cada, com 4 readers virava ~1,8 s para o painel acender).
-        A partir daqui o reader se vira sozinho — ao reconectar ele usa o
-        próprio finder, que é onde a re-localização faz sentido.
-        """
+        """Abre UM reader; False quando este controle não tem esse node."""
         with self._lock:
             if uniq in self._mapa(tipo):
                 return True
@@ -696,13 +559,12 @@ class SensorHub:
         with self._lock:
             anterior = self._mapa(tipo).get(uniq)
             self._mapa(tipo)[uniq] = reader
-        if anterior is not None:  # corrida improvável: nunca deixa órfão
+        if anterior is not None:
             with contextlib.suppress(Exception):
                 anterior.stop()
         logger.info("sensor_hub_reader_iniciado", identity=uniq, tipo=tipo)
         return True
 
-    # -- Fábricas/descobridores reais (isolados para o teste substituir) ---
 
     @staticmethod
     def _motion_reader_real(uniq: str, node: Any) -> Any:
@@ -720,13 +582,7 @@ class SensorHub:
 
     @staticmethod
     def _gamepad_reader_real(uniq: str, node: Any) -> Any:
-        """O reader PASSIVO de STATUS-04 — e `set_grab` nunca é chamado.
-
-        `EvdevReader` nasce com `_grab=False` e só graba por pedido explícito
-        (`set_grab`); a ausência da chamada aqui é a entrega, não um esquecimento.
-        Com grab, o daemon viraria leitor exclusivo do controle e o JOGO
-        deixaria de vê-lo — o card acenderia à custa da partida dela.
-        """
+        """O reader PASSIVO de STATUS-04 — e `set_grab` nunca é chamado."""
         from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
         return EvdevReader(device_path=node, target_uniq=uniq)
@@ -749,38 +605,16 @@ class SensorHub:
 
     @staticmethod
     def _descobrir_gamepad_real() -> dict[str, Any]:
-        """MAC -> node de gamepad, reusando a descoberta ÚNICA da casa.
-
-        `discover_dualsense_evdevs()` e não uma enumeração por VID/PID: o
-        filtro `_is_virtual_evdev` dela é o que impede o hub de abrir o
-        PRÓPRIO vpad do daemon — o fallback uinput cria um `054c:0ce6`
-        idêntico ao físico, e o card viraria eco do daemon.
-        """
+        """MAC -> node de gamepad, reusando a descoberta ÚNICA da casa."""
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
 
         return dict(discover_dualsense_evdevs())
 
-    # -- O TOQUE E A INCLINAÇÃO COMO FONTE (NO-MODO-XBOX-TUDO-FUNCIONA-01) ----
-    #
-    # A resposta dela de 28/09 (~16h50): o touchpad move o cursor ou vira
-    # botões em zonas, e a inclinação vira analógico, por perfil de jogo. Quem
-    # decide é o `roteador_de_movimento`; quem pergunta é o tique
-    # (`gamepad.aplicar_o_toque` e `gamepad.aplicar_o_movimento`); aqui só se
-    # lê o que os leitores de cada peça já leem, e se segura o nó do toque.
 
-    #: Quanto tempo o nó do toque fica GRABADO depois do último pedido do
-    #: tique. O tique pergunta a 60 Hz; um segundo e meio cobre a volta de
-    #: manutenção (1 s) e solta o nó logo que o controle virtual sai.
     _TOQUE_ROTEADO_TTL_S: ClassVar[float] = 1.5
 
     def aceleracao_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
-        """O acelerômetro de `uniq` AGORA, em g; `None` sem leitor.
-
-        A irmã magra da `velocidade_do_movimento`, pelo mesmo leitor e pelo
-        mesmo nó (`MotionSensorReader.accel_snapshot`, como está): o tique da
-        inclinação a chama a 60 Hz por controle, e ela registra a demanda que
-        mantém o leitor vivo enquanto a rota anda.
-        """
+        """O acelerômetro de `uniq` AGORA, em g; `None` sem leitor."""
         agora = self._relogio()
         with self._lock:
             self._demanda[uniq] = agora
@@ -795,22 +629,7 @@ class SensorHub:
             return None
 
     def toque_da_peca(self, uniq: str) -> tuple[Any, bool] | None:
-        """O dedo de `uniq` AGORA e o clique: `(TouchState, clicado)`; `None` sem leitor.
-
-        O leitor é o observador de sempre (`TouchpadReader`, sem acumular
-        movimento, como está), e o clique é o `regions_pressed` dele, que acende
-        com o `BTN_LEFT` do nó em qualquer região. Registra DUAS demandas: a do
-        leitor (o TTL de sempre) e a do toque roteado, que faz a manutenção
-        GRABAR o nó do touchpad desta peça (:meth:`_reconciliar_grabs_do_toque`).
-
-        O GRAB É O QUE TORNA A ROTA VERDADEIRA: sem ele, o dedo que aperta o
-        direcional numa zona ou move o cursor pelo Hefesto também moveria o
-        ponteiro do computador pelo libinput — dois donos para um dedo, o
-        engasgo de 26/06. O nó é só o do touchpad: os botões e os analógicos
-        vêm do outro nó, e o jogo não perde nada. E ele solta sozinho: o tique
-        que parou de perguntar (a rota apagada, o controle virtual que saiu)
-        deixa a demanda vencer, e o ponteiro volta ao computador.
-        """
+        """O dedo de `uniq` AGORA e o clique: `(TouchState, clicado)`; `None` sem leitor."""
         agora = self._relogio()
         with self._lock:
             self._demanda[uniq] = agora
@@ -829,12 +648,7 @@ class SensorHub:
         return estado, clicado
 
     def _reconciliar_grabs_do_toque(self, agora: float) -> None:
-        """O nó do touchpad fica GRABADO enquanto o tique leva o toque da peça.
-
-        A mesma máquina do `_reconciliar_grabs` do movimento, com o sinal da
-        demanda: quem o tique pediu há menos de :data:`_TOQUE_ROTEADO_TTL_S`
-        segura o nó; os outros o soltam. Leitor sem `set_grab` (dublê) passa.
-        """
+        """O nó do touchpad fica GRABADO enquanto o tique leva o toque da peça."""
         with self._lock:
             leitores = dict(self._touch)
             vistos = dict(self._demanda_do_toque)

@@ -1,21 +1,4 @@
-"""O daemon grava a bateria no journal — entrega 1 do PROTOCOLO de 07/08/2026.
-
-Documento:
-``docs/process/estudos/2026-08-07-PROTOCOLO-o-controle-que-cai-sozinho.md``.
-
-O defeito que estes testes trancam, MEDIDO em 07/08: o daemon lia a carga a cada
-tique e **não escrevia uma linha**, então a hipótese mais forte para as nove
-quedas de link (a carga acabando) era indecidível por falta de instrumento.
-
-Cinco contratos, e cada um tem uma mordida escrita no docstring da classe:
-
-1. a **faixa** e a **máscara** são funções puras e previsíveis;
-2. a **cadência** escreve na mudança e cala no repouso — uma sessão inteira de
-   16 h cabe em dezenas de linhas, não em milhares;
-3. a **queda** sempre deixa a última carga conhecida, com a idade dela;
-4. o **endereço nunca sai cru** — nem na amostra, nem na queda;
-5. a **fiação** existe: o poll loop sonda e a borda de desconexão registra.
-"""
+"""O daemon grava a bateria no journal — entrega 1 do PROTOCOLO de 07/08/2026."""
 from __future__ import annotations
 
 import asyncio
@@ -44,24 +27,12 @@ from tests.unit.test_docs_mac_anonimato import (
     _partes,
 )
 
-# --------------------------------------------------------------------------
-# Fixtures de endereço
-# --------------------------------------------------------------------------
 
-#: Sufixo INVENTADO. Ele só vira "forma de MAC" quando colado ao OUI real em
-#: tempo de execução — escrever o endereço inteiro aqui faria os DOIS portões de
-#: anonimato reprovarem este arquivo, que é exatamente o ponto do teste.
 _SUFIXO_DE_FIXTURE = "c31af7"
 
 
 def _uniq_realista() -> str:
-    """Endereço com OUI REAL desta bancada, montado em tempo de execução.
-
-    É o formato que o produto gera: 12 dígitos hex colados, como o ``uniq`` sai
-    do backend e do ``controllers.json``. Usar um OUI real importa: é ele que o
-    portão do repositório reconhece, e é contra o portão que a mordida do MAC
-    é medida.
-    """
+    """Endereço com OUI REAL desta bancada, montado em tempo de execução."""
     return "".join(_OUIS_REAIS_OCTETOS[0]) + _SUFIXO_DE_FIXTURE
 
 
@@ -106,11 +77,6 @@ def _descreve(uniq: str, pct: int | None, *, conectado: bool = True) -> dict[str
     }
 
 
-# --------------------------------------------------------------------------
-# 1. Faixa e máscara
-# --------------------------------------------------------------------------
-
-
 class TestFaixaEMascara:
     """Mordida: mude uma fronteira de :data:`FAIXAS` e os limites reprovam."""
 
@@ -138,12 +104,7 @@ class TestFaixaEMascara:
         assert faixa_de(None) is None
 
     def test_todo_degrau_do_hardware_cruza_uma_fronteira(self) -> None:
-        """O ``hid-playstation`` reporta 5, 15, 25 … 95 — nenhum degrau se perde.
-
-        Se alguém trocar as faixas por deciles puros, 5→15 e 15→25 passariam a
-        cair na MESMA faixa e a descida final ficaria invisível, que é
-        justamente o trecho da curva que decide a Q-1 do protocolo.
-        """
+        """O ``hid-playstation`` reporta 5, 15, 25 … 95 — nenhum degrau se perde."""
         degraus = [0, *range(5, 100, 10), 100]
         faixas = [faixa_de(d) for d in degraus]
         assert len(set(faixas)) == len(faixas), f"degraus colapsados: {faixas}"
@@ -152,7 +113,6 @@ class TestFaixaEMascara:
         mascarado = mascarar_endereco(_uniq_realista())
         octetos = mascarado.split(":")
         assert octetos[3] == "00" and octetos[4] == "00"
-        # O que a análise precisa sobrevive: fabricante e último octeto.
         assert octetos[:3] == list(_OUIS_REAIS_OCTETOS[0])
         assert octetos[5] == _SUFIXO_DE_FIXTURE[-2:]
 
@@ -169,13 +129,7 @@ class TestFaixaEMascara:
 
     def test_a_mascara_passa_pelo_portao_do_repositorio(self) -> None:
         assert _macs_sem_mascara(mascarar_endereco(_uniq_realista())) == []
-        # E a fixture crua REPROVA — senão o portão acima não provaria nada.
         assert _macs_sem_mascara(_uniq_realista()) != []
-
-
-# --------------------------------------------------------------------------
-# 2. O nó do kernel
-# --------------------------------------------------------------------------
 
 
 class TestNoDoKernel:
@@ -198,19 +152,8 @@ class TestNoDoKernel:
         assert ler_no_do_kernel("/dev/hidraw3", raiz=tmp_path) == (None, None)
 
 
-# --------------------------------------------------------------------------
-# 3. A cadência
-# --------------------------------------------------------------------------
-
-
 class TestCadencia:
-    """Mordida: troque o gate por ``return True`` e a sessão de 16 h estoura.
-
-    Arranque o gate de :data:`INTERVALO_SONDA_S` (ou o ``motivo is None`` do
-    diário) e ``test_sessao_de_dezesseis_horas_cabe_em_dezenas_de_linhas``
-    reprova com milhares de linhas — que é a poluição de journal que a decisão
-    de cadência existe para evitar.
-    """
+    """Mordida: troque o gate por ``return True`` e a sessão de 16 h estoura."""
 
     def _diario(self, tmp_path: Path) -> DiarioDaBateria:
         return DiarioDaBateria(raiz=tmp_path)
@@ -224,8 +167,6 @@ class TestCadencia:
         assert escritas == 1
         assert registros[0]["event"] == "bateria_amostra"
         assert registros[0]["motivo"] == "abertura"
-        # As DUAS réguas na mesma linha — regra da casa: todo instrumento
-        # declara contra o que mede.
         assert registros[0]["pct_kernel"] == 95
         assert registros[0]["pct_handle"] == 90
         assert registros[0]["fonte"] == "kernel"
@@ -297,7 +238,6 @@ class TestCadencia:
         diario = self._diario(tmp_path)
         agora = 1000.0
         diario.observar([_descreve(uniq, 95)], agora)
-        # Meia hora de curva reta: nada muda, e mesmo assim uma âncora sai.
         vistos: list[dict[str, Any]] = []
         with structlog.testing.capture_logs() as registros:
             passos = int(INTERVALO_ANCORA_S / INTERVALO_SONDA_S) + 1
@@ -310,12 +250,7 @@ class TestCadencia:
     def test_sessao_de_dezesseis_horas_cabe_em_dezenas_de_linhas(
         self, tmp_path: Path
     ) -> None:
-        """A descida inteira de 100% a 0% em 16 h, sondada a cada 30 s.
-
-        São 1.920 sondas. Se cada uma virasse linha, o journal ganharia ~2 mil
-        entradas por sessão e a bateria sumiria no ruído — o motivo declarado
-        para NÃO registrar a cada tique.
-        """
+        """A descida inteira de 100% a 0% em 16 h, sondada a cada 30 s."""
         uniq = _uniq_realista()
         diario = self._diario(tmp_path)
         agora = 1000.0
@@ -323,7 +258,6 @@ class TestCadencia:
         degraus = [100, *range(95, 0, -10), 0]
         with structlog.testing.capture_logs() as registros:
             for i in range(sondas):
-                # A carga cai um degrau do hardware a cada fatia da sessão.
                 pct = degraus[min(i * len(degraus) // sondas, len(degraus) - 1)]
                 _no_do_kernel(tmp_path, uniq, str(pct), "Discharging")
                 diario.observar([_descreve(uniq, pct)], agora + i * INTERVALO_SONDA_S)
@@ -354,22 +288,14 @@ class TestCadencia:
         assert registros[0]["pct_handle"] == 42
 
 
-# --------------------------------------------------------------------------
-# 4. A queda
-# --------------------------------------------------------------------------
-
-
 class TestQueda:
-    """Mordida: tire a chamada de ``registrar_queda`` da borda de desconexão
-    (``daemon/connection.py``) e ``test_borda_de_desconexao_registra_a_carga``
-    reprova — a queda volta a ser um carimbo de hora sem carga ao lado."""
+    """Mordida: tire a chamada de ``registrar_queda`` da borda de desconexão"""
 
     def test_ultima_carga_conhecida_com_a_idade(self, tmp_path: Path) -> None:
         uniq = _uniq_realista()
         no = _no_do_kernel(tmp_path, uniq, "5", "Discharging")
         diario = DiarioDaBateria(raiz=tmp_path)
         diario.observar([_descreve(uniq, 5)], 1000.0)
-        # O nó do kernel some junto com o controle — sobra o cache.
         (no / "capacity").unlink()
         (no / "status").unlink()
         no.rmdir()
@@ -405,14 +331,7 @@ class TestQueda:
     def test_a_queda_dupla_nao_desmente_a_primeira_linha(
         self, tmp_path: Path
     ) -> None:
-        """Um controle que some de vez passa pelas DUAS bordas: primeiro o
-        ``poll_read_failed``, segundos depois o ``probe_offline``. A segunda já
-        não tem cache — e sem a dedup escreveria "ninguém tinha medido" logo
-        abaixo da linha que acabou de dizer 5%.
-
-        Mordida: apague o gate de :data:`JANELA_DEDUP_QUEDA_S` e o teste acusa
-        a segunda linha.
-        """
+        """Um controle que some de vez passa pelas DUAS bordas: primeiro o"""
         uniq = _uniq_realista()
         no = _no_do_kernel(tmp_path, uniq, "5", "Discharging")
         diario = DiarioDaBateria(raiz=tmp_path)
@@ -426,7 +345,6 @@ class TestQueda:
         quedas = [r for r in registros if r["event"] == "bateria_na_queda"]
         assert len(quedas) == 1, "a segunda borda escreveu uma linha vazia"
         assert quedas[0]["pct_kernel"] == 5
-        # Passada a janela, uma queda nova volta a falar mesmo sem leitura.
         with structlog.testing.capture_logs() as registros:
             diario.registrar_queda("probe_offline", 1010.0 + JANELA_DEDUP_QUEDA_S + 1)
         assert len(registros) == 1
@@ -435,9 +353,7 @@ class TestQueda:
     def test_controle_que_some_com_outro_de_pe_deixa_rastro(
         self, tmp_path: Path
     ) -> None:
-        """O ``probe_offline`` nasce de um ``any()`` — só o ÚLTIMO a cair o
-        dispara. É por isso que "18 quedas" é PISO, não total; aqui a queda de
-        um controle no meio de três deixa linha."""
+        """O ``probe_offline`` nasce de um ``any()`` — só o ÚLTIMO a cair o"""
         um = _uniq_realista()
         outro = "".join(_OUIS_REAIS_OCTETOS[1]) + "b21e04"
         _no_do_kernel(tmp_path, um, "35", "Discharging")
@@ -465,24 +381,8 @@ class TestQueda:
         assert contadores.get("battery.journal.drop") == 1
 
 
-# --------------------------------------------------------------------------
-# 5. O endereço NUNCA sai cru — a mordida do MAC
-# --------------------------------------------------------------------------
-
-
 class TestEnderecoNaoVaza:
-    """Mordida MEDIDA em 07/08/2026: troquei ``mascarar_endereco(uniq)`` por
-    ``uniq`` nas duas linhas do ``battery_journal`` e os dois testes desta
-    classe reprovaram, apontando o endereço inteiro; devolvi a máscara e
-    passaram.
-
-    O portão usado aqui é o MESMO do repositório
-    (``tests/unit/test_docs_mac_anonimato.MAC_COMPLETO_RE``): se a convenção da
-    casa mudar, muda nos dois lugares de uma vez.
-
-    A fixture tem OUI REAL desta bancada, montado em tempo de execução — sem
-    isso o portão não reconheceria o endereço e o teste passaria vazio.
-    """
+    """Mordida MEDIDA em 07/08/2026: troquei ``mascarar_endereco(uniq)`` por"""
 
     def test_amostra_nao_leva_o_endereco_cru(self, tmp_path: Path) -> None:
         uniq = _uniq_realista()
@@ -493,7 +393,6 @@ class TestEnderecoNaoVaza:
         texto = _texto_de_registros(registros)
         assert _macs_sem_mascara(texto) == [], f"endereço cru no journal: {texto}"
         assert mascarar_endereco(uniq) in texto
-        # E o sufixo real não aparece em lugar nenhum da linha.
         assert _SUFIXO_DE_FIXTURE[:4] not in texto
 
     def test_queda_nao_leva_o_endereco_cru(self, tmp_path: Path) -> None:
@@ -508,15 +407,8 @@ class TestEnderecoNaoVaza:
         assert mascarar_endereco(uniq) in texto
 
 
-# --------------------------------------------------------------------------
-# 6. A fiação — sem ela o módulo é um enfeite
-# --------------------------------------------------------------------------
-
-
 class TestFiacao:
-    """Mordida: apague a chamada de ``_amostrar_bateria`` no poll loop (ou a de
-    ``registrar_queda_da_bateria`` em ``connection.py``) e os dois testes desta
-    classe reprovam."""
+    """Mordida: apague a chamada de ``_amostrar_bateria`` no poll loop (ou a de"""
 
     def test_o_daemon_sonda_a_bateria(self, tmp_path: Path) -> None:
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
@@ -578,12 +470,7 @@ class TestFiacao:
     async def test_erro_de_leitura_tambem_registra_a_carga(
         self, tmp_path: Path
     ) -> None:
-        """O irmão do ``probe_offline``: o poll loop perdendo a leitura.
-
-        São dois caminhos para a MESMA borda (``CONTROLLER_DISCONNECTED``), e
-        quem cair pelo segundo tem de deixar a carga registrada igual — senão
-        metade das quedas continua sem resposta.
-        """
+        """O irmão do ``probe_offline``: o poll loop perdendo a leitura."""
         from hefesto_dualsense4unix.core.controller import ControllerState
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
         from hefesto_dualsense4unix.testing.fake_controller import FakeController
@@ -644,16 +531,10 @@ class TestFiacao:
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
         daemon = Daemon(controller=SimpleNamespace())  # type: ignore[arg-type]
-        daemon._amostrar_bateria(1000.0)  # não levanta
+        daemon._amostrar_bateria(1000.0)
 
     def test_borda_de_desconexao_registra_a_carga(self, tmp_path: Path) -> None:
-        """A borda ``probe_offline`` do ``reconnect_loop`` deixa a última carga.
-
-        Monta o daemon como o ``test_hidraw_broker_hooks`` faz: um
-        ``SimpleNamespace`` com o mínimo que o loop toca, e um ``is_connected``
-        que devolve True no baseline e False na primeira iteração — que é a
-        borda online→offline.
-        """
+        """A borda ``probe_offline`` do ``reconnect_loop`` deixa a última carga."""
         from hefesto_dualsense4unix.daemon import connection
 
         uniq = _uniq_realista()
@@ -664,7 +545,7 @@ class TestFiacao:
         conexoes = iter([True, False, False, False])
         parada = iter([False, True, True, True])
         stop_event = asyncio.Event()
-        stop_event.set()  # os waits voltam na hora; _is_stopping governa o fim
+        stop_event.set()
         publicados: list[tuple[str, Any]] = []
 
         daemon = SimpleNamespace(

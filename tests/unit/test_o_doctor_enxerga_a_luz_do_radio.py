@@ -50,8 +50,6 @@ DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8")
 
 NOME_DO_CHECK = "check_led_sysfs_gravavel"
 
-#: A marca de identidade do vpad — a mesma string dos outros quatro lugares
-#: que já o reconhecem. Se ela mudar no produto, tem de mudar aqui junto.
 PHYS_DO_VPAD = "hefesto-vpad"
 
 
@@ -72,14 +70,7 @@ def _no_de_led(
     virtual: bool,
     gravavel: bool = True,
 ) -> Path:
-    """Monta um nó `:rgb:indicator` de mentira com a topologia REAL do sysfs.
-
-    `virtual=True` reproduz a forma do Bluetooth (BlueZ→uhid) e a do vpad — as
-    duas são `/devices/virtual/misc/uhid/<instância>/leds/<nó>`, e é essa
-    coincidência que derrubou o filtro por caminho. `virtual=False` reproduz o
-    cabo (`/devices/pci.../usb.../<instância>`). O que separa os dois casos
-    virtuais é só o `HID_PHYS` do `uevent`.
-    """
+    """Monta um nó `:rgb:indicator` de mentira com a topologia REAL do sysfs."""
     if virtual:
         device = raiz / "devices" / "virtual" / "misc" / "uhid" / instancia
     else:
@@ -132,7 +123,7 @@ def test_o_controle_do_radio_nao_e_confundido_com_o_vpad(tmp_path: Path) -> None
         tmp_path,
         nome_do_no="input259:rgb:indicator",
         instancia="0005:054C:0CE6.0028",
-        phys="00:00:00:00:00:00",  # o `phys` de um controle BT é o MAC do host
+        phys="00:00:00:00:00:00",
         virtual=True,
     )
     _no_de_led(
@@ -210,12 +201,7 @@ def test_cabo_e_radio_sao_relatados_juntos(tmp_path: Path) -> None:
 
 
 def test_o_no_sem_permissao_no_radio_vira_warn(tmp_path: Path) -> None:
-    """A regra 77 não pegou no controle do rádio: tem de sair `warn`, não `info`.
-
-    É a metade do defeito que mais custa: sem esta linha o doctor respondia
-    `info` ("não tem controle") para a mesa em que a regra udev falhou, e o
-    comando que a conserta nunca era mostrado.
-    """
+    """A regra 77 não pegou no controle do rádio: tem de sair `warn`, não `info`."""
     _no_de_led(
         tmp_path,
         nome_do_no="input259:rgb:indicator",

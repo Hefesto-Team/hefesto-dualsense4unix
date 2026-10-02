@@ -1,103 +1,4 @@
-"""NASCE-LIGADO-MIC-01 — o microfone nasce NO AR, sem gesto nenhum dela.
-
-**A QUEIXA, 17/09/2026**, com as palavras dela e sem corrigi-las:
-
-    *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
-    ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
-    ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
-
-E é a TERCEIRA vez que ela pede: `docs/data/decisoes-dela.csv` id 37
-(D-AUDIO-E-GIRO-NASCEM-LIGADOS) e id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), as duas
-de 25/08/2026 — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO O
-PREÇO… o que caduca é o padrão desligado"*.
-
-O BURACO QUE ESTA RÉGUA OCUPA
-------------------------------------------------------------------------------
-Medido antes de escrevê-la: **nenhuma régua desta casa perguntava qual é o
-estado do microfone DEPOIS DE CONECTAR E ANTES DE QUALQUER GESTO.** As que
-existem medem o gesto e as portas de saída do latch —
-`test_o_gesto_dela_poe_o_microfone_no_ar` mede a costura ato → palavra → `0x32`,
-`test_mic_fase_01_…` mede o PRIMEIRO APERTO, `test_os_quatro_microfones_ficam_no_ar`
-mede quatro no ar depois de quatro atos. Todas começam com um dedo dela no
-plástico ou um clique no 🎙. A chegada não tinha dono.
-
-O QUE SE AFIRMA, E POR QUE SÃO QUATRO COISAS E NÃO UMA
-------------------------------------------------------------------------------
-O estado do microfone é feito de quatro pedaços que nascem vazios, e meia cura
-aqui pinta uma tela que mente::
-
-    o pedaço                        quem o lê             o que falha sem ele
-    ------------------------------  --------------------  ---------------------
-    `PEDIDOS.abertos()`             `BtMicSubsystem.      a ponte do rádio não
-                                     alvos()`, e o        sobe, e no CABO o
-                                     `_reconciliar_o_cabo`  `hefesto_mic_<hex6>`
-                                                          não é publicado
-    `PEDIDOS.no_ar()`               `PonteMicBluetooth`   o nó sobe e o `0x32`
-                                                          sai DESLIGADO — é o
-                                                          journal dela às
-                                                          10:33:27
-    `MicrofonesNoAr`                `_ler_o_canal_deste`  o chip do cartão
-                                                          continua dizendo MUDO
-    `canal_ativo` do selo           `a02_controles.       a face que ela vê
-                                     _faces_do_microfone`
-
-Por isso cada um tem um caso PRÓPRIO, com a frase dizendo QUAL faltou: uma
-afirmação só passaria com três quartos da cura no lugar.
-
-A SEGUNDA MORDIDA, e é onde a cura vira defeito com o sinal trocado
-------------------------------------------------------------------------------
-"Estar no ar" é de cada controle, os quatro juntos; "ser a fonte padrão da
-máquina" é de UM só (OS-QUATRO-NO-AR-01). Um nascimento que chamasse a eleição
-para todo mundo faria o ÚLTIMO controle a conectar tomar a fonte padrão dela —
-e o microfone real dela sairia do caminho sem ela ter tocado em nada. Por isso
-`TestAMesaComDono` prova que o segundo a nascer **não mexe em `eleitor.eleito`**.
-
-E A TERCEIRA: O SILÊNCIO DELA VENCE
-------------------------------------------------------------------------------
-Ela calou um controle (o botão, ou o 🎙 da tela). Um nascimento que ignorasse
-isso reabriria o microfone de quem pediu silêncio — a SOM-MIC-REPLUG-01
-(*"o silêncio que o produto promete e não entrega"*) voltando pela porta da
-frente. São DOIS caminhos de silêncio e os dois têm caso: o mudo do controle
-no `maquina.json` (O-MUDO-E-DO-CONTROLE-01, 28/09/2026: o mudo é do controle,
-e não mais do perfil ativo) e o bit do mudo já aceso no aparelho.
-
-A MORDIDA, ARRANCADA UMA A UMA E MEDIDA (17/09/2026)
-------------------------------------------------------------------------------
-Cada pedaço da cura foi removido, a régua rodada, e o vermelho anotado::
-
-  o que se arranca                              o que reprova
-  --------------------------------------------  ---------------------------
-  a linha `nascer_o_microfone_ao_conectar` de    `test_o_replug_de_todos_os_
-  `connection.reaplicar_som_em_todos_os_alvos`   alvos…` + `test_a_conexao_
-                                                 nao_espera_o_nascimento`
-  `dizer_no_ar(uniq, True)` do ramo sem eleição  `test_a_palavra_dela_e_dita_
-                                                 sem_roubar_o_padrao` + o do
-                                                 replug
-  `no_ar.entrou(uniq)` do mesmo ramo             `test_o_segundo_entra_no_ar`
-                                                 + `test_o_selo_do_segundo_
-                                                 le_ativo` + o do replug
-  a condição `_eleitor(daemon).eleito is None`   `test_o_segundo_nao_rouba_a_
-  trocada por `True`                             fonte_padrao` + os outros 3
-  a guarda `_o_controle_pede_silencio`           `test_o_controle_calado_
-                                                 impede_o_nascimento`
-  a guarda `_o_firmware_esta_mudo`               `test_o_bit_do_mudo_ja_aceso_
-                                                 impede_o_nascimento`
-  o `async with _fila_do_nascimento(daemon)`     `test_dois_nascimentos_ao_
-                                                 mesmo_tempo_elegem_um_so` + o
-                                                 do replug
-
-**E UMA ARRANCADA QUE NÃO MORDEU — o achado desta mordida.** A primeira escrita
-da cura chamava `pedir_canal(uniq)` antes dos dois ramos; arrancá-la deixou a
-régua INTEIRA verde. A razão está no dono: `BtMicSubsystem.no_ar` pede o canal
-junto quando a palavra é `True` (*"sem ponte de pé não há a quem entregar a
-palavra"*), então aquela linha era uma segunda porta para o mesmo ato — a
-família de defeito que esta casa mais paga. Ela SAIU, e
-`test_o_canal_deste_controle_e_pedido` continua valendo: ele mede que o canal
-FICA pedido, não por qual porta.
-
-Os endereços são SINTÉTICOS e mascarados (octetos 4 e 5 zerados): endereço real
-da bancada dela não entra em arquivo versionado, e há dois portões sobre isso.
-"""
+"""NASCE-LIGADO-MIC-01 — o microfone nasce NO AR, sem gesto nenhum dela."""
 
 from __future__ import annotations
 
@@ -117,20 +18,11 @@ from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
 from hefesto_dualsense4unix.profiles import manager as mgr
 from hefesto_dualsense4unix.utils import maquina
 
-#: O primeiro controle da mesa dela, na grafia do plástico (sem dois-pontos).
 P1 = "aabbcc000011"
 
-#: O segundo — a mesa de dois é o que separa "no ar" de "fonte padrão".
 P2 = "aabbcc000022"
 
-#: A consulta de VERDADE, guardada antes de a fixture `mesa` dublá-la: as
-#: réguas do "não deu para perguntar" precisam do dono, não do dublê.
 _OUTRA_CAPTURA_DE_VERDADE = elm.outra_captura_elegivel
-
-
-# ---------------------------------------------------------------------------
-# Os dublês
-# ---------------------------------------------------------------------------
 
 
 class _Resultado:
@@ -143,12 +35,7 @@ class _Resultado:
 
 
 class _EleitorDublado:
-    """`EleitorDeMicrofone` de bancada, com o MESMO contrato do campo `eleito`.
-
-    Ele só passa a valer o `uniq` na eleição CONFERIDA, como o produto. Um
-    dublê que zerasse sempre seria mais frouxo que o real, e é assim que esta
-    casa já deu verde sobre defeito vivo.
-    """
+    """`EleitorDeMicrofone` de bancada, com o MESMO contrato do campo `eleito`."""
 
     def __init__(self, *, elege_ok: bool = True) -> None:
         self.chamadas: list[tuple[str, Any]] = []
@@ -173,9 +60,7 @@ class _EleitorDublado:
     def passar_o_padrao(
         self, no_ar: list[str], conectados: list[str], calou: str | None = None
     ) -> _Resultado:
-        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,
-        depois a volta à máquina (`devolver_o_microfone`, que aqui sempre tem
-        para onde ir)."""
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,"""
         for candidato in no_ar:
             passado = self.eleger_o_controle(candidato, conectados)
             if passado.ok:
@@ -187,12 +72,7 @@ class _EleitorDublado:
 
 
 class _Backend:
-    """O mínimo do backend que o nascimento e a eleição tocam.
-
-    `audio_status_for` devolve o que o FIRMWARE publica, e ele nasce ABERTO —
-    é o `microphone_led_repintado mudo=False` do journal dela. Um dublê que
-    nascesse mudo esconderia a premissa da queixa inteira.
-    """
+    """O mínimo do backend que o nascimento e a eleição tocam."""
 
     def __init__(self, uniqs: tuple[str, ...] = (P1,), *, mudo: bool = False) -> None:
         self.uniqs = list(uniqs)
@@ -240,11 +120,7 @@ class _Config:
 
 
 class _Daemon:
-    """O mínimo do daemon que o nascimento toca.
-
-    **`_run_blocking` NÃO ACEITA KEYWORDS**, que é a assinatura do daemon real
-    (`daemon/lifecycle.py`). Um dublê com `**kw` é mais frouxo que o produto.
-    """
+    """O mínimo do daemon que o nascimento toca."""
 
     def __init__(
         self,
@@ -283,8 +159,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch):
         def __init__(self) -> None:
             self.registro = RegistroDePedidosDeCanal()
             self.subsystem = BtMicSubsystem(registro=self.registro)
-            #: A resposta de `outra_captura_elegivel`: `None` é a mesa DELA,
-            #: em que o único microfone com porta usável é o do controle.
             self.outro_microfone: str | None = None
 
         def daemon(
@@ -300,27 +174,16 @@ def mesa(monkeypatch: pytest.MonkeyPatch):
             self.eleitor = _EleitorDublado(elege_ok=elege_ok)
             store = _Store(perfil_ativo) if perfil_ativo is not None else None
             daemon = _Daemon(self.backend, self.eleitor, store=store)
-            # A fonte CHAMÁVEL da recusa, como `lifecycle` a fia sobre o
-            # `maquina.json` — e a mesma que o subsystem lê.
             daemon.config = _Config(lambda: recusados)
             self.subsystem._config = daemon.config
             return daemon
 
     m = Mesa()
-    # "EXISTE OUTRO MICROFONE NA MÁQUINA?" É DUBLADO NO DONO, e é obrigatório:
-    # sem isto o nascimento perguntaria ao `pactl` de QUEM RODA A SUÍTE, e a
-    # régua mediria a máquina — verde na mesa dela, vermelha num PC com
-    # headset. `_dualsense_mic_intended` não precisa de dublê: o lar de
-    # mentira da suíte não tem drop-in nem marca, e ele responde "não pediu".
     monkeypatch.setattr(elm, "outra_captura_elegivel", lambda: m.outro_microfone)
     anterior_pedidor = elm.registrar_pedidor_de_canal(m.subsystem.pedir_canal)
     anteriores_palavra = elm.registrar_dizedor_do_no_ar(
         m.subsystem.no_ar, m.subsystem.esquecer_a_palavra, m.subsystem.palavra_no_ar
     )
-    # O SELO LÊ O PIPEWIRE, e o PipeWire não é desta régua. O que se dubla é a
-    # LEITURA (`_ler_o_canal`), com a fonte publicada e `canal_ativo=False` —
-    # que é o estado exato de quem tem canal e NÃO é a fonte padrão. Quem tem
-    # de acender a face é `_ler_o_canal_deste`, lendo o `MicrofonesNoAr`.
     monkeypatch.setattr(
         hotkey,
         "_ler_o_canal",
@@ -351,13 +214,7 @@ def _perfil(mic: dict | None = None, por_peca: dict | None = None):
 
 
 async def _esperar_os_nascimentos() -> None:
-    """Espera as tarefas que o caminho da conexão soltou.
-
-    O nascimento corre num FIO PRÓPRIO de propósito — ver
-    `agendar_o_nascimento_do_microfone` —, então a régua que mede a fiação
-    tem de esperar. Um `sleep(0)` solto mediria o instante e daria verde
-    intermitente.
-    """
+    """Espera as tarefas que o caminho da conexão soltou."""
     for _ in range(50):
         em_voo = [t for t in hotkey._NASCIMENTOS_EM_VOO if not t.done()]
         if not em_voo:
@@ -366,27 +223,12 @@ async def _esperar_os_nascimentos() -> None:
     await asyncio.sleep(0)
 
 
-# ===========================================================================
-# 1. A MESA SEM DONO — o primeiro a chegar nasce no ar E vira a fonte padrão
-# ===========================================================================
-
-
 class TestONascimentoComAMesaSemDono:
     """*"ele ser reconhecido"* — a mesa vazia é o único caso em que se elege."""
 
     @pytest.mark.asyncio
     async def test_o_canal_deste_controle_e_pedido(self, mesa) -> None:
-        """Sem o pedido a ponte não sobe, e no CABO o nó nem é publicado.
-
-        `_reconciliar_o_cabo` monta a lista com `self._registro.abertos()` — a
-        declaração do `maquina.json` não entra lá. Este pedido é o que faz o
-        `hefesto_mic_<hex6>` do fio existir sem ela ter clicado em nada.
-
-        **MEDE O ESTADO, NÃO A PORTA.** Quem escreve o pedido é
-        `BtMicSubsystem.no_ar`, por dentro da palavra — ver a mordida no
-        cabeçalho deste arquivo. Afirmar a CHAMADA em vez do registro travaria
-        a implementação de hoje e deixaria passar a que importa.
-        """
+        """Sem o pedido a ponte não sobe, e no CABO o nó nem é publicado."""
         daemon = mesa.daemon()
         assert mesa.registro.abertos() == frozenset(), "a cena começou suja"
 
@@ -399,11 +241,7 @@ class TestONascimentoComAMesaSemDono:
 
     @pytest.mark.asyncio
     async def test_a_palavra_dela_e_dita(self, mesa) -> None:
-        """Sem a palavra o nó sobe e o `0x32` sai DESLIGADO.
-
-        É o `bt_mic_pedido ligar=False seq=1` do journal dela às 10:33:27, 34 ms
-        depois de a source ser publicada.
-        """
+        """Sem a palavra o nó sobe e o `0x32` sai DESLIGADO."""
         daemon = mesa.daemon()
 
         await hotkey.nascer_no_ar(daemon, P1)
@@ -457,12 +295,7 @@ class TestONascimentoComAMesaSemDono:
 
     @pytest.mark.asyncio
     async def test_nao_escreve_o_bit_do_mudo_no_firmware(self, mesa) -> None:
-        """A TRAVA MEDIDA: tomar a posse do `common[9]` mata o botão dela.
-
-        Está escrito em `hotkey._o_que_a_borda_pede` e em `_metade_do_firmware`:
-        enquanto a posse for nossa, o botão do plástico deixa de valer. E é
-        desnecessário — o firmware já nasce ABERTO.
-        """
+        """A TRAVA MEDIDA: tomar a posse do `common[9]` mata o botão dela."""
         daemon = mesa.daemon()
         escritas: list[Any] = []
         mesa.backend.set_microphone_mute = (  # type: ignore[method-assign]
@@ -486,22 +319,12 @@ class TestONascimentoComAMesaSemDono:
         assert mesa.registro.no_ar() == {}
 
 
-# ===========================================================================
-# 2. A MESA COM DONO — os outros nascem no ar e NÃO roubam a fonte padrão
-# ===========================================================================
-
-
 class TestAMesaComDono:
     """A metade de PRIVACIDADE, e é onde a cura vira defeito com sinal trocado."""
 
     @pytest.mark.asyncio
     async def test_o_segundo_nao_rouba_a_fonte_padrao(self, mesa) -> None:
-        """Com quatro na mesa, o último a conectar tomaria o microfone dela.
-
-        A condição é a que já existia (`_o_que_a_borda_pede`: *"a mesa sem
-        dono"*), e reusá-la é o que garante que nenhuma segunda régua sobre a
-        posse nasça aqui.
-        """
+        """Com quatro na mesa, o último a conectar tomaria o microfone dela."""
         daemon = mesa.daemon((P1, P2))
 
         await hotkey.nascer_no_ar(daemon, P1)
@@ -560,22 +383,7 @@ class TestAMesaComDono:
 
     @pytest.mark.asyncio
     async def test_dois_nascimentos_ao_mesmo_tempo_elegem_um_so(self, mesa) -> None:
-        """**O DEFEITO QUE ESTA RÉGUA ACHOU**, e ele não estava no plano.
-
-        A conexão solta um nascimento POR ALVO no mesmo tique. Sem fila, os
-        dois leem `eleitor.eleito is None` antes de qualquer um escrever, os
-        DOIS chamam a eleição, e o ÚLTIMO fica com a fonte padrão da máquina —
-        a condição *"a mesa sem dono"* burlada por corrida em vez de por regra.
-
-        Medido com a cura ainda sem `_fila_do_nascimento`::
-
-            mic_da_mesa_eleicao  uniq=…0011 ok=True
-            mic_da_mesa_eleicao  uniq=…0022 ok=True
-            eleitor.eleito == …0022
-
-        MORDIDA: tire o `async with _fila_do_nascimento(daemon)` de
-        `nascer_no_ar`. Este caso reprova, e o do replug junto.
-        """
+        """**O DEFEITO QUE ESTA RÉGUA ACHOU**, e ele não estava no plano."""
         daemon = mesa.daemon((P1, P2))
 
         await asyncio.gather(
@@ -593,11 +401,7 @@ class TestAMesaComDono:
     async def test_a_ordem_de_chegada_nao_e_reescrita_por_reconexao(
         self, mesa
     ) -> None:
-        """A ordem decide para quem o padrão passa quando o dono sair.
-
-        Um nascimento que chamasse `entrou` a cada reconexão embaralharia a
-        fila sem ninguém ter ligado nada.
-        """
+        """A ordem decide para quem o padrão passa quando o dono sair."""
         daemon = mesa.daemon((P1, P2))
 
         await hotkey.nascer_no_ar(daemon, P1)
@@ -610,15 +414,8 @@ class TestAMesaComDono:
         )
 
 
-# ===========================================================================
-# 3. O SILÊNCIO DELA VENCE — as duas formas de ela ter pedido para calar
-# ===========================================================================
-
-
 class TestOSilencioDelaVence:
-    """SOM-MIC-REPLUG-01 pela porta da frente: *"o silêncio que o produto
-    promete e não entrega"*. Se o nascimento passar por cima, o defeito mais
-    grave desta família volta pelo lado de dentro."""
+    """SOM-MIC-REPLUG-01 pela porta da frente: *"o silêncio que o produto"""
 
     @pytest.mark.asyncio
     async def test_o_controle_calado_impede_o_nascimento(self, mesa) -> None:
@@ -637,12 +434,7 @@ class TestOSilencioDelaVence:
     async def test_o_mudo_de_um_perfil_nao_cala_o_nascimento(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O `mic.muted: true` que um perfil ainda carregue não é o mudo dela.
-
-        O `pragmata.json` dela tinha o global calado. Desde a
-        O-MUDO-E-DO-CONTROLE-01 o mudo é do controle, e o controle que ela não
-        calou nasce no ar em todo jogo.
-        """
+        """O `mic.muted: true` que um perfil ainda carregue não é o mudo dela."""
         monkeypatch.setattr(
             mgr,
             "load_profile",
@@ -659,12 +451,7 @@ class TestOSilencioDelaVence:
     async def test_o_controle_sem_opiniao_nasce_ligado(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A ordem dela de 17/09/2026: *"os jogos e perfis tem que iniciar com
-        todas as features ativadas por default."*  # (noqa-acento: citação dela)
-
-        O dono sem opinião (`None`) NÃO é silêncio; e ter dito «no ar» também
-        não cala.
-        """
+        """A ordem dela de 17/09/2026: *"os jogos e perfis tem que iniciar com"""
         monkeypatch.setattr(mgr, "load_profile", lambda _n: _perfil(mic={"volume": 100}))
         assert maquina.gravar_o_mudo_do_microfone(P2, False)
         daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
@@ -675,12 +462,7 @@ class TestOSilencioDelaVence:
 
     @pytest.mark.asyncio
     async def test_o_bit_do_mudo_ja_aceso_impede_o_nascimento(self, mesa) -> None:
-        """O outro caminho do silêncio: ela apertou o botão do plástico.
-
-        O perfil não sabe disso — o mudo do firmware não vai ao disco. Ler o
-        aparelho é o segundo cinto, e ele cobre a reconexão de quem estava
-        calado.
-        """
+        """O outro caminho do silêncio: ela apertou o botão do plástico."""
         daemon = mesa.daemon(mudo_no_firmware=True)
 
         assert await hotkey.nascer_no_ar(daemon, P1) is False
@@ -689,37 +471,15 @@ class TestOSilencioDelaVence:
 
     @pytest.mark.asyncio
     async def test_nao_saber_do_aparelho_nao_e_silencio(self, mesa) -> None:
-        """*"Não sei"* nunca vira *"me cale"* — senão o nascimento nunca ocorre.
-
-        Backend enxuto (sem `audio_status_for`) é o caso de todo dublê e de
-        toda instalação com backend legado.
-        """
+        """*"Não sei"* nunca vira *"me cale"* — senão o nascimento nunca ocorre."""
         daemon = mesa.daemon()
         mesa.backend.audio_status_for = None  # type: ignore[assignment]
 
         assert await hotkey.nascer_no_ar(daemon, P1) is True
 
 
-# ===========================================================================
-# 4. A FIAÇÃO — os três caminhos de conexão do daemon
-# ===========================================================================
-
-
 class TestAConexaoChamaONascimento:
-    """O ponto UNIVERSAL: vale para o 1º e para o 4º, no cabo e no rádio.
-
-    `reaplicar_som_em_todos_os_alvos` é chamado pela partida do daemon (o
-    controle que já estava na mesa, em `Daemon.run`), pela primeira conexão do
-    `reconnect_loop` e pelo `connect_with_retry` do `reconnect()`;
-    `anunciar_bordas_por_alvo` é o ramo do alvo que nasce. Cobrir os dois cobre
-    os caminhos.
-
-    FATO SUBSTITUÍDO (18/09/2026): aqui estava escrito que o primeiro connect
-    passava por `connect_with_retry`. Não passava — a partida do daemon conecta
-    por conta própria, e até 18/09 era o ÚNICO caminho sem o nascimento. A
-    régua que prova a partida é
-    `test_o_microfone_nasce_no_boot.py`, com o `Daemon` de verdade.
-    """
+    """O ponto UNIVERSAL: vale para o 1º e para o 4º, no cabo e no rádio."""
 
     @pytest.mark.asyncio
     async def test_o_replug_de_todos_os_alvos_faz_o_microfone_nascer(
@@ -763,12 +523,7 @@ class TestAConexaoChamaONascimento:
 
     @pytest.mark.asyncio
     async def test_a_conexao_nao_espera_o_nascimento(self, mesa) -> None:
-        """O fio próprio, e ele é medido: eleger custa `pactl` mais até 3 s.
-
-        Esse orçamento dentro de `connect_with_retry` seria a partida do daemon
-        inteira parada atrás do microfone, vezes o número de controles. É a
-        mesma família do travamento da janela medido em 15/09.
-        """
+        """O fio próprio, e ele é medido: eleger custa `pactl` mais até 3 s."""
         daemon = mesa.daemon()
         partiu = asyncio.Event()
 
@@ -806,28 +561,11 @@ class TestAConexaoChamaONascimento:
         assert await asyncio.to_thread(_sem_laco) is None
 
 
-# ===========================================================================
-# 5. A MÁQUINA COM OUTRO MICROFONE — o nascimento não desaloja o headset
-# ===========================================================================
-
-#: O microfone de verdade de quem NÃO é ela: um headset USB, na forma em que o
-#: PipeWire o publica. Nome de fabricante genérico, nenhum aparelho real.
 HEADSET = "alsa_input.usb-Fabricante_Headset_USB-00.mono-fallback"
 
 
 class TestAMaquinaComOutroMicrofone:
-    """O produto é para qualquer computador, não só o dela (ordem de 18/09).
-
-    Com a mesa sem dono o nascimento ELEGIA, e eleger é `pactl
-    set-default-source`: o WirePlumber grava a escolha, e ela vence a
-    prioridade 1500 do drop-in 51 que o `install.sh` instala justamente para
-    o controle NÃO virar o microfone padrão. Numa máquina com headset, cada
-    partida do daemon tomava o microfone da pessoa. Na mesa dela nunca se viu,
-    porque o único microfone com porta usável é o do controle.
-
-    MORDIDA: troque a condição de `_nascer_no_ar_na_vez` de volta para só
-    `_eleitor(daemon).eleito is None` — os dois primeiros casos reprovam.
-    """
+    """O produto é para qualquer computador, não só o dela (ordem de 18/09)."""
 
     @pytest.mark.asyncio
     async def test_o_controle_nasce_no_ar_sem_tomar_o_padrao(self, mesa) -> None:
@@ -866,13 +604,7 @@ class TestAMaquinaComOutroMicrofone:
     async def test_quem_pediu_o_controle_como_padrao_ainda_elege(
         self, mesa, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
-        """A marca que o `install.sh --keep-dualsense-mic` grava vale como pedido.
-
-        A marca é ESCRITA no lar de mentira, e quem a lê é o dono de verdade
-        (`system_check._dualsense_mic_intended`) — dublar a função mediria o
-        dublê. Quem usa o microfone do controle por acessibilidade escolheu
-        isso no instalador, e o headset plugado não desfaz a escolha.
-        """
+        """A marca que o `install.sh --keep-dualsense-mic` grava vale como pedido."""
         estado = tmp_path / "estado"
         marca = estado / "hefesto-dualsense4unix" / "mic-do-dualsense-pedido.conf"
         marca.parent.mkdir(parents=True)
@@ -892,23 +624,7 @@ class TestAMaquinaComOutroMicrofone:
     async def test_o_canal_de_outro_controle_nao_e_o_microfone_da_maquina(
         self, mesa, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
-        """A pergunta é "não é CONTROLE NENHUM", e não a lista do install.
-
-        A pergunta do install (`--melhor-fonte-elegivel`) responde o canal por
-        controle de propósito (o §D.2 da MIC-PADRAO-NO-CABO-01). Foi a primeira
-        escrita desta cura, e com ela o canal de um controle passava por
-        headset: na mesa que só tem os controles, ninguém elegeria.
-
-        O `_rodar` daqui responde as DUAS perguntas como o script responde na
-        mesa só de controles: o canal do outro controle para a do install, e
-        vazio para a da volta. FATO SUBSTITUÍDO (29/09/2026): a régua dublava
-        `melhor_fonte_elegivel`, que saiu do Python sem chamador
-        (A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01).
-
-        MORDIDA: faça `hotkey._microfone_que_ja_e_da_maquina` perguntar a flag
-        do install (`--melhor-fonte-elegivel`, pelo `eleicao_de_microfone.
-        _rodar`) no lugar de `outra_captura_elegivel`.
-        """
+        """A pergunta é "não é CONTROLE NENHUM", e não a lista do install."""
         canal_do_outro = f"hefesto_mic_{P2[-6:]}"
         script = tmp_path / "fix_wireplumber_default_source.sh"
         script.write_text(
@@ -956,19 +672,7 @@ class TestAMaquinaComOutroMicrofone:
     async def test_consulta_que_nao_respondeu_nao_toma_o_padrao(
         self, mesa, monkeypatch: pytest.MonkeyPatch, tmp_path, como: str
     ) -> None:
-        """"Não deu para perguntar" não é "não há outro microfone" (18/09/2026).
-
-        A consulta de VERDADE, com o dono do critério inalcançável de quatro
-        jeitos: sem o script (a instalação que não o traz), com um script mais
-        velho que não conhece a pergunta, com o `bash` respondendo erro, e com o
-        `_rodar` estourando o `_TIMEOUT_S`. Até esta data os quatro voltavam
-        como `None`, e o nascimento ELEGIA: numa máquina com headset, a
-        consulta lenta tomava o microfone da pessoa; sem o script, a eleição
-        recusava e a sexta porta deixava o microfone MUDO.
-
-        MORDIDA: devolva `None` em qualquer dos três `raise` de
-        `eleicao_de_microfone.outra_captura_elegivel` e o caso dele reprova.
-        """
+        """"Não deu para perguntar" não é "não há outro microfone" (18/09/2026)."""
         chamadas: list[list[str]] = []
         script = tmp_path / "fix_wireplumber_default_source.sh"
         if como == "script_velho":
@@ -1002,17 +706,8 @@ class TestAMaquinaComOutroMicrofone:
             assert chamadas == [], "o script que não conhece a pergunta foi chamado"
 
 
-# ===========================================================================
-# 5b. A ESCOLHA GRAVADA DELA — a partida não passa por cima dela
-# ===========================================================================
-
-
 def _gravar_a_escolha(fonte: str) -> None:
-    """O `default-nodes` do WirePlumber, no lar de mentira da suíte.
-
-    Com a `.0` da pilha junto, como o WirePlumber escreve: a pilha é o que foi
-    escolhido ANTES, e não pode ser lida como a escolha de agora.
-    """
+    """O `default-nodes` do WirePlumber, no lar de mentira da suíte."""
     from pathlib import Path
 
     estado = Path.home() / ".local" / "state" / "wireplumber"
@@ -1026,7 +721,6 @@ def _gravar_a_escolha(fonte: str) -> None:
 
 
 #: O nó ALSA do DualSense no cabo: NENHUMA identidade no nome — o `-00.2` é o
-#: desempate posicional do PipeWire. De quem ele é, só o dispositivo USB diz.
 NO_DO_CABO_SEM_NOME = (
     "alsa_input.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller-00.2.mono-fallback"
@@ -1034,19 +728,7 @@ NO_DO_CABO_SEM_NOME = (
 
 
 class TestAEscolhaGravadaDela:
-    """A partida do daemon não sobrescreve o microfone que ela escolheu.
-
-    Toda partida — o restart do `install.sh`, uma atualização, um tombo, o
-    login — solta um nascimento por controle na mesa, e o PRIMEIRO, com a mesa
-    sem dono, elegia. Com ela tendo escolhido o Controle 2, o
-    `default.configured.audio.source` do WirePlumber dizia o canal dele — e o
-    Controle 1 o sobrescrevia a cada restart. Antes de a partida nascer no ar,
-    essa escolha voltava sozinha quando o canal do Controle 2 subia.
-
-    MORDIDA: tire a pergunta `_a_escolha_gravada_e_de_outro_controle` de
-    `hotkey._o_nascimento_pode_tomar_o_padrao` e os casos do "outro controle"
-    reprovam; tire o casamento USB dela e o do cabo reprova.
-    """
+    """A partida do daemon não sobrescreve o microfone que ela escolheu."""
 
     @pytest.mark.parametrize(
         "gravada",
@@ -1122,12 +804,7 @@ class TestAEscolhaGravadaDela:
     async def test_a_escolha_de_um_controle_fora_da_mesa_nao_segura_a_vez(
         self, mesa
     ) -> None:
-        """Decisão: só quem ESTÁ na mesa segura a vez.
-
-        Recusar por um controle que não veio hoje deixaria o microfone de quem
-        está aqui sem ser o padrão até um toque no 🎙 — e o nascimento existe
-        para funcionar sem gesto.
-        """
+        """Decisão: só quem ESTÁ na mesa segura a vez."""
         _gravar_a_escolha("hefesto_mic_000033")
         daemon = mesa.daemon((P1, P2))
 
@@ -1140,15 +817,7 @@ class TestAEscolhaGravadaDela:
     async def test_a_escolha_de_quem_ja_largou_a_mesa_nao_segura_a_vez(
         self, mesa
     ) -> None:
-        """O handle de quem saiu fica com o `uniq` e `connected: False`.
-
-        É o que o backend real faz, e é por isso que quem está na mesa é
-        `recado_do_microfone.mesa_de_agora`, e não `_uniqs_conectados`. Com a
-        lista errada, a escolha gravada do controle que foi embora seguraria a
-        vez do que ficou — no ar, mas nunca o padrão. MORDIDA: troque
-        `mesa_de_agora(daemon)` por `_uniqs_conectados(daemon)` em
-        `_o_nascimento_pode_tomar_o_padrao`.
-        """
+        """O handle de quem saiu fica com o `uniq` e `connected: False`."""
         _gravar_a_escolha(f"hefesto_mic_{P2[-6:]}")
         daemon = mesa.daemon((P1, P2))
         mesa.backend.describe_controllers = lambda: [
@@ -1163,15 +832,7 @@ class TestAEscolhaGravadaDela:
     def test_sem_prova_o_no_do_cabo_nao_e_do_vizinho(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A lista da mesa ainda sem este controle não entrega o nó ao outro.
-
-        `_uniqs_conectados` lê o backend na hora, e o controle que está
-        nascendo pode ainda não constar. Com um só na lista, a regra do "um
-        para um" de `escolher_fonte` daria o nó do cabo — que não diz de quem é
-        — ao vizinho sem prova nenhuma, e este nascimento deixaria de eleger
-        por uma escolha que talvez seja DELE. MORDIDA: passe `conectados` cru
-        como a mesa em `_a_escolha_gravada_e_de_outro_controle`.
-        """
+        """A lista da mesa ainda sem este controle não entrega o nó ao outro."""
         monkeypatch.setattr(elm, "casamento_usb_agora", lambda uniqs: None)
         _gravar_a_escolha(NO_DO_CABO_SEM_NOME)
 
@@ -1200,24 +861,8 @@ class TestAEscolhaGravadaDela:
         assert mesa.eleitor.chamadas == [("eleger", P1)]
 
 
-# ===========================================================================
-# 6. A RECUSA DELA VENCE — o `microfone: false` do `maquina.json`
-# ===========================================================================
-
-
 class TestARecusaDelaVenceONascimento:
-    """*"todos os controles tem que nascer com tudo"* — e só o `False` desliga.
-
-    A inversão de 18/09/2026 tem duas metades, e o nascimento só honrava a
-    primeira: ele perguntava ao perfil e ao bit do firmware, nunca à recusa. No
-    hotplug seguinte ao "Desligar" dela, a palavra era dita e o canal pedido
-    para o controle que ela acabara de calar.
-
-    MORDIDA: tire a guarda `_ela_desligou_este_microfone` de
-    `_nascer_no_ar_na_vez` e os dois primeiros casos reprovam; tire a
-    subtração de `uniqs_negados` de `BtMicSubsystem._reconciliar_o_cabo` e os
-    dois últimos reprovam.
-    """
+    """*"todos os controles tem que nascer com tudo"* — e só o `False` desliga."""
 
     @pytest.mark.asyncio
     async def test_o_controle_desligado_nao_nasce(self, mesa) -> None:
@@ -1236,11 +881,7 @@ class TestARecusaDelaVenceONascimento:
 
     @pytest.mark.asyncio
     async def test_a_recusa_de_um_nao_cala_o_vizinho(self, mesa) -> None:
-        """A recusa é POR CONTROLE: o outro da mesa nasce e elege normalmente.
-
-        A grafia com dois-pontos é a da tela e do `maquina.json`; a do plástico
-        não tem. As duas têm de casar.
-        """
+        """A recusa é POR CONTROLE: o outro da mesa nasce e elege normalmente."""
         recusado = ":".join(P1[i : i + 2] for i in range(0, 12, 2))
         daemon = mesa.daemon((P1, P2), recusados=frozenset({recusado}))
 
@@ -1253,12 +894,7 @@ class TestARecusaDelaVenceONascimento:
     def test_o_canal_do_cabo_nao_sobe_para_quem_ela_desligou(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O terceiro leitor do registro, e o único que não subtraía a recusa.
-
-        O pedido que chega DEPOIS da borda de `_soltar_os_que_ela_desmarcou`
-        (um gesto velho na fila, o nascimento de uma versão sem a guarda) não
-        pode erguer canal com nome de controle para quem ela desligou.
-        """
+        """O terceiro leitor do registro, e o único que não subtraía a recusa."""
         abertos: list[list[str]] = []
         monkeypatch.setattr(
             BtMicSubsystem, "_abrir_os_canais_do_cabo",

@@ -1,38 +1,4 @@
-"""A aba Gatilhos parou de digitar o que já tem dono — 03/09/2026.
-
-DUAS SEGUNDAS CÓPIAS, e as duas divergiram calado:
-
-1. **Os 19 rótulos de modo.** `app/actions/trigger_specs.PRESETS` separa `name`
-   (contrato: está no perfil dela, no IPC e no DSX) de `label` (texto de tela),
-   e escreve isso com todas as letras no `GATILHO-PALAVRA-01`. O gerador da aba
-   carregava uma lista `MODOS` com os 19 rótulos digitados à mão, casada com
-   `PRESETS` pela ORDEM. **Medido no DOM vivo, com um controle na mesa: 16
-   divergências** — dois rótulos em cada um dos oito `<select>`. O produto diz
-   ``Arco de flecha (Bow)`` e ``Disparo (Weapon)``, as duas desambiguações que
-   ELA pediu em 07/08/2026; a tela dizia ``Arco de flecha`` e ``Disparo``.
-   *Na GTK:* `_populate_preset_selector` lê `spec.label` do `PRESETS`, sem cópia.
-
-2. **A sexta curva pronta.** `profiles/trigger_presets.FEEDBACK_POSITION_LABELS`
-   tem SEIS curvas de feedback; a lista `PRONTOS` do gerador, digitada, trazia
-   cinco — faltava `linear_medio`, a firmeza constante. **Medido no DOM vivo com
-   o gatilho em `Desligado`: os oito campos ofereciam cinco.** A sexta só
-   aparecia com o gatilho JÁ em "Curva de força", porque a completação do pacote
-   só corria nos dois modos por posição — oferecer cinco das seis irmãs é um
-   buraco que obriga a trocar o modo antes, sem nada na tela dizendo.
-   *Na GTK:* `_populate_preset_combo` popula o combo do próprio dicionário.
-
-A FORMA DO DEFEITO É A MESMA NAS DUAS, e ela tem nome nesta casa: **a régua (ou
-a tela) DIGITA o que devia PERGUNTAR.** O gerador tinha guarda para o tamanho
-das duas listas de modo e para um rótulo de curva que o produto NÃO tem — e
-nenhuma para um rótulo que o produto TEM e a tela esqueceu. Guarda de mão única
-é meia guarda.
-
-O QUE ESTAS RÉGUAS NÃO FAZEM: nenhuma digita um rótulo, um número de opções ou
-uma lista de chaves. Todas perguntam ao dono (`PRESETS`,
-`FEEDBACK_POSITION_LABELS`) e comparam CONJUNTOS. Uma que dissesse `== 20
-opções` reprovaria no dia em que o produto ganhasse um modo — reprovaria a
-melhora, que é a lição de 03/09.
-"""
+"""A aba Gatilhos parou de digitar o que já tem dono — 03/09/2026."""
 
 from __future__ import annotations
 
@@ -54,38 +20,18 @@ FALSO = {"uniq": UNIQ, "player": 1, "transport": "usb", "is_primary": True,
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: UMA OPÇÃO, partida em `value` e texto. A mesma forma que o pacote usa.
 _OPCAO = re.compile(r'<option value="(?P<valor>[^"]*)"[^>]*>(?P<texto>[^<]*)</option>')
 _SELECT = re.compile(
     r'<select[^>]*class="(?P<classe>modo|pronto)"[^>]*>(?P<dentro>.*?)</select>',
     re.S)
 
 
-#: A CENA DO PERFIL, e ela é DADO — não um símbolo trocado.
 _PERFIL_DA_CENA: dict = {}
 
 
 @pytest.fixture(autouse=True)
 def _o_perfil_de_mentira_nao_vaza():
-    """O dublê de `perfil.ativo` VOLTA — sem isto ele envenenava a suíte.
-
-    **MEDIDO EM 05/09/2026, por bisseção, e este foi o SEGUNDO arquivo.** Um
-    teste daqui fazia ``perfil.ativo = lambda _nome: {...}`` — atribuição CRUA,
-    sem desfazer. O dublê ficava no módulo `pacotes.perfil` para toda a suíte, e
-    devolve `triggers` sem parâmetros e `controllers` vazio.
-
-    O ESTRAGO APARECIA LONGE: rodando sozinho este arquivo passa; rodado antes
-    do `test_o_casamento_das_dez`, a aba 03 casava 15 endereços em vez de 19 e a
-    régua acusava uma REGRESSÃO QUE NÃO EXISTIA. O `PISO` daquele arquivo prevê
-    a forma do defeito por escrito — *"sem perfil, o pacote da Gatilhos emite
-    `Desligado` nos dois lados e o piso cairia por falta de DADO, não por
-    regressão"* — e mesmo assim ele custou uma bisseção para achar, DUAS VEZES.
-
-    A LIÇÃO É A DO DUBLÊ DO CO-OP, de 04/09, e ela se repetiu: trocar um símbolo
-    de módulo por atribuição em vez de `monkeypatch` mede o produto inteiro
-    contra a mentira de um arquivo de teste. `autouse` porque a troca não vinha
-    de fixture nenhuma — vinha do corpo de um teste.
-    """
+    """O dublê de `perfil.ativo` VOLTA — sem isto ele envenenava a suíte."""
     from pacotes import perfil
 
     original = perfil.ativo
@@ -123,9 +69,6 @@ def _selects(doc: str, classe: str) -> list[str]:
             if m.group("classe") == classe]
 
 
-# ---------------------------------------------------------------------------
-# 1. O RÓTULO DE CADA MODO É O DO PRODUTO
-# ---------------------------------------------------------------------------
 def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
     """O que o produto pinta nos oito campos traz o `label` do `PRESETS`.
 
@@ -146,31 +89,14 @@ def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
 
 
 def test_todo_modo_do_produto_tem_opcao_no_pacote(a03, presets):
-    """Nenhum dos 19 pode faltar — um modo sem opção é um modo inalcançável.
-
-    PERGUNTA, NÃO CONTA: a régua compara CONJUNTOS de `name`. Um `== 19` aqui
-    reprovaria no dia em que o produto ganhasse o vigésimo modo, que é reprovar
-    a melhora.
-
-    A MORDIDA: apague uma linha `<option>` do `select.modo` da página publicada
-    e este teste nomeia o modo que sumiu.
-    """
+    """Nenhum dos 19 pode faltar — um modo sem opção é um modo inalcançável."""
     tem = {v for v, _ in _OPCAO.findall(a03.html_das_opcoes_de_modo())}
     faltam = sorted({p.name for p in presets} - tem)
     assert not faltam, f"modos do produto sem opção no campo: {faltam}"
 
 
 def test_o_rotulo_de_cada_modo_na_bancada_e_o_do_produto(presets):
-    """E o DESENHO também parou de digitar — senão sobrariam duas verdades.
-
-    Curar só o pacote deixaria o arquivo do desenho dizendo `Arco de flecha` e
-    o produto dizendo `Arco de flecha (Bow)`: a bancada é a referência contra a
-    qual ela compara o produto, e uma referência que discorda do produto não
-    serve para comparar nada.
-
-    A MORDIDA: no `aba03.py`, troque `MODOS` de volta por uma lista com os
-    rótulos escritos à mão. Medido: **1 teste reprova**, nomeando os dois.
-    """
+    """E o DESENHO também parou de digitar — senão sobrariam duas verdades."""
     do_produto = {p.name: p.label for p in presets}
     erradas: list[str] = []
     for i, dentro in enumerate(_selects(_bancada(), "modo")):
@@ -184,9 +110,6 @@ def test_o_rotulo_de_cada_modo_na_bancada_e_o_do_produto(presets):
         + "\n  ".join(erradas))
 
 
-# ---------------------------------------------------------------------------
-# 2. A SEXTA CURVA, EM TODOS OS MODOS
-# ---------------------------------------------------------------------------
 def test_as_curvas_de_feedback_estao_no_campo_em_qualquer_modo(a03, presets):
     """A firmeza constante não pode exigir que ela troque o modo antes.
 
@@ -217,12 +140,7 @@ def test_as_curvas_de_feedback_estao_no_campo_em_qualquer_modo(a03, presets):
 
 
 def test_a_bancada_oferece_as_seis_curvas_de_feedback(a03):
-    """E o desenho também: `PRONTOS` deixou de ser digitada.
-
-    A MORDIDA: no `aba03.py`, volte a escrever a lista `PRONTOS` à mão sem
-    `Linear médio`. Medido: **1 teste reprova**, nomeando a chave em oito
-    campos.
-    """
+    """E o desenho também: `PRONTOS` deixou de ser digitada."""
     tp = a03._prontos()
     devem = {c for c in tp.FEEDBACK_POSITION_LABELS if c != "custom"}
     faltam: list[str] = []
@@ -235,16 +153,7 @@ def test_a_bancada_oferece_as_seis_curvas_de_feedback(a03):
 
 
 def test_o_rotulo_de_cada_curva_na_bancada_e_o_do_produto(a03):
-    """O nome da curva também tem dono, e é o mesmo dicionário.
-
-    A EXCEÇÃO É `custom`, e ela é DELA: o motor chama de "Personalizar" e esta
-    tela chama de "— Nenhum —". A palavra dela vence, e por isso a chave sai da
-    conferência em vez de a régua "corrigir" o desenho para o vocabulário do
-    motor.
-
-    A MORDIDA: troque `Stop hard` por `Parada dura` na bancada e este teste
-    nomeia a chave.
-    """
+    """O nome da curva também tem dono, e é o mesmo dicionário."""
     tp = a03._prontos()
     do_produto = {c: r for c, r in tp.FEEDBACK_POSITION_LABELS.items()
                   if c != "custom"}
@@ -258,22 +167,10 @@ def test_o_rotulo_de_cada_curva_na_bancada_e_o_do_produto(a03):
                          + "\n  ".join(erradas))
 
 
-# ---------------------------------------------------------------------------
-# 3. A LISTA CHEGA AOS OITO CAMPOS — e sem repintar a cada tique
-# ---------------------------------------------------------------------------
 def test_a_lista_de_modo_e_emitida_para_os_oito_campos(a03):
-    """Um dono, oito lugares: `blocos` leva a lista a cada `select.modo`.
-
-    Sem isto a cura viveria só no gerador, e a tela dela continuaria com a cópia
-    velha até alguém publicar a aba — que é ato dela, não meu.
-
-    A MORDIDA: apague as duas linhas de `select.modo` em `_blocos_da_coluna`.
-    Medido: **1 teste reprova**, dizendo quais dos oito seletores sumiram.
-    """
+    """Um dono, oito lugares: `blocos` leva a lista a cada `select.modo`."""
     from pacotes import Contexto
 
-    # O DUBLÊ VEM DA FIXTURE `_o_perfil_de_mentira_nao_vaza`, e não daqui — ver
-    # a razão inteira lá embaixo. Este teste só escreve a CENA.
     _PERFIL_DA_CENA.clear()
     _PERFIL_DA_CENA.update({
         "triggers": {"left": {"mode": "Off", "params": []},
@@ -293,23 +190,7 @@ def test_a_lista_de_modo_e_emitida_para_os_oito_campos(a03):
 
 
 def test_a_lista_de_modo_sai_como_o_dom_a_escreve(a03):
-    """Nem `selected`, nem `disabled` cru — senão o piloto repinta para sempre.
-
-    O piloto só troca um bloco quando `alvo.innerHTML !== html`, e o `innerHTML`
-    é o que o NAVEGADOR serializa: um `disabled` escrito volta `disabled=""`.
-    Um caractere de diferença no atributo faz o bloco ser reescrito a cada
-    tique, para sempre — e o contador de pinturas, que é O instrumento desta
-    casa, deixa de significar alguma coisa. Medido no irmão `pronto`, no mesmo
-    Chrome da régua do desenho: com a troca, `21 tiques · 1 pintura`; sem ela,
-    `25 tiques · 25 pinturas`.
-
-    E O `selected` SAI porque quem escolhe é a pintura do `modo-chave-<lado>`:
-    um `selected` no bloco emitido carregaria a escolha da coluna do DESENHO
-    para as quatro colunas da mesa dela.
-
-    A MORDIDA: tire o `.replace(" selected", "")` de `_opcoes_cravadas_do_modo`.
-    Medido: **1 teste reprova**.
-    """
+    """Nem `selected`, nem `disabled` cru — senão o piloto repinta para sempre."""
     html = a03.html_das_opcoes_de_modo()
     assert " selected" not in html, (
         "o bloco emitido carrega a escolha do desenho para a mesa dela")
@@ -321,9 +202,6 @@ def test_a_lista_de_modo_sai_como_o_dom_a_escreve(a03):
         "passaria a ser escolhível com o rato")
 
 
-# ---------------------------------------------------------------------------
-# 4. A CURVA ESCOLHIDA CONTINUA COM NOME NA TELA
-# ---------------------------------------------------------------------------
 def test_a_curva_aplicada_e_nomeada_de_volta_no_campo(a03):
     """Escolher `Linear médio` e o campo voltar a "— Nenhum —" é a tela mentindo.
 
@@ -361,14 +239,7 @@ def test_a_curva_aplicada_e_nomeada_de_volta_no_campo(a03):
 
 
 def test_a_curva_vinda_do_disco_continua_nomeada(a03):
-    """A cura não pode quebrar a forma ANTIGA — o disco guarda dez listas de um.
-
-    É a mordida gêmea: uma cura que só atende a forma nova trocaria um silêncio
-    por outro, e este é o que já funcionava.
-
-    A MORDIDA: troque o `if any(isinstance(v, list) …)` por `if False`. Medido:
-    **1 teste reprova**.
-    """
+    """A cura não pode quebrar a forma ANTIGA — o disco guarda dez listas de um."""
     tp = a03._prontos()
     specs = a03._specs()
     mudas: list[str] = []
@@ -400,24 +271,14 @@ def test_o_title_de_cada_modo_continua_sendo_o_desta_tela(a03, presets):
 
 
 def test_nenhum_teste_deste_arquivo_troca_simbolo_de_modulo() -> None:
-    """Nada aqui reatribui `perfil.ativo` — quem o troca é a fixture, que desfaz.
-
-    ELA LÊ O TEXTO DO ARQUIVO de propósito, e é a única forma que morde: um
-    teste que rode e devolva o símbolo passaria por qualquer verificação em
-    tempo de execução, e o defeito não é *"o símbolo está trocado agora"* — é
-    *"alguém o troca sem devolver"*. O que se guarda aqui é a FORMA.
-
-    MORDIDA: devolva um `perfil.ativo = lambda ...` a qualquer teste e este caso
-    reprova nomeando a linha.
-    """
+    """Nada aqui reatribui `perfil.ativo` — quem o troca é a fixture, que desfaz."""
     fonte = pathlib.Path(__file__).read_text(encoding="utf-8")
     linhas = [
         f"{n}: {ln.strip()}"
         for n, ln in enumerate(fonte.splitlines(), start=1)
         if re.search(r"^\s*perfil\.ativo\s*=", ln)
-        and "original" not in ln  # a devolução da fixture
+        and "original" not in ln
     ]
-    # A fixture troca DUAS vezes (instala e devolve); qualquer outra é vazamento.
     assert len(linhas) <= 1, (
         "há atribuição crua a `perfil.ativo` fora da fixture que a desfaz:\n"
         + "\n".join(linhas)

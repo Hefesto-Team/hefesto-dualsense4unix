@@ -1,15 +1,4 @@
-"""O CHECK-UP ABSORVE A GESTÃO — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026.
-
-Pedido dela: a Gestão de Controles entra no Check-up, e cada controle passa a
-dizer o ESTADO dele agora (Mic, Som, Modo de conexão, Visto como, Conexão
-estável, Bateria), com o nome do dono no lugar de «Player N» e o Perfil de
-Desempenho dele (o botão do Modo Economia virou os três perfis em 26/09/2026,
-A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01; as réguas dele moram em
-`test_o_perfil_de_desempenho_e_de_cada_controle.py`). Tudo lido do daemon vivo e
-da declaração — de um a quatro controles, USB, BT e misto.
-
-A MORDIDA de cada parte está escrita no teste que a cobra.
-"""
+"""O CHECK-UP ABSORVE A GESTÃO — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026."""
 from __future__ import annotations
 
 import pathlib
@@ -25,7 +14,6 @@ sys.path.insert(0, str(RAIZ / "src"))
 BANCADA = RAIZ / "mockup/08-conexoes.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
 
-# A FAIXA SINTÉTICA DA CASA.
 UNIQS = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 
 
@@ -70,9 +58,6 @@ def _mesa(vias: list[str]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     return mesa, conectados
 
 
-# ---------------------------------------------------------------------------
-# O ESTADO DA LINHA — cada selo lê o daemon, de um a quatro, USB, BT e misto
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("vias", [["usb"], ["bt"], ["usb", "bt"], ["bt", "usb", "bt", "usb"]])
 def test_os_seis_selos_saem_para_cada_controle(vias: list[str]) -> None:
     """MORDIDA: tire o `.update(estado_do_controle(...))` do `pacote()` → reprova."""
@@ -121,9 +106,7 @@ def test_o_mic_pelo_radio_sem_ponte_nao_e_certo() -> None:
 
 
 def test_conexao_e_bateria_sairam_do_cartao() -> None:
-    """26/09/2026, pedido dela: *«vamos remover as linhas de conexão estávbel
-    e a bateria vamos mover ela pra ficar do lado do BT»*. O cartão tem os
-    quatro selos, e a bateria vai no nome. (noqa-acento: citação literal dela)"""
+    """26/09/2026, pedido dela: *«vamos remover as linhas de conexão estávbel"""
     pac = _pac()
     c = {"uniq": UNIQS[0], "transport": "bt", "battery_pct": 40, "hz_movimento": 20}
     assert set(pac.estado_do_controle(c, {}, {}, _Declaracao())) == {
@@ -155,14 +138,10 @@ def test_o_modo_de_conexao_e_o_chip_aceso_da_jogar(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(a01_jogar, "_estado_da_tela",
                         lambda st: {"modo-aceso": "dualsense", "steam-input-aceso": ""})
     assert "<b>Sony DualSense</b>" in modo({"native_mode": False})
-    # e o modo lido uma vez para a mesa inteira chega igual a cada controle
     assert "<b>Navegação</b>" in pac.estado_do_controle(
         c, {}, {"native_mode": False}, _Declaracao(), "Navegação")["est-modo"]
 
 
-# ---------------------------------------------------------------------------
-# O NOME DO DONO — pelo dono do nome (o `Alias`), e «P N» quando apagado
-# ---------------------------------------------------------------------------
 def test_o_dono_mostra_o_nome_ou_p_n() -> None:
     pac = _pac()
     u = UNIQS[0]
@@ -189,19 +168,12 @@ def test_escrever_o_dono_grava_no_alias_e_apagar_volta_ao_p_n(digitado: str, gra
     assert chamadas == [(UNIQS[1].upper(), gravado)]
 
 
-# ---------------------------------------------------------------------------
-# O MAPEAR — a tela pinta a foto do dono do mapa
-# ---------------------------------------------------------------------------
 def test_a_tela_do_mapear_pinta_a_foto_do_dono() -> None:
     pac = _pac()
     parado = pac.campos_do_mapear({"estado": "parado", "portas": []})
     assert parado["mapear-diz"] == pac.MAPEAR_DIZ["parado"]
     porta = {"rotulo": "Entrada 3", "usb": "2.0", "hub": "", "storm": 2,
              "lugar_no_gabinete": "Frente do gabinete"}
-    # A CONTA É A DA LISTA DO DISCO desde 29/09/2026
-    # (O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): o `feitas` da sessão dizia
-    # «nenhuma» com 15 entradas mapeadas. A régua dela é
-    # `test_o_mapear_lista_o_que_ja_foi_mapeado.py`.
     na_porta = pac.campos_do_mapear({"estado": "porta", "porta": porta, "feitas": 0,
                                      "portas": [{"numero": "3", "nome": ""}]})
     assert "Entrada 3" in na_porta["mapear-porta"] and "USB 2.0" in na_porta["mapear-porta"]
@@ -229,17 +201,9 @@ def test_salvar_a_porta_chama_o_dono_com_a_face() -> None:
     assert visto == {"nome": "Frente de cima", "lugar": "Frente do gabinete"}
 
 
-# ---------------------------------------------------------------------------
-# A PÁGINA — uma seção só, os endereços novos, e o que saiu
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
 def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
-    """MORDIDA: devolva o quadro «Gestão de Controles» ao `MIOLO` → reprova.
-
-    A SEÇÃO QUE ABSORVEU SE CHAMA «Gestão de Controles» desde 26/09/2026
-    (`D-2609-O-CHECKUP-VIRA-GESTAO-DOS-CONTROLES`): o nome é UM título só, o da
-    primeira seção, e não um segundo quadro.
-    """
+    """MORDIDA: devolva o quadro «Gestão de Controles» ao `MIOLO` → reprova."""
     html = arquivo.read_text(encoding="utf-8")
     titulos = re.findall(r'<label class="quadro-titulo" for="([\w-]+)">Gestão de Controles<', html)
     assert titulos == ["cx8-2"], titulos
@@ -254,7 +218,6 @@ def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
     for gesto in ("perfil-do-controle", "dono-renomear",
                   "mapear-comecar", "mapear-gravar", "mapear-parar", "examinar-portas"):
         assert f'data-gesto="{gesto}"' in html, f"o gesto `{gesto}` não tem botão"
-    # `D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`: um botão só relê e examina.
     for saiu in ("economia-do-controle", "checkup-atualizar"):
         assert f'data-gesto="{saiu}"' not in html, f"o gesto `{saiu}` voltou"
 
@@ -269,11 +232,6 @@ def test_o_mapear_e_um_botao_so_e_os_que_repetiam_sairam(arquivo: pathlib.Path) 
     assert "Microfone e botões" not in gc and "Limite da vibração" not in gc
 
 
-# ---------------------------------------------------------------------------
-# O DESENHO DE QUEM COORDENA — 25-26/09/2026, depois de ela ver o acordeão:
-# *«tá quebradíssima a 8»*. Um cartão por lugar, nada abre nem fecha; o Mapear
-# em duas colunas; a ordem de serviço com título e instrução.
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
 def test_um_cartao_por_lugar_e_nada_abre_nem_fecha(arquivo: pathlib.Path) -> None:
     """MORDIDA: devolva as setas do acordeão à `linha_do_controle` → reprova."""
@@ -286,15 +244,7 @@ def test_um_cartao_por_lugar_e_nada_abre_nem_fecha(arquivo: pathlib.Path) -> Non
 
 
 def test_a_entrada_da_vez_sai_em_pares_e_a_lista_e_das_numeradas() -> None:
-    """MORDIDA: tire a entrada sem nome da lista → reprova.
-
-    VIROU O CONTRÁRIO EM 29/09/2026 (O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01).
-    Esta régua nasceu do desenho de 26/09 («o Mapear em duas colunas») e
-    travava a lista «só com nome», sem decisão dela no `decisoes-dela.csv`. Com
-    as 15 entradas dela numeradas e sem nome, a lista dizia «Nenhuma ainda.», e
-    a frase que ela ditou diz que o nome é opcional. A entrada sem nome entra,
-    com a palavra do número em negrito. E «Nenhuma em 7 dias» com maiúscula.
-    """
+    """MORDIDA: tire a entrada sem nome da lista → reprova."""
     pac = _pac()
     porta = {"rotulo": "Entrada 3", "usb": "3.0", "hub": "", "storm": 0}
     fatos = pac.html_da_porta_medida(porta)
@@ -321,12 +271,7 @@ def test_o_mapear_tem_onde_pintar_a_lista_e_o_passo(arquivo: pathlib.Path) -> No
 
 
 def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
-    """MORDIDA: tire a instrução do `_card_da_ordem` → reprova.
-
-    O TÍTULO SAIU DA LINHA em 26/09/2026: ele mora fora do campo que o tique
-    repinta (`.sugestao > .ordem-tit`), e cada linha é numerada. A página que
-    o traz é cobrada em `test_a_sugestao_de_conexao_diz_cada_ajuste.py`.
-    """
+    """MORDIDA: tire a instrução do `_card_da_ordem` → reprova."""
     pac = _pac()
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
 
@@ -343,14 +288,7 @@ def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
 
 
 def test_o_examinar_tambem_rele_os_controles(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`: o «Atualizar» saiu, e o «Examinar
-    Entradas» faz o que ele fazia — os nomes dos donos no BlueZ e o rascunho do
-    mapa das portas lidos de novo — além de refazer o exame (que relê a
-    declaração). Achado sem régua pela conferência de 26/09/2026.
-
-    MORDIDA: tire o `_esquecer("bluez")` ou o `_LOGICA = None` de
-    `examinar_portas` → reprova.
-    """
+    """`D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`: o «Atualizar» saiu, e o «Examinar"""
     pac = _pac()
     corridas: list[bool] = []
     monkeypatch.setattr(pac, "_correr_o_exame_completo", lambda: corridas.append(True))

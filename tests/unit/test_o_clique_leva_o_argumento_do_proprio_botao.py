@@ -1,36 +1,5 @@
 #!/usr/bin/env python3
-"""O clique tem de levar ao Python o que o BOTÃO diz — não uma lista de nomes.
-
-O DEFEITO, medido em 02/09/2026 com o dublê da casa: seis gestos da aba
-Conexões recusavam dizendo *"o clique não disse qual aparelho"*, e o diagnóstico
-que circulava era que o clique automático não dizia em qual CONTROLE agir.
-
-**Não é o controle.** Os seis leem o argumento do PRÓPRIO BOTÃO:
-
-    escolher-aparelho   o.get("caminho")    ← `data-caminho`, gerado em a08_conexoes.py:541
-    escolher-entrada    o.get("entrada")    ← `data-entrada`, no HTML publicado
-    tirar-daqui         o.get("entrada")
-    nova-entrada        o.get("face")
-    nova-extensao       o.get("entrada")
-    nova-face           o.get("valor")
-
-E o ouvinte do BOOTSTRAP encaminhava uma lista escrita à mão de catorze
-atributos, em que NENHUM dos três aparecia. Logo os seis recusavam **para ela
-também**, num clique de rato de verdade — não era defeito do instrumento.
-
-A CURA É GENÉRICA de propósito: o ouvinte copia o `dataset` INTEIRO antes de
-sobrescrever com a lista explícita. Uma lista escrita à mão de atributos que a
-página pode ter só cresce quando alguém se lembra, e o esquecimento é silencioso
-— é a mesma forma de defeito que esta casa já nomeou noutros lugares.
-
-A MORDIDA: tire o `Object.assign({}, d)` do BOOTSTRAP e
-``test_o_bootstrap_copia_o_dataset_inteiro`` reprova, nomeando os atributos que
-a página tem e o clique deixaria de carregar.
-
-O QUE ESTE TESTE **NÃO** PROVA: que o daemon dela aceitou. A prova no aparelho é
-do orquestrador, serializada — há dois controles na mesa dela e treze frentes
-rodando juntas, e um clique de régua muda o aparelho debaixo das outras.
-"""
+"""O clique tem de levar ao Python o que o BOTÃO diz — não uma lista de nomes."""
 from __future__ import annotations
 
 import pathlib
@@ -47,14 +16,6 @@ PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 PACOTES = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes"
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 
-#: Os atributos que o ouvinte nomeia UM A UM. Não é a lista boa — é a lista que
-#: existia sozinha, e é contra ela que se mede o que faltava.
-#:
-#: ELA COLHE DE MAIS DE PROPÓSITO (qualquer `nome:` do JS, e não só os do objeto
-#: do clique): colher demais só ENCOLHE a lista de órfãos, e um teste que erra
-#: para o lado de acusar menos não inventa defeito. Cravar o começo da linha
-#: perdia os que dividem linha com um vizinho — e a mensagem da mordida saía
-#: nomeando `forca` e `player`, que estão lá.
 _EXPLICITOS = re.compile(r"[\s,{]([a-zA-Z]+):")
 
 
@@ -74,11 +35,7 @@ def _chaves_que_os_gestos_leem() -> set[str]:
 
 
 def _data_das_paginas() -> set[str]:
-    """Os `data-*` que as dez páginas publicadas trazem, em nome camelCase.
-
-    É a forma com que o `dataset` do DOM os entrega — `data-mic-modo` chega como
-    `micModo` —, que é a mesma com que eles chegam ao Python.
-    """
+    """Os `data-*` que as dez páginas publicadas trazem, em nome camelCase."""
     fora: set[str] = set()
     for arq in sorted(PAGINAS.glob("[01][0-9]-*.html")):
         for cru in re.findall(r'\bdata-([a-z][a-z0-9-]*)=', arq.read_text(encoding="utf-8")):
@@ -88,12 +45,7 @@ def _data_das_paginas() -> set[str]:
 
 
 def test_o_bootstrap_copia_o_dataset_inteiro():
-    """A cura, e a mordida mora aqui: sem a cópia, estes atributos somem.
-
-    O teste não se contenta em ver a linha: ele NOMEIA os atributos que a página
-    tem, os gestos leem, e a lista explícita não carrega. Se a cópia sair, é
-    essa lista que aparece na mensagem — não um "faltou uma linha".
-    """
+    """A cura, e a mordida mora aqui: sem a cópia, estes atributos somem."""
     js = _bootstrap()
     lidos = _chaves_que_os_gestos_leem()
     das_paginas = _data_das_paginas()
@@ -122,14 +74,8 @@ def test_os_tres_argumentos_do_gabinete_estao_no_html_publicado():
         "esses três nomes não estavam na lista do ouvinte.")
 
 
-# -- o alvo, com o dublê da casa ------------------------------------------
 class PonteDeMentira:
-    """O dublê da `pacotes/ponte.py`, igual ao das outras réguas desta casa.
-
-    Ele responde a QUALQUER nome de propósito: virar uma segunda lista das
-    funções da ponte a faria envelhecer em silêncio. Quem confere se o nome
-    existe de verdade é `test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem`.
-    """
+    """O dublê da `pacotes/ponte.py`, igual ao das outras réguas desta casa."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []
@@ -183,9 +129,6 @@ def test_a_vibracao_recusa_sem_alvo_e_trabalha_com_ele(ctx, nome):
     assert fn is not None
 
     sem = {"gesto": nome, "texto": "x", "valor": "", "controle": "", "uniq": ""}
-    # O `match` ERA "não disse em qual controle" — a metade que a leva de língua
-    # tirou em 11/09/2026 (A4-064, aprovada por ela): o produto relatava o
-    # próprio defeito de leitura. O que sobra é a instrução, e é ela o ato.
     with pytest.raises(RuntimeError, match="dentro da coluna"):
         fn(ctx, sem, PonteDeMentira())
 
@@ -197,13 +140,7 @@ def test_a_vibracao_recusa_sem_alvo_e_trabalha_com_ele(ctx, nome):
 
 
 def test_o_gabinete_nao_se_cura_com_alvo_de_controle(ctx):
-    """A CORREÇÃO DE FATO: o que falta aos seis não é o controle.
-
-    O plano do dia dizia que os seis gestos do gabinete recusavam por falta de
-    alvo de CONTROLE. Medido: eles recusam com o controle passado do mesmo
-    jeito, porque o que eles leem é o argumento do próprio botão. Este teste
-    guarda a medição, para o diagnóstico errado não voltar.
-    """
+    """A CORREÇÃO DE FATO: o que falta aos seis não é o controle."""
     import pacotes
 
     com_alvo = {"gesto": "", "texto": "x", "valor": "",
@@ -217,11 +154,7 @@ def test_o_gabinete_nao_se_cura_com_alvo_de_controle(ctx):
 
 
 def test_o_gabinete_trabalha_quando_o_argumento_do_botao_chega(ctx):
-    """E a prova do outro lado: com `caminho`, `escolher-aparelho` não recusa.
-
-    É o que a cópia do `dataset` passa a entregar. O gesto de escolher não grava
-    nada — é estado de tela — e por isso é o seguro de provar aqui.
-    """
+    """E a prova do outro lado: com `caminho`, `escolher-aparelho` não recusa."""
     import pacotes
 
     fn = pacotes.gesto_da_pagina("08-conexoes.html", "escolher-aparelho")

@@ -24,14 +24,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
-# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
-# `test_a_trava_manual_de_audio_vence_o_perfil_no_mic`.
-#
-# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
-# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
-
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -73,14 +65,6 @@ def test_activate_aplica_trigger_e_led(isolated_profiles_dir: Path):
 
     triggers = [c for c in fc.commands if c.kind == "set_trigger"]
     assert len(triggers) == 2
-    # Right = Rigid.
-    #
-    # TRIGGER-CANON-01: o comentário que estava aqui dizia "RIGID_B = 5 bits,
-    # forces[1] = 200 (force cru)" — e `RIGID_B` é `0x05`, o OFF do bloco de
-    # gatilho. O preset mandava o controle DESLIGAR o gatilho, e ela mediu
-    # isso pelo tato: *"rígido e desligado sem diferença"*. Os bytes vêm da
-    # factory em vez de literais porque quem os trava é o
-    # `test_trigger_effects.py`, num lugar só.
     right_call = next(c for c in triggers if c.payload[0] == "right")
     assert right_call.payload[1].forces == rigid(5, 200).forces
 
@@ -118,18 +102,11 @@ def test_select_for_window_retorna_maior_prioridade(isolated_profiles_dir: Path)
     manager = ProfileManager(controller=fc)
     picked = manager.select_for_window({"wm_class": "Forza"})
     assert picked is not None
-    assert picked.name == "shooter"  # maior priority
+    assert picked.name == "shooter"
 
 
 def test_criteria_vence_catch_all_de_prioridade_maior(isolated_profiles_dir: Path):
-    """R-01 (auditoria 23/07): especificidade vem ANTES de prioridade.
-
-    Estado medido no disco da usuária: `vitoria` é MatchAny com prioridade 5, e
-    um perfil de jogo criado pela GUI nasce com prioridade 0. Ordenando só por
-    prioridade, o catch-all genérico de desktop vencia a regra própria do jogo
-    — ou seja, **criar o perfil do jogo não resolvia** o problema que ela
-    tentava resolver criando o perfil.
-    """
+    """R-01 (auditoria 23/07): especificidade vem ANTES de prioridade."""
     save_profile(
         _mk_profile(
             "mad_jack",
@@ -172,10 +149,7 @@ def test_prioridade_ainda_decide_entre_perfis_igualmente_especificos(
 
 
 def test_select_for_window_nao_elege_o_match_any(isolated_profiles_dir: Path):
-    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item
-    5): o `match any` era o fallback de toda janela sem regra; ele saiu da
-    seleção automática, e só entra pela mão dela. Numa janela sem regra, quem
-    decide é o autoswitch, com a escolha dela."""
+    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item"""
     save_profile(
         _mk_profile("shooter", match=MatchCriteria(window_class=["DoomEternal"]))
     )
@@ -198,27 +172,10 @@ def test_select_for_window_sem_match_sem_fallback(isolated_profiles_dir: Path):
     assert picked is None
 
 
-# ---------------------------------------------------------------------------
-# R-21 (auditoria 24/07) — catch-all NÃO tem autoridade sobre janela de jogo.
-#
-# O R-01 acertou a ORDEM (específico vence genérico) mas não a AUTORIDADE: sem
-# NENHUMA regra para o jogo, a ordenação ainda elegia o melhor dos catch-all. É
-# o caso medido: Mullet Mad Jack (steam_app_2111190) sem perfil próprio ⇒ vence
-# `vitoria` (MatchAny, prio 5); alt-tab para a janela `steam` ⇒ vence
-# `Navegação` (prio 50). Ping-pong a cada 18-28 s no journal de 22-23/07, com
-# lightbar/gatilhos/rumble diferentes dos dois lados.
-#
-# Mesma doutrina do `catch_all_sem_opiniao` de `lifecycle.apply_profile_
-# suppression`, um nível acima: lá o catch-all não pode REVERTER; aqui não pode
-# ENTRAR.
-# ---------------------------------------------------------------------------
-
-
 def test_janela_de_jogo_sem_regra_propria_nao_cai_no_catch_all(
     isolated_profiles_dir: Path,
 ):
-    """O caso medido: nenhum perfil opina sobre este jogo ⇒ None (e o
-    autoswitch retém o perfil corrente em vez de trocar)."""
+    """O caso medido: nenhum perfil opina sobre este jogo ⇒ None (e o"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
     save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=1))
 
@@ -235,19 +192,7 @@ def test_janela_de_jogo_sem_regra_propria_nao_cai_no_catch_all(
 def test_veto_r21_vale_com_wm_class_em_caixa_alta(
     isolated_profiles_dir: Path, wm_class: str
 ):
-    """UNIFICA-PREDICADO-01: o veto R-21 não pode depender da CAIXA da janela.
-
-    O buraco que ninguém cobria. A suíte inteira exercitava o veto só com
-    ``steam_app_...`` em minúscula, então a IGNORECASE de `manager.py` era uma
-    linha sem testemunha — e a "limpeza" que unifica o predicado numa fonte
-    CASE-SENSITIVE revogaria o veto sem uma reprovação sequer. Com a janela se
-    anunciando ``Steam_App_2111190`` (o X/XWayland escolhe a grafia, e ela
-    muda entre backends de detecção), o catch-all voltaria a entrar por cima
-    do jogo: exatamente o ping-pong de 22-23/07 que o R-21 fechou.
-
-    Arranque a `re.IGNORECASE` da fonte (`profiles/steam_app.py`) e este teste
-    reprova nos três casos.
-    """
+    """UNIFICA-PREDICADO-01: o veto R-21 não pode depender da CAIXA da janela."""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
     save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=1))
 
@@ -255,8 +200,6 @@ def test_veto_r21_vale_com_wm_class_em_caixa_alta(
     fc.connect()
     manager = ProfileManager(controller=fc)
     assert manager.select_for_window({"wm_class": wm_class}) is None
-    # E o MOTIVO tem de ser "jogo sem perfil próprio", não "nada casou": é ele
-    # que faz o daemon ligar o modo jogo padrão em vez de reter em silêncio.
     assert manager.select_for_window_ex({"wm_class": wm_class}) == (
         None,
         MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
@@ -264,12 +207,7 @@ def test_veto_r21_vale_com_wm_class_em_caixa_alta(
 
 
 def test_veto_r21_em_caixa_alta_sem_candidato_nenhum(isolated_profiles_dir: Path):
-    """O ramo vizinho do veto (ZERO candidatos no disco) pelo mesmo predicado.
-
-    `select_for_window_ex` decide o motivo ANTES de olhar candidatos; se o
-    predicado for sensível a caixa, esta janela vira `MOTIVO_SEM_CANDIDATO` e
-    o modo jogo padrão nunca liga.
-    """
+    """O ramo vizinho do veto (ZERO candidatos no disco) pelo mesmo predicado."""
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
@@ -280,8 +218,7 @@ def test_veto_r21_em_caixa_alta_sem_candidato_nenhum(isolated_profiles_dir: Path
 
 
 def test_regra_propria_do_jogo_continua_vencendo(isolated_profiles_dir: Path):
-    """O veto é só quando os ÚNICOS candidatos são catch-all — havendo regra
-    específica, ela entra normalmente (o R-01 segue de pé)."""
+    """O veto é só quando os ÚNICOS candidatos são catch-all — havendo regra"""
     save_profile(
         _mk_profile(
             "mad_jack",
@@ -301,8 +238,7 @@ def test_regra_propria_do_jogo_continua_vencendo(isolated_profiles_dir: Path):
 def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
     isolated_profiles_dir: Path,
 ):
-    """Só CATCH-ALL é vetado. Um perfil que casou por título/processo opinou
-    de verdade sobre esta janela e continua valendo."""
+    """Só CATCH-ALL é vetado. Um perfil que casou por título/processo opinou"""
     save_profile(
         _mk_profile(
             "fps",
@@ -322,11 +258,7 @@ def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
 
 
 def test_catch_all_nao_entra_nem_em_janela_comum(isolated_profiles_dir: Path):
-    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): o
-    veto era EXCLUSIVO de janela de jogo, e no desktop o catch-all era o
-    fallback de sempre. Às 17h31min19 de 29/09 ele trocou a escolha dela pelo
-    terminal em foco. No desktop, agora, a resposta é «nada casou», e a aba
-    Mouse/Teclado tem perfil pela escolha dela (o autoswitch a põe)."""
+    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): o"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
 
     fc = FakeController()
@@ -337,10 +269,7 @@ def test_catch_all_nao_entra_nem_em_janela_comum(isolated_profiles_dir: Path):
 
 
 def test_wm_class_parecida_com_steam_app_nao_e_vetada(isolated_profiles_dir: Path):
-    """`steam_app_` sem número, ou com sufixo, NÃO é janela de jogo da Steam —
-    o predicado é o mesmo (ancorado) dos outros dois lugares que o usam. O
-    motivo diz isso: «nada casou», e não «jogo sem perfil próprio» (desde
-    01/10/2026 o `match any` não é eleito em janela nenhuma)."""
+    """`steam_app_` sem número, ou com sufixo, NÃO é janela de jogo da Steam —"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
 
     fc = FakeController()
@@ -368,7 +297,6 @@ def test_veto_loga_uma_vez_por_jogo(
     manager = ProfileManager(controller=fc)
     for _ in range(10):
         manager.select_for_window({"wm_class": "steam_app_2111190"})
-    # Volta ao desktop e ao jogo: episódio novo, log novo.
     manager.select_for_window({"wm_class": "firefox"})
     manager.select_for_window({"wm_class": "steam_app_2111190"})
 
@@ -395,22 +323,14 @@ def test_delete_do_ativo_reseta_active_profile(isolated_profiles_dir: Path):
 def test_delete_por_slug_limpa_active_gravado_como_display_name(
     isolated_profiles_dir: Path,
 ):
-    """BUG-PROFILE-DELETE-ACTIVE-SLUG-01: delete por slug deve limpar o active.
-
-    `activate()` grava o DISPLAY NAME ("Ação") em `active_profile`, mas o
-    arquivo vive como `acao.json` e o usuário (ou a GUI) pode deletar pelo slug
-    ("acao"). Comparar as strings cruas deixava o active preso; com normalização  # (noqa-acento)
-    por slugify a limpeza acontece.
-    """
+    """BUG-PROFILE-DELETE-ACTIVE-SLUG-01: delete por slug deve limpar o active."""
     save_profile(_mk_profile("Ação"))
     fc = FakeController()
     fc.connect()
     store = StateStore()
     manager = ProfileManager(controller=fc, store=store)
     manager.activate("Ação")
-    # active é gravado como display name (acentuado), não como slug.
     assert store.active_profile == "Ação"
-    # delete pelo SLUG ainda deve limpar o active.
     manager.delete("acao")  # (noqa-acento)
     assert store.active_profile is None
 
@@ -454,8 +374,6 @@ def test_apply_propaga_brightness(isolated_profiles_dir: Path):
     manager.apply(profile)
 
     assert fc.last_led is not None, "set_led não foi chamado"
-    # RGB escalado pelo dono, com o piso (D-2909-O-BRILHO-TEM-PISO, 29/09/2026):
-    # a 25% o fator é 0,2 + 0,8 x 0,25 = 0,4 — 200*0,4=80, 100*0,4=40, 50*0,4=20.
     r, g, b = fc.last_led.color
     assert r == 80, f"canal R esperado 80, recebeu {r}"
     assert g == 40, f"canal G esperado 40, recebeu {g}"
@@ -494,13 +412,11 @@ def test_apply_propaga_multi_position(isolated_profiles_dir: Path):
     triggers = [c for c in fc.commands if c.kind == "set_trigger"]
     assert len(triggers) == 2
 
-    # Left: feedback — compara byte a byte com a factory direta.
     left_call = next(c for c in triggers if c.payload[0] == "left")
     expected_left = multi_position_feedback([0, 1, 2, 3, 4, 5, 6, 7, 8, 8])
     assert left_call.payload[1].mode == TriggerMode.FEEDBACK
     assert left_call.payload[1].forces == expected_left.forces
 
-    # Right: vibration com frequency=0 (default do formato aninhado).
     right_call = next(c for c in triggers if c.payload[0] == "right")
     expected_right = multi_position_vibration(0, [0, 0, 2, 2, 4, 5, 6, 7, 8, 8])
     assert right_call.payload[1].mode == TriggerMode.VIBRATION
@@ -535,7 +451,7 @@ def test_apply_propaga_player_leds_ao_controller(isolated_profiles_dir: Path):
         "player_leds_test",
         leds=LedsConfig(
             lightbar=(10, 20, 30),
-            player_leds=[True, False, True, False, True],  # 0b10101
+            player_leds=[True, False, True, False, True],
         ),
     )
     fc = FakeController()
@@ -577,7 +493,7 @@ def test_activate_propaga_player_leds(isolated_profiles_dir: Path):
             "p2_canonico",
             leds=LedsConfig(
                 lightbar=(100, 100, 100),
-                player_leds=[False, True, False, True, False],  # 0b01010 = Player 2
+                player_leds=[False, True, False, True, False],
             ),
         )
     )
@@ -587,14 +503,6 @@ def test_activate_propaga_player_leds(isolated_profiles_dir: Path):
     manager = ProfileManager(controller=fc, store=store)
     manager.activate("p2_canonico")
     assert fc.last_player_leds == (False, True, False, True, False)
-
-
-# -- PERFIL-01 (4P-01): perfil atinge TODOS os controles, mesmo com alvo -----
-#
-# Bug provado no código (agravante da revisão): `ProfileManager.apply()` usava
-# os setters broadcast que RESPEITAM `_output_target_key` — com um alvo
-# selecionado na GUI, ativar um perfil (manual OU via autoswitch, que passa
-# pela MESMA cadeia `activate()`) aplicava só no alvo.
 
 
 def _backend_com_dois_controles():
@@ -620,7 +528,7 @@ def test_activate_manual_com_alvo_selecionado_atinge_todos(
     """Ativação MANUAL com alvo=Controle 2 no seletor → as DUAS lightbars."""
     save_profile(_mk_profile("shooter"))
     backend, h1, h2 = _backend_com_dois_controles()
-    backend.set_output_target(1)  # usuária estava mexendo só no Controle 2
+    backend.set_output_target(1)
 
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("shooter")
@@ -628,15 +536,13 @@ def test_activate_manual_com_alvo_selecionado_atinge_todos(
     for h in (h1, h2):
         assert h.light.colors[-1] == (10, 20, 30)
         assert h.triggerR.forces == list(rigid(5, 200).forces)
-    # O seletor da usuária segue como estava (estado de UI preservado).
     assert backend.get_output_target_index() == 1
 
 
 def test_activate_via_autoswitch_com_alvo_selecionado_atinge_todos(
     isolated_profiles_dir: Path,
 ):
-    """Mesma cadeia pelo AUTOSWITCH (`AutoSwitcher._activate` → `activate`):
-    toda troca automática com alvo ativo também aplicava só no alvo."""
+    """Mesma cadeia pelo AUTOSWITCH (`AutoSwitcher._activate` → `activate`):"""
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 
     save_profile(_mk_profile("shooter"))
@@ -653,48 +559,29 @@ def test_activate_via_autoswitch_com_alvo_selecionado_atinge_todos(
 
 
 def test_activate_substitui_o_mapa_de_overrides(isolated_profiles_dir: Path):
-    """Reset na ativação: o override em memória do perfil anterior não pode
-    ressuscitar no hotplug sob o perfil novo (ciclo de vida explícito)."""
+    """Reset na ativação: o override em memória do perfil anterior não pode"""
     from hefesto_dualsense4unix.core.controller import OutputSpec
 
     save_profile(_mk_profile("shooter"))
     backend, _h1, _h2 = _backend_com_dois_controles()
     backend.apply_output_for("aabbcc000002", OutputSpec(led=(0, 255, 0)))
-    assert backend._desired_by_uniq  # override registrado
+    assert backend._desired_by_uniq
 
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("shooter")
 
-    assert backend._desired_by_uniq == {}  # mapa substituído (vazio: sem campo)
+    assert backend._desired_by_uniq == {}
     assert backend._desired_default.led == (10, 20, 30)
 
 
 def test_activate_sem_secao_mic_nao_toca_o_mic_led(isolated_profiles_dir: Path):
-    """AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: o LED do mic nunca é COLATERAL.
-
-    **NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01).** Este caso se chamava
-    `test_activate_nao_toca_o_mic_led` e afirmava "profile switch JAMAIS mexe
-    no LED do mic". A decisão medida CONTINUA valendo, e o ESCOPO dela é que ficou
-    explícito: o proibido é o LED como **colateral** — perfil que não pediu nada
-    apagando a luz vermelha do microfone dela ao trocar de janela. O que passou
-    a ser permitido, porque é o oposto disso, é o LED como **consequência de um
-    pedido explícito dela**: um perfil que GUARDA `mic.muted` porque ela o
-    salvou, aplicado numa troca EXPLÍCITA de perfil (a exceção MIC-GRAVACAO-01,
-    escrita em `ProfileManager.apply_mic`).
-
-    O que este caso trava, e é o que importa: **sem seção `mic`, jamais.**
-    """
+    """AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: o LED do mic nunca é COLATERAL."""
     save_profile(_mk_profile("shooter"))
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc, store=StateStore())
     manager.activate("shooter")
     assert fc.mic_led_history == []
-
-
-# ---------------------------------------------------------------------------
-# PERFIL-GUARDA-O-MIC-01 (18/08/2026) — ativar um perfil aplica o microfone
-# ---------------------------------------------------------------------------
 
 
 class _MicEspiao:
@@ -732,16 +619,7 @@ def _mk_profile_com_mic(
 
 
 def test_ativar_perfil_com_mic_aplica_volume(isolated_profiles_dir: Path):
-    """O pedido dela inteiro: *"temos que salvar isso no perfil sempre"*.
-
-    Medido em 18/08/2026: nenhum dos 18 perfis dela tinha a seção `mic`, e
-    ativar um perfil NUNCA tocava no microfone — a seção existia no esquema
-    desde 16/08 e nada a lia.
-
-    MORDIDA: apague a linha `self.apply_mic(...)` de
-    `ProfileManager.apply_emulation` (ou o `mic_applier=` da injeção) e este
-    caso fica vermelho.
-    """
+    """O pedido dela inteiro: *"temos que salvar isso no perfil sempre"*."""
     save_profile(_mk_profile_com_mic("gravando", volume=70))
     espiao = _MicEspiao()
     manager = ProfileManager(
@@ -760,17 +638,7 @@ def test_ativar_perfil_com_mic_aplica_volume(isolated_profiles_dir: Path):
 
 
 def test_perfil_sem_secao_mic_nao_chama_o_applier(isolated_profiles_dir: Path):
-    """Sem opinião é silêncio, não ordem — o outro sentido da mesma queixa.
-
-    Mesmo contrato do alto-falante: perfil que não pediu nada não impõe nada.
-
-    MORDIDA (medida em 18/08/2026): `apply_mic` tem DUAS guardas de ausência —
-    o `or secao is None` e o `volume is None and muted is None` logo abaixo —, e
-    a segunda absorve a primeira num perfil legado. Arrancar só uma delas deixa
-    este caso verde; arrancar as DUAS o deixa vermelho, que é o que prova que a
-    ausência de opinião é o que segura a chamada. Sem elas, todo perfil legado
-    passaria a mexer no microfone dela.
-    """
+    """Sem opinião é silêncio, não ordem — o outro sentido da mesma queixa."""
     save_profile(_mk_profile("sem_mic"))
     espiao = _MicEspiao()
     manager = ProfileManager(
@@ -781,23 +649,7 @@ def test_perfil_sem_secao_mic_nao_chama_o_applier(isolated_profiles_dir: Path):
 
 
 def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path):
-    """MIC-GRAVACAO-01 — a exceção nomeada, e a razão de ela existir.
-
-    O `muted` do perfil é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho.
-    A trava manual de áudio sozinha NÃO basta para protegê-lo: o perfil de JOGO
-    limpa as categorias travadas ao entrar (`profiles/autoswitch.py`, exceção
-    F2 — a troca por jogo não pode ficar silenciada para sempre por um
-    `led.set` da manhã). Sem esta guarda, abrir um jogo durante uma gravação
-    roubaria o mudo do microfone dela.
-
-    A separação: o `volume` (ganho da fonte no PipeWire, não apaga luz nenhuma)
-    atravessa toda ativação; o `muted` NENHUMA — desde a
-    O-MUDO-E-DO-CONTROLE-01 (29/09/2026) ele é do controle, e só o replug o
-    devolve, lido do dono (`reapply_mic_on_connect`).
-
-    MORDIDA: deixe o `muted` do perfil atravessar a troca explícita na guarda
-    de `apply_mic` e este caso fica vermelho na última asserção.
-    """
+    """MIC-GRAVACAO-01 — a exceção nomeada, e a razão de ela existir."""
     save_profile(_mk_profile_com_mic("jogo", volume=70, muted=False))
     espiao = _MicEspiao()
     manager = ProfileManager(
@@ -815,21 +667,11 @@ def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path)
         "o mudo do perfil atravessou o restauro de boot/reconexão"
     )
 
-    # O-MUDO-E-DO-CONTROLE-01 (29/09/2026): nem a troca EXPLÍCITA leva o
-    # mudo. Ele é do controle (resposta 9 dela: vale em todo jogo), e o
-    # `muted` que um perfil ainda carregue é ignorado.
     manager.activate("jogo", origin="manual")
     assert espiao.chamadas[-1] == (70, None, "manual"), (
         "a troca explícita de perfil levou o mudo — ele é do controle, não do "
         f"perfil: {espiao.chamadas[-1]!r}"
     )
-
-
-
-
-# ---------------------------------------------------------------------------
-# PERFIL-04: ativação aplica o mapa `controllers` do perfil por-uniq
-# ---------------------------------------------------------------------------
 
 
 def _mk_profile_com_override(name: str = "vitoria") -> Profile:
@@ -851,9 +693,7 @@ def _mk_profile_com_override(name: str = "vitoria") -> Profile:
 
 
 def test_activate_aplica_override_so_no_alvo(isolated_profiles_dir: Path):
-    """O pedido dela aplicado: ativar o perfil pinta SÓ o controle do
-    override de azul — o outro recebe a seção global (o merge do PERFIL-01
-    cuida do hotplug depois)."""
+    """O pedido dela aplicado: ativar o perfil pinta SÓ o controle do"""
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
     save_profile(_mk_profile_com_override("vitoria"))
@@ -862,21 +702,17 @@ def test_activate_aplica_override_so_no_alvo(isolated_profiles_dir: Path):
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("vitoria")
 
-    assert h1.light.colors[-1] == (10, 20, 30)  # global
-    assert h2.light.colors[-1] == (0, 0, 255)  # override do alvo
-    # O mapa em memória ficou registrado para o hotplug reaplicar.
+    assert h1.light.colors[-1] == (10, 20, 30)
+    assert h2.light.colors[-1] == (0, 0, 255)
     assert backend._desired_by_uniq[UNIQ_2].led == (0, 0, 255)
     assert backend._desired_by_uniq[UNIQ_2].player_leds == (
         False, True, False, True, False,
     )
-    # Override sem seção triggers = sem opinião (merge por campo no replug).
     assert backend._desired_by_uniq[UNIQ_2].trigger_left is None
 
 
 def test_activate_registra_override_de_desconectado(isolated_profiles_dir: Path):
-    """Override de controle DESCONECTADO fica registrado no mapa (a escrita
-    de hardware é pulada) — é o que faz o religar do BT receber a cor dele
-    (teste de fogo do PERFIL-05c)."""
+    """Override de controle DESCONECTADO fica registrado no mapa (a escrita"""
     from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
     from tests.unit.test_backend_multi_controller import (
         KEY_1,
@@ -888,21 +724,20 @@ def test_activate_registra_override_de_desconectado(isolated_profiles_dir: Path)
     save_profile(_mk_profile_com_override("vitoria"))
     backend = PyDualSenseController(evdev_reader=_null_evdev())
     h1 = _FakeHandle()
-    backend._handles = {KEY_1: h1}  # só o Controle 1 conectado
+    backend._handles = {KEY_1: h1}
     backend._primary_key = KEY_1
 
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("vitoria")
 
-    assert h1.light.colors[-1] == (10, 20, 30)  # o conectado ficou no global
-    assert backend._desired_by_uniq[UNIQ_2].led == (0, 0, 255)  # registrado
+    assert h1.light.colors[-1] == (10, 20, 30)
+    assert backend._desired_by_uniq[UNIQ_2].led == (0, 0, 255)
 
 
 def test_activate_override_escala_brilho_no_mesmo_caminho(
     isolated_profiles_dir: Path,
 ):
-    """Brilho do override passa pelo MESMO caminho de escala do global
-    (`LedSettings.apply_brightness`): o hardware recebe a cor JÁ escalada."""
+    """Brilho do override passa pelo MESMO caminho de escala do global"""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
@@ -922,25 +757,14 @@ def test_activate_override_escala_brilho_no_mesmo_caminho(
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("vitoria")
 
-    # A 50% o fator é 0,6 pelo piso (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
     assert h2.light.colors[-1] == (60, 120, 30)
     assert backend._desired_by_uniq[UNIQ_2].led == (60, 120, 30)
-
-
-# ---------------------------------------------------------------------------
-# Fix do review (2026-07-16, MED): override PARCIAL dentro da seção não
-# densifica — campo não escrito herda o GLOBAL (merge por campo de verdade)
-# ---------------------------------------------------------------------------
 
 
 def test_activate_override_parcial_herda_player_e_brilho_do_global(
     isolated_profiles_dir: Path,
 ):
-    """O EXATO JSON do aceite 1 do PERFIL-02, escrito à mão: override só com
-    a cor. Os campos NÃO escritos herdam o GLOBAL — antes, os defaults do
-    schema densificavam e o controle acordava com player-LEDs TODOS apagados
-    e a cor a brilho cheio (a resolução-por-objeto refutada, um nível
-    abaixo)."""
+    """O EXATO JSON do aceite 1 do PERFIL-02, escrito à mão: override só com"""
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
     raw = _mk_profile(
@@ -958,12 +782,8 @@ def test_activate_override_parcial_herda_player_e_brilho_do_global(
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("vitoria")
 
-    # A cor escrita herda o brilho 0.5 do GLOBAL (verde escalado, não cheio),
-    # pelo fator 0,6 do piso (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
     assert h2.light.colors[-1] == (0, 153, 0)
     assert backend._desired_by_uniq[UNIQ_2].led == (0, 153, 0)
-    # Campos não escritos ficam SEM OPINIÃO no mapa → hotplug herda o global
-    # (antes: player_leds=(False,)*5 apagava o player 1 aceso do global).
     assert backend._desired_by_uniq[UNIQ_2].player_leds is None
     assert backend._desired_by_uniq[UNIQ_2].trigger_left is None
 
@@ -971,9 +791,7 @@ def test_activate_override_parcial_herda_player_e_brilho_do_global(
 def test_activate_override_parcial_de_gatilho_nao_desliga_o_outro_lado(
     isolated_profiles_dir: Path,
 ):
-    """Override só de `left`: o `right` daquele controle segue o GLOBAL —
-    antes o default `Off` densificado desligava o gatilho direito global do
-    controle do override."""
+    """Override só de `left`: o `right` daquele controle segue o GLOBAL —"""
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
     raw = _mk_profile("vitoria").model_dump(mode="json")
@@ -986,7 +804,6 @@ def test_activate_override_parcial_de_gatilho_nao_desliga_o_outro_lado(
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("vitoria")
 
-    # O lado escrito aplicou; o NÃO escrito manteve o global (Rigid 5,200).
     assert h2.triggerL.forces == list(rigid(1, 100).forces)
     assert h2.triggerR.forces == list(rigid(5, 200).forces)
     assert backend._desired_by_uniq[UNIQ_2].trigger_right is None

@@ -1,17 +1,4 @@
-"""A bandeja do produto é o TRAY, e ele sobe sozinho — 19/09/2026.
-
-Decisão dela: *"desabilitamos o applet pela complexidade. o tray faz o mesmo
-mas melhor."*
-
-A troca tem DUAS metades, e uma sozinha estraga o produto:
-
-1. o applet sai do default do `install.sh` — senão a decisão dela não chega a
-   máquina nenhuma;
-2. o tray ganha autostart — senão a barra dela fica VAZIA, porque o applet era
-   plugin do `cosmic-panel` (subia com a sessão) e o tray é processo comum.
-
-Estas réguas medem as duas, e medem o ARQUIVO, não a intenção.
-"""
+"""A bandeja do produto é o TRAY, e ele sobe sozinho — 19/09/2026."""
 
 from __future__ import annotations
 
@@ -137,8 +124,6 @@ def test_o_applet_ja_instalado_e_anunciado_e_nao_apagado() -> None:
         "não se anuncia, e dois ícones na barra seriam lidos como defeito novo."
     )
     passo9 = texto.split('step "9/11"', 1)[-1].split('step "10/', 1)[0]
-    # Um `rm` EXECUTADO, não a palavra: o passo 9 IMPRIME a linha `sudo rm ...`
-    # para ela copiar, e isso é o contrário de apagar sozinho.
     executa = [
         linha
         for linha in passo9.splitlines()
@@ -149,17 +134,6 @@ def test_o_applet_ja_instalado_e_anunciado_e_nao_apagado() -> None:
         f"nesta corrida. A remoção é do ./uninstall.sh.\n{executa}"
     )
 
-
-# ---------------------------------------------------------------------------
-# O DOCTOR MEDE A BANDEJA, e não a saúde de um componente aposentado
-# ---------------------------------------------------------------------------
-# O `check_applet` auditava o `.desktop` do applet COSMIC — com um `fail`
-# armado. Depois de 19/09 isso derrubaria o diagnóstico de quem tivesse o
-# binário velho parado no disco, por um componente que ninguém deve usar.
-#
-# Medido na máquina dela em 19/09: o diagnóstico caiu de 9 avisos para 7, e os
-# dois que saíram eram exatamente as duas linhas do validador sobre o
-# `Categories=COSMIC;` do applet instalado em 16h30.
 
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
@@ -206,16 +180,6 @@ def test_o_applet_parado_e_recado_e_nunca_falha() -> None:
     assert "./uninstall.sh" in trecho, (
         "o recado tem de dizer COMO remover; binário parado não se anuncia."
     )
-
-
-# ---------------------------------------------------------------------------
-# A FLAG QUE TIRA SÓ O RESTO — `--so-o-applet`, 19/09/2026
-# ---------------------------------------------------------------------------
-# Pedido dela depois de o passo 9 do install passar a apenas ANUNCIAR o binário
-# parado: *"Cria a flag"*. Sem ela, tirar 23 MB de applet exigia o uninstall
-# INTEIRO — que para o daemon, apaga as regras udev, desliga o Steam Input e
-# derruba o DKMS. Pagar o preço do wipe por um resto é o que faz a pessoa
-# deixar o resto lá.
 
 
 def test_a_flag_do_applet_existe_e_e_anunciada() -> None:

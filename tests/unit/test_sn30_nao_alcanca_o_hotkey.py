@@ -9,13 +9,13 @@ fecha essa pergunta, com endereço.
 O CAMINHO, medido lendo o código (nenhum aparelho tocado):
 
     HotkeyManager.observe(buttons_pressed)          integrations/hotkey_daemon.py
-        chamado com  <-  self._evdev_buttons_once()  daemon/lifecycle.py:4668,4803
-        que delega a  <- evdev_buttons_once(daemon)   daemon/subsystems/poll.py:53
+        chamado com  <-  self._evdev_buttons_once()  daemon/lifecycle.py:2958,4803
+        que delega a  <- evdev_buttons_once(daemon)   daemon/subsystems/poll.py:34
         que lê         <- daemon.controller._evdev.snapshot()
         onde  controller._evdev  é um  EvdevReader()  retargetado por
-        `self._evdev.retarget(self.primary_uniq)` (core/backend_pydualsense.py:2707)
+        `self._evdev.retarget(self.primary_uniq)` (core/backend_pydualsense.py:1775)
         e  `primary_uniq`  só resolve identidade de um handle DualSense
-        (core/backend_pydualsense.py:1787-1802 — o backend inteiro só abre
+        (core/backend_pydualsense.py:1149-1164 — o backend inteiro só abre
         hardware Sony via hidapi; não existe handle de SN30 aqui).
 
     Sem alvo (`_target_uniq is None`), `EvdevReader._locate()` cai em
@@ -30,7 +30,7 @@ O CAMINHO, medido lendo o código (nenhum aparelho tocado):
     enxergar externo — mas só é chamada com um `_target_uniq` vindo de
     `primary_uniq`, e este nunca é a identidade de um externo (a adoção
     deliberada de externo, a `E3`, está EXPLICITAMENTE não-entregue:
-    core/evdev_reader.py:692-695, "O que ela NÃO faz: adotar ninguém (...)
+    core/evdev_reader.py:580-583, "O que ela NÃO faz: adotar ninguém (...)
     o veto de 19/07 segue de pé; quem o derruba é a E3, e ela é dela").
 
     Desde 28/09/2026 (O-MODO-XBOX-NAO-E-QUEDA-02, item 5) o laço entrega aos
@@ -61,8 +61,6 @@ from hefesto_dualsense4unix.core.evdev_reader import (
     discover_gamepads,
 )
 
-# Os quatro VID:PID que o SN30 desta bancada veste, medidos/documentados em
-# docs/protocol/externos-firmware-e-modos.md §2.2 — Switch (o modo em uso
 # nesta mesa), D-input, X-input, macOS. Nenhum é DualSense.
 _DISFARCES_DO_SN30 = [
     ("switch", 0x057E, 0x2009),
@@ -78,7 +76,7 @@ class _FakeSN30Dev:
     def __init__(self, path: str, vendor: int, product: int) -> None:
         self.path = path
         self.info = SimpleNamespace(vendor=vendor, product=product)
-        self.uniq = "e4:17:d8:00:00:1a"  # OUI real da 8BitDo, medido em 11/08
+        self.uniq = "e4:17:d8:00:00:1a"
         self.name = "8BitDo Pro Controller"
 
     def capabilities(self, *, verbose: bool = False, absinfo: bool = True):
@@ -122,10 +120,7 @@ def test_discover_dualsense_evdevs_nao_ve_o_sn30_em_modo_nenhum(
 def test_discover_gamepads_classifica_o_sn30_como_externo(
     monkeypatch: pytest.MonkeyPatch, nome: str, vendor: int, product: int
 ) -> None:
-    """A descoberta ÚNICA (usada quando HÁ alvo, via
-    `localizar_node_por_identidade`) rotula o SN30 como ESPECIE_EXTERNAL —
-    nunca ESPECIE_DUALSENSE. É essa espécie que os consumidores (co-op,
-    inventário de externos) usam para recusar dar vpad/hotkey a ele."""
+    """A descoberta ÚNICA (usada quando HÁ alvo, via"""
     dev = _FakeSN30Dev("/dev/input/event30", vendor, product)
 
     monkeypatch.setattr("evdev.list_devices", lambda: ["/dev/input/event30"])

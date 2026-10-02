@@ -1,26 +1,4 @@
-"""Duas réguas saíam verdes por VACUIDADE, e diziam `OK` ao fazê-lo.
-
-MEDIDO em 26/08/2026 (LEVA-4-E), com a máquina livre e a árvore parada:
-
-* `scripts/validar-fala-de-tela.py --all` imprimia
-  `OK: 1 Fala declarada(s), todas de acordo com …` — e o produto inteiro tem
-  **uma** `Fala` (`app/widgets/external_card.py:97`) contra um mapa de **308**
-  células, com **zero** abas em `ABAS_COM_FALA_DECLARADA`;
-* `scripts/gerar-tabela-de-curvas.py --check` imprimia
-  `atualizado (0 curva(s) no catálogo)` sobre um catálogo que **não existe no
-  disco**.
-
-Nos dois casos o `rc=0` é honesto e a PALAVRA é que mente: `OK` e `atualizado`
-descrevem um ATO que não houve. É o padrão que a casa nomeou em 25/08 — *a
-régua confunde a PALAVRA com o ATO* — e a saída que ela aplaudiu no mesmo dia
-foi a régua do teclado, por dizer *"a régua não achou NENHUM valor produzível —
-ela cegou"*.
-
-**O `rc` NÃO muda, e é decisão consciente.** O tamanho dos dois conjuntos é
-decisão de produto (quantas abas promover; quando a CR-04 produz a primeira
-curva), e portão não reprova ninguém por uma fila que ele mesmo não enche. O
-que muda é a frase, para que o verde não seja contado como medição.
-"""
+"""Duas réguas saíam verdes por VACUIDADE, e diziam `OK` ao fazê-lo."""
 from __future__ import annotations
 
 import importlib.util
@@ -43,11 +21,6 @@ def _rodar(script: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# validar-fala-de-tela.py
-# ─────────────────────────────────────────────────────────────────────────
-
-
 def test_fala_de_tela_nao_diz_ok_com_uma_fala_so() -> None:
     """MORDIDA — a frase de sucesso não pode ser `OK` sobre conjunto de um."""
     processo = _rodar(FALA, "--all")
@@ -61,20 +34,11 @@ def test_fala_de_tela_nao_diz_ok_com_uma_fala_so() -> None:
 
 
 def test_fala_de_tela_diz_o_tamanho_do_conjunto_medido() -> None:
-    """MORDIDA — o número de células do mapa tem de aparecer na frase.
-
-    Sem ele, quem lê o verde do `portoes.sh` não tem como saber se a régua
-    comparou uma frase ou trezentas.
-    """
+    """MORDIDA — o número de células do mapa tem de aparecer na frase."""
     processo = _rodar(FALA, "--all")
     ultima = processo.stdout.strip().splitlines()[-1]
     for pedaco in ("`Fala` declarada(s)", "célula(s)", "aba(s) promovida(s)"):
         assert pedaco in ultima, f"a frase não diz {pedaco!r}:\n{ultima}"
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# gerar-tabela-de-curvas.py
-# ─────────────────────────────────────────────────────────────────────────
 
 
 def _modulo_das_curvas():
@@ -95,11 +59,7 @@ def test_curvas_nao_diz_atualizado_sobre_catalogo_inexistente() -> None:
 
 
 def test_a_frase_muda_com_o_tamanho_do_catalogo(tmp_path: Path) -> None:
-    """As três respostas da régua, exercitadas uma a uma.
-
-    Régua que só sabe dizer "não medi" é tão inútil quanto régua que só sabe
-    dizer `OK` — este teste cobra as DUAS pontas.
-    """
+    """As três respostas da régua, exercitadas uma a uma."""
     modulo = _modulo_das_curvas()
 
     ausente = tmp_path / "nao-existe.json"

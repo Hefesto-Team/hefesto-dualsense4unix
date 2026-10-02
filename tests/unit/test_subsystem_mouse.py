@@ -1,15 +1,4 @@
-"""Testes unitários do subsystem Mouse (isolamento).
-
-Prova que:
-  - MouseSubsystem.is_enabled segue config.mouse_emulation_enabled.
-  - MouseSubsystem.stop é idempotente.
-  - stop_mouse_emulation para e descarta o device.
-  - dispatch_mouse chama device.dispatch com parâmetros corretos.
-  - dispatch_mouse trata exceção silenciosamente.
-
-Nota: start_mouse_emulation depende de UinputMouseDevice (uinput kernel),
-portanto os testes de criação usam mocks via atributo direto do daemon.
-"""
+"""Testes unitários do subsystem Mouse (isolamento)."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -40,7 +29,7 @@ class TestMouseSubsystem:
     @pytest.mark.asyncio
     async def test_stop_idempotente_sem_device(self) -> None:
         subsystem = MouseSubsystem()
-        await subsystem.stop()  # _device is None — não deve lançar
+        await subsystem.stop()
 
     @pytest.mark.asyncio
     async def test_stop_chama_device_stop(self) -> None:
@@ -74,7 +63,7 @@ class TestStopMouseEmulation:
     def test_stop_noop_sem_device(self) -> None:
         daemon = self._make_daemon()
         daemon._mouse_device = None
-        stop_mouse_emulation(daemon)  # não deve lançar
+        stop_mouse_emulation(daemon)
 
 
 class TestDispatchMouse:
@@ -105,7 +94,7 @@ class TestDispatchMouse:
         daemon = MagicMock()
         daemon._mouse_device = None
         state = self._make_state()
-        dispatch_mouse(daemon, state, frozenset())  # não deve lançar
+        dispatch_mouse(daemon, state, frozenset())
 
     def test_dispatch_trata_excecao(self) -> None:
         daemon = MagicMock()
@@ -114,4 +103,4 @@ class TestDispatchMouse:
         daemon._mouse_device = mock_dev
         state = self._make_state()
 
-        dispatch_mouse(daemon, state, frozenset())  # não deve lançar
+        dispatch_mouse(daemon, state, frozenset())

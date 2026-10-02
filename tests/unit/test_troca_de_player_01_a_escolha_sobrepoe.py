@@ -58,8 +58,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`, pelo mesmo motivo do
-# arquivo irmão — `importorskip` aceita o stub que outro arquivo planta.
 exigir_gi_real("troca de player 01")
 
 import json
@@ -82,9 +80,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: A mesa desta régua — quatro MACs forjados, octetos 4 e 5 zerados (máscara
-#: da casa). Os apelidos são os do mockup só para a leitura ficar humana; o
-#: mecanismo não conhece cor de plástico nenhuma.
 COSMIC = "aabbcc000001"
 BLUE = "aabbcc000002"
 PURPLE = "aabbcc000003"
@@ -101,11 +96,7 @@ class _FakeDaemon:
 
 
 class _Relogio:
-    """Relógio injetável — o instrumento que a suíte de 25/07 não tinha.
-
-    ``anda`` é a única forma de o tempo passar aqui: nenhum ``sleep``, nenhuma
-    régua dependente de máquina rápida ou lenta.
-    """
+    """Relógio injetável — o instrumento que a suíte de 25/07 não tinha."""
 
     def __init__(self) -> None:
         self.t = 1000.0
@@ -134,11 +125,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _servidor(tmp_path: Path, ds: ControllerIdentityRegistry) -> IpcServer:
-    """O CAMINHO PÚBLICO: o mesmo ``IpcServer`` que o botão da tela chama.
-
-    Entrar pelo ``_set_number_locked`` direto passaria com a cura arrancada
-    pela metade — o alinhamento e a aplicação moram no handler.
-    """
+    """O CAMINHO PÚBLICO: o mesmo ``IpcServer`` que o botão da tela chama."""
     fc = FakeController(transport="usb")
     fc.connect()
     store = StateStore()
@@ -156,12 +143,7 @@ def _servidor(tmp_path: Path, ds: ControllerIdentityRegistry) -> IpcServer:
 def _mesa_um_a_um(
     ds: ControllerIdentityRegistry, relogio: _Relogio, uniqs: list[str]
 ) -> None:
-    """Liga os controles UM A UM — cada um na sua própria onda de chegada.
-
-    É a mesa dela, e é a que a suíte antiga nunca montou: entre um controle e
-    o seguinte passa mais que :data:`JANELA_DE_ONDA_SEC`, então a casa os vê
-    chegar em momentos DIFERENTES e a fila do momento manda sozinha.
-    """
+    """Liga os controles UM A UM — cada um na sua própria onda de chegada."""
     ligados: list[str] = []
     for uniq in uniqs:
         ligados.append(uniq)
@@ -186,21 +168,12 @@ class TestAEscolhaChegaNaTela:
     async def test_a_troca_move_a_tela_com_chegadas_separadas(
         self, config_isolado: Path
     ) -> None:
-        """Três ligados um a um; o 1 vai para o último. A TELA SE MEXE.
-
-        REPROVA COM A CURA ARRANCADA: tire o ``escolha_da_mao`` do
-        ``_set_number_locked`` (volte a chamar ``compact``) e a tela fica em
-        ``{Cosmic: 1, Blue: 2, Purple: 3}`` — o comando escreve o lugar
-        gravado, mas quem pinta a tela é a fila do momento, que não foi
-        tocada. Medido antes da cura: ``NA TELA`` idêntico antes e depois.
-        """
+        """Três ligados um a um; o 1 vai para o último. A TELA SE MEXE."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
 
         assert ds.numeros_da_mesa() == {COSMIC: 1, BLUE: 2, PURPLE: 3}
-        # A prova de que a mesa é MESMO a de ondas separadas — sem isto o
-        # teste degradaria para o caso fácil da suíte de 25/07 sem avisar.
         assert ds.snapshot_chegada() == {COSMIC: 1, BLUE: 2, PURPLE: 3}
 
         server = _servidor(config_isolado, ds)
@@ -215,15 +188,7 @@ class TestAEscolhaChegaNaTela:
     async def test_os_dois_trocam_e_o_do_meio_nao_se_mexe(
         self, config_isolado: Path
     ) -> None:
-        """TROCA, não rodízio — a palavra dela de 28/08.
-
-        Quatro na mesa, o 1 para o último. A troca mexe em DOIS; o rodízio
-        mexeria em quatro.
-
-        REPROVA COM A CURA ARRANCADA: devolva o ``pop``+``insert`` e o Blue
-        vira 3 e o Purple vira 4 — ``changed`` sai com quatro chaves em vez
-        de duas.
-        """
+        """TROCA, não rodízio — a palavra dela de 28/08."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE, WHITE])
@@ -235,37 +200,17 @@ class TestAEscolhaChegaNaTela:
         )
 
         assert ds.numeros_da_mesa() == {WHITE: 1, BLUE: 2, PURPLE: 3, COSMIC: 4}
-        # Exatamente DOIS mudaram de lugar. É esta linha que separa troca de
-        # rodízio, e ela é a única que o mockup promete em dezessete lugares.
         assert set(resposta["changed"]) == {WHITE, COSMIC}
 
     @pytest.mark.asyncio
     async def test_o_gravado_em_desacordo_com_a_tela_nao_devolve_ok_a_toa(
         self, config_isolado: Path
     ) -> None:
-        """O falso sucesso: ``ok:true`` com ``changed`` vazio e nada movido.
-
-        Reboot com a fila gravada ``Cosmic=1, Blue=2``; ela liga o **Blue**
-        primeiro, então a tela mostra ``Blue=1, Cosmic=2``. Pedir o 1 para o
-        Cosmic tem de MOVER.
-
-        REPROVA COM A CURA ARRANCADA: tire o ``alinhar_gravado_com_a_tela`` e
-        o plano é calculado sobre o lugar GRAVADO, onde o Cosmic já é o
-        primeiro — medido em 29/08, ``changed`` volta ``set()`` e o
-        ``if changed:`` do handler pula a repintura inteira.
-
-        **A linha que morde é a do ``changed``, e a ordem das três importa.**
-        Com só o alinhamento arrancado, a última asserção passa por acidente:
-        o ``escolha_da_mao`` realinha as ondas mesmo quando nenhum lugar
-        mudou, e a tela acaba certa por efeito colateral — com o daemon
-        calado, sem repintar LED nenhum. Com as DUAS curas fora (o código de
-        antes desta sprint), medido: ``changed: {}`` **e** a tela parada em
-        ``{Blue: 1, Cosmic: 2}``.
-        """
+        """O falso sucesso: ``ok:true`` com ``changed`` vazio e nada movido."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         ds.load()
-        ds._ordem = {COSMIC: 1, BLUE: 2}  # o que atravessou o reboot
+        ds._ordem = {COSMIC: 1, BLUE: 2}
         _mesa_um_a_um(ds, relogio, [BLUE, COSMIC])
 
         assert ds.numeros_da_mesa() == {BLUE: 1, COSMIC: 2}
@@ -287,18 +232,7 @@ class TestAEscolhaSobreviveAoTempo:
     async def test_a_troca_sobrevive_ao_congelamento_da_ordem(
         self, config_isolado: Path
     ) -> None:
-        """A mesa fica estável e o congelamento roda — a escolha FICA.
-
-        ``_congelar_locked`` reescreve os lugares gravados a partir das ondas
-        de chegada. Antes da cura ele não sabia que houvera escolha à mão e
-        passava por cima dela: a escolha durava menos que os
-        :data:`JANELA_MESA_ESTAVEL_SEC` = 4,0 s.
-
-        REPROVA COM A CURA ARRANCADA: sem a redistribuição das ondas em
-        ``escolha_da_mao``, a mesa volta a ``{Cosmic: 1, Blue: 2, Purple: 3}``
-        aqui. Medido antes da cura: ``rank`` depois do congelamento igual ao
-        de antes do comando.
-        """
+        """A mesa fica estável e o congelamento roda — a escolha FICA."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
@@ -308,12 +242,10 @@ class TestAEscolhaSobreviveAoTempo:
         escolhido = ds.numeros_da_mesa()
         assert escolhido == {PURPLE: 1, BLUE: 2, COSMIC: 3}
 
-        # A mesa se mexe (alguém pisca no rádio) e volta a assentar: é este o
-        # gatilho do congelamento, e ele roda sem que ninguém peça.
         ds.mark_disconnected(BLUE)
         ds.sync_connected([COSMIC, BLUE, PURPLE])
         relogio.anda(JANELA_MESA_ESTAVEL_SEC + 0.1)
-        ds.numeros_da_mesa()  # o tique lento: é aqui que a foto é tirada
+        ds.numeros_da_mesa()
 
         assert ds.mesa_congelada() is True
         assert ds.numeros_da_mesa() == escolhido
@@ -322,16 +254,7 @@ class TestAEscolhaSobreviveAoTempo:
     async def test_a_troca_chega_ao_disco_e_fica_la(
         self, config_isolado: Path
     ) -> None:
-        """O ``controllers.json`` guarda a escolha, e o congelamento não a desfaz.
-
-        O campo ``order`` é o dono ÚNICO do número de jogador
-        (``utils/maquina.py``), então a escolha só existe de verdade quando
-        está gravada ali.
-
-        REPROVA COM A CURA ARRANCADA: sem ``escolha_da_mao``, o arquivo até
-        recebe os lugares novos (o ``compact`` grava), mas o congelamento
-        seguinte os reescreve a partir das ondas e o disco volta ao que era.
-        """
+        """O ``controllers.json`` guarda a escolha, e o congelamento não a desfaz."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
@@ -344,7 +267,7 @@ class TestAEscolhaSobreviveAoTempo:
         ds.sync_connected([COSMIC, BLUE, PURPLE])
         relogio.anda(JANELA_MESA_ESTAVEL_SEC + 0.1)
         ds.numeros_da_mesa()
-        ds.sync_connected([COSMIC, BLUE, PURPLE])  # o tique lento salva
+        ds.sync_connected([COSMIC, BLUE, PURPLE])
 
         assert _fila_no_disco(config_isolado) == {PURPLE: 1, BLUE: 2, COSMIC: 3}
 
@@ -352,16 +275,7 @@ class TestAEscolhaSobreviveAoTempo:
     async def test_a_escolha_sobrevive_ao_replug_do_controle_trocado(
         self, config_isolado: Path
     ) -> None:
-        """O controle escolhido cai e volta — e volta com o número dela.
-
-        É a promessa D2/R-15 (``mark_disconnected`` preserva a marca de
-        chegada) aplicada à escolha à mão: sem ela, a volta seria lida como
-        chegada nova e mandaria o controle para o fim da fila — o defeito de
-        ORDEM DE WAKE que a auditoria de 23/07 arrancou.
-
-        REPROVA COM A CURA ARRANCADA: sem a redistribuição das ondas, o
-        Purple volta com a onda 3 que tinha e a tela devolve o 3 a ele.
-        """
+        """O controle escolhido cai e volta — e volta com o número dela."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
@@ -371,9 +285,6 @@ class TestAEscolhaSobreviveAoTempo:
 
         ds.mark_disconnected(PURPLE)
         relogio.anda(JANELA_DE_ONDA_SEC + 0.1)
-        # O-ASSENTO-GUARDADO-NAO-ANDA-01 (24/09/2026): dentro do prazo o lugar
-        # 1, que a escolha deu ao Purple, fica guardado — ninguém anda. Era
-        # `{BLUE: 1, COSMIC: 2}` quando a fila se fechava na hora.
         assert ds.numeros_da_mesa() == {BLUE: 2, COSMIC: 3}
         ds.sync_connected([COSMIC, BLUE, PURPLE])
         relogio.anda(JANELA_MESA_ESTAVEL_SEC + 0.1)
@@ -385,16 +296,7 @@ class TestAEscolhaSobreviveAoTempo:
     async def test_quem_chega_depois_da_escolha_vai_para_o_fim(
         self, config_isolado: Path
     ) -> None:
-        """A escolha não sequestra a fila: o quarto controle nasce jogador 4.
-
-        A redistribuição das ondas usa o conjunto que os presentes JÁ têm —
-        nenhuma onda nova é inventada, então quem conecta depois continua com
-        a onda mais alta e cai no fim. É o que mantém a regra automática
-        intacta debaixo da escolha.
-
-        REPROVA se alguém trocar a redistribuição por "carimbar ondas novas":
-        o White nasceria no meio da mesa.
-        """
+        """A escolha não sequestra a fila: o quarto controle nasce jogador 4."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
@@ -420,23 +322,7 @@ class TestOComandoRecusadoNaoEscreve:
     async def test_numero_fora_da_mesa_nao_grava_o_controllers_json(
         self, config_isolado: Path
     ) -> None:
-        """Pedir um número que não existe recusa E NÃO ESCREVE.
-
-        A docstring do ``_set_number_locked`` promete *"Erros (todos ANTES de
-        qualquer escrita)"*, e a promessa é a que separa um comando recusado
-        de um comando aplicado: quem recusa não mexe no arquivo dela.
-
-        REPROVA COM A CURA ARRANCADA: ponha o
-        ``alinhar_gravado_com_a_tela`` de volta ANTES das duas recusas (como
-        esta sprint o escreveu primeiro) e o arquivo nasce do nada numa
-        chamada recusada. Medido em 29/08: ``controllers.json`` inexistente
-        antes, ``{Blue: 1, Cosmic: 2}`` depois de um
-        ``{"ok": false, "reason": "numero_fora_da_mesa"}``.
-
-        A mesa é a do desacordo de propósito — gravado ``Cosmic=1, Blue=2``,
-        ela ligando o Blue primeiro. É só nela que o alinhamento tem algo a
-        escrever; numa mesa já alinhada o teste passaria sem medir nada.
-        """
+        """Pedir um número que não existe recusa E NÃO ESCREVE."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         ds.load()
@@ -498,8 +384,8 @@ class TestACorSegueONumero:
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
         provider = make_auto_output_provider(ds)
 
-        assert provider(COSMIC).led == (0, 0, 255)  # o azul do jogador 1
-        assert provider(PURPLE).led == (0, 255, 0)  # o verde do jogador 3
+        assert provider(COSMIC).led == (0, 0, 255)
+        assert provider(PURPLE).led == (0, 255, 0)
 
         server = _servidor(config_isolado, ds)
         await server._handle_identity_number_set({"uniq": PURPLE, "number": 1})
@@ -511,18 +397,7 @@ class TestACorSegueONumero:
     async def test_a_escolha_de_cor_a_mao_vence_a_cor_do_numero(
         self, config_isolado: Path
     ) -> None:
-        """O caderno do mockup: *"sem escolha à mão ela é a cor do número"*.
-
-        Com escolha à mão, a troca de número NÃO repinta o controle — o
-        override por-uniq está ACIMA da camada automática no merge por campo
-        (``_merged_desired_for_key``). O vizinho, que não tem escolha, segue o
-        número normalmente: é o mesmo merge decidindo os dois casos.
-
-        Não é mordida da cura desta sprint — é a prova de que a cura não
-        atropelou a precedência que já existia. Se um dia ela reprovar, o
-        defeito é a troca ter passado a escrever cor, que é o que ela nunca
-        pode fazer.
-        """
+        """O caderno do mockup: *"sem escolha à mão ela é a cor do número"*."""
         from hefesto_dualsense4unix.core.backend_pydualsense import (
             PyDualSenseController,
             _DesiredOutput,
@@ -532,8 +407,6 @@ class TestACorSegueONumero:
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
 
-        # O merge REAL do backend, sem aparelho: o método é o mesmo que o
-        # daemon chama antes de cada escrita de LED.
         backend = object.__new__(PyDualSenseController)
         backend._key_to_uniq = lambda k: k
         backend._desired_default = _DesiredOutput()
@@ -549,7 +422,5 @@ class TestACorSegueONumero:
         await server._handle_identity_number_set({"uniq": PURPLE, "number": 1})
 
         assert ds.numeros_da_mesa()[PURPLE] == 1
-        # O Purple é o jogador 1 e continua roxo: a escolha dela manda.
         assert backend._merged_desired_for_key(PURPLE).led == (128, 0, 255)
-        # O Cosmic não tem escolha à mão: caiu para o 3 e virou verde.
         assert backend._merged_desired_for_key(COSMIC).led == (0, 255, 0)

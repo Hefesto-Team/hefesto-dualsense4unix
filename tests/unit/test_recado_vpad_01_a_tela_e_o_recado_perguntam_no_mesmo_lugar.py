@@ -83,36 +83,24 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
 
-#: O ESTADO EXATO DO JOURNAL DELA, 17/09/2026 às 01:50 — ``vpads=0``,
-#: ``emulacao=False``, sem modo nativo. O ``mouse_teclado`` do journal é o
-#: ``desktop`` do produto.
 NAVEGACAO: dict[str, Any] = {
     "native_mode": False,
     "gamepad_emulation": {"enabled": False},
     "rumble_ff": {"vpads": 0},
 }
 
-#: O SEGUNDO CAMINHO, e nele seguir a instrução velha nunca resolvia:
-#: ``make_virtual_pad`` devolveu ``None`` (``/dev/uhid`` **e** ``/dev/uinput``
-#: sem a ACL do ``uaccess``) e ``_gamepad_device`` ficou ``None`` com
-#: ``gamepad_emulation_enabled`` em pé. É a VPAD-09, "falha TOTAL".
 VPAD_NAO_SUBIU: dict[str, Any] = {
     "native_mode": False,
     "gamepad_emulation": {"enabled": True},
     "rumble_ff": {"vpads": 0},
 }
 
-#: DAEMON SEM O BLOCO ``gamepad_emulation`` — mais velho que esta janela.
 #: ``mode_of_state`` o lê como ``desktop``, e o interruptor da aba Jogar também:
-#: o recado tem de dizer o que a aba Jogar está mostrando, não o que ele acha.
 DAEMON_SEM_O_BLOCO: dict[str, Any] = {
     "native_mode": False,
     "rumble_ff": {"vpads": 0},
 }
 
-#: OS TRÊS ESTADOS EM QUE O AVISO SAI, pelo nome do RAMO que cada um deve
-#: acender. O nome é a chave de ``CAUSAS_DO_ALCANCE_PERDIDO`` — lida do
-#: produto, nunca digitada como frase.
 ESTADOS_E_O_RAMO_ESPERADO: dict[str, tuple[dict[str, Any], str]] = {
     "navegação": (NAVEGACAO, "navegacao"),
     "vpad não subiu": (VPAD_NAO_SUBIU, "vpad-nao-subiu"),
@@ -121,12 +109,7 @@ ESTADOS_E_O_RAMO_ESPERADO: dict[str, tuple[dict[str, Any], str]] = {
 
 
 def _ramo_que_saiu(texto: str) -> str:
-    """Qual das quatro segundas metades esta linha está dizendo.
-
-    Lê as frases do próprio módulo. Se duas casarem, o erro é do PRODUTO — uma
-    frase virou prefixo da outra — e a régua tem de reprovar em vez de escolher
-    a primeira: foi assim que a de 02/09 passou a medir meia frase.
-    """
+    """Qual das quatro segundas metades esta linha está dizendo."""
     casaram = [
         nome
         for nome, frase in rumble_actions.CAUSAS_DO_ALCANCE_PERDIDO.items()
@@ -141,15 +124,9 @@ def _ramo_que_saiu(texto: str) -> str:
 
 @pytest.mark.parametrize("nome", sorted(ESTADOS_E_O_RAMO_ESPERADO))
 def test_o_recado_e_o_interruptor_nao_se_contradizem(nome: str) -> None:
-    """Se o painel diz Ligado, o texto NÃO manda pôr o Status em Ligado.
-
-    A invariante inteira da RECADO-VPAD-01, e ela não cita uma palavra da tela:
-    o ramo que ORDENA ligar só pode sair quando ``hefesto_ligado`` não é
-    ``True``. As duas pontas vêm de quem as possui.
-    """
+    """Se o painel diz Ligado, o texto NÃO manda pôr o Status em Ligado."""
     estado, _ = ESTADOS_E_O_RAMO_ESPERADO[nome]
 
-    # A porta: o aviso só existe dentro do quadrante do daemon.
     texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
     assert texto is not None, (
         f"o estado «{nome}» saiu do quadrante do `sem_dono_do_rumble` e a régua "
@@ -170,12 +147,7 @@ def test_o_recado_e_o_interruptor_nao_se_contradizem(nome: str) -> None:
 
 @pytest.mark.parametrize("nome", sorted(ESTADOS_E_O_RAMO_ESPERADO))
 def test_cada_caminho_ganha_a_frase_do_seu_defeito(nome: str) -> None:
-    """Não basta parar de mandar ligar: cada caminho nomeia a SUA causa.
-
-    Um recado que só apagasse a instrução deixaria os dois caminhos com o mesmo
-    texto — e o do vpad que não subiu é o cruel: ali o Status está certo, e o
-    que falta é permissão do sistema.
-    """
+    """Não basta parar de mandar ligar: cada caminho nomeia a SUA causa."""
     estado, esperado = ESTADOS_E_O_RAMO_ESPERADO[nome]
     texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
     assert texto is not None
@@ -188,17 +160,7 @@ def test_cada_caminho_ganha_a_frase_do_seu_defeito(nome: str) -> None:
 
 
 def test_o_vpad_que_nao_subiu_nao_e_divida_nossa() -> None:
-    """A frase do VPAD-09 tem de ter o SISTEMA por sujeito, não o Hefesto.
-
-    Decisão dela, 07/09/2026: *a tela nunca confessa dívida nossa*. "o sistema
-    não deixou" é limite da máquina — legítimo, e é o que faz a pessoa parar de
-    repetir o gesto que não resolve. "o Hefesto não consegue" seria promessa
-    sobre trabalho próprio, e a régua de
-    ``scripts/check_a_tela_nao_confessa.py`` existe por causa disso.
-
-    Esta é a única afirmação sobre PALAVRA neste arquivo, e é de sujeito, não de
-    frase: ela reprova a família inteira das confissões, não uma redação.
-    """
+    """A frase do VPAD-09 tem de ter o SISTEMA por sujeito, não o Hefesto."""
     frase = rumble_actions.CAUSAS_DO_ALCANCE_PERDIDO["vpad-nao-subiu"]
     assert "o sistema não deixou" in frase, (
         "a frase do vpad que não subiu deixou de nomear o SISTEMA como quem "
@@ -241,28 +203,18 @@ def test_mandar_ligar_era_inalcancavel_correto(
 
 
 def test_no_nativo_o_interruptor_diz_desligado_e_o_aviso_cala() -> None:
-    """A outra ponta da tabela: onde o painel diz Desligado, não há este aviso.
-
-    É o que prova que o ramo da ordem de ligar não é dead code por descuido —
-    ele é inalcançável PELA PORTA deste quadrante, e a porta é o nativo.
-    """
+    """A outra ponta da tabela: onde o painel diz Desligado, não há este aviso."""
     estado = {"native_mode": True, "rumble_ff": {"vpads": 0}}
     assert painel.modo_vivo(estado) == MODE_NATIVE
     assert painel.hefesto_ligado(estado) is False
     texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
     assert texto is not None
     with pytest.raises(AssertionError):
-        # A frase do nativo não é nenhuma das quatro causas deste quadrante.
         _ramo_que_saiu(texto)
 
 
 def test_caminho_que_esta_janela_nao_conhece_nao_manda_mexer(monkeypatch) -> None:
-    """Daemon mais novo, modo novo dentro de ``MODOS_LIGADOS``: nada de gesto.
-
-    Inventar uma instrução para um caminho que não se leu é o defeito de 17/09
-    de novo, com outro nome. O ramo existe para isso, e sem esta régua ele seria
-    código que ninguém exercita — o lugar onde o próximo engano se esconde.
-    """
+    """Daemon mais novo, modo novo dentro de ``MODOS_LIGADOS``: nada de gesto."""
     monkeypatch.setattr(rumble_actions, "modo_vivo", lambda _estado: "coop")
     texto = rumble_actions.texto_do_alcance_da_intensidade(VPAD_NAO_SUBIU)
     assert texto is not None
@@ -270,12 +222,7 @@ def test_caminho_que_esta_janela_nao_conhece_nao_manda_mexer(monkeypatch) -> Non
 
 
 def test_as_quatro_frases_nao_sao_prefixo_uma_da_outra() -> None:
-    """Se uma frase couber dentro de outra, ``_ramo_que_saiu`` fica ambíguo.
-
-    A régua acima já reprova quando duas casam, mas ela só olha os estados que
-    o produto alcança hoje. Esta olha o CONJUNTO, e é a que impede o defeito de
-    nascer numa redação futura.
-    """
+    """Se uma frase couber dentro de outra, ``_ramo_que_saiu`` fica ambíguo."""
     causas = rumble_actions.CAUSAS_DO_ALCANCE_PERDIDO
     for nome, frase in causas.items():
         for outro, outra in causas.items():
@@ -288,13 +235,7 @@ def test_as_quatro_frases_nao_sao_prefixo_uma_da_outra() -> None:
 
 
 def test_o_aviso_diz_o_que_acontece_e_o_que_sobra_em_todos_os_ramos() -> None:
-    """As duas metades que NÃO mudam continuam em todas as combinações.
-
-    A primeira ("a intensidade não está chegando") é estado legítimo e ela
-    precisa saber; a última ("aqui embaixo ela ainda vale") impede o aviso de
-    virar "esta parte da tela não serve para nada", que é falso. Uma cura que
-    trocasse a instrução e comesse uma das duas curaria metade.
-    """
+    """As duas metades que NÃO mudam continuam em todas as combinações."""
     for nome, (estado, _) in ESTADOS_E_O_RAMO_ESPERADO.items():
         texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
         assert texto is not None
@@ -305,12 +246,7 @@ def test_o_aviso_diz_o_que_acontece_e_o_que_sobra_em_todos_os_ramos() -> None:
 
 
 def test_a_pergunta_tem_um_dono_so() -> None:
-    """O recado não pode reconstruir a regra do interruptor por conta própria.
-
-    ``MODOS_LIGADOS`` é do painel. Se o recado passar a ter a sua própria lista
-    de "quais modos são Ligado", os dois divergem na primeira mudança — que é a
-    classe de defeito inteira desta sprint, e já custou três pares nesta casa.
-    """
+    """O recado não pode reconstruir a regra do interruptor por conta própria."""
     fonte = rumble_actions._causa_do_alcance_perdido.__globals__
     assert fonte["hefesto_ligado"] is painel.hefesto_ligado
     assert fonte["modo_vivo"] is painel.modo_vivo

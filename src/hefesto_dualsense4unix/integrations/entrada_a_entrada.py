@@ -161,10 +161,6 @@ from hefesto_dualsense4unix.utils.maquina import (
 )
 
 # A GRAFIA DO NOME DA ENTRADA mora em ``utils/rotulo_da_entrada`` desde a
-# O-MAPA-QUE-ELA-CORRIGE-01 (26/09/2026): a palavra, o rótulo, a frase e o
-# artigo, só com a stdlib. Este módulo a REEXPORTA (o ``as`` repetido é a
-# reexportação explícita) e é o dono da LEITURA do nome
-# (:func:`nome_da_entrada`).
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     FACE_DO_HUB_DECLARADO as FACE_DO_HUB_DECLARADO,
 )
@@ -181,30 +177,13 @@ from hefesto_dualsense4unix.utils.rotulo_da_entrada import rotulo as _rotulo
 
 logger = get_logger(__name__)
 
-# ---------------------------------------------------------------------------
-# As palavras e os estados
-# ---------------------------------------------------------------------------
 
-#: As QUATRO respostas de «Onde fica esta entrada?» — as do produto, e as
-#: mesmas da janela de hoje (``app/widgets/calibrar_entradas.FACES``, aprovadas
-#: por ela em 25/08 e com a quarta trocada por ela em 05/09). Aquele módulo é a
-#: janela GTK que o gerador da aba 08 lê por AST, e ele não pode importar daqui
-#: sem quebrar o gerador; por isso a lista mora nos dois, e
-#: ``test_entrada_a_entrada_grava.py`` trava as duas juntas.
 FACE_FRENTE = "Frente do gabinete"
 FACE_ATRAS = "Atrás do gabinete"
 FACE_HUB = "Num hub ou extensão"
 FACE_ESCRIVANINHA = "Na escrivaninha"
 FACES = (FACE_FRENTE, FACE_ATRAS, FACE_HUB, FACE_ESCRIVANINHA)
 
-#: OS LUGARES DO GABINETE QUE A PESSOA ESCOLHE — A-08-UM-MAPEAR-SO-01
-#: (25/09/2026). O fluxo único pergunta *onde fica* com uma lista que serve a
-#: QUALQUER computador: a torre (frente, traseira, topo, lateral), o hub, o
-#: monitor e «outro». As três que já existiam ficam com a MESMA grafia — o
-#: lugar é a face do ``mapa``, e trocar a palavra deixaria órfãs as faces que
-#: ela já gravou. A face que ela gravou por outro nome (a «Na escrivaninha» da
-#: lista de antes, ou uma que ela escreveu no «Mapear Entradas») continua
-#: aceita na revisita: é dela, e não se apaga por não estar na lista nova.
 LUGAR_FRENTE = FACE_FRENTE
 LUGAR_TRASEIRA = FACE_ATRAS
 LUGAR_TOPO = "Topo do gabinete"
@@ -222,89 +201,47 @@ LUGARES_DA_PORTA = (
     LUGAR_OUTRO,
 )
 
-#: A face virada para quem senta (``FaceDeclarada.perto``) e a que fica no alto
-#: do rack (``FaceDeclarada.alto``) — fato físico que só ela tem, e que só
-#: nasce quando ela escolhe a face. A mesma regra de ``calibrar_entradas``.
 FACE_QUE_E_PERTO = FACE_FRENTE
 FACE_QUE_E_ALTO = FACE_HUB
 
-#: Em pé a face NÃO se pergunta: a dica da tela aprovada diz que *"toda entrada
-#: aprendida de pé é gravada em Atrás do gabinete"*, e a janela de ontem fazia
-#: o mesmo (``JanelaDeCalibrarEntradas.tique``).
 FACE_EM_PE = FACE_ATRAS
 
-# A palavra do produto para o buraco no gabinete (``PALAVRA_DA_ENTRADA``,
-# ``D-A-PALAVRA-ENTRADA``) e a face que um hub declarado ganha
-# (``FACE_DO_HUB_DECLARADO``, O-MAPA-DAS-CONEXOES-NO-PRODUTO-01) moram em
 # ``utils/rotulo_da_entrada`` e são reexportadas no topo deste arquivo.
 
-#: O que ela pode dizer que tem numa entrada, além de «Direto» (``None``), e as
-#: velocidades — a gramática de ``utils/maquina.PortaDeclarada``.
 LIGACOES_DECLARAVEIS = ("hub", "extensor")
 VELOCIDADES_DECLARAVEIS = (2, 3)
 
-#: A PONTA DO EXTENSOR — O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, 26/09/2026. O
-#: extensor declarado na entrada ``5`` desenha a entrada-filha ``5a``, a mesma
-#: letra da ``15a`` que o desenho sempre teve. Só a entrada de número puro tem
-#: ponta que grava: ``5aa`` não é um número de entrada que o
-#: ``utils/maquina.PortaDeclarada`` aceite, e o editor da página confere a
-#: mesma forma antes de mandar o gesto (``interface/pagina_do_mapa``).
 LETRA_DA_PONTA = "a"
 _SO_DIGITOS = re.compile(r"^[0-9]{1,3}$")
 
-#: AS RECUSAS DO «TROCAR COM…» — O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-O-
-#: BURACO). Vão na piscada do controle, e a régua de língua as lê daqui.
 RECUSA_A_MESMA_ENTRADA = "As duas são a mesma entrada."
 RECUSA_FORA_DO_MAPA = "Esta entrada não está no mapa."
 RECUSA_NENHUMA_MAPEADA = "Nenhuma das duas foi mapeada ainda."
 
-#: AS RECUSAS DO ENSINAR — O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO).
-#: A de fora do mapa é a mesma do «Trocar com…» (:data:`RECUSA_FORA_DO_MAPA`).
 RECUSA_O_APARELHO_JA_TEM_ENTRADA = "Este aparelho já está numa entrada."
 RECUSA_A_ENTRADA_OCUPADA = "Esta entrada está ocupada agora."
 RECUSA_O_APARELHO_SAIU = "Este aparelho não está plugado agora."
 RECUSA_LIGACOES_DEMAIS = "Esta entrada já tem ligações demais."
 
-#: As fases do laço — chaves de máquina, para o piloto da aba 08.
 PARADO = "parado"
 SENTADA = "sentada"
 FIM = "fim"
 EM_PE = "em_pe"
 
-#: Qual tela aprovada pinta cada fase: as três âncoras da aba 08. Parado não
-#: tem tela — a janela está fechada.
 TELAS: Mapping[str, str] = {
     SENTADA: "mapear-entrada-a-entrada",
     FIM: "mapear-entrada-a-entrada-fim",
     EM_PE: "mapear-entrada-a-entrada-em-pe",
 }
 
-#: Os motivos de uma gravação que não aconteceu, além dos do
-#: ``lugar_declarado`` (``versao_estranha``, ``schema_recusou``, ``disco``).
 MOTIVO_SEM_LUGAR = "sem_lugar"
 
 #: A Sony — a família DualSense da casa. Na fase em pé, só um aparelho dela
-#: marca uma entrada (ver o cabeçalho).
 _VID_DA_SONY = "054c"
 
-#: O ``connect_type`` do kernel para a entrada que se alcança de fora do
-#: gabinete. As outras (``hardwired``, ``not used``, ``unknown``) são as que
-#: mais provavelmente são conectores internos, e são as que o «Não alcanço»
-#: tira da conta primeiro.
 _ENCAIXE_DE_FORA = "hotplug"
 
-#: QUANTO A LEITURA DO ``/sys`` PODE DEMORAR ANTES DE A FOTO DIZER «procurando»
-#: (O-MAPEAR-NAO-CONGELA-A-JANELA-01). Em repouso a leitura inteira custa 8 ms,
-#: medido; enquanto o kernel enumera o controle que acabou de chegar, ela
-#: espera o lock do aparelho por 3 a 15 s. Um segundo separa os dois com folga,
-#: e é o que impede a tela de mostrar a porta de ANTES como a da vez enquanto
-#: o controle já está noutra.
 FOLEGO_DA_LEITURA_S = 1.0
-
-
-# ---------------------------------------------------------------------------
-# A leitura fora do fio da janela
-# ---------------------------------------------------------------------------
 
 
 def _num_fio_proprio(trabalho: Callable[[], None], nome: str) -> None:
@@ -312,15 +249,7 @@ def _num_fio_proprio(trabalho: Callable[[], None], nome: str) -> None:
 
 
 class _VooDaLeitura:
-    """UMA leitura do ``/sys`` de cada vez, num fio próprio — quem pede não espera.
-
-    O MOLDE É O ``LeitorDeCor.disparar`` (``interface/mesa_viva.py``): reserva,
-    fio ``daemon=True``, e a volta — dê certo ou não — solta o voo. O tique
-    chama :meth:`disparar` a cada volta; com uma leitura no ar ele não pede
-    outra, e a fila não cresce enquanto o kernel segura o aparelho.
-
-    ``fio`` é quem põe o trabalho para correr; o default abre a thread.
-    """
+    """UMA leitura do ``/sys`` de cada vez, num fio próprio — quem pede não espera."""
 
     def __init__(
         self,
@@ -333,7 +262,6 @@ class _VooDaLeitura:
         self._nome = nome
         self._fio = fio or _num_fio_proprio
         self._trava = threading.Lock()
-        #: Quando a leitura em voo saiu — ``None`` é nenhuma no ar.
         self._desde: float | None = None
 
     def disparar(self) -> bool:
@@ -344,7 +272,7 @@ class _VooDaLeitura:
             self._desde = time.monotonic()
         try:
             self._fio(self._voar, self._nome)
-        except Exception:  # defensivo — sem fio não há leitura, e o voo se solta
+        except Exception:
             logger.debug("leitura_de_fundo_nao_saiu", nome=self._nome, exc_info=True)
             self._pousar()
             return False
@@ -361,7 +289,7 @@ class _VooDaLeitura:
     def _voar(self) -> None:
         try:
             self._ler()
-        except Exception:  # defensivo — a leitura nunca derruba o fio
+        except Exception:
             logger.debug("leitura_de_fundo_falhou", nome=self._nome, exc_info=True)
         finally:
             self._pousar()
@@ -371,21 +299,9 @@ class _VooDaLeitura:
             self._desde = None
 
 
-# ---------------------------------------------------------------------------
-# O que a tela recebe
-# ---------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class PortaVista:
-    """Um aparelho num lugar — e o que já se sabe daquele lugar.
-
-    ``lugar`` é a chave (D3). ``caminho`` é o nome do kernel DESTE boot, e
-    existe para a tela mostrar («espécie · caminho») e para achar os nós do
-    buraco na leitura de agora — nunca para chavear, e nunca vai ao disco.
-    ``entrada``, ``face`` e ``nome`` vêm preenchidos quando ela já disse algo
-    sobre este lugar.
-    """
+    """Um aparelho num lugar — e o que já se sabe daquele lugar."""
 
     lugar: str
     caminho: str
@@ -419,11 +335,7 @@ class PortaVista:
 
 @dataclass(frozen=True)
 class Pergunta:
-    """Um passo da fase sentada — uma pergunta, um toque.
-
-    ``pendentes`` é o que ganha lugar JUNTO: para um HUB, tudo o que pende dele
-    e ainda não tem lugar. É essa lista que faz um toque valer quatro.
-    """
+    """Um passo da fase sentada — uma pergunta, um toque."""
 
     porta: PortaVista
     pendentes: tuple[PortaVista, ...] = ()
@@ -440,12 +352,7 @@ class Pergunta:
 
 @dataclass(frozen=True)
 class Gravacao:
-    """O que um gesto dela fez no disco. ``motivo`` é ``""`` quando gravou, e
-    quando não havia o que gravar (o Salvar vazio numa entrada numerada).
-
-    ``entradas`` são TODOS os números que ganharam dono na resposta — o do
-    aparelho e os do que pende dele; ``entrada`` é o do próprio aparelho.
-    """
+    """O que um gesto dela fez no disco. ``motivo`` é ``""`` quando gravou, e"""
 
     lugar: str
     entrada: str
@@ -485,31 +392,8 @@ class _Vaga:
     de_fora: bool
 
 
-# ---------------------------------------------------------------------------
-# O laço
-# ---------------------------------------------------------------------------
-
-
 class LacoDaEntrada:
-    """O «Mapear Entrada a Entrada», nas três telas aprovadas. Sem GTK e sem IPC.
-
-    Todas as leituras entram por argumento — o barramento (``ler``), os nós de
-    entrada (``entradas``), o ``maquina.json`` (``carregar``) e a gravação
-    (``gravar``). O default de cada um é o do sistema; a régua troca todos, e
-    nenhum caminho de ``/sys`` dela é tocado.
-
-    UMA TRAVA, porque o olhar corre num fio próprio e o gesto dela chega por
-    outro: sem a trava, um ``responder`` no meio de um ``olhar`` gravaria a
-    pergunta que acabou de mudar. **A TRAVA NUNCA SEGURA UMA LEITURA DO
-    ``/sys``** (O-MAPEAR-NAO-CONGELA-A-JANELA-01): cada gesto lê antes de
-    tomá-la, e ela guarda só a troca de estado. ESTA FRASE DIZIA *"o tique do
-    piloto lê o barramento num fio próprio (desde 15/09 a janela não segura o
-    laço do GTK)"*, e era fato errado: o fio de 15/09 era o do IPC; o tique da
-    aba 08 chamava ``olhar`` no fio da janela até esta sprint.
-
-    O TIQUE CHAMA :meth:`foto_sem_esperar`, que não lê nada nem toma a trava:
-    pinta a última foto e pede a próxima leitura num fio próprio.
-    """
+    """O «Mapear Entrada a Entrada», nas três telas aprovadas. Sem GTK e sem IPC."""
 
     def __init__(
         self,
@@ -525,52 +409,29 @@ class LacoDaEntrada:
         self._carregar = carregar or carregar_maquina
         self._gravar = gravar or declarar_a_maquina
         self._trava = threading.Lock()
-        #: A sessão da cerimônia: cada começar e cada parar a trocam, e a
-        #: leitura que voltar de outra sessão não anda nada.
         self._sessao = 0
         self._zerar(PARADO)
-        #: A última foto — o que o tique pinta sem esperar.
         self._pintada: dict[str, Any] = self._foto()
         self._voo = _VooDaLeitura(self.olhar, nome="entrada-a-entrada", fio=fio)
 
     def _zerar(self, fase: str) -> None:
         self._sessao += 1
         self._fase = fase
-        # -- sentada --
-        #: Os lugares das perguntas, na ordem em que apareceram: a pergunta da
-        #: vez não muda sob o dedo dela quando um aparelho novo chega.
         self._ordem: list[str] = []
         self._perguntas: tuple[Pergunta, ...] = ()
-        #: Respondidas e puladas — o N de «entrada N de M».
         self._andadas = 0
-        #: Os lugares que já foram pergunta nesta sessão: «sem perguntar de novo».
         self._ja_perguntados: set[str] = set()
         self._primeiro: str | None = None
-        # -- em pé --
-        #: Os nós vistos VAZIOS desde que ela levantou — é contra eles que o
-        #: veredito do ``/sys`` é medido.
         self._referencia: set[str] = set()
-        #: Os nós tirados da conta nesta sessão, sem gravar («Não sei onde
-        #: fica» em pé, e o «Não alcanço» de uma vaga sem lugar).
         self._fora_hoje: set[str] = set()
         self._aprendidas = 0
         self._vagas: tuple[_Vaga, ...] = ()
-        # -- comum --
         self._ultima: Gravacao | None = None
         self._feitas = 0
 
-    # -- os gestos -----------------------------------------------------------
 
     def comecar(self, lugar: str | None = None) -> dict[str, Any]:
-        """Abre a cerimônia na fase sentada — ou direto no fim, sem pergunta.
-
-        ``lugar`` é o atalho «Onde fica?» de um cartão (o ``data-alvo`` do
-        ``mapa-do-radio.html``): a pergunta que cobre aquele lugar vem primeiro.
-
-        O «Já chega por hoje» que chegar durante a leitura vence: os dois
-        gestos vieram nessa ordem, e a leitura presa no kernel não reabre a
-        cerimônia que ela fechou.
-        """
+        """Abre a cerimônia na fase sentada — ou direto no fim, sem pergunta."""
         with self._trava:
             sessao = self._sessao
         censo = self._ler_o_censo()
@@ -583,18 +444,7 @@ class LacoDaEntrada:
             return self._pintar()
 
     def olhar(self) -> dict[str, Any]:
-        """Um tique: relê o que a fase precisa e anda o laço. Parado e no fim,
-        não lê nada.
-
-        A leitura que não respondeu é "não sei", e "não sei" não anda o laço:
-        ``Censo()`` sem hub-raiz nenhum (o ``OSError`` de
-        ``ler_o_barramento``) ou nenhum nó de entrada lido diriam "nenhuma
-        pergunta" e "nenhuma vaga", e a fase pularia para o fim por um tique
-        que não viu nada.
-
-        A LEITURA É FORA DA TRAVA, e a que voltar com a fase ou a sessão
-        trocadas (ela fechou, respondeu a última, levantou) não anda nada.
-        """
+        """Um tique: relê o que a fase precisa e anda o laço. Parado e no fim,"""
         with self._trava:
             fase, sessao = self._fase, self._sessao
             if fase not in (SENTADA, EM_PE):
@@ -610,30 +460,13 @@ class LacoDaEntrada:
             return self._pintar()
 
     def foto_sem_esperar(self) -> dict[str, Any]:
-        """O que o TIQUE pinta: a última foto, sem ler nada e sem tomar a trava.
-
-        Com a cerimônia aberta numa fase que lê, a próxima leitura sai num fio
-        próprio (:class:`_VooDaLeitura`) — uma de cada vez.
-        """
+        """O que o TIQUE pinta: a última foto, sem ler nada e sem tomar a trava."""
         if self._fase in (SENTADA, EM_PE):
             self._voo.disparar()
         return self._pintada
 
     def responder(self, face: str) -> Gravacao:
-        """A resposta dela para a pergunta da vez — grava na hora, e vale para o
-        que pende do hub.
-
-        Levanta ``ValueError`` para uma face fora das quatro e ``RuntimeError``
-        sem pergunta: são os dois jeitos de o gesto chegar errado, e o tratador
-        da aba os devolve como recusa (a piscada), nunca como recado. O disco
-        que recusa deixa a pergunta onde está.
-
-        A PERGUNTA É A DO CLIQUE, e não a da vez quando a leitura volta: com o
-        kernel segurando o ``/sys``, um «Não sei onde fica» ou um «Já chega por
-        hoje» clicado depois passa na frente, e a face dela iria para a
-        pergunta seguinte — ou se perderia. Ela vale para o que ela respondeu,
-        e nada se perde; só a sessão que continua aberta anda.
-        """
+        """A resposta dela para a pergunta da vez — grava na hora, e vale para o"""
         if face not in FACES:
             raise ValueError(f"{face!r} não é uma das quatro respostas")
         with self._trava:
@@ -643,19 +476,13 @@ class LacoDaEntrada:
         censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
         with self._trava:
             aberta = self._sessao == sessao
-            # a mesma pergunta como está agora (os pendentes do hub podem ter
-            # crescido); se ela já saiu da fila, a do clique
             agora = [p for p in self._perguntas if p.porta.lugar == clicada.porta.lugar]
             da_vez = aberta and bool(agora)
             pergunta = agora[0] if da_vez else clicada
             if _nao_sei(censo):
-                # A leitura não respondeu: "não sei" não é "o aparelho saiu", e
-                # a pergunta da vez fica onde está.
                 raise RuntimeError("o barramento não respondeu")
             presentes = {aparelho.nome_do_kernel for aparelho in censo.conectados()}
             if pergunta.porta.caminho not in presentes:
-                # O aparelho saiu entre o tique e o toque: gravar agora poria a
-                # resposta dela num buraco vazio. A pergunta da vez anda.
                 if aberta and self._fase == SENTADA:
                     self._andar_sentada(censo)
                     self._pintar()
@@ -672,8 +499,6 @@ class LacoDaEntrada:
                 controladores=_controladores(censo),
             )
             if not aberta:
-                # ela fechou durante a leitura: a resposta foi ao disco, e a
-                # cerimônia fechada continua fechada
                 return gravacao
             self._ultima = gravacao
             if gravacao.gravou:
@@ -691,12 +516,7 @@ class LacoDaEntrada:
             return gravacao
 
     def pular(self) -> dict[str, Any]:
-        """«Não sei onde fica»: não grava, e não pergunta de novo nesta sessão.
-
-        Sentada, pula a pergunta da vez (e o que pende dela). Em pé, tira da
-        conta a vaga da vez, sem gravar — o «Não alcanço» é que é de vez. No
-        fim, não há o que pular.
-        """
+        """«Não sei onde fica»: não grava, e não pergunta de novo nesta sessão."""
         with self._trava:
             if self._fase == SENTADA and self._perguntas:
                 self._ja_perguntados.update(self._perguntas[0].lugares())
@@ -710,8 +530,7 @@ class LacoDaEntrada:
             return self._pintar()
 
     def levantar(self) -> dict[str, Any]:
-        """«Vou mostrar agora»: guarda a leitura de agora como referência e
-        entra na fase em pé. É a única porta para ela — só do fim."""
+        """«Vou mostrar agora»: guarda a leitura de agora como referência e"""
         with self._trava:
             if self._fase != FIM:
                 raise RuntimeError("a fase em pé só começa no fim da fase sentada")
@@ -747,7 +566,6 @@ class LacoDaEntrada:
                 if not recibo.gravou:
                     logger.warning("entrada_a_entrada_fora_nao_gravou", motivo=recibo.motivo)
             else:
-                # Sem lugar não há o que gravar: sai da conta desta sessão.
                 self._ultima = Gravacao("", "", "", False, MOTIVO_SEM_LUGAR)
             self._fora_hoje.update(vaga.furo.nos)
             self._tirar_a_vaga_da_vez()
@@ -764,7 +582,6 @@ class LacoDaEntrada:
         with self._trava:
             return self._foto()
 
-    # -- a fase sentada ------------------------------------------------------
 
     def _andar_sentada(self, censo: Censo) -> None:
         perguntas = _perguntas_sentadas(
@@ -787,14 +604,12 @@ class LacoDaEntrada:
         if not self._perguntas:
             self._fase = FIM
 
-    # -- a fase em pé --------------------------------------------------------
 
     def _andar_em_pe(self, censo: Censo, lidas: Sequence[NoDeEntrada]) -> None:
         maquina = self._carregar()
         controladores = _controladores(censo)
         buracos = furos(lidas)
 
-        # 1. o veredito, contra a referência dos tiques de antes
         for furo in buracos:
             if not set(furo.nos) & self._referencia:
                 continue
@@ -817,7 +632,6 @@ class LacoDaEntrada:
                 maquina = self._carregar()
             break
 
-        # 2. a referência cresce com o que está vazio AGORA
         vazios = [
             furo
             for furo in buracos
@@ -826,7 +640,6 @@ class LacoDaEntrada:
         for furo in vazios:
             self._referencia.update(furo.nos)
 
-        # 3. a conta, refeita pela leitura de agora
         vagas: list[_Vaga] = []
         for furo in vazios:
             if set(furo.nos) & self._fora_hoje:
@@ -835,8 +648,6 @@ class LacoDaEntrada:
             if lugar and lugar in maquina.mapa.fora:
                 continue
             vagas.append(_Vaga(furo, lugar, furo.tipo_de_encaixe == _ENCAIXE_DE_FORA))
-        # As que o kernel não diz serem de fora vêm primeiro: o «Não alcanço» e
-        # o «Não sei onde fica» tiram a vaga da vez, e a tela não aponta uma.
         self._vagas = tuple(sorted(vagas, key=lambda v: v.de_fora))
         if not self._vagas:
             self._fase = FIM
@@ -846,19 +657,18 @@ class LacoDaEntrada:
         if not self._vagas:
             self._fase = FIM
 
-    # -- interno -------------------------------------------------------------
 
     def _ler_o_censo(self) -> Censo:
         try:
             return self._ler()
-        except Exception:  # defensivo — a leitura some sob a mão
+        except Exception:
             logger.debug("entrada_a_entrada_leitura_falhou", exc_info=True)
             return Censo()
 
     def _ler_as_entradas(self) -> tuple[NoDeEntrada, ...]:
         try:
             return tuple(self._entradas())
-        except Exception:  # defensivo — o sysfs some sob a mão
+        except Exception:
             logger.debug("entrada_a_entrada_nos_falharam", exc_info=True)
             return ()
 
@@ -890,11 +700,6 @@ class LacoDaEntrada:
         }
 
 
-# ---------------------------------------------------------------------------
-# As peças do laço — privadas: quem está de fora fala com o laço
-# ---------------------------------------------------------------------------
-
-
 def _perguntas_sentadas(
     censo: Censo,
     maquina: MaquinaConfig,
@@ -902,20 +707,7 @@ def _perguntas_sentadas(
     *,
     ja_perguntados: set[str],
 ) -> tuple[Pergunta, ...]:
-    """As perguntas da fase sentada, na ordem do barramento.
-
-    * **um lugar, uma pergunta** — os dois lados de um buraco USB 3 chegam em
-      dois barramentos com o MESMO lugar; a cara é o lado 2.0;
-    * **só o que não tem lugar** — a amarra pelo lugar ou o desenho de hoje já
-      dão número a quem tem;
-    * **o hub leva o que pende dele** — quem pende de um hub sem lugar não vira
-      pergunta própria: viaja nos ``pendentes`` do hub mais alto sem lugar
-      (pela ``cadeia_de_hubs``, e não pelo pai: medido em 22/08, os três
-      adaptadores desta casa têm dois pais e um hub em comum).
-
-    Hub-raiz não é aparelho (``Censo.conectados``); aparelho sem controlador
-    PCI legível não tem lugar, e sem lugar não há o que gravar.
-    """
+    """As perguntas da fase sentada, na ordem do barramento."""
     grupos: dict[str, list[Aparelho]] = {}
     for aparelho in censo.conectados():
         if not (aparelho.nome_do_kernel and aparelho.devpath and aparelho.controlador_pci):
@@ -1016,15 +808,7 @@ def _lugar_do_furo(furo: Furo, controladores: Mapping[int, str]) -> str:
 def _o_furo_e_conhecido(
     furo: Furo, maquina: MaquinaConfig, controladores: Mapping[int, str]
 ) -> bool:
-    """Este buraco já é uma entrada dela? Pelo lugar, ou pelos nós.
-
-    O lugar que a entrada guarda é a resposta que sobrevive ao boot. Os nós
-    são o que a outra janela (e a janela de ontem) gravaram, e carregam o
-    número do barramento: valem SÓ para a entrada que ainda não guarda lugar.
-    Com o lugar, o nó gravado é de um boot que talvez não seja este —
-    ``usb1-port2`` do primeiro boot é a porta 2 do OUTRO controlador no
-    segundo, e o buraco errado sairia da conta.
-    """
+    """Este buraco já é uma entrada dela? Pelo lugar, ou pelos nós."""
     lugar = _lugar_do_furo(furo, controladores)
     if lugar and _numero_conhecido(maquina, lugar, "", controladores) is not None:
         return True
@@ -1033,12 +817,7 @@ def _o_furo_e_conhecido(
 
 
 def _nos_do_aparelho(caminho: str, lidas: Sequence[NoDeEntrada]) -> tuple[str, ...]:
-    """Os nós do buraco onde este aparelho está, pela leitura que já está na mão.
-
-    ``entrada_de`` com um ``real`` que não segue link: o índice invertido da
-    leitura responde sem tocar o ``/sys`` de novo (``NoDeEntrada.aparelho`` é o
-    próprio nó dizendo o que tem dentro).
-    """
+    """Os nós do buraco onde este aparelho está, pela leitura que já está na mão."""
     furo = entrada_de(caminho, lidas, real=_sem_link)
     return () if furo is None else tuple(furo.nos)
 
@@ -1054,12 +833,7 @@ def _porta_vista(
     *,
     e_hub: bool | None = None,
 ) -> PortaVista:
-    """O aparelho, com o que ela já disse sobre aquele lugar.
-
-    O número vem da mesma pergunta que a gravação faz
-    (:func:`_numero_conhecido`), para a tela mostrar o número que a resposta
-    vai gravar.
-    """
+    """O aparelho, com o que ela já disse sobre aquele lugar."""
     lugar = lugar_de(aparelho.controlador_pci, aparelho.devpath)
     entrada = _numero_conhecido(maquina, lugar, aparelho.nome_do_kernel, controladores)
     return PortaVista(
@@ -1085,13 +859,7 @@ def _numero_conhecido(
     caminho: str,
     controladores: Mapping[int, str],
 ) -> str | None:
-    """O número que este lugar JÁ tem — ``None`` quando não tem nenhum.
-
-    1. a entrada que guarda este lugar (``utils/maquina.entrada_do_lugar``);
-    2. sem ela, a entrada que ela só desenhou (sem lugar), pelos caminhos deste
-       lugar NESTE boot — os dois lados do buraco, e o caminho que o aparelho
-       tem agora. Dois números para o mesmo lugar é "não sei".
-    """
+    """O número que este lugar JÁ tem — ``None`` quando não tem nenhum."""
     numero = entrada_do_lugar(maquina, lugar)
     if numero is not None:
         return numero
@@ -1114,31 +882,7 @@ def _gravar_as_portas(
     controladores: Mapping[int, str],
     nome: str | None = None,
 ) -> Gravacao:
-    """A resposta dela vira a entrada — numa gravação só, o hub e o que pende
-    dele juntos.
-
-    ``nome`` é o nome que ela deu à PRIMEIRA porta (a do aparelho), no mesmo
-    gesto (A-08-UM-MAPEAR-SO-01): ``None`` não toca o nome que a entrada já
-    tinha, texto grava, e texto vazio apaga. ``face`` ``None`` é o nome sem o
-    «onde fica»: a entrada nasce com o número e o nome, e fora de toda face —
-    o produto não inventa face por ela.
-
-    O NÚMERO de cada porta, nesta ordem:
-
-    1. o que este LUGAR já tem (:func:`_numero_conhecido`) — a entrada que ela
-       numerou na outra janela ganha o lugar, e não um número novo;
-    2. o menor inteiro que ainda não é entrada de face nenhuma — a regra do
-       gabinete (``LogicaDoMapa.acrescentar_entrada``).
-
-    UM REGISTRO SÓ (A-ENTRADA-TEM-UM-REGISTRO-SO-01): a entrada guarda o
-    ``lugar`` e os ``nos`` do buraco, e o caminho não vai ao disco. Um buraco é
-    de UMA entrada: outra entrada que guardava este lugar, ou que (sem lugar)
-    tinha o caminho deste aparelho, fica vazia; a que dividia um nó perde o
-    nó. E o lugar sai do «Não alcanço» quando a porta ganha o «onde fica»: o
-    cabo provou que ela alcança. Só o nome (``face`` ``None``) não prova nada
-    do buraco, e o «Não alcanço» fica — a mesma regra da revisita pela lista
-    (:func:`_gravar_a_porta`).
-    """
+    """A resposta dela vira a entrada — numa gravação só, o hub e o que pende"""
     if face is not None and not _face_aceita(face, maquina):
         raise ValueError(f"{face!r} não é um lugar do gabinete que o produto conhece")
     validas = [
@@ -1167,8 +911,6 @@ def _gravar_as_portas(
             if indice == 0:
                 face_final = _face_da_entrada(mapa, numero) or ""
         elif declarada is not None and declarada.filha_de is not None:
-            # A entrada que nasce de uma extensão desenha dentro do quadrado de
-            # quem a hospeda e NÃO entra em fileira nenhuma (``FaceDeclarada``).
             if indice == 0:
                 face_final = _face_da_entrada(mapa, numero) or face
         else:
@@ -1183,9 +925,6 @@ def _gravar_as_portas(
             if dela.lugar == porta.lugar or (
                 not dela.lugar and porta.caminho and caminho_da_porta(dela) == porta.caminho
             ):
-                # O buraco sai da outra entrada, e os nós saem JUNTO: um nó
-                # mora numa entrada só. O nó velho casava pelos nós em
-                # :func:`_furo_da_entrada` e punha o mesmo aparelho em duas.
                 declaracao_das_portas[outro] = {"lugar": None, "nos": []}
             elif buraco and set(dela.nos) & set(buraco):
                 declaracao_das_portas[outro] = {
@@ -1194,7 +933,6 @@ def _gravar_as_portas(
         if face is not None and porta.lugar in fora:
             fora.remove(porta.lugar)
         if indice == 0 and nome is not None:
-            # O NOME É DA POSIÇÃO (D-2609-O-NOME-E-DA-POSICAO).
             declaracao_das_portas[numero]["nome"] = _o_nome_que_grava(numero, nome)
 
     declaracao_do_mapa: dict[str, Any] = {"faces": faces, "portas": declaracao_das_portas}
@@ -1214,8 +952,7 @@ def _gravar_as_portas(
 
 
 def _face_aceita(face: str, maquina: MaquinaConfig) -> bool:
-    """A face é uma das respostas do produto, uma que ela JÁ tem no mapa, ou
-    a de um hub que ela declarou (:func:`faces_dos_hubs`)."""
+    """A face é uma das respostas do produto, uma que ela JÁ tem no mapa, ou"""
     if face in FACES or face in LUGARES_DA_PORTA:
         return True
     if face in faces_dos_hubs(maquina.mapa).values():
@@ -1246,12 +983,7 @@ def _gravar_no_mapa(
 
 
 def _por_na_face(faces: list[dict[str, Any]], face: str, numero: str) -> None:
-    """O número sai de toda outra face e entra no fim da fileira desta.
-
-    A ORDEM DA FILEIRA É O DESENHO DELA: confirmar a mesma face de uma porta já
-    mapeada não a manda para o fim (conferência, 23/09/2026). ``perto`` e
-    ``alto`` nascem aqui, quando a face nasce — fato físico que só ela tem.
-    """
+    """O número sai de toda outra face e entra no fim da fileira desta."""
     alvo = next((f for f in faces if f["nome"] == face), None)
     for existente in faces:
         if existente is not alvo:
@@ -1281,31 +1013,13 @@ def _face_da_entrada(mapa: MapaDaMesa, numero: str) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# O nome da porta — interligado com o resto (a palavra dela)
-# ---------------------------------------------------------------------------
-
-
 def nome_do_lugar(
     lugar: str,
     *,
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> str | None:
-    """O nome desta porta: o que ela deu à entrada, ou «Entrada 3». ``None`` = não sei.
-
-    É o que a seção nova põe no lugar do «Entrada 4.1.4» e o que o conselho de
-    porta do vigia diz. O adaptador plugado nela NÃO herda este nome desde
-    26/09/2026 (ver ``utils/maquina.AdaptadorDeclarado``).
-
-    O nome é da ENTRADA (``mapa.portas[N].nome``), e o lugar sem entrada não
-    tem nome. Até 28/09/2026 o lugar sem entrada respondia o nome que ainda
-    morava em ``lugares`` — o «Centro» que o adaptador do meio herdara da
-    porta, contra o «Meio» que ela deu ao adaptador (A-ENTRADA-TEM-UM-REGISTRO-
-    SO-01). Sem entrada que guarde o lugar, vale a que ela só desenhou, pelos
-    caminhos deste lugar NESTE boot (``utils/lugar.caminhos_do_lugar``). Dois
-    números para o mesmo lugar é "não sei".
-    """
+    """O nome desta porta: o que ela deu à entrada, ou «Entrada 3». ``None`` = não sei."""
     documento = maquina if maquina is not None else carregar_maquina()
     numero = entrada_do_lugar(documento, lugar)
     if numero is None:
@@ -1325,28 +1039,7 @@ def nome_da_porta(
     controladores: Mapping[int, str] | None = None,
     so_o_declarado: bool = False,
 ) -> str | None:
-    """O nome da porta por QUALQUER das duas chaves da casa.
-
-    ``chave`` é o lugar (``pci-…-usb-0:4.1.4``, o do dono do BlueZ) ou o
-    caminho de barramento (``3-4.1.4``, o que a ponte root escreve). O caminho
-    é traduzido pelo ``utils/lugar.lugar_do_caminho`` com os barramentos DESTE
-    boot; e, se nenhuma entrada guarda aquele lugar, vale o número que o
-    desenho de hoje dá a este caminho (:func:`_entrada_do_caminho`).
-
-    SEM NOME E SEM NÚMERO, A PORTA SE CHAMA COMO O DESENHO APROVADO MOSTRA —
-    «Entrada 4.1.4», o ``devpath`` (TRANSPLANTE-DA-SECAO-01, item 4 de quem
-    coordena). Com o mapa dela vazio, a frase da recusa caía para «Este
-    adaptador já tem…» e a seção nova não tinha como dizer ONDE. ``None`` fica
-    para o que não é porta: chave vazia, fora das duas formas, ou o lugar do
-    adaptador embutido, que não pendura em entrada nenhuma. E a entrada do
-    próprio computador, numa máquina com dois controladores USB, leva o
-    barramento — «Entrada 1-4» e «Entrada 3-4», e não duas «Entrada 4»
-    (:func:`_rotulo_de_reserva`, STORM-USB-02).
-
-    ``so_o_declarado=True`` devolve ``None`` em vez do ``devpath``: é para quem
-    tem um texto próprio e mais rico para a porta sem nome — a coluna «Onde
-    está» da ``secao_mesa`` diz «Barramento 3, porta 1.2 · Direita».
-    """
+    """O nome da porta por QUALQUER das duas chaves da casa."""
     if not chave:
         return None
     documento = maquina if maquina is not None else carregar_maquina()
@@ -1378,30 +1071,13 @@ def nome_da_porta(
 
 
 def nome_da_entrada(numero: str, *, maquina: MaquinaConfig) -> str | None:
-    """O nome que ela deu à entrada ``numero`` — ``None`` quando não deu.
-
-    O ÚNICO LEITOR QUE CONHECE ONDE O NOME MORA (D-2609-O-NOME-E-DA-POSICAO):
-    ``mapa.portas[N].nome``. O nome que não é nome (o próprio número, «Entrada
-    N») é ``None``. NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026):
-    a RESERVA que lia ``lugares[lugar_da_entrada(N)].nome`` saiu com o
-    ``lugares``; o nome de verdade que morava ali veio para a posição na
-    migração (``utils/maquina.migrar_o_documento``).
-    """
+    """O nome que ela deu à entrada ``numero`` — ``None`` quando não deu."""
     declarada = maquina.mapa.portas.get(numero)
     return nome_que_vale(numero, declarada.nome if declarada is not None else None)
 
 
 def rotulo_do_numero(numero: str, *, maquina: MaquinaConfig | None = None) -> str | None:
-    """«Meio» quando ela deu nome à entrada; «Entrada 3» quando não deu — ou
-    «Entrada 4.1.4» para quem ela ainda não nomeou nem numerou.
-
-    Sem ``maquina``, é a palavra do dono diante do número (ou do ``devpath``),
-    sem nome: é o que o gerador da aba 08 põe no desenho aprovado.
-
-    PÚBLICA PARA QUE NINGUÉM MAIS COMPONHA A PALAVRA: compor fora daqui seria
-    o segundo dono que a ``test_a_costura_da_onda_2`` recusa
-    (TRANSPLANTE-DA-SECAO-01).
-    """
+    """«Meio» quando ela deu nome à entrada; «Entrada 3» quando não deu — ou"""
     if not numero:
         return None
     nome = nome_da_entrada(numero, maquina=maquina) if maquina is not None else None
@@ -1409,11 +1085,7 @@ def rotulo_do_numero(numero: str, *, maquina: MaquinaConfig | None = None) -> st
 
 
 def rotulos_das_entradas(maquina: MaquinaConfig) -> dict[str, dict[str, str]]:
-    """``{N: {"rotulo": «Meio», "naFrase": «entrada Meio»}}`` de cada entrada do mapa.
-
-    Para as duas fronteiras sem ``pydantic``: as ordens (``ordens_da_mesa``,
-    stdlib por contrato) e a página do mapa (o arranjo leva ``rotulos``).
-    """
+    """``{N: {"rotulo": «Meio», "naFrase": «entrada Meio»}}`` de cada entrada do mapa."""
     saida: dict[str, dict[str, str]] = {}
     for numero in _numeros_do_mapa(maquina.mapa):
         nome = nome_da_entrada(numero, maquina=maquina)
@@ -1455,14 +1127,7 @@ def rotulo_da_entrada(
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> str | None:
-    """O rótulo da entrada de um lugar: «Meio», «Entrada 3» ou «Entrada 4.1.4».
-
-    É a linha «entrada» de Rádio e Adaptadores, ao lado do nome do ADAPTADOR
-    (que é dele desde 26/09/2026). Desde a O-MAPA-QUE-ELA-CORRIGE-01 ela diz o
-    nome que ela deu à ENTRADA (D-2609-O-NOME-E-DA-POSICAO), pelo dono. ``None``
-    = não é porta: o lugar do adaptador embutido, que não pendura em entrada
-    nenhuma. O rótulo de reserva desempata como o do :func:`nome_da_porta`.
-    """
+    """O rótulo da entrada de um lugar: «Meio», «Entrada 3» ou «Entrada 4.1.4»."""
     partes = partes_do_lugar(lugar)
     if partes is None:
         return None
@@ -1480,11 +1145,7 @@ def face_do_lugar(
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> str | None:
-    """A face do gabinete em que esta porta está («Atrás do gabinete»), ou ``None``.
-
-    Sai do ``mapa`` dela, pelo número que o lugar tem: sem número, não se sabe
-    a face — e a tela oferece o «Onde fica?».
-    """
+    """A face do gabinete em que esta porta está («Atrás do gabinete»), ou ``None``."""
     if partes_do_lugar(lugar) is None:
         return None
     documento = maquina if maquina is not None else carregar_maquina()
@@ -1501,15 +1162,7 @@ def com_o_nome_dela(
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> dict[str, Any]:
-    """Uma linha do diário do rádio com o nome que ela deu à porta.
-
-    O conselho de porta do vigia sai de quem não tem como saber o nome dela —
-    a ponte root escreve ``"porta": "3-4.1.4"`` e «O adaptador da porta
-    3-4.1.4 travou de novo.»; o dono do BlueZ escreve o lugar. Quem LÊ o
-    diário (o sino) passa a linha por aqui: ganha ``porta_nome``, e a frase
-    troca o caminho do sistema pelo nome dela. Sem nome conhecido, a linha
-    volta como veio.
-    """
+    """Uma linha do diário do rádio com o nome que ela deu à porta."""
     saida = dict(linha)
     porta = str(linha.get("porta") or "")
     nome = nome_da_porta(porta, maquina=maquina, controladores=controladores)
@@ -1522,23 +1175,13 @@ def com_o_nome_dela(
     return saida
 
 
-# ---------------------------------------------------------------------------
-# O nome que ela dá a um lugar
-# ---------------------------------------------------------------------------
-
-
 def dar_nome_ao_adaptador(
     endereco: str,
     nome: str,
     *,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> NomeDado:
-    """Grava o nome do ADAPTADOR, pelo endereço dele. Nome vazio apaga o nome.
-
-    O ``Alias`` do BlueZ é a projeção deste campo, escrita pelo
-    ``bt_active_mode.sh`` no próximo tique do watchdog — o escritor é um só,
-    como o nome da entrada, que o Mapear grava.
-    """
+    """Grava o nome do ADAPTADOR, pelo endereço dele. Nome vazio apaga o nome."""
     chave = chave_do_adaptador(endereco)
     if chave is None:
         raise ValueError(f"{endereco!r} não é endereço de adaptador")
@@ -1547,15 +1190,6 @@ def dar_nome_ao_adaptador(
     return NomeDado(chave, limpo, recibo.gravou, recibo.motivo)
 
 
-# ---------------------------------------------------------------------------
-# O que tem na entrada, e a velocidade dela (O-MAPA-DAS-CONEXOES-NO-PRODUTO-01)
-# ---------------------------------------------------------------------------
-#
-# O editor do mapa das conexões, 26/09/2026. Pedido dela: *«ao clicar em um
-# desses usb mapeados eu pudesse setar que tem tal coisa lá. no caso o hub ou
-# afins»*; e a velocidade, porque o par SuperSpeed que o firmware publica não
-# prova o conector (ver ``mapa_das_portas.velocidade_da_entrada``). As duas vão ao ``maquina.json``
-# dela, ao lado do caminho e dos nós da entrada, pelo gravador único deste
 # módulo. <!-- noqa-acento: citação literal dela -->
 
 
@@ -1592,31 +1226,7 @@ def trocar_as_entradas(
     maquina: MaquinaConfig | None = None,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> Recibo:
-    """«Trocar com…»: o buraco da ``numero`` e o da ``outro`` trocam de posição.
-
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-O-BURACO). Pedido dela: *«trocar
-    elas de lugar no mapeamento»*. O Mapear pôs o cabo de uma entrada no número
-    de outra, e ela corrige sem mapear de novo. UM ATO SÓ, numa gravação:
-    <!-- noqa-acento: citação literal dela -->
-
-    * **vai com o buraco** — o ``lugar`` e os ``nos`` (sempre juntos: mover
-      só um deles era o defeito do ``colocar``), a ``liga`` e a ``usb``; a
-      ponta do extensor inteira (``Na`` vira ``Ma``, com o nome dela); e a
-      face do hub declarado, renomeada pelo número;
-    * **fica na posição** — o número, o nome (D-2609-O-NOME-E-DA-POSICAO), a
-      face e a ordem da fileira, e as ordens dispensadas.
-
-    TROCAR DOIS REGISTROS (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026). A
-    troca movia cinco coisas em dois registros — o buraco, a ponta, a amarra
-    em ``lugares``, o nome que «mudava de casa antes da troca» e a face do hub
-    —, e em 26/09 uma troca feita fora do produto moveu o ``mapa`` e não os
-    ``lugares``. Com o lugar dentro da entrada, o buraco inteiro é o que vai.
-
-    Desfazer é trocar de novo: a troca é uma involução. Recusa com
-    ``ValueError`` e a frase do dono: :data:`RECUSA_A_MESMA_ENTRADA`,
-    :data:`RECUSA_FORA_DO_MAPA` (fora do mapa, buraco desenhado ``3.1`` ou
-    ponta ``Na``) e :data:`RECUSA_NENHUMA_MAPEADA`.
-    """
+    """«Trocar com…»: o buraco da ``numero`` e o da ``outro`` trocam de posição."""
     documento = maquina if maquina is not None else carregar_maquina()
     mapa = documento.mapa
     if numero == outro:
@@ -1709,7 +1319,7 @@ def ensinar_a_entrada(
     nos = list(dict.fromkeys([*dela.nos, *novos]))
     try:
         PortaDeclarada(nos=nos)
-    except ValueError:  # o teto de nós é do dono do schema
+    except ValueError:
         raise ValueError(RECUSA_LIGACOES_DEMAIS) from None
     recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": {numero: {"nos": nos}}}})
     if not recibo.gravou:
@@ -1749,14 +1359,7 @@ def dar_nome_a_entrada(
     maquina: MaquinaConfig | None = None,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> Recibo:
-    """O nome que ela dá à entrada ``numero`` — O-MAPA-QUE-ELA-CORRIGE-01.
-
-    O nome é da POSIÇÃO (D-2609-O-NOME-E-DA-POSICAO): vai para
-    ``mapa.portas[numero].nome``, e numa troca fica com o número. Vazio (ou o
-    próprio número, ou «Entrada N») apaga, e a tela volta a dizer «Entrada N».
-    Mais de 24 caracteres levanta ``ValueError`` com a frase do dono
-    (:data:`FRASE_DO_NOME_COMPRIDO`); a entrada fora do mapa, também.
-    """
+    """O nome que ela dá à entrada ``numero`` — O-MAPA-QUE-ELA-CORRIGE-01."""
     vale = _o_nome_que_grava(numero, nome or "")
     return _declarar_na_entrada(numero, {"nome": vale}, maquina=maquina, gravar=gravar)
 
@@ -1768,21 +1371,7 @@ def _declarar_na_entrada(
     maquina: MaquinaConfig | None,
     gravar: Callable[[Mapping[str, Any]], Recibo],
 ) -> Recibo:
-    """Os campos na ``mapa.portas[numero]``, se a entrada é do mapa dela — ou é
-    a PONTA de um extensor que ela declarou numa entrada do mapa.
-
-    A PONTA GRAVA desde a O-MAPA-DAS-CONEXOES-NO-PRODUTO-02 (26/09/2026): o que
-    ela dizia ali sumia ao reler, sem aviso. Ela vai ao disco como a
-    entrada-filha que o ``PortaDeclarada.filha_de`` sempre descreveu, e daí o
-    motor a desenha sozinho (``mapa_das_portas.filhas_de``). Quando a entrada
-    deixa de ser extensor, a ponta que só o editor escreveu sai junto: sem
-    isso ela continuaria desenhada como filha de uma entrada «Direto».
-
-    AS ENTRADAS DO HUB DESENHADO (``5.1``…) NÃO GRAVAM: o ponto não cabe no
-    número de entrada que o ``utils/maquina`` aceita, e o exemplo da página não
-    é o gabinete de ninguém. Declarar sobre eles gravaria uma entrada que ela
-    nunca mapeou; o editor da página nem manda o gesto.
-    """
+    """Os campos na ``mapa.portas[numero]``, se a entrada é do mapa dela — ou é"""
     documento = maquina if maquina is not None else carregar_maquina()
     mapa = documento.mapa
     if numero in entradas_do_mapa(mapa):
@@ -1810,11 +1399,7 @@ def _declarar_na_entrada(
 
 
 def ponta_do_extensor(numero: str) -> str | None:
-    """A entrada-filha que um extensor na entrada ``numero`` desenha, ou ``None``.
-
-    ``None`` para a entrada que já é ponta ou é do hub desenhado: a ponta dela
-    não é um número que o disco aceite (ver :data:`LETRA_DA_PONTA`).
-    """
+    """A entrada-filha que um extensor na entrada ``numero`` desenha, ou ``None``."""
     return f"{numero}{LETRA_DA_PONTA}" if _SO_DIGITOS.match(numero) else None
 
 
@@ -1829,15 +1414,7 @@ def _mae_da_ponta(mapa: MapaDaMesa, numero: str) -> str | None:
 
 @dataclass(frozen=True)
 class Pendencia:
-    """De qual entrada uma face do gabinete pende — D-2609-O-HUB-PENDE-DA-ENTRADA.
-
-    ``entrada`` é a que vale (a dela, quando ela disse; a do barramento, quando
-    não disse). ``lida`` é a que o barramento lê, só quando diverge da que vale.
-    ``declarada`` diz que a ligação veio dela (a face com o nome do hub, ou o
-    «Hub» que ela declarou na entrada). ``barramento`` é a entrada de que a
-    face desce pelo que o Mapear gravou — ``None`` quando o disco não diz
-    (o hub desplugado antes de mapear): é onde o computador lê um hub.
-    """
+    """De qual entrada uma face do gabinete pende — D-2609-O-HUB-PENDE-DA-ENTRADA."""
 
     entrada: str
     lida: str | None = None
@@ -1971,13 +1548,7 @@ def faces_dos_hubs(mapa: MapaDaMesa) -> dict[str, str]:
 def _usb_da_porta(
     medido: Any, declarada: int | None, censo: Censo | None, nos: Sequence[str] = ()
 ) -> tuple[str, str]:
-    """``(USB 3.0 | USB 2.0 | "", de onde)`` de uma porta do Mapear.
-
-    A precedência é de ``mapa_das_portas.velocidade_da_entrada``: o aparelho
-    que enumerou a 5000M+ num dos ``nos`` dela (a MESMA pergunta do arranjo,
-    ``mapa_das_portas.aparelho_usb3_na_entrada``), depois o que ela declarou,
-    depois a placa (o ``medido.usb``, lido dos hubs que hospedam os nós).
-    """
+    """``(USB 3.0 | USB 2.0 | "", de onde)`` de uma porta do Mapear."""
     from hefesto_dualsense4unix.integrations import mapa_das_portas as junta
 
     placa = {junta.USB_3: True, junta.USB_2: False}.get(medido.usb)
@@ -1991,46 +1562,19 @@ def _usb_da_porta(
     return (junta.USB_3 if rapido else junta.USB_2), de_onde
 
 
-# ---------------------------------------------------------------------------
-# O MAPA DAS PORTAS — um fluxo, uma gravação, um nome (A-08-UM-MAPEAR-SO-01)
-# ---------------------------------------------------------------------------
-#
-# Pedido dela, 25/09/2026: *«Dava pra ser um botão só né?»*. O «Mapear
-# Entradas» (o rascunho da aba, que manda o ``mapa`` inteiro pelo IPC) e o
-# «Mapear Entrada a Entrada» (o laço acima) viram UM fluxo: ela leva o MESMO
 # DualSense de porta em porta; a porta que ele acabou de mostrar chega com o
-# que se mediu dela; ela dá o nome e escolhe onde fica. A primeira vez e a
-# revisita são o mesmo gesto — na revisita a porta já chega com o número, o
-# nome e o lugar de antes, e gravar de novo só troca o que ela trocou.
-#
-# UMA GRAVAÇÃO: :func:`_gravar_no_mapa`, a mesma do laço. UM NOME PARA LER:
-# :func:`ler_o_mapa`, que devolve cada porta com o declarado (número, nome,
-# lugar no gabinete) e o medido agora (USB 2.0/3.0, controlador, hub, -71,
-# Bluetooth da placa ou dongle). O medido NÃO vai ao disco: ver
-# ``mapa_das_portas.fatos_do_buraco``.
 
-#: As fases do fluxo único. ``PARADO`` é o mesmo do laço.
 ESPERANDO = "esperando"
 NA_PORTA = "porta"
 
-#: A chave da última gravação na foto — a mesma do laço, ASCII por contrato.
 _CHAVE_DA_ULTIMA = "ultima"  # (noqa-acento) chave de máquina
 
-#: O ``/sys/class/bluetooth`` do sistema — desviável, como a raiz do USB.
 RAIZ_BT_PADRAO = "/sys/class/bluetooth"
 
 
 @dataclass(frozen=True)
 class PortaDoMapa:
-    """Uma porta do mapa: o que ela declarou e o que o ``/sys`` diz agora.
-
-    ``chave`` é o que a tela devolve em :meth:`MapearAsPortas.gravar`: o
-    número quando a porta já tem um, e o lugar (``pci-…-usb-0:4.1``) quando
-    ainda não. ``rotulo`` é o nome que ela deu, ou «Entrada 3» — a palavra do
-    dono (:func:`nome_da_porta`). ``lugar_no_gabinete`` é a face do mapa
-    («Frente do gabinete»). Os campos medidos são os de
-    ``mapa_das_portas.FatosDoBuraco``, e ``""``/``None`` neles é "não sei".
-    """
+    """Uma porta do mapa: o que ela declarou e o que o ``/sys`` diz agora."""
 
     chave: str
     numero: str | None = None
@@ -2042,8 +1586,6 @@ class PortaDoMapa:
     nos: tuple[str, ...] = ()
     fora: bool = False
     usb: str = ""
-    #: De onde veio o ``usb`` — ``mapa_das_portas.USB_PELO_APARELHO``,
-    #: ``USB_DECLARADA`` ou ``USB_PELA_PLACA``; ``""`` quando não se sabe.
     usb_de: str = ""
     controlador: str = ""
     hub: str = ""
@@ -2068,13 +1610,7 @@ class PortaDoMapa:
 
 @dataclass(frozen=True)
 class MapaDasPortas:
-    """O mapa inteiro, pelo nome único que todo leitor pede.
-
-    ``bluetooth_sem_porta`` conta os adaptadores Bluetooth que não penduram em
-    porta USB nenhuma — o rádio da placa por SDIO/UART/PCIe. O da placa que
-    pendura num conector USB interno aparece como porta, com
-    ``bluetooth="placa"``.
-    """
+    """O mapa inteiro, pelo nome único que todo leitor pede."""
 
     portas: tuple[PortaDoMapa, ...] = ()
     bluetooth_sem_porta: int = 0
@@ -2108,21 +1644,7 @@ def ler_o_mapa(
     medir_storm: bool = True,
     incluir: Sequence[Sequence[str]] = (),
 ) -> MapaDasPortas:
-    """O MAPA DAS PORTAS — o nome único que a tela, o Check-up, Rádio e
-    Adaptadores e o exame pedem.
-
-    Cada entrada numerada do ``mapa`` (na ordem das faces) e cada buraco
-    OCUPADO agora que ainda não tem número, com o que o ``/sys`` diz dele.
-    ``incluir`` são buracos (pelos nós) que entram mesmo vazios — a porta que
-    o controle mostrou e de que ela já o tirou.
-
-    Tudo o que lê entra por argumento, com o default do sistema: ``raiz_usb``
-    desvia as duas leituras do barramento (a régua monta um ``/sys`` de
-    mentira), ``adaptadores`` e ``raiz_bt`` o Bluetooth, e ``storm`` o -71
-    (``{caminho do kernel: quantos}``). Sem ``storm``, e com a raiz do
-    sistema, o -71 sai do log do kernel-watch (``exame_da_mesa``); com outra
-    raiz o log não é daquela máquina, e o -71 fica ``None`` — não medido.
-    """
+    """O MAPA DAS PORTAS — o nome único que a tela, o Check-up, Rádio e"""
     from hefesto_dualsense4unix.integrations import mapa_das_portas as junta
 
     documento = maquina if maquina is not None else carregar_maquina()
@@ -2209,11 +1731,6 @@ def ler_o_mapa(
             )
         )
 
-    # O «NÃO ALCANÇO» TAMBÉM É DO MAPA: o lugar que ela disse não alcançar
-    # continua dela com o buraco vazio, e a revisita o mostra. O nome que ela
-    # dá a um buraco sem número já nasce entrada (:func:`_gravar_a_porta`), e
-    # vem no primeiro laço: não há mais nome morando no lugar
-    # (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026).
     listados = {p.lugar for p in portas if p.lugar}
     for lugar in documento.mapa.fora:
         if lugar in listados:
@@ -2248,9 +1765,6 @@ def ler_o_mapa(
     if adaptadores is None:
         adaptadores = _adaptadores_do_sistema(raiz_bt)
     sem_porta = sum(1 for a in adaptadores if not str(getattr(a, "no", "") or ""))
-    # Os lugares que a tela oferece: os sete universais e, depois, as faces que
-    # ela JÁ tem com outro nome — a escolha dela continua escolhível — e o hub
-    # que ela declarou no mapa das conexões, que vira lugar para as entradas dele.
     dela = tuple(
         dict.fromkeys(
             [f.nome for f in documento.mapa.faces if f.nome not in LUGARES_DA_PORTA]
@@ -2314,29 +1828,17 @@ class MapearAsPortas:
         self._antes: frozenset[tuple[str, ...]] = frozenset()
         self._da_vez: tuple[str, ...] = ()
         self._storm: Mapping[str, int] | None = None
-        #: O log do -71 já foi lido nesta sessão? É dele, e não da primeira
-        #: leitura do barramento: o Salvar que chegar antes da primeira foto
-        #: gasta a primeira sem ler o log, e o -71 sumiria da sessão inteira.
         self._storm_lido = False
         self._ultima: Gravacao | None = None
         self._feitas = 0
-        #: A sessão do fluxo: cada abrir e cada parar a trocam, e a leitura que
-        #: voltar de outra sessão não anda nada.
         self._sessao = 0
-        #: A próxima leitura é a PRIMEIRA da sessão: é ela que diz o que já
-        #: estava encaixado quando ela abriu a tela.
         self._primeira = False
-        #: A última foto que um fio tirou nesta sessão — ``None`` enquanto a
-        #: primeira não voltou.
         self._pintada: dict[str, Any] | None = None
         self._voo = _VooDaLeitura(self.olhar, nome="mapear-as-portas", fio=fio)
 
-    # -- os gestos -----------------------------------------------------------
 
     def abrir(self) -> None:
-        """Abre o fluxo SEM ler nada — o gesto da tela. A primeira leitura
-        (o log do -71 e o barramento) sai no fio do tique, e até ela voltar a
-        foto diz ``procurando``."""
+        """Abre o fluxo SEM ler nada — o gesto da tela. A primeira leitura"""
         with self._trava:
             self._fase = ESPERANDO
             self._da_vez = ()
@@ -2453,16 +1955,11 @@ class MapearAsPortas:
             if gravacao.gravou:
                 self._feitas += 1
             if aberto:
-                # O que ela acabou de salvar aparece no tique seguinte, e não
-                # só quando a próxima leitura do fio voltar.
                 self._pintada = self._foto(censo, lidas, adaptadores)
             return gravacao
 
     def parar(self) -> None:
-        """Fecha. Nada se perde: cada porta já foi ao disco quando ela gravou.
-
-        Nunca espera o ``/sys``: a leitura em voo é de outra sessão quando
-        voltar, e não anda nada."""
+        """Fecha. Nada se perde: cada porta já foi ao disco quando ela gravou."""
         with self._trava:
             self._fase = PARADO
             self._da_vez = ()
@@ -2472,9 +1969,7 @@ class MapearAsPortas:
             self._pintada = None
 
     def estado(self) -> dict[str, Any]:
-        """O que a tela pintaria, relendo o mapa agora (o fluxo aberto é de
-        propósito) — sem andar o fluxo. Quem chama espera o ``/sys``; o tique
-        usa :meth:`foto_sem_esperar`."""
+        """O que a tela pintaria, relendo o mapa agora (o fluxo aberto é de"""
         with self._trava:
             if self._fase == PARADO:
                 return self._foto_parada()
@@ -2486,21 +1981,12 @@ class MapearAsPortas:
             return self._foto(censo, lidas, adaptadores)
 
     def foto_sem_esperar(self) -> dict[str, Any]:
-        """O que o TIQUE pinta — não lê o ``/sys`` e não toma a trava.
-
-        Com o fluxo aberto, a próxima leitura sai num fio próprio
-        (:class:`_VooDaLeitura`, uma de cada vez), e a foto é a última que um
-        fio tirou. Ela vem com ``procurando`` enquanto a primeira da sessão
-        não voltou, e quando a leitura no ar passa do fôlego
-        (:data:`FOLEGO_DA_LEITURA_S`) — aí sem a porta da vez, que pode ser a
-        de antes.
-        """
+        """O que o TIQUE pinta — não lê o ``/sys`` e não toma a trava."""
         if self._fase == PARADO:
             return self._foto_parada()
         self._voo.disparar()
         return self._foto_de_agora()
 
-    # -- interno -------------------------------------------------------------
 
     def _andar(self, censo: Censo, lidas: Sequence[NoDeEntrada]) -> None:
         """Um passo do fluxo com uma leitura nova. Chamada sob a trava."""
@@ -2544,21 +2030,21 @@ class MapearAsPortas:
         censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
         try:
             adaptadores = tuple(self._adaptadores())
-        except Exception:  # defensivo — o /sys/class/bluetooth some sob a mão
+        except Exception:
             adaptadores = ()
         return censo, lidas, adaptadores
 
     def _ler_o_censo(self) -> Censo:
         try:
             return self._ler()
-        except Exception:  # defensivo — a leitura some sob a mão
+        except Exception:
             logger.debug("mapa_das_portas_leitura_falhou", exc_info=True)
             return Censo()
 
     def _ler_as_entradas(self) -> tuple[NoDeEntrada, ...]:
         try:
             return tuple(self._entradas())
-        except Exception:  # defensivo — o sysfs some sob a mão
+        except Exception:
             logger.debug("mapa_das_portas_nos_falharam", exc_info=True)
             return ()
 
@@ -2579,8 +2065,7 @@ class MapearAsPortas:
     def _foto(
         self, censo: Censo, lidas: Sequence[NoDeEntrada], adaptadores: Sequence[Any]
     ) -> dict[str, Any]:
-        """A foto da leitura que já está na mão. Chamada sob a trava: o
-        ``maquina.json`` é lido aqui, depois de qualquer gravação."""
+        """A foto da leitura que já está na mão. Chamada sob a trava: o"""
         mapa = ler_o_mapa(
             maquina=self._carregar(),
             censo=censo,
@@ -2643,9 +2128,7 @@ def _gravar_a_porta(
     if porta.numero is None and (not porta.lugar or (face is not None and not no_sys)):
         return Gravacao(porta.lugar, "", face or "", False, MOTIVO_SEM_LUGAR)
     if porta.numero is None or (da_vez and no_sys and face is not None):
-        # O caminho é o do lado 2.0, o mesmo de que sai o lugar
         # (:func:`_lugar_do_furo`) e onde o DualSense enumera — nunca o de um
-        # aparelho que só existe no lado 3.x.
         caminho = caminho_do_lado_20(porta.nos) or porta.aparelho
         vista = PortaVista(lugar=porta.lugar, caminho=caminho)
         return _gravar_as_portas(
@@ -2684,11 +2167,7 @@ def _gravar_a_porta(
 
 
 def _o_nome_que_grava(numero: str, nome: str) -> str | None:
-    """O nome que vai para ``portas[numero].nome`` — ``None`` apaga.
-
-    Vazio, o próprio número e «Entrada N» apagam (:func:`nome_que_vale`); mais
-    de 24 caracteres é recusa, com a frase do dono.
-    """
+    """O nome que vai para ``portas[numero].nome`` — ``None`` apaga."""
     limpo = " ".join(nome.split())
     if len(limpo) > MAXIMO_DO_NOME_DA_ENTRADA:
         raise ValueError(FRASE_DO_NOME_COMPRIDO)
@@ -2714,8 +2193,7 @@ def _porta_do_mapa(
     medido: Any,
     usb: tuple[str, str] | None = None,
 ) -> PortaDoMapa:
-    """``usb`` é ``(velocidade, de onde)`` quando a porta tem declaração — ver
-    :func:`_usb_da_porta`; sem ele vale o que o ``/sys`` mediu."""
+    """``usb`` é ``(velocidade, de onde)`` quando a porta tem declaração — ver"""
     velocidade, de_onde = usb if usb is not None else _usb_da_porta(medido, None, None)
     return PortaDoMapa(
         chave=chave,
@@ -2766,12 +2244,7 @@ def _furo_da_entrada(
     buracos: Sequence[Furo],
     controladores: Mapping[int, str],
 ) -> Furo | None:
-    """O buraco de agora que é esta entrada — pelo lugar, ou pelos nós.
-
-    A mesma escada de :func:`_o_furo_e_conhecido`, do outro lado: o lugar
-    sobrevive ao boot; os nós carregam o número do barramento e valem só para a
-    entrada que não guarda lugar.
-    """
+    """O buraco de agora que é esta entrada — pelo lugar, ou pelos nós."""
     declarada = maquina.mapa.portas.get(numero)
     if declarada is None:
         return None
@@ -2795,11 +2268,7 @@ def _buracos_com_dualsense(
 
 
 def _storm_do_log() -> dict[str, int] | None:
-    """``{caminho do kernel: quantos -71}`` dos últimos 7 dias — ``None`` sem log.
-
-    O dono da leitura é o ``exame_da_mesa.storm_por_porta``; aqui só se conta.
-    Sem o log do kernel-watch não há medição, e ``None`` não é zero.
-    """
+    """``{caminho do kernel: quantos -71}`` dos últimos 7 dias — ``None`` sem log."""
     try:
         from hefesto_dualsense4unix.integrations import exame_da_mesa
 
@@ -2807,7 +2276,7 @@ def _storm_do_log() -> dict[str, int] | None:
         if log is None:
             return None
         laudo = exame_da_mesa.storm_por_porta(log=log, nomear=exame_da_mesa._sem_nome)
-    except Exception:  # defensivo — o -71 nunca derruba o mapa
+    except Exception:
         logger.debug("mapa_das_portas_storm_falhou", exc_info=True)
         return None
     if laudo.porque_nao:
@@ -2822,13 +2291,9 @@ def _adaptadores_do_sistema(raiz_bt: str) -> tuple[Any, ...]:
         )
 
         return tuple(adaptadores_bluetooth(raiz_bt=raiz_bt))
-    except Exception:  # defensivo — sem Bluetooth é resposta, não defeito
+    except Exception:
         return ()
 
-
-# ---------------------------------------------------------------------------
-# O dono do laço no processo da janela
-# ---------------------------------------------------------------------------
 
 _O_LACO: LacoDaEntrada | None = None
 _TRAVA_DO_LACO = threading.Lock()
@@ -2855,29 +2320,15 @@ def o_mapa() -> MapearAsPortas:
         return _O_MAPA
 
 
-# ---------------------------------------------------------------------------
-# Interno
-# ---------------------------------------------------------------------------
-
-
 def _controladores(censo: Censo) -> dict[int, str]:
-    """``{busnum: controlador PCI}`` pelos hubs-raiz do censo que já está na mão.
-
-    O dono é ``mapa_das_portas.controladores_do_censo`` (a junção do mapa com o
-    censo), e o import é tardio como os outros daquele módulo aqui.
-    """
+    """``{busnum: controlador PCI}`` pelos hubs-raiz do censo que já está na mão."""
     from hefesto_dualsense4unix.integrations.mapa_das_portas import controladores_do_censo
 
     return controladores_do_censo(censo)
 
 
 def _nao_sei(censo: Censo) -> bool:
-    """A leitura do barramento não respondeu? Sem hub-raiz nenhum, é "não sei".
-
-    Toda máquina com USB tem hub-raiz, e ``ler_o_barramento`` devolve
-    ``Censo()`` vazio quando o ``/sys`` não se deixa ler. Ler isso como "nenhum
-    aparelho" é responder "não sei" com zero.
-    """
+    """A leitura do barramento não respondeu? Sem hub-raiz nenhum, é "não sei"."""
     return not any(aparelho.e_raiz for aparelho in censo.aparelhos)
 
 
@@ -2888,14 +2339,7 @@ def _entrada_do_caminho(
     *,
     sem_lugar: bool = False,
 ) -> str | None:
-    """O número da entrada em que um aparelho com este caminho está — ``None`` se nenhuma.
-
-    Pelos caminhos da entrada NESTE boot (``utils/maquina.caminhos_da_porta``):
-    a que guarda o lugar responde pelo lugar traduzido com os ``controladores``
-    de agora, e a que ela só desenhou, pelos nós. ``sem_lugar`` pergunta só a
-    estas — é a segunda pergunta de :func:`_numero_conhecido`, quando o lugar
-    não é de entrada nenhuma.
-    """
+    """O número da entrada em que um aparelho com este caminho está — ``None`` se nenhuma."""
     if not caminho:
         return None
     for numero, porta in sorted(maquina.mapa.portas.items()):

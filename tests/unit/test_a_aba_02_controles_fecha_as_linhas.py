@@ -1,43 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA ONDA2-02: as dez decisões da aba Controles, uma a uma.
-
-**A fonte é `docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`,
-§2, `02-controles`.** Vinte das trinta e quatro linhas desta aba eram `DESENHO`
-— a aba que mais esperava pela palavra dela —, e nenhuma espera mais.
-
-O QUE ESTE ARQUIVO COBRA, e por que cada bloco existe:
-
-1. **O selo composto (decisão [03], conflito C-2, pela D-12).** ATIVO só quando
-   as QUATRO faces concordam. `mic_da_mesa.eleito` está FORA de propósito: a
-   ONDA1-D1 o mediu MENTINDO, e `canal_ativo` é leitura enquanto `eleito` é
-   memória.
-2. **A palavra da barra de luz (decisão [02]).** Quatro estados dividiam um
-   travessão só; agora cada um tem a palavra dela, e a frase inteira vai no
-   `title` da linha.
-3. **O botão que avisa antes do clique (decisões [04] e [06]).**
-4. **A rota das duas camadas (decisão [09]).** O byte 3 sozinho não acende mais
-   "Todo o som do PC" — foi assim que o card 2 dela ficou aceso com o som
-   saindo na TV, em 03/09.
-5. **O ato do microfone (S-05).** Um pedido só, e a frase diz QUAL metade
-   faltou.
-6. **A confissão do volume (decisão [08]).** O mudo que caiu no controle de
-   outra pessoa vira aviso no cartão.
-7. **A degradação da máscara (decisão [07]).**
-8. **Os dois anéis (D-06 / S-11).**
-
-**O DUBLÊ DAQUI É ESTRITO, E ISSO É O PONTO INTEIRO DE ELE EXISTIR.** O dublê
-compartilhado (`test_os_botoes_tem_dono.PonteDeMentira`) responde `True` a todo
-nome que não conhece — e um dublê mais frouxo que a ponte real é a cicatriz de
-04/09/2026, que custou **duas** máscaras que passaram verdes sem gravar um
-byte. As funções `_detalhado` da ponte devolvem `dict | None`, e é isso que o
-dublê daqui devolve; um `bool` não tem `motivo` nem `por_uniq`, e é justamente
-o que os caminhos medidos aqui precisam.
-
-**E A PARTE DE TELA LÊ, NÃO DIGITA.** Nenhuma cor está escrita neste arquivo. A
-régua abre a página da BANCADA no Chrome do sistema (headless — nenhuma janela
-nasce na tela dela) e pergunta ao motor o que ele DESENHA, comparando elementos
-da MESMA página.
-"""
+"""A RÉGUA DA ONDA2-02: as dez decisões da aba Controles, uma a uma."""
 from __future__ import annotations
 
 import pathlib
@@ -59,9 +21,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 import mesa_viva
 
-# O GERADOR, e não uma cópia do texto dele: as duas dicas e o nome do atributo
-# do ♪ são LIDOS daqui. Importar `aba02` roda o módulo (que monta o MIOLO e o
-# CSS em memória) e NÃO escreve nada — a gravação mora no `__main__`.
 import aba02 as a02_gerador
 from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.app.widgets.controller_card import (
@@ -72,11 +31,8 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a02_controles as a02
 
-#: O MESMO MOTOR DAS OUTRAS RÉGUAS DE TELA desta casa, e ele roda headless.
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-#: A CHAVE DA CASA, e não um endereço real — a máscara é `docs/…` e há dois
-#: portões que a cobram.
 UNIQ = "aa:bb:cc:00:00:01"
 
 BASE: dict[str, Any] = {
@@ -86,13 +42,7 @@ BASE: dict[str, Any] = {
 
 
 class PonteEstrita:
-    """O dublê que é TÃO estrito quanto a ponte de verdade.
-
-    Cada nome devolve o que `interface/pacotes/ponte.py` devolve — `dict | None`
-    para as `_detalhado`, `bool` para as outras —, e um nome que a ponte não
-    tem levanta `AttributeError` em vez de responder `True`. É a diferença
-    entre medir o botão e medir o próprio dublê.
-    """
+    """O dublê que é TÃO estrito quanto a ponte de verdade."""
 
     def __init__(self, **respostas: Any) -> None:
         self.chamadas: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
@@ -123,20 +73,7 @@ def _ctx(entry: dict[str, Any] | None = None, **extra: Any) -> Contexto:
 
 
 def _enderecos_da_bancada() -> frozenset[str]:
-    """Todo `data-campo` do DESENHO de hoje — e a bancada é onde ele mora.
-
-    **POR QUE A BANCADA E NÃO O PUBLICADO.** O `_so_se_a_pagina_tiver` do
-    pacote pergunta ao PUBLICADO de propósito: emitir para um endereço que a
-    página do produto não tem enche `casamento.medir(...)["orfaos"]` e faz o
-    pacote se reportar pintando o que não pinta. Isso continua valendo, e não é
-    o que esta régua mede.
-
-    O QUE ELA MEDE é a decisão dela chegando ao card, e as decisões desta onda
-    nascem na BANCADA — publicar é ATO DELA, depois do olho dela na aba
-    inteira (`PROVA-DE-TELA-01`, a regra mais velha desta casa). Apontar a
-    régua para o publicado daria **verde por ausência**: os campos novos não
-    sairiam, e nenhum caso reprovaria.
-    """
+    """Todo `data-campo` do DESENHO de hoje — e a bancada é onde ele mora."""
     doc = onde.pagina("02-controles.html").read_text(encoding="utf-8")
     import re as _re
     return frozenset(_re.findall(r'data-campo="([^"]+)"', doc))
@@ -152,18 +89,12 @@ def _card(entry: dict[str, Any], **extra: Any) -> dict[str, Any]:
     return dict(fora["cards"][UNIQ])
 
 
-# ===========================================================================
-# 1. O SELO DIZ O ESTADO COMPOSTO — decisão [03], conflito C-2, pela D-12
-# ===========================================================================
 ATIVO = mesa_viva.selo_do_mic(False, True)
 MUDO = mesa_viva.selo_do_mic(True, True)
 NAO_SEI = mesa_viva.selo_do_mic(False, False)
 
-#: AS QUATRO FACES E O QUE CADA ARRANJO TEM DE DIZER. A palavra é PERGUNTADA a
-#: `mesa_viva.selo_do_mic` acima — digitar "ATIVO" aqui mediria este arquivo.
 NO_AR = {"mic_mudo": False, "canal_ativo": True, "canal_mudo": False}
 FACES = [
-    # (audio, esperado, por quê)
     (NO_AR, ATIVO, "as quatro concordam: firmware no ar e canal ouvindo"),
     ({**NO_AR, "mic_mudo": True}, MUDO, "o plástico calou"),
     ({**NO_AR, "canal_ativo": False}, MUDO,
@@ -186,12 +117,7 @@ FACES = [
 @pytest.mark.parametrize("audio, esperado, porque", FACES)
 def test_o_selo_le_as_quatro_faces(audio: dict[str, Any], esperado: str,
                                    porque: str) -> None:
-    """ATIVO só quando as quatro concordam — a D-12 dela, virada em régua.
-
-    MORDE: devolva `selo_do_mic(bool(a.get("mic_mudo")),
-    isinstance(a.get("mic_mudo"), bool))` — que é o que esta linha era até
-    04/09 — e caem os três casos em que o FIRMWARE está no ar e o canal não.
-    """
+    """ATIVO só quando as quatro concordam — a D-12 dela, virada em régua."""
     assert a02.selo_composto(audio) == esperado, porque
 
 
@@ -222,17 +148,6 @@ def test_o_selo_chega_ao_card(monkeypatch: pytest.MonkeyPatch) -> None:
     assert campos["mic-selo"] == MUDO
 
 
-# ===========================================================================
-# 2. A PALAVRA DA BARRA DE LUZ — decisão [02]
-# ===========================================================================
-#: OS TRÊS ESTADOS, com a ENTRADA que só aquele ramo do motor atende. A
-#: palavra sai da tabela do pacote (que por sua vez pergunta ao motor); o que
-#: esta lista digita é só a entrada.
-#:
-#: NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): eram QUATRO, e o do Modo
-#: Nativo («Jogo») saiu com a `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR` — no
-#: Nativo a barra é do Hefesto, e a tela mostra a cor como em todo modo. A
-#: régua que prova a cor no Nativo é `test_a_mira_na_navegacao.py`, seção 6.
 ESTADOS_DA_LUZ = [
     ({"lightbar_rgb": [0, 0, 0], "lightbar_source": "desconhecida"}, {},
      a02.ROTULO_DA_LUZ_DESCONHECIDA),
@@ -302,31 +217,14 @@ def test_a_frase_inteira_vai_para_o_hover(
 
 
 def test_com_a_cor_conhecida_o_hover_explica_de_quem_e_a_cor() -> None:
-    """Sem rótulo não há o que explicar sobre o estado — então o `title` volta
-    a ser a explicação de quem escolhe a cor, que é o texto que o desenho tinha.
-
-    MORDE: devolva `str(rotulo or "")` sem o ramo da cor conhecida e o `title`
-    some da linha no primeiro tique (o piloto REMOVE o atributo em valor vazio),
-    levando junto a explicação que ela vê hoje.
-    """
+    """Sem rótulo não há o que explicar sobre o estado — então o `title` volta"""
     campos = _card({"lightbar_rgb": [0, 0, 255], "lightbar_source": "sysfs",
                     "lightbar_on": True})
     assert campos["luz-porque"] == a02.DICA_DA_LUZ
 
 
-# ===========================================================================
-# 3. O BOTÃO AVISA ANTES DO CLIQUE — decisões [04] e [06]
-# ===========================================================================
 def test_a_razao_do_microfone_e_a_do_motor() -> None:
-    """A frase do `?` é a MESMA que o gesto levanta — e não uma cópia dela.
-
-    Com a cópia, a tela poderia apagar um botão que o gesto aceita, ou deixar
-    aceso um que ele recusa. É a cicatriz que o `mic-modo` desta aba já carrega
-    escrita no gesto.
-
-    MORDE: escreva a condição à mão (`"audio" not in c`) e mude a regra do
-    motor — este caso reprova comparando as duas frases.
-    """
+    """A frase do `?` é a MESMA que o gesto levanta — e não uma cópia dela."""
     from hefesto_dualsense4unix.app.widgets.controller_card import acao_mic
 
     sem_leitura = {**BASE, "audio": {}}
@@ -341,13 +239,7 @@ def test_com_leitura_o_botao_do_microfone_nao_fica_cinza() -> None:
 
 
 def test_a_razao_do_alto_falante_aponta_para_o_deslizante() -> None:
-    """A frase do ♪ manda para o que DESTRAVA o botão, e ele existe desde a D-08.
-
-    A do motor (`DICA_SPEAKER_SEM_DADO`) mandava *"use o controle deslizante
-    primeiro"* quando esta janela não tinha deslizante nenhum — mandar alguém a
-    um controle que não está na tela é pior que não dizer nada. Hoje ele existe,
-    e a frase daqui aponta para ele.
-    """
+    """A frase do ♪ manda para o que DESTRAVA o botão, e ele existe desde a D-08."""
     razao = a02.porques_do_som({**BASE, "speaker": {}})["alto-porque"]
     assert razao == a02.DICA_ALTO_SEM_POSSE
     assert "deslizante" in razao or "Arraste" in razao
@@ -359,18 +251,11 @@ def test_com_volume_conhecido_o_alto_falante_nao_fica_cinza() -> None:
 
 
 def test_as_duas_razoes_chegam_ao_card() -> None:
-    """O caminho inteiro — o pacote emite os dois `?` no card daquele controle.
-
-    MORDE: tire o `**porques_do_som(c)` do pintor e os dois botões voltam a
-    descobrir a recusa DEPOIS do clique, que é a queixa inteira da D-03.
-    """
+    """O caminho inteiro — o pacote emite os dois `?` no card daquele controle."""
     campos = _card({"audio": {}, "speaker": {}})
     assert campos["mic-porque"] and campos["alto-porque"]
 
 
-# ===========================================================================
-# 4. A ROTA LÊ AS DUAS CAMADAS — decisão [09]
-# ===========================================================================
 BYTE_PC = audio_saida.BYTE_TODO_O_SOM_DO_PC
 BYTE_JOGO = audio_saida.BYTE_SONS_DO_JOGO
 SINK = "alsa_output.usb-Sony-DualSense"
@@ -378,13 +263,7 @@ SINK = "alsa_output.usb-Sony-DualSense"
 
 @pytest.fixture(autouse=True)
 def _camada_1_parada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A camada 1 NÃO conversa com o PipeWire desta máquina durante a suíte.
-
-    O cache é o ponto de injeção da régua (o mesmo desenho do `_LENTO` da
-    `a09_sistema`), e `_CAMADA_1_EM_VOO` travado em `True` impede a thread de
-    nascer. Uma régua que esperasse a leitura de verdade seria uma corrida —
-    e corrida na suíte é vermelho que aparece uma vez em dez.
-    """
+    """A camada 1 NÃO conversa com o PipeWire desta máquina durante a suíte."""
     monkeypatch.setattr(a02, "_CAMADA_1", {})
     monkeypatch.setattr(a02, "_CAMADA_1_EM_VOO", [True])
     monkeypatch.setattr(a02, "_CAMADA_1_QUANDO", [0.0])
@@ -412,16 +291,7 @@ def test_o_byte_do_pc_com_a_saida_no_controle_acende_pc() -> None:
 
 
 def test_o_desacordo_nao_vira_mais_frase_no_cartao() -> None:
-    """A ressalva do alto-falante SAIU — 22/09/2026, ordem dela.
-
-    *"o alto-falante deste controle está roteado para receber todo o som (…)
-    não esquece de remover isso viu"*. O motor que compõe a frase continua de
-    pé para o ensaio; o cartão não a carrega mais, e a página não tem mais o
-    endereço.
-
-    MORDIDA: devolva `"alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER`
-    ao pintor e esta régua reprova.
-    """
+    """A ressalva do alto-falante SAIU — 22/09/2026, ordem dela."""
     _com_camada_1(byte=BYTE_PC, sink_do_controle=SINK, sink_padrao="hdmi")
     campos = _card({"speaker": {"volume": 102, "muted": False, "rota": BYTE_PC}})
     assert "alto-ressalva" not in campos, campos.get("alto-ressalva")
@@ -433,25 +303,12 @@ def test_o_desacordo_nao_vira_mais_frase_no_cartao() -> None:
 
 
 def test_sem_a_camada_1_lida_o_byte_ainda_responde() -> None:
-    """O cache vazio é o estado dos primeiros tiques — e ali sobra o byte.
-
-    Apagar os dois botões durante dois segundos afirmaria uma ignorância que
-    não existe: o byte é um fato lido, e é metade da resposta.
-    """
+    """O cache vazio é o estado dos primeiros tiques — e ali sobra o byte."""
     assert a02.aceso_da_rota(UNIQ, {"speaker": {"rota": BYTE_JOGO}}) == "jogo"
 
 
 def test_o_pintor_nao_conversa_com_o_pipewire_no_tique() -> None:
-    """A leitura é BLOQUEANTE e nunca roda no laço da janela.
-
-    `pactl` num pintor de 10 Hz trava a janela dela — é por isso que o
-    `ipc_bridge.run_in_thread` existe, e é o que a ONDA1-D1 escreveu com todas
-    as letras sobre esta leitura.
-
-    MORDE: devolva a primeira leitura ao caminho SÍNCRONO (era assim na
-    primeira redação) e este caso reprova, porque o pintor passa a chamar
-    `ler_as_duas_camadas` de dentro do tique.
-    """
+    """A leitura é BLOQUEANTE e nunca roda no laço da janela."""
     chamou: list[Any] = []
 
     def nao_deveria(*a: Any, **kw: Any) -> Any:
@@ -467,16 +324,8 @@ def test_o_pintor_nao_conversa_com_o_pipewire_no_tique() -> None:
     assert not chamou
 
 
-# ===========================================================================
-# 5. O MICROFONE É UM ATO SÓ — S-05, a D-12 dela
-# ===========================================================================
 def test_o_gesto_chama_o_ato_e_nao_a_metade_do_firmware() -> None:
-    """O 🎙 manda `mic.canal.set`, e o `ligado` é o INVERSO do mudo de agora.
-
-    MORDE: volte para `p.mic_set(not agora, uniq=uniq)` e este caso reprova
-    nomeando a função — o botão volta a pedir só a metade do firmware, e a
-    resposta perde a notícia de qual metade faltou.
-    """
+    """O 🎙 manda `mic.canal.set`, e o `ligado` é o INVERSO do mudo de agora."""
     p = PonteEstrita(mic_canal_set_detalhado={"status": "ok"})
     a02.mudo(_ctx({"audio": {"mic_mudo": True}}),
              {"uniq": UNIQ, "mudo": "microfone"}, p)
@@ -492,16 +341,7 @@ def test_o_clique_num_microfone_no_ar_pede_para_desligar() -> None:
 
 
 def test_meio_ato_vira_a_frase_do_dono_no_cartao() -> None:
-    """Modo Nativo: o canal foi eleito e o firmware ficou represado.
-
-    A FRASE É A DO DAEMON, e a decisão de a mostrar é a razão inteira desta
-    troca: um `RuntimeError` genérico devolveria o *"não deu"* que não diz nada
-    a quem está com o controle na mão.
-
-    MORDE: troque `frase_do_ato_do_microfone(corpo)` por um `if corpo.get(
-    "status") != "ok"` com frase própria, e este caso reprova comparando o
-    texto — a tela passa a inventar a razão em vez de repetir a do daemon.
-    """
+    """Modo Nativo: o canal foi eleito e o firmware ficou represado."""
     motivo = ("o microfone foi ligado no canal deste controle, mas o Hefesto "
               "não conseguiu escrever o mudo no aparelho")
     p = PonteEstrita(mic_canal_set_detalhado={
@@ -514,13 +354,7 @@ def test_meio_ato_vira_a_frase_do_dono_no_cartao() -> None:
 
 
 def test_daemon_calado_continua_dizendo_daemon_calado() -> None:
-    """`None` é o serviço que não respondeu, e a frase dele é outra.
-
-    **A PALAVRA DA TELA É «HEFESTO» — 11/09/2026, A3-056, aprovada por ela.**
-    `daemon` é o nome INTERNO do Hefesto, e as duas apareciam na MESMA frase
-    como se fossem duas coisas. Esta régua cravava *"Hefesto está parado"*, a
-    redação de ontem, e teria reprovado a troca em vez do defeito.
-    """
+    """`None` é o serviço que não respondeu, e a frase dele é outra."""
     p = PonteEstrita(mic_canal_set_detalhado=None)
     with pytest.raises(RuntimeError) as erro:
         a02.mudo(_ctx({"audio": {"mic_mudo": True}}),
@@ -531,9 +365,6 @@ def test_daemon_calado_continua_dizendo_daemon_calado() -> None:
         f"a tela voltou a chamar o Hefesto de «daemon»: {frase!r}")
 
 
-# ===========================================================================
-# 6. O MUDO QUE CAIU NO CONTROLE ERRADO — decisão [08]
-# ===========================================================================
 def test_o_volume_do_microfone_confessa_quando_cai_na_rota_global() -> None:
     """`por_uniq: False` — o daemon mexeu no microfone de OUTRA pessoa.
 
@@ -569,38 +400,19 @@ def test_honrado_e_nao_sei_nao_confessam(por_uniq: bool | None) -> None:
 
 
 def test_o_duble_estrito_recusa_um_nome_que_a_ponte_nao_tem() -> None:
-    """A régua da RÉGUA — a cicatriz de 04/09, em forma de caso.
-
-    Duas vezes num dia um gesto passou VERDE sem gravar um byte porque o dublê
-    do teste era mais frouxo que a ponte real. Este caso é o que impede a
-    terceira: se alguém escrever `p.mic_canal_setx(...)` num gesto, o dublê
-    daqui levanta em vez de responder `True`.
-    """
+    """A régua da RÉGUA — a cicatriz de 04/09, em forma de caso."""
     with pytest.raises(AttributeError):
         PonteEstrita().mic_canal_setx()
 
 
 def test_a_ponte_expoe_o_que_esta_aba_declara() -> None:
-    """Todo nome em `PONTE` existe de verdade — um nome inventado morre aqui,
-    e não na mão de quem clica.
-    """
+    """Todo nome em `PONTE` existe de verdade — um nome inventado morre aqui,"""
     import hefesto_dualsense4unix.interface.pacotes.ponte as ponte_real
 
     faltam = [n for n in a02.PONTE if not hasattr(ponte_real, n)]
     assert not faltam, f"a ponte não expõe: {faltam}"
 
 
-# ===========================================================================
-# 7. A DEGRADAÇÃO DA MÁSCARA SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01
-# ===========================================================================
-# As duas réguas que cobravam `mascara-degradou` no card viraram a que cobra a
-# AUSÊNCIA dele, em
-# `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`.
-
-
-# ===========================================================================
-# 8. O QUE O NAVEGADOR DESENHA — a parte que LÊ a tela
-# ===========================================================================
 O_QUE_O_NAVEGADOR_DESENHA = r"""
 (() => {
   const card = document.querySelector('.ctl.card[data-controle]');
@@ -692,18 +504,8 @@ def desenhado() -> dict[str, Any]:
 
 
 def test_o_botao_de_som_apaga_e_ainda_assim_responde(desenhado: dict[str, Any]) -> None:
-    """As duas metades que nenhuma sozinha prova: CINZA e CLICÁVEL.
-
-    MORDE: comente `.vol[data-porque] .mudo-i{…}` no CSS desta aba e a primeira
-    asserção reprova — a tela em repouso volta a não distinguir o botão que
-    funciona do que vai recusar, que é a queixa inteira da D-03.
-    """
+    """As duas metades que nenhuma sozinha prova: CINZA e CLICÁVEL."""
     antes, depois = desenhado["botao_antes"], desenhado["botao_depois"]
-    # A BORDA É O QUE MUDA, E NÃO A COR — medido neste motor, e é a mesma
-    # descoberta que a ONDA0-F fez sobre o `.seg button:disabled`: o `.mudo-i`
-    # JÁ NASCE em `--texto-mudo`, então não há cor a apagar. Quem diz "travado"
-    # nesta gramática é a borda (de `--border-forte` para `--border-sutil`) e o
-    # cursor. Uma asserção sobre a COR reprovaria sobre a folha certa.
     assert depois["borda"] != antes["borda"], (
         f"o botão com razão tem a MESMA borda do clicável ({antes['borda']}) — "
         f"a tela em repouso não distingue os dois")
@@ -715,10 +517,6 @@ def test_o_botao_de_som_apaga_e_ainda_assim_responde(desenhado: dict[str, Any]) 
         "navega pelo controle até a razão")
     assert not desenhado["botao_tem_disabled"], (
         "o `disabled` voltou: ele mata o clique, e o PO decidiu o contrário")
-    # O `?` SEGUE O MESMO ATRIBUTO, e este par saiu da FOTO: com o campo vazio
-    # o piloto escreve o travessão no `innerHTML` da dica, ela deixa de ser
-    # `:empty`, e o `?` apareceu na tela **com um `—` dentro**, ao lado de dois
-    # botões clicáveis.
     assert desenhado["porque_sem"]["display"] == "none", (
         "o `?` apareceu ao lado de um botão que NÃO está apagado — um `?` sem "
         "nada a explicar é ruído com cara de dado")
@@ -727,12 +525,7 @@ def test_o_botao_de_som_apaga_e_ainda_assim_responde(desenhado: dict[str, Any]) 
 
 
 def test_o_casco_fica_fora_e_a_luz_viva_dentro(desenhado: dict[str, Any]) -> None:
-    """D-06 / S-11 — dois anéis, duas perguntas, e eles não se disputam.
-
-    MORDE: tire o `<span class="anel-vivo">` do gerador e a régua reprova na
-    contagem dos dois elementos do mesmo endereço; tire a regra de CSS e o anel
-    deixa de mudar de cor.
-    """
+    """D-06 / S-11 — dois anéis, duas perguntas, e eles não se disputam."""
     assert desenhado["anel_apagado"] != desenhado["anel_aceso"], (
         "o anel interno não seguiu a cor de linha — ele deixou de ser a luz "
         "viva e virou desenho")
@@ -747,17 +540,11 @@ def test_o_casco_fica_fora_e_a_luz_viva_dentro(desenhado: dict[str, Any]) -> Non
 
 
 def test_o_acordeao_publica_o_decimo_alvo(desenhado: dict[str, Any]) -> None:
-    """T-07 — o alvo `marcado` existe no piloto desde a ONDA0-P; o ENDEREÇO é
-    desta aba, e é por ele que a régua do mockup passa a saber qual card está
-    aberto.
-    """
+    """T-07 — o alvo `marcado` existe no piloto desde a ONDA0-P; o ENDEREÇO é"""
     assert desenhado["radio_alvo"] == "marcado"
     assert desenhado["radio_campo"] == "card-aberto"
 
 
-# ===========================================================================
-# 9. O MARCADOR É O MESMO DAS DUAS CASAS
-# ===========================================================================
 def test_o_nada_a_dizer_nao_divergiu_do_da_folha() -> None:
     """A cópia declarada do `monta.NADA_A_DIZER` — e a régua que a segura.
 
@@ -772,33 +559,6 @@ def test_o_nada_a_dizer_nao_divergiu_do_da_folha() -> None:
     assert a02.NADA_A_DIZER == monta.NADA_A_DIZER
 
 
-# ===========================================================================
-# 10. O ♪ EM DUAS CORES, E AS DUAS DICAS COM SAÍDA — 02-Q9 e 02-Q6 (06/09/2026)
-# ===========================================================================
-# ELA MARCOU *"O botão de som acende"* e digitou por cima *"Com cor
-# diferente"*; na segunda volta fechou o que isso quer dizer: **borda VERDE se
-# ligado, ÂMBAR se desligado**. São DOIS estados pintados, e o que havia era um
-# e meio — MUDO pintava `--red` (a cor da FALHA nesta casa) e ATIVO ficava com
-# a mesma cara de "não sei".
-#
-# **AS CORES NÃO SE DIGITAM.** Uma régua com `#50fa7b` escrito dentro mede o
-# próprio teste, não o produto — é a lição das onze réguas de 26/08 que
-# *digitavam o que deviam LER*. O par de sonda abaixo pergunta as duas cores à
-# MESMA página, pelo MESMO motor que pinta o botão, e já as recebe
-# normalizadas em `rgb(...)`: comparar hexadecimal com `borderTopColor`
-# computado é comparar duas grafias e chamar isso de medição.
-#
-# **E QUEM PINTA É O PILOTO DE VERDADE.** A régua injeta o
-# `hefesto_vivo.BOOTSTRAP` — o mesmo texto que a janela dela executa — e chama
-# `window.__hef.pintar`, que é o caminho do tique. Uma régua que pusesse o
-# `data-som` com a própria mão passaria intacta se o alvo `atributo` recusasse
-# o nome, se o `data-hef-atributo` sumisse do botão, ou se o piloto escrevesse
-# a palavra como TEXTO dentro do glifo. Só o carteiro é dublê (este motor é o
-# Chrome, e `window.webkit` não existe nele).
-#
-# **E ELA VIVE NO TEMPO.** Uma régua que pinta um valor mede um INSTANTE: a
-# sequência abaixo é a de um controle que entra sem leitura, recebe volume e é
-# calado — `—`, `ATIVO`, `MUDO`, `ATIVO`, `—` em tiques seguidos.
 O_SOM_EM_TRES_ESTADOS = r"""
 (() => {
   const card = document.querySelector('[data-controle="p1"]');
@@ -889,8 +649,6 @@ def som() -> dict[str, Any]:
         try:
             pg = navegador.new_page(viewport={"width": 1180, "height": 900})
             pg.goto(alvo.as_uri())
-            # O CARTEIRO É O ÚNICO DUBLÊ, e ele é do MOTOR e não do produto: no
-            # WebKit da janela dela `window.webkit` existe; no Chrome, não.
             pg.evaluate("window.__cartas = [];"
                         "window.webkit = {messageHandlers: {hefesto: {"
                         "postMessage: s => window.__cartas.push(JSON.parse(s))}}};")
@@ -903,15 +661,7 @@ def som() -> dict[str, Any]:
 
 def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
         som: dict[str, Any]) -> None:
-    """02-Q9 — *"borda VERDE se ligado, ÂMBAR se desligado"*, e o cinza de "não sei".
-
-    MORDE: troque o `--orange` da regra do MUDO por `--green` no gerador,
-    regere a bancada, e a segunda asserção reprova dizendo que os dois estados
-    do ♪ pintam a mesma cor.
-    """
-    # AS PALAVRAS VÊM DO DONO — 19/09/2026. Digitá-las aqui foi o que fez esta
-    # régua reprovar quando ela mandou o alto-falante e o microfone falarem a
-    # mesma língua: o CSS do gerador já lê `mesa_viva`, e o teste não lia.
+    """02-Q9 — *"borda VERDE se ligado, ÂMBAR se desligado"*, e o cinza de "não sei"."""
     import mesa_viva
 
     por_valor = {t["valor"]: t for t in som["por_tique"]}
@@ -924,15 +674,11 @@ def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
     assert por_valor[mesa_viva.ATIVO]["borda"] != por_valor[mesa_viva.DESLIGADO]["borda"], (
         "os dois estados do ♪ pintam a MESMA cor — a tela voltou a não "
         "distinguir o alto-falante que toca do que está calado")
-    # O TERCEIRO ESTADO NÃO SE DESENHA: o travessão APAGA o atributo, e o botão
-    # cai no `.mudo-i` de base. É a resposta certa para "ninguém leu o
-    # alto-falante deste controle".
     assert por_valor["—"]["som"] is None, (
         "o travessão não apagou o `data-som` — um controle sem leitura ficaria "
         "afirmando um estado que ninguém mediu")
     assert por_valor["—"]["borda"] not in (som["verde"], som["ambar"]), (
         "o ♪ sem leitura pintou uma das duas cores de estado")
-    # E O `--red` SAIU: um alto-falante calado por escolha dela não é falha.
     assert som["vermelho"] not in (por_valor["ATIVO"]["borda"],
                                    por_valor[mesa_viva.DESLIGADO]["borda"],
                                    por_valor["—"]["borda"]), (
@@ -943,16 +689,7 @@ def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
 
 
 def test_o_cinza_da_razao_vence_o_verde_do_ativo(som: dict[str, Any]) -> None:
-    """Um botão que o produto VAI RECUSAR não pode aparecer verde.
-
-    A vitória é por ESPECIFICIDADE e não por ordem — `.vol[data-porque]
-    .mudo-i` é (0,3,0) contra os (0,2,0) das duas regras novas —, e por isso
-    ela se confere na FOTO e não na conta.
-
-    MORDE: troque `.vol[data-porque] .mudo-i` por `.mudo-i[data-porque]` no
-    gerador (que casa o atributo no botão, e o `data-porque` mora na linha) e a
-    primeira asserção reprova: o botão que o daemon recusa fica verde.
-    """
+    """Um botão que o produto VAI RECUSAR não pode aparecer verde."""
     assert som["cinza_com_ativo"] != som["verde"], (
         "o ♪ apagado pela razão pintou o verde do ATIVO — a tela oferece "
         "em cor cheia um botão que o produto vai recusar")
@@ -963,18 +700,7 @@ def test_o_cinza_da_razao_vence_o_verde_do_ativo(som: dict[str, Any]) -> None:
 
 def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
         som: dict[str, Any]) -> None:
-    """O CLIQUE e a RESPOSTA, e a resposta é a do tique seguinte.
-
-    A decisão desta frente, registrada: **o ♪ não recebe a piscada da 03-Q4.**
-    A mudança da borda de âmbar para verde É o recibo — ela acontece no tique
-    seguinte, é permanente, e um pisca por cima seria um segundo sinal para o
-    mesmo fato. Quem construir o pisca precisa saber disto: se ele nascer
-    aplicado a todo `data-campo` de gesto, ele cai no ♪ sozinho.
-
-    MORDE: tire o `data-gesto="mudo"` do ♪ no gerador e a primeira asserção
-    reprova — o clique chega ao despachante chamando-se `clique`, disputando
-    nome com os interruptores de sensor da mesma aba.
-    """
+    """O CLIQUE e a RESPOSTA, e a resposta é a do tique seguinte."""
     assert len(som["cartas"]) == 1, (
         f"o clique no ♪ não saiu UMA vez: {som['cartas']}")
     carta = som["cartas"][0]
@@ -983,16 +709,12 @@ def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
     assert carta["controle"] == "p1", (
         "o clique saiu sem dizer em QUAL controle — sem alvo o gesto não sabe "
         "qual alto-falante calar")
-    # A SEQUÊNCIA INTEIRA, e ela é a de um controle que entra sem leitura,
-    # recebe volume e é calado. Uma régua que pintasse um valor só mediria um
-    # instante.
     bordas = [t["borda"] for t in som["por_tique"]]
     assert bordas[1] == bordas[3], (
         "o ♪ não voltou ao verde depois de passar pelo âmbar — a cor ficou "
         "presa no estado anterior")
     assert bordas[0] == bordas[4], (
         "o ♪ não voltou ao neutro quando a leitura sumiu de novo")
-    # E A PALAVRA NÃO ENTRA NO BOTÃO: o alvo `atributo` existe para isso.
     assert som["texto_do_botao"] == "♪", (
         f"o piloto escreveu {som['texto_do_botao']!r} dentro do botão, no "
         f"lugar do glifo — o alvo deixou de ser `atributo`")
@@ -1001,30 +723,7 @@ def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
 
 
 def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
-    """A mentira vermelha do 🎙 saiu — e o que a substituiu é um sinal VIVO.
-
-    O defeito de 06/09 era a cor que o GERADOR escrevia uma vez e valia para
-    sempre: o 🎙 do segundo card ficava vermelho independentemente do aparelho,
-    porque não havia `data-campo` e o piloto nunca o visitava.
-
-    **A SEGUNDA METADE DESTA RÉGUA CADUCOU EM 10/09/2026, e por decisão DELA.**
-    Ela dizia *"uma borda viva no 🎙 seria um SEGUNDO sinal para o que o selo
-    ao lado já diz"*, e a cura de então foi TIRAR o sinal. O pedido dela de
-    10/09 é o oposto, e com a razão junto: *"invertemos o botão mic, ele aceso
-    (vai indicar que agora tá gravando audio), ele captando audio vai ficar no
-    estado de piscando (**guia visual pro leigo que pegar o controle de
-    primeira**)"*.  <!-- noqa-acento: citação literal dela -->
-
-    O selo é PALAVRA e o botão é FORMA, e quem pega o controle pela primeira
-    vez lê a forma. A lição que sobrevive inteira é a outra — **a cor não pode
-    vir do gerador** —, e é ela que esta régua passa a medir dos dois lados:
-    o 🎙 nasce sem classe de cor E com endereço, para que quem o pinte seja o
-    aparelho, a cada tique.
-
-    MORDE: devolva o `mic_on` ao gerador (a cor congelada volta e a primeira
-    parte reprova); ou tire o `data-campo` do 🎙 (o sinal morre e a segunda
-    reprova).
-    """
+    """A mentira vermelha do 🎙 saiu — e o que a substituiu é um sinal VIVO."""
     assert som["mics"], "a régua não achou 🎙 nenhum — ela mediria o vazio"
     for i, m in enumerate(som["mics"], start=1):
         assert m["classe"].strip() == "mudo-i", (
@@ -1041,29 +740,8 @@ def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
         "nada sobre nenhum dos dois")
 
 
-# ---------------------------------------------------------------------------
-# 02-Q6 — o aviso aponta para uma saída QUE EXISTE
-# ---------------------------------------------------------------------------
 def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
-    """As duas dicas mandavam para uma janela sem lançador desde 01/09/2026.
-
-    A janela do aplicativo completo perdeu o lançador por decisão dela, e o
-    botão "Soltar" continua no código sem que nada o abra. A língua desta casa
-    proíbe em texto de tela *"qualquer frase que mande a pessoa procurar um
-    botão ou uma janela que não existe"*.
-
-    **E O COMANDO DE TERMINAL SAIU DAS DUAS — 11/09/2026, A3-043 e A3-044,
-    aprovadas por ela.** Até aqui esta régua cobrava `"speaker release"` e
-    `"mic release"` DIGITADOS dentro das dicas, e teria reprovado exatamente a
-    melhora que ela pediu: *uma linha de comando não é texto de tela* — é a
-    primeira proibição da língua desta casa. O que se mede agora é o ATO: a
-    dica não manda ninguém para uma janela nem para um terminal, e a saída que
-    sobra no 🎙 é a que ela pode executar com o mouse.
-
-    MORDE: devolva o texto velho (`"a volta é pela janela do aplicativo"`) e a
-    primeira asserção reprova achando a palavra `janela`; devolva o
-    `hefesto-dualsense4unix speaker release` e a segunda reprova.
-    """
+    """As duas dicas mandavam para uma janela sem lançador desde 01/09/2026."""
     for nome, dica in (("🎙", a02_gerador.DICA_MIC_TESTAR),
                        ("♪", a02_gerador.DICA_ALTO_MUDO)):
         assert "janela" not in dica.lower(), (
@@ -1072,65 +750,22 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
             f"a dica do {nome} voltou a pôr uma linha de comando na tela — "
             f"a língua desta casa a proíbe em texto de tela: {dica!r}")
 
-    # A ASSERÇÃO DO «reinicie o Hefesto» CADUCOU COM O ATO — 20/09/2026.
-    # Ela cobrava que a dica do 🎙 dissesse como devolver o botão do controle,
-    # porque o 🎙 o CONFISCAVA até o reinício. O botão deixou de calar, por
-    # ordem dela: *"não precisamos dele mais na interface pq o botão do
     # proprio  # noqa-acento: citação literal dela
     # controle já o faz e ele reflete isso"*.  <!-- noqa-acento: citação literal dela -->
-    # Sem confisco não há o que devolver, e cobrar a frase manteria na tela uma
-    # saída para um problema que o produto não cria mais.
-    #
-    # O QUE SOBRA NO LUGAR, e é o que esta régua passa a medir: a dica tem de
-    # APONTAR ONDE SE CALA. Tirar o ato da tela sem dizer para onde ele foi
-    # deixaria quem lê procurando um botão que não existe — a primeira
-    # proibição da língua desta casa.
     assert "controle" in a02_gerador.DICA_MIC_TESTAR.lower(), (
         "a dica do 🎙 não diz mais onde se cala o microfone — o ato saiu da "
         "tela e quem lê precisa saber que ele está no plástico")
 
 
 def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
-    """A decisão 02-Q6 dela não muda: **sem botão novo no cartão.**
-
-    O que mudou é para ONDE o aviso aponta. Esta régua é a que impede a leitura
-    fácil — *"então põe um Devolver"* — de entrar pela porta dos fundos, e ela
-    é a mesma que segurou o "Liberar" em 31/08.
-
-    **ELA OLHA O MIOLO, NÃO A PÁGINA**, e a diferença foi medida ao escrevê-la:
-    a LEGENDA tem uma lápide que NOMEIA o "Liberar" para dizer que ele saiu
-    (`.nota li.foi`), e essa é a única licença desta aba para citar um termo que
-    o desenho não escreve. Uma régua sobre a página inteira reprovaria o
-    registro do que foi removido — que é o contrário do que ela existe para
-    proteger.
-    """
+    """A decisão 02-Q6 dela não muda: **sem botão novo no cartão.**"""
     for proibido in (">Soltar<", ">Liberar<", ">Devolver<"):
         assert proibido not in a02_gerador.MIOLO, (
             f"um botão {proibido} nasceu no cartão — ela decidiu que ele fica "
             f"fora, com aviso")
 
 
-# ===========================================================================
-# 9. O GIROSCÓPIO NO JOGO, E A PALAVRA DO TRANSPORTE — CONTROLES-VERDADE-01
-# ===========================================================================
-# *"Numa mesa de quatro, o cartão é o único lugar onde se descobre por que um
-# controle não está fazendo nada."* O que a tela mostrava sobre o giroscópio era
-# um NÚMERO DE CATÁLOGO — "No cabo são 250,0 Hz exatos", na dica do interruptor,
-# igual para todo controle e todo momento. Estas réguas cobram o número MEDIDO.
-#
 # A SPRINT PEDIA A LINHA DA VERDADE (`resumo_do_que_chega_ao_jogo`) E A MEDIÇÃO
-# A DERRUBOU. Aquela linha saiu da tela da GTK em 17/08/2026 a pedido dela
-# (*"remover guia dos status em tempo real"*): `controller_card.py:2916` diz que
-# ela é criada, alimentada e nunca empacotada, e o `paridade-gtk-html.csv:56`
-# avisa que reconstruí-la aqui seria reintroduzir o que ela mandou tirar. Quem
-# ocupa aquele lugar na GTK dela É esta frase (`controller_card.py:2770`).
-# A dívida VIVA é a linha 55 do mesmo CSV, e é a única da família sem segunda
-# metade — ou seja, sem pergunta pendente para ela.
-#
-# NENHUMA FRASE ESTÁ DIGITADA AQUI, e é a instrução literal da sprint: *"se o
-# seu teste escrever a frase esperada à mão, ele mede a sua digitação, não o
-# produto. Importe a constante do dono e compare com ela."* Onze réguas desta
-# casa caíram em 26/08 pela forma oposta.
 from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte,
 )
@@ -1162,9 +797,6 @@ def _a_frase_mais_larga_do_giroscopio() -> str:
     assert len(frases) == len(cenas), "uma das três formas do dono calou"
     return max(frases, key=len)
 
-#: O ESPELHO DE GIROSCÓPIO VIVO — o único bloco do estado global de que a linha
-#: precisa para sair do silêncio. Sem `per_vpad` não há gamepad virtual, e o dono
-#: devolve `None` de propósito.
 def _com_vpad(hz: float | None = 250.0, **extra: Any) -> dict[str, Any]:
     item: dict[str, Any] = {"player": 1, "motion_streaming": True}
     if hz is not None:
@@ -1189,11 +821,7 @@ def test_a_linha_do_giroscopio_e_a_do_dono_palavra_por_palavra() -> None:
 
 
 def test_as_situacoes_dizem_frases_diferentes_no_cartao() -> None:
-    """Fluindo com hertz, fluindo sem hertz, e sem espelho — três respostas.
-
-    Uma tela que diz a MESMA coisa nos três estados não informa nada, e é assim
-    que uma linha desta família passa verde sobre um card mudo.
-    """
+    """Fluindo com hertz, fluindo sem hertz, e sem espelho — três respostas."""
     com_hz = _card({}, state=_com_vpad())
     sem_hz = _card({}, state=_com_vpad(hz=None))
     sem_espelho = _card({}, state={})
@@ -1226,12 +854,7 @@ def test_a_excecao_do_modo_nativo_chega_ao_cartao() -> None:
 
 
 def test_a_excecao_da_mascara_xbox_chega_ao_cartao() -> None:
-    """A máscara Xbox apaga três recursos, e o motivo NÃO é defeito nosso.
-
-    MORDE: arranque o ramo `_mascara_e_xbox` do dono e o cartão volta a calar
-    sob a máscara — mostrando o giroscópio desenhado e nenhum sinal de que o
-    dado não sai dali.
-    """
+    """A máscara Xbox apaga três recursos, e o motivo NÃO é defeito nosso."""
     estado = {**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}}
     frase = _card({}, state=estado)["giro-no-jogo"]
     assert frase == texto_motion({**BASE}, estado)
@@ -1243,15 +866,7 @@ def test_a_excecao_da_mascara_xbox_chega_ao_cartao() -> None:
 
 
 def test_o_hertz_da_linha_e_medido_e_nunca_cravado() -> None:
-    """O número sai do `motion_hz` do vpad; zero não vira "~0 Hz".
-
-    O §Passo 3 da sprint é explícito — *"não crave número"*. Esta régua troca o
-    hertz no dublê e exige que a frase acompanhe; e com hertz zero exige que a
-    frase deixe de afirmar frequência nenhuma.
-
-    MORDE: escreva um número fixo na frase do dono e as duas primeiras
-    asserções caem; devolva o `~0 Hz` e cai a terceira.
-    """
+    """O número sai do `motion_hz` do vpad; zero não vira "~0 Hz"."""
     a = _card({}, state=_com_vpad(250.0))["giro-no-jogo"]
     b = _card({}, state=_com_vpad(61.0))["giro-no-jogo"]
     assert a != b, "o hertz do cartão não acompanhou o do aparelho — está cravado"
@@ -1268,7 +883,7 @@ def test_a_linha_da_verdade_continua_fora_do_cartao() -> None:
 
     *"remover guia dos status em tempo real"* — `resumo_do_que_chega_ao_jogo`
     saiu da tela da GTK naquele dia (SEM-BARRA-DA-VERDADE-01) e continua criada,
-    alimentada e nunca empacotada (`controller_card.py:2916`). A sprint
+    alimentada e nunca empacotada (`controller_card.py:1688`). A sprint
     CONTROLES-VERDADE-01 pedia para reconstruí-la aqui; a célula inteira do
     `paridade-gtk-html.csv:56` diz que isso *"seria reintroduzir o que ela
     mandou tirar"*, e o enunciado foi corrigido em vez de cumprido.
@@ -1292,9 +907,6 @@ def test_a_linha_da_verdade_continua_fora_do_cartao() -> None:
         f"é reintroduzir o que ela removeu")
 
 
-# --------------------------------------------------------------------------
-# A PALAVRA DO TRANSPORTE — e o defeito vivo que ela cura
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_cabecalho_do_cartao_pergunta_a_palavra_ao_dono(
         transporte: str) -> None:
@@ -1338,23 +950,11 @@ def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:
             f"o cartão escreveu {card['peca']!r} como NOME de um controle que "
             f"só tem transporte — o cabeçalho diria o transporte duas vezes, "
             f"ao lado de {card['via']!r}")
-    # E O NOME DE VERDADE NÃO PODE SER ENGOLIDO PELA MESMA GUARDA.
     com_nome = _card({"transport": "bt", "modelo": "Cosmic Red"})
     assert com_nome["peca"] == "Cosmic Red", (
         "a guarda do transporte duplicado comeu o nome do plástico")
 
 
-# --------------------------------------------------------------------------
-# A LINHA DO GIROSCÓPIO NA TELA — o Chrome do sistema, headless
-# --------------------------------------------------------------------------
-#: O QUE A PÁGINA RESPONDE SOBRE A LINHA DO GIROSCÓPIO. A régua acende e apaga o
-#: `aria-label` pelo MESMO caminho do produto (o alvo `atributo` do piloto
-#: escreve e REMOVE esse atributo), e não por uma classe posta à mão — medir uma
-#: classe que o produto não escreve mediria este arquivo.
-#:
-#: O ATRIBUTO ERA O `title` ATÉ 11/09/2026 (A3-050, aprovada por ela): ele era
-#: uma cópia exata do texto ao lado, e a `DICA_DA_CASA` colhe todo `title` do
-#: DOM vivo — então o antigo `[title]` da folha nem casava no produto.
 A_LINHA_DO_GIRO_NA_TELA = r"""
 ((A_MAIS_LARGA) => {
   const card = document.querySelector('.ctl.card[data-controle]');
@@ -1434,15 +1034,7 @@ def giro_na_tela() -> dict[str, Any]:
 
 
 def test_sem_frase_a_linha_do_giroscopio_esconde(giro_na_tela: dict[str, Any]) -> None:
-    """"Sem rótulo, esconde" é contrato, e não economia de pixel.
-
-    Um vão elástico vazio no meio do cabeçalho empurraria a bateria sem dizer
-    por quê — e o cartão de quatro controles não tem espaço para ruído.
-
-    MORDE: troque o `_aberto(" .faixa .verdade[title]")` da folha por
-    `_aberto(" .faixa .verdade")` e a segunda asserção reprova: o elemento
-    continua ocupando o vão com o `title` removido.
-    """
+    """"Sem rótulo, esconde" é contrato, e não economia de pixel."""
     assert not giro_na_tela.get("ausente"), (
         "o elemento da linha do giroscópio não está no desenho")
     assert giro_na_tela["com"]["display"] != "none", (
@@ -1455,34 +1047,8 @@ def test_sem_frase_a_linha_do_giroscopio_esconde(giro_na_tela: dict[str, Any]) -
 
 def test_a_frase_mais_larga_do_dono_cabe_em_uma_linha(
         giro_na_tela: dict[str, Any]) -> None:
-    """A maior frase que o dono sabe montar, dentro de um cabeçalho de uma linha.
-
-    A frase entra por `_a_frase_mais_larga_do_giroscopio()`, que monta as três
-    cenas do dono e deixa ELE dizer qual é a maior — digitar um texto de prova
-    aqui mediria esta régua.
-
-    E O VÃO É APERTADO A 120px DE PROPÓSITO. Com os 410px de hoje a frase cabe
-    inteira, e a cura fica sem exercício: o vão encolhe com o nome do plástico,
-    com a máscara e com a largura da janela dela, e é nesse dia que a folha tem
-    de segurar.
-
-    **AS DUAS PRIMEIRAS VERSÕES DESTA RÉGUA NÃO MEDIRAM NADA**, e o registro
-    fica porque a forma se repetiu: a primeira olhava a ALTURA DA FAIXA e a
-    DIREITA DA CAIXA, e as duas são seguradas por outra coisa — o
-    `flex:0 0 var(--h-acao)` da faixa é altura fixa, e o `min-width:0` já impede
-    o transbordo lateral. Com o
-    `ellipsis` e o `nowrap` ARRANCADOS ela passou verde. O que quebra de verdade
-    é o texto virar DUAS LINHAS num cabeçalho de uma: medido, 14px → 28px.
-
-    MORDE: tire o `text-overflow:ellipsis;white-space:nowrap` do `.verdade-t` e
-    a primeira asserção reprova com 2 linhas.
-    """
+    """A maior frase que o dono sabe montar, dentro de um cabeçalho de uma linha."""
     est = giro_na_tela["esticado"]
-    # O LIMIAR É 1,25 E NÃO 1,5, e o número saiu das duas medições: com a cura
-    # a razão é 1,0 (14px de texto em 14px de linha) e sem ela é 1,5 — o
-    # `scrollHeight` de duas linhas arredonda para 21. Um limiar EM CIMA do
-    # valor medido (`1.5 < 1.5`) é o mesmo que não ter limiar: qualquer
-    # arredondamento do motor de fontes o atravessa nos dois sentidos.
     assert est["linhas"] < 1.25, (
         f"a frase mais larga do dono ocupou {est['linhas']:.1f} linhas no "
         f"cabeçalho — ele tem uma só, de altura fixa, e o resto vaza por baixo")
@@ -1493,30 +1059,14 @@ def test_a_frase_mais_larga_do_dono_cabe_em_uma_linha(
 
 def test_a_frase_e_o_hover_sao_um_endereco_so(
         giro_na_tela: dict[str, Any]) -> None:
-    """Dois elementos, o MESMO `data-campo` — e nunca dois campos.
-
-    Dois endereços para o mesmo fato podem DIVERGIR na tela, que é o que esta
-    casa persegue. O `achar()` do piloto visita os dois com o mesmo valor e cada
-    um decide pelo próprio alvo.
-
-    MORDE: dê um `data-campo` próprio ao elemento de dentro e ela reprova.
-    """
+    """Dois elementos, o MESMO `data-campo` — e nunca dois campos."""
     assert giro_na_tela["um_endereco_so"] == 2, (
         f"a linha do giroscópio tem {giro_na_tela['um_endereco_so']} elementos "
         f"com o endereço `giro-no-jogo`; são dois — o que veste o "
         f"`data-no-jogo` e o que recebe o texto")
-    # E O HOVER NÃO REPETE O QUE ESTÁ ESCRITO — 11/09/2026, A3-050, aprovada
-    # por ela. Esta linha cobrava `title == texto`, ou seja, cobrava a CÓPIA
-    # EXATA que ela mandou tirar: passar o mouse mostrava o que ela acabou de
-    # ler. O que sobra de medível é a ausência dela.
     assert giro_na_tela["titulo"] is None, (
         f"a linha do giroscópio voltou a ter um `title` "
         f"({giro_na_tela['titulo']!r}) repetindo o texto que está ao lado dele")
-    # E A FRASE INTEIRA CONTINUA ALCANÇÁVEL. O `ellipsis` pode cortá-la numa
-    # janela estreita, e a casa exige que o cortado siga legível
-    # (`test_a_janela_estreita_nao_engole_o_desenho`, artigo 2). Quem a guarda
-    # agora é o `aria-label` — que não abre popup nenhum e ainda é o nome que
-    # o leitor de tela anuncia.
     assert giro_na_tela["rotulo"] == giro_na_tela["com"]["texto"], (
         f"o `aria-label` não é a frase do texto: "
         f"{giro_na_tela['rotulo']!r} contra {giro_na_tela['com']['texto']!r}")

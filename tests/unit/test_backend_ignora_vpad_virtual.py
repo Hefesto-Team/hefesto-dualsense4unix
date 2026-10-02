@@ -1,17 +1,4 @@
-"""O daemon não pode adotar o PRÓPRIO vpad uhid como controle físico.
-
-Regressão nova do SPRINT-UHID-VPAD-01: o vpad passou a ser um device HID de
-verdade, com **hidraw** e com VID/PID/bus idênticos ao controle real (é o que faz
-o `hid_playstation` fazer bind nele). O `_enumerate_device_keys` filtrava só por
-vendor/product — então enumerava o vpad como se fosse mais um controle: feedback
-loop (o daemon lendo a própria saída) e "3 controles" com dois na mesa.
-
-O `evdev_reader` já tinha o `_is_virtual_evdev` por essa exata razão; o caminho
-hidraw nunca precisou, porque uinput não cria hidraw.
-
-Medido ao vivo antes do fix: com o vpad no ar, o enumerate devolvia
-``('02:fe:00:00:00:02', b'/dev/hidraw7', False)`` — o MAC que nós mesmos forjamos.
-"""
+"""O daemon não pode adotar o PRÓPRIO vpad uhid como controle físico."""
 from __future__ import annotations
 
 import pytest
@@ -75,12 +62,7 @@ class TestIsVirtualHidraw:
 
 
 class TestBluezUhidFisicoNaoEVirtual:
-    """BLUEZ-UHID-01: com BlueZ ≥5.73 (UserspaceHID) o bluetoothd cria os HIDs
-    dos controles BT FÍSICOS via /dev/uhid — mesmo subtree do vpad. O critério
-    de topologia (`/devices/virtual/`) virou falso-positivo em massa: medido ao
-    vivo em 2026-07-19 (backport 5.85), os 4 controles BT ficaram invisíveis
-    (`connected: False` com 4 hidraws saudáveis). Identidade decide, não morada.
-    """
+    """BLUEZ-UHID-01: com BlueZ ≥5.73 (UserspaceHID) o bluetoothd cria os HIDs"""
 
     _UHID_BT = "/sys/devices/virtual/misc/uhid/0005:054C:0CE6.0015"
 
@@ -174,10 +156,7 @@ class TestEnumeracaoIgnoraOVpad:
     def test_vpad_edge_0df2_filtrado_mas_edge_fisico_adotado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """VPAD-04 (ressalva): 0x0DF2 está em `DUALSENSE_PIDS` porque o Edge
-        FÍSICO existe — o que separa o NOSSO vpad Edge (uhid E uinput nascem
-        0df2 agora) de um Edge de verdade é a ancestralidade virtual, nunca o
-        VID/PID."""
+        """VPAD-04 (ressalva): 0x0DF2 está em `DUALSENSE_PIDS` porque o Edge"""
         from hefesto_dualsense4unix.core import backend_pydualsense as bp
 
         class _Info:
@@ -201,5 +180,5 @@ class TestEnumeracaoIgnoraOVpad:
         chaves = bp.PyDualSenseController._enumerate_device_keys()
 
         assert [(k, edge) for k, _path, edge in chaves] == [
-            ("e8:47:3a:00:00:01", True)  # o Edge físico entra, flagado como Edge
+            ("e8:47:3a:00:00:01", True)
         ], "o vpad Edge (0df2) entrou na enumeração — feedback loop do UHID-02"

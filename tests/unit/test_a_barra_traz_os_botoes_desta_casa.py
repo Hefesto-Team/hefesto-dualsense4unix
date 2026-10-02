@@ -1,16 +1,4 @@
-"""A barra da janela traz TRÊS botões desta casa, e não os da decoração.
-
-BARRA-MAXIMIZADA-01, 4ª volta — 19/09/2026.
-
-**O QUE ESTA RÉGUA EXISTE PARA IMPEDIR:** que alguém devolva
-``set_show_close_button(True)`` por parecer mais simples. Ele delega os três
-botões à decoração do tema, e eles nascem **filhos internos** da ``HeaderBar``
-— invisíveis a ``get_children()``, só ``forall()`` os alcança. Sob o
-cosmic-comp maximizado, some o que eles desenham, enquanto o título continua na
-tela. Três voltas de cura de PINTURA não mudaram nada, porque não há nada
-errado do lado que ``queue_resize``/``queue_draw`` alcança: maximizada, a
-árvore responde três botões visíveis em x=1806, 1844 e 1882.
-"""
+"""A barra da janela traz TRÊS botões desta casa, e não os da decoração."""
 
 from __future__ import annotations
 
@@ -39,11 +27,7 @@ def test_sao_tres_botoes_com_gesto_dica_e_icone() -> None:
 
 
 def test_a_barra_nao_delega_os_botoes_a_decoracao() -> None:
-    """``set_show_close_button`` é chamado com ``False``, e só com ``False``.
-
-    A MORDIDA: trocar por ``True`` faz esta régua reprovar. Foi o que a leva
-    fez de propósito antes de entregar.
-    """
+    """``set_show_close_button`` é chamado com ``False``, e só com ``False``."""
     fonte = ponte_da_tela.__file__
     with open(fonte, encoding="utf-8") as arquivo:
         codigo = arquivo.read()

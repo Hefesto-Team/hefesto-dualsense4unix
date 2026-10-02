@@ -18,10 +18,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("launch wrapper dialog")
 
 import contextlib
@@ -81,18 +77,13 @@ def _decide(state: dict[str, Any] | None, **overrides: Any) -> tuple[str, str | 
     return wrapper_dialog_decision(state, **kwargs)
 
 
-# ---------------------------------------------------------------------------
-# extract_steam_appid — condição (b)
-# ---------------------------------------------------------------------------
-
-
 class TestExtractSteamAppid:
     @pytest.mark.parametrize(
         ("wm_class", "esperado"),
         [
             ("steam_app_1599660", "1599660"),
-            ("STEAM_APP_42", "42"),  # tolerante a caixa
-            ("  steam_app_7  ", "7"),  # tolerante a espaço acidental
+            ("STEAM_APP_42", "42"),
+            ("  steam_app_7  ", "7"),
             ("steam_app_", None),
             ("steam_app_abc", None),
             ("steam_app_12x", None),
@@ -100,34 +91,19 @@ class TestExtractSteamAppid:
             ("unknown", None),
             ("", None),
             (None, None),
-            (123, None),  # payload malformado não explode
+            (123, None),
         ],
     )
     def test_extracao(self, wm_class: object, esperado: str | None) -> None:
         assert extract_steam_appid(wm_class) == esperado
 
     def test_devolve_str_e_nao_int(self) -> None:
-        """UNIFICA-PREDICADO-01: a fronteira de TIPO fica neste callsite.
-
-        A fonte única (`profiles/steam_app.py`) devolve `int`; este módulo
-        inteiro chaveia por `str` — `_wrapper_dialog_vdf_cache`, o
-        `launch_dialog_dismissed.json` e o anti-spam da sessão. Esquecer o
-        `str(...)` não explode: um `int` num `in` de coleção de `str` é
-        sempre False, o cache nunca acerta e o diálogo passa a reaparecer
-        eternamente (ou a dispensa dela deixa de valer) — em SILÊNCIO.
-        """
+        """UNIFICA-PREDICADO-01: a fronteira de TIPO fica neste callsite."""
         appid = extract_steam_appid(WM_JOGO)
         assert isinstance(appid, str)
-        # E o silêncio é este: o anti-spam e a dispensa só funcionam se o tipo
-        # bater com o das coleções que a GUI mantém em disco (JSON = str).
         assert _decide(_state(), dismissed={APPID}) == (DECISION_SKIP, None)
         assert _decide(_state(), shown_this_session={APPID}) == (DECISION_SKIP, None)
         assert _decide(_state(), vdf_cache={APPID: True}) == (DECISION_PROMPT, APPID)
-
-
-# ---------------------------------------------------------------------------
-# Decisão pura — condições a-e
-# ---------------------------------------------------------------------------
 
 
 class TestDecisaoPura:
@@ -141,14 +117,12 @@ class TestDecisaoPura:
         assert _decide(_state()) == (DECISION_READ_VDF, APPID)
 
     def test_jogo_que_ja_usa_o_wrapper_nao_incomoda(self) -> None:
-        """(c) cache False = LaunchOptions já chama o wrapper (ou sem Steam
-        elegível) — nunca mostra."""
+        """(c) cache False = LaunchOptions já chama o wrapper (ou sem Steam"""
         assert _decide(_state(), vdf_cache={APPID: False}) == (
             DECISION_SKIP,
             None,
         )
 
-    # --- (a) emulação de gamepad ativa ---------------------------------
 
     def test_gamepad_desligado_nao_mostra(self) -> None:
         assert _decide(
@@ -156,13 +130,11 @@ class TestDecisaoPura:
         ) == (DECISION_SKIP, None)
 
     def test_modo_nativo_vence_o_gamepad_e_nao_mostra(self) -> None:
-        """Nativo ligado = sem vpad (o físico é que joga) — o lembrete da
-        dedup do vpad não se aplica, mesmo com gamepad_emulation.enabled."""
+        """Nativo ligado = sem vpad (o físico é que joga) — o lembrete da"""
         assert _decide(
             _state(gamepad_on=True, native=True), vdf_cache={APPID: True}
         ) == (DECISION_SKIP, None)
 
-    # --- (b) janela focada é jogo Steam ---------------------------------
 
     @pytest.mark.parametrize("wm_class", [None, "unknown", "firefox", "cosmic-term"])
     def test_janela_que_nao_e_jogo_steam_nao_mostra(
@@ -176,7 +148,6 @@ class TestDecisaoPura:
     def test_estado_offline_nao_mostra(self) -> None:
         assert _decide(None, vdf_cache={APPID: True}) == (DECISION_SKIP, None)
 
-    # --- (d) appid dispensado (persistido) ------------------------------
 
     def test_appid_dispensado_nao_mostra(self) -> None:
         assert _decide(
@@ -184,8 +155,7 @@ class TestDecisaoPura:
         ) == (DECISION_SKIP, None)
 
     def test_dispensa_vence_ate_a_leitura_do_vdf(self) -> None:
-        """Appid dispensado nem dispara a leitura — o gate (d) vem antes do
-        (c) de propósito (não pagar I/O por um jogo que ela já recusou)."""
+        """Appid dispensado nem dispara a leitura — o gate (d) vem antes do"""
         assert _decide(_state(), dismissed={APPID}) == (DECISION_SKIP, None)
 
     def test_dispensa_de_outro_appid_nao_bloqueia(self) -> None:
@@ -193,14 +163,12 @@ class TestDecisaoPura:
             _state(), vdf_cache={APPID: True}, dismissed={"42"}
         ) == (DECISION_PROMPT, APPID)
 
-    # --- anti-spam por sessão --------------------------------------------
 
     def test_appid_ja_exibido_na_sessao_nao_repete(self) -> None:
         assert _decide(
             _state(), vdf_cache={APPID: True}, shown_this_session={APPID}
         ) == (DECISION_SKIP, None)
 
-    # --- (e) nenhum diálogo/popup nosso aberto ---------------------------
 
     def test_popup_aberto_segura_o_dialogo(self) -> None:
         assert _decide(
@@ -216,20 +184,11 @@ class TestDecisaoPura:
         ) == (DECISION_SKIP, None)
 
 
-# ---------------------------------------------------------------------------
-# Persistência das dispensas (JSON atômico em tmp)
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture()
 def config_dir_isolado(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> Path:
-    """Redireciona `xdg_paths.config_dir` para tmp (padrão test_session_persist).
-
-    O `_dismissed_path` faz import LAZY de `config_dir`, então o monkeypatch
-    no módulo `xdg_paths` é o ponto hermético certo.
-    """
+    """Redireciona `xdg_paths.config_dir` para tmp (padrão test_session_persist)."""
     destino = tmp_path / "config"
     destino.mkdir()
 
@@ -290,7 +249,6 @@ class TestPersistenciaDasDispensas:
         arquivo.write_text(
             '{"dismissed_appids": [42, "77", "", null]}', encoding="utf-8"
         )
-        # int vira string (edição manual tolerada); vazio/null caem fora.
         assert lwd.load_dismissed_appids() == {"42", "77"}
 
     def test_escrita_atomica_nao_deixa_temporario_para_tras(
@@ -301,16 +259,11 @@ class TestPersistenciaDasDispensas:
         assert sobras == []
 
 
-# ---------------------------------------------------------------------------
-# Leitura do vdf por appid (integrations/steam_launch_options)
-# ---------------------------------------------------------------------------
-
 _TAB = "\t"
 
 
 def _vdf(launch_options: dict[str, str]) -> str:
-    """localconfig.vdf mínimo (mesmo builder do test_steam_launch_options_vdf,
-    com o escaping de KeyValues aplicado — a string do wrapper tem aspas)."""
+    """localconfig.vdf mínimo (mesmo builder do test_steam_launch_options_vdf,"""
     blocos = []
     for appid, valor in launch_options.items():
         blocos.append(
@@ -355,16 +308,14 @@ class TestLeituraDoVdfPorAppid:
         }
 
     def test_desfaz_o_escaping_da_string_do_wrapper(self) -> None:
-        """A string do wrapper tem aspas duplas — no vdf ela vive escapada e a
-        leitura devolve a forma crua (comparável com WRAPPER_PREFIX)."""
+        """A string do wrapper tem aspas duplas — no vdf ela vive escapada e a"""
         texto = _vdf({APPID: slo.WRAPPER_LAUNCH})
         mapa = slo.read_launch_options_by_appid(texto)
         assert mapa[APPID] == slo.WRAPPER_LAUNCH
         assert slo.WRAPPER_PREFIX in mapa[APPID]
 
     def test_roundtrip_com_a_migracao_real(self) -> None:
-        """Arquivo envenenado migrado pelo `transform_vdf_text` REAL → a
-        leitura por appid enxerga o wrapper naquele jogo."""
+        """Arquivo envenenado migrado pelo `transform_vdf_text` REAL → a"""
         veneno = (
             "SDL_JOYSTICK_HIDAPI=0 "
             f"{slo.IGNORE_SIGNATURE} %command%"
@@ -423,17 +374,11 @@ class TestAppidNeedsWrapper:
         assert slo.appid_needs_wrapper(APPID, home=home) is True
 
     def test_steam_sandboxed_fica_de_fora(self, tmp_path: Path) -> None:
-        """Só Flatpak/Snap no computador → o wrapper do host é invisível à
-        sandbox (a migração é recusada lá) — não faz sentido lembrar."""
+        """Só Flatpak/Snap no computador → o wrapper do host é invisível à"""
         home = _home_com_vdf(
             tmp_path, _vdf({APPID: "-fullscreen"}), sandbox=True
         )
         assert slo.appid_needs_wrapper(APPID, home=home) is False
-
-
-# ---------------------------------------------------------------------------
-# Mixin — cache por appid, anti-spam por sessão, gates ao vivo
-# ---------------------------------------------------------------------------
 
 
 class _AppStub(LaunchWrapperDialogMixin):
@@ -488,20 +433,19 @@ class TestMixinCacheEAntiSpam:
         stub = _AppStub()
         estado = _state()
 
-        stub._maybe_prompt_wrapper_dialog(estado)  # tick 1: só a leitura
+        stub._maybe_prompt_wrapper_dialog(estado)
         assert leitura_vdf["leituras"] == 1
         assert stub.shows == []
 
-        stub._maybe_prompt_wrapper_dialog(estado)  # tick 2: cache quente
+        stub._maybe_prompt_wrapper_dialog(estado)
         assert stub.shows == [APPID]
         assert stub._wrapper_dialog_open is True
 
-        # Diálogo fechado sem dispensa: anti-spam de SESSÃO segura o resto.
         stub._wrapper_dialog_open = False
         for _ in range(5):
             stub._maybe_prompt_wrapper_dialog(estado)
         assert stub.shows == [APPID]
-        assert leitura_vdf["leituras"] == 1  # appid repetido NUNCA relê
+        assert leitura_vdf["leituras"] == 1
 
     def test_appid_novo_le_de_novo_mas_o_antigo_nao(
         self, leitura_vdf: dict[str, int], config_dir_isolado: Path
@@ -515,13 +459,12 @@ class TestMixinCacheEAntiSpam:
         stub._wrapper_dialog_open = False
         assert leitura_vdf["leituras"] == 1
 
-        stub._maybe_prompt_wrapper_dialog(estado_b)  # B em foco: nova leitura
+        stub._maybe_prompt_wrapper_dialog(estado_b)
         stub._maybe_prompt_wrapper_dialog(estado_b)
         stub._wrapper_dialog_open = False
         assert leitura_vdf["leituras"] == 2
         assert stub.shows == [APPID, "42"]
 
-        # Voltar ao A: cache quente + anti-spam — nem leitura, nem exibição.
         stub._maybe_prompt_wrapper_dialog(estado_a)
         assert leitura_vdf["leituras"] == 2
         assert stub.shows == [APPID, "42"]
@@ -573,8 +516,7 @@ class TestMixinCacheEAntiSpam:
     def test_leitura_pendente_nao_acumula_submissoes(
         self, monkeypatch: pytest.MonkeyPatch, config_dir_isolado: Path
     ) -> None:
-        """Worker que nunca responde (IPC lento): o guard de inflight impede
-        fila de leituras no executor de 1 worker."""
+        """Worker que nunca responde (IPC lento): o guard de inflight impede"""
         submissoes: list[Any] = []
         monkeypatch.setattr(
             lwd,
@@ -592,8 +534,7 @@ class TestMixinCacheEAntiSpam:
     def test_falha_na_leitura_e_silenciosa_e_nao_insiste(
         self, monkeypatch: pytest.MonkeyPatch, config_dir_isolado: Path
     ) -> None:
-        """Erro no vdf memoiza False (fail-quiet): sem exceção no tick, sem
-        releitura a 2 Hz e sem diálogo."""
+        """Erro no vdf memoiza False (fail-quiet): sem exceção no tick, sem"""
         leituras = {"n": 0}
 
         def explode(appid: str, home: Path | None = None) -> bool:
@@ -615,7 +556,7 @@ class TestMixinCacheEAntiSpam:
         monkeypatch.setattr(lwd, "run_in_thread", sync_run_in_thread)
         stub = _AppStub()
 
-        stub._maybe_prompt_wrapper_dialog(_state())  # não propaga
+        stub._maybe_prompt_wrapper_dialog(_state())
         stub._maybe_prompt_wrapper_dialog(_state())
         stub._maybe_prompt_wrapper_dialog(_state())
 
@@ -629,11 +570,6 @@ class TestMixinCacheEAntiSpam:
         stub._maybe_prompt_wrapper_dialog(None)
         assert leitura_vdf["leituras"] == 0
         assert stub.shows == []
-
-
-# ---------------------------------------------------------------------------
-# Handler de resposta do diálogo
-# ---------------------------------------------------------------------------
 
 
 class _FakeDialog:
@@ -688,13 +624,12 @@ class TestRespostaDoDialogo:
         assert any("selecione" in t.lower() for t in stub.toasts)
 
     def test_fechar_nao_persiste_nada(self, config_dir_isolado: Path) -> None:
-        """Fechar/Esc/X (qualquer response que não seja copiar/dispensar)
-        fecha SEM gravar — dispensa persistente só pelo botão explícito."""
+        """Fechar/Esc/X (qualquer response que não seja copiar/dispensar)"""
         stub = _AppStub()
         stub._wrapper_dialog_open = True
         dlg = _FakeDialog()
 
-        stub._on_wrapper_dialog_response(dlg, -4, APPID)  # DELETE_EVENT
+        stub._on_wrapper_dialog_response(dlg, -4, APPID)
 
         assert dlg.destroyed is True
         assert stub._wrapper_dialog_open is False
@@ -702,12 +637,7 @@ class TestRespostaDoDialogo:
 
 
 class TestTemaDoDialogo:
-    """GUI-05/P5 — espelho stub-level (roda headless, sem GTK real).
-
-    O assert GTK-real vive em ``TestDialogoGtkReal`` (has_class de verdade);
-    aqui a garantia é estrutural, por fonte: a construção aplica a classe de
-    tema escopo-de-todo-o-CSS, e ANTES de qualquer chance de early-return.
-    """
+    """GUI-05/P5 — espelho stub-level (roda headless, sem GTK real)."""
 
     def test_build_aplica_a_classe_de_tema(self) -> None:
         import inspect
@@ -715,10 +645,6 @@ class TestTemaDoDialogo:
         src = inspect.getsource(LaunchWrapperDialogMixin._build_wrapper_dialog)
         assert 'add_class("hefesto-dualsense4unix-window")' in src
 
-
-# ---------------------------------------------------------------------------
-# Diálogo GTK real (construção + sinal response de verdade)
-# ---------------------------------------------------------------------------
 
 _DISPLAY_OK = False
 with contextlib.suppress(Exception):
@@ -743,17 +669,12 @@ class TestDialogoGtkReal:
         dlg = stub._build_wrapper_dialog("777")
         try:
             assert isinstance(dlg, Gtk.MessageDialog)
-            # GUI-05/P5: o diálogo carrega a classe de tema — sem ela, sob
-            # XWayland no COSMIC ele abria Adwaita CLARO (tema nem instalado).
             assert dlg.get_style_context().has_class(
                 "hefesto-dualsense4unix-window"
             )
-            # NÃO-modal: aberto durante o jogo, não pode segurar grab GTK.
             assert dlg.get_modal() is False
             assert "777" in (dlg.get_property("text") or "")
             corpo = dlg.get_property("secondary-text") or ""
-            # Texto honesto exigido pelo sprint: duplicado, nunca zero — e a
-            # string constante visível/copiável.
             assert "DUPLICADO" in corpo
             assert "nunca zero controles" in corpo
             assert slo.WRAPPER_LAUNCH in corpo
@@ -779,15 +700,8 @@ class TestDialogoGtkReal:
         assert stub._wrapper_dialog_open is False
 
 
-# ---------------------------------------------------------------------------
-# Fiação no HefestoApp — o lembrete engancha no tick lento EXISTENTE
-# ---------------------------------------------------------------------------
-
-
 def _gdkpixbuf_ok() -> bool:
-    """GdkPixbuf disponível? A App real o importa (app.py); a CI headless de
-    release não tem o typelib, então esta fiação-da-App-inteira é pulada lá
-    (mesma filosofia do importorskip dos testes de GUI). Roda local."""
+    """GdkPixbuf disponível? A App real o importa (app.py); a CI headless de"""
     try:
         import gi
 
@@ -799,42 +713,3 @@ def _gdkpixbuf_ok() -> bool:
         return False
 
 
-# `TestFiacaoNoApp` SAIU — 08/09/2026.
-#
-# Os dois testes perguntavam ao `HefestoApp`: um que ele compõe o
-# `LaunchWrapperDialogMixin` na MRO, outro que o `_render_slow_state` do tique
-# de 2 Hz chama o render da aba Status ANTES do lembrete. A janela GTK saiu do
-# disco por decisão dela (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`) e os dois
-# passaram a estourar no import — o `skipif` de GdkPixbuf que os cercava não
-# alcança um `ImportError` de módulo que não existe mais. Veredito já escrito
-# em `docs/data/o-que-ainda-aponta-para-a-janela.csv:237`: SAI-COM-A-JANELA,
-# linhas 807;817.
-#
-# O MIXIN FICA E CONTINUA MEDIDO: `launch_wrapper_dialog.py` é motor, e o resto
-# deste arquivo exercita `_maybe_prompt_wrapper_dialog` direto — que é onde a
-# decisão de mostrar o lembrete de fato mora. O que saiu foi só a pergunta
-# sobre a COMPOSIÇÃO e sobre a ORDEM dentro do tique da janela; hoje o mixin
-# não tem composidor vivo em `src/`, então não há MRO nova a cobrar.
-
-# A COERÊNCIA COM A GUARDA QUE VOLTOU NO MESMO COMMIT — 08/09/2026, ressalva do
-# conferente. *"Mixin sem compositor vivo em `src/`"* decidiu dois casos em
-# sentidos opostos no mesmo dia: estes dois testes SAÍRAM, e
-# `_tem_edicao_pendente` VOLTOU ao `ProfilesActionsMixin`. A régua que separa os
-# dois está por extenso na lápide A FAMÍLIA DO R-08, no fim de
-# `app/actions/profiles_actions.py`, e é esta:
-#
-#     um teste sobre objeto morto não custa nada ao sair;
-#     uma regra sob um ramo vivo custa trabalho DELA no dia em que o ramo rodar.
-#
-# O sujeito destes dois testes era o COMPOSITOR, e ele saiu — nenhum compositor
-# futuro herda a pergunta, porque a aba web não terá aquela MRO nem aquele
-# tique. A guarda não é pergunta: é a RESPOSTA que dois ramos daquele arquivo
-# ainda procuram por `getattr`, e sem ela os dois tomam o caminho do "não há
-# nada a proteger" — em silêncio, por cima de edição não salva dela.
-#
-# E A ORDEM QUE ESTE ARQUIVO COBRAVA TINHA UM TERCEIRO ELO: o
-# `_render_slow_state` DA JANELA chamava `super()`, depois
-# `_reconciliar_draft_com_perfil_ativo` (R-08) e só então
-# `_maybe_prompt_wrapper_dialog` (`f5311616^:app/app.py:476-491`). O elo do meio
-# também não voltou, e é a peça 3 daquela lápide — é lá que se lê o que cobrar
-# no dia em que houver compositor.

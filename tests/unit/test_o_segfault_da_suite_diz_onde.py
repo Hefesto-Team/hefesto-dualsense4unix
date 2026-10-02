@@ -1,21 +1,4 @@
-"""O segfault da suíte diz onde morreu (VERDE-NAO-E-PROVA-01, passo 4).
-
-Em 26/09/2026 uma parte da suíte morreu com `rc=139` (o WebKit no lote) e
-nenhum log tinha a pilha. A Python vem do `faulthandler` (o pytest o liga, e o
-`tests/conftest.py` põe `PYTHONFAULTHANDLER=1` para os filhos); a nativa, de
-`scripts/pilha_nativa.c`, que o `scripts/rodar-a-suite.sh` carrega em todo
-pytest; e cada arquivo do WebKit roda em processo próprio. O processo que
-morre de propósito se declara não despejável antes do sinal: o apport dorme.
-
-AS MORDIDAS: tire o `PYTHONFAULTHANDLER` do conftest, e a régua do filho
-reprova; troque a `saida` da `pilha_nativa.c` pelo `STDERR_FILENO`, e as duas
-da pilha reprovam (a captura do pytest engole o texto); tire o `LD_PRELOAD` ou
-o processo próprio do `rodar-a-suite.sh`, e a da suíte de brinquedo reprova;
-tire o dígito da classe do nome ou o fecho dos imports, e a da árvore de
-verdade reprova (o pacote é `hefesto_dualsense4unix`, e o brinquedo também
-tem dígito); leia o sumário pela última linha do log, e o que morre ao sair
-vira «SEM SUMÁRIO».
-"""
+"""O segfault da suíte diz onde morreu (VERDE-NAO-E-PROVA-01, passo 4)."""
 from __future__ import annotations
 
 import ast
@@ -32,7 +15,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 FONTE = RAIZ / "scripts" / "pilha_nativa.c"
 SUITE = RAIZ / "scripts" / "rodar-a-suite.sh"
 
-#: O processo que morre de propósito: não despejável, sem apport.
 _MORRE = (
     "import ctypes, os, signal\n"
     "ctypes.CDLL(None).prctl(4, 0, 0, 0, 0)\n"
@@ -100,9 +82,7 @@ def test_a_pilha_nativa_sai_mesmo_com_o_stderr_desviado(tmp_path: Path) -> None:
 
 
 def test_o_arquivo_do_webkit_morre_sozinho_e_diz_onde(tmp_path: Path) -> None:
-    """A suíte de brinquedo: um arquivo comum, dois do WebKit que morrem (um no
-    meio, um ao sair), um que pula inteiro e dois que só importam o piloto, um
-    direto e um pela ponte. O pacote tem dígito no nome, como o de verdade."""
+    """A suíte de brinquedo: um arquivo comum, dois do WebKit que morrem (um no"""
     _compilada(tmp_path)
     raiz = tmp_path / "arvore"
     for pasta in ("scripts", "tests/unit", "src/pacote4unix"):
@@ -190,8 +170,7 @@ def _importados(nos: list[ast.stmt] | list[ast.AST], modulo: str = "") -> set[st
 
 
 def _carregam_o_webkit() -> set[str]:
-    """Os arquivos de teste que importam um módulo que carrega o WebKit ao ser
-    importado, pelo AST: o método é outro que o do runner, de propósito."""
+    """Os arquivos de teste que importam um módulo que carrega o WebKit ao ser"""
     modulos: dict[str, ast.Module] = {}
     for caminho in sorted((RAIZ / "src").rglob("*.py")) + sorted((RAIZ / "scripts").rglob("*.py")):
         partes = list(caminho.relative_to(RAIZ / "src").with_suffix("").parts

@@ -37,7 +37,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("O editor avançado que mostrava campos vazios")
 
 from typing import Any
@@ -54,14 +53,8 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: appid do Pragmata — o jogo em que esta família inteira de defeitos foi medida.
 APPID = "3357650"
 WM_JOGO = f"steam_app_{APPID}"
-
-
-# ---------------------------------------------------------------------------
-# Dublês de widget — a mesma API por-ID que a aba usa
-# ---------------------------------------------------------------------------
 
 
 class _FakeEntry:
@@ -206,7 +199,6 @@ class Editor(pa.ProfilesActionsMixin):
         self.resposta_manual = True
         self.resposta_prioridade = True
 
-    # --- a API que o mixin usa ---
 
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
@@ -229,7 +221,6 @@ class Editor(pa.ProfilesActionsMixin):
     def _toast_profile(self, msg: str) -> None:
         self.toasts.append(msg)
 
-    # --- leitura dos três campos crus, na ordem do glade ---
 
     def campos_crus(self) -> tuple[str, str, str]:
         return (
@@ -326,11 +317,6 @@ def perfil_complexo() -> Profile:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. A foto de 04:34
-# ---------------------------------------------------------------------------
-
-
 class TestOAvancadoMostraORegraDoPerfilAberto:
     def test_ligar_o_avancado_mostra_o_criterio_que_esta_no_arquivo(self) -> None:
         """A foto dela, clique a clique.
@@ -348,7 +334,6 @@ class TestOAvancadoMostraORegraDoPerfilAberto:
         editor = Editor(cache=[perfil])
         editor._populate_editor(perfil)
 
-        # A página simples mostra o que ela viu na primeira foto.
         assert editor._selected_simple_choice() == "steam_game"
         assert editor._get("profile_simple_custom_name").get_text() == APPID
 
@@ -358,16 +343,7 @@ class TestOAvancadoMostraORegraDoPerfilAberto:
         assert editor.campos_crus() == (WM_JOGO, "", "PRAGMATA.exe")
 
     def test_o_avancado_nao_mostra_a_regra_do_perfil_anterior(self) -> None:
-        """Perfil complexo aberto, depois o do jogo: os crus não podem ficar rançosos.
-
-        `_populate_editor` limpa a página SIMPLES ao abrir um match complexo
-        (BUG-PROFILE-SIMPLE-STALE-01) e nunca limpou o contrário. Sem a cura, a
-        `firefox`/`YouTube` do perfil anterior seguia nos campos crus — e ligar
-        o avançado no perfil do jogo mostrava a regra de OUTRO perfil, que é
-        pior que mostrar vazio: parece dado bom.
-
-        MORDIDA: a mesma chamada arrancada; sobra `("firefox", "YouTube", "")`.
-        """
+        """Perfil complexo aberto, depois o do jogo: os crus não podem ficar rançosos."""
         jogo = perfil_dela()
         editor = Editor(cache=[perfil_complexo(), jogo])
         editor._populate_editor(perfil_complexo())
@@ -401,16 +377,7 @@ class TestOAvancadoMostraORegraDoPerfilAberto:
         assert editor.campos_crus() == ("firefox", "YouTube", "")
 
     def test_o_avancado_mostra_o_que_ela_acabou_de_escolher_na_simples(self) -> None:
-        """Editar na página simples e ligar o avançado mostra o valor NOVO.
-
-        A regra "de verdade" é a que o Salvar gravaria, não a que está no disco:
-        se ela trocou o número do jogo, é o número novo que tem de aparecer. E o
-        `process_name` do jogo ANTERIOR não vai junto — é outro jogo
-        (`_process_name_a_preservar`).
-
-        MORDIDA: fazer `_regra_real_do_perfil_aberto` devolver sempre
-        `self._regra_do_disco` reprova este teste (mostraria 3357650).
-        """
+        """Editar na página simples e ligar o avançado mostra o valor NOVO."""
         perfil = perfil_dela()
         editor = Editor(cache=[perfil])
         editor._populate_editor(perfil)
@@ -421,14 +388,7 @@ class TestOAvancadoMostraORegraDoPerfilAberto:
         assert editor.campos_crus() == ("steam_app_1599660", "", "")
 
     def test_perfil_novo_sem_alvo_nao_inventa_criterio(self) -> None:
-        """"Novo perfil" + "Qualquer" + avançado: três campos vazios, e é a verdade.
-
-        `MatchAny` não tem critério nenhum para mostrar, e a cura não pode
-        inventar um (nem herdar o do perfil que estava aberto antes).
-
-        MORDIDA: uma cura que copiasse `_regra_do_disco` sem olhar o gesto dela
-        traria de volta a regra do perfil anterior nestes campos.
-        """
+        """"Novo perfil" + "Qualquer" + avançado: três campos vazios, e é a verdade."""
         anterior = perfil_complexo()
         editor = Editor(cache=[anterior])
         editor._populate_editor(anterior)
@@ -437,11 +397,6 @@ class TestOAvancadoMostraORegraDoPerfilAberto:
         editor.ligar_o_avancado()
 
         assert editor.campos_crus() == ("", "", "")
-
-
-# ---------------------------------------------------------------------------
-# 2. Ligar o avançado é OLHAR, não é MEXER
-# ---------------------------------------------------------------------------
 
 
 class TestLigarOAvancadoNaoContaComoGestoDela:
@@ -476,15 +431,7 @@ class TestLigarOAvancadoNaoContaComoGestoDela:
     def test_editar_um_campo_cru_depois_de_ligar_continua_contando(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A fotografia retirada não pode virar cadeado: mexer conta.
-
-        Ligar o avançado e ENTÃO editar um campo é gesto dela, e o Salvar tem
-        de gravar o que ela escreveu.
-
-        MORDIDA: retirar a fotografia SEMPRE (inclusive quando ela já tinha
-        mexido) ou congelá-la faz este teste reprovar — o Salvar devolveria a
-        regra do disco por cima do que ela digitou.
-        """
+        """A fotografia retirada não pode virar cadeado: mexer conta."""
         perfil = perfil_dela()
         editor = Editor(cache=[perfil])
         editor.selecionado = perfil.name
@@ -530,21 +477,11 @@ class TestLigarOAvancadoNaoContaComoGestoDela:
         assert salvo.window_class == ["steam_app_1599660"]
 
 
-# ---------------------------------------------------------------------------
-# 3. O que a cura NÃO pode ter mexido
-# ---------------------------------------------------------------------------
-
-
 class TestOQueContinuaComoEstava:
     def test_o_toggle_continua_trocando_a_pagina_e_persistindo_a_preferencia(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A função velha do handler segue inteira (stack + `set_pref`).
-
-        MORDIDA: mover o `_apply_editor_mode()` ou o `set_pref(...)` para
-        dentro do `if state:` da cura reprova aqui — desligar o avançado
-        deixaria de trocar a página e de gravar a preferência.
-        """
+        """A função velha do handler segue inteira (stack + `set_pref`)."""
         gravado: list[tuple[str, Any]] = []
         monkeypatch.setattr(
             pa, "set_pref", lambda k, v: gravado.append((k, v))

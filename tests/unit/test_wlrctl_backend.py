@@ -1,12 +1,4 @@
-"""Testes do `WlrctlBackend` (BUG-COSMIC-WLR-BACKEND-REGRESSION-01).
-
-Cobre:
-  - Detecção de binário ausente (shutil.which → None).
-  - Parsing de JSON do `wlrctl toplevel list --json --state activated`.
-  - Tratamento de erros: timeout, returncode != 0, JSON inválido.
-  - Compatibilidade com formato `app_id` vs. `appId`.
-  - Fallback gracioso para None.
-"""
+"""Testes do `WlrctlBackend` (BUG-COSMIC-WLR-BACKEND-REGRESSION-01)."""
 from __future__ import annotations
 
 import json
@@ -243,13 +235,7 @@ class TestWlrctlBackendErrosSubprocess:
 
 
 class TestWlrctlProtocoloNaoSuportado:
-    """FEAT-WINDOW-DETECT-DIAG-01: compositor sem o protocolo wlr (COSMIC).
-
-    O cosmic-comp não expõe `wlr-foreign-toplevel-management`; o wlrctl
-    imprime "Foreign Toplevel Management interface not found!" no stderr e
-    sai com rc 0 OU 1 conforme a versão. Antes isso era falha transiente
-    (retry eterno a 2 Hz); agora marca o backend indisponível de vez.
-    """
+    """FEAT-WINDOW-DETECT-DIAG-01: compositor sem o protocolo wlr (COSMIC)."""
 
     def _fake_result(self, rc: int) -> MagicMock:
         fake = MagicMock(spec=subprocess.CompletedProcess)

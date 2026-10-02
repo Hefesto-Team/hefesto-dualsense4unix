@@ -58,13 +58,7 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 
 
 def _card(mod, contexto, entrada: dict) -> dict:
-    """O ÚNICO card que o pacote monta para esta entrada.
-
-    A chave de `cards` é o `uniq`, e não a posição — quem traduz para `p1` é o
-    piloto. A régua tira o único valor em vez de digitar a chave: normalizar o
-    `uniq` é do produto, e uma régua que digite a forma dele reprova no dia em
-    que a normalização mudar.
-    """
+    """O ÚNICO card que o pacote monta para esta entrada."""
     cards = mod.pacote(contexto(state={"controllers": [entrada]},
                                 mesa=MESA, conectados=[entrada]))["cards"]
     assert len(cards) == 1, f"esperava um card, vieram {len(cards)}"
@@ -76,11 +70,7 @@ def _bancada() -> str:
 
 
 def _selos(doc: str) -> list[str]:
-    """Cada `<span class="selo-ativo…">` inteiro, até o `</span>` que o fecha.
-
-    Conta profundidade em vez de casar um `</span>` qualquer: o selo tem dois
-    filhos `<span>`, e uma expressão preguiçosa pararia no primeiro fecho.
-    """
+    """Cada `<span class="selo-ativo…">` inteiro, até o `</span>` que o fecha."""
     fora = []
     for abre in re.finditer(r'<span class="selo-ativo[^"]*"', doc):
         i, nivel = abre.start(), 0
@@ -92,31 +82,12 @@ def _selos(doc: str) -> list[str]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# 1. O selo — três elementos, um endereço, três alvos
-# ---------------------------------------------------------------------------
-
-
 def test_o_selo_tem_tres_alvos() -> None:
-    """A cor, o risco e a palavra são TRÊS alvos, e um elemento aceita UM.
-
-    A régua não conta elementos: ela cobra os três ALVOS que o
-    `hefesto_vivo.escrever` sabe distinguir, todos sob o mesmo `data-campo`.
-    `achar()` visita todos os elementos de mesmo endereço com o mesmo valor e
-    cada um decide por si — é o mecanismo que o próprio `escrever` documenta.
-
-    MORDE: junte os três `<span>` num só (que é como o produto está publicado
-    hoje) e o selo volta a ter um alvo — a palavra —, com a cor congelada no que
-    o gerador desenhou.
-    """
+    """A cor, o risco e a palavra são TRÊS alvos, e um elemento aceita UM."""
     selos = _selos(_bancada())
     assert selos, "não achei um `.selo-ativo` na bancada da aba Controles"
 
     for selo in selos:
-        # O CAMPO É LIDO DO PRÓPRIO SELO, e não digitado — 19/09/2026. Desde que
-        # o alto-falante ganhou o selo dele (`alto-canal`, a mesma peça com o
-        # glifo do alto-falante), cravar `mic-selo` aqui mediu UM dos dois e
-        # reprovava o outro por existir. A régua vale para TODO selo da página.
         campo = re.search(r'data-campo="([^"]+)"', selo)
         assert campo, f"selo sem endereço nenhum: {selo[:160]}"
         enderecos = selo.count(f'data-campo="{campo.group(1)}"')
@@ -124,29 +95,14 @@ def test_o_selo_tem_tres_alvos() -> None:
             f"o selo de `{campo.group(1)}` tem {enderecos} endereço(s) e precisa "
             f"de 3 — a cor, o risco e a palavra. Achado: {selo[:160]}"
         )
-        # A COR: o próprio selo acende a classe `on`.
         assert 'data-hef-alvo="classe" data-hef-classe="on"' in selo, (
             "o selo perdeu o alvo da COR. Sem ele o tique só troca a palavra, "
             "e o fundo fica no que o gerador desenhou — o defeito de 03/09."
         )
-        # O RISCO: o glifo acende a classe `cortado`.
         assert 'data-hef-alvo="classe" data-hef-classe="cortado"' in selo, (
             "o selo perdeu o alvo do RISCO. Ela escolheu 'Cor + ícone' de "
             "propósito, para quem não distingue cor."
         )
-        # A PALAVRA: um alvo que ESCREVE. São dois, e a régua aceita os dois
-        # desde 19/09/2026 — antes ela exigia a ausência de `data-hef-alvo`, o
-        # que é o alvo padrão (texto) e serve ao selo do microfone, que sempre
-        # tem uma das três palavras a dizer.
-        #
-        # O SELO DO ALTO-FALANTE PRECISA DE `html`, e não é gosto: ele pode não
-        # ter o que dizer (o rádio sem placa de som), e o "não há" viaja como
-        # `<i class="nada">` — um ELEMENTO. Com o alvo de texto, `escrever()`
-        # trocaria o vazio por travessão e deixaria um `—` solto no rótulo.
-        #
-        # O QUE A RÉGUA GUARDA CONTINUA O MESMO: que a palavra não caia num alvo
-        # que NÃO escreve texto (classe, largura, cor, valor) e congele no que o
-        # gerador desenhou.
         palavra = re.search(r'<span class="selo-palavra"([^>]*)>', selo)
         assert palavra is not None, "o selo perdeu o `<span>` da palavra"
         alvo = re.search(r'data-hef-alvo="([^"]*)"', palavra.group(1))
@@ -159,16 +115,7 @@ def test_o_selo_tem_tres_alvos() -> None:
 
 
 def test_o_quando_do_selo_vem_do_dono() -> None:
-    """O valor que acende cada classe é o que `mesa_viva.selo_do_mic` devolve.
-
-    RÉGUA PERGUNTA, NUNCA DIGITA — a lição que esta casa pagou seis vezes em
-    03/09. Se o `data-hef-quando` fosse um literal digitado no gerador, o dia em
-    que a palavra mudasse no dono ele deixaria de casar e a cor congelaria de
-    novo, **calada**. É a mesma armadilha da rota por CSS
-    (`.selo-ativo[data-mic="MUDO"]`), e a razão de ela ter sido recusada.
-
-    MORDE: troque o `data-hef-quando` de qualquer um dos dois por outra palavra.
-    """
+    """O valor que acende cada classe é o que `mesa_viva.selo_do_mic` devolve."""
     doc = _bancada()
     for selo in _selos(doc):
         for classe, esperado in (("on", mesa_viva.selo_do_mic(False, True)),
@@ -184,18 +131,7 @@ def test_o_quando_do_selo_vem_do_dono() -> None:
 
 
 def test_o_verde_quer_dizer_uma_coisa_so() -> None:
-    """Só ATIVO acende. MUDO e o travessão ficam apagados.
-
-    POR QUE A INVERSÃO IMPORTA: com a classe acesa no MUDO, o TERCEIRO estado —
-    o travessão de `selo_do_mic(_, sabemos=False)` — cairia no ramo de baixo e
-    ficaria VERDE. Um microfone que ninguém leu anunciando que captura é
-    exatamente o defeito que aquela função existe para matar
-    (`test_o_selo_do_mic_tem_tres_estados_e_um_dono_so`).
-
-    MORDE: volte a acender no MUDO (`data-hef-quando` do `on` = MUDO). O
-    travessão passa a pintar verde, e esta régua reprova pelo lado do desenho —
-    o ensaio reprova pelo lado do pixel.
-    """
+    """Só ATIVO acende. MUDO e o travessão ficam apagados."""
     import aba02
 
     aceso = aba02.selo_do_microfone(False)
@@ -209,21 +145,12 @@ def test_o_verde_quer_dizer_uma_coisa_so() -> None:
     assert "cortado" not in aceso.split("data-hef-classe")[1], (
         "o ATIVO nasceu com o risco aceso"
     )
-    # E O QUE NÃO É ATIVO NÃO ACENDE, incluindo o travessão: o único valor no
-    # `data-hef-quando` do `on` é o ATIVO, então qualquer outro apaga.
     assert f'data-hef-classe="on" data-hef-quando="{mesa_viva.selo_do_mic(False, True)}"' \
         in aceso
 
 
 def test_a_folha_pinta_as_duas_classes() -> None:
-    """As classes que o produto acende existem no CSS da página.
-
-    Um alvo `classe` sem regra de CSS é uma pintura que ninguém vê: o piloto
-    escreveria a classe a cada tique e o pixel não mudaria. É o gêmeo do
-    endereço órfão, do outro lado.
-
-    MORDE: apague `.selo-ativo.on` ou `.mic-glifo.cortado::after` do gerador.
-    """
+    """As classes que o produto acende existem no CSS da página."""
     doc = _bancada()
     assert ".selo-ativo.on{" in doc, (
         "a regra que ACENDE o selo sumiu — a classe seria escrita e o fundo "
@@ -240,19 +167,7 @@ def test_a_folha_pinta_as_duas_classes() -> None:
 
 
 def test_o_selo_nao_e_escrito_a_mao_em_dois_lugares() -> None:
-    """Um dono só para o selo no gerador — `aba02.selo_do_microfone`.
-
-    O selo aparece DUAS vezes por controle: a linha fechada e o card aberto. Foi
-    escrito à mão nos dois, e foi assim que a cor congelou — curar um lugar
-    deixaria a outra metade viva, que é o defeito que a regra da casa mata.
-
-    A régua lê o BYTECODE, não o texto: o comentário do gerador cita "ATIVO" com
-    todas as letras para explicar o defeito, e uma régua de substring reprovaria
-    justamente porque alguém escreveu bem.
-
-    MORDE: reescreva o `<span class="selo-ativo…">` dentro de `resumo_fechado`
-    ou de `bloco`.
-    """
+    """Um dono só para o selo no gerador — `aba02.selo_do_microfone`."""
     import aba02
 
     for alvo, nome in ((aba02.resumo_fechado, "resumo_fechado"),
@@ -267,11 +182,6 @@ def test_o_selo_nao_e_escrito_a_mao_em_dois_lugares() -> None:
             f"`{nome}` voltou a montar o selo por conta própria — duas versões "
             "vivas do mesmo desenho é como a cor congelou"
         )
-
-
-# ---------------------------------------------------------------------------
-# 2. A bateria desconhecida — `— %`, e a grafia é PERGUNTADA
-# ---------------------------------------------------------------------------
 
 
 def test_a_bateria_pergunta_a_grafia_a_gtk() -> None:
@@ -296,16 +206,7 @@ def test_a_bateria_pergunta_a_grafia_a_gtk() -> None:
 
 
 def test_a_bateria_desconhecida_e_travessao_com_porcento() -> None:
-    """Decisão dela: `— %`, como a janela antiga. Paridade literal.
-
-    O QUE CADUCOU: em 02/09 esta linha passou a devolver o travessão SECO, pela
-    regra de *campo sem informação não mostra nada*. Ela decidiu o contrário em
-    03/09 — a paridade com a janela que ela usa vence a harmonia interna do
-    card —, e a decisão é dela.
-
-    MORDE: volte a `mesa_viva.SEM_LEITOR` e esta régua reprova; o `%` some da
-    tela dela e o card deixa de casar com a janela antiga.
-    """
+    """Decisão dela: `— %`, como a janela antiga. Paridade literal."""
     from pacotes.a02_controles import texto_da_bateria
 
     seco = str(mesa_viva.SEM_LEITOR)
@@ -319,11 +220,7 @@ def test_a_bateria_desconhecida_e_travessao_com_porcento() -> None:
 
 
 def test_o_card_emite_a_carga_desconhecida_com_porcento() -> None:
-    """E ela chega ao CARD, não só à função — o valor que o tique pinta.
-
-    MORDE: desligue a chamada em `pacote()` (volte o literal). O campo `bateria`
-    do card volta ao travessão seco e esta régua reprova.
-    """
+    """E ela chega ao CARD, não só à função — o valor que o tique pinta."""
     from pacotes import Contexto
     from pacotes import a02_controles as mod
 
@@ -341,23 +238,7 @@ def test_o_card_emite_a_carga_desconhecida_com_porcento() -> None:
 
 @pytest.mark.parametrize("mudo", [True, False])
 def test_o_selo_do_card_continua_saindo_do_dono(mudo: bool) -> None:
-    """A palavra que o tique pinta é a do dono — a cura não mexeu nisso.
-
-    Esta régua existe porque a frente do selo tocou o GERADOR e o PACOTE no
-    mesmo dia: sem ela, um erro no pacote passaria escondido atrás do desenho
-    novo, que é bonito e não pinta nada sozinho.
-
-    **O SELO PASSOU A DIZER O ESTADO COMPOSTO — 04/09/2026, decisão [03] da
-    ONDA2-02, pela D-12 dela.** ATIVO só quando as QUATRO faces concordam, e o
-    bit do firmware é UMA delas: um microfone destravado no plástico cujo som
-    não chega a canal nenhum não está capturando coisa alguma.
-
-    ENTÃO A ENTRADA GANHOU AS DUAS CHAVES DE CANAL, e é o que faz este caso
-    continuar medindo o que promete: o dono da PALAVRA continua sendo
-    `mesa_viva.selo_do_mic`, e é isso que esta régua cobra. Sem elas o `False`
-    daria `—` — que é a resposta certa para "ainda não perguntamos", e não a
-    que este teste existe para medir.
-    """
+    """A palavra que o tique pinta é a do dono — a cura não mexeu nisso."""
     from pacotes import Contexto
     from pacotes import a02_controles as mod
 

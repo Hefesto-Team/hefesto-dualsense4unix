@@ -1,73 +1,5 @@
 #!/usr/bin/env python3
-"""Faxina do lixo que a suíte JÁ deixou em `/tmp` — o passivo, não o futuro.
-
-O futuro está resolvido no `tests/conftest.py` (BERCO-DE-TMP-01): desde
-07/08/2026 toda sessão de `pytest` cria `/tmp/hefesto-berco-<pid>`, aponta
-`tempfile`/`TMPDIR` para lá e leva o berço embora no fim. Este script existe
-para o que ficou para trás ANTES disso — medido em 07/08/2026, no `/tmp` dela:
-
-    906  diretórios `tmp<8>`, dos quais 892 ainda continham os arquivos que
-         só os testes de migração de perfil escrevem;
-     99  `pulse-<12>` vazios (a libpulse, um por execução da suíte);
-      3  `hefesto-arvore-congelada-<8>` que o `atexit` não alcançou porque a
-         sessão foi morta;
-      1  `hefesto_teste_pactl_chamadas.txt`, caminho FIXO num teste.
-
-===========================================================================
-O CRITÉRIO — escrito antes do código, e ele é POSITIVO
-===========================================================================
-
-Uma entrada só é apagada quando existe PROVA DE QUEM A CRIOU. Nunca o
-contrário: *"não reconheço este arquivo, então apago"* é como se apaga a
-configuração de alguém. As quatro regras, cada uma com a sua prova:
-
-  R1  `hefesto-berco-<pid>/`  — o nome é escrito por `tests/conftest.py`, e o
-      `<pid>` é o da sessão de `pytest` que o criou. Só vira alvo quando esse
-      pid NÃO está vivo. Sessão viva (a sua, a de outro agente) nunca entra.
-
-  R2  `hefesto-arvore-congelada-<8>/` — prefixo escrito por
-      `tests/conftest.py::arvore_congelada`. Só vira alvo depois da idade
-      mínima, para nunca pegar a cópia de uma sessão que está rodando agora.
-
-  R3  `tmp<8>/` ASSINADO pelos testes de migração de perfil: contém pelo menos
-      um dos dois marcadores que só aquelas migrações escrevem
-      (`.coop_default_on_migrated`, `.flavor_xbox_migrated`) **e** todo nome lá
-      dentro pertence ao conjunto FECHADO que aqueles dois arquivos de teste
-      escrevem. Um único nome fora do conjunto e o diretório é RECUSADO, com o
-      motivo impresso — porque aí ele pode ser de outra coisa.
-
-  R4  `hefesto_teste_pactl_chamadas.txt` — nome literal que só existia em
-      `tests/unit/test_doctor_mic_camada2.py` (corrigido em 07/08). Só vira
-      alvo se o conteúdo começar com `pactl `, que é o que aquele teste grava.
-
-Fora disso, e por decisão declarada, este script NÃO apaga:
-
-  - `pytest-of-<user>/` — é do pytest, que já guarda as 3 últimas execuções e
-    pode estar com uma delas EM USO por outra sessão. Entra só no relatório,
-    com o tamanho, para a decisão ser dela;
-  - `pulse-<12>/` — quem cria é a libpulse, e ela também roda fora da suíte.
-    Relatório, não faxina;
-  - qualquer coisa fora da raiz, de outro dono, ou alcançada por link.
-
-E os `.lock` órfãos de `~/.config/hefesto-dualsense4unix/profiles/` NÃO são
-assunto deste script, por mais que pareçam lixo: eles são do PRODUTO, não do
-teste. Medido em 07/08 — `delete_profile` (`profiles/loader.py:990`) remove o
-`.json` e deixa o `.json.lock` do `filelock`; os três órfãos de 06/08
-(`meu_perfil`, `pragmata2`, `sackboy_nativo`) têm mtime igual, ao microssegundo,
-ao nome do arquivo que o histórico guardou no mesmo instante. Isso é conserto
-no produto, e a decisão de mexer na config dela é dela.
-
-===========================================================================
-Uso
-===========================================================================
-
-    scripts/faxina-de-testes.py             # só RELATA (padrão)
-    scripts/faxina-de-testes.py --apagar    # apaga o que as regras provaram
-    scripts/faxina-de-testes.py --raiz DIR  # outra raiz (bancada de teste)
-
-O padrão é relatar porque a decisão de apagar o que já está no disco dela é
-dela, não do script.
-"""
+"""Faxina do lixo que a suíte JÁ deixou em `/tmp` — o passivo, não o futuro."""
 
 from __future__ import annotations
 
@@ -79,49 +11,15 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-#: Nome do berço de sessão que `tests/conftest.py` escreve (BERCO-DE-TMP-01).
 BERCO_PREFIXO = "hefesto-berco-"
 
-#: Nome da cópia congelada criada por `tests/conftest.py::arvore_congelada`.
 CONGELADA_PREFIXO = "hefesto-arvore-congelada-"
 
-#: Marcadores que SÓ as migrações de perfil escrevem. A presença de um deles é
-#: metade da prova da R3; a outra metade é o conjunto fechado abaixo.
 MARCADORES_DE_MIGRACAO = frozenset({
     ".coop_default_on_migrated",
     ".flavor_xbox_migrated",
 })
 
-#: O conjunto FECHADO de nomes que a bancada de teste de migração escreve no
-#: diretório temporário dela. Conferido em 03/09/2026 contra
-#: `tests/unit/test_o_preset_nao_escolhe_a_mascara.py` — a ÚNICA viva que abre
-#: um `tmp<8>` com `tempfile.mkdtemp()` e roda as migrações de verdade dentro
-#: dele. Se ela ganhar um nome novo, esta lista tem de ganhar junto — e até lá
-#: o diretório novo é RECUSADO, que é o lado seguro do erro.
-#:
-#: NOTA DATADA — 23/08/2026, reconferido. A segunda bancada mudou de nome
-#: (`test_preset_flavor_migration.py` foi APAGADO em 22/08) e passou a rodar
-#: TRÊS migrações em vez de uma, deixando cinco nomes que não estavam aqui:
-#: os marcadores `.coop_local_match_migrated` e `.modo_jogo_nos_presets_migrated`
-#: com seus `.lock`, e o `acao.json`. Sem eles a R3 RECUSAVA o resíduo real da
-#: bancada — medido rodando o classificador contra o diretório que ela cria —
-#: e o diretório ficava em `/tmp` para sempre quando escapa do berço.
-#:
-#: NENHUM NOME SAI DAQUI QUANDO UMA BANCADA MORRE, e a razão é o que esta lista
-#: É: um retrato do LIXO QUE ESTÁ NO DISCO, não do código de hoje. Os 906
-#: diretórios medidos em 07/08 continuam lá com os nomes que as bancadas de
-#: então escreveram; apagar um nome daqui é ensinar a faxina a RECUSAR
-#: exatamente o resíduo que ela existe para varrer.
-#:
-#: `.flavor_xbox_migrated` FICA: a migração que o escrevia saiu do `loader.py`
-#: em 22/08, mas o marcador continua no disco de quem já rodou a versão velha,
-#: e a faxina tem de saber reconhecê-lo para poder limpá-lo.
-#:
-#: `.coop_default_on_migrated` e o `meu_jogo.json` FICAM pelo mesmo motivo, e a
-#: data é 03/09/2026: a bancada que os escrevia
-#: (`test_coop_default_on_migration.py`) foi apagada em 02/09 junto com a
-#: migração inteira — o commit `11fa3e8b`, "cada controle é um jogador" — e o
-#: resíduo dela é justamente o mais numeroso do `/tmp` dela.
 NOMES_DA_MIGRACAO = frozenset({
     ".coop_default_on_migrated",
     ".coop_default_on_migrated.lock",
@@ -141,21 +39,14 @@ NOMES_DA_MIGRACAO = frozenset({
     "sem_opiniao.json",
 })
 
-#: Registro de caminho fixo que `test_doctor_mic_camada2.py` deixava para trás.
 REGISTRO_DO_PACTL = "hefesto_teste_pactl_chamadas.txt"
 
-#: Primeira linha que aquele teste grava — a prova de conteúdo da R4.
 REGISTRO_DO_PACTL_COMECO = "pactl "
 
-#: Idade mínima, em horas, para as regras que dependem de tempo (R2). Uma
-#: sessão de suíte inteira levou 232 s na medição de 07/08; uma hora é folga
-#: de mais de uma ordem de grandeza.
 IDADE_MINIMA_H_PADRAO = 1.0
 
-#: Prefixos que entram no RELATÓRIO e nunca na faxina.
 SO_RELATO = ("pytest-of-", "pulse-")
 
-#: Raízes que este script recusa de saída, aconteça o que acontecer.
 RAIZES_PROIBIDAS = frozenset({"/", "/etc", "/usr", "/var", "/boot", "/home", "/root"})
 
 
@@ -177,12 +68,7 @@ class Recusa:
 
 
 def raiz_permitida(raiz: Path) -> str | None:
-    """Devolve o motivo da recusa, ou None quando a raiz pode ser varrida.
-
-    O `$HOME` dela é recusado por nome, e não por heurística: um script de
-    faxina que aceite `$HOME` como raiz é um script que um dia vai receber
-    `$HOME` como raiz.
-    """
+    """Devolve o motivo da recusa, ou None quando a raiz pode ser varrida."""
     try:
         resolvida = raiz.resolve(strict=True)
     except OSError:
@@ -246,7 +132,7 @@ def _classificar_tmp_anonimo(entrada: Path) -> Alvo | Recusa | None:
     except OSError as exc:
         return Recusa(entrada, f"ilegível ({exc.__class__.__name__})")
     if not nomes & MARCADORES_DE_MIGRACAO:
-        return None  # Nem parece nosso: nem entra no relatório.
+        return None
     intrusos = sorted(nomes - NOMES_DA_MIGRACAO)
     if intrusos:
         return Recusa(
@@ -278,10 +164,7 @@ def _classificar_registro_do_pactl(entrada: Path) -> Alvo | Recusa:
 def recolher(
     raiz: Path, idade_minima_s: float, agora: float
 ) -> tuple[list[Alvo], list[Recusa], list[tuple[str, int]]]:
-    """Percorre os filhos DIRETOS de `raiz` e classifica cada um.
-
-    Devolve (alvos provados, recusas com motivo, contagem do que é só relato).
-    """
+    """Percorre os filhos DIRETOS de `raiz` e classifica cada um."""
     alvos: list[Alvo] = []
     recusas: list[Recusa] = []
     relato: dict[str, int] = {p: 0 for p in SO_RELATO}
@@ -299,15 +182,10 @@ def recolher(
                 break
         if any(nome.startswith(p) for p in SO_RELATO):
             continue
-        # O `_nosso` VEM ANTES e engole o `OSError`: um ponto de montagem FUSE
-        # morto no `/tmp` (o AppImage de um emulador que caiu, medido em
-        # 26/09/2026 com `.mount_azahar*`) responde ENOTCONN até ao `lstat`, e
-        # o `is_symlink` do Python só ignora ENOENT/ENOTDIR/EBADF/ELOOP — a
-        # faxina inteira caía numa entrada que nem é do usuário.
         if not _nosso(entrada):
             continue
         if entrada.is_symlink():
-            continue  # Link nunca é seguido: o alvo dele pode ser qualquer coisa.
+            continue
 
         pid = _pid_do_berco(nome)
         if pid is not None and entrada.is_dir():

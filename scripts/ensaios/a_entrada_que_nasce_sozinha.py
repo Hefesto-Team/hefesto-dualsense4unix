@@ -1,88 +1,5 @@
 #!/usr/bin/env python3
-"""a_entrada_que_nasce_sozinha.py — quem mexe no cursor e no teclado dela.
-
-PARA RODAR **NO MOMENTO EM QUE ACONTECER**, e é essa a razão de ele existir.
-
-O RELATO É DELA, 10/09/2026, duas vezes na mesma madrugada:
-
-    *"na REAL O TECLADO FICA SE MEXENDO QUANDO VC DA O COMANDO E SE FECHA
-     SOZINHO. AI DESLIGO O BT DO CONTROLE E VOLTA AO NORMAL."*
-    <!-- noqa-acento: citação literal dela -->
-
-    *"DESLIGUEI ELE PQ O PROBLEMA DO TECLADO MALUCO E MOUSE MALUCO VOLTARAM."*
-    <!-- noqa-acento: citação literal dela -->
-
-O QUE JÁ FOI MEDIDO, E DEU ZERO NOS DOIS
------------------------------------------
-* **o controle PARADO na mesa, 30 s** — zero eventos no controle do rádio, no
-  touchpad dele e no teclado virtual do Hefesto. Não é deriva de eixo nem botão
-  preso;
-* **durante 1000 reports de áudio escritos**, 16 s — zero eventos nos mesmos
-  três nós. A escrita não provoca entrada.
-
-**Logo a primeira causa que esta casa registrou estava errada** — eu atribuí a
-entrada fantasma à disputa de contador da rajada de `0x35`, e ela voltou com
-NENHUM som tocando.
-
-A DIFERENÇA DE ESTADO QUE SOBRA, e é a hipótese viva: nas duas vezes em que ela
-viu o defeito, o controle do rádio tinha **vpad** — era o `Hefesto P2` da mesa
-de co-op. Nas duas medições que deram zero, ele não tinha: voltou como controle
-físico depois de ela o reiniciar. Um vpad a mais é um caminho a mais entre o
-aparelho e o cursor dela.
-
-**Isto é hipótese, não conclusão.** Este instrumento existe para trocá-la por
-medição na próxima vez.
-
-E HOUVE UMA QUARTA MEDIÇÃO, que deu zero e **NÃO VALE** — 10/09/2026, 02h20.
-O controle do rádio saiu da mesa entre a listagem e a corrida: ela desligou o
-BT, que é o gesto com que ela cura o defeito. O instrumento mediu 90 s do
-estado CURADO e imprimiu "NINGUÉM EMITIU NADA".
-
-**A cura está no código, não neste texto:** ele relista os nós no fim, e se
-algum alvo saiu, o veredito vira `MEDIÇÃO INVÁLIDA` com `rc=2`. Zero com o
-alvo fora não é zero — é nada.
-
-O ALARME FALSO DE 29/09/2026, E AS SEIS CURAS QUE ELE PEDIU
-------------------------------------------------------------
-Quatro pads parados na mesa, um minuto, e o resumo disse «8875 evento(s) NO QUE
-MEXE NA TELA» com `rc 0`, sem nada se mexer na tela. O instrumento somava por
-NOME (quatro pads iguais davam quatro linhas com a soma dos quatro), contava o
-eco dos pedidos de vibração (`EV_FF`, que saía como um `0` sem tipo) como
-entrada, chamava eixo de pad de tela, escrevia `0` sobre os doze nós físicos que
-não conseguiu abrir, devolvia `rc 0` sobre o alarme, e o cabeçalho dizia a
-biblioteca «NÃO IMPORTADO» porque saía antes do `import`. Agora:
-
-* **a classe vem do udev**, pelas marcas de CLASSE do nó (`classe_do_no`), a
-  mesma fonte que o compositor lê; o nome só escolhe QUEM se vigia;
-* **a conta é por nó**, pelo caminho;
-* **só entrada é entrada** (`EV_KEY`, `EV_REL`, `EV_ABS`, `EV_SW`); a saída
-  ecoada sai numa linha própria, com o tipo e o efeito;
-* **o pad pergunta ao dono da zona**, `quem_mexe.teve_entrada`, a cada quadro:
-  o chiado de 1 LSB do aparelho fica «dentro da zona», e só a mão é candidata;
-* **o nó abre pelo dono da porta**, `evdev_reader.abrir_input_device` (o
-  físico escondido vem pelo broker), e o grab se pergunta no fd que se tem;
-  quem não abre sai com a frase do dono, `leitura_de_zero`;
-* **o `rc` diz o veredito**: 0 zero, 1 alguém mexeu, 2 medição inválida, 3 não
-  sei.
-
-O QUE ELE MEDE
----------------
-Todo nó de entrada com cara de controle ou de teclado/mouse virtual, ao mesmo
-tempo, contando evento por evento e dizendo QUAL nó emitiu. Se o cursor dela
-andar enquanto ele roda, o caminho do culpado sai no resumo.
-
-Ele **não escreve nada** e não abre janela: é leitura de `/dev/input` e do
-banco do udev.
-
-USO — rode QUANDO O DEFEITO ESTIVER ACONTECENDO
-    a_entrada_que_nasce_sozinha.py                # 30 s
-    a_entrada_que_nasce_sozinha.py --segundos 120 # mais tempo
-    a_entrada_que_nasce_sozinha.py --listar       # só diz o que vigiaria
-
-O `rc`: 0 ZERO no que mexe na tela · 1 alguém mexeu (o culpado vai nomeado) ·
-2 medição inválida (um nó saiu no meio) · 3 não sei (um nó da tela ou do pad
-não foi lido, ou a classe dele não se leu).
-"""
+"""a_entrada_que_nasce_sozinha.py — quem mexe no cursor e no teclado dela."""
 
 from __future__ import annotations
 
@@ -117,9 +34,6 @@ from comum import (
     resumo,
 )
 
-#: Os donos que este instrumento PERGUNTA, em vez de copiar: a porta do evdev,
-#: a faixa do eixo, o par código → campo e a zona da mão. Sem eles não há
-#: classificação honesta de pad, e o instrumento diz isso e sai com rc 3.
 try:
     from hefesto_dualsense4unix.core.evdev_reader import (
         EvdevReader,
@@ -134,8 +48,6 @@ try:
 except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
     DONOS_IMPORTAVEIS = str(_erro)
 
-#: O QUE ENTRA NA VIGIA. Nomes, e não caminhos: `eventNN` muda a cada
-#: reconexão, e um caminho cravado aqui mediria o nó errado amanhã.
 INTERESSA = ("hefesto", "dualsense", "virtual", "wireless controller")
 
 
@@ -166,12 +78,6 @@ def nos_de_entrada() -> list[tuple[str, str, str]]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# A classe do nó: do udev, nunca do nome
-# ---------------------------------------------------------------------------
-
-#: O banco do udev, onde a libudev (e por ela o compositor) lê as propriedades
-#: de cada nó. Só leitura: este instrumento nunca pede `trigger`.
 RAIZ_DO_BANCO_DO_UDEV = "/run/udev/data"
 
 TELA = "tela"
@@ -180,10 +86,6 @@ IMU = "IMU"
 CHAVE = "chave"
 NAO_SEI = "não sei"
 
-#: As marcas de CLASSE, e a lista é fechada. `ID_INPUT_JOYSTICK_INTEGRATION`,
-#: `ID_INPUT_TOUCHPAD_INTEGRATION`, `ID_INPUT_WIDTH_MM` e `ID_INPUT_HEIGHT_MM`
-#: são atributos: o gamepad físico traz `..._JOYSTICK_INTEGRATION=external`, e
-#: uma regra que lesse «qualquer `ID_INPUT_*`» faria dele uma tela.
 MARCAS_DA_TELA = (
     "ID_INPUT_KEY",
     "ID_INPUT_KEYBOARD",
@@ -207,11 +109,7 @@ def propriedades_do_udev(
     raiz: str = RAIZ_DO_BANCO_DO_UDEV,
     estat: Callable[[str], Any] = os.stat,
 ) -> dict[str, str] | None:
-    """As propriedades `E:` que o udev guardou para o nó; None se ilegíveis.
-
-    O arquivo do banco é `c<maior>:<menor>` do `st_rdev` do nó: o `event263` é
-    `c13:263`, e não `c13:327` (a conta 64 + N só vale até o `event31`).
-    """
+    """As propriedades `E:` que o udev guardou para o nó; None se ilegíveis."""
     try:
         info = estat(caminho)
     except OSError:
@@ -233,14 +131,7 @@ def propriedades_do_udev(
 
 
 def classe_do_no(propriedades: dict[str, str] | None) -> str:
-    """A classe que o compositor dá ao nó, pelas marcas de classe do udev.
-
-    A regra do libinput: o acelerômetro é ignorado (IMU); qualquer marca de
-    tecla, teclado, mouse, touchpad, mesa digitalizadora ou tela de toque faz
-    tela, sozinha ou junto do joystick; só joystick é pad; só chave é chave (o
-    «Headset Jack» dos pads `uhid`). Sem marca legível, não se sabe, e nada se
-    adivinha pelo nome.
-    """
+    """A classe que o compositor dá ao nó, pelas marcas de classe do udev."""
     if not propriedades:
         return NAO_SEI
     marcas = {m for m in MARCAS_DE_CLASSE if propriedades.get(m) == "1"}
@@ -253,11 +144,6 @@ def classe_do_no(propriedades: dict[str, str] | None) -> str:
     if MARCA_DA_CHAVE in marcas:
         return CHAVE
     return NAO_SEI
-
-
-# ---------------------------------------------------------------------------
-# O nó vigiado: a conta, o eco e a pergunta ao dono da zona
-# ---------------------------------------------------------------------------
 
 
 def numero(n: int) -> str:
@@ -295,15 +181,12 @@ class NoVigiado:
     nome: str
     uniq: str
     classe: str
-    #: Por onde abriu (`PORTA_DIRETA` ou `PORTA_BROKER`); None = não abriu.
     porta: str | None = None
-    #: O estado do grab, na frase do dono (`estado_do_grab`).
     grab: str = ""
     dispositivo: Any = None
     entradas: int = 0
     ecos: collections.Counter[str] = field(default_factory=collections.Counter)
     rotulos: collections.Counter[str] = field(default_factory=collections.Counter)
-    # -- o pad ------------------------------------------------------------
     eixos: dict[str, int] = field(default_factory=dict)
     botoes: set[str] = field(default_factory=set)
     faixas: dict[int, Any] = field(default_factory=dict)
@@ -356,7 +239,7 @@ class NoVigiado:
             self.ecos[rotulo] += 1
             return
         if tipo not in tipos_de_entrada(ecodes):
-            return  # EV_MSC e afins: acompanham a entrada, não são entrada
+            return
         self.entradas += 1
         self.rotulos[rotulo] += 1
         if self.classe == PAD:
@@ -376,11 +259,11 @@ class NoVigiado:
             elif codigo in _codigos_do_chapeu(ecodes):
                 (self.botoes.add if valor else self.botoes.discard)(rotulo)
             else:
-                self._quadro_sem_zona = True  # eixo sem dono de zona: não se afirma repouso
+                self._quadro_sem_zona = True
         elif tipo in (ecodes.EV_KEY, ecodes.EV_SW):
             (self.botoes.add if valor else self.botoes.discard)(rotulo)
         else:
-            self._quadro_sem_zona = True  # EV_REL num pad é movimento, e a zona não o mede
+            self._quadro_sem_zona = True
 
     def fechar_quadro(self) -> None:
         """Pergunta ao dono da zona se a mão estava no pad neste quadro."""
@@ -440,17 +323,8 @@ def _codigos_do_chapeu(ecodes: Any) -> frozenset[int]:
     )
 
 
-# ---------------------------------------------------------------------------
-# A porta e o grab: perguntados aos donos
-# ---------------------------------------------------------------------------
-
-
 def ler_o_grab(caminho: str, fd: int | None = None, *, ioctl: Any = None) -> str:
-    """O grab do nó, perguntado NO FD que se tem quando o nó abriu.
-
-    O `abrir` padrão do dono é `os.open`, e no físico `0600` lido pelo broker
-    ele responderia «sem permissão» sobre um nó que está sendo lido.
-    """
+    """O grab do nó, perguntado NO FD que se tem quando o nó abriu."""
     if fd is None:
         return estado_do_grab(caminho, ioctl=ioctl)
     return estado_do_grab(caminho, abrir=lambda *_a, **_k: os.dup(fd), ioctl=ioctl)
@@ -474,7 +348,7 @@ def montar_os_nos(
         direto = acesso(caminho, os.R_OK)
         try:
             dispositivo = abrir(caminho)
-        except Exception:  # sem permissão, broker que recusa, nó que sumiu
+        except Exception:
             no.grab = ler_o_grab(caminho, ioctl=ioctl)
         else:
             no.dispositivo = dispositivo
@@ -516,11 +390,6 @@ def fechar(nos: list[NoVigiado]) -> None:
         if no.dispositivo is not None:
             with contextlib.suppress(Exception):
                 no.dispositivo.close()
-
-
-# ---------------------------------------------------------------------------
-# O relatório e o veredito
-# ---------------------------------------------------------------------------
 
 
 def relatorio(nos: list[NoVigiado], segundos: float) -> list[str]:
@@ -625,9 +494,6 @@ def classes_dos_que_nasceram(
     ]
 
 
-# ---------------------------------------------------------------------------
-
-
 def importar_evdev() -> Any:
     """O `evdev`, importado ANTES do cabeçalho, para que ele diga de onde veio."""
     try:
@@ -688,15 +554,6 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         fechar(nos)
 
-    # A MESA MUDOU NO MEIO? — CURA DE 10/09/2026, e ela nasceu de um zero FALSO.
-    #
-    # A corrida das 02h20 mediu 90 s e imprimiu "NINGUÉM EMITIU NADA". Só que o
-    # controle do rádio tinha saído da mesa entre a listagem e a medição: ela
-    # desligou o BT, que é exatamente o gesto com que ela CURA o defeito. O
-    # instrumento mediu o estado curado e devolveu o veredito do estado doente.
-    #
-    # É a família que esta casa já nomeia: *o instrumento respondeu sobre outra
-    # coisa que não o alvo*. Zero com o alvo fora não é zero — é NADA.
     depois = {c for c, _n, _u in nos_de_entrada()}
     sumiram = [n for c, n, _u in alvos if c not in depois]
     nasceram = sorted(depois - {c for c, _n, _u in alvos})

@@ -193,11 +193,6 @@ from identidade_do_vpad import (
 )
 from quem_o_jogo_abre import arvore_do_jogo
 
-#: O produto é a fonte dos carimbos, e sem ele este instrumento não tem régua
-#: nenhuma — só chute com cara de medição. A falta é BARULHENTA de propósito,
-#: com o comando exato: o `python3` do sistema não enxerga o pacote, e um
-#: instrumento que degradasse em silêncio aqui mediria o aparelho de outra
-#: pessoa.
 try:
     from hefesto_dualsense4unix.integrations.no_do_vpad import no_ainda_vale
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
@@ -212,71 +207,35 @@ try:
 except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
     PRODUTO_IMPORTAVEL = str(_erro)
 
-#: Os nomes das máscaras do pad `uinput`, do fonte do produto (vazio sem ele).
 NOMES_DO_UINPUT = nomes_do_pad_uinput()
 
 VERSAO = "2026-08-20"
 
-#: As duas raízes que este instrumento lê. Parametrizáveis só como COSTURA DE
-#: TESTE, no mesmo molde do `integrations/no_do_vpad`: a suíte aponta para um
-#: diretório temporário, e **nenhum teste desta casa varre o `/sys` ou o
-#: `/proc` vivos da máquina dela** — nem para ler. É a disciplina da
-#: TEMPESTADE-DE-TECLADOS-01, e ela não se aplica só a criar dispositivo: um
-#: teste que lesse o `/sys` de verdade passaria ou reprovaria conforme o que
-#: estivesse plugado na hora, que é o oposto de teste.
 RAIZ_CLASS_INPUT = "/sys/class/input"
 RAIZ_PROC = "/proc"
 
-#: Os cinco vereditos. Ver o bloco OS CINCO VEREDITOS na docstring.
 V_NOSSO = "SEGURA O NOSSO NÓ"
 V_FISICO = "SEGURA O FÍSICO, NÃO O NOSSO"
 V_DOIS = "SEGURA OS DOIS"
 V_NENHUM = "NENHUM"
 V_NAO_SONDADO = "NÃO SONDADO"
 
-#: As cinco chaves que a QUEM-SEGURA-O-NOSSO-NO-01 acrescentou ao `per_vpad`.
-#: A lista existe para separar dois silêncios que chegam iguais na tela:
-#: chave AUSENTE é daemon MAIS VELHO que o código (install editable — a cura só
-#: vale no próximo start); chave presente com `None` é o daemon dizendo "não
-#: resolvi". O segundo é uma medição; o primeiro é a falta dela.
 CAMPOS_DO_NO = ("evdev", "hidraw", "ino", "hidraw_ino", "game_open")
 
 #: O papel de cada nó de entrada de um DualSense, pelo sufixo do nome. Um
-#: aparelho publica três (ou quatro, com fone), e o jogo pode segurar
-#: QUALQUER um deles — segurar o `Motion Sensors` é receber o nosso vpad tanto
-#: quanto segurar o gamepad.
 SUFIXOS_DE_PAPEL = (
     ("Motion Sensors", "movimento"),
     ("Touchpad", "touchpad"),
     ("Headset Jack", "fone"),
 )
 
-#: O padrão de cmdline que acha o jogo, o mesmo default do `quem_o_jogo_abre`.
 PADRAO_DO_JOGO = r"\.exe|Shipping"
 
-#: A ÂNCORA. Um processo só entra na árvore do jogo se carregar isto no
-#: `environ`. É a mesma variável em que o `quem_o_jogo_abre.processo_do_jogo`
-#: se apoia, e pelo mesmo motivo estrutural: ela existe no ambiente que a Steam
-#: monta e é herdada por tudo o que o jogo gera, inclusive o `winedevice` que é
-#: quem costuma segurar o dispositivo.
-#:
-#: MEDIDO em 20/08/2026, sem jogo nenhum aberto: o padrão default casou com o
-#: `earlyoom` (a palavra `.exe` mora na lista de `--avoid` dele) e com um
-#: binário de outro programa cujo nome termina em `.exe`. Sem a âncora, o
-#: instrumento teria afirmado "a árvore do jogo existe e não segura nada"
-#: sobre um jogo que não estava aberto — a classe de erro mais cara que um
-#: instrumento comete aqui.
 ANCORA_DO_JOGO = b"SteamAppId="
 
 
 def _mascara(mac: str) -> str:
-    """MAC com os octetos 4 e 5 zerados — a máscara desta casa.
-
-    Isto é APRESENTAÇÃO, não medição: o casamento acontece por inode, e o MAC
-    só aparece para quem lê saber de qual controle se fala. Mascarar aqui é o
-    que impede um endereço real de escorregar para dentro de um relatório
-    colado num arquivo versionado.
-    """
+    """MAC com os octetos 4 e 5 zerados — a máscara desta casa."""
     partes = mac.split(":")
     if len(partes) != 6:
         return mac
@@ -284,27 +243,12 @@ def _mascara(mac: str) -> str:
 
 
 def _chave(caminho: str) -> tuple[int, int] | None:
-    """`(st_dev, st_ino)` de um caminho, ou `None`. **Não abre nada.**
-
-    `os.stat` resolve o caminho e lê o inode; não há `open()`, então não há
-    `UHID_OPEN`, não há modo jogo armado e não há contagem de quem fecha por
-    último. É a razão de este instrumento poder rodar com o jogo aberto sem
-    estragar a medição que está tentando fazer.
-
-    O par, e não o `st_ino` sozinho: número de inode só é único dentro de um
-    sistema de arquivos. Um fd para um arquivo comum de outro `st_dev` com o
-    mesmo número casaria, e o falso positivo sairia convincente.
-    """
+    """`(st_dev, st_ino)` de um caminho, ou `None`. **Não abre nada.**"""
     try:
         st = os.stat(caminho)
     except OSError:
         return None
     return (st.st_dev, st.st_ino)
-
-
-# ---------------------------------------------------------------------------
-# O ALVO — régua A: o produto declara
-# ---------------------------------------------------------------------------
 
 
 def estado_do_produto(timeout: float = 5.0) -> tuple[dict, str]:
@@ -370,12 +314,7 @@ class VpadDoProduto:
 
 
 def vpads_do_produto(estado: dict) -> list[VpadDoProduto]:
-    """Os blocos `rumble_ff.per_vpad` traduzidos, com o que falta neles.
-
-    `per_vpad` não é chave de topo do payload — ela mora dentro de
-    `rumble_ff`, ao lado dos contadores de força-feedback. Isso já custou
-    tempo; fica escrito.
-    """
+    """Os blocos `rumble_ff.per_vpad` traduzidos, com o que falta neles."""
     per_vpad = (estado.get("rumble_ff") or {}).get("per_vpad") or []
     achados: list[VpadDoProduto] = []
     for bloco in per_vpad:
@@ -400,14 +339,7 @@ def vpads_do_produto(estado: dict) -> list[VpadDoProduto]:
 
 
 def fisico_por_jogador(estado: dict) -> dict[int, str]:
-    """`player` -> MAC do controle FÍSICO que alimenta aquele vpad.
-
-    Sai de `coop.mesa`, que é onde o produto publica a ligação vpad ↔ físico
-    (QUEM-É-QUEM-01). Nenhum arquivo de `/sys` carrega essa ligação: o vpad
-    nasce por `/dev/uhid` e não guarda ponteiro para o controle que o alimenta.
-    Sem o daemon vivo, esta ponte simplesmente não existe — e o transporte sai
-    `NÃO SONDADO`, que é a resposta honesta.
-    """
+    """`player` -> MAC do controle FÍSICO que alimenta aquele vpad."""
     mesa = (estado.get("coop") or {}).get("mesa") or []
     fora: dict[int, str] = {}
     for item in mesa:
@@ -418,11 +350,6 @@ def fisico_por_jogador(estado: dict) -> dict[int, str]:
         if isinstance(uniq, str) and uniq:
             fora[numero] = uniq
     return fora
-
-
-# ---------------------------------------------------------------------------
-# O ALVO — régua B: o kernel mostra
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -447,23 +374,7 @@ def _papel_do_nome(nome: str) -> str:
 
 
 def _hid_pai(dir_device: str) -> tuple[str, dict[str, str]]:
-    """`(diretório do device HID dono deste nó, campos do uevent dele)`.
-
-    `/sys/class/input/eventN/device` resolve em `<device HID>/input/inputM`;
-    dois níveis acima está o device HID.
-
-    **A subida de dois níveis não basta como prova, e isto é medido.** O vpad
-    de uinput resolve em `/sys/devices/virtual/input/input1499`: o pai
-    TAMBÉM se chama `input`, então a regra "subiu dois e o pai era input, logo
-    achei um device HID" entrega `/sys/devices/virtual` — um diretório que não
-    é device nenhum. Aqui o candidato só passa se o `uevent` dele trouxer
-    `HID_ID`, que é o que todo device HID publica e nenhum outro publica.
-    Confirmar pelo que o diretório DIZ, e não pelo nome do avô, é a diferença
-    entre régua e coincidência de caminho.
-
-    Devolve `("", {})` quando não há device HID acima — o caminho uinput —, e
-    é assim que quem chama sabe que não há hidraw a procurar.
-    """
+    """`(diretório do device HID dono deste nó, campos do uevent dele)`."""
     try:
         alvo = os.path.realpath(dir_device)
     except OSError:
@@ -492,25 +403,7 @@ def _hidraw_do_hid(dir_hid: str) -> str | None:
 
 
 def vpads_do_sysfs(raiz: str | None = None) -> list[NoDeEntrada]:
-    """Os nós de entrada que são vpad DESTE produto — varredura independente.
-
-    Esta é a régua B. Ela não pergunta nada ao daemon: lê o `uniq` do nó, o
-    `uevent` do device HID pai, e decide com
-    `identidade_do_vpad.e_vpad_do_hefesto` — a régua que os scripts desta casa
-    já compartilham, e que é outra IMPLEMENTAÇÃO da mesma pergunta que o
-    `integrations/no_do_vpad` do produto responde. Duas implementações, uma
-    pergunta: é isso que faz delas duas réguas, e não duas cópias.
-
-    O ramo do NOME é o buraco declarado, e ele fica à parte de propósito. No
-    backend uinput não há `uniq`, não há device HID pai e não há carimbo
-    nenhum: o `e_vpad_do_hefesto` responde `False`, com razão, porque procura
-    `(Hefesto P` e o nome do uinput não tem essa marca. O que sobra são os
-    nomes das máscaras (`uinput_gamepad.FLAVORS`) lidos do FONTE do produto,
-    com a morada do uinput — o que torna esta metade da régua independente do
-    daemon VIVO, mas não do código. Casamento **exato**: o espelho Xbox que o
-    Steam Input publica de cada controle se chama `Microsoft X-Box 360 pad 0`,
-    e um prefixo o abraçaria.
-    """
+    """Os nós de entrada que são vpad DESTE produto — varredura independente."""
     raiz = RAIZ_CLASS_INPUT if raiz is None else raiz
     achados: list[NoDeEntrada] = []
     try:
@@ -554,13 +447,7 @@ def vpads_do_sysfs(raiz: str | None = None) -> list[NoDeEntrada]:
 
 
 def nos_de_entrada_do_hid(dir_device: str) -> list[tuple[str, str]]:
-    """`[(nome, /dev/input/eventN)]` de um device HID, pelo sysfs.
-
-    Variante de `quem_e_quem._nos_de_entrada`, e a diferença é deliberada: lá
-    a saída é um mapa `papel -> caminho`, que guarda UM nó por papel; aqui
-    interessam TODOS os nós, porque a pergunta é "o jogo segurou algum deles?"
-    e a resposta não pode perder o quarto nó por ele não ter papel próprio.
-    """
+    """`[(nome, /dev/input/eventN)]` de um device HID, pelo sysfs."""
     fora: list[tuple[str, str]] = []
     raiz = os.path.join(dir_device, "input")
     if not os.path.isdir(raiz):
@@ -582,11 +469,6 @@ def nos_de_entrada_do_hid(dir_device: str) -> list[tuple[str, str]]:
             if sub.startswith("event"):
                 fora.append((nome, f"/dev/input/{sub}"))
     return fora
-
-
-# ---------------------------------------------------------------------------
-# O transporte da perna FÍSICA — duas rotas, e discordância vira NÃO SONDADO
-# ---------------------------------------------------------------------------
 
 
 def _transporte_do_bustype(bruto: str) -> str:
@@ -644,18 +526,13 @@ def transporte_por_duas_rotas(
     return V_NAO_SONDADO, rota1, rota2
 
 
-# ---------------------------------------------------------------------------
-# Os alvos, montados das duas réguas
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Alvo:
     """Um nó de `/dev` que interessa à pergunta, e de onde a certeza dele veio."""
 
-    classe: str  # "nosso" | "físico"
-    rotulo: str  # "P1" / "44:46:48:00:00:03"
-    papel: str  # "gamepad" | "touchpad" | "hidraw" | ...
+    classe: str
+    rotulo: str
+    papel: str
     caminho: str
     chave: tuple[int, int] | None
     reguas: str
@@ -669,17 +546,7 @@ class Alvo:
 def _rotulo_do_no(
     no: NoDeEntrada, vpad: VpadDoProduto | None, do_produto: list[VpadDoProduto]
 ) -> str:
-    """Como este nó aparece na tabela: `P1`, o `uniq` forjado, ou o `eventN`.
-
-    **Isto é rótulo, não medição.** O casamento acontece por inode, sempre; o
-    que se decide aqui é só como chamar a linha na tela.
-
-    A queda para o NOME existe porque, com o daemon mais velho que o código,
-    a régua A não publica caminho nenhum e todo nó nosso sairia chamado
-    `event10` — verdadeiro e inútil. E ela só vale quando o nome é ÚNICO nas
-    duas listas: no co-op com quatro vpads de uinput os quatro têm o mesmo
-    nome, e escolher um deles seria inventar de qual jogador é o nó.
-    """
+    """Como este nó aparece na tabela: `P1`, o `uniq` forjado, ou o `eventN`."""
     if vpad is not None:
         return f"P{vpad.player}"
     homonimos = [v for v in do_produto if v.nome and v.nome == no.nome]
@@ -693,17 +560,10 @@ def _rotulo_do_no(
 def montar_alvos(
     do_produto: list[VpadDoProduto], do_sysfs: list[NoDeEntrada]
 ) -> tuple[list[Alvo], list[str]]:
-    """Os nós NOSSOS, com as duas réguas confrontadas nó a nó.
-
-    A ordem importa: começa pelo que a régua B viu no kernel — ela existe com
-    ou sem daemon — e só então pergunta se a régua A concorda. O contrário
-    faria a régua A definir o universo, e uma segunda régua que só confere o
-    que a primeira apontou não é segunda régua nenhuma.
-    """
+    """Os nós NOSSOS, com as duas réguas confrontadas nó a nó."""
     alvos: list[Alvo] = []
     avisos: list[str] = []
 
-    #: `caminho publicado -> o vpad que o publicou`, para o confronto abaixo.
     publicados: dict[str, VpadDoProduto] = {}
     for vpad in do_produto:
         if isinstance(vpad.evdev, str) and vpad.evdev:
@@ -791,13 +651,7 @@ def montar_alvos(
 
 
 def alvos_fisicos(mapa_do_produto: dict[int, str]) -> tuple[list[Alvo], list[list[str]]]:
-    """Os nós dos controles FÍSICOS, e a tabela de transporte de cada um.
-
-    Eles entram como alvo porque o veredito `SEGURA O FÍSICO` é uma resposta
-    de verdade, e das caras: quer dizer que o jogo passou por fora de tudo o
-    que o produto montou. Sem eles o instrumento só saberia dizer "não segura
-    o nosso", que é a mesma frase para dois mundos opostos.
-    """
+    """Os nós dos controles FÍSICOS, e a tabela de transporte de cada um."""
     alvos: list[Alvo] = []
     linhas: list[list[str]] = []
     por_mac = {mac.replace(":", "").lower(): num for num, mac in mapa_do_produto.items()}
@@ -840,11 +694,6 @@ def alvos_fisicos(mapa_do_produto: dict[int, str]) -> tuple[list[Alvo], list[lis
     return alvos, linhas
 
 
-# ---------------------------------------------------------------------------
-# O CENSO — quem segura o quê, por inode
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Posse:
     """Um processo com um dos nossos alvos aberto, agora."""
@@ -865,14 +714,7 @@ class Censo:
     posses: list[Posse] = field(default_factory=list)
 
     def fechou_sobre(self, pids: list[int]) -> bool:
-        """Li o `fd/` de TODOS estes processos? `NENHUM` depende disto.
-
-        A pergunta é sobre a ÁRVORE DO JOGO, e é o censo dela que precisa
-        fechar. Exigir o mundo inteiro seria exigir o impossível: `(sd-pam)` e
-        `ssh-agent` zeram o `PR_SET_DUMPABLE` e nunca se deixam ler, então o
-        censo global desta máquina não fecha nunca — e `NENHUM` viraria um
-        veredito decorativo, que nunca sai.
-        """
+        """Li o `fd/` de TODOS estes processos? `NENHUM` depende disto."""
         return not (set(pids) & self.ilegiveis)
 
 
@@ -887,19 +729,7 @@ def _cmdline(pid: int, raiz_proc: str | None = None) -> str:
 
 
 def censo_de_posse(alvos: list[Alvo], raiz_proc: str | None = None) -> Censo:
-    """Quem, entre TODOS os processos legíveis, segura um dos alvos.
-
-    A varredura é global de propósito, e não só da árvore do jogo. A pergunta
-    do degrau é sobre o jogo, mas a pergunta que salva a investigação é *"e
-    quem está segurando, então?"* — o cliente Steam abre o nó, e sessão aberta
-    NÃO é evidência de jogo (veto da NUMA-02, mecanismo do incidente das
-    14:42). Sem a lista global, um `NENHUM` no jogo e um `NENHUM` no mundo
-    sairiam com a mesma cara.
-
-    O casamento é `os.stat` do `/proc/<pid>/fd/<n>` contra o `(st_dev, st_ino)`
-    do alvo. **Nada é aberto.** E não se lê o `os.readlink`: o caminho é um
-    número de fila, e o critério do degrau proíbe casar por ele.
-    """
+    """Quem, entre TODOS os processos legíveis, segura um dos alvos."""
     raiz = RAIZ_PROC if raiz_proc is None else raiz_proc
     censo = Censo()
     por_chave: dict[tuple[int, int], Alvo] = {
@@ -918,7 +748,7 @@ def censo_de_posse(alvos: list[Alvo], raiz_proc: str | None = None) -> Censo:
         try:
             dono = os.stat(os.path.join(raiz, entrada)).st_uid
         except OSError:
-            continue  # morreu entre o listdir e o stat: não é buraco, é vida
+            continue
         if dono != meu_uid:
             censo.de_outro_usuario += 1
             continue
@@ -926,13 +756,10 @@ def censo_de_posse(alvos: list[Alvo], raiz_proc: str | None = None) -> Censo:
         try:
             fds = os.listdir(os.path.join(raiz, entrada, "fd"))
         except FileNotFoundError:
-            continue  # morreu agora
+            continue
         except OSError:
             censo.ilegiveis.add(pid)
             continue
-        # Um mesmo nó aberto duas vezes pelo mesmo processo é UM fato, não
-        # dois: o `dup()` de um fd não é uma segunda posse, e contá-lo duas
-        # vezes engorda a tabela sem acrescentar nada.
         ja_vistos: set[str] = set()
         for fd in fds:
             chave = _chave(os.path.join(raiz, entrada, "fd", fd))
@@ -948,16 +775,7 @@ def censo_de_posse(alvos: list[Alvo], raiz_proc: str | None = None) -> Censo:
 def arvore_ancorada(
     padrao: str, *, ancora: bool = True, raiz_proc: str | None = None
 ) -> tuple[list[int], list[int]]:
-    """`(árvore ancorada, o que casou pelo cmdline e NÃO é jogo)`.
-
-    A expansão da árvore é a do `quem_o_jogo_abre.arvore_do_jogo` — processos
-    cujo cmdline case, mais os descendentes. O que se acrescenta aqui é a
-    peneira: só fica quem carrega `SteamAppId` no `environ`.
-
-    O resto volta separado de propósito, para ser IMPRESSO. Quem roda isto sem
-    jogo aberto precisa ver que o `earlyoom` casou com a palavra `.exe` — e não
-    ficar com a impressão de que o instrumento não achou nada por acaso.
-    """
+    """`(árvore ancorada, o que casou pelo cmdline e NÃO é jogo)`."""
     raiz = RAIZ_PROC if raiz_proc is None else raiz_proc
     candidatos = arvore_do_jogo(padrao)
     if not ancora:
@@ -975,22 +793,10 @@ def arvore_ancorada(
     return dentro, fora
 
 
-# ---------------------------------------------------------------------------
-# A decisão
-# ---------------------------------------------------------------------------
-
-
 def decidir(
     alvos: list[Alvo], censo: Censo, arvore: list[int], recusados: list[int]
 ) -> tuple[str, str]:
-    """`(veredito, motivo)` sobre a ÁRVORE DO JOGO. Um dos cinco, sempre.
-
-    A assimetria entre achar e não achar é o coração disto: **achar é uma
-    observação positiva** e vale mesmo com o censo aberto — um processo com o
-    fd na mão é um processo com o fd na mão. **Não achar não é observação
-    nenhuma** enquanto sobrar processo que não se pôde ler: aí a frase honesta
-    é `NÃO SONDADO`, e não `NENHUM`.
-    """
+    """`(veredito, motivo)` sobre a ÁRVORE DO JOGO. Um dos cinco, sempre."""
     nossos = [a for a in alvos if a.classe == "nosso" and a.sondado]
     if not nossos:
         return (
@@ -1054,11 +860,6 @@ def decidir(
         "lidos, um a um) e nenhum deles segura o nosso nó nem o do físico. "
         "Isto é uma afirmação, não uma ausência de dado.",
     )
-
-
-# ---------------------------------------------------------------------------
-# Saída
-# ---------------------------------------------------------------------------
 
 
 def _linha_do_vpad(vpad: VpadDoProduto) -> list[str]:
@@ -1209,12 +1010,7 @@ def registro(
     arvore: list[int],
     recusados: list[int],
 ) -> dict:
-    """O mesmo relatório em JSON, para quem for CONFERIR — nunca para preencher.
-
-    Ele não grava nada em disco e não conhece o formato do caderno de ensaios.
-    Escrever a célula é ato de quem olhou; um instrumento que preenchesse
-    sozinho fabricaria exatamente o defeito que o degrau existe para impedir.
-    """
+    """O mesmo relatório em JSON, para quem for CONFERIR — nunca para preencher."""
     da_arvore = set(arvore)
     return {
         "veredito": veredito,

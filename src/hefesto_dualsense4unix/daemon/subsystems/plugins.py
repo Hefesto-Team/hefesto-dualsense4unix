@@ -1,36 +1,4 @@
-"""PluginsSubsystem — carregamento e despacho de plugins Python.
-
-Carrega plugins de ~/.config/hefesto-dualsense4unix/plugins/
-(ou HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR), chama os hooks no poll loop
-e subscreve eventos do bus.
-
-Ciclo de vida:
-  start(ctx):
-    - load_plugins_from_dir() carrega todos os *.py do diretório.
-    - on_load(ctx) e chamado em cada plugin com um PluginContext dedicado.
-    - Subscreve BUTTON_DOWN e BATTERY_CHANGE para despacho síncrono via
-      método tick() chamado pelo poll loop.
-
-  tick(state, active_profile):
-    - Chamado pelo _poll_loop() em lifecycle.py a cada tick.
-    - Despacha on_tick(state) para plugins com profile_match vazio ou que
-      contenham o perfil ativo.
-    - Watchdog: cada hook tem time.monotonic antes/depois; se > 5 ms loga
-      warning; 3x seguido desativa o plugin (flag local).
-
-  stop():
-    - Chama on_unload() em cada plugin ativo.
-
-Configuração:
-  - plugins_enabled (DaemonConfig): False por padrão. Opt-in explícito.
-  - HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR: env var sobrescreve o diretório padrão.
-  - HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED: "1" forca ativação (util em smoke/dev).
-
-Aviso de seguranca:
-    Plugins rodam com os mesmos privilegios do daemon. O usuário e
-    responsavel pelo código instalado em ~/.config/hefesto-dualsense4unix/plugins/.
-    Ver ADR-017.
-"""
+"""PluginsSubsystem — carregamento e despacho de plugins Python."""
 from __future__ import annotations
 
 import os
@@ -48,10 +16,8 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Tempo máximo por hook antes de emitir warning (segundos).
 _HOOK_WARN_MS = 5.0 / 1000.0
 
-# Quantas vezes consecutivas acima do limite antes de desativar.
 _HOOK_DISABLE_THRESH = 3
 
 
@@ -126,15 +92,7 @@ class _PluginEntry:
 
 
 class PluginsSubsystem:
-    """Subsystem que gerencia o ciclo de vida dos plugins.
-
-    Wire-up canônico (A-07):
-      1. Slot no dataclass Daemon: _plugins_subsystem
-      2. _start_plugins() chamado em Daemon.run() (após connect, antes de
-         _stop_event.wait())
-      3. tick() chamado no _poll_loop() apos cada read_state bem-sucedido
-      4. stop() chamado no shutdown
-    """
+    """Subsystem que gerencia o ciclo de vida dos plugins."""
 
     name = "plugins"
 
@@ -143,9 +101,6 @@ class PluginsSubsystem:
         self._ctx: DaemonContext | None = None
         self._last_profile: str | None = None
 
-    # ------------------------------------------------------------------
-    # Subsystem Protocol
-    # ------------------------------------------------------------------
 
     async def start(self, ctx: DaemonContext) -> None:
         """Carrega plugins do diretório configurado e chama on_load()."""
@@ -195,21 +150,9 @@ class PluginsSubsystem:
         cfg_enabled = bool(getattr(config, "plugins_enabled", False))
         return cfg_enabled or env_force
 
-    # ------------------------------------------------------------------
-    # Método de tick (chamado pelo poll loop)
-    # ------------------------------------------------------------------
 
     def tick(self, state: ControllerState, active_profile: str | None = None) -> None:
-        """Despacha on_tick() para plugins que correspondem ao perfil ativo.
-
-        Deve ser chamado uma vez por iteração do poll loop, apos
-        read_state() bem-sucedido.
-
-        Args:
-            state: snapshot imutavel do controle.
-            active_profile: slug do perfil ativo (None se nenhum).
-        """
-        # Verificar mudanca de perfil
+        """Despacha on_tick() para plugins que correspondem ao perfil ativo."""
         if active_profile != self._last_profile:
             for entry in self._entries:
                 if not entry.disabled:
@@ -235,9 +178,6 @@ class PluginsSubsystem:
             if not entry.disabled:
                 entry.call_on_battery_change(pct)
 
-    # ------------------------------------------------------------------
-    # Introspeccao (CLI)
-    # ------------------------------------------------------------------
 
     def list_plugins(self) -> list[dict[str, Any]]:
         """Retorna lista de dicts descrevendo cada plugin carregado."""
@@ -252,11 +192,7 @@ class PluginsSubsystem:
         ]
 
     def reload(self, ctx: DaemonContext | None = None) -> int:
-        """Descarrega todos os plugins e recarrega do disco.
-
-        Returns:
-            Numero de plugins carregados apos o reload.
-        """
+        """Descarrega todos os plugins e recarrega do disco."""
         import asyncio
 
         ctx_real = ctx or self._ctx
@@ -264,12 +200,10 @@ class PluginsSubsystem:
             logger.warning("plugins_reload_sem_ctx")
             return 0
 
-        # Unload sincrono
         for entry in self._entries:
             entry.call_on_unload()
         self._entries.clear()
 
-        # Re-start sincrono (sem await — chamado do CLI)
         loop = asyncio.new_event_loop()
         try:
             loop.run_until_complete(self.start(ctx_real))

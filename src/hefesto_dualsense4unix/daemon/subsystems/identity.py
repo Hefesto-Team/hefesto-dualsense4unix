@@ -286,170 +286,50 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: Arquivo de persistência (no ``config_dir`` do app — padrão ``session.json``).
 _CONTROLLERS_FILE = "controllers.json"
 
-#: R-23: versão do SCHEMA de ``controllers.json``. É o que decide se o mapa
-#: gravado ainda vale — o ``boot_id`` deixou de decidir (ver docstring). Bump
-#: OBRIGATÓRIO sempre que a REGRA de numeração mudar: um arquivo de versão
-#: diferente é descartado UMA vez e a sessão seguinte renumera com a regra
-#: nova. Sem isso, a numeração torta gravada pela versão anterior (na máquina
 #: dela: externo com o slot 1, DualSense em 2 e 3) sobreviveria para sempre,
-#: justamente porque agora o mapa NÃO morre mais no reboot.
-#: 2 = R-23/R-24 (slot sobrevive ao boot + espaço de numeração único).
-#: 3 = NUM-01 (o que se grava é a ORDEM DE PREFERÊNCIA, não o número): o
-#: arquivo da mantenedora, com ``{"slots": {"a0fa…": 1, "143a…": 2}}``, fazia
-#: o único controle ligado exibir 2 para sempre. O bump é o que descarta
-#: aquele estado UMA vez — a fila renasce na ordem de chegada da sessão
-#: seguinte, e daí em diante ela é que sobrevive a restart/reboot.
 CONTROLLERS_SCHEMA_VERSION = 3
 
-#: NUM-01: campo do ``controllers.json`` que carrega a FILA — uma lista só,
-#: com os dois registros dentro (ver docstring do módulo). Os campos
-#: ``slots``/``externals`` do schema 2 não são mais lidos nem escritos: eram
-#: dois mapas MAC→número absoluto, e é justamente essa forma que não consegue
-#: representar "quem está na mesa é 1..N".
 ORDER_FIELD = "order"
 
-#: NUM-01: valores do campo ``kind`` de cada entrada da fila — dizem a qual
-#: registro a entrada pertence, para que o read-modify-write de um lado
-#: preserve (e nunca reinterprete) as entradas do outro.
 KIND_DUALSENSE = "dualsense"
 KIND_EXTERNAL = "external"
 
-#: R-23: teto defensivo de entradas restauradas do disco. Como nada expira
-#: mais (nem no reboot), um casal que passe anos trocando de controle veria o
-#: arquivo crescer sem fim e a numeração começar cada vez mais alto. 16 é
-#: ordens de magnitude acima de qualquer setup real (4 no co-op + externos);
-#: acima disso, caem as entradas do FIM DA FILA (NUM-01: são as menos
-#: estabelecidas — quem está na frente é quem a casa usa).
 _MAX_PERSISTED_SLOTS = 16
 
-#: D-30: largura da ONDA de chegada — dois controles vistos dentro da mesma
-#: janela chegaram, para a casa, JUNTOS, e a ordem entre eles é a do GRAVADO
-#: (o desempate), não uma ordem inventada.
-#:
-#: O número não é escolhido, é espremido entre dois limites medidos:
-#:
-#: - **teto**: a casa olha para a mesa a cada **2,0 s** (o tick lento do
-#:   ``lifecycle`` — ``identity_sync_next_at = tick_started + 2.0``). A janela
-#:   tem de ser MENOR que isso, senão duas olhadas DIFERENTES (que são
-#:   informação de verdade sobre a ordem) seriam fundidas numa onda só;
-#: - **piso**: tem de cobrir a rajada de chamadas de UMA olhada — o
-#:   ``sync_connected`` do tick e os ``slot_for`` que o provider de cor faz um
-#:   por controle logo em seguida. Essa rajada é memória pura, sem I/O por
-#:   construção (ver docstring da classe): microssegundos.
-#:
-#: 0,5 s fica 4x abaixo do teto e ordens de magnitude acima do piso.
 JANELA_DE_ONDA_SEC = 0.5
 
-#: D-30: quanto tempo a mesa precisa ficar SEM ninguém entrar nem sair para
-#: ser declarada estável — e é aí que a ordem do momento é CONGELADA na fila
-#: gravada (:meth:`ControllerIdentityRegistry._congelar_locked`).
-#:
-#: 4,0 s é o número que esta casa já mediu duas vezes, não um chute:
-#:
-#: - ``external_identity.VOLATILE_ABSENCE_LIMIT = 2`` (MODO-01) fixou DUAS
-#:   ausências consecutivas — *"~4 s no poll lento"* — como o limiar entre
-#:   "sumiu de verdade" e "hiccup de enumeração", justamente para que *"um
-#:   hiccup de enumeração não renumere ninguém"*. Congelar é gravar: exigir o
-#:   MESMO limiar é o que impede que um blip de enumeração vire ordem gravada;
-#: - a repintura que a Steam faz a cada conexão nova dura **~4 s**
-#:   (``core/lightbar_gatilho.py``) — enquanto ela roda, a mesa ainda está se
-#:   mexendo, e uma foto tirada no meio dela não é a mesa dela.
-#:
-#: E é 8x a :data:`JANELA_DE_ONDA_SEC`: uma onda sempre fecha antes de a mesa
-#: poder ser declarada estável.
 JANELA_MESA_ESTAVEL_SEC = 4.0
 
 
 def prazo_do_lugar_guardado() -> float:
-    """Por quanto tempo o lugar de quem saiu fica guardado — O-ASSENTO-GUARDADO-NAO-ANDA-01.
-
-    **A decisão (24/09/2026, por delegação dela, ``D-2409-O-ASSENTO-GUARDADO-
-    NAO-ANDA``):** dentro deste prazo ninguém troca de número — o lugar de quem
-    saiu fica vazio e não se fecha; passado o prazo, a NUM-01 volta (um até N).
-    É a linha 17 dela (*"o P2 sai por 20 segundos, volta como P2, e os outros
-    três não trocam de número"*) e a D-2309 (*"o Hefesto manda no número,
-    sempre"*): quem joga não vê o próprio número mudar porque outra pessoa
-    desligou o controle.
-
-    **O prazo tem UM dono, e é o posto de primário** (``PRIMARIO_RESERVA_SEC``,
-    ``core/backend_pydualsense.py``): o posto do P1 e o lugar dos quatro são a
-    mesma promessa, medida na mesma janela — uma piscada de rádio cabe nela, e
-    guardar mais atrapalharia quem desliga o controle e segue jogando com o
-    outro. Antes desta sprint só o P1 tinha prazo; o número dos outros se
-    fechava na hora, na tela, e nas lâmpadas no batimento seguinte. E o
-    RELÓGIO também é um só, e anda na suspensão (:func:`relogio_do_lugar_guardado`).
-
-    **O jogo segue o lugar guardado.** Dentro do prazo o buraco é o lugar de
-    quem saiu, ninguém está fora do boneco da própria carta e o co-op não recria
-    ninguém (``coop.planejar_a_ordem``); passado o prazo, quem ficou atrás renasce
-    no boneco do número novo (O-ASSENTO-GUARDADO-NAO-ANDA-03). Com o P1 fora e o
-    jogo aberto, o vpad do P1 fica parado à espera dele e o P2 segue no vpad 2
-    (O-ASSENTO-02, :meth:`o_lugar_espera`); sem jogo, o backend o passa na hora.
-
-    Import tardio pela razão de sempre deste módulo: ele não carrega o backend
-    (e o ``pydualsense``) só por ser importado.
-    """
+    """Por quanto tempo o lugar de quem saiu fica guardado — O-ASSENTO-GUARDADO-NAO-ANDA-01."""
     from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
 
     return float(PRIMARIO_RESERVA_SEC)
 
 
-#: R-23: fallbacks da âncora de sessão quando ``/proc`` não está montado
-#: (contêiner/Flatpak). machine-id não é por-boot, e tudo bem: depois do R-23
-#: a âncora é DIAGNÓSTICO, não gate — só precisa ser estável e barata.
 _MACHINE_ID_PATHS = ("/etc/machine-id", "/var/lib/dbus/machine-id")
 
-#: MAC "de verdade": 12 dígitos hex, com ou sem separadores ``:``/``-``.
-#: Mais estrito que o ``norm_mac`` do backend de propósito: um PATH exótico
-#: pode conter 12 chars hex espalhados e viraria um pseudo-MAC persistível.
 _MAC_RE = re.compile(
     r"^(?:[0-9a-fA-F]{12}|(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2})$"
 )
 
-#: Prefixo (canônico, 12-hex) dos MACs forjados dos vpads uhid — D9.
 _VPAD_MAC_PREFIX = "02fe"
 
-#: O-CONTROLE-SEM-MAC-01: a frase da DESISTÊNCIA, quando nem o serial nem o
-#: crachá dão uma identidade estável. Decidida por delegação em 06/09/2026
-#: (``D-0609-A-FRASE-DO-CONTROLE-SEM-CRACHA``, ``docs/data/decisoes-dela.csv``)
-#: e reversível numa frase.
-#:
-#: O defeito que ela cura é o SILÊNCIO, não o slot volátil: sem crachá o slot
-#: já era volátil hoje, e o que faltava era o produto DIZER. Perder
-#: configuração calado é o defeito; perder avisando é limitação declarada.
-#:
-#: Ela obedece ao glossário da tela para o dia em que for exibida
-#: (``docs/A-LINGUA-DESTA-CASA-…``): nada de ``MAC``, ``uniq`` nem ``hidraw``.
-#: **Quem a exibe é outra sprint** — aqui ela é dado, não tela.
 FRASE_SEM_CRACHA = (
     "Este controle não tem identificação estável: o Hefesto não vai "
     "lembrar dele no próximo jogo."
 )
 
-#: Lock de MÓDULO (NUMA-04, sprint 2026-07-19): protege TODO acesso
-#: read→``os.replace`` ao ``controllers.json`` COMPARTILHADO pelos dois
-#: registros independentes — este (entradas ``kind`` :data:`KIND_DUALSENSE`
-#: da fila) e o dos externos (``external_identity.py``). Cada registro tinha
-#: só o próprio ``RLock`` de INSTÂNCIA, que não protege contra o OUTRO objeto
-#: fazendo read-modify-write ao MESMO tempo — um lost-update latente (um dos
 #: dois namespaces podia sumir quando o tick do externo e o sync do DualSense
 #: salvavam intercalados). ``external_identity.py`` IMPORTA e usa este MESMO
-#: Lock — nunca cria o seu. Um `threading.Lock` de PROCESSO basta (o daemon é
-#: singleton); `flock` inter-processo foi avaliado e REJEITADO como
-#: sobre-engenharia (não há dois processos daemon concorrentes a proteger).
 CONTROLLERS_FILE_LOCK = threading.Lock()
 
 
 def _read_boot_id() -> str | None:
-    """boot_id do kernel — identifica ESTE boot da máquina (None se ilegível).
-
-    R-23: NÃO é mais um gate. Depois que o mapa MAC→slot passou a sobreviver
-    ao reboot, o boot_id só ANOTA em que boot o arquivo foi escrito (útil no
-    log de diagnóstico). Monkeypatchável nos testes.
-    """
+    """boot_id do kernel — identifica ESTE boot da máquina (None se ilegível)."""
     try:
         with open("/proc/sys/kernel/random/boot_id", encoding="utf-8") as fh:
             value = fh.read().strip()
@@ -459,12 +339,7 @@ def _read_boot_id() -> str | None:
 
 
 def _read_machine_id() -> str | None:
-    """machine-id do host (None se ilegível) — 2º degrau da âncora (R-23).
-
-    Compartilhado com ``external_identity._session_anchor``: os dois
-    registros escrevem o MESMO ``controllers.json`` e não podem discordar do
-    valor do campo ``boot_id`` (um sobrescreveria o do outro a cada save).
-    """
+    """machine-id do host (None se ilegível) — 2º degrau da âncora (R-23)."""
     for caminho in _MACHINE_ID_PATHS:
         try:
             with open(caminho, encoding="utf-8") as fh:
@@ -556,179 +431,55 @@ def merged_order_payload(
 
 
 def _session_anchor() -> str | None:
-    """Âncora de sessão RESILIENTE: boot_id → machine-id → ``None`` (R-23).
-
-    A âncora antiga era só o ``_read_boot_id``, e ela FALHAVA FECHADA: sem
-    ``/proc/sys/kernel/random/boot_id`` (contêiner/Flatpak, ``/proc`` não
-    montado) o ``load`` abortava e a numeração inteira renascia — bastava
-    reiniciar o daemon para os controles trocarem de número. Aqui a ausência
-    degrada em CASCATA e, no pior caso, devolve ``None`` sem nenhuma
-    consequência: quem decide o que restaurar é o
-    :data:`CONTROLLERS_SCHEMA_VERSION`, não a âncora.
-
-    Nunca levanta (todo caminho de I/O é ``OSError``-safe).
-    """
+    """Âncora de sessão RESILIENTE: boot_id → machine-id → ``None`` (R-23)."""
     valor = _read_boot_id()
     if valor:
         return valor
     machine_id = _read_machine_id()
-    # Prefixado para nunca ser confundido com um boot_id de verdade num
-    # arquivo antigo (e para o log dizer de onde veio).
     return f"machine:{machine_id}" if machine_id else None
 
 
 class ControllerIdentityRegistry:
-    """MAC normalizado → lugar na FILA; a exibição é 1..N entre os presentes.
-
-    NUM-01: o mapa que este objeto guarda (``_ordem``) é a ORDEM DE
-    PREFERÊNCIA — "o endereço A vem antes do endereço B" —, e é ela que
-    atravessa sessão e boot (D2/R-15/R-23). O número que a usuária vê sai de
-    ``slot_for``, que CONTA só quem está presente: é por isso que um controle
-    sozinho na mesa é o jogador 1 mesmo que a fila tenha outro endereço à
-    frente dele.
-
-    Thread-safe (RLock próprio): o provider de cor consulta ``slot_for`` sob
-    o ``_io_lock`` do backend (thread do executor) enquanto ``sync_connected``
-    roda no event loop. Nenhum método faz I/O de disco EXCETO ``load()``
-    (chamado uma vez na fiação do daemon, fora do caminho quente) e o save
-    interno do ``sync_connected`` (tick lento ~2s, só quando algo mudou) —
-    ``slot_for`` apenas marca o estado como sujo (o provider roda sob o
-    ``_io_lock`` do backend e DEVE ser barato, sem I/O).
-    """
+    """MAC normalizado → lugar na FILA; a exibição é 1..N entre os presentes."""
 
     def __init__(self, *, clock: Callable[[], float] | None = None) -> None:
         self._lock = threading.RLock()
-        #: D-30: relógio da fila do momento (ondas, estabilidade da mesa) e do
-        #: lugar guardado. Injetável só para o teste mover o tempo sem dormir —
-        #: em produção é o dono ÚNICO dos prazos (``relogio_do_lugar_guardado``),
-        #: que não anda para trás com o NTP e ANDA durante a suspensão.
         self._clock: Callable[[], float] = clock or relogio_do_lugar_guardado
-        #: D-30: key → ONDA em que a casa VIU este controle chegar NESTA
-        #: sessão (1, 2, 3…). É a FILA DO MOMENTO, e é ela que ordena a
-        #: exibição; o ``rank`` gravado só desempata dentro de uma onda.
-        #: NUNCA é persistida (é da sessão, por definição) e NUNCA é solta
-        #: dentro dela: é a marca antiga que devolve o mesmo número a quem
-        #: cai e volta (D2/R-15).
         self._chegada: dict[str, int] = {}
-        #: onda corrente e o instante em que ela abriu (:data:`JANELA_DE_ONDA_SEC`).
         self._onda = 0
         self._onda_aberta_em: float | None = None
-        #: D-30: instante da última MUDANÇA de composição da mesa (alguém
-        #: entrou ou saiu). A mesa fica estável :data:`JANELA_MESA_ESTAVEL_SEC`
-        #: depois dele — e é então que a ordem do momento é gravada.
         self._mesa_mudou_em: float = self._clock()
-        #: True quando a ordem do momento JÁ foi gravada para a composição
-        #: atual da mesa. Volta a False a cada entrada/saída — congelar de
-        #: novo custa uma permutação, e só acontece uma vez por mesa.
         self._mesa_congelada = False
-        #: NUM-01: key canônica (MAC 12-hex, ou a key volátil crua) → RANK,
-        #: o lugar na fila GLOBAL (compartilhada com os externos). Contém
-        #: presentes E ausentes — a permanência do lugar É a promessa D2.
-        #: NÃO é o número exibido: esse é ``slot_for`` (conta os presentes).
         self._ordem: dict[str, int] = {}
-        #: keys de lugares VOLÁTEIS (sem MAC 12-hex) — nunca persistidas (D9).
         self._volatile: set[str] = set()
-        #: keys atualmente conectadas (subset das que reportaram presença).
-        #: R-15: lido por ``snapshot_connected`` (o "Renumerar agora" põe os
-        #: CONECTADOS na frente da fila e só depois anexa os ausentes).
-        #: NUM-01: passou a governar também a EXIBIÇÃO — é este conjunto que
-        #: decide quem conta para a contagem 1..N.
         self._connected: set[str] = set()
-        #: APARELHO-NAO-SE-CONTRADIZ-01 (20/09/2026) — o número que o APARELHO
-        #: pode mostrar agora, que não é o mesmo que a mesa já sabe.
-        #:
-        #: Decisão dela, verbatim: *"As lâmpadas esperam a cor"*, e a razão é
-        #: do produto: **o aparelho nunca se contradiz consigo mesmo.**
-        #: Custo aceito por ela: meio minuto com o número velho depois de
-        #: alguém sair.
-        #:
-        #: Ver :meth:`_numeros_das_lampadas_locked` para o mecanismo e
-        #: :meth:`liberar_as_lampadas` para quem o solta.
         self._lampadas: dict[str, int] = {}
-        #: O-ASSENTO-GUARDADO-NAO-ANDA-01: key de quem SAIU → instante (no
-        #: ``_clock``) em que o lugar dele se libera. Enquanto vale, o lugar
-        #: conta na mesa sem número para ninguém: os outros não andam. Só
-        #: identidade estável guarda lugar — a volátil não tem promessa a
-        #: honrar (D9/MODO-01). Ver :func:`prazo_do_lugar_guardado`.
         self._guardados: dict[str, float] = {}
-        #: E quem chega NOVO refaz a mesa (conferência de 24/09/2026): cada
-        #: entrada em ``_connected`` ganha um número de ordem, e o tique lento
-        #: guarda até onde já tinha visto. Quem entrou depois disso e não é
-        #: dono de lugar guardado é gente nova — ver
-        #: :meth:`_quem_chega_novo_refaz_a_mesa_locked`.
         self._entrada: dict[str, int] = {}
         self._entradas = 0
         self._entradas_no_ultimo_tique = 0
-        #: mapa mudou desde o último save (o sync persiste no tick lento).
         self._dirty = False
         self._loaded = False
-        #: vpads já logados (evita spam — o provider consulta a cada reassert).
         self._vpad_logged: set[str] = set()
-        #: O-CONTROLE-SEM-MAC-01: provider OPCIONAL do CRACHÁ — recebe o
         #: ``uniq`` cru de um controle SEM serial e devolve o endereço que o
-        #: aparelho respondeu (feature ``0x09``), ou None. Ele faz I/O de
-        #: hidraw, então é chamado SÓ no tick lento e SÓ fora do ``_lock``.
-        #: None (não fiado / FakeController) = comportamento histórico: sem
-        #: serial, slot volátil — só que agora anunciado.
         self._cracha_provider: Callable[[str], str | None] | None = None
-        #: ``uniq`` cru (o path) → key 12-hex que o crachá devolveu. É CACHE
-        #: de sessão, e é esquecido quando o controle sai da mesa: um path
-        #: reocupado por outro aparelho devolveria a identidade ERRADA.
         self._cracha: dict[str, str] = {}
-        #: ``uniq`` crus que já anunciaram a desistência (uma vez cada — o
-        #: tick lento repassa por eles a cada ~2 s).
         self._sem_cracha: set[str] = set()
-        #: provider OPCIONAL dos lugares já ocupados pelos EXTERNOS (EXT-04):
         #: a fila é ÚNICA entre DualSense e externos, então a atribuição une
         #: esses lugares ao ``ocupados`` — um DualSense que entra DEPOIS de um
-        #: externo numerado entra atrás dele. None (não fiado /
-        #: FakeController) = comportamento histórico, hermético.
         self._extra_reserved: Callable[[], set[int]] | None = None
-        #: NUM-01: provider OPCIONAL dos lugares dos externos PRESENTES agora.
-        #: A contagem 1..N é global (um externo na mesa ocupa um número que
         #: nenhum DualSense pode exibir), mas ``_extra_reserved`` não sabe
-        #: quem está ligado — usá-lo para exibir devolveria o defeito que esta
-        #: frente cura (um ausente empurrando o presente para cima). Sem o
-        #: provider a contagem cai no ``_extra_reserved``, que é
-        #: CONSERVADOR: no pior caso deixa um buraco na numeração, nunca dois
-        #: controles com o mesmo número.
         self._external_present: Callable[[], set[int]] | None = None
-        #: O-ASSENTO-GUARDADO-NAO-ANDA-01: quem solta o lugar guardado dos
-        #: EXTERNOS quando a mesa se refaz daqui — o "Renumerar agora" ou
-        #: gente nova chegando (a fila é uma só). Fiado por
-        #: ``ExternalLedSync``; None = só este lado.
         self._soltar_os_externos: Callable[[], object] | None = None
-        # -- estado do automático (COR-03, configurado pelo ProfileManager) --
-        # R-14: dois eixos INDEPENDENTES (ver docstring do módulo). Cor é o
-        # campo antigo do perfil; numeração nasce ligada e não tem campo no
-        # schema ainda — quem quiser desligá-la usa ``configure(numbers=…)``.
         self._auto_colors = True
         self._auto_numbers = True
         self._auto_brightness = 1.0
-        # -- o plástico de cada controle (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01) --
-        #: D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO: a cor automática vem do
-        #: plástico, e o daemon precisa sabê-lo SEM a janela. A pergunta de
-        #: fábrica (o `SET_FEATURE` da família `0x80`) sai daqui, no tique de
-        #: presença, para quem chega; a resposta fica neste cache, que o
         #: provider lê sem I/O e o `state_full` lê também. Só a RESPOSTA
-        #: DEFINITIVA entra (o serial não muda); a falha volta à agenda.
         self._fabrica: dict[str, Any] = {}
-        #: A `AgendaDaPergunta` da fábrica, criada no primeiro uso.
         self._agenda_da_fabrica: Any = None
-        #: Quem pergunta ao aparelho: `(uniq) -> IdentidadeDeFabrica`. None =
-        #: não armado (teste, CLI): nenhuma pergunta sai, e a cor automática
-        #: segue a do número, como antes. A fiação do daemon o arma em
-        #: :func:`make_auto_output_provider`.
         self._perguntar_a_fabrica: Callable[[str], Any] | None = None
-        #: Quem converge a luz quando o plástico chega (conferência de
-        #: 29/09/2026): o backend pendura aqui o `reassert_resolved_outputs`.
-        #: Sem ele, a cor do plástico só chegava à barra no próximo
-        #: `connect()` — até 30 s depois, e 300 s com a volta pelo evento.
         self._ao_chegar_o_plastico: Callable[[], object] | None = None
 
-    # ------------------------------------------------------------------
-    # Config do automático (COR-03 / D11)
-    # ------------------------------------------------------------------
 
     def configure(
         self,
@@ -761,23 +512,13 @@ class ControllerIdentityRegistry:
 
     @property
     def auto_enabled(self) -> bool:
-        """True quando as cores automáticas por controle estão ligadas.
-
-        Nome histórico (``auto_player_colors``) mantido: é o que o resto do
-        código e os testes leem. Depois de R-14 ele significa exatamente o
-        eixo COR — para a numeração existe ``auto_numbers_enabled``.
-        """
+        """True quando as cores automáticas por controle estão ligadas."""
         with self._lock:
             return self._auto_colors
 
     @property
     def auto_numbers_enabled(self) -> bool:
-        """True quando a NUMERAÇÃO automática (player-LED) está ligada (R-14).
-
-        Independente da cor: desligar a paleta não pode apagar o número do
-        controle nem congelar a numeração dos externos — era exatamente o que
-        acontecia com o flag único ("dois player 1, dois player 2").
-        """
+        """True quando a NUMERAÇÃO automática (player-LED) está ligada (R-14)."""
         with self._lock:
             return self._auto_numbers
 
@@ -787,41 +528,17 @@ class ControllerIdentityRegistry:
         with self._lock:
             return self._auto_brightness
 
-    # ------------------------------------------------------------------
-    # Slots
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _canonical(uniq: str) -> tuple[str, bool]:
-        """Devolve ``(key, persistível)`` — MAC 12-hex canônico ou key volátil.
-
-        Persistível = a string INTEIRA parece um MAC (12 hex, com ou sem
-        ``:``/``-``). Qualquer outra coisa (``path:...``, node de device) é
-        identidade VOLÁTIL de sessão — vale para numerar, nunca para gravar
-        em disco (D9: path muda entre boots).
-        """
+        """Devolve ``(key, persistível)`` — MAC 12-hex canônico ou key volátil."""
         value = uniq.strip()
         if _MAC_RE.match(value):
             return value.lower().replace(":", "").replace("-", ""), True
         return value, False
 
     def _chave(self, uniq: str) -> tuple[str, bool]:
-        """``_canonical`` mais o CRACHÁ já resolvido (O-CONTROLE-SEM-MAC-01).
-
-        É o funil de key de todo caminho VIVO — ``slot_for``,
-        ``posicao_na_mesa``, ``mark_disconnected``, ``sync_connected``. O
-        ``load`` NÃO passa por aqui de propósito: o que vem do disco já é
-        canônico por invariante do save, e consultar um cache de sessão para
-        decidir o que o disco quis dizer seria deixar a sessão reescrever o
-        passado.
-
-        Barato por construção: **não chama o provider**, só lê o que o tick
-        lento já guardou (:meth:`resolver_crachas`). É o que mantém a promessa
-        de ``slot_for`` sem I/O.
-
-        Não toca em quem já tem serial: MAC 12-hex entra e sai igual, sem o
-        cache ser sequer consultado (o crachá jamais vence o serial).
-        """
+        """``_canonical`` mais o CRACHÁ já resolvido (O-CONTROLE-SEM-MAC-01)."""
         key, persistable = self._canonical(uniq)
         if persistable or not key:
             return key, persistable
@@ -832,24 +549,7 @@ class ControllerIdentityRegistry:
         return key, False
 
     def resolver_crachas(self, uniqs: Iterable[str]) -> None:
-        """Pergunta o CRACHÁ de quem não tem serial — TICK LENTO, fora do lock.
-
-        O-CONTROLE-SEM-MAC-01. Para cada ``uniq`` que ``_canonical`` recusou
-        como MAC e que ainda não está no cache, chama o
-        ``cracha_provider``. O que ele devolver só vira key se passar pelas
-        MESMAS guardas do serial — 12 hex canônicos e não-vpad —, porque o
-        contrato é "outra estrada para o mesmo valor", não "uma segunda forma
-        de chave".
-
-        Quando não há crachá, ANUNCIA a desistência uma vez por ``uniq``
-        (:data:`FRASE_SEM_CRACHA`) e o controle segue volátil, como sempre foi.
-        O silêncio é que era o defeito.
-
-        Chamado por ``sync_connected`` ANTES de tomar o ``_lock``: o provider
-        conversa com o aparelho, e conversar com o aparelho segurando o lock
-        que o provider de cor disputa é o caminho para o daemon travar num
-        controle mudo.
-        """
+        """Pergunta o CRACHÁ de quem não tem serial — TICK LENTO, fora do lock."""
         with self._lock:
             provider = self._cracha_provider
             ja_sabidos = set(self._cracha)
@@ -866,7 +566,7 @@ class ControllerIdentityRegistry:
             if provider is not None:
                 try:
                     achado = provider(uniq)
-                except Exception as exc:  # aparelho mudo não derruba o tick
+                except Exception as exc:
                     logger.info("identity_cracha_falhou", uniq=uniq, err=str(exc))
                     achado = None
             key: str | None = None
@@ -897,32 +597,14 @@ class ControllerIdentityRegistry:
                 )
 
     def _esquecer_cracha_locked(self, uniqs_vivos: set[str]) -> None:
-        """Solta o crachá de quem saiu da mesa (já sob ``self._lock``).
-
-        O cache é indexado pelo ``uniq`` CRU, que é um path, e paths voltam a
-        circular dentro da MESMA sessão: ``/dev/hidraw3`` liberado pode ser
-        reocupado por outro aparelho. Manter o crachá do primeiro daria ao
-        segundo a identidade do primeiro — a única forma de estrago que a
-        ressalva do mapa exclui, porque ela CORROMPE em vez de interromper.
-        """
+        """Solta o crachá de quem saiu da mesa (já sob ``self._lock``)."""
         for uniq in list(self._cracha):
             if uniq not in uniqs_vivos:
                 del self._cracha[uniq]
         self._sem_cracha &= uniqs_vivos
 
     def avisos_sem_cracha(self) -> list[dict[str, str]]:
-        """Os controles que a casa DESISTIU de lembrar, com a frase (leitura).
-
-        O-CONTROLE-SEM-MAC-01, entrega 2. Um item por controle presente sem
-        serial e sem crachá: ``{"uniq": <a key volátil>, "frase":
-        FRASE_SEM_CRACHA}``. Lista vazia é o caso normal desta casa — os
-        controles daqui todos têm serial, e é por isso que o defeito era
-        invisível daqui.
-
-        Quem LEVA isto à tela é outra sprint: o ``uniq`` é vocabulário de
-        casa e não sobe para o texto de tela (glossário: ``uniq`` e ``MAC``
-        são proibidos lá). O que sobe é a ``frase``.
-        """
+        """Os controles que a casa DESISTIU de lembrar, com a frase (leitura)."""
         with self._lock:
             return [
                 {"uniq": uniq, "frase": FRASE_SEM_CRACHA}
@@ -974,34 +656,14 @@ class ControllerIdentityRegistry:
     def set_external_presence_provider(
         self, provider: Callable[[], set[int]] | None
     ) -> None:
-        """Injeta o provider dos lugares dos externos PRESENTES agora (NUM-01).
-
-        Irmão presença-consciente do ``set_external_reserve_provider``, e a
-        razão de serem DOIS: ``_extra_reserved`` responde "que lugares da fila
-        estão tomados" (serve para ATRIBUIR sem colidir, e por isso precisa
-        incluir quem está desligado); a EXIBIÇÃO precisa da outra pergunta,
-        "quem está na mesa agora à minha frente", porque contar um ausente é
-        exatamente o defeito que NUM-01 cura.
-
-        Fiado por ``ExternalLedSync`` (o único componente que enxerga os dois
-        registros). ``None`` = sem fiação: a contagem cai no
-        ``_extra_reserved``, conservador — pode deixar um buraco, nunca
-        duplica um número.
-        """
+        """Injeta o provider dos lugares dos externos PRESENTES agora (NUM-01)."""
         with self._lock:
             self._external_present = provider
 
     def set_external_release_provider(
         self, provider: Callable[[], object] | None
     ) -> None:
-        """Injeta quem solta o lugar guardado dos externos (O-ASSENTO-GUARDADO-NAO-ANDA-01).
-
-        Quando a mesa se refaz deste lado — o "Renumerar agora"
-        (:meth:`compact`) ou gente nova chegando
-        (:meth:`_quem_chega_novo_refaz_a_mesa_locked`) —, o externo com o
-        lugar guardado também cede: a fila é única, e um lugar guardado do
-        outro lado seguraria o buraco que este lado acabou de fechar.
-        """
+        """Injeta quem solta o lugar guardado dos externos (O-ASSENTO-GUARDADO-NAO-ANDA-01)."""
         with self._lock:
             self._soltar_os_externos = provider
 
@@ -1075,9 +737,6 @@ class ControllerIdentityRegistry:
                 self._marcar_chegada_locked(key)
                 self._entrou_na_mesa_locked(key)
                 self._retomar_o_lugar_locked(key)
-                # Só com ENDEREÇO: o controle sem serial chega aqui pelo
-                # caminho cru, e o crachá dele só se resolve no tique lento —
-                # é lá que se sabe se ele é gente nova ou o dono que voltou.
                 if not dono_de_lugar and persistable:
                     chegou_gente_nova = True
                     self._quem_chega_novo_refaz_a_mesa_locked()
@@ -1087,26 +746,11 @@ class ControllerIdentityRegistry:
         return numero
 
     def _assign_locked(self, key: str, persistable: bool) -> int:
-        """Põe ``key`` no FIM da fila (já sob ``self._lock``). Fonte ÚNICA.
-
-        Extraída de ``slot_for`` no R-24 porque ``sync_connected`` passou a
-        atribuir também: duas cópias da regra seriam duas chances de divergir
-        da fila global (o defeito que aquela onda existe para matar).
-
-        NUM-01 trocou "MENOR lugar livre" por "FIM da fila". O menor-livre
-        fazia sentido quando o inteiro ERA o número exibido — reaproveitar um
-        buraco era o que evitava exibir 1 e 3 sem 2. Agora o buraco não
-        aparece mais na exibição (a contagem é dos presentes), e reaproveitar
-        um lugar vago passaria a significar outra coisa: enfiar um controle
-        NOVO na frente de um que já estava na casa. Ordem de chegada é o que
-        a fila promete.
-        """
+        """Põe ``key`` no FIM da fila (já sob ``self._lock``). Fonte ÚNICA."""
         ocupados = set(self._ordem.values())
         prov = self._extra_reserved
         if prov is not None:
-            # EXT-04: fila global ÚNICA — entra depois do último lugar que os
             # externos detêm (um DualSense que conecta DEPOIS de um externo
-            # numerado não pode ocupar o lugar dele).
             with contextlib.suppress(Exception):
                 ocupados |= {int(s) for s in prov()}
         rank = max(ocupados) + 1 if ocupados else 1
@@ -1123,35 +767,14 @@ class ControllerIdentityRegistry:
         )
         return rank
 
-    # ------------------------------------------------------------------
-    # A fila do MOMENTO (D-30 / ORDEM-DE-CHEGADA-01)
-    # ------------------------------------------------------------------
 
     def _mesa_mexeu_locked(self) -> None:
-        """Alguém entrou ou saiu — a mesa volta a se mexer (já sob o lock).
-
-        Zera a estabilidade: a próxima foto só pode ser tirada
-        :data:`JANELA_MESA_ESTAVEL_SEC` depois daqui. Chamado nos TRÊS pontos
-        onde ``_connected`` muda (``slot_for``, ``mark_disconnected`` e
-        ``sync_connected``) — se um deles esquecer, a casa congela uma mesa
-        que ainda está se montando.
-        """
+        """Alguém entrou ou saiu — a mesa volta a se mexer (já sob o lock)."""
         self._mesa_mudou_em = self._clock()
         self._mesa_congelada = False
 
     def _marcar_chegada_locked(self, key: str) -> None:
-        """Carimba a ONDA de chegada de ``key`` NESTA sessão (já sob o lock).
-
-        Idempotente por decisão, e a decisão é a garantia de R-15: quem JÁ
-        tem marca não ganha outra. Um controle que cai e volta no meio da
-        partida volta com a onda de quando CHEGOU — é isso que devolve a ele
-        o mesmo número, em vez de mandá-lo para o fim da fila (o defeito da
-        "ordem de wake" que a auditoria de 23/07 arrancou).
-
-        Ondas, e não um carimbo de relógio: tudo que a casa vê na MESMA
-        olhada para a mesa (:data:`JANELA_DE_ONDA_SEC`) chega junto, e a
-        ordem entre esses fica com o desempate gravado.
-        """
+        """Carimba a ONDA de chegada de ``key`` NESTA sessão (já sob o lock)."""
         if key in self._chegada:
             return
         agora = self._clock()
@@ -1162,27 +785,14 @@ class ControllerIdentityRegistry:
         self._chegada[key] = self._onda
 
     def _ordem_do_momento_locked(self, presentes: list[str]) -> list[str]:
-        """``presentes`` ordenados pela FILA DO MOMENTO (já sob o lock).
-
-        A chave de ordenação é ``(onda de chegada, rank gravado)``, nesta
-        ordem e por decisão dela: a fila do momento MANDA, o gravado
-        DESEMPATA. Key sem marca de chegada (defensivo — todo conectado é
-        carimbado nos três pontos de entrada) cai na onda 0 e é ordenada
-        inteiramente pelo gravado, que é o comportamento anterior a D-30.
-        """
+        """``presentes`` ordenados pela FILA DO MOMENTO (já sob o lock)."""
         return sorted(
             presentes,
             key=lambda k: (self._chegada.get(k, 0), self._ordem.get(k, 0), k),
         )
 
     def _avaliar_mesa_locked(self) -> bool:
-        """Congela a ordem do momento se a mesa já está estável (sob o lock).
-
-        Barato no caminho quente: um ``monotonic()`` e duas comparações
-        enquanto não há nada a fazer (o ``_mesa_congelada`` mata a repetição —
-        congela-se UMA vez por composição de mesa). Mesa vazia não é mesa
-        estável: não há foto a tirar, e tirá-la apagaria a ordem viva.
-        """
+        """Congela a ordem do momento se a mesa já está estável (sob o lock)."""
         if self._mesa_congelada or not self._connected:
             return False
         if self._clock() - self._mesa_mudou_em < JANELA_MESA_ESTAVEL_SEC:
@@ -1192,25 +802,7 @@ class ControllerIdentityRegistry:
         return True
 
     def _congelar_locked(self, na_mesa: list[str] | None = None) -> None:
-        """Grava a ordem do momento na FILA GRAVADA — CONGELAR (já sob o lock).
-
-        A operação inteira é uma PERMUTAÇÃO: os ``rank`` que os presentes já
-        detêm são redistribuídos ENTRE ELES, na ordem de chegada. O conjunto
-        de postos não muda em momento nenhum — nenhum posto some, nenhum vale
-        0 no meio do caminho, e o ausente não é tocado. É isso que impede a
-        janela de DUPLICATA que R-15 mediu em 23/07 (``_ds_reserve`` lendo
-        piso 0 entre expirar e reatribuir): aqui não existe "entre".
-
-        Depois desta escrita a ordem do momento e a gravada dizem a mesma
-        coisa — e é a gravada que atravessa restart e reboot (R-23). Não
-        persiste em disco aqui: marca ``_dirty`` e o ``sync_connected`` (tick
-        lento) salva, porque este método também roda no caminho quente do
-        provider de cor, onde I/O é proibido.
-
-        ``na_mesa`` é o gesto dela (:meth:`alinhar_gravado_com_a_tela`): os
-        presentes E os lugares guardados, porque é essa a mesa que ela vê. A
-        mesa estável que congela sozinha continua com os presentes só.
-        """
+        """Grava a ordem do momento na FILA GRAVADA — CONGELAR (já sob o lock)."""
         presentes = (
             [k for k in self._connected if k in self._ordem]
             if na_mesa is None
@@ -1235,12 +827,7 @@ class ControllerIdentityRegistry:
         )
 
     def snapshot_chegada(self) -> dict[str, int]:
-        """Cópia da FILA DO MOMENTO: key → onda de chegada (D-30). Leitura pura.
-
-        Diagnóstico e testes. NÃO é o número exibido (esse é ``slot_for``) nem
-        o lugar na fila gravada (esse é ``snapshot()``): é a ordem em que a
-        casa VIU cada controle chegar nesta sessão.
-        """
+        """Cópia da FILA DO MOMENTO: key → onda de chegada (D-30). Leitura pura."""
         with self._lock:
             return dict(self._chegada)
 
@@ -1249,19 +836,9 @@ class ControllerIdentityRegistry:
         with self._lock:
             return self._mesa_congelada
 
-    # ------------------------------------------------------------------
-    # O LUGAR GUARDADO (O-ASSENTO-GUARDADO-NAO-ANDA-01, 24/09/2026)
-    # ------------------------------------------------------------------
 
     def _guardar_o_lugar_locked(self, key: str) -> None:
-        """``key`` saiu da mesa: o lugar dele fica guardado (já sob o lock).
-
-        Chamado nos DOIS pontos em que alguém sai de ``_connected`` (o
-        ``sync_connected`` e o ``mark_disconnected``). Identidade volátil não
-        guarda lugar: sem chave estável, quem volta pode ser outro aparelho, e
-        guardar empurraria o próximo que chega para cima (o defeito do
-        MODO-01, do lado dos externos).
-        """
+        """``key`` saiu da mesa: o lugar dele fica guardado (já sob o lock)."""
         if key not in self._ordem or key in self._volatile:
             return
         prazo = prazo_do_lugar_guardado()
@@ -1274,12 +851,7 @@ class ControllerIdentityRegistry:
             logger.info("lugar_guardado_retomado", uniq=key)
 
     def _guardados_locked(self) -> list[str]:
-        """Quem tem o lugar guardado AGORA. Leitura pura, sob o lock.
-
-        O prazo é conferido aqui, a cada leitura, e não só no tique: é o que
-        faz a NUM-01 voltar no instante em que o prazo passa, sem esperar
-        ninguém entrar nem sair.
-        """
+        """Quem tem o lugar guardado AGORA. Leitura pura, sob o lock."""
         agora = self._clock()
         return [
             key
@@ -1288,32 +860,14 @@ class ControllerIdentityRegistry:
         ]
 
     def _vencer_os_guardados_locked(self) -> None:
-        """Esquece o lugar guardado cujo prazo passou (tique lento, sob o lock).
-
-        A leitura já não o conta; isto só limpa a tabela e deixa no diário o
-        desfecho alternativo — como a caducidade do posto de primário, que é
-        ``info`` para o journal poder medir o prazo pelos dois lados.
-        """
+        """Esquece o lugar guardado cujo prazo passou (tique lento, sob o lock)."""
         agora = self._clock()
         for key in [k for k, ate in self._guardados.items() if ate <= agora]:
             del self._guardados[key]
             logger.info("lugar_guardado_venceu", uniq=key)
 
     def soltar_os_lugares_guardados(self, *, motivo: str = "renumerar") -> bool:
-        """Solta todo lugar guardado, dos dois registros. Devolve se havia.
-
-        Dois chamadores, e os dois refazem a mesa inteira:
-
-        - o **"Renumerar agora"** (``identity.renumber`` → :meth:`compact`):
-          renumerar é fechar a fila agora, por vontade dela;
-        - **gente nova chegando pelo lado dos externos** (a ponte que o
-          ``ExternalLedSync`` fia) — ver
-          :meth:`_quem_chega_novo_refaz_a_mesa_locked` para o lado daqui.
-
-        O ``identity.number.set`` NÃO solta (conferência de 24/09/2026): o
-        clique dela é uma TROCA sobre o que ela vê, e o que ela vê tem o
-        buraco — ver :meth:`alinhar_gravado_com_a_tela`.
-        """
+        """Solta todo lugar guardado, dos dois registros. Devolve se havia."""
         with self._lock:
             havia = bool(self._guardados)
             self._guardados.clear()
@@ -1341,25 +895,7 @@ class ControllerIdentityRegistry:
         self._entrada[key] = self._entradas
 
     def _quem_chega_novo_refaz_a_mesa_locked(self) -> bool:
-        """Gente NOVA chegou: todo lugar guardado se solta (sob o lock).
-
-        Conferência de 24/09/2026. O lugar guardado existe para quem SAIU e
-        volta; quem chega e não é dono de lugar nenhum não tem para onde
-        andar, e segurá-lo atrás do buraco era pior que a regra de antes:
-
-        - com os quatro na mesa, o P2 sai e outro controle chega — o novo
-          nascia **5**, com as cinco lâmpadas e a barra amarela, numa mesa de
-          quatro, e a tela, que tem quatro cartões, voltava a contar por
-          POSIÇÃO (``mesa_viva._lugares_da_mesa``): o P3 no cartão do P2;
-        - com três, o novo nascia 4 e virava 3 no fim do prazo — o número de
-          quem ACABOU de chegar mudando no meio da partida.
-
-        E o caso mais comum dos dois é o mesmo jogador: a bateria do P2
-        acabou e ele pegou outro controle. A sprint manda, quando o lugar
-        vazio quebra o que a NUM-01 protegia, não mudar: gente nova refaz a
-        mesa como antes (um até N). Quem só VOLTA não é gente nova — ele
-        retoma o lugar dele e ninguém anda.
-        """
+        """Gente NOVA chegou: todo lugar guardado se solta (sob o lock)."""
         if not self._guardados:
             return False
         self._guardados.clear()
@@ -1367,10 +903,7 @@ class ControllerIdentityRegistry:
         return True
 
     def guardados(self) -> dict[str, float]:
-        """Cópia de quem tem o lugar guardado agora → segundos que faltam.
-
-        Diagnóstico e testes. Leitura pura.
-        """
+        """Cópia de quem tem o lugar guardado agora → segundos que faltam."""
         with self._lock:
             agora = self._clock()
             return {k: self._guardados[k] - agora for k in self._guardados_locked()}
@@ -1399,26 +932,7 @@ class ControllerIdentityRegistry:
         return bruto - set(self._ordem.values())
 
     def _numeros_da_mesa_locked(self) -> dict[str, int]:
-        """Número EXIBIDO de CADA presente, numa leitura só (sob ``self._lock``).
-
-        **É o ponto ÚNICO onde um endereço vira número de jogador**, e a
-        unicidade é ESTRUTURAL, não conferida depois: a tabela nasce de um
-        ``zip`` entre a FILA DO MOMENTO e os ``postos`` ordenados, e a conta
-        de cada linha (``posicao`` + quantos externos vêm antes do posto) é
-        estritamente crescente nas duas parcelas. Dois presentes não podem
-        sair com o mesmo número nem com o arquivo corrompido.
-
-        Isto era um cálculo POR CONSULTA dentro de ``_posicao_locked``, e a
-        aritmética aqui é a mesma — o que muda é haver UMA tabela por leitura
-        da mesa, que é o que permite provar a unicidade e o que o resto da
-        casa consome (``numeros_da_mesa``, ``numero_da_lampada``).
-
-        **O LUGAR GUARDADO senta na conta e não leva número** (O-ASSENTO-
-        GUARDADO-NAO-ANDA-01): quem saiu dentro do prazo entra no ``zip`` com
-        a onda e o posto dele, e a linha dele é descartada no fim. É isso que
-        faz o P3 continuar 3 com o P2 fora, e a unicidade continua estrutural —
-        descartar linha nunca repete número.
-        """
+        """Número EXIBIDO de CADA presente, numa leitura só (sob ``self._lock``)."""
         return {
             chave: numero
             for chave, numero in self._assentos_locked().items()
@@ -1426,13 +940,7 @@ class ControllerIdentityRegistry:
         }
 
     def _assentos_locked(self) -> dict[str, int]:
-        """O número de cada ASSENTO da mesa — os presentes e os guardados.
-
-        A conta de sempre (a fila do momento contra os postos ordenados, mais
-        os externos que vêm antes), sobre quem está na mesa E sobre quem saiu
-        há menos de :func:`prazo_do_lugar_guardado`. Passado o prazo, o
-        guardado sai da conta e a NUM-01 volta: um até N entre os presentes.
-        """
+        """O número de cada ASSENTO da mesa — os presentes e os guardados."""
         na_mesa = [k for k in self._connected if k in self._ordem]
         na_mesa += self._guardados_locked()
         if not na_mesa:
@@ -1447,17 +955,7 @@ class ControllerIdentityRegistry:
         return numeros
 
     def numeros_da_mesa(self) -> dict[str, int]:
-        """Tabela key→número de TODOS os presentes agora. Leitura pura.
-
-        A forma honesta de perguntar "quem acende o quê nesta mesa": uma
-        leitura, uma mesa, e a garantia de que nenhum número se repete. Quem
-        pergunta por UM controle chama ``numero_da_lampada``.
-
-        **É A MESA DE AGORA, e é ela que a TELA lê** — por isso a tela continua
-        se refazendo em 0,2 s depois que alguém sai. O que o APARELHO pode
-        mostrar é outra pergunta, e tem outro dono
-        (:meth:`_numeros_das_lampadas_locked`).
-        """
+        """Tabela key→número de TODOS os presentes agora. Leitura pura."""
         with self._lock:
             self._avaliar_mesa_locked()
             return self._numeros_da_mesa_locked()
@@ -1526,24 +1024,7 @@ class ControllerIdentityRegistry:
         return fora
 
     def liberar_as_lampadas(self) -> bool:
-        """Solta o número novo para o APARELHO. Devolve se algo se mexeu.
-
-        APARELHO-NAO-SE-CONTRADIZ-01. É o instante em que a cor e as lâmpadas
-        se refazem JUNTAS, e por isso quem chama é UM só: o preparo do gatilho
-        da lightbar (``daemon/connection._preparar_a_lightbar``, no fio do
-        laço), imediatamente ANTES de a tarefa resolver o report. Assim o mesmo
-        report leva o número novo e a cor nova.
-
-        **Chamar de outro lugar reabre o defeito**, e por um caminho que régua
-        nenhuma veria: liberar no momento de ARMAR o gatilho (e não no de
-        escrever) devolveria 1,5 s de contradição — o debounce da rajada —,
-        que é exatamente o vão que esta sprint veio fechar, só que menor.
-
-        Best-effort por construção: não escreve hardware nem disco, só move a
-        tabela de memória. Quem não a chama nunca vê número mudar no aparelho
-        depois da estreia, e é por isso que ela é chamada pelo gatilho, que
-        toda conexão e toda renumeração já armam.
-        """
+        """Solta o número novo para o APARELHO. Devolve se algo se mexeu."""
         with self._lock:
             self._avaliar_mesa_locked()
             agora = self._numeros_da_mesa_locked()
@@ -1641,14 +1122,9 @@ class ControllerIdentityRegistry:
         rank = self._ordem.get(key)
         if rank is None:
             return None
-        # O-ASSENTO-GUARDADO-NAO-ANDA-01: quem saiu dentro do prazo responde
-        # pelo assento que está guardado para ele.
         numero = self._assentos_locked().get(key)
         if numero is not None:
             return numero
-        # Ausente: não está na fila do momento (não chegou), então a
-        # pergunta só pode ser respondida pelo gravado — comportamento
-        # idêntico ao de antes de D-30.
         presentes = [k for k in self._connected if k in self._ordem]
         presentes += self._guardados_locked()
         antes = sum(1 for k in presentes if self._ordem[k] < rank)
@@ -1656,41 +1132,16 @@ class ControllerIdentityRegistry:
         return antes + 1
 
     def mark_disconnected(self, uniq: str | None) -> None:
-        """Marca ``uniq`` desconectado — o LUGAR NA FILA fica com o MAC (D2).
-
-        Replug dentro da sessão recupera o mesmo número. R-15: o lugar vale
-        pelo BOOT inteiro — nada aqui (nem no ``sync_connected``) o expira por
-        sessão esvaziada, então flap de BT, suspend e "desliguei os dois
-        controles pra jantar" devolvem a MESMA colocação a cada MAC.
-
-        NUM-01 não revogou nada disso; mudou o que a permanência CUSTA. Antes,
-        o ausente segurava um NÚMERO, e era essa reserva que fazia o controle
-        sozinho na mesa exibir 2. Agora ele segura só o LUGAR NA FILA: quem
-        está presente conta 1..N sem ele e, quando ele volta, cada um recupera
-        a sua colocação. As duas promessas passam a caber juntas. (Desde a
-        O-ASSENTO-GUARDADO-NAO-ANDA-01, a conta sem ele começa depois do prazo
-        do lugar guardado; dentro dele, ninguém anda.)
-
-        D-30 acrescentou a SEGUNDA metade da promessa: além do lugar gravado,
-        o ausente mantém a ONDA DE CHEGADA desta sessão. Sem isso, "ordem de
-        conexão" leria a volta dele como uma chegada nova e o mandaria para o
-        fim da fila — que é, palavra por palavra, o defeito de ORDEM DE WAKE
-        que R-15 arrancou em 23/07.
-        """
+        """Marca ``uniq`` desconectado — o LUGAR NA FILA fica com o MAC (D2)."""
         if not uniq or not isinstance(uniq, str):
             return
         key, _ = self._chave(uniq)
         with self._lock:
-            # D-30: avaliar ANTES de tirar da mesa. Se a mesa já estava
-            # estável há tempo, a foto é tirada com este controle ainda nela —
-            # é a saída dele que faz a mesa se mexer, não o contrário.
             self._avaliar_mesa_locked()
             if key in self._connected:
                 self._connected.discard(key)
                 self._mesa_mexeu_locked()
                 self._guardar_o_lugar_locked(key)
-            # A marca de chegada FICA (D2/R-15): quem volta recupera a onda
-            # que tinha, e com ela o mesmo número.
 
     def sync_connected(self, uniqs: Iterable[str]) -> None:
         """Reconcilia com os uniqs CONECTADOS agora e ATRIBUI quem falta (~2s).
@@ -1742,21 +1193,10 @@ class ControllerIdentityRegistry:
         reiniciar o daemon com quatro controles já ligados (todos vistos na
         mesma primeira olhada) não embaralha nada — R-23 continua de pé.
         """
-        # O-CONTROLE-SEM-MAC-01: materializado ANTES de qualquer coisa porque
-        # a lista é percorrida duas vezes daqui para baixo (o crachá e a
-        # reconciliação) — e o lifecycle entrega em ORDEM, que um gerador
-        # consumido na primeira volta apagaria.
         na_mesa = [u for u in uniqs if u and isinstance(u, str)]
-        # O SEGUNDO CONDUÍTE, e ele mora aqui de propósito: este é o tick
-        # lento (~2 s) e estamos FORA do ``_lock``. É a única janela em que
-        # falar com o aparelho é barato o bastante.
         self.resolver_crachas(na_mesa)
         vivos: list[tuple[str, bool]] = []
         vistos: set[str] = set()
-        # Quem AINDA está na mesa, na grafia CRUA — é por ela que o cache do
-        # crachá é indexado. Não é ``vistos``: duas interfaces do mesmo
-        # aparelho colapsam numa key só, e a segunda perderia o cache à toa,
-        # reperguntando ao aparelho a cada tick.
         crus_vivos = set(na_mesa)
         a_perguntar: list[tuple[str, str]] = []
         for uniq in na_mesa:
@@ -1764,19 +1204,13 @@ class ControllerIdentityRegistry:
             if not key or key in vistos:
                 continue
             if persistable and key.startswith(_VPAD_MAC_PREFIX):
-                continue  # D9: vpad não é controle
+                continue
             vistos.add(key)
             vivos.append((key, persistable))
             if persistable:
                 a_perguntar.append((key, uniq))
         with self._lock:
-            # Quem saiu da mesa devolve o crachá: o cache é indexado pelo
-            # path, e path reocupado por outro aparelho daria a ele a
-            # identidade do anterior.
             self._esquecer_cracha_locked(crus_vivos)
-            # D-30: a foto da mesa ANTERIOR primeiro (pelo mesmo motivo do
-            # ``mark_disconnected``: se ela estava estável, o que se grava é
-            # a mesa que estava estável, não a que este tick acabou de mudar).
             self._avaliar_mesa_locked()
             anteriores = self._connected
             donos_de_lugar = set(self._guardados_locked())
@@ -1785,13 +1219,6 @@ class ControllerIdentityRegistry:
                 self._mesa_mexeu_locked()
             for key in vistos - anteriores:
                 self._entrou_na_mesa_locked(key)
-            # O-ASSENTO-GUARDADO-NAO-ANDA-01: o prazo vencido sai primeiro,
-            # quem saiu agora ganha o lugar guardado, e quem está na mesa
-            # não tem lugar guardado nenhum. GENTE NOVA desde o tique anterior
-            # — quem entrou agora, ou pelo provider de cor entre os dois tiques,
-            # e não é dono de lugar — refaz a mesa: nenhum lugar fica guardado
-            # (ver `_quem_chega_novo_refaz_a_mesa_locked`). É o controle que
-            # substitui o que saiu no MESMO tique que viu a saída.
             self._vencer_os_guardados_locked()
             chegou_gente_nova = any(
                 key not in donos_de_lugar
@@ -1810,28 +1237,15 @@ class ControllerIdentityRegistry:
                 if key not in self._ordem:
                     self._assign_locked(key, persistable)
                 if key not in anteriores:
-                    # Chegou nesta olhada: entra na fila do momento. Todos os
-                    # que chegaram JUNTOS ficam na mesma onda, e o desempate
-                    # entre eles é o gravado (a ordem do iterável não decide
-                    # sozinha — ver ``_marcar_chegada_locked``).
                     self._marcar_chegada_locked(key)
-            # Este tick é também o batimento que declara a mesa estável: quando
-            # nada muda, a avaliação lá em cima congela, e o save daqui leva a
-            # ordem do momento ao disco no MESMO tick lento.
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
         if chegou_gente_nova:
-            # A mesa é uma só: o lugar guardado de um externo também cede.
             self._soltar_os_lugares_dos_externos()
-        # O PLÁSTICO DE QUEM CHEGOU — fora do ``_lock``, no tique lento, como
-        # o crachá: a pergunta sai numa thread, uma em voo por controle.
         for key, uniq in a_perguntar:
             self._agendar_a_pergunta_de_fabrica(key, uniq)
 
-    # ------------------------------------------------------------------
-    # O plástico (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01)
-    # ------------------------------------------------------------------
     def armar_a_pergunta_de_fabrica(
         self, perguntar: Callable[[str], Any] | None
     ) -> None:
@@ -1841,13 +1255,7 @@ class ControllerIdentityRegistry:
     def avisar_quando_o_plastico_chegar(
         self, fn: Callable[[], object] | None
     ) -> None:
-        """Pendura (ou tira, com None) quem converge a luz quando o plástico chega.
-
-        A cor automática vem do plástico (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO),
-        e a resposta chega numa thread, depois de o controle já ter acendido a
-        cor do número. O aviso sai só quando o plástico lido TEM tom, porque
-        só aí a automática muda; fora do ``_lock``, e a falha dele é engolida.
-        """
+        """Pendura (ou tira, com None) quem converge a luz quando o plástico chega."""
         self._ao_chegar_o_plastico = fn
 
     @property
@@ -1874,11 +1282,7 @@ class ControllerIdentityRegistry:
             return self._fabrica.get(key)
 
     def tom_do_plastico(self, uniq: str) -> tuple[int, int, int] | None:
-        """O tom de luz do plástico de `uniq`, sem I/O — None quando não se sabe.
-
-        É a companheira que o provider pendura para o backend: quem perde o
-        tom do plástico cai na cor do número, e o backend leva as duas à mesa.
-        """
+        """O tom de luz do plástico de `uniq`, sem I/O — None quando não se sabe."""
         achado = self.identidade_de_fabrica(uniq)
         if achado is None:
             return None
@@ -1909,8 +1313,6 @@ class ControllerIdentityRegistry:
                 daemon=True,
             ).start()
         except Exception:
-            # A thread não nasceu: o voo é solto como falha, senão o controle
-            # fica preso sem pergunta para sempre.
             from hefesto_dualsense4unix.integrations.cor_do_plastico import (
                 IdentidadeDeFabrica,
             )
@@ -1930,7 +1332,7 @@ class ControllerIdentityRegistry:
         achado: Any = IdentidadeDeFabrica(motivo="a leitura não devolveu")
         try:
             achado = perguntar(uniq)
-        except Exception as erro:  # defensivo — jamais derruba o daemon
+        except Exception as erro:
             achado = IdentidadeDeFabrica(
                 motivo=f"a leitura levantou {type(erro).__name__}"
             )
@@ -1943,7 +1345,6 @@ class ControllerIdentityRegistry:
                     modelo=getattr(getattr(achado, "cor", None), "nome", None),
                 )
             self._agenda_de_fabrica().registrar(key, achado)
-        # A LUZ CONVERGE QUANDO O PLÁSTICO CHEGA, e não no próximo `connect()`.
         aviso = self._ao_chegar_o_plastico
         if aviso is not None and getattr(achado, "definitiva", False):
             from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_da_luz
@@ -1951,29 +1352,16 @@ class ControllerIdentityRegistry:
             if tom_da_luz(getattr(achado, "cor", None)) is not None:
                 try:
                     aviso()
-                except Exception as erro:  # defensivo — jamais derruba a thread
+                except Exception as erro:
                     logger.warning("plastico_aviso_falhou", err=str(erro))
 
     def snapshot(self) -> dict[str, int]:
-        """Cópia do mapa key→LUGAR NA FILA (presentes + ausentes). Leitura pura.
-
-        NUM-01: o valor NÃO é o número exibido — é o posto na ordem de
-        preferência global (ver docstring da classe). Quem quer o número que a
-        usuária vê chama ``slot_for``. Os três consumidores deste snapshot
-        querem mesmo o posto: o piso dos externos (``_ds_reserve``), o
-        provider de reserva fiado no lifecycle e o plano do "Renumerar agora".
-        """
+        """Cópia do mapa key→LUGAR NA FILA (presentes + ausentes). Leitura pura."""
         with self._lock:
             return dict(self._ordem)
 
     def present_ranks(self) -> set[int]:
-        """Lugares da fila ocupados por controles PRESENTES agora (NUM-01).
-
-        É o que o registro dos EXTERNOS consome para contar 1..N na mesa
-        inteira (via provider injetado por ``ExternalLedSync``) — a pergunta
-        "quem está à minha frente AGORA", que ``snapshot()`` não responde
-        porque inclui os ausentes.
-        """
+        """Lugares da fila ocupados por controles PRESENTES agora (NUM-01)."""
         with self._lock:
             return {
                 rank
@@ -1994,35 +1382,12 @@ class ControllerIdentityRegistry:
             return {self._ordem[k] for k in chaves if k in self._ordem}
 
     def snapshot_connected(self) -> set[str]:
-        """Keys CONECTADAS agora (subconjunto de ``snapshot()``). Leitura pura.
-
-        R-15: o "Renumerar agora" compactava sobre o mapa inteiro — incluindo
-        reserva de controle OFFLINE. Com o 8BitDo desligado segurando um slot
-        baixo, a compactação era um no-op que ainda respondia "4 controle(s)
-        renumerado(s)". Quem está na mesa vai para a frente da fila; o ausente
-        segue atrás sem ser dropado (a promessa D2 continua de pé).
-
-        NUM-01: este conjunto passou a ser também a fonte da EXIBIÇÃO — é ele
-        que ``slot_for`` conta para dizer 1..N.
-        """
+        """Keys CONECTADAS agora (subconjunto de ``snapshot()``). Leitura pura."""
         with self._lock:
             return set(self._connected)
 
     def lock_for_renumber(self) -> threading.RLock:
-        """Expõe o `RLock` de instância — SÓ para `identity.renumber` (fix TOCTOU).
-
-        Achado MEDIUM da corretora final (2026-07-20): entre o `snapshot()` e
-        o `compact()` do handler IPC não havia lock nenhum cobrindo o span
-        inteiro plan→apply — um `slot_for(assign=True)` concorrente (hotplug
-        real sob o `_io_lock` do backend) podia ler `used` ainda
-        NÃO-compactado e reivindicar o slot-alvo que o `compact()` estava
-        prestes a devolver a outro controle, gerando dois controles com o
-        MESMO slot. O `RLock` é reentrante: o handler mantém isto tomado
-        durante `snapshot()`+plano+`compact()` do MESMO thread sem
-        autodeadlock; qualquer `slot_for` de OUTRO thread bloqueia até o
-        handler soltar. Não usar para mais nada — vazar o lock de instância é
-        exceção deliberada, não precedente.
-        """
+        """Expõe o `RLock` de instância — SÓ para `identity.renumber` (fix TOCTOU)."""
         return self._lock
 
     def compact(self, mapping: dict[str, int]) -> None:
@@ -2069,9 +1434,6 @@ class ControllerIdentityRegistry:
                 self._save_locked()
                 self._dirty = False
 
-    # ------------------------------------------------------------------
-    # A ESCOLHA À MÃO (TROCA-DE-PLAYER-01, 29/08/2026)
-    # ------------------------------------------------------------------
 
     def alinhar_gravado_com_a_tela(self) -> bool:
         """Grava a fila do momento AGORA, sem esperar a janela de estabilidade.
@@ -2200,23 +1562,9 @@ class ControllerIdentityRegistry:
             self._save_locked()
             self._dirty = False
 
-    # ------------------------------------------------------------------
-    # Persistência (restart do daemon com controles presentes)
-    # ------------------------------------------------------------------
 
     def load(self) -> None:
-        """Carrega ``controllers.json`` — a FILA ATRAVESSA o boot (R-23/NUM-01).
-
-        Chamado UMA vez na fiação do daemon (fora do caminho quente).
-        Entradas carregadas entram como AUSENTES: o primeiro reconcile com
-        controles presentes as marca vivas. O gate NÃO é mais o ``boot_id``
-        (era ele que renumerava a casa inteira a cada reboot — e a cada
-        restart do daemon onde ``/proc`` não existe): é o
-        :data:`CONTROLLERS_SCHEMA_VERSION`. Idempotente; nunca propaga
-        exceção. NUMA-04: a leitura roda sob ``CONTROLLERS_FILE_LOCK`` — o
-        mesmo lock que ``external_identity.py`` usa para o próprio load/save
-        do MESMO arquivo.
-        """
+        """Carrega ``controllers.json`` — a FILA ATRAVESSA o boot (R-23/NUM-01)."""
         with self._lock:
             if self._loaded:
                 return
@@ -2226,18 +1574,13 @@ class ControllerIdentityRegistry:
                     data = json.loads(self._path().read_text(encoding="utf-8"))
                 except (FileNotFoundError, json.JSONDecodeError, OSError):
                     return
-                except Exception as exc:  # defensivo — load jamais derruba o boot
+                except Exception as exc:
                     logger.debug("identity_load_falhou", err=str(exc))
                     return
             if not isinstance(data, dict):
                 return
             if data.get("version") != CONTROLLERS_SCHEMA_VERSION:
-                # R-23: única renumeração AUTOMÁTICA que sobrou. Arquivo
-                # escrito por uma versão com outra regra de numeração (ou
-                # anterior ao campo) não pode congelar a regra velha para
                 # sempre, agora que nada mais expira. NUM-01 é exatamente um
-                # desses casos: o schema 2 gravava NÚMERO ABSOLUTO, e é dele
-                # que vem o "sozinho na mesa e mesmo assim jogador 2".
                 logger.info(
                     "identity_arquivo_de_schema_antigo_descartado",
                     versao_arquivo=data.get("version"),
@@ -2253,22 +1596,17 @@ class ControllerIdentityRegistry:
                 return
             anchor = _session_anchor()
             if anchor is not None and data.get("boot_id") != anchor:
-                # Só DIAGNÓSTICO (R-23): reboot não renumera mais. Fica no log
-                # para o dia em que alguém perguntar "de onde veio este número".
                 logger.info(
                     "identity_slots_restaurados_de_outro_boot",
                     arquivo_boot=data.get("boot_id"),
                 )
             usados: set[int] = set()
-            # `order_entries` já devolve do começo da fila para o fim: se o
-            # teto podar, quem cai é a entrada menos estabelecida (o fim da
-            # fila), nunca quem a casa usa todo dia.
             for raw_key, raw_rank in entradas:
                 key, persistable = self._canonical(raw_key)
                 if not persistable or key.startswith(_VPAD_MAC_PREFIX):
-                    continue  # voláteis/vpad jamais deveriam estar no disco
+                    continue
                 if key in self._ordem or raw_rank in usados:
-                    continue  # arquivo degenerado: 1º ganha, sem duplicatas
+                    continue
                 if len(self._ordem) >= _MAX_PERSISTED_SLOTS:
                     logger.warning(
                         "identity_slots_truncados", teto=_MAX_PERSISTED_SLOTS
@@ -2281,52 +1619,25 @@ class ControllerIdentityRegistry:
 
     @staticmethod
     def _path() -> Path:
-        """Path do ``controllers.json`` — import LAZY do ``config_dir``.
-
-        Lazy para preservar o ponto de monkeypatch dos testes
-        (``monkeypatch.setattr(xdg_paths, "config_dir", ...)``), o mesmo
-        padrão de ``utils.session.save_active_marker``.
-        """
+        """Path do ``controllers.json`` — import LAZY do ``config_dir``."""
         from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
         return config_dir(ensure=True) / _CONTROLLERS_FILE
 
     def _save_locked(self) -> None:
-        """Grava a fila persistível (atômico: mkstemp + os.replace). Sob lock.
-
-        Só entradas com MAC 12-hex (voláteis ficam de fora — D9). Nunca
-        propaga exceção (paridade com ``utils.session``): perder um save
-        significa, no pior caso, renumerar no próximo boot — inócuo.
-
-        EXT-04/NUM-01: o arquivo é COMPARTILHADO com o registro dos externos
-        (``subsystems/external_identity.py``), que grava as entradas de
-        ``kind`` :data:`KIND_EXTERNAL` da MESMA fila; read-modify-write via
-        :func:`merged_order_payload` para preservar as do outro lado.
-        NUMA-04: o span INTEIRO read→``os.replace`` roda sob
-        ``CONTROLLERS_FILE_LOCK`` — fecha o lost-update entre os dois
-        escritores independentes (cada um só tinha o próprio RLock de
-        instância, que não protegia o outro).
-        """
+        """Grava a fila persistível (atômico: mkstemp + os.replace). Sob lock."""
         try:
             with CONTROLLERS_FILE_LOCK:
                 path = self._path()
                 existente: Any = None
                 with contextlib.suppress(Exception):
                     bruto = json.loads(path.read_text(encoding="utf-8"))
-                    # R-23: só se aproveitam as entradas do OUTRO lado quando
-                    # o arquivo é do MESMO schema. Preservá-las às cegas num
-                    # bump de versão re-carimbava a versão nova sobre a
-                    # numeração VELHA do outro lado: o regime antigo (na
-                    # máquina dela, o Pro segurando o slot 1) ressuscitava com
-                    # selo de válido no boot seguinte.
                     if (
                         isinstance(bruto, dict)
                         and bruto.get("version") == CONTROLLERS_SCHEMA_VERSION
                     ):
                         existente = bruto
                 payload: dict[str, Any] = {}
-                # R-23: a VERSÃO é o que o load consulta; o boot_id vira
-                # anotação (âncora resiliente — nunca mais um gate).
                 payload["version"] = CONTROLLERS_SCHEMA_VERSION
                 payload["boot_id"] = _session_anchor()
                 payload[ORDER_FIELD] = merged_order_payload(
@@ -2351,32 +1662,9 @@ class ControllerIdentityRegistry:
         except Exception as exc:
             logger.debug("identity_save_falhou", err=str(exc))
 
-    # ------------------------------------------------------------------
-    # O JOGO ESPERA O LUGAR GUARDADO (O-ASSENTO-GUARDADO-NAO-ANDA-02)
-    # ------------------------------------------------------------------
-    # No fim da classe porque o mapa de canais cita este arquivo por linha.
 
     def o_lugar_espera(self, uniq: str | None) -> bool:
-        """O lugar de ``uniq`` ainda está na mesa? — ligado, ou guardado no prazo.
-
-        É a pergunta que o posto de P1 faz ao registro, pelo co-op
-        (``CoopManager.o_posto_do_p1_espera``), quando o primário cai com o
-        jogo aberto: enquanto o lugar dele espera, o vpad do P1 fica parado e
-        ninguém dirige o jogador 1 do jogo no lugar dele
-        (``D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO``). O registro é o dono da
-        resposta porque é o dono do número que a tela e a lâmpada mostram: o
-        prazo, a gente nova que refaz a mesa e o «Renumerar agora» já moram
-        aqui, e o vpad passa a seguir os três sem uma regra a mais.
-
-        **LIGADO CONTA.** O backend vê a queda no ``connect()`` e o registro só
-        no tique lento (``sync_connected``, ~2 s); nesse vão o registro ainda o
-        tem na mesa, e a resposta certa é *"espera"*. No tique, o lugar vira
-        guardado — ou não, e a vaga acaba: identidade volátil não guarda lugar
-        (MODO-01), e gente nova refaz a mesa.
-
-        Leitura pura, sem I/O: o backend pergunta sob o ``_io_lock`` dele, a
-        mesma hierarquia do provider de cor.
-        """
+        """O lugar de ``uniq`` ainda está na mesa? — ligado, ou guardado no prazo."""
         if not uniq or not isinstance(uniq, str):
             return False
         key, _persistable = self._chave(uniq)
@@ -2388,15 +1676,7 @@ class ControllerIdentityRegistry:
             return key in self._connected or key in self._guardados_locked()
 
     def posto_na_fila(self, uniq: str | None) -> int | None:
-        """O lugar GRAVADO de ``uniq`` na fila — ou None. Leitura pura.
-
-        O-MODO-XBOX-NAO-E-QUEDA-02, item 4: o primário é o controle da carta 1,
-        e o backend elege no ``connect()``, antes de o tique lento pôr alguém
-        na mesa — sem lâmpada, a carta é a da fila gravada, que é a mesma que o
-        boot vai acender (``sync_connected``: quem chega junto desempata pelo
-        gravado). Não atribui, não põe na mesa: o vpad (D9) e o endereço que
-        nunca estreou respondem None.
-        """
+        """O lugar GRAVADO de ``uniq`` na fila — ou None. Leitura pura."""
         if not uniq or not isinstance(uniq, str):
             return None
         key, persistable = self._chave(uniq)
@@ -2472,40 +1752,17 @@ def make_auto_output_provider(
     )
     from hefesto_dualsense4unix.integrations import cor_do_plastico
 
-    # O PLÁSTICO É PERGUNTADO PELO DAEMON, SEM A JANELA — 29/09/2026,
-    # D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO. Esta é a fiação do daemon (a
-    # única que chama esta fábrica), e é aqui que a pergunta se arma. O leitor
-    # é procurado NA HORA da pergunta, pelo módulo, para o dublê da suíte
-    # (`monkeypatch` em `cor_do_plastico.ler_identidade_pelo_cabo`) valer.
     registry.armar_a_pergunta_de_fabrica(
         lambda uniq: cor_do_plastico.ler_identidade_pelo_cabo(uniq)
     )
 
     def provider(uniq: str) -> _DesiredOutput | None:
-        # R-14 §1: a ATRIBUIÇÃO acontece sempre (ver docstring) — é o que
-        # `numero_da_lampada(assign=True)` faz antes de qualquer outra coisa.
-        # O NÚMERO, esse, sai da mesa de AGORA: quem não está nela não acende
-        # (None = sem opinião), porque o lugar gravado do ausente é de outro
-        # espaço de numeração e já colidiu com o de um presente (27/08/2026).
-        #
-        # QUATRO-NA-MESA-01 §1: `autoridade_de_presenca=False`. Esta função é
-        # o segundo escritor de `_connected` que a sprint mediu, e ela é uma
-        # LEITURA a 10 Hz (a aba Status). Quem sabe quem está na mesa é o
-        # tique de 2 s, e só ele.
-        #
-        # APARELHO-NAO-SE-CONTRADIZ-01 (20/09/2026): `numero_da_lampada` passou
-        # a responder pela tabela LIBERADA, e é de propósito que ela alimente
-        # os DOIS campos abaixo. A cor e o número deste controle saem do mesmo
-        # `slot`, então não há caminho no código em que um avance sem o outro —
-        # que é a decisão dela: *"As lâmpadas esperam a cor"*.
         slot = registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
         if slot is None:
             return None
         campos: dict[str, Any] = {}
         if registry.auto_enabled:
             brilho = registry.auto_brightness
-            # A COR AUTOMÁTICA TEM UM DONO (`led_control.cor_automatica`): a do
-            # plástico, lido sem I/O do registro, e a do número sem ele.
             settings = LedSettings(
                 lightbar=cor_automatica(slot, registry.tom_do_plastico(uniq)),
                 brightness_level=brilho,
@@ -2514,61 +1771,19 @@ def make_auto_output_provider(
         if registry.auto_numbers_enabled:
             campos["player_leds"] = player_led_pattern(slot)
         if not campos:
-            return None  # os dois eixos desligados = sem opinião nenhuma
+            return None
         return _DesiredOutput(**campos)
 
     def numero_do_slot(uniq: str) -> int | None:
-        """O NÚMERO de `uniq` agora — a companheira do provider de cor.
-
-        A regra de cor única (`core/led_control.py::cores_sem_colisao`)
-        resolve a mesa NA ORDEM DO NÚMERO: é ele que define "o primeiro", e
-        as palavras dela são *"o segundo desloca para o tom vizinho"*. O
-        `_DesiredOutput` que o provider devolve não carrega o número — ele é
-        a saída de HID, e um campo de identidade não cabe ali —, então a
-        consulta viaja PENDURADA no próprio provider.
-
-        Assim ela chega ao backend pela injeção que já existe
-        (`set_auto_output_provider`), sem um segundo fio para o daemon
-        ligar. Quem injeta um provider sem esta companheira (teste com
-        `lambda`) não perde a garantia de unicidade: o backend cai na ordem
-        do `uniq`, que é arbitrária mas estável.
-
-        Mesmo contrato do provider: barato, só memória, e
-        `autoridade_de_presenca=False` — uma LEITURA de cor não ressuscita
-        ausente na mesa (QUATRO-NA-MESA-01 §1).
-        """
+        """O NÚMERO de `uniq` agora — a companheira do provider de cor."""
         return registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
 
     def uniqs_da_mesa() -> list[str]:
-        """QUEM está na mesa agora — a segunda companheira do provider de cor.
-
-        A regra de cor única resolve a MESA INTEIRA para decidir sobre UMA
-        peça, e por isso precisa da lista, não só do número de cada um. Ela
-        vem daqui, e não dos `_handles` do backend, por duas razões medidas:
-
-        * **`_handles` é ordem e composição de HOTPLUG.** Quem manda em quem
-          está na mesa é o tique de presença (QUATRO-NA-MESA-01 §1), e é a
-          MESMA tabela que a tela mostra. Duas fontes para "quem está aí" é
-          como a lâmpada e o rótulo divergem;
-        * a primeira volta desta regra leu `self._handles` como fonte única e
-          transformou um `_merged_desired_for_key` que respondia numa
-          `AttributeError` — o merge passou a exigir um mapa que ele nunca
-          precisou. Aqui a pergunta chega pelo fio que já existe
-          (`set_auto_output_provider`), e o backend só cai nos handles quando
-          o provider não tem esta companheira.
-
-        Mesmo contrato do provider e da irmã `numero_do_slot`: barato, só
-        memória, e uma LEITURA — `numeros_da_mesa` não admite ninguém.
-        """
+        """QUEM está na mesa agora — a segunda companheira do provider de cor."""
         return list(registry.numeros_da_mesa())
 
     def cor_do_numero(uniq: str) -> tuple[int, int, int] | None:
-        """A cor do NÚMERO de `uniq`, no brilho do perfil — a queda do plástico.
-
-        Com a cor automática vinda do plástico, o provider acende o plástico,
-        e a regra de cor única leva a do número para quem o perder (dois
-        plásticos iguais). Mesmo contrato das irmãs: só memória.
-        """
+        """A cor do NÚMERO de `uniq`, no brilho do perfil — a queda do plástico."""
         slot = registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
         if slot is None or not registry.auto_enabled:
             return None
@@ -2580,14 +1795,10 @@ def make_auto_output_provider(
     provider.numero_do_slot = numero_do_slot  # type: ignore[attr-defined]
     provider.uniqs_da_mesa = uniqs_da_mesa  # type: ignore[attr-defined]
     provider.tom_do_plastico = registry.tom_do_plastico  # type: ignore[attr-defined]
-    # Quem converge a luz quando o plástico chega: o backend se pendura aqui
-    # em `set_auto_output_provider` (conferência de 29/09/2026).
     provider.avisar_quando_a_automatica_mudar = (  # type: ignore[attr-defined]
         registry.avisar_quando_o_plastico_chegar
     )
     provider.cor_do_numero = cor_do_numero  # type: ignore[attr-defined]
-    # O-MODO-XBOX-NAO-E-QUEDA-02: a carta de quem ainda não tem lâmpada, para
-    # o backend eleger o primário no `connect()` (ver `posto_na_fila`).
     provider.posto_na_fila = registry.posto_na_fila  # type: ignore[attr-defined]
     return provider
 
@@ -2597,15 +1808,7 @@ _registry_lock = threading.Lock()
 
 
 def get_identity_registry() -> ControllerIdentityRegistry:
-    """Registro de identidade do processo (singleton, criado sob demanda).
-
-    Singleton deliberado: o ``ProfileManager`` é instanciado em ≥3 lugares
-    (restore de boot, hotkey, IPC) e todos precisam configurar o MESMO
-    estado do automático que o provider (injetado no backend pela fiação do
-    daemon) consulta — sem parâmetro novo em cada callsite. A criação não
-    faz I/O (o ``load()`` é chamado explicitamente só pela fiação do
-    daemon), então testes que ativam perfis continuam herméticos.
-    """
+    """Registro de identidade do processo (singleton, criado sob demanda)."""
     global _registry
     with _registry_lock:
         if _registry is None:

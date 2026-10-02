@@ -1,25 +1,4 @@
-"""STEAM-FORA-DO-SERVICO-01 — o aplicativo da pessoa nasce fora do serviço do Hefesto.
-
-Medido em 26/09/2026: o botão PS abria a Steam por ``Popen`` de dentro do
-daemon, e a Steam e o jogo nasciam no cgroup ``hefesto-dualsense4unix.service``,
-com o nice 5 e o oom 200 dele, e morriam no restart da unit. A cura é
-``integrations/fora_do_servico.abrir``; a medição que escolheu a forma está no
-docstring dele.
-
-Nenhum teste daqui chega ao gerenciador de usuário de quem roda a suíte: o
-``executar`` é sempre dublê, e o de verdade RECUSA sob a suíte (a última
-classe prova isso).
-
-As três réguas que a sprint pede:
-
-1. a Steam do daemon nasce numa unidade própria quando há systemd de usuário —
-   e NÃO por ``Popen`` (``TestADoDaemonNasceFora``);
-2. o ``ambiente_limpo`` chega ao filho (``TestOAmbienteChegaAoFilho``), lido
-   como o gerenciador o monta: o ambiente dele, o ``--setenv`` por cima, o
-   ``UnsetEnvironment`` no fim;
-3. sem systemd de usuário, ou com quem chama já sendo da pessoa, o ``Popen``
-   de sempre (``TestOPopenDeSempre``).
-"""
+"""STEAM-FORA-DO-SERVICO-01 — o aplicativo da pessoa nasce fora do serviço do Hefesto."""
 from __future__ import annotations
 
 import ast
@@ -39,12 +18,10 @@ from hefesto_dualsense4unix.integrations import steam_launcher
 _RAIZ = Path(__file__).resolve().parents[2]
 _INTEGRACOES = _RAIZ / "src" / "hefesto_dualsense4unix" / "integrations"
 
-#: O cgroup do daemon medido em 26/09 (`/proc/<pid>/cgroup`).
 _CGROUP_DO_DAEMON = (
     "/user.slice/user-1000.slice/user@1000.service/app.slice/"
     "hefesto-dualsense4unix.service"
 )
-#: O da janela aberta pelo painel do COSMIC, medido no mesmo dia.
 _CGROUP_DO_PAINEL = (
     "/user.slice/user-1000.slice/user@1000.service/app.slice/"
     "app-cosmic-com.system76.CosmicAppList-2665262.scope"
@@ -89,15 +66,8 @@ def _depois_do_traco(cmd: list[str]) -> list[str]:
     return cmd[cmd.index("--") + 1 :]
 
 
-# ---------------------------------------------------------------------------
-# 1 — a Steam do daemon nasce numa unidade própria
-# ---------------------------------------------------------------------------
-
-
 class TestADoDaemonNasceFora:
-    """MORDE: troque o ``fora_do_servico.abrir`` de ``_spawn_steam`` pelo
-    ``runner([STEAM_BINARY], ..., start_new_session=True, env=...)`` de antes e
-    as duas primeiras reprovam — o ``Popen`` proibido é chamado."""
+    """MORDE: troque o ``fora_do_servico.abrir`` de ``_spawn_steam`` pelo"""
 
     @pytest.mark.parametrize(
         ("pgrep", "desfecho"),
@@ -124,7 +94,6 @@ class TestADoDaemonNasceFora:
         assert "--property=Type=exec" in cmd
         assert "--property=ExitType=cgroup" in cmd
         assert "--property=OOMScoreAdjust=100" in cmd
-        # O DEVNULL do Popen de sempre, e não o diário de todo serviço.
         assert "--property=StandardOutput=null" in cmd
         assert "--property=StandardError=null" in cmd
         assert _depois_do_traco(cmd) == ["steam"]
@@ -135,11 +104,7 @@ class TestADoDaemonNasceFora:
     def test_o_comando_proprio_do_ps_nasce_fora(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O ``custom`` do PS é o programa DELA, e mora no mesmo serviço.
-
-        MORDE: devolva o ``_sp.Popen(command, ...)`` ao ``_on_ps_solo`` e o
-        ``abrir`` não é chamado.
-        """
+        """O ``custom`` do PS é o programa DELA, e mora no mesmo serviço."""
         chamadas: list[dict[str, Any]] = []
 
         def _abrir(argv: Sequence[str], **kwargs: Any) -> fds.Abertura:
@@ -171,8 +136,6 @@ class TestADoDaemonNasceFora:
         assert fds.motivo_de_herdar(
             cgroup=_CGROUP_DO_PAINEL, nice=0, oom=0, oom_do_gerenciador=100
         ) is None
-        # Fora de serviço, mas com o nice ou o oom do daemon (o daemon rodado
-        # de um terminal): o filho herdaria do mesmo jeito.
         assert fds.motivo_de_herdar(
             cgroup=_CGROUP_DO_PAINEL, nice=5, oom=0, oom_do_gerenciador=100
         ) == "nice 5"
@@ -181,16 +144,10 @@ class TestADoDaemonNasceFora:
         ) == "oom_score_adj 200"
 
     def test_o_contexto_le_o_proc_e_o_piso_do_gerenciador(self, tmp_path: Path) -> None:
-        """``contexto_atual`` lê ``/proc/self`` e acha o oom do gerenciador.
-
-        Duas rotas: o ``MANAGERPID`` que o gerenciador põe nos serviços dele, e
-        o ``init.scope`` do ``user@<uid>.service`` para quem está num scope.
-        """
+        """``contexto_atual`` lê ``/proc/self`` e acha o oom do gerenciador."""
         proc = tmp_path / "proc"
         (proc / "self").mkdir(parents=True)
         (proc / "self" / "cgroup").write_text(f"0::{_CGROUP_DO_DAEMON}\n")
-        # Depois do `)`: o 3º campo (estado) é o índice 0, então o 18º
-        # (prioridade) é o 15 e o 19º (nice) é o 16.
         campos = ["S", "1"] + ["0"] * 13 + ["25", "5"] + ["0"] * 30
         (proc / "self" / "stat").write_text("4242 (python) " + " ".join(campos) + "\n")
         (proc / "self" / "oom_score_adj").write_text("200\n")
@@ -216,19 +173,8 @@ class TestADoDaemonNasceFora:
         ) == 100
 
 
-# ---------------------------------------------------------------------------
-# 2 — o ambiente_limpo chega ao filho
-# ---------------------------------------------------------------------------
-
-
 def _ambiente_do_filho(cmd: list[str], do_gerenciador: Mapping[str, str]) -> dict[str, str]:
-    """O ambiente que o gerenciador monta para a unidade (``systemd.exec(5)``).
-
-    O dele primeiro; o ``Environment=`` (``--setenv``) por cima; o
-    ``UnsetEnvironment=`` no fim. As variáveis que o gerenciador escreve para a
-    unidade nova (``INVOCATION_ID``…) entram antes do ``Environment=``: por
-    isso um ``--setenv`` com a do daemon as trocaria.
-    """
+    """O ambiente que o gerenciador monta para a unidade (``systemd.exec(5)``)."""
     env = dict(do_gerenciador)
     env["INVOCATION_ID"] = "da-unidade-nova"
     for arg in cmd[: cmd.index("--")]:
@@ -243,9 +189,7 @@ def _ambiente_do_filho(cmd: list[str], do_gerenciador: Mapping[str, str]) -> dic
 
 
 class TestOAmbienteChegaAoFilho:
-    """MORDE: mande ``os.environ`` em vez de ``ambiente_limpo(os.environ)`` no
-    ``_spawn_steam`` e a primeira reprova pela venv; tire o ``--setenv`` do
-    ``argv_da_unidade`` e ela reprova pela sessão."""
+    """MORDE: mande ``os.environ`` em vez de ``ambiente_limpo(os.environ)`` no"""
 
     @pytest.fixture()
     def daemon_sujo(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
@@ -255,13 +199,11 @@ class TestOAmbienteChegaAoFilho:
             "CONDA_PREFIX": str(tmp_path / "conda"),
             "PYTHONPATH": "/algum/src",
             "PATH": f"{venv}/bin:/usr/local/bin:/usr/bin:/usr/games",
-            # As da unidade do daemon, medidas no environ dele em 26/09.
             "INVOCATION_ID": "do-daemon",
             "JOURNAL_STREAM": "10:30588975",
             "MANAGERPID": "1703",
             "SYSTEMD_EXEC_PID": "2491964",
             "MEMORY_PRESSURE_WATCH": "/sys/fs/cgroup/do/daemon/memory.pressure",
-            # A sessão, de que a Steam precisa.
             "WAYLAND_DISPLAY": "wayland-1",
             "DISPLAY": ":0",
             "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus",
@@ -280,8 +222,6 @@ class TestOAmbienteChegaAoFilho:
             popen_runner=_popen_proibido, contexto=_DENTRO_DO_SERVICO, executar=executar
         ) is True
         cmd = executar.chamadas[0]
-        # O gerenciador de uma sessão aberta de um terminal sujo tem a venv no
-        # ambiente dele também: o UnsetEnvironment é quem a tira desse lado.
         do_gerenciador = {"VIRTUAL_ENV": "/venv/do/gerenciador", "LANG": "C.UTF-8"}
         filho = _ambiente_do_filho(cmd, do_gerenciador)
 
@@ -299,8 +239,7 @@ class TestOAmbienteChegaAoFilho:
         assert filho["COM_DOLAR"] == "a$b"
 
     def test_variavel_que_o_systemd_run_recusaria_fica_de_fora(self) -> None:
-        """Uma só recusada derrubaria a abertura inteira (medido:
-        ``Cannot assign environment variable BASH_FUNC_x%%``)."""
+        """Uma só recusada derrubaria a abertura inteira (medido:"""
         mantidas, fora = fds.ambiente_da_unidade(
             {
                 "BASH_FUNC_x%%": "() { :; }",
@@ -314,18 +253,12 @@ class TestOAmbienteChegaAoFilho:
         assert fora == ("BASH_FUNC_x%%", "COM_QUEBRA", "SURROGATE")
 
     def test_o_dolar_do_comando_nao_vira_variavel(self) -> None:
-        """O gerenciador expande ``$NOME`` no ``ExecStart``; ``$$`` é o ``$``.
-        Medido em 26/09: o ``sh`` recebeu ``a$b`` pela unidade."""
+        """O gerenciador expande ``$NOME`` no ``ExecStart``; ``$$`` é o ``$``."""
         cmd = fds.argv_da_unidade(
             ["prog", "a$b", "${HOME}"], {}, unidade="u.service", forma="ExitType=cgroup", oom=None
         )
         assert _depois_do_traco(cmd) == ["prog", "a$$b", "$${HOME}"]
         assert not any(a.startswith("--property=OOMScoreAdjust") for a in cmd)
-
-
-# ---------------------------------------------------------------------------
-# 3 — o Popen de sempre, quando é ele o caminho
-# ---------------------------------------------------------------------------
 
 
 class _Popen:
@@ -358,8 +291,7 @@ class TestOPopenDeSempre:
         assert executar.chamadas == []
 
     def test_systemd_antigo_cai_no_killmode_process(self) -> None:
-        """Antes do systemd 250 o ``ExitType`` não existe (``Unknown
-        assignment``); o ``KillMode=process`` foi medido com o mesmo efeito."""
+        """Antes do systemd 250 o ``ExitType`` não existe (``Unknown"""
         executar = _Executar(1, 0, erro="Unknown assignment: ExitType=cgroup")
         ab = fds.abrir(["steam"], env={}, contexto=_DENTRO_DO_SERVICO,
                        executar=executar, popen=_popen_proibido)
@@ -388,16 +320,7 @@ class TestOPopenDeSempre:
     def test_a_espera_do_systemd_run_cabe_no_teto_do_mesmo_toque(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O botão PS chama o ``abrir`` no fio do gesto (``hotkey.py``, desde a
-        TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01), depois do ``pgrep``
-        e do ``wmctrl`` do mesmo toque. Um gerenciador que não responde segura
-        o fio, e o próximo toque é descartado pela espera inteira: ela não passa
-        do teto que aqueles dois já têm.
-
-        MORDE: volte ``ESPERA_DO_SYSTEMD_RUN_S`` para os 10 s com que nasceu e
-        a primeira comparação reprova; troque o ``timeout=`` do
-        ``_executar_de_verdade`` por outro valor e a segunda reprova.
-        """
+        """O botão PS chama o ``abrir`` no fio do gesto (``hotkey.py``, desde a"""
         esperas: dict[str, float] = {}
 
         def _run(cmd: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
@@ -410,8 +333,6 @@ class TestOPopenDeSempre:
         teto = min(esperas["pgrep"], esperas["wmctrl"])
         assert teto >= fds.ESPERA_DO_SYSTEMD_RUN_S
 
-        # O dublê de `subprocess.run` já está no lugar: a pergunta da suíte
-        # pode dizer "não" sem que nada chegue ao gerenciador de verdade.
         monkeypatch.setattr(fds, "_a_suite_esta_rodando", lambda: False)
         fds._executar_de_verdade(["systemd-run", "--user", "--", "steam"], {})
         assert esperas["systemd-run"] == fds.ESPERA_DO_SYSTEMD_RUN_S
@@ -436,17 +357,11 @@ class TestOPopenDeSempre:
         assert popen.chamadas[0]["cmd"] == ["steam"]
 
 
-# ---------------------------------------------------------------------------
-# 4 — a suíte nunca chega ao gerenciador de verdade
-# ---------------------------------------------------------------------------
-
-
 class TestASuiteNaoAbreUnidade:
     def test_o_systemd_run_de_verdade_recusa_sob_a_suite(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDE: tire a pergunta ``_a_suite_esta_rodando`` do
-        ``_executar_de_verdade`` e o ``subprocess.run`` proibido é chamado."""
+        """MORDE: tire a pergunta ``_a_suite_esta_rodando`` do"""
 
         def _run_proibido(*_a: Any, **_k: Any) -> Any:
             raise AssertionError("a suíte chegou ao gerenciador de verdade")
@@ -458,13 +373,6 @@ class TestASuiteNaoAbreUnidade:
         assert "a suíte está no ar" in ab.tentativas[0]
 
 
-# ---------------------------------------------------------------------------
-# 5 — nenhum Popen novo abre aplicativo da pessoa por fora do dono
-# ---------------------------------------------------------------------------
-
-#: Os módulos que abrem aplicativo da pessoa, e o Popen que cada um ainda pode
-#: ter: o ``steam -shutdown`` fala com a Steam de pé, não faz nascer nenhuma, e
-#: o ``_default_popen`` só repassa o que o dono mandou.
 _DONOS = {
     _INTEGRACOES / "steam_launcher.py": 1,
     _INTEGRACOES / "steam_launch_options.py": 1,
@@ -475,12 +383,7 @@ _DONOS = {
 
 @pytest.mark.parametrize("arquivo", list(_DONOS), ids=lambda p: p.name)
 def test_nenhum_aplicativo_nasce_por_popen_fora_do_dono(arquivo: Path) -> None:
-    """Um ``Popen`` novo num destes módulos reprova aqui: quem abre aplicativo
-    da pessoa passa por ``fora_do_servico.abrir``.
-
-    MORDE: devolva o ``_sp.Popen`` ao comando próprio do PS e ``hotkey.py``
-    reprova com um Popen a mais.
-    """
+    """Um ``Popen`` novo num destes módulos reprova aqui: quem abre aplicativo"""
     arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
     popens = [
         no for no in ast.walk(arvore)

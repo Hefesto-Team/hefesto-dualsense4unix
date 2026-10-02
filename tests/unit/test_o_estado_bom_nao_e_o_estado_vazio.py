@@ -1,20 +1,4 @@
-"""O estado bom sabe se dizer, e o "não sei" não se disfarça dele.
-
-A queixa dela era direta: *"o 'está tudo certo' não fala nada"*. A cura é o
-NÚMERO e o botão — o estado bom passa a dizer **quanta coisa** foi conferida e a
-abrir a lista.
-
-E o terceiro caso deixa de se disfarçar do segundo, que é o F7 desta casa: o
-estado em que o produto NÃO SOUBE parecendo o estado em que está tudo bem.
-"Conferi 5 coisas" e "5 coisas não deram resposta" são afirmações opostas, e a
-tela que as colapsa é a tela que mente de verde.
-
-A PROVA DE TELA AGUARDA O OLHO DELA
-------------------------------------
-
-As quatro frases são texto novo. O que fecha aqui é a DERIVAÇÃO — quatro
-situações, quatro cabeçalhos, num lugar só. A foto é PROVA-DE-TELA-01 e é dela.
-"""
+"""O estado bom sabe se dizer, e o "não sei" não se disfarça dele."""
 from __future__ import annotations
 
 import pytest
@@ -33,7 +17,6 @@ def uma_ordem(chave: str = "radio_largo_no_mesmo_hub") -> ordens.Ordem:
     )
 
 
-#: As quatro situações da §8.3, e o cabeçalho que cada uma tem de produzir.
 AS_QUATRO = {
     ordens.TOPO_HA_ORDENS: {
         "ordens": [uma_ordem()],
@@ -79,23 +62,14 @@ def test_as_quatro_frases_sao_distintas_duas_a_duas() -> None:
 
 
 def test_o_nao_sei_nunca_e_verde() -> None:
-    """F7: o estado em que o produto não soube **não** pode ser o estado bom.
-
-    É a cicatriz de 16/08 noutra roupa — o verde convivendo com o vermelho.
-    Trocar `nao_sei` por `certo` aqui reprova.
-    """
+    """F7: o estado em que o produto não soube **não** pode ser o estado bom."""
     topo = ordens.cabecalho(**AS_QUATRO[ordens.TOPO_ALGUMA_NAO_SOUBE])  # type: ignore[arg-type]
     assert topo.estado == "nao_sei"
     assert topo.estado != "certo"
 
 
 def test_o_sem_resposta_passa_a_frente_da_dispensa() -> None:
-    """A precedência é de HONESTIDADE, e não de gravidade.
-
-    Com dispensa dela E checagem que não soube, quem fala é a que não soube:
-    deixar a dispensa ganhar faria o terceiro caso se disfarçar do quarto, que é
-    verde.
-    """
+    """A precedência é de HONESTIDADE, e não de gravidade."""
     topo = ordens.cabecalho(
         ordens=[], conferidas=5, sem_resposta=1, dispensadas=1
     )
@@ -155,11 +129,7 @@ def test_o_singular_e_o_plural_concordam() -> None:
 
 
 def test_o_estado_de_cada_cabecalho_e_o_vocabulario_do_exame() -> None:
-    """As três palavras são as de `exame_da_mesa`, e vêm de UM lugar só.
-
-    Um segundo lugar decidindo a cor do topo é exatamente como o verde volta a
-    conviver com o vermelho.
-    """
+    """As três palavras são as de `exame_da_mesa`, e vêm de UM lugar só."""
     for campos in AS_QUATRO.values():
         topo = ordens.cabecalho(**campos)  # type: ignore[arg-type]
         assert topo.estado in {"certo", "atencao", "nao_sei"}  # (noqa-acento) estado do daemon

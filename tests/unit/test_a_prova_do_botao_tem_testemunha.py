@@ -40,7 +40,6 @@ ENSAIO = ENSAIOS / "quem_e_quem.py"
 INICIO = 1000.0
 JANELA_S = 4.0
 
-#: Faixa forjada (a máscara preserva o OUI; fixture não usa endereço real).
 UNIQS = tuple(f"aa:bb:cc:00:00:0{n}" for n in range(1, 5))
 
 
@@ -50,7 +49,6 @@ def _carregar() -> ModuleType:
     spec = importlib.util.spec_from_file_location("quem_e_quem_da_testemunha", ENSAIO)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
-    # as dataclasses do ensaio procuram o próprio módulo em `sys.modules`
     sys.modules[spec.name] = modulo
     spec.loader.exec_module(modulo)
     return modulo
@@ -64,11 +62,6 @@ def qq() -> ModuleType:
 @pytest.fixture(scope="module")
 def tela(qq: ModuleType) -> tuple[Any, Any, Any, int]:
     return qq._a_tela()  # type: ignore[no-any-return]
-
-
-# ---------------------------------------------------------------------------
-# O pad de mentira: eventos com a hora do kernel, e um seletor que anda o relógio
-# ---------------------------------------------------------------------------
 
 
 class Relogio:
@@ -153,16 +146,13 @@ def aperto(pad: PadDeMentira, botao: str, descida: float, duracao: float) -> Non
                     Evento(ecodes.EV_SYN, 0, 0, descida + duracao)]
 
 
-# ---------------------------------------------------------------------------
 # O `state_full` de mentira: os cartões, e o que cada um tem apertado em cada hora
-# ---------------------------------------------------------------------------
 
 
 @dataclass
 class Cena:
     relogio: Relogio
     jogadores: tuple[int, ...] = (1, 2, 3, 4)
-    #: (jogador, botão, de, até)
     apertados: list[tuple[int, str, float, float]] = field(default_factory=list)
     mudo: bool = False
     perguntas: int = 0
@@ -183,11 +173,6 @@ class Cena:
                 "inputs": {"buttons": botoes, "l2_raw": 0, "r2_raw": 0},
             })
         return {"controllers": controles}
-
-
-# ---------------------------------------------------------------------------
-# A mesa de mentira no disco: os vpads uhid, os pads uinput e os físicos
-# ---------------------------------------------------------------------------
 
 
 def _no_de_entrada(dir_device: Path, input_n: int, event_n: int, nome: str) -> str:
@@ -248,11 +233,6 @@ def _nome_do_pad_xbox() -> str:
     return str(XBOX360_NAME)
 
 
-# ---------------------------------------------------------------------------
-# O mundo: a porta da casa, o dono do grab e o daemon, trocados em TODO teste
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Mundo:
     relogio: Relogio
@@ -307,18 +287,9 @@ def linhas_do(saida: str, marca: str) -> list[str]:
     return [linha for linha in saida.splitlines() if marca in linha]
 
 
-# ---------------------------------------------------------------------------
-# As réguas
-# ---------------------------------------------------------------------------
-
-
 def test_regua_1_sem_aperto_nada_medido(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                          capsys: pytest.CaptureFixture[str]) -> None:
-    """Pad calado e estado vazio nos quatro: «nada medido», rc 3.
-
-    MORDIDA: sem a guarda da testemunha (julgar pela tela vazia), o ensaio diz
-    que a tela não acendeu, e o rc sai 2.
-    """
+    """Pad calado e estado vazio nos quatro: «nada medido», rc 3."""
     aparelhos, _ = quatro_vpads(qq, tmp_path)
     rc = rodar(qq, mundo, aparelhos)
     saida = capsys.readouterr().out
@@ -331,10 +302,7 @@ def test_regua_1_sem_aperto_nada_medido(qq: ModuleType, mundo: Mundo, tmp_path: 
 
 def test_regua_1_o_daemon_mudo_nao_e_estado_vazio(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                                    capsys: pytest.CaptureFixture[str]) -> None:
-    """A tela que levanta `DaemonMudo` e um X de 300 ms: «a tela não respondeu», rc 3.
-
-    MORDIDA: tratar o daemon mudo como estado vazio dá FALHA (rc 2).
-    """
+    """A tela que levanta `DaemonMudo` e um X de 300 ms: «a tela não respondeu», rc 3."""
     aparelhos, caminhos = quatro_vpads(qq, tmp_path)
     mundo.cena.mudo = True
     aperto(mundo.pad(caminhos[1]), "BTN_SOUTH", INICIO + 1.0, 0.3)
@@ -368,17 +336,13 @@ def _o_x_do_p2(qq: ModuleType, m: Mundo, tmp_path: Path, acende: tuple[int, ...]
     descida = INICIO + 1.02
     aperto(m.pad(caminhos[1]), "BTN_SOUTH", descida, 0.3)
     for jogador in acende:
-        # a tela acende no tique seguinte à descida e apaga um tique depois da subida
         m.cena.apertados.append((jogador, "cross", descida + 0.05, descida + 0.35))
     return aparelhos
 
 
 def test_regua_3_acendeu_o_cartao_dele(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                         capsys: pytest.CaptureFixture[str]) -> None:
-    """X de 300 ms no pad do P2, `cross` no cartão do P2 em três tiques: acendeu, sem rc próprio.
-
-    `None` é «vale o rc da tabela» (o aviso do LED fica; ver a régua 10).
-    """
+    """X de 300 ms no pad do P2, `cross` no cartão do P2 em três tiques: acendeu, sem rc próprio."""
     aparelhos = _o_x_do_p2(qq, mundo, tmp_path, acende=(2,))
     rc = rodar(qq, mundo, aparelhos)
     saida = capsys.readouterr().out
@@ -423,10 +387,7 @@ def test_regua_3_o_no_que_falou_nao_sai_como_zero(qq: ModuleType, mundo: Mundo, 
 
 def test_regua_4_um_cartao_so(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                capsys: pytest.CaptureFixture[str]) -> None:
-    """O mesmo aperto com `cross` no P2 e no P3: FALHA.
-
-    MORDIDA: um veredito que aceita «algum cartão acendeu» passa com rc 0.
-    """
+    """O mesmo aperto com `cross` no P2 e no P3: FALHA."""
     aparelhos = _o_x_do_p2(qq, mundo, tmp_path, acende=(2, 3))
     rc = rodar(qq, mundo, aparelhos)
     saida = capsys.readouterr().out
@@ -437,10 +398,7 @@ def test_regua_4_um_cartao_so(qq: ModuleType, mundo: Mundo, tmp_path: Path,
 
 def test_regua_5_o_aperto_curto_nao_e_medido(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                               capsys: pytest.CaptureFixture[str]) -> None:
-    """Um X de 60 ms entre dois tiques, sem nada aceso: «curto demais» e «nada medido», rc 3.
-
-    MORDIDA: tratar o curto como FALHA dá rc 2; contá-lo como medido dá rc 0.
-    """
+    """Um X de 60 ms entre dois tiques, sem nada aceso: «curto demais» e «nada medido», rc 3."""
     aparelhos, caminhos = quatro_vpads(qq, tmp_path)
     aperto(mundo.pad(caminhos[0]), "BTN_SOUTH", INICIO + 1.02, 0.06)
     rc = rodar(qq, mundo, aparelhos)
@@ -468,12 +426,7 @@ def test_regua_5_o_curto_com_um_aperto_medido(qq: ModuleType, mundo: Mundo, tmp_
 
 def test_regua_6_o_modo_xbox_abre_os_pads_uinput(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                                   capsys: pytest.CaptureFixture[str]) -> None:
-    """Quatro nós uinput com o nome do `FLAVORS` e a morada do uinput: o ensaio abre os quatro.
-
-    O nó uinput não diz o jogador: a linha diz o cartão que acendeu.
-    MORDIDA: com a descoberta só por `/sys/class/hidraw`, nenhum nó abre e a
-    régua reprova; e os físicos não são testemunha quando há pad.
-    """
+    """Quatro nós uinput com o nome do `FLAVORS` e a morada do uinput: o ensaio abre os quatro."""
     caminhos = pads_uinput(mundo.raiz_sys, 4, _nome_do_pad_xbox())
     fisicos = [controle_fisico(qq, tmp_path, n)[0] for n in range(1, 5)]
     aperto(mundo.pad(caminhos[2]), "BTN_SOUTH", INICIO + 1.02, 0.3)
@@ -494,10 +447,7 @@ def test_regua_6_o_espelho_de_outro_nome_nao_e_pad(qq: ModuleType, mundo: Mundo)
 
 def test_regua_7_o_dono_do_aceso_e_o_da_tela(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                               capsys: pytest.CaptureFixture[str]) -> None:
-    """O estado traz `create` no P1 e o pad um `BTN_SELECT`: a tela acendeu `share`.
-
-    MORDIDA: comparar com o `inputs.buttons` cru dá `create` no lado da tela.
-    """
+    """O estado traz `create` no P1 e o pad um `BTN_SELECT`: a tela acendeu `share`."""
     aparelhos, caminhos = quatro_vpads(qq, tmp_path)
     aperto(mundo.pad(caminhos[0]), "BTN_SELECT", INICIO + 1.02, 0.3)
     mundo.cena.apertados.append((1, "create", INICIO + 1.05, INICIO + 1.35))
@@ -512,8 +462,6 @@ def test_regua_7_o_dono_do_aceso_e_o_da_tela(qq: ModuleType, mundo: Mundo, tmp_p
 def test_regua_8_a_troca_de_botao(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                    capsys: pytest.CaptureFixture[str]) -> None:
     """O pad vê `BTN_EAST` e o estado traz `cross` no mesmo cartão: acendeu, e a linha diz os dois.
-
-    MORDIDA: exigir o mesmo nome nos dois lados dá FALHA.
     """
     aparelhos, caminhos = quatro_vpads(qq, tmp_path)
     aperto(mundo.pad(caminhos[3]), "BTN_EAST", INICIO + 1.02, 0.3)
@@ -528,12 +476,7 @@ def test_regua_8_a_troca_de_botao(qq: ModuleType, mundo: Mundo, tmp_path: Path,
 
 def test_regua_9_o_nativo_segurado_por_outro(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                               capsys: pytest.CaptureFixture[str]) -> None:
-    """Sem pad, a testemunha é o físico pela porta da casa, e o nó calado sai pelo dono do zero.
-
-    MORDIDA: com `evdev.InputDevice` direto no lugar de `abrir_input_device`,
-    a porta de mentira não é chamada; com um texto próprio no lugar de
-    `leitura_de_zero`, a frase não bate com a do dono.
-    """
+    """Sem pad, a testemunha é o físico pela porta da casa, e o nó calado sai pelo dono do zero."""
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as dono
 
     par = [controle_fisico(qq, tmp_path, n) for n in (1, 3)]
@@ -562,7 +505,6 @@ def test_regua_9_o_nativo_confere_o_cartao_pelo_endereco(
     assert rc == 2
     (linha,) = linhas_do(saida, f"no físico {UNIQS[2]}")
     assert "acendeu o cartão P1, que é de outro jogador (o nó é do P3)" in linha
-    # e o P1, que não apertou nada, sai pelo dono do zero, livre
     (calado,) = linhas_do(saida, f"({par[0][1]}):")
     assert calado.endswith("0 (o controle não emitiu)")
 
@@ -583,16 +525,11 @@ def test_regua_12_o_botao_sem_glifo_nao_e_falha(qq: ModuleType, mundo: Mundo, tm
     assert "a grade não tem glifo para l3 — nada medido" in linha
 
 
-# ---------------------------------------------------------------------------
-# O rc inteiro: a régua 10 roda o `main`, com a tabela e o aperto
-# ---------------------------------------------------------------------------
-
-
 def _main_com_led_repetido(qq: ModuleType, m: Mundo, tmp_path: Path,
                            monkeypatch: pytest.MonkeyPatch, acende: int) -> int:
     import functools
 
-    dois = [controle_fisico(qq, tmp_path, n, led="00100")[0] for n in (1, 2)]  # os dois dizem P1
+    dois = [controle_fisico(qq, tmp_path, n, led="00100")[0] for n in (1, 2)]
     vpad2, caminho2 = vpad_uhid(qq, tmp_path, 2)
     aperto(m.pad(caminho2), "BTN_SOUTH", INICIO + 1.02, 0.3)
     m.cena.apertados.append((acende, "cross", INICIO + 1.05, INICIO + 1.35))
@@ -608,10 +545,7 @@ def _main_com_led_repetido(qq: ModuleType, m: Mundo, tmp_path: Path,
 def test_regua_10_o_aviso_do_led_nao_some(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                            monkeypatch: pytest.MonkeyPatch,
                                            capsys: pytest.CaptureFixture[str]) -> None:
-    """O aperto certo com o LED de jogador repetido na tabela: rc 1.
-
-    MORDIDA: um rc 0 fixo quando o aperto passa esconde a divergência.
-    """
+    """O aperto certo com o LED de jogador repetido na tabela: rc 1."""
     rc = _main_com_led_repetido(qq, mundo, tmp_path, monkeypatch, acende=2)
     saida = capsys.readouterr().out
     assert "P1 está aceso em 2 controles" in saida
@@ -626,10 +560,6 @@ def test_regua_10_a_falha_vence_o_led(qq: ModuleType, mundo: Mundo, tmp_path: Pa
     assert _main_com_led_repetido(qq, mundo, tmp_path, monkeypatch, acende=3) == 2
     capsys.readouterr()
 
-
-# ---------------------------------------------------------------------------
-# A régua 11: a tabela e o `--json` não dependem da tela
-# ---------------------------------------------------------------------------
 
 _SEM_GI = textwrap.dedent('''
     import importlib.util, json, sys
@@ -655,7 +585,6 @@ def _sem_gi(tmp_path: Path, argv: list[str]) -> subprocess.CompletedProcess[str]
                  for n, led in ((1, "00100"), (2, "01010"))]
     ambiente = dict(os.environ)
     ambiente["PYTHONPATH"] = str(RAIZ / "src")
-    # o lar de mentira: nada do que este processo importa acha a pasta dela
     ambiente["HOME"] = str(tmp_path / "lar")
     for chave in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
         ambiente[chave] = str(tmp_path / "lar" / chave.lower())
@@ -676,11 +605,7 @@ def _chaves_que_o_o_basico_le() -> tuple[set[str], set[str]]:
 
 
 def test_regua_11_o_json_nao_depende_da_tela(tmp_path: Path) -> None:
-    """Com o `import gi` levantando, o `--json` termina e traz as chaves que o `o_basico.py` lê.
-
-    MORDIDA: com o import do `hefesto_vivo` no topo do módulo, o `--json`
-    quebra no import, e a régua reprova.
-    """
+    """Com o `import gi` levantando, o `--json` termina e traz as chaves que o `o_basico.py` lê."""
     feito = _sem_gi(tmp_path, ["--json"])
     assert "Traceback" not in feito.stderr, feito.stderr
     corpo, _, fim = feito.stdout.rpartition("RC=")
@@ -694,10 +619,7 @@ def test_regua_11_o_json_nao_depende_da_tela(tmp_path: Path) -> None:
 
 
 def test_regua_11_sem_a_tela_o_apertar_diz_nada_medido(tmp_path: Path) -> None:
-    """Sem o pacote da interface, o `--apertar` diz «a tela não se lê aqui — nada medido», rc 3.
-
-    Nenhum nó é aberto: a tela é importada antes da testemunha.
-    """
+    """Sem o pacote da interface, o `--apertar` diz «a tela não se lê aqui — nada medido», rc 3."""
     feito = _sem_gi(tmp_path, ["--apertar", "--segundos", "0.1"])
     assert "Traceback" not in feito.stderr, feito.stderr
     assert "A tela não se lê aqui" in feito.stdout and "nada medido" in feito.stdout

@@ -1,50 +1,5 @@
 #!/usr/bin/env python3
-"""As quatro linhas da tabela «Ajuste próprio» cabem — inclusive com a tira acesa.
-
-POR QUE ELE EXISTE (PERFIS-A-TELA-01, 11/09/2026). Ela abriu a aba Perfis e
-disse:
-
-    "em perfis as linhas dos controles e ajustes proprios quebram."
-
-MEDIDO, e eram DUAS coisas na mesma tabela:
-
-1. **a tabela não cabia no quadro** — e não sempre, só quando a tira do desfecho
-   (`.desfecho.on`) acendia, o que acontece a cada gesto dela e dura 30
-   segundos. Nesses 30 segundos a coluna perdia 37px, a tabela passava a rolar e
-   a linha do P4 ficava **15px fora**;
-2. **a coluna do nome não se centrava na linha** — o `<td>` era `display:flex` e
-   por isso deixava de ser célula de tabela, perdendo o `vertical-align:middle`
-   que as outras duas têm de graça.
-
-**AS DUAS ANDAVAM JUNTAS, E É A RAZÃO DESTE ARQUIVO SER UM SÓ:** a cura da
-primeira (tirar o quadro «Modo», ordem dela) devolve 36px às quatro linhas — e
-**altura de linha ESCANCARA o desalinho da segunda**, de 3,13px para 8,13px.
-Curar uma sem a outra piora o que ela viu.
-
-**POR QUE NO WEBKIT E NÃO NO CHROME.** Régua de Python lê o CSS escrito; o
-Playwright lê o Chrome. O que ela abre é um `WebKit2.WebView` dentro de uma
-janela GTK3, e a pergunta aqui é geométrica — *quantos pixels sobram* —, então
-ela tem de ser feita ao motor que ela usa. O `interface/olhar.py` não alcança
-este motor, e é por isso que ele não substitui este ensaio.
-
-**E ELE PINTA COMO O PRODUTO PINTA, não como o desenho congela.** O mockup traz
-quatro linhas de exemplo; o produto manda `guarda.vazio="sim"` nos lugares sem
-controle (a classe `fora`) e o travessão no ID. Medir o desenho cru daria a
-resposta certa sobre a página errada.
-
-**NADA TOCA O PERFIL DELA, E NENHUMA JANELA NASCE NA TELA DELA:** não há disco,
-não há daemon e não há IPC — a página é lida do arquivo e a pintura é feita por
-JavaScript dentro de um `Gtk.OffscreenWindow`.
-
-Uso::
-
-    scripts/ensaios/a_tabela_do_perfil_cabe_com_a_tira.py            # a bancada
-    scripts/ensaios/a_tabela_do_perfil_cabe_com_a_tira.py --publicado
-    scripts/ensaios/a_tabela_do_perfil_cabe_com_a_tira.py --json
-
-`rc=0` quando as quatro linhas cabem nos dois estados e as três colunas alinham;
-`rc=1` nomeando o estado e o número que faltou.
-"""
+"""As quatro linhas da tabela «Ajuste próprio» cabem — inclusive com a tira acesa."""
 from __future__ import annotations
 
 import argparse
@@ -55,7 +10,6 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
 from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
@@ -74,20 +28,8 @@ from hefesto_dualsense4unix.interface import onde
 ABA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 TITULO = "Hefesto — aba PERFIS"
 
-#: O ESPALHAMENTO VERTICAL QUE SE TOLERA entre as três colunas da mesma linha,
-#: em pixels. **1,5px é MEDIDO, não escolhido**: é a distância entre o centro do
-#: glifo SVG da coluna do meio (que carrega `vertical-align:-3px`, o
-#: deslocamento ótico da casa) e o centro do texto das outras duas — que fecham
-#: EXATO uma com a outra, 16,13 contra 16,13. Dois pixels de folga cobrem o
-#: arredondamento do motor sem deixar passar o defeito, que era de 8,13.
 ESPALHAMENTO_TOLERADO = 2.0
 
-#: O QUE A TABELA PEDE E O QUE SOBRA — o roteiro roda DENTRO da página.
-#:
-#: `table{height:100%}` ESTICA as quatro linhas para preencher o quadro, então
-#: `scrollHeight` da tabela não responde *"quanto elas pedem"*: responde *"quanto
-#: elas receberam"*. Para saber o mínimo, o roteiro tira o esticão, mede, e
-#: devolve — é a diferença entre medir o desenho e medir a necessidade.
 ROTEIRO = r"""
 (function () {
   function comoOProdutoPinta() {
@@ -215,13 +157,10 @@ def medir(pagina: pathlib.Path) -> dict:
             else:
                 try:
                     saida.update(json.loads(valor))
-                except Exception as e:  # a exceção É a resposta
+                except Exception as e:
                     saida["erro"] = f"{e}: {valor!r}"
             Gtk.main_quit()
 
-        # A FOLGA DE 400 ms NÃO É SUPERSTIÇÃO: as fontes web da casa mudam a
-        # altura da linha quando chegam, e medir antes delas responde sobre uma
-        # página que ninguém vê.
         GLib.timeout_add(400, lambda: (janela.ponte.perguntar(ROTEIRO, veio), False)[1])
 
     janela = JanelaDaAba(arquivo=pagina, titulo_esperado=TITULO,

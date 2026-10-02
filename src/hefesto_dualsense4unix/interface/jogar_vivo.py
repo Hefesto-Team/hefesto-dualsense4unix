@@ -58,13 +58,6 @@ import sys
 import time
 from typing import Any
 
-# A BIBLIOTECA VEM ANTES DO `gi.repository`, e não é import decorativo: é ela
-# que crava os quatro pinos de `gi.require_version` com o Gdk DEPOIS do Gtk.
-#
-# O `isort:skip` NÃO É ENFEITE, e um `ruff --fix` cego o removeu em 01/09/2026,
-# reordenando estas três linhas: o `gi.repository` subiu para antes da
-# biblioteca, e a ordem que este comentário protege se perdeu. Ferramenta de
-# formatação não lê comentário — a marca é o que ela lê.
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
@@ -98,44 +91,8 @@ import onde  # noqa: E402  (o DONO do caminho das páginas publicadas)
 
 import aba01  # noqa: E402  isort:skip
 
-#: A PASTA TEM UM DONO, E É O `onde.PUBLICADO` — nunca um caminho absoluto (o
-#: instrumento mediria a árvore errada, o defeito que a
-#: `regua_de_tela.raizes_candidatas` documenta por extenso) e nunca uma segunda
-#: montagem do mesmo caminho, que é como esta linha morreu da primeira vez.
-#:
-#: **ESTA BANCADA MEDIU O VAZIO — 06/09/2026, ONDA5-07-03.** A linha dizia
-#: ``AQUI.parent / "01-jogar.html"``, que era certo quando este arquivo morava
-#: em ``layout/_ferramentas/`` e a página em ``layout/``. A mudança para
-#: ``src/…/interface/`` levou as páginas para ``interface/paginas/`` e esta
-#: linha ficou: ``AQUI.parent`` passou a apontar para
-#: ``src/hefesto_dualsense4unix/01-jogar.html``, **que não existe**. Medido: a
-#: bancada imprimia *"ERRO DE CARGA: carregou OUTRA página"*, ficava em
-#: ``voltas: 0`` e **saía com rc=0** — verde sobre nada, que é a família de
-#: instrumento falso que esta casa mais paga. Três das cinco abas vivas foram
-#: corrigidas em 05/09 e duas ficaram para trás; a outra é `perfis_vivos.py:78`,
-#: com o mesmo defeito e fora desta posse.
 PAGINA = onde.PUBLICADO / "01-jogar.html"
 
-#: A BANCADA — o desenho de HOJE, que é o que os geradores escrevem
-#: (`onde.BANCADA`). Ela existe por `--bancada`, e não por padrão: o padrão
-#: continua sendo o PUBLICADO, que é o que ela abre.
-#:
-#: **POR QUE ELE PRECISOU EXISTIR — 06/09/2026, JOGAR-O-QUE-FALTA-01.** Publicar
-#: é ato dela, e uma sprint que acrescenta endereço ao desenho fica, até o OK, com
-#: a bancada à frente do produto. Sem esta bandeira não há como CLICAR e
-#: FOTOGRAFAR o que se acabou de construir: o piloto e esta bancada abrem o
-#: publicado, e a régua daria verde sobre a página de ontem — que é a armadilha
-#: que o `COMO-OLHAR-A-TELA` chama de *"régua que pergunta no lugar errado"*.
-#: A frente da `PERFIL-MODO-01` pagou esse preço em 06/09 escrevendo um ensaio
-#: próprio para medir exatamente isto. **Aquele ensaio morreu em 11/09/2026**,
-#: com o quadro «Modo» que ele clicava (ordem dela: o modo só aparece na aba
-#: Jogar); quem mede a aba Perfis no WebKit hoje é
-#: `scripts/ensaios/a_tabela_do_perfil_cabe_com_a_tira.py`, que tem esta mesma
-#: bandeira pela mesma razão.
-#:
-#: **ELE NÃO PUBLICA NADA.** É só de onde o `WebKit2.WebView` lê; a direção
-#: `mockup/` → `interface/paginas/` continua sendo do
-#: `scripts/check_o_desenho_aprovado.py --publicar NN`, e continua sendo dela.
 BANCADA = onde.BANCADA / "01-jogar.html"
 
 
@@ -146,13 +103,8 @@ def pagina_de(args: Any) -> pathlib.Path:
 
 TITULO_ESPERADO = "Hefesto — aba JOGAR"
 
-#: O tique rápido: o mesmo período da janela de hoje
-#: (`app/constants.LIVE_POLL_INTERVAL_MS`).
 TIQUE_MS = 100
 
-#: O DONO REAL DE CADA GESTO, DECLARADO NUM LUGAR SÓ. Nenhum deles é chamado
-#: nesta leva — a aba é para ela AVALIAR, e um gesto que aplique sem ela mandar
-#: é dano. O que o clique faz hoje é chegar aqui, ser registrado e ecoar.
 DONOS_DOS_GESTOS = {
     "modo": "app/actions/mode_transition.apply_mode — o gesto de modo tem dono "
     "e funciona na janela de hoje, nos TRÊS: `gamepad` (a posição Ligado do "
@@ -177,43 +129,22 @@ DONOS_DOS_GESTOS = {
     "reconectar": "app/actions/home_actions.RECONCILIAR_LABEL + o gesto de "
     "reconciliação de jogadores, que JÁ é produto que funciona na janela de "
     "hoje. O que faltava era a tela nova ter onde ligá-lo.",
-    # FATO ERRADO, SUBSTITUÍDO (01/09/2026). Aqui estava escrito que "os quatro
-    # têm dono no produto (app/actions/profiles_actions.py)". São TRÊS.
-    # Medido: `footer_actions.py` tem `on_apply_draft`, `on_save_profile` e
-    # `on_import_profile`; `profiles_actions.py` tem new/duplicate/remove/
-    # activate/reload/save; e o `main.glade` traz `btn_footer_apply`,
-    # `btn_footer_import` e `btn_footer_save_profile` — **e nenhum botão de
-    # exportar**. Não há handler de exportação em lugar nenhum do `src/`.
-    #
-    # "Exportar" é um botão que o DESENHO criou e o produto nunca teve. É
-    # feature nova — barata, porque o perfil já é JSON no disco — mas não é
-    # ligação, e chamá-la de ligação esconderia trabalho.
     "rodape": "Aplicar/Salvar/Importar têm dono (app/actions/footer_actions.py: "
     "on_apply_draft, on_save_profile, on_import_profile). EXPORTAR NÃO TEM — "
     "não existe handler no src/ nem botão no main.glade. Nesta leva nenhum é "
     "chamado: 'Salvar Perfil' GRAVA NO DISCO DELA, e esta leva não escreve.",
 }
 
-#: O que se diz de um gesto SEM linha na tabela acima. Era um `KeyError` cru no
-#: piloto, e derrubar a tela dela para relatar um dono desconhecido é o pior dos
-#: dois males.
 SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço "
             "que o gerador não escreve. Nada foi aplicado.")
 
-#: A cor do plástico quando o aparelho não a respondeu — a mesma saída que o
-#: piloto da Controles dá, e a mesma que `cor_do_plastico.tom_para_a_borda` dá
-#: para tom vazio.
 PLASTICO_DESCONHECIDO = "var(--border-forte)"
 
 _cor_da_zona_real = monta.cor_da_zona
 
 
 def _cor_da_zona_tolerante(colorway: str, zona: str = "casca-solida") -> str:
-    """`monta.cor_da_zona` PARA a geração quando o colorway não existe.
-
-    Está certo para o mockup, onde a mesa é escrita à mão; aqui a mesa vem do
-    aparelho, e "não sei a cor" é resposta legítima — vira a borda neutra.
-    """
+    """`monta.cor_da_zona` PARA a geração quando o colorway não existe."""
     if not colorway:
         return PLASTICO_DESCONHECIDO
     try:
@@ -222,24 +153,12 @@ def _cor_da_zona_tolerante(colorway: str, zona: str = "casca-solida") -> str:
         return PLASTICO_DESCONHECIDO
 
 
-# OS DOIS NOMES, porque são dois: o `aba01` importou `cor_da_zona` de `monta`
-# por `from monta import ...`, e quem desenha o chip da fita é `monta.fita`.
-# Trocar um só deixava o cartão com a borda neutra e a fita PARANDO a montagem —
-# é a cicatriz que o piloto da Controles já carrega por extenso.
 monta.cor_da_zona = _cor_da_zona_tolerante
 aba01.monta.cor_da_zona = _cor_da_zona_tolerante
 
 
-# ---------------------------------------------------------------------------
-# O gerador do mockup, usado como biblioteca
-# ---------------------------------------------------------------------------
 def html_dos_cartoes(mesa: list[dict[str, Any]], baterias: dict[str, Any]) -> str:
-    """Um cartão por controle PRESENTE, pelo gerador — nunca por HTML meu.
-
-    Zero, um, dois ou N: o desenho tem quatro porque a cena tem quatro, e o
-    número aqui é o `len` da mesa. Não há um `range(4)` nesta função, e é
-    exatamente o defeito que a MIGRA-JOGAR-04 nomeia.
-    """
+    """Um cartão por controle PRESENTE, pelo gerador — nunca por HTML meu."""
     return "\n".join(aba01.cartao(c, bateria=baterias.get(c["uniq"])) for c in mesa)
 
 
@@ -249,15 +168,6 @@ def html_da_fita(mesa: list[dict[str, Any]], alvo: str | None) -> str:
     monta.MESA = mesa
     try:
         escolhido = next((c["pref"] for c in mesa if c["uniq"] == alvo), "todos")
-        # A mesa como ARGUMENTO — `monta.MESA` acima não alcança a fita,
-        # porque `monta.CONECTADOS` é derivado no import. Ver a nota gêmea em
-        # `controles_vivos.html_da_fita`.
-        # O `inerte` VAI EXPLÍCITO, e não pelo padrão — 05/09/2026. Esta bancada
-        # serve a aba 01, que ESCOLHE controle, então o padrão `False` acerta
-        # hoje. Mas foi contando com esse padrão que o piloto acendeu a fita das
-        # sete abas de leitura e lhes deu o `title` de quem escolhe. Quem responde
-        # é `monta.a_fita_escolhe`, e passar a resposta aqui faz a bancada seguir
-        # a aba no dia em que ela mudar, em vez de repetir o defeito adormecido.
         return monta.fita(ativo=escolhido, mesa=mesa,
                           inerte=not monta.a_fita_escolhe("01-jogar.html"))
     finally:
@@ -265,31 +175,10 @@ def html_da_fita(mesa: list[dict[str, Any]], alvo: str | None) -> str:
 
 
 def html_dos_avisos(avisos: list[dict[str, str]]) -> str:
-    """``""`` — a coluna Atenção SAIU da aba Jogar em 07/09/2026.
-
-    Ordem dela: *"em jogar remover essa seção do atenção, nenhum aviso esse —
-    deixar só o reconectar controles."* Esta função montava as linhas pela
-    `aba01.aviso()`, que morreu com a seção; sem esta cura a bancada levantaria
-    `AttributeError` na primeira remontagem.
-
-    **ELA NÃO SOME, e a razão é a chamadora:** `HEF.remonta` (o `BOOTSTRAP`
-    abaixo) recebe `{cartoes, avisos, fita}` e escreve os três. Tirar a chave
-    faria o JS receber `undefined` num ramo que não o espera; devolver `""`
-    escreve vazio na `[data-lista="avisos"]` que a página não tem mais — zero
-    elementos, zero escrito, nenhum erro. **É a bancada acompanhando a aba**, que
-    é o contrato deste arquivo.
-
-    NÃO A ENCHA DE VOLTA COM HTML DIGITADO AQUI. Uma segunda montagem de aviso
-    nesta casa é o que a `aba01.aviso` existia para impedir; se a coluna ganhar
-    casa nova (a proposta é a aba 09 — ver `pacotes/a01_jogar._avisos`), quem
-    monta as linhas é a aba que as recebe, e não esta bancada.
-    """
+    """``""`` — a coluna Atenção SAIU da aba Jogar em 07/09/2026."""
     return ""
 
 
-# ---------------------------------------------------------------------------
-# O JavaScript da ponte — escreve por TIPO, nunca "ponha isto aí"
-# ---------------------------------------------------------------------------
 BOOTSTRAP = r"""
 window.HEF = (function(){
   const qa = (s,r)=>Array.from((r||document).querySelectorAll(s));
@@ -559,32 +448,6 @@ window.HEF = (function(){
 'HEF-PRONTO'
 """
 
-# ---------------------------------------------------------------------------
-# LÁPIDE — a FOLHA_DO_SEM_DONO, injetada de 29/08 a 31/08/2026
-# ---------------------------------------------------------------------------
-# ELA EXISTIA PORQUE O MOCKUP NÃO TINHA O ESTADO "este chip não tem dono": era
-# consequência de a escada ter quatro degraus e a tela cinco, e desenhá-lo é
-# palavra dela (PROVA-DE-TELA-01). Enquanto ela não via, esta aba injetava
-#
-#     .degrau.sem-dono{opacity:.45;cursor:not-allowed}
-#     .seg button:disabled{opacity:.45;cursor:not-allowed}
-#
-# 31/08/2026 ELA VIU, E DESENHOU — e o desenho é melhor que a injeção, de um
-# jeito MEDIDO: `.degrau.sem-dono` agora é borda tracejada e cor explícita, e
-# `.seg button:disabled` (no `topo.html`, das dez abas) é borda e cor, os dois
-# **sem `opacity`**. É a lição da `.fita.inerte`: a opacidade mora no ANCESTRAL,
-# o texto cai para perto de 2:1, e toda régua de contraste que lê `color` fica
-# cega a isso.
-#
-# CONTINUAR INJETANDO SERIA DESFAZER A CURA: a regra desta folha chega DEPOIS
-# das do documento e vence no desempate, então o `opacity:.45` voltaria por cima
-# do desenho — e a régua de contraste voltaria a dar verde sobre texto ilegível.
-# Fora que `.seg` não tem uma única marcação na aba Jogar (`grep -c 'class="seg"'
-# src/hefesto_dualsense4unix/interface/paginas/01-jogar.html` → 0): a segunda linha já não pintava nada.
-#
-# NÃO REINTRODUZA ESTA FOLHA. Se um estado de tela faltar, ele se DESENHA no
-# gerador, que é onde ela o vê.
-
 
 def _leitor_duble(codigos: str | None) -> Any:
     """Um `ler_identidade_pelo_cabo` de mentira, que responde os códigos pedidos.
@@ -604,8 +467,6 @@ def _leitor_duble(codigos: str | None) -> Any:
     entregues: dict[str, Any] = {}
 
     def leitor(uniq: str) -> Any:
-        # O contrato da fonte (`ler_identidade_pelo_cabo`): um serial de
-        # mentira com o código nos caracteres 5 e 6 é uma RESPOSTA, e fica.
         if uniq not in entregues:
             codigo = fila[len(entregues) % len(fila)][:2].rjust(2, "0")
             serial = f"DUBL{codigo}".ljust(17, "0")
@@ -615,9 +476,6 @@ def _leitor_duble(codigos: str | None) -> Any:
     return leitor
 
 
-# ---------------------------------------------------------------------------
-# A janela
-# ---------------------------------------------------------------------------
 class Janela:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
@@ -632,19 +490,10 @@ class Janela:
         self.remontagens = 0
         self.gestos: list[dict[str, Any]] = []
         self.valores: list[int] = []
-        #: Os lados que a TELA mostrou, na ordem, lidos do DOM. É a régua da
-        #: cura de 31/08: com o `hefesto_ligado` arrancado esta lista trava num
-        #: lado só, porque o rádio fica onde o mockup nasceu.
         self.lados_do_interruptor: list[str] = []
-        #: O ECO, e ele mora SÓ AQUI — na memória desta janela, nunca no perfil
-        #: dela. É o que faz o clique continuar valendo no tique seguinte em vez
-        #: de o desenho voltar sozinho meio décimo depois.
         self.eco_modo: str | None = None
         self.eco_degrau: str | None = None
         self.eco_mascara: dict[str, str] = {}
-        #: A PENDÊNCIA É O ECO DO MODO, e é honesta: enquanto o gesto não for
-        #: aplicado, a tela deve dizer que ainda deve. Ela some no instante em
-        #: que o modo vivo alcança o escolhido.
         self.pendente: str | None = None
         self.leitor_de_cor = mesa_viva.LeitorDeCor(
             ligado=not args.sem_cor, leitor=_leitor_duble(args.cor_duble)
@@ -665,7 +514,6 @@ class Janela:
         self.ponte = self.tela.ponte
         self.janela = self.tela.janela
 
-    # -- carga -------------------------------------------------------------
     def _saiu_da_aba(self, titulo: str) -> None:
         """Ela clicou na tira. Sair da Jogar só DESLIGA a pintura."""
         self.pronto = False
@@ -689,14 +537,6 @@ class Janela:
             if self.args.prova_gesto:
                 self._marcar_gestos_de_mentira()
             if self.args.arranca_enderecos:
-                # A MORDIDA DO ENDEREÇO: arranca os `data-*` que o `aba01.py`
-                # escreve e vê a pintura DESABAR. Um endereço a menos não
-                # levanta erro nenhum no WebKit — o `querySelector` devolve
-                # `null` e o valor simplesmente não é escrito.
-                #
-                # `data-controle` fica de fora de propósito: arrancá-lo derruba
-                # a pintura dos cartões inteira de uma vez, e a queda deixaria
-                # de dizer QUAL endereço morreu.
                 GLib.timeout_add(
                     2000,
                     lambda: (
@@ -737,24 +577,9 @@ class Janela:
         conferindo cada endereço daqui contra o `src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`.
         """
         roteiro = [
-            # O `pointclick` SAIU DO DESENHO — decisão dela em 31/08/2026, quando
-            # o Point And Click deixou de ser um degrau da escada de conexão. O
-            # roteiro ficou com a referência velha, e `.click()` sobre `null`
-            # levanta `TypeError` dentro do WebKit: a régua morreria no meio,
-            # CALADA, e as três provas seguintes nunca rodariam.
-            #
-            # A régua que pegou isto está na suíte
-            # (`test_o_botao_de_ligar_funciona_e_se_lembra`), e ela confere cada
-            # endereço deste roteiro contra o `src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`. É o tipo de
-            # defeito que só a suíte inteira acha: os portões rápidos não a rodam.
             (1200, "document.querySelector('[data-degrau=\"dualsense\"]').click()"),
             (1500, "document.querySelector('[data-modo=\"native\"]').click()"),
             (1800, "document.querySelector('[data-degrau=\"steam\"]').click()"),
-            # O ÚLTIMO CARTÃO, E NÃO O `[1]`. O mockup tem quatro cartões, mas a
-            # remonta os troca pela MESA DELA: com um controle só na mesa o
-            # `[1]` é `undefined`, e `.click()` nele levanta `TypeError` — a
-            # régua morre calada no meio do roteiro, e o que vem depois nunca é
-            # clicado. `length-1` é o último, que existe sempre que há mesa.
             (2100, "(function(c){c[c.length-1].click()})"
                    "(document.querySelectorAll('.cartao[data-controle]'))"),
             (2400, "(function(c){c[c.length-1]"
@@ -762,9 +587,6 @@ class Janela:
                    "(document.querySelectorAll('.cartao[data-controle]'))"),
             (2700, "document.querySelector('[data-gesto=\"reconectar\"]').click()"),
             (3000, "document.querySelector('.r-aplicar').click()"),
-            # E O INTERRUPTOR VOLTA. Sem este passo a prova mostraria o clique
-            # de ida e nada do retorno — e "vai e não volta" é indistinguível de
-            # "travou lá".
             (3300, "document.querySelector('[data-modo=\"gamepad\"]').click()"),
         ]
         for ms, script in roteiro:
@@ -777,7 +599,6 @@ class Janela:
             antes=(lambda: self.tela.fotografar(foto)) if foto else None,
         )
 
-    # -- o tique -----------------------------------------------------------
     def _estado(self) -> tuple[dict | None, str]:
         """O `state_full` de agora — do daemon dela, ou do dublê."""
         if self.args.duble:
@@ -823,10 +644,6 @@ class Janela:
         mesa = mesa_viva.mesa_do_estado(state, self.leitor_de_cor.conhecidos(), alvo=self.alvo)
         if not mesa:
             self._mesa_ausente(
-                # A FRASE TEM UM DONO SÓ — `a01_jogar.MESA_VAZIA`. Ela vivia
-                # digitada aqui E lá, e duas cópias da mesma frase concordam até
-                # o dia em que uma muda. Fechado em 04/09/2026, com a régua
-                # (`test_a01_a_mesa_vazia_fala.py`) já cobrando as duas.
                 _a01().MESA_VAZIA,
                 bolinha="○",
                 cor="var(--orange)",
@@ -836,19 +653,6 @@ class Janela:
             return True
 
         # A CHAVE DA REMONTAGEM é o que está ASSADO no HTML do cartão: sem a cor
-        # aqui, a que chega três segundos depois (é uma pergunta ao aparelho, em
-        # thread) nunca apareceria. É a mesma disciplina de
-        # `status_actions._status_card_keys_for`, que reconstrói quando o
-        # conjunto muda e faz diff no resto.
-        #
-        # A BANCADA MEDE COM O SILÊNCIO DELA, e não por lembrança — ONDA5-07-03,
-        # 06/09/2026. As duas recusas («Não perguntar para este jogo» e «Tirar
-        # daqui») calam o aviso do selo `JOGO`, e a conta mora DENTRO da função
-        # dona (`home_actions.aviso_do_wrapper`), não num parâmetro que quem
-        # chama tenha de passar. Por isso estes DOIS pontos — aqui e o
-        # `_pacote` — medem exatamente o que a aba publicada mostra. Um
-        # parâmetro seria a mesma família de defeito do dublê mais frouxo que a
-        # função real, que envenenou outro arquivo por ordem de teste em 04/09.
         avisos = painel.avisos_do_estado(state)
         chaves = (
             tuple((c["uniq"], c["cor"], c["nome"], c["via"], c["jogador"]) for c in mesa),
@@ -865,9 +669,6 @@ class Janela:
         self.custos_tela.append(t_tela)
         self.custos.append(t_ipc + t_tela)
         self.voltas += 1
-        # UM VAZAMENTO NÃO APARECE NO RELÓGIO — aparece na memória. A remontagem
-        # troca o `innerHTML` da grade, e um listener não removido por
-        # remontagem seria invisível numa régua de tempo.
         if self.voltas % 50 == 0:
             try:
                 with open("/proc/self/status", encoding="utf-8") as arq:
@@ -935,38 +736,17 @@ class Janela:
                 "alvo": c["alvo"],
             }
         return {
-            "conta": conta[1:],  # o "●" é o `.bolinha`, elemento próprio
+            "conta": conta[1:],
             "conta_b": conta_b if mesa else "—",
             "conta_cor": "var(--green)" if mesa else "var(--orange)",
             "bolinha": "●" if mesa else "○",
-            # O PERFIL SE PERGUNTA AO DONO DAS DUAS PERNAS (daemon, depois o
-            # marcador em disco) — o mesmo que o crachá das dez abas lê em
             # `pacotes.topo()`. O `painel.nome_do_perfil` lia só a primeira e
-            # saiu em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01).
             "perfil": _perfil_ativo(state),
             "modo": modo or "",
-            # OS TRAVADOS SÃO CALCULADOS, NÃO DIGITADOS: `painel` deriva os dois
-            # conjuntos do próprio produto (`mode_transition.MODES` e
-            # `ponte_escada.ESCADA`). No dia em que a escada ganhar o degrau de
-            # desktop, o chip destrava sozinho.
             "modos_travados": {m.chave: m.porque_nao for m in painel.MODOS_DA_TELA
                                if not m.tem_leitor},
-            # NENHUM CHIP ESTÁ SEM DONO, e o dicionário nasce vazio. A conta que
-            # o preenchia (`painel.chips_sem_dono`) saiu do produto em 28/09/2026
-            # e virou régua da suíte (`test_a_fileira_nao_tem_linha_fantasma.py`):
-            # a tela nunca a perguntou, e um chip cinza com "ainda não tem quem o
-            # atenda" seria a tela confessando dívida nossa.
             "degraus_travados": {},
-            # A POSIÇÃO DO INTERRUPTOR, DERIVADA — nunca a comparação de um botão
-            # só. O Hefesto ligado é `gamepad` OU `desktop` (a Navegação); um a
-            # um, com o modo vivo em `desktop` as duas posições ficam apagadas e
-            # a tela fica MUDA, que parece defeito. Vem do `state` e não do eco:
-            # esta aba não aplica nada, e a seção que abre é a do daemon.
             "hefesto_ligado": painel.hefesto_ligado(state),
-            # O CHIP ACESO É O DO CAMINHO VIVO, e quem o lê é o pacote da aba
-            # publicada (`a01_jogar._chip_do_caminho`). O `painel.degrau_vivo`
-            # lia o carimbo por jogo e saiu em 28/09/2026: aqui ele era chamado
-            # com `pontes=None` e devolvia sempre `None`.
             "degrau": self.eco_degrau or (_a01()._chip_do_caminho(state) if state else ""),
             "pendente": self.pendente,
             "cartoes": cartoes,
@@ -977,23 +757,13 @@ class Janela:
     ) -> None:
         self.ponte.dizer("HEF.pinta", self._pacote(state, mesa, conectados))
 
-    # -- a ponte -----------------------------------------------------------
     def _gesto(self, o: dict) -> None:
-        """tela → Python, já em JSON. Quem RECUSA o que não for objeto JSON é a
-        `PonteDaTela`; o que chega aqui é gesto de verdade."""
+        """tela → Python, já em JSON. Quem RECUSA o que não for objeto JSON é a"""
         self.gestos.append(o)
         gesto = str(o.get("gesto") or "")
         if gesto == "pintou":
             self.valores.append(int(o.get("valores") or 0))
-            # O LADO É LIDO DO DOM, e é a régua da cura de 31/08: sem
-            # `painel.hefesto_ligado` o rádio fica onde o mockup nasceu e a tela
-            # abre a seção errada — "Modo Nativo" com o daemon em `gamepad`, ou o
-            # contrário. Sem esta leitura de volta a mordida não teria como
-            # aparecer no relato.
             lado = str(o.get("lado") or "?")
-            # A LISTA GUARDA AS VIRADAS, não os valores distintos: com um `set`
-            # de dois elementos "foi e voltou" e "foi e ficou" contam igual, e é
-            # a volta que prova que a tela SEGUE o daemon em vez de travar.
             if not self.lados_do_interruptor or lado != self.lados_do_interruptor[-1]:
                 self.lados_do_interruptor.append(lado)
             print(f'[pintura] {o.get("valores")} valores escritos · '
@@ -1019,35 +789,20 @@ class Janela:
             return
         if gesto == "alvo":
             self.alvo = str(o.get("controle") or "") or None
-            # O ÍNDICE NA FITA sai do Python porque é ele que conhece a ordem da
-            # mesa; a página não pode deduzi-lo do DOM sem repetir a regra de
-            # ordenação de `mesa_viva._por_numero_de_identidade`.
             self.ponte.dizer("HEF.eco", {**o, "indice_na_fita": self._indice_na_fita()})
             return
 
     def _indice_na_fita(self) -> int:
-        """A posição do alvo entre os chips — o "Todos", quando existe, é o zero.
-
-        E ELE NEM SEMPRE EXISTE — decisão dela, 04/09/2026: com um controle só na
-        mesa, `monta.fita()` não emite o `Todos`, e o primeiro chip passa a ser o
-        do controle. Contar sempre a partir de 1 acenderia `chips[1]` numa fita
-        de um chip — ninguém aceso, e a régua desta bancada dizendo "clicou".
-        Quem responde se o chip existe é `monta.cabe_o_todos`, o mesmo dos três
-        emissores.
-        """
+        """A posição do alvo entre os chips — o "Todos", quando existe, é o zero."""
         controles = self.chaves[0] if self.chaves else ()
-        # `cabe_o_todos` só conta, e as chaves são uma por controle da mesa.
         comeco = 1 if monta.cabe_o_todos(controles) else 0
         if self.alvo is None:
-            # SEM ALVO É "Todos", e sem o chip `Todos` é o único que sobrou —
-            # que está no zero nos dois casos.
             return 0
         for i, c in enumerate(controles, start=comeco):
             if c[0] == self.alvo:
                 return i
         return 0
 
-    # -- relato ------------------------------------------------------------
     def relato(self) -> str:
         def resumo(nome: str, v: list[float]) -> str:
             if not v:
@@ -1074,10 +829,6 @@ class Janela:
             linhas.append(
                 f"orçamento: {med / TIQUE_MS * 100:.1f}% dos {TIQUE_MS} ms do tique rápido"
             )
-        # A RÉGUA POR BLOCO, e ela é o que uma volta só esconde: uma régua de
-        # 29/08 rodou o tique UMA VEZ e não viu uma regressão que só aparecia em
-        # 181 segundos. Aqui o custo é cortado em blocos de 300 voltas, e uma
-        # deriva aparece como a mediana subindo de bloco para bloco.
         if len(self.custos) >= 600:
             passo = 300
             blocos = []
@@ -1126,17 +877,6 @@ def main() -> int:
     Gtk.main()
     print("\n" + j.relato())
 
-    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE —
-    # 06/09/2026, ONDA5-07-03. Com a página apontada para um arquivo que não
-    # existia, este comando imprimia "ERRO DE CARGA", ficava em `voltas: 0` e
-    # devolvia `rc=0`; quem o rodasse num laço ou num portão leria sucesso. A
-    # regra desta casa é a de 04/09: *instrumento que sabe do próprio risco
-    # RESOLVE, não avisa* — aviso no meio de um comando que termina verde
-    # ninguém lê.
-    #
-    # O `--sem-ponte` é a exceção, e é a MORDIDA: ele desliga a pintura de
-    # propósito para provar que a tela desaba sem ela, então zero volta ali é o
-    # resultado esperado, não a falha.
     if j.voltas == 0 and not args.sem_ponte:
         print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1

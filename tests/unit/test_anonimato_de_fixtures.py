@@ -1,31 +1,4 @@
-"""A regra de anonimato em forma de teste — agora para MACs em fixtures.
-
-O irmão `test_nao_existe_bin_fossilizado_do_0x09` trava a identidade em binário
-(captures/); este trava a forma mais fácil de vazá-la: um MAC Bluetooth REAL
-(do controle ou do adaptador da máquina de teste) colado numa fixture. Já
-aconteceu — MACs reais ficaram fossilizados em testes por dois dias antes da
-revisão adversarial pegar — e o push publicaria a identidade da mantenedora
-para sempre.
-
-A trava é por ALLOWLIST de prefixos sintéticos, nunca por blocklist: listar os
-MACs reais aqui seria exatamente o vazamento que o teste existe para impedir.
-Faixas permitidas (todas forjadas, documentadas onde nasceram):
-
-- ``02:fe:...``  — o MAC que o próprio vpad forja por jogador (uhid_gamepad);
-- ``aa:bb:cc:...`` — placeholder canônico de fixture (controles/adaptador);
-- ``e8:47:3a:...`` — o "Edge físico" forjado dos testes de dedup;
-- ``ff:ff:ff...``/``00:00:00...`` — broadcast/zerado.
-
-Tokens de 12 hex são checados também em little-endian (o report 0x09 guarda o
-MAC em LE — foi assim que um MAC real escapou da primeira varredura).
-
-Além das faixas, existe uma allowlist de TOKENS EXATOS: hashes abreviados de
-commits PÚBLICOS do kernel upstream (12 hex é a abreviação canônica do git no
-kernel) citados como proveniência dos patches DKMS. São identidade do KERNEL,
-verificável por qualquer um em git.kernel.org — não da mantenedora. A entrada
-é sempre exata e documentada linha a linha; nunca prefixo/faixa (um MAC real
-jamais ganharia carona num hash documentado).
-"""
+"""A regra de anonimato em forma de teste — agora para MACs em fixtures."""
 from __future__ import annotations
 
 import re
@@ -33,122 +6,45 @@ from pathlib import Path
 
 _TESTS_DIR = Path(__file__).resolve().parents[1]
 
-#: Prefixos (3 bytes, sem ":") das faixas sintéticas permitidas em fixtures.
 _PREFIXOS_FORJADOS = (
     "02fe00",
     "aabbcc",
     "e8473a",
     "ffffff",
     "000000",
-    # NOTA DATADA — 18/09/2026, UM-NUMERO-SO-01, e ela nasce de uma TENSÃO
-    # REAL entre duas réguas desta casa, não de conveniência.
-    #
-    # Neste dia o PRODUTO passou a EXPURGAR endereço de faixa sintética da fila
-    # de numeração (`identity.order_entries`), porque quatro endereços `aabbcc`
-    # moraram no `controllers.json` VIVO dela de 22/08 a 18/09, empurrando um
     # DualSense real para o oitavo posto. A partir daí, um controle de prova
-    # escrito numa faixa sintética é COMIDO pela própria cura — e a régua que
-    # deveria medir o expurgo mediria o nada.
-    #
-    # Então a prova precisa de endereços que o produto trate como REAIS e que
-    # não identifiquem ninguém. `02:` é o bit localmente administrado: por
-    # construção nenhum fabricante o recebe. CONFERIDA pelo critério escrito
-    # abaixo em 18/09/2026: `grep -ic 02001A /usr/share/ieee-data/oui.csv` deu
-    # ZERO, e não está em `_OUIS_REAIS_OCTETOS`. Fica longe do `02fe00` do
-    # vpad por três octetos.
     "02001a",
-    # Segunda faixa sintética da casa, para provar que não há nada de especial
-    # na primeira (`test_uma_faixa_nao_e_um_fabricante.py`). CONFERIDA em
-    # 22/08/2026 contra `/usr/share/ieee-data/oui.csv`: não é atribuída a
-    # fabricante nenhum, igual a `e8473a`.
     "3c9d07",
-    # NOTA DATADA — 25/08/2026. A leva da madrugada trouxe mesas de mentira
-    # NOVAS, e cada uma precisou de faixa própria porque `aabbcc` está proibida
-    # em teste novo desde 23/08 (`scripts/check_faixa_sintetica.py`: quatro
-    # registros dessa faixa vazaram para o `controllers.json` VIVO dela). As
-    # faixas entraram nas fixtures e ninguém as trouxe para cá — por isso este
-    # portão ficou vermelho com oito violações, TODAS sintéticas.
-    #
-    # O CRITÉRIO, escrito para poder ser refeito por quem vier: uma faixa só
-    # entra aqui depois de (1) não casar em `/usr/share/ieee-data/oui.csv`
-    # (`grep -i ",<OUI>," oui.csv` vazio) e (2) não estar em
-    # `_OUIS_REAIS_OCTETOS` do `test_docs_mac_anonimato.py`, que é a lista dos
-    # aparelhos DESTA bancada. As quatro abaixo passaram nos dois em 25/08.
-    #
-    # `f7e6d5` e `a1b2c3` têm o bit 0 do primeiro octeto ligado (f7 e a1 são
-    # ímpares): são endereços de GRUPO, e nenhum aparelho pode carregá-los.
-    # `d0f1a2` é global e não atribuído; `d2c1b0` é local (bit 1 ligado).
-    "d0f1a2",  # seriais USB da bancada de ordens (`bancada_das_ordens.py`)
-    "f7e6d5",  # o serial do teclado da mesma bancada
+    "d0f1a2",
+    "f7e6d5",
     "a1b2c3",  # o DualSense físico por rádio (`…marca_do_vpad_no_nome…`)
-    "d2c1b0",  # a mesa de mentira do no-sniff (`…no_sniff_alcanca_todo_pro…`)
+    "d2c1b0",
 )
 
-#: OUIs de FABRICANTE que aparecem de propósito em fixture, e só valem com a
-#: máscara da casa (octetos 4 e 5 zerados). Um OUI é dado PÚBLICO do registro
-#: IEEE — identifica a marca, nunca o aparelho — e escrever o literal é o que
-#: torna o teste régua independente do módulo que ele confere. Com a máscara
-#: exigida aqui, nenhum MAC de aparelho real passa: bastaria um octeto 4 ou 5
-#: não-zero para reprovar.
 _OUIS_DE_FABRICANTE_COM_MASCARA = frozenset(
     {
-        # 8BITDO TECHNOLOGY HK LIMITED — a faixa do clone, escrita à mão em
-        # `test_external_identity.py` e `test_uma_faixa_nao_e_um_fabricante.py`
-        # justamente para NÃO iterar a mesma lista que deveria conferir.
         "e417d8",
     }
 )
 
-#: Hashes abreviados (12 hex) de commits PÚBLICOS do kernel upstream citados
-#: nos testes da Onda W (test_dkms_rtw88_usb_assets.py) como proveniência dos
-#: patches do rtw88. Match EXATO apenas — nada de faixa.
 _HASHES_UPSTREAM_DOCUMENTADOS = frozenset(
     {
-        # wifi: rtw88: usb: fix memory leaks on USB write failures — o
-        # backport 0001 (CVE-2026-63821), pinado verbatim no teste.
         "6b964941bbfe",
-        # commit apontado pelo "Fixes:" do 0001 (onde o memleak nasceu).
         "a82dfd33d123",
-        # wifi: rtw89 — modelo do contador continual_io_error portado no
-        # 0002 (proveniência gravada no BASELINE e no limiar do teste).
         "2135c28be6a8",
-        # Bluetooth Base UUID (Bluetooth Core Spec, Vol 3 Part B 2.5.1): todo
-        # UUID de 16 bits vira 0000xxxx-0000-1000-8000-00805F9B34FB. Os 12 hex
-        # finais são CONSTANTE PÚBLICA do SIG, não identidade de hardware —
-        # aparecem em qualquer fixture que reproduza o `Services=` do BlueZ
-        # (test_bt_sdp_cache.py). Mesma natureza dos hashes upstream acima.
         "00805f9b34fb",
-        # Dois GUIDs do SDK do Windows, mesma natureza do UUID base do SIG:
-        # o device KS da háptica (test_haptica_nativa_01_…) é gravado com a
-        # classe USB e lido pelo ContainerId do endpoint, e as duas chaves
-        # são constantes públicas que todo registro Wine carrega.
-        # GUID_DEVCLASS_USB {36FC9E60-C465-11CF-8056-444553540000}.
         "444553540000",
-        # PKEY_Device_ContainerId {8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c},2.
         "ae9e1faefc6c",
-        # EFI_GLOBAL_VARIABLE {8be4df61-93ca-11d2-aa0d-00e098032b8c}, da
-        # especificação UEFI: o sufixo do nome da `SecureBoot-*` na efivars de
-        # qualquer máquina (test_o_secure_boot_se_le_sem_mokutil.py).
         "00e098032b8c",
     }
 )
 
 _MAC_COM_DOIS_PONTOS = re.compile(r"\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b")
-#: ANONIMATO-BINARIO-FALSO-POSITIVO-02 (01/08/2026): o `(?!0[bBxX])` NÃO é
-#: enfeite. Um literal BINÁRIO de Python de dez dígitos tem DOZE caracteres
-#: contando o prefixo, e todos eles são hex válidos (`0`, `b`, `1`) — então a
-#: regex de "12 hex seguidos" casava o literal inteiro. O portão reprovou dez
-#: linhas do `test_trigger_effects.py` que são bitmasks de zonas de gatilho, e
-#: acusou identidade real onde havia aritmética.
-#:
-#: O lookahead recusa o que começa com prefixo de literal numérico. Um MAC de
-#: verdade nunca vem escrito com `0b` ou `0x` na frente.
 _MAC_12_HEX = re.compile(r"\b(?!0[bBxX])[0-9a-fA-F]{12}\b")
 
 
 def _permitido(mac_12hex: str) -> bool:
-    """True se o token (12 hex, sem ':') é faixa forjada (BE/LE) ou hash
-    upstream documentado (match exato)."""
+    """True se o token (12 hex, sem ':') é faixa forjada (BE/LE) ou hash"""
     norm = mac_12hex.lower()
     if norm in _HASHES_UPSTREAM_DOCUMENTADOS:
         return True
@@ -156,7 +52,6 @@ def _permitido(mac_12hex: str) -> bool:
     for candidato in (norm, invertido):
         if candidato.startswith(_PREFIXOS_FORJADOS):
             return True
-        # OUI de fabricante SÓ passa com a máscara da casa nos octetos 4 e 5.
         if candidato[:6] in _OUIS_DE_FABRICANTE_COM_MASCARA and (
             candidato[6:10] == "0000"
         ):
@@ -173,7 +68,7 @@ def test_nenhum_mac_fora_das_faixas_forjadas_em_tests() -> None:
         try:
             texto = arquivo.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
-            continue  # binário/ilegível: coberto pelo teste do 0x09
+            continue
         for linha_num, linha in enumerate(texto.splitlines(), start=1):
             candidatos = [
                 m.group(0).replace(":", "")

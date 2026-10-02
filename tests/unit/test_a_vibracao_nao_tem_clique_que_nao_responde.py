@@ -77,27 +77,7 @@ from hefesto_dualsense4unix.interface import regua_do_mockup as _regua
 
 PAGINA = "05-vibracao.html"
 
-#: OS NOMES QUE ERAM CLIQUE MORTO, e continuam sendo ENDEREÇO. A lista é o que
-#: impede a cura de virar uma remoção: se um deles sumir do desenho, a régua do
-#: mockup perde um campo e ninguém percebe.
-#:
-#: **ERAM QUATRO E HOJE SÃO TRÊS — 04/09/2026, e `motor` saiu pela porta certa:
-#: ele GANHOU GESTO.** A decisão dela sobre a barra por motor (*"os slcers do
-#: botão esquerdo e direito se multiplicam"*) fez a linha virar AJUSTE, e o
-#: `data-papel="motor"` voltou ao desenho — desta vez no `<input type=range>`,
-#: com `a05_vibracao.motor` para atender. Não é a régua perdendo um campo: os
-#: dois endereços que a linha usa agora (`barra-e`/`barra-d`, mais o
-#: `motor-<lado>-pedido` do `title`) são contados no lugar dele, e
-#: `test_nenhum_papel_desta_aba_fica_sem_gesto` continua exigindo que todo
-#: `data-papel` tenha dono.
-#: **E HOJE SÃO DOIS — 14/09/2026, e `lado` saiu pela MESMA porta que `motor`:
-#: ele GANHOU GESTO.** A ordem é dela, com os dois controles na mesa: *"ao abrir
-#: o vibração o motor esquerdo do controle azul não fica ativado e nem se eu
 #: clicar em máximo ele liga"*  (noqa-acento: citação literal dela). O botão
-#: trocou o `data-hef` pelo par `data-gesto="lado"` + `data-campo="lado-<sigla>"`
-#: com alvo `classe`, e `a05_vibracao.lado` atende. Não é a régua perdendo um
-#: campo: o endereço que a coluna usa agora é `lado-e`/`lado-d`, contado no lugar
-#: dele, e `test_nenhum_papel_desta_aba_fica_sem_gesto` continua exigindo dono.
 ENDERECOS_QUE_SO_PINTAM = ("desenho", "identidade")
 
 
@@ -112,14 +92,7 @@ def bancada() -> str:
 
 @pytest.fixture(scope="module")
 def gerador(tmp_path_factory: pytest.TempPathFactory):
-    """O módulo `aba05`, importado com a escrita DESVIADA para um temporário.
-
-    Importar o gerador RODA o gerador — o `monta(...)` do fim do arquivo é
-    código de módulo. Sem o desvio, um `pytest` desta régua reescreveria a
-    bancada DELA, que é a pasta que ela olha. `HEFESTO_BANCADA` existe
-    exatamente para isso (`interface/onde._DESVIO`), e é o que
-    `test_os_dez_geradores_rodam` já usa.
-    """
+    """O módulo `aba05`, importado com a escrita DESVIADA para um temporário."""
     import importlib
     import os
 
@@ -137,27 +110,14 @@ def gerador(tmp_path_factory: pytest.TempPathFactory):
 
 
 def _gestos_registrados() -> set[str]:
-    """Os gestos que o pacote desta aba REGISTRA — lidos, nunca digitados.
-
-    Digitar a lista aqui seria a segunda cópia do registro, e o dia em que um
-    gesto nascesse no pacote esta régua o acusaria de órfão.
-    """
+    """Os gestos que o pacote desta aba REGISTRA — lidos, nunca digitados."""
     import pacotes
 
     return {nome for pagina, nome in pacotes.GESTOS if pagina in (PAGINA, "*")}
 
 
-# --------------------------------------------------------------------------
-# 1. NENHUM CLIQUE SEM DONO
-# --------------------------------------------------------------------------
-
 def test_nenhum_papel_desta_aba_fica_sem_gesto(bancada: str) -> None:
-    """Todo `data-papel` da bancada é um gesto que o pacote atende.
-
-    É a régua que faltava ao lado da que já existe: ``aba05._conferir`` §6 pega
-    o nome que é VALOR e CLIQUE ao mesmo tempo; esta pega o nome que é CLIQUE e
-    NINGUÉM ATENDE.
-    """
+    """Todo `data-papel` da bancada é um gesto que o pacote atende."""
     papeis = {g.nome for g in _regua._papeis_cravados(bancada)}
     assert papeis, ("a bancada não tem `data-papel` nenhum — ou o desenho mudou "
                     "de vocabulário, ou esta régua virou vácuo")
@@ -170,32 +130,15 @@ def test_nenhum_papel_desta_aba_fica_sem_gesto(bancada: str) -> None:
 
 
 def test_o_gerador_reprova_um_papel_orfao(gerador, bancada: str) -> None:
-    """A régua 11 do `aba05._conferir` faz a GERAÇÃO falhar, não só o teste.
-
-    Sem isto a cura dependeria de alguém lembrar de rodar a suíte; quem edita o
-    gerador roda o gerador, e é ali que o barulho tem de sair.
-
-    A MORDIDA É FEITA AQUI, no documento que o gerador acabou de escrever: um
-    ``data-papel="lado"`` de volta, e ``_conferir`` tem de levantar. Se ele
-    passar, a régua 11 é enfeite.
-    """
-    # O VENENO MUDOU DE NOME EM 14/09/2026 — era o `lado`, que ganhou gesto
-    # nesse dia. O `identidade` serve pela mesma razão que o `lado` servia:
-    # nenhum pacote o registra, então um `data-papel` nele é clique sem dono.
+    """A régua 11 do `aba05._conferir` faz a GERAÇÃO falhar, não só o teste."""
     envenenado = bancada.replace(
         'data-hef="identidade"', 'data-papel="identidade"', 1)
     assert envenenado != bancada, (
         'o desenho não tem mais `data-hef="identidade"`')
     with pytest.raises(SystemExit):
         gerador._conferir(envenenado)
-    # E o documento LIMPO passa — senão a reprovação acima seria por outro
-    # motivo qualquer, e a régua estaria acusando o ar.
     gerador._conferir(bancada)
 
-
-# --------------------------------------------------------------------------
-# 2. E O ENDEREÇO NÃO SE PERDEU
-# --------------------------------------------------------------------------
 
 def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
     """A cura tirou o CLIQUE, não o endereço.
@@ -220,8 +163,6 @@ def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
     :func:`test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique` logo abaixo —
     ele é o que mantém a moldura fora do ouvinte de clique.
     """
-    #: O `desenho` é o único da lista que a régua NÃO conta mais como campo, e a
-    #: razão está no docstring. Os outros dois continuam cobrados.
     sombreados = {"desenho"}
     campos = {c.chave for c in _regua._campos_cravados(bancada)}
     assert "plastico" in campos, (
@@ -237,16 +178,7 @@ def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
 
 
 def test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique(bancada: str) -> None:
-    """Os quatro saem em `data-hef`, que é o único dos três fora do ouvinte.
-
-    O seseletor do ouvinte (`manda_do_alvo`) nomeia `data-gesto`, `data-modo`,
-    `data-hef-gesto`, `data-papel`, `data-forca`, `data-player`, `data-sensor`,
-    `data-rota`, `data-mudo`, `data-mic-modo` e `data-v` — e `data-hef` não está
-    lá. Trocar por `data-campo` também tiraria o clique, mas `data-campo` é o
-    endereço do VALOR: pôr `desenho` nele faria a pintura procurar um valor
-    chamado `desenho` e escrever texto DENTRO do SVG no dia em que alguém o
-    emitisse. É o defeito da régua 6, um andar acima.
-    """
+    """Os quatro saem em `data-hef`, que é o único dos três fora do ouvinte."""
     for nome in ENDERECOS_QUE_SO_PINTAM:
         assert f'data-hef="{nome}"' in bancada, (
             f"`{nome}` não sai em `data-hef` — ver a razão no cabeçalho")
@@ -255,12 +187,7 @@ def test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique(bancada: str) -> None:
 
 
 def test_os_dois_botoes_de_verdade_continuam_clicaveis(bancada: str) -> None:
-    """"Testar", "Parar" e os quatro degraus NÃO podem perder o `data-papel`.
-
-    Uma cura que calasse a aba inteira seria mais fácil e mais errada: estes
-    seis TÊM gesto registrado, com desfecho relatado pelo piloto. A régua os
-    fixa para que a próxima varredura de `data-papel` não os leve junto.
-    """
+    """"Testar", "Parar" e os quatro degraus NÃO podem perder o `data-papel`."""
     for nome in ("testar", "parar", "forca"):
         assert f'data-papel="{nome}"' in bancada, (
             f"`{nome}` perdeu o `data-papel` — ele TEM gesto, e sem o atributo o "

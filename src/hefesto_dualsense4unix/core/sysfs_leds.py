@@ -27,37 +27,13 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Raiz da classe `leds` no sysfs. Variável de ambiente p/ testes herméticos.
 LEDS_ROOT: str = os.environ.get("HEFESTO_DUALSENSE4UNIX_LEDS_ROOT", "/sys/class/leds")
 
-#: Sufixo do nó da lightbar RGB (multicolor) registrado pelo hid_playstation.
 _INDICATOR_SUFFIX = ":rgb:indicator"
 
 
 def norm_mac(value: str | None) -> str | None:
-    """Normaliza um MAC/serial para só os dígitos hex em minúsculo.
-
-    ``serial_number`` (hidapi) e ``uniq`` (sysfs) podem diferir em caixa e na
-    presença de ``:`` — normalizar os dois lados garante o casamento.
-
-    FATO ERRADO, SUBSTITUÍDO EM 04/09/2026. Esta docstring dizia *"retorna
-    ``None`` quando não há nenhum dígito hex (ex.: ``key`` que é um ``path``)"*,
-    e o exemplo que ela dava é justamente o caso em que ela falha — medido:
-
-        norm_mac("path:/dev/input/event9")  ->  'adeee9'
-        norm_mac("/dev/hidraw4")            ->  'deda4'
-        norm_mac("xyz")                     ->  None
-
-    Um caminho tem letras de ``a`` a ``f`` no meio (``d``, ``e``, ``a``…), e a
-    peneira as recolhe. O ``None`` só vem quando NÃO SOBRA NENHUM dígito hex.
-
-    **Para LER isso é inofensivo** — a chave inventada não casa com nada e o
-    resultado é um "não achei". **Para GRAVAR é perda de dado dela**: a escolha
-    dela vai ao disco sob uma chave que parece boa e que aparelho nenhum
-    reivindica, e some calada. Quem grava não usa esta função sozinha; usa uma
-    peneira que exige a FORMA de um MAC (ver
-    ``daemon/subsystems/gamepad._chave_de_peca_que_grava``, 04/09/2026).
-    """
+    """Normaliza um MAC/serial para só os dígitos hex em minúsculo."""
     if not value:
         return None
     s = "".join(ch for ch in value.lower() if ch in "0123456789abcdef")
@@ -68,24 +44,12 @@ class SysfsLedNode:
     """Nós sysfs (lightbar + player LEDs) de UM controle DualSense."""
 
     def __init__(self, indicator_dir: str, player_dirs: list[str]) -> None:
-        #: Diretório do LED multicolor (contém ``multi_intensity`` e ``brightness``).
         self.indicator_dir = indicator_dir
-        #: Diretórios dos LEDs de player, ordenados por número (1..5).
         self.player_dirs = player_dirs
-        # GUERRA-01 item 3: cache do último (rgb, brightness) ESCRITO com
-        # sucesso por esta instância — `reassert_resolved_outputs()` roda a
-        # cada reconciliação (30s do reconnect_loop) e reescrevia a MESMA cor
-        # incondicionalmente (o "flash azul de 30s" da guerra de escritores).
-        # Nó recriado (wake/adoção BT) = instância nova = cache vazio =
-        # escreve naturalmente.
         self._last_write: tuple[tuple[int, int, int], int] | None = None
         self._skip_logged = False
-        # NUMA-03: log de escritor estrangeiro 1x POR EPISÓDIO (espelho de
-        # `_skip_logged`, mas com re-arme: uma verificação LIMPA — cor lida
-        # igual à esperada — encerra o episódio e re-arma o log).
         self._foreign_logged = False
 
-    # --- introspecção ----------------------------------------------------
 
     @property
     def _multi_intensity(self) -> str:
@@ -104,22 +68,9 @@ class SysfsLedNode:
         """
         return os.access(self._multi_intensity, os.W_OK)
 
-    # --- leitura (STATUS-01) ----------------------------------------------
 
     def get_rgb(self) -> tuple[int, int, int] | None:
-        """Cor atual da classe LED (``multi_intensity``), ou None se ilegível.
-
-        STATUS-01 — ATENÇÃO ao que isto significa (refutação 1 do sprint): o
-        ``multi_intensity`` NÃO é "a verdade do hardware" — é o último valor
-        escrito VIA CLASSE LED. O probe do kernel registra o LED multicolor com
-        intensidades ZERADAS e acende a lightbar de azul por um caminho interno
-        que nunca atualiza a classe; escrita por hidraw (pydualsense/jogo em
-        Modo Nativo) também não a atualiza. Quem decide se esta leitura é
-        confiável é o rastreio "escrito por nós" do backend
-        (``_sysfs_written``) — nunca rotular ``(0, 0, 0)`` daqui como
-        "apagada" sem essa prova de posse. Tolerante: nó que sumiu (replug/BT)
-        devolve None em vez de levantar.
-        """
+        """Cor atual da classe LED (``multi_intensity``), ou None se ilegível."""
         try:
             with open(self._multi_intensity) as fh:
                 parts = fh.read().split()
@@ -134,12 +85,7 @@ class SysfsLedNode:
         return (r, g, b)
 
     def _brightness_lido(self) -> int | None:
-        """``brightness`` do LED multicolor como número, ou None se ilegível.
-
-        Memória do kernel — zero subcomando HID (mesma nota do ``get_players``).
-        None é "não sei", NUNCA "está apagado": nó que sumiu num replug/BT drop
-        tem de levar quem chama a ESCREVER, não a pular a escrita.
-        """
+        """``brightness`` do LED multicolor como número, ou None se ilegível."""
         try:
             with open(self._indicator_brightness) as fh:
                 raw = fh.read().strip()
@@ -151,20 +97,10 @@ class SysfsLedNode:
             return None
 
     def is_on(self) -> bool:
-        """True se o ``brightness`` do LED multicolor é > 0. Tolerante (nó pode sumir).
-
-        Nota de semântica: o caminho de escrita do daemon fixa ``brightness``
-        em 255 e apaga por ``multi_intensity "0 0 0"`` (ver ``set_rgb``), então
-        "fisicamente apagada" = ``is_on() and get_rgb() == (0, 0, 0)`` com a
-        escrita rastreada como nossa — quem compõe essa leitura é o handler IPC.
-
-        Lê pelo MESMO ``_brightness_lido`` que o ``set_rgb`` consulta: duas
-        réguas sobre o mesmo nó discordando é defeito que esta casa já pagou.
-        """
+        """True se o ``brightness`` do LED multicolor é > 0. Tolerante (nó pode sumir)."""
         valor = self._brightness_lido()
         return valor is not None and valor > 0
 
-    # --- escrita ---------------------------------------------------------
 
     @staticmethod
     def _write(path: str, data: str) -> bool:
@@ -226,13 +162,9 @@ class SysfsLedNode:
                 if lido is not None and lido != (r, g, b):
                     intruso = lido
                 else:
-                    # Verificação limpa (ou ilegível — trata como hoje):
-                    # encerra o episódio de escritor estrangeiro, se havia.
                     self._foreign_logged = False
             if intruso is None:
                 if not self._skip_logged:
-                    # 1x por nó (telemetria da cura): o journal prova que o
-                    # reassert parou de martelar o firmware com a mesma cor.
                     logger.info(
                         "lightbar_reassert_skip_cache",
                         node=self.indicator_dir,
@@ -248,19 +180,7 @@ class SysfsLedNode:
                     esperado=(r, g, b),
                 )
                 self._foreign_logged = True
-            # Cache invalidado: cai na reescrita abaixo (retoma a posse).
             self._last_write = None
-        # LUZ-CEGA-01/F3: `brightness` só é escrito quando DIVERGE de 255.
-        # Cada escrita na classe LED faz o kernel montar um output report — o
-        # `btmon` mediu os dois saindo no mesmo milissegundo, com bytes
-        # IDÊNTICOS (`vf1=0x04`, mesmo RGB), porque o report carrega o estado
-        # inteiro do LED e o `brightness` já valia 255. Reescrevê-lo não
-        # acrescenta nada ao aparelho e custa um quadro de rádio por controle
-        # por reconciliação, numa mesa que já mostra `input CRC's check
-        # failed` no `dmesg`. Mesma disciplina do `set_players_verified`
-        # (NUMA-03): re-ler a memória do kernel é grátis, o quadro não é.
-        # Divergente (terceiro apagou pela classe) ou ILEGÍVEL (nó sumindo) =
-        # escreve, exatamente como antes.
         ok = True
         if self._brightness_lido() != 255:
             ok = self._write(self._indicator_brightness, "255")
@@ -288,14 +208,7 @@ class SysfsLedNode:
         return ok
 
     def get_players(self) -> tuple[bool, ...] | None:
-        """Padrão ACESO dos LEDs de player, lido da classe (puro — testes/doctor).
-
-        NUMA-03: leitura de ``brightness`` é memória do kernel (zero
-        subcomando HID). ``None`` quando não há nós de player ou algum ficou
-        ilegível (replug/BT drop) — o chamador trata como "sem leitura", nunca
-        como padrão apagado. Mesma ressalva do ``get_rgb``: escrita crua por
-        hidraw não atualiza a classe, então isto é o último valor VIA CLASSE.
-        """
+        """Padrão ACESO dos LEDs de player, lido da classe (puro — testes/doctor)."""
         if not self.player_dirs:
             return None
         bits: list[bool] = []
@@ -311,16 +224,7 @@ class SysfsLedNode:
     def set_players_verified(
         self, bits: tuple[bool, bool, bool, bool, bool]
     ) -> bool:
-        """``set_players`` que SÓ escreve nos nós de brightness divergentes.
-
-        NUMA-03 (defesa dirigida): re-lê cada ``brightness`` (memória do
-        kernel) e reescreve apenas os LEDs cujo estado físico via classe
-        difere do desejado — repinta um padrão rabiscado por escritor
-        estrangeiro (o "player 3" da Steam no incidente 14:42) sem gerar
-        output report quando está tudo certo. Nó ilegível é escrito sem
-        verificação (não dá para provar que está certo — melhor a escrita
-        idempotente do que confiar num nó mudo).
-        """
+        """``set_players`` que SÓ escreve nos nós de brightness divergentes."""
         if not self.player_dirs:
             return False
         ok = True
@@ -353,19 +257,14 @@ def discover() -> dict[str, SysfsLedNode]:
     for indicator in glob.glob(pattern):
         try:
             real = os.path.realpath(indicator)
-            # real = .../<HID_DEVICE>/leds/inputN:rgb:indicator
-            #   dirname        -> .../<HID_DEVICE>/leds
-            #   dirname^2      -> .../<HID_DEVICE>   (tem uevent com HID_UNIQ=MAC)
             hid_dir = os.path.dirname(os.path.dirname(real))
-            name = os.path.basename(real)  # inputN:rgb:indicator
+            name = os.path.basename(real)
             prefix = name[: -len(_INDICATOR_SUFFIX)] if name.endswith(_INDICATOR_SUFFIX) else name
             mac = _read_mac(hid_dir, prefix)
             players = sorted(
                 glob.glob(os.path.join(LEDS_ROOT, f"{prefix}:white:player-*"))
             )
             node = SysfsLedNode(indicator, players)
-            # Indexa por MAC quando disponível; senão por um pseudo-key derivado do
-            # prefixo (o backend tem fallback single-controle quando não há MAC).
             key = mac if mac else f"prefix:{prefix}"
             out[key] = node
         except OSError as exc:
@@ -374,11 +273,7 @@ def discover() -> dict[str, SysfsLedNode]:
 
 
 def _read_mac(hid_dir: str, prefix: str) -> str | None:
-    """Lê o MAC do controle dono do nó LED, normalizado (ou None).
-
-    Fonte primária: ``HID_UNIQ`` no ``uevent`` do device HID (existe em USB E BT).
-    Fallback: ``uniq`` do input device (``<hid_dir>/input/<prefix>/uniq``).
-    """
+    """Lê o MAC do controle dono do nó LED, normalizado (ou None)."""
     uevent = os.path.join(hid_dir, "uevent")
     try:
         with open(uevent) as fh:

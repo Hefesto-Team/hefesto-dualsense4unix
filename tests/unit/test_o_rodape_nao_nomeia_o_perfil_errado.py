@@ -41,8 +41,6 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import onde, pacotes
 
-#: AS DEZ PÁGINAS que o produto renderiza. O rodapé é um só para todas —
-#: `fim.html` — e é por isso que um literal ali custa dez vezes.
 PAGINAS = tuple(f"{n:02d}-" for n in range(1, 11))
 
 
@@ -62,11 +60,7 @@ def test_a_dica_sai_com_o_nome_do_perfil_ativo() -> None:
 
 
 def test_sem_perfil_ativo_nao_se_inventa_nome() -> None:
-    """Sem perfil ativo, a dica cai para a mesma palavra do desenho.
-
-    Escrever *"Grava no perfil —"* seria pior do que não dizer: um travessão
-    onde se espera um nome lê-se como nome. A frase tem de continuar uma frase.
-    """
+    """Sem perfil ativo, a dica cai para a mesma palavra do desenho."""
     campos = pacotes.topo(_Ctx(""))
     assert "no perfil ativo" in campos["rodape.salvar"]
     assert "—" not in campos["rodape.salvar"]
@@ -75,16 +69,7 @@ def test_sem_perfil_ativo_nao_se_inventa_nome() -> None:
 
 
 def test_a_dica_continua_dizendo_o_que_o_botao_faz() -> None:
-    """A cura não pode ter encurtado a frase até tirar o que ela ensina.
-
-    A decisão que o rodapé protege é a diferença entre APLICAR (vale agora) e
-    SALVAR (grava no perfil). Trocar o nome não pode ter levado isso junto.
-
-    O-MODO-FREESTYLE-03, 24/09/2026: a promessa de QUANDO o que se grava volta
-    passou a seguir o perfil ativo — a de cada tipo se mede na
-    `test_o_freestyle_vale_em_todo_caminho.py`. O que ensina a diferença vale
-    para todo perfil, inclusive o que não está no disco, como este.
-    """
+    """A cura não pode ter encurtado a frase até tirar o que ela ensina."""
     campos = pacotes.topo(_Ctx("meu_perfil"))
     assert campos["rodape.salvar"].startswith(
         "Grava no perfil meu_perfil. É onde a mudança vai cair"), campos["rodape.salvar"]
@@ -92,15 +77,8 @@ def test_a_dica_continua_dizendo_o_que_o_botao_faz() -> None:
 
 
 def test_o_desenho_congelado_nao_nomeia_perfil() -> None:
-    """O ``fim.html`` — o rodapé das dez — não pode trazer nome de perfil.
-
-    Ele é o que a tela mostra ANTES de o produto pintar, e numa página que ela
-    ainda não publicou é o que ela mostra SEMPRE. Um nome ali é uma afirmação
-    que o produto não fez.
-    """
+    """O ``fim.html`` — o rodapé das dez — não pode trazer nome de perfil."""
     fim = (onde.AQUI / "fim.html").read_text(encoding="utf-8")
-    # SÓ AS LINHAS DE MARCAÇÃO: os comentários citam o pedido dela, que traz o
-    # exemplo, e censurar a citação apagaria a razão de a cura existir.
     marcacao = "\n".join(
         ln for ln in fim.splitlines() if "<button" in ln or "title=" in ln)
     assert "Mortal Kombat" not in marcacao, (
@@ -110,15 +88,7 @@ def test_o_desenho_congelado_nao_nomeia_perfil() -> None:
 
 @pytest.mark.parametrize("pagina", PAGINAS)  # (noqa-acento): nome de parâmetro
 def test_nenhuma_pagina_da_bancada_promete_o_perfil_errado(pagina: str) -> None:
-    """A régua olha a BANCADA — o desenho de HOJE, que é o que tem dono aqui.
-
-    NÃO O PUBLICADO, e a distinção é a armadilha mais cara do
-    `COMO-OLHAR-A-TELA.md`: apontar para o publicado daria **verde sobre a
-    página congelada**. Mas o inverso também vale — cobrar aqui a página que só
-    ELA pode republicar seria pôr num teste desta suíte uma dívida que não é de
-    quem a roda. **A lacuna de publicação já tem dono**, e ele a relata com
-    nome e número: `scripts/check_o_desenho_aprovado.py`.
-    """
+    """A régua olha a BANCADA — o desenho de HOJE, que é o que tem dono aqui."""
     caminhos = sorted(onde.saida().glob(f"{pagina}*.html"))
     if not caminhos:
         pytest.skip(f"não há página na bancada para {pagina}")

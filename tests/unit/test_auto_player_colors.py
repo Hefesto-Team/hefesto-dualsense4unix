@@ -95,24 +95,15 @@ class _FakeLedNode:
 
 class TestPaletaCanonica:
     def test_cores_ps5(self) -> None:
-        assert player_slot_color(1) == (0, 0, 255)  # azul
-        assert player_slot_color(2) == (255, 0, 0)  # vermelho
-        assert player_slot_color(3) == (0, 255, 0)  # verde
-        assert player_slot_color(4) == (255, 0, 128)  # rosa
-        # R-25: 5..8 ganharam cor PRÓPRIA. Antes todos caíam no branco, e com
-        # o espaço de numeração único (R-24) o slot 5+ é alcançável — dois
-        # controles ficavam da MESMA cor, que é a colisão que a paleta existe
-        # para evitar. Só ≥9 (inatingível na prática) cai no branco.
-        assert player_slot_color(5) == (255, 255, 0)  # amarelo
+        assert player_slot_color(1) == (0, 0, 255)
+        assert player_slot_color(2) == (255, 0, 0)
+        assert player_slot_color(3) == (0, 255, 0)
+        assert player_slot_color(4) == (255, 0, 128)
+        assert player_slot_color(5) == (255, 255, 0)
         assert player_slot_color(9) == (255, 255, 255)
 
     def test_cores_de_slot_nunca_se_repetem(self) -> None:
-        """R-25: a paleta 1..8 é uma BIJEÇÃO — nenhuma cor serve a dois slots.
-
-        Falha-sem: com o fallback branco para tudo acima de 4, os slots 5..8
-        eram indistinguíveis entre si (a queixa "nunca sei o que é o quê", no
-        eixo cor).
-        """
+        """R-25: a paleta 1..8 é uma BIJEÇÃO — nenhuma cor serve a dois slots."""
         cores = [player_slot_color(n) for n in range(1, 9)]
         assert len(set(cores)) == len(cores)
 
@@ -125,8 +116,6 @@ class TestPaletaCanonica:
         assert via_coop is player_led_pattern
         assert player_led_pattern(1) == (False, False, True, False, False)
         assert player_led_pattern(4) == (True, True, False, True, True)
-        # R-25: 5..8 têm padrão próprio (antes 5,6,7… acendiam TODOS os LEDs,
-        # indistinguíveis uns dos outros).
         assert player_led_pattern(5) == (True, True, True, True, True)
         assert player_led_pattern(7) == (False, True, True, True, False)
 
@@ -146,12 +135,11 @@ class TestMergeTresCamadas:
 
     def test_auto_vence_o_global(self) -> None:
         inst, _h1, _h2 = _backend_com_dois()
-        inst.set_led((10, 10, 10))  # global (broadcast)
+        inst.set_led((10, 10, 10))
         inst.set_auto_output_provider(
             _provider_fixo({UNIQ_1: _DesiredOutput(led=AZUL)})
         )
         assert inst._merged_desired_for_key(KEY_1).led == AZUL
-        # O outro controle não tem camada auto → global.
         assert inst._merged_desired_for_key(KEY_2).led == (10, 10, 10)
 
     def test_explicita_vence_a_auto(self) -> None:
@@ -159,8 +147,8 @@ class TestMergeTresCamadas:
         inst.set_auto_output_provider(
             _provider_fixo({UNIQ_2: _DesiredOutput(led=AZUL)})
         )
-        inst.set_output_target(1)  # mira o Controle 2
-        inst.set_led((9, 9, 9))  # cor explícita por-uniq
+        inst.set_output_target(1)
+        inst.set_led((9, 9, 9))
         assert inst._merged_desired_for_key(KEY_2).led == (9, 9, 9)
 
     def test_override_so_de_trigger_nao_mata_a_cor_auto(self) -> None:
@@ -176,9 +164,9 @@ class TestMergeTresCamadas:
         inst.set_output_target(1)
         inst.set_trigger("left", TriggerEffect(mode=2, forces=[1, 2, 3, 0, 0, 0, 0]))
         merged = inst._merged_desired_for_key(KEY_2)
-        assert merged.led == AZUL  # cor automática sobreviveu
+        assert merged.led == AZUL
         assert merged.player_leds == player_led_pattern(2)
-        assert merged.trigger_left is not None  # override explícito valeu
+        assert merged.trigger_left is not None
 
     def test_override_de_cor_mata_so_a_cor(self) -> None:
         inst, _h1, _h2 = _backend_com_dois()
@@ -190,17 +178,17 @@ class TestMergeTresCamadas:
         inst.set_output_target(1)
         inst.set_led((9, 9, 9))
         merged = inst._merged_desired_for_key(KEY_2)
-        assert merged.led == (9, 9, 9)  # explícita venceu a cor
-        assert merged.player_leds == player_led_pattern(2)  # o resto é auto
+        assert merged.led == (9, 9, 9)
+        assert merged.player_leds == player_led_pattern(2)
 
     def test_auto_off_e_comportamento_historico(self) -> None:
         """Provider None (ou devolvendo None) = merge default+override puro."""
         inst, _h1, _h2 = _backend_com_dois()
         inst.set_led((10, 10, 10))
         assert inst._merged_desired_for_key(KEY_1).led == (10, 10, 10)
-        inst.set_auto_output_provider(_provider_fixo({}))  # sempre None
+        inst.set_auto_output_provider(_provider_fixo({}))
         assert inst._merged_desired_for_key(KEY_1).led == (10, 10, 10)
-        inst.set_auto_output_provider(None)  # removido
+        inst.set_auto_output_provider(None)
         assert inst._merged_desired_for_key(KEY_1).led == (10, 10, 10)
 
     def test_provider_quebrado_nao_derruba_a_resolucao(self) -> None:
@@ -228,7 +216,7 @@ class TestMergeTresCamadas:
         inst.set_auto_output_provider(provider)
         inst.set_led((10, 10, 10))
         assert inst._merged_desired_for_key("/dev/hidraw3").led == (10, 10, 10)
-        assert consultados == []  # provider nem foi chamado
+        assert consultados == []
 
 
 class TestHotplugPintaCorDoSlot:
@@ -246,8 +234,7 @@ class TestHotplugPintaCorDoSlot:
     def test_refresh_sysfs_new_keys_reasserta_a_cor_auto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O reassert de nó novo resolve via `_merged_desired_for_key` — a
-        camada automática flui sem caminho novo de escrita."""
+        """O reassert de nó novo resolve via `_merged_desired_for_key` — a"""
         from hefesto_dualsense4unix.core import sysfs_leds
 
         inst, _h1, _h2 = _backend_com_dois()
@@ -289,16 +276,12 @@ class TestHotplugPintaCorDoSlot:
             )
         )
         node1, node2 = _FakeLedNode("/fake/led1"), _FakeLedNode("/fake/led2")
-        # Nós JÁ mapeados (mesma `indicator_dir` que o discover devolve) →
-        # NÃO são `new_keys` no próximo `_refresh_sysfs_leds`.
         inst._sysfs = {KEY_1: node1, KEY_2: node2}  # type: ignore[dict-item]
         monkeypatch.setattr(
             sysfs_leds, "discover", lambda: {UNIQ_1: node1, UNIQ_2: node2}
         )
-        # Zera o histórico: mede SÓ o efeito do connect (não escritas de boot).
         node1.colors.clear()
         node2.colors.clear()
-        # Nenhum controle NOVO: enumerate devolve os mesmos já presentes.
         with patch.object(
             PyDualSenseController,
             "_enumerate_device_keys",
@@ -315,13 +298,7 @@ class TestHotplugPintaCorDoSlot:
     def test_mutado_escreve_a_cor_auto_no_no(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """No Modo Nativo o nó novo recebe a cor da camada automática também.
-
-        Era o D12 ao contrário («mutado, nada escrito»). Caducou em 23/09/2026
-        pela decisão dela `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`
-        (STEAM-NO-FISICO-01): *"no Modo Nativo, o Hefesto escreve a barra e o
-        número SEMPRE"* — o controle que conectava no meio do jogo nascia
-        apagado até o desmute."""
+        """No Modo Nativo o nó novo recebe a cor da camada automática também."""
         from hefesto_dualsense4unix.core import sysfs_leds
 
         inst, _h1, _h2 = _backend_com_dois()
@@ -335,10 +312,7 @@ class TestHotplugPintaCorDoSlot:
         assert node.colors == [AZUL]
 
     def test_reapply_mutado_escreve_no_no_sysfs(self) -> None:
-        """No hotplug em Modo Nativo o nó sysfs recebe a cor automática.
-
-        O D12 dizia o contrário; caducou com a
-        `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (23/09/2026)."""
+        """No hotplug em Modo Nativo o nó sysfs recebe a cor automática."""
         inst, _h1, h2 = _backend_com_dois()
         inst.set_auto_output_provider(
             _provider_fixo({UNIQ_2: _DesiredOutput(led=VERMELHO)})
@@ -350,8 +324,7 @@ class TestHotplugPintaCorDoSlot:
         assert node.colors == [VERMELHO]
 
     def test_unmute_reasserta_a_cor_auto(self) -> None:
-        """Sair do Modo Nativo re-aplica o resolvido POR-KEY (com a camada
-        automática) nos nós sysfs — caminho existente do unmute."""
+        """Sair do Modo Nativo re-aplica o resolvido POR-KEY (com a camada"""
         inst, _h1, _h2 = _backend_com_dois()
         inst.set_auto_output_provider(
             _provider_fixo(
@@ -375,7 +348,7 @@ class TestProviderDoDaemon:
         registry = ControllerIdentityRegistry()
         registry.configure(enabled=True, brightness=0.4)
         provider = make_auto_output_provider(registry)
-        out = provider(UNIQ_1)  # 1ª consulta: slot 1 (lazy)
+        out = provider(UNIQ_1)
         assert out is not None
         esperado = (
             LedSettings(lightbar=player_slot_color(1), brightness_level=0.4)
@@ -384,17 +357,16 @@ class TestProviderDoDaemon:
         )
         assert out.led == esperado
         assert out.player_leds == player_led_pattern(1)
-        # Campos não-automáticos ficam sem opinião (merge por campo).
         assert out.trigger_left is None
         assert out.mic_led is None
 
     def test_segundo_controle_ganha_vermelho(self) -> None:
         registry = ControllerIdentityRegistry()
         provider = make_auto_output_provider(registry)
-        assert provider(UNIQ_1) is not None  # slot 1
-        out2 = provider(UNIQ_2)  # slot 2
+        assert provider(UNIQ_1) is not None
+        out2 = provider(UNIQ_2)
         assert out2 is not None
-        assert out2.led == player_slot_color(2)  # brilho 1.0 = cor pura
+        assert out2.led == player_slot_color(2)
         assert out2.player_leds == player_led_pattern(2)
 
     def test_cor_desligada_mantem_numero_e_atribui_slot(self) -> None:
@@ -416,9 +388,9 @@ class TestProviderDoDaemon:
         provider = make_auto_output_provider(registry)
         out = provider(UNIQ_1)
         assert out is not None
-        assert out.led is None  # a paleta calou
-        assert out.player_leds == player_led_pattern(1)  # o número não
-        assert registry.snapshot() == {UNIQ_1: 1}  # atribuição aconteceu
+        assert out.led is None
+        assert out.player_leds == player_led_pattern(1)
+        assert registry.snapshot() == {UNIQ_1: 1}
 
     def test_numero_desligado_mantem_a_cor(self) -> None:
         """R-14: o eixo NUMERAÇÃO é independente do eixo COR."""
@@ -436,7 +408,6 @@ class TestProviderDoDaemon:
         registry.configure(enabled=False, numbers=False)
         provider = make_auto_output_provider(registry)
         assert provider(UNIQ_1) is None
-        # ...mas o slot foi atribuído mesmo assim (identidade ≠ aparência).
         assert registry.snapshot() == {UNIQ_1: 1}
 
     def test_vpad_e_uniq_invalido_devolvem_none(self) -> None:
@@ -447,29 +418,19 @@ class TestProviderDoDaemon:
         assert provider("") is None
 
     def test_replug_mantem_a_cor_do_slot(self) -> None:
-        """Reserva de sessão (D2): o replug do controle 1 segue azul.
-
-        QUATRO-NA-MESA-01 §1 (06/09/2026) trocou QUEM readmite: quem põe de
-        volta na mesa é o TIQUE (``sync_connected``), nunca a leitura de cor.
-        Enquanto o tique não passa, o provider responde ``None`` — *sem
-        opinião*, que é o contrato que o ``numero_da_lampada`` já publicava
-        desde 27/08 e que a autoadmissão do ``slot_for`` tornava inalcançável.
-        A promessa D2 não mudou: quando o tique passa, ele volta AZUL.
-        """
+        """Reserva de sessão (D2): o replug do controle 1 segue azul."""
         registry = ControllerIdentityRegistry()
         provider = make_auto_output_provider(registry)
         assert (p1 := provider(UNIQ_1)) is not None and p1.led == player_slot_color(1)
         assert (p2 := provider(UNIQ_2)) is not None and p2.led == player_slot_color(2)
         registry.mark_disconnected(UNIQ_1)
         registry.sync_connected([UNIQ_2])
-        # Replugou: o handle voltou, o tique ainda não viu. A leitura de cor
-        # NÃO readmite — é o defeito 1 desta sprint.
         assert provider(UNIQ_1) is None
         assert registry.snapshot_connected() == {UNIQ_2}
-        registry.sync_connected([UNIQ_1, UNIQ_2])  # o tique viu
+        registry.sync_connected([UNIQ_1, UNIQ_2])
         out = provider(UNIQ_1)
         assert out is not None
-        assert out.led == player_slot_color(1)  # continua azul, não virou 3
+        assert out.led == player_slot_color(1)
 
 
 class TestPontaAPonta:
@@ -479,30 +440,24 @@ class TestPontaAPonta:
         inst, h1, h2 = _backend_com_dois()
         registry = ControllerIdentityRegistry()
         inst.set_auto_output_provider(make_auto_output_provider(registry))
-        # Global do perfil (broadcast) — a automática vence por camada.
         inst.set_led((10, 10, 10))
         inst._reapply_desired(KEY_1, h1)
         inst._reapply_desired(KEY_2, h2)
-        assert h1.light.colors[-1] == player_slot_color(1)  # azul
-        assert h2.light.colors[-1] == player_slot_color(2)  # vermelho
+        assert h1.light.colors[-1] == player_slot_color(1)
+        assert h2.light.colors[-1] == player_slot_color(2)
         assert h1.light.colors[-1] != h2.light.colors[-1]
 
     def test_resolved_player_leds_for_devolve_o_padrao_do_slot(self) -> None:
-        """O revert do co-op (PERFIL-06) lê por aqui: com auto ligado, o
-        controle volta ao padrão do NÚMERO DO CONTROLE (D7), não ao global."""
+        """O revert do co-op (PERFIL-06) lê por aqui: com auto ligado, o"""
         inst, _h1, _h2 = _backend_com_dois()
         registry = ControllerIdentityRegistry()
         inst.set_auto_output_provider(make_auto_output_provider(registry))
-        inst.set_player_leds((True, True, True, True, False))  # global
-        registry.slot_for(UNIQ_1)  # 1º a chegar = slot 1
+        inst.set_player_leds((True, True, True, True, False))
+        registry.slot_for(UNIQ_1)
         assert inst.resolved_player_leds_for(UNIQ_1) == player_led_pattern(1)
-        # O 2º controle resolve o slot 2 LAZY na própria leitura (D1).
         assert inst.resolved_player_leds_for(UNIQ_2) == player_led_pattern(2)
-        # R-14 — CONTRATO TROCADO: desligar a COR não pode mais apagar o
-        # NÚMERO (era o acoplamento que congelava a numeração de todo mundo).
         registry.configure(enabled=False)
         assert inst.resolved_player_leds_for(UNIQ_2) == player_led_pattern(2)
-        # Quem manda no número é o eixo próprio; aí sim volta ao global.
         registry.configure(numbers=False)
         assert inst.resolved_player_leds_for(UNIQ_2) == (
             True, True, True, True, False,
@@ -565,8 +520,7 @@ class TestManagerConfiguraOAuto:
     def test_perfil_sem_secao_leds_liga_o_auto(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Decisão documentada: sem seção `leds` no JSON = defaults do schema
-        (`LedsConfig()`) = auto ON com brilho 1.0."""
+        """Decisão documentada: sem seção `leds` no JSON = defaults do schema"""
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
         from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
         from hefesto_dualsense4unix.testing import FakeController
@@ -590,8 +544,7 @@ class TestSchemaAditivo:
         assert "auto_player_colors" not in cfg.model_fields_set
 
     def test_campo_novo_nao_densifica_override_por_controle(self) -> None:
-        """`_controllers_to_specs` ignora o toggle: um override que SÓ escreve
-        `auto_player_colors` não vira spec (não pisa o global no merge)."""
+        """`_controllers_to_specs` ignora o toggle: um override que SÓ escreve"""
         from hefesto_dualsense4unix.profiles.manager import _controllers_to_specs
         from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
@@ -649,10 +602,8 @@ class TestAtivacaoReassertaResolvido:
             leds=LedsConfig(lightbar=(129, 61, 156), lightbar_brightness=1.0),
         )
         manager.apply(profile)
-        # A ÚLTIMA escrita em cada nó é a cor do SLOT (a paleta venceu o
-        # broadcast global) — antes do fix ficava o roxo (129, 61, 156).
-        assert n1.colors[-1] == player_slot_color(1)  # azul
-        assert n2.colors[-1] == player_slot_color(2)  # vermelho
+        assert n1.colors[-1] == player_slot_color(1)
+        assert n2.colors[-1] == player_slot_color(2)
         assert n1.patterns[-1] == player_led_pattern(1)
         assert n2.patterns[-1] == player_led_pattern(2)
 
@@ -677,13 +628,11 @@ class TestAtivacaoReassertaResolvido:
             ),
         )
         manager.apply(profile)
-        # O reassert com auto OFF re-escreve o RESOLVIDO = global (inócuo).
         assert n1.colors[-1] == (129, 61, 156)
         assert n2.colors[-1] == (129, 61, 156)
 
     def test_reassert_escreve_em_modo_nativo(self) -> None:
-        """Era no-op sob o mute (D12); desde 23/09/2026 a luz e o número são do
-        Hefesto no Nativo (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`)."""
+        """Era no-op sob o mute (D12); desde 23/09/2026 a luz e o número são do"""
         inst, n1, _n2 = self._backend_com_nos()
         inst._output_mute = True
         antes = list(n1.colors)

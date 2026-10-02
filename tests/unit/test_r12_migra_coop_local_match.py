@@ -1,14 +1,4 @@
-"""R-12 (auditoria 23/07) — migração one-shot do `match` do coop_local.
-
-O preset de fábrica de 14/07 saiu com `MatchCriteria` de campos TODOS vazios —
-`matches()` devolve False sem condição alguma, então o autoswitch NUNCA o
-escolhe. O asset novo tem o regex de jogos de co-op, mas `seed_default_presets`
-não sobrescreve (o preset está no `.seeded_presets`), então o arquivo LOCAL de
-quem já tinha o preset velho fica preso.
-
-A migração é CONSERVADORA: só reescreve quando o preset está EXATAMENTE no estado
-inalcançável de fábrica (intocado). Qualquer edição da usuária = recua.
-"""
+"""R-12 (auditoria 23/07) — migração one-shot do `match` do coop_local."""
 
 from __future__ import annotations
 
@@ -20,7 +10,6 @@ from hefesto_dualsense4unix.profiles.loader import (
     migrate_coop_local_match,
 )
 
-# O estado de fábrica inalcançável (14/07): criteria com tudo vazio.
 FABRICA_VELHO = {
     "name": "coop_local",
     "version": 1,
@@ -35,7 +24,6 @@ FABRICA_VELHO = {
     "mode": {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": True},
 }
 
-# O asset novo (fonte da verdade): regex de co-op + prioridade 45.
 ASSET_NOVO = {
     "name": "coop_local",
     "version": 1,
@@ -57,8 +45,6 @@ def _monta(tmp_path: Path, perfil: dict) -> tuple[Path, Path]:
 
 
 def _roda(dest: Path, src: Path) -> list[str]:
-    # A função lê o asset via _seed_source_file(source_dirs=...) — mas a
-    # assinatura pública não expõe isso; monkeypatch da cascata de fontes.
     import hefesto_dualsense4unix.profiles.loader as loader
 
     orig = loader._DEFAULT_SEED_SOURCE_DIRS
@@ -77,7 +63,6 @@ class TestMigracao:
         d = json.loads((dest / "coop_local.json").read_text(encoding="utf-8"))
         assert d["match"]["window_title_regex"] == ASSET_NOVO["match"]["window_title_regex"]
         assert d["priority"] == 45
-        # Cor/mode intocados.
         assert d["leds"]["lightbar"] == [0, 200, 120]
         assert d["mode"]["coop"] is True
 
@@ -85,7 +70,6 @@ class TestMigracao:
         dest, src = _monta(tmp_path, FABRICA_VELHO)
         assert _roda(dest, src) == ["coop_local.json"]
         assert (dest / _COOP_LOCAL_MATCH_MIGRATION_MARKER).exists()
-        # 2ª vez: marker existe, não toca.
         assert _roda(dest, src) == []
 
     def test_editado_pela_usuaria_nao_e_tocado(self, tmp_path: Path) -> None:

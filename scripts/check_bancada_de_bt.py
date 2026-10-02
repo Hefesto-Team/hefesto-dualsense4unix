@@ -44,15 +44,8 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 CADERNO = RAIZ / "docs/data/ensaios.csv"
 
-#: O que conta como "sim" nas colunas de acionamento.
 SIM = {"sim", "true", "1"}
 
-#: AS SETE PERGUNTAS DE RÁDIO DELA, do `SPRINT_ORDER.md` §2.1 — e a família do
-#: mapa que cada uma destrava. A tabela de lá está na ordem das ABAS, não do
-#: protocolo, *"assim cada medição destrava uma tela, e não só uma linha"*.
-#:
-#: A oitava (o preço em bateria) entra DEPOIS das sete, por pedido dela em
-#: 24/08, e por isso não conta aqui.
 PERGUNTAS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("vibracao-por-radio",
      "a vibração do jogo chega ao motor por rádio?", ("vibracao",)),
@@ -87,13 +80,7 @@ def _sim(valor: str | None) -> bool:
 
 
 def r1(pecas: list[dict]) -> list[str]:
-    """Célula de rádio que admite não acionar e NÃO nomeia a culpa.
-
-    Uma célula assim é a pior forma de vazio: ela diz "não funciona" e não diz
-    por quê, então quem lê não sabe se é limitação do aparelho, decisão da casa
-    ou trabalho por fazer. A escada é clara — preencher com `decisao-tomada`
-    fecha esta régua e é verdade.
-    """
+    """Célula de rádio que admite não acionar e NÃO nomeia a culpa."""
     return [f"{peca['chave']}  ({peca['rotulo'][:48]})"
             for peca in pecas
             if not _sim(peca.get("radio_aciona"))
@@ -101,11 +88,7 @@ def r1(pecas: list[dict]) -> list[str]:
 
 
 def r2(pecas: list[dict]) -> list[str]:
-    """Célula que AFIRMA acionar por rádio e não foi medida.
-
-    É a afirmação forte sem lastro — a casa dizendo que funciona porque leu o
-    código, ou porque supôs do cabo. Rebaixar para `parcial` fecha e é verdade.
-    """
+    """Célula que AFIRMA acionar por rádio e não foi medida."""
     return [f"{peca['chave']}  (de_onde_sei={peca.get('radio_de_onde_sei') or '—'})"
             for peca in pecas
             if _sim(peca.get("radio_aciona"))
@@ -113,16 +96,7 @@ def r2(pecas: list[dict]) -> list[str]:
 
 
 def r3(pecas: list[dict]) -> list[str]:
-    """Das sete perguntas dela, quantas seguem sem UMA medição de rádio.
-
-    A PERGUNTA DELA É SOBRE A TELA, e uma tela não se sustenta numa linha: ela
-    só fecha quando TODA a família que destrava estiver medida.
-
-    O critério frouxo — "basta uma peça medida" — foi tentado primeiro e dava
-    ZERO, enquanto a escada de 24/08 contava 6 de 7. Régua que devolve zero onde
-    o documento conta seis está medindo outra coisa, e zero por critério frouxo
-    se lê como aprovação.
-    """
+    """Das sete perguntas dela, quantas seguem sem UMA medição de rádio."""
     fora = []
     for chave, texto, familias in PERGUNTAS:
         da_familia = [peca for peca in pecas if peca.get("familia") in familias]
@@ -135,12 +109,7 @@ def r3(pecas: list[dict]) -> list[str]:
 
 
 def r4(ensaios: list[dict]) -> list[str]:
-    """Ensaio de rádio no caderno sem o `degrau` preenchido.
-
-    O degrau é a escada de conexão em que o ensaio correu, e sem ele a medição
-    não se compara com outra: dois ensaios do mesmo assunto em degraus
-    diferentes medem coisas diferentes.
-    """
+    """Ensaio de rádio no caderno sem o `degrau` preenchido."""
     return [f"{e.get('id') or '?'}  ({(e.get('linha_id') or '')[:40]})"
             for e in ensaios
             if (e.get("transporte") or "").strip().lower() == "radio"

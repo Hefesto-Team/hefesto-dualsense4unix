@@ -38,8 +38,6 @@ import pytest
 
 from hefesto_dualsense4unix.core.sysfs_leds import SysfsLedNode
 
-#: Cores assimétricas em R e B — cinza (r == g == b) passaria com os canais
-#: trocados e não provaria nada (mesma disciplina do PARIDADE-BYTE-01).
 COR_A = (0x2A, 0x40, 0xC8)
 COR_B = (0xC8, 0x40, 0x2A)
 
@@ -79,34 +77,24 @@ def test_com_o_brilho_ja_em_255_sai_um_quadro_so(
     no, gravacoes, indicador = no_e_gravacoes
     assert no.set_rgb(*COR_A) is True
     assert gravacoes == [("multi_intensity", "42 64 200")], gravacoes
-    # E o kernel enxerga exatamente o mesmo estado de antes da cura.
     assert _estado(indicador) == ("255", "42 64 200")
 
 
 def test_o_estado_final_e_byte_a_byte_o_de_antes(
     no_e_gravacoes: tuple[SysfsLedNode, list[tuple[str, str]], Path],
 ) -> None:
-    """Paridade: dois `set_rgb` seguidos deixam o nó no MESMO estado de sempre.
-
-    É a condição que a leva impôs para tocar a rota quente da luz — o que muda
-    é a CONTAGEM de quadros, nunca o conteúdo.
-    """
+    """Paridade: dois `set_rgb` seguidos deixam o nó no MESMO estado de sempre."""
     no, gravacoes, indicador = no_e_gravacoes
     no.set_rgb(*COR_A)
     no.set_rgb(*COR_B)
     assert _estado(indicador) == ("255", "200 64 42")
-    # Duas trocas de cor = dois quadros (um por cor), não quatro.
     assert len(gravacoes) == 2, gravacoes
 
 
 def test_brilho_zerado_por_terceiro_volta_a_255_antes_da_cor(
     no_e_gravacoes: tuple[SysfsLedNode, list[tuple[str, str]], Path],
 ) -> None:
-    """Um terceiro apagou pela classe LED: a cura NÃO pode deixar a barra apagada.
-
-    E a ORDEM importa — `brightness` antes de `multi_intensity`, como sempre
-    foi: acender depois de pôr a cor mostraria a cor VELHA por um quadro.
-    """
+    """Um terceiro apagou pela classe LED: a cura NÃO pode deixar a barra apagada."""
     no, gravacoes, indicador = no_e_gravacoes
     (indicador / "brightness").write_text("0")
     assert no.set_rgb(*COR_A) is True
@@ -120,15 +108,10 @@ def test_brilho_zerado_por_terceiro_volta_a_255_antes_da_cor(
 def test_brilho_ilegivel_escreve_como_sempre(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Nó sumindo num replug: "não sei" leva a ESCREVER, nunca a pular.
-
-    É a mesma regra do `verify=True` (veto 5 da síntese NUMA-03): ausência de
-    leitura não é prova de estado.
-    """
+    """Nó sumindo num replug: "não sei" leva a ESCREVER, nunca a pular."""
     indicador = tmp_path / "input262:rgb:indicator"
     indicador.mkdir()
     (indicador / "multi_intensity").write_text("0 0 0")
-    # Sem arquivo `brightness` nenhum: a leitura devolve None.
     gravacoes: list[tuple[str, str]] = []
     original = SysfsLedNode._write
 
@@ -154,11 +137,7 @@ def test_o_cache_de_cor_igual_continua_valendo(
 
 
 def test_o_brilho_lido_nao_confunde_apagado_com_ilegivel(tmp_path: Path) -> None:
-    """A régua do `_brightness_lido`: 0 é um NÚMERO, ausência é None.
-
-    Sem este caso, um leitor que devolvesse 0 para arquivo ausente passaria
-    despercebido — e 0 != 255 escreveria, mascarando o defeito no caso feliz.
-    """
+    """A régua do `_brightness_lido`: 0 é um NÚMERO, ausência é None."""
     indicador = tmp_path / "input266:rgb:indicator"
     indicador.mkdir()
     no = SysfsLedNode(str(indicador), [])
@@ -176,7 +155,7 @@ def test_o_is_on_le_pelo_mesmo_lugar_que_a_escrita(tmp_path: Path) -> None:
     indicador = tmp_path / "input270:rgb:indicator"
     indicador.mkdir()
     no = SysfsLedNode(str(indicador), [])
-    assert no.is_on() is False  # sem arquivo: "não sei" nunca vira "aceso"
+    assert no.is_on() is False
     (indicador / "brightness").write_text("0")
     assert no.is_on() is False
     (indicador / "brightness").write_text("255")

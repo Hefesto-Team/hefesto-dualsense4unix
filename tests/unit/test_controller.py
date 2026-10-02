@@ -85,7 +85,7 @@ class TestFakeController:
         assert fc.read_state() == states[0]
         assert fc.read_state() == states[1]
         assert fc.read_state() == states[2]
-        assert fc.read_state() == states[2]  # últimos repetem
+        assert fc.read_state() == states[2]
 
     def test_transport_bt_propaga(self) -> None:
         fc = FakeController(transport="bt")
@@ -111,11 +111,7 @@ class TestFakeController:
 
 
 class TestPyDualSenseController:
-    """Smoke test do backend real via mock do pydualsense.
-
-    Não conecta a hardware físico. Valida que a classe respeita
-    `IController`, inicializa sem quebrar e aceita comandos.
-    """
+    """Smoke test do backend real via mock do pydualsense."""
 
     def test_class_implements_interface(self) -> None:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
@@ -123,9 +119,7 @@ class TestPyDualSenseController:
         assert isinstance(inst, IController)
 
     def test_read_state_sem_connect_retorna_offline_defaults(self) -> None:
-        """BUG-DAEMON-NO-DEVICE-FATAL-01: read_state offline retorna snapshot
-        neutro com connected=False em vez de levantar RuntimeError. Permite
-        ao daemon rodar poll_loop sem hardware conectado."""
+        """BUG-DAEMON-NO-DEVICE-FATAL-01: read_state offline retorna snapshot"""
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         inst = PyDualSenseController()
         state = inst.read_state()
@@ -157,8 +151,8 @@ class TestPyDualSenseController:
         class FakeState:
             L2 = False
             R2 = True
-            L2_value = 180  # meio-pressionado
-            R2_value = 255  # totalmente pressionado
+            L2_value = 180
+            R2_value = 255
             LX = 128
             LY = 128
             RX = 128
@@ -172,9 +166,8 @@ class TestPyDualSenseController:
             battery = FakeBattery()
             connected = True
 
-        # Força fallback pro caminho pydualsense usando reader sem device
         null_reader = EvdevReader(device_path=None)
-        null_reader._device_path = None  # força is_available=False
+        null_reader._device_path = None
         inst = PyDualSenseController(evdev_reader=null_reader)
         inst._ds = FakeDs()  # type: ignore[assignment]
         inst._transport = "usb"
@@ -240,7 +233,6 @@ class TestPyDualSenseController:
         from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
 
         class FakeState:
-            # Valores pydualsense — Não devem aparecer no resultado
             L2_value = 0
             R2_value = 0
             LX = 128
@@ -256,7 +248,6 @@ class TestPyDualSenseController:
             battery = FakeBattery()
             connected = True
 
-        # Reader com snapshot customizado (simula evdev reportando pressão)
         class FakeReader(EvdevReader):
             def __init__(self) -> None:
                 super().__init__(device_path=None)
@@ -276,12 +267,10 @@ class TestPyDualSenseController:
         inst._transport = "usb"
 
         state = inst.read_state()
-        # Triggers e sticks vêm do evdev, não do pydualsense
         assert state.l2_raw == 210
         assert state.r2_raw == 255
         assert state.raw_lx == 30
         assert state.raw_ly == 200
-        # Battery continua vindo do pydualsense (evdev não expõe)
         assert state.battery_pct == 50
 
     def test_read_state_includes_mic_btn_when_hid_bit_set(self) -> None:
@@ -329,7 +318,6 @@ class TestPyDualSenseController:
         assert "mic_btn" in state.buttons_pressed, (
             "mic_btn deve estar em buttons_pressed quando ds.state.micBtn=True"
         )
-        # Botão evdev também deve estar preservado
         assert "cross" in state.buttons_pressed
 
     def test_read_state_mic_btn_false_when_hid_bit_clear(self) -> None:

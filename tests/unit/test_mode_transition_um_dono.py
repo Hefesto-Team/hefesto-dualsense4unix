@@ -1,34 +1,8 @@
-"""SPRINT-HARMONIA-01 — o modo do sistema tem UM dono só.
-
-HARM-01: a aba Emulação chamava ``gamepad.emulation.set`` cru, sem sair do Modo
-Nativo antes. Nativo + gamepad ligados juntos = controle físico grabado pelo
-jogo + vpad congelado, ou seja JOGO SEM CONTROLE NENHUM — e a Início ainda
-exibia "Conexão Nativa (Sony)" (o nativo vence no `_render_home`), escondendo o
-estado real. Estes testes travam a paridade: as duas abas emitem exatamente a
-mesma sequência de IPC, com a mesma folga de timeout.
-
-HARM-03: "Modo jogo" (suspender mouse/teclado) não pode ser oferecido em
-"Controlar o PC" — nesse modo o controle SÓ faz mouse/teclado, então
-suspendê-los deixa o controle sem função nenhuma.
-
-Herméticos: stubs de gi (armadilha A-12), sem GTK real e sem daemon.
-
-O stub daqui é um SUPERSET do de test_emulation_actions_modo_jogo.py: expõe
-também `GObject`. O stub original só publica Gtk/GLib, então quando ele roda
-antes de um módulo que faz ``from gi.repository import GObject``
-(profiles_actions) a coleção do outro teste morre com ImportError. Stub de
-menos quebra uns; gi real quebra outros (test_triggers_actions.py depende do
-gi stubado) — o superset é o que convive com os dois.
-"""
+"""SPRINT-HARMONIA-01 — o modo do sistema tem UM dono só."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("mode_transition: a troca de modo tem um dono")
 
 import sys
@@ -39,11 +13,6 @@ import pytest
 
 
 def _install_gi_stubs() -> None:
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # o merge abaixo mutaria o gi REAL (sobrescreve GLib.idle_add e
-    # require_version) e fazia testes de GUI pularem como "ambiente sem GTK".
-    # Um stub instalado por outro módulo de teste (__spec__ None) segue
-    # sendo reaproveitado para merge de atributos.
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -92,7 +61,6 @@ from hefesto_dualsense4unix.app.actions import (
     mode_transition,
 )
 
-# --- captura de IPC ---------------------------------------------------------
 
 Call = tuple[str, dict[str, Any], float]
 
@@ -118,9 +86,6 @@ def ipc(monkeypatch: pytest.MonkeyPatch) -> list[Call]:
 
 def _methods(calls: list[Call]) -> list[tuple[str, dict[str, Any]]]:
     return [(m, p) for m, p, _t in calls]
-
-
-# --- plano puro da transição ------------------------------------------------
 
 
 def test_plano_do_gamepad_sai_do_nativo_antes_de_ligar_o_vpad() -> None:
@@ -156,19 +121,7 @@ def test_plano_do_nativo_so_liga_o_nativo() -> None:
 
 
 def test_plano_sem_flavor_nao_escolhe_mascara_nenhuma() -> None:
-    """AUTO-01.3: sem escolha dela, quem decide a máscara é o DAEMON.
-
-    Este teste TROCOU de contrato de propósito. Ele travava o oposto (a GUI
-    injetava ``DEFAULT_FLAVOR``), e era esse o defeito: `gamepad on` pela linha
-    de comando preservava a máscara do daemon — `dualsense` numa instalação
-    nova, por HARMONIA-MASK-01 — enquanto "Jogar pelo Hefesto" impunha `xbox`.
-    O MESMO gesto entregava máscaras diferentes conforme a porta de entrada, e
-    a máscara decide se o jogo reconhece o controle.
-
-    O `DEFAULT_FLAVOR` segue existindo e segue com um dono só (é o piso dos
-    presets e o fallback do `normalize_flavor`); o que acabou foi a GUI
-    escolher por ela.
-    """
+    """AUTO-01.3: sem escolha dela, quem decide a máscara é o DAEMON."""
     plan = mode_transition.plan_mode_transition("gamepad", None)
     assert plan[-1] == ("gamepad.emulation.set", {"enabled": True, "origin": "manual"})
     assert "flavor" not in plan[-1][1]
@@ -198,9 +151,6 @@ def test_apply_mode_da_folga_de_timeout_em_todos_os_passos(ipc: list[Call]) -> N
     assert [t for _m, _p, t in ipc] == [2.0, 2.0]
 
 
-# --- leitura do modo (uma regra só) -----------------------------------------
-
-
 def test_mode_of_state_nativo_vence_o_gamepad() -> None:
     """Com os dois ligados é o físico grabado que manda — as abas não discordam."""
     state = {"native_mode": True, "gamepad_emulation": {"enabled": True}}
@@ -213,9 +163,6 @@ def test_mode_of_state_offline_e_none() -> None:
 
 def test_mode_of_state_desktop_sem_nada_ligado() -> None:
     assert mode_transition.mode_of_state({"gamepad_emulation": {}}) == "desktop"
-
-
-# --- HARM-01: a Emulação usa o MESMO caminho da Início ----------------------
 
 
 class _EmulStub(emulation_actions.EmulationActionsMixin):
@@ -257,8 +204,7 @@ def test_emulacao_dualsense_sai_do_nativo_antes_de_ligar_o_vpad(
 
 
 def test_emulacao_desligado_tambem_sai_do_nativo(ipc: list[Call]) -> None:
-    """"Desligado" = "Controlar o PC": deixar o nativo de pé exibia o botão
-    "Desligado" realçado com o jogo ainda dono do controle."""
+    """"Desligado" = "Controlar o PC": deixar o nativo de pé exibia o botão"""
     _EmulStub().on_emulation_gamepad_off(None)
 
     assert _methods(ipc) == [
@@ -269,8 +215,7 @@ def test_emulacao_desligado_tambem_sai_do_nativo(ipc: list[Call]) -> None:
 
 
 def test_nenhum_caminho_da_emulacao_liga_o_vpad_sem_transicao(ipc: list[Call]) -> None:
-    """Aceite do HARM-01: todo `gamepad.emulation.set` vem depois de um
-    `native.mode.set`, com a folga de 2s — em QUALQUER botão da aba."""
+    """Aceite do HARM-01: todo `gamepad.emulation.set` vem depois de um"""
     stub = _EmulStub()
     for handler in (
         stub.on_emulation_gamepad_off,
@@ -280,7 +225,6 @@ def test_nenhum_caminho_da_emulacao_liga_o_vpad_sem_transicao(ipc: list[Call]) -
         ipc.clear()
         handler(None)
         metodos = [m for m, _p, _t in ipc]
-        # A ordem é o que importa: sair do nativo ANTES de tocar no vpad.
         assert metodos.index("native.mode.set") < metodos.index(
             "gamepad.emulation.set"
         )
@@ -310,8 +254,6 @@ class _HomeStub:
     _on_home_mode_changed = home_actions.HomeActionsMixin._on_home_mode_changed
     _on_home_flavor_changed = home_actions.HomeActionsMixin._on_home_flavor_changed
 
-    # RELANCAR-01: sem jogo aberto, o gancho devolve False e o handler aplica
-    # direto — que é o caminho que este arquivo mede (o plano de transição).
     def _perguntar_antes_de_relancar(self, **_kw: object) -> bool:
         return False
 
@@ -329,17 +271,7 @@ class _HomeStub:
 
 
 class _RodapeStub:
-    """O botão verde, com o método REAL que aplica a escolha da aba Início.
-
-    AGORA-E-DEPOIS-01: o caminho da Início tem dois tempos agora (marcar no
-    clique, aplicar no rodapé) e a paridade com a Emulação só é medível
-    percorrendo os dois. O método vem do mixin de verdade — um dublê que
-    reimplementasse a regra mediria o dublê.
-
-    ``_apply_draft_agora`` é no-op aqui: o rascunho das sete seções não faz
-    parte da paridade de MODO que este arquivo mede, e o fake de `call_async`
-    deste módulo nem chama os callbacks.
-    """
+    """O botão verde, com o método REAL que aplica a escolha da aba Início."""
 
     _aplicar_escolha_pendente = (
         footer_actions.FooterActionsMixin._aplicar_escolha_pendente
@@ -354,9 +286,6 @@ class _RodapeStub:
         return False
 
     def _ha_jogo_aberto_agora(self) -> bool:
-        # JOGO-ABERTO-SO-NA-INICIO-01: o rodapé relê o sinal no clique. Aqui não
-        # há daemon, e este arquivo mede a SEQUÊNCIA de IPC do modo — não o
-        # diálogo. Sem jogo aberto é o caminho que ele exercita.
         return False
 
     def _apply_draft_agora(self) -> None:
@@ -380,25 +309,11 @@ class _RodapeStub:
 def test_inicio_e_emulacao_emitem_a_mesma_sequencia(
     ipc: list[Call], mode_id: str, flavor: str, emul_handler: str
 ) -> None:
-    """Aceite do HARM-01: alternar Início<->Emulação nunca mostra estados
-    diferentes porque as duas abas fazem literalmente a mesma coisa.
-
-    AGORA-E-DEPOIS-01 (08/08/2026): o GESTO da Início mudou de lugar — o clique
-    no seletor marca, e quem aplica é o "Aplicar" do rodapé. O invariante NÃO
-    mudou, e é por isso que este teste continua existindo em vez de sair: as
-    duas abas têm de chegar à MESMA sequência de IPC, senão voltam a poder
-    mostrar estados diferentes do mesmo sistema.
-
-    Por isso o caminho da Início aqui é o completo — marcar E aplicar. Medir só
-    o clique diria "a Início não emite nada", que é verdade e não é o ponto.
-    """
+    """Aceite do HARM-01: alternar Início<->Emulação nunca mostra estados"""
     home = _HomeStub(flavor)
     home._home_mode_selector.set_active_id(mode_id)
     home._on_home_mode_changed(home._home_mode_selector)
     if mode_id == "gamepad":
-        # Os botões da Emulação dizem a máscara no próprio rótulo ("Xbox 360"),
-        # então o gesto equivalente na Início é escolher as DUAS coisas — que é
-        # o que a caixa "Quando o jogo abrir" oferece.
         home._home_flavor_selector.set_active_id(flavor)
         home._on_home_flavor_changed(home._home_flavor_selector)
     _RodapeStub(home._escolha_pendente or {}).aplicar()
@@ -413,17 +328,7 @@ def test_inicio_e_emulacao_emitem_a_mesma_sequencia(
 def test_a_inicio_sem_mascara_escolhida_nao_impoe_mascara_nenhuma(
     ipc: list[Call],
 ) -> None:
-    """AUTO-01.3, no caminho novo: quem não escolheu não manda.
-
-    Trocar só o modo ("Jogar pelo Hefesto") não é escolher máscara. O passo sai
-    SEM o campo, e o daemon preserva a que já está configurada — enquanto a aba
-    Emulação, cujos botões dizem a máscara no rótulo, manda o campo sempre.
-
-    A diferença é de DESENHO e está travada aqui de propósito: ecoar de volta a
-    máscara vigente parece inofensivo e recria, por outra porta, o "segundo dono
-    do valor" que a AUTO-01.3 enterrou — a GUI decidindo máscara por causa de um
-    payload que ela apenas leu.
-    """
+    """AUTO-01.3, no caminho novo: quem não escolheu não manda."""
     home = _HomeStub("dualsense")
     home._home_mode_selector.set_active_id("gamepad")
     home._on_home_mode_changed(home._home_mode_selector)
@@ -434,9 +339,6 @@ def test_a_inicio_sem_mascara_escolhida_nao_impoe_mascara_nenhuma(
     assert ligar and "flavor" not in ligar[0], (
         "a Início mandou uma máscara que ninguém escolheu"
     )
-
-
-# --- HARM-03: "Modo jogo" não é oferecido em "Controlar o PC" ---------------
 
 
 class _FakeButton:
@@ -461,8 +363,7 @@ class _GameModeStub(emulation_actions.EmulationActionsMixin):
 
 
 def test_modo_jogo_desabilitado_em_controlar_o_pc() -> None:
-    """Ligá-lo em desktop deixava o controle sem função NENHUMA (só faz
-    mouse/teclado nesse modo) e o tooltip afirmava o contrário."""
+    """Ligá-lo em desktop deixava o controle sem função NENHUMA (só faz"""
     stub = _GameModeStub()
     stub._sync_gamemode_button("desktop")
 
@@ -472,7 +373,7 @@ def test_modo_jogo_desabilitado_em_controlar_o_pc() -> None:
 
 def test_modo_jogo_disponivel_jogando_e_sem_explicacao_sobrando() -> None:
     stub = _GameModeStub()
-    stub._sync_gamemode_button("desktop")  # estado anterior: bloqueado
+    stub._sync_gamemode_button("desktop")
     stub._sync_gamemode_button("gamepad")
 
     assert stub.pause_btn.sensitive is True
@@ -480,9 +381,7 @@ def test_modo_jogo_disponivel_jogando_e_sem_explicacao_sobrando() -> None:
 
 
 def test_modo_jogo_desabilitado_em_jogar_direto_sony() -> None:
-    """EMU-07: no Modo Nativo o jogo fala direto com o controle — não há
-    mouse/teclado nem gamepad virtual para suspender, então "Modo jogo" fica
-    bloqueado (antes ficava clicável e o toast mentia "gamepad ativo")."""
+    """EMU-07: no Modo Nativo o jogo fala direto com o controle — não há"""
     stub = _GameModeStub()
     stub._sync_gamemode_button("native")
 

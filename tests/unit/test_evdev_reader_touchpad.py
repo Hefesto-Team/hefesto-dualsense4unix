@@ -1,9 +1,4 @@
-"""Cobertura de TouchpadReader (INFRA-EVDEV-TOUCHPAD-01).
-
-Testes sem hardware: mocks de `evdev.list_devices` e `evdev.InputDevice`.
-A região é calculada por função pura `_region_from_x`; o loop é testado
-injetando events sintéticos no `_handle_event`.
-"""
+"""Cobertura de TouchpadReader (INFRA-EVDEV-TOUCHPAD-01)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -35,12 +30,7 @@ def _fake_input_device(
 class TestFindDualsenseTouchpadEvdev:
     @pytest.fixture(autouse=True)
     def _no_real_sysfs(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """BUG-TEST-TOUCHPAD-SYSFS-NONHERMETIC-01: `find_dualsense_touchpad_evdev`
-        chama `_is_virtual_evdev`, que lê `/sys/class/input/` REAL. Com o daemon
-        rodando na máquina da usuária, seus nós uinput (event21+ virtuais) faziam
-        os paths MOCKADOS (event22) serem tratados como virtuais e descartados —
-        o teste passava/falhava conforme o daemon estivesse no ar. Isola o filtro
-        aqui (os testes dedicados de `_is_virtual_evdev` exercitam o real)."""
+        """BUG-TEST-TOUCHPAD-SYSFS-NONHERMETIC-01: `find_dualsense_touchpad_evdev`"""
         monkeypatch.setattr(
             "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
             lambda _path: False,
@@ -48,13 +38,7 @@ class TestFindDualsenseTouchpadEvdev:
 
     @staticmethod
     def _descobrir(nos: dict[str, tuple[str, int, int]]) -> Path | None:
-        """Publica os nós no sysfs de mentira e chama a descoberta.
-
-        A descoberta lê vendor, product e nome no sysfs e não abre nó
-        nenhum (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026): o
-        `evdev.InputDevice` que reprova no primeiro `open` é a outra metade
-        da régua.
-        """
+        """Publica os nós no sysfs de mentira e chama a descoberta."""
         from hefesto_dualsense4unix.core import evdev_reader as er
         from tests.unit.sysfs_de_entrada_de_mentira import publicar_no
 
@@ -93,11 +77,7 @@ class TestFindDualsenseTouchpadEvdev:
         assert result is None
 
     def test_ignora_outro_vendor(self) -> None:
-        """Outro touchpad (ex: laptop) com 'Touchpad' no nome não casa por vendor.
-
-        O nome casa de propósito (é o de um touchpad de notebook, com a mesma
-        palavra): quem recusa aqui é o vendor, e só ele.
-        """
+        """Outro touchpad (ex: laptop) com 'Touchpad' no nome não casa por vendor."""
         result = self._descobrir({
             "/dev/input/event5": ("ELAN0501:00 04F3:3060 Touchpad", 0x04F3, 0x3060),
         })
@@ -105,10 +85,7 @@ class TestFindDualsenseTouchpadEvdev:
 
 
 class TestFindIgnoraVirtual:
-    """find_dualsense_evdev ignora o gamepad virtual (uinput) — FEAT-DSX-GAMEPAD-FLAVOR-01.
-
-    Sem isso, o daemon poderia ler o próprio device virtual (mesmo VID/PID Sony).
-    """
+    """find_dualsense_evdev ignora o gamepad virtual (uinput) — FEAT-DSX-GAMEPAD-FLAVOR-01."""
 
     def test_is_virtual_evdev_detecta_caminho_virtual(
         self, monkeypatch: pytest.MonkeyPatch
@@ -205,11 +182,9 @@ class TestTouchpadReaderBehavior:
             BTN_LEFT=272,
             BTN_TOUCH=330,
         )
-        # ABS_X = 300 (esquerda)
         reader._handle_event(
             SimpleNamespace(type=3, code=0, value=300), ecodes
         )
-        # BTN_LEFT value=1 (press)
         reader._handle_event(
             SimpleNamespace(type=1, code=272, value=1), ecodes
         )
@@ -248,7 +223,6 @@ class TestTouchpadReaderBehavior:
         reader._handle_event(
             SimpleNamespace(type=3, code=0, value=300), ecodes
         )
-        # ABS_Y com code diferente (1) — deve ser ignorado
         reader._handle_event(
             SimpleNamespace(type=3, code=1, value=500), ecodes
         )
@@ -305,10 +279,10 @@ class TestTouchpadReaderMotion:
     def test_acumula_delta_enquanto_dedo_apoiado(self) -> None:
         reader = TouchpadReader(device_path=Path("/dev/input/event22"))
         _touch(reader, True)
-        _abs_x(reader, 300)  # seeda âncora — não move
-        _abs_x(reader, 350)  # +50
-        _abs_y(reader, 500)  # seeda âncora Y — não move
-        _abs_y(reader, 480)  # -20
+        _abs_x(reader, 300)
+        _abs_x(reader, 350)
+        _abs_y(reader, 500)
+        _abs_y(reader, 480)
         assert reader.consume_motion() == (50, -20)
 
     def test_consume_zera_o_acumulado(self) -> None:
@@ -317,7 +291,6 @@ class TestTouchpadReaderMotion:
         _abs_x(reader, 100)
         _abs_x(reader, 130)
         assert reader.consume_motion() == (30, 0)
-        # Segunda drenagem sem novo movimento = zero.
         assert reader.consume_motion() == (0, 0)
 
     def test_sem_dedo_nao_acumula(self) -> None:
@@ -334,13 +307,13 @@ class TestTouchpadReaderMotion:
         reader = TouchpadReader(device_path=Path("/dev/input/event22"))
         _touch(reader, True)
         _abs_x(reader, 300)
-        _abs_x(reader, 400)  # +100
+        _abs_x(reader, 400)
         assert reader.consume_motion() == (100, 0)
         _touch(reader, False)
-        _touch(reader, True)  # reapoiou
-        _abs_x(reader, 900)  # salto de 400→900 NÃO conta (re-seed)
+        _touch(reader, True)
+        _abs_x(reader, 900)
         assert reader.consume_motion() == (0, 0)
-        _abs_x(reader, 950)  # agora sim +50
+        _abs_x(reader, 950)
         assert reader.consume_motion() == (50, 0)
 
     def test_reset_on_disconnect_zera_movimento(self) -> None:
@@ -350,6 +323,5 @@ class TestTouchpadReaderMotion:
         _abs_x(reader, 200)
         reader._reset_on_disconnect()
         assert reader.consume_motion() == (0, 0)
-        # Pós-reset o dedo é considerado solto: ABS_X sozinho não acumula.
         _abs_x(reader, 500)
         assert reader.consume_motion() == (0, 0)

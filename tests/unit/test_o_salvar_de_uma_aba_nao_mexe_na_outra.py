@@ -52,16 +52,11 @@ from hefesto_dualsense4unix.profiles import loader
 
 NOME = "PRAGMATA"
 
-#: OS QUATRO CONTROLES DO PERFIL DELA, com endereço FORJADO (faixa `aa:bb:cc` e
-#: `02:fe:`), na grafia do mapa `controllers` (sem os dois-pontos).
 P3 = "aabbcc000003"
 P2 = "aabbcc0000d8"
 P4 = "aabbcc0000ab"
 P1 = "02fe000000f0"
 
-#: O PERFIL COMO ESTAVA NO DISCO DELA ANTES DO SALVAR, com as chaves trocadas.
-#: Ele tem opinião em toda seção que o vivo alcança — é o que torna a régua
-#: capaz de ver um atravessamento em qualquer uma delas.
 PERFIL: dict[str, Any] = {
     "name": NOME, "version": 1,
     "match": {"type": "criteria", "window_class": ["steam_app_3357650"],
@@ -105,8 +100,6 @@ PERFIL: dict[str, Any] = {
               "confirmada_por": "silencio"},
 }
 
-#: O …:03 COMO O DAEMON O PUBLICAVA ÀS 18:38:37: o microfone LIGADO no aparelho
-#: contra o `mic.muted=true` do disco; o resto igual ao disco.
 VIVO_DAS_18H38: dict[str, Any] = {
     "uniq": P3, "connected": True, "transport": "bt", "is_primary": True,
     "lightbar_rgb": [255, 0, 0], "lightbar_on": True, "lightbar_source": "sysfs",
@@ -116,8 +109,6 @@ VIVO_DAS_18H38: dict[str, Any] = {
     "sensores": {"giroscopio_ligado": True, "acelerometro_ligado": True},
 }
 
-#: O MESMO CONTROLE COM O VIVO DIVERGINDO EM TODA SEÇÃO que o daemon publica
-#: por peça — a luz, o alto-falante, o microfone e os sensores.
 VIVO_QUE_DIVERGE: dict[str, Any] = {
     **VIVO_DAS_18H38,
     "lightbar_rgb": [0, 0, 255],
@@ -126,8 +117,6 @@ VIVO_QUE_DIVERGE: dict[str, Any] = {
     "sensores": {"giroscopio_ligado": False, "acelerometro_ligado": True},
 }
 
-#: OS GLOBAIS QUE O DAEMON PUBLICA, divergindo do disco na vibração e no
-#: mouse.
 MESA_QUE_DIVERGE: dict[str, Any] = {
     "rumble_policy": "max",
     "rumble_passthrough": False,
@@ -151,7 +140,6 @@ class PonteDeMentira:
         self.chamadas.append(f"profile_switch:{nome}")
         return True
 
-    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
     def profile_reaplicar(self, nome: str) -> bool:
         self.chamadas.append(f"profile_reaplicar:{nome}")
         return True
@@ -166,11 +154,7 @@ class PonteDeMentira:
 
 @pytest.fixture(autouse=True)
 def _perfil_no_disco(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O perfil no disco hermético da suíte (o `XDG_CONFIG_HOME` do conftest).
-
-    Gravado pelo PRÓPRIO produto, para que a representação do arquivo seja a
-    de sempre e a régua compare o gesto, não a forma do fixture.
-    """
+    """O perfil no disco hermético da suíte (o `XDG_CONFIG_HOME` do conftest)."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", NOME, raising=False)
@@ -229,9 +213,6 @@ def _fora_da_secao(mudou: dict[str, Any], secoes: frozenset[str]) -> dict[str, A
     return {k: v for k, v in mudou.items() if _secao(k) not in secoes}
 
 
-# --------------------------------------------------------------------------
-# 1. o Salvar do rodapé, com o estado dela das 18:38:37
-# --------------------------------------------------------------------------
 def test_o_caso_das_18h38_da_vibracao() -> None:
     """O clique dela, com o estado dela: o microfone e a fonte do …:03 ficam."""
     antes = _o_disco()
@@ -263,14 +244,7 @@ def test_o_volume_da_02_guarda_a_fonte_e_a_rota() -> None:
 
 
 def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
-    """O Salvar da 02 regrava o microfone da peça inteiro: o mudo, o volume e o ganho.
-
-    É a assinatura da escrita das 18:40:14 de 26/09 no Freestyle dela
-    (`mic.volume` 64 → ausente): o Salvar remontava o microfone com o que o
-    daemon publica, e o daemon não publica o ganho, nem o volume enquanto o
-    canal não responde. Desde 27/09 ele lê o disco, e o aparelho aberto aqui
-    (o `mic_mudo` falso) também não entra.
-    """
+    """O Salvar da 02 regrava o microfone da peça inteiro: o mudo, o volume e o ganho."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     cru = json.loads(json.dumps(PERFIL))
@@ -291,9 +265,6 @@ def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
         "ainda sem resposta")
 
 
-# --------------------------------------------------------------------------
-# 2. os escritores por seção: a 10, a 05 e a 02
-# --------------------------------------------------------------------------
 def test_o_editor_da_10_so_muda_o_campo_dele() -> None:
     """Mudar a prioridade grava a prioridade, e o microfone fica."""
     antes = _o_disco()
@@ -317,8 +288,6 @@ def test_a_forca_da_05_so_muda_a_vibracao() -> None:
 
 @pytest.mark.parametrize(("campos", "secao"), [
     ({"speaker": {"volume": 50}}, "speaker"),
-    # O mudo não passa por aqui desde 29/09 (O-MUDO-E-DO-CONTROLE-01): é do
-    # controle. O caso do microfone mede o volume da peça.
     ({"mic": {"volume": 55}}, "mic"),
 ])
 def test_o_som_da_02_so_muda_a_secao_do_gesto(campos: dict[str, Any], secao: str) -> None:

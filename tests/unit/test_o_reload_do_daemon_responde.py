@@ -41,12 +41,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
 
 def _config_como_no_daemon_vivo() -> DaemonConfig:
-    """Um `DaemonConfig` com os campos que o daemon preenche em runtime.
-
-    NASCER LIMPO É O PONTO: `DaemonConfig()` tem ZERO campos não-serializáveis,
-    e é por isso que o defeito atravessou. Só a config VIVA explode — quem
-    testasse a de fábrica veria verde para sempre.
-    """
+    """Um `DaemonConfig` com os campos que o daemon preenche em runtime."""
     cfg = DaemonConfig()
     for f in dataclasses.fields(cfg):
         if f.name.endswith("applier") or "orcamento" in f.name:
@@ -55,21 +50,12 @@ def _config_como_no_daemon_vivo() -> DaemonConfig:
 
 
 def test_a_config_de_fabrica_ja_serializava() -> None:
-    """A prova de que o defeito NÃO se via na config de fábrica.
-
-    Sem esta linha, alguém leria a régua abaixo e pensaria que bastava testar
-    `DaemonConfig()` — que é exatamente o que não bastava.
-    """
+    """A prova de que o defeito NÃO se via na config de fábrica."""
     json.dumps(dataclasses.asdict(DaemonConfig()))
 
 
 def test_a_config_viva_explodia_no_json_cru() -> None:
-    """E a prova de que a viva explodia. É o defeito, reproduzido.
-
-    Se um dia esta linha parar de levantar, o `DaemonConfig` deixou de carregar
-    função — e aí a cura vira desnecessária, o que é uma boa notícia que alguém
-    tem de ver em vez de adivinhar.
-    """
+    """E a prova de que a viva explodia. É o defeito, reproduzido."""
     with pytest.raises(TypeError, match="not JSON serializable"):
         json.dumps(dataclasses.asdict(_config_como_no_daemon_vivo()))
 
@@ -81,33 +67,19 @@ def test_a_resposta_do_reload_atravessa_o_json() -> None:
 
 
 def test_nenhum_campo_some_da_resposta() -> None:
-    """Filtrar não pode virar esconder.
-
-    Quem lê a resposta do `reload` está conferindo o que passou a valer. Um
-    campo que sumisse calado faria a config nova parecer menor do que é — e a
-    diferença apareceria como "essa opção não existe" muito depois.
-    """
+    """Filtrar não pode virar esconder."""
     cfg = _config_como_no_daemon_vivo()
     assert set(_config_que_viaja(cfg)) == {f.name for f in dataclasses.fields(cfg)}
 
 
 def test_o_que_nao_viaja_diz_que_nao_viajou() -> None:
-    """E o campo que ficou de fora carrega a marca, não um `null`.
-
-    `null` seria indistinguível de um campo realmente vazio, e é assim que uma
-    resposta passa a mentir devagar.
-    """
+    """E o campo que ficou de fora carrega a marca, não um `null`."""
     viajou = _config_que_viaja(_config_como_no_daemon_vivo())
     assert viajou["orcamento_da_mesa"] == "<não viaja por IPC>"
 
 
 def test_o_handler_usa_a_funcao_e_nao_o_asdict_cru() -> None:
-    """O elo, lido na ÁRVORE — e não por `grep`, que casaria o comentário.
-
-    A primeira forma que me ocorreu foi procurar a string `asdict(new_cfg)` no
-    fonte, e ela apareceria dentro desta própria docstring se estivesse citada.
-    É a forma que esta casa mais paga: *a régua confunde a PALAVRA com o ATO*.
-    """
+    """O elo, lido na ÁRVORE — e não por `grep`, que casaria o comentário."""
     import ast
     import inspect
 

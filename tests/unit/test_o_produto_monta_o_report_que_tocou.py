@@ -35,10 +35,8 @@ import pytest
 import hefesto_dualsense4unix.core.ds_output_report as rep
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
-#: O tamanho do `0x35` com o byte de id — declarado no descritor do aparelho.
 TAMANHO_035 = 334
 
-#: Um quadro Opus de mentira, do tamanho exato que o CBR de 160 kbps fecha.
 QUADRO = bytes(range(200))
 
 
@@ -51,12 +49,7 @@ def report_como_o_ensaio_monta(
     buffer: bytes,
     com_mic: bool = False,
 ) -> bytes:
-    """A montagem do ENSAIO, escrita à mão — é ela que tocou.
-
-    Deliberadamente uma segunda implementação: se ela fosse importada do
-    módulo, este arquivo mediria o produto contra si mesmo, que é o defeito
-    que a casa nomeia como *trava medida contra a própria saída*.
-    """
+    """A montagem do ENSAIO, escrita à mão — é ela que tocou."""
     pkt = bytearray(TAMANHO_035)
     pkt[0] = 0x35
     pkt[1] = (seq & 0x0F) << 4
@@ -101,12 +94,7 @@ def test_os_bytes_sao_os_que_ela_ouviu(
 
 
 def test_o_padrao_do_produto_e_o_que_tocou() -> None:
-    """Quem manda som sem escolher arranjo recebe o MEDIDO, não um candidato.
-
-    Os dois candidatos de fonte externa descrevem o `0x39` de 547 B com DOIS
-    quadros, e as nove passadas de áudio desta casa bateram todas neles. O
-    padrão tem de ser o que a orelha dela aprovou.
-    """
+    """Quem manda som sem escolher arranjo recebe o MEDIDO, não um candidato."""
     assert af.ARRANJO_PADRAO is af.ARRANJO_035
     assert af.ARRANJO_PADRAO.degrau == 0x35, "o degrau que toca é o QUINTO, não o teto"
     assert af.ARRANJO_PADRAO.quadros_de_audio == 1, (
@@ -120,14 +108,7 @@ def test_o_padrao_do_produto_e_o_que_tocou() -> None:
 
 
 def test_a_cadencia_e_a_medida_e_nao_a_nominal() -> None:
-    """512/48000, e não 10 ms — o aparelho come 93,75 quadros/s, não 100.
-
-    Ela mede a CADÊNCIA DECLARADA no arranjo, que o ``rodar()`` e o ensaio de
-    bancada usam. O que a ponte do produto manda é outra medida: a ponte não
-    dorme, e quem lhe dá o ritmo é a taxa da fonte
-    (``test_a_ponte_do_som_anda_no_ritmo_do_controle.py``). Até 29/09/2026 a
-    frase desta régua dizia «esta bomba manda» enquanto a ponte mandava 100/s.
-    """
+    """512/48000, e não 10 ms — o aparelho come 93,75 quadros/s, não 100."""
     bomba = af.BombaDeSomPeloRadio(
         arranjo=af.ARRANJO_035, fonte=lambda n: b"\x00" * n
     )
@@ -169,16 +150,7 @@ def test_o_contador_de_quadros_avanca_a_cada_report() -> None:
 
 
 def test_o_contador_conta_QUADROS_e_nao_reports() -> None:  # noqa: N802
-    """Um arranjo de DOIS quadros avança de dois em dois. A distinção é real.
-
-    ESTE TESTE NASCEU FROUXO E FOI APERTADO NA MORDIDA, em 10/09/2026. Ele
-    média contra o `ARRANJO_035`, que carrega UM quadro — e ali
-    `+= quadros_de_audio` e `+= 1` dão o mesmo número. A mordida
-    (`self._quadros_mandados += 1`) passou, e uma régua que passa com a cura
-    arrancada não mede nada.
-
-    A cura da régua é medir contra um arranjo que carrega DOIS.
-    """
+    """Um arranjo de DOIS quadros avança de dois em dois. A distinção é real."""
     de_dois = dataclasses.replace(af.ARRANJO_DS5DONGLE, controle_conta_quadros=True)
     assert de_dois.quadros_de_audio == 2, (
         "este teste só morde se o arranjo levar mais de um quadro"
@@ -192,11 +164,7 @@ def test_o_contador_conta_QUADROS_e_nao_reports() -> None:  # noqa: N802
 
 
 def test_o_arranjo_sem_haptico_nao_estraga_o_byte_de_id() -> None:
-    """A guarda do háptico: sem ela o `[0]` vira `0xD2` e o firmware cala.
-
-    É o defeito mais caro possível nesta área, porque o sintoma é exatamente o
-    mesmo de um payload errado: silêncio.
-    """
+    """A guarda do háptico: sem ela o `[0]` vira `0xD2` e o firmware cala."""
     assert af.ARRANJO_035.len_haptico == 0
     assert af.ARRANJO_035.pos_tag_haptico == 0, (
         "este teste só prova o que promete se a posição do háptico for 0 — é "

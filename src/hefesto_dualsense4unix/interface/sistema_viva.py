@@ -51,10 +51,6 @@ import sys
 import time
 from typing import Any
 
-# A JANELA, AS DUAS PONTES E A GUARDA DE CARGA VÊM DA BIBLIOTECA, e é ela que
-# crava os quatro pinos de `gi.require_version` (com o Gdk DEPOIS do Gtk).
-# Importá-la ANTES de `gi.repository` é o que garante a ordem — não é import
-# decorativo, é a ordem de inicialização do gi.
 from hefesto_dualsense4unix.gui import aba_sistema  # noqa: E402  isort:skip
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
 
@@ -63,34 +59,18 @@ from gi.repository import GLib, Gtk  # noqa: E402
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito arquivos
-# desta casa cravavam o caminho absoluto da árvore DELA, e por isso rodar uma
-# CÓPIA reescrevia o mockup dela.
-# A RAIZ É `parents[2]` — ver a nota em `hefesto_vivo.py`, medida em
-# 04/09/2026: com `[1]` o `RAIZ / "src"` virava `src/src`, que não existe.
 RAIZ = AQUI.parents[2]
 PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 TITULO_ESPERADO = "Hefesto — aba SISTEMA"
 
 import mesa_viva  # noqa: E402  (só pelo `estado_do_daemon`, que é leitura pura)
 
-#: O tique rápido: o mesmo período da janela de hoje
-#: (`app/constants.LIVE_POLL_INTERVAL_MS`). Ele lê SÓ o IPC.
 TIQUE_MS = 100
-#: A faixa lenta: `systemctl` e o exame de disco. São subprocessos e leituras de
-#: arquivo — a 10 Hz seriam vinte por segundo, que é o custo que a carona de
-#: 0,5 Hz existe para não pagar.
 TIQUE_LENTO_MS = 2000
 
 
-# ---------------------------------------------------------------------------
-# As leituras de verdade — tudo o que sai deste processo
-# ---------------------------------------------------------------------------
 def _systemctl(*args: str) -> str | None:
-    """Uma linha de `systemctl --user`, ou `None` quando nem deu para perguntar.
-
-    `None` **não é** "desligado": é "não sei". A diferença chega à tela.
-    """
+    """Uma linha de `systemctl --user`, ou `None` quando nem deu para perguntar."""
     try:
         proc = subprocess.run(
             ["systemctl", "--user", *args],
@@ -160,11 +140,7 @@ def _lugares_do_pid() -> list[str]:
 
 
 def _exame() -> list[tuple[str, str]] | None:
-    """O `storm_report`, que é READ-ONLY por contrato do próprio módulo.
-
-    Custa 2 a 5 ms nesta máquina (medido em 29/08), e por isso anda na faixa
-    lenta e não no tique de 100 ms.
-    """
+    """O `storm_report`, que é READ-ONLY por contrato do próprio módulo."""
     try:
         from hefesto_dualsense4unix.integrations.storm_doctor import (
             controles_no_cabo,
@@ -179,19 +155,11 @@ def _exame() -> list[tuple[str, str]] | None:
 
 
 #: O último `state_full` visto, para o exame poder usar o denominador honesto
-#: (quantos controles estão NO CABO). Uma lista de um elemento porque o exame
-#: roda noutro tique.
 _ULTIMO_STATE: list[dict[str, Any] | None] = [None]
 
 
 def _frases_de_janela(state: Any) -> tuple[str | None, str | None]:
-    """As duas frases do produto sobre o detector de janela.
-
-    A longa da PROMESSA (`descrever_deteccao_de_janela`, o perfil troca sozinho?)
-    e a do MECANISMO (`descrever_display_grafico`, por onde ele enxerga). A
-    segunda tem **zero chamadores** no produto de hoje — é a cura escrita e
-    nunca ligada, e esta aba é o primeiro chamador dela.
-    """
+    """As duas frases do produto sobre o detector de janela."""
     try:
         from hefesto_dualsense4unix.app.actions.ambiente_na_tela import (
             descrever_display_grafico,
@@ -204,9 +172,6 @@ def _frases_de_janela(state: Any) -> tuple[str | None, str | None]:
     return descrever_deteccao_de_janela(state), descrever_display_grafico(state)
 
 
-# ---------------------------------------------------------------------------
-# O bootstrap: o que a PÁGINA passa a saber fazer
-# ---------------------------------------------------------------------------
 BOOTSTRAP = r"""
 window.HEF = (function(){
   const qa = (s,r)=>Array.from((r||document).querySelectorAll(s));
@@ -362,9 +327,6 @@ window.HEF = (function(){
 """
 
 
-# ---------------------------------------------------------------------------
-# A janela
-# ---------------------------------------------------------------------------
 class Janela:
     """A aba Sistema viva: o tique, a pintura e os doze gestos."""
 
@@ -388,7 +350,6 @@ class Janela:
         self.ponte = self.tela.ponte
         self.janela = self.tela.janela
 
-    # -- carga -------------------------------------------------------------
     def _saiu_da_aba(self, titulo: str) -> None:
         """Ela clicou na tira. Sair da Sistema só DESLIGA a pintura."""
         self.pronto = False
@@ -417,11 +378,6 @@ class Janela:
             if self.args.prova_gesto:
                 self._marcar_gestos_de_mentira()
             if self.args.arranca_enderecos:
-                # A MORDIDA DO ENDEREÇO: arranca os `data-id` que o `aba09.py`
-                # escreve e vê a pintura DESABAR. Um endereço a menos não
-                # levanta erro nenhum no WebKit — o `querySelector` devolve
-                # `null` e o valor simplesmente não é escrito. Se a conta não
-                # cair, os endereços não estavam sendo usados.
                 GLib.timeout_add(
                     2000,
                     lambda: (
@@ -444,22 +400,13 @@ class Janela:
         )
 
     def _marcar_gestos_de_mentira(self) -> None:
-        """Cliques SINTÉTICOS, para provar o caminho tela → Python → eco.
-
-        A ORDEM É A MORDIDA. O "Retomar" é clicado PRIMEIRO, com o Hefesto sem
-        pausa: ele está travado e tem de produzir ZERO gestos. Uma régua que
-        clicasse os doze em qualquer ordem não distinguiria "travado" de "sem
-        ouvinte" — que é exatamente o defeito que a aba Controles pagou em 29/08,
-        quando dois botões de som eram pintados, tinham `cursor:pointer` e não
-        tinham ouvinte nenhum.
-        """
+        """Cliques SINTÉTICOS, para provar o caminho tela → Python → eco."""
         roteiro = [(1400, "retomar"), (1700, "atualizar"), (2000, "ver-detalhes"),
                    (2300, "restaurar-de-fabrica"), (2600, "refazer-consertos")]
         for ms, gesto in roteiro:
             script = f"document.querySelector('[data-gesto=\"{gesto}\"]').click()"
             GLib.timeout_add(ms, lambda s=script: (self._js(s), False)[1])
 
-    # -- os tiques ---------------------------------------------------------
     def _estado(self) -> dict[str, Any] | None:
         """O `state_full` de agora — do daemon dela, ou do dublê, ou `None`.
 
@@ -504,14 +451,7 @@ class Janela:
         return True
 
     def _perfil_da_mesa(self) -> str | None:
-        """O perfil de bateria escolhido hoje — do produto, inteiro.
-
-        `perfil_na_tela(None)` já é exatamente esta pergunta, e já traz a
-        decisão que importa escrita no produto: **`None` quer dizer NENHUM, e a
-        ausência não afunda "Tudo ligado"** (a nota de `PERFIL_POR_TETO`). A
-        primeira versão desta função refazia a tradução chave→perfil com um
-        laço próprio — um segundo dono do mesmo mapa, e o dono existia ao lado.
-        """
+        """O perfil de bateria escolhido hoje — do produto, inteiro."""
         try:
             from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
                 perfil_na_tela,
@@ -521,14 +461,8 @@ class Janela:
         except Exception:
             return None
 
-    # -- os gestos ---------------------------------------------------------
     def _gesto(self, o: dict[str, Any]) -> None:
-        """Um gesto da tela chegou. Registrado, com o dono, e ecoado de volta.
-
-        NADA É APLICADO, e a exceção é o `atualizar` — que só relê. É a mesma
-        disciplina do piloto da aba Controles: a aba é para ela AVALIAR, e um
-        gesto que grave sem ela mandar é dano.
-        """
+        """Um gesto da tela chegou. Registrado, com o dono, e ecoado de volta."""
         nome = str(o.get("gesto") or "")
         if nome == "pintou":
             self.valores.append(-int(o.get("valores") or 0))
@@ -573,12 +507,6 @@ def main(argv: list[str] | None = None) -> int:
     print(f"gestos ouvidos: {len(janela.gestos)}")
     print(f"recusas da ponte: {len(janela.ponte.recusas)}")
 
-    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
-    # guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, estendida às cinco
-    # na costura da ONDA C. Aqui a contagem não é um `voltas`: esta bancada
-    # guarda os custos do tique em `janela.valores`, e um tique medido é uma
-    # volta dada. O `--sem-ponte` é a exceção e é a MORDIDA: ele desliga a
-    # pintura de propósito, e zero volta ali é o resultado esperado.
     if not custos and not args.sem_ponte:
         print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1

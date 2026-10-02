@@ -1,38 +1,4 @@
-"""A FAMÍLIA DO `getattr` SEM DONO — o método que achou o R-08, virado régua.
-
-O DEFEITO QUE ESTA RÉGUA PEGA, e ele já custou duas vezes: um
-``getattr(self, "_alguma_coisa", None)`` sobre um nome que **módulo nenhum de
-``src/`` define**. A chamada nunca estoura — devolve o default e o ramo desce
-pelo caminho de recuo, calado. Enquanto a janela GTK existia, ela é que
-fornecia esses nomes; a janela saiu do disco em ``f5311616`` (06/09/2026,
-``D-0609-GTK-LEVA-INTEIRA``) e os ramos ficaram apontando para fora.
-
-AS DUAS OCORRÊNCIAS QUE ORIGINARAM A RÉGUA, e a diferença entre elas importa:
-
-* ``_tem_edicao_pendente`` (08/09) — o recuo era *"não há nada a proteger"*:
-  a guarda R-08 passava a mentir e uma edição não salva dela podia ser
-  repintada por cima. **Voltou**, como ``profile_writer.tem_edicao_pendente``.
-* ``_bootstrap_draft_async`` (08/09, irmão) — o recuo é ``_refresh_all_tabs``,
-  documentado, que repinta a memória sem reler o disco. **Não volta**, e a
-  medição de por que está na lápide A FAMÍLIA DO R-08, no fim de
-  ``app/actions/profiles_actions.py``.
-
-O QUE MEDIU AS DUAS não foi ler código com atenção — foi cruzar duas listas: os
-nomes consultados por ``getattr``/``hasattr`` sobre ``self`` contra os nomes que
-``src/`` define. É uma pergunta mecânica, e por isso vira régua: a próxima
-pessoa não precisa ter a mesma atenção que o conferente teve.
-
-POR QUE TESTE E NÃO PORTÃO: a lista dos portões tem um dono só
-(``scripts/portoes.sh``) e ``test_portao_a_lista_de_portoes_e_uma_so.py`` exige
-que ela e a do CI batam — um portão a mais é decisão de duas listas. E esta
-pergunta é da CAUDA: a leva de 08/09 mediu que os 50 portões ficaram verdes com
-a guarda R-08 já sem dono. Quem alcança a cauda é a suíte.
-
-A DECLARAÇÃO NÃO É ISENÇÃO, e as três provas abaixo é que garantem isso: um
-órfão declarado tem de continuar órfão (senão a declaração está velha) **e** tem
-de continuar sendo consultado (senão a declaração é peso morto). Declarar sem
-razão escrita não passa — a razão é campo obrigatório do dicionário.
-"""
+"""A FAMÍLIA DO `getattr` SEM DONO — o método que achou o R-08, virado régua."""
 
 from __future__ import annotations
 
@@ -45,10 +11,6 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 
-#: Nome consultado por `getattr`/`hasattr` que NINGUÉM em `src/` define, com a
-#: razão medida. Entrar aqui é decisão registrada, não conveniência: as três
-#: provas deste arquivo cobram que a declaração continue verdadeira nos dois
-#: sentidos.
 ORFAOS_DECLARADOS: dict[str, str] = {
     "_bootstrap_draft_async": (
         "A peça 2 da máquina do R-08 — o carregador que RELIA o perfil ativo "
@@ -96,13 +58,7 @@ class _Consultas(ast.NodeVisitor):
 
 
 class _Definicoes(ast.NodeVisitor):
-    """Todo jeito de um nome `_x` PASSAR A EXISTIR num objeto desta casa.
-
-    Larga de propósito: a pergunta é *"alguém em `src/` define este nome?"*, e
-    uma varredura estreita transformaria um dono legítimo em falso vermelho.
-    Errar para o lado do "tem dono" é o lado barato — o caro é acusar quem
-    escreveu certo, que é a forma de instrumento falso que esta casa mais pagou.
-    """
+    """Todo jeito de um nome `_x` PASSAR A EXISTIR num objeto desta casa."""
 
     def __init__(self, arq: pathlib.Path, saco: dict[str, list[Any]]) -> None:
         self.arq = arq
@@ -199,12 +155,7 @@ def _relativo(arq: pathlib.Path) -> str:
 def test_nenhum_getattr_de_src_aponta_para_nome_que_ninguem_define(
     censo: tuple[dict[str, list[Any]], dict[str, list[Any]]],
 ) -> None:
-    """A varredura que achou as duas peças do R-08, agora permanente.
-
-    MORDIDA (08/09/2026): tirado `_bootstrap_draft_async` de
-    `ORFAOS_DECLARADOS`, esta prova reprova nomeando
-    `app/actions/profiles_actions.py:3361`. Devolvido, verde.
-    """
+    """A varredura que achou as duas peças do R-08, agora permanente."""
     consultas, definicoes = censo
     sem_dono = {
         nome: onde
@@ -231,13 +182,7 @@ def test_nenhum_getattr_de_src_aponta_para_nome_que_ninguem_define(
 def test_orfao_declarado_que_ganhou_dono_perde_a_declaracao(
     censo: tuple[dict[str, list[Any]], dict[str, list[Any]]],
 ) -> None:
-    """Declaração velha é pior que nenhuma: ela silencia a régua sobre um fato
-    que mudou.
-
-    MORDIDA (08/09/2026): posto um `def _bootstrap_draft_async(self): ...` em
-    `app/actions/profiles_actions.py`, esta prova reprova nomeando o arquivo e
-    a linha do dono novo. Arrancado, verde.
-    """
+    """Declaração velha é pior que nenhuma: ela silencia a régua sobre um fato"""
     _, definicoes = censo
     voltaram = {
         nome: definicoes[nome] for nome in ORFAOS_DECLARADOS if nome in definicoes
@@ -260,12 +205,7 @@ def test_orfao_declarado_que_ganhou_dono_perde_a_declaracao(
 def test_orfao_declarado_que_ninguem_mais_consulta_perde_a_declaracao(
     censo: tuple[dict[str, list[Any]], dict[str, list[Any]]],
 ) -> None:
-    """O outro sentido: sem o ramo, a declaração é peso morto.
-
-    MORDIDA (08/09/2026): trocado o `getattr` de `profiles_actions.py:3361` por
-    uma chamada direta a `_refresh_all_tabs`, esta prova reprova nomeando
-    `_bootstrap_draft_async`. Devolvido, verde.
-    """
+    """O outro sentido: sem o ramo, a declaração é peso morto."""
     consultas, _ = censo
     esquecidos = [nome for nome in ORFAOS_DECLARADOS if nome not in consultas]
     if esquecidos:
@@ -281,34 +221,11 @@ def test_orfao_declarado_que_ninguem_mais_consulta_perde_a_declaracao(
 def test_o_recuo_do_carregador_deixa_a_guarda_do_r08_de_pe(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O recuo repinta a memória — e NÃO pode declarar a edição dela salva.
-
-    Esta é a metade que a declaração do órfão não cobre. Sem o carregador,
-    `_recarregar_as_abas_do_perfil_ativo` cai em `_refresh_all_tabs`, que
-    repinta `self.draft`. O perigo não é repintar: é alguém "consertar" o recuo
-    fazendo `self._draft_baseline = self.draft` para o estado parecer coerente
-    — com isso `tem_edicao_pendente` responde `False`, a guarda R-08 desliga e a
-    edição não salva dela deixa de ser protegida, que é exatamente o estrago que
-    a peça 1 voltou para impedir.
-
-    MORDIDA (08/09/2026): acrescentado `self._draft_baseline = self.draft` ao
-    fim de `_recarregar_as_abas_do_perfil_ativo`, esta prova reprova com
-    *"o recuo apagou a edição pendente dela"*. Arrancado, verde.
-
-    NO DIA EM QUE O CARREGADOR VOLTAR esta prova reprova junto — e é para
-    reprovar. O carregador legítimo refaz a linha de base a partir do DISCO, e
-    então a bancada tem de ganhar um disco em vez de perder a régua. A lápide A
-    FAMÍLIA DO R-08 diz o que ele fazia, com o endereço do original.
-    """
+    """O recuo repinta a memória — e NÃO pode declarar a edição dela salva."""
     from hefesto_dualsense4unix.app.actions import footer_actions as fa
     from hefesto_dualsense4unix.app.actions import profiles_actions as pa
     from hefesto_dualsense4unix.app.actions.profile_writer import tem_edicao_pendente
 
-    # AS TRÊS PROVAS ACIMA LEEM O DISCO A PARTIR DO `__file__`; esta IMPORTA, e
-    # o import obedece ao `PYTHONPATH`. Se os dois divergirem, este arquivo
-    # estaria medindo duas árvores e chamando o resultado de uma — que é o
-    # instrumento falso de 04/09, quando a suíte inteira LIA o `src/` de outra
-    # árvore. Declarar qual das duas está em uso é regra desta casa.
     assert pathlib.Path(pa.__file__).resolve().is_relative_to(RAIZ), (
         f"a suíte importou `{pa.__file__}`, e a varredura leu `{RAIZ}` — duas "
         "árvores. Rode com o `PYTHONPATH` desta árvore antes de acreditar em "
@@ -322,8 +239,6 @@ def test_o_recuo_do_carregador_deixa_a_guarda_do_r08_de_pe(
         """Nem janela nem aba: o mixin sozinho, que é o estado de `src/` hoje."""
 
         def __init__(self) -> None:
-            # Dois `DraftConfig` diferentes = edição por salvar (R-08). Objetos
-            # crus bastam: `tem_edicao_pendente` só faz `draft != baseline`.
             self._draft_baseline = object()
             self.draft = object()
 

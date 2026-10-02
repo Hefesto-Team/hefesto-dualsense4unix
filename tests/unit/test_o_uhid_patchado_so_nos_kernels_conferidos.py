@@ -1,34 +1,4 @@
-"""O `uhid` patchado só se constrói nos kernels conferidos — GOVERNADOR-DO-RADIO-01.
-
-O `uhid` é o dono de TODO HID por Bluetooth da máquina. O DKMS da
-contrapressão (RADIO-AFOGADO-02) o substitui por um `uhid.c` de fábrica com
-duas linhas a mais; construído contra um kernel cujo `uhid.c` de fábrica é
-OUTRO, ele COMPILA LIMPO e devolve o arquivo errado — a correção do stable
-perdida em silêncio. O estudo de 23/09 pediu o pino (`BUILD_EXCLUSIVE_KERNEL`),
-e esta régua cobra quatro coisas:
-
-1. o pino existe, e a lista do `dkms.conf` é a MESMA do `patch/BASELINE`
-   (`KERNELS_VALIDADOS`), nos dois sentidos — a forma do `rtw88-usb`;
-2. um kernel que ninguém conferiu fica de fora;
-3. a procedência: o `uhid.c` da pasta é o `SHA256_PATCHED_C`, e o
-   `patch -R` devolve o `SHA256_VANILLA_C`;
-4. **a base é o stable de CADA kernel pinado**, e cada um tem o `srcversion`
-   de fábrica medido.
-
-**O QUARTO ITEM NASCEU DE UM DEFEITO, na conferência de 23/09/2026.** A base
-era o mainline v7.1 e o pino aceitava o 7.1.5-76070105 — cujo `uhid.c` de
-fábrica é o do stable v7.1.5, com o `hid_safe_input_report`. Os três itens de
-cima passavam, porque os três conferem a pasta contra ELA MESMA: o `BASELINE`
-e o `uhid.c` concordavam, e nenhum dos dois era o kernel da máquina. Quem
-respondeu sobre o aparelho foi o `srcversion` do `uhid.ko` de fábrica.
-
-A MORDIDA, feita em 23/09/2026: tirar a linha ``BUILD_EXCLUSIVE_KERNEL`` do
-``dkms.conf`` faz ``test_o_dkms_do_uhid_tem_pino_de_kernel`` reprovar; tirar um
-build da regex faz ``test_cada_kernel_validado_casa_o_pino`` reprovar; e o
-``BASELINE`` de antes da conferência (base v7.1, pino 7.0.11 e 7.1.5) faz
-``test_a_base_e_o_stable_de_cada_kernel_pinado`` reprovar. Devolvido o
-arquivo, md5 conferido.
-"""
+"""O `uhid` patchado só se constrói nos kernels conferidos — GOVERNADOR-DO-RADIO-01."""
 
 from __future__ import annotations
 
@@ -81,10 +51,6 @@ def test_cada_kernel_validado_casa_o_pino() -> None:
 def test_o_pino_nao_aceita_kernel_que_ninguem_conferiu() -> None:
     validados = set(_baseline()["KERNELS_VALIDADOS"].split())
     pino = _pino()
-    # O 7.0.11-76070011 está AQUI de propósito: o `uhid.ko` de fábrica dele é
-    # o do v7.1 (`srcversion` 553CF66B8F924EEA2B1428F, medido em 23/09/2026),
-    # e não a base de agora. Voltar a piná-lo pede refazer o ritual do
-    # `BASELINE` — e mexer nesta linha é a prova de que alguém o refez.
     for build in (
         "7.2.0-76070200", "7.1.6-76070106", "6.17.9-76061709", "7.1.5-1", "7.0.11-76070011",
     ):
@@ -118,12 +84,7 @@ def test_o_patch_desfeito_devolve_o_de_fabrica(tmp_path: Path) -> None:
 
 
 def test_a_base_e_o_stable_de_cada_kernel_pinado() -> None:
-    """O `uhid.c` de base é o da versão EXATA de cada kernel pinado.
-
-    Um tag do mainline não diz nada sobre o kernel da distribuição: o v7.1 e o
-    v7.1.5 têm `uhid.c` diferentes, e o pino que aceitou o 7.1.5 sobre a base
-    v7.1 desfazia o `hid_safe_input_report` do stable em silêncio.
-    """
+    """O `uhid.c` de base é o da versão EXATA de cada kernel pinado."""
     base = _baseline()
     versao_da_base = base["KERNEL_BASE"].removeprefix("v")
     for build in base["KERNELS_VALIDADOS"].split():
@@ -134,11 +95,7 @@ def test_a_base_e_o_stable_de_cada_kernel_pinado() -> None:
 
 
 def test_cada_kernel_pinado_tem_o_srcversion_de_fabrica_medido() -> None:
-    """O terceiro passo do ritual: a medida que prova o pino fica escrita.
-
-    O `srcversion` é o hash que o modpost tira do `uhid.c` que gerou o módulo
-    de fábrica — a única resposta que vem do aparelho, e não de um tag.
-    """
+    """O terceiro passo do ritual: a medida que prova o pino fica escrita."""
     base = _baseline()
     medidos: dict[str, str] = {}
     for par in base.get("SRCVERSION_DE_FABRICA", "").split():

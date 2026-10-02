@@ -47,10 +47,6 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as jogar
 
-#: UM 8BITDO POR RÁDIO, na forma que o daemon publica
-#: (`ipc_handlers._handle_controller_list`, chave `external`). O MAC leva a
-#: MÁSCARA DA CASA — octetos 4 e 5 zerados —, e o OUI `e4:17:d8` é o da 8BitDo,
-#: que é o único sinal capaz de desmentir o VID que o clone mente.
 UM_8BITDO: dict[str, Any] = {
     "name": "8BitDo Pro 2",
     "vid": "2dc8",
@@ -61,9 +57,6 @@ UM_8BITDO: dict[str, Any] = {
     "player_slot": 3,
 }
 
-#: UM PRO CONTROLLER POR RÁDIO — VID `057e` (Nintendo), que é o que acende o
-#: aviso do `hid-nintendo`. É a mesma armadilha que a linha 305 do CSV nomeia
-#: como SINAL dela.
 UM_PRO: dict[str, Any] = {
     "name": "Pro Controller",
     "vid": "057e",
@@ -86,16 +79,8 @@ def _ctx(externos: list[dict[str, Any]]) -> Contexto:
     return Contexto(state=dict(VIVO), mesa=[], conectados=[], externos=externos)
 
 
-# ---------------------------------------------------------------------------
-# 1. O CAMPO É PRÓPRIO — e a rota da sprint diz por quê
-# ---------------------------------------------------------------------------
 def test_o_externo_nao_entra_nos_assentos() -> None:
-    """`externos` é campo próprio: nunca dentro de `conectados` nem de `mesa`.
-
-    Somá-lo aos assentos faria o cabeçalho contar jogadores que não existem, a
-    fita oferecer um alvo que nenhum gesto alcança e
-    `apagar_os_lugares_sem_dono` disputar um cartão que não é dele.
-    """
+    """`externos` é campo próprio: nunca dentro de `conectados` nem de `mesa`."""
     ctx = _ctx([UM_8BITDO])
     assert ctx.externos == [UM_8BITDO]
     assert ctx.conectados == []
@@ -107,31 +92,18 @@ def test_o_contexto_nasce_sem_externo_nenhum() -> None:
     assert Contexto(state={}).externos == []
 
 
-# ---------------------------------------------------------------------------
-# 2. A ABA 01 — a linha 16 do CSV
-# ---------------------------------------------------------------------------
 def test_a_jogar_escreve_o_cartao_do_externo() -> None:
     """O cartão traz o NÚMERO, a MARCA e o transporte, pelos donos da frase."""
     html = jogar.pacote(_ctx([UM_8BITDO]))["externos"]
     assert 'class="ext-cartao"' in html
-    # O número é o SLOT GLOBAL de co-op — o mesmo que o Hefesto escreve no LED
     # de player do aparelho. Ele vem do `player_slot` que o daemon mandou, e não
-    # de uma conta local (NUMA-05).
     assert "Controle 3" in html
-    # A MARCA VEM DO OUI, e é o ponto: `brand_of` é a única função da casa que
-    # sabe desmentir o VID mentido por um clone em modo DualShock4.
     assert "8BitDo" in html
-    # A PALAVRA DO TRANSPORTE É A DO DONO (`home_actions.palavra_do_transporte`),
-    # que é o §2 do "o que se mede antes de escrever" desta sprint — e ela é
-    # PERGUNTADA, não digitada: em 21/09/2026 a palavra dela passou de "rádio"
-    # a "BT", e uma régua que a decorasse reprovaria a decisão dela.
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte,
     )
     assert palavra_do_transporte("bt") in html
     assert "bluetooth" not in html.lower()
-    # E A TELA DIZ O QUE O HEFESTO NÃO FAZ com ele, que é a informação que a
-    # pessoa procura ao ver um controle que não acende.
     assert "só vê" in html
 
 
@@ -168,21 +140,13 @@ def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
     assert vazio == monta.NADA_A_DIZER, (
         f"a Jogar sem externo devolveu {vazio!r} — com `''` o piloto escreve "
         f"`—` e a grade dos assentos ganha um quinto item com um traço dentro")
-    # E ELE MEDE ZERO: o CSS da aba esconde o marcador dentro da `.ext-vaga`.
-    # Sem esta regra o `<i>` estaria lá e continuaria não mostrando nada — mas
-    # por acidente de elemento vazio, não por decisão.
     assert ".ext-vaga > .nada{display:none}" in (
         INTERFACE / "aba01.py").read_text(encoding="utf-8"), (
         "a regra que esconde o marcador saiu do CSS da aba 01")
 
 
 def _a_saida_estavel() -> str:
-    """O fim do aviso do `hid-nintendo`, com a palavra PERGUNTADA ao dono.
-
-    Em 24/09/2026 (A-GESTAO-SEGUE-O-JOGADOR-01, conferência) o aviso passou de
-    «por cabo é estável» para a palavra de tela do transporte, a decisão dela
-    de 21/09; digitar «cabo» aqui prenderia a palavra que ela revogou.
-    """
+    """O fim do aviso do `hid-nintendo`, com a palavra PERGUNTADA ao dono."""
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte,
     )
@@ -217,25 +181,16 @@ def test_o_externo_nao_usa_a_classe_dos_assentos() -> None:
 
 
 def test_o_endereco_dos_externos_esta_prometido_na_pagina() -> None:
-    """`externos` está em `DA_PAGINA` — senão a `cobertura` mente.
-
-    Emitir uma chave sem pô-la na lista deixa o contador menor que o pacote, que
-    é o defeito que aquele número existe para denunciar.
-    """
+    """`externos` está em `DA_PAGINA` — senão a `cobertura` mente."""
     assert "externos" in jogar.DA_PAGINA
 
 
-# ---------------------------------------------------------------------------
-# 3. A ABA 08 — a linha 305 do CSV
-# ---------------------------------------------------------------------------
 def test_a_conexoes_lista_o_externo() -> None:
     from pacotes import a08_conexoes as conexoes
 
     html = conexoes._html_dos_externos(_ctx([UM_PRO]))
     assert 'class="ext-linha"' in html
     assert "Controle 4" in html
-    # A MESMA FRASE DA ABA 01, PELO MESMO DONO: é isso que impede as duas abas
-    # de discordarem sobre o mesmo aparelho.
     assert "só vê" in html
     assert _a_saida_estavel() in html
 
@@ -260,15 +215,8 @@ def test_as_duas_abas_dizem_a_mesma_coisa_do_mesmo_aparelho() -> None:
         assert pedaco in do_01 and pedaco in do_08, pedaco
 
 
-# ---------------------------------------------------------------------------
-# 4. O ENDEREÇO EXISTE NA BANCADA — senão o pacote escreve no vazio
-# ---------------------------------------------------------------------------
 def test_as_duas_paginas_da_bancada_tem_onde_escrever() -> None:
-    """O `data-campo` com alvo `html` está nas duas páginas da bancada.
-
-    Endereço que não existe não levanta: `querySelector` devolve `null` e a
-    pintura escreve zero, calada. É como a coluna Atenção mentiu por dois dias.
-    """
+    """O `data-campo` com alvo `html` está nas duas páginas da bancada."""
     for arquivo, campo in (("01-jogar.html", "externos"),
                            ("08-conexoes.html", "externos-lista")):
         texto = onde.pagina(arquivo).read_text()
@@ -282,28 +230,15 @@ def test_nenhum_aparelho_de_exemplo_nasce_no_desenho() -> None:
         assert marca not in onde.pagina(arquivo).read_text(), arquivo
 
 
-# ---------------------------------------------------------------------------
-# 5. O PILOTO — o dublê que sabe RECUSAR
-# ---------------------------------------------------------------------------
 class _PilotoDeMentira:
-    """O mínimo do piloto que a leitura dos externos toca.
-
-    Ela não abre janela, não fala com GTK e não sobe daemon — é a função de
-    `hefesto_vivo` chamada sobre um objeto que tem só os quatro atributos que
-    ela lê. É o mesmo desenho do dublê da ponte: o que interessa é QUAL função
-    foi chamada e com quê.
-    """
+    """O mínimo do piloto que a leitura dos externos toca."""
 
     def __init__(self) -> None:
         self._externos: list[dict[str, Any]] = []
         self._externos_lidos_em = 0.0
         self._externos_no_ar = False
-        # O QUE `_contexto` TAMBÉM LÊ, e só isso: o leitor de cor, que responde
-        # `{}` até a primeira pergunta voltar e guarda a própria trava.
         self.leitor = _LeitorDeMentira()
 
-    #: OS DOIS TETOS SÃO OS DA CLASSE REAL, emprestados e nunca digitados: um
-    #: número escrito aqui faria a régua medir o dublê em vez do produto.
     SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS = (
         __import__("hefesto_dualsense4unix.interface.hefesto_vivo",
                    fromlist=["Piloto"]).Piloto.SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS)
@@ -311,10 +246,6 @@ class _PilotoDeMentira:
         __import__("hefesto_dualsense4unix.interface.hefesto_vivo",
                    fromlist=["Piloto"]).Piloto.SEGUNDOS_DE_ESPERA_DOS_EXTERNOS)
 
-    #: O MÉTODO REAL, EMPRESTADO — e não uma reescrita. Este dublê existe para
-    #: dar ao `_contexto` os quatro atributos que ele lê; o COMPORTAMENTO tem de
-    #: ser o do produto, senão a régua mede o dublê. É o defeito que esta casa
-    #: nomeia: *"o dublê era mais frouxo que a função real"*.
     _talvez_ler_os_externos = (
         __import__("hefesto_dualsense4unix.interface.hefesto_vivo",
                    fromlist=["Piloto"]).Piloto._talvez_ler_os_externos)
@@ -334,11 +265,7 @@ class _LeitorDeMentira:
 
 
 def _ler(piloto: _PilotoDeMentira, resposta: Any, levanta: bool = False) -> None:
-    """Roda `_talvez_ler_os_externos` com um `controller.list` de mentira.
-
-    A thread é esperada de propósito: sem o `join` a régua leria a lista antes
-    de a resposta chegar e passaria por acidente.
-    """
+    """Roda `_talvez_ler_os_externos` com um `controller.list` de mentira."""
     import threading
 
     from hefesto_dualsense4unix.interface import hefesto_vivo
@@ -362,19 +289,11 @@ def _ler(piloto: _PilotoDeMentira, resposta: Any, levanta: bool = False) -> None
                 t.join(timeout=5)
     finally:
         ponte.resultado = antes  # type: ignore[assignment]
-    # AS CHAMADAS SE SOMAM entre uma leitura e a seguinte: é assim que a régua
-    # do teto pode contar quantas perguntas SAÍRAM em duas voltas. Trocar a
-    # lista aqui faria a segunda volta apagar a prova da primeira — e o teste do
-    # teto passaria por acidente, com zero chamada em vez de uma.
     piloto.chamadas = getattr(piloto, "chamadas", []) + chamadas  # type: ignore[attr-defined]
 
 
 def test_o_piloto_pergunta_pelos_externos_com_o_opt_in() -> None:
-    """A pergunta é `controller.list {"external": True}` — sem o opt-in, nada vem.
-
-    A chave nem aparece na resposta sem ela
-    (`ipc_handlers._handle_controller_list`: *"sem opt-in, a chave nem aparece"*).
-    """
+    """A pergunta é `controller.list {"external": True}` — sem o opt-in, nada vem."""
     p = _PilotoDeMentira()
     _ler(p, {"controllers": [], "external": [UM_8BITDO]})
     assert p.chamadas == [("controller.list", {"external": True})]  # type: ignore[attr-defined]
@@ -382,11 +301,7 @@ def test_o_piloto_pergunta_pelos_externos_com_o_opt_in() -> None:
 
 
 def test_o_piloto_nao_repete_a_pergunta_dentro_do_teto() -> None:
-    """Uma leitura por `SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS`, e não uma por tique.
-
-    A enumeração custa 10-40 ms e um subprocess — num orçamento de 100 ms,
-    perguntar a cada tique comeria até 40% do laço para receber a mesma resposta.
-    """
+    """Uma leitura por `SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS`, e não uma por tique."""
     p = _PilotoDeMentira()
     _ler(p, {"external": [UM_8BITDO]})
     _ler(p, {"external": [UM_PRO]})
@@ -395,12 +310,7 @@ def test_o_piloto_nao_repete_a_pergunta_dentro_do_teto() -> None:
 
 
 def test_o_daemon_mudo_nao_apaga_a_lista_boa() -> None:
-    """**A MORDIDA.** *"Não consegui perguntar"* não vira *"não há controle"*.
-
-    `ponte.resultado` LEVANTA quando o daemon não atende — é a escolha declarada
-    em `pacotes/ponte.py`. Um `except` que zerasse a lista transformaria a
-    ausência de notícia em sucesso, que é o defeito mais caro desta casa.
-    """
+    """**A MORDIDA.** *"Não consegui perguntar"* não vira *"não há controle"*."""
     p = _PilotoDeMentira()
     _ler(p, {"external": [UM_8BITDO]})
     p._externos_lidos_em = 0.0
@@ -410,11 +320,7 @@ def test_o_daemon_mudo_nao_apaga_a_lista_boa() -> None:
 
 
 def test_a_resposta_sem_a_chave_external_esvazia_a_lista() -> None:
-    """Um daemon que responde SEM a chave é resposta boa: não há externo.
-
-    Diferente do daemon MUDO acima — ali ninguém respondeu; aqui alguém
-    respondeu "nenhum". As duas se lêem igual na tela e são medidas diferentes.
-    """
+    """Um daemon que responde SEM a chave é resposta boa: não há externo."""
     p = _PilotoDeMentira()
     _ler(p, {"external": [UM_8BITDO]})
     p._externos_lidos_em = 0.0
@@ -423,37 +329,18 @@ def test_a_resposta_sem_a_chave_external_esvazia_a_lista() -> None:
 
 
 def test_o_contexto_do_tique_carrega_os_externos_lidos() -> None:
-    """**A MORDIDA QUE FALTAVA, e ela reprovou a primeira régua desta sprint.**
-
-    As provas acima mediam `_talvez_ler_os_externos` de um lado e o pacote do
-    outro, com um `Contexto` montado à MÃO no meio — e por isso passavam
-    inteiras com a cura arrancada: bastava `_contexto` não chamar a leitura, ou
-    montar o `Contexto` com `externos=[]`, para a tela voltar a não ver externo
-    nenhum **com dezenove testes verdes**.
-
-    É a armadilha nomeada no `COMO-EXECUTAR-UMA-SPRINT.md` §9 — *o dublê que só
-    sabe passar* —, achada aqui pelo passo 2 do protocolo: arrancar a cura e
-    olhar. Esta prova cobre o FIO, que é a única parte que nenhuma das outras
-    tocava.
-    """
+    """**A MORDIDA QUE FALTAVA, e ela reprovou a primeira régua desta sprint.**"""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     p = _PilotoDeMentira()
     _ler(p, {"external": [UM_8BITDO]})
     ctx, _ = hefesto_vivo.Piloto._contexto(p, dict(VIVO))  # type: ignore[arg-type]
     assert ctx.externos == [UM_8BITDO]
-    # E O EXTERNO NÃO ENCOSTA NOS ASSENTOS pelo caminho do tique, que é onde o
-    # engano custaria caro: `conectados` sai de `state["controllers"]`, e o
-    # `state` desta prova não traz nenhum.
     assert ctx.conectados == []
 
 
 def test_o_tique_pergunta_sozinho_pelos_externos() -> None:
-    """`_contexto` DISPARA a leitura — senão a lista nunca sai de vazia.
-
-    A outra metade do fio: mesmo carregando `self._externos` para o `Contexto`,
-    um tique que não pergunta deixa a lista em `[]` para sempre.
-    """
+    """`_contexto` DISPARA a leitura — senão a lista nunca sai de vazia."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
     from hefesto_dualsense4unix.interface.pacotes import ponte
 
@@ -467,8 +354,6 @@ def test_o_tique_pergunta_sozinho_pelos_externos() -> None:
     antes = ponte.resultado
     ponte.resultado = falso  # type: ignore[assignment]
     try:
-        # Só os fios que ESTE tique abriu: juntar todo fio do processo prendia
-        # o caso nos que outro caso deixou vivos (25/09/2026, parte 03).
         fios_antes = set(__import__("threading").enumerate())
         hefesto_vivo.Piloto._contexto(p, dict(VIVO))  # type: ignore[arg-type]
         for t in set(__import__("threading").enumerate()) - fios_antes:

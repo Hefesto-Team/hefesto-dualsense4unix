@@ -1,55 +1,4 @@
-"""o_cabo_em_espera.py — o controle do rádio que ganhou cabo, e o kernel deixou esperando.
-
-O-CABO-ASSUME-DO-RADIO-01 (25/09/2026). Ela plugou no USB um controle que
-estava pelo rádio, e ele *«segue conectado no modo bt mas agora segue
-carregando»*. <!-- noqa-acento: citação literal dela -->
-
-POR QUE O RÁDIO FICAVA — medido na mesa dela, 25/09/2026, 19:42
-----------------------------------------------------------------
-
-O daemon nunca escolheu o rádio: ele nem chegou a ver o cabo. O kernel
-enumerou o aparelho USB, o ``hid-playstation`` leu o endereço do controle e
-recusou o segundo registro do MESMO endereço::
-
-    usb 3-4.1.3: New USB device found, idVendor=054c, idProduct=0ce6
-    playstation 0003:054C:0CE6.001B: hidraw1: USB HID v1.11 Gamepad [...]
-    playstation 0003:054C:0CE6.001B: Duplicate device found for MAC address …
-    playstation 0003:054C:0CE6.001B: probe with driver playstation failed with error -17
-
-O ``-17`` é ``-EEXIST``, de ``ps_devices_list_add`` (o comentário do próprio
-driver: *"which can happen if the same device is connected using both
-Bluetooth and USB"*). O HID do cabo fica em ``/sys/bus/hid/devices`` SEM
-driver — sem ``hidraw``, sem ``input``, sem LED —, o áudio do cabo sobe
-(``snd-usb-audio`` nas interfaces 0 a 2) e a bateria passa a carregar pelo
-rádio. É exatamente o que ela viu.
-
-A CURA, EM TRÊS MÃOS
---------------------
-
-1. **este módulo** acha o cabo que espera (:func:`cabos_em_espera`) e o par
-   dele no rádio — pela linha do kernel, que traz o endereço
-   (:func:`enderecos_recusados`), ou, quando o diário não se deixa ler, pela
-   borda da carga (:meth:`VigiaDoCabo.decidir`);
-2. **o laço do daemon** (``daemon/connection.vigiar_o_cabo_em_espera``) marca a
-   troca no backend e derruba o RÁDIO daquele controle (``Disconnect``, o
-   pareamento fica) — medido, é o único jeito de o controle falar pelo cabo;
-3. **a regra udev** ``assets/85-hefesto-o-cabo-assume.rules`` religa, como
-   root, o HID que esperava, no instante em que o gêmeo sai do barramento.
-
-Nenhum recado na tela, nenhum botão: o controle passa a dizer USB na aba
-Conexões, com o mesmo número. Tirou o cabo, ele volta pelo rádio sozinho, no
-adaptador de sempre (o pareamento nunca saiu), e o lugar espera por ele
-(``backend_pydualsense._segurar_a_volta_pelo_radio_locked``).
-
-AUSÊNCIA É RESPOSTA
--------------------
-
-Sem a regra que religa o cabo, derrubar o rádio deixaria o controle em lugar
-nenhum. Então o produto não derruba, e diz por quê (:func:`impedimentos_da_troca`).
-Sem o diário do kernel e sem uma borda de carga que aponte UM controle, ele
-também não age: derrubar o rádio de outra pessoa é o pior erro possível, e
-ficar no rádio carregando é o comportamento de antes.
-"""
+"""o_cabo_em_espera.py — o controle do rádio que ganhou cabo, e o kernel deixou esperando."""
 
 from __future__ import annotations
 
@@ -66,13 +15,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Onde o kernel lista os aparelhos HID. Resolvido NA CHAMADA: a suíte o aponta
-#: para uma pasta vazia (``tests/conftest.py``), e sem isso ela enxergaria o
-#: cabo que espera na mesa dela.
 RAIZ_DO_BARRAMENTO_HID = "/sys/bus/hid/devices"
 
-#: A regra udev que religa o cabo quando o gêmeo sai (``assets/``). Os três
-#: lugares onde um instalador a põe: o ``install_udev.sh`` e o pacote.
 NOME_DA_REGRA = "85-hefesto-o-cabo-assume.rules"
 REGRAS_QUE_RELIGAM: tuple[str, ...] = (
     f"/etc/udev/rules.d/{NOME_DA_REGRA}",
@@ -81,49 +25,26 @@ REGRAS_QUE_RELIGAM: tuple[str, ...] = (
 )
 
 #: O HID de um DualSense (comum ou Edge) NO CABO: barramento 0003, Sony 054C.
-#: O número depois do ponto é o contador de HID do boot, que só cresce (todo
-#: vpad que nasce por ``uhid`` também conta), e o ``%04X`` do kernel é largura
-#: MÍNIMA: passado ``FFFF`` ele ganha o quinto dígito, e a forma não pode morrer ali.
 _FORMA_DO_CABO = re.compile(r"^0003:054C:(0CE6|0DF2)\.[0-9A-F]{4,}$")
 
-#: A linha do kernel que diz QUEM esperava: a instância e o endereço recusado.
 _LINHA_DA_RECUSA = re.compile(
     r"(?P<inst>[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4,}): "
     r"Duplicate device found for MAC address (?P<mac>[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})"
 )
 
-#: Os estados de carga que só existem com energia de fora (``ESTADO_DE_CARGA``
-#: do backend, a tabela do kernel). ``descarregando`` é bateria pura.
 CARGA_DE_FORA = frozenset({"carregando", "cheio", "fora_de_faixa", "erro"})
 
-#: Quanto um HID do cabo precisa ficar sem driver para ser chamado de órfão
-#: quando o diário não fala. A probe do ``hid-playstation`` no cabo leva menos
-#: de um segundo (os retries do DKMS no cabo são de 100 ms); cinco segundos
-#: separam "ainda subindo" de "recusado" sem deixar ninguém esperando à toa.
 ESPERA_PARA_SER_ORFAO_S = 5.0
 
-#: A borda da carga (descarregando → energia de fora) e o cabo que aparece são
-#: o MESMO gesto — plugar. Medido em 25/09/2026: o USB enumerou às 19:42:14 e o
-#: HID recusado nasceu às 19:42:28. Um minuto cabe os dois com folga e deixa de
-#: fora o controle que está na base de carga desde antes.
 JANELA_DO_PAR_PELA_CARGA_S = 60.0
 
-#: Uma derrubada de rádio por controle nesta janela. Sem teto, um cabo que o
-#: kernel recusasse por outro motivo faria o produto derrubar o rádio em laço.
 TETO_POR_CONTROLE_S = 120.0
 
-#: A derrubada que o BlueZ RECUSOU (a trava do rádio ocupada pela central, o
-#: barramento que não respondeu) é passageira: o cabo tenta de novo depois
-#: desta espera, até ``RECUSAS_ANTES_DE_DESISTIR`` vezes. Conferência de
-#: 25/09/2026 — antes, uma recusa só marcava o cabo como resolvido para sempre,
-#: e o controle ficava no rádio carregando até alguém tirar e pôr o cabo.
 ESPERA_DEPOIS_DA_RECUSA_S = 5.0
 RECUSAS_ANTES_DE_DESISTIR = 5
 
-#: O teto do ``journalctl``. Medido na mesa dela: 0,18 s para o boot inteiro.
 ESPERA_DO_DIARIO_S = 3.0
 
-#: Quem assina a escrita no BlueZ (a trava e o diário do rádio).
 QUEM = "o-cabo-assume"
 
 
@@ -141,7 +62,6 @@ class Decisao:
     par: str | None = None
     fonte: str = ""
     motivo: str = ""
-    #: ``True`` quando não adianta tentar de novo (o cabo não é um gêmeo).
     desistir: bool = False
 
 
@@ -159,21 +79,13 @@ def mac_com_dois_pontos(uniq: str) -> str:
 
 
 def mascarar(uniq: str | None) -> str | None:
-    """A máscara da casa para o diário: os octetos 4 e 5 zerados, sem os dois-pontos.
-
-    Quem mascara é o dono, ``core/formas_do_endereco``: um endereço em qualquer
-    grafia sai colado e minúsculo (a forma do backend); o que não é UM
-    endereço passa pela máscara do texto e volta. ``None`` só para o vazio.
-    """
+    """A máscara da casa para o diário: os octetos 4 e 5 zerados, sem os dois-pontos."""
     if not uniq:
         return None
     mascarado = _formas.mascarar_endereco(uniq)
     if mascarado is None:
         return _formas.mascarar(uniq)
     return mascarado.replace(":", "")
-
-
-# --- as leituras (I/O; cada uma degrada para vazio, nunca levanta) ------------
 
 
 def cabos_em_espera(raiz: str | os.PathLike[str] | None = None) -> list[CaboEmEspera]:
@@ -202,11 +114,7 @@ def cabos_em_espera(raiz: str | os.PathLike[str] | None = None) -> list[CaboEmEs
 
 
 def enderecos_recusados(texto: str) -> dict[str, str]:
-    """``{instância: endereço 12-hex}`` das recusas por endereço repetido. Pura.
-
-    A ÚLTIMA linha de cada instância vale: a mesma instância recusada duas
-    vezes (uma religada que também recusou) diz o mesmo endereço.
-    """
+    """``{instância: endereço 12-hex}`` das recusas por endereço repetido. Pura."""
     achados: dict[str, str] = {}
     for linha in texto.splitlines():
         casou = _LINHA_DA_RECUSA.search(linha)
@@ -221,14 +129,7 @@ def enderecos_recusados(texto: str) -> dict[str, str]:
 def ler_o_diario_do_kernel(
     executor: Callable[[list[str]], str | None] | None = None,
 ) -> str | None:
-    """O texto do diário do kernel deste boot, ou ``None`` se não deu para ler.
-
-    ``journalctl -k`` lê o diário do SISTEMA, e a usuária só o lê quando está no
-    grupo que o systemd libera (``adm``, ``systemd-journal`` ou ``wheel``). Sem
-    permissão ele não falha: devolve vazio. Por isso vazio também é ``None`` —
-    todo boot tem linha de kernel, e "não achei a recusa" num diário que não se
-    deixou ler seria mentira.
-    """
+    """O texto do diário do kernel deste boot, ou ``None`` se não deu para ler."""
     comando = ["journalctl", "-k", "-b", "-o", "cat", "--no-pager"]
     if executor is not None:
         texto = executor(comando)
@@ -250,12 +151,7 @@ def ler_o_diario_do_kernel(
 
 
 def impedimentos_da_troca(regras: Iterable[str] | None = None) -> list[str]:
-    """Por que o produto não pode derrubar o rádio agora. Vazio = pode.
-
-    ``None`` lê ``REGRAS_QUE_RELIGAM`` NA CHAMADA, e não na definição: um
-    default amarrado à tupla de quando o módulo carregou não deixaria a régua
-    apontar para a regra de mentira, e ela mediria o ``/etc`` da máquina.
-    """
+    """Por que o produto não pode derrubar o rádio agora. Vazio = pode."""
     alvos = REGRAS_QUE_RELIGAM if regras is None else regras
     if any(Path(regra).exists() for regra in alvos):
         return []
@@ -268,13 +164,7 @@ def impedimentos_da_troca(regras: Iterable[str] | None = None) -> list[str]:
 
 
 def derrubar_o_radio(uniq: str, leitor: Any = None) -> tuple[bool, str]:
-    """``Disconnect`` do controle ``uniq`` em todo adaptador onde ele está ligado.
-
-    O pareamento FICA: é ele que traz o controle de volta pelo rádio, no mesmo
-    adaptador, quando o cabo sair. ``(feito, motivo)``; nunca levanta. O leitor
-    é o dono do BlueZ (``bluez_dbus.dono()``), que já traz a trava do rádio, o
-    diário comum e a recusa quando a suíte está no ar.
-    """
+    """``Disconnect`` do controle ``uniq`` em todo adaptador onde ele está ligado."""
     if leitor is None:
         from hefesto_dualsense4unix.integrations import bluez_dbus
 
@@ -304,33 +194,17 @@ def derrubar_o_radio(uniq: str, leitor: Any = None) -> tuple[bool, str]:
     return feito, "; ".join(motivos)
 
 
-# --- a regra (o tempo mora aqui) --------------------------------------------
-
-
 @dataclass
 class VigiaDoCabo:
-    """Guarda desde quando cada cabo espera e a borda da carga de cada controle.
+    """Guarda desde quando cada cabo espera e a borda da carga de cada controle."""
 
-    Uma por daemon (``connection.vigia_do_cabo_de``). O relógio entra por
-    argumento: a régua viaja no tempo sem dormir.
-    """
-
-    #: instância -> quando o cabo foi visto esperando pela primeira vez.
     visto_em: dict[str, float] = field(default_factory=dict)
-    #: instâncias já resolvidas (tentadas ou desistidas) — não se olha de novo.
     resolvidos: set[str] = field(default_factory=set)
-    #: uniq -> quando a energia de fora chegou (``None`` = já estava quando
-    #: começamos a olhar: não é borda, é a base de carga de sempre).
     carga_de_fora_desde: dict[str, float | None] = field(default_factory=dict)
-    #: uniq -> quando o produto derrubou o rádio dele pela última vez.
     derrubado_em: dict[str, float] = field(default_factory=dict)
-    #: as frases já ditas ao diário, para cada uma sair UMA vez.
     avisados: set[str] = field(default_factory=set)
-    #: quando o laço olhou os cabos pela última vez (``None`` = nunca).
     ultima_olhada: float | None = None
-    #: instância -> quantas derrubadas o BlueZ já recusou para este cabo.
     recusas: dict[str, int] = field(default_factory=dict)
-    #: instância -> quando o cabo recusado volta a ser decidido.
     tentar_de_novo_em: dict[str, float] = field(default_factory=dict)
     _cargas_vistas: dict[str, str | None] = field(default_factory=dict)
 
@@ -368,13 +242,7 @@ class VigiaDoCabo:
         return pendentes
 
     def quer_olhar_de_novo(self, agora: float) -> bool:
-        """Algum cabo pendente ficou maduro DEPOIS da última olhada?
-
-        É o que encurta a espera do laço: sem isto, o cabo visto no tique do
-        hotplug só seria decidido no fallback de 30 s. Responde sim UMA vez por
-        cabo — a olhada seguinte já o vê maduro. O cabo que o BlueZ recusou
-        conta do mesmo jeito quando a espera da recusa acaba.
-        """
+        """Algum cabo pendente ficou maduro DEPOIS da última olhada?"""
         desde = self.ultima_olhada
         if desde is None:
             return False
@@ -395,14 +263,7 @@ class VigiaDoCabo:
         no_radio: Mapping[str, str | None],
         agora: float,
     ) -> Decisao:
-        """O par do cabo no rádio. Função do estado; não escreve em nada fora dela.
-
-        - o diário do kernel deu o endereço: é ele, se estiver no rádio;
-        - o diário se deixou ler e não fala deste cabo: ou a probe ainda está
-          correndo (espera), ou ele não é gêmeo de ninguém (desiste);
-        - o diário não se deixou ler: depois da espera, a borda da carga, se
-          ela apontar UM controle só.
-        """
+        """O par do cabo no rádio. Função do estado; não escreve em nada fora dela."""
         maduro = agora - self.visto_em.get(cabo.instancia, agora) >= ESPERA_PARA_SER_ORFAO_S
         if diario is not None:
             endereco = diario.get(cabo.instancia.upper())
@@ -448,13 +309,7 @@ class VigiaDoCabo:
         self.resolvidos.add(instancia)
 
     def recusado(self, instancia: str, agora: float) -> bool:
-        """O BlueZ não derrubou o rádio deste cabo. ``True`` = tenta de novo.
-
-        A recusa é passageira (a trava do rádio, o barramento): o cabo volta a
-        ser decidido depois de ``ESPERA_DEPOIS_DA_RECUSA_S``. Na
-        ``RECUSAS_ANTES_DE_DESISTIR``-ésima ele fica resolvido — fica no rádio,
-        que é o comportamento de antes, e o laço não vira martelo.
-        """
+        """O BlueZ não derrubou o rádio deste cabo. ``True`` = tenta de novo."""
         vezes = self.recusas.get(instancia, 0) + 1
         self.recusas[instancia] = vezes
         if vezes >= RECUSAS_ANTES_DE_DESISTIR:
@@ -469,15 +324,7 @@ class VigiaDoCabo:
         self.derrubado_em[uniq] = agora
 
     def observar_quem_esta_no_cabo(self, no_cabo: Iterable[str]) -> None:
-        """A troca que DEU CERTO solta o teto daquele controle.
-
-        O teto existe para o laço — o rádio derrubado e o cabo que não sobe. O
-        controle que aparece na mesa pelo cabo é a prova do contrário: a troca
-        assumiu, e o próximo cabo plugado nele é gesto novo dela, não laço.
-        Sem isto, tirar o cabo e pôr de novo dentro de dois minutos deixava o
-        controle no rádio carregando — a queixa de 25/09, de volta pela porta
-        da própria cura (conferência de 25/09/2026).
-        """
+        """A troca que DEU CERTO solta o teto daquele controle."""
         for uniq in no_cabo:
             self.derrubado_em.pop(uniq, None)
 

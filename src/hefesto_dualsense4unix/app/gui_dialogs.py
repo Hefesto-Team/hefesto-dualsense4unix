@@ -24,59 +24,22 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger  # noqa: E402
 logger = get_logger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# DIÁLOGO-QUE-MATA-A-JANELA-01 — o envelope que impede o estrangulamento
-# ---------------------------------------------------------------------------
-
-#: Prazo (ms) entre abrir o diálogo e a primeira tentativa de SOCORRO.
-#:
-#: Folgado de propósito: 1,5 s é muito mais do que qualquer compositor leva
-#: para mapear e focar um diálogo que ele VAI mostrar, e curto o bastante para
-#: ela não chegar a achar que a janela morreu.
 PRAZO_ATE_O_SOCORRO_MS = 1500
 
-#: Prazo (ms) entre o socorro e a DESISTÊNCIA (responder por ela e sair).
 PRAZO_ATE_DESISTIR_MS = 2000
 
-#: Nome do último diálogo que a casa teve de cancelar por não conseguir
-#: aparecer. Lido por quem chama, para o aviso na barra ser honesto em vez de
-#: um "Operação cancelada." que ela não pediu. Ver ``ultimo_socorro``.
 _ULTIMO_SOCORRO: str | None = None
 
-#: Diálogos com laço em curso — a lista que o ``presentar_dialogos_em_curso``
-#: usa como saída de emergência externa (SIGUSR1). Nunca mais de um elemento na
-#: prática (todos são modais), mas é lista para não mentir sobre aninhamento.
 _EM_CURSO: list[Any] = []
 
 
 def ultimo_socorro() -> str | None:
-    """Nome do diálogo cancelado pelo socorro, ou ``None``.
-
-    Zerado a cada ``executar_dialogo``, então só é verdadeiro sobre o diálogo
-    que acabou de fechar. Existe para o chamador poder dizer a ela *"o aviso
-    não conseguiu aparecer; nada foi alterado"* em vez do genérico
-    *"Operação cancelada."*, que a faria procurar um clique que ela não deu.
-    """
+    """Nome do diálogo cancelado pelo socorro, ou ``None``."""
     return _ULTIMO_SOCORRO
 
 
 def dialogo_na_tela(dialog: Any) -> bool:
-    """O diálogo existe no servidor gráfico neste instante?
-
-    MEDIDO em 06/08/2026 (Xvfb, GTK 3.24, PyGObject 3.48): as perguntas óbvias
-    MENTEM. Com o ``GdkWindow`` do diálogo retirado do servidor
-    (``WITHDRAWN`` — o mais próximo que se reproduz em bancada do "ela não vê
-    nada"), o GTK continua respondendo::
-
-        get_mapped()  -> True     (mente)
-        get_visible() -> True     (mente)
-        get_window().is_visible() -> False   (a verdade)
-        is_active()   -> False    (a verdade)
-
-    Daí a pergunta ser feita ao ``GdkWindow``, e não ao widget. Em falha de
-    medição devolve ``True``: "não sei medir" nunca pode virar um cancelamento
-    que ela não pediu.
-    """
+    """O diálogo existe no servidor gráfico neste instante?"""
     try:
         janela = dialog.get_window()
         return bool(janela is not None and janela.is_visible())
@@ -85,15 +48,7 @@ def dialogo_na_tela(dialog: Any) -> bool:
 
 
 def dialogo_alcancavel(dialog: Any) -> bool:
-    """Ela consegue RESPONDER este diálogo agora? Na tela **e** com o foco.
-
-    O segundo termo é **foco de teclado**, não pixels — e isso é uma escolha,
-    não uma aproximação. Um diálogo que o compositor apresentou recebe o foco;
-    com o foco ela tem, no mínimo, o ``Esc``, que é a saída padrão de todo
-    ``GtkDialog``. Sem foco, o diálogo é **inalcançável por definição**: não há
-    clique nem tecla que chegue nele, e é esse o estado em que a janela dela
-    morreu em 06/08/2026.
-    """
+    """Ela consegue RESPONDER este diálogo agora? Na tela **e** com o foco."""
     if not dialogo_na_tela(dialog):
         return False
     try:
@@ -103,17 +58,7 @@ def dialogo_alcancavel(dialog: Any) -> bool:
 
 
 def presentar_dialogos_em_curso() -> int:
-    """Traz para a frente todo diálogo à espera de resposta; devolve quantos.
-
-    A SEGUNDA saída de emergência, e a única que não depende de o produto
-    concordar com o diagnóstico: o app já instala ``SIGUSR1 -> show_window``
-    (``app.py``), e está MEDIDO (06/08/2026) que ``GLib.idle_add`` **roda
-    dentro do laço aninhado do ``dialog.run()``** — ou seja, um
-    ``kill -USR1 <pid>`` de fora alcança a janela mesmo com um diálogo
-    bloqueante aberto. Sem esta função o sinal só levantava a janela
-    principal, que é justamente a que está sob o grab modal; com ela, levanta
-    quem está segurando o grab.
-    """
+    """Traz para a frente todo diálogo à espera de resposta; devolve quantos."""
     trazidos = 0
     for dialog in list(_EM_CURSO):
         with contextlib.suppress(Exception):
@@ -217,38 +162,7 @@ def mostrar_dialogo_assincrono(
     nome: str,
     resposta_de_socorro: int | None = None,
 ) -> None:
-    """Mostra um diálogo que responde por sinal, com a MESMA rede do bloqueante.
-
-    O irmão assíncrono de :func:`executar_dialogo`, e ele existe por um achado
-    de 06/08/2026 que a primeira cura deixou passar.
-
-    O QUE A PRIMEIRA CURA ERROU
-    ---------------------------
-    A docstring de ``executar_dialogo`` já escrevia a frase certa — *"um diálogo
-    modal invisível e não-bloqueante estrangula a janela do mesmo jeito"* — e
-    mesmo assim o envelope só cobriu quem chama ``run()``. Ficou de fora o
-    ``_on_home_shutdown_clicked`` da aba Início ("Desligar o Hefesto?"), que usa
-    ``modal=True`` + ``connect("response")`` + ``show()``.
-
-    **MEDIDO por verificação adversarial:** o ``show()`` de um diálogo modal já
-    instala o grab do GTK. Com o ``GdkWindow`` fora do servidor — o estado dela
-    — a janela principal perde os TRÊS canais: clique, tecla e o "X" do
-    gerenciador (0/0/0, contra 2/1/1 no controle). E nenhuma das duas saídas
-    alcançava: o vigia não roda (não passa pelo envelope) e
-    ``presentar_dialogos_em_curso`` devolve zero, porque ``_EM_CURSO`` não o
-    conhece.
-
-    Ou seja: a cura fechava a porta que ela atravessou e deixava a do lado
-    aberta — com um portão por AST que jurava não haver mais nenhuma. Por isso
-    o portão passou a olhar ``modal=True`` + ``show()``, e não só ``run()``.
-
-    COMO USAR
-    ---------
-    No lugar de ``dialog.show()``, depois de ligar o seu ``connect("response")``.
-    O diálogo sai de ``_EM_CURSO`` sozinho quando a resposta chega — inclusive a
-    resposta de socorro, que aqui **também** dispara o ``response`` do chamador,
-    então a transação dele fecha pelo caminho normal.
-    """
+    """Mostra um diálogo que responde por sinal, com a MESMA rede do bloqueante."""
     desarmar = _mostrar_e_vigiar(dialog, nome=nome, resposta_de_socorro=resposta_de_socorro)
     _EM_CURSO.append(dialog)
 
@@ -267,13 +181,7 @@ def _mostrar_e_vigiar(
     nome: str,
     resposta_de_socorro: int | None = None,
 ) -> Any:
-    """Mostra de verdade e arma o vigia; devolve o `desarmar()`.
-
-    O miolo compartilhado por :func:`executar_dialogo` e
-    :func:`mostrar_dialogo_assincrono`. Está separado de propósito: os dois
-    caminhos precisam da MESMA rede, e duas cópias dela seriam a próxima
-    divergência a custar uma sessão dela.
-    """
+    """Mostra de verdade e arma o vigia; devolve o `desarmar()`."""
     global _ULTIMO_SOCORRO
     _ULTIMO_SOCORRO = None
     socorro = (
@@ -294,18 +202,7 @@ def _mostrar_e_vigiar(
             estado["visto"] = True
 
     def _precisa_de_socorro() -> bool:
-        """A trava do "já foi visto" vale para o FOCO, nunca para a TELA.
-
-        Dois estados diferentes se parecem, e tratá-los igual quebra um dos
-        dois:
-
-        * **sumiu da tela** (``GdkWindow`` fora do servidor): estrangulamento,
-          e nenhum histórico salva — mesmo que ela tenha visto o diálogo um
-          segundo antes, agora não há o que clicar. Sem latch;
-        * **está na tela, sem foco**: pode ser só um Alt+Tab dela. Aqui a trava
-          vale: um diálogo que ela JÁ alcançou uma vez nunca mais é cancelado
-          pelo vigia — o remédio não pode repetir a doença.
-        """
+        """A trava do "já foi visto" vale para o FOCO, nunca para a TELA."""
         if not dialogo_na_tela(dialog):
             return True
         if estado["visto"]:
@@ -318,8 +215,6 @@ def _mostrar_e_vigiar(
             return False
         logger.error("dialogo_invisivel_desistindo", dialogo=nome)
         _ULTIMO_SOCORRO = nome
-        # Solta o grab ANTES de responder: mesmo que o `response` falhe, a
-        # janela dela já voltou a aceitar clique.
         with contextlib.suppress(Exception):
             dialog.set_modal(False)
         with contextlib.suppress(Exception):
@@ -347,8 +242,6 @@ def _mostrar_e_vigiar(
             if dialog.get_transient_for() is not None
             else Gtk.WindowPosition.CENTER
         )
-    # `run()` só faria `gtk_widget_show`; o `present` é o pedido de LEVANTAR e
-    # FOCAR que faltava, e é a cura da causa (1) descrita acima.
     with contextlib.suppress(Exception):
         dialog.show_all()
     with contextlib.suppress(Exception):
@@ -371,14 +264,7 @@ def _mostrar_e_vigiar(
 
 
 def _apply_app_theme(dialog: Any) -> None:
-    """Aplica a classe de tema do app ao toplevel do diálogo (GUI-05/P5).
-
-    TODO o CSS Drácula é escopado a ``.hefesto-dualsense4unix-window`` — um
-    diálogo sem a classe herda o tema do sistema, que sob XWayland no COSMIC
-    (XSettings apontando um gtk-theme nem instalado) degrada para Adwaita
-    CLARO, ilegível ao lado do corpo escuro do app. Best-effort: um style
-    context stubado nos testes não pode derrubar o fluxo do diálogo.
-    """
+    """Aplica a classe de tema do app ao toplevel do diálogo (GUI-05/P5)."""
     with contextlib.suppress(Exception):
         dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
 
@@ -387,11 +273,7 @@ def prompt_profile_name(
     parent: Gtk.Window,
     default_name: str = "",
 ) -> str | None:
-    """Exibe diálogo modal para entrada de nome de perfil.
-
-    Retorna o nome digitado (stripped) ou None se o usuário cancelou.
-    Campo pré-preenchido com ``default_name``.
-    """
+    """Exibe diálogo modal para entrada de nome de perfil."""
     dialog = Gtk.Dialog(
         title=_("Salvar Perfil"),
         parent=parent,
@@ -433,10 +315,7 @@ def prompt_overwrite_existing(
     parent: Gtk.Window,
     name: str,
 ) -> bool:
-    """Pergunta se o usuário deseja sobrescrever um perfil de mesmo nome.
-
-    Retorna True se confirmou sobrescrever, False se cancelou.
-    """
+    """Pergunta se o usuário deseja sobrescrever um perfil de mesmo nome."""
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
@@ -461,20 +340,7 @@ def confirm_downgrade_match_to_any(
     name: str,
     regra_atual: str | None = None,
 ) -> bool:
-    """Confirma transformar um perfil de programa específico em "Sempre".
-
-    COR-A: desligar "Modo avançado" num perfil de jogo e Salvar trocava o alvo
-    (window_class/título) por MatchAny em SILÊNCIO — o perfil que valia só num
-    jogo passava a valer para TUDO, sem aviso e com o toast "Perfil salvo".
-    Retorna True se o usuário confirmou a mudança, False se cancelou.
-
-    SALVAR-NAO-REBAIXA-02 (leva 2, 05/08): ``regra_atual`` é o rótulo do que o
-    perfil É HOJE, na língua da lista ("Quando usar"). Sem ele o diálogo
-    continua dizendo a frase da COR-A, que só é verdade para o perfil de
-    programa específico — e o chamador passou a avisar também no perfil
-    *"Só manual (nunca ativa sozinho)"*, onde afirmar "vale só em programas
-    específicos" seria o aviso mentindo sobre o que ela está prestes a perder.
-    """
+    """Confirma transformar um perfil de programa específico em "Sempre"."""
     titulo = (
         _("O perfil '%s' vale só em programas específicos.") % name
         if regra_atual is None
@@ -510,32 +376,7 @@ def confirm_downgrade_match_to_manual(
     name: str,
     regra_atual: str | None = None,
 ) -> bool:
-    """Confirma tirar o alvo de um perfil, deixando-o só-manual.
-
-    O-AVANCADO-QUE-MOSTRAVA-VAZIO-01 (10/08/2026). O irmão que faltava do
-    ``confirm_downgrade_match_to_any``: aquele é guardado por
-    ``isinstance(profile.match, MatchAny)``, e o editor avançado com os TRÊS
-    campos em branco grava ``MatchManual`` (R-12 item 3). Os dois são "o perfil
-    perdeu o alvo", por lados opostos — e reusar o texto do outro seria o aviso
-    mentindo na frase mais importante: ali o perfil passa a valer para tudo,
-    aqui ele passa a não valer para nada.
-
-    Medido no editor dela antes desta leva: perfil ``Pragmata``
-    (``window_class: ["steam_app_3357650"]``, prioridade 200) → trocar o número
-    do jogo na página simples → ligar o "Modo avançado" (que mostrava os três
-    campos VAZIOS) → Salvar. O disco recebia ``{"type": "manual"}``, o toast
-    dizia "Perfil salvo", e o perfil do jogo dela nunca mais entrava sozinho.
-
-    A cura de fundo é a página avançada mostrar a regra de verdade. Este
-    diálogo é o cinto para o gesto que continua sendo LEGÍTIMO — ela ler os
-    campos cheios e apagá-los de propósito. A vontade dela prevalece: isto
-    PERGUNTA, nunca recusa.
-
-    ``regra_atual`` é o rótulo do que o perfil é HOJE, na língua da coluna
-    "Quando usar" (mesma disciplina do irmão, desde a SALVAR-NAO-REBAIXA-02).
-
-    Retorna True se ela confirmou, False se cancelou.
-    """
+    """Confirma tirar o alvo de um perfil, deixando-o só-manual."""
     titulo = (
         _("O perfil '%s' vai deixar de entrar sozinho.") % name
         if regra_atual is None
@@ -574,18 +415,7 @@ def confirm_downgrade_priority(
     de: int,
     para: int,
 ) -> bool:
-    """Confirma REBAIXAR a prioridade de um perfil que já existe em disco.
-
-    SALVAR-NAO-REBAIXA-02 (leva 2, 05/08). O aviso de rebaixamento que esta
-    casa tinha (``confirm_downgrade_match_to_any``) só dispara quando o match
-    ORIGINAL é específico — e os perfis dela JÁ ESTÃO em ``MatchAny``, rebaixados
-    por defeito anterior. Para esses perfis a janela não tinha uma única palavra
-    a dizer: o que ainda podia sumir calado era a PRIORIDADE, que é justamente o
-    que decide qual dos "Sempre" vence (ver `explicacao_da_disputa`). Medido:
-    salvar por cima levava ``prio=200`` para ``prio=0``.
-
-    Retorna True se ela confirmou a queda, False se cancelou.
-    """
+    """Confirma REBAIXAR a prioridade de um perfil que já existe em disco."""
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
@@ -617,20 +447,7 @@ def confirm_discard_pending_edits(
     ativado: str,
     editando: str | None = None,
 ) -> bool:
-    """Ativar um perfil com edição não salva na tela: descartar o que está lá?
-
-    ATIVAR-NAO-MENTE-01 (leva 2, 05/08). Ativar um perfil passou a refazer as
-    abas na hora — era a queixa literal dela, *"o perfil que eu ativei não
-    aplica imediatamente as features das abas"*. Só que refazer as abas
-    RECARREGA o rascunho do disco, e com edição pendente isso apaga o que ela
-    ajustou e ainda não salvou. Ignorar em silêncio (o que o tique de 2 Hz faz)
-    deixaria as abas mentindo; recarregar em silêncio perderia trabalho dela.
-    A decisão é DELA, então é uma pergunta.
-
-    Retorna True para descartar e mostrar o perfil ativado, False para manter
-    o que está na tela. O default é MANTER: um Enter distraído nunca pode
-    custar edição não salva.
-    """
+    """Ativar um perfil com edição não salva na tela: descartar o que está lá?"""
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
@@ -661,11 +478,7 @@ def prompt_import_conflict(
     parent: Gtk.Window,
     name: str,
 ) -> str | None:
-    """Exibe diálogo de conflito ao importar perfil com nome já existente.
-
-    Retorna uma das strings: "sobrescrever", "renomear", ou None (cancelado).
-    O chamador deve tratar "renomear" pedindo novo nome via prompt_profile_name.
-    """
+    """Exibe diálogo de conflito ao importar perfil com nome já existente."""
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
@@ -694,10 +507,7 @@ def prompt_import_conflict(
 
 
 def confirm_restore_default(parent: Gtk.Window) -> bool:
-    """Pede confirmação antes de restaurar o perfil padrão ao original.
-
-    Retorna True se o usuário confirmou, False se cancelou.
-    """
+    """Pede confirmação antes de restaurar o perfil padrão ao original."""
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
@@ -707,15 +517,9 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
         text=_("Restaurar perfil original?"),
     )
     _apply_app_theme(dialog)
-    # O NOME VEM DO DONO — O-MODO-FREESTYLE-03, 24/09/2026. A frase o digitava,
-    # e digitou dois nomes aposentados em seguida: 'meu_perfil' e, depois da
-    # O-MODO-FREESTYLE-02, 'Personalizado', que ninguém mais lê na lista.
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
     dialog.format_secondary_text(
-        # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: citava 'Navegação' (outro asset,
-        # navegacao.json); o restore aplica o asset do perfil padrão
-        # (match: any) — a frase cita o nome que ela vê na lista.
         _(
             "Isso vai restaurar o '{nome}' para a configuração padrão "
             "de fábrica (aplica-se a todos os apps). As suas alterações serão "
@@ -734,17 +538,7 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
 def confirm_delete_profile(
     parent: Gtk.Window, name: str, aviso: str | None = None
 ) -> bool:
-    """Pede confirmação antes de remover PERMANENTEMENTE um perfil.
-
-    Retorna True se o usuário confirmou a remoção, False se cancelou.
-    BUG-DELETE-NO-CONFIRM-01: antes a remoção era 1-clique sem aviso.
-
-    `aviso` (PERFIS-ABRE-O-QUE-GUARDA-01/§P7) é a consequência que só quem
-    chama sabe calcular — hoje, "este é o perfil que está valendo agora". O
-    diálogo não a descobre e não a inventa: **quem sabe o fato escreve a
-    frase**, e este arquivo só a encaixa. `None` deixa o diálogo idêntico ao
-    de ontem, que é o caso da esmagadora maioria das remoções.
-    """
+    """Pede confirmação antes de remover PERMANENTEMENTE um perfil."""
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
@@ -755,9 +549,6 @@ def confirm_delete_profile(
     )
     _apply_app_theme(dialog)
     permanente = _("Esta ação é permanente e não pode ser desfeita.")
-    # O aviso vem PRIMEIRO: ele é o que ela ainda não sabe. "Permanente e não
-    # pode ser desfeita" ela já leu em todo diálogo desta casa, e uma linha
-    # que se aprende a pular não pode ficar na frente da que muda a decisão.
     dialog.format_secondary_text(
         f"{aviso}\n\n{permanente}" if aviso else permanente
     )
@@ -776,15 +567,7 @@ def _escape_markup(text: str) -> str:
 
 
 def _external_mode_row(entry: dict[str, Any]) -> tuple[Any, Any] | None:
-    """(linha com o segmentado read-only do modo, subtítulo) — ou ``None``.
-
-    GUI-05/P4: o modo detectado ("O jogo vê como") deixou de ser só uma linha
-    de texto na grade e virou um seletor SEGMENTADO do padrão da casa
-    (``Nintendo | Xbox``) — READ-ONLY, porque o modo é troca de HARDWARE
-    (combo no próprio controle), nunca um toggle de software. Sem popup nem
-    dropdown (veto do 8BIT-02: cosmic-comp fecha qualquer popup). Separado do
-    diálogo modal para os testes montarem a linha sem ``run()``.
-    """
+    """(linha com o segmentado read-only do modo, subtítulo) — ou ``None``."""
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         MODE_SELECTOR_SUBTITLE,
         MODE_SELECTOR_TOOLTIP,
@@ -808,8 +591,6 @@ def _external_mode_row(entry: dict[str, Any]) -> tuple[Any, Any] | None:
     seletor = SegmentedSelector()
     seletor.set_items(itens)
     seletor.set_active_id(ativo)
-    # Insensitive de propósito: visual idêntico aos segmentados do app, mas
-    # não-clicável — não existe troca por software para oferecer.
     with contextlib.suppress(Exception):
         seletor.set_sensitive(False)
     seletor.set_tooltip_text(MODE_SELECTOR_TOOLTIP)
@@ -826,16 +607,7 @@ def _external_mode_row(entry: dict[str, Any]) -> tuple[Any, Any] | None:
 def show_external_controller(
     parent: Gtk.Window, entry: dict[str, Any], slot: int | None = None
 ) -> None:
-    """Ficha READ-ONLY de um controle externo (8BIT-02) — a "aba secreta".
-
-    Abre só para o controle clicado no seletor do topo. Mostra identidade
-    honesta (tipo, como conectou, driver) + o aviso do Nintendo/8BitDo por
-    Bluetooth. ``slot`` = número GLOBAL de co-op (o MESMO do LED de player), pra
-    GUI e LED não discordarem. NUMA-05: ``slot=None`` (registry ainda sem
-    opinião) exibe "—" honesto em vez de omitir a linha ou inventar posição.
-    NÃO controla nada: o Hefesto não mexe nesses controles — eles funcionam
-    pelo driver do Linux + Steam. Modal, run/destroy.
-    """
+    """Ficha READ-ONLY de um controle externo (8BIT-02) — a "aba secreta"."""
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         detail_rows,
         friendly_type,
@@ -850,9 +622,6 @@ def show_external_controller(
         modal=True,
         destroy_with_parent=True,
     )
-    # Popup NÃO-INTERATIVO com o visual da GUI (Drácula): a classe da janela faz
-    # o CSS screen-wide (theme.css) pintar fundo/labels/botão como no resto do
-    # app — sem isso o diálogo herdava o tema claro do sistema (branco no COSMIC).
     _apply_app_theme(dialog)
     dialog.add_button(_("Fechar"), Gtk.ResponseType.CLOSE)
     dialog.set_default_response(Gtk.ResponseType.CLOSE)
@@ -860,11 +629,7 @@ def show_external_controller(
     content.set_spacing(10)
     content.set_border_width(16)
 
-    # Número GLOBAL de co-op — o MESMO que o LED de player do controle mostra,
-    # para GUI e LED nunca discordarem (o 1º externo continua a contagem dos
     # DualSense: com 2 DualSense, este é o Controle 3). NUMA-05: sempre exibe
-    # a linha — sem opinião do registry ainda (`slot=None`), mostra "Controle
-    # —" em vez de sumir com a linha inteira (null honesto > omissão muda).
     slot_lbl = Gtk.Label()
     slot_lbl.set_markup(
         f'<span size="x-large" weight="bold">{_("Controle")} '
@@ -899,12 +664,6 @@ def show_external_controller(
         grid.attach(val, 1, row, 1, 1)
     content.pack_start(grid, False, False, 0)
 
-    # Xbox/Nintendo (como o jogo o enxerga): é modo de HARDWARE do controle, não
-    # um toggle de software — a ficha DETECTA o modo atual e ORIENTA a troca +
-    # o trade-off (X-input/Xbox = à prova de travas por foge do hid-nintendo;
-    # Switch/Nintendo = gyro, mas instável por Bluetooth). GUI-05/P4: o modo
-    # detectado aparece num segmentado READ-ONLY (Nintendo | Xbox) do padrão da
-    # casa — a linha de texto da grade virou este widget (fonte única).
     modo_widgets = _external_mode_row(entry)
     if modo_widgets is not None:
         modo_row, modo_sub = modo_widgets
@@ -924,7 +683,6 @@ def show_external_controller(
     aviso = nintendo_bt_warning(entry)
     if aviso:
         warn = Gtk.Label()
-        # &#9888; (WARNING SIGN) via NCR — sobrevive ao sanitizer de emojis.
         warn.set_markup(
             f'<span foreground="#ffb86c">&#9888; {_escape_markup(aviso)}</span>'
         )

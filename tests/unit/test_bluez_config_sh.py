@@ -174,22 +174,6 @@ import pytest
 
 from tests.conftest import arvore_congelada
 
-#: A RAIZ NÃO É A ÁRVORE DE TRABALHO — é uma CÓPIA dela, tirada uma vez no
-#: início da sessão (ARVORE-CONGELADA-01, em `tests/conftest.py`).
-#:
-#: POR QUÊ, MEDIDO em 06/08/2026: esta bancada EXECUTA `scripts/bluez_config.sh`
-#: e `scripts/doctor.sh` pelo caminho absoluto. Enquanto ela rodava, outro
-#: processo estava mutando esses mesmos arquivos (mutação -> medição -> `cp` de
-#: volta), e a bancada lia o produto de outra pessoa NO MEIO DO VOO: 5 falhas
-#: em 10 execuções, testes DIFERENTES a cada rodada, incluindo testes de TEXTO
-#: que caíam por ler o script pela metade. Com a bancada apontada para uma
-#: cópia vizinha e o mesmo mutador rodando, 0 falhas em 10. O canal era o
-#: arquivo compartilhado, e não carga nem concorrência (18 `pytest` simultâneos
-#: na árvore real: 0 falhas em 18).
-#:
-#: A MORDIDA NÃO SE PERDE: a cópia sai da árvore como ela está quando o
-#: `pytest` começa. Arrancar uma cura ANTES de rodar continua ficando vermelho
-#: — é arrancá-la DEPOIS que deixa de ser medido, e isso nunca foi medição.
 RAIZ = arvore_congelada()
 SCRIPT = RAIZ / "scripts" / "bluez_config.sh"
 ASSETS = RAIZ / "assets" / "bluetooth"
@@ -198,9 +182,6 @@ UNINSTALL = RAIZ / "uninstall.sh"
 
 MARCA = "#hefesto-desativou# "
 
-#: O estado EXATO medido em /etc/bluetooth/main.conf na máquina dela em
-#: 06/08/2026: um bloco do hefesto, escrito por uma versão anterior, com o
-#: valor inseguro. É a fixture que importa — não é um caso hipotético.
 MAIN_CONF_DELA = """[General]
 
 # >>> hefesto bluetooth >>>
@@ -235,15 +216,12 @@ def _rodar(
         **os.environ,
         "HEFESTO_BT_ETC": str(etc),
         "HEFESTO_BT_ASSETS": str(ASSETS),
-        # Vazio = sem prefixo de root. É o que torna a bancada possível.
         "HEFESTO_BT_SUDO": "",
         "HEFESTO_BT_BACKUPS_MANTER": manter,
     }
     if path_extra is not None:
         ambiente["PATH"] = f"{path_extra}:{os.environ.get('PATH', '')}"
     if sudo_falso is not None:
-        # NUNCA "sudo": um binário nosso, com outro nome, que só REGISTRA o que
-        # seria escalado. É como a bancada prova a escalada sem virar root.
         ambiente["HEFESTO_BT_SUDO"] = str(sudo_falso.name)
         ambiente["HEFESTO_FAKE_SUDO_LOG"] = str(sudo_falso.parent / "escaladas.txt")
         ambiente["PATH"] = f"{sudo_falso.parent}:{ambiente.get('PATH', '')}"
@@ -256,12 +234,6 @@ def _rodar(
     )
 
 
-#: O ORÁCULO. Roda em SUBPROCESSO de propósito, por duas razões medidas:
-#: (1) vinte e um arquivos desta suíte plantam um ``gi`` FALSO em
-#:     ``sys.modules`` (ver a GUARDA-GI-REAL-01 em ``tests/conftest.py``), e um
-#:     oráculo que respondesse pelo stub seria pior que oráculo nenhum;
-#: (2) é o mesmo parser que o ``bluetoothd`` usa — GLib GKeyFile — e não uma
-#:     imitação dele.
 _ORACULO = """
 import sys
 from gi.repository import GLib
@@ -281,14 +253,7 @@ except Exception:
 def _oraculo(
     arquivo: Path, grupo: str = "General", chave: str = "JustWorksRepairing"
 ) -> str | None:
-    """O que o GKeyFile — o parser REAL do bluetoothd — lê deste arquivo.
-
-    A bancada tinha um TERCEIRO parser em Python (`ln.split("=", 1)[1].strip()`
-    sobre o arquivo inteiro), e foi por ali que a classe de defeito do GRUPO
-    passou batida: dono e bancada erravam do MESMO jeito, então concordavam.
-    Duas fontes para a mesma regra é o defeito que esta leva veio fechar, e ele
-    tinha sobrevivido no dono E na bancada.
-    """
+    """O que o GKeyFile — o parser REAL do bluetoothd — lê deste arquivo."""
     proc = subprocess.run(
         [sys.executable, "-c", _ORACULO, str(arquivo), grupo, chave],
         capture_output=True,
@@ -309,14 +274,7 @@ def _oraculo(
 
 
 def _oraculo_recusa(arquivo: Path) -> str | None:
-    """A mensagem com que o GKeyFile RECUSA o arquivo inteiro, ou None.
-
-    O `_oraculo` acima devolve `None` tanto para "a chave não está lá" quanto
-    para "o parser abortou a carga", e essas duas coisas são MUITO diferentes:
-    na primeira o BlueZ usa o default da distro para uma chave; na segunda ele
-    fica sem config NENHUMA, inclusive sem o que já era dela. Toda afirmação
-    sobre recusa passa por aqui, e nunca pela réplica em `awk` do dono único.
-    """
+    """A mensagem com que o GKeyFile RECUSA o arquivo inteiro, ou None."""
     proc = subprocess.run(
         [sys.executable, "-c", _ORACULO, str(arquivo), "General", "JustWorksRepairing"],
         capture_output=True,
@@ -339,17 +297,8 @@ def _backups(etc: Path) -> list[Path]:
     return sorted(etc.glob("main.conf.bak.hefesto-*"))
 
 
-# ---------------------------------------------------------------------------
-# 1. O defeito real desta máquina: valor inseguro JÁ ESTÁ lá, e é nosso
-# ---------------------------------------------------------------------------
-
-
 def test_bloco_antigo_do_hefesto_com_always_vira_confirm(tmp_path: Path) -> None:
-    """O caso que ninguém tratava: RECONHECER e CORRIGIR bloco nosso antigo.
-
-    Não basta "acrescentar o bloco novo" — o bloco velho tem de sair. A prova
-    é dupla: `always` some do arquivo E `confirm` fica ATIVO.
-    """
+    """O caso que ninguém tratava: RECONHECER e CORRIGIR bloco nosso antigo."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     proc = _rodar(etc, "aplicar")
 
@@ -369,11 +318,7 @@ def test_bloco_antigo_do_hefesto_com_always_vira_confirm(tmp_path: Path) -> None
 def test_o_aplicar_diz_em_voz_alta_que_corrigiu_valor_do_proprio_hefesto(
     tmp_path: Path,
 ) -> None:
-    """Correção silenciosa foi o que deixou o `always` viver quatro dias.
-
-    Quem roda o install tem de LER que a máquina esteve com o valor perigoso —
-    senão a segurança acontece sem ninguém saber que era necessária.
-    """
+    """Correção silenciosa foi o que deixou o `always` viver quatro dias."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     proc = _rodar(etc, "aplicar")
 
@@ -383,12 +328,7 @@ def test_o_aplicar_diz_em_voz_alta_que_corrigiu_valor_do_proprio_hefesto(
 
 
 def test_chave_insegura_fora_do_bloco_e_neutralizada(tmp_path: Path) -> None:
-    """A chave também existe FORA das sentinelas — e o `always` solto mataria a cura.
-
-    Nosso bloco vai para o FIM do arquivo e o último vence, mas deixar um
-    `always` ativo solto é uma bomba-relógio: qualquer edição futura que mova o
-    bloco inverte o resultado. Neutralizamos, e o `remover` devolve.
-    """
+    """A chave também existe FORA das sentinelas — e o `always` solto mataria a cura."""
     etc = _etc(tmp_path, "[General]\nJustWorksRepairing = always\nName = BlueZ\n")
     proc = _rodar(etc, "aplicar")
 
@@ -402,11 +342,7 @@ def test_chave_insegura_fora_do_bloco_e_neutralizada(tmp_path: Path) -> None:
 
 
 def test_chave_comentada_do_template_upstream_fica_intacta(tmp_path: Path) -> None:
-    """`#JustWorksRepairing = never` do template do BlueZ não é chave ativa.
-
-    Sem esta asserção, um neutralizador guloso comentaria comentário e o
-    arquivo do dpkg viraria lixo a cada install.
-    """
+    """`#JustWorksRepairing = never` do template do BlueZ não é chave ativa."""
     etc = _etc(tmp_path, "[General]\n#JustWorksRepairing = never\nName = BlueZ\n")
     _rodar(etc, "aplicar")
 
@@ -415,17 +351,8 @@ def test_chave_comentada_do_template_upstream_fica_intacta(tmp_path: Path) -> No
     assert f"{MARCA}#JustWorksRepairing" not in texto
 
 
-# ---------------------------------------------------------------------------
-# 2. Idempotência — o portão que o BUG-INSTALL-MAIN-CONF-CRESCE-01 nunca teve
-# ---------------------------------------------------------------------------
-
-
 def test_rodar_duas_vezes_nao_gera_backup_novo(tmp_path: Path) -> None:
-    """BUG-INSTALL-MAIN-CONF-BACKUP-INFINITO-01, agora com portão.
-
-    MEDIDO em 06/08/2026: 37 backups em /etc/bluetooth da máquina dela. O
-    `cmp` antes do backup é o que impede o 38.
-    """
+    """BUG-INSTALL-MAIN-CONF-BACKUP-INFINITO-01, agora com portão."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     _rodar(etc, "aplicar")
     apos_primeiro = _backups(etc)
@@ -440,12 +367,7 @@ def test_rodar_duas_vezes_nao_gera_backup_novo(tmp_path: Path) -> None:
 
 
 def test_rodar_duas_vezes_nao_duplica_o_bloco(tmp_path: Path) -> None:
-    """BUG-INSTALL-MAIN-CONF-CRESCE-01: nem bloco repetido, nem arquivo crescendo.
-
-    O bug real (medido em série temporal nos backups dela: 27, 28, 29 … 34
-    linhas) era +1 linha em branco por execução, porque a separadora ficava
-    FORA das sentinelas.
-    """
+    """BUG-INSTALL-MAIN-CONF-CRESCE-01: nem bloco repetido, nem arquivo crescendo."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     _rodar(etc, "aplicar")
     primeiro = (etc / "main.conf").read_text(encoding="utf-8")
@@ -455,7 +377,6 @@ def test_rodar_duas_vezes_nao_duplica_o_bloco(tmp_path: Path) -> None:
 
     assert primeiro == terceiro, "o arquivo mudou entre a 1a e a 3a aplicação"
     assert terceiro.count("# >>> hefesto bluetooth >>>") == 1
-    # Só linhas ATIVAS: o próprio comentário do bloco cita a chave em prosa.
     ativas = [
         ln for ln in terceiro.splitlines()
         if ln.strip().startswith("JustWorksRepairing")
@@ -482,21 +403,8 @@ def test_blocos_legados_de_instalacao_antiga_tambem_saem(tmp_path: Path) -> None
     assert _valor(etc) == "confirm"
 
 
-# ---------------------------------------------------------------------------
-# 3. A assimetria estrutural: o caminho do drop-in abandonava o main.conf
-# ---------------------------------------------------------------------------
-
-
 def test_dropin_presente_nao_deixa_always_no_main_conf(tmp_path: Path) -> None:
-    """O furo que o mapa chamou de 4-A, e que é o pior dos dois.
-
-    O desenho antigo era `if -d main.conf.d` … `elif -f main.conf`: com o
-    diretório presente, o install gravava os drop-ins, imprimia sucesso e
-    RETORNAVA SEM ABRIR o main.conf. Como o bluetoothd desta casa não lê
-    main.conf.d (MEDIDO: `strings` do bluez 5.86 do backport tem `%*s/main.conf`
-    e ZERO `main.conf.d`), bastava alguém criar o diretório para o instalador
-    anunciar `confirm` com o `always` vivo no arquivo que vale.
-    """
+    """O furo que o mapa chamou de 4-A, e que é o pior dos dois."""
     etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
     proc = _rodar(etc, "aplicar")
 
@@ -510,12 +418,7 @@ def test_dropin_presente_nao_deixa_always_no_main_conf(tmp_path: Path) -> None:
 
 
 def test_dropin_e_bloco_declaram_o_mesmo_valor(tmp_path: Path) -> None:
-    """Os dois lugares dizendo a mesma coisa é o que torna a dúvida inofensiva.
-
-    Não sabemos com certeza qual dos dois este BlueZ lê (a evidência do
-    `strings` é forte, mas não é leitura do fonte). Escrever nos dois com o
-    MESMO valor faz a resposta não importar.
-    """
+    """Os dois lugares dizendo a mesma coisa é o que torna a dúvida inofensiva."""
     etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
     _rodar(etc, "aplicar")
 
@@ -528,18 +431,6 @@ def test_dropin_e_bloco_declaram_o_mesmo_valor(tmp_path: Path) -> None:
     assert ativos == ["confirm"]
     assert _valor(etc) == "confirm"
 
-
-# ---------------------------------------------------------------------------
-# 3-bis. O caminho do drop-in obedece às MESMAS invariantes do main.conf
-#
-# ACHADO MÉDIA de 06/08/2026: `aplicar` gravava `main.conf.d/*.conf` com
-# `install -Dm644` — sem `cmp`, sem backup, sem aviso — e `remover` fazia `rm -f`
-# sem backup. Um arquivo editado à mão nesse caminho era destruído SEM CÓPIA
-# NENHUMA, enquanto a mesma função imprimia "drop-ins de main.conf.d gravados"
-# como sucesso. Não era regressão (o código inline antigo do install fazia
-# igual), mas o arquivo passou a se declarar DONO ÚNICO e a enunciar invariantes
-# no cabeçalho que esse caminho violava.
-# ---------------------------------------------------------------------------
 
 _DROPIN_DELA = (
     "# escrito à mão por ela em 03/08\n"
@@ -554,12 +445,7 @@ def _backups_de_dropin(etc: Path) -> list[Path]:
 
 
 def test_aplicar_nao_destroi_dropin_editado_a_mao(tmp_path: Path) -> None:
-    """Reescrever por cima sem cópia é apagar decisão dela — no outro caminho.
-
-    O drop-in tem o NOSSO nome, e é justamente por isso que ela o editaria: é o
-    arquivo que a documentação manda olhar. A invariante do `main.conf` vale
-    aqui inteira — `cmp`, backup, aviso — e o valor que sobrevive é o nosso.
-    """
+    """Reescrever por cima sem cópia é apagar decisão dela — no outro caminho."""
     etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
     alvo = etc / "main.conf.d" / "hefesto-justworks.conf"
     alvo.write_text(_DROPIN_DELA, encoding="utf-8")
@@ -576,9 +462,6 @@ def test_aplicar_nao_destroi_dropin_editado_a_mao(tmp_path: Path) -> None:
     assert "conteúdo DIFERENTE do nosso" in proc.stdout, (
         "o arquivo dela foi reescrito em silêncio"
     )
-    # E o resultado é o nosso valor: guardar cópia não é desistir de curar.
-    # Pelo ORÁCULO, não por `in`: o asset escreve `JustWorksRepairing = confirm`
-    # com espaços, e quem decide o que isso vale é o GKeyFile.
     assert _oraculo(alvo) == "confirm"
 
 
@@ -600,12 +483,7 @@ def test_remover_nao_apaga_dropin_editado_a_mao_sem_copia(tmp_path: Path) -> Non
 
 
 def test_dropin_igual_ao_nosso_asset_nao_gera_backup(tmp_path: Path) -> None:
-    """A EXCEÇÃO DECLARADA — e a linha de base dos dois testes acima.
-
-    Igual byte a byte ao asset = nada a perder (o asset está versionado). Sem
-    esta metade, uma implementação que fizesse backup de TUDO passaria nos dois
-    testes acima e encheria o `main.conf.d` dela de cópias a cada `install.sh`.
-    """
+    """A EXCEÇÃO DECLARADA — e a linha de base dos dois testes acima."""
     etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
 
     _rodar(etc, "aplicar")
@@ -619,17 +497,8 @@ def test_dropin_igual_ao_nosso_asset_nao_gera_backup(tmp_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. O uninstall devolve o arquivo sem chave nossa
-# ---------------------------------------------------------------------------
-
-
 def test_remover_devolve_o_arquivo_sem_chave_nossa(tmp_path: Path) -> None:
-    """Ciclo completo: aplicar → remover tem de devolver o arquivo ORIGINAL.
-
-    Byte a byte. Um uninstall que deixa a linha em branco separadora órfã (o
-    achado 4-C) ou que come o `[General]` reprova aqui.
-    """
+    """Ciclo completo: aplicar → remover tem de devolver o arquivo ORIGINAL."""
     original = "[General]\nName = BlueZ\n\n[Policy]\nAutoEnable=true\n"
     etc = _etc(tmp_path, original)
 
@@ -645,12 +514,7 @@ def test_remover_devolve_o_arquivo_sem_chave_nossa(tmp_path: Path) -> None:
 
 
 def test_remover_devolve_a_chave_de_terceiro(tmp_path: Path) -> None:
-    """Instalar+desinstalar não pode ser destrutivo líquido sobre config alheia.
-
-    O `awk` antigo do install APAGAVA `JustWorksRepairing = never` de quem
-    tivesse escolhido a opção mais segura do template, e o uninstall — que só
-    conhecia sentinelas — nunca a devolvia.
-    """
+    """Instalar+desinstalar não pode ser destrutivo líquido sobre config alheia."""
     original = "[General]\nJustWorksRepairing = never\nName = BlueZ\n"
     etc = _etc(tmp_path, original)
 
@@ -697,21 +561,11 @@ def test_remover_duas_vezes_nao_gera_backup_novo(tmp_path: Path) -> None:
     assert _backups(etc) == apos
 
 
-# ---------------------------------------------------------------------------
-# 5. A faixa sem fechamento — o `sed` que apagava até o fim do arquivo
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("modo", ["aplicar", "remover"])
 def test_sentinela_sem_fechamento_nao_come_o_resto_do_arquivo(
     tmp_path: Path, modo: str
 ) -> None:
-    """`sed '/A/,/B/d'` sem B apaga ATÉ O FIM. Aqui a resposta é RECUSAR.
-
-    O removedor antigo do uninstall ancorava o fechamento em `$`: um espaço em
-    branco no fim de `# <<< hefesto bluetooth <<<` bastava para a faixa nunca
-    fechar. Num main.conf com conteúdo depois do bloco, o estrago não é contido.
-    """
+    """`sed '/A/,/B/d'` sem B apaga ATÉ O FIM. Aqui a resposta é RECUSAR."""
     conteudo = (
         "[General]\n"
         "# >>> hefesto bluetooth >>>\n"
@@ -739,24 +593,8 @@ def test_aplicar_que_recusa_nao_anuncia_garantia(tmp_path: Path) -> None:
     assert "garantidos" not in proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# 6. Backup: contar é automático, APAGAR nunca é
-#
-# A primeira versão desta entrega podava dentro do `aplicar`. MEDIDO por
-# simulação só-leitura do pipeline exato contra o /etc/bluetooth dela: a
-# PRIMEIRA execução apagaria 27 dos 37 backups, entre eles
-# `main.conf.bak.hefesto-1784672963` (404 linhas, 14797 bytes, 21/07 19:29) e
-# `main.conf.bak.hefesto-1784694261` (3 linhas, 59 bytes, 22/07 01:24) — os dois
-# pontos de medição do colapso que a sprint RADIO-ABERTO-01 registra como
-# suspeita EM ABERTO, sem cura. Retenção por mtime descarta primeiro o que tem
-# MAIS valor: o estado pré-hefesto e o instante do estrago.
-# ---------------------------------------------------------------------------
-
-#: Os dois arquivos que a poda automática apagaria primeiro, com os tamanhos e
-#: as datas MEDIDOS. Reproduzir os nomes é de propósito: se alguém devolver a
-#: poda automática, o teste falha citando a evidência pelo nome real.
-_PRE_COLAPSO = "main.conf.bak.hefesto-1784672963"      # 404 linhas, 21/07 19:29
-_POS_COLAPSO = "main.conf.bak.hefesto-1784694261"      # 3 linhas, 22/07 01:24
+_PRE_COLAPSO = "main.conf.bak.hefesto-1784672963"
+_POS_COLAPSO = "main.conf.bak.hefesto-1784694261"
 
 
 def _povoar_como_a_maquina_dela(etc: Path, quantos: int = 37) -> list[Path]:
@@ -778,8 +616,6 @@ def _povoar_como_a_maquina_dela(etc: Path, quantos: int = 37) -> list[Path]:
 
     for i in range(quantos - 2):
         alvo = etc / f"main.conf.bak.hefesto-17861{i:05d}"
-        # Conteúdo REPETIDO de propósito: são os pós-colapso (de 11 a 1395
-        # bytes) que a retenção por mtime guardaria por serem os mais recentes.
         alvo.write_text("[General]\n", encoding="utf-8")
         os.utime(alvo, (momento + 3600 + i * 60, momento + 3600 + i * 60))
         criados.append(alvo)
@@ -787,11 +623,7 @@ def _povoar_como_a_maquina_dela(etc: Path, quantos: int = 37) -> list[Path]:
 
 
 def test_aplicar_nao_apaga_backup_nenhum(tmp_path: Path) -> None:
-    """A EVIDÊNCIA NÃO SAI. Nem um arquivo, nem com 37 no diretório.
-
-    "Não se apaga decisão medida" — e os dois pontos do colapso são a única
-    medição que existe do único estrago deste projeto ainda sem explicação.
-    """
+    """A EVIDÊNCIA NÃO SAI. Nem um arquivo, nem com 37 no diretório."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     antes = _povoar_como_a_maquina_dela(etc)
 
@@ -801,7 +633,6 @@ def test_aplicar_nao_apaga_backup_nenhum(tmp_path: Path) -> None:
     for backup in antes:
         assert backup.exists(), f"o aplicar apagou {backup.name} — isso é evidência medida"
     assert (etc / _PRE_COLAPSO).read_text(encoding="utf-8").count("\n") == 404
-    # 37 preservados + 1 novo (a aplicação mudou o arquivo).
     assert len(_backups(etc)) == 38
     assert "nenhum é apagado automaticamente" in proc.stdout
 
@@ -844,11 +675,7 @@ def test_podar_nunca_apaga_o_mais_antigo(tmp_path: Path) -> None:
 
 
 def test_podar_nunca_apaga_backup_de_conteudo_unico(tmp_path: Path) -> None:
-    """Conteúdo único = única cópia daquele estado. É o instante do estrago.
-
-    Com retenção 1, tudo menos o mais recente vira candidato. O que segura os
-    dois pontos do colapso não é a retenção — é a proteção por ESTADO.
-    """
+    """Conteúdo único = única cópia daquele estado. É o instante do estrago."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     _povoar_como_a_maquina_dela(etc)
 
@@ -859,25 +686,11 @@ def test_podar_nunca_apaga_backup_de_conteudo_unico(tmp_path: Path) -> None:
         "cópia daquele estado do main.conf dela"
     )
     assert "ÚNICA cópia deste conteúdo" in proc.stdout
-    # E o que saiu foi só o que tinha cópia byte a byte em outro arquivo.
     assert len(_backups(etc)) < 37
 
 
 def test_podar_nunca_faz_um_estado_sumir_do_disco(tmp_path: Path) -> None:
-    """A promessa é sobre ESTADO, não sobre arquivo — e a regra velha não era.
-
-    O CENÁRIO QUE IMPORTA e que nenhum teste exercitava: vários estados
-    distintos, cada um com POUCAS cópias, TODAS fora da janela de retenção. A
-    proteção anterior era "nenhum OUTRO backup tem os mesmos bytes", isto é, por
-    ARQUIVO: um conteúdo repetido em três cópias não era "único" nenhuma vez, as
-    três viravam candidatas juntas, e aquele estado do `main.conf` dela sumia do
-    disco por completo — enquanto a última linha impressa dizia "os de conteúdo
-    único ficam sempre", que se lê como promessa de estado.
-
-    Aqui são 3 estados de 3 cópias cada, com retenção 1. O estado do MEIO é o que a regra
-    velha aniquilava: nenhuma das três cópias dele é a mais nova (a retenção
-    salva o estado de cima) nem a mais antiga (essa salva o de baixo).
-    """
+    """A promessa é sobre ESTADO, não sobre arquivo — e a regra velha não era."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     momento = 1_784_600_000
     estados = {
@@ -892,7 +705,7 @@ def test_podar_nunca_faz_um_estado_sumir_do_disco(tmp_path: Path) -> None:
             alvo.write_text(conteudo, encoding="utf-8")
             os.utime(alvo, (momento + i * 60, momento + i * 60))
             i += 1
-        assert nome  # o nome existe para o leitor, não para a asserção
+        assert nome
 
     antes = {b.read_bytes() for b in _backups(etc)}
     assert len(antes) == 3, "a fixture tem de ter TRÊS estados distintos"
@@ -909,21 +722,14 @@ def test_podar_nunca_faz_um_estado_sumir_do_disco(tmp_path: Path) -> None:
         "A proteção era por ARQUIVO ('nenhum outro tem os mesmos bytes') e a "
         "frase impressa prometia ESTADO."
     )
-    # E a poda AINDA PODA: um teste que passasse com a poda desligada não
-    # provaria nada. Das 9 cópias saem as 6 que têm irmã idêntica sobrevivendo.
     assert len(_backups(etc)) == 3, (
         f"sobraram {len(_backups(etc))} de 9 — a poda parou de podar"
     )
-    # A cópia que fica de cada estado é a MAIS ANTIGA dele: entre bytes iguais,
-    # a de mtime menor é a que diz quando aquele estado apareceu.
     assert "ÚNICA cópia deste conteúdo" in proc.stdout
 
 
 def test_podar_nao_toca_backup_que_nao_e_nosso(tmp_path: Path) -> None:
-    """Há um backup de OUTRA ferramenta em /etc/bluetooth que não é nosso.
-
-    Retenção que apaga o que não escreveu é perda de dado alheio.
-    """
+    """Há um backup de OUTRA ferramenta em /etc/bluetooth que não é nosso."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     alheio = etc / "main.conf.bak.outra-ferramenta-1784689791"
     alheio.write_text("nao-e-nosso\n", encoding="utf-8")
@@ -958,11 +764,7 @@ def test_podar_com_argumento_desconhecido_recusa(tmp_path: Path) -> None:
 
 
 def test_podar_nao_anuncia_remocao_que_nao_aconteceu(tmp_path: Path) -> None:
-    """O `|| true` engolia a falha do `rm` e a frase de sucesso saía igual.
-
-    Diretório sem permissão de escrita: o `rm` falha, e o script tem de DIZER
-    que falhou — anunciar remoção que não houve é mentir sobre o disco dela.
-    """
+    """O `|| true` engolia a falha do `rm` e a frase de sucesso saía igual."""
     if os.geteuid() == 0:
         pytest.skip("como root o modo do diretório não impede o rm")
     etc = _etc(tmp_path, MAIN_CONF_DELA)
@@ -976,11 +778,6 @@ def test_podar_nao_anuncia_remocao_que_nao_aconteceu(tmp_path: Path) -> None:
     assert proc.returncode != 0, "a poda falhou em tudo e mesmo assim saiu com 0"
     assert "não consegui remover" in proc.stderr
     assert "0 de 37 backup(s) removido(s)" in proc.stdout
-
-
-# ---------------------------------------------------------------------------
-# 7. `verificar` — o modo de leitura que o doctor consome
-# ---------------------------------------------------------------------------
 
 
 def test_verificar_acusa_o_estado_da_maquina_dela(tmp_path: Path) -> None:
@@ -1024,14 +821,8 @@ def test_sem_bluez_nada_explode(tmp_path: Path) -> None:
     assert not (etc / "main.conf").exists()
 
 
-# ---------------------------------------------------------------------------
-# 8. Fiação e invariantes de segurança do próprio script
-# ---------------------------------------------------------------------------
-
-
 def test_o_script_e_executavel_e_tem_sintaxe_valida() -> None:
-    """Contrato dos scripts desta casa, e aqui vale dobrado: install e
-    uninstall passaram a DEPENDER dele."""
+    """Contrato dos scripts desta casa, e aqui vale dobrado: install e"""
     assert SCRIPT.stat().st_mode & 0o111, "bluez_config.sh não é executável"
     proc = subprocess.run(
         ["bash", "-n", str(SCRIPT)], capture_output=True, text=True, timeout=60
@@ -1072,12 +863,7 @@ def test_o_script_diz_com_todas_as_letras_quando_a_mudanca_vale(tmp_path: Path) 
 
 
 def test_todo_caminho_deriva_da_raiz_configuravel() -> None:
-    """A bancada é segura porque NENHUM caminho é literal.
-
-    `/etc/bluetooth` só pode aparecer como valor PADRÃO de `HEFESTO_BT_ETC`.
-    Um literal solto significaria que algum modo escreve em /etc mesmo com a
-    raiz falsa — e a suíte passaria a mexer na máquina dela.
-    """
+    """A bancada é segura porque NENHUM caminho é literal."""
     fonte = SCRIPT.read_text(encoding="utf-8")
     codigo = [
         ln for ln in fonte.splitlines()
@@ -1088,24 +874,8 @@ def test_todo_caminho_deriva_da_raiz_configuravel() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 9. A escrita é ATÔMICA — o beco sem saída que a versão anterior podia criar
-#
-# `install -m644 tmp /etc/bluetooth/main.conf` escreve NO LUGAR (mesmo inode,
-# O_TRUNC). Disco cheio, queda de energia ou um kill no meio deixavam o
-# main.conf DELA truncado — e como o bloco fica no FIM, o corte cai DENTRO dele:
-# sobra sentinela de abertura sem fechamento, e a partir daí `aplicar` E
-# `remover` RECUSAM para sempre, com o doctor mandando rodar exatamente o que
-# não pode funcionar.
-# ---------------------------------------------------------------------------
-
-
 def _shim(tmp_path: Path, alvo: Path, comandos: tuple[str, ...], corta: bool) -> Path:
-    """Sabota SÓ o que escreve DIRETO no arquivo vivo; o resto passa reto.
-
-    `corta=True` simula a queda no meio da escrita (trunca o destino e sai com
-    erro). `corta=False` simula a falha limpa (não escreve nada e sai com erro).
-    """
+    """Sabota SÓ o que escreve DIRETO no arquivo vivo; o resto passa reto."""
     pasta = tmp_path / f"shim-{'corte' if corta else 'falha'}"
     pasta.mkdir(exist_ok=True)
     for nome in comandos:
@@ -1127,12 +897,7 @@ def _shim(tmp_path: Path, alvo: Path, comandos: tuple[str, ...], corta: bool) ->
 
 
 def test_escrita_interrompida_nao_trunca_o_main_conf(tmp_path: Path) -> None:
-    """Nenhuma escrita cai DIRETO sobre o main.conf vivo — nem uma.
-
-    O shim corta pela metade qualquer `cp`/`install` cujo destino seja o
-    arquivo vivo. Com a troca atômica, nada nunca tem esse destino: o conteúdo
-    novo nasce num temporário do mesmo diretório e entra por `mv`.
-    """
+    """Nenhuma escrita cai DIRETO sobre o main.conf vivo — nem uma."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     original = (etc / "main.conf").read_text(encoding="utf-8")
     pasta = _shim(tmp_path, etc / "main.conf", ("cp", "install"), corta=True)
@@ -1147,7 +912,6 @@ def test_escrita_interrompida_nao_trunca_o_main_conf(tmp_path: Path) -> None:
         "o arquivo ficou com sentinela de abertura sem fechamento — a partir "
         "daqui aplicar E remover recusam para sempre"
     )
-    # E a prova de que o beco não existe: dá para rodar de novo.
     assert _rodar(etc, "aplicar").returncode == 0
 
 
@@ -1165,7 +929,6 @@ def test_falha_na_troca_atomica_devolve_o_arquivo_intacto(tmp_path: Path) -> Non
     )
     assert "INTACTO" in proc.stderr
     assert "garantidos" not in proc.stdout
-    # O backup daquele estado existe, e é o que sobra quando algo dá errado.
     assert len(_backups(etc)) == 1
 
 
@@ -1174,24 +937,7 @@ def _sobras(etc: Path) -> list[str]:
 
 
 def test_a_troca_atomica_nao_deixa_temporario_quando_o_mv_fracassa(tmp_path: Path) -> None:
-    """ESTE TESTE NÃO MORDIA (achado de 06/08/2026, MEDIDO).
-
-    A versão anterior rodava um `aplicar` que dava CERTO e conferia que não
-    havia sobra. Num `aplicar` bem-sucedido o `mv` LEVA o temporário embora — não
-    há sobra possível, com ou sem limpeza no código. O teste passava verde com a
-    cura arrancada, que é o pior tipo de cobertura: a falsa.
-
-    O caminho que precisa de limpeza é o do FRACASSO. Aqui o `mv` falha, e é aí
-    que o temporário sobraria em /etc/bluetooth — no conffile dela, sem ninguém
-    para contar nem varrer.
-
-    A MORDIDA (MEDIDA): há DOIS mecanismos cobrindo este caminho — o `rm -f`
-    explícito e o `trap` de saída. Arrancar só um deixa este teste verde, porque
-    o outro segura a INVARIANTE, que é o que se testa aqui; arrancar os dois o
-    deixa vermelho. Quem quiser ver o `trap` morder sozinho tem o
-    `test_um_kill_no_meio_da_troca_nao_deixa_temporario`, onde não há `rm -f`
-    nenhum para salvar.
-    """
+    """ESTE TESTE NÃO MORDIA (achado de 06/08/2026, MEDIDO)."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     pasta = _shim(tmp_path, etc / "main.conf", ("mv",), corta=False)
 
@@ -1204,20 +950,7 @@ def test_a_troca_atomica_nao_deixa_temporario_quando_o_mv_fracassa(tmp_path: Pat
 
 
 def test_um_kill_no_meio_da_troca_nao_deixa_temporario(tmp_path: Path) -> None:
-    """O `trap` que não existia: um kill entre o `mktemp` e o `mv`.
-
-    ACHADO DE 06/08/2026: não havia `trap` nenhum no script. Um SIGTERM (ou um
-    Ctrl-C) depois do `mktemp` do temporário deixava
-    `.main.conf.hefesto-novo.XXXXXX` órfão em /etc/bluetooth, e nada o contava
-    nem o varria.
-
-    O shim aqui é um `chmod` que mata o PRÓPRIO script — mas SÓ quando o alvo é
-    o temporário da troca, que é o instante exato do intervalo, entre o
-    temporário nascer e o `mv` acontecer. Mirar em `chmod` qualquer NÃO serve: o
-    primeiro da execução é o do BACKUP, e ali o temporário ainda nem existe — o
-    teste passava sem exercitar nada (foi o primeiro desenho deste teste, e a
-    mutação "tira o trap" o deixou verde).
-    """
+    """O `trap` que não existia: um kill entre o `mktemp` e o `mv`."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     original = (etc / "main.conf").read_bytes()
     pasta = tmp_path / "shim-kill"
@@ -1249,12 +982,7 @@ def test_um_kill_no_meio_da_troca_nao_deixa_temporario(tmp_path: Path) -> None:
 
 
 def test_verificar_reporta_temporario_orfao(tmp_path: Path) -> None:
-    """O que um SIGKILL deixar para trás, alguém tem de saber contar.
-
-    `kill -9` não tem trap. O que já está no disco dela hoje também não teve.
-    Reportar é obrigação; apagar não fazemos — um temporário órfão pode ser a
-    única cópia do que a máquina tentou gravar quando morreu.
-    """
+    """O que um SIGKILL deixar para trás, alguém tem de saber contar."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     orfao = etc / ".main.conf.hefesto-novo.aBc123"
     orfao.write_text("[General]\n", encoding="utf-8")
@@ -1270,18 +998,7 @@ def test_verificar_reporta_temporario_orfao(tmp_path: Path) -> None:
 
 
 def test_backup_de_zero_byte_nao_conta_como_backup(tmp_path: Path) -> None:
-    """O backup nasce vazio do `mktemp`; um SIGKILL antes do `cp` o deixa assim.
-
-    E SIGKILL não tem trap — a limpeza que cobre INT/TERM/HUP não roda. O que
-    ficava no disco era um `main.conf.bak.hefesto-...` de ZERO byte que o
-    `verificar` contava dentro de `backups-hefesto:` como legítimo e o
-    `_resumo_backups` somava na frase do `aplicar`. Ela lia "há backup" onde não
-    havia cópia nenhuma do estado do arquivo — e essa frase é justamente a que
-    autoriza mexer no conffile.
-
-    O temporário órfão já tinha relatório próprio (`temporarios-orfaos:`); o
-    backup vazio não tinha nenhum. Aqui ele deixa de contar E passa a ser dito.
-    """
+    """O backup nasce vazio do `mktemp`; um SIGKILL antes do `cp` o deixa assim."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     vivo = etc / "main.conf.bak.hefesto-1786000001"
     vivo.write_text("[General]\nJustWorksRepairing=always\n", encoding="utf-8")
@@ -1308,7 +1025,6 @@ def test_o_resumo_do_aplicar_nao_soma_backup_vazio(tmp_path: Path) -> None:
     proc = _rodar(etc, "aplicar")
 
     assert proc.returncode == 0, proc.stderr
-    # 1 preexistente com conteúdo + 1 novo (o aplicar mudou o arquivo) = 2.
     assert "2 arquivo(s)" in proc.stdout, (
         f"a frase do resumo somou o backup vazio: {proc.stdout}"
     )
@@ -1319,11 +1035,7 @@ def test_o_resumo_do_aplicar_nao_soma_backup_vazio(tmp_path: Path) -> None:
 
 
 def test_a_poda_nao_alcanca_backup_vazio(tmp_path: Path) -> None:
-    """Não conta como backup, então não é candidato — e continua no disco.
-
-    Mesma regra dos temporários órfãos: reportar é obrigação, apagar não
-    fazemos. Um arquivo de 0 byte também é a marca de uma execução que morreu.
-    """
+    """Não conta como backup, então não é candidato — e continua no disco."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     _povoar_como_a_maquina_dela(etc)
     morto = etc / "main.conf.bak.hefesto-1786099999"
@@ -1346,18 +1058,8 @@ def test_o_temporario_do_remover_sai_de_mktemp(tmp_path: Path) -> None:
     assert any('devolvido="$(mktemp)"' in ln for ln in codigo)
 
 
-# ---------------------------------------------------------------------------
-# 10. O que a ferramenta DIZ antes de mexer no arquivo de alguém
-# ---------------------------------------------------------------------------
-
-
 def test_aplicar_nomeia_linha_de_terceiro_dentro_do_bloco(tmp_path: Path) -> None:
-    """Dentro das sentinelas é o lugar mais óbvio para alguém escrever.
-
-    O bloco inteiro é reescrito, então o que estiver ali dentro SAI. Sair em
-    silêncio é o que não pode: `ControllerMode`/`MultiProfile` são exatamente o
-    que se põe num main.conf por causa de fone/headset.
-    """
+    """Dentro das sentinelas é o lugar mais óbvio para alguém escrever."""
     etc = _etc(
         tmp_path,
         "[General]\n"
@@ -1375,7 +1077,6 @@ def test_aplicar_nomeia_linha_de_terceiro_dentro_do_bloco(tmp_path: Path) -> Non
     assert "ControllerMode = bredr" in proc.stdout, "a linha alheia saiu em silêncio"
     assert "MultiProfile = multiple" in proc.stdout
     assert "FORA das sentinelas" in proc.stdout
-    # E o comentário do nosso próprio bloco não vira alarme falso.
     assert "sai do arquivo: #" not in proc.stdout
 
 
@@ -1388,12 +1089,7 @@ def test_bloco_so_com_o_nosso_conteudo_nao_gera_alarme(tmp_path: Path) -> None:
 
 
 def test_remover_grita_o_always_que_devolve(tmp_path: Path) -> None:
-    """O `aplicar` grita ao CORRIGIR; o `remover` era mudo ao DEVOLVER.
-
-    Correção silenciosa foi o que deixou o `always` viver quatro dias. A
-    operação inversa, muda, devolve ao estado ATIVO o valor que esta mesma
-    sprint classifica como injeção de teclas.
-    """
+    """O `aplicar` grita ao CORRIGIR; o `remover` era mudo ao DEVOLVER."""
     etc = _etc(tmp_path, "[General]\nJustWorksRepairing = always\nName = BlueZ\n")
     _rodar(etc, "aplicar")
 
@@ -1417,12 +1113,7 @@ def test_remover_diz_quando_a_chave_deixa_de_existir(tmp_path: Path) -> None:
 
 
 def test_aplicar_avisa_que_rebaixa_um_never(tmp_path: Path) -> None:
-    """`never` é MAIS restritivo que o nosso `confirm` — rebaixar em silêncio não.
-
-    Quem escolheu `never` escolheu recusar todo re-pareamento por Just Works de
-    quem já tem bond. Rebaixamos (senão o controle dela deixa de re-parear), mas
-    dizendo o que estamos fazendo e como ter o valor de volta.
-    """
+    """`never` é MAIS restritivo que o nosso `confirm` — rebaixar em silêncio não."""
     etc = _etc(tmp_path, "[General]\nJustWorksRepairing = never\nName = BlueZ\n")
     proc = _rodar(etc, "aplicar")
 
@@ -1433,12 +1124,7 @@ def test_aplicar_avisa_que_rebaixa_um_never(tmp_path: Path) -> None:
 
 
 def test_sem_main_conf_o_aplicar_nao_anuncia_garantia(tmp_path: Path) -> None:
-    """Com /etc/bluetooth presente e main.conf AUSENTE, nada foi escrito.
-
-    A versão anterior imprimia "JustWorksRepairing=confirm + FastConnectable=true
-    garantidos" e saía com 0 sem ter tocado em arquivo nenhum — a mesma mentira
-    do instalador que anunciava `confirm` com o `always` vivo, em outra roupa.
-    """
+    """Com /etc/bluetooth presente e main.conf AUSENTE, nada foi escrito."""
     etc = _etc(tmp_path)
     proc = _rodar(etc, "aplicar")
 
@@ -1448,13 +1134,7 @@ def test_sem_main_conf_o_aplicar_nao_anuncia_garantia(tmp_path: Path) -> None:
 
 
 def test_remover_declara_a_excecao_das_linhas_em_branco_do_fim(tmp_path: Path) -> None:
-    """A invariante "devolve byte a byte" tem UMA exceção, e ela é declarada.
-
-    Linhas em branco do FIM não voltam: é o preço da idempotência (sem isso,
-    cada `aplicar` empurrava o bloco uma linha para baixo — medido, 27 a 34
-    linhas em oito execuções). Fica fixado aqui para ninguém descobrir por
-    acidente, e a exceção está escrita no comentário do `_despir_main_conf`.
-    """
+    """A invariante "devolve byte a byte" tem UMA exceção, e ela é declarada."""
     original = "[General]\nName = BlueZ\n\n\n"
     etc = _etc(tmp_path, original)
 
@@ -1467,18 +1147,8 @@ def test_remover_declara_a_excecao_das_linhas_em_branco_do_fim(tmp_path: Path) -
     )
 
 
-# ---------------------------------------------------------------------------
-# 11. Ler o arquivo dela: nem cego, nem pedindo senha à toa
-# ---------------------------------------------------------------------------
-
-
 def test_remover_recusa_em_vez_de_concluir_que_nao_ha_nada_nosso(tmp_path: Path) -> None:
-    """main.conf ilegível fazia o `remover` decidir que não havia bloco nosso.
-
-    Três leituras rodavam sem o prefixo de root, ao contrário de todo o resto:
-    com um main.conf modo 600 (legítimo num arquivo de config de rádio), o
-    `remover` não removia — desinstalar não desinstalava, em silêncio.
-    """
+    """main.conf ilegível fazia o `remover` decidir que não havia bloco nosso."""
     if os.geteuid() == 0:
         pytest.skip("root lê qualquer modo; o cenário não existe")
     etc = _etc(tmp_path, MAIN_CONF_DELA)
@@ -1490,7 +1160,6 @@ def test_remover_recusa_em_vez_de_concluir_que_nao_ha_nada_nosso(tmp_path: Path)
 
     assert proc.returncode != 0, "o remover disse que estava tudo certo sem poder ler o arquivo"
     assert "não consigo LER" in proc.stderr
-    # E o bloco continua lá: recusar é honesto, mentir não.
     assert "# >>> hefesto bluetooth >>>" in (etc / "main.conf").read_text(encoding="utf-8")
 
 
@@ -1511,13 +1180,7 @@ def test_verificar_nao_inventa_valor_quando_nao_consegue_ler(tmp_path: Path) -> 
 
 
 def test_leitura_de_arquivo_ilegivel_escala_em_vez_de_desistir(tmp_path: Path) -> None:
-    """Recusar é melhor que mentir; ESCALAR é melhor que recusar.
-
-    Em produção o `remover` roda com prefixo de root. Se a leitura não escalasse,
-    todo main.conf modo 600 viraria recusa e o uninstall nunca removeria o bloco
-    — a versão mais educada do mesmo defeito. Aqui um `sudo` FALSO (outro nome,
-    que só registra e repassa) prova que a escalada é tentada.
-    """
+    """Recusar é melhor que mentir; ESCALAR é melhor que recusar."""
     if os.geteuid() == 0:
         pytest.skip("root lê qualquer modo; o cenário não existe")
     etc = _etc(tmp_path, MAIN_CONF_DELA)
@@ -1544,18 +1207,9 @@ def test_leitura_de_arquivo_ilegivel_escala_em_vez_de_desistir(tmp_path: Path) -
 
 
 def test_verificar_nao_pede_sudo_para_arquivo_legivel() -> None:
-    """O `verificar` é o que o doctor consome: senha em diagnóstico, não.
-
-    A escalada é condicional — só quando o arquivo NÃO é legível. Um `_r` fixo
-    em toda leitura transformaria `scripts/doctor.sh` em pedido de senha.
-    """
+    """O `verificar` é o que o doctor consome: senha em diagnóstico, não."""
     fonte = SCRIPT.read_text(encoding="utf-8")
     assert 'if [[ -r "${arquivo}" ]]; then' in fonte
-
-
-# ---------------------------------------------------------------------------
-# 12. A fiação com quem chama: install.sh e doctor.sh
-# ---------------------------------------------------------------------------
 
 
 def _secao_3d() -> str:
@@ -1567,20 +1221,13 @@ def _secao_3d() -> str:
 
 
 def test_install_anuncia_o_pulo_do_bluez_com_no_udev() -> None:
-    """`--no-udev` pulava a cura do BlueZ inteira SEM DIZER UMA PALAVRA.
-
-    O passo era gateado por `SKIP_UDEV -eq 0` e não tinha `else`: com a flag,
-    nem o `step "3d"` saía. Na máquina dela isso significa que o `always`
-    SOBREVIVE ao install — enquanto o detector novo do doctor manda "rode
-    ./install.sh" sem ressalva. O vizinho 3d-bis já fazia certo.
-    """
+    """`--no-udev` pulava a cura do BlueZ inteira SEM DIZER UMA PALAVRA."""
     secao = _secao_3d()
     assert '"${SKIP_UDEV}" -eq 1' in secao, "o passo 3d não tem ramo para --no-udev"
     assert "PULADO (--no-udev)" in secao
     assert "bluez_config.sh" in secao.split('"${SKIP_UDEV}" -eq 1')[1].split("elif")[0], (
         "o pulo não diz que a config do BlueZ ficou por fazer"
     )
-    # E diz o estado do disco AGORA, pelo dono único, em leitura pura.
     assert "verificar" in secao
     assert "JustWorksRepairing=always AGORA" in secao
 
@@ -1592,12 +1239,7 @@ def test_install_anuncia_o_pulo_tambem_quando_falta_sudo() -> None:
 
 
 def test_doctor_le_pelo_dono_unico() -> None:
-    """Duas fontes para a mesma regra é a classe de defeito desta leva.
-
-    O doctor REIMPLEMENTAVA o `sed` do `_valor_ativo`. Hoje ele chama
-    `bluez_config.sh verificar` — e o comentário do script, que afirmava isso
-    antes de ser verdade, passou a ser verdade.
-    """
+    """Duas fontes para a mesma regra é a classe de defeito desta leva."""
     doctor = (RAIZ / "scripts" / "doctor.sh").read_text(encoding="utf-8")
     assert '"${dono}" verificar' in doctor
     assert "JustWorksRepairing[[:space:]]*=" not in doctor, (
@@ -1611,27 +1253,10 @@ def test_doctor_avisa_em_vez_de_mentir_quando_o_dono_some() -> None:
     assert "o dono único da config do BlueZ não está aqui" in doctor
 
 
-# ---------------------------------------------------------------------------
-# 13. O BACKUP QUE SE DESTRUÍA SOZINHO (achado ALTA-1 de 06/08/2026)
-#
-# O nome era `main.conf.bak.hefesto-${rotulo}$(date +%s)`: resolução de UM
-# SEGUNDO, `cp` sem `-n`, sem teste de `-e`, sem mktemp. Duas gravações do MESMO
-# rótulo dentro do mesmo segundo faziam a segunda SOBRESCREVER o backup da
-# primeira — dentro do `aplicar`/`remover`, sem gesto dela. O `_resumo_backups`
-# não via nada (um arquivo morre, outro nasce, a CONTAGEM não muda) e a mesma
-# execução imprimia "nenhum é apagado automaticamente".
-# ---------------------------------------------------------------------------
-
-
 def test_duas_gravacoes_no_mesmo_segundo_nao_comem_o_backup_anterior(
     tmp_path: Path,
 ) -> None:
-    """O estado imediatamente anterior é o backup de MAIOR valor. E era o que sumia.
-
-    Reprodução MEDIDA: `aplicar` sobre o estado A, edição para o estado B,
-    `aplicar` de novo dentro do mesmo segundo. Antes: UM backup no disco, com o
-    estado B — o estado A dela tinha ido embora.
-    """
+    """O estado imediatamente anterior é o backup de MAIOR valor. E era o que sumia."""
     etc = _etc(tmp_path, "[General]\nName = ESTADO-A-DELA\n")
     _rodar(etc, "aplicar")
     (etc / "main.conf").write_text("[General]\nName = ESTADO-B\n", encoding="utf-8")
@@ -1651,19 +1276,7 @@ def test_duas_gravacoes_no_mesmo_segundo_nao_comem_o_backup_anterior(
 
 
 def test_aplicar_e_remover_seguidos_nao_colidem(tmp_path: Path) -> None:
-    """A reprodução do verificador, letra por letra: aplicar; remover; aplicar.
-
-    É a sequência que o próprio doctor sugere, e ela acontece em muito menos de
-    um segundo. O que ela grava são DOIS estados (o original e o aplicado), e o
-    disco guarda os dois — nenhum nome colide e nenhum estado some.
-
-    FATO SUBSTITUÍDO em 28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B7): esta
-    régua cobrava «três gravações reais = três backups, sempre», e a terceira
-    era cópia byte a byte da primeira. Foi assim que o /etc/bluetooth dela
-    chegou a 51 backups. Um arquivo por ESTADO é a regra agora; a colisão de
-    nomes continua cobrada pela régua de cima, com dois estados distintos no
-    mesmo segundo.
-    """
+    """A reprodução do verificador, letra por letra: aplicar; remover; aplicar."""
     etc = _etc(tmp_path, "[General]\nName = ESTADO-ORIGINAL\n")
     inicio = time.monotonic()
     _rodar(etc, "aplicar")
@@ -1681,10 +1294,7 @@ def test_aplicar_e_remover_seguidos_nao_colidem(tmp_path: Path) -> None:
 
 
 def test_a_frase_do_resumo_deixou_de_ser_mentira(tmp_path: Path) -> None:
-    """"nenhum é apagado automaticamente" saía na MESMA execução que apagava um.
-
-    Não é preciosismo de texto: era a frase que impedia quem lia de desconfiar.
-    """
+    """"nenhum é apagado automaticamente" saía na MESMA execução que apagava um."""
     etc = _etc(tmp_path, "[General]\nName = BlueZ\n")
     _rodar(etc, "aplicar")
     antes = {b.name for b in _backups(etc)}
@@ -1698,34 +1308,8 @@ def test_a_frase_do_resumo_deixou_de_ser_mentira(tmp_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 14. O BACKUP PARCIAL (achado MÉDIA-7 de 06/08/2026)
-#
-# A assimetria estava no próprio corpo do `_gravar_se_mudou`: o caminho do
-# temporário tinha `rm -f`, o do backup não. Um `cp` que morre no meio deixava
-# um arquivo cortado no disco, sem limpeza e sem uma palavra — e todo consumidor
-# (o `verificar` que conta, o `podar` que decide) o tratava como legítimo.
-# ---------------------------------------------------------------------------
-
-
 def test_backup_parcial_e_apagado_e_o_main_conf_nao_e_tocado(tmp_path: Path) -> None:
-    """Meio backup é pior que backup nenhum: tem cara de cópia fiel.
-
-    O shim corta o `cp` cujo destino é o arquivo de backup. Nada de backup
-    cortado sobrevive, e o `main.conf` dela não é reescrito — sem backup íntegro
-    não se mexe no conffile.
-
-    O QUE ESTE TESTE MORDE, EXATAMENTE (correção de 06/08/2026 — a rodada
-    anterior afirmou uma mordida que NÃO REPRODUZ, e uma medição de terceiro a
-    derrubou). A cura tem duas metades:
-
-        if ! _r cp "${origem}" "${backup}" || ! _r cmp -s "${origem}" "${backup}"
-
-    Aqui o shim faz o `cp` sair **1**, então o `||` curto-circuita e o `cmp`
-    NUNCA É AVALIADO: este teste morde a metade do `cp` e a limpeza, e arrancar
-    o `cmp` o deixa VERDE. A outra metade tem bancada própria e é a de baixo,
-    `test_backup_que_mente_ter_copiado_e_pego_pelo_cmp`, onde o `cp` sai 0.
-    """
+    """Meio backup é pior que backup nenhum: tem cara de cópia fiel."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     original = (etc / "main.conf").read_bytes()
     pasta = tmp_path / "shim-backup-parcial"
@@ -1757,19 +1341,7 @@ def test_backup_parcial_e_apagado_e_o_main_conf_nao_e_tocado(tmp_path: Path) -> 
 
 
 def test_backup_que_mente_ter_copiado_e_pego_pelo_cmp(tmp_path: Path) -> None:
-    """A metade do `cmp`, que até 06/08/2026 NÃO TINHA MORDIDA NENHUMA.
-
-    O caso é o pior de todos e o mais silencioso: o `cp` corta o arquivo E SAI
-    COM 0. Nada no código anterior desconfia — o `||` já foi satisfeito pelo
-    lado esquerdo e o script segue adiante reescrevendo o `main.conf` dela com
-    um "backup" de 118 bytes cortado no meio do bloco. Só a conferência byte a
-    byte pega isso, e ela existia sem ninguém provar que servia para alguma
-    coisa: o teste que dizia cobri-la usava um `cp` que saía 1.
-
-    Não é hipótese de laboratório: `cp` sobre NFS/SMB com escrita adiada, disco
-    cheio detectado só no `close()`, e qualquer sistema de arquivos que só
-    reporte erro no flush chegam exatamente aqui — saída 0, arquivo curto.
-    """
+    """A metade do `cmp`, que até 06/08/2026 NÃO TINHA MORDIDA NENHUMA."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     original = (etc / "main.conf").read_bytes()
     assert len(original) > 118, "a fixture precisa ser maior que o corte"
@@ -1814,23 +1386,6 @@ def test_backup_integro_e_conferido_byte_a_byte(tmp_path: Path) -> None:
     assert _backups(etc)[0].read_text(encoding="utf-8") == MAIN_CONF_DELA
 
 
-# ---------------------------------------------------------------------------
-# 15. O GRUPO — o oráculo é o GKeyFile, e o dono único tem de concordar com ele
-#
-# ACHADO MÉDIA-4 (06/08/2026, MEDIDO): o `_valor_ativo` era um `sed | tail -n 1`
-# que varria o arquivo INTEIRO e ignorava o grupo. Com `[General]
-# JustWorksRepairing=always` seguido de `[Policy] JustWorksRepairing=confirm`, o
-# `verificar` respondia `veredito: OK` e o GKeyFile lia `always`. Falso negativo
-# do dono único, consumido pelo doctor E pelo ramo `--no-udev` do install.
-#
-# E a regra "o último vence" (o `tail -n 1`) não tinha teste que mordesse:
-# trocar por `head -n 1` deixava a suíte verde.
-# ---------------------------------------------------------------------------
-
-#: (nome, conteúdo do main.conf, valor que o BlueZ lê). A terceira coluna é
-#: CONFERIDA contra o GKeyFile de verdade em
-#: `test_a_tabela_do_grupo_nao_e_ficcao` — sem isso ela seria só mais um parser
-#: em Python escrito à mão, que é exatamente o defeito desta seção.
 _TABELA_DO_GRUPO: list[tuple[str, str, str | None]] = [
     (
         "grupo-errado-nao-conta",
@@ -1906,11 +1461,7 @@ def test_a_tabela_do_grupo_nao_e_ficcao(
 def test_o_dono_unico_le_exatamente_o_que_o_bluez_le(
     tmp_path: Path, nome: str, conteudo_conf: str, esperado: str | None
 ) -> None:
-    """E então: o `verificar` responde a MESMA coisa, caso a caso.
-
-    O caso `grupo-errado-nao-conta` é a reprodução literal do achado: antes
-    desta cura o `verificar` dizia `confirm` e o BlueZ lia `always`.
-    """
+    """E então: o `verificar` responde a MESMA coisa, caso a caso."""
     etc = _etc(tmp_path, conteudo_conf)
 
     proc = _rodar(etc, "verificar")
@@ -1944,11 +1495,7 @@ def test_o_veredito_acompanha_o_grupo(tmp_path: Path) -> None:
 
 
 def test_o_ultimo_vence_e_nao_o_primeiro(tmp_path: Path) -> None:
-    """A regra `tail -n 1` sem teste: trocar por `head -n 1` passava verde.
-
-    Alguém que apense o PRÓPRIO `[General]` DEPOIS do nosso bloco vence — e um
-    dono que lesse o primeiro diria `confirm` com `always` no ar.
-    """
+    """A regra `tail -n 1` sem teste: trocar por `head -n 1` passava verde."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
     _rodar(etc, "aplicar")
     with (etc / "main.conf").open("a", encoding="utf-8") as fh:
@@ -1977,20 +1524,6 @@ def test_aplicar_corrige_o_caso_do_grupo(tmp_path: Path) -> None:
     assert _valor(etc) == "confirm"
 
 
-# ---------------------------------------------------------------------------
-# 16. A PROMESSA QUE ERA FALSA NO LUGAR MAIS PROVÁVEL (achado MÉDIA-5)
-#
-# O rebaixamento `never` -> `confirm` vinha com a promessa em voz alta "a sua
-# linha é neutralizada, não apagada, e volta inteira". Ela é VERDADE fora do
-# bloco. É FALSA quando o `never` está DENTRO do bloco hefesto — que é
-# exatamente onde vai escrever quem leu o aviso do doctor e resolveu endurecer o
-# valor, porque é ali que a chave já está. Ali o `_despir_main_conf` descarta a
-# faixa inteira, nenhuma MARCA é gravada, e o `remover` entrega arquivo SEM a
-# chave. E o aviso do alheio tem `FastConnectable|JustWorksRepairing` na lista
-# de exceções, então a linha dela sumia sem uma palavra.
-# ---------------------------------------------------------------------------
-
-
 def test_never_fora_do_bloco_ganha_a_promessa_e_ela_se_cumpre(tmp_path: Path) -> None:
     """Fora do bloco a promessa é verdadeira — e o teste cobra o cumprimento."""
     original = "[General]\nJustWorksRepairing = never\nName = BlueZ\n"
@@ -2011,12 +1544,7 @@ def test_never_fora_do_bloco_ganha_a_promessa_e_ela_se_cumpre(tmp_path: Path) ->
 def test_never_dentro_do_bloco_nao_ganha_promessa_que_nao_se_cumpre(
     tmp_path: Path,
 ) -> None:
-    """Dentro do bloco a linha SAI e não volta. Então não se promete que volta.
-
-    A prova é dupla: o aviso diz que a linha não volta, E o `remover` de fato
-    não a devolve (é a medição do achado, mantida aqui para que ninguém
-    "conserte" o aviso sem consertar o mecanismo).
-    """
+    """Dentro do bloco a linha SAI e não volta. Então não se promete que volta."""
     etc = _etc(
         tmp_path,
         "[General]\nName = BlueZ\n"
@@ -2041,7 +1569,6 @@ def test_never_dentro_do_bloco_nao_ganha_promessa_que_nao_se_cumpre(
     )
     assert _valor(etc) == "confirm"
 
-    # E a medição que sustenta o texto: o `never` de dentro do bloco NÃO volta.
     _rodar(etc, "remover")
     assert _valor(etc) is None, (
         "se o `never` de dentro do bloco passou a voltar, a promessa pode ser "
@@ -2062,20 +1589,8 @@ def test_o_doctor_nao_promete_devolucao_sem_ressalva() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 17. O asset vazio, e o que o comentário promete
-# ---------------------------------------------------------------------------
-
-
 def test_bloco_de_zero_byte_nao_anuncia_garantia(tmp_path: Path) -> None:
-    """Cada passo deu certo e o resultado não existe.
-
-    MEDIDO em 06/08/2026: com `assets/bluetooth/hefesto-bt.block` de ZERO BYTE
-    — asset truncado no build, no rsync ou no empacotamento — o `aplicar` saía
-    com rc=0 anunciando "garantidos" e o arquivo final não tinha a chave. É a
-    mesma família do defeito que abriu a sprint, e a cura estava a uma chamada
-    de distância: reler o disco pelo `_verificar`, que já existia.
-    """
+    """Cada passo deu certo e o resultado não existe."""
     assets = tmp_path / "assets"
     assets.mkdir()
     (assets / "hefesto-bt.block").write_text("", encoding="utf-8")
@@ -2106,13 +1621,7 @@ def test_bloco_de_zero_byte_nao_anuncia_garantia(tmp_path: Path) -> None:
 
 
 def test_o_comentario_nao_promete_durabilidade_que_nao_entrega() -> None:
-    """`rename(2)` dá ATOMICIDADE, não DURABILIDADE — e não há `fsync` aqui.
-
-    O comentário prometia cobrir "queda de energia". Cobre o arquivo pela
-    metade (que era o estrago que importava), não a perda do conteúdo novo.
-    Promessa a mais num comentário é a semente da próxima hipótese que não
-    explica o que já funcionava.
-    """
+    """`rename(2)` dá ATOMICIDADE, não DURABILIDADE — e não há `fsync` aqui."""
     fonte = SCRIPT.read_text(encoding="utf-8")
     assert "ATOMICIDADE, não DURABILIDADE" in fonte, (
         "o comentário da troca atômica voltou a prometer durabilidade"
@@ -2126,19 +1635,7 @@ def test_o_comentario_nao_promete_durabilidade_que_nao_entrega() -> None:
 
 
 def test_verificar_reporta_o_valor_dos_dropins(tmp_path: Path) -> None:
-    """O ANEXO da verificação adversarial, avaliado e reportado.
-
-    O `aplicar` grava drop-ins POR CIMA e o `verificar` nunca lia VALOR de lá:
-    um drop-in de terceiro que ordene DEPOIS do nosso venceria, e o veredito
-    continuaria `OK`.
-
-    MEDIDO em 06/08/2026 nesta máquina, três vezes pelo mesmo lado: `strings` do
-    bluetoothd 5.86 do backport tem `%*s/main.conf` e ZERO `main.conf.d`, o
-    diretório NÃO EXISTE, e `dpkg -L bluez` não o lista. Aqui o mecanismo do
-    drop-in não está ligado — fazer o VEREDITO depender de um arquivo que este
-    bluetoothd não lê seria alarme falso, o defeito de costas. Então o valor é
-    REPORTADO e nomeado, e o veredito segue saindo do `main.conf`.
-    """
+    """O ANEXO da verificação adversarial, avaliado e reportado."""
     etc = _etc(
         tmp_path,
         "[General]\nFastConnectable=true\nJustWorksRepairing=confirm\n",
@@ -2172,16 +1669,7 @@ def test_dropin_nosso_nao_vira_conflito(tmp_path: Path) -> None:
 
 
 def test_a_nota_do_no_udev_nao_alega_o_que_o_ci_nao_faz() -> None:
-    """Decisão gravada sobre medição FALSA é pior que decisão sem nota.
-
-    A justificativa do gate do `--no-udev` era "o CI o usa: separar faria o CI
-    reescrever /etc/bluetooth/main.conf da máquina de build". MEDIDO em
-    06/08/2026 que a premissa não existe: o CI NÃO roda o `install.sh` —
-    `grep -rn 'install\\.sh' .github/workflows/` acha só o `shellcheck` da
-    ci.yml:136, e nenhuma invocação. A decisão se mantém pelo contrato
-    documentado (`--no-udev` pula os passos que tocam /etc, e este escreve em
-    /etc/bluetooth/main.conf); a justificativa é que foi corrigida.
-    """
+    """Decisão gravada sobre medição FALSA é pior que decisão sem nota."""
     secao = INSTALL.read_text(encoding="utf-8")
     assert "máquina de build" not in secao, (
         "a justificativa falsa voltou: o CI não roda o install.sh"
@@ -2199,12 +1687,6 @@ def test_a_nota_do_no_udev_nao_alega_o_que_o_ci_nao_faz() -> None:
             if linha.lstrip().startswith("#"):
                 continue
             invocacoes.append(f"{arquivo.name}:{numero}: {linha.strip()}")
-    # 19/08/2026: o CI PASSOU a rodar o `install.sh`, de propósito — o job
-    # `install-multi-distro` o executa em contêiner, como usuária comum, e foi
-    # ele que achou dois bloqueantes que nenhuma máquina de quem desenvolve
-    # pegava. A asserção mudou de lado, e continua mordendo: o que ela guarda
-    # agora é que a SEGUNDA nota datada exista no `install.sh`, para ninguém
-    # ler a primeira (de 06/08) e concluir hoje o que era verdade naquele dia.
     assert "SEGUNDA NOTA DATADA" in secao, (
         "o CI roda o install.sh desde 19/08/2026, e o `install.sh` voltou a ter "
         "só a nota de 06/08 dizendo que ele NÃO roda. Uma nota datada não se "
@@ -2220,13 +1702,7 @@ def test_a_nota_do_no_udev_nao_alega_o_que_o_ci_nao_faz() -> None:
 
 
 def test_o_caso_do_link_simbolico_esta_dito(tmp_path: Path) -> None:
-    """Não é regressão, não é o caso dela — mas merece a linha no comentário.
-
-    Com `main.conf` como LINK SIMBÓLICO, o `mv -f` substitui o link por arquivo
-    comum e o alvo do link fica para trás. O código antigo (`install -m644`)
-    fazia o oposto: seguia o link e reescrevia o alvo. Nenhum dos dois é
-    "certo"; o que não pode é o comportamento ser surpresa.
-    """
+    """Não é regressão, não é o caso dela — mas merece a linha no comentário."""
     assert "LINK SIMBÓLICO" in SCRIPT.read_text(encoding="utf-8")
 
     alvo = tmp_path / "main.conf.real"
@@ -2245,14 +1721,6 @@ def test_o_caso_do_link_simbolico_esta_dito(tmp_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 20. Os três casos em que o dono único discordava do GKeyFile (06/08/2026)
-#
-# Nenhum deles é hipótese: os três foram medidos contra o oráculo antes de a
-# cura existir, e os três produziam veredito FALSO — em duas direções.
-# ---------------------------------------------------------------------------
-
-#: (nome, conteúdo, mensagem que o GKeyFile dá ao recusar — CONFERIDA).
 _TABELA_DA_RECUSA: list[tuple[str, str]] = [
     (
         "linha-solta-sem-igual",
@@ -2277,11 +1745,7 @@ _TABELA_DA_RECUSA: list[tuple[str, str]] = [
 def test_a_tabela_da_recusa_nao_e_ficcao(
     tmp_path: Path, nome: str, conteudo_conf: str
 ) -> None:
-    """Primeiro: o GKeyFile RECUSA MESMO estes arquivos, inteiros.
-
-    Sem esta metade, a réplica em `awk` do dono estaria sendo conferida contra
-    uma tabela escrita à mão — o terceiro parser de novo, pela porta dos fundos.
-    """
+    """Primeiro: o GKeyFile RECUSA MESMO estes arquivos, inteiros."""
     alvo = tmp_path / "main.conf"
     alvo.write_text(conteudo_conf, encoding="utf-8")
 
@@ -2289,7 +1753,6 @@ def test_a_tabela_da_recusa_nao_e_ficcao(
         f"a tabela afirma que o GKeyFile recusa '{nome}' e ele NÃO recusa — "
         "corrija a TABELA, nunca o oráculo"
     )
-    # E o efeito que importa: nem a chave que ESTÁ escrita no arquivo vale.
     assert _oraculo(alvo) is None
 
 
@@ -2301,15 +1764,7 @@ def test_a_tabela_da_recusa_nao_e_ficcao(
 def test_o_dono_unico_nao_aprova_arquivo_que_o_bluez_descarta(
     tmp_path: Path, nome: str, conteudo_conf: str
 ) -> None:
-    """O falso `OK` mais silencioso que havia.
-
-    Uma linha malformada em QUALQUER ponto faz o GKeyFile abortar a carga, e o
-    `bluetoothd` fica sem config nenhuma — nem a nossa, nem a dela. O dono lia
-    `JustWorksRepairing=confirm` normalmente, respondia `veredito: OK` e o doctor
-    dava selo verde a um arquivo que o BlueZ descarta inteiro. A direção do
-    engano é conservadora (ninguém fica com `always` VALENDO), mas o veredito é
-    falso e ela não tem como descobrir.
-    """
+    """O falso `OK` mais silencioso que havia."""
     etc = _etc(tmp_path, conteudo_conf)
 
     proc = _rodar(etc, "verificar")
@@ -2336,16 +1791,11 @@ def test_o_aplicar_nao_anuncia_garantia_sobre_arquivo_recusado(tmp_path: Path) -
     assert "garantidos" not in proc.stdout
     assert "RECUSA" in proc.stderr
     assert "linha-solta-que-o-parser-recusa" in proc.stderr, "não nomeia a linha"
-    # E o oráculo confirma: depois do aplicar, o arquivo continua sem valer nada.
     assert _oraculo_recusa(etc / "main.conf") is not None
 
 
 def test_arquivo_valido_com_bloco_nosso_nao_e_acusado_de_recusa(tmp_path: Path) -> None:
-    """A linha de base: um detector de recusa que acusa tudo não serve.
-
-    O nosso próprio bloco (comentários, `[General]` repetido, chaves com espaço
-    em volta do `=`) tem de passar limpo — e passa, conferido pelo oráculo.
-    """
+    """A linha de base: um detector de recusa que acusa tudo não serve."""
     etc = _etc(tmp_path, MAIN_CONF_DELA)
 
     _rodar(etc, "aplicar")
@@ -2359,14 +1809,7 @@ def test_arquivo_valido_com_bloco_nosso_nao_e_acusado_de_recusa(tmp_path: Path) 
 
 
 def test_crlf_o_dono_le_o_mesmo_que_o_bluez(tmp_path: Path) -> None:
-    """MEDIDO: o GKeyFile descarta o `\\r` do fim e PRESERVA os espaços.
-
-    `JustWorksRepairing=confirm  \\r\\n` vale `'confirm  '` — dois espaços, sem o
-    CR. O dono lia `confirm\\r`, discordava do BlueZ e ainda EMBARALHAVA a
-    própria mensagem: o CR volta o cursor e a frase se sobrescreve no terminal
-    dela. Um main.conf com CRLF não é exótico — é o que sai de um editor de
-    Windows, de um `scp` de máquina Windows ou de um arquivo colado num wiki.
-    """
+    """MEDIDO: o GKeyFile descarta o `\\r` do fim e PRESERVA os espaços."""
     conteudo = "[General]\r\nJustWorksRepairing=confirm\r\n"
     etc = _etc(tmp_path, conteudo)
     assert _valor(etc) == "confirm", "a premissa do teste mudou — confira o oráculo"
@@ -2383,13 +1826,7 @@ def test_crlf_o_dono_le_o_mesmo_que_o_bluez(tmp_path: Path) -> None:
 
 
 def test_valor_vazio_existe_e_nao_e_ausente(tmp_path: Path) -> None:
-    """MEDIDO: `JustWorksRepairing=` faz o GKeyFile dizer que a chave EXISTE.
-
-    O valor é `''`. O dono devolvia string vazia, o `verificar` imprimia
-    `ausente`, e `ausente` tem tratamento PRÓPRIO no doctor ("o BlueZ cai no
-    default da distro") — que é uma afirmação diferente, e falsa: aqui a chave
-    está declarada, e declarada com um valor que não é o nosso.
-    """
+    """MEDIDO: `JustWorksRepairing=` faz o GKeyFile dizer que a chave EXISTE."""
     etc = _etc(tmp_path, "[General]\nJustWorksRepairing=\n")
     assert _valor(etc) == "", "a premissa do teste mudou — confira o oráculo"
 
@@ -2405,18 +1842,12 @@ def test_valor_vazio_existe_e_nao_e_ausente(tmp_path: Path) -> None:
 def test_as_tres_excecoes_do_devolve_byte_a_byte_estao_declaradas(
     tmp_path: Path,
 ) -> None:
-    """A invariante tinha TRÊS exceções e só uma estava escrita (achado (e)).
-
-    Cada uma é MEDIDA aqui contra o próprio script, não afirmada: se alguma
-    deixar de acontecer, este teste cai e a declaração tem de ser corrigida —
-    declarar exceção que não existe é tão ruim quanto esconder a que existe.
-    """
+    """A invariante tinha TRÊS exceções e só uma estava escrita (achado (e))."""
     fonte = SCRIPT.read_text(encoding="utf-8")
     assert "AS TRÊS EXCEÇÕES da promessa" in fonte, (
         "as exceções da invariante 3 deixaram de estar declaradas no cabeçalho"
     )
 
-    # (i) linhas em branco do FIM — já tinha teste próprio; aqui só a medição.
     for sub in ("i", "ii", "iii"):
         (tmp_path / sub).mkdir()
     etc = _etc(tmp_path / "i", "[General]\nName = BlueZ\n\n\n")
@@ -2424,7 +1855,6 @@ def test_as_tres_excecoes_do_devolve_byte_a_byte_estao_declaradas(
     _rodar(etc, "remover")
     assert (etc / "main.conf").read_text(encoding="utf-8") == "[General]\nName = BlueZ\n"
 
-    # (ii) chave NOSSA que um terceiro escreveu DENTRO do bloco não volta.
     dentro = (
         "[General]\n"
         "# >>> hefesto bluetooth >>>\n"
@@ -2438,7 +1868,6 @@ def test_as_tres_excecoes_do_devolve_byte_a_byte_estao_declaradas(
         "a exceção (ii) deixou de existir — reveja a declaração do cabeçalho"
     )
 
-    # (iii) linha que JÁ começava com a marca literal é DESCOMENTADA.
     etc = _etc(
         tmp_path / "iii",
         "[General]\n"

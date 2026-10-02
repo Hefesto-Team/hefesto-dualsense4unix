@@ -1,23 +1,4 @@
-"""A-MIRA-POR-MOVIMENTO-NA-TELA-02 — as três respostas dela sobre a Mira Virtual.
-
-Ela respondeu na página da sessão dos desenhos, em 24/09/2026 às 03h14
-(`D-2409-*` no `docs/data/decisoes-dela.csv`):
-
-1. **a dica do Giroscópio muda com a Mira acesa** — «Com a Mira Virtual acesa,
-   o giro deste controle vai ao jogo pelo analógico direito.»; apagada, a de
-   hoje. Por controle;
-2. **no Modo Nativo o chip fica cinza e não grava** — *"A exceção do nativo
-   todo o resto deve ter mira Virtual"*. A guarda mora no daemon (`mira.set`
-   recusa), não só na tela; e em todo outro modo e caminho a Mira funciona,
-   no cabo e no BT, do P1 ao P4;
-3. **«Só enquanto eu segurar» e «Inverter» entram na tela**, no bloco da Mira
-   da Calibrar, por controle, nascendo desligados.
-
-Cada seção abaixo é uma resposta, e cada régua diz a MORDIDA: o que arrancar
-para vê-la reprovar.
-
-Endereços de rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``), nunca um OUI real.
-"""
+"""A-MIRA-POR-MOVIMENTO-NA-TELA-02 — as três respostas dela sobre a Mira Virtual."""
 
 from __future__ import annotations
 
@@ -76,23 +57,11 @@ def _mira_set(servidor: IpcServer, **params: Any) -> dict[str, Any]:
     return asyncio.run(servidor._handlers["mira.set"](params))
 
 
-# ---------------------------------------------------------------------------
-# 2. O NATIVO — o chip não grava, e a guarda mora no daemon
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("ligada", [True, False])
 def test_no_nativo_o_mira_set_recusa_o_chip_sem_escrever_nada(
     perfis: Path, tmp_path: Path, ligada: bool
 ) -> None:
-    """`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`: o chip não grava no Nativo — nem
-    para acender, nem para apagar —, e a recusa não deixa rastro no disco nem
-    no vivo.
-
-    MORDIDA: tire a guarda `if nativo and "ligada" in params` do
-    `_handle_mira_set` e este teste reprova — o chip voltaria a gravar e
-    avisar, que é a opção que ela recusou.
-    """
+    """`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`: o chip não grava no Nativo — nem"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
@@ -107,11 +76,7 @@ def test_no_nativo_o_mira_set_recusa_o_chip_sem_escrever_nada(
 
 
 def test_no_nativo_a_recusa_leva_o_pedido_inteiro(perfis: Path, tmp_path: Path) -> None:
-    """Chip e ajuste no mesmo pedido: nada grava. Uma resposta que diz
-    «recusei» com metade escrita seria a tela mentindo pela metade.
-
-    MORDIDA: mova a guarda para depois do `save_profile` e este teste reprova.
-    """
+    """Chip e ajuste no mesmo pedido: nada grava. Uma resposta que diz"""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     servidor = _servidor_com_perfil(tmp_path)
@@ -124,12 +89,7 @@ def test_no_nativo_a_recusa_leva_o_pedido_inteiro(perfis: Path, tmp_path: Path) 
 def test_no_nativo_os_ajustes_da_calibrar_continuam_gravando(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """Os ajustes não acendem mira nenhuma: gravam, e valem quando o modo
-    voltar. Escolha pelo padrão dela (a que custa menos a quem joga): ela
-    pode deixar a Calibrar pronta no Nativo.
-
-    MORDIDA: recuse qualquer campo no Nativo e este teste reprova.
-    """
+    """Os ajustes não acendem mira nenhuma: gravam, e valem quando o modo"""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     servidor = _servidor_com_perfil(tmp_path)
@@ -146,28 +106,17 @@ def test_no_nativo_os_ajustes_da_calibrar_continuam_gravando(
 
 
 def test_fora_do_nativo_o_chip_grava(perfis: Path, tmp_path: Path) -> None:
-    """O controle da guarda: o MESMO pedido, sem o Nativo, grava. Sem este
-    caso a régua de cima passaria com um `mira.set` que recusa sempre."""
+    """O controle da guarda: o MESMO pedido, sem o Nativo, grava. Sem este"""
     servidor = _servidor_com_perfil(tmp_path)
     corpo = _mira_set(servidor, uniq=_P3, ligada=True)
     assert corpo["status"] == "ok" and corpo["ligada"] is True
     assert corpo["alcance"] == {"tique": "aplicado"} and corpo["ressalva"] is None
 
 
-# ---------------------------------------------------------------------------
-# 3. «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — o IPC abre a porta que a tela tem
-# ---------------------------------------------------------------------------
-
-
 def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """Os três campos novos gravam NA PEÇA, só o que ela mexeu, e valem no
-    próximo tique.
-
-    MORDIDA: tire `gatilho` de `_CAMPOS_DA_MIRA` e este teste reprova com a
-    recusa de chave desconhecida.
-    """
+    """Os três campos novos gravam NA PEÇA, só o que ela mexeu, e valem no"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
@@ -184,11 +133,7 @@ def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
 
 
 def test_sempre_devolve_a_mira_sem_botao(perfis: Path, tmp_path: Path) -> None:
-    """A opção «Sempre» manda `null` (a lista manda `""`): a peça volta a mirar
-    sem botão, COM opinião — o gatilho do perfil não volta por baixo.
-
-    MORDIDA: trate o `""` como campo omitido e este teste reprova.
-    """
+    """A opção «Sempre» manda `null` (a lista manda `""`): a peça volta a mirar"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     perfil = Profile(
@@ -207,12 +152,7 @@ def test_sempre_devolve_a_mira_sem_botao(perfis: Path, tmp_path: Path) -> None:
 def test_o_ps_e_o_que_nao_e_botao_sao_recusados(
     perfis: Path, tmp_path: Path, torto: Any
 ) -> None:
-    """O PS é a saída de emergência dela e nunca vira gatilho; o que não chega
-    ao jogo como botão também não. Nada grava.
-
-    MORDIDA: tire o validador de `ProfileMovimentoConfig.gatilho` e o caso
-    `ps` reprova.
-    """
+    """O PS é a saída de emergência dela e nunca vira gatilho; o que não chega"""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     servidor = _servidor_com_perfil(tmp_path)
@@ -246,15 +186,6 @@ def test_a_leitura_de_volta_traz_os_tres(perfis: Path, tmp_path: Path) -> None:
     assert entradas[1]["mira"]["inverter_vertical"] is True
 
 
-# ---------------------------------------------------------------------------
-# A TELA 02 — a dica do Giroscópio (resposta 1) e o chip cinza (resposta 2)
-# ---------------------------------------------------------------------------
-# O desenho mora na BANCADA (`mockup/02-controles.html`) e espera o OK dela; o
-# pacote já sabe pintar, e só pinta no dia em que a página publicada tiver o
-# endereço.
-
-#: AS PALAVRAS DELA, escritas aqui POR EXTENSO e não lidas do pacote: a régua
-#: confere o pacote contra a decisão dela, não contra ele mesmo.
 _DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
 _DICA_COM_A_MIRA = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
                     "pelo analógico direito.")
@@ -265,10 +196,7 @@ def _bancada_02() -> str:
 
 
 def _ctx(nativo: bool = False, **miras: Any) -> Any:
-    """Um `Contexto` com um controle por jogador, no cabo e no rádio.
-
-    `miras` é `{uniq: bloco mira ou None}`; `None` = o daemon não publicou.
-    """
+    """Um `Contexto` com um controle por jogador, no cabo e no rádio."""
     import pacotes
 
     conectados = []
@@ -295,12 +223,7 @@ def _cards(monkeypatch: pytest.MonkeyPatch, ctx: Any) -> dict[str, dict[str, Any
 def test_a_dica_do_giroscopio_muda_so_com_a_mira_acesa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`, POR CONTROLE: o P2 com a
-    Mira acesa diz a frase nova; o P3 apagado e o P4 sem leitura dizem a de hoje.
-
-    MORDIDA: devolva sempre `DICA_DO_GIRO` em `dica_do_giro` e o P2 reprova;
-    devolva sempre a nova e o P3 reprova.
-    """
+    """`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`, POR CONTROLE: o P2 com a"""
     cards = _cards(monkeypatch, _ctx(**{
         "aa:bb:cc:00:00:02": {"ligada": True},
         "aa:bb:cc:00:00:03": {"ligada": False},
@@ -313,11 +236,7 @@ def test_a_dica_do_giroscopio_muda_so_com_a_mira_acesa(
 def test_no_nativo_a_dica_de_hoje_volta_mesmo_com_a_mira_acesa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No Nativo o jogo lê o controle físico — o giro chega como giroscópio, e
-    a frase da Mira afirmaria o que não acontece.
-
-    MORDIDA: tire o `and not nativo` de `dica_do_giro` e este teste reprova.
-    """
+    """No Nativo o jogo lê o controle físico — o giro chega como giroscópio, e"""
     cards = _cards(monkeypatch, _ctx(nativo=True, **{"aa:bb:cc:00:00:02": {"ligada": True}}))
     assert next(iter(cards.values()))["giro-dica"] == _DICA_DE_HOJE
 
@@ -325,11 +244,7 @@ def test_no_nativo_a_dica_de_hoje_volta_mesmo_com_a_mira_acesa(
 def test_no_nativo_o_chip_da_mira_fica_cinza_nos_quatro(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`: o cinza acende em todo controle no
-    Nativo, e em nenhum fora dele. O valor é o que o desenho espera.
-
-    MORDIDA: devolva sempre `""` em `mira_fora` e o caso Nativo reprova.
-    """
+    """`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`: o cinza acende em todo controle no"""
     import re
 
     esperado = re.findall(r'data-campo="mira-fora" data-hef-alvo="classe" '
@@ -344,12 +259,7 @@ def test_no_nativo_o_chip_da_mira_fica_cinza_nos_quatro(
 
 
 def test_no_nativo_o_clique_no_chip_nao_chega_ao_daemon() -> None:
-    """O chip cinza não pede nada: recusa antes da ponte, e a frase vai ao
-    diário (o botão pisca a recusa; recado na tela, nenhum).
-
-    MORDIDA: tire o `if _nativo(ctx)` do gesto `mira` e este teste reprova —
-    o clique voltaria a chegar ao daemon.
-    """
+    """O chip cinza não pede nada: recusa antes da ponte, e a frase vai ao"""
     import pacotes.a02_controles as a02
 
     p = _PonteDaMira(_OK)
@@ -362,13 +272,7 @@ def test_no_nativo_o_clique_no_chip_nao_chega_ao_daemon() -> None:
 
 
 def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
-    """A tela leu o estado um tique atrás: se o Nativo ligou no meio, quem
-    recusa é o daemon (`status: "nativo"`), e a frase é a mesma do cinza —
-    não a do controle que sumiu.
-
-    MORDIDA: apague o ramo `status == "nativo"` do gesto e a frase vira
-    `MIRA_SEM_O_CONTROLE`.
-    """
+    """A tela leu o estado um tique atrás: se o Nativo ligou no meio, quem"""
     import pacotes.a02_controles as a02
 
     p = _PonteDaMira({"status": "nativo", "uniq": "aa:bb:cc:00:00:01", "motivo": "x"})
@@ -381,8 +285,8 @@ def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
 
 
 @pytest.mark.parametrize(("entrada", "jogador"), [
-    ({"is_primary": True}, 1),        # o primário, fora do co-op
-    ({"player": 3}, 3),               # um secundário do co-op
+    ({"is_primary": True}, 1),
+    ({"player": 3}, 3),
 ])
 def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     entrada: dict[str, Any], jogador: int,
@@ -411,7 +315,6 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     assert texto_motion(acesa, estado) is None
     nativo = texto_motion(acesa, {**estado, "native_mode": True})
     assert nativo and "direto com o controle" in nativo, nativo
-    # E pelo pacote da aba, que é quem leva a linha à tela: o vazio a esconde.
     dele = {"uniq": _P2, "transport": "usb", "connected": True, "inputs": {},
             "audio": {}, "speaker": {}, **acesa}
     import pacotes
@@ -422,13 +325,7 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
 
 
 def test_a_bancada_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
-    """O desenho: a dica do Giroscópio no invólucro sem caixa, o botão SEM
-    `title` próprio (ele calaria a dica que muda), e o cinza do chip da Mira
-    na folha, com o cursor que recusa.
-
-    MORDIDA: devolva o `title` ao botão do Giroscópio no `aba02.py` e o gerador
-    para; tire a regra `.sem-mira` da folha e este teste reprova.
-    """
+    """O desenho: a dica do Giroscópio no invólucro sem caixa, o botão SEM"""
     import re
 
     doc = _bancada_02()
@@ -447,12 +344,7 @@ def test_a_bancada_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
 
 
 def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
-    """A página PUBLICADA não tem os dois endereços, e o pacote não emite para
-    o vazio: o desenho novo só chega à janela dela depois do `--publicar`.
-
-    MORDIDA: tire `giro-dica` e `mira-fora` de dentro do
-    `_so_se_a_pagina_tiver` e este teste reprova.
-    """
+    """A página PUBLICADA não tem os dois endereços, e o pacote não emite para"""
     import pacotes.a02_controles as a02
 
     publicado = (_RAIZ / "src/hefesto_dualsense4unix/interface/paginas/"
@@ -464,12 +356,6 @@ def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
     assert "giro-dica" not in campos and "mira-fora" not in campos
 
 
-# ---------------------------------------------------------------------------
-# A CALIBRAR — «Só enquanto eu segurar» e «Inverter» (resposta 3)
-# ---------------------------------------------------------------------------
-
-#: OS BOTÕES QUE O ESQUEMA ACEITA, com os nomes que a troca de botões da aba
-#: Navegação já mostra — escritos aqui por extenso, e não lidos do gerador.
 _BOTOES_DA_LISTA = [
     ("cross", "Cruz"), ("circle", "Círculo"), ("square", "Quadrado"),
     ("triangle", "Triângulo"), ("l1", "L1"), ("r1", "R1"), ("l2", "L2"),
@@ -492,12 +378,7 @@ def _colunas_da_mira() -> list[str]:
 
 
 def test_a_lista_do_segurar_e_a_do_esquema_e_nasce_sempre() -> None:
-    """Cada coluna tem a lista: «Sempre» escolhido de nascença, e depois os
-    dezesseis botões que o esquema aceita, na ordem dele — nenhum PS.
-
-    MORDIDA: acrescente `"ps"` à lista do gerador, ou tire o `selected` do
-    «Sempre», e este teste reprova.
-    """
+    """Cada coluna tem a lista: «Sempre» escolhido de nascença, e depois os"""
     import re
 
     from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
@@ -519,11 +400,7 @@ def test_a_lista_do_segurar_e_a_do_esquema_e_nasce_sempre() -> None:
 
 
 def test_os_dois_inverter_nascem_apagados_e_dizem_o_ato() -> None:
-    """Dois interruptores por coluna, cada lado por si, APAGADOS de nascença,
-    e o nome acessível diz o ato inteiro («Inverter cima e baixo»).
-
-    MORDIDA: tire o `off` do gerador e este teste reprova.
-    """
+    """Dois interruptores por coluna, cada lado por si, APAGADOS de nascença,"""
     import re
 
     for coluna in _colunas_da_mira():
@@ -560,11 +437,7 @@ def _ctx_calibrar(**mira: Any) -> Any:
 
 
 def test_a_calibrar_pinta_o_segurar_e_o_inverter(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A lista recebe o botão da peça (`sempre` quando é `None`) e os dois
-    interruptores as três respostas: aceso, apagado e o travessão.
-
-    MORDIDA: pinte o `None` como vazio e a lista nunca volta a «Sempre».
-    """
+    """A lista recebe o botão da peça (`sempre` quando é `None`) e os dois"""
     import mesa_viva
     from pacotes import a11_calibrar_sensores as a11
 
@@ -579,18 +452,12 @@ def test_a_calibrar_pinta_o_segurar_e_o_inverter(monkeypatch: pytest.MonkeyPatch
     campos = a11.pacote(_ctx_calibrar(gatilho="l2"))["colunas"]["p1"]
     assert campos["mira-segurar"] == "l2"
     assert campos["mira-inverter-lado"] == mesa_viva.SEM_LEITOR
-    # Sem a chave, a lista fica onde está; um botão que ela não oferece, também.
     for mira in ({}, {"gatilho": "ps"}):
         assert "mira-segurar" not in a11.pacote(_ctx_calibrar(**mira))["colunas"]["p1"]
 
 
 def test_a_calibrar_pinta_cada_controle_com_o_dele(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Do P1 ao P4, no USB e no BT: cada coluna recebe o botão e os dois
-    «Inverter» do SEU controle — nunca só o P1 (a regra dela de 23/09).
-
-    MORDIDA: faça o `pacote` ler o bloco `mira` do primeiro controle para
-    todas as colunas e este teste reprova.
-    """
+    """Do P1 ao P4, no USB e no BT: cada coluna recebe o botão e os dois"""
     import pacotes
     from pacotes import a11_calibrar_sensores as a11
 
@@ -618,14 +485,7 @@ def test_a_calibrar_pinta_cada_controle_com_o_dele(monkeypatch: pytest.MonkeyPat
 
 
 def test_escolher_o_botao_manda_um_campo_so() -> None:
-    """A escolha vai ao `mira.set` sozinha; «Sempre» manda o vazio (que a ponte
-    leva como `null`); o `click` de abrir a lista não é escolha.
-
-    MORDIDA: trate o `click` como escolha e a lista regrava o perfil a cada vez
-    que ela a abre para olhar; devolva `None` no `click` e a lista pisca o
-    verde de «aplicado» só por ter sido aberta (o `armou` é o pouso sem
-    piscada, `hefesto_vivo.CHAVE_DO_CLIQUE_QUE_SO_ARMOU`).
-    """
+    """A escolha vai ao `mira.set` sozinha; «Sempre» manda o vazio (que a ponte"""
     gesto = _o_gesto("calibrar-sensores.html", "mira-segurar")
     for valor, esperado in (("l2", "l2"), ("sempre", "")):
         p = _PonteDaMira(_OK)
@@ -655,11 +515,7 @@ def test_o_ps_nao_passa_pela_lista(torto: str) -> None:
 
 
 def test_inverter_alterna_um_lado_pelo_que_o_daemon_diz() -> None:
-    """Cada botão alterna O SEU lado, pelo estado lido — e só ele vai ao daemon.
-
-    MORDIDA: mande `True` fixo e o segundo caso reprova; troque as chaves dos
-    dois lados e o primeiro reprova.
-    """
+    """Cada botão alterna O SEU lado, pelo estado lido — e só ele vai ao daemon."""
     gesto = _o_gesto("calibrar-sensores.html", "mira-inverter")
     for qual, chave in (("lado", "inverter_horizontal"),
                         ("cima-baixo", "inverter_vertical")):
@@ -683,11 +539,7 @@ def test_inverter_sem_leitura_recusa_sem_chutar() -> None:
 
 
 def test_no_nativo_a_calibrar_grava_calada() -> None:
-    """O ajuste no Nativo grava (`alcance: nao_se_aplica`) e não vira recusa:
-    o aviso «grava e avisa» saiu com a decisão dela.
-
-    MORDIDA: devolva o ramo `nao_se_aplica` ao `_pedir_a_mira` e reprova.
-    """
+    """O ajuste no Nativo grava (`alcance: nao_se_aplica`) e não vira recusa:"""
     p = _PonteDaMira({"status": "ok", "alcance": {"tique": "nao_se_aplica"},
                       "ressalva": "Modo Nativo"})
     _o_gesto("calibrar-sensores.html", "mira-tremor")(
@@ -696,10 +548,7 @@ def test_no_nativo_a_calibrar_grava_calada() -> None:
 
 
 def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ponte da tela: `gatilho=""` sai como `null` no pedido, e `None` não sai.
-
-    MORDIDA: trate o `""` como `None` na ponte e «Sempre» vira pedido vazio.
-    """
+    """A ponte da tela: `gatilho=""` sai como `null` no pedido, e `None` não sai."""
     from hefesto_dualsense4unix.app import ipc_bridge
 
     enviados: list[tuple[str, dict[str, Any]]] = []
@@ -714,43 +563,13 @@ def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> Non
     ]
 
 
-# ---------------------------------------------------------------------------
-# A MATRIZ DO ITEM 2 — fora do Nativo, a Mira do CHIP anda em todo caminho
-# ---------------------------------------------------------------------------
-# *"todas as decisões e funcionalidades nunca é pensada só em um modo, rota,
 # forma de conexão se cabo ou se bt, ou só pro player 1."*  <!-- noqa-acento: dela -->
-#
-# OS MODOS QUE EXISTEM, medidos em 24/09/2026 (`mode_transition.MODES` e
-# `ProfileModeConfig`): `gamepad` (o Hefesto ligado, com o CAMINHO `dualsense`
-# — o vpad `uhid` — ou `xbox` — o vpad `uinput`), `native` (o Modo Nativo) e
-# `desktop` (a Navegação). A matriz abaixo é a do `gamepad`: os dois caminhos,
-# os dois transportes e os quatro jogadores, com a mira acesa PELO CHIP
-# (`mira.set`), e o analógico direito lido na SAÍDA de cada vpad de verdade —
-# o report `0x01` do `uhid` e o `ABS_RX` do `uinput`. O `desktop` não entra:
-# nele não há gamepad virtual (o `dispatch_gamepad` volta no `device is None`)
-# e o analógico direito vira a roda do mouse (`uinput_mouse.dispatch`).
-# NOTA DATADA — 24/09/2026: a decisão veio
-# (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`) — na Navegação o giro vira o
-# cursor, e a matriz dela (P1 a P4, USB e BT, com o `UinputMouseDevice` do
-# produto) mora em `test_a_mira_na_navegacao.py`, seção 1.
-#
-# E O QUARTO CHIP DA FILEIRA, o «Steam Input», NÃO É UMA LINHA A MAIS — medido
-# na conferência, em `a01_jogar.o_que_o_chip_faz`: ele é `gamepad` com o
-# caminho `dualsense` e o jogo na lista da Steam. No daemon é a MESMA linha do
-# `dualsense` acima (o vpad `uhid` recebe a mira igual), e o que a Steam faz
-# depois com o analógico direito é configuração dela, que esta régua não mede.
-# Uma linha `steam` aqui repetiria a do `dualsense` com outro nome — a matriz
-# que finge cobrir o que não exercita.
 
 _GIRO = (0.0, 150.0, 0.0)
 
 
 class _GravadorDeEvdev:
-    """O nó `uinput` de mentira: guarda o último valor de cada eixo escrito.
-
-    Do tamanho do `evdev.UInput` para o que o `UinputGamepad.forward_analog`
-    usa — `write(tipo, código, valor)` e `syn()` —, e nada a mais.
-    """
+    """O nó `uinput` de mentira: guarda o último valor de cada eixo escrito."""
 
     def __init__(self) -> None:
         self.eixos: dict[int, int] = {}
@@ -796,8 +615,7 @@ def _vpad_de_verdade(caminho: str, jogador: int, fds: list[int]) -> tuple[Any, A
 
 
 def _servidor_da_matriz(tmp_path: Path, transporte: str, hub: Any) -> Any:
-    """O `Daemon` e o `IpcServer` reais, com um perfil ATIVO SEM mira: quem
-    acende a mira aqui é o CHIP, e só ele."""
+    """O `Daemon` e o `IpcServer` reais, com um perfil ATIVO SEM mira: quem"""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from tests.unit.test_a_mira_por_movimento_na_tela import _mesa_de_verdade
 
@@ -815,15 +633,7 @@ def test_fora_do_nativo_a_mira_do_chip_anda_do_p1_ao_p4(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     caminho: str, transporte: str,
 ) -> None:
-    """Os dois caminhos, os dois transportes e os quatro jogadores: o chip
-    acende a mira de cada um, e o analógico direito que o JOGO recebe anda.
-
-    MORDIDAS, as três conferidas em 24/09/2026: faça o `mira.set` recusar
-    `ligada` em todo modo (a guarda sem o `nativo`) e os quatro casos reprovam;
-    arranque o `aplicar_o_movimento` do `coop.CoopManager.forward_all` e os
-    quatro reprovam pelos P2 a P4; arranque-o do `gamepad.dispatch_gamepad` e
-    os quatro reprovam pelo P1.
-    """
+    """Os dois caminhos, os dois transportes e os quatro jogadores: o chip"""
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.daemon.subsystems import coop as co
@@ -839,7 +649,6 @@ def test_fora_do_nativo_a_mira_do_chip_anda_do_p1_ao_p4(
 
     fds: list[int] = []
     try:
-        # O P1 — o tique do primário, `dispatch_gamepad`.
         monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: None)
         monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
         vpad1, ler1 = _vpad_de_verdade(caminho, 1, fds)
@@ -849,7 +658,6 @@ def test_fora_do_nativo_a_mira_do_chip_anda_do_p1_ao_p4(
         gp.dispatch_gamepad(daemon, _estado(transporte), frozenset())
         lidos = {_P1: ler1()}
 
-        # Os P2 a P4 — o laço dos secundários, `CoopManager.forward_all`.
         gerente = co.CoopManager(daemon)
         leitores = {}
         for n, uniq in enumerate(todos[1:], start=2):
@@ -885,8 +693,7 @@ def test_fora_do_nativo_a_mira_do_chip_anda_do_p1_ao_p4(
 def test_no_nativo_o_chip_nao_acende_ninguem(
     perfis: Path, tmp_path: Path, transporte: str
 ) -> None:
-    """A exceção dela, nos quatro jogadores e nos dois transportes: no Nativo
-    o chip de ninguém acende, e o giro nativo de ninguém sai da janela."""
+    """A exceção dela, nos quatro jogadores e nos dois transportes: no Nativo"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from tests.unit.test_a_mira_por_movimento_na_tela import _P1, _hub
 

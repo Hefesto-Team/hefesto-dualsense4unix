@@ -1,77 +1,21 @@
-"""Quem é a source/sink de ÁUDIO de cada controle — a resolução `uniq → nome`.
-
-MIC-DA-MESA-ELEICAO-01 (01/09/2026). Esta peça nasceu dentro de
-`app/mic_monitor.py` porque foi a JANELA que precisou dela primeiro: o medidor
-de nível da aba Status tinha de saber qual das sources do PipeWire é do
-controle daquele card.
-
-Só que a ELEIÇÃO DE MICROFONE precisa exatamente da mesma resposta, e ela mora
-no daemon — que **não importa nada de `app/`** (a camada é limpa e vai
-continuar sendo: `grep -r "from hefesto_dualsense4unix.app" src/…/daemon/`
-devolve zero). Duplicar a lógica criaria duas verdades sobre a mesma pergunta,
-que é como esta casa fabrica divergência silenciosa.
-
-O molde já estava executado e escrito: `app/usb_pai.py` é a ponte,
-`integrations/usb_pai.py` é o dono (MIC-DA-MESA-CHEIA-01, 20/08). Aqui é o
-mesmo movimento, e `app/mic_monitor.py` continua reexportando tudo.
-
-Nada mudou de comportamento: é o mesmo código, com outro endereço.
-
-**E o prefixo da ponte BT ganhou UM dono.** Ele era montado por f-string em
-`integrations/dualsense_bt_audio.py` e digitado de novo, à mão, como constante
-no `app/mic_monitor.py`. Dois donos do mesmo nome: quem trocasse um lado
-deixaria o outro procurando um prefixo que não existe mais, em silêncio. Agora
-o dono é :data:`PREFIXO_SOURCE_PONTE_BT`, e a ponte o importa daqui.
-"""
+"""Quem é a source/sink de ÁUDIO de cada controle — a resolução `uniq → nome`."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
 #: Marcadores no NOME da source que identificam um DualSense. O PipeWire monta
-#: o nome a partir das strings USB do device ("Sony Interactive Entertainment
-#: Wireless Controller"), então o casamento é por substring normalizada.
 MARCADORES_DUALSENSE: tuple[str, ...] = (
     "wireless_controller",
     "wireless controller",
     "dualsense",
 )
 
-#: Prefixo do nome que a ponte de mic por Bluetooth publica no PipeWire:
-#: ``hefesto_dualsense_bt_<hex>``, onde ``<hex>`` são os SEIS últimos dígitos
 #: hex do MAC do controle (`PontePyDualSenseBT`, via `NoHidraw.nome_curto`).
-#:
-#: **DONO ÚNICO.** Este valor era montado por f-string na ponte e redigitado
-#: como constante do lado da janela. Quem lê e quem escreve o nome agora leem
-#: daqui — a regra da casa: se você precisa digitar um nome que já existe
-#: noutro arquivo, LEIA de lá.
 PREFIXO_SOURCE_PONTE_BT = "hefesto_dualsense_bt_"
 
-#: Prefixo do nome do CANAL POR CONTROLE: ``hefesto_mic_<hex6>``, o nó que
-#: :mod:`integrations.canal_do_microfone` publica (ONDA5-MIC-VIRTUAL-01).
-#:
-#: **DONO ÚNICO, e ele mora AQUI pela mesma razão de
-#: :data:`PREFIXO_SOURCE_PONTE_BT`:** quem LÊ o nome é este módulo
-#: (:func:`fontes_dualsense`, :func:`escolher_fonte`) e quem o ESCREVE é o dono
-#: do canal. Se o prefixo morasse lá, este arquivo teria de importá-lo — e
-#: `canal_do_microfone` já importa daqui (``so_hex``, ``MIN_HEX_SUFIXO_BT``),
-#: o que fecharia um ciclo. A regra da casa resolve sem ciclo: **o nome mora
-#: com quem o lê, e quem o escreve LÊ de lá.**
-#:
-#: **Por que um prefixo NOVO e não o da ponte.** ``hefesto_dualsense_bt_`` diz o
-#: TRANSPORTE no próprio nome, e é esse o defeito que o canal por controle
-#: existe para curar: troque o cabo pelo rádio e o microfone daquele controle
-#: mudava de nome. Reusar aquele prefixo apenas mudaria o defeito de lugar.
-#: Enquanto o rádio publicar o nome velho, os dois prefixos convivem e os dois
-#: leitores discriminam — é o preço declarado da transição, e a
-#: ONDA5-MIC-VIRTUAL-02 é quem o paga.
 PREFIXO_SOURCE_CANAL_DO_MIC = "hefesto_mic_"
 
-#: Tamanho mínimo do sufixo hex aceito como identidade. Seis dígitos são os
-#: três últimos octetos do MAC — o que a ponte publica. Menos que isso não
-#: distingue controles, e a ponte tem um caminho de fallback (nó sem
-#: ``HID_UNIQ``) em que o sufixo é o nome do nó e não um MAC: por isso o
-#: sufixo também precisa ser hex INTEIRO para valer.
 MIN_HEX_SUFIXO_BT = 6
 
 
@@ -98,17 +42,7 @@ class CasamentoUSB:
     por_no: dict[str, str] = field(default_factory=dict)
 
     def casar(self, nomes: list[str], uniq: str) -> str | None:
-        """O nó que pendura no MESMO dispositivo USB deste controle, ou None.
-
-        Sem dispositivo USB do lado do controle não há o que casar (rádio):
-        devolve None e deixa a decisão para as outras regras — nunca chuta o
-        primeiro nó da lista, que seria emprestar a placa do vizinho.
-
-        Empate (dois nós do mesmo controle, uma placa com dois perfis) resolve
-        pelo menor nome, e não é arbitrário: os dois nós SÃO daquele controle,
-        então qualquer um leva ao aparelho certo, e ordenar é o que faz a
-        janela mostrar o mesmo nó a cada ciclo em vez de piscar entre dois.
-        """
+        """O nó que pendura no MESMO dispositivo USB deste controle, ou None."""
         meu = self.por_uniq.get(uniq, "")
         if not meu:
             return None
@@ -116,17 +50,7 @@ class CasamentoUSB:
         return candidatos[0] if candidatos else None
 
     def veta(self, nome: str, uniq: str) -> bool:
-        """True quando este nó NÃO pode ser deste controle. A guarda do 1-para-1.
-
-        A regra do "um nó, um controle, só pode ser ele" é boa aritmética e má
-        física: um controle no RÁDIO não tem placa de som (medido 15/08/2026 —
-        a placa segue o transporte), e se sobra na tela um nó de áudio USB de
-        outro aparelho, o um-para-um o entregaria a ele. Aqui o casamento por
-        USB é o que diz "este nó tem dono, e não é você".
-
-        Nó sem dispositivo USB não veta nada: é o caso da ponte de mic por
-        Bluetooth, que é virtual e legítima justamente para quem está no rádio.
-        """
+        """True quando este nó NÃO pode ser deste controle. A guarda do 1-para-1."""
         do_no = self.por_no.get(nome, "")
         if not do_no:
             return False
@@ -312,8 +236,6 @@ def escolher_fonte(
             sufixo = sufixo_da_ponte_bt(fonte)
             if sufixo and alvo.endswith(sufixo):
                 return fonte
-    # DAQUI PARA BAIXO, NÓ COM O NOME DE OUTRO CONTROLE NÃO É RESPOSTA. As regras
-    # 3 e 4 não leem nome, e era por essa porta que o canal órfão do vizinho saía.
     sem_nome_alheio = [f for f in fontes if not e_de_outro_controle(f, uniq)]
     if usb is not None:
         casada = usb.casar(sem_nome_alheio, uniq)
@@ -362,14 +284,7 @@ def escolher_sink(
 
 
 def sufixo_da_ponte_bt(fonte: str) -> str:
-    """Rabo hex do MAC no nome da source da ponte BT — "" se não for uma.
-
-    Recorta o prefixo ANTES de filtrar hex, e a ordem não é detalhe: o
-    próprio prefixo ``hefesto_dualsense_bt_`` é cheio de letras hex
-    (``e``, ``f``, ``d``, ``a``, ``b``), e passar o nome inteiro por
-    :func:`so_hex` produziria um "MAC" com lixo do prefixo grudado na
-    frente — casamento por acaso, que é exatamente o que a regra 1 evita.
-    """
+    """Rabo hex do MAC no nome da source da ponte BT — "" se não for uma."""
     baixa = fonte.lower()
     if not baixa.startswith(PREFIXO_SOURCE_PONTE_BT):
         return ""
@@ -380,19 +295,7 @@ def sufixo_da_ponte_bt(fonte: str) -> str:
 
 
 def sufixo_do_canal_do_mic(fonte: str) -> str:
-    """Rabo hex do MAC no nome do CANAL POR CONTROLE — "" se não for um.
-
-    De que controle é este nó. Mesma forma de :func:`sufixo_da_ponte_bt` e
-    mesma armadilha evitada do mesmo jeito: recorta o prefixo ANTES de filtrar
-    hex, porque ``hefesto_mic_`` tem letras hex dentro (``e``, ``f``, ``c``) e
-    passar o nome inteiro por :func:`so_hex` produziria um "MAC" com lixo
-    grudado na frente — casamento por acaso.
-
-    **ESTA FUNÇÃO MOROU EM `canal_do_microfone.sufixo_do_canal` ATÉ 06/09/2026**,
-    e desceu para cá quando a regra 0 de :func:`escolher_fonte` passou a
-    precisar dela. Não é cópia: lá ela não existe mais. Duas verdades sobre "de
-    que controle é este nó" é como esta casa fabrica divergência silenciosa.
-    """
+    """Rabo hex do MAC no nome do CANAL POR CONTROLE — "" se não for um."""
     baixa = fonte.lower()
     if not baixa.startswith(PREFIXO_SOURCE_CANAL_DO_MIC):
         return ""
@@ -402,18 +305,11 @@ def sufixo_do_canal_do_mic(fonte: str) -> str:
     return resto
 
 
-#: Quantos octetos um endereço de rádio tem. É o que separa um MAC inteiro
-#: dentro de um nome ``bluez_input.XX_XX_XX_XX_XX_XX`` de um número qualquer.
 _OCTETOS_DE_UM_MAC = 6
 
 
 def _mac_no_nome_bluez(fonte: str) -> str:
-    """Os doze hex do MAC de um nó ``bluez_*`` — "" se o nome não traz um inteiro.
-
-    Lê por OCTETO, e não por :func:`so_hex` sobre o nome inteiro: o próprio
-    ``bluez_input`` tem ``b`` e ``e`` dentro, e a leitura cega grudaria lixo na
-    frente do endereço — o casamento por acaso que a regra 1 já evita.
-    """
+    """Os doze hex do MAC de um nó ``bluez_*`` — "" se o nome não traz um inteiro."""
     baixa = fonte.lower()
     if not baixa.startswith("bluez"):
         return ""
@@ -427,28 +323,12 @@ def _mac_no_nome_bluez(fonte: str) -> str:
 
 
 def identidade_no_nome(fonte: str) -> str:
-    """O pedaço do endereço que o NOME do nó carrega — "" quando não carrega nada.
-
-    São as três formas que :func:`escolher_fonte` sabe ler para dizer SIM: o
-    canal por controle (regra 0), o MAC inteiro do ``bluez`` (regra 1) e o rabo
-    do MAC da ponte de rádio (regra 2). Nó ALSA, e o nó da ponte sem
-    ``HID_UNIQ`` (``hefesto_dualsense_bt_hidraw3``), não carregam identidade.
-    """
+    """O pedaço do endereço que o NOME do nó carrega — "" quando não carrega nada."""
     return sufixo_do_canal_do_mic(fonte) or sufixo_da_ponte_bt(fonte) or _mac_no_nome_bluez(fonte)
 
 
 def e_de_outro_controle(fonte: str, uniq: str) -> bool:
-    """True quando o NOME do nó diz que ele é de um controle que NÃO é `uniq`.
-
-    MIC-O-CANAL-DO-OUTRO-01. É a mesma leitura das regras 0, 1 e 2, usada para
-    dizer NÃO: ``hefesto_mic_<hex6>`` de outro controle não vira o microfone
-    deste só porque sobrou sozinho na lista.
-
-    Nome sem identidade nunca é "de outro": sobre ele o nome não sabe nada, e
-    quem decide continuam sendo o casamento por USB e o um-para-um. E um `uniq`
-    ilegível não casa com identidade nenhuma — sem endereço não há como dizer
-    que o nó é dele.
-    """
+    """True quando o NOME do nó diz que ele é de um controle que NÃO é `uniq`."""
     identidade = identidade_no_nome(fonte)
     if not identidade:
         return False

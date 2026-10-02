@@ -41,32 +41,19 @@ DOCTOR = ROOT / "scripts" / "doctor.sh"
 
 
 def _funcao_inteira(nome: str) -> str:
-    """O corpo da função shell, do cabeçalho à chave que fecha na coluna 0.
-
-    Substitui a janela fixa de 2600 caracteres que estes testes usavam. A janela
-    era mais curta que a função (3581 bytes em 06/08/2026), então tudo que
-    entrasse no FIM ficava fora da medição: uma asserção ``not in`` passava por
-    não enxergar, e uma ``in`` reprovava por corte. Foi assim que a cura do
-    AFIRMACAO-SO-NO-ESTADO-DELA-01 derrubou um teste sem nada ter quebrado.
-    """
+    """O corpo da função shell, do cabeçalho à chave que fecha na coluna 0."""
     texto = DOCTOR.read_text(encoding="utf-8")
     i = texto.index(f"{nome}() {{")
     fim = texto.index("\n}\n", i)
     return texto[i : fim + 3]
 
-# A linha exata que estava em /etc/udev/rules.d/60-openrgb.rules até 06/08/2026.
 BLANKET = 'KERNEL=="hidraw*", MODE="0666"'
 
-# CONTROLE POSITIVO, copiado de /usr/lib/udev/rules.d/71-pdp-controllers.rules
-# desta máquina: MODE="0666" com estreitamento por fabricante. É regra de
-# distro, mira UM controle, e NÃO pode ser acusada — se aparecer, o filtro de
-# estreitamento morreu e o portão vira ruído.
 PDP_ESTREITA = (
     'ACTION!="remove", KERNEL=="hidraw*", ATTRS{idVendor}=="0e6f", '
     'ATTRS{idProduct}=="0185", MODE="0666", TAG+="uaccess"'
 )
 
-# O que o Hefesto instala: estreitado E sem bit para outros.
 HEFESTO = (
     'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", '
     'ATTRS{idProduct}=="0ce6", MODE="0660", TAG+="uaccess"'
@@ -104,11 +91,7 @@ class TestAVarreduraNomeiaOCulpado:
         assert BLANKET in saida, saida
 
     def test_regra_estreitada_por_fabricante_nao_e_acusada(self, tmp_path: Path) -> None:
-        """MODE="0666" mirando UM aparelho é decisão de quem escreveu a regra.
-
-        Sem este negativo o portão acusaria meia `/usr/lib/udev/rules.d` e
-        viraria ruído — falso positivo em massa torna o gate inútil.
-        """
+        """MODE="0666" mirando UM aparelho é decisão de quem escreveu a regra."""
         d = tmp_path / "rules.d"
         d.mkdir()
         (d / "71-pdp-controllers.rules").write_text(
@@ -132,12 +115,7 @@ class TestAVarreduraNomeiaOCulpado:
         assert _varre(d) == ""
 
     def test_o_bit_de_leitura_sozinho_ja_conta(self, tmp_path: Path) -> None:
-        """O check antigo casava só o literal `666`.
-
-        `0664` deixa QUALQUER processo local LER o nó — e é a leitura, não a
-        escrita, que vaza o que está sendo digitado no receptor do teclado.
-        `0662` e `0646` tinham o mesmo buraco.
-        """
+        """O check antigo casava só o literal `666`."""
         d = tmp_path / "rules.d"
         d.mkdir()
         for i, modo in enumerate(("0664", "0662", "0646")):
@@ -157,13 +135,7 @@ class TestAVarreduraNomeiaOCulpado:
         assert _varre(d) == ""
 
     def test_arquivo_em_etc_faz_sombra_no_de_usr_lib(self, tmp_path: Path) -> None:
-        """É assim que o udev resolve, e é o que a regra dela exercita HOJE.
-
-        MEDIDO em 06/08 21:20: `60-openrgb.rules` foi corrigido para
-        0660+uaccess. Se a varredura ignorasse a sombra, ela continuaria
-        acusando uma cópia velha do mesmo nome noutro diretório e a correção
-        nunca apareceria como feita.
-        """
+        """É assim que o udev resolve, e é o que a regra dela exercita HOJE."""
         etc = tmp_path / "etc"
         lib = tmp_path / "lib"
         etc.mkdir()
@@ -192,41 +164,16 @@ class TestOAvisoDeixouDeAcusarAPessoa:
         assert "provável ajuste manual" not in corpo.split('warn "${#abertos[@]}')[0], (
             "o aviso ainda acusa antes de olhar a causa"
         )
-        # A hipótese de ajuste manual continua VÁLIDA — mas só quando nenhuma
-        # regra explica. Foi para esse ramo que ela mudou de lugar.
         assert "ajuste manual é hipótese" in corpo, corpo[:800]
 
     def test_o_grau_continua_warn_e_nao_reprova_o_exit_code(self) -> None:
-        """Decisão medida, não esquecimento.
-
-        Só o `fail` alimenta `FAILS`, que é o código de saída do doctor. Fazer a
-        configuração de um programa de TERCEIRO reprovar o portão de saúde do
-        Hefesto seria dizer "estou doente" por algo que não é nosso.
-        """
+        """Decisão medida, não esquecimento."""
         corpo = _funcao_inteira("check_perms_soft")
         assert 'fail "' not in corpo, "o check virou reprovação de exit code"
         assert 'warn "' in corpo
 
     def test_o_texto_diz_o_que_esta_aberto_e_de_quem_e_o_arquivo(self) -> None:
-        """NOTA DATADA — 06/08/2026, AFIRMACAO-SO-NO-ESTADO-DELA-01.
-
-        Este teste cobrava a frase ``70-ps5-controller.rules``, que inocentava
-        os aparelhos do Hefesto **sem condição**: "a 70 roda depois e os devolve
-        a 0660+uaccess". A verificação adversarial da noite mediu que a frase é
-        verdadeira só quando o culpado está numerado ABAIXO das nossas regras —
-        que é o estado desta bancada (culpado em 60, nós em 70+) — e FALSA em
-        três estados plausíveis, um deles o mais provável de todos:
-
-        1. ``99-hidraw-permissions.rules``, a receita de internet mais copiada
-           para hidraw, roda DEPOIS de nós e vence;
-        2. ``MODE:=`` é atribuição final, que regra nenhuma desfaz;
-        3. a máquina sem as nossas regras instaladas — que é justamente quando
-           se roda o doctor.
-
-        A asserção antiga caducou porque cobrava a AFIRMAÇÃO. O que se cobra
-        agora é a MEDIÇÃO: o texto só inocenta depois de comparar a numeração e
-        procurar ``:=``, e existe um ramo que ATENÇÃO quando o culpado vence.
-        """
+        """NOTA DATADA — 06/08/2026, AFIRMACAO-SO-NO-ESTADO-DELA-01."""
         corpo = _funcao_inteira("check_perms_soft")
         assert "NÃO é do Hefesto" in corpo, "o aviso não diz de quem é o arquivo"
         assert "_culpado_tardio" in corpo, (

@@ -61,8 +61,8 @@ from pathlib import Path
 #:
 #: `nao_sei` NASCEU DA MEDIÇÃO, e não do desenho: o produto tem `zero` função
 #: que examine Heroic, Lutris, RetroArch, Dolphin ou mGBA — as cinco só aparecem
-#: em COMENTÁRIO (`daemon/subsystems/hotkey.py:56`, `daemon/lifecycle.py:2421`,
-#: `profiles/schema.py:1658`). Sem este selo, o cartão do Heroic teria de
+#: em COMENTÁRIO (`daemon/subsystems/hotkey.py:37`, `daemon/lifecycle.py:1407`,
+#: `profiles/schema.py:1099`). Sem este selo, o cartão do Heroic teria de
 #: escolher entre `CHEGAM` e `NÃO CHEGAM`, e as duas seriam afirmação sobre um
 #: lançador que o produto nunca olhou. **"Não sei" é resposta; palpite não é.**
 #: O `off` DIZ «NÃO LOCALIZADO» DESDE 08/09/2026 — palavra dela, olhando a aba
@@ -231,7 +231,7 @@ def _e(txt: object) -> str:
 
     O `quote=False` NÃO É RELAXAMENTO — é o que impede um LAÇO INFINITO na
     máquina dela, e a razão é o piloto: ele só reescreve quando
-    `innerHTML !== valor` (`hefesto_vivo.py:441` no campo, `:944` no bloco). As
+    `innerHTML !== valor` (`hefesto_vivo.py:263` no campo, `:944` no bloco). As
     duas comparações são de TEXTO LITERAL, e o lado esquerdo é o que o DOM
     **devolve**, não o que se escreveu. Se a grafia emitida não for a que o DOM
     devolve, a comparação nunca casa e a reescrita não para nunca.
@@ -389,7 +389,7 @@ FILEIRA_VAZIA = "<!-- nada a oferecer neste cartão -->"
 #: None`) e a Steam ilegível (`lida.erros`) — devolviam o cartão com `fora` no
 #: padrão `""`. Como `tem_lista=True`, `valores_do_cartao` emitia
 #: `steam-fora=""`, e o `escrever()` do BOOTSTRAP troca vazio por travessão
-#: ANTES de despachar o alvo (`hefesto_vivo.py:118`), inclusive para
+#: ANTES de despachar o alvo (`hefesto_vivo.py:61`), inclusive para
 #: `alvo === 'html'`. **O da Steam ilegível é permanente** — justo a tela em que
 #: ela precisa ler uma mensagem, com um traço mudo pendurado embaixo.
 #:

@@ -53,8 +53,6 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
 
 
 #: A MESA DE 02/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve — e o
-#: `jogador` dela JÁ É `numero_do_controle(entrada)` (`mesa_viva.py:324`).
-#: MAC da faixa sintética da casa: há dois portões de anonimato nesta árvore.
 MESA = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "BT", "transporte": "bt"},
@@ -62,9 +60,6 @@ MESA = [
      "nome": "Starlight Blue", "via": "USB", "transporte": "usb"},
 ]
 
-#: O CONTROLE DO CABO COMO O DAEMON O PUBLICA: `player` é `None` porque ele não
-#: é jogador do co-op — a condição está em `daemon/subsystems/coop.py:394-396`,
-#: e NÃO é o transporte, como o mapa chegou a afirmar.
 DO_CABO = {"uniq": "aa:bb:cc:00:00:02", "transport": "usb", "connected": True,
            "player": None, "player_slot": 2, "is_primary": False,
            "lightbar_rgb": [255, 0, 0], "lightbar_on": True,
@@ -91,15 +86,8 @@ def colunas():
     return montar
 
 
-# ---------------------------------------------------------------------------
-# 1. o número — D2
-# ---------------------------------------------------------------------------
 def test_o_rotulo_nao_diz_travessao_com_o_botao_aceso(colunas):
-    """O defeito, na forma exata em que foi fotografado.
-
-    A MORDIDA: troque `_numero()` por `c.get("player")` e esta linha reprova com
-    `P—`, que é o que a tela mostrava.
-    """
+    """O defeito, na forma exata em que foi fotografado."""
     col = colunas()[DO_CABO["uniq"]]
     assert col["identidade"].startswith("P2 "), (
         f"o rótulo saiu {col['identidade']!r}. O controle do cabo tem "
@@ -126,38 +114,20 @@ def test_o_numero_e_o_do_motor_e_nao_uma_copia(colunas):
         f"`app/actions/base.numero_do_controle`, e a MESA já o chama.")
 
 
-# ---------------------------------------------------------------------------
-# 2. o rótulo inteiro — os dois pedaços que a pintura comia
-# ---------------------------------------------------------------------------
 def test_o_rotulo_leva_o_nome_e_o_transporte(colunas):
-    """`P1 • Cosmic Red • BT`, e não `P1`.
-
-    O desenho escreve os três pedaços; `hefesto_vivo.escrever` faz
-    `el.textContent = t`, que apaga os filhos. Emitir só o número fazia o
-    primeiro tique tirar da tela o nome do controle e o transporte — medido em
-    Chrome headless em 01/09 (`.ctrl-rot` de 2 filhos para 0).
-    """
+    """`P1 • Cosmic Red • BT`, e não `P1`."""
     col = colunas()[DO_RADIO["uniq"]]
     assert col["identidade"] == "P1 • Cosmic Red • BT", col["identidade"]
 
 
 def test_o_transporte_vem_do_agora_e_nao_do_desenho(colunas):
-    """O HTML publicado diz `USB` no P1; o daemon diz `bt`. Vence o daemon.
-
-    É a oitava aparição nesta casa de *uma frase que nomeia um controle fora do
-    que a mesa mostra* — e aqui ela estava congelada dentro do rótulo.
-    """
+    """O HTML publicado diz `USB` no P1; o daemon diz `bt`. Vence o daemon."""
     col = colunas()[DO_RADIO["uniq"]]
     assert col["identidade"].endswith("• BT"), col["identidade"]
 
 
 def test_sem_nome_na_mesa_o_rotulo_nao_inventa(colunas):
-    """Sem item de mesa, travessão — nunca um nome de modelo cravado.
-
-    `Cosmic Red` e `Starlight Blue` estão cravados 54 vezes no gerador desta
-    aba, e nenhum deles pode vazar para o produto: quem sabe o nome é a MESA,
-    que o leu do plástico pelo broker.
-    """
+    """Sem item de mesa, travessão — nunca um nome de modelo cravado."""
     import pacotes
 
     ctx = pacotes.Contexto(state={}, mesa=[], conectados=[DO_CABO], estados={})
@@ -165,14 +135,8 @@ def test_sem_nome_na_mesa_o_rotulo_nao_inventa(colunas):
     assert col["identidade"] == "P2 • — • USB", col["identidade"]
 
 
-# ---------------------------------------------------------------------------
-# 3. o brilho — D7, a metade do VALOR
-# ---------------------------------------------------------------------------
 def test_o_brilho_chega_com_o_por_cento(colunas):
-    """A caixa ao lado da barra é de TEXTO, e o desenho escreve `82%`.
-
-    Sem perfil o brilho é `None`, e o travessão é a resposta honesta.
-    """
+    """A caixa ao lado da barra é de TEXTO, e o desenho escreve `82%`."""
     col = colunas()[DO_RADIO["uniq"]]
     assert col["brilho"] == "—", col["brilho"]
     assert col["brilho-pct"] is None
@@ -196,19 +160,8 @@ def test_a_barra_recebe_numero_e_a_caixa_recebe_texto():
     assert isinstance(col["brilho"], str), "a caixa é texto, e o `%` é dela."
 
 
-# ---------------------------------------------------------------------------
-# 4. a fileira dos quatro números
-# ---------------------------------------------------------------------------
 def _dica_do_botao(fileira: str, n: int) -> str:
-    """O `title` do botão daquele número, sem digitar a frase inteira.
-
-    ELE NASCEU EM 11/09/2026, e a razão é a de sempre: duas réguas deste arquivo
-    digitavam a dica letra por letra (*"O Starlight Blue É o Player 2"*,
-    *"Dar o Player 2"*), e a leva de língua aprovada por ela (A4-039 e A4-040)
-    encurtou as duas. Régua que digita o texto que mede reprova a melhora em vez
-    do defeito. O que se mede aqui é QUAL das duas dicas o botão recebeu — a de
-    "este número é dele" ou a da troca —, que é o ato.
-    """
+    """O `title` do botão daquele número, sem digitar a frase inteira."""
     achado = re.search(rf'data-player="{n}" title="([^"]*)"', fileira)
     assert achado, f"o botão {n} não saiu na fileira: {fileira}"
     return achado.group(1)
@@ -220,12 +173,7 @@ def _nome_na_mesa(controle: dict) -> str:
 
 
 def test_a_fileira_marca_o_numero_de_quem_e(colunas):
-    """O `on` é do número DESTE controle, e ele é vivo.
-
-    Enquanto os quatro botões eram `data-campo="player-N"`, a pintura só sabia
-    escrever TEXTO neles — e texto num `<button>` apaga o anel do dono. Nenhum
-    dos quatro era pintado, e `casamento.py` os listava como VAZIOS.
-    """
+    """O `on` é do número DESTE controle, e ele é vivo."""
     cols = colunas()
     fileira = cols[DO_CABO["uniq"]]["players"]
     dois = _dica_do_botao(fileira, 2)
@@ -236,17 +184,7 @@ def test_a_fileira_marca_o_numero_de_quem_e(colunas):
 
 
 def test_a_dica_nao_nomeia_controle_que_nao_esta_na_mesa(colunas):
-    """A dica não pode nomear quem não está na mesa.
-
-    31/08/2026: o `title` dizia *"o Galactic Purple, que tem o 3 hoje"* com o
-    Galactic Purple desconectado.
-
-    FATO CORRIGIDO EM 03/09/2026: esta régua exigia `count("— livre.") == 3`
-    com UM controle na mesa, e era a régua que sustentava o defeito — com um
-    controle só, os números 2, 3 e 4 não estão livres, estão FORA DA MESA. Ver
-    `test_um_numero_acima_da_mesa_nao_se_diz_livre`, onde está a medição. O que
-    esta régua guarda continua sendo o dela: nenhum nome inventado.
-    """
+    """A dica não pode nomear quem não está na mesa."""
     fileira = colunas([DO_RADIO])[DO_RADIO["uniq"]]["players"]
     assert "Starlight Blue" not in fileira, (
         "a dica nomeou um controle que não está na mesa.")
@@ -296,12 +234,7 @@ def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
 
 
 def test_com_a_mesa_cheia_nenhum_numero_fica_fora(colunas):
-    """A GUARDA da cura acima — sem ela, apagar botões seria a correção EXCESSIVA.
-
-    Com dois controles na mesa o número 2 é alcançável (é de alguém) e o 1
-    também; só o 3 e o 4 passam da conta. Uma cura que apagasse os quatro
-    tiraria dela a troca de números, que é o que esta aba existe para fazer.
-    """
+    """A GUARDA da cura acima — sem ela, apagar botões seria a correção EXCESSIVA."""
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
 
     fileira = colunas()[DO_RADIO["uniq"]]["players"]
@@ -345,12 +278,7 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
     dono = {"nome": "Cosmic Red", "via": "USB", "cor": "cosmic-red"}
     botao = pac.um_botao_de_player("Cosmic Red", 1, 1, dono, quantos=2)
     assert botao.startswith('<button class="on" data-gesto="player" data-player="1"')
-    # O `data-hef` do anel entrou em 03/09/2026 (IDENTIDADE-VEM-DE-CIMA-01): sem
     # ele a régua da identidade acusa o `--plastico` do `<i>`, porque ela julga
-    # a cor no elemento que a carrega. Ver `a04_iluminacao.ANEL_DO_DONO`.
-    # O ENDEREÇO SAI DE `endereco_do_anel` e o ALVO de `ALVO_DO_PLASTICO`: os
-    # dois têm dono, e digitá-los aqui foi o que deixou esta linha para trás
-    # quando o endereço virou um por jogador, em 03/09/2026.
     assert (f'<i class="dono" data-hef="{pac.endereco_do_anel(1)}"'
             f' data-hef-alvo="{pac.ALVO_DO_PLASTICO}"'
             f' style="--plastico:#ae335a"></i>1</button>') in botao, (
@@ -362,30 +290,7 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
 
 
 def test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco():
-    """Onde cada `data-campo` está, nos DOIS lados — e o par que ainda difere.
-
-    FATO CORRIGIDO EM 02/09/2026: este teste dizia *"o publicado ainda tem
-    `player-1..4` nos botões"*, e olhava só a bancada. Não tem mais — a
-    publicação do commit `70b58116` levou `data-campo="players"` e o alvo
-    `largura` ao produto. Medido: `grep -c` no HTML publicado dá `2`, `2` e `0`.
-    Uma régua que olha um lado só não podia ver isso.
-
-    E OS DOIS LADOS ANDAM EM GERAÇÕES DIFERENTES — 07/09/2026, e é por isso que
-    a conta deixou de ser `== 2`. O gerador escreve a BANCADA (`mockup/`); o
-    PUBLICADO só muda quando ela aprova
-    (`scripts/check_o_desenho_aprovado.py --aprovar`), que é a direção que ela
-    fixou em 31/08: *"nunca terminamos o mockup, por isso não era pra ser feito
-    no layout final"*. Um número cravado aqui obriga os dois lados a mudarem no
-    mesmo instante — e como só um deles é meu para mudar, ele reprovaria a
-    melhora em vez do defeito, que é a forma de régua falsa que esta casa mais
-    encontrou.
-
-    O QUE VALE NOS DOIS LADOS, e não envelhece: o endereço existe em toda
-    coluna CONECTADA (o piso), e nunca em mais lugares do que a mesa tem (o
-    teto). A bancada de hoje bate o teto — os quatro —, porque desde 07/09 o
-    lugar que nasce vazio também carrega o endereço; o publicado bate o piso
-    até ela aprovar. As duas leituras são certas, e a régua diz qual é qual.
-    """
+    """Onde cada `data-campo` está, nos DOIS lados — e o par que ainda difere."""
     import monta
     import onde
 
@@ -407,30 +312,13 @@ def test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco():
             f"o {lado} ficou com os dois endereços: o da fileira e os dos "
             f"botões. Dois donos para o mesmo lugar é o que este projeto "
             f"persegue.")
-    # E A BANCADA — que é o que ESTE gerador escreve — bate o teto: os quatro
-    # lugares têm os mesmos endereços. É a metade que morde, e a que teria
-    # pego o defeito de 07/09/2026 (p3 e p4 com ZERO `data-campo` por dentro).
     assert bancada.count('data-campo="brilho-pct" data-hef-alvo="largura"') == teto, (
         "a bancada deixou de endereçar a barra de brilho nos quatro lugares — "
         "o lugar que ganha um controle volta a não ter onde pousar o brilho")
 
 
-# ---------------------------------------------------------------------------
-# 5. o DESENHO da luz — e a palavra que o apagava
-# ---------------------------------------------------------------------------
 def test_a_luz_e_desenho_e_nao_palavra(colunas):
-    """O `.aceso` é um DESENHO; escrever nele uma palavra o APAGA.
-
-    FOTOGRAFADO na tela dela em 02/09/2026, com dois controles na mesa: a célula
-    LEDs das colunas P1 e P2 mostrando a palavra `Aceso`, sem as duas tiras de
-    luz e sem as cinco lâmpadas. A causa é uma linha do pacote — `"aceso":
-    "Aceso" if …` num `data-campo` de alvo `texto` —, e `escrever()` faz
-    `el.textContent = t`, que apaga os filhos. A régua do mockup contava isso
-    como PRODUTO, porque o valor MUDOU: é a mesma família do `balanceado`
-    escrito dentro dos quatro botões da Vibração.
-
-    A MORDIDA: devolva `"aceso": "Aceso"` ao pacote e a primeira linha reprova.
-    """
+    """O `.aceso` é um DESENHO; escrever nele uma palavra o APAGA."""
     col = colunas()[DO_RADIO["uniq"]]
     assert "aceso" not in col, (
         "a palavra voltou ao lugar do desenho: `textContent` num `.aceso` "
@@ -507,30 +395,9 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
     from pacotes import a04_iluminacao as pac
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    #: OITO TONS nos QUATRO LUGARES da bancada — e eram DEZESSEIS até
-    #: 07/09/2026, porque a guia só nascia nos dois conectados.
-    #:
-    #: O NÚMERO MUDOU PORQUE O MUNDO MUDOU, e não porque a régua afrouxou: a
-    #: guia passou a nascer nos quatro lugares para que o P3 que ganha um
-    #: controle a encontre pronta (o piloto vira marca e escreve campo, não
-    #: materializa HTML — só recarregar a página desfazia). Um `16` mantido
-    #: aqui mediria o mundo de ontem, que é o defeito que esta casa nomeia:
     #: *a régua media o mundo de ontem*.  (noqa-acento: verbo medir, imperfeito)
-    #:
-    #: E O ENDEREÇO CONTINUA VALENDO NOS QUATRO, que é o ponto: sem ele nos
-    #: lugares vazios, o P3 mostraria a guia e nenhuma cor marcada.
-    #:
     #: **O ENDEREÇO MUDOU — 09/09/2026, COR-X-01.** Era um `data-campo="hex"`
     #: com `data-hef-alvo="classe"` por BOTÃO, e o alvo `classe` compara por
-    #: IGUALDADE: ele acende o tom escolhido e não tem como dizer "esta cor é
-    #: de OUTRO controle", que é o X que ela pediu. A guia virou bloco
-    #: (`data-campo="tons"`, alvo `html`), como a fileira de players.
-    #:
-    #: **E ESTA RÉGUA ESTAVA VERMELHA DESDE A LEVA DOS CATORZE TONS**, sem
-    #: ninguém ver: ela exigia `32` (oito tons por quatro lugares) e o arquivo
-    #: trazia `56`. *Um número cravado envelhece calado no dia em que a guia
-    #: cresce* — por isso o que se conta agora é o BLOCO, um por lugar, e o
-    #: tamanho da guia vem de `tons_da_guia()`, que tem dono.
     assert bancada.count('data-campo="tons" data-hef-alvo="html"') == 4, (
         "a guia de cores voltou a não ter endereço de estado — ou ela deixou "
         "de nascer nos QUATRO lugares, e o P3 que ganha um controle volta a "
@@ -538,9 +405,6 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
     assert bancada.count('class="tom') == 4 * len(pac.tons_da_guia()), (
         "a bancada e `tons_da_guia()` discordam sobre quantos tons a guia tem")
 
-    #: O `data-hex` LEVA O HEX DO PRODUTO, que é o que o gesto lê — e não o tom
-    #: da casa, que é só o que a tela desenha. Foi essa mesma confusão que fez
-    #: o `.tom.on` do desenho casar ZERO botões em 31/08.
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
     for n in (1, 2):
@@ -548,21 +412,7 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
 
 
 def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
-    """A dica do `.aceso` saiu do ATRIBUTO da célula e entrou no desenho.
-
-    Ela dizia, cravada pelo gerador nos dois controles conectados::
-
-        title="O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco
-               lâmpadas no padrão do Player 1."
-
-    Um `title` na célula não tem como ser repintado: o piloto só sabe escrever
-    `texto`, `largura`, `fundo`, `valor`, `html`, `classe` e `cor` — atributo
-    não está na lista. Congelada, ela nomeava o controle do MOCKUP na coluna de
-    um controle que está na mesa (decisão 8 dela) e dizia `aceso` (decisão 7).
-
-    A MORDIDA: devolva o `title=` ao `<div class="aceso">` do gerador, rode-o, e
-    a primeira asserção reprova.
-    """
+    """A dica do `.aceso` saiu do ATRIBUTO da célula e entrou no desenho."""
     import onde
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
@@ -570,27 +420,9 @@ def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
         "a célula de LEDs voltou a carregar atributo cravado pelo gerador.")
     assert " aceso:" not in bancada, (
         "a palavra que ela mandou tirar voltou ao desenho.")
-    #: A DICA VIVA ESTÁ NAS TRÊS PEÇAS de cada coluna conectada: 2 tiras + o
-    #: `.pad`. A frase esperada NÃO é digitada aqui — sai do mesmo dono que o
-    #: gerador chama, senão a régua mediria a palavra e não o ato.
-    #:
-    #: ELA CONTAVA `"Desenho que mandamos:" == 6` ATÉ 02/09/2026, e isso cravava
-    #: uma afirmação que esta aba não pode fazer — ver
-    #: `test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve`.
     import monta
     from pacotes import a04_iluminacao as pac
 
-    #: AS TRÊS PEÇAS DIZEM A MESMA FRASE — e voltaram a dizer em 07/09/2026.
-    #: Entre 06/09 e essa data a do meio dizia uma coisa a mais: a botoeira da
-    #: `LUZES-01` deu CLIQUE ao `.pad`, e a dica dele passou a anunciar também o
-    #: que o clique fazia. A botoeira saiu por ordem dela (*"só olhar a linha de
-    #: cima da seleção de player e replicar o que tem lá"*), o `.pad` voltou a
-    #: ser desenho de leitura, e uma dica que ainda prometesse um reenvio seria
-    #: a tela oferecendo um gesto que o pacote já não tem.
-    #:
-    #: A CONFERÊNCIA É POR IGUALDADE E A CONTA É TRÊS: `in` deixaria a dica
-    #: composta passar, porque a viva é PREFIXO dela — era exatamente assim que
-    #: esta régua deixaria a botoeira voltar sem dizer nada.
     for c in monta.CONECTADOS:
         esperada = pac.dica_da_luz(c["nome"], c["via"], "")
         assert bancada.count(f'title="{esperada}"') == 3, (
@@ -603,13 +435,7 @@ def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
 
 
 def test_o_gerador_e_o_produto_desenham_a_mesma_luz():
-    """Um dono, dois chamadores — o mesmo par da fileira de players.
-
-    O gerador desenhava as três linhas do `.aceso` à mão; agora chama
-    `desenho_da_luz`. Enquanto fossem duas escritas, a tira do desenho e a do
-    produto podiam divergir sem ninguém ver — que é como a `novo-layout/`
-    divergiu 25 KB calada.
-    """
+    """Um dono, dois chamadores — o mesmo par da fileira de players."""
     from pacotes import a04_iluminacao as pac
 
     miolo = pac.desenho_da_luz("#7EB8D4", 0.82, 1)
@@ -649,24 +475,7 @@ def test_um_numero_que_a_bancada_nunca_teve_nao_congela_a_aba():
 
 
 def test_a_tira_apagada_nao_acende_branco(colunas):
-    """A barra APAGADA não pode virar um halo BRANCO — e o halo é `currentColor`.
-
-    MEDIDO EM CHROME HEADLESS, dentro da página publicada, em 02/09/2026::
-
-        com `background:;color:;opacity:1.0`  box-shadow rgb(248,248,242) · opacity 1
-        a tira ACESA do P1, no mesmo arquivo  box-shadow rgb(126,184,212) · opacity 0.82
-
-    Um `color:` VAZIO não desliga cor nenhuma: ele deixa valer o HERDADO, que
-    nesta página é o `--fg` (`#f8f8f2`). A tira que o produto dizia estar
-    apagada acendia BRANCA — e mais forte que a acesa a 82%.
-
-    ESTA RÉGUA LÊ O CSS em vez de decorar a regra: se um dia o halo deixar de
-    ser `currentColor`, é a primeira linha que reprova, e não uma asserção
-    escrita à mão que continuaria verde sobre outra realidade.
-
-    A MORDIDA: devolva `""` ao lugar de `TIRA_APAGADA` e a asserção do
-    `color:transparent` reprova.
-    """
+    """A barra APAGADA não pode virar um halo BRANCO — e o halo é `currentColor`."""
     import onde
 
     publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
@@ -734,7 +543,6 @@ def test_a_tira_nao_acende_sob_steam_e_no_nativo_mostra_a_cor(colunas):
     assert "color:transparent" in sob_steam[DO_RADIO["uniq"]]["luz"], (
         "com a Steam segurando o `fd` a tira acendeu com a barra apagada.")
 
-    #: NO NATIVO, COMO EM TODO MODO: apagada é apagada, acesa é a cor.
     nativo = {"active_profile": "", "native_mode": True}
     apagada_no_nativo = colunas([apagado], nativo)[DO_RADIO["uniq"]]["luz"]
     assert "color:transparent" in apagada_no_nativo
@@ -744,7 +552,6 @@ def test_a_tira_nao_acende_sob_steam_e_no_nativo_mostra_a_cor(colunas):
         "no Nativo a barra é do Hefesto, e a tira não mostrou a cor")
     assert "Nativo" not in acesa_no_nativo, acesa_no_nativo
 
-    #: O CAMINHO QUE NÃO PODE FECHAR JUNTO: acesa, cor conhecida, sem ressalva.
     acesa = colunas([DO_RADIO])[DO_RADIO["uniq"]]["luz"]
     assert "color:transparent" not in acesa, (
         "a cura apagou a tira que o motor diz estar ACESA — uma régua que "
@@ -752,21 +559,7 @@ def test_a_tira_nao_acende_sob_steam_e_no_nativo_mostra_a_cor(colunas):
 
 
 def test_a_dica_da_luz_nao_diz_aceso_e_nomeia_quem_esta_conectado(colunas):
-    """As duas decisões dela de 02/09/2026, na mesma frase.
-
-    7. *"a palavra ACESO sai do texto"* — ela já tinha mandado tirar, a GTK
-       obedeceu em 25/08 (`lightbar_actions._PREFIXO_DESENHO` diz *"Desenho que
-       mandamos"*) e o mockup a reintroduziu.
-    8. *"a interface mostra o que tá conectado e não o controle do mockup"*.
-
-    O QUE ESTAVA NA TELA DELA, cravado no `title` da célula::
-
-        "O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco
-         lâmpadas no padrão do Player 1."
-
-    A MORDIDA: devolva essa frase ao gerador e as duas primeiras linhas
-    reprovam.
-    """
+    """As duas decisões dela de 02/09/2026, na mesma frase."""
     luz = colunas()[DO_RADIO["uniq"]]["luz"]
     assert "aceso" not in luz.lower(), (
         f"a palavra voltou à dica: {luz!r}. Não há canal de leitura de LED de "
@@ -799,7 +592,7 @@ def test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve(
     um desenho e a frase antiga anunciava outro.
 
     E O PACOTE NÃO PODE SABER: `_enrich_controllers_per_controller` não publica
-    nenhum campo do desejado por controle — `interface/aba02.py:809` já dizia
+    nenhum campo do desejado por controle — `interface/aba02.py:698` já dizia
     *"publica o ``player_slot`` e NÃO publica ``player_leds``"*.
 
     A REGRA DELA, 02/09/2026: *"se não tá mostrando agora, não tem info pra
@@ -815,15 +608,13 @@ def test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve(
     uniq = "aabbcc000002"
     escolha_dela = (True, False, False, False, True)
 
-    #: O MERGE REAL, com os colaboradores dublados — o mesmo arranjo de
-    #: `tests/unit/test_troca_de_player_01_a_escolha_sobrepoe.py:534`.
     backend = object.__new__(PyDualSenseController)
     backend._key_to_uniq = lambda k: k
     backend._desired_default = _DesiredOutput(
-        player_leds=tuple(player_led_pattern(1)))   # o default global do perfil
+        player_leds=tuple(player_led_pattern(1)))
     backend._assentar_mesa_locked = lambda: None
     backend._auto_output_provider = lambda u: _DesiredOutput(
-        player_leds=tuple(player_led_pattern(2)))   # a camada AUTOMÁTICA
+        player_leds=tuple(player_led_pattern(2)))
     backend._desired_coop_by_uniq = {}
     backend._scaled_led = lambda u, resolvido: resolvido
     backend._game_output_by_uniq = {}
@@ -838,17 +629,14 @@ def test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve(
         "o dublê não separa as duas camadas: escolha um desenho diferente do "
         "automático, senão o teste passa sem medir nada.")
 
-    #: E A TELA NÃO DIZ NADA SOBRE ISSO — nem o certo, nem o errado. As frases
-    #: proibidas NÃO são digitadas aqui: são os três ramos SEM co-op do próprio
-    #: motor, para a régua acompanhar se ele reescrever o texto.
     from hefesto_dualsense4unix.app.actions.lightbar_actions import (
         texto_do_desenho_aceso,
     )
     dica = a04.dica_da_luz("Cosmic Red", "BT", "")
     proibidas = [
-        texto_do_desenho_aceso((False,) * 5, 1),            # automático com nº
-        texto_do_desenho_aceso((False,) * 5, None),         # automático sem nº
-        texto_do_desenho_aceso(tuple(player_led_pattern(2)), 1),  # escolha dela
+        texto_do_desenho_aceso((False,) * 5, 1),
+        texto_do_desenho_aceso((False,) * 5, None),
+        texto_do_desenho_aceso(tuple(player_led_pattern(2)), 1),
     ]
     for afirmacao in proibidas:
         assert afirmacao not in dica, (
@@ -858,7 +646,6 @@ def test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve(
     assert dica == "Cosmic Red (BT)", (
         f"sobrou algo além do que o pacote mede: {dica!r}")
 
-    #: NEM PELO CAMINHO DE VERDADE — a coluna inteira, com a mesa de 02/09.
     luz = colunas()[DO_RADIO["uniq"]]["luz"]
     assert "automático" not in luz and "escolha sua" not in luz, luz
 
@@ -886,27 +673,8 @@ def test_o_coop_so_manda_quando_ha_mais_de_um_jogador():
     assert a04.o_coop_manda({"coop": None}) is False
 
 
-# A FRASE DO CO-OP SAIU DA DICA DA CÉLULA LEDs — O-CO-OP-LOCAL-SAI-01,
-# 25/09/2026, pedido dela (`D-2409-O-CO-OP-LOCAL-SAI`). Aqui moravam duas
-# réguas do REUSO daquela frase: `test_a_frase_do_coop_e_a_do_motor_chamada_
-# e_nao_uma_copia` (a dica tinha de ser o retorno de `lightbar_actions.
-# texto_do_desenho_aceso(..., coop_ligado=True)`, e não uma cópia) e
-# `test_o_ramo_do_coop_do_motor_ignora_o_rascunho_e_o_numero` (os sentinelas
-# que a dica passava ao motor). As duas mediam um chamador que deixou de
-# existir: a dica não traz mais frase de co-op nenhuma, e é a mesma com um
-# jogador ou com quatro. Quem mede isso agora é
-# `tests/unit/test_o_co_op_local_saiu.py`.
-
-
 def test_o_hex_e_o_do_dono_e_nao_um_guarda_copiado(colunas):
-    """`cor_do_swatch` é o dono da leitura crua do `lightbar_rgb`.
-
-    O guarda que estava em `_hex` (`len(rgb) < 3`) é o `_rgb3` do
-    `controller_card`, cujo docstring pede para não ser repetido: *"com duas
-    leituras do ``lightbar_rgb``, as duas abas divergiriam no primeiro caso de
-    borda"*. E divergiam: uma lista de QUATRO canais passava na cópia e é
-    recusada pelo dono.
-    """
+    """`cor_do_swatch` é o dono da leitura crua do `lightbar_rgb`."""
     from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
 
     quatro = dict(DO_RADIO, lightbar_rgb=[0, 0, 255, 7])
@@ -920,9 +688,6 @@ def test_o_hex_e_o_do_dono_e_nao_um_guarda_copiado(colunas):
         "que nem o `casamento.py` enxerga, porque ele filtra list e dict.")
 
 
-# ---------------------------------------------------------------------------
-# 6. a frase da disputa — o motor, não uma segunda verdade
-# ---------------------------------------------------------------------------
 def test_a_frase_da_disputa_e_a_do_motor(colunas):
     """`recado` vem de `controller_card.rotulo_lightbar`, e não da mão.
 
@@ -969,9 +734,6 @@ def test_o_recado_conhece_os_estados_que_a_mao_nao_conhecia(colunas):
     assert "Lightbar:" not in limpa and "Nativo" not in limpa, limpa
 
 
-# ---------------------------------------------------------------------------
-# 7. os gestos — a ponte com dublê, cobrando QUAL função e com quê
-# ---------------------------------------------------------------------------
 class PonteDeMentira:
     """A ponte com dublê: guarda o que foi chamado e com quê."""
 
@@ -1024,13 +786,7 @@ def test_o_botao_por_controle_do_automatico_saiu_com_o_widget():
         "oferecia — ela mandou tirar os dois botões do automático em "
         "07/09/2026, e a poda acompanha a peça")
 
-    # O CONTROLE TEM DE ESTAR **SEM COR AFIRMADA**, e a primeira redação desta
     # régua errava aí: com o `DO_CABO` inteiro ela media o SWATCH,  # noqa-acento: verbo medir
-    # não a queda —
-    # e `DO_CABO["lightbar_rgb"]` é `[255, 0, 0]`, que por acaso é a cor do slot
-    # 2. Ela passava com a cura arrancada, medido na mordida. Sem
-    # `lightbar_rgb` o motor não afirma cor nenhuma, que é o estado em que a
-    # queda existe: Modo Nativo, a Steam com o `fd`, ou o começo da sessão.
     mudo = {k: v for k, v in DO_CABO.items() if k != "lightbar_rgb"}
     ctx = pacotes.Contexto(state={"active_profile": "regua"}, mesa=list(MESA),
                            conectados=[mudo], estados={})
@@ -1038,9 +794,6 @@ def test_o_botao_por_controle_do_automatico_saiu_com_o_widget():
         "a cor de queda deixou de ser a do número que o motor dá — o controle "
         "do cabo é o 2 pelo `player_slot`, e cair em 1 é a posição disfarçada "
         "de default")
-    # E A MORDIDA TEM DE DISTINGUIR OS DOIS NÚMEROS: se a queda passar a ser a
-    # do slot 1, o valor muda. Esta linha existe para que a régua não fique
-    # verde num dia em que as duas cores coincidirem por outra razão.
     assert player_slot_color(1) != player_slot_color(2)
 
 
@@ -1057,9 +810,6 @@ def test_a_conversao_do_hex_e_a_do_motor():
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000"})
     assert p.chamadas == [("led_set_detalhado", ((255, 128, 0),),
                           {"brightness": None, "uniq": DO_CABO["uniq"]})]
-    # SEM O DOCSTRING: ele CITA a linha morta, para quem ler saber o que caiu, e
-    # procurar no texto inteiro faria a régua reprovar quem documenta bem — o
-    # defeito de forma que esta casa já nomeou cinco vezes.
     corpo = inspect.getsource(pac.cor).replace(pac.cor.__doc__ or "", "")
     assert "int(hexa" not in corpo, (
         "a conversão voltou a ser escrita à mão ao lado do dono que a faz.")
@@ -1078,36 +828,20 @@ def test_o_hex_torto_recusa_com_a_razao_do_motor():
 
 
 def test_a_casa_hachurada_saiu_e_o_gesto_nao_aceita_cor_sem_tom():
-    """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, ordem dela.
-
-    *"temos que remover esse botão que o mouse tá (que abre outras cores.)"*
-
-    ERAM DUAS PORTAS: os botões da fileira, que trazem o tom em `data-hex`, e o
-    campo de cor do fim da fileira, que o trazia no `valor` que o ouvinte lia.
-    Tirar o widget e deixar a queda pelo `valor` seria o pior dos dois mundos —
-    **peça com chamador e sem tela**: um caminho que nenhum elemento da página
-    alcança, aceitando calado carga que ninguém desenhou. É o que esta régua
-    mede, nas duas metades.
-
-    A MORDIDA: devolva o `pedido = str(o.get("valor") or "")` ao gesto e a
-    segunda asserção passa a não levantar nada.
-    """
+    """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, ordem dela."""
     import onde
 
-    # a) o widget não está na página, em nenhum dos quatro lugares
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     assert '<input type="color"' not in bancada, (
         "o campo de cor do sistema voltou à fileira — e o gesto dele morreu "
         "junto, então ele seria um clique sem resposta")
     assert 'class="livre"' not in bancada
 
-    # b) e o gesto recusa DIZENDO um pedido sem tom, em vez de adivinhar
     with pytest.raises(ValueError) as sem_tom:
         _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#00ff80",
                         "tipo": "input", "evento": "change"})
     assert "qual tom" in str(sem_tom.value)
 
-    # c) o botão da fileira continua inteiro — ele é quem manda o `data-hex`
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000",
                         "tipo": "button", "evento": "click"})
     assert p.chamadas == [("led_set_detalhado", ((255, 128, 0),),
@@ -1142,18 +876,15 @@ def test_os_tres_tons_sairam_dos_quatro_controles():
 
     crus = ["#{:02X}{:02X}{:02X}".format(*rgb) for rgb in pac.tons_da_guia()]
 
-    # a) os três não estão na fileira, nem como tom nem como endereço de clique
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     for h in ("#0080FF", "#FF00FF", "#000000"):
         assert h not in crus, f"{h} continua na guia"
         assert f'data-hex="{h}"' not in bancada, (
             f"{h} voltou à fileira da página — ela mandou os três saírem")
 
-    # b) a fileira tem ONZE casas, e são as mesmas em todos os lugares da grade
     assert len(crus) == 11, crus
     assert bancada.count('class="tom') == 4 * len(crus)
 
-    # c) as oito automáticas do produto NÃO foram tocadas — a poda é de tela
     for n in range(1, 9):
         assert "#{:02X}{:02X}{:02X}".format(*player_slot_color(n)) == crus[n - 1], (
             "a guia deixou de começar pelas oito cores automáticas, e "
@@ -1161,16 +892,7 @@ def test_os_tres_tons_sairam_dos_quatro_controles():
 
 
 def test_a_poda_da_guia_recusa_dizendo_o_que_nao_pode_podar():
-    """`FORA_DA_GUIA` sabe RECUSAR, e as duas recusas são diferentes.
-
-    Régua que só sabe passar não é régua: um hex errado ali seria mudo de dois
-    jeitos — um que não existe no dono não tira nada, e um que é cor automática
-    de jogador faria a nona casa dizer o nome da oitava, porque
-    `titulo_da_casa` numera pela POSIÇÃO.
-
-    A MORDIDA: tire qualquer um dos dois `raise` de `tons_da_guia()` e o
-    `pytest.raises` correspondente reprova.
-    """
+    """`FORA_DA_GUIA` sabe RECUSAR, e as duas recusas são diferentes."""
     from pacotes import a04_iluminacao as pac
 
     antes = pac.FORA_DA_GUIA
@@ -1180,7 +902,7 @@ def test_a_poda_da_guia_recusa_dizendo_o_que_nao_pode_podar():
             pac.tons_da_guia()
         assert "não conhece" in str(fantasma.value)
 
-        pac.FORA_DA_GUIA = ("#FF0080",)   # a cor automática do Player 4
+        pac.FORA_DA_GUIA = ("#FF0080",)
         with pytest.raises(ValueError) as automatica:
             pac.tons_da_guia()
         assert "automática" in str(automatica.value)
@@ -1189,9 +911,6 @@ def test_a_poda_da_guia_recusa_dizendo_o_que_nao_pode_podar():
     assert len(pac.tons_da_guia()) == 11
 
 
-# ---------------------------------------------------------------------------
-# 10. o botão que aceita o clique, não faz nada — e não diz
-# ---------------------------------------------------------------------------
 class PonteMuda:
     """A ponte com o daemon SEM RESPONDER — e o "não respondeu" tem DUAS formas.
 
@@ -1222,12 +941,7 @@ class PonteMuda:
 
 
 def _clicar_mudo(gesto, clique, conectados=None):
-    """O mesmo clique, com o daemon calado — e a ponte volta mesmo se levantar.
-
-    Ela volta SEMPRE porque a metade que importa em dois destes testes é o que
-    o gesto deixou de chamar depois da recusa; um `pytest.raises` em volta
-    engoliria o objeto junto com a exceção.
-    """
+    """O mesmo clique, com o daemon calado — e a ponte volta mesmo se levantar."""
     import pacotes
 
     ctx = pacotes.Contexto(state={}, mesa=MESA,
@@ -1241,15 +955,6 @@ def _clicar_mudo(gesto, clique, conectados=None):
     return p
 
 
-#: OS QUE ESCREVEM NO APARELHO. O `player` já lia a resposta.
-#:
-#: ERAM TRÊS ATÉ 07/09/2026, e o terceiro saiu com o botão POR CONTROLE que ela
-#: mandou tirar. O DEFEITO QUE ESTA RÉGUA MEDE CONTINUA COBERTO nos dois que
-#: ficam: os três nasceram com o mesmo defeito (jogavam fora o booleano da
-#: ponte) e a cura foi a mesma nos três — o caminho de escrita é UM só
-#: (`_escrever_a_cor`). Tirar um caso não abre buraco; deixar o caso de um
-#: gesto que não existe faria a régua levantar com uma frase sobre um botão que
-#: a tela não tem.
 QUE_ESCREVEM = [("cor", {"hex": "#FF8000"}),  # (noqa-acento) chave do contrato
                 ("apagar", {})]  # (noqa-acento) idem
 
@@ -1279,25 +984,7 @@ def test_o_botao_da_luz_recusa_dizendo_quando_o_daemon_nao_responde(gesto, cliqu
 
 
 def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
-    """A frase é `lightbar_actions._AVISO_HEFESTO_DESLIGADO`, LIDA do motor.
-
-    LEI 0 desta casa: *"não temos que recriar nada"*. A janela GTK diz esta
-    frase neste MESMO evento (`lightbar_actions.py:955-956` —
-    `mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO`, no ramo em
-    que o `led.set` por `uniq` volta sem corpo). Escrever outra aqui criaria a
-    segunda verdade que esta casa persegue: as duas telas diriam coisas
-    diferentes sobre o mesmo daemon desligado.
-
-    ESTA RÉGUA NASCEU MEDINDO A PALAVRA, e eu a peguei com a minha própria
-    mordida em 02/09/2026. Ela era `assert do_motor in str(p.erro)` com
-    `do_motor` lido do motor — o que parece reuso e não é: copiei a frase à mão
-    para dentro do pacote, palavra por palavra, e os **38 testes ficaram
-    verdes**. É o defeito exato que a auditoria deste mesmo dia nomeou noutro
-    ponto desta aba: *a régua confunde a PALAVRA com o ATO*.
-
-    O QUE MEDE O ATO é trocar o valor NO MOTOR e cobrar que a tela acompanhe:
-    uma cópia à mão continua dizendo a frase velha, e aí a régua acusa.
-    """
+    """A frase é `lightbar_actions._AVISO_HEFESTO_DESLIGADO`, LIDA do motor."""
     from hefesto_dualsense4unix.app.actions import lightbar_actions
 
     do_motor = lightbar_actions._AVISO_HEFESTO_DESLIGADO
@@ -1307,7 +994,6 @@ def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
             f"o gesto {gesto!r} recusou com {str(p.erro)!r}, e a frase do "
             f"motor para este evento é {do_motor!r}.")
 
-    #: A MEDIDA DO ATO: o motor troca a frase, e a tela tem de trocar junto.
     outra = "\x00o motor mudou de frase"
     monkeypatch.setattr(lightbar_actions, "_AVISO_HEFESTO_DESLIGADO", outra)
     for gesto, clique in QUE_ESCREVEM:
@@ -1318,19 +1004,9 @@ def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
             f"dia em que a GTK mudar a dela as duas telas divergem.")
 
 
-# O TESTE DA ORDEM DAS DUAS CHAMADAS SAIU COM O GESTO — 07/09/2026.
-#
 # Ele media que o botão POR CONTROLE não pintava a cor nova  # noqa-acento: verbo medir
-# quando o claim não
-# tinha sido largado: pintar depois de a primeira chamada falhar deixaria a
-# barra numa cor nova com o claim ainda no Hefesto, que é o OPOSTO do que
-# aquele botão prometia. A medição fica escrita aqui e no pacote; o gesto não
-# existe mais para medir.
 
 
-# ---------------------------------------------------------------------------
-# 8. o lugar que ESVAZIA na frente dela — 03/09/2026
-# ---------------------------------------------------------------------------
 def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     """`.vazia` e `.off` são o mesmo fato, e tinham duas leituras.
 
@@ -1359,70 +1035,37 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     assert ".ctrl.off" in doc, (
         "a folha desta aba voltou a não ter regra nenhuma para o lugar que "
         "esvazia — era o estado do defeito de 03/09/2026.")
-    # O QUE OS OLHOS LEEM: a moldura perde a cor do plástico do mockup.
     assert ".luz-grade .ctrl.off .moldura{color:var(--linha) !important" in doc, (
         "sem `!important` a regra não vence o `style=` INLINE do gerador, e a "
         "coluna vazia continua com a cor de um controle que não está lá.")
-    # O QUE NÃO PODE ACEITAR CLIQUE: guia, trilho e os dois botões.
-    #
     # A CHAVE PASSOU DE `.off` PARA `[data-conectado="nao"]` EM 07/09/2026, e a
-    # régua ficou MAIS forte, não mais frouxa: `.off` só alcança o lugar que
-    # ESVAZIA, e desde hoje os widgets de gesto nascem também nos dois lugares
-    # que nascem VAZIOS — eles precisavam nascer, porque o piloto vira marca e
-    # escreve campo, e não materializa HTML: o P3 que ganhava um controle
-    # ficava sem guia de cores até alguém recarregar a página. `[data-conectado
-    # ="nao"]` é a marca que o piloto vira nos DOIS sentidos (passos `1b` e
-    # `1c`), então ela cobre o lugar esvaziado E o lugar nascido vazio, e
-    # devolve o widget no instante em que o controle chega.
     for peca in ('.luz-grade .ctrl[data-conectado="nao"] .guia',
                  '.luz-grade .ctrl[data-conectado="nao"] .trilho',
                  '.luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn'):
         assert peca in doc, (
             f"{peca} voltou à tela num lugar sem controle: botões que "
             f"engolem o toque sem uma letra.")
-    # E A CAIXA DO HEXADECIMAL, que não pode SUMIR porque é o travessão da
-    # célula `Cor` — nela o que se apaga é o CLIQUE.
     assert ('.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia'
             "{pointer-events:none" in doc), (
         "a caixa do hexadecimal voltou a aceitar clique num lugar sem "
         "controle — ela leva `data-gesto=\"reenviar\"` nos quatro lugares "
         "desde 07/09/2026, e sem esta regra o clique levanta `o clique não "
         "disse em qual controle`, que o cartão do piloto não leva à tela.")
-    # E OS WIDGETS EXISTEM MESMO NA COLUNA QUE NASCE VAZIA — a outra metade da
-    # cura, e sem ela as três regras acima esconderiam o que não existe.
     grade = doc.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
     for coluna in re.findall(
             r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)', grade, re.S):
-        # `data-gesto="auto"` SAIU DESTA LISTA em 07/09/2026, com o botão
-        # que ela mandou tirar. Exigir um endereço que a tela não tem mais
-        # faria esta régua reprovar a ordem dela.
-        # `class="guia"` SEM o `>`: desde a COR-X-01 o `<span>` carrega
         # atributos (o `data-campo="plastico"` e, dentro, o bloco dos tons),
-        # e uma busca pelo fecho mede a FORMA da tag em vez da presença da
-        # guia. O que esta régua quer saber é se o lugar vazio TEM a guia.
         for peca in ('class="guia"', 'class="puxador"',
                      'data-gesto="apagar"', 'data-gesto="reenviar"'):
             assert peca in coluna, (
                 f"o lugar que NASCE vazio perdeu {peca!r} — o controle que "
                 f"chegar ali fica sem esse gesto na tela, e só recarregar a "
                 f"página desfaz.")
-    # O TRAVESSÃO DA SÉTIMA CÉLULA — a única sem `data-campo`, logo a única que
-    # o molde do lugar sem dono não alcança.
     assert doc.count('<span class="nada">—</span>\n          </div>') >= 2, (
         "a célula `Opções` da coluna viva perdeu o travessão escondido: quando "
         "ela esvaziar, a linha fica em BRANCO enquanto o P3 e o P4 mostram —.")
-    # E A COLUNA QUE NASCE VAZIA NÃO PODE PERDER O DELA. Foi a regressão que a
-    # primeira foto desta cura pegou: `.ctrl .cel-acoes .nada{display:none}`
-    # apagava o travessão do P3 e do P4 junto.
-    #
     # E O SELETOR VIROU `[data-conectado="sim"]` EM 07/09/2026: o
     # `:not(.vazia):not(.off)` media o NASCIMENTO, e o que  (noqa-acento) medir
-    # decide é o AGORA.
-    # Com os dois botões nascendo nos quatro lugares, o P3 que ganha um
-    # controle sai de `.vazia` + `conectado="sim"` — nenhum dos dois `:not`
-    # falha —, e a célula Opções mostrava "—" AO LADO de `Automático` e
-    # `Desligar`. A marca do piloto responde pelos dois estados; a classe de
-    # nascimento só responde por um.
     assert '.luz-grade .ctrl[data-conectado="sim"] .cel-acoes .nada{display:none}' in doc, (
         "a regra que esconde o travessão da coluna VIVA sumiu, ou voltou a "
         "medir o NASCIMENTO: sem ela o lugar que ganha um controle mostra o "

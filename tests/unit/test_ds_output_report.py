@@ -1,10 +1,4 @@
-"""BTREPORT-02 — o builder comum do output report DS5 (USB 0x02 / BT 0x31).
-
-Layout validado contra o `hid-playstation` do kernel (structs
-`dualsense_output_report_usb`/`_bt`/`_common`), nunca contra a pydualsense
-(cujo 0x31 é malformado — o firmware o descarta). O CRC de referência é
-recalculado AQUI com zlib puro, independente do builder.
-"""
+"""BTREPORT-02 — o builder comum do output report DS5 (USB 0x02 / BT 0x31)."""
 from __future__ import annotations
 
 import zlib
@@ -31,7 +25,7 @@ class TestBuildUsb:
         assert len(r) == rep.USB_REPORT_LEN == 64
         assert r[0] == 0x02
         assert bytes(r[1 : 1 + rep.COMMON_LEN]) == bytes(common)
-        assert all(b == 0 for b in r[1 + rep.COMMON_LEN :])  # padding zero
+        assert all(b == 0 for b in r[1 + rep.COMMON_LEN :])
 
     def test_common_de_tamanho_errado_e_erro(self) -> None:
         with pytest.raises(ValueError):
@@ -44,10 +38,10 @@ class TestBuildBt:
         r = rep.build_bt_report(common, seq=5)
         assert len(r) == rep.BT_REPORT_LEN == 78
         assert r[0] == 0x31
-        assert r[1] == 0x50  # seq no nibble ALTO
-        assert r[2] == 0x10  # tag mágico obrigatório
+        assert r[1] == 0x50
+        assert r[2] == 0x10
         assert bytes(r[3 : 3 + rep.COMMON_LEN]) == bytes(common)
-        assert all(b == 0 for b in r[3 + rep.COMMON_LEN : 74])  # reservado
+        assert all(b == 0 for b in r[3 + rep.COMMON_LEN : 74])
 
     def test_crc_confere_com_a_receita_0xa2(self) -> None:
         r = rep.build_bt_report(_common_marcado(), seq=7)
@@ -58,9 +52,7 @@ class TestBuildBt:
         assert rep.build_bt_report(bytearray(47), seq=16)[1] == 0x00
 
     def test_vetor_conhecido_release_leds(self) -> None:
-        """Vetor de referência: o report de Reset LED state (flag1=0x08) que
-        já foi VALIDADO AO VIVO (LIGHTBAR-BT-RESET-01) sai byte a byte igual
-        pelo builder comum."""
+        """Vetor de referência: o report de Reset LED state (flag1=0x08) que"""
         from hefesto_dualsense4unix.core.lightbar_reset import (
             build_bt_release_leds_report,
         )
@@ -70,7 +62,6 @@ class TestBuildBt:
         assert bytes(rep.build_bt_report(common, seq=0)) == (
             build_bt_release_leds_report(seq=0)
         )
-        # E o CRC do vetor confere com a receita independente.
         r = rep.build_bt_report(common, seq=0)
         assert int.from_bytes(r[74:78], "little") == _crc_referencia(r)
 
@@ -82,7 +73,6 @@ class TestStampSeq:
         rep.stamp_bt_seq(r, 9)
         assert r[1] == 0x90
         assert int.from_bytes(r[74:78], "little") == _crc_referencia(r)
-        # Só seq+CRC mudam — payload intacto.
         assert bytes(r[2:74]) == original[2:74]
 
     def test_funciona_em_list_de_ints(self) -> None:

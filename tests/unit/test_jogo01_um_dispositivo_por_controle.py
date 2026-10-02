@@ -173,12 +173,7 @@ def _broker_falso(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture()
 def _sem_disco(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
-    """Isola o ciclo do vpad de disco, kernel e threads.
-
-    Devolve a lista de chamadas a `save_gamepad_emulation` — a PREFERÊNCIA dela
-    em disco é a coisa que a suspensão não pode encostar, e a única forma de
-    provar isso é observar quem escreve.
-    """
+    """Isola o ciclo do vpad de disco, kernel e threads."""
     import hefesto_dualsense4unix.integrations.virtual_pad as vp
     import hefesto_dualsense4unix.utils.session as session
 
@@ -207,17 +202,7 @@ async def _encerrar_vigia(daemon: Any) -> Any:
 
 
 class TestSuspensaoDoVpad:
-    """NOTA DATADA — 09/08/2026: a marca não chama mais a suspensão.
-
-    Estes quatro testes entravam por `sync_steam_input_exception`, porque era a
-    borda da marca que suspendia. Não é mais (ESCONDER-EM-VEZ-DE-SAIR-01), e o
-    caminho de hoje está travado em `test_esconder_em_vez_de_sair_01.py`. Eles
-    passaram a chamar `suspend_vpads_for_steam_input` DIRETO — que é a função
-    viva, ainda alcançável por um daemon que subiu antes desta cura — em vez de
-    virarem verdes de graça: por aquela porta, hoje, não acontece nada, e um
-    teste que afirma "não aconteceu nada" onde nada podia acontecer não prova
-    coisa nenhuma.
-    """
+    """NOTA DATADA — 09/08/2026: a marca não chama mais a suspensão."""
 
     async def test_a_suspensao_derruba_o_vpad_do_p1_e_o_coop(
         self,
@@ -225,12 +210,7 @@ class TestSuspensaoDoVpad:
         _broker_falso: None,
         _sem_disco: list[Any],
     ) -> None:
-        """O que a suspensão faz — e o PREÇO dela, na mesma asserção.
-
-        A linha do co-op é a que ficou famosa em 08/08: derrubar os secundários
-        é derrubar o jogador 2. Ela continua aqui porque é o fato medido; o que
-        mudou é que ninguém paga esse preço pela marca do Steam Input.
-        """
+        """O que a suspensão faz — e o PREÇO dela, na mesma asserção."""
         daemon = _DaemonFalso(jogadores=3)
         vpad = daemon._gamepad_device
 
@@ -249,10 +229,7 @@ class TestSuspensaoDoVpad:
         _broker_falso: None,
         _sem_disco: list[Any],
     ) -> None:
-        """O-MODO-XBOX-NAO-E-QUEDA-02: a máscara volta, e o modo tem de voltar junto.
-
-        Mordida: tire a linha que guarda o caminho na suspensão e esta reprova.
-        """
+        """O-MODO-XBOX-NAO-E-QUEDA-02: a máscara volta, e o modo tem de voltar junto."""
         daemon = _DaemonFalso()
         daemon._gamepad_device.caminho = "xbox"
 
@@ -266,9 +243,7 @@ class TestSuspensaoDoVpad:
         _broker_falso: None,
         _sem_disco: list[Any],
     ) -> None:
-        """R-07/HARM-06: só gesto manual escreve a preferência. A suspensão é
-        decisão NOSSA e some com o jogo — em disco a emulação segue ligada, e é
-        isso que devolve o vpad se o daemon morrer sujo no meio da partida."""
+        """R-07/HARM-06: só gesto manual escreve a preferência. A suspensão é"""
         daemon = _DaemonFalso()
 
         gp.suspend_vpads_for_steam_input(daemon, appid=MMJ)
@@ -284,12 +259,7 @@ class TestSuspensaoDoVpad:
         _broker_falso: None,
         _sem_disco: list[Any],
     ) -> None:
-        """Fail-safe declarado: sem quem devolva o vpad, não se retira o vpad.
-
-        Teste SÍNCRONO de propósito — é justamente o caso "não há event loop
-        rodando". Degradar para o duplicado é ruim; deixá-la sem gamepad virtual
-        até reiniciar o daemon é pior, e ela não teria como desfazer.
-        """
+        """Fail-safe declarado: sem quem devolva o vpad, não se retira o vpad."""
         daemon = _DaemonFalso()
 
         assert gp.suspend_vpads_for_steam_input(daemon, appid=MMJ) is False
@@ -315,27 +285,12 @@ class TestSuspensaoDoVpad:
 
 
 class TestQuemTentaLevantarOVpadDeVolta:
-    """NOTA DATADA — 09/08/2026: os dois gates que protegiam a suspensão caíram.
-
-    Eles recusavam quem pudesse levantar o vpad durante a marca — o apply
-    automático do perfil/autoswitch e a rede de segurança do VPAD-09 —, e a
-    razão era uma só, escrita nos dois: *"nos appids da allowlist o dispositivo
-    do jogo é o físico"*. **Essa premissa se inverteu.** No jogo marcado o
-    dispositivo do jogo passou a ser o vpad, e recusá-lo ali é recusar
-    justamente o que a marca promete entregar — pior: com o físico escondido,
-    um vpad que morre e não volta é ZERO controles na mão dela.
-
-    Os dois testes ficam, com a resposta de hoje. O do gesto manual não mudou de
-    veredito: continua verde, agora pelo caminho que serve à suspensão HERDADA.
-    """
+    """NOTA DATADA — 09/08/2026: os dois gates que protegiam a suspensão caíram."""
 
     def test_apply_automatico_volta_a_ser_aceito_no_jogo_marcado(
         self, _broker_falso: None, _sem_disco: list[Any]
     ) -> None:
-        """A MORDIDA: devolva o `if origin != "manual": return False` ao gate de
-        `start_gamepad_emulation` e o autoswitch volta a ser recusado — no jogo
-        marcado, isso é recusar o único dispositivo que sobrou.
-        """
+        """A MORDIDA: devolva o `if origin != "manual": return False` ao gate de"""
         daemon = _DaemonFalso()
         daemon._gamepad_device = None
         daemon._steam_input_excecao = True
@@ -352,9 +307,7 @@ class TestQuemTentaLevantarOVpadDeVolta:
     def test_gesto_manual_vence_e_encerra_a_suspensao(
         self, _broker_falso: None, _sem_disco: list[Any]
     ) -> None:
-        """A última palavra é dela. Religar na mão devolve o vpad e a suspensão
-        morre ali — a saída da exceção não pode tentar devolver um vpad que já
-        está de pé."""
+        """A última palavra é dela. Religar na mão devolve o vpad e a suspensão"""
         daemon = _DaemonFalso()
         daemon._gamepad_device = None
         daemon._steam_input_excecao = True
@@ -368,13 +321,7 @@ class TestQuemTentaLevantarOVpadDeVolta:
     def test_revive_pos_falha_total_vale_dentro_do_jogo_marcado(
         self, _broker_falso: None, _sem_disco: list[Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """VPAD-09 dispara em borda de CONEXÃO — a mais frequente desta máquina
-        (BT reconectando no meio da partida). Com o físico escondido, é aqui que
-        ela deixa de ficar sem controle nenhum.
-
-        A MORDIDA: devolva o `if steam_input_excecao_ativa(daemon): return
-        False` a `upgrade_primary_vpad_to_uhid`.
-        """
+        """VPAD-09 dispara em borda de CONEXÃO — a mais frequente desta máquina"""
         monkeypatch.setattr(gp, "controller_allows_uhid", lambda d: True)
         daemon = _DaemonFalso()
         daemon._gamepad_device = None
@@ -442,8 +389,7 @@ class TestDevolucaoDoVpad:
     def test_sem_mascara_gravada_a_devolucao_nao_inventa_um_vpad(
         self, _broker_falso: None, _sem_disco: list[Any]
     ) -> None:
-        """Máscara `None` na suspensão = não havia vpad do P1 para derrubar.
-        Criar um agora seria dar a ela um device que ela não tinha."""
+        """Máscara `None` na suspensão = não havia vpad do P1 para derrubar."""
         daemon = self._suspenso()
         daemon._steam_input_flavor_suspenso = None
 
@@ -458,8 +404,7 @@ class TestDevolucaoDoVpad:
         _broker_falso: None,
         _sem_disco: list[Any],
     ) -> None:
-        """No Modo Nativo o físico é o dispositivo por escolha dela: ressuscitar
-        o vpad recriaria o duplicado pelo outro lado."""
+        """No Modo Nativo o físico é o dispositivo por escolha dela: ressuscitar"""
         daemon = self._suspenso()
         daemon._nativo = True
         monkeypatch.setattr(le, "steam_input_exception_appid", lambda d, **k: None)
@@ -513,18 +458,7 @@ class TestEnvDaAllowlist:
     def test_o_appid_marcado_deixou_de_ter_env_propria(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """NOTA DATADA — 09/08/2026: o rótulo virou obituário.
-
-        Este teste afirmava que o `.env` do appid marcado declarava, em letras,
-        *"allowlist Steam Input (físico é o único dispositivo)"*, e que o dedup
-        NÃO podia estar lá — porque esconder o físico, com o vpad suspenso,
-        seria zero controles. A regra que o rótulo afirma deixou de valer: no
-        jogo marcado o único dispositivo passou a ser o do Hefesto.
-
-        A MORDIDA: devolva o laço da allowlist a `materialize_launch_env`. A env
-        renasce mandando o jogo olhar para o físico — e o daemon, do outro lado,
-        acabou de escondê-lo. É o "Jogador 3" fantasma, inteiro.
-        """
+        """NOTA DATADA — 09/08/2026: o rótulo virou obituário."""
         monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
         monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {MMJ})
@@ -533,8 +467,6 @@ class TestEnvDaAllowlist:
         le.materialize_launch_env(daemon)
 
         assert not (tmp_path / f"steam_app_{MMJ}.env").exists()
-        # O jogo marcado passa a ler o mesmo `default.env` de qualquer outro, e
-        # com o dedup — o dispositivo dele é o vpad.
         texto = (tmp_path / "default.env").read_text(encoding="utf-8")
         assert _IGNORE in texto
         assert le.ESTADO_ALLOWLIST_STEAM_INPUT not in texto, (

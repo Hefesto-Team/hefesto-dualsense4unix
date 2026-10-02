@@ -1,33 +1,4 @@
-"""CONFIG-06 — todo campo do card nasce em "não sei", e "não sei" é resposta.
-
-Teste PURO: nenhuma linha aqui precisa de GTK, de display ou de daemon. O que
-ele guarda é a regra que a `D-A2` escreveu ao reabrir o escopo desta seção —
-*"onde as quatro perguntas abertas mordem, o campo nasce em 'não sei' e a tela
-diz que não sabe; nada de valor default chutado"*.
-
-POR QUE ESTA REGRA TEM PORTÃO PRÓPRIO
---------------------------------------
-
-Porque a casa já pagou por ela. O editor de perfis tinha um ``or "xbox"``
-(``daemon/subsystems/external_mask.py:143-149``): quem nunca escolheu máscara
-nenhuma recebia a de Xbox em silêncio, e a de Xbox APAGA giroscópio e touchpad.
-Ninguém pediu, nada avisou, e o sintoma aparecia dentro do jogo. Um default
-chutado é pior que campo vazio porque parece informação.
-
-AS MORDIDAS, EXERCIDAS EM 22/08/2026
--------------------------------------
-
-1. Troquei, em ``declaracoes_do_aparelho``, o ``_valor_declarado(...)`` por um
-   ``_valor_declarado(...) or "xbox"``. Os três casos de
-   ``test_todo_campo_nasce_sem_valor`` reprovaram, um por entrada.
-2. Troquei o ``return ""`` final de ``modo_deduzido`` por ``return "dinput"``.
-   ``test_modo_desconhecido_e_vazio_e_nao_um_chute`` reprovou.
-3. Troquei o ``return None`` de ``chave_de_maquina`` para o endereço que começa
-   em ``02`` por ``return limpo``. ``test_endereco_forjado_nao_vira_chave``
-   reprovou — e essa é a mordida que importa mais: sem ela, dois clones do mesmo
-   modelo dividiriam a mesma linha do ``maquina.json``, e a cor de um pintaria a
-   borda do outro.
-"""
+"""CONFIG-06 — todo campo do card nasce em "não sei", e "não sei" é resposta."""
 from __future__ import annotations
 
 import ast
@@ -58,8 +29,6 @@ from hefesto_dualsense4unix.integrations.cor_do_plastico import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: O 8BitDo desta casa em modo Switch, por Bluetooth. MAC forjado na faixa
-#: `e8:47:3a` que o portão de anonimato reconhece como sintética.
 _8BITDO_SWITCH = {
     "name": "Nintendo Co., Ltd. Pro Controller",
     "vid": "057e",
@@ -69,11 +38,7 @@ _8BITDO_SWITCH = {
     "driver": "nintendo",
     "identity": "e8473a000007",
 }
-#: Um Pro Controller GENUÍNO: mesmo VID:PID e mesmo driver do clone acima — é
-#: exatamente por isso que ele está aqui. Se o "não sei" dependesse de o produto
-#: distinguir os dois, ele já teria falhado nesta linha.
 _PRO_GENUINO = {**_8BITDO_SWITCH, "uniq": "aa:bb:cc:00:00:11", "identity": "aabbcc000011"}
-#: Marca que ninguém conhece: nem VID, nem OUI, nem driver.
 _DESCONHECIDO = {
     "name": "Marca Xpto Pad",
     "vid": "abcd",
@@ -102,11 +67,7 @@ class TestTodoCampoNasceSemValor:
         assert chaves == ["cor"]
 
     def test_declaracao_gravada_aparece(self) -> None:
-        """Instrumento válido: com valor gravado, o campo NÃO devolve `None`.
-
-        Sem esta asserção o teste acima passaria com uma função que devolve
-        `None` sempre — que é o defeito de portão que esta casa mais paga.
-        """
+        """Instrumento válido: com valor gravado, o campo NÃO devolve `None`."""
         campos = dict(
             (chave, valor)
             for chave, _rotulo, valor in declaracoes_do_aparelho(
@@ -160,12 +121,7 @@ class TestOModoEDeduzido:
         assert modo_deduzido(_DESCONHECIDO) == ""
 
     def test_a_ficha_do_controle_continua_dizendo_o_que_dizia(self) -> None:
-        """`input_mode` virou projeção de `modo_deduzido` e NÃO mudou de resposta.
-
-        Duas leituras do mesmo fato só não são duas verdades enquanto elas
-        concordam. Esta é a asserção que garante que a projeção não inventou
-        estado novo para a ficha do controle.
-        """
+        """`input_mode` virou projeção de `modo_deduzido` e NÃO mudou de resposta."""
         assert input_mode(_8BITDO_SWITCH) == "nintendo"
         assert input_mode({"vid": "045e", "pid": "028e"}) == "xbox"
         assert input_mode({"vid": "0000", "driver": "xpad"}) == "xbox"
@@ -176,17 +132,7 @@ class TestOModoEDeduzido:
 
 class TestAChaveDoDisco:
     def test_endereco_forjado_nao_vira_chave(self) -> None:
-        """O `02:` que o nosso DKMS sintetiza não pode indexar o `maquina.json`.
-
-        Ele é montado a partir de VID, PID e bus, então dois clones do MESMO
-        modelo recebem o MESMO endereço. Gravar por ele funde dois aparelhos numa
-        linha só — e a cor de um passa a pintar a borda do outro.
-
-        O exemplo usa a faixa `02:fe`, que é o endereço que o nosso próprio vpad
-        forja (`player_mac()`) e uma das faixas sintéticas que o
-        `test_anonimato_de_fixtures` permite. Serve duas vezes: é forjado de
-        verdade e é `02` de verdade.
-        """
+        """O `02:` que o nosso DKMS sintetiza não pode indexar o `maquina.json`."""
         assert chave_de_maquina({"uniq": "02:fe:00:00:00:02"}) is None
         assert chave_de_maquina({"identity": "02fe00000002"}) is None
 
@@ -201,11 +147,7 @@ class TestAChaveDoDisco:
 
 class TestAListaDeCor:
     def test_oito_botoes_seis_cores_outra_e_nao_sei(self) -> None:
-        """O oitavo entrou em 23/08/2026: sem ele, "não sei" não era resposta.
-
-        Grupo de rádio ignora o clique no botão já afundado — quem declarasse a
-        cor errada não tinha gesto nenhum para desfazer (`D-A1`).
-        """
+        """O oitavo entrou em 23/08/2026: sem ele, "não sei" não era resposta."""
         itens = cores_do_plastico_items()
         assert len(itens) == 8
         assert [ident for ident, _ in itens[:6]] == ["00", "01", "02", "03", "04", "05"]
@@ -230,14 +172,7 @@ class TestAListaDeCor:
 
 class TestATabelaDeCores:
     def test_o_ensaio_e_o_produto_leem_o_mesmo_mapa(self) -> None:
-        """Nenhum dos dois guarda cópia digitada — os dois leem o CSV dela.
-
-        FATO SUBSTITUÍDO (25/09/2026, O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01):
-        aqui se confrontavam DUAS cópias digitadas de 21 códigos, a do produto e
-        a do ensaio, e as duas concordavam entre si enquanto o mapa dela tinha
-        28. O confronto certo é com o dono: o ensaio não pode ter um dicionário
-        literal de cores, e o produto tem de conhecer os códigos do mapa.
-        """
+        """Nenhum dos dois guarda cópia digitada — os dois leem o CSV dela."""
         fonte = (RAIZ / "scripts" / "ensaios" / "cor_do_plastico.py").read_text(
             encoding="utf-8"
         )
@@ -282,12 +217,7 @@ class TestATabelaDeCores:
 
 class TestOPretoNaoSome:
     def test_midnight_black_e_clareado_para_a_borda(self) -> None:
-        """Pintado cru, o preto do plástico é a AUSÊNCIA de borda.
-
-        `#00040d` é MAIS ESCURO que o fundo da janela. O desenho já previa e a
-        dica dele está na tela: *"Preto puro sumiria no fundo escuro da janela,
-        então a borda usa um tom clareado do mesmo plástico."*
-        """
+        """Pintado cru, o preto do plástico é a AUSÊNCIA de borda."""
         cru = TONS["01"]
         borda = tom_para_a_borda(cru)
         assert borda != cru
@@ -296,17 +226,7 @@ class TestOPretoNaoSome:
         ) + int(cru[3:5], 16) + int(cru[5:7], 16)
 
     def test_o_preto_clareado_continua_parecendo_preto(self) -> None:
-        """A clareada é MISTURA com branco, não subida de luminosidade em HLS.
-
-        MEDIDO em 22/08/2026: o `ensure_min_contrast` da casa preserva matiz E
-        saturação, e o Midnight Black tem saturação HLS de 100 % (o canal
-        vermelho é zero). Subir a luminosidade dele devolve `#0a56ff` — um AZUL
-        ELÉTRICO no lugar do preto do plástico. Misturar com branco não pode
-        aumentar saturação; subir luminosidade pode, e justamente nas cores
-        quase pretas, que são as que precisam da correção.
-
-        O desenho aprovado pinta aquele card de `#5a5c6b`, um cinza-azulado.
-        """
+        """A clareada é MISTURA com branco, não subida de luminosidade em HLS."""
         import colorsys
 
         def saturacao(hexa: str) -> float:
@@ -344,15 +264,6 @@ class TestOPretoNaoSome:
         assert tom_para_a_borda("#nope") == ""
 
 
-#: OS DOIS SERIAIS FORJADOS DESTE ARQUIVO. Eles vivem em constante, e não
-#: soltos na linha do `assert`, por uma razão medida em 03/09/2026: com a marca
-#: de isenção do portão `serial-de-aparelho` na mesma linha, quatro `assert`
-#: passavam de cem caracteres e o `ruff` reprovava. A constante paga a marca uma
-#: vez só.
-#:
-#: O prefixo `AB1C` não sai de fábrica nenhuma; o que eles preservam é a FORMA —
-#: dezessete caracteres, com o CÓDIGO DA COR nos caracteres cinco e seis, que é
-#: o que estes testes medem.
 _SERIAL_05 = "AB1C05D1234567890"  # serial-de-mentira: prefixo forjado
 _SERIAL_02 = "AB1C02D1234567890"  # serial-de-mentira: prefixo forjado
 
@@ -365,12 +276,7 @@ class TestARespostaDoAparelho:
         assert cor.nome == "Cosmic Red"
 
     def test_eco_errado_nao_vira_cor(self) -> None:
-        """Sem o eco certo, o que vem depois não é o serial.
-
-        Aceitar assim mesmo decodificaria a cor a partir de OUTRO report — que é
-        a medição falsa que esta casa pegou em 15/08/2026, com um pedido de
-        `0x20` voltando com `0x80` no byte 0.
-        """
+        """Sem o eco certo, o que vem depois não é o serial."""
         assert decodificar(bytes([0x81, 9, 9, 2]) + _SERIAL_02.encode()) is None
         assert decodificar(bytes([0x81, 1, 19, 0]) + _SERIAL_02.encode()) is None
         assert decodificar(bytes([0x81, 1, 19, 2]) + b"curto") is None
@@ -378,12 +284,6 @@ class TestARespostaDoAparelho:
 
 class TestOSubtitulo:
     def test_a_via_sai_como_no_desenho(self) -> None:
-        # "Nintendo" e não "8BitDo": o MAC daqui é FORJADO (faixa `e8:47:3a` do
-        # portão de anonimato), e o OUI real da 8BitDo não pode entrar em
-        # arquivo versionado. Sem o OUI, `brand_of` cai no VID — que é o
-        # primeiro dos três erros de rótulo medidos em
-        # `docs/protocol/externos-firmware-e-modos.md:230-246`, e que esta leva
-        # não conserta: consertar é outra frente.
         assert marca_e_via(_8BITDO_SWITCH) == "Nintendo · Bluetooth"
         assert marca_e_via({"bus": "usb"}, marca="Sony") == "Sony · cabo"
 

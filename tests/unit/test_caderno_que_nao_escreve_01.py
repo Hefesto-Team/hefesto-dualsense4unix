@@ -1,31 +1,4 @@
-"""O caderno do `storm_watch.sh` escreve ENQUANTO a vigia está viva.
-
-CADERNO-QUE-NÃO-ESCREVE-01 (08/08/2026). O defeito, MEDIDO na máquina dela: o
-caderno `~/.local/state/hefesto-dualsense4unix/kernel.log` tinha **120 linhas,
-todas banners** escritos pelo próprio shell, a mais nova de 20/07 — contra
-**723** eventos de storm no journal do mesmo período, com a vigia `enabled` e
-`active` o tempo todo. Ela pediu a explicação da queda dos controles; o arquivo
-que a guardaria estava vazio.
-
-A CAUSA, e ela não é a óbvia
-============================
-A hipótese natural — e a que esta casa escreveu primeiro — era buffer de SAÍDA
-do `awk`, curável com `fflush()`. **Está errada, e a medição derrubou:**
-
-    produtor vivo (o cano não fecha), 3-4 s de espera:
-        mawk '{print; fflush()}'                 -> 0 bytes
-        stdbuf -oL -i0 mawk '{print; fflush()}'  -> 0 bytes
-        mawk -W interactive '{print}'            -> escreve na hora
-
-O gargalo é a **ENTRADA**: o mawk lê com buffer próprio, fora do stdio, e nem
-chega a executar o bloco. Não há o que um `fflush()` de saída descarregue, e o
-`stdbuf` não o alcança porque só mexe no stdio. O `journalctl -f` está inocente.
-
-Este arquivo trava as duas metades: que a vigia escreve com o processo vivo (o
-comportamento), e que a escolha do interpretador é medida em vez de assumida (a
-estrutura). O `fflush()` fica junto da cura e é testado, porque é ele que cobre
-o caso do `gawk`, que recusa o `-W interactive`.
-"""
+"""O caderno do `storm_watch.sh` escreve ENQUANTO a vigia está viva."""
 
 from __future__ import annotations
 
@@ -41,8 +14,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "storm_watch.sh"
 
-#: Poucas linhas de propósito: MUITO abaixo de qualquer buffer, para que só o
-#: destravamento da entrada explique a escrita.
 LINHAS = [
     "2026-08-08T00:24:39-03:00 MeowSystem kernel: nintendo 0005:057E:2009.000A: "
     "joycon_enforce_subcmd_rate: exceeded max attempts",
@@ -60,28 +31,14 @@ def _corpo_do_classify() -> str:
     return texto[inicio : texto.index("bt_read_errors()", inicio)]
 
 
-# --- o comportamento: a vigia escreve com o processo VIVO ---------------------
-
-
 @pytest.mark.skipif(shutil.which("awk") is None, reason="awk ausente")
 def test_o_caderno_escreve_com_a_vigia_viva(tmp_path: Path) -> None:
-    """Com o produtor vivo e poucos bytes, o caderno já tem as linhas.
-
-    Este é o teste que MORDE. Ele reproduz a condição real da vigia: um produtor
-    que não fecha o cano (como o `journalctl -f`), volume pequeno, e a pergunta
-    "o arquivo já tem conteúdo AGORA?".
-
-    ARRANQUE A CURA — troque `${_AWK_CMD:-awk}` por `awk` no `classify()` de
-    `scripts/storm_watch.sh` — e este teste REPROVA com zero byte, que é
-    exatamente o caderno vazio dela.
-    """
+    """Com o produtor vivo e poucos bytes, o caderno já tem as linhas."""
     caderno = tmp_path / "kernel.log"
     produtor = tmp_path / "produz.sh"
     produtor.write_text(
         "#!/bin/bash\n"
         + "".join(f"echo {linha!r}\nsleep 0.2\n" for linha in LINHAS)
-        # segura o cano aberto: é isto que distingue este teste do que passava
-        # com a cura arrancada, porque o EOF descarregaria o buffer sozinho.
         + "sleep 60\n",
         encoding="utf-8",
     )
@@ -112,7 +69,6 @@ def test_o_caderno_escreve_com_a_vigia_viva(tmp_path: Path) -> None:
         assert "[JOYCON]" in conteudo, f"faltou a etiqueta [JOYCON]: {conteudo!r}"
         assert "[USB-71]" in conteudo, f"faltou a etiqueta [USB-71]: {conteudo!r}"
     finally:
-        # Mata por sinal, como o desligamento faz — sem chance de EOF salvar.
         try:
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
         except (ProcessLookupError, PermissionError):  # pragma: no cover
@@ -120,15 +76,8 @@ def test_o_caderno_escreve_com_a_vigia_viva(tmp_path: Path) -> None:
         proc.wait(timeout=5)
 
 
-# --- a estrutura: a escolha do interpretador é MEDIDA -------------------------
-
-
 def test_o_classify_usa_o_awk_escolhido() -> None:
-    """O `classify()` chama `${_AWK_CMD}`, não `awk` cru.
-
-    ARRANQUE A CURA e este teste REPROVA. É o portão barato contra alguém
-    "limpar" a indireção sem saber por que ela existe.
-    """
+    """O `classify()` chama `${_AWK_CMD}`, não `awk` cru."""
     corpo = _corpo_do_classify()
     assert "${_AWK_CMD" in corpo, (
         "o `classify()` voltou a chamar `awk` diretamente. Sem o `-W interactive` "
@@ -138,12 +87,7 @@ def test_o_classify_usa_o_awk_escolhido() -> None:
 
 
 def test_a_escolha_do_awk_e_medida_e_nao_assumida() -> None:
-    """A opção é TESTADA contra o `awk` da máquina antes de ser usada.
-
-    Assumir `-W interactive` quebraria a vigia onde o `awk` é o gawk, que recusa
-    a opção e sai com erro — deixando o caderno mudo de um jeito pior que o
-    defeito original, porque aí nem o processo sobe.
-    """
+    """A opção é TESTADA contra o `awk` da máquina antes de ser usada."""
     texto = SCRIPT.read_text(encoding="utf-8")
     assert "_escolher_awk()" in texto, "a função que MEDE o awk sumiu"
     assert "-W interactive 'BEGIN { exit 0 }'" in texto, (
@@ -163,12 +107,7 @@ def test_o_fflush_continua_como_rede_do_gawk() -> None:
 
 
 def test_o_porque_esta_escrito_no_script() -> None:
-    """Quem abrir o script encontra o motivo, não só a linha.
-
-    Uma indireção sem explicação é candidata a ser "limpa" por quem acha que é
-    complicação — e a distinção entrada contra saída aqui custou duas medições e uma
-    afirmação errada.
-    """
+    """Quem abrir o script encontra o motivo, não só a linha."""
     texto = SCRIPT.read_text(encoding="utf-8")
     assert "CADERNO-QUE-NÃO-ESCREVE-01" in texto, "o comentário que explica sumiu"
     assert "ENTRADA do mawk" in texto, (

@@ -69,7 +69,7 @@ echo "  sink em 4 canais visto alguma vez:             $([ $viu4ch -eq 1 ] && ec
 echo
 if [ "$melhor_opcoes" -eq 0 ]; then
   echo "AS OPÇÕES DO PROTON NÃO CHEGARAM A PROCESSO NENHUM do jogo."
-  echo "É o elo que o wrapper deveria fechar — ver launch_env.py:1634."
+  echo "É o elo que o wrapper deveria fechar — ver launch_env.py:1037."
 elif [ "$viu4ch" -eq 0 ]; then
   echo "As opções chegaram, mas o sink NUNCA abriu em 4 canais."
   echo "O jogo não pediu háptica, ou o endpoint KS não foi aceito."

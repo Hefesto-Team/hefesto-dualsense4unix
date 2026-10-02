@@ -101,9 +101,6 @@ def _ctx(com_o_controle: bool = True) -> pacotes.Contexto:
         conectados=[controle], estados={}, externos=[])
 
 
-# --------------------------------------------------------------------------
-# 1. A LARGADA — o que a aba segurava volta ao jogo
-# --------------------------------------------------------------------------
 def test_a_aba_registrou_a_largada_no_despachante() -> None:
     """Sem o registro, o piloto larga o vazio e a cura não existe."""
     assert pacotes.LARGADAS, (
@@ -113,13 +110,7 @@ def test_a_aba_registrou_a_largada_no_despachante() -> None:
 
 
 def test_largar_devolve_os_motores_ao_jogo_na_ordem_do_parar() -> None:
-    """`rumble.stop` e DEPOIS `passthrough(True)` — parar sozinho deixa mudo.
-
-    A ordem não é estilo: `rumble_stop` fixa `(0, 0)` e o laço do daemon
-    re-afirma o silêncio. Sem o `passthrough(True)` em seguida, o jogo fica
-    mudo — é a SPRINT-GAME-RUMBLE-01, e é exatamente o defeito que esta cura
-    existe para fechar.
-    """
+    """`rumble.stop` e DEPOIS `passthrough(True)` — parar sozinho deixa mudo."""
     p = PonteQueAnota()
     a05._EM_TESTE[0] = UNIQ
     a05._largar_o_teste(p)
@@ -132,12 +123,7 @@ def test_largar_devolve_os_motores_ao_jogo_na_ordem_do_parar() -> None:
 
 
 def test_largar_sem_teste_ligado_nao_fala_com_o_daemon() -> None:
-    """Trocar de aba com o teste desligado não pode mexer na vibração do jogo.
-
-    O piloto larga a CADA travessia de página. Se a largada falasse sempre, um
-    passeio pelas dez abas mandaria dez `rumble.stop` ao daemon dela — e o
-    `stop` fixa `(0, 0)`, que é o jogo mudo por um gesto que ninguém fez.
-    """
+    """Trocar de aba com o teste desligado não pode mexer na vibração do jogo."""
     p = PonteQueAnota()
     a05._largar_o_teste(p)
     assert p.nomes == [], (
@@ -145,12 +131,7 @@ def test_largar_sem_teste_ligado_nao_fala_com_o_daemon() -> None:
 
 
 def test_a_marca_cai_mesmo_com_a_ponte_morta() -> None:
-    """A janela indo embora é justamente quando a ponte morre.
-
-    Se a marca só caísse depois de os dois passos darem certo, uma ponte morta
-    deixaria `_EM_TESTE` ligado — e o próximo arraste de barra ressuscitaria o
-    tremor de um teste que já acabou.
-    """
+    """A janela indo embora é justamente quando a ponte morre."""
     class PonteMorta:
         def rumble_stop(self, *a: Any) -> None:
             raise OSError("a ponte morreu")
@@ -176,9 +157,6 @@ def test_o_despachante_nunca_levanta_por_causa_de_uma_largada() -> None:
         pacotes.LARGADAS.remove(larga_mal)
 
 
-# --------------------------------------------------------------------------
-# 2. O CORAÇÃO — enquanto a janela vive, o teste fica de pé
-# --------------------------------------------------------------------------
 def test_a_aba_registrou_o_coracao() -> None:
     assert a05._bater_o_coracao_do_teste in pacotes.CORACOES
 
@@ -192,14 +170,10 @@ def test_sem_teste_ligado_o_coracao_nao_bate() -> None:
 
 
 def test_o_coracao_bate_uma_vez_por_segundo_e_nao_por_tique() -> None:
-    """O espaçamento é da ABA, e é o que separa a cura de uma enxurrada.
-
-    MORDIDA: apague o `if agora - _BATEU_EM[0] < SEGUNDOS_ENTRE_BATIMENTOS` e
-    este teste reprova — dez tiques viram dez viagens de IPC.
-    """
+    """O espaçamento é da ABA, e é o que separa a cura de uma enxurrada."""
     p = PonteQueAnota()
     a05._EM_TESTE[0] = UNIQ
-    for _ in range(10):          # dez tiques, ~1 s de janela
+    for _ in range(10):
         a05._bater_o_coracao_do_teste(_ctx(), p)
     assert p.nomes == ["rumble_set_checked"], (
         f"dez tiques deram {len(p.nomes)} batimentos: {p.nomes}. O espaçamento "
@@ -207,12 +181,7 @@ def test_o_coracao_bate_uma_vez_por_segundo_e_nao_por_tique() -> None:
 
 
 def test_o_teto_do_daemon_cabe_em_tres_batimentos() -> None:
-    """O contrato entre os dois números, e é o que faz o teste não piscar.
-
-    Se o teto do daemon encolher para perto do espaçamento, UM batimento
-    perdido — um tique pulado por pintura no ar, um IPC lento — solta os motores
-    no meio do teste dela.
-    """
+    """O contrato entre os dois números, e é o que faz o teste não piscar."""
     from hefesto_dualsense4unix.daemon.subsystems import rumble as _rumble
 
     cabem = _rumble.TETO_DO_RUMBLE_FIXADO_S / a05.SEGUNDOS_ENTRE_BATIMENTOS
@@ -232,11 +201,7 @@ def test_o_controle_que_sai_da_mesa_desliga_o_teste() -> None:
 
 
 def test_o_despachante_nunca_levanta_por_causa_de_um_coracao() -> None:
-    """Um tique que levanta para de pintar a aba INTEIRA.
-
-    Trocar um jogo sem vibração por uma tela congelada seria o pior dos dois
-    negócios — e é a A-TELA-QUE-TRAVA-01 de volta pela outra porta.
-    """
+    """Um tique que levanta para de pintar a aba INTEIRA."""
     def bate_mal(_ctx: Any, _p: Any) -> None:
         raise RuntimeError("eu quebro")
 
@@ -247,9 +212,6 @@ def test_o_despachante_nunca_levanta_por_causa_de_um_coracao() -> None:
         pacotes.CORACOES.remove(bate_mal)
 
 
-# --------------------------------------------------------------------------
-# 3. O PILOTO — ele bate e larga, sem saber que o assunto é vibração
-# --------------------------------------------------------------------------
 def test_o_piloto_larga_ao_trocar_de_pagina_e_ao_sair() -> None:
     import inspect
 
@@ -267,13 +229,7 @@ def test_o_piloto_larga_ao_trocar_de_pagina_e_ao_sair() -> None:
 
 
 def test_o_piloto_nao_sabe_que_o_assunto_e_vibracao() -> None:
-    """A régua contra o desvio por nome de página no dono das dez abas.
-
-    O piloto é o dono das DEZ e não conhece o assunto de nenhuma. Uma segunda
-    aba que segure um aparelho amanhã registra em `pacotes` e ganha as duas
-    metades de graça — e quem escreve a aba não precisa lembrar de mexer aqui,
-    que é a forma de defeito que o `GESTOS_QUE_MEXEM` já nomeia.
-    """
+    """A régua contra o desvio por nome de página no dono das dez abas."""
     import inspect
 
     from hefesto_dualsense4unix.interface import hefesto_vivo as hv

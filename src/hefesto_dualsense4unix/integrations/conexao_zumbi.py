@@ -90,61 +90,34 @@ from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalac
 
 logger = get_logger(__name__)
 
-#: Quanto tempo um link precisa ficar nas três condições para virar zumbi.
-#: Generoso de propósito: o objeto do BlueZ nasce no *connect complete*, e o
-#: perfil HID sobe em seguida — segundos, não dezenas. O custo de esperar é um
-#: controle mudo por mais um instante; o de não esperar é derrubar quem estava
-#: quase subindo.
 SEGUNDOS_PARA_ZUMBI = 20.0
 
-#: Uma derrubada por controle por janela. Ver "A CURA TEM TETO".
 JANELA_DO_TETO_S = 600.0
 
-#: Raiz do sysfs dos adaptadores. Parametrizada porque a suíte roda contra uma
 #: árvore de mentira — a de verdade é a mesa dela, com quatro DualSense de pé.
 RAIZ_ADAPTADORES = "/sys/class/bluetooth"
 
-#: Raiz dos nós hidraw. Mesma fonte de ``doctor.sh:_hidraw_uniqs``.
 RAIZ_HIDRAW = "/sys/class/hidraw"
 
-#: Onde o produto instala a ponte privilegiada (``install.sh``). Na árvore de
-#: desenvolvimento ela ainda não existe, e isso é um impedimento declarado.
 PONTE_INSTALADA = "/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
 
-#: MAC e nada mais — a mesma forma que a ponte valida do lado de lá.
 _FORMA_MAC = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 
-#: ``hciN`` e nada mais.
 _FORMA_HCI = re.compile(r"^hci[0-9]+$")
 
-#: Endereço dentro de uma linha do ``hcitool con``.
 _MAC_NA_LINHA = re.compile(r"\b([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})\b")
 
-#: ``/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF``.
 _NO_DO_BLUEZ = re.compile(r"^/org/bluez/(hci[0-9]+)/dev_([0-9A-Fa-f_]{17})$")
 
 
 def mac_limpo(valor: str | None) -> str | None:
-    """MAC em ``aa:bb:cc:dd:ee:ff`` minúsculo, ou ``None``.
-
-    ESTRITA DE PROPÓSITO, e não usa ``core.sysfs_leds.norm_mac``: aquela
-    recolhe os dígitos hex de QUALQUER texto (``norm_mac("/dev/hidraw4")``
-    devolve ``'deda4'``, medido em 04/09/2026). Aqui o valor vira dado de um
-    comando privilegiado — o que não é um endereço tem de sair como
-    ``None``, não como um endereço aproximado.
-    """
+    """MAC em ``aa:bb:cc:dd:ee:ff`` minúsculo, ou ``None``."""
     if not valor:
         return None
     texto = str(valor).strip().lower()
     return texto if _FORMA_MAC.match(texto) else None
 
 
-# --- o pedido à ponte (um dono, os cinco chamadores) --------------------------
-
-#: Quantos endereços cada verbo da ponte lê pelo stdin, nesta ordem: o do
-#: adaptador, depois o do controle. É o espelho do despacho de
-#: ``scripts/bt_ponte_privilegiada.sh``; a régua
-#: ``tests/unit/test_o_sudo_nao_grava_o_endereco.py`` roda os dois juntos.
 _ENDERECOS_DO_VERBO: dict[str, int] = {
     "bonds": 1,
     "renomear": 1,
@@ -157,14 +130,7 @@ _ENDERECOS_DO_VERBO: dict[str, int] = {
 
 @dataclass(frozen=True)
 class PedidoAPonte:
-    """Um pedido à ponte root, montado por :func:`pedido_a_ponte`.
-
-    ``argv`` é o que o ``sudo`` vê — e REGISTRA, no journal, na unidade de quem
-    chamou e no ``/proc`` enquanto vive: o verbo, e os segundos do
-    ``descobrir``. ``entrada`` é o que vai pelo stdin, uma linha por dado.
-    ``sonda`` é a MESMA linha do ``argv`` perguntada à regra do sudoers
-    (``sudo -n -l``), sem rodar a ponte.
-    """
+    """Um pedido à ponte root, montado por :func:`pedido_a_ponte`."""
 
     argv: tuple[str, ...]
     entrada: str
@@ -178,20 +144,7 @@ def pedido_a_ponte(
     nome: str | None = None,
     caminho: str = PONTE_INSTALADA,
 ) -> PedidoAPonte:
-    """O pedido à ponte root — o ÚNICO lugar do ``src/`` que escreve ``sudo`` para ela.
-
-    O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026). O endereço ia no
-    argv, e o argv de um ``sudo`` é registro por desenho: a bancada de 29/09
-    achou 15 linhas ``COMMAND=…esquecer <adaptador> <controle>`` inteiras no
-    diário da unidade do daemon. Agora o argv leva só o verbo (e os segundos
-    do ``descobrir``, que não identificam ninguém), e os endereços vão pelo
-    stdin — como o nome novo do ``renomear`` já ia.
-
-    Cada endereço passa por :func:`mac_limpo`, e o que não tem forma de
-    endereço levanta ``ValueError`` antes de qualquer processo. Sem
-    endereço, o pedido só serve à ``sonda``, que não leva dado nenhum: rodado,
-    a ponte o recusa com código 2 (a linha que não veio).
-    """
+    """O pedido à ponte root — o ÚNICO lugar do ``src/`` que escreve ``sudo`` para ela."""
     esperados = _ENDERECOS_DO_VERBO.get(verbo)
     if esperados is None:
         raise ValueError(f"a ponte não tem o verbo {verbo!r} com dado pelo stdin")
@@ -219,12 +172,7 @@ def pedido_a_ponte(
 
 @dataclass(frozen=True)
 class LinkDeRadio:
-    """Um ACL de pé: em QUAL adaptador, com QUAL endereço.
-
-    O adaptador não é decoração. O rádio é por adaptador — ``hcitool dc`` sem
-    ``-i`` cai no primeiro que o kernel rotear, e numa malha de três dongles
-    isso derruba o link de outro adaptador, de quem estava jogando.
-    """
+    """Um ACL de pé: em QUAL adaptador, com QUAL endereço."""
 
     hci: str
     adaptador: str
@@ -235,18 +183,11 @@ class LinkDeRadio:
 class Veredito:
     """O que o vigia viu nesta volta, e o que fez — ou por que não fez."""
 
-    #: Links que estão nas três condições AGORA (ainda sem contar o tempo).
     suspeitos: tuple[LinkDeRadio, ...] = ()
-    #: Suspeitos que já completaram :data:`SEGUNDOS_PARA_ZUMBI` seguidos.
     zumbis: tuple[LinkDeRadio, ...] = ()
-    #: Zumbis cuja derrubada foi de fato pedida à ponte nesta volta.
     derrubados: tuple[LinkDeRadio, ...] = ()
-    #: Zumbis que o TETO segurou, para não alimentar laço de reconexão.
     segurados_pelo_teto: tuple[LinkDeRadio, ...] = ()
-    #: Por que o produto não agiu. Vazio = nada impede.
     impedimentos: tuple[str, ...] = ()
-    #: Uma linha por acontecimento, na língua da casa — é o que vai ao diário
-    #: e o que a aba Conexões tem de mostrar em vez de uma recusa seca.
     diario: tuple[str, ...] = ()
 
     @property
@@ -254,33 +195,12 @@ class Veredito:
         return bool(self.derrubados)
 
 
-# --- leitores (I/O; cada um degrada para vazio, nunca levanta) ---------------
-
-
 def adaptadores_na_mesa(
     raiz: str | os.PathLike[str] = RAIZ_ADAPTADORES,
     *,
     executor: object = None,
 ) -> dict[str, str]:
-    """``{hciN: MAC do adaptador}``, por uma escada de duas fontes.
-
-    **A ESCADA NÃO É ZELO — o degrau de cima NÃO EXISTE nesta máquina.** Medido
-    em 20/09/2026, kernel 7.1.5: ``/sys/class/bluetooth/hci0/`` tem ``device``,
-    ``power``, ``reset``, ``rfkill0``, ``subsystem`` e ``uevent``, e **nenhum
-    ``address``**. Quem só lê o sysfs devolve dicionário vazio com três dongles
-    de pé — e "nenhum adaptador" se lê como "nenhum zumbi", que é o pior jeito
-    de errar nesta cura.
-
-    1. **sysfs** (``<raiz>/hciN/address``) — kernel puro, sem processo e sem
-       D-Bus; existe em kernel que o traga, e é por aqui que a régua injeta uma
-       mesa de mentira;
-    2. **``hcitool dev``** — a MESMA ferramenta que lista os links, responde
-       sem root (medido: três adaptadores), e não depende do ``bluetoothd``.
-
-    Os nós de LINK (``hci0:5``) ficam de fora pela forma: eles são as conexões,
-    não os adaptadores, e o ``uevent`` deles não traz endereço nenhum (medido:
-    só ``DEVTYPE=link``).
-    """
+    """``{hciN: MAC do adaptador}``, por uma escada de duas fontes."""
     achados: dict[str, str] = {}
     try:
         entradas = sorted(Path(raiz).iterdir())
@@ -313,13 +233,7 @@ def adaptadores_na_mesa(
 
 
 def _rodar(args: Sequence[str], *, segundos: float = 5.0) -> str:
-    """Executa e devolve o stdout, ou ``""``. Nunca levanta.
-
-    ``LC_ALL=C`` não é zelo: o ``pactl`` desta casa já cegou um leitor duas
-    vezes por traduzir a própria saída, e o ``hcitool`` tem o mesmo risco. Um
-    leitor cego responde *"não há"* sobre aparelho de pé — que aqui significa
-    "não há zumbi" sobre um controle mudo, ou pior, o contrário.
-    """
+    """Executa e devolve o stdout, ou ``""``. Nunca levanta."""
     ambiente = dict(os.environ)
     ambiente["LC_ALL"] = "C"
     try:
@@ -341,21 +255,7 @@ def links_de_pe(
     *,
     executor: object = None,
 ) -> tuple[list[LinkDeRadio], list[str]]:
-    """Os ACL de pé, POR ADAPTADOR, e os impedimentos encontrados.
-
-    A fonte é ``hcitool -i hciN con``, que responde **sem root** (medido em
-    20/09/2026 na mesa dela, três links em dois adaptadores). Ele foi
-    DEPRECIADO pelo BlueZ, então a ausência dele é caso normal e vira
-    impedimento declarado, não exceção.
-
-    POR QUE ``-i`` É OBRIGATÓRIO: sem ele o ``hcitool con`` lista os links de
-    TODOS os adaptadores numa lista só, e o endereço do adaptador se perde. A
-    cura precisa saber em qual dongle está o link, porque é nele que o
-    ``desconectar`` tem de agir.
-
-    O ``executor`` existe para a régua injetar um dublê sem tocar no rádio
-    dela; em produção é ``None`` e o leitor chama o ``hcitool`` de verdade.
-    """
+    """Os ACL de pé, POR ADAPTADOR, e os impedimentos encontrados."""
     if not adaptadores:
         return [], ["nenhum adaptador de Bluetooth na mesa"]
     correr = executor if callable(executor) else _rodar
@@ -382,25 +282,12 @@ def links_de_pe(
 
 
 def uniqs_com_hid(raiz: str | os.PathLike[str] = RAIZ_HIDRAW) -> set[str]:
-    """Os endereços que TÊM um ``hidraw`` vivo, normalizados; vazio quando a raiz não abre.
-
-    É a leitura da cura do zumbi, que lê a raiz fechada como «ninguém tem» e se
-    protege pela terceira condição. Quem precisa separar «ninguém tem» de «não
-    sei» pergunta a :func:`quem_tem_hid`.
-    """
+    """Os endereços que TÊM um ``hidraw`` vivo, normalizados; vazio quando a raiz não abre."""
     return quem_tem_hid(raiz) or set()
 
 
 def quem_tem_hid(raiz: str | os.PathLike[str] | None = None) -> set[str] | None:
-    """Os endereços que TÊM um ``hidraw`` vivo, normalizados, ou ``None`` = não sei.
-
-    Mesma fonte de ``doctor.sh:_hidraw_uniqs`` — ``HID_UNIQ`` do ``uevent`` do
-    pai HID, que existe tanto no cabo quanto no rádio. Três respostas, no molde
-    do ``esta_conectado`` do rádio: a raiz que não abre é ``None``, nunca o
-    conjunto vazio, que se leria como «ninguém tem HID»
-    (O-RECONECTAR-SO-DERRUBA-O-ELO-MORTO-01, 02/10/2026). A raiz se resolve na
-    chamada.
-    """
+    """Os endereços que TÊM um ``hidraw`` vivo, normalizados, ou ``None`` = não sei."""
     achados: set[str] = set()
     try:
         entradas = sorted(Path(RAIZ_HIDRAW if raiz is None else raiz).iterdir())
@@ -423,22 +310,7 @@ def quem_tem_hid(raiz: str | os.PathLike[str] | None = None) -> set[str] | None:
 
 
 def enderecos_que_o_bluez_conhece(*, executor: object = None) -> set[tuple[str, str]]:
-    """``{(hciN, MAC)}`` dos objetos ``org.bluez.Device1`` que existem.
-
-    É a TRAVA DE SEGURANÇA das três condições. Um endereço que aparece aqui tem
-    perfil, tem serviço e tem dono — nunca é alvo desta cura, aconteça o que
-    acontecer com o ``hidraw`` dele (esse caso é o do cache SDP, e a cura é
-    outra).
-
-    Conjunto VAZIO é lido como *"não sei"*, não como *"o BlueZ não conhece
-    ninguém"* — quem trata disso é :func:`zumbis`, que se recusa a acusar
-    ninguém sem esta leitura.
-
-    A pergunta é ao dono do BlueZ (BLUEZ-UM-DONO-01): com ele vivo, a árvore
-    sai da foto do ``ObjectManager`` e esta volta de cinco em cinco segundos
-    deixa de abrir um subprocesso. O ``executor`` injetado continua sendo o
-    dublê de linha inteira que a régua sempre usou.
-    """
+    """``{(hciN, MAC)}`` dos objetos ``org.bluez.Device1`` que existem."""
     from hefesto_dualsense4unix.integrations import bluez_dbus
 
     leitor = (
@@ -457,21 +329,12 @@ def enderecos_que_o_bluez_conhece(*, executor: object = None) -> set[tuple[str, 
     return achados
 
 
-# --- a regra (pura) ----------------------------------------------------------
-
-
 def zumbis(
     links: Iterable[LinkDeRadio],
     uniqs_hid: Iterable[str],
     conhecidos_do_bluez: Iterable[tuple[str, str]],
 ) -> list[LinkDeRadio]:
-    """Os links que estão nas TRÊS condições. Função PURA.
-
-    ``conhecidos_do_bluez`` VAZIO devolve lista vazia, e isso é deliberado: sem
-    a terceira leitura a trava de segurança não existe, e acusar sem ela
-    derrubaria o fone dela junto com o zumbi. Ausência de leitura é *"não sei"*,
-    e "não sei" nunca autoriza agir.
-    """
+    """Os links que estão nas TRÊS condições. Função PURA."""
     conhecidos = {(hci, endereco) for hci, endereco in conhecidos_do_bluez}
     if not conhecidos:
         return []
@@ -486,41 +349,19 @@ def zumbis(
     return achados
 
 
-# --- a porta privilegiada ----------------------------------------------------
-
-
 @dataclass
 class PontePrivilegiada:
-    """O único caminho de root desta cura — ``bt_ponte_privilegiada.sh``.
-
-    O produto NÃO chama ``hcitool dc`` direto: derrubar link é root, e a porta
-    já existe. O endereço vai à ponte pelo stdin (:func:`pedido_a_ponte`), e é
-    ela que confere a forma dele, antes de qualquer efeito; o
-    ``sudoers.d/49-hefesto-bt-ponte`` casa só o verbo.
-    """
+    """O único caminho de root desta cura — ``bt_ponte_privilegiada.sh``."""
 
     caminho: str = PONTE_INSTALADA
-    #: Injetável para a régua não precisar de sudo nem de ponte instalada.
-    #: Recebe UM objeto, o :class:`PedidoAPonte` (o que o sudo veria), e
-    #: devolve ``(agiu, motivo)``.
     executor: object = None
 
     def impedimentos(self) -> list[str]:
-        """Por que esta porta não pode ser usada agora. Vazio = pode.
-
-        A sonda pergunta à regra o verbo DESTA porta, o ``desconectar``.
-        """
+        """Por que esta porta não pode ser usada agora. Vazio = pode."""
         return self.impedimentos_do_pedido(pedido_a_ponte("desconectar", caminho=self.caminho))
 
     def impedimentos_do_pedido(self, *pedidos: PedidoAPonte) -> list[str]:
-        """Os impedimentos, com a sonda de CADA pedido perguntada à regra.
-
-        A sonda é a linha que o pedido vai usar, e não a do ``adaptadores`` que
-        o install pergunta: essa linha é igual na regra velha (a do endereço no
-        argv) e na nova, e a meia-instalação — a ponte nova com a regra velha,
-        que o ``install-host-udev.sh`` deixa porque troca a ponte e não a
-        regra — passaria nela e seria recusada no pedido.
-        """
+        """Os impedimentos, com a sonda de CADA pedido perguntada à regra."""
         if self.executor is not None:
             return []
         motivos: list[str] = []
@@ -580,24 +421,14 @@ class PontePrivilegiada:
         return False, (resultado.stderr or "").strip() or f"a ponte saiu com {resultado.returncode}"
 
 
-# --- o vigia (o tempo mora aqui) ---------------------------------------------
-
-
 @dataclass
 class VigiaDeZumbis:
-    """Guarda DESDE QUANDO cada link está suspeito, e aplica o teto da cura.
-
-    O relógio entra por argumento em :meth:`observar` — sem isso a régua teria
-    de dormir 20 segundos para medir 20 segundos, e uma régua que dorme é uma
-    régua que ninguém roda.
-    """
+    """Guarda DESDE QUANDO cada link está suspeito, e aplica o teto da cura."""
 
     ponte: PontePrivilegiada = field(default_factory=PontePrivilegiada)
     segundos_para_zumbi: float = SEGUNDOS_PARA_ZUMBI
     janela_do_teto_s: float = JANELA_DO_TETO_S
-    #: ``{(hci, controle): instante da primeira vez que vimos assim}``.
     _desde: dict[tuple[str, str], float] = field(default_factory=dict, init=False)
-    #: ``{controle: instante da última derrubada}`` — o teto.
     _ultima_derrubada: dict[str, float] = field(default_factory=dict, init=False)
 
     def observar(
@@ -614,9 +445,6 @@ class VigiaDeZumbis:
         chaves_agora = {(link.hci, link.controle) for link in suspeitos}
         for chave in list(self._desde):
             if chave not in chaves_agora:
-                # O link saiu da suspeita — ou virou controle, ou caiu sozinho.
-                # O relógio dele ZERA: sem isto, um controle que oscila somaria
-                # instantes separados até virar zumbi sem nunca ter ficado.
                 del self._desde[chave]
         maduros: list[LinkDeRadio] = []
         for link in suspeitos:

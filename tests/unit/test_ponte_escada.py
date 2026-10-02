@@ -30,13 +30,7 @@ PRODUTO = RAIZ / "src" / "hefesto_dualsense4unix"
 
 
 def _chamadas_a(nome: str) -> dict[str, list[ast.Call]]:
-    """Todo `…nome(…)` do produto, agrupado por arquivo (caminho da raiz).
-
-    LÊ a árvore sintática, e é isso que separa esta régua das onze que esta
-    casa já reprovou por *digitarem o que deviam ler*: `def nome(...)`, a
-    palavra num comentário e a menção numa docstring NÃO contam — só a
-    chamada conta.
-    """
+    """Todo `…nome(…)` do produto, agrupado por arquivo (caminho da raiz)."""
     achados: dict[str, list[ast.Call]] = {}
     for arquivo in sorted(PRODUTO.rglob("*.py")):
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
@@ -47,11 +41,7 @@ def _chamadas_a(nome: str) -> dict[str, list[ast.Call]]:
 
 
 def _nome_curto(no: ast.expr | None) -> str | None:
-    """O último nome de uma expressão: `a.b.c` -> `"c"`, `c` -> `"c"`.
-
-    Serve para `confirmar_ponte` e `ProfileManager(...).confirmar_ponte`
-    contarem como a MESMA chamada, sem depender do estilo do import.
-    """
+    """O último nome de uma expressão: `a.b.c` -> `"c"`, `c` -> `"c"`."""
     if isinstance(no, ast.Attribute):
         return no.attr
     if isinstance(no, ast.Name):
@@ -84,7 +74,6 @@ class TestAOrdemVemDoMapa:
             "a ordem da escada se apoia na assimetria 'a máscara DualSense "
             f"carrega o que a Xbox não carrega'; o mapa hoje lista {chaves}"
         )
-        # Nomeia, nunca só conta (WRAPPER-EM-TODOS-01).
         for esperada in (
             "movimento.giroscopio.jogo",
             "toque.touchpad",
@@ -151,8 +140,7 @@ class TestAEscadaSoRodaQuandoOProdutoNaoSabe:
         ), "a escada rodando em jogo com ponte confirmada é regressão pura"
 
     def test_confirmada_para_a_escada_mesmo_divergindo_do_que_esta_de_pe(self) -> None:
-        """Divergir do carimbo é assunto do prontuário, não licença para
-        recomeçar a escada num jogo que já foi resolvido."""
+        """Divergir do carimbo é assunto do prontuário, não licença para"""
         assert (
             pe.proximo_degrau(
                 ponte_atual=pe.ESCADA[0].ponte, confirmada=pe.ESCADA[2].ponte
@@ -210,8 +198,6 @@ class TestOQueConfirmaEOQueNao:
             )
             is None
         )
-        # ... e a ponte de pé continua sendo a posição na escada, então o
-        # próximo lançamento retoma de onde parou.
         assert pe.proximo_degrau(ponte_atual=pe.ESCADA[1].ponte) is pe.ESCADA[2]
 
     def test_o_silencio_nao_recarimba_o_que_ja_foi_confirmado(self) -> None:
@@ -276,26 +262,7 @@ class TestUmaGavetaSO:
 
 
 class TestQuemRecarimbaOPerfil:
-    """A cadeia que escreve o carimbo continua sendo um FIO SÓ — e agora o
-    gesto dela alcança o carimbo errado.
-
-    Até 29/08/2026 esta classe se chamava `TestNinguemRecarimbaOPerfil` e
-    travava o contrário: *nada recarimba*, medido contra a afirmação que morava
-    na nota do `SILENCIO_CONFIRMA_SEC`. Ela mesma dizia, por escrito, o que
-    fazer no dia em que o recarimbo fosse implementado — reprovar, e exigir que
-    a nota fosse reescrita no mesmo commit. Foi o que aconteceu; a nota está
-    reescrita, e o que esta classe trava agora é o desenho novo.
-
-    O preço que a mudança paga, no journal dela: o Mullet Mad Jack carimbado
-    `dualsense` por silêncio às 03:23:13 com `gestos=0`, quatro `PS + R3` entre
-    03:27:59 e 03:29:02 terminando em `xbox`, e o carimbo errado no lugar — com
-    a aba Perfis contando que aquela ponte funcionou e ninguém precisou mexer.
-    Em 7 dias, 24 apertos: 23 perfis de jogo dela pedem `dualsense` e ela joga
-    em `xbox`.
-
-    O que NÃO mudou, e é o que estas três réguas seguram: **uma gaveta, um
-    escritor, e nenhum carimbo sem `por=` explícito.**
-    """
+    """A cadeia que escreve o carimbo continua sendo um FIO SÓ — e agora o"""
 
     def test_um_so_escritor_monta_o_carimbo(self) -> None:
         """`PonteConfirmada` e `carimbar_ponte` só são chamados de um arquivo."""
@@ -307,13 +274,7 @@ class TestQuemRecarimbaOPerfil:
         }
 
     def test_um_so_chamador_grava_o_carimbo(self) -> None:
-        """O tique de 1 Hz é o único, e vale para as DUAS gravações.
-
-        `alinhar_o_modo_com_a_ponte` entrou junto do carimbo em 29/08 e é a
-        outra metade da mesma pergunta — por isso ela sai pela mesma porta e
-        tem o mesmo chamador. Duas portas para o mesmo fato é como esta casa
-        fabrica duas verdades.
-        """
+        """O tique de 1 Hz é o único, e vale para as DUAS gravações."""
         assert set(_chamadas_a("confirmar_ponte")) == {
             "src/hefesto_dualsense4unix/daemon/launch_env.py"
         }
@@ -325,14 +286,7 @@ class TestQuemRecarimbaOPerfil:
         }
 
     def test_todo_carimbo_do_produto_diz_de_onde_veio(self) -> None:
-        """Nenhum carimbo sai sem `por=`, e o valor é do vocabulário da escada.
-
-        A leitura é do argumento `por=` de cada chamada, não da palavra no
-        arquivo: um carimbo novo cai aqui. O valor deixou de ser a constante
-        `POR_SILENCIO` digitada no callsite e passou a ser o que o tique
-        decidiu (`por_que_confirmou`), porque agora há DOIS desfechos — e é o
-        `ponte_escada` que escolhe entre eles, não o `launch_env`.
-        """
+        """Nenhum carimbo sai sem `por=`, e o valor é do vocabulário da escada."""
         for chamadas in _chamadas_a("confirmar_ponte").values():
             for chamada in chamadas:
                 por = next(
@@ -340,7 +294,6 @@ class TestQuemRecarimbaOPerfil:
                 )
                 assert por is not None, "carimbo gravado sem `por=` explícito"
 
-        # E os dois desfechos possíveis são os do esquema, sem um sexto nome.
         assert pe.por_que_confirmou(0) == pe.POR_SILENCIO
         assert pe.por_que_confirmou(1) == pe.POR_GESTO
         assert {pe.por_que_confirmou(0), pe.por_que_confirmou(3)} <= pe.CONFIRMACOES

@@ -1,25 +1,4 @@
-"""Testes do portão de glifos (``scripts/validar-glifos.py``), sprint GATE-EMOJI-01.
-
-Nenhum glifo aparece desenhado neste arquivo: todos nascem de ``chr()`` sobre o
-codepoint. O motivo é o assunto da própria sprint -- o higienizador do ambiente
-apaga caractere dos blocos que o ADR-011 manda preservar, e já apagou, no mesmo
-passe, o desenho do código e o valor esperado do teste, deixando o teste verde
-com a função quebrada.
-
-As três provas que a sprint pede estão em:
-
-- ``test_a_reprova_a_estrela_viva_no_troubleshooting_8bitdo``
-- ``test_b_passa_em_arquivo_com_glifos_permitidos``
-- ``test_c_arrancar_a_clausula_de_preservacao_faz_o_portao_reprovar``  (a mordida)
-
-Desvio medido, e está documentado em
-``test_widgets_init_nao_carrega_glifo_literal``: a sprint mandava usar
-``src/hefesto_dualsense4unix/tui/widgets/__init__.py`` como alvo da mordida, mas
-aquele arquivo não tem **nenhum** caractere literal dos quatro blocos -- ele já
-constrói tudo por ``chr()``. Sem caractere não há o que preservar, então
-arrancar a cláusula não podia fazê-lo reprovar. A mordida usa a interseção real
-dos dois conjuntos, medida do próprio Unicode: U+25FD e U+25FE.
-"""
+"""Testes do portão de glifos (``scripts/validar-glifos.py``), sprint GATE-EMOJI-01."""
 from __future__ import annotations
 
 import subprocess
@@ -31,26 +10,20 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "validar-glifos.py"
 
-# Os quatro blocos do ADR-011, seção "Decisão", item "Permitidos".
 BLOCOS_ADR_011 = (
-    (0x2190, 0x21FF),  # Arrows
-    (0x2500, 0x257F),  # Box Drawing
-    (0x2580, 0x259F),  # Block Elements
-    (0x25A0, 0x25FF),  # Geometric Shapes
+    (0x2190, 0x21FF),
+    (0x2500, 0x257F),
+    (0x2580, 0x259F),
+    (0x25A0, 0x25FF),
 )
 
-# Os cinco codepoints que o ADR-011 nomeia um a um como exemplos canônicos.
 CODEPOINTS_CANONICOS_ADR_011 = (0x25CF, 0x25CB, 0x25AE, 0x25AF, 0x25D0)
 
-# Interseção medida entre Emoji_Presentation e os blocos preservados. É por
-# causa dela que a cláusula de preservação não é decorativa.
 INTERSECAO_MEDIDA = (0x25FD, 0x25FE)
 
-ESTRELA_PROIBIDA = 0x2B50  # WHITE MEDIUM STAR
+ESTRELA_PROIBIDA = 0x2B50
 VARIATION_SELECTOR_16 = 0xFE0F
 
-# Trechos exatos que os testes de mordida arrancam do script. Se o texto do
-# script mudar, o teste falha no assert de sanidade em vez de passar à toa.
 CLAUSULA_DE_PRESERVACAO = (
     "    if preservado_pelo_adr_011(cp)[0]:\n"
     "        return False\n"
@@ -103,26 +76,8 @@ def _script_mutilado(sandbox: Path, trecho: str, nome: str) -> Path:
     return mutilado
 
 
-# ---------------------------------------------------------------------------
-# (a) O portão tem de reprovar HOJE, sem alterar uma linha do repositório.
-# ---------------------------------------------------------------------------
 def test_a_reprova_a_estrela_proibida_em_documento(sandbox: Path) -> None:
-    """O caso que fez o portão nascer, reproduzido em caixa própria.
-
-    Até 27/07/2026 este teste apontava para
-    ``docs/usage/troubleshooting-8bitdo.md``, que tinha dois U+2B50 vivos nas
-    linhas 29 e 48 -- commitados, passados por pre-commit e por CI, provando que
-    o portão prometido pelo ``CONTRIBUTING`` não existia.
-
-    O portão passou a existir e o defeito foi corrigido no mesmo dia: os dois
-    pictogramas viraram texto literal, que é o que o ADR-011 manda usar em
-    documento. Manter a violação viva só para o teste usá-la de material seria
-    usar o defeito como andaime -- e um portão que depende de haver sujeira para
-    provar que funciona deixa de provar assim que alguém limpa.
-
-    A forma do caso original está preservada aqui: mesma extensão, mesma
-    posição (célula de tabela e título de seção), duas ocorrências.
-    """
+    """O caso que fez o portão nascer, reproduzido em caixa própria."""
     alvo = sandbox / "docs" / "usage" / "troubleshooting.md"
     alvo.parent.mkdir(parents=True)
     estrela = chr(ESTRELA_PROIBIDA)
@@ -179,13 +134,9 @@ def test_reprova_variation_selector_16(sandbox: Path) -> None:
     res = _roda(["--check-file", str(alvo)], sandbox)
     assert res.returncode == 1
     cps = {cp for _a, _l, _c, cp in _achados(res.stdout)}
-    # A seta em si é bloco preservado e continua permitida; o seletor, não.
     assert cps == {VARIATION_SELECTOR_16}
 
 
-# ---------------------------------------------------------------------------
-# (b) O portão tem de PASSAR em arquivo com glifo permitido.
-# ---------------------------------------------------------------------------
 def test_b_passa_em_arquivo_com_glifos_permitidos(sandbox: Path) -> None:
     """Os cinco codepoints que o ADR-011 nomeia, mais barra e moldura."""
     alvo = sandbox / "src" / "widgets.py"
@@ -213,16 +164,8 @@ def test_b_passa_no_widgets_da_tui() -> None:
     assert res.returncode == 0, res.stdout + res.stderr
 
 
-# ---------------------------------------------------------------------------
-# (c) A MORDIDA: arrancar a cláusula de preservação tem de fazer reprovar.
-# ---------------------------------------------------------------------------
 def test_intersecao_emoji_presentation_com_blocos_adr_nao_e_vazia() -> None:
-    """A cláusula de preservação só morde porque os dois conjuntos se cruzam.
-
-    Se uma revisão futura do Unicode esvaziar essa interseção, a cláusula vira
-    código morto e a mordida abaixo deixa de provar qualquer coisa. Este teste
-    é o alarme desse dia.
-    """
+    """A cláusula de preservação só morde porque os dois conjuntos se cruzam."""
     res = _roda(["--mostrar-criterio"], RAIZ)
     assert res.returncode == 0, res.stderr
     for cp in INTERSECAO_MEDIDA:
@@ -231,11 +174,7 @@ def test_intersecao_emoji_presentation_com_blocos_adr_nao_e_vazia() -> None:
 
 
 def test_c_arrancar_a_clausula_de_preservacao_faz_o_portao_reprovar(sandbox: Path) -> None:
-    """A prova de que o portão lê o que acha que lê.
-
-    U+25FD e U+25FE são Geometric Shapes -- o ADR-011 manda preservar -- e são
-    ``Emoji_Presentation``. Com a cláusula, o portão passa. Sem ela, reprova.
-    """
+    """A prova de que o portão lê o que acha que lê."""
     alvo = sandbox / "src" / "medidor.py"
     alvo.parent.mkdir(parents=True)
     literais = "".join(chr(cp) for cp in INTERSECAO_MEDIDA)
@@ -258,12 +197,7 @@ def test_c_arrancar_a_clausula_de_preservacao_faz_o_portao_reprovar(sandbox: Pat
 
 
 def test_c_a_clausula_arrancada_tambem_derruba_o_canonico_do_adr(sandbox: Path) -> None:
-    """Contraprova do escopo: os cinco canônicos passam nas duas versões.
-
-    U+25CF e companhia não são ``Emoji_Presentation``, então continuam verdes
-    mesmo sem a cláusula. Isso delimita o que a mordida acima prova -- e é o
-    motivo de o arquivo da TUI não poder ser o alvo dela.
-    """
+    """Contraprova do escopo: os cinco canônicos passam nas duas versões."""
     alvo = sandbox / "src" / "canonicos.py"
     alvo.parent.mkdir(parents=True)
     literais = "".join(chr(cp) for cp in CODEPOINTS_CANONICOS_ADR_011)
@@ -275,14 +209,7 @@ def test_c_a_clausula_arrancada_tambem_derruba_o_canonico_do_adr(sandbox: Path) 
 
 
 def test_widgets_init_nao_carrega_glifo_literal() -> None:
-    """A medição que obrigou a mordida a mudar de alvo.
-
-    A sprint pedia arrancar a cláusula e ver
-    ``tui/widgets/__init__.py`` reprovar. Aquele arquivo constrói todos os
-    desenhos por ``chr()`` -- não há caractere literal dos quatro blocos nele,
-    então nenhuma alteração no portão pode fazê-lo reprovar por glifo
-    preservado. Medição vence instrução; o alvo virou a interseção real.
-    """
+    """A medição que obrigou a mordida a mudar de alvo."""
     alvo = RAIZ / "src" / "hefesto_dualsense4unix" / "tui" / "widgets" / "__init__.py"
     texto = alvo.read_text(encoding="utf-8")
     literais = [
@@ -296,9 +223,6 @@ def test_widgets_init_nao_carrega_glifo_literal() -> None:
     assert "chr(0x25AE)" in texto and "chr(0x2588)" in texto
 
 
-# ---------------------------------------------------------------------------
-# Defeito conhecido: git ls-files puro é cego a arquivo novo.
-# ---------------------------------------------------------------------------
 def test_all_enxerga_arquivo_novo_ainda_nao_adicionado(sandbox: Path) -> None:
     novo = sandbox / "docs" / "recem-escrito.md"
     novo.parent.mkdir(parents=True)
@@ -333,9 +257,6 @@ def test_all_respeita_gitignore(sandbox: Path) -> None:
     assert res.returncode == 0, res.stdout
 
 
-# ---------------------------------------------------------------------------
-# Higiene: binário e diretório de máquina ficam de fora.
-# ---------------------------------------------------------------------------
 def test_binario_e_ignorado(sandbox: Path) -> None:
     alvo = sandbox / "assets" / "captura.bin"
     alvo.parent.mkdir(parents=True)
@@ -364,12 +285,7 @@ def test_pycache_e_ignorado(sandbox: Path) -> None:
 
 
 def test_repositorio_inteiro_limpo() -> None:
-    """O número que a sprint dizia não existir sem portão: quantos emojis há.
-
-    Medido em 27/07/2026, antes da cura: dois, os dois U+2B50 do troubleshooting
-    do 8BitDo. Depois da cura: zero. Este teste trava o zero -- é o número que
-    só passou a existir porque o portão passou a existir.
-    """
+    """O número que a sprint dizia não existir sem portão: quantos emojis há."""
     res = _roda(["--all"], RAIZ)
     itens = _achados(res.stdout)
     assert itens == [], (
@@ -378,17 +294,8 @@ def test_repositorio_inteiro_limpo() -> None:
     assert res.returncode == 0, res.stdout + res.stderr
 
 
-# ---------------------------------------------------------------------------
-# AS EXCEÇÕES DELA — 20/09/2026
-# ---------------------------------------------------------------------------
 def _portao():
-    """O módulo do portão, carregado do arquivo — ele tem hífen no nome.
-
-    O resto deste arquivo fala com o portão por SUBPROCESSO, que é o certo para
-    medir a saída e o código de retorno. Estas réguas perguntam ao critério em
-    si (`e_proibido`, `EXCECOES_DELA`), e para isso o módulo tem de entrar no
-    processo. `validar-glifos` não é nome de módulo importável, daí o carregador.
-    """
+    """O módulo do portão, carregado do arquivo — ele tem hífen no nome."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("_vg_excecoes", SCRIPT)
     assert spec and spec.loader
@@ -398,13 +305,7 @@ def _portao():
 
 
 class TestAsExcecoesDelaSaoUmaListaNaoUmaFaixa:
-    """Ela abriu o portão para a fileira de saída de som, e só para ela.
-
-    *"altera o hook do sistema para adicionar essas exceções que vc sugerir"* —
-    20/09/2026. O perigo não é abrir: é abrir DEMAIS. Uma faixa
-    ``U+1F300 a U+1FAFF`` devolveria exatamente o buraco que o ADR-011 fechou
-    depois de um diff strippar ``U+25CF`` e zerar a barra de bateria da TUI.
-    """
+    """Ela abriu o portão para a fileira de saída de som, e só para ela."""
 
     def test_as_quatro_que_ela_nomeou_passam(self) -> None:
         vg = _portao()
@@ -416,35 +317,18 @@ class TestAsExcecoesDelaSaoUmaListaNaoUmaFaixa:
                 f"responde à próxima pessoa que quiser acrescentar mais um")
 
     def test_o_resto_do_emoji_continua_reprovado(self) -> None:
-        """A exceção não pode virar a porta aberta.
-
-        Os quatro escolhidos são de APARELHO — o jogo, a TV, o alto-falante, o
-        fone. O que o ADR-011 recusa é a decoração cultural, e ela continua
-        fora: o ``PARTY POPPER`` e o ``HEAVY CHECK MARK`` são os exemplos que o
-        próprio ADR nomeia.
-        """
+        """A exceção não pode virar a porta aberta."""
         vg = _portao()
         for cp in (0x1F389, 0x2705, 0x274C, 0x1F4BB, 0x1F600, 0x1F44D):
             assert vg.e_proibido(cp), f"U+{cp:05X} passou e não devia"
 
     def test_o_seletor_de_variacao_continua_reprovado(self) -> None:
-        """A exceção é para o SÍMBOLO, não para o realce dele.
-
-        Quem escreve ``U+FE0F`` força a forma colorida sobre um caractere que
-        já tem a sua. Se o seletor entrasse de carona numa exceção, a faixa
-        estaria aberta por outro caminho.
-        """
+        """A exceção é para o SÍMBOLO, não para o realce dele."""
         vg = _portao()
         assert vg.e_proibido(vg.VARIATION_SELECTOR_16)
 
     def test_a_excecao_e_uma_lista_e_nao_uma_faixa(self) -> None:
-        """A FORMA do dado é a trava.
-
-        Um ``dict`` de codepoints só cresce quando alguém escreve um número E o
-        papel dele. Uma tupla de faixas cresceria com dois números e levaria
-        centenas de codepoints junto, calada — que é como esta casa perde
-        portão.
-        """
+        """A FORMA do dado é a trava."""
         vg = _portao()
         assert isinstance(vg.EXCECOES_DELA, dict)
         assert all(isinstance(k, int) for k in vg.EXCECOES_DELA)
@@ -453,12 +337,7 @@ class TestAsExcecoesDelaSaoUmaListaNaoUmaFaixa:
             "não é qual acrescentar, é se o ADR-011 ainda descreve o produto")
 
     def test_a_preservacao_do_adr_011_continua_vencendo(self) -> None:
-        """O que já era preservado não pode ter sido atropelado pela exceção.
-
-        ``U+25FD`` e ``U+25FE`` são ``Emoji_Presentation`` E moram em Geometric
-        Shapes. Eles passavam pela cláusula do ADR-011, e a exceção nova entrou
-        DEPOIS dela — se a ordem tivesse sido trocada, estes dois cairiam.
-        """
+        """O que já era preservado não pode ter sido atropelado pela exceção."""
         vg = _portao()
         for cp in (0x25FD, 0x25FE, 0x25CF, 0x25CB, 0x25AE, 0x25AF, 0x25D0):
             assert not vg.e_proibido(cp), f"U+{cp:05X} caiu — a ordem mudou"

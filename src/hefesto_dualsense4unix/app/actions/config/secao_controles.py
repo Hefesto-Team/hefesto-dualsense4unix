@@ -13,7 +13,7 @@ DE ONDE VEM CADA COISA NA TELA
 -------------------------------
 
 * **os controles adotados** — `daemon.state_full`, que é o único lugar onde o
-  `player_slot` de um DualSense existe (`ipc_handlers.py:3117`); o
+  `player_slot` de um DualSense existe (`ipc_handlers.py:2328`); o
   `controller.list` devolve a lista sem ele;
 * **os que o Hefesto só vê** — `controller.list {external: true}`, que já traz o
   `player_slot` deles resolvido pelo registro do daemon;
@@ -32,7 +32,7 @@ DUAS CHAMADAS, E NUNCA NUM TIQUE
 
 Os tiques desta casa são de 100 ms, 500 ms e 2 s. Enumerar o `/dev/input`
 inteiro e sondar quem segura cada `hidraw` custa de 10 a 40 ms mais um
-subprocesso (`ipc_handlers.py:728`), e nada disso muda entre dois quadros. A
+subprocesso (`ipc_handlers.py:561`), e nada disso muda entre dois quadros. A
 leitura roda ao ENTRAR na aba, e só.
 """
 from __future__ import annotations
@@ -78,138 +78,64 @@ from hefesto_dualsense4unix.utils.maquina import carregar_maquina, fundir_declar
 
 logger = get_logger(__name__)
 
-#: O título como ela o lê na tela.
 TITULO = "Os controles"
 
-#: A dica do título, palavra por palavra como saiu do desenho aprovado
-#: (`TOOLTIPS.md`). Ela não se reescreve na hora.
 DICA: str | None = (
     "A borda de cada card é a cor do plástico daquele controle. O anel roxo "
     "por dentro marca qual está selecionado no cabeçalho da janela."
 )
 
-#: O nome que o `_REFRESH_POR_ABA` de `app/app.py` procura para reler a mesa ao
-#: ENTRAR na aba. Ele é pendurado no hospedeiro por `montar`, como o
-#: `_reexaminar_a_mesa` de CONFIG-02 e o `_refresh_saude_da_mesa` de CONFIG-09.
 NOME_DO_REFRESH = "_refresh_config_controles"
 
-#: Quantas colunas de card a grade tem. FIXO, e não `Gtk.FlowBox`: o FlowBox
-#: decide as colunas pela largura que RECEBE, o rolador lhe entrega a MÍNIMA, e
-#: o resultado medido em `segmented_selector.py:214-231` foi 606px de altura
-#: empilhada virando o piso de TODAS as abas do notebook.
-#:
-#: Três, e não cinco como no desenho: um card pede 208px de largura mínima, e a
-#: janela abre com 1180px sem rolagem horizontal. Cinco cards lado a lado com a
-#: lista de cor de três colunas dentro não cabem — e o portão
-#: `test_config_01_a_aba_nasce_vazia::test_a_aba_montada_cabe_na_largura_da_janela`
-#: reprova antes de a tela existir. Com três colunas, a mesa de cinco vira duas
-#: fileiras, e a altura igual continua valendo (é o `row_homogeneous`).
 COLUNAS = 3
 
-#: Espaço entre cards, o mesmo `--sp-3` do desenho.
 _ESPACAMENTO = 10
 
-#: O que a seção diz quando não há controle nenhum.
-#:
-#: A segunda frase é a resposta on-screen à medição 3 do aceite desta sprint
-#: ("em modo D-input, o Hefesto vê o controle?"), cuja previsão é NÃO com grau
-#: MÉDIO. Enquanto a medição não acontece, o estado vazio precisa ser
-#: *"não estou vendo nada e sei por quê"* — que é entrega, não falha.
 FRASE_SEM_CONTROLE = (
     "Nenhum controle ligado agora. Conecte um pelo cabo ou pelo rádio e entre "
     "nesta aba de novo. Um controle ligado em modo D-input pode não aparecer "
     "aqui — esse caso ainda não foi medido nesta casa."
 )
 
-#: O que a seção diz quando o Hefesto não respondeu.
 FRASE_SEM_RESPOSTA = (
     "O Hefesto está desligado, então não dá para saber quais controles estão "
     "ligados. Ligue-o na aba Sistema e entre nesta aba de novo."
 )
 
-#: Título de um card sem número. "Jogador —" leria como defeito; esta frase diz
-#: a mesma coisa e diz que é normal (é o estado dos primeiros segundos, enquanto
-#: o registro do daemon ainda não opinou).
 TITULO_SEM_NUMERO = "Sem número ainda"
 
 
-# ---------------------------------------------------------------------------
-# O gesto da luz — "A luz não acende"
-# ---------------------------------------------------------------------------
-#
 # A barra do DualSense por rádio nasce travada em ALGUMAS instâncias de conexão,
-# e a única cura conhecida é derrubar a conexão e deixar a pessoa apertar PS
-# (medido em 12/08 e de novo em 22/08/2026, com o olho dela). O `Disconnect` do
-# BlueZ tinha ZERO chamadores em `src/` — a cura estava escrita e nunca ligada.
-#
-# TRÊS REGRAS DELA, e as três estão escritas em código aqui:
-#
-# 1. *"sempre visível mas só acionável quando tiver no rádio"* — o botão existe
-#    no card do cabo também, apagado, com a dica dizendo por quê. Botão que SOME
-#    ensina que a tela é instável;
 # 2. **o produto NÃO reconecta.** O botão PS é dela. Este arquivo derruba e
 #    espera; `integrations/gesto_de_reconexao` não tem `reconectar` de propósito;
-# 3. **o fim da espera diz o que aconteceu**, e "não voltou" nunca é dito como
-#    "não deu certo": o controle continua PAREADO, e a frase precisa dizê-lo ou
-#    a pessoa acha que perdeu o pareamento.
-#
-# O QUE ESTE BOTÃO NÃO PROMETE: que a barra vai acender. Ninguém nesta casa
-# consegue LER a lâmpada — `multi_intensity` é a memória da última escrita pela
-# classe LED, e leu `[0 255 0]` com a barra apagada E com ela verde (16/08). Por
-# isso nenhuma frase daqui diz "acesa" nem "apagada".
 
-#: O rótulo do botão em repouso — a queixa dela, não o remédio. Quem vê a barra
-#: apagada procura "a luz não acende", nunca "reiniciar a conexão Bluetooth".
 TEXTO_DO_BOTAO = "A luz não acende"
 
-#: Quanto tempo o card espera o botão PS depois de derrubar o controle.
-#:
-#: Sessenta segundos porque o gesto tem DUAS pernas humanas — pegar o controle e
-#: apertar PS — e porque o custo de esperar demais é uma linha na tela, enquanto
-#: o de esperar de menos é dizer "não voltou" para um controle que voltou.
 ESPERA_PELO_PS_S = 60
 
-#: O aviso do estado de espera, palavra por palavra como no desenho aprovado.
 FRASE_APERTE_PS = "Aperte PS no controle"
 
-#: O rótulo do botão que desiste da espera. Cancelar NÃO reconecta — não existe
-#: reconexão neste produto.
 TEXTO_CANCELAR = "Cancelar"
 
-#: A dica do botão quando ele PODE ser clicado.
 DICA_NO_RADIO = (
     "Derruba este controle do BT. Depois aperte PS nele para ele voltar — é "
     "a única cura conhecida para a barra que nasce travada. O Hefesto não "
     "reconecta sozinho: o botão PS é seu."
 )
 
-#: A dica do botão apagado. Ela diz POR QUE está apagado, que é a metade que
-#: falta em todo botão insensível desta casa.
 DICA_NO_CABO = (
     "Só vale no BT. Pelo USB a barra obedece — o defeito que este gesto "
     "cura não existe no USB, e por isso o botão fica apagado aqui."
 )
 
 # O AVISO DA MESA SUJA SAIU DA DICA — FRASES-E-DICAS-02, 13/09/2026. Aqui
-# morava `AVISO_DA_MESA_SUJA`, anexado à dica do botão quando outro programa
-# segurava nó de controle: *"Atenção: … Feche-o antes para o gesto valer."* Era
-# aviso com instrução, e a ordem dela de 13/09 tira frase de aviso da tela em
-# toda forma, `title` incluído (`sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-
-# INDICE.md`, a mensagem de abertura: *"esse tipo de info segue aparecendo nas
-# abas"*). A dica fica com o que o clique faz. O botão continua clicável com a
-# Steam aberta, que é o que o experimento da célula do mapa precisa.
 
-#: Os quatro fins possíveis da espera. Nenhum é acento — são chaves de máquina.
 ESPERA_PROCURANDO = "procurando"
 ESPERA_VOLTOU = "voltou"
 ESPERA_NAO_CAIU = "nao_caiu"  # (noqa-acento): chave de máquina
 ESPERA_NAO_VOLTOU = "nao_voltou"  # (noqa-acento): chave de máquina
 ESPERA_CANCELADA = "cancelada"
 
-#: O controle nunca sumiu do rádio — então o `Disconnect` não surtiu efeito, e
-#: mandar a pessoa apertar PS seria gastar o gesto dela à toa. É o remédio do
-#: ELO-MUDO-01 aplicado aqui: o produto respondeu pelo TRANSPORTE (o `busctl`
-#: devolveu zero) e o EFEITO não veio.
 FRASE_NAO_CAIU = (
     "O controle não chegou a cair do rádio, então não houve o que reconectar. "
     "Ele continua pareado."
@@ -222,33 +148,16 @@ def frase_da_procura(restantes: int) -> str:
 
 
 def frase_nao_voltou(segundos: int) -> str:
-    """O controle caiu e não voltou no tempo.
-
-    A segunda oração é obrigatória e não é gentileza: sem ela a pessoa lê "não
-    voltou" como "perdi o pareamento" e vai reparear um controle que está
-    pareado.
-    """
+    """O controle caiu e não voltou no tempo."""
     return (
         f"Não voltou em {int(segundos)}s. Ele continua pareado — aperte PS nele "
         "quando quiser."
     )
 
 
-# A RAZÃO DO NASCIMENTO SAIU DA TELA — FRASES-E-DICAS-03, 13/09/2026. Aqui
 # moravam `FRASE_NASCEU_CONDENADO` e `frase_do_nascimento`
-# (SINAL-NO-NASCIMENTO-01/E2): a linha que dizia, debaixo do «A luz não
-# acende», por que a cura era oferecida a ESTA conexão — e, desde 04/09, o
 # anexo da dica do mesmo botão na aba 08. A ordem dela de 13/09
-# (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
-# tela a frase que avisa sobre um estado, `title` incluído. Quem ainda a lia,
-# medido antes de apagar: a dica da 08 e o `_BlocoDaLuz` desta seção, que é da
-# janela GTK (fora do produto desde 06/09, `D-0609-GTK-LEVA-INTEIRA`).
 # O carimbo `nascimento` continua no `state_full`, para o diagnóstico.
-#
-# A DECISÃO MEDIDA QUE CADUCA JUNTO: só a condenação falava. Sem carimbo,
-# `limpa` e `nao_sei` calavam — ausência não é inocência nem acusação, "nasceu
-# bem" em todo card é ruído crônico, e alarme sem medição atrás treina a
-# ignorar alarmes. Quem religar uma razão na tela herda as três regras.
 
 
 def pode_derrubar(dados: Any) -> bool:
@@ -266,12 +175,7 @@ def pode_derrubar(dados: Any) -> bool:
 
 
 def dica_do_botao(dados: Any) -> str:
-    """A dica do botão, e ela nunca é vazia.
-
-    No cabo diz por que está apagado; no rádio diz o que o clique faz e o que
-    ele NÃO faz. O aviso da mesa suja não entra mais — ver a nota logo acima de
-    :data:`ESPERA_PROCURANDO`.
-    """
+    """A dica do botão, e ela nunca é vazia."""
     if not pode_derrubar(dados):
         return DICA_NO_CABO
     return DICA_NO_RADIO
@@ -321,23 +225,7 @@ def uniqs_no_radio() -> set[str] | None:
 
 
 class EsperaPeloPS:
-    """A espera pelo botão PS de UM controle. Sem GTK, sem IPC, sem relógio.
-
-    Quem chama dá o tique (uma vez por segundo, na janela) e recebe o estado.
-    Fazer assim é o que torna a espera inteira exercitável em teste puro — e a
-    espera é justamente onde mora a mentira fácil.
-
-    A MENTIRA QUE ESTA CLASSE EXISTE PARA IMPEDIR
-    ---------------------------------------------
-    No instante do clique o controle AINDA ESTÁ no sysfs — o `Disconnect` foi
-    pedido, e o nó leva um tempo para sumir. Uma espera que só perguntasse "ele
-    está aí?" responderia **voltou** no primeiro tique, sem nada ter acontecido:
-    o card piscaria e a pessoa nunca apertaria PS.
-
-    Por isso são DOIS marcos, nesta ordem: primeiro é preciso VER O CONTROLE
-    SUMIR, e só depois vê-lo voltar. É a mesma disciplina do ELO-MUDO-01 — não
-    tratar ausência de notícia como notícia de sucesso.
-    """
+    """A espera pelo botão PS de UM controle. Sem GTK, sem IPC, sem relógio."""
 
     def __init__(
         self,
@@ -350,7 +238,6 @@ class EsperaPeloPS:
         self.total_s = int(total_s)
         self.restantes = int(total_s)
         self.estado = ESPERA_PROCURANDO
-        #: Já vi este controle SUMIR? Sem isto, "voltou" é chute.
         self.caiu = False
         self._sonda = sonda if sonda is not None else uniqs_no_radio
 
@@ -393,105 +280,37 @@ class EsperaPeloPS:
         """A sonda, embrulhada: uma falha dela não pode derrubar a janela."""
         try:
             return self._sonda()
-        except Exception:  # best-effort por contrato: a sonda não derruba a janela
+        except Exception:
             logger.debug("config_luz_sonda_falhou", exc_info=True)
             return None
 
 
-# ---------------------------------------------------------------------------
-# O gesto do microfone — a ponte por rádio, POR CONTROLE (QUATRO-MICROFONES-01)
-# ---------------------------------------------------------------------------
-#
-# O campo `bt_mic_enabled` era lido por três lugares e escrito por NENHUM: a
-# ponte de microfone por Bluetooth só subia por `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`
-# no ambiente do daemon. É a família A-CASA-SABE-E-O-PRODUTO-NAO-FAZ, e este
-# interruptor é a porta que faltava.
-#
-# AS QUATRO REGRAS DELA, de 22/08/2026, e as quatro estão em código aqui:
-#
-# 1. **POR CONTROLE.** Textual: *"por controle"*. Um por card, quatro
-#    independentes. Não existe chave de mesa inteira, e o daemon acompanha: o
-#    gate deixou de ser um `bool` e passou a ser um CONJUNTO de `uniq`
-#    (`daemon/subsystems/bt_mic.py`, que explica por que o `bool` não servia);
-# 2. **a DECLARAÇÃO nasce ausente**, sempre. Ausência deixa a ponte no chão, e
-#    é por isso que desligar volta a "não sei" em vez de gravar um `false`.
-#    PRECISÃO DE 17/09/2026 (NASCE-LIGADO-MIC-01): esta regra dizia "nasce
-#    desligado", e a frase ficou ambígua quando o MICROFONE passou a nascer
-#    LIGADO na chegada do controle (`daemon/subsystems/hotkey.nascer_no_ar`,
-#    a `D-O-MIC-LIGADO-VALE-NO-RADIO` implementada). São DOIS eixos: o
-#    interruptor deste card é a declaração, que continua nascendo ausente —
-#    e tem de continuar, porque é `None` que carrega o gesto de DESLIGAR dela;
-#    o padrão do produto é o nascimento, e ele é LIGADO;
-# 3. **sempre visível, e acionável nos DOIS transportes** — REESCRITA em
-#    04/09/2026 (D-12). Ela dizia *"só acionável no rádio"*, e a queixa 15 dela
 #    <!-- noqa-acento: citação literal dela -->
 #    derrubou a regra assim: *"esse aviso nao devia aparecer pq era  # (dela) noqa-acento
-#    pra funcionar em ambos ne"*. O CSV desta casa já dizia o mesmo —
-#    `audio.microfone` tem `cabo_aciona=sim` e `radio_aciona=parcial`
-#    (`docs/data/mapa-controles.csv`): quem é PARCIAL é o rádio. O que "não vale
-#    no cabo" nunca foi a feature — é uma IMPLEMENTAÇÃO dela, a
-#    `PonteMicBluetooth`, e a frase deu à ponte o nome da capacidade.
 #    O que a declaração diz é *"o microfone deste controle chega ao PC pelo
-#    canal dele"*, e ela é DURÁVEL: no cabo ela não sobe ponte nenhuma (o
-#    `bt_mic.alvos()` só enxerga nós de Bluetooth) e fica escrita para quando
-#    este controle voltar ao rádio. Botão que SOME ensina que a tela é instável;
-#    botão que RECUSA no transporte em que a feature é mais forte ensina pior;
-# 4. **capacidade, não advertência.** A frase de preço que existia foi derrubada
-#    por ela no mesmo dia — comparava 170 Hz de rádio com um espelho de 250 Hz
-#    que é a taxa NATIVA DO CABO. O que fica ao lado do interruptor é quanto do
-#    rádio o microfone ocupa, derivado das constantes do medidor.
 
-#: O rótulo do interruptor. Uma palavra, porque o card tem 208px de largura
-#: mínima e as outras linhas dele já são "Modo:", "Botões:", "Cor:" e "Jogador:".
 TEXTO_DO_MIC = "Microfone"
 
-#: A dica quando o interruptor PODE ser clicado. Ela diz o que o clique faz,
-#: quanto custa e que a escolha é dela — nunca "não faça isto".
 DICA_MIC_NO_RADIO = (
     "Traz o microfone deste controle pelo rádio, como no PS5. Ele nasce "
     "desligado por privacidade: a ponte é um gesto seu, e vale só para este "
     "controle."
 )
 
-#: A dica no CABO. **Ela era uma RECUSA e virou INFORMAÇÃO — 04/09/2026, D-12.**
-#:
-#: O que ela dizia, palavra por palavra: *"Só vale no rádio. Pelo cabo o
-#: microfone deste controle é uma placa de som USB e não passa por esta ponte —
-#: ele já funciona sem ela."* Três coisas erradas numa frase só:
-#:
-#: 1. **"Só vale no rádio" está de cabeça para baixo.** `audio.microfone` é
-#:    `cabo_aciona=sim` e `radio_aciona=parcial` no `mapa-controles.csv`. A
-#:    frase promovia o transporte fraco e recusava o forte;
-#: 2. **deu à PONTE o nome da CAPACIDADE.** O que não vale no cabo é a
-#:    `PonteMicBluetooth`, não o microfone;
-#: 3. **"ele já funciona sem ela" é falso** sob o conceito dela: pelo cabo o
-#:    canal existe mas nasce PARADO — `SUSPENDED`, medido em
-#:    `daemon/subsystems/bt_mic.py`. Existir não é ser ouvido.
-#:
-#: A que fica diz o que o transporte muda de verdade — a ROTA, nunca se o
-#: microfone existe — e não recusa nada: no cabo o interruptor está ACESO.
 DICA_MIC_NO_CABO = (
     "Pelo cabo o canal deste microfone já existe: o PipeWire o publica sozinho, "
     "e o Hefesto não precisa de ponte para entregá-lo. A escolha fica gravada "
     "para quando este controle voltar ao rádio, onde a ponte é o que o traz."
 )
 
-#: A dica de quem NÃO TEM canal de captura a ligar — 04/09/2026. Ela nasce com
 #: :func:`tem_canal_de_captura`, e existe porque a `dica_do_microfone` passou a
-#: ter dois motivos de recusa e não podia responder aos dois com a frase do
-#: endereço: uma frase só mandaria a pessoa procurar endereço onde o problema é
-#: o aparelho. Na GUI ela não chega à tela — `_pendurar_o_microfone` nem
 #: pendura o interruptor em card que não é DualSense adotado —, e é justamente
-#: por isso que ela precisa existir: o dia em que alguém pendurar, a frase está
-#: pronta em vez de mentir sobre o motivo.
 DICA_MIC_SEM_CANAL = (
     "Este controle não tem canal de captura para o Hefesto entregar: o áudio do "
     "microfone vem tunelado num report HID da Sony, e só um DualSense adotado o "
     "carrega."
 )
 
-#: A dica do interruptor apagado por falta de endereço. Sem os doze hexa não há
-#: chave no `maquina.json`, e o daemon não teria como saber de quem é a ponte.
 DICA_MIC_SEM_ENDERECO = (
     "Este controle não tem endereço fixo, então o Hefesto não tem como guardar "
     "a quem esta ponte pertence."
@@ -512,24 +331,7 @@ def _numero(valor: float) -> str:
 
 
 def frase_da_capacidade_do_mic() -> str:
-    """Quanto do rádio um microfone ocupa. DERIVADA, nunca digitada.
-
-    Os quatro números saem das constantes do medidor
-    (`integrations/radio_da_mesa`), que é o mesmo lugar de onde a barra de
-    "Rádio em uso" tira os dela. Digitá-los aqui criaria a segunda verdade — e a
-    primeira vez que alguém remedisse o A/B, a tela e a barra passariam a dizer
-    coisas diferentes sobre o mesmo fato.
-
-    É CAPACIDADE, não advertência: diz o que o rádio carrega, e a pergunta
-    "cabe?" quem responde é a barra da seção vizinha.
-
-    **O NOME DA SEÇÃO É LIDO, nunca digitado — corrigido em 26/08/2026.** Esta
-    frase mandava a pessoa procurar uma seção chamada "A mesa"; a LEX-1 renomeou
-    a seção para o léxico dela no mesmo dia, e a frase passou a apontar para um
-    nome que não existe mais na tira. Quem lesse procuraria "A mesa" e leria
-    "Conexões" — a tela mandando para um lugar que ela mesma renomeou. Ler o
-    ``TITULO`` faz o ponteiro seguir o renomeio de graça, para sempre.
-    """
+    """Quanto do rádio um microfone ocupa. DERIVADA, nunca digitada."""
     from hefesto_dualsense4unix.integrations.radio_da_mesa import (
         HZ_AUDIO_COM_MIC,
         HZ_INPUT_COM_MIC,
@@ -591,19 +393,7 @@ def pode_ligar_o_mic(dados: Any) -> bool:
 
 
 def dica_do_microfone(dados: Any) -> str:
-    """A dica do interruptor, e ela nunca é vazia.
-
-    **OS DOIS MOTIVOS DE ESTAR APAGADO MUDARAM DE PAR — 04/09/2026.** Eram *"no
-    cabo não FAZ FALTA, sem endereço não TEM ONDE ser guardada"*; o do cabo caiu
-    com a D-12 — no cabo o interruptor está ACESO, e o que a dica faz ali é
-    INFORMAR por onde o canal vem, não recusar. O par que sobrou é **não tem
-    canal** e **não tem onde guardar**, e cada um continua com a frase dele:
-    responder aos dois com uma só mandaria a pessoa procurar endereço onde o
-    problema é o aparelho.
-
-    E as duas perguntas são feitas na ORDEM em que elas mandam: sem canal, o
-    endereço não interessa.
-    """
+    """A dica do interruptor, e ela nunca é vazia."""
     if not tem_canal_de_captura(dados):
         return DICA_MIC_SEM_CANAL
     if not bool(getattr(dados, "endereco", "")):
@@ -616,17 +406,7 @@ def dica_do_microfone(dados: Any) -> str:
 
 
 class _BlocoDoMicrofone:
-    """O interruptor de UM card. Dono de widgets, não subclasse de widget.
-
-    Mesma disciplina do `_BlocoDaLuz` logo abaixo, e pela mesma razão: assim
-    `app/widgets/external_card.py` continua sem saber que este gesto existe.
-
-    E o gesto é DIFERIDO como o resto da seção (`D-A4`): o clique acumula em
-    `host._maquina_pendente` e quem grava é o "Aplicar" do rodapé. Não é
-    detalhe de implementação — é o que a frase `QUANDO_VALE`, no pé da seção,
-    promete à pessoa que clicou. Gravar na hora aqui faria a seção mentir em
-    uma linha e dizer a verdade nas outras quatro.
-    """
+    """O interruptor de UM card. Dono de widgets, não subclasse de widget."""
 
     def __init__(
         self,
@@ -643,9 +423,6 @@ class _BlocoDoMicrofone:
 
         self.caixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         self.botao = Gtk.CheckButton(label=_(TEXTO_DO_MIC))
-        # O valor inicial entra ANTES do `connect`, como todo campo deste card:
-        # `set_active` EMITE "toggled", e com o handler já ligado a abertura da
-        # janela declararia sozinha o que ninguém escolheu.
         self.botao.set_active(bool(ligado))
         self.botao.set_sensitive(pode_ligar_o_mic(dados))
         self.botao.set_tooltip_text(_(dica_do_microfone(dados)))
@@ -653,11 +430,7 @@ class _BlocoDoMicrofone:
         self.caixa.pack_start(self.botao, False, False, 0)
 
     def encaixar(self, card: Any) -> None:
-        """Põe a caixa no corpo do card, ANTES do espaçador.
-
-        Mesma conta do `_BlocoDaLuz.encaixar`, e por isso a ordem entre os dois
-        é a ordem em que a seção os pendura: quem entra depois fica embaixo.
-        """
+        """Põe a caixa no corpo do card, ANTES do espaçador."""
         corpo = card.get_child()
         if corpo is None:
             return
@@ -673,116 +446,48 @@ class _BlocoDoMicrofone:
 
 
 def montar(host: Any, caixa: Any) -> None:
-    """Monta a seção dentro de `caixa` — a caixa interna da moldura.
-
-    `host` é o `HefestoApp`: dele vêm `_get` (widgets do Glade) e o que os
-    outros mixins já penduraram. `caixa` é um `Gtk.Box` vertical, com as
-    margens da casa já aplicadas.
-
-    Contrato, e ele vale para as cinco: **nunca levantar**. Uma seção que
-    falha ao montar não pode derrubar a aba, e uma aba que falha não pode
-    derrubar a janela. Quem chama já embrulha em `contextlib.suppress`, mas a
-    tolerância começa aqui.
-
-    O último gesto pendura `_refresh_config_controles` no hospedeiro. Ele
-    NASCE aqui e não no `mixin.py` pela mesma razão do refresher da mesa: o
-    montador da aba não conhece uma linha do que há dentro de nenhuma seção.
-    """
+    """Monta a seção dentro de `caixa` — a caixa interna da moldura."""
     painel = _PainelDosControles(host)
     painel.montar(caixa)
     setattr(host, NOME_DO_REFRESH, painel.reexaminar)
 
 
 class _PainelDosControles:
-    """A grade de cards e as duas leituras que a preenchem.
-
-    Uma instância por montagem. A grade mora dentro de uma caixa que FICA:
-    reexaminar esvazia a caixa e a preenche de novo, em vez de mexer na página —
-    assim a ordem dos filhos da seção nunca muda e a tela não pula.
-    """
+    """A grade de cards e as duas leituras que a preenchem."""
 
     def __init__(self, host: Any) -> None:
         self._host = host
         self._caixa: Any = None
         self._estado: dict[str, Any] = {}
-        #: `{uniq: CorDoPlastico | None}` — `None` gravado é "já perguntei e o
-        #: aparelho não respondeu". Sem guardar a falha, cada entrada na aba
-        #: mandaria de novo o comando de fábrica para o mesmo controle.
         self._cores: dict[str, Any] = {}
-        #: Os cards vivos, por chave, para repintar a borda sem redesenhar tudo
-        #: (redesenhar tira o foco de quem está digitando no campo livre).
         self._cards: dict[str, Any] = {}
-        #: Os blocos do gesto da luz, por chave do card.
         self._luzes: dict[str, Any] = {}
-        #: Os interruptores de microfone, por chave do card.
         self._microfones: dict[str, Any] = {}
-        #: `{endereco: True}` para quem tem a ponte de microfone declarada. Vive
-        #: separado do `DadosDoControle` de propósito: o card
-        #: (`app/widgets/external_card.py`) é território de outra frente, e um
-        #: campo novo lá obrigaria as duas a mexerem no mesmo arquivo.
         self._mic_declarado: dict[str, bool] = {}
 
-    # -- montagem ----------------------------------------------------------
 
     def montar(self, caixa: Any) -> None:
         from gi.repository import Gtk
 
         self._caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         caixa.pack_start(self._caixa, False, False, 0)
-        # O estado vazio vai à tela AGORA, antes de qualquer pergunta: a
-        # resposta chega por callback, e uma seção em branco enquanto ela não
-        # chega leria como seção quebrada.
         self._desenhar([])
-        # Cor e número de jogador são DIFERIDOS como o resto da aba, e a frase
-        # é a mesma constante do Orçamento e da Mesa. Ver `moldura.QUANDO_VALE`
-        # para o defeito que ela fecha: a aba tinha três semânticas de salvar e
-        # só uma escrita na tela.
-        #
-        # Ela fica FORA de `self._caixa` de propósito: aquela caixa é esvaziada
-        # e repreenchida a cada reexame, e a frase não é dado da mesa — some e
-        # volta piscaria a cada troca de aba.
-        # A capacidade do microfone vem ANTES da frase de quando a escolha vale,
-        # e vem UMA vez por seção, não uma por card: são 208px de largura por
-        # card, e a mesma frase repetida cinco vezes vira ruído em vez de
-        # informação. Ela fica fora de `self._caixa` pelo mesmo motivo da outra
-        # — aquela caixa é esvaziada a cada reexame, e a capacidade do rádio não
-        # é dado da mesa.
-        #
-        # LEX-2, ITEM 4 — A `QUANDO_VALE` SAIU DA PÁGINA (26/08/2026) e virou a
-        # dica da frase de capacidade. Ela diria a mesma coisa com a mesa vazia
-        # e com a mesa cheia, logo é EXPLICAÇÃO, e explicação vai para o hover.
-        #
-        # POR QUE ESTE RÓTULO E NÃO O INTERRUPTOR QUE ELA EXPLICA: o
-        # interruptor nasce e morre com o card, e numa mesa sem controle nenhum
         # não existe widget nenhum para hospedar a frase — que é exatamente o
-        # caso que `test_a_aba_diz_quando_a_escolha_fica_guardada.py` monta
-        # (hospedeiro vazio). Este rótulo é o único desta seção que existe
-        # sempre e que fica FORA de `self._caixa`, a caixa que o reexame
-        # esvazia.
         capacidade = rotulo_de_apoio(frase_da_capacidade_do_mic())
         with contextlib.suppress(Exception):
             capacidade.set_tooltip_text(_(QUANDO_VALE))
         caixa.pack_start(capacidade, False, False, 0)
         self.reexaminar()
 
-    # -- leitura -----------------------------------------------------------
 
     def reexaminar(self) -> None:
-        """Relê a mesa e redesenha a grade. Engole a própria exceção.
-
-        É o refresher da aba: `app.py` chama o nome direto, sem embrulhar, e uma
-        leitura que falhe não pode derrubar a troca de aba.
-        """
+        """Relê a mesa e redesenha a grade. Engole a própria exceção."""
         try:
             leitor = getattr(self._host, "_controles_leitor", None)
             if leitor is not None:
                 self._aplicar(leitor())
                 return
             if self._e_bancada_de_retrato():
-                # O retrato NUNCA publica dado vivo (F5). Sem um dublê montado,
-                # a seção mostra o estado vazio em vez de fotografar a mesa dela
-                # — e, principalmente, em vez de mandar o comando de fábrica que
-                # lê a cor para os quatro controles durante uma captura.
                 self._desenhar([])
                 return
             call_async(
@@ -796,35 +501,11 @@ class _PainelDosControles:
             logger.warning("config_controles_reexame_falhou", exc_info=True)
 
     def _e_bancada_de_retrato(self) -> bool:
-        """O hospedeiro é uma bancada de retrato, e não o produto?
-
-        O sinal é o `_mesa_leitor`, que a bancada monta para a seção da mesa
-        (`secao_mesa.py:772`, `_mesa_leitor`) e que nenhum hospedeiro de
-        produção tem. Usar um sinal que já existe é melhor que inventar uma
-        segunda bandeira: uma bandeira nova precisaria ser posta no retratista,
-        e até lá a captura sairia falando com o daemon vivo — falha CALADA, do
-        tipo que só aparece no PNG.
-
-        **O HOSPEDEIRO QUE ISTO DETECTAVA NÃO EXISTE MAIS — 08/09/2026.** Era
-        `scripts/gui-captura/retratar_abas.py`, apagado com a janela GTK em
-        06/09 (`D-0609-GTK-LEVA-INTEIRA`); o retratista de hoje fotografa HTML
-        já gravado e nunca monta esta seção. A guarda FICA, e por dois motivos
-        medidos: ela falha para o lado seguro (sem o sinal, devolve `False` e o
-        produto se comporta como produto), e o sinal continua sendo o que a
-        SUÍTE usa para montar a seção sem daemon. Arrancá-la seria trocar uma
-        guarda inerte por um caminho a menos de teste.
-        """
+        """O hospedeiro é uma bancada de retrato, e não o produto?"""
         return getattr(self._host, "_mesa_leitor", None) is not None
 
     def _chegou_o_estado(self, resultado: Any) -> bool:
-        """Guarda os adotados e vai buscar os que o Hefesto só vê.
-
-        Em série e não em paralelo de propósito: o executor da ponte tem UM
-        worker (`ipc_bridge._get_executor`), então duas chamadas simultâneas
-        seriam duas filas na mesma fila — com a segunda pagando o tempo da
-        primeira de qualquer jeito, e o código ficando com dois caminhos de
-        chegada para reconciliar.
-        """
+        """Guarda os adotados e vai buscar os que o Hefesto só vê."""
         self._estado = resultado if isinstance(resultado, dict) else {}
         call_async(
             "controller.list",
@@ -832,8 +513,6 @@ class _PainelDosControles:
             self._chegou_o_inventario,
             self._nao_respondeu,
             # O inventário externo enumera TODOS os /dev/input e sonda quem
-            # segura cada hidraw: 10-40 ms mais um subprocesso. O default de
-            # 0,25 s da ponte estoura.
             timeout_s=3.0,
         )
         return False
@@ -868,11 +547,6 @@ class _PainelDosControles:
     ) -> list[DadosDoControle]:
         """Os dados de cada card, ordenados pelo número de jogador."""
         declarado = self._declaracoes()
-        # Z2-5 (24/08/2026): o dono único, não mais o campo legado por
-        # getattr. `selecionado=bool(alvo) and alvo == uniq` já era imune ao
-        # defeito do P3 (`None` — TODOS ou DESCONHECIDO — nunca marca card
-        # nenhum), então a migração é byte-idêntica na tela; o que muda é a
-        # fonte deixar de ser o campo que o portão da Z2-6 apaga.
         alvo = alvo_de_edicao(self._host).uniq
         cards: list[DadosDoControle] = []
         for entrada in adotados:
@@ -880,14 +554,7 @@ class _PainelDosControles:
                 self._card(
                     {**entrada, "bus": str(entrada.get("transport") or "")},
                     adotado=True,
-                    # Sem fallback posicional, e a ausência dele é a cura: com
                     # `player_slot` nulo (o registro do daemon ainda sem opinião)
-                    # a conta `índice + 1` deu "Jogador 4" a DOIS cards da mesa
-                    # de cinco, medido em 22/08/2026 contra
-                    # `tests/fixtures/inventario_externos.json`. É o mesmo ponto
-                    # cego que a NUMA-05 curou nos externos
-                    # (`external_controllers.slot_of`): null honesto vale mais
-                    # que número errado, e o card tem título para dizê-lo.
                     slot=_inteiro(entrada.get("player_slot")),
                     declarado=declarado,
                     alvo=alvo,
@@ -951,12 +618,7 @@ class _PainelDosControles:
         )
 
     def _declaracoes(self) -> dict[str, Any]:
-        """O que está no disco, com a pendência desta sessão por cima.
-
-        Decisão C5 — entrar na aba RELÊ o disco. E a pendência vence porque ela
-        é mais nova: o "Aplicar" ainda não rodou, e mostrar o valor antigo faria
-        o clique dela parecer perdido.
-        """
+        """O que está no disco, com a pendência desta sessão por cima."""
         gravado: dict[str, Any] = {}
         with contextlib.suppress(Exception):
             gravado = {
@@ -1020,12 +682,7 @@ class _PainelDosControles:
             run_in_thread(_pergunta_de_cor(uniq, alvo), self._chegou_a_cor)
 
     def _chegou_a_cor(self, resultado: Any) -> bool:
-        """Repinta SÓ a borda do card que ganhou cor.
-
-        Redesenhar a grade inteira tiraria o foco de quem estivesse digitando no
-        campo livre de outro card — e a resposta chega segundos depois da
-        montagem, que é exatamente quando ela poderia estar digitando.
-        """
+        """Repinta SÓ a borda do card que ganhou cor."""
         try:
             uniq, cor = resultado
         except (TypeError, ValueError):
@@ -1041,13 +698,6 @@ class _PainelDosControles:
                 card.repintar_o_nome_da_cor(cor.nome)
         return False
 
-    # A SONDA DA MESA SUJA SAIU DAQUI — FRASES-E-DICAS-02, 13/09/2026. Ela
-    # perguntava, fora do tique, se outro programa segurava nó de controle, e a
-    # resposta só servia para anexar o aviso à dica do botão da luz. O aviso
-    # saiu da tela (ver a nota ao lado de `DICA_NO_CABO`), e uma sonda que varre
-    # `/proc` para alimentar uma frase que ninguém mostra é trabalho por nada.
-
-    # -- desenho -----------------------------------------------------------
 
     def _desenhar(self, cards: list[DadosDoControle] | None) -> None:
         """A grade, ou a frase de que não há o que mostrar.
@@ -1060,10 +710,6 @@ class _PainelDosControles:
             return
         from gi.repository import Gtk
 
-        # Uma espera viva aponta para widgets que o `_esvaziar` vai destruir —
-        # e um tique que chegasse depois disso mexeria em widget morto. Cancelar
-        # antes é o que impede a janela de cair numa troca de aba durante a
-        # contagem.
         for bloco in self._luzes.values():
             with contextlib.suppress(Exception):
                 bloco.encerrar()
@@ -1087,10 +733,6 @@ class _PainelDosControles:
         grade.set_column_spacing(_ESPACAMENTO)
         grade.set_row_spacing(_ESPACAMENTO)
         grade.set_column_homogeneous(True)
-        # `row_homogeneous` iguala LINHAS entre si — é o que faz o card da
-        # segunda fileira ter a mesma altura do da primeira. O que iguala dois
-        # cards da MESMA fileira é o `valign=FILL` + `vexpand` de cada card
-        # (`app/widgets/external_card.py`). Precisa das duas metades.
         grade.set_row_homogeneous(True)
         for indice, dados in enumerate(cards):
             card = ExternalCard(
@@ -1098,8 +740,6 @@ class _PainelDosControles:
             )
             self._cards[dados.chave] = card
             self._pendurar_a_luz(card, dados)
-            # Depois da luz, e a ordem é a do encaixe: os dois usam a mesma
-            # conta de posição, então quem entra por último fica embaixo.
             self._pendurar_o_microfone(card, dados)
             grade.attach(card, indice % COLUNAS, indice // COLUNAS, 1, 1)
         self._caixa.pack_start(grade, False, False, 0)
@@ -1163,7 +803,6 @@ class _PainelDosControles:
             return
         self._microfones[dados.chave] = bloco
 
-    # -- gestos ------------------------------------------------------------
 
     def _ao_alternar_o_microfone(self, chave: str, ligado: bool) -> None:
         """A ponte de microfone deste controle entra no rascunho.
@@ -1183,29 +822,16 @@ class _PainelDosControles:
         self._ao_declarar(chave, "microfone", True if ligado else None)
 
     def _ao_declarar(self, chave: str, campo: str, valor: str | bool | None) -> None:
-        """Acumula a escolha dela no rascunho. NÃO grava — quem grava é o rodapé.
-
-        `D-A4`, sem exceção: o clique marca o rascunho e o efeito sai no
-        "Aplicar". Chamar `machine.declare` daqui criaria um segundo dono do
-        gesto de gravar, que é a classe de defeito que a `ABAS-01` curou.
-        """
+        """Acumula a escolha dela no rascunho. NÃO grava — quem grava é o rodapé."""
         card = self._cards.get(chave)
         endereco = "" if card is None else card.dados.endereco
         if not endereco:
-            # Sem endereço de doze hexa não há chave no `maquina.json`, e o card
-            # já mostra a frase que diz isso. A escolha continua valendo na tela
-            # — a borda repinta — e morre com a janela.
             self._repintar(chave, campo, valor)
             return
         self._host._maquina_pendente = fundir_declaracao(
             getattr(self._host, "_maquina_pendente", None),
             {"controles": {endereco: {campo: valor}}},
         )
-        # A marca "há escolhas por aplicar" no rodapé (23/08/2026). Sem esta chamada
-        # ela só acendia ao trocar de aba ou ao ir para a bandeja — quem declarava e
-        # clicava direto no X via o diálogo de fechamento sem nunca ter visto o aviso.
-        # `getattr` com guarda é o idioma da casa para fiação de aba: hospedeiro de
-        # teste sem rodapé não pode derrubar a declaração.
         marcar = getattr(self._host, "_marcar_declaracao_por_aplicar", None)
         if marcar is not None:
             with contextlib.suppress(Exception):
@@ -1225,14 +851,7 @@ class _PainelDosControles:
             card.repintar_a_borda(_tom_da_cor(valor if isinstance(valor, str) else None, lida))
 
     def _ao_numerar(self, uniq: str, numero: int) -> None:
-        """Pede o número ao daemon e RELÊ quando ele confirmar.
-
-        Nada é pintado por conta própria: o número que aparece é o que o daemon
-        devolveu no reexame, nunca o que a janela achou que ia acontecer. É a
-        mesma disciplina do chip da aba Status (`status_actions.py:1854-1868`),
-        e ela existe porque a alternativa cria a terceira verdade — três
-        superfícies, dois números, o mesmo controle.
-        """
+        """Pede o número ao daemon e RELÊ quando ele confirmar."""
 
         def _fim(resultado: Any) -> bool:
             ok, motivo = resultado
@@ -1244,23 +863,8 @@ class _PainelDosControles:
         run_in_thread(lambda: identity_number_set(uniq, numero), _fim)
 
 
-# ---------------------------------------------------------------------------
-# O bloco do gesto da luz, dentro do card
-# ---------------------------------------------------------------------------
-
-
 class _BlocoDaLuz:
-    """Os dois estados do desenho dela, encaixados no corpo de um card.
-
-    Ele NÃO é uma subclasse de widget: é um dono de widgets. Assim o arquivo do
-    card (`app/widgets/external_card.py`) continua sem saber que este gesto
-    existe — território de outra frente nesta leva, e um card que aprendesse a
-    falar com o BlueZ deixaria de ser um card.
-
-    Tudo que toca o mundo entra pelo construtor (`ao_derrubar`, `ao_voltar`,
-    `agendar`): é o que permite exercer a máquina inteira sem BlueZ, sem
-    controle e sem relógio.
-    """
+    """Os dois estados do desenho dela, encaixados no corpo de um card."""
 
     def __init__(
         self,
@@ -1277,9 +881,6 @@ class _BlocoDaLuz:
         self._ao_derrubar = ao_derrubar
         self._ao_voltar = ao_voltar
         self._agendar = agendar if agendar is not None else _agendar_um_segundo
-        #: Quem sai da thread da janela. Injetável porque o `Disconnect` pode
-        #: levar segundos, e porque um teste não pode depender do laço do GTK
-        #: para provar que o card entrou no estado certo.
         self._correr = correr if correr is not None else run_in_thread
         self._corpo: Any = None
         self._escondidos: list[Any] = []
@@ -1298,22 +899,13 @@ class _BlocoDaLuz:
         self.contagem = _oculto(_apoio_do_bloco(frase_da_procura(ESPERA_PELO_PS_S)))
         self.cancelar = _oculto(Gtk.Button(label=TEXTO_CANCELAR))
         self.cancelar.connect("clicked", self._ao_cancelar)
-        #: O recado do fim. Ele SOBREVIVE ao fim da espera de propósito: o card
-        #: volta ao normal, mas a frase fica — sem ela, "não voltou" viraria
-        #: silêncio, que é o defeito que o ELO-MUDO-01 nomeou.
         self.recado = _oculto(_apoio_do_bloco(""))
         for widget in (self.aviso, self.contagem, self.cancelar, self.recado):
             self.caixa.pack_start(widget, False, False, 0)
 
-    # -- encaixe -----------------------------------------------------------
 
     def encaixar(self, card: Any) -> None:
-        """Põe a caixa no corpo do card, ANTES do espaçador.
-
-        O espaçador é o que empurra "Jogador:" para o rodapé de todos os cards
-        (`external_card.py`, o `respiro`). Entrar depois dele jogaria o botão
-        para baixo da linha do jogador, que não é o desenho dela.
-        """
+        """Põe a caixa no corpo do card, ANTES do espaçador."""
         corpo = card.get_child()
         if corpo is None:
             return
@@ -1329,7 +921,6 @@ class _BlocoDaLuz:
             self._espera.cancelar()
         self._parar_o_tique()
 
-    # -- os dois estados ---------------------------------------------------
 
     def _ao_clicar(self, _botao: Any) -> None:
         if self._espera is not None and not self._espera.acabou:
@@ -1345,14 +936,7 @@ class _BlocoDaLuz:
         self._sair_da_espera("")
 
     def _chegou_o_gesto(self, resultado: Any) -> bool:
-        """O `Disconnect` respondeu. Só conta o tempo se o controle CAIU.
-
-        `caiu` é falso tanto para "não achei o controle no Bluetooth" quanto
-        para "não consegui falar com o `bluetoothd`" — e nos dois casos mandar
-        a pessoa apertar PS seria gastar o gesto dela por uma coisa que não
-        aconteceu. A frase que aparece é a do próprio gesto, que sabe distinguir
-        os quatro fins.
-        """
+        """O `Disconnect` respondeu. Só conta o tempo se o controle CAIU."""
         if getattr(resultado, "caiu", False):
             self._espera = EsperaPeloPS(self.dados.uniq)
             self._mostrar_a_contagem()
@@ -1372,9 +956,6 @@ class _BlocoDaLuz:
             return True
         self._fonte = None
         if estado == ESPERA_VOLTOU:
-            # O card volta ao normal pela releitura da mesa, e não por este
-            # bloco se redesenhar: o número de jogador e a cor podem ter mudado
-            # com a instância nova, e quem sabe disso é o daemon.
             self._sair_da_espera("")
             with contextlib.suppress(Exception):
                 self._ao_voltar()
@@ -1412,14 +993,9 @@ class _BlocoDaLuz:
                 self.recado.show()
         self._mostrar_os_irmaos()
 
-    # -- as linhas do card que somem na espera ------------------------------
 
     def _esconder_os_irmaos(self) -> None:
-        """Esconde "Cor:" e "Jogador:" — o desenho dela mostra só o pedido.
-
-        O espaçador FICA: é ele que segura a altura do card, e um card que
-        encolhe no clique faria a fileira inteira pular.
-        """
+        """Esconde "Cor:" e "Jogador:" — o desenho dela mostra só o pedido."""
         self._escondidos = []
         if self._corpo is None:
             return
@@ -1429,9 +1005,6 @@ class _BlocoDaLuz:
             with contextlib.suppress(Exception):
                 if filho.get_visible():
                     self._escondidos.append(filho)
-                    # O `no_show_all` junto com o `hide` é cinto e suspensório:
-                    # um `show_all()` que chegasse de fora durante a espera
-                    # devolveria "Cor:" e "Jogador:" por cima do pedido do PS.
                     filho.set_no_show_all(True)
                     filho.hide()
 
@@ -1456,17 +1029,12 @@ def _e_o_respiro(widget: Any) -> bool:
     """O espaçador do card: uma caixa vazia que se estica na vertical."""
     try:
         return not widget.get_children() and bool(widget.get_vexpand())
-    except Exception:  # um Label não tem `get_children`
+    except Exception:
         return False
 
 
 def _oculto(widget: Any) -> Any:
-    """Nasce escondido e SOBREVIVE ao `show_all` da seção.
-
-    Sem o `no_show_all`, o `show_all()` que a seção dá depois de montar a grade
-    revelaria os quatro widgets do estado de espera — e o card nasceria pedindo
-    o botão PS sem ninguém ter clicado em nada.
-    """
+    """Nasce escondido e SOBREVIVE ao `show_all` da seção."""
     with contextlib.suppress(Exception):
         widget.set_no_show_all(True)
         widget.hide()
@@ -1495,25 +1063,8 @@ def _derrubar_o_controle(uniq: str) -> Any:
     return desconectar(uniq)
 
 
-# ---------------------------------------------------------------------------
-# Tradução — pura, sem GTK e sem IPC
-# ---------------------------------------------------------------------------
-
-
 def _sem_chave_repetida(cards: list[DadosDoControle]) -> list[DadosDoControle]:
-    """Garante que dois cards nunca respondam pela mesma chave.
-
-    A chave sai de `external_key`, que degrada para `evdev_path`, `hidraw`,
-    `name` e, no fim da fila, `"?"`. Dois aparelhos que caiam no MESMO degrau de
-    degradação teriam a MESMA chave — e então declarar a cor de um repintaria a
-    borda do outro, que é o defeito de CLONE-01 voltando pela porta dos fundos
-    (dois Nintendo-class no cabo, com o `uniq` sintetizado igual pelo
-    `hid-nintendo`, respondendo pelo mesmo botão).
-
-    O sufixo é posicional e vive só na sessão: ele NUNCA chega ao disco, porque
-    quem indexa o `maquina.json` é o `endereco`, e um aparelho sem endereço já
-    não persiste nada.
-    """
+    """Garante que dois cards nunca respondam pela mesma chave."""
     from dataclasses import replace
 
     vistas: set[str] = set()
@@ -1527,45 +1078,23 @@ def _sem_chave_repetida(cards: list[DadosDoControle]) -> list[DadosDoControle]:
     return saida
 
 
-
 def _por_numero_de_jogador(
     cards: list[DadosDoControle],
 ) -> list[DadosDoControle]:
-    """Ordena os cards por jogador, e põe quem não tem número no fim.
-
-    A mesa entrega os controles na ordem em que os viu — que é a ordem de
-    enumeração do kernel, não a de chegada nem a dos jogadores. Numa foto de
-    quatro controles isso saiu como "Jogador 4, Jogador 1, Jogador 3, Jogador 2"
-    (medido em 22/08/2026 contra o fixture da mesa cheia), e uma fileira assim
-    lê como erro de montagem antes de ler como informação.
-
-    Estável: dois cards sem número guardam a ordem em que a mesa os entregou, em
-    vez de dançarem entre duas leituras. Quem não tem número vai para o fim
-    porque ele ainda não é jogador de ninguém — e o começo da fileira é onde o
-    olho procura o Jogador 1.
-    """
+    """Ordena os cards por jogador, e põe quem não tem número no fim."""
     return sorted(
         cards,
         key=lambda card: (card.slot is None, card.slot if card.slot else 0),
     )
 
 
-#: O endereço da linha do mapa de canais que responde por esta leitura, e que
-#: diz `aciona = sim` nos DOIS lados desde 02/09/2026. Está escrito aqui para
-#: quem vier conferir a célula antes de mexer no comportamento da seção.
 ID_DA_COR_NO_MAPA = "identidade.cor_do_aparelho@dualsense"
 
 
 def _pergunta_de_cor(
     uniq: str, ler: Callable[[str], Any]
 ) -> Callable[[], tuple[str, Any]]:
-    """Fecha o endereço e o leitor numa função de zero argumento.
-
-    Um `lambda` com valor por omissão faria o mesmo e é o que estava aqui — o
-    `mypy --strict` recusa inferir o tipo dele, e um `# type: ignore` num
-    fechamento sobre variável de laço é onde um dia se esconde o bug clássico
-    de todas as threads lerem o ÚLTIMO endereço do laço.
-    """
+    """Fecha o endereço e o leitor numa função de zero argumento."""
 
     def _perguntar() -> tuple[str, Any]:
         return uniq, ler(uniq)
@@ -1584,17 +1113,7 @@ def _inteiro(valor: Any) -> int | None:
 
 
 def _cor_na_tela(declarada: str | None, lida: Any) -> tuple[str, str, str]:
-    """`(id a marcar na lista, texto do campo livre, nome a mostrar)`.
-
-    Três situações, e a ordem é a decisão dela de 21/08/2026 — *"a pessoa pode
-    escolher a cor, e a escolha dela vence a tabela"*:
-
-    1. **declarou um nome de fábrica** → a lista marca aquele botão;
-    2. **declarou outro nome** → a lista marca "Outra" e o campo livre traz o
-       texto dela;
-    3. **não declarou** → a lista nasce sem marca e o nome mostrado é o que o
-       aparelho respondeu, se respondeu.
-    """
+    """`(id a marcar na lista, texto do campo livre, nome a mostrar)`."""
     if declarada:
         conhecida = cor_do_nome(declarada)
         if conhecida is not None:
@@ -1604,11 +1123,7 @@ def _cor_na_tela(declarada: str | None, lida: Any) -> tuple[str, str, str]:
 
 
 def _tom_da_cor(declarada: str | None, lida: Any) -> str:
-    """O hexa da borda, já clareado. "" quando ninguém sabe a cor.
-
-    A escolha dela vence a leitura; um nome que a casa não conhece não tem tom,
-    e o card fica com a borda neutra em vez de uma cor inventada.
-    """
+    """O hexa da borda, já clareado. "" quando ninguém sabe a cor."""
     if declarada:
         conhecida = cor_do_nome(declarada)
         return "" if conhecida is None else tom_para_a_borda(conhecida.tom)

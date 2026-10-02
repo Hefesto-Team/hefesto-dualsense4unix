@@ -18,11 +18,7 @@ from hefesto_dualsense4unix.testing import FakeController
 
 
 async def _ate(condicao, prazo_s: float = 3.0) -> bool:  # type: ignore[no-untyped-def]
-    """Espera a condição com prazo, em vez de um sono fixo que o tique pode perder.
-
-    Medido em 27/09/2026: com 0,2 s fixos, `test_borda_de_queda_limpa_o_estado_publicado`
-    reprovava 4 vezes em 12 corridas do arquivo, com o daemon certo.
-    """
+    """Espera a condição com prazo, em vez de um sono fixo que o tique pode perder."""
     laco = asyncio.get_running_loop()
     fim = laco.time() + prazo_s
     while not condicao():
@@ -120,7 +116,6 @@ async def test_battery_debounce_dispara_no_primeiro_read():
     daemon.stop()
     await run_task
 
-    # Bateria não mudou: min-interval (100ms) + elapsed < 5s impede novo disparo
     assert store.counter("battery.change.emitted") == 1
 
 
@@ -168,7 +163,7 @@ async def test_stop_idempotente():
     run_task = asyncio.create_task(daemon.run())
     await asyncio.sleep(0.03)
     daemon.stop()
-    daemon.stop()  # segundo stop é noop
+    daemon.stop()
     await run_task
 
 
@@ -191,24 +186,7 @@ async def test_daemon_desconecta_no_shutdown():
 
 
 class _ControleQueCaiPeloProbe(FakeController):
-    """A queda pela porta do `is_connected()` — e SÓ por ela. E quem cai não volta.
-
-    DUAS COISAS O `FakeController` FAZIA QUE O APARELHO NÃO FAZ, medidas num
-    clone limpo em 27/09/2026:
-
-    * ele levanta quando lê desconectado. Com a leitura em voo no executor na
-      hora da queda, ela entrava pela OUTRA porta (a da leitura que levanta), e
-      esta régua acabava medindo a porta do sorteio. Aqui a leitura em voo
-      devolve a última, já com `connected=False`, como o `read_state` do
-      backend real, que não levanta por estar fora de linha;
-    * ele VOLTA no primeiro `connect()`. Sob carga, o boot do daemon ainda está
-      subindo os subsistemas quando a régua derruba o controle, e a primeira
-      sonda do `reconnect_loop` nasce DEPOIS da queda e o religa — 5 a 7 em 10
-      voltas com carga. Depois de `cair()`, o `connect()` não acha ninguém,
-      como o do backend real com a mesa vazia.
-
-    A outra porta tem a régua dela, logo abaixo.
-    """
+    """A queda pela porta do `is_connected()` — e SÓ por ela. E quem cai não volta."""
 
     caiu = False
 
@@ -279,13 +257,11 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
     )
 
     run_task = asyncio.create_task(daemon.run())
-    # Sanidade: antes da queda, o daemon LEU alguma coisa de verdade.
     assert await _ate(
         lambda: store.snapshot().controller is not None and daemon._last_state is not None
     ), "o daemon não leu nada antes da queda"
 
-    fc.cair()  # a queda: nenhum controle na mesa a partir daqui
-    # o próximo tick percebe a borda; sem a limpeza, o prazo estoura
+    fc.cair()
     await _ate(lambda: store.snapshot().controller is None and daemon._last_state is None)
 
     daemon.stop()
@@ -308,18 +284,7 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
 async def test_a_queda_pela_leitura_tambem_limpa_o_estado_publicado(
     auto_reconnect: bool,
 ) -> None:
-    """A MESMA BORDA, PELA OUTRA PORTA (27/09/2026).
-
-    Até aqui só o `is_connected() == False` limpava o estado publicado. Pela
-    leitura que levanta, o `_poll_loop` saía (`break`) ou reconectava com
-    `was_connected` já em `False`, e nenhuma volta do laço apagava nada: o
-    daemon seguia dizendo bt/75% para uma mesa vazia — a mentira da ONDA0-Z5,
-    pela porta por onde um controle que some de vez sai primeiro.
-
-    MORDE: tire o `esquecer_a_leitura_publicada()` do `except` do `_poll_loop`
-    e as duas voltas reprovam no prazo, sem sorteio — aqui a queda só tem esta
-    porta.
-    """
+    """A MESMA BORDA, PELA OUTRA PORTA (27/09/2026)."""
     fc = _ControleQueSomeNaLeitura(leituras=20)
     store = StateStore()
     daemon = Daemon(
@@ -348,7 +313,6 @@ async def test_a_queda_pela_leitura_tambem_limpa_o_estado_publicado(
 
 
 def test_battery_debounce_constants_coerentes_com_adr008():
-    # Sanidade cross-regra: ADR-008 + V2-17 exige 1%, 5s, min 100ms
     from hefesto_dualsense4unix.daemon.lifecycle import (
         BATTERY_DELTA_THRESHOLD_PCT,
         BATTERY_MIN_INTERVAL_SEC,
@@ -361,17 +325,7 @@ def test_battery_debounce_constants_coerentes_com_adr008():
 
 @pytest.mark.asyncio
 async def test_poll_loop_emits_button_down_up_on_diff(monkeypatch):
-    """Publica BUTTON_DOWN/UP ao diff entre ticks (INFRA-BUTTON-EVENTS-01).
-
-    Tick 1: cross pressionado  -> BUTTON_DOWN cross.
-    Tick 2: cross + circle     -> BUTTON_DOWN circle (cross mantido, sem UP).
-    Tick 3: nenhum pressionado -> BUTTON_UP cross, BUTTON_UP circle.
-    Total esperado: 3 DOWN (cross, circle) + 2 UP (circle, cross por ordem sorted).
-
-    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para exercitar a lógica de
-    diff a partir do 1º tick (o settling tem teste dedicado). Ver
-    test_input_settling_* abaixo.
-    """
+    """Publica BUTTON_DOWN/UP ao diff entre ticks (INFRA-BUTTON-EVENTS-01)."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
@@ -402,12 +356,10 @@ async def test_poll_loop_emits_button_down_up_on_diff(monkeypatch):
     up_queue = bus.subscribe(EventTopic.BUTTON_UP)
 
     run_task = asyncio.create_task(daemon.run())
-    # Aguarda processamento dos 3 ticks (120Hz → ~25ms por tick)
     await asyncio.sleep(0.15)
     daemon.stop()
     await run_task
 
-    # Coleta eventos publicados
     down_events = []
     while not down_queue.empty():
         down_events.append(await down_queue.get())
@@ -418,18 +370,14 @@ async def test_poll_loop_emits_button_down_up_on_diff(monkeypatch):
     down_buttons = [e["button"] for e in down_events]
     up_buttons = [e["button"] for e in up_events]
 
-    # cross DOWN no tick 1; circle DOWN no tick 2
     assert "cross" in down_buttons
     assert "circle" in down_buttons
-    # circle UP e cross UP no tick 3
     assert "cross" in up_buttons
     assert "circle" in up_buttons
 
-    # Contadores no store refletem emissões
     assert store.counter("button.down.emitted") >= 2
     assert store.counter("button.up.emitted") >= 2
 
-    # Payloads corretos
     for ev in down_events:
         assert ev["pressed"] is True
     for ev in up_events:
@@ -438,13 +386,7 @@ async def test_poll_loop_emits_button_down_up_on_diff(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_poll_loop_emits_mic_btn_down_up(monkeypatch):
-    """Mic button via ControllerState.buttons_pressed gera BUTTON_DOWN/UP (INFRA-MIC-HID-01).
-
-    FakeController com mic_btn alternando entre ticks produz sequência correta.
-
-    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado — o mute fantasma DENTRO do
-    settling tem teste dedicado (test_input_settling_suppresses_mic_btn_down).
-    """
+    """Mic button via ControllerState.buttons_pressed gera BUTTON_DOWN/UP (INFRA-MIC-HID-01)."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
@@ -488,7 +430,6 @@ async def test_poll_loop_emits_mic_btn_down_up(monkeypatch):
     assert "mic_btn" in down_buttons
     assert "mic_btn" in up_buttons
 
-    # Verificar payloads
     mic_down = next((e for e in down_events if e["button"] == "mic_btn"), None)
     mic_up = next((e for e in up_events if e["button"] == "mic_btn"), None)
     assert mic_down is not None and mic_down["pressed"] is True
@@ -497,11 +438,7 @@ async def test_poll_loop_emits_mic_btn_down_up(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_poll_loop_no_event_when_buttons_unchanged(monkeypatch):
-    """Nenhum evento publicado se buttons_pressed não muda (idempotência — critério 5).
-
-    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para validar a idempotência
-    de diff a partir do 1º tick.
-    """
+    """Nenhum evento publicado se buttons_pressed não muda (idempotência — critério 5)."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
@@ -509,8 +446,6 @@ async def test_poll_loop_no_event_when_buttons_unchanged(monkeypatch):
         battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb",
         buttons_pressed=frozenset({"cross"}),
     )
-    # 10 ticks com mesmo conjunto — deve gerar exatamente 1 DOWN na transição
-    # vazio -> {cross} e nenhum UP
     states = [state_base] * 10
     fc = FakeController(transport="usb", states=states)
     bus = EventBus()
@@ -532,16 +467,10 @@ async def test_poll_loop_no_event_when_buttons_unchanged(monkeypatch):
     down_count = down_queue.qsize()
     up_count = up_queue.qsize()
 
-    # Exatamente 1 DOWN (vazio -> {cross}); 0 UP
     assert down_count == 1
     assert up_count == 0
     assert store.counter("button.down.emitted") == 1
     assert store.counter("button.up.emitted") == 0
-
-
-# ---------------------------------------------------------------------------
-# FEAT-METRICS-01: o MetricsSubsystem é iniciado por Daemon.run() (M1).
-# ---------------------------------------------------------------------------
 
 
 def _free_port() -> int:
@@ -555,11 +484,7 @@ def _free_port() -> int:
 
 @pytest.mark.asyncio
 async def test_metrics_sobe_quando_metrics_enabled():
-    """Com metrics_enabled=True, `run()` sobe o servidor HTTP de métricas.
-
-    Antes o MetricsSubsystem nunca era iniciado (run() pulava metrics), então
-    metrics_enabled/metrics_port eram config morta.
-    """
+    """Com metrics_enabled=True, `run()` sobe o servidor HTTP de métricas."""
     import urllib.request
 
     port = _free_port()
@@ -585,8 +510,6 @@ async def test_metrics_sobe_quando_metrics_enabled():
     finally:
         daemon.stop()
         await run_task
-        # O shutdown (connection.py) não para o metrics; encerra aqui para não
-        # vazar a thread do servidor HTTP entre os testes.
         await daemon._stop_metrics()
 
 

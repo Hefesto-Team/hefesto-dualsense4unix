@@ -1,46 +1,8 @@
-"""§P9 — o que esta aba esconde volta sozinho no próximo `show_all()` da janela.
-
-MEDIDO em 25/08/2026, e é a correção do mecanismo que a sprint supôs.
-
-**O que a sprint dizia** (PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/9): trocar o
-"Aplica a:" de "Jogo da Steam" para "Steam" deixaria a lista de outros marcados
-mostrando N-1. **Não reproduz** — e a razão é boa: `profile_steam_input_outros`
-é FILHO de `profile_steam_input_box`, e a troca de escolha chama
-`_mostrar_caixa_do_steam_input(False)`, que esconde o pai inteiro. A lista
-desatualizada existe, e ninguém a vê.
-
-**O que reproduz, e é pior:** o esconder não dura. Os três widgets que esta aba
-revela fazem `set_no_show_all(False)` para aparecer — a cura da
-CAMPO-QUE-NAO-NASCIA-01 — e **nunca rearmavam** ao esconder. O desarme é
-permanente, e `app.py:show_window()`::
-
-    def show_window(self) -> None:
-        \"\"\"Traz a janela para a frente (SIGUSR1, tray, notificação).\"\"\"
-        ...
-        self.window.show_all()
-
-chama `show_all()` na JANELA — o que reexibe todo widget sem `no_show_all`
-armado. Resultado, com o gesto mais banal do mundo (escolher "Jogo da Steam",
-voltar para "Sempre", e trazer a janela pela bandeja): **a caixinha do Steam
-Input reaparece sob um "Aplica a:" que não é jogo da Steam**, com a lista de
-outros marcados de outra escolha e um rótulo de exigência vazio.
-
-**O molde certo já estava no mesmo arquivo, uma seção acima:**
-`_sync_mode_options_visibility` faz `set_no_show_all(not is_gamepad)` — arma e
-desarma. O glade também já dizia a intenção (`no-show-all: True` nos widgets).
-Faltava rearmar.
-
-O `_Widget` deste arquivo imita a doutrina do GTK que importa aqui: `show_all()`
-IGNORA quem está com `no_show_all` armado, inclusive quando chamado no próprio
-widget (é essa a linha que a CAMPO-QUE-NAO-NASCIA-01 documentou).
-"""
+"""§P9 — o que esta aba esconde volta sozinho no próximo `show_all()` da janela."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
-# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
-# falso. Sem aquele plantio, a guarda vem antes do import da janela.
 exigir_gi_real("p9: o que a aba escondeu volta")
 
 from typing import Any
@@ -56,7 +18,6 @@ class _Widget:
         self.visivel = False
         self.filhos: list[Any] = []
 
-    # -- a API que o produto usa ------------------------------------------
     def set_no_show_all(self, valor: bool) -> None:
         self.no_show_all = bool(valor)
 
@@ -118,8 +79,6 @@ class _Aba(pa.ProfilesActionsMixin):  # type: ignore[misc]
     def _get(self, wid: str) -> Any:
         return self._widgets.get(wid)
 
-    # A da caixinha não é o objeto deste arquivo; a dos OUTROS é a de
-    # verdade, porque o esconder dela é uma das três curas medidas aqui.
     def _sincronizar_caixa_do_steam_input(self) -> None:
         return None
 
@@ -153,12 +112,7 @@ class TestACaixinhaDoSteamInputNaoVolta:
         assert aba.caixa.visivel is False
 
     def test_e_ela_continua_aparecendo_quando_deve(self) -> None:
-        """A cura da CAMPO-QUE-NAO-NASCIA-01 não pode ser desfeita por esta.
-
-        Esconder e escolher "Jogo da Steam" de novo tem de revelar a caixa —
-        se o rearme ficasse ligado, a caixinha nunca mais apareceria, que é um
-        defeito pior que o que este arquivo cura.
-        """
+        """A cura da CAMPO-QUE-NAO-NASCIA-01 não pode ser desfeita por esta."""
         aba = _Aba()
         aba._mostrar_caixa_do_steam_input(True)
         aba._mostrar_caixa_do_steam_input(False)
@@ -171,7 +125,7 @@ class TestACaixinhaDoSteamInputNaoVolta:
 class TestOsOutrosDoisWidgetsTambem:
     def test_a_lista_vazia_de_outros_nao_volta(self) -> None:
         aba = _Aba()
-        aba.outros.set_no_show_all(False)  # como fica depois de uma vez cheia
+        aba.outros.set_no_show_all(False)
         aba.outros.visivel = True
 
         aba._sincronizar_outros_marcados()

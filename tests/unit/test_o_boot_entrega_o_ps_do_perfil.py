@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-"""O BOOT ENTREGA O PS DO PERFIL — F1-REMAPEAR-02, 13/09/2026.
-
-O ACHADO veio lido pela F1-REMAPEAR e foi MEDIDO com dublê antes da cura:
-`daemon/connection.py::restore_last_profile` montava o `ProfileManager` à mão
-e sem o `ps_action_sink`. A ativação do boot rodava inteira, o perfil dava uma
-tecla ao PS, e `hotkey.definir_acao_do_ps` não era chamado nenhuma vez — a
-escolha só chegava ao `ps_solo` na primeira troca de perfil. Na base
-(`e1c7d96b`) o mesmo roteiro deste arquivo imprimiu
-`definir_acao_do_ps chamado com: []`.
-
-A CURA passa ao boot o MESMO canal que `profiles/manager.gerente_do_daemon`
-passa às outras rotas (`_canal_do_ps`), e mais nada: o `mouse_applier` e o
-`mode_applier` continuam `None` pelo BUG-BOOT-RESTORE-FLIPS-EMULATION-01.
-
-O DUBLÊ SABE AS DUAS RESPOSTAS: o perfil que dá uma tecla ao PS a entrega, e o
-perfil que não opina APAGA a do perfil de antes — o `None` é metade do
-contrato de `definir_acao_do_ps`.
-
-A MORDIDA: tire `ps_action_sink=_canal_do_ps(daemon)` do `restore_last_profile`
-e os três casos reprovam.
-"""
+"""O BOOT ENTREGA O PS DO PERFIL — F1-REMAPEAR-02, 13/09/2026."""
 from __future__ import annotations
 
 import asyncio

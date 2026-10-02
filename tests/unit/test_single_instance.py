@@ -1,17 +1,5 @@
 # ruff: noqa: E501
-"""Testes de single_instance (BUG-MULTI-INSTANCE-01 e BUG-TRAY-SINGLE-FLASH-01).
-
-Cobre:
-  - `acquire_or_takeover` cria pid file e adquire flock.
-  - `is_alive` reporta ESRCH como morto.
-  - Takeover envia SIGTERM ao predecessor (um processo de verdade) e vence o
-    lock.
-  - Pid órfão (processo já morto) é sobrescrito sem SIGTERM.
-  - `acquire_or_bring_to_front` chama callback com PID do predecessor, não envia
-    SIGTERM e retorna None quando predecessor permanece vivo.
-  - `_is_hefesto_dualsense4unix_process` distingue daemon/GUI legítimos de PIDs reciclados
-    (AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01).
-"""
+"""Testes de single_instance (BUG-MULTI-INSTANCE-01 e BUG-TRAY-SINGLE-FLASH-01)."""
 from __future__ import annotations
 
 import os
@@ -25,10 +13,6 @@ import pytest
 
 from hefesto_dualsense4unix.utils import single_instance
 
-# O predecessor destes testes nasce por `subprocess`, e não por `os.fork()`: o
-# pytest roda com threads, e o CPython avisa que `fork()` depois de criar thread
-# pode deixar o filho em deadlock. O que os testes precisam do predecessor é PID
-# real, pid file real e morte por sinal — um interpretador novo entrega os três.
 _FILHO_QUE_SEGURA_O_LOCK = (
     "import sys, time\n"
     "from hefesto_dualsense4unix.utils import single_instance\n"
@@ -38,8 +22,6 @@ _FILHO_QUE_SEGURA_O_LOCK = (
 
 _FILHO_OCIOSO = "import time\ntime.sleep(30)\n"
 
-# Generoso de propósito: o filho é um interpretador novo e importa o pacote
-# inteiro antes de escrever o pid file.
 ESPERA_MAXIMA_PELO_LOCK_SEC = 20.0
 
 
@@ -56,11 +38,7 @@ def _subir_filho_ocioso() -> subprocess.Popen[bytes]:
 
 
 def _subir_filho_com_lock(nome: str, pid_file: Path) -> subprocess.Popen[bytes]:
-    """Sobe um processo real que adquire o lock `nome` e fica vivo até morrer.
-
-    Só devolve depois que o pid file traz o PID do filho — o pid file É o
-    sinal de prontidão, e sem ele o pai faria takeover de ninguém.
-    """
+    """Sobe um processo real que adquire o lock `nome` e fica vivo até morrer."""
     filho = subprocess.Popen([sys.executable, "-c", _FILHO_QUE_SEGURA_O_LOCK, nome])
     limite = time.monotonic() + ESPERA_MAXIMA_PELO_LOCK_SEC
     while time.monotonic() < limite:
@@ -75,29 +53,16 @@ def _subir_filho_com_lock(nome: str, pid_file: Path) -> subprocess.Popen[bytes]:
 
 @pytest.fixture
 def isolated_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redireciona $XDG_RUNTIME_DIR para tmp_path; isola pid files.
-
-    O berço é 0700 porque a especificação XDG exige esse modo do runtime dir, e
-    o `platformdirs` 4.12 passou a conferir: com outro modo ele recusa o berço
-    e cai no `/run/user/<uid>` DE VERDADE, onde mora o `daemon.pid` do Hefesto
-    de quem roda a suíte. Medido no CI de 27/09/2026 (corrida 36354426805,
-    `platformdirs` 4.12.0, umask 022): os pid files dos sete testes foram para o
-    `/run/user/1001` do runner, e o `acquire_or_takeover("daemon")` numa
-    máquina com o daemon de pé leria o PID dele como predecessor e o mataria.
-    """
+    """Redireciona $XDG_RUNTIME_DIR para tmp_path; isola pid files."""
     target = tmp_path / "runtime"
     target.mkdir()
     target.chmod(0o700)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(target))
-    # platformdirs cacheia o valor em módulo — reimporta para pegar novo env.
     import importlib
 
     from hefesto_dualsense4unix.utils import xdg_paths as xdg
     importlib.reload(xdg)
     importlib.reload(single_instance)
-    # A guarda vale para qualquer versão do platformdirs: se o berço for
-    # recusado por outra razão, o teste para aqui, antes de um pid file ou um
-    # sinal sair da árvore do teste.
     resolvido = xdg.runtime_dir()
     assert resolvido.parent == target, (
         f"o runtime resolveu para {resolvido}, fora do berço {target}: os pid "
@@ -138,8 +103,6 @@ def test_takeover_mata_predecessor(
     isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Filho adquire lock, pai faz takeover; filho recebe SIGTERM e sai."""
-    # O dublê mantém o teste no fluxo de takeover; a heurística de detecção tem
-    # portão próprio nos `test_is_hefesto_dualsense4unix_process_*`.
     monkeypatch.setattr(
         single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: True
     )
@@ -151,8 +114,6 @@ def test_takeover_mata_predecessor(
         assert own == os.getpid()
         assert pid_file.read_text().strip() == str(own)
 
-        # O filho dorme 30s: sair em menos que isso, e por sinal, só acontece
-        # se o takeover o tiver derrubado.
         codigo = filho.wait(timeout=10)
         assert codigo in (-signal.SIGTERM, -signal.SIGKILL), (
             f"filho não saiu por sinal do takeover: código {codigo}"
@@ -164,22 +125,13 @@ def test_takeover_mata_predecessor(
 
 
 def test_release_sem_acquire_e_noop(isolated_runtime: Path) -> None:
-    # Não deve levantar.
     single_instance.release("nao_adquirido")
 
 
 def test_bring_to_front_chama_callback(
     isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Filho adquire lock; pai detecta predecessor vivo, chama callback e retorna None.
-
-    Verifica:
-      - O callback é invocado com o PID correto do filho (predecessor).
-      - O filho NÃO recebe SIGTERM (permanece vivo após acquire_or_bring_to_front).
-      - O retorno do pai é None (indica que o predecessor foi preservado).
-    """
-    # Mesmo dublê do test_takeover_mata_predecessor: o alvo aqui é o fluxo de
-    # bring-to-front, não a heurística de detecção.
+    """Filho adquire lock; pai detecta predecessor vivo, chama callback e retorna None."""
     monkeypatch.setattr(
         single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: True
     )
@@ -193,35 +145,25 @@ def test_bring_to_front_chama_callback(
 
         def _callback(pid: int) -> None:
             callback_pids.append(pid)
-            # Não faz nada além de registrar — simula xdotool ausente.
 
         result = single_instance.acquire_or_bring_to_front(
             "gui-btf",
             bring_to_front_cb=_callback,
-            fallback_takeover_after_sec=0.5,  # prazo curto para o teste ser rápido
+            fallback_takeover_after_sec=0.5,
         )
 
-        # O filho deve ainda estar vivo (não recebeu SIGTERM).
         assert single_instance.is_alive(filho.pid), (
             "predecessor morreu — bring-to-front errou"
         )
 
-        # Callback deve ter sido chamado com o PID do filho.
         assert callback_pids == [filho.pid], (
             f"callback não chamado corretamente: {callback_pids}"
         )
 
-        # Retorno deve ser None — indica que o predecessor foi preservado.
         assert result is None, f"esperado None, obtido {result}"
     finally:
         _encerrar(filho)
         single_instance.release("gui-btf")
-
-
-# -----------------------------------------------------------------------------
-# AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01
-# Defesa em profundidade contra reciclagem de PID.
-# -----------------------------------------------------------------------------
 
 
 def test_is_hefesto_dualsense4unix_process_comm_ok(
@@ -305,18 +247,13 @@ def test_takeover_ignora_pid_reciclado(
     pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "daemon.pid"
     pid_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # O predecessor tem de ser outro processo VIVO: com o PID do próprio pytest o
-    # fluxo pula na guarda `predecessor != os.getpid()` e o teste não mediria nada.
     filho = _subir_filho_ocioso()
     orig_kill = os.kill
     try:
         pid_file.write_text(f"{filho.pid}\n")
 
-        # Mock: o filho NÃO é hefesto-dualsense4unix (simula reciclagem).
         monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: False)
 
-        # Spy em os.kill SOMENTE para capturar sinais letais; `os.kill(pid, 0)`
-        # é a sonda do `is_alive` e tem de continuar chegando ao kernel.
         kills_real: list[tuple[int, int]] = []
 
         def spy(pid: int, sig: int) -> None:
@@ -330,11 +267,9 @@ def test_takeover_ignora_pid_reciclado(
         own = single_instance.acquire_or_takeover("daemon")
         assert own == os.getpid()
 
-        # Nenhum SIGTERM/SIGKILL deve ter sido enviado ao filho.
         assert not any(pid == filho.pid for pid, _ in kills_real), \
             f"SIGTERM enviado a PID reciclado: {kills_real}"
 
-        # Pid file sobrescrito com PID atual.
         assert pid_file.read_text().strip() == str(own)
     finally:
         monkeypatch.setattr(os, "kill", orig_kill)
@@ -349,7 +284,6 @@ def test_takeover_mata_predecessor_hefesto(
     pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "gui-hef.pid"
     filho = _subir_filho_com_lock("gui-hef", pid_file)
     try:
-        # Força `_is_hefesto_dualsense4unix_process` a reportar True (simula predecessor legítimo).
         monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: True)
 
         own = single_instance.acquire_or_takeover("gui-hef")
@@ -369,7 +303,6 @@ def test_terminate_predecessor_pid_reciclado_nao_sinaliza(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`_terminate_predecessor` com PID vivo não-hefesto-dualsense4unix: early-return sem SIGTERM/SIGKILL."""
-    # PID existe (probe) mas não é hefesto-dualsense4unix.
     monkeypatch.setattr(single_instance, "is_alive", lambda pid: True)
     monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: False)
     monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: "firefox")
@@ -383,7 +316,6 @@ def test_terminate_predecessor_pid_reciclado_nao_sinaliza(
 
     single_instance._terminate_predecessor(12345)
 
-    # Nenhum kill foi chamado (nem SIGTERM, nem probe — usamos mock de is_alive).
     assert sinais == [], f"_terminate_predecessor sinalizou PID reciclado: {sinais}"
 
 
@@ -410,13 +342,11 @@ def test_read_existing_pid_oserror_retorna_none(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`_read_existing_pid` tratamento de OSError não-FileNotFound (ex: ENOTDIR)."""
-    # Path que aponta pra algo não-legível: cria arquivo sem permissão.
     pid_file = tmp_path / "bloqueado.pid"
     pid_file.write_text("1234\n")
     pid_file.chmod(0o000)
     try:
         result = single_instance._read_existing_pid(pid_file)
-        # Em usuário root a leitura pode passar (retorna 1234); em user comum retorna None.
         assert result in (None, 1234)
     finally:
         pid_file.chmod(0o644)
@@ -447,7 +377,6 @@ def test_bring_to_front_ignora_pid_reciclado(
         pid_file.parent.mkdir(parents=True, exist_ok=True)
         pid_file.write_text(f"{filho.pid}\n")
 
-        # Simula reciclagem.
         monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: False)
 
         callback_pids: list[int] = []
@@ -461,13 +390,10 @@ def test_bring_to_front_ignora_pid_reciclado(
             fallback_takeover_after_sec=0.5,
         )
 
-        # Callback NÃO deve ter sido invocado (predecessor não é hefesto-dualsense4unix).
         assert callback_pids == [], f"callback invocado para PID reciclado: {callback_pids}"
 
-        # Resultado: adquire lock normalmente (getpid).
         assert result == os.getpid()
 
-        # Pid file sobrescrito.
         assert pid_file.read_text().strip() == str(os.getpid())
     finally:
         _encerrar(filho)

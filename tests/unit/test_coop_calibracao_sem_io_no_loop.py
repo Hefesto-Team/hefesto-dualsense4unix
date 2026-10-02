@@ -1,27 +1,4 @@
-"""R-22 (auditoria 23/07): a calibração 0x05 sai da thread do event loop.
-
-O bug: `coop._promote_player` lia o feature 0x05 do controle DENTRO do poll
-loop. Essa leitura abre o socket do broker (2s de timeout por tentativa) e faz
-`HIDIOCGFEATURE` no hidraw (BT ocioso segura até o timeout de 5s do hidp antes
-do EIO). Enquanto durava, o loop não despachava `forward_all` nem o IPC — o
-input dos QUATRO jogadores e a GUI congelavam por segundos, sem log nenhum
-("bug não notado" da queixa 5 da mantenedora).
-
-O que estes testes provam, sem hardware:
-
-- promover um jogador NA THREAD DO EVENT LOOP não chama `read_calibration` ali
-  (roda no executor dedicado do broker) e retorna em milissegundos mesmo com a
-  leitura demorando ~1s;
-- a promoção ADIA (jogador segue sem vpad, como no grab pendente) e o tick
-  seguinte cria o vpad com a calibração CERTA — o GYRO-01 não é sacrificado
-  pelo desbloqueio do loop;
-- o cache é por MAC e imutável: a segunda promoção do mesmo controle não
-  repaga a leitura;
-- prazo estourado (rádio mudo) faz o jogador NASCER com o 0x05 canônico —
-  ninguém fica sem controle esperando I/O;
-- fora do event loop (testes/`_run_blocking`/shutdown) o comportamento
-  síncrono de antes é preservado.
-"""
+"""R-22 (auditoria 23/07): a calibração 0x05 sai da thread do event loop."""
 from __future__ import annotations
 
 import asyncio
@@ -116,8 +93,6 @@ def cenario(monkeypatch: pytest.MonkeyPatch) -> Any:
 
     def _montar(controller: _FakeController) -> Any:
         daemon = _FakeDaemon(controller)
-        # Executor do broker explícito: o mesmo que `broker_executor_for`
-        # encontraria, mas com desligamento determinístico no fim do teste.
         daemon._hidraw_broker_executor = ThreadPoolExecutor(  # type: ignore[attr-defined]
             max_workers=1, thread_name_prefix="teste-broker"
         )
@@ -154,12 +129,7 @@ class TestCalibracaoForaDoLoop:
     def test_promocao_no_event_loop_nao_paga_a_leitura_ali(
         self, cenario: Any
     ) -> None:
-        """A leitura NÃO roda na thread do loop, e a promoção volta na hora.
-
-        Este é o teste que pega a regressão do R-22: com a leitura inline (o
-        código de antes) a chamada demoraria ~1s NA thread do event loop e o
-        nome da thread anotado seria o da própria thread do loop.
-        """
+        """A leitura NÃO roda na thread do loop, e a promoção volta na hora."""
         ctx = cenario(_FakeController(atraso=1.0))
 
         async def _no_loop() -> tuple[float, str]:
@@ -169,12 +139,9 @@ class TestCalibracaoForaDoLoop:
 
         gasto, thread_do_loop = asyncio.run(_no_loop())
 
-        # 1) O loop não ficou preso pela leitura lenta.
         assert gasto < 0.3, f"promoção bloqueou o event loop por {gasto:.2f}s"
-        # 2) A promoção ADIOU: sem vpad, sem factory chamada.
         assert ctx.player.vpad is None
         assert ctx.capturas == []
-        # 3) A leitura foi paga por OUTRA thread (o executor do broker).
         _drenar(ctx)
         assert ctx.daemon.controller.pedidos == 1
         assert ctx.daemon.controller.threads[0] != thread_do_loop
@@ -183,19 +150,14 @@ class TestCalibracaoForaDoLoop:
     def test_tick_seguinte_promove_com_a_calibracao_certa(
         self, cenario: Any
     ) -> None:
-        """Adiar não sacrifica o GYRO-01: o vpad nasce com o 0x05 da unidade.
-
-        Atraso pequeno de propósito: sem ele o executor pode terminar ANTES de
-        `_calibration_pronta` reconsultar o cache (caminho legítimo — HIT já no
-        primeiro tick), e o teste não exercitaria o adiamento.
-        """
+        """Adiar não sacrifica o GYRO-01: o vpad nasce com o 0x05 da unidade."""
         ctx = cenario(_FakeController(atraso=0.05))
 
         async def _dois_ticks() -> None:
-            ctx.manager._promote_player(ctx.player)  # miss: agenda e adia
+            ctx.manager._promote_player(ctx.player)
             assert ctx.player.vpad is None
             _drenar(ctx)
-            ctx.manager._promote_pending()  # tick seguinte: cache quente
+            ctx.manager._promote_pending()
 
         asyncio.run(_dois_ticks())
         assert ctx.player.vpad is not None
@@ -209,7 +171,6 @@ class TestCalibracaoForaDoLoop:
             ctx.manager._promote_player(ctx.player)
             _drenar(ctx)
             ctx.manager._promote_pending()
-            # Respawn do MESMO controle (node novo / troca de máscara).
             ctx.manager._teardown_player(_MAC)
             novo = coop_mod._SecondaryPlayer(
                 identity=_MAC,
@@ -219,7 +180,7 @@ class TestCalibracaoForaDoLoop:
             )
             ctx.manager._players[_MAC] = novo
             ctx.manager._promote_player(novo)
-            assert novo.vpad is not None  # HIT: nem adiou
+            assert novo.vpad is not None
 
         asyncio.run(_promove_duas_vezes())
         assert ctx.daemon.controller.pedidos == 1
@@ -233,9 +194,9 @@ class TestCalibracaoForaDoLoop:
         ctx = cenario(_FakeController(atraso=0.5))
 
         async def _dois_ticks() -> None:
-            ctx.manager._promote_player(ctx.player)  # adia (prazo já vencido…)
+            ctx.manager._promote_player(ctx.player)
             assert ctx.player.vpad is None
-            ctx.manager._promote_pending()  # …e o tick seguinte desiste
+            ctx.manager._promote_pending()
 
         asyncio.run(_dois_ticks())
         assert ctx.player.vpad is not None
@@ -288,12 +249,7 @@ class TestCalibracaoForaDoLoop:
         assert ctx.daemon.controller.pedidos == 0
 
     def test_fora_do_loop_segue_sincrono(self, cenario: Any) -> None:
-        """`_run_blocking`/shutdown/testes: o valor volta na mesma chamada.
-
-        O R-22 é sobre a thread do event loop; fora dela a leitura inline nunca
-        foi problema e o contrato antigo (`_read_player_calibration` devolve os
-        bytes na hora) continua valendo.
-        """
+        """`_run_blocking`/shutdown/testes: o valor volta na mesma chamada."""
         ctx = cenario(_FakeController())
         assert ctx.manager._read_player_calibration(_MAC) == _CALIB
         ctx.manager._promote_player(ctx.player)

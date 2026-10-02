@@ -1,10 +1,4 @@
-"""Forma do modprobe.d do btusb (PLAT-04 item 1: BT no máximo).
-
-Estudo 2026-07-18-estudo-bt-maximo.md §3/§7: o btusb LIGA o USB autosuspend do
-adaptador no probe (``enable_autosuspend`` default Y — provado por modinfo).
-O asset ``assets/modprobe.d/hefesto-btusb-no-autosuspend.conf`` corta na raiz,
-inclusive para adaptadores composite (classe ef) que escapam da regra udev 81.
-"""
+"""Forma do modprobe.d do btusb (PLAT-04 item 1: BT no máximo)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,7 +8,6 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONF_PATH = REPO_ROOT / "assets" / "modprobe.d" / "hefesto-btusb-no-autosuspend.conf"
 
-# A linha canônica — contrato com o kernel (modinfo btusb: parm bool).
 EXPECTED_OPTION = "options btusb enable_autosuspend=0"
 
 
@@ -47,7 +40,6 @@ def test_cabecalho_marca_origem_e_reversao(conf_text: str) -> None:
 
 
 def test_explica_o_furo_composite(conf_text: str) -> None:
-    # A razão de existir além da regra udev: adaptadores composite (classe ef).
     assert "ef" in conf_text and "composite" in conf_text.lower(), (
         "documentar que cobre adaptadores composite (classe ef) que escapam "
         "da regra udev por classe e0"

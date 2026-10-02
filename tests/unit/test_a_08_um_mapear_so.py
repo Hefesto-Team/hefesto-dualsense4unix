@@ -1,69 +1,4 @@
-"""Um mapear só — A-08-UM-MAPEAR-SO-01 (25/09/2026).
-
-O pedido dela: *«mapear entradas e mapear entrada a entrada. […] Dava pra ser
-um botão só né?»* e *«Use um controle do dualsense (o mesmo), vá de porta em
-porta conectando ele, carrega a informação que medimos, aí ele salva,
-adiciona um nome e adiciona o posicionamento»*. <!-- noqa-acento: citação literal dela -->
-
-O QUE ESTA RÉGUA COBRA, no ``/sys`` de mentira da ENTRADA-A-ENTRADA-02 (o
-``Gabinete``, lido pelos leitores DE VERDADE — ``ler_o_barramento`` e
-``listar_entradas``), com uma porta de cada tipo:
-
-* ``1-5`` — do computador, só USB 2.0;
-* ``1-1`` — do computador, USB 3.0 (os dois nós do buraco, pelo ``peer``);
-* ``3-4.2`` — atrás do hub de dois chips (``3-4``/``4-4``), 3.0;
-* ``3-4.1`` — o dongle Bluetooth, com cinco -71 no log;
-* ``3-2`` — o Bluetooth da placa, num conector interno (``hardwired``).
-
-1. **o mesmo controle de porta em porta**: cada porta que ele mostra chega com
-   o medido, e gravar nome e lugar dá número, face e amarra numa gravação só;
-2. **a leitura pelo nome único** (``ler_o_mapa``): o declarado e o medido de
-   cada porta, as ocupadas sem número incluídas;
-3. **a revisita é o mesmo fluxo e não apaga**: renomear e reposicionar trocam
-   SÓ o que ela trocou — a MORDIDA da sprint;
-4. **um gravador só**: toda escrita do dono passa por ``_gravar_no_mapa`` — a
-   outra MORDIDA da sprint;
-5. **o lugar é universal**, e a face que ela já tinha continua aceita.
-
-AS MORDIDAS (arranque a cura, veja reprovar, devolva):
-
-* :func:`test_a_revisita_so_troca_o_que_ela_trocou` — faça o ramo da revisita
-  de ``_gravar_a_porta`` (o hub desligado) começar as faces de ``[]`` e as
-  outras faces somem do disco;
-* :func:`test_um_gravador_so_no_dono` — ponha um ``self._gravar({...})`` direto
-  em qualquer método, ou um ``Path(…).write_text`` cru, e ela reprova;
-* :func:`test_o_controle_que_ja_estava_no_cabo_nao_e_a_porta_da_vez` — troque
-  o ``nos not in self._antes`` de ``MapearAsPortas.olhar`` por ``agora[:1]`` e a
-  porta da vez vira o controle que já estava no cabo;
-* :func:`test_a_revisita_so_troca_o_que_ela_trocou` (a segunda) — troque o
-  ``nome is not None`` de ``_gravar_as_portas`` por nada e reposicionar apaga
-  o nome;
-* :func:`test_cada_porta_diz_o_que_o_metal_e` — troque o ``hardwired`` do
-  Bluetooth da placa por ``hotplug`` e o nativo vira dongle;
-* :func:`test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma` — parta a
-  gravação de ``_gravar_as_portas`` em duas (as faces numa, as portas noutra)
-  e o gesto deixa de ser UMA gravação;
-* :func:`test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle` — devolva o
-  ``else BLUETOOTH_DONGLE`` de antes (todo encaixe que não é ``hardwired`` vira
-  dongle) e o rádio numa entrada ``unknown`` vira dongle; troque o ``return
-  BLUETOOTH_DONGLE if degraus…`` por ``return ""`` e o dongle da mesa dela
-  (atrás do hub, tudo ``unknown``) vira "não sei"; tire o ``interno = True`` e
-  o que pende do hub interno vira dongle;
-* :func:`test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia` — tire o
-  ``and caminhos`` de ``fatos_do_buraco`` e o -71 da porta sem nó lido vira
-  zero. NOTA DATADA (28/09/2026): a mordida do laço dos lugares só nomeados
-  saiu com o laço — com um registro só (A-ENTRADA-TEM-UM-REGISTRO-SO-01), a
-  porta que ela só nomeia nasce entrada e vem no primeiro laço;
-* :func:`test_o_lugar_e_universal_e_o_dela_continua_aceito` — tire o ``+ dela``
-  dos lugares de ``ler_o_mapa`` e a face que ela já tem deixa de ser escolhível;
-* :func:`test_renomear_pela_lista_nao_troca_a_testemunha` — devolva o
-  ``porta.aparelho or …`` no caminho da porta nova, ou tire o ``or
-  da_vez``/``numero is None`` do ramo vivo, e o pendrive no lado 3.x vira o
-  buraco da porta. (A «testemunha» era a cópia do caminho em ``lugares``, que
-  saiu em 28/09/2026; o nome da régua fica para as citações.)
-
-Faixa sintética da casa: controladores ``0000:0a:00.0`` e ``0000:0b:00.0``.
-"""
+"""Um mapear só — A-08-UM-MAPEAR-SO-01 (25/09/2026)."""
 
 from __future__ import annotations
 
@@ -99,10 +34,8 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
 RAIZ = Path(__file__).resolve().parents[2]
 DONO = RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "entrada_a_entrada.py"
 
-#: O -71 que o log do kernel-watch daria: cinco no dongle.
 STORM = {"3-4.1": 5}
 
-#: Um aparelho que só existe no lado 3.x do buraco (classe de armazenamento).
 PENDRIVE = ("aa01", "0001", ("08", "06", "50"))
 
 
@@ -156,11 +89,6 @@ def _mapear_tres(gabinete: Gabinete, fluxo: ee.MapearAsPortas) -> None:
         fluxo.olhar()
 
 
-# ---------------------------------------------------------------------------
-# 1. o mesmo controle de porta em porta
-# ---------------------------------------------------------------------------
-
-
 def test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma(
     mesa: Gabinete, disco: Path
 ) -> None:
@@ -191,8 +119,6 @@ def test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma(
     assert documento.mapa.portas["1"].nos == ["usb1-port5"]
     assert documento.mapa.portas["2"].nos == ["usb1-port1", "usb2-port1"]
     assert documento.mapa.portas["3"].nos == ["3-4-port2", "4-4-port2"]
-    # Um registro por entrada (A-ENTRADA-TEM-UM-REGISTRO-SO-01): o lugar e o
-    # nome moram na entrada (D-2609-O-NOME-E-DA-POSICAO).
     assert documento.mapa.portas["1"].lugar == lugar_de(PCI_A, "5")
     assert documento.mapa.portas["1"].nome == "Frente de baixo"
     assert documento.mapa.portas["3"].lugar == lugar_de(PCI_B, "4.2")
@@ -239,11 +165,6 @@ def test_ela_tira_o_controle_antes_de_gravar_e_a_porta_continua_a_da_vez(
     assert carregar_maquina().mapa.portas["1"].caminho == "1-5"
 
 
-# ---------------------------------------------------------------------------
-# 2. a leitura pelo nome único
-# ---------------------------------------------------------------------------
-
-
 def test_cada_porta_diz_o_que_o_metal_e(mesa: Gabinete, disco: Path) -> None:
     fluxo = _fluxo(mesa)
     _mapear_tres(mesa, fluxo)
@@ -285,11 +206,6 @@ def test_a_raiz_desviada_nao_le_o_log_desta_maquina(mesa: Gabinete) -> None:
     assert all(p.storm is None for p in mapa.portas), "outra raiz: o -71 é não medido"
 
 
-# ---------------------------------------------------------------------------
-# 3. a revisita é o mesmo fluxo, e não apaga
-# ---------------------------------------------------------------------------
-
-
 def _sem(documento: dict[str, Any], *caminhos: tuple[str, ...]) -> dict[str, Any]:
     copia = json.loads(json.dumps(documento))
     for caminho in caminhos:
@@ -305,7 +221,6 @@ def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> No
     _mapear_tres(mesa, fluxo)
     antes = json.loads(disco.read_text(encoding="utf-8"))
 
-    # renomear pela lista, sem encaixar nada
     assert fluxo.gravar(chave="1", nome="Frente").gravou
     depois = json.loads(disco.read_text(encoding="utf-8"))
     lugar_1 = lugar_de(PCI_A, "5")
@@ -314,14 +229,12 @@ def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> No
         antes, ("mapa", "portas", "1", "nome")
     ), "renomear mexeu em mais do que o nome"
 
-    # reposicionar pela lista
     assert fluxo.gravar(chave="2", lugar=ee.LUGAR_TOPO).gravou
     faces = {f.nome: f.portas for f in carregar_maquina().mapa.faces}
     assert faces[ee.LUGAR_TOPO] == ["2"] and faces[ee.LUGAR_FRENTE] == ["1"]
     assert faces[ee.LUGAR_HUB] == ["3"]
     assert faces[ee.LUGAR_TRASEIRA] == [], "a face de antes fica, vazia — é o desenho dela"
 
-    # a revisita pelo controle: a porta chega com o que ela já disse
     mesa.plugar(1, "5", DUALSENSE)
     foto = fluxo.olhar()
     assert (foto["porta"]["numero"], foto["porta"]["nome"]) == ("1", "Frente")
@@ -331,7 +244,6 @@ def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> No
     assert documento.mapa.portas["1"].lugar == lugar_1, "a revisita não troca o número"
     assert documento.mapa.portas["3"].nos == ["3-4-port2", "4-4-port2"]
 
-    # o hub desligado: a porta 3 não está no /sys, e a revisita ainda vale
     mesa.tirar("3-4")
     mesa.tirar("4-4")
     antes = json.loads(disco.read_text(encoding="utf-8"))
@@ -374,11 +286,6 @@ def test_a_revisita_nao_apaga_o_que_o_laco_de_antes_gravou(
     assert hub_depois == hub_antes
 
 
-# ---------------------------------------------------------------------------
-# 4. um gravador só
-# ---------------------------------------------------------------------------
-
-#: Os nomes que ESCREVEM o ``maquina.json`` quando chamados.
 _GRAVADORES = frozenset(
     {
         "gravar",
@@ -391,17 +298,11 @@ _GRAVADORES = frozenset(
     }
 )
 
-#: As escritas cruas de arquivo — o ``maquina.json`` escrito à mão, sem o lock.
 _ESCRITAS_CRUAS = frozenset({"open", "write_text", "write_bytes", "dump", "replace", "rename"})
 
 
 def _gravadores() -> frozenset[str]:
-    """Os de hoje e TODO escritor público que nascer nos dois donos do disco.
-
-    A lista digitada acima envelheceria calada no dia em que ``utils/maquina``
-    ou ``lugar_declarado`` ganhassem um ``gravar_…`` novo; o que se deriva
-    deles não envelhece.
-    """
+    """Os de hoje e TODO escritor público que nascer nos dois donos do disco."""
     derivados = {
         nome
         for modulo in (utils_maquina, lugar_declarado)
@@ -458,11 +359,6 @@ def test_um_gravador_so_no_dono() -> None:
     assert not crus, f"uma escrita crua de arquivo no dono do mapa, fora do lock: {crus}"
 
 
-# ---------------------------------------------------------------------------
-# 5. o lugar é universal
-# ---------------------------------------------------------------------------
-
-
 def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Path) -> None:
     assert len(set(ee.LUGARES_DA_PORTA)) == len(ee.LUGARES_DA_PORTA) == 7
     for antigo in (ee.FACE_FRENTE, ee.FACE_ATRAS, ee.FACE_HUB):
@@ -474,9 +370,6 @@ def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Pat
     fluxo.olhar()
     with pytest.raises(ValueError):
         fluxo.gravar(nome="x", lugar="Na lua")
-    # NOTA DATADA (28/09/2026, A-ENTRADA-TEM-UM-REGISTRO-SO-01): o nome sem
-    # número morava em ``lugares``; com um registro só, a porta que ela só
-    # nomeia nasce entrada, com o menor número livre e FORA de toda face.
     so_o_nome = fluxo.gravar(nome="só o nome, porta nova")
     assert so_o_nome.gravou and so_o_nome.entrada == "1" and so_o_nome.face == ""
     documento = carregar_maquina()
@@ -493,23 +386,10 @@ def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Pat
         fluxo.gravar(chave="99", nome="não existe")
 
 
-# ---------------------------------------------------------------------------
-# 6. o que ela só nomeou também é do mapa (conferência, 25/09/2026)
-# ---------------------------------------------------------------------------
-
-
 def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
     mesa: Gabinete, disco: Path
 ) -> None:
-    """O nome dado a uma porta sem número fica com a porta, e o Mapear o renomeia.
-
-    Desde 28/09/2026 (A-ENTRADA-TEM-UM-REGISTRO-SO-01) a porta nomeada nasce
-    entrada, fora de toda face; o nome morava em ``lugares``.
-
-    Ela pediu que o mesmo botão renomeie *«as entradas já mapeadas ou
-    identificadas»*: o dongle que ela nomeou é identificado, e continua dela
-    com o dongle fora da porta. <!-- noqa-acento: citação literal dela -->
-    """
+    """O nome dado a uma porta sem número fica com a porta, e o Mapear o renomeia."""
     lugar_do_dongle = lugar_de(PCI_B, "4.1")
     fluxo = _fluxo(mesa)
     fluxo.comecar()
@@ -528,13 +408,8 @@ def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
     sem_o_hub = ee.ler_o_mapa(
         censo=mesa.ler(), entradas=mesa.entradas(), storm=STORM, adaptadores=()
     ).porta(lugar_do_dongle)
-    # a porta nomeada é entrada, e guarda o buraco que o Mapear leu: com o hub
-    # desligado nada foi lido, e o -71 que o log deste boot deu ao caminho
-    # dela continua dela
     assert sem_o_hub is not None and sem_o_hub.nos == ("3-4-port1", "4-4-port1")
     assert (sem_o_hub.ocupada, sem_o_hub.usb, sem_o_hub.storm) == (None, "", 5)
-    # sem nó nenhum (o «Não alcanço» atrás do hub desligado), o log não tem a
-    # quem ser atribuído
     vaga = lugar_de(PCI_B, "4.3")
     assert declarar_a_maquina({"mapa": {"fora": [vaga]}}).gravou
     sem_no = ee.ler_o_mapa(
@@ -554,16 +429,7 @@ def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
 
 
 def test_so_o_nome_nao_desfaz_o_nao_alcanco(mesa: Gabinete, disco: Path) -> None:
-    """O nome dado à porta do «Não alcanço», sem o «onde fica», não prova o
-    buraco: a porta vira entrada com o nome, e o «Não alcanço» fica — a regra
-    da revisita pela lista (``test_renomear_pela_lista_nao_troca_a_testemunha``),
-    agora para a porta que ainda não tinha número. Até 28/09/2026 esse nome ia
-    para ``lugares[L].nome`` e o ``fora`` do lugar nem era tocado.
-
-    MORDIDA: tire o ``face is not None`` da saída do «Não alcanço» em
-    ``_gravar_as_portas`` — só o nome desfaz o «Não alcanço», e esta régua
-    reprova.
-    """
+    """O nome dado à porta do «Não alcanço», sem o «onde fica», não prova o"""
     vaga = lugar_de(PCI_B, "4.3")
     fluxo = _fluxo(mesa)
     fluxo.comecar()
@@ -624,8 +490,6 @@ def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None
     assert no_hub_interno is not None and no_hub_interno.bluetooth == "", (
         "o hub interno hospeda o rádio da placa E o painel da frente: não sei"
     )
-    # a mesa dela, medida em 25/09: toda entrada diz unknown, e os rádios estão
-    # atrás do hub da mesa — o rádio da placa não mora atrás de hub
     na_mesa_dela = mapa.porta(lugar_de(PCI_A, "5.1"))
     assert na_mesa_dela is not None and na_mesa_dela.bluetooth == junta.BLUETOOTH_DONGLE
     hub = mapa.porta(lugar_de(PCI_B, "4"))
@@ -642,7 +506,6 @@ def test_renomear_pela_lista_nao_troca_a_testemunha(mesa: Gabinete, disco: Path)
     fluxo = _fluxo(mesa)
     _mapear_tres(mesa, fluxo)
     mesa.plugar(2, "1", PENDRIVE)
-    # o «Não alcanço» que ela deu um dia fica: renomear não é o cabo provando
     assert declarar_a_maquina({"mapa": {"fora": [lugar_de(PCI_A, "1")]}}).gravou
     antes = json.loads(disco.read_text(encoding="utf-8"))
 
@@ -658,8 +521,6 @@ def test_renomear_pela_lista_nao_troca_a_testemunha(mesa: Gabinete, disco: Path)
     assert depois["mapa"]["portas"]["2"]["nome"] == "Atrás, a de cima"
     assert depois["mapa"]["fora"] == [lugar_2], "renomear desfez o «Não alcanço»"
 
-    # e a porta nova tocada pela lista, com o pendrive só no lado 3.x, também
-    # amarra pelo lado 2.0
     mesa.plugar(4, "3", PENDRIVE)
     assert fluxo.gravar(chave=lugar_de(PCI_B, "3"), lugar=ee.LUGAR_LATERAL).gravou
     documento = carregar_maquina()

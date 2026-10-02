@@ -1,34 +1,8 @@
-"""P10 — quatro caminhos desta aba não tinham UMA mordida.
-
-PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/10 (24/08/2026), medido assim:
-
-    $ for f in on_profile_remove on_profile_duplicate _ao_tirar_outro_marcado \\
-               _refazer_as_abas_apos_ativar; do
-        echo "$f -> $(grep -rl "$f" tests/ | wc -l)"; done
-    on_profile_remove            -> 0
-    on_profile_duplicate         -> 0
-    _ao_tirar_outro_marcado      -> 0
-    _refazer_as_abas_apos_ativar -> 0
-
-Zero cada um. **Remover** apaga arquivo dela. **Duplicar** já foi quebrado uma
-vez pela MASCARA-QUE-GRUDA-01. O **"Tirar"** escreve na allowlist da Steam. E o
-**refazer das seis abas** é o mais caro dos quatro: é ele que reconstrói
-Lightbar, Gatilhos, Rumble, Navegação, Início e Emulação a cada ativação, e é
-o motivo de esta onda vir DEPOIS das quatro que decidem contrato.
-
-Cada teste daqui morde uma invariante que hoje só existe em COMENTÁRIO. A
-docstring de cada um diz qual linha do produto arrancar para vê-lo reprovar.
-"""
+"""P10 — quatro caminhos desta aba não tinham UMA mordida."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): a guarda vem ANTES de qualquer
-# import da janela. Este arquivo plantava um `gi` falso no topo com o marcador
-# `skip_sem_gi_real`, que pula o teste e não a importação: sem o GTK, a coleta
-# deixava 16 módulos da janela construídos sobre a mentira para o arquivo
-# seguinte. Agora ele pula inteiro onde não há GTK real, e com o GTK real não
-# havia o que plantar.
 exigir_gi_real("p10: os quatro caminhos da aba Perfis")
 
 from typing import Any
@@ -43,8 +17,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: O perfil-fonte do "Duplicar": tem cor e tem regra, e as duas TÊM de viajar.
-#: A MASCARA-QUE-GRUDA-01 já quebrou este caminho uma vez.
 SACKBOY = Profile(
     name="Sackboy",
     match=MatchCriteria(window_class=["steam_app_1599660"]),
@@ -101,18 +73,9 @@ class _Aba(pa.ProfilesActionsMixin):  # type: ignore[misc]
         self.toasts.append(msg)
 
 
-# ---------------------------------------------------------------------------
-# 1. Remover — apaga ARQUIVO dela, e tinha zero teste
-# ---------------------------------------------------------------------------
-
-
 class TestRemover:
     def test_cancelar_nao_toca_o_disco(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """MORDE a confirmação (BUG-DELETE-NO-CONFIRM-01).
-
-        Arranque o `if not gui_dialogs.confirm_delete_profile(...)` e o perfil
-        dela some com um clique só, sem uma palavra.
-        """
+        """MORDE a confirmação (BUG-DELETE-NO-CONFIRM-01)."""
         aba = _Aba()
         apagados: list[str] = []
         monkeypatch.setattr(
@@ -128,12 +91,7 @@ class TestRemover:
     def test_confirmar_apaga_e_avisa_o_daemon(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O `launch_env` do perfil apagado tem de sumir junto (DEDUP-04).
-
-        Arranque o `_notify_launch_env_refresh` do fim e o `steam_app_<id>.env`
-        do perfil morto fica rançoso no disco — o primeiro lançamento seguinte
-        do jogo lê um bilhete de um perfil que não existe mais.
-        """
+        """O `launch_env` do perfil apagado tem de sumir junto (DEDUP-04)."""
         aba = _Aba()
         apagados: list[str] = []
         monkeypatch.setattr(
@@ -150,14 +108,7 @@ class TestRemover:
     def test_o_alvo_do_salvar_nao_e_zerado_e_isso_e_decisao_medida(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """NUNCA-TROCA-O-ALVO-01: a decisão foi medida, e este teste a trava.
-
-        Zerar `_alvo_do_salvar` aqui faz o alvo cair no fallback (a linha
-        selecionada), que depois da recarga é OUTRO perfil — e um Salvar em
-        seguida viraria um RENAME dele, com o diálogo do R-10 se oferecendo
-        para apagá-lo. O comentário de `on_profile_remove` explica; nada
-        travava. Agora trava.
-        """
+        """NUNCA-TROCA-O-ALVO-01: a decisão foi medida, e este teste a trava."""
         aba = _Aba()
         monkeypatch.setattr(
             gui_dialogs, "confirm_delete_profile", lambda parent, name, aviso=None: True
@@ -200,19 +151,9 @@ class TestRemover:
         assert aba.toasts == ["Selecione um perfil para remover"]
 
 
-# ---------------------------------------------------------------------------
-# 2. Duplicar — as TRÊS invariantes que só existiam em comentário
-# ---------------------------------------------------------------------------
-
-
 class TestDuplicar:
     def test_a_fonte_inteira_viaja_e_nao_so_o_nome(self) -> None:
-        """MORDE o BUG-DUPLICATE-NO-CONFIG-COPY-01.
-
-        Arranque o `self._duplicate_source = self._find_cached_profile(name)`
-        e a cópia muda só o nome: gatilhos, lightbar, LEDs e o resto viram
-        default. É perda da configuração REAL dela, calada.
-        """
+        """MORDE o BUG-DUPLICATE-NO-CONFIG-COPY-01."""
         aba = _Aba()
         aba.on_profile_duplicate(None)
 
@@ -228,12 +169,7 @@ class TestDuplicar:
         assert aba._new_profile is False
 
     def test_o_salvar_deixa_de_mirar_a_fonte_no_mesmo_instante(self) -> None:
-        """MORDE a linha mais perigosa das três (NUNCA-TROCA-O-ALVO-01).
-
-        A cópia vai para um arquivo NOVO. Arranque o `_alvo_do_salvar = None`
-        e o próximo Salvar grava por cima do perfil-FONTE — que é o perfil
-        que ela quis preservar ao clicar em Duplicar.
-        """
+        """MORDE a linha mais perigosa das três (NUNCA-TROCA-O-ALVO-01)."""
         aba = _Aba()
         assert aba._alvo_do_salvar == "Sackboy"
         aba.on_profile_duplicate(None)
@@ -252,22 +188,11 @@ class TestDuplicar:
         assert aba.toasts == ["Selecione um perfil para duplicar"]
 
 
-# ---------------------------------------------------------------------------
-# 3. O "Tirar" da lista — escreve na allowlist da Steam
-# ---------------------------------------------------------------------------
-
-
 class TestTirarDaLista:
     def test_passa_pelo_escritor_unico_e_nao_pelo_remove_direto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDE o dono único da escrita.
-
-        `_gravar_marca_do_steam_input` é quem dá o toast, avisa o daemon e relê
-        o disco. Arranque a delegação (chamando `remove_...` direto daqui) e
-        nasce o SEGUNDO escritor da mesma lista — que é metade do defeito que
-        a A-LISTA-QUE-FALTAVA-01 fechou.
-        """
+        """MORDE o dono único da escrita."""
         aba = _Aba()
         gravados: list[tuple[str, bool]] = []
         monkeypatch.setattr(
@@ -283,12 +208,7 @@ class TestTirarDaLista:
     def test_tirar_nao_pergunta_do_relancar_e_a_diferenca_e_medida(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A pergunta do RELANCAR-01 é para o jogo DESTE editor, não para os outros.
-
-        Ela existe porque marcar/desmarcar o jogo que está ABERTO tira dele o
-        dispositivo que ele já enumerou. Estes são os OUTROS jogos. Se alguém
-        somar a pergunta aqui, o "Tirar" vira dois cliques para nada.
-        """
+        """A pergunta do RELANCAR-01 é para o jogo DESTE editor, não para os outros."""
         aba = _Aba()
         monkeypatch.setattr(
             pa.ProfilesActionsMixin,
@@ -302,11 +222,6 @@ class TestTirarDaLista:
         )
 
         aba._ao_tirar_outro_marcado(None, "1599660")
-
-
-# ---------------------------------------------------------------------------
-# 4. O refazer das SEIS abas — o caminho mais caro dos quatro
-# ---------------------------------------------------------------------------
 
 
 class _AbaComEdicao(_Aba):
@@ -347,14 +262,9 @@ class TestRefazerAsAbasAposAtivar:
     def test_com_edicao_pendente_a_decisao_e_dela(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDE o portão da edição pendente.
-
-        Arranque o `if pendente:` e a ativação recarrega o rascunho do disco
-        por cima da cor que ela mexeu e não salvou — trocar um jeito de perder
-        trabalho por outro, que é o que a R-08 já tinha decidido para o tique.
-        """
+        """MORDE o portão da edição pendente."""
         aba = _AbaComEdicao(pendente=True)
-        aba.resposta = False  # ela recusa: MANTER o que está na tela
+        aba.resposta = False
         self._armar(aba, monkeypatch)
 
         aba._refazer_as_abas_apos_ativar("Sackboy")
@@ -382,14 +292,7 @@ class TestRefazerAsAbasAposAtivar:
     def test_a_guarda_que_estoura_nao_impede_a_pergunta(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`_tem_edicao_pendente` que levanta não pode virar "não há edição".
-
-        É a mesma disciplina do "não sei" do P1: uma exceção aqui é ausência
-        de RESPOSTA, e o caminho seguro é o que NÃO recarrega calado... só que
-        o produto de hoje trata o estouro como "sem edição". Este teste
-        registra o comportamento de HOJE — se alguém o mudar, a mudança vem
-        com decisão, não por acidente.
-        """
+        """`_tem_edicao_pendente` que levanta não pode virar "não há edição"."""
         aba = _AbaComEdicao(pendente=False)
 
         def _explode(self: Any) -> bool:

@@ -35,9 +35,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 DRIVER = RAIZ / "assets" / "dkms" / "hid-playstation" / "hid-playstation.c"
 
-#: Quantos bytes o envelope põe ANTES do bloco `common` em cada transporte.
-#: Não é chute: sai do mesmo fonte, das duas `struct`s de saída, e a soma de 3 do
-#: rádio já está MEDIDA no mapa em `luz.led_microfone` (`common[8] = report[11]`).
 PREFIXO_DO_ENVELOPE = {"cabo": 1, "radio": 3}
 
 
@@ -151,11 +148,7 @@ def test_o_porteiro_do_led_de_jogador_e_o_bit4_do_flag1() -> None:
 
 
 def test_a_entrada_do_dualsense_nao_tem_campo_de_led() -> None:
-    """A linha `leitura` diz `—`, e o fonte tem de sustentar a negativa.
-
-    Se um dia o driver ganhar um campo de LED no report de ENTRADA, esta régua
-    reprova — e aí a linha `luz.led_jogador.leitura` deixou de ser verdade.
-    """
+    """A linha `leitura` diz `—`, e o fonte tem de sustentar a negativa."""
     fonte = _fonte_do_driver()
     corpo = re.search(r"struct\s+dualsense_input_report\s*\{(.*?)\n\}", fonte, re.DOTALL)
     assert corpo is not None, "`struct dualsense_input_report` sumiu do fonte"
@@ -184,12 +177,7 @@ def test_a_entrada_do_dualsense_nao_tem_campo_de_led() -> None:
 
 
 def test_o_que_veio_de_fonte_externa_declara_de_onde_veio() -> None:
-    """Toda linha que esta leva preencheu tem de dizer a proveniência.
-
-    É a regra 19 do `check_paridade_transporte` aplicada às cinco linhas desta
-    leva, e com uma cobrança a mais: quem citou repositório de terceiro tem de
-    ter `fonte_externa` preenchida, senão o endereço morre na prosa.
-    """
+    """Toda linha que esta leva preencheu tem de dizer a proveniência."""
     linhas = _linhas_do_mapa()
     for chave in (*CHAVES_QUE_ESCREVEM, "luz.led_jogador.leitura", "luz.recursos_proprios"):
         linha = linhas[chave]
@@ -204,12 +192,7 @@ def test_o_que_veio_de_fonte_externa_declara_de_onde_veio() -> None:
 
 
 def test_nada_desta_leva_se_declarou_medido() -> None:
-    """Nada foi ao aparelho em 03/09/2026: nenhuma célula pode dizer `medido`.
-
-    Escrever `medido` para o que se LEU num repositório é a mentira que portão
-    nenhum pega — então ela vira teste. Vale só para as duas linhas que NASCERAM
-    nesta leva; as irmãs têm medição anterior, e legítima.
-    """
+    """Nada foi ao aparelho em 03/09/2026: nenhuma célula pode dizer `medido`."""
     linhas = _linhas_do_mapa()
     for chave in ("luz.led_jogador.quinto", "luz.recursos_proprios"):
         linha = linhas[chave]

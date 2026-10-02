@@ -60,72 +60,18 @@ if TYPE_CHECKING:  # pragma: no cover - só para tipo
 
 logger = get_logger(__name__)
 
-#: Onde o depósito fica pendurado no daemon. Mesmo padrão do
-#: `_eleitor_de_microfone` (`hotkey._eleitor`): atributo do objeto vivo, não
-#: global de módulo — dois daemons no mesmo processo (a suíte faz isso) não
-#: podem partilhar a memória de quem apertou o quê.
 ATRIBUTO = "_recados_do_microfone"
 
-#: Teto de recados guardados. A mesa dela tem quatro lugares; o dobro cobre o
-#: vaivém de hotplug sem deixar o dicionário crescer sem fim num daemon que
-#: fica dias de pé. Ao estourar, sai o mais VELHO — o mais novo é o que a
-#: pessoa acabou de provocar e é o único que ela está esperando ver.
 TETO: int = 8
 
-#: Os três gestos que produzem recado, e eles são distintos na tela:
-#:
-#: * ``eleger``  — o botão do mic subiu (não-mudo): este controle quer o canal;
-#: * ``devolver``— o ELEITO foi a mudo: o microfone da mesa volta para a máquina;
-#: * ``recusa``  — quem não é o eleito foi a mudo. Não há o que devolver, e o
-#:   produto só apaga a luz DELE. É o caminho que estava mais calado dos três.
 GESTOS = ("eleger", "devolver", "recusa")
 
-#: Quanto tempo um recado continua sendo publicado. Passado isso ele SOME do
-#: bloco — a chave do `uniq` deixa de existir, e a tela não tem o que pintar.
-#:
-#: **DECISÃO DELA (02/09/2026):** *"a frase de recusa some depois de um tempo,
-#: na ordem de 30 segundos. É aviso, não estado."* O depósito guarda AVISO; o
-#: estado do canal é o `eleito`/`eleito_na_mesa` do bloco, e esse não expira.
-#:
-#: **POR QUE 30 E NÃO OUTRO NÚMERO**, que é o que ela deixou para quem
-#: implementasse:
-#:
-#: * o piso é ser LIDA. A tela repinta a cada 500 ms, então a frase aparece no
-#:   tique seguinte ao toque — mas quem apertou o botão está com o controle na
-#:   mão e os olhos no jogo. Trinta segundos são 60 repinturas: dá para olhar o
-#:   plástico, não entender, e só então procurar a tela;
-#: * o teto é não sobreviver à cena que descreve. A eleição inteira cabe em
-#:   5 s (`eleicao_de_microfone.SETTLE_PASSOS` vezes `SETTLE_PASSO_S`), e numa mesa
-#:   de quatro em turnos o dono do canal troca em segundos. Uma frase de
-#:   minutos vira *"meia hora atrás com cara de agora"*, que é o defeito;
-#: * e ela NÃO substitui o `vale_agora`. Aquele campo mata a frase que virou
-#:   MENTIRA (a mesa mudou); este prazo mata a frase que virou VELHA mesmo
-#:   continuando verdadeira. Idade não é falsidade, e por isso são dois.
 VALIDADE_DO_RECADO_S: float = 30.0
 
 
 @dataclass(frozen=True)
 class RecadoDoMicrofone:
-    """A resposta do produto a UM toque no botão do microfone de UM controle.
-
-    Espelha `ResultadoDaEleicao` (`ok`/`ativo`/`motivo`) e acrescenta as três
-    coisas que ela não tem e a tela precisa: de QUEM foi o toque (`uniq`), o
-    que se tentou (`gesto`) e QUANDO (`quando_s`, monotônico).
-
-    `eleito` é o RETRATO da mesa no instante do gesto — quem estava com o
-    microfone quando esta frase nasceu. **Ele é congelado, e envelhece com a
-    frase**: a tela NUNCA o pinta como "de quem é o canal agora", porque o
-    dono pode ter mudado nos 500 ms seguintes. Quem é o dono AGORA está no
-    `eleito` do bloco (`publicar`), e `vale_agora` diz se os dois ainda são o
-    mesmo. `None` é "ninguém na mesa", e não "não sei".
-
-    CORREÇÃO DE FATO (02/09/2026, auditoria): este docstring dizia *"o dono do
-    microfone da mesa DEPOIS do gesto — a tela usa para dizer que o canal está
-    com outra pessoa"*, e a frase estava errada de um jeito caro: ela mandava o
-    pintor tratar um retrato congelado como o presente. Reproduzido — a J1
-    elege, o J2 é recusado, a J1 devolve, e o card do J2 seguia dizendo *"o
-    microfone da mesa está com outro controle"* a 10 Hz com NINGUÉM no canal.
-    """
+    """A resposta do produto a UM toque no botão do microfone de UM controle."""
 
     uniq: str
     gesto: str
@@ -136,32 +82,11 @@ class RecadoDoMicrofone:
     quando_s: float
 
     def expirou(self, agora_s: float) -> bool:
-        """Passou de `VALIDADE_DO_RECADO_S`? Então ele não é mais publicado.
-
-        `agora_s` entra por argumento pela mesma razão de `em_dicionario`: uma
-        régua que precisa de `sleep` para provar prazo mede o relógio, não o
-        código.
-        """
+        """Passou de `VALIDADE_DO_RECADO_S`? Então ele não é mais publicado."""
         return (agora_s - self.quando_s) >= VALIDADE_DO_RECADO_S
 
     def em_dicionario(self, agora_s: float, *, dono_agora: str | None) -> dict[str, Any]:
-        """O recado como o IPC o publica, com a IDADE e a VALIDADE calculadas.
-
-        `agora_s` entra por argumento em vez de ser lido aqui para a régua
-        poder medir o envelhecimento sem dormir — um teste que precisa de
-        `sleep` para provar idade é um teste que mede o relógio, não o código.
-
-        `dono_agora` é quem está com o microfone da mesa NESTE instante, do
-        ponto de vista da mesa (ver `publicar`). Ele é obrigatório e não tem
-        valor padrão de propósito: um padrão `None` faria todo recado com dono
-        congelado nascer `vale_agora=False` sem ninguém decidir isso, que é a
-        forma como esta casa fabrica campo que mente calado.
-
-        **IDADE NÃO É FALSIDADE.** Uma frase de 200 ms pode já estar errada e
-        uma de dois minutos pode estar certa — por isso `idade_s` e
-        `vale_agora` são campos SEPARADOS, e o segundo é o que decide se a
-        tela pode falar no presente.
-        """
+        """O recado como o IPC o publica, com a IDADE e a VALIDADE calculadas."""
         return {
             "uniq": self.uniq,
             "gesto": self.gesto,
@@ -209,7 +134,7 @@ def mesa_de_agora(daemon: Any) -> list[str] | None:
     função e não a elas. O
     `describe_controllers` do backend real devolve uma entrada POR HANDLE e
     preenche o `uniq` mesmo com `connected: False`
-    (`core/backend_pydualsense.py:8021`) — ler só o `uniq` daria "está na mesa"
+    (`core/backend_pydualsense.py:5347`) — ler só o `uniq` daria "está na mesa"
     a um handle que o controle já largou, que é exatamente o defeito que este
     campo existe para matar. As outras duas montam a lista que vai para a
     ELEIÇÃO (`eleger_o_controle`), e mudá-las mexeria em quem pode ser eleito;
@@ -256,16 +181,8 @@ def anotar(
     eleito: str | None = None,
     agora_s: float | None = None,
 ) -> RecadoDoMicrofone:
-    """Guarda o que aconteceu com o microfone DESTE controle.
-
-    Substitui o recado anterior do mesmo `uniq`: o que interessa é o último
-    toque, e empilhar histórico aqui faria a tela ter de escolher qual das
-    frases mostrar — decisão que não é do daemon.
-    """
+    """Guarda o que aconteceu com o microfone DESTE controle."""
     if gesto not in GESTOS:
-        # Gesto desconhecido é erro de programação, e ele sai NOMEADO: aceitar
-        # calado faria a tela receber uma palavra que ela não sabe pintar e
-        # cair no ramo genérico sem que ninguém soubesse por quê.
         raise ValueError(f"gesto de microfone desconhecido: {gesto!r}")
     recado = RecadoDoMicrofone(
         uniq=uniq,
@@ -341,10 +258,6 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
 
     mesa = mesa_de_agora(daemon)
     eleito_na_mesa = None if (eleito is None or mesa is None) else eleito in mesa
-    # "NÃO SEI" NUNCA VIRA "SAIU". Só o `False` MEDIDO tira o dono do retrato
-    # da mesa; o `None` (backend que não sabe listar, ou ninguém eleito) deixa
-    # o dono de pé. Inverter isto faria todo backend legado publicar que o
-    # controle eleito caiu, e a tela apagaria um canal que está no ar.
     dono_agora = None if eleito_na_mesa is False else eleito
 
     deposito = getattr(daemon, ATRIBUTO, None)

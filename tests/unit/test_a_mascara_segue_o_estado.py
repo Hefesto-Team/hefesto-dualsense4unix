@@ -1,30 +1,4 @@
-"""A máscara que cada boneco veste é a do estado de AGORA, nunca a sobra.
-
-A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026). Medido na máquina dela depois do
-boot, com o diário na mão:
-
-    00:00:44  profile_activated 'Future Knight' origin=manual   (global `xbox`)
-    00:00:43  gamepad_emulation_started flavor=xbox mascara_do_p1=xbox
-    00:05:31  launch_allowlist_so_a_mascara mascara_do_perfil=None mascara_viva=xbox
-    00:05:31  profile_mascara_por_peca mascara=dualsense profile=PRAGMATA  (x4)
-    ...       o boneco do P1 seguiu Xbox até ela desistir
-
-O PRAGMATA venceu pela prioridade e gravou `dualsense` nos quatro cartões, e o
-jogo viu um Xbox 360: sem giroscópio e sem acelerômetro. Três buracos, todos
-curados na origem, e esta bateria mede os três em toda mesa (os três jeitos de
-um perfil não opinar, cabo e BT, de um a quatro jogadores, os modos Xbox e
-Nativo):
-
-1. o perfil sem máscara global herdava a do jogo anterior, que ficava na
-   sessão (`config.gamepad_flavor`); agora vale a da MÁQUINA (o flag dela);
-2. o boneco do P1 só era refeito pelo evento que PEDIA máscara global, e os
-   cartões chegam depois do modo; agora há um juiz para os quatro
-   (`gamepad.reconciliar_as_mascaras`), no compasso do co-op;
-3. com o P1 já certo pelo cartão, a sessão ficava com a sobra, e o P2 sem
-   cartão seguia em Xbox.
-
-Cada classe diz a mordida que a derruba.
-"""
+"""A máscara que cada boneco veste é a do estado de AGORA, nunca a sobra."""
 
 from __future__ import annotations
 
@@ -53,20 +27,14 @@ from hefesto_dualsense4unix.testing.fake_controller import FakeController
 from hefesto_dualsense4unix.utils import session as session_mod
 from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
-#: A mesa forjada da casa (octetos 4 e 5 zerados).
 MAC_P1 = "aa:bb:cc:00:00:01"
 SECUNDARIOS = ("aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
-#: Toda máscara que um jogo pode declarar e que não é a de fábrica.
 MASCARAS_DE_OUTRO_JOGO = sorted(set(get_args(MascaraDeGamepad)) - {"dualsense"})
 TRANSPORTES = ("usb", "bt")
 
 
 class _Pad:
-    """Um boneco com o que o produto lê dele: máscara, canal e caminho.
-
-    O canal sai de `virtual_pad.quer_uhid`, a mesma função do produto: cravar
-    `uhid` aqui passaria verde com o gate do canal quebrado.
-    """
+    """Um boneco com o que o produto lê dele: máscara, canal e caminho."""
 
     def __init__(self, flavor: str, caminho: str | None) -> None:
         self.flavor = flavor
@@ -99,9 +67,6 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
 
 @pytest.fixture(autouse=True)
 def _sem_no_de_kernel(monkeypatch: pytest.MonkeyPatch) -> None:
-    # A fábrica real resolve `mascara_efetiva(identity, flavor)` por dentro;
-    # um dublê que usasse só o `flavor` seria mais pobre que o produto e
-    # reprovaria o cartão que o produto honra.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
         lambda flavor, **kw: _Pad(mascara_efetiva(kw.get("identity"), flavor), kw.get("caminho")),
@@ -154,11 +119,11 @@ def _perfil_sem_modo() -> Profile:
 def _o_proximo_nao_opina(d: Any, jeito: str) -> None:
     """Os três jeitos de um perfil não opinar sobre a máscara global."""
     if jeito == "sem_modo":
-        d._mode_from_profile = None  # o boneco é dela, e fica de pé
+        d._mode_from_profile = None
         perfil = _perfil_sem_modo()
         d.apply_profile_mode(perfil.mode, profile=perfil, origin="autoswitch")
         return
-    if jeito == "com_cartao":  # o PRAGMATA: os cartões em `dualsense`
+    if jeito == "com_cartao":
         registro_de_mascaras().set_mask(MAC_P1, "dualsense")
     d.apply_profile_mode(
         ProfileModeConfig(kind="gamepad", gamepad_flavor=None, caminho="dualsense"),
@@ -167,9 +132,7 @@ def _o_proximo_nao_opina(d: Any, jeito: str) -> None:
 
 
 class TestOJogoSemOpiniaoNaoHerdaAMascaraDoAnterior:
-    """MORDIDAS: `flavor_do_jogo = flavor` no `apply_profile_mode` (buraco 1),
-    ou tirar a linha da sessão no ramo sem `mode`, ou o
-    `_mascara_da_maquina` caindo no `normalize_flavor(None)`."""
+    """MORDIDAS: `flavor_do_jogo = flavor` no `apply_profile_mode` (buraco 1),"""
 
     @pytest.mark.parametrize("transporte", TRANSPORTES)
     @pytest.mark.parametrize("anterior", MASCARAS_DE_OUTRO_JOGO)
@@ -194,8 +157,7 @@ class TestOJogoSemOpiniaoNaoHerdaAMascaraDoAnterior:
         assert lc._mascara_da_maquina() == DaemonConfig.gamepad_flavor == "dualsense"
 
     def test_a_escolha_dela_para_a_maquina_vale(self) -> None:
-        """Ela escolheu Xbox para tudo (o flag, pela CLI): o jogo sem opinião
-        obedece a ela, e não ao `dualsense` de fábrica."""
+        """Ela escolheu Xbox para tudo (o flag, pela CLI): o jogo sem opinião"""
         save_gamepad_emulation(True, "xbox")
         d = _daemon()
         gp.start_gamepad_emulation(d, "dualsense", origin="profile")
@@ -207,9 +169,7 @@ class TestOJogoSemOpiniaoNaoHerdaAMascaraDoAnterior:
 
 
 class TestOsCartoesChegamDepoisDoModo:
-    """MORDIDA: `reconciliar_as_mascaras` devolvendo `None` na primeira linha
-    (buraco 2). O gerente aplica o modo ANTES dos cartões, e o P1 decidia com
-    os cartões do perfil anterior."""
+    """MORDIDA: `reconciliar_as_mascaras` devolvendo `None` na primeira linha"""
 
     @pytest.mark.parametrize("transporte", TRANSPORTES)
     def test_o_cartao_novo_refaz_o_boneco_do_p1(self, transporte: str) -> None:
@@ -264,12 +224,11 @@ class TestOsCartoesChegamDepoisDoModo:
 
 
 class TestAMesaInteiraSegueAMesmaRegra:
-    """MORDIDA: tirar `daemon.config.gamepad_flavor = key` do ramo
-    `EMU_JA_ESTAVA` do `start_gamepad_emulation_desfecho` (buraco 3)."""
+    """MORDIDA: tirar `daemon.config.gamepad_flavor = key` do ramo"""
 
     def test_o_p1_certo_pelo_cartao_nao_segura_a_sobra_na_sessao(self) -> None:
         d = _daemon()
-        registro_de_mascaras().set_mask(MAC_P1, "xbox")  # o cartão é escolha dela
+        registro_de_mascaras().set_mask(MAC_P1, "xbox")
         _jogo_que_opina(d, "xbox")
         boneco = d._gamepad_device
 
@@ -292,7 +251,7 @@ class TestAMesaInteiraSegueAMesmaRegra:
         mesa._players[macs[-1]].vpad = _Pad("xbox", None)
         assert mesa.algum_boneco_ficou_para_tras()
 
-        registro_de_mascaras().set_mask(macs[-1], "xbox")  # agora é escolha dela
+        registro_de_mascaras().set_mask(macs[-1], "xbox")
         assert not mesa.algum_boneco_ficou_para_tras()
 
     def test_o_juiz_manda_o_co_op_refazer_so_sem_o_jogo_na_autoridade(self) -> None:
@@ -314,9 +273,7 @@ class TestAMesaInteiraSegueAMesmaRegra:
 
 
 class TestOPortaoDoJogoAbertoPreveARecriacao:
-    """MORDIDA: devolver ao `_modo_seria_destrutivo` a comparação velha
-    (`flavor is not None and flavor != flavor_atual`). Com o jogo na
-    autoridade ele dizia «não destrói» e a pendência não segurava nada."""
+    """MORDIDA: devolver ao `_modo_seria_destrutivo` a comparação velha"""
 
     def test_o_perfil_sem_opiniao_sobre_um_boneco_xbox_recriaria(self) -> None:
         d = _daemon()

@@ -82,20 +82,12 @@ from hefesto_dualsense4unix.daemon.ipc_handlers import _norm_uniq
 from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
 from hefesto_dualsense4unix.profiles.schema import Profile
 
-# --- os dois controles da prova, sintéticos e na máscara da casa -------------
-#: Controle 1, nas duas grafias que um JSON editado à mão pode ter. A key que o
-#: backend enumera É o serial do hidapi, então a grafia com ``:`` é a que o
-#: aparelho no CABO entrega e a colada é a que ela digitaria no JSON.
 CABO_GRAFIA = "AA:BB:CC:00:00:02"
 RADIO_GRAFIA = "aabbcc000002"
 CHAVE_UM = "aabbcc000002"
-#: Controle 2 — a mesa de DOIS. Sem ele a prova só falaria da mesa de um.
 SEGUNDO_GRAFIA = "3C:9D:07:00:00:07"
 CHAVE_DOIS = "3c9d07000007"
 
-#: Os nomes de transporte que a pydualsense publica no handle. O terceiro caso
-#: — o controle DESCONECTADO, cujo ``transport`` sai ``None`` — entra por
-#: ``connected=False``, não por um nome.
 TRANSPORTES = ("USB", "BT")
 
 
@@ -119,20 +111,11 @@ def _null_evdev() -> EvdevReader:
     return reader
 
 
-#: Um controlador REAL, reaproveitado entre os casos. Construir um por caso
-#: custava ~0,4 s (o `EvdevReader` varre `/dev/input` ao nascer) e a suíte desta
-#: casa roda em oito lotes cronometrados; `describe_controllers` só LÊ
-#: `_handles`/`_primary_key`, então reaproveitar não mistura estado nenhum.
 _CONTROLADOR: PyDualSenseController | None = None
 
 
 def _descrever(*pares: tuple[str, str | None]) -> list[dict[str, Any]]:
-    """A saída REAL de ``describe_controllers`` para uma mesa montada aqui.
-
-    Cada par é ``(key do handle, nome do transporte)``; ``None`` no transporte
-    é o controle DESCONECTADO. A key é o serial do hidapi — é o único lugar de
-    onde a identidade pode sair, e é o que o ``_key_to_uniq`` normaliza.
-    """
+    """A saída REAL de ``describe_controllers`` para uma mesa montada aqui."""
     global _CONTROLADOR
     if _CONTROLADOR is None:
         _CONTROLADOR = PyDualSenseController(evdev_reader=_null_evdev())
@@ -145,12 +128,7 @@ def _descrever(*pares: tuple[str, str | None]) -> list[dict[str, Any]]:
 
 
 def _chave_da_entrada(entrada: dict[str, Any]) -> str | None:
-    """A chave com que o daemon procura no mapa do perfil.
-
-    É o caminho REAL: ``ipc_handlers._norm_uniq`` sobre o ``uniq`` que
-    ``describe_controllers`` publicou. O ``transport`` da entrada NÃO é lido —
-    e é justamente isso que a prova 3 congela.
-    """
+    """A chave com que o daemon procura no mapa do perfil."""
     return _norm_uniq(entrada.get("uniq"))
 
 
@@ -166,9 +144,6 @@ def _mapa(*chaves: str) -> dict[str, Any]:
     return {chave: {"rumble": {"motor_forte_pct": 40}} for chave in chaves}
 
 
-# --- PROVA 1 — duas grafias, dois transportes, a MESMA entrada ---------------
-
-
 @pytest.mark.parametrize("mesa_de_dois", [False, True])
 @pytest.mark.parametrize("grafia_no_json", [CABO_GRAFIA, RADIO_GRAFIA])
 @pytest.mark.parametrize("grafia_do_handle", [CABO_GRAFIA, RADIO_GRAFIA])
@@ -176,14 +151,7 @@ def _mapa(*chaves: str) -> dict[str, Any]:
 def test_duas_grafias_dois_transportes_a_mesma_entrada(
     mesa_de_dois: bool, grafia_no_json: str, grafia_do_handle: str, transporte: str
 ) -> None:
-    """F1: o perfil acha a MESMA entrada, venha o controle pelo cabo ou pelo rádio.
-
-    As DUAS grafias variam de propósito, e as duas variações são diferentes: a
-    do JSON é o que ela (ou um editor de texto) escreveu no perfil; a do handle
-    é o serial que o hidapi devolveu. Roda na mesa de UM e na de DOIS (prova
-    6) — o segundo controle não pode fazer o primeiro deixar de ser achado,
-    nem ser achado no lugar dele.
-    """
+    """F1: o perfil acha a MESMA entrada, venha o controle pelo cabo ou pelo rádio."""
     vizinho = (SEGUNDO_GRAFIA,) if mesa_de_dois else ()
     perfil = _perfil(_mapa(grafia_no_json, *vizinho))
     assert perfil.controllers is not None
@@ -191,12 +159,10 @@ def test_duas_grafias_dois_transportes_a_mesma_entrada(
     (entrada,) = _descrever((grafia_do_handle, transporte))
     chave = _chave_da_entrada(entrada)
 
-    # o transporte SAI da descrição — separado, e nunca dentro da chave
     assert entrada["transport"] == transporte.lower()
     assert chave == CHAVE_UM
     assert chave in perfil.controllers
     assert perfil.controllers[chave].rumble is not None
-    # e não é a entrada do vizinho
     assert chave != CHAVE_DOIS
 
 
@@ -226,37 +192,21 @@ def test_a_mesa_de_dois_nao_embaralha_as_duas_memorias() -> None:
     assert perfil.controllers[CHAVE_DOIS].rumble.motor_forte_pct == 90  # type: ignore[union-attr]
 
 
-# --- PROVA 2 — a mordida da normalização, e ela DISCRIMINA -------------------
-
-
 @pytest.mark.parametrize("mesa_de_dois", [False, True])
 def test_a_mordida_da_normalizacao(mesa_de_dois: bool) -> None:
-    """F2: com a cura, as duas grafias acham; sem a cura, só a do rádio.
-
-    **É esta assimetria que faz a régua morder.** Se os dois casos
-    continuassem passando com o ``norm_mac`` de ``_validate_controllers_keys``
-    fora, ela estaria medindo a string — e uma régua que mede a string dá
-    verde sobre a memória perdida.
-    """
+    """F2: com a cura, as duas grafias acham; sem a cura, só a do rádio."""
     vizinho = (SEGUNDO_GRAFIA,) if mesa_de_dois else ()
     (entrada,) = _descrever((RADIO_GRAFIA, "BT"))
     uniq = _chave_da_entrada(entrada)
     assert uniq == CHAVE_UM
 
-    # --- com a cura: as duas grafias do JSON caem na mesma entrada
     for grafia in (CABO_GRAFIA, RADIO_GRAFIA):
         perfil = _perfil(_mapa(grafia, *vizinho))
         assert perfil.controllers is not None
         assert uniq in perfil.controllers, grafia
 
-    # --- com a cura ARRANCADA (o mapa fica com a grafia CRUA do JSON, que é o
-    #     que o validador sem `norm_mac` devolveria): o CABO deixa de achar, e
-    #     o RÁDIO continua achando.
     assert uniq not in _mapa(CABO_GRAFIA, *vizinho)
     assert uniq in _mapa(RADIO_GRAFIA, *vizinho)
-
-
-# --- PROVA 3 — o transporte NUNCA entra na chave -----------------------------
 
 
 @pytest.mark.parametrize("mesa_de_dois", [False, True])
@@ -264,15 +214,7 @@ def test_a_mordida_da_normalizacao(mesa_de_dois: bool) -> None:
 def test_o_transporte_nunca_entra_na_chave(
     mesa_de_dois: bool, grafia_do_handle: str
 ) -> None:
-    """A chave é BYTE A BYTE a mesma no cabo, no rádio e desconectado.
-
-    MORDIDA: faça ``describe_controllers`` publicar
-    ``f"{self._key_to_uniq(key)}:{transporte}"`` e este caso cai — a memória do
-    rádio deixa de encontrar a do cabo.
-    """
-    # o JSON aqui já está canônico DE PROPÓSITO: o assunto deste caso é o
-    # transporte, e misturar a grafia faria a mordida da prova 2 derrubá-lo
-    # junto, escondendo qual das duas curas caiu.
+    """A chave é BYTE A BYTE a mesma no cabo, no rádio e desconectado."""
     vizinho = (SEGUNDO_GRAFIA,) if mesa_de_dois else ()
     perfil = _perfil(_mapa(RADIO_GRAFIA, *vizinho))
     assert perfil.controllers is not None
@@ -284,9 +226,7 @@ def test_o_transporte_nunca_entra_na_chave(
         vistas.add(_chave_da_entrada(entrada))
         transportes_vistos.add(entrada["transport"])
 
-    # a chave não se move…
     assert vistas == {CHAVE_UM}
-    # …e o transporte de fato VARIOU (senão o caso acima seria vacuoso)
     assert transportes_vistos == {"usb", "bt", None}
     assert CHAVE_UM in perfil.controllers
 
@@ -302,17 +242,9 @@ def test_o_uniq_e_o_transporte_sao_campos_separados() -> None:
         assert str(entrada["transport"]) not in uniq
 
 
-# --- PROVA 4 — o controle sem MAC, e a parede que a O-CONTROLE-SEM-MAC-01 moveu
-
-
 @pytest.mark.parametrize("mesa_de_dois", [False, True])
 def test_sem_mac_nao_produz_entrada_fantasma(mesa_de_dois: bool) -> None:
-    """``uniq=None`` não vira chave, e o perfil não ganha entrada de ninguém.
-
-    MORDIDA: tire a guarda de 12 dígitos de ``_key_to_uniq`` e ``/dev/hidraw3``
-    vira o pseudo-MAC ``deda3`` — um identificador que não é de controle
-    nenhum, e que na GUI apareceria como se fosse um.
-    """
+    """``uniq=None`` não vira chave, e o perfil não ganha entrada de ninguém."""
     vizinho = (SEGUNDO_GRAFIA,) if mesa_de_dois else ()
     perfil = _perfil(_mapa(RADIO_GRAFIA, *vizinho))
     assert perfil.controllers is not None
@@ -323,21 +255,13 @@ def test_sem_mac_nao_produz_entrada_fantasma(mesa_de_dois: bool) -> None:
     assert _chave_da_entrada(entrada) is None
     assert dict(perfil.controllers) == antes
 
-    # o que a guarda impede, medido: sem ela a key crua vira pseudo-MAC…
     assert norm_mac("/dev/hidraw3") == "deda3"
-    # …e o perfil o recusa nomeando, que é a metade que sobrevive da F3
     with pytest.raises(ValidationError, match="12 dígitos"):
         _perfil(_mapa("/dev/hidraw3"))
 
 
 def test_a_forma_do_cracha_e_a_de_sempre_e_o_perfil_ja_a_aceita() -> None:
-    """A §3 item 1 CAIU: o crachá é um ENDEREÇO, e o perfil não aprende gramática.
-
-    Medido de ponta a ponta com o registro REAL da ``O-CONTROLE-SEM-MAC-01``:
-    o provider devolve o que o feature ``0x09`` responderia, o registro o
-    canoniza para 12 hex, e ``Profile`` aceita a mesma chave — sem uma linha
-    nova no validador. É a porta que a sprint ia abrir, já aberta.
-    """
+    """A §3 item 1 CAIU: o crachá é um ENDEREÇO, e o perfil não aprende gramática."""
     registro = ControllerIdentityRegistry()
     registro.set_cracha_provider(
         lambda uniq: CABO_GRAFIA if uniq == "/dev/hidraw7" else None
@@ -350,7 +274,6 @@ def test_a_forma_do_cracha_e_a_de_sempre_e_o_perfil_ja_a_aceita() -> None:
     perfil = _perfil(_mapa(key))
     assert perfil.controllers is not None
     assert list(perfil.controllers) == [CHAVE_UM]
-    # e a mesma chave é a que a consulta produz para aquele controle
     (entrada,) = _descrever((CABO_GRAFIA, "BT"))
     assert _chave_da_entrada(entrada) == key
 
@@ -360,27 +283,14 @@ def test_a_forma_do_cracha_e_a_de_sempre_e_o_perfil_ja_a_aceita() -> None:
     ["cracha:0x09:9f2a1c04", "sem-mac:0b:9f2a1c04", "9f2a1c04", "0x09"],
 )
 def test_gramatica_inventada_de_cracha_continua_recusada(inventada: str) -> None:
-    """O portão NÃO afrouxou: só o endereço entra, e o resto sai com motivo.
-
-    A chave de crachá com prefixo — que a §3 item 1 mandava aceitar — nunca
-    chega a existir, e continuar a recusá-la é o que impede uma segunda
-    gramática de nascer por acidente numa sprint futura.
-    """
+    """O portão NÃO afrouxou: só o endereço entra, e o resto sai com motivo."""
     with pytest.raises(ValidationError, match="12 dígitos"):
         _perfil(_mapa(inventada))
 
 
-# --- PROVA 5 — as três rejeições medidas continuam de pé ---------------------
-
-
 @pytest.mark.parametrize("mesa_de_dois", [False, True])
 def test_a_rejeicao_do_oui_degenerado(mesa_de_dois: bool) -> None:
-    """``000000000001`` foi medido AO VIVO no Pro Controller, idêntico entre unidades.
-
-    Aceitá-lo faria dois controles DIFERENTES dividirem a mesma memória — é a
-    F4, e é o defeito pior que esta sprint poderia causar se fosse feita com
-    pressa para "abrir a porta" do controle sem serial.
-    """
+    """``000000000001`` foi medido AO VIVO no Pro Controller, idêntico entre unidades."""
     vizinho = {CHAVE_DOIS: {}} if mesa_de_dois else {}
     with pytest.raises(ValidationError, match="degenerado"):
         _perfil({"000000000001": {}, **vizinho})
@@ -405,40 +315,23 @@ def test_a_rejeicao_da_duplicata_apos_normalizacao(mesa_de_dois: bool) -> None:
 
 
 def test_a_mordida_das_tres_rejeicoes() -> None:
-    """Solte as guardas e duas unidades diferentes dividem a MESMA memória.
-
-    A colisão é encenada sobre o mecanismo que o validador usa — ``norm_mac``
-    mais o dicionário — porque é ali que o dano acontece: sem a guarda de
-    duplicata a segunda grafia SOBRESCREVE a primeira por ordem de inserção, e
-    nada é dito. Ao lado, o validador real recusando, para a comparação não
-    ficar abstrata.
-    """
+    """Solte as guardas e duas unidades diferentes dividem a MESMA memória."""
     cru = {RADIO_GRAFIA: "o ajuste dela", CABO_GRAFIA: "o ajuste de outro dia"}
 
     sem_guarda = {norm_mac(k): v for k, v in cru.items()}
     assert len(sem_guarda) == 1
-    assert sem_guarda[CHAVE_UM] == "o ajuste de outro dia"  # a colisão calada
+    assert sem_guarda[CHAVE_UM] == "o ajuste de outro dia"
 
     with pytest.raises(ValidationError, match="duplicadas"):
         _perfil({k: {} for k in cru})
 
-    # e o degenerado: duas grafias do MESMO endereço inútil, que sem a guarda
-    # do OUI fariam dois controles distintos caírem numa memória só
     assert norm_mac("00:00:00:00:00:01") == norm_mac("000000000001") == "000000000001"
     with pytest.raises(ValidationError, match="degenerado"):
         _perfil(_mapa("000000000001"))
 
 
-# --- PROVA 6 — a mesa de UM tem prova própria, e não só parametrização -------
-
-
 def test_a_mesa_de_um_atravessa_o_transporte_inteira() -> None:
-    """O usuário de UM controle: cabo, rádio e as duas grafias, num só perfil.
-
-    *"Funcione como acessibilidade pra qualquer usuário simples"* — a mesa de
-    um é a mais comum do mundo e a que esta casa nunca tem, então ela ganha um
-    caso que se lê inteiro, sem parametrização.
-    """
+    """O usuário de UM controle: cabo, rádio e as duas grafias, num só perfil."""
     perfil = _perfil({CABO_GRAFIA: {"rumble": {"motor_forte_pct": 40}}})
     assert perfil.controllers is not None
     assert list(perfil.controllers) == [CHAVE_UM]

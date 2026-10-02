@@ -1,20 +1,4 @@
-"""AS-SOLUCOES-NOS-LANCADORES-01 — as réguas.
-
-«Aplicar soluções nos lançadores» vale para todo lançador, e a aba Lançadores
-diz, por lançador, onde o ambiente do Hefesto falta.
-
-MEDIDO ANTES, no disco dela e só lendo (01/10/2026): a lista global do Heroic
-tinha as 8 variáveis que a ponte publica, e a cópia do Guardiões
-(`GamesConfig/<app>.json`, de 22/09) não tinha três —
-`PROTON_ENABLE_MHWILDS_USB_AUDIO`, `PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE` e
-`SDL_ACCELEROMETER_AS_JOYSTICK`. O Heroic monta `{...globais, ...do jogo}`, e
-todo jogo instalado tem cópia (ele a grava ao instalar): a carona e o botão
-escreviam numa lista que o único jogo instalado dela não lia mais.
-
-TUDO AQUI MORA NUM LAR DE MENTIRA: o `HOME` e o `XDG_*` de cada teste, e a
-ponte publicada numa pasta do teste. Nenhuma Steam, nenhum lançador de
-verdade.
-"""
+"""AS-SOLUCOES-NOS-LANCADORES-01 — as réguas."""
 
 from __future__ import annotations
 
@@ -36,9 +20,7 @@ _MHWILDS = ("PROTON_ENABLE_MHWILDS_USB_AUDIO", "1")
 _SONY = ("PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE", "1")
 _ACELEROMETRO = ("SDL_ACCELEROMETER_AS_JOYSTICK", "0")
 _CACHE = ("__GL_SHADER_DISK_CACHE", "1")
-#: O que a ponte publica agora — a forma do `default.env` dela em 01/10.
 _PONTE = (_HIDRAW, _IGNORE, _MHWILDS, _SONY, _ACELEROMETRO, _CACHE)
-#: A cópia de 22/09: sem as três de depois, e com o cache que ELA pôs no jogo.
 _COPIA_VELHA = (_HIDRAW, _IGNORE, ("__GL_SHADER_DISK_CACHE", "0"), ("MANGOHUD", "1"))
 
 
@@ -93,13 +75,8 @@ def _carona(tmp_path: Path, amb: Path) -> tuple[str, ...]:
                                        raiz_sistema=tmp_path / "sistema")
 
 
-# ---------------------------------------------------------------------------
-# 1 · A cópia de cada jogo do Heroic recebe o ambiente de agora
-# ---------------------------------------------------------------------------
 def test_a_carona_leva_o_ambiente_a_copia_do_jogo(tmp_path: Path) -> None:
-    """ARRANQUE o `_por_o_nosso_nas_copias` do `curar_todas_as_estradas` e
-    este teste reprova: a háptica pelo áudio e o acelerômetro não chegam ao
-    jogo instalado — o estado medido no disco dela."""
+    """ARRANQUE o `_por_o_nosso_nas_copias` do `curar_todas_as_estradas` e"""
     copia = _heroic()
     _carona(tmp_path, _ponte(tmp_path))
     pares = _pares(copia)
@@ -111,10 +88,7 @@ def test_a_carona_leva_o_ambiente_a_copia_do_jogo(tmp_path: Path) -> None:
 
 
 def test_no_modo_nativo_o_ignore_sai_da_copia(tmp_path: Path) -> None:
-    """O Modo Nativo não publica o `IGNORE`. A cópia perde o nosso como a
-    global perde. ARRANQUE o registro da casa (`_entrada_da_copia(entrada)`)
-    do `_por_o_nosso_nas_copias` e este teste reprova: o jogo do Heroic no
-    Modo Nativo abriria com o físico escondido e sem o virtual."""
+    """O Modo Nativo não publica o `IGNORE`. A cópia perde o nosso como a"""
     copia = _heroic()
     _carona(tmp_path, _ponte(tmp_path))
     assert _IGNORE[0] in _pares(copia)
@@ -123,8 +97,7 @@ def test_no_modo_nativo_o_ignore_sai_da_copia(tmp_path: Path) -> None:
 
 
 def test_o_jogo_sem_lista_propria_segue_a_global(tmp_path: Path) -> None:
-    """Uma cópia sem `enviromentOptions` (o `{}` que o Heroic grava ao abrir a
-    tela do jogo) segue a global: a carona não lhe dá lista própria."""
+    """Uma cópia sem `enviromentOptions` (o `{}` que o Heroic grava ao abrir a"""
     copia = _heroic(copia=None)
     copia.parent.mkdir(parents=True)
     copia.write_text(json.dumps({_APP: {}, "version": "v0", "explicit": True}))
@@ -133,9 +106,7 @@ def test_o_jogo_sem_lista_propria_segue_a_global(tmp_path: Path) -> None:
 
 
 def test_o_uninstall_tira_da_copia_o_que_a_carona_pos(tmp_path: Path) -> None:
-    """A escrita nas cópias continua reversível: o desfazer do uninstall a lê
-    pelo registro da casa. Se a carona escrevesse um valor que o registro não
-    conhece, ele ficaria na cópia depois do uninstall."""
+    """A escrita nas cópias continua reversível: o desfazer do uninstall a lê"""
     copia = _heroic()
     amb = _ponte(tmp_path)
     _carona(tmp_path, amb)
@@ -146,10 +117,7 @@ def test_o_uninstall_tira_da_copia_o_que_a_carona_pos(tmp_path: Path) -> None:
 
 
 def test_a_copia_do_excluido_nem_e_reescrita(tmp_path: Path) -> None:
-    """O jogo excluído não recebe nada — e a cópia dele nem é regravada.
-    ARRANQUE o filtro das `excluidas` do `_por_o_nosso_nas_copias` e este
-    teste reprova: a carona escreveria o nosso e a manutenção da exclusão o
-    tiraria logo depois, duas escritas por transição num arquivo dela."""
+    """O jogo excluído não recebe nada — e a cópia dele nem é regravada."""
     copia = _heroic()
     amb = _ponte(tmp_path)
     assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
@@ -162,12 +130,8 @@ def test_a_copia_do_excluido_nem_e_reescrita(tmp_path: Path) -> None:
     assert copia.stat().st_mtime_ns == marcado, "a cópia do jogo excluído foi regravada"
 
 
-# ---------------------------------------------------------------------------
-# 2 · Onde falta, por lançador — o que a aba Lançadores mostra
-# ---------------------------------------------------------------------------
 def test_onde_falta_mede_a_copia_e_nao_so_a_global(tmp_path: Path) -> None:
-    """ARRANQUE a leitura das cópias do `onde_falta_o_ambiente` e este teste
-    reprova: a global completa diria «no lugar» sobre o jogo que não a lê."""
+    """ARRANQUE a leitura das cópias do `onde_falta_o_ambiente` e este teste"""
     _heroic()
     amb = _ponte(tmp_path)
     (Path.home() / ".var/app/com.heroicgameslauncher.hgl/config/heroic/config.json").write_text(
@@ -194,10 +158,7 @@ def test_o_excluido_nao_conta_como_falta(tmp_path: Path) -> None:
 
 
 def test_onde_falta_mede_a_caixa_do_emulador(tmp_path: Path) -> None:
-    """A caixa do Flatpak sem uma variável da ponte acusa falta; a carona a
-    cura, e a caixa excluída não conta. ARRANQUE o ramo das caixas do
-    `onde_falta_o_ambiente` e este teste reprova: o cartão do RetroArch nunca
-    diria «Sem o ambiente do Hefesto»."""
+    """A caixa do Flatpak sem uma variável da ponte acusa falta; a carona a"""
     ativo = Path.home() / ".local/share/flatpak/app/org.libretro.RetroArch/current/active"
     ativo.mkdir(parents=True)
     (ativo / "metadata").write_text("[Application]\nname=org.libretro.RetroArch\n")
@@ -221,10 +182,7 @@ def test_onde_falta_mede_a_caixa_do_emulador(tmp_path: Path) -> None:
 
 
 def test_sem_a_ponte_nao_ha_o_que_cobrar(tmp_path: Path) -> None:
-    """Sem o ambiente publicado (serviço nunca ligado) não há com o que
-    comparar: nenhum cartão acusa falta — nem com a global do Heroic ilegível,
-    que é o caso em que a conta diria «falta» a todo jogo sem cópia. ARRANQUE
-    a guarda do ambiente do `onde_falta_o_ambiente` e este teste reprova."""
+    """Sem o ambiente publicado (serviço nunca ligado) não há com o que"""
     copia = _heroic(copia=None)
     copia.parent.parent.joinpath("config.json").write_text("{ torto")
     assert cpe.onde_falta_o_ambiente("heroic", ("com.heroicgameslauncher.hgl",),
@@ -233,9 +191,7 @@ def test_sem_a_ponte_nao_ha_o_que_cobrar(tmp_path: Path) -> None:
 
 
 def test_o_cartao_diz_onde_o_ambiente_falta() -> None:
-    """A forma da Steam quando o atalho falta: o contador abre o corpo, a
-    linha vem embaixo e o selo diz `COM IMPEDIMENTO`. ARRANQUE a linha do
-    `cartao_sem_censo` e este teste reprova."""
+    """A forma da Steam quando o atalho falta: o contador abre o corpo, a"""
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
     heroic = next(x for x in desenho.SEM_FONTE if x.chave == "heroic")
@@ -255,9 +211,7 @@ def test_o_cartao_diz_onde_o_ambiente_falta() -> None:
 
 def test_a_vigia_pergunta_ao_dono_da_estrada(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A vigia da aba 07 mede pelo dono da estrada, só nos cartões ACHADOS.
-    ARRANQUE o `_onde_falta_o_ambiente` do `_ler_do_disco` e a linha nunca
-    chega ao cartão."""
+    """A vigia da aba 07 mede pelo dono da estrada, só nos cartões ACHADOS."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -278,14 +232,9 @@ def test_a_vigia_pergunta_ao_dono_da_estrada(
     assert "_onde_falta_o_ambiente(onde_estao, declarados)" in corpo
 
 
-# ---------------------------------------------------------------------------
-# 3 · O botão da aba Sistema aplica em todos
-# ---------------------------------------------------------------------------
 def test_o_botao_da_sistema_aplica_nos_outros_mesmo_com_a_steam_recusando(
         monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
-    """Com jogo aberto a Steam recusa, e os outros lançadores já receberam o
-    deles: nada ali fecha programa nenhum. ARRANQUE a carona do
-    `aplicar_aos_jogos` e este teste reprova."""
+    """Com jogo aberto a Steam recusa, e os outros lançadores já receberam o"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")

@@ -1,28 +1,5 @@
 #!/usr/bin/env python3
-"""quadros_do_jogo.py — o tempo de cada quadro de um jogo do Proton, sem reabri-lo.
-
-O-ENGASGO-DO-JOGO-LEVE-SE-SEPARA-EM-ABBA-01 (01/10/2026). O instrumento do
-ABBA: o clock da placa (livre × travado) contra o caminho do controle (o pad
-virtual × o Modo Nativo).
-
-O QUE MEDE. Um uprobe do `bpftrace` no `thunk64_vkQueuePresentKHR` do
-`winevulkan.so` do Proton, dentro do jogo (`/proc/<pid>/root/…`): todo quadro do
-DXVK e do vkd3d-proton passa ali. O uprobe no `vkQueuePresentKHR` do
-`libvulkan.so.1` não pega nada — o DXVK chama o driver direto (medido em 01/10).
-Não precisa de MangoHud nem de reabrir o jogo; precisa de root (`sudo -A` com o
-`SUDO_ASKPASS` no ambiente, ou `sudo` num terminal).
-
-Uso:
-    quadros_do_jogo.py medir --pid <jogo> --segundos 180 --rotulo virtual-livre-1 \\
-        --saida ~/.local/state/hefesto-casa/engasgo-0110/abba.jsonl
-    quadros_do_jogo.py resumo ~/.local/state/hefesto-casa/engasgo-0110/abba.jsonl
-
-`medir` acrescenta UMA linha JSON por rodada: os quadros, os acima de 20 e de
-50 ms, a mediana, o p99 e os picos acima de 50 ms com a hora. `resumo` agrupa
-as rodadas pelo rótulo sem o número final (`virtual-livre-1` e
-`virtual-livre-2` são a mesma célula) e dá os quadros acima de 20 e de 50 ms
-por minuto.
-"""
+"""quadros_do_jogo.py — o tempo de cada quadro de um jogo do Proton, sem reabri-lo."""
 from __future__ import annotations
 
 import argparse
@@ -36,9 +13,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-#: Acima disto o quadro passou de um vsync de 60 Hz com folga.
 LIMIAR_JITTER_MS = 20.0
-#: Acima disto é tranco: a pessoa vê a imagem parar.
 LIMIAR_TRANCO_MS = 50.0
 
 PROGRAMA = """\

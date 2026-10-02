@@ -24,7 +24,7 @@ O QUE ELE NÃO É
 Não entrega o **endereço** (MAC) do adaptador. Medido nesta bancada em
 22/08/2026, kernel 7.0.11-76070011-generic: ``/sys/class/bluetooth/hci0/`` não
 tem arquivo ``address`` — o ``_adapter_addresses`` do próprio projeto
-(``broker/hidraw_broker.py:237``) devolve ``set()`` sobre ``/sys``. O endereço
+(``broker/hidraw_broker.py:177``) devolve ``set()`` sobre ``/sys``. O endereço
 existe pelo BlueZ no D-Bus de sistema, que este módulo não abre: quem fala
 com o BlueZ é o ``bluez_dbus``, o dono único do barramento de sistema
 (BLUEZ-UM-DONO-01), e este módulo fica no que o kernel diz pelo
@@ -56,7 +56,7 @@ como prova (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A6).
 
 Todas as raízes e todos os leitores entram por argumento com default do sistema
 real — nunca por constante de módulo, que o ``CANARIO-FS-01``
-(``tests/conftest.py:549``) pega e que impediria o retrato de fotografar a aba
+(``tests/conftest.py:329``) pega e que impediria o retrato de fotografar a aba
 com uma bancada de mentira.
 """
 
@@ -69,67 +69,32 @@ from dataclasses import dataclass
 
 from hefesto_dualsense4unix.integrations.usb_pai import dispositivo_usb_pai
 
-#: Nome de interface Bluetooth do kernel. O ``/sys/class/bluetooth`` também
-#: hospeda nós de canal (``hci0:12``), que não são adaptadores — casar o nome
-#: inteiro é o que os deixa de fora.
 _INTERFACE_BT = re.compile(r"^hci[0-9]+$")
 
-#: Hub-RAIZ do controlador xHCI. Ele é classe ``09`` como qualquer hub, e TODO
-#: aparelho pendura sob um deles: sem esta exceção a mesa inteira sairia
-#: marcada como "em hub". Medido nesta bancada em 22/08/2026 — as quatro
-#: entradas ``usb1``..``usb4`` são ``1d6b:0002``/``1d6b:0003``, classe ``09``.
 _HUB_RAIZ = re.compile(r"^usb[0-9]+$")
 
-#: Classe USB de hub, do descritor de dispositivo (``bDeviceClass``).
 _CLASSE_HUB = "09"
 
-#: O último ``0000:xx:xx.x`` da cadeia sysfs é o controlador xHCI onde o
-#: aparelho pendura. É o algoritmo de ``scripts/doctor.sh:7124``
-#: (``usb_pci_controller``), portado. O que NÃO se porta é o ``pci_label``
-#: (``doctor.sh:7130-7137``): ele traduz dois endereços PCI de uma máquina
-#: específica, e endereço PCI de máquina é o oposto de universal.
 _CONTROLADOR_PCI = re.compile(r"0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]")
 
-#: Velocidade negociada, em Mbit/s, a partir da qual o aparelho é USB 3.x.
-#: É a fonte real do "USB 3.0" que a dica da tela promete: o ``speed`` do
-#: sysfs vale ``5000`` para SuperSpeed e ``10000`` para SuperSpeed+.
 _VELOCIDADE_USB3 = 5000.0
 
-#: VIDs de fabricante de CONTROLE. Um controle no cabo NÃO é "outro rádio que
-#: divide a faixa" — listá-lo faria o produto acusar os próprios controles de
-#: interferência, e nesta bancada seriam DOIS (``054c:0ce6`` em ``3-1`` e
-#: ``3-4``). É a decisão M4 de ``DECISOES-DA-EXECUCAO.md``.
-#:
-#: O conjunto é o mesmo de ``app/actions/external_controllers.py:40``
-#: (``_VENDOR_BY_VID``), repetido e não importado: aquele é privado e mora na
-#: camada de JANELA, e ``integrations/`` não pode depender de ``app/``. Quando
-#: um VID novo entrar lá, entra aqui — as duas listas respondem à mesma
-#: pergunta.
 _VIDS_DE_CONTROLE = frozenset(
     {
-        "054c",  # Sony
-        "057e",  # Nintendo
-        "045e",  # Xbox
-        "2dc8",  # 8BitDo
-        "0f0d",  # HORI
-        "20d6",  # PowerA
-        "28de",  # Valve
+        "054c",
+        "057e",
+        "045e",
+        "2dc8",
+        "0f0d",
+        "20d6",
+        "28de",
     }
 )
 
 
 @dataclass(frozen=True)
 class Adaptador:
-    """Um adaptador Bluetooth e ONDE ele está, fisicamente.
-
-    ``interface`` é o ``hciN`` e existe só para o registro e para a depuração:
-    ele inverte entre boots, e por isso NUNCA vai para a tela (M1).
-
-    ``no`` é o caminho do nó do dispositivo USB, ou ``""`` quando o adaptador
-    não pendura em USB nenhum — o caso do rádio embutido na placa-mãe. Nesse
-    caso ``vid``, ``pid``, ``busnum`` e ``devpath`` vêm vazios, e isso é uma
-    resposta, não uma falha.
-    """
+    """Um adaptador Bluetooth e ONDE ele está, fisicamente."""
 
     interface: str
     no: str = ""
@@ -143,40 +108,18 @@ class Adaptador:
 
     @property
     def caminho(self) -> str:
-        """``3-1.1.4`` — a palavra COMUM com ``censo_do_barramento``.
-
-        É ``f"{busnum}-{devpath}"``, que é exatamente o ``nome_do_kernel`` do
-        censo (``censo_do_barramento.py``) e o nome do diretório em
-        ``/sys/bus/usb/devices``. Os dois módulos já tinham as duas metades e
-        nenhum montava a palavra inteira: era a única peça que faltava para
-        eles falarem do mesmo aparelho com o mesmo nome.
-
-        ``""`` quando falta qualquer metade — o adaptador embutido, que não
-        pendura em USB nenhum. Ausência é resposta, e o mapa lê ``""`` como
-        "este não está em entrada nenhuma", nunca como uma entrada chamada
-        ``0-``.
-        """
+        """``3-1.1.4`` — a palavra COMUM com ``censo_do_barramento``."""
         return _caminho_de_barramento(self.busnum, self.devpath)
 
     @property
     def lugar(self) -> str:
-        """O LUGAR (D3): ``pci-0000:0c:00.3-usb-0:4.1.4`` — a chave do dono.
-
-        É por ela que o «Mapear Entrada a Entrada» grava e que o adaptador
-        herda o nome da porta. O :attr:`caminho` fica para quem ainda chaveia
-        pelo barramento; a tradução entre os dois é de ``utils/maquina``.
-        """
+        """O LUGAR (D3): ``pci-0000:0c:00.3-usb-0:4.1.4`` — a chave do dono."""
         return _lugar(self.controlador_pci, self.devpath)
 
 
 @dataclass(frozen=True)
 class RadioUsb:
-    """Um aparelho USB que divide a faixa de 2,4 GHz com os controles.
-
-    ``usb3`` sai de ``speed >= 5000`` e não é enfeite: USB 3.x emite ruído de
-    banda larga bem em cima dos 2,4 GHz, e é essa medição — não um palpite —
-    que autoriza a tela a dizê-lo.
-    """
+    """Um aparelho USB que divide a faixa de 2,4 GHz com os controles."""
 
     no: str
     vid: str
@@ -201,26 +144,7 @@ class RadioUsb:
 
 @dataclass(frozen=True)
 class Mesa:
-    """A leitura inteira, de uma vez — o que a seção "A mesa" desenha.
-
-    Existe para que haja UM ponto de injeção em vez de seis: quem fotografava a
-    aba trocava esta chamada por uma com raízes de mentira, e nenhum caminho de
-    ``/sys`` real era tocado. A foto entra em ``docs/usage/assets`` sem revisão
-    humana, e um endereço de rádio dela num PNG versionado não tem portão que
-    pegue — os de anonimato desta casa não leem imagem.
-
-    **O FOTÓGRAFO MUDOU E A RAZÃO FICOU MAIS FORTE — 08/09/2026.** Era
-    ``scripts/gui-captura/retratar_abas.py``, que montava a JANELA GTK e por
-    isso EXECUTAVA este módulo para desenhar a seção. Apagado em 06/09 com a
-    janela (``D-0609-GTK-LEVA-INTEIRA``). Quem fotografa hoje é
-    ``interface/olhar.py``, que abre uma página HTML já gravada num Chrome
-    headless — **ele não chama esta função em momento nenhum**, e há portão
-    dizendo que ele não fala com o daemon
-    (``tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py``).
-
-    O ponto de injeção NÃO é dívida a recolher: ele continua sendo como a
-    suíte lê uma mesa de mentira, e é o que impede o teste de tocar ``/sys``.
-    """
+    """A leitura inteira, de uma vez — o que a seção "A mesa" desenha."""
 
     adaptadores: tuple[Adaptador, ...] = ()
     radios: tuple[RadioUsb, ...] = ()
@@ -236,18 +160,7 @@ def ler_a_mesa(
     existe: Callable[[str], bool] = os.path.exists,
     real: Callable[[str], str] = os.path.realpath,
 ) -> Mesa:
-    """As três leituras de uma vez — adaptadores, rádios e quem está colado.
-
-    Uma varredura de ``/sys`` por chamada, sem subprocesso e sem abrir ``/dev``:
-    nada aqui disputa o hidraw com o daemon. Chamada ao ENTRAR na aba e no
-    botão "Reexaminar a mesa", nunca em tique — os tiques desta casa são de
-    100 ms, 500 ms e 2 s (``status_actions.py:507``), e pendurar uma varredura
-    de barramento em qualquer um deles é gastar CPU para reler o que não muda.
-
-    A vizinhança é calculada sobre adaptadores E rádios juntos, de propósito: os
-    dois avisos que a tela dá — "colado no vizinho" e "vizinho do adaptador" —
-    são o MESMO cálculo com participantes diferentes.
-    """
+    """As três leituras de uma vez — adaptadores, rádios e quem está colado."""
     leitor = _ler_texto if ler is None else ler
     adaptadores = adaptadores_bluetooth(
         raiz_bt=raiz_bt, listar=listar, ler=leitor, existe=existe, real=real
@@ -270,17 +183,7 @@ def adaptadores_bluetooth(
     existe: Callable[[str], bool] = os.path.exists,
     real: Callable[[str], str] = os.path.realpath,
 ) -> list[Adaptador]:
-    """Os adaptadores Bluetooth da máquina, em ordem estável de interface.
-
-    Lista VAZIA é a resposta mais comum e não é erro: é o estado desta bancada
-    em 22/08/2026, e é também o de qualquer PC de mesa sem dongle. Quem chama
-    tem de dizer isso na tela em vez de mostrar uma tabela em branco (M5).
-
-    O nó do adaptador NÃO sai de ``raiz_bt/hciN`` direto: o ``realpath`` de lá
-    aponta para a INTERFACE USB (medido: termina em ``.../3-3/3-3:1.0``), e é
-    ``dispositivo_usb_pai`` (``usb_pai.py:68``) quem sobe até o dispositivo. Sem
-    a subida, ``idVendor`` e ``physical_location`` não existem no caminho.
-    """
+    """Os adaptadores Bluetooth da máquina, em ordem estável de interface."""
     leitor = _ler_texto if ler is None else ler
     try:
         nomes = sorted(listar(raiz_bt))
@@ -295,9 +198,6 @@ def adaptadores_bluetooth(
             os.path.join(raiz_bt, nome), existe=existe, real=real
         )
         if not no:
-            # Adaptador que não pendura em USB — embutido na placa-mãe, por
-            # PCIe, UART ou SDIO. Ele EXISTE e a tela tem de dizer que existe;
-            # o que ela não pode é inventar uma porta para ele.
             achados.append(Adaptador(interface=nome))
             continue
         achados.append(
@@ -349,8 +249,6 @@ def radios_do_barramento(
     achados: list[RadioUsb] = []
     for nome in nomes:
         if ":" in nome:
-            # `1-3:1.0` é INTERFACE, não dispositivo: ela não tem `idVendor` e
-            # multiplicaria o mesmo aparelho por quantas funções ele expuser.
             continue
         no = real(os.path.join(raiz_usb, nome))
         if no in nos_dos_adaptadores:
@@ -360,10 +258,6 @@ def radios_do_barramento(
         if not vid or not pid:
             continue
         if _e_hub(_campo(no, "bDeviceClass", leitor)):
-            # Hub NENHUM entra, nem o de raiz: um hub não é aparelho de rádio,
-            # é o próprio barramento. Medido antes de existir esta linha — os
-            # quatro `usbN` desta bancada entraram na tabela como se fossem
-            # antenas, com `1d6b:0002` no lugar do nome.
             continue
         if vid in _VIDS_DE_CONTROLE:
             continue
@@ -386,17 +280,7 @@ def radios_do_barramento(
 def vizinhancas_apertadas(
     aparelhos: Sequence[Adaptador | RadioUsb],
 ) -> list[tuple[str, str]]:
-    """Os pares de aparelhos COLADOS, como ``(nó, nó)`` — um par, um aviso.
-
-    "Colado" é a conjunção de três leituras, e ela é conservadora de propósito:
-    mesmo controlador PCI, mesmo barramento, e ``devpath`` numericamente
-    vizinho dentro do mesmo hub (``3`` e ``4``; ``1.2`` e ``1.3``). Portas
-    vizinhas no sysfs são, na esmagadora maioria dos gabinetes, portas vizinhas
-    no metal — que é o que importa para dois rádios se atrapalharem.
-
-    Cada par aparece UMA vez, na ordem dos nós. Devolver ``(a, b)`` e ``(b, a)``
-    faria a tela mostrar dois avisos para um problema só.
-    """
+    """Os pares de aparelhos COLADOS, como ``(nó, nó)`` — um par, um aviso."""
     ordenados = sorted(
         (a for a in aparelhos if a.no and a.devpath), key=lambda a: a.no
     )
@@ -419,17 +303,7 @@ def controladores_dos_barramentos(
     listar: Callable[[str], list[str]] = os.listdir,
     real: Callable[[str], str] = os.path.realpath,
 ) -> dict[int, str]:
-    """``{busnum: controlador PCI}`` DESTE boot — o que traduz caminho em lugar.
-
-    Um ``realpath`` por hub-raiz (``usb1``..``usbN``), sem abrir arquivo:
-    medido em 23/09, ``usb1``/``usb2`` penduram em ``0000:02:00.0`` e
-    ``usb3``/``usb4`` em ``0000:0c:00.3``. É a leitura que
-    ``utils/maquina.lugar_do_caminho`` recebe por argumento, e é por ela que o
-    nome de uma porta sobrevive a um boot que troque a ordem dos barramentos.
-
-    Dicionário vazio é resposta: sem ``/sys`` (contêiner) não há o que
-    traduzir, e quem pergunta diz "não sei".
-    """
+    """``{busnum: controlador PCI}`` DESTE boot — o que traduz caminho em lugar."""
     try:
         nomes = listar(raiz_usb)
     except OSError:
@@ -446,38 +320,21 @@ def controladores_dos_barramentos(
 
 
 def _lugar(controlador_pci: str, devpath: str) -> str:
-    """A grafia do lugar, perguntada ao dono dela (``utils/lugar``).
-
-    O doctor carrega este módulo pelo ``python3`` do sistema
-    (``exame_da_mesa._vizinhancas_do_sistema``), que tem pydantic 1.10. O dono
-    da grafia é só biblioteca padrão, e por isso a CHAMADA também vive ali —
-    perguntar ao ``utils/maquina`` (pydantic 2) levantava ``ImportError`` e o
-    adaptador ficava sem lugar (ENTRADA-A-ENTRADA-02).
-    """
+    """A grafia do lugar, perguntada ao dono dela (``utils/lugar``)."""
     from hefesto_dualsense4unix.utils.lugar import lugar_de
 
     return lugar_de(controlador_pci, devpath)
 
 
 def _caminho_de_barramento(busnum: int, devpath: str) -> str:
-    """``busnum-devpath``, ou ``""`` quando falta metade.
-
-    Uma função e não duas cópias: as duas classes respondem a mesma pergunta,
-    e o ponto do caminho é ser a MESMA palavra em toda a casa. Duas montagens
-    independentes é como se produzem duas palavras que quase batem.
-    """
+    """``busnum-devpath``, ou ``""`` quando falta metade."""
     if not busnum or not devpath:
         return ""
     return f"{busnum}-{devpath}"
 
 
 def _portas_vizinhas(uma: str, outra: str) -> bool:
-    """``devpath`` numericamente adjacente NO MESMO hub — ``1.2`` e ``1.3``.
-
-    O prefixo tem de bater: ``1.2`` e ``2.3`` são portas de hubs diferentes, e
-    o número final vizinho ali é coincidência de numeração, não proximidade
-    física.
-    """
+    """``devpath`` numericamente adjacente NO MESMO hub — ``1.2`` e ``1.3``."""
     prefixo_uma, _, cauda_uma = uma.rpartition(".")
     prefixo_outra, _, cauda_outra = outra.rpartition(".")
     if prefixo_uma != prefixo_outra:
@@ -494,17 +351,7 @@ def _e_hub(classe: str) -> bool:
 
 
 def _atras_de_hub(no: str, ler: Callable[[str], str]) -> bool:
-    """O PAI deste nó é um hub DE VERDADE, e não o hub-raiz do controlador?
-
-    A exceção do hub-raiz é o que torna a resposta útil, e ela nasceu de uma
-    medição: sem ela TODO aparelho da mesa sairia rotulado "em hub", porque
-    todo aparelho pendura sob um hub-raiz, sempre, em qualquer PC.
-
-    Nada de ``bMaxPower`` para saber se o hub tem fonte própria: MEDIDO, ele
-    diz o contrário do palpite — o hub USB 3.1 alimentado reporta ``0mA`` e o
-    USB 2.1 sem fonte reporta ``100mA``. Sem fonte de verdade, a tela não
-    afirma.
-    """
+    """O PAI deste nó é um hub DE VERDADE, e não o hub-raiz do controlador?"""
     pai = os.path.dirname(no)
     if not pai:
         return False
@@ -514,15 +361,7 @@ def _atras_de_hub(no: str, ler: Callable[[str], str]) -> bool:
 
 
 def _painel(no: str, ler: Callable[[str], str]) -> str:
-    """O painel do gabinete, na palavra do kernel — ``""`` quando ele não sabe.
-
-    São SETE valores possíveis (``top``, ``bottom``, ``left``, ``right``,
-    ``front``, ``back``, ``unknown``), e não os três que o desenho previa: esta
-    bancada mede ``right`` em ``/sys/bus/usb/devices/1-3/physical_location/panel``.
-    O arquivo simplesmente não existe em boa parte dos aparelhos — inclusive em
-    todos os que estão atrás de um hub —, e ausência é ausência: quem traduz
-    para palavra de tela é a janela, e ela diz "Não sei", nunca chuta.
-    """
+    """O painel do gabinete, na palavra do kernel — ``""`` quando ele não sabe."""
     valor = _campo(no, "physical_location/panel", ler)
     return "" if valor == "unknown" else valor
 
@@ -555,12 +394,7 @@ def _campo(no: str, atributo: str, ler: Callable[[str], str]) -> str:
 
 
 def _ler_texto(caminho: str) -> str:
-    """Lê um arquivo de ``/sys``; "" em qualquer erro — sysfs some sob a mão.
-
-    Mesmas três linhas de ``usb_pai.py:212``, repetidas e não importadas: lá
-    ela é privada, e um módulo de integração puxar o privado do outro é
-    acoplamento que ninguém pediu.
-    """
+    """Lê um arquivo de ``/sys``; "" em qualquer erro — sysfs some sob a mão."""
     try:
         with open(caminho, encoding="utf-8", errors="replace") as arquivo:
             return arquivo.read()

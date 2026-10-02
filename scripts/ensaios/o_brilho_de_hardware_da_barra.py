@@ -77,7 +77,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (
 )
 
 LINHA_DO_MAPA = "luz.lightbar.brilho@dualsense"
-COMMON_LED_BRIGHTNESS = 42  #: `led_brightness` no common — o mapa e o kernel dizem 42
+COMMON_LED_BRIGHTNESS = 42
 OFF_R, OFF_G, OFF_B = 44, 45, 46
 NOME_DO_NIVEL = {0: "ALTO (a base)", 1: "MÉDIO", 2: "BAIXO"}
 ESCADA_PADRAO = (0, 2, 1, 0)

@@ -1,24 +1,4 @@
-"""PONTE-STEAM-INPUT-01 (19/08/2026) — a lista de exceções passa a LIGAR.
-
-O defeito estava nomeado pelo próprio produto, no estorvo `excecao_inerte`:
-*"Este jogo está na sua lista de exceções do Steam Input, mas o Steam Input
-está DESLIGADO para ele. A lista só preserva o que já estava ligado — ela nunca
-liga."* Diagnóstico perfeito, cura escrita, e ninguém a aplicava.
-
-O preço, na noite de 18→19/08/2026: DON'T SCREAM é da classe *"só aceita Steam
-Input"* — motor Unreal falando XInput, e quem lhe entregava um dispositivo
-XInput era o espelho Xbox do Steam Input. Com o Steam Input desligado ele não
-via controle nenhum, e o guarda desligava a única ponte que o fazia funcionar.
-
-Este arquivo trava quatro coisas:
-
-1. a lista LIGA (e a mordida: com a cura arrancada, o jogo continua em `"0"`);
-2. a árvore em que se escreve é a VIVA, achada por medição e não por suposição
-   — e é uma árvore DIFERENTE da canônica das `LaunchOptions`;
-3. as duas réguas: quando elas discordam, o produto RECUSA escrever;
-4. o prontuário deixou de ser modelo sem uso: todo estorvo que ele declara
-   automático tem quem o cure.
-"""
+"""PONTE-STEAM-INPUT-01 (19/08/2026) — a lista de exceções passa a LIGAR."""
 from __future__ import annotations
 
 import os
@@ -41,11 +21,6 @@ from hefesto_dualsense4unix.integrations.prontuario_dos_jogos import (
     curar_o_que_e_automatico,
 )
 
-#: Os appids reais do caso. O DON'T SCREAM aparece aqui como DADO DE TESTE, e
-#: de propósito NÃO entra em lista nenhuma do produto: receita por appid
-#: embarcada foi recusada por ela em 14/08/2026, porque deixa todo jogo novo
-#: desprotegido. O que o produto ganha é o MECANISMO; quais jogos entram é
-#: config da máquina dela.
 _DONT_SCREAM = "2497900"
 _SACKBOY = "1599660"
 _MMJ = "2111190"
@@ -99,17 +74,9 @@ def _valor(texto: str, appid: str) -> str | None:
     return achado[0] if achado is not None else None
 
 
-# ---------------------------------------------------------------------------
-# 1. A lista LIGA — a mordida
-# ---------------------------------------------------------------------------
 class TestAListaLiga:
     def test_o_jogo_da_lista_desligado_passa_a_ligado(self) -> None:
-        """A MORDIDA. Antes desta leva o valor continuava `"0"` para sempre.
-
-        Arranque a cura (o ramo `atual is not None` de `ligar_no_texto`, ou o
-        `_CURAS[EXCECAO_INERTE]`) e este teste reprova dizendo o valor que
-        sobrou.
-        """
+        """A MORDIDA. Antes desta leva o valor continuava `"0"` para sempre."""
         texto = _vdf(viva={_SACKBOY: "0", _MMJ: "2"})
         assert _valor(texto, _SACKBOY) == "0"
         novo, ligados, pulados = ponte.ligar_no_texto(texto, [_SACKBOY, _MMJ])
@@ -124,16 +91,10 @@ class TestAListaLiga:
         novo, ligados, _ = ponte.ligar_no_texto(texto, [_DONT_SCREAM])
         assert ligados == [_DONT_SCREAM]
         assert _valor(novo, _DONT_SCREAM) == "2"
-        # e não inventou uma segunda ocorrência em lugar nenhum
         assert ponte.contar_chave_cru(novo) == ponte.contar_chave_cru(texto) + 1
 
     def test_o_jogo_sem_bloco_na_arvore_viva_ganha_o_bloco(self) -> None:
-        """Jogo instalado que a Steam nunca abriu em Propriedades > Controle.
-
-        A prova de que ele existe é o bloco na árvore CANÔNICA (onde a Steam
-        guarda as `LaunchOptions` de todo jogo da biblioteca); a escrita cai na
-        árvore VIVA, que ainda não tem bloco nenhum dele.
-        """
+        """Jogo instalado que a Steam nunca abriu em Propriedades > Controle."""
         texto = _vdf(canonica={_DONT_SCREAM: "%command%"}, viva={_MMJ: "2"})
         novo, ligados, _ = ponte.ligar_no_texto(texto, [_DONT_SCREAM])
         assert ligados == [_DONT_SCREAM]
@@ -141,12 +102,7 @@ class TestAListaLiga:
         assert _valor(novo, _MMJ) == "2"
 
     def test_appid_que_o_arquivo_desconhece_nao_vira_bloco_fantasma(self) -> None:
-        """Número errado na lista, ou jogo de outra conta.
-
-        Obedecer à lista dela não é inventar biblioteca — e uma pendência que
-        nunca se resolve traria de volta o D-32: pré-voo dizendo "precisa" para
-        sempre, e a Steam dela sendo fechada para não mudar byte nenhum.
-        """
+        """Número errado na lista, ou jogo de outra conta."""
         texto = _vdf(viva={_MMJ: "2"})
         novo, ligados, pulados = ponte.ligar_no_texto(texto, ["404404"])
         assert novo == texto
@@ -173,9 +129,6 @@ class TestAListaLiga:
         assert len(novo.splitlines()) == len(texto.splitlines())
 
 
-# ---------------------------------------------------------------------------
-# 2. A árvore VIVA não é a canônica das LaunchOptions
-# ---------------------------------------------------------------------------
 class TestAArvoreViva:
     def test_a_chave_mora_na_outra_arvore(self) -> None:
         """Medido em 19/08/2026 no `localconfig.vdf` dela.
@@ -207,13 +160,7 @@ class TestAArvoreViva:
         assert viva.chaves[_SACKBOY][0] == "2"
 
     def test_a_irma_global_acha_a_arvore_num_arquivo_sem_a_chave(self) -> None:
-        """Perfil recém-criado: nenhum jogo tem a chave ainda.
-
-        A âncora é o `SteamController_PSSupport`, que mora no bloco PAI da
-        árvore viva — e no arquivo dela ele aparece DEPOIS do `}` que a fecha,
-        que é o detalhe de ordem capaz de fazer o portão responder o contrário
-        do que vê.
-        """
+        """Perfil recém-criado: nenhum jogo tem a chave ainda."""
         texto = _vdf(canonica={_SACKBOY: "%command%"}, viva={_SACKBOY: None})
         viva = ponte.arvore_viva(ponte.ler_arvores(texto))
         assert viva is not None
@@ -229,9 +176,6 @@ class TestAArvoreViva:
         assert pulados == [(_SACKBOY, ponte.ARVORE_DESCONHECIDA)]
 
 
-# ---------------------------------------------------------------------------
-# 3. As duas réguas
-# ---------------------------------------------------------------------------
 class TestAsDuasReguas:
     def test_a_regua_bruta_e_a_estrutural_batem_no_layout_real(self) -> None:
         texto = _vdf(viva={_SACKBOY: "0", _MMJ: "2", "888": "0"})
@@ -240,12 +184,7 @@ class TestAsDuasReguas:
         assert ponte.conferir_reguas(texto, arvores) is None
 
     def test_chave_fora_de_bloco_de_app_derruba_a_escrita(self) -> None:
-        """Uma ocorrência que a navegação não sabe atribuir = recusa.
-
-        É a lição do `O PORTÃO PODE OLHAR PARA O LUGAR ERRADO`: régua sozinha
-        mente com convicção. Aqui a bruta conta 2 e a estrutural atribui 1 —
-        e o produto prefere não escrever a escrever no lugar errado.
-        """
+        """Uma ocorrência que a navegação não sabe atribuir = recusa."""
         texto = _vdf(viva={_SACKBOY: "0"}).replace(
             '\t"SteamController_PSSupport"',
             '\t"UseSteamControllerConfig"\t\t"1"\n\t"SteamController_PSSupport"',
@@ -276,13 +215,9 @@ class TestAsDuasReguas:
         texto = _vdf(viva={_SACKBOY: "0"})
         novo, ligados, _ = ponte.ligar_no_texto(texto, [_SACKBOY])
         assert ponte.conferir_escrita(texto, novo, ligados) is None
-        # o mesmo relatório sobre um texto que NÃO mudou é reprovado
         assert ponte.conferir_escrita(texto, texto, [_SACKBOY]) == f"nao_ligou:{_SACKBOY}"
 
 
-# ---------------------------------------------------------------------------
-# 4. O estado, os portões e a promessa honesta
-# ---------------------------------------------------------------------------
 class TestOEstadoEOsPortoes:
     @pytest.fixture()
     def casa(self, tmp_path: Path) -> Path:
@@ -305,12 +240,7 @@ class TestOEstadoEOsPortoes:
     def test_com_a_steam_viva_adia_e_diz_que_adiou(
         self, casa: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A promessa honesta: a escrita só sobrevive com a Steam FECHADA.
-
-        Ela regrava o `localconfig.vdf` ao sair e engole a edição feita por
-        baixo. Prometer mais que isto seria a mentira do `resultado=aplicado`
-        sobre um no-op, que esta casa já pagou uma vez.
-        """
+        """A promessa honesta: a escrita só sobrevive com a Steam FECHADA."""
         monkeypatch.setattr(ponte, "steam_running", lambda: True)
         monkeypatch.setattr(ponte, "steam_game_running", lambda: False)
         antes = self._vdf_de(casa).read_text(encoding="utf-8")
@@ -364,19 +294,9 @@ class TestOEstadoEOsPortoes:
         assert status == ponte.PONTE_NADA
 
 
-# ---------------------------------------------------------------------------
-# 5. O prontuário deixou de ser modelo sem uso
-# ---------------------------------------------------------------------------
 class TestOProntuarioLigado:
     def test_todo_estorvo_automatico_tem_quem_o_cure(self) -> None:
-        """A MORDIDA do item 2 da frente.
-
-        O prontuário nasceu em 16/08 modelando `Estorvo.automatica` — *"O
-        produto conserta sozinho, sem ela clicar em nada?"* — e nada do produto
-        o importava. Um `True` ali sem entrada em `_CURAS` é promessa sem dono,
-        e é exatamente o defeito mais caro desta casa: a cura escrita e nunca
-        ligada.
-        """
+        """A MORDIDA do item 2 da frente."""
         automaticos = {chave for chave, dados in _ESTORVOS.items() if dados[2]}
         assert automaticos, "nenhum estorvo automático — o modelo esvaziou"
         assert automaticos <= set(_CURAS), (
@@ -394,11 +314,7 @@ class TestOProntuarioLigado:
     def test_a_cura_automatica_liga_de_verdade(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O fio inteiro: censo -> estorvo automático -> ponte -> vdf escrito.
-
-        É esta a diferença entre modelar uma cura e APLICÁ-LA. O prontuário
-        sabia tudo isto em 16/08 e nada do produto o chamava.
-        """
+        """O fio inteiro: censo -> estorvo automático -> ponte -> vdf escrito."""
         steamapps = tmp_path / ".steam/steam/steamapps"
         (steamapps / "common/Sackboy").mkdir(parents=True)
         (steamapps / f"appmanifest_{_SACKBOY}.acf").write_text(
@@ -421,9 +337,6 @@ class TestOProntuarioLigado:
         lista = tmp_path / ".config/hefesto-dualsense4unix/steam_input_apps.txt"
         lista.parent.mkdir(parents=True)
         lista.write_text(f"# bancada\n{_SACKBOY}\n", encoding="utf-8")
-        # A lista é lida por `XDG_CONFIG_HOME`, do mesmo jeito no censo, na
-        # ponte e no guarda. Sem fixar aqui, a bancada leria a allowlist REAL
-        # da mantenedora e o teste passaria a depender do disco dela.
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
         monkeypatch.setattr(ponte, "steam_running", lambda: False)
         monkeypatch.setattr(ponte, "steam_game_running", lambda: False)
@@ -448,8 +361,7 @@ class TestOProntuarioLigado:
         assert "Consertei" not in cura.frase()
 
     def test_o_estorvo_continua_sendo_nomeado_enquanto_pendente(self) -> None:
-        """Curar sozinho não é motivo para calar: enquanto a Steam está viva o
-        jogo segue impedido, e a tela tem de dizer isso."""
+        """Curar sozinho não é motivo para calar: enquanto a Steam está viva o"""
         ficha = Prontuario(
             appid=_SACKBOY, nome="Sackboy", raiz=Path("/jogo"),
             linha="sh -c 'x' hefesto-launch %command%",
@@ -458,23 +370,11 @@ class TestOProntuarioLigado:
         assert EXCECAO_INERTE in [e.chave for e in ficha.estorvos]
 
 
-# ---------------------------------------------------------------------------
-# 6. O guarda — bash de verdade, no instante em que a escrita sobrevive
-# ---------------------------------------------------------------------------
 _BASH = shutil.which("bash") or "/bin/bash"
 _RAIZ = Path(__file__).resolve().parents[2]
 _GUARDA = _RAIZ / "scripts" / "disable_steam_input.sh"
 _DONO_DA_PONTE = _RAIZ / "src" / "hefesto_dualsense4unix" / "integrations"
 
-#: A ponte de verdade, pela porta que o guarda já abre (`PONTE_PY`), sem o jogo
-#: da máquina. MEDIDO em 02/10/2026, com ela jogando: o `pgrep` de mentira da
-#: bancada só responde ao shell; a ponte em Python pergunta «há jogo?» pelo
-#: `/proc` (`steam_game_running`, desde a PERF-PROC-SCAN-01), achou o jogo DELA
-#: e respondeu `adiado_jogo_aberto`, e dois testes daqui reprovaram. É a família
-#: do bloco JOGO-SO-DA-SESSAO do `tests/conftest.py`, num processo filho, aonde o
-#: embrulho dele não chega. Esta borda responde à ponte o que o `pgrep` responde
-#: ao shell: a cmdline de jogo da máquina não chega à pergunta; o resto do `/proc`
-#: passa intacto.
 _PONTE_DA_BANCADA = """\
 import runpy
 import sys
@@ -498,23 +398,13 @@ runpy.run_path(sys.argv[0], run_name="__main__")
 
 
 class TestOGuardaConstroiAPonte:
-    """O gatilho já existia: o `hefesto-steam-input-guard` acorda quando o
-    `userdata` muda — isto é, quando a Steam ACABOU de sair. Inventar um
-    gatilho novo seria refazer o que já está de pé.
-
-    Execução real do bash, com HOME em `tmp_path` e `pgrep`/`steam`/`sleep`
-    stubados no PATH: nenhum processo desta máquina é tocado. A ponte em Python
-    roda pela `_PONTE_DA_BANCADA`, que tira da pergunta «há jogo?» o jogo aberto
-    na máquina de quem roda a suíte.
-    """
+    """O gatilho já existia: o `hefesto-steam-input-guard` acorda quando o"""
 
     @pytest.fixture()
     def bancada(self, tmp_path: Path) -> dict[str, Any]:
         home = tmp_path / "home"
         vdf = home / ".steam/steam/userdata/1/config/localconfig.vdf"
         vdf.parent.mkdir(parents=True)
-        # Um jogo da lista DESLIGADO (a exceção inerte), um fora dela LIGADO
-        # (que o guarda tem de continuar desligando).
         vdf.write_text(
             _vdf(viva={_SACKBOY: "0", _DONT_SCREAM: "2"}, ps_support="2"),
             encoding="utf-8",
@@ -544,8 +434,6 @@ class TestOGuardaConstroiAPonte:
     ) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         env["HOME"] = str(bancada["home"])
-        # Sem fixar o XDG, um shell com ele exportado (o caso desta máquina)
-        # faria a bancada ler a allowlist REAL da mantenedora.
         env["XDG_CONFIG_HOME"] = str(bancada["home"] / ".config")
         env["PATH"] = f"{bancada['stubs']}:/usr/bin:/bin"
         env["PONTE_PY"] = str(bancada["ponte_py"])
@@ -563,12 +451,7 @@ class TestOGuardaConstroiAPonte:
     def test_o_guarda_desliga_o_de_fora_e_liga_o_da_lista(
         self, bancada: dict[str, Any]
     ) -> None:
-        """A MORDIDA no shell, e as duas metades no mesmo arquivo.
-
-        Antes desta leva o guarda só sabia descer: o de fora ia a `"0"` e o da
-        lista ficava em `"0"` para sempre. É a linha exata que custou DON'T
-        SCREAM — o produto desligando a única ponte que o fazia funcionar.
-        """
+        """A MORDIDA no shell, e as duas metades no mesmo arquivo."""
         proc = self._roda(bancada, "--apply-quiet")
         assert proc.returncode == 0, proc.stdout + proc.stderr
         texto = bancada["vdf"].read_text(encoding="utf-8")
@@ -591,10 +474,7 @@ class TestOGuardaConstroiAPonte:
     def test_o_status_nao_diz_tudo_limpo_com_a_excecao_inerte(
         self, bancada: dict[str, Any]
     ) -> None:
-        """O portão que olha para o lugar errado encerra a busca.
-
-        Foi lendo um "tudo limpo" que a noite de 18/08 se perdeu.
-        """
+        """O portão que olha para o lugar errado encerra a busca."""
         original = bancada["vdf"].read_text(encoding="utf-8")
 
         proc = self._roda(bancada, "--status")

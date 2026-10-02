@@ -98,8 +98,6 @@ def cmd_lightbar_reset(uniq: str | None = None) -> None:
             enviados = bruto
 
     if not enviados:
-        # Não é erro: é a resposta "não havia handle aberto". Dizer "falhou"
-        # aqui mandaria alguém procurar defeito onde só há controle desligado.
         console.print(
             "[yellow]Nenhum controle com handle aberto[/yellow] — nada foi enviado."
         )

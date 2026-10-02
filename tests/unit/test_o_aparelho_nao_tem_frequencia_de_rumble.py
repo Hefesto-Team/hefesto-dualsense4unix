@@ -1,25 +1,4 @@
-"""A régua das duas linhas de ENERGIA e VIBRAÇÃO do mapa — 03/09/2026.
-
-O mapa passou a afirmar duas coisas que vieram de leitura de fonte, e as duas
-são checáveis **sem aparelho**, contra o driver que está COMPILADO nesta
-máquina (``assets/dkms/hid-playstation/hid-playstation.c``):
-
-1. **não existe frequência de rumble** no report de saída — o que existe é um
-   BIT de modo (``valid_flag2`` bit 2) e a amplitude nos bytes 2 e 3;
-2. **a bateria é o byte 52 do corpo**, nibble baixo = nível e nibble alto =
-   estado, com seis estados de carga.
-
-Onde ela MORDE: o driver da DKMS é um arquivo versionado nesta árvore, e um
-``apt upgrade`` que traga outro `hid-playstation` troca esse arquivo. Se a
-constante da v2 mudar de bit, se o corpo deixar de ter 47 bytes, se o limiar de
-firmware mudar de número ou se o `switch` de carga ganhar/perder um estado, o
-mapa passa a mentir — e é aqui que isso aparece, antes de alguém ir ao aparelho
-descobrir na mão.
-
-O que esta régua **não** faz, de propósito: ela não mede nada. Nenhuma célula
-que ela guarda diz `medido`, e o `ate_onde_foi` das duas linhas está vazio.
-Ver `docs/protocol/dualsense-energia-e-vibracao.md`.
-"""
+"""A régua das duas linhas de ENERGIA e VIBRAÇÃO do mapa — 03/09/2026."""
 
 from __future__ import annotations
 
@@ -36,9 +15,6 @@ from hefesto_dualsense4unix.core.physical_report_reader import (
 _RAIZ = Path(__file__).resolve().parents[2]
 _DRIVER = _RAIZ / "assets" / "dkms" / "hid-playstation" / "hid-playstation.c"
 
-#: Os seis estados que o nibble alto do byte de bateria pode dizer, com o
-#: `case` do driver e o que a `decodificar_bateria` desta casa devolve para
-#: eles. A coluna do meio é o que se cobra do FONTE; a da direita, do produto.
 _ESTADOS_DE_CARGA = (
     (0x0, "case 0x0:", True),
     (0x1, "case 0x1:", True),
@@ -71,11 +47,7 @@ class TestOQueODriverDestaMaquinaDiz:
     """As afirmações da linha `vibracao.rumble.frequencia`."""
 
     def test_a_v2_e_um_bit_e_nao_um_numero(self) -> None:
-        """A v2 é um BIT, e o corpo que a carrega tem 47 bytes.
-
-        As quatro afirmações que a célula `cabo_offset` do mapa faz, numa
-        asserção cada. Trocar qualquer um dos números no driver derruba esta.
-        """
+        """A v2 é um BIT, e o corpo que a carrega tem 47 bytes."""
         fonte = fonte_do_driver()
 
         assert "DS_OUTPUT_VALID_FLAG2_COMPATIBLE_VIBRATION2\t\tBIT(2)" in fonte, (
@@ -108,12 +80,7 @@ class TestOQueODriverDestaMaquinaDiz:
         assert "VALID_FLAG0_COMPATIBLE_VIBRATION" in trecho.group("v1")
 
     def test_nenhum_campo_do_corpo_se_chama_frequencia(self) -> None:
-        """A prova de COMPLETUDE: 47 bytes nomeados, e nenhum é frequência.
-
-        É o oposto de uma busca fracassada. O corpo inteiro está declarado
-        num `struct`; se um dia um campo de frequência aparecer ali, esta
-        asserção cai e a linha do mapa tem de ser reescrita.
-        """
+        """A prova de COMPLETUDE: 47 bytes nomeados, e nenhum é frequência."""
         corpo = corpo_do_struct(fonte_do_driver(), "dualsense_output_report_common")
         suspeitos = [
             linha.strip()
@@ -152,16 +119,10 @@ class TestOByteDaBateria:
     def test_os_seis_estados_de_carga_batem_com_o_driver(
         self, nibble: int, caso: str, sabe_o_nivel: bool
     ) -> None:
-        """Cada estado que o driver trata, o produto também sabe responder.
-
-        O enum de fora (`DS5Dongle`) nomeia os seis; o driver trata os seis; e
-        a `decodificar_bateria` desta casa devolve `None` exatamente nos três
-        de erro, que é o "não sei" que não dispara alerta falso.
-        """
+        """Cada estado que o driver trata, o produto também sabe responder."""
         assert caso in fonte_do_driver(), (
             f"o driver deixou de tratar o estado de carga {nibble:#x}"
         )
-        # nibble alto = estado, nibble baixo = nível 7 (75%).
         percentual, _carregando = decodificar_bateria((nibble << 4) | 0x7)
         if sabe_o_nivel:
             assert percentual is not None, (
@@ -174,12 +135,7 @@ class TestOByteDaBateria:
             )
 
     def test_o_nivel_para_em_dez_e_por_isso_a_conta_satura(self) -> None:
-        """O achado que veio de fora: o nibble baixo vai só até 0x0A.
-
-        É a razão de `min(..., 100)` existir. Onze níveis, não dezesseis: os
-        cinco valores acima de 10 não são níveis, e o produto não deve
-        inventar porcentagem para eles.
-        """
+        """O achado que veio de fora: o nibble baixo vai só até 0x0A."""
         vistos = {decodificar_bateria(nivel)[0] for nivel in range(0x0, 0x0B)}
         assert vistos == {5, 15, 25, 35, 45, 55, 65, 75, 85, 95, 100}, (
             f"a escala de onze níveis mudou: {sorted(v for v in vistos if v)}"

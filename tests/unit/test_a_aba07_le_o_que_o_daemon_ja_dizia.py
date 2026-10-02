@@ -49,7 +49,6 @@ sys.path.insert(0, str(INTERFACE))
 PAGINA = "07-lancadores.html"
 
 #: O `state_full` que o daemon publica quando HÁ jogo aberto e ele **não**
-#: passou pelo wrapper. É o único payload que acende o aviso — ver
 #: `home_actions.wrapper_banner_text`, que só reage ao `False` LITERAL.
 SEM_WRAPPER: dict[str, Any] = {
     "gamepad_emulation": {"enabled": True, "wrapper_used": False},
@@ -59,18 +58,7 @@ SEM_WRAPPER: dict[str, Any] = {
 
 @pytest.fixture(scope="module")
 def a07():
-    """O módulo que os GESTOS REGISTRADOS habitam — e não outro com o mesmo nome.
-
-    A ARMADILHA, e ela custou três reprovações desta régua: esta casa alcança o
-    pacote por DOIS caminhos — `hefesto_dualsense4unix.interface.pacotes.
-    a07_lancadores` e `pacotes.a07_lancadores`, este pelo `sys.path.insert` que
-    o `pacotes/__init__.py` faz. **São dois objetos de módulo**, com dois jogos
-    de estado de módulo: um `monkeypatch.setattr` num deles não é visto pelo
-    gesto que vive no outro, e o teste reprova falando de uma cura que existe.
-
-    Perguntar ao registro em vez de importar por um nome fecha a porta: o
-    módulo que sai daqui é, por construção, o mesmo que o piloto chama.
-    """
+    """O módulo que os GESTOS REGISTRADOS habitam — e não outro com o mesmo nome."""
     import pacotes
 
     fn = pacotes.gesto_da_pagina(PAGINA, "procurar")
@@ -104,9 +92,6 @@ def _cartao_da_steam(a07, desenho, lida, state):
     return a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida)[0]
 
 
-# --------------------------------------------------------------------------
-# 1. o aviso vivo — a chave que o daemon publicava e a interface jogava fora
-# --------------------------------------------------------------------------
 def test_o_aviso_e_a_decisao_da_gtk_e_nao_uma_copia(a07, monkeypatch):
     """Quem decide é `home_actions.wrapper_banner_text`. Ponto.
 
@@ -118,11 +103,6 @@ def test_o_aviso_e_a_decisao_da_gtk_e_nao_uma_copia(a07, monkeypatch):
     """
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
-    # O QUE ESTA RÉGUA CASA MUDOU EM 13/09/2026 — TELA-CALADA-02. O cartão
-    # deixou de escrever a frase do dono e escreve um rótulo de estado
-    # (`a07.JOGO_ABERTO_SEM_O_ATALHO`); por isso o dublê já não aparece no
-    # texto. O que a régua cobra continua: quem decide SE acende é o dono — o
-    # dublê que diz "não" apaga o aviso num `state` que o acenderia.
     monkeypatch.setattr(ha, "wrapper_banner_text", lambda s: "FRASE DA GTK")
     html, _ = a07.aviso_do_jogo_aberto({}, None)
     assert a07.JOGO_ABERTO_SEM_O_ATALHO in html, (
@@ -134,18 +114,7 @@ def test_o_aviso_e_a_decisao_da_gtk_e_nao_uma_copia(a07, monkeypatch):
 
 
 def test_o_aviso_usa_o_texto_dela_sem_redigitar(a07):
-    """O cartão escreve o RÓTULO de estado, e não uma segunda redação da frase.
-
-    **O CONTRATO MUDOU EM 13/09/2026 — TELA-CALADA-02.** Até aqui esta régua
-    exigia o `WRAPPER_MISSING_TEXT` da GTK, palavra por palavra, dentro do
-    cartão. A palavra dela sobre as frases de status é *"em todas as abas da
-    interface"*: a frase saiu, e o cartão diz `a07.JOGO_ABERTO_SEM_O_ATALHO`.
-    O que sobra da decisão 14 (*"uma frase, um dono"*) é a outra metade: a aba
-    não redige a frase do dono — nem inteira, nem um pedaço dela.
-
-    A MORDIDA: devolva `_texto(texto)` ao retorno de `aviso_do_jogo_aberto` e
-    este teste reprova.
-    """
+    """O cartão escreve o RÓTULO de estado, e não uma segunda redação da frase."""
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
     html, _ = a07.aviso_do_jogo_aberto(SEM_WRAPPER, None)
@@ -163,41 +132,23 @@ def test_sem_jogo_aberto_o_aviso_nao_acende(a07):
 
 
 def test_o_aviso_respeita_a_dispensa_dela(a07, desenho):
-    """Se ela mandou não perguntar, o aviso não volta para aquele jogo.
-
-    É a metade que faz o par existir: sem isto o botão "Não perguntar para este
-    jogo" gravaria no disco e a tela continuaria igual — o botão que aceita o
-    clique e não faz nada.
-
-    A MORDIDA: apague o `if appid ... in lida.dispensados` e este teste reprova.
-    """
+    """Se ela mandou não perguntar, o aviso não volta para aquele jogo."""
     lida = desenho.Leitura(dispensados=(("3357650", "Um jogo"),))
     html, appid = a07.aviso_do_jogo_aberto(SEM_WRAPPER, lida)
     assert (html, appid) == ("", ""), (
         "o aviso voltou para um jogo que ela dispensou — o clique dela não "
         "produziu efeito nenhum na tela")
-    # e continua acendendo para OUTRO jogo, senão a dispensa seria global
     outro = desenho.Leitura(dispensados=(("999", "Outro"),))
     assert a07.aviso_do_jogo_aberto(SEM_WRAPPER, outro)[0], (
         "a dispensa de um jogo calou o aviso de todos os outros")
 
 
 def test_o_aviso_chega_ao_cartao(a07, desenho):
-    """O que a função devolve tem de APARECER no cartão que a tela recebe.
-
-    Sem esta régua o aviso poderia estar certo, ter teste unitário e **nunca
-    chegar à tela** — que é o defeito que a `test_os_botoes_que_a_pintura_traz`
-    da régua irmã existe para pegar, aqui aplicado ao corpo do cartão.
-
-    O BOTÃO DE DISPENSAR SAIU EM 21/09/2026 com os outros que só a Steam tinha
-    (*"a ideia é termos os mesmos botões pra todos os lançadores. sempre."*).
-    """
+    """O que a função devolve tem de APARECER no cartão que a tela recebe."""
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
     steam = _cartao_da_steam(a07, desenho, desenho.Leitura(com_wrapper=("1",)),
                              SEM_WRAPPER)
-    # O QUE CHEGA AO CARTÃO É O RÓTULO — TELA-CALADA-02, 13/09/2026: a frase
-    # longa do dono saiu do corpo, e o estado ficou.
     assert a07.JOGO_ABERTO_SEM_O_ATALHO in steam.diz
     assert ha.WRAPPER_MISSING_TEXT not in steam.diz
     assert 'data-gesto="nao-perguntar"' not in desenho.acoes_html(steam), (
@@ -205,12 +156,7 @@ def test_o_aviso_chega_ao_cartao(a07, desenho):
 
 
 def test_sem_appid_o_aviso_fica_e_o_botao_some(a07, desenho):
-    """O daemon afirmou que HÁ jogo sem o wrapper; calar seria pior.
-
-    Quando a `window_detect_last_class` ainda não casou, o produto sabe que há
-    um jogo aberto sem o atalho e **não sabe qual**. O aviso é verdadeiro e
-    fica; o que some é o botão, que sem appid não teria sobre o que agir.
-    """
+    """O daemon afirmou que HÁ jogo sem o wrapper; calar seria pior."""
     state = {"gamepad_emulation": {"wrapper_used": False},
              "window_detect_last_class": "Hefesto-Dualsense4Unix"}
     html, appid = a07.aviso_do_jogo_aberto(state, None)
@@ -221,11 +167,7 @@ def test_sem_appid_o_aviso_fica_e_o_botao_some(a07, desenho):
 
 
 def test_a_pintura_do_aviso_nao_toca_o_disco(a07, monkeypatch):
-    """O aviso roda no TIQUE — 2 Hz. Disco ali é o defeito que a vigia cura.
-
-    A MORDIDA: troque a segunda evidência por `launch_session_appid()` ou por
-    `slo.rotulo_do_jogo(appid)` dentro do aviso e este teste reprova.
-    """
+    """O aviso roda no TIQUE — 2 Hz. Disco ali é o defeito que a vigia cura."""
     from hefesto_dualsense4unix.daemon import launch_env
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -239,13 +181,7 @@ def test_a_pintura_do_aviso_nao_toca_o_disco(a07, monkeypatch):
     assert a07.aviso_do_jogo_aberto(SEM_WRAPPER, None)[1] == "3357650"
 
 
-# --------------------------------------------------------------------------
-# 2. "Voltar a perguntar" — o desfazer do que ela já dispensou
-#
-# O «NÃO PERGUNTAR» E O «FECHAR A STEAM» SAÍRAM EM 21/09/2026, e as réguas
 # deles com eles. A lista de dispensados continua lida (`calados`), e quem já
-# dispensou um jogo continua tendo por onde desfazer.
-# --------------------------------------------------------------------------
 def test_voltar_a_perguntar_tira_do_arquivo_de_verdade(a07):
     """Contra o `launch_dialog_dismissed.json` do lar de mentira: o arquivo muda.
 
@@ -262,16 +198,8 @@ def test_voltar_a_perguntar_tira_do_arquivo_de_verdade(a07):
         "com o appid")
 
 
-# --------------------------------------------------------------------------
-# 4. a escada de três evidências — o jogo que ela JÁ FECHOU
-# --------------------------------------------------------------------------
 def test_a_escada_alcanca_o_jogo_que_ela_ja_fechou(a07, monkeypatch):
-    """O caso REAL do botão: o jogo não funcionou, ela fechou, e só então veio.
-
-    A MORDIDA: devolva o `slo.steam_game_running_appid()` sozinho ao `detectar`
-    e este teste reprova — sem o terceiro degrau o produto responde "não achei
-    jogo nenhum" exatamente no caso comum.
-    """
+    """O caso REAL do botão: o jogo não funcionou, ela fechou, e só então veio."""
     from hefesto_dualsense4unix.daemon import launch_env
 
     monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
@@ -318,10 +246,7 @@ def test_sem_evidencia_nenhuma_a_escada_recusa(a07, monkeypatch):
 
 
 def test_o_detectar_nao_diz_aberto_sobre_um_jogo_fechado(a07, monkeypatch):
-    """A tela não afirma o que o produto não mediu — nem por reaproveitar frase.
-
-    A MORDIDA: use a mesma frase nos dois casos e este teste reprova.
-    """
+    """A tela não afirma o que o produto não mediu — nem por reaproveitar frase."""
     from hefesto_dualsense4unix.daemon import launch_env
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -336,18 +261,11 @@ def test_o_detectar_nao_diz_aberto_sobre_um_jogo_fechado(a07, monkeypatch):
     assert "já fechou" in diz and "Um Jogo" in diz
 
 
-#: O APPID DAS DUAS RÉGUAS DE BAIXO É SINTÉTICO — a regra da sprint
-#: STEAM-INPUT-01 (§5.3): régua nova não embarca appid de jogo real.
 JOGO_DE_TESTE = 999000001
 
 
 def _detectar_com(a07, monkeypatch, *, agora, ler=None) -> str:
-    """A frase do cartão da Steam depois do «Detectar», com a vigia dublada.
-
-    `agora` é o que a vigia já tem; `ler` é o que o DONO responde quando
-    perguntado. Sem `ler`, a leitura bloqueante levanta — a régua reprova se o
-    gesto a alcançar sem precisar.
-    """
+    """A frase do cartão da Steam depois do «Detectar», com a vigia dublada."""
     from hefesto_dualsense4unix.daemon import launch_env
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -370,20 +288,7 @@ def _detectar_com(a07, monkeypatch, *, agora, ler=None) -> str:
 ])
 def test_o_detectar_nao_manda_a_um_botao_que_saiu(a07, desenho, monkeypatch,
                                                   onde, promete):
-    """O «Consertar» saiu da aba em 21/09/2026, e a frase ainda mandava clicá-lo.
-
-    STEAM-INPUT-01, acréscimo de 24/09/2026 — achado pela preparação da
-    bancada: o jogo sem o atalho terminava em *"clique em Consertar com o jogo
-    e a Steam fechados"*, e a página publicada não tem botão «Consertar»
-    nenhum. Quem repõe é o vigia de fora quando a Steam fecha, e a frase diz
-    isso — só para o jogo que ele repõe (`Leitura.reparaveis`). O que ELA tirou
-    (`recusados`) fica sem o atalho de propósito. Sem leitura na vigia, o gesto
-    pergunta ao dono (`VIGIA.ler`), e a resposta é a dele.
-
-    A MORDIDA: devolva o «clique em Consertar…» à frase e a primeira asserção
-    reprova; prometa a volta a todo jogo sem o atalho (tire o filtro por
-    `reparaveis` de `_quem_repoe_o_atalho`) e o caso `recusados` reprova.
-    """
+    """O «Consertar» saiu da aba em 21/09/2026, e a frase ainda mandava clicá-lo."""
     reparavel = desenho.Leitura(reparaveis=((str(JOGO_DE_TESTE), "Um Jogo", "—"),))
     agora, ler = {
         "reparaveis": (reparavel, None),
@@ -405,16 +310,7 @@ def test_o_detectar_nao_manda_a_um_botao_que_saiu(a07, desenho, monkeypatch,
 
 def test_sem_leitura_o_detectar_pergunta_ao_dono_e_nao_diz_nao(a07, desenho,
                                                                monkeypatch):
-    """«Não sei» não é «não»: sem leitura, o «Detectar» pergunta ao dono.
-
-    Conferência da STEAM-INPUT-01, 24/09/2026. `VIGIA.agora()` devolve `None`
-    na primeira volta, e a frase dizia «não abre pelo atalho do Hefesto» sobre
-    um jogo que ninguém tinha lido — com o atalho no lugar. O gesto roda em
-    thread, e o contrato da vigia manda quem precisa do valor chamar `ler()`.
-
-    A MORDIDA: tire o `if lida is None: lida = VIGIA.ler()` de
-    `a07_lancadores.detectar` e esta régua reprova.
-    """
+    """«Não sei» não é «não»: sem leitura, o «Detectar» pergunta ao dono."""
     com_o_atalho = desenho.Leitura(com_wrapper=(str(JOGO_DE_TESTE),))
 
     diz = _detectar_com(a07, monkeypatch, agora=None, ler=com_o_atalho)

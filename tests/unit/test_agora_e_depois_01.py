@@ -1,42 +1,8 @@
-"""AGORA E DEPOIS — a escolha dela para de voltar sozinha, e o clique para de aplicar.
-
-AGORA-E-DEPOIS-01 (08/08/2026). A aba Início misturava **dois tempos verbais**
-com a mesma aparência: o que vale AGORA (cor, brilho, gatilho, vibração — o
-daemon é o dono) e o que só vale QUANDO O JOGO ABRIR (o modo e a máscara — ela é
-a dona). O jogo lê a configuração UMA VEZ, na abertura
-(``assets/hefesto-launch.sh``, ``exec env "$@"``), então mexer nesses dois com o
-jogo em curso não o alcança — e mexer no vpad ao vivo invalida os handles que
-ele já abriu. Todo defeito da noite de 08/08 nasceu de aplicar o DEPOIS como se
-fosse AGORA: uma partida sem controle nenhum, um "Jogador 3" fantasma e três
-curas revertidas.
-
-O QUE CADA GRUPO DESTE ARQUIVO TRAVA
-====================================
-1. **a guarda do valor** — com escolha pendente, os tiques do `_render_home`
-   (a cada 2 s) não sobrescrevem o que ela escolheu. Sem isto o desenho inteiro
-   cai: a escolha dela voltava sozinha antes de ela alcançar o "Aplicar";
-2. **o clique não aplica** — nenhum IPC sai de um seletor da aba Início;
-3. **a linha do pendente** — a única prova de que o clique registrou;
-4. **o "Aplicar" aplica os dois tempos** — e pergunta UMA vez, só onde a
-   decisão está completa.
-
-E trava também as DECISÕES DELA de 08/08 à noite, que são o que separa este
-desenho de um parecido e errado (§9 e §12 do plano):
-
-* a caixa da máscara nasce com a ESCOLHA dela — clicou em "Jogar pelo Hefesto",
-  a máscara aparece, e um "Aplicar" só resolve os dois;
-* com jogo aberto, **modo e máscara** abrem o diálogo — a pergunta mora no
-  "Aplicar", onde a decisão está completa;
-* o rascunho só recebe o modo quando o Aplicar confirma;
-* e nada disto depende de cabo, de Bluetooth ou de quantos controles há na mesa
-  (grupo 5) — pedido dela: *"deve ser universal"*.
-"""
+"""AGORA E DEPOIS — a escolha dela para de voltar sozinha, e o clique para de aplicar."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi`, como no
-# `test_footer_actions` — o rodapé puxa `gui_dialogs` no topo do módulo.
 exigir_gi_real("AGORA-E-DEPOIS-01: a escolha pendente")
 
 import sys
@@ -58,10 +24,6 @@ from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
-# ---------------------------------------------------------------------------
-# Dublês
-# ---------------------------------------------------------------------------
-
 
 class _StyleCtx:
     def __init__(self) -> None:
@@ -77,11 +39,7 @@ class _StyleCtx:
 
 
 class _FakeWidget:
-    """O subconjunto de `Gtk` que o `_render_home` toca.
-
-    ``active_id`` e ``visible`` são guardados porque são exatamente o que estes
-    testes observam: "o seletor mostra o quê?" e "a linha está na tela?".
-    """
+    """O subconjunto de `Gtk` que o `_render_home` toca."""
 
     def __init__(self, label: str | None = None, **_kwargs: object) -> None:
         self.label = label
@@ -147,13 +105,7 @@ class _FakeWidget:
 
 
 class _Janela:
-    """A aba Início com os widgets falsos — render E handlers na mesma casca.
-
-    Junta o que os dublês antigos separavam (`test_home_render_state` só
-    renderiza, `test_home_actions_handlers` só clica) porque o defeito que este
-    arquivo persegue mora exatamente no ENCONTRO dos dois: o clique marca, o
-    tique seguinte reescreve.
-    """
+    """A aba Início com os widgets falsos — render E handlers na mesma casca."""
 
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
@@ -205,12 +157,7 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture()
 def sem_ipc(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, dict[str, Any]]]:
-    """Grava toda chamada IPC dos dois módulos que a aba Início usava.
-
-    Cobrir `home_actions` E `mode_transition` é o que dá valor ao teste do
-    passo 2: a troca de modo saía por `mode_transition.call_async`, e olhar só
-    um dos dois deixaria metade do caminho sem vigia.
-    """
+    """Grava toda chamada IPC dos dois módulos que a aba Início usava."""
     chamadas: list[tuple[str, dict[str, Any]]] = []
 
     def _fake(
@@ -240,21 +187,11 @@ def _estado(
     }
 
 
-# ---------------------------------------------------------------------------
-# 1. A guarda do valor (passo 1)
-# ---------------------------------------------------------------------------
-
-
 class TestAEscolhaDelaNaoVoltaSozinha:
     def test_dois_tiques_seguidos_nao_mexem_no_que_o_seletor_mostra(
         self, fake_gtk: None
     ) -> None:
-        """O teste do plano, literal — e o coração do desenho.
-
-        ARRANQUE A GUARDA (faça `_render_home` escrever sempre o modo do daemon)
-        e este teste REPROVA: o poller roda a cada 2 s, e a escolha dela voltaria
-        para "Jogar pelo Hefesto" antes de ela alcançar o botão "Aplicar".
-        """
+        """O teste do plano, literal — e o coração do desenho."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad"))
         janela._home_mode_selector.set_active_id("desktop")
@@ -283,12 +220,7 @@ class TestAEscolhaDelaNaoVoltaSozinha:
     def test_sem_pendencia_a_caixa_continua_ecoando_o_daemon(
         self, fake_gtk: None
     ) -> None:
-        """O contrapeso, e ele é obrigatório.
-
-        Uma guarda que congela a aba trocaria um defeito por outro pior: a
-        janela deixaria de mostrar o que está valendo. Sem pendência, o daemon
-        manda — a AUTO-01.3 continua de pé.
-        """
+        """O contrapeso, e ele é obrigatório."""
         janela = _Janela()
 
         janela._render_home(_estado(modo="native", mascara="xbox"))
@@ -299,18 +231,7 @@ class TestAEscolhaDelaNaoVoltaSozinha:
     def test_a_caixa_da_mascara_nasce_com_a_escolha_dela(
         self, fake_gtk: None
     ) -> None:
-        """Decisão 2 dela, REVISTA em 08/08 à noite — vendo a tela.
-
-        A primeira versão fazia a visibilidade obedecer ao daemon, e o efeito
-        foi o pior possível: ela clicou em "Jogar pelo Hefesto", o botão acendeu
-        e a caixa da máscara SUMIU (o daemon ainda estava em desktop). Ela viu e
-        cortou: *"a máscara volta ao que era. Não temos que burocratizar aí.
-        Clico hefesto, a máscara aparece, clico em jogar xbox ou dualsense e ao
-        clicar em aplicar lá embaixo o efeito aplica de fato"*.
-
-        ARRANQUE A CURA (faça esta linha ler o modo do DAEMON) e este teste
-        REPROVA — e o "ué?" dela volta com ele.
-        """
+        """Decisão 2 dela, REVISTA em 08/08 à noite — vendo a tela."""
         janela = _Janela()
         janela._render_home(_estado(modo="desktop"))
         janela._home_mode_selector.set_active_id("gamepad")
@@ -326,12 +247,7 @@ class TestAEscolhaDelaNaoVoltaSozinha:
     def test_saindo_do_modo_jogo_a_caixa_da_mascara_some(
         self, fake_gtk: None
     ) -> None:
-        """O contrapeso: seguir a escolha vale para os DOIS lados.
-
-        Com o daemon em gamepad e ela escolhendo "Controlar o PC", a máscara
-        deixa de fazer sentido na hora — não se escolhe como o jogo vê um
-        controle que vai virar mouse.
-        """
+        """O contrapeso: seguir a escolha vale para os DOIS lados."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad"))
         janela._home_mode_selector.set_active_id("desktop")
@@ -344,12 +260,7 @@ class TestAEscolhaDelaNaoVoltaSozinha:
     def test_o_custo_mostrado_e_o_da_mascara_que_ela_escolheu(
         self, fake_gtk: None
     ) -> None:
-        """MASCARA-CUSTO-01 continua respondendo a pergunta certa.
-
-        O preço embaixo do seletor existe para ela decidir ANTES de clicar. Com
-        uma máscara pendente, mostrar o custo da vigente responderia sobre a
-        máscara que ela está deixando para trás.
-        """
+        """MASCARA-CUSTO-01 continua respondendo a pergunta certa."""
         janela = _Janela()
         janela._render_home(_estado(mascara="dualsense"))
         janela._home_flavor_selector.set_active_id("xbox")
@@ -363,13 +274,7 @@ class TestAEscolhaDelaNaoVoltaSozinha:
     def test_quando_o_daemon_alcanca_a_escolha_a_pendencia_some(
         self, fake_gtk: None
     ) -> None:
-        """A pendência é uma DIVERGÊNCIA, não uma marca permanente.
-
-        Se o daemon chegou ao que ela escolheu — por esta janela, pela CLI, pelo
-        applet ou por troca de perfil —, não há mais nada a aplicar. Sem esta
-        reconciliação a linha "vai mudar para:" ficaria acesa prometendo uma
-        mudança que já aconteceu.
-        """
+        """A pendência é uma DIVERGÊNCIA, não uma marca permanente."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad"))
         janela._home_mode_selector.set_active_id("desktop")
@@ -384,12 +289,7 @@ class TestAEscolhaDelaNaoVoltaSozinha:
     def test_daemon_desligado_esconde_a_linha_e_preserva_a_escolha(
         self, fake_gtk: None
     ) -> None:
-        """Offline não é "ela desistiu".
-
-        Sem daemon não há como aplicar, então a linha sai da tela — mas apagar a
-        ESCOLHA num engasgo de IPC perderia o que ela acabou de decidir, e ela
-        teria de refazer sem nunca saber por quê.
-        """
+        """Offline não é "ela desistiu"."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad"))
         janela._home_mode_selector.set_active_id("desktop")
@@ -401,21 +301,11 @@ class TestAEscolhaDelaNaoVoltaSozinha:
         assert janela._escolha_pendente == {"modo": "desktop"}
 
 
-# ---------------------------------------------------------------------------
-# 2. O clique não aplica (passo 2)
-# ---------------------------------------------------------------------------
-
-
 class TestOCliqueSoMarca:
     def test_clicar_no_modo_nao_produz_ipc_nenhum(
         self, fake_gtk: None, sem_ipc: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """O teste do passo 2, literal.
-
-        ARRANQUE A CURA (devolva o `apply_mode` ao handler) e este teste
-        REPROVA. Era a segunda metade do defeito 2 dela: *"clicar em dualsense
-        ainda pede pra aplicar agora, ao invés de ser só no botão aplicar"*.
-        """
+        """O teste do passo 2, literal."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad"))
         sem_ipc.clear()
@@ -442,13 +332,7 @@ class TestOCliqueSoMarca:
     def test_o_clique_marca_a_escolha_com_a_aridade_real_do_sinal(
         self, fake_gtk: None
     ) -> None:
-        """BUG-HOME-SEGMENTED-SIGNATURE-01 continua travado.
-
-        O sinal "changed" do `SegmentedSelector` chega SEM argumentos (como o
-        `GtkComboBox`): o handler recebe só o widget e lê `get_active_id()`. Um
-        handler que peça um segundo argumento faz o PyGObject engolir o
-        `TypeError` — os botões mudam de visual e nada acontece, em silêncio.
-        """
+        """BUG-HOME-SEGMENTED-SIGNATURE-01 continua travado."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad", mascara="dualsense"))
 
@@ -462,13 +346,7 @@ class TestOCliqueSoMarca:
     def test_fora_de_jogar_pelo_hefesto_a_mascara_nao_marca_nada(
         self, fake_gtk: None
     ) -> None:
-        """A máscara só existe DENTRO de "Jogar pelo Hefesto".
-
-        O gate lê o seletor de modo — que, com pendência, mostra a escolha dela.
-        Quem marcou "Controlar o PC" e ainda não aplicou não está escolhendo
-        máscara nenhuma, e gravar uma pendência ali faria o "Aplicar" mandar uma
-        máscara para um modo que não a tem.
-        """
+        """A máscara só existe DENTRO de "Jogar pelo Hefesto"."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad", mascara="dualsense"))
         janela._home_mode_selector.set_active_id("desktop")
@@ -480,12 +358,7 @@ class TestOCliqueSoMarca:
         assert janela._escolha_pendente == {"modo": "desktop"}
 
     def test_o_guard_do_render_nao_vira_escolha_dela(self, fake_gtk: None) -> None:
-        """O `_home_guard` continua indispensável — e não foi substituído.
-
-        É ele que impede o `set_active_id` do próprio `_render_home` de entrar
-        no handler como se fosse clique: sem ele, cada tique gravaria uma
-        "pendência" e a janela inventaria decisões que ninguém tomou.
-        """
+        """O `_home_guard` continua indispensável — e não foi substituído."""
         janela = _Janela()
         janela._home_guard = True
         janela._home_mode_selector.set_active_id("native")
@@ -497,12 +370,7 @@ class TestOCliqueSoMarca:
     def test_voltar_ao_que_ja_esta_valendo_desfaz_a_pendencia(
         self, fake_gtk: None
     ) -> None:
-        """Escolher o que já vale não é pendência — e o rodapé diz isso.
-
-        Sem esta volta, clicar "desktop" e depois "gamepad" de novo deixaria uma
-        pendência igual ao vigente: o "Aplicar" dispararia uma transição para
-        onde o sistema já está, e a linha prometeria uma mudança inexistente.
-        """
+        """Escolher o que já vale não é pendência — e o rodapé diz isso."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad"))
         janela._home_mode_selector.set_active_id("desktop")
@@ -513,11 +381,6 @@ class TestOCliqueSoMarca:
 
         assert janela._escolha_pendente is None
         assert janela.toasts[-1] == relancar.TOAST_ESCOLHA_DESFEITA
-
-
-# ---------------------------------------------------------------------------
-# 3. A linha do pendente (passo 3)
-# ---------------------------------------------------------------------------
 
 
 class TestALinhaDoPendente:
@@ -533,11 +396,7 @@ class TestALinhaDoPendente:
     def test_a_frase_usa_o_lexico_da_tela_e_nao_os_ids(
         self, fake_gtk: None
     ) -> None:
-        """Ela recusa nome que não deriva do que já existe na janela.
-
-        "gamepad"/"xbox" são ids internos — palavras que não aparecem em botão
-        nenhum. A linha ecoa o rótulo que ela acabou de clicar.
-        """
+        """Ela recusa nome que não deriva do que já existe na janela."""
         janela = _Janela()
         janela._render_home(_estado(modo="desktop", mascara="dualsense"))
         janela._home_mode_selector.set_active_id("gamepad")
@@ -550,12 +409,7 @@ class TestALinhaDoPendente:
     def test_a_linha_acende_no_clique_e_apaga_sem_pendencia(
         self, fake_gtk: None
     ) -> None:
-        """Sem esta linha o plano vira defeito.
-
-        Com o clique não aplicando mais, ela é a ÚNICA prova de que o gesto
-        registrou: a pessoa clica, nada acontece na hora, e sem o rótulo conclui
-        que a janela ignorou o clique.
-        """
+        """Sem esta linha o plano vira defeito."""
         janela = _Janela()
         janela._render_home(_estado(modo="gamepad"))
         assert janela._home_pendente_label.visible is False
@@ -565,11 +419,6 @@ class TestALinhaDoPendente:
 
         assert janela._home_pendente_label.visible is True
         assert janela.toasts[-1] == relancar.TOAST_ESCOLHA_ANOTADA
-
-
-# ---------------------------------------------------------------------------
-# 4. O "Aplicar" aplica o DEPOIS também (passo 4)
-# ---------------------------------------------------------------------------
 
 
 class _Dialogo:
@@ -603,11 +452,7 @@ class _Dialogo:
 
 
 class _Rodape(FooterActionsMixin):
-    """O rodapé com o mínimo da aba Início que ele lê — como na classe real.
-
-    `HefestoApp` junta os dois mixins; aqui o dublê faz o mesmo, porque o passo
-    4 existe justamente no ponto onde eles se encontram.
-    """
+    """O rodapé com o mínimo da aba Início que ele lê — como na classe real."""
 
     def __init__(self, *, jogo_aberto: bool = False) -> None:
         self.draft = DraftConfig.default()
@@ -633,12 +478,7 @@ class _Rodape(FooterActionsMixin):
 def ipc_do_rodape(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[tuple[str, dict[str, Any]]]:
-    """Grava o que sai pelos DOIS canos do "Aplicar": a transição e o rascunho.
-
-    O `apply_draft` sai por `footer_actions.ipc_bridge.call_async`; a transição,
-    por `mode_transition.call_async`. Só olhando os dois é possível afirmar a
-    ORDEM — e a ordem é metade da entrega.
-    """
+    """Grava o que sai pelos DOIS canos do "Aplicar": a transição e o rascunho."""
     chamadas: list[tuple[str, dict[str, Any]]] = []
 
     def _transicao(
@@ -682,13 +522,7 @@ class TestOBotaoVerdeAplicaOsDoisTempos:
     def test_com_pendencia_e_sem_jogo_a_transicao_vem_antes_do_rascunho(
         self, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """A ordem importa: o DEPOIS primeiro, o AGORA emendado no sucesso.
-
-        ARRANQUE A CURA (volte o `on_apply_draft` a mandar só o rascunho) e este
-        teste REPROVA — era o defeito 1 dela: *"quando eu clico ali no inferior
-        no verde em aplicar, ele não aplica"*. O payload do rascunho não carrega
-        modo nem máscara por contrato.
-        """
+        """A ordem importa: o DEPOIS primeiro, o AGORA emendado no sucesso."""
         rodape = _Rodape()
         rodape._escolha_pendente = {"mascara": "xbox"}
 
@@ -704,13 +538,7 @@ class TestOBotaoVerdeAplicaOsDoisTempos:
     def test_a_transicao_declara_que_o_gesto_e_dela(
         self, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """ORIGEM-QUE-MENTE-01: silêncio no protocolo significa "automático".
-
-        E automático não fura o portão da allowlist do Steam Input — foi assim
-        que o botão "Jogar pelo Hefesto" parou de funcionar na máquina dela com
-        o Sackboy marcado. O clique dela vira pedido AQUI agora, então é daqui
-        que a declaração tem de sair.
-        """
+        """ORIGEM-QUE-MENTE-01: silêncio no protocolo significa "automático"."""
         rodape = _Rodape()
         rodape._escolha_pendente = {"mascara": "xbox"}
 
@@ -726,13 +554,7 @@ class TestOBotaoVerdeAplicaOsDoisTempos:
     def test_o_modo_entra_no_rascunho_so_quando_o_aplicar_confirma(
         self, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """Decisão 3 dela (08/08, noite).
-
-        O registro morava no callback do clique; com o clique não aplicando
-        mais, ninguém o chamaria — e "Salvar este perfil" passaria a gravar
-        perfil SEM a seção `mode`, em silêncio. E ele continua vindo DEPOIS da
-        confirmação: o rascunho descreve o que ficou de pé, não uma intenção.
-        """
+        """Decisão 3 dela (08/08, noite)."""
         rodape = _Rodape()
         rodape._escolha_pendente = {"modo": "desktop"}
         assert rodape.draft.to_profile("Perfil").mode is None
@@ -749,11 +571,7 @@ class TestOBotaoVerdeAplicaOsDoisTempos:
     def test_falha_na_transicao_preserva_a_escolha_dela(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A pendência FICA quando a transição falha.
-
-        Apagá-la aqui faria a linha "vai mudar para:" sumir sem que nada tivesse
-        mudado — a janela mentindo por omissão, no pior momento possível.
-        """
+        """A pendência FICA quando a transição falha."""
 
         def _falha(
             _method: str,
@@ -786,13 +604,7 @@ class TestODialogoPerguntaUmaVezSoENoLugarCerto:
     def test_com_jogo_aberto_e_mascara_pendente_pergunta_e_nao_dispara_nada(
         self, dialogo: _Dialogo, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """O teste do plano, literal — e o cenário dela.
-
-        Ela vai ao Hefesto no meio da partida, troca a máscara e clica em
-        Aplicar. O diálogo pergunta UMA vez, com as três saídas, e **nada** sai
-        antes da resposta: nem a transição (que recriaria o vpad embaixo do jogo)
-        nem o rascunho.
-        """
+        """O teste do plano, literal — e o cenário dela."""
         rodape = _Rodape(jogo_aberto=True)
         rodape._escolha_pendente = {"mascara": "xbox"}
 
@@ -811,20 +623,7 @@ class TestODialogoPerguntaUmaVezSoENoLugarCerto:
     def test_com_jogo_aberto_o_modo_sozinho_tambem_pergunta(
         self, dialogo: _Dialogo, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """Decisão 1 dela, REVISTA em 08/08 à noite — com a tela na frente.
-
-        Ela tinha mantido a `RELANCAR-ORDEM-01` (só a máscara pergunta) quando a
-        pergunta ainda nascia no clique do seletor. Com a pergunta morando no
-        "Aplicar", onde modo E máscara já estão escolhidos, ela disse o que
-        quer: *"se o jogo tiver aberto aparece o popup falando em fechar o jogo
-        pra aplicar e afins. e isso vai permitir aplicar tudo que alterar em
-        todas as abas"*.
-
-        Isto fecha o caminho pelo qual o "Jogador 3" fantasma era alcançado sem
-        aviso — trocar o modo com o jogo aberto mexe no `compose_env` ao vivo.
-        A cura do estado meio-a-meio continua sendo a JOGADOR-3-FANTASMA-01;
-        este diálogo é o que impede de chegar lá sem ela saber.
-        """
+        """Decisão 1 dela, REVISTA em 08/08 à noite — com a tela na frente."""
         rodape = _Rodape(jogo_aberto=True)
         rodape._escolha_pendente = {"modo": "desktop"}
 
@@ -839,12 +638,7 @@ class TestODialogoPerguntaUmaVezSoENoLugarCerto:
     def test_sem_jogo_aberto_nada_pergunta(
         self, dialogo: _Dialogo, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """O contrapeso do teste acima, e ele é obrigatório.
-
-        O diálogo é caro — interrompe — e só se paga quando há um jogo para o
-        qual a mudança não chegaria. Sem jogo aberto, o "Aplicar" aplica e
-        pronto, como sempre fez.
-        """
+        """O contrapeso do teste acima, e ele é obrigatório."""
         rodape = _Rodape(jogo_aberto=False)
         rodape._escolha_pendente = {"modo": "desktop", "mascara": "xbox"}
 
@@ -856,26 +650,12 @@ class TestODialogoPerguntaUmaVezSoENoLugarCerto:
     def test_cancelar_recusa_o_relancamento_mas_o_agora_sai(
         self, dialogo: _Dialogo, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """O-AGORA-NAO-E-REFEM-DO-DEPOIS-01 — inverte o que este teste dizia.
-
-        NOTA DATADA (08/08/2026, noite). A versão anterior travava o contrário,
-        com o raciocínio de que o toast do cancelar promete que "nada mudou" e
-        que aplicar depois dele seria mentira. A verificação adversarial derrubou
-        o raciocínio: a promessa é sobre o **jogo** — *"não mexe na minha
-        partida"* — e as sete seções (cor, brilho, gatilho, vibração) não mexem
-        no jogo em curso. Engoli-las era perder trabalho dela em silêncio.
-
-        E o agravante que decidiu a questão: o Cancelar é o botão **default** do
-        diálogo, então Esc, Enter distraído e o X da janela caíam todos aqui.
-
-        A pendência, essa sim, FICA: ela recusou relançar o jogo agora, não
-        desistiu da escolha.
-        """
+        """O-AGORA-NAO-E-REFEM-DO-DEPOIS-01 — inverte o que este teste dizia."""
         rodape = _Rodape(jogo_aberto=True)
         rodape._escolha_pendente = {"mascara": "xbox"}
         rodape.on_apply_draft()
 
-        dialogo.responder(-6)  # Gtk.ResponseType.CANCEL
+        dialogo.responder(-6)
 
         metodos = [m for m, _ in ipc_do_rodape]
         assert "gamepad.emulation.set" not in metodos, (
@@ -910,17 +690,7 @@ class TestODialogoPerguntaUmaVezSoENoLugarCerto:
     def test_na_proxima_abertura_nao_recria_o_vpad_mas_aplica_o_agora(
         self, dialogo: _Dialogo, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """As duas metades desta saída, e as duas já custaram caro.
-
-        DEPOIS-QUE-APLICAVA-AGORA-01: "aplicar depois" chamava `aplicar()`
-        incondicionalmente e, na máscara, isso RECRIAVA O VPAD ao vivo — a mesma
-        coisa que "aplicar agora", sem fechar o jogo. Continua proibido.
-
-        AGORA-E-DEPOIS-01: mas o "Aplicar" carrega SETE seções que mudam na hora
-        (gatilhos, LEDs, rumble…). Adiar o que só vale na abertura não pode
-        engolir em silêncio o que valia agora — e é para isso que existe o
-        `ao_adiar`.
-        """
+        """As duas metades desta saída, e as duas já custaram caro."""
         rodape = _Rodape(jogo_aberto=True)
         rodape._escolha_pendente = {"mascara": "xbox"}
         rodape.on_apply_draft()
@@ -937,16 +707,7 @@ class TestODialogoPerguntaUmaVezSoENoLugarCerto:
     def test_adiar_tira_a_linha_da_tela_para_ela_nao_contradizer_o_rodape(
         self, dialogo: _Dialogo, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """Enquanto não houver onde guardar, a tela não pode fingir que guardou.
-
-        O toast desta saída diz *"Não mudei nada agora — refaça a escolha depois
-        de fechar"*. Deixar a linha "vai mudar para:" acesa poria a tela
-        contradizendo o rodapé, na mesma janela e no mesmo segundo.
-
-        Quando o passo 6 do plano existir (a pendência gravada em disco,
-        aplicada sozinha quando o jogo fechar), é ESTE teste que muda — junto
-        com o `guardou=` do toast, e não antes dele.
-        """
+        """Enquanto não houver onde guardar, a tela não pode fingir que guardou."""
         rodape = _Rodape(jogo_aberto=True)
         rodape._escolha_pendente = {"mascara": "xbox"}
         rodape.on_apply_draft()
@@ -955,11 +716,6 @@ class TestODialogoPerguntaUmaVezSoENoLugarCerto:
 
         assert rodape._escolha_pendente is None
         assert rodape._home_pendente_label.visible is False
-
-
-# ---------------------------------------------------------------------------
-# 5. Vale para QUALQUER mesa — decisão dela, 08/08 à noite
-# ---------------------------------------------------------------------------
 
 
 class TestValeParaQualquerMesa:
@@ -1006,13 +762,7 @@ class TestValeParaQualquerMesa:
     def test_sem_controle_nenhum_a_escolha_continua_de_pe(
         self, fake_gtk: None
     ) -> None:
-        """O caso extremo, e o que prova que NÃO há acoplamento.
-
-        Com a mesa vazia — nenhum controle conectado — o modo e a máscara
-        continuam sendo escolha válida: eles descrevem o que o sistema vai
-        entregar ao jogo, não o que um aparelho específico faz. Se algum dia
-        alguém condicionar a pendência a haver controle, este teste cai.
-        """
+        """O caso extremo, e o que prova que NÃO há acoplamento."""
         janela = _Janela()
         estado = _estado(modo="desktop")
         estado["controllers"] = []
@@ -1024,18 +774,12 @@ class TestValeParaQualquerMesa:
 
         assert janela._escolha_pendente == {"modo": "gamepad"}
         assert janela._home_mode_selector.active_id == "gamepad"
-        # E a caixa da máscara nasce junto (§12.1) mesmo sem controle na mesa.
         assert janela._home_gamepad_opts.visible is True
 
     def test_o_aplicar_nao_olha_para_controle_nenhum(
         self, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """O payload da transição é do SISTEMA — sem `uniq`, sem índice.
-
-        Um payload por-controle aqui faria a máscara valer para um aparelho e
-        não para os outros, e a mesa de quatro controles dela viraria quatro
-        verdades diferentes sobre o que o jogo vê.
-        """
+        """O payload da transição é do SISTEMA — sem `uniq`, sem índice."""
         rodape = _Rodape()
         rodape._escolha_pendente = {"modo": "gamepad", "mascara": "dualsense"}
 
@@ -1047,37 +791,13 @@ class TestValeParaQualquerMesa:
             assert "transport" not in params, f"{metodo} olhou o transporte"
 
 
-# ---------------------------------------------------------------------------
-# 6. O AGORA nunca é refém do DEPOIS
-# ---------------------------------------------------------------------------
-
-
 class TestOAgoraNaoEeRefemDoDepois:
-    """O-AGORA-NAO-E-REFEM-DO-DEPOIS-01 (08/08/2026, noite).
-
-    Quatro buracos que a verificação adversarial achou no "Aplicar" que EU
-    escrevi horas antes, e que juntos são a explicação provável do relato dela:
-    *"e não aplica mais as cores"*.
-
-    A regra que os une, e que estes testes travam: **cor, brilho, gatilho e
-    vibração mudam na hora e não dependem de o jogo abrir.** Nenhum tropeço no
-    caminho do DEPOIS (modo/máscara) pode cancelar, adiar ou engolir o AGORA.
-    """
+    """O-AGORA-NAO-E-REFEM-DO-DEPOIS-01 (08/08/2026, noite)."""
 
     def test_transicao_que_falha_nao_engole_as_cores(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O buraco principal, e ele era alcançável de verdade.
-
-        `apply_mode` espera 2,0 s por chamada, e a recriação do vpad com dois
-        controles — MEDIDA no journal dela em 08/08 — levou ~1,7 s. Um estouro
-        do timeout caía no `_fail`, que só dava toast: as sete seções nunca
-        saíam, e o toast falava só do modo. Ela não tinha como saber que a cor
-        tinha ido junto.
-
-        ARRANQUE A CURA (tire o `_apply_draft_agora()` do `_fail`) e este teste
-        REPROVA.
-        """
+        """O buraco principal, e ele era alcançável de verdade."""
         chamadas: list[str] = []
 
         def _transicao_que_falha(
@@ -1112,18 +832,12 @@ class TestOAgoraNaoEeRefemDoDepois:
             "a transição falhou e levou as sete seções junto — a cor dela some "
             "sem ninguém dizer nada."
         )
-        # E a pendência fica: ela ainda não valeu.
         assert rodape._escolha_pendente == {"mascara": "xbox"}
 
     def test_o_toast_da_falha_diz_que_o_resto_foi_aplicado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Metade da cura é o texto — senão ela fica sem saber o que valeu.
-
-        O toast antigo dizia só "ERRO ao aplicar o que vale na abertura", e com
-        as sete seções silenciosamente engolidas isso era meia verdade. Agora
-        que elas saem, o texto tem de dizer as DUAS coisas.
-        """
+        """Metade da cura é o texto — senão ela fica sem saber o que valeu."""
 
         def _falha(
             _m: str,
@@ -1187,13 +901,7 @@ class TestOAgoraNaoEeRefemDoDepois:
     def test_dialogo_que_nao_nasce_devolve_o_gesto_em_vez_de_sumir(
         self, monkeypatch: pytest.MonkeyPatch, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """Um clique que não faz nada, sem toast e sem log, é o pior desfecho.
-
-        Se o construtor do diálogo levantar (GTK sem tela, tema quebrado), o
-        `_perguntar_antes_de_relancar` já tinha prometido `True` e a exceção
-        subia: o clique no verde morria em silêncio. Agora ele devolve o gesto
-        — o mesmo fail-safe que o módulo já aplicava na sondagem do jogo.
-        """
+        """Um clique que não faz nada, sem toast e sem log, é o pior desfecho."""
 
         def _explode(*_args: Any, **_kwargs: Any) -> Any:
             raise RuntimeError("sem tela")
@@ -1208,35 +916,15 @@ class TestOAgoraNaoEeRefemDoDepois:
         assert "gamepad.emulation.set" in metodos and "profile.apply_draft" in metodos
 
 
-# ---------------------------------------------------------------------------
-# 7. O diálogo não pode depender de qual aba está à vista
-# ---------------------------------------------------------------------------
-
-
 class TestOJogoAbertoELidoNaHora:
-    """JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026).
-
-    O `_jogo_aberto` tinha UM escritor — `home_actions._render_home` — e ele só
-    roda com a aba Início à vista (o poller checa a página corrente antes de
-    trabalhar). Quem clicasse no "Aplicar" a partir da aba Lightbar, ou nos
-    primeiros 2 s da janela, tinha o flag em `False` e **nenhuma pergunta era
-    feita**: a transição saía direto com o jogo aberto.
-
-    É o caminho que produziu o "Jogador 3" fantasma — o mesmo que esta leva
-    dizia ter fechado horas antes. A cura é reler o sinal no clique, e estes
-    testes existem para que a dependência de aba não volte por descuido.
-    """
+    """JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026)."""
 
     def test_o_aplicar_rele_o_sinal_mesmo_sem_a_aba_inicio_ter_rodado(
         self,
         monkeypatch: pytest.MonkeyPatch,
         ipc_do_rodape: list[tuple[str, dict[str, Any]]],
     ) -> None:
-        """O cenário exato: janela recém-aberta, ela nunca passou pela Início.
-
-        ARRANQUE A CURA (tire a chamada de `_ha_jogo_aberto_agora`) e este teste
-        REPROVA — o diálogo não abre e a transição sai por cima do jogo dela.
-        """
+        """O cenário exato: janela recém-aberta, ela nunca passou pela Início."""
         dialogo_falso = _Dialogo()
         monkeypatch.setattr(
             daemon_actions, "build_consentimento_dialog", dialogo_falso.construir
@@ -1248,7 +936,7 @@ class TestOJogoAbertoELidoNaHora:
             "_run_call",
             lambda *_a, **_k: {"game_signal": {"authority": "game"}},
         )
-        rodape = _Rodape(jogo_aberto=False)  # como nasce, sem a Início renderizar
+        rodape = _Rodape(jogo_aberto=False)
         rodape._escolha_pendente = {"mascara": "xbox"}
 
         rodape.on_apply_draft()
@@ -1263,12 +951,7 @@ class TestOJogoAbertoELidoNaHora:
     def test_leitura_que_falha_nao_muda_de_opiniao(
         self, monkeypatch: pytest.MonkeyPatch, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """Fail-safe: IPC que engasga mantém o que já se sabia.
-
-        A assimetria é deliberada e é a mesma que o `_perguntar_antes_de_relancar`
-        já declara: um diálogo que não aparece é ruim, mas um diálogo que aparece
-        porque o IPC engasgou **interrompe a partida dela**.
-        """
+        """Fail-safe: IPC que engasga mantém o que já se sabia."""
         import hefesto_dualsense4unix.app.ipc_bridge as ponte
 
         def _explode(*_a: Any, **_k: Any) -> Any:
@@ -1281,18 +964,12 @@ class TestOJogoAbertoELidoNaHora:
         rodape.on_apply_draft()
 
         assert rodape._jogo_aberto is False
-        # E o gesto segue: sem jogo conhecido, aplica como sempre aplicou.
         assert [m for m, _ in ipc_do_rodape][:1] == ["native.mode.set"]
 
     def test_o_criterio_e_o_mesmo_da_aba_inicio(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Duas leituras do mesmo fato não podem discordar.
-
-        A aba Início decide por `game_signal.authority == "game"`. Se o rodapé
-        inventasse outro critério, a janela passaria a ter duas verdades sobre
-        se há jogo aberto — o defeito que esta casa persegue desde a HARM-01.
-        """
+        """Duas leituras do mesmo fato não podem discordar."""
         import hefesto_dualsense4unix.app.ipc_bridge as ponte
 
         for autoridade, esperado in (("game", True), ("daemon", False), (None, False)):

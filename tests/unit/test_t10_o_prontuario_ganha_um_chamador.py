@@ -1,26 +1,8 @@
-"""T-10 (SISTEMA-O-VIGIA-VIVO-01) — 1.037 linhas, zero chamadores.
-
-`integrations/prontuario_dos_jogos.py` é o exemplar mais caro da família F2
-nesta casa: mil linhas de código bom, escrito, testado, e **nunca ligado**.
-Ele sabe dizer, lendo só o disco, quais jogos têm uma ponte CONFIRMADA que a
-allowlist de hoje desmente — e essa resposta nunca chegou a lugar nenhum.
-
-O padrão tem nome aqui dentro: *"a casa sabe e o produto não faz"*. O portão
-de órfãos até via o módulo — e o **perdoava** numa lista de exceções.
-
-Ligar não era "chamar em qualquer lugar". O lugar é o cartão "Saúde do
-sistema" desta aba, no molde do `medir_guarda_do_steam_input`: **uma linha só
-quando há divergência, calada quando está alinhado** — a regra que ela deu em
-22/08/2026 para o vigia, e que vale igual aqui.
-"""
+"""T-10 (SISTEMA-O-VIGIA-VIVO-01) — 1.037 linhas, zero chamadores."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_t10_o_prontuario_ganha_um_chamador: importa código da janela GTK")
 
 from dataclasses import dataclass, field
@@ -49,12 +31,7 @@ class TestOCartaoSoFalaQuandoHaDivergencia:
         assert interpretar_prontuario_dos_jogos(_CensoFalso()) is None
 
     def test_tudo_alinhado_fica_calado(self) -> None:
-        """A metade que impede o cartão de virar paisagem.
-
-        Um "[ OK ] nenhuma divergência" a mais empurra para baixo o que
-        importa e treina a pessoa a não ler o cartão — que é como uma tela de
-        saúde deixa de servir para alguma coisa.
-        """
+        """A metade que impede o cartão de virar paisagem."""
         censo = _CensoFalso(
             jogos=[_JogoFalso("Sackboy"), _JogoFalso("Pragmata")]
         )
@@ -62,11 +39,7 @@ class TestOCartaoSoFalaQuandoHaDivergencia:
         assert interpretar_prontuario_dos_jogos(censo) is None
 
     def test_divergencia_vira_aviso_com_o_nome_do_jogo(self) -> None:
-        """A mordida: nomeia, nunca só conta.
-
-        *"3 jogos com pendência"* é exatamente o texto que deixou o Pragmata
-        quebrado a noite inteira (WRAPPER-EM-TODOS-01).
-        """
+        """A mordida: nomeia, nunca só conta."""
         censo = _CensoFalso(
             jogos=[
                 _JogoFalso("Sackboy"),
@@ -83,12 +56,7 @@ class TestOCartaoSoFalaQuandoHaDivergencia:
         assert "Sackboy" not in texto
 
     def test_a_frase_diz_o_que_fazer(self) -> None:
-        """Regra desta casa: o quê, por quê e o que fazer.
-
-        Uma linha que só acusa divergência deixa a pessoa sem o próximo
-        gesto — e o próximo gesto aqui é concreto: a caixinha do editor de
-        perfil, que é quem desmarca.
-        """
+        """Regra desta casa: o quê, por quê e o que fazer."""
         censo = _CensoFalso(jogos=[_JogoFalso("Pragmata", ponte_divergente=True)])
 
         _, texto = interpretar_prontuario_dos_jogos(censo)  # type: ignore[misc]
@@ -125,12 +93,7 @@ class TestNuncaDerrubaOResto:
         assert interpretar_prontuario_dos_jogos(censo) is None
 
     def test_censo_que_explode_vira_silencio(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-        """Sem Steam instalada, sem perfis, disco ilegível: calado, não vermelho.
-
-        A régua tem de saber recusar TAMBÉM o erro — um cartão de saúde que
-        some inteiro porque uma das linhas levantou é pior do que a linha não
-        existir.
-        """
+        """Sem Steam instalada, sem perfis, disco ilegível: calado, não vermelho."""
         from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
 
         def _explode(*_a: object, **_kw: object) -> None:
@@ -143,12 +106,7 @@ class TestNuncaDerrubaOResto:
 
 class TestOModuloDeixouDeSerOrfao:
     def test_o_prontuario_tem_chamador_de_producao(self) -> None:
-        """A mordida da OUTRA metade: o órfão deixou de ser órfão.
-
-        Até 25/08 o `grep` por `prontuario` em `src/` e `scripts/` devolvia
-        QUATRO linhas, e as quatro eram comentário. Agora há um import de
-        verdade, num caminho que a janela percorre ao abrir a aba Sistema.
-        """
+        """A mordida da OUTRA metade: o órfão deixou de ser órfão."""
         import ast
         from pathlib import Path
 
@@ -170,11 +128,7 @@ class TestOModuloDeixouDeSerOrfao:
         )
 
     def test_o_cartao_de_saude_consulta_o_prontuario(self) -> None:
-        """O import não basta: o cartão tem de CHAMAR a medição.
-
-        Sem esta linha, `medir_prontuario_dos_jogos` seria só mais um órfão,
-        um nível acima — o defeito curado pela metade.
-        """
+        """O import não basta: o cartão tem de CHAMAR a medição."""
         import inspect
 
         from hefesto_dualsense4unix.app.actions.daemon_actions import (

@@ -29,9 +29,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o
-# stub que outro arquivo de teste planta em sys.modules — e por isso
-# deixava este módulo rodar contra um GTK de mentira.
 exigir_gi_real("R10 (slug e rename)")
 
 
@@ -103,11 +100,6 @@ SACKBOY = Profile(
 )
 
 
-# ---------------------------------------------------------------------------
-# Helpers puros (valem sem GTK)
-# ---------------------------------------------------------------------------
-
-
 class TestSlugHelpers:
     def test_navegacao_sem_acento_e_o_mesmo_arquivo(self) -> None:
         assert slugify("Navegacao") == slugify("Navegação") == "navegacao"
@@ -128,11 +120,6 @@ class TestSlugHelpers:
     def test_find_by_slug_tolera_nome_sem_slug(self) -> None:
         assert find_by_slug("", [NAVEGACAO]) is None
         assert find_by_slug("Navegacao", []) is None
-
-
-# ---------------------------------------------------------------------------
-# Editor fake: métodos REAIS do mixin sobre widgets fake
-# ---------------------------------------------------------------------------
 
 
 class _FakeEntry:
@@ -178,7 +165,6 @@ class _EditorSalvar(pa.ProfilesActionsMixin):
             "profile_priority_scale": _FakeScale(0),
             "main_window": object(),
         }
-        # Registro do que aconteceu.
         self.salvos: list[Profile] = []
         self.deletados: list[str] = []
         self.switches: list[str] = []
@@ -187,14 +173,12 @@ class _EditorSalvar(pa.ProfilesActionsMixin):
         self.downgrade_perguntado: list[str] = []
         self.prioridade_perguntada: list[str] = []
         self.rename_perguntado: list[tuple[str, str]] = []
-        # Respostas dos diálogos (default: confirma tudo).
         self.resposta_overwrite = True
         self.resposta_downgrade = True
         self.resposta_prioridade = True
         self.resposta_rename: str | None = "renomear"
         self.ativo = selecionado
 
-    # --- ganchos do mixin ---
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
 
@@ -240,8 +224,6 @@ def _rodar_save(
         ),
         raising=False,
     )
-    # SALVAR-NAO-REBAIXA-02: o diálogo ganhou o `regra_atual` (o rótulo do que
-    # o perfil É HOJE) — `**_kw` aqui é só o dublê acompanhando a assinatura.
     monkeypatch.setattr(
         gd,
         "confirm_downgrade_match_to_any",
@@ -263,8 +245,6 @@ def _rodar_save(
     monkeypatch.setattr(pa, "delete_profile", lambda n: editor.deletados.append(n))
     monkeypatch.setattr(pa, "active_profile_name", lambda: editor.ativo)
     # P3 (25/08/2026): o `profile.switch` do Salvar saiu da thread do GTK e
-    # passou pelo MESMO `call_async` do botão Ativar — o dublê acompanha, e
-    # roda o `on_success` na hora porque num teste não há laço do GLib.
     def _call_async_sincrono(
         method: str,
         params: dict[str, object] | None = None,
@@ -293,8 +273,8 @@ class TestGuardaDeSobrescritaPorSlug:
             selecionado="Navegação",
             nome_digitado="Navegacao",
         )
-        ed._new_profile = True  # é um perfil NOVO, não a edição da Navegação
-        ed.resposta_overwrite = False  # ela cancela ao ver o aviso
+        ed._new_profile = True
+        ed.resposta_overwrite = False
         _rodar_save(ed, monkeypatch)
 
         assert ed.overwrite_perguntado == ["Navegação"], (

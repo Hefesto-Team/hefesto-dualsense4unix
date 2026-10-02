@@ -42,11 +42,8 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
-#: Faixa forjada da casa: nenhum endereço de aparelho.
 UNIQ = "aa:bb:cc:00:00:a1"
 
-#: O prazo da conferência na régua. O do produto é 2 s; aqui é curto para a
-#: mesa vazia passar dele seis vezes em 0,6 s.
 TTL_S = 0.1
 
 
@@ -107,7 +104,7 @@ def test_a_mesa_vazia_nao_para_o_laco_do_servico(monkeypatch: pytest.MonkeyPatch
     def correr() -> None:
         try:
             asyncio.run(cenario())
-        except BaseException as erro:  # a régua diz o erro, e não some com ele
+        except BaseException as erro:
             erros.append(erro)
 
     fio = threading.Thread(target=correr, name="laco-da-regua", daemon=True)
@@ -115,13 +112,13 @@ def test_a_mesa_vazia_nao_para_o_laco_do_servico(monkeypatch: pytest.MonkeyPatch
     conferidas_na_volta = 0
     try:
         _ate(lambda: bool(conferencias), "a primeira conferência, com o controle na mesa")
-        mesa.clear()  # o último controle sai
+        mesa.clear()
         time.sleep(2 * TTL_S)
         antes = batidas[0]
         time.sleep(6 * TTL_S)
         depois = batidas[0]
         ja = len(conferencias)
-        mesa.append(UNIQ)  # a volta solta o laço que girava: a régua não pendura
+        mesa.append(UNIQ)
         _ate(lambda: len(conferencias) > ja, "a conferência de quem voltou", prazo=2.0)
         conferidas_na_volta = len(conferencias) - ja
     finally:

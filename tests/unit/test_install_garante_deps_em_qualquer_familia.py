@@ -1,36 +1,4 @@
-"""DEPS-UNIVERSAIS-01 — o install garante as dependências em QUALQUER família.
-
-O pedido dela, em 19/08/2026, em duas frases: *"corrige nosso install pra
-instalar isso tudo aí"* e *"qualquer install. inclusive o do andre ou de
-qualquer outro user"*. A segunda é a que manda no desenho: a cura não pode ser
-para a máquina dela.
-
-O DEFEITO, medido antes desta leva:
-
-    grep -c "libhidapi\\|librsvg" install.sh   ->  0   (as duas OBRIGATÓRIAS)
-    run_apt() { ... sudo apt-get install ... } ->  a ÚNICA porta
-
-Numa máquina limpa de Fedora ou de Arch o instalador nativo terminava
-"ok" sem a libhidapi — a biblioteca que o backend do controle abre por dlopen —
-e sem o loader SVG do gdk-pixbuf, sem o qual o ícone da bandeja some e todo
-glifo da interface cai junto. É o verde mentiroso que o próprio ``install.sh``
-já nomeia por escrito no bloco do DKMS.
-
-O que este arquivo tranca, em quatro frentes:
-
-1. a família é descoberta pelo ``/etc/os-release`` — Debian, Fedora e Arch —
-   e cai no PATH só quando o os-release não conclui;
-2. UMA tabela traduz o nome canônico para cada família, e o despacho instala
-   com o gerenciador certo (o valor da cura está justamente na distro que
-   ninguém desta casa roda à mão);
-3. as duas OBRIGATÓRIAS são FATAIS quando continuam faltando depois da
-   tentativa — reconferidas pelo EFEITO, para que nome errado na tabela não
-   passe por instalado;
-4. numa família SEM tratamento o install NÃO aborta e NÃO mente: diz o que
-   falta, com o nome de referência, e segue.
-
-PROVA DE QUE MORDE: ver o cabeçalho de cada teste e o relatório da leva.
-"""
+"""DEPS-UNIVERSAIS-01 — o install garante as dependências em QUALQUER família."""
 
 from __future__ import annotations
 
@@ -47,33 +15,14 @@ from tests.unit.fonte_do_instalador import texto_do_instalador
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 INSTALL_PATH = RAIZ / "install.sh"
-#: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh`. Sem a lib esta
-#: régua PERDIA COBERTURA EM SILÊNCIO — e é o pior jeito de perder: o
-#: `install_bt_agent_host` mudou de casa em 31/08/2026 levando junto o
-#: `run_pkg bt-agent` e o `comando_manual_pkg bt-agent`, e a derivação de
-#: `_canonicos_usados()` deixava de enxergar `bt-agent`. O teste continuava
-#: VERDE, medindo um canônico a menos. Ver `tests/unit/fonte_do_instalador.py`.
 INSTALL = texto_do_instalador()
 
-#: As três famílias que a tabela trata — e são três, não quatro, desde
-#: 19/08/2026: o ``zypper`` foi retirado porque **todos** os seus nomes de
-#: pacote eram inferidos e nenhum smoke os conferia (ver a nota datada no
-#: cabeçalho da tabela, em ``install.sh``). Cada nome que sobrou tem
-#: empacotamento desta casa ou contêiner do ``smoke-multi-distro`` por trás.
 FAMILIAS = ("apt", "dnf", "pacman")
 
-#: Buracos ACEITOS na tabela, com o motivo. Não é folga: é o registro de que a
-#: ausência foi decidida. ``bluez-tools`` não existe com esse nome no Fedora —
-#: nesse caso o ``run_pkg`` diz "não tenho nome para isso aqui" em vez de
-#: instalar outra coisa.
 VAZIOS_ACEITOS = {
     ("bt-agent", "dnf"),
 }
 
-
-# --------------------------------------------------------------------------
-# Extração — executar bash de VERDADE, como test_install_dkms_default.py
-# --------------------------------------------------------------------------
 
 def _linha_do_install(agulha: str) -> str | None:
     """A primeira linha do `install.sh` que contém `agulha`."""
@@ -84,11 +33,7 @@ def _linha_do_install(agulha: str) -> str | None:
 
 
 def _path_sem(binarios: list[str]) -> str:
-    """Um PATH com o essencial, mas SEM os binários pedidos.
-
-    Monta um diretório de links: é a única forma honesta de medir "máquina que
-    não tem X" numa bancada que tem X.
-    """
+    """Um PATH com o essencial, mas SEM os binários pedidos."""
     import tempfile
 
     alvo = Path(tempfile.mkdtemp(prefix="hefesto-path-magro-"))
@@ -188,15 +133,12 @@ def _bin_falso(tmp_path: Path) -> Path:
     return binario
 
 
-# --------------------------------------------------------------------------
-# 1. A família sai do /etc/os-release
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("os_release", "esperado"),
     [
         ('ID=ubuntu\nID_LIKE=debian\n', "apt"),
         ('ID=debian\n', "apt"),
-        ('ID=pop\nID_LIKE="ubuntu debian"\n', "apt"),  # a máquina do André
+        ('ID=pop\nID_LIKE="ubuntu debian"\n', "apt"),
         ('ID=fedora\n', "dnf"),
         ('ID=nobara\nID_LIKE="fedora"\n', "dnf"),
         ('ID=arch\n', "pacman"),
@@ -204,12 +146,7 @@ def _bin_falso(tmp_path: Path) -> Path:
     ],
 )
 def test_familia_sai_do_os_release(tmp_path: Path, os_release: str, esperado: str) -> None:
-    """A régua não pode depender do PATH desta máquina.
-
-    Esta bancada tem apt-get. Se a descoberta olhasse só para o PATH, TODA
-    distro daria "apt" aqui e o portão passaria por vacuidade — que é o pior
-    estado possível.
-    """
+    """A régua não pode depender do PATH desta máquina."""
     arquivo = tmp_path / "os-release"
     arquivo.write_text(os_release, encoding="utf-8")
     proc = _roda("_familia_pacotes", env={"HEFESTO_OS_RELEASE": str(arquivo)})
@@ -218,12 +155,7 @@ def test_familia_sai_do_os_release(tmp_path: Path, os_release: str, esperado: st
 
 
 def _path_magro(tmp_path: Path) -> Path:
-    """Um PATH com o mínimo para o script rodar e NENHUM gerenciador de pacotes.
-
-    Sem isto a régua passa por vacuidade: esta bancada tem ``apt-get``, então
-    o passo de PATH do ``_familia_pacotes`` responderia "apt" para qualquer
-    ``/etc/os-release``.
-    """
+    """Um PATH com o mínimo para o script rodar e NENHUM gerenciador de pacotes."""
     magro = tmp_path / "magro"
     magro.mkdir(exist_ok=True)
     for utilitario in ("sed", "tr", "head", "cat", "rm", "mktemp", "grep"):
@@ -254,21 +186,7 @@ def test_familia_desconhecida_nao_inventa(tmp_path: Path) -> None:
     ],
 )
 def test_opensuse_nao_e_prometido(tmp_path: Path, os_release: str) -> None:
-    """19/08/2026 — decisão dela: **não prometer openSUSE**.
-
-    A leva da manhã tinha acrescentado a família ``zypper`` com nomes de pacote
-    INFERIDOS em 100% das linhas, sem um único smoke que os conferisse — o
-    repositório não tem uma linha sequer sobre zypper. Afirmação forte sem
-    teste que a sustente é o que esta casa reprova por portão.
-
-    A resposta honesta, então, é a mesma do NixOS: "nenhum". Quem está lá cai
-    no caminho de família sem tratamento, que já existe, DIZ o que falta e
-    SEGUE — ver ``test_familia_sem_tratamento_nao_aborta_e_diz_o_que_falta``.
-
-    O QUE DERRUBA ESTE TESTE (e deve derrubá-lo): um contêiner openSUSE na
-    matriz ``smoke-multi-distro`` do CI conferindo os nomes. Aí a coluna volta
-    medida, e esta régua é reescrita junto.
-    """
+    """19/08/2026 — decisão dela: **não prometer openSUSE**."""
     arquivo = tmp_path / "os-release"
     arquivo.write_text(os_release, encoding="utf-8")
     proc = _roda(
@@ -285,11 +203,7 @@ def test_opensuse_nao_e_prometido(tmp_path: Path, os_release: str) -> None:
 
 
 def test_nenhum_gerenciador_sem_medicao_no_codigo() -> None:
-    """O portão do inferido: gerenciador sem smoke não entra pela porta dos fundos.
-
-    Olha só as linhas EXECUTÁVEIS — a nota datada do ``install.sh`` cita o
-    zypper pelo nome de propósito, e apagar a nota seria apagar a decisão.
-    """
+    """O portão do inferido: gerenciador sem smoke não entra pela porta dos fundos."""
     codigo = "\n".join(
         linha for linha in INSTALL.splitlines() if not linha.strip().startswith("#")
     )
@@ -301,9 +215,6 @@ def test_nenhum_gerenciador_sem_medicao_no_codigo() -> None:
         )
 
 
-# --------------------------------------------------------------------------
-# 2. O despacho instala com o gerenciador certo, com o nome certo
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("familia", "comando"),
     [
@@ -313,11 +224,7 @@ def test_nenhum_gerenciador_sem_medicao_no_codigo() -> None:
     ],
 )
 def test_run_pkg_despacha_por_familia(tmp_path: Path, familia: str, comando: str) -> None:
-    """As duas OBRIGATÓRIAS, nas três famílias medidas, sem tocar no sistema.
-
-    Este é o teste que morde se alguém arrancar uma linha da tabela: sem o
-    nome, o ``run_pkg`` recusa e o comando não sai.
-    """
+    """As duas OBRIGATÓRIAS, nas três famílias medidas, sem tocar no sistema."""
     log = tmp_path / "log"
     binario = _bin_falso(tmp_path)
     proc = _roda(
@@ -350,12 +257,7 @@ def test_run_pkg_sem_nome_recusa_e_nao_instala_outra_coisa(tmp_path: Path) -> No
 
 
 def test_run_apt_continua_sendo_o_braco_apt(tmp_path: Path) -> None:
-    """``run_apt`` não virou fachada morta: é ele que roda no apt.
-
-    Há chamadores e documentos desta casa que o citam, e é ele que guarda a
-    disciplina de saída quieta. Se alguém o cortar do caminho do ``run_pkg``,
-    esta régua reprova.
-    """
+    """``run_apt`` não virou fachada morta: é ele que roda no apt."""
     log = tmp_path / "log"
     binario = _bin_falso(tmp_path)
     proc = _roda(
@@ -369,15 +271,11 @@ def test_run_apt_continua_sendo_o_braco_apt(tmp_path: Path) -> None:
     assert "FACHADA libhidapi-hidraw0" in proc.stdout
 
 
-# --------------------------------------------------------------------------
-# 3. A tabela cobre o que o install pede
-# --------------------------------------------------------------------------
 def _canonicos_usados() -> set[str]:
     """Nomes canônicos passados literalmente a ``run_pkg``/``comando_manual_pkg``."""
     usados: set[str] = set()
     padrao = re.compile(r"\b(?:run_pkg|comando_manual_pkg)((?:\s+[a-z0-9-]+)+)")
     for corpo in padrao.findall(INSTALL):
-        # O `2` de `run_pkg wlrctl 2>/dev/null` não é nome de pacote.
         usados.update(
             token for token in corpo.split() if re.fullmatch(r"[a-z][a-z0-9-]+", token)
         )
@@ -385,12 +283,7 @@ def _canonicos_usados() -> set[str]:
 
 
 def test_todo_canonico_usado_tem_linha_na_tabela(tmp_path: Path) -> None:
-    """Portão contra o canônico órfão.
-
-    Escrever ``run_pkg foo`` sem linha na tabela produz um install que avisa
-    "não tenho nome para 'foo'" em TODA máquina — falha silenciosa que só
-    aparece na distro de outra pessoa.
-    """
+    """Portão contra o canônico órfão."""
     usados = _canonicos_usados()
     assert usados, "nenhuma chamada de run_pkg encontrada — a régua ficou cega"
     faltando: list[str] = []
@@ -423,16 +316,8 @@ def test_o_passo_e_chamado_no_fluxo_native() -> None:
     assert chamadas, "_garantir_deps_de_sistema está definida mas nunca é chamada"
 
 
-# --------------------------------------------------------------------------
-# 4. Criticidade: obrigatória morre, importante avisa, desconhecida não aborta
-# --------------------------------------------------------------------------
 def test_obrigatoria_que_continua_faltando_e_fatal(tmp_path: Path) -> None:
-    """A reconferência pelo EFEITO é o que impede o verde mentiroso.
-
-    Aqui o gerenciador "instala" com sucesso (sai 0) e a biblioteca continua
-    ausente — exatamente o que acontece com nome de pacote errado. O install
-    tem de MORRER, não celebrar.
-    """
+    """A reconferência pelo EFEITO é o que impede o verde mentiroso."""
     proc = _roda(
         "\n".join(
             [
@@ -469,11 +354,7 @@ def test_importante_ausente_avisa_e_segue(tmp_path: Path) -> None:
 
 
 def test_familia_sem_tratamento_nao_aborta_e_diz_o_que_falta() -> None:
-    """Uma pessoa no Nix tem de sair sabendo o que instalar à mão.
-
-    Nem mentir ("ok") nem abortar (a máquina dela pode ter tudo por outro
-    caminho): dizer o nome e seguir.
-    """
+    """Uma pessoa no Nix tem de sair sabendo o que instalar à mão."""
     proc = _roda(
         "\n".join(
             [
@@ -489,21 +370,12 @@ def test_familia_sem_tratamento_nao_aborta_e_diz_o_que_falta() -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "SEGUIU" in proc.stdout
     assert "NAO DEVIA INSTALAR" not in proc.stdout
-    # O nome de referência tem de aparecer, senão o aviso não serve para nada.
     assert "librsvg2-common" in proc.stdout
     assert "libhidapi-hidraw0" in proc.stdout
 
 
 def test_checagem_de_biblioteca_nao_morre_de_sigpipe(tmp_path: Path) -> None:
-    """SIGPIPE-NA-CHECAGEM-01 — MEDIDO em 19/08/2026.
-
-    ``ldconfig -p | grep -q libopus`` sob ``set -o pipefail`` devolve **141**:
-    o grep sai no primeiro acerto, o ldconfig morre de SIGPIPE e o pipeline
-    herda o sinal. A biblioteca PRESENTE era lida como ausente, e o bloco
-    BT-MIC-01 chamava o gerenciador de pacotes a cada execução do install para
-    instalar o que já estava instalado. O ``ldconfig`` falso abaixo imprime
-    muito, justamente para que o SIGPIPE seja certo se alguém devolver o pipe.
-    """
+    """SIGPIPE-NA-CHECAGEM-01 — MEDIDO em 19/08/2026."""
     binario = tmp_path / "bin"
     binario.mkdir()
     falso = binario / "ldconfig"
@@ -525,51 +397,20 @@ def test_checagem_de_biblioteca_nao_morre_de_sigpipe(tmp_path: Path) -> None:
     assert "PRESENTE" in proc.stdout
 
 
-# --------------------------------------------------------------------------
-# 5. O texto que caducou foi SUBSTITUÍDO
-# --------------------------------------------------------------------------
 def test_reconhecimento_nao_diz_mais_que_so_sabe_apt() -> None:
-    """Fato errado se substitui (regra dela, 11/08/2026).
-
-    A frase "o caminho nativo instala dependências só por apt" descrevia o
-    instalador de ontem. Mantê-la ao lado do certo obriga a próxima pessoa a
-    escolher entre duas afirmações.
-    """
+    """Fato errado se substitui (regra dela, 11/08/2026)."""
     assert "instala dependências só por apt" not in INSTALL
     assert "sem apt-get: esta não é uma distro da família Debian/Ubuntu" not in INSTALL
 
 
 def test_nenhum_bloco_de_dependencia_ficou_preso_no_apt() -> None:
-    """Os blocos que instalavam por apt passaram todos pelo despacho.
-
-    Se alguém escrever um ``run_apt`` novo com nome de pacote na grafia do
-    Debian, a distro de outra pessoa volta a ficar sem a cura — e é isso que
-    esta régua pega.
-    """
-    # Nome LITERAL começa com letra/dígito; a única chamada legítima é a do
-    # despacho, que passa a lista já traduzida (`run_apt "${_nomes[@]}"`).
+    """Os blocos que instalavam por apt passaram todos pelo despacho."""
     literais = re.compile(r"(?:^|[;&|(]|\s)run_apt\s+(?:\\\n\s*)?[A-Za-z0-9]", re.MULTILINE)
     sem_comentario = "\n".join(
         linha for linha in INSTALL.splitlines() if not linha.strip().startswith("#")
     )
     achados = literais.findall(sem_comentario)
     assert achados == [], "run_apt com nome de pacote literal, fora do run_pkg"
-
-
-# ── PATH-SEM-SBIN-01 (19/08/2026) ────────────────────────────────────────────
-# A régua de biblioteca perguntava ao `ldconfig`, e ele mora em `/usr/sbin` —
-# que NÃO está no PATH de usuária comum no Debian 12; só no do root. Toda
-# biblioteca PRESENTE era lida como ausente, e o instalador pedia `sudo` para
-# instalar o que já estava lá (ou morria, no caso das obrigatórias).
-#
-# Por que nenhum portão via: os contêineres do `smoke-multi-distro`
-# (.github/workflows/ci.yml) rodam como ROOT, e o root tem sbin no PATH em
-# qualquer distro. O teste abaixo tira o sbin de propósito.
-#
-# A cura é a disciplina que o próprio arquivo já declara três linhas acima da
-# função: "cada checagem pergunta pelo EFEITO, nunca pelo nome do pacote".
-# `ctypes.CDLL` é o que o produto faz — o `hidapi` do pip abre por `ffi.dlopen`
-# e o `dualsense_bt_audio` abre a libopus por `ctypes.CDLL`.
 
 
 def _dep_presente_isolada(soname: str, *, path: str) -> int:
@@ -617,24 +458,8 @@ class TestARaguaNaoDependeDoSbin:
         )
 
 
-# ── MAQUINA-SEM-BLUETOOTHCTL-01 e SONAME-QUE-NAO-ABRE-01 (19/08/2026) ────────
-# Os dois foram achados pelo job novo que EXECUTA o `install.sh` em contêiner,
-# no primeiro uso dele. Nenhuma máquina de quem desenvolve os pega: todas têm
-# `bluetoothctl`, e todas tinham o `ldconfig` no PATH.
-
-
 class TestMaquinaSemBluetoothctl:
-    """O `install.sh` morria com 127, calado, antes do passo 1 de 11.
-
-    `bluetoothctl --version | awk ...` num PATH sem `bluetoothctl`: o
-    `command not found` devolve 127, o `set -o pipefail` (install.sh:188)
-    propaga, o `set -e` derruba o script — e o `2>/dev/null` engole até a
-    mensagem. Medido em contêiner debian:12 limpo:
-    `install.sh terminou com código 127 em 50s`.
-
-    E contradizia o desenho do próprio arquivo: o censo lista `bluez` como
-    IMPORTANTE, não obrigatória — o instalador deve seguir sem ele e avisar.
-    """
+    """O `install.sh` morria com 127, calado, antes do passo 1 de 11."""
 
     def test_a_leitura_da_versao_do_bluez_nao_derruba_o_script(self) -> None:
         """A MORDIDA. Tire o `|| true` da linha e isto reprova com 127."""
@@ -675,12 +500,7 @@ class TestMaquinaSemBluetoothctl:
 
 
 class TestOSonameTemDeAbrir:
-    """A régua pergunta pelo EFEITO (`ctypes.CDLL`), e efeito exige soname real.
-
-    `lib:libhidapi` funcionava com o `ldconfig -p | grep` porque ali era
-    SUBSTRING. Com `ctypes.CDLL` é `dlopen`, e `dlopen('libhidapi')` falha:
-    medido nesta bancada, com a biblioteca instalada.
-    """
+    """A régua pergunta pelo EFEITO (`ctypes.CDLL`), e efeito exige soname real."""
 
     def test_todo_soname_da_tabela_e_carregavel_ou_ausente_de_verdade(self) -> None:
         """A MORDIDA. Troque um soname por um nome sem `.so` e isto reprova."""
@@ -698,7 +518,6 @@ class TestOSonameTemDeAbrir:
                 try:
                     ctypes.CDLL(soname)
                 except OSError as exc:
-                    # Ausente nesta máquina é legítimo; nome INVÁLIDO não é.
                     if "cannot open shared object file" not in str(exc):
                         maus.append(f"{soname} ({exc})")
         assert not maus, (
@@ -709,24 +528,9 @@ class TestOSonameTemDeAbrir:
         )
 
 
-# ---------------------------------------------------------------------------
-# O P3 DA MÁQUINA LIMPA NO CI (28/09/2026, O-PRODUTO-EM-QUALQUER-MAQUINA-01)
-#
-# O `install-multi-distro` passou a rodar o install no Pop sem a parte gráfica
-# (o ubuntu:24.04 com o repositório do Pop por cima) e no fedora:42, e a
-# compilar cada módulo DKMS contra os headers da distro. O `smoke-multi-distro`
-# é o espelho: a mesma promessa medida por outra pergunta.
-#
-# A MORDIDA: tire a entrada do Pop de uma das duas matrizes (reprova o
-# espelho e a do Pop), tire o passo do `--so-dkms` (reprova a do dkms), ou
-# troque a impressão digital no script (reprova a da chave).
-# ---------------------------------------------------------------------------
-
 CI_YML = RAIZ / ".github" / "workflows" / "ci.yml"
 INSTALAR_COMO_USUARIA = RAIZ / "scripts" / "ci" / "instalar_como_usuaria.sh"
 
-#: A impressão digital da chave que assina o repositório do Pop!_OS, digitada
-#: aqui e não lida do script: a régua tem de ser independente do que ela mede.
 _CHAVE_DO_POP = "63C46DF0140D738961429F4E204DD8AEC33A7AFF"
 
 

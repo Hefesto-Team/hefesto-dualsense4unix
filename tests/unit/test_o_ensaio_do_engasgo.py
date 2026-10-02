@@ -1,20 +1,4 @@
-"""O ensaio do engasgo — `scripts/ensaio-do-engasgo.sh`, a ferramenta dos ensaios 1 a 4.
-
-O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01, §4: cada ensaio é a mesma fase,
-jogada por ela, e o script grava por minuto os picos, o `allocstall`, o `NVRM` e
-o `Output queue is full`. O MangoHud entra pela Steam (pedido dela, 27/09:
-*«usa o mango hud na steam»*), pelo dono das Opções de Inicialização, e sai do
-mesmo jeito — conferido. <!-- noqa-acento: citação literal dela -->
-
-Tudo aqui roda num lar de mentira, com um dono de mentira: a régua nunca fala
-com a Steam de quem a roda.
-
-AS MORDIDAS: faça o `devolver` pular o `devolver_a_tabela` e
-`test_preparar_e_devolver_deixam_a_opcao_como_era` reprova; tire o filtro de
-hora do `resumo` e `test_o_resumo_conta_por_minuto_so_o_que_e_da_volta`
-reprova; faça o `cabe` do `resumo` imprimir o número sempre e
-`test_o_que_nao_foi_medido_sai_como_traco_e_nunca_como_zero` reprova.
-"""
+"""O ensaio do engasgo — `scripts/ensaio-do-engasgo.sh`, a ferramenta dos ensaios 1 a 4."""
 from __future__ import annotations
 
 import json
@@ -29,8 +13,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 ENSAIO = RAIZ / "scripts" / "ensaio-do-engasgo.sh"
 
-#: O dono de mentira: a tabela é um JSON; `--aplicar` sai 3 (a Steam aberta)
-#: quando o lar tem o arquivo `steam-aberta`.
 _DONO = '''#!/usr/bin/env python3
 import json, sys
 from pathlib import Path
@@ -81,11 +63,6 @@ def _pasta(lar: Path) -> Path:
     return lar / "estado" / "hefesto-dualsense4unix" / "ensaio-do-engasgo"
 
 
-# ---------------------------------------------------------------------------
-# 1. A OPÇÃO DO JOGO VAI E VOLTA PELO DONO
-# ---------------------------------------------------------------------------
-
-
 def test_preparar_e_devolver_deixam_a_opcao_como_era(lar: Path) -> None:
     original = "VKD3D_CONFIG=no_upload_hvv %command%"
     (lar / "tabela.json").write_text(json.dumps({"3357650": original}))
@@ -125,11 +102,6 @@ def test_sem_preparar_a_volta_recusa(lar: Path) -> None:
     assert r.returncode != 0 and "preparar" in r.stderr
 
 
-# ---------------------------------------------------------------------------
-# 2. A VOLTA E O RESUMO
-# ---------------------------------------------------------------------------
-
-
 def test_a_volta_grava_a_memoria_e_so_le_a_maquina(lar: Path) -> None:
     assert _rodar(lar, "preparar", "1599660").returncode == 0
     r = _rodar(lar, "volta", "um", "0.03")
@@ -157,7 +129,6 @@ def test_o_resumo_conta_por_minuto_so_o_que_e_da_volta(lar: Path) -> None:
          "ordem_7_a_10": 7},
     ]
     (volta / "memoria.jsonl").write_text("".join(json.dumps(a) + "\n" for a in amostras))
-    # O jogo abriu 30 s antes da volta: os 30 primeiros segundos ficam fora.
     partida = datetime.fromtimestamp(t0 - 30)
     linhas = ["os,cpu", "x,y", "fps,frametime,cpu_load,elapsed", "0,49000000,0,0"]
     for segundo, ms in ((10, 16.7), (20, 80.0), (40, 16.7), (50, 40.0), (70, 60.0), (95, 16.7),
@@ -171,10 +142,6 @@ def test_o_resumo_conta_por_minuto_so_o_que_e_da_volta(lar: Path) -> None:
     assert r.returncode == 0, r.stderr
     saida = r.stdout.splitlines()
     assert saida[0] == "== sackboy-ligado", saida
-    # 14:00: os quadros dos segundos 40, 50 e 70 (16,7, 40 e 60 ms) e uma
-    # amostra só — a ordem é retrato e vale, a diferença do `allocstall` não
-    # existe ainda, e sai «-»; 14:01: o do segundo 95, duas amostras, e o
-    # kernel. O de 150 s passa da última amostra, e sai.
     assert saida[1] == ("14:00 quadros=3 >33ms=2 >50ms=1 allocstall=- compact_stall=- "
                         "ordem7-10_min=40 NVRM=0 fila_cheia=0"), saida
     assert saida[2] == ("14:01 quadros=1 >33ms=0 >50ms=0 allocstall=2 compact_stall=2 "
@@ -183,13 +150,7 @@ def test_o_resumo_conta_por_minuto_so_o_que_e_da_volta(lar: Path) -> None:
 
 
 def test_o_que_nao_foi_medido_sai_como_traco_e_nunca_como_zero(lar: Path) -> None:
-    """Sem o CSV do MangoHud e sem o diário do kernel, a volta não tem pico medido.
-
-    O MangoHud pode não estar instalado, ou a opção pode não ter chegado ao
-    jogo; o diário do kernel pode estar fechado para quem roda. Um «>50ms=0»
-    ali se leria como a volta limpa — e o ensaio 1 decide o botão por essa
-    conta. MORDIDA: faça o `cabe` devolver sempre o número e esta régua reprova.
-    """
+    """Sem o CSV do MangoHud e sem o diário do kernel, a volta não tem pico medido."""
     volta = _pasta(lar) / "voltas" / "sem-mangohud"
     volta.mkdir(parents=True)
     comeco = datetime(2026, 9, 28, 15, 0, 0)

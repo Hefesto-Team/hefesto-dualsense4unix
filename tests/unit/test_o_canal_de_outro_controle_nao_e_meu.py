@@ -1,34 +1,4 @@
-"""MIC-O-CANAL-DO-OUTRO-01 — o canal de outro controle não é meu (13/09/2026).
-
-O journal do teste dela de 12/09 (15:52 a 17:22) mostrou três defeitos que régua
-nenhuma via, e esta régua é dos três:
-
-1. **o microfone de um controle eleito no canal de OUTRO** — o ``…:ab`` saiu da
-   mesa às 16:35:04, e às 16:40:06 a eleição deu ao ``…:03`` o canal
-   ``hefesto_mic_0000ab``. A regra 4 de `escolher_fonte` (um para um) entregava
-   o único nó da lista sem ler o nome dele;
-2. **o canal órfão sobrevive ao controle e ao daemon** — ninguém derrubava o
-   `module-pipe-source` de um controle que saiu;
-3. **o `pactl` mudo e o supervisor martelando** — medido por quem coordena em
-   13/09, das 01:53 às 02:40: 699 prazos estourados e 509 `load-module` sem
-   resposta.
-
-NENHUM TESTE AQUI FALA COM O SERVIDOR DE SOM DA MÁQUINA. Todo `pactl` é dublê;
-o único contato com o sistema é ler o ``/proc`` DESTE processo para um fifo que
-o próprio teste cria em ``tmp_path``.
-
-COMO MORDE (exercido em 13/09/2026, as saídas estão na entrega)
-----------------------------------------------------------------
-* arranque o ``if not sem_nome_alheio: return None`` de `escolher_fonte` e
-  devolva ``usb.casar(fontes, …)`` → reprova a seção 1;
-* arranque a chamada ``self._varrer_os_orfaos(nos)`` do `_loop` → reprova o
-  laço da seção 2; arranque a prova do escritor do varredor → reprova
-  ``test_canal_com_escritor_fica_mesmo_sem_pedido``;
-* arranque os dois ``pactl_mudo()`` de `_orfaos_se_o_pactl_responde` → reprova
-  a seção 3.
-
-Endereços sintéticos da faixa ``e8:47:3a`` com a máscara da casa.
-"""
+"""MIC-O-CANAL-DO-OUTRO-01 — o canal de outro controle não é meu (13/09/2026)."""
 
 from __future__ import annotations
 
@@ -50,9 +20,7 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     identidade_no_nome,
 )
 
-#: Quem apertou o botão do microfone.
 DELE = "e8:47:3a:00:00:5c"
-#: Quem saiu da mesa e deixou o canal para trás.
 VIZINHO = "e8:47:3a:00:00:9e"
 
 CANAL_DELE = "hefesto_mic_00005c"
@@ -67,11 +35,6 @@ CABO = (
 
 def _hex(uniq: str) -> str:
     return uniq.replace(":", "").lower()
-
-
-# ===========================================================================
-# 1. O NOME DE OUTRO CONTROLE DIZ NÃO
-# ===========================================================================
 
 
 @pytest.mark.parametrize("alheio", [CANAL_DO_VIZINHO, PONTE_DO_VIZINHO, BLUEZ_DO_VIZINHO])
@@ -113,18 +76,13 @@ def test_a_identidade_que_o_nome_carrega() -> None:
     assert e_de_outro_controle(CANAL_DO_VIZINHO, DELE) is True
     assert e_de_outro_controle(CANAL_DELE, DELE) is False
     assert e_de_outro_controle(CABO, DELE) is False
-    # Sem endereço legível não se diz que o nó é dele.
     assert e_de_outro_controle(CANAL_DELE, "nao-e-um-mac") is True
 
 
 def test_a_eleicao_pede_o_canal_dele_em_vez_de_eleger_o_do_vizinho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caminho EXATO do journal: `eleicao_mic_ok alvo=hefesto_mic_0000ab` para o ``…:03``.
-
-    Com só o órfão do vizinho publicado, `_canal_no_ar` achava canal atribuível
-    — o do vizinho — e nem pedia o canal de quem apertou.
-    """
+    """O caminho EXATO do journal: `eleicao_mic_ok alvo=hefesto_mic_0000ab` para o ``…:03``."""
     publicadas = [CANAL_DO_VIZINHO]
     pedidos: list[str] = []
 
@@ -144,11 +102,6 @@ def test_a_eleicao_pede_o_canal_dele_em_vez_de_eleger_o_do_vizinho(
 
     assert pedidos == [DELE], "o canal dele nunca foi pedido: o do vizinho respondeu antes"
     assert escolher_fonte(fontes, DELE, [DELE], usb) == CANAL_DELE
-
-
-# ===========================================================================
-# 2. O CANAL ÓRFÃO SAI — e só ele
-# ===========================================================================
 
 
 class _Servidor:
@@ -294,7 +247,6 @@ class _GerenciadorDeMentira:
 def _uma_volta(sub: bt_mic.BtMicSubsystem, monkeypatch: pytest.MonkeyPatch) -> None:
     """O `_loop` DE PRODUÇÃO, uma volta — é o laço que tem de chamar a varredura."""
     monkeypatch.setattr(bt, "nos_dualsense_bluetooth", lambda: [])
-    # O canal do cabo de quem pediu lê as fontes do servidor: nunca o de verdade.
     monkeypatch.setattr(elm, "fontes_de_captura_agora", lambda: [])
     sub._registro.novidade.set()
     sub._loop()
@@ -393,7 +345,7 @@ def test_quem_escreve_no_fifo_e_o_o_wronly_de_verdade(tmp_path: Any) -> None:
         escritor = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
         try:
             assert bt.alguem_escreve_no_fifo(fifo) is True
-            os.unlink(fifo)  # o `parar()` apaga o caminho; o fd continua valendo
+            os.unlink(fifo)
             assert bt.alguem_escreve_no_fifo(fifo) is True
         finally:
             os.close(escritor)
@@ -401,11 +353,6 @@ def test_quem_escreve_no_fifo_e_o_o_wronly_de_verdade(tmp_path: Any) -> None:
     finally:
         os.close(como_o_servidor)
     assert bt.alguem_escreve_no_fifo("") is None
-
-
-# ===========================================================================
-# 3. O `pactl` MUDO: RECUO, E NÃO LAÇO FIXO
-# ===========================================================================
 
 
 class _PactlQueTrava:
@@ -456,7 +403,6 @@ def test_load_module_que_estoura_o_prazo_nao_se_repete_no_ciclo_seguinte(recuo: 
     assert bt.pactl_mudo() is True
 
     antes = len(pactl.chamadas)
-    # O CICLO SEGUINTE constrói uma source NOVA — a memória não pode ser dela.
     seguinte = bt.SourceVirtualPipeWire(nome=CANAL_DELE, descricao="Teste", runner=pactl)
     assert seguinte.iniciar() is False
     assert len(pactl.chamadas) == antes, "o ciclo seguinte perguntou ao servidor mudo"
@@ -503,12 +449,7 @@ class _Decodador:
 def test_o_supervisor_nao_repete_o_load_module_no_ciclo_seguinte(
     recuo: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Dois ciclos do gerenciador com o servidor travando no `load-module`.
-
-    Sem a cura: o canal por controle e o caminho de volta pelo nome do
-    transporte tentam cada um, a cada ciclo — QUATRO `load-module` em dois
-    ciclos, a mesma cadência do journal de 13/09. Com a cura: UM.
-    """
+    """Dois ciclos do gerenciador com o servidor travando no `load-module`."""
     pactl = _PactlQueTravaNoLoad()
     real = bt.SourceVirtualPipeWire
 

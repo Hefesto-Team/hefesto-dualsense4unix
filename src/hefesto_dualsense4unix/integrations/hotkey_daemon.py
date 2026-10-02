@@ -63,50 +63,14 @@ DEFAULT_BUFFER_MS = 150
 DEFAULT_COMBO_NEXT = ("ps", "dpad_up")
 DEFAULT_COMBO_PREV = ("ps", "dpad_down")
 PS_BUTTON = "ps"
-# FEAT-EMULATION-GAMEMODE-LONGPRESS-01: segurar o PS por este tempo (sem outro
-# botao) alterna o "modo jogo" (suprime a emulacao de mouse/teclado).
-# 0 (ou negativo) desliga o gesto — o PS solo então só faz a ação de toque
-# curto (ex.: abrir Steam) e o modo jogo passa a ser so pelo combo.
-# Default 0: o long-press estava causando modo-jogo ACIDENTAL (o toque de abrir
-# a Steam que passava de ~1s alternava o modo). O modo jogo agora e' so pelo
-# combo deliberado PS+Options. Quem quiser o gesto de volta: ps_long_press_ms>0.
 DEFAULT_PS_LONG_PRESS_MS = 0
-# PS-TOQUE-CURTO-01 (E1) — o TETO de duração do "toque curto" do PS, em ms.
-# Acima dele o release deixa de ser toque: nada dispara, e o motivo vai para o
-# journal (E2, `ps_solo_ignorado_hold_longo`).
-#
-# POR QUE ELE EXISTE. O README publica *"PS (toque curto) → abre a Steam"* e o
-# comentário deste módulo dizia "toque curto" — mas o código não comparava
-# duração com teto nenhum: TODA duração de release caía no mesmo ramo. A única
-# barreira era `_ps_long_press_fired`, que nunca arma porque o long-press nasce
-# desligado (`DEFAULT_PS_LONG_PRESS_MS = 0`, por causa do modo-jogo acidental).
-# Composição das duas decisões: **segurar o PS por cinco segundos para RELIGAR
 # um DualSense que caiu no rádio abria a Steam** — duas vezes em 45 s na sessão
-# dela, e com a Steam já aberta abria uma segunda janela.
-#
-# POR QUE 700. Um clique intencional humano fica em 80-250 ms; o religamento
-# medido no journal dela foi de 5.038 ms. 700 ms é folgado para o primeiro e
-# corta o segundo com sobra. É um número único, e não uma configuração nova a
-# mais para ela entender (a sprint recomenda esta saída, a (a), e recusa
-# explicitamente reaproveitar `ps_long_press_ms`: amarrar dois gestos
-# independentes ao mesmo número faria o toque curto virar 2 s no dia em que ela
-# ligasse o long-press em 2000 ms).
-#
-# 0 (ou negativo) DESLIGA o teto e restaura o comportamento antigo — qualquer
-# duração vira toque. Mesma semântica de `ps_long_press_ms`.
 DEFAULT_PS_TOQUE_CURTO_TETO_MS = 700
-#: Env var que sobrescreve o teto acima, lida na construção do `HotkeyConfig`.
-#: Este módulo NÃO lê `daemon.toml` (ver docstring do topo): a config efetiva
-#: vem de env vars + IPC, e é por env que `ps_long_press_ms` também se ajusta.
 ENV_PS_TOQUE_CURTO_TETO_MS = "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS"
 
 
 def _teto_do_toque_curto_do_ambiente() -> int:
-    """Resolve o teto do toque curto: env var se legível, senão o default.
-
-    Valor ilegível (vazio, texto, float) NÃO derruba o daemon nem desliga o
-    teto: cai no default. Desligar é escolha explícita — `=0`.
-    """
+    """Resolve o teto do toque curto: env var se legível, senão o default."""
     bruto = os.getenv(ENV_PS_TOQUE_CURTO_TETO_MS)
     if bruto is None:
         return DEFAULT_PS_TOQUE_CURTO_TETO_MS
@@ -121,48 +85,13 @@ def _teto_do_toque_curto_do_ambiente() -> int:
         return DEFAULT_PS_TOQUE_CURTO_TETO_MS
 
 
-# FEAT-EMULATION-GAMEMODE-COMBO-01: combo que alterna o modo jogo. Default
-# PS+Options — gesto deliberado que NAO colide com o PS solo (Steam) nem com
-# next/prev (PS+dpad). Tupla vazia desliga o combo.
 DEFAULT_COMBO_GAMEMODE = ("ps", "options")
-# FEAT-HOTKEY-PONTE-CYCLE-01: combo que pede a PRÓXIMA PONTE — a forma como o
 # jogo enxerga o controle (máscara DualSense, máscara Xbox, mouse+teclado).
-# Tupla vazia desliga o gesto.
-#
-# Default PS+R3 desde 19/08/2026, por pedido dela: *"ao invés de apertarmos 4
-# vezes o botão ps, deveriamos mudar pra ser segurar o botão ps e o start faz
-# ele pular de modo de sincronização"* — e a correção dela em seguida, porque
-# `PS + Options` já é o modo jogo (`DEFAULT_COMBO_GAMEMODE`), então o par é o
-# R3. SUBSTITUI o `PS + seta direita` de 18/08: era um default escolhido por
-# estar LIVRE, e o clique do analógico direito é gesto de polegar que a mão já
-# está segurando, sem tirar o dedo de lugar nenhum.
-#
-# Por que o R3 cabe: ele existe no mapa de botões do evdev
-# (`core/evdev_reader.py`, `BTN_THUMBR`) e nenhum outro combo o usa. Ele TEM
 # outros donos fora do combo — clique do meio na emulação de mouse
-# (`integrations/uinput_mouse.py`) e fechar o teclado virtual
-# (`core/keyboard_mappings.py`) —, e é o latch de combo
-# (FEAT-HOTKEY-COMBO-NO-LEAK-02) que impede o gesto de vazar para eles: o
-# membro fica bloqueado até TODOS serem soltos, não só enquanto o PS está
-# pressionado.
 DEFAULT_COMBO_PONTE = ("ps", "r3")
-# PS-L3-MASCARA-01 (14/09/2026): combo que pede a PRÓXIMA MÁSCARA — como o jogo
-# reconhece o controle, por cima do modo. Pedido dela: *"preciso que o ps+ l3
-# funcione igual o ps /+ r3 que muda o modo porém para as máscaras"*, para
-# ajustar dentro do jogo sem fechá-lo. O L3 tem dono fora do combo (abre o
-# teclado na tela), e é o mesmo latch do R3 que o segura. Tupla vazia desliga.
 DEFAULT_COMBO_MASCARA = ("ps", "l3")
 
 
-#: DE QUEM É O GESTO que dispara agora — O-MODO-XBOX-NAO-E-QUEDA-02, item 5.
-#:
-#: O `observe(..., de=<MAC>)` põe aqui o controle cujos botões ele está lendo,
-#: e só durante a leitura. Um ato que é corrotina nasce como tarefa DENTRO do
-#: `observe` (`_fire` → `create_task`), e a tarefa leva uma cópia do contexto
-#: do instante em que nasceu: quando ela roda, um tique depois, a pergunta
-#: «de quem é o gesto» ainda responde o controle que o fez, mesmo que outro
-#: tenha feito outro gesto no meio. `None` = fora de um gesto, ou um controle
-#: sem MAC (o `FakeController`).
 _QUEM_FAZ_O_GESTO: ContextVar[str | None] = ContextVar(
     "hefesto_quem_faz_o_gesto", default=None
 )
@@ -180,24 +109,12 @@ def _de(uniq: str | None) -> dict[str, str]:
 
 @dataclass
 class _Aperto:
-    """O aperto de UM controle: os combos em formação e o ciclo do PS dele.
+    """O aperto de UM controle: os combos em formação e o ciclo do PS dele."""
 
-    O-MODO-XBOX-NAO-E-QUEDA-02, item 5 (`D-2709-O-PS-R3-EM-QUALQUER-CONTROLE`):
-    o PS e as combinações valem em qualquer um dos quatro controles, e cada um
-    aperta os DELE. Um estado só para todos juntaria o PS de um ao R3 de outro
-    num PS + R3 que ninguém fez, e o PS solto de um soltaria o do outro.
-    """
-
-    # Quando cada combo apareceu inteiro neste controle (o `buffer_ms`).
     first_seen_at: dict[frozenset[str], float] = field(default_factory=dict)
-    # O combo que disparou e segue apertado (UM GESTO POR APERTO).
     last_fired: frozenset[str] | None = None
-    # Estado do PS solo (FEAT-HOTKEY-STEAM-01): quando o PS apareceu, e se um
-    # combo com PS já disparou neste ciclo de aperto.
     ps_pressed_at: float | None = None
     ps_combo_fired: bool = False
-    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: se o long-press do PS já disparou
-    # neste ciclo de hold (evita repetir e suprime o PS solo no release).
     ps_long_press_fired: bool = False
 
 
@@ -208,8 +125,6 @@ class HotkeyConfig:
     prev_profile: tuple[str, ...] = DEFAULT_COMBO_PREV
     passthrough_in_emulation: bool = False
     ps_long_press_ms: int = DEFAULT_PS_LONG_PRESS_MS
-    # PS-TOQUE-CURTO-01 (E1): acima deste teto o release do PS não é toque.
-    # 0 ou negativo desliga o teto. Default via env (ver a constante).
     ps_toque_curto_teto_ms: int = field(
         default_factory=_teto_do_toque_curto_do_ambiente
     )
@@ -226,20 +141,11 @@ class HotkeyManager:
     on_prev: Any | None = None
     on_ps_solo: Any | None = None
     on_ps_long_press: Any | None = None
-    # FEAT-HOTKEY-PONTE-CYCLE-01: próximo modo (PS+R3).
     on_next_bridge: Any | None = None
-    # PS-L3-MASCARA-01: próxima máscara (PS+L3).
     on_next_mask: Any | None = None
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
 
-    # O aperto de cada controle, pelo MAC que o `observe` recebe em `de`
-    # (O-MODO-XBOX-NAO-E-QUEDA-02, item 5). A chave None é a de quem chama sem
-    # dizer de quem são os botões — o controle sem MAC, e todo chamador de antes.
     _apertos: dict[str | None, _Aperto] = field(default_factory=dict)
-    # FEAT-HOTKEY-COMBO-NO-LEAK-02 (latch): membros de um combo PS+X ficam
-    # bloqueados da emulação até serem TODOS soltos — não só enquanto o PS
-    # estiver pressionado. Fecha o leak de Meta na ordem de release (soltar o
-    # PS antes do Options ao alternar o modo-jogo virava um tap de Meta).
     _combo_latch: set[str] = field(default_factory=set)
 
     def _combos_configurados(self) -> dict[str, frozenset[str]]:
@@ -280,17 +186,7 @@ class HotkeyManager:
         now: float | None = None,
         de: str | None = None,
     ) -> str | None:
-        """Processa snapshot de botões. Retorna nome do evento disparado.
-
-        Valores possíveis: `"next"`, `"prev"`, `"gamemode"`, `"ponte"`,
-        `"mascara"`, `"ps_solo"`, `"ps_long_press"` ou `None`.
-
-        `de` é o MAC do controle cujos botões são estes (O-MODO-XBOX-NAO-E-
-        QUEDA-02, item 5): cada controle tem o aperto DELE (:class:`_Aperto`),
-        e o ato que o gesto dispara pergunta de quem ele é por
-        :func:`quem_faz_o_gesto`. Sem `de`, o aperto é o da chave None — o
-        chamador de um controle só, como sempre foi.
-        """
+        """Processa snapshot de botões. Retorna nome do evento disparado."""
         t = now if now is not None else time.monotonic()
         aperto = self._apertos.get(de)
         if aperto is None:
@@ -302,12 +198,7 @@ class HotkeyManager:
             _QUEM_FAZ_O_GESTO.reset(marca)
 
     def soltar_quem_saiu(self, ficam: Iterable[str | None]) -> None:
-        """Esquece o aperto de quem não foi lido neste tique.
-
-        Um controle que saiu da mesa (ou que não tem de quem ler) deixa de ser
-        lido; o aperto dele, parado no meio, dispararia um PS solto no dia em
-        que ele voltasse. Quem volta começa um aperto novo.
-        """
+        """Esquece o aperto de quem não foi lido neste tique."""
         manter = set(ficam)
         for chave in [c for c in self._apertos if c not in manter]:
             del self._apertos[chave]
@@ -321,7 +212,6 @@ class HotkeyManager:
 
         combos = self._combos_configurados()
 
-        # Esquece registros cujo combo não esta mais pressionado
         stale = [key for key in aperto.first_seen_at if not key.issubset(buttons)]
         for key in stale:
             del aperto.first_seen_at[key]
@@ -336,21 +226,6 @@ class HotkeyManager:
             held_for = (t - aperto.first_seen_at[combo]) * 1000
             if held_for < self.config.buffer_ms:
                 continue
-            # UM GESTO POR APERTO — TROCA-DENTRO-DO-JOGO-01, 14/09/2026.
-            #
-            # Aqui dizia `if self._last_fired == combo`, e só o MESMO combo
-            # ficava travado. Dois combos caem no mesmo aperto o tempo todo:
-            # afundar os dois analógicos com o PS é `{ps, l3, r3}`, que CONTÉM o
-            # `ps+r3` (modo) e o `ps+l3` (máscara). O laço pulava o último que
-            # disparou e disparava o OUTRO, a cada tique — e o daemon lê o
-            # controle a 60 Hz. Medido em 14/09 no HotkeyManager isolado, com
-            # `{ps, l3, r3}` segurado: 25 disparos em 0,4 s, alternando modo e
-            # máscara, cada um recriando o vpad e gravando o perfil. O mesmo
-            # valia para `{ps, dpad_up, r3}` desde antes da máscara existir.
-            #
-            # Enquanto o combo que disparou continuar no aperto, nenhum outro
-            # dispara. Soltar um botão dele destrava (o `last_fired` some lá em
-            # cima), e o PS + cima repetido a cada toque continua funcionando.
             if aperto.last_fired is not None:
                 continue
             self._fire(name, combo, de=de)
@@ -358,9 +233,6 @@ class HotkeyManager:
             combo_fired = name
             break
 
-        # Rastreamento do PS solo.
-        # Se o PS esta pressionado junto com outro botao (combo potencial) e o
-        # combo disparou, marca `ps_combo_fired` do aperto para suprimir o solo no release.
         if combo_fired is not None and PS_BUTTON in combos[combo_fired]:
             aperto.ps_combo_fired = True
 
@@ -380,18 +252,7 @@ class HotkeyManager:
         combo_fired: str | None,
         de: str | None = None,
     ) -> str | None:
-        """Detecta o pattern press-then-release do PS sem combo.
-
-        Regras:
-          - PS acabou de ser pressionado → armazena timestamp.
-          - PS foi liberado → se nenhum combo disparou E o hold coube no
-            teto (`ps_toque_curto_teto_ms`), é PS solo, tenha o release
-            vindo antes ou depois do buffer. Se ocorreu com outros botoes
-            pressionados junto (que não formaram combo), também dispara
-            ao release — mantemos a semantica de "PS isolado terminado".
-          - Hold ACIMA do teto → não é toque: nada dispara (PS-TOQUE-
-            CURTO-01, o gesto de religar o controle no rádio).
-        """
+        """Detecta o pattern press-then-release do PS sem combo."""
         if ps_now:
             if aperto.ps_pressed_at is None:
                 aperto.ps_pressed_at = t
@@ -401,9 +262,6 @@ class HotkeyManager:
                 and not aperto.ps_combo_fired
                 and (t - aperto.ps_pressed_at) * 1000 >= self.config.ps_long_press_ms
             ):
-                # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: PS segurado alem do
-                # threshold sem combo — dispara o long-press uma vez (toggle do
-                # modo jogo). Marca para suprimir o PS solo no release seguinte.
                 aperto.ps_long_press_fired = True
                 logger.info(
                     "ps_long_press_fired",
@@ -413,9 +271,7 @@ class HotkeyManager:
                 return "ps_long_press"
             return None
 
-        # PS não esta mais pressionado. Verifica se houve release.
         if aperto.ps_pressed_at is None:
-            # Não estava registrado: reset e sai.
             aperto.ps_combo_fired = False
             aperto.ps_long_press_fired = False
             return None
@@ -435,22 +291,15 @@ class HotkeyManager:
             return None
 
         if long_press_fired:
-            # Long-press ja disparou neste hold — o release não abre Steam.
             logger.debug(
                 "ps_solo_suppressed_by_long_press",
                 held_ms=round((t - pressed_at) * 1000, 1),
             )
             return None
 
-        # Release sem combo nem long-press. PS-TOQUE-CURTO-01 (E1): só é TOQUE
-        # se coube no teto. O gesto de RELIGAR o controle (segurar o PS por
-        # ~5 s) passa por aqui exatamente como um toque passava, e sem o teto
-        # abria a Steam.
         held_ms = (t - pressed_at) * 1000
         teto_ms = self.config.ps_toque_curto_teto_ms
         if teto_ms > 0 and held_ms > teto_ms:
-            # E2: a recusa tem de APARECER. Um hold longo engolido em silêncio
-            # manda a próxima investigação procurar o que não existe.
             logger.info(
                 "ps_solo_ignorado_hold_longo",
                 held_ms=round(held_ms, 1),
@@ -465,11 +314,7 @@ class HotkeyManager:
     def should_passthrough(
         self, pressed: Iterable[str], *, emulation_active: bool
     ) -> bool:
-        """Retorna True se os botões devem ser repassados ao uinput.
-
-        Em modo emulação, combos sagrados não passam (V2-4). Demais botões
-        passam sempre. Configurável via `passthrough_in_emulation=True`.
-        """
+        """Retorna True se os botões devem ser repassados ao uinput."""
         if not emulation_active or self.config.passthrough_in_emulation:
             return True
         buttons = frozenset(str(b).lower() for b in pressed)
@@ -479,30 +324,14 @@ class HotkeyManager:
         )
 
     def combo_buttons_active(self, pressed: Iterable[str]) -> frozenset[str]:
-        """Botões a NÃO despachar à emulação por pertencerem a um combo PS+X.
-
-        FEAT-HOTKEY-COMBO-NO-LEAK-01/02. O poll loop subtrai este conjunto dos
-        botões enviados à emulação de mouse/teclado — senão 'options'→Meta e
-        dpad→setas vazam pro desktop ao usar um combo (PS+Options, PS+dpad),
-        podendo travar o modificador se a supressão ligar no mesmo tick.
-
-        LATCH (no-leak-02): um membro entra no latch quando o combo está "em
-        formação" (PS + membro pressionados juntos) e SÓ sai quando é solto —
-        não quando o PS é solto. Fecha o leak de ordem-de-release: ao alternar
-        o modo-jogo com PS+Options e soltar o PS ANTES do Options, o 'options'
-        continua latchado (bloqueado) até ser solto, em vez de virar um tap de
-        Meta para o COSMIC no tick seguinte.
-        """
+        """Botões a NÃO despachar à emulação por pertencerem a um combo PS+X."""
         buttons = frozenset(str(b).lower() for b in pressed)
-        # 1. Enquanto o combo se forma (PS + membro juntos), latcha os membros.
         if PS_BUTTON in buttons:
             for combo in self._combos_configurados().values():
                 if PS_BUTTON not in combo:
                     continue
                 self._combo_latch |= {b for b in combo if b in buttons}
-        # 2. Release = unlatch: solta do latch o que não está mais pressionado.
         self._combo_latch &= buttons
-        # 3. Bloqueia da emulação tudo que segue latchado (e pressionado).
         return frozenset(self._combo_latch)
 
     def _callback_do_combo(self, name: str) -> tuple[bool, Any | None]:
@@ -530,9 +359,6 @@ class HotkeyManager:
         return True, despacho[name]
 
     def _fire(self, name: str, combo: frozenset[str], *, de: str | None = None) -> None:
-        # `de` só entra no diário quando há de quem: é por ele que a bancada
-        # confere que o gesto veio do controle que o fez (item 5 da O-MODO-XBOX-
-        # NAO-E-QUEDA-02), e não do primário.
         logger.info("hotkey_fired", combo=name, buttons=sorted(combo), **_de(de))
         conhecido, cb = self._callback_do_combo(name)
         if not conhecido:

@@ -1,14 +1,4 @@
-"""A dispensa de uma ordem é fato de TOPOLOGIA, e mora com os outros.
-
-`maquina.json`, dentro de `MesaDeclarada` — e não no `gui_preferences.json`.
-Dispensar uma recomendação é uma afirmação sobre esta casa, o mesmo assunto de
-`radios` e `altura_da_antena`. O arquivo da janela é da JANELA, e dar dois donos
-possíveis ao mesmo fato é o defeito que a CONFIGURAÇÕES-FECHA-01 curou.
-
-O que este arquivo prova é o CONTRATO DE DISCO. A lógica de quando a ordem volta
-está em `test_a_ordem_confirma_que_ela_moveu.py`; os dois botões são tela e
-aguardam o olho dela.
-"""
+"""A dispensa de uma ordem é fato de TOPOLOGIA, e mora com os outros."""
 from __future__ import annotations
 
 import pytest
@@ -58,11 +48,6 @@ def test_a_dispensa_atravessa_o_arquivo_inteiro() -> None:
     assert config.model_dump()["mesa"]["ordens_dispensadas"]
 
 
-# ---------------------------------------------------------------------------
-# O validador de CHAVE — `extra="forbid"` não protege chave de dicionário.
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "chave",
     [
@@ -75,11 +60,7 @@ def test_a_dispensa_atravessa_o_arquivo_inteiro() -> None:
     ],
 )
 def test_chave_que_nao_e_slug_de_regra_nao_entra_no_disco(chave: str) -> None:
-    """A MORDIDA: sem o validador, o disco aceita lixo que nenhuma regra reclama.
-
-    Uma chave que nenhuma regra produz é uma dispensa que nunca vai calar nada —
-    e que ninguém consegue achar para apagar.
-    """
+    """A MORDIDA: sem o validador, o disco aceita lixo que nenhuma regra reclama."""
     with pytest.raises(ValidationError):
         MesaDeclarada(
             ordens_dispensadas={chave: OrdemDispensada(arranjo="3-1.4")}
@@ -125,11 +106,6 @@ def test_as_seis_chaves_sao_as_do_modulo_das_ordens() -> None:
     assert set(mesa.ordens_dispensadas) == do_catalogo
 
 
-# ---------------------------------------------------------------------------
-# A data, e a assinatura que não pode virar identidade.
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "quando", ["25/08/2026", "2026-08-25T03:14:00", "ontem", "2026-8-5"]
 )
@@ -139,28 +115,13 @@ def test_data_que_nao_e_iso_nao_entra(quando: str) -> None:
 
 
 def test_a_hora_nao_entra_junto_com_a_data() -> None:
-    """Hora não muda decisão nenhuma do produto, e é rotina dela num arquivo
-    que ela cola em relato de defeito."""
+    """Hora não muda decisão nenhuma do produto, e é rotina dela num arquivo"""
     with pytest.raises(ValidationError):
         OrdemDispensada(quando="2026-08-25 03:14", arranjo="3-1.4")
 
 
 def test_a_assinatura_nao_aceita_serial_nem_endereco() -> None:
-    """A MORDIDA DO ANONIMATO: doze hex é a forma de um serial, e ela não passa.
-
-    `check_anonymity.sh` diz por escrito que o serial identifica a unidade dela
-    tão bem quanto o MAC, e este arquivo vai para o `$HOME` dela e para o
-    `doctor.sh --censo`.
-
-    NOTA DATADA — 25/08/2026. O segundo caso citava o OUI REAL do adaptador
-    Bluetooth desta bancada (`d8:44:89`), mascarado. A máscara da casa o
-    autoriza em documento, e o portão autoritativo
-    (`test_docs_mac_anonimato.py`) o aprovava — mas o portão de fixtures
-    (`test_anonimato_de_fixtures.py`) é mais duro dentro de `tests/` de
-    propósito, e só admite OUI de fabricante quando o LITERAL é o que faz a
-    régua medir. Aqui ele não era: o que morde é a FORMA (doze hex), e ela
-    morde igual com faixa sintética. Endereço real que não paga aluguel sai.
-    """
+    """A MORDIDA DO ANONIMATO: doze hex é a forma de um serial, e ela não passa."""
     with pytest.raises(ValidationError):
         OrdemDispensada(arranjo="d0f1a2b3c4d5")
     with pytest.raises(ValidationError):

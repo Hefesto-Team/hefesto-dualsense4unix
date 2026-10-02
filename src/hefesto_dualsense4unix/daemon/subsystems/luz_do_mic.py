@@ -53,12 +53,12 @@ voltou a ser dele.
 
 **POR QUE `set_microphone_led` E NÃO `set_mic_led`, e isto não é preferência.**
 Medido nesta árvore em 03/09/2026: `set_mic_led` coage a `bool` DUAS VEZES em
-série (`core/backend_pydualsense.py:5943`, `flag = bool(aceso)`, e `:480`,
+série (`core/backend_pydualsense.py:3952`, `flag = bool(aceso)`, e `:480`,
 `tomar(bool(aceso))`), então `2` e `3` viram `1` sem erro e sem log — luz acesa
 fixa onde devia piscar, que se lê como *"a PEÇA B não está detectando som"*. O
 único caminho de produção que carrega o nível é
 `PyDualSenseController.set_microphone_led(aceso, *, uniq=)`
-(`core/backend_pydualsense.py:6450`), medido: `0->0, 1->1, 2->2, 3->3`.
+(`core/backend_pydualsense.py:4300`), medido: `0->0, 1->1, 2->2, 3->3`.
 
 **DUAS CADÊNCIAS NUM LAÇO SÓ, e o número tem razão.** A decisão roda a
 `INTERVALO_S` (4 Hz) porque o `2` é atividade de voz e a 1 Hz a luz acompanha o
@@ -153,29 +153,11 @@ if TYPE_CHECKING:  # pragma: no cover - só para tipo
 
 logger = get_logger(__name__)
 
-#: Os quatro estados do `common[8]`, medidos no aparelho com o olho dela
-#: (sprint §0). A faixa é `0..3` e o produto **não** a filtra: quem valida é o
-#: firmware (`255 & 0x03 = 3` e ele APAGA — logo ele valida a faixa, não
-#: mascara bits), e um `clamp` aqui esconderia um pedido errado.
 APAGADA: int = 0
 ACESA: int = 1
 PISCANDO: int = 2
 PISCANDO_LENTO: int = 3
 
-#: O QUE ESTE LAÇO DECIDIU POR CONTROLE, para quem PINTA — 10/09/2026
-#: (MIC-NA-TELA-01, o pedido dela: *"ele aceso vai indicar que agora tá
-#: gravando audio, ele captando audio vai ficar no estado de piscando"*).
-#:
-#: **A TELA NÃO DECIDE DE NOVO, e é o ponto.** O contrato de três estados que
-#: ela desenhou já existia — aqui, no byte que acende a luz do PLÁSTICO — e um
-#: segundo ternário do lado da tela seria a mesma resposta escrita duas vezes,
-#: que é a família de defeito que esta casa persegue por escrito. O botão 🎙 da
-#: aba Controles passa a mostrar o MESMO estado que o controle na mão dela
-#: mostra, e os dois discordarem deixa de ser possível.
-#:
-#: Guarda o ALVO decidido, não o escrito: sem a posse do byte a luz do plástico
-#: não muda, e ainda assim a tela sabe dizer o estado. `None` some daqui —
-#: *"não sei"* é a ausência da chave, nunca um número.
 _DECIDIDO: dict[str, int] = {}
 
 
@@ -199,18 +181,6 @@ def _lembrar_o_estado(uniq: str, alvo: int | None) -> None:
         _DECIDIDO[chave] = int(alvo)
 
 
-#: QUEM OUVE CADA CONTROLE, para quem ESCREVE — 19/09/2026, a outra metade da
-#: decisão dela. A luz do plástico passou a espelhar o botão, e com isso ela
-#: deixou de conseguir dizer *"tem alguém te ouvindo"* sozinha: o `1` cobre os
-#: dois casos. A aba Controle é quem passa a dizer QUEM, por escrito.
-#:
-#: **É A MESMA DISCIPLINA DO `_DECIDIDO`**: a PEÇA A já foi perguntada neste
-#: tique, e publicar a resposta que o laço JÁ TEM custa um `dict`. Perguntar de
-#: novo do lado do IPC seriam dois `pactl` por tique de tela, e duas respostas
-#: que divergem no primeiro segundo em que uma delas chega atrasada.
-#:
-#: `None` some daqui — *"não perguntei"* é a ausência da chave, e a lista vazia
-#: (`[]`) é a resposta *"medi, e ninguém te ouve"*, que é a que vira frase.
 _OUVINTES: dict[str, list[str]] = {}
 
 
@@ -242,83 +212,24 @@ def _lembrar_quem_ouve(uniq: str, ouvintes: list[str] | None) -> None:
     else:
         _OUVINTES[chave] = [str(x) for x in ouvintes]
 
-#: Cadência da DECISÃO. O `2` é atividade de voz, que muda em ~100 ms; a 1 Hz a
-#: luz acompanharia o parágrafo e não a fala. A 4 Hz nada disto custa: as
-#: leituras deste tique (mudo e bateria) são `getattr` sobre o que a thread de
-#: report da pydualsense já atualizou, sem HID I/O.
 INTERVALO_S: float = 0.25
 
-#: Cadência de QUEM OUVE (PEÇA A). Ela era a leitura CARA — dois `pactl` por
-#: pergunta, 6,8 ms de CPU medidos em 03/09/2026 —, e a sprint fixa o alvo:
-#: *"Custo alvo: leitura de ~1 Hz, sem processo permanente"*. A resposta fica
 #: guardada entre uma pergunta e outra, então a decisão continua a 4 Hz.
-#:
-#: **DESDE 28/09/2026 ELA NÃO CUSTA `pactl`** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01):
-#: medidos contra um servidor de mentira que conta os clientes, eram TRÊS por
-#: pergunta (`list source-outputs`, `list sources short`, `list sources`);
-#: com o retrato do som vivo, as três saem da foto. E a pergunta passa a ser
-#: feita também quando o retrato muda nas fontes ou nos fluxos de gravação —
-#: um programa que abre o microfone acende a luz no tique seguinte, e não na
-#: volta de 1 s.
 INTERVALO_DE_QUEM_OUVE_S: float = 1.0
 
-#: O que QUEM OUVE lê no retrato do som: os fluxos de gravação e as fontes.
 _O_QUE_A_LUZ_LE: tuple[str, ...] = ("source-outputs", "sources")
 
-#: Quanto a luz segura a borda de um controle, esperando o ato tomar a posse do
-#: mudo (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, 29/09/2026). Na bancada de 29/09 o
-#: ato levou ~0,1 s da borda à escrita (`mic_da_mesa_borda` 47,979 →
-#: `microphone_mute_set` 48,075); um segundo é dez vezes isso, e é o mesmo
-#: sossego em que o `mic_da_mesa` não aceita outra borda do mesmo controle.
-#: Quando o ato não escreve (o firmware já está como ele pede), a luz decide
-#: pelo firmware passado o teto — e quem pintou no meio foi a eleição.
 SEGURA_A_BORDA_S: float = 1.0
 
-#: O quarto estado é a bateria, e o número é dela: *"pisca lento, se a bateria
-#: do controle tiver abaixo de 30%"*. Abaixo, não abaixo-ou-igual.
 LIMIAR_DE_BATERIA_PCT: int = 30
 
-#: Quanto esperar, depois de REPINTAR, antes de soltar o bit `0x01`. O report
-#: de saída sai na thread do handle assim que o buffer MUDA
-#: (`backend_pydualsense.sendReport`), com throttle de
-#: `REPORT_THREAD_THROTTLE_SEC` (0,008 s) escalado por controle até
-#: `REPORT_THREAD_THROTTLE_MAX_SEC` (0,032 s). 150 ms são ~5 ciclos do pior
-#: caso: folga para a repintura chegar ao aparelho antes de a posse cair.
-#: Soltar sem esperar é o §2 da sprint acontecendo de novo — *"ambos tão
-#: ligados. e ficaram."*
 ESPERA_DO_REPORT_S: float = 0.15
 
-#: Quanto tempo o laço segura a posse quando parou de saber decidir, antes de
-#: devolvê-la ao kernel. Devolver na PRIMEIRA não-resposta faria um `pactl`
-#: que estourou o `timeout` uma vez virar um pisca-pisca de posse; nunca
-#: devolver deixaria a luz travada no último valor (um `2` eterno) quando a
-#: PEÇA A cai de vez. Três segundos são doze tiques: uma falha isolada passa
-#: batida, uma falha real vira devolução.
 SEM_RESPOSTA_ATE_SOLTAR_S: float = 3.0
 
-#: A PEÇA A: uma FUNÇÃO, e o nome é fixo dos dois lados. Contrato:
-#: `{uniq: [nomes dos clientes]}`, e `None` quando não dá para saber.
-#:
-#: **FATO SUBSTITUÍDO, 03/09/2026.** Isto já foi uma TUPLA de quatro nomes
-#: candidatos, de quando as peças nasciam na mesma leva e o nome ainda não
-#: estava fixado. Ele está — a docstring de `quem_ouve_agora` diz *"é esta a
-#: função que a PEÇA C chama"* —, e a lista custou caro no vizinho: procurar
-#: quatro nomes e não achar nenhum é uma junta MORTA que se lê como *"a peça
-#: irmã respondeu que não há som"*. Um nome, e o laço loga se não o achou.
 MODULO_DE_QUEM_OUVE: str = "hefesto_dualsense4unix.integrations.quem_ouve_o_microfone"
 NOME_DE_QUEM_OUVE: str = "quem_ouve_agora"
 
-#: A PEÇA B: uma CLASSE com estado, não uma função. Dirigida por
-#: `seguir({uniq: fonte})` e lida por `captando() -> {uniq: bool|None}`, já com
-#: histerese (sem ela o pisca vira estroboscópio em cada sílaba). `None`
-#: naquele `uniq` é *"não medi"*, e não *"não há som"*.
-#:
-#: **A JUNTA ESTAVA MORTA e nenhum teste via.** Este laço procurava aqui as
-#: funções `captando_agora`/`esta_captando_agora`/`nivel_agora`/
-#: `captando_por_uniq`; a PEÇA B não publica nenhuma das quatro. Medido em
-#: 03/09/2026: `captando` ficava `None` para sempre e os estados `2` e `3`
-#: eram inalcançáveis — metade do contrato dela, morta em silêncio. A suíte
-#: passava porque o dublê PLANTAVA `captando_agora`, que só existia no teste.
 MODULO_DO_NIVEL: str = "hefesto_dualsense4unix.integrations.nivel_do_microfone"
 NOME_DO_MEDIDOR: str = "NivelDoMicrofone"
 
@@ -390,8 +301,6 @@ def decidir(
     if ouvintes is None:
         return None
     if not ouvintes:
-        # ACESA, E ERA APAGADA — a mudança de 19/09/2026. Ver a docstring: o
-        # `0` deixou de querer dizer duas coisas, e quem apaga é só o `mudo`.
         return ACESA
     if captando is True:
         if bateria_pct is not None and bateria_pct < LIMIAR_DE_BATERIA_PCT:
@@ -401,13 +310,7 @@ def decidir(
 
 
 def _posse_do_mudo(backend: Any, uniq: str) -> bool | None:
-    """O mudo que o HEFESTO afirma no firmware, ou `None` quando o dono é o kernel.
-
-    `microphone_mute_for` responde quem MANDA no `common[9]`: `True`/`False`
-    são ordens que vão em todo report, `None` é a posse do `hid-playstation`.
-    Backend sem o leitor (dublê enxuto, controle genérico) responde como a
-    posse do kernel — a mesma leitura do `hotkey._a_posse_nao_desdiz`.
-    """
+    """O mudo que o HEFESTO afirma no firmware, ou `None` quando o dono é o kernel."""
     ler = getattr(backend, "microphone_mute_for", None)
     if not callable(ler):
         return None
@@ -422,22 +325,7 @@ def _posse_do_mudo(backend: Any, uniq: str) -> bool | None:
 def _segura_a_borda(
     backend: Any, uniq: str, segura_desde: dict[str, float], agora: float
 ) -> bool:
-    """A borda deste controle ainda é da ELEIÇÃO? `True` = não decida nem escreva.
-
-    O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026). Na borda, quem pinta a luz é
-    o `set_mic_led` da eleição, com o resultado do ato
-    (`hotkey._eleger_ou_devolver`). O `mudo` que a borda traz não é o que o ato
-    faz — `hotkey._o_que_a_borda_pede` troca o calar por LIGAR no primeiro
-    aperto depois de conectar —, e o bit do firmware ainda pode ser o de antes
-    do aperto. Decidir por qualquer um dos dois antes do ato é repintar o
-    estado velho (ou o pedido cru) por cima dele.
-
-    A espera acaba quando o ato toma a posse do mudo (`microphone_mute_for`
-    deixa de ser `None`: é o que o firmware vai dizer na volta seguinte) ou no
-    teto, `SEGURA_A_BORDA_S` — o ato que não escreve (o firmware já estava como
-    ele pede) não deixa posse, e aí quem responde, passado o teto, é o bit
-    fresco.
-    """
+    """A borda deste controle ainda é da ELEIÇÃO? `True` = não decida nem escreva."""
     desde = segura_desde.get(uniq)
     if desde is None:
         return False
@@ -448,22 +336,7 @@ def _segura_a_borda(
 
 
 def _mudo(backend: Any, uniq: str) -> bool | None:
-    """O mudo que vale naquele controle, ou `None` quando ninguém disse.
-
-    Sem posse nossa, é o do FIRMWARE: `audio_status_for` é a leitura do byte de
-    estado que veio no report de INPUT, e a §1.1 fala do firmware. Com a
-    volta que esvazia a fila, esse byte tem no máximo uma volta de idade.
-
-    **Com a posse NOSSA, é o que o Hefesto afirma (`microphone_mute_for`) —
-    a exceção de 29/09/2026** (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01). Até ali esta
-    função não lia a posse *«de propósito»*, porque ela diz quem MANDA e não o
-    que está valendo. Mas quem manda é obedecido na volta seguinte: a posse é
-    o que o firmware vai dizer, e o bit lido é o que ele dizia antes da ordem.
-    Pintar o bit enquanto a ordem viaja era a luz repintando o estado velho
-    por cima do ato. É a mesma regra do `hotkey._a_posse_nao_desdiz`, que
-    também só pula a escrita com a posse do kernel ou igual ao que o ato pede:
-    as duas decidem pelo `microphone_mute_for` quando ele é uma ordem.
-    """
+    """O mudo que vale naquele controle, ou `None` quando ninguém disse."""
     posse = _posse_do_mudo(backend, uniq)
     if posse is not None:
         return posse
@@ -485,7 +358,7 @@ def _baterias(backend: Any) -> dict[str, int]:
     """`{uniq: battery_pct}` dos controles conectados. Só quem reportou entra.
 
     `describe_controllers` já devolve a carga por controle
-    (`core/backend_pydualsense.py:8021`) e a leitura é `getattr` no objeto que
+    (`core/backend_pydualsense.py:5347`) e a leitura é `getattr` no objeto que
     a thread de report atualiza — sem HID I/O, e já há três consumidores do
     daemon pagando esse preço por tique.
 
@@ -515,22 +388,7 @@ def _baterias(backend: Any) -> dict[str, int]:
 
 
 def _da_peca(caminho: str, nome: str, cache: dict[str, Any]) -> Any:
-    """Resolve UM nome num módulo irmão, uma vez só, tolerando a ausência.
-
-    **Isto é requisito, não contorno.** As peças A e B nascem na mesma leva que
-    este laço e podem chegar depois; um `import` no topo faria a ausência de
-    uma delas derrubar o subsistema inteiro no boot, e um subsistema derrubado
-    no boot é a luz morta sem ninguém saber por quê.
-
-    O `cache` guarda o que foi achado (ou o `None` de *"não achei"*) para não
-    repetir a busca a cada tique, e para o aviso sair UMA vez em vez de a 4 Hz
-    no journal dela.
-
-    **Um nome, não uma lista de candidatos.** Procurar quatro e não achar
-    nenhum devolve o mesmo `None` de *"a peça não existe"*, e foi assim que a
-    junta com a PEÇA B ficou morta sem ninguém ver: o `luz_do_mic_peca_ligada`
-    nunca saía no journal, e nada olhava para a ausência dele.
-    """
+    """Resolve UM nome num módulo irmão, uma vez só, tolerando a ausência."""
     chave = f"{caminho}:{nome}"
     if chave in cache:
         return cache[chave]
@@ -538,9 +396,6 @@ def _da_peca(caminho: str, nome: str, cache: dict[str, Any]) -> Any:
     try:
         modulo = importlib.import_module(caminho)
     except Exception as exc:
-        # `Exception` e não `ImportError`: uma peça irmã que existe mas quebra
-        # ao importar (um `SyntaxError` no meio da leva, uma dependência que
-        # faltou) não pode derrubar o subsistema da luz.
         logger.info("luz_do_mic_peca_ausente", modulo=caminho, err=str(exc))
         modulo = None
     if modulo is not None:
@@ -555,18 +410,7 @@ def _da_peca(caminho: str, nome: str, cache: dict[str, Any]) -> Any:
 
 
 async def _fora_do_laco(daemon: Any, fn: Any, *args: Any) -> Any:
-    """Roda `fn` fora do event loop, caindo para a chamada direta se não der.
-
-    O que passa por aqui fala com o mundo: a PEÇA A são três `pactl` com
-    `timeout` de 3 s cada, e a resolução de fonte são mais dois. Congelar o
-    event loop por isso pararia o IPC e a reafirmação do report de saída — e o
-    pior caso, 9 s, se lê como a máquina dela travando.
-
-    A queda para a chamada direta existe porque `_run_blocking` exige o
-    executor montado (`daemon/lifecycle.py:6686` afirma isso), e um daemon
-    dublado ou meio subido não o tem. Bloquear um teste é aceitável; derrubar
-    a luz por causa dele não é.
-    """
+    """Roda `fn` fora do event loop, caindo para a chamada direta se não der."""
     correr = getattr(daemon, "_run_blocking", None)
     if callable(correr):
         try:
@@ -579,14 +423,7 @@ async def _fora_do_laco(daemon: Any, fn: Any, *args: Any) -> Any:
 
 
 def _quem_ouve(uniqs: list[str], cache: dict[str, Any]) -> dict[str, Any] | None:
-    """A PEÇA A: `{uniq: [clientes]}`, ou `None` para *"não sei"*.
-
-    **BLOQUEIA** — até três `pactl`. Só se chama por `_fora_do_laco`.
-
-    O retorno é aceito só quando é `dict`, e a própria PEÇA A registra o porquê
-    no lugar dela: devolver a leitura rica aqui não daria erro nenhum — daria a
-    luz apagada para sempre, com o laço descartando toda resposta em silêncio.
-    """
+    """A PEÇA A: `{uniq: [clientes]}`, ou `None` para *"não sei"*."""
     funcao = _da_peca(MODULO_DE_QUEM_OUVE, NOME_DE_QUEM_OUVE, cache)
     if funcao is None:
         return None
@@ -601,12 +438,7 @@ def _quem_ouve(uniqs: list[str], cache: dict[str, Any]) -> dict[str, Any] | None
 
 
 def _com_ouvinte(ouvintes_por_uniq: dict[str, Any] | None) -> list[str]:
-    """Os `uniq` que a PEÇA A disse ter ouvinte — e só eles vão para o medidor.
-
-    A §1.1 é a razão: o `2` (piscando) só existe DENTRO do `1` (algum app com o
-    microfone aberto). Medir quem ninguém está ouvindo abriria um `parec` para
-    responder uma pergunta que a precedência já respondeu.
-    """
+    """Os `uniq` que a PEÇA A disse ter ouvinte — e só eles vão para o medidor."""
     if not ouvintes_por_uniq:
         return []
     return [
@@ -660,13 +492,7 @@ def _fontes_para(uniqs: list[str], mesa: list[str]) -> dict[str, str]:
 
 
 def _medidor(cache: dict[str, Any]) -> Any:
-    """A PEÇA B, construída na PRIMEIRA vez que alguém ouve — e não antes.
-
-    Ela sobe uma thread e passa a segurar processos `parec`; construí-la no
-    boot faria uma máquina onde ninguém nunca abre o microfone pagar uma thread
-    parada para sempre. **Quem a cria é quem a PARA** — ver o `finally` de
-    `luz_do_mic_loop`.
-    """
+    """A PEÇA B, construída na PRIMEIRA vez que alguém ouve — e não antes."""
     if "medidor" in cache:
         return cache["medidor"]
     classe = _da_peca(MODULO_DO_NIVEL, NOME_DO_MEDIDOR, cache)
@@ -709,14 +535,7 @@ def _captando(medidor: Any) -> dict[str, Any] | None:
 
 
 def _parar_medidor(medidor: Any) -> None:
-    """Mata os `parec` e a thread do medidor. **Não é opcional.**
-
-    Um `parec` órfão segura a fonte de captura DELA aberta para sempre: o
-    stdout vai para `/dev/null`, então ele nunca toma `SIGPIPE`, e o cgroup em
-    que nasce não é unit do Hefesto — um `systemctl --user stop` do daemon não
-    o recolhe. Medido nesta bancada em 03/09/2026, com um vazado vivo há 25
-    minutos.
-    """
+    """Mata os `parec` e a thread do medidor. **Não é opcional.**"""
     if medidor is None:
         return
     parar = getattr(medidor, "parar", None)
@@ -733,7 +552,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
 
     **NÃO É `set_mic_led`.** Aquele esmaga em `bool` duas vezes em série e faz
     o `2` e o `3` virarem `1` sem erro e sem log (medido em 03/09/2026,
-    `core/backend_pydualsense.py:5943` e `:480`).
+    `core/backend_pydualsense.py:3952` e `:480`).
 
     `valor is None` é a DEVOLUÇÃO DA POSSE (o bit `0x01` do flag1 cai e o
     kernel volta a escrever a luz na borda do botão); `0` é uma ORDEM
@@ -741,16 +560,13 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
     `3d9bb7e` no byte vizinho.
 
     A escrita **não é HID I/O**: `_PinnedPyDualSense.set_microphone_led` só
-    guarda `_mic_led_desejado` (`core/backend_pydualsense.py:1957`), e quem
+    guarda `_mic_led_desejado` (`core/backend_pydualsense.py:1316`), e quem
     manda o report é a thread do handle. É por isso que ela pode ser chamada
     direto no `finally` do desligamento, quando não há executor garantido.
     """
     escrever = getattr(backend, "set_microphone_led", None)
     if not callable(escrever):
-        # Medido em 02/09/2026: nem `core/controller.IController` nem o
-        # `FakeController` da suíte declaram este método — só o
         # `PyDualSenseController`. Sair calado daqui seria o log dizendo que a
-        # luz mudou quando ela não mudou.
         logger.warning("luz_do_mic_sem_backend", uniq=uniq)
         return False
     try:
@@ -771,39 +587,11 @@ async def _devolver(
     escrito: dict[str, int],
     posse: set[str],
 ) -> int:
-    """REPINTA na língua do kernel, espera o report sair, e SOLTA a posse.
-
-    Este é o §2 da sprint, e ele nasceu de uma medição com ela olhando os dois
-    controles: *"ambos tão ligados. e ficaram."* A causa está no contrato do
-    kernel — ele escreve `mute_button_led = ds->mic_muted` **na borda do botão
-    físico**, não continuamente (`hid-playstation.c:1538-1540`). Então largar o
-    byte com a luz no NOSSO vocabulário deixa a mentira no ar até ela apertar o
-    botão.
-
-    **A repintura é na língua do KERNEL, e essa inversão é o miolo da função.**
-    Nosso contrato é *mudo = apagado*; o do kernel é *aceso = mudo*. Como o
-    byte está voltando para ele, o valor a deixar é `ACESA` quando ela está
-    muda e `APAGADA` quando não está — o contrário do que este laço pinta
-    enquanto a posse é nossa. Repintar no nosso vocabulário deixaria a luz
-    discordando do kernel até a próxima borda, que é o mesmo defeito com outra
-    roupa.
-
-    **A ORDEM É REPINTAR, ESPERAR, SOLTAR — e a espera não é decoração.** O
-    report só sai quando o buffer MUDA, na thread do handle; repintar e soltar
-    no mesmo instante faria as duas mudanças caberem no mesmo report, e o
-    aparelho nunca veria a repintura.
-
-    Se o `await` for cancelado (a task já está morrendo), a repintura JÁ foi
-    aplicada e a posse fica nossa: é o desfecho seguro dos dois. A luz mostra a
-    verdade, e a posse de um daemon morto não escreve mais nada — o kernel
-    reassume na borda seguinte de qualquer jeito.
-    """
+    """REPINTA na língua do kernel, espera o report sair, e SOLTA a posse."""
     alvos = [uniq for uniq in uniqs if uniq in posse]
     if backend is None or not alvos:
         return 0
     for uniq in alvos:
-        # `None` (o controle nunca reportou) vira APAGADA: uma luz apagada é a
-        # entrega mais segura para o kernel, que a repinta na borda seguinte.
         _escrever(backend, uniq, ACESA if _mudo(backend, uniq) else APAGADA)
     try:
         await asyncio.sleep(ESPERA_DO_REPORT_S)
@@ -819,27 +607,7 @@ async def _devolver(
 
 
 async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
-    """Decide o estado de cada controle da mesa e escreve — só na MUDANÇA.
-
-    A memória do laço é local e por `uniq`, como no `mic_da_mesa`:
-
-    * ``escrito`` — o último valor que NÓS pusemos no byte daquele controle;
-    * ``posse``   — de quem o bit `0x01` do flag1 é, no nosso entender.
-
-    Os dois são separados porque a eleição também escreve neste byte: quando
-    uma borda chega, esquecemos o VALOR (para reescrever o nosso uma vez,
-    depois da eleição) mas continuamos sabendo que a POSSE é nossa (a eleição
-    a tomou ao escrever).
-
-    * ``segura_desde`` — a borda que ainda é da eleição, por `uniq` (ver
-      `_segura_a_borda`): até o ato deixar a posse do mudo, ou até o teto, o
-      laço não decide nem escreve aquele controle.
-
-    **Controle que sai da mesa perde a memória inteira**, e não é higiene: na
-    reconexão o handle é NOVO e não tem lembrança do que escrevemos no velho.
-    Guardar o valor antigo faria o laço achar que o byte já está certo e nunca
-    reescrevê-lo — a luz nasceria errada e ficaria.
-    """
+    """Decide o estado de cada controle da mesa e escreve — só na MUDANÇA."""
     from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
     relogio = asyncio.get_running_loop().time
@@ -870,12 +638,6 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 continue
             agora = relogio()
 
-            # A BORDA INVALIDA O QUE ACHAMOS TER ESCRITO, E É SEGURADA. A
-            # eleição põe um valor no byte por outro caminho; se guardássemos o
-            # nosso, nunca o reescreveríamos e o valor dela ficaria de pé. Mas
-            # reescrever já no tique seguinte, pelo bit de antes do aperto, é
-            # pintar o estado velho por cima do ato: a borda espera o ato
-            # (`_segura_a_borda`).
             if fila is not None:
                 while True:
                     try:
@@ -889,21 +651,13 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                         escrito.pop(alvo, None)
                         posse.add(alvo)
                         segura_desde[alvo] = agora
-                        # O APERTO É ORDEM DELA, com o instante do aperto: o
-                        # pedido do jogo mais velho que ele cai.
                         a_pessoa_mandou(alvo, evento.get("em"))
-            # O QUE O JOGO PEDIU (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01):
-            # o pedido de pé esquece o escrito, para a luz do jogo ir ao
-            # plástico no tique seguinte.
             for chave in _drenar_o_jogo(fila_do_jogo):
                 for uniq in [u for u in escrito if chave_do_mic(u) == chave]:
                     escrito.pop(uniq, None)
 
             mesa = mesa_de_agora(daemon)
             if mesa is None:
-                # "Não perguntei a ninguém" não é "a mesa esvaziou": um backend
-                # que não sabe listar não pode fazer o laço soltar a posse de
-                # todo mundo. Ficamos parados até ele saber responder.
                 continue
             for uniq in [u for u in escrito if u not in mesa] + [
                 u for u in posse if u not in mesa
@@ -914,10 +668,6 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 posse.discard(uniq)
                 segura_desde.pop(uniq, None)
                 sem_resposta_desde.pop(uniq, None)
-            # O PEDIDO DO JOGO NÃO SAI COM O CONTROLE: o rádio cai e volta no
-            # meio do jogo, o pad virtual fica, e o dedup dele não reenvia o
-            # mesmo valor. O `escrito` que saiu acima faz a luz do jogo voltar
-            # ao plástico novo; quem apaga o pedido é o `solta` do pad.
 
             marca = RETRATO.marca(_O_QUE_A_LUZ_LE)
             if marca != marca_vista or (agora - perguntei_em) >= INTERVALO_DE_QUEM_OUVE_S:
@@ -926,9 +676,6 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 )
                 perguntei_em = agora
                 marca_vista = marca
-                # O MEDIDOR SEGUE SÓ QUEM JÁ TEM OUVINTE (§1.1: o `2` vive
-                # dentro do `1`). Com a sala vazia não se resolve fonte, não se
-                # abre `parec`, e o medidor nem chega a nascer.
                 com_ouvinte = _com_ouvinte(ouvintes_por_uniq)
                 if com_ouvinte and medidor is None:
                     medidor = _medidor(cache_das_pecas)
@@ -945,11 +692,8 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 if ouvintes_por_uniq is not None:
                     bruto = ouvintes_por_uniq.get(uniq)
                     ouvintes = list(bruto) if isinstance(bruto, (list, tuple)) else None
-                # A TELA LÊ DAQUI, e não pergunta de novo — ver `_OUVINTES`.
                 _lembrar_quem_ouve(uniq, ouvintes)
                 if _segura_a_borda(backend, uniq, segura_desde, agora):
-                    # A BORDA AINDA É DA ELEIÇÃO: ela pinta com o resultado do
-                    # ato, e o `_DECIDIDO` fica com o último que decidimos.
                     continue
                 captando = None
                 if captando_por_uniq is not None:
@@ -962,17 +706,10 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     bateria_pct=baterias.get(uniq),
                 )
 
-                # A TELA PINTA O ESTADO DO MICROFONE, e não a luz do jogo: o
-                # `_DECIDIDO` guarda sempre o `decidir`. O plástico, com o
-                # pedido do jogo de pé, é do jogo, literal (língua da Sony).
                 _lembrar_o_estado(uniq, decidido)
                 do_jogo = luz_do_mic_do_jogo(uniq)
                 alvo = do_jogo if do_jogo is not None else decidido
                 if alvo is None:
-                    # PAROU DE SABER. Segurar para sempre deixaria um `2`
-                    # eterno quando a PEÇA A cai; soltar na primeira falha
-                    # faria um `pactl` que estourou o timeout virar um
-                    # pisca-pisca de posse. Segura, e devolve se durar.
                     if uniq not in posse:
                         sem_resposta_desde.pop(uniq, None)
                         continue
@@ -985,20 +722,12 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
 
                 sem_resposta_desde.pop(uniq, None)
                 if escrito.get(uniq) == alvo and uniq in posse:
-                    # ESCREVE SÓ NA MUDANÇA. Reafirmar o mesmo valor a cada
-                    # tique por cima do kernel é o commit `3d9bb7e` no byte
-                    # vizinho, e é isto que o teste do TEMPO morde.
                     continue
                 if await _fora_do_laco(daemon, _escrever, backend, uniq, alvo):
                     escrito[uniq] = alvo
                     posse.add(uniq)
                     logger.info("luz_do_mic_escrita", uniq=uniq, estado=alvo)
     finally:
-        # O MEDIDOR MORRE NUM `finally` PRÓPRIO, e o aninhamento é o ponto: a
-        # devolução abaixo tem um `await`, e um `await` pode ser cancelado. Se
-        # a parada do medidor viesse depois dela, um segundo cancelamento
-        # deixaria os `parec` vivos — com a fonte de captura DELA aberta e
-        # ninguém lendo. A luz errada é um defeito; o microfone preso é dela.
         try:
             desinscrever = getattr(getattr(daemon, "bus", None), "unsubscribe", None)
             if callable(desinscrever):
@@ -1006,13 +735,6 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     if aberta is not None:
                         with contextlib.suppress(Exception):
                             desinscrever(topico, aberta)
-            # A DEVOLUÇÃO NO DESLIGAMENTO mora aqui porque o
-            # `connection.shutdown` só sabe CANCELAR tasks
-            # (`daemon/connection.py:2306-2307`) — um laço cancelado não repinta e
-            # não solta nada. O `finally` roda com a cancelação já entregue, e
-            # como o `shutdown` chama `cancel()` UMA vez por task, o `await` de
-            # dentro de `_devolver` sobrevive; se não sobreviver, a repintura já
-            # foi aplicada (ver `_devolver`).
             with contextlib.suppress(Exception):
                 await _devolver(
                     getattr(daemon, "controller", None), sorted(posse), escrito, posse
@@ -1047,12 +769,7 @@ _TOPICO_DO_JOGO = _topico_do_jogo()
 
 
 def mesa_de_agora(daemon: Any) -> list[str] | None:
-    """Reexporta a ÚNICA leitura pública de *"tem card na tela"*.
-
-    Não é uma régua nova: é a de `recado_do_microfone`, importada tarde para
-    não criar ciclo. Escrever a quarta régua sobre o mesmo estado é o defeito
-    que esta casa já pagou onze vezes.
-    """
+    """Reexporta a ÚNICA leitura pública de *"tem card na tela"*."""
     from hefesto_dualsense4unix.daemon.subsystems.recado_do_microfone import (
         mesa_de_agora as _mesa,
     )
@@ -1060,35 +777,15 @@ def mesa_de_agora(daemon: Any) -> list[str] | None:
     return _mesa(daemon)
 
 
-# ---------------------------------------------------------------------------
-# A LUZ OBEDECE AO JOGO — A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01
-# (29/09/2026, a D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que revoga a recusa)
-# ---------------------------------------------------------------------------
-#
 # Com pad virtual DualSense, o `common[8]` que o jogo pede vai ao plástico do
-# controle daquele jogador como veio (0 a 3), na língua do jogo, que é a da
-# Sony: traduzir faria o plástico dizer outra coisa que o jogo disse. Quem
-# escreve continua sendo este laço, o único escritor por decisão de estado.
-#
-# QUANDO O JOGO E ELA DISCORDAM, VALE O ÚLTIMO QUE MANDOU, e o instante dela é
-# o do APERTO (o `em` da borda), não o da hora em que o Hefesto o processa: o
-# jogo que responde ao aperto é mais novo que ele e fica com a luz; o jogo que
-# só reafirma não conta de novo (o dedup do pad) e o aperto dela vale sozinho.
-# O 🎙 da tela é ordem dela com o instante do clique. O fim da sessão solta.
 
-#: `{chave: (valor, em)}` — o pedido de luz do jogo DE PÉ, por controle.
 _LUZ_DO_JOGO: dict[str, tuple[int, float]] = {}
 
-#: `{chave: em}` — a última ordem dela (o aperto, o 🎙), por controle.
 _A_PESSOA_MANDOU_EM: dict[str, float] = {}
 
 
 def chave_do_mic(uniq: str | None) -> str | None:
-    """O `uniq` na forma da mesa (`norm_mac`, doze hex), ou `None` se não é MAC.
-
-    É a forma do `describe_controllers` (pelo `_key_to_uniq`), do
-    `primary_uniq` e do alvo do co-op: os três lados casam por ela.
-    """
+    """O `uniq` na forma da mesa (`norm_mac`, doze hex), ou `None` se não é MAC."""
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     chave = norm_mac(uniq)
@@ -1108,11 +805,7 @@ def luz_do_mic_do_jogo(uniq: str | None) -> int | None:
 
 
 def a_pessoa_mandou(uniq: str | None, em: float | None = None) -> None:
-    """Ela mandou no microfone deste controle (o aperto, o 🎙). `None` = agora.
-
-    Guarda o MAIOR instante, e o pedido de luz do jogo mais velho que ele cai:
-    a luz volta à língua dela. Um pedido do jogo mais novo fica.
-    """
+    """Ela mandou no microfone deste controle (o aperto, o 🎙). `None` = agora."""
     chave = chave_do_mic(uniq)
     if chave is None:
         return
@@ -1150,10 +843,7 @@ def _o_jogo_pede_a_luz(chave: str, valor: int, em: float) -> bool:
 
 
 def _drenar_o_jogo(fila: Any) -> list[str]:
-    """Aplica os eventos `MIC_DO_JOGO` da fila; devolve as chaves que mudaram.
-
-    Só a `luz` e o `solta` são deste laço; o `mudo` é do `hotkey`.
-    """
+    """Aplica os eventos `MIC_DO_JOGO` da fila; devolve as chaves que mudaram."""
     mudaram: list[str] = []
     if fila is None:
         return mudaram

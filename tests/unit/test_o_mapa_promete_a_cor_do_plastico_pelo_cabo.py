@@ -73,20 +73,10 @@ RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ID_DA_LINHA = "identidade.cor_do_aparelho@dualsense"
 
-#: MACs FORJADOS na faixa que o portão de anonimato reconhece como sintética
-#: (`aa:bb:cc`), e o prefixo `02:fe` que é o do nosso vpad.
 _UNIQ_NO_CABO = "aa:bb:cc:00:00:d5"
 _UNIQ_DE_OUTRO = "aa:bb:cc:00:00:e9"
 _UNIQ_DO_VPAD = "02:fe:00:00:00:01"
 
-#: A semente do CRC de ESCRITA, DIGITADA AQUI e não importada do produto.
-#:
-#: É de propósito, e é a armadilha que esta casa mais paga: uma régua que
-#: pergunta ao produto qual é a semente concorda com ele mesmo quando ele está
-#: errado. Medido nesta própria leva — com `SEMENTE_SET_FEATURE_BT` trocada para
-#: `0xA3`, o nó bicondicional do mapa passava verde, porque comparava o pedido
-#: com `envelope_de_radio()`, que usava a semente errada dos dois lados.
-#: `0x53` = `HIDP_TRANS_SET_REPORT (0x50) | RTYPE_FEATURE (0x03)`.
 _SEMENTE_ESPERADA = 0x53
 
 
@@ -99,9 +89,6 @@ def _assinado_a_mao(pedido: bytes) -> bytes:
     return pedido[:corte] + crc.to_bytes(4, "little")
 
 
-#: Serial FORJADO: 17 caracteres com a cor `05` (Starlight Blue) nos caracteres
-#: 5 e 6, e uma LETRA na posição 2 de propósito — é o que o tira da forma do
-#: serial de fábrica de verdade e o faz passar pelo `check_anonymity.sh`.
 _SERIAL_FORJADO = "ZZ9Y05Q0000000000"  # serial-de-mentira: prefixo forjado
 
 _DUALSENSE_NO_CABO = {
@@ -163,26 +150,14 @@ class TestOsDoisFiltrosDoNo:
         )
 
     def test_o_mesmo_controle_no_radio_tambem_vira_alvo(self) -> None:
-        """SUBSTITUÍDO em 02/09/2026 — e o que caiu não foi opinião, foi fato.
-
-        Este nó dizia `is None`, com a razão *"medido no E7: por rádio o
-        SET_FEATURE 0x80 volta EIO"*. Aquele EIO era o NOSSO CRC assinado com a
-        semente errada (`0xA3` em vez de `0x53`), refutado em 27/08/2026 e
-        medido de novo em 02/09/2026 com o controle dela: `hidraw5` devolveu 64
-        bytes, eco `[1, 19, 2]` e o código `04` em 13,6 ms.
-
-        O que o nó guarda agora é o mesmo de sempre — o produto tem de ACHAR o
-        controle — mais o transporte, que é o que decide o envelope.
-        """
+        """SUBSTITUÍDO em 02/09/2026 — e o que caiu não foi opinião, foi fato."""
         bancada = _bancada({"hidraw4": _DUALSENSE_NO_RADIO})
         alvo = alvo_do_controle(_UNIQ_NO_CABO, **bancada)
         assert alvo is not None
         assert (alvo.caminho, alvo.transporte) == ("/dev/hidraw4", RADIO)
 
     def test_barramento_que_nao_e_cabo_nem_radio_nao_vira_alvo(self) -> None:
-        """`0x0003` e `0x0005` são os dois que esta casa mediu. Um terceiro
-        barramento é aparelho que ninguém viu, e escrever nele é escrever às
-        cegas — a mesma razão do filtro de VID:PID."""
+        """`0x0003` e `0x0005` são os dois que esta casa mediu. Um terceiro"""
         estranho = {**_DUALSENSE_NO_CABO, "HID_ID": "0018:0000054C:00000CE6"}
         bancada = _bancada({"hidraw4": estranho})
         assert alvo_do_controle(_UNIQ_NO_CABO, **bancada) is None
@@ -233,7 +208,7 @@ class TestOProdutoLeACorPeloCabo:
     def test_eco_errado_nao_vira_cor_inventada(self) -> None:
         bancada = _bancada({"hidraw4": _DUALSENSE_NO_CABO})
         torto = bytearray(_resposta_boa())
-        torto[2] = 20  # `num` que ninguém pediu
+        torto[2] = 20
         assert ler_pelo_cabo(
             _UNIQ_NO_CABO, perguntar=lambda _c, _p: bytes(torto), **bancada
         ) is None
@@ -265,16 +240,10 @@ def _pedido_que_sai(no: dict[str, str]) -> bytes:
 
 
 class TestOEnvelopeDoRadio:
-    """O comando é o mesmo nos dois transportes; muda a ASSINATURA.
-
-    Esta classe é a rede da `ONDA-CONEXOES-11`. Ela não encosta em aparelho: o
-    envelope é montado e conferido em memória, e o transporte entra por
-    `perguntar`.
-    """
+    """O comando é o mesmo nos dois transportes; muda a ASSINATURA."""
 
     def test_pelo_cabo_o_pedido_sai_nu(self) -> None:
-        """O `ioctl` do cabo não leva assinatura — foi assim que o fio nunca
-        acusou o CRC errado, e é o que separa os dois caminhos."""
+        """O `ioctl` do cabo não leva assinatura — foi assim que o fio nunca"""
         assert _pedido_que_sai(_DUALSENSE_NO_CABO) == montar_pedido()
 
     def test_pelo_radio_o_pedido_sai_assinado(self) -> None:
@@ -287,16 +256,14 @@ class TestOEnvelopeDoRadio:
         assert pedido == envelope_de_radio(montar_pedido())
 
     def test_o_comando_dentro_do_envelope_e_o_mesmo_do_cabo(self) -> None:
-        """A assinatura envelopa; ela não muda `[1, 19]`. Se mudasse, o rádio
-        seria um segundo comando com uma segunda trava para manter."""
+        """A assinatura envelopa; ela não muda `[1, 19]`. Se mudasse, o rádio"""
         assinado = _pedido_que_sai(_DUALSENSE_NO_RADIO)
         nu = montar_pedido()
         assert assinado[:-TAMANHO_DO_CRC] == nu[:-TAMANHO_DO_CRC]
         assert (assinado[1], assinado[2]) == (nu[1], nu[2]) == (1, 19)
 
     def test_a_semente_e_a_de_escrita_e_nao_a_de_leitura(self) -> None:
-        """O byte que custou quatro dias: `0x53` (SET_REPORT|FEATURE) e não
-        `0xA3` (DATA|FEATURE), que é o do feature que CHEGA."""
+        """O byte que custou quatro dias: `0x53` (SET_REPORT|FEATURE) e não"""
         import zlib
 
         from hefesto_dualsense4unix.core.ds_output_report import BT_FEATURE_CRC_SEED
@@ -309,12 +276,7 @@ class TestOEnvelopeDoRadio:
         ) & 0xFFFFFFFF, "assinar com a semente de LEITURA é o erro de 23/08/2026"
 
     def test_a_trava_aceita_o_envelope_e_recusa_o_rabo_corrompido(self) -> None:
-        """A trava não afrouxou para deixar o rádio passar: ela APERTOU.
-
-        Antes, os quatro bytes finais só precisavam estar zerados. Agora, quando
-        não estão, eles têm de ser exatamente a assinatura recalculada — um valor
-        só por tamanho de buffer, que não carrega parâmetro nenhum.
-        """
+        """A trava não afrouxou para deixar o rádio passar: ela APERTOU."""
         envelope = envelope_de_radio(montar_pedido())
         conferir_pedido(envelope)
         torto = bytearray(envelope)
@@ -323,8 +285,7 @@ class TestOEnvelopeDoRadio:
             conferir_pedido(bytes(torto))
 
     def test_a_trava_continua_recusando_o_miolo_sujo_no_envelope(self) -> None:
-        """O envelope não é um passe livre: um parâmetro escondido no meio do
-        buffer assinado reprova igual, que é o que a trava existe para pegar."""
+        """O envelope não é um passe livre: um parâmetro escondido no meio do"""
         sujo = bytearray(envelope_de_radio(montar_pedido()))
         sujo[7] = 1
         with pytest.raises(PedidoRecusadoError, match="zerados"):
@@ -349,16 +310,7 @@ class TestOEnvelopeDoRadio:
 
 
 def _o_produto_pergunta_por_radio() -> bool:
-    """O produto chega a PERGUNTAR a um controle de rádio, e entende a resposta?
-
-    Medido pelo COMPORTAMENTO, não por AST, e a diferença já custou uma régua
-    falsa nesta casa em 29/08/2026 (ver `_abre_o_no_pela_porta_do_broker`): uma
-    régua que procura o nome de uma variável se desliga quando a cura entra pela
-    forma normal do repositório. Esta aqui monta uma bancada de rádio de mentira,
-    deixa o produto rodar inteiro e olha se o pedido saiu, se ele estava
-    ASSINADO e se a cor voltou. Nenhum aparelho é tocado — o transporte entra
-    por `perguntar`.
-    """
+    """O produto chega a PERGUNTAR a um controle de rádio, e entende a resposta?"""
     bancada = _bancada({"hidraw4": _DUALSENSE_NO_RADIO})
     visto: list[bytes] = []
 
@@ -369,33 +321,14 @@ def _o_produto_pergunta_por_radio() -> bool:
     cor = ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **bancada)
     if not visto or cor is None:
         return False
-    conferir_pedido(visto[0])  # o que sai por rádio passa pela MESMA trava
-    # A comparação é contra a SEGUNDA régua, não contra `envelope_de_radio`:
-    # perguntar ao produto qual é a semente faria esta função concordar com ele
-    # mesmo quando ele estivesse errado. Medido — ver `_SEMENTE_ESPERADA`.
+    conferir_pedido(visto[0])
     return visto[0] == _assinado_a_mao(montar_pedido())
 
 
 def _abre_o_no_pela_porta_do_broker() -> bool:
-    """`_perguntar_ao_hidraw` pede o fd ao broker, ou abre o nó na unha?
-
-    Lido por AST do fonte, nunca por chamada: chamar a função de verdade
-    encostaria no `/dev/hidraw` dela. `os.open` direto morre com EACCES enquanto
-    o BROKER-01 estiver instalado — e ele é DEFAULT em todo formato.
-    """
+    """`_perguntar_ao_hidraw` pede o fd ao broker, ou abre o nó na unha?"""
     import ast
 
-    #: RÉGUA FALSA, CORRIGIDA EM 29/08/2026 — e ela mentiu no primeiro uso.
-    #: A primeira versão desta função olhava só o ALVO das chamadas
-    #: (`ast.unparse(filho.func)`) procurando "abrir_hidraw". Quando a cura
-    #: entrou, ela entrou pela forma que esta casa usa em todo lugar — o
-    #: transporte injetável: `porta = abrir if abrir is not None else
-    #: abrir_hidraw`, e depois `porta(caminho, escrita=True)`. O alvo da chamada
-    #: passou a ser `porta`, e a régua devolveu "não curado" com a cura no
-    #: disco, deixando a célula do mapa em `não` com o produto lendo.
-    #: Instrumento que confunde o NOME DA VARIÁVEL com o ATO — a mesma família
-    #: das réguas que esta casa já pegou. Agora ela varre TODO identificador do
-    #: corpo, não só o alvo da chamada.
     fonte = Path(cor_do_plastico.__file__).read_text(encoding="utf-8")
     for no in ast.walk(ast.parse(fonte)):
         if not (isinstance(no, ast.FunctionDef) and no.name == "_perguntar_ao_hidraw"):
@@ -477,14 +410,7 @@ class TestOMapaEOProdutoNaoDivergem:
     def test_a_celula_do_radio_segue_o_que_o_produto_faz(
         self, linha_do_mapa: dict[str, str]
     ) -> None:
-        """Bicondicional, pelo mesmo motivo da do cabo — e ela não é decorativa.
-
-        `interface/mesa_viva.py::LeitorDeCor.pendentes` decide a quem perguntar
-        LENDO ESTA CÉLULA (`aciona("identidade.cor_do_aparelho", transporte)`).
-        Com ela em `não` o produto nem chega ao módulo; com ela em `sim` e o
-        módulo recusando, a interface soltaria uma pergunta por tique para
-        sempre. As duas metades têm de dizer a mesma coisa, nos dois sentidos.
-        """
+        """Bicondicional, pelo mesmo motivo da do cabo — e ela não é decorativa."""
         le_por_radio = _o_produto_pergunta_por_radio()
         esperado = "sim" if le_por_radio else "não"
         assert linha_do_mapa["radio_aciona"] == esperado, (
@@ -497,12 +423,7 @@ class TestOMapaEOProdutoNaoDivergem:
     def test_o_radio_nao_acusa_mais_o_aparelho(
         self, linha_do_mapa: dict[str, str]
     ) -> None:
-        """O `o-aparelho-recusa` de 23/08 foi REFUTADO em 27/08: era o nosso CRC.
-
-        Esta asserção existe para a lápide não voltar — alguém relendo a captura
-        de 23/08 pode reescrevê-la. E ela vale nos dois estados da célula: se um
-        dia o produto perder a leitura por rádio, a causa continua sendo NOSSA.
-        """
+        """O `o-aparelho-recusa` de 23/08 foi REFUTADO em 27/08: era o nosso CRC."""
         causa = linha_do_mapa["radio_por_que_nao_aciona"].strip()
         if linha_do_mapa["radio_aciona"] == "sim":
             assert not causa, (
@@ -523,19 +444,7 @@ class TestOMapaEOProdutoNaoDivergem:
     def test_a_referencia_de_codigo_do_radio_nao_cita_funcao_morta(
         self, linha_do_mapa: dict[str, str]
     ) -> None:
-        """Toda função CITADA com endereço tem de existir no módulo.
-
-        `_e_dualsense_no_cabo` morreu na `ONDA-CONEXOES-11` e a célula o citava
-        como *"o filtro que exige barramento USB"*, com linha e tudo. Citar
-        função que não existe mais é a caducidade que este arquivo inteiro
-        existe para pegar — foi assim que `cabo_codigo_ref` chegou a dizer "zero
-        linhas no produto" com a leitura no disco.
-
-        A régua lê a FORMA DE CITAÇÃO do mapa (`arquivo.py:110-120 (`nome`)`), e
-        não o nome solto: a prosa da mesma célula menciona o nome morto de
-        propósito, dizendo que morreu, e apagar isso obrigaria a próxima pessoa a
-        redescobrir por que o filtro saiu.
-        """
+        """Toda função CITADA com endereço tem de existir no módulo."""
         import re
 
         referencia = linha_do_mapa["radio_codigo_ref"]

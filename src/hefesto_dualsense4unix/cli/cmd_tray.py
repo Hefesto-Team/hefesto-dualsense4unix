@@ -1,49 +1,4 @@
-"""Subcomando `hefesto-dualsense4unix tray` — o ícone de bandeja do produto.
-
-**ELE PASSOU A SUBIR O `AppTray` EM 19/09/2026** (`TRAY-ORFAO-01`), e a troca é
-a resposta à queixa dela: *"o tray sumiu, não o portamos"*.
-
-## O QUE MUDOU, e por que o outro não servia
-
-Até aqui este comando subia o `integrations.tray.TrayController`, que é
-**estritamente mais pobre** que o `app.tray.AppTray`:
-
-| | `TrayController` (saiu) | `AppTray` (entrou) |
-| --- | --- | --- |
-| clique no ícone | abre a **TUI** no terminal | abre o **painel** — a interface que ela usa |
-| perfis | lista de nomes, sem marca do ativo | submenu com o ativo marcado, e troca por clique |
-| estado | uma linha remontada aqui | `N controles`, bateria e perfil, do dono |
-| atualização | thread própria a cada 2 s | `GLib.timeout_add_seconds` interno |
-| COSMIC | cria o indicador na hora | **espera o watcher aparecer** — o
-  `cosmic-applet-status-area` registra o `org.kde.StatusNotifierWatcher` alguns
-  ms depois do login, e quem cria antes perde a primeira fase |
-
-O `AppTray` era **órfão** desde 06/09, quando a janela GTK saiu do disco
-(`D-0609-GTK-LEVA-INTEIRA`) levando junto o único chamador dele
-(`app/app.py:1794`). O censo de 19/09 o encontrou com zero chamadores de
-produção — e a cura não é arquivá-lo, é **dar-lhe o dono que faltava**.
-
-## O FATO QUE CAIU
-
-Estava escrito que em Pop!_OS COSMIC *"o `org.kde.StatusNotifierWatcher` D-Bus
-que o libayatana usa não existe, então o tray clássico fica oculto"* — foi essa
-premissa que fez a janela compacta nascer como surrogate. **Medido em
-19/09/2026, na sessão dela:**
-
-```
-org.kde.StatusNotifierWatcher              PID 4212  cosmic-applet-s
-com.system76.CosmicStatusNotifierWatcher   PID 4212  cosmic-applet-s
-```
-
-O watcher existe. O COSMIC passou a trazê-lo, e o tray clássico funciona.
-
-## A THREAD DE `refresh` SUMIU, e isso é a metade que barateia
-
-O `TrayController` não se atualizava sozinho, então este arquivo mantinha uma
-thread chamando `asyncio.run` a cada 2 s. O `AppTray` tem `_tick_refresh`
-próprio no laço do GTK, e as chamadas de IPC saem dele pelos callbacks abaixo —
-um lugar só, no fio do GTK, sem `Event` para desarmar no fim.
-"""
+"""Subcomando `hefesto-dualsense4unix tray` — o ícone de bandeja do produto."""
 from __future__ import annotations
 
 import asyncio
@@ -53,10 +8,6 @@ from typing import Any
 import typer
 from rich.console import Console
 
-# OS ATOS DA BANDEJA MORAM EM `app/actions/atos_da_bandeja.py` desde 01/10/2026
-# (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01): o gesto do controle chama os
-# mesmos três, e um dono só é o que impede a quarta cópia de divergir. Os
-# nomes de cá continuam respondendo — são os MESMOS objetos (`is`).
 from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
     LANCADOR_DO_PAINEL as LANCADOR_DO_PAINEL,
 )
@@ -71,13 +22,7 @@ console = Console()
 
 
 def _chamar(metodo: str, argumentos: dict[str, Any] | None = None) -> Any:
-    """Uma chamada de IPC ao daemon, com o silêncio certo quando ele não está.
-
-    **O SILÊNCIO É `None`, E NÃO UMA EXCEÇÃO:** estes callbacks rodam dentro do
-    laço do GTK, e uma exceção que suba dali derruba o menu no meio do clique
-    dela. O `AppTray` já sabe tratar `None` — é o que ele recebe quando o
-    daemon está parado.
-    """
+    """Uma chamada de IPC ao daemon, com o silêncio certo quando ele não está."""
     from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 
     async def _ir() -> Any:
@@ -99,16 +44,10 @@ def _listar_perfis() -> list[dict[str, Any]]:
 
 
 def _trocar_de_perfil(nome: str) -> bool:
-    """Troca pelo IPC; se o daemon não responder, tenta pela CLI.
-
-    A RESERVA PELA CLI É A DO ARQUIVO ANTIGO, e ela fica: o caminho da CLI
-    sobe o daemon quando ele está parado, o que é exatamente o caso em que o
-    IPC falha.
-    """
+    """Troca pelo IPC; se o daemon não responder, tenta pela CLI."""
     if _chamar("profile.switch", {"name": nome}) is not None:
         return True
     try:
-        # O NOME VEM DA LISTA DO PRÓPRIO DAEMON, não de entrada livre.
         subprocess.Popen(
             ["hefesto-dualsense4unix", "profile", "activate", nome],
             start_new_session=True,
@@ -130,28 +69,8 @@ def _estado() -> dict[str, Any] | None:
     return resposta if isinstance(resposta, dict) else None
 
 
-# ---------------------------------------------------------------------------
-# TRAY-A-LISTINHA-DELA-01 (21/09/2026) — os quatro atos da bandeja
-#
-# NENHUMA REGRA NOVA MORA AQUI, e é o contrato deste arquivo: cada função
-# abaixo pergunta ao DONO do ato e despacha o que ele responder. O tray é a
-# quarta superfície a chamar os mesmos donos (a janela GTK saiu, ficam a aba
-# Jogar, a aba Sistema e a CLI) — e a lição que esta casa pagou três vezes é
-# que a quarta cópia é a que diverge.
-# ---------------------------------------------------------------------------
 def _definir_o_modo(ligado: bool) -> bool:
-    """O interruptor da aba Jogar, pelo mesmo plano de IPC que ela despacha.
-
-    **O PLANO É DO DONO** (`painel.plano_do_modo` -> `plan_mode_transition`), e
-    a ORDEM das chamadas é a entrega: invertidas, *"o vpad nasceria com o
-    físico ainda grabado pelo jogo"*. Por isso o laço despacha na ordem em que
-    o plano vem, e nunca reordena.
-
-    **LIGAR SOBE O SERVIÇO ANTES**, e vem antes do plano porque sem o daemon de
-    pé não há a quem mandar — decisão dela de 03/09/2026: *"Adiciona essa
-    função extra quando clicar em ligar"*. A ordem inversa recusaria o clique
-    exatamente no caso que ela pediu que passasse a funcionar.
-    """
+    """O interruptor da aba Jogar, pelo mesmo plano de IPC que ela despacha."""
     from hefesto_dualsense4unix.app.actions.jogar.painel import plano_do_modo
     from hefesto_dualsense4unix.app.actions.mode_transition import (
         MODE_GAMEPAD,
@@ -171,12 +90,7 @@ def _definir_o_modo(ligado: bool) -> bool:
 
 
 def _reconectar_os_controles() -> bool:
-    """O «Reconectar controles» da aba Jogar — os MESMOS dois passos.
-
-    `coop.sync` reconcilia o co-op e `identity.renumber` devolve os números de
-    jogador. Ele NÃO manda um `Connect` pelo rádio: reconectar o aparelho é o
-    botão PS dela, e isso é decisão de produto registrada no gesto da aba.
-    """
+    """O «Reconectar controles» da aba Jogar — os MESMOS dois passos."""
     primeiro = _chamar("coop.sync") is not None
     segundo = _chamar("identity.renumber") is not None
     return primeiro and segundo

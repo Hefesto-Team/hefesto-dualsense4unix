@@ -1,62 +1,4 @@
-"""O gravador da ponte de som MORRE, e morre ANTES de o nó sair.
-
-SOM-TRAVA-NA-QUEDA-01, 13/09/2026. A queixa dela, no mesmo dia, pela segunda
-vez: o som da máquina parou de sair e a Steam e os jogos ficaram sem janela.
-
-O DEFEITO, MEDIDO NO ESTUDO DA SPRINT
--------------------------------------
-Na queda do controle no rádio, o laço da `PonteDeSomPorRadio` para de ler o
-`pw-record` do monitor do nó (a escrita no hidraw é recusada), o cano enche em
-cerca de 0,34 s e a única thread do gravador fica parada no `write`. O SIGTERM
-do `descer()` fica PENDENTE para sempre. O gravador sobrevivia à ponte e ao nó,
-e todo cliente que mexia num parâmetro do nó dele ficava esperando por ele.
-
-OS DUBLÊS, e por que são processos de verdade
----------------------------------------------
-Nenhum servidor de som roda aqui. O gravador é um `python -c` que reproduz o
-`pw-record` medido: SIGTERM BLOQUEADO (o `signalfd` dele), SIGPIPE no padrão, e
-escrevendo no `stdout` até o cano encher — com espera por
-`/proc/<pid>/wchan == anon_pipe_write`. O teimoso ignora também o SIGPIPE, e só
-o KILL o derruba. Um dublê em Python puro, sem processo, passaria com a cura
-arrancada: o que se mede é o KERNEL entregando SIGPIPE, não um método chamado.
-
-A PONTE É A DE VERDADE, com o laço de verdade: só o codificador Opus e o hidraw
-são dublês. O hidraw é um cano com a ponta de leitura fechada, e a escrita
-recusada é o que faz o laço sair — a mesma porta da queda no diário dela.
-
-AS RÉGUAS E AS MORDIDAS (cada uma medida na entrega da sprint)
---------------------------------------------------------------
-* R1 — o gravador preso morre no `descer`, por SIGPIPE, em até 200 ms.
-  MORDIDA: o `descer` de antes (só `terminate`) deixa o dublê vivo.
-* R2 — o teimoso morre por KILL em até 1,5 s.
-  MORDIDA: tirar o `kill` de `filho_de_som.derrubar_leitor_de_pipe` deixa vivo.
-* R3 — na queda, o gravador já foi colhido quando o nó sai.
-  MORDIDA: trocar a ordem de `_casar_as_pontes` e `gerenciador.reconciliar` em
-  `AltoFalanteSubsystem._reconciliar`.
-* R4 — no `stop`, o gravador é colhido antes de `gerenciador.parar()`.
-  MORDIDA: o `stop` de antes (nós primeiro) reprova.
-* R5 — o filho ocioso morre com o pai morto por SIGKILL.
-  MORDIDA: tirar o `preexec_fn` de `filho_de_som.lancar_leitor` deixa o filho
-  vivo, adotado por outro processo.
-* R6 — o alimentador do cabo, com o bombeador morto, é colhido em < 100 ms.
-  MORDIDA: a ordem de antes (`terminate` e `wait(2 s)`) leva 2 s.
-
-E duas portas do órfão que o estudo nomeou: a ponte que não sobe e o gravador
-sem `stdout`.
-
-AS TRÊS QUE A VALIDAÇÃO ACRESCENTOU (13/09/2026). Quatro mordidas passavam com
-as réguas acima todas verdes, e cada uma arrancava um pedaço da rota:
-
-* R7 — com o laço vivo, parado no hidraw, o `descer` colhe o gravador e NÃO
-  fecha o `stdout` dele. MORDIDA: fechar o `stdout` sem olhar se o leitor
-  parou, no primeiro ou no último fechamento de
-  `filho_de_som.derrubar_leitor_de_pipe`.
-* R8 — o `stop` desce as pontes FORA do event loop. MORDIDA: `ponte.descer()`
-  direto no `stop`, no lugar do `asyncio.gather` de `asyncio.to_thread`.
-* R9 — a fonte que volta sem PCM e com processo tem o processo derrubado pelo
-  subsystem. MORDIDA: tirar o `derrubar_leitor_de_pipe` do ramo `if fonte is
-  None` de `AltoFalanteSubsystem._casar_as_pontes`.
-"""
+"""O gravador da ponte de som MORRE, e morre ANTES de o nó sair."""
 
 from __future__ import annotations
 
@@ -84,21 +26,10 @@ pytestmark = pytest.mark.skipif(
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-#: Faixa FORJADA da casa — nunca o endereço de um controle dela.
 P1 = "aa:bb:cc:00:00:01"
 
-#: A marca no argv de todo dublê. É por ela que a régua confere um PID antes de
-#: matar um sobrevivente — nunca por nome de processo.
 MARCA = "hefesto-regua-som-trava-na-queda"
 
-#: O `pw-record` medido: TERM bloqueado (o signalfd), SIGPIPE no padrão, e o
-#: `write` bloqueante até o cano encher.
-#:
-#: **OS DUBLÊS LEVAM SINAL, e não silêncio** (A-HAPTICA-DO-RADIO-OBEDECE-AO-
-#: SINAL-DO-JOGO-01, 28/09/2026): a ponte do produto não escreve silêncio, e a
-#: queda que estas réguas medem é a escrita recusada de quem ESTÁ tocando. Com
-#: zeros, o laço nunca escreveria no hidraw que caiu, e a régua mediria outra
-#: cena. A amostra `1` é o menor sinal que existe.
 DUBLE_PW_RECORD = r"""
 import os, signal
 signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
@@ -108,7 +39,6 @@ while True:
     os.write(1, bloco)
 """
 
-#: O pior caso: TERM bloqueado E SIGPIPE ignorado. Só o KILL derruba.
 DUBLE_TEIMOSO = r"""
 import os, signal, time
 signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
@@ -121,8 +51,6 @@ while True:
         time.sleep(0.01)
 """
 
-#: O gravador SÃO: escreve sem parar e morre no SIGTERM, como o `pw-record`
-#: que não está preso (medido no estudo: 1 ms).
 DUBLE_SAO = r"""
 import os
 bloco = b"\1\0" * 960
@@ -130,8 +58,6 @@ while True:
     os.write(1, bloco)
 """
 
-#: O gravador OCIOSO: não escreve nada, logo nunca toma SIGPIPE. É o caso que
-#: só o `PR_SET_PDEATHSIG` cobre quando o daemon morre por SIGKILL.
 DUBLE_OCIOSO = "import time\ntime.sleep(300)\n"
 
 
@@ -181,11 +107,7 @@ def _wchan(pid: int) -> str:
 
 
 def _esperar_o_cano_encher(pid: int) -> None:
-    """Até o dublê parar no `write` do cano cheio — o estado do órfão da queda.
-
-    Onde o kernel não mostra o `wchan`, espera o bastante para o cano encher: o
-    dublê escreve mais de 1 MB por segundo e o cano tem 64 KiB.
-    """
+    """Até o dublê parar no `write` do cano cheio — o estado do órfão da queda."""
     prazo = time.monotonic() + 5.0
     while time.monotonic() < prazo:
         wchan = _wchan(pid)
@@ -302,19 +224,10 @@ def _gerenciador_com_o_no_de_pe(
     return ger
 
 
-# ---------------------------------------------------------------------------
-# R1 e R2 — o `descer` colhe o gravador
-# ---------------------------------------------------------------------------
-
-
 def test_r1_o_gravador_preso_morre_no_descer_por_sigpipe(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]]
 ) -> None:
-    """A queda: laço fora, cano cheio, TERM pendente. O `descer` o derruba.
-
-    MORDIDA: com o `descer` de antes (só `terminate`) o dublê fica vivo, no
-    `write`, com o SIGTERM pendente — exatamente o órfão da máquina dela.
-    """
+    """A queda: laço fora, cano cheio, TERM pendente. O `descer` o derruba."""
     ponte, proc = _ponte_na_queda(dubles)
 
     comeco = time.monotonic()
@@ -337,11 +250,7 @@ def test_r1_o_gravador_preso_morre_no_descer_por_sigpipe(
 def test_r2_o_teimoso_morre_por_kill(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]]
 ) -> None:
-    """TERM bloqueado e SIGPIPE ignorado: só o KILL, e dentro do prazo.
-
-    MORDIDA: tire o `kill` de `filho_de_som.derrubar_leitor_de_pipe` e o
-    teimoso sobrevive ao `descer`.
-    """
+    """TERM bloqueado e SIGPIPE ignorado: só o KILL, e dentro do prazo."""
     ponte, proc = _ponte_na_queda(dubles, codigo=DUBLE_TEIMOSO)
 
     comeco = time.monotonic()
@@ -358,20 +267,10 @@ def test_r2_o_teimoso_morre_por_kill(
     assert ponte.como_morreu_o_gravador.insistiu is True
 
 
-# ---------------------------------------------------------------------------
-# R3 e R4 — a ORDEM: o gravador morre antes de o nó sair
-# ---------------------------------------------------------------------------
-
-
 def test_r3_na_queda_o_gravador_ja_foi_colhido_quando_o_no_sai(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]]
 ) -> None:
-    """O controle sumiu da lista: a ponte desce e o nó sai, NESTA ordem.
-
-    MORDIDA: em `AltoFalanteSubsystem._reconciliar`, chame
-    `gerenciador.reconciliar(alvos)` antes de `self._casar_as_pontes(alvos)` —
-    o nó sai com o gravador ainda preso.
-    """
+    """O controle sumiu da lista: a ponte desce e o nó sai, NESTA ordem."""
     ponte, proc = _ponte_na_queda(dubles)
     saidas: list[int | None] = []
     ger = _gerenciador_com_o_no_de_pe(proc, saidas)
@@ -392,11 +291,7 @@ def test_r3_na_queda_o_gravador_ja_foi_colhido_quando_o_no_sai(
 def test_r4_no_stop_o_gravador_e_colhido_antes_de_os_nos_sairem(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]], cena: str
 ) -> None:
-    """O desligamento do daemon: pontes primeiro, nós depois — nas duas cenas.
-
-    MORDIDA: com o `stop` de antes, `gerenciador.parar()` vinha primeiro e os
-    nós saíam com o gravador vivo.
-    """
+    """O desligamento do daemon: pontes primeiro, nós depois — nas duas cenas."""
     if cena == "na_queda":
         ponte, proc = _ponte_na_queda(dubles)
     else:
@@ -417,10 +312,6 @@ def test_r4_no_stop_o_gravador_e_colhido_antes_de_os_nos_sairem(
     assert proc.poll() is not None
     assert sub._pontes == {}
 
-
-# ---------------------------------------------------------------------------
-# R5 — o filho ocioso morre com o pai morto por SIGKILL
-# ---------------------------------------------------------------------------
 
 _PAI_DO_GRAVADOR = """
 import sys, time
@@ -470,16 +361,7 @@ def _pai_de(pid: int) -> str:
     "roteiro", [_PAI_DO_GRAVADOR, _PAI_DO_ALIMENTADOR], ids=["gravador", "alimentador"]
 )
 def test_r5_o_filho_ocioso_morre_com_o_pai(roteiro: str) -> None:
-    """O daemon morto por SIGKILL não roda `finally`: quem mata o filho é o kernel.
-
-    O pai é um processo SEPARADO, que lança o filho pela porta do PRODUTO
-    (`fonte_do_monitor_do_no` sem `abrir`, e `_Alimentador` sem `lancar`) — só o
-    argv vira o dublê ocioso. O filho ocioso não escreve, então não há SIGPIPE
-    que o salve.
-
-    MORDIDA: tire o `preexec_fn` de `filho_de_som.lancar_leitor` e o filho
-    sobrevive ao pai, adotado por outro processo.
-    """
+    """O daemon morto por SIGKILL não roda `finally`: quem mata o filho é o kernel."""
     pai = subprocess.Popen(
         [sys.executable, "-c", roteiro.format(raiz=RAIZ, argv=_argv(DUBLE_OCIOSO))],
         stdout=subprocess.PIPE,
@@ -512,16 +394,9 @@ def test_r5_o_filho_ocioso_morre_com_o_pai(roteiro: str) -> None:
             pai.wait(timeout=5)
         if pai.stdout is not None:
             pai.stdout.close()
-        # O sobrevivente da mordida é colhido pela régua, por PID conferido pela
-        # MARCA no argv — nunca por nome de processo.
         if neto and MARCA in _cmdline(neto):
             with contextlib.suppress(OSError):
                 os.kill(neto, signal.SIGKILL)
-
-
-# ---------------------------------------------------------------------------
-# R6 — o alimentador do cabo não segura o fechamento por 2 s
-# ---------------------------------------------------------------------------
 
 
 class _SourceQueSumiu:
@@ -537,11 +412,7 @@ class _SourceQueSumiu:
 def test_r6_o_alimentador_com_o_bombeador_morto_e_colhido_depressa(
     dubles: list[subprocess.Popen[bytes]],
 ) -> None:
-    """Ninguém lê o cano do `parec`: fechar o canal não pode esperar o prazo.
-
-    MORDIDA: a ordem de antes (`terminate` → `wait(2 s)` → `kill`) leva os 2 s
-    inteiros, porque o TERM não alcança quem está parado no `write`.
-    """
+    """Ninguém lê o cano do `parec`: fechar o canal não pode esperar o prazo."""
     alimentador = canal._Alimentador(
         "aabbcc000001", "fonte-de-mentira", _SourceQueSumiu(),
         lancar=_lancador(DUBLE_PW_RECORD, dubles),
@@ -563,18 +434,8 @@ def test_r6_o_alimentador_com_o_bombeador_morto_e_colhido_depressa(
     assert proc.returncode == -signal.SIGPIPE, f"morreu com {proc.returncode}"
 
 
-# ---------------------------------------------------------------------------
-# R7, R8 e R9 — as mordidas que passavam sem régua (validação, 13/09/2026)
-# ---------------------------------------------------------------------------
-
-
 def _hidraw_que_trava() -> tuple[int, int]:
-    """Um hidraw cuja escrita BLOQUEIA: o cano está cheio e ninguém lê.
-
-    Devolve `(leitura, escrita)`. A ponte recebe a escrita e o laço para no
-    `write` do report — o único jeito de ter o LEITOR do gravador vivo, e fora
-    do `read`, enquanto o `descer` corre.
-    """
+    """Um hidraw cuja escrita BLOQUEIA: o cano está cheio e ninguém lê."""
     leitura, escrita = os.pipe()
     os.set_blocking(escrita, False)
     for tamanho in (4096, 1):
@@ -596,18 +457,7 @@ def _wchan_da_thread(thread: Any) -> str:
 def test_r7_o_descer_nao_fecha_o_cano_debaixo_do_laco_vivo(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]]
 ) -> None:
-    """O laço está vivo, parado no hidraw: o `stdout` do gravador NÃO fecha.
-
-    Fechar o `stdout` com o laço vivo devolve o número do fd ao kernel, e o
-    próximo `open` de qualquer parte do daemon o recebe debaixo do `read` do
-    laço — o cuidado que a docstring do `descer` já guarda para o hidraw. O
-    `descer` colhe o gravador pelo KILL, deixa o cano aberto e devolve `False`,
-    porque a corrida ainda não acabou.
-
-    MORDIDA (medida na validação): em `filho_de_som.derrubar_leitor_de_pipe`,
-    fechar o `stdout` sem olhar se o leitor parou — no primeiro fechamento ou
-    no último.
-    """
+    """O laço está vivo, parado no hidraw: o `stdout` do gravador NÃO fecha."""
     leitura, escrita = _hidraw_que_trava()
     ponte, proc = _ponte(dubles, abrir_hidraw=lambda: escrita)
     thread = ponte._thread
@@ -633,8 +483,6 @@ def test_r7_o_descer_nao_fecha_o_cano_debaixo_do_laco_vivo(
             "volta ao kernel debaixo do `read` dele"
         )
     finally:
-        # Esvazia o hidraw: o `write` do laço volta, ele vê o `parar` e sai,
-        # fechando o fd DELE. Só então a ponta de leitura fecha.
         os.set_blocking(leitura, False)
         prazo = time.monotonic() + 5.0
         while thread.is_alive() and time.monotonic() < prazo:
@@ -648,15 +496,7 @@ def test_r7_o_descer_nao_fecha_o_cano_debaixo_do_laco_vivo(
 def test_r8_o_stop_desce_as_pontes_fora_do_event_loop(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]]
 ) -> None:
-    """O gravador que demora a morrer não segura o event loop do daemon.
-
-    O teimoso só cai no KILL, um segundo depois do TERM. Com o `descer` dentro
-    do loop, o daemon passaria esse segundo sem atender ninguém no
-    desligamento — e com quatro controles, quatro segundos.
-
-    MORDIDA (medida na validação): trocar o `asyncio.gather` de
-    `asyncio.to_thread(ponte.descer)` por um `ponte.descer()` direto no `stop`.
-    """
+    """O gravador que demora a morrer não segura o event loop do daemon."""
     ponte, proc = _ponte_na_queda(dubles, codigo=DUBLE_TEIMOSO)
     saidas: list[int | None] = []
     ger = _gerenciador_com_o_no_de_pe(proc, saidas)
@@ -680,8 +520,6 @@ def test_r8_o_stop_desce_as_pontes_fora_do_event_loop(
         fim = time.monotonic()
         chega.set()
         await tarefa
-        # O FIM ENTRA NA SÉRIE: com o loop preso, nenhuma batida acontece
-        # depois do começo, e o silêncio só aparece contra o fim.
         serie = sorted([t for t in batidas if t <= fim] + [fim])
         maior = max(serie[i + 1] - serie[i] for i in range(len(serie) - 1))
         return fim - comeco, maior
@@ -704,16 +542,7 @@ def test_r9_a_fonte_sem_saida_no_subsystem_e_colhida(
     dubles: list[subprocess.Popen[bytes]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A fonte voltou sem PCM, mas COM processo: o subsystem o derruba ali mesmo.
-
-    `fonte_do_monitor_do_no` já colhe o gravador sem `stdout` antes de voltar;
-    o ramo `if fonte is None` de `_casar_as_pontes` é a segunda trava, para toda
-    fonte que devolva `(None, processo, motivo)`. Sem ponte, ninguém mais
-    derrubaria aquele processo.
-
-    MORDIDA (medida na validação): tirar o `derrubar_leitor_de_pipe(gravador)`
-    desse ramo.
-    """
+    """A fonte voltou sem PCM, mas COM processo: o subsystem o derruba ali mesmo."""
     abrir = _lancador(DUBLE_OCIOSO, dubles, sem_saida=True)
 
     def _fonte_que_devolve_o_processo(_id_do_no: str, **_kw: Any) -> tuple[Any, Any, str]:
@@ -738,33 +567,17 @@ def test_r9_a_fonte_sem_saida_no_subsystem_e_colhida(
     )
 
 
-# ---------------------------------------------------------------------------
-# As outras duas portas do órfão
-# ---------------------------------------------------------------------------
-
-
 def test_a_ponte_que_nao_sobe_colhe_o_gravador(
     ponte_real: None,
     dubles: list[subprocess.Popen[bytes]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O gravador já nasceu e a ponte não subiu: ninguém lê aquele cano, nunca.
-
-    MORDIDA: com o `descer` de antes o gravador fica vivo, preso no cano.
-    """
+    """O gravador já nasceu e a ponte não subiu: ninguém lê aquele cano, nunca."""
     real = af.fonte_do_monitor_do_no
 
     def _com_o_duble(id_do_no: str, **kw: Any) -> tuple[Any, Any, str]:
-        # OS KWARGS SÃO REPASSADOS, e engoli-los já custou uma corrida da suíte
-        # em 20/09/2026: quando a `O-ROTULO-QUE-COLIDE-01` tornou o `uniq`
-        # obrigatório, este dublê ficou MAIS POBRE que a função real e o
-        # `TypeError` se leu como regressão do produto. Um dublê que descarta
-        # o que o produto exige não substitui o produto — é a família do
-        # `duble-por-new-fica-mais-pobre-que-o-produto`.
         kw.pop("abrir", None)
         resposta = real(id_do_no, abrir=_lancador(DUBLE_PW_RECORD, dubles), **kw)
-        # Preso ANTES de a ponte recusar: um dublê ainda nascendo morreria no
-        # TERM de qualquer `descer`, e a régua passaria com a cura arrancada.
         _esperar_o_cano_encher(resposta[1].pid)
         return resposta
 
@@ -791,11 +604,7 @@ def test_a_ponte_que_nao_sobe_colhe_o_gravador(
 def test_o_gravador_sem_stdout_e_colhido_antes_de_voltar(
     ponte_real: None, dubles: list[subprocess.Popen[bytes]]
 ) -> None:
-    """Sem `stdout` não há fonte, nem ponte, nem quem derrube o processo.
-
-    MORDIDA: devolva `(None, proc, …)` sem `derrubar_leitor_de_pipe` e o
-    processo fica vivo.
-    """
+    """Sem `stdout` não há fonte, nem ponte, nem quem derrube o processo."""
     fonte, proc, motivo = af.fonte_do_monitor_do_no(
         af.nome_do_sink(P1), uniq=P1,
         abrir=_lancador(DUBLE_OCIOSO, dubles, sem_saida=True)

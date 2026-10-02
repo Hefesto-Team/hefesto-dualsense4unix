@@ -1,34 +1,9 @@
-"""COR-04 — GUI da aba Lightbar: toggle "Cores automáticas por controle".
-
-Cobre o item COR-04 do sprint 2026-07-16-sprint-cores-e-led-automaticos:
-
-  - o checkbox reflete o draft (GLOBAL, nunca o efetivo do alvo) e o campo
-    sobrevive ao round-trip from_profile → GUI → to_profile, com o mapa
-    ``controllers`` intacto;
-  - semântica D4: aplicar COR com alvo "Todos" e auto ligado desliga o
-    toggle no draft com aviso visível (toast espião), inclusive nos botões
-    "Aplicar no controle" e "Apagar" (que levam o toggle no IPC parcial);
-  - religar o automático NÃO mexe nos overrides por-controle;
-  - "Voltar ao automático" remove SÓ a cor explícita do alvo (player-LEDs e
-    gatilhos próprios ficam); entrada que esvazia some do mapa;
-  - "Voltar todos ao automático" limpa as cores explícitas de todo mundo e
-    religa o auto;
-  - perfil antigo sem o campo → checkbox ligado (default do schema);
-  - DraftApplier propaga ``leds.auto_player_colors`` ao registro de
-    identidade (espelho da ativação de perfil), com brilho junto (D11).
-
-Sem display: instâncias parciais via construtor próprio + widgets fakes —
-mesmo padrão de tests/unit/test_controller_target_ui.py.
-"""
+"""COR-04 — GUI da aba Lightbar: toggle "Cores automáticas por controle"."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("lightbar auto colors")
 
 from typing import Any
@@ -37,8 +12,6 @@ from unittest.mock import MagicMock
 import gi
 import pytest
 
-# BUG-TEST-GDK-VERSION-PIN-01: pina Gdk/Gtk 3.0 ANTES de importar módulos da
-# GUI — sem isso o gi pode carregar Gdk 4.0 e envenenar o processo inteiro.
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
@@ -58,14 +31,8 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: MACs forjados da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
-
-
-# ---------------------------------------------------------------------------
-# Fakes de widget + host parcial do mixin
-# ---------------------------------------------------------------------------
 
 
 class _FakeCheck:
@@ -129,12 +96,7 @@ class _Host(LightbarActionsMixin):
 
 
 def _aceitou(uniq: str | None) -> dict[str, Any]:
-    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU em ``uniq``.
-
-    BG-01 (26/08/2026): a aba lê o CORPO do daemon, e não mais o ``bool`` da
-    ponte estreita. A forma é a do handler; o que estes testes julgam continua
-    sendo o D4 e o ENDEREÇO do pedido, nunca a frase.
-    """
+    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU em ``uniq``."""
     return {
         "status": "ok",
         "aplicado_em": [uniq] if uniq else [],
@@ -147,13 +109,8 @@ def _host_com_checkbox(
 ) -> tuple[_Host, _FakeCheck]:
     check = _FakeCheck()
     host = _Host(draft, uniq, widgets={"auto_player_colors_check": check})
-    host.install_lightbar_tab()  # fia o "toggled" em código (COR-04)
+    host.install_lightbar_tab()
     return host, check
-
-
-# ---------------------------------------------------------------------------
-# Perfis de apoio
-# ---------------------------------------------------------------------------
 
 
 def _perfil(
@@ -191,20 +148,14 @@ def _override_verde_completo() -> ControllerOverrides:
     )
 
 
-# ---------------------------------------------------------------------------
-# Round-trip: from_profile → GUI → to_profile
-# ---------------------------------------------------------------------------
-
-
 def test_from_profile_le_auto_false_e_checkbox_mostra_desligado() -> None:
     draft = DraftConfig.from_profile(_perfil(auto=False))
     assert draft.leds.auto_player_colors is False
 
     host, check = _host_com_checkbox(draft)
-    check.active = True  # estado visual divergente de propósito
+    check.active = True
     host._refresh_lightbar_from_draft()
-    assert check.get_active() is False  # GUI mostra desligado
-    # O refresh programático não pode ter mexido no draft (guard).
+    assert check.get_active() is False
     assert host.draft.leds.auto_player_colors is False
 
 
@@ -231,7 +182,6 @@ def test_round_trip_preserva_auto_false_e_mapa_controllers() -> None:
     override = salvo.controllers[UNIQ_2]
     assert tuple(override.leds.lightbar) == (0, 255, 0)
     assert override.triggers.right.mode == "Rigid"
-    # O toggle é do PERFIL: o override não pode ter ganho o campo no save.
     assert "auto_player_colors" not in override.leds.model_fields_set
 
 
@@ -254,21 +204,15 @@ def test_override_criado_pela_gui_nao_ganha_o_campo() -> None:
     assert "auto_player_colors" not in override.leds.model_fields_set
 
 
-# ---------------------------------------------------------------------------
-# Handler do checkbox
-# ---------------------------------------------------------------------------
-
-
 def test_toggle_grava_no_global_mesmo_com_alvo_selecionado() -> None:
     """O toggle é do PERFIL: com um controle no seletor, ainda cai no global."""
     perfil = _perfil(auto=True, controllers={UNIQ_2: _override_verde_completo()})
     host, check = _host_com_checkbox(DraftConfig.from_profile(perfil), uniq=UNIQ_2)
-    check.set_active(True)  # sem mudança de estado — nada dispara
+    check.set_active(True)
     check.active = True
-    check.set_active(False)  # a usuária desmarca
+    check.set_active(False)
 
     assert host.draft.leds.auto_player_colors is False
-    # Nenhum override foi tocado (nem criado, nem alterado).
     override = host.draft.controller_override(UNIQ_2)
     assert override is not None and tuple(override.leds.lightbar) == (0, 255, 0)
     assert host.draft.controller_override(UNIQ_1) is None
@@ -278,10 +222,10 @@ def test_religar_o_auto_nao_apaga_cores_explicitas() -> None:
     perfil = _perfil(auto=False, controllers={UNIQ_2: _override_verde_completo()})
     host, check = _host_com_checkbox(DraftConfig.from_profile(perfil))
     antes = host.draft.source_controllers
-    check.set_active(True)  # religa
+    check.set_active(True)
 
     assert host.draft.leds.auto_player_colors is True
-    assert host.draft.source_controllers is antes  # mapa intacto (mesmo objeto)
+    assert host.draft.source_controllers is antes
 
 
 def test_refresh_programatico_nao_dispara_o_handler() -> None:
@@ -289,23 +233,18 @@ def test_refresh_programatico_nao_dispara_o_handler() -> None:
     host, check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
     host._refresh_guard = True
     check.set_active(False)
-    assert host.draft.leds.auto_player_colors is True  # intacto
+    assert host.draft.leds.auto_player_colors is True
     host._refresh_guard = False
-
-
-# ---------------------------------------------------------------------------
-# Semântica D4: cor única em "Todos" com o automático ligado
-# ---------------------------------------------------------------------------
 
 
 def test_cor_em_todos_com_auto_on_desliga_toggle_com_aviso() -> None:
     host, check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
-    check.active = True  # espelho visual do draft
+    check.active = True
     host.on_lightbar_color_set(_FakeColorButton((0, 0, 255)))
 
     assert host.draft.leds.auto_player_colors is False
     assert host.draft.leds.lightbar_rgb == (0, 0, 255)
-    assert check.get_active() is False  # checkbox sincronizado, sob guard
+    assert check.get_active() is False
     assert any(_AVISO_D4 in toast for toast in host._toasts)
 
 
@@ -357,12 +296,12 @@ def test_player_leds_em_todos_com_auto_on_dispara_d4(
         lambda _bits, uniq=None: _aceitou(uniq),
     )
     host, check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
-    check.active = True  # espelho visual do draft
+    check.active = True
 
     host.on_player_leds_apply(None)
 
     assert host.draft.leds.auto_player_colors is False
-    assert check.get_active() is False  # checkbox sincronizado, sob guard
+    assert check.get_active() is False
     assert any(_AVISO_D4 in toast for toast in host._toasts)
 
 
@@ -404,14 +343,11 @@ def test_player_leds_com_alvo_selecionado_nao_dispara_d4(
 def test_aplicar_no_controle_em_todos_leva_toggle_no_ipc(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Botão "Aplicar no controle" em "Todos": D4 + cor e toggle num único
-    profile.apply_draft parcial (led.set clássico seria vencido pela paleta)."""
+    """Botão "Aplicar no controle" em "Todos": D4 + cor e toggle num único"""
     host, check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
     check.active = True
     payloads: list[dict[str, Any]] = []
 
-    # APLICAR-VERDADE-01/E2: o dublê fala o contrato do daemon (a resposta
-    # inteira), não o `bool` que a ponte devolvia e que perdia o `failed`.
     def _spy(payload: dict[str, Any]) -> dict[str, Any]:
         payloads.append(payload)
         return {"status": "ok", "applied": ["leds"]}
@@ -428,7 +364,7 @@ def test_aplicar_no_controle_em_todos_leva_toggle_no_ipc(
     host._current_brightness = 0.5
     host.on_lightbar_apply(None)
 
-    assert host.draft.leds.auto_player_colors is False  # D4
+    assert host.draft.leds.auto_player_colors is False
     assert check.get_active() is False
     assert payloads == [
         {
@@ -440,10 +376,6 @@ def test_aplicar_no_controle_em_todos_leva_toggle_no_ipc(
         }
     ]
     assert any(_AVISO_D4 in toast for toast in host._toasts)
-    # TELA-QUE-SO-AFIRMA-O-QUE-SABE-01: a frase do caminho feliz virou "Cor
-    # ENVIADA ao controle" — o `ok` do daemon sempre significou "o report
-    # saiu", nunca "a barra acendeu". O que este teste mede segue igual: o
-    # aviso do D4 não engoliu o resultado do envio.
     assert any("enviada" in toast for toast in host._toasts)
 
 
@@ -471,14 +403,12 @@ def test_aplicar_no_controle_com_alvo_usa_led_set(
     host._current_brightness = 1.0
     host.on_lightbar_apply(None)
 
-    # PERFIL-05: o MAC do alvo viaja no pedido (aplicação por-controle real).
     assert chamadas == [((10, 20, 30), 1.0, UNIQ_2)]
-    assert host.draft.leds.auto_player_colors is True  # alvo não dispara D4
+    assert host.draft.leds.auto_player_colors is True
 
 
 def _gdk_rgba_ok() -> bool:
-    """Gdk.RGBA existe? A CI headless de release tem um Gdk parcial sem RGBA;
-    este caso exercita o botão "Apagar" que constrói um Gdk.RGBA. Pula lá."""
+    """Gdk.RGBA existe? A CI headless de release tem um Gdk parcial sem RGBA;"""
     try:
         import gi
 
@@ -504,17 +434,12 @@ def test_apagar_em_todos_leva_toggle_no_ipc(
     )
     host.on_lightbar_off(None)
 
-    assert host.draft.leds.auto_player_colors is False  # D4 (preto é cor única)
+    assert host.draft.leds.auto_player_colors is False
     assert host.draft.leds.lightbar_rgb == (0, 0, 0)
     assert payloads == [
         {"leds": {"lightbar_rgb": [0, 0, 0], "auto_player_colors": False}}
     ]
     assert any(_AVISO_D4 in toast for toast in host._toasts)
-
-
-# ---------------------------------------------------------------------------
-# "Voltar ao automático" (alvo) e "Voltar todos ao automático"
-# ---------------------------------------------------------------------------
 
 
 def test_voltar_ao_automatico_remove_so_a_cor_do_alvo() -> None:
@@ -526,12 +451,10 @@ def test_voltar_ao_automatico_remove_so_a_cor_do_alvo() -> None:
     assert override is not None and override.leds is not None
     assert "lightbar" not in override.leds.model_fields_set
     assert "lightbar_brightness" not in override.leds.model_fields_set
-    # Player-LEDs e gatilhos próprios FICAM.
     assert "player_leds" in override.leds.model_fields_set
     assert override.triggers is not None and override.triggers.right.mode == "Rigid"
-    # A aba volta a exibir o global no alvo (cor herdada).
     assert host.draft.effective_leds_for(UNIQ_2).lightbar_rgb == (129, 61, 156)
-    assert host._toasts  # feedback visível
+    assert host._toasts
 
 
 def test_voltar_ao_automatico_poda_entrada_que_esvaziou() -> None:
@@ -543,7 +466,7 @@ def test_voltar_ao_automatico_poda_entrada_que_esvaziou() -> None:
     host.on_lightbar_auto_reset_target(None)
 
     assert host.draft.controller_override(UNIQ_2) is None
-    assert host.draft.source_controllers is None  # mapa vazio → None
+    assert host.draft.source_controllers is None
 
 
 def test_voltar_ao_automatico_sem_alvo_orienta_sem_mexer() -> None:
@@ -552,7 +475,7 @@ def test_voltar_ao_automatico_sem_alvo_orienta_sem_mexer() -> None:
     host, _check = _host_com_checkbox(draft, uniq=None)
     host.on_lightbar_auto_reset_target(None)
 
-    assert host.draft is draft  # nada mudou
+    assert host.draft is draft
     assert any("Voltar todos ao automático" in toast for toast in host._toasts)
 
 
@@ -567,21 +490,16 @@ def test_voltar_todos_limpa_cores_e_religa_o_auto() -> None:
     host, check = _host_com_checkbox(DraftConfig.from_profile(perfil))
     host.on_lightbar_auto_reset_all(None)
 
-    assert host.draft.leds.auto_player_colors is True  # religou
-    assert check.get_active() is True  # refresh sincronizou o checkbox
+    assert host.draft.leds.auto_player_colors is True
+    assert check.get_active() is True
     o1 = host.draft.controller_override(UNIQ_1)
     assert o1 is not None and o1.leds is not None
-    assert "lightbar" not in o1.leds.model_fields_set  # cor saiu
-    assert "player_leds" in o1.leds.model_fields_set  # player-LEDs ficaram
-    assert o1.triggers is not None  # gatilhos ficaram
+    assert "lightbar" not in o1.leds.model_fields_set
+    assert "player_leds" in o1.leds.model_fields_set
+    assert o1.triggers is not None
     o2 = host.draft.controller_override(UNIQ_2)
     assert o2 is not None and "player_leds" in o2.leds.model_fields_set
     assert host._toasts
-
-
-# ---------------------------------------------------------------------------
-# DraftApplier: o toggle chega ao registro de identidade (daemon)
-# ---------------------------------------------------------------------------
 
 
 class TestApplierAutoColors:
@@ -614,7 +532,7 @@ class TestApplierAutoColors:
         assert applied == ["leds"]
         registry = identity.get_identity_registry()
         assert registry.auto_enabled is False
-        assert registry.auto_brightness == pytest.approx(0.4)  # D11
+        assert registry.auto_brightness == pytest.approx(0.4)
         controller.apply_output_defaults.assert_called_once()
 
     def test_toggle_sozinho_configura_sem_broadcast(self) -> None:
@@ -639,39 +557,23 @@ class TestApplierAutoColors:
     def test_toggle_invalido_recusa_a_secao(self) -> None:
         applier, controller = self._applier()
         applied = applier.apply({"leds": {"auto_player_colors": "sim"}})
-        assert applied == []  # seção falhou (best-effort, logada)
-        assert identity.get_identity_registry().auto_enabled is True  # intacto
+        assert applied == []
+        assert identity.get_identity_registry().auto_enabled is True
         controller.apply_output_defaults.assert_not_called()
 
 
 class TestPreviaHonestaAuto:
-    """Achado ao vivo 2026-07-17: com auto ON + um controle específico em
-    edição, a prévia mostra a cor REAL da paleta (não a manual global).
-
-    L7 (25/08/2026) — os casos abaixo foram RE-APONTADOS, não apagados. O que
-    eles mediam continua valendo palavra por palavra (auto ligado + alvo
-    específico = cor da paleta; auto desligado ou "Todos" = cor manual); o que
-    caducou é de ONDE o número saía. Ele vinha de uma expressão regular sobre
-    o TEXTO do rótulo do cabeçalho, e esse rótulo é ``translatable="yes"``:
-    em inglês vira "Controller 2", a busca falha e a prévia volta a mostrar a
-    cor manual — o defeito de 17/07 ressuscitado por um idioma. Agora o número
-    vem de ``_edit_target_slot``, o número canônico que a aba Status mantém.
-    """
+    """Achado ao vivo 2026-07-17: com auto ON + um controle específico em"""
 
     def test_le_o_slot_do_alvo(self) -> None:
-        draft = DraftConfig.default()  # auto_player_colors=True (default COR-04)
+        draft = DraftConfig.default()
         host = _Host(draft, uniq="aabbcc000002")
         host._edit_target_label = "Controle 2 — BT"
         host._edit_target_slot = 2
         assert host._auto_preview_slot() == 2
 
     def test_o_idioma_da_fita_nao_decide_a_previa(self) -> None:
-        """A MORDIDA do L7: rótulo em INGLÊS, slot conhecido → paleta do P2.
-
-        Com a leitura por expressão regular esta asserção devolve ``None`` — a
-        prévia volta a pintar a cor manual, que é exatamente o defeito de
-        17/07. Traduzir a interface não pode ressuscitar defeito curado.
-        """
+        """A MORDIDA do L7: rótulo em INGLÊS, slot conhecido → paleta do P2."""
         draft = DraftConfig.default()
         host = _Host(draft, uniq="aabbcc000002")
         host._edit_target_label = "Controller 2 — BT"
@@ -697,7 +599,7 @@ class TestPreviaHonestaAuto:
 
     def test_none_no_alvo_todos(self) -> None:
         draft = DraftConfig.default()
-        host = _Host(draft, uniq=None)  # "Todos" — sem controle específico
+        host = _Host(draft, uniq=None)
         host._edit_target_label = "Todos os controles"
         host._edit_target_slot = None
         assert host._auto_preview_slot() is None

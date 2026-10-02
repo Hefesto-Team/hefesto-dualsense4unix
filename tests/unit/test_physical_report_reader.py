@@ -35,18 +35,11 @@ from hefesto_dualsense4unix.core.physical_report_reader import (
     PhysicalReportReader,
 )
 
-#: Janela padrão reconhecível (25 bytes 0x01..0x19).
 _WINDOW = bytes(range(1, MOTION_WINDOW_LEN + 1))
 
 
 def _janela_do_laco(report: bytes) -> bytes | None:
-    """A janela de motion como o laço vivo a lê (`physical_report_reader`).
-
-    A base uma vez (`_struct_base`, que valida o CRC do BT e recusa o report de
-    áudio) e a fatia com ela (`_janela_com_base`) — o par que o `_run` usa. O
-    `extract_motion_window`, que fazia os dois passos numa função só e só a
-    suíte chamava, saiu em 28/09/2026; estas réguas passaram ao dono.
-    """
+    """A janela de motion como o laço vivo a lê (`physical_report_reader`)."""
     base = prr._struct_base(report)
     return None if base is None else prr._janela_com_base(report, base)
 
@@ -55,9 +48,9 @@ def _usb_report(window: bytes = _WINDOW) -> bytes:
     """Report 0x01 (64 B) com a janela nos offsets 16..40 do buffer cru."""
     raw = bytearray(64)
     raw[0] = 0x01
-    raw[1:7] = bytes([0x80, 0x80, 0x80, 0x80, 0, 0])  # sticks neutros
+    raw[1:7] = bytes([0x80, 0x80, 0x80, 0x80, 0, 0])
     raw[16 : 16 + MOTION_WINDOW_LEN] = window
-    raw[53] = 0x29  # status como o físico manda
+    raw[53] = 0x29
     return bytes(raw)
 
 
@@ -65,32 +58,26 @@ def _bt_report(window: bytes = _WINDOW, *, corrupt: bool = False) -> bytes:
     """Report 0x31 (78 B) com CRC de INPUT (seed 0xA1) válido — ou corrompido."""
     raw = bytearray(INPUT_REPORT_BT_SIZE)
     raw[0] = 0x31
-    raw[1] = 0x01  # header/contador BT (opaco para o parser)
+    raw[1] = 0x01
     raw[17 : 17 + MOTION_WINDOW_LEN] = window
     crc = bt_crc32(raw[:-4], seed=BT_INPUT_CRC_SEED)
     raw[-4:] = crc.to_bytes(4, "little")
     if corrupt:
-        raw[20] ^= 0xFF  # muda a janela DEPOIS do CRC — assinatura não bate
+        raw[20] ^= 0xFF
     return bytes(raw)
 
 
 class TestExtractMotionWindow:
-    """A janela de motion como o laço vivo a lê.
-
-    O NOME DA CLASSE FICA, e o extrator que ele nomeia saiu (28/09/2026): cinco
-    linhas do `docs/data/mapa-controles.csv` citam esta classe como a régua que
-    morde (`teste_que_morde`), e o portão da paridade confere que ela existe.
-    O que ela mede é o par que o laço usa, por `_janela_do_laco`, logo acima.
-    """
+    """A janela de motion como o laço vivo a lê."""
 
     def test_usb_extrai_a_janela_verbatim(self) -> None:
         assert _janela_do_laco(_usb_report()) == _WINDOW
 
     def test_usb_e_fatia_exata_do_buffer(self) -> None:
-        raw = bytes(range(64))  # cada byte = seu offset
+        raw = bytes(range(64))
         window = _janela_do_laco(bytes([0x01]) + raw[1:])
         assert window is not None
-        assert window[0] == 16 and window[-1] == 40  # raw[16:41]
+        assert window[0] == 16 and window[-1] == 40
 
     def test_usb_curto_demais_e_descartado(self) -> None:
         assert _janela_do_laco(_usb_report()[:40]) is None
@@ -111,14 +98,9 @@ class TestExtractMotionWindow:
         assert _janela_do_laco(b"") is None
 
     def test_crc_de_input_bate_com_o_vetor_conhecido(self) -> None:
-        # ps_check_crc32(0xA1, "0x31 + 73 zeros") — precomputado e fossilizado:
-        # se alguém trocar o seed (0xA2 é o de OUTPUT!) ou a janela do CRC,
-        # este vetor denuncia na hora.
         assert bt_crc32(bytes([0x31]) + bytes(73), seed=BT_INPUT_CRC_SEED) == 0x1C9C519D
 
     def test_janela_bt_e_usb_sao_a_mesma_fatia_do_struct(self) -> None:
-        # base 1 (USB) vs base 2 (BT): o MESMO conteúdo de struct tem de sair
-        # igual dos dois transportes.
         assert _janela_do_laco(_usb_report()) == _janela_do_laco(
             _bt_report()
         )
@@ -178,10 +160,10 @@ class TestThrottle:
         w2 = bytes([2]) * MOTION_WINDOW_LEN
         w3 = bytes([3]) * MOTION_WINDOW_LEN
         reader._maybe_emit(_WINDOW)
-        clock.now += 0.001  # < 1/250 s
+        clock.now += 0.001
         reader._maybe_emit(w2)
         clock.now += 0.001
-        reader._maybe_emit(w3)  # sobrescreve a retida (coalescência)
+        reader._maybe_emit(w3)
         assert vpad.windows == [_WINDOW]
         assert reader._pending == w3
 
@@ -192,11 +174,11 @@ class TestThrottle:
         w3 = bytes([3]) * MOTION_WINDOW_LEN
         reader._maybe_emit(_WINDOW)
         clock.now += 0.001
-        reader._maybe_emit(w2)  # retida
-        clock.now += 0.010  # venceu o intervalo de 4 ms
+        reader._maybe_emit(w2)
+        clock.now += 0.010
         reader._maybe_emit(w3)
         assert vpad.windows == [_WINDOW, w3]
-        assert reader._pending is None  # w2 foi superada — nunca sai atrasada
+        assert reader._pending is None
 
     def test_valor_repetido_nao_reemite(self) -> None:
         vpad, clock = _FakeVpad(), _FakeClock()
@@ -212,16 +194,14 @@ class TestThrottle:
         w2 = bytes([2]) * MOTION_WINDOW_LEN
         reader._maybe_emit(_WINDOW)
         clock.now += 0.001
-        reader._maybe_emit(w2)  # retida pelo cap
-        reader._flush_pending()  # cedo demais: segue retida
+        reader._maybe_emit(w2)
+        reader._flush_pending()
         assert vpad.windows == [_WINDOW]
         clock.now += 0.010
-        reader._flush_pending()  # agora sai — a última janela nunca se perde
+        reader._flush_pending()
         assert vpad.windows == [_WINDOW, w2]
 
     def test_cap_de_taxa_segura_uma_rajada_de_bt(self) -> None:
-        # ~765 Hz de BT simulados por 0,1 s: o cap de 250 Hz deixa passar no
-        # máximo ~26 janelas (0,1 s ÷ 4 ms + a primeira).
         vpad, clock = _FakeVpad(), _FakeClock()
         reader = _reader(vpad, clock)
         for i in range(77):
@@ -236,7 +216,7 @@ class TestThrottle:
 
         vpad, clock = _Bomba(), _FakeClock()
         reader = _reader(vpad, clock)
-        reader._maybe_emit(_WINDOW)  # não propaga
+        reader._maybe_emit(_WINDOW)
 
     def test_max_hz_zero_desliga_o_cap(self) -> None:
         vpad, clock = _FakeVpad(), _FakeClock()
@@ -284,7 +264,6 @@ class TestLoopComPipe:
             reader.stop()
             os.close(escrita)
             os.close(lido)
-        # stop() desliga o streaming (fail-safe) e a thread morre.
         assert vpad.streaming[-1] is False
         assert reader.is_running is False
 
@@ -302,7 +281,6 @@ class TestLoopComPipe:
             os.write(escrita, _bt_report(corrupt=True))
             assert self._esperar(lambda: reader.bt_drops >= 1)
             assert vpad.windows == []
-            # O são passa depois do corrompido — o reader não desistiu.
             os.write(escrita, _bt_report())
             assert self._esperar(lambda: vpad.windows)
             assert vpad.windows[0] == _WINDOW
@@ -319,15 +297,12 @@ class TestLoopComPipe:
         reader.stop()
         assert vpad.windows == []
         assert reader.is_running is False
-        # Nunca abriu device: o único set_motion_streaming é o False do stop.
         assert True not in vpad.streaming
 
     def test_stop_acorda_o_select_na_hora_sem_esperar_o_timeout(
         self, monkeypatch
     ) -> None:
-        """GYRO-FD-01: com select de 5 s, o stop() tem de voltar em bem menos
-        de 2 s (o wake do self-pipe acorda a thread; sem ele, o join de 2 s
-        estouraria esperando o select)."""
+        """GYRO-FD-01: com select de 5 s, o stop() tem de voltar em bem menos"""
         monkeypatch.setattr(prr, "_SELECT_TIMEOUT_S", 5.0)
         lido, escrita = os.pipe()
         monkeypatch.setattr(prr.os, "open", lambda *_a: os.dup(lido))
@@ -348,8 +323,7 @@ class TestLoopComPipe:
             os.close(lido)
 
     def test_request_reopen_acorda_o_select_na_hora(self, monkeypatch) -> None:
-        """GYRO-FD-01: reopen não espera o timeout do select — o wake pipe
-        derruba a espera e o 2º open acontece em instantes."""
+        """GYRO-FD-01: reopen não espera o timeout do select — o wake pipe"""
         monkeypatch.setattr(prr, "_SELECT_TIMEOUT_S", 5.0)
         lido, escrita = os.pipe()
         abertos: list[int] = []
@@ -398,12 +372,11 @@ class TestLoopComPipe:
             reader.start()
             os.write(escrita1, _usb_report())
             assert self._esperar(lambda: vpad.windows)
-            reader.request_reopen("primary_changed")  # retarget do backend
+            reader.request_reopen("primary_changed")
             assert self._esperar(lambda: len(abertos) >= 2)
             w2 = bytes([9]) * MOTION_WINDOW_LEN
             os.write(escrita2, _usb_report(w2))
             assert self._esperar(lambda: w2 in vpad.windows)
-            # A borda perder→reabrir desligou e religou o streaming.
             assert vpad.streaming.count(False) >= 1
             assert vpad.streaming.count(True) >= 2
         finally:
@@ -413,14 +386,7 @@ class TestLoopComPipe:
 
 
 class TestDonoUnicoDoFd:
-    """GYRO-FD-01: a thread do reader é a ÚNICA dona do fd do hidraw.
-
-    O bug original: `request_reopen`/`stop` fechavam o fd de OUTRA thread
-    enquanto o loop estava em select/read no NÚMERO local — um open
-    concorrente do daemon (eventX do `_recompute_primary`, /dev/uhid de um
-    vpad novo) reciclava o número e o reader passava a drenar um fd ALHEIO
-    (input do jogo congelado + gyro-lixo no vpad).
-    """
+    """GYRO-FD-01: a thread do reader é a ÚNICA dona do fd do hidraw."""
 
     def _esperar(self, cond, timeout_s: float = 2.0) -> bool:
         deadline = time.monotonic() + timeout_s
@@ -439,11 +405,11 @@ class TestDonoUnicoDoFd:
         lido, escrita = os.pipe()
         try:
             with reader._fd_lock:
-                reader._fd = lido  # fd "ativo" plantado (sem thread viva)
+                reader._fd = lido
             reader.request_reopen("primary_changed")
-            os.fstat(lido)  # não levanta: o número NÃO foi liberado
+            os.fstat(lido)
             reader.stop()
-            os.fstat(lido)  # stop() também não toca o fd do hidraw
+            os.fstat(lido)
         finally:
             for fd in (lido, escrita):
                 with contextlib.suppress(OSError):
@@ -452,14 +418,10 @@ class TestDonoUnicoDoFd:
     def test_reopen_concorrente_nao_recicla_o_numero_do_fd(
         self, monkeypatch
     ) -> None:
-        """O cenário do achado, determinístico: a thread está no select do fd
-        antigo, outra thread pede reopen e um open concorrente acontece em
-        seguida — o número do fd do reader NUNCA pode ser entregue ao open
-        concorrente (quem fecha é a própria thread, DEPOIS de sair do loop),
-        e os bytes do fd alheio ficam intactos (o reader não os drena)."""
+        """O cenário do achado, determinístico: a thread está no select do fd"""
         lido1, escrita1 = os.pipe()
         lido2, escrita2 = os.pipe()
-        lido3, escrita3 = os.pipe()  # o "eventX" alheio do daemon
+        lido3, escrita3 = os.pipe()
         fontes = [lido1, lido2]
         abertos: list[int] = []
 
@@ -473,9 +435,6 @@ class TestDonoUnicoDoFd:
         real_close = os.close
 
         def _close_gated(fd: int) -> None:
-            # Segura SÓ o close do fd do hidraw (determinismo do teste): a
-            # janela "reopen pedido, fd ainda não fechado" fica aberta até o
-            # teste liberar — é nela que o bug original reciclava o número.
             if abertos and fd == abertos[0] and not pode_fechar.is_set():
                 pode_fechar.wait(2.0)
             fechados.append((threading.current_thread().name, fd))
@@ -494,26 +453,20 @@ class TestDonoUnicoDoFd:
             fd_reader = abertos[0]
 
             reader.request_reopen("primary_changed")
-            # O open concorrente do daemon, logo após o pedido: com o close
-            # externo do bug, o menor número livre seria o RECICLADO fd do
-            # reader; com a posse única, o fd segue aberto e fora de alcance.
             alheio = os.dup(lido3)
             try:
                 assert alheio != fd_reader
-                os.fstat(fd_reader)  # o número do reader segue vivo/nosso
+                os.fstat(fd_reader)
                 os.write(escrita3, b"segredo-alheio")
 
-                pode_fechar.set()  # libera o close do PRÓPRIO reader
+                pode_fechar.set()
                 assert self._esperar(lambda: len(abertos) >= 2)
                 w2 = bytes([9]) * MOTION_WINDOW_LEN
                 os.write(escrita2, _usb_report(w2))
                 assert self._esperar(lambda: w2 in vpad.windows)
 
-                # Quem fechou o fd antigo foi a THREAD DO READER, nunca a de
-                # fora (a chamadora do request_reopen é a MainThread).
                 donos = [nome for (nome, fd) in fechados if fd == fd_reader]
                 assert donos == ["hefesto-motion-p7"]
-                # E os bytes do fd alheio continuam lá, intactos.
                 assert os.read(alheio, 64) == b"segredo-alheio"
             finally:
                 real_close(alheio)

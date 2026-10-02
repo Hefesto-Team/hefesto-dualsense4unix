@@ -1,30 +1,4 @@
-"""«Funciona em:» diz DE ONDE O JOGO VEM, e o produto casa sozinho.
-
-C4-FUNCIONA-EM, 11/09/2026. O desenho é DELA, confirmado com todas as letras
-(*"isso mesmo."*), e a ordem original foi esta:
-
-    "seria legal nome do programa launcher aqui: A gente adicionaria  # noqa-acento: citação dela
-     Navegação, remopve jogo da steam, jogo, jogo pela janela, estilo de jogo,
-     e colocariamos os launchers. Isso deveria ajudar a identificar mais rápido
-     o nome do jogo depois"
-
-O QUE ESTE ARQUIVO MEDE, e cada bloco tem a sua mordida escrita:
-
-1. **o campo oferece procedências**, e a lista sai do CENSO — nunca digitada;
-2. **a máquina sem lançador nenhum** sai com «Navegação» e «Qualquer jogo» e
-   nada mais. É a ordem dela do mesmo dia: *"a ideia é que todas as
-   features mesmo do app funcionem nao so pra mim mas pra qualquer  (noqa-acento)
-   outro user"*;
-3. **o caminho de volta** — um perfil que já existe continua sendo mostrado, e
-   isso inclui os dois do disco dela que nenhum catálogo conhece;
-4. **o clique**, pelo gesto que o dedo dela aciona, com o `MatchCriteria`
-   LIDO DE VOLTA DO DISCO;
-5. **o jargão saiu** das duas telas — o desenho e a página publicada.
-
-**NENHUMA RÉGUA AQUI TOCA A BIBLIOTECA DELA.** O lar de mentira da suíte é um
-espelho por symlink, então `Path.home()` num teste alcançaria o Heroic de
-verdade: ou se passa `lar=tmp_path`, ou se substitui a fonte.
-"""
+"""«Funciona em:» diz DE ONDE O JOGO VEM, e o produto casa sozinho."""
 from __future__ import annotations
 
 import json
@@ -66,20 +40,11 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 HEROIC_ID = "com.heroicgameslauncher.hgl"
 
-#: O umu-id que o Heroic guarda para o jogo dela, como o disco o traz.
 UMU_DO_GOTG = "umu-1088850"
 
-#: **A CHAVE DE JANELA DO GOTG, LIDA E NUNCA DIGITADA — 21/09/2026.**
-#:
-#: Este arquivo cravava o basename do executável, que era o que o censo
-#: DERIVAVA. Medido com o jogo aberto na tela dela, a janela diz
-#: `steam_app_1088850`: o Heroic lança pelo umu, que monta a pilha da Steam e
-#: exporta `SteamAppId`. Cravar de novo a resposta — agora a certa — repetiria
 #: o erro de forma: quem responde é `identidade_de_janela`, e é a ele que a
-#: régua pergunta.
 CHAVE_DO_GOTG = classe_do_umu_id(UMU_DO_GOTG)
 
-#: O jogo baixado dela, com os campos EXATOS que o disco trouxe em 10/09/2026.
 BAIXADO: dict[str, Any] = {
     "app_name": "63a665088eb1480298f1e57943b225d8",
     "title": "Marvel's Guardians of the Galaxy",
@@ -89,7 +54,6 @@ BAIXADO: dict[str, Any] = {
                 "is_dlc": False},
 }
 
-#: A MESA — endereço MASCARADO (octetos 4 e 5 zerados).
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
@@ -116,18 +80,11 @@ def _ctx() -> Contexto:
 
 
 def _heroic(lar: pathlib.Path, itens: list[dict[str, Any]]) -> None:
-    """A biblioteca do Heroic num lar de mentira, com o `umu.json` junto.
-
-    **O `umu.json` ENTROU EM 21/09/2026, e sem ele a fixture mede um Heroic
-    que não existe:** é dele que sai a chave de janela do jogo. Uma biblioteca
-    sem ele é o Heroic recém-instalado, cujo jogo ainda responde «não sei» — um
-    caso legítimo, mas não o da máquina DELA, que é o que estas réguas medem.
-    """
+    """A biblioteca do Heroic num lar de mentira, com o `umu.json` junto."""
     cache = lar / ".var/app" / HEROIC_ID / "config/heroic/store_cache"
     cache.mkdir(parents=True, exist_ok=True)
     (cache / "legendary_library.json").write_text(
         json.dumps({"library": itens}), encoding="utf-8")
-    # O instalado é o registro da Epic, que o Heroic lê (02/10/2026).
     plantar_o_registro(cache.parent, {
         str(i["app_name"]): {"is_dlc": bool((i.get("install") or {}).get("is_dlc"))}
         for i in itens if i.get("is_installed")})
@@ -138,12 +95,7 @@ def _heroic(lar: pathlib.Path, itens: list[dict[str, Any]]) -> None:
 
 @pytest.fixture(autouse=True)
 def _caderno_limpo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O caderno das janelas é memoizado no DONO — zerá-lo é obrigatório.
-
-    Sem isto, a primeira régua que ler o catálogo congela a resposta para as
-    seguintes, e uma máquina "sem lançador nenhum" herdaria o Heroic da régua
-    anterior. É a mesma trava que as réguas da sprint dos lançadores já usam.
-    """
+    """O caderno das janelas é memoizado no DONO — zerá-lo é obrigatório."""
     monkeypatch.setattr(jl, "_NOMES_DAS_JANELAS", None, raising=False)
     monkeypatch.setattr(a10, "_ESCOLHIDO", "", raising=False)
     monkeypatch.setattr(a10, "_ARMADO", None, raising=False)
@@ -154,13 +106,7 @@ def _caderno_limpo(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def maquina_pelada(monkeypatch: pytest.MonkeyPatch,
                    tmp_path: pathlib.Path) -> pathlib.Path:
-    """UMA MÁQUINA SEM NADA: sem Steam, sem Heroic, sem Lutris, sem `.desktop`.
-
-    É o computador de quem instalou o Hefesto hoje, e é o caso que a ordem dela
-    de 11/09/2026 exige que funcione. As duas origens são apontadas para um
-    `tmp_path` vazio — e a da Steam some pelo dublê, porque ela não passa por
-    `lar` nenhum na chamada da aba.
-    """
+    """UMA MÁQUINA SEM NADA: sem Steam, sem Heroic, sem Lutris, sem `.desktop`."""
     vazio = tmp_path / "lar-pelado"
     vazio.mkdir()
     de_verdade, assinar = jl.jogos_com_janela, jl.assinatura_das_janelas
@@ -175,11 +121,7 @@ def maquina_pelada(monkeypatch: pytest.MonkeyPatch,
 @pytest.fixture
 def maquina_dela(monkeypatch: pytest.MonkeyPatch,
                  tmp_path: pathlib.Path) -> pathlib.Path:
-    """A MÁQUINA COM DUAS ORIGENS: o Heroic com o jogo baixado, e a Steam.
-
-    O lado da Steam é dublê porque ele já tem régua própria — o que se mede
-    aqui é o campo que passou a somar as duas.
-    """
+    """A MÁQUINA COM DUAS ORIGENS: o Heroic com o jogo baixado, e a Steam."""
     lar = tmp_path / "lar-dela"
     lar.mkdir()
     _heroic(lar, [BAIXADO])
@@ -203,21 +145,12 @@ def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *perfis: Any) -> list[Any]:
 
 
 def _aberto_no_editor(monkeypatch: pytest.MonkeyPatch, prof: Any) -> None:
-    """O perfil que o editor abriu — o que o clique na linha da lista deixa.
-
-    Sem ele os gestos recusam dizendo *"escolha um perfil na lista primeiro"*,
-    que é a guarda certa e não é o que estas réguas medem.
-    """
+    """O perfil que o editor abriu — o que o clique na linha da lista deixa."""
     monkeypatch.setattr(a10, "_ESCOLHIDO", prof.name, raising=False)
 
 
 def _do_disco(prof: Any) -> dict[str, Any]:
-    """O ARQUIVO, lido de volta — e é o de verdade, no lar de mentira da suíte.
-
-    O nome sai de `slugify`, que é o mesmo que `loader._profile_path` usa:
-    digitar `elden-ring.json` aqui faria a régua medir um arquivo que o produto
-    nunca escreve, e o `FileNotFoundError` se leria como "não gravou".
-    """
+    """O ARQUIVO, lido de volta — e é o de verdade, no lar de mentira da suíte."""
     caminho = loader.profiles_dir() / f"{slugify(prof.name)}.json"
     return json.loads(caminho.read_text(encoding="utf-8"))
 
@@ -236,18 +169,10 @@ def _opcoes(html: str) -> list[str]:
             if t != a10.TRAVESSAO]
 
 
-# ---------------------------------------------------------------------------
-# 1. O CAMPO OFERECE PROCEDÊNCIAS, e a lista sai do censo
-# ---------------------------------------------------------------------------
 def test_o_campo_oferece_de_onde_o_jogo_vem(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Navegação» · os lançadores que a máquina tem · «Qualquer jogo».
-
-    MORDIDA: tire o `SELETOR_DO_AMBIENTE` do `fora["blocos"]` de `pacote()` e
-    o campo volta a mostrar os lançadores do DESENHO — a tela afirmando que
-    esta máquina tem Lutris e RetroArch, que ela não tem.
-    """
+    """«Navegação» · os lançadores que a máquina tem · «Qualquer jogo»."""
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=80,
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])))
@@ -256,24 +181,13 @@ def test_o_campo_oferece_de_onde_o_jogo_vem(
 
     assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == [
         "Navegação", "Steam", "Heroic", "Qualquer jogo"]
-    # E O LUTRIS NÃO ESTÁ LÁ, que é a metade que importa: a lista não é
-    # digitada, e um lançador que a máquina não tem não aparece.
     assert "Lutris" not in blocos[a10.SELETOR_DO_AMBIENTE]
 
 
 def test_a_maquina_sem_lancador_nenhum_sai_com_as_duas_fixas(
     maquina_pelada: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**A ORDEM DELA:** o produto é para qualquer pessoa, não para esta bancada.
-
-    Sem Steam, sem Heroic e sem Lutris o campo sai com «Navegação» e «Qualquer
-    jogo» — sem linha vazia, sem erro, e sem uma palavra que pressuponha Steam.
-
-    MORDIDA: cave `PROCEDENCIA_DA_STEAM` dentro de `oferta_do_funciona_em` (ou
-    troque `_procedencias_da_maquina` por uma lista escrita à mão) e a régua
-    reprova: quem acabou de instalar ganha uma opção que não leva a lugar
-    nenhum.
-    """
+    """**A ORDEM DELA:** o produto é para qualquer pessoa, não para esta bancada."""
     _o_disco_tem(monkeypatch, Profile(name="Universal", priority=0,
                                       match=MatchAny()))
 
@@ -282,11 +196,7 @@ def test_a_maquina_sem_lancador_nenhum_sai_com_as_duas_fixas(
     assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == [
         "Navegação", "Qualquer jogo"]
     assert _opcoes(blocos[a10.SELETOR_DO_AMBIENTE]) == sm.oferta_do_funciona_em([])
-    # E A LISTA DE BAIXO SAI VAZIA, sem uma `<option>` em branco: um campo que
-    # oferece uma linha vazia é pior que um campo que não oferece nada.
     assert blocos[a10.SELETOR_DOS_JOGOS] == ""
-    # O TRAVESSÃO CONTINUA LÁ, e ele não é uma procedência: é onde o piloto
-    # pousa o `—` de um perfil cuja regra a tela não sabe mostrar.
     assert (f'<option value="{a10.TRAVESSAO}" disabled>'
             in blocos[a10.SELETOR_DO_AMBIENTE])
 
@@ -294,31 +204,15 @@ def test_a_maquina_sem_lancador_nenhum_sai_com_as_duas_fixas(
 def test_a_procedencia_do_perfil_entra_mesmo_desinstalado(
     maquina_pelada: pathlib.Path,
 ) -> None:
-    """Ela desinstalou o Heroic; o perfil do jogo dele continua no disco.
-
-    Um ``<select>`` só mostra o que oferece. Sem esta linha o campo cairia para
-    a primeira opção — a tela AFIRMANDO uma regra que o arquivo não tem, que é
-    o mesmo defeito que o travessão veio curar em 04/09/2026.
-
-    MORDIDA: tire o `atual` de `oferta_do_funciona_em` e a lista volta sem ele.
-    """
+    """Ela desinstalou o Heroic; o perfil do jogo dele continua no disco."""
     assert sm.oferta_do_funciona_em([], "Heroic") == [
         "Navegação", "Heroic", "Qualquer jogo"]
-    # E ELE NÃO ENTRA DUAS VEZES quando já está na lista da máquina.
     assert sm.oferta_do_funciona_em(["Steam"], "Steam") == [
         "Navegação", "Steam", "Qualquer jogo"]
 
 
 def test_os_lancadores_que_a_tela_ordena_o_censo_sabe_ler() -> None:
-    """A ordem declarada não pode citar um lançador que não existe.
-
-    `ORDEM_DOS_LANCADORES` é digitada (e tem de ser — ver a docstring dela), e
-    uma lista digitada envelhece. A régua não compara texto com texto: ela
-    PERGUNTA ao censo se aquele nome é um lançador que ele sabe ler.
-
-    MORDIDA: acrescente `"GOG"` à ordem e isto reprova — a GOG é uma LOJA
-    dentro do Heroic, não um lançador com biblioteca própria.
-    """
+    """A ordem declarada não pode citar um lançador que não existe."""
     for nome in a10.ORDEM_DOS_LANCADORES:
         assert nome == sm.PROCEDENCIA_DA_STEAM or sabe_ler(nome), (
             f"“{nome}” está na ordem do campo «Funciona em:» e o censo não "
@@ -326,23 +220,10 @@ def test_os_lancadores_que_a_tela_ordena_o_censo_sabe_ler() -> None:
             f"foi um lançador")
 
 
-# ---------------------------------------------------------------------------
-# 2. O CAMINHO DE VOLTA — o perfil que já existe continua sendo mostrado
-# ---------------------------------------------------------------------------
 def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
     maquina_dela: pathlib.Path,
 ) -> None:
-    """As cinco leituras, e as duas últimas são o disco DELA de 11/09/2026.
-
-    Medido nos 27 perfis dela: 25 são `steam_game`, um é `game` (``guard``) e
-    um é `janela` (``Hefesto-Dualsense4Unix``). Os dois últimos são exatamente
-    os que dependem do residual para não abrirem travados — e a §5 manda o
-    perfil de forma escolhida à mão continuar válido e mostrado.
-
-    MORDIDA: devolva `None` no ramo `("game", "janela")` de
-    `procedencia_do_match` e os dois perfis dela abrem com o cadeado aceso,
-    sem gesto nenhum, sobre regras que funcionam.
-    """
+    """As cinco leituras, e as duas últimas são o disco DELA de 11/09/2026."""
     def vem_de(match: Any) -> str | None:
         return sm.procedencia_do_match(match, a10._lancador_da_chave)
 
@@ -350,9 +231,7 @@ def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
     assert vem_de(MatchCriteria(process_name=["steam"])) == "Steam"
     assert vem_de(MatchAny()) == "Qualquer jogo"
     assert vem_de(sm.SIMPLE_MATCH_PRESETS["browser"]) == "Navegação"
-    # O jogo do Heroic, pela chave que a janela dele anuncia.
     assert vem_de(MatchCriteria(window_class=[CHAVE_DO_GOTG])) == "Heroic"
-    # E OS DOIS DO DISCO DELA que catálogo nenhum conhece.
     assert vem_de(MatchCriteria(process_name=["guard"])) == jl.LANCADOR_DIRETO
     assert vem_de(
         MatchCriteria(window_class=["Hefesto-Dualsense4Unix"])
@@ -362,16 +241,7 @@ def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
 def test_a_regra_que_a_tela_nao_sabe_mostrar_continua_travando(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A válvula do R-12 não morreu — ela só passou a falar a língua nova.
-
-    Sete dos nove perfis de fábrica casam por título de janela ou por lista de
-    classes, e nenhuma procedência descreve isso. O campo vai travado com a
-    frase do que a regra É, e o `match` do disco fica intacto.
-
-    MORDIDA: faça `_procedencia_e_recado` devolver «Instalado aqui» quando
-    `procedencia_do_match` diz `None` e o cadeado apaga sobre uma regra que o
-    campo não sabe mostrar — o gesto seguinte a rebaixaria.
-    """
+    """A válvula do R-12 não morreu — ela só passou a falar a língua nova."""
     fino = MatchCriteria(window_title_regex="Elden Ring.*",
                          process_name=["eldenring.exe"])
     _o_disco_tem(monkeypatch, Profile(name="Fino", priority=90, match=fino))
@@ -383,29 +253,15 @@ def test_a_regra_que_a_tela_nao_sabe_mostrar_continua_travando(
     assert "título de janela" in fora["editor.ambiente.recado"]
 
 
-# ---------------------------------------------------------------------------
-# 3. O CAMPO DE BAIXO — os jogos DAQUELE lançador, pelo nome
-# ---------------------------------------------------------------------------
 def test_a_lista_de_baixo_segue_o_campo_de_cima(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Escolhido «Heroic», o campo «Nome do Jogo» oferece os jogos do Heroic.
-
-    É o efeito que ela pediu com todas as letras: *"Isso deveria ajudar a
-    identificar mais rápido o nome do jogo depois"*.
-
-    MORDIDA: tire o filtro por procedência de `_html_dos_jogos` e a lista volta
-    a oferecer o `ELDEN RING` da Steam com «Heroic» escolhido no campo de cima
-    — duas afirmações contraditórias na mesma tela.
-    """
+    """Escolhido «Heroic», o campo «Nome do Jogo» oferece os jogos do Heroic."""
     do_heroic = a10._html_dos_jogos("Heroic")
     da_steam = a10._html_dos_jogos("Steam")
 
     assert CHAVE_DO_GOTG in do_heroic and "1245620" not in do_heroic
     assert "1245620" in da_steam and CHAVE_DO_GOTG not in da_steam
-    # AS DUAS FIXAS NÃO FILTRAM, e é a saída que `editor_jogo` documenta:
-    # digitar um jogo com o perfil em «Qualquer jogo» é como ela DIZ que aquele
-    # perfil é daquele jogo. Esvaziar a lista prenderia o perfil onde está.
     inteira = a10._html_dos_jogos("Qualquer jogo")
     assert CHAVE_DO_GOTG in inteira and "1245620" in inteira
 
@@ -413,18 +269,7 @@ def test_a_lista_de_baixo_segue_o_campo_de_cima(
 def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
     maquina_dela: pathlib.Path,
 ) -> None:
-    """``ELDEN RING · 1245620``, e nunca ``eldenring.exe`` — item 12 da lista dela.
-
-    A queixa é da foto 9: a linha trazia o número sozinho, que não diz nada a
-    ninguém, nem a ela daqui a um mês.
-
-    O jogo de lançador sai só com o NOME: o "código" dele é o basename do
-    executável, que é exatamente o que a foto manda nunca mostrar.
-
-    MORDIDA: devolva `jogo.rotulo` em `_linha_do_jogo` e a linha volta a
-    `ELDEN RING (appid 1245620)` — o número com a palavra `appid` colada, que
-    é jargão, e o parêntese que ela não pediu.
-    """
+    """``ELDEN RING · 1245620``, e nunca ``eldenring.exe`` — item 12 da lista dela."""
     html = a10._html_dos_jogos("Steam")
     assert 'label="ELDEN RING · 1245620"' in html
     assert ".exe" not in html
@@ -432,35 +277,17 @@ def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
     do_heroic = a10._html_dos_jogos("Heroic")
     assert 'label="Marvel&#x27;s Guardians of the Galaxy"' in do_heroic or (
         "label=\"Marvel's Guardians of the Galaxy\"" in do_heroic)
-    # O `value` CONTINUA SENDO O ENDEREÇO, e isso não é descuido: é o que o
-    # campo grava, e trocá-lo pelo nome faria nascer um `steam_app_Sea of
-    # Stars`, que nunca casa com janela nenhuma. O que ela LÊ é o `label`.
     assert f'value="{CHAVE_DO_GOTG}"' in do_heroic
 
 
-# ---------------------------------------------------------------------------
-# 4. O CLIQUE — e o `MatchCriteria` lido de volta do disco
-# ---------------------------------------------------------------------------
 def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O gesto que o dedo dela aciona, e o arquivo LIDO DE VOLTA.
-
-    Ela escolhe «Heroic» num perfil que estava em «Qualquer jogo» com o jogo
-    já no campo de baixo; o produto decide sozinho que a forma daquele lançador
-    é a `wm_class`, e o disco recebe `window_class: ["steam_app_1088850"]` —
-    **nunca um
-    tipo novo de casamento**, que é a regra do §4.
-
-    MORDIDA: faça `forma_da_procedencia` devolver `"game"` para um lançador e
-    o disco passa a guardar `process_name`, que é outro dado e casa por acaso —
-    a família do R-12 que esta casa já pagou.
-    """
+    """O gesto que o dedo dela aciona, e o arquivo LIDO DE VOLTA."""
     prof = Profile(name="Guardioes", priority=80,
                    match=MatchCriteria(window_class=[CHAVE_DO_GOTG]))
     _o_disco_tem(monkeypatch, prof)
     _aberto_no_editor(monkeypatch, prof)
-    # A REGRA VAI PARA «Qualquer jogo» primeiro, para o clique ter o que mudar.
     prof.match = MatchAny()
     monkeypatch.setattr(a10, "_editor_de",
                         lambda _p: {"jogo": CHAVE_DO_GOTG, "ambiente_recado": ""})
@@ -469,8 +296,6 @@ def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
 
     assert resposta is not None
     assert "Heroic" in resposta["relato"]
-    # O DISCO, LIDO DE VOLTA — e é o arquivo de verdade, no lar de mentira da
-    # suíte. Nada aqui inspeciona o objeto em memória.
     do_disco = _do_disco(prof)
     assert do_disco["match"] == {"type": "criteria",
                                  "window_class": [CHAVE_DO_GOTG],
@@ -481,11 +306,7 @@ def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
 def test_escolher_a_steam_com_o_numero_no_campo_grava_o_steam_app(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Steam» + «ELDEN RING · 1245620» → ``steam_app_1245620``. É o §4, literal.
-
-    MORDIDA: mande `forma_da_procedencia` devolver sempre `"janela"` e o disco
-    guarda `window_class: ["1245620"]` — uma regra que nunca casa.
-    """
+    """«Steam» + «ELDEN RING · 1245620» → ``steam_app_1245620``. É o §4, literal."""
     prof = Profile(name="Elden Ring", priority=85, match=MatchAny())
     _o_disco_tem(monkeypatch, prof)
     _aberto_no_editor(monkeypatch, prof)
@@ -501,16 +322,7 @@ def test_escolher_a_steam_com_o_numero_no_campo_grava_o_steam_app(
 def test_a_mesma_procedencia_nao_reescreve_a_forma_do_perfil(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Clicar na opção que JÁ está lá não pode trocar `process_name` por `wm_class`.
-
-    O perfil ``guard`` dela casa por nome de programa e aparece como «Instalado
-    aqui». «Instalado aqui» escreve `wm_class` quando ela escolhe um jogo da
-    lista — então, sem esta guarda, um gesto que não mudou nada na tela
-    trocaria o dado no disco por outro que *"casa por acaso"*.
-
-    MORDIDA: tire o `if rotulo == agora: return None` de `editor_ambiente` e a
-    régua reprova com `window_class: ["guard"]` no arquivo.
-    """
+    """Clicar na opção que JÁ está lá não pode trocar `process_name` por `wm_class`."""
     gravados: list[Any] = []
     monkeypatch.setattr(loader, "save_profile",
                         lambda prof, **kw: gravados.append(prof))
@@ -530,16 +342,7 @@ def test_a_mesma_procedencia_nao_reescreve_a_forma_do_perfil(
 def test_trocar_para_um_lancador_sem_o_jogo_manda_ela_para_a_lista(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Uma frase pela metade não vira regra — e a recusa diz onde terminar.
-
-    Escolher «Heroic» com o campo de baixo em branco (ou com um jogo de outro
-    lugar) é dizer meia coisa: o endereço que está lá não vale naquele
-    lançador. Gravar assim mesmo faria nascer uma regra que nunca casa.
-
-    MORDIDA: tire o `raise` e o perfil passa a guardar
-    `window_class: ["1245620"]` — o número da Steam gravado como classe de
-    janela, calado.
-    """
+    """Uma frase pela metade não vira regra — e a recusa diz onde terminar."""
     gravados: list[Any] = []
     monkeypatch.setattr(loader, "save_profile",
                         lambda prof, **kw: gravados.append(prof))
@@ -561,16 +364,7 @@ def test_trocar_para_um_lancador_sem_o_jogo_manda_ela_para_a_lista(
 def test_a_navegacao_grava_o_preset_dos_navegadores(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Navegação» é o perfil do desktop, sem jogo — e ele já existia no produto.
-
-    O preset `browser` estava em `perfis_web.FORA_DO_DESENHO` desde que a
-    interface nova nasceu: *"existe no produto e não no desenho dela"*. Esta
-    sprint o traz para a tela com a palavra DELA.
-
-    MORDIDA: tire a linha `«Navegação» → "browser"` de `_FORMA_FIXA` e o gesto
-    grava `janela` com o texto do campo de baixo — um perfil de navegador
-    viraria um perfil de um jogo.
-    """
+    """«Navegação» é o perfil do desktop, sem jogo — e ele já existia no produto."""
     prof = Profile(name="Navegar", priority=40, match=MatchAny())
     _o_disco_tem(monkeypatch, prof)
     _aberto_no_editor(monkeypatch, prof)
@@ -580,26 +374,16 @@ def test_a_navegacao_grava_o_preset_dos_navegadores(
     a10.editor_ambiente(_ctx(), _escolher("Navegação"), PonteDeMentira())
 
     do_disco = _do_disco(prof)
-    # O TEXTO DO CAMPO DE BAIXO NÃO ENTRA: «Navegação» não tem jogo.
     assert "1245620" not in json.dumps(do_disco)
     assert do_disco["match"]["window_class"] == list(
         sm.SIMPLE_MATCH_PRESETS["browser"].window_class)
 
 
-# ---------------------------------------------------------------------------
-# 5. O JARGÃO SAIU — das duas telas, e «Estilo de Jogo» continua vivo
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("caminho", ["mockup/10-perfis.html",
                                     "src/hefesto_dualsense4unix/interface/"
                                     "paginas/10-perfis.html"])
 def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
-    """O desenho e a página publicada dizem a MESMA coisa — ou nenhuma das duas.
-
-    Curar o mockup não cura o produto: os geradores escrevem em `mockup/`, e
-    sem o `--publicar` a tela dela não muda. Esta régua mede as duas.
-
-    MORDIDA: publique só uma e ela reprova nomeando qual ficou para trás.
-    """
+    """O desenho e a página publicada dizem a MESMA coisa — ou nenhuma das duas."""
     html = (RAIZ / caminho).read_text(encoding="utf-8")
     campo = html.split('data-hef="editor.ambiente"', 1)[1].split("</select>", 1)[0]
 
@@ -612,66 +396,31 @@ def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
             f"“{fixa}” saiu do «Funciona em:» de `{caminho}` — as duas fixas "
             f"são o que sobra numa máquina sem lançador nenhum")
 
-    # **«Estilo de Jogo» NÃO MORREU — mudou de lugar.** Ele não é uma
-    # procedência, é um corte transversal, e continua no campo próprio uma
-    # linha abaixo. Cobrar a ausência dele na PÁGINA seria a régua matando o
-    # campo que a ordem dela preservou.
     assert 'data-hef="editor.estilo"' in html
     assert ">Estilo de Jogo:</span>" in html
 
 
-# ---------------------------------------------------------------------------
-# 6. A COLUNA DA LISTA — a mesma língua do campo, a um palmo dele
-# ---------------------------------------------------------------------------
 def test_a_coluna_fala_a_lingua_do_campo(maquina_dela: pathlib.Path) -> None:
-    """`procedência · nome · código`, e o executável nunca quando há nome.
-
-    **A TELA DIZIA DUAS COISAS SOBRE O MESMO PERFIL.** O campo do editor já
-    respondia «Heroic» e a coluna, a um palmo dele, dizia «Só neste programa» —
-    e a coluna é onde ela passa a maior parte do tempo olhando.
-
-    A forma é o item 12 da segunda lista dela (foto 9): *"aqui por exemplo
-    deveria aparecer o nome e o codigo não só o codigo e não deveria   # noqa-acento: cita ela
-    aparecer o nome do programa"*.
-
-    MORDIDA: devolva `base` sempre em `_quando_usar` e a coluna volta a dizer
-    «Só neste programa» sobre o Elden Ring — o mesmo texto para os 25 perfis de
-    jogo dela, que é o defeito que esta régua fecha.
-    """
+    """`procedência · nome · código`, e o executável nunca quando há nome."""
     def coluna(match: Any) -> str:
         return a10._quando_usar(match, "Só neste programa")
 
-    # A Steam tem número, e ele é o que ela confere na loja.
     assert coluna(MatchCriteria(window_class=["steam_app_1245620"])) == (
         "Steam · ELDEN RING · 1245620")
-    # O jogo do lançador NÃO tem número público — e o "código" dele seria o
-    # basename do executável, que é o que a foto manda nunca mostrar.
     assert coluna(MatchCriteria(window_class=[CHAVE_DO_GOTG])) == (
         "Heroic · Marvel's Guardians of the Galaxy")
     assert ".exe" not in coluna(MatchCriteria(window_class=[CHAVE_DO_GOTG]))
-    # O que o catálogo não conhece mostra O QUE TEM, sem inventar nome.
     assert coluna(MatchCriteria(process_name=["mk1.exe"])) == (
         f"{jl.LANCADOR_DIRETO} · mk1.exe")
-    # Um número de jogo que não está nesta máquina continua valendo.
     assert coluna(MatchCriteria(window_class=["steam_app_9999999"])) == (
         "Steam · 9999999")
-    # «Navegação» não tem jogo — e a coluna não inventa um.
     assert coluna(sm.SIMPLE_MATCH_PRESETS["browser"]) == "Navegação"
 
 
 def test_a_coluna_nao_engole_a_disputa_nem_a_frase_do_produto(
     maquina_dela: pathlib.Path,
 ) -> None:
-    """As duas frases do produto que FICAM, e as duas ficam por conteúdo.
-
-    A do catch-all não é um rótulo, é a DISPUTA — *"Sempre — 2 disputam, este
-    vence"* —, e ela responde a queixa mais antiga desta casa. A da regra que a
-    tela não sabe descrever é a válvula do R-12: inventar uma procedência ali
-    seria o mesmo defeito que o cadeado do campo existe para impedir.
-
-    MORDIDA: tire o `or procedencia == PROCEDENCIA_DE_QUALQUER_JOGO` de
-    `_quando_usar` e a coluna troca a disputa inteira por duas palavras.
-    """
+    """As duas frases do produto que FICAM, e as duas ficam por conteúdo."""
     disputa = "Sempre — 2 disputam, este vence"
     assert a10._quando_usar(MatchAny(), disputa) == disputa
 
@@ -683,14 +432,7 @@ def test_a_coluna_nao_engole_a_disputa_nem_a_frase_do_produto(
 def test_a_coluna_traduzida_chega_as_duas_portas_da_lista(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O `blocos` e a lista `perfis.linha.quando` saem da MESMA tradução.
-
-    O pintor distribui as três listas pela ordem do DOCUMENTO; traduzir só numa
-    das portas põe a coluna de um perfil na linha de outro.
-
-    MORDIDA: tire o `_com_a_procedencia` do `pacote()` e as duas portas voltam
-    a dizer «Só neste programa» sobre um perfil do Heroic.
-    """
+    """O `blocos` e a lista `perfis.linha.quando` saem da MESMA tradução."""
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=90,
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])),
@@ -705,24 +447,13 @@ def test_a_coluna_traduzida_chega_as_duas_portas_da_lista(
         "Steam · ELDEN RING · 1245620"]
     corpo = fora["blocos"][a10.SELETOR_DA_LISTA]
     for frase in fora["perfis.linha.quando"]:
-        # O TEXTO **E** O `title`: a coluna tem `white-space:nowrap`, e a
-        # afordância que `test_a_janela_estreita_nao_engole_o_desenho` aceita
-        # para o corte é a frase inteira guardada no `title`.
         assert f'title="{frase}">{frase}</td>' in corpo
 
 
 def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A tradução vem ANTES do filtro — senão a lupa mede a frase de ontem.
-
-    Ordem dela: *"achar rápido o nome de um jogo"*. Com a tradução  # noqa-acento: cita ela
-    depois do filtro, digitar «Guardians» não acharia a linha que mostra
-    «Guardians», e digitar «Só neste» acharia todas.
-
-    MORDIDA: mova o `_com_a_procedencia` para depois do `_filtrada` e isto
-    reprova com a lista vazia.
-    """
+    """A tradução vem ANTES do filtro — senão a lupa mede a frase de ontem."""
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=90,
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])),
@@ -739,16 +470,7 @@ def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
 def test_o_clique_no_campo_arrasta_a_coluna_junto(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**O CLIQUE, e é ele que fecha a queixa:** trocar o lançador no campo e a
-    coluna da MESMA linha acompanhar, no tique seguinte.
-
-    Enquanto as duas frases tinham donos diferentes, era possível mudar uma e
-    não a outra — e foi assim que a tela passou o dia dizendo «Só neste
-    programa» ao lado de «Heroic», sobre o mesmo perfil.
-
-    MORDIDA: tire o `_com_a_procedencia` do `pacote()` e a coluna fica
-    congelada na frase do produto enquanto o campo troca.
-    """
+    """**O CLIQUE, e é ele que fecha a queixa:** trocar o lançador no campo e a"""
     prof = Profile(name="Guardioes", priority=80, match=MatchAny())
     _o_disco_tem(monkeypatch, prof)
     _aberto_no_editor(monkeypatch, prof)

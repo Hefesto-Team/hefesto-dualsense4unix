@@ -40,8 +40,6 @@ from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 
 _CABECALHO = "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n"
 
-#: Blocos ALHEIOS que o módulo nunca pode tocar: o wineusb, o winebus (serial
-#: sintético) e uma chave qualquer.
 _ALHEIOS = [
     "[System\\\\ControlSet001\\\\Enum\\\\USB\\\\VID_054C&PID_0CE6\\\\512&256&3&3] 1789693594\n"
     '"ClassGUID"="{36FC9E60-C465-11CF-8056-444553540000}"\n',
@@ -94,17 +92,12 @@ def _ler(compat: Path) -> str:
 PADRAO = ks.Controle(pid=0x0CE6, bus=3, dev=28, usec=None)
 
 
-# ---------------------------------------------------------------- 1. a conta
-
-
 def test_a_conta_do_winepulse_da_o_valor_que_vibrou() -> None:
     """17/09, 23:05: bus 3, dev 28, Data4 zero — o `ContainerId` que casou."""
     assert ks.container_id(PADRAO, bytes(8)) == "{0ce6054c-0003-001c-0000-000000000000}"
 
 
 def test_o_data4_e_o_usec_em_little_endian() -> None:
-    # O byte menos significativo sai primeiro. Os seis finais caem na faixa
-    # sintética `aabbcc` de propósito: o fim do GUID tem forma de MAC.
     d4 = (0x030000CCBBAA0201).to_bytes(8, "little")
     assert ks.container_id(PADRAO, d4) == "{0ce6054c-0003-001c-0102-aabbcc000003}"
 
@@ -132,8 +125,8 @@ def test_o_sysfs_sintetico_da_os_controles_com_placa_de_som(tmp_path: Path) -> N
 
     usb("3-2", "054c", "0ce6", 3, 28, som=True, majmin="189:283")
     usb("1-4", "054c", "0df2", 1, 7, som=True, majmin="189:6")
-    usb("1-5", "054c", "0ce6", 1, 9, som=False, majmin="189:8")  # sem placa de som
-    usb("1-6", "046d", "c52b", 1, 3, som=True, majmin="189:2")  # não é Sony
+    usb("1-5", "054c", "0ce6", 1, 9, som=False, majmin="189:8")
+    usb("1-6", "046d", "c52b", 1, 3, som=True, majmin="189:2")
     (udev / "c189:283").write_text("I:1234567\nE:ID_VENDOR=Sony\n")
 
     achados = ks.controles_no_cabo(sysfs, udev)
@@ -141,9 +134,6 @@ def test_o_sysfs_sintetico_da_os_controles_com_placa_de_som(tmp_path: Path) -> N
         (0x0DF2, 1, 7, None),
         (0x0CE6, 3, 28, 1234567),
     ]
-
-
-# --------------------------------------------------------- 2. o dono manda
 
 
 def test_o_dono_manda_o_endpoint_diz_zero_e_so_zero_entra(tmp_path: Path) -> None:
@@ -189,9 +179,6 @@ def test_o_dono_nao_e_a_propria_resposta(tmp_path: Path) -> None:
     assert r.variantes == 2
 
 
-# ------------------------------------------- 3. o que o setupapi exige
-
-
 def test_o_device_leva_classguid_e_a_interface_ligada(tmp_path: Path) -> None:
     """Sem `ClassGUID` o `setupapi` do Wine descarta o device (medido no trace)."""
     compat = _prefixo(tmp_path, _registro(_endpoint(bytes(8))))
@@ -199,13 +186,10 @@ def test_o_device_leva_classguid_e_a_interface_ligada(tmp_path: Path) -> None:
     blocos = [b for b in ks._blocos(_ler(compat)) if ks.e_bloco_nosso(b)]
     enum = next(b for b in blocos if "\\\\Enum\\\\USB\\\\" in b)
     assert '"ClassGUID"="{36FC9E60-C465-11CF-8056-444553540000}"' in enum
-    assert "{4d36e96c" not in enum.lower()  # MEDIA: o GE apagaria
+    assert "{4d36e96c" not in enum.lower()
     assert '"HardwareID"=str(7):"USB\\\\VID_054C&PID_0CE6\\0"' in enum
     assert any(b.rstrip().endswith('"Linked"=dword:00000001') for b in blocos)
     assert any(ks.KS in b and '"DeviceInstance"=' in b for b in blocos)
-
-
-# ------------------------------------------------------ 4. idempotência
 
 
 def test_a_segunda_rodada_nao_escreve_e_nada_alheio_some(tmp_path: Path) -> None:
@@ -239,10 +223,7 @@ def test_o_legado_da_prova_a_mao_sai(tmp_path: Path) -> None:
     compat = _prefixo(tmp_path, _registro(legado))
     ks.aplicar(compat, controles=[], proc=tmp_path / "proc", carimbo=1)
     assert "4298&85989E60" not in _ler(compat)
-    assert "512&256&3&3" in _ler(compat)  # o do wineusb fica
-
-
-# -------------------------------------------- 5. replug e zero controles
+    assert "512&256&3&3" in _ler(compat)
 
 
 def test_o_replug_substitui_e_nao_acumula(tmp_path: Path) -> None:
@@ -264,9 +245,6 @@ def test_sem_controle_no_cabo_os_nossos_saem_e_os_alheios_ficam(tmp_path: Path) 
         assert alheio.split("\n", 1)[0].split("] ")[0] in texto
 
 
-# ---------------------------------------------------------- 6. N controles
-
-
 def test_um_device_por_controle(tmp_path: Path) -> None:
     compat = _prefixo(tmp_path, _registro(_endpoint(bytes(8)), _endpoint(bytes(8), bus=1, dev=7)))
     dois = [PADRAO, ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=None)]
@@ -274,9 +252,6 @@ def test_um_device_por_controle(tmp_path: Path) -> None:
     assert r.variantes == 2
     texto = _ler(compat)
     assert "HEFESTOKS&003&028&0" in texto and "HEFESTOKS&001&007&0" in texto
-
-
-# ------------------------------------------------------ 7. prefixo ocupado
 
 
 def _wineserver_de_mentira(proc: Path, pid: str, prefixo: str) -> None:
@@ -307,9 +282,6 @@ def test_sem_system_reg_nao_faz_nada(tmp_path: Path) -> None:
     assert ks.aplicar(compat, controles=[PADRAO], proc=tmp_path / "proc").motivo == "sem-registro"
 
 
-# ------------------------------------------------------------------ a CLI
-
-
 def test_a_cli_grava_e_o_remover_tira(tmp_path: Path) -> None:
     compat = _prefixo(tmp_path, _registro(_endpoint(bytes(8))))
     sysfs = tmp_path / "sys"
@@ -324,12 +296,6 @@ def test_a_cli_grava_e_o_remover_tira(tmp_path: Path) -> None:
     assert ks.main([*base, "--remover"]) == 0
     assert not _nossos(_ler(compat))
 
-
-# ------------------------------------------------ 8. a fiação no lançamento
-#
-# A cura escrita e nunca ligada é o defeito mais caro desta casa: o wrapper DE
-# VERDADE, em `sh`, com um daemon de mentira que responde ao ping, um sysfs e um
-# prefixo sintéticos.
 
 RAIZ = Path(__file__).resolve().parents[2]
 _WRAPPER = RAIZ / "assets" / "hefesto-launch.sh"
@@ -373,11 +339,6 @@ class _DaemonQueResponde:
 
 def _path_minimo(pasta: Path) -> str:
     pasta.mkdir()
-    # O PATH mínimo do teste do acelerômetro, mais o `grep` da limpeza: o
-    # passo novo não pode depender de `cat` nem de `sed` (medido: sem `sed` o
-    # jogo perdia TODAS as variáveis). E o `timeout` do coreutils, que está em
-    # toda máquina: sem ele o wrapper cai no ramo sem teto, e a régua do
-    # `pactl` travado mediria o ramo errado.
     for ferramenta in ("sh", "python3", "env", "date", "mkdir", "mv", "grep", "timeout"):
         real = shutil.which(ferramenta)
         assert real is not None, f"ferramenta de teste ausente: {ferramenta}"
@@ -395,16 +356,7 @@ def _sysfs_com_dualsense(raiz: Path) -> Path:
 
 
 def _pactl_de_mentira(caminho: Path, sinks: str) -> None:
-    """Um `pactl` que responde às DUAS perguntas que o produto faz.
-
-    O gancho pergunta `list short sinks` (uma linha por nó) e o curador
-    pergunta `list sinks` (o bloco com o proplist). Um dublê que só responde a
-    uma delas daria verde sobre metade do caminho.
-
-    **Só `printf`, que é builtin**: o PATH deste teste é o mínimo do produto, e
-    nele não há `cat` — um dublê que precisasse dele sairia com rc=1 e a régua
-    leria "não há endpoint" onde havia.
-    """
+    """Um `pactl` que responde às DUAS perguntas que o produto faz."""
     nomes = [ln.split("Name: ")[1] for ln in sinks.splitlines() if "Name: " in ln]
     curto = [f"{i}\t{nome}\tPipeWire\tfloat32le 4ch 48000Hz\tIDLE" for i, nome in enumerate(nomes)]
 
@@ -424,11 +376,7 @@ def _pactl_de_mentira(caminho: Path, sinks: str) -> None:
 
 
 def _sysfs_com_ancora(raiz: Path) -> Path:
-    """Um hub USB com a interface dele: a âncora de onde o ContainerId sai.
-
-    O nó declara a INTERFACE (`3-4:1.0`) e o GUID sai do PAI dela — o udev
-    devolve um ancestral, nunca o próprio device.
-    """
+    """Um hub USB com a interface dele: a âncora de onde o ContainerId sai."""
     d = raiz / "devices" / "pci0000:00" / "usb3" / "3-4"
     (d / "3-4:1.0").mkdir(parents=True)
     (raiz / "bus" / "usb" / "devices").mkdir(parents=True)
@@ -450,11 +398,6 @@ def _com_dualsense_no_radio(raiz: Path) -> Path:
     return raiz
 
 
-#: O nome tem de carregar as três agulhas dos patches do GE, e ele é longo
-#: por isso: `Sony_Interactive_Entertainment`, `Wireless_Controller`,
-#: `Speaker__sink` — mais o marcador da casa e o LUGAR (desde 28/09/2026 o nó é
-#: um por lugar, A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01; antes levava o rabo
-#: do `uniq`).
 _NOME_DO_NO_DO_RADIO = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller_HEFESTOLUGAR1-00.HiFi__Speaker__sink"
@@ -479,13 +422,7 @@ def _lancar(
     registro: str,
     sinks: str | None = None,
 ) -> tuple[str, str]:
-    """Roda o wrapper; devolve (o valor da opção do MHWilds no jogo, o system.reg).
-
-    `sinks` põe um `pactl` de mentira no PATH, e é assim que o caso do RÁDIO se
-    mede: é do nó do lugar que o curador tira a âncora. Sem ele o `pactl` não
-    existe e o curador responde "não há lugar" — o comportamento certo numa
-    máquina sem servidor de som.
-    """
+    """Roda o wrapper; devolve (o valor da opção do MHWilds no jogo, o system.reg)."""
     home = tmp_path / "home"
     binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
     binario.mkdir(parents=True)
@@ -500,7 +437,7 @@ def _lancar(
     caminho = _path_minimo(tmp_path / "bin")
     if sinks is not None:
         _pactl_de_mentira(Path(caminho) / "pactl", sinks)
-    runtime = Path(tempfile.mkdtemp(prefix="hefks-"))  # AF_UNIX: caminho curto
+    runtime = Path(tempfile.mkdtemp(prefix="hefks-"))
     (runtime / "hefesto-dualsense4unix").mkdir()
     daemon = _DaemonQueResponde(runtime / "hefesto-dualsense4unix" / "hefesto-dualsense4unix.sock")
     try:
@@ -576,9 +513,6 @@ def test_sem_a_opcao_o_gancho_so_limpa_o_que_e_nosso(tmp_path: Path) -> None:
     assert "512&256&3&3" in registro
 
 
-# -- o rádio (HAPTICA-POR-RADIO-01, P3c) --------------------------------------
-
-
 def test_com_o_dualsense_no_radio_a_opcao_chega_ao_jogo(tmp_path: Path) -> None:
     """Sem DualSense no cabo, mas com um no rádio: o caminho tem de abrir.
 
@@ -601,7 +535,6 @@ def test_com_o_dualsense_no_radio_a_opcao_chega_ao_jogo(tmp_path: Path) -> None:
         sinks=_SINK_DO_RADIO,
     )
     assert valor == "1"
-    # O ContainerId é o da ÂNCORA (2357/0604, bus 3, dev 29), não o da Sony.
     assert '"ContainerId"="{06042357-0003-001d-0000-000000000000}"' in registro
     assert "HEFESTOKS&003&029&0" in registro
     assert "VID_054C&PID_0CE6" in registro, "o HardwareID continua sendo o do controle"
@@ -621,20 +554,7 @@ def test_sem_no_do_radio_nem_cabo_nada_muda(tmp_path: Path) -> None:
     assert "HEFESTOKS" not in registro
 
 
-# -- o servidor de som não segura o jogo (INSTALL-UNIVERSAL, 18/09) -----------
-#
-# A sonda `endpoint_de_mentira_vivo` rodava em TODO lançamento com o daemon vivo
 # e sem DualSense no cabo. Nasceu sem teto de tempo e com o ambiente do runtime
-# da Steam, ao contrário de todo vizinho do arquivo. Um `pipewire-pulse` travado
-# — medido nesta casa por horas depois da queda de um controle BT — deixava o
-# `pactl` preso e o wrapper nunca chegava ao `exec`: nenhum jogo abria.
-#
-# DESDE 28/09/2026 A SONDA NÃO EXISTE (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
-# a guarda do Black Desert pergunta pelo controle no `sysfs`, em shell puro, e o
-# único `pactl` do lançamento é o do CURADOR — que roda sem o loader da Steam,
-# em `LC_ALL=C`, com teto de 5 s por pergunta, a primeira sem resposta calando
-# as seguintes, e o `timeout 10` do gancho por cima. As duas réguas abaixo
-# ficaram, e mudaram de alvo.
 
 def _lancar_com_o_pactl(
     tmp_path: Path,
@@ -645,13 +565,7 @@ def _lancar_com_o_pactl(
     eco: str = "${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}",
     sysfs: Path | None = None,
 ) -> tuple[str, str]:
-    """Roda o wrapper com um `pactl` escrito à mão; devolve (o que o jogo viu, o registro).
-
-    Separado de :func:`_lancar` por um motivo só: o `pactl` daqui pode TRAVAR, e
-    quem estoura o prazo tem de levar junto o processo preso. O wrapper nasce
-    numa sessão própria e, se o prazo estourar, o grupo inteiro morre — sem isso
-    a régua reprovaria e deixaria um `pactl` pendurado na máquina.
-    """
+    """Roda o wrapper com um `pactl` escrito à mão; devolve (o que o jogo viu, o registro)."""
     home = tmp_path / "home"
     binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
     binario.mkdir(parents=True)
@@ -670,7 +584,7 @@ def _lancar_com_o_pactl(
     pactl = Path(caminho) / "pactl"
     pactl.write_text("#!/bin/sh\n" + corpo_do_pactl, encoding="utf-8")
     pactl.chmod(0o755)
-    runtime = Path(tempfile.mkdtemp(prefix="hefks-"))  # AF_UNIX: caminho curto
+    runtime = Path(tempfile.mkdtemp(prefix="hefks-"))
     (runtime / "hefesto-dualsense4unix").mkdir()
     daemon = _DaemonQueResponde(runtime / "hefesto-dualsense4unix" / "hefesto-dualsense4unix.sock")
     env = {
@@ -751,7 +665,7 @@ def test_a_pergunta_do_curador_e_em_c_e_sem_o_loader_da_steam(tmp_path: Path) ->
     """
     loader = tmp_path / "runtime-da-steam"
     loader.mkdir()
-    preload = str(tmp_path / "nao-existe.so")  # o ld.so avisa e ignora
+    preload = str(tmp_path / "nao-existe.so")
     linhas = " ".join(f"'{ln}'" for ln in _SINK_DO_RADIO.splitlines())
     corpo = (
         '[ -z "${LD_LIBRARY_PATH:-}" ] || exit 1\n'
@@ -774,21 +688,6 @@ def test_a_pergunta_do_curador_e_em_c_e_sem_o_loader_da_steam(tmp_path: Path) ->
         "o curador não leu o nó do lugar: o pactl dele não perguntou em C e sem o loader"
     )
 
-
-# ------------------------------------------ D1: as duas nascem em TODA variante
-#
-# O BURACO QUE ESTA SEÇÃO FECHA, medido em 20/09/2026: arrancadas as duas linhas
-# de `compose_env` que ligam a háptica — as que fizeram o PRAGMATA vibrar na mão
-# dela —, 312 testes desta área e os 42 portões da camada rápida continuaram
-# VERDES. Todo teste do arquivo acima entrega ao wrapper um `env_do_daemon`
-# escrito à mão, então mede o WRAPPER; ninguém perguntava ao `compose_env`, que
-# é quem decide o que o daemon materializa. A `SDL_ACCELEROMETER_AS_JOYSTICK`
-# tem essa régua desde a SENSORES-NO-JOGO-02; estas duas nasceram sem.
-#
-# A MATRIZ NÃO É DIGITADA. Ela sai do produto cartesiano dos argumentos que
-# `compose_env` distingue, e é essa a diferença que importa: uma tabela de
-# variantes escrita à mão tem um segundo dono e envelhece calada — é assim que
-# um `if` novo passa por baixo de uma régua que continua verde.
 
 _LIGADAS_SEMPRE = (
     "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE",
@@ -838,33 +737,6 @@ def test_as_duas_opcoes_da_haptica_moram_na_allowlist() -> None:
     for nome in _LIGADAS_SEMPRE:
         assert nome in ENV_ALLOWLIST, nome
 
-
-# ------------------------------- o curador tem QUATRO donos, e eles têm de bater
-#
-# O SEGUNDO BURACO DE 20/09/2026, medido do mesmo jeito: trocado o nome do alvo
-# em `install.sh` (`bin/hefesto-audio-ks` → `bin/hefesto-audio-ks-MORDIDA`), os
-# 52 testes desta área e os 42 portões da camada rápida seguiram VERDES. O
-# install passaria a materializar o curador com um nome que o wrapper não
-# procura, e a háptica morreria calada: o `curar_audio_ks` cai em
-# `sem-curador`, que é um rastro, não um erro, e o jogo abre normalmente — sem
-# vibrar.
-#
-# O caminho do curador está escrito em QUATRO lugares, e nenhum perguntava aos
-# outros:
-#
-#   `install.sh`                AUDIO_KS_TARGET — quem escreve o arquivo;
-#   `uninstall.sh`              AUDIO_KS_TARGET — quem o apaga;
-#   `assets/hefesto-launch.sh`  `curador=` — quem o executa no lançamento;
-#   `scripts/doctor.sh`         a linha do `check_copias_do_wrapper` — quem avisa.
-#
-# É a mesma forma do defeito que fez nascer o `scripts/portoes.sh`: uma lista
-# em dois lugares é duas listas, e elas divergem. Aqui a régua LÊ os quatro
-# fontes e exige que digam a mesma coisa — nenhum caminho é digitado nela.
-#
-# E O EXTRATOR TAMBÉM É UMA RÉGUA: `curador=` aparece DUAS vezes no wrapper (a
-# de cima é a do `hefesto-camadas`), então ele lê de dentro do corpo do
-# `curar_audio_ks`. Um `re.search` solto teria medido o vizinho e dado verde
-# sobre o arquivo errado.
 
 _RAIZ_DO_PROJETO = Path(__file__).resolve().parents[2]
 
@@ -931,26 +803,8 @@ def test_o_doctor_vigia_o_curador_no_mesmo_lugar_e_pela_mesma_fonte() -> None:
     assert (_RAIZ_DO_PROJETO / fonte).is_file(), fonte
 
 
-# ------------------------- a conferência de 20/09/2026: o que ainda passava
-#
-# As três réguas acima mordem tudo o que existe HOJE — medido arrancando cada
-# uma das duas opções, trocando o VALOR de «1» para «0», pondo uma delas sob um
-# `if` de variante e renomeando o caminho do curador em cada um dos seus donos,
-# um por vez. As duas abaixo fecham o que sobrou, e cada uma nasce de uma
-# mordida que ficou VERDE.
-
-
 def test_a_matriz_conhece_todo_argumento_do_compose_env() -> None:
-    """A matriz só vale enquanto souber de TODO eixo que o produto distingue.
-
-    A MORDIDA QUE REVELOU, 20/09/2026: acrescentado a `compose_env` um sexto
-    argumento, com as duas opções puladas quando ele vem ligado, os 1.075
-    testes que leem o wrapper e os 42 portões da camada rápida seguiram
-    VERDES. A matriz nunca passa o eixo novo, então nunca visita o ramo que
-    desliga a vibração — que é, palavra por palavra, o defeito que a régua de
-    cima diz impedir. Os eixos ali SÃO digitados; a assinatura é o dono.
-    Pergunta-se a ela.
-    """
+    """A matriz só vale enquanto souber de TODO eixo que o produto distingue."""
     import inspect
 
     from hefesto_dualsense4unix.daemon.launch_env import compose_env
@@ -966,22 +820,7 @@ def test_a_matriz_conhece_todo_argumento_do_compose_env() -> None:
 
 
 def test_o_curador_entra_executavel_porque_o_wrapper_exige_isso() -> None:
-    """O install grava o curador; o wrapper só o roda se ele puder ser executado.
-
-    A MORDIDA QUE REVELOU, 20/09/2026: trocado `install -Dm755` por `-Dm644` no
-    `install.sh`, os 1.075 testes que leem o wrapper e os 42 portões da camada
-    rápida seguiram VERDES. Medido no wrapper DE VERDADE, com o curador em
-    0644: o jogo abre (rc=0), o rastro diz `sem-curador` — que é rastro, não
-    erro — e o `system.reg` do prefixo não recebe o device. A mesma morte
-    calada do caminho renomeado, pela outra metade do mesmo contrato.
-
-    O irmão `hefesto-camadas` já tinha a régua do bit (um teste que RODA o
-    bloco do install e cobra `os.access(..., os.X_OK)`); a do device KS nasceu
-    sem, e o dublê do lançamento dava o bit a si mesmo.
-
-    O número não é digitado aqui: a EXIGÊNCIA é lida do wrapper, e o modo é
-    lido do install.
-    """
+    """O install grava o curador; o wrapper só o roda se ele puder ser executado."""
     corpo = _corpo_da_funcao("assets/hefesto-launch.sh", "curar_audio_ks")
     assert '-x "$curador"' in corpo, (
         "o wrapper deixou de exigir o bit de execução — esta régua mede a "

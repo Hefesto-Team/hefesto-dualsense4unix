@@ -1,16 +1,4 @@
-"""CODIGO-MORTO-01: a lápide do `xlib_window` tem de MORDER quem importar.
-
-O módulo `integrations/xlib_window.py` guardava 111 linhas que nenhum código de
-produção importava e que liam o `_NET_ACTIVE_WINDOW` SEM gate de foco — o
-defeito que o UX-02/FOCO-01 curaram no backend vivo. Enquanto ele importava
-limpo, era armadilha carregada: bastava alguém achar e usar.
-
-Estes testes fixam as duas metades da cura:
-  1. importar levanta `ImportError` (toda vez, não só na primeira);
-  2. a mensagem aponta o substituto (`window_detect.build_window_reader`);
-  3. a mecânica da leitura cega saiu do arquivo (nem `XlibClient`, nem
-     `intern_atom`/`get_full_property` sobraram como código).
-"""
+"""CODIGO-MORTO-01: a lápide do `xlib_window` tem de MORDER quem importar."""
 from __future__ import annotations
 
 import importlib

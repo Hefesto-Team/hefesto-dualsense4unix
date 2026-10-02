@@ -69,11 +69,8 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-#: Os quatro controles da régua, na faixa forjada da casa (nenhum endereço real).
 UNIQS = ["aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014"]
 
-#: O MENOR CORPO de cada seção do esquema: `None` é «sem opinião», e o disco
-#: pergunta `is not None` sobre a SEÇÃO. O `speaker` exige `volume` (SOM-02).
 MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
@@ -116,8 +113,7 @@ def _estado(*entradas: dict[str, Any]) -> dict[str, Any]:
 
 
 def _o_cenario() -> dict[str, Any]:
-    """P1 com o microfone mudo, P2 com a barra apagada, P3 com a máscara Xbox,
-    P4 com a mira ligada (a régua 1 da sprint). O P1 tem os motores em zero."""
+    """P1 com o microfone mudo, P2 com a barra apagada, P3 com a máscara Xbox,"""
     return _estado(
         _entrada(UNIQS[0], 1, audio={"mic_mudo": True}),
         _entrada(UNIQS[1], 2, lightbar_on=False, lightbar_rgb=[0, 0, 0]),
@@ -194,13 +190,9 @@ def _como_a_celula(aceso: bool | None) -> str:
     return TRAVESSAO if aceso is None else ("sim" if aceso else "")
 
 
-# ---------------------------------------------------------------------------
-# 1. O AGORA VEM DO CONTROLE, NÃO DO PERFIL
-# ---------------------------------------------------------------------------
 def test_o_glifo_diz_o_que_o_dono_diz_de_cada_controle(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Quatro controles, quatro combinações, e um perfil que guarda TUDO dos
-    quatro: o glifo de cada célula é o que o dono responde, nunca o disco."""
+    """Quatro controles, quatro combinações, e um perfil que guarda TUDO dos"""
     state = _o_cenario()
     fora = _emitidos(monkeypatch, state, [_perfil("Régua A", TUDO)])
     mesa = mesa_viva.mesa_do_estado(state, {})
@@ -213,8 +205,6 @@ def test_o_glifo_diz_o_que_o_dono_diz_de_cada_controle(
                 errados.append(f"P{n + 1}/{secao}: tela={linhas[n][secao]!r} dono={quer!r}")
     assert not errados, (
         "a coluna «Status» não diz o que o controle diz:\n  " + "\n  ".join(errados))
-    # AS QUATRO COMBINAÇÕES DO CENÁRIO, ditas pelo nome: se o dublê deixar de
-    # montar a combinação, a régua acima passaria sobre um cenário sem contraste.
     assert linhas[0]["mic"] == "" and linhas[0]["rumble"] == ""
     assert linhas[1]["leds"] == ""
     assert linhas[2]["mascara"] == ""
@@ -235,13 +225,9 @@ def test_a_dica_diz_qual_mascara_e_o_nao_sei(monkeypatch: pytest.MonkeyPatch) ->
     assert all(v == "" for i in incertos for s, v in i.items() if s != "triggers")
 
 
-# ---------------------------------------------------------------------------
-# 2. TROCAR O PERFIL DO EDITOR NÃO MEXE NO AGORA
-# ---------------------------------------------------------------------------
 def test_trocar_o_perfil_do_editor_muda_o_ponto_e_nao_o_glifo(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O clique na lista que ela via trocar a coluna inteira com os controles
-    parados. Agora troca só o ponto."""
+    """O clique na lista que ela via trocar a coluna inteira com os controles"""
     state = _o_cenario()
     perfis = [_perfil("Régua A", TUDO), _perfil("Régua B", ["rumble"])]
     com_a = _emitidos(monkeypatch, state, perfis, editado="Régua A")
@@ -256,17 +242,13 @@ def test_trocar_o_perfil_do_editor_muda_o_ponto_e_nao_o_glifo(
 
 def test_sem_perfil_nenhum_a_coluna_continua_dizendo_o_agora(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O agora não depende de perfil: sem um só para escolher, os quatro
-    controles continuam na tabela (antes caíam em «Desconectado»)."""
+    """O agora não depende de perfil: sem um só para escolher, os quatro"""
     fora = _emitidos(monkeypatch, _o_cenario(), [])
     assert "Desconectado" not in " ".join(fora["guarda.nome"])
     assert _por_linha(fora["guarda.secao"])[3]["movimento"] == "sim"
     assert not any(fora["guarda.proprio"])
 
 
-# ---------------------------------------------------------------------------
-# 3. O «NÃO SEI» NÃO ACENDE
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("bloco", "secao"), [
     ("speaker", "speaker"), ("sensores", "sensores"), ("audio", "mic"),
     ("mira", "movimento")])
@@ -299,9 +281,6 @@ def test_o_motor_sem_mapa_nao_vira_o_padrao(monkeypatch: pytest.MonkeyPatch) -> 
     assert {linha["rumble"] for linha in _por_linha(fora["guarda.secao"])} == {TRAVESSAO}
 
 
-# ---------------------------------------------------------------------------
-# 4. O PONTO É O DISCO INTEIRO
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("secao", list(ControllerOverrides.model_fields))
 def test_o_ponto_acende_a_secao_guardada_e_so_ela(
         monkeypatch: pytest.MonkeyPatch, secao: str) -> None:
@@ -316,9 +295,6 @@ def test_o_ponto_acende_a_secao_guardada_e_so_ela(
     assert pontos == [set(), {secao}, set(), set()], pontos
 
 
-# ---------------------------------------------------------------------------
-# O DESENHO E O PACOTE FALAM A MESMA LÍNGUA
-# ---------------------------------------------------------------------------
 def _gerador() -> Any:
     pasta = pathlib.Path(onde.__file__).parent
     if str(pasta) not in sys.path:
@@ -338,9 +314,6 @@ def test_o_desenho_e_o_pacote_dizem_as_mesmas_dicas() -> None:
     assert set(a10_perfis.QUEM_DIZ_O_AGORA) == set(a10_perfis.SECOES_DA_COLUNA)
 
 
-# ---------------------------------------------------------------------------
-# 5 e 6. NA TELA (WebKit, a página do gerador pintada pelo BOOTSTRAP do piloto)
-# ---------------------------------------------------------------------------
 def _bootstrap() -> str:
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py").read_text(
         encoding="utf-8")
@@ -408,8 +381,7 @@ def _pintar(tela: Any, fora: dict[str, Any]) -> list[dict[str, Any]]:
 
 def test_o_ponto_e_o_glifo_aceso_sao_coisas_diferentes_na_tela(
         tela: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O ponto só onde o disco diz, embaixo do glifo e dentro da célula; a cor
-    do aceso não depende do ponto."""
+    """O ponto só onde o disco diz, embaixo do glifo e dentro da célula; a cor"""
     state = _o_cenario()
     perfil = _perfil("Régua A", ["leds", "mic", "movimento"])
     fora = _emitidos(monkeypatch, state, [perfil])

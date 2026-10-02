@@ -1,172 +1,4 @@
-"""As camadas Vulkan implícitas que moram DENTRO do prefixo Wine de cada jogo.
-
-Sprint ENGASGO-VULKAN-01 (23/08/2026). O Sackboy dela entregava **3.597 quadros
-por minuto — 60 fps de média perfeita** — e mesmo assim engasgava: **~70 quadros
-longos por minuto** (>33 ms, medidos de 47 a 91 ms), um por segundo, com os
-vizinhos correndo para compensar. Não é lentidão, é **ritmo de apresentação
-desigual**, e o metrônomo tem período de 1,021 s SOLTO do relógio de parede
-(qui-quadrado 1 contra 9 graus de liberdade na fase dentro do segundo) — ou
-seja, nasce dentro do laço de quadro do jogo, não de temporizador do sistema.
-
-Caiu tudo o que era fácil culpar, cada linha medida: GPU em 51% a 65 °C com
-todos os `Clocks Event Reasons` em `Not Active`; oito jogos dela no MESMO
-GE-Proton10-34 e só um engasga; engasga com um jogador só; Mortal Kombat e
-Wukong no ultra, lisos; e os próprios medidores saem da conta (69,9/min com
-eles, 70,7/min sem). E um RELATO dela, sem instrumento: engasga com o Hefesto
-DESLIGADO.
-
-A varredura dos **27 prefixos `compatdata`** dela achou **um único** com camada
-a mais — o do Sackboy, com o `EOSOverlayVkLayer` do Epic Online Services
-registrado como camada IMPLÍCITA; os outros 26 têm SÓ `winevulkan.json`, o
-driver Vulkan do próprio Wine, obrigatório. Naquela noite a camada virou a
-hipótese da causa, e a hipótese caiu duas vezes: **a camada não é a causa do
-engasgo, e tirá-la não o cura.**
-
-**Grau de confiança: EVIDÊNCIA CONTRÁRIA (23/08/2026, medido).** O A/B saiu, e
-derrubou a hipótese. Dois logs por quadro, guardados em
-`docs/process/estudos/dados/2026-08-23-frametime-sackboy/`, recomputados por
-duas passagens independentes:
-
-    camada LIGADA    104.681 quadros, 30 min: p99 sobe +2,35 ms/min,  51 picos/min
-    camada DESLIGADA 111.417 quadros, 36 min: p99 sobe +4,19 ms/min, 121 picos/min
-
-**A rampa acontece nos dois casos**, e desligar mediu PIOR. Ressalva de método:
-na sessão sem a camada ela estava jogando e na outra o jogo passou mais tempo
-parado — carga diferente, e isso não foi controlado. O que a diferença de carga
-NÃO explica é a rampa estar presente dos dois lados.
-
-**E o porquê de tirar quase nunca mudar a imagem, lido em 26/09/2026:** a camada
-registrada no `system.reg` só é lida pelo carregador Vulkan do PRÓPRIO Windows,
-num jogo que o traga. O `vulkan-1` do Wine devolve zero camadas, e o
-vkd3d-proton chama o `winevulkan` direto; nos 31 prefixos da máquina dela, os
-31 usam o `vulkan-1` do Wine. As duas queixas de engasgo dela depois de 23/08
-vieram com a camada já desligada.
-
-**Este módulo continua valendo, e por outro motivo.** Camada implícita de
-terceiro registrada no prefixo do jogo é coisa que quem usa tem o direito de
-ver e de tirar, e antes disto o produto não sabia nem enumerar. O que ele não
-pode fazer é prometer cura de engasgo — não há.
-
-**O BOTÃO AGE ONDE A CAMADA CARREGA — 28/09/2026,
-O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Decisão dela, 27/09:
-*«Nao sai. Passa a funcionar do jeito certo.»* <!-- noqa-acento: citação literal dela -->
-O Wine chama o carregador Vulkan do Linux, e as camadas que chegam ao jogo são
-as do lado Linux. As duas da Steam (a sobreposição e o gravador de shaders)
-saem pelo ambiente que o lançador entrega ao jogo
-(`AMBIENTE_SEM_AS_CAMADAS_DA_STEAM`), e é isso que o «Corrigir Vulkan» liga. O
-registro do prefixo só se mexe no jogo que traz o carregador oficial da Khronos
-(`traz_o_carregador_da_khronos`), o único caminho em que a chave tem leitor.
-
-Pedido dela, textual: *"faz uma cura universal e coloca isso naqueles botões do
-emulação tipo travar próton e coloca essa cura contra o vulcan em todos os
-jogos"*. Universal é requisito, não estilo: a regra dela de 14/08/2026 é que
-**receita por appid deixa todo jogo novo desprotegido**.
-
-O que este módulo NÃO faz: rede, `sudo`, e nada fora de `compatdata`. Tudo é
-arquivo do usuário.
-
-
-O REGISTRO, e o detalhe que a próxima pessoa vai errar
-------------------------------------------------------
-
-As camadas ficam em `system.reg`, texto puro dentro do prefixo, em DUAS chaves
-(a de 64 bits e a de 32):
-
-    [Software\\\\Khronos\\\\Vulkan\\\\ImplicitLayers] 1783894861
-    "C:\\\\Program Files (x86)\\\\...\\\\EOSOverlayVkLayer-Win64.json"=dword:00000000
-
-    [Software\\\\Wow6432Node\\\\Khronos\\\\Vulkan\\\\ImplicitLayers] 1783894861
-    "C:\\\\Program Files (x86)\\\\...\\\\EOSOverlayVkLayer-Win32.json"=dword:00000000
-
-**`dword:00000000` significa LIGADA.** O número é a flag de DESABILITAR do
-carregador Vulkan, não um interruptor de ligar: zero = "não desabilite" = a
-camada carrega; qualquer valor diferente de zero = desligada. É o contrário do
-que a intuição diz, está escrito aqui e está escrito de novo em `_LIGADA` lá
-embaixo, porque ler errado esta linha inverte a cura inteira.
-
-O driver `winevulkan.json` mora em OUTRA chave — `…\\\\Vulkan\\\\Drivers`, nunca
-em `ImplicitLayers`. Ou seja: a separação já é estrutural, e mesmo assim ele é
-recusado por nome em `_e_o_driver`, com portão próprio
-(`tests/unit/test_a_cura_do_engasgo_nunca_mira_o_driver_do_wine.py`). Um engano
-ali não quebra um jogo: quebra TODOS de uma vez.
-
-
-A RÉGUA: por que lista de PRESERVADOS, e não de conhecidos-ruins
-----------------------------------------------------------------
-
-Três desenhos eram possíveis, e a escolha aqui é a lista de **preservados** —
-tudo que não é o driver e não está nela é *sobra*, mostrada com nome e jogo
-antes de qualquer clique:
-
-- **Lista de conhecidos-ruins** (só o `EOSOverlay`) foi RECUSADA porque é a
-  regra dela de 14/08 com outro nome: assim como receita por appid deixa todo
-  jogo novo desprotegido, receita por nome de camada deixa toda camada nova
-  desprotegida. O overlay da Ubisoft, o da EA, o da Rockstar, o do Discord — cada
-  um exigiria mexer no código de novo, e quem paga é quem instalou o jogo de
-  amanhã.
-- **Lista de preservados** é limitada e muda devagar: é o conjunto de
-  ferramentas que alguém instala de PROPÓSITO (medidor de quadro, compositor,
-  filtro, gravador, a sobreposição da própria Steam). Ela erra para o lado
-  seguro na única direção que sobra — uma ferramenta legítima e nova pode ser
-  desligada, e o preço disso é "o meu medidor sumiu", com o produto dizendo o
-  nome do que desligou e um clique para devolver. O preço do desenho contrário
-  é camada nova de terceiro pendurada no prefixo sem ninguém saber que está lá.
-- **"Tudo que não é o driver, mostrando antes"** é o que a interface FAZ: o
-  diálogo lista jogo por jogo o que achou. A lista de preservados é o que
-  decide o que fica de fora da mira; a mostra é o que garante que nada saia às
-  escondidas.
-
-A sobreposição da Steam (`SteamOverlayVulkanLayer`) está entre os preservados
-por decisão de produto, não por acaso: é ela que dá o Shift+Tab, a captura de
-tela e a tela de configuração de controle da Steam. Um produto de CONTROLE que
-desliga a tela de controle da Steam se auto-sabota.
-
-
-ONDE A CURA AGE, e a honestidade sobre o wineserver
----------------------------------------------------
-
-A escrita é no `system.reg`, com backup ao lado (`.bak.hefesto-camadas-<ts>`) e
-troca atômica (tmp + `os.replace`). O Wine mantém o registro em MEMÓRIA
-enquanto o prefixo está vivo e o regrava ao sair — por isso:
-
-- a interface RECUSA devolver com jogo da Steam aberto (mesmo portão do
-  `proton_pin`);
-- o gancho de lançamento escreve ANTES de o Proton subir o `wineserver`
-  daquele prefixo, que é o instante certo — e, desde 28/09/2026, só com o
-  botão ligado e só no jogo que traz o `vulkan-1.dll`;
-- se ainda assim um `wineserver` sobrescrever, a mudança se perde e o próximo
-  lançamento a REFAZ. A cura é idempotente de propósito para que o pior caso
-  seja "não pegou desta vez", nunca um prefixo pela metade.
-
-**E O TERCEIRO ITEM SÓ PASSOU A SER VERDADE EM 16/09/2026** — até então era
-promessa que o próprio código desmentia, e o desmentido estava a seiscentas
-linhas daqui. A regra 2 de `aplicar_no_prefixo` ("religar por fora também
-conta como escolha", pedido dela de 09/08/2026) via a camada de volta em
-`dword:00000000` e concluía ESCOLHA DELA, gravando `manter` para sempre. Só
-que o `wineserver` regravando o registro que tinha em memória produz
-exatamente o mesmo byte que alguém religando à mão: **os dois casos são
-INDISTINGUÍVEIS no registro**, e o desempate caía sempre no lado que
-aposentava a cura. Um prefixo curado uma vez e reaberto uma vez nunca mais
-era curado.
-
-Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o botão
-devolver é permanente. O botão vira a única voz de escolha e o wineserver
-perde o voto."* A regra 2 caducou — o que sobrou dela está em
-`_e_escolha_dela`, que é quem lê o estado antigo sem obedecer a ele. Desde
-28/09/2026 o botão é um ligável, e a voz dele é o arquivo da escolha
-(`caminho_da_escolha`): com ele ligado o gancho FORÇA, porque desligar já tira
-o gancho do caminho. O `manter` só vale para quem chama `curar_um_prefixo` sem
-forçar.
-
-Este módulo é **100% stdlib de propósito** (mesmo padrão de `proton_pin` e
-`steam_launch_options`): o `install.sh` o materializa em
-`~/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas` e o
-`assets/hefesto-launch.sh` o executa como script avulso, com o `python3` do
-SISTEMA, sem o pacote no `sys.path`. Import de irmão só acontece TARDE e com
-fallback, e a única função que precisa disso é o censo de todos os prefixos —
-o gancho de lançamento recebe o prefixo pronto pela `STEAM_COMPAT_DATA_PATH` e
-nunca enumera nada.
-"""
+"""As camadas Vulkan implícitas que moram DENTRO do prefixo Wine de cada jogo."""
 from __future__ import annotations
 
 import argparse
@@ -181,39 +13,23 @@ from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
 
-#: O valor de dword que significa **camada LIGADA** (a flag de desabilitar em
-#: zero). Repetido aqui, fora do docstring, porque é a linha que inverte a cura
-#: inteira se for lida ao contrário.
 _LIGADA = 0
 
-#: O valor que gravamos para DESLIGAR. Qualquer não-zero serve para o
-#: carregador; `1` é o convencional e é o que fica legível para quem abrir o
-#: `system.reg` à mão depois.
 _DESLIGADA_DWORD = "00000001"
 
-#: Cabeçalho de seção do `system.reg`: `[Chave\\Com\\Escape] <timestamp>`.
 _SECAO_RE = re.compile(r"^\[(?P<chave>.*?)\](?:\s|$)")
 
-#: Uma entrada `"nome"=dword:XXXXXXXX` dentro de uma seção.
 _ENTRADA_DWORD_RE = re.compile(
     r'^(?P<prefixo>"(?P<nome>(?:\\.|[^"\\])*)"=dword:)(?P<valor>[0-9a-fA-F]+)(?P<sufixo>\s*)$'
 )
 
-#: As duas chaves de camadas implícitas (64 e 32 bits), já DESESCAPADAS.
 CHAVES_DE_CAMADAS: tuple[str, ...] = (
     r"Software\Khronos\Vulkan\ImplicitLayers",
     r"Software\Wow6432Node\Khronos\Vulkan\ImplicitLayers",
 )
 
-#: O driver Vulkan do próprio Wine. **Nunca entra na mira, em nenhum caminho.**
-#: Ele vive em `…\Vulkan\Drivers`, não em `ImplicitLayers` — a recusa por nome
-#: aqui é o cinto por cima do suspensório, e tem portão só dela.
 NOME_DO_DRIVER_DO_WINE = "winevulkan.json"
 
-#: Camadas legítimas e desejadas: pedaços de ferramenta que alguém instala de
-#: PROPÓSITO. Casamento por substring, sem acento e em minúsculas, contra o
-#: NOME DO ARQUIVO do manifesto. Cada linha tem dono declarado, porque lista
-#: sem dono vira lixo em três meses.
 CAMADAS_PRESERVADAS: tuple[tuple[str, str], ...] = (
     ("winevulkan", "driver Vulkan do Wine"),
     ("wineopenxr", "OpenXR do Wine"),
@@ -233,27 +49,13 @@ CAMADAS_PRESERVADAS: tuple[tuple[str, str], ...] = (
     ("amd_switchable", "AMD switchable graphics"),
 )
 
-#: Sufixo do estado local. Guarda o que NÓS mexemos e, principalmente, o que
-#: ela mandou manter — é ele que impede o gancho de desfazer a escolha dela no
-#: lançamento seguinte.
 ESTADO_BASENAME = "camadas-vulkan.json"
 
-#: Marca do backup, no molde do `proton_pin` (`.bak.hefesto-proton-<ts>`).
 _BACKUP_SUFIXO = ".bak.hefesto-camadas-"
 
 
-# --------------------------------------------------------------------------
-# Escape do registro do Wine
-# --------------------------------------------------------------------------
-
-
 def desescapar(valor: str) -> str:
-    """Desfaz o escape do `system.reg` (`\\\\` e `\\"`).
-
-    Mesmo critério do `_desescapar_acf` do `steam_launch_options`: o registro
-    do Wine escapa a barra invertida e a aspa, e nada mais aparece nos nomes de
-    caminho que nos interessam.
-    """
+    """Desfaz o escape do `system.reg` (`\\\\` e `\\"`)."""
     return valor.replace('\\\\', '\\').replace('\\"', '"')
 
 
@@ -272,19 +74,8 @@ def _escapar(valor: str) -> str:
     return valor.replace('\\', '\\\\').replace('"', '\\"')
 
 
-# --------------------------------------------------------------------------
-# Classificação de uma camada
-# --------------------------------------------------------------------------
-
-
 def _e_o_driver(caminho_windows: str) -> bool:
-    """`True` para o `winevulkan.json`, em qualquer caixa e qualquer pasta.
-
-    Desligar o driver Vulkan do Wine não quebra UM jogo: quebra todos de uma
-    vez, e a pessoa fica sem imagem sem saber o que aconteceu. Por isso a
-    recusa é por NOME e não por chave de registro — mesmo que um dia alguém
-    registre o driver no lugar errado, ele continua fora da mira.
-    """
+    """`True` para o `winevulkan.json`, em qualquer caixa e qualquer pasta."""
     return _nome_do_arquivo(caminho_windows) == NOME_DO_DRIVER_DO_WINE
 
 
@@ -295,11 +86,7 @@ def _nome_do_arquivo(caminho_windows: str) -> str:
 
 
 def dono_preservado(caminho_windows: str) -> str | None:
-    """Quem é o dono desta camada, se ela está entre as preservadas.
-
-    Devolve a descrição legível (para a interface poder dizer POR QUE não
-    mexeu) ou `None` quando a camada é uma sobra desconhecida.
-    """
+    """Quem é o dono desta camada, se ela está entre as preservadas."""
     nome = _nome_do_arquivo(caminho_windows)
     for pedaco, dono in CAMADAS_PRESERVADAS:
         if pedaco in nome:
@@ -309,14 +96,7 @@ def dono_preservado(caminho_windows: str) -> str | None:
 
 @dataclass(frozen=True)
 class Camada:
-    """Uma linha de `ImplicitLayers` já interpretada.
-
-    `ligada` é o que o registro diz; `presente` é o que o DISCO diz. Os dois
-    juntos cobrem o estado em que a máquina dela estava quando esta leva foi
-    escrita: registro apontando para um manifesto que foi renomeado à mão
-    (`.json.desligado`), ou seja, entrada VIVA no registro e INERTE
-    na prática. Chamar isso de "ligada" seco seria mentira de instrumento.
-    """
+    """Uma linha de `ImplicitLayers` já interpretada."""
 
     caminho_windows: str
     chave: str
@@ -338,11 +118,7 @@ class Camada:
 
     @property
     def e_sobra(self) -> bool:
-        """Sobra = candidata à cura: nem driver, nem preservada, e LIGADA.
-
-        Entrada já desligada não é sobra: não há o que curar nela, e contá-la
-        faria o produto prometer trabalho que não existe.
-        """
+        """Sobra = candidata à cura: nem driver, nem preservada, e LIGADA."""
         return self.ligada and not self.e_o_driver and self.preservada_por is None
 
 
@@ -367,18 +143,8 @@ class PrefixoDeJogo:
         return f"{self.nome} ({self.appid})" if self.nome else self.appid
 
 
-# --------------------------------------------------------------------------
-# Leitura
-# --------------------------------------------------------------------------
-
-
 def caminho_no_prefixo(prefixo: Path, caminho_windows: str) -> Path | None:
-    """Traduz `C:\\...` para o caminho Linux dentro do prefixo.
-
-    `prefixo` é o `compatdata/<appid>`. `C:` é `pfx/drive_c`; `Z:` é a raiz do
-    sistema. Qualquer outra letra devolve `None` — inventar um caminho para
-    poder dizer "não existe" seria pior que admitir que não sabemos.
-    """
+    """Traduz `C:\\...` para o caminho Linux dentro do prefixo."""
     bruto = caminho_windows.replace("/", "\\")
     if len(bruto) < 2 or bruto[1] != ":":
         return None
@@ -393,14 +159,7 @@ def caminho_no_prefixo(prefixo: Path, caminho_windows: str) -> Path | None:
 
 
 def ler_camadas(registro: Path, *, prefixo: Path | None = None) -> tuple[Camada, ...]:
-    """Lê as duas seções `ImplicitLayers` de um `system.reg`.
-
-    Varredura de uma passada e sem regex sobre o arquivo inteiro: o
-    `system.reg` do Sackboy tem 5,5 MB e 100 mil linhas, e este código roda no
-    caminho do LANÇAMENTO do jogo. Best-effort read-only — arquivo ausente ou
-    ilegível devolve tupla vazia, porque "não consegui ler" e "não tem camada"
-    levam ao mesmo lugar seguro: não mexer.
-    """
+    """Lê as duas seções `ImplicitLayers` de um `system.reg`."""
     try:
         texto = registro.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -454,14 +213,7 @@ def prefixo_de_jogo(
 
 
 def _pastas_steamapps_do_irmao() -> Callable[[Path | None], list[Path]] | None:
-    """O `pastas_steamapps` do irmão, ou `None` quando ele não está alcançável.
-
-    Import TARDE e nas duas formas: `from .steam_launch_options` quando o
-    pacote está montado, e `import steam_launch_options` quando este arquivo
-    roda de dentro da pasta `integrations/`. Na cópia avulsa instalada em
-    `~/.local/share/.../bin/hefesto-camadas` nenhuma das duas resolve, e aí a
-    resposta honesta é `None` — não uma lista vazia disfarçada de resultado.
-    """
+    """O `pastas_steamapps` do irmão, ou `None` quando ele não está alcançável."""
     try:
         from .steam_launch_options import pastas_steamapps
     except ImportError:  # pragma: no cover - cópia avulsa, sem o pacote
@@ -473,35 +225,12 @@ def _pastas_steamapps_do_irmao() -> Callable[[Path | None], list[Path]] | None:
 
 
 def sabe_enumerar() -> bool:
-    """Esta cópia consegue LISTAR os jogos, ou só curar um prefixo apontado?
-
-    Existe para que o relatório não diga "não achei camada nenhuma" quando a
-    verdade é "não consegui abrir a lista de jogos". Medido em 23/08/2026: a
-    cópia avulsa instalada respondia exatamente essa mentira, que é a armadilha
-    número um desta casa — *o instrumento mente mais que o produto*.
-    """
+    """Esta cópia consegue LISTAR os jogos, ou só curar um prefixo apontado?"""
     return _pastas_steamapps_do_irmao() is not None
 
 
 def pastas_compatdata(home: Path | None = None) -> list[Path]:
-    """Todo `steamapps/compatdata` desta máquina, biblioteca por biblioteca.
-
-    **Reusa `steam_launch_options.pastas_steamapps`, não reescreve.** Aquele
-    módulo é o dono do formato VDF nesta casa e já resolve o que morde aqui:
-    biblioteca em outro disco pelo `libraryfolders.vdf` (nesta máquina,
-    `/mnt/Mnemosyne/SteamLibrary`) e a mesma `steamapps` chegando por dois
-    caminhos de texto diferentes — `~/.steam/steam` é link para
-    `~/.steam/debian-installation`, e comparar texto contava tudo em dobro
-    (BIBLIOTECA-DOBRADA-01, 16/08/2026).
-
-    Import TARDE e com fallback pelo motivo do cabeçalho: quando este arquivo
-    roda como cópia avulsa em `~/.local/share/.../bin/hefesto-camadas`, o
-    irmão não está no `sys.path`. Nesse caso a lista sai VAZIA — e é
-    `sabe_enumerar` que separa esse "não consegui olhar" do "olhei e não achou
-    nada", porque as duas coisas devolvem `[]` e confundi-las é o instrumento
-    mentindo. O gancho de lançamento não passa por aqui: ele recebe o prefixo
-    pronto pela `STEAM_COMPAT_DATA_PATH`.
-    """
+    """Todo `steamapps/compatdata` desta máquina, biblioteca por biblioteca."""
     if not sabe_enumerar():
         return []
     pastas_steamapps = _pastas_steamapps_do_irmao()
@@ -514,67 +243,24 @@ def pastas_compatdata(home: Path | None = None) -> list[Path]:
     return saida
 
 
-#: ONDE OS OUTROS LANÇADORES GUARDAM PREFIXO WINE, e o formato é IDÊNTICO ao da
-#: Steam — `<raiz>/pfx/system.reg`. Medido no disco dela em 21/09/2026.
-#:
-#: **O HEROIC GUARDA O CAMINHO POR JOGO**, em `GamesConfig/<app_name>.json`
-#: (`winePrefix`), e a raiz comum em `config.json`
-#: (`defaultSettings.defaultWinePrefix` = `~/Games/Heroic/Prefixes`). Ler os
-#: dois é de propósito: o por-jogo alcança quem mudou o prefixo à mão, e a raiz
-#: alcança quem nunca abriu o `GamesConfig`.
 _CONFIG_DO_HEROIC = (
     ".var/app/com.heroicgameslauncher.hgl/config/heroic",
     ".config/heroic",
 )
 
-#: RAÍZES DE JOGO POR CONVENÇÃO — O-VULKAN-VE-TODO-LANCADOR-01, 21/09/2026.
-#:
-#: **PERGUNTA DELA:** *"o botão vulcan ele identifica todos os jogos que
-#: contenham isso?"* — e a medição respondeu *quase*: a Steam e o Heroic sim,
-#: o Lutris não. Hoje ela tem o Lutris instalado e sem nenhum prefixo wine, e
-#: o primeiro jogo que nascer lá ficaria invisível para o botão, com o sintoma
-#: de sempre nesta casa: a AUSÊNCIA de dado, que se lê como "funcionou".
-#:
-#: **A VARREDURA É POR FORMA, NÃO POR LANÇADOR**, e é a decisão da sprint. Em
-#: vez de uma terceira função que conhece o Lutris (e uma quarta que conheça o
-#: próximo), pergunta-se a cada filho destas pastas se ele tem
-#: `pfx/system.reg` — que é a forma que Steam, Heroic e Lutris compartilham.
-#: Um lançador novo que respeite a convenção entra de graça.
-#:
-#: **POR QUE NÃO LER O `pga.db` DO LUTRIS:** é SQLite, e o esquema é dele — muda
-#: sem aviso. Este arquivo roda como cópia avulsa em `bin/hefesto-camadas`, onde
-#: o pacote não está no `sys.path`, e a regra que ele já declara é "sem dono
-#: externo". A varredura por forma não tem esse dono.
 _RAIZES_DE_JOGO = (
     "Games",
     ".local/share/lutris",
     ".var/app/net.lutris.Lutris/data/lutris",
 )
 
-#: Quantos filhos de uma raiz se olha antes de desistir. Uma pasta `~/Games`
-#: com dez mil arquivos não pode custar dez mil `is_file()` a cada censo — e o
-#: caso real é uma dúzia de jogos.
 _MAXIMO_DE_FILHOS_POR_RAIZ = 400
 
-#: AS CASAS NATIVAS SEGUEM O XDG (02/10/2026,
-#: O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01), como o lançador segue: o
-#: Heroic nativo guarda a casa no `appData` do Electron (o `XDG_CONFIG_HOME`), e
-#: o Lutris nativo no `GLib.get_user_data_dir()` (o `XDG_DATA_HOME`). Os
-#: caminhos acima são os de sem XDG; com ele, o começo de cada um troca pela
-#: pasta da variável. A casa do Flatpak não muda: dentro da caixa o XDG é sempre
-#: `~/.var/app/<id>/{config,data}`. A regra é a do censo
-#: (`censo_dos_lancadores._Onde`), escrita aqui de novo porque esta cópia
-#: avulsa roda sem o pacote, e uma régua compara as duas respostas.
 _DO_XDG = ((".config/", "XDG_CONFIG_HOME"), (".local/share/", "XDG_DATA_HOME"))
 
 
 def _no_lar(relativo: str, home: Path | None) -> Path:
-    """O caminho de uma casa: no lar dado, ou no XDG do ambiente quando o lar é o
-    de verdade (``home is None``) e a variável vem absoluta.
-
-    O XDG anda junto com o lar, o mesmo molde de :func:`a_steam_instalou_as_camadas`:
-    quem passa um lar de mentira fica com o padrão dentro dele.
-    """
+    """O caminho de uma casa: no lar dado, ou no XDG do ambiente quando o lar é o"""
     lar = Path.home() if home is None else home
     for comeco, variavel in _DO_XDG:
         valor = os.environ.get(variavel, "").strip() if home is None else ""
@@ -584,35 +270,7 @@ def _no_lar(relativo: str, home: Path | None) -> Path:
 
 
 def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
-    """Todo prefixo wine de lançador que NÃO é a Steam. Read-only.
-
-    **POR QUE ESTA FUNÇÃO EXISTE — 21/09/2026, LANCADOR-AGNOSTICO-01.** Ordem
-    dela: *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR
-    SER STEAM."*
-
-    A háptica nativa (o device KS) e a cura de camada Vulkan enumeravam só
-    `steamapps/compatdata`. O prefixo do Heroic mora em
-    `~/Games/Heroic/Prefixes/<Nome do Jogo>`, que nenhuma `steamapps` contém —
-    o lote nunca o via.
-
-    **MEDIDO NA MÁQUINA DELA, e o número é o laudo:** três prefixos da Steam
-    trazem a marca `HEFESTOKS` no `system.reg` (24, 36 e 42 ocorrências); o
-    prefixo do Guardiões da Galáxia, aberto pelo Heroic, trazia **ZERO**. A
-    háptica não chegava, e ela leu isso como *"não funciona lá"*.
-
-    **A FORMA É A MESMA**, e é o que torna a cura barata: `<raiz>/pfx/system.reg`
-    nos dois. O que muda é só o nome da pasta — um appid numérico na Steam, o
-    TÍTULO do jogo no Heroic.
-
-    JSON PURO, sem importar o censo: este arquivo roda como cópia avulsa em
-    `~/.local/share/.../bin/hefesto-camadas`, onde o pacote não está no
-    `sys.path`. Um import do irmão faria a háptica do lançador depender de
-    estar instalada de um jeito — que é a classe de defeito que `sabe_enumerar`
-    existe para nomear.
-
-    NUNCA LEVANTA: disco hostil, JSON torto ou lançador ausente devolvem menos
-    prefixos, nunca uma exceção.
-    """
+    """Todo prefixo wine de lançador que NÃO é a Steam. Read-only."""
     achados: list[Path] = []
     vistos: set[Path] = set()
 
@@ -635,7 +293,6 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
         pasta = _no_lar(relativo, home)
         if not pasta.is_dir():
             continue
-        # 1. O prefixo DE CADA JOGO, que é o mais exato.
         for arquivo in sorted((pasta / "GamesConfig").glob("*.json")):
             try:
                 dado = json.loads(arquivo.read_text(encoding="utf-8"))
@@ -644,7 +301,6 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
             for valor in (dado or {}).values():
                 if isinstance(valor, dict):
                     _guardar(valor.get("winePrefix"))
-        # 2. E a RAIZ comum, para quem nunca abriu o `GamesConfig`.
         try:
             conf = json.loads((pasta / "config.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -660,10 +316,6 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
             for filho in filhos:
                 _guardar(str(filho))
 
-    # A VARREDURA POR FORMA — ver `_RAIZES_DE_JOGO`. Roda DEPOIS da leitura do
-    # Heroic de propósito: quem tem config explícita entra pelo caminho exato,
-    # e esta varredura só acrescenta o que ninguém declarou. O `_guardar` já
-    # descarta repetido pelo caminho resolvido.
     for relativo in _RAIZES_DE_JOGO:
         raiz = _no_lar(relativo, home)
         try:
@@ -676,15 +328,7 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
 
 
 def raizes_de_prefixo(home: Path | None = None) -> list[Path]:
-    """TODO prefixo wine desta máquina — Steam e os outros lançadores.
-
-    Cada item é a pasta que CONTÉM o `pfx/`: `compatdata/<appid>` na Steam,
-    `Prefixes/<Nome do Jogo>` no Heroic. É a lista que a háptica e a cura de
-    camada percorrem desde 21/09/2026.
-
-    **A ORDEM É STEAM PRIMEIRO**, e não é gosto: é a ordem em que esta casa
-    mediu as duas, e quem lê um log quer ver o caminho conhecido antes do novo.
-    """
+    """TODO prefixo wine desta máquina — Steam e os outros lançadores."""
     saida: list[Path] = []
     for compatdata in pastas_compatdata(home):
         try:
@@ -714,16 +358,7 @@ def _nome_do_appid(appid: str, home: Path | None = None) -> str | None:
 
 
 def censo(home: Path | None = None, *, com_nomes: bool = True) -> list[PrefixoDeJogo]:
-    """Todos os prefixos, com as camadas de cada um. Read-only.
-
-    Só volta prefixo que TEM alguma camada implícita registrada: na máquina
-    dela isso é 1 de 27, e listar os 26 vazios seria enterrar o achado no
-    ruído. Quem precisa da contagem total usa `pastas_compatdata`.
-    """
-    # **TODO PREFIXO, E NÃO SÓ O DA STEAM — 21/09/2026.** O `isdigit()` que
-    # morava aqui era a assinatura da Steam escrita no filtro: só `compatdata`
-    # nomeia a pasta com um appid numérico. O Heroic a nomeia com o TÍTULO do
-    # jogo, e a cura de camada nunca o alcançava.
+    """Todos os prefixos, com as camadas de cada um. Read-only."""
     saida: list[PrefixoDeJogo] = []
     for raiz in raizes_de_prefixo(home):
         achado = prefixo_de_jogo(raiz)
@@ -735,57 +370,23 @@ def censo(home: Path | None = None, *, com_nomes: bool = True) -> list[PrefixoDe
                 raiz=achado.raiz,
                 registro=achado.registro,
                 camadas=achado.camadas,
-                # O NOME SÓ SAI DO `appmanifest` QUANDO HÁ APPID NUMÉRICO. Um
-                # prefixo do Heroic já traz o título na própria pasta, e pedir
-                # o `appmanifest` dele à Steam devolveria `None` — pior que o
-                # nome que já está na mão.
                 nome=(_nome_do_appid(achado.appid, home)
                       if achado.appid.isdigit() else raiz.name),
             )
         saida.append(achado)
-    # A ORDEM É PELO NOME DA PASTA, e não mais pelo `int(appid)`: com o título
-    # do Heroic no meio, o `int()` levantaria — e uma ordenação que levanta
-    # derruba a aba inteira por causa de um jogo.
     saida.sort(key=lambda p: (not p.appid.isdigit(), p.appid.zfill(12)))
     return saida
 
 
-# --------------------------------------------------------------------------
-# O que chega ao jogo — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01, 28/09/2026
-# --------------------------------------------------------------------------
-
-#: As duas camadas da Steam que o carregador do LADO LINUX põe no jogo, pelo
-#: `disable_environment` dos manifestos que a Steam instala em
-#: `~/.local/share/vulkan/implicit_layer.d/` (`steamoverlay_*.json` e
-#: `steamfossilize_*.json`, lidos em 28/09). A Steam as liga com
-#: `ENABLE_…_1=1` no ambiente do jogo (medido no `environ` do PRAGMATA em
-#: 28/09), e o carregador obedece ao `DISABLE_…_1=1` por cima do `ENABLE`:
-#: medido em 28/09 com o carregador desta máquina (1.3.280), com as duas
-#: variáveis ele não pede nenhuma das duas camadas, e só com o `ENABLE` pede as
-#: duas. O lançador (`assets/hefesto-launch.sh`) as recebe daqui, pelo arquivo
-#: da escolha.
 AMBIENTE_SEM_AS_CAMADAS_DA_STEAM: tuple[str, ...] = (
     "DISABLE_VK_LAYER_VALVE_steam_overlay_1=1",
     "DISABLE_VK_LAYER_VALVE_steam_fossilize_1=1",
 )
 
-#: A escolha do «Corrigir Vulkan», ao lado das outras escolhas dela no
-#: `XDG_CONFIG_HOME`. Ligado é o arquivo com as linhas de
-#: `AMBIENTE_SEM_AS_CAMADAS_DA_STEAM`; desligado é o arquivo ausente, que é
-#: também o jeito de todo computador novo. O lançador lê este mesmo arquivo, em
-#: shell puro, e só passa ao jogo as linhas que ele próprio conhece.
 ESCOLHA_RELPATH = "hefesto-dualsense4unix/camadas_da_steam_fora.env"
 
-#: O carregador Vulkan oficial do Windows, da Khronos. É o ÚNICO leitor das
-#: chaves `ImplicitLayers` do registro do prefixo; o `vulkan-1` do Wine devolve
-#: zero camadas (`estudos/2026-09-26-o-engasgo-do-sackboy/a-conferencia.md`
-#: §1.3). Só o jogo que o traz na própria pasta tem o registro mexido.
 CARREGADOR_DA_KHRONOS = "vulkan-1.dll"
 
-#: Até onde se procura o carregador na pasta do jogo: o motor Unreal o põe em
-#: `<Jogo>/Binaries/Win64/`, três níveis abaixo da raiz. O teto de entradas
-#: segura a busca num jogo de cem mil arquivos; ela roda no lançamento, e só
-#: quando o registro tem camada ligada.
 _FUNDO_DA_BUSCA = 4
 _TETO_DA_BUSCA = 20_000
 
@@ -799,18 +400,7 @@ def caminho_da_escolha(config_home: Path | None = None) -> Path:
 
 
 def camadas_da_steam_fora(config_home: Path | None = None) -> bool:
-    """O «Corrigir Vulkan» está ligado? A pergunta que o lançador também faz.
-
-    Ligado só com TODAS as linhas no arquivo: um arquivo pela metade entregaria
-    ao jogo uma camada só, e a pílula acesa diria as duas.
-
-    A LEITURA É A DO LANÇADOR, byte a byte (`camadas_da_steam_fora` em
-    `assets/hefesto-launch.sh`: `read -r` com `IFS=` vazio e `case` exato).
-    Linha partida só no `\\n`, sem aparar espaço e sem traduzir o `\\r\\n`: uma
-    linha com espaço no fim ou um arquivo salvo com `\\r\\n` não passa no
-    lançador, e a pílula não pode acender sobre o que o jogo não recebe. Byte
-    fora do UTF-8 noutra linha não muda nada no lançador, e aqui também não.
-    """
+    """O «Corrigir Vulkan» está ligado? A pergunta que o lançador também faz."""
     try:
         bruto = caminho_da_escolha(config_home).read_bytes()
     except OSError:
@@ -820,11 +410,7 @@ def camadas_da_steam_fora(config_home: Path | None = None) -> bool:
 
 
 def gravar_camadas_da_steam_fora(fora: bool, config_home: Path | None = None) -> None:
-    """Liga (as linhas, com tmp e `os.replace`) ou desliga (o arquivo sai).
-
-    LEVANTA `OSError` quando não consegue: é o clique dela, e a tela tem de
-    dizer que não pegou em vez de acender a pílula sobre nada.
-    """
+    """Liga (as linhas, com tmp e `os.replace`) ou desliga (o arquivo sai)."""
     alvo = caminho_da_escolha(config_home)
     if not fora:
         alvo.unlink(missing_ok=True)
@@ -841,14 +427,7 @@ def gravar_camadas_da_steam_fora(fora: bool, config_home: Path | None = None) ->
 
 
 def a_steam_instalou_as_camadas(home: Path | None = None) -> bool:
-    """A Steam pôs as camadas dela neste computador? Read-only, nunca levanta.
-
-    É o que dá sentido à linha do exame: sem os manifestos
-    (`steamoverlay_*.json`, `steamfossilize_*.json`) na pasta de camadas do
-    usuário, não há camada da Steam para o botão tirar, e a linha seria ruído.
-    Olha o `XDG_DATA_HOME` e o `~/.local/share`, as duas pastas que o
-    carregador lê.
-    """
+    """A Steam pôs as camadas dela neste computador? Read-only, nunca levanta."""
     lar = Path.home() if home is None else home
     pastas = [lar / ".local" / "share"]
     xdg = os.environ.get("XDG_DATA_HOME", "").strip()
@@ -864,12 +443,7 @@ def a_steam_instalou_as_camadas(home: Path | None = None) -> bool:
 
 
 def traz_o_carregador_da_khronos(pasta_do_jogo: Path) -> bool:
-    """A pasta do jogo traz o `vulkan-1.dll` da Khronos? Read-only, nunca levanta.
-
-    Busca em largura até `_FUNDO_DA_BUSCA` níveis e `_TETO_DA_BUSCA` entradas,
-    sem seguir link de pasta (um link para `/` não pode virar a busca do disco
-    inteiro). Pasta ausente é `False`: sem saber, o registro não se mexe.
-    """
+    """A pasta do jogo traz o `vulkan-1.dll` da Khronos? Read-only, nunca levanta."""
     alvo = CARREGADOR_DA_KHRONOS.lower()
     fila: list[tuple[Path, int]] = [(pasta_do_jogo, 0)]
     vistas = 0
@@ -894,31 +468,14 @@ def traz_o_carregador_da_khronos(pasta_do_jogo: Path) -> bool:
 
 
 def frase_do_estado(fora: bool) -> str:
-    """*"Sobreposição Vulkan: sem a da Steam"*, ou a Steam decide.
-
-    A linha que o exame da aba Sistema pinta
-    (`a09_sistema.linha_da_sobreposicao_vulkan`) e a que o desenho da aba
-    (`interface/aba09.py`) mostra na cena. UM dono para os dois — 26/09/2026:
-    o desenho digitava a sua própria linha, que prometia o que o A/B de 23/08
-    derrubou. Pura e stdlib, porque o gerador do desenho não sobe GTK.
-
-    **28/09/2026: a linha diz o que chega ao jogo.** Os três números de antes
-    (tirada, posta, prefixos vistos) contavam o registro do prefixo, que nenhum
-    jogo desta máquina lê; com o botão ligado ela dizia «nenhuma tirada», e a
-    tela contradizia o próprio botão.
-    """
+    """*"Sobreposição Vulkan: sem a da Steam"*, ou a Steam decide."""
     if fora:
         return "Sobreposição Vulkan: sem a da Steam"
     return "Sobreposição Vulkan: a Steam decide"
 
 
 def frase_do_ato(fora: bool) -> str:
-    """O recibo do clique no «Corrigir Vulkan» — o ato não se vê na hora.
-
-    As camadas saem do jogo que ABRIR depois do clique: o que está aberto já
-    carregou as dele, e a frase diz isso em vez de deixar ela procurar a mudança
-    no jogo da frente.
-    """
+    """O recibo do clique no «Corrigir Vulkan» — o ato não se vê na hora."""
     if fora:
         return ("Pronto: a sobreposição e o gravador de shaders da Steam ficam fora "
                 "dos jogos, a partir do próximo que abrir.")
@@ -927,22 +484,12 @@ def frase_do_ato(fora: bool) -> str:
 
 
 def ha_o_que_devolver(home: Path | None = None) -> bool:
-    """O estado diz que NÓS desligamos alguma camada de algum prefixo?
-
-    É o que decide se desligar o botão mexe no registro. Lê só o nosso arquivo
-    de estado: o censo dos prefixos custa um segundo, e quem confere camada a
-    camada é o `religar` de `aplicar_no_prefixo`.
-    """
+    """O estado diz que NÓS desligamos alguma camada de algum prefixo?"""
     return any(
         registro.get("feito") == "desligada"
         for camadas in ler_estado(home).values()
         for registro in camadas.values()
     )
-
-
-# --------------------------------------------------------------------------
-# Estado local — o que mexemos e, sobretudo, o que ela mandou MANTER
-# --------------------------------------------------------------------------
 
 
 def caminho_do_estado(home: Path | None = None) -> Path:
@@ -989,39 +536,13 @@ def gravar_estado(
         return
 
 
-#: O `feito` que a regra 2 CADUCA gravava, de 09/08/2026 a 16/09/2026. Nada
-#: mais o escreve; ele sobrevive só no estado já gravado na máquina de quem
-#: usou o produto nesse intervalo — e é por ele que `_e_escolha_dela` separa a
-#: escolha de verdade da inferência que o wineserver forjava.
 _FEITO_CADUCO = "religada-por-fora"
 
-#: A marca do religar da lista de exclusão: sem ``escolha``, e por isso NÃO é
-#: escolha dela (`_e_escolha_dela`) — tirado da lista, o jogo volta a ser curado.
 _FEITO_PELA_EXCLUSAO = "religada-pela-exclusao"
 
 
 def _e_escolha_dela(registro_dela: dict[str, str]) -> bool:
-    """O `manter` deste registro veio de um GESTO dela, ou de uma inferência?
-
-    **É esta função que distingue os dois `manter` do estado já gravado**, e a
-    distinção não precisa de migração nem de adivinhação: o próprio campo
-    `feito` diz quem escreveu a linha.
-
-    - `feito: "religada"` — escreveu o ramo `religar=True`, que só o BOTÃO
-      «devolver» alcança (`interface/pacotes/a09_sistema.py`, gesto
-      `procurar-camadas`, que chama `curar_todos(religar=True, forcar=True)`).
-      Isso é gesto explícito dela e continua valendo para sempre.
-    - `feito: "religada-por-fora"` — escreveu a regra 2, que caducou em
-      16/09/2026 (ver o docstring do módulo). O registro sozinho não sabia
-      diferenciar o `wineserver` de uma pessoa, então essa linha não prova
-      escolha nenhuma e **deixa de travar o gancho de lançamento**.
-
-    O estado antigo não é reescrito por aqui de propósito: a linha caduca
-    simplesmente para de ser obedecida, e o primeiro lançamento que refizer a
-    cura a substitui por `desligada`. Migração que reescreve arquivo do usuário
-    para corrigir o próprio engano é risco sem ganho — o `feito` já carrega a
-    resposta.
-    """
+    """O `manter` deste registro veio de um GESTO dela, ou de uma inferência?"""
     if registro_dela.get("escolha") != "manter":
         return False
     return registro_dela.get("feito") != _FEITO_CADUCO
@@ -1033,25 +554,8 @@ def _agora() -> str:
 
 
 def chave_de_estado(chave: str, caminho_windows: str) -> str:
-    """Identidade de UMA entrada no estado local: a chave do registro E o caminho.
-
-    O caminho sozinho NÃO identifica uma entrada — o mesmo manifesto pode estar
-    registrado na chave de 64 bits e na de 32 com valores diferentes, e foi
-    exatamente isso que quebrou a reversibilidade byte a byte antes de
-    23/08/2026 (o `valor_antes` do segundo sobrescrevia o do primeiro, e
-    devolver restaurava os dois para o mesmo número). O motivo longo está em
-    `_reescrever`.
-
-    O separador é `|` porque o Windows o PROÍBE em nome de arquivo e de pasta,
-    e as duas chaves de registro são constantes deste módulo — nenhum dos dois
-    lados pode contê-lo, então a junção nunca fica ambígua.
-    """
+    """Identidade de UMA entrada no estado local: a chave do registro E o caminho."""
     return f"{chave}|{caminho_windows}"
-
-
-# --------------------------------------------------------------------------
-# Escrita no registro
-# --------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -1071,29 +575,7 @@ class Resultado:
 
 
 def _reescrever(registro: Path, alvos: dict[tuple[str, str], str]) -> None:
-    """Troca o dword das entradas nomeadas em `alvos`, e só delas.
-
-    `alvos` é `{(chave_do_registro, caminho_windows_desescapado): novo_dword}`.
-    A troca só vale DENTRO das duas seções de `ImplicitLayers`: um caminho que
-    apareça em outra chave do registro (o driver em `…\\Vulkan\\Drivers` é o
-    caso real) passa intocado, por construção e não por sorte.
-
-    **A chave entra no alvo, e isso é correção de defeito medido (23/08/2026),
-    não zelo.** Enquanto o alvo era só o caminho, `alvos.get(caminho)` casava
-    a MESMA linha nas DUAS seções — e o mesmo manifesto pode estar registrado
-    na chave de 64 e na de 32 bits com valores DIFERENTES. Medido num prefixo
-    de mentira: entrada de 64 em `dword:00000000` (ligada, candidata) e a de 32
-    em `dword:00000003` (já desligada, classificada `e_sobra=False`); curar
-    escrevia `00000001` nas DUAS, inclusive na que o próprio módulo tinha dito
-    que não ia tocar, e devolver trazia as duas para `00000000` — ou seja, a
-    reversibilidade byte a byte quebrava e a segunda entrada saía LIGADA sem
-    nunca ter estado. Portão:
-    `test_o_mesmo_manifesto_nas_duas_chaves_nao_contamina_a_outra`.
-
-    Backup ao lado, escrita em tmp e `os.replace` no fim — o `system.reg` não
-    pode existir pela metade nem por um instante, porque o Wine pode lê-lo a
-    qualquer momento.
-    """
+    """Troca o dword das entradas nomeadas em `alvos`, e só delas."""
     texto = registro.read_text(encoding="utf-8", errors="replace")
     saida: list[str] = []
     chave_atual: str | None = None
@@ -1133,46 +615,7 @@ def aplicar_no_prefixo(
     home: Path | None = None,
     pela_exclusao: bool = False,
 ) -> Resultado:
-    """Desliga (ou religa) as camadas sobrando deste prefixo.
-
-    ``pela_exclusao`` (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01,
-    21/09/2026): religa o que NÓS desligamos, como o «devolver», mas SEM
-    gravar ``escolha: manter``. O jogo que ela exclui do Hefesto recebe de
-    volta as camadas que ele tinha; quando ela o tira da lista, o gancho de
-    lançamento volta a curar — a exclusão não pode virar uma escolha
-    permanente que ela nunca fez.
-
-    Duas regras, e as duas são pedido dela:
-
-    1. **A escolha dela vence a automação, e só ela conta como escolha.**
-       Camada marcada `manter` pelo BOTÃO «devolver» nunca é desligada de novo
-       — é o que impede o gancho de lançamento de desfazer, no jogo seguinte, o
-       que ela devolveu de propósito. Quem decide se um `manter` é dela mesmo é
-       `_e_escolha_dela`, e não o simples fato de a camada estar ligada.
-    2. **Gesto explícito na interface manda.** `forcar=True` (o botão) limpa o
-       `manter` e desliga — "a vontade da GUI prevalece", regra dela de
-       09/08/2026. O gancho de lançamento nunca força.
-
-    **A REGRA 2 DE 09/08/2026 CADUCOU EM 16/09/2026, e a numeração acima já é a
-    nova.** Ela dizia: *"religar por fora também conta como escolha — se o
-    registro mostra LIGADA uma camada que NÓS desligamos, alguém a religou sem
-    passar por aqui; marque `manter` e saia, não desligue de novo"*. Era pedido
-    dela e foi medida, então fica escrita aqui em vez de sumir.
-
-    O que a derrubou: **a premissa "alguém religou" era falsa na maioria das
-    vezes**. O Wine mantém o registro do prefixo em memória e o regrava ao
-    sair, devolvendo a camada a `dword:00000000` sozinho — byte por byte o
-    mesmo que uma pessoa editando o `system.reg` à mão. A regra lia isso como
-    gesto dela e gravava `manter` PERMANENTE, de modo que o prefixo curado uma
-    vez e reaberto uma vez nunca mais era curado — o contrário do que o
-    docstring do módulo prometia (*"o próximo lançamento a refaz"*).
-
-    Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o
-    botão devolver é permanente. O botão vira a única voz de escolha e o
-    wineserver perde o voto."* Quem edita o registro à mão e quer que fique
-    clica em «devolver» — o botão já existe, e nenhuma tela mudou por causa
-    disto.
-    """
+    """Desliga (ou religa) as camadas sobrando deste prefixo."""
     estado = ler_estado(home)
     memoria = dict(estado.get(prefixo.appid, {}))
     alvos: dict[tuple[str, str], str] = {}
@@ -1204,11 +647,6 @@ def aplicar_no_prefixo(
             if not forcar and _e_escolha_dela(registro_dela):
                 respeitadas.append(camada.nome_curto)
                 continue
-            # NÓS DESLIGAMOS E ELA ESTÁ LIGADA DE NOVO: não há como saber se
-            # foi o `wineserver` ou uma pessoa, então refazemos a cura — é a
-            # decisão dela de 16/09/2026, e o caminho de volta é o botão
-            # «devolver». Antes daquela data havia aqui um ramo que marcava
-            # `manter` e saía; ver o docstring desta função.
             alvos[(camada.chave, camada.caminho_windows)] = _DESLIGADA_DWORD
             desligadas.append(camada.nome_curto)
             memoria[marca] = {
@@ -1223,7 +661,6 @@ def aplicar_no_prefixo(
             gravar_estado(estado, home)
         return Resultado(appid=prefixo.appid, respeitadas=tuple(respeitadas))
 
-    # Cinto: nem por engano de chamador o driver do Wine entra na escrita.
     for _chave, caminho in alvos:
         if _e_o_driver(caminho):
             return Resultado(
@@ -1253,22 +690,7 @@ def curar_todos(
     forcar: bool = True,
     excluir: Collection[str] = (),
 ) -> list[Resultado]:
-    """Passa em todos os prefixos desta máquina. É o que o botão chama.
-
-    ``excluir``: os appids da lista de exclusão do Hefesto (21/09/2026). O
-    botão não toca no prefixo de um jogo que ela tirou do Hefesto — quem o
-    chama lê a lista, porque este arquivo roda também como cópia avulsa, sem o
-    pacote no caminho.
-
-    **O APPID SÓ VALE NO `compatdata`, E O CAMINHO NO RESTO — 02/10/2026,
-    A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01.** O `appid` de um prefixo de fora da
-    Steam é o NOME da pasta (o título do jogo no Heroic), e dois prefixos com a
-    mesma pasta em casas diferentes eram o mesmo para esta comparação: medido
-    num lar de mentira, a exclusão de um jogo do Heroic pulava também o
-    prefixo de outra casa. Agora o número da Steam se compara só com os prefixos
-    de `compatdata`, e os demais pelo caminho resolvido
-    (`lista_de_exclusao.ids_dos_prefixos` manda os dois).
-    """
+    """Passa em todos os prefixos desta máquina. É o que o botão chama."""
     fora = {str(a).strip() for a in excluir}
     da_steam: set[Path] = set()
     for pasta in pastas_compatdata(home):
@@ -1296,23 +718,11 @@ def curar_um_prefixo(
     home: Path | None = None,
     forcar: bool = False,
 ) -> Resultado:
-    """Um prefixo, sem enumerar nada — o motor do gancho de lançamento.
-
-    Sem `forcar`, o `manter` do estado vence (regra 1 de `aplicar_no_prefixo`).
-    O gancho força desde 28/09/2026: ele só chega aqui com o «Corrigir Vulkan»
-    ligado, e a escolha ligada é a voz dela (`main`, modo `--prefixo`). `home`
-    existe só para o teste poder montar uma casa inteira em `tmp_path`; em
-    produção fica `None` e o estado sai do XDG.
-    """
+    """Um prefixo, sem enumerar nada — o motor do gancho de lançamento."""
     prefixo = prefixo_de_jogo(raiz, appid=appid)
     if not prefixo.sobras:
         return Resultado(appid=prefixo.appid)
     return aplicar_no_prefixo(prefixo, forcar=forcar, home=home)
-
-
-# --------------------------------------------------------------------------
-# CLI — usada pelo gancho de lançamento, pelo install/uninstall e pelo doctor
-# --------------------------------------------------------------------------
 
 
 def _linha_de_relatorio(prefixo: PrefixoDeJogo) -> list[str]:
@@ -1361,14 +771,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.prefixo:
-        # O REGISTRO SÓ SE MEXE NO JOGO QUE TRAZ O CARREGADOR DA KHRONOS — 28/09.
-        # Sem a pasta do jogo não há como saber, e a resposta é não mexer: o
-        # gancho que editava todo prefixo em todo lançamento saiu.
         if not args.jogo or not traz_o_carregador_da_khronos(Path(args.jogo)):
             return 0
-        # `--appid ""` chega assim do gancho de lançamento quando a Steam não
-        # exportou `SteamAppId`; vazio vira `None` para o nome do diretório
-        # valer, em vez de gravar o estado sob uma chave em branco.
         resultado = curar_um_prefixo(
             Path(args.prefixo), appid=args.appid or None, forcar=True)
         if resultado.erro:
@@ -1379,10 +783,6 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if not sabe_enumerar():
-        # A cópia avulsa instalada não alcança o irmão que lê o
-        # `libraryfolders.vdf`, e sem ele não há lista de jogos. Dizer "não
-        # achei nada" aqui seria mentira do instrumento; o modo `--prefixo`,
-        # que é o do gancho de lançamento, continua inteiro porque não enumera.
         print(
             "esta cópia não consegue listar os jogos (falta o módulo irmão "
             "steam_launch_options); só o modo --prefixo funciona aqui",

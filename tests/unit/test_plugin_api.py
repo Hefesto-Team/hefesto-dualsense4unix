@@ -1,17 +1,4 @@
-"""Testes unitarios do sistema de plugins (FEAT-PLUGIN-01).
-
-Cobre:
-  - load_plugins_from_dir: carregamento via diretório tmp_path.
-  - on_load called com PluginContext valido.
-  - on_tick chamado pelo PluginsSubsystem.tick().
-  - Watchdog: hook lento acima de 3 vezes desativa plugin.
-  - BUTTON_DOWN e BATTERY_CHANGE despachados corretamente.
-  - Plugin com profile_match não recebe tick de perfil fora da lista.
-  - Arquivo invalido (SyntaxError) não quebra o loader.
-  - Plugin sem atributo name e ignorado.
-  - PluginContext: ControllerProxy delega para IController mock.
-  - PluginsSubsystem.list_plugins() retorna descrição correta.
-"""
+"""Testes unitarios do sistema de plugins (FEAT-PLUGIN-01)."""
 from __future__ import annotations
 
 import time
@@ -28,10 +15,6 @@ from hefesto_dualsense4unix.daemon.subsystems.plugins import PluginsSubsystem, _
 from hefesto_dualsense4unix.plugin_api import Plugin, PluginContext
 from hefesto_dualsense4unix.plugin_api.context import ControllerProxy, make_plugin_context
 from hefesto_dualsense4unix.plugin_api.loader import load_plugins_from_dir
-
-# ---------------------------------------------------------------------------
-# Auxiliares
-# ---------------------------------------------------------------------------
 
 
 def _mk_state(battery: int = 80, buttons: frozenset[str] | None = None) -> ControllerState:
@@ -80,11 +63,6 @@ class PluginTeste(Plugin):
 
 {extra}
 """
-
-
-# ---------------------------------------------------------------------------
-# Testes de loader
-# ---------------------------------------------------------------------------
 
 
 def test_load_plugins_from_dir_carrega_plugin(tmp_path: Path) -> None:
@@ -136,11 +114,6 @@ def test_load_plugins_sem_subclasse_skipped(tmp_path: Path) -> None:
     assert plugins == []
 
 
-# ---------------------------------------------------------------------------
-# Testes de PluginContext / ControllerProxy
-# ---------------------------------------------------------------------------
-
-
 def test_controller_proxy_delega_set_led() -> None:
     """ControllerProxy.set_led deve chamar IController.set_led."""
     ctrl = _mk_controller_mock()
@@ -167,11 +140,6 @@ def test_make_plugin_context_retorna_instancia() -> None:
     assert ctx.log is not None
 
 
-# ---------------------------------------------------------------------------
-# Testes de on_load
-# ---------------------------------------------------------------------------
-
-
 def test_on_load_chamado_com_ctx(tmp_path: Path) -> None:
     """on_load deve ser chamado com PluginContext valido."""
     (tmp_path / "p.py").write_text(_plugin_py_content("p_load"))
@@ -185,13 +153,7 @@ def test_on_load_chamado_com_ctx(tmp_path: Path) -> None:
     ctx = make_plugin_context(plugin.name, ctrl, bus, store)
     plugin.on_load(ctx)
 
-    # Verifica que on_load foi executado (classe rastreia contador)
     assert plugin.__class__.chamadas_on_load >= 1
-
-
-# ---------------------------------------------------------------------------
-# Testes de PluginsSubsystem
-# ---------------------------------------------------------------------------
 
 
 def _mk_subsystem_with_plugin(plugin: Plugin) -> PluginsSubsystem:
@@ -252,11 +214,9 @@ def test_tick_respeita_profile_match() -> None:
     plugin = PluginFiltrado()
     ps = _mk_subsystem_with_plugin(plugin)
 
-    # Perfil ativo diferente: não deve receber tick.
     ps.tick(_mk_state(), active_profile="darksouls")
     assert PluginFiltrado.ticks_filtrado == 0
 
-    # Perfil ativo compativel: deve receber tick.
     ps.tick(_mk_state(), active_profile="eldenring")
     assert PluginFiltrado.ticks_filtrado == 1
 
@@ -289,7 +249,7 @@ def test_watchdog_desativa_plugin_apos_3_ticks_lentos() -> None:
 
         def on_tick(self, state: Any) -> None:
             self.__class__.chamadas += 1
-            time.sleep(0.010)  # 10 ms > 5 ms limite
+            time.sleep(0.010)
 
     PluginLento.chamadas = 0
     plugin = PluginLento()
@@ -299,7 +259,6 @@ def test_watchdog_desativa_plugin_apos_3_ticks_lentos() -> None:
         entry.call_on_tick(_mk_state())
 
     assert entry.disabled is True
-    # Tick adicional apos desativação: não deve chamar on_tick.
     PluginLento.chamadas_antes = PluginLento.chamadas
     entry.call_on_tick(_mk_state())
     assert PluginLento.chamadas == PluginLento.chamadas_antes
@@ -317,9 +276,7 @@ def test_watchdog_reset_apos_tick_rapido() -> None:
             contagem["rapidos"] += 1
 
     entry = _PluginEntry(PluginHibrid())
-    # Simula 2 ticks lentos (não chega ao threshold de 3).
     entry._slow_ticks = 2
-    # Tick rapido deve zerar contador.
     entry.call_on_tick(_mk_state())
     assert entry._slow_ticks == 0
     assert entry.disabled is False
@@ -351,11 +308,6 @@ def test_plugin_desativado_nao_recebe_tick() -> None:
     assert _SimplePlugin.ticks == 0
     assert _SimplePlugin.buttons == []
     assert _SimplePlugin.battery_events == []
-
-
-# ---------------------------------------------------------------------------
-# Testes de integração via loader + subsystem
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

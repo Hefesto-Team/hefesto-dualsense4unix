@@ -73,12 +73,7 @@ def test_ha_um_dono_so_e_o_mesa_viva_o_le():
 
 
 def test_um_transporte_novo_aparece_cru_em_vez_de_sumir():
-    """Um daemon mais recente tem de conseguir mostrar o que trouxe.
-
-    MORDIDA: faça o dono devolver a frase do "não sei" para o que o mapa não
-    conhece e esta régua reprova — um transporte novo ficaria escondido atrás de
-    uma frase genérica, e ninguém saberia que ele existe.
-    """
+    """Um daemon mais recente tem de conseguir mostrar o que trouxe."""
     assert mesa_viva._via_do_transporte("dock") == "dock"
 
 

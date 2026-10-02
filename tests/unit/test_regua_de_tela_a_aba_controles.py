@@ -1,48 +1,4 @@
-"""A PRIMEIRA RÉGUA DE TELA: a aba Controles, dirigida por dentro.
-
-Pedido dela, 29/08/2026: *"temos que ter no nosso hook do novo dev algo que
-induza a construção de validações via interface pra ver se tal problema foi
-resolvido ou se tal coisa traz regressão"*. Este módulo é o primeiro exemplar do
-gênero, e o instrumento que ele usa é ``scripts/regua_de_tela.py``.
-
-**Régua se prova contra defeito conhecido.** Os quatro que este arquivo cobre
-foram achados nesta casa em 29/08/2026, e cada um está preso a uma medição:
-
-(a) O ``or 128``. ``mesa_viva._eixo_do_analogico`` era
-    ``int(inputs.get(nome) or 128)``, e ``0 or 128`` é ``128``: o zero — que num
-    analógico é o EXTREMO — virava o CENTRO. Erro de 128 unidades, o máximo
-    possível. Curado; :func:`test_o_extremo_do_analogico_nao_e_o_centro` reprova
-    se voltar, e reprova **pela tela**: o que ele mede é onde o ponto está
-    desenhado, não o que a função devolve.
-
-(b) A geometria dos analógicos. Sem o ``transform:translate(-50%,-50%)`` do
-    ``.stick .p`` o ponto era posicionado pelo CANTO: cru 0 e cru 255 davam
-    -43,5 px e +52,5 px — 7 px vazando para fora de um lado e 9 px sobrando do
-    outro. Com a cura os dois lados dão ±48 px.
-
-(c) Os três botões de som. O 🎙, o ♪ e o "Liberar" tinham ``cursor:pointer``,
-    eram pintados, e **não tinham ouvinte**: dois cliques sintéticos produziram
-    ZERO gestos enquanto os botões de rota, ao lado, ecoavam. A régua de então
-    dava VERDE sobre dois botões mortos porque nunca os tocava. E o "Liberar"
-    tem de nascer TRAVADO: sem posse do mudo não há o que devolver ao kernel.
-
-(d) A mordida, nas duas metades que o piloto já tinha: sem a ponte a tela fica
-    na cena FIXA do mockup (quatro controles, perfil sem nome); e com os
-    ``data-*`` arrancados a pintura DESABA. Se qualquer uma das duas não
-    acontecer, o dado não estava vindo do Python.
-
-COMO MORDER ESTE ARQUIVO (e é assim que ele foi provado, numa cópia da árvore):
-
-    (a) ``mesa_viva._eixo_do_analogico``  → ``return int(inputs.get(nome) or 128)``
-    (b) ``aba02``, no ``.stick .p``       → tire o ``transform:translate(-50%,-50%)``
-    (c) ``controles_vivos.BOOTSTRAP``     → apague o laço ``for(const b of qa('[data-mudo]'))``
-    (d) ``controles_vivos.BOOTSTRAP``     → faça ``txt``/``est`` devolverem 1 sempre
-
-O QUE ESTE MÓDULO NÃO PROVA: nada de pixel (ver ``O_QUE_ELE_NAO_FAZ`` no
-instrumento), nada de ``:hover`` e nada das outras nove abas. Ele também **pula**
-onde não há servidor gráfico, WebKit2 4.1 ou o ``novo-layout/`` (que é
-``.gitignore:108``) — e um pulo não é um verde: o resumo do pytest o nomeia.
-"""
+"""A PRIMEIRA RÉGUA DE TELA: a aba Controles, dirigida por dentro."""
 from __future__ import annotations
 
 import importlib
@@ -56,9 +12,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# A guarda vem ANTES da ponte: `gui.ponte_da_tela` carrega o GTK e o WebKit2
-# no import, e depois dela a guarda chegava tarde — sem PyGObject o módulo
-# errava na coleta em vez de pular (corrida 36119169814, 25/09/2026).
 exigir_gi_real("RÉGUA-DE-TELA-01 — a aba Controles dirigida por dentro")
 
 from hefesto_dualsense4unix.gui import ponte_da_tela
@@ -87,26 +40,6 @@ try:
 except regua_de_tela.MockupAusente as _erro:
     pytest.skip(f"RÉGUA-DE-TELA-01: {_erro}", allow_module_level=True)
 
-#: O piloto e o gerador da aba são usados como BIBLIOTECA. Reusar é a regra
-#: desta casa: copiar o `_pacote_do_card` para cá criaria uma segunda verdade
-#: sobre o que a tela recebe, e a régua deixaria de sentir quem quebrasse o
-#: original.
-#:
-#: **ESTA RÉGUA ESTAVA MORTA E CALADA — medido em 06/09/2026.** A linha dizia
-#: `PAGINA.parent / "_ferramentas"`, que era certo enquanto os geradores moravam
-#: em `layout/_ferramentas/`. A pasta foi aposentada em 31/08 e eles passaram a
-#: morar em `src/hefesto_dualsense4unix/interface/`; a pasta velha deixou de
-#: existir, o `sys.path.insert` apontou para o nada, o import falhou e o teste
-#: virou `skip`. Um `skip` não aparece em vermelho nenhum: a régua da aba 02
-#: atravessou uma semana de mudanças de tela sem medir uma linha, e quem a viu
-#: no sumário leu "1 skipped" como ambiente sem WebKit.
-#:
-#: A PASTA SE DERIVA DA PÁGINA, e não se soletra: o `achar_a_aba` pode devolver
-#: a cópia de OUTRA árvore (é ele quem decide, pela mais nova), e as ferramentas
-#: têm de ser as daquela mesma árvore — medir o HTML de uma e o gerador de outra
-#: é a armadilha do `PYTHONPATH` (`test_a_suite_mede_esta_arvore.py`). A página mora em
-#: `<árvore>/mockup/` ou em `<árvore>/src/…/interface/paginas/`; nos dois casos
-#: a raiz é o primeiro ancestral que tem `src/hefesto_dualsense4unix/interface`.
 def _ferramentas_da_pagina(pagina: pathlib.Path) -> pathlib.Path:
     for base in pagina.parents:
         alvo = base / "src" / "hefesto_dualsense4unix" / "interface"
@@ -117,18 +50,6 @@ def _ferramentas_da_pagina(pagina: pathlib.Path) -> pathlib.Path:
 
 FERRAMENTAS = _ferramentas_da_pagina(PAGINA)
 sys.path.insert(0, str(FERRAMENTAS))
-#: AUSÊNCIA É SKIP; DEFEITO É VERMELHO — e a diferença é a régua inteira.
-#:
-#: Este bloco pegava `Exception` e virava tudo em `skip`. Medido em 06/09/2026,
-#: na mordida: com o `KeyError: 'cabo'` VIVO no gerador da aba — a chave de
-#: `TAXA_DO_GIRO` indexada com a palavra da tela —, esta régua não reprovava.
-#: Ela dizia `1 skipped`, e quem lesse o sumário entenderia "ambiente sem
-#: WebKit". O defeito que a régua existe para pegar era exatamente o que a
-#: desligava.
-#:
-#: `ImportError` é ambiente (o pacote não está aqui) e continua sendo skip.
-#: Qualquer outra exceção é o CÓDIGO desta casa quebrando ao ser importado, e
-#: isso é vermelho — a mensagem diz o tipo e o arquivo, para não virar charada.
 try:
     mesa_viva = importlib.import_module("mesa_viva")
     aba02 = importlib.import_module("aba02")
@@ -139,31 +60,21 @@ except ImportError as _erro:  # pragma: no cover — árvore sem o piloto
         f"({type(_erro).__name__}: {_erro})",
         allow_module_level=True,
     )
-except Exception as _erro:  # o gerador quebrou — isto NÃO é ambiente
+except Exception as _erro:
     raise AssertionError(
         f"RÉGUA-DE-TELA-01: o gerador da aba 02 quebrou ao ser importado de "
         f"{FERRAMENTAS} — {type(_erro).__name__}: {_erro}. Isto não é ambiente "
         "sem WebKit: é código desta casa, e vira vermelho de propósito."
     ) from _erro
 
-#: A faixa sintética da casa (`scripts/check_faixa_sintetica.py`). Nenhum
-#: endereço real entra em arquivo versionado, e a mesa deste teste é inventada.
 UNIQ = ("aabbcc000001", "aabbcc000002")
 
-#: O centro do curso de um analógico. `0` e `255` são os EXTREMOS.
 CENTRO, MINIMO, MAXIMO = 128, 0, 255
 
-#: O deslocamento do ponto no fim do curso, MEDIDO em 29/08/2026 na aba de hoje:
-#: o círculo tem 100 px de caixa e 2 px de borda, então o ponto — centrado pelo
-#: `translate(-50%,-50%)` — vai de 257 px a 353 px num círculo cujo centro é
-#: 305 px. Os dois lados dão 48. A tolerância é de meio pixel.
 DESLOCAMENTO_NO_FIM = 48.0
 FOLGA = 0.6
 
 
-# ---------------------------------------------------------------------------
-# A mesa de mentira
-# ---------------------------------------------------------------------------
 def _entrada(
     indice: int,
     *,
@@ -222,16 +133,7 @@ def _estado(**kwargs: Any) -> dict[str, Any]:
 
 
 class _PonteNaRegua(ponte_da_tela.PonteDaTela):
-    """A ponte DE PRODUÇÃO com o transporte trocado.
-
-    Desde 29/08/2026 a janela, as duas pontes e a guarda de carga saíram do
-    piloto para `gui/ponte_da_tela.py`, e o `_remontar`/`_pintar` do piloto
-    falam por ela. Esta subclasse troca SÓ o `rodar` — o WebView próprio pelo
-    `executar` da régua — e herda tudo o mais: a serialização em JSON, uma
-    chamada por pacote e a recusa do gesto malformado. **Reescrever `dizer`
-    aqui criaria a segunda verdade** sobre o que a tela recebe, que é o defeito
-    que a extração existe para não cometer.
-    """
+    """A ponte DE PRODUÇÃO com o transporte trocado."""
 
     def __init__(self, tela: Any, ao_receber: Any) -> None:
         self.canal = ponte_da_tela.CANAL_PADRAO
@@ -247,15 +149,7 @@ class _PonteNaRegua(ponte_da_tela.PonteDaTela):
 
 
 class CabecaDeMentira(controles_vivos.Janela):
-    """O lado Python do piloto, sem a janela dele.
-
-    Herda de :class:`controles_vivos.Janela` de propósito e **não** chama o
-    ``__init__`` — aquele abre uma janela GTK própria e fala com o daemon dela.
-    O que se herda é o que interessa: ``_remontar``, ``_pintar``,
-    ``_pacote_do_card`` e ``_gesto``, verbatim. Assim a régua mede o MESMO
-    código que a interface roda, e quem quebrar qualquer um dos quatro é pego
-    aqui em vez de na tela dela.
-    """
+    """O lado Python do piloto, sem a janela dele."""
 
     def __init__(self, tela: Any) -> None:
         self.tela = tela
@@ -271,21 +165,8 @@ class CabecaDeMentira(controles_vivos.Janela):
         self.lento = {}
         self.mic = None
 
-    # -- o que a régua acrescenta -----------------------------------------
     def pintar(self, state: dict[str, Any], *, remontar: bool = True) -> int:
-        """Remonta e pinta a mesa daquele `state`. Devolve os valores escritos.
-
-        O `__hefN` volta a -1 antes de cada pintura porque o bootstrap só
-        relata quando a conta MUDA — sem isso, a segunda pintura de um mesmo
-        desenho passaria calada e a régua leria "nenhum valor escrito".
-
-        ``remontar=False`` PINTA SEM RECONSTRUIR O HTML, e não é conforto: a
-        remontagem troca o `innerHTML` do corpo pelo que o gerador emite, ou
-        seja, ela DEVOLVE todo `data-*` que se tenha arrancado. Foi assim que a
-        primeira versão da mordida do endereço deu 121 → 121 e mediu a si
-        mesma. O piloto tem a mesma disciplina: só remonta quando a chave da
-        mesa muda, e no resto do tempo faz diff.
-        """
+        """Remonta e pinta a mesa daquele `state`. Devolve os valores escritos."""
         conectados = mesa_viva.controles_conectados(state)
         mesa = mesa_viva.mesa_do_estado(state, {})
         estados = {
@@ -310,12 +191,7 @@ class CabecaDeMentira(controles_vivos.Janela):
         return int(pintou.objeto["valores"])
 
     def ouvir(self, recados: list[Any]) -> None:
-        """Entrega à cabeça o que a tela mandou — e o eco volta para a tela.
-
-        É o outro sentido da ponte, e sem ele a prova pararia na metade: o
-        "Liberar" só destrava porque o 🎙 assumiu a posse **no Python** e o eco
-        voltou. Quem faz a conta é o `_da_tela` do piloto, sem cópia.
-        """
+        """Entrega à cabeça o que a tela mandou — e o eco volta para a tela."""
         for recado in recados:
             self.ponte.receber_texto(recado.bruto)
         self.tela.avancar(0.2)
@@ -326,11 +202,7 @@ def _cartao(indice: int = 0) -> str:
 
 
 def _desvio_do_ponto(tela: Any, lado: str, indice: int = 0) -> float:
-    """Quantos pixels o ponto está à direita do centro do círculo.
-
-    Negativo é para a esquerda. É a medida que interessa: a posição ABSOLUTA
-    muda com o layout, a relativa ao próprio círculo é a promessa do desenho.
-    """
+    """Quantos pixels o ponto está à direita do centro do círculo."""
     circulo = tela.medir(f'{_cartao(indice)} .stick[data-stick="{lado}"]')
     ponto = tela.medir(f'{_cartao(indice)} .stick[data-stick="{lado}"] .p')
     return ponto.centro[0] - circulo.centro[0]
@@ -342,16 +214,9 @@ def _desvio_vertical(tela: Any, lado: str, indice: int = 0) -> float:
     return ponto.centro[1] - circulo.centro[1]
 
 
-# ---------------------------------------------------------------------------
-# A bancada
-# ---------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def bancada():
-    """Uma aba aberta e a ponte instalada — uma vez para o módulo inteiro.
-
-    Abrir um WebView por teste custa ~1,5 s cada; a mesa é repintada entre os
-    testes, que é o que a interface faz de verdade dez vezes por segundo.
-    """
+    """Uma aba aberta e a ponte instalada — uma vez para o módulo inteiro."""
     with regua_de_tela.Tela(PAGINA, titulo_esperado="Hefesto") as tela:
         tela.executar(controles_vivos.BOOTSTRAP)
         yield tela, CabecaDeMentira(tela)
@@ -369,18 +234,8 @@ def mesa(bancada):
     return tela, cabeca
 
 
-# ---------------------------------------------------------------------------
-# (a) O `or 128` — o extremo não pode aparecer como centro
-# ---------------------------------------------------------------------------
 def test_o_extremo_do_analogico_nao_e_o_centro(mesa):
-    """Cru 0 nos dois eixos: a tela tem de mostrar 0 e desenhar no canto.
-
-    A DIFERENÇA ENTRE ESTA RÉGUA E UM TESTE DE UNIDADE: se
-    `_eixo_do_analogico` voltar a ser `or 128`, um teste de unidade da função
-    pega; um teste do desenho também tem de pegar, porque o caminho inteiro —
-    IPC, `estado_do_card`, `_pacote_do_card`, `HEF.pinta`, CSS — é onde ela
-    olha. Aqui o zero é lido de volta DA TELA.
-    """
+    """Cru 0 nos dois eixos: a tela tem de mostrar 0 e desenhar no canto."""
     tela, cabeca = mesa
     cabeca.pintar(_estado(lx=MINIMO, ly=MINIMO))
 
@@ -398,28 +253,15 @@ def test_o_extremo_do_analogico_nao_e_o_centro(mesa):
 
 
 def test_o_analogico_no_centro_fica_no_centro(mesa):
-    """A outra metade da mesma régua: 128 tem de ficar no meio, e fica.
-
-    Sem este par, apagar a cura do `or 128` e pôr um `or 0` no lugar passaria:
-    o extremo iria para o canto e o centro iria junto.
-    """
+    """A outra metade da mesma régua: 128 tem de ficar no meio, e fica."""
     tela, cabeca = mesa
     cabeca.pintar(_estado(lx=CENTRO, ly=CENTRO))
     assert abs(_desvio_do_ponto(tela, "l")) < 1.0
     assert abs(_desvio_vertical(tela, "l")) < 1.0
 
 
-# ---------------------------------------------------------------------------
-# (b) A geometria: os dois extremos têm de ser simétricos
-# ---------------------------------------------------------------------------
 def test_os_dois_extremos_do_analogico_sao_simetricos(mesa):
-    """Cru 0 e cru 255 têm de dar o MESMO deslocamento, com sinais trocados.
-
-    Antes da cura o ponto era posicionado pelo canto e não pelo centro:
-    -43,5 px de um lado e +52,5 px do outro — 7 px vazando para fora do círculo
-    num extremo e 9 px sobrando no outro. A assimetria é o defeito; o ±48 é o
-    valor medido depois da cura.
-    """
+    """Cru 0 e cru 255 têm de dar o MESMO deslocamento, com sinais trocados."""
     tela, cabeca = mesa
     cabeca.pintar(_estado(lx=MINIMO, ly=CENTRO, rx=MAXIMO, ry=CENTRO))
 
@@ -444,19 +286,7 @@ def test_os_dois_extremos_do_analogico_sao_simetricos(mesa):
 
 
 def test_o_ponto_vaza_o_mesmo_tanto_nos_dois_extremos(mesa):
-    """A consequência visível da assimetria, dita como ela aparece na tela.
-
-    O ponto tem 9 px e a borda do círculo tem 2 px, então no fim do curso ele
-    SEMPRE sobra um pouco para fora — 2,5 px de cada lado, e isso é o desenho,
-    não defeito. O defeito era a sobra ser DIFERENTE nas duas pontas: com o
-    ponto posicionado pelo canto, num extremo ele entrava 2 px e no outro saía
-    7 px. Exigir "sobra zero" reprovaria a tela curada; o que se exige é
-    simetria.
-
-    Esta primeira versão do teste EXIGIA sobra zero e reprovou a árvore sã. Fica
-    escrito: uma régua que reprova a cura em vez do defeito é o modo de falha
-    mais caro desta casa, e ela se pega comparando com a medida real.
-    """
+    """A consequência visível da assimetria, dita como ela aparece na tela."""
     tela, cabeca = mesa
     cabeca.pintar(_estado(lx=MINIMO, ly=CENTRO, rx=MAXIMO, ry=CENTRO))
 
@@ -482,28 +312,9 @@ def test_o_ponto_vaza_o_mesmo_tanto_nos_dois_extremos(mesa):
     )
 
 
-# ---------------------------------------------------------------------------
-# (c) Os três botões de som — e o "Liberar" que nasce travado
-# ---------------------------------------------------------------------------
 def test_os_tres_botoes_de_som_existem_na_tela(mesa):
-    """Antes de perguntar se respondem, perguntar se estão lá.
-
-    Um seletor que não casa é ERRO nesta régua, nunca silêncio — foi o silêncio
-    que deixou o `--prova-gesto` dar verde sobre dois botões mortos.
-    """
+    """Antes de perguntar se respondem, perguntar se estão lá."""
     tela, _ = mesa
-    # ERAM TRÊS E VIRARAM DOIS — decisão dela, 31/08/2026. O `mic-liberar` saiu
-    # do desenho e ela confirmou que fica fora, sabendo que ele existe no
-    # produto (ver o bloco de baixo). Cobrar aqui um botão que ela mandou tirar
-    # é a régua brigando com a decisão, não medindo a tela.
-    #
-    # E OS DOIS DEIXARAM DE TER O MESMO ENDEREÇO — 20/09/2026. O 🎙 saiu do
-    # `data-mudo` por ordem dela (*"esse botão segue desativando o microfone,
-    # não precisamos dele mais na interface"*) e virou `data-gesto="mic-testar"`;
-    # o ♪ FICOU no `data-mudo`, porque ele não tem botão no plástico que o
-    # cale. Montar os dois por `f'[data-mudo="{bloco}"]'` era conveniente
-    # enquanto o endereço era um só; hoje seria a régua exigindo que o produto
-    # mantivesse a simetria que a decisão dela desfez.
     for botao, quem in (('[data-gesto="mic-retorno"]', "🎙"),
                         ('[data-mudo="alto-falante"]', "♪")):
         assert tela.existe(f'{_cartao()} {botao}'), (
@@ -512,45 +323,8 @@ def test_os_tres_botoes_de_som_existem_na_tela(mesa):
         )
 
 
-# ---------------------------------------------------------------------------
-# O "LIBERAR" SAIU DA TELA NOVA — 31/08/2026, e a história importa mais que a
-# ausência, porque um fato errado custou um botão real.
-#
-# Três testes moravam aqui: `test_o_liberar_nasce_travado_sem_posse`,
-# `test_o_liberar_travado_nao_responde_ao_clique` e
-# `test_o_microfone_da_posse_e_o_liberar_destrava`. Eles mediam o botão que
-# devolve a posse do mudo do microfone ao kernel.
-#
-# O QUE ACONTECEU, na ordem:
-#  1. Ela olhou a tela e disse: *"esse botão liberar no microfone não existe."*
-#  2. A RETOMADA de 30/08 registrou isso como *"não existe em lugar nenhum"* e
-#     mandou tirá-lo (sprint A-1). **Essa generalização é FALSA**, e a medição é
-#     direta: `app/widgets/controller_card.py:490` define
-#     `TEXTO_BOTAO_MIC_DEVOLVER = "Liberar"`, a `:2026` o usa com dica própria,
-#     e `daemon/ipc_server.py:32` declara `mic.set {muted: bool|null}` — o
-#     `null` que devolve a posse (`ipc_handlers.py:3438`).
-#  3. A sessão seguinte removeu o botão do `aba02.py`, e estes três testes
-#     passaram a reprovar procurando um endereço que ninguém mais escrevia.
-#  4. Em 31/08 o fato foi medido e levado a ela. **Ela manteve a decisão**: o
-#     botão fica fora da tela nova, mesmo existindo no produto.
-#
-# O QUE ISSO CUSTA, escrito para ninguém descobrir sozinho: quem clicar no
-# microfone pela tela nova ASSUME a posse do mudo, e o botão físico do controle
-# para de valer. A devolução continua possível — mas só pela GUI GTK do app
-# completo, ou reiniciando o daemon. A tela nova não tem caminho de volta.
-#
-# NÃO É PARA REPOR ESTES TESTES sem a palavra dela. Se o botão voltar, eles
-# voltam do `git log` inteiros — a régua estava certa; o que mudou foi a tela.
-# ---------------------------------------------------------------------------
-
-
 def test_o_gesto_do_som_tem_dono_declarado(mesa):
-    """Todo gesto que chega ao Python tem de saber QUEM o aplicaria.
-
-    `DONOS_DOS_GESTOS` é a tabela num lugar só. Um gesto sem linha nela é um
-    endereço que o gerador não escreve, e a régua tem de dizer isso em vez de
-    engolir — foi um `KeyError` cru que já derrubou a janela inteira.
-    """
+    """Todo gesto que chega ao Python tem de saber QUEM o aplicaria."""
     tela, _cabeca = mesa
     recados = tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="alto-falante"]')
     chave = f'mudo:{recados[0].objeto["bloco"]}'
@@ -559,9 +333,6 @@ def test_o_gesto_do_som_tem_dono_declarado(mesa):
     assert "speaker.set" in dono, dono
 
 
-# ---------------------------------------------------------------------------
-# (d) A mordida: sem ponte, e sem endereços
-# ---------------------------------------------------------------------------
 def test_com_a_ponte_a_tela_mostra_a_mesa_e_nao_a_cena_fixa(mesa):
     """A metade positiva da mordida — sem ela, a negativa não prova nada."""
     tela, _ = mesa
@@ -607,16 +378,7 @@ def test_sem_a_ponte_a_tela_fica_na_cena_fixa_do_mockup():
 
 
 def test_arrancar_os_enderecos_faz_a_pintura_desabar(mesa):
-    """A MORDIDA DO ENDEREÇO: sem os `data-*` a conta da pintura tem de cair.
-
-    Um endereço a menos não levanta erro nenhum no WebKit — o `querySelector`
-    devolve `null` e o valor simplesmente não é escrito. Por isso a régua é a
-    CONTA: `HEF.pinta` devolve quantos valores escreveu, e se a conta não cair
-    ao arrancar os endereços é porque eles não estavam sendo usados.
-
-    `data-controle` fica de fora de propósito — arrancá-lo derruba a pintura
-    inteira de uma vez, e a queda deixaria de dizer QUAL endereço morreu.
-    """
+    """A MORDIDA DO ENDEREÇO: sem os `data-*` a conta da pintura tem de cair."""
     tela, cabeca = mesa
     inteiro = cabeca.pintar(_estado())
     assert inteiro > 60, f"a pintura inteira escreveu só {inteiro} valores"
@@ -629,13 +391,6 @@ def test_arrancar_os_enderecos_faz_a_pintura_desabar(mesa):
     )
     depois = cabeca.pintar(_estado(), remontar=False)
 
-    # O TETO É 20% E FOI CALIBRADO CONTRA A MORDIDA, não escolhido no olho. Com
-    # a árvore sã a conta cai 121 → 17 (14%). Com as escritas do bootstrap
-    # contando CEGO — o `n++` de 27/08, que devolve 1 mesmo sem elemento — ela
-    # cai só até 39 (32%), porque os laços de glifo e de eixo continuam caindo
-    # sozinhos. O primeiro teto que escrevi era `inteiro/3` (33%) e deixou a
-    # conta cega passar por 1,3 ponto: uma régua frouxa aprova exatamente o
-    # defeito que ela existe para pegar.
     assert depois <= inteiro * 0.20, (
         f"arranquei os endereços e a pintura ainda escreveu {depois} de "
         f"{inteiro} valores ({depois / inteiro:.0%}); o medido na árvore sã é "
@@ -647,12 +402,7 @@ def test_arrancar_os_enderecos_faz_a_pintura_desabar(mesa):
 
 
 def test_o_seletor_que_nao_casa_e_erro_e_nao_silencio(mesa):
-    """A régua da régua. Se o instrumento mentir, tudo acima é enfeite.
-
-    É o portão do próprio vocabulário: `ler`, `medir`, `travado` e `clicar` têm
-    de REPROVAR em endereço que não existe, e é isso que separa este instrumento
-    do `--prova-gesto` que dava verde sobre dois botões mortos.
-    """
+    """A régua da régua. Se o instrumento mentir, tudo acima é enfeite."""
     tela, _ = mesa
     inexistente = '.ctl [data-mudo="botao-que-nunca-existiu"]'
     assert tela.contar(inexistente) == 0

@@ -1,26 +1,4 @@
-"""TRAY-A-LISTINHA-DELA-01 — os quatro atos que desceram para a bandeja.
-
-Pedido dela, 21/09/2026, com o menu do tray aberto na frente dela:
-
-    *"no tray remover o numero de perfis. Adicionar o Reiniciar Daemon,
-    Desativar Daemon que temos na aba sistema, na aba jogar o Status Ligado e
-    Desligado e o reconectar controles. como opções no tray, não nessa ordem.
-    Vc ordena a listinha que deve aparecer pensando no storytellign da coisa."*
-    <!-- noqa-acento: citação literal dela -->
-
-O QUE ESTAS RÉGUAS MEDEM, e por que cada uma existe:
-
-1. **A ordem** — ela delegou o desenho, e delegado não é arbitrário: a ordem é
-   a história do menu, e uma leva futura que insira um item no meio quebra a
-   frase sem perceber. A régua fixa a sequência.
-2. **O eco do rádio** — `Gtk.RadioMenuItem` emite ``activate`` também quando o
-   TIQUE reescreve a posição. Sem o guarda, o tray mandaria ao daemon, de três
-   em três segundos, o modo que ele acabou de LER. Este é o defeito que o
-   arquivo inteiro existe para pegar.
-3. **A ausência é ausência** — callback ``None`` não produz item cinzento.
-4. **Nenhuma regra nova no tray** — o plano de IPC do interruptor é o do dono
-   (`painel.plano_do_modo`), na ORDEM dele.
-"""
+"""TRAY-A-LISTINHA-DELA-01 — os quatro atos que desceram para a bandeja."""
 
 from __future__ import annotations
 
@@ -29,14 +7,6 @@ from typing import Any
 import pytest
 
 
-# ---------------------------------------------------------------------------
-# UM GTK DE MENTIRA COM COMPORTAMENTO, e não um MagicMock — de propósito.
-#
-# O defeito do eco do rádio SÓ APARECE se o dublê fizer o que o GTK faz: emitir
-# `activate` no `set_active`, e emitir nos DOIS itens ao trocar de posição. Um
-# `MagicMock` aceita tudo calado e daria verde sobre o defeito vivo, que é a
-# assinatura dos instrumentos falsos que esta casa já enterrou seis vezes.
-# ---------------------------------------------------------------------------
 class _Item:
     def __init__(self, label: str = "") -> None:
         self._label = label
@@ -77,8 +47,6 @@ class _Radio(_Item):
     def set_active(self, valor: bool) -> None:
         if valor == self._ativo:
             return
-        # O GTK DESMARCA O IRMÃO E EMITE NOS DOIS. É isto que o guarda de
-        # reentrância do tray tem de aguentar.
         if valor:
             for outro in self._grupo:
                 if outro is not self and outro._ativo:
@@ -108,11 +76,7 @@ class _Separador(_Item):
 
 
 class _Fabrica:
-    """`Gtk.MenuItem(...)` E `Gtk.MenuItem.new_with_label(...)` — as duas formas.
-
-    O tray usa a primeira no menu de cima e a segunda no submenu de perfis, e
-    um dublê que só oferecesse uma deixaria metade do arquivo sem medir.
-    """
+    """`Gtk.MenuItem(...)` E `Gtk.MenuItem.new_with_label(...)` — as duas formas."""
 
     def __call__(self, label: str = "", **_k: Any) -> _Item:
         return _Item(label)
@@ -132,11 +96,7 @@ class _GtkDeMentira:
         return _Radio(label, group)
 
 
-#: OS DOIS ESTADOS DO DAEMON QUE MOVEM O INTERRUPTOR, escritos na forma que o
 #: dono lê (`mode_transition.mode_of_state`): `native_mode.enabled` verdadeiro
-#: é o modo NATIVO — o «Desligado» dela. Não se digita a posição aqui; ela sai
-#: de `painel.hefesto_ligado`, e o `assert` de cima confere que os dois de
-#: fato divergem.
 _MODO_DESLIGADO = {"native_mode": {"enabled": True}}
 _MODO_LIGADO = {"gamepad_emulation": {"enabled": True}}
 
@@ -168,17 +128,9 @@ def _rotulos(tray: Any) -> list[str]:
     ]
 
 
-# ---------------------------------------------------------------------------
-# 1 — A ORDEM É A HISTÓRIA
-# ---------------------------------------------------------------------------
 def test_a_ordem_do_menu_e_a_frase_que_ela_mandou_escrever(
         gtk_de_mentira: Any) -> None:
-    """Jogo antes de serviço, e cada grupo atrás da sua divisória.
-
-    Ela delegou o desenho — *"Vc ordena a listinha (…) pensando no
-    storytellign da coisa"* — e delegado vira contrato: quem inserir um item
-    no meio reprova aqui, e vai ter de decidir onde ele entra na frase.
-    """
+    """Jogo antes de serviço, e cada grupo atrás da sua divisória."""
     tray = _tray(gtk_de_mentira,
                  on_set_modo=lambda _l: True,
                  on_reconectar=lambda: True,
@@ -194,12 +146,7 @@ def test_a_ordem_do_menu_e_a_frase_que_ela_mandou_escrever(
 
 def test_o_que_mexe_no_jogo_vem_antes_do_que_mexe_no_servico(
         gtk_de_mentira: Any) -> None:
-    """A razão da ordem, medida e não decorada.
-
-    «Parar o serviço» ao lado de «Ligado» faria dois interruptores parecerem o
-    mesmo — e eles não são: a decisão dela de 31/08/2026 diz que *"Desligado"*
-    é o **modo nativo**, não parar o Hefesto.
-    """
+    """A razão da ordem, medida e não decorada."""
     tray = _tray(gtk_de_mentira,
                  on_set_modo=lambda _l: True,
                  on_servico=lambda _v: True)
@@ -209,26 +156,14 @@ def test_o_que_mexe_no_jogo_vem_antes_do_que_mexe_no_servico(
     assert rotulos.index("Ligado") < rotulos.index("Parar o serviço")
 
 
-# ---------------------------------------------------------------------------
-# 2 — O ECO DO RÁDIO, que é o defeito que este arquivo existe para pegar
-# ---------------------------------------------------------------------------
 def test_o_tique_que_pinta_a_posicao_nao_manda_nada_ao_daemon(
         gtk_de_mentira: Any) -> None:
-    """A PINTURA NÃO É CLIQUE.
-
-    MORDE: tire o `self._pintando_o_modo` de `_ao_escolher_o_modo` e esta
-    régua reprova com duas chamadas — a cada três segundos, para sempre.
-    """
+    """A PINTURA NÃO É CLIQUE."""
     pedidos: list[bool] = []
     tray = _tray(gtk_de_mentira, on_set_modo=lambda ligado: pedidos.append(ligado))
     tray._montar_os_atos_do_jogo()
-    pedidos.clear()  # a montagem marca o primeiro rádio
+    pedidos.clear()
 
-    # OS DOIS ESTADOS TÊM DE MOVER O RÁDIO DE VERDADE, senão a régua mede o
-    # nada: com dois estados que dão a MESMA posição, `set_active` volta cedo,
-    # `activate` nunca é emitido e a guarda nunca é exercitada. Medido em
-    # 21/09/2026 — a primeira versão desta régua usava dois `gamepad` e passava
-    # com o guarda arrancado.
     assert _MODO_DESLIGADO != _MODO_LIGADO
     tray._pintar_o_estado_dos_atos(_MODO_DESLIGADO)
     assert tray._modo_desligado_item.get_active() is True, (
@@ -242,11 +177,7 @@ def test_o_tique_que_pinta_a_posicao_nao_manda_nada_ao_daemon(
 
 
 def test_o_clique_no_radio_manda_uma_vez_so(gtk_de_mentira: Any) -> None:
-    """Trocar de posição emite nos DOIS itens; só o que ENTROU vale.
-
-    MORDE: tire o `item.get_active()` da guarda e o clique em «Desligado»
-    manda também um «Ligado» ao daemon, na mesma volta.
-    """
+    """Trocar de posição emite nos DOIS itens; só o que ENTROU vale."""
     pedidos: list[bool] = []
     tray = _tray(gtk_de_mentira, on_set_modo=lambda ligado: pedidos.append(ligado))
     tray._montar_os_atos_do_jogo()
@@ -266,12 +197,9 @@ def test_o_erro_de_um_clique_nao_derruba_o_menu(gtk_de_mentira: Any) -> None:
     tray._montar_os_atos_do_jogo()
     reconectar = tray._menu.itens[-1]
 
-    reconectar.emitir()  # não levanta
+    reconectar.emitir()
 
 
-# ---------------------------------------------------------------------------
-# 3 — A AUSÊNCIA É AUSÊNCIA
-# ---------------------------------------------------------------------------
 def test_sem_callback_o_item_nao_nasce(gtk_de_mentira: Any) -> None:
     """Botão que aparece e não faz nada ensina que a tela é enfeite."""
     tray = _tray(gtk_de_mentira)
@@ -286,9 +214,6 @@ def test_so_o_reconectar_nao_traz_os_radios(gtk_de_mentira: Any) -> None:
     assert _rotulos(tray) == ["———", "Reconectar controles"]
 
 
-# ---------------------------------------------------------------------------
-# 4 — O PAR «PARAR»/«ATIVAR», e o estado que o escolhe
-# ---------------------------------------------------------------------------
 def test_o_rotulo_do_servico_segue_o_estado(gtk_de_mentira: Any) -> None:
     """Um item, dois rótulos — a forma que ela escolheu em 03/09/2026."""
     verbos: list[str] = []
@@ -319,19 +244,9 @@ def test_o_modo_desconhecido_nao_mexe_nos_radios(gtk_de_mentira: Any) -> None:
     assert tray._modo_ligado_item.get_active() is False
 
 
-# ---------------------------------------------------------------------------
-# 5 — NENHUMA REGRA NOVA MORA NO TRAY
-# ---------------------------------------------------------------------------
 def test_o_interruptor_despacha_o_plano_do_dono_na_ordem_dele(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O plano é de `painel.plano_do_modo`, e a ORDEM é a entrega.
-
-    Invertidas, *"o vpad nasceria com o físico ainda grabado pelo jogo"*.
-
-    MORDE: faça `_definir_o_modo` escrever os métodos à mão e a régua reprova
-    no dia em que o `plan_mode_transition` mudar — que é o dia em que um
-    segundo dono começa a divergir.
-    """
+    """O plano é de `painel.plano_do_modo`, e a ORDEM é a entrega."""
     from hefesto_dualsense4unix.app.actions.jogar.painel import plano_do_modo
     from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
     from hefesto_dualsense4unix.cli import cmd_tray
@@ -348,11 +263,7 @@ def test_o_interruptor_despacha_o_plano_do_dono_na_ordem_dele(
 
 def test_ligar_sobe_o_servico_antes_de_falar_com_o_daemon(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Decisão dela, 03/09/2026 — e a ORDEM é o ponto.
-
-    Sem o daemon de pé não há a quem mandar: a ordem inversa recusaria o
-    clique exatamente no caso que ela pediu que passasse a funcionar.
-    """
+    """Decisão dela, 03/09/2026 — e a ORDEM é o ponto."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     passos: list[str] = []
@@ -384,11 +295,7 @@ def test_desligar_nao_sobe_servico_nenhum(
 
 def test_o_reconectar_faz_os_dois_passos_da_aba_jogar(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """`coop.sync` e `identity.renumber` — e nenhum `Connect` pelo rádio.
-
-    Reconectar o aparelho é o botão PS dela; isso é decisão de produto, e a
-    régua a prende aqui também.
-    """
+    """`coop.sync` e `identity.renumber` — e nenhum `Connect` pelo rádio."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     chamados: list[str] = []
@@ -399,15 +306,8 @@ def test_o_reconectar_faz_os_dois_passos_da_aba_jogar(
     assert chamados == ["coop.sync", "identity.renumber"]
 
 
-# ---------------------------------------------------------------------------
-# 6 — A CONTAGEM DE PERFIS SAIU DO TÍTULO
-# ---------------------------------------------------------------------------
 def test_o_titulo_nao_conta_perfis(gtk_de_mentira: Any) -> None:
-    """*"no tray remover o numero de perfis"* — palavra dela, 21/09/2026.
-    <!-- noqa-acento: citação literal dela -->
-
-    MORDE: devolva o `%d perfis` e a régua reprova.
-    """
+    """*"no tray remover o numero de perfis"* — palavra dela, 21/09/2026."""
     tray = _tray(gtk_de_mentira)
     tray._status_item = _Item("")
     tray._profiles_submenu = _Menu()

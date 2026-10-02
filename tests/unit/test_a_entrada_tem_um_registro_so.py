@@ -1,46 +1,4 @@
-"""A entrada tem um registro só — A-ENTRADA-TEM-UM-REGISTRO-SO-01 (28/09/2026).
-
-O defeito, item 6 da auditoria de 26/09: a mesma entrada morava em DOIS
-registros do ``maquina.json`` — ``mapa.portas[N]`` (o caminho de barramento
-deste boot, os nós, o nome) e ``lugares[L]`` (a amarra pelo lugar, com uma
-cópia do caminho como «testemunha», e um nome). Em 26/09 uma troca feita fora
-do produto mexeu num e não no outro, e o Mapa mostrou as entradas erradas até
-o reparo à mão. E o adaptador do meio tinha dois nomes em dois registros:
-«Centro» em ``lugares`` e «Meio» em ``adaptadores``.
-
-A CURA: a entrada guarda o ``lugar`` (``mapa.portas[N].lugar``); o caminho se
-calcula na leitura, com os controladores deste boot; ``lugares`` sai do
-esquema; a migração roda ao carregar, inteira, uma vez, e é idempotente.
-
-AS PROVAS DA SPRINT QUE MORAM AQUI (a 3 é da mão dela, no aparelho):
-
-1. a migração reproduz o estado de hoje — o arquivo de antes da troca de 26/09
-   com os gestos dela PELO PRODUTO (as trocas 3↔4, 5↔6 e 7↔8 pelo
-   ``trocar_as_entradas`` e o «Meio» tirado da entrada 1) dá o MESMO mapa que o
-   arquivo reparado à mão, migrado — sem script de reparo;
-2. migrar duas vezes dá o mesmo arquivo, byte a byte;
-4. um boot com outra numeração dos barramentos: o Mapa diz a mesma entrada.
-
-A MÁQUINA É SINTÉTICA, NA FORMA DA DELA (a de
-``test_o_nome_da_entrada_e_da_posicao``): 15 entradas em três faces, os números
-gravados como nome, o «Meio» na 1 e três lugares de adaptador com «Centro»,
-«Esquerda» e «Direita». Faixa sintética da casa: controladores
-``0000:0a:00.0`` e ``0000:0b:00.0``, endereços ``aa:bb:cc``.
-
-AS MORDIDAS (medidas em 28/09, com a cura arrancada e devolvida pelo md5):
-
-* a migração deixa em ``lugares`` o nome do lugar sem entrada (a leitura de
-  ``lugares[L].nome`` de volta) — «Centro» volta ao arquivo e à porta do
-  adaptador do meio (``test_o_centro_nao_volta_ao_adaptador_do_meio``);
-* ``caminho_da_porta`` ignora o lugar e responde pelos nós — o boot com os
-  barramentos trocados põe a Entrada 7 no buraco do outro controlador
-  (``test_um_boot_com_outra_numeracao_diz_a_mesma_entrada``);
-* a migração não leva a testemunha que andou para a entrada que a tem — o
-  mapa dos gestos pelo produto sai diferente do reparado à mão
-  (``test_os_gestos_dela_pelo_produto_dao_o_mapa_reparado_a_mao``);
-* a gravação volta a escrever o ``caminho`` calculado — o arquivo ganha a
-  chave (``test_o_caminho_nao_vai_ao_disco``).
-"""
+"""A entrada tem um registro só — A-ENTRADA-TEM-UM-REGISTRO-SO-01 (28/09/2026)."""
 
 from __future__ import annotations
 
@@ -87,12 +45,8 @@ from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: As três trocas de 26/09 (as entradas que o Mapear tinha posto no número da
-#: outra), feitas por ela pelo «Trocar com…».
 TROCAS = (("3", "4"), ("5", "6"), ("7", "8"))
 
-#: O adaptador do meio: o lugar dele guardava «Centro» (a D3), e o nome dele é
-#: «Meio» (``adaptadores``, 26/09). Endereço da faixa sintética.
 LUGAR_DO_MEIO = lugar_de(PCI_B, "4.1.1")
 ADAPTADOR_DO_MEIO = "aa:bb:cc:00:00:11"
 
@@ -108,14 +62,8 @@ def _a_dela_com_os_nomes_dos_adaptadores() -> dict[str, Any]:
     return documento
 
 
-# ---------------------------------------------------------------------------
-# O esquema: um registro, e o caminho não se guarda
-# ---------------------------------------------------------------------------
-
-
 def test_o_esquema_recusa_os_lugares_depois_de_migrado() -> None:
-    """``lugares`` não é campo; cada entrada guarda o lugar, e o caminho dos
-    nós é o de antes."""
+    """``lugares`` não é campo; cada entrada guarda o lugar, e o caminho dos"""
     assert "lugares" not in MaquinaConfig.model_fields
     with pytest.raises(ValueError, match="lugares"):
         MaquinaConfig.model_validate({"lugares": {lugar_de(PCI_A, "1"): {"entrada": "1"}}})
@@ -127,26 +75,19 @@ def test_o_esquema_recusa_os_lugares_depois_de_migrado() -> None:
         assert set(porta.nos) == set(nos)
     assert entrada_do_lugar(migrado, lugar_de(PCI_A, "5")) == "7"
     with pytest.raises(ValueError, match="lugar"):
-        PortaDeclarada(lugar=f"pci-{PCI_A}")  # sem cadeia de portas não é entrada
+        PortaDeclarada(lugar=f"pci-{PCI_A}")
 
 
 def test_o_caminho_nao_vai_ao_disco(tmp_path: Path) -> None:
-    """O caminho é da LEITURA: nenhuma gravação o escreve, e quem ainda o
-    declara (o rascunho do mapa) é entendido — o caminho vira o nó do buraco.
-
-    MORDIDA: grave com o ``model_dump`` sem o ``exclude`` dos calculados — o
-    arquivo ganha a chave ``caminho`` e esta régua reprova.
-    """
+    """O caminho é da LEITURA: nenhuma gravação o escreve, e quem ainda o"""
     alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
     assert carregar_maquina().mapa.portas["3"].caminho == "3-1"
     assert ee.declarar_a_velocidade("3", 3).gravou
     assert '"caminho"' not in alvo.read_text(encoding="utf-8")
 
-    # «este aparelho está nesta entrada»: o buraco passa a ser o dele
     assert declarar_a_maquina({"mapa": {"portas": {"3": {"caminho": "3-4"}}}}).gravou
     tres = carregar_maquina().mapa.portas["3"]
     assert (tres.nos, tres.lugar, tres.caminho) == (["usb3-port4"], None, "3-4")
-    # o «tirar» do rascunho: os nós saem, e o lugar do Mapear fica
     assert declarar_a_maquina({"mapa": {"portas": {"7": {"caminho": None}}}}).gravou
     sete = carregar_maquina().mapa.portas["7"]
     assert (sete.nos, sete.lugar) == ([], lugar_de(PCI_A, "5"))
@@ -156,19 +97,7 @@ def test_o_caminho_nao_vai_ao_disco(tmp_path: Path) -> None:
 def test_a_gravacao_serve_ao_pydantic_que_o_pacote_pede(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O ``pyproject.toml`` e os pacotes (Fedora, Nix) pedem ``pydantic>=2.0``,
-    e o ``exclude_computed_fields`` do ``model_dump`` só nasceu no 2.12: com
-    ele, numa máquina com o 2.11, toda gravação do ``maquina.json`` levantava
-    ``TypeError`` — o Mapear, o nome, a troca, a ordem das caixas.
-
-    A régua dá ao ``model_dump`` a assinatura do 2.11 (o argumento novo
-    levanta, como lá) e grava pelos gestos que tiram os calculados: a
-    velocidade (a gravação do documento) e a troca com a ponta do extensor
-    (``_a_ponta_inteira``).
-
-    MORDIDA: devolva o ``exclude_computed_fields=True`` a uma das duas — a
-    gravação levanta ``TypeError`` e esta régua reprova.
-    """
+    """O ``pyproject.toml`` e os pacotes (Fedora, Nix) pedem ``pydantic>=2.0``,"""
     from pydantic import BaseModel
 
     from tests.unit.test_trocar_duas_entradas_move_o_buraco import _com_o_que_ela_disse
@@ -194,9 +123,7 @@ def test_a_gravacao_serve_ao_pydantic_que_o_pacote_pede(
 
 
 def test_o_rascunho_do_mapa_le_o_caminho_e_a_volta_nao_muda_nada() -> None:
-    """A ``LogicaDoMapa`` (o rascunho da aba Conexões) lê o ``caminho`` do
-    ``model_dump`` e o manda de volta inteiro: a volta não mexe em entrada
-    nenhuma."""
+    """A ``LogicaDoMapa`` (o rascunho da aba Conexões) lê o ``caminho`` do"""
     from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
 
     documento = MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
@@ -207,14 +134,8 @@ def test_o_rascunho_do_mapa_le_o_caminho_e_a_volta_nao_muda_nada() -> None:
     assert volta.mapa == documento.mapa
 
 
-# ---------------------------------------------------------------------------
-# A migração: inteira, ao carregar, uma vez
-# ---------------------------------------------------------------------------
-
-
 def test_a_migracao_roda_ao_carregar_inteira_e_uma_vez(tmp_path: Path) -> None:
-    """PROVA 2: a primeira leitura migra e regrava; a cópia de antes fica ao
-    lado; migrar de novo dá o mesmo arquivo, byte a byte."""
+    """PROVA 2: a primeira leitura migra e regrava; a cópia de antes fica ao"""
     alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
     antes = alvo.read_bytes()
     carregar_maquina()
@@ -238,14 +159,12 @@ def test_a_migracao_roda_ao_carregar_inteira_e_uma_vez(tmp_path: Path) -> None:
 
 
 def test_a_migracao_leva_o_nome_de_verdade_e_nao_o_numero() -> None:
-    """O «Meio» da 1 vai para a posição; os números gravados como nome não vão;
-    o nome do lugar sem entrada sai; o do adaptador fica onde é dele."""
+    """O «Meio» da 1 vai para a posição; os números gravados como nome não vão;"""
     migrado = migrar_o_documento(_a_dela_com_os_nomes_dos_adaptadores())
     portas = migrado["mapa"]["portas"]
     assert portas["1"]["nome"] == "Meio"
     assert [n for n, p in portas.items() if "nome" in p] == ["1"], portas
     assert "lugares" not in migrado
-    # os três lugares de adaptador: o nome deles é do adaptador, pelo endereço
     assert set(_ORFAOS.values()) == {"Centro", "Esquerda", "Direita"}
     assert "Centro" not in json.dumps(migrado, ensure_ascii=False)
     assert migrado["adaptadores"]["aabbcc000011"] == {"nome": "Meio"}
@@ -254,9 +173,7 @@ def test_a_migracao_leva_o_nome_de_verdade_e_nao_o_numero() -> None:
 def test_o_nome_comprido_bloqueia_a_migracao_daquela_entrada_e_diz_no_log(
     tmp_path: Path,
 ) -> None:
-    """Nada se trunca calado: o nome de mais de 24 caracteres fica no lugar,
-    como estava, a entrada dele não migra, e o log diz qual é. O nome que ela
-    der à posição destrava. No disco, o resto do arquivo migra e é lido."""
+    """Nada se trunca calado: o nome de mais de 24 caracteres fica no lugar,"""
     documento = _a_maquina_dela()
     lugar_5 = lugar_de(PCI_B, "3")
     comprido = "A de trás, perto do cabo de rede"
@@ -299,15 +216,8 @@ def test_o_nao_alcanco_vai_para_o_mapa() -> None:
     assert set(migrado.mapa.fora) == {vaga, lugar_de(PCI_A, "6")}
 
 
-# ---------------------------------------------------------------------------
-# PROVA 1 — os gestos dela pelo produto dão o mapa reparado à mão
-# ---------------------------------------------------------------------------
-
-
 def _o_reparado_a_mao() -> dict[str, Any]:
-    """O arquivo depois do reparo à mão de 26/09, no formato de antes: o buraco
-    trocado no ``mapa`` E a amarra trocada nos ``lugares`` (o que o
-    ``reparo_real.sh`` fez), e o «Meio» tirado do lugar da 1."""
+    """O arquivo depois do reparo à mão de 26/09, no formato de antes: o buraco"""
     reparado = copy.deepcopy(_a_maquina_dela())
     portas = reparado["mapa"]["portas"]
     troca = {}
@@ -322,9 +232,7 @@ def _o_reparado_a_mao() -> dict[str, Any]:
 
 
 def test_os_gestos_dela_pelo_produto_dao_o_mapa_reparado_a_mao(tmp_path: Path) -> None:
-    """PROVA 1. O arquivo de ANTES da troca, migrado ao carregar, com a
-    sequência de gestos de 26/09 pelo produto, dá o mesmo mapa que o arquivo
-    reparado à mão, migrado. Sem o script de reparo."""
+    """PROVA 1. O arquivo de ANTES da troca, migrado ao carregar, com a"""
     alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
     carregar_maquina()
     for um, outro in TROCAS:
@@ -346,12 +254,7 @@ _LUGAR_DE_ANTES = tuple(
 
 
 def test_a_troca_feita_fora_do_produto_se_repara_na_migracao() -> None:
-    """O estado de 26/09 às 15h43: o ``mapa`` trocou o buraco de 3↔4 e 7↔8
-    sem os ``lugares``. A testemunha de cada lugar está na OUTRA entrada, e a
-    migração leva a amarra para ela — o que o reparo à mão fez.
-
-    MORDIDA: tire da migração o passo da testemunha que andou — os lugares
-    ficam sem entrada, e a 4 não é mais o lugar do hub."""
+    """O estado de 26/09 às 15h43: o ``mapa`` trocou o buraco de 3↔4 e 7↔8"""
     documento = _a_maquina_dela()
     portas = documento["mapa"]["portas"]
     for um, outro in (("3", "4"), ("7", "8")):
@@ -362,11 +265,6 @@ def test_a_troca_feita_fora_do_produto_se_repara_na_migracao() -> None:
     assert entrada_do_lugar(migrado, lugar_de(PCI_A, "5")) == "8"
     assert entrada_do_lugar(migrado, lugar_de(PCI_A, "6")) == "7"
     assert ee.nome_da_porta("3-1", maquina=migrado, controladores=BOOT_1) == "Entrada 4"
-
-
-# ---------------------------------------------------------------------------
-# PROVA 4 — um boot com outra numeração dos barramentos
-# ---------------------------------------------------------------------------
 
 
 def test_um_boot_com_outra_numeracao_diz_a_mesma_entrada(tmp_path: Path) -> None:
@@ -395,14 +293,8 @@ def test_um_boot_com_outra_numeracao_diz_a_mesma_entrada(tmp_path: Path) -> None
         documento.mapa, "3-5", mapa_das_portas.controladores_do_censo(censo)) == "7"
 
 
-# ---------------------------------------------------------------------------
-# Um dono do nome do adaptador, e um lugar_de só
-# ---------------------------------------------------------------------------
-
-
 def test_o_centro_nao_volta_ao_adaptador_do_meio(tmp_path: Path) -> None:
-    """O adaptador do meio se chama «Meio» (``adaptadores``, pelo endereço), e
-    o «Centro» que o lugar dele guardava (a D3) sai do arquivo e da porta."""
+    """O adaptador do meio se chama «Meio» (``adaptadores``, pelo endereço), e"""
     alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_dela_com_os_nomes_dos_adaptadores())
     documento = carregar_maquina()
     assert "Centro" not in alvo.read_text(encoding="utf-8")
@@ -421,12 +313,7 @@ def test_o_centro_nao_volta_ao_adaptador_do_meio(tmp_path: Path) -> None:
 
 
 def test_o_lugar_de_tem_uma_definicao_so() -> None:
-    """Uma definição de ``lugar_de`` no pacote, a de ``utils/lugar.py``; o
-    ``bluez_dbus`` IMPORTA a dela.
-
-    MORDIDA: devolva ao ``bluez_dbus`` o ``def lugar_de`` que repassava a
-    chamada — esta régua reprova nomeando o arquivo.
-    """
+    """Uma definição de ``lugar_de`` no pacote, a de ``utils/lugar.py``; o"""
     definicoes = []
     for arquivo in sorted(SRC.rglob("*.py")):
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))

@@ -51,15 +51,11 @@ BACKEND_PATH = (
 
 MSG = cmd_test.MSG_RAW_COM_DAEMON
 
-#: A frase exata que estava no ar até 13/08/2026 e o núcleo dela. O keepalive
-#: perpétuo saiu em 11/08; dizer isto no presente manda a pessoa depurar um
-#: mecanismo que o produto não tem mais.
 MECANISMO_DERRUBADO = (
     "é o keepalive dele",
     "sobrescreve o efeito em menos de 0,5",
 )
 
-#: As três saídas, na ordem em que a mensagem as oferece.
 SAIDAS_EM_ORDEM = (
     "aba Gatilhos",
     "--mode com NOME de preset",
@@ -91,7 +87,6 @@ def test_a_correcao_e_datada_e_diz_o_que_caducou() -> None:
 
 
 def test_a_recusa_continua_e_o_motivo_e_a_disputa_pelo_hidraw() -> None:
-    # O veredito não mudou com o prazo: dois donos no mesmo /dev/hidraw.
     assert "SEGUNDO controlador" in MSG
     assert "/dev/hidraw" in MSG
     assert "ATÔMICO" in MSG, (
@@ -144,4 +139,4 @@ def test_sem_daemon_o_raw_passa(monkeypatch: pytest.MonkeyPatch) -> None:
     import hefesto_dualsense4unix.app.ipc_bridge as ipc_bridge
 
     monkeypatch.setattr(ipc_bridge, "daemon_status_basic", lambda: None)
-    cmd_test._recusar_raw_com_daemon_vivo()  # não levanta
+    cmd_test._recusar_raw_com_daemon_vivo()

@@ -1,25 +1,4 @@
-"""A trava do perfil ativo é a pílula que ela pediu, e o travessão não acende.
-
-`TRAVA-PILULA-01` — pedido dela, 19/09/2026, com as duas abas abertas lado a
-lado: *"vê os botões do giroscopio e acelerometro queria esse tipo de botão ali
-no Trava o perfil Ativo."*  <!-- noqa-acento: citação literal dela -->
-
-A TROCA NÃO É DE MARCAÇÃO — ela muda o alvo da ponte, e o alvo tem dono:
-
-* até 19/09 a trava era `<input type="checkbox">` com `data-hef-alvo="marcado"`,
-  o DÉCIMO alvo da ponte e o **único que escreve `el.checked`**;
-* a pílula usa `classe` + `data-hef-quando`, como o Giroscópio;
-* e um `<button>` **não emite `change`** — só `<input>`, `<select>` e
-  `<textarea>` emitem. O gesto filtrava por `change`, então sem a troca do
-  evento a trava viraria enfeite: a tela pisca e o disco não muda.
-
-**A POLARIDADE É INVERTIDA EM RELAÇÃO AO MODELO, e é o que esta régua mais
-protege.** O `.sw` da aba Controles está ACESO em repouso e ganha `.off` ao
-desligar, porque o default dos sensores é ligado. O default desta trava é
-DESTRAVADA — e o caso que decide não é o default, é o TRAVESSÃO: com a
-polaridade do modelo, um estado que o daemon não respondeu ficaria VERDE, e a
-tela afirmaria uma escolha dela que ela não fez.
-"""
+"""A trava do perfil ativo é a pílula que ela pediu, e o travessão não acende."""
 from __future__ import annotations
 
 import pathlib
@@ -29,19 +8,12 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
-#: O DESENHO, medido junto — O-MODO-FREESTYLE-02, 24/09/2026: é ele que o
-#: `--publicar 01` leva ao produto.
 DESENHO = RAIZ / "mockup/01-jogar.html"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 
 def _altura_esperada(rotulo: str) -> int:
-    """A altura do «Modo Freestyle», lida no dono (`aba01.py`), nunca digitada.
-
-    É a decisão `D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`. Os 17 px da palavra de
-    ontem saíram no `--publicar 01` de 24/09/2026. O `rotulo` fica na assinatura
-    porque os chamadores o passam.
-    """
+    """A altura do «Modo Freestyle», lida no dono (`aba01.py`), nunca digitada."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba01.py").read_text(
         encoding="utf-8")
     achado = re.search(r"\.cadeado\{(?:[^}]*;)?height:(\d+)px", fonte)
@@ -63,8 +35,6 @@ def test_o_emissor_responde_as_tres_e_so_o_true_acende() -> None:
 
     assert p._cadeado({"freestyle_ligado": True}) == p.CADEADO_LIGADO
     assert p._cadeado({"freestyle_ligado": False}) == p.CADEADO_DESLIGADO
-    # SEM DAEMON E COM LIXO caem no MESMO lugar, e não no `DESLIGADO`: a tela
-    # não sabe, e o que ela mostra é o padrão do produto — não uma leitura.
     for sem_resposta in ({}, {"freestyle_ligado": "sim"}, {"freestyle_ligado": 1}):
         assert p._cadeado(sem_resposta) not in (p.CADEADO_LIGADO, p.CADEADO_DESLIGADO), (
             f"{sem_resposta!r} produziu uma AFIRMAÇÃO sobre a trava. Só o `True` "
@@ -124,7 +94,6 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(arquivo: pathlib.P
             pg.evaluate("v => window.__hef.pintar({mesa:{cadeado:v}})", p.CADEADO_DESLIGADO)
             assert not olhar()["acesa"], "destravado e a pílula ficou verde"
 
-            # O CASO QUE DECIDE A POLARIDADE.
             pg.evaluate("v => window.__hef.pintar({mesa:{cadeado:v}})", p._cadeado({}))
             mudo = olhar()
             assert not mudo["acesa"] and not mudo["brilho"], (
@@ -133,15 +102,12 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(arquivo: pathlib.P
                 f"acontece — a tela afirma uma escolha dela sobre um estado que "
                 f"ninguém leu.")
 
-            # A ALTURA, que é a trava cara desta linha — e que tem PRAZO: ver
-            # `_altura_esperada`.
             assert mudo["alt"] == _altura_esperada(mudo["rotulo"]), (
                 f"a pílula mede {mudo['alt']}px com a palavra {mudo['rotulo']!r}. "
                 f"O `.quadro-topo` é `align-items:center`: a altura da pílula é a "
                 f"da linha do título inteira, e a porta da Navegação já pagou "
                 f"esse preço com 2px.")
 
-            # E O CLIQUE SAI, uma vez só.
             pg.evaluate("window.__recebido = []")
             pg.eval_on_selector(".cadeado", "el => el.click()")
             crus = pg.evaluate("window.__recebido")

@@ -35,7 +35,6 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
-# MACs fake (regra da casa: jamais gravar MAC real 14:3a de controle).
 KEY1 = "AA:BB:CC:00:00:01"
 KEY2 = "AA:BB:CC:00:00:02"
 MAC1 = "aabbcc000001"
@@ -163,9 +162,6 @@ async def _state_full(socket_path: Path) -> dict[str, Any]:
     return result
 
 
-# --- lightbar: o DONO DA ESCRITA decide a fonte ------------------------------
-
-
 class TestLightbarPorControle:
     @pytest.mark.asyncio
     async def test_no_gravavel_escrito_por_nos_sai_como_sysfs(
@@ -189,15 +185,10 @@ class TestLightbarPorControle:
     async def test_no_zerado_sem_escrita_nossa_e_desconhecida_nunca_apagada(
         self, running_server: Any
     ) -> None:
-        """Refutação 1 do sprint: classe zerada do probe NÃO é "apagada".
-
-        O kernel registra o LED multicolor zerado e acende a lightbar de azul
-        por fora da classe — `0 0 0` sem rastreio nosso é estado desconhecido
-        (rgb None), nunca um `[0, 0, 0]` apresentável como "apagada".
-        """
+        """Refutação 1 do sprint: classe zerada do probe NÃO é "apagada"."""
         _server, socket_path, fc, _store, _daemon = running_server
         _describe_dois(fc)
-        node = _FakeLedNode(rgb=(0, 0, 0))  # recém-registrado pelo probe
+        node = _FakeLedNode(rgb=(0, 0, 0))
         fc._sysfs = {KEY1: node}
         fc._sysfs_written = {}
 
@@ -224,7 +215,7 @@ class TestLightbarPorControle:
         c1 = result["controllers"][0]
         assert c1["lightbar_source"] == "sysfs"
         assert c1["lightbar_rgb"] == [0, 0, 0]
-        assert c1["lightbar_on"] is False  # brightness 255, mas cor preta
+        assert c1["lightbar_on"] is False
 
     @pytest.mark.asyncio
     async def test_no_nao_gravavel_cai_no_desired_via_resolved_led_for(
@@ -245,7 +236,6 @@ class TestLightbarPorControle:
         assert c1["lightbar_source"] == "desired"
         assert c1["lightbar_rgb"] == [40, 80, 180]
         assert c1["lightbar_on"] is True
-        # Sem nó E sem desired: nada conhecido.
         assert c2["lightbar_source"] == "desconhecida"
         assert c2["lightbar_rgb"] is None
 
@@ -267,9 +257,6 @@ class TestLightbarPorControle:
         assert node.reads == 1
 
 
-# --- inputs ao vivo -----------------------------------------------------------
-
-
 class TestInputsPorControle:
     @pytest.mark.asyncio
     async def test_primario_espelha_last_state_do_daemon(
@@ -289,7 +276,6 @@ class TestInputsPorControle:
             "lx": 200, "ly": 50, "rx": 128, "ry": 128,
             "l2_raw": 180, "r2_raw": 0, "buttons": ["cross"],
         }
-        # Espelho do topo, literal:
         assert c1["inputs"]["lx"] == result["lx"]
         assert c1["inputs"]["buttons"] == result["buttons"]
 
@@ -353,7 +339,6 @@ class TestPlayerSlot:
 
         assert result["controllers"][0]["player_slot"] == 1
         assert result["controllers"][1]["player_slot"] == 2
-        # Leitura NUNCA aloca slot: toda consulta é assign=False.
         assert chamadas and all(assign is False for _uniq, assign in chamadas)
 
     @pytest.mark.asyncio
@@ -374,14 +359,11 @@ class TestPlayerSlot:
     ) -> None:
         """MagicMock auto-atributo devolve mock → coerção para None, sem crash."""
         _server, socket_path, fc, _store, _daemon = running_server
-        _describe_dois(fc)  # daemon MagicMock cru: identity_registry auto-mock
+        _describe_dois(fc)
 
         result = await _state_full(socket_path)
 
         assert result["controllers"][0]["player_slot"] is None
-
-
-# --- vpad_backend / vpad_motivo por jogador (BT-03) ---------------------------
 
 
 class TestVpadPorJogador:
@@ -482,9 +464,6 @@ class TestVpadPorJogador:
             assert entry["vpad_motivo"] is None
 
 
-# --- priming + rastreio "escrito por nós" no backend --------------------------
-
-
 def _stub_handle() -> Any:
     return SimpleNamespace(
         connected=True,
@@ -540,11 +519,7 @@ class TestPrimingERastreio:
     def test_priming_roda_em_modo_nativo_tambem(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Era a exceção documentada («mutado, nada é escrito»); caducou em
-        23/09/2026 com a decisão dela
-        `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01):
-        a luz e o número são do Hefesto no Nativo também. O nó que nasce ali é
-        escrito e entra no rastreio de posse."""
+        """Era a exceção documentada («mutado, nada é escrito»); caducou em"""
         node = _FakeLedNode(rgb=(0, 0, 0))
         backend = _backend_com_nos(monkeypatch, {MAC1: node})
         backend._output_mute = True
@@ -557,8 +532,7 @@ class TestPrimingERastreio:
     def test_no_recriado_no_reconnect_bt_e_primado_de_novo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Mesmo MAC, `indicator_dir` novo (input30→input75): a classe renasceu
-        zerada no probe e converge de novo."""
+        """Mesmo MAC, `indicator_dir` novo (input30→input75): a classe renasceu"""
         node_a = _FakeLedNode(rgb=(0, 0, 0), indicator_dir="/fake/input30:rgb:indicator")
         backend = _backend_com_nos(monkeypatch, {MAC1: node_a})
         backend._refresh_sysfs_leds()
@@ -614,21 +588,11 @@ def _stub_handle_transporte(transporte: str) -> Any:
 
 
 class TestSupressaoDeLedPorTransporte:
-    """LIGHTBAR-BT-NEVER-01: por BT a pydualsense fica SEMPRE suprimida.
-
-    O report BT da pydualsense 0.7.5 é malformado (layout off-by-one, sem o
-    tag 0x10) e um write com flags de LED dentro da janela da máquina de
-    estados da lightbar LATCHEIA a lightbar apagada até o power-off (provado
-    ao vivo 2026-07-18: o nó de LED atrasado na reconexão BT rebaixava a
-    supressão por 1 tick e re-envenenava o controle). Em USB o fallback
-    histórico (não-suprimido quando sem nó sysfs) continua.
-    """
+    """LIGHTBAR-BT-NEVER-01: por BT a pydualsense fica SEMPRE suprimida."""
 
     def test_bt_sem_no_sysfs_continua_suprimido(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Nó de LED ATRASADO/ausente (discover vazio): o handle BT NÃO pode
-        # ser rebaixado para False — era a janela residual do envenenamento.
         backend = _backend_com_nos(monkeypatch, {})
         handle = _stub_handle_transporte("bt")
         backend._handles = {KEY1: handle}
@@ -649,7 +613,6 @@ class TestSupressaoDeLedPorTransporte:
     def test_usb_sem_no_sysfs_libera_o_fallback_pydualsense(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # USB sem regra udev: o caminho histórico pydualsense segue valendo.
         backend = _backend_com_nos(monkeypatch, {})
         handle = _stub_handle_transporte("usb")
         backend._handles = {KEY1: handle}
@@ -676,17 +639,13 @@ class TestSupressaoDeLedPorTransporte:
         backend._desired_default.led = (1, 2, 3)
         backend.apply_output_for(MAC2, OutputSpec(led=(9, 8, 7)))
 
-        assert backend.resolved_led_for(MAC1) == (1, 2, 3)  # default puro
-        assert backend.resolved_led_for(MAC2) == (9, 8, 7)  # override por-uniq
+        assert backend.resolved_led_for(MAC1) == (1, 2, 3)
+        assert backend.resolved_led_for(MAC2) == (9, 8, 7)
 
     def test_describe_controllers_em_loop_nao_le_arquivo_nenhum(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`describe_controllers` roda no caminho quente do FF — zero I/O de nó.
-
-        O enriquecimento de cor mora no handler IPC (com cache TTL), nunca
-        aqui. O fake conta leituras: N chamadas = 0 leituras.
-        """
+        """`describe_controllers` roda no caminho quente do FF — zero I/O de nó."""
         node = _FakeLedNode(rgb=(5, 5, 5))
         backend = _backend_com_nos(monkeypatch, {MAC1: node})
         backend._refresh_sysfs_leds()
@@ -709,16 +668,9 @@ class TestSupressaoDeLedPorTransporte:
         assert discover_chamado["n"] == 0
 
 
-# --- LEDS_ROOT fake de verdade: SysfsLedNode + discover reais -----------------
-
-
 class TestSysfsLedsLeituraReal:
     def _monta_arvore(self, tmp_path: Path, mac: str) -> tuple[Path, Path]:
-        """Réplica mínima do sysfs: HID dev + leds/inputN:rgb:indicator + symlink.
-
-        `discover()` faz glob em `LEDS_ROOT` e `realpath` até o dir do HID
-        (que tem `uevent` com HID_UNIQ) — a árvore fake reproduz isso.
-        """
+        """Réplica mínima do sysfs: HID dev + leds/inputN:rgb:indicator + symlink."""
         hid = tmp_path / "hid-dev"
         indicator = hid / "leds" / "input30:rgb:indicator"
         indicator.mkdir(parents=True)
@@ -766,9 +718,6 @@ class TestSysfsLedsLeituraReal:
         assert node.is_on() is False
 
 
-# --- CoopManager.live_snapshots ------------------------------------------------
-
-
 class TestLiveSnapshots:
     def _manager(self) -> Any:
         from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
@@ -788,9 +737,7 @@ class TestLiveSnapshots:
         reader_ok = SimpleNamespace(snapshot=lambda: snap)
         manager._players = {
             MAC2: SimpleNamespace(vpad=object(), reader=reader_ok, player_index=2),
-            # pendente (sem vpad): o jogo não o vê — fica fora.
             MAC1: SimpleNamespace(vpad=None, reader=reader_ok, player_index=3),
-            # sem MAC: não casa com nenhum card — fica fora.
             "path:/dev/input/event9": SimpleNamespace(
                 vpad=object(), reader=reader_ok, player_index=4
             ),
@@ -822,9 +769,6 @@ class TestLiveSnapshots:
         out = manager.live_snapshots()
 
         assert list(out) == [MAC2]
-
-
-# --- transição de degradação anunciada (BT-03) --------------------------------
 
 
 class TestNotifyVpadDegradado:
@@ -878,7 +822,6 @@ class TestNotifyVpadDegradado:
             flavor="dualsense", backend="uinput",
             fallback_motivo="uhid_indisponivel", stop=lambda: None,
         )
-        # `**_sinks`: o co-op também passa os sinks de replicação (REPLICA-03).
         monkeypatch.setattr(
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
             lambda flavor, *, rumble_sink=None, player=1, allow_uhid=True,

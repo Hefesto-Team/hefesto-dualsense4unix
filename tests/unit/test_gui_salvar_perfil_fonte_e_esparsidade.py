@@ -76,7 +76,7 @@ class TestEsparsidadeDoOverridePorControle:
         """O fix: a guarda que `draft_config.to_profile` já tinha."""
         p = _perfil_com_override_parcial()
         payload = p.model_dump(mode="python")
-        payload["controllers"] = p.controllers  # <- a guarda
+        payload["controllers"] = p.controllers
 
         salvo = Profile.model_validate(payload)
         leds = salvo.controllers[MAC].leds
@@ -111,11 +111,7 @@ class TestFonteDoBuild:
     """O build tem de ler o DRAFT quando edita o perfil que o draft representa."""
 
     def test_o_codigo_consulta_o_draft(self) -> None:
-        """Guarda de arquitetura: o módulo não lia `self.draft` em linha alguma.
-
-        Um teste de comportamento exigiria GTK montado; o que importa travar é
-        que a fonte deixou de ser exclusivamente o disco.
-        """
+        """Guarda de arquitetura: o módulo não lia `self.draft` em linha alguma."""
         fonte = (
             Path(__file__).resolve().parents[2]
             / "src/hefesto_dualsense4unix/app/actions/profiles_actions.py"
@@ -139,26 +135,11 @@ class TestFonteDoBuild:
             '"Novo perfil" não pode cair no selected_source (que existe para '
             "rename e duplicação) — nasceria clonando overrides por-MAC"
         )
-        # E a flag precisa ser zerada nos caminhos que saem do estado "novo",
-        # senão o Salvar seguinte sobre um perfil existente perderia a config.
         assert fonte.count("self._new_profile = False") >= 3
 
 
 class TestR11SourceNameGateiaAsRegras:
-    """R-11 — `to_profile` reemitia match/priority/mode para QUALQUER nome.
-
-    Os campos `source_*` são um snapshot tirado no bootstrap, e nenhum handler
-    da aba Perfis os atualiza. Dois estragos distintos saíam daí:
-
-    1. **nome NOVO** — o perfil nascia com a regra de casamento e a prioridade
-       de OUTRO perfil. Medido: com o FPS ativo, "Salvar Perfil" como "MadJack"
-       produzia um perfil com o regex de título do FPS e prioridade 60, e
-       nenhuma regra para o jogo dela;
-    2. **mesmo nome** — ela configurava o Modo na aba Perfis e salvava (o JSON
-       ganhava `mode`), ia à Lightbar mudar a cor e clicava "Salvar Perfil" no
-       rodapé → `to_profile` reemitia `mode=source_mode`, ainda o valor do BOOT
-       (None), e a seção `mode` era APAGADA do JSON.
-    """
+    """R-11 — `to_profile` reemitia match/priority/mode para QUALQUER nome."""
 
     @staticmethod
     def _draft_do_fps():
@@ -197,22 +178,16 @@ class TestR11SourceNameGateiaAsRegras:
         assert salvo.suppress_desktop_emulation is True
 
     def test_mode_configurado_na_aba_perfis_sobrevive_ao_salvar_do_rodape(self) -> None:
-        """O estrago nº 2, na ordem exata de cliques que ela faz.
-
-        Depois de salvar pela aba Perfis, a reconciliação (R-08) recarrega o
-        draft do disco — e é DAÍ que o snapshot passa a ter o `mode` novo.
-        """
+        """O estrago nº 2, na ordem exata de cliques que ela faz."""
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
         from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
-        # Boot: o perfil ainda não tem `mode`.
         no_boot = Profile(
             name="FPS", match=MatchCriteria(window_class=["x"]), priority=60
         )
         draft_boot = DraftConfig.from_profile(no_boot)
         assert draft_boot.to_profile("FPS").mode is None
 
-        # Aba Perfis grava o Modo; a reconciliação recarrega o draft.
         com_mode = no_boot.model_copy(
             update={"mode": ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")}
         )

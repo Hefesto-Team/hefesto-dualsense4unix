@@ -1,69 +1,5 @@
 #!/usr/bin/env python3
-"""reapontar-citacoes.py — a citação `arquivo:linha` anda junto com o código.
-
-POR QUE ELE EXISTE (25/09/2026)
---------------------------------
-Toda leva que insere código no meio de um arquivo apodrece as citações que
-apontam para baixo dele, e alguém as reaponta à mão: 27 de uma vez em 10/09, 30
-no merge da 6e em 25/09 (e as oito faixas de `coop.py` cravadas numa régua), e
-mais duas horas depois, quando o `doctor.sh` ganhou uma função. A ordem dela,
-no mesmo dia: *«erro no install e durante o Merge quero q vc mesmo corrija na
-origem melhorando o produto e o tornando cada vez mais inteligente e
-integrado»*. <!-- noqa-acento: citação literal dela -->
-
-O validador (`validar-citacoes-de-linha.py`) sabe QUAL símbolo cada citação
-promete; a régua dos comentários de `src/`
-(`tests/unit/test_portao_o_par_com_metade_ligada.py`) também. O que faltava era
-saber PARA ONDE a linha foi, e isso o git sabe.
-
-COMO ELE REAPONTA, e por que não é aritmética
----------------------------------------------
-Para cada citação que reprova, e que promete um símbolo:
-
-1. procura no histórico do arquivo citado a versão MAIS RECENTE em que a faixa
-   era verdadeira (continha o símbolo prometido);
-2. leva a faixa daquela versão até o arquivo de hoje pelos hunks do
-   `git diff -U0` — a mesma conta que o `git blame` faz: linha que nenhum hunk
-   tocou anda o que os hunks de cima andaram;
-3. se uma ponta da faixa caiu dentro de um hunk, procura o BLOCO daquela versão,
-   idêntico, no arquivo de hoje — só vale se ele aparece uma vez (é assim que a
-   função que mudou de lugar é achada);
-4. se nem isso, leva a faixa pela linha do próprio símbolo.
-
-Só escreve quando a faixa nova contém TODO símbolo prometido. Depois de escrever
-um documento, roda o validador de novo nele: se alguma citação que passava
-passou a reprovar (o mesmo endereço servia a duas promessas), o documento volta
-como estava e a citação vai para a lista «à mão».
-
-Citação sem símbolo prometido não se reaponta: sem promessa não há como saber
-quando ela era verdadeira. Ela sai na lista «à mão», com o motivo.
-
-A SEGUNDA PERGUNTA: A FUNÇÃO INTEIRA QUE FICOU À DERIVA, E PASSAVA VERDE
-------------------------------------------------------------------------
-O validador pergunta se o símbolo prometido está DENTRO da faixa. Uma citação
-da função inteira que andou menos que o tamanho dela continua com a linha do
-`def` lá dentro, e passa verde apontando para o código errado. Medido no mapa em
-25/09: de 184 citações que prometem uma função ou classe de definição única, 33
-tinham o tamanho exato da função e estavam fora do lugar (`read_state` citado
-em 3901-3982, e ele mora em 3971-4052; `numeros_de_jogador` 26 linhas acima de
-onde está). Para arquivo `.py`, e só quando o símbolo tem UMA definição, a
-citação é da função inteira se tem o tamanho dela hoje, ou se numa versão do
-histórico ela batia exatamente com a função; então ela vai para onde a função
-está. Citação de trecho de dentro da função não é tocada por esta pergunta.
-
-A TERCEIRA: O TRECHO QUE ABRAÇA O `def` COMEÇANDO EM CÓDIGO DE FORA
---------------------------------------------------------------------
-O trecho do começo da função (as primeiras 34 linhas do `_spawn_player`) que
-andou menos que o próprio tamanho também passava verde na pergunta 2. A
-pergunta 3 do validador (`abraca_de_fora`) o reprova, e o `_contem` daqui faz
-a MESMA pergunta, a ele, para decidir qual versão do histórico era verdadeira
-— então o trecho anda pelos hunks como qualquer outra citação podre.
-
-Uso:
-
-    python3 scripts/reapontar-citacoes.py              # só mostra
-    python3 scripts/reapontar-citacoes.py --escrever   # reaponta e confere
-"""
+"""reapontar-citacoes.py — a citação `arquivo:linha` anda junto com o código."""
 
 from __future__ import annotations
 
@@ -80,9 +16,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 
-#: Quantas versões do arquivo citado ele olha para trás, no máximo. A versão
-#: verdadeira costuma ser a de um ou dois commits antes; 400 cobre uma leva
-#: inteira de costura sem deixar a busca sem teto.
 HISTORICO = 400
 
 _NOME_NA_QUEIXA = re.compile(r"a faixa (?:não contém `|começa antes do `def )(?P<nome>[^`]+)`")
@@ -101,8 +34,6 @@ class Citacao:
     b: int
     faixa: bool
     nomes: set[str] = field(default_factory=set)
-    #: As linhas do documento em que o validador a achou. É o que deixa
-    #: escrever a forma curta ``:N``, que só vale ancorada na MESMA linha.
     linhas: set[int] = field(default_factory=set)
 
     @property
@@ -137,9 +68,7 @@ def _validador(raiz: Path) -> ModuleType:
 def _contem(
     linhas: Sequence[str], a: int, b: int, nomes: set[str], relativo: str = ""
 ) -> bool:
-    """A faixa é verdadeira: contém todo nome prometido e, em `.py`, não
-    abraça o `def` de nenhum deles começando em código de fora (a pergunta 3
-    do validador, perguntada a ele)."""
+    """A faixa é verdadeira: contém todo nome prometido e, em `.py`, não"""
     if a < 1 or b < a or b > len(linhas):
         return False
     trecho = "\n".join(linhas[a - 1 : b])
@@ -176,7 +105,6 @@ def _levar_linha(linha: int, hunks: list[tuple[int, int, int, int]]) -> int | No
     delta = 0
     for os_, oc, _ns, nc in hunks:
         if oc == 0:
-            # Inserção DEPOIS da linha `os_` da versão velha.
             if os_ < linha:
                 delta += nc
             continue
@@ -190,11 +118,7 @@ def _levar_linha(linha: int, hunks: list[tuple[int, int, int, int]]) -> int | No
 def levar(
     raiz: Path, relativo: str, a: int, b: int, nomes: set[str], *, historico: int = HISTORICO
 ) -> tuple[int, int] | None:
-    """A faixa ``a-b`` de ``relativo``, levada para onde o trecho que ela prometia está hoje.
-
-    ``None`` quando nenhuma versão do histórico tinha a promessa na faixa, ou
-    quando o trecho não pode ser achado hoje sem chute.
-    """
+    """A faixa ``a-b`` de ``relativo``, levada para onde o trecho que ela prometia está hoje."""
     atual = (raiz / relativo).read_text(encoding="utf-8", errors="replace").splitlines()
     if _contem(atual, a, b, nomes, relativo):
         return a, b
@@ -225,7 +149,6 @@ def _mapear(
         a2, b2 = _levar_linha(a, hunks), _levar_linha(b, hunks)
         if a2 is not None and b2 is not None and _contem(atual, a2, b2, nomes, relativo):
             return a2, b2
-    # Uma ponta caiu num hunk: o bloco inteiro, idêntico e ÚNICO, no arquivo de hoje.
     bloco = velho[a - 1 : b]
     lugares = [
         i + 1 for i in range(len(atual) - len(bloco) + 1) if atual[i : i + len(bloco)] == bloco
@@ -234,7 +157,6 @@ def _mapear(
         return lugares[0], lugares[0] + len(bloco) - 1
     if len(lugares) > 1 or hunks is None:
         return None
-    # Pela linha do próprio símbolo: a primeira da faixa que o nomeia.
     for n in range(a, b + 1):
         if any(nome in velho[n - 1] for nome in nomes):
             hoje = _levar_linha(n, hunks)
@@ -245,8 +167,6 @@ def _mapear(
     return None
 
 
-#: Quantas versões do arquivo a pergunta da deriva olha para trás: ela parseia
-#: cada uma (com cache), e é a pergunta mais cara do script.
 HISTORICO_DA_DERIVA = 150
 
 _DEFINICOES: dict[tuple[str, str], dict[str, list[tuple[int, int]]]] = {}
@@ -273,12 +193,7 @@ def _unica(definicoes: dict[str, list[tuple[int, int]]], nome: str) -> tuple[int
 def pelo_simbolo(
     raiz: Path, relativo: str, a: int, b: int, nome: str, *, historico: int = HISTORICO_DA_DERIVA
 ) -> tuple[int, int] | None:
-    """A citação da função (ou classe) INTEIRA, ou da linha do ``def``, que ficou à deriva.
-
-    ``None`` quando ela está no lugar, quando o símbolo não tem uma definição só,
-    ou quando nada diz que ela era a função inteira — trecho de dentro da função
-    não é desta pergunta.
-    """
+    """A citação da função (ou classe) INTEIRA, ou da linha do ``def``, que ficou à deriva."""
     if not relativo.endswith(".py"):
         return None
     hoje = _unica(
@@ -305,11 +220,6 @@ def pelo_simbolo(
         if a == b == antes[0]:
             return inicio, inicio
     return None
-
-
-# ---------------------------------------------------------------------------
-# As frentes: o que o validador cobra, a deriva, e os comentários de src/.
-# ---------------------------------------------------------------------------
 
 
 def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
@@ -352,11 +262,7 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
 
 
 def com_promessa(raiz: Path) -> list[Citacao]:
-    """Toda citação que o validador confere E que promete um símbolo, podre ou não.
-
-    Lê como o validador lê — as mesmas expressões, a mesma âncora na mesma linha
-    do `.md`, a mesma célula do CSV — e só conta o endereço com caminho escrito.
-    """
+    """Toda citação que o validador confere E que promete um símbolo, podre ou não."""
     val = _validador(raiz)
     achadas: dict[tuple[Path, str], Citacao] = {}
 
@@ -391,24 +297,17 @@ def com_promessa(raiz: Path) -> list[Citacao]:
 
 
 def podres_do_src(raiz: Path) -> tuple[list[Citacao], list[str]]:
-    """As citações dos comentários de `src/` que a régua deles reprova.
-
-    Quem sabe o que é uma citação ali — as formas, a janela de três linhas, a
-    âncora candidata — é a própria régua; este script pergunta a ela, e não
-    escreve um segundo leitor.
-    """
+    """As citações dos comentários de `src/` que a régua deles reprova."""
     src = raiz / "src" / "hefesto_dualsense4unix"
     regua = raiz / "tests" / "unit" / "test_portao_o_par_com_metade_ligada.py"
     if not regua.is_file() or not src.is_dir():
         return [], []
     sys.path.insert(0, str(raiz))
-    # Perguntar à régua não pode deixar `__pycache__` na árvore de quem pergunta.
     bytecode, sys.dont_write_bytecode = sys.dont_write_bytecode, True
     try:
         spec = importlib.util.spec_from_file_location("_regua_das_citacoes_do_src", regua)
         assert spec is not None and spec.loader is not None
         modulo = importlib.util.module_from_spec(spec)
-        # O `@dataclass` da régua procura o módulo em `sys.modules`.
         sys.modules[spec.name] = modulo
         spec.loader.exec_module(modulo)
     finally:
@@ -422,8 +321,6 @@ def podres_do_src(raiz: Path) -> tuple[list[Citacao], list[str]]:
         if cit.chave not in queixas or cit.chave in pendentes:
             continue
         candidatas = list(modulo._ancoras_candidatas(src / cit.citante, cit.linha_da_citacao))
-        # A régua só aponta UMA âncora por citação: a primeira candidata, NA
-        # ORDEM dela, que tem definição única no alvo.
         linhas = cit.alvo.read_text(encoding="utf-8").splitlines()
         uma = next((n for n in candidatas if modulo._definicao_unica(linhas, n) is not None), None)
         if uma is None:
@@ -448,11 +345,6 @@ def podres_do_src(raiz: Path) -> tuple[list[Citacao], list[str]]:
     return citacoes, a_mao
 
 
-# ---------------------------------------------------------------------------
-# Escrever, e conferir o que escreveu.
-# ---------------------------------------------------------------------------
-
-
 def _trocar(texto: str, velho: str, novo: str) -> tuple[str, int]:
     """Troca o endereço ``velho`` inteiro — nunca um prefixo de outro número."""
     padrao = re.compile(r"(?<![A-Za-z0-9_./-])" + re.escape(velho) + r"(?![0-9-])")
@@ -460,14 +352,7 @@ def _trocar(texto: str, velho: str, novo: str) -> tuple[str, int]:
 
 
 def _trocar_curta(texto: str, cit: Citacao, endereco: str) -> tuple[str, int]:
-    """Troca a forma curta ``:N`` só nas linhas em que o validador a ancorou.
-
-    No `.md` a forma curta herda o arquivo da citação inteira da MESMA linha, e
-    é assim que o validador a lê. O endereço que ele devolve vem com o arquivo,
-    e o texto não o tem: trocar pelo endereço inteiro dava zero, e a troca
-    saía na lista dos feitos sem ter escrito nada (medido na costura da 6e-4,
-    com a `dualsense-referencia-canonica.md:766`).
-    """
+    """Troca a forma curta ``:N`` só nas linhas em que o validador a ancorou."""
     curto_velho = cit.texto[len(cit.arquivo):]
     curto_novo = endereco[len(cit.arquivo):]
     linhas = texto.split("\n")
@@ -499,7 +384,6 @@ def reapontar(raiz: Path, *, escrever: bool) -> tuple[list[str], list[str]]:
             a_mao.append(f"{rotulo}: nenhuma versão do histórico acha o trecho sem chute")
             continue
         planos.setdefault(cit.documento, []).append((cit, cit.novo_texto(*novo)))
-    # A deriva: a função inteira que andou e segue com o `def` dentro da faixa.
     for cit in com_promessa(raiz):
         if (cit.documento, cit.texto) in vistos:
             continue

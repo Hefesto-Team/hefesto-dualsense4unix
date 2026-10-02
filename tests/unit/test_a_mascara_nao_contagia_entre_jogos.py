@@ -37,10 +37,7 @@ GAMEPAD = pathlib.Path("src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py"
 
 class TestPonto1AMascaraDeUmJogoNaoViraPadraoDaMaquina:
     def test_o_pedido_do_perfil_nao_chama_mais_o_gravador(self):
-        """MORDIDA: devolva `self._gravar_mascara_do_perfil(flavor)` ao
-        `_pedir_mascara_do_perfil`. O `xbox` do Future Knight volta a virar lei
-        sobre os outros 28 perfis dela.
-        """
+        """MORDIDA: devolva `self._gravar_mascara_do_perfil(flavor)` ao"""
         fonte = LIFECYCLE.read_text(encoding="utf-8")
         i = fonte.index("    def _pedir_mascara_do_perfil(")
         corpo = fonte[i : fonte.index("\n    def ", i + 10)]
@@ -48,14 +45,7 @@ class TestPonto1AMascaraDeUmJogoNaoViraPadraoDaMaquina:
             "o perfil voltou a promover a própria máscara a padrão da máquina")
 
     def test_o_gravador_fica_como_nota_datada_e_nao_escreve(self):
-        """**NÃO SE APAGA DECISÃO MEDIDA** — ela ganha nota datada.
-
-        O método fica, vazio, porque a MASCARA-PERSISTE-01 (22/08) custou um
-        journal inteiro para ser achada e o preço já foi pago. Quem o apagasse
-        faria a próxima pessoa remedir o mesmo dia.
-
-        MORDIDA: devolva o `save_gamepad_emulation` ao corpo.
-        """
+        """**NÃO SE APAGA DECISÃO MEDIDA** — ela ganha nota datada."""
         fonte = LIFECYCLE.read_text(encoding="utf-8")
         i = fonte.index("    def _gravar_mascara_do_perfil(")
         corpo = fonte[i : fonte.index("\n    def ", i + 10)]
@@ -88,14 +78,7 @@ class TestPonto2OGestoQueNaoFalaDeMascaraNaoEscreveMascara:
         assert "save_gamepad_emulation(True, key)" in bloco
 
     def test_o_liga_desliga_continua_gravando(self):
-        """**O EIXO DO LIGA/DESLIGA NÃO PODE CAIR JUNTO** (AUTO-01.1).
-
-        Omitir a escrita quando não há `flavor` apagaria a preferência de
-        LIGADO que a R-07 existe para proteger. A cura reescreve o `True` com a
-        máscara que JÁ ESTÁ NO DISCO — nem inventa opinião, nem perde a dela.
-
-        MORDIDA: apague o ramo `else`. Esta régua reprova.
-        """
+        """**O EIXO DO LIGA/DESLIGA NÃO PODE CAIR JUNTO** (AUTO-01.1)."""
         corpo = self._desfecho()
         i = corpo.index('if origin == "manual":')
         bloco = corpo[i : i + 2200]
@@ -107,9 +90,7 @@ class TestPonto2OGestoQueNaoFalaDeMascaraNaoEscreveMascara:
 
 class TestPonto3ODevolvedorDoXboxDoVazamento:
     def test_o_xbox_volta_ao_default_uma_vez(self, tmp_path, monkeypatch):
-        """MORDIDA: faça a função devolver `lido` sempre. O flag dela continua
-        `xbox` para sempre, e todo controle sem entrada no registro nasce Xbox.
-        """
+        """MORDIDA: faça a função devolver `lido` sempre. O flag dela continua"""
         from hefesto_dualsense4unix.daemon import lifecycle
 
         escritos: list[tuple[bool, str | None]] = []
@@ -124,13 +105,7 @@ class TestPonto3ODevolvedorDoXboxDoVazamento:
             "a devolução não chegou ao disco — o próximo boot lê `xbox` de novo")
 
     def test_o_dualsense_nao_e_tocado(self, monkeypatch):
-        """**A ASSIMETRIA É DE PROPÓSITO.** Só o valor que o vazamento escrevia
-        é devolvido; um `dualsense` no arquivo já é o default e não precisa de
-        conserto.
-
-        MORDIDA: tire o `if lido != "xbox"`. Esta régua reprova com uma escrita
-        de disco que ninguém pediu.
-        """
+        """**A ASSIMETRIA É DE PROPÓSITO.** Só o valor que o vazamento escrevia"""
         from hefesto_dualsense4unix.daemon import lifecycle
         import hefesto_dualsense4unix.utils.session as sessao
 
@@ -143,10 +118,7 @@ class TestPonto3ODevolvedorDoXboxDoVazamento:
         assert escritos == []
 
     def test_o_boot_passa_a_flag_pela_devolucao(self):
-        """**A CURA ESCRITA E NUNCA LIGADA** é o defeito mais caro desta casa.
-
-        MORDIDA: tire a chamada do bloco FEAT-DSX-GAMEPAD-FLAVOR-01 do boot.
-        """
+        """**A CURA ESCRITA E NUNCA LIGADA** é o defeito mais caro desta casa."""
         fonte = LIFECYCLE.read_text(encoding="utf-8")
         i = fonte.index("gp_enabled, gp_flavor = load_gamepad_emulation()")
         bloco = fonte[i : i + 900]
@@ -160,12 +132,7 @@ class TestPonto3ODevolvedorDoXboxDoVazamento:
 
 class TestOsDoisEixosTemAMesmaForma:
     def test_a_irma_do_caminho_continua_la(self):
-        """As duas funções são irmãs e a segunda foi escrita olhando a
-        primeira. Se uma sair, a outra fica sem o par que explica a forma —
-        e a terceira porta desta classe seria achada pela terceira vez.
-
-        MORDIDA: apague `_a_escolha_dela_sem_o_vazamento`.
-        """
+        """As duas funções são irmãs e a segunda foi escrita olhando a"""
         fonte = LIFECYCLE.read_text(encoding="utf-8")
         assert "def _a_escolha_dela_sem_o_vazamento(" in fonte
         assert "def _a_mascara_dela_sem_o_vazamento(" in fonte

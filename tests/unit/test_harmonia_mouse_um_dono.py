@@ -1,25 +1,8 @@
-"""SPRINT-HARMONIA-01 — a emulação de mouse/teclado tem UM dono: o modo desktop.
-
-HARM-05: a aba Mouse era um segundo dono e derrubava o vpad/co-op sem aviso —
-por clique (switch ligado durante "Jogar pelo Hefesto") e por descuido (o
-`dirty` da seção mouse NUNCA baixava, então todo "Aplicar" do rodapé pelo resto
-da sessão religava o mouse e matava o vpad no meio do jogo).
-
-HARM-06: "Controlar o PC" só DESLIGAVA gamepad/nativo — o controle ficava sem
-função nenhuma até alguém achar a aba Mouse — e o round-trip
-desktop->gamepad->desktop apagava a preferência persistida.
-
-Herméticos: sem GTK real (widgets stub), sem daemon real (FakeController +
-config_dir redirecionado para tmp_path), sem uinput de verdade.
-"""
+"""SPRINT-HARMONIA-01 — a emulação de mouse/teclado tem UM dono: o modo desktop."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("harmonia mouse um dono")
 
 from pathlib import Path
@@ -44,11 +27,6 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_sub
 from hefesto_dualsense4unix.integrations import virtual_pad
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
-
-
-# ---------------------------------------------------------------------------
-# HARM-05 (a) — o switch da aba Mouse só existe em "Controlar o PC"
-# ---------------------------------------------------------------------------
 
 
 class _FakeWidget:
@@ -99,22 +77,11 @@ def test_switch_do_mouse_bloqueado_jogando_com_a_razao_ao_lado(mode: str) -> Non
     assert stub.toggle.sensitive is False
     assert stub.hint.text == MODE_GATE_HINT
     assert stub.hint.visible is True
-    # A razão manda para o lugar certo em vez de só proibir.
     assert "Controlar o PC" in stub.hint.text
 
 
 def test_switch_do_mouse_bloqueado_com_daemon_offline_diz_por_que() -> None:
-    """Sem estado não dá para saber se ligar derrubaria um jogo em andamento.
-
-    NOTA DATADA — 25/08/2026 (INTERRUPTOR-APAGADO-MUDO-01, N4). Este teste se
-    chamava `..._e_sem_texto` e exigia `hint.text == ""`. O BLOQUEIO continua
-    certo e continua medido aqui; o SILÊNCIO caiu: na foto oficial das 18h15 de
-    23/08 o interruptor do mouse aparece cinza sem uma palavra ao lado, e um
-    interruptor apagado e mudo é lido como defeito do produto.
-
-    A frase tem de ser OUTRA que a do modo jogo — aquela afirma "o controle é do
-    jogo", que é exatamente o que aqui não se sabe.
-    """
+    """Sem estado não dá para saber se ligar derrubaria um jogo em andamento."""
     from hefesto_dualsense4unix.app.actions.mouse_actions import (
         MODO_DESCONHECIDO_HINT,
     )
@@ -134,11 +101,7 @@ def test_switch_do_mouse_bloqueado_com_daemon_offline_diz_por_que() -> None:
 def test_gate_do_modo_aplicado_mesmo_com_edicao_pendente(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O gate vem antes dos returns do refresh.
-
-    Os ramos de `dirty`/`in_profile` pulam a atualização do draft (para não
-    apagar a edição da usuária) — não podem pular a exclusão mútua junto.
-    """
+    """O gate vem antes dos returns do refresh."""
     stub = _MouseTabStub()
     stub.draft = stub.draft.model_copy(
         update={"mouse": stub.draft.mouse.model_copy(update={"dirty": True})}
@@ -176,11 +139,6 @@ def test_refresh_da_aba_mouse_da_folga_de_timeout(
     _MouseTabStub()._refresh_mouse_from_daemon_async()
 
     assert vistos == [1.0]
-
-
-# ---------------------------------------------------------------------------
-# HARM-05 (b) — o `dirty` baixa depois de aplicar (e só então)
-# ---------------------------------------------------------------------------
 
 
 class _FooterStub(FooterActionsMixin):
@@ -229,8 +187,7 @@ def apply_result(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_aplicar_com_sucesso_baixa_o_dirty(apply_result: dict[str, Any]) -> None:
-    """Era o único `dirty=False` que faltava: sem ele, depois de tocar a aba
-    Mouse UMA vez, todo "Aplicar" religava o mouse e matava o vpad."""
+    """Era o único `dirty=False` que faltava: sem ele, depois de tocar a aba"""
     stub = _FooterStub()
     _com_mouse_tocado(stub)
 
@@ -242,12 +199,7 @@ def test_aplicar_com_sucesso_baixa_o_dirty(apply_result: dict[str, Any]) -> None
 def test_aplicar_seguinte_nao_reenvia_a_secao_mouse(
     apply_result: dict[str, Any],
 ) -> None:
-    """Aceite do HARM-05: nenhum "Aplicar" muda o modo do sistema.
-
-    O PRIMEIRO Aplicar é o que importa — baixar o `dirty` no callback de
-    sucesso só alcança o segundo, e o dano já foi. Nem o primeiro leva
-    `enabled`: ele carrega só a edição pendente, que é a velocidade.
-    """
+    """Aceite do HARM-05: nenhum "Aplicar" muda o modo do sistema."""
     stub = _FooterStub()
     _com_mouse_tocado(stub)
 
@@ -255,7 +207,6 @@ def test_aplicar_seguinte_nao_reenvia_a_secao_mouse(
     stub.on_apply_draft()
 
     assert apply_result["enviados"][0]["mouse"] == {"speed": 6, "scroll_speed": 1}
-    # Aplicada a edição, o segundo Aplicar não tem nada de mouse a dizer.
     assert apply_result["enviados"][1]["mouse"] is None
 
 
@@ -286,8 +237,7 @@ def test_aplicar_recusado_pelo_daemon_mantem_o_dirty(
 def test_aplicar_nao_faz_o_salvar_perfil_perder_a_secao_mouse(
     apply_result: dict[str, Any],
 ) -> None:
-    """Baixar o `dirty` não pode apagar a seção do perfil salvo depois
-    (BUG-MOUSE-SAVE-DROPS-SECTION-01): aplicada, ela FAZ PARTE da config."""
+    """Baixar o `dirty` não pode apagar a seção do perfil salvo depois"""
     stub = _FooterStub()
     _com_mouse_tocado(stub, speed=9)
 
@@ -301,9 +251,7 @@ def test_aplicar_nao_faz_o_salvar_perfil_perder_a_secao_mouse(
 def test_descongelar_nao_reabre_o_switch_fora_do_modo_desktop(
     monkeypatch: pytest.MonkeyPatch, apply_result: dict[str, Any]
 ) -> None:
-    """HARM-05: `_freeze_ui(False)` liberava o switch do mouse às cegas —
-    inclusive em "Jogar pelo Hefesto", ressuscitando o clique que derruba o
-    vpad. A classe real tem os dois mixins; aqui espelhamos essa composição."""
+    """HARM-05: `_freeze_ui(False)` liberava o switch do mouse às cegas —"""
 
     class _AppStub(FooterActionsMixin, MouseActionsMixin):
         def __init__(self) -> None:
@@ -333,11 +281,6 @@ def test_descongelar_nao_reabre_o_switch_fora_do_modo_desktop(
     stub._freeze_ui(False)
 
     assert stub.toggle.sensitive is False
-
-
-# ---------------------------------------------------------------------------
-# HARM-06 — a preferência de mouse sobrevive ao round-trip pelo jogo
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture()
@@ -388,8 +331,7 @@ def daemon(monkeypatch: pytest.MonkeyPatch) -> Daemon:
 def test_preferencia_nunca_configurada_liga_o_mouse(
     tmp_config: Path, daemon: Daemon
 ) -> None:
-    """Aceite do HARM-06: entrar em "Controlar o PC" deixa o cursor
-    funcionando. Sem flag = nunca configurada; a alternativa é o controle mudo."""
+    """Aceite do HARM-06: entrar em "Controlar o PC" deixa o cursor"""
     assert session.load_mouse_preference() == (None, None, None)
 
     assert daemon.restore_mouse_preference() is True
@@ -399,8 +341,7 @@ def test_preferencia_nunca_configurada_liga_o_mouse(
 def test_preferencia_desligada_de_proposito_e_respeitada(
     tmp_config: Path, daemon: Daemon
 ) -> None:
-    """"Desligado pela usuária" não pode virar "nunca configurada" — senão o
-    modo desktop religa o mouse contra a vontade dela."""
+    """"Desligado pela usuária" não pode virar "nunca configurada" — senão o"""
     session.save_mouse_emulation(False)
 
     assert daemon.restore_mouse_preference() is False
@@ -421,21 +362,17 @@ def test_restore_reaplica_as_velocidades_persistidas(
 def test_ligar_o_gamepad_nao_apaga_a_preferencia_de_mouse(
     tmp_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A causa-raiz do HARM-06: a exclusão mútua gravava "off" e o round-trip
-    desktop->gamepad->desktop devolvia o controle sem função nenhuma."""
+    """A causa-raiz do HARM-06: a exclusão mútua gravava "off" e o round-trip"""
     session.save_mouse_emulation(True, speed=9, scroll_speed=2)
     d = _daemon()
     d._mouse_device = _FakeMouseDevice()
     d.config.mouse_emulation_enabled = True
     monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: None)
 
-    # O start do vpad falha (make_virtual_pad -> None), mas a exclusão mútua já
-    # rodou — que é o ponto: ela não pode custar a preferência.
     gamepad_sub.start_gamepad_emulation(d, flavor="xbox", origin="manual")
 
-    assert d._mouse_device is None  # o device saiu do caminho do jogo
+    assert d._mouse_device is None
     assert d.config.mouse_emulation_enabled is False
-    # ... mas a PREFERÊNCIA (e as velocidades) sobreviveram.
     assert session.load_mouse_preference() == (True, 9, 2)
 
 
@@ -444,13 +381,13 @@ def test_round_trip_desktop_gamepad_desktop_preserva(
 ) -> None:
     """Aceite do HARM-06: sair e voltar preserva."""
     monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: None)
-    daemon.restore_mouse_preference()  # desktop: liga por default
+    daemon.restore_mouse_preference()
     assert daemon.config.mouse_emulation_enabled is True
 
-    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")  # foi jogar
+    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")
     assert daemon.config.mouse_emulation_enabled is False
 
-    assert daemon.restore_mouse_preference() is True  # voltou pro desktop
+    assert daemon.restore_mouse_preference() is True
     assert daemon.config.mouse_emulation_enabled is True
 
 
@@ -479,8 +416,7 @@ async def test_ipc_restore_liga_o_mouse_e_esta_no_contrato(
 async def test_ipc_restore_com_daemon_sem_o_metodo_nao_estoura(
     tmp_config: Path,
 ) -> None:
-    """Daemon antigo/dublado: o modo desktop vale sem o mouse — mas a resposta
-    não pode mentir "ok"."""
+    """Daemon antigo/dublado: o modo desktop vale sem o mouse — mas a resposta"""
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 
     class _DaemonSemRestore:
@@ -500,18 +436,12 @@ async def test_ipc_restore_com_daemon_sem_o_metodo_nao_estoura(
 
 
 def test_desligar_o_mouse_na_mao_persiste_off(tmp_config: Path, daemon: Daemon) -> None:
-    """O gesto MANUAL da aba Mouse continua gravando a preferência — é ele que
-    a exclusão mútua não pode imitar."""
+    """O gesto MANUAL da aba Mouse continua gravando a preferência — é ele que"""
     daemon.restore_mouse_preference()
 
     daemon.set_mouse_emulation(False, origin="manual")
 
     assert session.load_mouse_preference()[0] is False
-
-
-# ---------------------------------------------------------------------------
-# HARM-05 (c) — o "Aplicar" não derruba o vpad (do draft até o daemon)
-# ---------------------------------------------------------------------------
 
 
 def _applier(daemon: Daemon) -> Any:
@@ -523,14 +453,7 @@ def _applier(daemon: Daemon) -> Any:
 def test_aplicar_jogando_nao_derruba_o_vpad(
     tmp_config: Path, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O repro do revisor, do draft ao daemon (aceite do item HIGH).
-
-    Início em "Controlar o PC" -> a aba Mouse liga o switch -> "Jogar pelo
-    Hefesto" -> um "Aplicar" qualquer (mudou um gatilho). O payload levava
-    `mouse.enabled=true`, o daemon aplicava a exclusão mútua e o vpad morria no
-    meio da partida. Aqui o draft está do jeito exato daquele momento: mouse
-    `enabled=True` (de quando ela estava no desktop) e `dirty` de um slider.
-    """
+    """O repro do revisor, do draft ao daemon (aceite do item HIGH)."""
     monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: object())
     gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")
     assert daemon._gamepad_device is not None
@@ -554,12 +477,7 @@ def test_aplicar_jogando_nao_derruba_o_vpad(
 def test_aplicar_jogando_ainda_aplica_a_velocidade_editada(
     tmp_config: Path, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Tirar `enabled` do payload não pode custar a edição que ele carregava.
-
-    A seção só viaja por causa dos sliders — se ela virasse no-op, o item HIGH
-    teria sido "consertado" jogando a feature fora (e o applier engole a
-    exceção da seção, então a perda seria SILENCIOSA).
-    """
+    """Tirar `enabled` do payload não pode custar a edição que ele carregava."""
     monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: object())
     gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")
 

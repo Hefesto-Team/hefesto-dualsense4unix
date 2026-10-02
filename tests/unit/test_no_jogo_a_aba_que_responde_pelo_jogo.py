@@ -35,10 +35,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_no_jogo_a_aba_que_responde_pelo_jogo: importa código da janela GTK")
 
 from typing import Any
@@ -64,7 +60,6 @@ from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
     titulo_do_painel,
 )
 
-#: O controle primário, sem número de jogador — o caso de mesa de um controle.
 _PRIMARIO: dict[str, Any] = {
     "index": 0,
     "connected": True,
@@ -129,18 +124,8 @@ def _por_recurso(estado: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# As três palavras, e a distinção que elas carregam
-# ---------------------------------------------------------------------------
-
-
 def test_o_que_atravessa_agora_aparece_como_no_jogo_agora() -> None:
-    """Giroscópio e vibração fluindo: a linha diz "no jogo agora" com o número.
-
-    Mordida: trocar `PALAVRA_DA_SITUACAO[SITUACAO_CHEGANDO]` por qualquer outra
-    coisa derruba as duas primeiras asserções; tirar o `_detalhe` do texto
-    derruba as duas últimas, que são o número que ela lê na tela.
-    """
+    """Giroscópio e vibração fluindo: a linha diz "no jogo agora" com o número."""
     estado = _estado(
         _vpad(
             motion_streaming=True,
@@ -160,15 +145,7 @@ def test_o_que_atravessa_agora_aparece_como_no_jogo_agora() -> None:
 
 
 def test_parou_e_sem_pedido_ainda_sao_frases_diferentes() -> None:
-    """As duas situações que mandam agir em lugares opostos.
-
-    "Nunca começou" é fiação; "parou" é o espelho/o rádio que caiu. Quem as
-    separa é `motion_forwards`, o contador cumulativo de janelas que o vpad de
-    fato escreveu — e a regra é do card, não daqui.
-
-    Mordida: apagar `motion_forwards` do vpad "parado" faz as duas linhas
-    saírem iguais, e a primeira asserção reprova.
-    """
+    """As duas situações que mandam agir em lugares opostos."""
     parado = _por_recurso(
         _estado(_vpad(motion_streaming=False, motion_forwards=12904))
     )
@@ -182,12 +159,7 @@ def test_parou_e_sem_pedido_ainda_sao_frases_diferentes() -> None:
 
 
 def test_o_carimbo_velho_vira_parou_e_o_fresco_vira_no_jogo_agora() -> None:
-    """A recência é lida do `visto_ha_s`, e o teto é o do card (3,0 s).
-
-    Mordida: fixar a idade em algo abaixo do teto nos dois casos faz a segunda
-    asserção reprovar — que é exatamente o defeito de uma tela que diz "está
-    chegando" olhando um contador cumulativo.
-    """
+    """A recência é lida do `visto_ha_s`, e o teto é o do card (3,0 s)."""
     fresco = _por_recurso(_estado(_vpad(visto_ha_s={"lightbar": 1.0})))
     velho = _por_recurso(_estado(_vpad(visto_ha_s={"lightbar": 73.0})))
 
@@ -195,10 +167,6 @@ def test_o_carimbo_velho_vira_parou_e_o_fresco_vira_no_jogo_agora() -> None:
     assert velho["lightbar"].texto == "parou"
 
 
-#: A palavra desta aba -> o rótulo de GRUPO que a linha do card usa para a
-#: mesma situação. Só uma difere, e só em número: o card enumera vários
-#: recursos de uma vez ("pararam: gatilho, luz") e aqui cada linha fala de um
-#: ("parou"). Nenhuma outra palavra entrou.
 _MESMA_COISA_NO_CARD = {
     "no jogo agora": "No jogo agora",
     "parou": "pararam",
@@ -207,21 +175,11 @@ _MESMA_COISA_NO_CARD = {
 
 
 def test_as_tres_palavras_sao_as_do_card_no_singular() -> None:
-    """O vocabulário não é novo: ele é o da linha do card, sem o plural.
-
-    Palavra nova nesta tela seria conceito novo, e a regra da casa é que nome
-    que não deriva do que já está na tela é sinal de erro de conceito.
-
-    Mordida: inventar uma quarta palavra em `PALAVRA_DA_SITUACAO` (ou trocar
-    "sem pedido ainda" por "nunca chegou") derruba a primeira asserção, porque
-    a palavra nova não tem par no card.
-    """
+    """O vocabulário não é novo: ele é o da linha do card, sem o plural."""
     assert set(PALAVRA_DA_SITUACAO.values()) == set(_MESMA_COISA_NO_CARD), (
         "esta aba ganhou (ou perdeu) uma palavra de situação. Ela tem de vir "
         "da linha do card — e o par correspondente tem de entrar no mapa acima"
     )
-    # Uma mesa em que as TRÊS situações aparecem de uma vez: giroscópio
-    # fluindo, luz vista há muito tempo, e o resto sem pedido nenhum.
     estado = _estado(
         _vpad(
             motion_streaming=True,
@@ -240,16 +198,8 @@ def test_as_tres_palavras_sao_as_do_card_no_singular() -> None:
 
 
 def test_os_nomes_dos_recursos_sao_os_mesmos_do_card() -> None:
-    """Os seis nomes têm de aparecer, iguais, na linha do card.
-
-    É o teste que impede as duas telas de divergirem: se alguém renomear
-    "clique do touchpad" aqui, o card continua com o nome antigo e a mesma
-    janela passa a ter dois nomes para o mesmo recurso.
-
-    Mordida: escrever `NOME_DO_RECURSO` à mão neste módulo (em vez de importar
-    a lista-dona) e mudar um nome faz o `in` reprovar.
-    """
-    estado = _estado(_vpad())  # tudo em "sem pedido ainda": a linha cita os 6
+    """Os seis nomes têm de aparecer, iguais, na linha do card."""
+    estado = _estado(_vpad())
     do_card = resumo_do_que_chega_ao_jogo(_PRIMARIO, estado) or ""
 
     for recurso in RECURSOS:
@@ -259,21 +209,8 @@ def test_os_nomes_dos_recursos_sao_os_mesmos_do_card() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# Os três modos — a pergunta que a aba existe para fechar
-# ---------------------------------------------------------------------------
-
-
 def test_mascara_xbox_explica_em_vez_de_acusar() -> None:
-    """Giroscópio e touchpad não chegam, e o motivo não é defeito nosso.
-
-    A API do controle de Xbox declara 8 eixos e 11 botões: não há onde pôr IMU
-    nem dedo. A linha EXPLICA isso; a vibração e a luz continuam medidas.
-
-    Mordida: fazer a aba tratar `SITUACAO_IMPOSSIVEL` como as outras três (isto
-    é, colar a palavra "sem pedido ainda" na frente da explicação) faz a
-    primeira asserção reprovar.
-    """
+    """Giroscópio e touchpad não chegam, e o motivo não é defeito nosso."""
     estado = _estado(
         _vpad(
             visto_ha_s={"rumble": 0.3},
@@ -284,15 +221,6 @@ def test_mascara_xbox_explica_em_vez_de_acusar() -> None:
     )
     linhas = _por_recurso(estado)
 
-    # **O SUJEITO DA FRASE MUDOU EM 21/09/2026, POR ORDEM DELA**, e esta régua
-    # passa a cobrar a PROPRIEDADE em vez do literal. Ela leu a frase antiga
-    # («a máscara Xbox 360 não tem giroscópio») no cabeçalho do cartão e
-    # disse: *"essa frase não deveria existir, não tem sentido tendo em vista
-    # que o giroscopio e mic fazem parte independente do modo ou mascara"*.
-    #
-    # Ela estava certa: o fato é sobre o CANAL ATÉ O JOGO, e a frase o
-    # afirmava sobre o APARELHO. Cravar o literal aqui prenderia a tela ao
-    # sujeito errado — e é o que prendeu por quinze dias.
     for recurso in ("giroscopio", "touchpad"):
         texto = linhas[recurso].texto
         assert "o jogo vê este controle como Xbox 360" in texto, (
@@ -309,15 +237,7 @@ def test_mascara_xbox_explica_em_vez_de_acusar() -> None:
 
 
 def test_conexao_nativa_diz_o_que_acontece_em_vez_de_ficar_vazia() -> None:
-    """No Nativo não há gamepad virtual — e a tela tem de DIZER isso.
-
-    Ficar vazia seria pior que mentir: ela olharia uma aba morta e concluiria
-    que quebrou. E dizer "não chega nada" seria falso — no Nativo chega TUDO,
-    justamente porque não há nada nosso no meio.
-
-    Mordida: devolver `None` em `recado_global` para o Nativo faz a aba cair no
-    caminho dos painéis, e a primeira asserção reprova com a aba vazia.
-    """
+    """No Nativo não há gamepad virtual — e a tela tem de DIZER isso."""
     estado = _estado(native=True, gamepad=False)
 
     assert recado_global(estado) == TEXTO_NATIVO
@@ -327,15 +247,7 @@ def test_conexao_nativa_diz_o_que_acontece_em_vez_de_ficar_vazia() -> None:
 
 
 def test_controlar_o_pc_afirma_so_o_que_o_daemon_sabe() -> None:
-    """A frase fala do que NÓS entregamos, nunca do que o jogo faz.
-
-    "Nenhum jogo recebe nada" seria uma afirmação sobre o mundo inteiro tirada
-    de um campo do nosso payload. "O Hefesto não entrega controle nenhum ao
-    jogo" é o que o daemon de fato sabe.
-
-    Mordida: trocar a frase por uma que comece com "o jogo" faz a última
-    asserção reprovar.
-    """
+    """A frase fala do que NÓS entregamos, nunca do que o jogo faz."""
     estado = _estado(gamepad=False)
 
     assert recado_global(estado) == TEXTO_DESKTOP
@@ -366,35 +278,15 @@ def test_a_linha_de_contexto_nomeia_o_modo_e_a_mascara() -> None:
 
 
 def test_mascara_desconhecida_diz_o_modo_e_cala_sobre_o_resto() -> None:
-    """Payload incompleto não autoriza inventar nome de máscara.
-
-    Mesma família de erro que esta casa já removeu do
-    `texto_do_custo_da_mascara` (o `or "xbox"` que afirmava por omissão).
-
-    Mordida: cair num `str(flavor)` cru faz a asserção ver "arco-iris" no
-    texto.
-    """
+    """Payload incompleto não autoriza inventar nome de máscara."""
     estado = _estado(_vpad(), flavor="arco-iris")
 
     assert texto_do_contexto(estado) == "Jogar pelo Hefesto"
 
 
-# ---------------------------------------------------------------------------
-# O caso sem gamepad virtual — nem vazio, nem mentira
-# ---------------------------------------------------------------------------
-
-
 def test_sem_vpad_no_modo_jogo_a_aba_diz_o_que_observa_e_o_que_fazer() -> None:
-    """"Jogar pelo Hefesto" e mesmo assim nenhum controle virtual casado.
-
-    É o único dos três casos sem vpad que pode ser transitório, e por isso o
-    único com conselho: a frase diz o que se observa, que costuma resolver
-    sozinho, e aponta o gesto que já existe na aba Início.
-
-    Mordida: fazer `recado_do_controle` devolver `None` (ou a frase do Nativo)
-    aqui faz a aba ficar com um painel vazio — a primeira asserção reprova.
-    """
-    estado = _estado()  # modo gamepad, `per_vpad` vazio
+    """"Jogar pelo Hefesto" e mesmo assim nenhum controle virtual casado."""
+    estado = _estado()
 
     assert recado_do_controle(_PRIMARIO, estado) == TEXTO_SEM_VPAD
     assert recado_global(estado) is None, (
@@ -421,21 +313,10 @@ def test_o_secundario_sem_reader_nao_ganha_linha_inventada() -> None:
 
 
 def test_o_titulo_do_painel_e_o_mesmo_do_card_do_status() -> None:
-    """Ela olha uma aba, olha a outra, e o nome do aparelho bate.
-
-    Mordida: montar o título aqui ("Jogador 1", "vpad 1"...) em vez de chamar
-    `titulo_do_card` faz a asserção reprovar.
-    """
+    """Ela olha uma aba, olha a outra, e o nome do aparelho bate."""
     assert titulo_do_painel(_PRIMARIO) == "Controle 1 — USB · Jogador 1"
 
 
-# ---------------------------------------------------------------------------
-# O vocabulário — a regra que mais custou nesta casa
-# ---------------------------------------------------------------------------
-
-#: Frases proibidas: todas afirmam que o JOGO consumiu o dado. O daemon não
-#: sabe disso, e o erro é fácil — em 01/08 uma medição contra a biblioteca
-#: errada produziu um diagnóstico convincente e falso.
 _PROIBIDAS = (
     "o jogo recebeu",
     "o jogo está recebendo",
@@ -446,12 +327,7 @@ _PROIBIDAS = (
 
 
 def test_nenhuma_frase_afirma_que_o_jogo_consumiu_o_dado() -> None:
-    """Varre TODOS os textos que a aba consegue produzir.
-
-    Mordida: trocar "no jogo agora" por "o jogo está recebendo" — que é
-    literalmente a pergunta dela, e por isso a tentação — faz este teste
-    reprovar na hora.
-    """
+    """Varre TODOS os textos que a aba consegue produzir."""
     estados = [
         _estado(_vpad(motion_streaming=True, motion_hz=158.0)),
         _estado(_vpad(visto_ha_s={"rumble": 90.0}), flavor="xbox"),
@@ -477,11 +353,6 @@ def test_nenhuma_frase_afirma_que_o_jogo_consumiu_o_dado() -> None:
             )
 
 
-# ---------------------------------------------------------------------------
-# O gate de aba à vista — o poller que não trabalha para ninguém
-# ---------------------------------------------------------------------------
-
-
 class _Rotulo:
     """Dublê de `Gtk.Label` com o mínimo que o sync toca."""
 
@@ -495,10 +366,6 @@ class _Rotulo:
         self.markup = ""
 
     def set_markup(self, markup: str) -> None:
-        # PERFIL-MUDO-01: o aviso do perfil sai por markup (a cor não vem de
-        # CSS nesta janela — ver `COR_DA_SITUACAO`). O dublê guarda os dois:
-        # `texto` para as asserções de conteúdo, `markup` para provar que a
-        # linha saiu colorida e não em branco.
         self.markup = markup
         self.texto = markup
 
@@ -543,13 +410,6 @@ class _Janela:
         self._sync = sa.StatusActionsMixin._sync_paineis_no_jogo.__get__(self)
         self._status_card_keys_for = sa.StatusActionsMixin._status_card_keys_for
         self._connected_controllers = sa.StatusActionsMixin._connected_controllers
-        # ABA-DO-JOGO-01 (10/08/2026): o `_sync_paineis_no_jogo` passou a decidir
-        # também a EXISTÊNCIA da aba, uma linha antes do gate de pintura. O
-        # método vem REAL, como todos os outros aqui — e é inócuo nesta bancada
-        # porque o `_get` acima não devolve notebook nenhum e os estados destes
-        # testes não têm a chave `jogo_steam` (que é "não dá para saber", e não
-        # mexe em nada). Quem cobra a visibilidade é a bancada própria dela,
-        # `test_aba_no_jogo_entra_e_sai_da_tira`, com GTK de verdade.
         self._sync_visibilidade_no_jogo = (
             sa.StatusActionsMixin._sync_visibilidade_no_jogo.__get__(self)
         )
@@ -590,13 +450,7 @@ def _sincronizar(aba_a_vista: str | None, estado: Any) -> _Janela:
 def test_com_outra_aba_a_vista_o_tique_nao_pinta_nada(
     sem_notebook_real: None,
 ) -> None:
-    """O mesmo gate do tique de 10 Hz da Status, pelo mesmo motivo medido.
-
-    Pintar com outra aba na frente é CPU que ninguém vê — e um poller cego já
-    custou 104% de um núcleo nesta casa (BUG-GUI-IDLE-ADD-BUSY-LOOP-01).
-
-    MORDIDA: tirar o `return` do gate faz a primeira asserção reprovar.
-    """
+    """O mesmo gate do tique de 10 Hz da Status, pelo mesmo motivo medido."""
     from hefesto_dualsense4unix.app.actions.status_actions import ABA_STATUS
 
     janela = _sincronizar(ABA_STATUS, _estado(_vpad(motion_streaming=True)))
@@ -608,8 +462,7 @@ def test_com_outra_aba_a_vista_o_tique_nao_pinta_nada(
 def test_com_a_aba_a_vista_o_tique_pinta_contexto_e_paineis(
     sem_notebook_real: None,
 ) -> None:
-    """E do outro lado do gate ele trabalha — senão o teste acima passaria com
-    uma aba que nunca pinta nada."""
+    """E do outro lado do gate ele trabalha — senão o teste acima passaria com"""
     from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
 
     janela = _sincronizar(ABA_NO_JOGO, _estado(_vpad(motion_streaming=True)))
@@ -622,12 +475,7 @@ def test_com_a_aba_a_vista_o_tique_pinta_contexto_e_paineis(
 def test_daemon_desligado_esvazia_a_aba_em_vez_de_congelar(
     sem_notebook_real: None,
 ) -> None:
-    """Sem daemon, o último estado bom não pode ficar na tela como se fosse de
-    agora — é a mentira confortável que esta aba existe para não contar.
-
-    MORDIDA: fazer `_render_offline` deixar de chamar o sync (ou o sync tratar
-    `None` como "não mexe") faz a segunda asserção reprovar.
-    """
+    """Sem daemon, o último estado bom não pode ficar na tela como se fosse de"""
     from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
 
     janela = _sincronizar(ABA_NO_JOGO, None)
@@ -641,11 +489,7 @@ def test_daemon_desligado_esvazia_a_aba_em_vez_de_congelar(
 
 
 def test_no_nativo_o_recado_substitui_os_paineis(sem_notebook_real: None) -> None:
-    """A explicação é UMA, e não uma cópia dela dentro de cada painel.
-
-    MORDIDA: deixar `recado_global` fora do sync faz a segunda asserção
-    reprovar com um painel por controle repetindo a mesma frase.
-    """
+    """A explicação é UMA, e não uma cópia dela dentro de cada painel."""
     from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
 
     janela = _sincronizar(ABA_NO_JOGO, _estado(native=True, gamepad=False))
@@ -658,19 +502,7 @@ def test_no_nativo_o_recado_substitui_os_paineis(sem_notebook_real: None) -> Non
 def test_o_aviso_do_perfil_sai_colorido_e_aparece_ate_no_nativo(
     sem_notebook_real: None,
 ) -> None:
-    """PERFIL-MUDO-01, do estado até o pixel. Duas mordidas numa.
-
-    1. **A cor.** Nesta janela classe de CSS NÃO pinta rótulo — está medido em
-       `COR_DA_SITUACAO`, com foto: a regra `.hefesto-dualsense4unix-window
-       label` do tema tem especificidade maior. Trocar o `set_markup` por
-       `set_text` faz esta asserção reprovar, e sem ela o aviso sairia branco no
-       meio de uma tela onde branco é o texto comum.
-    2. **O Modo Nativo.** O recado global SUBSTITUI os painéis, e a tentação é
-       deixar o aviso do perfil sair junto. Ele não pode: um perfil que não
-       entrou é fato do disco e da janela em foco, e no Nativo é justamente o
-       perfil dela que ligaria o modo certo. Arrancar a linha do sync (ou
-       escondê-la quando há recado) faz a última asserção reprovar.
-    """
+    """PERFIL-MUDO-01, do estado até o pixel. Duas mordidas numa."""
     from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
     from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
         COR_DO_AVISO_DE_PERFIL,
@@ -688,23 +520,13 @@ def test_o_aviso_do_perfil_sai_colorido_e_aparece_ate_no_nativo(
     assert "Pragmata" in janela._no_jogo_perfil.markup
     assert "não entrou" in janela._no_jogo_perfil.markup
     assert "fallback" in janela._no_jogo_perfil.markup
-    # E o recado do Nativo continua no lugar dele: os dois convivem.
     assert janela._no_jogo_recado.texto == TEXTO_NATIVO
 
 
 def test_nome_de_perfil_com_e_comercial_nao_quebra_o_markup(
     sem_notebook_real: None,
 ) -> None:
-    """Terceira mordida: o escape do Pango.
-
-    O nome do perfil vem do disco — dela — e `set_markup` interpreta `&` e `<`.
-    Um perfil chamado "Rock & Roll" derrubaria a pintura da linha inteira com
-    um erro de parse, e a aba perderia justamente o aviso.
-
-    Arranque do `GLib.markup_escape_text`: o `&` cru sai no markup e o GTK real
-    reclama. Aqui o dublê não faz o parse, então a asserção é sobre a forma:
-    o que sai TEM de estar escapado.
-    """
+    """Terceira mordida: o escape do Pango."""
     from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
 
     estado = _estado()
@@ -716,16 +538,11 @@ def test_nome_de_perfil_com_e_comercial_nao_quebra_o_markup(
 
     markup = janela._no_jogo_perfil.markup
     assert "&amp;" in markup and "&lt;não&gt;" in markup
-    # O único `<` que sobra é o da própria etiqueta de cor.
     assert markup.count("<") == markup.count("<span") + markup.count("</span")
 
 
 def test_sem_aviso_de_perfil_a_linha_fica_escondida(sem_notebook_real: None) -> None:
-    """O caso comum — nenhum perfil ficou de fora — não deixa rótulo em branco.
-
-    Arranque do `set_visible(False)`: uma linha vazia abre um buraco entre o
-    cabeçalho e o primeiro painel, em toda sessão de jogo que dá certo.
-    """
+    """O caso comum — nenhum perfil ficou de fora — não deixa rótulo em branco."""
     from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
 
     janela = _sincronizar(ABA_NO_JOGO, _estado())

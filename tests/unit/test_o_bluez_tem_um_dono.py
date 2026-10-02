@@ -1,24 +1,4 @@
-"""O D-Bus do BlueZ tem UM dono — BLUEZ-UM-DONO-01 (23/09/2026).
-
-Medido no estudo de 23/09: nove leitores falavam com o BlueZ, cada um com o
-próprio subprocesso, quatro desembrulhos, três prazos, e ninguém assinava o
-``ObjectManager``. A guarda contra a suíte estava em um executor de cinco — e a
-política D-Bus desta máquina deixa qualquer uid local chamar qualquer método do
-``org.bluez``, inclusive a suíte.
-
-O QUE ESTA RÉGUA COBRA:
-
-1. **o contrato do barramento:** um ``PropertiesChanged(Discovering=true)``
-   muda a leitura da varredura sem subprocesso nenhum;
-2. **a guarda na borda:** sob a suíte, toda escrita no BlueZ de verdade recusa,
-   e o ``busctl`` do sistema nem responde à leitura;
-3. **a trava:** toda escrita espera o motor que está com a trava do rádio — a
-   exceção declarada é o ``StopDiscovery``;
-4. **o diário:** a escrita que muda o rádio deixa uma linha no diário comum;
-5. **a régua de dono:** um ``busctl`` ou um nome ``org.bluez`` escrito em
-   ``src/`` fora do ``bluez_dbus.py`` reprova;
-6. **o lugar (D3):** o dongle que troca de porta é percebido e dito.
-"""
+"""O D-Bus do BlueZ tem UM dono — BLUEZ-UM-DONO-01 (23/09/2026)."""
 
 from __future__ import annotations
 
@@ -80,11 +60,6 @@ def trava_de_mentira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return caminho
 
 
-# ---------------------------------------------------------------------------
-# 1. o contrato do barramento
-# ---------------------------------------------------------------------------
-
-
 def test_o_sinal_muda_a_leitura_sem_subprocesso_novo(
     vivo: bd.DonoVivo,
     barramento: bm.BarramentoDeMentira,
@@ -126,12 +101,7 @@ def test_o_aparelho_que_entra_e_o_que_sai_mudam_a_arvore(
 def test_o_sinal_que_chega_durante_a_foto_nao_se_perde(
     barramento: bm.BarramentoDeMentira,
 ) -> None:
-    """A foto é do instante em que o BlueZ respondeu; o sinal que chega enquanto
-    ela viaja é MAIS NOVO que ela.
-
-    MORDIDA: aplique o sinal direto na foto em vez de pôr na fila — a foto o
-    sobrescreve e a leitura volta ao valor velho.
-    """
+    """A foto é do instante em que o BlueZ respondeu; o sinal que chega enquanto"""
     dono = bd.DonoVivo(barramento)
 
     def no_meio() -> None:
@@ -164,17 +134,7 @@ def test_o_bluetoothd_que_sai_vira_nao_sei_e_o_que_volta_refotografa(
 def test_a_foto_que_falhou_com_o_bluez_de_pe_e_tirada_de_novo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Um ``GetManagedObjects`` que estourou o prazo não cega o dono para sempre.
-
-    Achado na conferência: o único gatilho de foto nova era o
-    ``NameOwnerChanged``. Um ``bluetoothd`` lento no instante em que o daemon
-    ligava o dono — o regime das quedas de 22/09 — deixava a árvore em "não sei"
-    até o próximo reinício do serviço, e todo leitor do produto respondia
-    "não deu" com o BlueZ de pé.
-
-    MORDIDA: tire o ``_em_segundo_plano(self._refotografar_se_o_bluez_esta_la)``
-    de ``DonoVivo.caminhos`` — a árvore nunca volta.
-    """
+    """Um ``GetManagedObjects`` que estourou o prazo não cega o dono para sempre."""
     monkeypatch.setattr(bd, "REFOTOGRAFAR_S", 0.0)
     barramento = bm.BarramentoDeMentira()
     barramento.fotos_que_falham = 1
@@ -187,14 +147,7 @@ def test_a_foto_que_falhou_com_o_bluez_de_pe_e_tirada_de_novo(
 
 
 def test_sem_dono_do_org_bluez_a_foto_nao_e_pedida(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem ``bluetoothd`` no barramento, pedir a foto ATIVARIA o serviço
-    (``org.bluez.service``): quem o parou de propósito o veria voltar sozinho.
-    Quem refotografa, então, é o ``NameOwnerChanged``.
-
-    MORDIDA: troque o ``if self._barramento.dono_do_nome(SERVICO):`` de
-    ``_refotografar_se_o_bluez_esta_la`` por ``if True:`` — o dono pede a foto
-    ao nome sem dono.
-    """
+    """Sem ``bluetoothd`` no barramento, pedir a foto ATIVARIA o serviço"""
     monkeypatch.setattr(bd, "REFOTOGRAFAR_S", 0.0)
     barramento = bm.BarramentoDeMentira()
     barramento.bluez_de_pe = False
@@ -207,10 +160,6 @@ def test_sem_dono_do_org_bluez_a_foto_nao_e_pedida(monkeypatch: pytest.MonkeyPat
     time.sleep(0.2)
     assert barramento.fotos == 1
 
-
-# ---------------------------------------------------------------------------
-# 2. a guarda na borda
-# ---------------------------------------------------------------------------
 
 _ARGUMENTOS_DE_ESCRITA: dict[str, tuple[Any, ...]] = {
     "chamar": (bm.no_de(bm.CONTROLE), bd.APARELHO, "Connect"),
@@ -245,12 +194,11 @@ def _sem_classificacao(*classes: type) -> set[str]:
 
 
 def test_todo_metodo_publico_do_dono_e_leitura_escrita_ou_ciclo() -> None:
-    """Um método público novo que escreve e não está em ``ESCRITAS`` escaparia
-    da guarda. MORDIDA embutida: uma subclasse com um método a mais reprova."""
+    """Um método público novo que escreve e não está em ``ESCRITAS`` escaparia"""
     assert _sem_classificacao(bd.LeitorDoBluez, bd.PeloBusctl, bd.DonoVivo) == set()
 
     class ComUmAMais(bd.DonoVivo):
-        def religar_tudo(self) -> None:  # o método que ninguém classificou
+        def religar_tudo(self) -> None:
             return None
 
     assert _sem_classificacao(ComUmAMais) == {"religar_tudo"}
@@ -260,18 +208,13 @@ def test_todo_metodo_publico_do_dono_e_leitura_escrita_ou_ciclo() -> None:
 def test_sob_a_suite_toda_escrita_no_bluez_de_verdade_recusa(
     nome: str, sem_subprocesso: list[Any]
 ) -> None:
-    """A borda: o BlueZ do SISTEMA (pelo Gio ou pelo ``busctl``) recusa tudo.
-
-    MORDIDA: tire o ``_recusa()`` de ``_na_borda`` — as escritas chegam ao
-    barramento de mentira marcado como sistema, e ao ``busctl`` de verdade.
-    """
+    """A borda: o BlueZ do SISTEMA (pelo Gio ou pelo ``busctl``) recusa tudo."""
     sistema = bm.BarramentoDeMentira(e_do_sistema=True)
     vivo = bd.DonoVivo(sistema)
     assert vivo.ligar()
     for leitor in (vivo, bd.PeloBusctl()):
         escrita = getattr(leitor, nome)(*_ARGUMENTOS_DE_ESCRITA[nome])
         if nome in ("comecar_busca", "parar_busca") and isinstance(leitor, bd.PeloBusctl):
-            # Pelo busctl a busca nem existe: um processo que sai a derruba.
             assert escrita.erro == bd.SEM_BARRAMENTO
             continue
         assert escrita.erro == bd.RECUSA_DA_SUITE, (nome, type(leitor).__name__, escrita)
@@ -290,12 +233,7 @@ def test_a_guarda_recusa_o_sistema_e_nao_o_barramento_de_mentira(
 def test_sob_a_suite_o_busctl_do_sistema_nao_responde_nem_a_leitura(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Uma régua que lê o barramento DELA mede a máquina, não o produto.
-
-    O ``busctl`` de mentira posto na frente do ``PATH`` responde; o do sistema
-    não. MORDIDA: tire o ``_e_o_do_sistema`` de ``bd.busctl`` — sem o de
-    mentira, a árvore da mesa dela volta.
-    """
+    """Uma régua que lê o barramento DELA mede a máquina, não o produto."""
     if bd.shutil.which(bd.FERRAMENTA, path=bd._PATH_DO_SISTEMA) is not None:
         monkeypatch.setenv("PATH", bd._PATH_DO_SISTEMA)
         assert bd.busctl(["tree", bd.SERVICO, "--list"]) is None
@@ -313,17 +251,7 @@ def test_sob_a_suite_o_busctl_do_sistema_nao_responde_nem_a_leitura(
 def test_o_busctl_so_escreve_de_dentro_da_borda(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, trava_de_mentira: Path
 ) -> None:
-    """Um executor novo que chamasse ``bd.busctl(["call", …])`` direto pularia a
-    trava e o diário — e a régua de dono não o via, porque ele não escreve
-    ``busctl`` nem ``org.bluez``: usa as constantes do dono.
-
-    A suíte já recusa toda escrita pelo ``busctl``; para medir a BORDA, a régua
-    desliga a guarda da suíte e deixa NO ``PATH`` SÓ um ``busctl`` de mentira,
-    que anota o que recebe. O do sistema não é alcançável daqui.
-
-    MORDIDA: tire a conferência de ``_POR_FIO.na_borda`` de ``bd.busctl`` — a
-    chamada direta chega ao ``busctl``.
-    """
+    """Um executor novo que chamasse ``bd.busctl(["call", …])`` direto pularia a"""
     pasta = tmp_path / "bin"
     pasta.mkdir()
     anotado = tmp_path / "chamadas.txt"
@@ -346,15 +274,7 @@ def test_o_busctl_so_escreve_de_dentro_da_borda(
 
 @pytest.mark.skipif(not bm.ha_dbus_daemon(), reason="sem Gio nesta máquina")
 def test_o_barramento_mudo_nao_deixa_fio_pendurado(tmp_path: Path) -> None:
-    """Um barramento que aceita a conexão e não responde o aperto de mão.
-
-    Achado na conferência: o ``abrir`` desistia no prazo e o fio ficava preso
-    para sempre — e o ``dono()`` tenta de novo a cada minuto, um fio a mais por
-    tentativa. O soquete é particular: nada aqui toca o barramento dela.
-
-    MORDIDA: tire o ``self._cancelar.cancel()`` do ``abrir`` — o fio continua
-    vivo depois do prazo.
-    """
+    """Um barramento que aceita a conexão e não responde o aperto de mão."""
     mudo = tmp_path / "mudo"
     servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     servidor.bind(str(mudo))
@@ -378,15 +298,7 @@ def test_sob_a_suite_o_dono_do_processo_nunca_e_o_vivo_do_sistema() -> None:
 def test_sob_a_suite_o_gio_nao_abre_o_barramento_de_sistema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A guarda do ``busctl`` cobria a leitura; a do Gio faltava.
-
-    Achado na conferência: ``bd.dono()`` nunca liga o vivo sob a suíte, mas um
-    ``BarramentoGio()`` construído por uma régua abria o barramento de sistema e
-    tirava a foto da mesa dela. O fio é trocado por um que não conecta nada, para
-    a mordida não alcançar o barramento de verdade.
-
-    MORDIDA: tire a guarda do começo de ``BarramentoGio.abrir`` — o fio nasce.
-    """
+    """A guarda do ``busctl`` cobria a leitura; a do Gio faltava."""
     nasceram: list[str] = []
 
     def viver_de_mentira(self: bd.BarramentoGio) -> None:
@@ -406,11 +318,6 @@ def test_a_porta_de_fuga_e_declarada(monkeypatch: pytest.MonkeyPatch) -> None:
     assert bd.a_suite_esta_rodando() is False
 
 
-# ---------------------------------------------------------------------------
-# 3. a trava
-# ---------------------------------------------------------------------------
-
-
 def _segurar_a_trava(segundos: float, pronto: threading.Event, soltou: list[float]) -> None:
     with diario_do_radio.trava_do_radio("watchdog-de-mentira", prazo_s=1.0):
         pronto.set()
@@ -421,11 +328,7 @@ def _segurar_a_trava(segundos: float, pronto: threading.Event, soltou: list[floa
 def test_a_escrita_espera_o_motor_que_esta_com_a_trava(
     vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira, trava_de_mentira: Path
 ) -> None:
-    """O watchdog com a trava, e o nosso ``Disconnect`` só sai quando ele solta.
-
-    MORDIDA: chame ``fazer()`` sem ``na_trava`` em ``_na_borda`` — a chamada
-    sai ANTES de o outro motor soltar.
-    """
+    """O watchdog com a trava, e o nosso ``Disconnect`` só sai quando ele solta."""
     pronto = threading.Event()
     soltou: list[float] = []
     outro = threading.Thread(target=_segurar_a_trava, args=(0.4, pronto, soltou))
@@ -466,11 +369,7 @@ def test_o_stop_discovery_solta_o_radio_sem_esperar_ninguem(
     trava_de_mentira: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A exceção declarada: parar a busca nunca espera a trava.
-
-    MORDIDA: tire ``StopDiscovery`` de ``METODOS_SEM_TRAVA`` — a busca fica de
-    pé enquanto o outro motor segura a trava, e a escrita volta recusada.
-    """
+    """A exceção declarada: parar a busca nunca espera a trava."""
     assert frozenset({"StopDiscovery"}) == bd.METODOS_SEM_TRAVA
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.1)
     pronto = threading.Event()
@@ -490,11 +389,7 @@ def test_a_trava_e_reentrante_no_mesmo_fio(
     trava_de_mentira: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O motor que segura o gesto inteiro passa pela borda a cada escrita.
-
-    MORDIDA: tire o atalho do ``dentro`` de ``na_trava`` — a escrita espera o
-    próprio fio até o prazo e volta recusada.
-    """
+    """O motor que segura o gesto inteiro passa pela borda a cada escrita."""
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.2)
     with bd.na_trava("gesto-inteiro"):
         assert vivo.desconectar(bm.no_de(bm.CONTROLE)).feita
@@ -521,12 +416,7 @@ def travas_pegas(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 def test_o_reconectar_segura_uma_trava_so_do_disconnect_ao_connect(
     trava_de_mentira: Path, travas_pegas: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Decisão de quem coordena: o «Reconectar controles» entra na trava — e o
-    gesto INTEIRO, para o watchdog não dar o Connect dele entre os nossos dois.
-
-    MORDIDA: tire o ``with bluez_dbus.na_trava(QUEM)`` de ``reconectar`` — a
-    borda pega a trava duas vezes, uma por escrita, e há uma fresta entre elas.
-    """
+    """Decisão de quem coordena: o «Reconectar controles» entra na trava — e o"""
     barramento = bm.BarramentoDeMentira()
     barramento.mesa[bm.no_de(bm.CONTROLE)][bd.APARELHO]["Connected"] = True
     dono = bd.DonoVivo(barramento)
@@ -546,8 +436,7 @@ def test_o_parear_pelo_dono_segura_uma_trava_so_do_pair_ao_trusted(
     trava_de_mentira: Path,
     travas_pegas: list[str],
 ) -> None:
-    """MORDIDA: tire o ``na_trava`` de ``DonoVivo.parear`` — duas pegas, e o
-    registro do agente nunca pede a trava (ele não aparece aqui)."""
+    """MORDIDA: tire o ``na_trava`` de ``DonoVivo.parear`` — duas pegas, e o"""
     assert vivo.parear(bm.no_de(bm.CONTROLE), quem=gp.QUEM).feita
     assert barramento.metodos() == ["RegisterAgent", "Pair"]
     assert travas_pegas == [gp.QUEM]
@@ -576,11 +465,7 @@ class _ProcessoVivo:
 def test_o_parear_pela_ponte_espera_a_trava(
     trava_de_mentira: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O piso também entra na fila: a ponte root não pareia no meio de outro motor.
-
-    MORDIDA: tire o ``na_trava`` do ``parear`` da ponte em ``JanelaDeBusca`` —
-    a ponte é chamada com a trava na mão de outro motor.
-    """
+    """O piso também entra na fila: a ponte root não pareia no meio de outro motor."""
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.1)
     corridas: list[Any] = []
 
@@ -606,15 +491,7 @@ def test_o_parear_pela_ponte_espera_a_trava(
 def test_a_busca_da_ponte_so_nasce_com_a_trava(
     trava_de_mentira: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Decisão de quem coordena: o ``descobrir`` do piso entra na trava — a busca
-    não começa a varrer no meio do gesto de outro motor.
-
-    Achado na conferência: a cura estava no código e nenhuma régua a cobrava —
-    arrancada, os 104 testes do território passavam.
-
-    MORDIDA: tire o ``na_trava`` do ``abrir_a_janela`` da ponte — a ponte nasce
-    com a trava na mão de outro motor.
-    """
+    """Decisão de quem coordena: o ``descobrir`` do piso entra na trava — a busca"""
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.1)
     abertas: list[Any] = []
 
@@ -639,18 +516,10 @@ def test_a_busca_da_ponte_so_nasce_com_a_trava(
 def test_a_janela_pelo_dono_fecha_sozinha_quando_o_tempo_acaba(
     vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira, trava_de_mentira: Path
 ) -> None:
-    """A busca é da conexão do dono, que vive o processo inteiro: sem o relógio,
-    uma janela esquecida varreria até o daemon sair — e a busca custa de 32% a
-    43% do adaptador.
-
-    Achado na conferência: arrancado o relógio, nenhuma régua reprovava.
-
-    MORDIDA: não ligue o ``_relogio`` em ``_abrir_pelo_dono`` — o
-    ``StopDiscovery`` nunca sai.
-    """
+    """A busca é da conexão do dono, que vive o processo inteiro: sem o relógio,"""
     janela = gp.JanelaDeBusca(bm.ADAPTADOR, 5, dono=vivo)
     assert janela.pelo_dono
-    janela.segundos = 0.2  # o relógio usa o prazo da janela; a régua não espera 5 s
+    janela.segundos = 0.2
     assert janela.abrir_a_janela() == ""
     assert "StartDiscovery" in barramento.metodos()
 
@@ -661,15 +530,7 @@ def test_a_janela_pelo_dono_fecha_sozinha_quando_o_tempo_acaba(
 def test_fechar_colhe_os_achados_antes_de_parar_a_busca(
     vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira, trava_de_mentira: Path
 ) -> None:
-    """Sem a busca, o BlueZ recolhe os aparelhos que ela achou e ninguém pareou:
-    o controle que apareceu no último instante não pode sumir com ela.
-
-    Achado na conferência: arrancada a colheita do ``fechar``, nenhuma régua
-    reprovava.
-
-    MORDIDA: tire o ``self._colher()`` de ``JanelaDeBusca.fechar`` — o candidato
-    que entrou antes de fechar e saiu depois some da lista.
-    """
+    """Sem a busca, o BlueZ recolhe os aparelhos que ela achou e ninguém pareou:"""
     janela = gp.JanelaDeBusca(bm.ADAPTADOR, 5, dono=vivo)
     assert janela.abrir_a_janela() == ""
     tardio = "aa:bb:cc:00:00:55"
@@ -684,11 +545,6 @@ def test_fechar_colhe_os_achados_antes_de_parar_a_busca(
 
     assert "StopDiscovery" in barramento.metodos()
     assert tardio in {c.endereco for c in janela.candidatos()}
-
-
-# ---------------------------------------------------------------------------
-# 4. o diário
-# ---------------------------------------------------------------------------
 
 
 def test_a_escrita_que_muda_o_radio_vai_ao_diario_e_o_nome_nao(
@@ -707,21 +563,10 @@ def test_a_escrita_que_muda_o_radio_vai_ao_diario_e_o_nome_nao(
     assert linha["depois"]["feita"] is True
 
 
-# ---------------------------------------------------------------------------
-# 5. a régua de dono
-# ---------------------------------------------------------------------------
-
-#: Os programas que falam com o BlueZ por linha de comando.
 _FERRAMENTAS = frozenset({"busctl", "bluetoothctl", "gdbus", "dbus-send"})
 
-#: Um nome D-Bus do BlueZ: o serviço ou uma interface dele.
 _NOME_DO_BLUEZ = re.compile(r"org\.bluez(\.[A-Za-z0-9_]+)*")
 
-#: O texto que COMEÇA falando com o BlueZ: a linha de comando inteira numa
-#: string só (``"busctl call org.bluez …"``, para ``shell=True``) e o pedaço de
-#: f-string (``f"org.bluez.{interface}"``). Achado na conferência: as duas
-#: formas passavam pelo ``fullmatch`` acima. Frase de tela que CITA o
-#: ``org.bluez`` no meio ("o `org.bluez` não respondeu") não começa com ele.
 _COMECA_FALANDO_COM_O_BLUEZ = re.compile(
     r"^(?:busctl|bluetoothctl|gdbus|dbus-send)(?:\s|$)|^org\.bluez(?:\.|$)"
 )
@@ -739,8 +584,7 @@ def _docstrings(arvore: ast.AST) -> set[int]:
 
 
 def segundos_donos(fonte: str) -> list[tuple[int, str]]:
-    """Os literais que falam com o BlueZ num arquivo. Docstring e comentário não
-    contam — um aviso que descreve o padrão não é o padrão."""
+    """Os literais que falam com o BlueZ num arquivo. Docstring e comentário não"""
     arvore = ast.parse(fonte)
     docs = _docstrings(arvore)
     achados: list[tuple[int, str]] = []
@@ -772,11 +616,7 @@ def test_a_regua_de_dono_morde_um_executor_novo() -> None:
 
 
 def test_a_regua_de_dono_morde_a_linha_inteira_e_a_f_string() -> None:
-    """As duas formas que o ``fullmatch`` deixava passar, achadas na conferência.
-
-    MORDIDA embutida: sem ``_COMECA_FALANDO_COM_O_BLUEZ`` a lista volta vazia.
-    E a frase que só CITA o serviço no meio continua fora — ela é tela, não ato.
-    """
+    """As duas formas que o ``fullmatch`` deixava passar, achadas na conferência."""
     novo = (
         "import subprocess\n"
         "SEM_BLUEZ = 'o `org.bluez` não respondeu no barramento'\n"
@@ -788,11 +628,7 @@ def test_a_regua_de_dono_morde_a_linha_inteira_e_a_f_string() -> None:
 
 
 def test_ninguem_fala_com_o_bluez_fora_do_dono() -> None:
-    """Um ``busctl`` ou um ``org.bluez`` em ``src/`` fora de ``bluez_dbus.py`` reprova.
-
-    MORDIDA medida: devolver o ``["busctl", "tree", "org.bluez", "--list"]`` a
-    ``conexao_zumbi.enderecos_que_o_bluez_conhece`` reprova esta régua.
-    """
+    """Um ``busctl`` ou um ``org.bluez`` em ``src/`` fora de ``bluez_dbus.py`` reprova."""
     fora: list[str] = []
     for arquivo in sorted(SRC.rglob("*.py")):
         if arquivo == DONO:
@@ -807,11 +643,6 @@ def test_o_dono_tem_os_nomes_que_a_regua_procura() -> None:
     assert {v for _l, v in segundos_donos(DONO.read_text(encoding="utf-8"))} >= {
         "busctl", "org.bluez", "org.bluez.Adapter1", "org.bluez.Device1", "org.bluez.Agent1",
     }
-
-
-# ---------------------------------------------------------------------------
-# 6. o endereço e o lugar (D3)
-# ---------------------------------------------------------------------------
 
 
 class _KernelDeMentira:
@@ -863,10 +694,7 @@ def test_o_lugar_sai_no_adaptador_do_dono() -> None:
 def test_trocar_o_dongle_de_porta_e_percebido_e_dito(
     tmp_path: Path, trava_de_mentira: Path
 ) -> None:
-    """D3: o nome segue o LUGAR. Mudar de porta é percebido e vai ao diário.
-
-    MORDIDA: faça ``perceber_as_mudancas`` devolver ``()`` — a mudança passa calada.
-    """
+    """D3: o nome segue o LUGAR. Mudar de porta é percebido e vai ao diário."""
     lugares = {"hci9": "pci-0000:0c:00.3-usb-0:1.2"}
     dono = bd.DonoVivo(bm.BarramentoDeMentira(), lugares=lambda: dict(lugares))
     assert dono.ligar()
@@ -888,11 +716,6 @@ def test_dongle_trocado_na_mesma_porta_e_outra_frase() -> None:
     assert mudanca.tipo == "trocado"
     assert mudanca.frase == "O adaptador desta porta foi trocado."
     assert bd.perceber_as_mudancas({}, {"p1": "aa:bb:cc:00:00:01"}) == ()
-
-
-# ---------------------------------------------------------------------------
-# o desembrulho — um só
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(

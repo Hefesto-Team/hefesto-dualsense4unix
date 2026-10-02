@@ -1,29 +1,4 @@
-"""A folha lê o tema que o sistema PINTA, não o sinalizador que ninguém liga.
-
-O DEFEITO, medido em 10/09/2026 com ela na bancada e as duas folhas na tela:
-*"fora que nao deu pra ler nada nos botoes"*.  # noqa-acento: citação literal dela
-
-As três folhas de ensaio decidiam claro-ou-escuro por
-``gtk-application-prefer-dark-theme``. Na máquina dela esse sinalizador é
-**False** e o tema é **`adw-gtk3-dark`** — escuro. As folhas pintavam a janela de
-CLARO e o GTK seguia pintando ``button`` e ``entry`` pelo tema ESCURO, com a
-letra BRANCA. Branco sobre claro é o que ela não conseguiu ler — e o rótulo do
-botão era justamente o que dizia o que fazer.
-
-``prefer-dark`` é um PEDIDO do aplicativo ao tema, não uma descrição do tema. O
-produto o liga por conta própria (``app/theme.py``) e por isso nunca viu este
-defeito; um instrumento que não o liga lê ``False`` num desktop escuro.
-
-ESTA RÉGUA MORDE EM TRÊS LUGARES, e os três já erraram:
-
-1. a detecção não pode depender só do sinalizador — com ele em False e um tema
-   escuro, a resposta ainda tem de ser «escuro»;
-2. o CSS tem de pintar ``button``, ``entry`` e ``combobox``. Pintar só
-   ``window``/``frame``/``scrolledwindow`` é o que deixou o rótulo sumir dentro
-   do próprio botão;
-3. as três folhas têm de usar o DONO. Uma cura em uma folha só deixaria as
-   outras duas com o defeito — e a que ela usou de manhã é a terceira.
-"""
+"""A folha lê o tema que o sistema PINTA, não o sinalizador que ninguém liga."""
 from __future__ import annotations
 
 import pathlib
@@ -36,9 +11,6 @@ ENSAIOS = RAIZ / "scripts" / "ensaios"
 if str(ENSAIOS) not in sys.path:
     sys.path.insert(0, str(ENSAIOS))
 
-#: AS TRÊS FOLHAS DA BANCADA DELA. A do som e a do microfone nasceram em 09/09;
-#: a dos ensaios é a que ela usou na manhã de 09/09, e é por ela que a cura tem
-#: de passar também.
 FOLHAS = (
     "a_folha_do_som_por_controle.py",
     "a_folha_do_microfone_por_controle.py",
@@ -55,11 +27,7 @@ def test_o_dono_existe_e_e_um_so() -> None:
 
 
 def test_a_deteccao_nao_acredita_so_no_sinalizador(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tema escuro + `prefer-dark` False = escuro. É o caso EXATO da máquina dela.
-
-    A MORDIDA: devolver a detecção para `prefer-dark` sozinho faz este teste
-    reprovar, que é o defeito de 10/09 voltando.
-    """
+    """Tema escuro + `prefer-dark` False = escuro. É o caso EXATO da máquina dela."""
     import comum
 
     gi = pytest.importorskip("gi")
@@ -85,10 +53,7 @@ def test_a_deteccao_nao_acredita_so_no_sinalizador(monkeypatch: pytest.MonkeyPat
 
 
 def test_o_css_pinta_o_botao_o_campo_e_a_lista(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O CSS cobre `button`, `entry` e `combobox` — os três que sumiram.
-
-    A MORDIDA: apagar qualquer um dos três seletores reprova aqui.
-    """
+    """O CSS cobre `button`, `entry` e `combobox` — os três que sumiram."""
     import comum
 
     pytest.importorskip("gi")
@@ -117,11 +82,6 @@ def test_o_css_pinta_o_botao_o_campo_e_a_lista(monkeypatch: pytest.MonkeyPatch) 
     assert css_visto, "o CSS não foi carregado"
     css = css_visto[0]
 
-    # OS SELETORES, LIDOS — e não a substring procurada no texto todo. A
-    # primeira versão desta régua fazia `"button" in css` e PASSOU com a cura
-    # arrancada: a palavra sobrevivia dentro de `combobox button`. É a armadilha
-    # que esta casa já nomeia — *régua que casa um token em QUALQUER lugar do
-    # texto, em vez do campo que o significa* — e ela pegou a própria régua.
     seletores = set()
     for regra in css.split("}"):
         if "{" in regra:
@@ -137,11 +97,7 @@ def test_o_css_pinta_o_botao_o_campo_e_a_lista(monkeypatch: pytest.MonkeyPatch) 
 
 @pytest.mark.parametrize("folha", FOLHAS)
 def test_toda_folha_usa_o_dono_e_nenhuma_decide_sozinha(folha: str) -> None:
-    """Nenhuma folha lê o sinalizador por conta própria.
-
-    A MORDIDA: devolver o bloco antigo a QUALQUER uma das três reprova aqui —
-    inclusive à que ninguém abriu hoje.
-    """
+    """Nenhuma folha lê o sinalizador por conta própria."""
     fonte = (ENSAIOS / folha).read_text(encoding="utf-8")
     assert "pintar_fundo_solido" in fonte, f"{folha} não usa o dono do fundo"
     assert "gtk-application-prefer-dark-theme" not in fonte, (

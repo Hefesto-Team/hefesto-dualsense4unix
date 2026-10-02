@@ -1,7 +1,4 @@
-"""Tipos base para backends de detecção de janela ativa.
-
-Define `WindowInfo` (dataclass) e `WindowBackend` (Protocol).
-"""
+"""Tipos base para backends de detecção de janela ativa."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,15 +7,7 @@ from typing import Protocol, runtime_checkable
 
 @dataclass
 class WindowInfo:
-    """Informações sobre a janela ativa.
-
-    Campos:
-        wm_class:  Classe WM da janela (X11) ou app_id (Wayland).
-        pid:       PID do processo dono da janela (0 se indisponível).
-        app_id:    Identificador de aplicação Wayland (vazio em X11).
-        title:     Título da janela.
-        exe_basename: Basename do executável via /proc/PID/exe (X11).
-    """
+    """Informações sobre a janela ativa."""
 
     wm_class: str = "unknown"
     pid: int = 0

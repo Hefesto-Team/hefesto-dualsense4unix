@@ -64,32 +64,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 SCRIPTS = RAIZ / "scripts"
 
 
-# ===========================================================================
-# MORDIDA 1 — o instrumento que abre o nó escondido
-# ===========================================================================
-#
-# A varredura tem DUAS réguas, e a assimetria é deliberada:
-#
-#   Python — AST. Dá para saber com precisão o que é uma CHAMADA de abertura
-#   (`open`/`os.open`/`io.open`) e o que é só uma menção numa docstring. Só a
-#   chamada é cobrada.
-#
-#   Shell — texto. Não dá para parsear bash com precisão suficiente para
-#   distinguir `ls /dev/hidraw*` de `dd of=/dev/hidraw3`, e uma régua que
-#   erra para o lado de deixar passar não seria portão nenhum. Então **toda**
-#   menção a `/dev/hidraw` num `.sh` de `scripts/` precisa de justificativa
-#   escrita — inclusive em comentário. É mais chato, e é de propósito: o custo
-#   de escrever uma linha de motivo é muito menor que o custo de uma sessão
-#   inteira medindo no nó errado.
-
-#: Caminhos que um `open()` de Python pode carregar sem ser abertura de nó de
-#: aparelho: sysfs, procfs e os nós de evdev (que têm régua própria — a do
-#: grab, na mordida 3).
 _PREFIXOS_QUE_NAO_SAO_O_NO = ("/sys/", "/proc/", "/dev/input")
 
-#: Os arquivos com menção a `/dev/hidraw` que NÃO abrem o nó, cada um com o
-#: motivo por escrito. Entrada morta (arquivo que já não menciona) também
-#: reprova: uma lista de exceções que ninguém poda vira permissão geral.
 EXCECOES: dict[str, str] = {
     "install_udev.sh": (
         "escreve a REGRA udev; a única menção é a linha de instrução "
@@ -116,9 +92,6 @@ EXCECOES: dict[str, str] = {
     ),
 }
 
-#: Os instrumentos que ABREM hidraw: têm de fazê-lo pelo cliente único.
-#: `abrir_no_hidraw` é o nome do reexport em `scripts/ensaios/comum.py`, que
-#: delega ao `abrir_hidraw` do pacote — um cliente, um só.
 USAM_O_CLIENTE = (
     "capture_blueprint.py",
     "ensaio_rumble_um_bit_por_vez.py",
@@ -126,9 +99,6 @@ USAM_O_CLIENTE = (
     "ensaios/censo_features.py",
 )
 
-#: Os instrumentos que NÃO abrem hidraw mas cuja medição depende da porta — e
-#: que por isso têm de DECLARÁ-la no relatório. O valor é o trecho exato que
-#: prova a declaração: arrancá-lo faz este teste reprovar.
 DECLARAM_A_PORTA: dict[str, str] = {
     "capture_blueprint.py": "declaracao_da_porta()",
     "ensaio_rumble_um_bit_por_vez.py": "declaracao_da_porta()",
@@ -187,12 +157,7 @@ def _relativo(caminho: Path) -> str:
 
 
 def test_mordida_1_nenhum_instrumento_abre_dev_hidraw_por_conta_propria() -> None:
-    """Ninguém em `scripts/` faz `open()` de um nó de aparelho sem justificar.
-
-    É a mordida PRINCIPAL da sprint porque é a que impede o PRÓXIMO
-    instrumento de nascer cego. Um instrumento novo que faça
-    `os.open("/dev/hidrawN")` reprova aqui antes de chegar à mesa dela.
-    """
+    """Ninguém em `scripts/` faz `open()` de um nó de aparelho sem justificar."""
     infratores: list[str] = []
     for arquivo in sorted(SCRIPTS.rglob("*.py")):
         if "__pycache__" in arquivo.parts:
@@ -226,11 +191,7 @@ def test_mordida_1_todo_shell_que_fala_de_hidraw_tem_motivo_escrito() -> None:
 
 
 def test_mordida_1_a_lista_de_excecoes_nao_acumula_entrada_morta() -> None:
-    """Exceção que já não corresponde a nada some — senão vira permissão geral.
-
-    Uma lista que ninguém poda deixa de ser uma lista de exceções e passa a ser
-    um buraco com nome bonito.
-    """
+    """Exceção que já não corresponde a nada some — senão vira permissão geral."""
     mortas: list[str] = []
     for relativo, motivo in EXCECOES.items():
         arquivo = SCRIPTS / relativo
@@ -255,15 +216,6 @@ def test_mordida_1_os_instrumentos_usam_o_cliente_unico(relativo: str) -> None:
         "cliente único (scripts/ensaios/comum.py → integrations/"
         "hidraw_broker_client.abrir_hidraw)."
     )
-
-
-# ===========================================================================
-# MORDIDA 2 — a queda silenciosa para `open()` direto
-# ===========================================================================
-#
-# Um fallback silencioso é PIOR que a falha: ele produz uma medição que parece
-# boa e não diz que mediu por um caminho diferente do outro braço do ensaio —
-# que é exatamente o que o desenho 2+2 existe para impedir.
 
 
 def test_mordida_2_sem_broker_a_queda_para_open_direto_e_declarada(
@@ -309,11 +261,7 @@ def test_mordida_2_com_broker_a_porta_declarada_e_a_do_broker(tmp_path: Path) ->
 
 
 def test_mordida_2_as_duas_portas_fechadas_nunca_viram_silencio(tmp_path: Path) -> None:
-    """Sem broker e sem permissão: erro que NOMEIA as duas tentativas.
-
-    Um `EACCES` pelado é o que mandou gente consertar a regra udev em
-    15/08/2026 — a regra estava certa o tempo todo.
-    """
+    """Sem broker e sem permissão: erro que NOMEIA as duas tentativas."""
     with pytest.raises(PortaFechadaError) as capturado:
         abrir_hidraw(
             str(tmp_path / "nao-existe-em-lugar-nenhum"),
@@ -328,13 +276,7 @@ def test_mordida_2_as_duas_portas_fechadas_nunca_viram_silencio(tmp_path: Path) 
 def test_mordida_2_o_relatorio_do_instrumento_contem_a_porta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """O relatório de um instrumento REAL nomeia a porta que ele usou.
-
-    Não é o helper que se testa aqui — é a saída do
-    `scripts/capture_blueprint.py`, o instrumento que a sprint mediu falhando.
-    Ele declara a porta ANTES de tocar em qualquer coisa, então um nó
-    inexistente basta para colher o cabeçalho.
-    """
+    """O relatório de um instrumento REAL nomeia a porta que ele usou."""
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(tmp_path / "sem-broker.sock"))
     modulo = _carregar_script("capture_blueprint.py")
     modulo.main("hidraw-que-nao-existe-neste-teste")
@@ -351,16 +293,6 @@ def test_mordida_2_a_linha_da_porta_sempre_carrega_a_porta() -> None:
     linha = linha_da_porta(PORTA_BROKER, "o broker responde em /run/x.sock")
     assert PORTA_BROKER in linha
     assert "porta" in linha
-
-
-# ===========================================================================
-# MORDIDA 3 — o zero que vem do grab, não do aparelho
-# ===========================================================================
-#
-# O co-op faz `EVIOCGRAB` no evdev físico, e o grab é exclusivo. Um instrumento
-# ingênuo lê zero evento e conclui que o aparelho está calado. Medido em
-# 15/08/2026 na mesa dela: os QUATRO nós evdev físicos estavam grabados, e
-# nenhum instrumento sabia dizer isso.
 
 
 class _IoctlFalso:
@@ -392,12 +324,7 @@ def test_mordida_3_grab_de_terceiro_e_distinguivel_de_grab_livre(
 def test_mordida_3_o_grab_tomado_e_devolvido_no_mesmo_instante(
     tmp_path: Path,
 ) -> None:
-    """Se o nó estava LIVRE, o instrumento solta o que pegou. Sempre.
-
-    A única prova de grab que o kernel oferece é tentar. Tentar num nó livre
-    TIRA o nó de quem fosse ler a seguir — então a devolução não é cortesia, é
-    obrigação, e é aqui que ela fica travada.
-    """
+    """Se o nó estava LIVRE, o instrumento solta o que pegou. Sempre."""
     no = tmp_path / "event998"
     no.write_bytes(b"")
     livre = _IoctlFalso(ocupado=False)
@@ -424,11 +351,7 @@ def test_mordida_3_no_inexistente_e_sem_permissao_sao_respostas_diferentes(
 
 
 def test_mordida_3_zero_com_grab_nao_e_o_mesmo_zero_sem_grab() -> None:
-    """"O controle não emitiu" e "eu não posso ler" saem DIFERENTES na tela.
-
-    Hoje as duas coisas saíam como zero — e um zero convincente e falso é a
-    forma de erro mais cara desta casa.
-    """
+    """"O controle não emitiu" e "eu não posso ler" saem DIFERENTES na tela."""
     calado = leitura_de_zero(GRAB_LIVRE)
     escondido = leitura_de_zero(GRAB_DE_TERCEIRO)
     assert calado != escondido
@@ -438,13 +361,7 @@ def test_mordida_3_zero_com_grab_nao_e_o_mesmo_zero_sem_grab() -> None:
 
 
 def test_mordida_3_o_instrumento_de_evdev_pergunta_o_grab_em_vez_de_inferir() -> None:
-    """`taxa_de_entrada.py` MEDE o grab; não o deduz do daemon estar vivo.
-
-    A inferência antiga — zero + nó físico + daemon rodando — junta três
-    indícios que costumam andar com o grab sem serem o grab: com o co-op
-    desligado, um controle parado saía como `MUDO (EVIOCGRAB)` sem que ninguém
-    tivesse grabado coisa alguma.
-    """
+    """`taxa_de_entrada.py` MEDE o grab; não o deduz do daemon estar vivo."""
     fonte = (SCRIPTS / "ensaios" / "taxa_de_entrada.py").read_text(encoding="utf-8")
     assert "estado_do_grab(" in fonte
     assert "leitura_de_zero(" in fonte
@@ -466,22 +383,11 @@ def test_mordida_3_o_valor_da_celula_muda_com_o_grab() -> None:
     assert "EVIOCGRAB" in modulo._valor(contagem, 0, GRAB_DE_TERCEIRO)
 
 
-# ===========================================================================
-# E3 — o cabeçalho declara a porta ao lado da biblioteca
-# ===========================================================================
-
-
 @pytest.mark.parametrize(("relativo", "trecho"), sorted(DECLARAM_A_PORTA.items()))
 def test_e3_todo_instrumento_declara_a_porta_no_relatorio(
     relativo: str, trecho: str
 ) -> None:
-    """A regra da casa vale para a porta como vale para a biblioteca.
-
-    *"Todo instrumento tem de declarar qual biblioteca está usando"* — porque
-    medir contra a biblioteca errada produz alarme convincente e falso. **O
-    mesmo vale para a porta:** medir no nó escondido produz zero convincente e
-    falso.
-    """
+    """A regra da casa vale para a porta como vale para a biblioteca."""
     fonte = (SCRIPTS / relativo).read_text(encoding="utf-8")
     assert trecho in fonte, (
         f"scripts/{relativo} deixou de declarar a porta no relatório "
@@ -505,25 +411,13 @@ def test_e3_o_cabecalho_dos_ensaios_traz_porta_e_grab(tmp_path: Path) -> None:
     assert str(no) in texto
 
 
-# ---------------------------------------------------------------------------
-# Ferramentas do teste
-# ---------------------------------------------------------------------------
-
-
 def _carregar_script(relativo: str) -> types.ModuleType:
-    """Importa um script de `scripts/` pelo caminho, sem instalá-lo.
-
-    Os instrumentos não são um pacote — são scripts, e é assim que ela os
-    roda. Carregá-los pelo caminho é o que mais se parece com o uso real.
-    """
+    """Importa um script de `scripts/` pelo caminho, sem instalá-lo."""
     caminho = SCRIPTS / relativo
     nome = "instrumento_" + relativo.replace("/", "_").removesuffix(".py")
     spec = importlib.util.spec_from_file_location(nome, caminho)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
-    # O registro em `sys.modules` ANTES do exec não é enfeite: `@dataclass`
-    # resolve as anotações procurando o módulo da classe em `sys.modules`, e
-    # sem isto qualquer instrumento com dataclass explode em AttributeError.
     sys.modules[nome] = modulo
     spec.loader.exec_module(modulo)
     return modulo
@@ -543,14 +437,6 @@ def _dono_de_mentira() -> object:
         rotulo="",
     )
 
-
-# --- a aba Conexões pergunta a causa (28/09/2026) -----------------------------
-# A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01. As quatro perguntas deste arquivo
-# (`porta_provavel`, `estado_do_grab`, `linha_do_grab`, `leitura_de_zero`) só
-# eram feitas pelos instrumentos; a aba Conexões dizia o resultado e não a
-# causa. O exame completo dela passa a perguntar — só quando o daemon JÁ disse
-# que não conseguiu segurar o controle principal —, e a linha do Check-up e o
-# `?` dela são as frases do dono do aviso (`home_actions.aviso_de_grab`).
 
 _PRINCIPAL = "aa:bb:cc:00:00:01"
 
@@ -583,13 +469,7 @@ def _perguntas() -> tuple[dict[str, list[object]], dict[str, object]]:
 def test_o_exame_da_08_diz_a_causa_do_controle_que_o_hefesto_nao_segura(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Com o grab que FALHOU, o exame pergunta à porta e ao nó, escreve as duas
-    linhas de cabeçalho da casa no diário da janela, e a linha do Check-up é o
-    aviso do dono.
-
-    MORDIDA: troque o `estado_do_grab` da conferência por um `GRAB_LIVRE` fixo
-    — o diário deixa de dizer «PEGO por outro processo» e esta régua reprova.
-    """
+    """Com o grab que FALHOU, o exame pergunta à porta e ao nó, escreve as duas"""
     from hefesto_dualsense4unix.app.actions.home_actions import AVISO_DE_GRAB_LINHA
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
@@ -610,9 +490,7 @@ def test_o_exame_da_08_diz_a_causa_do_controle_que_o_hefesto_nao_segura(
     ("held", True), ("pending", True), ("off", True), ("failed", False),
 ])
 def test_sem_o_aviso_do_dono_o_exame_nao_toca_no_no(grab: str, emulando: bool) -> None:
-    """O grab que o Hefesto segura, o que ainda abre, e o modo sem o controle do
-    Hefesto: nenhuma linha, e nenhuma pergunta ao nó — tentar o grab de um nó
-    livre o tiraria, por um instante, de quem o lê."""
+    """O grab que o Hefesto segura, o que ainda abre, e o modo sem o controle do"""
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
     feitas, dubles = _perguntas()
@@ -622,12 +500,7 @@ def test_sem_o_aviso_do_dono_o_exame_nao_toca_no_no(grab: str, emulando: bool) -
 
 
 def test_o_interrogacao_e_a_sugestao_sao_as_duas_metades_do_dono() -> None:
-    """O `?` leva o porquê e a Sugestão de Conexão leva o que fazer — as duas
-    metades de `home_actions.AVISO_DE_GRAB_PORQUE`, sem a mesma frase duas vezes.
-
-    MORDIDA: tire a `cura` da conferência — a Sugestão volta a repetir a linha
-    da esquerda («O jogo pode receber…») no lugar do que fazer.
-    """
+    """O `?` leva o porquê e a Sugestão de Conexão leva o que fazer — as duas"""
     from hefesto_dualsense4unix.app.actions.home_actions import AVISO_DE_GRAB_PORQUE
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
@@ -644,8 +517,7 @@ def test_o_interrogacao_e_a_sugestao_sao_as_duas_metades_do_dono() -> None:
 def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O exame completo a acrescenta à tira da 08; o contrato da Jogar
-    (`_exame`) a deixa de fora, porque lá o dono já diz o aviso."""
+    """O exame completo a acrescenta à tira da 08; o contrato da Jogar"""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
@@ -660,13 +532,7 @@ def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
 
 
 def test_o_exame_completo_pergunta_pela_leitura(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «Examinar» (e a entrada na aba) corre o exame completo, e é ele que
-    acrescenta a linha da leitura com o estado do último tique. As leituras da
-    máquina saem por dublê: nenhum nó, nenhum `/sys`, nenhum `busctl`.
-
-    MORDIDA: troque, em `_correr_o_exame_completo`, a chamada da conferência
-    por `None` — a linha some da tira e esta régua reprova.
-    """
+    """O «Examinar» (e a entrada na aba) corre o exame completo, e é ele que"""
     from hefesto_dualsense4unix.integrations import exame_da_mesa
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
@@ -695,14 +561,7 @@ def test_o_exame_completo_pergunta_pela_leitura(monkeypatch: pytest.MonkeyPatch)
 def test_a_linha_da_leitura_sai_quando_o_daemon_volta_a_segurar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O grab que falhou volta sozinho (o daemon tenta de 2 em 2 s). A linha
-    guardada no exame não pode seguir dizendo «AJUSTAR» sobre um controle que o
-    Hefesto já segura: o Check-up pergunta ao dono a cada tique, como a aba
-    Jogar pergunta.
-
-    MORDIDA: tire de `_itens_da_tela` o filtro da `CHAVE_DA_LEITURA` — a linha
-    fica na tira com o grab `held` e esta régua reprova.
-    """
+    """O grab que falhou volta sozinho (o daemon tenta de 2 em 2 s). A linha"""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 

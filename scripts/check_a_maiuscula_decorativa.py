@@ -77,17 +77,8 @@ E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
 
 sys.path.insert(0, str(RAIZ / "src"))
 
-# ---------------------------------------------------------------------------
-# §1 — A FOLHA
-# ---------------------------------------------------------------------------
-#: As formas que SOBEM a caixa. `lowercase` não entra: abaixar não inventa
-#: maiúscula nenhuma, e `none` é justamente a cura que várias páginas já
-#: escrevem para desfazer herança.
 SOBE_A_CAIXA = frozenset({"uppercase", "capitalize"})
 
-#: Regras de caixa alta que FICAM, com a razão. **Vazia hoje, e isso é medido**:
-#: a última morreu em 11/09/2026 (`.fita .chip .via`, no `topo.html`). Se um dia
-#: houver uma legítima, ela entra aqui com a razão e a data — nunca calada.
 CAIXA_QUE_FICA: dict[str, str] = {}
 
 _COMENTARIO_CSS = re.compile(r"/\*.*?\*/", re.S)
@@ -96,12 +87,7 @@ _TRANSFORMA = re.compile(r"text-transform\s*:\s*([a-z-]+)", re.I)
 
 
 def _folha(pagina: str) -> list[tuple[int, str, str]]:
-    """`(linha, valor, seletor)` de cada regra que sobe a caixa nesta página.
-
-    O COMENTÁRIO É APAGADO COM ESPAÇO DO MESMO TAMANHO, e não removido: só
-    assim o número da linha continua sendo o número da linha do arquivo — e a
-    entrega de uma régua é o endereço, não a contagem.
-    """
+    """`(linha, valor, seletor)` de cada regra que sobe a caixa nesta página."""
     limpo = _COMENTARIO_CSS.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), pagina)
     fora = []
     for bloco in _ESTILO.finditer(limpo):
@@ -110,7 +96,6 @@ def _folha(pagina: str) -> list[tuple[int, str, str]]:
                 continue
             onde = bloco.start(1) + m.start()
             linha = limpo.count("\n", 0, onde) + 1
-            # o seletor é o que vem antes da `{` mais próxima acima
             antes = limpo[max(0, onde - 400):onde]
             corte = antes.rfind("}")
             seletor = antes[corte + 1:].split("{")[0].strip().replace("\n", " ")
@@ -118,58 +103,18 @@ def _folha(pagina: str) -> list[tuple[int, str, str]]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# §2 — O TEXTO
-# ---------------------------------------------------------------------------
-#: OS SELOS, POR CLASSE — ordem da sprint: *"Os selos são desenho e ficam."*
-#: Eles são etiquetas de estado, e a caixa alta ali É a forma da etiqueta.
-#: A peneira é a CLASSE e não a palavra, de propósito: um selo novo nasce
-#: coberto, e uma palavra decorativa não se salva por parecer um.
 SELO = ("selo", "lanc-selo", "selo-som", "selo-ativo")
 
-#: O `<title>` DO DOCUMENTO — ver o cabeçalho. Achado pela tag, nunca por um
-#: número de linha cravado: o `<head>` já mudou de tamanho.
-#:
 #: **SÓ O DO DOCUMENTO, e o recorte é o `<body>`**: o desenho do DualSense traz
-#: um `<title>` por grupo de peça (`CHASSI`, `BOTÕES DA FACE`), que é o nome
-#: acessível daquele pedaço — texto que uma pessoa alcança, e que está na
-#: DÍVIDA abaixo. Apagar os dois com a mesma regra esconderia catorze achados.
 _TITULO = re.compile(r"<title>.*?</title>", re.S | re.I)
 _CORPO = re.compile(r"<body\b", re.I)
 
-#: O QUE NÃO É MARCAÇÃO DE TELA — apagado ANTES de procurar selo.
-#:
-#: **ESTA LINHA É CICATRIZ, e de dentro desta régua** (11/09/2026): sem ela, um
-#: comentário do `<style>` que CITA `<span class="lanc-selo localizado">` —
-#: escrito para explicar por que a folha não conhecia a classe nova — era lido
-#: como abertura de selo de verdade. O varredor de `<span>` saía dali
-#: procurando o fechamento, atravessava o `</style>` e o apagava junto: a folha
-#: de estilo inteira virava "texto visível", e a régua acusava **306** caixas
-#: altas, quase todas prosa de comentário de CSS.
-#:
-#: É a armadilha de prosa desta casa pela sétima vez — *o comentário que
-#: descreve o padrão VIRA a primeira ocorrência dele* — e desta vez ela pegou o
-#: instrumento que nasceu para medi-la.
 _FORA_DA_TELA = re.compile(
     r"<style[^>]*>.*?</style>|<script[^>]*>.*?</script>|<!--.*?-->", re.S | re.I)
 
-#: VALOR DE MÁQUINA QUE A TELA MOSTRA: cor em hexa e endereço de rádio
-#: mascarado. Apagado ANTES de separar as palavras, e é a diferença entre uma
-#: peneira e um acaso.
-#:
-#: **MEDIDO EM 11/09/2026, pelo próprio teste desta régua:** a primeira versão
-#: tratava qualquer par `[0-9A-F]{2}` como código, para cobrir os octetos de
-#: `AA:BB:CC:00:00:01`. Com isso o `DA` de «BOTÕES DA FACE» virava "código de
-#: máquina" e saía calado do inventário — uma preposição do português inteira
-#: perdida porque as duas letras dela também são dígitos hexadecimais. Quem
-#: pega o endereço é a FORMA INTEIRA dele, nunca o pedaço.
 _VALOR_DE_MAQUINA = re.compile(
     r"#[0-9A-Fa-f]{3,8}\b|\b(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b")
 
-#: `<span>` é a única tag em que os selos moram hoje, e o varredor conta
-#: aberturas para achar o fechamento certo — um selo com `<span>` dentro (o
-#: caso de `<span class="selo ok"><span data-campo="selo">CERTO</span></span>`)
-#: quebraria uma busca ingênua pelo primeiro `</span>`.
 _SPAN = re.compile(r"<span\b[^>]*>|</span>", re.I)
 
 
@@ -185,10 +130,7 @@ def _branco(texto: str) -> str:
 
 
 def _so_a_tela(pagina: str) -> str:
-    """A página sem o `<style>`, o `<script>`, os comentários e o `<title>` dela.
-
-    Do MESMO tamanho, sempre: é o que deixa a régua dizer página e LINHA.
-    """
+    """A página sem o `<style>`, o `<script>`, os comentários e o `<title>` dela."""
     limpo = _FORA_DA_TELA.sub(lambda m: _branco(m.group(0)), pagina)
     limpo = _VALOR_DE_MAQUINA.sub(lambda m: _branco(m.group(0)), limpo)
     corpo = _CORPO.search(limpo)
@@ -204,9 +146,6 @@ def _sem_os_selos(pagina: str) -> str:
         r"<span\b[^>]*\bclass\s*=\s*\"[^\"]*\b(?:%s)\b[^\"]*\"[^>]*>"
         % "|".join(re.escape(c) for c in SELO), re.I)
     for m in abre.finditer(pagina):
-        # O FECHAMENTO TEM DE FECHAR. Um `<span>` que não equilibra não é
-        # marcação de selo — é texto que se parece com uma —, e apagar até o
-        # fim do arquivo por causa dele foi exatamente o defeito de 11/09.
         fundo, fim = 1, None
         for t in _SPAN.finditer(pagina, m.end()):
             fundo += -1 if t.group(0).startswith("</") else 1
@@ -218,41 +157,20 @@ def _sem_os_selos(pagina: str) -> str:
     return "".join(letras)
 
 
-#: A PALAVRA. Um corrido de letras/dígitos/`_`/`-` que é TODO maiúsculo e traz
-#: ao menos duas letras. O `w == w.upper() != w.lower()` é o que separa `GHz`
-#: (que tem minúscula e não é caixa alta) de `GH`, que uma peneira ingênua
-#: recortaria de dentro dele e acusaria como palavra.
 _PALAVRA = re.compile(r"[^\W_]+(?:[_-][^\W_]+)*", re.UNICODE)
 
-#: MODELO DE APARELHO, pela FORMA e não por lista (`AX211`, `UB500`): uma lista
-#: envelheceria a cada aparelho novo na mesa dela. A cor em hexa e o endereço
-#: de rádio já saíram antes, em :data:`_VALOR_DE_MAQUINA`.
 _CODIGO = re.compile(r"^[A-Z]{1,3}[0-9]{3,5}$")
 
-#: SIGLA, MARCA E NOME DE BOTÃO — a caixa alta é a grafia PRÓPRIA delas, e
-#: escrevê-las de outro jeito seria escrevê-las erradas.
 SIGLA = frozenset({
     "USB", "BT", "PC", "TV", "ID", "LED", "FPS", "MK", "SDL", "GTK", "IPC",
     "HID", "A2DP", "HFP", "GOG", "GBA", "DKMS", "CPU", "SVG", "CSV", "JSON",
     "HDMI", "COSMIC",
-    # os botões e gatilhos do aparelho, como o próprio aparelho os chama
     "PS", "L1", "L2", "L3", "R1", "R2", "R3", "ZL", "ZR", "LB", "RB", "LT", "RT",
 })
 
-#: A DÍVIDA — caixa alta que a tela mostra HOJE e que não é sigla nem selo.
-#: Ela **não reprova**: nenhuma destas mora num arquivo da ESQUELETO-C2, e uma
-#: régua que reprovasse de saída dezoito frases de outras frentes seria
-#: desligada na primeira segunda-feira. Ela é IMPRESSA a cada corrida, com o
-#: dono, para que a dívida não cresça calada — e uma palavra que não esteja
-#: aqui reprova.
-#:
-#: LEVANTADA EM 11/09/2026, nas dez páginas publicadas.
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 DIVIDA: dict[str, tuple[str, str]] = {
     # -- os rótulos de grupo do desenho do DualSense --------------------------
-    # Dez títulos de `<title>` dentro do SVG, em caixa alta. Pela regra dela de
-    # 30/08 seriam «Chassi», «Botões da face»… Dono: `interface/exportar.py`,
-    # que os escreve no `ds_limpo.svg` (linhas 74-84).
     "CHASSI": ("rótulo de grupo do SVG", "interface/exportar.py"),
     "BOTÕES": ("rótulo de grupo do SVG («BOTÕES DA FACE»)", "interface/exportar.py"),
     "DA": ("rótulo de grupo do SVG («BOTÕES DA FACE»)", "interface/exportar.py"),
@@ -267,10 +185,6 @@ DIVIDA: dict[str, tuple[str, str]] = {
     "MOTORES": ("rótulo de grupo do SVG («SENSORES E MOTORES»)", "interface/exportar.py"),
     "GLIFOS": ("rótulo de grupo do SVG", "interface/exportar.py"),
     "LUZES": ("rótulo de grupo do SVG", "interface/exportar.py"),
-    # -- ênfase decorativa dentro da prosa das dicas --------------------------
-    # É o caso mais puro do que ela proibiu: a palavra sobe de caixa só para
-    # gritar. Dono: o gerador da aba em que a dica mora — as frentes da onda
-    # A-LINGUA-DA-TELA passam por todas elas.
     "INTEIRO": ("ênfase na dica do giroscópio", "interface/exportar.py · aba01"),
     "MULTIPLICA": ("ênfase na dica da força", "aba05 · a05_vibracao"),
     "ESTE": ("ênfase na dica de ignorar", "aba08 · a08_conexoes"),
@@ -289,10 +203,6 @@ DIVIDA: dict[str, tuple[str, str]] = {
     "TODOS": ("ênfase na dica de pôr em todos os jogos", "aba09 · a09_sistema"),
     "TOTAL": ("ênfase na dica do contador", "aba08 · a08_conexoes"),
     "OCUPAÇÃO": ("ênfase na dica do rádio cheio", "aba08 · a08_conexoes"),
-    # -- a casa falando a língua de dentro ------------------------------------
-    # Nome de constante do produto citado na tela. Não é assunto de caixa alta:
-    # é `check_a_tela_nao_confessa`, e por isso fica declarado aqui em vez de
-    # ser curado por esta frente.
     "LINHAS_DO_TETO": ("nome de constante do produto na dica",
                        "aba09 — assunto do `check_a_tela_nao_confessa`"),
     "RUMBLE_POLICY_MULT": ("nome de constante do produto na dica",
@@ -324,13 +234,11 @@ def _legitima(p: str) -> bool:
     return p in SIGLA or bool(_CODIGO.match(p))
 
 
-# ---------------------------------------------------------------------------
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     so_lista = "--lista" in argv
 
     paginas = sorted(p for p in PUBLICADO.glob("*.html") if E_ABA.match(p.name))
-    # RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE.
     if len(paginas) != 10:
         print(f"achei {len(paginas)} abas em {PUBLICADO} — o caminho mudou?",
               file=sys.stderr)
@@ -375,8 +283,6 @@ def main(argv: list[str] | None = None) -> int:
             for onde in divida[palavra][:1]:
                 print(f"      {onde}")
         print()
-        # A DÍVIDA SAI ANTES DO VERMELHO na tela de quem roda: sem o `flush` os
-        # dois fluxos chegam trocados e o relato começa pelo fim.
         sys.stdout.flush()
 
     if so_lista:

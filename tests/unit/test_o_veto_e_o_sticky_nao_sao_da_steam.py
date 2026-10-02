@@ -1,16 +1,4 @@
-"""LANCADOR-AGNOSTICO-01 — o veto e o sticky param de ser da Steam.
-
-Três curas de 21/09/2026, as três nascidas da mesma ordem dela:
-
-    *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR SER
-    STEAM. QUALQUER OUTRO LANÇADOR O FUNCIONAMENTO SEGUE IGUAL."*
-
-1. O veto da R-21 perguntava «é da Steam?» e chamava a resposta de
-   `e_janela_de_jogo`;
-2. o sticky `window_detect_last_class` guardava a NOSSA janela, e o «Detectar»
-   gravava a regra do próprio Hefesto — está no `personalizado.json` dela;
-3. o Lutris não tinha degrau nenhum, e todo jogo dele caía no «não sei».
-"""
+"""LANCADOR-AGNOSTICO-01 — o veto e o sticky param de ser da Steam."""
 
 from __future__ import annotations
 
@@ -22,23 +10,14 @@ import pytest
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
 
-#: A janela do Hefesto como o compositor dela a anuncia — o valor que está,
-#: hoje, dentro do `match.window_class` do `personalizado.json` dela.
 NOSSA = "Hefesto-Dualsense4Unix"
 
 
 class TestOStickyNaoGuardaANossaJanela:
-    """**A METADE QUE MORA ONDE O VALOR NASCE.**
-
-    `record_window_detect_read` promovia a `wm_class` a sticky sempre que ela
-    fosse "útil" — e a nossa janela é uma leitura utilíssima. O sticky, porém,
-    responde outra pergunta: *"qual foi a última janela de OUTRO app?"*.
-    """
+    """**A METADE QUE MORA ONDE O VALOR NASCE.**"""
 
     def test_a_nossa_classe_nao_derruba_a_anterior(self):
-        """MORDIDA: devolva `self._window_detect_last_class = wm_class` para
-        dentro do `if useful`. Este caso reprova na hora.
-        """
+        """MORDIDA: devolva `self._window_detect_last_class = wm_class` para"""
         store = StateStore()
         store.record_window_detect_read("xlib", "steam_app_1088850")
         store.record_window_detect_read("xlib", NOSSA)
@@ -47,26 +26,13 @@ class TestOStickyNaoGuardaANossaJanela:
             "grava quando ela clica no botão")
 
     def test_a_leitura_crua_continua_dizendo_a_verdade(self):
-        """O sticky filtra; a leitura CRUA não pode filtrar.
-
-        `window_detect_current_class` é quem responde *"o que está na frente
-        AGORA?"*, e o `game_signal` depende dessa crueza. Escondê-la aqui
-        trocaria um defeito por outro.
-        """
+        """O sticky filtra; a leitura CRUA não pode filtrar."""
         store = StateStore()
         store.record_window_detect_read("xlib", NOSSA)
         assert store.window_detect_current_class == NOSSA
 
     def test_olhar_para_nos_nao_declara_o_detector_cego(self):
-        """**A ASSIMETRIA É O CUIDADO DESTA CURA.**
-
-        `window_detect_seeing` pergunta *"o detector enxerga?"* — e olhar para
-        a nossa janela é enxergar. Congelar o relógio junto com o sticky faria
-        o produto se dizer CEGO exatamente enquanto ela mexe nele.
-
-        MORDIDA: mova `_window_detect_last_useful_monotonic = moment` para
-        dentro do `if entra_no_sticky`.
-        """
+        """**A ASSIMETRIA É O CUIDADO DESTA CURA.**"""
         store = StateStore()
         store.record_window_detect_read("xlib", NOSSA, now=100.0)
         assert store.window_detect_seeing(now=101.0) is True
@@ -87,21 +53,12 @@ class TestOStickyNaoGuardaANossaJanela:
         assert store.window_detect_last_class is None
 
     def test_a_lista_da_nossa_janela_nao_e_digitada_aqui(self):
-        """A régua consulta o MESMO dono que o produto (`OWN_GUI_WM_CLASSES`).
-
-        Digitar a classe aqui faria a régua sobreviver a uma renomeação do app
-        que quebrasse o produto — é a família *"a régua digitava o que devia
-        LER"*, que esta casa já pagou onze vezes num dia.
-        """
+        """A régua consulta o MESMO dono que o produto (`OWN_GUI_WM_CLASSES`)."""
         assert NOSSA.casefold() in OWN_GUI_WM_CLASSES
 
 
 class TestODetectarNaoGravaANossaPropriaJanela:
-    """**A OUTRA METADE, no gesto — e sem ela a primeira não fecha.**
-
-    Sem sticky (detector recém-subido), o `detectar` recuava para a leitura
-    CRUA, que no instante do clique é a nossa janela.
-    """
+    """**A OUTRA METADE, no gesto — e sem ela a primeira não fecha.**"""
 
     def _ctx(self, **estado):
         from types import SimpleNamespace
@@ -138,11 +95,7 @@ class TestODetectarNaoGravaANossaPropriaJanela:
         assert _classe_de_outro_app(ctx) == "firefox"
 
     def test_a_recusa_diz_o_que_esta_vendo(self):
-        """*"Não achei janela"* sobre uma tela cheia de janelas se lê como
-        defeito do produto. A recusa nomeia a classe crua.
-
-        MORDIDA: tire o `vendo` da frase.
-        """
+        """*"Não achei janela"* sobre uma tela cheia de janelas se lê como"""
         fonte = Path(
             "src/hefesto_dualsense4unix/interface/pacotes/a10_perfis.py"
         ).read_text(encoding="utf-8")
@@ -153,10 +106,7 @@ class TestODetectarNaoGravaANossaPropriaJanela:
 
 
 class TestOVetoDaR21AlcancaQualquerLancador:
-    """**O NOME DIZIA A PERGUNTA CERTA E O CORPO RESPONDIA OUTRA.**
-
-    `e_janela_de_jogo = steam_appid_from_wm_class(...) is not None`.
-    """
+    """**O NOME DIZIA A PERGUNTA CERTA E O CORPO RESPONDIA OUTRA.**"""
 
     def test_o_predicado_e_o_dono_da_pergunta(self):
         """MORDIDA: devolva o predicado da Steam. Esta régua reprova."""
@@ -180,18 +130,13 @@ class TestOVetoDaR21AlcancaQualquerLancador:
             assert e_endereco_de_jogo("jogo-nativo-do-heroic") is False
             registrar_classes_de_jogo(["jogo-nativo-do-heroic"])
             assert e_endereco_de_jogo("jogo-nativo-do-heroic") is True
-            # E O CARIMBO DA STEAM CONTINUA VALENDO SOZINHO: o cadastro
-            # SUBSTITUI, e um registro de outro lançador não pode apagar o
-            # degrau que já funcionava.
             assert e_endereco_de_jogo("steam_app_1088850") is True
         finally:
             registrar_classes_de_jogo([])
 
 
 class TestOLutrisGanhaODegrauDoAppid:
-    """**O `pga.db` DELA TEM ZERO JOGOS** — e é por isso que o que entra aqui
-    é só o degrau JÁ MEDIDO em outro leitor, não um degrau novo.
-    """
+    """**O `pga.db` DELA TEM ZERO JOGOS** — e é por isso que o que entra aqui"""
 
     def _banco(self, tmp_path: Path, linhas):
         banco = tmp_path / "pga.db"
@@ -224,14 +169,7 @@ class TestOLutrisGanhaODegrauDoAppid:
         assert jogo.classe_de_janela == "steam_app_1332010"
 
     def test_o_id_da_gog_nao_vira_chave_de_janela(self, tmp_path):
-        """**O CASO QUE IMPEDE A CURA DE PASSAR DO PONTO.**
-
-        O Lutris usa a mesma coluna para `gog`/`egs`/`humble`, e ali o
-        `service_id` é o id DAQUELA loja. Aceitá-lo faria nascer um
-        `steam_app_<id da GOG>` — uma chave que nunca casa, o defeito R-12.
-
-        MORDIDA: troque a igualdade por `if numero:`.
-        """
+        """**O CASO QUE IMPEDE A CURA DE PASSAR DO PONTO.**"""
         from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
             _lutris,
         )

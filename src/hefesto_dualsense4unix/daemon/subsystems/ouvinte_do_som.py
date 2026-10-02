@@ -1,46 +1,4 @@
-"""O servidor de som AVISA, e até hoje ninguém escutava.
-
-O-SOM-DO-SISTEMA-E-O-DA-TELA-01 (21/09/2026). Pedido dela, com o painel de som
-do COSMIC aberto ao lado da janela do Hefesto:
-
-    *"outra coisa que precisamos ter é sincronia com os canais de saida de som
-    e entrada de som do sistema operacional. isso é importante."*
-    <!-- noqa-acento: citação literal dela -->
-
-**O QUE ESTAVA MEDIDO, e é o defeito inteiro:** o produto só ESCREVIA. Uma
-varredura em `src/` não achava um `pactl subscribe` nem um `pw-mon`; havia
-escrita (`set-default-sink`, `set-default-source`) e leitura SOB DEMANDA
-(`get-default-sink`). Quando ela trocava a saída no painel do sistema, nada no
-Hefesto ficava sabendo — a tela só descobria no tique que por acaso
-perguntasse, e a fileira do som continuava acesa no que estava.
-
-**O CANAL EXISTE E RESPONDE.** Provado em 21/09/2026 sem tocar no som dela: um
-`pactl subscribe` aberto, um null-sink criado e removido, e as quatro linhas
-chegaram na hora (`new`/`remove` de `module` e de `sink`).
-
-**E UM FATO QUE DESENHA ESTE MÓDULO: reescrever o MESMO valor não emite
-evento.** Medido: `pactl set-default-source <o que já era>` passou sem uma
-linha no `subscribe`. Quem escuta não vê as próprias escritas idempotentes, e
-por isso **não há eco a filtrar** — o ouvinte pode ser burro.
-
-**ELE NÃO DECIDE NADA, E ISSO É CONTRATO.** Este laço lê, compara e PUBLICA.
-Quem elege microfone continua sendo `integrations/eleicao_de_microfone`, que é
-o dono, e escrever um `set-default-source` daqui criaria o segundo escritor que
-a eleição existe para acabar.
-
-**E ELE PASSOU A SER O ÚNICO OUVIDO DO RETRATO** —
-O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01 (28/09/2026). Até esta data ele só
-publicava a saída e a entrada padrão, e o daemon perguntava todo o resto ao
-servidor por conta própria, 22 a 23 vezes por segundo. Agora ele escuta todo
-evento de nó, de fluxo, de módulo e de servidor, junta cada rajada em
-:data:`RAJADA_S` e manda o `integrations/retrato_do_som` reler SÓ o tipo que
-mudou. Sem evento, zero `pactl`. O padrão publicado sai do retrato, sem
-pergunta própria.
-
-**A LÍNGUA FICA PRESA EM C.** O `pactl` desta casa responde em português
-(`LC_ALL` do sistema), e um leitor que dependa do idioma da máquina já
-respondeu *"não há"* sobre aparelho de pé duas vezes.
-"""
+"""O servidor de som AVISA, e até hoje ninguém escutava."""
 
 from __future__ import annotations
 
@@ -57,43 +15,19 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Quanto se espera antes de tentar de novo quando o `pactl` morre. O servidor
-#: de som reinicia (o `systemctl --user restart pipewire` do doctor faz isso), e
-#: um ouvinte que desistisse na primeira queda ficaria mudo pelo resto da
-#: sessão — que é exatamente o defeito que ele vem curar.
 ESPERA_PARA_RELIGAR_S: float = 3.0
 
-#: Quanto o ouvinte junta eventos antes de mandar reler. Um jogo que abre
-#: emite uma rajada — o fluxo nasce, muda, o nó acorda — e reler a cada linha
-#: faria da rajada a mesma chuva de `pactl` que esta sprint veio curar.
 RAJADA_S: float = 0.05
 
-#: As linhas do `subscribe` que interessam. O `subscribe` fala de tudo —
-#: clientes que abrem e fecham, streams de cada app — e reagir a tudo faria uma
-#: leitura de `pactl info` por frame de áudio de qualquer programa.
-#:
-#: `server` é a que carrega a troca de padrão; `sink`/`source` são o nó que
-#: nasce e morre, que é a outra metade da queixa dela (o nó do controle some e
-#: a tela fica acesa no que estava).
 EVENTOS_QUE_IMPORTAM = ("server", "sink", "source")
 
-#: Os tipos do retrato cuja releitura pode mudar o padrão publicado: o
-#: `server` diz quem é o padrão, e as listas de nós dizem o nome de gente dele.
 _TIPOS_DO_PADRAO = frozenset(
     retrato_do_som.TIPO_DO_EVENTO[e] for e in EVENTOS_QUE_IMPORTAM)
 
 
 @dataclass(frozen=True)
 class SomDoSistema:
-    """A saída e a entrada padrão do sistema, como o servidor as diz.
-
-    DOIS PARES, e o segundo é o que ela lê. `saida`/`entrada` são os nomes
-    CRUS dos nós (`alsa_output.pci-…hdmi-stereo`), que é o que o produto usa
-    para comparar; `saida_nome`/`entrada_nome` são as `Description` do próprio
-    servidor — **as mesmas palavras que o painel de som do COSMIC mostra a
-    ela**, e é isso que faz a tela do Hefesto e o painel do sistema falarem a
-    mesma língua, que é o pedido inteiro.
-    """
+    """A saída e a entrada padrão do sistema, como o servidor as diz."""
 
     saida: str = ""
     entrada: str = ""
@@ -111,24 +45,7 @@ def _ambiente() -> dict[str, str]:
 
 
 async def ler_o_padrao() -> SomDoSistema:
-    """A saída e a entrada padrão, com os nomes de gente — pelo RETRATO, sem `pactl`.
-
-    Até 28/09/2026 esta função fazia quatro perguntas próprias ao servidor
-    (`get-default-sink`, `get-default-source`, `list sinks`, `list sources`) a
-    cada evento. O retrato já sabe as quatro respostas, relidas pelo mesmo
-    evento que acordou quem pergunta.
-
-    Retrato sem resposta devolve os campos vazios — *"não sei"*, que é o que a
-    tela já sabe pintar.
-
-    **A CONSULTA RODA FORA DO LAÇO DO DAEMON.** Ela quase sempre sai da foto,
-    mas nem sempre: uma escrita que deixou o tipo pendente, um recuo do
-    servidor vencido ou uma releitura que falhou fazem o retrato perguntar ao
-    servidor na hora, com `subprocess.run` e até
-    `retrato_do_som.TETO_DA_LEITURA_S` de prazo. No laço, esse `pactl`
-    seguraria o daemon inteiro — era por isso que a leitura de antes era
-    assíncrona.
-    """
+    """A saída e a entrada padrão, com os nomes de gente — pelo RETRATO, sem `pactl`."""
     return await asyncio.to_thread(_o_padrao_do_retrato)
 
 
@@ -145,20 +62,7 @@ def _o_padrao_do_retrato() -> SomDoSistema:
 
 
 def tipo_do_evento(linha: str) -> str | None:
-    """O tipo do retrato que esta linha do `subscribe` manda reler, ou `None`.
-
-    A forma é `Event 'change' on server #0`. Casar pela PALAVRA do alvo, e não
-    por substring solta: `sink-input` (o fluxo de um app qualquer) CONTÉM
-    `sink`, e é um tipo à parte — ele relê os fluxos, e não o padrão, que só
-    se relê pelos tipos de :data:`_TIPOS_DO_PADRAO`. `client` não relê nada —
-    cada `pactl` do próprio retrato é um cliente, e reler por eles faria o
-    retrato perguntar por causa das próprias perguntas.
-
-    Até 28/09/2026 moravam aqui `interessa` e `descricoes_da_lista`, o filtro
-    e os nomes de gente do padrão. O retrato os substituiu (a releitura por
-    tipo e `RetratoDoSom.descricoes`), e as réguas deles passaram a medir o
-    caminho do produto.
-    """
+    """O tipo do retrato que esta linha do `subscribe` manda reler, ou `None`."""
     partes = linha.split()
     if len(partes) < 4 or partes[0] != "Event":
         return None
@@ -194,13 +98,6 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
     sem_pactl = False
     try:
         while True:
-            # SEM `pactl` NÃO HÁ O QUE OUVIR, e isso não é queda (30/09/2026).
-            # O `runtime-smoke` do CI, numa máquina sem o programa, pegou o
-            # laço soltando um `FileNotFoundError` com a pilha inteira a cada
-            # volta. O leitor do retrato já pergunta o mesmo antes de chamar
-            # (`retrato_do_som.py`, `shutil.which("pactl")`): o ouvinte diz uma
-            # linha na transição, fica sem retrato, e volta a ouvir sozinho se
-            # o programa aparecer.
             if shutil.which("pactl") is None:
                 if not sem_pactl:
                     sem_pactl = True
@@ -226,13 +123,6 @@ async def _carregar_o_retrato(retrato: retrato_do_som.RetratoDoSom) -> bool:
     """A leitura inteira, fora do laço de eventos. True = o retrato assumiu."""
     completo = await asyncio.to_thread(retrato.carregar)
     if completo or retrato.algum_em_dia():
-        # O RETRATO ASSUME COM O QUE RESPONDEU, mesmo que um tipo tenha
-        # falhado: o tipo em dúvida diz "não sei" sozinho, e os outros não
-        # precisam esperar por ele. Exigir os seis deixava o retrato solto para
-        # sempre numa máquina em que UMA pergunta nunca responde — todo leitor
-        # de volta ao servidor e o padrão publicado vazio (conferência de
-        # 28/09/2026). Se NADA respondeu, o servidor não está de pé: o retrato
-        # de antes continua sem servidor, e o que nunca assumiu, solto.
         retrato.assumir(asyncio.get_running_loop())
         return True
     return False
@@ -249,9 +139,6 @@ async def _uma_volta(daemon: Any) -> None:
     pendentes: set[str] = set()
     tarefas: list[asyncio.Task[None]] = []
     try:
-        # O `subscribe` ABRE ANTES DA LEITURA INTEIRA: um evento que chegue no
-        # meio dela fica na fila do pipe e relê o tipo depois — o contrário
-        # perderia a mudança que acontecesse entre ler e escutar.
         await _carregar_o_retrato(retrato)
         anterior = await ler_o_padrao()
         _guardar(daemon, anterior)
@@ -271,10 +158,6 @@ async def _uma_volta(daemon: Any) -> None:
                 return
             agora = await ler_o_padrao()
             if agora == anterior:
-                # O SERVIDOR FALA MAIS DO QUE MUDA: um nó que nasce emite
-                # evento e não troca padrão nenhum. Publicar aqui faria a tela
-                # repintar por nada, que é o defeito medido em 05/09/2026 (80
-                # repinturas em 80 tiques).
                 return
             anterior = agora
             _guardar(daemon, agora)
@@ -288,9 +171,6 @@ async def _uma_volta(daemon: Any) -> None:
                 await aplicar()
 
         async def insistir() -> None:
-            # A LEITURA INTEIRA QUE FALHOU TENTA DE NOVO sem esperar evento: um
-            # servidor parado não avisa nada, e o retrato ficaria "não sei"
-            # até alguém mexer no som.
             while not retrato.completo():
                 await asyncio.sleep(ESPERA_PARA_RELIGAR_S)
                 pendentes.update(retrato.faltando())
@@ -309,14 +189,8 @@ async def _uma_volta(daemon: Any) -> None:
                 _podar(tarefas)
                 vez = asyncio.create_task(descarregar())
                 tarefas.append(vez)
-        # O CANAL FECHOU (o servidor caiu, ou o `pactl` morreu): a rajada que
-        # esperava a vez é relida agora, antes de o retrato dizer "não sei".
         for tarefa in tarefas:
             tarefa.cancel()
-        # `gather` e não um `await` por tarefa dentro de `suppress(CancelledError)`:
-        # aquele engolia também o cancelamento DESTE laço, que chegasse bem
-        # aqui, e o daemon não conseguia parar o ouvinte com o servidor caído
-        # (achado pela mordida do «sem servidor», 28/09/2026).
         await asyncio.gather(*tarefas, return_exceptions=True)
         tarefas.clear()
         if pendentes:
@@ -332,17 +206,7 @@ async def _uma_volta(daemon: Any) -> None:
 
 
 def _podar(tarefas: list[asyncio.Task[None]]) -> None:
-    """Tira da lista da volta as tarefas que acabaram — e diz a falha de quem caiu.
-
-    **A LISTA NÃO CRESCE COM A SESSÃO.** Cada rajada é uma tarefa nova, e uma
-    volta dura o que o `subscribe` durar: numa sessão boa, o dia inteiro. Sem
-    a poda, um jogo que mexe nos fluxos uma vez por segundo guardaria dezenas
-    de milhares de tarefas acabadas por noite no processo do daemon (medido
-    pela conferência de 28/09/2026: trinta rajadas, trinta guardadas).
-
-    A exceção de uma rajada que caiu é lida AQUI, e não esquecida: sem isto
-    ela só sairia no `gather` do fim da volta, que a engole.
-    """
+    """Tira da lista da volta as tarefas que acabaram — e diz a falha de quem caiu."""
     vivas: list[asyncio.Task[None]] = []
     for tarefa in tarefas:
         if not tarefa.done():
@@ -353,7 +217,7 @@ def _podar(tarefas: list[asyncio.Task[None]]) -> None:
 
 
 def _guardar(daemon: Any, agora: SomDoSistema) -> None:
-    with contextlib.suppress(Exception):  # dublê sem atributo, daemon ausente
+    with contextlib.suppress(Exception):
         daemon.som_do_sistema = agora
 
 

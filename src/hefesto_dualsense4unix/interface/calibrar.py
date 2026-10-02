@@ -67,105 +67,38 @@ import onde  # noqa: E402
 import monta  # noqa: E402
 import caixa_da_janela  # noqa: E402
 
-#: Quanto tempo a medição leva. NÃO é chute: é o que o `--calibrate` do
-#: `hefesto-dualsense4unix` já usa como janela de repouso. Escrito aqui uma vez,
-#: e lido pelos dois lugares da página que o citam.
 SEGUNDOS = 5
 
-#: O QUE A TELA MOSTRA ONDE NÃO HÁ LEITURA. É o mesmo caractere e o mesmo
-#: sentido de `mesa_viva.SEM_LEITOR` — nunca zero fingindo repouso, nunca o
-#: último valor como se fosse de agora. Repetido aqui como literal porque este
-#: gerador roda sem o pacote instalado (`python3 calibrar.py`), e a régua
-#: `test_a_calibracao_mostra_quem_esta_na_mao.py` confere que os dois são o
-#: MESMO caractere.
 SEM_LEITURA = "—"
 
-#: AS DUAS FAMÍLIAS DE EIXO, na ordem em que a tela as mostra. O rótulo sai só
-#: na primeira das três linhas de cada família — é o desenho aprovado.
 FAMILIAS = (("giro", "Giroscópio"), ("accel", "Acelerômetro"))
 
-#: O QUE A PÁGINA DIZ SEM CONTROLE NENHUM, e zero é estado legítimo: ela pode
-#: abrir a calibração com tudo desligado. A frase diz **o que falta e o que
-#: fazer**, nas palavras do glossário (`cabo` · `rádio`, §1) — nunca um cartão
-#: fantasma com travessão, que anunciaria um controle que não está aqui.
 SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
                 "e ele aparece aqui.")
 
-# ---------------------------------------------------------------------------
-# A MIRA VIRTUAL — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01
-# ---------------------------------------------------------------------------
-# Palavra dela, 23/09: o chip «Mira Virtual» mora no cartão de cada controle, na
-# aba Controles, e *"a sensibilidade e o «Ignorar tremor até» ficam na tela
-# Calibrar sensores"*. São dois deslizantes POR CONTROLE, numa coluna embaixo do
-# cartão daquele controle.
-#
-# UM BLOCO PRÓPRIO, E NÃO DENTRO DO CARTÃO — e a razão é o produto: o
-# `pacotes/a11_calibrar_sensores` REMONTA o bloco dos cartões a cada mudança de
-# bancada, pelo `controle()` deste arquivo. Um deslizante dentro do cartão
-# chegaria à janela dela no primeiro tique, antes de ela aprovar o desenho.
-#
-# OS NÚMEROS SÃO DO ESQUEMA (`profiles/schema.ProfileMovimentoConfig`), e estão
-# escritos aqui porque este gerador roda sem o pacote instalado — a régua
-# `test_a_mira_por_movimento_na_tela.py` confere que são os mesmos. O mínimo do
-# tremor é 1, e não o 0 que o esquema aceita: é a faixa da sprint, e o 0 não
-# ignora tremor nenhum.
-#
-# O RÓTULO DO TREMOR NÃO DIZ «zona morta»: a palavra técnica esconde para que
-# o campo serve, e ele é o campo de acessibilidade desta tela (§3 da sprint).
 ROTULO_DA_MIRA = "Mira Virtual"
 ROTULO_SENSIBILIDADE = "O quanto um gesto anda"
 ROTULO_TREMOR = "Ignorar tremor até"
 UNIDADE_DO_TREMOR = "graus/s"
-SENSIBILIDADE = (1, 12, 6)   # mínimo, máximo, o de nascença
-TREMOR = (1, 60, 3)          # idem, em graus/s
-#: A linha que liga os deslizantes ao chip. Sem ela os dois números flutuam na
-#: página de calibração sem dizer a que servem.
-#:
-#: E ELA DIZ OS OUTROS DOIS DESDE 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): a
-#: «Inclinação» embaixo de cada analógico lê o quanto anda, o segurar e o
-#: inverter do mesmo controle (a zona morta dela é de inclinação, em graus, e
-#: não o tremor em graus/s), e o «Cursor» do touchpad só o quanto anda — um
-#: cursor que anda ao contrário do dedo é defeito, não ajuste
-#: (`roteador_de_movimento.pixels_do_toque`).
+SENSIBILIDADE = (1, 12, 6)
+TREMOR = (1, 60, 3)
 DE_ONDE_VEM_A_MIRA = ("Valem para o controle com a Mira Virtual acesa, na aba "
                       "Controles. A Inclinação usa todos menos o tremor, e o "
                       "Cursor do touchpad, só o quanto um gesto anda.")
 
-# ---------------------------------------------------------------------------
-# «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-02
-# ---------------------------------------------------------------------------
-# Palavra dela na página da sessão dos desenhos
-# (`D-2409-SEGURAR-E-INVERTER-ENTRAM-NA-TELA`): «entram as duas». Os dois já
-# estavam no esquema e no motor (`ProfileMovimentoConfig.gatilho`,
-# `inverter_horizontal`, `inverter_vertical`); faltava a tela. Moram na coluna
-# de cada controle, embaixo dos dois deslizantes, e nascem DESLIGADOS: a mira
-# anda sempre, e nada inverte.
-#
-# OS BOTÕES DA LISTA SÃO OS DO ESQUEMA, e não uma lista escrita aqui: é
-# `remapeamento_de_botao.REMAPEAVEIS`, a mesma de que o esquema recusa o que
-# não está nela — o PS fica fora porque é a saída de emergência dela. (O
-# `monta`, que este gerador importa, já puxa o pacote; a nota do topo sobre
-# rodar sem ele caducou para os geradores que o importam.)
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     REMAPEAVEIS,
 )
 
 ROTULO_SEGURAR = "Só enquanto eu segurar"
-#: A opção de nascença da lista: a mira anda sem botão nenhum. O VALOR não é o
-#: vazio porque o alvo `valor` do piloto troca o vazio pelo travessão, e um
-#: `<select>` não aceita o que não oferece — a lista nunca voltaria a «Sempre».
 ROTULO_SEMPRE = "Sempre"
 SEMPRE = "sempre"
 ROTULO_INVERTER = "Inverter"
-#: Os dois lados do «Inverter», cada um por si: `(o valor do `data-inverter`,
-#: o rótulo do botão, o campo do esquema)`.
 INVERTER = (
     ("lado", "Esquerda e direita", "inverter_horizontal"),
     ("cima-baixo", "Cima e baixo", "inverter_vertical"),
 )
 
-#: OS TRÊS BOTÕES CUJO ID DO JOGO NÃO É O ID DA PEÇA no mapa das peças: o clique
-#: dos dois analógicos e o Create, que o mapa chama pelo nome do plástico antigo.
 _PECA_DO_BOTAO = {"l3": "stick_l", "r3": "stick_r", "create": "share"}
 
 
@@ -179,13 +112,7 @@ def _pecas() -> dict:
 
 
 def nome_do_botao(botao, pecas=None):
-    """O nome curto do botão na tela, LIDO do mapa das peças.
-
-    A MESMA REGRA da troca de botões da aba Navegação (`aba06.nome_de`): o
-    `nome` quando ele é curto, e o apelido curto quando não é — é de lá que
-    saem o L3 e o R3. Uma segunda regra aqui faria a mesma peça ter dois nomes
-    na mesma janela.
-    """
+    """O nome curto do botão na tela, LIDO do mapa das peças."""
     p = (pecas or _pecas())[_PECA_DO_BOTAO.get(botao, botao)]
     if len(p["nome"]) <= 8:
         return p["nome"]
@@ -206,7 +133,7 @@ def plural(quantos: int, um: str, muitos: str) -> str:
 
     POR QUE ELE EXISTE, e o defeito é medido: esta página escrevia
     ``dos {n} controles`` e caía em *"dos 1 controles"* com um controle só
-    (`calibrar.py:219`, antes de 11/09). **O plural dito com um «s» entre
+    (`calibrar.py:146`, antes de 11/09). **O plural dito com um «s» entre
     parênteses não existe em língua nenhuma além da nossa** e não tem como ser
     traduzido: em inglês são duas formas, em russo são três.
 
@@ -231,14 +158,7 @@ def plural(quantos: int, um: str, muitos: str) -> str:
 
 
 def contagem(quantos: int) -> str:
-    """`Nenhum controle conectado` · `1 controle conectado` · `4 controles conectados`.
-
-    É a linha do rodapé que diz **de quem** são os números da tela, antes de ela
-    apertar «Começar». Com zero ela fica vazia de propósito: o lugar dos cartões
-    já traz a frase inteira (:data:`SEM_CONTROLE`), e repetir a ausência em dois
-    lugares é a pergunta 4 da vistoria de língua — *repete o que a tela já diz
-    por outro meio?*
-    """
+    """`Nenhum controle conectado` · `1 controle conectado` · `4 controles conectados`."""
     if quantos <= 0:
         return ""
     return f"{quantos} {plural(quantos, 'controle conectado', 'controles conectados')}"
@@ -454,53 +374,11 @@ CSS = """
 """
 
 
-# A CAIXA TEM O TAMANHO DA JANELA DAS ABAS — 23/09/2026,
-# A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01. Ela, com a foto da tela:
-#
-#     "na aba de calibração ela tem altura e largura de layout inferior sendo
-#      que deveria ser a mesma do programa."
-#
-# MEDIDO NO PILOTO ANTES DA CURA, na MESMA janela oculta, indo da Controles à
-# Calibrar pelo botão dela:
-#
-#     vista       02-controles `.janela`   calibrar `.cx`
-#     1212x809    1180 x 777               1168 x 499
-#     1918x840    1600 x 808               1180 x 499   <- a TV dela
-#     1212x700    1180 x 668               1168 x 499
-#
-# A vista era a mesma nas duas páginas, logo a janela hospeda as duas igual: a
-# causa era ESTA folha — `width:1180px` (a largura das abas antes de 08/09),
-# `body{padding:22px}` e a altura que o conteúdo desse.
-#
-# O TAMANHO TEM DONO, e é o `topo.html`: o recuo, o piso, o teto e a altura da
-# vista (`--recuo-do-corpo`, `--piso-da-vista`, `--teto-da-vista`,
-# `--alt-janela`) e as quatro propriedades de tamanho da `.janela`. Esta página
-# os LÊ de lá a cada geração; redigitá-los aqui foi exatamente como o 1180
-# ficou para trás quando as abas passaram a esticar.
-#
-# O LEITOR MUDOU DE CASA EM 24/09/2026 (AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-
-# JANELA-01): ele mora em `caixa_da_janela.py`, porque o «Mapa do controle» e o
-# mapa das portas passaram a pedir a mesma caixa, e o mapa das portas é
-# importado pelo produto por um caminho que não alcança este arquivo. O nome
-# `moldura` fica aqui para quem já o chamava.
 moldura = caixa_da_janela.moldura
 
 
 def _svg(c):
-    """O desenho do controle, na cor do plástico dele, sem as lâmpadas.
-
-    As lâmpadas do jogador saem pelo mesmo motivo medido na aba Jogar: com 74px
-    de desenho elas mediriam ~1,3 x 0,4 px. Abaixo de um pixel não é lâmpada
-    apagada — é lâmpada que não cabe.
-
-    A COR VEM POR `.get`, e não por `[...]` — 11/09/2026, e o defeito foi
-    MEDIDO: o `pacotes._LUGAR_DE_MENTIRA`, com que o despachante roda a pintura
-    fantasma do molde, não tem chave `cor`. O `KeyError` caía dentro do
-    `except Exception` de `molde_do_lugar` e o molde saía **vazio, calado** — a
-    forma exata do defeito que esta casa chama de ausência de notícia lida como
-    sucesso. Modelo que o desenho não conhece cai no cinza sem identidade, que é
-    o que a regra dela pede quando não há informação.
-    """
+    """O desenho do controle, na cor do plástico dele, sem as lâmpadas."""
     cor = str(c.get("cor") or "")
     if cor and not monta.o_desenho_conhece(cor):
         cor = ""
@@ -509,16 +387,7 @@ def _svg(c):
 
 
 def _eixos():
-    """As seis linhas de leitura de um controle: três de giro, três de aceleração.
-
-    TRÊS ENDEREÇOS POR EIXO, e são três porque um elemento só aceita UM alvo: o
-    número é texto (`giro-x`), cada metade da barra é largura (`-neg`, `-pos`) e
-    a cor sobe para o trilho (`-cor`). É a mesma repartição que a aba Controles
-    documenta no `gx()` dela, e é o que faz o tique poder escrever a leitura sem
-    tocar no desenho.
-
-    NASCEM NO TRAVESSÃO E COM A BARRA A ZERO — ver o cabeçalho deste arquivo.
-    """
+    """As seis linhas de leitura de um controle: três de giro, três de aceleração."""
     linhas = []
     for fam, rot in FAMILIAS:
         for i, e in enumerate("XYZ"):
@@ -537,15 +406,7 @@ def _eixos():
 
 
 def _plastico(c):
-    """A cor do plástico daquele controle, ou a borda neutra do tema.
-
-    `monta.cor_da_zona` PARA a geração quando o modelo não existe no SVG — e
-    está certo para a bancada, onde a lista é escrita à mão. Aqui a lista vem do
-    APARELHO: um modelo que o desenho não conhece, ou a cor que o controle ainda
-    não respondeu (`cor` vazio enquanto a primeira pergunta não volta), são
-    respostas legítimas. É a mesma saída do `_cor_da_zona_tolerante` do piloto
-    da aba Controles, e pela mesma razão.
-    """
+    """A cor do plástico daquele controle, ou a borda neutra do tema."""
     cor = str(c.get("cor") or "")
     if cor and monta.o_desenho_conhece(cor):
         return monta.cor_da_zona(cor)
@@ -553,17 +414,7 @@ def _plastico(c):
 
 
 def controle(c):
-    """O cartão de UM controle — o desenho, a identidade e as seis linhas vazias.
-
-    PÚBLICA PORQUE TEM DOIS CHAMADORES: o `main()`, que grava o arquivo, e
-    `pacotes/a11_calibrar_sensores.py`, que o remonta a cada mudança de bancada.
-    Reescrever o cartão do lado do pacote seria a segunda cópia do desenho — o
-    defeito que `controles_vivos.html_da_mesa` já evitou chamando o gerador.
-    """
-    # TODO CAMPO POR `.get`, E COM O TRAVESSÃO NO LUGAR DO VAZIO. A lista vem do
-    # APARELHO: um controle que o daemon publicou antes de resolver o número de
-    # jogador, o modelo ou o transporte chega aqui com `None` — e `f"{None}"`
-    # escreve a palavra `None` na tela dela. Ver a nota do `_svg`.
+    """O cartão de UM controle — o desenho, a identidade e as seis linhas vazias."""
     jogador = c.get("jogador") or SEM_LEITURA
     nome = c.get("nome") or SEM_LEITURA
     via = c.get("via") or SEM_LEITURA
@@ -581,26 +432,14 @@ def controle(c):
 
 
 def controles(quem):
-    """O miolo do bloco `[data-bloco="controles"]`: os cartões, ou a frase.
-
-    LISTA VAZIA É UMA RESPOSTA, não a ausência de uma. Com zero controles esta
-    função devolve :data:`SEM_CONTROLE` — nunca um cartão com travessão, que
-    seria a tela afirmando um controle que não está aqui (o defeito que esta
-    casa já nomeou sete vezes).
-    """
+    """O miolo do bloco `[data-bloco="controles"]`: os cartões, ou a frase."""
     if not quem:
         return f'          <p class="vazio">{SEM_CONTROLE}</p>'
     return "\n".join(controle(c) for c in quem)
 
 
 def _deslizante(gesto, rotulo, faixa, campo, unidade=""):
-    """Uma linha de deslizante da mira: o rótulo, o trilho e o número.
-
-    DOIS ENDEREÇOS, porque um elemento aceita UM alvo: o trilho recebe o
-    `valor` (a posição do polegar) e o número recebe o texto. O número nasce no
-    valor de nascença do esquema — é o que um perfil novo tem, e não uma
-    leitura inventada: ninguém mediu nada para ele existir.
-    """
+    """Uma linha de deslizante da mira: o rótulo, o trilho e o número."""
     minimo, maximo, nasce = faixa
     un = f' <span class="un">{unidade}</span>' if unidade else ""
     return (f'              <label class="desl"><span class="r">{rotulo}</span>'
@@ -612,12 +451,7 @@ def _deslizante(gesto, rotulo, faixa, campo, unidade=""):
 
 
 def _segurar():
-    """A linha do «Só enquanto eu segurar»: o rótulo e a lista, nascendo «Sempre».
-
-    A lista é um `<select>` de verdade, e o endereço é o alvo `valor`: o
-    produto escreve nela o botão que a peça usa (`sempre` quando não há), e a
-    troca dela chega ao gesto pela porta do `change`.
-    """
+    """A linha do «Só enquanto eu segurar»: o rótulo e a lista, nascendo «Sempre»."""
     opcoes = "".join(
         f'<option value="{v}"{" selected" if v == SEMPRE else ""}>{r}</option>'
         for v, r in _opcoes_do_segurar())
@@ -628,14 +462,7 @@ def _segurar():
 
 
 def _inverter():
-    """A linha do «Inverter»: o rótulo e os dois botões, cada lado por si.
-
-    Os botões são interruptores na cara dos chips de sensor da aba Controles
-    (o verde aceso, o `off` apagado), e NASCEM APAGADOS. O alvo é `classe`, na
-    língua do `_selo_do_sensor`: `off` quando o produto disser `DESLIGADO`.
-    O nome acessível diz o ato inteiro, porque o rótulo do botão sozinho
-    («Cima e baixo») não diz que inverte.
-    """
+    """A linha do «Inverter»: o rótulo e os dois botões, cada lado por si."""
     botoes = "".join(
         f'<button class="sw off" data-gesto="mira-inverter" data-inverter="{qual}"'
         f' data-campo="mira-inverter-{qual}" data-hef-alvo="classe"'
@@ -648,13 +475,7 @@ def _inverter():
 
 
 def mira(c):
-    """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu
-    segurar» e o «Inverter» dele.
-
-    PÚBLICA pelo mesmo motivo do `controle()`: o `pacotes/a11_calibrar_sensores`
-    a remonta quando a página publicada tiver o bloco. O `data-controle` é o do
-    cartão de cima, e é ele que leva o clique ao controle certo.
-    """
+    """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu"""
     jogador = c.get("jogador") or SEM_LEITURA
     return (f'          <div class="mira" data-controle="{c.get("pref") or ""}">\n'
             f'            <span class="quem">Player {jogador}</span>\n'
@@ -666,13 +487,7 @@ def mira(c):
 
 
 def miras(quem):
-    """O miolo do bloco `[data-bloco="miras"]`: o título e uma coluna por controle.
-
-    SEM CONTROLE, NADA — nem o título. A frase de quem falta já está no bloco
-    dos cartões, logo acima, e dizê-la duas vezes seria a tela narrando. O
-    vazio é VAZIO DE VERDADE (sem quebra de linha), porque é o `:empty` da
-    folha que some com a moldura do bloco.
-    """
+    """O miolo do bloco `[data-bloco="miras"]`: o título e uma coluna por controle."""
     if not quem:
         return ""
     colunas = "\n".join(mira(c) for c in quem)
@@ -682,17 +497,7 @@ def miras(quem):
 
 
 def documento(quem):
-    """A página inteira, com os cartões de ``quem``, pronta para gravar.
-
-    PÚBLICA para a régua do tamanho medir a página com 1, 2 e 4 controles — a
-    MATRIZ dela — sem gravar arquivo; o `main()` grava a da bancada do desenho.
-    """
-    # O PLURAL SAIU DA FRASE — 11/09/2026, aprovado por ela. A linha dizia
-    # «dos dois controles» e caía em «dos 1 controles» com um controle só na
-    # bancada: a contagem era do desenho, não de quem lê. «todos os controles
-    # conectados» é verdade com um, com dois e com quatro, e não tem número
-    # a errar. O número voltou à tela no RODAPÉ, onde ele é dado e não frase —
-    # e lá a concordância tem dono (`contagem()`).
+    """A página inteira, com os cartões de ``quem``, pronta para gravar."""
     html = f'''<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -781,14 +586,8 @@ def documento(quem):
 
 
 def main():
-    # O ARQUIVO NASCE COM A BANCADA DO DESENHO, e o produto a substitui no
-    # primeiro tique — é o mesmo contrato das dez abas. O que mudou em 11/09 é
-    # que agora HÁ quem substitua: `pacotes/a11_calibrar_sensores.py`.
     quem = monta.CONECTADOS
     onde.pagina("calibrar-sensores.html").write_text(documento(quem))
-    # O «s» ENTRE PARÊNTESES SAIU DAQUI TAMBÉM — 11/09/2026. Não é texto de
-    # tela, mas é a mesma concordância, e a régua que a cobra lê este arquivo
-    # inteiro — inclusive esta linha, que por isso não o escreve.
     print(f"calibrar-sensores.html: {contagem(len(quem))} no desenho · "
           f"3 estados clicáveis")
 

@@ -48,9 +48,7 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no TOPO, antes de qualquer import de `gi`. O módulo sob
 # teste (`app.actions.rumble_actions`) importa `gi` na primeira linha, e sem
-# esta guarda o arquivo inteiro passaria verde contra widget de mentira.
 exigir_gi_real("aba Rumble: o caminho por peça, da tela ao daemon")
 
 from typing import Any
@@ -60,15 +58,9 @@ import pytest
 from hefesto_dualsense4unix.app.actions import rumble_actions
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
-#: A peça escolhida no seletor. Faixa sintética `02:fe:00` (`core/faixa_sintetica.py`), fora da
-#: `aabbcc` que vazou para a mesa de produção dela em 23/08.
 PECA = "02:fe:00:00:00:02"
 
-#: A segunda peça, para a mordida por jogador não depender de uma só.
 OUTRA_PECA = "02:fe:00:00:00:03"
-
-
-# --- dublês de widget --------------------------------------------------
 
 
 class _FakeToggle:
@@ -131,14 +123,7 @@ class _FakeBarra:
 
 
 class _Aba(rumble_actions.RumbleActionsMixin):
-    """A aba Rumble com os widgets que estas mordidas tocam.
-
-    O ``rumble_policy_aviso`` é um ``Gtk.Label`` DE VERDADE dentro de uma
-    ``Gtk.Box`` de verdade, e não um dublê: ``_rotulo_do_alcance_do_gesto``
-    pendura o rótulo novo no PAI dele (``get_parent()`` + ``pack_start``), e um
-    dublê sem pai faz a função devolver ``None`` — o teste ficaria verde por
-    não ter onde escrever, que é o falso verde mais caro desta casa.
-    """
+    """A aba Rumble com os widgets que estas mordidas tocam."""
 
     def __init__(self) -> None:
         import gi
@@ -150,8 +135,6 @@ class _Aba(rumble_actions.RumbleActionsMixin):
         self._rumble_guard_refresh = False
         self._rumble_policy = "balanceado"
         self._rumble_test_source = None
-        # Z2-1: "Todos" precisa existir explicitamente; sem o atributo,
-        # `alvo_de_edicao` devolve DESCONHECIDO e nada é escrito no rascunho.
         self._edit_target_uniq: str | None = None
 
         self.caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -173,7 +156,6 @@ class _Aba(rumble_actions.RumbleActionsMixin):
     def _get(self, key: str) -> Any:  # type: ignore[override]
         return self._widgets.get(key)
 
-    # O rótulo de RUM-1 nasce em código; quem lê é este atalho.
     @property
     def linha_do_alcance(self) -> Any:
         return getattr(self, "_rumble_alcance_do_gesto_label", None)
@@ -193,16 +175,8 @@ def aba(monkeypatch: pytest.MonkeyPatch) -> _Aba:
     return _Aba()
 
 
-# ===========================================================================
-# Mordida 1 — RUM-1: a aba diz onde grava e onde manda
-# ===========================================================================
-
-
 def test_com_uma_peca_escolhida_a_aba_confessa_o_alcance(aba: _Aba) -> None:
-    """Arranque a linha e a aba volta a afirmar o alvo calando o escopo.
-
-    Régua: o texto lido do ``Gtk.Label`` depois da montagem — **não** OCR.
-    """
+    """Arranque a linha e a aba volta a afirmar o alvo calando o escopo."""
     aba._edit_target_uniq = PECA
     aba._apply_policy_to_widgets("balanceado", 100.0)
 
@@ -217,12 +191,7 @@ def test_com_uma_peca_escolhida_a_aba_confessa_o_alcance(aba: _Aba) -> None:
 
 
 def test_com_todos_no_seletor_a_linha_nao_aparece(aba: _Aba) -> None:
-    """Em "Todos" o que ela grava e o que ela manda são a mesma coisa.
-
-    Um aviso permanente ali viraria ruído crônico — a mesma disciplina do
-    ``texto_do_alcance_da_intensidade``, e o motivo de a frase ser condicional
-    em vez de um rótulo fixo no Glade.
-    """
+    """Em "Todos" o que ela grava e o que ela manda são a mesma coisa."""
     aba._edit_target_uniq = None
     aba._apply_policy_to_widgets("balanceado", 100.0)
 
@@ -233,19 +202,10 @@ def test_com_todos_no_seletor_a_linha_nao_aparece(aba: _Aba) -> None:
 
 
 def test_a_frase_nomeia_as_duas_metades_do_gesto(aba: _Aba) -> None:
-    """A frase tem de dizer o AGORA e o SALVO — sem as duas ela não explica nada.
-
-    Mordida de REDAÇÃO, e ela existe porque a mentira que RUM-1 cura não é a
-    ausência de um rótulo: é a ausência da distinção. Um texto que diga só
-    *"vale para todos"* deixa a usuária sem saber por que ela escolheu um
-    controle no seletor.
-    """
+    """A frase tem de dizer o AGORA e o SALVO — sem as duas ela não explica nada."""
     frase = rumble_actions.TEXTO_ONDE_GRAVA_E_ONDE_MANDA
     assert "agora" in frase, "a metade do que ela OUVE sumiu da frase"
     assert "salvar" in frase, "a metade do que ela SALVA sumiu da frase"
-    # §6 da sprint: nenhuma frase nova desta onda pode afirmar comportamento
-    # POR TRANSPORTE — o rádio não está medido, e a aba responde pelo que o
-    # produto MANDA, nunca pelo que o motor FAZ.
     for palavra in ("Bluetooth", "rádio", "cabo", "USB"):
         assert palavra.lower() not in frase.lower(), (
             f"a frase de alcance passou a falar de transporte ({palavra}) — "
@@ -253,23 +213,9 @@ def test_a_frase_nomeia_as_duas_metades_do_gesto(aba: _Aba) -> None:
         )
 
 
-# ===========================================================================
-# Mordida 2 — RUM-2: mesa vazia deixa de comemorar
-# ===========================================================================
-
-
 @pytest.mark.asyncio
 async def test_rumble_set_com_alvo_fora_da_mesa_responde_recusado() -> None:
-    """A metade "e DIZ": a RESPOSTA, não a contagem de bytes.
-
-    O ``test_p4_alvo_ausente_nao_vira_broadcast.py`` já prova que ninguém
-    recebe motor. O que ele **não** prova — e o que manda a aba comemorar — é o
-    ``{"status": "ok"}`` que o handler devolvia mesmo assim: o toast dizia
-    *"Vibração travada (fraca=160, forte=220)"* com zero byte escrito.
-
-    Arrancar a consulta a ``alvo_de_output_ausente`` faz o handler voltar a
-    responder ``ok``, e é essa a diferença que morde.
-    """
+    """A metade "e DIZ": a RESPOSTA, não a contagem de bytes."""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
     from hefesto_dualsense4unix.daemon.subsystems.rumble import (
         MOTIVO_ALVO_FORA_DA_MESA,
@@ -319,25 +265,13 @@ async def test_rumble_set_com_alvo_fora_da_mesa_responde_recusado() -> None:
     )
     assert resposta["desfecho"] == RUMBLE_RECUSADO_ALVO_AUSENTE
     assert resposta["motivo"] == MOTIVO_ALVO_FORA_DA_MESA
-    # A recusa vem ANTES de qualquer escrita: nem o par armado (que desarmaria
-    # a HARM-16), nem o handle do backend, nem a trava manual.
     assert escritas == []
     assert servidor.daemon.config.rumble_active is None
     assert servidor.store.travas == []
 
 
-# ===========================================================================
-# Mordida 3 — RUM-3: o "Auto" para de apagar em silêncio
-# ===========================================================================
-
-
 def test_auto_com_peca_escolhida_nomeia_o_apagamento(aba: _Aba) -> None:
-    """Grava na peça, clica Auto, e o toast tem de NOMEAR o que sumiu.
-
-    Sem a oração, o toast é *"Intensidade da vibração: Auto"* — a MESMA frase
-    do caso "Todos" — e o ajuste próprio daquela peça foi apagado sem uma
-    palavra.
-    """
+    """Grava na peça, clica Auto, e o toast tem de NOMEAR o que sumiu."""
     aba._edit_target_uniq = PECA
     aba._gravar_intensidade_no_rascunho("max", None)
     assert aba.draft.controller_override(PECA) is not None, (
@@ -352,16 +286,12 @@ def test_auto_com_peca_escolhida_nomeia_o_apagamento(aba: _Aba) -> None:
         "clicar Auto com uma peça escolhida apagou o ajuste dela e o toast "
         f"não disse uma palavra: {barra.ultima!r}"
     )
-    # E o apagamento é real — a oração não pode virar promessa vazia.
     override = aba.draft.controller_override(PECA)
     assert override is None or getattr(override, "rumble", None) is None
 
 
 def test_auto_com_todos_no_seletor_nao_fala_em_apagamento(aba: _Aba) -> None:
-    """A oração é do gesto que APAGA — em "Todos" não há peça a devolver.
-
-    A contra-classe da mordida acima: sem ela, um `True` constante passaria.
-    """
+    """A oração é do gesto que APAGA — em "Todos" não há peça a devolver."""
     aba._edit_target_uniq = None
     barra: _FakeBarra = aba._widgets["status_bar"]
     aba._set_policy("auto")
@@ -371,11 +301,7 @@ def test_auto_com_todos_no_seletor_nao_fala_em_apagamento(aba: _Aba) -> None:
 
 
 def test_max_com_peca_escolhida_nao_fala_em_apagamento(aba: _Aba) -> None:
-    """A segunda contra-classe: um preset que GRAVA na peça não apaga nada.
-
-    Sem ela, "toda escolha com peça no seletor avisa" passaria — e aí a frase
-    viraria ruído em todo clique, que é o defeito oposto.
-    """
+    """A segunda contra-classe: um preset que GRAVA na peça não apaga nada."""
     aba._edit_target_uniq = PECA
     aba._gravar_intensidade_no_rascunho("economia", None)
     barra: _FakeBarra = aba._widgets["status_bar"]
@@ -384,11 +310,6 @@ def test_max_com_peca_escolhida_nao_fala_em_apagamento(aba: _Aba) -> None:
     assert rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL not in barra.ultima
     override = aba.draft.controller_override(PECA)
     assert override is not None and getattr(override, "rumble", None) is not None
-
-
-# ===========================================================================
-# Mordida 4 — RUM-9: o contador de pedidos, por jogador
-# ===========================================================================
 
 
 def _estado(per_vpad: list[dict[str, Any]], **extra: Any) -> dict[str, Any]:
@@ -404,11 +325,7 @@ def _estado(per_vpad: list[dict[str, Any]], **extra: Any) -> dict[str, Any]:
 
 
 def test_dois_jogadores_deixam_de_virar_um_numero_somado() -> None:
-    """40x + 0x não é "o jogo pediu 40x" — é o Jogador 2 mudo.
-
-    Somar manda caçar no lugar errado: a frase agregada é verdade sobre a mesa
-    e mentira sobre quem reclamou.
-    """
+    """40x + 0x não é "o jogo pediu 40x" — é o Jogador 2 mudo."""
     texto = rumble_actions.texto_dos_pedidos_de_vibracao(
         _estado(
             [
@@ -442,12 +359,7 @@ def test_a_ordem_e_a_do_jogador_nao_a_do_payload() -> None:
 
 
 def test_forca_zero_continua_separado_de_nao_falou_por_jogador() -> None:
-    """As perguntas 5 e 6 do agregado sobrevivem inteiras dentro do escopo.
-
-    "Falou e pediu zero" e "não falou" mandam caçar em lugares OPOSTOS — o
-    primeiro é o jogo, o segundo é a nossa ponte. Fundi-los seria trocar a
-    mentira da soma por outra.
-    """
+    """As perguntas 5 e 6 do agregado sobrevivem inteiras dentro do escopo."""
     texto = rumble_actions.texto_dos_pedidos_de_vibracao(
         _estado(
             [
@@ -462,12 +374,7 @@ def test_forca_zero_continua_separado_de_nao_falou_por_jogador() -> None:
 
 
 def test_com_um_jogador_so_a_frase_e_byte_identica_a_de_sempre() -> None:
-    """Quem joga sozinho não vê mudança nenhuma nesta leva.
-
-    O contrato explícito da RUM-9, e a razão de ``_pedidos_por_jogador``
-    devolver ``None`` com menos de dois jogadores em vez de escrever
-    *"Jogador 1: 40x"* para quem tem um controle só.
-    """
+    """Quem joga sozinho não vê mudança nenhuma nesta leva."""
     um = _estado([{"player": 1, "ff_play_count": 40, "ff_nao_nulo_count": 40}])
     sem_lista = {
         "native_mode": False,
@@ -479,12 +386,7 @@ def test_com_um_jogador_so_a_frase_e_byte_identica_a_de_sempre() -> None:
 
 
 def test_entrada_sem_o_contador_cai_para_a_soma_em_vez_de_mentir() -> None:
-    """Daemon mais velho (ou vpad que não respondeu): "não sei" ≠ "nenhuma".
-
-    A frase por jogador teria um buraco no meio, e um buraco lido como
-    "nenhuma" manda caçar no lado errado. Somar perde granularidade; afirmar
-    perderia a verdade.
-    """
+    """Daemon mais velho (ou vpad que não respondeu): "não sei" ≠ "nenhuma"."""
     texto = rumble_actions.texto_dos_pedidos_de_vibracao(
         _estado(
             [
@@ -503,12 +405,7 @@ def test_entrada_sem_o_contador_cai_para_a_soma_em_vez_de_mentir() -> None:
 
 
 def test_a_ordem_da_verdade_nao_mudou_o_descartado_vem_antes() -> None:
-    """O escopo mudou; a ORDEM das perguntas, não.
-
-    ``descartados`` é defeito NOSSO e vale para a mesa inteira — ele continua
-    respondendo antes de qualquer resposta por jogador. Inverter a ordem
-    mandaria a usuária caçar do lado dela um defeito que é do nosso.
-    """
+    """O escopo mudou; a ORDEM das perguntas, não."""
     texto = rumble_actions.texto_dos_pedidos_de_vibracao(
         _estado(
             [

@@ -1,25 +1,4 @@
-"""A régua do portão `nada novo aponta para a janela` — sprint GTK-1, 06/09/2026.
-
-O portão (`scripts/check_nada_aponta_para_a_janela.py`) tem DUAS METADES, e este
-arquivo prova as duas com a MORDIDA: cada uma é exercitada com a cura arrancada,
-para que se veja reprovar, e devolvida.
-
-  METADE 1 — um import novo de `gui/` fora da lista reprova, nomeando arquivo e
-             linha.
-  METADE 2 — uma linha nova no inventário sem veredito reprova.
-
-**Por que o portão existe**, decisão dela em 06/09/2026
-(`D-0609-GTK-LEVA-INTEIRA`): *"a ideia sempre foi reaproveitar o que fiz no gtk
-e não apontar nada mais pra lá mas pro html"*. A janela sai em três sprints; enquanto ela
-sai, nada novo pode passar a apontar para lá — senão a `GTK-3` persegue um alvo
-que cresce.
-
-**ESTA RÉGUA NÃO MEDE A ÁRVORE, MEDE O PORTÃO.** Ela monta uma árvore de
-mentira em `tmp_path` e aponta o módulo do portão para lá, trocando `RAIZ` e
-`CSV_DO_INVENTARIO`. Medir a árvore de verdade faria a régua reprovar por
-trabalho de outra sprint, que é o defeito que esta casa chama de *"a régua mede
-o mundo de ontem"*.
-"""
+"""A régua do portão `nada novo aponta para a janela` — sprint GTK-1, 06/09/2026."""
 
 from __future__ import annotations
 
@@ -85,11 +64,6 @@ def test_a_base_da_regua_esta_verde(casa, capsys):
     assert "OK:" in capsys.readouterr().out
 
 
-# ---------------------------------------------------------------------------
-# METADE 1 — um import NOVO de `gui/` reprova, nomeando arquivo e linha
-# ---------------------------------------------------------------------------
-
-
 def test_metade_1_import_novo_de_gui_reprova_nomeando_arquivo_e_linha(casa, capsys):
     modulo, raiz, _ = casa
     alvo = raiz / "src" / "hefesto_dualsense4unix" / "interface" / "aba_nova.py"
@@ -133,11 +107,6 @@ def test_metade_1_a_cura_devolvida_passa(casa, capsys):
     alvo.unlink()
     assert modulo.comando_portao() == 0
     assert "OK:" in capsys.readouterr().out
-
-
-# ---------------------------------------------------------------------------
-# METADE 2 — linha nova no CSV sem veredito reprova
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -202,11 +171,6 @@ def test_metade_2_par_repetido_reprova(casa, capsys):
     assert "par repetido" in capsys.readouterr().out
 
 
-# ---------------------------------------------------------------------------
-# O QUE NÃO REPROVA — e é decisão, não descuido
-# ---------------------------------------------------------------------------
-
-
 def test_a_lista_que_encolheu_avisa_mas_nao_reprova(casa, capsys):
     modulo, raiz, _ = casa
     (raiz / "src" / "hefesto_dualsense4unix" / "interface" / "aba_qualquer.py").unlink()
@@ -218,11 +182,7 @@ def test_a_lista_que_encolheu_avisa_mas_nao_reprova(casa, capsys):
 
 
 def test_o_podar_so_encolhe(casa, capsys):
-    """`--podar` apaga a linha cujo par sumiu, e NUNCA acrescenta uma nova.
-
-    Se ele acrescentasse, bastaria rodá-lo para lavar uma citação nova — e o
-    portão passaria a assinar embaixo do que devia barrar.
-    """
+    """`--podar` apaga a linha cujo par sumiu, e NUNCA acrescenta uma nova."""
     modulo, raiz, inventario = casa
     (raiz / "src" / "hefesto_dualsense4unix" / "interface" / "aba_qualquer.py").unlink()
     nova = raiz / "src" / "hefesto_dualsense4unix" / "interface" / "outra.py"
@@ -237,17 +197,8 @@ def test_o_podar_so_encolhe(casa, capsys):
     assert modulo.comando_portao() == 1, "a citação nova continua reprovando"
 
 
-# ---------------------------------------------------------------------------
-# A RÉGUA NÃO SE MEDE
-# ---------------------------------------------------------------------------
-
-
 def test_o_portao_nao_se_varre_a_si_mesmo():
-    """O script, o CSV e este arquivo citam os alvos porque SÃO o instrumento.
-
-    Sem `_NAO_SE_VARRE` o portão nasceria acusando a si mesmo — e esta leva já
-    achou três réguas que mediam a si mesmas.
-    """
+    """O script, o CSV e este arquivo citam os alvos porque SÃO o instrumento."""
     modulo = _carregar_portao()
     assert "scripts/check_nada_aponta_para_a_janela.py" in modulo._NAO_SE_VARRE
     assert "tests/unit/test_nada_novo_aponta_para_a_janela.py" in modulo._NAO_SE_VARRE
@@ -285,16 +236,7 @@ def test_o_arquivo_nao_cita_a_si_mesmo(casa, capsys):
 
 
 def test_a_peneira_nao_muda_a_conta():
-    """A peneira barata tem de fazer a MESMA pergunta do filtro.
-
-    **A cicatriz:** a primeira peneira era uma lista de cadeias escrita à mão, e
-    ela perdeu 20 pares e 35 citações de uma vez — nenhuma das cadeias cobria
-    `hefesto_dualsense4unix.app.app` na forma pontuada. Peneira que não é o
-    filtro é portão que mede menos do que diz medir, em silêncio.
-
-    Aqui a igualdade é exercitada linha a linha: tudo o que `_alvos_da_linha`
-    acha, a peneira TEM de deixar passar.
-    """
+    """A peneira barata tem de fazer a MESMA pergunta do filtro."""
     modulo = _carregar_portao()
     amostras = [
         "from hefesto_dualsense4unix.app.app import HefestoApp",
@@ -319,11 +261,6 @@ def test_os_tres_vereditos_sao_os_do_plano():
         "MOTOR-MUDA-DE-CASA",
         "NUNCA-DEVIA-CITAR",
     } == modulo.VEREDITOS
-
-
-# ---------------------------------------------------------------------------
-# O INVENTÁRIO DE VERDADE — o que a GTK-3 vai levar a zero
-# ---------------------------------------------------------------------------
 
 
 def test_o_inventario_de_verdade_existe_e_esta_declarado_por_inteiro():

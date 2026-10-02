@@ -1,22 +1,4 @@
-"""O SOM E A HÁPTICA JUNTOS — as réguas do ensaio do passo 0 (01/10/2026).
-
-O-SOM-E-A-HAPTICA-CHEGAM-JUNTOS-PELO-RADIO-01. O código do produto só nasce
-depois que a orelha e a mão dela aprovarem uma passada; o que se versiona agora
-é o instrumento que ela vai usar, e estas réguas dizem que ele monta o que
-promete e que não toca o aparelho por engano.
-
-O QUE ELAS NÃO MEDEM: que o aparelho toca os dois juntos. Isso é o passo 0, e
-só ele. Nenhuma régua aqui abre porta, fala com o broker ou ouve som.
-
-AS MORDIDAS (arranque, veja reprovar, devolva):
-
-1. o bloco háptico no assento do som (o [11] da passada azul de 18/09): a
-   régua do parser independente reprova;
-2. o ``if not args.tocar`` antes de abrir a porta: a régua da leitura pura
-   reprova;
-3. a recusa com o daemon no ar: a régua da recusa reprova;
-4. o ``finally`` que fecha a porta: a régua do controle devolvido reprova.
-"""
+"""O SOM E A HÁPTICA JUNTOS — as réguas do ensaio do passo 0 (01/10/2026)."""
 
 from __future__ import annotations
 
@@ -34,13 +16,9 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: Faixa sintética da casa (o ``02:fe:``), nunca endereço real mascarado.
 MAC_UM = "02:fe:00:00:00:01"
 MAC_DOIS = "02:fe:00:00:00:02"
 
-#: Os assentos da passada A, digitados AQUI a partir da sprint (e não lidos do
-#: ensaio): Opus em [13..212], o bloco ``0x92`` em [215..278], o AudioControl
-#: em [4..10]. Se o ensaio mudar um assento, esta régua reprova.
 ASSENTO_DO_CONTROLE = (0x91, 4, 7)
 ASSENTO_DO_SOM = (0x93, 13, 200)
 ASSENTO_DO_HAPTICO = (0x92, 215, 64)
@@ -303,7 +281,7 @@ class TestAsGuardas:
 
         def _cai(*a: Any, **k: Any) -> bytes:
             chamadas.append(1)
-            if len(chamadas) > 2:  # o exemplo e o primeiro report passam
+            if len(chamadas) > 2:
                 raise RuntimeError("o laço caiu no meio")
             return bytes(original(*a, **k))
 

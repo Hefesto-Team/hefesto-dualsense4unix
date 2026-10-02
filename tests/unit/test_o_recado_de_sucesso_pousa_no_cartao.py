@@ -98,28 +98,13 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: OS DOIS CONTROLES DA MESA DUBLÊ, na faixa sintética da casa. Nada de MAC real
-#: em arquivo versionado — há dois portões, e eles não perdoam.
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 
-#: O `uniq` NORMALIZADO é a chave do depósito. Escrito à mão de propósito: a
-#: régua confere o VALOR que o produto usa, e importar a mesma função dos dois
-#: lados faria os dois errarem juntos em silêncio.
 CHAVE_P1 = "aabbcc000001"
 
 
 def _ctl(uniq: str, transporte: str, jogador: int) -> dict:
-    # O BLOCO `speaker` É O QUE DESTRAVA O ♪, e a ausência dele não era um
-    # dublê mais simples: era um dublê MAIS POBRE QUE O PRODUTO, que é a
-    # família de defeito que esta casa persegue por escrito. O daemon publica
-    # `speaker` assim que alguém escreve um volume (`ipc_handlers.py:4332`), e
-    # o ♪ recusa enquanto ele não existe — *"calar antes de saber o volume
-    # tranca-o em zero"*. Sem o bloco, toda régua de SUCESSO deste arquivo
-    # mediria uma RECUSA e a leria como defeito da piscada.
-    #
-    # `rota: 2` é «Efeitos do Jogo», o estado em que o cartão dela nasce: L
-    # para o fone e R para o alto-falante do controle.
     return {"uniq": uniq, "connected": True, "transport": transporte,
             "player": jogador, "audio": {"mic_mudo": False},
             "speaker": {"volume": 100, "muted": False, "rota": 2}}
@@ -133,52 +118,24 @@ ESTADO = {
 
 MESA = {"estado": ESTADO}
 
-#: QUANTO O RECIBO VIVE NESTA MEDIÇÃO. O produto usa 6 s; aqui encolhe para a
-#: régua ver a frase VENCER sem esperar. É a constante DO PRODUTO que muda, e não
-#: uma segunda regra escrita para o teste — a régua mede o mesmo caminho. E o
-#: valor do produto é lido ANTES, para dar dono à decisão dela.
 VENCE_EM_S = 3.0
 
-#: QUANTO O GESTO LENTO DEMORA. Ele existe para o item 6: um gesto instantâneo
-#: não tem "durante", e o estado em voo é justamente o que se vê DURANTE.
 GESTO_LENTO_S = 1.6
 
-#: QUANTO DO GESTO LENTO CORRE ANTES DE A RÉGUA LER O BOTÃO — meio segundo de
-#: repintura por cima do botão em voo. É PISO, e não marco: a leitura acontece
-#: DENTRO do gesto (ver `o_gesto_lento`), então a carga pode atrasá-la e não
-#: pode fazê-la cair depois do pouso.
 MEIO_DO_VOO_S = 0.5
 
-#: O PASSO DA ESPERA POR CONDIÇÃO. A pergunta seguinte só sai DEPOIS de a
-#: anterior voltar, então sob carga elas não se empilham.
 PASSO_MS = 50
 
-#: O TETO DE CADA ESPERA — generoso de propósito, e continua sendo régua: um
-#: gesto que nunca pousa, uma piscada que nunca apaga ou uma frase que nunca
-#: vence reprovam dizendo QUAL marco não chegou.
 TETO_S = 10.0
 
-#: O TETO DA PRIMEIRA ESPERA, a da página de pé: carregar a `02` e instalar a
-#: ponte é o passo mais pesado do roteiro, e é o que a carga mais atrasa.
 TETO_DA_PAGINA_S = 30.0
 
-#: O TETO DO ROTEIRO INTEIRO. Com o produto quebrado cada espera pode gastar o
-#: seu teto, e a reprova tem de sair nomeando o marco — não morrer no relógio
-#: de parede com "o roteiro não chegou ao fim".
 TETO_DO_ROTEIRO_S = 120.0
 
-#: QUANTO A PISCADA PODE PASSAR DE `MS_DA_PISCADA`, no relógio da página. O
-#: `setTimeout` que a apaga nunca dispara ANTES; sob carga dispara depois —
-#: medido sob `stress-ng --cpu 64`, até 79 ms além.
 FOLGA_DA_PISCADA_MS = 1500
 
-#: A FRASE QUE O DONO DO ASSUNTO MANDA. É a forma da D-12, e ela chega pelo
-#: retorno do gesto — o piloto não a inventa nem a conhece.
 FRASE_DO_DONO = "o microfone ligou, mas o canal dele está mudo no sistema"
 
-#: A LEITURA DO DOM, e ela é UMA para os dois instrumentos: a pergunta avulsa
-#: (`LER_A_TELA`) e a foto que o vigia tira no instante da mudança. Duas
-#: leituras escritas à mão divergiriam, e a régua compararia coisas diferentes.
 _LEITURA = r"""
 function(){
   const recados = [];
@@ -238,22 +195,6 @@ function(){
 
 LER_A_TELA = "(function(){ return JSON.stringify((" + _LEITURA + ")()); })()"
 
-#: O VIGIA DO BOTÃO — a peça que tira a régua do relógio (FLAKE-DO-PISCA).
-#:
-#: O VOO E A PISCADA SÃO ESTADOS DE PASSAGEM. Uma pergunta avulsa só os pega se
-#: chegar dentro da janela deles, e sob carga ela chega fora: aos 700 ms o gesto
-#: ainda voava, aos 2,9 s a piscada ainda estava acesa. Esperar "mais tempo" só
-#: troca a janela que falha.
-#:
-#: O `MutationObserver` entrega a mudança num microtask logo depois do script
-#: que a fez — antes de qualquer outra tarefa da página, o `setTimeout` que
-#: apaga a piscada incluído. Então a foto do pouso SEMPRE pega a piscada que o
-#: pouso acendeu, com a carga que for.
-#:
-#: SÓ ANOTA QUANDO O BOTÃO MUDA: a repintura mexe no documento dez vezes por
-#: segundo, e a assinatura barata evita uma leitura cheia por tique. E ele
-#: confere a PONTE neste documento — o `pronto` do piloto é do documento em que
-#: ele instalou, e uma carga nova de página a leva embora.
 _VIGIA = r"""
 function(ler){
   if(!(window.__hef && window.__hef.voltouDoVoo)) return 'sem ponte';
@@ -280,10 +221,6 @@ function(ler){
 
 VIGIAR_O_BOTAO = "JSON.stringify((" + _VIGIA + ")(" + _LEITURA + "))"
 
-#: O CLIQUE, no 🎙 do cartão do p1 — o botão do produto, com o `data-mudo` que a
-#: página publicada traz. Clicar por coordenada é a armadilha que esta casa já
-#: pagou duas vezes. O MARCO entra na trilha ANTES do clique, e é por ele que a
-#: espera separa o voo deste clique do voo do anterior.
 _CLICAR_NO_MIC = r"""
 function(marco){
   const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
@@ -295,7 +232,6 @@ function(marco){
 }
 """
 
-#: AS FOTOS DE UM CLIQUE: da marca dele até a marca do próximo.
 _TRILHA_DESDE = r"""
 function(marco){
   const trilha = window.__reguaTrilha || [];
@@ -317,10 +253,6 @@ def _trilha_desde(marco: str) -> str:
     return "(" + _TRILHA_DESDE + ")(" + json.dumps(marco) + ")"
 
 
-#: O RÓTULO EM VOO QUE UMA PÁGINA PUBLICARIA. A `09` publicará
-#: `data-hef-em-voo="Reaplicando…"`; aqui a régua o escreve no botão da `02`,
-#: porque nenhuma página o traz ainda — e a metade do endereço é da frente da
-#: aba, não desta.
 PUBLICAR_O_ROTULO = r"""
 (function(){
   const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
@@ -332,18 +264,7 @@ PUBLICAR_O_ROTULO = r"""
 
 
 def _pouso(trilha: object) -> dict | None:
-    """A foto em que o 🎙 SAIU do voo depois de ter entrado nele — ou nada ainda.
-
-    É a condição de quase todo marco deste roteiro, e é a que a sprint nomeia:
-    *o campo sair de `hef-em-voo`*. A foto é do INSTANTE do pouso, tirada pelo
-    vigia no mesmo passo em que o `voltouDoVoo` tirou a classe — e é por isso
-    que ela traz a piscada acesa sem depender de a pergunta chegar a tempo.
-
-    O QUE SE LÊ É O CARIMBO (`data-hef-voo`), e não a classe: os dois entram no
-    mesmo passo e saem no mesmo passo. Medido por mordida em 13/09/2026 —
-    lendo a classe, arrancá-la do ouvinte reprovava DOZE réguas (as de frase
-    inclusive, que nada têm com o voo); lendo o carimbo, reprova só a do voo.
-    """
+    """A foto em que o 🎙 SAIU do voo depois de ter entrado nele — ou nada ainda."""
     voou = False
     for foto in trilha if isinstance(trilha, list) else []:
         botao = foto.get("botao")
@@ -357,12 +278,7 @@ def _pouso(trilha: object) -> dict | None:
 
 
 def _apagou(trilha: object) -> dict | None:
-    """A foto em que a piscada do pouso apagou, com quanto ela durou.
-
-    As duas pontas da duração são do relógio da PÁGINA — o do `setTimeout` que
-    apaga. Sem piscada no pouso não há o que apagar, e a espera vence no teto:
-    a régua irmã já reprova o pouso que não piscou.
-    """
+    """A foto em que a piscada do pouso apagou, com quanto ela durou."""
     fotos = trilha if isinstance(trilha, list) else []
     pouso = _pouso(fotos)
     if pouso is None or not pouso["botao"]["deu_certo"]:
@@ -374,15 +290,6 @@ def _apagou(trilha: object) -> dict | None:
     return None
 
 
-#: O PERFIL ATIVO PRECISA EXISTIR NO DISCO — 05/09/2026. Desde que a aba 02
-#: aprendeu a GUARDAR o som por controle, o gesto lê o perfil ativo para
-#: escrever nele; sem arquivo, ele recusa com *"o ajuste chegou ao controle,
-#: mas não consegui ler o perfil"* — e a recusa está CERTA: dizer "Pronto."
-#: sobre um ajuste que amanhã volta ao de ontem seria a mentira que a frase
-#: existe para evitar. O que faltava era esta régua ter um perfil.
-#: `scope="module"` PORQUE O PILOTO TAMBÉM É — uma fixture de função
-#: correria DEPOIS da `medido`, que abre a janela, e o perfil chegaria
-#: tarde. Autouse do mesmo escopo corre antes das outras.
 @pytest.fixture(scope="module", autouse=True)
 def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.profiles import loader
@@ -413,52 +320,20 @@ def medido() -> dict:
 
     import hefesto_vivo as hv
 
-    # OS DUBLÊS, E ELES SÃO DEVOLVIDOS NO FIM. `mesa_viva`, `pacotes.ponte` e o
-    # registro `GESTOS` são módulos COMPARTILHADOS do produto: escrever neles sem
-    # devolver deixaria, no mesmo processo, uma mesa de mentira e um `mic.set`
-    # que sempre passa para todo vizinho que abrir um `Piloto` depois.
     chave = ("02-controles.html", "mudo")
-    # **O DUBLÊ MUDOU DE FUNÇÃO EM 04/09/2026 — S-05, a D-12 dela.** O gesto
-    # `mudo` da aba 02 passou a chamar o ATO inteiro do microfone
-    # (`mic_canal_set_detalhado`), e com o dublê no nome VELHO esta régua
-    # mediria o caminho da RECUSA no lugar do sucesso: a chamada iria ao
-    # socket, não achava daemon, e o cartão recebia a frase laranja. É o mesmo
-    # arranjo do `test_a_recusa_chega_ao_cartao`, do outro lado do desfecho.
     guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
                 hv.ponte.speaker_set, hv.pacotes.GESTOS.get(chave))
-    #: O VALOR DO PRODUTO, lido do módulo. Até 13/09/2026 aqui se liam também os
-    #: dois prazos do recado (6 s o recibo, 30 s a recusa), que saíram com o
-    #: canal na FRASES-E-DICAS-01; o que sobra é saber se eles voltaram.
     do_produto = {
         "prazos_do_recado": [n for n in ("SEGUNDOS_DO_RECADO",
                                          "SEGUNDOS_DO_RECADO_DE_SUCESSO")
                              if hasattr(hv, n)],
-        # A PISCADA É DELA E TEM DONO: sem ler o valor do produto aqui, trocar
-        # 1500 por 15 deixaria a régua verde, porque ela só mede "acendeu" e
-        # "apagou". O número entra na MENSAGEM de erro, que é onde ele serve.
         "piscada_ms": int(hv.MS_DA_PISCADA),
     }
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
-    # `mic.set` PASSANDO — é o caminho do SUCESSO, e é o que nunca foi medido.
-    # `status: "ok"` É O QUE O ATO RESPONDE COM AS DUAS METADES FEITAS, e é o
-    # único corpo em que `frase_do_ato_do_microfone` devolve `None` — o caminho
-    # do SUCESSO, que é o que este arquivo existe para medir. Um `True` seria
-    # mais frouxo que a ponte real, que devolve `dict | None`.
     hv.ponte.mic_canal_set_detalhado = (  # type: ignore[assignment]
         lambda *a, **k: {"status": "ok", "canal_feito": True,
                          "firmware_pedido": True})
-    # `speaker.set` PASSANDO — o alvo destas réguas virou o ♪ em 20/09 (o 🎙
-    # deixou de calar e passou a gravar), e o ♪ fala por OUTRO método da ponte.
-    # Sem este dublê a régua percorria o caminho da RECUSA achando que era o do
-    # sucesso, e reprovava a piscada verde por um `speaker_set` que nunca
-    # chegava a daemon nenhum — exatamente o que o comentário de 04/09 logo
-    # acima descreve para o método irmão.
-    #
-    # `True` é o que a ponte real devolve aqui (`ipc_bridge.speaker_set` ->
-    # `bool`), e não um `True` mais frouxo: o dublê que responde melhor que o
-    # produto é a família `duble-por-new-fica-mais-pobre-que-o-produto` virada
-    # do avesso, e esconde tanto quanto.
     hv.ponte.speaker_set = lambda *a, **k: True  # type: ignore[assignment]
 
     args = argparse.Namespace(
@@ -469,15 +344,10 @@ def medido() -> dict:
         sem_cravado=False, sem_selo=False,
     )
     piloto = hv.Piloto(args)
-    #: O QUE NÃO CHEGOU, por marco — é daqui que `_leitura` tira a reprova.
     faltou: dict[str, str] = {}
-    #: QUANTO CADA ESPERA LEVOU, para quem for recalibrar um teto.
     esperas_s: dict[str, float] = {}
     fora: dict[str, object] = {"produto": do_produto, "faltou": faltou,
                                "esperas_s": esperas_s}
-    # O ROTEIRO PARA DE PERGUNTAR QUANDO A FIXTURE FECHA. Uma espera pendente
-    # que acordasse depois do `destroy` perguntaria a uma janela que já não
-    # existe — dentro do laço do PRÓXIMO teste de GUI do mesmo processo.
     no_ar = {"sim": True}
 
     def ler(rotulo: str):
@@ -492,22 +362,12 @@ def medido() -> dict:
         return _leu
 
     def por_gesto(fn) -> None:
-        """Troca quem atende o 🎙 — pelo REGISTRO do produto, não por atalho.
-
-        `@gesto` grava em `pacotes.GESTOS`, e é daí que o `_gesto` lê. Injetar
-        aqui é exercitar exatamente o caminho que um pacote real percorre.
-        """
+        """Troca quem atende o 🎙 — pelo REGISTRO do produto, não por atalho."""
         hv.pacotes.GESTOS[chave] = fn
 
     def esperar(marco: str, pergunta: str, achar, depois, o_que: str,
                 teto_s: float = TETO_S) -> None:
-        """UMA espera por condição: pergunta, e só segue quando `achar` achar.
-
-        `achar` recebe a resposta já lida do JSON e devolve o que guardar no
-        marco — ou `None`, para perguntar de novo. No teto o roteiro SEGUE, e o
-        marco fica em `faltou` com a frase do que não chegou: as outras réguas
-        continuam medindo o que é delas, e a deste marco reprova dizendo o quê.
-        """
+        """UMA espera por condição: pergunta, e só segue quando `achar` achar."""
         comeco = _time.monotonic()
 
         def perguntar() -> bool:
@@ -542,9 +402,6 @@ def medido() -> dict:
 
     def comecar() -> bool:
         piloto._ir(args.abre)
-        # A PÁGINA TEM DE ESTAR PRONTA, e não "já deve ter carregado": sem o
-        # bootstrap o `el.click()` acha o botão sem ouvinte que responda — o
-        # clique some, calado. Já custou uma medição a esta casa.
         esperar("vigia", VIGIAR_O_BOTAO,
                 lambda v: v if v == "vigiando" and piloto.pronto else None,
                 o_sucesso_calado,
@@ -559,17 +416,11 @@ def medido() -> dict:
                 a_piscada_apaga, "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 1")
 
     def a_piscada_apaga() -> None:
-        # A PISCADA DO POUSO APAGA SOZINHA, com a repintura correndo por cima
-        # o tempo todo.
         esperar("depois-de-muitos-tiques", _trilha_desde("clique-1"), _apagou,
                 com_a_frase_do_dono,
                 "a piscada do clique 1 acender no pouso e apagar sozinha")
 
     def com_a_frase_do_dono() -> None:
-        # A FRASE DO DONO DO ASSUNTO, pelo retorno do gesto. É a forma da D-12.
-        # Até 13/09/2026 o `_depositar` a pintava NA HORA e antes do pouso, e a
-        # foto do pouso a trazia no cartão. Desde a TELA-CALADA-01 o sucesso não
-        # deposita: a foto do pouso é a prova de que o cartão ficou como estava.
         por_gesto(lambda ctx, o, p: {"recado": FRASE_DO_DONO,
                                      "mesa": {"perfil-ativo": "regua"}})
         piloto.ponte.perguntar(_clicar_no_mic("clique-2"), anotar("clique-2"))
@@ -577,11 +428,6 @@ def medido() -> dict:
                 a_frase_vence, "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 2")
 
     def a_frase_vence() -> None:
-        # E O 🎙 EM REPOUSO ANTES DO PRÓXIMO CLIQUE: o gesto da frase também
-        # pisca, e sem frase no cartão a espera terminaria na hora — a recusa
-        # pousaria com a piscada do clique 2 ainda acesa e pareceria piscar
-        # verde. Medido por mordida em 13/09/2026; o relógio fixo de antes
-        # escondia isto esperando 3,4 s.
         esperar("depois-de-vencer", LER_A_TELA,
                 lambda leitura: leitura if (
                     not _frases(leitura) and leitura["botao"]
@@ -592,7 +438,6 @@ def medido() -> dict:
                 teto_s=VENCE_EM_S + TETO_S)
 
     def agora_a_recusa() -> None:
-        # E A RECUSA, PARA COMPARAR OS DOIS TONS no mesmo cartão e no mesmo dia.
         def recusa(ctx, o, p):
             raise RuntimeError("o daemon não confirmou o mudo do microfone")
 
@@ -603,14 +448,7 @@ def medido() -> dict:
                 "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 3, o que recusa")
 
     def o_gesto_lento() -> None:
-        # O ESTADO EM VOO, e ele só existe DURANTE. Um gesto instantâneo não tem
         # "durante": o `daemon.reload` do produto leva 9,5 s, e é essa espera que
-        # a decisão dela manda anunciar.
-        #
-        # A LEITURA MORA DENTRO DO GESTO, e é o que a torna imune à carga: o
-        # pouso só é agendado quando o gesto volta, e o gesto só volta depois de
-        # a leitura voltar. As duas atravessam a mesma fila até a página, na
-        # ordem — a foto é DURANTE o voo por construção, não por relógio.
         def lento(ctx, o, p):
             leu = threading.Event()
 
@@ -640,15 +478,6 @@ def medido() -> dict:
                 teto_s=GESTO_LENTO_S + 2 * TETO_S)
 
     def depois_do_pouso() -> None:
-        # O QUE SE LÊ AQUI É ESTADO QUE FICA — o botão fora do voo, o rótulo
-        # devolvido, a recusa viva por 30 s. Por isso o meio segundo
-        # abaixo é PISO e não marco: a carga só pode atrasá-lo, e atrasar não
-        # muda nenhuma destas leituras. É a repintura correndo por cima do botão
-        # que acabou de voltar.
-        #
-        # E O `fim()` MORA NA RESPOSTA, não num relógio depois da pergunta: um `fim()`
-        # agendado podia fechar o laço antes de a leitura voltar, e o marco
-        # sumia com a janela.
         def ler_e_fechar(valor, erro) -> None:
             ler("depois-do-pouso")(valor, erro)
             fim()
@@ -666,42 +495,14 @@ def medido() -> dict:
         Gtk.main_quit()
 
     GLib.timeout_add(400, comecar)
-    # O RELÓGIO DE SEGURANÇA GUARDA O SEU `id` e é desarmado no `finally`: um
-    # `timeout_add` pendente depois da fixture dispara DENTRO do laço do PRÓXIMO
-    # teste de GUI do mesmo processo. Já matou onze medições de um vizinho.
     guarda = GLib.timeout_add(int(TETO_DO_ROTEIRO_S * 1000), Gtk.main_quit)
     try:
-        # O LAÇO REENTRA ATÉ O ROTEIRO ACABAR, e isto NÃO é zelo — é um defeito
-        # MEDIDO em 04/09/2026. Rodada sozinha, esta régua fecha em 17,7 s e
-        # passa nos catorze testes; rodada no lote com os 24 vizinhos, ela morria
-        # com `o roteiro não chegou ao fim`, faltando **só o último passo**. A
-        # causa é a bomba que esta casa já documentou noutro arquivo: um
-        # `Gtk.main_quit` pendente de OUTRO teste de GUI do mesmo processo cai
-        # DENTRO deste `Gtk.main()` e o encerra no meio.
-        #
-        # Um `timeout_add` não morre com o `main_quit`, então reentrar no laço
-        # retoma o roteiro exatamente de onde ele estava. O relógio de parede é
-        # o teto real: `TETO_DO_ROTEIRO_S`.
-        #
-        # A CONDIÇÃO É A ÚLTIMA ETAPA DO ROTEIRO, E ISSO CUSTOU UMA MEDIÇÃO —
-        # 04/09/2026, na integração desta leva. Ela era `"depois-do-pouso" not
-        # in fora`, que é a PENÚLTIMA: quem preenche `desfechos` é o `fim()`.
-        # Rodada sozinha a janela dava tempo; rodada no lote, o `main_quit` do
-        # vizinho caía exatamente entre as duas, o laço via a condição
-        # satisfeita e voltava sem `desfechos` — `KeyError`, reprodutível, e o
-        # produto sem defeito nenhum.
-        #
-        # Esperar pelo penúltimo passo de um roteiro é esperar por quase tudo, e
-        # "quase tudo" é o que falha só quando há vizinho.
         limite = _time.monotonic() + TETO_DO_ROTEIRO_S
         while "desfechos" not in fora and _time.monotonic() < limite:
             Gtk.main()
     finally:
         no_ar["sim"] = False
         GLib.source_remove(guarda)
-        # E O PILOTO TAMBÉM PARA: o tique é um `timeout_add` que se reagenda
-        # para sempre, e deixá-lo vivo faria esta janela pintar por cima de todo
-        # laço GTK que vier depois, no mesmo processo.
         piloto.pronto = False
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
@@ -720,12 +521,7 @@ def medido() -> dict:
 
 
 def _leitura(medido: dict, marco: str) -> dict:
-    """A foto de um marco do roteiro — ou a reprova dizendo o que não chegou.
-
-    Cada marco é uma espera por condição com teto. Quando o teto vence, a foto
-    não existe, e `medido[marco]` daria um `KeyError` que não diz nada: aqui
-    sai, no lugar dele, a frase do que o produto não fez.
-    """
+    """A foto de um marco do roteiro — ou a reprova dizendo o que não chegou."""
     falta = medido["faltou"].get(marco)
     assert falta is None, f"o marco `{marco}` não chegou: {falta}"
     assert marco in medido, (
@@ -742,9 +538,6 @@ def _frases(leitura: object) -> list[str]:
     return [r["texto"] for r in _r(leitura)]
 
 
-# --------------------------------------------------------------------------
-# 0. o gesto deu certo — senão não há o que medir
-# --------------------------------------------------------------------------
 def test_o_gesto_aplicou(medido: dict) -> None:
     assert _leitura(medido, "vigia") == "vigiando"
     assert medido["clique-1"] == "cliquei", medido["clique-1"]
@@ -758,60 +551,17 @@ def test_a_tela_estava_muda_antes(medido: dict) -> None:
         f"a página já tinha aviso antes do clique: {_frases(antes)}")
 
 
-# --------------------------------------------------------------------------
-# 1. o sucesso CALADO pisca e não fala — e o que ele guarda é o mesmo defeito
-# --------------------------------------------------------------------------
 def test_o_sucesso_calado_pisca_e_nao_fala(medido: dict) -> None:
-    """A PERGUNTA FOI INVERTIDA EM 05/09/2026, e a medição é a mesma.
-
-    Ela era `test_a_frase_de_sucesso_chega_ao_dom` e exigia o ``"Pronto."`` no
-    DOM. O defeito de origem que ela guarda continua sendo *o gesto deu certo e
-    o cartão ficou MUDO* — "aplicado" saía no terminal de quem lançou a janela,
-    e quem clica não lê terminal. O que mudou é a RESPOSTA, por decisão dela na
-    `03-Q4`:
-
-        *"O campo que você acabou de mexer ganha uma borda verde por cerca de um
-        segundo e meio e volta ao normal sozinho; nada muda de lugar e nenhuma
-        palavra nova entra na tela."*
-
-    O gesto deste trecho é o `mic.set` PASSANDO, e `frase_do_ato_do_microfone`
-    devolve `None` no caminho de sucesso — não há notícia. Então a tela pisca.
-
-    AS DUAS ASSERÇÕES, e nenhuma vale sozinha: o botão com a classe (a tela
-    respondeu) e o DOM sem frase (a palavra saiu). Sem a segunda, o Passo 4
-    poderia entrar com o ``"Pronto."`` ainda na tela e esta régua não veria.
-
-    A FOTO É DO INSTANTE DO POUSO desde 13/09/2026 (FLAKE-DO-PISCA), e o DOM
-    sem frase é conferido duas vezes: no pouso e quando a piscada apaga, um
-    segundo e meio de repintura depois. Uma frase que só o tique trouxesse
-    apareceria na segunda.
-    """
+    """A PERGUNTA FOI INVERTIDA EM 05/09/2026, e a medição é a mesma."""
     botao = _leitura(medido, "depois-do-sucesso")["botao"]
     assert botao and botao["deu_certo"], (
         "o gesto deu certo e o campo não piscou — é o defeito que a D-01 fecha, "
         f"na forma que ela escolheu na 03-Q4: {botao}")
-    # E A REGRA TEM DE PEGAR, não só existir. Comparado contra o MESMO botão
-    # antes do clique, que é a régua independente — não há verde digitado aqui.
-    #
-    # O QUE ESTA LINHA **NÃO** PROVA, e a ausência é medida (05/09/2026):
-    # arrancar o `!important` da folha e rodar esta régua dá VERDE. O botão que
-    # ela clica (`.mudo-i`, apagado) não declara `border-color` própria, então a
-    # folha de usuário vence sem precisar do `!important`. Quem provaria são os
-    # elementos que declaram cor: `.mudo-i.on` (`02-controles.html:1420`, que
-    # pede `var(--red)`) e `select.modo` (`03-gatilhos.html:1050`, que pede
-    # `var(--purple)`) — e nenhum dos dois está no caminho deste clique.
-    #
-    # O `!important` FICA MESMO ASSIM, e não por precaução: a mesma folha já
-    # pagou exatamente este preço em 04/09, quando o `cursor` saiu `pointer` e
-    # não `progress` porque as dez páginas declaram `cursor` nos botões. É a
-    # mesma classe de defeito, medida, no mesmo arquivo.
     antes = _leitura(medido, "antes")["botao"]
     assert botao["borda"] != antes["borda"] or botao["contorno_larg"] != antes["contorno_larg"], (
         "a classe entrou e a tela não mudou de cor — o `!important` da folha "
         f"não pegou: antes={antes['borda']}/{antes['contorno_larg']} "
         f"durante={botao['borda']}/{botao['contorno_larg']}")
-    # A SEGUNDA FOTO SÓ ENTRA SE CHEGOU: a piscada que não apaga é da régua
-    # irmã, e não deste "não fala".
     marcos = ["depois-do-sucesso"]
     if "depois-de-muitos-tiques" not in medido["faltou"]:
         marcos.append("depois-de-muitos-tiques")
@@ -823,22 +573,7 @@ def test_o_sucesso_calado_pisca_e_nao_fala(medido: dict) -> None:
 
 
 def test_a_piscada_apaga_sozinha(medido: dict) -> None:
-    """A classe saiu sozinha, durou o que o produto diz, e o `data-hef-voo` não ficou.
-
-    Um campo que ficasse verde para sempre afirmaria um clique de dez minutos
-    atrás — a mesma doença do botão que fica em voo, que o piloto já nomeia.
-
-    E O ATRIBUTO ÓRFÃO É A SEGUNDA METADE: se o `data-hef-voo` sobrevivesse à
-    piscada, o pouso seguinte acharia DOIS elementos com o mesmo número e
-    devolveria o rótulo errado a um deles. É por isso que a retirada agendada
-    procura pela CLASSE, e o número sai antes.
-
-    A DURAÇÃO É DO RELÓGIO DA PÁGINA desde 13/09/2026 (FLAKE-DO-PISCA). Até ali
-    esta régua lia o botão 2,9 s depois do clique — e sob carga o pouso vinha
-    tarde e a piscada ainda estava acesa, sem defeito nenhum. O `setTimeout`
-    nunca apaga ANTES do número; uma piscada mais curta é a repintura
-    arrancando o nó, e uma bem mais longa é o número errado.
-    """
+    """A classe saiu sozinha, durou o que o produto diz, e o `data-hef-voo` não ficou."""
     apagou = _leitura(medido, "depois-de-muitos-tiques")
     botao = apagou["botao"]
     ms = medido["produto"]["piscada_ms"]
@@ -852,34 +587,18 @@ def test_a_piscada_apaga_sozinha(medido: dict) -> None:
 
 
 def test_a_piscada_nao_acende_na_recusa(medido: dict) -> None:
-    """Recusa é laranja, e o campo NÃO pisca verde.
-
-    É a régua do Passo 2: sem o desfecho no pouso, o `voltouDoVoo` piscaria
-    verde em cima de um cartão laranja — a tela dizendo as duas coisas de uma
-    vez sobre o mesmo clique. A foto é do instante do pouso, e é nele que a
-    piscada acenderia.
-    """
+    """Recusa é laranja, e o campo NÃO pisca verde."""
     com_a_recusa = _leitura(medido, "com-a-recusa")
     botao = com_a_recusa["botao"]
     assert botao and not botao["deu_certo"], (
         f"o gesto levantou e o campo piscou verde mesmo assim: {botao}")
-    # O OUTRO LADO DA MESMA MEDIÇÃO era a recusa no cartão, com o tom dela. Desde
-    # 13/09/2026 (FRASES-E-DICAS-01) ela pisca no botão, e o cartão fica como
-    # estava.
     assert botao["recusou"], (
         f"o gesto levantou e o botão não piscou a recusa: {botao}")
     assert com_a_recusa["recados"] == [], com_a_recusa["recados"]
 
 
 def test_o_pisca_nao_move_a_tela(medido: dict) -> None:
-    """A metade da decisão dela que nenhuma leitura de classe mede.
-
-        *"nada muda de lugar"*
-
-    É o que separa o `outline` (que não ocupa espaço na caixa) de uma borda mais
-    grossa, que empurraria o vizinho. A comparação é do MESMO elemento, antes do
-    clique e com a piscada acesa, na mesma unidade.
-    """
+    """A metade da decisão dela que nenhuma leitura de classe mede."""
     antes = _leitura(medido, "antes")["botao"]
     piscando = _leitura(medido, "depois-do-sucesso")["botao"]
     assert antes and piscando, (antes, piscando)
@@ -916,42 +635,13 @@ def test_a_frase_do_dono_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
 
 
 def test_nenhuma_frase_volta_nos_tiques(medido: dict) -> None:
-    """ERA `test_o_aviso_sobrevive_aos_tiques` — 13/09/2026. A tela repinta a cada
-    100 ms e troca blocos inteiros.
-
-    Um recibo que só existisse no instante do clique não seria visto por
-    ninguém — é a mesma razão pela qual este canal é um DEPÓSITO e não um evento.
-
-    ELA MEDE O RECIBO DA RECUSA desde 05/09/2026, e a razão é a mesma da irmã
-    acima: o sucesso calado não deposita mais nada, então não há recibo dele a
-    sobreviver. A recusa deposita, dura 30 s, e atravessa os tiques da mesma
-    forma — o depósito é um só. **O `com-a-recusa` é a foto do pouso da recusa,
-    e o `depois-do-pouso` vem depois do gesto lento inteiro e de mais meio
-    segundo**, com a repintura correndo por cima o tempo todo: é o mesmo
-    "sobreviveu aos tiques" que ela sempre mediu.
-    """
-    # O CONTRATO VIROU O AVESSO EM 13/09/2026 (FRASES-E-DICAS-01): a recusa não
-    # é mais depositada, e o que se cobra é que a repintura não traga frase
-    # nenhuma de volta — nem a da recusa, depois do gesto lento inteiro.
+    """ERA `test_o_aviso_sobrevive_aos_tiques` — 13/09/2026. A tela repinta a cada"""
     assert _frases(_leitura(medido, "depois-do-pouso")) == [], (
         "a repintura trouxe uma frase à tela depois da recusa")
 
 
-# --------------------------------------------------------------------------
-# 2. o tom — dois desfechos, duas cores, um canal só
-# --------------------------------------------------------------------------
 def test_a_recusa_tem_o_tom_dela_e_o_sucesso_nao_tem_no(medido: dict) -> None:
-    """ERA `test_o_sucesso_e_verde_e_a_recusa_e_laranja` — 13/09/2026.
-
-    Os dois tons se comparavam no mesmo cartão, lado a lado. Desde a
-    TELA-CALADA-01 o sucesso não deposita (*"em todas as abas da interface"*),
-    e não há nó verde a comparar: o que sobra medir é a recusa no tom dela, com
-    o desenho de um tom só (cor e borda iguais, lidas do CSSOM), e nenhum nó de
-    tom `sucesso` nas fotos dos dois pousos de sucesso.
-    """
-    # E A RECUSA SAIU DO CARTÃO NO MESMO DIA (FRASES-E-DICAS-01): o nó de tom
-    # `recusa` também não existe mais. A cor dela mora no botão, e é a folha da
-    # casa que a pinta (`test_a_recusa_pisca_no_botao`).
+    """ERA `test_o_sucesso_e_verde_e_a_recusa_e_laranja` — 13/09/2026."""
     assert _r(_leitura(medido, "com-a-recusa")) == []
     for marco in ("depois-do-sucesso", "com-a-frase-do-dono"):
         fotos = _r(_leitura(medido, marco))
@@ -960,32 +650,14 @@ def test_a_recusa_tem_o_tom_dela_e_o_sucesso_nao_tem_no(medido: dict) -> None:
 
 
 def test_o_mesmo_cartao_troca_de_tom(medido: dict) -> None:
-    """Recusa depois de sucesso, na MESMA chave: a cor tem de acompanhar.
-
-    A chave é o controle, não o desfecho. Sem refazer o estilo quando o tom
-    muda, o aviso trocaria de frase e ficaria verde dizendo que recusou.
-    """
-    # O NÓ DO CARTÃO SAIU EM 13/09/2026 (FRASES-E-DICAS-01), e a pergunta mudou
-    # de lugar sem mudar de forma: o MESMO botão, que acabou de piscar verde no
-    # clique da frase do dono, pisca a recusa — e não fica com a cor anterior.
+    """Recusa depois de sucesso, na MESMA chave: a cor tem de acompanhar."""
     botao = _leitura(medido, "com-a-recusa")["botao"]
     assert botao and botao["recusou"] and not botao["deu_certo"], (
         f"o botão reaproveitado ficou com a cor do desfecho anterior: {botao}")
 
 
-# --------------------------------------------------------------------------
-# 3. a frase do dono do assunto vence a do piloto — é onde a D-12 pousa
-# --------------------------------------------------------------------------
 def test_a_frase_do_dono_nao_chega_a_tela(medido: dict) -> None:
-    """ERA `test_a_frase_do_dono_vence` — invertida em 13/09/2026.
-
-    Ela exigia que a frase devolvida pelo gesto fosse a que o cartão mostrava.
-    Pela palavra dela (*"em todas as abas da interface"*, TELA-CALADA-01), a
-    frase de um gesto que deu certo não entra na tela: vai ao diário da janela.
-    O texto continua sendo do dono do assunto — quem o leva ao diário é o
-    piloto, e `test_a_tela_nao_narra_o_gesto_que_deu_certo` cobra a linha
-    `[relato]`.
-    """
+    """ERA `test_a_frase_do_dono_vence` — invertida em 13/09/2026."""
     frases = _frases(_leitura(medido, "com-a-frase-do-dono"))
     assert FRASE_DO_DONO not in frases and frases == [], (
         f"a frase do gesto que deu certo chegou à tela: {frases}")
@@ -1005,24 +677,8 @@ def test_o_recado_nao_vira_endereco_de_pagina(medido: dict) -> None:
         f"aviso está sendo contado pela régua do mockup como campo da página.")
 
 
-# --------------------------------------------------------------------------
-# 4. não há recibo a vencer — nem no pouso, nem depois do prazo
-# --------------------------------------------------------------------------
 def test_nao_ha_recibo_a_vencer(medido: dict) -> None:
-    """ERA `test_o_recibo_vence_e_some` — o contrato mudou em 13/09/2026.
-
-    A FLAKE-DO-PISCA, no mesmo dia, tinha dado dente a esta régua: ela passara a
-    exigir que o recibo ESTIVESSE no cartão antes de conferir que ele vencia,
-    porque com o prazo em 600 s ela dava verde sobre um recibo eterno. A
-    TELA-CALADA-01 tira o recibo da tela (*"em todas as abas da interface"*), e
-    o recibo eterno deixa de poder existir: o que se mede agora é a AUSÊNCIA, nos
-    dois instantes em que ele apareceria — a foto do pouso e a leitura depois do
-    prazo encolhido desta medição.
-
-    O VERDE SOBRE O VAZIO continua vigiado: a piscada acesa no pouso prova que o
-    gesto com a frase do dono deu certo, então o zero é de um sucesso que não
-    falou, e não de um clique que não chegou.
-    """
+    """ERA `test_o_recibo_vence_e_some` — o contrato mudou em 13/09/2026."""
     pouso = _leitura(medido, "com-a-frase-do-dono")
     assert pouso["botao"] and pouso["botao"]["deu_certo"], (
         "o gesto com a frase do dono não piscou verde no pouso — sem o sucesso, "
@@ -1035,22 +691,12 @@ def test_nao_ha_recibo_a_vencer(medido: dict) -> None:
 
 
 def test_os_prazos_do_recado_sairam_com_o_canal(medido: dict) -> None:
-    """ERA `test_o_prazo_do_sucesso_e_menor_que_o_da_recusa` — 13/09/2026.
-
-    Os dois números eram decisão dela (30 s a recusa, 02/09; 6 s o recibo, a
-    D-01) e o produto os carregava. Os dois mediam o tempo de uma FRASE na tela,
-    e a frase saiu: o sucesso na TELA-CALADA-01, a recusa na FRASES-E-DICAS-01
-    (o índice da leva, `2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19).
-    Um prazo sem canal é dado morto, e a régua cobra que ele não volte calado.
-    """
+    """ERA `test_o_prazo_do_sucesso_e_menor_que_o_da_recusa` — 13/09/2026."""
     assert medido["produto"]["prazos_do_recado"] == [], (
         f"voltaram ao piloto prazos de frase na tela: "
         f"{medido['produto']['prazos_do_recado']}")
 
 
-# --------------------------------------------------------------------------
-# 5. o botão em voo — a decisão `09` [03]
-# --------------------------------------------------------------------------
 def test_o_botao_diz_que_esta_trabalhando(medido: dict) -> None:
     antes = _leitura(medido, "antes")["botao"]
     voando = _leitura(medido, "no-meio-do-voo")["botao"]
@@ -1064,23 +710,14 @@ def test_o_botao_diz_que_esta_trabalhando(medido: dict) -> None:
 
 
 def test_o_rotulo_publicado_entra_no_lugar(medido: dict) -> None:
-    """Quem publica um `data-hef-em-voo` ganha a palavra dentro do botão.
-
-    O texto continua sendo dela — o piloto só o troca. Sem o atributo, o botão
-    ganha o sinal da classe e nenhuma palavra inventada.
-    """
+    """Quem publica um `data-hef-em-voo` ganha a palavra dentro do botão."""
     voando = _leitura(medido, "no-meio-do-voo")["botao"]
     assert "Calando" in voando["texto"], (
         f"o rótulo em voo não entrou: {voando['texto']!r}")
 
 
 def test_o_botao_volta_sozinho_e_volta_inteiro(medido: dict) -> None:
-    """E volta com os filhos que tinha.
-
-    O original é guardado como `innerHTML` justamente por isto: os botões desta
-    casa têm `<span>` dentro, e devolver só o `textContent` os achataria — o
-    botão voltaria da espera diferente de como entrou.
-    """
+    """E volta com os filhos que tinha."""
     antes = _leitura(medido, "antes")["botao"]
     depois = _leitura(medido, "depois-do-pouso")["botao"]
     assert not depois["em_voo"], (
@@ -1095,20 +732,7 @@ def test_o_botao_volta_sozinho_e_volta_inteiro(medido: dict) -> None:
 
 
 def test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados() -> None:
-    """A segunda régua do dono impossível — o Python e o JavaScript concordam.
-
-    `MS_DA_PISCADA` não pode ser interpolado no `BOOTSTRAP`: ele é uma string
-    CRUA de aspas triplas, e **cinco réguas desta casa a extraem do fonte** por
-    uma regex ancorada no fecho, para rodá-la mutilada num WebKit. Um
-    `.replace()` colado nesse fecho quebra a âncora, e a regex passa a engolir o
-    Python que vem depois — medido em 05/09/2026, e o sintoma foram 41 erros de
-    `SyntaxError` no bootstrap, que não se leem como "alguém mexeu na
-    constante". Uma f-string também não serve: o JS é cheio de chaves.
-
-    Então o número vive nos dois sítios, e esta linha é o que impede que eles se
-    afastem. É a mesma forma de `PRIORIDADE_SESSAO_DA_PONTE`, que convive com um
-    `.conf` do WirePlumber pela mesma impossibilidade.
-    """
+    """A segunda régua do dono impossível — o Python e o JavaScript concordam."""
     import re
 
     import hefesto_vivo as hv
@@ -1121,19 +745,7 @@ def test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados() -> None:
 
 
 def test_o_bootstrap_e_a_primeira_ocorrencia_de_si_mesmo() -> None:
-    """Seis réguas extraem o BOOTSTRAP do fonte, e nem todas ancoram no início.
-
-    O DEFEITO QUE ISTO NÃO DEIXA VOLTAR foi medido em 05/09/2026, e ele é de
-    PROSA: um comentário sobre o próprio BOOTSTRAP citou LITERALMENTE o padrão
-    com que as réguas o extraem. O comentário mora acima da definição, então
-    virou a **primeira ocorrência** do arquivo — e as réguas sem âncora de
-    início passaram a extrair o comentário em vez do JavaScript. Treze testes
-    caíram com `Unexpected token '.'`, que não se lê como *"alguém escreveu uma
-    frase infeliz num comentário"*.
-
-    A régua é simples e é a que faltava: **a primeira ocorrência do texto que
-    abre a constante tem de ser a própria constante**, no começo de uma linha.
-    """
+    """Seis réguas extraem o BOOTSTRAP do fonte, e nem todas ancoram no início."""
     import re
     from pathlib import Path
 
@@ -1152,8 +764,6 @@ def test_o_bootstrap_e_a_primeira_ocorrencia_de_si_mesmo() -> None:
         "réguas sem âncora vão extrair a prosa. Descreva o padrão, não o "
         f"escreva: …{fonte[max(0, primeira - 90):primeira + 30]!r}")
 
-    # E O QUE SAI TEM DE SER JAVASCRIPT, não uma linha de comentário: a régua
-    # acima pega o caso de hoje, esta pega o que ele vier a ser amanhã.
     extraido = re.search(re.escape(abertura) + r'(.*?)' + '"' * 3, fonte, re.S)
     assert extraido and len(extraido.group(1)) > 10_000, (
         "o que a extração sem âncora devolve não é o bootstrap inteiro: "

@@ -64,7 +64,6 @@ from hefesto_dualsense4unix.profiles.simple_match import (
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 
-#: A MESA — endereços MASCARADOS (octetos 4 e 5 zerados), a máscara da casa.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True},
@@ -125,10 +124,6 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         guardado["salvos"].append(prof)
 
     def _delete(nome: str, *a: Any, **kw: Any) -> None:
-        # O RENOMEAR APAGA O ANTIGO, e o dublê tem de saber disso: sem esta
-        # metade o gesto mais perigoso para um dado INVISÍVEL — o que reescreve
-        # o perfil inteiro com nome novo — não chegaria a rodar, e a régua
-        # ficaria verde por não ter medido.
         guardado["apagados"].append(nome)
 
     monkeypatch.setattr(loader, "load_all_profiles", _load_all)
@@ -144,18 +139,8 @@ def _ctx() -> Contexto:
                     conectados=list(MESA), estados={})
 
 
-# --------------------------------------------------------------------------
-# 1. O GESTO SAIU, E SAIU INTEIRO
-# --------------------------------------------------------------------------
-
 def test_a_aba_perfis_nao_tem_mais_gesto_de_modo() -> None:
-    """Ordem dela, 11/09/2026 — e a queda se mede nos DOIS lugares.
-
-    O nome da função e o REGISTRO são coisas diferentes: `@gesto` inscreve o par
-    `(página, nome)` numa tabela que o piloto consulta. Apagar a função e
-    esquecer a inscrição deixaria a tabela apontando para o vazio; inscrever sem
-    função é o inverso. As duas metades caem juntas ou a retirada é pela metade.
-    """
+    """Ordem dela, 11/09/2026 — e a queda se mede nos DOIS lugares."""
     assert not hasattr(a10_perfis, "editor_modo"), (
         "`a10_perfis.editor_modo` voltou — o quadro «Modo» saiu do editor de "
         "Perfis por ordem dela em 11/09/2026, e um gesto que nenhum clique "
@@ -171,14 +156,7 @@ def test_a_aba_perfis_nao_tem_mais_gesto_de_modo() -> None:
 
 
 def test_a_chave_do_modo_esta_declarada_sem_endereco() -> None:
-    """O dono do DADO continua publicando; a tela é que deixou de ter onde pôr.
-
-    `perfis_web._pacote_do_editor` emite `modo` porque o perfil continua
-    guardando `Profile.mode` — e `perfis_web` serve mais de uma tela. O que a
-    aba 10 faz é DECLARAR que não tem endereço para ele. Declarar é o que deixa
-    a queda visível: sem a linha, a chave cairia no vazio calada, que é o
-    defeito que `SEM_ENDERECO` existe para nomear.
-    """
+    """O dono do DADO continua publicando; a tela é que deixou de ter onde pôr."""
     assert "editor.modo" in a10_perfis.SEM_ENDERECO, (
         "`editor.modo` deixou de ser declarado em `SEM_ENDERECO` — ou ele "
         "voltou a ter endereço (e aí a decisão dela mudou), ou a chave passou a "
@@ -187,10 +165,6 @@ def test_a_chave_do_modo_esta_declarada_sem_endereco() -> None:
     assert "Jogar" in razao and "11/09" in razao, (
         f"a razão declarada não diz para onde o quadro foi nem quando: {razao!r}")
 
-
-# --------------------------------------------------------------------------
-# 2. O DADO FICOU — e é aqui que uma retirada de tela costuma matar
-# --------------------------------------------------------------------------
 
 def _renomear(ctx: Contexto, ponte: Any) -> None:
     a10_perfis.editor_nome(ctx, {"valor": "Sackboy", "evento": "change"}, ponte)
@@ -201,15 +175,6 @@ def _prioridade(ctx: Contexto, ponte: Any) -> None:
 
 
 def _ambiente(ctx: Contexto, ponte: Any) -> None:
-    # «QUALQUER JOGO» E NÃO UM LANÇADOR: um lançador exige o jogo no campo ao
-    # lado (`simple_match.MSG_ESCOLHA_O_JOGO`), e o perfil deste dublê não o
-    # tem. A recusa seria do casamento, não do funil de gravação que esta régua
-    # mede.
-    #
-    # O RÓTULO SAI DA CONSTANTE, e não é mais a palavra "Todos": em 11/09/2026
-    # o campo passou a dizer DE ONDE O JOGO VEM (C4-FUNCIONA-EM), por ordem
-    # dela. Digitar a palavra aqui faria esta régua medir um rótulo que a tela
-    # não oferece mais — e ela não é sobre o rótulo, é sobre o funil.
     a10_perfis.editor_ambiente(
         ctx, {"valor": PROCEDENCIA_DE_QUALQUER_JOGO, "evento": "change"}, ponte)
 
@@ -227,17 +192,7 @@ def _jogo(ctx: Contexto, ponte: Any) -> None:
 def test_o_modo_do_disco_sobrevive_aos_gestos_que_ficaram(
     disco: dict[str, Any], gesto: Any, nome_do_gesto: str
 ) -> None:
-    """O campo ficou INVISÍVEL nesta aba — e invisível é onde o dado morre calado.
-
-    Cada um destes gestos lê UM campo, muda UM campo e grava o perfil INTEIRO.
-    Enquanto o quadro existia, um deles que perdesse a seção `mode` apareceria
-    na tela no tique seguinte: os quatro botões apagariam. Sem o quadro, não há
-    nada que mostre — ela só descobriria no dia em que o perfil deixasse de
-    ligar o modo que ela pediu.
-
-    MORDIDA: ponha `prof.mode = None` dentro de `a10_perfis._gravar` e os quatro
-    casos reprovam nomeando o gesto.
-    """
+    """O campo ficou INVISÍVEL nesta aba — e invisível é onde o dado morre calado."""
     disco["perfil"] = disco["perfil"].model_copy(update={
         "mode": ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")})
     gesto(_ctx(), PonteDeMentira())
@@ -254,12 +209,7 @@ def test_o_modo_do_disco_sobrevive_aos_gestos_que_ficaram(
 
 
 def test_duplicar_leva_o_modo_junto(disco: dict[str, Any]) -> None:
-    """"Copia o perfil inteiro" é literal, e o modo é parte do inteiro.
-
-    MORDIDA: troque o `model_copy` de `a10_perfis.duplicar` por um `Profile(...)`
-    montado à mão com nome, regra e prioridade, e isto reprova — a cópia nasceria
-    sem opinião de modo enquanto a dica na tela promete o perfil inteiro.
-    """
+    """"Copia o perfil inteiro" é literal, e o modo é parte do inteiro."""
     disco["perfil"] = disco["perfil"].model_copy(
         update={"mode": ProfileModeConfig(kind="native")})
     a10_perfis.duplicar(_ctx(), {}, PonteDeMentira())
@@ -271,12 +221,7 @@ def test_duplicar_leva_o_modo_junto(disco: dict[str, Any]) -> None:
 
 
 def test_o_pacote_continua_publicando_o_modo_como_id(disco: dict[str, Any]) -> None:
-    """O dono do dado não mudou, e é ele quem a aba Jogar vai ler.
-
-    MORDIDA: troque `"modo": ...kind` por `dict(_MODE_KIND_ITEMS)[kind]` em
-    `perfis_web._pacote_do_editor` e isto reprova — quem compara com um id
-    passaria a comparar com a palavra dela, que muda.
-    """
+    """O dono do dado não mudou, e é ele quem a aba Jogar vai ler."""
     disco["perfil"] = disco["perfil"].model_copy(
         update={"mode": ProfileModeConfig(kind="gamepad")})
     editor = perfis_web._pacote_do_editor(disco["perfil"])
@@ -288,23 +233,8 @@ def test_o_pacote_continua_publicando_o_modo_como_id(disco: dict[str, Any]) -> N
         "estado certo")
 
 
-# --------------------------------------------------------------------------
-# 3. O PERFIL NOVO — a decisão que a saída do quadro obrigou
-# --------------------------------------------------------------------------
-
 def test_o_perfil_novo_nasce_sem_opiniao_de_modo(disco: dict[str, Any]) -> None:
-    """Decisão desta sprint, 11/09/2026, registrada em `a10_perfis.novo`.
-
-    Com o quadro fora, a tela deixou de ter onde perguntar *"que modo?"* — e um
-    padrão tinha de ser escolhido. É `None`: «Não mexer no modo», o perfil sem
-    opinião. É o único valor que preserva o comportamento de antes do quadro,
-    quando o campo não era alcançável por esta tela e todo perfil nascia assim.
-
-    MORDIDA: ponha `mode=ProfileModeConfig(kind="gamepad")` no `Profile(...)` de
-    `a10_perfis.novo` e isto reprova — um perfil recém-criado passaria a MEXER
-    no modo da máquina dela sem ninguém ter pedido, que é a cicatriz do
-    `or "xbox"` do Salvar da janela estável.
-    """
+    """Decisão desta sprint, 11/09/2026, registrada em `a10_perfis.novo`."""
     a10_perfis.novo(_ctx(), {}, PonteDeMentira())
     criado = disco["perfil"]
     assert criado.name != "Pragmata", "o perfil novo não nasceu"
@@ -313,34 +243,8 @@ def test_o_perfil_novo_nasce_sem_opiniao_de_modo(disco: dict[str, Any]) -> None:
         f"ela não teria como ver nem desfazer isso")
 
 
-# --------------------------------------------------------------------------
-# 4. O DONO DA REGRA CONTINUA DE PÉ — é por ele que o daemon grava a escolha da Jogar
-# --------------------------------------------------------------------------
-
 def test_o_perfil_sem_opiniao_e_o_primeiro_par_do_dono() -> None:
-    """`MODO_SEM_OPINIAO` é o id do perfil sem seção `mode`, e ele casa com o dono.
-
-    **ESTA RÉGUA MUDOU DE ALVO EM 11/09/2026, na conferência.** Ela perguntava a
-    `perfis_web.MODO_DO_PERFIL` — uma cópia dos quatro rótulos que existia para
-    o quadro «Modo» da aba Perfis. O quadro saiu por ordem dela, e a cópia ficou
-    **sem um único leitor em `src/`**: os únicos que restavam eram estas
-    asserções. Uma régua cujo alvo só existe para ela medir não mede o produto,
-    então a cópia morreu e a pergunta passou ao DONO.
-
-    O QUE ELA GUARDA: "none" é o primeiro par de
-    `profiles_actions._MODE_KIND_ITEMS` — «Não mexer no modo» —, e é o id que
-    `perfis_web._pacote_do_editor` publica para o perfil sem seção `mode`.
-
-    FATO SUBSTITUÍDO — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026: a segunda
-    asserção cobrava que `interface/pacotes/perfil.secao_do_modo` REMOVIA a
-    seção com esse id. A função saiu com o escritor da janela, e nenhum gesto
-    do produto passava o `"none"`; o dono que ficou
-    (`manager.secao_do_modo_com_o_caminho`) não tem esse par.
-
-    MORDIDA: mova `("none", "Não mexer no modo")` para o fim de
-    `_MODE_KIND_ITEMS` e isto reprova, com o id do perfil sem opinião
-    apontando para um modo que LIGA alguma coisa.
-    """
+    """`MODO_SEM_OPINIAO` é o id do perfil sem seção `mode`, e ele casa com o dono."""
     primeiro = next(iter(dict(_MODE_KIND_ITEMS)))
     assert primeiro == perfis_web.MODO_SEM_OPINIAO, (
         "«Não mexer no modo» deixou de ser o primeiro par do dono — é o que a "

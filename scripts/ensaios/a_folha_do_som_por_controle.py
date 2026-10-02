@@ -1,136 +1,5 @@
 #!/usr/bin/env python3
-"""a_folha_do_som_por_controle.py — o SOM nos dois transportes, lado a lado.
-
-A ENCOMENDA É DELA, 09/09/2026, com o produto instalado e os controles na mão:
-
-    *"materializa o teste pensando em dois controles. um com cabo e o da direita
-     via bt. vou desconectar os demais. Faz eles estilo o que fizemos hoje mais
-     cedo. (…) com os controles pra eu poder ver e tal."*
-
-*"Estilo o que fizemos hoje mais cedo"* é a `a_folha_dos_ensaios.py`, e o
-critério dela é uma frase da mesma manhã: *"se não fosse o slicers era
-impossível notar"*. Daqui sai o mesmo desenho — tabela declarativa, um controle
-por pergunta, a posse por linha, o martelo dito na tela.
-
-A PERGUNTA QUE ELA DECIDE (ensaio 13 do índice do rádio; SOM-POR-CONTROLE-01 §2)
---------------------------------------------------------------------------------
-**O som do PC chega ao alto-falante do controle pelo RÁDIO?**
-
-O estado medido, e é ele que torna esta folha necessária:
-
-    cabo ..... FUNCIONA. `audio.alto_falante.rota` e `.volume` são `aciona=sim`
-               nos dois transportes, e no cabo o controle tem placa USB própria.
-    rádio .... `aciona=não · dívida`. SEIS passadas de bancada em 08/09,
-               silêncio nas seis. O CONTEÚDO já variou de todas as formas que o
-               mapa conhece (Opus, 200 B por quadro, os dois arranjos de TLV, a
-               escada `0x32`-`0x39`). **O que nunca variou foi o ENVELOPE.**
-
-O CABO É O CONTROLE POSITIVO, e é o coração deste desenho
-----------------------------------------------------------
-Pôr os dois lado a lado na MESMA folha é o que transforma *"não ouvi nada"* em
-prova: ela aperta o do cabo, ouve, aperta o do rádio, e a diferença é o
-resultado. Sem o positivo ao lado, silêncio no rádio não distingue *"o aparelho
-não aceita"* de *"o meu tom está mudo"*.
-
-E o tom é literalmente O MESMO: o WAV que o cabo toca é escrito com os MESMOS
-bytes de PCM que o rádio codifica em Opus (:func:`quadros_de_pcm`). Um tom por
-caminho seria uma segunda variável escondida dentro do controle positivo.
-
-O DESENHO — uma COLUNA por controle, uma LINHA por pergunta
-------------------------------------------------------------
-`LINHAS` declara cada pergunta. A folha se MONTA dessa tabela, e ela não é
-digitada: as seis linhas de rádio são o PRODUTO CARTESIANO de
-`af.ARRANJO_POR_NOME` por `ENVELOPES`. Arranjo novo no produto é linha nova
-aqui, sem que ninguém precise lembrar.
-
-**SÃO SEIS CRUZAMENTOS, e não os quatro do enunciado.** Medido antes de aceitar
-o desenho: `af.ARRANJO_POR_NOME` tem TRÊS arranjos, não dois — o terceiro é o
-`common-preservado`, e ele não é leitura de fonte externa nenhuma; é o envelope
-que ESTA bancada mediu obedecendo por rádio. Uma folha que ela dirige e que
-alcança MENOS que a linha de comando de que ela é a cara seria um instrumento
-pior que o instrumento que substitui.
-
-**DEFEITO ACHADO AO LER, e é por isso que esta folha não chama
-`montar_pelos_dois_arranjos`:** aquela função devolve só os dois de `ARRANJOS`,
-enquanto `o_envelope_do_som_no_radio.py` valida `--arranjo` contra
-`ARRANJO_POR_NOME`, que tem mais — então `--arranjo common-preservado` passava
-na validação e morria de `KeyError` na montagem. Aqui a montagem é
-`ARRANJO_POR_NOME[nome].montar(...)`, que é o MESMO código do produto e alcança
-todos. (O outro arquivo foi curado em 28/09/2026 da mesma forma, e a função do
-par desceu do produto para `o_som_que_sai.py`, o ensaio que a usa.)
-
-O NEGATIVO É UM BOTÃO, e não uma bandeira global
--------------------------------------------------
-Na linha de comando o negativo é `--crc-errado`, que vale para a corrida
-inteira. Aqui ele é o botão AO LADO do positivo, em cada linha — porque um MODO
-que muda em silêncio o que todos os botões fazem é a família de defeito que
-esta casa mais paga. Ela aperta «Tocar», ouve; aperta «Tocar · CRC errado», e
-o silêncio ao lado do som é a prova de que o som veio de onde a gente pensa.
-
-O QUE É DO PRODUTO, e o que é daqui
-------------------------------------
-Do PRODUTO: o Opus (`af.CodificadorOpus`), o corpo dos degraus
-(`Arranjo.montar`, com CRC, tag e offsets), o `common` de áudio
-(`af.common_de_audio` — volume, rota e pré-amplificador, sem UM offset digitado
-aqui), o report de cada transporte (`escrita_pelo_broker.report_para`), o sink
-do controle no cabo (`af.rota_do_no`, que resolve por IDENTIDADE) e o mapa de
-canais do alto-falante (`af.CANAIS_DO_ALTO_FALANTE`).
-Do ensaio irmão `o_envelope_do_som_no_radio.py`: o `HIDIOCSOUTPUT`, o envio por
-envelope, o `0x31` de cor do passo 0, a corrupção de CRC e o PCM do tom.
-Daqui é só a FOLHA: as colunas, os botões, o martelo e a proposta de caderno.
-
-A MORDIDA
----------
-Três, e as três estão nos botões, não num relatório:
-
-1. **o positivo do CAMINHO** — o tom pelo cabo. Se ela não ouvir aqui, a sessão
-   para: o problema não é o rádio.
-2. **o positivo do ENVELOPE** — o `0x31` de COR pelo canal de controle. Se a
-   barra acender por SET_REPORT, o envelope CHEGA ao firmware, e o silêncio do
-   áudio por ele passa a ser do ÁUDIO. **Sem este passo, "silêncio nos dois"
-   não diz nada.**
-3. **o negativo** — o CRC corrompido. Nenhum envelope pode dar som com ele.
-
-E a régua desta folha, em `tests/unit/test_a_folha_do_som_por_controle.py`,
-morde ONZE vezes no que já enganou esta casa: o tom do cabo deixando de ser o
-mesmo do rádio, um arranjo do produto sumindo das linhas, o negativo sem par ou
-saindo com o CRC certo, o `common` da condição digitado à mão, a coluna que
-recusa em silêncio, a rajada trocando de envelope no meio ou insistindo depois
-do «não» do kernel, a chave de posse ficando ligada sobre coluna já devolvida, e
-`--listar`/`--oculta` abrindo porta no aparelho.
-
-A MESA É DE DOIS, e o instrumento a DESCOBRE
----------------------------------------------
-Um no CABO e um no RÁDIO. Nenhum MAC é digitado — a mesa vem de
-`escrita_pelo_broker.alvos_da_mesa()`, e todo endereço sai mascarado. Com
-quatro na mesa ele mostra quatro colunas; quando falta o par que ele precisa,
-ele diz com todas as letras qual metade falta, em vez de medir meia mesa em
-silêncio.
-
-O MARTELO, e a posse POR LINHA
--------------------------------
-O daemon reescreve volume, rota e pré-amplificador a cada report dele. A linha
-da CONDIÇÃO tem chave de «Assumir» por controle: enquanto ligada, esta folha
-repete o `common` do produto a 10 Hz. **Ele não é enfeite nesta folha, é
-pré-requisito:** os arranjos `ds5dongle` e `senshi` levam o áudio num bloco TLV
-e NÃO carregam o `common` — o volume que valer para eles é o do último `0x31`.
-Só o `common-preservado` leva a condição dentro do próprio report de áudio.
-
-**A posse é por LINHA, e ela só liga quando ela liga.** Assumir tudo de uma vez
-briga com o daemon em todas as frentes e emborca a medição.
-
-Porta: o broker (`comum.abrir_no_hidraw`), com o daemon VIVO — e ela abre na
-PRIMEIRA escrita, nunca antes.
-Escreve no aparelho? SIM, e só quando ela aperta: os reports de áudio, o `0x31`
-de cor, e o `common` de condição enquanto a chave estiver ligada.
-`--listar` e `--oculta` NÃO abrem porta e NÃO escrevem byte nenhum.
-
-USO
-    a_folha_do_som_por_controle.py --listar     # só lê: a mesa, as rotas, as linhas
-    a_folha_do_som_por_controle.py              # na tela dela
-    a_folha_do_som_por_controle.py --so-ajustes # só os controles, sem prosa
-    a_folha_do_som_por_controle.py --oculta     # sem tela, para régua
-"""
+"""a_folha_do_som_por_controle.py — o SOM nos dois transportes, lado a lado."""
 
 from __future__ import annotations
 
@@ -151,9 +20,6 @@ _SRC = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), "src")
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-# O ESCAPE É DECLARADO (TELA-DELA-02): sem `--oculta` esta folha é DELA e nasce
-# na tela dela — vê-la é o ponto inteiro. Com `--oculta` a guarda desvia para um
-# Xvfb próprio, que é o que a régua usa.
 if "--oculta" not in sys.argv:
     os.environ["HEFESTO_NA_TELA"] = "1"
 
@@ -194,34 +60,21 @@ from o_envelope_do_som_no_radio import (
     report_de_cor,
 )
 
-#: A frequência do tom. Uma só, e a MESMA nos dois caminhos — ver `wav_do_tom`.
 TOM_HZ = 440.0
 
-#: Quanto dura cada aperto. Três segundos é o que ela leva para dizer «não saiu
-#: nada» sem pressa, e é o mesmo padrão do ensaio de linha de comando.
 SEGUNDOS_DE_TOM = 3.0
 
-#: O martelo da linha da CONDIÇÃO. O mesmo 10 Hz da folha irmã.
 HZ_DO_MARTELO = 10.0
 
-#: Onde o WAV desta corrida vive. Fora da árvore, de propósito: é rascunho.
 PASTA = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "hefesto-folha-do-som")
 
-#: O nome de cada envelope na tela. `ENVELOPES` é do ensaio irmão — aqui só se
-#: escreve o que ela lê, e a frase diz o CANAL, que é a variável do ensaio.
 NOME_DO_ENVELOPE = {
     "data": "DATA · write() no hidraw, canal de interrupção",
     "set_report": "SET_REPORT · ioctl HIDIOCSOUTPUT, canal de controle",
 }
 
 #: A cor do passo 0. Azul porque é o que a barra do DualSense não mostra em
-#: repouso nesta casa — vermelho e branco disputam com o daemon e com a carga.
 COR_DO_PASSO_0 = (0, 0, 255)
-
-
-# ---------------------------------------------------------------------------
-# O tom — um só, nos dois caminhos
-# ---------------------------------------------------------------------------
 
 
 @lru_cache(maxsize=4)
@@ -231,13 +84,7 @@ def quadros_de_pcm(segundos: float) -> tuple[bytes, ...]:
 
 
 def wav_do_tom(segundos: float) -> str:
-    """O MESMO PCM num WAV, para o cabo tocar pelo caminho do produto.
-
-    **Byte a byte o mesmo som que vai pelo rádio**, e não um segundo tom
-    gerado ao lado. Um tom por caminho poria uma variável escondida dentro do
-    controle positivo: ela ouviria o do cabo, não ouviria o do rádio, e não
-    haveria como saber se a diferença é o transporte ou a amplitude.
-    """
+    """O MESMO PCM num WAV, para o cabo tocar pelo caminho do produto."""
     caminho = os.path.join(PASTA, f"tom-{TOM_HZ:g}hz-{segundos:g}s.wav")
     if os.path.exists(caminho):
         return caminho
@@ -271,12 +118,7 @@ def pacotes_do_tom(
     crc_errado: bool = False,
     seq0: int = 0,
 ) -> list[bytes]:
-    """A rajada inteira já montada, pelo arranjo pedido. Nada é digitado aqui.
-
-    O corpo do degrau, o CRC, a tag e os offsets saem de `Arranjo.montar` — o
-    produto. O `common` vem de fora porque ele é a CONDIÇÃO que ela dirige, e
-    só o arranjo `common-preservado` o carrega dentro do report de áudio.
-    """
+    """A rajada inteira já montada, pelo arranjo pedido. Nada é digitado aqui."""
     arranjo = af.ARRANJO_POR_NOME[arranjo_nome]
     por_report = max(1, int(arranjo.quadros_de_audio))
     quadros = quadros_opus(segundos)
@@ -290,13 +132,7 @@ def pacotes_do_tom(
 
 
 def ms_por_report(arranjo_nome: str) -> float:
-    """O ritmo do arranjo — o MEDIDO quando existe, o nominal quando não.
-
-    **O nominal está errado para o `0x35`, e a folha o anunciava.** Um quadro
-    Opus carrega 10 ms de som, mas o aparelho o consome a cada 10,667 ms
-    (512/48000): a folha dizia *"um report a cada 10 ms"* na tela dela, que é a
-    taxa de estouro pela qual esta casa passou nove vezes.
-    """
+    """O ritmo do arranjo — o MEDIDO quando existe, o nominal quando não."""
     arranjo = af.ARRANJO_POR_NOME[arranjo_nome]
     medido = getattr(arranjo, "intervalo_de_envio_s", None)
     if medido:
@@ -305,18 +141,8 @@ def ms_por_report(arranjo_nome: str) -> float:
 
 
 def rota_do_controle(alvo: Aparelho, uniqs: tuple[str, ...]) -> af.RotaDoNo:
-    """Pergunta AO PRODUTO para onde o som deste controle vai.
-
-    Uma segunda regra de atribuição aqui daria ao alto-falante do P1 o som do
-    P2 assim que houvesse dois no cabo — é o que a docstring de
-    `af.sink_do_controle` avisa, e é por isso que esta função só encaminha.
-    """
+    """Pergunta AO PRODUTO para onde o som deste controle vai."""
     return af.rota_do_no(alvo.mac, alvo.transporte, uniqs)
-
-
-# ---------------------------------------------------------------------------
-# A TABELA — uma linha por pergunta
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -326,7 +152,7 @@ class Campo:
     rotulo: str
     atributo: str
     linha_do_mapa: str
-    forma: str = "escala"  # escala | escolha
+    forma: str = "escala"
     minimo: int = 0
     maximo: int = 255
     marcas: tuple[tuple[int, str], ...] = ()
@@ -338,7 +164,7 @@ class Botao:
     """Um ato. O byte muda a condição; o ATO é o que ela ouve ou vê."""
 
     rotulo: str
-    acao: str  # tom-no-sink | luz | audio
+    acao: str
     envelope: str = ""
     arranjo: str = ""
     crc_errado: bool = False
@@ -356,12 +182,9 @@ class Linha:
     sprint: str
     campos: tuple[Campo, ...] = ()
     botoes: tuple[Botao, ...] = ()
-    #: "" = as duas colunas. Senão, a coluna do outro transporte RECUSA DIZENDO.
     so_transporte: str = ""
     recusa: str = ""
-    #: Esta linha tem chave de posse e martelo?
     assumir: bool = False
-    #: A coluna `presente` do caderno: o suspeito estava presente nesta medição?
     presente: str = "sim"
 
 
@@ -440,9 +263,6 @@ def _linha_da_luz(envelope: str) -> Linha:
         linha_do_mapa="plataforma.escada_de_output@dualsense",
         sprint="SOM-POR-CONTROLE-01",
         so_transporte=RADIO,
-        # O envelope é pergunta do RÁDIO. Por cabo o descritor de 289 B declara
-        # UM único OUTPUT — o `0x02` (mapa, `plataforma.escada_de_output`) — e
-        # não há escada nenhuma a testar.
         recusa="o envelope é pergunta do RÁDIO: por cabo o descritor declara um único OUTPUT.",
         presente="sim" if envelope == "set_report" else "não",
         botoes=(
@@ -480,10 +300,6 @@ def _linha_do_cruzamento(arranjo_nome: str, envelope: str) -> Linha:
     )
 
 
-#: A FOLHA INTEIRA. As linhas de rádio NÃO são digitadas: são o produto
-#: cartesiano das tabelas do PRODUTO (`af.ARRANJO_POR_NOME`) pelos envelopes do
-#: ensaio irmão (`ENVELOPES`). Arranjo novo no produto vira linha nova aqui —
-#: que é o que faz esta folha aguentar o resto da fila do rádio.
 LINHAS: tuple[Linha, ...] = (
     CONDICAO,
     TOM_PELO_CABO,
@@ -496,18 +312,12 @@ LINHAS: tuple[Linha, ...] = (
 )
 
 
-# ---------------------------------------------------------------------------
-# A COLUNA — um controle físico
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Coluna:
     """Um controle da mesa: a condição que ela pediu, a porta, e o que já saiu."""
 
     alvo: Aparelho
     rota_do_produto: af.RotaDoNo | None = None
-    #: Os TRÊS parâmetros de `af.common_de_audio` — nenhum offset mora aqui.
     volume: int = af.VOLUME_QUE_ELA_OUVIU
     rota: int = rep.SAIDA_SO_NO_ALTO_FALANTE
     preamp: int = rep.SP_PREAMP_GAIN_PADRAO
@@ -516,10 +326,7 @@ class Coluna:
     erro: str = ""
     _no: object | None = field(default=None, repr=False)
     _seq: int = 0
-    #: A rajada em voo, para que dois apertos não se atropelem no mesmo fio.
     rajada_em_voo: str = ""
-    #: O que REALMENTE saiu, por linha. É isto que vai para a nota do caderno —
-    #: nunca a intenção do botão.
     feito: dict[str, list[str]] = field(default_factory=dict)
 
     @property
@@ -535,12 +342,7 @@ class Coluna:
         return af.common_de_audio(volume=self.volume, rota=self.rota, preamp=self.preamp)
 
     def fd(self) -> int | None:
-        """Abre a porta NA PRIMEIRA ESCRITA, e nunca antes.
-
-        É o que faz `--listar` e `--oculta` não tocarem no aparelho: sem aperto
-        não há porta aberta. Uma porta aberta na construção seria uma escrita
-        de devolução no fim de toda corrida de régua.
-        """
+        """Abre a porta NA PRIMEIRA ESCRITA, e nunca antes."""
         if self._no is None and not self.erro:
             try:
                 self._no = abrir_no_hidraw(self.alvo.caminho_hidraw, escrita=True)
@@ -590,11 +392,7 @@ class Coluna:
 
 
 def mesa_incompleta(colunas: list[Coluna]) -> str:
-    """A frase que falta, com todas as letras — ou "" quando o par está lá.
-
-    Um instrumento que rodasse com dois no cabo e não dissesse nada deixaria
-    quem lê achar que comparou transportes quando comparou um só.
-    """
+    """A frase que falta, com todas as letras — ou "" quando o par está lá."""
     no_cabo = [c for c in colunas if c.alvo.transporte == CABO]
     no_radio = [c for c in colunas if c.alvo.transporte == RADIO]
     if no_cabo and no_radio:
@@ -614,26 +412,15 @@ def mesa_incompleta(colunas: list[Coluna]) -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# A FOLHA
-# ---------------------------------------------------------------------------
-
-
 class Folha:
     def __init__(self, colunas: list[Coluna], *, enxuta: bool = False,
                  segundos: float = SEGUNDOS_DE_TOM) -> None:
         self.colunas = colunas
         self.enxuta = enxuta
         self.segundos = segundos
-        #: UMA NOTA POR (linha, coluna). Uma por linha faria o que ela viu no
-        #: CABO sair escrito também na linha do RÁDIO — a régua que afirma
-        #: sobre o que não mediu é a família de defeito mais cara desta casa.
         self.notas: dict[tuple[str, str], Gtk.Entry] = {}
         self.recados: dict[tuple[str, str], Gtk.Label] = {}
         self.contadores: list[tuple[Coluna, Gtk.Label]] = []
-        #: As chaves de posse. O «Devolver TUDO» tem de DESLIGÁ-LAS, e não só
-        #: devolver por baixo: uma chave que fica ligada sobre uma coluna já
-        #: devolvida é a tela mentindo sobre quem manda no byte.
         self.chaves: list[Gtk.Switch] = []
 
         self.janela = Gtk.Window(title="Som do controle — cabo e rádio lado a lado")
@@ -659,16 +446,11 @@ class Folha:
 
         GLib.timeout_add(int(1000 / HZ_DO_MARTELO), self._tique)
 
-    # ------------------------------------------------------------------ tema
     def _fundo_opaco(self) -> None:
         """Um fundo SÓLIDO — razão dela, na folha irmã: *"o fundo tá muito transparente"*."""
-        # O DONO É `comum.pintar_fundo_solido` DESDE 10/09/2026, e a razão está
-        # lá: estas três folhas decidiam o tema por `prefer-dark`, que é False
-        # na máquina dela sob um tema ESCURO — e o rótulo do botão sumia dentro
         # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal dela)
         pintar_fundo_solido(self.janela)
 
-    # ------------------------------------------------------------------ topo
     def _topo(self) -> Gtk.Widget:
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         caixa.set_margin_top(10)
@@ -721,7 +503,6 @@ class Folha:
         caixa.pack_start(Gtk.Separator(), False, False, 6)
         return caixa
 
-    # ----------------------------------------------------------------- seção
     def _secao(self, linha: Linha) -> Gtk.Widget:
         moldura = Gtk.Frame()
         dentro = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -784,7 +565,6 @@ class Folha:
         caixa.pack_start(cabeca, False, False, 0)
 
         if linha.so_transporte and coluna.alvo.transporte != linha.so_transporte:
-            # RECUSAR DIZENDO: uma coluna muda leria como "não fizeram nada".
             recusa = Gtk.Label(label=linha.recusa or "esta pergunta não é deste transporte.")
             recusa.set_xalign(0.0)
             recusa.set_line_wrap(True)
@@ -859,10 +639,9 @@ class Folha:
         caixa.pack_start(escala, False, False, 0)
         return caixa
 
-    # ----------------------------------------------------------------- atos
     def _devolver_tudo(self, *_: object) -> None:
         for chave in self.chaves:
-            chave.set_active(False)  # dispara `_assumir`, que devolve
+            chave.set_active(False)
         for coluna in self.colunas:
             coluna.devolver()
 
@@ -950,11 +729,6 @@ class Folha:
         coluna.anotar(linha.id, f"{botao.envelope}{marca}: 0x31 de cor enviado")
 
         def apagar() -> bool:
-            # A devolução é um `common` VAZIO — nenhum bit de validação, logo
-            # o firmware volta a obedecer ao daemon, que repinta em ~100 ms.
-            # E ela vai sempre por DATA, o envelope que já se sabe chegar:
-            # devolver pelo envelope EM TESTE deixaria a barra acesa justamente
-            # quando ele for o que não funciona.
             coluna.escrever(
                 report_para(coluna.alvo.transporte, bytes(rep.COMMON_LEN), coluna.proximo_seq())
             )
@@ -981,9 +755,6 @@ class Folha:
             return str(erro)
         if not pacotes:
             return "o tom é curto demais para um report deste arranjo"
-        # O nibble de sequência é do CONTROLE, não da rajada: sem adiantá-lo o
-        # martelo da condição repetiria números que a rajada já gastou, e o
-        # firmware tem o direito de descartar report com seq repetido.
         coluna._seq = (coluna._seq + len(pacotes)) & 0x0F
         if coluna.fd() is None:
             return coluna.erro or "sem porta para este controle"
@@ -1017,8 +788,6 @@ class Folha:
                 if not estado["erro"]:
                     estado["erro"] = motivo
                     recado.set_markup(f"<span foreground='#c01c28'>{_escapar(motivo)}</span>")
-                    # Um kernel sem HIDIOCSOUTPUT recusa TODOS: insistir 150
-                    # vezes só enche o log e atrasa a resposta na tela.
                     estado["i"] = len(pacotes)
             else:
                 estado["enviados"] += 1
@@ -1028,7 +797,6 @@ class Folha:
         GLib.timeout_add(ms_por_report(botao.arranjo), bombear)
         return ""
 
-    # ---------------------------------------------------------------- laço
     def _tique(self) -> bool:
         for coluna in self.colunas:
             coluna.bater()
@@ -1042,7 +810,6 @@ class Folha:
                 conta.set_text(f"{coluna.curto}: {posse}, {coluna.escritas} escritas")
         return True
 
-    # ------------------------------------------------------------- proposta
     def propor(self, linha: Linha, *, exigir_nota: bool = True) -> None:
         """A folha NÃO conclui: imprime as linhas, e quem coordena as escreve."""
         print(f"\nLINHAS PROPOSTAS — {linha.titulo} (docs/data/ensaios.csv):")
@@ -1055,8 +822,6 @@ class Folha:
                 print(f"  (o {coluna.nome} ficou sem resposta — nada a propor por ele)")
                 continue
             feito = "; ".join(coluna.feito.get(linha.id, [])) or "nada apertado nesta linha"
-            # A linha da CONDIÇÃO tem posse: o «suspeito presente» dela é a
-            # chave ligada, não uma constante da tabela.
             presente = ("sim" if coluna.assumido else "não") if linha.assumir else linha.presente
             campos = linha.campos or (None,)
             for campo in campos:
@@ -1091,12 +856,7 @@ class Folha:
 
 
 def _sem_acento(texto: str) -> str:
-    """O rótulo virando pedaço de `id` do caderno: sem acento e sem espaço.
-
-    O `id` é chave de linha num CSV que scripts leem; «pré-amplificador» com
-    acento é legítimo em prosa e ruim como chave. O texto QUE ELA LÊ continua
-    acentuado — só o identificador é dobrado.
-    """
+    """O rótulo virando pedaço de `id` do caderno: sem acento e sem espaço."""
     import unicodedata
 
     cru = unicodedata.normalize("NFKD", texto or "")
@@ -1105,15 +865,9 @@ def _sem_acento(texto: str) -> str:
 
 
 def _escapar(texto: str) -> str:
-    """Markup do Pango não engole `&` nem `<` crus — e um `&` de mensagem de erro
-    faz o rótulo inteiro sumir, que é o recado de recusa quebrando a tela que
-    vinha explicar."""
+    """Markup do Pango não engole `&` nem `<` crus — e um `&` de mensagem de erro"""
     return (texto or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-
-# ---------------------------------------------------------------------------
-# A porta de entrada
-# ---------------------------------------------------------------------------
 
 PERGUNTA = "o som do PC chega ao alto-falante do controle pelo RÁDIO, como já chega pelo cabo?"
 
@@ -1127,7 +881,7 @@ def montar_colunas(alvos: list[Aparelho]) -> list[Coluna]:
         coluna = Coluna(alvo=alvo)
         try:
             coluna.rota_do_produto = rota_do_controle(alvo, uniqs)
-        except Exception as erro:  # o produto pode não responder; dizer é o dever
+        except Exception as erro:
             coluna.rota_do_produto = af.RotaDoNo(False, motivo=f"não consegui perguntar: {erro}")
         colunas.append(coluna)
     return colunas

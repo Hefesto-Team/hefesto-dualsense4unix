@@ -1,65 +1,4 @@
-"""Portão das licenças: o LICENSE é MIT puro, o NOTICE é dono da ressalva, e o
-texto das licenças de terceiros viaja com o fonte.
-
-Cobre três decisões, todas de 07/08/2026, todas grau DECISÃO DELA
-(``docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md``):
-
-- **resposta 4** — o bloco ``ESCOPO`` sai do ``LICENSE`` e o ``NOTICE`` vira
-  dono da ressalva. O motivo é medido e só aparece fora da máquina: um
-  ``LICENSE`` com texto antes do MIT faz o detector de licença do GitHub
-  rotular o repositório como "View license" em vez de "MIT";
-- **resposta 2** — MIT no código, CC0-1.0 nas curvas medidas por ela;
-- **CR-05, a caixa que ficou aberta em 31/07** — a GPL-2.0, seção 1, exige que
-  a cópia do texto da licença acompanhe o fonte, e nenhuma acompanhava.
-
-A MORDIDA — provada em 07/08/2026 arrancando a cura, uma por vez, com a suíte
-rodando entre cada arrancada e o arquivo devolvido logo em seguida. Com tudo no
-lugar: **21 passaram, 0 reprovaram**.
-
-===================================================  ===========================
-cura arrancada                                       testes que reprovaram
-===================================================  ===========================
-bloco ``ESCOPO`` devolvido ao topo do ``LICENSE``    2
-seção "ESCOPO DESTE ARQUIVO" removida do ``NOTICE``  3
-``LICENSES/GPL-2.0.txt`` apagado                     3
-``LICENSES/BSD-3-Clause.txt`` apagado                2
-linha do ``LICENSES`` tirada do ``build_deb.sh``     1
-linha do ``LICENSES`` tirada do ``PKGBUILD``         1
-linha do ``LICENSES`` tirada do ``.spec``            1
-linha do ``LICENSES`` tirada do flatpak ``.yml``     1
-bloco da CC0 removido do ``NOTICE``                  2
-===================================================  ===========================
-
-Depois do ciclo inteiro, os nove arquivos tocados voltaram com ``SHA-256``
-idêntico ao de antes — conferido, não presumido.
-
-NOTA DATADA — 07/08/2026, na passagem dos portões sobre a árvore inteira.
-**Quatro linhas da tabela acima caducaram**: as dos quatro empacotadores. A
-mordida delas foi medida de novo e **não mordia**. O motivo, MEDIDO:
-``test_alvo_que_copia_dkms_copia_licenses_junto`` só perguntava se a palavra
-``LICENSES`` aparecia em algum lugar do arquivo — busca de trecho — e os
-quatro alvos trazem o COMENTÁRIO "Procedência em ``LICENSES/README.md``" logo
-acima da cópia. Duas arrancadas provaram o buraco:
-
-- só a linha ``cp`` fora dos quatro alvos: **21 passaram, 0 reprovaram**;
-- ``mkdir`` **e** ``cp`` fora dos quatro, sobrando apenas o comentário — isto
-  é, os quatro artefatos distribuindo fonte GPL sem uma linha de licença
-  junto, exatamente o que a CR-05 existe para impedir: **21 passaram, 0
-  reprovaram**, e o ``check_packaging_parity.sh`` também ficou verde.
-
-O portão passou a cobrar um COMANDO de cópia (``COPIA_DE_LICENSES`` sobre
-``_linhas_executaveis``), com ``LICENSES`` na origem e destino depois dele.
-Mordida redonda, medida em 07/08/2026: arrancando a linha ``cp`` dos quatro
-alvos, **4 reprovaram**; arrancando de um só (o flatpak), **1 reprovou**. Com
-tudo no lugar, 21 verdes. Os quatro arquivos voltaram com ``SHA-256`` idêntico.
-
-O resto da tabela — ``LICENSE``, ``NOTICE``, os textos das licenças — continua
-valendo: aquelas curas foram rearrancadas e reprovaram como escrito.
-
-Por que este portão não mora no ``check_packaging_parity.sh``: aquele script
-cobra unit, ícone, regra udev e broker — coisas de empacotamento. Este aqui
-precisa ler o ``LICENSE`` e o ``NOTICE`` também, que não são empacotamento.
-"""
+"""Portão das licenças: o LICENSE é MIT puro, o NOTICE é dono da ressalva, e o"""
 from __future__ import annotations
 
 import hashlib
@@ -74,14 +13,8 @@ LICENSE = REPO / "LICENSE"
 NOTICE = REPO / "NOTICE"
 LICENSES = REPO / "LICENSES"
 
-#: SHA-256 do texto canônico da GNU GPL v2, medido em 07/08/2026 sobre
-#: ``/usr/share/common-licenses/GPL-2`` (pacote ``base-files``, dono confirmado
-#: por ``dpkg -S``). Cópia byte a byte, sem modificação nenhuma.
 SHA256_GPL2 = "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
 
-#: Os alvos de empacotamento que copiam ``assets/dkms/`` e por isso TÊM de
-#: copiar ``LICENSES/`` junto. O sdist não está aqui: quem diz o que ele leva é
-#: o ``only-include`` do pyproject, e ele tem teste próprio, mais abaixo.
 ALVOS_QUE_COPIAM_DKMS = [
     "scripts/build_deb.sh",
     "packaging/arch/PKGBUILD",
@@ -90,30 +23,12 @@ ALVOS_QUE_COPIAM_DKMS = [
 ]
 
 
-#: Um comando que COPIA ``LICENSES`` para um destino. O que importa é a forma:
-#: um verbo de cópia, ``LICENSES`` como ORIGEM, e um destino depois dele. Cobre
-#: as duas escritas em uso — ``cp -a LICENSES/. <destino>`` (deb, Arch, Fedora)
-#: e ``cp -a LICENSES <destino>`` (flatpak).
-#:
-#: Por que não basta procurar a palavra: até 07/08/2026 este portão só olhava
-#: se ``LICENSES`` aparecia no arquivo, e os quatro empacotadores trazem um
-#: COMENTÁRIO ("Procedência em LICENSES/README.md") logo acima da cópia. No
-#: mesmo dia, arrancando ``mkdir`` e ``cp`` dos QUATRO alvos — isto é, com os
-#: quatro artefatos distribuindo fonte GPL sem uma linha de licença junto, que
-#: é exatamente o que a CR-05 existe para impedir — a suíte seguia com 21
-#: verdes. O comentário sozinho satisfazia o portão.
 COPIA_DE_LICENSES = re.compile(
     r"\b(?:cp|install|rsync)\b[^\n]*?(?<![\w./-])LICENSES(?:/\S*)?\s+(\S+)"
 )
 
-#: Comentário de linha inteira ou de fim de linha. O ``#`` só conta quando vem
-#: depois de espaço (ou no começo), para não confundir com ``${VAR#prefixo}``
-#: nem com ``$#``.
 COMENTARIO = re.compile(r"(?<!\S)#.*$")
 
-#: Continuação de linha por barra invertida. Precisa ser desfeita antes de
-#: olhar comando por comando: nos três alvos de shell a origem e o destino da
-#: cópia moram em linhas físicas diferentes.
 CONTINUACAO = re.compile(r"\\\n\s*")
 
 
@@ -122,11 +37,7 @@ def _texto(caminho: Path) -> str:
 
 
 def _linhas_executaveis(texto: str) -> list[str]:
-    """As linhas que a máquina executa: continuações juntadas, comentário fora.
-
-    É o filtro que separa "o empacotador copia" de "o empacotador comenta sobre
-    a cópia". Sem ele, prosa vira prova.
-    """
+    """As linhas que a máquina executa: continuações juntadas, comentário fora."""
     inteiro = CONTINUACAO.sub(" ", texto)
     linhas = []
     for linha in inteiro.splitlines():
@@ -136,17 +47,8 @@ def _linhas_executaveis(texto: str) -> list[str]:
     return linhas
 
 
-# ---------------------------------------------------------------------------
-# Resposta 4 — o LICENSE é MIT canônico, e nada antes dele
-# ---------------------------------------------------------------------------
-
-
 def test_license_comeca_no_mit_sem_nada_antes() -> None:
-    """A primeira linha do LICENSE tem de ser ``MIT License``.
-
-    É esta a forma que o detector de licença do GitHub reconhece; qualquer
-    coisa antes derruba o rótulo "MIT" para "View license" na vitrine.
-    """
+    """A primeira linha do LICENSE tem de ser ``MIT License``."""
     linhas = _texto(LICENSE).splitlines()
     assert linhas, "LICENSE vazio"
     assert linhas[0] == "MIT License", (
@@ -157,12 +59,7 @@ def test_license_comeca_no_mit_sem_nada_antes() -> None:
 
 
 def test_license_nao_carrega_mais_bloco_de_escopo() -> None:
-    """Nenhuma ressalva de escopo pode voltar para o LICENSE.
-
-    Não basta olhar a primeira linha: um bloco no rodapé também é texto que o
-    detector do GitHub não espera, e a decisão dela foi que a ressalva mora no
-    NOTICE — não que ela desça de posição.
-    """
+    """Nenhuma ressalva de escopo pode voltar para o LICENSE."""
     texto = _texto(LICENSE)
     for proibido in ("ESCOPO", "assets/dkms", "SPDX", "GPL-2.0"):
         assert proibido not in texto, (
@@ -172,10 +69,7 @@ def test_license_nao_carrega_mais_bloco_de_escopo() -> None:
 
 
 def test_license_tem_o_texto_mit_canonico_inteiro() -> None:
-    """As quatro partes do MIT canônico estão todas lá.
-
-    Tirar o bloco de escopo não pode ter levado meia licença junto.
-    """
+    """As quatro partes do MIT canônico estão todas lá."""
     texto = _texto(LICENSE)
     for trecho in (
         "MIT License",
@@ -187,11 +81,6 @@ def test_license_tem_o_texto_mit_canonico_inteiro() -> None:
     assert re.search(r"Copyright \(c\) \d{4} ", texto), (
         "o LICENSE perdeu a linha de copyright"
     )
-
-
-# ---------------------------------------------------------------------------
-# Resposta 4 — o NOTICE é o dono da ressalva, e ela chegou inteira
-# ---------------------------------------------------------------------------
 
 
 def test_notice_tem_a_secao_de_escopo() -> None:
@@ -212,12 +101,7 @@ def test_notice_tem_a_secao_de_escopo() -> None:
     ],
 )
 def test_notice_nomeia_cada_módulo_com_a_licença_dele(módulo: str, licença: str) -> None:
-    """Cada linha que o bloco do LICENSE dizia tem de estar no NOTICE.
-
-    Este é o teste que impede a mudança de endereço de virar perda de conteúdo:
-    a ressalva saiu do LICENSE, e o que ela dizia tem de estar aqui, com o
-    diretório e a licença juntos na mesma vizinhança.
-    """
+    """Cada linha que o bloco do LICENSE dizia tem de estar no NOTICE."""
     texto = _texto(NOTICE)
     assert módulo in texto, f"o NOTICE não nomeia {módulo}"
     janela = texto[texto.index(módulo) : texto.index(módulo) + 200]
@@ -227,7 +111,6 @@ def test_notice_nomeia_cada_módulo_com_a_licença_dele(módulo: str, licença: 
     )
 
 
-#: A primeira linha de um fonte C do kernel: `// SPDX-License-Identifier: <expr>`.
 _SPDX_DO_FONTE = re.compile(r"SPDX-License-Identifier:\s*(.+?)\s*(?:\*/)?\s*$")
 
 
@@ -253,9 +136,7 @@ def _modulos_de_assets_dkms() -> dict[str, set[str]]:
 
 
 def test_notice_e_o_readme_declaram_todo_modulo_de_assets_dkms() -> None:
-    """A lista sai do disco, e não de uma tabela digitada: um módulo novo em
-    `assets/dkms/` reprova aqui até o NOTICE o nomear com a licença SPDX do
-    próprio fonte, e a seção de licença do README o nomear também."""
+    """A lista sai do disco, e não de uma tabela digitada: um módulo novo em"""
     modulos = _modulos_de_assets_dkms()
     assert len(modulos) >= 4 and all(modulos.values()), (
         f"a leitura de assets/dkms/ parou de achar módulos ou SPDX: {modulos}"
@@ -292,9 +173,6 @@ def test_notice_diz_que_o_spdx_nao_pode_ser_removido() -> None:
     )
 
 
-#: O que não é atribuição de licença e não cabe no NOTICE: nota datada, grau
-#: de decisão, caminho do arquivo de processo, pessoa do projeto por pronome e
-#: identificador de tarefa interna. O histórico da ressalva mora no git.
 _DIARIO_NO_NOTICE = re.compile(
     r"nota datada|decis[ãa]o dela|docs/process|\bdela\b|\bsprints?\b"
     r"|\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b",
@@ -303,8 +181,7 @@ _DIARIO_NO_NOTICE = re.compile(
 
 
 def test_notice_so_carrega_a_atribuicao() -> None:
-    """O NOTICE é lido por quem redistribui: ele diz o que é de terceiros, de
-    onde veio e sob que licença, sem o diário de quando cada coisa mudou."""
+    """O NOTICE é lido por quem redistribui: ele diz o que é de terceiros, de"""
     achados = [
         f"{numero}: {linha.strip()}"
         for numero, linha in enumerate(_texto(NOTICE).splitlines(), start=1)
@@ -316,17 +193,8 @@ def test_notice_so_carrega_a_atribuicao() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# CR-05 — o texto das licenças de terceiros existe e é canônico
-# ---------------------------------------------------------------------------
-
-
 def test_gpl2_existe_e_e_byte_a_byte_o_canonico() -> None:
-    """O texto da GPL-2.0 não pode ter sido reescrito, resumido nem traduzido.
-
-    A conferência é por SHA-256 justamente porque "parece a GPL" não serve:
-    licença editada é licença outra.
-    """
+    """O texto da GPL-2.0 não pode ter sido reescrito, resumido nem traduzido."""
     alvo = LICENSES / "GPL-2.0.txt"
     assert alvo.is_file(), (
         "LICENSES/GPL-2.0.txt sumiu. A GPL-2.0, seção 1, exige que a cópia do "
@@ -347,12 +215,7 @@ def test_gpl2_e_mesmo_a_versao_2() -> None:
 
 
 def test_bsd3_existe_com_as_tres_clausulas_e_o_disclaimer() -> None:
-    """O rtw88-usb é licença DUPLA; mandar só a GPL cobre metade da escolha.
-
-    ``assets/dkms/rtw88-usb/usb.c:1`` traz ``GPL-2.0 OR BSD-3-Clause`` e
-    ``usb.c:1504`` traz ``MODULE_LICENSE("Dual BSD/GPL")`` — quem redistribui
-    escolhe um dos dois termos, e os dois precisam do texto que os sustenta.
-    """
+    """O rtw88-usb é licença DUPLA; mandar só a GPL cobre metade da escolha."""
     alvo = LICENSES / "BSD-3-Clause.txt"
     assert alvo.is_file(), (
         "LICENSES/BSD-3-Clause.txt sumiu — e com ele metade da licença dupla do "
@@ -385,19 +248,9 @@ def test_notice_aponta_para_os_textos_das_licencas() -> None:
         assert caminho in texto, f"o NOTICE não aponta para {caminho}"
 
 
-# ---------------------------------------------------------------------------
-# CR-05 — o texto viaja em TODO alvo que carrega os fontes GPL
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("alvo", ALVOS_QUE_COPIAM_DKMS)
 def test_alvo_que_copia_dkms_copia_licenses_junto(alvo: str) -> None:
-    """Quem leva o fonte GPL leva o texto da licença junto, ou não leva nada.
-
-    A medição de 31/07 (CR-05) mostrou que os fontes GPL viajam em cinco dos
-    sete artefatos publicados. Isso é lícito — é o que a GPL-2.0 autoriza —
-    desde que a cópia da licença vá junto, e é isso que este teste cobra.
-    """
+    """Quem leva o fonte GPL leva o texto da licença junto, ou não leva nada."""
     conteudo = _texto(REPO / alvo)
     assert "assets/dkms/" in conteudo, (
         f"{alvo} não copia mais assets/dkms/ — se isso é intencional, esta "
@@ -425,8 +278,7 @@ def test_alvo_que_copia_dkms_copia_licenses_junto(alvo: str) -> None:
 
 
 def _o_que_o_sdist_leva() -> list[str] | None:
-    """As entradas do `only-include` do sdist, ou None sem a lista (o hatchling
-    leva então tudo o que o `.gitignore` não esconde)."""
+    """As entradas do `only-include` do sdist, ou None sem a lista (o hatchling"""
     pyproject = _texto(REPO / "pyproject.toml")
     marca = "[tool.hatch.build.targets.sdist]"
     if marca not in pyproject:
@@ -444,12 +296,7 @@ def _o_sdist_leva_assets_dkms() -> bool:
 
 
 def test_sdist_carrega_licenses_sem_precisar_de_linha() -> None:
-    """O sdist que levar os fontes GPL de `assets/dkms/` leva `LICENSES/` junto.
-
-    O `only-include` do sdist diz o que entra. Se ele passar a levar `assets/`
-    (ou sumir, e o hatchling voltar a levar tudo), o sdist distribui fonte GPL,
-    e aí a lista tem de nomear `LICENSES`.
-    """
+    """O sdist que levar os fontes GPL de `assets/dkms/` leva `LICENSES/` junto."""
     entradas = _o_que_o_sdist_leva()
     if _o_sdist_leva_assets_dkms():
         assert entradas is None or "LICENSES" in entradas, (
@@ -463,8 +310,7 @@ def test_sdist_carrega_licenses_sem_precisar_de_linha() -> None:
 
 
 def test_o_notice_diz_se_o_sdist_leva_os_fontes_gpl() -> None:
-    """O NOTICE afirma quais artefatos não levam `assets/dkms/`, e o dono do
-    sdist é o `only-include` do pyproject: a frase segue o que ele leva."""
+    """O NOTICE afirma quais artefatos não levam `assets/dkms/`, e o dono do"""
     frase = next(
         (
             paragrafo
@@ -488,18 +334,8 @@ def test_o_notice_diz_se_o_sdist_leva_os_fontes_gpl() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# Resposta 2 — MIT no código, CC0 nas curvas
-# ---------------------------------------------------------------------------
-
-
 def test_notice_declara_cc0_nas_curvas_proprias() -> None:
-    """Onde as curvas vão viver, está escrito que elas saem em CC0.
-
-    A decisão foi tomada ANTES de a primeira curva existir, e é de propósito:
-    o problema que abriu a série CR foi justamente uma tabela de curva que
-    existe sem licença nenhuma.
-    """
+    """Onde as curvas vão viver, está escrito que elas saem em CC0."""
     texto = _texto(NOTICE)
     assert "CC0-1.0" in texto, (
         "o NOTICE não declara a licença das curvas próprias. Decisão dela de "
@@ -511,11 +347,7 @@ def test_notice_declara_cc0_nas_curvas_proprias() -> None:
 
 
 def test_notice_nao_confunde_a_licenca_do_codigo_com_a_das_curvas() -> None:
-    """As duas licenças convivem, e a distinção tem de estar escrita.
-
-    Sem esta frase, "CC0" solto no NOTICE poderia ser lido como troca da
-    licença do projeto — que é exatamente o contrário da decisão dela.
-    """
+    """As duas licenças convivem, e a distinção tem de estar escrita."""
     texto = _texto(NOTICE)
     assert "MIT no código" in texto and "CC0-1.0 nas curvas" in texto, (
         "o NOTICE não diz, na mesma frase, que o código segue MIT e as curvas "

@@ -3,7 +3,7 @@
 O DEFEITO, E ELE ERA UMA REGRESSÃO
 -----------------------------------
 
-``_destinos_do_broadcast`` (``daemon/ipc_handlers.py:1158-1183``) devolve
+``_destinos_do_broadcast`` (``daemon/ipc_handlers.py:870-895``) devolve
 ``([], [])`` em **cinco** situações distintas:
 
 ===  ====================================================  ==================
@@ -74,7 +74,6 @@ class _Host:
             self._target_uniq_by_index = conectados
 
 
-#: O corpo que o daemon devolve nos CINCO caminhos: as duas listas vazias.
 VAZIO = {"status": "ok", "aplicado_em": [], "guardado_em": []}
 
 MESA_COM_UM = {0: "aabbcc000001"}
@@ -82,18 +81,14 @@ MESA_COM_UM = {0: "aabbcc000001"}
 
 class TestABarraNaoInventaACausaDoNada:
     def test_o_modo_nativo_nao_vira_mesa_vazia(self) -> None:
-        """O caso 2 — e é a regressão que este arquivo existe para impedir.
-
-        Modo Nativo ligado **com um controle na mesa**. Dizer "não há controle
-        na mesa" aqui é afirmar o oposto do que a própria janela enxerga.
-        """
+        """O caso 2 — e é a regressão que este arquivo existe para impedir."""
         host = _Host(nativo=True, conectados=MESA_COM_UM)
         frase = frase_do_desfecho("Gatilho esquerdo (L2): Rigid", VAZIO, host)
 
         assert "não há controle na mesa" not in frase, (
             f"a barra disse {frase!r} com o Modo Nativo LIGADO e um controle "
             "conectado. As duas listas vazias vieram do ramo `is_native_mode()` "
-            "(daemon/ipc_handlers.py:1162), não de mesa vazia — e o código "
+            "(daemon/ipc_handlers.py:874), não de mesa vazia — e o código "
             "anterior a 41541a7 acertava esta frase. É regressão."
         )
         assert frase.endswith(NADA_ACONTECEU_NATIVO), (
@@ -101,12 +96,7 @@ class TestABarraNaoInventaACausaDoNada:
         )
 
     def test_a_mesa_vazia_continua_dizendo_que_esta_vazia(self) -> None:
-        """O caso 1. A cura não pode ter custado a frase que era VERDADE.
-
-        Sem esta guarda, "conserto" que apagasse o diagnóstico inteiro
-        passaria — e a pessoa com a mesa vazia perderia a única frase que lhe
-        dizia o que fazer.
-        """
+        """O caso 1. A cura não pode ter custado a frase que era VERDADE."""
         host = _Host(nativo=False, conectados={})
         frase = frase_do_desfecho("Cor da barra", VAZIO, host)
         assert frase.endswith(NADA_ACONTECEU_MESA_VAZIA), (
@@ -114,12 +104,7 @@ class TestABarraNaoInventaACausaDoNada:
         )
 
     def test_o_que_a_janela_nao_sabe_ela_nao_afirma(self) -> None:
-        """Os casos 3, 4 e 5 — invisíveis para a janela.
-
-        Um controle na mesa, Modo Nativo desligado, e mesmo assim o daemon
-        devolveu duas listas vazias. A causa está fora do alcance da janela; a
-        frase honesta é a genérica.
-        """
+        """Os casos 3, 4 e 5 — invisíveis para a janela."""
         host = _Host(nativo=False, conectados=MESA_COM_UM)
         frase = frase_do_desfecho("Vibração", VAZIO, host)
 
@@ -161,12 +146,6 @@ class TestMesaVaziaNaoAdivinha:
         assert mesa_vazia(_Host(conectados=mapa)) is esperado, porque
 
     def test_sem_mapa_ela_nao_inventa(self) -> None:
-        """Sem o mapa a resposta é ``False``, e é o padrão SEGURO.
-
-        ``True`` aqui faria a barra afirmar "não há controle na mesa" toda vez
-        que os mixins não estivessem compostos — que é justamente quando ela
-        menos sabe. Mesmo critério do ``getattr`` defensivo de
-        ``modo_nativo_manda_no_output``.
-        """
+        """Sem o mapa a resposta é ``False``, e é o padrão SEGURO."""
         assert mesa_vazia(_Host()) is False
         assert mesa_vazia(object()) is False

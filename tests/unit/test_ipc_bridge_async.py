@@ -1,13 +1,4 @@
-"""Testes de call_async em ipc_bridge.
-
-Verifica que:
-  (a) call_async não bloqueia a thread chamadora;
-  (b) callback de sucesso é invocado com o resultado;
-  (c) callback de falha invocado em IpcError/FileNotFoundError;
-  (d) timeout honrado — worker retorna rápido, sem esperar forever.
-
-Usa unittest.mock.patch para isolar de socket real.
-"""
+"""Testes de call_async em ipc_bridge."""
 from __future__ import annotations
 
 import threading
@@ -17,10 +8,6 @@ from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# ---------------------------------------------------------------------------
-# Helpers de stub GTK-less
-# ---------------------------------------------------------------------------
 
 
 class _FakeGLib:
@@ -45,11 +32,6 @@ def _make_fake_glib_module() -> types.ModuleType:
     mod = types.ModuleType("gi.repository")
     mod.GLib = _FakeGLib
     return mod
-
-
-# ---------------------------------------------------------------------------
-# Testes
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture(autouse=True)
@@ -209,11 +191,6 @@ def test_call_async_timeout_honrado():
     assert duracao < 1.0, f"Levou {duracao:.2f}s — timeout não honrado"
 
 
-# ---------------------------------------------------------------------------
-# run_in_thread (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01)
-# ---------------------------------------------------------------------------
-
-
 def test_run_in_thread_entrega_resultado():
     """run_in_thread roda fn() em worker e entrega o resultado via on_success."""
     import hefesto_dualsense4unix.app.ipc_bridge as bridge
@@ -253,4 +230,3 @@ def test_run_in_thread_on_failure_em_excecao():
     assert isinstance(erros[0], ValueError)
 
 
-# "A obstinação pelo detalhe é o que separa o artesão do improvisador." — Sêneca (adaptado)

@@ -1,56 +1,4 @@
-"""AS QUATRO PERNAS — toda escolha dela tem de sobreviver ao CICLO, não ao clique.
-
-ORDEM DELA, 16/09/2026, depois de três defeitos da mesma família num dia só::
-
-    "O app deveria construir tudo independente de qual jogo ou launcher. Olha
-    preciso que se lembre que o app em si vai ser disponibilizado pra outras
-    pessoas e é um app que será focado pra acessibilidade. Isso não pode se
-    repetir. Por isso a briga com o sackboy e demais. Esses erros não podem
-    seguir."
-
-OS TRÊS DEFEITOS QUE PAGARAM POR ESTE ARQUIVO — o mesmo erro, três vezes:
-
-===========================  ==========================================
-`PERFIL-MANDA-01`            a camada GAME era o topo do merge; o jogo
-                             pintava por cima do perfil dela
-`SOM-ROTA-02`                a rota do alto-falante nunca era escrita na
-                             adoção, e o default do firmware é o fone
-                             vazio — o som nascia mudo em todo controle
-`SOM-ROTA-03`                o gancho do replug exigia a seção `speaker`
-                             GLOBAL, e os perfis dela guardam o som por
-                             PEÇA — a escolha não voltava do replug
-===========================  ==========================================
-
-**Nenhuma régua desta casa perguntava se a escolha dela sobrevive a um CICLO
-COMPLETO.** Cada um dos três foi curado como instância, e o quarto apareceria.
-Este arquivo pergunta pela CLASSE.
-
-POR QUE ISTO É ACESSIBILIDADE, E NÃO CAPRICHO
-----------------------------------------------
-Um defeito que exige que a pessoa saiba reaplicar não é inconveniência: quem
-depende do controle para jogar não diagnostica *"a rota do `common[7]` não foi
-escrita"*. O som não sai, e a conclusão é que o app não funciona. **Falha que
-a pessoa não pode nomear é falha total.**
-
-AS QUATRO PERNAS DE CADA CAMPO
--------------------------------
-1. **aplica** quando o perfil ativa — já vigiada por
-   `test_toda_secao_de_perfil_tem_quem_a_aplique.py`, e é dela que este arquivo
-   importa a lista de campos: **uma fonte só, nunca duas**;
-2. **volta** depois de desconectar e reconectar o controle;
-3. **resiste** quando o jogo (ou o Proton) escreve por cima;
-4. **não depende** de qual jogo, qual lançador, nem de haver perfil ativo.
-
-A DÍVIDA É DECLARADA, E ESSE É O DESENHO
------------------------------------------
-Hoje a maioria dos campos NÃO tem as quatro. Uma régua que reprovasse tudo de
-uma vez pararia o repositório e seria desligada na semana seguinte — que é como
-morrem as réguas honestas demais. Então: **dívida declarada com data passa;
-dívida não declarada reprova.** Campo novo tem de responder às quatro antes de
-entrar, e o número de dívidas não pode crescer.
-
-É o mesmo padrão do `_CITACOES_PENDENTES` e do `APOSENTADOS` desta casa.
-"""
+"""AS QUATRO PERNAS — toda escolha dela tem de sobreviver ao CICLO, não ao clique."""
 from __future__ import annotations
 
 import re
@@ -59,25 +7,15 @@ from pathlib import Path
 
 import pytest
 
-#: A LISTA DE CAMPOS VEM DA RÉGUA DA PERNA 1, nunca de uma segunda cópia. Ela
-#: já é exaustiva contra `Profile.model_fields` nos dois sentidos — campo novo
-#: sem classificação reprova lá, e aqui reprova por tabela.
 from tests.unit.test_toda_secao_de_perfil_tem_quem_a_aplique import _CLASSIFICACAO
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
 
-# --------------------------------------------------------------------------
-# O vocabulário das respostas
-# --------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Cumprida:
-    """A perna está de pé, e AQUI está o código que a sustenta.
-
-    `onde` é `caminho/relativo.py::simbolo`. O símbolo é conferido no fonte —
-    citação que não abre no que promete é a armadilha nº 1 desta casa.
-    """
+    """A perna está de pé, e AQUI está o código que a sustenta."""
 
     onde: str
     como: str
@@ -105,24 +43,20 @@ RESISTE = "resiste_ao_jogo"
 INDEPENDE = "independe_do_lancador"
 PERNAS = (VOLTA, RESISTE, INDEPENDE)
 
-#: O que o backend devolve sozinho a cada conexão (`_reapply_desired`).
 _REAPPLY_DESIRED = (
     "core/backend_pydualsense.py::_reapply_desired",
     "os cinco campos de `_OUTPUT_FIELDS` são reescritos em toda adoção de "
     "handle, no cabo e no rádio, com ou sem perfil ativo",
 )
-#: A peneira que faz o perfil vencer o jogo (PERFIL-MANDA-01, 16/09/2026).
 _PERFIL_MANDA = (
     "core/backend_pydualsense.py::_campos_do_perfil_locked",
     "campo com dono `perfil`/`usuaria` é subtraído do que o jogo manda, nas "
     "três peneiras (entrada, merge e gatilho)",
 )
-#: Quem não chega ao aparelho não pode perder nem resistir a nada.
 _NAO_CHEGA = "não chega ao controle: é metadado do perfil, não estado do aparelho."
 
 
 _PERNAS: dict[str, dict[str, Resposta]] = {
-    # ---------------- o que chega ao controle ----------------
     "triggers": {
         VOLTA: Cumprida(*_REAPPLY_DESIRED),
         RESISTE: Cumprida(*_PERFIL_MANDA),
@@ -313,7 +247,6 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "profiles/manager.py::apply_movimento", "nenhum lançador no caminho"
         ),
     },
-    # ---------------- o que NÃO chega ao controle ----------------
     "ponte": {
         VOLTA: NaoSeAplica("memória de qual ponte funcionou; nada vai ao controle."),
         RESISTE: NaoSeAplica("nada vai ao controle."),
@@ -340,17 +273,6 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
     "match": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
 }
 
-#: O PISO DA DÍVIDA, medido em 16/09/2026. **Ele só desce.**
-#:
-#: Nasceu SETE e desceu a SEIS no mesmo dia: o mudo do microfone voltou a
-#: sobreviver ao replug (`SOM-MIC-REPLUG-01`), e o teto veio junto — dívida paga
-#: que não baixa o teto deixa a próxima entrar de graça, e é o teto que impede
-#: esta lista de crescer calada.
-#:
-#: As SEIS que faltam, cada uma com nome: a defesa do `common[7]` contra
-#: escritor de fora, as duas metades do rumble fora do replug, o override por
-#: peça que só volta no áudio, o alto-falante contra a escrita crua do Proton, e
-#: a ponte que só existe pela Steam.
 DIVIDA_MAXIMA = 6
 
 
@@ -368,18 +290,8 @@ def _fonte_de(onde: str) -> tuple[Path, str]:
     return SRC / arquivo, simbolo
 
 
-# --------------------------------------------------------------------------
-# 1. a tabela é exaustiva, e a lista de campos tem UM dono
-# --------------------------------------------------------------------------
 def test_toda_secao_do_perfil_responde_as_quatro_pernas() -> None:
-    """Campo novo no esquema dela não entra sem dizer o que acontece no ciclo.
-
-    É esta linha que impede o quarto caso: quem acrescentar uma seção ao perfil
-    tem de responder, por escrito, se ela volta do replug, se resiste ao jogo e
-    se depende de lançador.
-
-    MORDIDA: apague uma entrada de `_PERNAS`.
-    """
+    """Campo novo no esquema dela não entra sem dizer o que acontece no ciclo."""
     faltam = sorted(set(_CLASSIFICACAO) - set(_PERNAS))
     sobram = sorted(set(_PERNAS) - set(_CLASSIFICACAO))
 
@@ -406,9 +318,6 @@ def test_cada_campo_responde_as_tres_pernas_desta_regua() -> None:
     assert not mudos, "perna sem resposta:\n  " + "\n  ".join(sorted(mudos))
 
 
-# --------------------------------------------------------------------------
-# 2. perna CUMPRIDA aponta para símbolo que existe
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("campo", "perna", "onde"),
     [
@@ -419,14 +328,7 @@ def test_cada_campo_responde_as_tres_pernas_desta_regua() -> None:
     ],
 )
 def test_a_perna_cumprida_abre_no_que_promete(campo: str, perna: str, onde: str) -> None:
-    """Citação que não abre no símbolo é a armadilha nº 1 desta casa.
-
-    Uma perna "cumprida" apontando para função que alguém renomeou é verde
-    sobre nada — exatamente o instrumento falso que este repositório já achou
-    seis vezes.
-
-    MORDIDA: troque o símbolo de qualquer `Cumprida` por um nome inventado.
-    """
+    """Citação que não abre no símbolo é a armadilha nº 1 desta casa."""
     fonte, simbolo = _fonte_de(onde)
 
     assert fonte.is_file(), f"{campo}.{perna}: {fonte} não existe"
@@ -436,9 +338,6 @@ def test_a_perna_cumprida_abre_no_que_promete(campo: str, perna: str, onde: str)
     )
 
 
-# --------------------------------------------------------------------------
-# 3. a dívida é honesta, datada e não cresce
-# --------------------------------------------------------------------------
 def test_toda_divida_tem_data_e_razao() -> None:
     """Dívida sem data envelhece calada e vira paisagem."""
     torta = [
@@ -454,10 +353,7 @@ def test_toda_divida_tem_data_e_razao() -> None:
 
 
 def test_a_divida_nao_cresce() -> None:
-    """O piso só desce. Uma perna nova faltando é regressão, não status quo.
-
-    MORDIDA: acrescente uma `Divida` a qualquer campo sem baixar o piso.
-    """
+    """O piso só desce. Uma perna nova faltando é regressão, não status quo."""
     dividas = _dividas()
 
     assert len(dividas) <= DIVIDA_MAXIMA, (
@@ -467,9 +363,6 @@ def test_a_divida_nao_cresce() -> None:
     )
 
 
-# --------------------------------------------------------------------------
-# 4. as três curas de 16/09 não voltam atrás
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("campo", "perna"),
     [
@@ -482,14 +375,7 @@ def test_a_divida_nao_cresce() -> None:
     ],
 )
 def test_o_que_foi_curado_em_16_09_continua_de_pe(campo: str, perna: str) -> None:
-    """As três curas daquele dia viram piso: nenhuma delas pode virar dívida.
-
-    `PERFIL-MANDA-01`, `SOM-ROTA-02` e `SOM-ROTA-03` custaram uma sessão inteira
-    e uma bancada com a orelha dela. Rebaixá-las a dívida seria desfazê-las sem
-    que uma linha vermelha aparecesse.
-
-    MORDIDA: troque qualquer uma destas por `Divida`.
-    """
+    """As três curas daquele dia viram piso: nenhuma delas pode virar dívida."""
     resposta = _PERNAS[campo][perna]
 
     assert isinstance(resposta, Cumprida), (
@@ -497,11 +383,6 @@ def test_o_que_foi_curado_em_16_09_continua_de_pe(campo: str, perna: str) -> Non
     )
 
 
-# --------------------------------------------------------------------------
-# 5. a perna 4, medida no código: nada de caminho só-Steam
-# --------------------------------------------------------------------------
-#: Marcas de um caminho que só funciona pela Steam. Um campo cuja perna de
-#: independência aponta para código com uma destas não independe de lançador.
 MARCAS_DE_UM_LANCADOR_SO = (
     "STEAM_COMPAT_DATA_PATH",
     "STEAM_COMPAT_CLIENT_INSTALL_PATH",
@@ -518,16 +399,7 @@ MARCAS_DE_UM_LANCADOR_SO = (
     ],
 )
 def test_a_independencia_de_lancador_e_medida_no_codigo(campo: str, onde: str) -> None:
-    """Declarar "independe" não basta: o código tem de ser lido.
-
-    Ordem dela, 16/09/2026: *"O app deveria construir tudo independente de qual
-    jogo ou launcher."* Um campo cuja aplicação passa por
-    `STEAM_COMPAT_DATA_PATH` funciona para quem joga pela Steam e falha calado
-    para quem usa Lutris, Heroic ou o executável direto.
-
-    MORDIDA: aponte a perna `independe_do_lancador` de qualquer campo para
-    `integrations/camadas_vulkan.py`, que hoje depende do prefixo da Steam.
-    """
+    """Declarar "independe" não basta: o código tem de ser lido."""
     fonte, simbolo = _fonte_de(onde)
     corpo = fonte.read_text(encoding="utf-8")
     achadas = [m for m in MARCAS_DE_UM_LANCADOR_SO if m in corpo]

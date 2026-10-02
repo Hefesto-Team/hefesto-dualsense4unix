@@ -50,8 +50,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: Um controle de mentira, na faixa sintética da casa — há dois portões de
-#: anonimato nesta árvore e eles não perdoam.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "bt",
          "battery_pct": 95, "is_primary": True, "inputs": {}, "audio": {},
@@ -89,15 +87,7 @@ def _bancada() -> str:
 
 
 def _perfil(**campos):
-    """Um `Profile` DE VERDADE — o do esquema, nunca um dublê mais frouxo.
-
-    A RAZÃO É MEDIDA E É DESTA CASA: em 06/09/2026 um dublê de device com a
-    assinatura antiga transformou um `TypeError` em "o produto falhou ao
-    aplicar", e em 04/09 outro, mais frouxo que a função real, envenenou um
-    arquivo inteiro por ordem de teste. Aqui o perfil é o pydantic do produto:
-    se um campo desta frente não couber no esquema, a régua estoura na hora em
-    vez de gravar um dicionário que o disco recusaria.
-    """
+    """Um `Profile` DE VERDADE — o do esquema, nunca um dublê mais frouxo."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     return Profile(name="regua", match={"type": "manual"}, **campos)
@@ -105,12 +95,7 @@ def _perfil(**campos):
 
 @pytest.fixture
 def bancada(monkeypatch):
-    """O pacote da 06 com um disco de mentira e a trava sempre limpa.
-
-    A LIMPEZA É OBRIGATÓRIA: `_MEXENDO` é estado de MÓDULO, e um teste que a
-    deixasse suja contaminaria o seguinte — o vazamento seria justamente o
-    defeito que estes casos existem para medir.
-    """
+    """O pacote da 06 com um disco de mentira e a trava sempre limpa."""
     import pacotes
     from pacotes import a06_navegacao as mod
     from pacotes import perfil
@@ -122,20 +107,12 @@ def bancada(monkeypatch):
     def _gravar(prof, **_):
         from hefesto_dualsense4unix.profiles.schema import Profile
 
-        # O DISCO REVALIDA, e é de propósito: `model_copy` do pydantic **não**
-        # valida, então um dublê que apenas guardasse o objeto seria mais
-        # frouxo que o `save_profile` de verdade, que serializa e relê.
         disco[prof.name] = Profile.model_validate(prof.model_dump())
         gravados.append(disco[prof.name])
 
     monkeypatch.setattr(loader, "load_profile", lambda n: disco[n], raising=False)
     monkeypatch.setattr(loader, "save_profile", _gravar, raising=False)
 
-    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): as
-    # teclas gravam por `gravar_pelo_gesto`, que escolhe entre o perfil e o
-    # computador. Aqui o disco de mentira é o de um perfil que já sobrepõe o
-    # «Teclado»: o que se mede é o que o gesto grava, e não onde. O onde tem
-    # régua própria em `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     def _pelo_gesto(_cartao, nome, muda, **_k):
@@ -173,20 +150,8 @@ def _fora_do_dominio() -> str:
     raise AssertionError("o domínio do teclado passou a ser TODOS os botões")
 
 
-# ---------------------------------------------------------------------------
-# PASSO 1 — a tela de escolher a tecla
-# ---------------------------------------------------------------------------
 def test_a_tela_oferece_um_campo_por_botao_do_dominio():
-    """Um campo de texto para cada botão que `key_bindings` alcança, e só.
-
-    O DOMÍNIO É DO PRODUTO, e a régua o pergunta: oferecer campo num botão fora
-    dele gravaria no disco uma escolha que o `resolver()` não lê — a ausência de
-    dado, que se lê como "a mudança não pegou".
-
-    A MORDIDA: tire uma linha do laço que monta a `TELA_TECLAS` em `aba06.py`,
-    ou troque `_DOMINIO_DO_TECLADO` por uma lista digitada — este caso nomeia o
-    botão que ficou de fora.
-    """
+    """Um campo de texto para cada botão que `key_bindings` alcança, e só."""
     from hefesto_dualsense4unix.core.acoes_de_botao import DOMINIO_DO_TECLADO
 
     doc = _bancada()
@@ -203,27 +168,13 @@ def test_a_tela_oferece_um_campo_por_botao_do_dominio():
 
 
 def test_o_campo_de_texto_nao_ocupa_a_chave_da_lista():
-    """O campo de tecla não pode ter `data-linha` — a `forma` colidiria.
-
-    O DEFEITO QUE ISTO IMPEDE é de UMA linha de JavaScript e some sem barulho:
-    o piloto monta a `forma` com `data-linha || data-campo` como chave
-    (`hefesto_vivo`, o bloco `forma:`), e as vinte e duas listas de *o que cada
-    botão faz* já ocupam a chave `<botão>` pelo `data-linha`. Um campo de texto
-    com `data-linha` gravaria o texto dela NA CHAVE DA LISTA, e o
-    `guardar-definicoes` leria "Ctrl + W" onde espera um rótulo de ação — recusa
-    a tabela inteira, ou pior, apaga a escolha da lista.
-
-    A MORDIDA: acrescente `data-linha="{botao}"` ao `<input>` de
-    `aba06.linha_de_tecla` — este caso reprova nomeando o atributo.
-    """
+    """O campo de tecla não pode ter `data-linha` — a `forma` colidiria."""
     doc = _bancada()
     tela = doc.split('id="teclas-do-teclado"', 1)[-1].split('class="tela-nova"', 1)[0]
     assert 'data-campo="tecla-' in tela, "não achei a tela de teclas na bancada"
     assert "data-linha=" not in tela, (
         "voltou um `data-linha` à tela de teclas — ele faria o campo de texto "
         "ocupar, na `forma`, a chave da lista de 'o que cada botão faz'.")
-    # E O ↺ NÃO ENTRA NA FORMA. Sem `value`, o piloto gravaria o `textContent`
-    # dele ("↺") na chave que ele carregasse.
     for linha in re.findall(r"<tr>(.*?)</tr>", tela, re.S):
         if "padrao-da-tecla" not in linha:
             continue
@@ -305,8 +256,6 @@ def test_uma_tecla_que_o_teclado_nao_sabe_e_recusada_dizendo(bancada):
                                 "valor": invalida}, _PonteMuda())
     assert "não sabe digitar" in str(caiu.value), str(caiu.value)
     assert not gravados, "o gesto do campo não pode gravar em disco"
-    # A TRAVA SOLTA NA RECUSA: sem isso a tela ficaria mostrando o texto
-    # inválido para sempre e o Guardar recusaria a cada clique por causa dele.
     assert f"{mod.PREFIXO_DA_TECLA}{alvo}" not in mod._MEXENDO, (
         "a recusa segurou a trava — o tique nunca devolveria o valor do perfil.")
 
@@ -348,24 +297,8 @@ def test_o_campo_vazio_cala_o_botao(bancada):
         "apagar o campo — é o botão que responde calado, pelo avesso.")
 
 
-# ---------------------------------------------------------------------------
-# PASSO 2 — "Voltar ao padrão" para de apagar o que ela escreveu
-# ---------------------------------------------------------------------------
 def test_o_padrao_da_linha_ao_lado_nao_apaga_a_dela(bancada):
-    """**A MORDIDA DO PASSO 2.** O ↺ de uma linha não encosta na vizinha.
-
-    A REGRA DELA: *"'Voltar ao padrão' devolve a LINHA ao padrão; ele não é um
-    apagador de tudo o que ela escreveu na janela antiga."*
-
-    E ESCREVER É O CERTO, APAGAR SERIA O ERRADO: dentro de um `key_bindings`
-    que já é dicionário, tirar a chave devolve a linha ao SILÊNCIO, não ao de
-    fábrica. Por isso o gesto ESCREVE `acoes.padrao()[botão]`, e por isso a
-    régua confere a linha voltada contra o de fábrica do dono.
-
-    A MORDIDA: faça `padrao_da_tecla` gravar `key_bindings = None` (o que o
-    "Voltar ao padrão" da tela inteira faz) — este caso reprova nomeando o
-    atalho da vizinha que sumiu.
-    """
+    """**A MORDIDA DO PASSO 2.** O ↺ de uma linha não encosta na vizinha."""
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     ctx, mod, disco, gravados = bancada
@@ -391,17 +324,7 @@ def test_o_padrao_da_linha_ao_lado_nao_apaga_a_dela(bancada):
 
 
 def test_o_guardar_das_teclas_nao_apaga_o_que_esta_fora_do_alcance(bancada):
-    """O que ela escreveu num botão FORA do domínio sobrevive ao Guardar.
-
-    ELA PODE TER ESCRITO `Ctrl + W` NO CROSS pela janela antiga, e nada nesta
-    tela alcança essa linha — logo nada nesta tela tem o direito de apagá-la. O
-    dicionário de partida é o do perfil, e só as chaves do domínio são
-    reescritas.
-
-    A MORDIDA: faça o `guardar_teclas` montar o dicionário do zero (`atalhos =
-    {}` em vez de `_atalhos_de_hoje(prof)`) — este caso reprova nomeando o botão
-    que sumiu.
-    """
+    """O que ela escreveu num botão FORA do domínio sobrevive ao Guardar."""
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     ctx, mod, disco, _gravados = bancada
@@ -445,8 +368,6 @@ def test_o_atalho_do_dominio_sobrevive_ao_guardar_das_definicoes(bancada):
     assert alvo not in perdidos, (
         f"o {alvo} está no domínio de `key_bindings` e a aba ainda o nomeia "
         f"como perdido: {perdidos!r}")
-    # E O DE FORA CONTINUA SE PERDENDO — a perda ENCOLHEU, não sumiu, e uma
-    # régua que dissesse o contrário absolveria o defeito que resta.
     de_fora = _fora_do_dominio()
     p["key_bindings"][de_fora] = ["KEY_F5"]
     assert de_fora in dict(mod.atalhos_que_param_de_valer(p)), (
@@ -478,27 +399,12 @@ def test_a_tira_nomeia_a_linha_que_a_lista_nao_sabe_dizer(bancada):
         f"a tira não nomeia o {alvo}, cuja tecla a lista não sabe mostrar: "
         f"{aviso!r}")
     assert mod._atalho_em_palavras("KEY_LEFTCTRL+KEY_W") in aviso, aviso
-    # E ELA NÃO FALA DO QUE A LISTA SABE DIZER: a tira só ocupa espaço quando há
-    # o que dizer, e nomear uma linha que a lista mostra certo seria ruído.
     p2 = {"key_bindings": {alvo: acoes.padrao()[alvo].split("+")}}
     assert humanize_button(alvo) not in mod.linhas_que_a_lista_nao_sabe_dizer(p2)
 
 
 def test_o_tique_nao_apaga_o_que_ela_esta_digitando(bancada):
-    """O campo em edição sobrevive à pintura — a exigência de tempo da sprint.
-
-    O DEFEITO É DE 100 ms: o `escrever()` do piloto faz `el.value = t` assim que
-    os dois diferem, e um campo em edição difere já na primeira letra. Sem a
-    trava, o tique apagaria o que ela está digitando.
-
-    O CLIQUE É QUEM ABRE A TRAVA, e não o `change`: um `<input>` só dispara
-    `change` ao PERDER o foco, tarde demais. É por isso que o `<input>` leva
-    `data-gesto` — o ouvinte de `click` do piloto sobe pelo `closest`.
-
-    A MORDIDA: tire o `linhas.update(teclas_dos_botoes(p))` de
-    `_o_que_a_tabela_mostra`, ou o `_MEXENDO[campo] = texto` de `tecla_escrita`
-    — este caso reprova dizendo que a pintura mandou outro texto.
-    """
+    """O campo em edição sobrevive à pintura — a exigência de tempo da sprint."""
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     ctx, mod, disco, _gravados = bancada
@@ -511,38 +417,23 @@ def test_o_tique_nao_apaga_o_que_ela_esta_digitando(bancada):
 
     meio = mod._atalho_em_palavras("KEY_LEFTCTRL") + " + "
     mod.tecla_escrita(ctx, {"campo": campo, "valor": meio}, _PonteMuda())
-    for _volta in range(15):  # 1,5 s de tique, que é a janela medida em 02/09
+    for _volta in range(15):
         agora = mod.pacote(ctx)["mesa"][campo]
         assert agora == meio, (
             f"o tique escreveu {agora!r} por cima do que ela está digitando "
             f"({meio!r}) — o campo é reconstruído sob os dedos dela.")
 
 
-# ---------------------------------------------------------------------------
-# PASSO 3 — o botão PS na lista (entregue pela ONDA5-06-02; aqui se CONFERE)
-# ---------------------------------------------------------------------------
 def test_o_botao_ps_esta_na_lista_uma_vez_so():
-    """O PS é linha da tabela, e é UMA linha — não duas.
-
-    O CUIDADO É O QUE A SPRINT MANDA: a `ONDA5-06-02` fecha antes desta frente e
-    entrega *"a vigésima segunda linha"*. Acrescentar de novo daria duas linhas
-    `ps`, e a segunda seria construída por quem não conferiu.
-
-    A MORDIDA: acrescente uma segunda entrada `ps` a `aba06.BOTOES` — este caso
-    reprova com a conta.
-    """
+    """O PS é linha da tabela, e é UMA linha — não duas."""
     from hefesto_dualsense4unix.app.actions.input_actions import _BUTTON_LABELS
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     assert acoes.BOTAO_PS in acoes.BOTOES, (
         "o PS saiu da lista do produto — a decisão dela na 06-Q3 o pôs lá.")
     doc = _bancada()
-    # A CONTA É DA TABELA DE "o que cada botão faz" — 13/09/2026, F1-REMAPEAR: a
-    # tela "Trocar os botões" da mesma página tem a SUA linha do PS, com o gesto
-    # `linha-de-troca`. O gesto recorta a tabela que esta régua confere.
     quantas = doc.count(f'data-gesto="linha-de-botao" data-linha="{acoes.BOTAO_PS}"')
     assert quantas == 1, (
         f"o desenho tem {quantas} linha(s) do PS — a régua da aba apanha duas, "
         "e uma delas teria sido construída por quem não conferiu a outra.")
-    # O RÓTULO É O DO DONO, e não uma digitação desta tela.
     assert _BUTTON_LABELS[acoes.BOTAO_PS] == "Botão PS"

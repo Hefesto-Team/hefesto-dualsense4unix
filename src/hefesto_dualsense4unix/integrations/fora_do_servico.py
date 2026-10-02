@@ -1,71 +1,4 @@
-"""O aplicativo da pessoa nasce FORA do serviço do Hefesto — STEAM-FORA-DO-SERVICO-01.
-
-**O DEFEITO, medido em 26/09/2026** (estudo do engasgo do Sackboy, §3.4, e a
-conferência, §6): o botão PS abriu a Steam por ``Popen`` de dentro do daemon.
-A Steam e o jogo nasceram no cgroup ``hefesto-dualsense4unix.service``, com o
-``nice 5`` do daemon (``daemon/main.py``) e o ``oom_score_adj 200`` que o
-gerenciador de usuário dá a todo serviço dele. E a unit mata o grupo inteiro
-ao parar (``KillMode=control-group``, o padrão): o restart que o install faz
-derrubava a Steam e o jogo abertos pelo botão.
-
-**A FORMA FOI ESCOLHIDA POR MEDIÇÃO**, não pelo manual (26/09/2026, 18h03): um
-processo em ``nice 5`` e ``oom 200`` abriu ``sh -c 'sleep 60 & exec sleep 3'``
-de sete jeitos, e o neto de longa vida foi lido em ``/proc``:
-
-======================================  ====  ===  ==================================
-forma                                   nice  oom  o neto, depois de o principal sair
-======================================  ====  ===  ==================================
-``Popen`` de hoje                       5     200  vive, no cgroup de quem chamou
-``systemd-run --user --scope``          5     200  vive (o scope é filho do chamador)
-serviço transitório, padrão             0     200  **MORTO** junto com o principal
-serviço + ``ExitType=cgroup``           0     200  vive, unidade ativa
-serviço + ``KillMode=process``          0     200  vive, unidade dada como morta
-serviço + ``OOMScoreAdjust=100``        0     100  vive
-serviço + ``OOMScoreAdjust=0``          0     100  vive — o kernel não desce abaixo
-======================================  ====  ===  ==================================
-
-Daí a forma: **serviço transitório** do gerenciador de usuário (nasce dele, e
-não de quem chama), ``Type=exec`` (o ``systemd-run`` só volta depois do
-``execve``, e um binário ausente volta como erro), ``ExitType=cgroup`` (um
-lançador que se bifurca e sai não leva a Steam junto; o ``ExitType`` é do
-systemd 250 — antes dele, ``KillMode=process``, medido com o mesmo efeito) e
-``OOMScoreAdjust`` igual ao do próprio gerenciador. O ``0`` que os
-aplicativos do painel têm é inalcançável daqui: o gerenciador nasce do PID 1
-com ``100``, e esse é o piso de tudo o que descende dele (medido acima).
-
-**O AMBIENTE VAI JUNTO, e só o que é da pessoa.** O serviço nasce com o
-ambiente do gerenciador; o de quem chama (já passado por
-``ambiente_do_jogo.ambiente_limpo``) vai por ``--setenv``, e a classe do
-interpretador sai também do lado do gerenciador (``UnsetEnvironment=``). Não
-vão as variáveis que o systemd escreve PARA UMA UNIDADE (``INVOCATION_ID``,
-``JOURNAL_STREAM``, ``MEMORY_PRESSURE_WATCH``…): as do daemon apontariam a
-Steam para o diário e a pressão de memória de outro serviço.
-
-**QUANDO NÃO HÁ O QUE CURAR, NADA MUDA.** Quem chama de um lugar que já é da
-pessoa — a janela aberta pelo painel, num scope com ``nice 0`` e ``oom 0`` —
-abre por ``Popen`` como sempre: o filho herda o que a pessoa tem, e o
-gerenciador só teria o ``100`` a oferecer. Sem systemd de usuário, também
-``Popen`` (``start_new_session=True``), o de hoje.
-
-**SOB A SUÍTE, O ``systemd-run`` DE VERDADE RECUSA.** Ele fala com o
-gerenciador pelo soquete ``$XDG_RUNTIME_DIR/systemd/private``, que nenhum
-barramento de mentira desvia: um teste que chegasse a ele abriria unidade na
-sessão de quem roda a suíte. Quem testa injeta ``executar``.
-
-**O PID DO APLICATIVO SE PERGUNTA À UNIDADE** (``pids_da_unidade``). Pelo
-``Popen`` quem chama fica com o processo; pela unidade fica com um nome, e o
-PID do ``systemd-run`` não é o do aplicativo. Quem precisa fechar o que abriu
-(o teclado na tela) lê o ``cgroup.procs`` da unidade: é o kernel dizendo quem
-está lá dentro.
-
-**E O LAÇO DE LEITURA NÃO ESPERA O GERENCIADOR** (``FioDeTrabalho``). O PS e o
-L3 chegam ao daemon no laço que lê os quatro controles, e o ``systemd-run``
-leva de 6 a 20 ms, com teto de 2 s por forma. Quem abre a partir dali
-dispara num fio próprio, e o laço segue lendo.
-
-Módulo 100% stdlib DE PROPÓSITO: ``steam_launch_options`` o importa, e o
-install/uninstall rodam aquele arquivo como script avulso.
-"""
+"""O aplicativo da pessoa nasce FORA do serviço do Hefesto — STEAM-FORA-DO-SERVICO-01."""
 from __future__ import annotations
 
 import contextlib
@@ -83,14 +16,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-try:  # importado como módulo do pacote (GUI/daemon/testes)
+try:
     from .ambiente_do_jogo import VARIAVEIS_DO_INTERPRETADOR
 except ImportError:  # pragma: no cover - executado como script avulso pelo install/uninstall
     from ambiente_do_jogo import VARIAVEIS_DO_INTERPRETADOR  # type: ignore[no-redef]
 
-#: O que o systemd escreve no ambiente de UMA unidade (``systemd.exec(5)``,
-#: «Environment Variables in Spawned Processes»). As do daemon não são da
-#: Steam; a unidade nova ganha as dela.
 VARIAVEIS_DA_UNIDADE: tuple[str, ...] = (
     "INVOCATION_ID",
     "JOURNAL_STREAM",
@@ -131,28 +61,14 @@ VARIAVEIS_DA_UNIDADE: tuple[str, ...] = (
 )
 
 #: As duas formas de o serviço deixar o lançador viver depois de o principal
-#: sair, na ordem em que se tentam: a do systemd 250 em diante, e a de antes.
 FORMAS_DE_VIVER: tuple[str, ...] = ("ExitType=cgroup", "KillMode=process")
 
-#: Prefixo do nome da unidade: ``app-hefesto-<aplicativo>-<acaso>.service``.
-#: Sem o ``@`` de instância de propósito — medido em 26/09: com ele o
-#: gerenciador cria uma fatia por aplicativo (``app-app\\x2dhefesto…slice``)
-#: que fica ativa, vazia, depois de o aplicativo fechar.
 PREFIXO_DA_UNIDADE = "app-hefesto-"
 
-#: Quanto se espera o ``systemd-run`` voltar. Medido em 26/09: 6 a 12 ms ele
-#: sozinho, 12 a 20 ms o ``abrir`` inteiro. O teto é o do ``pgrep`` e do
-#: ``wmctrl`` do mesmo toque (``steam_launcher``). Quem espera é o
-#: ``FioDeTrabalho`` do PS e o do teclado na tela, não o laço de leitura; o
-#: teto segura só o próximo toque, que o fio descarta ou enfileira.
 ESPERA_DO_SYSTEMD_RUN_S = 2.0
 
-#: ``systemd-run`` recusa nome de variável fora disto (medido com
-#: ``BASH_FUNC_x%%``: «Cannot assign environment variable»).
 _NOME_DE_VARIAVEL = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-#: Caracteres de controle que um systemd antigo recusa no valor (o
-#: ``Environment=`` de antes do 245 aceitava só a tabulação).
 _CONTROLE = re.compile(r"[\x00-\x08\x0a-\x1f\x7f]")
 
 _PARTE_DO_NOME = re.compile(r"[^A-Za-z0-9_.]+")
@@ -162,24 +78,16 @@ _PARTE_DO_NOME = re.compile(r"[^A-Za-z0-9_.]+")
 class Contexto:
     """O que decide a forma: o que um filho direto herdaria, e a quem pedir."""
 
-    #: Há gerenciador de usuário a quem pedir (``systemd-run`` e o soquete dele).
     gerenciador: bool
-    #: Por que um filho direto herdaria o que não é da pessoa, ou None.
     herdaria: str | None
-    #: O ``oom_score_adj`` do gerenciador, que é o piso da árvore dele.
     oom_do_gerenciador: int | None
 
 
 @dataclass(frozen=True)
 class Abertura:
-    """Como o aplicativo saiu. ``unidade`` só quando nasceu fora.
+    """Como o aplicativo saiu. ``unidade`` só quando nasceu fora."""
 
-    ``processo`` é o que o ``Popen`` devolveu, quando ele foi o caminho: quem
-    precisa fechar o aplicativo depois (o teclado na tela) guarda o processo;
-    pela unidade, pergunta a ela (``pids_da_unidade``).
-    """
-
-    caminho: str  # "unidade" | "popen"
+    caminho: str
     motivo: str
     unidade: str | None = None
     tentativas: tuple[str, ...] = field(default_factory=tuple)
@@ -227,12 +135,7 @@ def oom_do_gerenciador(
     raiz_proc: str = "/proc",
     raiz_cgroup: str = "/sys/fs/cgroup",
 ) -> int | None:
-    """O ``oom_score_adj`` do gerenciador de usuário, ou None.
-
-    Primeiro pelo ``MANAGERPID`` que o gerenciador põe no ambiente dos
-    serviços dele; fora de um serviço, pelo ``init.scope`` do
-    ``user@<uid>.service`` no caminho do próprio cgroup.
-    """
+    """O ``oom_score_adj`` do gerenciador de usuário, ou None."""
     pid = _inteiro(environ.get("MANAGERPID"))
     if pid is not None:
         valor = _inteiro(_ler(f"{raiz_proc}/{pid}/oom_score_adj"))
@@ -289,13 +192,7 @@ def motivo_de_herdar(
     oom: int | None,
     oom_do_gerenciador: int | None,
 ) -> str | None:
-    """Por que um filho DIRETO deste processo herdaria o que não é da pessoa.
-
-    Três respostas, cada uma medida: dentro de um SERVIÇO o filho morre com o
-    restart dele; com ``nice`` acima de zero o filho nasce com ele; com
-    ``oom_score_adj`` acima do piso do gerenciador, também. None = o filho
-    direto já nasce com o que a pessoa tem.
-    """
+    """Por que um filho DIRETO deste processo herdaria o que não é da pessoa."""
     ultimo = (cgroup or "").rstrip("/").rsplit("/", 1)[-1]
     if ultimo.endswith(".service"):
         return f"dentro do serviço {ultimo}"
@@ -307,13 +204,7 @@ def motivo_de_herdar(
 
 
 def ambiente_da_unidade(env: Mapping[str, str]) -> tuple[dict[str, str], tuple[str, ...]]:
-    """O que vai por ``--setenv``, e os nomes que ficam de fora.
-
-    Saem as variáveis da unidade de quem chama, as da classe do interpretador
-    (quem chama já as tirou, e a régua cobra) e as que o ``systemd-run``
-    recusaria — nome fora de ``[A-Za-z_][A-Za-z0-9_]*``, valor com caractere de
-    controle ou que não é UTF-8. Uma recusada derrubaria a abertura inteira.
-    """
+    """O que vai por ``--setenv``, e os nomes que ficam de fora."""
     mantidas: dict[str, str] = {}
     fora: list[str] = []
     for nome, valor in env.items():
@@ -347,16 +238,7 @@ def argv_da_unidade(
     oom: int | None,
     teto_s: int | None = None,
 ) -> list[str]:
-    """A linha do ``systemd-run`` que abre ``argv`` numa unidade própria.
-
-    O ``$`` do comando vira ``$$``: o gerenciador expande ``$NOME`` no
-    ``ExecStart`` de todo serviço, e um argumento da pessoa não é variável.
-
-    ``teto_s`` é o script do gesto (``rodar_e_esperar``): a linha passa a
-    ESPERAR a unidade (``--wait``, sem ``--quiet``, que é o que deixa o resumo
-    do fim dizer que a unidade rodou) e o gerenciador a para no teto
-    (``RuntimeMaxSec``). Sem ele, a linha de sempre.
-    """
+    """A linha do ``systemd-run`` que abre ``argv`` numa unidade própria."""
     cmd = [
         "systemd-run",
         "--user",
@@ -371,8 +253,6 @@ def argv_da_unidade(
     cmd += [
         "--property=Type=exec",
         f"--property={forma}",
-        # O `DEVNULL` do `Popen` de sempre: sem isto a saída do aplicativo iria
-        # para o diário (o padrão de todo serviço), e a Steam fala muito.
         "--property=StandardOutput=null",
         "--property=StandardError=null",
     ]
@@ -418,16 +298,8 @@ def abrir(
     executar: Executar | None = None,
     popen: Callable[..., Any] | None = None,
 ) -> Abertura:
-    """Abre ``argv`` com o ambiente ``env``, fora do serviço quando é preciso.
-
-    ``aplicativo`` dá nome à unidade (o id do flatpak diz mais que
-    ``flatpak``); sem ele, o nome do programa. Nunca espera o aplicativo.
-    Levanta só o que o ``Popen`` de hoje levantaria (``FileNotFoundError`` e
-    ``OSError``), e só quando ele é o caminho.
-    """
-    # O `Popen` aceita o programa sozinho numa `str` (sem `shell`), e o
+    """Abre ``argv`` com o ambiente ``env``, fora do serviço quando é preciso."""
     # `ps_button_command` chega assim de um `daemon.reload` com texto;
-    # `list("steam")` o partiria em letras.
     argv = [argv] if isinstance(argv, str) else list(argv)
     ctx = contexto if contexto is not None else contexto_atual()
     abrir_direto = popen if popen is not None else subprocess.Popen
@@ -461,7 +333,6 @@ def abrir(
         try:
             feito = run(cmd, env)
         except subprocess.TimeoutExpired:
-            # A unidade pode ter nascido: abrir de novo por Popen daria duas.
             return Abertura(
                 caminho="unidade",
                 motivo=f"o systemd-run não respondeu em {ESPERA_DO_SYSTEMD_RUN_S:.0f} s",
@@ -485,20 +356,6 @@ def abrir(
     return _pelo_popen(f"o systemd-run recusou ({ctx.herdaria})", tuple(tentativas))
 
 
-# ---------------------------------------------------------------------------
-# O SCRIPT DO GESTO — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026)
-#
-# O `abrir` não serve para ele, por dois motivos medidos no código: espera o
-# `systemd-run` só `ESPERA_DO_SYSTEMD_RUN_S`, e com `--wait` o `systemd-run` só
-# volta quando o script termina; e lê código diferente de zero como recusa do
-# gerenciador e tenta a segunda forma de viver e depois o `Popen` — com
-# `--wait` esse código é o do SCRIPT, e um script que sai com 3 rodaria três
-# vezes. Esta função separa «o gerenciador recusou» de «o script saiu com N»
-# pelo resumo que o `--wait` escreve ao fim («Finished with result: …»).
-# ---------------------------------------------------------------------------
-
-#: A folga além do teto: o gerenciador para a unidade no teto, e o
-#: `systemd-run --wait` ainda precisa voltar e contar.
 FOLGA_DO_TETO_S = 5.0
 
 _O_FIM_DA_UNIDADE = re.compile(r"Finished with result:\s*(\S+)")
@@ -506,17 +363,12 @@ _O_FIM_DA_UNIDADE = re.compile(r"Finished with result:\s*(\S+)")
 
 @dataclass(frozen=True)
 class Desfecho:
-    """Como o programa esperado terminou.
-
-    ``rodou`` diz que a unidade (ou o processo) nasceu; ``saiu_com`` é o código
-    de saída quando ele terminou sozinho; ``estourou`` é o teto vencido, e
-    quem parou foi o gerenciador (ou o grupo de processos morto aqui).
-    """
+    """Como o programa esperado terminou."""
 
     rodou: bool
     saiu_com: int | None
     estourou: bool
-    caminho: str  # "unidade" | "popen" | "nenhum"
+    caminho: str
     motivo: str = ""
     tentativas: tuple[str, ...] = field(default_factory=tuple)
 
@@ -546,11 +398,7 @@ def _esperar_pelo_popen(
     motivo: str,
     tentativas: tuple[str, ...],
 ) -> Desfecho:
-    """O caminho sem gerenciador: o ``Popen`` com o mesmo teto.
-
-    ``start_new_session`` dá ao script um grupo de processos próprio, e é o
-    grupo inteiro que morre no teto — os filhos que ele deixou vão junto.
-    """
+    """O caminho sem gerenciador: o ``Popen`` com o mesmo teto."""
     try:
         processo = abrir_direto(
             list(argv),
@@ -587,16 +435,7 @@ def rodar_e_esperar(
     executar: Executar | None = None,
     popen: Callable[..., Any] | None = None,
 ) -> Desfecho:
-    """Roda ``argv`` fora do serviço, ESPERA ele terminar, e diz como terminou.
-
-    Sem shell: ``argv`` é a lista, e o caminho do script é um argumento só.
-    Uma chamada ao gerenciador por forma de viver, e só a RECUSA do
-    gerenciador (sem o resumo do fim) passa à forma seguinte; o script que
-    rodou e saiu com N é um desfecho, nunca uma nova tentativa.
-
-    Sob a suíte, nem o gerenciador nem o ``Popen`` de verdade: quem testa
-    injeta ``executar`` e ``popen``.
-    """
+    """Roda ``argv`` fora do serviço, ESPERA ele terminar, e diz como terminou."""
     argv = list(argv)
     ctx = contexto if contexto is not None else contexto_atual()
     if popen is None and _a_suite_esta_rodando():
@@ -644,19 +483,12 @@ def _recusar_sob_a_suite(*_args: Any, **_kwargs: Any) -> Any:
     raise OSError("a suíte está no ar e este é o Popen de verdade")
 
 
-#: Onde o kernel publica os processos de cada unidade. Módulo-nível para a
-#: régua apontar a uma árvore de mentira sem tocar no gerenciador de ninguém.
 RAIZ_DO_CGROUP = "/sys/fs/cgroup"
 RAIZ_DO_PROC = "/proc"
 
 
 def _base_do_gerenciador(raiz_proc: str) -> str:
-    """O cgroup do ``user@<uid>.service`` de quem chama, sem a barra inicial.
-
-    Lido do próprio cgroup (o daemon mora em
-    ``user.slice/user-<uid>.slice/user@<uid>.service/app.slice/…``); fora do
-    gerenciador (um terminal, no ``session-N.scope``), montado pelo uid.
-    """
+    """O cgroup do ``user@<uid>.service`` de quem chama, sem a barra inicial."""
     proprio = _cgroup_de(_ler(f"{raiz_proc}/self/cgroup")) or ""
     partes = proprio.strip("/").split("/")
     for i, parte in enumerate(partes):
@@ -680,20 +512,7 @@ def pids_da_unidade(
     raiz_cgroup: str | None = None,
     raiz_proc: str | None = None,
 ) -> tuple[int, ...]:
-    """Quem está de pé na unidade que ``abrir`` criou, pergunta feita ao kernel.
-
-    O PID do ``systemd-run`` não é o do aplicativo, e o nome da unidade é
-    tudo o que quem chamou tem. O gerenciador põe a unidade transitória em
-    ``app.slice`` (systemd 255, medido na máquina dela em 28/09/2026 com o
-    ``app-hefesto…tray@autostart.service`` ao lado do daemon); as outras
-    fatias do primeiro nível também são olhadas, e, se nenhuma pasta existe,
-    o ``/proc/<pid>/cgroup`` de cada processo responde, que vale para
-    qualquer arranjo de fatias e para o cgroup v1 (``_esta_na_unidade``).
-    Unidade que saiu (``--collect`` recolhe a pasta) é a resposta vazia.
-
-    Só nomes que ``nome_da_unidade`` escreve: um nome de fora não vira
-    caminho de arquivo.
-    """
+    """Quem está de pé na unidade que ``abrir`` criou, pergunta feita ao kernel."""
     if not unidade.startswith(PREFIXO_DA_UNIDADE) or "/" in unidade:
         return ()
     cgroup = RAIZ_DO_CGROUP if raiz_cgroup is None else raiz_cgroup
@@ -725,13 +544,7 @@ def pids_da_unidade(
 
 
 def _esta_na_unidade(texto: str | None, unidade: str) -> bool:
-    """Alguma hierarquia de um ``/proc/<pid>/cgroup`` termina na unidade.
-
-    No cgroup v2 é a linha ``0::``. Numa máquina só com o cgroup v1 não há
-    ``0::``, e quem diz a unidade é a linha ``1:name=systemd:/…``: ler só a
-    ``0::`` deixaria o teclado na tela sem PID ali, e cada L3 abriria outro
-    por cima do primeiro.
-    """
+    """Alguma hierarquia de um ``/proc/<pid>/cgroup`` termina na unidade."""
     for linha in (texto or "").splitlines():
         caminho = linha.split(":", 2)[-1].strip().rstrip("/")
         if caminho and caminho.rsplit("/", 1)[-1] == unidade:
@@ -740,20 +553,7 @@ def _esta_na_unidade(texto: str | None, unidade: str) -> bool:
 
 
 class FioDeTrabalho:
-    """O laço de leitura dispara, e quem espera o gerenciador é este fio.
-
-    O PS e o L3 chegam ao daemon no laço que lê os quatro controles
-    (``hotkey_daemon._fire_ps_solo`` e o ``virtual_token_callback`` do teclado
-    virtual). Abrir a Steam ou o teclado na tela dali custa o ``systemd-run``
-    (6 a 20 ms, teto de ``ESPERA_DO_SYSTEMD_RUN_S`` por forma), e antes dele o
-    ``pgrep`` do mesmo toque: a entrada dos quatro controles parava junto.
-
-    ``espera`` é quantos pedidos cabem atrás do que está em voo. ``0``
-    descarta o pedido que chega com outro em voo (o PS: dois toques seguidos
-    não abrem duas Steam); um número maior enfileira em ordem (o L3: alternar
-    é ida e volta, e a ordem dos toques é a resposta). Um pedido que levanta
-    não trava o fio: ``ao_falhar`` recebe a exceção, e o próximo pedido corre.
-    """
+    """O laço de leitura dispara, e quem espera o gerenciador é este fio."""
 
     def __init__(
         self,
@@ -809,10 +609,7 @@ class FioDeTrabalho:
         return quantos
 
     def esperar(self, teto: float | None = None) -> bool:
-        """Espera o fio esvaziar. True = nada em voo nem na fila.
-
-        Do próprio fio devolve False na hora: esperar por si é travar.
-        """
+        """Espera o fio esvaziar. True = nada em voo nem na fila."""
         limite = None if teto is None else time.monotonic() + teto
         while True:
             with self._tranca:

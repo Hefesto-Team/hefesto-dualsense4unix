@@ -14,7 +14,7 @@ lista da tela grava e pinta por ela — ver `acao_do_gesto`, no fim do módulo
 FATO SUBSTITUÍDO (06/09/2026): esta linha dizia que o `ps_button_action` da
 config é *"o único pedaço ajustável"* e que *"método de IPC nenhum escreve"*.
 As duas metades caíram. **Escreve** — `daemon.reload` aceita `config_overrides`
-com qualquer campo do `DaemonConfig` (`ipc_handlers.py:6280`, a leitura dos
+com qualquer campo do `DaemonConfig` (`ipc_handlers.py:4581`, a leitura dos
 overrides) e aplica com `replace(config, **overrides)` + `reload_config`
 (`:6292-6293`); o que ele NÃO faz é gravar em disco, então a escolha morre no
 próximo start do daemon. E **deixou de ser o único ajustável**: desde a
@@ -58,7 +58,7 @@ escolheria (evento `change`):
     +1500 ms                     : Botão direito
 
 Eram DUAS causas, e as duas eram desta aba: os 21 `<select>` não casavam com
-nenhum endereço clicável do ouvinte (`hefesto_vivo.py:367`, o `closest` de
+nenhum endereço clicável do ouvinte (`hefesto_vivo.py:189`, o `closest` de
 `manda_do_alvo`) — logo a escolha não chegava ao Python —, e o tique seguinte
 reescrevia o valor do perfil por cima. Enquanto isso valeu, **o "Guardar" nunca
 recebeu uma forma diferente do perfil**, e a recusa dele mandava trocar a linha
@@ -79,7 +79,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:3726`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:2786`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): **nenhuma frase de recusa fala
@@ -114,7 +114,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:3726`) levava à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:2786`) levava à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -168,169 +168,47 @@ from . import (
     registrar,
 )
 
-#: CORRIGIDO EM 01/09/2026. Aqui estava escrito que a velocidade do cursor e da
 #: rolagem "mora no perfil, não no state_full". **O daemon publica as duas**, em
-#: `mouse_emulation`, junto com se a emulação está ligada e por que está
-#: bloqueada — medido no daemon dela: `{"enabled": false, "speed": 6,
-#: "scroll_speed": 1, "bloqueio": "desligada"}`.
-#:
-#: Os atalhos de BOTÃO vêm do perfil (`key_bindings`), que também tem dono.
-#: Sobra nada.
 SEM_DONO: dict[str, str] = {}
 
-#: O QUE O PACOTE SABE E A PÁGINA NÃO TEM ONDE PÔR — medido em 02/09/2026, com
-#: `casamento.py 06-navegacao.html`. É o INVERSO do `SEM_DONO`: lá o produto não
-#: sabe responder; aqui ele sabe, e o desenho não tem lugar para a resposta.
-#:
-#: POR QUE ISTO PRECISOU EXISTIR: `casamento.py` já imprimia os órfãos e
-#: **reprovava só o zero**. Esta aba emitia oito chaves para o vazio com o
-#: portão verde — e uma delas, `via`, não era falta de lugar: era o pacote
-#: mandando METADE de uma linha cujo endereço cobre a linha inteira. Órfão
-#: silencioso e defeito real ficavam na mesma pilha, sem ninguém para separá-los.
-#: `test_a_06_nao_manda_para_o_vazio.py` passou a cobrar que toda chave órfã
-#: esteja AQUI, com a razão.
-#:
-#: `via` SAIU: virou parte do `navega` (ver `_linha_do_cartao`).
-#: `teclado-ligado` SAIU: era o mesmo bit de `teclado-estado`, que tem endereço.
-#:
-#: QUATRO SAÍRAM EM 03/09/2026, e as quatro pelo mesmo motivo — **o desenho
-#: ganhou o lugar que faltava**, e o que cai nele é a frase do PRODUTO, não uma
-#: frase nova:
-#:
-#:   · `rato-ligado`   o "Status do Modo" perdeu o `<input checkbox>` e a
-#:                     palavra de `content:` de CSS; agora é a classe `ligado`
-#:                     (alvo `classe`) mais um nó de texto. Era a maior mentira
-#:                     desta aba: com `mouse_emulation.enabled=false` a tela
-#:                     dizia **Ligado**;
-#:   · `rato-bloqueio` virou `rato-estado`, a linha de estado do mouse virtual,
 #:                     traduzida por `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`;
-#:   · `teclado-osk`   ganhou linha, com a frase de
 #:                     `input_actions.frase_do_teclado_na_tela`;
-#:   · e nasceu `teclado-bloqueio`, de
 #:                     `emulation_actions.descrever_teclado_emulado`.
 SEM_ENDERECO: dict[str, str] = {
-    # QUEM DESPACHA O CURSOR CONTINUA SEM LINHA, e agora por decisão e não por
-    # falta de lugar: a GTK não tem frase para `despachando` — as quatro do
-    # rótulo dela falam do DEVICE (`device_ativo`/`bloqueio`), que é o que a
-    # linha `rato-estado` já leva. Escrever uma frase nova aqui seria inventar
-    # texto de tela, e texto de tela é palavra dela.
     "rato-despachando": "a GTK não tem frase para 'o daemon está despachando' — "
                         "as quatro dela falam do device, que `rato-estado` já "
                         "diz. Inventar a frase é decisão dela",
-    # OS ATALHOS DO PERFIL: a tabela da tela é a dos seis GESTOS (PS+Options…),
-    # que não são `key_bindings`. Não há onde mostrar a contagem, e mostrá-la na
-    # tabela dos combos seria pôr um número ao lado de outra coisa.
     "gestos": "a tabela da tela é a dos seis GESTOS, e `key_bindings` são os "
               "nove BOTÕES — não é o mesmo dado, e não há linha para ele",
     "gestos-lista": "idem; e a lista é estrutura, que o piloto pula",
 }
 
-#: AS DUAS FRASES DA LISTA "Função do teclado" QUE O DAEMON SABE DIZER, e elas
-#: são o outro lado do contrato que `src/hefesto_dualsense4unix/interface/aba06.py:OPCOES_TECLADO`
-#: desenha. A repetição é declarada, e os dois lados falham de jeitos diferentes
-#: de propósito:
-#:
-#: * o GESTO casa pela palavra que DISTINGUE (`_ESCOLHA`), então reescrever o
-#:   resto da frase não desliga o botão;
-#: * a PINTURA usa a frase inteira, porque `escrever()` do piloto faz
-#:   `el.value = texto` e o `<select>` só aceita o texto exato de uma `<option>`
-#:   (as opções não têm `value` — ver a nota no gerador sobre o portão do
-#:   desenho).
-#:
-#: AS TRÊS PALAVRAS SÃO DECISÃO DELA, 02/09/2026: *"`Só dentro do jogo` · `Só
-#: fora do jogo` · `Desativado`. O padrão de um perfil novo é `Só fora do jogo`
-#: — no jogo o L3 é o clique do analógico e o teclado atrapalha; no desktop é
-#: onde ele serve."*
-#:
-#: DUAS TÊM DONO E UMA NÃO, e qual é qual foi MEDIDO — ver o `fato_derrubado`
-#: no corpo de `teclado()`. O que o teclado emulado faz hoje **já é** "só fora
-#: do jogo": o daemon cala a emulação de desktop quando um jogo assume
-#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:3518`, e o
-#: `gamepad_dispatched` do laço em `:5863`), e o `suppress_desktop_emulation`
-#: do perfil é a versão explícita e por perfil da MESMA coisa. Quem não tem
-#: dono é o INVERSO — "só dentro do jogo".
 TECLADO_SO_FORA = "Só fora do jogo"
 TECLADO_DESATIVADO = "Desativado"
 TECLADO_SO_DENTRO = "Só dentro do jogo"
 
-#: A TRAVESSIA ACABOU — 03/09/2026, e quem mandou apagar foi a régua.
-#:
-#: Entre 02/09 e a publicação, a bancada tinha as três palavras dela e a página
-#: que o produto renderiza ainda tinha as antigas (`Ligada — atalhos e teclado
-#: na tela` · `Desligada`). Duas constantes e um dicionário de sinônimos
-#: seguravam os dois mundos ao mesmo tempo, e o custo de não tê-los estava
-#: medido: DUAS das três opções da tela viravam clique morto — inclusive a única
-#: forma de desligar o teclado por esta aba — e a pintura emitia uma palavra que
-#: a lista publicada não tinha, deixando na tela a `<option selected>` do
-#: desenho: com o teclado DESLIGADO a linha afirmava o contrário.
-#:
-#: A 06 FOI PUBLICADA, `mockup/` e `interface/paginas/` voltaram a bater, e
-#: `test_a_06_a_funcao_do_teclado_tem_tres.py::test_os_sinonimos_da_travessia_
-#: tem_prazo` ficou VERMELHO nomeando o que apagar — que é o único trabalho que
-#: aquela régua tinha. Declaração velha é a régua se desligando sozinha.
-#:
-#: O QUE FICA: `PALAVRAS_DO_TECLADO` continua sendo uma TUPLA de candidatas, e
-#: não uma palavra só, porque é o que faz a próxima travessia custar uma linha
-#: em vez de um defeito calado — e porque `_o_teclado_em_palavras` continua
-#: conferindo contra a página CARREGADA, que é a regra que sobrou do episódio:
-#: *mudar rótulo na bancada obriga a perguntar o que acontece na tela dela hoje*.
 PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
     True: (TECLADO_SO_FORA,),
     False: (TECLADO_DESATIVADO,),
 }
 
-#: O SEPARADOR DO CARTÃO — o mesmo `•` que o desenho põe entre o transporte e o
-#: papel, com a MESMA marcação (`<span class="pt">`). O endereço
-#: `data-campo="navega"` cobre a LINHA INTEIRA e, desde 21/09/2026, tem alvo
-#: `html`: a linha é desenhada por `linha_do_cartao`, para o gerador e o pacote.
 PONTO = ' <span class="pt">•</span> '
 
-#: A BOLINHA DE QUEM NAVEGA — o filho mudo que só o CSS desenha, e o motivo de a
-#: linha ser `html`. Ver `linha_do_cartao`.
 BOLINHA = '<span class="bolinha"></span>'
 
-#: OS TRÊS PAPÉIS DO CARTÃO, o que cada controle faz no PC. Os dois primeiros
-#: são do desenho que ela aprovou; o terceiro é da A-MIRA-NA-NAVEGACAO-02
-#: (25/09/2026, por delegação dela): na Navegação, a Mira Virtual acesa num
-#: controle que não navega move o cursor com o giro dele
-#: (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`), e «Só a janela» afirmava o
-#: contrário. As três palavras estão no glossário da casa.
 PAPEL_QUE_NAVEGA = "Navega o PC"
 PAPEL_SO_A_JANELA = "Só a janela"
 PAPEL_DO_CURSOR = "Move o cursor"
 
-#: O PREFIXO DAS VINTE E UMA LINHAS de *o que cada botão faz*. Um por botão de
 #: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
 PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
 
-#: O PREFIXO DAS LINHAS DA TELA "Teclas do teclado" — 06/09/2026,
-#: NAVEGACAO-TECLAS-01. Um por botão de `acoes.DOMINIO_DO_TECLADO`, e a lista
-#: também é do produto.
-#:
-#: ELE É OUTRO PREFIXO DE PROPÓSITO, e a razão é medida: a `forma` que o piloto
-#: recolhe usa `data-linha || data-campo` como chave
-#: (`hefesto_vivo.py`, o bloco `forma:`), e as vinte e duas listas de *o que
-#: cada botão faz* já ocupam a chave `<botão>` pelo `data-linha`. Um campo de
-#: texto que reusasse aquela chave APAGARIA a escolha da lista dentro da mesma
-#: forma, sem uma palavra — o "Guardar" leria o texto onde esperava um rótulo.
 PREFIXO_DA_TECLA = "tecla-"  # (noqa-acento) prefixo de endereço, não é prosa
 
-#: O PREFIXO DAS LINHAS DA TELA "Trocar os botões" — F1-REMAPEAR, 13/09/2026.
-#: Um por botão de `core/remapeamento_de_botao.REMAPEAVEIS`: só a linha que a
-#: troca alcança ganha endereço de pintura. É OUTRO PREFIXO pela mesma razão do
-#: `tecla-`: as linhas de *o que cada botão faz* já ocupam `acao-<botão>`, e o
-#: mesmo endereço para dois dados seria a segunda verdade que esta casa persegue.
 PREFIXO_DA_TROCA = "troca-"  # (noqa-acento) prefixo de endereço, não é prosa
 
-#: O "sem troca" da tela, com o texto exato da `<option>` que o gerador crava.
 SEM_TROCA = "— Sem troca —"
 
-#: O RÓTULO DE CADA DESTINO → o id do botão no motor. O rótulo é o que a
-#: `<option>` diz, e ele sai de `docs/data/pecas-do-dualsense.csv` pelo gerador
-#: (`aba06.REMAP`); este dicionário é a TRADUÇÃO de volta, e o gerador PARA a
-#: geração se os dois divergirem (`aba06.py`, logo abaixo do `SEM_TROCA` dele) —
-#: é assim que a lista digitada não diverge da fonte, que é a razão da decisão
-#: D-O-REMAPEAMENTO-BOTAO-A-BOTAO-ENTRA.
 ROTULOS_DA_TROCA: dict[str, str] = {
     "Triângulo": "triangle",
     "Círculo": "circle",
@@ -354,15 +232,10 @@ ROTULOS_DA_TROCA: dict[str, str] = {
     "PS": remap.BOTAO_PS,
 }
 
-#: O `<select>` da "Função do teclado" e as suas `<option>`, lidos do HTML.
-#: Duas expressões e não uma: recortar o bloco primeiro é o que impede casar
-#: com as `<option>` das outras 21 listas da mesma página.
 _SELECT_DO_TECLADO = re.compile(
     r'<select[^>]*data-campo="teclado-estado"[^>]*>(.*?)</select>', re.S)
 _OPCAO = re.compile(r"<option[^>]*>(.*?)</option>", re.S)
 
-#: O selo do arquivo lido e o que ele oferecia. O caminho é fixo; o que muda é
-#: o arquivo, no dia em que ela publicar.
 _OFERTAS: tuple[tuple[int, int], frozenset[str]] | None = None
 
 
@@ -373,7 +246,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     `a03_gatilhos._pagina_publicada` documenta: o padrão de `onde.pagina` é a
     BANCADA porque todo instrumento desta casa mede o desenho de hoje. Aqui
     não — quem pinta pinta no que está no `WebView`, e o piloto abre SEMPRE o
-    publicado (`hefesto_vivo.py:936, 1418, 1458, 1646, 1818`).
+    publicado (`hefesto_vivo.py:758, 1418, 1458, 1646, 1818`).
 
     LÊ UMA VEZ POR VERSÃO DO ARQUIVO, e o selo é `(mtime_ns, tamanho)`: a
     página tem 385 KB e a pintura roda a cada 100 ms — reler a cada tique seria
@@ -412,16 +285,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
 
 
 def _o_teclado_em_palavras(ligado: bool) -> str:
-    """A palavra daquele estado que a página CARREGADA sabe receber.
-
-    A primeira candidata de `PALAVRAS_DO_TECLADO` é a decisão dela; a segunda é
-    o rótulo que a página publicada ainda oferece. Escolher a primeira que
-    EXISTE é o que faz a linha dizer a verdade nos dois mundos — e o que faz a
-    publicação bastar, sem ninguém voltar aqui.
-
-    Nenhuma das duas na página é o caso em que não há nada a acertar: devolve a
-    palavra dela, o `escrever()` se cala, e a régua do dublê acusa.
-    """
+    """A palavra daquele estado que a página CARREGADA sabe receber."""
     candidatas = PALAVRAS_DO_TECLADO[ligado]
     ofertas = _o_que_a_pagina_oferece()
     for palavra in candidatas:
@@ -430,35 +294,12 @@ def _o_teclado_em_palavras(ligado: bool) -> str:
     return candidatas[0]
 
 
-#: A PALAVRA DO INTERRUPTOR "Status do Modo", e ela é DUAS coisas ao mesmo
-#: tempo: o texto que o `.txt` mostra e o gatilho da classe verde
 #: (`data-hef-quando="Ligado"` no rótulo — ver `aba06.STATUS_MODO`). Por isso
-#: elas são constantes e não literais espalhados: trocar uma sem a outra
-#: acenderia a cor sem a palavra, ou o contrário.
 LIGADO = "Ligado"
 DESLIGADO = "Desligado"
 
-#: "NÃO HÁ O QUE DIZER", dito de um jeito que a tela sabe APAGAR.
-#:
-#: Ele existe por um detalhe do piloto que custou uma foto: `escrever()` troca
-#: valor vazio por um travessão (`hefesto_vivo.py:141`), de propósito — um lugar
-#: VAZIO da mesa tem de apagar o que estava lá. Numa linha de estado isso vira
-#: um `—` solto embaixo do interruptor, que é ruído com cara de dado.
-#:
-#: Então a linha sem conteúdo manda ESTE marcador, e o desenho a esconde inteira
-#: (`.estado:has(.nada){display:none}`). A chave continua sendo emitida em todo
-#: tique — é o que faz a linha SUMIR quando o bloqueio acaba. Omiti-la deixaria
-#: a frase velha na tela para sempre, que é o defeito oposto e pior.
 NADA_A_DIZER = '<i class="nada"></i>'
 
-#: A ÚNICA FRASE DESTA ABA COPIADA DA GTK EM VEZ DE IMPORTADA, e a duplicação é
-#: declarada porque não há como evitá-la sem tocar arquivo de outra frente: ela
-#: é um literal DENTRO de `_refresh_mouse_view`
-#: (`app/actions/mouse_actions.py:611`), que é método de mixin GTK e escreve num
-#: widget. Extraí-la para uma constante é o certo, e é edição naquele arquivo.
-#:
-#: ELA NÃO PODE DIVERGIR CALADA: `test_a_06_as_frases_do_mouse_sao_as_da_gtk.py`
-#: lê o fonte da GTK e reprova no dia em que a frase de lá mudar.
 PRONTO_PARA_MOUSE = "Pronto para usar como mouse"
 
 
@@ -497,7 +338,6 @@ def _o_mouse_virtual_em_uma_linha(rato: dict[str, Any]) -> str:
         return NADA_A_DIZER
     motivo = BLOQUEIO_DO_MOUSE_EM_PORTUGUES.get(bloqueio)
     if motivo is None:
-        # Motivo NOVO, de um daemon mais novo que esta tela: dizer o código cru
         # é feio e é honesto — a GTK faz o mesmo em `frase_da_recusa_do_mouse`.
         motivo = f"o Hefesto está bloqueando o mouse (motivo: {bloqueio})"
     motivo = motivo.replace("{gesto}", como_atualizar_esta_instalacao())
@@ -549,25 +389,6 @@ def _o_teclado_na_tela_em_uma_linha(tecla: dict[str, Any]) -> str:
         bruto if isinstance(bruto, bool) else None) or NADA_A_DIZER
 
 
-#: O CUSTO DE DESLIGAR O TECLADO, dito ENQUANTO ele estiver desligado — decisão
-#: do PO em 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[05]`): *"Uma frase
-#: permanente enquanto estiver desativado."*
-#:
-#: POR QUE PERMANENTE, e a razão é a pergunta que chega tarde: a dica `?` da
-#: "Função do teclado" já diz o custo ANTES do ato, e some com o ponteiro. A
-#: pergunta *"por que o L3 parou de abrir o teclado na tela?"* chega dias
-#: depois, e nesse dia a dica não está lá. A tira de estados está.
-#:
-#: A FRASE É COPIADA DA GTK, e a duplicação é declarada pelo mesmo motivo de
-#: `PRONTO_PARA_MOUSE`: o original é um literal DENTRO de
-#: `emulation_actions.on_keyboard_toggle_set` (`:1725`), método de mixin GTK que
-#: escreve num toast. Extraí-lo para uma constante é o certo, e é edição naquele
-#: arquivo — que não é desta frente. O que muda é só a moldura: lá o toast diz
-#: *"Teclado emulado desligado — saem também …"*, e aqui a linha vive no
-#: presente contínuo, porque ela fica.
-#:
-#: ELA NÃO PODE DIVERGIR CALADA: `test_a_aba_06_navegacao_fecha_as_linhas.py`
-#: lê o fonte da GTK e reprova no dia em que a lista de lá mudar.
 O_QUE_SAI_COM_O_TECLADO = ("o teclado na tela (L3/R3) e as três regiões do "
                            "touchpad")
 
@@ -591,35 +412,9 @@ def _o_custo_de_desligar_o_teclado(tecla: dict[str, Any]) -> str:
             "</span>")
 
 
-#: O ENDEREÇO DA RESSALVA DA D3 — 05/09/2026, e ela nasceu de uma promessa que
-#: esta aba fazia sem poder cumprir.
-#:
-#: A DECISÃO É D3 DO `2026-09-05-AS-TRES-DECISOES-DO-PERFIL`: `mouse`,
 #: `key_bindings`, `button_actions`, `teclado_emulado` e
-#: `suppress_desktop_emulation` ficam **globais por enquanto**, e a razão é
-#: medida, não preguiça — o `Daemon` tem UM `_mouse_device` e UM
-#: `_keyboard_device`, alimentados por um `read_state()` por tique, e o input vem
-#: sempre do controle PRIMÁRIO. Guardar por controle antes de o caminho de
-#: ENTRADA existir é o que a régua
-#: `test_perfil_por_controle_o_campo_espera_o_caminho.py` proíbe.
-#:
-#: A DECISÃO PEDE A TELA JUNTO, com estas palavras: *"onde a aba oferece um
-#: destes cinco, a linha de ressalva diz que o ajuste vale para a mesa inteira,
-#: não só para o controle selecionado. Sem isso a tela promete por-controle e
-#: entrega global — que é o mesmo defeito por outro caminho."*
-#:
-#: O `title` DA FITA NÃO BASTAVA, e é o que faz esta linha existir. Ele diz
-#: *"Não se aplica: mouse, teclado e gestos saem de um controle só"* desde
-#: 30/08 — mas é TOOLTIP: só aparece para quem passa o ponteiro, e some quando
-#: ele sai. É a mesma medição que a Onda 2 fez para o `teclado-custo`: *"a dica
-#: `?` já dizia o custo ANTES do ato e some com o ponteiro; a pergunta chega
-#: dias depois, e nesse dia esta linha ainda está aqui."* E ele diz outra coisa:
-#: de onde o comando SAI (o primário), não para onde o ajuste VAI (todos).
 ENDERECO_DA_RESSALVA = "ativacao-ressalva"
 
-#: A FRASE, e a palavra "mesa" está fora dela por ordem dela de 05/09 — *"não é
-#: pra ter mesa em nada da interface"*. O que sobra é o que ela lê sem traduzir:
-#: os três nomes que a tela mostra logo acima, e para quem o ajuste vale.
 RESSALVA_DOS_GLOBAIS = (
     "O cursor, a rolagem e o teclado são um só para o computador inteiro: "
     "mudar aqui vale para <b>todos os controles ligados</b>, e não só para o "
@@ -644,49 +439,14 @@ def _a_ressalva_dos_globais(ctx: Contexto) -> str:
     return RESSALVA_DOS_GLOBAIS if len(ctx.conectados) > 1 else NADA_A_DIZER
 
 
-#: A RAZÃO DO PORTÃO DE MODO — UMA frase, e ela serve aos DOIS caminhos: a linha
-#: permanente da tira de estados (antes do clique) e o `RuntimeError` do gesto
-#: `modo` (depois dele, quando alguém clica assim mesmo).
 #:
-#: UMA SÓ, e não duas: a tela e a recusa dizendo a mesma coisa com palavras
-#: diferentes é a doença que esta casa persegue. O gesto a levanta inteira.
-#:
-#: DECISÃO DO PO, 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[01]`): *"Apaga o
-#: interruptor e escreve ao lado, na tira de estados. É a D-03 com a D-02."* A
-#: janela antiga já faz isso — `_sync_mouse_mode_gate`
-#: (`app/actions/mouse_actions.py:299`) põe `blocked = mode != MODE_DESKTOP` e
-#: apaga o switch ANTES de qualquer clique. O que faltava aqui era o MOMENTO:
-#: a tela nova aceitava o clique e recusava por escrito, e ela gastava o clique
-#: para descobrir.
-#:
-#: A FRASE É OUTRA QUE A DA GTK, e tem de ser: `MODE_GATE_HINT` manda ir à aba
-#: **Início**, que não existe no desenho das dez — o degrau mudou para a aba
-#: **Jogar**. Reusar o módulo também não dá: `mouse_actions.py` importa GTK no
-#: topo, e os pacotes são puros de propósito.
 RAZAO_DO_PORTAO = (
-    # SEM MARCAÇÃO, e é o canal que manda: esta MESMA frase sai por dois
-    # caminhos — a dica viva `modo-portao` (que aceita HTML) e o
-    # `RuntimeError` do gesto, que `hefesto_vivo._depositar` põe na tela por
-    # `textContent`. Um `<b>` aqui apareceria como `<b>` no cartão dela. O
-    # negrito da proposta A5-026 cai por isso, e só por isso.
     "O mouse e o teclado só se ligam fora do jogo — ligar agora derrubaria o "
     "controle no meio da partida. O Modo se troca na aba Jogar.")
 
 
 def _a_razao_do_portao(estado: dict[str, Any]) -> str:
-    """Por que o "Status do Modo" vai recusar agora — ou nada a dizer.
-
-    O ENDEREÇO É UM SÓ, e é ele que faz as duas metades da D-03 nunca
-    discordarem: esta chave alimenta a LINHA da tira (alvo `html`) e, pela folha
-    da aba, o CINZA do interruptor — que é uma regra `:has()` lendo a própria
-    linha. Não há segundo campo a divergir porque não há segundo campo.
-
-    SEM ESTADO, NÃO AFIRMA. O gesto recusa dizendo que não conseguiu falar com o
-    Hefesto, e isso é resposta a um clique — não é fato sobre o portão. Apagar o
-    interruptor por falta de resposta seria a tela afirmando um bloqueio que
-    ninguém mediu, que é a regra dela de 30/08: *"se não tá mostrando agora, não
-    tem info pra mostrar"*.
-    """
+    """Por que o "Status do Modo" vai recusar agora — ou nada a dizer."""
     if not estado:
         return NADA_A_DIZER
     if mode_of_state(estado) == MODE_DESKTOP:
@@ -714,7 +474,7 @@ def _nome_do_botao(botao: str) -> str:
 
     São 22 botões em `acoes.BOTOES` e 20 nomes em `_BUTTON_LABELS`, e os dois
     que faltam são a DIREÇÃO dos analógicos. A cura mora no MOTOR
-    (`app/actions/input_actions.py:129`), não aqui — copiar duas linhas para
+    (`app/actions/input_actions.py:85`), não aqui — copiar duas linhas para
     dentro deste arquivo criaria a segunda tabela que o
     `test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela` existe para
     impedir, e a tela passaria a chamar o mesmo botão por dois nomes.
@@ -742,81 +502,33 @@ def _nome_do_botao(botao: str) -> str:
     return humanize_button(botao)
 
 
-# ---------------------------------------------------------------------------
-# A IDENTIDADE VEM DE CIMA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01
-#
-# A lei é dela: *"se no topo tá mostrando controle white player 1, então cada
-# aba vai usar os controles lá de cima. Não mistura com a info dos mockups."*
-#
-# Esta aba tinha DEZESSEIS valores de identidade cravados no HTML — dois nomes
-# de plástico no cartão, dois no `title`, dois em cada uma das duas dicas das
 # telas de botões, os dois `--plastico` das bordas e os chips da fita. Todos
-# nomeavam o controle do DESENHO enquanto a mesa dela tinha outros dois.
-#
-# AS TRÊS FUNÇÕES ABAIXO TÊM DOIS CHAMADORES E UM DONO — o mesmo arranjo de
 # `a04_iluminacao.um_botao_de_player`: o gerador `aba06.py` as chama para
-# desenhar a bancada, e o pacote as chama a cada tique para pintar a tela viva.
-# Enquanto fossem duas escritas, o desenho e o produto podiam divergir sem
-# ninguém ver — a cicatriz de 25 KB da `novo-layout/`.
-# ---------------------------------------------------------------------------
 
-#: O que a tela escreve quando a leitura não veio. VAZIO, e é a regra dela:
-#: *campo sem informação não mostra nada*. Nunca a cor do mockup — cair de volta
-#: no desenho é o defeito que esta onda inteira existe para matar.
 SEM_LEITURA = ""
 
 
 def _monta() -> Any:
-    """O `monta`, importado tarde. O `pacotes/__init__` põe `interface/` no path.
-
-    TARDE E NÃO NO TOPO: `monta` lê o `topo.html`, o `fim.html` e o SVG de
-    28 modelos no import. Um pacote é importado por teste sem janela nenhuma, e
-    pagar 4,7 MB de leitura para responder "qual é o hex do plástico" seria o
-    mesmo desperdício que `a04_iluminacao` já evita pelo mesmo caminho.
-    """
+    """O `monta`, importado tarde. O `pacotes/__init__` põe `interface/` no path."""
     import monta
 
     return monta
 
 
 def cor_do_plastico(slug: str) -> str:
-    """O hex da casca daquele modelo, LIDO do mapa — ou `""` sem leitura.
-
-    `monta.cor_da_zona` é o dono: ele lê a folha que
-    `scripts/gerar_cores_do_dualsense.py` escreveu no SVG, em vez de digitar o
-    hex. Digitá-lo aqui seria a segunda verdade que o portão
-    `check_cores_do_dualsense.py` existe para matar.
-
-    O `""` NÃO É DESISTÊNCIA: pelo rádio o mapa de canais diz que a cor **não**
-    se lê (`identidade.cor_do_aparelho`, `radio_aciona = não`), e a mesa nasce
-    sem cor até o leitor responder pelo cabo. Sem hex, o cartão fica no neutro
-    do CSS — que é exatamente o que ela pediu para um campo sem informação.
-    """
+    """O hex da casca daquele modelo, LIDO do mapa — ou `""` sem leitura."""
     if not slug:
         return SEM_LEITURA
     try:
-        # `cor_de_css` E NÃO `cor_da_zona` — 03/09/2026. Oito dos 28 modelos
         # dela não têm hexa amostrado e devolvem `url(#hachura-sem-hex)`, que
-        # o CSSOM RECUSA EM SILÊNCIO num campo de cor — e o que ficava na
-        # tela era o Cosmic Red do MOCKUP, sob um desenho que dizia outro
-        # modelo. Ver a razão inteira em `monta.cor_de_css`.
         return str(_monta().cor_de_css(slug))
     except Exception:
-        # `cor_da_zona` levanta `SystemExit` (que não é `Exception`) para um
-        # colorway que o SVG não tem — e `SystemExit` derrubaria a aba inteira
-        # por causa de um modelo novo. `BaseException` seria largo demais; o
-        # `SystemExit` entra pelo nome logo abaixo.
         return SEM_LEITURA
     except SystemExit:
         return SEM_LEITURA
 
 
-#: As zonas do desenho que CARREGAM IDENTIDADE, calculadas do mapa e não
-#: digitadas: uma zona é identidade quando o valor dela MUDA de um modelo para
-#: outro. As que não mudam — o painel, o touchpad, os analógicos, os símbolos —
-#: são pretas nos 28 e apagá-las transformaria o desenho num vulto.
 _ZONAS_DE_IDENTIDADE: frozenset[str] | None = None
-#: `colorway -> {zona: hex}`, lido uma vez da folha do SVG.
 _FOLHA: dict[str, dict[str, str]] | None = None
 
 
@@ -844,20 +556,7 @@ def _ler_a_folha() -> dict[str, dict[str, str]]:
 
 
 def colorway_do_aparelho(slug: str) -> str:
-    """O `data-colorway` daquele lugar da mesa — o id do modelo, ou `""`.
-
-    É O MESMO DADO DE `cor_do_plastico`, PELA OUTRA PORTA, e as duas portas
-    existem porque a tela precisa das duas coisas: o cartão precisa do HEX (a
-    borda é `currentColor`) e o desenho precisa do NOME (o SVG escolhe a cor por
-    `svg[data-colorway="…"]`, e não por hex). Traduzir uma na outra aqui seria
-    escrever a tabela dela de novo; ambas leem a folha que
-    `scripts/gerar_cores_do_dualsense.py` pintou no SVG.
-
-    O SLUG QUE O MAPA NÃO CONHECE VIRA `""`, e isso é a regra dela e não zelo:
-    escrever um colorway sem regra na folha deixaria o desenho no cinza cru do
-    `ds_limpo.svg` **parecendo** cor lida. `""` apaga o atributo, o que dá o
-    mesmo cinza — mas dizendo a verdade: não há informação.
-    """
+    """O `data-colorway` daquele lugar da mesa — o id do modelo, ou `""`."""
     if not slug:
         return SEM_LEITURA
     return slug if slug in _ler_a_folha() else SEM_LEITURA
@@ -925,12 +624,6 @@ def folha_do_plastico(mesa: list[dict[str, Any]], caixa: str = ".nav-ctl") -> st
     return "".join(regras)
 
 
-#: OS LUGARES QUE O DESENHO TEM. As duas páginas que chamam a
-#: `folha_do_plastico` nomeiam `p1` e `p2` (medido em 03/09/2026:
-#: `grep -o 'data-controle="p[0-9]"'` devolve os mesmos dois em
-#: `06-navegacao.html` e em `04-iluminacao.html`). Vai até `p4` porque a mesa do
-#: desenho tem quatro lugares e um dia os quatro podem ganhar nome — uma regra
-#: para um `pref` que a página não tem não casa com nada e não custa nada.
 LUGARES_DO_DESENHO = 4
 
 
@@ -967,7 +660,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:1648`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:790`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:
@@ -1029,15 +722,6 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     identidade congelada esperando alguém acreditar nela.
     """
     monta = _monta()
-    # O `Todos` E QUEM ACENDE SAEM DE `monta.escolha_da_fita`, e não de um `if`
-    # daqui. Esta aba é a segunda de TRÊS que escrevem o chip `Todos` — a régua
-    # dele mora num lugar só, senão a 06 continuaria oferecendo, com um controle
-    # na mesa, o botão que a 01 já não oferece. Ver a nota do bloco em `monta.py`.
-    #
-    # O `"todos"` É LITERAL AQUI PORQUE ELE É A ESCOLHA DESTA ABA: a fita nasce
-    # `inerte` (fora de `monta.ABAS_QUE_ESCOLHEM`) e não há gesto que a mova. É por
-    # CONSTANTE que a volta funciona sozinha — com o segundo controle de novo na
-    # mesa, este mesmo `"todos"` reacende o `Todos`.
     mostra_todos, escolhido = monta.escolha_da_fita("todos", mesa)
     chips = [f"<span>{monta.ROTULO_DA_FITA}</span>"]
     if mostra_todos:
@@ -1049,9 +733,6 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
         partes = [f'P{lugar["jogador"]}' if lugar.get("jogador") else "",
                   nome, str(lugar.get("via") or "")]
         rotulo = monta.SEPARADOR.join(p for p in partes if p)
-        # SEM O `Todos`, ALGUÉM TEM DE ACENDER. Com um controle na mesa ele é o
-        # escolhido — uma fita com um chip e nenhum aceso diria "escolha" sobre
-        # a única coisa que não se pode deixar de escolher.
         aceso = " on" if str(lugar.get("pref") or "") == escolhido else ""
         chips.append(f'<label class="chip plastico{aceso}"'
                      ' title="a borda é a cor do plástico">'
@@ -1060,22 +741,7 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
 
 
 def _linha_do_cartao(c: dict[str, Any], primario: bool, cursor: bool = False) -> str:
-    """A linha inteira do cartão: `"BT • Navega o PC"`.
-
-    ELA ERA METADE, e a metade que faltava era o TRANSPORTE — medido em
-    02/09/2026, com a foto ao lado. O desenho escreve
-    `{via} <span class="pt">•</span> {papel}` e põe o `data-campo="navega"` na
-    `<div>` que os contém; o pacote mandava só o papel. Como o piloto escreve
-    `textContent`, o primeiro tique APAGAVA o "USB •" do cartão — a tela nascia
-    dizendo por onde o controle está ligado e parava de dizer meio segundo
-    depois, sem que nada acusasse.
-
-    O `via` NÃO SE CALCULA AQUI. `mesa_viva` é o dono da regra
-    (`"USB" if transporte == "usb" else "BT"`), e ela já vem mastigada na mesa
-    que o piloto monta — repeti-la seria a segunda verdade que envelhece calada.
-    O `ctx.conectados` é a resposta CRUA do daemon e traz `transport`; a mesa
-    traz `via`. Quem entra na tela é o da mesa.
-    """
+    """A linha inteira do cartão: `"BT • Navega o PC"`."""
     return linha_do_cartao(str(c.get("via") or ""), primario, cursor)
 
 
@@ -1192,10 +858,6 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     uma opção nova por tecla que ela invente.
     """
     perfil_ = p or {}
-    # A MESMA TABELA QUE O DEVICE RECEBE — `resolver()` e este chamador leem
-    # a mesma função. Ela é privada do motor, e usá-la daqui é declarado: a
-    # alternativa seria montar as três camadas de novo aqui, que é a segunda
-    # verdade que esta casa persegue. Ver o relato desta frente.
     tabela = acoes.tabela_efetiva(
         perfil_.get("button_actions") or None,
         perfil_.get("key_bindings") or None)
@@ -1205,40 +867,15 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     }
 
 
-# ---------------------------------------------------------------------------
-# A TIRA DE AVISO SOB A TABELA — as três verdades que a tabela escondia.
-#
-# DECISÃO DO PO, 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[04]`): *"Uma tira
-# de aviso sob a tabela. O que vai ser APAGADO não mora num hover."* Ninguém
-# passa o rato onde não sabe que há algo, e as duas linhas que esta tira fecha
-# (`Nomear os botões que não digitam nada` e `Nomear os atalhos que o perfil
-# guarda e a lista não mostra`) falam justamente do que se perde.
-#
-# ELA NÃO É A FRASE DA GTK, e a diferença é um FATO medido, não estilo. A
 # `input_actions.frase_dos_atalhos_fora_da_lista` termina com *"nada nesta aba
-# os apaga"* — verdade na janela antiga, porque lá a fusão de
-# `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
-# contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:1021`, `core/acoes_de_botao.resolver`, que nunca
-# consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
-# o oposto do que este produto faz — e é a família de defeito que esta casa
-# persegue acima de todas.
-#
-# O QUE ELA **NÃO** DUPLICA: nenhum nome de botão e nenhum rótulo de tecla é
-# escrito aqui. Os nomes saem de `input_actions.humanize_button` e as teclas de
-# `input_actions.humanize_binding` — os mesmos donos que a GTK usa —, e o que
+# fábrica (`profiles/manager.py:570`, `core/acoes_de_botao.resolver`, que nunca
 # cada linha faz sai de `core/acoes_de_botao`.
 # ---------------------------------------------------------------------------
 
 
 def _colado(ligacao: Any) -> str:
-    """A ligação do perfil na forma com `+`, que é a que o produto lê de volta.
-
-    O perfil guarda combo como LISTA (`["KEY_LEFTCTRL", "KEY_W"]`) e tecla
-    solta às vezes como string. `keyboard_mappings.parse_binding` lê a forma
-    colada — um round-trip, e não uma segunda grafia.
-    """
+    """A ligação do perfil na forma com `+`, que é a que o produto lê de volta."""
     if isinstance(ligacao, (list, tuple)):
         return "+".join(str(t) for t in ligacao)
     return str(ligacao)
@@ -1270,7 +907,7 @@ def _dois_donos() -> list[tuple[str, str, str]]:
 
     Hoje isso dá um botão só — o R3, "Botão do meio" para o mouse e "Fechar o
     teclado na tela" para o teclado —, e a colisão já está escrita em
-    `core/keyboard_mappings.py:47-52`. Derivar em vez de digitar é o que faz
+    `core/keyboard_mappings.py:37-42`. Derivar em vez de digitar é o que faz
     esta tira acompanhar o dia em que um segundo botão entrar na mesma situação.
     """
     from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
@@ -1289,30 +926,10 @@ def _dois_donos() -> list[tuple[str, str, str]]:
 
 
 #: OS DOIS MAPAS QUE O `set_button_actions` RECONSTRÓI DO DE FÁBRICA, e é deles
-#: que sai o defeito medido em 04/09/2026 nesta frente:
-#:
-#:     self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items() if b not in do_mouse}
-#:     self._mapa_tap  = {b: k for b, k in EDGE_KEY_MAP.items() if b not in do_mouse}
-#:                                        (`integrations/uinput_mouse.py:315-316`)
-#:
-#: Um botão em `— Nada —` **não entra em `do_mouse`** — o `resolver()` o pula de
-#: propósito —, logo ele não é subtraído desses dois mapas e **continua
-#: emitindo o de fábrica**. Medido, com o `resolver()` e os mapas do dono:
-#:
-#:     "— Nada —" no cross    -> calou de verdade
-#:     "— Nada —" no options  -> calou de verdade
-#:     "— Nada —" no dpad_up  -> AINDA emite KEY_UP
 #:     "— Nada —" no circle   -> AINDA emite KEY_ENTER
-#:
-#: São SEIS das vinte e uma linhas: as quatro direções do d-pad, o Círculo e o
 #: Quadrado. A cura é do MOTOR (`uinput_mouse.set_button_actions` precisa saber
 #: quais botões foram calados de propósito, e hoje não sabe: `do_mouse` não
-#: distingue "não é do mouse" de "foi calado") e está no relato desta frente.
 #: Enquanto ela não vem, **a tela diz**, que é o contrário de um botão que
-#: responde calado.
-#:
-#: A REGRA É COPIADA, e a duplicação é declarada — os MAPAS são importados do
-#: dono, nunca digitados, e `test_a_aba_06_navegacao_fecha_as_linhas.py` chama o
 #: `set_button_actions` DE VERDADE e compara com o que esta função responde.
 
 
@@ -1336,15 +953,7 @@ def _o_que_a_tabela_diz_de_cada_botao(p: dict[str, Any]) -> dict[str, str]:
 
 
 def _linhas_que_nao_acendem(p: dict[str, Any]) -> tuple[list[str], list[str]]:
-    """`(as que calaram de verdade, as que o "— Nada —" NÃO calou)`.
-
-    A primeira lista tem DUAS origens, e as duas são do motor: a escolha
-    `— Nada —` que o device realmente atende, e a terceira sacola do
-    `resolver()` — os comandos sem atendente, os papéis de eixo pedidos a um
-    botão e o gatilho cuja escolha diverge do espelho dele.
-
-    A segunda é o defeito medido acima, e ela existe para a tela poder dizê-lo.
-    """
+    """`(as que calaram de verdade, as que o "— Nada —" NÃO calou)`."""
     tabela = _o_que_a_tabela_diz_de_cada_botao(p)
     escolhas = (p.get("button_actions") or None) if p else None
     mudos = {b for b in acoes.BOTOES if tabela.get(b) == acoes.TOKEN_NADA}
@@ -1357,7 +966,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:1021`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:570`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
@@ -1371,7 +980,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     que não se perde é ruído.
 
     A RESSALVA QUE A FRASE CARREGA, e ela é medida: sem device de mouse vivo o
-    `apply_button_actions` sai antes (`manager.py:1083-1088`) e nada é reescrito. Por
+    `apply_button_actions` sai antes (`manager.py:628-633`) e nada é reescrito. Por
     isso a tira diz *"quando o mouse virtual estiver de pé"* em vez de prometer
     o desastre em todo caso.
 
@@ -1404,43 +1013,9 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
-#
-# O QUE ELA FECHA: a linha `FALTA_NO_HTML` de *Editar QUAL TECLA cada botão
-# digita* (`docs/data/paridade-gtk-html.csv:208`). A janela antiga tem uma
-# coluna EDITÁVEL EM TEXTO — ela digita `Alt + Tab`, `Ctrl + Shift + F`,
 # `Super`, e `dehumanize_binding` traduz —, e a tela nova só oferecia uma LISTA
-# FECHADA de 26 ações. Tudo o que estivesse fora dela — um F5, um Ctrl + W,
-# qualquer combinação que ela invente — a GTK escrevia e o HTML não tinha como
-# escrever, por nenhuma aba.
-#
-# NENHUMA TABELA DE NOMES DE TECLA NASCE AQUI, e é a exigência da sprint com
-# todas as letras: *"uma segunda tabela de nomes de tecla é a segunda verdade
-# mais previsível deste repositório"*. São TRÊS donos, cada um respondendo o que
-# só ele sabe, e o import dos dois primeiros é TARDIO porque `input_actions`
-# puxa GTK no topo e os pacotes são puros de propósito:
-#
-#   `input_actions.humanize_binding`   token cru  -> o que ela lê
 #   `input_actions.dehumanize_binding` o que ela digita -> token cru
-#   `keyboard_mappings.parse_binding`  a FORMA (`KEY_*` ou `__…__`), e recusa
-#   `uinput_keyboard.SUPPORTED_KEYS`   o que o device virtual SABE EMITIR
-#
-# O QUARTO É O QUE FALTAVA, e sem ele a tela aceitaria calada. `parse_binding`
-# só confere o PREFIXO — `KEY_BANANA` passa por ele —, e o device
-# (`uinput_keyboard._emit_sequence_press`) faz `getattr(u, key_name, None)` e
-# **pula em silêncio** o que o módulo não conhece. Uma tecla inventada seria
-# gravada no perfil, apareceria na tela e não digitaria nada: o botão que
-# responde calado, com o dado dela no disco.
-#
-# O DOMÍNIO É DE OITO BOTÕES, E ELE É PERGUNTADO — `acoes.DOMINIO_DO_TECLADO`,
-# que o motor DERIVA dos quatro mapas do produto (hoje: `create`, `l1`, `l3`,
-# `options`, `r1` e as três regiões do touchpad). São os botões sobre os quais
-# `key_bindings` manda; nos outros catorze o que vale é o mapa fixo do
-# `UinputMouseDevice`, e escrever `key_bindings` neles seria gravar no disco uma
-# escolha que o `resolver()` não lê — a ausência de dado, que se lê como "a
 # mudança não pegou". Ver `_tabela_efetiva` em `core/acoes_de_botao.py`.
-# ---------------------------------------------------------------------------
 
 
 def _traduzir(texto: str) -> str:
@@ -1489,12 +1064,7 @@ def _desfazer_o_humanize(cru: str) -> str:
 
 
 def _teclas_que_o_device_sabe() -> frozenset[str]:
-    """O que o teclado virtual SABE EMITIR — perguntado ao dono.
-
-    `uinput_keyboard.SUPPORTED_KEYS` é a lista de capacidades que o device
-    declara ao `uinput` no `start()`. Uma tecla fora dela não é emitida: o
-    `_emit_sequence_press` faz `getattr(u, key_name, None)` e segue em frente.
-    """
+    """O que o teclado virtual SABE EMITIR — perguntado ao dono."""
     from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
 
     return frozenset(SUPPORTED_KEYS)
@@ -1527,7 +1097,7 @@ def tokens_da_tecla(texto: str) -> tuple[str, ...]:
         parse_binding,
     )
 
-    tokens = parse_binding(cru)  # ValueError com a frase do dono
+    tokens = parse_binding(cru)
     virtuais = [t for t in tokens if is_virtual_token(t)]
     if virtuais and len(virtuais) != len(tokens):
         raise ValueError(
@@ -1578,22 +1148,7 @@ def teclas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 
 
 def linhas_que_a_lista_nao_sabe_dizer(p: dict[str, Any]) -> list[tuple[str, str]]:
-    """As linhas cuja tecla o `<select>` das 22 NÃO tem como mostrar.
-
-    O DEFEITO QUE ELA NOMEIA, e ele é o preço de aceitar combinação livre: a
-    lista da tabela oferece 26 ações, e uma combinação que ela escreveu não
-    está entre elas. `acoes.rotulo()` devolve o token CRU nesse caso, o
-    `escrever()` do piloto recusa em silêncio o texto que não casa com nenhuma
-    `<option>` (`hefesto_vivo.py`, `if(!tem) return 0;`) — e o que fica na tela
-    é o rótulo que o **desenho** cravou. A linha passa a AFIRMAR uma ação que o
-    botão não faz.
-
-    ELA É DITA NA TIRA, e não curada na lista: pôr a combinação como opção nova
-    faria a lista crescer a cada tecla que ela inventasse, que é exatamente o
-    que a tela de texto existe para não fazer.
-
-    :returns: `[(botão, o que ele digita, em palavras), …]`.
-    """
+    """As linhas cuja tecla o `<select>` das 22 NÃO tem como mostrar."""
     digita = _o_que_cada_botao_digita(p)
     fora: list[tuple[str, str]] = []
     for botao in acoes.BOTOES:
@@ -1605,22 +1160,7 @@ def linhas_que_a_lista_nao_sabe_dizer(p: dict[str, Any]) -> list[tuple[str, str]
 
 
 def _o_ps_digita(token: str | None) -> bool | None:
-    """O token escolhido é coisa que o PS sabe entregar? — PERGUNTADO AO DONO.
-
-    `None` quer dizer *"não deu para perguntar"*, e é diferente de `False`: sem
-    o dono, a tira NÃO INVENTA a resposta e não escreve linha nenhuma. É a regra
-    dela de 30/08 — *"se não tá mostrando agora, não tem info pra mostrar"*.
-
-    O DONO É `daemon/subsystems/hotkey._o_ps_digita`, e é ele que o toque no PS
-    consulta de verdade (`_a_metade_da_maquina`). Copiar a regra para cá criaria
-    a segunda tabela que esta casa persegue: no dia em que o PS aprender a
-    disparar um programa, a tira continuaria dizendo que ele não sabe.
-
-    O IMPORT É TARDIO pela mesma razão de `_nome_do_botao` e
-    `_atalho_em_palavras`: os pacotes são puros de propósito — importáveis sem
-    janela e sem daemon. Medido nesta árvore: 158 ms no primeiro tique, e o
-    módulo NÃO arrasta `gi`.
-    """
+    """O token escolhido é coisa que o PS sabe entregar? — PERGUNTADO AO DONO."""
     try:
         from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
             _o_ps_digita as do_dono,
@@ -1684,16 +1224,7 @@ def _o_que_o_ps_faz(p: dict[str, Any]) -> str:
 
 
 def _aviso_da_tabela(p: dict[str, Any]) -> str:
-    """A tira sob a tabela de botões — vazia quando não há o que perder.
-
-    CINCO FRASES, e nenhuma nasce se o fato dela não existir. A tira só ocupa
-    espaço nos perfis em que há mesmo algo a dizer, que é o que a decisão do PO
-    pede: *"a tira se esconde vazia, como a de estados já faz"*.
-
-    A QUINTA É O BOTÃO PS — 06/09/2026, decisão dela na 06-Q3. Ela vem por
-    último de propósito: as quatro primeiras falam da tabela inteira, e esta
-    fala de UMA linha. Ver `_o_que_o_ps_faz`.
-    """
+    """A tira sob a tabela de botões — vazia quando não há o que perder."""
     partes: list[str] = []
     donos = _dois_donos()
     if donos:
@@ -1724,11 +1255,7 @@ def _aviso_da_tabela(p: dict[str, Any]) -> str:
             "Guardar aqui substitui o conjunto inteiro de atalhos pelo que a "
             "tabela mostra, e esses param de valer assim que o mouse virtual "
             "estiver de pé.")
-    # A SEXTA FRASE — 06/09/2026, NAVEGACAO-TECLAS-01. Ela nasce com a tela de
     # texto, e sem ela a tela de texto CRIARIA um defeito: uma combinação livre
-    # não tem `<option>` na lista de 26, o `escrever()` recusa em silêncio, e a
-    # linha fica AFIRMANDO o rótulo que o desenho cravou. Ver
-    # `linhas_que_a_lista_nao_sabe_dizer`.
     mudas = linhas_que_a_lista_nao_sabe_dizer(p)
     if mudas:
         partes.append(
@@ -1744,51 +1271,13 @@ def _aviso_da_tabela(p: dict[str, Any]) -> str:
     return "".join(f"<div>{x}</div>" for x in partes)
 
 
-#: O QUE ELA JÁ ESCOLHEU E AINDA NÃO GUARDOU: `acao-<botão>` → o rótulo que
-#: está no `<select>`. Só entram as linhas que DIFEREM do que o perfil guarda —
-#: escolher de volta o valor do perfil tira a linha daqui, e com o dicionário
-#: vazio a aba volta a ser exatamente o que era antes desta trava.
-#:
-#: DECISÃO DELA, 02/09/2026: *"o Guardar FICA. As 21 listas param de ser
-#: repintadas enquanto ela está mexendo, até guardar ou sair. **Não** vira
-#: gravação automática: ela quer escolher várias, conferir e aplicar de uma
-#: vez."*
-#:
-#: O QUE ISSO CURA, e estava medido no próprio arquivo: a pintura desfazia a
 #: escolha de quem clica em ≤1,5 s (quinze tiques de `hefesto_vivo.TIQUE_MS`),
-#: e por isso o "Guardar" NUNCA recebia uma forma diferente do perfil —
-#: ele caía sempre no ramo de "não havia o que guardar". A recusa daquele ramo
-#: ainda mandava *"troque a linha antes de clicar"*, um caminho que o mesmo
-#: arquivo declarava não existir. Agora existe.
-#:
-#: ELE É DE MÓDULO, e é de propósito: o pacote é chamado uma vez por tique e não
-#: tem onde guardar estado entre tiques. O piloto é um processo por janela e uma
-#: janela por vez — não há duas telas desta aba no mesmo processo.
 _MEXENDO: dict[str, str] = {}
 
-#: Quando a tabela foi pintada pela última vez (`time.monotonic`). É o que
-#: distingue "ela continua na aba" de "ela saiu e voltou".
 _ULTIMA_PINTURA = 0.0
 
-#: A PAUSA QUE SIGNIFICA OUTRA ABA. O tique do piloto é de 100 ms
 #: (`hefesto_vivo.TIQUE_MS`), e enquanto ela estiver nesta página o `pacote()`
-#: é chamado a cada tique. Cinco segundos sem uma chamada só acontecem se a página
-#: SAIU de cena — e voltar a ela é um documento NOVO, com os 21 `<select>` de
-#: volta no que o gerador cravou. Aí a trava tem de estar solta, senão a tabela
-#: ficaria mostrando o desenho com o perfil dizendo outra coisa.
-#:
 #: NÃO SE IMPORTA `TIQUE_MS` DAQUI: `hefesto_vivo` puxa GTK no topo, e os
-#: pacotes são puros de propósito — importáveis sem janela, testáveis sem
-#: display. O número está escrito com a conta ao lado, que é o que permite
-#: conferir a divergência se o tique mudar.
-#:
-#: O CUSTO ESTÁ DECLARADO: um daemon mudo por mais de cinco segundos também
-#: interrompe a pintura (o `_tique` do piloto volta antes de chamar o pacote), e
-#: nesse caso as escolhas pendentes são largadas como se ela tivesse saído. É o
-#: preço de não haver, hoje, um sinal de "a página recarregou" que chegue ao
-#: pacote — e ele erra para o lado seguro: a tela volta a mostrar o perfil, que
-#: é a verdade do disco, em vez de fingir uma escolha que ninguém mais está
-#: fazendo.
 PAUSA_DE_OUTRA_ABA = 5.0
 
 
@@ -1798,38 +1287,15 @@ def _largar_o_que_ela_mexeu() -> None:
 
 
 def _o_que_a_tabela_mostra(p: dict[str, Any]) -> dict[str, str]:
-    """As 21 linhas: o perfil, com as que ela está mexendo por cima.
-
-    A PINTURA NÃO PARA — ela passa a CONCORDAR com a tela, que é a única forma
-    estável de "não repintar". Um pacote que simplesmente OMITISSE as 21 chaves
-    deixaria a tabela sem dono: a página recarregada mostraria o desenho para
-    sempre, e o contador de pinturas do piloto perderia 21 endereços vivos. Aqui
-    o valor emitido é o que o `<select>` já tem, então `escrever()` devolve 0 e
-    nada pisca — e o que ela escolheu continua na tela até guardar ou sair.
-
-    A JANELA DE SAÍDA é medida pelo relógio, e não por um sinal do piloto: ver
-    `PAUSA_DE_OUTRA_ABA`.
-    """
+    """As 21 linhas: o perfil, com as que ela está mexendo por cima."""
     global _ULTIMA_PINTURA
 
     agora = time.monotonic()
     if _MEXENDO and _ULTIMA_PINTURA and agora - _ULTIMA_PINTURA > PAUSA_DE_OUTRA_ABA:
-        # ELA SAIU DA ABA. O documento que ela vê agora é outro, e nele os 21
-        # `<select>` voltaram ao que o gerador cravou — segurar as escolhas
-        # velhas por cima disso seria pintar uma decisão que ela abandonou.
         _largar_o_que_ela_mexeu()
     _ULTIMA_PINTURA = agora
     linhas = _linhas_dos_botoes(p)
-    # OS OITO CAMPOS DE TEXTO ENTRAM NA MESMA TRAVA, e é a exigência da sprint:
-    # *"um campo de texto sendo editado não pode ser reconstruído sob os dedos
-    # dela"*. Sem isto o tique de 100 ms escreveria o valor do perfil por cima
-    # da primeira letra que ela digitasse — o `escrever()` com alvo `valor` faz
-    # `el.value = t` assim que os dois diferem, e um campo em edição SEMPRE
-    # difere. O gesto `tecla-escrita` é quem anota; aqui a pintura CONCORDA.
     linhas.update(teclas_dos_botoes(p))
-    # SÓ AS QUE AINDA DIFEREM. Se o perfil já passou a dizer o que ela escolheu
-    # (o "Guardar" gravou, ou outro caminho mudou o perfil), a linha sai da
-    # trava sozinha — e a trava se esvazia sem ninguém precisar lembrar.
     for campo in list(_MEXENDO):
         if campo not in linhas or linhas[campo] == _MEXENDO[campo]:
             del _MEXENDO[campo]
@@ -1837,15 +1303,8 @@ def _o_que_a_tabela_mostra(p: dict[str, Any]) -> dict[str, str]:
     return linhas
 
 
-#: O QUE ELA ESCOLHEU NA TELA "Trocar os botões" E NÃO GUARDOU: `troca-<botão>`
-#: → o rótulo no `<select>`. É a MESMA trava do `_MEXENDO`, pela mesma decisão
-#: dela de 02/09 (*"param de ser repintadas enquanto ela está mexendo, até
-#: guardar ou sair"*), num dicionário PRÓPRIO: com um só, uma linha pendente
-#: numa tela desligaria a trava do "Guardar" da outra, e o "Guardar" de uma
-#: largaria o que ela escolheu na outra.
 _TROCANDO: dict[str, str] = {}
 
-#: Quando a troca foi pintada pela última vez — ver `PAUSA_DE_OUTRA_ABA`.
 _ULTIMA_TROCA = 0.0
 
 
@@ -1858,11 +1317,7 @@ def _rotulo_do_destino(botao: str) -> str:
 
 
 def _linhas_da_troca(p: dict[str, Any] | None) -> dict[str, str]:
-    """As linhas que a troca alcança, com o destino que o PERFIL guarda.
-
-    `Profile.remapeamento` guarda só o que troca (`None` é "sem troca
-    nenhuma"), então uma linha ausente é o "— Sem troca —" da tela.
-    """
+    """As linhas que a troca alcança, com o destino que o PERFIL guarda."""
     mapa = (p or {}).get("remapeamento") or {}
     return {
         f"{PREFIXO_DA_TROCA}{botao}": (
@@ -1904,219 +1359,71 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     cards = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
-        # A MESA É QUEM TEM O `via`. `ctx.conectados` é a resposta crua do
-        # daemon (`transport`), e a tradução para "USB"/"BT" tem dono em
         # `mesa_viva.mesa_do_estado`. Sem casa na mesa (um controle que entrou
-        # entre a montagem da mesa e este tique), a linha sai só com o papel —
-        # meia verdade, nunca um transporte inventado.
         na_mesa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
         primario = bool(c.get("is_primary"))
         cards[uniq] = {
-            # O PAPEL NO PC, e o terceiro é o da Mira na Navegação — ver
-            # `move_o_cursor` (A-MIRA-NA-NAVEGACAO-02).
             "navega": _linha_do_cartao(na_mesa, primario,
                                        move_o_cursor(c, ctx, primario)),
-            # O NOME DO APARELHO, do dono que a ROTA-A deixou pronto. Ele lê,
-            # nesta ordem, o que ELA nomeou > o modelo decodificado > o nome da
-            # mesa > o transporte sozinho — e NUNCA a posição, que foi o que
-            # fazia o mesmo controle mudar de nome quando o segundo entrava.
             "identidade": identidade_de(c, ctx.mesa),
         }
-    # A COR DA BORDA DE CADA LUGAR, na ORDEM DA MESA DO DESENHO. Vai em `mesa`
-    # e não em `colunas` porque o elemento que a recebe É o `[data-controle]`:
-    # o `achar()` do piloto varre os DESCENDENTES de um cartão, nunca o próprio
-    # cartão. Uma lista se distribui pelos elementos de mesmo endereço, na
-    # ordem — que aqui é a ordem dos quatro lugares no HTML.
-    #
-    # QUATRO ENTRADAS, SEMPRE: os dois lugares vazios recebem `""`, e `""`
-    # apaga a cor de linha e devolve a borda ao neutro do CSS. Sem as duas
-    # últimas, um lugar que ficasse vazio guardaria a cor do controle que saiu.
     plastico = [cor_do_plastico(str(m.get("cor") or "")) for m in ctx.mesa]
-    # O DESENHO DE CADA LUGAR, PELO MESMO CAMINHO E PELA MESMA ORDEM —
-    # 03/09/2026, A-COR-VEM-DO-APARELHO. O `<svg>` escolhe o modelo por
-    # `data-colorway`, e até hoje esse atributo era o do MOCKUP: com o P1 dela
-    # em White, o `<svg>` do cartão dizia `cosmic-red`.
-    #
-    # A TELA JÁ MOSTRAVA A COR CERTA, e é o fato que mais importa aqui: a
-    # `folha_do_plastico` sobrescrevia as VARIÁVEIS do modelo e o casco saía
-    # White (medido no WebKit em 03/09: `rgb(228, 224, 216)`). O que estava
-    # errado não era o pixel — era o mecanismo: as REGRAS que leem essas
-    # variáveis são `svg[data-colorway="cosmic-red"] …`, e só casavam porque o
-    # atributo do mockup tinha ficado. Ligar o atributo, que é o que a lei
     # pede, teria QUEBRADO o desenho — e foi por isso que a página passou a
-    # publicar os 28 modelos no mesmo movimento.
-    #
-    # OS QUATRO LUGARES, SEMPRE, e a razão é a mesma da linha de cima: o piloto
-    # distribui a lista pelos elementos de mesmo `data-campo` NA ORDEM do HTML.
-    # Uma lista mais curta deixaria o lugar vazio com o colorway do desenho.
     desenho = [colorway_do_aparelho(str(m.get("cor") or "")) for m in ctx.mesa]
     # QUEM NAVEGA O PC É O PRIMÁRIO, e quem o marca é o daemon (`is_primary`).
-    # O gerador tirava o MENOR número da mesa, que acerta por coincidência
-    # enquanto o P1 estiver na frente.
     chefe = next((c for c in ctx.conectados if c.get("is_primary")), None)
     do_chefe = next((m for m in ctx.mesa
                      if str(m.get("uniq") or "") == str((chefe or {}).get("uniq") or "")),
                     {}) if chefe else {}
     mesa = {
-        # A FITA DO TOPO, quando o dono dela desiste — ver `chips_da_fita`.
         "fita-chips": chips_da_fita(ctx.mesa),
         "plastico": plastico + [""] * max(0, 4 - len(plastico)),
         "desenho": desenho + [""] * max(0, 4 - len(desenho)),
-        # QUEM NAVEGA O PC, nas duas dicas das telas de botões.
         "quem-navega": rotulo_de_quem_navega(
             jogador_de(chefe) if chefe else None,
             identidade_de(chefe, ctx.mesa) if chefe else "",
             str(do_chefe.get("via") or "")),
-        # AS DUAS VELOCIDADES, do daemon — não do perfil. O perfil guarda o
-        # que ela SALVOU; o daemon diz o que está VALENDO agora, e é o
-        # segundo que a tela mostra.
         "vel-cursor": rato.get("speed"),
         "vel-rolagem": rato.get("scroll_speed"),
         "rato-despachando": bool(rato.get("despachando")),
         "gestos": len(atalhos),
         "gestos-lista": {k: v for k, v in list(atalhos.items())[:12]},
     }
-    # O "STATUS DO MODO" SÓ FALA QUANDO O DAEMON FALOU — 03/09/2026, e é a mesma
-    # trava da lista "Função do teclado" logo abaixo. Sem o bloco
-    # `mouse_emulation` a chave não é emitida, o `—` do desenho fica, e a tela
-    # não afirma lado nenhum. Emitir `Desligado` porque ninguém respondeu
-    # trocaria a mentira antiga ("Ligado" sempre) por outra.
-    #
-    # A PALAVRA SERVE AOS DOIS ELEMENTOS: o `.txt` a escreve como texto, e o
-    # rótulo acende a classe `ligado` quando ela casa com o `data-hef-quando`.
-    # É a mesma semântica dos quatro degraus da Vibração — um `data-campo`, cada
-    # elemento decidindo por si.
     if isinstance(rato.get("enabled"), bool):
         mesa["rato-ligado"] = LIGADO if rato["enabled"] else DESLIGADO
-    # AS TRÊS LINHAS DE ESTADO, e as três frases são do PRODUTO. Elas respondem
-    # o que esta aba calava e a GTK responde: *por que o cursor não anda*, *o
-    # teclado está ligado e calado agora?* e *há teclado na tela nesta máquina?*
-    # Vazias quando não há o que dizer — o `:empty` do desenho as apaga.
     mesa["rato-estado"] = _o_mouse_virtual_em_uma_linha(rato)
     mesa["teclado-bloqueio"] = _o_teclado_em_uma_linha(tecla)
     mesa["teclado-osk"] = _o_teclado_na_tela_em_uma_linha(tecla)
-    # AS TRÊS QUE A ONDA 2 ACRESCENTOU, e as três são "só quando há o que
-    # dizer": a razão do portão de modo (que também é o que APAGA o interruptor,
-    # pela folha desta aba), o custo de manter o teclado desligado, e a tira sob
-    # a tabela de botões. Emitidas em TODO tique, como as três de cima — chave
-    # ausente deixaria a frase velha na tela para sempre.
     mesa["modo-portao"] = _a_razao_do_portao(st)
     mesa["teclado-custo"] = _o_custo_de_desligar_o_teclado(tecla)
     mesa["aviso-da-tabela"] = _aviso_da_tabela(p)
-    # A RESSALVA DA D3 — 05/09/2026. Emitida em TODO tique, como as outras: a
-    # chave ausente deixaria a frase na tela depois de o segundo controle sair,
-    # e a linha passaria a ressalvar uma escolha que não existe mais.
     mesa[ENDERECO_DA_RESSALVA] = _a_ressalva_dos_globais(ctx)
-    # AS VINTE E UMA LINHAS DE *O QUE CADA BOTÃO FAZ*, do perfil dela — e elas
-    # não existiam aqui até 02/09/2026. O botão "Guardar" LIA essas linhas
-    # (`data-hef-forma`) e nada as ESCREVIA, então a tela mostrava para sempre o
-    # que o desenho escolheu. Ver `guardar_definicoes` para o que isso custava.
-    #
-    # E ELAS PARAM DE SER REPINTADAS ENQUANTO ELA ESTÁ MEXENDO — decisão dela,
-    # 02/09/2026. Ver `_o_que_a_tabela_mostra`.
     mesa.update(_o_que_a_tabela_mostra(p))
-    # AS LINHAS DA TELA "Trocar os botões" (F1-REMAPEAR, do perfil) e as dos SEIS
-    # GESTOS, que são da máquina: `_o_que_a_troca_mostra` e `_o_que_os_gestos_fazem`.
     mesa.update({**_o_que_a_troca_mostra(p), **_o_que_os_gestos_fazem()})
-    # A LISTA "Função do teclado" SÓ É REESCRITA QUANDO O DAEMON FALOU, e a
-    # ausência da chave é o que impede a mentira: sem o bloco
     # `keyboard_emulation` (daemon mudo, ou config inacessível — o `state_full`
-    # OMITE o bloco nesse caso) escrever "Desligada" afirmaria um estado que
-    # ninguém mediu. Chave ausente = a pintura não toca no `<select>`.
-    #
-    # E ela ACOMPANHA a recusa: desde 02/09/2026 a frase de um `RuntimeError`
     # chega ao cartão dela na hora (`hefesto_vivo._recusou_dizendo`, pelo
-    # `idle_add`). Escolher "Só dentro do jogo", que não tem dono, mostra o
-    # motivo E deixa a lista voltar sozinha para o que está valendo no tique
-    # seguinte. A frase do `ValueError` continua sem chegar, por contrato — e é
-    # por isso que uma opção que a tela OFERECE nunca pode cair nele.
-    #
-    # E A PALAVRA É A QUE A PÁGINA CARREGADA SABE RECEBER — 02/09/2026,
-    # corretivo. Emitir a palavra da BANCADA numa lista que só tem as antigas é
-    # escrita descartada em silêncio, e o que fica na tela é a `<option
-    # selected>` do desenho: com o teclado DESLIGADO a linha afirmava `Ligada —
-    # atalhos e teclado na tela`. Ver `PALAVRAS_DO_TECLADO`.
     if "keyboard_emulation" in st:
         mesa["teclado-estado"] = _o_teclado_em_palavras(bool(tecla.get("enabled")))
     return {
         "colunas": cards,
         "mesa": mesa,
-        # O CARTÃO VAZIO É UM SÓ NOS QUATRO LUGARES — 21/09/2026, com zero
-        # controles na mesa ela viu *"p1,p2 tão diferentes do p3 e p4"*: o P1
-        # dizia `P1 • P1 • Desconectado` com `● USB • Navega o PC` em verde, o
-        # P2 `BT • Só a janela`, e o P3 e o P4 `P3 • Desconectado` com `—`.
-        #
-        # A IDENTIDADE AQUI É SÓ O NOME: o `P{n} •` do rótulo é ESTRUTURA e mora
-        # fora do `data-campo` (`aba06.controle`), e a frase-padrão do
-        # despachante — que traz o número — o repetia. A LINHA DE ESTADO leva
-        # o travessão que o molde não escreve nela (`enderecos_que_o_texto_
-        # apaga`: ela tem a bolinha por dentro, e num lugar vazio não há
-        # bolinha a guardar).
         LUGAR_VAZIO: {"identidade": SEM_NINGUEM_AQUI, "navega": TRAVESSAO},
-        # O VERDE DE QUEM NAVEGA vai para o cartão do PRIMÁRIO, e só para ele.
-        # O gerador o crava no P1 do desenho; sem esta chave ele ficava lá com
-        # a mesa vazia, ou com outro controle no comando.
         MARCAS_DO_LUGAR: {
             "navega": [str(chefe.get("uniq") or "")] if chefe else [],
-            # O LUGAR QUE TEM DONO PERDE A CARA DE VAZIO — A-MIRA-NA-NAVEGACAO-02,
-            # 25/09/2026, medido no piloto: o P3 e o P4 nascem `nav-ctl vazia`
-            # no desenho, e o passo `1c` do piloto só tira o `off` (a palavra
-            # das outras abas). Com os quatro na mesa, o P3 e o P4 ficavam
-            # esmaecidos ao lado de «BT • Move o cursor». A classe acende nos
-            # lugares sem dono e apaga nos outros, pela mesma chave do verde.
             "vazia": sorted(TODOS_OS_LUGARES - {str(m.get("pref") or "") for m in ctx.mesa}),
         },
-        # A FOLHA VIVA DO PLÁSTICO. Ela vai por `blocos` e não por campo porque
-        # o casco do desenho é `var(--z-…)` dentro do SVG, e o piloto não tem
-        # alvo que escreva variável CSS — ver `folha_do_plastico`.
-        #
-        # SEMPRE PRESENTE, mesmo vazia: `normalizar` só deixa o `blocos`
-        # atravessar quando o dicionário não é vazio, e uma folha que somisse
-        # deixaria na tela a última cor escrita. Com a mesa vazia o valor é `""`
-        # e o `innerHTML` do `<style>` é apagado.
         "blocos": {"#plastico-vivo": folha_do_plastico(ctx.mesa)},
         "sem_dono": {},
-        # O NÚMERO SAI DOS DICIONÁRIOS, e não de uma constante escrita à mão:
-        # foi uma soma digitada (`len(cards) * 2 + 9`) que deixou a curva da aba
-        # Gatilhos fora da cobertura, e aqui ela erraria no tique em que a lista
-        # do teclado entra — o valor é condicional.
-        #
-        # E ELE DESCONTA O QUE NÃO TEM ONDE CAIR — 02/09/2026. Contar chave
-        # EMITIDA como "pintado" é a mesma confusão entre a PALAVRA e o ATO que
-        # produziu o "77%" falso desta casa: medido no mesmo dia, esta aba
-        # emitia 14 chaves e a página tinha endereço para 6. O instrumento dizia
-        # 14. Um contador que mente é pior que um campo parado.
         "cobertura": {"pintados": (sum(len(v) for v in cards.values())
                                    + len(set(mesa) - set(SEM_ENDERECO))),
                       "sem_dono": len(SEM_DONO)},
     }
 
 
-# ---------------------------------------------------------------------------
-# OS GESTOS — ver o exemplo comentado em `a04_iluminacao.py`
-#
-# ESTA ABA NÃO ENDEREÇA POR CONTROLE, e é decisão do desenho: o `title` da fita
-# diz, com todas as letras, *"Não se aplica: mouse, teclado e gestos saem de um
-# controle só"* — o primário. Nenhum gesto daqui pede `uniq`, e nenhum dos
 # métodos do daemon aceita um: `mouse.emulation.set`, `mouse.emulation.restore`,
 # `keyboard.emulation.set` e `desktop.status.set` valem para a MÁQUINA.
-#
-# DE ONDE VEM O NÚMERO DE QUEM DEPENDE DO ESTADO: do `ctx`, que é o do ÚLTIMO
 # TIQUE (100 ms, `hefesto_vivo.TIQUE_MS`). Ler o daemon a cada clique custaria um
 # `daemon.state_full` por clique (57 ms medidos, e HARM-15 já registra que ele
-# passa dos 0,25 s sob carga), e ainda assim a tela só repinta no tique.
-#
-# O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE PARAVA DE ANDAR — CURADO em 03/09/2026.
-# Dois cliques dentro do mesmo tique liam o mesmo `atual` e mandavam o mesmo alvo:
-# o segundo não movia nada. A cura é `_partir_de` — a memória do último alvo
-# pedido, largada assim que o daemon fala.
-#
-# QUEM AINDA DEPENDE DELA É O INTERRUPTOR, e só ele: as duas velocidades
-# deixaram de somar passos em 05/09/2026, quando os `-`/`+` viraram barra
-# (decisão dela). Uma barra manda o número INTEIRO — não tem de onde partir, e
-# por isso não passa por aqui. O "Status do Modo" tem UM gesto, e o segundo
-# clique dele é *desfaça*: sem a memória ele volta a ser engolido.
-# ---------------------------------------------------------------------------
 from hefesto_dualsense4unix.app.actions.mode_transition import (  # noqa: E402
     MODE_DESKTOP,
     mode_of_state,
@@ -2130,69 +1437,17 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 
 from . import gesto  # noqa: E402
 
-#: A ORIGEM É `manual` PORQUE É A MÃO DELA. `origem_do_pedido`
-#: (`daemon/ipc_handlers.py:167`) lê a AUSÊNCIA como `"profile"`, e a assimetria é
-#: de propósito — foi um cliente que só reconciliava estado, promovido a gesto
-#: humano, que devolveu o gamepad virtual com o grab pulado e pôs um "Jogador 3"
-#: fantasma na tela dela (JOGADOR-3-FANTASMA-01). Aqui é clique, logo é manual.
 MANUAL = "manual"
 
 
 def _rato(ctx: Contexto) -> dict[str, Any]:
-    """O bloco `mouse_emulation` do último tique — o que está VALENDO agora.
-
-    Ele é o do DAEMON, e não o do perfil: o perfil guarda o que ela salvou, e a
-    tela mexe no que está ligado. É a mesma escolha que a função de pintura
-    acima já fazia.
-    """
+    """O bloco `mouse_emulation` do último tique — o que está VALENDO agora."""
     return ctx.state.get("mouse_emulation") or {}
 
 
-# ---------------------------------------------------------------------------
-# O QUE ESTA ABA GUARDA NO PERFIL, E POR QUE NO CLIQUE
-#
-# DECISÃO D2, 05/09/2026 (`2026-09-05-AS-TRES-DECISOES-DO-PERFIL`):
-# **persistência no clique em toda parte, com o rodapé como rede de segurança.**
-# O requisito dela é durabilidade — *"salvar se lembra disso quando eu for jogar
-# o jogo e no dia seguinte e por diante"* —, não o gesto de salvar; e só a
-# gravação no clique sobrevive a fechar a janela sem clicar em nada.
-#
-# O QUE JÁ FUNCIONAVA, MEDIDO ANTES DE ESCREVER UMA LINHA (05/09/2026, em `HOME`
-# de mentira, ciclo inteiro: disco → ela mexe na aba → Salvar → relê o disco):
-#
-#     mouse.speed         11 → 11   SOBREVIVE   (rodapé, commit ed91c687)
-#     mouse.scroll_speed   4 →  4   SOBREVIVE
-#     mouse.enabled     True → True SOBREVIVE
-#     teclado_emulado  False → True PERDIDO
-#
-# **O `mouse` já ia ao perfil pelo Salvar e não se duplica aqui** — o que este
-# bloco acrescenta às três linhas do rato é o caminho do CLIQUE, que é o que
-# faltava. O `teclado_emulado` não tinha caminho NENHUM: `to_profile` o emite
-# por passthrough do que veio do disco (`draft_config.py:856`), então desligar o
-# teclado e clicar Salvar devolvia o valor VELHO.
-#
-# E O PRODUTO JÁ DIZIA DE QUEM ERA O TRABALHO. O comentário do passthrough, em
-# `draft_config.py`, está escrito assim: *"POR QUE PASSTHROUGH E NÃO CAMPO
-# EDITÁVEL: quem os escreve hoje é a aba 06, direto no disco, no clique."* Era
-# uma afirmação sobre um escritor que não existia; agora existe.
-#
 # DISCO, E SÓ — NUNCA `perfil.gravar_e_reaplicar`. O preço está medido em 03/09
-# no `a03_gatilhos._gravar_so_o_gatilho` e repetido em 04/09 no trilho de brilho
-# da aba 04: aquele caminho termina em `profile_switch`, que manda o daemon
-# reaplicar o perfil INTEIRO — e a barra de luz que ela DESLIGOU acende de novo,
-# sem nada na tela dizer que ia acontecer. Aqui seria pior ainda: o gesto é uma
-# BARRA, e arrastá-la desfaria, a cada passo, o que ela mexeu nas outras abas e
 # ainda não salvou. O aparelho já recebeu a mudança pelo `mouse.emulation.set`
-# logo acima; o que falta é durabilidade, e durabilidade é disco.
-# ---------------------------------------------------------------------------
 
-#: OS CAMPOS QUE ESTES GESTOS GRAVAM, e o nome de cada um dentro de
-#: `ProfileMouseConfig`. O prefixo existe para o helper distinguir, numa
-#: assinatura só, o que é do rato do que é do teclado.
-#:
-#: O `mouse_enabled` SAIU em 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01): quem
-#: grava o liga/desliga é o daemon, pelo «Status do Modo»
-#: (`Daemon.definir_o_status_da_navegacao`). Daqui só as duas barras.
 _DO_RATO: dict[str, str] = {
     "mouse_speed": "speed",
     "mouse_scroll": "scroll_speed",
@@ -2236,17 +1491,10 @@ def _secao_do_mouse(prof: Any, ctx: Contexto, campos: dict[str, Any]) -> Any:
 
 
 def _o_que_nao_guardou(nome: str) -> str:
-    """A frase de quando o aparelho mudou e o perfil não guardou. Um dono.
-
-    Dois chamadores: `_guardar_no_perfil` (as barras e a lista do teclado) e o
-    gesto `modo`, que lê a resposta do daemon (`perfil`, `gravado`) desde
-    29/09/2026. Sem nome, não há perfil ativo; com nome, o arquivo não abriu.
-    """
+    """A frase de quando o aparelho mudou e o perfil não guardou. Um dono."""
     if not nome:
         return ("mudei agora, mas não guardei: não há perfil ativo. "
                 "Escolha um na aba Perfis.")
-    # A MESMA ABERTURA DA IRMÃ DE CIMA (A5-027): a figura *"para amanhã"*
-    # sai das DUAS, ou a mesma tela diz a mesma coisa de dois jeitos.
     return (f"mudei agora, mas não guardei: não consegui abrir o "
             f"perfil “{nome}” para gravar.")
 
@@ -2296,8 +1544,6 @@ def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
                 mudanca["mouse"] = secao
         return prof.model_copy(update=mudanca) if mudanca else None
 
-    # ONDE GRAVA É A MARCA DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01):
-    # o perfil, quando ele já escolheu; o computador, quando não, e sem perfil.
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     cartao = "teclado" if "teclado_emulado" in campos else "mouse"
@@ -2346,7 +1592,7 @@ def _recusa_do_mouse(resposta: Any) -> str:
     `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
     um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
     tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
-    `ponte.resultado` (`interface/pacotes/ponte.py:264`) devolve o `result` do
+    `ponte.resultado` (`interface/pacotes/ponte.py:183`) devolve o `result` do
     daemon e levanta quando ninguém responde. Era um caminho que já existia e
     esta aba não chamava.
 
@@ -2368,7 +1614,7 @@ def _recusa_do_teclado(resposta: Any) -> str:
 
     `keyboard.emulation.set` responde com o bloco `keyboard_emulation` inteiro —
     *"para a janela não precisar de uma segunda chamada só para saber se o
-    device subiu"* (`daemon/ipc_handlers.py:7006`). Quem o traduz é
+    device subiu"* (`daemon/ipc_handlers.py:5162`). Quem o traduz é
     `emulation_actions.descrever_teclado_emulado`, o mesmo dono da linha de
     estado desta aba.
 
@@ -2390,39 +1636,10 @@ def _recusa_do_teclado(resposta: Any) -> str:
     return "o Hefesto recusou e não disse por quê"
 
 
-#: O QUE O HEFESTO JÁ CONFIRMOU E O TIQUE AINDA NÃO TROUXE, por campo:
-#: `{"speed": (o número que o tique mostrava, o que ele confirmou, o sentido do
-#: clique, o relógio da confirmação)}`.
-#:
-#: Ele existe por UM defeito medido, e some sozinho: o `ctx` é o estado do
-#: último tique (100 ms), então dois cliques dentro do mesmo tique partiam do
-#: MESMO número e pediam o MESMO alvo — o segundo clique não andava. Ver
-#: `_partir_de`.
-#:
-#: O INTERRUPTOR VIAJA COMO 0/1, e é de propósito: "Status do Modo" tinha o
-#: MESMO defeito e não tinha a cura (medido em 03/09/2026 — dois cliques no
-#: mesmo tique mandavam `enabled=True` duas vezes, e o segundo era engolido).
-#: Dois armazéns seriam dois relógios, duas expirações e duas regras de largar;
-#: um bool É um número de dois valores, e uma trava só é uma trava só.
 _PEDIDO: dict[str, tuple[int, int, int, float]] = {}
 
-#: QUANTO TEMPO A MEMÓRIA DE UM CLIQUE VALE. Ela existe para atravessar a VIAGEM
-#: INTEIRA do pedido — clicar, o daemon aplicar, e o tique seguinte LER de volta
-#: o que mudou. O tique de pintura é só a última perna dela: 100 ms
 #: (`hefesto_vivo.TIQUE_MS`). Um segundo é folga de sobra para um daemon lento
-#: sem virar uma segunda verdade sobre o valor.
-#:
-#: SEM O RELÓGIO A MEMÓRIA ATRAVESSAVA UMA VOLTA INTEIRA, e o docstring de
-#: `_partir_de` prometia o contrário (*"não há caminho em que ela sobreviva a
-#: uma discordância"*). Havia um: ela clica `+` aqui (6 → 7), volta o número
-#: para 6 pela janela GTK, e o `+` seguinte partia de 7 e pedia 8 — porque o
-#: daemon dizia 6 de novo e o sentido era o mesmo. Concordar por acaso não é
-#: concordar.
-#:
 #: NÃO SE IMPORTA `TIQUE_MS` DAQUI, pela mesma razão de `PAUSA_DE_OUTRA_ABA`:
-#: `hefesto_vivo` puxa GTK no topo e os pacotes são puros de propósito. O número
-#: está escrito com a conta ao lado, que é o que permite conferir a divergência
-#: se o tique mudar.
 MEMORIA_DE_UM_CLIQUE = 2.0
 
 
@@ -2482,12 +1699,7 @@ def _reservar(chave: str, atual: int, valor: int,
 
 def _largar_a_reserva(chave: str,
                       antes: tuple[int, int, int, float] | None) -> None:
-    """O Hefesto recusou ou ficou mudo: a reserva volta ao que era.
-
-    VOLTA AO QUE ERA, e não some: um `+` aceito seguido de um `+` recusado tem
-    de deixar o primeiro alvo de pé, senão a recusa apagaria um pedido que
-    aconteceu — e o clique seguinte pediria de novo o número que já está lá.
-    """
+    """O Hefesto recusou ou ficou mudo: a reserva volta ao que era."""
     if antes is None:
         _PEDIDO.pop(chave, None)
     else:
@@ -2500,11 +1712,11 @@ def _velocidade(p: Any, o: dict[str, Any], campo: str,
 
     SEM `enabled` DE PROPÓSITO, e é a rota que o produto criou para isto: o
     handler manda o pedido sem `enabled` para `set_mouse_speed`
-    (`daemon/ipc_handlers.py:5064`), que atualiza a config e o device vivo **sem
+    (`daemon/ipc_handlers.py:3670`), que atualiza a config e o device vivo **sem
     start/stop e sem gravar o flag**. É o que impede um ajuste de velocidade de
     RELIGAR a emulação e matar o gamepad virtual — a regressão que o
     BUG-MOUSE-GUI-SYNC-01 (A4) fechou. O `_send_mouse_param_async` da GUI
-    estável (`app/actions/mouse_actions.py:559`) manda exatamente este payload.
+    estável (`app/actions/mouse_actions.py:394`) manda exatamente este payload.
 
     ELE NÃO LÊ O `ctx`, E É A DIFERENÇA QUE A BARRA TROUXE. Os `-`/`+` liam o
     estado do último tique porque um passo precisa saber de ONDE parte — e daí
@@ -2516,7 +1728,7 @@ def _velocidade(p: Any, o: dict[str, Any], campo: str,
 
     A FAIXA NÃO É DIGITADA AQUI: quem chama passa as constantes
     `MOUSE_SPEED_MIN`/`MOUSE_SPEED_MAX`
-    (`integrations/uinput_mouse.py:78-79`), o mesmo módulo de onde
+    (`integrations/uinput_mouse.py:72-73`), o mesmo módulo de onde
     `set_speed` (`:279`) tira a sua. A barra já nasce com esses `min`/`max`
     (`aba06.trilho`), então aparar aqui é a rede para o dia em que alguém
     publicar a página sem regerar o desenho — não é a segunda verdade que esta
@@ -2568,12 +1780,12 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     dica dele diz o alcance: *"nada desta aba chega ao PC"*. Teclado é desta
     aba. O daemon tem dois interruptores separados, e o do teclado nasceu
     justamente porque desligar o mouse deixava o teclado emitindo Alt+Tab dentro
-    da partida (`daemon/ipc_handlers.py:7151`); o `desktop.status.set` aciona
+    da partida (`daemon/ipc_handlers.py:5272`); o `desktop.status.set` aciona
     os dois, numa chamada só.
 
     O MOUSE VAI PRIMEIRO de propósito. É ele que tem exclusão mútua com o
     gamepad virtual: ligá-lo PARA o vpad (`set_mouse_emulation`,
-    `daemon/lifecycle.py:2138`). Se o mouse falhar, o teclado não é tocado e
+    `daemon/lifecycle.py:1163`). Se o mouse falhar, o teclado não é tocado e
     não fica ligado sozinho num modo que não é dele. A ordem mora no daemon
     desde 29/09/2026 (`Daemon.definir_o_status_da_navegacao`).
 
@@ -2583,7 +1795,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     `enabled=false` — ler a tela inverteria o gesto no primeiro clique.
 
     O PORTÃO DO MODO É DO PRODUTO, e está copiado dele: `_sync_mouse_mode_gate`
-    (`app/actions/mouse_actions.py:299`) faz `blocked = mode != MODE_DESKTOP` e
+    (`app/actions/mouse_actions.py:205`) faz `blocked = mode != MODE_DESKTOP` e
     desliga o interruptor nos DOIS sentidos, inclusive com o modo desconhecido.
     A razão está escrita lá e é o que este gesto herda: *"Ligar o switch durante
     'Jogar pelo Hefesto' derrubava o vpad e os jogadores do co-op SEM AVISO (a
@@ -2613,25 +1825,11 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             "mouse derrubaria um jogo em andamento. Tente de novo em instantes.")
     modo_agora = mode_of_state(ctx.state)
     if modo_agora != MODE_DESKTOP:
-        # A MESMA FRASE QUE A TIRA JÁ MOSTRA — 04/09/2026. Desde que o portão
-        # ganhou linha permanente (`_a_razao_do_portao`), a recusa e o aviso
         # passaram a ser o mesmo texto: duas grafias do mesmo fato divergiriam
-        # na primeira correção, e quem clicasse leria uma coisa depois de ter
-        # lido outra ao lado do interruptor.
         raise RuntimeError(RAZAO_DO_PORTAO)
 
-    # O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE DESFAZ O PRIMEIRO — 03/09/2026, e é
-    # a cura que o `+`/`-` já tinha e este interruptor não. O `ctx` é o estado de
-    # um tique atrás, então dois cliques seguidos liam o MESMO `enabled` e mandavam
-    # `enabled=True` duas vezes: o segundo era engolido, e a tela — que desde
-    # hoje só acende pelo daemon — ficava dizendo "Ligado" sem ela ter querido.
-    # Ver `_partir_de`, com `sentido=0`: o interruptor tem um gesto só.
     ligado = bool(_rato(ctx).get("enabled"))
     novo = not bool(_partir_de("modo", int(ligado), 0))
-    # A RESERVA COBRE SÓ O MOUSE, e é onde ela tem de estar: a memória espelha
-    # `mouse_emulation.enabled`, que é o que `_rato` lê no clique seguinte. Se o
-    # TECLADO falhar depois, o mouse já mudou — largar a reserva ali faria o
-    # próximo clique repetir o pedido que o mouse já atendeu.
     reserva = _reservar("modo", int(ligado), int(novo), 0)
     try:
         try:
@@ -2640,11 +1838,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         except RuntimeError as erro:
             raise RuntimeError(
                 "o Hefesto não respondeu — o mouse ficou como estava") from erro
-        # O MOTIVO DA RECUSA CHEGA À TELA — 03/09/2026, e segue chegando: o
-        # bloco `mouse_emulation` da resposta leva o `status` e o `bloqueio` da
         # recusa, na forma que o `mouse.emulation.set` devolvia. Sem o bloco, a
-        # resposta inteira é lida como a do mouse: um `failed` sem lado não
-        # passa calado como se tivesse ligado.
         corpo = resposta if isinstance(resposta, dict) else {}
         recusa = _recusa_do_mouse(corpo.get("mouse_emulation", corpo))
         if recusa:
@@ -2654,36 +1848,14 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         raise
     if (corpo.get("keyboard_emulation") or {}).get("status") == "failed":
         raise RuntimeError(f"o mouse mudou e o teclado não: {_recusa_do_teclado(corpo)}")
-    # O APARELHO MUDOU E O PERFIL NÃO GUARDOU: o canal do AVISO, nunca o da
-    # recusa (ver `_guardar_no_perfil`). Um daemon que não diz `gravado` não é
-    # lido como falha de gravação.
     if corpo.get("gravado") is False:
         return {"recado": _o_que_nao_guardou(str(corpo.get("perfil") or ""))}
     return None
 
 
-#: O QUE CADA OPÇÃO DA LISTA MANDA FAZER. A chave é a palavra que DISTINGUE uma
-#: das outras duas, e não mais a primeira: com as três palavras dela, duas
-#: começam por "só" — casar pela primeira faria "Só dentro do jogo" e "Só fora
-#: do jogo" virarem a mesma escolha, e viraria CALADO.
-#:
-#: A busca é por palavra INTEIRA no texto da opção, em minúsculas, o que deixa o
-#: gesto sobreviver a uma reescrita do resto da frase. Casar a frase toda
-#: quebraria no dia em que alguém melhorasse o texto da tela — e um `<select>`
-#: cujo valor não casa com nada simplesmente não faz nada.
-#:
-#: `None` é a opção que a tela oferece e o produto NÃO tem. Ela não vira `False`
-#: nem `True` por conveniência: ver `teclado()`.
 _ESCOLHA_DELA: dict[str, bool | None] = {
     "fora": True, "desativado": False, "dentro": None}
 
-#: OS SINÔNIMOS DA TRAVESSIA SAÍRAM — 03/09/2026, e foi a régua que mandou.
-#:
-#: Enquanto a bancada tinha as três palavras dela e a página publicada tinha as
-#: antigas, este mapa acrescentava `ligada`/`desligada` ao `_ESCOLHA_DELA` para
-#: as opções da tela DELA continuarem clicáveis. A 06 foi publicada, o
-#: `test_os_sinonimos_da_travessia_tem_prazo` ficou vermelho nomeando o que
-#: apagar, e é isto: `_ESCOLHA` volta a ser a decisão dela, sem tradução.
 _ESCOLHA: dict[str, bool | None] = _ESCOLHA_DELA
 
 
@@ -2693,7 +1865,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     O VALOR VEM EM `valor`, E ISSO É O QUE MUDOU DESDE A PRIMEIRA LEVA: o
     ouvinte do piloto passou a escutar `change` além de `click` e a mandar o
-    `value` do alvo (`hefesto_vivo.py:196` e `:230`). Antes só chegava `texto`,
+    `value` do alvo (`hefesto_vivo.py:75` e `:230`). Antes só chegava `texto`,
     que num `<select>` é a lista INTEIRA de opções concatenada — foi por isso
     que esta lista ficou sem dono na primeira leva, e não por falta de método.
 
@@ -2707,7 +1879,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     da casa, não uma falha desta ligação:
 
     * "Só fora do jogo" → `enabled=True`; "Desativado" → `enabled=False`. O
-      handler (`daemon/ipc_handlers.py:5129`) só lê `enabled`, e ele é bool.
+      handler (`daemon/ipc_handlers.py:3732`) só lê `enabled`, e ele é bool.
     * "Só dentro do jogo" **não existe do outro lado**, e nem poderia: ele é o
       INVERSO de tudo o que o produto faz hoje.
 
@@ -2716,12 +1888,12 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     *"'Só dentro do jogo' já existe, e é o `suppress_desktop_emulation`"*. **Os
     dois estão invertidos**, e a medição é de três leituras:
 
-    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1818`) diz, no
+    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1215`) diz, no
        próprio comentário: *"True = ativar o perfil suprime a emulação de
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
        jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:3130`) recebe esse
+    2. `apply_profile_suppression` (`daemon/lifecycle.py:1976`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
        desktop quando um jogo assume: `_jogo_no_controle_do_desktop`
@@ -2738,15 +1910,15 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:2100`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1137`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:2522`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1496`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
-    guarda está em `lifecycle.py:6609`, no `if not gamepad_dispatched`. Copiar o
+    guarda está em `lifecycle.py:4307`, no `if not gamepad_dispatched`. Copiar o
     portão daqui bloquearia, dentro do jogo, o único interruptor que existe
     para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
     curar (queixa dela, 29/07).
@@ -2769,7 +1941,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     E ELE PASSOU A LEMBRAR — 05/09/2026, e este era o buraco INTEIRO desta aba.
     `keyboard.emulation.set` grava na flag GLOBAL da sessão
-    (`utils/session.py:416`), nunca no perfil; e `DraftConfig.to_profile` emite
+    (`utils/session.py:306`), nunca no perfil; e `DraftConfig.to_profile` emite
     `teclado_emulado` por PASSTHROUGH do que veio do disco. Medido no ciclo
     completo em `HOME` de mentira: com o perfil dizendo `True` e ela escolhendo
     a opção `TECLADO_DESATIVADO`, o Salvar do rodapé devolvia **`True`** — o
@@ -2799,9 +1971,6 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     except RuntimeError as erro:
         raise RuntimeError(
             "o Hefesto não respondeu — o teclado ficou como estava") from erro
-    # O MOTIVO CHEGA À TELA — 03/09/2026. O `chamar` devolvia `True` para um
-    # `{"status": "failed"}` e a lista voltava sozinha no tique seguinte, sem
-    # uma palavra: ela lia "não pegou" e não sabia por quê.
     if isinstance(resposta, dict) and resposta.get("status") == "failed":
         raise RuntimeError(
             f"o teclado ficou como estava: {_recusa_do_teclado(resposta)}")
@@ -2823,13 +1992,13 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     E A PARIDADE COM A JANELA GTK FECHOU NO MESMO MOVIMENTO: lá esta linha é um
     `Gtk.Scale` de `mouse_speed_adj` (`gui/main.glade:79`, 1..12, passo 1), que
     é a MESMA faixa que a barra oferece agora — porque as duas leem o dono
-    (`integrations/uinput_mouse.py:78`). Ver `docs/data/paridade-gtk-html.csv`,
+    (`integrations/uinput_mouse.py:72`). Ver `docs/data/paridade-gtk-html.csv`,
     linha "Velocidade do cursor".
 
     O ALCANCE É O DE UM NÚMERO SÓ, e a medição é de 01/09: `mouse_speed` move o
     analógico esquerdo **e** o cursor do touchpad — `emit_touchpad_move` escala
     por `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-    (`integrations/uinput_mouse.py:517`).
+    (`integrations/uinput_mouse.py:440`).
 
     E ELE PASSOU A DURAR ALÉM DA JANELA — 05/09/2026, decisão D2. Até aqui o
     número ia ao daemon e ao `session.json`, e o perfil só o recebia se ela
@@ -2844,26 +2013,7 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
 
 @gesto("06-navegacao.html", "vel-rolagem", grava="gravar_pelo_gesto")
 def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A barra da Velocidade da rolagem, arrastada. `scroll_speed`.
-
-    Mesma rota speed-only do vizinho, e o mesmo motivo — ver :func:`_velocidade`.
-    O que muda é o alcance: `scroll_speed` multiplica o passo do analógico
-    DIREITO em `_emit_scroll` (`integrations/uinput_mouse.py:497`) e nada mais —
-    o touchpad não rola.
-
-    A FAIXA DELE É OUTRA, e o dono é o mesmo: `SCROLL_SPEED_MIN`/`MAX` (1..5,
-    `uinput_mouse.py:79`), contra os 12 do cursor. O daemon apara com as mesmas
-    constantes (`daemon/lifecycle.py:1964` e `:2334`), e o `GtkAdjustment` da
-    janela estável publica os mesmos limites (`gui/main.glade:87`).
-
-    FATO SUBSTITUÍDO — 03/09/2026. Esta frase estava truncada no meio e afirmava
-    que a dica da tela dizia *"De 1 a 10"* nas duas linhas *"e nas duas está
-    errada"*. Caducou: `aba06.D_VEL` e `aba06.D_ROL` LEEM a faixa do dono, e a
-    página publicada diz "De 1 a 12" no cursor e "De 1 a 5" na rolagem.
-
-    ELE TAMBÉM DURA ALÉM DA JANELA desde 05/09/2026 — mesma decisão D2 do
-    vizinho, mesmo caminho (`_guardar_no_perfil`).
-    """
+    """A barra da Velocidade da rolagem, arrastada. `scroll_speed`."""
     alvo = _velocidade(p, o, "scroll_speed", SCROLL_SPEED_MIN, SCROLL_SPEED_MAX,
                        "a velocidade da rolagem")
     recado = _guardar_no_perfil(ctx, mouse_scroll=alvo)
@@ -2886,7 +2036,7 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
 
     SEM ELE A ESCOLHA NÃO CHEGAVA AQUI, e a medição é do mesmo dia: o ouvinte do
     piloto só olha um alvo que case com o `closest` de `manda_do_alvo`
-    (`hefesto_vivo.py:367`), e os 21 `<select>` tinham só `data-campo`,
+    (`hefesto_vivo.py:189`), e os 21 `<select>` tinham só `data-campo`,
     `data-linha` e `data-hef-alvo`. O `change` morria no navegador:
 
         ANTES  (o que a pintura pôs) : Botão direito
@@ -2924,8 +2074,6 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     do_perfil = _linhas_dos_botoes(
         perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))
     if do_perfil.get(campo) == rotulo:
-        # ELA VOLTOU AO QUE O PERFIL JÁ GUARDA. Não há nada a segurar, e segurar
-        # assim mesmo deixaria a trava presa por uma escolha que não é escolha.
         _MEXENDO.pop(campo, None)
     else:
         _MEXENDO[campo] = rotulo
@@ -2934,21 +2082,7 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
 
 @gesto("06-navegacao.html", "fechar-definicoes")
 def fechar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O fechar e o "Cancelar" da tela de definições: LARGAM o que ela não guardou.
-
-    Este é o "sair" da decisão dela — *"até guardar ou sair"*. Os dois botões
-    fecham a pop-up sozinhos, pelo `:target` do CSS; o que faltava era o Python
-    saber que ela desistiu. Sem isso a trava das 21 linhas ficaria presa depois
-    do "Cancelar", e a tela continuaria mostrando escolhas que ninguém vai
-    guardar.
-
-    ELE DEVOLVE A TABELA DO PERFIL na hora, e não espera o tique: um "Cancelar"
-    que só desfaz meio segundo depois deixa a pessoa vendo a própria escolha
-    fantasma na reabertura da tela.
-
-    SEM PERFIL ATIVO ele ainda solta a trava — largar não depende de haver o que
-    ler — e devolve o de fábrica, que é o que `_linhas_dos_botoes({})` dá.
-    """
+    """O fechar e o "Cancelar" da tela de definições: LARGAM o que ela não guardou."""
     _largar_o_que_ela_mexeu()
     return {"mesa": _linhas_dos_botoes(
         perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
@@ -2993,7 +2127,7 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     trava; o `change` que vem depois a atualiza com o texto final.
 
     A RECUSA É `RuntimeError`, e não `ValueError`, de propósito: o
-    `_recusou_dizendo` do piloto (`hefesto_vivo.py:3726`) guarda a classe da
+    `_recusou_dizendo` do piloto (`hefesto_vivo.py:2786`) guarda a classe da
     exceção no relato, e `ValueError` é a linguagem de quem programa. Desde
     13/09/2026 nenhuma das duas chega à tela: a combinação que ela digitou e o
     produto não sabe digitar pisca a recusa no campo (FRASES-E-DICAS-01).
@@ -3011,11 +2145,6 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
             f"tecla-escrita: o clique não disse qual botão (veio {campo!r}). O "
             f"`data-campo` de cada campo é `{PREFIXO_DA_TECLA}<botão>`, e ele "
             "vem do gerador.")
-    # O TEXTO NÃO É APARADO AQUI, e a diferença é de um espaço que ELA está
-    # digitando: com `Ctrl + ` no campo, guardar `Ctrl +` na trava faz a pintura
-    # do tique seguinte reescrever o campo — e o cursor SALTA para antes do
-    # espaço, no meio da combinação. Quem apara é `tokens_da_tecla`, na
-    # tradução, que é onde aparar não mexe no que ela vê.
     texto = str(o.get("valor") or "")
     try:
         tokens = tokens_da_tecla(texto)
@@ -3024,23 +2153,13 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
         raise RuntimeError(
             f"{_nome_do_botao(botao)}: {erro} O que estava guardado continua "
             "valendo — nada foi gravado.") from erro
-    # O TEXTO QUE FICA NA TRAVA É O **DELA**, e não a volta do round-trip: ela
-    # pode escrever `ctrl+w` ou `KEY_LEFTCTRL+KEY_W`, e reescrever o campo com a
-    # forma canônica no meio da digitação seria mexer no que ela está fazendo.
-    # A canônica aparece no tique seguinte ao "Guardar", que é quando o perfil
-    # passou a dizê-la.
     _MEXENDO[campo] = texto
     return {"mesa": {campo: texto}} if tokens or not texto else None
 
 
 @gesto("06-navegacao.html", "fechar-teclas")
 def fechar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O fechar e o "Cancelar" da tela de teclas: LARGAM o que ela não guardou.
-
-    Mesmo papel do `fechar-definicoes`, e o mesmo motivo: sem ele a trava dos
-    oito campos ficaria presa depois de ela desistir, e a tela continuaria
-    mostrando um texto que ninguém vai gravar.
-    """
+    """O fechar e o "Cancelar" da tela de teclas: LARGAM o que ela não guardou."""
     _largar_o_que_ela_mexeu()
     return {"mesa": teclas_dos_botoes(
         perfil.ativo_que_vale((ctx.state or {}).get("active_profile")))}
@@ -3160,15 +2279,6 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             return None
         return prof.model_copy(update={"key_bindings": novo})
 
-    # A COMPARAÇÃO É DIRETA, e é o Python que já separa os três estados: `None`
-    # (herda), `{}` (ela esvaziou tudo) e um dicionário. `None == {}` é falso, e
-    # é o que impede este ramo de confundir "herda" com "vazio" — a mesma
-    # distinção do esquema e a mesma que `resolve_key_bindings` aplica.
-    #
-    # NADA A GRAVAR **É UM DESFECHO, E ELE FALA**, pela mesma correção de
-    # 02/09/2026 que o `guardar_definicoes` carrega: um `return` seco aqui seria
-    # o botão que responde calado. E gravar o idêntico não é de graça — trocaria
-    # a data do arquivo e faria o daemon reaplicar um perfil igual, o que um
     # `profile.switch` no meio de uma partida cobra.
     onde, _novo = gravar_pelo_gesto("teclado", nome, _com_as_teclas,
                                     origem="interface-nova")
@@ -3178,11 +2288,7 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             f"não havia o que guardar — {_quem_guarda(onde, nome)} já digita "
             "exatamente o que estes campos mostram. Está guardado. Para mudar "
             "alguma coisa, escreva outra tecla e clique aqui de novo.")
-    # A LISTA AO LADO PODE ESTAR MASCARANDO O QUE ELA ACABOU DE ESCREVER, e a
     # tela DIZ em vez de gravar por cima: `button_actions` é a camada de cima
-    # (`acoes.tabela_efetiva`), então uma linha escolhida na tabela vence a
-    # tecla escrita aqui. Apagar a escolha da tabela de carona seria desfazer,
-    # em silêncio, um clique que ela deu na outra tela.
     escolhas = visto.get("escolhas") or {}
     mascarados = sorted(b for b, t in escritos.items()
                         if b in escolhas and "+".join(t) != str(escolhas[b]))
@@ -3236,9 +2342,6 @@ def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     de_fabrica = acoes.padrao()[botao].split("+")
     visto: dict[str, Any] = {}
 
-    # AS DUAS CAMADAS SÃO DE DOIS CARTÕES (a tecla é do «Teclado», a escolha
-    # da lista é do «Mouse»), e cada uma grava onde a marca do cartão dela
-    # diz: um perfil pode sobrepor uma e não a outra.
     def _a_tecla_de_fabrica(prof: Any) -> Any:
         atalhos = _atalhos_de_hoje(prof)
         visto["antes"] = list(atalhos.get(botao) or ())
@@ -3262,9 +2365,6 @@ def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     antes = visto.get("antes") or []
     tirado = visto.get("tirado")
     if not visto.get("mudou_tecla") and tirado is None:
-        # NADA A FAZER **É UM DESFECHO, E ELE FALA** — a mesma correção de
-        # 02/09/2026 que o `padrao_definicoes` carrega: um `return` seco aqui
-        # seria indistinguível de um botão que mentiu.
         _MEXENDO.pop(f"{PREFIXO_DA_TECLA}{botao}", None)
         raise RuntimeError(
             f"não havia o que voltar — {_nome_do_botao(botao)} já está no de "
@@ -3332,13 +2432,7 @@ def _o_desenho_congelado(diferentes: dict[str, str]) -> dict[str, tuple[str, str
 
 
 def _frase_do_congelado(congelado: dict[str, tuple[str, str]]) -> str:
-    """O que NÃO foi gravado e por quê — a frase vai para a tela dela.
-
-    RECUSAR DIZENDO É OBRIGATÓRIO nesta casa, e aqui a recusa é PARCIAL: o resto
-    da forma foi gravado. Engolir a linha em silêncio trocaria um defeito por
-    outro — o produto deixaria de estragar o perfil e passaria a não contar o
-    que ignorou.
-    """
+    """O que NÃO foi gravado e por quê — a frase vai para a tela dela."""
     partes = []
     for botao, (de_fabrica, da_tela) in sorted(congelado.items()):
         rotulo_certo = acoes.ACOES.get(de_fabrica, ("", de_fabrica))[1]
@@ -3356,11 +2450,7 @@ def _frase_do_congelado(congelado: dict[str, tuple[str, str]]) -> str:
 
 
 def _perfil_ativo_ou_recusa(ctx: Contexto) -> str:
-    """O nome do perfil ativo, ou a recusa com o motivo.
-
-    OS ATALHOS SÃO DO PERFIL, não da máquina (`profiles/schema.py`), e essa é a
-    frase que a recusa precisa carregar: sem ela, "não deu" vira mistério.
-    """
+    """O nome do perfil ativo, ou a recusa com o motivo."""
     nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         raise RuntimeError(
@@ -3370,14 +2460,7 @@ def _perfil_ativo_ou_recusa(ctx: Contexto) -> str:
 
 
 def _nome_do_ativo_ou_nada(ctx: Contexto) -> str:
-    """O nome do perfil ativo, ou ``""``.
-
-    Para os gestos dos cartões «Mouse» e «Teclado», que são do computador
-    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): sem perfil ativo, eles
-    gravam no computador, e não há o que recusar. A troca de botões e o
-    Point-and-click continuam do jogo, e recusam por
-    :func:`_perfil_ativo_ou_recusa`.
-    """
+    """O nome do perfil ativo, ou ``""``."""
     return perfil.nome_do_ativo(ctx.state).strip()
 
 
@@ -3487,16 +2570,9 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     de_fabrica = acoes.padrao()
     diferentes = {b: a for b, a in escolhas.items() if de_fabrica.get(b) != a}
-    # O DESENHO CONGELADO NÃO É ESCOLHA DELA — 02/09/2026. Ver
-    # `_o_desenho_congelado`: a linha cuja opção de fábrica a página PUBLICADA
-    # não sabe dizer abre no rótulo mais próximo, e recolhê-la aqui gravava no
-    # perfil ATIVO uma troca de comportamento que ela não pediu.
     congelado = _o_desenho_congelado(diferentes)
     for botao in congelado:
         del diferentes[botao]
-    # A FRASE VIAJA COM TODOS OS DESFECHOS, e não só com o que grava: os dois
-    # ramos de recusa abaixo também precisam dizê-la, senão a linha some do
-    # relato exatamente nos casos em que nada mais é dito.
     aviso = _frase_do_congelado(congelado) if congelado else ""
 
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
@@ -3520,28 +2596,11 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     onde, _gravado = gravar_pelo_gesto("mouse", nome, _com_as_linhas,
                                        origem="interface-nova")
-    # NADA A GRAVAR **É UM DESFECHO, E ELE FALA** — 02/09/2026, corretivo. Aqui
-    # havia um `return` seco, e ele era o outro lado da recusa logo abaixo: a
-    # trava manda "espere a tabela se preencher e clique de novo", e o segundo
-    # clique caía exatamente NESTE `return` — sem gravar, sem chamar e sem uma
-    # palavra. Encenado com dublê de disco e ponte muda:
-    #
-    #     1º clique (tabela ainda no desenho)  → RuntimeError, com a frase
-    #     2º clique (tabela cheia, = ao perfil) → voltou SEM levantar, gravou 0
-    #
-    # Uma recusa que INSTRUI a repetir o gesto e depois não responde nada é pior
-    # que uma recusa seca: ela promete que a segunda tentativa funciona. E um
-    # gesto que devolve `None` não toca o DOM (`hefesto_vivo._deu_certo`), logo
-    # o segundo clique era o botão que responde calado — o defeito que esta casa
-    # mais persegue.
     if visto.get("desfecho") == "igual":
         guardadas = (f"nenhuma escolha sua: as {len(acoes.BOTOES)} linhas estão "
                      "no de fábrica"
                      if not novo else
                      f"{len(novo)} escolha(s) sua(s)")
-        # NADA PENDENTE: a tela e o disco dizem a mesma coisa, logo não há
-        # escolha em curso a segurar. Soltar aqui é o que impede a trava de
-        # ficar presa por uma linha que ela desfez à mão.
         _largar_o_que_ela_mexeu()
         raise RuntimeError(
             f"não havia o que guardar — {_quem_guarda(onde, nome)} já tem "
@@ -3549,58 +2608,21 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "alguma coisa, troque a linha e clique aqui de novo; para voltar "
             "tudo ao de fábrica, use o “Voltar ao padrão” ao lado."
             + (f" E {aviso}" if aviso else ""))
-    # A TRAVA CONTRA O APAGADOR — 02/09/2026. "Nada diferente do de fábrica" só
-    # quer dizer "ela zerou as 21 linhas" DEPOIS que as 21 linhas mostraram o
-    # que o perfil guarda. Elas mostram desde que a página foi publicada, mas
-    # não no primeiro instante: entre a carga e o primeiro tique há 100 ms
     # (`hefesto_vivo.TIQUE_MS`) em que a tela ainda é o desenho, e nessa janela
-    # esta forma quer dizer outra coisa — *o piloto releu o desenho*.
-    #
-    # E ZERAR TEM BOTÃO PRÓPRIO, a dois centímetros: "Voltar ao padrão"
-    # (`padrao-definicoes`), que zera dizendo e ainda pede confirmação. Um
-    # "Guardar" que apaga em silêncio é o botão que responde calado — o defeito
-    # que esta casa mais persegue.
-    #
-    # E ELA DEIXOU DE SER CEGA — 02/09/2026, segunda correção. A trava não tinha
-    # como distinguir *"ela zerou as 21 linhas"* de *"o piloto releu o desenho"*,
-    # e por isso recusava as duas. Com a decisão dela sobre o repinte, a
-    # diferença passou a estar ESCRITA: `_MEXENDO` só tem linha que ELA trocou,
-    # pelo gesto `linha-de-botao`. Vazio, a forma é o que a pintura pôs — e a
-    # trava vale. Cheio, a forma é escolha dela — e zerar de propósito é um
-    # pedido legítimo, que o "Guardar" atende.
-    #
-    # ISSO CURA A FRASE QUE ENSINAVA UM CAMINHO INEXISTENTE. A recusa mandava
-    # *"espere a tabela se preencher e clique de novo"*, e trocar a linha nunca
-    # chegava ao Guardar: o tique reescrevia a escolha em ≤1,5 s. Agora chega.
     if visto.get("desfecho") == "trava":
-        # A CONTA SAIU — A5-032, aprovada por ela em 11/09/2026. Ela dizia "as
-        # 21 linhas" (ou "as 20 restantes", quando o desenho congelado tirava
-        # alguma da forma), e a frase de agora não afirma número nenhum: "a
-        # tela está no de fábrica" vale nos dois casos, e era só para os dois
-        # caberem juntos que a conta existia.
         raise RuntimeError(
             "não guardei: a tela está no de fábrica e "
             f"{_quem_guarda(onde, nome)} guarda "
             f"{len(visto['guardadas'])} escolha(s) sua(s) — gravar isto as "
             "apagaria. Espere a tabela se preencher e tente de novo."
             + (f" E {aviso}" if aviso else ""))
-    # O QUE ESTE CLIQUE VAI FAZER PARAR DE VALER foi contado ANTES da gravação,
-    # dentro de `_com_as_linhas` — 04/09/2026, e é a metade dita do defeito
-    # §3-1: o recado fala do que ESTE gesto trocou, e não do estado que sobrou.
     perdidos = visto.get("perdidos") or []
     perfil.reaplicar(nome, ctx, p)
-    # GUARDADO É O FIM DA EDIÇÃO. A partir daqui o perfil diz o que a tela diz,
-    # e o tique volta a mandar na tabela — que é a outra metade de *"até guardar
-    # ou sair"*.
     _largar_o_que_ela_mexeu()
 
     _, _, sem_dono = acoes.resolver(novo)
     recados = []
     if perdidos:
-        # NOMEAR O QUE SE PERDE É O MÍNIMO, e o silêncio aqui era o defeito
-        # inteiro: o perfil continua MOSTRANDO os dois campos, como se os dois
-        # valessem, e o efeito de `key_bindings` morre na próxima ativação sem
-        # uma palavra. A cura de verdade é `resolver()` herdar `key_bindings`, e
         # ela mora em `core/acoes_de_botao.py` — está no relato desta frente.
         recados.append(
             "guardei, e estes atalhos que você escreveu na janela antiga param "
@@ -3629,7 +2651,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
 
     O QUE ELE FAZ: grava `key_bindings = None` no perfil ATIVO e manda o daemon
     reaplicá-lo. `None` não é "vazio" — o esquema o define como *"herda
-    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1731`), e `{}` é
+    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1172`), e `{}` é
     outra coisa (teclado silencioso). Escrever `{}` aqui devolveria um controle
     MUDO com o botão dizendo "de fábrica".
 
@@ -3637,9 +2659,9 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
     no fonte, em 01/09/2026:
 
         9 linhas   `key_bindings` as alcança — l1, r1, l3, r3, options, create
-                   e as três regiões do touchpad (`core/keyboard_mappings.py:41`)
+                   e as três regiões do touchpad (`core/keyboard_mappings.py:36`)
         12 linhas  mapas FIXOS do produto — `BUTTON_TO_UINPUT`, `DPAD_TO_KEY` e
-                   `EDGE_KEY_MAP` (`integrations/uinput_mouse.py:93,99,105`),
+                   `EDGE_KEY_MAP` (`integrations/uinput_mouse.py:78,99,105`),
                    mais o L2/R2 e a DIREÇÃO dos analógicos, que binding nenhum
                    alcança
 
@@ -3701,31 +2723,16 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
                                 origem="interface-nova")
     gravar_pelo_gesto("mouse", nome, _sem_as_linhas, origem="interface-nova")
     # OS DOIS CAMPOS, e não só um — 01/09/2026, quando o `button_actions`
-    # nasceu. O perfil passou a guardar o que cada botão faz em DOIS lugares:
-    # o `key_bindings` (as nove teclas, da FEAT-KEYBOARD-PERSISTENCE-01) e o
     # `button_actions` (as vinte e uma linhas da tela). Um "Voltar ao padrão"
-    # que zerasse só o primeiro deixaria a tabela metade de fábrica e metade
-    # não — e o botão diria "de fábrica" sobre isso.
     if not visto.get("mudou"):
-        # JÁ ESTÁ DE FÁBRICA. Gravar de novo trocaria a data do arquivo e faria
-        # o daemon reaplicar um perfil idêntico — barulho sem efeito, e um
         # `profile.switch` no meio de uma partida não é de graça. **Mas não
-        # fazer nada não é não dizer nada:** até 02/09/2026 este ramo era um
-        # `return` seco, e a régua do aparelho o lia como "disse aplicado e
-        # nada mudou" — indistinguível de um botão que mentiu. Agora ele
-        # RECUSA DIZENDO, que é o desfecho verdadeiro: não havia o que voltar.
-        # Nada é gravado e o daemon continua sem ser incomodado.
         _largar_o_que_ela_mexeu()
         raise RuntimeError(
             f"não havia o que voltar — {_quem_guarda(onde, nome)} já está no de "
             f"fábrica nas {len(acoes.BOTOES)} linhas de o que cada botão faz. "
             "Não gravei nada e não incomodei o daemon.")
-    # O QUE ELE APAGA foi contado ANTES de apagar, dentro de `_sem_as_teclas`.
     atalhos = visto.get("atalhos") or {}
     perfil.reaplicar(nome, ctx, p)
-    # "VOLTAR AO PADRÃO" TAMBÉM É FIM DE EDIÇÃO: o perfil foi zerado, e segurar
-    # escolhas pendentes por cima disso faria a tabela mostrar o contrário do
-    # que o botão acabou de fazer.
     _largar_o_que_ela_mexeu()
     if not atalhos:
         return None
@@ -3740,19 +2747,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
 
 @gesto("06-navegacao.html", "padrao-da-aba", grava="voltar_o_computador_ao_de_fabrica")
 def padrao_da_aba(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O «Voltar ao padrão» da aba: o mouse e o teclado voltam UM DEGRAU.
-
-    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, `D-0110-VOLTAR-AO-PADRAO-E-UM-
-    DEGRAU` (por delegação, a validar por ela). Os dois cartões desta aba são do
-    computador: no jogo que os sobrepõe, sai a escolha do jogo e volta a valer
-    o computador; sem sobreposição, o computador volta ao de fábrica. Fora do
-    jogo (sem perfil, ou o Freestyle), a tabela dos gestos também volta, pelo
-    `machine.declare` (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01, §11). A
-    troca de botões e o Point-and-click são do jogo, e não são tocados.
-
-    A pergunta antes é a do desenho (o «Confirmar» é que tem o endereço), e as
-    duas velocidades que passam a valer vão ao daemon no mesmo clique.
-    """
+    """O «Voltar ao padrão» da aba: o mouse e o teclado voltam UM DEGRAU."""
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
     from hefesto_dualsense4unix.profiles.schema import ProfileMouseConfig
@@ -3842,9 +2837,6 @@ def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     nao_reconhecidas: list[str] = []
     for botao, rotulo in forma.items():
         if botao not in acoes.BOTOES:
-            # A LINHA SEM ENDEREÇO CAI AQUI, e cair é o certo: *deslizar o dedo
-            # no touchpad* não é botão do produto. O que o gerador não endereça,
-            # este laço não inventa.
             continue
         token = acoes.token_do_rotulo(str(rotulo))
         if token is None:
@@ -3866,21 +2858,11 @@ def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     loader = perfil._com_o_src()
     prof = loader.load_profile(nome)
-    # O QUE A TELA PINTADA MOSTRARIA, montado do DISCO e não do `ctx`: a
-    # comparação tem de ser contra a verdade que o "Guardar" está prestes a
-    # trocar, e não contra o retrato que o daemon mandou há um tique.
     mostra = _linhas_dos_botoes({"button_actions": prof.button_actions,
                                  "key_bindings": prof.key_bindings})
     divergem = [b for b, token in escolhas.items()
                 if mostra.get(f"{PREFIXO_DA_ACAO}{b}") != acoes.rotulo(token)]
     if divergem and not _MEXENDO:
-        # A FRASE NÃO DIZ «AINDA NÃO», e a escolha é do portão da confissão
-        # (`check_a_tela_nao_confessa.py`): `ainda` é o advérbio da dívida — ele
-        # promete que a coisa vem, e promessa só se faz sobre trabalho NOSSO.
-        # A primeira redação desta recusa dizia *"estas linhas ainda não
-        # mostram…"* e o portão a pegou no mesmo dia em que ela nasceu. O que
-        # a pessoa precisa saber é o mesmo e cabe sem a promessa: o que está na
-        # tela não é o que o perfil guarda, e a saída é esperar e repetir.
         raise RuntimeError(
             f"não guardei: o que estas linhas mostram não é o que o perfil "
             f"“{nome}” guarda — "
@@ -3940,29 +2922,9 @@ def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(" ".join(recados))
 
 
-# ---------------------------------------------------------------------------
-# A TELA "Trocar os botões" — F1-REMAPEAR, 13/09/2026.
-#
-# OS DOIS GESTOS DO RODAPÉ GANHARAM DONO porque o MOTOR nasceu:
-# `core/remapeamento_de_botao.py` (a regra), `Profile.remapeamento` (o campo,
-# global no perfil — D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL) e a tradução logo
-# antes dos dois `forward_buttons` (`gamepad.dispatch_gamepad` e
-# `coop.CoopManager.forward_all`). A decisão de que entra é dela
-# (D-O-REMAPEAMENTO-BOTAO-A-BOTAO-ENTRA); o ponto de entrada foi escolhido por
-# quem coordena, por delegação, e está escrito na sprint F1-REMAPEAR.
-#
-# O MOLDE É O DA TELA DE DEFINIÇÕES, peça por peça: a linha anota o que ela
-# escolheu (`linha-de-troca`), o fechar larga (`fechar-troca`), o "Guardar"
 # recolhe a `forma` e grava com `perfil.gravar_e_reaplicar`, e a trava contra o
-# apagador é a mesma — a tela no desenho por 100 ms não é escolha dela.
-# ---------------------------------------------------------------------------
 def _destino_do_rotulo(rotulo: str) -> str | None:
-    """O texto da `<option>` → o id de destino. `None` é o "— Sem troca —".
-
-    RÓTULO QUE A TABELA NÃO CONHECE É CLIQUE INVÁLIDO (`ValueError`): ele só
-    chega aqui se o desenho andou sem o gerador, e o gerador para a geração
-    quando a lista dele e `ROTULOS_DA_TROCA` divergem.
-    """
+    """O texto da `<option>` → o id de destino. `None` é o "— Sem troca —"."""
     texto = str(rotulo or "").strip()
     if texto == SEM_TROCA:
         return None
@@ -4001,19 +2963,7 @@ def _frase_da_troca(exc: remap.RemapeamentoRecusadoError) -> str:
 
 @gesto("06-navegacao.html", "linha-de-troca")
 def linha_de_troca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Ela trocou UMA linha da tela "Trocar os botões". NÃO grava nada.
-
-    Irmão de `linha_de_botao`: anota a escolha em `_TROCANDO` para a pintura do
-    tique seguinte concordar com a tela, e o ponto de gravação continua sendo o
-    "Guardar".
-
-    O QUE NÃO PODE SER TROCADO É RECUSADO NA HORA, pelo motor: o PS nos dois
-    lados, e a direção dos analógicos e o clique do touchpad. A linha não entra
-    na trava, e a pintura a devolve ao que o perfil guarda. Dois botões para o
-    mesmo destino NÃO são recusados aqui, e é de propósito: trocar o ✕ e depois
-    o △ para o mesmo ○, a caminho de mudar o ✕ de novo, é o jeito normal de
-    mexer numa tabela — a colisão é do "Guardar".
-    """
+    """Ela trocou UMA linha da tela "Trocar os botões". NÃO grava nada."""
     botao = (str(o.get("linha") or "").strip()
              or str(o.get("campo") or "").removeprefix(PREFIXO_DA_TROCA))
     if botao not in acoes.BOTOES:
@@ -4024,8 +2974,6 @@ def linha_de_troca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
     destino = _destino_do_rotulo(rotulo)
     if destino is None and botao not in remap.REMAPEAVEIS:
-        # A LINHA SEM ENDEREÇO VOLTOU AO "— Sem troca —": não há o que anotar
-        # nem onde pintar.
         return None
     if destino is not None:
         try:
@@ -4043,12 +2991,7 @@ def linha_de_troca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
 
 @gesto("06-navegacao.html", "fechar-troca")
 def fechar_troca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O fechar e o "Cancelar" da troca: LARGAM o que ela não guardou.
-
-    Mesmo ato de `fechar_definicoes`, noutro nome — o piloto recusa gesto que
-    não está registrado, e o relato do clique nomeia a pop-up certa. Devolve as
-    linhas do perfil na hora, sem esperar o tique.
-    """
+    """O fechar e o "Cancelar" da troca: LARGAM o que ela não guardou."""
     _TROCANDO.clear()
     return {"mesa": _linhas_da_troca(
         perfil.ativo((ctx.state or {}).get("active_profile")))}
@@ -4056,25 +2999,7 @@ def fechar_troca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
 
 @gesto("06-navegacao.html", "guardar-remapeamento", grava="gravar_e_reaplicar")
 def guardar_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Guardar" da tela "Trocar os botões". Escreve `Profile.remapeamento`.
-
-    DE ONDE VEM O QUE ELE GRAVA: da `forma` que o piloto recolhe no `id` da
-    pop-up (`data-hef-forma="remapeamento"`), chaveada pelo `data-linha` de cada
-    lista. O que não é botão (o `quem-navega` de outra dica, se houver) é
-    pulado, como no irmão.
-
-    GRAVA O MAPA INTEIRO, e não diferença sobre o que o perfil guarda: a tela
-    mostra as 22 linhas, e cada "— Sem troca —" é uma linha sem troca. `{}` vira
-    `None`, e o save omite a chave.
-
-    AS RECUSAS SÃO DO MOTOR (`remap.resolver`) e chegam com os nomes da tela;
-    NADA É GRAVADO nelas.
-
-    A TRAVA CONTRA O APAGADOR é a de `guardar_definicoes`: a forma inteira sem
-    troca, com o perfil guardando trocas e nenhuma linha em `_TROCANDO`, é a
-    tela nos 100 ms antes do primeiro tique — gravar isso apagaria a escolha
-    dela com o botão dizendo "Guardar".
-    """
+    """"Guardar" da tela "Trocar os botões". Escreve `Profile.remapeamento`."""
     nome = _perfil_ativo_ou_recusa(ctx)
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
@@ -4082,12 +3007,6 @@ def guardar_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "não consegui ler as linhas da tela. O botão precisa do "
             "`data-hef-forma` para o piloto recolher os campos — se ele sumiu do "
             "desenho, o Guardar não tem o que gravar.")
-    # AS SEIS LINHAS QUE A TROCA NÃO ALCANÇA SÓ PASSAM COM "— Sem troca —" —
-    # F1-REMAPEAR-02, 13/09/2026. A página as entrega apagadas e com essa única
-    # opção; uma forma que traga outra coisa nelas veio de uma página velha. A
-    # guarda vem ANTES do motor porque ele deixa passar a troca por si mesmo (o
-    # PS para "PS"), e ela continua sendo recusa; a recusa do motor fica logo
-    # abaixo, para o que a guarda não vê.
     fora = tuple(b for b in acoes.BOTOES
                  if b in forma and b not in remap.REMAPEAVEIS
                  and str(forma[b] or "").strip() != SEM_TROCA)
@@ -4127,15 +3046,7 @@ def guardar_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("06-navegacao.html", "padrao-remapeamento", grava="gravar_e_reaplicar")
 def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Confirmar" do "Voltar ao padrão" da troca: `remapeamento = None`.
-
-    A pergunta da tela diz o que ele apaga e o que não toca — *"Devolver as 22
-    linhas ao — Sem troca —? As Definições Controle e Mouse não são tocadas."* —,
-    e ele faz exatamente isso: zera SÓ `Profile.remapeamento`.
-
-    JÁ SEM TROCA É RECUSA DIZENDO, como no irmão: gravar de novo faria o daemon
-    reaplicar um perfil idêntico no meio de uma partida, sem efeito.
-    """
+    """"Confirmar" do "Voltar ao padrão" da troca: `remapeamento = None`."""
     nome = _perfil_ativo_ou_recusa(ctx)
     loader = perfil._com_o_src()
     prof = loader.load_profile(nome)
@@ -4149,182 +3060,31 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     return {"mesa": _linhas_da_troca({})}
 
 
-#: OS QUATRO QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
-#: inventário honesto do que falta, no lugar de um botão que responde calado. O
-#: piloto os recusa PELO NOME (`[gesto sem dono] 06-navegacao.html · <nome>`), e
-#: por isso as chaves aqui são os nomes que ele vai imprimir, um por um.
-#:
 #: ERAM SEIS ATÉ 13/09/2026: `guardar-remapeamento` e `padrao-remapeamento`
-#: saíram com a F1-REMAPEAR, porque o motor nasceu — ver os dois gestos logo
-#: acima. FATO SUBSTITUÍDO no mesmo dia: a entrada deles dizia que o
-#: `forward_buttons` do co-op *"só alcança os controles SECUNDÁRIOS — o primário
-#: não passa por ali"*. Passa: `lifecycle` → `_dispatch_gamepad_emulation` →
-#: `gamepad.dispatch_gamepad` → `device.forward_buttons`, desde `da9b4921`.
-#:
-#: ERAM QUATORZE, depois TREZE, depois SEIS. O `teclado` saiu na segunda
-#: leva — o que o segurava não era falta de método, era o piloto não mandar o
-#: valor de um `<select>`. O `padrao-definicoes` saiu na TERCEIRA, e o que o
-#: segurava era um FATO ERRADO escrito aqui: que gravar perfil não tinha método.
-#: Tinha, e o `a10_perfis` já o usava. O `guardar-ponto` saiu na QUARTA
-#: (11/09/2026), e o que o segurava era uma PERGUNTA errada: a entrada mediu que
-#: "Estilo de Jogo" não tem campo, e a tela não pergunta o estilo — pergunta o
-#: que cada peça faz, que tem campo desde 01/09. As três saídas têm a mesma
-#: forma — o que prendia o botão não era o produto, era o que estava escrito
-#: sobre ele.
-#:
-#: -------------------------------------------------------------------------
 #: `mouse.emulation.restore` NÃO virou botão, e a segunda leva reconfirmou a
-#: recusa com uma razão MAIOR que a da primeira. Três coisas, e a terceira é a
-#: que fecha a porta:
-#:
-#: 1. o handler diz o lugar dele com todas as letras — *"entra na transição de
-#:    modo (`app/actions/mode_transition.py`), **nunca em um botão solto**"*
-#:    (`daemon/ipc_handlers.py:7095-7096`);
-#: 2. ele devolve a preferência PERSISTIDA — não "o de fábrica" nem "o que a
-#:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
-#:    prometer uma coisa e fazer outra;
-#: 3. **ele LIGA o mouse.** `restore_mouse_preference`
-#:    (`daemon/lifecycle.py:2166`) chama `set_mouse_emulation(pref, …)` e, com a
-#:    preferência nunca gravada, `pref` vira `True` por default (`:1785`) — o
-#:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
-#:    (`:1741`). Isso o põe na mesma prateleira do gesto `modo`, que já está em
-#:    `hefesto_vivo.PERIGOSOS` justamente para a prova botão a botão não o
-#:    clicar. Ligá-lo aqui criaria um gesto perigoso NOVO **fora** daquela
-#:    lista, e a lista mora num arquivo que esta aba não pode tocar.
 SEM_GESTO = {
     "navegacao-interna": "navegar a janela do Hefesto com o controle não tem "
                          "método no daemon — nenhum dos 39, e o "
                          "`core/disputa_de_botao.py` que as sprints citam não "
                          "existe no disco",
     "modo-steam": "não há método de Modo Steam no daemon — nenhum dos 39",
-    # OS QUATRO DE VELOCIDADE SAÍRAM DAQUI porque saíram da TELA — 01/09/2026,
-    # decisão dela ao ler a medição: *"só ajustar o texto e deixar rolagem,
-    # ajustar ali pra deixar um só se for o caso pra ambos"*.
-    #
-    # O que estava escrito aqui era: o cursor do touchpad sai do MESMO
-    # `mouse_speed` (`uinput_mouse.py:467`), e rolagem por dois dedos não existe
-    # (`_emit_scroll` lê só o analógico direito). As duas linhas do desenho
-    # ofereciam DOIS números onde o produto tem UM — e a cura foi no desenho, não
-    # num gesto que fingisse o segundo. As dicas passaram a ler a faixa do
-    # produto, que também estava errada nas duas ("De 1 a 10", quando o cursor
-    # vai a 12 e a rolagem a 5).
-    # FATO SUBSTITUÍDO (segunda leva): dizia "os cinco combos moram em
-    # `key_bindings` do perfil". Não moram — `key_bindings` são os nove BOTÕES
     # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.
-    # FATO AFINADO (terceira leva, 01/09/2026): esta entrada dizia que "método
     # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
-    # aceita `config_overrides` com qualquer campo do `DaemonConfig`
-    # (`ipc_handlers.py:6280`). O que ele NÃO faz é gravar: o handler roda
-    # `replace(config, **overrides)` e `reload_config(...)` e para aí
-    # (`:6240-6241`), então a escolha morre no próximo start do daemon. E o
-    # `ps_button_action` é do PS SOLO, não dos combos — a tabela desta tela é dos
-    # cinco COMBOS.
-    #
-    # ENDEREÇOS REMEDIDOS EM 06/09/2026: eram `:4556` e `:4567`, que hoje são o
-    # cache de órfãos HID. Medidos com `grep -n` no HEAD desta árvore, nunca
-    # copiados de relatório.
     # `acao-do-gesto` SAIU DAQUI em 01/10/2026 (OS-GESTOS-DO-CONTROLE-01): a
-    # tabela é dado do `maquina.json`, e o daemon despacha por ela.
-    # `padrao-da-aba` SAIU DAQUI em 01/10/2026
-    # (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o mouse e o teclado são
-    # do computador, e voltar um degrau tem dono (`padrao_da_aba`).
-    # `guardar-definicoes` SAIU DAQUI em 01/09/2026, e não porque a medição
-    # estivesse errada: ela estava certa. A tela deixava escolher 21 linhas e o
-    # perfil alcançava 9, e guardar 9 de 21 caladas seria o botão que responde
-    # calado. O que mudou foi o PRODUTO — decisão dela ao ler a medição:
-    # *"ganha campo. essa é a parte das features que precisam ou serem ajustadas
     # ou desenvolvidas."* `Profile.button_actions` nasceu, o
     # `core/acoes_de_botao` virou o dono do vocabulário e do padrão, e o device
-    # de mouse passou a obedecer.
-    #
-    # O QUE AINDA NÃO PousA está DITO, não engolido: os três comandos
-    # ("Abrir a Steam", "Sair do modo jogo", "Escolher um programa…"), os dois
-    # papéis de eixo pedidos a um botão, e os gatilhos L2/R2, que são espelho do
-    # cross e do triangle. O gesto grava o resto e LEVANTA nomeando esses.
-    # `guardar-ponto` SAIU DAQUI em 11/09/2026 (F2-POINT-AND-CLICK), e é a
-    # quarta saída com a MESMA forma das três anteriores: **o que prendia o
-    # botão não era o produto, era o que estava escrito sobre ele.** A entrada
-    # dizia que *"'Estilo de Jogo' não existe em campo, widget ou preset nenhum
-    # do produto"*, e continua verdade — só que a tela não pergunta o estilo.
-    # Ela pergunta o que cada peça FAZ, e isso tem campo desde 01/09
     # (`Profile.button_actions`): seis das sete linhas são botões de
-    # `acoes.BOTOES`, com o id que a tela de Definições já grava. Ver
-    # `guardar_ponto`.
-    #
-    # A SÉTIMA CONTINUA SEM DESTINO, e ela está DITA no gerador em vez de aqui,
-    # porque é falta de ENDEREÇO e não de dono: *deslizar o dedo no touchpad*
-    # não é botão em `BOTOES`, e quem move o cursor por ali é o próprio mouse
-    # virtual (`uinput_mouse.emit_touchpad_move`). Ela não tem `data-gesto`, e
-    # por isso não é um gesto sem dono — é uma linha sem endereço.
-    #
     # `guardar-remapeamento` e `padrao-remapeamento` SAÍRAM DAQUI em 13/09/2026
-    # (F1-REMAPEAR) — ver o cabeçalho deste dicionário.
 }
 
 
-#: OS DOIS QUE GRAVAM PERFIL E NÃO TÊM ECO — 02/09/2026, à tarde, medido com
-#: dublê da ponte e dublê do disco (`--prova-no-aparelho` NÃO foi usado: há
-#: controles na mesa dela e a leva inteira está proibida de tocar o aparelho).
-#:
 #: O `state_full` do daemon publica `active_profile` — o NOME — e mais nada do
 #: conteúdo do perfil. Nem `button_actions` nem `key_bindings` aparecem entre as
-#: chaves do payload (`daemon/ipc_handlers.py:3024`). Logo a régua que compara o
-#: estado do daemon antes e depois do clique não tem como ver o efeito destes
-#: dois, por mais que eles funcionem — e eles funcionam:
-#:
-#:     gesto                               desfecho          chamou      gravou
-#:     guardar-definicoes (linha trocada)  ACEITOU           switch      1 perfil
-#:     guardar-definicoes (forma de fábr.) RECUSA dizendo    NADA        0
-#:     guardar-definicoes (= ao perfil)    RECUSA dizendo    NADA        0
-#:     padrao-definicoes                   ACEITOU           switch      1 perfil
-#:     padrao-definicoes (já de fábrica)   RECUSA dizendo    NADA        0
-#:
-#: A PROVA DELES É O ARQUIVO — mesma forma do `teto-da-vibracao` da aba Conexões
-#: (`a08_conexoes.SEM_ECO`), que também grava no perfil: efeito vivo pelo
 #: `profile.switch` do `gravar_e_reaplicar`, e nenhum eco. Quem cobra são
-#: `test_a_06_nao_manda_para_o_vazio.py` e
-#: `test_o_padrao_dos_atalhos_volta_de_fabrica.py`, contra o disco.
-#:
-#: FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que *"a última
-#: linha da tabela é o que os pôs aqui"*: `padrao-definicoes` com o perfil já de
-#: fábrica saindo pelo `return` de "nada a fazer", sem gravar, sem chamar e sem
-#: levantar. **Isso caducou porque o `return` mudo morreu** — os dois ramos de
-#: "nada a fazer" (aqui e no `guardar-definicoes`) passaram a RECUSAR DIZENDO, e
-#: `recusou dizendo` vem ANTES de `aceito sem eco` na ordem de `classe()`
-#: (`hefesto_vivo.py:1555`). Logo esta declaração NÃO cobre mais o caso do
-#: não-fazer-nada calado: ele voltou a ser visível para a régua do aparelho, com
-#: nome próprio. O que `SEM_ECO` cobre é só o que está escrito acima — o daemon
-#: não publica conteúdo de perfil, e o efeito das linhas "ACEITOU" mora no disco.
-#:
-#: O `teclado` NÃO ENTRA, e a diferença é medida: ele chama
 #: `keyboard.emulation.set`, e `keyboard_emulation.enabled` VOLTA no
 #: `state_full` — é o que pinta o `teclado-estado`. Declará-lo aqui calaria a
-#: régua sobre um caminho que ela consegue medir.
-#:
-#: OS DOIS QUE NÃO TÊM ASSUNTO NENHUM NO DAEMON — 02/09/2026, e eles são de
-#: outra espécie que os dois acima. `linha-de-botao` e `fechar-definicoes` não
-#: chamam a ponte, não escrevem em disco e não pretendem: os dois mexem no que a
-#: PINTURA vai fazer no tique seguinte, e nada mais. Não é "o daemon não publica
-#: este assunto" — é "não há assunto do daemon", que é mais forte.
-#:
-#: SEM ESTA LINHA a régua do aparelho os leria como *"disse aplicado e nada
-#: mudou"* (`hefesto_vivo.Piloto._depois_do_gesto`), que é o rótulo dos botões que mentem — e
-#: aqui seria a régua acusando o comportamento CERTO. Declará-los sem prova
-#: seria o inverso: lápide escondendo defeito. A prova deles não é o estado do
-#: daemon, é o efeito na pintura, e ela roda no CI, sem janela:
-#: `test_a_06_a_escolha_dela_sobrevive_ao_tique.py`, que arranca a trava e vê a
-#: tabela voltar a desfazer a escolha em um tique.
-#:
-#: TUPLA, e não dicionário: o piloto faz `set(getattr(mod, "SEM_ECO", ()))` e as
-#: seis abas que declaram usam tupla. O motivo mora no comentário, que é onde
-#: ele cabe inteiro — `SEM_ECO` sem razão escrita é lápide para esconder defeito.
-#:
-#: OS QUATRO DA TROCA DE BOTÕES ENTRAM PELAS MESMAS DUAS RAZÕES — F1-REMAPEAR,
 #: 13/09/2026. `guardar-remapeamento` e `padrao-remapeamento` gravam no perfil,
 #: e o `state_full` não publica `remapeamento` (nem o mapa ativo, que mora no
-#: `store` e não viaja no estado): a prova deles é o arquivo, em
-#: `test_migra_navegacao_13_o_remapeamento_botao_a_botao.py`. `linha-de-troca` e
-#: `fechar-troca` não têm assunto no daemon — mexem só no que a pintura faz.
 SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
            "linha-de-botao", "fechar-definicoes",
            "guardar-remapeamento", "padrao-remapeamento",
@@ -4333,8 +3093,6 @@ SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
 
 PONTE = {"chamar", "machine_declare", "escolher_arquivo"}
 #: O `desktop.status.set` é o «Status do Modo» desde 29/09/2026
-#: (O-MOUSE-SEGUE-A-NAVEGACAO-01): o mouse, o teclado e a gravação do
-#: perfil numa chamada só, no daemon.
 METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "desktop.status.set",
            "machine.declare"}
 
@@ -4344,37 +3102,11 @@ PISO_DA_ABA = 8
 
 
 def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any]:
-    """Uma linha do `PROVAS`, para a chave da régua ser escrita UMA vez.
-
-    Cinco dicionários escritos por extenso repetiam a chave da página cinco
-    vezes — e cada repetição custava um marcador `# (noqa-acento)` (a chave é do
-    contrato da régua, não texto em português) e um aviso do ruff sobre ele. Um
-    construtor paga o preço uma vez só.
-    """
-    # A primeira chave é o NOME do contrato da régua, não texto em português —
-    # por isso a linha leva o marcador de isenção, e uma vez só. (Escrever a
-    # palavra AQUI, no comentário, também acusava: a régua de acentuação não
-    # distingue prosa de identificador nem quando o identificador é o assunto.)
+    """Uma linha do `PROVAS`, para a chave da régua ser escrita UMA vez."""
     return {"pagina": PAGINA, "gesto": nome,  # (noqa-acento) chave do contrato
             "clique": clique, "chama": chama}
 
 
-#: O `ctx` da régua não tem `mouse_emulation`, e é de propósito: o gesto que
-#: depende do estado — o interruptor — tem de partir do mesmo chão que a tela
-#: mostra enquanto o daemon ainda não falou.
-#:
-#: AS DUAS VELOCIDADES MANDAM O NÚMERO QUE A BARRA DEU, e não um passo — as
-#: quatro provas de `-`/`+` saíram em 05/09/2026 com os botões (decisão dela,
-#: *"velocidade do cursor e da rolagem coloca um slicer pra cada"*). O `clique`
-#: leva `valor` porque é ele que o piloto manda de um `<input type=range>`
-#: (`data-hef-alvo="valor"`), e as duas provas de EXTREMO são as que mordem: a
-#: barra do cursor manda `99` e o pacote apara em `MOUSE_SPEED_MAX`; a da
-#: rolagem manda `0` e ele apara em `SCROLL_SPEED_MIN`. A faixa continua com um
-#: dono só — as constantes são IMPORTADAS de `integrations/uinput_mouse.py:78-79`,
-#: não digitadas, e o daemon continua aparando por último.
-#:
-#: AS CHAMADAS VIRARAM `resultado` — 03/09/2026, e é o que faz a recusa do daemon
-#: chegar à tela: `chamar` devolve `bool` e joga fora o corpo com o `bloqueio`.
 _MOUSE = "mouse.emulation.set"
 PROVAS = [
     _prova("modo", {},
@@ -4390,47 +3122,18 @@ PROVAS = [
     _prova("vel-rolagem", {"valor": "0"},
            [("resultado", [_MOUSE],
              {"scroll_speed": SCROLL_SPEED_MIN, "origin": "manual"})]),
-    # AS DUAS PONTAS DA LISTA DO TECLADO, e as duas provam a mesma coisa por
-    # lados opostos: que o `valor` do `<select>` decide o bool. O `clique` traz
-    # `valor` porque é ele que o piloto manda desde 01/09 — `texto`, num
-    # `<select>`, é a lista inteira concatenada, e foi essa confusão que deixou
-    # esta lista sem dono na primeira leva.
-    #
-    # A OPÇÃO SEM DONO NÃO TEM PROVA AQUI de propósito: `PROVAS` só sabe cobrar
-    # chamada, e o certo para "Só dentro do jogo" é NÃO chamar nada. Ela é
-    # provada pela mordida, no relato, e pelo teste da recusa.
     _prova("teclado", {"valor": TECLADO_SO_FORA},
            [("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
     _prova("teclado", {"valor": TECLADO_DESATIVADO},
            [("resultado", ["keyboard.emulation.set"], {"enabled": False})]),
-    # O GESTO DA TABELA grava na MÁQUINA (OS-GESTOS-DO-CONTROLE-01): o «— Nada —»
-    # no PS + L3, que é a visita errando o combo e reescrevendo o perfil do jogo.
     _prova("acao-do-gesto", {"linha": "ps_l3", "rotulo": "— Nada —", "valor": "— Nada —"},
            [("machine_declare", [{"gestos": {"ps_l3": {"faz": "nada"}}}], {})]),
 ]
 
 
-# ---------------------------------------------------------------------------
-# OS GESTOS DO CONTROLE — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026)
-#
-# NO FIM DO MÓDULO de propósito: o mapa cita linhas deste arquivo até a 3198, e
-# nada acima delas anda.
-#
-# A tabela «Os gestos do controle» é DA MÁQUINA (`D-2909-OS-GESTOS-SAO-DA-MAQUINA`,
-# dela): o gesto grava no `maquina.json` pelo `machine.declare`, que relê o
-# daemon no mesmo pedido, e a pintura lê o MESMO arquivo — o que a lista mostra
-# é o que o controle faz, e sobrevive a reabrir a aba e a trocar de perfil (a
-# noite de 01/10, em que a lista voltava a «Abrir a Steam» a cada troca).
-# ---------------------------------------------------------------------------
-
-#: O endereço de cada lista, `faz-<gesto>`: o valor que o tique escreve.
 PREFIXO_DO_GESTO = "faz-"
-#: O endereço da opção do script de cada lista, `script-<gesto>`: o texto dela
-#: é o nome do arquivo escolhido.
 PREFIXO_DO_SCRIPT = "script-"
-#: A frase viva da dica da tabela — o que muda com a escolha dela.
 ENDERECO_DA_DICA_DOS_GESTOS = "gestos-dica"
-#: O título do seletor do sistema, e o filtro.
 TITULO_DO_SELETOR_DO_SCRIPT = "Escolher um script"
 FILTRO_DO_SCRIPT = "*.sh"
 
@@ -4451,11 +3154,7 @@ def _selo_da_maquina() -> tuple[int, int, int] | None:
 
 
 def _a_maquina() -> Any:
-    """O `maquina.json` validado, RELIDO QUANDO O ARQUIVO MUDA (um `stat` por tique).
-
-    É o caminho da 08 (`a08_conexoes._declaracao`), copiado de propósito: os
-    pacotes são território exclusivo. O `carregar_maquina` nunca levanta.
-    """
+    """O `maquina.json` validado, RELIDO QUANDO O ARQUIVO MUDA (um `stat` por tique)."""
     global _A_MAQUINA, _SELO_DA_MAQUINA
     selo = _selo_da_maquina()
     if _A_MAQUINA is None or selo != _SELO_DA_MAQUINA:
@@ -4470,12 +3169,7 @@ def _a_maquina() -> Any:
 
 
 def _a_dica_dos_gestos(escolhas: dict[str, Any]) -> str:
-    """O que a dica da tabela diz sobre a escolha de hoje, ou o «nada a dizer».
-
-    Duas frases, cada uma só quando é verdade: a saída de emergência que ficou
-    sem gesto (nada se trava — a dica diz), e a volta do «Parar o serviço»,
-    que não existe pelo controle.
-    """
+    """O que a dica da tabela diz sobre a escolha de hoje, ou o «nada a dizer»."""
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 
     frases = [f"Nenhum gesto faz <b>{ag.rotulo(t)}</b>, uma das saídas de emergência."
@@ -4487,12 +3181,7 @@ def _a_dica_dos_gestos(escolhas: dict[str, Any]) -> str:
 
 
 def _o_que_os_gestos_fazem() -> dict[str, str]:
-    """As seis listas da tabela, a opção do script de cada uma, e a dica viva.
-
-    A opção do script vem ANTES da lista na mesma pintura: a lista só aceita o
-    texto de uma opção que existe (`escrever`, o ramo do `<select>`), e o nome
-    do arquivo tem de estar na opção quando o valor chega.
-    """
+    """As seis listas da tabela, a opção do script de cada uma, e a dica viva."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 

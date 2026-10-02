@@ -1,76 +1,5 @@
 #!/usr/bin/env python3
-"""o_jogo_ouve_o_controle.py — o NOSSO comando e o JOGO, lado a lado, no mesmo tom.
-
-A ENCOMENDA É DELA, 21/09/2026 (A-FORJA-VALIDA-O-SOM-01, E7):
-
-    *"podermos validar em tempo real coisa que ainda não fizemos"* — e em
-    23/09 ela corrigiu o que a Forja é: *"a forja é um jogo que temos
-    desenvolvido (…) testarmos ao vivo esse feature pra cada controle."*
-    <!-- noqa-acento: citação literal dela -->
-
-A PERGUNTA QUE O MAPA NÃO TEM: o mapa sabe que o aparelho obedece ao NOSSO
-comando (`O APARELHO OBEDECEU`) e não sabe se obedece a um JOGO — o degrau
-«chegou ao JOGO» não existe para o som. Esta folha é a irmã de
-`a_folha_do_som_por_controle.py`: uma COLUNA por controle, uma LINHA por
-pergunta, e uma diferença que é a sprint inteira — **em cada célula, o nosso
-comando e o do jogo, lado a lado, no mesmo tom.** Sem o positivo ao lado,
-«não ouvi» não distingue *o jogo não alcança* de *o meu tom está mudo*.
-
-O JOGO é a Forja (`Hefesto-Forja`, repositório dela): ele não sabe que o
-Hefesto existe. Ele acha o alto-falante do controle PELO NOME que um jogo
-mostra — sob Proton, a descrição do nó —, e é por isso que o nome dela ganhou
-o nome da Sony atrás (a forma A, 23/09/2026).
-
-AS QUATRO LINHAS, uma por chave `.jogo` do mapa
-------------------------------------------------
-=================================  ==========================  =============================
-chave                              o nosso                     o jogo (a Forja)
-=================================  ==========================  =============================
-``audio.alto_falante.jogo``        o tom no nó do controle     o MESMO tom, achado pelo nome
-``audio.microfone.jogo``           o nível do nó do controle   a Voz (F5), ESTE de padrão
-``gatilho.direito.adaptativo.jogo`` o degrau do mapa            a Forja na Galeria (R2)
-``vibracao.rumble.jogo``           o degrau do mapa            a Forja no Impacto (motores)
-=================================  ==========================  =============================
-
-O JOGO OUVE O MICROFONE PADRÃO, e não o da coluna: é assim que um jogo pede, e
-é o que a Forja faz. Então a sala Voz só abre na coluna do controle cujo
-microfone é o padrão AGORA — aberta na coluna do P3 com o P1 de padrão, a barra
-subiria com a voz dela no P1 e o «vi no jogo» iria para o P3 (conferente,
-24/09/2026). A pergunta é uma só, feita no clique, e só lê.
-
-Nas duas de baixo o positivo JÁ está medido (`O APARELHO OBEDECEU`, no mapa);
-a folha o lê do dono em vez de mandar um gatilho pelo daemon, que gravaria no
-perfil dela. As linhas do mapa em si entram pela `PARIDADE-NO-JOGO-BANCADA-01`,
-que é dona do arquivo; esta folha propõe a linha do caderno, com data e gesto.
-
-O QUE É DO PRODUTO, e o que é daqui
-------------------------------------
-Do PRODUTO: o nome do nó de som (`alto_falante_bt.nome_do_sink`), o do canal do
-microfone (`canal_do_microfone.nome_do_canal`), a mesa
-(`escrita_pelo_broker.alvos_da_mesa`, que só lê o sysfs) e a máscara.
-Daqui: o tom (a MESMA conta do `forja_tom` da Forja — `tom_da_forja`), as
-linhas, os gestos e a linha do caderno.
-
-A MORDIDA, e ela está nos botões
----------------------------------
-1. **o positivo** — o NOSSO tom. Se ela não ouvir aqui, a sessão para: o
-   problema não é o jogo.
-2. **o jogo** — o mesmo tom pela Forja. Ouviu no nosso e não no do jogo: o jogo
-   não alcança. A Forja responde com `rc=2` quando NÃO ACHA o alto-falante — e
-   isso é diferente de achar e ficar mudo.
-3. **o gesto vai junto** — nenhuma linha de caderno sai sem a data e o comando
-   que a produziu.
-
-Porta: nenhuma. Escreve no aparelho? NÃO — o som vai pelo servidor de som, e o
-gatilho e a vibração quem manda é a Forja. `--listar` e `--oculta` não rodam
-comando nenhum.
-
-USO
-    o_jogo_ouve_o_controle.py --listar                # a mesa, as linhas, os comandos — só lê
-    o_jogo_ouve_o_controle.py                         # na tela dela
-    o_jogo_ouve_o_controle.py --forja ~/Hefesto-Forja # outra pasta da Forja
-    o_jogo_ouve_o_controle.py --oculta                # sem tela, para régua
-"""
+"""o_jogo_ouve_o_controle.py — o NOSSO comando e o JOGO, lado a lado, no mesmo tom."""
 
 from __future__ import annotations
 
@@ -96,9 +25,6 @@ _SRC = os.path.join(_RAIZ, "src")
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-# O ESCAPE É DECLARADO (TELA-DELA-02): sem `--oculta` esta folha é DELA e nasce
-# na tela dela — vê-la é o ponto inteiro. Com `--oculta` a guarda desvia para um
-# Xvfb próprio, que é o que a régua usa.
 if "--oculta" not in sys.argv:
     os.environ["HEFESTO_NA_TELA"] = "1"
 
@@ -115,26 +41,16 @@ from escrita_pelo_broker import alvos_da_mesa, linha_do_caderno, mascarar
 from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
 from hefesto_dualsense4unix.integrations.canal_do_microfone import nome_do_canal
 
-#: O TOM — os MESMOS números do `forja-speak` (``src/forja_speak.c`` e
-#: ``src/forja_alto_falante.c`` na Forja): 1300 Hz, 400 ms, amplitude 22000,
-#: rampa de 10 ms nas duas pontas, a 48 kHz. Um tom por caminho seria uma
-#: segunda variável escondida dentro do controle positivo.
 TOM_HZ = 1300.0
 TOM_MS = 400
 AMPLITUDE = 22000.0
 TAXA = 48000
 
-#: O nó de som por controle tem DOIS canais, e o alto-falante do plástico come
-#: o da direita (FR) — no cabo pela rota `front-left,front-right` do loopback,
-#: no rádio pelo firmware (`CANAIS_DO_ENCODER`).
 CANAIS_DO_NO = 2
 CANAL_DO_ALTO_FALANTE = 1
 
-#: Quanto dura a escuta do microfone. Três segundos é o que ela leva para
-#: dizer uma frase sem pressa.
 SEGUNDOS_DO_MICROFONE = 3.0
 
-#: Onde a Forja mora, por padrão: ao lado desta árvore, como está na mesa dela.
 FORJA_PADRAO = Path(_RAIZ).parent / "Hefesto-Forja"
 GODOT_DA_FORJA = "tools/Godot_v4.4.1-stable_linux.x86_64"
 
@@ -148,11 +64,7 @@ def tom_da_forja(
     canais: int = CANAIS_DO_NO,
     canal: int = CANAL_DO_ALTO_FALANTE,
 ) -> bytes:
-    """O PCM s16le do tom, intercalado: o tom no `canal`, ZERO nos outros.
-
-    A MESMA conta do `forja_tom` da Forja, linha a linha — o zero nos outros
-    canais é o que transforma «ouvi» em «ouvi ALI».
-    """
+    """O PCM s16le do tom, intercalado: o tom no `canal`, ZERO nos outros."""
     quadros = TAXA * ms // 1000
     rampa = TAXA // 100
     amostras: list[int] = []
@@ -171,12 +83,12 @@ def tom_da_forja(
 class Pergunta:
     """Uma linha da folha: a chave `.jogo` do mapa e o que se aperta de cada lado."""
 
-    chave: str  #: a chave nova do mapa, com `.jogo`
-    base: str  #: a chave em que o NOSSO já está medido
+    chave: str
+    base: str
     pergunta: str
-    nosso: str  #: "tom" · "nivel" · "mapa"
-    sala: str  #: a sala da Forja: "" (o forja-speak) · "voz" · "galeria" · "impacto"
-    sentido: str  #: o que ela observa: "ouvi" · "vi" · "senti"
+    nosso: str
+    sala: str
+    sentido: str
 
 
 LINHAS: tuple[Pergunta, ...] = (
@@ -220,7 +132,7 @@ class Controle:
     """Um controle da mesa. O endereço cru nunca sai daqui — só o mascarado."""
 
     mac: str
-    transporte: str  #: "cabo" · "radio", como o mapa escreve
+    transporte: str
 
     @property
     def mascarado(self) -> str:
@@ -235,13 +147,7 @@ class Controle:
         return nome_do_canal(self.mac)
 
     def mascarar_no_texto(self, texto: str) -> str:
-        """O texto com os nomes de nó deste controle refeitos a partir da MÁSCARA.
-
-        O nome do nó leva o rabo do endereço (``hefesto_som_<hex6>``), e dois
-        daqueles seis dígitos são os octetos que a máscara da casa zera. O que
-        vai para a tela e para o caderno sai mascarado; o comando que RODA usa
-        o nome de verdade.
-        """
+        """O texto com os nomes de nó deste controle refeitos a partir da MÁSCARA."""
         for real, falso in (
             (self.no_de_som, nome_do_sink(self.mascarado)),
             (self.no_do_microfone, nome_do_canal(self.mascarado)),
@@ -287,8 +193,7 @@ class Gesto:
     argv: list[str] = field(default_factory=list)
     pcm: bytes = b""
     recusa: str = ""
-    fica_aberto: bool = False  #: a janela do jogo, que ela fecha quando acabar
-    #: o nó que TEM de ser o microfone padrão para o jogo ouvir ESTE controle
+    fica_aberto: bool = False
     ouve_o_padrao: str = ""
 
     @property
@@ -314,8 +219,6 @@ def gesto_nosso(p: Pergunta, c: Controle) -> Gesto:
     if p.nosso == "nivel":
         if not c.no_do_microfone:
             return Gesto("Medir o nosso nível", recusa="controle sem identidade legível")
-        # A latência vai EXPLÍCITA: sem ela o `parec` entrega dois segundos
-        # depois, e a barra respondia à frase de antes (memória da casa).
         return Gesto(
             "Medir o nosso nível",
             argv=[
@@ -332,8 +235,6 @@ def gesto_do_jogo(p: Pergunta, c: Controle, forja: Forja) -> Gesto:
     if not p.sala:
         if falta:
             return Gesto("Tocar pelo jogo", recusa=falta)
-        # PELO NOME: o jogo acha o alto-falante como a pessoa o aponta na lista
-        # dele. O `--nome` casa o nome do nó ou o que o jogo mostra; quem decide
         # se ele é um alto-falante de DualSense é a Forja, pela palavra da Sony.
         return Gesto(
             "Tocar pelo jogo",
@@ -350,19 +251,12 @@ def gesto_do_jogo(p: Pergunta, c: Controle, forja: Forja) -> Gesto:
         f"Abrir a Forja ({p.sala})",
         argv=[str(forja.godot), "--path", str(forja.raiz / "godot"), "--", f"--sala={p.sala}"],
         fica_aberto=True,
-        # O jogo ouve o PADRÃO: sem isto, a sala Voz aberta na coluna do P3
-        # mede o microfone de quem for o padrão — o P1, quase sempre.
         ouve_o_padrao=c.no_do_microfone if p.nosso == "nivel" else "",
     )
 
 
 def microfone_padrao() -> str:
-    """O microfone PADRÃO do sistema agora — o que o jogo vai ouvir. Só lê.
-
-    ``""`` quando o servidor não responde: aí a folha não sabe quem o jogo
-    ouviria, e recusa em vez de adivinhar. ``LC_ALL=C`` pela regra da casa (o
-    ``pactl`` dela traduz), mesmo sendo um nome de nó.
-    """
+    """O microfone PADRÃO do sistema agora — o que o jogo vai ouvir. Só lê."""
     if shutil.which("pactl") is None:
         return ""
     try:
@@ -376,11 +270,7 @@ def microfone_padrao() -> str:
 
 
 def recusa_do_padrao(g: Gesto, padrao: str) -> str:
-    """Por que o jogo NÃO ouviria este controle — ``""`` quando ouviria.
-
-    Não diz o nome do padrão de agora: ele leva o rabo do endereço de outro
-    controle, e a célula só mostra o que sai mascarado.
-    """
+    """Por que o jogo NÃO ouviria este controle — ``""`` quando ouviria."""
     if not g.ouve_o_padrao:
         return ""
     if not padrao:
@@ -413,12 +303,7 @@ def degrau_do_mapa(chave: str, transporte: str) -> str:
 def linha_para_o_caderno(
     p: Pergunta, c: Controle, resultado: str, feitos: Sequence[Gesto], nota: str = ""
 ) -> str:
-    """A linha do caderno — e ela NÃO SAI sem gesto.
-
-    Um veredito sem a data e sem o comando que o produziu é opinião, e é o que
-    o degrau `.jogo` do mapa não pode virar (a mordida do E7). ``""`` quando
-    nada foi feito ainda.
-    """
+    """A linha do caderno — e ela NÃO SAI sem gesto."""
     gestos = [c.mascarar_no_texto(g.texto) for g in feitos if g.argv]
     if not gestos:
         return ""
@@ -455,11 +340,6 @@ def listar(controles: Sequence[Controle], forja: Forja) -> str:
     return "\n".join(linhas)
 
 
-# ---------------------------------------------------------------------------
-# A FOLHA NA TELA
-# ---------------------------------------------------------------------------
-
-
 def _pico_em_db(bruto: bytes) -> float:
     n = len(bruto) // 2
     if n == 0:
@@ -469,11 +349,7 @@ def _pico_em_db(bruto: bytes) -> float:
 
 
 def executar(g: Gesto) -> tuple[str, bool]:
-    """Roda o gesto: o que ela precisa ler na célula, e se ele RODOU.
-
-    O gesto recusado não conta para a linha do caderno — um «vi no jogo» não
-    pode sair apoiado num comando que nem rodou.
-    """
+    """Roda o gesto: o que ela precisa ler na célula, e se ele RODOU."""
     if not g.argv:
         return g.recusa, False
     if shutil.which(g.argv[0]) is None and not os.access(g.argv[0], os.X_OK):
@@ -487,7 +363,7 @@ def executar(g: Gesto) -> tuple[str, bool]:
     if g.argv[0] == "parec":
         proc = subprocess.Popen(g.argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         time.sleep(SEGUNDOS_DO_MICROFONE)
-        proc.terminate()  # o processo que ESTE gesto abriu, pelo objeto — nunca por nome
+        proc.terminate()
         bruto, _ = proc.communicate(timeout=5)
         return f"pico {_pico_em_db(bruto):.0f} dB em {SEGUNDOS_DO_MICROFONE:g} s", True
     feito = subprocess.run(

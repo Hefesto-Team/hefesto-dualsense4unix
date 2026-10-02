@@ -1,18 +1,4 @@
-"""O diário comum e a trava do rádio — O-DIARIO-DO-RADIO-01.
-
-Três motores mexiam no rádio sem se conhecer: o watchdog root, o vigia de
-zumbis do daemon e a central que vai nascer. Esta régua prova as duas peças que
-os põem em fila e deixam rastro:
-
-- a TRAVA: dois processos disputando, o segundo espera, e os dois aparecem no
-  diário na ordem. **A mordida:** sem o ``flock`` em ``trava_do_radio``, o
-  teste de concorrência vê dois ``Connect`` ao mesmo tempo e reprova;
-- o DIÁRIO: quem, o quê, por quê, antes e depois; rotação por tamanho; e o
-  leitor que junta o diário dela com o do root pela hora.
-
-Nada aqui toca a trava comum (``/run/hefesto-dualsense4unix/radio.lock``) nem o
-diário do root: todo caminho vem de ``tmp_path``.
-"""
+"""O diário comum e a trava do rádio — O-DIARIO-DO-RADIO-01."""
 
 from __future__ import annotations
 
@@ -29,9 +15,6 @@ import pytest
 from hefesto_dualsense4unix.integrations import diario_do_radio as diario
 
 RAIZ = Path(__file__).resolve().parents[2]
-
-
-# --- o diário -------------------------------------------------------------------
 
 
 def test_uma_acao_vira_uma_linha_com_quem_o_que_por_que_antes_e_depois(
@@ -88,8 +71,6 @@ def test_o_diario_gira_por_tamanho_e_o_leitor_ve_os_dois(
     assert girado.exists(), "passou do tamanho e não girou"
     assert atual.stat().st_size <= 400
     lidas = diario.ler()
-    #: O leitor junta o girado e o atual; o que girou DUAS vezes saiu, e é
-    #: o preço declarado da rotação — só as últimas entradas contam.
     passos = [e["o_que"] for e in lidas]
     assert passos == sorted(passos, key=lambda p: int(p.split()[1]))
     assert passos[-1] == "passo 11"
@@ -108,13 +89,7 @@ def test_o_leitor_junta_o_diario_dela_com_o_do_root_pela_hora(tmp_path: Path) ->
 def test_com_a_suite_no_ar_a_trava_e_o_root_nao_sao_os_dela(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """ARRANQUE A GUARDA da suíte em ``caminho_da_trava`` e este teste reprova.
-
-    A trava comum FINGE estar instalada: sem isso, a régua respondia se o
-    install desta máquina já criou ``/run/hefesto-dualsense4unix`` — e não se a
-    guarda existe. Medido na conferência de 23/09: com a guarda arrancada e a
-    pasta ainda ausente, o teste passava verde.
-    """
+    """ARRANQUE A GUARDA da suíte em ``caminho_da_trava`` e este teste reprova."""
     comum = tmp_path / "run" / "radio.lock"
     comum.parent.mkdir()
     monkeypatch.setattr(diario, "TRAVA_COMUM", comum)
@@ -152,12 +127,6 @@ def test_as_pontes_de_pe_saem_do_diario(tmp_path: Path) -> None:
     }
 
 
-# --- a trava --------------------------------------------------------------------
-
-#: O motor de mentira: pega a trava, registra um `Connect`, segura, solta. A
-#: marca em disco é o instrumento da colisão — quem entra e já a encontra está
-#: agindo AO MESMO TEMPO que outro motor, que é o defeito que a trava existe
-#: para impedir.
 MOTOR = textwrap.dedent(
     """
     import sys, time
@@ -209,12 +178,7 @@ def _espera_a_entrada(alvo: Path, quem: str, o_que: str, prazo_s: float = 15.0) 
 
 
 def test_dois_motores_disputam_a_trava_e_o_segundo_espera(tmp_path: Path) -> None:
-    """O segundo espera, e os dois aparecem no diário na ordem.
-
-    ARRANQUE A CURA — tire o ``fcntl.flock`` de ``trava_do_radio`` — e o
-    segundo motor entra com o primeiro ainda dentro: o ``Connect`` dele sai com
-    ``colidiu=True`` e este teste reprova dizendo «dois Connect».
-    """
+    """O segundo espera, e os dois aparecem no diário na ordem."""
     alvo = tmp_path / "radio-diario.jsonl"
     primeiro = _motor(tmp_path, "watchdog", 1.0)
     try:
@@ -289,14 +253,6 @@ def test_a_trava_sai_quando_o_processo_morre(tmp_path: Path) -> None:
         assert espera < 2.0
 
 
-# --- as lápides -----------------------------------------------------------------
-#
-# Mover um controle (a R1 dela) apaga o bond no adaptador antigo. O snapshot de
-# antes do gesto ainda o tem, e o autorestore — aditivo — o devolveria no
-# primeiro crash do bluetoothd. A lápide é o «esquecido de propósito»: um
-# controle num adaptador, escrita pelo `esquecer` da ponte, lida pelo
-# autorestore. Faixa sintética `aa:bb:cc`, como manda o anonimato de fixture.
-
 PONTE = RAIZ / "scripts" / "bt_ponte_privilegiada.sh"
 AUTORESTORE = RAIZ / "scripts" / "bt_bonds_autorestore.sh"
 
@@ -342,11 +298,7 @@ def _voltou(destino: Path, adaptador: str, controle: str) -> bool:
 
 
 def test_a_lapide_segura_um_controle_e_deixa_os_outros_voltarem(tmp_path: Path) -> None:
-    """O crash comeu os dois bonds; só o esquecido de propósito fica fora.
-
-    ARRANQUE A CURA — tire o bloco da LÁPIDE do ``bt_bonds_autorestore.sh`` — e
-    o vermelho volta do snapshot: este teste reprova.
-    """
+    """O crash comeu os dois bonds; só o esquecido de propósito fica fora."""
     agora = int(time.time())
     acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
     _snapshot(acervo, agora - 600, [(ADAPTADOR, VERMELHO), (ADAPTADOR, AZUL)])
@@ -420,7 +372,6 @@ def test_o_esquecer_da_ponte_escreve_a_lapide_que_o_autorestore_le(tmp_path: Pat
 
     resultado = subprocess.run(
         ["bash", str(PONTE), "esquecer"],
-        # Os endereços vão pelo stdin (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01).
         input=f"{ADAPTADOR.lower()}\n{VERMELHO.lower()}\n",
         capture_output=True,
         text=True,
@@ -460,15 +411,6 @@ def test_o_esquecer_a_seco_so_diz_a_lapide(tmp_path: Path) -> None:
     assert "gravaria a lápide" in resultado.stdout
     assert not lapides.exists()
 
-
-# --- o adaptador travado em laço (família 3) --------------------------------------
-#
-# O laço de 13/09, com as linhas reais (três por volta, a cada ~2 s), sobre
-# uma mesa sysfs de mentira: o adaptador travado está na porta 3-1.1.2, e um
-# vizinho são, na 3-4.1.4, teve UM timeout solto — que acontece em adaptador são.
-# A forma é a do `journalctl -o short-unix` que o verbo lê: o epoch na frente,
-# porque o verbo pergunta QUANDO — o laço tem de estar vivo agora, e depois de
-# um reinício só conta o que veio depois dele.
 
 _MENSAGENS_DA_VOLTA = (
     "command 0xfc61 tx timeout",
@@ -530,12 +472,7 @@ def _autorizado(sysfs: Path, porta: str) -> str:
 
 
 def test_o_laco_de_13_09_reinicia_uma_porta_so_e_a_certa(tmp_path: Path) -> None:
-    """Exatamente um reinício, na porta do adaptador em laço.
-
-    ARRANQUE O DETECTOR — faça ``_hcis_em_laco`` não imprimir nada — e o teste
-    não vê reinício nenhum. Baixe o ``LIMIAR_DO_LACO`` para 1 e o vizinho são
-    também é reiniciado: o teste reprova pelos dois.
-    """
+    """Exatamente um reinício, na porta do adaptador em laço."""
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2", "hci1": "3-4.1.4"})
     resultado = _reiniciar(tmp_path, sysfs)
     assert resultado.returncode == 0, resultado.stderr
@@ -551,12 +488,7 @@ def test_o_laco_de_13_09_reinicia_uma_porta_so_e_a_certa(tmp_path: Path) -> None
 
 
 def test_o_adaptador_que_nao_volta_nao_e_dito_reiniciado(tmp_path: Path) -> None:
-    """A frase do sino diz o que a espera mediu.
-
-    O adaptador some da porta durante o reinício e não reaparece: o diário diz
-    ``voltou: false`` — e a frase não pode dizer «foi reiniciado». ARRANQUE A
-    CURA — volte a frase fixa — e este teste reprova.
-    """
+    """A frase do sino diz o que a espera mediu."""
     import threading
 
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
@@ -601,14 +533,7 @@ def test_com_conexao_de_pe_o_reinicio_e_recusado(tmp_path: Path) -> None:
 
 
 def test_o_tique_seguinte_nao_acusa_o_laco_de_antes_do_reinicio(tmp_path: Path) -> None:
-    """O adaptador que voltou são não «travou de novo».
-
-    A janela de 150 s alcança o tique seguinte do watchdog, e as linhas de
-    ANTES do reinício continuam nela. ARRANQUE A CURA — tire a contagem depois
-    do carimbo da porta — e este tique acusa «travou de novo, tire e ponha»
-    sobre um adaptador bom (medido na conferência de 23/09: a régua antiga
-    ESPERAVA essa frase).
-    """
+    """O adaptador que voltou são não «travou de novo»."""
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
     assert _reiniciar(tmp_path, sysfs).returncode == 0
     (sysfs / "bus" / "usb" / "devices" / "3-1.1.2" / "authorized").write_text(
@@ -646,13 +571,7 @@ def test_o_freio_nao_reinicia_a_mesma_porta_duas_vezes(tmp_path: Path) -> None:
 
 
 def test_o_laco_que_parou_nao_reinicia_nada(tmp_path: Path) -> None:
-    """Um laço de um minuto atrás não é laço agora — e o hciN já pode ser outro.
-
-    O hciN do journal é amarrado ao aparelho de AGORA pelo laço estar vivo: o
-    adaptador que saiu da porta para de repetir, e o número dele pode ter ido
-    para o próximo que entrou. ARRANQUE A CURA — tire o ``LACO_VIVO_S`` — e a
-    porta de hoje do hci0 é reiniciada por linhas de outro aparelho.
-    """
+    """Um laço de um minuto atrás não é laço agora — e o hciN já pode ser outro."""
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-4.1.4"})
     (tmp_path / "journal.txt").write_text(
         _laco_de_13_09(int(time.time()) - 60), encoding="utf-8"
@@ -694,8 +613,6 @@ def test_os_ganchos_do_reinicio_morrem_sob_sudo(tmp_path: Path) -> None:
     assert not (tmp_path / "diario-root.jsonl").exists()
 
 
-# --- o watchdog root na mesma trava e no mesmo diário ------------------------------
-
 WATCHDOG = RAIZ / "scripts" / "bt_health_watchdog.sh"
 
 
@@ -719,8 +636,7 @@ def _watchdog(tmp_path: Path, *args: str, prazo: str = "5") -> subprocess.Popen[
 
 
 def test_o_watchdog_espera_a_trava_que_o_daemon_segura(tmp_path: Path) -> None:
-    """O shell root e o Python dela disputam o MESMO arquivo, e a espera vai
-    para o diário do root com a palavra que o leitor procura."""
+    """O shell root e o Python dela disputam o MESMO arquivo, e a espera vai"""
     primeiro = _motor(tmp_path, "central", 1.0)
     try:
         _espera_a_entrada(tmp_path / "radio-diario.jsonl", "central", "Connect")
@@ -772,26 +688,13 @@ def test_o_daemon_espera_a_trava_que_o_watchdog_segura(tmp_path: Path) -> None:
 
 
 def test_o_tique_inteiro_roda_com_a_trava() -> None:
-    """O tique pega a trava ANTES da primeira vigia que age.
-
-    Rodar o tique de verdade aqui falaria com o BlueZ dela (``busctl
-    set-property``, ``systemctl restart``), então esta régua lê a ORDEM do
-    script — é a única forma sem tocar o rádio. Os testes do ``--so-a-trava``
-    provam o ``_pegar_a_trava``; este prova que o tique o chama. Medido na
-    conferência de 23/09: arrancar a chamada do corpo do script passava verde
-    em todas as réguas.
-
-    ARRANQUE A CURA — tire o ``_pegar_a_trava || exit 0`` do corpo, ou desça-o
-    para depois da vigia 0 — e este teste reprova.
-    """
+    """O tique pega a trava ANTES da primeira vigia que age."""
     linhas = WATCHDOG.read_text(encoding="utf-8").splitlines()
     pega = [n for n, linha in enumerate(linhas) if linha == "_pegar_a_trava || exit 0"]
     assert len(pega) == 1, "o tique não pega a trava do rádio no corpo do script"
     gancho = next(n for n, linha in enumerate(linhas) if '"--so-a-trava"' in linha)
     vigia0 = next(n for n, linha in enumerate(linhas) if linha.startswith("# --- vigia 0"))
     assert gancho < pega[0] < vigia0, "a trava tem de vir antes da primeira vigia"
-    #: Chamada no corpo do script (não a definição da função, nem o gancho
-    #: ``--sdp-cache-only`` da régua, que é indentado e sai antes).
     for n, linha in enumerate(linhas[: pega[0]]):
         if linha.endswith("() {"):
             continue
@@ -801,11 +704,7 @@ def test_o_tique_inteiro_roda_com_a_trava() -> None:
 
 
 def test_o_watchdog_na_arvore_de_teste_nao_pega_a_trava_da_maquina(tmp_path: Path) -> None:
-    """Com a árvore do BlueZ desviada e sem o gancho, nada de trava comum.
-
-    ARRANQUE A GUARDA — volte o default do ``TRAVA_DO_RADIO`` para a trava
-    comum — e o watchdog de teste diz que foi atrás dela.
-    """
+    """Com a árvore do BlueZ desviada e sem o gancho, nada de trava comum."""
     env = {
         chave: valor for chave, valor in os.environ.items() if chave != "HEFESTO_RADIO_TRAVA"
     }
@@ -854,9 +753,6 @@ def test_a_linha_do_shell_com_aspas_e_acento_o_python_le(tmp_path: Path) -> None
     assert entrada["porta"] == "3-1.1.2"
 
 
-# --- o vigia de zumbis do daemon na mesma trava ------------------------------------
-
-
 class _PonteDeMentira:
     """A ponte de verdade sem sudo: anota quem pediu, e quando."""
 
@@ -898,13 +794,7 @@ def test_o_vigia_derruba_o_link_com_a_trava_e_deixa_rastro(
 def test_com_a_trava_na_mao_do_watchdog_o_vigia_nao_derruba_nada(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Dois motores no mesmo rádio: o vigia espera o prazo e desiste da volta.
-
-    ARRANQUE A CURA — faça o ``ConexoesSubsystem`` montar a
-    ``PontePrivilegiada`` crua — e ``test_o_daemon_monta_o_vigia_com_a_trava``
-    reprova; arranque a trava da ``PonteComTrava`` e este reprova com o link
-    derrubado por cima do watchdog.
-    """
+    """Dois motores no mesmo rádio: o vigia espera o prazo e desiste da volta."""
     from hefesto_dualsense4unix.daemon.subsystems.conexoes import PonteComTrava
 
     monkeypatch.setenv(diario.ENV_TRAVA, str(tmp_path / "radio.lock"))
@@ -937,12 +827,7 @@ def test_o_daemon_monta_o_vigia_com_a_trava() -> None:
 
 
 def test_o_watchdog_root_recusa_trava_que_e_link(tmp_path: Path) -> None:
-    """Root num arquivo que ela também abre: um link no lugar da trava não leva a
-    escrita do root a outro arquivo.
-
-    ARRANQUE A GUARDA — tire o ``[[ -L "${TRAVA_DO_RADIO}" ]]`` de
-    ``_pegar_a_trava`` — e o nome do watchdog aparece dentro do alvo do link.
-    """
+    """Root num arquivo que ela também abre: um link no lugar da trava não leva a"""
     alvo = tmp_path / "arquivo-de-outra-pessoa"
     alvo.write_text("intocado\n", encoding="utf-8")
     (tmp_path / "radio.lock").symlink_to(alvo)

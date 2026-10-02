@@ -1,25 +1,4 @@
-"""O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01 — as réguas.
-
-**O DEFEITO, medido em 02/10/2026 num lar de mentira** (a carona, a exclusão
-e o desfazer reais da integração): o jogo A do Heroic, que seguia a lista
-global, foi excluído (a exclusão lhe deu uma lista própria, sem o que é nosso)
-e o uninstall o deixou com a lista própria — ele não seguia mais a global
-dela, e levava o cache de shader que a carona pôs na global. Com
-`--purge-config` era pior: a lista de exclusão, onde mora a anotação de como
-devolver A, saía do disco ANTES do desfazer dos lançadores.
-
-AS CINCO RÉGUAS, cada uma lendo os arquivos do lançador pelo disco, nunca a
-resposta do desfazer:
-
-1. a volta segue a global;
-2. o purge não apaga antes (o `uninstall.sh` de verdade, no lar de mentira);
-3. um excluído de cada lançador, e nenhum rastro nosso nos quatro;
-4. ela mexeu, ela fica;
-5. sem PyYAML, o `.yml` não se escreve à mão.
-
-E mais duas: o desfazer adiado com `--purge-config` termina depois (a lista vai
-para o `launch_env`, ao lado do registro), e o espelho do caminho da lista.
-"""
+"""O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01 — as réguas."""
 
 from __future__ import annotations
 
@@ -50,7 +29,6 @@ from tests.unit.test_o_uninstall_nao_deixa_rastro import (
 RAIZ = Path(__file__).resolve().parents[2]
 CURA = RAIZ / "src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
 
-#: A ponte com a emulação ligada — as 9 variáveis (o `default.env` do daemon).
 _PONTE = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6\nSDL_JOYSTICK_HIDAPI=0\n"
     "SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0\nPROTON_DISABLE_HIDRAW=0x054C/0x0CE6\n"
@@ -74,11 +52,7 @@ def _md5(caminho: Path) -> str:
 
 
 def _heroic(lar: Path, jogos: dict[str, dict[str, object] | None]) -> Path:
-    """O Heroic Flatpak com a global dela (`MANGOHUD`) e estes jogos instalados.
-
-    `jogos`: `app -> cópia` (`None` = sem arquivo; `{}` = a cópia vazia que o
-    Heroic grava ao abrir a tela do jogo). O umu-id é `umu-<100 + i>`.
-    """
+    """O Heroic Flatpak com a global dela (`MANGOHUD`) e estes jogos instalados."""
     casa = lar / _HEROIC
     (casa / "store_cache").mkdir(parents=True)
     (casa / "GamesConfig").mkdir()
@@ -134,13 +108,9 @@ def _desfazer(lar: Path) -> tuple[list[cpe.Desfeito], bool]:
     return cpe.desfazer_as_estradas([_pasta()], lar, [lx.caminho()])
 
 
-# ---------------------------------------------------------------------------
-# 1 · A volta segue a global
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("copia", [None, {}], ids=["sem-arquivo", "copia-vazia"])
 def test_a_volta_segue_a_global(lar: Path, copia: dict[str, object] | None) -> None:
-    """MORDIDA: o desfazer sem a volta (`_devolver_os_excluidos` vazio); a régua
-    mostra a lista que ficou em A."""
+    """MORDIDA: o desfazer sem a volta (`_devolver_os_excluidos` vazio); a régua"""
     casa = _heroic(lar, {"A": copia, "B": {"enviromentOptions": [
         {"key": "MANGOHUD", "value": "1"}]}})
     _carona(lar)
@@ -161,9 +131,6 @@ def test_a_volta_segue_a_global(lar: Path, copia: dict[str, object] | None) -> N
     assert global_["enviromentOptions"] == [{"key": "MANGOHUD", "value": "1"}]
 
 
-# ---------------------------------------------------------------------------
-# 4 · Ela mexeu, ela fica
-# ---------------------------------------------------------------------------
 def test_ela_mexeu_a_chave_dela_fica(lar: Path) -> None:
     """MORDIDA: a volta exata sem conferir o «depois» (a chave dela sumiria)."""
     casa = _heroic(lar, {"A": {}})
@@ -183,14 +150,8 @@ def test_ela_mexeu_a_chave_dela_fica(lar: Path) -> None:
         f"A ficou com o que a carona ou a exclusão escreveram: {sorted(set(ficou) & _nossas())}")
 
 
-# ---------------------------------------------------------------------------
-# 5 · Sem PyYAML, o `.yml` não se escreve à mão
-# ---------------------------------------------------------------------------
 def _lutris(lar: Path, jogos: dict[str, str]) -> dict[str, Path]:
-    """O Lutris Flatpak com estes jogos da GOG (`slug -> appid da GOG`).
-
-    Devolve o `.yml` de cada um. O umu-id é `umu-<70000 + i>`.
-    """
+    """O Lutris Flatpak com estes jogos da GOG (`slug -> appid da GOG`)."""
     import sqlite3
 
     _instalar_flatpak(lar, _LUTRIS)
@@ -223,13 +184,7 @@ def _lutris(lar: Path, jogos: dict[str, str]) -> dict[str, Path]:
 
 
 def test_sem_pyyaml_o_yml_volta_exato_ou_fica(lar: Path, tmp_path: Path) -> None:
-    """O desfazer pelo `python3` do sistema, com o `yaml` recusado (só a
-    biblioteca padrão importa): o `.yml` que ninguém mexeu volta byte a byte; o
-    mexido fica intacto, e a saída diz o arquivo.
-
-    MORDIDA: uma volta parcial que regrave o `.yml` sem o PyYAML (por texto);
-    reprova pelo md5 do `.yml` mexido.
-    """
+    """O desfazer pelo `python3` do sistema, com o `yaml` recusado (só a"""
     py = shutil.which("python3", path=SISTEMA)
     if py is None:
         pytest.skip("sem python3 no sistema")
@@ -260,16 +215,9 @@ def test_sem_pyyaml_o_yml_volta_exato_ou_fica(lar: Path, tmp_path: Path) -> None
     assert "fica para o desfazer de depois" in linha, r.stdout
 
 
-# ---------------------------------------------------------------------------
-# 2 e 3 · O uninstall.sh de verdade, no lar de mentira
-# ---------------------------------------------------------------------------
 def _excluir_um_de_cada(r: m.Raizes, monkeypatch: pytest.MonkeyPatch,
                         ) -> tuple[dict[str, Path], str]:
-    """Depois dos donos e da carona do harness: A no Heroic, um jogo no Lutris
-    Flatpak, o mGBA inteiro e um jogo da Steam na lista de exclusão.
-
-    Devolve os arquivos e o texto do `.yml` do jogo do Lutris antes da exclusão.
-    """
+    """Depois dos donos e da carona do harness: A no Heroic, um jogo no Lutris"""
     monkeypatch.setenv("HOME", str(r.lar))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(r.config))
     monkeypatch.setenv("XDG_STATE_HOME", str(r.estado))
@@ -334,11 +282,7 @@ def _uninstall_com_um_excluido_de_cada(
 
 def test_o_purge_nao_apaga_antes_e_a_volta_segue_a_global(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """2 · O `uninstall.sh` real, do começo ao fim, com `--purge-config`.
-
-    MORDIDA: a ordem de antes (o bloco da configuração antes do desfazer dos
-    lançadores); reprova pelo nome de A.
-    """
+    """2 · O `uninstall.sh` real, do começo ao fim, com `--purge-config`."""
     r, alvos, _ = _uninstall_com_um_excluido_de_cada(tmp_path, monkeypatch)
     ficou = _lista_propria(alvos["casa"], "A")
     assert ficou is None, (
@@ -351,11 +295,7 @@ def test_o_purge_nao_apaga_antes_e_a_volta_segue_a_global(
 
 def test_um_excluido_de_cada_e_nenhum_rastro(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """3 · Um jogo da Steam, um do Heroic, um do Lutris Flatpak e um emulador
-    na lista; depois do uninstall, nenhum arquivo dos quatro tem o nosso.
-
-    MORDIDA: tirar a volta do Heroic; só ele aparece no rastro.
-    """
+    """3 · Um jogo da Steam, um do Heroic, um do Lutris Flatpak e um emulador"""
     r, alvos, yml_antes = _uninstall_com_um_excluido_de_cada(tmp_path, monkeypatch)
     nossas = _nossas()
     rastros: list[str] = []
@@ -376,11 +316,7 @@ def test_um_excluido_de_cada_e_nenhum_rastro(
 
 def test_o_desfazer_adiado_leva_a_lista_e_termina_depois(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com o desfazer adiado e `--purge-config`, a lista vai para o
-    `launch_env`, ao lado do registro, e o comando do ADIADO devolve A depois.
-
-    MORDIDA: o purge sem guardar a lista (o `cp` do bloco da configuração);
-    o desfazer de depois não sabe devolver A."""
+    """Com o desfazer adiado e `--purge-config`, a lista vai para o"""
     r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
     _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
     alvos, _ = _excluir_um_de_cada(r, monkeypatch)
@@ -397,7 +333,7 @@ def test_o_desfazer_adiado_leva_a_lista_e_termina_depois(
     assert guardada.is_file(), sorted(os.listdir(alvos["pasta"]))
     assert not lx.caminho(r.config).exists()
 
-    (alvos["casa"] / "config.json").write_text(inteiro)  # ela abriu o Heroic
+    (alvos["casa"] / "config.json").write_text(inteiro)
     py = shutil.which("python3", path=SISTEMA)
     assert py, "sem python3 no sistema"
     depois = subprocess.run(
@@ -413,22 +349,9 @@ def test_o_desfazer_adiado_leva_a_lista_e_termina_depois(
 
 
 def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
-    """O uninstall que GUARDA a configuração (o padrão) devolve os jogos e deixa
-    a lista; o install de depois põe o nosso de volta na caixa e na global, e o
-    excluído tem de voltar a ser excluído, nos dois lançadores.
-
-    Medido em 02/10/2026 na conferência: o `.yml` do Lutris ficava sem a camada
-    (a carona lia o que faltava no REGISTRO, que dizia «já pus»), e o jogo
-    excluído herdava da caixa o `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o
-    `PROTON_DISABLE_HIDRAW` — zero controles com o Modo Nativo em foco.
-
-    MORDIDAS: a carona do `.yml` lendo o que falta no registro (`k not in
-    dict(yml.pares)`), reprova pelo `.yml`; e o «antes» perdido quando o arquivo
-    é o de antes, reprova pela volta, que deixa de ser byte a byte.
-    """
+    """O uninstall que GUARDA a configuração (o padrão) devolve os jogos e deixa"""
     casa = _heroic(lar, {"A": None})
     ymls = _lutris(lar, {"q": "11"})
-    #: Um comentário dela: só a volta byte a byte o guarda (o PyYAML o perde).
     original = "# o jogo dela\n" + ymls["q"].read_text()
     ymls["q"].write_text(original)
     _carona(lar)
@@ -439,7 +362,7 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
     assert [e.chave for e in lx.ler()] == ["steam_app_100", "steam_app_70000"]
 
     (_pasta() / "default.env").parent.mkdir(parents=True, exist_ok=True)
-    (_pasta() / "default.env").write_text(_PONTE)  # o install de depois
+    (_pasta() / "default.env").write_text(_PONTE)
     _carona(lar)
 
     caixa = (lar / ".local/share/flatpak/overrides" / _LUTRIS).read_text()
@@ -460,6 +383,5 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
 
 
 def test_o_caminho_da_lista_e_um_so() -> None:
-    """O desfazer repete o caminho da lista porque roda sem o pacote; os dois
-    não podem se afastar."""
+    """O desfazer repete o caminho da lista porque roda sem o pacote; os dois"""
     assert cpe.RELPATH_DA_LISTA == lx.RELPATH

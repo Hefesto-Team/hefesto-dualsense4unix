@@ -1,35 +1,5 @@
 #!/usr/bin/env python3
-"""A tela Calibrar tem a largura e a altura das abas — A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01.
-
-A queixa dela, 23/09/2026, com a foto da tela: *"na aba de calibração ela tem
-altura e largura de layout inferior sendo que deveria ser a mesma do
-programa."*
-
-MEDIDO NO PILOTO ANTES DA CURA (WebKit, a mesma janela oculta, indo da
-Controles à Calibrar pelo botão dela)::
-
-    vista       02-controles `.janela`   calibrar `.cx`
-    1212x809    1180 x 777               1168 x 499
-    1918x840    1600 x 808               1180 x 499   <- a TV dela
-    1212x700    1180 x 668               1168 x 499
-
-A vista era a mesma nas duas páginas: a causa era a folha da Calibrar, e não
-como a janela a hospeda. O tamanho tem dono, o `topo.html`, e a Calibrar passou
-a lê-lo de lá (`calibrar.moldura`).
-
-O QUE ESTA RÉGUA MEDE: numa mesma aba do Chrome, na mesma vista, a caixa da
-02-controles e a da Calibrar — e exige a mesma largura, a mesma altura e o
-mesmo lugar (±2 px), nas quatro vistas e com 0, 1 no cabo, 1 no rádio, 2 e 4
-controles (a MATRIZ dela: *"nunca é pensada só em um modo, rota, forma de
-conexão se cabo ou se bt, ou só pro player 1"*). E que a altura ganha vire vão
-ACIMA do rodapé, que desce para o fim da caixa. As duas páginas são as da
-BANCADA (`mockup/`): é lá que o desenho mora até ela aprovar.
-
-A MORDIDA: devolva à `documento()` do `calibrar.py` a regra antiga
-(`body{padding:22px}` e `.cx{width:1180px;max-width:100%}` no lugar da
-`moldura()`), regere, e o caso da vista dela reprova com 1180 x 499 contra
-1600 x 808 — os números que o piloto mediu.
-"""
+"""A tela Calibrar tem a largura e a altura das abas — A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01."""
 from __future__ import annotations
 
 import pathlib
@@ -44,26 +14,16 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import olhar  # a vista dela tem dono, e ele mora ao lado do gerador
+import olhar
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 PAGINA = "calibrar-sensores.html"
 ABA_VIZINHA = "02-controles.html"
 
-#: A folga que a sprint pede: arredondamento de subpixel, nada mais.
 FOLGA = 2
 
-#: O PISO DA JANELA (`TAMANHO_OCULTA`, na ponte da janela GTK). Fica escrito
-#: porque importar a ponte sobe o WebKit, que a CI não tem, e porque citação
-#: nova da janela reprova no portão `nada-aponta-para-a-janela`. O que muda com
-#: a vista é só o tamanho em que se compara: a régua exige a caixa da aba, não
-#: um número.
 PISO = (1212, 809)
 
-#: As vistas: o piso da janela, a dela maximizada (`olhar.VISTA_DELA`, lida do
-#: dono), a ladrilhada abaixo do piso — onde a caixa encolhe com a vista em vez
-#: de passar da tela — e uma BAIXA, em que o conteúdo da Calibrar não cabe e o
-#: miolo tem de rolar por dentro. As duas últimas têm a largura do piso.
 VISTAS = {"piso": PISO, "dela": olhar.VISTA_DELA, "ladrilhada": (PISO[0], 700),
           "baixa": (PISO[0], 480)}
 
@@ -76,8 +36,6 @@ def _controle(i: int, via: str) -> dict[str, Any]:
             "transporte": via}
 
 
-#: A MATRIZ: quantos controles e por onde. `dois` é a bancada do desenho, lida
-#: do ARQUIVO — os outros são a mesma página gerada com outra mesa.
 MESAS: dict[str, list[dict[str, Any]]] = {
     "nenhum": [],
     "um-no-cabo": [_controle(0, "usb")],
@@ -138,8 +96,6 @@ def medido(calibrar_mod: Any) -> dict[str, dict[str, Any]]:
     assert aba.exists() and calibrar.exists(), (
         f"a bancada não tem {ABA_VIZINHA} e {PAGINA} — o caminho mudou? Uma "
         f"régua de tamanho que não abre página passa sobre tudo.")
-    # O QUE O PRODUTO ESCONDE (a `.nota` da bancada) vem da folha do piloto: sem
-    # isto a legenda faz a página rolar e a barra come 15 px da largura.
     esconde = "".join(f"{s}{{display:none}}" for s in seletores_escondidos())
 
     fora: dict[str, dict[str, Any]] = {}
@@ -190,11 +146,7 @@ def test_a_calibracao_tem_a_caixa_da_aba(medido: dict[str, Any], vista: str,
 
 @pytest.mark.parametrize("vista", VISTAS)
 def test_a_calibracao_nao_passa_da_vista(medido: dict[str, Any], vista: str) -> None:
-    """A página não rola e o «Começar» se alcança: quem rola é o miolo, por dentro.
-
-    MORDE na vista `baixa`: tire o `overflow-y:auto` do `.corpo` e o aviso do
-    fim fica cortado pela borda da caixa, sem rolagem que o traga.
-    """
+    """A página não rola e o «Começar» se alcança: quem rola é o miolo, por dentro."""
     _, alt = VISTAS[vista]
     for mesa in ("dois", *MESAS):
         cal = medido[vista][mesa]
@@ -210,13 +162,7 @@ def test_a_calibracao_nao_passa_da_vista(medido: dict[str, Any], vista: str) -> 
 
 @pytest.mark.parametrize("vista", VISTAS)
 def test_o_rodape_desce_para_o_fim_da_caixa(medido: dict[str, Any], vista: str) -> None:
-    """O rodapé e o aviso terminam na borda de baixo da caixa, como o das abas.
-
-    A caixa cresceu até a altura da janela; sem o rodapé descer, a altura nova
-    viraria um vão ABAIXO do aviso, e a tela pareceria a caixa pequena de antes
-    pintada sobre um fundo maior. MORDE: tire o `margin-top:auto` do `.rodape`
-    no `calibrar.py`, regere, e a folga de baixo passa de 21 px para centenas.
-    """
+    """O rodapé e o aviso terminam na borda de baixo da caixa, como o das abas."""
     for mesa in ("dois", *MESAS):
         folga = medido[vista][mesa]["folga"]
         assert folga and abs(folga["embaixo"] - folga["esperada"]) <= FOLGA, (
@@ -227,11 +173,7 @@ def test_o_rodape_desce_para_o_fim_da_caixa(medido: dict[str, Any], vista: str) 
 
 
 def test_a_bancada_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
-    """O arquivo da bancada é o que o gerador escreve hoje — ninguém esqueceu de regerar.
-
-    A régua de cima mede o ARQUIVO no caso `dois`; esta diz, sem Chrome, se ele
-    ficou para trás do gerador.
-    """
+    """O arquivo da bancada é o que o gerador escreve hoje — ninguém esqueceu de regerar."""
     import monta
     import onde
 
@@ -242,12 +184,7 @@ def test_a_bancada_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
 
 
 def test_o_tamanho_vem_do_topo(calibrar_mod: Any) -> None:
-    """Mude o teto da `.janela` no esqueleto e a Calibrar vai junto; tire-o e ela PARA.
-
-    É o que impede o defeito de voltar pelo caminho por onde veio: o 1180 da
-    Calibrar era a largura das abas antes de 08/09, redigitada, e ficou para
-    trás quando elas passaram a esticar.
-    """
+    """Mude o teto da `.janela` no esqueleto e a Calibrar vai junto; tire-o e ela PARA."""
     import monta
 
     assert "min(100%,1600px)" in monta.TOPO, (

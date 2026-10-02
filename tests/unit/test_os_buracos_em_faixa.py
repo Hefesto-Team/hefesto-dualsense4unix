@@ -1,90 +1,4 @@
-"""O-ASSENTO-GUARDADO-NAO-ANDA-04 — os 60 arranjos raros também fecham o buraco no jogo.
-
-**Decidido por delegação e mantido por ela em 24/09/2026, 19h.** A varredura
-da O-ASSENTO-03 (``_as_mesas_do_produto``, todas as mesas de até quatro lugares)
-deixou 60 arranjos em que a guarda de quem já está no boneco certo deixava o
-jogo como estava: com dois controles fora e prazos diferentes, o buraco que
-VENCEU fica à frente de um lugar AINDA GUARDADO, e o sufixo só fecharia o
-buraco pondo no lugar guardado quem já estava certo.
-
-**A CONTAGEM, refeita pela função pura antes da cura:** os 60 são as mesas em
-que o plano da O-ASSENTO-03 difere do mesmo sufixo sem a guarda. São DEZ
-formas, cada uma com os três secundários em seis ordens (:data:`AS_DEZ_FORMAS`),
-todas com quatro vpads sentados, nenhum nascendo e o jogo aberto. As famílias,
-pelo lugar do vpad do P1 (fixo com o jogo na autoridade, a R-04):
-
-- o P1 no boneco dele, na frente do buraco (``1F@1 2@3 3@4 5@5``);
-- o P1 certo no meio da faixa, que passa por cima dele (``1@2 2@4 3F@3 5@5``
-  e ``1@3 2F@2 3@4 5@5``);
-- o P1 certo atrás do lugar guardado (``1@2 2@3 4@4 5F@5`` e
-  ``1@2 2@3 4F@4 5@5``);
-- o P1 fora do boneco dele, esperando o jogo (as outras cinco).
-
-Em todas, um ou dois secundários estão atrás do buraco que venceu, um
-secundário certo está mais atrás, e entre eles há um boneco que ninguém pode
-ocupar agora: o da carta guardada, ou, com o P1 fora do boneco dele, o boneco
-do P1, que espera o jogo. Recriar o certo o jogaria nesse boneco. **Chegar a
-elas exige seis controles na mesa** (quatro vpads sentados, um que venceu e um
-que segura a carta que falta, guardado ou externo): com P1 a P4 e quaisquer
-dois fora, nenhuma das 60 acontece (:class:`TestAMatrizDeQuatro`).
-
-**A CURA mora no dono** (``coop._a_faixa``): quando o sufixo deixa alguém fora
-do boneco, numa mesa já em ordem e com o jogo aberto, tenta-se recriar só uma
-FAIXA de cartas. Ela só vale se todo mundo dela renasce no boneco da própria
-carta (o que já deixa de fora quem está certo), se o fixo não entra e se bate o
-sufixo em (fora do boneco, recriações). Nos 60, todo secundário acaba no boneco
-da carta; só o P1 fora do boneco continua fora, esperando o jogo.
-
-**E A MESMA FAMÍLIA fora dos 60:** a varredura muda 652 mesas, e 592 não são
-dos 60 — o buraco que venceu à frente de um boneco que ninguém pode ocupar,
-que sufixo nenhum fechava (322, com menos gente fora do boneco: 118 com três
-sentados e 204 com quatro), e os empates em que o sufixo recriava quem espera
-para jogá-lo DENTRO desse boneco (270, a mesma conta com menos recriações: em
-168 o boneco é o da carta guardada, e em 102 o do P1 fixo, que espera o
-jogo). O caso que já fechava não muda.
-
-AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
-
-- ``_a_faixa`` desligada (o ``planejar_a_ordem`` de antes) reprova 25: as dez
-  famílias, os dois casos puros de quem espera, a varredura e as doze da
-  bancada de queda (seis e cinco controles). A matriz de quatro passa, e é o
-  que ela afirma;
-- a faixa aceitando quem não cai no boneco da carta reprova a varredura (24
-  mesas: em 12 o renascido cairia no boneco do P1 fixo, e em 12 no da carta
-  guardada) e a mesa de cinco;
-- a faixa sem a exigência da mesa em ordem reprova a varredura (mesa fora de
-  ordem é do sufixo, STEAM-NO-FISICO-01);
-- a faixa sem a ordem DEPOIS de recriar reprova a varredura pela ordem que ela
-  confere (86 mesas em que quem renasce acertaria o próprio boneco passando à
-  frente de quem tem carta menor — a STEAM-NO-FISICO-01 ao contrário);
-- o fixo entrando na faixa reprova três famílias, a varredura, a mesa de cinco
-  e três casos da matriz de quatro: o vpad do P1 renasceria com o jogo aberto
-  (a R-04);
-- a faixa pesando só a conta de fora, sem as recriações, reprova oito: é quem
-  espera o lugar guardado renascendo à toa;
-- a faixa dizendo sempre que a ordem fecha inteira reprova as três famílias em
-  que o P1 fixo fica fora de ordem, esperando o jogo: o diário diria
-  ``coop_ordem_do_p1_voltou`` sobre um P1 que não voltou;
-- sem a guarda da O-ASSENTO-03 (o ``break``), a faixa acha o mesmo plano nas
-  34.790 mesas de até quatro; quem ainda a mede é
-  :meth:`TestOs60.test_a_guarda_da_03_continua_valendo_numa_mesa_de_cinco`.
-
-Saíram da faixa a exclusão de quem já está certo e o pulo da faixa vazia:
-arrancadas as duas, nenhuma das 6,4 milhões de mesas de até cinco sentados
-muda de plano (medido). A exigência do boneco já deixa de fora quem está
-certo, e a faixa vazia é o plano de nenhuma recriação, que o sufixo já pesou.
-O desempate a favor do sufixo também não se mede: nessas mesas, nenhuma faixa
-diferente empata com ele. E o ``not compacta`` não morde (sem jogo, faixa
-nenhuma bate o sufixo): fica porque a faixa só sabe olhar o jogo aberto. Nem
-o ``melhor[0]`` do ``planejar_a_ordem`` (a faixa só roda com alguém fora do
-boneco): arrancado, nenhuma das 34.790 mesas de até quatro chaves nem das
-1.218.732 de até cinco muda (conferência de 24/09/2026), porque faixa nenhuma
-bate um sufixo que já fecha. Fica pelo custo, já que o caso comum não varre
-faixa nenhuma, e porque é ele que garante, por construção, que o caso que já
-fechava não muda.
-
-Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
-"""
+"""O-ASSENTO-GUARDADO-NAO-ANDA-04 — os 60 arranjos raros também fecham o buraco no jogo."""
 from __future__ import annotations
 
 import functools
@@ -124,9 +38,6 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
 
 FIXO = frozenset({"p1"})
 
-#: As dez formas dos 60, em «carta@boneco» na ordem da carta (``F`` é o vpad do
-#: P1, fixo com o jogo na autoridade), com o boneco do buraco que venceu e a
-#: carta ainda guardada.
 AS_DEZ_FORMAS = {
     "1F@1 2@3 3@4 5@5": (2, 4),
     "1@2 2@4 3F@3 5@5": (1, 4),
@@ -139,9 +50,6 @@ AS_DEZ_FORMAS = {
     "1@3 3@4 4F@2 5@5": (1, 2),
     "2@3 3@4 4F@1 5@5": (2, 1),
 }
-
-
-# -- os oráculos: o plano de antes desta sprint, com e sem a guarda -----------
 
 
 def _o_plano_da_03(
@@ -245,10 +153,6 @@ class TestOs60:
                 lugar == cartas[c] - 1 for lugar, c in depois.items() if c not in FIXO
             ), f"um secundário ficou fora do boneco: {depois}"
             assert not set(recriar) & FIXO
-            # O segundo valor diz se a ordem fecha inteira COM o P1 fixo: é ele
-            # que escolhe a frase do diário (`coop_ordem_do_p1_espera_o_jogo`).
-            # Em três formas a do P1 fica fora de ordem até o jogo devolver a
-            # autoridade, e a faixa não pode dizer que ele voltou.
             numeros = [cartas[c] for _lugar, c in sorted(depois.items())]
             assert inteira == (numeros == sorted(numeros)), (mesa, cartas, inteira)
 
@@ -260,12 +164,7 @@ class TestOs60:
         assert planejar_a_ordem(mesa, cartas, fixos=FIXO) == (["b", "c"], True)
 
     def test_quem_espera_fora_do_boneco_tambem_fica(self) -> None:
-        """Cinco controles: o P2 venceu, o P4 ainda está guardado (a carta 3).
-
-        O sufixo recriava o ``novo`` (carta 4, no boneco 5) junto com o P3, e o
-        jogo o punha no boneco 3 — o lugar guardado do P4, ainda errado. A
-        faixa recria só o P3; o ``novo`` espera o P4 voltar ou vencer.
-        """
+        """Cinco controles: o P2 venceu, o P4 ainda está guardado (a carta 3)."""
         mesa = {0: "p1", 2: "p3", 4: "novo"}
         cartas = {"p1": 1, "p3": 2, "novo": 4}
         assert _o_plano_da_03(mesa, cartas, fixos=FIXO) == (["p3", "novo"], True)
@@ -276,11 +175,7 @@ class TestOs60:
         assert planejar_a_ordem(mesa, {"p1": 1, "p3": 3, "p4": 4}, fixos=FIXO) == ([], True)
 
     def test_a_guarda_da_03_continua_valendo_numa_mesa_de_cinco(self) -> None:
-        """Sem a guarda, o ``e`` (certo no boneco 6) iria para o lugar guardado do 5.
-
-        A faixa não conserta esta mesa: o ``b`` renasceria no boneco 2, e o 1
-        é do P1 fixo. Fica como está, e é a guarda que segura o ``e``.
-        """
+        """Sem a guarda, o ``e`` (certo no boneco 6) iria para o lugar guardado do 5."""
         mesa = {0: "p1", 2: "b", 3: "c", 4: "d", 5: "e"}
         cartas = {"p1": 2, "b": 1, "c": 3, "d": 4, "e": 6}
         sem_guarda = _o_plano_da_03(mesa, cartas, fixos=FIXO, guarda=False)
@@ -323,8 +218,6 @@ class TestAVarredura:
                 "quem renasce pela faixa cai no boneco da própria carta",
                 caso,
             )
-            # A ordem continua valendo (STEAM-NO-FISICO-01): acertar o boneco
-            # de alguém passando à frente de quem tem carta menor não é cura.
             assert _em_ordem([cartas[c] for c in depois.values() if c not in fixos]), (
                 "a faixa quebrou a ordem do jogo",
                 caso,
@@ -342,12 +235,8 @@ class TestAVarredura:
         }
 
 
-# -- a bancada de queda, com a classe real -----------------------------------
-
-#: O sexto controle: os 60 pedem seis na mesa (a bancada de queda tem cinco).
 SEXTO = "aabbcc000006"
 
-#: Seis controles no cabo, no rádio, e alternados.
 TRANSPORTES_DE_SEIS = {
     "usb": ("usb",) * 6,
     "bt": ("bt",) * 6,
@@ -356,11 +245,7 @@ TRANSPORTES_DE_SEIS = {
 
 
 class _LeitorQueDemora(_LeitorDeSecundario):
-    """O leitor de um jogador cujo grab ainda não confirmou.
-
-    É o «aguardando grab» do produto (BUG-COOP-GRAB-PENDING-VPAD-01): a thread
-    do leitor ainda não abriu o nó, e o jogador está na mesa sem vpad.
-    """
+    """O leitor de um jogador cujo grab ainda não confirmou."""
 
     demorados: frozenset[str] = frozenset()
 
@@ -433,9 +318,7 @@ def _nascidos(bancada: MesaDoJogo, desde: int, uniq: str) -> list[Any]:
     return [v for v in bancada.vpads[desde:] if getattr(v, "identidade", None) == uniq]
 
 
-#: Quanto o lugar guardado dura (os dois prazos têm o mesmo dono).
 PRAZO = max(PRIMARIO_RESERVA_SEC, prazo_do_lugar_guardado())
-#: Quanto depois do primeiro o segundo sai: o prazo do primeiro vence antes.
 DEPOIS = 10.0
 
 
@@ -443,20 +326,12 @@ DEPOIS = 10.0
 def mesa_de_seis(monkeypatch: pytest.MonkeyPatch) -> None:
     """A bancada de queda com um sexto controle (a mesa de cinco lê ``CHAVE_DE``)."""
     monkeypatch.setitem(bancada_mod.CHAVE_DE, SEXTO, "AA:BB:CC:00:00:06")
-    # O jogador que chega pronto não espera o vpad do que demora no grab: é o
-    # piso de acessibilidade do produto, sem os 4 s de relógio de verdade.
     monkeypatch.setattr(coop_mod, "ESPERA_PELA_ORDEM_S", 0.0)
 
 
 @pytest.mark.usefixtures("config_isolado", "mesa_de_seis")
 class TestUmDosSessentaComSeisControles:
-    """A forma ``1F@1 2@3 3@4 5@5``, com a classe real e seis controles.
-
-    O ``g`` (o quinto a chegar) demora no grab e o ``z`` nasce antes dele, no
-    boneco 5. O P2 sai; dez segundos depois o ``g`` sai sem nunca ter tido
-    vpad. Quando o prazo do P2 vence, o do ``g`` ainda corre: a tela fecha a
-    fila (o P3 é 2, o P4 é 3, o ``z`` é 5) e o boneco 4 é do ``g``.
-    """
+    """A forma ``1F@1 2@3 3@4 5@5``, com a classe real e seis controles."""
 
     @staticmethod
     def _ate_o_p2_vencer(
@@ -491,7 +366,6 @@ class TestUmDosSessentaComSeisControles:
 
         antes, planos, vpad_do_z = self._ate_o_p2_vencer(monkeypatch, bancada, g)
 
-        # O co-op perguntou uma das 60, e a faixa respondeu.
         mudados = planos.os_que_a_faixa_mudou()
         assert len(mudados) == 1, mudados
         mesa, cartas, nascer, fixos, compacta, resposta = mudados[0]
@@ -505,7 +379,6 @@ class TestUmDosSessentaComSeisControles:
             assert len(_nascidos(bancada, antes, uniq)) == 1, f"{uniq} renasce uma vez"
         assert bancada.vpad_de(SEXTO) is vpad_do_z, "o z estava certo e renasceu"
 
-        # E depois: o g volta ao boneco dele, ou vence e o z desce uma vez.
         if volta:
             monkeypatch.setattr(_LeitorQueDemora, "demorados", frozenset())
             bancada.mesa.sentar(g, transporte=vias[g])
@@ -525,13 +398,7 @@ class TestUmDosSessentaComSeisControles:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestQuemEsperaOLugarGuardado:
-    """Cinco controles, e quem espera o lugar guardado não renasce à toa.
-
-    O P2 sai; dez segundos depois, o P4. Quando o prazo do P2 vence, o P3 desce
-    ao boneco 2 e o ``novo`` (carta 4, no boneco 5) ESPERA: recriado agora, o
-    jogo o poria no boneco 3, que é do P4. Ele renasce uma vez só, quando o P4
-    volta (e aí vai ao boneco 4) ou quando o prazo do P4 vence (boneco 3).
-    """
+    """Cinco controles, e quem espera o lugar guardado não renasce à toa."""
 
     @pytest.mark.parametrize("volta", [True, False], ids=["o-p4-volta", "o-p4-vence"])
     @pytest.mark.parametrize("transporte", list(TRANSPORTES_DE_SEIS))
@@ -591,20 +458,7 @@ DOIS_FORA = [
 
 @pytest.mark.usefixtures("config_isolado")
 class TestAMatrizDeQuatro:
-    """P1 a P4, quaisquer dois fora com prazos diferentes, USB, BT e a mesa mista.
-
-    O primeiro sai, o segundo sai dez segundos depois, o prazo do primeiro
-    vence; o segundo volta dentro do prazo dele, ou o prazo vence também. Com
-    quatro controles a faixa nunca muda o plano: cada pergunta que o co-op faz
-    tem a resposta da O-ASSENTO-03. O jogo termina seguindo a tela, e quem
-    ficou na mesa o tempo todo só renasce quando o número dele muda, e sempre
-    no boneco do número novo (o ~1 s sem controle nunca é à toa).
-
-    A exceção é a R-04, e ela não é desta sprint: o P1 sai, o P2 sai, o prazo
-    do P1 vence com o P2 fora, e o posto passa ao P3. O P2 volta com a carta 1
-    e dirige o boneco que o jogo lhe deu até o jogo devolver a autoridade
-    (:class:`TestAVoltaTardiaDoP1`, na régua da O-ASSENTO-03).
-    """
+    """P1 a P4, quaisquer dois fora com prazos diferentes, USB, BT e a mesa mista."""
 
     @pytest.mark.parametrize(("primeiro", "segundo", "transporte", "volta"), DOIS_FORA)
     def test_a_faixa_nao_muda_nada_na_mesa_de_quatro(
@@ -628,7 +482,6 @@ class TestAMatrizDeQuatro:
             jogo, numeros = bancada.o_jogo_ve(), bancada.a_tela()
             for uniq in sempre:
                 novo = bancada.vpad_de(uniq)
-                # Sem vpad é quem cedeu o controle ao posto do P1: não renasceu.
                 if novo is not None and vpads[uniq] is not None and novo is not vpads[uniq]:
                     assert uniq not in certos or numeros[uniq] != tela[uniq], (
                         f"{uniq} estava no boneco do número dele e renasceu"

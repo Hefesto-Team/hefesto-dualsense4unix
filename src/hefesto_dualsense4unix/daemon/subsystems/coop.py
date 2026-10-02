@@ -1,45 +1,4 @@
-"""Subsystem Co-op local — N controles = N jogadores (FEAT-DSX-COOP-LOCAL-01).
-
-O multi-controle base (FEAT-DSX-MULTI-CONTROLLER-01) é "N controles, 1 player":
-o OUTPUT é broadcast e o INPUT vem só do primário. Isso serve para reserva/troca
-de controle, mas NÃO para co-op (2 pessoas) — os dois viram o mesmo player.
-
-Este subsystem adiciona, SEM tocar no caminho do primário (P1), uma camada de
-"jogadores secundários": para cada controle FÍSICO além do primário, cria um
-leitor evdev dedicado (com grab) e um gamepad virtual próprio (P2, P3, …). O
-poll loop, depois de despachar o P1, chama `forward_all()` para repassar cada
-secundário ao SEU gamepad virtual. Assim o jogo enxerga N devices distintos =
-co-op local de verdade.
-
-BUG-COOP-GRAB-PENDING-VPAD-01 — garantia: o gamepad virtual de um secundário SÓ
-nasce depois do EVIOCGRAB CONFIRMADO (`grab_state == "held"`). Um jogador cujo
-grab ainda está "pending" (a thread do reader não abriu o device) fica
-registrado SEM vpad — o jogo não vê nada dobrado — e é promovido pelo próprio
-tick (`forward_all`/`sync`) assim que o grab confirmar. Antes, o vpad nascia
-com grab apenas "pendente" e uma recusa tardia (EBUSY) deixava até ~2s de
-input DOBRADO no jogo até o sync derrubar o jogador.
-
-FEAT-COOP-PLAYER-LED-01: com o co-op ativo, cada controle acende o padrão
-canônico de player-LED do SEU jogador (P1 no primário, P2.. nos secundários,
-na ordem de criação), via a rota sysfs do kernel — a mesma da lightbar BT
-(FEAT-DSX-LIGHTBAR-SYSFS-01). Quando um jogador sai ou o co-op desliga, o
-padrão do perfil ativo é restaurado (ver `_revert_player_leds`).
-
-Pré-requisitos (gate em `should_be_active`):
-  - `config.coop_enabled` ligado — **default ON** desde 06/08/2026, por decisão
-    dela (*"todos e tudo no Hefesto tem que tá com o permitir co-op ligado"*);
-    o piso é o dataclass de `daemon/lifecycle.py`, e quem quer controle de
-    reserva o deixa DESCONECTADO. (A linha dizia "default OFF" até 15/08/2026 —
-    fato errado, substituído.)
-  - emulação de gamepad ativa (o P1 já é um gamepad virtual; os secundários
-    seguem a mesma máscara/flavor);
-  - 2+ controles físicos conectados.
-
-FEAT-VPAD-FF-PASSTHROUGH-01: o vpad de cada jogador nasce com um
-`rumble_sink` que devolve o rumble pedido pelo JOGO ao controle físico
-DAQUELE jogador (targeting por MAC via `apply_game_rumble`); o
-`forward_all()` bombeia o FF de cada vpad a cada tick.
-"""
+"""Subsystem Co-op local — N controles = N jogadores (FEAT-DSX-COOP-LOCAL-01)."""
 from __future__ import annotations
 
 import contextlib
@@ -50,12 +9,6 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# FEAT-COOP-PLAYER-LED-01 / COR-03: os padrões canônicos de player-LED
-# (P1..P4 do PS5) moraram aqui até o COR-03; agora o dono é
-# `core.led_control` (a cor automática por controle usa o MESMO padrão fora
-# do co-op — D7 "número do controle"). O import reexporta para preservar o
-# contrato público (`from ...coop import player_led_pattern` continua
-# válido — testes e chamadores antigos não quebram).
 from hefesto_dualsense4unix.core.led_control import player_led_pattern
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -68,67 +21,15 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: R-22: prazo máximo (s) que a promoção de UM jogador espera pela calibração
-#: antes de nascer com o 0x05 canônico. Medido: no caminho quente (USB, ou BT
-#: com o report_thread mantendo o link vivo) o `HIDIOCGFEATURE` volta em ~1ms e
-#: a promoção acontece no tick seguinte; o prazo só existe para o caminho
-#: patológico (broker mudo = 2s de timeout por tentativa; BT ocioso = 5s até o
-#: EIO do hidp). Esperar além disso não traz calibração nenhuma — só deixaria o
-#: jogador sem vpad. Fail-safe: na dúvida o jogador NASCE (drift leve de gyro é
-#: tolerável; "sem controle" não é).
 _CALIB_PRAZO_S = 2.0
 
-#: STEAM-NO-FISICO-01 — quanto um jogador PRONTO espera pelo vpad de um número
-#: MENOR que ainda não nasceu, para o jogo ver a ordem P1→P4.
-#:
-#: A terceira obrigação da decisão dela de 23/09/2026: *"o P1 do Hefesto é o
-#: jogador 1 do jogo"*. O jogo numera pela ORDEM EM QUE OS VPADS NASCEM — lido
-#: no fonte: o SDL dá a cada joystick novo o menor índice livre
-#: (`SDL_joystick.c`, `SDL_PrivateJoystickAdded` → `SDL_FindFreePlayerIndex`),
-#: e a enumeração inicial do HIDAPI é a do `udev` (`linux/hid.c`,
-#: `udev_enumerate_scan_devices` sobre `hidraw`), ordenada pelo syspath — que
-#: num vpad uhid carrega o número de sequência do HID, ou seja, a ordem de
-#: criação. O winebus do Proton enumera pelo mesmo `udev`.
-#:
-#: O prazo cobre UM feature report por rádio (o `REPORT_REQ_TIMEOUT` de 3 s do
-#: BlueZ é o pior caso da calibração que adia a promoção) com folga. Passado
-#: ele, o jogador nasce fora de ordem: um número trocado no jogo se conserta
-#: reconectando, um jogador sem controle não se conserta sozinho.
 ESPERA_PELA_ORDEM_S = 4.0
 
 
 def secundarios_fora_da_mesa(
     sentados: Iterable[str], presentes: Iterable[str]
 ) -> int:
-    """Quantos dos secundários DERRUBADOS perderam também o controle físico.
-
-    AVISO-FALSO-DO-COOP-01 (09/08/2026). O aviso vermelho *"1 jogador saiu —
-    não foi você; volta sozinho"* aparecia com os DOIS controles dela na tela,
-    conectados: ele contava **gamepads virtuais recolhidos**, e recolher vpad
-    não é controle saindo da mesa. Na máquina dela isso aconteceu 20 vezes num
-    dia — a caixinha de Steam Input do jogo suspende os vpads a cada entrada em
-    sessão, e cada reinício do daemon repete a suspensão.
-
-    A regra de produto, em uma linha: **o produto fala do que ela vê.** O aviso
-    diz *controle*; enquanto todo controle que estava sentado continuar
-    conectado, o número é 0 e a janela cala.
-
-    O contrapeso é a razão de esta função existir em vez de um `return 0`:
-    quando um controle DELA cai de verdade (bateria, replug, rádio), a
-    identidade dele some de `presentes` e o número sobe — o aviso tem de
-    aparecer, senão trocaríamos um defeito por outro pior.
-
-    Os dois lados são medidos com a **mesma régua**: `presentes` vem de
-    `discover_dualsense_evdevs()`, exatamente a enumeração que o `sync()` usa
-    para SENTAR cada secundário. Comparar contra outro inventário (handles do
-    backend, por exemplo) mediria "estar na mesa" com uma régua diferente da
-    que usou para servir o lugar — a armadilha nº 1 da casa.
-
-    Identidades-fallback (`path:…`, node sem `uniq` legível) ficam de fora: o
-    node é volátil por construção (uma re-enumeração troca `eventN` sem ninguém
-    sair), e acusar queda a partir dele seria o mesmo aviso falso com outra
-    roupa.
-    """
+    """Quantos dos secundários DERRUBADOS perderam também o controle físico."""
     vivos = {str(mac) for mac in presentes}
     return sum(
         1
@@ -195,27 +96,11 @@ def _item_da_mesa(
     vpad: Any,
     aguardando_grab: bool,
 ) -> dict[str, Any]:
-    """Um item de `CoopManager.mesa` — o contrato num lugar só.
-
-    QUEM-É-QUEM-01: o primário e os secundários vêm de estruturas diferentes
-    (`daemon._gamepad_device` contra `_SecondaryPlayer.vpad`), e montar o
-    dicionário duas vezes é como as duas metades da mesma tabela se afastam na
-    primeira mudança.
-
-    ``nome_divergente`` é a E3 da sprint, e é um ALARME, não uma afirmação
-    simétrica: só vai a ``True`` quando os DOIS inteiros são conhecidos e
-    diferem. Desconhecido (uinput, que não carrega número no nome; vpad
-    ausente; dublê) fica ``False`` — "nada a avisar" —, porque publicar o
-    alarme sem saber seria a medição confiante e errada que a armadilha nº 1
-    desta casa descreve.
-    """
+    """Um item de `CoopManager.mesa` — o contrato num lugar só."""
     numero = _inteiro_ou_none(player) or 0
     identidade = identidade_do_vpad(vpad)
     indice = identidade["vpad_indice"]
     return {
-        # Os dois primeiros repetem o NOME que `controllers[]` já usa para o
-        # mesmo fato (`uniq`, `player`): fato igual, nome igual — é assim que
-        # quem lê casa as duas listas sem uma tabela de tradução.
         "uniq": _texto_ou_none(uniq),
         "player": numero,
         "is_primary": bool(is_primary),
@@ -226,22 +111,7 @@ def _item_da_mesa(
 
 
 def calibration_cache(daemon: Any) -> dict[str, bytes]:
-    """Cache de calibração 0x05 POR MAC, vivo no daemon (R-22).
-
-    O feature 0x05 é imutável por unidade (bias/sensibilidade de fábrica da
-    IMU daquele controle), então cachear por MAC é correto por construção — a
-    chave é a identidade estável do jogador, nunca o node/handle volátil.
-
-    Mora no daemon (`_calibration_by_uniq`) de propósito: o P1
-    (`gamepad.read_primary_calibration`) e os secundários do co-op leem o
-    MESMO controle quando a usuária troca de primário, e uma leitura já paga
-    não deve ser paga de novo pelo outro caminho.
-
-    Degradação (dublê/objeto que recusa setattr): devolve um dicionário novo a
-    cada chamada — sem cache, mas TAMBÉM sem I/O no event loop (a promoção
-    adia uma vez e nasce com o 0x05 canônico). O invariante do R-22 é sobre a
-    thread do loop, não sobre o hit rate.
-    """
+    """Cache de calibração 0x05 POR MAC, vivo no daemon (R-22)."""
     cache = getattr(daemon, "_calibration_by_uniq", None)
     if isinstance(cache, dict):
         return cache
@@ -253,141 +123,48 @@ def calibration_cache(daemon: Any) -> dict[str, bytes]:
 
 @dataclass
 class _SecondaryPlayer:
-    """Um jogador secundário: o evdev de um controle físico + seu gamepad virtual.
-
-    FEAT-DSX-CONTROLLER-IDENTITY-01: a identidade do jogador é o MAC
-    (`identity`); o `evdev_path` é só o node volátil que estava valendo quando
-    o jogador nasceu — se o kernel re-enumerar (storm/replug), o `sync()`
-    detecta a troca de node e recria o jogador limpo no node novo.
-
-    BUG-COOP-GRAB-PENDING-VPAD-01: `vpad` nasce None quando o grab ainda está
-    "pending"; `_promote_pending` cria o vpad SÓ quando `grab_state == "held"`.
-    Nunca existe vpad sem grab confirmado — sem janela de input dobrado.
-
-    `player_index` é o índice de ALOCAÇÃO deste jogador (2..N), fixado na
-    criação: menor livre, REUSADO quando alguém sai, para o co-op manter
-    P1..PN contíguos. **Hoje ele não aparece em lugar nenhum que a usuária
-    veja, e as duas coisas que ele carimbava saíram uma por uma:**
-
-    - o MAC do vpad uhid saiu na COOP-QUE-NÃO-DESMONTA-01/E3 (06/09/2026) —
-      quem responde é `uhid_gamepad.vpad_mac`, ancorado no APARELHO; reusar o
-      índice trocava o MAC do Jogador 2 de dono no meio da mesa;
-    - o NOME do vpad saiu na A-MESMA-LINGUA-01 (07/09/2026) — quem responde
-      é `CoopManager.numero_para_o_nome`, a fila de chegada. Antes disso o
-      nome dizia um número e a carta dizia outro, em 4 de 4 na bancada dela.
-
-    Ele segue sendo o `fallback` dos dois quando não há de quem perguntar
-    (FakeController, backend legado, dublê de teste), e o poço de reúso que
-    garante a contiguidade. NÃO é, e nunca foi, o número EXIBIDO: a barra de
-    player e os rótulos usam a fila (`CoopManager._numero_exibido`). Acender
-    este índice na lâmpada é o que fazia "os dois controles aparecem como
-    player 1".
-    """
+    """Um jogador secundário: o evdev de um controle físico + seu gamepad virtual."""
 
     identity: str
     evdev_path: str
     reader: EvdevReader
     player_index: int
     vpad: VirtualPad | None = None
-    # COOP-QUE-NAO-DESMONTA-01 / E1: este jogador CEDEU o controle dele ao
-    # primário — o `EVIOCGRAB` já foi solto (na thread do `connect()`), e o
-    # que falta é o desmonte do vpad, que só o poll loop pode fazer. Enquanto
-    # a marca está de pé o `forward_all` NÃO repassa nada: o físico agora
-    # alimenta o P1, e repassá-lo também ao vpad do P2 seria o input dobrado
-    # que o grab existe para impedir.
     cedido_ao_primario: bool = False
-    # GYRO-01 (co-op): espelho de motion do FÍSICO deste jogador → vpad dele
-    # (`core.physical_report_reader.PhysicalReportReader`). Só nasce quando o
     # vpad é uhid E o backend resolve hidraw por-uniq (DualSense); None para
-    # externos (8BitDo/Nintendo passam direto ao jogo — gyro nativo deles).
     motion_reader: Any = None
 
 
 class CoopManager:
-    """Gerencia os jogadores secundários (P2+) do co-op local.
+    """Gerencia os jogadores secundários (P2+) do co-op local."""
 
-    Aditivo e idempotente: `sync()` reconcilia o conjunto de secundários com os
-    controles fisicamente plugados (hotplug-safe); `forward_all()` repassa cada
-    um ao seu gamepad virtual; `disable()`/`stop_all()` desmontam tudo (solta o
-    grab, fecha os vpads e restaura os player-LEDs do perfil). Nunca propaga
-    exceção para não derrubar o poll loop.
-    """
-
-    # STEAM-NO-FISICO-01: o que o `forward_all` lê a CADA tique tem default de
-    # CLASSE — a suíte monta gerente por `__new__`, sem `__init__`, e o tique
-    # não pode levantar nele. O `__init__` repete os dois por clareza.
     _fio_do_laco: int | None = None
     _ordem_pendente: bool = False
 
     def __init__(self, daemon: DaemonProtocol) -> None:
         self._daemon = daemon
         self._players: dict[str, _SecondaryPlayer] = {}
-        # PERF-MULTI-CONTROLLER-01: a enumeração completa de /dev/input é cara
-        # (~10-40ms) e rodava a cada 2s NO EVENT LOOP (hitch rítmico de input
-        # durante o jogo). O watch detecta mudança por listdir (~µs); a
-        # enumeração cara só roda quando o conjunto de nodes mudou de fato.
         from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 
         self._watch = InputDirWatch()
         self._was_active = False
-        # FEAT-COOP-PLAYER-LED-01: True quando o co-op sobrescreveu algum
-        # player-LED — gate para restaurar o padrão do perfil só quando preciso.
         self._leds_overridden = False
-        # R-13 item 1 (auditoria 23/07): espelho da CAMADA publicada no backend
-        # (`{mac: padrão}`). Vazio = nada publicado — ou o backend não tem a API
-        # de camadas (fakes/legado) e o caminho sysfs cru segue valendo, ou o
-        # co-op ainda não escreveu nada. É o que permite revogar UM jogador
-        # (republicar sem ele) sem perguntar nada ao backend.
         self._camada_coop: dict[str, tuple[bool, bool, bool, bool, bool]] = {}
-        # BUG-COOP-GRAB-PENDING-VPAD-01: True quando `_promote_pending` derrubou
-        # um jogador (grab "failed"); força o próximo sync a rodar o ciclo cheio
-        # e respawnar (retry), mesmo sem mudança em /dev/input.
         self._retry_spawn = False
-        # R-22 (auditoria 23/07): identidade -> instante (monotonic) em que a
-        # promoção para de esperar a calibração. Presença = leitura JÁ agendada
-        # fora do loop; é o que impede reagendar o mesmo MAC a cada tick.
         self._calib_prazo: dict[str, float] = {}
-        # R-22: identidades cuja leitura de calibração já foi tentada e não
-        # rendeu bytes (externo sem handle, BT ocioso com EIO, CRC corrompido).
-        # Negativo NÃO vai para o cache do daemon — lá só entra o que é
-        # imutável de verdade. `_teardown_player` limpa a marca, então replug/
-        # respawn ganham uma tentativa nova sem nunca repetir o custo por tick.
         self._calib_sem_leitura: set[str] = set()
-        # COOP-QUE-NAO-DESMONTA-01 / E1: o backend em que o aviso de troca de
-        # primário já foi pendurado. Guardamos o OBJETO (não um bool) porque
-        # `daemon.controller` pode ser trocado em runtime (fake→real nos
-        # testes, reconstrução do backend): comparar por identidade re-liga o
-        # aviso no backend novo, e um bool o deixaria mudo para sempre.
         self._backend_avisado: Any = None
-        # STEAM-NO-FISICO-01: identidade -> instante (monotonic) em que o
-        # jogador ficou PRONTO para ganhar vpad e passou a esperar a ordem.
         self._pronto_desde: dict[str, float] = {}
-        # STEAM-NO-FISICO-01, as respostas dela de 23/09/2026 sobre a ORDEM
-        # (`D-2309-O-PRIMARIO-ESPERA-A-CARTA-1`, `D-2309-FORA-DE-ORDEM-SE-
-        # RECRIA-NA-HORA`): a mesa como o JOGO a vê — lugar do jogo -> chave
-        # (`_CHAVE_DO_P1` para o vpad do primário, o MAC para os secundários).
-        # Ver `planejar_a_ordem` e `_corrigir_a_ordem`.
         self._mesa_do_jogo: dict[int, str] = {}
-        # chave -> ordem de nascimento do vpad, que é a ordem em que o jogo que
-        # abrir depois o enumera (o syspath do uhid, e o do uinput, crescem).
         self._nascido_em: dict[str, int] = {}
         self._nascimentos = 0
-        # O vpad do P1 da última vez que a mesa foi olhada: a troca de máscara,
-        # a promoção uhid e a suspensão também o recriam, e a mesa tem de saber.
         self._vpad_do_p1_visto: Any = None
-        # A thread do poll loop (a do `forward_all`). A renumeração da aba
-        # Controles roda o `sync(force=True)` num worker, e recriar vpad fora
-        # do laço disputaria o `forward_all`: o worker só deixa o recado.
         self._fio_do_laco: int | None = None
         self._ordem_pendente = False
-        # Anti-laço: a assinatura da última recriação. A mesma desordem logo
-        # depois de recriar quer dizer que o modelo e o jogo discordam, e
-        # recriar de novo arrancaria o controle dela em laço.
         self._ultima_recriacao: tuple[Any, ...] | None = None
         self._ordem_travada = False
         self._p1_espera_o_jogo = False
 
-    # -- estado / gate --------------------------------------------------
 
     def should_be_active(self) -> bool:
         """True se o co-op deve estar ativo agora (flag + gamepad + 2+ controles)."""
@@ -402,25 +179,7 @@ class CoopManager:
         return 1 + len(self._players)
 
     def player_indexes(self) -> dict[str, int]:
-        """MAC -> número do jogador que o JOGO vê (P1 no primário, P2+ nos demais).
-
-        LEIGO-01b: a GUI rotulava os cards por POSIÇÃO na lista (`idx+1`), o que
-        mente em dois casos reais — com o co-op desligado todos os controles
-        alimentam o MESMO vpad (são um jogador só) e, com ele ligado,
-        `_next_player_index` REUSA índices de quem saiu, então a ordem da lista
-        deixa de casar com o número do jogador.
-
-        Só entra quem o jogo enxerga: um secundário ainda aguardando o grab não
-        tem vpad — reservou o índice, mas não é jogador nenhum até ser promovido.
-        Identidade sem MAC ("path:") fica de fora (não há como casar o card).
-
-        MESA-CHEIA-12 (15/08/2026): o NÚMERO vem de `numeros_de_jogador()` — a
-        MESMA função que escolhe o desenho da lâmpada —, nunca mais do
-        `player_index` cru. Era daí que saía o retrato medido na mesa dela: o
-        card dizia "jogador 2" no controle que acendia o desenho do 4. Quem
-        ENTRA na lista continua sendo decidido aqui (vpad promovido, com MAC);
-        o que mudou é só de onde sai o inteiro.
-        """
+        """MAC -> número do jogador que o JOGO vê (P1 no primário, P2+ nos demais)."""
         numeros = self.numeros_de_jogador()
         out: dict[str, int] = {}
         primary = self._primary_identity()
@@ -574,13 +333,7 @@ class CoopManager:
         return str(path) if path is not None else None
 
     def _primary_identity(self) -> str | None:
-        """Identidade (MAC) do primário; fallback por path do reader.
-
-        FEAT-DSX-CONTROLLER-IDENTITY-01: antes o coop excluía o primário por
-        PATH lido de `controller._evdev._device_path` — que fica stale/None
-        durante hotplug/re-enumeração, fazendo o coop criar um vpad para o
-        PRÓPRIO controle do P1 (input dobrado). O MAC do backend é estável.
-        """
+        """Identidade (MAC) do primário; fallback por path do reader."""
         ctrl = getattr(self._daemon, "controller", None)
         uniq = getattr(ctrl, "primary_uniq", None)
         if uniq:
@@ -588,21 +341,9 @@ class CoopManager:
         path = self._primary_evdev_path()
         return f"path:{path}" if path else None
 
-    # -- a troca de primário (COOP-QUE-NAO-DESMONTA-01 / E1) -------------
 
     def _garantir_aviso_de_primario(self) -> None:
-        """Pendura o aviso de troca de primário no backend. Idempotente.
-
-        Fica AQUI, e não na fiação do `lifecycle`, porque quem precisa do aviso
-        é este manager e ele nasce sob demanda (`get_coop_manager`) — no boot o
-        backend pode nem existir ainda. Custo por tick: um `getattr` e uma
-        comparação de identidade.
-
-        Backend sem `set_primary_change_observer` (fakes, backend legado) segue
-        como antes: o co-op continua funcional e descobre a troca pelo `sync`,
-        que é o comportamento com o defeito. É degradação declarada, não
-        silêncio — a linha de debug diz que o aviso não existe naquele backend.
-        """
+        """Pendura o aviso de troca de primário no backend. Idempotente."""
         ctrl = getattr(self._daemon, "controller", None)
         if ctrl is None or ctrl is self._backend_avisado:
             return
@@ -616,45 +357,15 @@ class CoopManager:
         self._pendurar_a_espera_do_posto(ctrl)
 
     def ceder_ao_primario(self, anterior: str | None, novo: str | None) -> None:
-        """O controle `novo` virou o primário — solte-o AGORA, antes do retarget.
-
-        É a metade do co-op da cura do "Jogador 2 que dura dois segundos".
-        Chamada pelo backend de dentro de `_recompute_primary`
-        (`set_primary_change_observer`), **no executor do `connect()`/`read_state()`, sob o
-        `_io_lock` do backend**. Daí as três regras do que se pode fazer aqui:
-
-        1. **solta o grab, e só.** É o que impede o `EBUSY`: um `ungrab` é um
-           ioctl, custa microssegundos e não bloqueia;
-        2. **não para o reader** (`stop()` faz `join(timeout=2.0)` — dois
-           segundos segurando o `_io_lock` congelariam `read_state` e todo o
-           fan-out de output);
-        3. **não desmonta o vpad.** O `_players` é do poll loop; mexer nele de
-           outra thread desfaria o vizinho em silêncio. A marca
-           `cedido_ao_primario` é o recado, e o `forward_all` do próximo tick
-           (~10 ms) faz o desmonte explícito no dono certo.
-
-        Entre o `ungrab` daqui e o desmonte de lá o vpad deste jogador fica
-        MUDO, não solto: o `forward_all` pula quem está cedido. Sem isso o
-        físico alimentaria o vpad do P1 **e** o do P2 ao mesmo tempo — o input
-        dobrado que o grab existe para impedir.
-
-        `anterior` não é usado hoje e está na assinatura de propósito: é o
-        contrato do observador (quem sai, quem entra), e o lado "quem sai" é o
-        que a E2 vai querer quando o deposto virar secundário sem esperar o
-        próximo `sync`.
-        """
+        """O controle `novo` virou o primário — solte-o AGORA, antes do retarget."""
         if novo is None:
             return
         player = self._players.get(novo)
         if player is None or player.cedido_ao_primario:
             return
-        # A marca vem ANTES do ungrab: quem lê é o poll loop, e é melhor ele
-        # calar um tick a mais do que repassar um físico já solto.
         player.cedido_ao_primario = True
         with contextlib.suppress(Exception):
             player.reader.set_grab(False)
-        # O ciclo cheio do próximo sync, mesmo sem mudança em /dev/input —
-        # trocar de primário não mexe nos nodes, então o watch não veria nada.
         self._retry_spawn = True
         logger.info(
             "coop_player_cedido_ao_primario",
@@ -664,53 +375,15 @@ class CoopManager:
         )
 
     def _recolher_os_cedidos(self) -> None:
-        """Desmonta, no poll loop, os jogadores que cederam o controle ao P1.
-
-        A segunda metade do `ceder_ao_primario`: aqui já estamos na thread dona
-        do `_players`, então o desmonte é o normal (vpad fechado, LED do perfil
-        devolvido, envs do wrapper regravadas) — **explícito, e não um `EBUSY`
-        no meio**, que é o que a entrega E1 pede com todas as letras.
-        """
+        """Desmonta, no poll loop, os jogadores que cederam o controle ao P1."""
         for identity in [
             mac for mac, p in self._players.items() if p.cedido_ao_primario
         ]:
             self._teardown_player(identity)
 
-    # -- reconciliação --------------------------------------------------
 
     def sync(self, *, force: bool = False, origem: str | None = None) -> None:
-        """Reconcilia os secundários com os controles plugados. Idempotente.
-
-        A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026): o juiz da máscara
-        (o secundário cujo pad ficou para trás) pergunta ao dono da trava
-        (`gamepad._recriacao_bloqueada_por_jogo`) antes de derrubar. No ciclo
-        não forçado a origem é `coop_tique` (automática: com o jogo aberto, o
-        secundário segue com o pad que o jogo tem, e converge quando o jogo
-        fecha, pelo `reconciliar_as_mascaras`). No ciclo forçado, quem forçou
-        diz a origem por nome (`origem=`): o P1 recriado (a origem do pedido
-        dele) e a máscara de um secundário (`manual`). Os outros chamadores do
-        ciclo forçado já perguntaram antes de forçar, e não passam origem.
-
-        Keyed por IDENTIDADE (MAC). Derruba e recria um jogador quando:
-        o controle sumiu; o node evdev do MESMO controle mudou (re-enumeração
-        pós storm/replug — reconexão limpa no node novo); ou o EVIOCGRAB
-        falhou (BUG-COOP-GRAB-SILENT-FAIL-01 — sem grab confirmado o físico
-        dobraria o input no jogo; derrubar aqui garante retry a cada ciclo).
-
-        BUG-COOP-GRAB-PENDING-VPAD-01: jogadores "aguardando grab" são
-        promovidos (ganham vpad) aqui e a cada `forward_all` — nunca antes do
-        grab confirmado. A promoção roda mesmo em tick quieto: o grab
-        confirmar não muda /dev/input, então o watch não a cobriria.
-
-        PERF-MULTI-CONTROLLER-01: a enumeração cara de /dev/input só roda
-        quando (a) o listdir mudou (hotplug/re-enumeração), (b) o co-op acabou
-        de ser ativado, (c) há grab degradado/derrubado a recuperar, ou
-        (d) `force=True` (toggle explícito da usuária). Ticks quietos custam
-        um listdir (~µs).
-        """
-        # E1: antes de qualquer gate — o aviso tem de estar pendurado mesmo com
-        # o co-op suspenso, senão a primeira troca de primário depois que ele
-        # voltar passaria sem recado.
+        """Reconcilia os secundários com os controles plugados. Idempotente."""
         self._garantir_aviso_de_primario()
         if not self.should_be_active():
             self._was_active = False
@@ -723,25 +396,14 @@ class CoopManager:
 
         activated = not self._was_active
         self._was_active = True
-        # E1: quem cedeu o controle ao primário sai ANTES de tudo — o `want`
-        # abaixo já não o contém (ele virou o primário), mas desmontar aqui em
-        # cima deixa o ciclo com uma verdade só sobre quem está na mesa.
         self._recolher_os_cedidos()
         self._promote_pending()
-        # STEAM-NO-FISICO-01: a renumeração da aba Controles, o P1 que esperou
-        # o jogo fechar — a ordem se confere a cada `sync` (~2 s), antes do
-        # portão do ciclo cheio, porque trocar um número não muda /dev/input.
         self._corrigir_a_ordem()
         retry_needed = self._retry_spawn
         self._retry_spawn = False
         grab_degraded = any(
             p.reader.grab_state == "failed" for p in self._players.values()
         )
-        # Achado Onda S #1: vpad MORTO (uhid derrubado por UHID_STOP sem
-        # `_teardown_player` — `_started=False` com o objeto vivo) também
-        # força o ciclo cheio: o jogador é derrubado e respawnado abaixo.
-        # Sem isto ele ficaria vpad-morto PARA SEMPRE (nenhum gatilho de
-        # /dev/input dispara quando o kernel só derruba o uhid).
         vpad_morto = any(
             p.vpad is not None and not vpad_vivo(p.vpad)
             for p in self._players.values()
@@ -754,7 +416,7 @@ class CoopManager:
             or retry_needed
             or force
         ):
-            self._repintar_se_o_numero_mudou()  # G6: o número muda sem hotplug
+            self._repintar_se_o_numero_mudou()
             return
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
@@ -763,13 +425,11 @@ class CoopManager:
         )
 
         primary = self._primary_identity()
-        # BUG-COOP-BOOT-PRIMARY-DUP-01: o conjunto `want` é keyed por MAC; se o
         # primário ainda não resolveu o MAC (`primary_uniq` None no boot/restart
         # com controles já plugados → fallback "path:"), não há como excluí-lo de
         # `want` e um secundário nasceria para o PRÓPRIO controle do P1 (input
         # DOBRADO até o próximo sync ~2s). Adia enquanto não há MAC do primário;
         # `_retry_spawn` garante o re-teste no tick seguinte, sem depender do
-        # watch de /dev/input (resolver o MAC não muda os nodes).
         if primary is None or primary.startswith("path:"):
             logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
             self._retry_spawn = True
@@ -779,16 +439,7 @@ class CoopManager:
             for mac, path in discover_dualsense_evdevs().items()
             if mac != primary
         }
-        # SPRINT-GAME-RUMBLE-01: a máscara (flavor) do P1 pode ter mudado em
-        # runtime (aba Início / perfil xboxdualsense). O vpad de cada
-        # secundário nasce com o flavor vigente na criação (`_flavor()`), mas
-        # não se repropaga sozinho — sem isto, P2+ ficam presos no flavor antigo
-        # (rumble morto e prompts divergentes do P1). Derrubar por mismatch aqui
-        # força a recriação com a máscara nova. Só efetiva no ciclo cheio (o
-        # `set_gamepad_emulation` chama `sync(force=True)` após trocar o flavor).
         desired_flavor = self._flavor()
-        # MODO-DE-CONEXAO-01 (13/09/2026): o CAMINHO também. Com a mesma máscara,
-        # o secundário que ficou no canal antigo é recriado no novo — e só ele.
         desired_caminho = self._caminho()
 
         for mac in list(self._players):
@@ -809,9 +460,6 @@ class CoopManager:
                 logger.warning("coop_player_grab_failed_retry", identity=mac)
                 self._teardown_player(mac)
             elif player.vpad is not None and not vpad_vivo(player.vpad):
-                # Achado Onda S #1: vpad morto (UHID_STOP pós-promoção) —
-                # derruba (o teardown restaura o físico via broker) e o loop
-                # de spawn deste MESMO ciclo recria o jogador do zero.
                 logger.warning("coop_player_vpad_morto_respawn", identity=mac)
                 self._teardown_player(mac)
             elif player.vpad is not None and vpad_ficou_para_tras(
@@ -823,15 +471,6 @@ class CoopManager:
             ):
                 if self._a_mascara_espera_o_jogo(mac, origem if force else "coop_tique"):
                     continue
-                # MÁSCARA-POR-JOGADOR-01 (29/08/2026): `desired_flavor` deixou
-                # de ser um VALOR e passou a ser FUNÇÃO do aparelho. Sem esta
-                # troca, um jogador com máscara própria diverge do
-                # `config.gamepad_flavor` em TODO tique e o vpad dele seria
-                # derrubado e recriado a cada ~1s, para sempre — a cura da
-                # SPRINT-GAME-RUMBLE-01 virada contra a decisão dela. Com ela,
-                # a DIVERGÊNCIA ESCOLHIDA sobrevive e só o FLAVOR QUE FICOU
-                # PARA TRÁS (a máscara deste aparelho mudou, ou mudou a do jogo
-                # que ele herda) recria — que é o que a cura sempre fez.
                 logger.info(
                     "coop_player_flavor_changed",
                     identity=mac,
@@ -840,16 +479,10 @@ class CoopManager:
                 )
                 self._teardown_player(mac)
 
-        # hotplug-IN: cria secundários novos — NA ORDEM DA CARTA
-        # (STEAM-NO-FISICO-01). `want` vem na ordem do `eventN`, que é a ordem
-        # em que o kernel viu os controles, e ela só coincide com o número da
-        # aba Controles por sorte (no boot com a mesa cheia, a carta é a
-        # gravada). O jogo numera pela ordem em que os vpads nascem.
         for mac in self._na_ordem_da_carta(want):
             if mac not in self._players:
                 self._spawn_player(mac, want[mac])
 
-        # FEAT-COOP-PLAYER-LED-01: (re)afirma o padrão por jogador ao final de
         # todo ciclo cheio — cobre ativação, spawn, node novo e o replug (o
         # backend re-afirma o padrão broadcast do perfil no nó que reaparece;
         # como o replug também dispara o watch, este reassert devolve o padrão
@@ -875,28 +508,7 @@ class CoopManager:
     def _segura_na_troca_de_transporte(
         self, player: _SecondaryPlayer, no_de_agora: str | None
     ) -> bool:
-        """O jogador que está TROCANDO de transporte fica com o vpad. Devolve se segurou.
-
-        O-CABO-ASSUME-DO-RADIO-01, a decisão dela de 25/09/2026: o controle do
-        rádio que ganha cabo passa para o cabo *sem o jogo perder o controle*.
-        O kernel não deixa o mesmo endereço existir nos dois barramentos: entre
-        o rádio sair e o cabo entrar, o controle some da mesa por um instante e
-        volta por OUTRO nó. As duas regras de baixo do `sync` leriam isso como
-        "saiu" e "o nó mudou", e as duas derrubam o vpad — o jogo veria o
-        jogador desconectar e um controle novo chegar.
-
-        Quem responde se é troca é o backend (`em_troca_de_transporte`), que
-        marca a ida antes de derrubar o rádio e a volta quando o cabo sai. Com o
-        sim:
-
-        - fora da mesa: o jogador fica, com o vpad de pé e parado (o leitor
-          dele solta os botões ao perder o nó, `_reset_on_disconnect`);
-        - de volta por outro nó: o leitor é reapontado — ele já procura o
-          controle pelo MAC (`target_uniq`) e refaz o grab ao abrir —, e o
-          espelho de movimento segue sozinho, pelo `hidraw_path` do backend.
-
-        Sem o método (backend enxuto, dublê) ou fora da troca, nada muda.
-        """
+        """O jogador que está TROCANDO de transporte fica com o vpad. Devolve se segurou."""
         if no_de_agora is not None and no_de_agora == player.evdev_path:
             return False
         pergunta = getattr(
@@ -906,18 +518,13 @@ class CoopManager:
             return False
         try:
             em_troca = bool(pergunta(player.identity))
-        except Exception as exc:  # a pergunta nunca derruba o sync
+        except Exception as exc:
             logger.debug("coop_troca_de_transporte_pergunta_falhou", err=str(exc))
             return False
         if not em_troca:
             return False
         if no_de_agora is None:
             logger.debug("coop_player_segura_na_troca", identity=player.identity)
-            # Conferência de 25/09: o jogador segurado fora da mesa não muda
-            # `/dev/input`, e o ciclo cheio só volta com o watch mudando. Sem
-            # pedir a próxima olhada, a troca que não termina (o cabo que não
-            # sobe, a volta que não volta) deixava o vpad dele de pé no jogo
-            # para sempre. Pedida, o prazo solta o jogador no ~2 s seguinte.
             self._retry_spawn = True
             return True
         logger.info(
@@ -929,33 +536,11 @@ class CoopManager:
         player.evdev_path = no_de_agora
         with contextlib.suppress(Exception):
             player.reader.request_reopen("troca_de_transporte")
-        # O físico novo nasce fechado pela regra udev; o `rehide` do laço de
-        # reconexão também o pega, e pedir aqui só adianta.
         self._broker_hide_player(player)
         return True
 
     def _reavaliar_a_mesa_suspensa(self) -> None:
-        """Reabre a conta do aviso enquanto os vpads estão suspensos.
-
-        AVISO-FALSO-DO-COOP-01, o CONTRAPESO. A suspensão de Steam Input entra
-        publicando 0 (o teardown dela recolhe vpad, não desconecta controle) e
-        o co-op fica INATIVO enquanto ela dura — `should_be_active()` é False
-        sem `_gamepad_device`, e o `sync()` retornava ali mesmo. Sem esta
-        reavaliação o número ficaria congelado em 0 e um controle que caísse
-        DURANTE a partida nunca acenderia o aviso: seria trocar um defeito por
-        outro pior, que é o que a regra proíbe.
-
-        Roda no ramo INATIVO do `sync()` de propósito, e só quando há uma
-        suspensão em curso com gente sentada: fora disso não toca em nada, nem
-        no watch.
-
-        PERF-MULTI-CONTROLLER-01 continua valendo — a enumeração cara
-        (~10-40ms) só roda quando o `listdir` de /dev/input mudou, que é
-        justamente o evento "um controle sumiu/voltou". Consumir o watch aqui
-        não rouba ciclo do caminho ativo: a volta do co-op passa por
-        `_was_active=False` → `activated=True`, que força o ciclo cheio
-        independentemente do watch.
-        """
+        """Reabre a conta do aviso enquanto os vpads estão suspensos."""
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             coop_sentados_na_suspensao,
             reavaliar_coop_fora_da_mesa,
@@ -969,19 +554,13 @@ class CoopManager:
 
         try:
             presentes = set(discover_dualsense_evdevs())
-        except Exception as exc:  # nunca derruba o poll loop
+        except Exception as exc:
             logger.debug("coop_reavaliacao_da_mesa_falhou", err=str(exc))
             return
         reavaliar_coop_fora_da_mesa(self._daemon, presentes)
 
     def algum_boneco_ficou_para_tras(self) -> bool:
-        """Algum secundário veste máscara ou canal diferente do efetivo de agora?
-
-        A mesma pergunta que o `sync` faz no laço dos jogadores, feita de fora
-        e sem mexer em nada: o `sync` só chega nela quando algo muda em
-        `/dev/input` ou quando é forçado, e trocar a máscara não muda nó
-        nenhum (A-MASCARA-SEGUE-O-ESTADO-01, `gamepad.reconciliar_as_mascaras`).
-        """
+        """Algum secundário veste máscara ou canal diferente do efetivo de agora?"""
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             vpad_ficou_para_tras,
         )
@@ -1181,7 +760,6 @@ class CoopManager:
         # R-22: esquenta o cache do 0x05 assim que o jogador é registrado —
         # normalmente o grab só confirma um tick depois, então a leitura (que
         # roda fora do loop) já terminou quando a promoção precisar dela e o
-        # adiamento nem chega a acontecer.
         self._prefetch_calibration(identity)
         if reader.grab_state == "held" and self._pode_nascer_na_ordem(player):
             self._nascer_na_ordem(player)
@@ -1199,21 +777,10 @@ class CoopManager:
                 evdev=path,
                 **self._numero_e_indice(player),
             )
-            # IGNORE-NO-FIM-DA-SEQUENCIA-01: este é o ramo que não materializa
-            # nada — e é o ramo em que a mesa fica desequilibrada (mais um
-            # físico, nenhum vpad novo). Armar o sossego é o que faz a cobertura
-            # ser reavaliada quando a promoção acontecer, ou quando ficar claro
-            # que ela não vai acontecer.
             self._armar_sossego_do_launch_env("jogador de co-op aguardando grab")
 
     def _promote_pending(self) -> None:
-        """Promove jogadores "aguardando grab": cria o vpad quando "held".
-
-        BUG-COOP-GRAB-PENDING-VPAD-01: chamado a cada tick (`forward_all`) e a
-        cada `sync`. Grab "failed" derruba o jogador SEM nunca ter criado o
-        vpad e marca `_retry_spawn` (o próximo sync recria do zero).
-        """
-        # STEAM-NO-FISICO-01: na ordem da carta, só quem ainda espera o vpad.
+        """Promove jogadores "aguardando grab": cria o vpad quando "held"."""
         pendentes = [i for i, p in self._players.items() if p.vpad is None]
         for identity in self._na_ordem_da_carta(pendentes):
             player = self._players.get(identity)
@@ -1315,11 +882,6 @@ class CoopManager:
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
         from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
-        # R-22: a calibração vem do CACHE — nenhuma leitura de hidraw/socket
-        # acontece nesta thread. Enquanto ela não resolve, a promoção ADIA (o
-        # jogador segue sem vpad, exatamente como no grab pendente) e o
-        # `_promote_pending` do próximo tick tenta de novo; nunca há
-        # `make_virtual_pad` com calibração de outra unidade.
         calib_pronta, calib = self._calibration_pronta(player.identity)
         if not calib_pronta:
             logger.debug(
@@ -1329,39 +891,15 @@ class CoopManager:
             )
             return
 
-        # SPRINT-UHID-VPAD-01 + VPAD-03: o MAC que o kernel vê é o que o dono dos
-        # vpads vivos VESTE (`uhid_gamepad._MacsDosVpadsVivos`): o do aparelho (sem
-        # identidade, o do número), e o seguinte quando outro vpad vivo já o veste;
-        # dois vivos nunca repetem MAC (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01). O
-        # blueprint é o canônico embutido (nenhuma leitura do físico): jogador com
         # controle não-DualSense (8BitDo, Pro Controller) também ganha vpad uhid
-        # Edge — decisão de produto do VPAD-09 (uniformidade, dedup segura e rumble
-        # via hidraw para todos). O backend fake veta o uhid (VPAD-08).
         vpad = make_virtual_pad(
             self._flavor(),
-            # MÁSCARA-POR-JOGADOR-01 (29/08/2026): o MAC deste jogador. Com ele
-            # a máscara que ESTE aparelho escolheu vence; sem escolha, a do jogo
-            # (`_flavor()`) segue valendo — o dado já estava aqui do lado, no
-            # `rumble_sink` da linha de baixo.
             identity=player.identity,
             rumble_sink=self._make_player_rumble_sink(player.identity),
-            # A-MESMA-LINGUA-01: o número que vai DENTRO do nome é o da CARTA,
-            # perguntado ao dono (`numeros_de_jogador`), nunca o `player_index`
-            # cru — ver :meth:`numero_para_o_nome`. O `player_index` segue
-            # inteiro no `_SecondaryPlayer` (contiguidade P1..PN e o poço de
-            # reúso), e o MAC do vpad não se move: `vpad_mac` está ancorado na
-            # `identity` desde a COOP-QUE-NÃO-DESMONTA-01/E3, então trocar este
-            # inteiro troca o NOME e mais nada.
             player=self.numero_para_o_nome(player.identity, player.player_index),
             allow_uhid=controller_allows_uhid(self._daemon),
-            # GYRO-01: 0x05 do físico DESTE jogador calibra o motion espelhado
-            # (None para externos/sem MAC → canônico, fail-safe).
             calibration_0x05=calib,
-            # MODO-DE-CONEXAO-01: o caminho escolhido vale para todos os
-            # jogadores — o modo é um para todos (08/09), a máscara é por controle.
             caminho=self._caminho(),
-            # REPLICA-03: o output do jogo (gatilhos/lightbar/player-LED)
-            # replica no físico DESTE jogador; CLOSE devolve perfil/paleta.
             **self._make_player_replica_sinks(player.identity),
         )
         if vpad is None:
@@ -1374,10 +912,7 @@ class CoopManager:
             self._retry_spawn = True
             return
         player.vpad = vpad
-        # STEAM-NO-FISICO-01: o vpad sentou num lugar do jogo.
         self._assentar(player.identity)
-        # GYRO-01 (co-op): o gyro/touchpad do físico deste jogador flui pelo
-        # espelho de report — um reader POR JOGADOR, no hidraw por-uniq.
         self._start_player_motion_reader(player)
         logger.info(
             "coop_player_added",
@@ -1386,10 +921,6 @@ class CoopManager:
             **self._numero_e_indice(player),
             players=self.player_count(),
         )
-        # BT-03: vpad de secundário que nasceu degradado é transição anunciada
-        # — mesma borda do P1 (log estruturado + bus), nunca reavaliada por
-        # tick. Quem diz se degradou é `motivo_da_degradacao`, o mesmo dono do
-        # `dedup_status`: o caminho Xbox em uinput é escolha dela, não queda.
         from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
 
         motivo = motivo_da_degradacao(vpad)
@@ -1402,14 +933,7 @@ class CoopManager:
                 notify_vpad_degradado(
                     self._daemon, motivo=motivo, **self._numero_e_indice(player)
                 )
-        # DEDUP-04: gatilho "mudança do conjunto de jogadores" — o dedup_ok do
-        # launch é POR JOGADOR (um único vpad de co-op degradado em uinput já
-        # proíbe o IGNORE), então cada spawn regrava as envs do wrapper.
         self._materialize_launch_env()
-        # BROKER-01: ÚLTIMA linha do caminho feliz — hide do físico DESTE
-        # jogador, só com o vpad confirmado (regra de ouro: nunca hide sem
-        # vpad vivo). O reader de motion acima nem depende da ordem: o opener
-        # dele fura o hide via broker (fd-injection).
         self._broker_hide_player(player)
 
     def _read_player_calibration(self, identity: str) -> bytes | None:
@@ -1422,47 +946,7 @@ class CoopManager:
         return self._calibration_pronta(identity)[1]
 
     def _calibration_pronta(self, identity: str) -> tuple[bool, bytes | None]:
-        """`(resolvida?, calibração)` do jogador pelo CACHE — R-22.
-
-        `resolvida=False` significa "ainda não sei, tente no próximo tick";
-        nunca "não tem" (isso é `(True, None)` = 0x05 canônico).
-
-        R-22 (auditoria 23/07) — I/O BLOQUEANTE na thread do event loop. A
-        leitura do 0x05 é cara em dois pontos e AMBOS rodavam aqui dentro, no
-        poll loop: o `open` do socket do broker (2s de timeout por tentativa,
-        até 2 tentativas) e o `HIDIOCGFEATURE` no hidraw (BT ocioso segura até
-        o timeout de 5s do hidp antes do EIO). Enquanto isso o loop não
-        despacha `forward_all` — o input dos QUATRO jogadores e o IPC da GUI
-        congelam por segundos, sem uma linha de log dizendo por quê (é o "bug
-        não notado" da queixa 5).
-
-        A cura é de raiz, não paliativa (encurtar o timeout do broker não
-        cobriria o ioctl): a leitura sai do loop e o loop passa a consumir só
-        cache. Três estados:
-
-        - HIT — `(True, bytes)` na hora, custo zero;
-        - MISS — agenda a leitura no executor DEDICADO do broker
-          (`broker_call_nonblocking`, 1 worker FIFO: nunca o pool 'hefesto-hid'
-          do `read_state` que o HANG-01 baniu) e devolve `(False, None)`;
-        - resolvido-sem-bytes / prazo estourado — `(True, None)` (canônico).
-
-        Por que ADIAR em vez de nascer com o canônico no primeiro miss: o 0x05
-        é carimbado no blueprint na CRIAÇÃO do uhid e não tem como ser
-        retrofitado depois; promover no miss trocaria o congelamento do loop
-        por gyro permanentemente calibrado com a unidade errada (drift na mira
-        — o que o GYRO-01 existe para curar). O adiamento custa um tick,
-        `_promote_pending` já roda a cada `forward_all`, e o jogador ainda nem
-        aparecia para o jogo. `_CALIB_PRAZO_S` é o teto: passou dele, o vpad
-        nasce canônico — ninguém fica sem controle esperando um rádio mudo.
-
-        Fora do event loop (testes, shutdown síncrono, qualquer caminho que já
-        venha de `_run_blocking`) o `broker_call_nonblocking` executa INLINE:
-        o cache preenche na mesma chamada e o retorno é o `bytes` — o
-        comportamento síncrono de antes, preservado onde ele nunca foi problema.
-        """
-        # Identidade sem MAC ("path:...") e controles fora do backend
-        # pydualsense (externos: 8BitDo/Nintendo) não têm handle por-uniq →
-        # None, fail-safe, sem nem tocar no cache.
+        """`(resolvida?, calibração)` do jogador pelo CACHE — R-22."""
         if identity.startswith("path:"):
             return True, None
         cache = calibration_cache(self._daemon)
@@ -1474,9 +958,6 @@ class CoopManager:
         prazo = self._calib_prazo.get(identity)
         if prazo is None:
             self._schedule_calibration(identity)
-            # Fora do loop a linha acima rodou INLINE — reconsulta antes de
-            # mandar adiar (senão o chamador síncrono perderia a leitura que
-            # acabou de pagar).
             hit = cache.get(identity)
             if hit is not None or identity in self._calib_sem_leitura:
                 self._calib_prazo.pop(identity, None)
@@ -1484,25 +965,13 @@ class CoopManager:
             return False, None
         if time.monotonic() < prazo:
             return False, None
-        # Prazo estourado: a leitura ainda pode voltar depois (e o cache a
-        # aproveita num respawn futuro), mas ESTE jogador nasce agora.
         self._calib_prazo.pop(identity, None)
-        # STEAM-NO-FISICO-01: o prazo estourado é resposta, e ela fica — sem a
-        # marca, a pergunta seguinte reagendava a leitura e devolvia «ainda
-        # não sei», e o vpad que renasce para o jogo ver a ordem esperaria mais
-        # um prazo inteiro sem controle. Uma leitura que chegue tarde entra no
-        # cache e vence a marca (o cache é olhado antes); o teardown a limpa.
         self._calib_sem_leitura.add(identity)
         logger.warning("coop_calibracao_prazo_estourado", identity=identity)
         return True, None
 
     def _prefetch_calibration(self, identity: str) -> None:
-        """Esquenta o cache do 0x05 de um jogador recém-registrado (R-22).
-
-        Só age no miss frio: já cacheado, já tentado sem sucesso ou já agendado
-        não fazem nada. Não consome o prazo nem loga o estouro — isso é
-        decisão da promoção, não do spawn.
-        """
+        """Esquenta o cache do 0x05 de um jogador recém-registrado (R-22)."""
         if identity.startswith("path:"):
             return
         if identity in self._calib_sem_leitura or identity in self._calib_prazo:
@@ -1512,13 +981,7 @@ class CoopManager:
         self._schedule_calibration(identity)
 
     def _schedule_calibration(self, identity: str) -> None:
-        """Agenda (fora do event loop) a leitura do 0x05 deste MAC — R-22.
-
-        Idempotente por identidade enquanto o prazo estiver armado. O
-        `broker_call_nonblocking` é o mesmo despachante que o `hide`/`restore`
-        do co-op já usam: no event loop agenda no executor dedicado do broker e
-        retorna na hora; fora dele executa inline.
-        """
+        """Agenda (fora do event loop) a leitura do 0x05 deste MAC — R-22."""
         from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
             broker_call_nonblocking,
         )
@@ -1527,13 +990,7 @@ class CoopManager:
         broker_call_nonblocking(self._daemon, lambda: self._fill_calibration(identity))
 
     def _fill_calibration(self, identity: str) -> None:
-        """Lê o 0x05 e preenche o cache. Roda NA THREAD DO EXECUTOR (R-22).
-
-        Publicação segura sem lock: `dict.__setitem__` e `set.add` são atômicos
-        sob o GIL e o leitor (`_calibration_pronta`, no event loop) só faz `get`/
-        `in` — nunca há estado meio-escrito para ele enxergar. O `read_calibration`
-        do backend já serializa com o report_thread pelo `_io_lock` dele.
-        """
+        """Lê o 0x05 e preenche o cache. Roda NA THREAD DO EXECUTOR (R-22)."""
         data: Any = None
         fn = getattr(self._daemon.controller, "read_calibration", None)
         if callable(fn):
@@ -1625,15 +1082,9 @@ class CoopManager:
             **self._numero_e_indice(player),
         )
 
-    # -- broker hide-hidraw por jogador (BROKER-01) ----------------------
 
     def _player_hidraw_node(self, identity: str) -> str | None:
-        """`/dev/hidrawN` do físico DESTE jogador via `hidraw_path(uniq)`, ou None.
-
-        Controles externos (8BitDo/Nintendo, identidade `path:*`) nunca têm
-        hide: não há handle por-uniq no backend — e o validador do broker os
-        rejeitaria de qualquer forma (defesa dupla).
-        """
+        """`/dev/hidrawN` do físico DESTE jogador via `hidraw_path(uniq)`, ou None."""
         if identity.startswith("path:"):
             return None
         hidraw_fn = getattr(self._daemon.controller, "hidraw_path", None)
@@ -1645,19 +1096,7 @@ class CoopManager:
         return None
 
     def _broker_hide_player(self, player: _SecondaryPlayer) -> None:
-        """Hide do físico do jogador — SÓ com vpad confirmado E VIVO (BROKER-01).
-
-        Chamado como última etapa do caminho feliz de `_promote_player`:
-        nunca se esconde o físico de um jogador sem vpad (seria ZERO controle
-        para aquela pessoa). Achado Onda S #1: o gate é VIDA (`vpad_vivo`,
-        lição 6/#17), não existência — um uhid derrubado por UHID_STOP mantém
-        o objeto Python com `_started=False` e NÃO autoriza hide. Achados
-        #5/#10: a chamada ao broker vai via `broker_call_nonblocking` — o
-        `coop.sync()` roda NA thread do event loop (poll loop) e um broker
-        lento não pode congelar todos os jogadores. Best-effort integral:
-        broker ausente, daemon dublado sem `is_native_mode` — nada levanta e,
-        na dúvida, NÃO esconde.
-        """
+        """Hide do físico do jogador — SÓ com vpad confirmado E VIVO (BROKER-01)."""
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
 
         if not vpad_vivo(player.vpad):
@@ -1677,14 +1116,7 @@ class CoopManager:
             broker_call_nonblocking(self._daemon, lambda: client.hide(node))
 
     def _broker_restore_player(self, identity: str) -> None:
-        """Restore do físico do jogador no `_teardown_player` (best-effort).
-
-        O nó re-resolve por identity NA HORA; se o controle já saiu
-        fisicamente, devolve None e o EOF/`restore_node_gone` do broker cobre.
-        Sem gate de modo: expor nunca é errado. Achados Onda S #5/#10: a
-        chamada ao broker vai via `broker_call_nonblocking` — o teardown roda
-        no tick do poll loop (hotplug-out) e não pode bloquear o event loop.
-        """
+        """Restore do físico do jogador no `_teardown_player` (best-effort)."""
         with contextlib.suppress(Exception):
             node = self._player_hidraw_node(identity)
             if node is None:
@@ -1698,13 +1130,7 @@ class CoopManager:
             broker_call_nonblocking(self._daemon, lambda: client.restore(node))
 
     def _materialize_launch_env(self) -> None:
-        """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04).
-
-        IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026): escreve AGORA e **arma o
-        relógio do sossego**. O spawn de cada jogador é uma borda da rajada; a
-        decisão sobre o IGNORE tem de valer para a mesa que sobrar no FIM dela,
-        não para a foto de um jogador no meio.
-        """
+        """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04)."""
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.daemon.launch_env import (
                 armar_rematerializacao,
@@ -1715,16 +1141,7 @@ class CoopManager:
             armar_rematerializacao(self._daemon, motivo="borda de jogador de co-op")
 
     def _armar_sossego_do_launch_env(self, motivo: str) -> None:
-        """Arma o sossego SEM escrever — para a borda que não materializa.
-
-        O `_spawn_player` com grab pendente registra um jogador que ainda não
-        tem vpad: nada muda nos backends, então materializar seria reescrever
-        cinco arquivos idênticos. Mas o FÍSICO daquele jogador já conta na mesa,
-        e é exatamente esse o desequilíbrio que o IGNORE não pode congelar —
-        `fisicos=4 vpads=1` ficou dez segundos de pé no journal dela em 12/08
-        sem que nada tivesse motivo para reavaliar. Armar aqui custa um float e
-        garante que o vigia olhe a mesa quando ela parar de se mexer.
-        """
+        """Arma o sossego SEM escrever — para a borda que não materializa."""
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.daemon.launch_env import (
                 armar_rematerializacao,
@@ -1736,70 +1153,29 @@ class CoopManager:
         player = self._players.pop(identity, None)
         if player is None:
             return
-        # R-22: o jogador está saindo — limpa o prazo e a marca de "leitura sem
-        # bytes" desta identidade. Um replug/respawn merece tentativa nova (a
-        # falha típica é transitória: BT ocioso, broker reiniciando); o cache
-        # POSITIVO fica, porque o 0x05 é imutável por unidade.
         self._calib_prazo.pop(identity, None)
         self._calib_sem_leitura.discard(identity)
         self._pronto_desde.pop(identity, None)
-        # BROKER-01: restore do físico ANTES de soltar grab/reader/vpad — o
-        # jogador está saindo e o nó dele não pode ficar 0600 sem dono.
         self._broker_restore_player(identity)
         with contextlib.suppress(Exception):
             player.reader.set_grab(False)
         with contextlib.suppress(Exception):
             player.reader.stop()
-        # GYRO-01: o reader de motion morre ANTES do vpad (ele escreve no
-        # /dev/uhid do vpad — mesma ordem do stop_gamepad_emulation do P1).
         if player.motion_reader is not None:
             with contextlib.suppress(Exception):
                 player.motion_reader.stop()
             player.motion_reader = None
-        # BORDA-DE-QUEDA-01 (26/08/2026): o motor para ANTES de o vpad morrer.
-        # Ver `_zerar_rumble_do_jogador` — a ordem é o conserto, não o efeito.
         self._zerar_rumble_do_jogador(identity)
         if player.vpad is not None:
             with contextlib.suppress(Exception):
                 player.vpad.stop()
-        # STEAM-NO-FISICO-01: o lugar dele no jogo ficou livre.
         self._levantar(identity)
-        # FEAT-COOP-PLAYER-LED-01: devolve ESTE controle ao padrão do perfil.
-        # Best-effort: em hotplug-out o nó sysfs já sumiu junto com o controle
-        # (nada a escrever); em teardown-com-respawn (node novo / retry de
-        # grab) o reassert do mesmo ciclo de sync reaplica o padrão do jogador.
         self._revert_single_player_led(identity)
-        # DEDUP-04: o conjunto de jogadores mudou — regrava as envs do wrapper.
         self._materialize_launch_env()
         logger.info("coop_player_removed", identity=identity, players=self.player_count())
 
     def _zerar_rumble_do_jogador(self, identity: str) -> None:
-        """Manda UM report de stop ao controle que está saindo da mesa.
-
-        BORDA-DE-QUEDA-01 (26/08/2026). Jogando com dois ou mais no rádio, um
-        cai e o motor fica vibrando até o teto de 3 s do relógio cortar —
-        quatro vezes em 28 s na sessão dela, uma delas em (230, 230), quase
-        máximo. O `_teardown_player` derrubava reader, motion_reader e vpad
-        **sem uma linha que zerasse o rumble**: a cura de 02/08 só trata o caso
-        em que o JOGO manda parar, e aqui o device sumiu debaixo do jogo — o FF
-        que o kernel já entregou ao firmware fica de pé porque ninguém mais vai
-        mandar report nenhum por aquele caminho.
-
-        A ORDEM é o conserto. Depois do `vpad.stop()` o sink de FF daquele
-        jogador já morreu e o `_players[identity]` já saiu do dict; parar aqui,
-        antes, é o que garante que o último report escrito no controle seja o
-        de motores em 0.
-
-        Best-effort de três jeitos, e nenhum deles pode abortar o teardown (um
-        nó físico ficaria 0600 sem dono, que é pior que um motor preso):
-        backend sem a API (fakes/legado) é no-op; identidade sem MAC
-        (`path:*`, externo) é no-op **de propósito** — sem endereço, a única
-        chamada possível seria o broadcast, e ele pararia o motor de quem
-        continua jogando; falha do backend vira `logger.warning`.
-
-        O relógio (`uhid_gamepad._expirar_rumble_preso`) fica onde está: ele é
-        o segundo cinto, não o primeiro.
-        """
+        """Manda UM report de stop ao controle que está saindo da mesa."""
         if identity.startswith("path:"):
             return
         force = getattr(self._daemon.controller, "force_rumble_stop", None)
@@ -1812,50 +1188,13 @@ class CoopManager:
                 "coop_rumble_stop_na_borda_falhou", identity=identity, err=str(exc)
             )
 
-    # -- player LEDs por jogador (FEAT-COOP-PLAYER-LED-01) ---------------
 
     def _apply_coop_player_leds(self) -> None:
-        """Acende em cada controle o padrão canônico do SEU jogador.
-
-        R-13 item 1 (auditoria 23/07) — ESCRITOR ÚNICO. Até aqui o co-op
-        escrevia sysfs CRU (`*:white:player-N` casado por MAC), fora do estado
-        desejado do backend. O `reassert_resolved_outputs` roda em TODO
-        `connect()` (a cada ≤30 s) e repintava o padrão do PERFIL por cima —
-        um repintava o outro, num pisca-pisca sem fim que é metade da queixa
-        dos números duplicados. Agora o co-op PUBLICA seu padrão como camada
-        por-uniq no backend (`set_coop_outputs`, acima da automática e da
-        usuária) e o mesmo reassert passa a reafirmar o valor DO CO-OP.
-
-        A publicação depende do R-20: com a substituição antiga do mapa
-        (`reset_output_overrides`), a camada do co-op seria apagada na
-        ativação de perfil seguinte — os dois são um par.
-
-        Backend sem a API de camadas (fakes/legado) cai no caminho sysfs cru
-        histórico. Ele requer a regra udev `77-dualsense-leds.rules` (a mesma
-        da lightbar sysfs); sem nó/permissão loga warning e segue — o co-op
-        continua funcional.
-        """
-        # R-13 item 4 (auditoria 23/07): SEM SECUNDÁRIO NÃO HÁ CO-OP.
-        #
-        # `should_be_active()` liga o co-op pela preferência persistida
-        # (`coop_enabled.flag`, que é 1 na configuração dela), não pela
-        # contagem de controles — a docstring do módulo promete um gate de
+        """Acende em cada controle o padrão canônico do SEU jogador."""
         # "2+ controles" que nunca existiu. Resultado: com um único DualSense,
-        # o co-op cravava player-LED 1 nele.
-        #
-        # Isso alimenta a queixa dos números duplicados: o Pro Nintendo tem
         # slot 1 no registry de externos e o DualSense primário recebia 1 do
-        # co-op — dois "player 1" acesos ao mesmo tempo.
-        #
-        # A correção é no EFEITO, não no gate: mexer em `should_be_active()`
-        # exigiria enumerar `/dev/input` por tick, que é justamente o que o
-        # PERF-MULTI-CONTROLLER-01 removeu, e faria o co-op piscar a cada blip
-        # de link.
         if not self._players:
             logger.debug("coop_sem_secundario_nao_escreve_player_led")
-            # Se havia camada publicada (o último secundário acabou de sair),
-            # revoga: o revert por-jogador do teardown já cuidou dos LEDs, mas
-            # a camada no backend não pode ficar pendurada sem jogador.
             if self._camada_coop:
                 self._publicar_camada_coop({})
             return
@@ -1865,7 +1204,6 @@ class CoopManager:
         }
         if self._publicar_camada_coop(padroes):
             return
-        # Caminho sysfs cru (backend sem camadas): comportamento histórico.
         from hefesto_dualsense4unix.core import sysfs_leds
 
         try:
@@ -1998,18 +1336,8 @@ class CoopManager:
         return numero
 
     def _numero_da_carta(self, identity: str) -> int | None:
-        """O número da carta deste controle, perguntado ao registro — ou None.
-
-        É a consulta que o `_numero_exibido` sempre fez, posta num lugar só
-        porque desde a STEAM-NO-FISICO-01 ela tem um segundo leitor: a ORDEM em
-        que os vpads nascem (`_na_ordem_da_carta`).
-        """
+        """O número da carta deste controle, perguntado ao registro — ou None."""
         registry = getattr(self._daemon, "identity_registry", None)
-        # 27/08/2026: `numero_da_lampada` primeiro, `slot_for` só como degrau
-        # de compatibilidade (dublê de teste / backend legado sem o método).
-        # A diferença morde: `slot_for(assign=False)` responde um AUSENTE pelo
-        # LUGAR GRAVADO, que é de outro espaço de numeração e já colidiu com
-        # o número de um presente — quem acende lâmpada não pode ler aquilo.
         lampada = (
             getattr(registry, "numero_da_lampada", None) if registry is not None else None
         )
@@ -2017,20 +1345,13 @@ class CoopManager:
         consulta = lampada if callable(lampada) else slot_for
         if callable(consulta):
             with contextlib.suppress(Exception):
-                # `assign=False`: acender LED jamais aloca identidade (o dono
-                # da atribuição é o provider de cor / o `sync_connected`).
                 bruto = consulta(identity, assign=False)
                 if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
                     return bruto
         return None
 
     def _na_ordem_da_carta(self, identidades: Iterable[str]) -> list[str]:
-        """As identidades na ordem do número da carta; sem número, no fim.
-
-        STEAM-NO-FISICO-01. Empate e ausência de número mantêm a ordem de
-        entrada (`sorted` é estável) — sem registro de identidade (dublês,
-        backend legado) nada muda em relação ao histórico.
-        """
+        """As identidades na ordem do número da carta; sem número, no fim."""
         lista = list(identidades)
         sem_numero = float("inf")
         return sorted(
@@ -2041,18 +1362,7 @@ class CoopManager:
         )
 
     def _pode_nascer_na_ordem(self, player: _SecondaryPlayer) -> bool:
-        """Este jogador PRONTO pode ganhar o vpad agora sem furar a fila?
-
-        STEAM-NO-FISICO-01, terceira obrigação: *"os controles virtuais chegam
-        ao jogo na ordem P1→P4"*. O jogo dá a cada vpad NOVO o menor lugar
-        livre (ver `ESPERA_PELA_ORDEM_S`), então o vpad do jogador 3 que nasce
-        antes do do jogador 2 é o «jogador 2» do jogo para sempre naquela
-        partida. Quem ainda não tem vpad e tem carta MENOR passa na frente —
-        seja por grab pendente, seja por calibração adiada.
-
-        O prazo é o piso de acessibilidade: passado `ESPERA_PELA_ORDEM_S`
-        esperando, o jogador nasce assim mesmo e o diário diz.
-        """
+        """Este jogador PRONTO pode ganhar o vpad agora sem furar a fila?"""
         carta = self._numero_da_carta(player.identity)
         agora = time.monotonic()
         desde = self._pronto_desde.setdefault(player.identity, agora)
@@ -2086,14 +1396,7 @@ class CoopManager:
     def _publicar_camada_coop(
         self, padroes: dict[str, tuple[bool, bool, bool, bool, bool]], *, escrever: bool = True
     ) -> bool:
-        """Publica (ou revoga, com `{}`) a camada do co-op no backend (R-13).
-
-        Devolve True quando o backend tem a API de camadas e a publicação
-        rodou — é o sinal para `_apply_coop_player_leds` NÃO cair no sysfs
-        cru. False = backend legado/fake (sem `set_coop_outputs`): o chamador
-        segue pelo caminho histórico. Idempotente: republicar o mesmo mapa é
-        um no-op barato do lado do backend (compara antes de escrever).
-        """
+        """Publica (ou revoga, com `{}`) a camada do co-op no backend (R-13)."""
         ctrl = getattr(self._daemon, "controller", None)
         publicar = getattr(ctrl, "set_coop_outputs", None)
         if not callable(publicar):
@@ -2112,26 +1415,11 @@ class CoopManager:
             logger.warning("coop_publicar_camada_falhou", err=str(exc))
             return True
         self._camada_coop = dict(padroes)
-        # A camada tem dono próprio no backend; o revert por-uniq do teardown
-        # é desnecessário para os controles cobertos por ela, mas manter o
-        # flag preserva o gate do sync (`disable()` quando não deveria estar
-        # ativo) e o caminho legado.
         self._leds_overridden = bool(padroes)
         return True
 
     def _profile_player_leds(self) -> tuple[bool, bool, bool, bool, bool] | None:
-        """Último padrão de player-LED aplicado pelo perfil/GUI (broadcast).
-
-        Decisão (documentada): o perfil aplica player-LEDs por broadcast
-        (`apply_output_defaults`/`set_player_leds`) e o backend guarda o
-        último padrão pedido no DEFAULT do estado desejado para re-afirmá-lo
-        em reconexões. PERFIL-01: `_desired` é a property de compatibilidade
-        do backend → `_desired_default` (o padrão broadcast — a BASE do
-        revert); o padrão POR CONTROLE (default + override do uniq) vem de
-        `_resolved_player_leds` (PERFIL-06). Ler esse valor é a forma mais
-        simples e fiel de saber "o padrão do perfil ativo" sem recarregar o
-        perfil aqui. None = nenhum perfil/GUI setou player-LED ainda.
-        """
+        """Último padrão de player-LED aplicado pelo perfil/GUI (broadcast)."""
         ctrl = getattr(self._daemon, "controller", None)
         bits = getattr(getattr(ctrl, "_desired", None), "player_leds", None)
         if bits is None or len(bits) != 5:
@@ -2141,16 +1429,7 @@ class CoopManager:
     def _resolved_player_leds(
         self, mac: str
     ) -> tuple[bool, bool, bool, bool, bool] | None:
-        """Padrão de player-LED do perfil para `mac`, resolvido POR-UNIQ.
-
-        PERFIL-06: prefere a API de leitura do backend
-        (`resolved_player_leds_for` — merge por campo default + override do
-        uniq): restaurar o broadcast global por cima de um override
-        por-controle era exatamente o "caminho (4)" do COR-02 que este item
-        fecha. Backend sem a API (fakes/legado) cai no padrão broadcast
-        (`_profile_player_leds`), o comportamento histórico. None = sem
-        padrão conhecido → quem chama não escreve nada.
-        """
+        """Padrão de player-LED do perfil para `mac`, resolvido POR-UNIQ."""
         ctrl = getattr(self._daemon, "controller", None)
         reader = getattr(ctrl, "resolved_player_leds_for", None)
         if not callable(reader):
@@ -2167,20 +1446,7 @@ class CoopManager:
         return (bool(bits[0]), bool(bits[1]), bool(bits[2]), bool(bits[3]), bool(bits[4]))
 
     def _revert_single_player_led(self, mac: str) -> None:
-        """Devolve UM controle (por MAC) ao padrão do perfil. Best-effort.
-
-        PERFIL-06: o padrão restaurado é o RESOLVIDO POR-UNIQ deste mac
-        (override de `player_leds` do perfil onde existe, default broadcast
-        onde não) — nunca o global cego por cima do override. Escreve no
-        Modo Nativo também: o número é do Hefesto ali
-        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`, 23/09/2026, que
-        revogou o gate D12 deste revert).
-
-        R-13: com a API de camadas, este revert por-controle é DESNECESSÁRIO
-        — o jogador sai da camada no próximo `_apply_coop_player_leds` (fim
-        do mesmo sync) e o `set_coop_outputs` reescreve o resolvido dele sem
-        o co-op. Curto-circuito para não escrever sysfs cru duas vezes.
-        """
+        """Devolve UM controle (por MAC) ao padrão do perfil. Best-effort."""
         if callable(getattr(getattr(self._daemon, "controller", None),
                             "set_coop_outputs", None)):
             return
@@ -2196,34 +1462,10 @@ class CoopManager:
         except Exception:
             node = None
         if node is None or not node.set_players(bits):
-            # Hotplug-out: o nó sumiu junto com o controle — nada a restaurar.
             logger.debug("coop_player_led_revert_indisponivel", identity=mac)
 
     def _revert_player_leds(self) -> None:
-        """Restaura o padrão do perfil em TODOS os controles (co-op desligado).
-
-        PERFIL-06 (revert por-uniq): com a API de leitura do backend
-        (`resolved_player_leds_for`), cada controle conectado volta ao SEU
-        padrão resolvido — default broadcast onde não há override, override
-        por-uniq onde há — em dois passos:
-
-        1. re-emite o DEFAULT por `apply_output_defaults` (broadcast REAL e
-           NÃO-destrutivo: grava no default sem limpar os overrides —
-           `set_player_leds` broadcast LIMPARIA o campo `player_leds` de
-           todos os overrides por-uniq, corrompendo o estado do perfil);
-        2. corrige por-uniq, pela MESMA rota sysfs por MAC do co-op, os
-           conectados cujo resolvido difere do default
-           (`_reassert_overridden_player_leds`). O transiente do passo 1
-           nesses controles dura ms até o passo 2 cobrir.
-
-        Backend sem a API (fakes/legado): re-emite o último padrão broadcast
-        pelo caminho público que o perfil usa (`set_player_leds`, que
-        prefere sysfs e cai em pydualsense) — o comportamento histórico.
-        Sem padrão conhecido (None), não escreve nada: o próximo apply de
-        perfil / reassert do backend na reconexão cobre. Nada aqui espera o
-        Modo Nativo acabar: o número é do Hefesto ali também
-        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
-        """
+        """Restaura o padrão do perfil em TODOS os controles (co-op desligado)."""
         if not self._leds_overridden:
             return
         self._leds_overridden = False
@@ -2231,16 +1473,10 @@ class CoopManager:
         if ctrl is None:
             logger.debug("coop_player_led_revert_sem_padrao")
             return
-        # R-13: com camadas, reverter = REVOGAR a camada. O backend recalcula
-        # o resolvido de cada controle afetado SEM o co-op (override por-uniq
-        # onde há, default onde não — a mesma promessa do PERFIL-06) e escreve
-        # sozinho. Não passa pelo broadcast + correção por-uniq abaixo, que
-        # existe só para backends sem estado por-controle.
         if self._camada_coop and self._publicar_camada_coop({}):
             return
         bits = self._profile_player_leds()
         if not callable(getattr(ctrl, "resolved_player_leds_for", None)):
-            # Comportamento histórico: backend sem estado por-controle.
             if bits is None:
                 logger.debug("coop_player_led_revert_sem_padrao")
                 return
@@ -2261,17 +1497,7 @@ class CoopManager:
     def _reassert_overridden_player_leds(
         self, default: tuple[bool, bool, bool, bool, bool] | None
     ) -> None:
-        """Re-escreve por-uniq (sysfs por MAC) os conectados com override efetivo.
-
-        Complemento do passo broadcast do `_revert_player_leds` (PERFIL-06):
-        o `apply_output_defaults` pinta TODOS os conectados com o default;
-        aqui os controles cujo padrão RESOLVIDO difere (têm override de
-        `player_leds` no perfil ativo) voltam ao padrão DELES. Best-effort:
-        só toca o sysfs quando há o que corrigir — no Modo Nativo também
-        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
-        Controle sem MAC (uniq None no describe) fica de fora — segue só o
-        global, como em todo o resto do mapa por-uniq.
-        """
+        """Re-escreve por-uniq (sysfs por MAC) os conectados com override efetivo."""
         ctrl = getattr(self._daemon, "controller", None)
         describe = getattr(ctrl, "describe_controllers", None)
         if not callable(describe):
@@ -2306,24 +1532,9 @@ class CoopManager:
             if node is None or not node.set_players(bits):
                 logger.debug("coop_player_led_revert_indisponivel", identity=mac)
 
-    # -- por tick -------------------------------------------------------
 
     def forward_all(self) -> None:
-        """Repassa cada secundário ao seu gamepad virtual. Chamado por tick.
-
-        Também promove jogadores "aguardando grab" (BUG-COOP-GRAB-PENDING-
-        VPAD-01): o vpad nasce aqui, poucos ms depois de o grab confirmar —
-        sem esperar o próximo sync (~2s). Jogadores ainda pendentes são
-        pulados (não existe vpad para repassar; o jogo não vê nada).
-
-        COOP-QUE-NAO-DESMONTA-01 / E1: e quem CEDEU o controle ao primário sai
-        aqui, no tick (~10 ms) e não no sync (~2 s). O caminho é este e não o
-        `sync` porque o jogador cedido já está com o físico solto: cada tick a
-        mais com o vpad de pé é um tick a mais de mesa desequilibrada.
-
-        STEAM-NO-FISICO-01: é também quem diz QUAL é a thread do laço, e quem
-        cumpre o recado de ordem que um `sync` de worker deixou.
-        """
+        """Repassa cada secundário ao seu gamepad virtual. Chamado por tick."""
         self._fio_do_laco = threading.get_ident()
         if self._ordem_pendente:
             self._ordem_pendente = False
@@ -2331,48 +1542,19 @@ class CoopManager:
                 self._corrigir_a_ordem()
         self._recolher_os_cedidos()
         self._promote_pending()
-        # F1-REMAPEAR (13/09/2026): a mesma troca do primário
-        # (`gamepad.dispatch_gamepad`), lida UMA vez por tique do `store` do
-        # daemon — o remapeamento é global no perfil e vale nos quatro.
         troca = remapeamento_ativo(getattr(self._daemon, "store", None))
-        # MOVIMENTO-EM-QUALQUER-MASCARA-01 / E8 (21/09/2026): a mira por
-        # movimento vale nos QUATRO, e não só no P1.
-        #
-        # **ORDEM DELA, e ela recusou a dívida que eu tinha declarado:** *"cara
-        # nenhuma solução pode ser feita só pro p1"*. A primeira entrega desta
-        # sprint misturava o giro dentro do `dispatch_gamepad`, que é o caminho
-        # do PRIMÁRIO — este laço aqui é o dos secundários, e eles ficariam de
-        # fora. Numa feature de acessibilidade isso obriga a pessoa a ser o P1,
-        # e quem escolhe a ordem da mesa é o jogo, não ela.
-        #
-        # O MOTOR É O MESMO, chamado e não copiado: `gamepad.aplicar_o_movimento`
-        # recebe o `uniq` e cada jogador lê o PRÓPRIO giroscópio, o próprio
-        # interruptor de sensor (`virtual_motion.REGISTRO`) e o próprio gatilho.
-        # Copiar o bloco para cá deixaria duas redações da mesma regra, e a
-        # próxima cura alcançaria uma só — que é o defeito que esta casa nomeia
-        # como "cobrir um chamador deixa a próxima pessoa remedindo".
-        #
-        # LIDO UMA VEZ POR TIQUE, como a troca acima: o arranjo é global no
-        # perfil, e perguntá-lo por jogador seria o mesmo `getattr` quatro vezes.
         arranjo_de_movimento = roteador_ativo(getattr(self._daemon, "store", None))
-        # A-HAPTICA-QUEM-JOGA-01 (26/09/2026): quem MEXE na partida é quem joga,
-        # para a háptica pelo rádio. Sem jogo aberto, isto é um `getattr`.
         marcas = marcas_da_partida(self._daemon)
         for player in list(self._players.values()):
             if player.vpad is None:
-                continue  # aguardando confirmação de grab
+                continue
             if player.cedido_ao_primario:
-                # A marca pode ter sido posta pela thread do `connect()` DEPOIS
                 # do `_recolher_os_cedidos` acima — este `continue` é o que
-                # garante que nem UM tick do físico já cedido chegue a dois
-                # vpads ao mesmo tempo. O desmonte vem no tick seguinte.
                 continue
             try:
                 snap = player.reader.snapshot()
                 botoes, l2, r2 = snap.buttons_pressed, snap.l2_raw, snap.r2_raw
                 lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
-                # O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01: o aperto que começou e
-                # acabou entre dois tiques volta pela contagem do MESMO retrato.
                 soltos = self._apertos_vistos_de(player.identity).soltos(
                     leitor=player.reader,
                     pad=player.vpad,
@@ -2380,14 +1562,11 @@ class CoopManager:
                     apertos=getattr(snap, "apertos", None),
                     apertados=botoes,
                 )
-                if marcas is not None:  # a MÃO dele, antes da troca e da mira
+                if marcas is not None:
                     marcas.anotar(
                         player.identity, botoes=botoes, lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2
                     )
                 if arranjo_de_movimento is not None:
-                    # O TOQUE (NO-MODO-XBOX, 28/09): as zonas deste jogador
-                    # entram na MÃO dele, antes da Mira e da troca — o motor é o
-                    # do primário (`gamepad.aplicar_o_toque`), chamado.
                     botoes, l2 = aplicar_o_toque(
                         self._daemon,
                         arranjo_de_movimento,
@@ -2395,10 +1574,6 @@ class CoopManager:
                         botoes=botoes,
                         l2=l2,
                     )
-                    # O GATILHO LÊ OS BOTÕES ORIGINAIS, e por isso esta linha
-                    # vem ANTES da troca — igual ao primário. Com o
-                    # remapeamento ativo, a mira tem de ligar pelo botão que a
-                    # MÃO daquele jogador apertou, não pelo que o jogo vê.
                     lx, ly, rx, ry = aplicar_o_movimento(
                         self._daemon,
                         arranjo_de_movimento,
@@ -2421,22 +1596,17 @@ class CoopManager:
                     r2=r2,
                 )
                 if soltos:
-                    # O quadro do aperto que já soltou vem antes, na MÃO e com a
-                    # troca do perfil; depois o de agora (como o do P1).
                     com_soltos = da_mao | soltos
                     if troca:
                         com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
                     player.vpad.forward_buttons(com_soltos)
                 player.vpad.forward_buttons(botoes)
-                # FEAT-VPAD-FF-PASSTHROUGH-01: rumble do jogo deste jogador.
-                # getattr defensivo: fakes/vpads sem pump_ff degradam sem crash.
                 pump = getattr(player.vpad, "pump_ff", None)
                 if pump is not None:
                     pump()
-            except Exception as exc:  # nunca derruba o poll loop
+            except Exception as exc:
                 logger.warning("coop_forward_failed", evdev=player.evdev_path, err=str(exc))
 
-    # -- a ordem do jogo (STEAM-NO-FISICO-01) ---------------------------
 
     def _jogo_com_a_autoridade(self) -> bool:
         """O jogo está com a autoridade (o mesmo sinal STICKY da R-04)."""
@@ -2452,15 +1622,8 @@ class CoopManager:
         return fio is None or fio == threading.get_ident()
 
     def _assentar(self, chave: str) -> None:
-        """Um vpad nasceu: ele toma um lugar no jogo.
-
-        Com o jogo aberto, o menor lugar livre (o `SDL_FindFreePlayerIndex`);
-        sem jogo, o fim da fila — o jogo que abrir depois enumera os vpads na
-        ordem em que nasceram.
-        """
+        """Um vpad nasceu: ele toma um lugar no jogo."""
         if chave != _CHAVE_DO_P1:
-            # O P1 nasce no boot, antes de qualquer secundário: a mesa o
-            # conhece ANTES de sentar o primeiro deles.
             self._acompanhar_o_p1()
         self._levantar(chave)
         self._nascimentos += 1
@@ -2483,8 +1646,6 @@ class CoopManager:
 
     def _compactar(self) -> None:
         """Sem jogo aberto, o lugar de cada vpad é a ordem em que ele nasceu."""
-        # `.get`: a renumeração pode sentar alguém pelo worker no meio desta
-        # conta, e a ordem de escrita de `_assentar` põe a data antes do lugar.
         ordem = sorted(
             self._mesa_do_jogo.values(), key=lambda c: self._nascido_em.get(c, 0)
         )
@@ -2511,13 +1672,7 @@ class CoopManager:
         return self._numero_da_carta(primario)
 
     def _posto_vago(self, chave: str, autoridade: bool) -> bool:
-        """`chave` é o vpad do P1 parado à espera do primário que caiu?
-
-        A mesma pergunta que o backend faz para abrir a vaga
-        (:meth:`o_posto_do_p1_espera`, O-ASSENTO-GUARDADO-NAO-ANDA-02), sobre o
-        dono do posto de agora. Só com o jogo na autoridade: é quando o vpad do
-        P1 é fixo e a carta dele não decide nada.
-        """
+        """`chave` é o vpad do P1 parado à espera do primário que caiu?"""
         if chave != _CHAVE_DO_P1 or not autoridade:
             return False
         primario = self._primary_identity()
@@ -2526,14 +1681,7 @@ class CoopManager:
         return self.o_posto_do_p1_espera(primario)
 
     def _nascer_na_ordem(self, player: _SecondaryPlayer) -> None:
-        """Dá o vpad a `player` — recriando ANTES quem ficaria fora de ordem.
-
-        Fora da thread do laço (o `sync` do worker da renumeração) nasce como
-        sempre nasceu e deixa o recado: o `forward_all` confere a ordem no
-        tique seguinte. Calibração ainda pendente também nasce como sempre —
-        o `_promote_player` adia sozinho, e recriar alguém para um jogador
-        que nem vai nascer agora seria arrancar controle por nada.
-        """
+        """Dá o vpad a `player` — recriando ANTES quem ficaria fora de ordem."""
         if not self._no_fio_do_laco():
             self._promote_player(player)
             self._ordem_pendente = True
@@ -2544,31 +1692,7 @@ class CoopManager:
         self._corrigir_a_ordem(nascer=player)
 
     def _corrigir_a_ordem(self, nascer: _SecondaryPlayer | None = None) -> None:
-        """Faz o jogo ver a carta: recria quem ficou fora de ordem, e nasce `nascer`.
-
-        As duas respostas dela de 23/09/2026, 22h, pela recomendada:
-
-        - **o controle virtual do PRIMÁRIO espera a carta 1**
-          (`D-2309-O-PRIMARIO-ESPERA-A-CARTA-1`). O vpad do P1 nasce no boot,
-          antes de o daemon saber qual controle é o primário — então «esperar»
-          é nascer de novo DEPOIS do vpad da carta 1. NOTA DATADA, 28/09: o
-          primário passou a SER a carta 1 (O-MODO-XBOX-NAO-E-QUEDA-02, item 4),
-          e «quem é o primário não muda» caducou; controle novo não rouba;
-        - **controle fora de ordem com o jogo aberto se recria na hora**
-          (`D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA`): a carta renumerada na
-          aba Controles, a carta menor que chega depois da maior, e o buraco
-          que um controle que saiu deixou para o próximo que chega.
-
-        **O LIMITE, e ele é a R-04 medida em 23/07:** recriar o vpad do P1 com
-        o jogo na autoridade mata aquele controle até o fim da sessão (a Steam
-        não reabre o hidraw dele) — a premissa «perde por cerca de um segundo»
-        não vale para ELE. Então o P1 fica parado enquanto o jogo manda, os
-        secundários se acertam entre si, e o P1 renasce no lugar quando o jogo
-        devolver a autoridade. O diário diz, uma vez por episódio.
-
-        Nunca propaga exceção (a regra do módulo: o poll loop não cai): a
-        falha vai ao diário, e quem ia nascer nasce como sempre nasceu.
-        """
+        """Faz o jogo ver a carta: recria quem ficou fora de ordem, e nasce `nascer`."""
         if not self._no_fio_do_laco():
             self._ordem_pendente = True
             return
@@ -2596,20 +1720,9 @@ class CoopManager:
         ]:
             carta = self._carta_da_chave(chave)
             if carta is None and lugar is not None and self._posto_vago(chave, autoridade):
-                # O POSTO VAGO NÃO PARA A MESA (conferência da O-ASSENTO-
-                # GUARDADO-NAO-ANDA-03). Com o P1 fora dentro do prazo e o jogo
-                # aberto, o vpad dele espera parado e o primário ausente não
-                # tem carta — e o `return` abaixo deixava o P4 no boneco 4 com a
-                # tela e a lâmpada dizendo 3 até o P1 voltar ou o prazo DELE
-                # vencer (medido: 24 s). O vpad do P1 é fixo com o jogo na
-                # autoridade (a R-04), então a carta dele não escolhe plano
-                # nenhum: vai a do lugar em que ele espera, e o `inteira` desta
-                # passada não fala do P1.
                 vago = True
                 carta = lugar + 1
             elif carta is None:
-                # Sem carta não há ordem a obedecer (dublê, backend legado,
-                # primário sem MAC): o de sempre.
                 if nascer is not None:
                     self._promote_player(nascer)
                 return
@@ -2622,8 +1735,6 @@ class CoopManager:
             compacta=not autoridade,
         )
         if not autoridade:
-            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01, item 3: com o jogo
-            # solto, quem tem o nome velho renasce com o número dele.
             recriar = self._com_os_nomes_velhos(recriar, cartas)
         if vago:
             cartas_no_diario = {_rotulo(c): n for c, n in cartas.items() if c != _CHAVE_DO_P1}
@@ -2640,9 +1751,6 @@ class CoopManager:
         if recriar:
             assinatura = (tuple(sorted(cartas.items())), tuple(recriar))
             if assinatura == self._ultima_recriacao:
-                # A MESMA desordem logo depois de recriar: o modelo e o jogo
-                # discordam. Recriar de novo seria arrancar o controle dela em
-                # laço — fica parado, e o diário diz UMA vez.
                 if not self._ordem_travada:
                     self._ordem_travada = True
                     logger.warning(
@@ -2658,9 +1766,6 @@ class CoopManager:
                     cartas=cartas_no_diario,
                     jogo=autoridade,
                 )
-                # A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01: a ordem passa pelo
-                # dono da trava, que a deixa passar pela D-2309 e diz a linha
-                # de quem recriou com o jogo aberto.
                 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                     _recriacao_bloqueada_por_jogo,
                 )
@@ -2684,19 +1789,12 @@ class CoopManager:
                 self._promote_player(jogador)
 
     def _derrubar_para_renascer(self, chave: str) -> None:
-        """Derruba SÓ o vpad de `chave`: o físico segue preso e escondido.
-
-        O leitor evdev, o grab e o esconderijo do broker ficam — o jogador
-        não sai da mesa, só o controle virtual dele renasce no lugar certo.
-        A ordem é a do `_teardown_player`: o espelho de movimento antes do
-        vpad, e o motor parado antes de o sink de FF morrer.
-        """
+        """Derruba SÓ o vpad de `chave`: o físico segue preso e escondido."""
         if chave == _CHAVE_DO_P1:
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                 stop_gamepad_emulation,
             )
 
-            # Os mesmos dois `False` da troca de máscara: não é parada, é passo.
             stop_gamepad_emulation(self._daemon, persist=False, release_grab=False)
             self._acompanhar_o_p1()
             return
@@ -2720,45 +1818,24 @@ class CoopManager:
             reerguer_o_p1,
         )
 
-        # `origin="profile"`: é manutenção interna, não gesto dela (ORIGEM-
-        # QUE-MENTE-01) — e `flavor=None` lê a máscara da sessão, intacta.
-        #
-        # O CAMINHO É O DO DONO (conferência de 24/09/2026, e o dono ganhou nome
-        # na O-MODO-XBOX-NAO-E-QUEDA-02, 28/09). Um start sem opinião não herda
-        # caminho de lugar nenhum, por ordem dela (`gamepad._caminho_a_herdar`,
-        # CAMINHO-CONTAGIO-01), e o `_guardar_o_caminho` LIMPA o slot da sessão:
         # sem o dono, a mesa no Modo Xbox via o P1 voltar DualSense e a tela e
-        # os secundários perdiam a escolha dela. O slot lido é o mesmo que os
-        # secundários leem (`_caminho`), e o `stop` do passo anterior não o toca.
         desfecho = reerguer_o_p1(self._daemon, motivo="ordem_do_coop")
         if desfecho not in DESFECHOS_EMULACAO_ATIVA:
             logger.warning("coop_ordem_o_p1_nao_voltou", desfecho=desfecho)
         self._acompanhar_o_p1()
 
-    # -- ciclo de vida --------------------------------------------------
 
     def disable(self) -> None:
-        """Desmonta todos os secundários (solta grab, fecha uinput) e restaura
-        os player-LEDs do perfil ativo. Idempotente."""
+        """Desmonta todos os secundários (solta grab, fecha uinput) e restaura"""
         for key in list(self._players):
             self._teardown_player(key)
         self._revert_player_leds()
 
-    # Alias semântico para o shutdown do daemon.
     stop_all = disable
 
-    # -- a vaga do posto de P1 (O-ASSENTO-GUARDADO-NAO-ANDA-02) ---------
-    # No fim da classe pela razão dos imports do F1-REMAPEAR logo abaixo: o
-    # mapa de canais cita os métodos desta classe por número de linha.
 
     def _pendurar_a_espera_do_posto(self, ctrl: Any) -> None:
-        """A segunda metade do `_garantir_aviso_de_primario`: a pergunta da vaga.
-
-        Pendurada no MESMO ponto do aviso de troca de primário e pela mesma
-        razão: este manager nasce sob demanda, e é ele quem sabe se cada
-        controle tem o próprio vpad. Backend sem `set_espera_do_posto` (dublê,
-        legado) segue com a regra de sempre — o próximo assume na hora.
-        """
+        """A segunda metade do `_garantir_aviso_de_primario`: a pergunta da vaga."""
         pendurar = getattr(ctrl, "set_espera_do_posto", None)
         if callable(pendurar):
             pendurar(self.o_posto_do_p1_espera)
@@ -2794,36 +1871,9 @@ class CoopManager:
         pergunta = getattr(registry, "o_lugar_espera", None)
         return callable(pergunta) and bool(pergunta(uniq))
 
-    # -- quem alimenta cada vpad (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01) --
-    # No fim da classe pela razão da vaga logo acima: o mapa de canais cita os
-    # métodos desta classe por número de linha.
 
     def quem_alimenta_cada_vpad(self) -> dict[str, str]:
-        """``{MAC que o vpad veste: identidade do físico que o alimenta}``. Só leitura.
-
-        A háptica pelo rádio perguntava à FORJA de quem é um vpad (o aparelho
-        de que o MAC dele deriva), e a forja responde quem o vpad era ao NASCER:
-        o posto nasce sem identidade no boot, ou com a do primário de quando
-        renasceu, e o primário muda embaixo dele sem ele renascer. Quem sabe
-        quem alimenta cada vpad AGORA é este manager, que liga cada físico ao
-        vpad dele — a mesma resposta que o rumble do jogo já segue:
-
-        - o vpad do posto (``daemon._gamepad_device``) é do primário: quem o
-          dirige, ou quem a vaga espera (O-ASSENTO-GUARDADO-NAO-ANDA-02) — o
-          alvo de ``gamepad.make_primary_rumble_sink``;
-        - o de cada secundário promovido é do físico dele — o alvo de
-          :meth:`_make_player_rumble_sink`.
-
-        Ficam de fora quem espera o grab (sem vpad), quem cedeu o controle ao
-        primário (o físico agora alimenta o posto, e o vpad velho cai no tique
-        seguinte), a identidade por ``path:`` (sem MAC não casa nada) e o vpad
-        sem MAC (o ``uinput`` não carrega ``uniq``).
-
-        A chave é o MAC que o vpad VESTE (``vpad.mac``), em minúsculas: é o que
-        o kernel republica no ``uniq`` do nó. Quem pergunta roda fora do laço
-        (a volta do alto-falante), então a lista dos jogadores é copiada antes
-        de ser percorrida, e nada é escrito.
-        """
+        """``{MAC que o vpad veste: identidade do físico que o alimenta}``. Só leitura."""
         alimenta: dict[str, str] = {}
         primario = self._primary_identity()
         posto = getattr(self._daemon, "_gamepad_device", None)
@@ -2838,28 +1888,9 @@ class CoopManager:
                 alimenta[mac.lower()] = identidade
         return alimenta
 
-    # -- o número é da pessoa (O-MODO-XBOX-NAO-E-QUEDA-02, item 6) -------
-    # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
-    # desta classe por número de linha.
 
     def _numeros_em_duas_passadas(self) -> dict[str, int]:
-        """O corpo de `numeros_de_jogador`: quem tem carta fica com ela, os outros depois.
-
-        **1ª passada — a CARTA** (`_numero_da_carta`, a lâmpada do registro):
-        cada controle na mesa acende o número dele. Nenhum `fallback` entra
-        antes, então nenhum toma o número de quem está na mesa.
-
-        **2ª passada — quem não tem lâmpada.** É quem está FORA da mesa com o
-        jogador de pé no co-op (a troca de transporte segura o vpad), e o
-        primário ausente com o posto vago. Primeiro o ASSENTO que o registro
-        guarda para ele (`slot_for(assign=False)`, o mesmo que o nome do
-        microfone lê: com o lugar guardado, é o número dele), e só sem assento
-        livre o `fallback` histórico (o primário 1, o secundário o
-        `player_index`). Um número já tomado nunca acende duas vezes.
-
-        Sem registro (Fake, backend legado, dublê), a 1ª passada não acha carta
-        nenhuma e tudo cai no `fallback`, como sempre foi.
-        """
+        """O corpo de `numeros_de_jogador`: quem tem carta fica com ela, os outros depois."""
         alvos = self._alvos_de_numeracao()
         cartas = {mac: self._numero_da_carta(mac) for mac, _fallback in alvos}
         numeros: dict[str, int] = {}
@@ -2882,13 +1913,7 @@ class CoopManager:
         return {mac: numeros[mac] for mac, _fallback in alvos}
 
     def _assento_guardado(self, identity: str) -> int | None:
-        """O número do assento de `identity` na mesa do registro — ou None.
-
-        A leitura pura que o nome do microfone também faz
-        (`subsystems/base.slot_de_sessao`): com o lugar guardado, é o número
-        dele; fora do prazo, é a colocação que ele teria, e a 2ª passada só a
-        usa se ela estiver livre.
-        """
+        """O número do assento de `identity` na mesa do registro — ou None."""
         registry = getattr(self._daemon, "identity_registry", None)
         slot_for = getattr(registry, "slot_for", None) if registry is not None else None
         if not callable(slot_for):
@@ -2901,24 +1926,10 @@ class CoopManager:
         return None
 
     def _repintar_se_o_numero_mudou(self) -> None:
-        """A barra de jogador segue o número mesmo sem hotplug (G6).
-
-        O `sync` só republica a camada do co-op no ciclo cheio, que roda quando
-        `/dev/input` muda. O número muda sem mexer lá: a lâmpada que o registro
-        libera depois da volta (o G6: a mesa voltou a 1, 2, 3 e 4, e o azul
-        ficou com o 5), e o número que ela troca na aba Controles. Aqui, a cada
-        tique quieto, a mesa é conferida — e só PUBLICA se mudou
-        (`_publicar_camada_coop` compara antes). Só pela camada: backend sem
-        ela (Fake, legado) fica com o ciclo cheio, que é quem sabe o sysfs cru.
-        """
+        """A barra de jogador segue o número mesmo sem hotplug (G6)."""
         self.publicar_os_numeros(escrever=True)
 
-    # -- o nome que o jogo vê (A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01) ---
-    # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
-    # desta classe por número de linha.
 
-    #: Os nomes velhos que o diário já disse neste episódio. Default de
-    #: CLASSE, como o `_ordem_pendente`: a suíte monta gerente por `__new__`.
     _nomes_velhos_ditos: list[tuple[int, int]] | None = None
 
     def _nomes_que_ficaram_para_tras(self, cartas: Mapping[str, int]) -> dict[str, tuple[int, int]]:
@@ -2962,23 +1973,7 @@ class CoopManager:
         return velhos
 
     def _a_mesa_esta_assentada(self) -> bool:
-        """Nenhum lugar guardado, e todo controle da mesa com o virtual dele.
-
-        As duas esperas foram medidas na bancada de queda em 28/09/2026, com a
-        carta 1 saindo e voltando sem jogo:
-
-        - **o lugar guardado** (`identity.prazo_do_lugar_guardado`: a queda
-          curta e a troca de transporte). Sem esperar, o posto do P1 renascia
-          duas vezes em 30 s, e o segundo vestia o endereço do controle que
-          depois ganha vpad próprio. Se quem saiu volta no prazo, nada precisa
-          renascer;
-        - **quem ainda não tem virtual** (a volta, o grab pendente, a ordem
-          que espera). Sem esperar, os de carta maior renasciam pelo nome e,
-          no mesmo `sync`, de novo pela ordem de quem nasceu depois.
-
-        A contagem é pelo registro de identidade (quem está na mesa) contra os
-        virtuais de pé; sem registro não há número a mudar, e nada espera.
-        """
+        """Nenhum lugar guardado, e todo controle da mesa com o virtual dele."""
         registro = getattr(self._daemon, "identity_registry", None)
         guardados = getattr(registro, "guardados", None)
         conectados = getattr(registro, "snapshot_connected", None)
@@ -3003,34 +1998,11 @@ class CoopManager:
         return com_virtual >= na_mesa
 
     def _com_os_nomes_velhos(self, recriar: list[str], cartas: Mapping[str, int]) -> list[str]:
-        """`recriar` mais quem tem o nome velho, na ordem do jogo. Só com o jogo SOLTO.
-
-        A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01, item 3. Quem chama já
-        sabe que o jogo não está com a autoridade: recriar com o jogo
-        segurando arranca o controle da partida (a R-04), e o nome não vale
-        esse preço. Aqui, sem jogo, o custo é um replug que ninguém está
-        jogando.
-
-        Recria-se a partir da MENOR carta de nome velho, todo mundo de carta
-        igual ou maior: sem jogo, quem renasce vai para o fim da ordem de
-        nascimento (`_compactar`), e recriar só o do meio desarrumaria a ordem
-        que o jogo que abrir depois vai enumerar. O plano de ordem que chega em
-        `recriar` já é um sufixo de cartas nesse caso, então a união continua
-        um sufixo, e a ordem continua certa.
-
-        **E SÓ COM A MESA ASSENTADA** (:meth:`_a_mesa_esta_assentada`): o
-        número de quem ficou é de passagem enquanto alguém tem o lugar guardado
-        ou ainda espera o virtual dele, e quem nasce depois faz a ordem recriar
-        os de carta maior de qualquer jeito.
-        """
+        """`recriar` mais quem tem o nome velho, na ordem do jogo. Só com o jogo SOLTO."""
         if not self._a_mesa_esta_assentada():
             return recriar
         velhos = self._nomes_que_ficaram_para_tras(cartas)
         if not velhos:
-            # O episódio acabou: o próximo, mesmo com os mesmos números, é
-            # outro, e o diário o diz. Sem isto a segunda saída da carta 1 na
-            # mesma vida do daemon renascia calada, e a prova que conta as
-            # linhas do diário lia «nada renasceu».
             self._nomes_velhos_ditos = None
             return recriar
         piso = min(cartas[chave] for chave in velhos)
@@ -3038,27 +2010,13 @@ class CoopManager:
         juntos = [c for c in sentados if c in recriar or cartas.get(c, 0) >= piso]
         nomes = sorted(velhos.values())
         if nomes != self._nomes_velhos_ditos:
-            # Uma linha por episódio: se a ordem não convergir, a trava do
-            # `_ordenar` para as recriações e o diário não repete a cada `sync`.
             self._nomes_velhos_ditos = nomes
             logger.info("coop_nome_do_virtual_renasce", nomes=nomes, recriados=len(juntos))
         return juntos
 
-    # -- o número no diário (O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01) --
-    # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
-    # desta classe por número de linha.
 
     def numero_do_diario(self, identity: str | None, indice: int) -> int:
-        """O número que o diário diz para este jogador: o da CARTA.
-
-        A cura 2 da sprint (02/10/2026). O diário dizia ``player=`` com o
-        ``player_index``, o índice de ALOCAÇÃO do vpad: em 29/09 o roxo nasceu
-        «Hefesto P2», com a lâmpada e a tela dizendo 2, e o diário escreveu
-        ``coop_player_added player=4``. Quem lia procurava o P4 e achava o
-        controle de outra pessoa. O dono do número é um só
-        (:meth:`numero_para_o_nome`, a mesma conta do nome, da lâmpada e do
-        cartão); sem identidade, ou sem registro, vale o índice, como o nome.
-        """
+        """O número que o diário diz para este jogador: o da CARTA."""
         if not identity or identity.startswith("path:"):
             return indice
         return self.numero_para_o_nome(identity, indice)
@@ -3074,24 +2032,9 @@ class CoopManager:
             "indice": player.player_index,
         }
 
-    # -- o número que se solta é o que acende (A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01) --
 
     def publicar_os_numeros(self, *, escrever: bool) -> bool:
-        """Republica a camada do co-op com os números de agora. Devolve se mudou.
-
-        O corpo do `_repintar_se_o_numero_mudou` (o tique quieto, que segue
-        chamando com escrita), com a escrita opcional. ``escrever=False`` é o
-        PREPARO do gatilho da lightbar (`connection._preparar_a_lightbar`): ele
-        solta as lâmpadas e chama isto na thread do laço, antes de a tarefa ir
-        ao executor. Medido em 30/09, 03:07:55: o gatilho soltou 1, 2 e 3 e o
-        mesmo disparo escreveu 1, 3 e 4, porque esta camada é uma CÓPIA do
-        número, fica acima da automática no merge, e só se atualizava no tique
-        seguinte do co-op. Republicada antes, a escrita do gatilho já resolve o
-        número novo, uma escrita por controle (o cabo sem nó de LED sai aqui).
-
-        Sem jogador secundário não faz nada: a camada já está revogada
-        (`_apply_coop_player_leds`).
-        """
+        """Republica a camada do co-op com os números de agora. Devolve se mudou."""
         if not self._players:
             return False
         ctrl = getattr(self._daemon, "controller", None)
@@ -3110,11 +2053,7 @@ class CoopManager:
         )
         return self._publicar_camada_coop(padroes, escrever=escrever)
 
-    # -- o aperto que já soltou (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01) ---------
 
-    #: A contagem de apertos que cada pad virtual já recebeu, por jogador.
-    #: Default de CLASSE, como o `_nomes_velhos_ditos`: a suíte monta gerente
-    #: por `__new__`.
     _apertos_vistos: dict[str, Any] | None = None
 
     def _apertos_vistos_de(self, identity: str) -> Any:
@@ -3127,11 +2066,6 @@ class CoopManager:
         return vistos
 
 
-# F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da
-# classe, e não no topo, de propósito. No topo ele empurrava os métodos que o
-# mapa de canais (`docs/data/mapa-controles.csv`, que não é desta sprint) cita
-# por número de linha. O `forward_all` só lê o nome quando o tique roda, então a
-# posição não muda nada.
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     ativo as remapeamento_ativo,
 )
@@ -3165,7 +2099,7 @@ def _numeros_sem_vpad(
     - **Conexão Nativa (Sony)**: o jogo abre o controle FÍSICO e fala direto com
       ele. Não há intermediário, mas há controle na mão de alguém, e o número
       dele **já está calculado** — o ``identity_registry`` é chaveado pelo MAC e
-      não consulta modo nenhum (``daemon/lifecycle.py:4525-4527`` roda o
+      não consulta modo nenhum (``daemon/lifecycle.py:2849-2851`` roda o
       ``_sync_identity_registry`` antes do gate de conexão, a cada 2 s). Era
       dado pronto que a tela não publicava.
 
@@ -3193,14 +2127,14 @@ def _numeros_sem_vpad(
     vpad por jogador* (``_spawn_player``), e pôr-se no meio é exatamente o que a
     Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que ela
     pediu**, pela mesma razão que já mantém a exceção de
-    ``lifecycle.py:2662-2663``. Ou o jogo conta os dois físicos sozinho, ou
+    ``lifecycle.py:1611-1612``. Ou o jogo conta os dois físicos sozinho, ou
     alguém tem de estar no meio (o Caminho D, que é oferta e continua sem a
     palavra dela). A régua que trava isto é
     ``tests/unit/test_o_coop_vive_na_conexao_nativa.py``.
 
     **POR QUE ESTE PARÁGRAFO MORA AQUI e não lá em cima**, que é onde ele
     seria lido primeiro: ``docs/data/mapa-controles.csv`` cita
-    ``coop.py:853-863``, ``:865`` e ``:880`` por FAIXA, e uma linha
+    ``coop.py:486-496``, ``:865`` e ``:880`` por FAIXA, e uma linha
     acrescentada antes delas apodrece as seis citações no portão
     ``citacoes-de-linha``. O mapa é da SPECS-A-PROCEDENCIA-01 e não se edita
     daqui — logo o topo deste arquivo está congelado para quem não o possui.
@@ -3236,29 +2170,7 @@ def _numeros_sem_vpad(
 def resolve_player_numbers(
     daemon: DaemonProtocol, controllers: Sequence[Mapping[str, object]]
 ) -> list[int | None]:
-    """Número do jogador que o JOGO vê, para cada controle de `controllers`.
-
-    LEIGO-01b: a fonte do número é o daemon, nunca a posição na lista. `None`
-    significa "este controle não é um jogador agora" e a UI simplesmente não
-    mostra número — melhor calar que mentir. Acontece em três casos:
-
-    - **Controlar o PC** (sem gamepad virtual e sem Modo Nativo): não existe
-      jogador — o controle mexe no PC;
-    - controle desconectado;
-    - co-op ligado mas o jogador ainda não foi promovido (aguardando o grab), ou
-      controle sem MAC para casar.
-
-    **A CONEXÃO NATIVA SAIU DESSA LISTA em 06/09/2026** (COOP-NA-CONEXAO-NATIVA-01,
-    Caminho B): ali não há vpad e há jogador — quem numera é o
-    ``identity_registry``, e o porquê está em :func:`_numeros_sem_vpad`. A frase
-    que estava aqui — *"sem gamepad virtual (modo desktop/nativo): não existe
-    jogador"* — era uma premissa escrita, não um descuido, e o que a derrubou
-    foi a decisão dela de materializar o co-op na Conexão Nativa.
-
-    Com o gamepad ligado e o co-op DESLIGADO todos os controles conectados são o
-    jogador 1 — é literalmente o que o jogo vê (um vpad só, alimentado pelo
-    primário). Função de leitura pura: não toca no estado do co-op.
-    """
+    """Número do jogador que o JOGO vê, para cada controle de `controllers`."""
     if getattr(daemon, "_gamepad_device", None) is None:
         return _numeros_sem_vpad(daemon, controllers)
     connected = [bool(c.get("connected")) for c in controllers]
@@ -3272,8 +2184,6 @@ def resolve_player_numbers(
         uniq = ctrl.get("uniq")
         number = index_by_mac.get(uniq) if ok and isinstance(uniq, str) else None
         # Blindagem de serialização (mesma do `_as_str_or_none` do state_full):
-        # com o daemon dublado por MagicMock em teste, `player_indexes()` devolve
-        # um mock — que estoura no json.dumps do servidor IPC. Só int real passa.
         out.append(
             number if isinstance(number, int) and not isinstance(number, bool) else None
         )
@@ -3290,36 +2200,7 @@ def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
 
 
 def numero_do_nome_do_primario(daemon: Any, fallback: int = 1) -> int:
-    """O número que vai DENTRO do nome do vpad do P1. A-MESMA-LINGUA-01.
-
-    O irmão de :meth:`CoopManager.numero_para_o_nome` para o único jogador que
-    o `CoopManager` não promove: o primário nasce em
-    `subsystems/gamepad.start_gamepad_emulation`, e o número dele estava
-    **cravado em 1** desde sempre.
-
-    **CRAVAR 1 ERA UM FATO ERRADO, e foi ele que a bancada dela pegou em
-    07/09/2026:** o primário era o Cosmic Red, no cabo, e a carta dele dizia
-    **2** — o primeiro da fila era o Galactic Purple, no rádio. Ser o controle
-    que alimenta o P1 é uma função da SESSÃO ("de quem o daemon lê o input"),
-    não um lugar na fila; confundir as duas fazia o vpad do primário mentir
-    100% das vezes em que ele não era o primeiro a chegar.
-
-    A regra mora aqui, e não em `gamepad.py`, por uma razão só: a fila tem UM
-    dono, e reimplementar a consulta do outro lado criaria a segunda cópia que
-    esta casa persegue. O ``fallback`` (1) responde quando não há mesa de quem
-    perguntar — daemon sem `_coop_manager` ainda, ou primário sem MAC.
-
-    **O MAC DO VPAD NÃO SE MOVE COM ISTO, e o encaixe é o que torna a cura
-    segura.** O MAC PEDIDO (`uhid_gamepad.vpad_mac`) só sai do número sem
-    identidade de aparelho, e aí `numeros_de_jogador()` não responde
-    (`_alvos_de_numeracao` descarta `path:`) e este fallback devolve 1. Com
-    identidade, sai do aparelho; o VESTIDO pode ser o seguinte do MESMO aparelho
-    (`vpad_macs_do_aparelho`, O-VPAD-DO-P1-NAO-REPETE-O-MAC-01). O número só pinta o nome.
-
-    **NÃO cria o manager.** `getattr`, nunca `get_coop_manager`: subir um
-    `CoopManager` do lado de dentro da partida do vpad inverteria a ordem de
-    construção do daemon por causa de um rótulo.
-    """
+    """O número que vai DENTRO do nome do vpad do P1. A-MESMA-LINGUA-01."""
     manager = getattr(daemon, "_coop_manager", None)
     if not isinstance(manager, CoopManager):
         return fallback
@@ -3328,18 +2209,11 @@ def numero_do_nome_do_primario(daemon: Any, fallback: int = 1) -> int:
         if identity is None or identity.startswith("path:"):
             return fallback
         return manager.numero_para_o_nome(identity, fallback)
-    except Exception as exc:  # rótulo nunca derruba a partida do vpad
+    except Exception as exc:
         logger.debug("numero_do_nome_do_primario_falhou", err=str(exc))
         return fallback
 
 
-# STEAM-NO-FISICO-01: a ordem do jogo, pura. Mora no fim do módulo pela mesma
-# razão dos imports do F1-REMAPEAR acima: o mapa de canais cita os métodos da
-# classe por número de linha. Os métodos só leem estes nomes quando rodam.
-
-#: A chave do vpad do PRIMÁRIO na mesa do jogo. Não é um MAC de propósito: o
-#: vpad do P1 é um só enquanto o primário troca de aparelho
-#: (`ceder_ao_primario`), e a carta dele é sempre a do primário de agora.
 _CHAVE_DO_P1 = "<p1>"
 
 
@@ -3355,12 +2229,7 @@ def _a_mesa_depois(
     *,
     compacta: bool,
 ) -> dict[int, str]:
-    """Lugar do jogo -> chave depois de derrubar `recriar` e nascer o resto.
-
-    Devolve o LUGAR, e não só a ordem (O-ASSENTO-GUARDADO-NAO-ANDA-03): a lista
-    em ordem de lugar escondia o buraco, e é o lugar que diz qual boneco o
-    jogo dá a cada um.
-    """
+    """Lugar do jogo -> chave depois de derrubar `recriar` e nascer o resto."""
     restam = {lugar: c for lugar, c in mesa.items() if c not in recriar}
     if compacta:
         restam = dict(enumerate(c for _lugar, c in sorted(restam.items())))
@@ -3377,13 +2246,7 @@ def _em_ordem(numeros: Sequence[int]) -> bool:
 
 
 def _fora_do_boneco(depois: Mapping[int, str], cartas: Mapping[str, int]) -> int:
-    """Quantos o jogo mexe num boneco que não é o número da carta deles.
-
-    O lugar ``N - 1`` do jogo é o jogador ``N`` — o boneco que a lâmpada e a
-    tela prometem. É a conta que a ordem sozinha não fazia: com o buraco de
-    quem saiu, o P3 com a carta 2 no lugar 2 do jogo está EM ORDEM e no boneco
-    errado.
-    """
+    """Quantos o jogo mexe num boneco que não é o número da carta deles."""
     return sum(1 for lugar, chave in depois.items() if lugar != cartas[chave] - 1)
 
 
@@ -3394,31 +2257,7 @@ def _a_faixa(
     fixos: frozenset[str],
     melhor: tuple[int, list[str], bool],
 ) -> tuple[int, list[str], bool]:
-    """O plano por FAIXA de cartas, para quando o sufixo deixa gente fora do boneco.
-
-    O-ASSENTO-GUARDADO-NAO-ANDA-04. O sufixo recria todo mundo a partir de uma
-    carta; a faixa recria só as cartas de ``piso`` a ``teto``, e quem vem
-    depois do ``teto`` fica onde está. É o que fecha o buraco que venceu À
-    FRENTE de um lugar ainda guardado (dois controles fora, com prazos
-    diferentes): quem está atrás do buraco renasce no boneco do número novo, e
-    quem espera o lugar guardado não se mexe. Recriá-lo o jogaria DENTRO do
-    lugar guardado, porque o jogo dá a quem nasce o menor lugar livre.
-
-    Uma faixa só vale se:
-
-    - TODO mundo dela renasce no boneco da própria carta: o ~1 s sem controle
-      é só de quem de fato chega aonde a lâmpada diz. Isso já deixa de fora
-      quem está certo (a O-ASSENTO-03: ele não sai para fechar o buraco de
-      ninguém) — recriado, ele cai no lugar que outro da faixa deixou, ou
-      volta ao mesmo boneco sem ganhar nada;
-    - a ordem continua valendo, e o fixo não entra;
-    - e ela bate o sufixo: menos gente fora do boneco, ou a mesma conta com
-      menos recriações.
-
-    Só na mesa que já está EM ORDEM como está (ninguém recriado): a carta
-    renumerada e a menor que chega depois da maior são ordem a consertar, e
-    isso é do sufixo (STEAM-NO-FISICO-01).
-    """
+    """O plano por FAIXA de cartas, para quando o sufixo deixa gente fora do boneco."""
     parada = _a_mesa_depois(mesa, [], nascer, cartas, compacta=False)
     if not _em_ordem([cartas[c] for c in parada.values() if c not in fixos]):
         return melhor
@@ -3446,53 +2285,7 @@ def planejar_a_ordem(
     fixos: frozenset[str] = frozenset(),
     compacta: bool = False,
 ) -> tuple[list[str], bool]:
-    """Quem recriar para o jogo ver as cartas em ordem — e se a ordem fecha inteira.
-
-    STEAM-NO-FISICO-01. ``mesa`` é lugar do jogo -> chave; ``cartas`` dá o
-    número de cada chave (as sentadas e as de ``nascer``). O modelo é o do
-    fonte do SDL, medido nesta sprint: um vpad que nasce toma o MENOR lugar
-    livre, e um que morre libera o dele. ``compacta`` é o caso sem jogo
-    aberto: o jogo que abrir depois enumera os vpads na ordem em que nasceram,
-    então quem renasce vai para o fim.
-
-    A escolha é pela MENOR perturbação, e ela tem uma forma só: recriar todo
-    mundo a partir de uma carta ``t`` (quem tem carta menor fica onde está).
-    Tenta-se o ``t`` mais alto primeiro — nenhuma recriação — e desce-se até a
-    mesa ficar em ordem; recriar todos sempre fecha. Carta repetida (registro
-    degenerado) conta como em ordem: não há ordem a impor entre as duas.
-
-    ``fixos`` são as chaves que não podem ser recriadas agora (o vpad do P1
-    com o jogo na autoridade, a R-04): elas ficam onde estão, a ordem é
-    conferida SEM elas, e o segundo valor diz se a mesa fechou inteira mesmo
-    assim.
-
-    **O BURACO DE QUEM SAIU SE FECHA (O-ASSENTO-GUARDADO-NAO-ANDA-03).** A
-    ordem não basta: passado o prazo do lugar guardado, o P3 fica com a carta
-    2 no lugar 2 do jogo — em ordem, e no boneco 3, com a tela e a lâmpada
-    dizendo 2. Entre os planos em ordem vale o que deixa MENOS gente fora do
-    boneco da própria carta (:func:`_fora_do_boneco`), e no empate o de ``t``
-    mais alto, que recria menos. Então só renasce quem tem para onde descer:
-    dentro do prazo o buraco é o lugar guardado e ninguém sai do boneco; sem
-    jogo (``compacta``) todo plano em ordem dá os mesmos lugares e nada muda;
-    e o fixo não se mexe, então a volta tardia do P1 não o recria.
-
-    **E QUEM JÁ ESTÁ NO BONECO DA CARTA NÃO SAI PARA FECHAR O BURACO DE
-    NINGUÉM** — o item 3 da sprint, medido na varredura de todas as mesas de
-    até quatro lugares: com um lugar ainda guardado ATRÁS do buraco que venceu
-    (``{0: p1=1, 2: b=2, 3: c=3, 4: d=5}``, o 4 guardado), recriar a partir
-    da carta 2 fecharia o buraco do ``b`` e do ``c`` e poria o ``d`` no lugar
-    guardado — tirando do jogo, e do boneco certo, quem não precisava sair.
-    Além do plano de antes (a ordem), só se recria quem está fora do boneco.
-
-    **E O BURACO FECHA MESMO ASSIM, PELA FAIXA (O-ASSENTO-GUARDADO-NAO-ANDA-04).**
-    Nesses 60 arranjos o sufixo deixava o jogo como estava. Quando o sufixo
-    deixa alguém fora do boneco, :func:`_a_faixa` tenta recriar só uma faixa de
-    cartas: na mesa de cima, o ``b`` e o ``c`` renascem nos bonecos 2 e 3, o
-    boneco 4 fica guardado para a carta 4, e o ``d`` não se mexe. Quem espera
-    um lugar ainda guardado também não se mexe quando está fora do boneco:
-    recriá-lo o poria no lugar guardado. O caso que já fechava não passa por
-    lá, então não muda.
-    """
+    """Quem recriar para o jogo ver as cartas em ordem — e se a ordem fecha inteira."""
     sentados = [c for _lugar, c in sorted(mesa.items())]
     lugar_de = {c: lugar for lugar, c in mesa.items()}
     limites = sorted({*(cartas[c] for c in sentados), *(cartas[c] for c in nascer)})
@@ -3503,7 +2296,6 @@ def planejar_a_ordem(
         if melhor is not None and any(
             lugar_de[c] == cartas[c] - 1 for c in recriar if c not in melhor[1]
         ):
-            # Os `t` menores recriam este também: a busca acaba aqui.
             break
         depois = _a_mesa_depois(mesa, recriar, nascer, cartas, compacta=compacta)
         if not _em_ordem([cartas[c] for c in depois.values() if c not in fixos]):
@@ -3514,25 +2306,17 @@ def planejar_a_ordem(
     if melhor is None:
         return [], False
     if melhor[0] and not compacta:
-        # Sem jogo não há lugar guardado no jogo: quem abrir depois enumera
-        # os vpads na ordem em que nasceram.
         melhor = _a_faixa(mesa, cartas, nascer, fixos, melhor)
     return melhor[1], melhor[2]
 
 
 __all__ = [
     "CoopManager",
-    # R-22: público de propósito — o caminho do P1 (`gamepad`) compartilha o
-    # MESMO cache por MAC, para que trocar de primário não repague a leitura.
     "calibration_cache",
     "get_coop_manager",
-    # A-MESMA-LINGUA-01: o caminho do P1 (`gamepad`) pergunta o número do nome
-    # AQUI, para que a fila continue com um dono só.
     "numero_do_nome_do_primario",
     "planejar_a_ordem",
     "player_led_pattern",
     "resolve_player_numbers",
-    # AVISO-FALSO-DO-COOP-01: a regra do aviso é pura e mora aqui, longe do
-    # daemon, para poder ser mordida dos dois lados sem subir um daemon.
     "secundarios_fora_da_mesa",
 ]

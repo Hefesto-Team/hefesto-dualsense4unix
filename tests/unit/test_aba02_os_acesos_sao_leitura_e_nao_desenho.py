@@ -57,7 +57,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 BANCADA = RAIZ / "mockup/02-controles.html"
 PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
 
-#: MAC da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 
 
@@ -68,17 +67,8 @@ def a02():
     return a02_controles
 
 
-# ---------------------------------------------------------------------------
-# 1. A ROTA — o dono é o aparelho
-# ---------------------------------------------------------------------------
 def test_a_rota_vem_do_byte_do_aparelho(a02):
-    """Os dois bytes que estes dois botões significam, PERGUNTADOS ao dono.
-
-    Os números não entram digitados: `ROTA_DO_CANAL` é o mapa que a GTK usa
-    para exatamente estes dois botões (`controller_card.py:716`), e ele sai de
-    `core/ds_output_report.py`. Uma régua com `== 2` envelheceria no dia em que
-    o protocolo mudasse de número — e reprovaria a melhora.
-    """
+    """Os dois bytes que estes dois botões significam, PERGUNTADOS ao dono."""
     from hefesto_dualsense4unix.app.widgets.controller_card import (
         CANAL_SONS_DO_JOGO,
         CANAL_TODO_O_PC,
@@ -92,18 +82,7 @@ def test_a_rota_vem_do_byte_do_aparelho(a02):
 
 
 def test_a_rota_desconhecida_nao_acende_botao_nenhum(a02):
-    """A rota 1 é do protocolo e NÃO é nenhum destes botões.
-
-    `""` apaga os três — o piloto escreve o travessão, e no alvo `classe` com
-    `data-hef-quando` nenhum dos três casa com ele. Acender o "mais parecido"
-    seria arredondar um byte para um botão.
-
-    **A ROTA 0 SAIU DESTA RÉGUA EM 21/09/2026, e por ordem dela:** *"os 3
-    botões de som tem que ter saídas diferenciadas"*. «Tudo na TV e Nada no
-    Controle» É o byte 0, então exigir que ele apague os três passou a cobrar
-    o mundo de ontem — a régua reprovaria a cura. Quem mede a rota 0 é
-    `test_os_tres_botoes_do_som_sao_tres_saidas.py`, o dono do botão novo.
-    """
+    """A rota 1 é do protocolo e NÃO é nenhum destes botões."""
     from hefesto_dualsense4unix.core.ds_output_report import SAIDA_MONO_NO_FONE
 
     assert a02.rota_na_tela(
@@ -111,34 +90,19 @@ def test_a_rota_desconhecida_nao_acende_botao_nenhum(a02):
 
 
 def test_sem_bloco_de_alto_falante_a_tela_nao_afirma_rota(a02):
-    """O daemon só publica `speaker` depois do primeiro `speaker.set`.
-
-    Antes dele NÃO HÁ leitura, e o desenho acendia um dos dois assim mesmo.
-    """
+    """O daemon só publica `speaker` depois do primeiro `speaker.set`."""
     assert a02.rota_na_tela({"uniq": UNIQ_CABO}) == ""
     assert a02.rota_na_tela({"speaker": {"volume": 102}}) == ""
     assert a02.rota_na_tela(None) == ""
 
 
 def test_a_rota_nao_confunde_booleano_com_byte(a02):
-    """`True` é `int` em Python, e `ROTA_DO_CANAL.get(True)` acharia a rota 1.
-
-    Um daemon que publicasse `rota: true` faria a tela acender um botão a partir
-    de um valor que não é rota nenhuma.
-    """
+    """`True` é `int` em Python, e `ROTA_DO_CANAL.get(True)` acharia a rota 1."""
     assert a02.rota_na_tela({"speaker": {"volume": 102, "rota": True}}) == ""
 
 
 def test_a_rota_sai_do_mesmo_bloco_que_o_volume(a02):
-    """A régua ANTI-DERIVA das duas leituras da mesma regra.
-
-    `_bloco_do_speaker` repete o que `speaker_do_entry` sabe sobre ONDE o bloco
-    mora — nas duas posições em que o daemon o publica —, porque o dono devolve
-    só `(volume, muted)` e a rota não passa por ele. Esta régua não digita as
-    posições: ela **pergunta aos dois** sobre as mesmas entradas e cobra que
-    achem o mesmo volume. Se o daemon mudar de lugar e só um acompanhar, ela
-    reprova nomeando o caso.
-    """
+    """A régua ANTI-DERIVA das duas leituras da mesma regra."""
     from hefesto_dualsense4unix.app.widgets.controller_card import speaker_do_entry
 
     casos = {
@@ -162,9 +126,6 @@ def test_a_rota_sai_do_mesmo_bloco_que_o_volume(a02):
             f"{meu.get('volume')!r} contra {dono[0]!r}")
 
 
-# ---------------------------------------------------------------------------
-# 2. O MODO DO MICROFONE — o dono é o disco
-# ---------------------------------------------------------------------------
 def test_o_modo_do_mic_segue_a_inversao_so_false_e_nativo(a02, monkeypatch):
     """A tabela do daemon — `bt_mic.uniqs_recusados` —, com três valores.
 
@@ -191,14 +152,7 @@ def test_o_modo_do_mic_segue_a_inversao_so_false_e_nativo(a02, monkeypatch):
 
 
 def test_o_nativo_da_aba_02_grava_o_mesmo_que_o_desligado_da_aba_08(a02):
-    """Um valor só para "não quero": o `False` do `maquina.json`.
-
-    As duas abas escrevem a mesma declaração por caminhos diferentes, e em
-    18/09/2026 só a 08 foi curada — a 02 ficou gravando `None`, que hoje é o
-    valor que LIGA. Esta régua é o que impede a próxima metade.
-
-    MORDIDA: devolva `None` ao gesto `mic_modo`.
-    """
+    """Um valor só para "não quero": o `False` do `maquina.json`."""
     prova = [p for p in a02.PROVAS
              if p["gesto"] == "mic-modo" and p["clique"]["micModo"] == "nativo"]
     assert len(prova) == 1, "a prova do «Nativo» sumiu das PROVAS da aba"
@@ -207,22 +161,13 @@ def test_o_nativo_da_aba_02_grava_o_mesmo_que_o_desligado_da_aba_08(a02):
 
 
 def test_sem_endereco_o_modo_do_mic_nao_acende_nenhum(a02, monkeypatch):
-    """Um controle sem `uniq` normalizado não tem linha no `maquina.json`.
-
-    Escrever "Nativo" ali seria afirmar uma escolha que ninguém fez — e é o
-    mesmo cuidado que a `GUARDA-SEM-ENDEREÇO-01` toma do lado da GTK.
-    """
+    """Um controle sem `uniq` normalizado não tem linha no `maquina.json`."""
     monkeypatch.setattr(a02, "_DECLARADOS", {})
     assert a02.modo_do_mic("") == ""
 
 
 def test_o_gesto_do_modo_invalida_a_leitura_em_cache(a02, monkeypatch):
-    """O botão que grava e não muda de cor é o defeito que esta cura veio matar.
-
-    `_controles_declarados` guarda o `maquina.json` porque ele só muda por gesto
-    dela — e este É o gesto. Sem o `recarregar=True`, o aceso continuaria sendo
-    o de antes do clique até alguém reabrir a janela.
-    """
+    """O botão que grava e não muda de cor é o defeito que esta cura veio matar."""
     from types import SimpleNamespace
 
     from pacotes import Contexto
@@ -248,26 +193,6 @@ def test_o_gesto_do_modo_invalida_a_leitura_em_cache(a02, monkeypatch):
         "o gesto gravou no disco e não derrubou a leitura em cache")
 
 
-# ---------------------------------------------------------------------------
-# 3. O DESENHO TEM ONDE O PRODUTO ESCREVER — nos dois lados
-# ---------------------------------------------------------------------------
-#: OS DOIS PARES, com os valores que cada botão representa **perguntados ao
-#: pacote**. Digitar `["jogo", "pc"]` aqui seria a régua que reprova o dia em
-#: que o vocabulário da página mudar, em vez de acompanhá-lo.
-#:
-#: **E A PERGUNTA MUDOU DE DONO EM 21/09/2026.** Até aqui a fileira saía dos
-#: VALORES de `NOME_DO_BOTAO_DA_ROTA`, que responde *"que nome tem o byte
-#: tal?"* — outra pergunta. Desde 20/09 o byte 3 (`"pc"`) não tem botão nesta
-#: fileira: ela trocou o ATO do terceiro (*"O nome está certo, mude o ato."*),
-#: e a fileira passou a ser jogo · junto · nada. A régua cobrava um botão `pc`
-#: que a página não tem, e **reprovava a decisão dela em vez de um defeito**.
-#: `BOTOES_DA_FILEIRA_DO_SOM` é o dono da pergunta certa.
-#:
-#: **E O `pc` VOLTOU À FILEIRA EM 24/09/2026** — o quarto botão, decisão dela
-#: de 23/09. O desenho novo para no mockup e quem coordena publica; enquanto a
-#: 02 estiver declarada em trabalho no `mockup/DIVERGENCIAS.md`, o publicado é
-#: o desenho de ontem e não tem o quarto. A licença é a MESMA do portão
-#: `desenho-aprovado` (`declaradas()`), e morre no `--publicar 02`.
 def _pares(a02, onde=None) -> dict[str, list[str]]:
     rota = sorted(a02.BOTOES_DA_FILEIRA_DO_SOM)
     if onde == PUBLICADO and _a_02_esta_em_trabalho():
@@ -300,18 +225,7 @@ def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
     `data-hef-quando` o alvo vira booleano e os DOIS acenderiam ao mesmo tempo.
     """
     doc = onde.read_text(encoding="utf-8")
-    # A CONTA DE CARTÕES PASSOU A ACEITAR O `off` — 07/09/2026,
-    # CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01. Aqui estava
-    # `doc.count('class="ctl card"')`, casamento EXATO, e desde hoje o lugar
-    # vazio é o MESMO cartão com uma classe a mais (`ctl card off`). O
-    # casamento exato daria 2 numa página de 4 cartões e a régua passaria
-    # medindo METADE da mesa — que é a forma exata do defeito que a mudança
     # veio curar: com os quatro DualSense dela ligados, dois assentos ficavam
-    # sem endereço nenhum e nenhuma régua desta casa via.
-    #
-    # NA PÁGINA PUBLICADA ELE CONTINUA DANDO 2, porque lá o lugar vazio ainda é
-    # `class="ctl off"` (sem `card`) — publicar é ato dela. Os dois casos deste
-    # parâmetro medem, cada um, a mesa que a sua página tem.
     cards = len(re.findall(r'class="ctl card[^"]*"', doc))
     assert cards >= 2, "o desenho precisa de mais de um card para esta régua morder"
     for campo, valores in _pares(a02, onde).items():
@@ -340,7 +254,7 @@ def test_o_endereco_do_aceso_nao_mora_no_container(a02):
 
     O defeito de 01/09 **não é o endereço; é o ALVO**. O piloto resolve
     `const alvo = el.dataset.hefAlvo || 'texto'`
-    (`interface/hefesto_vivo.py:419`), e só o ramo padrão chama `textContent`
+    (`interface/hefesto_vivo.py:241`), e só o ramo padrão chama `textContent`
     (`:915`). Um container com alvo declarado nunca passa por ali.
 
     Então a régua passa a proibir o que de fato apaga: endereço no container
@@ -362,23 +276,7 @@ def test_o_endereco_do_aceso_nao_mora_no_container(a02):
 
 
 def test_o_pacote_emite_os_dois_acesos_para_a_pagina_publicada(a02, monkeypatch):
-    """O elo que faltava: emitir para um endereço que a página publicada NÃO tem
-    não pinta nada e ainda conta como pintura (`cobertura.pintados`).
-
-    Esta régua confere o caminho INTEIRO — o pacote emite, e a página publicada
-    tem onde pôr —, que é o que separa "escrevi o código" de "chegou à tela".
-
-    **O `alto-rota` PASSOU A LER AS DUAS CAMADAS — 04/09/2026, decisão [09].**
-    O byte 3 sozinho NÃO acende mais "Todo o som do PC": foi assim que o card 2
-    dela ficou aceso em 03/09 com o som saindo na TV. Quem decide agora é
-    `audio_saida.botao_da_rota_aceso`, e ele exige que a saída padrão do
-    sistema seja a placa DESTE controle.
-
-    POR ISSO A CAMADA 1 É INJETADA, e não esperada: `a02._CAMADA_1` é o ponto
-    de injeção da régua, como o `_LENTO` da `a09_sistema`. Esperar a thread
-    seria uma corrida — e uma corrida na suíte é vermelho que aparece uma vez
-    em dez.
-    """
+    """O elo que faltava: emitir para um endereço que a página publicada NÃO tem"""
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.app.audio_saida import RotaDasDuasCamadas
@@ -401,16 +299,8 @@ def test_o_pacote_emite_os_dois_acesos_para_a_pagina_publicada(a02, monkeypatch)
     assert campos["mic-modo-aceso"] == "virtual"
 
 
-# ---------------------------------------------------------------------------
-# 4. A CARGA FALA A GRAMÁTICA DA CASA
-# ---------------------------------------------------------------------------
 def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
-    """`85 %`, com espaço — e o card mostrava as DUAS gramáticas ao mesmo tempo.
-
-    Três centímetros abaixo, o `alto-estado` sai de `sensor_widgets.texto_volume`,
-    que é `f"{...} %"`. A régua pergunta ao dono em vez de digitar o espaço:
-    a grafia da carga tem de casar com a do volume, que é do produto.
-    """
+    """`85 %`, com espaço — e o card mostrava as DUAS gramáticas ao mesmo tempo."""
     from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_volume
     from pacotes import Contexto
 
@@ -420,8 +310,6 @@ def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
                 "player_slot": 1, "speaker": {"volume": 102, "muted": False}}
     campos = a02.pacote(Contexto(state={}, mesa=[], conectados=[controle],
                                  estados={}))["cards"][UNIQ_CABO]
-    # `texto_volume(102, False)` é "100 %": o separador entre número e unidade é
-    # o que se compara, e ele sai do produto.
     separador = texto_volume(102, False).replace("100", "").replace("%", "")
     assert campos["bateria"] == f"85{separador}%", (
         f"a carga escreve {campos['bateria']!r} e o volume ao lado usa "
@@ -429,19 +317,7 @@ def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
 
 
 def test_a_carga_desconhecida_e_a_da_janela_antiga(a02, monkeypatch):
-    """A carga sem leitura é `— %`, como a GTK. Decisão dela, 03/09/2026.
-
-    O QUE CADUCOU, e esta régua era ele: até 03/09 o teste se chamava
-    `test_a_carga_desconhecida_e_o_travessao_seco` e cobrava o travessão SECO,
-    pela regra de *campo sem informação não mostra nada* e para casar com o
-    `alto-estado` e o `touch-estado` do mesmo card. Ela decidiu o contrário —
-    **"— %, como a janela antiga"** —, e a paridade com a janela que ela usa
-    vence a harmonia interna do card. A decisão é dela.
-
-    E A FRASE É PERGUNTADA, não digitada: o dono é
-    `StatusActionsMixin._bateria_da_mesa`, o mesmo que a GTK usa. Uma régua com
-    `== "— %"` reprovaria a MELHORA no dia em que a GTK mudasse a grafia.
-    """
+    """A carga sem leitura é `— %`, como a GTK. Decisão dela, 03/09/2026."""
     from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
     from pacotes import Contexto
 

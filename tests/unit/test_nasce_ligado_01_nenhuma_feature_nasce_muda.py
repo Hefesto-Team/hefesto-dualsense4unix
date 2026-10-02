@@ -1,53 +1,4 @@
-"""NASCE-LIGADO-01 — nenhuma feature do perfil nasce muda, e nenhuma nasce calada.
-
-**A ORDEM DELA, 17/09/2026:**
-
-    *"os jogos e perfis tem que iniciar com todas as features ativadas por
-    default."*
-
-E a de 16/09, mais estreita, que nomeia os dois valores:
-
-    *"botão de balanceado deveria ser pré setado em todo perfil sem config
-    alterada. assim como os gatilhos deveriam vir como rigidos e os controles
-    com tudo ativado por default"*  # noqa-acento: a digitação é dela
-
-O QUE ESTA RÉGUA MEDE, E POR QUE ELA NÃO É UMA LISTA DE CATORZE
-==============================================================================
-Ela percorre `profiles/schema.py` por INTROSPECÇÃO — todo modelo pydantic
-declarado no módulo, todo campo dele — e cobra de cada campo uma linha em
-`schema.NASCIMENTO_DOS_CAMPOS` dizendo DE ONDE vem o valor quando o perfil cala.
-Uma lista digitada de catorze protegeria os catorze de hoje e nenhum dos
-próximos; é a forma de régua que esta casa já pagou onze vezes num dia só.
-
-O PORQUÊ DE CADA AFIRMAÇÃO ESTAR SEPARADA
-------------------------------------------------------------------------------
-São quatro perguntas diferentes, e uma afirmação só passaria com três quartos
-da cura no lugar:
-
-1. **todo campo tem linha** — o campo novo que ninguém classificou reprova
-   nomeando a si mesmo (`TestTodoCampoTemLinha`);
-2. **o que nasce no esquema não nasce mudo** — e o "mudo" de cada campo é
-   digitado AQUI, não lido do esquema (`TestOQueNasceNoEsquemaNaoNasceMudo`);
-3. **quem promete nascer no leitor tem leitor** — o endereço resolve por
-   import, e o leitor RESPONDE ligado (`TestOsDonosRespondemLigado`);
-4. **o que espera a palavra dela é uma lista fechada** — parar um campo na
-   fila dela exige declará-lo nos dois lugares (`TestAFilaDela`).
-
-A TAUTOLOGIA QUE ESTA RÉGUA EVITA, e ela é a armadilha do dia
-------------------------------------------------------------------------------
-Uma régua que montasse o esperado a partir da MESMA constante que o produto lê
-passaria com a cura arrancada. Por isso, aqui:
-
-* o valor **mudo** de cada campo é digitado neste arquivo, e o valor de
-  **nascimento** vem do esquema — divergir é o que reprova;
-* os parâmetros do gatilho rígido são comparados com o DONO deles
-  (`app/actions/trigger_specs`, que é quem a tela lê), nos DOIS sentidos;
-* e o gatilho é medido no APARELHO: o efeito que o nascimento constrói tem de
-  ser diferente do que `off()` constrói. Isso morde um defeito que esta casa
-  já teve de verdade (TRIGGER-CANON-01: `Rigid` mandava o byte do OFF, e ela
-  mediu *"rígido e desligado sem diferença"*) — um nascimento que só TROCASSE
-  a palavra passaria pelas outras duas.
-"""
+"""NASCE-LIGADO-01 — nenhuma feature do perfil nasce muda, e nenhuma nasce calada."""
 from __future__ import annotations
 
 import importlib
@@ -66,11 +17,7 @@ from hefesto_dualsense4unix.profiles import schema as esquema
 
 
 def _campos_vivos() -> dict[str, tuple[type[BaseModel], str]]:
-    """Todo campo de todo modelo declarado em `profiles/schema.py`.
-
-    Lido do módulo, nunca digitado: é isto que faz o campo 15 reprovar junto
-    com os catorze de hoje.
-    """
+    """Todo campo de todo modelo declarado em `profiles/schema.py`."""
     achados: dict[str, tuple[type[BaseModel], str]] = {}
     for nome, obj in vars(esquema).items():
         if not inspect.isclass(obj) or not issubclass(obj, BaseModel):
@@ -105,26 +52,12 @@ class _SemDefault:
 _SEM_DEFAULT = _SemDefault()
 
 
-#: Sentinela: o mudo deste campo não é um valor a digitar — quem responde é o
-#: APARELHO, e a pergunta é "o efeito construído é o mesmo que `off()`?".
 PERGUNTE_AO_APARELHO = object()
 
 
-#: O que é NASCER MUDO, campo a campo — DIGITADO AQUI de propósito.
-#:
-#: O esquema guarda o nascimento; esta tabela guarda o silêncio. As duas
-#: grafias são independentes, e é a divergência entre elas que reprova. Se este
-#: dicionário fosse montado a partir do `schema`, arrancar a cura passaria.
-#:
-#: REPARE NO `False` do `suppress_desktop_emulation`: ali o mudo é `True`. Uma
-#: régua que recusasse `False` em bloco reprovaria a feature LIGADA — é por
-#: isso que o silêncio é por campo, e não uma regra geral.
 O_QUE_E_MUDO: dict[str, Any] = {
     "LedsConfig.auto_player_colors": False,
     "LedsConfig.lightbar_brightness": 0.0,
-    # O brilho das luzes de número não tem degrau apagado: os três acendem. O
-    # silêncio deste campo é NÃO escolher — o produto sem o bit, que era o de
-    # antes de 24/09/2026 (O-BRILHO-DAS-LUZES-DE-NUMERO-01).
     "LedsConfig.player_led_brightness": None,
     "Profile.suppress_desktop_emulation": True,
     "ProfileSpeakerConfig.muted": True,
@@ -134,15 +67,6 @@ O_QUE_E_MUDO: dict[str, Any] = {
 }
 
 
-#: A FILA DELA, fechada e digitada. Parar um campo aqui custa declará-lo nos
-#: DOIS lugares — no esquema e neste arquivo —, que é o que impede alguém de
-#: estacionar uma feature nova na fila dela sem ninguém ver.
-#:
-#: A sprint é explícita sobre o que NÃO se decide: *"Os demais — LED, sensores,
-#: mouse, teclado — não têm valor decidido e não se inventa aqui."* Dos quatro,
-#: três saíram da fila na triagem porque JÁ nascem ligados (ver
-#: `TestOsDonosRespondemLigado`); o mouse ficou, e a razão é a assimetria
-#: medida com o teclado.
 A_FILA_DELA = frozenset(
     {
         "Profile.mouse",
@@ -212,10 +136,6 @@ class TestOQueNasceNoEsquemaNaoNasceMudo:
         nasce = _valor_de_nascimento(modelo, campo)
         mudo = O_QUE_E_MUDO[endereco]
         if mudo is PERGUNTE_AO_APARELHO:
-            # Aqui o silêncio não é um valor a digitar: quem responde é o
-            # aparelho. `TestOGatilhoNasceRigidoDeVerdade` mede o mesmo por
-            # outros dois canais — este caso existe para que o campo não
-            # escape da varredura por ser especial.
             efeito = build_from_name(nasce.mode, nasce.params)
             assert efeito != off(), (
                 f"{endereco} nasce com o modo {nasce.mode!r}, e o efeito que "
@@ -245,12 +165,7 @@ class TestOGatilhoNasceRigidoDeVerdade:
             )
 
     def test_o_aparelho_ve_diferenca_entre_o_nascimento_e_o_desligado(self) -> None:
-        """O oráculo é o efeito construído, não a palavra escrita no modo.
-
-        TRIGGER-CANON-01: `Rigid` já mandou o byte `0x05`, que é o OFF do bloco
-        de gatilho, e ela mediu *"rígido e desligado sem diferença"*. Um
-        nascimento que só trocasse o nome do modo passaria pelo caso acima.
-        """
+        """O oráculo é o efeito construído, não a palavra escrita no modo."""
         nascido = esquema.TriggersConfig()
         desligado = off()
         for lado in ("left", "right"):
@@ -263,13 +178,7 @@ class TestOGatilhoNasceRigidoDeVerdade:
             )
 
     def test_os_parametros_saem_do_dono_deles(self) -> None:
-        """Nos DOIS sentidos, contra quem a tela lê.
-
-        `profiles/` não importa `app/` (nenhum módulo de `profiles/` ou
-        `core/` o faz), então os dois números são digitados no esquema. É a
-        mesma saída do `MascaraDeGamepad`, e o preço dela é esta comparação:
-        divergir do dono reprova aqui.
-        """
+        """Nos DOIS sentidos, contra quem a tela lê."""
         spec = get_spec(esquema.MODO_DE_NASCIMENTO_DO_GATILHO)
         assert spec is not None, (
             f"o modo de nascimento {esquema.MODO_DE_NASCIMENTO_DO_GATILHO!r} "
@@ -283,13 +192,7 @@ class TestOGatilhoNasceRigidoDeVerdade:
         )
 
     def test_o_perfil_recem_nascido_ja_chega_rigido(self) -> None:
-        """O caminho que a pessoa percorre: perfil de jogo enxuto, sem seção.
-
-        A afirmação é sobre o APARELHO de propósito. Comparar com
-        `MODO_DE_NASCIMENTO_DO_GATILHO` seria montar o esperado com a mesma
-        constante que o produto lê — passaria com a cura arrancada, que é
-        exatamente o que este arquivo existe para não fazer.
-        """
+        """O caminho que a pessoa percorre: perfil de jogo enxuto, sem seção."""
         perfil = esquema.Profile(
             name="um jogo qualquer",
             match=esquema.MatchCriteria(window_class=["steam_app_12345"]),
@@ -304,12 +207,7 @@ class TestOGatilhoNasceRigidoDeVerdade:
             )
 
     def test_o_perfil_que_ela_configurou_continua_mandando(self) -> None:
-        """A trava do alcance: nascimento não pisa em escolha gravada.
-
-        `loader.save_profile` grava a seção `triggers` DENSA, então o perfil
-        que ela configurou carrega a escolha dela no arquivo. Um nascimento
-        que vencesse o disco apagaria trabalho dela — é o oposto do pedido.
-        """
+        """A trava do alcance: nascimento não pisa em escolha gravada."""
         perfil = esquema.Profile(
             name="o que ela deixou solto",
             match=esquema.MatchAny(),
@@ -353,12 +251,7 @@ class TestOsDonosRespondemLigado:
         )
 
     def test_a_vibracao_ja_nasce_balanceada(self) -> None:
-        """O achado que derrubou o enunciado da sprint.
-
-        A sprint contava a vibração entre as features mudas lendo `policy=None`
-        no esquema. O canal certo é o LEITOR: `policy=None` é o perfil dizendo
-        *não mexo*, e a política global que segue valendo nasce balanceada.
-        """
+        """O achado que derrubou o enunciado da sprint."""
         from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
         assert DaemonConfig().rumble_policy == "balanceado"
@@ -430,12 +323,7 @@ class TestAFilaDela:
         )
 
     def test_a_assimetria_que_poe_o_mouse_na_fila_continua_de_pe(self) -> None:
-        """A razão do `Profile.mouse` estar parado é medida, não opinião.
-
-        Os dois interruptores são vizinhos na mesma aba e nascem ao contrário
-        um do outro. Se o daemon passar a ligar o mouse, este caso reprova e a
-        linha do campo sai da fila dela.
-        """
+        """A razão do `Profile.mouse` estar parado é medida, não opinião."""
         from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
         cfg = DaemonConfig()

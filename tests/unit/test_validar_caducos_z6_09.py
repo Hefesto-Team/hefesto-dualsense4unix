@@ -1,9 +1,4 @@
-"""Z6-09 — o fato declarado caduco não pode continuar publicado.
-
-Os dois itens do aceite que são desta tarefa: (3) devolver o parágrafo caduco
-de `README.md` reprova citando a chave e a data; (4) a varredura roda duas
-vezes e a segunda não acha nada.
-"""
+"""Z6-09 — o fato declarado caduco não pode continuar publicado."""
 from __future__ import annotations
 
 import subprocess

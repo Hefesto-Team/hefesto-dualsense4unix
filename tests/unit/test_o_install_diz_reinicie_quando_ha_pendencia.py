@@ -1,27 +1,4 @@
-"""O install diz «reinicie» quando algum passo deixou algo para o boot — B5.
-
-``O-PRODUTO-EM-QUALQUER-MAQUINA-01`` (28/09/2026), a L8 do estudo
-``2026-09-27-o-basico-e-os-jogos/03-qualquer-maquina.md`` corrigida pela C18:
-«vale no próximo boot» estava escrito em 26 lugares, e o fecho dizia só
-«instalado · Abrir · Desinstalar». O ``hid-playstation`` instalado com o de
-fábrica carregado NÃO é recarregado (de propósito), e a primeira sessão depois
-do install roda sem a guarda do microfone. O comentário do fecho dizia que o
-install não tocava no cmdline, e o passo 3e o escreve.
-
-A cura: cada passo que deixa algo para o boot anota
-(``anotar_reinicio_pendente``, na ``scripts/lib/camada_de_maquina.sh``), e o
-fecho diz «Reinicie o computador» só quando há o que esperar. O doctor faz a
-MESMA pergunta (``_modulo_pede_reinicio``): o ``srcversion`` do módulo
-carregado difere do arquivo em ``updates/dkms``.
-
-Tudo de mentira: o ``/sys/module``, o ``modinfo``, o ``sudo``, o ``dkms`` e o
-``/etc``. Nada lê a máquina de quem roda.
-
-A MORDIDA, feita em 28/09/2026: devolver o fecho fixo de antes (tirar a
-chamada ``dizer_o_reinicio_pendente`` do fim do ``install.sh``) faz
-``test_o_fecho_do_install_diz_reinicie_com_o_modulo_staged`` reprovar; tirar a
-anotação do ``install_dkms_hid_playstation_host`` faz o mesmo.
-"""
+"""O install diz «reinicie» quando algum passo deixou algo para o boot — B5."""
 
 from __future__ import annotations
 
@@ -62,8 +39,6 @@ def _sys_module(tmp_path: Path, carregado: str | None) -> Path:
     raiz.mkdir()
     if carregado is not None:
         (raiz / "hid_playstation").mkdir()
-        # "" = carregado SEM `srcversion` (módulo embutido, ou um kernel sem
-        # `CONFIG_MODULE_SRCVERSION_ALL`): a pasta existe e o arquivo não.
         if carregado:
             (raiz / "hid_playstation" / "srcversion").write_text(
                 carregado + "\n", encoding="ascii"
@@ -72,14 +47,10 @@ def _sys_module(tmp_path: Path, carregado: str | None) -> Path:
 
 
 _CASOS = [
-    # (carregado, arquivo que o próximo carregamento usa, srcversion dele, pede?)
     (VELHO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, True),
     (NOVO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
     (None, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
     (VELHO, "/lib/modules/k/kernel/drivers/hid/hid-playstation.ko.zst", NOVO, False),
-    # Sem um dos dois `srcversion` não há o que comparar, e não sei não é
-    # «reinicie» (a conferência de 28/09/2026: aqui o install e o doctor
-    # divergiam, e esta lista não tinha o caso).
     ("", "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
     (VELHO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", "", False),
 ]
@@ -118,11 +89,7 @@ def _fecho_do_install() -> str:
 
 
 def _rodar_o_passo_e_o_fecho(tmp_path: Path, carregado: str | None) -> str:
-    """O passo 3k de verdade (a função da lib) e o fecho de verdade do install.
-
-    O `/sys/module/` e o `/etc/` do texto da lib apontam para o `tmp_path`, o
-    `dkms_lib.sh` é um de mentira (o DKMS já «instalou»), e o `sudo` só anota.
-    """
+    """O passo 3k de verdade (a função da lib) e o fecho de verdade do install."""
     raiz = tmp_path / "raiz"
     (raiz / "scripts").mkdir(parents=True)
     (raiz / "assets" / "modprobe.d").mkdir(parents=True)
@@ -235,11 +202,7 @@ def _o_grupo(tmp_path: Path, grupos_da_sessao: str) -> str:
 
 
 def test_o_grupo_ganho_agora_entra_no_reinicie(tmp_path: Path) -> None:
-    """A conferência de 28/09/2026: o grupo `hefesto` entrou no fecho sem régua.
-
-    A MORDIDA: tirar o `grupo_pede_novo_login` do `dizer_o_reinicio_pendente`
-    faz este teste reprovar.
-    """
+    """A conferência de 28/09/2026: o grupo `hefesto` entrou no fecho sem régua."""
     saida = _o_grupo(tmp_path, "jogadora adm")
     assert "Reinicie o computador" in saida and "o grupo hefesto" in saida, saida
 

@@ -1,26 +1,4 @@
-"""O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 — o «Aplicar» e a ativação são uma só.
-
-O defeito, medido (proposta A3 do relatório 04 da auditoria de 27/09): o
-«Aplicar» mandava `profile.apply_draft` (o `DraftApplier`), e a ativação roda
-`ProfileManager.activate`. Eram duas máquinas, e o «Aplicar» levava menos da
-metade do perfil: ficavam de fora o volume e o ganho do microfone, os
-sensores, a máscara, a mira, o modo e a política global de vibração.
-
-A cura: `ProfileManager.reaplicar` roda a cadeia do `activate`, com todas as
-camadas, sem os efeitos do gesto de escolha (a sessão, o marcador, o Modo
-Freestyle e a trava da troca à mão); o `profile.reaplicar` do daemon o chama, e
-o «Aplicar» do rodapé chama o `profile.reaplicar`.
-
-A RÉGUA 1 enumera os campos de `Profile` e de `ControllerOverrides` PELO
-ESQUEMA (nunca por lista digitada): cada campo é lido pela cadeia do
-`reaplicar`, ou está em :data:`FORA` com a razão. O perfil passa por um espião
-que anota cada campo que a cadeia LÊ; os quatro controles (dois no cabo, dois
-no rádio: o gerente publica por `uniq`, e o transporte não entra na conta) têm
-cada um os seus campos, e o controle de mentira anota o que chegou a cada um.
-
-MORDIDA: tire `self.apply_controller_mascaras(...)` de
-`ProfileManager.apply_emulation` e a régua nomeia `controllers.<uniq>.mascara`.
-"""
+"""O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 — o «Aplicar» e a ativação são uma só."""
 from __future__ import annotations
 
 import asyncio
@@ -53,24 +31,17 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 
-#: Os quatro controles, da faixa forjada da casa: dois no cabo, dois no rádio.
 CABO = ("aabbcc000001", "aabbcc000002")
 RADIO = ("02fe00000003", "02fe00000004")
 UNIQS = CABO + RADIO
 NOME = "Jogo da Régua"
 
-#: O que a cadeia da ativação NÃO aplica, e por quê. Cada linha é uma decisão;
-#: um campo novo no esquema que a cadeia não lê e que não está aqui reprova.
 FORA: dict[str, str] = {
     "name": "é o nome do arquivo, não um ajuste",
     "version": "é a versão do formato, não um ajuste",
     "match": "decide QUANDO o perfil entra (a seleção), não o que ele aplica",
     "priority": "decide QUEM ganha na seleção, não o que ele aplica",
     "ponte": "é o carimbo da escada do lançamento, lido por ela no jogo",
-    # Medido por esta régua em 01/10/2026: a ativação nunca leu o campo. Quem o
-    # lê é a entrada na Navegação (`Daemon.aplicar_o_arranjo_do_desktop`, por
-    # `schema.resolver_teclado_emulado`), e a regra dela é que entrar na
-    # Navegação não religa o teclado (D-2909-A-NAVEGACAO-NAO-RELIGA-O-TECLADO).
     "teclado_emulado": "é lido na entrada da Navegação, pelo arranjo do desktop",
 }
 FORA_POR_CONTROLE: dict[str, str] = {}
@@ -176,11 +147,7 @@ def _gerente(controle: _ControleQueAnota, store: StateStore) -> tuple[ProfileMan
 def test_todo_campo_do_perfil_e_de_cada_controle_e_levado_pelo_aplicar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cada campo do esquema é lido pela cadeia do `reaplicar`, ou está em `FORA`.
-
-    MORDIDA: tire a máscara do aplicador (`apply_controller_mascaras` em
-    `apply_emulation`) e a régua nomeia o campo de cada controle.
-    """
+    """Cada campo do esquema é lido pela cadeia do `reaplicar`, ou está em `FORA`."""
     loader.save_profile(_o_perfil_inteiro(), origem="régua")
     lidos: set[str] = set()
 
@@ -221,11 +188,7 @@ def test_todo_campo_do_perfil_e_de_cada_controle_e_levado_pelo_aplicar(
 
 
 def test_o_aplicar_nao_e_escolha_nem_liga_o_freestyle() -> None:
-    """O `reaplicar` não grava a sessão nem o marcador, e não mexe no Freestyle.
-
-    MORDIDA: chame o `_ativar` do `reaplicar` com `e_a_escolha=True` e o
-    `session.json` passa a dizer o perfil reaplicado.
-    """
+    """O `reaplicar` não grava a sessão nem o marcador, e não mexe no Freestyle."""
     loader.save_profile(_o_perfil_inteiro(), origem="régua")
     store = StateStore()
     gerente, _chegou = _gerente(_ControleQueAnota(), store)
@@ -241,10 +204,7 @@ def test_o_aplicar_nao_e_escolha_nem_liga_o_freestyle() -> None:
 
 
 def test_o_profile_reaplicar_do_daemon_nao_arma_a_trava_da_troca_a_mao() -> None:
-    """O handler do `profile.reaplicar` responde como o switch e não arma a trava.
-
-    MORDIDA: arme `mark_manual_profile_lock` no handler e a trava aparece.
-    """
+    """O handler do `profile.reaplicar` responde como o switch e não arma a trava."""
     import time
 
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin

@@ -1,26 +1,4 @@
 """A FOLHA DO JOGO — o nosso e o do jogo, lado a lado, no mesmo tom (A-FORJA-VALIDA-O-SOM-01, E7).
-
-`scripts/ensaios/o_jogo_ouve_o_controle.py` é a folha que ELA dirige para dar
-ao mapa o degrau que ele não tem: *chegou ao JOGO?* A medição é da orelha e da
-mão dela; o que se prova AQUI é o que já enganou esta casa antes de a orelha
-entrar.
-
-AS MORDIDAS, uma por teste:
-
-1. troque uma chave `.jogo` de `LINHAS` e a primeira régua cai — as quatro são
-   as da sprint;
-2. mude o canal do tom, ou o `--hz` do lado do jogo, e o «mesmo tom» deixa de
-   ser o mesmo;
-3. aponte o jogo por outra coisa que não o nó DESTE controle e a célula mede o
-   vizinho;
-4. deixe a célula sem a frase quando a Forja falta e ela fica muda — um painel
-   calado lê-se como *"não fizeram nada"*;
-5. rode um comando ao montar ou listar e a folha toca o som dela antes da
-   primeira pergunta;
-6. deixe sair linha de caderno sem gesto e o degrau `.jogo` vira opinião; e o
-   nome do nó, que leva o rabo do endereço, tem de sair MASCARADO;
-7. abra a sala Voz sem perguntar quem é o microfone PADRÃO e a coluna do P3
-   mede o P1 — o jogo ouve o padrão, não a coluna.
 """
 
 from __future__ import annotations
@@ -44,7 +22,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 ENSAIOS = RAIZ / "scripts" / "ensaios"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
-#: As quatro chaves da sprint (§5, E7) — DIGITADAS: a régua lê a sprint.
 _AS_QUATRO = (
     "audio.alto_falante.jogo",
     "audio.microfone.jogo",
@@ -52,7 +29,6 @@ _AS_QUATRO = (
     "vibracao.rumble.jogo",
 )
 
-#: Faixa sintética da casa. Nenhum destes é um controle desta bancada.
 _NO_CABO = "aa:bb:cc:12:34:01"
 _NO_RADIO = "aa:bb:cc:56:78:02"
 
@@ -100,9 +76,6 @@ def _pergunta(chave: str):
 @pytest.fixture
 def sem_godot_de_fora(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GODOT", raising=False)
-
-
-# ---------------------------------------------------------------------------
 
 
 def test_as_quatro_chaves_e_o_positivo_de_cada_uma_tem_dono() -> None:
@@ -204,7 +177,6 @@ def test_veredito_sem_gesto_nao_vira_linha_e_o_no_sai_mascarado(
     assert ",cabo," in linha and ",obedece," in linha
     assert "pw-cat" in linha and "--nome" in linha
     assert "20" in linha.split(",")[5][:4], "a linha leva a data (quando)"
-    # o nó é `hefesto_som_<hex6>`: os octetos 4 e 5 saem zerados, como a máscara da casa
     assert "123401" not in linha
     assert folha.nome_do_sink("aa:bb:cc:00:00:01") in linha
 
@@ -212,23 +184,16 @@ def test_veredito_sem_gesto_nao_vira_linha_e_o_no_sai_mascarado(
 def test_a_voz_so_abre_com_o_microfone_deste_controle_de_padrao(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sem_godot_de_fora
 ) -> None:
-    """O jogo ouve o microfone PADRÃO: a Voz na coluna do P3, com o P1 de padrão, mediria o P1.
-
-    MORDIDA: tire a guarda de `executar` (ou o `ouve_o_padrao` do gesto) e a
-    Forja abre com o padrão de outro controle — e o «vi no jogo» vai para a
-    coluna errada. E o gesto recusado não entra na conta da célula.
-    """
+    """O jogo ouve o microfone PADRÃO: a Voz na coluna do P3, com o P1 de padrão, mediria o P1."""
     este, outro = folha.Controle(_NO_RADIO, "radio"), folha.Controle(_NO_CABO, "cabo")
     forja = _forja_de_mentira(tmp_path)
     voz = folha.gesto_do_jogo(_pergunta("audio.microfone.jogo"), este, forja)
     assert voz.ouve_o_padrao == este.no_do_microfone
-    # Só a Voz pergunta: a Galeria e o Impacto não dependem do microfone.
     for chave in ("gatilho.direito.adaptativo.jogo", "vibracao.rumble.jogo"):
         assert folha.gesto_do_jogo(_pergunta(chave), este, forja).ouve_o_padrao == ""
 
     abertos: list[list[str]] = []
     monkeypatch.setattr(subprocess, "Popen", lambda argv, **_k: abertos.append(list(argv)))
-    # «Não sei» não se lê como «é outro»: cada recusa diz a sua.
     for padrao, frase in ((outro.no_do_microfone, "é outro"), ("", "não consegui perguntar")):
         monkeypatch.setattr(folha, "microfone_padrao", lambda p=padrao: p)
         texto, rodou = folha.executar(voz)

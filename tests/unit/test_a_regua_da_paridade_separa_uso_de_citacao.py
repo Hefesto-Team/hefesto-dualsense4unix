@@ -94,11 +94,7 @@ def _arquivo(tmp_path: Path, corpo: str) -> Path:
 
 
 def test_citar_numa_docstring_nao_e_usar(portao, tmp_path):
-    """O caso REAL de 06/09: o nome da função da GTK dentro de uma docstring.
-
-    É a mordida principal. Se ela passar, a régua voltou a confundir a palavra
-    com o ato, e a linha 315 do CSV volta a ser promovida por engano.
-    """
+    """O caso REAL de 06/09: o nome da função da GTK dentro de uma docstring."""
     alvo = _arquivo(tmp_path, '''
 def _o_avulso_saiu(pid):
     """Pede ao daemon avulso que saia.
@@ -124,23 +120,14 @@ def test_citar_num_comentario_nao_e_usar(portao, tmp_path):
 
 
 def test_chamar_de_verdade_e_usar(portao, tmp_path):
-    """O outro lado, e sem ele a cura seria um portão que emudeceu.
-
-    Uma régua que deixa de reprovar é pior que uma que reprova demais: a dívida
-    que fecha DE VERDADE tem de continuar acusando, porque é assim que o número
-    da paridade não vira propaganda.
-    """
+    """O outro lado, e sem ele a cura seria um portão que emudeceu."""
     alvo = _arquivo(tmp_path, "def f():\n    return on_daemon_migrate_to_systemd()\n")
     arvore = portao.Arvore()
     assert arvore.usa("on_daemon_migrate_to_systemd", [alvo]) == alvo
 
 
 def test_cadeia_usada_como_valor_e_codigo(portao, tmp_path):
-    """A tentativa errada nº 1, congelada: apagar toda cadeia derrubou 165 linhas.
-
-    O sinal de muitas features É uma cadeia — o nome de um gesto, um endereço de
-    tela. Apagar toda `ast.Constant` de texto mata essas linhas.
-    """
+    """A tentativa errada nº 1, congelada: apagar toda cadeia derrubou 165 linhas."""
     alvo = _arquivo(tmp_path, 'GESTOS = ["restaurar-de-fabrica", "refazer-proton"]\n')
     arvore = portao.Arvore()
     assert arvore.usa("restaurar-de-fabrica", [alvo]) == alvo, (
@@ -148,11 +135,7 @@ def test_cadeia_usada_como_valor_e_codigo(portao, tmp_path):
 
 
 def test_o_cerquilha_de_uma_cor_nao_come_a_linha(portao, tmp_path):
-    """A tentativa errada nº 2, congelada: o regex de comentário custou 93 falsos.
-
-    `(?m)#[^\\n]*` come o `#` de uma cor hexadecimal e tudo o que vem depois.
-    Quem sabe qual `#` abre comentário é o `tokenize`.
-    """
+    """A tentativa errada nº 2, congelada: o regex de comentário custou 93 falsos."""
     alvo = _arquivo(tmp_path, 'COR = "#A51C48"; ALVO = VIA_DO_TRANSPORTE\n')
     arvore = portao.Arvore()
     assert arvore.usa("VIA_DO_TRANSPORTE", [alvo]) == alvo, (
@@ -182,28 +165,10 @@ def test_a_borda_de_palavra_recusa_sufixo(portao, tmp_path):
 
 
 def test_arquivo_ilegivel_falha_para_o_lado_seguro(portao, tmp_path):
-    """Sintaxe quebrada devolve o texto CRU, e a régua continua vendo.
-
-    Uma régua que emudece por causa de um `.py` a meio caminho de uma edição é
-    pior que uma que exagera: ela dá verde sobre o que não leu.
-    """
+    """Sintaxe quebrada devolve o texto CRU, e a régua continua vendo."""
     alvo = _arquivo(tmp_path, "def f(:\n    on_daemon_migrate_to_systemd()\n")
     arvore = portao.Arvore()
     assert arvore.usa("on_daemon_migrate_to_systemd", [alvo]) == alvo
-
-
-# ---------------------------------------------------------------------------
-# O SEGUNDO PORTÃO, e ele é a razão de a cura ter virado módulo com dono.
-#
-# `scripts/check_donos_de_comportamento.py` tinha o MESMO defeito, no mesmo dia:
-# a regra `SO-GTK` reprovava `migrar_para_systemd` dizendo "a tela nova já
-# CHAMA", e o que a tela nova tinha era a citação numa docstring. O nome da
-# função que ele usava era `_cita` e a mensagem dizia `chama` — nome e mensagem
-# discordavam, e quem tinha razão era a mensagem.
-#
-# A regra desta casa: quando a cura conhece a causa, ela cobre TODOS os
-# chamadores. Cobrir um deixa a próxima pessoa remedindo o mesmo defeito.
-# ---------------------------------------------------------------------------
 
 
 def _modulo_dos_donos():
@@ -221,12 +186,7 @@ def donos():
 
 
 def test_a_separacao_tem_dono_e_o_portao_da_paridade_pergunta_a_ele(portao):
-    """A técnica de apagar prosa mora em `scripts/prosa_do_codigo.py`.
-
-    Se o portão da paridade voltar a ter cópia própria, esta régua cai — e é o
-    que impede a QUARTA volta do mesmo defeito. O portão dos donos resolve a
-    mesma pergunta por outro caminho, declarado no teste abaixo.
-    """
+    """A técnica de apagar prosa mora em `scripts/prosa_do_codigo.py`."""
     import prosa_do_codigo
 
     assert portao.prosa_do_codigo is prosa_do_codigo
@@ -234,19 +194,7 @@ def test_a_separacao_tem_dono_e_o_portao_da_paridade_pergunta_a_ele(portao):
 
 
 def test_o_portao_dos_donos_resolve_a_mesma_pergunta_por_outro_caminho(donos, tmp_path):
-    """Dois instrumentos, duas técnicas, e a diferença é do dado que cada um lê.
-
-    O portão dos DONOS coleta os NOMES que o `ast` aponta (`ast.Name`,
-    `ast.Attribute`, os imports). É o certo lá: naquele CSV o dono é sempre um
-    símbolo do código.
-
-    O portão da PARIDADE não pode fazer isso: **o sinal dele pode ser uma
-    cadeia** — `"restaurar-de-fabrica"` é o nome de um gesto, `test_...py` é um
-    nome de arquivo — e coletar só nomes derrubaria essas linhas. Por isso ele
-    apaga a prosa e procura no que sobra.
-
-    As duas concordam no caso que importa, que é o defeito de 03/09 e 06/09.
-    """
+    """Dois instrumentos, duas técnicas, e a diferença é do dado que cada um lê."""
     corpo = (
         "def _o_avulso_saiu(pid):\n"
         '    """A janela antiga tinha (`daemon_actions.on_daemon_migrate_to_systemd`)."""\n'

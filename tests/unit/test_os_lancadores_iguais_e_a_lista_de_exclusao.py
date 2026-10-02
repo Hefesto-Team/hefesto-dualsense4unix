@@ -1,14 +1,4 @@
-"""OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01 — as réguas.
-
-A E1 é o dono da lista (`integrations/lista_de_exclusao.py`), e ela é um
-GUARDA-CHUVA: excluir escreve nas duas listas por feature que já existiam (pino
-e atalho); tirar sai delas — e SÓ das que a exclusão escreveu. A do Steam Input
-NÃO entra: desde 09/08 ela põe o Hefesto NA FRENTE do jogo, não fora dele.
-
-TODA RÉGUA AQUI DESVIA O `XDG_CONFIG_HOME` para uma pasta de teste. As listas
-moram na configuração de verdade dela, e uma régua que escrevesse lá tiraria
-jogos do Proton pinado na máquina dela.
-"""
+"""OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01 — as réguas."""
 
 from __future__ import annotations
 
@@ -65,10 +55,6 @@ _APPID = "1088850"
 
 @pytest.fixture(autouse=True)
 def _config_de_mentira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    # O `HOME` também, desde 01/10/2026: excluir um jogo mexe na cópia dele no
-    # Heroic e na caixa do emulador, que moram no lar — e o lar da sessão de
-    # teste espelha o dela por symlink. `_CHAVE` é o Guardiões, que o Heroic
-    # dela conhece.
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     monkeypatch.setenv("HOME", str(tmp_path / "lar"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "lar" / ".local" / "state"))
@@ -91,35 +77,21 @@ def _nas_listas(appid: str) -> dict[str, bool]:
 
 
 def test_a_regua_nao_escreve_na_config_dela(_config_de_mentira: Path) -> None:
-    """A trava das outras: se o desvio cair, as três listas apontariam para a
-    configuração de verdade — e esta régua reprova ANTES de qualquer escrita."""
+    """A trava das outras: se o desvio cair, as três listas apontariam para a"""
     for caminho in (slo.steam_input_allowlist_path(), proton_pin.fora_do_pino_path(),
                     slo.sem_wrapper_path(), lx.caminho(), Path.home()):
         assert _config_de_mentira in caminho.parents, caminho
 
 
 def test_excluir_escreve_nas_duas_listas() -> None:
-    """ARRANQUE o laço de `LISTAS` e este teste reprova: o jogo excluído
-    continuaria com o Proton pinado e o atalho de inicialização."""
+    """ARRANQUE o laço de `LISTAS` e este teste reprova: o jogo excluído"""
     assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "adicionado"
     assert _nas_listas(_APPID) == {"entrada": False, "pino": True, "atalho": True}
     assert lx.contem(_CHAVE)
 
 
 def test_a_exclusao_nunca_toca_na_lista_do_steam_input() -> None:
-    """A CORREÇÃO DE 21/09, e ela tem dois lados.
-
-    DE IDA — PONHA `"entrada"` de volta em `LISTAS` e este teste reprova. Desde
-    09/08 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela) a marca do Steam Input
-    ESCONDE O FÍSICO e mantém os virtuais de pé: *"a allowlist do Steam Input
-    NÃO tira o Hefesto da frente"*. Pôr o jogo excluído nela deixaria o Hefesto
-    na frente do jogo que ela quis sem Hefesto.
-
-    DE VOLTA — o jogo que ELA marcou lá (o PRAGMATA, na máquina dela) continua
-    lá depois de excluído e tirado. A primeira redação migrava essa marca para
-    a exclusão, e isso desligaria a vibração da RE Engine que passa pelo
-    Hefesto — a mesma que ela fez funcionar em 17/09.
-    """
+    """A CORREÇÃO DE 21/09, e ela tem dois lados."""
     slo.add_appid_to_steam_input_allowlist("3357650", nota="dela")
     assert not hasattr(lx, "migrar_a_lista_velha"), (
         "a migração da lista do Steam Input voltou — ela desligaria a vibração "
@@ -134,8 +106,7 @@ def test_a_exclusao_nunca_toca_na_lista_do_steam_input() -> None:
 
 
 def test_tirar_sai_das_duas() -> None:
-    """ARRANQUE o laço do `tirar` e este teste reprova: a exclusão viraria mão
-    única — o jogo sairia da lista e continuaria sem nenhuma feature."""
+    """ARRANQUE o laço do `tirar` e este teste reprova: a exclusão viraria mão"""
     lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     assert lx.tirar(_CHAVE) == "removido"
     assert _nas_listas(_APPID) == {"entrada": False, "pino": False, "atalho": False}
@@ -143,12 +114,7 @@ def test_tirar_sai_das_duas() -> None:
 
 
 def test_tirar_nao_apaga_a_escolha_anterior_dela() -> None:
-    """ARRANQUE o `if status == "adicionado"` (registre toda lista) e este
-    teste reprova.
-
-    Ela já tinha tirado o atalho deste jogo ANTES de excluí-lo. Excluir e tirar
-    não pode apagar essa escolha — a exclusão viraria borracha, calada.
-    """
+    """ARRANQUE o `if status == "adicionado"` (registre toda lista) e este"""
     assert slo.marcar_jogo_sem_wrapper(_APPID, nota="dela") == "adicionado"
     lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     (entrada,) = lx.ler()
@@ -160,8 +126,7 @@ def test_tirar_nao_apaga_a_escolha_anterior_dela() -> None:
 
 
 def test_o_emulador_entra_sem_tocar_nas_listas() -> None:
-    """As listas falam appid da Steam; o emulador é um processo para todas as
-    ROMs e não tem atalho nem pino. Ele entra na lista e nenhuma ganha linha."""
+    """As listas falam appid da Steam; o emulador é um processo para todas as"""
     assert lx.adicionar("processo:retroarch", lancador="retroarch",
                         nome="RetroArch — todos os jogos") == "adicionado"
     (entrada,) = lx.ler()
@@ -183,9 +148,7 @@ def test_excluir_duas_vezes_nao_duplica() -> None:
 
 
 def test_arquivo_torto_e_recusado_e_nunca_sobrescrito() -> None:
-    """ARRANQUE a recusa do `_ArquivoTortoError` no `adicionar` e este teste
-    reprova: um JSON torto seria SOBRESCRITO com uma linha só, e a lista dela
-    inteira sumiria para gravar um jogo."""
+    """ARRANQUE a recusa do `_ArquivoTortoError` no `adicionar` e este teste"""
     destino = lx.caminho()
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text('{"formato": 1, "jogos": [ ESTRAGADO', encoding="utf-8")
@@ -197,9 +160,7 @@ def test_arquivo_torto_e_recusado_e_nunca_sobrescrito() -> None:
 
 
 def test_uma_lista_que_falha_desfaz_as_outras(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o desfazer do ramo de erro e este teste reprova: o jogo ficaria
-    MEIO excluído — fora do pino, mas com o atalho —, que é o estado que a
-    D-2109-A-EXCLUSAO-E-TUDO-OU-NADA existe para não ter."""
+    """ARRANQUE o desfazer do ramo de erro e este teste reprova: o jogo ficaria"""
     monkeypatch.setitem(lx._POR, "atalho", lambda a: "erro")
     assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "erro"
     assert _nas_listas(_APPID) == {"entrada": False, "pino": False, "atalho": False}
@@ -207,19 +168,10 @@ def test_uma_lista_que_falha_desfaz_as_outras(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_a_linha_de_comando_do_pino_passa_pelo_dono() -> None:
-    """Um dono só para o formato do `jogos_fora_do_pino.txt`: a CLI e a lista
-    de exclusão escrevem pela MESMA função."""
+    """Um dono só para o formato do `jogos_fora_do_pino.txt`: a CLI e a lista"""
     assert "nomear_fora_do_pino" in inspect.getsource(proton_pin._cmd_fora_do_pino)
     assert "devolver_ao_pino" in inspect.getsource(proton_pin._cmd_de_volta_ao_pino)
 
-
-# ---------------------------------------------------------------------------
-# E2 — tirar o pino de UM jogo (`proton_pin.destravar_um_jogo`)
-# ---------------------------------------------------------------------------
-#
-# O `jogos_fora_do_pino.txt` só tira o jogo do PRÓXIMO lock, e o único
-# desfazer que existia era o do desinstalar, que devolve TODOS. A exclusão
-# precisa devolver UM — e com a regra do desinstalar: só o que é nosso.
 
 @pytest.fixture
 def _steam_fechada(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -238,9 +190,7 @@ def _pinar(tmp_path: Path, jogos: list[str]) -> tuple[Path, Path]:
 
 
 def test_destravar_um_jogo_devolve_so_ele(tmp_path: Path, _steam_fechada: None) -> None:
-    """ARRANQUE o recorte `changes={alvo: …}` (passe o registro inteiro) e este
-    teste reprova: excluir UM jogo tiraria o pino de TODOS — o desinstalar
-    disfarçado de botão."""
+    """ARRANQUE o recorte `changes={alvo: …}` (passe o registro inteiro) e este"""
     vdf, estado = _pinar(tmp_path, ["1599660", "1971870"])
     r = proton_pin.destravar_um_jogo("1599660", config_vdf=vdf, state_path=estado)
     assert r["status"] == "destravado" and r["reverted"] == 1, r
@@ -254,9 +204,7 @@ def test_destravar_um_jogo_devolve_so_ele(tmp_path: Path, _steam_fechada: None) 
 
 def test_destravar_nao_desfaz_o_proton_que_ela_trocou(
         tmp_path: Path, _steam_fechada: None) -> None:
-    """A regra do desinstalar, recortada: se ela trocou o Proton do jogo DEPOIS
-    do pino, a escolha é dela e fica — e a linha sai do registro, para um
-    desinstalar futuro não tentar desfazer o que não é mais nosso."""
+    """A regra do desinstalar, recortada: se ela trocou o Proton do jogo DEPOIS"""
     vdf, estado = _pinar(tmp_path, ["1599660"])
     texto = vdf.read_text(encoding="utf-8")
     vdf.write_text(texto.replace(f'"{PIN_NAME}"', '"proton_9"', 2), encoding="utf-8")
@@ -271,8 +219,7 @@ def test_destravar_nao_desfaz_o_proton_que_ela_trocou(
 
 def test_destravar_com_a_steam_aberta_nao_toca_em_nada(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch, _steam_fechada: None) -> None:
-    """ARRANQUE o `_steam_gate()` e este teste reprova: a Steam viva regrava o
-    `config.vdf` ao sair, e a edição seria perdida — ou pior, corrompida."""
+    """ARRANQUE o `_steam_gate()` e este teste reprova: a Steam viva regrava o"""
     vdf, estado = _pinar(tmp_path, ["1599660"])
     antes = vdf.read_text(encoding="utf-8"), estado.read_text(encoding="utf-8")
     monkeypatch.setattr(proton_pin, "steam_running", lambda: True)
@@ -289,15 +236,8 @@ def test_destravar_o_que_nao_e_nosso_e_noop(tmp_path: Path, _steam_fechada: None
     assert vdf.read_text(encoding="utf-8") == antes
 
 
-# ---------------------------------------------------------------------------
-# E2 — tirar o atalho de UM jogo, e o vigia honrando a lista nos dois sentidos
-# ---------------------------------------------------------------------------
-#
 # A lista `jogos_sem_wrapper.txt` só fazia o jogo ser PULADO: o que ele já
-# tinha ficava. Agora o dono do atalho sabe tirar de um jogo só, e o reparo do
-# vigia tira de quem está na lista.
 
-#: A linha dela que tem de sobreviver byte a byte (a do PRAGMATA, 14/08).
 _DELA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 
@@ -319,9 +259,7 @@ def _biblioteca(tmp_path: Path) -> Path:
 
 def test_tirar_o_atalho_tira_so_o_jogo_pedido(
         tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
-    """ARRANQUE o filtro `so_os_jogos` do `transform_vdf_text` e este teste
-    reprova: excluir UM jogo tiraria o atalho da biblioteca inteira — o
-    `--strip` do desinstalar disfarçado de botão."""
+    """ARRANQUE o filtro `so_os_jogos` do `transform_vdf_text` e este teste"""
     vdf = _biblioteca(tmp_path)
     r = slo.tirar_o_atalho_dos_jogos(["1599660"], vdfs=[vdf])
     apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
@@ -343,9 +281,7 @@ def test_tirar_o_atalho_com_a_steam_aberta_nao_toca(
 
 def test_o_vigia_tira_o_atalho_de_quem_esta_na_lista(
         tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
-    """ARRANQUE o `recusados_com_wrapper` do censo e este teste reprova: o
-    reparo do vigia diria «nada a fazer», e o jogo que ela excluiu continuaria
-    abrindo pelo Hefesto."""
+    """ARRANQUE o `recusados_com_wrapper` do censo e este teste reprova: o"""
     vdf = _biblioteca(tmp_path)
     assert slo.marcar_jogo_sem_wrapper("1599660") == "adicionado"
     status, censo, resultado = sw.reparar_ou_adiar(
@@ -360,8 +296,7 @@ def test_o_vigia_tira_o_atalho_de_quem_esta_na_lista(
 
 def test_o_vigia_nao_repoe_o_atalho_de_quem_esta_na_lista(
         tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
-    """O avesso, que já valia e tem de continuar valendo: o jogo da lista sem
-    o atalho é o estado CERTO, e o reparo não briga com ele."""
+    """O avesso, que já valia e tem de continuar valendo: o jogo da lista sem"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_localconfig({"1599660": _DELA}), encoding="utf-8")
     slo.marcar_jogo_sem_wrapper("1599660")
@@ -370,16 +305,11 @@ def test_o_vigia_nao_repoe_o_atalho_de_quem_esta_na_lista(
     assert slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))["1599660"] == _DELA
 
 
-# ---------------------------------------------------------------------------
-# E2 — «tirar do disco»: o passo do vigia, feito na hora do clique
-# ---------------------------------------------------------------------------
-
 @pytest.fixture
 def _steam_do_teste(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
         _steam_fechada: None, _steam_fechada_no_atalho: None) -> tuple[Path, Path, Path]:
-    """Os três arquivos da Steam apontados para a pasta de teste — nenhum
-    caminho padrão alcança a Steam de verdade dela."""
+    """Os três arquivos da Steam apontados para a pasta de teste — nenhum"""
     config_vdf, estado = _pinar(tmp_path, ["1599660", "1971870"])
     biblioteca = _biblioteca(tmp_path)
     monkeypatch.setattr(proton_pin, "default_config_vdf", lambda home=None: config_vdf)
@@ -390,9 +320,7 @@ def _steam_do_teste(
 
 def test_excluir_com_a_steam_fechada_tira_pino_e_atalho_na_hora(
         _steam_do_teste: tuple[Path, Path, Path]) -> None:
-    """ARRANQUE uma das duas chamadas do `tirar_do_disco` e este teste reprova:
-    o jogo abriria UMA vez pelo Hefesto antes de a Steam fechar e o vigia
-    terminar o serviço."""
+    """ARRANQUE uma das duas chamadas do `tirar_do_disco` e este teste reprova:"""
     config_vdf, _, biblioteca = _steam_do_teste
     assert lx.tirar_do_disco("steam_app_1599660") == "feito"
     mapa = proton_pin.extract_compat_tool_mapping(config_vdf.read_text(encoding="utf-8"))
@@ -417,21 +345,12 @@ def test_o_emulador_nao_tem_o_que_tirar_do_disco() -> None:
     assert lx.tirar_do_disco("retroarch") == "sem_appid"
 
 
-# ---------------------------------------------------------------------------
-# E2 — o wrapper consulta a lista: a exclusão vale com a Steam aberta
-# ---------------------------------------------------------------------------
-#
-# Até o vigia tirar o atalho (na saída da Steam), a LaunchOptions do jogo
-# excluído ainda chama o `hefesto-launch`. É o wrapper quem faz a exclusão
-# valer no primeiro lançamento depois do clique.
-
 _O_WRAPPER = Path(__file__).resolve().parents[2] / "assets" / "hefesto-launch.sh"
 
 
 @pytest.fixture
 def _runtime_com_daemon() -> Iterator[Path]:
-    """Daemon de mentira de pé: sem a lista, o wrapper EXPORTARIA as envs — é
-    o que prova que a ausência delas é a exclusão, e não um gate que caiu."""
+    """Daemon de mentira de pé: sem a lista, o wrapper EXPORTARIA as envs — é"""
     base = _runtime_dir()
     daemon = _FakeDaemon(_socket_path(base))
     try:
@@ -461,9 +380,7 @@ def _lancar(runtime: Path, casa: Path, appid: str, *, com_config: bool = True
 
 def test_o_jogo_excluido_abre_sem_nada_do_hefesto(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
-    """ARRANQUE o `if jogo_excluido` do wrapper e este teste reprova: com a
-    Steam aberta o atalho ainda está na LaunchOptions, e o jogo que ela
-    excluiu abriria com as envs, o device KS e a camada Vulkan do Hefesto."""
+    """ARRANQUE o `if jogo_excluido` do wrapper e este teste reprova: com a"""
     assert lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
     fora, marca_fora = _lancar(_runtime_com_daemon, tmp_path, "1599660")
     assert fora.returncode == 0, fora.stderr
@@ -477,8 +394,7 @@ def test_o_jogo_excluido_abre_sem_nada_do_hefesto(
 
 def test_steam_app_1_nao_casa_steam_app_15(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
-    """As aspas dos dois lados do número: excluir um jogo não exclui o de
-    appid que começa igual."""
+    """As aspas dos dois lados do número: excluir um jogo não exclui o de"""
     lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
     r, _ = _lancar(_runtime_com_daemon, tmp_path, "159966")
     assert "HIDAPI=0|" in r.stdout, r.stdout
@@ -486,24 +402,17 @@ def test_steam_app_1_nao_casa_steam_app_15(
 
 def test_sem_home_o_jogo_abre_do_mesmo_jeito(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
-    """O wrapper roda com `set -u`: um `$HOME` cru na leitura da lista
-    abortaria o script, e o jogo não abriria."""
+    """O wrapper roda com `set -u`: um `$HOME` cru na leitura da lista"""
     r, _ = _lancar(_runtime_com_daemon, tmp_path, "1599660", com_config=False)
     assert r.returncode == 0, r.stderr
     assert "IGNORE=" in r.stdout, r.stdout
 
 
-# ---------------------------------------------------------------------------
-# E2 — o prefixo Wine: o device KS sai, e as camadas Vulkan que NÓS
-# desligamos voltam, sem virar escolha dela
-# ---------------------------------------------------------------------------
-
 @pytest.fixture
 def _prefixo_curado(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
         _steam_do_teste: tuple[Path, Path, Path]) -> Path:
-    """O prefixo de um jogo que o Hefesto já tocou: o device KS gravado e a
-    camada do Epic desligada pela cura do lançamento — como no uso real."""
+    """O prefixo de um jogo que o Hefesto já tocou: o device KS gravado e a"""
     compatdata = tmp_path / "steamapps" / "compatdata"
     raiz = compatdata / "1599660"
     (raiz / "pfx").mkdir(parents=True)
@@ -528,18 +437,14 @@ def _epic_ligada(raiz: Path) -> bool:
 
 
 def test_excluir_tira_o_ks_e_devolve_a_camada(_prefixo_curado: Path) -> None:
-    """ARRANQUE o `_devolver_o_prefixo` do `tirar_do_disco` e este teste
-    reprova: o jogo excluído seguiria com o device KS do Hefesto e sem a
-    camada do Epic que ele tinha."""
+    """ARRANQUE o `_devolver_o_prefixo` do `tirar_do_disco` e este teste"""
     assert lx.tirar_do_disco("steam_app_1599660") == "feito"
     assert not _nossos_blocos_ks(_prefixo_curado), "o device KS do Hefesto ficou"
     assert _epic_ligada(_prefixo_curado), "a camada que o Hefesto desligou não voltou"
 
 
 def test_tirar_da_lista_a_cura_do_lancamento_volta(_prefixo_curado: Path) -> None:
-    """ARRANQUE o `pela_exclusao` (religue como o «devolver», com `manter`) e
-    este teste reprova: a exclusão viraria uma escolha permanente que ela
-    nunca fez, e tirar o jogo da lista não devolveria a cura."""
+    """ARRANQUE o `pela_exclusao` (religue como o «devolver», com `manter`) e"""
     lx.tirar_do_disco("steam_app_1599660")
     memoria = cv.ler_estado()["1599660"]
     assert all("escolha" not in m for m in memoria.values()), memoria
@@ -548,8 +453,7 @@ def test_tirar_da_lista_a_cura_do_lancamento_volta(_prefixo_curado: Path) -> Non
 
 
 def test_o_botao_vulkan_pula_o_jogo_excluido(_prefixo_curado: Path) -> None:
-    """ARRANQUE o `excluir` do `curar_todos` e este teste reprova: o botão da
-    aba Sistema desligaria de novo a camada do jogo que ela excluiu."""
+    """ARRANQUE o `excluir` do `curar_todos` e este teste reprova: o botão da"""
     lx.tirar_do_disco("steam_app_1599660")
     cv.curar_todos(excluir=["1599660"])
     assert _epic_ligada(_prefixo_curado)
@@ -572,20 +476,11 @@ def test_os_appids_da_lista_sao_so_os_de_steam() -> None:
     assert lx.appids() == ["1599660"]
 
 
-# ---------------------------------------------------------------------------
-# E3 — a camada ao vivo: a janela excluída em foco liga o Modo Nativo
-# ---------------------------------------------------------------------------
-#
-# O Modo Nativo JÁ é o «Hefesto fora»: gatilhos Off na mesa inteira, vibração
-# do jogo, emulação desligada e guardada, o físico exposto ao jogo. A exclusão
-# o liga com a origem dela, anota a POSSE no stash, e solta ao sair do foco.
-
 _JANELA = "steam_app_1599660"
 
 
 class _NativoCapturado:
-    """O `set_native_mode` do daemon trocado por um que só registra — a régua
-    mede a POLÍTICA, e nada aqui escreve no controle dela."""
+    """O `set_native_mode` do daemon trocado por um que só registra — a régua"""
 
     def __init__(self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
         self.chamadas: list[tuple[bool, str]] = []
@@ -601,9 +496,7 @@ class _NativoCapturado:
 
 @pytest.fixture
 def _daemon(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Daemon:
-    """O flag do Modo Nativo vai para a pasta do teste: o lar de mentira da
-    suíte é COMPARTILHADO, e um `native_mode.flag` que sobrasse faria o
-    próximo daemon da suíte nascer solto."""
+    """O flag do Modo Nativo vai para a pasta do teste: o lar de mentira da"""
     casa = tmp_path / "config-do-daemon"
     monkeypatch.setattr(session, "config_dir", lambda ensure=False: casa.mkdir(
         parents=True, exist_ok=True) or casa)
@@ -623,8 +516,7 @@ def test_a_janela_excluida_liga_o_modo_nativo(
 
 def test_o_modo_nativo_dela_nao_e_desligado_pela_exclusao(
         _daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `ligou_nativo` e este teste reprova: sair do jogo excluído
-    desligaria o Modo Nativo que ELA tinha ligado antes."""
+    """ARRANQUE o `ligou_nativo` e este teste reprova: sair do jogo excluído"""
     nativo = _NativoCapturado(_daemon, monkeypatch)
     _daemon._native_mode = True
     _daemon.aplicar_a_exclusao(chave=_JANELA)
@@ -635,9 +527,7 @@ def test_o_modo_nativo_dela_nao_e_desligado_pela_exclusao(
 
 def test_a_posse_da_exclusao_atravessa_o_reinicio(
         _daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE a leitura da posse do `_carregar_o_modo_nativo` e este teste
-    reprova: o daemon reiniciado com o jogo excluído em foco leria o Modo
-    Nativo como gesto dela, e o controle ficaria solto depois do jogo."""
+    """ARRANQUE a leitura da posse do `_carregar_o_modo_nativo` e este teste"""
     _NativoCapturado(_daemon, monkeypatch)
     _daemon.aplicar_a_exclusao(chave=_JANELA)
 
@@ -688,8 +578,7 @@ def _o_autoswitch(espiao: _EspiaoDaExclusao) -> AutoSwitcher:
 
 def test_a_janela_excluida_nao_pede_perfil_nem_modo_jogo(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `_na_exclusao` do tique e este teste reprova: o jogo que ela
-    excluiu ganharia o modo jogo padrão — o gamepad virtual na frente dele."""
+    """ARRANQUE o `_na_exclusao` do tique e este teste reprova: o jogo que ela"""
     monkeypatch.setattr(loader_module, "profiles_dir", lambda ensure=False: tmp_path)
     lx.adicionar(_JANELA, lancador="steam", nome="Wo Long")
     espiao = _EspiaoDaExclusao()
@@ -716,9 +605,7 @@ def test_fora_da_lista_nada_muda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 @pytest.mark.parametrize("rota", ["subsistema", "utilitaria"])
 def test_as_duas_rotas_de_subida_ligam_os_tres_fios(
         rota: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE um dos três fios de uma das rotas e este teste reprova: o
-    autoswitch subiria sem saber da lista, e a E3 inteira ficaria escrita e
-    desligada — a cura que ninguém chama, o defeito mais caro desta casa."""
+    """ARRANQUE um dos três fios de uma das rotas e este teste reprova: o"""
     from hefesto_dualsense4unix.daemon.subsystems import autoswitch as sub
     from hefesto_dualsense4unix.profiles import autoswitch as perfis
     from hefesto_dualsense4unix.profiles import manager as gerente
@@ -751,21 +638,12 @@ def test_as_duas_rotas_de_subida_ligam_os_tres_fios(
     assert capturado["exclusao_reader"] is lx.contem
 
 
-# ---------------------------------------------------------------------------
-# E5 — os oito cartões iguais, a escolha do jogo e os gestos
-# ---------------------------------------------------------------------------
 _APPID_WO_LONG = "1599660"
 
 
 @pytest.fixture()
 def _aba07(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple]:
-    """O desenho e o pacote da aba 07, com a VIGIA parada.
-
-    Os gestos devolvem `_resposta(VIGIA.agora(), …)`, e a vigia sem dado dispara
-    a thread que lê o disco de verdade — o vazamento medido em 13/09/2026 em
-    `test_a_aba_07_lancadores_fecha_as_linhas.py`. Aqui ela responde nada, e a
-    escolha que um teste abre não sobra para o seguinte.
-    """
+    """O desenho e o pacote da aba 07, com a VIGIA parada."""
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 
@@ -796,16 +674,7 @@ def _o_dia_do_reparo(desenho) -> object:
 
 @pytest.mark.parametrize("dia", ["bom", "reparo"])
 def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07, dia: str) -> None:
-    """Os cartões ACHADOS oferecem os mesmos botões — o pedido dela, *"todos os
-    lançadores com os botões da Steam"* —, e os quatro vêm PRIMEIRO, na ordem
-    do dono: ela pediu os quatro numa linha só (21/09/2026), e um botão de
-    estado no meio deles os partiria em duas.
-
-    A régua PERGUNTA ao dono dos rótulos (`fileira_comum`), nunca digita — régua
-    de dono mede DONO. OS DOIS DIAS ENTRAM porque o do reparo escapou: a Steam
-    com jogo sem atalho perdia o «Criar perfil», e a régua só olhava o dia bom.
-    ARRANQUE a `fileira_comum` do cartão da Steam e o dia do reparo reprova.
-    """
+    """Os cartões ACHADOS oferecem os mesmos botões — o pedido dela, *"todos os"""
     desenho, _a07 = _aba07
     lida = _o_dia_bom(desenho) if dia == "bom" else _o_dia_do_reparo(desenho)
     cartoes = desenho.cartoes(lida)
@@ -817,10 +686,7 @@ def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07, dia: str) -> None:
 
 
 def test_a_lista_vazia_nao_ocupa_linha_no_cartao(_aba07) -> None:
-    """Sem jogo excluído, o cartão não ganha pé — palavra dela, 21/09/2026:
-    *"remove aquele status que é uma linha por si só (…) é um espaço vertical
-    que ganhamos ao remover"*. ARRANQUE a guarda do `com_a_exclusao` e o cartão
-    volta a ganhar um pé vazio."""
+    """Sem jogo excluído, o cartão não ganha pé — palavra dela, 21/09/2026:"""
     desenho, a07 = _aba07
     lida = _o_dia_bom(desenho)
     antes = desenho.cartoes(lida)
@@ -830,9 +696,7 @@ def test_a_lista_vazia_nao_ocupa_linha_no_cartao(_aba07) -> None:
 
 
 def test_nenhum_botao_do_cartao_nasce_sem_gesto(_aba07) -> None:
-    """O «Criar perfil para um jogo» era um botão SEM gesto (§1 da sprint).
-    ARRANQUE o gesto dele e este teste reprova: é o botão morto de antes,
-    multiplicado por oito."""
+    """O «Criar perfil para um jogo» era um botão SEM gesto (§1 da sprint)."""
     desenho, _a07 = _aba07
     for lanc in desenho.cartoes(_o_dia_bom(desenho)):
         mortos = [a.rotulo for a in lanc.acoes if not a.gesto]
@@ -840,9 +704,7 @@ def test_nenhum_botao_do_cartao_nasce_sem_gesto(_aba07) -> None:
 
 
 def test_o_emulador_nao_promete_exclusao_por_rom(_aba07) -> None:
-    """Um processo para todas as ROMs (§4.3): a lista oferece UMA linha.
-    ARRANQUE o ramo do emulador e este teste reprova — a lista ofereceria uma
-    ROM que o daemon não sabe distinguir."""
+    """Um processo para todas as ROMs (§4.3): a lista oferece UMA linha."""
     _desenho, a07 = _aba07
     jogos, janelas, emulador = a07._jogos_para_escolher("retroarch", "RetroArch", None)
     assert emulador and len(jogos) == 1
@@ -851,8 +713,7 @@ def test_o_emulador_nao_promete_exclusao_por_rom(_aba07) -> None:
 
 
 def test_a_exclusao_do_emulador_casa_pela_janela_medida(_aba07) -> None:
-    """A janela do RetroArch diz `com.libretro.RetroArch`, e o flatpak é `org.`
-    (medido em 10/09/2026). A lista casa pela JANELA, sem caixa."""
+    """A janela do RetroArch diz `com.libretro.RetroArch`, e o flatpak é `org.`"""
     _desenho, a07 = _aba07
     jogos, janelas, _ = a07._jogos_para_escolher("retroarch", "RetroArch", None)
     lx.adicionar(jogos[0].chave, lancador="retroarch", nome=jogos[0].nome,
@@ -876,8 +737,7 @@ def _escolher(monkeypatch: pytest.MonkeyPatch, a07, modo: str) -> None:
 
 def test_confirmar_a_exclusao_grava_e_tira_do_disco(
         _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `tirar_do_disco` do confirmar e este teste reprova: o jogo
-    entraria na lista com o pino e o atalho de antes."""
+    """ARRANQUE o `tirar_do_disco` do confirmar e este teste reprova: o jogo"""
     desenho, a07 = _aba07
     tirados: list[str] = []
     monkeypatch.setattr(lx, "tirar_do_disco",
@@ -901,8 +761,7 @@ def test_confirmar_sem_escolha_recusa_dizendo(
 
 
 def test_tirar_da_lista_pelo_rodape(_aba07) -> None:
-    """O «Tirar da lista» do rodapé leva a CHAVE no `data-v`, e o gesto a tira.
-    ARRANQUE o `lista_de_exclusao.tirar` do gesto e este teste reprova."""
+    """O «Tirar da lista» do rodapé leva a CHAVE no `data-v`, e o gesto a tira."""
     desenho, a07 = _aba07
     lx.adicionar(_JANELA, lancador=desenho.STEAM, nome="Wo Long")
     rodape = desenho.rodape_da_exclusao_html([(_JANELA, "Wo Long")])
@@ -913,9 +772,7 @@ def test_tirar_da_lista_pelo_rodape(_aba07) -> None:
 
 
 def test_o_rodape_diz_o_excluido_e_a_lista_da_steam_nao_o_repete(_aba07) -> None:
-    """ARRANQUE o filtro dos recusados e este teste reprova: o jogo excluído
-    apareceria duas vezes no cartão, uma delas com um «Voltar a usar» que
-    desfaria só o atalho — metade da exclusão."""
+    """ARRANQUE o filtro dos recusados e este teste reprova: o jogo excluído"""
     desenho, a07 = _aba07
     lx.adicionar(_JANELA, lancador=desenho.STEAM, nome="Wo Long")
     lida = desenho.Leitura(
@@ -962,9 +819,7 @@ def test_o_excluido_de_outro_cartao_tambem_sai_da_lista_da_steam(
 
 def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
         _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
-    """D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS: um gravador, dois caminhos de
-    chegada. ARRANQUE a chamada ao `a10_perfis.criar_para_o_jogo` e este teste
-    reprova — a aba Lançadores teria um segundo gravador de perfil."""
+    """D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS: um gravador, dois caminhos de"""
     from hefesto_dualsense4unix.interface.pacotes import a10_perfis
 
     desenho, a07 = _aba07
@@ -983,15 +838,6 @@ def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
         "ela ver onde")
 
 
-# ---------------------------------------------------------------------------
-# A METADE DOS OUTROS LANÇADORES — 01/10/2026
-#
-# Medido antes da cura, num lar de mentira: excluir o jogo do Heroic deixava o
-# `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW` na cópia
-# dele, e excluir o RetroArch deixava os dois na caixa do Flatpak (que a carona
-# da transição seguinte reescrevia). Com a janela excluída em foco o daemon
-# liga o Modo Nativo, sem controle virtual: o jogo ficava sem controle nenhum.
-# ---------------------------------------------------------------------------
 _APP_DO_HEROIC = "63a665088eb1480298f1e57943b225d8"
 _NOSSOS_NO_HEROIC = (("PROTON_DISABLE_HIDRAW", "0x054c/0x0ce6"),
            ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "0x054c/0x0ce6"))
@@ -1008,12 +854,7 @@ def _chaves_do_jogo(arquivo: Path) -> list[str]:
 
 
 def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
-    """O Heroic flatpak no lar de mentira, com o Guardiões na biblioteca.
-
-    A forma é a do disco dela (01/10): a lista global com o nosso e o dela,
-    e — com `com_copia` — a cópia do jogo que o Heroic tirou da global.
-    Devolve ``(casa, cópia do jogo)``.
-    """
+    """O Heroic flatpak no lar de mentira, com o Guardiões na biblioteca."""
     casa = Path.home() / ".var/app/com.heroicgameslauncher.hgl/config/heroic"
     (casa / "store_cache").mkdir(parents=True)
     globais = _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)
@@ -1037,8 +878,7 @@ def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
 
 
 def test_excluir_o_jogo_do_heroic_tira_o_nosso_da_copia() -> None:
-    """ARRANQUE o `tirar_o_nosso_do_jogo_do_heroic` do `adicionar` e este teste
-    reprova: a cópia do jogo excluído seguiria escondendo o físico dele."""
+    """ARRANQUE o `tirar_o_nosso_do_jogo_do_heroic` do `adicionar` e este teste"""
     _casa, copia = _heroic_de_mentira(com_copia=True)
     assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
     assert _chaves_do_jogo(copia) == ["MANGOHUD"]
@@ -1047,11 +887,7 @@ def test_excluir_o_jogo_do_heroic_tira_o_nosso_da_copia() -> None:
 
 
 def test_o_jogo_sem_copia_ganha_a_lista_propria_e_a_volta_a_apaga() -> None:
-    """Sem cópia o jogo segue a lista GLOBAL — que a carona reescreve com o
-    nosso a cada transição. A exclusão lhe dá a lista própria (o Heroic monta
-    `{...globais, ...do jogo}`), e o «Tirar» apaga o arquivo que nasceu dela.
-    ARRANQUE o ramo `sem_lista` da volta e a cópia fica: o jogo, fora da
-    lista, continuaria sem o Hefesto."""
+    """Sem cópia o jogo segue a lista GLOBAL — que a carona reescreve com o"""
     _casa, copia = _heroic_de_mentira(com_copia=False)
     assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
     assert _chaves_do_jogo(copia) == ["MANGOHUD"]
@@ -1060,8 +896,7 @@ def test_o_jogo_sem_copia_ganha_a_lista_propria_e_a_volta_a_apaga() -> None:
 
 
 def test_tirar_devolve_a_copia_byte_a_byte() -> None:
-    """ARRANQUE o `devolver_ao_jogo_do_heroic` do `tirar` e este teste reprova:
-    o jogo tirado da lista seguiria sem o ambiente do Hefesto."""
+    """ARRANQUE o `devolver_ao_jogo_do_heroic` do `tirar` e este teste reprova:"""
     _casa, copia = _heroic_de_mentira(com_copia=True)
     antes = json.loads(copia.read_text(encoding="utf-8"))
     lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
@@ -1070,8 +905,7 @@ def test_tirar_devolve_a_copia_byte_a_byte() -> None:
 
 
 def test_a_volta_nao_passa_por_cima_do_que_ela_mudou() -> None:
-    """Ela trocou o `MANGOHUD` do jogo depois da exclusão: a volta repõe o
-    nosso e deixa o dela como está."""
+    """Ela trocou o `MANGOHUD` do jogo depois da exclusão: a volta repõe o"""
     _casa, copia = _heroic_de_mentira(com_copia=True)
     lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     raiz = json.loads(copia.read_text(encoding="utf-8"))
@@ -1084,10 +918,7 @@ def test_a_volta_nao_passa_por_cima_do_que_ela_mudou() -> None:
 
 
 def test_a_carona_mantem_a_copia_do_excluido_limpa(tmp_path: Path) -> None:
-    """O Heroic aberto regrava a cópia com o que tinha na memória quando ela
-    muda uma opção do jogo. A carona da transição seguinte a limpa de novo.
-    ARRANQUE o laço das cópias do `curar_todas_as_estradas` e este teste
-    reprova."""
+    """O Heroic aberto regrava a cópia com o que tinha na memória quando ela"""
     casa, copia = _heroic_de_mentira(com_copia=True)
     lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     raiz = json.loads(copia.read_text(encoding="utf-8"))
@@ -1123,8 +954,7 @@ _JANELAS_DO_RETROARCH = ("org.libretro.RetroArch", "retroarch", "com.libretro.Re
 
 
 def test_excluir_o_emulador_tira_o_ambiente_da_caixa(tmp_path: Path) -> None:
-    """ARRANQUE o `tirar_o_nosso_da_caixa` do `adicionar` e este teste
-    reprova: o emulador excluído abriria com o físico escondido."""
+    """ARRANQUE o `tirar_o_nosso_da_caixa` do `adicionar` e este teste"""
     override = _caixa_do_retroarch(tmp_path)
     assert lx.adicionar("emulador:retroarch", lancador="retroarch",
                         nome="RetroArch — todos os jogos",
@@ -1133,9 +963,7 @@ def test_excluir_o_emulador_tira_o_ambiente_da_caixa(tmp_path: Path) -> None:
 
 
 def test_a_carona_nao_repoe_o_ambiente_na_caixa_excluida(tmp_path: Path) -> None:
-    """ARRANQUE o filtro das caixas do `curar_todas_as_estradas` e este teste
-    reprova: a transição seguinte devolveria o ambiente ao emulador excluído
-    (medido antes da cura: a carona escrevia em `retroarch`)."""
+    """ARRANQUE o filtro das caixas do `curar_todas_as_estradas` e este teste"""
     override = _caixa_do_retroarch(tmp_path)
     lx.adicionar("emulador:retroarch", lancador="retroarch",
                  nome="RetroArch — todos os jogos", janelas=_JANELAS_DO_RETROARCH)
@@ -1149,8 +977,7 @@ def test_a_carona_nao_repoe_o_ambiente_na_caixa_excluida(tmp_path: Path) -> None
 
 def test_o_device_ks_nao_volta_ao_prefixo_do_jogo_excluido(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o filtro dos `prefixos_excluidos` da carona do device KS e este
-    teste reprova: a transição seguinte gravaria o device no jogo excluído."""
+    """ARRANQUE o filtro dos `prefixos_excluidos` da carona do device KS e este"""
     from hefesto_dualsense4unix.daemon import launch_env
 
     _heroic_de_mentira(com_copia=True)
@@ -1170,12 +997,7 @@ def test_o_device_ks_nao_volta_ao_prefixo_do_jogo_excluido(
 
 def test_tirar_do_disco_tira_o_ks_do_prefixo_do_heroic(
         monkeypatch: pytest.MonkeyPatch, _steam_do_teste: tuple[Path, Path, Path]) -> None:
-    """ARRANQUE os prefixos do Heroic do `tirar_do_disco` e este teste
-    reprova: o jogo excluído seguiria com o device KS que a carona gravou.
-
-    A Steam e o jogo da máquina ficam fora (`_steam_do_teste`): sem isso, um
-    jogo aberto na máquina de quem roda a suíte fazia o `tirar_do_disco`
-    responder «espera_a_steam», e a régua respondia sobre a máquina, não sobre o produto."""
+    """ARRANQUE os prefixos do Heroic do `tirar_do_disco` e este teste"""
     _heroic_de_mentira(com_copia=True)
     raiz = Path.home() / "Games/Heroic/Prefixes/Guardioes"
     (raiz / "pfx").mkdir(parents=True)

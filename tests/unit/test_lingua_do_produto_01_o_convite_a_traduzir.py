@@ -1,74 +1,4 @@
-"""O convite a traduzir só pode existir com o encanamento ligado nas telas.
-
-Decisão dela, 07/08/2026 (resposta 10 do painel): **o português do Brasil é a
-língua do produto**. Três páginas do projeto — `.github/CONTRIBUTING.md`,
-`docs/usage/flatpak.md` e `docs/usage/troubleshooting.md` — convidavam a
-comunidade a acrescentar um idioma, com receita pronta. O convite era falso: o
-catálogo alcança o esqueleto fixo da janela, e não alcança o texto que as abas
-escrevem enquanto rodam.
-
-Este arquivo é o portão que impede o convite de voltar **sozinho**. Ele não
-proíbe traduzir para sempre: proíbe enquanto o encanamento não estiver de fato
-ligado às telas. No dia em que estiver, o portão para de reprovar sem que
-ninguém precise editar uma linha aqui — a condição é medida do CÓDIGO, não
-escrita à mão.
-
-O CRITÉRIO, e por que não é "procurar a palavra traduzir"
---------------------------------------------------------
-
-Um portão que procurasse `traduzir` reprovaria `docs/usage/integrating-mods.md`,
-que fala de *"modo de gatilho sem tradução"* — outro assunto, mesma palavra — e
-viraria ruído no primeiro documento honesto. O que caracteriza o convite não é
-o vocábulo: é a **receita**, e receita tem comando, arquivo-alvo e cabeçalho
-imperativo. Por isso as marcas são quatro, e cada uma sozinha já é prova:
-
-1. **o comando que cria idioma** (`i18n_extract.sh --add`). Ninguém o escreve
-   sem estar ensinando alguém a usá-lo;
-2. **um catálogo que o repositório não tem** (`po/fr_FR.po` e parentes),
-   derivado de `po/` em tempo de execução — citar um `.po` inexistente é dizer
-   ao leitor que ele o crie;
-3. **cabeçalho de receita** — "Adicionar idioma novo", "Contribuir traduções".
-   Cabeçalho é o índice de um procedimento; prosa que apenas *menciona*
-   tradução não vira seção;
-4. **ponteiro para a receita** — a frase-alvo *"para adicionar um novo
-   idioma..."*, que era como a `flatpak.md` empurrava o leitor para a
-   `CONTRIBUTING`, e o nome da seção removida.
-
-E o portão só cobra isso nos documentos que **ENSINAM** — o mesmo escopo que
-`scripts/validar-referencias-docs.py` usa e pelo mesmo motivo: `docs/process/`
-é registro histórico, e uma sprint que conta o que foi removido precisa citar o
-removido.
-
-A MORDIDA (verificada em 07/08/2026)
-------------------------------------
-
-Devolvi a receita ao fim da seção 11 de `docs/usage/troubleshooting.md`, com as
-mesmas linhas que saíram, e
-`test_nenhuma_pagina_que_ensina_convida_a_traduzir` reprovou nas quatro marcas
-de uma vez. Devolvi só o ponteiro da `flatpak.md` (uma frase, sem comando) e
-reprovou de novo. Depois arranquei a condição do encanamento (fingindo os 18
-módulos traduzidos) e o portão passou a ACEITAR a receita — que é a metade
-condicional funcionando, e não um "não" disfarçado de condição.
-
-O ALCANCE DESTE PORTÃO, MEDIDO (07/08/2026) — leia antes de confiar nele
-------------------------------------------------------------------------
-
-Ele é ESTREITO, e isso é de propósito. As quatro marcas são casadas com A
-REDAÇÃO QUE SAIU, não com a ideia. Um convite EQUIVALENTE escrito com outras
-palavras passa VERDE, e isso está medido: acrescentado à `docs/usage/flatpak.md`
-um bloco com cabeçalho "Traduzir o Hefesto", o comando `msginit` do `gettext`
-sobre um `.pot` e o pedido de mandar o arquivo num pull request, os 50 testes
-deste arquivo passaram. Trocado só o comando pelo `i18n_extract.sh --add`, o
-mesmo bloco reprovou na hora (`1 failed, 49 passed`). A página foi devolvida
-byte a byte depois das duas medições. GRAU: MEDIDO.
-
-NÃO alargue isto procurando a palavra `traduzir`: a seção "O CRITÉRIO" acima
-explica por que essa versão reprovaria três documentos honestos e seria
-desligada na terceira vez. O que este portão promete é impedir que a receita
-REMOVIDA volte sozinha — e é só isso que ele entrega. Contra a forma reescrita,
-a defesa é a revisão humana. O registro completo está na
-LINGUA-DO-PRODUTO-01, seção "O que fica ABERTO".
-"""
+"""O convite a traduzir só pode existir com o encanamento ligado nas telas."""
 from __future__ import annotations
 
 import ast
@@ -79,29 +9,19 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Os módulos que escrevem o texto vivo das abas. É aqui que o encanamento de
-#: i18n precisa chegar para que traduzir signifique alguma coisa.
 DIR_ACOES = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions"
 
 
 def _modulos_de_acoes() -> list[Path]:
-    """Todo `.py` de `app/actions/`, inclusive os de dentro de um pacote.
-
-    Recursivo desde 22/08/2026. Enquanto era `glob("*.py")`, o censo perdia de
-    vista qualquer módulo que descesse um nível — e perdeu: o pacote
-    `config/`, com nove arquivos, sumiu inteiro do mapa no dia em que nasceu.
-    """
+    """Todo `.py` de `app/actions/`, inclusive os de dentro de um pacote."""
     return sorted(
         caminho
         for caminho in DIR_ACOES.rglob("*.py")
         if "__pycache__" not in caminho.parts
     )
 
-#: Onde moram os catálogos que o projeto de fato entrega.
 DIR_CATALOGOS = RAIZ / "po"
 
-#: Os documentos que ENSINAM. `docs/process/` fica de fora por escrito: sprint
-#: é registro, e registrar a remoção de uma receita exige transcrevê-la.
 ALVOS_QUE_ENSINAM = (
     "README.md",
     ".github/CONTRIBUTING.md",
@@ -110,25 +30,18 @@ ALVOS_QUE_ENSINAM = (
     "docs/protocol",
 )
 
-#: Letra acentuada do português. Um literal que a carrega é prosa escrita para
-#: uma pessoa ler, não chave de dicionário nem nome de sinal.
 _ACENTUADA = re.compile(r"[áàâãéêíóôõúüçÁÀÂÃÉÊÍÓÔÕÚÜÇ]")
 
-#: O comando que cria um catálogo novo. Marca 1.
 _COMANDO_QUE_CRIA_IDIOMA = re.compile(r"i18n_extract\.sh\s+--add")
 
-#: Um arquivo `po/<algo>.po`. Marca 2 depois de descontar os que existem.
 _CATALOGO_CITADO = re.compile(r"\bpo/([A-Za-z0-9_.-]+)\.po\b")
 
-#: Cabeçalho markdown com forma de receita. Marca 3.
 _CABECALHO_DE_RECEITA = re.compile(
     r"^#{1,6}\s.*\b(adicionar|acrescentar|criar|incluir|contribuir)\b"
     r"[^\n]{0,40}\b(idioma|l[ií]ngua|tradu[çc])",
     re.IGNORECASE,
 )
 
-#: Ponteiro para a receita: a construção final ("para adicionar um novo
-#: idioma...") e o nome da seção que saiu da `CONTRIBUTING`. Marca 4.
 _PONTEIRO_PARA_A_RECEITA = (
     re.compile(
         r"\b(para|como)\s+(adicionar|acrescentar|criar|incluir)\s+"
@@ -140,12 +53,7 @@ _PONTEIRO_PARA_A_RECEITA = (
 
 
 def _importa_a_funcao_de_traducao(arvore: ast.Module) -> bool:
-    """O módulo puxa o `_` de `utils.i18n` (ou o `gettext` cru)?
-
-    Lido por AST, sem importar o pacote: importar `app.actions` arrasta GTK e
-    transformaria este portão num erro de coleta na primeira máquina sem
-    PyGObject — modo de falha que some calado, e esta casa já pagou por ele.
-    """
+    """O módulo puxa o `_` de `utils.i18n` (ou o `gettext` cru)?"""
     for no in ast.walk(arvore):
         if (
             isinstance(no, ast.ImportFrom)
@@ -177,27 +85,7 @@ def _literais_de_prosa(arvore: ast.Module) -> int:
 
 
 def _modulos_que_escrevem_portugues_cru(diretorio: Path) -> dict[str, int]:
-    """Os módulos com prosa acentuada e SEM a função de tradução.
-
-    É a medida de "o encanamento não está ligado nas telas", e é o que decide se
-    o convite pode existir. Devolve caminho relativo -> quantidade de literais.
-
-    RECURSIVO desde 03/09/2026, e a razão é que o defeito de 22/08 tinha sido
-    curado só de UM lado. Naquele dia o DENOMINADOR (`_modulos_de_acoes`) passou
-    de `glob` para `rglob` porque o pacote `config/` sumira inteiro do mapa; o
-    NUMERADOR aqui ficou em `glob("*.py")`. O resultado é que a proporção
-    publicada — "19 de 31" nas três páginas — aferia numerador de um nível
-    contra denominador de todos: nunca foram a mesma população.
-
-    O que isso escondia, medido hoje: `jogar/painel.py` nasceu em 30/08 com 37
-    literais de português cru e não aparecia no numerador, junto com
-    `config/mixin.py` (6), `config/__init__.py` (1), `config/secoes.py` (1) e
-    `jogar/__init__.py` (1). São CINCO módulos e 46 literais fora da conta. Com
-    as duas pontas recursivas a proporção honesta é **25 de 34**.
-
-    A chave passou de `fonte.name` para o caminho relativo porque, recursivo,
-    três arquivos se chamam `__init__.py` e um sobrescreveria o outro.
-    """
+    """Os módulos com prosa acentuada e SEM a função de tradução."""
     fora: dict[str, int] = {}
     for fonte in sorted(diretorio.rglob("*.py")):
         if "__pycache__" in fonte.parts:
@@ -248,103 +136,11 @@ def _convites_em(texto: str, catalogos: set[str]) -> list[tuple[int, str]]:
     return achados
 
 
-# ---------------------------------------------------------------------------
-# A condição: o encanamento está ligado nas telas?
-# ---------------------------------------------------------------------------
-
-
 def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
-    """Ancora a medição que sustenta a decisão dela, e a mantém honesta.
-
-    Se alguém ligar o encanamento de verdade, este teste reprova PRIMEIRO, com
-    nome e sobrenome, em vez de o portão de baixo afrouxar em silêncio. É o
-    lembrete de que a decisão tem uma condição, e a condição tem número.
-    """
+    """Ancora a medição que sustenta a decisão dela, e a mantém honesta."""
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
     total = len(_modulos_de_acoes())
 
-    # RELANCAR-01 (08/08/2026): 18 viraram 19 com o `relancar.py`, e 15 viraram
-    # 16 — ele escreve o texto do diálogo em português, direto, como os outros.
-    # Os números sobem juntos de propósito: se um subir sozinho, alguém ligou (ou
-    # desligou) o encanamento num módulo, e é isso que este teste existe para
-    # acusar. As três páginas ganharam nota datada em vez de reescrita.
-    #
-    # CARONA-DO-WRAPPER-01 (16/08/2026): 19 viraram 20 com o
-    # `carona_do_wrapper.py`, e 16 viraram 17 — pela MESMA razão do
-    # `relancar.py`: a frase que ele põe no rodapé ("Reposta a Opção de
-    # Inicialização…") é português direto, sem passar pela função de tradução.
-    # Os dois números subiram juntos, que é o sinal de que nada mudou de
-    # natureza; as três páginas ganham nota datada, não reescrita.
-    #
-    # CONFIG-01 (21/08/2026): 20 viraram 21 com o `config_actions.py`, e o 17
-    # NÃO subiu junto — este é o primeiro módulo novo de `actions/` que nasce
-    # importando a função de tradução. A proporção passa de 17 de 20 para 17 de
-    # 21, e o quadro melhora pela primeira vez desde 07/08. Os dois números
-    # NÃO subirem juntos é, aqui, a boa notícia — e é exatamente o sinal que
-    # este teste existe para tornar visível.
-    #
-    # ANDAIME DA ABA CONFIGURAÇÕES (22/08/2026): o censo passou a ser
-    # RECURSIVO, e por um motivo de medição, não de estilo. O
-    # `config_actions.py` virou o pacote `app/actions/config/` — um módulo por
-    # seção, para que oito frentes escrevessem sem colidir — e o `glob("*.py")`
-    # de antes, que só olha o primeiro nível, deixou de enxergar a aba inteira:
-    # a contagem CAIU de 21 para 20 e o censo passou a jurar que ninguém ali
-    # traduz. Um portão cego a subpasta é pior que portão nenhum, porque a
-    # próxima pasta some do mapa em silêncio. Com `rglob`, 21 viraram 29 (os 20
-    # do primeiro nível mais os 9 do pacote) e o encanamento aparece em CINCO
-    # arquivos: os três de sempre mais `config/mixin.py` e `config/moldura.py`.
-    #
-    # ONDA0-Z7 (24/08/2026): 29 viraram 30 com o `ambiente_na_tela.py`, e 17
-    # viraram 18 — os dois sobem JUNTOS, que é o sinal de que nada mudou de
-    # natureza. Ele põe texto de tela ("Teclado na tela: instalado…") em
-    # português direto, no molde de `daemon_actions.descrever_deteccao_de_janela`
-    # que ele copia — e esse molde também não traduz.
-    #
-    # **É uma piora, e fica escrita como tal:** desde a CONFIG-01 (21/08) o
-    # módulo novo de `actions/` nascia traduzindo, e este não nasceu. O motivo
-    # de NÃO consertar aqui é medido, não conveniência: as três frases ainda
-    # não estão penduradas em tela nenhuma (quem as pendura é a Onda 10 e a
-    # Onda 11, §10 da sprint Z7) e ainda vão ao olho dela para aprovação de
-    # redação. Embrulhar em `_()` agora congela os msgid ANTES da aprovação, e
-    # trocar o texto depois troca o msgid e deixa o inglês para trás — que é o
-    # DEFEITO C já medido em `test_mesa_cheia_11_a_janela_conta_quatro.py`,
-    # sete tooltips que voltaram ao português numa sessão `LANG=en`. O momento
-    # certo de ligar o `_()` é junto com a fiação, no mesmo passo do
-    # `i18n_extract.sh` + `i18n_compile.sh`.
-    #
-    # I12 da INÍCIO NÃO MENTE-01 (25/08/2026): 30 viraram 31 com o
-    # `contrato_da_mascara.py`, e 18 viraram 19 — os dois sobem JUNTOS, que é o
-    # sinal de que nada mudou de natureza.
-    #
-    # CORREÇÃO DE FATO, e ela é a lição desta linha: a primeira versão desta
-    # nota afirmou que o módulo "não põe uma frase em tela nenhuma, logo não tem
-    # o que traduzir". **A régua derrubou a afirmação na hora** — o módulo tem
-    # prosa em português dentro das constantes (a explicação de O QUE FECHA o
-    # contrato, escrita para quem lê o código). Não é texto de tela, mas a régua
-    # deste teste conta português fora de `_()`, e conta certo: a diferença
-    # entre "texto que a pessoa lê na janela" e "texto que o próximo dev lê no
-    # fonte" não está no dado, e afirmar que está seria pintar o número.
-    # O 19 é honesto; a proporção 19 de 31 é o que a árvore tem.
-    #
-    # AS DUAS PONTAS RECURSIVAS (03/09/2026): 31 viraram 34 e 19 viraram 25, e
-    # os dois números mudam por motivos DIFERENTES — que é justamente o que esta
-    # nota precisa separar.
-    #
-    # O denominador subiu por trabalho novo: `perfis_web.py` e o pacote
-    # `jogar/` (`__init__.py` e `painel.py`) nasceram em 30/08/2026. Nenhum
-    # deles importa a função de tradução, então a piora é real e não de medição.
-    #
-    # O numerador subiu por CORREÇÃO DE MEDIÇÃO, e ela é a lição do dia: a cura
-    # de 22/08 — trocar `glob` por `rglob` porque o pacote `config/` sumira do
-    # mapa — foi aplicada só ao denominador. O numerador continuou lendo um
-    # nível só, então mediu-se por doze dias uma população contra outra. Os
-    # cinco que faltavam somam 46 literais, e o maior deles, `jogar/painel.py`,
-    # tem 37 sozinho: um pacote inteiro nasceu escrevendo português cru e não
-    # apareceu no número que decide se o convite pode voltar.
-    #
-    # Portanto: dos 19 para os 25, SEIS entram, e um só (`perfis_web.py`) é
-    # regressão de hoje; os outros cinco sempre estiveram lá, invisíveis. As
-    # três páginas passam a publicar 25 de 34.
     assert total == 34, (
         f"`app/actions/` tem {total} módulos, não 34. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
@@ -356,11 +152,6 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
-    # O volume entra como PISO, não como igualdade: 561 é a medição datada de
-    # 07/08/2026, e qualquer edição de frase em qualquer um dos 15 a move. Um
-    # portão que exigisse o número exato reprovaria trabalho alheio inocente e
-    # seria desligado na terceira vez — que é como portão vira decoração. O que
-    # precisa doer é o volume DESABAR, porque aí a premissa mudou.
     assert sum(fora.values()) >= 400, (
         f"os {len(fora)} módulos somam agora {sum(fora.values())} literais "
         "acentuados; "
@@ -401,20 +192,6 @@ def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
         )
     }
 
-    #: O PISO — quem já traduzia e não pode parar. Cresce quando um módulo novo
-    #: entra e alguém quiser prendê-lo aqui.
-    #:
-    #: **ENCOLHEU UMA VEZ, em 23/08/2026, e a razão fica escrita.** O
-    #: `config/mixin.py` saiu daqui porque o único texto de tela que ele tinha
-    #: — o rótulo que explicava a fita de alvo esmaecida — foi REMOVIDO por
-    #: decisão dela: ele empurrava a altura e a largura do cabeçalho e deixava
-    #: a aba Configurações mais larga que as outras dez. Sem texto de tela, o
-    #: `from ... import _` vira import morto, e o `ruff` o reprova.
-    #:
-    #: **A regra continua sendo "nunca encolhe" para o caso que este portão
-    #: existe para pegar:** i18n arrancado de módulo que AINDA põe texto na
-    #: tela. Encolher só é legítimo quando o TEXTO some junto, e a prova é
-    #: mecânica — `grep -c '_('` no módulo tem de devolver zero.
     piso = {
         "config/moldura.py",
         "footer_actions.py",
@@ -437,22 +214,12 @@ def test_os_catalogos_entregues_continuam_no_repositorio() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O portão: enquanto a condição não for satisfeita, o convite não volta.
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "documento",
     [p.relative_to(RAIZ).as_posix() for p in _paginas_que_ensinam()],
 )
 def test_nenhuma_pagina_que_ensina_convida_a_traduzir(documento: str) -> None:
-    """Enquanto houver português cru nas telas, a receita não pode existir.
-
-    Repare no `if not fora: return`: o portão é CONDICIONAL de verdade. Ligado o
-    encanamento, ele libera o convite sozinho — porque a decisão dela foi contra
-    a promessa falsa, não contra traduzir.
-    """
+    """Enquanto houver português cru nas telas, a receita não pode existir."""
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
     if not fora:
         return
@@ -474,11 +241,7 @@ def test_nenhuma_pagina_que_ensina_convida_a_traduzir(documento: str) -> None:
 
 
 def test_a_contributing_diz_o_que_o_convite_perdido_foi_substituido_por() -> None:
-    """Tirar sem explicar é apagar. A página tem de carregar a decisão.
-
-    A decisão é dita sem data: quem contribui precisa saber a regra de hoje,
-    e a data de quando ela foi tomada mora no histórico do git.
-    """
+    """Tirar sem explicar é apagar. A página tem de carregar a decisão."""
     texto = (RAIZ / ".github" / "CONTRIBUTING.md").read_text(encoding="utf-8")
 
     for esperado in (
@@ -490,12 +253,6 @@ def test_a_contributing_diz_o_que_o_convite_perdido_foi_substituido_por() -> Non
             "traduções saiu da página, e o lugar dela é de quem explica a "
             "decisão; senão a próxima pessoa reabre o convite."
         )
-
-
-# ---------------------------------------------------------------------------
-# O critério medido contra si mesmo: sem isto, a metade condicional do portão
-# seria afirmação, não medição.
-# ---------------------------------------------------------------------------
 
 
 def test_o_criterio_reconhece_o_encanamento_ligado(tmp_path: Path) -> None:
@@ -519,12 +276,7 @@ def test_o_criterio_reconhece_o_encanamento_ligado(tmp_path: Path) -> None:
 
 
 def test_o_criterio_enxerga_a_receita_e_ignora_quem_so_fala_de_traducao() -> None:
-    """As quatro marcas mordem a receita; a prosa honesta passa ilesa.
-
-    A segunda metade é a que impede o portão de virar ruído: são frases reais
-    de `docs/usage/integrating-mods.md`, de `README.md` e da própria explicação
-    da decisão. Nenhuma delas é convite, e nenhuma delas pode reprovar.
-    """
+    """As quatro marcas mordem a receita; a prosa honesta passa ilesa."""
     catalogos = {"en", "pt_BR"}
 
     receita = (

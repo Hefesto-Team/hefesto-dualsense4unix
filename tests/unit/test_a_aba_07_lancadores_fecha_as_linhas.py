@@ -75,20 +75,7 @@ def a07():
 
 @pytest.fixture(autouse=True)
 def _a_maquina_nao_entra_na_regua(monkeypatch):
-    """Nenhum teste daqui depende de haver jogo da Steam aberto na máquina.
-
-    O VAZAMENTO, MEDIDO EM 13/09/2026: um gesto que devolvia `VIGIA.agora()`
-    disparava a thread `hefesto-lancadores`, que rodava o `_ler_do_disco` de
-    verdade — e o censo pergunta `steam_game_running()` ao `/proc` real.
-    Quatro testes reprovavam só porque a máquina estava jogando. Os botões
-    daquele vazamento saíram em 21/09/2026; o dublê fica, porque o censo
-    continua perguntando.
-
-    O DUBLÊ VAI NOS DOIS LUGARES, e os dois foram medidos: a sentinela guarda a
-    própria cópia de `steam_game_running` (`from .steam_launch_options import`),
-    e um dublê só em `steam_launch_options` deixa a outra cópia viva. Quem
-    precisa de outro valor sobrescreve no próprio teste.
-    """
+    """Nenhum teste daqui depende de haver jogo da Steam aberto na máquina."""
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -99,12 +86,7 @@ def _a_maquina_nao_entra_na_regua(monkeypatch):
 
 @pytest.fixture(scope="module")
 def linha_do_motor() -> str:
-    """A linha de inicialização, PERGUNTADA ao dono — nunca digitada aqui.
-
-    143 caracteres com aspas, cifrões e `%command%`: digitá-los nesta régua
-    seria a quarta cópia de um literal que já tem dono, e a régua daria verde
-    no dia em que o wrapper mudasse de caminho e a tela ficasse com o antigo.
-    """
+    """A linha de inicialização, PERGUNTADA ao dono — nunca digitada aqui."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import (
         WRAPPER_LAUNCH,
     )
@@ -120,12 +102,7 @@ def ctx():
 
 
 def _fileira(desenho, lida) -> str:
-    """A fileira de botões DO CARTÃO DA STEAM, como a pintura a emite.
-
-    ELA LÊ O VALOR QUE VAI PARA A TELA (`Quadro.valores()["steam-acoes"]`), e
-    não a lista de botões guardada no cartão: um botão que existisse no objeto
-    e sumisse na marcação passaria por uma régua que olhasse só o objeto.
-    """
+    """A fileira de botões DO CARTÃO DA STEAM, como a pintura a emite."""
     return desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()["steam-acoes"]
 
 
@@ -149,22 +126,11 @@ def _em_ordem(desenho, linha: str, **extra):
                            linha=linha, **extra)
 
 
-# --------------------------------------------------------------------------
-# [01] o reparo manual sem caminho — OS DOIS, SÓ QUANDO FAZ FALTA
-# --------------------------------------------------------------------------
-#: O gesto do botão que SAIU em 21/09/2026 — escrito aqui como literal porque o
-#: desenho não tem mais a constante, e a régua cobra que ele não volte.
 COPIAR_QUE_SAIU = 'data-gesto="copiar-a-linha"'
 
 
 def test_o_estado_intocavel_traz_a_linha_a_mostra(desenho, linha_do_motor):
-    """Com jogo intocável, o cartão mostra a linha — e o «Copiar» não volta.
-
-    O BOTÃO SAIU EM 21/09/2026 com os outros botões que só a Steam tinha,
-    palavra dela: *"a ideia é termos os mesmos botões pra todos os lançadores.
-    sempre."* A linha à mostra fica, e é a metade da decisão `07[01]` que a
-    cópia calada nunca garantiu: com ela na tela, um `Ctrl+C` salva o dia.
-    """
+    """Com jogo intocável, o cartão mostra a linha — e o «Copiar» não volta."""
     lida = _com_intocavel(desenho, linha_do_motor)
     corpo = _corpo(desenho, lida)
 
@@ -181,37 +147,19 @@ def test_o_estado_intocavel_traz_a_linha_a_mostra(desenho, linha_do_motor):
 
 
 def test_no_dia_bom_nada_disso_ocupa_a_tela(desenho, linha_do_motor):
-    """Sem jogo intocável, o bloco da linha não nasce — a outra metade da decisão.
-
-    *"No dia bom o cartão fica exatamente como está"*: nos outros estados o
-    vigia (`hefesto-steam-input-guard`) repõe o atalho sozinho.
-    """
+    """Sem jogo intocável, o bloco da linha não nasce — a outra metade da decisão."""
     assert "linha-do-wrapper" not in _corpo(desenho, _em_ordem(desenho, linha_do_motor)), (
         "o bloco da linha apareceu numa biblioteca em ordem")
 
 
 def test_sem_a_linha_o_cartao_cala_em_vez_de_inventar(desenho):
-    """Leitura com intocáveis e SEM linha: nenhum bloco.
-
-    O DESENHO NÃO IMPORTA O PRODUTO — é o que deixa o gerador rodar como script
-    solto —, então a linha chega pelo contrato frio. Sem ela, o bloco mostraria
-    um `<code>` em branco onde a tela promete uma linha para colar.
-    """
+    """Leitura com intocáveis e SEM linha: nenhum bloco."""
     assert "linha-do-wrapper" not in _corpo(desenho, _com_intocavel(desenho, ""))
 
 
 def test_o_produto_enche_a_linha_com_a_constante_do_motor(
         a07, desenho, linha_do_motor, monkeypatch):
-    """`_ler_do_disco` põe `WRAPPER_LAUNCH` na `Leitura` — LIDO, não digitado.
-
-    SEM ESTA RÉGUA o desenho poderia estar perfeito e o botão **nunca nascer na
-    máquina dela**: `lida.linha` ficaria vazia para sempre, o `if` do cartão
-    nunca casaria, e nada acusaria — a forma exata do defeito que esta casa
-    chama de *pintura perdida*.
-
-    O CENSO É DUBLÊ porque o disco desta máquina não tem jogo intocável nenhum,
-    e uma régua que dependesse da biblioteca dela mediria a mesa, não o código.
-    """
+    """`_ler_do_disco` põe `WRAPPER_LAUNCH` na `Leitura` — LIDO, não digitado."""
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 
     censo = types.SimpleNamespace(
@@ -226,31 +174,8 @@ def test_o_produto_enche_a_linha_com_a_constante_do_motor(
         f"que o botão da janela velha copia.")
 
 
-# --------------------------------------------------------------------------
-# [02] a frase que manda a um botão inexistente — UMA FRASE, UM DONO
-# --------------------------------------------------------------------------
 def test_a_aba_nao_escreve_uma_segunda_frase_do_aviso(a07):
-    """O texto do aviso sai de `home_actions`, e esta aba não o redige.
-
-    A DECISÃO `07[02]` DO PO CADUCOU em 05/09, e quem a derrubou foi ELA: a
-    `07-Q2` recusou as três opções oferecidas — só o fato, apontar o Consertar,
-    duas frases — e respondeu com uma quarta, *"O produto aplica ela"*. A frase
-    do dono (`home_actions.WRAPPER_MISSING_TEXT`) diz hoje o fato **mais** a
-    promessa que o produto cumpre, e a ONDA5-07-03 a entregou em 06/09.
-
-    **O QUE ESTA RÉGUA COBRA NÃO MUDOU COM ISSO**, e é por isso que ela
-    sobreviveu à troca sem uma linha nova: ela não conhece a frase — ela
-    PERGUNTA ao dono e compara. Escrever aqui uma segunda redação faria as duas
-    janelas do mesmo produto falarem línguas diferentes, que é exatamente o que
-    a opção *"duas frases, uma por tela"* fazia — e ela foi recusada.
-
-    **O CONTRATO MUDOU EM 13/09/2026 — TELA-CALADA-02.** A palavra dela sobre
-    as frases de status é *"em todas as abas da interface"*, e o cartão deixou
-    de pintar a frase do dono a cada tique: escreve o rótulo de estado
-    `a07.JOGO_ABERTO_SEM_O_ATALHO`. A régua passou a cobrar as duas metades do
-    que sobrou da decisão acima: o dono continua decidindo SE acende, e a aba
-    continua sem uma SEGUNDA REDAÇÃO da frase dele — nem inteira, nem pedaço.
-    """
+    """O texto do aviso sai de `home_actions`, e esta aba não o redige."""
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
     state = {"gamepad_emulation": {"enabled": True, "wrapper_used": False}}
@@ -264,9 +189,6 @@ def test_a_aba_nao_escreve_uma_segunda_frase_do_aviso(a07):
         f"o cartão acendeu sem o rótulo de estado: {aviso!r}")
 
 
-# --------------------------------------------------------------------------
-# [03] de onde o aviso some — AS DUAS RECUSAS CALAM
-# --------------------------------------------------------------------------
 def _state_com_jogo(appid: str) -> dict:
     """O `state` do daemon com um jogo Steam aberto SEM o wrapper.
 
@@ -309,12 +231,7 @@ def test_o_nao_perguntar_continua_calando(a07, desenho):
 
 
 def test_o_jogo_que_ela_nao_recusou_continua_avisando(a07, desenho):
-    """O OUTRO LADO DA RÉGUA: calar demais é pior que não calar.
-
-    Uma régua que só provasse o silêncio ficaria verde sobre um
-    `aviso_do_jogo_aberto` que devolvesse `""` sempre — e o aviso que a aba
-    existe para dar morreria sem ninguém ver.
-    """
+    """O OUTRO LADO DA RÉGUA: calar demais é pior que não calar."""
     lida = desenho.Leitura(recusados=(("70", "Jogo tirado"),),
                            dispensados=(("80", "Jogo dispensado"),))
     aviso, appid = a07.aviso_do_jogo_aberto(_state_com_jogo("90"), lida)
@@ -337,24 +254,8 @@ def test_as_duas_listas_entram_na_conta_dos_calados(a07, desenho):
         "primeira meia volta, antes de o disco ter respondido")
 
 
-# --------------------------------------------------------------------------
-# PASSO 2 — "Este jogo não funciona" SAIU, e a exclusão entrou no lugar
-# --------------------------------------------------------------------------
 def test_o_jogo_nao_funciona_saiu_e_a_exclusao_entrou_no_lugar(a07, desenho):
-    """21/09/2026, o desenho aprovado por ela (OS-LANCADORES-IGUAIS-E-A-LISTA-
-    DE-EXCLUSAO-01): no lugar do «Este jogo não funciona» entrou o «Adicionar à
-    lista de exclusão», nos oito cartões.
-
-    A lista do Steam Input que o botão velho escrevia NÃO é exclusão — ela põe o
-    Hefesto NA FRENTE do jogo (§11 da sprint) —, e continua alcançável pelo chip
-    «Steam Input» da aba Jogar, que escreve a mesma lista jogo por jogo. Os três
-    testes que provavam o gesto velho (a marca no arquivo, a recarga, a recusa
-    sem jogo) saíram com ele; o chip tem os dele em
-    `test_steam_input_01_o_chip_que_acende_por_jogo.py`.
-
-    A MORDIDA: devolva o botão velho à `acoes_do_steam_input` e a primeira linha
-    reprova; tire a `fileira_comum` do cartão da Steam e a segunda reprova.
-    """
+    """21/09/2026, o desenho aprovado por ela (OS-LANCADORES-IGUAIS-E-A-LISTA-"""
     lida = desenho.Leitura(com_wrapper=("620",), instalados=1)
     fileira = desenho.acoes_html(
         a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)[0])
@@ -365,16 +266,6 @@ def test_o_jogo_nao_funciona_saiu_e_a_exclusao_entrou_no_lugar(a07, desenho):
         "nenhuma página oferece")
 
 
-# --------------------------------------------------------------------------
-# PASSO 4 — o lembrete "este jogo ainda não abre pelo atalho do Hefesto"
-#
-# ELE JÁ EXISTIA PELA METADE, e a medição de 06/09/2026 é esta: a aba acendia o
-# aviso desde 03/09 (`aviso_do_jogo_aberto`, do `wrapper_used` do daemon) e
-# calava nas duas recusas dela desde 04/09 — mas **não perguntava pelo MODO**.
-# No Modo Nativo não existe gamepad virtual, logo não há o que duplicar, e a
-# tela avisava assim mesmo. A janela velha nunca teve esse defeito porque a
-# decisão dela é uma função PURA, e a cura foi IMPORTÁ-LA.
-# --------------------------------------------------------------------------
 def _mesa_com_jogo_sem_atalho(**troca):
     """O `state_full` de quem está jogando um jogo Steam SEM o atalho."""
     estado = {
@@ -388,10 +279,6 @@ def _mesa_com_jogo_sem_atalho(**troca):
 @pytest.mark.parametrize(
     ("qual", "estado"),
     [
-        # (b) SEM JOGO STEAM EM FOCO o daemon devolve `None`, e não `False` —
-        # `wrapper_used` é *"o jogo em foco passou pelo atalho?"*, e sem jogo
-        # não há pergunta. Um `False` com a janela do navegador em foco é um
-        # estado que o daemon não produz.
         ("(b) a janela em foco não é jogo Steam",
          {"gamepad_emulation": {"enabled": True, "wrapper_used": None},
           "window_detect_last_class": "firefox"}),

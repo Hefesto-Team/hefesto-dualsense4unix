@@ -1,10 +1,4 @@
-"""Testes dos paths XDG — foco em `ipc_socket_path()`/`ipc_socket_name()` e no
-isolamento automático do socket no modo fake (BUG-FAKE-SOCKET-SYNC-01).
-
-Nota: o `conftest` liga `HEFESTO_DUALSENSE4UNIX_FAKE=1` em todo teste (hermetismo
-sem hardware). Os testes de comportamento de PRODUÇÃO desligam o fake explicitamente
-via `monkeypatch.delenv(FAKE_ENV_VAR)`.
-"""
+"""Testes dos paths XDG — foco em `ipc_socket_path()`/`ipc_socket_name()` e no"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -39,9 +33,6 @@ def runtime_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def producao(monkeypatch: pytest.MonkeyPatch) -> None:
     """Contexto de produção: desliga o fake que o conftest injeta."""
     monkeypatch.delenv(FAKE_ENV_VAR, raising=False)
-
-
-# ---- produção (sem fake) --------------------------------------------------
 
 
 def test_ipc_socket_path_default_sem_env(
@@ -82,17 +73,10 @@ def test_ipc_socket_path_rejeita_nome_vazio(
     assert path.name == IPC_SOCKET_DEFAULT_NAME
 
 
-# ---- fake: isolamento AUTOMÁTICO (BUG-FAKE-SOCKET-SYNC-01) -----------------
-
-
 def test_fake_auto_isola_socket_sem_override(
     runtime_tmp: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    """FAKE=1 sem override → socket fake isolado (NUNCA o de produção).
-
-    Este é o coração do fix: um `daemon start` cru só com FAKE=1 não pode mais
-    sequestrar o socket de produção.
-    """
+    """FAKE=1 sem override → socket fake isolado (NUNCA o de produção)."""
     monkeypatch.setenv(FAKE_ENV_VAR, "1")
     monkeypatch.delenv(IPC_SOCKET_ENV_VAR, raising=False)
     assert ipc_socket_name() == IPC_SOCKET_FAKE_NAME

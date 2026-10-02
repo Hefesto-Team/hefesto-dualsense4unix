@@ -65,12 +65,7 @@ class TestODaemonLembraOQueDecidiu:
     """O laço da luz guarda o ALVO, não o escrito."""
 
     def test_lembra_e_esquece(self) -> None:
-        """MORDIDA: guarde só quando a escrita der certo.
-
-        Sem a posse do byte a luz do plástico não muda, e ainda assim a tela
-        sabe dizer o estado — guardar apenas o escrito deixaria o botão cinza
-        exatamente nos controles em que o Hefesto não tem a posse.
-        """
+        """MORDIDA: guarde só quando a escrita der certo."""
         from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as luz
 
         luz._lembrar_o_estado("aa:bb:cc:00:00:01", luz.PISCANDO)
@@ -79,12 +74,7 @@ class TestODaemonLembraOQueDecidiu:
         assert luz.estado_da_luz_do_mic("aa:bb:cc:00:00:01") is None
 
     def test_quem_nunca_foi_decidido_e_nao_sei(self) -> None:
-        """MORDIDA: devolva `APAGADA` em vez de `None` para quem não está lá.
-
-        `APAGADA` é uma afirmação — *"medi, e está mudo"*. Para um controle que
-        acabou de chegar isso pinta o botão de cinza-mudo com a mesma cara de
-        quem foi medido, e a tela perde o terceiro estado que ela tem hoje.
-        """
+        """MORDIDA: devolva `APAGADA` em vez de `None` para quem não está lá."""
         from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as luz
 
         assert luz.estado_da_luz_do_mic("ff:ff:ff:00:00:ff") is None
@@ -98,21 +88,13 @@ class TestOGeradorPinta:
         return ABA02.read_text(encoding="utf-8")
 
     def test_o_botao_tem_endereco(self) -> None:
-        """MORDIDA: tire o `data-campo` do 🎙.
-
-        Sem endereço o pacote escreve no vazio: o campo sai a cada tique e a
-        tela não muda — um botão que promete três estados e tem um.
-        """
+        """MORDIDA: tire o `data-campo` do 🎙."""
         fonte = self._fonte()
         assert 'data-campo="mic-retorno"' in fonte
         assert 'data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}"' in fonte
 
     def test_as_duas_regras_sao_verdes_e_nao_vermelhas(self) -> None:
-        """MORDIDA: troque `--green` por `--red`.
-
-        `--red` é a cor da FALHA nesta casa, e um microfone no ar não é falha.
-        Foi por isso — entre outras — que o `.mudo-i.on` caiu em 06/09.
-        """
+        """MORDIDA: troque `--green` por `--red`."""
         fonte = self._fonte()
         trecho = fonte[fonte.index("O 🎙 EM TRÊS ESTADOS"):]
         trecho = trecho[: trecho.index('"""')]

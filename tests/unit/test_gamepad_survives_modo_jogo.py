@@ -1,18 +1,4 @@
-"""FEAT-DSX-GAMEPAD-ALWAYS-LIVE-01 — o gamepad virtual continua recebendo input
-mesmo com o daemon PAUSADO (daemon.pause) e/ou em MODO JOGO (supressão), senão o
-controle morre no jogo.
-
-Regressão de "o controle não funciona no jogo mesmo com gatilhos/cores aplicados":
-o forward do gamepad virtual estava DENTRO dos dois gates de emulação de DESKTOP
-no poll loop — `_paused` (via o `continue` do gate de pausa/grace, antes do
-dispatch) e `_emulation_suppressed` (via `emu_active`). Como o controle físico
-fica EVIOCGRAB-grabado quando o gamepad está ligado (fonte única), congelar o
-virtual deixava o jogo sem ver NADA: real escondido + virtual mudo. Pior, a pausa
-persistia em disco e o daemon renascia pausado no boot.
-
-Estes testes provam que o gamepad é despachado mesmo sob pausa/supressão, e que o
-mouse/teclado de desktop continuam corretamente suspensos.
-"""
+"""FEAT-DSX-GAMEPAD-ALWAYS-LIVE-01 — o gamepad virtual continua recebendo input"""
 from __future__ import annotations
 
 import asyncio
@@ -56,9 +42,7 @@ def _config() -> DaemonConfig:
 async def _run_with_gates(
     monkeypatch: pytest.MonkeyPatch, *, paused: bool, suppressed: bool
 ) -> tuple[MagicMock, MagicMock]:
-    """Sobe o poll loop com gamepad + teclado mockados, liga os gates pedidos
-    DEPOIS do grace, e devolve (gamepad_mock, keyboard_mock) com os mocks zerados
-    no momento em que os gates foram aplicados (mede só o regime gateado)."""
+    """Sobe o poll loop com gamepad + teclado mockados, liga os gates pedidos"""
     monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)
     fc = FakeController(transport="usb", states=_mk_states(2000))
     mock_evdev = MagicMock()
@@ -73,14 +57,14 @@ async def _run_with_gates(
     daemon._keyboard_device = kbd
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.05)  # passa o grace, despacha em regime normal
+    await asyncio.sleep(0.05)
     if suppressed:
         daemon.set_emulation_suppressed(True)
     if paused:
         daemon.pause()
     gp.reset_mock()
     kbd.reset_mock()
-    await asyncio.sleep(0.06)  # mede o regime gateado
+    await asyncio.sleep(0.06)
     daemon.stop()
     await run_task
     return gp, kbd
@@ -111,8 +95,7 @@ async def test_gamepad_vivo_sob_pause_e_suppress(
 
 @pytest.mark.asyncio
 async def test_gamepad_respeita_grace_period(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O gamepad NÃO deve despachar durante o grace-period (anti-ghost-input):
-    a imunidade a pause/suppress não pode furar o settling pós-conexão."""
+    """O gamepad NÃO deve despachar durante o grace-period (anti-ghost-input):"""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 10.0
     )
@@ -127,7 +110,7 @@ async def test_gamepad_respeita_grace_period(monkeypatch: pytest.MonkeyPatch) ->
     daemon._gamepad_device = gp
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.06)  # bem dentro do grace de 10s
+    await asyncio.sleep(0.06)
     daemon.stop()
     await run_task
     assert gp.forward_buttons.call_count == 0, (

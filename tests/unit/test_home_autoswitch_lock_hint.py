@@ -27,10 +27,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_autoswitch_lock_hint: importa código da janela GTK")
 
 import sys
@@ -55,7 +51,6 @@ class TestDecisaoPura:
         assert autoswitch_lock_text({"connected": True}) == ""
 
     def test_offline_nao_diz_nada(self) -> None:
-        # Offline não é "destravado", é "não sei" — e a aba apaga a frase.
         assert autoswitch_lock_text(None) == ""
 
     def test_travado_explica_a_causa(self) -> None:
@@ -63,8 +58,7 @@ class TestDecisaoPura:
         assert "não troca sozinho" in texto
 
     def test_travado_nomeia_o_perfil_que_ficou(self) -> None:
-        """'o perfil não troca sozinho' sem dizer QUAL perfil é meia
-        informação — é o perfil que ela precisa reconhecer na aba Perfis."""
+        """'o perfil não troca sozinho' sem dizer QUAL perfil é meia"""
         texto = autoswitch_lock_text(
             {"freestyle_ligado": True, "active_profile": "vitoria"}
         )
@@ -78,12 +72,7 @@ class TestDecisaoPura:
         assert "None" not in texto
 
     def test_diz_que_nem_o_jogo_troca(self) -> None:
-        """Ligado, o Freestyle vale também no jogo (D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA).
-
-        A frase de antes prometia que *"jogos com perfil próprio ainda
-        entram"*: com a LOCK-CEDE-01 revogada, ela afirmaria o contrário do
-        produto. MORDIDA: devolva a frase velha e as duas linhas reprovam.
-        """
+        """Ligado, o Freestyle vale também no jogo (D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA)."""
         texto = autoswitch_lock_text({"freestyle_ligado": True})
         assert "nem no jogo" in texto
         assert "perfil próprio" not in texto
@@ -91,11 +80,6 @@ class TestDecisaoPura:
     def test_payload_torto_nao_vira_frase(self) -> None:
         for torto in (0, "", [], {}):
             assert autoswitch_lock_text({"freestyle_ligado": torto}) == ""
-
-
-# ---------------------------------------------------------------------------
-# O GTK de mentira que MONTA a aba — e a única regra dele que importa aqui
-# ---------------------------------------------------------------------------
 
 
 class _EstiloFalso:
@@ -112,16 +96,7 @@ class _EstiloFalso:
 
 
 class _WidgetFalso:
-    """Widget de mentira que obedece à REGRA do ``gtk_widget_show_all``.
-
-    A regra é uma só, e é a que a aba depende: ``show_all()`` num widget com
-    ``no-show-all`` ligado **não faz nada** — nem nele, nem nos filhos dele
-    (`gtk_widget_show_all`: ``if (gtk_widget_get_no_show_all (widget)) return;``).
-    Sem ela, o `show_all()` do fim do `install_home_tab` acenderia o rótulo do
-    cadeado, e a aba nasceria com uma linha de texto vazia ocupando espaço.
-
-    Nasce INVISÍVEL, como todo widget GTK antes do primeiro ``show``.
-    """
+    """Widget de mentira que obedece à REGRA do ``gtk_widget_show_all``."""
 
     def __init__(self, label: str | None = None, **_kwargs: object) -> None:
         self.label = label
@@ -136,7 +111,6 @@ class _WidgetFalso:
         self.handlers: list[tuple[str, Any]] = []
         self.items: list[tuple[str, str]] = []
 
-    # --- leitura ---------------------------------------------------------
     def get_style_context(self) -> _EstiloFalso:
         return self.style
 
@@ -152,7 +126,6 @@ class _WidgetFalso:
     def get_active_id(self) -> str | None:
         return self.active_id
 
-    # --- escrita ---------------------------------------------------------
     def set_text(self, texto: str) -> None:
         self.label = texto
 
@@ -190,21 +163,11 @@ class _WidgetFalso:
         self.visible = False
 
     def __getattr__(self, nome: str) -> Any:
-        """Qualquer OUTRO ajuste de layout é no-op — e isso é deliberado.
-
-        `set_xalign`, `set_line_wrap`, `set_max_width_chars`, `set_margin_*`:
-        nenhum deles muda o que esta medida observa (texto e visibilidade), e
-        um dublê que quebrasse a cada propriedade nova que a aba ganhasse
-        seria a mesma fragilidade que esta entrega veio tirar. O que ele MEDE
-        está declarado explicitamente acima; leitura (`get_*`) continua
-        levantando `AttributeError`, porque ali um silêncio viraria medida
-        falsa.
-        """
+        """Qualquer OUTRO ajuste de layout é no-op — e isso é deliberado."""
         if nome.startswith(("set_", "add_", "queue_", "override_")):
             return lambda *_args, **_kwargs: None
         raise AttributeError(nome)
 
-    # --- árvore ----------------------------------------------------------
     def pack_start(self, filho: _WidgetFalso, *_args: object) -> None:
         self.children.append(filho)
 
@@ -229,34 +192,19 @@ class _WidgetFalso:
 
 
 class _JanelaFalsa(HomeActionsMixin):
-    """A janela real, com os handlers reais — só o toolkit é de mentira.
-
-    Herda o mixin inteiro (e não copia método por método) por dois motivos: os
-    `connect` do build precisam dos handlers de verdade existindo, e um dublê
-    parcial esconderia exatamente o defeito que estes testes procuram — uma
-    chamada que sumiu do `install_home_tab`/`_render_home`.
-    """
+    """A janela real, com os handlers reais — só o toolkit é de mentira."""
 
     def __init__(self) -> None:
         self.tab_home_box = _WidgetFalso()
         self.timeouts: list[tuple[int, Any]] = []
 
     def _get(self, widget_id: str) -> Any:
-        # Só a caixa da aba vem do Glade neste dublê; os widgets opcionais
-        # (co-op) são ausência LEGÍTIMA — o `install_home_tab` a tolera de
-        # propósito, e é essa tolerância que o dublê exercita.
         return self.tab_home_box if widget_id == "tab_home_box" else None
 
 
 @pytest.fixture()
 def gtk_de_mentira(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Planta `gi.repository` e o seletor segmentado, os dois de mentira.
-
-    O seletor entra na lista porque a régua tem de declarar contra o que mede:
-    `segmented_selector` decide na IMPORTAÇÃO se é a subclasse de `Gtk.Box` ou
-    o stub puro, e o teste não pode depender de haver PyGObject real no
-    processo — nem instanciar um `Gtk.Box` de verdade sem display.
-    """
+    """Planta `gi.repository` e o seletor segmentado, os dois de mentira."""
     repo = types.ModuleType("gi.repository")
     repo.Gtk = types.SimpleNamespace(  # type: ignore[attr-defined]
         Label=_WidgetFalso,
@@ -294,12 +242,7 @@ class TestFiacaoNaAbaInicio:
     def test_render_home_consome_a_funcao_pura(
         self, aba: _JanelaFalsa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O rótulo diz o que a FUNÇÃO PURA decidiu, não o que a aba inventou.
-
-        O dublê entra pelo `__name__` da própria função — de propósito. Congelar
-        o nome numa string é o que fazia este teste reprovar um `rename` que não
-        muda comportamento nenhum (TESTE-HONESTO-01/E3).
-        """
+        """O rótulo diz o que a FUNÇÃO PURA decidiu, não o que a aba inventou."""
         estado = {"freestyle_ligado": True, "active_profile": "vitoria"}
         espiao = MagicMock(return_value="FRASE-DO-CADEADO")
         monkeypatch.setattr(home_actions, autoswitch_lock_text.__name__, espiao)
@@ -341,12 +284,7 @@ class TestFiacaoNaAbaInicio:
     def test_o_rotulo_nasce_invisivel_e_o_show_all_do_build_nao_o_acende(
         self, aba: _JanelaFalsa
     ) -> None:
-        """Mesmo desenho dos banners de vpad/wrapper.
-
-        O `install_home_tab` termina com `box.show_all()`. Sem o `no-show-all`
-        no rótulo, esse `show_all` acende uma linha VAZIA no meio do frame — e
-        desfaz, no ato do build, o que o `_render_home` mandaria depois.
-        """
+        """Mesmo desenho dos banners de vpad/wrapper."""
         rotulo = aba._home_autoswitch_lock_hint
 
         assert rotulo.visible is False
@@ -390,7 +328,6 @@ class TestEstadoDoDaemonCarregaOCampo:
             assert "active_profile" in payload, f"{nome} não expõe o perfil ativo"
             assert payload["freestyle_ligado"] is True, nome
             assert payload["active_profile"] == "vitoria", nome
-            # E o fecho: com esse payload, a aba TEM frase para mostrar.
             assert "vitoria" in autoswitch_lock_text(payload), nome
 
     @pytest.mark.asyncio

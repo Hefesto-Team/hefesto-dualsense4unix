@@ -1,13 +1,4 @@
-"""Fixtures compartilhadas entre testes unit e integration.
-
-Além das fixtures, este arquivo hospeda a GUARDA-GI-REAL-01 — a resposta ao
-defeito medido em 28/07: ``pytest.importorskip("gi")`` é DERROTADO por poluição
-de ``sys.modules``. Vinte e um arquivos de teste plantam um ``gi`` falso (com
-``Gtk.Box = object``) no nível de módulo; quem vem depois na ORDEM ALFABÉTICA
-importa esse falso, o ``importorskip`` não pula, e centenas de testes de
-interface reportam PASSED contra um GTK de mentira. Cobertura falsa é pior do
-que cobertura ausente. Ver ``exigir_gi_real`` e ``pytest_collectstart`` abaixo.
-"""
+"""Fixtures compartilhadas entre testes unit e integration."""
 
 import atexit
 import contextlib
@@ -30,31 +21,6 @@ from typing import Any
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# SRC-DESTA-ARVORE-01 — a suíte mede o código DESTA árvore, não o de outra
-# ---------------------------------------------------------------------------
-#
-# MEDIDO EM 04/09/2026, numa árvore de integração, e a conta foi cara: doze
-# lotes inteiros mediram o `src/` de OUTRA cópia do repositório.
-#
-# O caminho é banal e por isso passa despercebido: qualquer venv do projeto tem
-# o pacote instalado em modo editável, e o `.pth` dela aponta para o `src/` da
-# árvore onde a venv nasceu. Chamar `<venv-de-lá>/bin/python -m pytest` aqui
-# roda os TESTES daqui contra o PRODUTO de lá. Não dá erro; dá `ImportError` de
-# símbolo novo e `AttributeError` de atributo novo — que se leem como
-# *"o agente não terminou"*, quando o que houve foi o teste nunca ter visto o
-# código que ele testa.
-#
-# O `portoes.sh` já sofria disto e apenas AVISAVA ("PYTHONPATH (vazio) --
-# armadilha"). Aviso não é cura: ninguém lê o cabeçalho de um comando que
-# termina verde.
-#
-# Aqui a cura é estrutural e não depende de ninguém lembrar de nada: o
-# `conftest.py` sabe em que árvore ele mesmo está, e põe o `src/` dessa árvore
-# na FRENTE do `sys.path`. Viaja pelo git para toda árvore de agente.
-#
-# **Antes de tudo no módulo, de propósito** — os módulos de teste importam o
-# produto na coleta, que é depois disto e nunca antes.
 _RAIZ_DESTA_ARVORE = Path(__file__).resolve().parents[1]
 _SRC_DESTA_ARVORE = _RAIZ_DESTA_ARVORE / "src"
 if _SRC_DESTA_ARVORE.is_dir():
@@ -62,104 +28,25 @@ if _SRC_DESTA_ARVORE.is_dir():
     while _caminho in sys.path:
         sys.path.remove(_caminho)
     sys.path.insert(0, _caminho)
-    # Os subprocessos que a suíte dispara (há dezenas) herdam a mesma escolha.
     _antes = os.environ.get("PYTHONPATH", "")
     if _caminho not in _antes.split(os.pathsep):
         os.environ["PYTHONPATH"] = (
             _caminho + (os.pathsep + _antes if _antes else "")
         )
 
-# ---------------------------------------------------------------------------
-# SUITE-SEM-COR-01 — a suíte não pode depender do terminal de quem a roda
-# ---------------------------------------------------------------------------
-#
-# MEDIDO EM 22/08/2026, rodando a suíte inteira: **nove testes de CLI reprovam
-# ou passam conforme o TERMINAL**. Os testes comparam a saída dos comandos
-# (`'[ OK ]' in resultado`, `json.loads(resultado)`), o `rich` decide colorir na
-# CONSTRUÇÃO do `Console()` — que acontece no import de cada `cli/cmd_*.py` —, e
-# aí o texto vem com sequências ANSI no meio. `\x1b[36mControle` não contém
-# `Controle 2 — BT`, e o `json.loads` de uma linha colorida levanta.
-#
-# O gatilho aqui foi `FORCE_COLOR=3`, que o terminal do agente exporta. Podia
-# ter sido qualquer coisa: a precedência do `rich` é `FORCE_COLOR` acima de
-# `NO_COLOR`, então nem desligar a cor pelo caminho normal resolve — é preciso
-# TIRAR a variável.
-#
-# Isso é a família "o instrumento mente mais que o produto", e a mentira mais
-# cara possível: a suíte que reprova na máquina de quem trabalha e passa no CI
-# ensina a ignorar a suíte. O produto não tem defeito nenhum aqui.
-#
-# **No topo do módulo, e antes de qualquer import do produto, de propósito.**
-# Uma fixture — mesmo `autouse` e de sessão — roda DEPOIS da coleta, e a coleta
-# já importou os `cmd_*.py`. Um `Console()` já construído não relê o ambiente.
 os.environ.pop("FORCE_COLOR", None)
 os.environ.setdefault("NO_COLOR", "1")
 
-# ---------------------------------------------------------------------------
-# TELA-DELA-01 — nenhuma janela de teste nasce na tela dela. NUNCA.
-# ---------------------------------------------------------------------------
-#
-# MEDIDO EM 04/09/2026, e reportado por ELA duas vezes no mesmo dia:
-# *"segue tudo abrindo na Meow ao invés da OS"*.
-#
-# A causa não era o workspace. Era este arquivo: o `conftest.py` **não desviava
-# a tela**. Rodando a suíte na máquina dela o ambiente é
-#
-#     DISPLAY=:1   WAYLAND_DISPLAY=wayland-1   GDK_BACKEND=wayland,x11
-#
-# — a sessão VIVA. E há mais de vinte arquivos de teste que constroem
-# `Gtk.Window(...)` e chamam `show_all()`. Cada um deles abria uma janela de
-# verdade, no compositor de verdade, no workspace que estivesse na frente —
-# que é o dela. Ela tem UMA tela; janela que nasce nela quebra o trabalho dela.
-#
-# Nenhum script de workspace resolve isto: o `park` desses scripts
-# move uma janela DEPOIS de ela existir, e a suíte abre e fecha centenas em
-# segundos. A cura tem de ser ANTES — a janela não pode ter para onde nascer.
-#
-# Por isso a suíte sobe um **Xvfb próprio** e aponta o GTK para ele, tirando
-# `WAYLAND_DISPLAY` do caminho. É também o que o CI já faz, então isto APROXIMA
-# o local do CI em vez de afastar.
-#
-# **No topo do módulo, e antes de qualquer import do produto, de propósito** —
-# a mesma razão do bloco acima: uma fixture roda depois da coleta, e a coleta
-# já importou os módulos que abrem `Gtk.init`.
-#
-# ESCAPE, explícito e com nome: `HEFESTO_NA_TELA=1` deixa a suíte usar a
-# sessão viva. Existe para quem PRECISA ver a janela — e é opt-in porque o
-# padrão seguro tem de ser o que não custa o trabalho dela.
 
-# A implementação é UMA SÓ, e vive no pacote: os instrumentos de `scripts/`
-# chamam a mesma função (TELA-DELA-02). Duas cópias da mesma guarda seriam duas
-# guardas a divergir — e uma delas subiria um segundo Xvfb por cima do outro,
-# que foi exatamente o que a régua de cobertura pegou ao nascer.
 from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
 
 garantir_tela_de_mentira(anunciar=False)
 
-# ---------------------------------------------------------------------------
-# A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — nenhum aviso de teste chega à tela dela.
-# ---------------------------------------------------------------------------
-#
-# Ela, 25/09/2026, com a foto: três «Teclado na tela aberto pelo L3.» na tela
-# dela às 20h18, com o daemon dela calado. Era a suíte: o `notify` falava com
-# o `org.freedesktop.Notifications` da SESSÃO dela, e a janela de mentira acima
-# não alcança o barramento. Quem recusa é o próprio `notify`, com a suíte no ar
-# (`integrations/desktop_notifications._a_suite_esta_rodando`): lá passam todos
-# os chamadores, inclusive o `from … import notify` da bandeja.
-#
-# O papel DESTE arquivo é o escape: `HEFESTO_AVISO_DE_VERDADE=1` devolve o
-# caminho inteiro a quem declara, e ele só vale escrito DENTRO do teste, com
-# `monkeypatch` e o barramento dublado. Herdado do terminal de quem roda a
-# suíte, ele mandaria de novo cada L3 da suíte para a tela dela — então sai.
 os.environ.pop("HEFESTO_AVISO_DE_VERDADE", None)
 
-# ---------------------------------------------------------------------------
-# GUARDA-GI-REAL-01 — o `gi` do processo é o de verdade, ou é um stub?
-# ---------------------------------------------------------------------------
 
-#: Nomes de módulo que os stubs de teste plantam em ``sys.modules``.
 _PREFIXO_GI = "gi"
 
 
@@ -169,40 +56,25 @@ def _e_modulo_gi(nome: str) -> bool:
 
 
 def _gtk_e_real(gtk: Any) -> bool:
-    """True quando ``gtk`` expõe widgets de VERDADE, não os do stub.
-
-    O stub canônico dos testes faz ``Gtk.Box = object`` — passa em qualquer
-    ``hasattr``, e é justamente por isso que ``importorskip`` não o pega. Aqui
-    o critério é o que distingue os dois: no PyGObject real ``Gtk.Box`` é uma
-    classe própria (``gi.overrides.Gtk.Box``), nunca o ``object`` embutido.
-    """
+    """True quando ``gtk`` expõe widgets de VERDADE, não os do stub."""
     caixa = getattr(gtk, "Box", None)
     if caixa is None or caixa is object:
         return False
     if not isinstance(caixa, type):
         return False
-    # `types.ModuleType` puro (o stub) nunca tem `ListStore` E `Box` reais ao
-    # mesmo tempo; o real tem os dois.
     lista = getattr(gtk, "ListStore", None)
     return lista is not None and lista is not object
 
 
 def gi_real_no_processo() -> bool:
-    """True quando o ``gi`` JÁ CARREGADO neste processo é o PyGObject real.
-
-    Devolve False tanto para "não há ``gi``" quanto para "há um stub plantado
-    por outro arquivo de teste" — é esta segunda resposta que o
-    ``pytest.importorskip("gi")`` erra.
-    """
+    """True quando o ``gi`` JÁ CARREGADO neste processo é o PyGObject real."""
     modulo_gi = sys.modules.get(_PREFIXO_GI)
     if modulo_gi is None:
         return False
-    # `types.ModuleType("gi")` nasce com `__spec__` None; o pacote real tem um.
     if getattr(modulo_gi, "__spec__", None) is None:
         return False
     gtk = sys.modules.get("gi.repository.Gtk")
     if gtk is None:
-        # O `gi` é real e o Gtk ainda não foi carregado — nada a reprovar.
         return True
     return _gtk_e_real(gtk)
 
@@ -220,15 +92,6 @@ def _remover_gi_do_processo() -> list[str]:
     return removidos
 
 
-#: Fotografia dos módulos ``gi*`` REAIS, mantida em dia enquanto o processo tem
-#: o PyGObject de verdade carregado.
-#:
-#: Ela existe por uma razão medida: NÃO se desfaz um stub simplesmente apagando
-#: o ``gi`` e deixando o próximo módulo reimportar. O PyGObject registra tipos
-#: no GObject na primeira importação, e a segunda estoura
-#: ``RuntimeError: Unable to register enum 'PyGLibUserDirectory'`` — na máquina
-#: da mantenedora isso derrubou 66 testes e 39 coletas de uma vez. Devolver os
-#: MESMOS objetos de módulo não reimporta nada e não registra nada de novo.
 _FOTO_GI_REAL: dict[str, Any] = {}
 
 
@@ -249,16 +112,7 @@ def _restaurar_gi_real_da_foto() -> bool:
 
 
 def _sondar_gtk_do_ambiente() -> tuple[bool, bool]:
-    """Pergunta a um SUBPROCESSO limpo o que o ambiente tem de GTK.
-
-    Devolve ``(gi_real_disponivel, response_type_presente)``.
-
-    Roda fora do processo de propósito: importar o Gtk aqui, no conftest
-    (avaliado cedo, na coleta), competiria com a versão que outro teste já
-    carregou — o repo mistura Gtk 3.0 (produção) e 4.0 (fixtures), e
-    "Namespace already loaded" derruba a coleta inteira. O subprocesso não tem
-    esse estado e responde só as duas perguntas que importam.
-    """
+    """Pergunta a um SUBPROCESSO limpo o que o ambiente tem de GTK."""
     import subprocess
 
     codigo = (
@@ -295,13 +149,8 @@ def _sondar_gtk_do_ambiente() -> tuple[bool, bool]:
     return (saida[0] == "1", saida[1] == "1")
 
 
-#: Medido UMA vez, na importação do conftest (o subprocesso é barato).
 GI_REAL_DISPONIVEL, _GTK_RESPONSE_TYPE_PRESENTE = _sondar_gtk_do_ambiente()
 
-#: Quando ligado, "pular por falta de GTK real" vira REPROVAÇÃO. É o que o job
-#: dedicado do CI (com `python3-gi` + typelibs + Xvfb) usa: lá, um pulo é um
-#: defeito de ambiente disfarçado de sucesso, e o pulo silencioso é metade do
-#: problema que esta guarda existe para curar.
 EXIGE_GTK_REAL = os.environ.get("HEFESTO_EXIGE_GTK_REAL") == "1"
 
 _MOTIVO_SEM_GI = (
@@ -309,20 +158,15 @@ _MOTIVO_SEM_GI = (
     "teste). Instale python3-gi + gir1.2-gtk-3.0 para exercitar a interface."
 )
 
-#: Marker reusável: pula quando o GTK do ambiente não expõe os enums de widget.
 skip_sem_gtk_response = pytest.mark.skipif(
     not _GTK_RESPONSE_TYPE_PRESENTE,
     reason="Gtk.ResponseType indisponível (GTK parcial — CI headless)",
 )
 
-#: Marker reusável: pula quando não há PyGObject REAL. Substitui, com critério
-#: honesto, o ``pytest.importorskip("gi")`` — que aceita o stub.
 skip_sem_gi_real = pytest.mark.skipif(not GI_REAL_DISPONIVEL, reason=_MOTIVO_SEM_GI)
 
-#: Módulos que pularam por falta de GTK real, para o resumo alto no fim do run.
 _MODULOS_PULADOS_SEM_GI: list[str] = []
 
-#: Módulos cujo `gi` FALSO foi retirado antes da importação do módulo seguinte.
 _MODULOS_DESPOLUIDOS: list[str] = []
 
 
@@ -339,26 +183,11 @@ def _carregar_gi_real() -> None:
 
 
 def exigir_gi_real(motivo: str = "") -> None:
-    """Guarda de nível de módulo: exige o PyGObject REAL, reprovando o stub.
-
-    Use no lugar de ``pytest.importorskip("gi")`` em todo módulo de teste que
-    só faz sentido contra o GTK de verdade. A diferença é o critério:
-
-    - ``importorskip("gi")`` pergunta "``import gi`` funciona?" — e um stub
-      plantado por OUTRO arquivo de teste responde que sim;
-    - ``exigir_gi_real()`` pergunta "o ``Gtk`` deste processo tem widgets de
-      verdade?" — e o stub (``Gtk.Box = object``) reprova.
-
-    Quando há stub carregado mas o AMBIENTE tem PyGObject real, a função limpa
-    o stub em vez de pular: quem mentiu foi o arquivo anterior, e a máquina de
-    desenvolvimento não pode perder centenas de testes por causa disso.
-    """
+    """Guarda de nível de módulo: exige o PyGObject REAL, reprovando o stub."""
     if gi_real_no_processo():
         return
 
     if GI_REAL_DISPONIVEL:
-        # Ambiente bom, processo envenenado: devolve os módulos reais (a foto)
-        # ou, se ainda não há foto, importa o PyGObject pela primeira vez.
         if not _restaurar_gi_real_da_foto():
             _remover_gi_do_processo()
             _carregar_gi_real()
@@ -381,13 +210,7 @@ def instalar_stubs_gi(
     *,
     widgets: tuple[str, ...] = (),
 ) -> types.ModuleType:
-    """Planta stubs de ``gi`` ISOLADOS, desfeitos ao fim do escopo do monkeypatch.
-
-    Alternativa ao ``sys.modules["gi"] = ...`` cru: o ``monkeypatch.setitem``
-    devolve ``sys.modules`` ao estado anterior no teardown, então a poluição
-    não vaza para o arquivo seguinte. Devolve o módulo ``gi.repository.Gtk``
-    plantado, para o chamador acrescentar o que faltar.
-    """
+    """Planta stubs de ``gi`` ISOLADOS, desfeitos ao fim do escopo do monkeypatch."""
     gi_mod = types.ModuleType("gi")
     gi_mod.require_version = lambda *_a, **_kw: None  # type: ignore[attr-defined]
     repo_mod = types.ModuleType("gi.repository")
@@ -402,22 +225,7 @@ def instalar_stubs_gi(
 
 
 def pytest_collectstart(collector: Any) -> None:
-    """Impede que o ``gi`` FALSO de um arquivo vaze para o arquivo seguinte.
-
-    Este é o coração da GUARDA-GI-REAL-01. A importação dos módulos de teste
-    acontece toda na COLETA, antes de qualquer fixture rodar — por isso
-    nenhuma fixture (nem ``monkeypatch``) chega a tempo de desfazer o plantio
-    antes do próximo arquivo ser importado. Este hook chega: ele roda logo
-    antes de cada módulo ser importado.
-
-    Regra: se o ``gi`` carregado for REAL, não se mexe (é o estado desejado) e
-    a fotografia dos módulos reais fica em dia. Se for um STUB, ele sai — pela
-    fotografia, quando existe (máquina com GTK: o módulo seguinte recebe o
-    PyGObject de verdade, sem reimportar nada), ou apagado (CI sem GTK: o
-    módulo seguinte decide sozinho — importa, planta o próprio stub, ou pula).
-    O que ele NÃO faz mais é herdar a mentira de quem veio antes por acaso da
-    ordem alfabética.
-    """
+    """Impede que o ``gi`` FALSO de um arquivo vaze para o arquivo seguinte."""
     if not isinstance(collector, pytest.Module):
         return
     if gi_real_no_processo():
@@ -453,15 +261,7 @@ def _falta_o_gtk(erro: BaseException | None) -> bool:
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item: Any, call: Any) -> Any:
-    """Sem o GTK real, o teste que precisa dele PULA com o motivo, e não reprova.
-
-    27/09/2026: o `lint-test` do CI roda sem PyGObject, e dois mil testes das
-    páginas reprovavam com `No module named 'gi'`, porque o gerador das páginas
-    alcança módulos do GTK. Marcar arquivo a arquivo (`exigir_gi_real`) cobria
-    sete de cento e cinquenta. A regra é uma só: o que falha pela falta do GTK
-    vira pulo, entra no resumo da GUARDA-GI-REAL-01, e roda no job com o GTK
-    real, onde `HEFESTO_EXIGE_GTK_REAL=1` desliga esta regra e o pulo reprova.
-    """
+    """Sem o GTK real, o teste que precisa dele PULA com o motivo, e não reprova."""
     resultado = yield
     if GI_REAL_DISPONIVEL or EXIGE_GTK_REAL or call.excinfo is None:
         return
@@ -483,22 +283,7 @@ def pytest_runtest_setup(item: Any) -> None:
 
 
 def pytest_report_header(config: Any) -> list[str]:
-    """Diz, no cabeçalho do run, contra QUAL GTK a suíte vai rodar.
-
-    E — LUZ-CEGA-01/E8, 25/08/2026 — quantos endereços de FIXTURE já moram no
-    `config_dir()` REAL antes de a suíte começar. É o `--casa` do
-    `scripts/check_faixa_sintetica.py` ganhando o chamador que ele nunca teve:
-    `scripts/portoes.sh` só roda o `--arvore`, e o `~/.config` de verdade não
-    era olhado por instrumento nenhum em estado PARADO — só o DELTA da
-    FAIXA-NO-BERCO-01 o olhava, e delta é cego para a sujeira que já estava lá.
-    Foi essa cegueira que deixou quatro endereços forjados morarem na fila dela
-    de 22/08 a 25/08.
-
-    RELATO, nunca portão, e a razão é a mesma que o cabeçalho do script já
-    escreve: a decisão sobre o que JÁ está gravado é de quem é dono da máquina.
-    Um vermelho que ninguém pode limpar hoje é um vermelho que se aprende a
-    desligar.
-    """
+    """Diz, no cabeçalho do run, contra QUAL GTK a suíte vai rodar."""
     estado = "REAL (python3-gi + typelibs)" if GI_REAL_DISPONIVEL else "AUSENTE"
     extra = " | HEFESTO_EXIGE_GTK_REAL=1 (pulo vira reprovação)" if EXIGE_GTK_REAL else ""
     linhas = [f"guarda-gi-real-01: PyGObject {estado}{extra}"]
@@ -541,87 +326,26 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
         )
 
 
-# ---------------------------------------------------------------------------
-# CANARIO-FS-01 — a suíte escreveu no ~/.config DELA?
-# ---------------------------------------------------------------------------
-# O PORQUÊ, medido em 04/08/2026: os perfis dela foram encontrados corrompidos
-# e a pergunta que ficou sem resposta foi "como sabemos se algum TESTE corrompeu
 # algo?". A fixture `_hefesto_fake_env` isola os diretórios XDG — mas NÃO isola
-# o ``HOME``, e há constantes de módulo avaliadas na IMPORTAÇÃO que apontam para
-# arquivos reais dela por ``Path.home()``:
-#
-#   - `integrations/storm_doctor.py` (_ALLOWLIST_PATH, leitura);
-#   - `app/actions/emulation_actions.py` (_WP_DROPIN_DIR, e este é dir de
-#     ESCRITA em produção — o toggle do microfone cria e apaga drop-ins ali).
-#
-# Constante de módulo é avaliada ANTES de qualquer monkeypatch de ``HOME``, então
-# nenhuma fixture consegue desviá-la depois.
-#
-# ATUALIZAÇÃO 05/08/2026 (decisão dela: *"preciso que as constantes apontem
-# pros arquivos reais"*): as DUAS viraram função — `storm_doctor._allowlist_path`
-# e `EmulationActionsMixin._wp_dropin_dir`. `Path.home()` dentro de função lê o
-# ``HOME`` na hora da chamada, então o isolamento da suíte volta a valer e o
-# comportamento em produção não muda. O canário CONTINUA, e não por desconfiança
-# destas duas: ele cobre o que ninguém mapeou — subprocessos, `systemctl`,
-# `uinput` e a próxima constante que alguém escrever sem pensar nisso.
-#
-# O canário fotografa (mtime_ns, tamanho, sha256) dos diretórios de verdade no
-# início e no fim da sessão e REPROVA listando o que mudou. O hash não é zelo:
-# a primeira versão comparava só (mtime_ns, size) e acusou 15 arquivos `.lock`
-# na estreia — tocados pelo daemon e pela janela DELA, vivos ao lado da suíte.
-# Um portão que grita no primeiro dia é um portão que alguém desliga no segundo.
-#
-# Isto não é hipótese: é medição. Se a suíte não escreve nada, o canário é
-# invisível; se escreve, ele diz exatamente qual arquivo.
 
-#: Diretórios REAIS que a suíte não pode tocar. Relativos ao ``HOME``.
 _CANARIO_ALVOS: tuple[str, ...] = (
     ".config/hefesto-dualsense4unix",
     ".config/wireplumber",
     ".local/share/hefesto-dualsense4unix",
 )
 
-#: Árvores REAIS que a suíte também não devia mexer — mas onde um delta quase
-#: nunca é escrita da suíte, e sim a **daemon VIVA dela reagindo à suíte**.
-#: MEDIDO em 07/08/2026, com retrato do disco antes e depois de uma suíte
-#: inteira: os quatro `launch_env/*.env` foram REGRAVADOS às 16:19:38, dentro
-#: da janela da suíte, pelo daemon dela (pid 2870305, `launch_env_materializado`
-#: no journal), 20 s depois da primeira rajada de teclados uinput que a suíte
-#: cria — e o próprio daemon nomeia o mecanismo duas linhas adiante:
-#: `backend_hotplug_reconcile trigger=input_dir_change`. A suíte não escreveu:
-#: ela mexeu em `/dev/input`, e quem escreveu foi o daemon.
-#:
-#: Por isso AVISO e não portão. Reprovar aqui seria um alarme que fica vermelho
-#: na máquina dela e verde na CI — exatamente o portão que se aprende a
-#: desligar (é a lição do DIV-11, os 15 `.lock` da estreia do canário). O que
-#: faltava era ENXERGAR: esta árvore estava fora de qualquer instrumento.
 _CANARIO_ALVOS_AVISO: tuple[str, ...] = (".local/state/hefesto-dualsense4unix",)
 
-#: Escotilha de saída, para quem PRECISA rodar a suíte contra o HOME real
-#: (nunca deveria ser preciso — existe para não obrigar ninguém a comentar
-#: código quando o daemon está de pé e mexendo no session.json ao lado).
-#: Desliga as duas listas: a que reprova e a que só avisa.
 _CANARIO_DESLIGADO_ENV = "HEFESTO_SEM_CANARIO_FS"
 
-#: Fotografia do início da sessão: {caminho: (mtime_ns, tamanho, resumo)}.
 _CANARIO_FOTO_INICIAL: dict[str, tuple[int, int, str]] = {}
 
-#: A mesma coisa, para as árvores de AVISO (`_CANARIO_ALVOS_AVISO`).
 _CANARIO_FOTO_AVISO: dict[str, tuple[int, int, str]] = {}
 
-#: True só depois que a foto inicial foi tirada. Sem este selo, uma sessão que
-#: começou com o canário desligado e terminou com ele ligado compararia contra
-#: um dicionário vazio e acusaria TODO arquivo do ``$HOME`` de ter nascido
-#: durante a suíte — o alarme mais falso que existe.
 _CANARIO_ARMADO = False
 
-#: Acima disto o arquivo não é resumido (só mtime+tamanho). Nada nos diretórios
-#: vigiados chega perto — medido em 05/08: 93 arquivos, 356 KB no total; a
-#: árvore de aviso somava 60 KB em 07/08.
 _CANARIO_LIMITE_RESUMO = 4 * 1024 * 1024
 
-#: Teto de linhas do relato de AVISO — ele não decide nada, e uma lista longa
-#: só ensina a pular o bloco inteiro.
 _CANARIO_LIMITE_AVISO = 10
 
 
@@ -629,61 +353,14 @@ def _canario_ligado() -> bool:
     return os.environ.get(_CANARIO_DESLIGADO_ENV) != "1"
 
 
-# ---------------------------------------------------------------------------
-# FAIXA-NO-BERCO-01 — a segunda régua sobre o `~/.config` REAL
-# ---------------------------------------------------------------------------
-# O PORQUÊ, medido em 25/08/2026 (LUZ-CEGA-01/E8). Quatro endereços da faixa de
-# fixture `aa:bb:cc:*` moram no `controllers.json` de PRODUÇÃO dela desde
-# 22/08 — o journal dela datou a escrita dentro do boot `df8018bc`
-# (21/08 15:56 → 22/08 01:55): antes dela a fila gravada tinha os quatro
 # DualSense REAIS; depois, só os quatro forjados.
-#
-# O CANARIO-FS-01 acima deveria ter pego, e não pegou. Duas razões, e as duas
-# são estruturais:
-#
-# 1. **ele é DELTA de conteúdo, e a mesa dela já nasce suja.** De 22/08 em
-#    diante toda sessão COMEÇA com a poluição no lugar: a foto inicial e a
-#    final concordam, e o canário fica calado para sempre sobre um defeito que
-#    continua no disco;
-# 2. **ele é rotineiramente DESLIGADO justamente onde importa.** Com o daemon
-#    e a janela DELA vivos ao lado, o canário acusa a escrita do produto como
-#    se fosse da suíte (medido em 06/08: seis escritas em `profiles/` num run
-#    que só rodou `test_bluez_config_sh.py`), e a própria mensagem dele oferece
-#    `HEFESTO_SEM_CANARIO_FS=1`. Um portão que se aprende a desligar não é a
-#    régua que pega o dia ruim.
-#
-# Esta régua não tem nenhum dos dois defeitos: ela não pergunta "mudou?", e sim
-# "apareceu ENDEREÇO DE FIXTURE que não estava aqui quando a suíte começou?".
-# A daemon dela escrevendo os MACs REAIS dela nunca a dispara — então ela pode
-# ficar LIGADA na máquina em que o canário fica desligado, que é o ponto todo.
-# É a regra da casa: duas réguas independentes é o que revela.
-#
-# O dono da régua é um só: `scripts/check_faixa_sintetica.py`. Aqui só se
-# compara o começo com o fim.
-#
-# O QUE ELA NÃO PEGA, e está escrito para ninguém confiar demais: um vazamento
-# que reescreva EXATAMENTE os mesmos endereços nos mesmos arquivos que já
-# estavam sujos passa em branco (delta vazio). Quem pega esse é o CANARIO-FS-01,
-# que compara conteúdo. As duas juntas cobrem o que nenhuma cobre sozinha — e é
-# por isso que esta não substitui aquela.
 
-#: Escotilha PRÓPRIA — de propósito não é a do canário. Foi a escotilha do
-#: canário que deixou 21/08 passar; herdar o mesmo interruptor seria herdar o
-#: mesmo buraco.
 _FAIXA_DESLIGADA_ENV = "HEFESTO_SEM_FAIXA_SINTETICA"
 
-#: `{"<arquivo>::<endereço>"}` no início da sessão. O que já estava lá é dela.
 _FAIXA_NO_INICIO: set[str] = set()
 
-#: O `config_dir()` REAL, fixado no `sessionstart` ANTES do desvio do
-#: LAR-DE-SESSAO-01. Só para RELATAR (`pytest_report_header`): a partir do
-#: desvio, `_faixa_config_dir_real()` resolve o dublê, e o cabeçalho tem de
-#: dizer o caminho que a pessoa reconhece.
 _FAIXA_DIR_REAL: list[Path] = []
 
-#: Selo, pelo mesmo motivo do `_CANARIO_ARMADO`: sem a foto inicial, comparar
-#: contra um conjunto vazio acusaria a poluição VELHA como se fosse desta
-#: sessão — o alarme mais falso que existe.
 _FAIXA_ARMADA = False
 
 
@@ -692,24 +369,14 @@ def _faixa_ligada() -> bool:
 
 
 def _faixa_config_dir_real() -> Path:
-    """O `config_dir()` de produção, resolvido do ambiente NA HORA da chamada.
-
-    Sem importar o produto: este arquivo é carregado também pelo job leve do
-    CI, que instala só o pytest (ver `_nenhum_sysfs_vivo_na_varredura_de_vpad`).
-    A regra é a do `platformdirs`, e é a mesma que `utils/xdg_paths.config_dir`
-    aplica: `$XDG_CONFIG_HOME` quando existe, `~/.config` quando não.
-    """
+    """O `config_dir()` de produção, resolvido do ambiente NA HORA da chamada."""
     base = os.environ.get("XDG_CONFIG_HOME", "").strip()
     raiz = Path(base) if base else Path(os.path.expanduser("~")) / ".config"
     return raiz / "hefesto-dualsense4unix"
 
 
 def _faixa_enderecos() -> set[str]:
-    """Endereços sintéticos hoje no `config_dir()` real. Vazio se algo faltar.
-
-    Nunca levanta: uma régua que derruba a sessão quando não consegue medir
-    ensina a desligá-la, e é assim que se perde a régua.
-    """
+    """Endereços sintéticos hoje no `config_dir()` real. Vazio se algo faltar."""
     try:
         raiz_do_repo = Path(__file__).resolve().parents[1]
         pasta_de_scripts = str(raiz_do_repo / "scripts")
@@ -750,12 +417,7 @@ def _faixa_no_fim_da_sessao(session: Any) -> None:
 
 
 def _canario_raizes() -> list[Path]:
-    """Os alvos resolvidos contra o ``HOME`` REAL do processo.
-
-    Lido de ``os.environ`` no momento da chamada de propósito: se um teste
-    trocar o ``HOME``, as duas fotos ainda comparam a MESMA árvore, porque os
-    dois hooks rodam fora de qualquer fixture.
-    """
+    """Os alvos resolvidos contra o ``HOME`` REAL do processo."""
     lar = Path(os.path.expanduser("~"))
     return [lar / alvo for alvo in _CANARIO_ALVOS]
 
@@ -767,15 +429,7 @@ def _canario_raizes_de_aviso() -> list[Path]:
 
 
 def _resumo_do_arquivo(caminho: Path, tamanho: int) -> str:
-    """sha256 do conteúdo — vazio para diretórios, ilegíveis e arquivos enormes.
-
-    O resumo existe por uma medição de 05/08: com o daemon e a janela DELA de
-    pé ao lado da suíte, os `*.json.lock` do diretório de perfis mudam de mtime
-    a cada poucos segundos (o `filelock` toca o arquivo a cada aquisição). Um
-    canário que reprovasse por mtime acusaria a suíte do que o daemon fez, e
-    seria desligado na primeira semana. Conteúdo não mente: comparar o resumo
-    reprova toda ESCRITA de verdade e ignora o vaivém dos locks.
-    """
+    """sha256 do conteúdo — vazio para diretórios, ilegíveis e arquivos enormes."""
     if tamanho > _CANARIO_LIMITE_RESUMO:
         return ""
     try:
@@ -785,12 +439,7 @@ def _resumo_do_arquivo(caminho: Path, tamanho: int) -> str:
 
 
 def _fotografar_arvore(raiz: Path) -> dict[str, tuple[int, int, str]]:
-    """{caminho: (mtime_ns, tamanho, resumo)} sob `raiz`. Ausente = dict vazio.
-
-    Diretórios entram na foto para que um subdiretório novo (ou sumido) apareça
-    como delta. Erros de permissão são pulados em silêncio: o canário mede o que
-    consegue ver, e ver menos nunca pode derrubar a suíte por si só.
-    """
+    """{caminho: (mtime_ns, tamanho, resumo)} sob `raiz`. Ausente = dict vazio."""
     foto: dict[str, tuple[int, int, str]] = {}
     if not raiz.exists():
         return foto
@@ -822,11 +471,7 @@ def _fotografar_tudo_de_aviso() -> dict[str, tuple[int, int, str]]:
 def _deltas_do_canario(
     antes: dict[str, tuple[int, int, str]], depois: dict[str, tuple[int, int, str]]
 ) -> list[str]:
-    """Lista legível do que mudou entre as duas fotos (vazia = nada mudou).
-
-    Delta de arquivo é MUDANÇA DE CONTEÚDO (tamanho ou resumo) — mtime sozinho
-    não conta, pelo motivo medido em `_resumo_do_arquivo`.
-    """
+    """Lista legível do que mudou entre as duas fotos (vazia = nada mudou)."""
     deltas: list[str] = []
     deltas.extend(f"CRIADO   {c}" for c in sorted(set(depois) - set(antes)))
     deltas.extend(f"APAGADO  {c}" for c in sorted(set(antes) - set(depois)))
@@ -840,93 +485,22 @@ def _deltas_do_canario(
     return deltas
 
 
-# ---------------------------------------------------------------------------
-# BERCO-DE-TMP-01 — a suíte devolve o `/tmp` como encontrou
-# ---------------------------------------------------------------------------
-# O PORQUÊ, MEDIDO em 07/08/2026 (retrato do disco antes e depois de uma suíte
-# inteira, 7619 passed em 232 s): o CANARIO-FS-01 acima vigia três árvores do
-# ``$HOME`` e ficou CALADO — a suíte não escreveu em nenhuma. Mas ela deixou
-# **16 entradas novas em `/tmp`**, que nenhum instrumento desta casa olhava:
-#
-#   9  `tmp<8>/`  ....... `tempfile.mkdtemp()` SEM limpeza, nos dois arquivos
-#                         de teste de migração de perfil (7 + 2 chamadas);
-#   6  `tmp.<10>`  ...... `mktemp` de shell, dentro de script sob teste;
-#   1  `pulse-<12>/`  ... a libpulse criando o runtime dir dela.
-#
-# E o acumulado no dia da medição: **906** diretórios `tmp<8>`, dos quais 892
-# ainda continham os arquivos que só os dois testes de migração escrevem
-# (`.coop_default_on_migrated`, `.flavor_xbox_migrated`, `quebrado.json`…), mais
-# 99 `pulse-*` e 3 `hefesto-arvore-congelada-*` que o `atexit` não alcançou
-# porque a sessão foi morta. Ninguém limpou porque ninguém sabia.
-#
-# A CURA que não depende de alguém lembrar: **o `/tmp` da sessão não é o `/tmp`
-# da máquina**. No `pytest_sessionstart` a suíte cria um BERÇO
-# (``/tmp/hefesto-berco-<pid>``) e aponta `tempfile.tempdir` e `TMPDIR`/`TMP`/
-# `TEMP` para ele. Tudo que nascer de `tempfile` (Python), de `mktemp` (shell,
-# nos scripts sob teste) ou de qualquer biblioteca que respeite `TMPDIR`
-# (libpulse) nasce DENTRO do berço; no fim da sessão o berço inteiro sai.
-#
-# O CRITÉRIO DE "ISTO É LIXO DE TESTE" É POSITIVO, e é o ponto do desenho:
-# não é *"não reconheço este arquivo, então apago"* — é *"este diretório foi
-# aberto por ESTA sessão de pytest, com ESTE pid no nome, e tudo que está
-# dentro nasceu depois disso"*. Nada fora do berço é tocado, nunca, por
-# nenhum caminho de código daqui.
-#
-# O que fica DE FORA do berço, de propósito:
-#
-#   - **o `basetemp` do pytest** (`/tmp/pytest-of-<user>/pytest-N`). Ele é
-#     resolvido À FORÇA antes do desvio (`_fixar_basetemp_do_pytest`) por dois
-#     motivos medidos: (a) o pytest já tem retenção própria (guarda as 3
-#     últimas execuções, que é o que se olha quando um teste cai), e (b) o
-#     `sun_path` de um `AF_UNIX` tem ~108 bytes — empurrar todo `tmp_path` para
-#     dentro do berço somaria 27 bytes a caminhos que já batem em 95;
-#   - **o `$HOME` dela.** Este mecanismo NÃO restaura nada em `$HOME`, e isso é
-#     decisão, não esquecimento: a suíte não é a única a escrever ali (o daemon
-#     e a janela DELA estão vivos ao lado), e "devolver ao estado anterior" um
-#     arquivo que a daemon dela acabou de gravar é destruir trabalho real.
-#     Para o `$HOME` o desenho continua sendo prevenir e DETECTAR — o
-#     CANARIO-FS-01 acima.
-
-#: Prefixo do berço. O nome carrega o pid da sessão: é ele que torna o critério
-#: de varredura POSITIVO (nasceu desta sessão) em vez de negativo.
 _BERCO_PREFIXO = "hefesto-berco-"
 
-#: Escotilha, mesma lógica do canário: quem PRECISA inspecionar o que a suíte
-#: deixou em `/tmp` desliga o desvio em vez de comentar código.
 _BERCO_DESLIGADO_ENV = "HEFESTO_SEM_BERCO_TMP"
 
-#: No máximo um elemento — o berço desta sessão. Lista para poder ser preenchida
-#: dentro do hook sem `global`.
 _BERCO: list[Path] = []
 
-#: O `/tmp` de VERDADE, capturado ANTES do desvio.
 _TMP_REAL: list[Path] = []
 
-#: As variáveis de ambiente que decidem onde nasce um temporário — as três,
-#: porque o `mktemp` de shell e a `tempfile` do Python não olham as mesmas.
 _VARS_DE_TMP = ("TMPDIR", "TMP", "TEMP")
 
-#: O valor que cada uma tinha ANTES do desvio (None = não existia), mais o
-#: `tempfile.tempdir` sob a chave `None`. A varredura DEVOLVE, em vez de apagar:
-#: quem chama o pytest de dentro de outro processo pode ter um `TMPDIR` próprio,
-#: e ele não é nosso para jogar fora.
 _TMP_ENV_ANTES: dict[str | None, str | None] = {}
 
-#: `id()` da Session REAL desta execução, e ele não é zelo — é defeito medido em
-#: 07/08/2026, na primeira integração deste berço. Nove testes do
-#: `test_conftest_canario_fs.py` CHAMAM `pytest_sessionfinish` com uma Session
-#: de mentira, de propósito, para provar que o canário reprova. Sem esta guarda,
-#: a primeira dessas chamadas varria o berço da sessão VIVA no meio dela e
-#: devolvia `tempfile.tempdir` para o `/tmp` real — a suíte voltava calada ao
-#: comportamento antigo, e a única pista era um punhado de testes pulando.
 _SESSAO_REAL: list[int] = []
 
-#: Nomes de primeiro nível do `/tmp` real no início da sessão, para o aviso de
-#: "nasceu FORA do berço" (caminho fixo escrito à mão num teste, por exemplo).
 _TMP_ANTES: set[str] = set()
 
-#: Teto de nomes listados nos relatos — nenhum deles é portão, e uma lista de
-#: trezentas linhas no fim da suíte é uma lista que ninguém lê.
 _BERCO_LIMITE_RELATO = 8
 
 
@@ -940,11 +514,7 @@ def berco() -> Path | None:
 
 
 def _pid_vivo(pid: int) -> bool:
-    """True quando existe processo com este pid.
-
-    ``PermissionError`` conta como VIVO: é processo de outro usuário, e a
-    dúvida sempre se resolve para "não mexa".
-    """
+    """True quando existe processo com este pid."""
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -957,11 +527,7 @@ def _pid_vivo(pid: int) -> bool:
 
 
 def _pid_do_berco(nome: str) -> int | None:
-    """O pid gravado no nome do berço, ou None quando o nome NÃO é de berço.
-
-    Deliberadamente estrito: o sufixo tem de ser dígito puro. Um
-    ``hefesto-berco-de-outra-coisa`` devolve None e nunca vira alvo.
-    """
+    """O pid gravado no nome do berço, ou None quando o nome NÃO é de berço."""
     if not nome.startswith(_BERCO_PREFIXO):
         return None
     resto = nome[len(_BERCO_PREFIXO) :]
@@ -971,12 +537,7 @@ def _pid_do_berco(nome: str) -> int | None:
 
 
 def _bercos_orfaos(raiz: Path) -> list[Path]:
-    """Berços de sessões MORTAS sob `raiz`, do mais antigo para o mais novo.
-
-    Critério, todo ele positivo: o nome tem o prefixo do berço, o sufixo é um
-    pid, é diretório, e esse pid NÃO está vivo. Sessão viva (inclusive a nossa)
-    nunca entra na lista.
-    """
+    """Berços de sessões MORTAS sob `raiz`, do mais antigo para o mais novo."""
     orfaos: list[Path] = []
     try:
         entradas = sorted(raiz.iterdir())
@@ -1001,15 +562,9 @@ def _armar_berco(session: Any) -> None:
     _TMP_REAL.append(raiz)
     with contextlib.suppress(OSError):
         _TMP_ANTES.update(os.listdir(raiz))
-    # Varre berços de sessões mortas ANTES de criar o nosso: uma sessão morta
-    # (kill, queda de energia) não roda `sessionfinish`, e sem esta linha o
-    # berço dela ficaria para sempre.
     for orfao in _bercos_orfaos(raiz):
         shutil.rmtree(orfao, ignore_errors=True)
     destino = raiz / f"{_BERCO_PREFIXO}{os.getpid()}"
-    # Se já existe, é berço de uma sessão morta cujo pid o sistema reciclou
-    # para nós — não pode ser de sessão viva, porque a sessão viva com este pid
-    # somos nós.
     if destino.exists():
         shutil.rmtree(destino, ignore_errors=True)
     try:
@@ -1026,14 +581,7 @@ def _armar_berco(session: Any) -> None:
 
 
 def _fixar_basetemp_do_pytest(session: Any) -> None:
-    """Resolve (e cacheia) o `basetemp` do pytest ANTES do desvio do `TMPDIR`.
-
-    O `TempPathFactory` guarda o resultado em `self._basetemp` na primeira
-    chamada; forçando-a aqui, `tmp_path` continua morando no `/tmp` real, com a
-    retenção das 3 últimas execuções que o pytest já faz. Toda esta função é
-    best-effort: se um pytest futuro mudar o atributo privado, o berço
-    simplesmente passa a englobar o `basetemp` — e nada quebra.
-    """
+    """Resolve (e cacheia) o `basetemp` do pytest ANTES do desvio do `TMPDIR`."""
     fabrica = getattr(getattr(session, "config", None), "_tmp_path_factory", None)
     if fabrica is None:  # pragma: no cover — pytest sempre publica a fábrica
         return
@@ -1042,15 +590,7 @@ def _fixar_basetemp_do_pytest(session: Any) -> None:
 
 
 def _nascidos_fora_do_berco() -> list[str]:
-    """Nomes de primeiro nível que apareceram no `/tmp` REAL durante a sessão.
-
-    É AVISO, nunca portão, e o motivo está escrito no relato: a máquina dela
-    está viva, e o navegador, o PipeWire e os screenshots dela também escrevem
-    em `/tmp`. O que este aviso pega de graça é a classe que o berço não
-    alcança — caminho FIXO escrito à mão dentro de um teste, que ignora
-    `TMPDIR` por construção (foi assim que `hefesto_teste_pactl_chamadas.txt`
-    apareceu na medição de 07/08).
-    """
+    """Nomes de primeiro nível que apareceram no `/tmp` REAL durante a sessão."""
     if not _TMP_REAL:
         return []
     nosso = berco()
@@ -1061,14 +601,9 @@ def _nascidos_fora_do_berco() -> list[str]:
     novos = agora - _TMP_ANTES
     if nosso is not None:
         novos.discard(nosso.name)
-    # LAR-DE-SESSAO-01: o lar de mentira nasce FORA do berço de propósito (ele
-    # precisa sobreviver à varredura, ver a seção dele) e é NOSSO — acusá-lo
-    # aqui seria o instrumento denunciando o próprio instrumento.
     lar = lar_de_sessao()
     if lar is not None:
         novos.discard(lar.name)
-    # SOM-DE-MENTIRA e LANCADOR-DE-MENTIRA: os dublês moram fora do berço de propósito
-    # (eles têm de sobreviver ao fim da sessão), e também são NOSSOS.
     for nosso in (som_de_mentira(), lancador_de_mentira()):
         if nosso is not None:
             novos.discard(nosso.name)
@@ -1076,13 +611,7 @@ def _nascidos_fora_do_berco() -> list[str]:
 
 
 def _varrer_berco(session: Any, exitstatus: int) -> None:
-    """Fim de sessão: o berço inteiro sai, e o que havia nele é relatado.
-
-    Só a Session que ARMOU o berço pode varrê-lo — ver `_SESSAO_REAL`. Uma
-    Session de mentira (teste que chama o hook direto, para provar um portão)
-    é ignorada aqui, e não no chamador: quem tem de saber quem é o dono do
-    berço é o berço.
-    """
+    """Fim de sessão: o berço inteiro sai, e o que havia nele é relatado."""
     nosso = berco()
     if nosso is None:
         return
@@ -1094,8 +623,6 @@ def _varrer_berco(session: Any, exitstatus: int) -> None:
         restos = []
 
     if exitstatus != 0 and restos:
-        # Sessão vermelha: o que a suíte deixou pode ser prova. Guardar custa
-        # um diretório e a próxima sessão o varre pelo pid morto.
         _escrever_no_terminal(session, [
             "",
             f"BERCO-DE-TMP-01: sessão vermelha — o berço FICA, com {len(restos)} "
@@ -1141,80 +668,20 @@ def _varrer_berco(session: Any, exitstatus: int) -> None:
         ])
 
 
-# ---------------------------------------------------------------------------
-# LAR-DE-SESSAO-01 — o isolamento sobrevive ao teardown do `monkeypatch`
-# ---------------------------------------------------------------------------
-# O PORQUÊ, medido pelo forense em 25/08/2026 e confirmado no disco DELA:
-# quatro endereços da faixa de fixture `aa:bb:cc:00:00:0{1..4}` moravam no
-# `~/.config/hefesto-dualsense4unix/controllers.json` de PRODUÇÃO, ocupando os
 # postos 2 a 5 e empurrando os DualSense REAIS dela para 6, 7 e 8 — e
-# `core/led_control.py` só tem cor de PS5 para 1..4. É REINCIDÊNCIA: o backup
-# `backup-limpeza-20260811-233704/controllers.json` já trazia forjados em 11/08.
-#
-# O MECANISMO, em quatro linhas:
-#
-#   1. `identity._path()` resolve o caminho na hora do SAVE, não no import;
-#   2. o isolamento de `XDG_CONFIG_HOME`/`HOME` é `monkeypatch` de escopo de
-#      FUNÇÃO (`_hefesto_fake_env`). No teardown ele DESFAZ — e desfazer
-#      significa devolver o valor que a variável tinha antes do teste;
-#   3. o que ela tinha antes do teste era o `~/.config` DELA;
-#   4. logo, tudo que grava DEPOIS do teardown — finalizador, `atexit`, thread
-#      de escopo maior que a função, subprocesso que sobreviveu, singleton que
-#      atravessa os casos — grava na mesa dela.
-#
-# A CURA não é apertar o teardown: é mudar PARA ONDE ele desfaz. Aqui, no
-# `sessionstart` (antes da COLETA, portanto antes de qualquer import de módulo
-# de teste), o `HOME` e os quatro `XDG_*` passam a apontar para um lar de
-# MENTIRA da sessão inteira. A partir daí:
-#
-#   - `_hefesto_fake_env` continua isolando por teste, como sempre;
-#   - o teardown dele desfaz para o lar de MENTIRA, não para o `~/.config` dela;
-#   - constante de módulo avaliada na importação também cai no dublê (a coleta
-#     acontece depois deste hook), que é a classe que a RÉGUA 1 do
-#     `test_luz_cega_e8_o_berco_nao_vaza.py` só sabe ACUSAR, não impedir;
-#   - subprocesso HERDA o ambiente desviado — e essa é a classe que nenhuma
-#     sonda dentro do processo enxerga.
-#
-# O que este mecanismo NÃO faz: escrever no lar de mentira não é erro nenhum, e
-# ele não reprova ninguém. Quem reprova continua sendo o CANARIO-FS-01 (delta
-# de conteúdo no `$HOME` real) e a FAIXA-NO-BERCO-01 (endereço de fixture novo
-# no `config_dir()` real). Este é o cinto; aqueles são os dois alarmes.
-#
-# O LAR DE MENTIRA MORA FORA DO BERÇO, de propósito: o berço é varrido no
-# `sessionfinish`, e o que precisa continuar de pé DEPOIS dele é justamente
-# este. Quem o leva embora é um `atexit` registrado no `sessionstart` — e
-# `atexit` é LIFO, então o nosso, registrado primeiro, roda POR ÚLTIMO, depois
-# de todo handler que a suíte tenha registrado durante os testes.
 
-#: Escotilha PRÓPRIA — não é a do canário nem a do berço. Quem PRECISA rodar a
-#: suíte contra o `$HOME` de verdade desliga aqui. É também o que dá a mordida
-#: permanente: com isto ligado, o vazamento volta a acontecer (ver
-#: `tests/unit/test_g8_o_lar_de_sessao_fecha_a_janela_do_teardown.py`).
 _LAR_DESLIGADO_ENV = "HEFESTO_SEM_LAR_DE_SESSAO"
 
-#: Prefixo do lar de mentira. Carrega o pid pelo mesmo motivo do berço: o
-#: critério de varredura é POSITIVO ("nasceu desta sessão"), nunca negativo.
 _LAR_PREFIXO = "hefesto-lar-de-sessao-"
 
-#: No máximo um elemento — o lar de mentira desta sessão.
 _LAR_DE_SESSAO: list[Path] = []
 
-#: O `$HOME` REAL, fixado ANTES do desvio. Quem precisa do de verdade (o
-#: `rustup`/`cargo` do `_hefesto_fake_env`) pergunta a `lar_real()`.
 _LAR_REAL: list[Path] = []
 
-#: O valor de cada variável ANTES do desvio (None = não existia).
 _LAR_ENV_ANTES: dict[str, str | None] = {}
 
-#: E o valor DEPOIS, calculado uma vez no arme. Guardado porque o desvio é
-#: reaplicado depois dos portões de fim de sessão, e recalcular ali leria um
-#: ambiente que já é o real — o dublê apontaria para dentro de si mesmo.
 _LAR_ENV_DEPOIS: dict[str, str] = {}
 
-#: As variáveis desviadas, e o caminho PADRÃO de cada uma dentro de um `$HOME`.
-#: O caminho serve para dois usos: montar o valor novo dentro do dublê e
-#: reconhecer o valor REAL quando ele é o default (a máquina dela não seta
-#: nenhuma das quatro).
 _VARS_DO_LAR: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("HOME", ()),
     ("XDG_CONFIG_HOME", (".config",)),
@@ -1223,26 +690,6 @@ _VARS_DO_LAR: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("XDG_STATE_HOME", (".local", "state")),
 )
 
-#: O QUE NASCE VAZIO NO DUBLÊ, e é a decisão central deste mecanismo.
-#:
-#: Um lar de mentira VAZIO fechava o vazamento e QUEBRAVA outra coisa: medido
-#: em 25/08/2026, quatro testes de layout (`test_layout_orcamento_altura.py`,
-#: `test_status_som_02_controle_de_volume.py`) passam a REPROVAR, porque o GTK
-#: e o fontconfig leem `~/.config/gtk-3.0/settings.ini` no `Gtk.init()` — que
-#: acontece na IMPORTAÇÃO dos módulos, portanto depois deste desvio — e sem os
-#: ajustes de fonte dela as larguras medidas em pixel mudam. Trocar um defeito
-#: por outro não é cura.
-#:
-#: Por isso o dublê é um ESPELHO: cada entrada do `$HOME` dela entra por
-#: symlink, e só estes quatro diretórios — os únicos que o produto ESCREVE —
-#: nascem vazios e de verdade. Quem lê configuração de terceiro continua vendo
-#: a dela; quem grava do produto grava no `/tmp`.
-#:
-#: O QUE ISSO NÃO PROTEGE, escrito para ninguém confiar demais: escrita fora
-#: destes quatro caminhos atravessa o symlink e chega ao disco dela — que é
-#: exatamente o que já acontecia antes deste mecanismo existir. Este espelho
-#: NUNCA é pior que o estado anterior; ele só é melhor nos quatro. Quem vigia
-#: o resto continua sendo o CANARIO-FS-01.
 _NOME_DO_PRODUTO = "hefesto-dualsense4unix"
 
 _DIRS_DO_PRODUTO: tuple[tuple[str, ...], ...] = (
@@ -1252,17 +699,10 @@ _DIRS_DO_PRODUTO: tuple[tuple[str, ...], ...] = (
     (".cache", _NOME_DO_PRODUTO),
 )
 
-#: Os RAMOS: todo prefixo próprio dos caminhos acima. Um ramo vira diretório de
-#: verdade no dublê (para poder conter o dublê do produto) e continua espelhado
-#: entrada por entrada; tudo que não é ramo nem folha vira symlink.
 _RAMOS_DO_PRODUTO: frozenset[tuple[str, ...]] = frozenset(
     folha[:n] for folha in _DIRS_DO_PRODUTO for n in range(1, len(folha))
 )
 
-#: `id()` da Session que ARMOU o desvio. Mesma razão do `_SESSAO_REAL` do
-#: berço: os testes do canário chamam `pytest_sessionfinish` com uma Session de
-#: mentira, de propósito, e sem esta guarda a primeira dessas chamadas
-#: devolveria o `$HOME` real no meio da sessão VIVA.
 _SESSAO_DO_LAR: list[int] = []
 
 
@@ -1271,10 +711,7 @@ def _lar_ligado() -> bool:
 
 
 def lar_real() -> Path:
-    """O `$HOME` de verdade — o de antes do desvio, quando ele está armado.
-
-    Fora de uma sessão armada devolve o `$HOME` vivo, que é o que ele é.
-    """
+    """O `$HOME` de verdade — o de antes do desvio, quando ele está armado."""
     if _LAR_REAL:
         return _LAR_REAL[0]
     return Path(os.environ.get("HOME") or os.path.expanduser("~"))
@@ -1307,16 +744,13 @@ def _lares_orfaos(raiz: Path) -> list[Path]:
 def _espelhar_o_lar(
     real: Path, destino: Path, prefixo: tuple[str, ...] = ()
 ) -> None:
-    """Espelha `real` em `destino`: symlink em tudo, menos nos quatro do produto.
-
-    Ver `_DIRS_DO_PRODUTO` para o PORQUÊ de não ser um diretório vazio.
-    """
+    """Espelha `real` em `destino`: symlink em tudo, menos nos quatro do produto."""
     destino.mkdir(mode=0o700, parents=True, exist_ok=True)
     with contextlib.suppress(OSError):
         for entrada in sorted(real.iterdir()):
             caminho = (*prefixo, entrada.name)
             if caminho in _DIRS_DO_PRODUTO:
-                continue  # nasce vazio no bloco final, exista ou não na casa dela
+                continue
             if caminho in _RAMOS_DO_PRODUTO:
                 _espelhar_o_lar(entrada, destino / entrada.name, caminho)
                 continue
@@ -1324,23 +758,13 @@ def _espelhar_o_lar(
                 (destino / entrada.name).symlink_to(entrada)
     if prefixo:
         return
-    # Os quatro do produto existem SEMPRE aqui, mesmo quando não existem na casa
-    # dela: um `config_dir(ensure=True)` que os criasse por conta própria já
-    # estaria resolvendo o caminho — e resolver o caminho certo é o assunto.
     for folha in _DIRS_DO_PRODUTO:
         with contextlib.suppress(OSError):
             destino.joinpath(*folha).mkdir(mode=0o700, parents=True, exist_ok=True)
 
 
 def _destino_no_duble(var: str, padrao: tuple[str, ...], duble: Path) -> str:
-    """Para onde `var` passa a apontar dentro do dublê.
-
-    O caso comum (e o da máquina dela) é a variável NÃO estar setada: vale o
-    default XDG, que é um caminho dentro do `$HOME`, e o dublê tem o mesmo
-    caminho dentro dele. Uma variável apontada para fora do `$HOME` ganha um
-    espelho próprio — senão o desvio a jogaria num diretório que não espelha
-    nada e o defeito das fontes voltaria por outra porta.
-    """
+    """Para onde `var` passa a apontar dentro do dublê."""
     real = lar_real()
     if not padrao:
         return str(duble)
@@ -1374,20 +798,13 @@ def _aplicar_o_lar_de_sessao() -> None:
 
 
 def _armar_lar_de_sessao(session: Any) -> None:
-    """Cria o lar de mentira e desvia `HOME` + os quatro `XDG_*` para dentro.
-
-    Chamado no FIM do `sessionstart`, depois de toda fotografia: o CANARIO-FS-01
-    e a FAIXA-NO-BERCO-01 medem o `$HOME` REAL, e as duas leem `os.environ` na
-    hora — se o desvio viesse antes, as fotos do início seriam do dublê.
-    """
+    """Cria o lar de mentira e desvia `HOME` + os quatro `XDG_*` para dentro."""
     if not _lar_ligado() or _LAR_DE_SESSAO:
         return
     raiz = _TMP_REAL[0] if _TMP_REAL else Path(tempfile.gettempdir())
     for orfao in _lares_orfaos(raiz):
         shutil.rmtree(orfao, ignore_errors=True)
     destino = raiz / f"{_LAR_PREFIXO}{os.getpid()}"
-    # `shutil.rmtree` NÃO segue symlink (ele os desliga, um a um) — e é isso que
-    # torna seguro varrer um espelho cheio de links para a casa dela.
     shutil.rmtree(destino, ignore_errors=True)
     try:
         _espelhar_o_lar(lar_real(), destino)
@@ -1400,8 +817,6 @@ def _armar_lar_de_sessao(session: Any) -> None:
         _LAR_ENV_ANTES[var] = os.environ.get(var)
         _LAR_ENV_DEPOIS[var] = _destino_no_duble(var, padrao, destino)
     _aplicar_o_lar_de_sessao()
-    # LIFO: registrado AQUI, roda por ÚLTIMO — depois de todo `atexit` que a
-    # suíte registrar durante os testes, que é a classe mais tardia que existe.
     atexit.register(_fechar_o_lar_de_sessao)
 
 
@@ -1416,15 +831,7 @@ def _devolver_o_ambiente_real() -> None:
 
 @contextlib.contextmanager
 def _com_o_ambiente_real(session: Any) -> Iterator[None]:
-    """Devolve o `$HOME` real SÓ pelo tempo dos portões de fim de sessão.
-
-    O CANARIO-FS-01 e a FAIXA-NO-BERCO-01 resolvem os alvos contra o `HOME`
-    VIVO (é o contrato deles, e `test_conftest_canario_fs.py` o exercita
-    monkeypatchando `HOME`). Para que a foto do FIM caia na mesma árvore da
-    foto do INÍCIO, o ambiente volta ao real enquanto eles medem — e volta ao
-    dublê logo depois, porque a janela de escrita tardia continua aberta até o
-    interpretador morrer.
-    """
+    """Devolve o `$HOME` real SÓ pelo tempo dos portões de fim de sessão."""
     if not _LAR_DE_SESSAO or id(session) not in _SESSAO_DO_LAR:
         yield
         return
@@ -1445,28 +852,8 @@ def _fechar_o_lar_de_sessao() -> None:
     _LAR_DE_SESSAO.clear()
     _SESSAO_DO_LAR.clear()
     if destino is not None:
-        # Seguro sobre o espelho: `rmtree` desliga symlink, nunca o segue.
         shutil.rmtree(destino, ignore_errors=True)
 
-
-# ---------------------------------------------------------------------------
-# SINGLETON-QUE-ATRAVESSA-01 — o registro de identidade não é do processo
-# ---------------------------------------------------------------------------
-# Irmão da cura acima, e a outra metade do mesmo defeito. `identity._registry`
-# é um singleton de MÓDULO: uma vez criado, ele atravessa todos os casos do
-# processo. Foi ele que acumulou os QUATRO endereços de fixture que nenhum
-# arquivo de teste junta sozinho — cada caso põe o seu, ninguém tira, e o
-# primeiro save depois do teardown grava a fila inteira de uma vez.
-#
-# `reset_identity_registry()` existe desde sempre e sete arquivos de teste já a
-# chamam À MÃO. Chamar à mão é o defeito: quem escreve o teste novo não sabe
-# que precisa. Aqui ela roda em TODO caso, nos dois lados.
-#
-# O import é por `sys.modules`, e não por `import`: este conftest é carregado
-# também pelo job leve do CI, que instala só o pytest (ver
-# `test_o_conftest_roda_onde_o_produto_nao_esta_instalado.py`). Se nenhum teste
-# importou o módulo, não há singleton para descartar — e o custo é uma consulta
-# a um dicionário.
 
 _MODULO_DA_IDENTIDADE = "hefesto_dualsense4unix.daemon.subsystems.identity"
 
@@ -1484,44 +871,23 @@ def _descartar_registro_de_identidade() -> None:
 
 
 def pytest_sessionstart(session: Any) -> None:
-    """CANARIO-FS-01: primeira fotografia dos diretórios REAIS da usuária.
-
-    E BERCO-DE-TMP-01: a partir daqui, todo temporário desta sessão nasce
-    dentro de um diretório que só esta sessão conhece.
-
-    E, por ÚLTIMO de propósito, o LAR-DE-SESSAO-01: a partir daqui o `$HOME` e
-    os quatro `XDG_*` apontam para um dublê que dura a sessão INTEIRA — depois
-    de toda fotografia, que precisa ser do `$HOME` de verdade.
-    """
+    """CANARIO-FS-01: primeira fotografia dos diretórios REAIS da usuária."""
     global _CANARIO_ARMADO, _FAIXA_ARMADA
     if not _LAR_REAL:
         _LAR_REAL.append(Path(os.environ.get("HOME") or os.path.expanduser("~")))
     _armar_berco(session)
-    # SOM-DE-MENTIRA: antes da COLETA, pela mesma razão da vigia logo abaixo —
-    # o que roda na importação de um módulo passa por baixo de toda fixture.
-    # Depois do berço, porque é dele que sai o `/tmp` de verdade.
     _armar_som_de_mentira()
-    _armar_lancador_de_mentira(session)  # LANCADOR-DE-MENTIRA, a mesma razão
-    # FAIXA-NO-BERCO-01: a foto do que JÁ estava sujo. Fora do `if` do canário
-    # de propósito — esta régua fica de pé mesmo com aquele desligado, que é a
-    # razão de ela existir.
+    _armar_lancador_de_mentira(session)
     if _faixa_ligada():
         _FAIXA_DIR_REAL.append(_faixa_config_dir_real())
         _FAIXA_NO_INICIO.update(_faixa_enderecos())
         _FAIXA_ARMADA = True
-    # VIGIA-DE-APARELHO-01: antes da COLETA, porque um módulo de teste que
-    # criasse aparelho na importação passaria por baixo de qualquer fixture
-    # (fixture de sessão só nasce no primeiro teste, depois de importar tudo).
     _armar_vigia_de_aparelho()
     _INICIO_DA_SESSAO.append(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     if _canario_ligado():
         _CANARIO_FOTO_INICIAL.update(_fotografar_tudo())
         _CANARIO_FOTO_AVISO.update(_fotografar_tudo_de_aviso())
         _CANARIO_ARMADO = True
-    # LAR-DE-SESSAO-01 por ÚLTIMO, e fora de todo `if` acima: as fotos são do
-    # `$HOME` de verdade, e tudo o que vier DEPOIS deste ponto — coleta,
-    # importação de módulo, teste, teardown, finalizador, `atexit` — cai no
-    # dublê. É a ordem que faz a cura valer.
     _armar_lar_de_sessao(session)
 
 
@@ -1540,24 +906,7 @@ def _escrever_no_terminal(session: Any, linhas: list[str]) -> None:
 
 
 def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
-    """Sob ``HEFESTO_EXIGE_GTK_REAL=1``, pulo por falta de GTK reprova o run.
-
-    E, sempre, o CANARIO-FS-01: se a suíte mexeu em qualquer arquivo dos
-    diretórios REAIS da usuária, o run REPROVA com a lista do que mudou. Um
-    teste hermético não deixa rastro nenhum em ``$HOME``.
-
-    Por último, e SEMPRE (daí o `finally`), o BERCO-DE-TMP-01 leva embora o
-    `/tmp` desta sessão. Depois de tudo, e não antes, porque a cópia congelada
-    da ARVORE-CONGELADA-01 mora dentro do berço: varrer primeiro apagaria o
-    lado esquerdo da comparação que decide se o produto mudou no meio da
-    medição.
-
-    LAR-DE-SESSAO-01: os portões medem com o `$HOME` de VERDADE reposto (as
-    duas fotos têm de ser da mesma árvore), e o dublê volta ao sair do `with`.
-    Ele NÃO é desfeito aqui de propósito: o teardown das fixtures de sessão do
-    pytest roda DEPOIS deste hook, e a escrita tardia é justamente o defeito.
-    Quem desfaz é o `atexit` de `_fechar_o_lar_de_sessao`.
-    """
+    """Sob ``HEFESTO_EXIGE_GTK_REAL=1``, pulo por falta de GTK reprova o run."""
     try:
         with _com_o_ambiente_real(session):
             _sessionfinish_das_guardas(session)
@@ -1565,8 +914,6 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
         _varrer_berco(session, getattr(session, "exitstatus", exitstatus))
 
 
-#: Teto de linhas do relato da vigia — o livro de uma sessão contaminada diz
-#: tudo nas primeiras; uma lista de trezentas só ensina a pular o bloco.
 _VIGIA_LIMITE_RELATO = 12
 
 
@@ -1618,10 +965,6 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     if EXIGE_GTK_REAL and _MODULOS_PULADOS_SEM_GI:
         session.exitstatus = 1
 
-    # ARVORE-CONGELADA-01, segunda metade: o produto mudou DEBAIXO da medição?
-    # Então este run não mediu uma coisa só, e nenhum verde nem vermelho dele
-    # vale. Reprovar é a única saída honesta: um verde falso passa despercebido
-    # para sempre, e foi assim que uma mordida real foi declarada inexistente.
     deltas_produto = _deltas_do_congelado()
     if deltas_produto:
         mostrados = deltas_produto[:_CONGELADA_LIMITE_RELATO]
@@ -1639,21 +982,14 @@ def _sessionfinish_das_guardas(session: Any) -> None:
         ])
         session.exitstatus = 1
 
-    # VIGIA-DE-APARELHO-01, as duas metades: o PORTÃO (o livro da vigia, que
-    # atribui) e o AVISO (o journal do kernel, que enxerga o que a vigia não
-    # alcança — processo filho — e não sabe de quem é).
     _vigia_no_fim_da_sessao(session)
-    _lancador_no_fim_da_sessao(session)  # LANCADOR-DE-MENTIRA, o ato sem dono
+    _lancador_no_fim_da_sessao(session)
 
-    # FAIXA-NO-BERCO-01 ANTES do canário, e fora do `return` dele: é a régua
-    # que precisa valer justamente quando o canário está desligado.
     _faixa_no_fim_da_sessao(session)
 
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
 
-    # As árvores de AVISO primeiro, porque elas NÃO reprovam e não podem ser
-    # engolidas por um `return` do bloco que reprova.
     deltas_aviso = _deltas_do_canario(
         _CANARIO_FOTO_AVISO, _fotografar_tudo_de_aviso()
     )
@@ -1691,54 +1027,9 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     session.exitstatus = 1
 
 
-# NOTA: a sonda antiga `_gtk_response_type_ausente()` foi fundida em
-# `_sondar_gtk_do_ambiente()` acima — um subprocesso responde as DUAS
-# perguntas (gi real? ResponseType presente?) em vez de dois.
-
-
-# ---------------------------------------------------------------------------
-# ARVORE-CONGELADA-01 — o produto MEDIDO não pode mudar no meio da medição
-# ---------------------------------------------------------------------------
-#
-# O DEFEITO, MEDIDO em 06/08/2026 (diagnóstico com reprodução em três braços):
-# uma bancada que roda `bash /caminho/absoluto/da/arvore/scripts/x.sh` mede o
-# arquivo que estiver no disco NAQUELE INSTANTE. Quando outro processo edita
-# esse arquivo durante a sessão — um agente irmão fazendo "arrancar a cura ->
-# rodar -> devolver", um `git checkout` noutro terminal, um editor salvando —
-# a bancada mede o produto de outra pessoa. O braço de controle da reprodução:
-#
-#   bancada em cópia A, ninguém mutando A ......... 0 falhas / 10
-#   bancada em cópia A, mutador ciclando em A ..... 5 falhas / 10 (testes
-#                                                   DIFERENTES a cada rodada)
-#   bancada em cópia B, mutador ciclando em A ..... 0 falhas / 10
-#
-# O terceiro braço é a prova de que o canal é o ARQUIVO COMPARTILHADO, e não
-# carga da máquina nem concorrência entre execuções (18 `pytest` simultâneos na
-# árvore real: 0 falhas / 18).
-#
-# E a contaminação vai nos DOIS sentidos, o que é o pior da história: mutação
-# alheia viva produz VERMELHO FALSO (mordida afirmada que não existe), e um
-# `cp ORIG` alheio que desfaz a sua mutação antes do `pytest` rodar produz
-# VERDE FALSO (mordida real declarada inexistente). É exatamente a classe que
-# a regra "teste tem de MORDER" existe para impedir.
-#
-# A CURA que não depende de disciplina de processo: a bancada não lê a árvore
-# de trabalho — lê uma CÓPIA tirada UMA VEZ, no início da sessão. O que roda
-# continua sendo o que está na árvore no instante em que o `pytest` começou
-# (então arrancar uma cura ANTES de rodar continua ficando vermelho, como tem
-# de ser); o que deixa de existir é a janela em que o arquivo muda DEBAIXO da
-# medição.
-#
-# Não substitui o CANARIO-FS-01 acima: aquele vigia o `$HOME` DELA contra
-# escrita da suíte; este protege a MEDIÇÃO contra escrita de terceiros.
-
-#: O que uma bancada de shell precisa enxergar. Lista explícita de propósito:
-#: `packaging/cosmic-applet/target` tem 18 GB e copiar a árvore inteira seria
-#: trocar um defeito por outro.
 _CONGELAR: tuple[str, ...] = (
     "scripts",
     "assets/bluetooth",
-    # o scripts/construir_bluez_backport.sh lê os patches e o BASELINE daqui
     "assets/bluez-backport",
     "flatpak",
     "packaging/arch",
@@ -1750,49 +1041,22 @@ _CONGELAR: tuple[str, ...] = (
     "uninstall.sh",
 )
 
-#: Lixo de build que nunca é produto.
 _CONGELAR_IGNORAR = ("__pycache__", "target", ".flatpak-builder", "build", "*.pyc")
 
 
 def _e_lixo_de_build(relativo: Path) -> bool:
-    """O caminho cai em `_CONGELAR_IGNORAR`? Então não é produto, nos DOIS lados.
-
-    Existe porque a foto e a comparação precisam concordar sobre o que é
-    produto. Medido em 12/08/2026: a cópia congelada nasce sem um único
-    `.pyc` (o `copytree` já ignora), mas quem IMPORTA um script de dentro
-    dela — `tests/unit/test_gravador_recusa_com_daemon_vivo.py` faz isso pelo
-    `importlib`, e é o comportamento normal do CPython — deixa o bytecode
-    nascer LÁ DENTRO, depois da foto. Na comparação final esse `.pyc` não
-    tinha par na árvore viva e a guarda o relatava como
-    `APAGADO scripts/__pycache__/record_hid_capture.cpython-312.pyc`,
-    reprovando com código 1 uma sessão de cinco testes verdes — inclusive o
-    job `lint-test` do CI, desde 11/08/2026.
-
-    Isto explica o que JÁ funcionava: a guarda passou dias correta porque
-    nenhuma bancada importava de dentro do congelado, só executava por
-    `subprocess` (o `__main__` de um script não gera `__pycache__`).
-
-    A cura NÃO é afrouxar a guarda: o filtro é exatamente a mesma lista que a
-    foto usou. Um arquivo de produto de verdade continua sendo acusado.
-    """
+    """O caminho cai em `_CONGELAR_IGNORAR`? Então não é produto, nos DOIS lados."""
     return any(
         fnmatch.fnmatch(parte, padrao)
         for parte in relativo.parts
         for padrao in _CONGELAR_IGNORAR
     )
 
-#: Preenchido na primeira chamada e nunca mais — a foto é da SESSÃO.
 _ARVORE_CONGELADA: list[Path] = []
 
 
 def arvore_congelada() -> Path:
-    """Cópia só-leitura da árvore, tirada UMA VEZ por sessão de `pytest`.
-
-    Use-a como raiz em toda bancada que EXECUTA um arquivo do repositório
-    (``bash scripts/...``) em vez de apenas lê-lo: é o que impede que uma
-    escrita de terceiro no meio da sessão vire falha (ou aprovação) inventada.
-    Ver ARVORE-CONGELADA-01 acima.
-    """
+    """Cópia só-leitura da árvore, tirada UMA VEZ por sessão de `pytest`."""
     if _ARVORE_CONGELADA:
         return _ARVORE_CONGELADA[0]
 
@@ -1817,34 +1081,11 @@ def arvore_congelada() -> Path:
     return destino
 
 
-#: Teto de linhas do relatório — uma sessão contaminada de verdade muda poucos
-#: arquivos; se mudou centenas, a lista inteira não ajuda ninguém.
 _CONGELADA_LIMITE_RELATO = 20
 
 
 def _deltas_do_congelado() -> list[str]:
-    """O produto MUDOU entre a foto e o fim da sessão? Diga quais arquivos.
-
-    Congelar torna o veredito COERENTE (uma sessão inteira mede o mesmo
-    produto) — não torna a bancada imune: uma mutação que já estivesse viva no
-    instante da foto é medida a sessão inteira, e é indistinguível de um defeito
-    de verdade, como TEM de ser (é assim que se prova mordida). O que faltava era
-    a outra metade: DIZER quando isso aconteceu, em vez de acreditar no veredito.
-    Sem isto, um `cp ORIG` de terceiro no meio da sessão desfaz a sua mutação e
-    a suíte declara VERDE uma mordida real — o pior dos dois erros.
-
-    O LIMITE DESTA SONDA, MEDIDO e declarado para ninguém a tomar por garantia:
-    ela compara DOIS INSTANTES (a foto e o fim), não vigia o intervalo. Numa
-    reprodução de 06/08/2026 com um mutador ciclando a 2 Hz na árvore durante
-    dez execuções, a sonda acusou 3 das 10 — e as 7 restantes eram sessões em
-    que a árvore estava no MESMO estado nos dois instantes. O que a sonda pega
-    de graça é o caso que mais engana: a árvore mexida e devolvida (ou mexida e
-    deixada mexida) enquanto a suíte roda. O ganho grande da mesma reprodução é
-    outro, e esse é total: as falhas deixaram de ser SORTEADAS. Antes, testes
-    diferentes caíam a cada rodada; depois, TODA rodada vermelha caiu no mesmo
-    conjunto de quatro — exatamente a mordida pretendida da mutação viva.
-    Vermelho reproduzível é diagnosticável; vermelho sorteado não é.
-    """
+    """O produto MUDOU entre a foto e o fim da sessão? Diga quais arquivos."""
     if not _ARVORE_CONGELADA:
         return []
     congelada = _ARVORE_CONGELADA[0]
@@ -1854,8 +1095,6 @@ def _deltas_do_congelado() -> list[str]:
         if not copia.is_file():
             continue
         relativo = copia.relative_to(congelada)
-        # Bytecode que NASCEU dentro do congelado (um `importlib` de bancada)
-        # não é produto e não tem par na árvore viva. Ver `_e_lixo_de_build`.
         if _e_lixo_de_build(relativo):
             continue
         atual = viva / relativo
@@ -1874,62 +1113,14 @@ def _deltas_do_congelado() -> list[str]:
     return deltas
 
 
-# ---------------------------------------------------------------------------
-# VIGIA-DE-APARELHO-01 — a suíte não cria aparelho de entrada no kernel DELA
-# ---------------------------------------------------------------------------
-# O DEFEITO é o da `_nenhum_uinput_de_verdade` (lá embaixo): 1289 nós
-# `Hefesto - Dualsense4Unix Virtual Keyboard` num dia, saídos do meu `pytest`,
-# derrubando a tela cheia dela no meio de um jogo. A CURA daquele dia pegou — o
-# `journalctl -k` de 19 a 22/08 não registra UM nó com esse nome. O que faltava
-# é o PORTÃO: sem ele, o próximo teste que abra a porta reabre isto e ninguém
-# nota por semanas (entre 04/08 e 20/08 foram dezesseis dias).
-#
-# A RÉGUA É A PORTA, e as outras três foram MEDIDAS nesta máquina em 22/08
-# antes de serem descartadas:
-#
-#  (a) contagem de `/dev/input/event*` antes e depois — CEGA ao defeito. O nó
-#      uinput morre quando o descritor que o criou fecha, e isso acontece dentro
-#      do próprio teste: a contagem do fim é idêntica à do início mesmo depois
-#      de 1289 nós. Medido em 04/08 e reconfirmado aqui pelo teste da mordida,
-#      que cria um nó de verdade e mostra a contagem parada nos dois lados.
-#  (b) o maior `inputN` de `/sys/class/input` — parecia a saída (o número cresce
-#      e não é reciclado: o nó da mordida saiu `input198` com o máximo em 196) e
-#      NÃO é: `/sys/class/input` lista só o que está VIVO, e o máximo volta a
-#      196 no instante em que o nó morre. Sysfs não guarda memória de número já
-#      usado. Régua descartada por MEDIÇÃO: a primeira versão deste bloco a
-#      chamava de "alto-d'água" e prometia o contrário — o teste da mordida
-#      derrubou a promessa na primeira execução. Ela também não atribuiria:
-#      nesta máquina nasceram 43 aparelhos de entrada em uma hora sem suíte
-#      nenhuma (espelhos do Steam Input e os controles dela).
-#  (c) journal do kernel — a ÚNICA régua que sobrevive à morte do nó, e foi com
-#      ela que os 1289 foram contados. Não serve de portão (não existe no CI, e
-#      a linha do kernel não diz de QUEM é o nó), mas é o AVISO do fim da
-#      sessão: é o único instrumento que enxerga nó que nasce em processo FILHO.
-#      Latência medida em 22/08: menos de 20 ms entre criar e aparecer.
-#  (d) arquivo fora do `tmp_path` — já é o CANARIO-FS-01 + BERCO-DE-TMP-01 aqui
-#      em cima, e nenhum dos dois vê uinput: nó de entrada não deixa arquivo.
-#
-# A porta: em processo, todo nó de entrada nasce por `uinput.Device`
-# (python-uinput), `evdev.UInput` (python-evdev) ou `os.open` de `/dev/uinput` /
-# `/dev/uhid` — as três são chamadas Python, então dá para ficar na porta,
-# registrar QUEM passou (o nodeid do teste) e recusar. Atribuição perfeita (é o
-# nosso processo), nenhum privilégio, e ela vê o nó transitório que (a) não vê.
-#
-# O CEGO DELA, declarado: nó que nasce em processo FILHO não passa por porta
-# nossa. É para esse buraco que o aviso de (c) existe.
-
-#: Os dois nós de kernel por onde nasce aparelho de entrada.
 PORTAS_DE_APARELHO: tuple[str, ...] = ("/dev/uinput", "/dev/uhid")
 
-#: As fábricas de biblioteca que criam o nó sem passar por `os.open` do Python
-#: (as duas abrem o `/dev/uinput` em C). Nome da porta -> (módulo, atributo).
 FABRICAS_DE_APARELHO: tuple[tuple[str, str], ...] = (
     ("uinput", "Device"),
     ("evdev", "UInput"),
     ("evdev.uinput", "UInput"),
 )
 
-#: Escotilha de saída, mesmo padrão do canário e do berço.
 _VIGIA_DESLIGADA_ENV = "HEFESTO_SEM_VIGIA_APARELHO"
 
 
@@ -1947,32 +1138,19 @@ class NascimentoDeAparelho:
 
 
 class AparelhoRecusadoError(PermissionError):
-    """A porta fechada, e ela é ``OSError`` de propósito.
-
-    O produto já sabe degradar quando `/dev/uinput` não abre (é o que acontece
-    no CI e em máquina sem a ACL do udev): quem chama trata `OSError` e responde
-    "não dá para usar". Recusar com um erro de outra família faria a suíte medir
-    um caminho que produção nenhuma percorre.
-    """
+    """A porta fechada, e ela é ``OSError`` de propósito."""
 
 
 class VigiaDeAparelho:
-    """Fica nas portas do kernel: registra quem passa e, por padrão, recusa.
-
-    ``recusar=False`` deixa passar e só anota — é o modo do teste da mordida,
-    que precisa de um nó de VERDADE para provar que a régua não é fantasia.
-    """
+    """Fica nas portas do kernel: registra quem passa e, por padrão, recusa."""
 
     def __init__(self, *, recusar: bool = True) -> None:
         self.livro: list[NascimentoDeAparelho] = []
         self.quem = "<coleta ou fixture de sessão>"
         self.recusar = recusar
-        #: O que estava na porta ANTES de nós — é daqui que o teste da mordida
-        #: tira a fábrica de verdade sem desarmar a vigia da sessão.
         self.originais: dict[str, Any] = {}
         self._desfazer: list[Callable[[], None]] = []
 
-    # -- a porta, isolada de qualquer instalação ---------------------------
 
     def registrar(self, porta: str, detalhe: str = "") -> None:
         self.livro.append(NascimentoDeAparelho(self.quem, porta, detalhe))
@@ -2013,7 +1191,6 @@ class VigiaDeAparelho:
         _abrir.vigia_de_aparelho = "os.open"  # type: ignore[attr-defined]
         return _abrir
 
-    # -- instalação --------------------------------------------------------
 
     def instalar(self) -> "VigiaDeAparelho":
         """Põe a vigia nas três portas que existirem neste ambiente."""
@@ -2031,8 +1208,6 @@ class VigiaDeAparelho:
             alvo = __import__(modulo, fromlist=[atributo])
             original = getattr(alvo, atributo)
         except Exception:
-            # Sem a biblioteca não há porta a vigiar — é o caso do job leve do
-            # CI, que instala só o pytest.
             return
         porta = f"{modulo}.{atributo}"
         self.originais[porta] = original
@@ -2046,16 +1221,10 @@ class VigiaDeAparelho:
         self._desfazer.clear()
 
 
-#: No máximo um — a vigia desta sessão.
 _VIGIA: list[VigiaDeAparelho] = []
 
-#: O relógio do início da sessão, no formato que o `journalctl --since` aceita.
 _INICIO_DA_SESSAO: list[str] = []
 
-#: O nome do nó que o teste da mordida cria (e mata) para provar que a régua não
-#: é fantasia. Mora aqui porque os dois lados precisam concordar: o teste o usa,
-#: e o aviso do journal o EXCLUI — senão a prova da régua vira alarme.
-#: Nunca o nome de produção: quem lê o journal tem de distinguir de olho (E1).
 NOME_DO_NO_DE_MORDIDA = "Hefesto MORDIDA de teste (VIGIA-DE-APARELHO-01)"
 
 
@@ -2075,20 +1244,7 @@ def _armar_vigia_de_aparelho() -> None:
 
 
 def maior_no_de_entrada_vivo() -> int:
-    """O maior `inputN` VIVO agora (-1 quando não há nenhum).
-
-    ATENÇÃO ao que este número NÃO é, porque a primeira versão desta função se
-    chamava `alto_dagua_de_aparelhos` e prometia justamente isso: ele **não é
-    alto-d'água**. Medido em 22/08 com um nó de verdade: o kernel deu `input198`
-    ao nó (o número cresce, não é reciclado), e a função devolveu 198 enquanto
-    ele vivia — mas 196 assim que ele morreu, porque `/sys/class/input` só lista
-    o que está VIVO. Não existe, em sysfs, memória do número já usado.
-
-    A consequência é a que decide o desenho da vigia: **nenhuma régua de sysfs
-    enxerga o nó que já morreu** — nem a contagem de `/dev/input/event*`, nem
-    esta. Quem enxerga é a porta (em processo) e o journal do kernel (também
-    para processo filho). Ver `nascimentos_no_journal`.
-    """
+    """O maior `inputN` VIVO agora (-1 quando não há nenhum)."""
     maior = -1
     try:
         entradas = os.listdir("/sys/class/input")
@@ -2102,15 +1258,7 @@ def maior_no_de_entrada_vivo() -> int:
 
 
 def nascimentos_no_journal(desde: str) -> list[str] | None:
-    """Os nomes dos aparelhos de entrada que o KERNEL registrou desde `desde`.
-
-    `None` quando não deu para ler o journal (CI em container, sem journald) —
-    e essa é a razão de isto ser aviso e nunca portão.
-
-    É a única régua que sobrevive à morte do nó, e foi com ela que os 1289 nós
-    de 20/08 foram contados. Latência medida em 22/08: a linha do kernel aparece
-    no journal em menos de 20 ms.
-    """
+    """Os nomes dos aparelhos de entrada que o KERNEL registrou desde `desde`."""
     import subprocess
 
     try:
@@ -2134,12 +1282,7 @@ def nascimentos_no_journal(desde: str) -> list[str] | None:
 
 
 def nomes_de_aparelhos_vivos() -> list[str]:
-    """Os nomes dos aparelhos de entrada VIVOS agora, lidos do sysfs.
-
-    A outra metade da contagem independente: enquanto o nó existe, o kernel
-    publica o nome dele. É assim que o teste da mordida confirma que o nó que a
-    vigia registrou nasceu mesmo — e que sumiu depois.
-    """
+    """Os nomes dos aparelhos de entrada VIVOS agora, lidos do sysfs."""
     nomes: list[str] = []
     raiz = Path("/sys/class/input")
     try:
@@ -2155,12 +1298,7 @@ def nomes_de_aparelhos_vivos() -> list[str]:
 
 
 def problemas_da_vigia(vigia: VigiaDeAparelho | None) -> list[str]:
-    """A lista que o portão lê: uma linha por passagem na porta (vazia = limpo).
-
-    Função e não `assert` porque ela é usada por DOIS lados: o portão da suíte
-    (`test_a_suite_nao_cria_aparelho_no_kernel.py`) e o `sessionfinish`, que
-    cobre a sessão inteira — o portão só enxerga o que rodou antes dele.
-    """
+    """A lista que o portão lê: uma linha por passagem na porta (vazia = limpo)."""
     if vigia is None:
         return []
     return [str(n) for n in vigia.livro]
@@ -2172,27 +1310,7 @@ def repo_root() -> Path:
 
 
 def _o_produto_nao_roda_neste_ambiente(erro: ModuleNotFoundError) -> bool:
-    """O job LEVE do CI: o produto não importa aqui, e não há o que blindar.
-
-    As fixtures de sessão que apontam o sysfs, o `/proc` e o `pactl` para o
-    vazio importam o produto para trocar uma constante. Nos jobs que instalam
-    só o pytest (`A casa sabe`, os documentos, o mapa) esse import falha — e
-    elas foram escritas para, nesse caso, só ceder a vez: sem o produto não há
-    varredura a desviar.
-
-    A PERGUNTA ANTIGA NUNCA CASAVA, e é por isso que esta função existe
-    (O-CI-DA-DEV-VOLTA-A-VERDE-01, 25/09/2026). Ela era «o módulo que faltou é
-    o `hefesto_dualsense4unix`?», mas este mesmo arquivo põe o `src/` na frente
-    do `sys.path` (ver o topo): o pacote SEMPRE se acha. O que falta no job
-    leve é a dependência DELE, e a corrida `36119169814` reprovou os 42 testes
-    do portão com `No module named 'structlog'`, vindo de uma fixture que
-    importa o `dualsense_bt_audio`.
-
-    A pergunta nova é «o módulo que faltou não está instalado neste
-    interpretador?». Continua estreita onde tem de ser: um submódulo do
-    produto que sumiu (renome, arquivo apagado) tem o pacote instalado, e
-    propaga — a ausência aí é defeito, não desenho.
-    """
+    """O job LEVE do CI: o produto não importa aqui, e não há o que blindar."""
     import importlib.util
 
     nome = (erro.name or "").split(".")[0]
@@ -2224,21 +1342,7 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """
     if not os.environ.get("HEFESTO_DUALSENSE4UNIX_FAKE"):
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_FAKE", "1")
-    # O `dkms_lib.sh` lê o Secure Boot pela efivars. Sem este desvio, toda régua
-    # que herda o `os.environ` num subprocesso mediria a máquina de quem roda: verde
-    # aqui, vermelho num runner com Secure Boot ligado. Quem mede o Secure Boot
-    # monta a própria efivars por cima.
     monkeypatch.setenv("HEFESTO_EFIVARS_ROOT", str(tmp_path / ".efivars-sem-secure-boot"))
-    # XDG_RUNTIME_DIR NÃO é isolado de propósito: os testes de single_instance
-    # dependem da semântica real do runtime dir (pid/socket, permissões 0700) e
-    # quebram sob um tmp. O socket IPC já é isolável por nome via
-    # HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME quando um teste precisa.
-    #
-    # Os dirs ficam sob um subdir dedicado (`.xdg/`) para NÃO colidir com testes
-    # que criam `tmp_path / "config"` etc. com `exist_ok=False` na própria fixture
-    # (ex.: test_service_install.isolated_systemd_user) — pytest entrega o MESMO
-    # tmp_path a todas as fixtures do teste. Testes que setam o próprio
-    # XDG_CONFIG_HOME por cima continuam vencendo (este é só o default hermético).
     xdg_root = tmp_path / ".xdg"
     for var, sub in (
         ("XDG_CONFIG_HOME", "config"),
@@ -2249,108 +1353,32 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         target = xdg_root / sub
         target.mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv(var, str(target))
-    # BERÇO-DE-TMP-01, a cauda do `$HOME` (24/08/2026) — o isolamento acima
-    # cobre os quatro XDG_*, mas ``Path.home()``/``os.path.expanduser("~")``
     # continuavam resolvendo o `$HOME` REAL do dev em qualquer chamada que não
-    # respeite XDG. Dois casos MEDIDOS: `utils/i18n._candidate_locale_dirs()`
-    # cai para `Path.home()/.local/share/locale` sempre que o candidato
-    # XDG_DATA_HOME isolado (vazio) não tem catálogo — e `core/system_check.
-    # _wireplumber_hijacks_mic()` lê `Path.home()/.local/state/wireplumber/
-    # default-nodes` direto, ignorando XDG_STATE_HOME. As duas leituras
-    # atingem o disco real do dev sob teste: um source-install real em
-    # `~/.local/share/locale` faz `init_locale()` carregar o catálogo DELA (e
-    # gravar o resultado num flag de módulo que persiste pela sessão inteira),
     # e um WirePlumber real com o DualSense fixado como mic faz todo teste que
-    # sobe o daemon (`_check_system_on_boot`) avaliar um aviso que depende do
-    # estado da MÁQUINA, não do teste — a mesma classe de defeito do
-    # BUG-TEST-CONFIG-LEAK-01 acima, só que em leitura em vez de escrita.
-    #
-    # A cura é a mesma dos quatro XDG_*: isolar o `HOME` também, num diretório
-    # vazio por teste. Não precisa de escotilha própria — nenhuma suíte NOSSA
-    # depende do `$HOME` real (os 7 arquivos que hoje fazem
-    # `monkeypatch.setenv("HOME", ...)` continuam livres para sobrescrever, e
-    # vencem por rodarem depois desta fixture). O CANARIO-FS-01 não é afetado:
-    # ele lê `os.environ` fresco nos hooks de sessão, fora de qualquer
-    # fixture, de propósito (comentário em `_canario_raizes`).
-    #
-    # CORREÇÃO 24/08/2026, achada pela suíte completa após integrar a frente
-    # 17: a frase acima estava incompleta — uma ferramenta EXTERNA depende,
-    # sim. `test_o_cargo_de_verdade_aceita_o_manifesto_real` chama `cargo`
-    # de verdade, e o `rustup`/`cargo` resolvem o toolchain default por
-    # `$HOME/.rustup`/`$HOME/.cargo` quando `RUSTUP_HOME`/`CARGO_HOME` não
-    # estão setados — com o `$HOME` isolado acima, esses dois diretórios
-    # nascem vazios e o cargo recusa com "no default toolchain configured".
-    # O Rust não é o que este isolamento protege (é o `$HOME` DELA, para o
-    # Python/GTK); então os dois apontam de volta para o `$HOME` real antes
-    # dele ser sobrescrito.
-    #
-    # CORREÇÃO 25/08/2026 (LAR-DE-SESSAO-01): esta linha lia `os.environ["HOME"]`
-    # — e desde o desvio de sessão o `HOME` vivo JÁ é o dublê, então o `rustup`
-    # cairia num `.rustup` vazio e o cargo recusaria com "no default toolchain
-    # configured". `lar_real()` devolve o `$HOME` fixado ANTES do desvio, que é
-    # o que estas duas variáveis sempre quiseram dizer.
     real_home = lar_real()
     monkeypatch.setenv("RUSTUP_HOME", str(real_home / ".rustup"))
     monkeypatch.setenv("CARGO_HOME", str(real_home / ".cargo"))
     home_dir = xdg_root / "home"
     home_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("HOME", str(home_dir))
-    # FIX-PACKAGING-SEED-PARITY-01 — desliga a semeadura automática de presets
-    # (profiles.loader._maybe_seed_presets). Sem isto, o PRIMEIRO teste do
-    # processo a carregar perfis receberia os JSONs de assets/profiles_default/
-    # do repo no seu tmp (o flag once-per-process faria só um teste, dependente
-    # da ordem, quebrar asserções de listas exatas). Os testes da semeadura
-    # chamam seed_default_presets() com paths injetados ou re-habilitam via
-    # monkeypatch (delenv + _seed_attempted=False).
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")
-    # BROKER-01: aponta o cliente do broker hide-hidraw para um socket
-    # INEXISTENTE em TODO teste. Na máquina da mantenedora o broker REAL está
-    # de pé em /run/hefesto-hidraw-broker/broker.sock — um teste que
-    # resolvesse o default esconderia/abriria hidraw DE VERDADE no meio da
-    # suíte. Testes do próprio cliente passam o caminho explicitamente.
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
-    # O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01 (25/09/2026) — a irmã
-    # do BROKER-01 acima, pela mesma razão: o sysfs dos nós de entrada que o
-    # `core/evdev_reader` lê (`SYS_CLASS_INPUT`) aponta para uma pasta VAZIA em
     # todo teste. A vista dos externos pula pelo sysfs o nó de DualSense antes
-    # de abrir, e os testes usam nomes de nó (`/dev/input/event30`,
-    # `event261`) que na máquina dela são o movimento do P1 e o touchpad do
-    # vpad do P2. Medido com a cura e sem esta linha: o Pro de dois testes do
-    # inventário sumiu (o do `event261` e o do `event30`) — só na máquina
     # dela, e só com os controles ligados. Vazio é «não achei DualSense nenhum», a resposta de
-    # uma máquina sem controle; quem precisa de árvore monta a sua e aponta
-    # por cima (monkeypatch de função, que desfaz depois desta). Pasta nova
-    # a cada teste, sob o `.xdg/` de sempre: o módulo lê a constante na
-    # chamada, e o desvio vale do primeiro ao último teste.
     try:
         from hefesto_dualsense4unix.core import evdev_reader
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
-        # O job "A casa sabe e o produto não faz" instala só o pytest; sem o
-        # pacote não há leitura de sysfs a desviar (ver
-        # `_nenhum_sysfs_vivo_na_varredura_de_vpad`).
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
     else:
         sysfs_vazio = xdg_root / "sys-class-input"
         sysfs_vazio.mkdir(parents=True, exist_ok=True)
         monkeypatch.setattr(evdev_reader, "SYS_CLASS_INPUT", str(sysfs_vazio))
-    # A-HAPTICA-QUEM-JOGA-01 (26/09/2026) — a irmã da linha de cima: a linha
-    # do portão fechado lê o `uevent` de cada `hidrawN` que o jogo segura, para
-    # contar os de vpad. Numa pasta vazia, nenhum teste lê o de um aparelho
-    # dela; quem precisa de árvore monta a sua e aponta por cima.
     from hefesto_dualsense4unix.integrations import quem_o_jogo_le
 
     hidraw_vazio = xdg_root / "sys-class-hidraw"
     hidraw_vazio.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(quem_o_jogo_le, "RAIZ_CLASS_HIDRAW", str(hidraw_vazio))
-    # O-RECONECTAR-SO-DERRUBA-O-ELO-MORTO-01 (02/10/2026) — a terceira irmã: o
-    # `reconectar` pergunta ao `quem_tem_hid` antes de derrubar, e a raiz da
-    # máquina decidia o veredito dos testes do rádio (sem `/sys/class/hidraw`,
-    # a dúvida segura o elo e três deles reprovavam). A pasta vazia é «ninguém
-    # tem HID»; quem precisa de árvore monta a sua e aponta por cima.
-    # A guarda é a do `evdev_reader`, e não a do `quem_o_jogo_le`: o
-    # `conexao_zumbi` puxa o `structlog`, e os jobs que instalam só o pytest
-    # (os documentos, o mapa, «A casa sabe») erravam em todo teste, na fixture.
     try:
         from hefesto_dualsense4unix.integrations import conexao_zumbi
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
@@ -2358,77 +1386,21 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
             raise
     else:
         monkeypatch.setattr(conexao_zumbi, "RAIZ_HIDRAW", str(hidraw_vazio))
-    # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026) — mesma classe do BROKER-01 acima, e
-    # medida ao vivo: vários testes rodam os scripts `bt_*.sh` DE VERDADE, e
-    # eles registram no journal. Os DADOS já eram isolados (raízes em tmp); o
-    # LOG não era. Em 15/08 a suíte escreveu 3.221 linhas no journal DELA (2.199
-    # do autorestore, 535 do snapshot, 422 do rebind, 65 da vigia) — 36 delas
-    # dizendo "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" sobre
-    # um bluetoothd que nunca morreu (systemctl: Result=success, ativo desde as
-    # 14:14). Oito dessas linhas caíram entre 18h29 e 21h38 e custaram vinte
-    # minutos de caçada a um defeito inexistente.
-    #
-    # O default aqui DESVIA, não emudece: as linhas continuam sendo escritas,
-    # num arquivo por teste que o próprio teste pode ler. Um teste que precise
-    # do caminho de produção passa `HEFESTO_BT_LOG_DEST=""` explicitamente — e
-    # é isso que faz esta variável ser um portão e não um interruptor: quem
-    # quiser o journal tem de pedir por escrito.
     monkeypatch.setenv("HEFESTO_BT_LOG_DEST", str(xdg_root / "bt-log.txt"))
-    # CARONA-DO-WRAPPER-01 (16/08/2026) — mesma classe do BROKER-01 acima, e o
-    # risco é maior: salvar ou aplicar um perfil passou a repor, de carona, a
-    # chamada do `hefesto-launch` nas Opções de Inicialização da Steam
-    # (`app/actions/carona_do_wrapper.py`). Isso varre o `localconfig.vdf` e,
-    # com a Steam fechada, ESCREVE nele. Dezenas de testes de GUI chamam
-    # "Salvar Perfil"; sem esta linha, uma suíte rodando na máquina dela
-    # reescreveria a biblioteca inteira dela em segundo plano — e o
-    # `discover_vdfs` resolve `Path.home()`.
-    #
-    # CORREÇÃO 24/08/2026 (BERÇO-DE-TMP-01, cauda do `$HOME`): a frase acima
-    # dizia "e o HOME NÃO é isolado nesta suíte" como a causa — não é mais
-    # verdade, o bloco de isolamento logo acima desta fixture agora isola o
-    # `HOME` também. O desligador FICA de qualquer forma: é a segunda camada,
-    # e a que documenta a intenção ("carona é opt-in sob teste") — sem ela um
-    # `Path.home()` isolado ainda deixaria `discover_vdfs` escrever de verdade
-    # dentro do `home_dir` fake a cada "Salvar Perfil" das dezenas de testes
-    # de GUI, o que seria ruído sem propósito nenhum dessas suítes.
-    #
-    # Desligado em TODO teste, e quem quer exercitar a carona religa por
-    # escrito, com fixtures em `tmp_path` (é o que o
-    # `test_carona_do_wrapper_01_*.py` faz). Não é flag de produto: em produção
-    # a variável não existe e a carona está sempre ligada.
     monkeypatch.setenv("HEFESTO_CARONA_WRAPPER", "0")
-    # A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — o escape do aviso nunca atravessa de
-    # um teste para o seguinte: quem o escreveu em `os.environ` sem
-    # `monkeypatch` deixaria a suíte inteira mandando aviso para a tela dela.
     monkeypatch.delenv("HEFESTO_AVISO_DE_VERDADE", raising=False)
 
 
 @pytest.fixture(autouse=True)
 def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
-    """SINGLETON-QUE-ATRAVESSA-01 — o `identity._registry` morre com o caso.
-
-    Definida DEPOIS de `_hefesto_fake_env` de propósito: fixtures do mesmo
-    escopo montam na ordem em que são declaradas e desmontam na ordem
-    INVERSA, então o descarte de saída acontece com o `XDG_CONFIG_HOME` do
-    teste ainda de pé — e não depois de ele ser desfeito.
-
-    Nos DOIS lados: na entrada porque um caso anterior pode ter morrido no meio
-    e deixado o singleton populado, e na saída porque é a saída que impede o
-    acúmulo. Descartar não grava nada: `reset_identity_registry` só zera a
-    referência de módulo.
-    """
+    """SINGLETON-QUE-ATRAVESSA-01 — o `identity._registry` morre com o caso."""
     _descartar_registro_de_identidade()
     yield
     _descartar_registro_de_identidade()
 
 
 def _leitores_fisicos_vivos() -> dict[int, Any]:
-    """``{ident da thread: leitor}`` de todo ``PhysicalReportReader`` rodando.
-
-    Pela classe do alvo da thread, sem importar o produto: fixture que importa
-    o produto no ``conftest`` já vermelhou 28 testes (ver
-    ``_nenhum_sysfs_vivo_na_varredura_de_vpad``).
-    """
+    """``{ident da thread: leitor}`` de todo ``PhysicalReportReader`` rodando."""
     vivos: dict[int, Any] = {}
     for fio in threading.enumerate():
         dono = getattr(getattr(fio, "_target", None), "__self__", None)
@@ -2439,18 +1411,7 @@ def _leitores_fisicos_vivos() -> dict[int, Any]:
 
 @pytest.fixture(autouse=True)
 def _nenhum_leitor_fisico_atravessa() -> Iterator[None]:
-    """O leitor de movimento que um caso ligou, o próprio caso desliga.
-
-    Medido na costura da 6e-3, 25/09/2026: a ``MesaHonesta`` monta o co-op de
-    verdade, que liga um ``PhysicalReportReader`` por jogador, e nenhum caso
-    da família o parava. Um arquivo só deixava 189 fios vivos, e o caso da
-    interface que junta todo fio do processo (``join(timeout=5)`` em cada um)
-    ficou cinco minutos parado no meio da parte 03 da suíte.
-
-    Curado aqui, e não caso a caso: vale para todo teste que ligar um leitor,
-    inclusive o que ainda não foi escrito. O ``stop()`` é o do produto (sinal
-    e espera curta), e o leitor que nasceu antes do caso não é tocado.
-    """
+    """O leitor de movimento que um caso ligou, o próprio caso desliga."""
     antes = set(_leitores_fisicos_vivos())
     yield
     for ident, leitor in _leitores_fisicos_vivos().items():
@@ -2459,20 +1420,6 @@ def _nenhum_leitor_fisico_atravessa() -> Iterator[None]:
                 leitor.stop()
 
 
-# ---------------------------------------------------------------------------
-# GUARDA-GI-REAL-01 FORA DO PROCESSO DA SUÍTE (27/09/2026)
-# ---------------------------------------------------------------------------
-#
-# A regra do `pytest_runtest_makereport`, lá em cima, lê a exceção que sobe
-# NESTE processo. Há dois caminhos por onde a falta do GTK chega a um teste sem
-# subir exceção nenhuma aqui, e os dois reprovavam o `lint-test` do CI por
-# ambiente: o processo FILHO (o gerador de uma aba, o `aba05.py` sem o glade, o
-# visor) e a fixture EMPRESTADA de um arquivo que pulou. Este bloco fica aqui,
-# longe do `_falta_o_gtk`, de propósito: acima dele há citações `conftest.py:N`
-# em `src/` e em `tests/`, e um bloco novo lá em cima as moveria todas.
-
-#: O fim do traceback que o processo filho escreve no stderr, e a exceção que
-#: ele vira no pai. São os três tipos que o `_falta_o_gtk` sabe ler.
 _EXCECOES_DO_FILHO: dict[str, type[BaseException]] = {
     "ModuleNotFoundError": ModuleNotFoundError,
     "ImportError": ImportError,
@@ -2481,20 +1428,7 @@ _EXCECOES_DO_FILHO: dict[str, type[BaseException]] = {
 
 
 def repassar_a_falta_do_gtk(filho: Any) -> None:
-    """O processo filho que morreu pela falta do GTK devolve a mesma exceção ao pai.
-
-    O gerador de uma aba, o `aba05.py` sem o glade e o visor rodam num
-    `subprocess`, morrem com `No module named 'gi'` no stderr do filho, e o pai
-    só via um `returncode` — a régua reprovava o runner, não o produto. Aqui a
-    última linha do traceback do filho vira a exceção equivalente no pai, e
-    quem decide é o mesmo `_falta_o_gtk`: pula com o motivo sem o GTK real, e
-    reprova no `gtk-real` (ou na máquina com o GTK real), onde o filho sem `gi`
-    é defeito de ambiente, não ausência.
-
-    Chame ANTES da asserção sobre o `returncode`. Qualquer outro fim de
-    traceback (outro módulo, outra exceção, saída sem traceback) volta sem
-    fazer nada, e a asserção da régua reprova como sempre.
-    """
+    """O processo filho que morreu pela falta do GTK devolve a mesma exceção ao pai."""
     if filho.returncode == 0:
         return
     saida = filho.stderr
@@ -2518,18 +1452,7 @@ def repassar_a_falta_do_gtk(filho: Any) -> None:
 
 
 def pytest_itemcollected(item: Any) -> None:
-    """Quem empresta fixture de um módulo que PULOU pula com o motivo dele.
-
-    `pytest_plugins = ["tests.unit.<outro_arquivo>"]` pega as fixtures de outro
-    arquivo de teste. Quando esse arquivo pula na importação
-    (`exigir_gi_real()` sem o GTK real, ou um insumo fora do git), o pytest
-    anota o plugin em `skipped_plugins` e o descarta CALADO — e quem pediu as
-    fixtures dele caía em `fixture 'a09' not found`, um ERRO que não diz a
-    razão. Foi o `lint-test` de 27/09 com os seis casos do botão do Vulkan.
-    O motivo do plugin vira o pulo de quem o pediu; com
-    `HEFESTO_EXIGE_GTK_REAL=1` o `exigir_gi_real()` do plugin reprova na
-    importação, e nada chega aqui.
-    """
+    """Quem empresta fixture de um módulo que PULOU pula com o motivo dele."""
     pedidos = getattr(getattr(item, "module", None), "pytest_plugins", ())
     if isinstance(pedidos, str):
         pedidos = (pedidos,)
@@ -2547,67 +1470,19 @@ def pytest_itemcollected(item: Any) -> None:
         return
 
 
-# ---------------------------------------------------------------------------
-# PARIDADE-BYTE-01 — o transporte vira DIMENSÃO do caso, não rótulo num dict
-# ---------------------------------------------------------------------------
-#
-# O PORQUÊ, MEDIDO em 10/08/2026 contra os 8589 testes coletados (o diagnóstico
-# inteiro está na seção 2 do índice
-# `docs/process/sprints/arquivados/2026-08-10-INDICE-o-mapa-que-vira-portao.md`):
-#
-#   testes que MENCIONAM transporte ................... 718 (9,7%)
-#   testes que tocam o envelope no nível de BYTE ......  93 (1,1%)
-#   `parametrize` cruzando os DOIS transportes ........   0, de 233
-#   fixtures parametrizadas por transporte ............   0
-#   capturas HID gravadas na suíte ....................   1, e é USB
-#
-# E a prova por mutação, que é a que não deixa dúvida: trocar **R por B** dentro
-# de `_build_common` (vermelho vira azul na lightbar) deixava a suíte INTEIRA
-# verde — 8584 passaram; e matar os gatilhos adaptativos **só no BT**, com
-# envelope e CRC perfeitos, reprovava **1 teste em 8589** — e era o genérico "o
-# payload sai verbatim", que não sabe o que é gatilho.
-#
-# O diagnóstico em uma frase: cada feature era provada UMA vez, no transporte
-# que estava na mesa de quem escreveu o teste — quase sempre o cabo.
-#
-# A CURA é esta fixture: `transporte` é PARAMETRIZADA (`usb` e `bt`), então todo
-# caso que a pede roda DUAS vezes, com ids `[usb]` e `[bt]`, e reprova quando um
-# dos lados quebra sozinho.
-#
-# O QUE ELA NÃO FAZ, DE PROPÓSITO: reimplementar o envelope. Uma fixture que
-# monta o 0x31 por conta própria mede a si mesma — é a armadilha nº 1 desta casa
-# (o instrumento brigando com o produto). Todo valor aqui ou é uma constante
-# importada de `core/ds_output_report.py`, ou é MEDIDO chamando o builder de
-# produção: o deslocamento do common não está escrito em lugar nenhum daqui,
-# `_medir_deslocamento_do_common` procura um payload marcado DENTRO do report
-# que a produção montou.
-
 #: Os dois transportes que o DualSense fala, nos nomes que a casa usa (são os
-#: mesmos do `Transport` do backend e das colunas `cabo_*`/`radio_*` do mapa).
 TRANSPORTES: tuple[str, ...] = ("usb", "bt")
 
 
 def _montar_usb(common: bytes | bytearray, *, seq: int = 0) -> bytearray:
-    """Adaptador de assinatura: o 0x02 não tem sequência, e `seq` é inócuo.
-
-    Existe para que o caso de teste chame `transporte.montar(common, seq=…)`
-    sem saber em qual transporte está — que é justamente o ponto de o
-    transporte ser dimensão do caso. Não monta nada: delega ao builder de
-    produção.
-    """
+    """Adaptador de assinatura: o 0x02 não tem sequência, e `seq` é inócuo."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
 
     return rep.build_usb_report(common)
 
 
 def _medir_deslocamento_do_common(montar: Callable[..., bytearray]) -> int:
-    """Onde o common de 47 bytes CAI dentro do report que a produção monta.
-
-    Medido, não declarado: monta um common marcado (0,1,2,…,46 — uma sequência
-    que não se repete no envelope) e procura essa subsequência no buffer. Se um
-    dia o envelope mudar de forma, este número muda junto com o produto, em vez
-    de virar uma segunda verdade que ninguém atualiza.
-    """
+    """Onde o common de 47 bytes CAI dentro do report que a produção monta."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
 
     marcado = bytes(range(rep.COMMON_LEN))
@@ -2622,18 +1497,7 @@ def _medir_deslocamento_do_common(montar: Callable[..., bytearray]) -> int:
 
 @dataclass(frozen=True)
 class EnvelopeDeTransporte:
-    """Tudo que separa o cabo do rádio, do report id ao CRC.
-
-    Os campos respondem, para UM transporte, as perguntas que o diagnóstico de
-    10/08 mostrou que nenhum teste fazia duas vezes:
-
-    - `report_id` — 0x02 no cabo, 0x31 no rádio;
-    - `deslocamento_do_common` — 1 no cabo, 3 no rádio (MEDIDO no builder);
-    - `tamanho_do_report` — 64 e 78;
-    - `tag` — o 0x10 obrigatório do BT, ausente no USB;
-    - `semente_do_crc` — 0xA2 no BT, `None` no USB (o cabo não tem CRC);
-    - `tem_nibble_de_sequencia` — o nibble alto de `[1]`, só no BT.
-    """
+    """Tudo que separa o cabo do rádio, do report id ao CRC."""
 
     nome: str
     nome_do_contype: str
@@ -2681,12 +1545,7 @@ class EnvelopeDeTransporte:
         return rep.bt_crc32(bytes(report)[:-4], seed=self.semente_do_crc)
 
     def problemas_do_envelope(self, report: bytes | bytearray | list[int]) -> list[str]:
-        """Lista legível do que está errado no envelope (vazia = está inteiro).
-
-        É lista e não `assert` para o caso de teste poder dizer QUAL transporte
-        quebrou na mensagem — o ponto inteiro desta camada é que "quebrou" nunca
-        mais seja uma resposta sem lado.
-        """
+        """Lista legível do que está errado no envelope (vazia = está inteiro)."""
         from hefesto_dualsense4unix.core import ds_output_report as rep
 
         bruto = bytes(report)
@@ -2718,9 +1577,6 @@ class EnvelopeDeTransporte:
         return problemas
 
 
-#: Medido UMA vez por sessão, na primeira fixture que pedir (o import do módulo
-#: de produção fica fora do topo do conftest de propósito: ele é avaliado na
-#: coleta, e nada aqui pode depender de o pacote estar importável tão cedo).
 _ENVELOPES: dict[str, EnvelopeDeTransporte] = {}
 
 
@@ -2762,29 +1618,13 @@ def envelope_de(nome: str) -> EnvelopeDeTransporte:
 
 @pytest.fixture(params=["usb", "bt"])
 def transporte(request: Any) -> EnvelopeDeTransporte:
-    """O transporte como DIMENSÃO do caso: todo teste que a pede roda 2x.
-
-    Os ids saem `[usb]` e `[bt]`, então o relatório do pytest diz qual LADO
-    quebrou — que é a informação que faltava em 10/08, quando matar os gatilhos
-    só no BT reprovava um único teste genérico.
-
-    OS DOIS NOMES ESTÃO ESCRITOS À MÃO NO DECORADOR, e não como `TRANSPORTES`,
-    de propósito: quem faz o CENSO desta camada lê o código com `ast`, e uma
-    indireção (`params=TRANSPORTES`) some do censo — a fixture existiria e o
-    portão continuaria contando zero. `test_paridade_transporte_envelope.py`
-    trava as duas listas juntas para que a duplicação não possa divergir.
-    """
+    """O transporte como DIMENSÃO do caso: todo teste que a pede roda 2x."""
     return envelope_de(str(request.param))
 
 
 @pytest.fixture()
 def transportes() -> tuple[EnvelopeDeTransporte, ...]:
-    """Os DOIS envelopes de uma vez, para o caso que os COMPARA entre si.
-
-    Complementa a `transporte` (que roda um por vez): há afirmação do produto
-    que só existe no cruzamento — "o common de 47 bytes é IDÊNTICO nos dois
-    transportes, muda só o envelope" não cabe num caso que enxerga um lado.
-    """
+    """Os DOIS envelopes de uma vez, para o caso que os COMPARA entre si."""
     return tuple(envelope_de(nome) for nome in TRANSPORTES)
 
 
@@ -2845,28 +1685,12 @@ def ds5_de_bancada(
 
 @pytest.fixture(autouse=True, scope="session")
 def _nenhuma_ancora_de_usb_viva_na_suite(tmp_path_factory: pytest.TempPathFactory) -> None:
-    """A suíte não enxerga o barramento USB DELA.
-
-    Sem isto, `endpoint_de_haptica.ancoras()` leria `/sys` de verdade, o
-    subsystem distribuiria âncoras e o `EndpointDeHaptica.iniciar()` publicaria
-    um `module-null-sink` NA MÁQUINA DELA a cada corrida da suíte. É a mesma
-    forma do defeito que a memória "subsystem novo faz a suíte tocar o aparelho
-    dela" registra — e a cura é a mesma: a raiz se resolve na chamada, e aqui
-    ela aponta para um sysfs vazio.
-
-    **O `try` NÃO é zelo, e o portão que o cobra tem nome.** Fixture autouse de
-    escopo de SESSÃO roda em TODA execução de pytest, inclusive nos jobs leves
-    do `ci.yml` (`anonymity`, `mapa-de-canais`, `promessa-sem-caminho`,
-    `referencias-docs`), que instalam só o pytest e não o produto. Um import
-    duro aqui derruba a coleta INTEIRA desses jobs — e o erro não fala de
-    fixture nenhuma. `tests/unit/test_o_conftest_roda_onde_o_produto_nao_esta_instalado.py`
-    é quem cobra, e foi ele que pegou esta.
-    """
+    """A suíte não enxerga o barramento USB DELA."""
     vazio = tmp_path_factory.mktemp("sysfs-sem-usb")
     try:
         from hefesto_dualsense4unix.integrations import endpoint_de_haptica
     except ModuleNotFoundError:
-        return  # job leve, sem o produto: não há o que desviar
+        return
     endpoint_de_haptica.RAIZ_DO_SYSFS = vazio
 
 
@@ -2911,7 +1735,6 @@ def _nenhum_uinput_de_verdade() -> Iterator[None]:
     try:
         import uinput  # type: ignore[import-not-found]
     except ImportError:
-        # Sem a biblioteca não há tempestade a impedir — e é o caso do CI.
         yield
         return
 
@@ -2972,20 +1795,6 @@ def _nenhum_sysfs_vivo_na_varredura_de_vpad(
     try:
         from hefesto_dualsense4unix.integrations import no_do_vpad
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
-        # O job "A casa sabe e o produto não faz" do `ci.yml` instala SÓ o
-        # pytest, de propósito: é um portão de doze segundos que LÊ a árvore e
-        # nunca importa o produto. Esta fixture é `autouse=True` de escopo de
-        # SESSÃO, então ao nascer em 20/08 (e0a5837) passou a importar o
-        # produto em toda sessão de pytest — e vermelhou os 28 testes daquele
-        # portão, nenhum dos quais toca em vpad. O CI de main ficou vermelho
-        # nos dois repositórios desde então.
-        #
-        # Sem o produto de pé NÃO HÁ o que blindar: a varredura de sysfs que
-        # esta fixture aponta para o vazio mora dentro do produto, e quem a
-        # chamasse já teria estourado no próprio import. O `except` é estreito
-        # de propósito, e quem decide o que é «produto que não roda aqui» é
-        # `_o_produto_nao_roda_neste_ambiente` — um submódulo do produto que
-        # sumiu propaga, porque aí a ausência é defeito e não desenho.
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -3052,16 +1861,11 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
     try:
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
-        # A mesma razão, palavra por palavra, da irmã logo acima: o job "A casa
-        # sabe e o produto não faz" instala só o pytest e nunca importa o
-        # produto. Sem o pacote não há o que blindar.
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
         return
 
-    # O backend num import próprio: ele puxa o `pydualsense`, que as varreduras
-    # do som não usam. Se só ele faltar, o desvio do som continua de pé.
     backend_pydualsense: Any = None
     try:
         from hefesto_dualsense4unix.core import backend_pydualsense
@@ -3118,17 +1922,7 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
 def _nenhum_cabo_em_espera_vivo_na_suite(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Iterator[None]:
-    """O barramento HID que o laço do daemon olha aponta para o VAZIO.
-
-    O-CABO-ASSUME-DO-RADIO-01 (25/09/2026). O `reconnect_loop` passou a olhar
-    `/sys/bus/hid/devices` atrás do cabo que o kernel deixou esperando, e a
-    derrubar o RÁDIO do gêmeo dele. No dia em que a sprint nasceu havia um
-    desses na mesa dela (`0003:054C:0CE6.001B`, o controle plugado às 19:42):
-    todo teste que roda o laço com o backend de verdade o leria, e só a regra
-    udev ausente impediria a suíte de pedir o `Disconnect` do controle dela.
-    Vazio, pela razão das irmãs acima; quem precisa de um barramento forjado
-    aponta a constante com `monkeypatch` de escopo de função.
-    """
+    """O barramento HID que o laço do daemon olha aponta para o VAZIO."""
     vazio = tmp_path_factory.mktemp("sysfs-sem-barramento-hid")
     try:
         from hefesto_dualsense4unix.integrations import o_cabo_em_espera
@@ -3146,34 +1940,6 @@ def _nenhum_cabo_em_espera_vivo_na_suite(
         o_cabo_em_espera.RAIZ_DO_BARRAMENTO_HID = antes
 
 
-# ---------------------------------------------------------------------------
-# BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026)
-# ---------------------------------------------------------------------------
-#
-# DEFEITO MEDIDO: dois testes desta suíte apontavam para `.venv/bin/<coisa>`
-# **relativo à raiz da árvore**, e `git worktree add` não copia `.venv/` (é
-# ignorado). Numa árvore de agente os dois reprovavam sem que nada do produto
-# estivesse errado:
-#
-#   * `test_os_scripts_rodam_no_python_minimo.py` estourava com
-#     `FileNotFoundError: '.venv/bin/ruff'` — o único portão de sintaxe sobre
-#     `scripts/`, calado em toda árvore de agente desde 23/08/2026;
-#   * `test_doctor_cobra_as_duas_obrigatorias.py` mandava o `doctor.sh` procurar
-#     um python que não existe; ele caía no `python3` do PATH, que aqui é um
-#     venv sem PyGObject, e o `check_loader_svg` reprovava por falta de `gi` —
-#     lido como "a régua do doctor quebrou", quando a máquina carrega SVG.
-#
-# A RESPOSTA JÁ EXISTIA EM BASH: `scripts/portoes.sh:_venv_bin` (25/08/2026)
-# resolve venv local → venv da árvore PRINCIPAL do worktree. Esta função é a
-# gêmea em Python, e as duas TÊM DE CONCORDAR: são a mesma decisão escrita duas
-# vezes porque uma tabela de portões em bash não pode ser importada por um
-# teste. Quem mudar a ordem de busca aqui muda lá também.
-#
-# Vale para os BINÁRIOS (ruff, mypy, pytest, o python que carrega `gi`). O
-# código sob teste continua vindo do `PYTHONPATH`, nunca daqui.
-
-#: Ordem de busca, relativa a cada raiz candidata. `.venv` antes de `venv`
-#: porque é o nome que o `install.sh` (`VENV_DIR`) e o CI usam.
 _NOMES_DE_VENV = (".venv", "venv")
 
 
@@ -3199,13 +1965,7 @@ def _raizes_de_venv() -> list[Path]:
 
 
 def binario_do_venv(nome: str) -> Path | None:
-    """O caminho de `nome` no venv desta árvore, ou no da árvore principal.
-
-    Devolve ``None`` quando não há venv nenhum ao alcance — e aí quem chama
-    decide entre o PATH e o `pytest.skip`. Nunca devolve um caminho que não
-    existe: foi um caminho inexistente que virou `FileNotFoundError` e apagou
-    um portão inteiro.
-    """
+    """O caminho de `nome` no venv desta árvore, ou no da árvore principal."""
     for raiz in _raizes_de_venv():
         for venv in _NOMES_DE_VENV:
             candidato = raiz / venv / "bin" / nome
@@ -3214,88 +1974,25 @@ def binario_do_venv(nome: str) -> Path | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# SOM-DE-MENTIRA (13/09/2026) — a suíte não conversa com o som dela, nem para LER
-# ---------------------------------------------------------------------------
-#
-# A-SUITE-NAO-PERGUNTA-AO-SOM-01, achado da validação da SOM-TRAVA-NA-QUEDA-01.
-#
-# A guarda SOM-DELA-01, logo abaixo, recusava só `load-module`/`unload-module`
-# e deixava a leitura passar. O servidor de som dela travou duas vezes em
-# 13/09, e um `pactl` que LÊ fica preso tanto quanto um que escreve: a suíte
-# que pergunta ao servidor dela trava com ele, e o veredito da régua passa a
-# depender da máquina.
-#
-# O INVENTÁRIO, antes desta cura, com espiões na frente do `PATH` e montados
-# por cima de `/usr/bin` (e os sockets de som escondidos): 87 argv chegaram a
-# um `pactl` sem dublê, em 27 arquivos — todos LEITURAS. Oitenta
-# eram o `pactl list modules short` que TODO boot de `Daemon` faz; o resto,
-# `list sinks short` e `get-default-sink` da aba Controles — e um deles era a
-# régua que existia para provar que a leitura passava.
-#
-# A CURA É NA BORDA DO PROCESSO, e não num `_rodar` por módulo: doze arquivos
-# de `src/` montam argv de som, e cobrir executor por executor deixaria o
-# próximo de fora. Duas camadas, as duas armadas no `sessionstart`:
-#
-#   1. o PATH — um diretório com um dublê para cada nome de
-#      `BINARIOS_DO_SERVIDOR_DE_SOM` entra na FRENTE do `PATH`. O dublê anota o
-#      argv em `chamadas.txt` e sai com rc=1, a resposta de um servidor que não
-#      atende. Pega o `shutil.which` do produto, todo subprocesso que herda o
-#      ambiente e os scripts de shell sob teste;
-#   2. o `Popen` — vinte arquivos da suíte escrevem `"PATH": "/usr/bin:/bin"` no
-#      `env` de um subprocesso, e esse PATH não herda nada. O `Popen.__init__` da
-#      sessão põe o dublê ANTES do primeiro diretório de sistema do PATH que o
-#      teste mandou, e troca pelo dublê o executável que resolveria num
-#      diretório de sistema. O dublê que o PRÓPRIO teste pôs antes do sistema
-#      continua vencendo — é assim que `doctor.sh` e companhia são medidos.
-#
-# O DIRETÓRIO FICA DEPOIS DA SESSÃO, e não é esquecimento: thread de escopo
-# maior que o teste e `atexit` alheio rodam até o interpretador morrer, e um
-# PATH apontando para um diretório já apagado cai no `/usr/bin` de verdade.
-# Quem o leva embora é a PRÓXIMA sessão, pelo pid morto — o critério do berço.
-#
-# ESCAPE, o mesmo da guarda de escrita e com o mesmo nome:
-# `HEFESTO_SOM_DE_VERDADE=1` desliga as duas camadas e a guarda — para o ensaio
-# de bancada que precisa do servidor, com a orelha dela do outro lado. Ele é
-# lido UMA vez, no `sessionstart`: um `setenv` no meio da sessão não reabre a
-# porta.
-#
-# O QUE ISTO NÃO ALCANÇA, escrito para ninguém confiar demais: biblioteca que
-# fala o protocolo do servidor sem subprocesso (libpulse, GStreamer, o som de
-# evento do GTK), script que REESCREVE o próprio PATH para diretórios de
-# sistema, `shell=True` com caminho absoluto dentro do texto do comando, e
-# script de shell rodado com um `env` que não tem PATH nenhum.
-
-#: Os clientes do servidor de som que ganham dublê. A régua
-#: `test_a_suite_nao_conversa_com_o_som_dela.py` faz o CENSO de `src/`,
-#: `scripts/` e `install.sh`, e reprova o nome usado que não estiver aqui.
 BINARIOS_DO_SERVIDOR_DE_SOM: tuple[str, ...] = (
-    # pulseaudio-utils — é o `pipewire-pulse` quem responde a eles
     "pactl", "pacmd", "pacat", "parec", "parecord", "paplay", "pamon", "pasuspender",
-    # PipeWire e WirePlumber, pelo protocolo nativo
     "wpctl", "pw-cli", "pw-dump", "pw-metadata", "pw-record", "pw-play", "pw-cat",
     "pw-link", "pw-loopback", "pw-top", "pw-mon",
-    # ALSA — `scripts/` usa `arecord`, e o dispositivo padrão pode ser o servidor
     "arecord", "aplay", "speaker-test",
 )
 
 _SOM_DE_VERDADE_ENV = "HEFESTO_SOM_DE_VERDADE"
 
-#: Prefixo do diretório dos dublês. Carrega o pid pelo mesmo motivo do berço: o
-#: critério de varredura é POSITIVO ("nasceu de uma sessão que morreu").
 _SOM_PREFIXO = "hefesto-som-de-mentira-"
 _SOM_REGISTRO = "chamadas.txt"
 
-#: No máximo um — o diretório desta sessão.
 _SOM_DE_MENTIRA: list[Path] = []
 
-#: Onde mora o cliente de som de VERDADE, em `realpath`. Preenchido no arme.
 _DIRS_DE_SISTEMA_PADRAO: tuple[str, ...] = (
     "/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin",
 )
 _DIRS_DE_SISTEMA: set[str] = set()
 
-#: O `Popen.__init__` de antes da camada 2 — no máximo um.
 _POPEN_INIT_REAL: list[Callable[..., None]] = []
 
 
@@ -3349,9 +2046,7 @@ def _som_orfaos(raiz: Path) -> list[Path]:
 
 
 def _dirs_de_sistema(caminho: str) -> set[str]:
-    """Os diretórios de sistema de sempre, mais todo diretório em que o PATH de
-    ANTES do desvio acha um cliente de som — sem contar o dublê de uma sessão
-    mãe (a suíte que roda pytest em subprocesso)."""
+    """Os diretórios de sistema de sempre, mais todo diretório em que o PATH de"""
     dirs = {os.path.realpath(d) for d in _DIRS_DE_SISTEMA_PADRAO}
     limpo = os.pathsep.join(
         e for e in caminho.split(os.pathsep)
@@ -3372,7 +2067,6 @@ def _armar_som_de_mentira() -> None:
     for orfao in _som_orfaos(raiz):
         shutil.rmtree(orfao, ignore_errors=True)
     destino = raiz / f"{_SOM_PREFIXO}{os.getpid()}"
-    # Já existe? É de uma sessão morta cujo pid o sistema reciclou para nós.
     shutil.rmtree(destino, ignore_errors=True)
     registro = destino / _SOM_REGISTRO
     try:
@@ -3393,11 +2087,7 @@ def _armar_som_de_mentira() -> None:
 
 
 def _path_com_o_duble(caminho: str, duble: Path) -> str:
-    """`caminho` com o dublê ANTES do primeiro diretório de sistema.
-
-    Nada muda quando o dublê já vem antes de todo sistema, ou quando o PATH não
-    tem diretório de sistema nenhum — o teste montou um PATH só dele.
-    """
+    """`caminho` com o dublê ANTES do primeiro diretório de sistema."""
     alvo = str(duble)
     entradas = caminho.split(os.pathsep)
     for i, entrada in enumerate(entradas):
@@ -3409,11 +2099,7 @@ def _path_com_o_duble(caminho: str, duble: Path) -> str:
 
 
 def _duble_no_lugar_de(programa: Any, caminho: str, duble: Path) -> str | None:
-    """O dublê que roda no lugar de `programa`, ou None se não há o que trocar.
-
-    Troca só o cliente de som que resolveria num diretório de SISTEMA. O que
-    resolve no dublê da sessão, ou no dublê que o próprio teste montou, fica.
-    """
+    """O dublê que roda no lugar de `programa`, ou None se não há o que trocar."""
     try:
         texto = os.fsdecode(programa)
     except (TypeError, ValueError):
@@ -3450,7 +2136,7 @@ def _desviar_para_o_duble(argumentos: dict[str, Any], duble: Path) -> None:
         return
     programa = argumentos.get("args")
     if programa is None:
-        return  # o `Popen` real reprova sem `args`, com a mensagem dele
+        return
     if isinstance(programa, (str, bytes, os.PathLike)):
         troca = _duble_no_lugar_de(programa, caminho, duble)
         if troca is not None:
@@ -3470,71 +2156,26 @@ def _desviar_para_o_duble(argumentos: dict[str, Any], duble: Path) -> None:
 
 
 def _instalar_popen_sem_som() -> None:
-    """A camada 2: o `Popen.__init__` da sessão desvia quem não herda o PATH.
-
-    O embrulho é UM só para o som e os lançadores (`_instalar_popen_da_sessao`,
-    no bloco LANCADOR-DE-MENTIRA): esta chamada liga nele a tabela do som.
-    """
+    """A camada 2: o `Popen.__init__` da sessão desvia quem não herda o PATH."""
     if not _POPEN_COM_SOM:
         _POPEN_COM_SOM.append(True)
     _instalar_popen_da_sessao()
 
 
-# ---------------------------------------------------------------------------
-# SOM-DELA-01 (07/09/2026) — a suíte não carrega módulo no PipeWire DELA
-# ---------------------------------------------------------------------------
-#
-# MEDIDO, e o estrago foi real: no meio desta sessão a lista de som dela ganhou
-# **52 sinks fantasma** `hefesto_som_<hex6>`, todos com o mesmo rótulo
 # "Alto-falante do controle", ao lado das duas placas de DualSense de verdade.
-# O daemon dela não os publicou — `journalctl --user` não tem UMA linha de
-# `som_sink_publicado` —, logo quem os publicou foi um processo de TESTE
-# chamando `pactl load-module` de verdade.
-#
-# A porta é estreita e tem nome: `SinkVirtualPipeWire.__init__` resolve
-# `runner or _rodar`, então **todo nó construído sem runner injetado escreve no
-# servidor de som vivo**. Um subsystem iniciado num teste sobe uma THREAD que
-# reconcilia a cada 5 s; se o teste não o parar, a thread sobrevive ao
-# `monkeypatch` que a protegia — o dublê é desfeito no teardown e o laço volta
-# a falar com o `pactl` real.
-#
-# É a mesma família da TELA-DELA-01 lá em cima, com outro periférico: a máquina
-# de desenvolvimento é a máquina DELA, e a suíte não pode mexer no que ela está
 # usando. Lá era a tela; aqui é o som — e ela está com quatro DualSense na mesa.
-#
-# **Só as ESCRITAS são recusadas AQUI**, antes de o subprocesso nascer: um nó
-# construído sem runner volta `None` sem mandar argv a ninguém. A LEITURA segue
-# para o `_rodar` de verdade — e desde 13/09 quem a atende é o dublê do
-# SOM-DE-MENTIRA, logo acima.
-#
-# FATO SUBSTITUÍDO (13/09/2026): este bloco dizia que a leitura passava porque
-# ler o servidor não mudava nada dela. A razão caiu no dia em que o servidor
-# dela travou duas vezes e a leitura travou junto.
-#
-# ESCAPE, explícito e com nome: `HEFESTO_SOM_DE_VERDADE=1`, para o ensaio de
-# bancada que PRECISA publicar um nó — com a orelha dela do outro lado. Ele
-# desliga esta guarda e as duas camadas do SOM-DE-MENTIRA.
 _VERBOS_QUE_ESCREVEM_NO_SOM = ("load-module", "unload-module")
 
 
 @pytest.fixture(autouse=True, scope="session")
 def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
-    """`pactl load-module`/`unload-module` da suíte não chega ao PipeWire dela.
-
-    Devolve `None` para as escritas — que é exatamente o que o `_rodar` real
-    devolve numa máquina sem `pactl`, o caso do CI. Quem quiser afirmar sobre o
-    argv continua injetando o próprio `runner`, como os testes já fazem; esta
-    fixture só fecha a porta de quem NÃO injetou nada.
-    """
+    """`pactl load-module`/`unload-module` da suíte não chega ao PipeWire dela."""
     try:
         from hefesto_dualsense4unix.integrations import (
             alto_falante_bt,
             dualsense_bt_audio,
         )
     except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
-        # Mesma razão da `_nenhum_sysfs_vivo_na_varredura_de_vpad`: o portão
-        # "A casa sabe" roda com só o pytest instalado e nunca importa o
-        # produto. Sem o pacote não há o que blindar.
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -3544,11 +2185,6 @@ def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
         yield
         return
 
-    # OS DOIS `_rodar` QUE CARREGAM MÓDULO (SOM-RECUO-01, 13/09/2026). Até esta
-    # data só o do alto-falante tinha guarda, e o do microfone tem a mesma
-    # porta: `SourceVirtualPipeWire.__init__` resolve `runner or _rodar`, então
-    # uma source construída num teste sem `runner` carregava `module-pipe-source`
-    # no servidor dela — e `descarregar_modulo` sem `runner` descarregava.
     reais = {modulo: modulo._rodar for modulo in (alto_falante_bt, dualsense_bt_audio)}
     for modulo, real in reais.items():
         modulo._rodar = _sem_escrever_no_som(real)
@@ -3574,18 +2210,7 @@ def _sem_escrever_no_som(
 
 @pytest.fixture(autouse=True)
 def _recuo_do_pactl_zerado() -> Iterator[None]:
-    """O recuo do `pactl` nasce ZERADO em cada teste (SOM-RECUO-01, 13/09/2026).
-
-    `dualsense_bt_audio.PACTL` é um singleton do PROCESSO, e a suíte roda num
-    processo só: um `pactl` que estoura o prazo de verdade num teste — ou um
-    teste que chama `PACTL.estourou()` sem trocar o objeto — deixaria o som, o
-    microfone e o volume dos testes seguintes respondendo «não sei» sem
-    perguntar nada. Vermelho por ordem de execução, que se lê como defeito do
-    teste que reprovou.
-
-    Zera NO LUGAR (`zerar()`), sem trocar o objeto: quem copiou a referência por
-    `from … import PACTL` enxerga o mesmo zero.
-    """
+    """O recuo do `pactl` nasce ZERADO em cada teste (SOM-RECUO-01, 13/09/2026)."""
     try:
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio
     except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
@@ -3600,49 +2225,8 @@ def _recuo_do_pactl_zerado() -> Iterator[None]:
         dualsense_bt_audio.PACTL.zerar()
 
 
-# ---------------------------------------------------------------------------
-# INSUMO-FORA-DO-GIT-01 (20/09/2026) — a régua é versionada, o insumo dela não
-# ---------------------------------------------------------------------------
-#
-# MEDIDO, e é o que derruba a esteira dos pacotes: `docs/process/` é
-# `.gitignore:178` por decisão dela, e o bloco `.gitignore:189-195` tirou do
-# repositório o despacho e a costura de leva — `check_colisao_de_sprints.py`
-# entre eles. O `release.yml` roda `pytest tests/unit` num CLONE LIMPO, onde
-# nada disso existe: as réguas versionadas cujo insumo saiu junto reprovam por
-# AMBIENTE, e a esteira que gera os pacotes para outros computadores cai aí.
-#
-# Reprovar por ambiente é pior do que parecer: lê-se como regressão. Três vezes
-# nesta casa um laudo de agente acusou "regressão" sobre uma árvore recém-criada
-# a que ninguém tinha copiado os ignorados.
-#
-# A CURA É UM MARCADOR SÓ, e não cento e vinte e nove `if`s espalhados. Duas
-# portas para a mesma lógica, porque há dois momentos em que a ausência mata:
-#
-#   `@pytest.mark.insumo_fora_do_git("docs/process/sprints")`
-#       no teste, na classe ou em `pytestmark`. O gancho abaixo converte em
-#       `skip` COM A RAZÃO na coleta.
-#   `exigir_insumo_fora_do_git("scripts/check_colisao_de_sprints.py")`
-#       no CORPO do módulo, para quem importa o insumo no nível de módulo: ali
-#       a exceção sobe na COLETA, pytest devolve `Interrupted: 1 error during
-#       collection`, o LOTE INTEIRO morre — e `no tests ran` lê-se como limpo.
-#
-# AS DUAS REGRAS QUE ESTE BLOCO NÃO NEGOCIA:
-#
-#   1. **Pulo calado é verde sobre nada.** A razão nomeia CADA caminho que
-#      faltou e a linha do `.gitignore` que o exclui. Marcador sem caminho
-#      nenhum é recusado com `UsageError`, alto, na coleta.
-#   2. **Ausência que o git não explica NÃO pula — reprova.** Se o caminho
-#      sumiu e nenhuma linha do `.gitignore` o cobre, isso é defeito, não
-#      ambiente, e esconder defeito atrás de `skip` é exatamente o verde sobre
-#      nada que esta casa passa o dia caçando. `motivo_do_pulo` devolve `None`
-#      nesse caso e o teste reprova no claro.
-#
-# E a linha do `.gitignore` TEM DONO: ela é lida do arquivo, nunca digitada.
-# Digitar `178` aqui faria esta mensagem envelhecer calada na primeira vez que
-# alguém acrescentasse uma linha acima.
 _MARCA_DO_INSUMO = "insumo_fora_do_git"
 
-#: `.gitignore` lido uma vez por árvore — o gancho passa por cada item coletado.
 _GITIGNORE_POR_RAIZ: dict[str, list[tuple[int, str, bool, bool]]] = {}
 
 
@@ -3652,8 +2236,6 @@ class InsumoDeclarado:
 
     relativo: str
     existe: bool
-    #: A linha do `.gitignore` que exclui o caminho (`.gitignore:178`), quando
-    #: existe. `None` quer dizer que o git NÃO explica a ausência.
     regra: str | None
 
     @property
@@ -3691,27 +2273,7 @@ def _padroes_do_gitignore(raiz: Path) -> list[tuple[int, str, bool, bool]]:
 
 
 def _regra_que_exclui(raiz: Path, relativo: str) -> str | None:
-    """A linha do `.gitignore` que exclui `relativo`, ou `None`.
-
-    Segue as duas regras do git que esta casa usa de fato: um padrão com barra
-    é ancorado na raiz e um padrão sem barra casa com qualquer componente. A
-    última linha que casa manda, e por isso um `!` posterior tira a dispensa.
-
-    ONDE ISTO É MAIS ESTRITO QUE O GIT, de propósito (medido em 20/09/2026, com
-    `git check-ignore -v` num repositório de mentira): o git **não** deixa um
-    `!` re-incluir o que mora sob uma pasta já excluída — com
-    `docs/process/` e `!docs/process/sprints`, o git continua dizendo
-    `.gitignore:1` para `docs/process/sprints`, e esta leitura diz `None`.
-    A divergência é para o lado que não esconde nada: `None` NÃO pula, e o
-    teste reprova no claro. O lado oposto seria uma dispensa a mais, e dispensa
-    a mais é o verde sobre nada que este bloco existe para impedir.
-
-    Um padrão só-pasta (`docs/process/`) casa também com o caminho declarado em
-    si, e não só com os ancestrais dele: o caminho que se está olhando NÃO
-    EXISTE — é essa a pergunta —, então não há no disco a quem perguntar se ele
-    é pasta. Ser permissivo aqui é o lado seguro: o outro lado esconderia o
-    caminho por trás de uma reprovação por ambiente.
-    """
+    """A linha do `.gitignore` que exclui `relativo`, ou `None`."""
     alvo = relativo.strip("/")
     if not alvo:
         return None
@@ -3747,12 +2309,7 @@ def olhar_insumo(relativo: str, raiz: Path | None = None) -> InsumoDeclarado:
 
 
 def motivo_do_pulo(*relativos: str, raiz: Path | None = None) -> str | None:
-    """A razão de pular, ou `None` quando não há razão para pular.
-
-    `None` sai em DOIS casos, e a diferença entre eles é a espinha deste bloco:
-    quando está tudo no lugar (a régua roda), e quando falta algo que o git
-    **não** explica (a régua roda e reprova no claro, como tem de reprovar).
-    """
+    """A razão de pular, ou `None` quando não há razão para pular."""
     if not relativos:
         raise ValueError(
             "INSUMO-FORA-DO-GIT-01: marcador sem caminho nenhum é pulo calado — "
@@ -3774,12 +2331,7 @@ def motivo_do_pulo(*relativos: str, raiz: Path | None = None) -> str | None:
 
 
 def exigir_insumo_fora_do_git(*relativos: str, raiz: Path | None = None) -> None:
-    """Pula o MÓDULO INTEIRO com a razão, quando o insumo não veio.
-
-    Para quem lê o insumo no corpo do módulo — `exec_module`, `read_text` no
-    nível de import. Ali o `skip` de item chega tarde: a exceção sobe na coleta
-    e derruba o lote inteiro.
-    """
+    """Pula o MÓDULO INTEIRO com a razão, quando o insumo não veio."""
     motivo = motivo_do_pulo(*relativos, raiz=raiz)
     if motivo is not None:
         pytest.skip(motivo, allow_module_level=True)
@@ -3812,42 +2364,9 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
             item.add_marker(pytest.mark.skip(reason=motivo))
 
 
-# ---------------------------------------------------------------------------
-# O SEGFAULT DIZ ONDE (VERDE-NAO-E-PROVA-01, passo 4)
-# ---------------------------------------------------------------------------
-#
-# No fim do arquivo de propósito: um bloco novo lá em cima moveria as citações
-# `conftest.py:N` de `src/` e de `tests/`. Em 26/09/2026 uma parte da suíte
-# morreu com `rc=139` e ninguém tinha a pilha. O pytest liga o `faulthandler`
-# no próprio processo, mas os filhos Python que a suíte dispara (os pilotos, os
-# geradores, os scripts) não herdam isso; a variável de ambiente herda, menos
-# no filho lançado com `-I`. A régua é
-# `tests/unit/test_o_segfault_da_suite_diz_onde.py`.
 os.environ.setdefault("PYTHONFAULTHANDLER", "1")
 
 
-# ---------------------------------------------------------------------------
-# O LIXO DO WEBKIT SE RECOLHE NO FIO DO GTK (02/10/2026)
-# ---------------------------------------------------------------------------
-#
-# Aqui, e não lá em cima, pelo motivo do bloco do segfault: daqui para baixo
-# nenhuma linha é citada. MEDIDO em 01 e 02/10/2026, num lote de 42 arquivos
-# vizinhos da aba Conexões, três vezes em três: o processo morre com `Fatal
-# Python error: Aborted`, e a pilha diz «Garbage-collecting» num fio da central
-# do rádio. O objeto do WebKit que um teste deixa num ciclo de referências (a
-# função que o sinal chama de volta, a célula que guarda a `view`) só sai na
-# coleta, e a coleta roda no fio que estiver alocando quando o limiar estoura:
-# um fio da central, fora do fio do GTK, onde o WebKit aborta ao soltar o
-# objeto. A `scripts/rodar-a-suite.sh` roda cada arquivo do WebKit em processo
-# próprio, e por isso a suíte não morria; o lote de vizinhos de quem confere,
-# sim, e levava junto a medida dos outros 41 arquivos.
-#
-# A CURA É NA BORDA, e não arquivo por arquivo: sessenta e quatro arquivos
-# abrem o WebKit, cada um com o próprio laço. Depois de todo teste de um
-# arquivo que diz `WebKit2` (o mesmo critério da `rodar-a-suite.sh`), e na
-# troca de arquivo com o WebKit já carregado no processo, a coleta roda AQUI,
-# no fio principal, e o GTK esgota o que a soltura deixou pendente. A régua é
-# `tests/unit/test_o_lixo_do_webkit_se_recolhe_no_fio_do_gtk.py`.
 _ARQUIVO_DO_WEBKIT: dict[str, bool] = {}
 
 
@@ -3865,8 +2384,6 @@ def _recolher_no_fio_do_gtk() -> None:
     import gc
 
     gc.collect()
-    # Só com o WebKit de verdade no processo: o GTK falso dos testes sem
-    # sessão gráfica não tem laço a esgotar.
     if "gi.repository.WebKit2" not in sys.modules:
         return
     gtk = sys.modules.get("gi.repository.Gtk")
@@ -3880,7 +2397,6 @@ def pytest_runtest_teardown_do_webkit(item: Any, nextitem: Any) -> Iterator[None
     try:
         return (yield)
     finally:
-        # Depois das fixtures do teste (e das do arquivo, no último dele).
         troca_de_arquivo = nextitem is None or getattr(nextitem, "path", None) != getattr(
             item, "path", None)
         if _e_arquivo_do_webkit(item) or (
@@ -3888,89 +2404,17 @@ def pytest_runtest_teardown_do_webkit(item: Any, nextitem: Any) -> Iterator[None
             _recolher_no_fio_do_gtk()
 
 
-# ---------------------------------------------------------------------------
-# LANCADOR-DE-MENTIRA (29/09/2026) — a suíte não abre nem fecha o lançador dela
-# ---------------------------------------------------------------------------
-#
-# A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01, achado 8 da bancada de 29/09.
-#
-# MEDIDO no diário dela, seis vezes desde 25/09: o gesto «reiniciar» da aba
-# Sistema ganhou em 21/09 um segundo ato (fechar e reabrir o lançador aberto),
-# e o teste de 03/09 que o exercita dublava só o primeiro. Sob a suíte, o
-# segundo ato perguntou à máquina dela se a Steam estava aberta (`pgrep`),
-# mandou `steam -shutdown` com o HOME do lar de mentira (que instalou uma Steam
-# nova em `/tmp`), derrubou o webhelper da Steam dela pelo nome no fallback
-# (`pkill -x steamwebhelper`) e, na janela em que o cliente dela ainda não o
-# tinha relançado, reabriu `steam`. A régua passava em todos os casos: o
-# produto engole tudo nesse caminho, e o único sinal era o tempo (38 s).
-#
-# A CURA É NA BORDA DO PROCESSO, como a do SOM logo acima: oito portas do
-# produto e dois scripts de shell chegam a um lançador, e cobrir executor por
-# executor deixaria o próximo de fora. Três camadas, armadas no `sessionstart`:
-#
-#   1. o PATH — um diretório com um dublê para cada nome de
-#      `BINARIOS_DE_LANCADOR` entra na FRENTE do `PATH`. O dublê de um ATO
-#      (abrir, fechar, trazer para a frente) anota o argv no livro e sai com
-#      rc=1, como um lançador ausente ou um `pkill` que não casou nada. O de
-#      uma LEITURA sobre lançador (`pgrep`, `flatpak ps|list|info`,
-#      `wmctrl -l`) responde «fechado», calado. O resto de `pgrep`, `pkill`,
-#      `killall`, `gio` e `flatpak` segue para o binário de verdade, pelo
-#      caminho resolvido no arme e escrito dentro do dublê;
-#   2. o `Popen` — o MESMO embrulho do SOM (uma função, duas tabelas): o nome
-#      da tabela vira o dublê onde quer que resolva (`/usr/games` inclusive,
-#      que o critério de sistema do SOM não conhece) e também quando não
-#      resolve em lugar nenhum. A exceção é o que resolve nos temporários da
-#      sessão (o berço e a `basetemp`): o dublê que o próprio teste montou
-#      vence;
-#   3. o VEREDITO — um embrulho em volta de cada fase do teste relê o livro, e
-#      o ato que chegou durante a fase reprova AQUELE teste, com o argv. O ato
-#      fora de qualquer fase (um fio, um finalizador) reprova a sessão. A
-#      reprovação vem do livro e não de exceção, porque nesses caminhos o
-#      produto engole tudo.
-#
-# SEM ESCAPE, de propósito: nenhum ensaio de bancada precisa de lançador de
-# verdade dentro do pytest. O `HEFESTO_SOM_DE_VERDADE=1` desliga só a tabela
-# do som; os lançadores moram noutro diretório e ficam.
-#
-# O QUE ISTO NÃO ALCANÇA, escrito para ninguém confiar demais: `shell=True`
-# com o caminho absoluto dentro do texto do comando; script de shell que
-# reescreve o próprio PATH por dentro e chama o lançador pelo nome; `os.kill`
-# num pid que não saiu do `pgrep` nem do `flatpak ps`; e o `/proc` de um FILHO
-# (`steam_game_running`), que vê o jogo dela (aqui, o JOGO-SO-DA-SESSAO o tira) — esse caminho
-# RECUSA o ato, então fica do lado seguro. Como no SOM, também não alcança o
-# script de shell rodado com um `env` sem PATH nenhum (o shell usa o PATH
-# padrão dele) nem o lançador por caminho absoluto como ARGUMENTO de outro
-# programa (`setsid /usr/games/steam`): o desvio olha o programa, não o resto
-# do argv. E o veredito não alcança o ato de um `atexit` (ele roda depois do
-# fim da sessão) nem o teste marcado `xfail`, que engole a reprovação; nos
-# dois o ato continua caindo no dublê. Onde não há Steam (o CI), o
-# `shutil.which("steam")` passa a achar o dublê.
-
-#: Os nomes que ABREM, FECHAM ou trazem para a frente um lançador — e os que
-#: LEEM se ele está aberto. A régua
-#: `test_a_suite_nao_abre_nem_fecha_o_lancador_dela.py` faz o CENSO das tabelas
-#: dos donos (`reposicao_dos_lancadores.LANCADORES`, `steam_launcher`,
-#: `desenho_dos_lancadores.A_STEAM`) e de `src/` e `scripts/`, e reprova o
-#: nome que não estiver aqui.
 BINARIOS_DE_LANCADOR: tuple[str, ...] = (
-    # os lançadores, pelo executável nativo e pelo id do flatpak
     "steam", "steam-native", "steamwebhelper", "com.valvesoftware.Steam",
     "heroic", "com.heroicgameslauncher.hgl",
     "lutris", "net.lutris.Lutris",
-    # os abridores genéricos, que abrem qualquer um
     "xdg-open", "gtk-launch", "gio",
-    # o flatpak (`run`, `kill`, ...) e o foco de janela (`wmctrl -ia`)
     "flatpak", "wmctrl",
-    # quem fecha pelo nome, e quem pergunta pelo nome
     "pkill", "killall", "pgrep",
 )
 
-#: As raízes que fazem um padrão de `pgrep`/`pkill`/`killall` «nomear um
-#: lançador». Todo nome de lançador acima contém uma delas (a régua confere),
-#: sem diferença de caixa: `com.valvesoftware.Steam`, `steamrt64/steam`.
 RAIZES_DE_LANCADOR: tuple[str, ...] = ("steam", "heroic", "lutris")
 
-#: O que cada nome faz no dublê. Quem não está aqui é um ATO inteiro.
 _FORMA_DO_DUBLE: dict[str, str] = {
     "pgrep": "pergunta",
     "pkill": "mata",
@@ -3980,36 +2424,22 @@ _FORMA_DO_DUBLE: dict[str, str] = {
     "gio": "gio",
 }
 
-#: Prefixo do diretório dos dublês, com o pid pelo critério de órfão do som.
 _LANCADOR_PREFIXO = "hefesto-lancador-de-mentira-"
 _LANCADOR_LIVRO = "atos.txt"
 
-#: No máximo um — o diretório desta sessão.
 _LANCADOR_DE_MENTIRA: list[Path] = []
 
-#: Os temporários desta sessão, em `realpath`: o berço e a `basetemp`.
 _TEMPORARIOS_DA_SESSAO: list[str] = []
 
-#: `id()` da Session que armou a guarda: os testes do canário chamam
-#: `pytest_sessionfinish` com uma Session de mentira no meio da sessão viva.
 _SESSAO_DO_LANCADOR: list[int] = []
 
-#: Até onde o livro já foi lido (em bytes), o que chegou fora de fase, e os
-#: começos de linha que uma régua declarou pela `ato_de_proposito`.
 _LIVRO_LIDO: list[int] = [0]
 _ATOS_FORA_DE_FASE: list[str] = []
 _ATOS_DE_PROPOSITO: set[int] = set()
 
-#: Os filhos que o `Popen` da sessão mandou a um dublê de lançador. O produto
-#: abre o lançador sem esperar (`fora_do_servico.abrir`), e o dublê escreve no
-#: livro quando RODA: o fim da fase espera por eles, senão o ato de um teste
-#: cairia na fase seguinte, ou fora de qualquer uma.
 _FILHOS_NO_DUBLE: list[Any] = []
 _ESPERA_DOS_FILHOS_S = 5.0
 
-#: O SOM ligou a tabela dele no embrulho? (a mordida da régua do som tira o
-#: `_instalar_popen_sem_som()` do arme do som, e o embrulho continua de pé
-#: pelos lançadores; sem esta marca, a mordida dele deixaria de morder).
 _POPEN_COM_SOM: list[bool] = []
 
 _SIGLA_DO_LANCADOR = "A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01"
@@ -4026,8 +2456,7 @@ def _livro_do_lancador() -> Path | None:
 
 
 def _ler_o_livro(desde: int) -> tuple[list[tuple[int, str]], int]:
-    """As linhas INTEIRAS do livro a partir do byte `desde`, com o começo de
-    cada uma, e o byte até onde se leu. Linha sem `\\n` fica para a próxima."""
+    """As linhas INTEIRAS do livro a partir do byte `desde`, com o começo de"""
     livro = _livro_do_lancador()
     if livro is None:
         return [], desde
@@ -4070,8 +2499,7 @@ def _padrao_de_lancador() -> str:
 
 
 def _texto_do_lancador(nome: str, livro: Path, real: str | None) -> str:
-    """O script de um dublê. `real` é o binário de verdade para o que não é
-    lançador (ou None, quando esta máquina não o tem)."""
+    """O script de um dublê. `real` é o binário de verdade para o que não é"""
     forma = _FORMA_DO_DUBLE.get(nome, "ato")
     padrao = _padrao_de_lancador()
     cabeca = (
@@ -4128,12 +2556,7 @@ def _texto_do_lancador(nome: str, livro: Path, real: str | None) -> str:
 def escrever_os_dubles_dos_lancadores(
     destino: Path, livro: Path, reais: dict[str, str | None]
 ) -> None:
-    """Escreve em `destino` um dublê por nome de `BINARIOS_DE_LANCADOR`.
-
-    `reais` diz onde mora o binário de verdade de cada nome (o que o dublê
-    repassa quando a pergunta não é sobre lançador). É parâmetro para a régua
-    poder pôr um binário falso no lugar e ver QUEM respondeu.
-    """
+    """Escreve em `destino` um dublê por nome de `BINARIOS_DE_LANCADOR`."""
     livro.touch()
     for nome in BINARIOS_DE_LANCADOR:
         duble = destino / nome
@@ -4160,8 +2583,7 @@ def _lancador_orfaos(raiz: Path) -> list[Path]:
 
 
 def _reais_dos_lancadores(caminho: str) -> dict[str, str | None]:
-    """Onde o PATH de ANTES do arme acha cada nome — sem o dublê de uma sessão
-    mãe (a suíte que roda pytest em subprocesso)."""
+    """Onde o PATH de ANTES do arme acha cada nome — sem o dublê de uma sessão"""
     limpo = os.pathsep.join(
         e for e in caminho.split(os.pathsep)
         if not os.path.basename(e.rstrip(os.sep)).startswith(_LANCADOR_PREFIXO)
@@ -4211,9 +2633,7 @@ def _e_temporario_da_sessao(caminho: str) -> bool:
 
 
 def _path_com_o_lancador(caminho: str, duble: Path) -> str:
-    """`caminho` com o dublê ANTES do primeiro diretório que não seja
-    temporário da sessão. Nada muda quando o PATH só tem temporários: o teste
-    montou um PATH só dele."""
+    """`caminho` com o dublê ANTES do primeiro diretório que não seja"""
     alvo = str(duble)
     entradas = caminho.split(os.pathsep)
     for i, entrada in enumerate(entradas):
@@ -4225,13 +2645,7 @@ def _path_com_o_lancador(caminho: str, duble: Path) -> str:
 
 
 def _lancador_no_lugar_de(programa: Any, caminho: str, duble: Path) -> str | None:
-    """O dublê que roda no lugar de `programa`, ou None se não há o que trocar.
-
-    Troca o nome da tabela onde quer que ele resolva, e também quando não
-    resolve: sem a troca, o ato viraria um `FileNotFoundError` que o produto
-    engole, e o livro não o veria. Fica só o que resolve no próprio dublê ou
-    num temporário da sessão (o dublê que o teste montou).
-    """
+    """O dublê que roda no lugar de `programa`, ou None se não há o que trocar."""
     try:
         texto = os.fsdecode(programa)
     except (TypeError, ValueError):
@@ -4244,8 +2658,6 @@ def _lancador_no_lugar_de(programa: Any, caminho: str, duble: Path) -> str | Non
         pasta = os.path.realpath(os.path.dirname(resolvido) or os.curdir)
         if pasta != os.path.realpath(duble) and _e_temporario_da_sessao(pasta):
             return None
-    # o que já resolvia no dublê ganha o caminho inteiro também: é por ele que
-    # o fim da fase reconhece o filho que tem de esperar
     return str(duble / nome)
 
 
@@ -4290,13 +2702,7 @@ def _desviar_para_o_lancador(argumentos: dict[str, Any], duble: Path) -> None:
 
 
 def _instalar_popen_da_sessao() -> None:
-    """O embrulho ÚNICO do `Popen.__init__` da sessão, com as duas tabelas.
-
-    Dois embrulhos encadeados seriam dois donos da mesma porta. O `__init__`
-    de verdade é lido de `_POPEN_INIT_REAL[0]` a cada chamada, e não guardado
-    no fecho: a régua dos lançadores põe ali um espião que só executa o que
-    mora no diretório dos dublês.
-    """
+    """O embrulho ÚNICO do `Popen.__init__` da sessão, com as duas tabelas."""
     import functools
     import subprocess
 
@@ -4313,7 +2719,7 @@ def _instalar_popen_da_sessao() -> None:
             try:
                 amarrado = assinatura.bind(self, *args, **kwargs)
             except TypeError:
-                pass  # chamada inválida: o `Popen` real reprova com a mensagem dele
+                pass
             else:
                 if som is not None:
                     _desviar_para_o_duble(amarrado.arguments, som)
@@ -4353,12 +2759,6 @@ def _esperar_os_filhos_no_duble() -> None:
                 time.sleep(0.01)
                 continue
         _FILHOS_NO_DUBLE.pop(0)
-
-
-# O VEREDITO POR TESTE. A atribuição é pelo LIVRO, e não pelo ambiente do
-# filho: um `env={"PATH": …}` apaga o `$PYTEST_CURRENT_TEST`, e o ato ficaria
-# sem dono. Cada fase guarda até onde o livro estava e o relê no fim; toda
-# linha nova é daquela fase, daquele teste.
 
 
 def _abrir_a_fase() -> None:
@@ -4426,14 +2826,7 @@ def pytest_runtest_teardown_do_lancador(item: Any, nextitem: Any) -> Iterator[No
 
 @pytest.fixture
 def ato_de_proposito() -> Callable[..., contextlib.AbstractContextManager[None]]:
-    """Declara o ato que a régua chama DE PROPÓSITO, para provar a guarda.
-
-    Uso: ``with ato_de_proposito("steam -shutdown", "steam"): ...``. Na saída
-    do bloco, o livro tem de trazer ESSES argv, nesta ordem, e só eles; aí eles
-    saem do veredito do teste. Qualquer outro ato, ou um declarado que não
-    chegou, reprova. Aberta a qualquer argv, ela seria o escape que a guarda
-    não tem.
-    """
+    """Declara o ato que a régua chama DE PROPÓSITO, para provar a guarda."""
 
     @contextlib.contextmanager
     def _declarar(*esperados: str) -> Iterator[None]:
@@ -4441,7 +2834,6 @@ def ato_de_proposito() -> Callable[..., contextlib.AbstractContextManager[None]]
             f"{_SIGLA_DO_LANCADOR}: a sessão não armou os dublês dos lançadores"
         )
         _, desde = _ler_o_livro(_LIVRO_LIDO[0])
-        # o que já estava no livro antes do bloco é da fase, não do bloco
         yield
         _esperar_os_filhos_no_duble()
         linhas, _ = _ler_o_livro(desde)
@@ -4461,8 +2853,6 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
         return
     if lancador_de_mentira() is None:
         return
-    # o dublê que um fio abriu sem esperar, depois do último teste, escreve
-    # quando RODA: sem esta espera, o fim da sessão lê o livro antes dele
     _esperar_os_filhos_no_duble()
     _abrir_a_fase()
     if not _ATOS_FORA_DE_FASE:
@@ -4484,50 +2874,12 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
     session.exitstatus = 1
 
 
-# ---------------------------------------------------------------------------
-# JOGO-SO-DA-SESSAO (01/10/2026) — a suíte não vê o jogo aberto de quem a roda
-# ---------------------------------------------------------------------------
-#
-# MEDIDO em 01/10/2026: a suíte de quem coordena rodou com ela jogando, e
-# quatro testes de `test_game_signal_wiring.py` reprovaram com `'game'` no
-# lugar de `'daemon'`. A pergunta «há jogo da Steam aberto?»
-# (`steam_launch_options._steam_launch_cmdline`, a evidência E4 do sinal de
 # jogo, o `jogo_aberto` do «reiniciar», a recusa do `with_steam_closed`)
-# varre o `/proc` da MÁQUINA, e o `reaper SteamLaunch AppId=<N>` do jogo dela
-# casava a agulha. Simulado sem nascer processo nenhum (um pid acima do
-# `pid_max` na listagem do `/proc`, com a cmdline do reaper), 110 arquivos que
-# chegam a essa pergunta deram 6 vermelhos em 2 arquivos; sem o jogo, zero.
-# Régua que depende do que está aberto na máquina mede a máquina, não o
-# produto.
-#
-# A CURA É NO LEITOR DE UMA CMDLINE (`_cmdline_of`), que só a varredura do
-# jogo usa: a cmdline que casa a agulha do DONO (`_STEAM_LAUNCH_RE`) só chega
-# ao produto quando o processo DESCENDE desta sessão de pytest. O jogo de
-# quem roda a suíte some; o processo que um teste nasceu continua visto (nada
-# fica mais frouxo que o produto), e toda outra cmdline passa intacta. O teste
-# que quer o jogo aberto já dubla o `_cmdline_of` (ou o `steam_game_running`)
-# pelo `monkeypatch`, que vence este embrulho e o devolve no fim.
-#
-# Armado por uma fixture `autouse`, antes de cada teste (e não no
-# `sessionstart`, que não precisa: nada na coleta pergunta pelo jogo): um teste
-# que tire o módulo do `sys.modules` e o importe de novo ganha o embrulho no
-# seguinte.
-#
-# O QUE ISTO NÃO ALCANÇA: o produto rodado num SUBPROCESSO (a CLI, o
-# `uninstall.sh` avulso, o guarda do Steam Input), que tem o próprio `/proc` sem
-# embrulho (a do guarda tem borda própria, a `_PONTE_DA_BANCADA` do
-# `test_ponte_steam_input_01_a_lista_que_so_preservava.py`, medida com ela
-# jogando em 02/10); e as outras
-# leituras do `/proc` (o `escritor_cru`, o `autoswitch` sem `proc_dir`, o
-# `proton_pin._em_uso`), que perguntam outra coisa que não «há jogo da Steam».
 
 _MODULO_DO_JOGO = "hefesto_dualsense4unix.integrations.steam_launch_options"
 
-#: O leitor de cmdline de verdade (o `cmdline_de_pid` do módulo), guardado no
-#: arme. Lista, e não nome solto, para o arme trocá-lo sem `global`.
 _LEITOR_DO_JOGO_REAL: list[Callable[[Any], str]] = []
 
-#: O pid desta sessão de pytest: a raiz de quem conta como «da sessão».
 _PID_DA_SESSAO_DO_JOGO: list[int] = []
 
 
@@ -4554,7 +2906,7 @@ def descende_da_sessao(pid: Any, sessao: int | None = None) -> bool:
     raiz = sessao if sessao is not None else (
         _PID_DA_SESSAO_DO_JOGO[0] if _PID_DA_SESSAO_DO_JOGO else os.getpid()
     )
-    for _ in range(64):  # a profundidade de uma árvore de processos de teste
+    for _ in range(64):
         if atual is None or atual <= 1:
             return False
         if atual == raiz:
@@ -4592,7 +2944,6 @@ def _armar_jogo_so_da_sessao() -> None:
         return
     if not _PID_DA_SESSAO_DO_JOGO:
         _PID_DA_SESSAO_DO_JOGO.append(os.getpid())
-    # o leitor de verdade é o do módulo, e não o que um teste deixou trocado
     _LEITOR_DO_JOGO_REAL[:] = [getattr(modulo, "cmdline_de_pid", atual)]
     setattr(modulo, "_cmdline_of", _cmdline_so_da_sessao)  # noqa: B010
 

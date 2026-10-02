@@ -1,39 +1,5 @@
 #!/usr/bin/env python3
-"""LANCADORES-ZERO-01, itens 3 e 4 — a cura por estrada e a caixa do Flatpak.
-
-**O QUE ESTA RÉGUA COBRA**, e cada item é uma forma de recaída medida:
-
-1. **a caixa do Flatpak se LÊ, não se supõe.** `devices=all` no `metadata` do
-   pacote, mais o que ela mudou nos `overrides` — inclusive a negação com `!`,
-   que é a única forma de a resposta ficar negativa numa máquina em que o
-   pacote pediu tudo;
-2. **um cartão pode ser DOIS programas.** O «Dolphin · mGBA» é achado pelo
-   `.desktop` de um só, e a conta do cartão «Flatpak» tem de somar os dois —
-   foi assim que ele disse *"4 lançadores"* numa máquina com CINCO, medido em
-   09/09/2026 antes desta régua existir;
-3. **a cura nunca inventa o ambiente.** Sem o `default.env` do daemon ela
-   RECUSA dizendo; e o que ela escreve é filtrado pela allowlist do wrapper,
-   nunca o que estiver no arquivo;
-4. **a cura nunca apaga o que é dela.** As duas estradas leem, fundem e
-   regravam: o `MANGOHUD` que ela pôs no Heroic e a seção `[Context]` que ela
-   pôs no override continuam lá depois do clique;
-5. **o formato é o do dono do arquivo.** O override sai `chave=valor`, sem
-   espaço em volta do `=` — que é como o `flatpak override` o escreve e como o
-   `GKeyFile` o lê.
-
-**O LAR É DE MENTIRA em todos os casos** — e a INSTALAÇÃO DO SISTEMA também,
-desde 09/09/2026. A primeira versão desta régua passava só o `lar`, e o
-`raiz_sistema` continuava valendo `/var/lib/flatpak`: **a medição escapava para
-o disco de verdade** e a resposta dependia da máquina em que rodasse. Nesta
-bancada `/var/lib/flatpak` nem existe — o escape era invisível aqui e mudaria a
-resposta na máquina de quem tem um flatpak instalado para todo mundo.
-
-Os dois viajam juntos em :func:`_lar_de_mentira`, e
-:func:`test_a_regua_nao_sai_do_lar_de_mentira` cobra que nenhum caminho fora do
-`tmp_path` seja sequer consultado. A ÚNICA leitura feita no disco real desta
-máquina foi a medição de 09/09/2026 que está escrita nos dois módulos — e ela é
-`read_text`, nunca escrita.
-"""
+"""LANCADORES-ZERO-01, itens 3 e 4 — a cura por estrada e a caixa do Flatpak."""
 from __future__ import annotations
 
 import json
@@ -54,14 +20,8 @@ HEROIC = "com.heroicgameslauncher.hgl"
 DOLPHIN = "org.DolphinEmu.dolphin-emu"
 MGBA = "io.mgba.mGBA"
 
-#: OS ATALHOS DO CARTÃO DUPLO, copiados de `desenho.SEM_FONTE` — dois `app-id`
-#: e três nomes nativos. É a forma que o item 2 desta régua mede.
 ATALHOS_EMULADORES = (DOLPHIN, "dolphin-emu", MGBA, "mgba-qt", "mgba")
 
-#: O `default.env` do daemon, com o cabeçalho e os valores MEDIDOS no disco
-#: dela em 09/09/2026 — mais uma linha fora da allowlist, que é o que o item 3
-#: cobra. Os pares VID/PID são de aparelho (Sony e Valve), não de endereço de
-#: rádio: não há máscara a aplicar aqui.
 DEFAULT_ENV = """\
 # Materializado pelo daemon do Hefesto (DEDUP-04). Não edite:
 # é regravado a cada transição de estado do gamepad virtual.
@@ -73,13 +33,7 @@ LD_PRELOAD=/tmp/algo-que-o-wrapper-nao-exporta.so
 
 
 def _lar_de_mentira(tmp: pathlib.Path) -> dict[str, pathlib.Path]:
-    """O PAR que mantém a medição inteira dentro do `tmp` — lar e sistema.
-
-    O Flatpak tem DUAS instalações, e ler só uma delas de mentira não é ler de
-    mentira: o `raiz_sistema` em branco vale `/var/lib/flatpak`, no disco de
-    verdade desta máquina. Ver o cabeçalho e
-    :func:`test_a_regua_nao_sai_do_lar_de_mentira`.
-    """
+    """O PAR que mantém a medição inteira dentro do `tmp` — lar e sistema."""
     return {"lar": tmp, "raiz_sistema": tmp / "instalacao-do-sistema"}
 
 
@@ -108,15 +62,8 @@ def _ambiente(tmp: pathlib.Path, corpo: str = DEFAULT_ENV) -> pathlib.Path:
     return pasta
 
 
-# ---------------------------------------------------------------------------
-# 1. A CAIXA SE LÊ — o item 4 da sprint
-# ---------------------------------------------------------------------------
 def test_a_caixa_com_devices_all_deixa_o_controle_entrar(tmp_path) -> None:
-    """Os cinco lançadores dela trazem `devices=all` — medido em 09/09/2026.
-
-    **A MORDIDA:** troque o `metadata` por `devices=dri;` e o estado vira
-    `NAO_ENTRA` — o cartão passa a dizer que o controle não atravessa.
-    """
+    """Os cinco lançadores dela trazem `devices=all` — medido em 09/09/2026."""
     _instalar(tmp_path, HEROIC)
 
     p = caixa.permissao_de(HEROIC, **_lar_de_mentira(tmp_path))
@@ -137,30 +84,14 @@ def test_a_caixa_sem_dispositivo_nenhum_recusa(tmp_path) -> None:
 
 
 def test_a_permissao_estreita_basta_para_o_controle(tmp_path) -> None:
-    """`--device=input` abre `/dev/input`, que é onde o controle virtual vive.
-
-    Reprovar esta caixa seria o produto dizendo *"não chega"* sobre um jogo em
-    que ele chega — o defeito que esta aba inteira existe para matar.
-    """
+    """`--device=input` abre `/dev/input`, que é onde o controle virtual vive."""
     _instalar(tmp_path, HEROIC, devices="input")
 
     assert caixa.permissao_de(HEROIC, **_lar_de_mentira(tmp_path)).entra
 
 
 def test_o_override_dela_soma_e_o_com_exclamacao_tira(tmp_path) -> None:
-    """O que ELA mudou é a resposta mais nova, e o `!` é a única que fecha.
-
-    **MEDIDO NO DISCO DELA, 09/09/2026:** `org.bleachbit.BleachBit` traz
-    `filesystems=!xdg-data/applications;` — é a forma que o `flatpak override
-    --nodevice` grava, e ignorá-la daria verde sobre uma caixa fechada à mão.
-
-    **A MORDIDA, E ELA NASCEU FRACA — 09/09/2026.** A primeira versão desta
-    régua punha `devices=dri` no pacote nos DOIS casos: com o ramo do `!`
-    arrancado, o `!all` entrava na lista como texto literal, `all` continuava
-    fora, e o teste passava com a cura no chão. **O caso da negação só morde
-    com o pacote pedindo `all`** — é ele que a negação tem de TIRAR. Com a base
-    certa, arrancar o ramo do `!` reprova.
-    """
+    """O que ELA mudou é a resposta mais nova, e o `!` é a única que fecha."""
     _instalar(tmp_path, DOLPHIN, devices="dri")
     _override(tmp_path, DOLPHIN, "[Context]\ndevices=all;\n")
     assert caixa.permissao_de(DOLPHIN, **_lar_de_mentira(tmp_path)).entra, (
@@ -176,11 +107,7 @@ def test_o_override_dela_soma_e_o_com_exclamacao_tira(tmp_path) -> None:
 
 
 def test_quem_nao_e_flatpak_nao_e_caixa_fechada(tmp_path) -> None:
-    """`NAO_INSTALADO` não é reprovação — é *"este não roda numa caixa"*.
-
-    Contá-lo como fechado baixaria a conta do cartão «Flatpak» por um lançador
-    NATIVO, que não tem caixa nenhuma a abrir.
-    """
+    """`NAO_INSTALADO` não é reprovação — é *"este não roda numa caixa"*."""
     p = caixa.permissao_de("net.lutris.Lutris", **_lar_de_mentira(tmp_path))
 
     assert p.estado == caixa.NAO_INSTALADO
@@ -189,12 +116,7 @@ def test_quem_nao_e_flatpak_nao_e_caixa_fechada(tmp_path) -> None:
 
 
 def test_o_app_id_sai_do_caminho_e_nao_do_nome(tmp_path) -> None:
-    """O mesmo nome de `.desktop` em dois lugares responde coisas diferentes.
-
-    Em `…/flatpak/exports/…` ele é de um flatpak; em `/usr/share/applications`
-    é do pacote da distribuição, que não tem caixa. Derivar o `app-id` do
-    rótulo do cartão diria "caixa fechada" sobre um programa que não está numa.
-    """
+    """O mesmo nome de `.desktop` em dois lugares responde coisas diferentes."""
     do_flatpak = ("/lar/.local/share/flatpak/exports/share/applications/"
                   f"{MGBA}.desktop")
 
@@ -204,17 +126,7 @@ def test_o_app_id_sai_do_caminho_e_nao_do_nome(tmp_path) -> None:
 
 
 def test_um_cartao_pode_ser_dois_programas_e_os_dois_contam(tmp_path) -> None:
-    """**O DEFEITO MEDIDO EM 09/09/2026, e é o item 2 desta régua.**
-
-    O cartão «Dolphin · mGBA» é achado pelo `.desktop` de UM deles, e o cartão
-    «Flatpak» respondeu *"4 lançadores por aqui"* numa máquina com cinco: o
-    mGBA existia, tinha caixa e não entrava na conta porque ninguém perguntou
-    por ele.
-
-    **A MORDIDA:** faça `app_ids_do_cartao` devolver só o `app_id_do_atalho` e
-    a lista volta a UM — a conta do cartão cai de 2 para 1 aqui, e de 5 para 4
-    na máquina dela.
-    """
+    """**O DEFEITO MEDIDO EM 09/09/2026, e é o item 2 desta régua.**"""
     _instalar(tmp_path, DOLPHIN)
     _instalar(tmp_path, MGBA)
     achado = ("/lar/.local/share/flatpak/exports/share/applications/"
@@ -242,19 +154,8 @@ def test_a_frase_do_cartao_flatpak_conta_e_nomeia(tmp_path) -> None:
     assert todos.resumo == "2 lançadores por aqui, e o controle entra em todos"
 
 
-# ---------------------------------------------------------------------------
-# 2. O AMBIENTE VEM DO DAEMON — nunca de uma segunda conta
-# ---------------------------------------------------------------------------
 def test_o_ambiente_e_o_do_daemon_filtrado_pela_allowlist(tmp_path) -> None:
-    """O `default.env` é lido, e a allowlist do wrapper filtra o que sai.
-
-    O `LD_PRELOAD` do arquivo de mentira é exatamente o que o wrapper `sh`
-    recusa exportar — e a cura, que escreve na configuração DELA, não pode ser
-    mais permissiva que o wrapper.
-
-    **A MORDIDA:** tire o `if nome in ENV_ALLOWLIST` e o `LD_PRELOAD` vai parar
-    no `config.json` do Heroic.
-    """
+    """O `default.env` é lido, e a allowlist do wrapper filtra o que sai."""
     env = cura.ambiente_da_ponte(_ambiente(tmp_path))
 
     assert env["PROTON_DISABLE_HIDRAW"] == "0x054C/0x0CE6"
@@ -265,13 +166,7 @@ def test_o_ambiente_e_o_do_daemon_filtrado_pela_allowlist(tmp_path) -> None:
 
 
 def test_sem_ambiente_publicado_a_cura_recusa_dizendo(tmp_path) -> None:
-    """Sem o daemon, a cura RECUSA — não deduz a conta nem escreve vazio.
-
-    **A MORDIDA:** faça `ambiente_da_ponte` devolver a allowlist com valores
-    inventados e esta régua passa a aceitar um arquivo escrito sem medição
-    nenhuma; faça `escrever_a_estrada` devolver frase em vez de levantar e a
-    tela dá piscada verde sobre um arquivo que ninguém tocou.
-    """
+    """Sem o daemon, a cura RECUSA — não deduz a conta nem escreve vazio."""
     _instalar(tmp_path, DOLPHIN)
     vazio = tmp_path / "sem-daemon"
     vazio.mkdir()
@@ -286,15 +181,8 @@ def test_sem_ambiente_publicado_a_cura_recusa_dizendo(tmp_path) -> None:
     assert not (tmp_path / ".local/share/flatpak/overrides" / DOLPHIN).exists()
 
 
-# ---------------------------------------------------------------------------
-# 3. AS ESTRADAS — quem recebe a cura, e por onde
-# ---------------------------------------------------------------------------
 def test_o_heroic_tem_estrada_propria_e_nao_ganha_override(tmp_path) -> None:
-    """O Heroic MONTA o ambiente do jogo a partir do `enviromentOptions`.
-
-    Escrever nos dois lugares poria a mesma variável em duas listas que
-    envelhecem separadas, e a próxima pessoa não saberia qual manda.
-    """
+    """O Heroic MONTA o ambiente do jogo a partir do `enviromentOptions`."""
     _instalar(tmp_path, HEROIC)
     (tmp_path / ".var/app" / HEROIC / "config/heroic").mkdir(parents=True)
 
@@ -319,25 +207,13 @@ def test_o_cartao_duplo_ganha_uma_estrada_por_programa(tmp_path) -> None:
 
 @pytest.mark.parametrize("chave", ["flatpak", "steam"])
 def test_quem_nao_tem_estrada_nao_ganha_botao(chave, tmp_path) -> None:
-    """O «Flatpak» é o runtime dos outros e a Steam tem o atalho dela.
-
-    Um botão «Consertar» em qualquer dos dois seria o botão que finge — a
-    regra desta aba desde que ela nasceu.
-    """
+    """O «Flatpak» é o runtime dos outros e a Steam tem o atalho dela."""
     assert cura.estradas_do_cartao(chave, ("flatpak",), **_lar_de_mentira(tmp_path)) == ()
     assert not cura.tem_estrada(chave, ("flatpak",), **_lar_de_mentira(tmp_path))
 
 
-# ---------------------------------------------------------------------------
-# 4. A ESCRITA — e o que ela NÃO pode apagar
-# ---------------------------------------------------------------------------
 def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_dela(tmp_path) -> None:
-    """As nossas entram; o `MANGOHUD` dela fica; o resto do arquivo fica.
-
-    **A MORDIDA:** troque a fusão por uma lista só com as nossas — sem as que
-    já estavam lá — e o `MANGOHUD` some: a cura apaga a configuração dela em
-    silêncio, com uma piscada verde por cima.
-    """
+    """As nossas entram; o `MANGOHUD` dela fica; o resto do arquivo fica."""
     _instalar(tmp_path, HEROIC)
     pasta = tmp_path / ".var/app" / HEROIC / "config/heroic"
     pasta.mkdir(parents=True)
@@ -366,16 +242,7 @@ def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_dela(tmp_path) -> None:
 
 
 def test_a_cura_do_override_escreve_no_formato_do_flatpak(tmp_path) -> None:
-    """`chave=valor`, sem espaço — e a seção `[Context]` dela fica intacta.
-
-    O arquivo é lido pelo `GKeyFile` do Flatpak. Escrever num formato que o
-    dono do arquivo não emite é convidar o dia em que ele deixa de ler, num
-    arquivo de configuração dela e sem aviso.
-
-    **A MORDIDA:** troque `_render_ini` por `ConfigParser.write` e as linhas
-    saem `chave = valor`; apague a leitura do arquivo existente e a
-    `[Context]` dela desaparece.
-    """
+    """`chave=valor`, sem espaço — e a seção `[Context]` dela fica intacta."""
     _instalar(tmp_path, DOLPHIN)
     alvo = _override(tmp_path, DOLPHIN,
                      "[Context]\ndevices=all;\nfilesystems=host;\n\n"
@@ -411,23 +278,7 @@ def test_a_cura_nasce_onde_nao_havia_override(tmp_path) -> None:
 
 
 def test_a_cura_devolve_a_permissao_do_arquivo_dela(tmp_path) -> None:
-    """**MEDIDO PELO CONFERENTE EM 09/09/2026: o clique fechava o arquivo dela.**
-
-    `config.json` do Heroic a **0644** antes da cura, **0600** depois — porque
-    `NamedTemporaryFile` nasce 0600 (é o contrato dele) e `replace()` leva o
-    modo do temporário junto. Este módulo promete *"nunca apaga o que já estava
-    lá"*, e a permissão é parte do que estava lá: um override fechado deixa de
-    ser legível por um serviço que rode com outro usuário, e ninguém liga isso
-    ao clique de ontem.
-
-    **E O QUE NASCE herda a PASTA**, não o 0600 do temporário: a pasta a 0755
-    dá 0644, uma pasta fechada a 0700 daria 0600. Ver `_modo_de_nascimento` — o
-    `umask` não se consulta numa thread de gesto, porque consultá-lo é
-    escrevê-lo.
-
-    **A MORDIDA:** tire o `os.chmod` de `_escrever_atomico` e os dois primeiros
-    `assert` reprovam com `0o600`.
-    """
+    """**MEDIDO PELO CONFERENTE EM 09/09/2026: o clique fechava o arquivo dela.**"""
     import os
     import stat as _stat
 
@@ -452,20 +303,7 @@ def test_a_cura_devolve_a_permissao_do_arquivo_dela(tmp_path) -> None:
 
 
 def test_o_recibo_diz_o_nome_do_cartao_e_nao_a_chave(tmp_path) -> None:
-    """**MEDIDO NA TELA VIVA, 09/09/2026**, e é o que esta régua guarda.
-
-    A tarja verde dizia *"Ajustei o ambiente de heroic"* — a chave do
-    `data-lancador` na frente dela, que é a língua de dentro num recado de
-    tela. E dizia *"(5): 5 ajustes"*, a mesma contagem duas vezes.
-
-    A frase também não leva ARTIGO antes do nome: ele vem do cartão, inclusive
-    de um que ELA acrescentou, e adivinhar o gênero de um nome que ainda não
-    existe é palpite na tela dela — a razão já medida em
-    `desenho_dos_lancadores.NOVO_PARA_O_CARTAO`.
-
-    **A MORDIDA:** troque `plano.rotulo` por `plano.cartao` em `frase_do_feito`
-    e a chave interna volta para a tarja.
-    """
+    """**MEDIDO NA TELA VIVA, 09/09/2026**, e é o que esta régua guarda."""
     _instalar(tmp_path, DOLPHIN)
     _instalar(tmp_path, MGBA)
     _instalar(tmp_path, HEROIC)
@@ -491,18 +329,7 @@ def test_o_recibo_diz_o_nome_do_cartao_e_nao_a_chave(tmp_path) -> None:
 
 
 def test_arquivo_ilegivel_recusa_e_nao_e_reescrito(tmp_path) -> None:
-    """**QUEM NÃO SABE LER NÃO ESCREVE**, e sem isto a cura APAGA o que é dela.
-
-    Um `config.json` truncado (o Heroic morreu no meio de um `write`) ou um
-    override que não abre continuam tendo a configuração DELA lá dentro.
-    Reescrevê-los com `{}` mais o nosso ambiente jogaria fora a biblioteca, o
-    caminho do Wine, a `[Context]` que ela deu à mão — em silêncio, e com uma
-    piscada verde por cima.
-
-    **A MORDIDA:** faça `_ler_heroic` devolver `{}` no ramo do `ValueError` (ou
-    tire a conferência de :func:`escrever_a_estrada`) e o arquivo truncado é
-    substituído pelo nosso — o `assert` do conteúdo intacto reprova.
-    """
+    """**QUEM NÃO SABE LER NÃO ESCREVE**, e sem isto a cura APAGA o que é dela."""
     _instalar(tmp_path, HEROIC)
     pasta = tmp_path / ".var/app" / HEROIC / "config/heroic"
     pasta.mkdir(parents=True)
@@ -520,15 +347,7 @@ def test_arquivo_ilegivel_recusa_e_nao_e_reescrito(tmp_path) -> None:
 
 
 def test_a_recusa_de_um_programa_nao_deixa_o_outro_escrito(tmp_path) -> None:
-    """UM cartão, DUAS estradas: ou as duas, ou nenhuma.
-
-    Recusar no meio do laço deixaria o Dolphin ajustado, o mGBA não, e a tela
-    mostrando só a recusa — o pior dos dois mundos, e impossível de diagnosticar
-    depois.
-
-    **A MORDIDA:** tire o laço de conferência de `escrever_a_estrada` e o
-    override do Dolphin nasce mesmo com o do mGBA ilegível.
-    """
+    """UM cartão, DUAS estradas: ou as duas, ou nenhuma."""
     _instalar(tmp_path, DOLPHIN)
     _instalar(tmp_path, MGBA)
     _override(tmp_path, MGBA, "[Context\nisto não é um arquivo de override\n")
@@ -544,38 +363,10 @@ def test_a_recusa_de_um_programa_nao_deixa_o_outro_escrito(tmp_path) -> None:
         "tela dizendo só que falhou")
 
 
-# ---------------------------------------------------------------------------
-# 5. O CARTÃO — a régua olha o que a tela recebe
-# ---------------------------------------------------------------------------
 def test_o_cartao_localizado_nao_oferece_conserto_e_o_flatpak_muda_de_pergunta(
     tmp_path, monkeypatch,
 ) -> None:
-    """O cartão que ACHOU não oferece conserto, e o «Flatpak» conta as caixas.
-
-    **A RÉGUA VIROU DE LADO EM 10/09/2026, e quem a virou foi ELA.** Até 09/09
-    o primeiro `assert` cobrava o contrário — que o cartão LOCALIZADO com
-    estrada OFERECESSE o «Consertar». Ela leu a tela e recusou:
-
-        "na real não faz sentido. Digo se tenho tudo
-         instalado e tá pra ser identificado não tem
-         pq ter o botão de consertar."
-
-    **A LEITURA DELA É A LEITURA CERTA DO CARTÃO:** selo `LOCALIZADO`, moldura
-    `chega` — a mesma do `ok`/CHEGAM da Steam — e a frase do corpo terminando em
-    *"um jogo aberto por aqui entra pelo mesmo caminho de qualquer outro"*. Nada
-    ali declara defeito, e uma cura oferecida onde a tela não declarou defeito
-    nenhum lê-se como cura de coisa nenhuma.
-
-    **A MORDIDA:** devolva o ramo do `consertar` a `cartao_sem_censo` e o
-    primeiro `assert` reprova nomeando o cartão e o selo; devolva `""` em vez da
-    linha do «Flatpak» em `medir_no_disco` e o cartão volta ao travessão.
-
-    **A LEITURA É DA VIGIA, e por isso ela aparece aqui como uma CHAMADA
-    SEPARADA** — 09/09/2026. Até o reparo daquele dia, `cartoes()` abria os
-    arquivos sozinho, dentro do tique; agora quem abre é `medir_no_disco`, e o
-    que a pintura recebe é a `DoDisco` fria. Medir os dois na mesma volta é o
-    que mantém a régua cobrindo a cadeia inteira.
-    """
+    """O cartão que ACHOU não oferece conserto, e o «Flatpak» conta as caixas."""
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
 
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -602,9 +393,6 @@ def test_o_cartao_localizado_nao_oferece_conserto_e_o_flatpak_muda_de_pergunta(
         f"o cartão «Dolphin · mGBA» tem selo {emuladores.selo!r} — a tela diz "
         f"que está tudo no lugar — e oferece {rotulos}. Uma cura oferecida onde "
         f"a tela não declarou defeito nenhum lê-se como cura de coisa nenhuma.")
-    # O RÓTULO DO CARTÃO ACHADO É OUTRO DESDE 11/09/2026 — A2-022, aprovada por
-    # ela: `LOCALIZADO` no selo e «Localizar» no botão se contradiziam, lidos de
-    # cima para baixo. O gesto é o MESMO; só o rótulo segue o estado.
     assert d.APONTAR_ROTULO in rotulos, (
         f"o cartão achado não oferece «{d.APONTAR_ROTULO}»: {rotulos}")
     assert cartoes["flatpak"].jogos == (
@@ -612,22 +400,12 @@ def test_o_cartao_localizado_nao_oferece_conserto_e_o_flatpak_muda_de_pergunta(
         f"o cartão «Flatpak» não mudou de pergunta: {cartoes['flatpak'].jogos!r}")
 
 
-#: OS MÉTODOS PELOS QUAIS ESTES TRÊS MÓDULOS TOCAM O DISCO. É `pathlib` em
-#: todos: nenhum deles abre arquivo por outro caminho, e o `open` embutido não
-#: aparece em nenhum dos três (medido em 09/09/2026, `grep -n "open("`).
 _PORTAS_DO_DISCO = ("is_file", "is_dir", "exists", "read_text", "stat",
                     "iterdir", "glob")
 
 
 def _espiar_o_disco(monkeypatch) -> list[str]:
-    """Grava TODO caminho que alguém consultar daqui para a frente.
-
-    É o instrumento das duas réguas de baixo, e ele mede o que nenhum `assert`
-    de conteúdo alcança: *quais arquivos foram abertos*. Sem ele, "a pintura
-    não lê disco" e "a régua não sai do `tmp`" são afirmações que só a leitura
-    do código sustenta — e leitura de código foi exatamente o que deixou as
-    duas passarem.
-    """
+    """Grava TODO caminho que alguém consultar daqui para a frente."""
     tocados: list[str] = []
 
     def espiao(nome: str, original):
@@ -643,19 +421,7 @@ def _espiar_o_disco(monkeypatch) -> list[str]:
 
 
 def test_a_pintura_do_tique_nao_abre_arquivo(tmp_path, monkeypatch) -> None:
-    """**O DEFEITO DE 09/09/2026, e ele é do tamanho do tique.**
-
-    `cartoes()` chamava o censo, a caixa do Flatpak e a pergunta da estrada na
-    hora de desenhar o cartão — **dez vezes por segundo**, dentro de um
-    orçamento de 100 ms para a janela inteira. Medido nesta bancada com os
-    cinco lançadores dela no disco: **6,4 ms de mediana** por tique (30 voltas,
-    máximo 18,6 ms). Depois da cura, **0,03 ms** — e o disco voltou para a
-    vigia, que é onde o `a07_lancadores` já escrevia que ele mora.
-
-    **A MORDIDA:** devolva a `_censo.biblioteca_do_cartao` (ou o
-    `_cura.tem_estrada`) para dentro de `cartao_sem_censo` e esta régua nomeia
-    os arquivos que o tique passou a abrir.
-    """
+    """**O DEFEITO DE 09/09/2026, e ele é do tamanho do tique.**"""
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
 
     for app in (HEROIC, DOLPHIN, MGBA):
@@ -682,18 +448,7 @@ def test_a_pintura_do_tique_nao_abre_arquivo(tmp_path, monkeypatch) -> None:
 
 
 def test_a_regua_nao_sai_do_lar_de_mentira(tmp_path, monkeypatch) -> None:
-    """**O ESCAPE MEDIDO PELO CONFERENTE, 09/09/2026.**
-
-    O cabeçalho desta régua afirmava *"o lar é de mentira em todos os casos"* e
-    a afirmação era falsa pela metade: o Flatpak tem DUAS instalações, e o
-    `raiz_sistema` em branco vale `/var/lib/flatpak` — o disco de verdade.
-    Nesta bancada essa pasta nem existe, então o escape não mudava resposta
-    nenhuma **aqui**; numa máquina com um flatpak instalado para todo mundo, a
-    resposta de uma medição de mentira passaria a depender da máquina.
-
-    **A MORDIDA:** tire o `raiz_sistema` de :func:`_lar_de_mentira` e esta
-    régua nomeia o caminho fora do `tmp` que a medição foi consultar.
-    """
+    """**O ESCAPE MEDIDO PELO CONFERENTE, 09/09/2026.**"""
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
 
     _instalar(tmp_path, DOLPHIN)
@@ -708,29 +463,4 @@ def test_a_regua_nao_sai_do_lar_de_mentira(tmp_path, monkeypatch) -> None:
         f"a medição saiu do lar de mentira e foi ao disco desta máquina: "
         f"{sorted(set(fora))[:8]}")
 
-# ---------------------------------------------------------------------------
-# AS TRÊS RÉGUAS DO GESTO SAÍRAM — LANCADOR-LOCALIZAR-01, 10/09/2026
-#
-# `test_o_gesto_sem_data_v_recusa_e_nao_escreve`,
-# `test_o_consertar_pergunta_antes_de_escrever` e
-# `test_o_gesto_da_cura_declara_que_mexe_na_maquina_dela` mediam o GESTO
-# `consertar-lancador` — o botão «Consertar» dos cartões sem censo. O botão e o
-# gesto saíram por palavra dela, e uma régua apontada para um gesto que não
-# existe morre num `KeyError` que não diz nada.
-#
-# **O QUE ELAS MEDIAM NÃO SE PERDEU, e é o que separa isto de apagar decisão
-# medida:** as duas primeiras cobravam a recusa sem `data-v` e o consentimento
-# de dois cliques, e as duas eram do VASO — o botão. A terceira cobrava que o
-# gesto declarasse `grava=`, e a porta que ela protegia (`escrever_a_estrada`)
-# continua protegida pela régua que é dona do assunto,
-# `tests/unit/test_todo_gesto_que_grava_esta_protegido.py`: nenhum gesto a
-# chama hoje, e a DIREÇÃO A daquela régua acusa no dia em que um voltar a
-# chamar sem declarar.
-#
-# **AS 26 PROVAS DO MÓDULO FICAM**, e são as de cima: a cura por estrada
-# continua sendo o único código desta casa que entrega o ambiente da ponte a um
-# lançador que não é a Steam, e a lacuna que ela fecha continua aberta —
-# `hefesto-launch` só age com jogo da Steam. A dívida está declarada em
 # `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`, com o endereço da
-# sprint que a desfaz (LANCADOR-CARONA-01).
-# ---------------------------------------------------------------------------

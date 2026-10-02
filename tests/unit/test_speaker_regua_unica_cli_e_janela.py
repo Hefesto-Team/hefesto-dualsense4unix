@@ -59,12 +59,7 @@ def test_o_mesmo_percentual_vira_o_mesmo_bruto_nos_dois_caminhos(pct: int) -> No
 
 
 def test_a_regua_nao_e_linear_senao_nao_ha_o_que_unificar() -> None:
-    """Guarda da premissa: se a régua virar linear, este arquivo perde sentido.
-
-    Não trava as bordas (são empíricas de um rig e podem ser reaferidas), trava
-    o FATO de o remapeamento existir. Uma régua linear mandaria 153 para 60 %;
-    a remapeada manda bem menos, porque o registrador satura por volta de 102.
-    """
+    """Guarda da premissa: se a régua virar linear, este arquivo perde sentido."""
     from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
     assert volume_do_percentual(100) < 255, (
@@ -94,12 +89,7 @@ def test_a_ida_e_volta_nao_desloca_o_valor() -> None:
 
 
 def test_a_linha_de_comando_nao_puxa_gtk() -> None:
-    """O comando roda em servidor sem interface: `gi` no caminho o derrubaria.
-
-    Importa num interpretador limpo e falha se `gi` aparecer em `sys.modules`.
-    Subprocesso de propósito: nesta máquina a suíte já carregou GTK por outros
-    testes, e olhar o `sys.modules` deste processo daria falso-vermelho.
-    """
+    """O comando roda em servidor sem interface: `gi` no caminho o derrubaria."""
     codigo = (
         "import sys; import hefesto_dualsense4unix.cli.cmd_speaker as m; "
         "print('gi' in sys.modules)"
@@ -119,13 +109,7 @@ def test_a_linha_de_comando_nao_puxa_gtk() -> None:
 
 
 def test_nenhuma_conta_de_255_sobrou_no_corpo_das_conversoes() -> None:
-    """Morde a duplicação de volta: `* 255 / 100` reaparecendo no comando.
-
-    Lê a árvore sintática das duas funções em vez de varrer o arquivo por texto,
-    porque a docstring EXPLICA a régua e citaria os números — um `grep` reprovaria
-    pela própria explicação, que é a armadilha que o gate anti-emoji desta casa
-    já pagou uma vez.
-    """
+    """Morde a duplicação de volta: `* 255 / 100` reaparecendo no comando."""
     arvore = ast.parse(CMD_SPEAKER.read_text(encoding="utf-8"))
     alvos = {"_pct_para_bruto", "_bruto_para_pct"}
     achadas: set[str] = set()

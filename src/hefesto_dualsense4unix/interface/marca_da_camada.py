@@ -1,37 +1,15 @@
-"""A marca da camada: de quem é o valor que um cartão mostra. Uma peça, um lugar.
-
-O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026). O som, os sensores,
-a luz, a vibração, o mouse e o teclado têm um padrão do computador, e o perfil
-do jogo só sobrepõe (`profiles/o_padrao_do_computador.SECOES`). O cabeçalho de
-cada um desses cartões diz onde o clique grava:
-
-- «PC», com «Só neste jogo» ao lado quando há um jogo ativo;
-- o nome do jogo, com «Voltar ao do PC», quando o jogo o sobrepõe;
-- só «PC», com o Freestyle ou sem perfil: o Freestyle não sobrepõe nada.
-
-A marca é estado, e nunca frase sobre o que acabou de acontecer. Os geradores
-da 02, da 04, da 05 e da 06 a desenham com :func:`bloco`; o pacote
-(`pacotes/camada.py`) reescreve o miolo a cada tique com :func:`miolo`. É a
-mesma função dos dois lados, e por isso o desenho e o produto não divergem.
-"""
+"""A marca da camada: de quem é o valor que um cartão mostra. Uma peça, um lugar."""
 from __future__ import annotations
 
 import html
 
-#: A palavra da marca quando o valor é do computador. É «PC», a palavra da tela
-#: dela («Navega o PC», «Controlar o PC», «Áudio do PC»), e não «Computador»:
-#: MEDIDO na janela mínima (1212px), a palavra longa no cabeçalho do card da
-#: aba Controles cortava a frase do giroscópio em 15px, e a régua da janela
-#: estreita reprova corte no tamanho do desenho. «Mesa» é palavra banida.
 COMPUTADOR = "PC"
 
-#: Os dois gestos da marca, e os textos dos dois botões.
 SO_NESTE_JOGO = "so-neste-jogo"
 VOLTAR_AO_DO_COMPUTADOR = "voltar-ao-do-computador"
 TEXTO_SO_NESTE_JOGO = "Só neste jogo"
 TEXTO_VOLTAR = "Voltar ao do PC"
 
-#: As dicas dos dois botões (o `?` da casa é o `title`).
 DICA_SO_NESTE_JOGO = ("Guarda este cartão no perfil do jogo ativo. Daí em diante, "
                       "o que você mudar aqui vale só neste jogo.")
 DICA_VOLTAR = "Tira a escolha deste jogo: volta a valer o do computador."
@@ -43,11 +21,7 @@ def campo(cartao: str) -> str:
 
 
 def miolo(cartao: str, *, jogo: str = "", sobrepoe: bool = False) -> str:
-    """O que vai dentro da marca: o dono do valor e o botão que muda o dono.
-
-    ``jogo`` é o nome do perfil ativo quando ele é um jogo (vazio com o
-    Freestyle ou sem perfil); ``sobrepoe`` diz se ele escolheu este cartão.
-    """
+    """O que vai dentro da marca: o dono do valor e o botão que muda o dono."""
     linha = html.escape(cartao, quote=True)
     if jogo and sobrepoe:
         dono = html.escape(jogo)
@@ -63,9 +37,6 @@ def miolo(cartao: str, *, jogo: str = "", sobrepoe: bool = False) -> str:
     else:
         dono = COMPUTADOR
         botao = ""
-    # A palavra pode ser cortada com reticências numa janela estreita; o
-    # `aria-label` guarda a palavra inteira (e não vira dica: seria a cópia
-    # exata do texto).
     return (f'<span class="camada-dono" aria-label="{dono}">{dono}</span>'
             f"{botao}")
 
@@ -77,30 +48,13 @@ def bloco(cartao: str, *, jogo: str = "", sobrepoe: bool = False) -> str:
 
 
 def rotuladas(pares: tuple[tuple[str, str], ...]) -> str:
-    """Mais de uma marca no mesmo cabeçalho, cada uma com o nome do cartão.
-
-    ``pares`` é ``((cartão, rótulo), …)``. O grupo leva o empurrão para a
-    direita (``margin-left:auto``): com as marcas soltas, cada uma pediria o
-    vão e o flex o partiria entre elas.
-    """
+    """Mais de uma marca no mesmo cabeçalho, cada uma com o nome do cartão."""
     return ('<span class="camadas">' + "".join(
         f'<span class="camada-rot">{rotulo}</span>{bloco(cartao)}'
         for cartao, rotulo in pares) + "</span>")
 
 
-#: A FOLHA DA MARCA, uma vez por página: discreta, no canto do cabeçalho.
-#:
-#: A ALTURA É 17px, a do `.quadro-titulo` e a da `.porta` da 06: o cabeçalho
-#: é `align-items:center`, e um filho mais alto desceria o quadro inteiro (a
-#: primeira porta da 06, com 19px, moveu 663 caixas por 2px). Por isso a borda
-#: da palavra não tem preenchimento vertical.
-#:
-#: NUMA COLUNA ESTREITA QUEM ENCOLHE PRIMEIRO É O NOME, com reticências (o
-#: `flex-shrink` dele é cem vezes o do botão), e o nome inteiro fica no
-#: `aria-label`. O botão só encolhe quando o nome já não tem o que dar.
-#:
 #: NO LUGAR VAZIO A MARCA SOME: o piloto põe ``data-conectado="nao"`` no
-#: bloco do lugar que esvazia, e um lugar sem controle não tem de quem ser.
 CSS = """
 .camadas{display:inline-flex;align-items:center;gap:6px;margin-left:auto;height:17px}
 .camada-rot{font-size:11px;line-height:17px;color:var(--texto-mudo,#9aa0b4)}

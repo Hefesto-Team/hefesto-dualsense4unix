@@ -100,8 +100,6 @@ from tests.unit import barramento_de_mentira as bm
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = (REPO_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
 
-#: Os controles da mesa de mentira. Faixa sintética da casa — nunca MAC real
-#: nem mascarado em fixture.
 P1 = "aa:bb:cc:00:00:11"
 P2 = "aa:bb:cc:00:00:22"
 P3 = "aa:bb:cc:00:00:33"
@@ -110,11 +108,6 @@ P5 = "aa:bb:cc:00:00:55"
 P6 = "aa:bb:cc:00:00:66"
 P7 = "aa:bb:cc:00:00:77"
 P8 = "aa:bb:cc:00:00:88"
-
-
-# ---------------------------------------------------------------------------
-# A bancada
-# ---------------------------------------------------------------------------
 
 
 def _ligar_o_barramento(
@@ -152,8 +145,7 @@ def _bancada(mapa: dict[str, str]) -> dict[str, Any]:
 
 
 def _controle(uniq: str, slot: int | None = None, *, ponte: str | None = None) -> dict[str, Any]:
-    """Um controle no rádio. ``ponte`` é a ponte de som/vibração DELE de pé —
-    é o que o «Equilibrar» pesa desde 23/09/2026 (MOVER-UM-POR-VEZ-01)."""
+    """Um controle no rádio. ``ponte`` é a ponte de som/vibração DELE de pé —"""
     return {
         "transport": "bt",
         "connected": True,
@@ -164,25 +156,7 @@ def _controle(uniq: str, slot: int | None = None, *, ponte: str | None = None) -
 
 
 def _mesa_apertada_com_dois_destinos() -> dict[str, plano_de_radio.PlanoDoAdaptador]:
-    """Cinco controles apertando um adaptador, e DOIS destinos que cabem.
-
-    O ARRANJO DIFÍCIL, e ele é o ponto: **o destino mais folgado é o que
-    varre**. Um com um controle (o que varre), outro com dois. Pelo critério de
-    sempre — menor ocupação primeiro — o motor escolhe exatamente o errado, e é
-    isso que a chave de ordenação nova tem de virar.
-
-    Montar o contrário (o que varre já cheio) daria uma régua verde sobre nada:
-    ela passaria com o filtro arrancado.
-
-    **E um adaptador sem controle nenhum não vira plano** — quando ninguém diz
-    que ele existe. `plano_por_adaptador` monta a mesa a partir dos CONTROLES;
-    desde 23/09/2026 (MOVER-UM-POR-VEZ-01) o dongle vazio entra quando vem em
-    ``adaptadores=`` ou no ``ar=``, e esta mesa não passa nenhum dos dois de
-    propósito: o arranjo difícil é o de dois destinos OCUPADOS.
-
-    A ordem nasce por PONTES desde 23/09/2026: três de som no adaptador parado,
-    contra o limite de duas.
-    """
+    """Cinco controles apertando um adaptador, e DOIS destinos que cabem."""
     return plano_de_radio.plano_por_adaptador(
         [
             _controle(P1, 1, ponte="som"),
@@ -207,10 +181,7 @@ def _mesa_apertada_com_dois_destinos() -> dict[str, plano_de_radio.PlanoDoAdapta
                 P3: bm.ADAPTADOR_PARADO,
                 P4: bm.ADAPTADOR_PARADO,
                 P5: bm.ADAPTADOR_PARADO,
-                # UM controle: é o mais folgado dos dois destinos, e é o que
-                # varre. O critério de sempre o elege.
                 P6: bm.ADAPTADOR_QUE_VARRE,
-                # DOIS controles: cabe mais um, mas perde no desempate de folga.
                 P7: bm.ADAPTADOR_FOLGADO,
                 P8: bm.ADAPTADOR_FOLGADO,
             }
@@ -218,21 +189,10 @@ def _mesa_apertada_com_dois_destinos() -> dict[str, plano_de_radio.PlanoDoAdapta
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O leitor — e "não sei" nunca é "nenhum"
-# ---------------------------------------------------------------------------
-
-
 def test_o_leitor_responde_pelo_endereco_e_nunca_pelo_hci_n(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """MORDIDA 1. A chave é o BD Address, porque `hciN` inverte entre boots.
-
-    O BlueZ devolve `s "AA:BB:CC:00:00:A1"` em MAIÚSCULAS e o `HID_PHYS` do
-    uevent publica minúsculo. Este nó exige o casamento: devolver o que o
-    `busctl` escreveu, sem normalizar, faria o filtro do motor comparar duas
-    grafias do mesmo endereço e nunca casar.
-    """
+    """MORDIDA 1. A chave é o BD Address, porque `hciN` inverte entre boots."""
     _ligar_o_barramento(
         monkeypatch,
         tmp_path,
@@ -256,13 +216,7 @@ def test_o_leitor_responde_pelo_endereco_e_nunca_pelo_hci_n(
 def test_sem_busctl_a_resposta_e_nao_sei_e_nunca_nenhum(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """MORDIDA 2. Sem ferramenta para perguntar, a resposta é "não sei".
-
-    Um `PATH` sem `busctl` e sem o Gio é o caso de um sandbox sem o `org.bluez`
-    (o runtime do Flatpak não traz o `busctl`). Devolver `varrendo=set()` sem
-    motivo faria a tela e o motor lerem "nenhum adaptador está varrendo" sobre
-    uma máquina em que ninguém olhou — a assinatura das dez réguas de 20/09.
-    """
+    """MORDIDA 2. Sem ferramenta para perguntar, a resposta é "não sei"."""
     vazio = tmp_path / "path-sem-busctl"
     vazio.mkdir()
     monkeypatch.setenv("PATH", str(vazio))
@@ -279,12 +233,7 @@ def test_sem_busctl_a_resposta_e_nao_sei_e_nunca_nenhum(
 def test_bluez_mudo_e_nao_sei_e_nunca_uma_mesa_vazia(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """`busctl` existe e o `org.bluez` não responde: continua sendo "não sei".
-
-    É o `bluetoothd` parado, e o produto NÃO pode ler isso como "nenhum
-    adaptador varre" — a diferença entre as duas é a diferença entre avisar e
-    calar sobre 43% dos pacotes dela.
-    """
+    """`busctl` existe e o `org.bluez` não responde: continua sendo "não sei"."""
     _ligar_o_barramento(monkeypatch, tmp_path, {})
     leitura = varredura_do_radio.quem_esta_varrendo()
 
@@ -296,16 +245,7 @@ def test_bluez_mudo_e_nao_sei_e_nunca_uma_mesa_vazia(
 def test_quem_varre_sem_endereco_legivel_nao_entra_como_varrendo(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """MORDIDA 3. `Discovering=true` sem `Address` é "não sei", não um destino.
-
-    O ARRANJO DIFÍCIL: o adaptador está mesmo varrendo, e mesmo assim não pode
-    entrar em `varrendo` — porque sem endereço não há com que casar. Pôr `hci7`
-    ali no lugar daria um conjunto que plano nenhum reivindica: o filtro do
-    motor rodaria, não casaria com nada, e ficaria verde sobre o defeito vivo.
-
-    Ele também não pode sumir: vai para `mudos`, que é a parte da resposta que
-    não existe.
-    """
+    """MORDIDA 3. `Discovering=true` sem `Address` é "não sei", não um destino."""
     _ligar_o_barramento(
         monkeypatch,
         tmp_path,
@@ -328,11 +268,7 @@ def test_quem_varre_sem_endereco_legivel_nao_entra_como_varrendo(
 def test_adaptador_mudo_nao_e_adaptador_parado(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """MORDIDA 4. `Discovering` que não responde não é `Discovering=false`.
-
-    Adaptador em `down` ou sob `rfkill` some da propriedade e fica na árvore.
-    Lê-lo como "parado" é a mesma família do `set()` ambíguo, um nível abaixo.
-    """
+    """MORDIDA 4. `Discovering` que não responde não é `Discovering=false`."""
     _ligar_o_barramento(
         monkeypatch,
         tmp_path,
@@ -351,12 +287,7 @@ def test_adaptador_mudo_nao_e_adaptador_parado(
 def test_a_mesa_inteira_parada_e_uma_resposta_de_verdade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O contrapeso das quatro acima: quando NINGUÉM varre, o produto sabe.
-
-    Sem este nó as cinco réguas de ausência passariam com um leitor que
-    devolvesse "não sei" para tudo — e um leitor que nunca sabe nada é um
-    leitor que nunca filtra nada.
-    """
+    """O contrapeso das quatro acima: quando NINGUÉM varre, o produto sabe."""
     _ligar_o_barramento(
         monkeypatch,
         tmp_path,
@@ -372,19 +303,8 @@ def test_a_mesa_inteira_parada_e_uma_resposta_de_verdade(
     assert leitura.mudos == frozenset()
 
 
-# ---------------------------------------------------------------------------
-# 2. O filtro no MOTOR — fim da fila, nunca fora dela
-# ---------------------------------------------------------------------------
-
-
 def test_o_destino_que_varre_desce_para_o_fim_da_fila() -> None:
-    """MORDIDA 6. Havendo outro destino que caiba, o que varre perde a vez.
-
-    A mesa é montada com o adaptador que varre sendo o MAIS FOLGADO — o destino
-    que o critério de sempre escolheria. Arrancar a chave de ordenação faz o
-    motor voltar a mandar o controle para dentro da varredura, que é o defeito
-    inteiro da sprint.
-    """
+    """MORDIDA 6. Havendo outro destino que caiba, o que varre perde a vez."""
     planos = _mesa_apertada_com_dois_destinos()
 
     sem_leitura = plano_de_radio.ordem_de_redistribuicao(planos)
@@ -403,16 +323,7 @@ def test_o_destino_que_varre_desce_para_o_fim_da_fila() -> None:
 
 
 def test_o_unico_destino_possivel_continua_valendo_mesmo_varrendo() -> None:
-    """MORDIDA 5. O filtro é ORDENAÇÃO, não exclusão — e é isso que o prova.
-
-    Numa mesa de dois adaptadores em que o único destino possível está
-    varrendo, excluir devolveria `None` e a tela calaria. Calar é pior: a
-    origem está apertada, o destino tem fila menor mesmo varrendo, e a pessoa
-    fica sem conselho nenhum.
-
-    *Excluir mataria a máquina de um adaptador só* — a frase é da sprint, e
-    este nó é a forma medida dela.
-    """
+    """MORDIDA 5. O filtro é ORDENAÇÃO, não exclusão — e é isso que o prova."""
     planos = plano_de_radio.plano_por_adaptador(
         [
             _controle(P1, 1, ponte="som"),
@@ -450,12 +361,7 @@ def test_o_unico_destino_possivel_continua_valendo_mesmo_varrendo() -> None:
 
 
 def test_sem_leitura_o_motor_escolhe_exatamente_como_escolhia() -> None:
-    """"Não sei" nunca vira penalidade — a hipótese explica o que JÁ funcionava.
-
-    `varrendo=None` é o padrão e é o caso de toda máquina sem BlueZ acessível.
-    Se a ausência de leitura mudasse o destino, o produto estaria movendo
-    controle por palpite.
-    """
+    """"Não sei" nunca vira penalidade — a hipótese explica o que JÁ funcionava."""
     planos = _mesa_apertada_com_dois_destinos()
 
     assert plano_de_radio.ordem_de_redistribuicao(
@@ -467,12 +373,7 @@ def test_sem_leitura_o_motor_escolhe_exatamente_como_escolhia() -> None:
 
 
 def test_a_mesa_folgada_nao_vira_ordem_so_porque_alguem_varre() -> None:
-    """Varredura não cria ordem de serviço — ela só reordena os destinos.
-
-    Sem este nó, um filtro escrito como "se alguém varre, mande mover" passaria
-    despercebido: o produto mandaria a pessoa mexer na mesa toda vez que ela
-    abrisse a tela de Bluetooth, com o rádio folgado.
-    """
+    """Varredura não cria ordem de serviço — ela só reordena os destinos."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1), _controle(P2, 2)],
         apelidos={bm.ADAPTADOR_QUE_VARRE: "Dongle de trás"},
@@ -486,29 +387,12 @@ def test_a_mesa_folgada_nao_vira_ordem_so_porque_alguem_varre() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. O ORÁCULO — o leitor de verdade, ligado ao motor de verdade
-# ---------------------------------------------------------------------------
-
-
 def test_o_oraculo_a_varredura_muda_o_destino_da_ordem(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A prova da sprint, ponta a ponta: liga a busca e a ordem muda de destino.
-
-    É o oráculo que a sprint pede — *"`bluetoothctl scan on` num adaptador, e a
-    ordem de serviço tem de mudar de destino"* — rodado contra o barramento de
-    mentira, porque ligar busca de verdade custa 43% dos pacotes dela.
-
-    E é ele que fecha o buraco que nó nenhum dos dois blocos acima fecha
-    sozinho: os do leitor passariam com um motor que ignora a leitura, e os do
-    motor passariam com um leitor que devolve `hciN`. **Este exige que as duas
-    metades falem a MESMA língua de endereço.** Foi assim que a régua do rótulo
-    do gravador passou por semanas conferindo dois nomes que nunca colidiam.
-    """
+    """A prova da sprint, ponta a ponta: liga a busca e a ordem muda de destino."""
     planos = _mesa_apertada_com_dois_destinos()
 
-    # ANTES: ninguém varre, e o motor manda para o mais folgado.
     _ligar_o_barramento(
         monkeypatch,
         tmp_path / "parado",
@@ -522,7 +406,6 @@ def test_o_oraculo_a_varredura_muda_o_destino_da_ordem(
     assert antes is not None
     assert antes.destino == bm.ADAPTADOR_QUE_VARRE
 
-    # DEPOIS: `scan on` naquele mesmo adaptador — e só nele.
     _ligar_o_barramento(
         monkeypatch,
         tmp_path / "varrendo",
@@ -543,19 +426,8 @@ def test_o_oraculo_a_varredura_muda_o_destino_da_ordem(
     assert antes.origem == depois.origem, "só o destino muda; a origem é a mesma"
 
 
-# ---------------------------------------------------------------------------
-# 4. O doctor — o CUSTO medido, não só o estado
-# ---------------------------------------------------------------------------
-
-
 def test_o_doctor_cita_os_numeros_do_dono() -> None:
-    """MORDIDA 7. Mexer na constante sem mexer no `doctor.sh` reprova aqui.
-
-    Os dois números viviam como PROSA em cinco arquivos, sem dono. Esta régua
-    não é tautologia: ela monta o esperado a partir do DONO em Python e o
-    procura no texto BASH, que é a outra grafia — as duas só passam juntas
-    quando concordam de verdade.
-    """
+    """MORDIDA 7. Mexer na constante sem mexer no `doctor.sh` reprova aqui."""
     minimo = varredura_do_radio.QUEDA_MINIMA_MEDIDA
     maximo = varredura_do_radio.QUEDA_MAXIMA_MEDIDA
     esperado_min = f"{minimo:.1f}".replace(".", ",")
@@ -570,13 +442,7 @@ def test_o_doctor_cita_os_numeros_do_dono() -> None:
 
 
 def test_o_aviso_do_doctor_diz_o_custo_e_nao_so_o_estado() -> None:
-    """O que a sprint pediu: o aviso já estava no lugar certo e calava o preço.
-
-    Um aviso sem tamanho se lê como zelo e se ignora. Este nó exige as três
-    coisas que o tornam acionável: que foi MEDIDO, o alcance (NESTE adaptador,
-    porque as corridas cruzadas deram ruído) e a CAUDA de 21 segundos — sem ela
-    a pessoa fecha a tela, mede na hora e conclui que o aviso mente.
-    """
+    """O que a sprint pediu: o aviso já estava no lugar certo e calava o preço."""
     bloco = DOCTOR.split("Discovering: yes")[1][:900]
     assert "MEDIDO" in bloco
     assert "NESTE adaptador" in bloco
@@ -584,41 +450,16 @@ def test_o_aviso_do_doctor_diz_o_custo_e_nao_so_o_estado() -> None:
 
 
 def test_o_aviso_do_doctor_nao_culpa_ninguem() -> None:
-    """Nenhuma palavra de culpa no texto que CHEGA a ela.
-
-    Rádio ocupado não é aparelho com defeito, e a mesma varredura de
-    `PALAVRAS_DE_CULPA` que o `plano_de_radio` sofre vale aqui. O aviso nomeia o
-    que foi medido e para.
-
-    **Ele mede o BASH, e não uma frase em Python, porque a frase em Python
-    morreu.** Ela existiu por meia hora nesta leva e era a MESMA sentença do
-    `doctor.sh` escrita duas vezes — a segunda grafia do mesmo fato, que é o
-    defeito que esta casa mata por regra. Quem a matou foi o portão `casa-sabe`:
-    nenhum caminho do produto a alcançava.
-    """
+    """Nenhuma palavra de culpa no texto que CHEGA a ela."""
     bloco = DOCTOR.split("Discovering: yes")[1][:900].lower()
     for palavra in PALAVRAS_DE_CULPA:
         assert palavra not in bloco, f"«{palavra}» culpa alguém pelo rádio ocupado"
 
 
-# ---------------------------------------------------------------------------
-# 5. A lembrança — o rádio fora do caminho do desenho
-# ---------------------------------------------------------------------------
-
-
 def test_a_lembranca_poupa_o_barramento_dentro_da_validade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """MORDIDA 8. Arrancar a validade faz a tela perguntar a cada pintura.
-
-    `varredura_recente` é o que o produto chama. Medido em 20/09 contra o BlueZ
-    vivo desta bancada, uma leitura custa 8,4 ms de mediana — barato, e não de
-    graça: quem chama é a thread do GTK, redesenhada a cada resposta do daemon.
-    Pôr rádio no caminho do desenho é a forma exata do travamento de 15/09/2026.
-
-    Trocar o corpo por `return quem_esta_varrendo()` reprova aqui com
-    `perguntas == [1, 1, 1]`.
-    """
+    """MORDIDA 8. Arrancar a validade faz a tela perguntar a cada pintura."""
     monkeypatch.setattr(varredura_do_radio, "_LEMBRANCA", None)
     _ligar_o_barramento(
         monkeypatch, tmp_path, {"hci7": (bm.ADAPTADOR_QUE_VARRE, "true")}
@@ -646,11 +487,7 @@ def test_a_lembranca_poupa_o_barramento_dentro_da_validade(
 def test_a_lembranca_nao_congela_a_resposta_para_sempre(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O contrapeso: passada a validade, o produto vê a busca que SUBIU.
-
-    Sem este nó, um cache eterno passaria na régua acima — e a tela continuaria
-    mandando o controle para dentro da busca por toda a sessão.
-    """
+    """O contrapeso: passada a validade, o produto vê a busca que SUBIU."""
     monkeypatch.setattr(varredura_do_radio, "_LEMBRANCA", None)
     _ligar_o_barramento(
         monkeypatch, tmp_path / "antes", {"hci7": (bm.ADAPTADOR_QUE_VARRE, "false")}
@@ -669,19 +506,10 @@ def test_a_lembranca_nao_congela_a_resposta_para_sempre(
     ).varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
 
 
-# ---------------------------------------------------------------------------
-# 6. O produto é de outra pessoa também
-# ---------------------------------------------------------------------------
-
-
 def test_o_leitor_nao_presume_bancada_nenhuma(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Um adaptador só, e o leitor responde igual — a ordem dela de 11/09.
-
-    A reserva estática morreu justamente por presumir três adaptadores. O
-    substituto tem de responder na máquina de UM, que é a de quase todo mundo.
-    """
+    """Um adaptador só, e o leitor responde igual — a ordem dela de 11/09."""
     _ligar_o_barramento(monkeypatch, tmp_path, {"hci7": (bm.ADAPTADOR_QUE_VARRE, "true")})
     leitura = varredura_do_radio.quem_esta_varrendo()
 
@@ -690,20 +518,11 @@ def test_o_leitor_nao_presume_bancada_nenhuma(
 
 
 def test_o_leitor_nao_toca_no_radio_de_ninguem(tmp_path: Path) -> None:
-    """Ler é tudo o que se pode fazer daqui, e o fonte tem de dizer isso.
-
-    O BlueZ conta `discovery` POR CLIENTE — medido em 19/09: `StopDiscovery` de
-    terceiro devolve `No discovery started` e a busca continua. Um módulo que
-    tentasse desligar a busca alheia falharia em silêncio e daria à casa a
-    ilusão de uma alavanca que não existe.
-    """
+    """Ler é tudo o que se pode fazer daqui, e o fonte tem de dizer isso."""
     fonte = Path(varredura_do_radio.__file__).read_text(encoding="utf-8")
     corpo = fonte.split('"""', 2)[2]
     for verbo in ("StartDiscovery", "StopDiscovery", "set-property", "Powered"):
         assert verbo not in corpo, f"o leitor não pode chamar {verbo}"
-    # BLUEZ-UM-DONO-01: o leitor pergunta ao dono do BlueZ, e nenhuma escrita
-    # do dono aparece aqui. A leitura tem de estar lá — senão esta régua passa
-    # sobre um módulo que não pergunta nada.
     for escrita in bluez_dbus.ESCRITAS:
         assert f".{escrita}(" not in corpo, f"o leitor não pode chamar {escrita}"
     assert ".propriedade(" in corpo
@@ -712,13 +531,8 @@ def test_o_leitor_nao_toca_no_radio_de_ninguem(tmp_path: Path) -> None:
 def test_o_leitor_nao_deixa_o_locale_cegar_a_leitura(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """`LC_ALL=C` no ambiente do subprocesso — o `pactl` já cegou dois leitores.
-
-    Um leitor traduzido responde "não há" sobre aparelho de pé. Aqui isso
-    significaria dizer "ninguém varre" enquanto ela perde 43% dos pacotes.
-    """
+    """`LC_ALL=C` no ambiente do subprocesso — o `pactl` já cegou dois leitores."""
     vistos: list[dict[str, str]] = []
-    # O subprocesso mora no dono do BlueZ desde a BLUEZ-UM-DONO-01.
     original = bluez_dbus.subprocess.run
 
     def espiar(*args: Any, **kwargs: Any) -> Any:
@@ -739,11 +553,7 @@ def test_o_leitor_nao_deixa_o_locale_cegar_a_leitura(
 def test_o_leitor_nao_levanta_quando_o_busctl_explode(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Nunca levanta: toda saída é uma `Varredura`, inclusive o erro do processo.
-
-    Esta função é chamada de caminho de diagnóstico; uma exceção daqui derrubaria
-    quem só queria saber se cabia mais um controle no adaptador.
-    """
+    """Nunca levanta: toda saída é uma `Varredura`, inclusive o erro do processo."""
     raiz = bm.montar_adaptadores(tmp_path, {"hci7": (bm.ADAPTADOR_PARADO, "false")})
     quebrado = raiz / "bin" / "busctl"
     quebrado.write_text("#!/usr/bin/env bash\nexit 7\n", encoding="utf-8")
@@ -755,18 +565,8 @@ def test_o_leitor_nao_levanta_quando_o_busctl_explode(
     assert leitura.varrendo == frozenset()
 
 
-# ---------------------------------------------------------------------------
-# 7. O BARRAMENTO TRAVADO — a conferência adversarial de 20/09/2026
-# ---------------------------------------------------------------------------
-
-
 def _busctl_que_trava(tmp_path: Path, quantos: int) -> Path:
-    """Um `busctl` que LISTA a mesa e depois não responde mais nada.
-
-    É a forma exata de um `bluetoothd` pendurado: o barramento aceita a
-    chamada e nunca devolve. O `tree` responde de propósito — um `tree` mudo
-    cairia no `SEM_BLUEZ` logo na porta e o cenário não chegaria a morder.
-    """
+    """Um `busctl` que LISTA a mesa e depois não responde mais nada."""
     raiz = tmp_path / "barramento-travado"
     (raiz / "bin").mkdir(parents=True)
     nos = "".join(f"/org/bluez/hci{i}\n" for i in range(quantos))
@@ -822,12 +622,7 @@ def test_o_barramento_travado_nao_segura_a_thread_do_desenho(
 def test_o_orcamento_nao_corta_barramento_que_responde(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O contrapeso da 10: um corte que corta sempre não mede nada.
-
-    Sem este nó, um `quem_esta_varrendo` que devolvesse
-    `SEM_RESPOSTA_A_TEMPO` para tudo passaria na régua acima — e o produto
-    ficaria cego para a busca que a pessoa abriu.
-    """
+    """O contrapeso da 10: um corte que corta sempre não mede nada."""
     _ligar_o_barramento(
         monkeypatch,
         tmp_path,

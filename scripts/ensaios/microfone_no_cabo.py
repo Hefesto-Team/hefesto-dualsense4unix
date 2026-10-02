@@ -93,10 +93,6 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# O `_dispositivo_usb_pai` é IMPORTADO, não recopiado: é a régua que amarra
-# placa de som a controle, e esta casa já pagou o preço de três instrumentos
-# respondendo à mesma pergunta de três jeitos (um deles errado). Com dois
-# controles no cabo, adivinhar a placa por ordem erraria metade das vezes.
 from audio_por_transporte import _dispositivo_usb_pai
 from comum import (
     CABO,
@@ -117,27 +113,12 @@ from imu_no_cabo import PERFIL_DO_TRANSPORTE, mascarar
 
 USBID_DUALSENSE = "054c:0ce6"
 
-#: O byte `status[1]` do report de entrada. Offset 53 dentro do
-#: `struct dualsense_input_report`; o transporte decide o endereço absoluto,
-#: como no `imu_no_cabo.py`.
-#:
-#: **`DS_STATUS1_MIC_DETECT` (BIT 1) é do JACK, não do microfone embutido.** O
-#: driver o define ao lado de `HP_DETECT` e os soma em `DS_STATUS1_JACK_DETECT`
-#: (`hid-playstation.c:179`), que é como o kernel avisa que plugaram um fone com
-#: microfone na entrada de 3,5 mm. Medido em 15/08/2026 nesta mesa: os dois
-#: controles do cabo saem com o bit **limpo** e mesmo assim o microfone
-#: embutido entrega piso de ruído pelo ALSA. Ler este bit como "tem microfone"
-#: teria produzido a conclusão exatamente oposta à medição.
 OFFSET_STATUS1_NO_CORPO = 53
 BIT_JACK_MIC_DETECT = 0x02
 BIT_MIC_MUTE = 0x04
 
 _BYTES_POR_LEITURA = 256
 
-#: Quantos segundos de folga antes de medir, para a captura se estabilizar. O
-#: `arecord` gasta os primeiros instantes negociando altset e enchendo o
-#: primeiro período — medir dentro dessa janela mediria o `arecord` subindo, e
-#: não a carga no controlador.
 _ASSENTAR_S = 2.0
 
 
@@ -275,11 +256,7 @@ def _analisar_wav(caminho: str, captura: Captura) -> None:
 def gravar(
     dispositivo: str, segundos: float, canais: int, rotulo: str, *, fonte_pulse: str = ""
 ) -> Captura:
-    """Grava `segundos` de `dispositivo` com `arecord` e devolve os números.
-
-    O MESMO binário e o MESMO analisador servem à medição e ao negativo — se a
-    régua fosse outra no negativo, ele não seria negativo de coisa nenhuma.
-    """
+    """Grava `segundos` de `dispositivo` com `arecord` e devolve os números."""
     captura = Captura(rotulo=rotulo, dispositivo=dispositivo)
     if not shutil.which("arecord"):
         captura.erro = "arecord não encontrado"
@@ -354,25 +331,8 @@ def _sink_suspenso_sem_dualsense() -> str:
     return ""
 
 
-# ---------------------------------------------------------------------------
-# O estado do microfone SEGUNDO O APARELHO — a desambiguação de um "zeros"
-# ---------------------------------------------------------------------------
-
-
 def estado_do_microfone(aparelho: Aparelho) -> str:
-    """`status[1]` do report de entrada, cru — para desambiguar um silêncio.
-
-    Existe porque microfone mudo por hardware e rota de áudio quebrada produzem
-    o mesmo `ZEROS EXATOS`, e chamá-los pelo mesmo nome seria a calúnia de
-    sempre.
-
-    **Ressalva declarada, e ela é dupla.** `DS_STATUS1_MIC_MUTE` é definido no
-    driver e nunca lido por ele (`hid-playstation.c:179`), então a semântica
-    não tem confirmação de terceiro. E o bit vizinho, `MIC_DETECT`, é do **jack
-    de 3,5 mm**, não do microfone embutido — medido aqui em 15/08/2026, com o
-    bit limpo nos dois do cabo e o microfone embutido captando. O que sai daqui
-    é o BYTE; a leitura ao lado é sugestão do fonte, não veredito.
-    """
+    """`status[1]` do report de entrada, cru — para desambiguar um silêncio."""
     perfil = PERFIL_DO_TRANSPORTE.get(aparelho.transporte)
     if perfil is None:
         return "transporte desconhecido"
@@ -401,11 +361,6 @@ def estado_do_microfone(aparelho: Aparelho) -> str:
         no.fechar()
 
 
-# ---------------------------------------------------------------------------
-# O E-6: a dose-resposta
-# ---------------------------------------------------------------------------
-
-
 def _abrir_fisicos(alvos: list[Aparelho]) -> tuple[dict[int, Aparelho], list[NoAberto], list[str]]:
     """Abre os quatro físicos pelo broker, uma vez para a fase inteira."""
     abertos: dict[int, Aparelho] = {}
@@ -424,12 +379,7 @@ def _abrir_fisicos(alvos: list[Aparelho]) -> tuple[dict[int, Aparelho], list[NoA
 
 
 def _drenar(fds: list[int]) -> None:
-    """Esvazia a fila de cada fd antes de contar.
-
-    Sem isto, a primeira janela contaria o que o kernel guardou ENQUANTO o
-    patamar anterior era desmontado — e a contagem do patamar 1 apareceria
-    inflada pelo que sobrou do patamar 0.
-    """
+    """Esvazia a fila de cada fd antes de contar."""
     for fd in fds:
         while True:
             try:
@@ -555,11 +505,7 @@ def _resumo_por_patamar(
 
 
 def _veredito_da_dose(resumo_do_aparelho: dict[int, tuple[float, float, float]]) -> str:
-    """A conclusão de UM aparelho — conservadora de propósito.
-
-    "Não mexeu" é resultado, não falha do ensaio (`A-20`). E queda que não
-    supera a própria dispersão das rodadas não é queda: é ruído com sorte.
-    """
+    """A conclusão de UM aparelho — conservadora de propósito."""
     if len(resumo_do_aparelho) < 3:
         return "patamares de menos"
     medias = [resumo_do_aparelho[p][0] for p in (0, 1, 2)]
@@ -577,8 +523,6 @@ def _veredito_da_dose(resumo_do_aparelho: dict[int, tuple[float, float, float]])
 def _escrever_csv(
     caminho: str, capturas: list[Captura], janelas: list[Janela], quando: str
 ) -> None:
-    # `lineterminator="\n"` porque o padrão do módulo `csv` é CRLF, e o
-    # `.gitattributes` desta casa é `eol=lf` em tudo.
     with open(caminho, "w", encoding="utf-8", newline="") as arquivo:
         escritor = csv.writer(arquivo, lineterminator="\n")
         escritor.writerow(["bloco", "quando", "chave", "campo", "valor"])

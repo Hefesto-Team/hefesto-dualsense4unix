@@ -1,9 +1,4 @@
-"""Cliente IPC síncrono/assíncrono para a GUI GTK.
-
-`_run_call` é síncrono e bloqueante — NÃO chamar da thread principal GTK.
-`call_async` despacha para um ThreadPoolExecutor (1 worker) e re-posta os
-callbacks via `GLib.idle_add`, mantendo a thread GTK livre durante I/O.
-"""
+"""Cliente IPC síncrono/assíncrono para a GUI GTK."""
 from __future__ import annotations
 
 import asyncio
@@ -17,13 +12,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Executor lazy-init — criado na primeira chamada de call_async.
 _EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
 
-# Exceções esperadas de transporte/disponibilidade do daemon. Capturar apenas
-# essas nos wrappers públicos mantém a trilha visível quando o daemon está
-# offline (resultado False legítimo) e deixa bugs reais (ValueError, TypeError,
-# RuntimeError inesperados) propagarem — AUDIT-FINDING-IPC-BRIDGE-BARE-EXCEPT-01.
 _IPC_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
     FileNotFoundError,
     ConnectionError,
@@ -32,26 +22,14 @@ _IPC_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
 )
 
 #: ATIVAR-NAO-MENTE-01 (leva 2, 05/08): quanto esperar por um `profile.switch`.
-#:
-#: O default de 250 ms desta ponte é o timeout de LEITURA — cabe num
 #: `daemon.state_full`, e é curto de propósito para a janela não pendurar
 #: esperando um daemon morto. Só que `profile.switch` não é leitura: o handler
-#: faz `activate` + `save_active_marker` + `materialize_launch_env` e levou
-#: ~1,2 s MEDIDOS no journal dela. Resultado: TODA ativação estourava o
-#: timeout, a janela dizia "Falha (daemon offline?)" com o perfil JÁ ativo, e
-#: ela clicava de novo — cada clique uma ativação real.
-#:
-#: Mesma família (e mesma cura) do `MODE_IPC_TIMEOUT_S` de
-#: `app/actions/mode_transition.py`: a chamada que MUDA o mundo ganha a folga
-#: que a leitura não pode ter. O applet COSMIC espelha este número em
-#: `packaging/cosmic-applet/src/ipc.rs` (`SWITCH_IPC_TIMEOUT`) — os dois falam
-#: com o MESMO daemon, e divergir aqui é reabrir o defeito de um lado só.
 PROFILE_SWITCH_TIMEOUT_S: float = 3.0
 
 
 def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
     """Retorna (criando se necessário) o executor IPC compartilhado."""
-    global _EXECUTOR  # necessário: lazy singleton
+    global _EXECUTOR
     if _EXECUTOR is None:
         _EXECUTOR = concurrent.futures.ThreadPoolExecutor(
             max_workers=1,
@@ -65,18 +43,9 @@ def _run_call(
     params: dict[str, Any] | None = None,
     timeout: float | None = 0.25,
 ) -> Any:
-    """Executa RPC de forma síncrona com timeout.
-
-    ATENÇÃO: função bloqueante. Não deve ser chamada da thread principal GTK.
-    Indicada para uso em CLI, TUI ou dentro do worker do executor.
-    """
+    """Executa RPC de forma síncrona com timeout."""
     async def _do() -> Any:
         async with IpcClient.connect(timeout=timeout) as client:
-            # BUG-IPC-READ-NO-TIMEOUT-01: o timeout precisa cobrir TAMBÉM a
-            # leitura da resposta, não só o connect — um daemon que aceita a
-            # conexão mas trava ao responder bloquearia o worker eternamente.
-            # IpcClient.call envolve o readline em asyncio.wait_for e converte
-            # TimeoutError em IpcError(-1, "conexão timeout") (já capturado).
             return await client.call(method, params or {}, timeout=timeout)
 
     return asyncio.run(_do())
@@ -120,16 +89,7 @@ def call_async(
     on_failure: Callable[[Exception], bool] | None = None,
     timeout_s: float = 0.25,
 ) -> None:
-    """Despacha RPC para thread worker; callbacks re-postados via GLib.idle_add.
-
-    - `on_success(result)` é chamado na thread principal GTK após conclusão.
-    - `on_failure(exc)` é chamado na thread principal GTK em caso de erro.
-    - Ambos os callbacks DEVEM retornar `False` para não serem repetidos
-      pelo GLib (contrato de `GLib.idle_add`).
-
-    A função não bloqueia a thread GTK em nenhuma circunstância.
-    """
-    # Import adiado para permitir testes sem GTK instalado.
+    """Despacha RPC para thread worker; callbacks re-postados via GLib.idle_add."""
     from gi.repository import GLib
 
     def _worker() -> None:
@@ -155,13 +115,7 @@ def run_in_thread(
     on_success: Callable[[Any], bool],
     on_failure: Callable[[Exception], bool] | None = None,
 ) -> None:
-    """Roda ``fn()`` em thread worker; callbacks re-postados via GLib.idle_add.
-
-    Generaliza ``call_async`` para qualquer função bloqueante fora de IPC (ex.:
-    ler perfis do disco com ``load_all_profiles``), mantendo a thread GTK livre.
-    Reusa o mesmo executor de 1 worker. Os callbacks DEVEM retornar ``False``
-    (contrato de ``GLib.idle_add``).
-    """
+    """Roda ``fn()`` em thread worker; callbacks re-postados via GLib.idle_add."""
     from gi.repository import GLib
 
     def _worker() -> None:
@@ -181,12 +135,6 @@ def run_in_thread(
     _get_executor().submit(_worker)
 
 
-# ---------------------------------------------------------------------------
-# Helpers síncronos de alto nível (usados por CLI e código legado da GUI que
-# já está em thread worker ou contexto de teste).
-# ---------------------------------------------------------------------------
-
-
 def daemon_state_full() -> dict[str, Any] | None:
     """Retorna estado completo via IPC; None se daemon offline."""
     ok, result = _safe_call("daemon.state_full")
@@ -196,11 +144,7 @@ def daemon_state_full() -> dict[str, Any] | None:
 
 
 def freestyle_set(ligado: bool | None = None) -> bool | None:
-    """Liga/desliga o Modo Freestyle (O-FREESTYLE-E-UMA-CAMADA-SO-01).
-
-    `ligado=None` inverte no daemon. Devolve o estado que FICOU valendo
-    (True = ligado), ou None se o daemon não respondeu.
-    """
+    """Liga/desliga o Modo Freestyle (O-FREESTYLE-E-UMA-CAMADA-SO-01)."""
     params: dict[str, Any] = {}
     if ligado is not None:
         params["ligado"] = bool(ligado)
@@ -240,10 +184,6 @@ def profile_list() -> list[dict[str, Any]]:
             for p in os_perfis_de_escolher(load_all_profiles())
         ]
     except (FileNotFoundError, PermissionError, OSError) as exc:
-        # PROFILE-LOADER-UX-01: load_all_profiles agora pula perfis corrompidos
-        # internamente; aqui só sobram falhas de I/O do diretório de perfis
-        # (permissão negada, FS desmontado etc.). Logar com exc_info para a
-        # GUI mostrar diretório vazio + investigador ter trilha.
         logger.warning(
             "profile_load_fallback_failed",
             err=str(exc),
@@ -269,47 +209,13 @@ def active_profile_name() -> str | None:
 
 
 def profile_switch(name: str) -> bool:
-    """Ativa um perfil no daemon; ``False`` quando ele não confirmou.
-
-    ATIVAR-NAO-MENTE-01: com o timeout de leitura (250 ms) esta função devolvia
-    ``False`` para uma ativação que o daemon estava CUMPRINDO — os ~1,2 s do
-    handler não cabiam. Quem lê o ``False`` são a CLI (`cmd_profile`), o
-    ciclador de perfil e o Salvar da aba Perfis, e os três passaram a anunciar
-    falha de uma troca que aconteceu. Ver `PROFILE_SWITCH_TIMEOUT_S`.
-    """
+    """Ativa um perfil no daemon; ``False`` quando ele não confirmou."""
     ok, _ = _safe_call(
         "profile.switch", {"name": name}, timeout=PROFILE_SWITCH_TIMEOUT_S
     )
     return ok
 
 
-#: O TETO DO ATO DO MICROFONE, e ele é MEDIDO — 08/09/2026, na máquina dela com
-#: os quatro na mesa, logo depois do `install.sh`.
-#:
-#: `mic.canal.set` responde em **3.070 ms** (três voltas: 3071, 3069, 3070) e o
-#: teto de `_safe_call` é **250 ms** — doze vezes menos. A resposta chegava
-#: SEMPRE tarde, `_safe_call` devolvia `ok=False`, `_corpo_do_daemon` devolvia
-#: `None`, e a tela mostrava a frase de três causas: *"ou o Hefesto está parado,
-#: ou este controle se desligou, ou o Hefesto instalado é mais velho que esta
-#: janela"*. **NENHUMA DAS TRÊS ERA VERDADE** — o daemon é o recém-instalado,
-#: conhece o método, e respondeu com a razão CERTA:
-#: *"não há canal de captura atribuível a este controle — no rádio ele só
-#: aparece com a ponte de microfone de pé"*.
-#:
-#: É EXATAMENTE O DEFEITO QUE `a02_controles` DIZ TER CURADO EM 04/09, voltando
-#: por outra porta: *"uma frase de recusa que não contém o caso que acontece
-#: manda a pessoa procurar o defeito no lugar errado"*. Da primeira vez faltava
-#: a terceira causa na lista; desta vez a razão verdadeira existia e o
-#: TRANSPORTE a jogou fora.
-#:
-#: POR QUE O ATO DEMORA, e não é lentidão a consertar: ele varre as fontes de
-#: captura do PulseAudio para achar o canal do controle. É trabalho real, e é o
-#: mesmo trabalho que produz a frase que ela precisa ler.
-#:
-#: O NÚMERO É 6 s, e a folga é deliberada: o dobro do medido. Um teto colado no
-#: valor de hoje vira vermelho no dia em que a máquina estiver mais carregada —
-#: e o modo de falhar é o pior possível, porque não parece um teto: parece um
-#: daemon quebrado.
 _TETO_DO_ATO_DE_AUDIO = 6.0
 
 
@@ -319,39 +225,7 @@ def _corpo_do_daemon(
     *,
     timeout: float | None = None,
 ) -> dict[str, Any] | None:
-    """RPC que entrega o CORPO da resposta, ou ``None`` quando não houve corpo.
-
-    ELO-MUDO-01 (23/08/2026). É a forma que ``apply_draft_detalhado`` já usava
-    sozinha desde 22/08, promovida a peça: ``None`` significa "NÃO HOUVE
-    RESPOSTA utilizável" (daemon offline, transporte, resposta que não é
-    dicionário) e um ``dict`` significa "o daemon falou — leia o que ele disse".
-
-    A distinção é o produto inteiro desta função: hoje meia dúzia de invólucros
-    desta ponte estreitam para ``bool`` um corpo que o daemon montou com
-    cuidado, e a tela do outro lado passa a re-DEDUZIR o que já sabia — foi
-    assim que "aplicado" apareceu com ``aplicado_em: []`` e ``guardado_em: []``
-    na mesa vazia.
-
-    **O ``timeout`` É OPCIONAL, e omitido a chamada sai com a forma de sempre**
-    — ``_safe_call(method, params)``, dois argumentos posicionais. Isso não é
-    detalhe: há dublês de ``_safe_call`` em testes escritos como uma lambda de
-    DOIS parâmetros, e um ``timeout=`` os quebra com ``TypeError`` sem que nada
-    do produto tenha mudado.
-
-    **FATO SUBSTITUÍDO — 09/09/2026.** Este parágrafo dizia *"sem parâmetro de
-    ``timeout``, de propósito"*, e a afirmação morreu em ``edfcc9b4``: os três
-    atos de áudio (``speaker.set``, e os dois irmãos em ``:1298`` e ``:1457``)
-    passaram a sair com ``_TETO_DO_ATO_DE_AUDIO`` = 6 s — a cura do teto que
-    fazia a tela mentir. Os 250 ms de leitura curta devolviam *"não respondeu"*
-    sobre um daemon que ia responder.
-
-    **E O AVISO ACERTOU:** os dois dublês da SOM-02 quebraram exatamente como
-    este parágrafo previa, e ficaram vermelhos até 09/09. Quem cedeu foi o
-    DUBLÊ (``**_teto`` na lambda), não o produto — um ato que escreve no
-    aparelho tem direito a mais fôlego que uma leitura. A lição fica: um aviso
-    que descreve o preço não impede ninguém de pagá-lo; só a régua impede, e a
-    régua aqui é a suíte, que roda no fim.
-    """
+    """RPC que entrega o CORPO da resposta, ou ``None`` quando não houve corpo."""
     if timeout is None:
         ok, result = _safe_call(method, params)
     else:
@@ -423,22 +297,7 @@ def _call_checked(
     params: dict[str, Any],
     timeout: float | None = 0.25,
 ) -> tuple[bool, str | None]:
-    """RPC que distingue "o daemon RECUSOU" de "o daemon não respondeu".
-
-    Retorna ``(ok, motivo)``. ``motivo`` só vem preenchido quando o daemon
-    respondeu e recusou por parâmetro inválido (``CODE_INVALID_PARAMS``): ele
-    está VIVO, o pedido é que não serve — a UI tem de mostrar o motivo dele, não
-    acusar o daemon de estar morto. Falha de transporte (offline, socket ausente,
-    timeout) volta como ``(False, None)``.
-
-    Existe porque ``_safe_call`` colapsa os dois casos em ``(False, None)``
-    (ver o docstring dele) e a UI pintava recusa de validação como "daemon
-    offline?".
-
-    Invólucro de :func:`_call_checked_detalhado`, que é onde o RPC acontece —
-    esta aqui só descarta o corpo, para os chamadores de hoje continuarem
-    desempacotando duas coisas.
-    """
+    """RPC que distingue "o daemon RECUSOU" de "o daemon não respondeu"."""
     ok, motivo, _corpo = _call_checked_detalhado(method, params, timeout=timeout)
     return ok, motivo
 
@@ -526,7 +385,7 @@ def trigger_reset_detalhado(
     escritos como espelho um do outro (ELO-MUDO-01, 23/08).
 
     R-19 (auditoria 23/07): o RPC já existia e já estava roteado
-    (`ipc_server.py:131`), mas a GUI não o expunha — então o botão "Desligar" da
+    (`ipc_server.py:126`), mas a GUI não o expunha — então o botão "Desligar" da
     aba Gatilhos mandava outro `trigger.set` com modo "Off". A diferença é
     decisiva: `trigger.set` **ARMA** `mark_manual_trigger_active`, então o botão
     que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
@@ -544,7 +403,7 @@ def trigger_reset_detalhado(
 
     Estes três parágrafos moraram no invólucro `trigger_reset`, podado em
     26/08/2026 por não ter chamador nenhum: quem aperta "Desligar" é
-    `app/actions/triggers_actions.py:697`, e chama esta.
+    `app/actions/triggers_actions.py:560`, e chama esta.
     """
     ok, motivo, corpo = _call_checked_detalhado(
         "trigger.reset", _payload_trigger_reset(side, uniq)
@@ -602,33 +461,7 @@ def led_set_detalhado(
 
 
 def _recusa_no_corpo(resultado: Any) -> str | None:
-    """Lê a recusa que vem no CORPO de uma resposta bem-sucedida.
-
-    NATIVO-RUMBLE-01 (19/08/2026). Esta casa tem DOIS jeitos de o daemon dizer
-    "não": o erro JSON-RPC ``CODE_INVALID_PARAMS`` — que ``_call_checked`` já
-    sabe ler — e o campo ``status`` do resultado, usado quando o pedido é
-    *válido* e mesmo assim não se realiza (o ``coop.set`` que recusa desligar, o
-    vocabulário ``EMU_*`` do gamepad, e agora o rumble sob Modo Nativo).
-
-    A diferença importa porque para o segundo caso o ``_call_checked`` responde
-    ``(True, None)``: o RPC foi bem-sucedido. Sem esta leitura, a recusa medida
-    do daemon chegaria na tela como "Vibração travada (fraca=…, forte=…)" com o
-    motor parado — a mentira que o NATIVO-RUMBLE-01 mediu, e a mesma classe de
-    defeito do HARM-19 pelo avesso.
-
-    **E não é só recusa** (20/08/2026, censo das nove abas). O ``rumble.stop``
-    dentro do Modo Nativo devolve ``status: "ok"`` — porque ele REALIZOU parte do
-    pedido: soltou o par que o Hefesto segurava. O que ele não consegue é calar o
-    motor que o JOGO está tocando pelo hidraw, e é isso que o ``motivo`` diz. Ler
-    só o ``status`` deixava a aba anunciar "Vibração parada (travada em
-    silêncio)" com o motor girando.
-
-    Então a regra é: **se o daemon mandou uma frase, ela é para ela.** O produto
-    não põe ``motivo`` numa resposta sem ter o que explicar.
-
-    Devolve o ``motivo`` quando houver um, e ``None`` quando o pedido valeu sem
-    ressalva.
-    """
+    """Lê a recusa que vem no CORPO de uma resposta bem-sucedida."""
     if not isinstance(resultado, dict):
         return None
     motivo = resultado.get("motivo")
@@ -636,12 +469,7 @@ def _recusa_no_corpo(resultado: Any) -> str | None:
 
 
 def rumble_set_checked(weak: int, strong: int) -> tuple[bool, str | None]:
-    """Fixa a vibração devolvendo o MOTIVO quando o daemon RECUSA.
-
-    Recusa típica: o Modo Nativo está ligado e o jogo é o dono dos motores
-    (NATIVO-RUMBLE-01). Ver ``_recusa_no_corpo`` para por que a recusa não vem
-    como erro JSON-RPC — e por que ``_call_checked`` não serve aqui.
-    """
+    """Fixa a vibração devolvendo o MOTIVO quando o daemon RECUSA."""
     ok, resultado = _safe_call("rumble.set", {"weak": weak, "strong": strong})
     if not ok:
         return False, None
@@ -663,16 +491,7 @@ def rumble_set(weak: int, strong: int) -> bool:
 
 
 def rumble_stop_checked() -> tuple[bool, str | None]:
-    """Para a vibração devolvendo a FRASE do daemon quando ele tem uma.
-
-    NATIVO-RUMBLE-01, segunda metade (20/08/2026). Dentro do Modo Nativo este
-    gesto não trava silêncio: ele SOLTA o par que o Hefesto segurava e devolve
-    ``status: "ok"`` com o motivo, porque calar o motor que o jogo toca pelo
-    hidraw não está ao alcance do produto. A aba anunciava "Vibração parada
-    (travada em silêncio)" nesse caso — a mesma mentira que o "Aplicar" e o
-    "Testar" já não contam desde 19/08, e que ficou aqui por eu ter parado nos
-    dois primeiros botões.
-    """
+    """Para a vibração devolvendo a FRASE do daemon quando ele tem uma."""
     ok, resultado = _safe_call("rumble.stop", {})
     if not ok:
         return False, None
@@ -761,27 +580,7 @@ def rumble_motores_set(
 def rumble_policy_set_checked(
     policy: str, *, timeout: float | None = 0.25
 ) -> tuple[bool, str | None]:
-    """Altera a intensidade devolvendo o MOTIVO quando o daemon RECUSA.
-
-    ``policy`` é um de "economia", "balanceado", "max", "auto", "custom"
-    (FEAT-RUMBLE-POLICY-01).
-
-    Mesmo tratamento dos gatilhos (ver ``_call_checked``): a aba Rumble afirmava
-    "O Hefesto não está rodando" também para erro JSON-RPC — daemon VIVO que
-    recusou o pedido. ``timeout`` é do chamador: a folga de leitura de estado
-    mora em ``app.actions.mode_transition``, que importa este módulo (importá-lo
-    aqui seria ciclo).
-
-    Esta é a ÚNICA porta do ``rumble.policy_set`` desde 26/08/2026, e as duas
-    que caíram deixaram medição: o invólucro ``rumble_policy_set`` descartava o
-    motivo da recusa (nunca teve chamador de produção), e o
-    ``rumble_policy_set_detalhado`` existia pela uniformidade das três rotas de
-    ``_call_checked``, mas o corpo deste RPC é ECO — ``{"status": "ok",
-    "policy": <a pedida>}``, medido em 23/08/2026 — então não havia verdade
-    nenhuma escondida no corpo para a aba recuperar. Se um dia o daemon passar
-    a resolver a política EFETIVA (``auto`` virando um valor concreto), é aqui
-    que a forma ``(ok, motivo, corpo)`` volta.
-    """
+    """Altera a intensidade devolvendo o MOTIVO quando o daemon RECUSA."""
     return _call_checked("rumble.policy_set", {"policy": policy}, timeout=timeout)
 
 
@@ -800,9 +599,6 @@ def rumble_policy_custom(mult: float) -> bool:
     return ok
 
 
-#: PLAYER-01: motivos de recusa do ``identity.number.set`` traduzidos para a
-#: frase que a janela mostra. Mapa explícito (não f-string do ``reason``) para
-#: a usuária nunca ler um identificador do protocolo na barra de status.
 _MOTIVOS_NUMERO: dict[str, str] = {
     "sessao_de_jogo_aberta": (
         "Feche o jogo antes de trocar o número — trocar agora repintaria "
@@ -819,25 +615,7 @@ _MOTIVOS_NUMERO: dict[str, str] = {
 
 
 def identity_number_set(uniq: str, number: int) -> tuple[bool, str | None]:
-    """Atribui o NÚMERO EXIBIDO do controle ``uniq`` (PLAYER-01, 25/07).
-
-    O comando que faltava no projeto inteiro: até 25/07 não havia forma
-    nenhuma de dizer "este controle é o 2". Só existia ``identity.renumber``,
-    que compacta TODOS preservando a ordem relativa e mora na aba Início — e
-    era por isso que a expectativa dela ("escolho o player e o cabeçalho
-    acompanha") não tinha como se realizar: ela clicava num controle de
-    APARÊNCIA (o desenho das 5 luzes) esperando mudar IDENTIDADE.
-
-    Devolve ``(ok, motivo)``. ``motivo`` só vem preenchido quando o daemon
-    RESPONDEU e RECUSOU — cada ``reason`` do protocolo já traduzido para a
-    frase da janela (:data:`_MOTIVOS_NUMERO`). Daemon offline volta como
-    ``(False, None)``: a distinção existe porque a tela precisa dizer coisas
-    diferentes em "o Hefesto está desligado" e "o jogo está aberto".
-
-    ``number`` é 1..N entre os controles PRESENTES (NUM-01: o número exibido
-    é a colocação entre quem está na mesa). Não confundir com o número de
-    JOGADOR do co-op — ver ``app/actions/base.py:26``.
-    """
+    """Atribui o NÚMERO EXIBIDO do controle ``uniq`` (PLAYER-01, 25/07)."""
     ok, result = _safe_call(
         "identity.number.set", {"uniq": uniq, "number": int(number)}
     )
@@ -850,10 +628,6 @@ def identity_number_set(uniq: str, number: int) -> tuple[bool, str | None]:
     return False, motivo or "Não consegui trocar o número — tente de novo"
 
 
-#: CONFIG-03: motivos de recusa do ``machine.declare`` traduzidos para a frase
-#: que a janela mostra. Mapa explícito pela mesma razão do
-#: :data:`_MOTIVOS_NUMERO`: a usuária nunca lê identificador de protocolo na
-#: barra de status.
 _MOTIVOS_MAQUINA: dict[str, str] = {
     "versao_desconhecida": (
         "O arquivo com o que você declarou sobre as entradas foi escrito por uma "
@@ -869,80 +643,23 @@ _MOTIVOS_MAQUINA: dict[str, str] = {
 }
 
 
-#: CONFIG-06 (23/08/2026): campo de topo do ``MaquinaConfig`` → o módulo de
-#: seção que o declara na aba Configurações. Mesma fronteira e mesma razão do
-#: :data:`_MOTIVOS_MAQUINA`: quando um campo é descartado, a frase do rodapé
-#: precisa nomear o que se perdeu, e ela nunca pode nomeá-lo ``orcamento``.
-#:
-#: AQUI FICA O VÍNCULO, NUNCA A PALAVRA. Até 25/08/2026 este mapa guardava os
-#: rótulos por CÓPIA — ``{"mesa": "A mesa", "orcamento": "Orçamento"}`` — com um
-#: comentário dizendo que "os rótulos são os ``TITULO`` de
-#: ``app/actions/config/``". Eram, mas por cópia: renomear a seção sem tocar
-#: aqui fazia o rodapé acusar a perda de "A mesa" numa aba onde a seção se chama
-#: outra coisa, e nenhum portão via a divergência, porque os dois lados passavam
-#: em separado. A LEX-1 da CONFIGURAÇÕES-O-LÉXICO-01 (25/08/2026) troca a cópia
-#: pela derivação: o ``TITULO`` do módulo vira o único dono da palavra.
 _SECAO_DO_CAMPO: dict[str, str] = {
     "mesa": "secao_mesa",
     "controles": "secao_controles",
     "orcamento": "secao_orcamento",
 }
 
-#: Os campos que NÃO derivam de um ``TITULO``, com a razão de cada um.
-#:
-#: CONEXÕES · MAPA 2D 01 (25/08/2026). O ``mapa`` é o único assim: ele não tem
-#: seção própria — mora numa janela que abre de dentro de "A mesa". O rótulo
-#: nomeia o que se PERDE, que é o desenho do gabinete, e não a seção de onde ele
-#: é aberto: dizer "A mesa" aqui faria a frase do rodapé acusar a perda de outra
-#: coisa.
-#: O `lancadores` NÃO TEM SEÇÃO NA ABA CONFIGURAÇÕES, e nunca vai ter: ele é
-#: escrito da aba Lançadores, pelos botões de localizar e de tirar
-#: (`interface/pacotes/a07_lancadores.py`). Mora no mesmo `maquina.json` porque
-#: aquele arquivo tem UM escritor — `machine.declare` —, e é por isso que ele
-#: cai nesta frase quando o documento em disco traz o campo corrompido.
-#:
-#: O RÓTULO NOMEIA O QUE SE PERDE, e não de onde ele é escrito: o que se perde é
-#: **onde cada lançador está**, que é a única coisa que ela digita naquela tela.
-#: Dizer "Lançadores" aqui faria a frase acusar a perda da aba inteira.
-#:
-#: ELE NASCEU DE UMA REGRESSÃO MEDIDA — 08/09/2026. O campo entrou no
-#: `MaquinaConfig` sem passar por aqui, e
-#: `test_todo_campo_do_schema_tem_rotulo_de_tela` ficou VERMELHO enquanto os
-#: portões inteiros ficavam verdes: aquele teste não está no `portoes.sh` nem no
-#: `ci.yml`. Sem o rótulo, `_rotulos_dos_descartados` cai no `rotulos.get(campo,
-#: campo)` e a barra de status dela mostraria a palavra crua `lancadores`.
-#:
-#: O campo `lugares` saiu do schema em 28/09/2026
-#: (A-ENTRADA-TEM-UM-REGISTRO-SO-01): o lugar de cada entrada mora agora na
-#: própria entrada do `mapa`, que já tem rótulo aqui.
 _ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho das entradas",
     "lancadores": "Onde estão os seus lançadores",
-    # D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026): o nome de cada adaptador,
-    # escrito pelo campo do cartão em «Rádio e Adaptadores».
     "adaptadores": "O nome de cada adaptador Bluetooth",
-    # O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (02/10/2026): os seis gestos do
-    # controle e o padrão do computador que todo jogo herda.
     "gestos": "O que cada gesto do controle faz",
     "computador": "O padrão do computador",
 }
 
 
 def _rotulos_dos_campos() -> dict[str, str]:
-    """``{campo do schema: rótulo de tela}``, LIDO das seções, nunca copiado.
-
-    O import é PREGUIÇOSO, e é obrigatório que seja: ``secao_janela`` importa
-    este módulo no topo (``secao_janela.py:54``), então um import de
-    ``config.secoes`` no topo daqui fecharia o ciclo e derrubaria a janela na
-    abertura. Preguiçoso, ele só roda quando o rodapé precisa da frase — muito
-    depois de todos os módulos estarem de pé.
-
-    Campo sem rótulo cai no nome cru, e há portão que exige uma entrada para
-    cada campo do schema — e que reprova entrada SOBRANDO, que foi o que pegou
-    ``ambiente`` quando ele saiu do schema (T2, CONFIGURAÇÕES-FECHA-01,
-    24/08/2026). Esconder seria pior: a pessoa perderia o único aviso do que
-    sumiu do arquivo dela.
-    """
+    """``{campo do schema: rótulo de tela}``, LIDO das seções, nunca copiado."""
     from hefesto_dualsense4unix.app.actions.config import secoes
 
     por_modulo = {
@@ -967,8 +684,8 @@ def __getattr__(nome: str) -> Any:
     * como atribuição no topo, a derivação rodaria na IMPORTAÇÃO do módulo, que
       é exatamente o instante em que o ciclo com ``secao_janela`` se fecha;
     * três arquivos de teste leem ``ipc_bridge._CAMPOS_DA_MAQUINA`` como
-      dicionário (``test_descartados_chegam_ao_rodape.py:414``,
-      ``test_o_teto_da_mesa_diz_o_que_faz.py:96``). Trocar a forma do nome
+      dicionário (``test_descartados_chegam_ao_rodape.py:304``,
+      ``test_o_teto_da_mesa_diz_o_que_faz.py:44``). Trocar a forma do nome
       público quebraria portões de outras frentes por uma mudança que é de
       redação — e a regra desta fronteira é aditiva, não destrutiva.
     """
@@ -978,12 +695,7 @@ def __getattr__(nome: str) -> Any:
 
 
 def _rotulos_dos_descartados(result: dict[str, Any]) -> tuple[str, ...]:
-    """Os campos descartados do corpo do daemon, já em rótulo de tela.
-
-    Defensiva por contrato de fronteira: o corpo vem de outro processo, e um
-    daemon mais velho (que não conhece a chave) ou um valor torto não podem
-    derrubar o "Aplicar" de quem gravou com sucesso.
-    """
+    """Os campos descartados do corpo do daemon, já em rótulo de tela."""
     descartados = result.get("descartados")
     if not isinstance(descartados, list):
         return ()
@@ -1049,14 +761,7 @@ def machine_declare_detalhado(
 def player_leds_set(
     bits: tuple[bool, bool, bool, bool, bool], uniq: str | None = None
 ) -> bool:
-    """Aplica bitmask de 5 LEDs de player no hardware via IPC (FEAT-PLAYER-LEDS-APPLY-01).
-
-    ``bits[0]`` = LED 1 (extremo esquerdo), ``bits[4]`` = LED 5 (extremo direito).
-    Retorna True se o daemon confirmou; False se offline ou erro.
-    ``uniq`` (PERFIL-05): MAC do controle selecionado — aplica SÓ nele.
-
-    **Não diz ONDE acendeu** — para isso existe :func:`player_leds_set_detalhado`.
-    """
+    """Aplica bitmask de 5 LEDs de player no hardware via IPC (FEAT-PLAYER-LEDS-APPLY-01)."""
     ok, _ = _safe_call("led.player_set", _payload_player_leds(bits, uniq))
     return ok
 
@@ -1085,16 +790,7 @@ def player_leds_set_detalhado(
 def player_led_brightness_set_detalhado(
     brilho: str, uniq: str | None = None
 ) -> dict[str, Any] | None:
-    """``led.player_brightness_set`` com a RESPOSTA do daemon (24/09/2026).
-
-    O brilho das cinco luzes de número — ``"fraco"``, ``"medio"`` ou (noqa-acento: chave ASCII)
-    ``"forte"``, decisão dela (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`).
-    Nasce já na forma ``_detalhado``, pela lição do irmão
-    :func:`player_leds_set_detalhado`: um ``True`` só diria *"o daemon
-    respondeu"*, e a tela precisa saber ONDE pegou (``aplicado_em``) e onde
-    ficou guardado (``guardado_em``). ``uniq`` presente = só naquele
-    controle. ``None`` = daemon não respondeu.
-    """
+    """``led.player_brightness_set`` com a RESPOSTA do daemon (24/09/2026)."""
     payload: dict[str, Any] = {"brilho": brilho}
     if uniq:
         payload["uniq"] = uniq
@@ -1102,34 +798,7 @@ def player_led_brightness_set_detalhado(
 
 
 def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type-arg]
-    """Envia ``profile.apply_draft`` e devolve a RESPOSTA INTEIRA do daemon.
-
-    APLICAR-VERDADE-01/E2. Esta é a ÚNICA porta do ``profile.apply_draft``
-    desde 26/08/2026 — quem decide "deu ou não deu" passa o retorno por
-    :func:`aplicacao_confirmada`, que é o dono único da regra R-18.
-
-    Houve um invólucro ``apply_draft`` que já fazia essas duas coisas e
-    devolvia só o ``bool``. Ele foi podado por não ter chamador de produção
-    nenhum, mas a medição que o justificava fica: um ``dict`` devolvido no
-    lugar do ``bool`` é SEMPRE verdadeiro num ``if``, então trocar o tipo de
-    retorno de uma porta booleana faria qualquer chamador não migrado dizer
-    "aplicado" para um no-op — ``{"status": "ok", "applied": []}`` significa
-    "nada entrou" e TEM de valer False. Por isso a forma detalhada nasceu como
-    função nova em vez de reescrever a antiga, e por isso o ``bool`` nunca
-    volta a esta assinatura sem passar pela ``aplicacao_confirmada``.
-
-    ``draft_dict`` segue o contrato definido em ``DraftConfig.to_ipc_dict()``:
-    chaves triggers/leds/rumble/mouse.
-
-    Devolve o dicionário da resposta — que carrega ``status`` (sempre ``"ok"``,
-    ver ``aplicacao_confirmada``), ``applied`` (as seções que entraram) e
-    ``failed`` (mapa ``seção -> motivo curto`` das que não entraram). Devolve
-    ``None`` quando NÃO HOUVE RESPOSTA utilizável: daemon offline, erro de
-    transporte, resposta que não é um dicionário. A distinção existe porque a
-    tela precisa dizer coisas diferentes em "o Hefesto está desligado" e "a
-    seção de luzes não entrou" — mandar procurar o daemon quando ele está vivo
-    é o defeito que esta sprint existe para eliminar.
-    """
+    """Envia ``profile.apply_draft`` e devolve a RESPOSTA INTEIRA do daemon."""
     ok, result = _safe_call("profile.apply_draft", draft_dict, timeout=1.0)
     if ok and isinstance(result, dict):
         return result
@@ -1137,22 +806,7 @@ def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type
 
 
 def aplicacao_confirmada(resposta: Any) -> bool:
-    """A resposta do ``profile.apply_draft`` confirma que algo entrou? (R-18).
-
-    Dono ÚNICO da regra de sucesso da aplicação — todo chamador de
-    :func:`apply_draft_detalhado` decide por aqui, para não nascerem duas
-    leituras do mesmo payload.
-
-    R-18 (auditoria 23/07): `status` é SEMPRE "ok" — o handler responde isso
-    mesmo quando o applier não aplicou seção nenhuma, e a GUI toastava "aplicado"
-    para um no-op. Agora exigimos também que o daemon diga o que aplicou: uma
-    resposta com `applied` vazio é um no-op honesto, não sucesso.
-
-    O `status:"ok"` foi mantido de propósito (em vez de "partial"/"failed"): a
-    GUI atual traduz status != "ok" como "daemon offline?", e essa mensagem
-    mandaria a usuária caçar o problema no lugar errado. A honestidade entra
-    pelo campo `applied`, que já viajava na resposta e ninguém lia.
-    """
+    """A resposta do ``profile.apply_draft`` confirma que algo entrou? (R-18)."""
     if not isinstance(resposta, dict):
         return False
     if resposta.get("status") != "ok":
@@ -1160,7 +814,6 @@ def aplicacao_confirmada(resposta: Any) -> bool:
     aplicado = resposta.get("applied")
     if isinstance(aplicado, list):
         return bool(aplicado)
-    # Daemon antigo, sem o campo: preserva o contrato v1.
     return True
 
 
@@ -1250,46 +903,12 @@ def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
 def mic_set_detalhado(
     muted: bool | None, uniq: str | None = None
 ) -> dict[str, Any] | None:
-    """``mic.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
-
-    Mesmo pedido do :func:`mic_set`; o que muda é o que volta. O corpo traz
-    ``status`` (``"ok"`` ou ``"sem_controle"``), ``audio`` e
-    ``mic_mudo_desejado``. ``None`` = daemon não respondeu.
-
-    A diferença que este corpo permite é a que o ``bool`` apagava:
-    ``sem_controle`` (o Hefesto está VIVO e não há controle na mesa) chegava na
-    janela como o mesmo ``False`` de "o Hefesto está desligado".
-    """
+    """``mic.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08)."""
     if muted is None:
-        # A PORTA DA POSSE continua sendo o `mic.set` cru, e ela é a única
-        # coisa que o ato NÃO faz: `muted: null` devolve o byte ao
-        # `hid-playstation`. Mandá-la pelo ato não faria sentido — o ato liga
-        # ou desliga o microfone, e "devolver a posse" não é nenhum dos dois.
         payload: dict[str, Any] = {"muted": None}
         if uniq:
             payload["uniq"] = uniq
         return _corpo_do_daemon("mic.set", payload)
-    # O 🎙 PASSA A SER O ATO INTEIRO — MICROFONE-UM-ATO-01 (04/09/2026).
-    #
-    # Esta função mandava `mic.set` e mais nada: o MUDO do firmware, metade do
-    # gesto. A outra metade — a fonte de captura deste controle eleita e
-    # ouvida — acontecia por EFEITO COLATERAL, e o efeito colateral foi medido
-    # na bancada em 04/09: um `mic.set {muted: false}` mudava o bit, o laço das
-    # bordas via a mudança e elegia o canal, e o microfone padrão do sistema
-    # dela trocava sem que método nenhum tivesse dito isso.
-    #
-    # O conceito é dela, e derrubou a pergunta que eu tinha feito: *"o botão é
-    # pra ligar o microfone e ele ser ouvido no canal específico dele"*. Um
-    # ato só, com as duas metades declaradas.
-    #
-    # **O `status` NÃO MUDOU DE SIGNIFICADO**, e isso é deliberado: ele sempre
-    # quis dizer *"o backend aceitou o pedido do firmware"*, e é o que os
-    # chamadores de hoje leem para decidir se levantam a frase de recusa.
-    # Trocá-lo por *"as duas metades aconteceram"* mudaria, em silêncio, o
-    # comportamento de um botão que outra frente está editando neste momento.
-    # A verdade inteira viaja nos campos NOVOS (`canal_feito`, `motivo`…) e em
-    # :func:`mic_canal_set_detalhado`, que nasce sem chamador e por isso pode
-    # nascer com o contrato inteiro.
     corpo = mic_canal_set_detalhado(not muted, uniq)
     if corpo is None:
         return None
@@ -1300,21 +919,7 @@ def mic_set_detalhado(
 
 
 def mic_canal_set(ligado: bool, uniq: str | None = None) -> bool:
-    """O ATO do microfone: o canal DESTE controle, e o mudo do firmware.
-
-    Decisão dela, 04/09/2026: *"o botão é pra ligar o microfone e ele ser
-    ouvido no canal específico dele"* — e, ao meio-dia:
-
-        *"o botão fisico do mic se ligado no  # noqa-acento: citação dela
-        microfone ele fica ligado tambem.  # noqa-acento: citação dela
-        indepente se nativo ou  # noqa-acento: citação dela
-    virtual"*.  # noqa-acento: citação literal dela
-
-    ``True`` só quando as DUAS metades aconteceram. Quem precisa saber QUAL
-    faltou — e é quem pinta o cartão — chama
-    :func:`mic_canal_set_detalhado` e lê a frase com
-    :func:`frase_do_ato_do_microfone`.
-    """
+    """O ATO do microfone: o canal DESTE controle, e o mudo do firmware."""
     corpo = mic_canal_set_detalhado(ligado, uniq)
     return corpo is not None and corpo.get("status") == "ok"
 
@@ -1351,27 +956,7 @@ def sensor_set_detalhado(
     acelerometro: bool | None = None,
     uniq: str | None = None,
 ) -> dict[str, Any] | None:
-    """``sensor.set`` com a RESPOSTA inteira do daemon — o giro e o accel.
-
-    SENSOR-DE-VERDADE-01, decisão dela: *"ele tem que funcionar de verdade.
-    ambos independente do modo e da mascara."*
-    <!-- noqa-acento: citação literal dela -->
-
-    Campo ``None`` **não é enviado** — e por isso não mexe naquele sensor. É o
-    mesmo contrato de ``rumble_motores_set``, e a razão é a mesma: desligar o
-    giroscópio não pode ligar o acelerômetro de volta pelas costas dela.
-
-    O corpo traz ``status``, ``giroscopio``/``acelerometro`` (o que passou a
-    valer), ``gravado`` (foi ao perfil?), ``alcance`` (``report`` e ``evdev``,
-    separados) e ``ressalva`` — a frase para a tela quando o interruptor pegou
-    só pela metade. ``None`` = daemon não respondeu.
-
-    **A ressalva não é decoração.** Medido em 04/09/2026: em Modo Nativo o
-    jogo lê o movimento pelo ``hidraw`` do controle físico, onde o daemon não
-    escreve — o interruptor esconde o sensor de quem lê evdev e não de quem lê
-    hidraw. Uma ponte que devolvesse só ``True`` faria a tela dizer "aplicado"
-    sobre um giro que continua chegando ao jogo.
-    """
+    """``sensor.set`` com a RESPOSTA inteira do daemon — o giro e o accel."""
     payload: dict[str, Any] = {}
     if giroscopio is not None:
         payload["giroscopio"] = bool(giroscopio)
@@ -1385,17 +970,7 @@ def sensor_set_detalhado(
 
 
 def frase_do_interruptor_de_sensor(corpo: Any) -> str | None:
-    """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo.
-
-    Irmã de :func:`frase_do_ato_do_microfone`, e pelo mesmo motivo: o corpo do
-    daemon tem tudo, e é a TELA que precisa de uma linha. Quem a desenha é a
-    aba 02 (`interface/pacotes/a02_controles.py`), que não é desta frente — ver
-    a dívida declarada na entrega da ONDA1-D3.
-
-    ``None`` significa **nada a dizer**: o interruptor pegou inteiro, ou ela
-    LIGOU o sensor (ligar nunca é parcial — o dado volta a fluir por todos os
-    caminhos de uma vez).
-    """
+    """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo."""
     if not isinstance(corpo, dict):
         return "o daemon não respondeu ao interruptor do sensor"
     status = corpo.get("status")
@@ -1407,17 +982,7 @@ def frase_do_interruptor_de_sensor(corpo: Any) -> str | None:
 
 
 def frase_do_ato_do_microfone(corpo: Any) -> str | None:
-    """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo.
-
-    Ela existe porque o ato falha pela METADE, e "não deu" não diz nada a quem
-    está com o controle na mão: o canal pode ter sido eleito e o mudo do
-    firmware ter ficado represado (Modo Nativo), ou o firmware ter obedecido
-    sem haver canal nenhum para onde apontar (o rádio sem a ponte).
-
-    ``None`` também quando o daemon não respondeu: aí a frase é a de daemon
-    parado, que já é de quem chama, e inventar outra aqui daria duas frases
-    para o mesmo silêncio.
-    """
+    """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo."""
     if not isinstance(corpo, dict):
         return None
     if corpo.get("status") == "ok":
@@ -1481,28 +1046,7 @@ def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
 def mic_volume_set_detalhado(
     volume: int, uniq: str | None = None
 ) -> dict[str, Any] | None:
-    """``mic.volume.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
-
-    Mesmo pedido do :func:`mic_volume_set`; o que muda é o que volta. O corpo
-    traz ``status`` (``"ok"``, ``"erro"`` ou ``"sem_fonte"``), ``fonte``,
-    ``volume`` (a LEITURA de volta, não o que mandamos) e ``por_uniq`` — leia o
-    último com :func:`alvo_honrado`. ``None`` = daemon não respondeu.
-
-    As três coisas que o ``bool`` apagava, medidas na bancada em 23/08:
-
-    1. ``sem_fonte`` chegava como o mesmo ``False`` de daemon offline — e a
-       promessa escrita em :func:`mic_volume_set` (*"o controle deslizante fica
-       insensível com a dica dizendo por quê"*) não tinha por onde se cumprir,
-       porque nenhum código de janela recebia a palavra ``sem_fonte``;
-    2. o volume LIDO de volta não chegava, então a janela só podia mostrar o
-       número que ela mesma mandou;
-    3. ``por_uniq: False`` era indistinguível de ``True`` — o gesto que caiu na
-       rota global (o microfone de OUTRA pessoa) voltava ``True`` e era gravado
-       no rascunho como se o controle escolhido tivesse sido honrado.
-
-    **O que fazer com a palavra ``sem_fonte`` na tela é desenho, e é dela** —
-    esta função só faz a palavra chegar.
-    """
+    """``mic.volume.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08)."""
     volume = max(0, min(100, int(volume)))
     payload: dict[str, Any] = {"volume": volume}
     if uniq:
@@ -1572,14 +1116,7 @@ def speaker_set_detalhado(
     rota: int | None = None,
     fonte: str | None = None,
 ) -> dict[str, Any] | None:
-    """``speaker.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
-
-    Mesmo pedido e as MESMAS regras do :func:`speaker_set` — inclusive o
-    ``ValueError`` de ``release`` com ``volume``/``muted``, que mora aqui porque
-    é aqui que o payload se monta. O corpo traz ``status`` (``"ok"`` ou
-    ``"sem_controle"``) e ``speaker``, o bloco de posse que só existe depois do
-    primeiro pedido. ``None`` = daemon não respondeu.
-    """
+    """``speaker.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08)."""
     if release and (volume is not None or muted is not None):
         raise ValueError(
             "speaker_set: 'release' não combina com volume/muted — devolver a "
@@ -1596,16 +1133,8 @@ def speaker_set_detalhado(
     if uniq:
         payload["uniq"] = uniq
     if rota is not None:
-        # SOM-CANAL-01: a rota de SAÍDA (`OUTPUT_PATH_SEL`, byte 7). Ela vai
-        # junto do volume porque é o mesmo bloco de posse — e sozinha quando o
-        # seletor de canal muda sem mexer no número.
         payload["rota"] = int(rota)
     if fonte is not None:
-        # A CAMADA 1 (20/09/2026). Ela não vai junto do volume como a `rota`:
-        # a `rota` é o mesmo bloco de posse do report de saída, esta é o
-        # PipeWire, e um pedido só de `fonte` de propósito não toma posse
-        # nenhuma no aparelho. O daemon recusa valor fora de `mix`/`sfx`, e
-        # recusa o pedido sem `uniq` — a fonte é por controle.
         payload["fonte"] = str(fonte)
     return _corpo_do_daemon("speaker.set", payload,
                              timeout=_TETO_DO_ATO_DE_AUDIO)
@@ -1623,27 +1152,7 @@ def mira_set_detalhado(
     inclinacao: str | None = None,
     toque: str | None = None,
 ) -> dict[str, Any] | None:
-    """``mira.set`` com a RESPOSTA inteira — o chip «Mira Virtual» e a Calibrar.
-
-    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026). Campo ``None`` **não é
-    enviado**, e por isso não mexe naquele campo — o mesmo contrato do
-    ``sensor_set_detalhado``: mexer no deslizante do tremor não pode acender ou
-    apagar o chip pelas costas dela. O corpo traz ``status``, o que passou a
-    valer (``ligada``, ``sensibilidade``, ``zona_morta_graus_s``, ``gatilho``,
-    ``inverter_*``), ``gravado`` e ``alcance``. ``None`` = daemon não
-    respondeu, ou nada foi pedido.
-
-    O ``gatilho`` e os dois ``inverter_*`` entraram na
-    A-MIRA-POR-MOVIMENTO-NA-TELA-02. **O ``gatilho`` vazio (``""``) É ENVIADO**,
-    como ``null``: é a opção «Sempre» da lista, e é a única forma de a peça
-    voltar a mirar sem botão — ``None`` continua sendo *"não mexe"*.
-
-    A ``inclinacao`` e o ``toque`` entraram na NO-MODO-XBOX-TUDO-FUNCIONA-01
-    (29/09/2026), com os chips «Inclinação» de cada analógico e o «Cursor |
-    Botões» do touchpad na aba Controles: o destino vai como texto (``nenhum``,
-    ``analogico_esquerdo``, ``analogico_direito``; ``nenhum``, ``cursor``,
-    ``zonas``), e quem recusa o que não conhece é o daemon.
-    """
+    """``mira.set`` com a RESPOSTA inteira — o chip «Mira Virtual» e a Calibrar."""
     payload: dict[str, Any] = {}
     if ligada is not None:
         payload["ligada"] = bool(ligada)
@@ -1669,40 +1178,12 @@ def mira_set_detalhado(
 
 
 def haptica_testar(uniq: str, ligado: bool) -> tuple[bool, dict[str, Any] | None]:
-    """``haptica.testar`` — o botão «Háptica» da aba Vibração, num controle.
-
-    A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (02/10/2026). Ligado,
-    o tocador do aparelho toca o par de teste com o ganho da linha «Sensor
-    Háptico»; desligado, cala. Devolve ``(ok, corpo)``, e o corpo é o do
-    daemon (``status``, ``ligado``, ``leva``, o ``motivo`` quando recusa).
-    Corpo ``None`` quer dizer daemon fora do ar.
-    """
+    """``haptica.testar`` — o botão «Háptica» da aba Vibração, num controle."""
     corpo = _corpo_do_daemon("haptica.testar", {"uniq": uniq, "ligado": bool(ligado)})
     return corpo is not None, corpo
 
 
-# PODA DE 26/08/2026 (BG-07) — cinco pontes públicas sem NENHUM chamador em
-# `src/` foram apagadas daqui, e o `__all__` abaixo é o registro do que ficou:
-# `apply_draft`, `rumble_policy_set`, `rumble_policy_set_detalhado`,
-# `trigger_reset` e `mouse_emulation_set`. As quatro primeiras deixaram a
-# medição delas na docstring da irmã que ficou. A quinta não tem irmã, e a
 # medição dela é esta: a aba Mouse fala `mouse.emulation.set` por `call_async`
-# DIRETO, em DOIS pontos (`app/actions/mouse_actions.py:462` — o interruptor —
-# e `:560` — o controle deslizante), sem passar por invólucro. A rota
-# speed-only do daemon (BUG-MOUSE-GUI-SYNC-01 A4, que atualiza só as
-# velocidades omitindo `enabled` do payload) continua viva: é o `:560`. E a
-# ponte podada não podia ser usada nem se alguém quisesse — ela não sabia
-# mandar `origin: "manual"`, o campo que a ORIGEM-QUE-MENTE-01 exige dos dois
-# pontos vivos. Duas pontes para o mesmo método IPC é como uma delas apodrece
-# sem ninguém ver, e era esta que estava apodrecendo.
-#
-# A trava que segurava a poda desde 12/08/2026 — "a assinatura pode estar
-# sendo importada pelo applet do COSMIC" — CAIU, e está medida em 26/08/2026:
-# o applet mora em `packaging/cosmic-applet/src/{app,ipc,main}.rs`, fala
-# JSON-RPC por socket Unix (`ipc.rs:3`: "Espelha `cli/ipc_client.py`"), e
-# `grep` pelos cinco nomes ali devolve ZERO. Um processo Rust não importa
-# função Python; o que ele espelha é o PROTOCOLO, e nenhum método IPC foi
-# tocado por esta poda.
 
 __all__ = [
     "PROFILE_SWITCH_TIMEOUT_S",
@@ -1749,4 +1230,3 @@ __all__ = [
     "trigger_set_detalhado",
 ]
 
-# "O segredo de ter sucesso é saber o que descartar." — Charlie Munger

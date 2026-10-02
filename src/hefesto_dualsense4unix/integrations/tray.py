@@ -1,18 +1,4 @@
-r"""Tray icon GTK3 com AppIndicator (W5.4, opcional).
-
-Depende do extra `[tray]` do pyproject (`PyGObject`) + pacotes do SO
-(`gir1.2-ayatanaappindicator3-0.1` em Pop!\_OS/Ubuntu, `libappindicator-gtk3`
-em Fedora). Quando a lib não está disponível, `TrayController.is_available()`
-retorna `False` e a CLI `hefesto-dualsense4unix tray` mostra mensagem clara pro usuário.
-
-Menu:
-  - Status: label não-clicável com bateria/perfil atual.
-  - Perfis: submenu com cada perfil (click ativa via IPC).
-  - Abrir TUI: dispara `hefesto-dualsense4unix tui` em processo filho.
-  - Sair: destroy do tray.
-
-Atualiza via timer de 2s consultando `daemon.status` pelo IPC.
-"""
+r"""Tray icon GTK3 com AppIndicator (W5.4, opcional)."""
 from __future__ import annotations
 
 import contextlib
@@ -27,15 +13,12 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 APP_ID = "hefesto-dualsense4unix-tray"
-ICON_NAME = "input-gaming"  # Symbolic icon do kernel freedesktop
+ICON_NAME = "input-gaming"
 REFRESH_INTERVAL_SEC = 2
 
 
 def probe_gi_availability() -> tuple[bool, str]:
-    """Verifica se GTK3 + AppIndicator estão importáveis.
-
-    Retorna `(ok, msg)`. `msg` descreve faltas pra mostrar ao usuário.
-    """
+    """Verifica se GTK3 + AppIndicator estão importáveis."""
     try:
         import gi
     except ImportError:
@@ -48,7 +31,6 @@ def probe_gi_availability() -> tuple[bool, str]:
     except Exception as exc:
         return False, f"Gtk 3.0 indisponivel: {exc}"
 
-    # Tenta Ayatana (Ubuntu/Debian modernos) depois AppIndicator3 (legado)
     for version_name in ("AyatanaAppIndicator3", "AppIndicator3"):
         try:
             gi.require_version(version_name, "0.1")
@@ -103,7 +85,6 @@ class TrayController:
 
         self._menu.append(Gtk.SeparatorMenuItem())
 
-        # Placeholder — perfis carregados depois via _refresh_profiles
         self._profile_items = []
 
         self._menu.append(Gtk.SeparatorMenuItem())
@@ -129,8 +110,6 @@ class TrayController:
 
     def stop(self) -> None:
         if self._indicator is not None:
-            # Tenta marcar passivo via status constant; cai em try/except
-            # porque type() de MagicMock não expõe IndicatorStatus.
             with contextlib.suppress(Exception):
                 passive = type(self._indicator).IndicatorStatus.PASSIVE
                 self._indicator.set_status(passive)
@@ -160,7 +139,6 @@ class TrayController:
             self._menu.remove(item)
         self._profile_items = []
 
-        # Inserir os itens após o status + separator (índices 0 e 1).
         position = 2
         for name in profiles:
             item = Gtk.MenuItem(label=f"Perfil: {name}")

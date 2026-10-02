@@ -1,28 +1,4 @@
-"""O lançador liga duas curas que estavam sem chamador (28/09/2026).
-
-O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01. As duas moravam no motor e só a suíte as
-chamava desde que a janela GTK saiu (06/09, `D-0609-GTK-LEVA-INTEIRA`):
-
-1. ``utils/single_instance.acquire_or_bring_to_front`` — clicar no ícone com a
-   janela já aberta abria OUTRA janela. Agora a aberta recebe o pedido pela
-   porta dela (um socket no runtime) e vem para a frente, e o segundo processo
-   sai com ``rc=0`` antes do GTK.
-2. ``app/arranque.sanear_loaders_do_gdk_pixbuf`` — o cache de loaders herdado de
-   um terminal empacotado, cujos módulos são de outro confinamento, fazia o GTK
-   abortar o processo no primeiro SVG. O lançador passa a descartá-lo antes de
-   qualquer ``gi.repository``.
-
-O PEDIDO NÃO É SINAL, e há régua para isso: a primeira versão mandava
-``SIGUSR1``, e a bancada de tela de 28/09 mostrou o WebKit tomando esse sinal
-para o coletor de lixo do JavaScriptCore — o segundo clique DERRUBOU a janela
-aberta com falha de segmentação.
-
-NADA AQUI FALA COM A JANELA DELA. O runtime (onde moram o pid file e a porta) é
-um berço 0700 curto em ``/tmp`` (o ``AF_UNIX`` aceita 108 bytes), reimportado
-como em ``test_single_instance.py``; o nome do lock leva um ``WAYLAND_DISPLAY``
-inventado por teste; e o único processo que recebe pedido é o filho que o
-próprio teste subiu.
-"""
+"""O lançador liga duas curas que estavam sem chamador (28/09/2026)."""
 from __future__ import annotations
 
 import ast
@@ -47,14 +23,8 @@ from tests.conftest import exigir_gi_real
 RAIZ = Path(__file__).resolve().parents[2]
 LANCADOR = RAIZ / "scripts" / "abrir_interface.py"
 
-#: Generoso: o filho é um interpretador novo que importa o pacote inteiro.
 ESPERA_PELO_FILHO_SEC = 20.0
 
-#: O filho que toma a vez. ``glib``: o ``main`` do lançador inteiro, com um
-#: piloto que segura o laço do GLib por 20 s. ``arranque``: toma a vez e
-#: DORME antes de armar a escuta (o pedido chega aí, como um segundo clique no
-#: meio do arranque), depois arma e roda o laço por 3 s e sai sozinho.
-#: ``travada``: toma a vez e nunca arma a escuta — o laço do GTK parado.
 _FILHO = """
 import os, sys, time, pathlib
 sys.path.insert(0, sys.argv[1])
@@ -78,9 +48,6 @@ GLib.timeout_add(3000, laco.quit)
 laco.run()
 """
 
-#: O piloto do primeiro processo no modo ``glib``: o ``main`` do lançador já
-#: tomou a vez, vestiu a identidade e armou a escuta quando ele roda, e ele só
-#: avisa que está de pé e segura o laço do GLib, como a janela das abas.
 _PILOTO_QUE_FICA = """
 from gi.repository import GLib
 print("vez:'pronto'", flush=True)
@@ -90,7 +57,6 @@ laco.run()
 """
 
 
-#: O MOTIVO de os dois filhos que armam a escuta pedirem o GTK de verdade.
 _O_FILHO_PRECISA_DO_GLIB = (
     "o filho roda o lançador de verdade: `vestir_a_identidade` importa o Gtk e o "
     "`armar_a_volta_a_frente` põe a porta no laço do GLib"
@@ -98,21 +64,7 @@ _O_FILHO_PRECISA_DO_GLIB = (
 
 
 def _o_filho_tem_o_glib() -> None:
-    """Os modos ``glib`` e ``arranque`` do filho só existem com o PyGObject real.
-
-    ELES REPROVAVAM NO `lint-test` COM A CAUSA ERRADA — 30/09/2026. O filho é
-    um ``sys.executable -c``, e na venv sem ``gi`` do job ele morre no ``import
-    gi`` (medido: ``ModuleNotFoundError: No module named 'gi'`` no
-    ``vestir_a_identidade`` e depois do ``time.sleep(2.5)`` do ``arranque``).
-    O pai não via isso: dizia *"o primeiro processo não tomou a vez"* ou
-    ``assert '' is None`` — a porta aberta sem ninguém para ler, o ``Connection
-    reset by peer`` do pedido. A falta do GTK morava num SUBPROCESSO, e a regra
-    do conftest (``_falta_o_gtk``) só enxerga a do processo dele.
-
-    A pergunta é a do dono, ``exigir_gi_real``: no job do GTK real
-    (``HEFESTO_EXIGE_GTK_REAL=1``) a falta reprova, e é lá que estes dois rodam
-    inteiros. O modo ``travada`` não importa o ``gi`` e não passa por aqui.
-    """
+    """Os modos ``glib`` e ``arranque`` do filho só existem com o PyGObject real."""
     exigir_gi_real(_O_FILHO_PRECISA_DO_GLIB)
 
 
@@ -163,8 +115,6 @@ def _subir_o_primeiro(modo: str, pasta: Path) -> subprocess.Popen[str]:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        # Num cano o stdout do filho é bufferizado em bloco, e o `kill` do fim
-        # jogaria fora a linha que o atendente imprimiu.
         env={**os.environ, "PYTHONUNBUFFERED": "1"},
     )
     assert filho.stdout is not None
@@ -207,8 +157,6 @@ class TestOSegundoCliqueTrazAJanela:
         ai = _carregar_o_lancador()
         from hefesto_dualsense4unix.utils import single_instance
 
-        # O filho é um `python -c`, e o crivo de PID reciclado procura
-        # "hefesto" na linha de comando — o mesmo dublê dos testes irmãos.
         monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda _p: True)
         monkeypatch.setattr(ai, "diario_da_janela", lambda: None)
         monkeypatch.setattr(ai, "achar_o_piloto", lambda: _piloto_que_denuncia(tmp_path))
@@ -518,7 +466,7 @@ class TestOsLoadersDoGdkPixbuf:
         """A chamada de verdade: ``main`` do lançador, com o piloto de mentira."""
         ai = _carregar_o_lancador()
         monkeypatch.delenv("SNAP", raising=False)
-        monkeypatch.delenv("HEFESTO_NA_TELA")  # sem lock: só a limpeza interessa
+        monkeypatch.delenv("HEFESTO_NA_TELA")
         cache = self._cache(tmp_path, "/snap/terminal/1/usr/lib/libpixbufloader-svg.so")
         monkeypatch.setenv("GDK_PIXBUF_MODULE_FILE", str(cache))
         monkeypatch.setattr(ai, "diario_da_janela", lambda: None)

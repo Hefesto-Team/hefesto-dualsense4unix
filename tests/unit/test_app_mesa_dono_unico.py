@@ -1,18 +1,4 @@
-"""ONDA0-Z5/T5 — `app/mesa.py` é dono único de "quem está na mesa", sem GTK.
-
-CONTAGEM-E-COOP-01 (29/07) já tinha nascido a função canônica
-(`ContagemDeControles`/`texto_de_contagem`), mas ela morava DENTRO do mixin
-da aba Status (`app/actions/status_actions.py`) — nove abas precisam da
-resposta, só uma era dona do arquivo (a mesma doença que a F3 já causou
-noutro fato, com custo medido de perda de dado dela em 23/08).
-
-A MORDIDA: importar `app.mesa` sem montar GTK e sem importar
-`app.actions.status_actions`. Se isso levantar `ImportError`/
-`ValueError: Namespace Gtk not available` (o erro que `gi.require_version`
-produz sob Xvfb sem display, ou mesmo com display se o import arrastar o
-mixin), o módulo não é dono de nada — é atalho que só funciona porque
-`status_actions` já foi importado antes em algum outro teste da sessão.
-"""
+"""ONDA0-Z5/T5 — `app/mesa.py` é dono único de "quem está na mesa", sem GTK."""
 from __future__ import annotations
 
 import subprocess
@@ -23,14 +9,7 @@ REPO_SRC = Path(__file__).resolve().parents[2] / "src"
 
 
 def test_importar_app_mesa_sozinho_em_processo_novo_nao_precisa_de_gtk() -> None:
-    """Processo NOVO, sem `sys.modules` contaminado por outro teste da sessão.
-
-    Roda fora do processo do pytest de propósito: se `app/mesa.py` importasse
-    `gi`/GTK (direto ou via `status_actions`), o subprocesso reprovaria com
-    `ModuleNotFoundError`/`ValueError` mesmo sem display — é a única forma de
-    provar "não precisa de GTK" sem depender de quem já rodou antes na mesma
-    sessão de teste.
-    """
+    """Processo NOVO, sem `sys.modules` contaminado por outro teste da sessão."""
     script = (
         "import sys\n"
         f"sys.path.insert(0, {str(REPO_SRC)!r})\n"
@@ -77,9 +56,7 @@ def test_texto_de_contagem_mesa_vazia_e_string_vazia() -> None:
 
 
 def test_status_actions_reexporta_os_mesmos_objetos_de_mesa() -> None:
-    """O espelho (§ do docstring de `app/mesa.py`): mesma classe/função,
-    não uma cópia — `status_actions.ContagemDeControles is mesa.ContagemDeControles`.
-    """
+    """O espelho (§ do docstring de `app/mesa.py`): mesma classe/função,"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real()

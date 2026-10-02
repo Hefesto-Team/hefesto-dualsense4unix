@@ -1,30 +1,4 @@
-"""LUZ-DO-MIC-01, PEÇA C — a luz do microfone diz QUEM TE ESCUTA.
-
-O alvo destes testes é `daemon/subsystems/luz_do_mic.py`: a precedência da §1.1
-da sprint, o laço que só escreve na MUDANÇA, a devolução que REPINTA (§2) e as
-degradações declaradas quando as peças irmãs não estão no ar.
-
-**POR QUE VÁRIOS DESTES TESTES RODAM CENTENAS DE TIQUES.** Uma régua que roda o
-laço UMA vez mede um instante, não um comportamento — e o defeito que esta peça
-mais arrisca reintroduzir é exatamente temporal: reafirmar o mesmo valor no
-`common[8]` a cada tique é o commit `3d9bb7e` no byte vizinho, e ele não
-aparece em nenhum tique isolado. Em 29/08/2026 esta casa deixou passar uma
-regressão que só aparecia aos 181 segundos com 67 testes verdes. Aqui os laços
-correm com `INTERVALO_S` encolhido e o número de voltas é MEDIDO (o dublê conta
-quantas vezes foi consultado), para que "rodou muito" seja um fato do teste e
-não uma esperança.
-
-**A MORDIDA, provada em 03/09/2026** (arrancar a cura, ver reprovar, devolver):
-
-* sem a guarda `escrito.get(uniq) == alvo` → `test_escreve_so_na_mudanca_...`
-  e `test_o_pisca_nao_vira_martelo...` reprovam (1 escrita esperada, 620
-  medidas);
-* sem a repintura em `_devolver` → `test_o_desligamento_repinta_...` e
-  `test_quando_para_de_saber_...` reprovam (a luz é solta no vocabulário
-  errado);
-* trocando `set_microphone_led` por `set_mic_led` →
-  `test_o_nivel_chega_inteiro_...` reprova (o `2` e o `3` viram `1`).
-"""
+"""LUZ-DO-MIC-01, PEÇA C — a luz do microfone diz QUEM TE ESCUTA."""
 
 from __future__ import annotations
 
@@ -39,25 +13,12 @@ import pytest
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as mod
 
-#: OS DOIS CONTROLES DA MESA, na faixa FORJADA `aa:bb:cc` — a do
-#: `test_anonimato_de_fixtures`. Aqui não vale a máscara da casa (octetos 4 e 5
-#: zerados): ela preserva o OUI, e o OUI é identidade de fabricante do aparelho
-#: dela. Fixture quer endereço que nunca existiu, não endereço real podado.
 UM = "aabbcc0000f1"
 OUTRO = "aabbcc0000f2"
 
 
-# ---------------------------------------------------------------------------
-# Dublês mínimos — o alvo é o laço, não o daemon inteiro
-# ---------------------------------------------------------------------------
-
-
 class _Controle:
-    """Backend dublado com as QUATRO portas que o laço toca.
-
-    As três primeiras ele usa; a quarta (`set_microphone_mute`, o `common[9]`)
-    está aqui só para PROVAR que ele nunca a chama — a §3 da sprint proíbe.
-    """
+    """Backend dublado com as QUATRO portas que o laço toca."""
 
     def __init__(
         self,
@@ -70,18 +31,11 @@ class _Controle:
         self.mudo: dict[str, bool | None] = mudo or {}
         self.bateria: dict[str, int] = bateria or {}
         self.conectados: set[str] = set(uniqs)
-        #: a posse do mudo (`microphone_mute_for`): `None` é a do kernel, que é
-        #: o estado de fora de um ato do microfone.
         self.posse: dict[str, bool | None] = {}
-        #: `set_microphone_led` — o caminho CERTO, o único que carrega o nível.
         self.escritas: list[tuple[str | None, int | None]] = []
-        #: em que volta cada escrita saiu (a régua da borda segurada).
         self.escritas_na_volta: list[int] = []
-        #: `set_mic_led` — o caminho que ESMAGA em bool. Tem de ficar vazio.
         self.escritas_esmagadas: list[Any] = []
-        #: `set_microphone_mute` — o `common[9]`. Tem de ficar vazio.
         self.mudos_escritos: list[Any] = []
-        #: quantas vezes o laço nos consultou (a régua de "rodou muito").
         self.voltas = 0
 
     def set_microphone_led(self, aceso: bool | int | None, *, uniq: str | None = None) -> bool:
@@ -127,8 +81,6 @@ class _Daemon:
         self.controller = controller
         self._parando = False
         self._tasks: list[asyncio.Task[Any]] = []
-        #: o que o laço mandou para o executor — a régua de "nada que fale com
-        #: o mundo roda no event loop".
         self.no_executor: list[str] = []
 
     def _is_stopping(self) -> bool:
@@ -142,24 +94,7 @@ class _Daemon:
 
 @pytest.fixture(autouse=True)
 def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Encolhe as cadências, e deixa o MUNDO do lado de fora.
-
-    As constantes são lidas como globais DENTRO do laço a cada volta — é o que
-    torna o encolhimento possível sem tocar no código de produção.
-
-    **A segunda metade não é higiene, é contenção.** As peças irmãs são
-    procuradas em `sys.modules`, e um teste que não as planta acha as DE
-    VERDADE: a PEÇA A dispara `pactl` contra a máquina dela, e a PEÇA B
-    instancia o medidor real, que abre processos `parec` na fonte de captura do
-    controle. Medido em 03/09/2026 — antes desta trava, os testes que exercitam
-    a AUSÊNCIA das peças eram justamente os que caíam nas peças reais. Teste de
-    unidade não toca o mundo; nesta casa a suíte já derrubou a sessão gráfica
-    dela uma vez por fazer isso.
-
-    Quem quiser as peças de verdade tira o tapume à mão — só
-    `test_a_junta_com_as_pecas_irmas_existe_de_verdade` o faz, e ele explica
-    por quê.
-    """
+    """Encolhe as cadências, e deixa o MUNDO do lado de fora."""
     monkeypatch.setattr(mod, "INTERVALO_S", 0.001)
     monkeypatch.setattr(mod, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
     monkeypatch.setattr(mod, "ESPERA_DO_REPORT_S", 0.001)
@@ -170,19 +105,10 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class _MedidorFalso:
-    """Dublê da PEÇA B **com a forma real dela**: `seguir` + `captando` + `parar`.
-
-    A forma importa mais que a resposta, e é a lição de 03/09/2026: este
-    arquivo plantava aqui uma FUNÇÃO `captando_agora`, que o laço procurava e
-    que a PEÇA B de verdade nunca teve. Os testes passavam sobre uma junta
-    morta — dois dos quatro estados eram inalcançáveis no produto e verdes na
-    suíte. Um dublê que inventa a forma do vizinho não mede o vizinho: mede a
-    própria invenção.
-    """
+    """Dublê da PEÇA B **com a forma real dela**: `seguir` + `captando` + `parar`."""
 
     def __init__(self, responder: Any) -> None:
         self._responder = responder
-        #: cada `seguir` recebido — a régua de "só mede quem tem ouvinte".
         self.seguidos: list[dict[str, str]] = []
         self.parado = False
 
@@ -190,10 +116,6 @@ class _MedidorFalso:
         self.seguidos.append(dict(alvos))
 
     def captando(self) -> dict[str, Any]:
-        # Responde SÓ por quem está sendo seguido, como a de verdade
-        # (`NivelDoMicrofone.captando` itera `self._desejado`). Um dublê mais
-        # generoso que o original deixaria passar um laço que lê nível de quem
-        # nunca mandou medir.
         seguidos = list(self.seguidos[-1]) if self.seguidos else []
         return {u: v for u, v in self._responder(seguidos).items() if u in seguidos}
 
@@ -207,17 +129,7 @@ def _pecas(
     ouvintes: Any = None,
     captando: Any = None,
 ) -> _MedidorFalso | None:
-    """Planta as peças A e B em `sys.modules`, do jeito que o laço as procura.
-
-    Passar `None` deixa a peça AUSENTE — o estado que as degradações
-    declaradas têm de aguentar.
-
-    **`_fontes_para` é sempre substituída**, mesmo quando a PEÇA B está
-    ausente: a de verdade dispara `pactl` contra a máquina DELA. Um teste de
-    unidade que abre subprocesso para descobrir o grafo de áudio da bancada não
-    é teste de unidade — e nesta casa a suíte já derrubou a sessão gráfica dela
-    uma vez por tocar o mundo real.
-    """
+    """Planta as peças A e B em `sys.modules`, do jeito que o laço as procura."""
     def _fontes_para(uniqs: list[str], _mesa: list[str]) -> dict[str, str]:
         return {u: f"fonte-de-{u}" for u in uniqs}
 
@@ -238,17 +150,7 @@ def _pecas(
 async def _rodar(
     daemon: _Daemon, *, voltas: int, entre: Any = None
 ) -> list[tuple[str | None, int | None]]:
-    """Sobe o laço, deixa dar `voltas` consultas, e o derruba pelo cancelamento.
-
-    O derrube é o do produto: `connection.shutdown` faz `task.cancel()` e
-    depois `await task` (`daemon/connection.py:1503-1507`). Testar com um
-    `_parando = True` educado mediria um caminho que o daemon nunca toma.
-
-    **Devolve o que foi escrito EM VOO**, tirado antes do cancelamento. A
-    devolução de posse escreve mais duas vezes (a repintura e o `None`), e
-    misturá-las com o que o laço fez enquanto vivia faria toda régua de
-    "escreveu só na mudança" contar a despedida como reafirmação.
-    """
+    """Sobe o laço, deixa dar `voltas` consultas, e o derruba pelo cancelamento."""
     tarefa = asyncio.create_task(mod.luz_do_mic_loop(daemon))
     controle = daemon.controller
     try:
@@ -264,33 +166,17 @@ async def _rodar(
     return em_voo
 
 
-# ---------------------------------------------------------------------------
-# 1. A precedência da §1.1, escrita como tabela
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("mudo", "ouvintes", "captando", "bateria", "esperado"),
     [
-        # mudo no firmware -> 0, e ele vence TUDO (inclusive a bateria baixa)
         (True, ["chrome"], True, 5, mod.APAGADA),
         (True, None, None, None, mod.APAGADA),
-        # captando + bateria < 30% -> 3
         (False, ["chrome"], True, 29, mod.PISCANDO_LENTO),
-        # o limiar é ABAIXO de 30, não abaixo-ou-igual
         (False, ["chrome"], True, 30, mod.PISCANDO),
-        # captando -> 2
         (False, ["chrome"], True, 80, mod.PISCANDO),
-        # bateria desconhecida NÃO vira pisca lento — ausência não é 3
         (False, ["chrome"], True, None, mod.PISCANDO),
-        # algum app com o microfone aberto -> 1
         (False, ["chrome"], False, 10, mod.ACESA),
-        # bateria baixa SEM captação não acende nada além do 1
         (False, ["chrome"], None, 4, mod.ACESA),
-        # MEDI, E NINGUÉM TE OUVE -> 1, E ERA 0 (19/09/2026, decisão dela).
-        # Este é o arranjo da mesa dela naquela noite — microfone ligado,
-        # nenhum app gravando — e o `0` daqui lhe disse "desligado": ela
-        # apertou o botão para ligar e desligou o que já estava no ar.
         (False, [], False, 90, mod.ACESA),
         (False, [], None, None, mod.ACESA),
     ],
@@ -313,20 +199,13 @@ def test_a_precedencia_e_a_da_sprint(
 @pytest.mark.parametrize(
     ("mudo", "ouvintes"),
     [
-        # o controle ainda não reportou o byte de estado de áudio
         (None, ["chrome"]),
         (None, []),
-        # a PEÇA A não sabe responder — "não perguntei" != "ninguém ouve"
         (False, None),
     ],
 )
 def test_nao_sei_nao_e_zero(mudo: bool | None, ouvintes: list[str] | None) -> None:
-    """`None` é *"não escreva"*, e ele NÃO pode virar `APAGADA` por descuido.
-
-    Confundir os dois é o `bool(None)` que esta casa já publicou como ATIVO
-    sobre um controle que tinha acabado de cair: a ausência de dado vira uma
-    afirmação, e ela é convincente.
-    """
+    """`None` é *"não escreva"*, e ele NÃO pode virar `APAGADA` por descuido."""
     assert (
         mod.decidir(mudo=mudo, ouvintes=ouvintes, captando=None, bateria_pct=None)
         is None
@@ -334,12 +213,7 @@ def test_nao_sei_nao_e_zero(mudo: bool | None, ouvintes: list[str] | None) -> No
 
 
 def test_a_lista_vazia_e_uma_resposta_e_a_ausencia_nao_e() -> None:
-    """`[]` (medi, ninguém ouve) e `None` (não medi) NÃO podem coincidir.
-
-    O VALOR DA VAZIA MUDOU EM 19/09/2026 — de `APAGADA` para `ACESA` —, e a
-    separação que este teste guarda não: `[]` continua sendo uma RESPOSTA, que
-    se escreve no aparelho, e `None` continua sendo *"não escreva"*.
-    """
+    """`[]` (medi, ninguém ouve) e `None` (não medi) NÃO podem coincidir."""
     vazia = mod.decidir(mudo=False, ouvintes=[], captando=None, bateria_pct=None)
     ausente = mod.decidir(mudo=False, ouvintes=None, captando=None, bateria_pct=None)
     assert vazia == mod.ACESA
@@ -358,37 +232,15 @@ def test_o_produto_nao_inventa_um_quinto_estado() -> None:
     assert saidas <= {None, 0, 1, 2, 3}
 
 
-# ---------------------------------------------------------------------------
-# 1.b A MESA DELA NA NOITE DE 19/09 — mic ligado, NINGUÉM gravando
-#
-# É o arranjo exato que a `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01` mediu, e a mordida
-# destes três é a mesma: devolver `APAGADA` ao ramo `not ouvintes` em
-# `decidir` faz os três reprovarem.
-# ---------------------------------------------------------------------------
-
-
 def test_com_o_mic_ligado_e_ninguem_gravando_a_luz_acende() -> None:
-    """A decisão dela de 19/09, na menor forma possível.
-
-    O QUE ESTE TESTE GUARDA não é um número: é que a luz do plástico responda
-    ao BOTÃO. Com o `0` de antes, a luz apagada dizia *"desligado"* sobre um
-    microfone no ar — e ela apertou o botão para ligar, desligando o que já
-    estava captando. O vigia mediu `mudo=False canal_ativo=True` antes do
-    primeiro clique dela.
-    """
+    """A decisão dela de 19/09, na menor forma possível."""
     assert mod.decidir(
         mudo=False, ouvintes=[], captando=False, bateria_pct=100
     ) == mod.ACESA
 
 
 def test_so_o_mudo_apaga_a_luz() -> None:
-    """Varredura: nenhuma combinação SEM `mudo is True` devolve `APAGADA`.
-
-    A régua de cima prova UM ponto; esta prova a REGRA, e é ela que pega uma
-    cura parcial — um `if not ouvintes: return APAGADA` que volte escondido
-    atrás de outra condição (bateria zero, captando `False`, lista de um item)
-    continua sendo pego aqui.
-    """
+    """Varredura: nenhuma combinação SEM `mudo is True` devolve `APAGADA`."""
     acesos = {
         (o_n, c, b): mod.decidir(
             mudo=False, ouvintes=o, captando=c, bateria_pct=b
@@ -398,15 +250,10 @@ def test_so_o_mudo_apaga_a_luz() -> None:
         for b in (None, 0, 29, 30, 100)
     }
     apagados = [k for k, v in acesos.items() if v == mod.APAGADA]
-    # A MENSAGEM NÃO PODE ESTOURAR: as chaves têm `None` dentro, e `sorted`
-    # sobre tuplas com `None` levanta `TypeError` — a régua reprovaria por
-    # um erro que esconde o que ela mediu. Medido ao arrancar a cura.
     assert not apagados, (
         f"com o microfone LIGADO, estes arranjos ainda apagam a luz: "
         f"{[repr(k) for k in apagados]}"
     )
-    # E o mudo continua apagando — senão a régua acima passaria sobre uma
-    # função que devolve `ACESA` para tudo.
     assert mod.decidir(
         mudo=True, ouvintes=["chrome"], captando=True, bateria_pct=5
     ) == mod.APAGADA
@@ -416,13 +263,7 @@ def test_so_o_mudo_apaga_a_luz() -> None:
 async def test_o_laco_acende_na_mesa_dela_e_publica_a_sala_vazia(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O laço inteiro, no arranjo dela — e o journal tinha `estado=0`.
-
-    É a régua de ponta a ponta: não basta `decidir` devolver `1`, o laço tem
-    de ESCREVER `1` no aparelho. E no mesmo tique ele publica a lista de
-    ouvintes para a tela, que é a outra metade da decisão dela — sem ela, a
-    aba não tem como dizer *"ninguém está te ouvindo"*.
-    """
+    """O laço inteiro, no arranjo dela — e o journal tinha `estado=0`."""
     mod._OUVINTES.clear()
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 100})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: []}, captando=lambda _u: {UM: False})
@@ -435,26 +276,14 @@ async def test_o_laco_acende_na_mesa_dela_e_publica_a_sala_vazia(
         f"{escritas}"
     )
     assert mod.estado_da_luz_do_mic(UM) == mod.ACESA
-    # `[]` e não `None`: *"perguntei, e não há ninguém"* é o que vira frase.
     assert mod.quem_ouve_este_mic(UM) == []
-
-
-# ---------------------------------------------------------------------------
-# 2. O TEMPO — escreve só na mudança, e a régua roda centenas de tiques
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_escreve_so_na_mudanca_ao_longo_de_centenas_de_tiques(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Estado parado por ~300 voltas = UMA escrita. É o guarda do `3d9bb7e`.
-
-    Reafirmar o mesmo valor a cada tique não quebra nenhum tique isolado — ele
-    quebra o barramento e atropela o kernel, e só aparece no acumulado. Por
-    isso a asserção é sobre o NÚMERO de escritas depois de muitas voltas, e o
-    número de voltas é medido pelo dublê.
-    """
+    """Estado parado por ~300 voltas = UMA escrita. É o guarda do `3d9bb7e`."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: ["chrome"]}, captando=lambda _u: {UM: False})
     daemon = _Daemon(controle)
@@ -472,12 +301,7 @@ async def test_escreve_so_na_mudanca_ao_longo_de_centenas_de_tiques(
 async def test_o_pisca_nao_vira_martelo_quando_ela_fala_sem_parar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ela fala por centenas de tiques seguidos: `2` é escrito UMA vez.
-
-    Este é o caso que a cadência de 4 Hz cria e que o `mic_da_mesa` não tem: a
-    PEÇA B responde `True` volta após volta, e um laço sem a guarda de mudança
-    escreveria `2` em cada uma delas.
-    """
+    """Ela fala por centenas de tiques seguidos: `2` é escrito UMA vez."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(
         monkeypatch,
@@ -495,11 +319,7 @@ async def test_o_pisca_nao_vira_martelo_quando_ela_fala_sem_parar(
 async def test_cada_virada_de_estado_vale_uma_escrita_e_so_uma(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quatro viradas ao longo do tempo = quatro escritas, na ordem certa.
-
-    A luz tem de ACOMPANHAR, e não só ficar quieta: um laço que nunca escreve
-    passaria nos dois testes de cima e reprovaria aqui.
-    """
+    """Quatro viradas ao longo do tempo = quatro escritas, na ordem certa."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     estado = {"ouve": False, "fala": False}
     _pecas(
@@ -521,38 +341,20 @@ async def test_cada_virada_de_estado_vale_uma_escrita_e_so_uma(
 
     em_voo = await _rodar(daemon, voltas=320, entre=virar)
 
-    # SÃO QUATRO, E ERAM CINCO — 19/09/2026, e a que sumiu é consequência
-    # DIRETA da decisão dela, não descuido: com o microfone ligado a luz já
-    # nasce ACESA, então *"um app abriu o microfone"* deixou de ser uma
-    # virada de estado. Ela não se perdeu — reaparece no `2`, quando entra
-    # som, e a aba Controle passou a dizer QUEM abriu, por escrito
-    # (`mesa_viva.frase_de_quem_te_ouve`). O laço escreve só na MUDANÇA.
     escritas_do_laco = [v for _u, v in em_voo if v is not None]
     assert escritas_do_laco == [
-        mod.ACESA,  # o microfone está ligado — com ou sem alguém ouvindo
-        mod.PISCANDO,  # entrou som, e há um app de fora com o canal aberto
-        mod.PISCANDO_LENTO,  # a bateria caiu abaixo de 30%
-        mod.APAGADA,  # ela apertou o botão e ficou muda
+        mod.ACESA,
+        mod.PISCANDO,
+        mod.PISCANDO_LENTO,
+        mod.APAGADA,
     ]
-
-
-# ---------------------------------------------------------------------------
-# 3. O caminho de escrita — o nível chega inteiro, e o `common[9]` não é tocado
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_o_nivel_chega_inteiro_pelo_caminho_que_carrega_o_nivel(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`2` e `3` saem como `2` e `3`, e `set_mic_led` NUNCA é chamado.
-
-    Medido em 03/09/2026 nesta árvore: `set_mic_led` coage a `bool` duas vezes
-    em série (`core/backend_pydualsense.py:5836` e `:479`), e o `2` e o `3`
-    viram `1` sem erro e sem log — luz acesa fixa onde devia piscar, que se lê
-    como *"a PEÇA B não está detectando som"*. O dublê expõe as DUAS portas de
-    propósito: se alguém trocar o caminho, a lista errada é que enche.
-    """
+    """`2` e `3` saem como `2` e `3`, e `set_mic_led` NUNCA é chamado."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 10})
     _pecas(
         monkeypatch,
@@ -589,28 +391,11 @@ async def test_o_laco_nunca_toca_o_mudo(monkeypatch: pytest.MonkeyPatch) -> None
     assert controle.mudos_escritos == []
 
 
-# ---------------------------------------------------------------------------
-# 4. §2 — a devolução REPINTA, e repinta na língua do KERNEL
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_o_desligamento_repinta_na_lingua_do_kernel_e_so_entao_solta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ela está MUDA: a posse volta com a luz ACESA — o contrário do que pintamos.
-
-    O §2 da sprint nasceu do que ela viu: *"ambos tão ligados. e ficaram."* O
-    kernel escreve `mute_button_led = ds->mic_muted` só na BORDA do botão
-    (`hid-playstation.c:1538-1540`), então o valor que largamos no byte fica no
-    ar até ela apertar o botão. E o vocabulário dele é o INVERSO do nosso:
-    para o kernel, aceso = mudo.
-
-    Com ela muda, o laço pinta `APAGADA` (contrato dela: mudo e apagado são
-    sinônimos). Ao soltar, o valor certo a deixar é `ACESA`. Duas maneiras de
-    errar isto reprovam aqui: soltar sem repintar (sobra só o `None`), e
-    repintar com o ÚLTIMO valor que escrevemos (sobra `0`).
-    """
+    """Ela está MUDA: a posse volta com a luz ACESA — o contrário do que pintamos."""
     controle = _Controle(uniqs=[UM], mudo={UM: True}, bateria={UM: 90})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: ["chrome"]}, captando=lambda _u: {UM: True})
     daemon = _Daemon(controle)
@@ -648,13 +433,7 @@ async def test_o_desligamento_devolve_a_posse_de_todos_os_controles(
 async def test_quando_para_de_saber_o_laco_devolve_a_luz_repintada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A PEÇA A cai no meio da sessão: a luz não pode ficar travada num `2`.
-
-    Segurar para sempre deixaria um pisca eterno sobre um microfone que talvez
-    ninguém esteja ouvindo. Devolver na PRIMEIRA não-resposta faria um `pactl`
-    que estourou o `timeout` uma vez virar um pisca-pisca de posse. O laço
-    segura por `SEM_RESPOSTA_ATE_SOLTAR_S` e então devolve — REPINTADO.
-    """
+    """A PEÇA A cai no meio da sessão: a luz não pode ficar travada num `2`."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     estado = {"viva": True}
 
@@ -679,24 +458,13 @@ async def test_quando_para_de_saber_o_laco_devolve_a_luz_repintada(
     )
 
 
-# ---------------------------------------------------------------------------
-# 5. As degradações declaradas — as peças irmãs podem não existir
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_sem_as_pecas_irmas_a_luz_ainda_apaga_quando_ela_fica_muda(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Nem PEÇA A nem PEÇA B no ar: o laço entrega o que SABE, e nada mais.
-
-    Este é o estado real da árvore enquanto as três peças são construídas em
-    paralelo. `mudo` vence a precedência inteira e não depende de ninguém, e é
-    por isso que a metade do contrato que ela mais nota — apertar o botão e a
-    luz apagar — já funciona sozinha.
-    """
+    """Nem PEÇA A nem PEÇA B no ar: o laço entrega o que SABE, e nada mais."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
-    _pecas(monkeypatch)  # as duas AUSENTES
+    _pecas(monkeypatch)
     daemon = _Daemon(controle)
 
     def emudecer(voltas: int) -> None:
@@ -755,8 +523,6 @@ async def test_um_backend_sem_a_porta_do_led_nao_derruba_o_laco() -> None:
     class _Legado:
         def __init__(self) -> None:
             self.voltas = 0
-            #: `_rodar` lê esta lista para tirar o que foi escrito EM VOO; um
-            #: dublê sem ela rebenta o helper antes de exercitar o laço.
             self.escritas: list[Any] = []
 
         def audio_status_for(self, uniq: str | None = None) -> dict[str, bool]:
@@ -773,42 +539,16 @@ async def test_um_backend_sem_a_porta_do_led_nao_derruba_o_laco() -> None:
     assert legado.voltas >= 80
 
 
-# ---------------------------------------------------------------------------
-# 6. A mesa vira — a borda invalida, e quem sai perde a memória
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_a_borda_do_botao_e_segurada_ate_o_ato_e_o_laco_reescreve_uma_vez(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A eleição escreve no MESMO byte; o laço espera o ato e reescreve UMA vez.
-
-    `hotkey._eleger_ou_devolver` chama `set_mic_led(aceso, uniq=)` na borda do
-    botão. Se o laço confiasse na memória do que ELE escreveu, o valor posto
-    pela eleição ficaria de pé para sempre. E se ele reescrevesse já no tique
-    seguinte à borda, pintaria pelo bit de antes do aperto, por cima do ato
-    (a bancada de 29/09: ~2,3 s de estado velho com os quatro no rádio).
-
-    Desde 29/09/2026 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01) a borda é SEGURADA: o
-    laço não escreve aquele controle até o ato tomar a posse do mudo, e então
-    reescreve o que decidiu pela posse, uma vez. As réguas dos três casos (o
-    aperto que cala, o que liga e a reancoragem) estão em
-    `test_o_botao_do_mic_chega_na_hora.py`.
-
-    MORDIDA: sem o `_segura_a_borda`, a reescrita sai no tique seguinte à
-    borda, antes da posse.
-    """
+    """A eleição escreve no MESMO byte; o laço espera o ato e reescreve UMA vez."""
     monkeypatch.setattr(mod, "SEGURA_A_BORDA_S", 30.0)
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: ["chrome"]}, captando=lambda _u: {UM: False})
     daemon = _Daemon(controle)
 
-    # LIMIARES COM TRAVA, e não `voltas == 100`. O amostrador de `_rodar` lê o
-    # contador a cada 2 ms enquanto o laço gira a cada 1 ms: ele enxerga a
-    # série aos saltos (medido: passos de 2 e 4), e um valor exato pode nunca
-    # aparecer. Uma régua que depende de acertar o número em cheio reprova por
-    # escalonamento, não por defeito.
     marcas: dict[str, int] = {}
 
     def bater_no_botao(voltas: int) -> None:
@@ -819,7 +559,7 @@ async def test_a_borda_do_botao_e_segurada_ate_o_ato_e_o_laco_reescreve_uma_vez(
             )
         if voltas >= 200 and "ato" not in marcas:
             marcas["ato"] = voltas
-            controle.posse[UM] = False  # o ato ligou: a posse do mudo é nossa
+            controle.posse[UM] = False
 
     em_voo = await _rodar(daemon, voltas=300, entre=bater_no_botao)
 
@@ -837,20 +577,11 @@ async def test_a_borda_do_botao_e_segurada_ate_o_ato_e_o_laco_reescreve_uma_vez(
 async def test_o_controle_que_sai_da_mesa_perde_a_memoria(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Na reconexão o handle é NOVO e não lembra do que escrevemos no velho.
-
-    Guardar o valor antigo faria o laço achar que o byte já está certo e nunca
-    reescrevê-lo: a luz nasceria errada e ficaria. E o controle que saiu não
-    pode ser "devolvido" — não há a quem devolver.
-    """
+    """Na reconexão o handle é NOVO e não lembra do que escrevemos no velho."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: ["chrome"]}, captando=lambda _u: {UM: False})
     daemon = _Daemon(controle)
 
-    # JANELAS, e não dois valores exatos: o amostrador lê o contador aos
-    # saltos (ver a nota do teste da borda). As duas operações são
-    # idempotentes de propósito, então repeti-las a cada amostra não muda
-    # nada — o que muda é que a régua deixa de depender de acertar o número.
     def tirar_e_por(voltas: int) -> None:
         if 100 <= voltas < 200:
             controle.conectados.discard(UM)
@@ -889,11 +620,6 @@ async def test_a_mesa_indecifravel_nao_faz_o_laco_soltar_ninguem() -> None:
     assert backend.escritas == []
 
 
-# ---------------------------------------------------------------------------
-# 7. A fiação — o laço nasce pelo caminho do produto
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_o_starter_pendura_a_task_no_daemon() -> None:
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
@@ -909,13 +635,7 @@ async def test_o_starter_pendura_a_task_no_daemon() -> None:
 
 
 def test_o_ciclo_de_vida_sobe_a_luz_do_mic() -> None:
-    """O laço tem de estar LIGADO — um subsistema que ninguém sobe não existe.
-
-    A régua lê o fonte do `lifecycle` em vez de subir um daemon: o boot toca
-    uinput e rede, e o que se quer provar aqui é só que a linha de registro
-    está lá, sem gate (§5.3b: um `install.sh` limpo entrega a luz funcionando,
-    sem passo manual e sem flag).
-    """
+    """O laço tem de estar LIGADO — um subsistema que ninguém sobe não existe."""
     from pathlib import Path
 
     import hefesto_dualsense4unix.daemon.lifecycle as ciclo
@@ -925,34 +645,10 @@ def test_o_ciclo_de_vida_sobe_a_luz_do_mic() -> None:
     assert 'self._safe_start("luz_do_mic"' in fonte
 
 
-# ---------------------------------------------------------------------------
-# 8. A JUNTA COM AS PEÇAS IRMÃS — a régua que faltava, e o defeito que ela pegou
-# ---------------------------------------------------------------------------
-
-
 def test_a_junta_com_as_pecas_irmas_existe_de_verdade() -> None:
-    """Os nomes que o laço procura EXISTEM nos módulos de verdade.
-
-    **ESTA RÉGUA NASCEU DE UM DEFEITO QUE A SUÍTE INTEIRA NÃO VIA, e o defeito
-    é do dia 03/09/2026.** O laço procurava na PEÇA B quatro nomes de função —
-    `captando_agora`, `esta_captando_agora`, `nivel_agora`, `captando_por_uniq`
-    — e a PEÇA B não publica nenhum deles: ela é a classe `NivelDoMicrofone`,
-    dirigida por `seguir`/`captando`. Resultado medido: `captando` ficava
-    `None` para sempre e os estados `2` (piscando) e `3` (pisca lento) eram
-    INALCANÇÁVEIS no produto — metade do contrato dela, morta em silêncio.
-
-    Todos os outros testes deste arquivo passavam, porque todos plantavam um
-    dublê com o nome que o laço queria. Um dublê que inventa a forma do vizinho
-    não mede o vizinho. Esta régua é a única que olha para os módulos REAIS, e
-    é por isso que ela não usa dublê nenhum.
-
-    Ela não roda `pactl`: só importa e olha os nomes.
-    """
+    """Os nomes que o laço procura EXISTEM nos módulos de verdade."""
     import importlib
 
-    # TIRA O TAPUME da bancada: este é o único teste do arquivo que quer os
-    # módulos DE VERDADE. Todos os outros os recebem dublados, para não
-    # disparar `pactl` nem `parec` na máquina dela.
     for caminho in (mod.MODULO_DE_QUEM_OUVE, mod.MODULO_DO_NIVEL):
         sys.modules.pop(caminho, None)
 
@@ -1011,16 +707,10 @@ async def test_o_medidor_e_parado_no_desligamento(
 async def test_o_medidor_so_segue_quem_tem_ouvinte(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """§1.1: o `2` vive dentro do `1`, então só quem tem ouvinte é medido.
-
-    Medir quem ninguém está ouvindo abriria um `parec` para responder uma
-    pergunta que a precedência já respondeu — e cada `parec` é custo na máquina
-    dela e uma fonte de captura segurada aberta.
-    """
+    """§1.1: o `2` vive dentro do `1`, então só quem tem ouvinte é medido."""
     controle = _Controle(uniqs=[UM, OUTRO], mudo={UM: False, OUTRO: False}, bateria={})
     medidor = _pecas(
         monkeypatch,
-        # só UM tem ouvinte; OUTRO tem a fonte publicada e ninguém nela
         ouvintes=lambda _u: {UM: ["chrome"], OUTRO: []},
         captando=lambda seguidos: dict.fromkeys(seguidos, True),
     )
@@ -1039,8 +729,6 @@ async def test_o_medidor_so_segue_quem_tem_ouvinte(
 
     escritos = {u: v for u, v in em_voo if v is not None}
     assert escritos.get(UM) == mod.PISCANDO
-    # ACESA, E ERA APAGADA: o OUTRO não está mudo, e desde 19/09 só o mudo
-    # apaga. Ele continua FORA do medidor, que é o que este teste guarda.
     assert escritos.get(OUTRO) == mod.ACESA
 
 
@@ -1048,12 +736,7 @@ async def test_o_medidor_so_segue_quem_tem_ouvinte(
 async def test_com_ninguem_ouvindo_o_medidor_nem_nasce(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Custo zero com a sala vazia: nem thread, nem `parec`, nem processo.
-
-    É o degrau menor da sprint feito desenho. Se o medidor nascesse no boot,
-    uma máquina onde ninguém nunca abre o microfone pagaria uma thread parada
-    para sempre.
-    """
+    """Custo zero com a sala vazia: nem thread, nem `parec`, nem processo."""
     nascidos: list[Any] = []
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
 
@@ -1087,13 +770,7 @@ async def test_com_ninguem_ouvindo_o_medidor_nem_nasce(
 async def test_o_pactl_nunca_roda_no_event_loop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O que fala com o mundo vai para o executor, e a régua nomeia quem foi.
-
-    A PEÇA A dispara três `pactl` com `timeout` de 3 s cada, e a resolução de
-    fonte mais dois. Chamados de dentro da corrotina, congelam o mesmo event
-    loop que serve o IPC e reafirma o report de saída — até 9 s no pior caso,
-    que na máquina dela se lê como travamento.
-    """
+    """O que fala com o mundo vai para o executor, e a régua nomeia quem foi."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(
         monkeypatch,

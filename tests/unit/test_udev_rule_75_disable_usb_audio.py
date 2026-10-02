@@ -35,13 +35,11 @@ def test_arquivo_existe() -> None:
 
 
 def test_casa_apenas_classe_audio_nunca_a_hid(rule_lines: list[str]) -> None:
-    # Toda linha de regra precisa casar a interface de áudio (classe 01)...
     assert rule_lines, "nenhuma linha de regra encontrada"
     for ln in rule_lines:
         assert 'ATTR{bInterfaceClass}=="01"' in ln, (
             f"linha não restringe à classe 01 (áudio): {ln}"
         )
-    # ...e NUNCA a HID (classe 03), para o gamepad (If3) ficar intacto.
     blob = "\n".join(rule_lines)
     assert "03" not in blob.replace('"01"', ""), (
         "a regra 75 não pode referenciar a classe 03 (HID) — quebraria o gamepad"
@@ -56,7 +54,6 @@ def test_cobre_ambos_os_pids_do_vendor_sony(rule_lines: list[str]) -> None:
 
 
 def test_mecanismo_primario_authorized_zero(rule_lines: list[str]) -> None:
-    # Uma linha ACTION=="add" ... ATTR{authorized}="0" por PID (race-reduzido).
     add_lines = [
         ln for ln in rule_lines
         if 'ACTION=="add"' in ln and 'ATTR{authorized}="0"' in ln
@@ -71,7 +68,6 @@ def test_mecanismo_primario_authorized_zero(rule_lines: list[str]) -> None:
 
 
 def test_reforco_unbind_snd_usb_audio(rule_lines: list[str]) -> None:
-    # Belt-and-suspenders: se mesmo assim bindar, desfaz no evento bind.
     bind_lines = [
         ln for ln in rule_lines
         if 'ACTION=="bind"' in ln and "snd-usb-audio/unbind" in ln

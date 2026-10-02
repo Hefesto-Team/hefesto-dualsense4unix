@@ -55,8 +55,6 @@ ABRE = "<!-- BLOCO GERADO por scripts/gerar-tabela-de-curvas.py — não edite �
 FECHA = "<!-- FIM DO BLOCO GERADO -->"
 VAZIO = "_(nenhum ainda — ver CR-04)_"
 
-#: Uma curva que PASSA nas recusas da CR-02: proveniência inteira, nota longa o
-#: bastante, data depois da vigência do CLEAN-ROOM e sete bytes de curva.
 CURVA = {
     "nome": "Tranco curto de teste",
     "medido_por": "vitoriamaria",
@@ -69,13 +67,7 @@ CURVA = {
 
 @pytest.fixture
 def arvore(tmp_path: Path) -> Path:
-    """Árvore de brinquedo com o gerador e o `src/` real ao lado.
-
-    O `src/` entra por symlink e não por cópia: o gerador IMPORTA
-    `profiles/curva_propria.py`, e o que se está testando é justamente que ele
-    use a função de verdade — copiar o módulo abriria a porta para o teste
-    passar contra uma versão velha dele.
-    """
+    """Árvore de brinquedo com o gerador e o `src/` real ao lado."""
     (tmp_path / "scripts").mkdir()
     (tmp_path / "docs" / "protocol").mkdir(parents=True)
     (tmp_path / "docs" / "data").mkdir(parents=True)
@@ -115,12 +107,7 @@ def test_o_catalogo_vazio_passa_e_devolve_a_linha_que_o_documento_ja_tinha(
 
 
 def test_uma_curva_no_catalogo_faz_o_check_reprovar(arvore: Path) -> None:
-    """A MORDIDA: o dado chegou e a tabela publicada não o traz.
-
-    É o dia da CR-04 em miniatura. Sem este portão, a primeira curva medida
-    entraria no catálogo e o documento continuaria dizendo "nenhum ainda" —
-    que é a forma exata do defeito que a CR-02 nomeou.
-    """
+    """A MORDIDA: o dado chegou e a tabela publicada não o traz."""
     catalogo(arvore).write_text(
         json.dumps({"curvas": [CURVA]}), encoding="utf-8")
     saida = confere(arvore)
@@ -179,13 +166,7 @@ def test_marcadores_apagados_reprovam_em_voz_alta(arvore: Path) -> None:
 
 
 def test_a_arvore_de_verdade_esta_atualizada_e_o_portao_esta_no_ci() -> None:
-    """Contra a árvore REAL, e a fiação.
-
-    O `--check` das curvas vive no job `lint-test` e NÃO no pre-commit: ele
-    importa um módulo pydantic, e o `language: system` do pre-commit roda o
-    Python pelado de quem commita — um hook que explode no import é um hook
-    desligado na semana seguinte. Quem o roda em toda máquina é este teste.
-    """
+    """Contra a árvore REAL, e a fiação."""
     saida = subprocess.run(
         [sys.executable, str(GERADOR), "--check"],
         capture_output=True, text=True, cwd=RAIZ_REAL, check=False)

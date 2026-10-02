@@ -1,45 +1,4 @@
-"""UDP server compatível com o protocolo DSX (V2 5.10, ADR-003, V3-1).
-
-Escuta em `127.0.0.1:6969` (configurável), parseia envelope JSON com
-`version: 1` + `instructions[]`, aplica cada instrução no controle.
-
-Fora de escopo aqui: persistir estado (fica no StateStore via handlers).
-Rate limit (V3-1) roda no dispatch, global + per-IP com sweep periódico.
-
-Schema resumido:
-
-    { "version": 1,
-      "instructions": [
-        {"type": "TriggerUpdate", "parameters": [side, mode, p1..p7]},
-        {"type": "RGBUpdate", "parameters": [idx, r, g, b]},
-        {"type": "PlayerLED", "parameters": [idx, bitmask]},
-        {"type": "MicLED", "parameters": [state]},
-        {"type": "TriggerThreshold", "parameters": [side, value]},
-        {"type": "ResetToUserSettings", "parameters": []}
-      ]
-    }
-
-`version != 1` dropa com `log.warn` (V2 5.10).
-
-Dois dialetos na mesma porta
-----------------------------
-O DSX real (Paliverse, e os mods compilados contra o SDK dele) fala um
-envelope DIFERENTE deste: sem campo `version`, `type` como ORDINAL do enum
-`InstructionType`, e `parameters[0]` sempre o `controllerIndex`. O daemon
-aceita os DOIS, decidindo por conteúdo e nunca por adivinhação:
-
-- `version` ausente  -> envelope do DSX (`Packet.cs` do SDK não tem o campo).
-- `type` inteiro     -> resolvido por `DSX_INSTRUCTION_TYPES`.
-- layout de params   -> desambiguado por tipo/aridade em cada handler.
-
-Ordinal ou layout que NÃO dá para resolver com certeza falha alto
-(`udp.unknown_instruction` / `udp.error.*` + log) em vez de agir por
-aproximação: no ecossistema do DSX existe divergência real de enum entre
-forks, e agir errado em silêncio é pior do que recusar.
-
-O que continua sem cobertura está em `docs/protocol/udp-schema.md`
-(seção "Fidelidade ao DSX original"), sem eufemismo.
-"""
+"""UDP server compatível com o protocolo DSX (V2 5.10, ADR-003, V3-1)."""
 from __future__ import annotations
 
 import asyncio
@@ -66,31 +25,10 @@ RATE_GLOBAL = 2000
 RATE_PER_IP = 1000
 SUPPORTED_VERSION = 1
 
-#: Ordinais do enum `Trigger` do DSX (`Invalid=0, Left=1, Right=2`). Mods C#
-#: serializam o enum como int, então é isso que chega no fio.
 DSX_TRIGGER_SIDES = {1: "left", 2: "right"}
 
-#: Ordinais do enum `InstructionType` do DSX -> nome usado internamente.
-#:
-#: PROCEDÊNCIA E DIVERGÊNCIA (importante, não apagar): o enum do DSX **não é
-#: único no ecossistema**. Quatro fontes públicas foram conferidas:
-#:
-#:   - `dvize/TarkovDSX` `DSX/InstructionType.cs` .... TriggerThreshold = 4
 #:   - `WujekFoliarz/DualSenseY-v2` `include/udp.hpp`  TriggerThreshold = 4
-#:   - `cosmii02/ForzaDSXlegacy` `Program.cs` ........ TriggerThreshold = 4
-#:   - `cosmii02/RacingDSX` `Program.cs` ............. TriggerThreshold = 6 (!)
-#:
-#: O RacingDSX troca `TriggerThreshold` e `PlayerLEDNewRevision` de lugar. Vale
 #: a maioria de 3 contra 1 — e o desempate real é que o DualSenseY-v2 é um
-#: SERVIDOR: ele precisa casar com o que os mods de verdade emitem, senão não
-#: funcionaria para os usuários dele.
-#:
-#: Os ordinais 1, 2, 3, 5 e 7 são unânimes nas fontes que os definem. O 4 segue
-#: a maioria. O 6 (`PlayerLEDNewRevision`) e o 0 (`Invalid`/`GetDSXStatus`)
-#: ficam DE FORA de propósito: nenhum deles tem instrução correspondente aqui,
-#: então caem em `udp.unknown_instruction` com log — falha barulhenta, que é o
-#: pior caso aceitável. Um mod do dialeto RacingDSX que mande 6 querendo dizer
-#: TriggerThreshold vai falhar de forma VISÍVEL em vez de mexer no LED errado.
 DSX_INSTRUCTION_TYPES: dict[int, str] = {
     1: "TriggerUpdate",
     2: "RGBUpdate",
@@ -100,22 +38,9 @@ DSX_INSTRUCTION_TYPES: dict[int, str] = {
     7: "ResetToUserSettings",
 }
 
-#: Ordinais do enum `TriggerMode` do DSX -> preset equivalente do Hefesto.
-#:
-#: Só entram aqui os modos em que o preset do Hefesto tem a MESMA assinatura de
-#: parâmetros que o helper C# do DSX (conferido em `DSX/Instruction.cs`):
-#: `Resistance(start, force)`, `Bow(start, end, force, snapForce)`,
-#: `Galloping(start, end, firstFoot, secondFoot, frequency)`,
-#: `SemiAutomaticGun(start, end, force)`, `AutomaticGun(start, strength,
-#: frequency)` e `Machine(start, end, strengthA, strengthB, frequency, period)`.
 #: Os ordinais 20-26 são a extensão do DualSenseY-v2 e usam nomes que são
-#: literalmente os presets do Hefesto.
-#:
-#: `Normal` (0) vira `Off`: nas duas pontas significa "gatilho sem efeito".
-#: NÃO é transcrição de bytes — é o preset do próprio Hefesto sendo reusado,
-#: exatamente como a GUI e os perfis já o usam.
 DSX_TRIGGER_MODES: dict[int, str] = {
-    0: "Off",  # Normal
+    0: "Off",
     13: "Resistance",
     14: "Bow",
     15: "Galloping",
@@ -131,21 +56,9 @@ DSX_TRIGGER_MODES: dict[int, str] = {
     26: "MultiPositionVibration",
 }
 
-#: Ordinal do `TriggerMode.CustomTriggerValue` — tratado à parte porque o
-#: primeiro parâmetro dele é outro enum (ver `DSX_CUSTOM_VALUE_MODES`).
 DSX_TRIGGER_MODE_CUSTOM_VALUE = 12
 
-#: Modos "prontos" do DSX que NÃO são implementáveis aqui, com o nome para o
-#: erro sair legível. Cada um é uma CURVA DE FORÇA fechada, definida por uma
-#: tabela de bytes interna do DSX — não por parâmetros que o mod mande.
-#:
-#: Por que não estão implementados, sem eufemismo: a única transcrição pública
 #: dessas tabelas que encontrei está no `DualSenseY-v2`, que é um repositório
-#: **sem licença nenhuma** (`license: null` na API do GitHub, sem arquivo
-#: LICENSE) — ou seja, todos os direitos reservados. Copiar as tabelas de lá
-#: para um projeto empacotado e distribuído seria problema de licença, não de
-#: engenharia. Implementá-las com fidelidade exige documentação oficial da
-#: Paliverse ou medir os bytes do DSX rodando. Até lá o pedido falha alto.
 DSX_CANNED_TRIGGER_MODES: dict[int, str] = {
     1: "GameCube",
     2: "VerySoft",
@@ -161,41 +74,24 @@ DSX_CANNED_TRIGGER_MODES: dict[int, str] = {
     19: "VibrateTrigger10Hz",
 }
 
-#: Enum `CustomTriggerValueMode` do DSX -> modo HID do Hefesto
-#: (`core.trigger_effects.TriggerMode`). Os bits são os mesmos dos dois lados —
-#: nada é transcrito, só correlacionado pelo nome.
-#:
-#: Os modos 9-16 (variantes *VibrateResistance*/*VibratePulse*) ficam de fora:
-#: o Hefesto não tem os modos HID correspondentes, e escolher "o mais parecido"
-#: mudaria a sensação no gatilho sem o mod saber.
 DSX_CUSTOM_VALUE_MODES: dict[int, int] = {
-    0: 0x00,  # Off
-    1: 0x01,  # Rigid
-    2: 0x01 | 0x20,  # RigidA
-    3: 0x01 | 0x04,  # RigidB
-    4: 0x01 | 0x20 | 0x04,  # RigidAB
-    5: 0x02,  # Pulse
-    6: 0x02 | 0x20,  # PulseA
-    7: 0x02 | 0x04,  # PulseB
-    8: 0x02 | 0x20 | 0x04,  # PulseAB
+    0: 0x00,
+    1: 0x01,
+    2: 0x01 | 0x20,
+    3: 0x01 | 0x04,
+    4: 0x01 | 0x20 | 0x04,
+    5: 0x02,
+    6: 0x02 | 0x20,
+    7: 0x02 | 0x04,
+    8: 0x02 | 0x20 | 0x04,
 }
 
-#: Enum `MicLEDMode` do DSX -> `aceso` do `IController.set_mic_led`.
-#: `On=0` acende o LED, `Off=2` apaga — o jogo manda a LUZ, e o que ela
-#: SIGNIFICA é assunto do produto (MIC-DA-MESA-ELEICAO-01: aceso = mic vivo).
-#: `Pulse=1` não existe no Hefesto e é DEGRADADO para aceso — com contador e
-#: log próprios, para não passar por implementado.
 DSX_MIC_LED_MODES: dict[int, bool] = {0: True, 1: True, 2: False}
 DSX_MIC_LED_PULSE = 1
 
 
 def resolve_instruction_type(raw: object) -> str | None:
-    """Nome canônico da instrução a partir de `type`. `None` = irreconhecível.
-
-    Aceita a string do dialeto do Hefesto (`"TriggerUpdate"`) e o ordinal do
-    enum `InstructionType` do DSX, que é como o `Newtonsoft.Json` serializa um
-    enum C# por padrão — e portanto o que os mods reais emitem.
-    """
+    """Nome canônico da instrução a partir de `type`. `None` = irreconhecível."""
     if isinstance(raw, bool):
         return None
     if isinstance(raw, str):
@@ -208,11 +104,7 @@ def resolve_instruction_type(raw: object) -> str | None:
 def resolve_dsx_trigger_mode(
     raw_mode: object, rest: list[Any]
 ) -> tuple[str, list[Any]]:
-    """Traduz `(TriggerMode do DSX, params)` para `(preset do Hefesto, params)`.
-
-    Levanta `ValueError` — nunca aproxima — quando o modo não tem equivalente
-    fiel. O texto do erro nomeia o modo para o autor do mod saber o que caiu.
-    """
+    """Traduz `(TriggerMode do DSX, params)` para `(preset do Hefesto, params)`."""
     ordinal = int(raw_mode)  # type: ignore[call-overload]
     if ordinal == DSX_TRIGGER_MODE_CUSTOM_VALUE:
         if not rest:
@@ -225,8 +117,6 @@ def resolve_dsx_trigger_mode(
                 f"TriggerUpdate CustomTriggerValueMode {int(rest[0])} sem "
                 "equivalente no Hefesto (variantes VibrateResistance/VibratePulse)"
             )
-        # `Custom` do Hefesto quer [modo, f0..f6]; o DSX manda até 7 forcas.
-        # Completar com zero é o mesmo que o servidor do DSX faz (`getOrZero`).
         forcas = [int(v) for v in rest[1:8]]
         forcas += [0] * (7 - len(forcas))
         return "Custom", [hid, *forcas]
@@ -244,12 +134,7 @@ def resolve_dsx_trigger_mode(
 
 
 def parse_side(raw: object) -> str | None:
-    """Traduz o lado do gatilho nos dois dialetos aceitos. `None` = inválido.
-
-    Aceita ``"left"``/``"right"`` (dialeto documentado do Hefesto) e o
-    ordinal do enum `Trigger` do DSX (1/2), inclusive quando o cliente o
-    manda como string numérica.
-    """
+    """Traduz o lado do gatilho nos dois dialetos aceitos. `None` = inválido."""
     if isinstance(raw, str):
         texto = raw.strip().lower()
         if texto in ("left", "right"):
@@ -257,7 +142,6 @@ def parse_side(raw: object) -> str | None:
         if texto.isdigit():
             return DSX_TRIGGER_SIDES.get(int(texto))
         return None
-    # `bool` é subclasse de `int`: True viraria "left" por acidente.
     if isinstance(raw, bool):
         return None
     if isinstance(raw, int):
@@ -268,16 +152,7 @@ def parse_side(raw: object) -> str | None:
 def parse_side_and_value(
     params: list[Any], *, kind: str
 ) -> tuple[str, int, int | None]:
-    """Extrai `(lado, valor, índice)` dos dois layouts que chegam na 6969.
-
-    - Dialeto do Hefesto: ``[side, value]`` — índice devolvido como `None`.
-    - Layout canônico do DSX: ``[controllerIndex, side, value]``.
-
-    A escolha é por conteúdo, não por tamanho: com 3+ parâmetros tentamos
-    primeiro o layout do DSX e só caímos no dialeto textual se `params[1]`
-    não for um lado válido. Assim `["left", 128]` e `[0, 1, 128]` significam
-    a mesma coisa sem ambiguidade.
-    """
+    """Extrai `(lado, valor, índice)` dos dois layouts que chegam na 6969."""
     if len(params) < 2:
         raise ValueError(f"{kind} precisa [side, value]")
     if len(params) >= 3:
@@ -301,10 +176,7 @@ def _como_indice(raw: object) -> int | None:
 
 
 class RateLimiter:
-    """Dois limites sobrepostos: global + per-IP (V3-1).
-
-    IPs inativos são evictados via `_sweep` periódico (máx 1x/s).
-    """
+    """Dois limites sobrepostos: global + per-IP (V3-1)."""
 
     def __init__(
         self,
@@ -355,12 +227,6 @@ class DsxProtocol(asyncio.DatagramProtocol):
         self.transport: asyncio.DatagramTransport | None = None
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        # Em Python 3.10 o objeto real é `_SelectorDatagramTransport`, que
-        # formalmente herda de `asyncio.DatagramTransport` mas falha no
-        # `isinstance` contra a classe pública exposta no namespace. O
-        # contrato do asyncio já garante o tipo via API de
-        # `create_datagram_endpoint`; atribuição direta evita o ruído de
-        # AssertionError no journal a cada startup (BUG-UDP-01 / A-02).
         self.transport = transport  # type: ignore[assignment]
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
@@ -401,11 +267,6 @@ class UdpHandler:
             self.store.bump("udp.parse_error")
             return
 
-        # O envelope do DSX canônico NÃO tem campo `version` (ver `Packet.cs`
-        # do SDK: a classe só carrega `Instruction[] instructions`). Ausência
-        # portanto significa "protocolo DSX", não "pacote malformado" — era
-        # aqui que TODO mod real morria, antes de qualquer instrução ser lida.
-        # Um `version` PRESENTE e diferente de 1 continua sendo descarte.
         if "version" not in payload:
             self.store.bump("udp.dsx_envelope")
         version = payload.get("version", SUPPORTED_VERSION)
@@ -431,15 +292,9 @@ class UdpHandler:
         if not isinstance(params, list):
             self.store.bump("udp.invalid_instruction")
             return
-        # `type` chega como string (dialeto do Hefesto) ou como ordinal do enum
-        # `InstructionType` (DSX canônico — é assim que o Newtonsoft serializa
-        # um enum C#). `None` só para tipo de dado impossível.
         kind = resolve_instruction_type(raw_kind)
         if kind is None:
             if isinstance(raw_kind, int):
-                # Ordinal fora da tabela: pode ser `PlayerLEDNewRevision`, um
-                # `GetDSXStatus`, ou o dialeto divergente do RacingDSX. Nenhum
-                # tem ação aqui — barulhento é melhor do que agir errado.
                 self.store.bump("udp.unknown_instruction")
                 logger.warning("udp_unknown_instruction", kind=raw_kind, ip=ip)
             else:
@@ -489,12 +344,7 @@ class UdpHandler:
         logger.warning("udp_controller_index_ignorado", kind=kind, index=indice)
 
     def _do_trigger_update(self, params: list[Any]) -> None:
-        """Aceita o dialeto do Hefesto e o layout canônico do DSX.
-
-        A desambiguação é pelo TIPO de `params[1]`: no dialeto do Hefesto ele
-        é o nome do preset (string), no DSX é o ordinal do lado (int). Não há
-        sobreposição possível entre os dois.
-        """
+        """Aceita o dialeto do Hefesto e o layout canônico do DSX."""
         if len(params) < 2:
             raise ValueError("TriggerUpdate precisa [side, mode, ...]")
         if isinstance(params[1], str):
@@ -504,7 +354,6 @@ class UdpHandler:
                 raise ValueError(f"TriggerUpdate side invalido: {side_raw!r}")
             mode_name: str = mode_raw
         else:
-            # [controllerIndex, side, mode, p1..pN]
             if len(params) < 3:
                 raise ValueError("TriggerUpdate (DSX) precisa [idx, side, mode, ...]")
             self._nota_indice(_como_indice(params[0]), kind="TriggerUpdate")
@@ -521,22 +370,13 @@ class UdpHandler:
             raise ValueError("RGBUpdate precisa [idx, r, g, b]")
         idx, r, g, b = params[:4]
         self._nota_indice(_como_indice(idx), kind="RGBUpdate")
-        # Clamp silencioso em [0, 255] para compatibilidade com clients DSX
-        # imprecisos. Alinha comportamento ao handler IPC `led.set` que valida
-        # range (achado 19 da auditoria forense V23).
         r_c = max(0, min(255, int(r)))
         g_c = max(0, min(255, int(g)))
         b_c = max(0, min(255, int(b)))
         self.controller.set_led((r_c, g_c, b_c))
 
     def _do_player_led(self, params: list[Any]) -> None:
-        """Aceita `[idx, bitmask]` (Hefesto) e `[idx, b1..b5]` (DSX canônico).
-
-        Desambiguação por aridade: o helper `Instruction.PlayerLED` do DSX
-        manda SEMPRE seis parâmetros (índice + cinco booleanos), então 6+ é
-        o layout do DSX e 2 é o bitmask. Bit i / booleano i = LED i (bit 0 =
-        LED da esquerda).
-        """
+        """Aceita `[idx, bitmask]` (Hefesto) e `[idx, b1..b5]` (DSX canônico)."""
         if len(params) >= 6:
             self._nota_indice(_como_indice(params[0]), kind="PlayerLED")
             acesos = [bool(v) for v in params[1:6]]
@@ -557,11 +397,7 @@ class UdpHandler:
         self.store.bump(f"udp.player_led.{mask}")
 
     def _do_mic_led(self, params: list[Any]) -> None:
-        """Aceita `[state]` (Hefesto) e `[idx, MicLEDMode]` (DSX canônico).
-
-        Desambiguação por aridade: o helper `Instruction.MicLED` do DSX manda
-        dois parâmetros; o dialeto daqui manda um.
-        """
+        """Aceita `[state]` (Hefesto) e `[idx, MicLEDMode]` (DSX canônico)."""
         if not params:
             raise ValueError("MicLED precisa [state]")
         if len(params) >= 2:
@@ -572,8 +408,6 @@ class UdpHandler:
             state = DSX_MIC_LED_MODES[modo]
             if modo == DSX_MIC_LED_PULSE:
                 # O firmware do DualSense tem o modo pulsante, mas o
-                # `IController` só expõe aceso/apagado. Acender é o mais perto
-                # — e o contador+log impedem que isso passe por implementado.
                 self.store.bump("udp.mic_led.pulse_degradado")
                 logger.warning("udp_mic_led_pulse_degradado")
         else:
@@ -603,22 +437,10 @@ class UdpHandler:
         logger.info("udp_trigger_threshold", side=side, value=value)
 
     def _do_reset(self) -> None:
-        """`ResetToUserSettings` do DSX — PARCIAL, e de propósito.
-
-        Desliga os dois gatilhos e apaga a deadzone que um mod tenha pedido
-        por `TriggerThreshold` (as duas coisas que a porta 6969 sabe desfazer
-        sozinha). NÃO restaura cor/LED de player/mic do perfil ativo: o
-        `UdpHandler` recebe só `controller` e `store`, não o gerenciador de
-        perfis, e reaplicar perfil a partir daqui seria inventar um caminho
-        de escrita de perfil paralelo aos que já têm dono. Está documentado
-        como parcial em `docs/protocol/udp-schema.md`.
-        """
+        """`ResetToUserSettings` do DSX — PARCIAL, e de propósito."""
         self.controller.set_trigger("left", trigger_off())
         self.controller.set_trigger("right", trigger_off())
         self.store.clear_udp_trigger_thresholds()
-        # O nome da instrução promete mais do que esta implementação entrega.
-        # Como o nome é do protocolo e não nosso, o que dá para fazer é não
-        # deixar a diferença invisível: o log diz o que voltou e o que não.
         self.store.bump("udp.reset_parcial")
         logger.info(
             "udp_reset_to_user_settings_parcial",

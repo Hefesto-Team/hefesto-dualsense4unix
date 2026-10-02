@@ -1,60 +1,5 @@
 #!/usr/bin/env python3
-"""o_vpad_quando_o_jogo_abre.py — o vpad MORRE, ou CONGELA? Segundo a segundo.
-
-A PERGUNTA QUE ELE RESPONDE
-----------------------------
-*Quando o jogo abre, o que acontece com o controle virtual?* — e a resposta tem
-de separar **duas coisas que os relatos de 16/08 misturaram**, porque elas têm
-curas diferentes:
-
-- **MORRE**  — o nó do vpad some (`gamepad_emulation_stopped`, `/dev/hidrawN`
-  desaparece). O jogo, que já enumerou aquele nó, fica com um descritor órfão.
-- **CONGELA** — o nó continua vivo e emitindo na cadência normal, e o CONTEÚDO
-  para: os eixos ficam no valor de repouso. Foi o que o par de 17/08 00h20
-  mediu (1573 reports, `LX` travado em 129) e o que o item 1 do
-  O-QUE-FICOU-ABERTO-01 já tinha registrado no rádio (396 reports, `LX` em 128).
-
-Contagem de reports **não** distingue as duas: um vpad que morreu e renasceu
-emite tanto quanto um que nunca parou. Só a linha do tempo distingue — e é ela
-que este instrumento imprime.
-
-O QUE ELE MEDE
----------------
-Uma linha por segundo, com quatro colunas que só fazem sentido juntas:
-
-    t    vpad          reports  pares  perfil        o que o daemon fez
-    12s  /dev/hidraw4      63     41   Dont Scream   -
-    13s  /dev/hidraw4      61     38   Dont Scream   -
-    14s  (nenhum)           0      0   Navegação     emulação PAROU
-    15s  /dev/hidraw4      58      1   Dont Scream   vpad NASCEU
-
-`pares` é a contagem de pares `(LX, LY)` **distintos** naquele segundo. É a
-régua do movimento, e não a do tráfego: um vpad congelado dá `reports` alto e
-`pares` = 1. Um vpad morto dá zero nos dois.
-
-O QUE ELE NÃO MEDE
--------------------
-**Não mede se o JOGO usa o que chega** — este é o andar do transporte, e o
-prontuário por jogo é quem recusa dizer "funciona". Não mede latência.
-
-A ARMADILHA QUE ELE EVITA
---------------------------
-**Guardar o caminho do nó.** O vpad renasce com outro número, e um instrumento
-que fixa `/dev/hidraw4` na primeira resolução mede "morreu" para sempre depois
-do primeiro ciclo — exatamente o erro que o `descobrir_aparelhos()` do
-`comum.py` existe para impedir. Aqui o nó é **redescoberto a cada segundo**, e
-a coluna `vpad` imprime o nó de verdade daquele segundo.
-
-E a de 16/08, que custou um diagnóstico errado: **um ensaio mede UM gesto**.
-O gesto aqui é *um só* — mexer o analógico esquerdo, sem parar, do começo ao
-fim. Quem parar de mexer para abrir o jogo produz `pares=1` por conta própria e
-lê congelamento onde só houve mão parada. Por isso o instrumento **pede o gesto
-antes de começar** e imprime, no resumo, quantos segundos tiveram movimento.
-
-USO
-    .venv/bin/python scripts/ensaios/o_vpad_quando_o_jogo_abre.py
-    .venv/bin/python scripts/ensaios/o_vpad_quando_o_jogo_abre.py --segundos 120
-"""
+"""o_vpad_quando_o_jogo_abre.py — o vpad MORRE, ou CONGELA? Segundo a segundo."""
 
 from __future__ import annotations
 
@@ -81,16 +26,10 @@ from comum import (
     vpads,
 )
 
-#: Buffer folgado: um `read()` de hidraw devolve UM relatório, e o maior desta
-#: família é o `0x31` do Bluetooth, com 78 bytes.
 BUF = 128
 
-#: Onde o primeiro eixo (`LX`) começa, por report ID. O vpad forja `BUS_USB` no
-#: `UHID_CREATE2` (vira `0x01`), mas a máscara pode mudar — então os dois.
 _BASE = {0x01: 1, 0x31: 2}
 
-#: Os eventos do journal que mudam o veredito, e o rótulo curto de cada um.
-#: Tudo o que não estiver aqui é ruído para ESTA pergunta e não entra na linha.
 _EVENTOS = (
     ("uhid_device_created", "vpad NASCEU"),
     ("gamepad_emulation_stopped", "emulação PAROU"),
@@ -108,14 +47,7 @@ _RE_PERFIL = re.compile(r"profile_activated\s+name=('([^']*)'|(\S+))")
 
 
 def _perfil_agora() -> str:
-    """O perfil ativo AGORA, para a primeira linha não sair em branco.
-
-    Uma chamada ao IPC, no começo e só no começo: dali em diante quem manda é o
-    `profile_activated` do log, que é a fonte de verdade sobre a TROCA. Ler o
-    IPC a cada segundo seria o instrumento perguntando ao produto o que ele já
-    está gritando no log — e mais uma coisa disputando o socket durante a
-    medição.
-    """
+    """O perfil ativo AGORA, para a primeira linha não sair em branco."""
     try:
         saida = subprocess.run(
             [sys.executable, "-m", "hefesto_dualsense4unix", "status"],
@@ -192,15 +124,13 @@ def _le_o_vpad(janela: Janela, t0: float, ate: float, parar: threading.Event) ->
         try:
             pronto, _, _ = select.select([no.fd], [], [], 0.2)
             if not pronto:
-                # Nó sumiu debaixo de nós? `stat` é barato e é a única checagem
-                # que separa "nada a ler" de "o vpad morreu".
                 if not os.path.exists(caminho):
                     raise OSError(2, "o nó sumiu")
                 continue
             dados = os.read(no.fd, BUF)
         except OSError:
             with contextlib.suppress(Exception):
-                no.close()  # fechar não pode derrubar a medição
+                no.close()
             aberto = None
             continue
         base = _BASE.get(dados[0] if dados else -1)
@@ -298,7 +228,6 @@ def main() -> int:
         print("\n  (interrompido)")
     parar.set()
 
-    # ---- o veredito, e ele recusa sair de contagem sozinha -------------------
     com_movimento = sum(1 for ln in linhas if int(ln[3]) > 2)
     com_report = sum(1 for ln in linhas if int(ln[2]) > 0)
     sem_vpad = sum(1 for ln in linhas if ln[1] == "(nenhum)")

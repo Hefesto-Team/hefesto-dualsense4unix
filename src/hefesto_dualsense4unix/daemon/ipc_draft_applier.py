@@ -1,21 +1,4 @@
-"""DraftApplier — aplica `profile.apply_draft` em ordem canônica.
-
-Extraído de `_handle_profile_apply_draft` em AUDIT-FINDING-IPC-SERVER-SPLIT-01.
-Cada seção (leds, triggers, controllers, rumble, mouse, keyboard, mic, speaker)
-é aplicada de forma best-effort: falha em uma seção loga warning, fica registrada
-em ``failed`` (APLICAR-VERDADE-01) e não bloqueia as demais. A ordem é leds
--> triggers -> controllers -> rumble -> mouse -> keyboard -> mic -> speaker
-(leds primeiro por ser menos transiente visualmente; controllers DEPOIS das
-seções globais para o override por-controle vencer no alvo — PERFIL-04).
-
-ESTA LISTA É A PROMESSA DO BOTÃO VERDE, e ela ficou desatualizada duas vezes
-antes de alguém notar: o `mic` entrou pela MIC-EXPOSE-01 sem ser citado aqui, e
-o `speaker` faltava por inteiro até 10/08/2026 — `grep -c speaker` neste arquivo
-devolvia ZERO, e o volume que ela ajustava no card só chegava ao controle na
-próxima troca de perfil. Há portão que compara esta lista com o que o rascunho
-emite; se as duas divergirem, ele reprova
-(`tests/unit/test_o_verde_leva_tudo_01.py`).
-"""
+"""DraftApplier — aplica `profile.apply_draft` em ordem canônica."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -57,59 +40,20 @@ class DraftApplier:
         self.controller = controller
         self.store = store
         self.daemon = daemon
-        # APLICAR-VERDADE-01: seção -> motivo curto das que NÃO entraram. O
-        # best-effort continua igual (uma seção que falha não bloqueia as
-        # outras), mas a falha para de morrer no warning do log: sobe junto
-        # com `applied` para quem chamou poder dizer a verdade na tela.
         self.failed: dict[str, str] = {}
-        #: O brilho global do rascunho em aplicação — o denominador dos fatores
-        #: por controle (`_publicar_escalas_de_brilho`). `None` = sem seção `leds`.
         self._brilho_do_rascunho: float | None = None
-        #: A cor global do rascunho, antes do brilho — o par do brilho acima,
-        #: publicado com ele (`set_led_scales(cor_do_perfil=)`).
         self._cor_do_rascunho: Any = None
-        #: Os controles em que a economia vale neste «Aplicar» — a camada deles
-        #: é a do perfil, como na ativação (`_com_o_teto_da_economia`).
         self._em_economia: frozenset[str] = frozenset()
-        #: PARA QUAL NÚMERO a cor de cada controle em economia foi escolhida —
-        #: o par da camada do perfil, lido pelo dono da ativação.
         self._procedencias_da_economia: dict[str, object] = {}
-        #: O rascunho trouxe o mapa `controllers` (e não `None`): só então o
-        #: mapa de overrides do daemon é trocado (Z4/T8).
         self._o_rascunho_tem_o_mapa = False
-        #: A seção `controllers` da vista, para o «Todos» das luzes saber se vai cru.
         self._controles_do_rascunho: Any = None
 
     def apply(self, params: dict[str, Any]) -> list[str]:
-        # ONDA-U (Causa A): trava manual INCONDICIONAL, no topo — antes vivia
-        # só dentro de `_apply_triggers` (BUG-MOUSE-TRIGGERS-01), então um
-        # "Aplicar no controle" sem a seção `triggers` (ex.: só `leds`, o
-        # botão da aba Lightbar) não armava a trava; o `AutoSwitcher`
-        # reativava o perfil salvo no próximo tick com troca de foco de
-        # janela e apagava a edição recém-aplicada ("perfil eterno", U3/U4/
-        # U9/U11). `apply_draft` É sempre edição manual explícita — arma
-        # ANTES de aplicar, POR CATEGORIA das seções presentes (F1, auditoria
-        # 21/07); payload sem seção mapeável (ex.: só `mouse`) arma as três,
-        # preservando o incondicional da cura original.
-        # O CARIMBO DE CATEGORIA SAIU — 14/09/2026,
-        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Aqui o "Aplicar" da
-        # janela traduzia as seções do rascunho em categorias de trava manual e
-        # armava uma a uma, para o perfil reaplicado não pisar o que ela acabara
-        # de aplicar. Nenhum caminho lê a trava desde a decisão dela, e a razão
-        # está em `profiles/manager.apply`: o que ela aplica pela interface já
-        # vai para o perfil, então o perfil é quem guarda o ajuste dela.
         applied: list[str] = []
-        # Cada `apply` conta a história dele: zera o registro de falhas antes
-        # de começar (o mesmo applier pode ser reusado).
         self.failed = {}
-        # O TETO DA ECONOMIA ANTES DE TUDO — O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01
-        # (26/09/2026). Daqui para baixo cada seção lê a VISTA com o teto posto,
-        # como a ativação lê a dela; ver `_com_o_teto_da_economia`.
         self._o_rascunho_tem_o_mapa = isinstance(params.get("controllers"), dict)
         params = self._com_o_teto_da_economia(params)
         self._controles_do_rascunho = params.get("controllers")
-        # O denominador dos fatores de brilho por controle: o brilho GLOBAL do
-        # rascunho, lido da seção `leds` (ver `_publicar_escalas_de_brilho`).
         leds_raw = params.get("leds")
         self._brilho_do_rascunho = (
             _brilho_de(leds_raw.get("lightbar_brightness"))
@@ -121,8 +65,6 @@ class DraftApplier:
         )
         self._apply_section(applied, params.get("leds"), "leds", self._apply_leds)
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)
-        # PERFIL-04: overrides por-controle DEPOIS das seções globais — o
-        # override vence no alvo (mesma precedência da ativação de perfil).
         self._apply_section(
             applied, params.get("controllers"), "controllers", self._apply_controllers
         )
@@ -131,21 +73,7 @@ class DraftApplier:
         self._apply_section(
             applied, params.get("keyboard"), "keyboard", self._apply_keyboard
         )
-        # MIC-EXPOSE-01: seção `mic` (botão de mic  mute do sistema).
         self._apply_section(applied, params.get("mic"), "mic", self._apply_mic)
-        # O-VERDE-NAO-LEVAVA-O-SOM-01 (10/08/2026): a seção `speaker` faltava
-        # aqui, e a palavra é literal — `grep -c speaker` neste arquivo devolvia
-        # ZERO. O botão verde "Aplicar" carregava gatilho, luz, rumble, mouse,
-        # teclado e mic, e deixava o alto-falante do controle para trás.
-        #
-        # O volume, o mudo e o canal chegavam ao PERFIL (`to_profile`) e ao
-        # hardware na ATIVAÇÃO do perfil (`apply_profile_speaker`, pela rota do
-        # autoswitch), mas não no AGORA: ela mexia no card, clicava no verde, e
-        # o som não mudava até trocar de perfil. É metade exata da queixa dela —
-        # *"literalmente nenhuma feature ficou lá"*.
-        #
-        # Por último de propósito, como o mic: é a seção mais barata de refazer
-        # se falhar, e nenhuma outra depende dela.
         self._apply_section(applied, params.get("speaker"), "speaker", self._apply_speaker)
         return applied
 
@@ -163,23 +91,12 @@ class DraftApplier:
             applied.append(section)
         except Exception as exc:
             logger.warning(f"apply_draft_{section}_falhou", erro=str(exc))
-            # APLICAR-VERDADE-01: além do warning (que só a gente lê), a seção
-            # entra em `self.failed`. Sem isto a resposta do handler dizia
-            # apenas o que deu certo, e a GUI, sem nada que contradissesse o
-            # `status: "ok"`, anunciava "Perfil aplicado ao controle." mesmo
-            # com todas as seções fora. Motivo curto e cortado: serve de
-            # diagnóstico, não é o texto que a usuária lê.
             motivo = str(exc) or type(exc).__name__
             self.failed[section] = motivo[:120]
 
     @staticmethod
     def _scaled_rgb_from(leds_raw: dict[str, Any]) -> tuple[int, int, int] | None:
-        """RGB da seção de leds já escalado pelo brilho (0.0-1.0); None sem cor.
-
-        É O caminho de escala do brilho no apply_draft — os overrides
-        por-controle (PERFIL-04) passam por aqui também, em paridade com a
-        seção global.
-        """
+        """RGB da seção de leds já escalado pelo brilho (0.0-1.0); None sem cor."""
         rgb_raw = leds_raw.get("lightbar_rgb")
         if rgb_raw is None:
             return None
@@ -191,9 +108,6 @@ class DraftApplier:
         except (TypeError, ValueError):
             brightness = 1.0
         brightness = max(0.0, min(1.0, brightness))
-        # A CONTA É DO DONO DA ESCALA (`LedSettings.apply_brightness`), com o
-        # piso de D-2909-O-BRILHO-TEM-PISO (29/09/2026): por conta própria, o
-        # «Aplicar» acendia abaixo do piso e o perfil reaplicado, acima dele.
         from hefesto_dualsense4unix.core.led_control import LedSettings
 
         cru = tuple(max(0, min(255, int(canal))) for canal in rgb_raw)
@@ -233,22 +147,7 @@ class DraftApplier:
         return build_from_name(mode, trigger_params)
 
     def _apply_leds(self, leds_raw: Any) -> None:
-        """Aplica a seção GLOBAL de leds do draft em TODOS os controles.
-
-        Fix do review (2026-07-16, MED): via ``apply_output_defaults`` —
-        broadcast REAL que ignora o seletor de alvo e grava o
-        ``_desired_default`` (mesma medicina do `ProfileManager.apply`). Os
-        setters clássicos respeitavam o seletor: com um alvo selecionado
-        (o estado normal do fluxo de edição por-controle), o "Aplicar" do
-        rodapé gravava a seção GLOBAL no override do alvo, o default nunca
-        era atualizado e o replug de outro controle reassertava estado velho.
-
-        COR-04: ``auto_player_colors`` viaja nesta seção — propagado ao
-        registro de identidade ANTES do broadcast (mesma ordem da ativação
-        de perfil: ``_configure_auto_player_colors`` primeiro), para os
-        reasserts subsequentes já resolverem com o toggle novo. Payload sem
-        a chave (GUI antiga) = sem opinião — o estado vigente fica.
-        """
+        """Aplica a seção GLOBAL de leds do draft em TODOS os controles."""
         if not isinstance(leds_raw, dict):
             raise ValueError("leds deve ser objeto")
         self._configure_auto_colors(leds_raw)
@@ -259,36 +158,12 @@ class DraftApplier:
             self.controller.apply_output_defaults(
                 OutputSpec(led=rgb, player_leds=bits, player_led_brightness=luzes)
             )
-        # COR-03 (fix de integração, 2026-07-17): converge o estado físico ao
-        # RESOLVIDO por-controle após o toggle/broadcast — sem isto, religar
-        # as cores automáticas pelo "Aplicar" só surtiria efeito no próximo
-        # replug (e o D4 "a cor única aparece em todos" já dependia do
-        # broadcast acima). Getattr defensivo (fakes seguem sem o método).
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
 
     def _o_todos_das_luzes(self, leds_raw: dict[str, Any]) -> int | None:
-        """O degrau do «Todos» das luzes de número, quando ele pode ir a todos.
-
-        O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 (26/09/2026). A palavra
-        viaja na seção `leds` do rascunho; `None` sem ela (rascunho de outra
-        versão), e aí o padrão da ativação fica.
-
-        O `apply_output_defaults` leva o global CRU a todo handle, e não o
-        resolvido de cada um (`backend_pydualsense`, a razão está lá). Com um
-        controle que termina noutro degrau — a palavra dele, ou o Fraco da
-        economia —, o global cru seria nele um QUADRO INTERMEDIÁRIO antes da
-        palavra dele: medido na mesa de quatro com o global sempre cru, o P1
-        no Forte passava por `[2, 0, 0]` (o Fraco do «Todos», depois o dele).
-        Então o global só vai cru quando ninguém termina noutro degrau; senão
-        o padrão fica o que a ativação do perfil ativo deixou — o mesmo global
-        do disco, porque a tela só escreve a palavra por controle —, e cada
-        controle recebe a sua pela seção `controllers`. O que sobra (um
-        «Todos» mudado no disco sem ativação, com alguém noutro degrau) espera
-        a próxima ativação: o backend não tem porta que grave o padrão sem o
-        escrever cru, e ela não é desta posse.
-        """
+        """O degrau do «Todos» das luzes de número, quando ele pode ir a todos."""
         palavra = leds_raw.get("player_led_brightness")
         if palavra is None:
             return None
@@ -305,17 +180,7 @@ class DraftApplier:
 
     @staticmethod
     def _configure_auto_colors(leds_raw: dict[str, Any]) -> None:
-        """COR-04: propaga o toggle do automático ao registro de identidade.
-
-        Espelho do ``ProfileManager._configure_auto_player_colors`` para o
-        caminho ``profile.apply_draft`` (o "Aplicar" do rodapé e o botão
-        "Aplicar no controle" em "Todos") — sem isto o toggle editado na GUI
-        só valeria na PRÓXIMA ativação de perfil, e a semântica D4 ("a cor
-        única aparece em todos") ficaria quebrada ao vivo. O brilho
-        acompanha quando presente (a paleta automática respeita o brilho do
-        perfil — D11). Best-effort na mesma medida do manager: falha de
-        import/configure loga warning e NÃO derruba a aplicação da cor.
-        """
+        """COR-04: propaga o toggle do automático ao registro de identidade."""
         raw = leds_raw.get("auto_player_colors")
         if raw is None:
             return
@@ -338,11 +203,7 @@ class DraftApplier:
             logger.warning("apply_draft_auto_colors_falhou", erro=str(exc))
 
     def _apply_triggers(self, triggers_raw: Any) -> None:
-        """Aplica a seção GLOBAL de gatilhos em TODOS os controles.
-
-        Broadcast real via ``apply_output_defaults`` — mesma justificativa
-        de ``_apply_leds`` (fix do review 2026-07-16, MED).
-        """
+        """Aplica a seção GLOBAL de gatilhos em TODOS os controles."""
         if not isinstance(triggers_raw, dict):
             raise ValueError("triggers deve ser objeto")
         effects: dict[str, TriggerEffect] = {}
@@ -360,23 +221,7 @@ class DraftApplier:
             )
 
     def _apply_controllers(self, raw: Any) -> None:
-        """Aplica os overrides POR CONTROLE do draft (PERFIL-04).
-
-        Cada entrada ``{uniq: {leds?, triggers?}}`` vira um ``OutputSpec``
-        aplicado via ``apply_output_for`` — a API por-uniq do PERFIL-01
-        (alvo no parâmetro, nunca o seletor global). O brilho escala o RGB
-        pelo MESMO caminho da seção global (``_scaled_rgb_from``). Backend
-        sem estado por-controle (FakeController) herda o no-op seguro do
-        ``IController``; controle desconectado fica registrado no mapa em
-        memória do backend real (o hotplug o aplica quando chegar).
-
-        A seção presente SUBSTITUI o mapa inteiro de overrides
-        (``reset_output_overrides``) ANTES de reaplicar — o MESMO ciclo de
-        vida da ativação de perfil (``ProfileManager.apply``). Sem isto, um
-        ajuste especial que a usuária TIROU de um controle na GUI (ele voltou
-        a "Todos" e sumiu do payload) seguiria vivo no controle até a próxima
-        troca de perfil, e o "Aplicar" mostraria a cor/gatilho antigo.
-        """
+        """Aplica os overrides POR CONTROLE do draft (PERFIL-04)."""
         if not isinstance(raw, dict):
             raise ValueError("controllers deve ser objeto")
         specs: dict[str, OutputSpec] = {}
@@ -386,12 +231,8 @@ class DraftApplier:
             spec = self._controller_override_spec(entry, str(uniq))
             if spec is not None:
                 specs[str(uniq)] = spec
-        # O CONTROLE EM ECONOMIA VAI NA CAMADA DO PERFIL, como na ativação
-        # (`_publicar_a_economia`); o resto é a camada dela, como sempre.
         da_economia = {u: s for u, s in specs.items() if u in self._em_economia}
         da_mao = {u: s for u, s in specs.items() if u not in da_economia}
-        # Getattr defensivo: stubs/fakes de teste sem o método seguem (a base
-        # ``IController`` e os backends reais o têm — no-op sem estado por-uniq).
         reset = getattr(self.controller, "reset_output_overrides", None)
         if callable(reset) and self._o_rascunho_tem_o_mapa:
             reset(da_mao or None)
@@ -399,22 +240,9 @@ class DraftApplier:
             self._aplicar_com_o_brilho_da_cor(uniq, spec, raw.get(uniq))
         self._publicar_escalas_de_brilho(raw)
         self._publicar_a_economia(da_economia)
-        # A LUZ CONVERGE DEPOIS DO MAPA NOVO — conferência da
-        # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. O brilho sozinho de
-        # um controle viaja como FATOR, sem cor, e o `apply_output_for` acima
-        # não escreve luz nenhuma por ele; o único reassert desta aplicação era
-        # o de `_apply_leds`, que roda ANTES do mapa novo. Medido na mesa de
-        # quatro real: com o brilho do P1 mudado no disco (30%) e o «Aplicar»,
-        # o produto decidia `(0,0,76)` e a barra ficava em `(0,0,153)` até o
-        # próximo reassert. É o mesmo fecho da ativação (`manager.apply`).
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
-        # POR-UNIDADE-01 (10/08/2026): vibração e som da PEÇA. Ficam FORA do
-        # `OutputSpec` de propósito — não são output persistente do controle
-        # (o rumble é transitório; o áudio tem posse própria), e empurrá-los
-        # para dentro do spec faria o reassert de hotplug re-vibrar o que já
-        # passou. Cada um segue a sua rota por-uniq, que já existia.
         self._publicar_escalas_de_vibracao(raw)
         self._escrever_alto_falantes_por_unidade(raw)
 
@@ -442,21 +270,7 @@ class DraftApplier:
             aplicar(uniq, spec)
 
     def _publicar_escalas_de_brilho(self, raw: dict[str, Any]) -> None:
-        """Publica o brilho por controle como FATOR, como a ativação (R-20 item 2).
-
-        A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. O override que só
-        escreveu o brilho chega aqui SEM cor (`DraftConfig._controllers_to_ipc`
-        parou de lhe emprestar o global), e o brilho dele vale sobre a base do
-        merge — a cor do número ou o global —, pelo mesmo fator que
-        `manager._controllers_to_led_scales` publica na ativação: o brilho do
-        controle sobre o do perfil. SUBSTITUI o mapa inteiro, como a
-        vibração logo abaixo, e pela mesma razão: o brilho que ela tirou de um
-        controle tem de sumir no mesmo "Aplicar".
-
-        Sem o brilho global no rascunho (seção `leds` ausente) não há
-        denominador, e o mapa da última ativação fica; com ele em 0% também não
-        — é o caso degenerado em que a cor viaja materializada.
-        """
+        """Publica o brilho por controle como FATOR, como a ativação (R-20 item 2)."""
         escalar = getattr(self.controller, "set_led_scales", None)
         base = self._brilho_do_rascunho
         if not callable(escalar) or base is None or base <= 0.0:
@@ -482,20 +296,7 @@ class DraftApplier:
             escalar(escalas or None)
 
     def _publicar_escalas_de_vibracao(self, raw: dict[str, Any]) -> None:
-        """Publica a escala de vibração por peça no backend (POR-UNIDADE-01).
-
-        SUBSTITUI o mapa inteiro, como o ``reset_output_overrides`` acima e
-        pela mesma razão: intensidade que ela TIROU de um controle na janela
-        (a peça voltou ao global e sumiu do payload) tem de sumir do backend
-        no mesmo "Aplicar", senão continuaria valendo até a próxima troca de
-        perfil e a tela mentiria.
-
-        O fator é RELATIVO à política global vigente no daemon — o mesmo
-        denominador que ``_controllers_to_rumble_scales`` usa na ativação,
-        porque o valor que chega ao ``set_rumble`` já vem escalado por ela
-        (``apply_rumble_policy``). Sem daemon (CLI/testes), o denominador é o
-        ``balanceado`` padrão.
-        """
+        """Publica a escala de vibração por peça no backend (POR-UNIDADE-01)."""
         from hefesto_dualsense4unix.profiles.manager import _mult_da_politica
 
         escalar = getattr(self.controller, "set_rumble_scales", None)
@@ -511,10 +312,6 @@ class DraftApplier:
                 rumble_raw.get("policy"), rumble_raw.get("custom_mult")
             )
             if mult is None or base is None or base <= 0.0:
-                # Global em `auto` (denominador móvel) ou política que não vira
-                # número: a peça fica com o global. Ver a docstring do irmão em
-                # `profiles/manager.py` — prometer um fator contra denominador
-                # móvel seria pior do que não entregar.
                 continue
             fator = mult / base
             if fator != 1.0:
@@ -522,19 +319,7 @@ class DraftApplier:
         escalar(escalas or None)
 
     def _escrever_alto_falantes_por_unidade(self, raw: dict[str, Any]) -> None:
-        """Aplica o alto-falante de cada peça (POR-UNIDADE-01).
-
-        Rota por-``uniq`` que já existia e nunca fora ligada pelo perfil:
-        ``set_speaker_volume(volume, muted=..., uniq=..., rota=...)``. Fala
-        DIRETO com o backend, e não pelo ``speaker.set`` do IPC, pela mesma
-        razão de ``lifecycle.apply_profile_speaker``: aquele handler arma a
-        trava manual da categoria ``"audio"``, e um "Aplicar" que a armasse
-        faria todo "Aplicar" seguinte ser descartado em silêncio.
-
-        Sem broadcast e sem ``None``: seção ausente é ausência de opinião, e
-        nunca escrever é o que impede tomar a posse dos bytes de áudio de uma
-        peça que ninguém pediu (SOM-02, armadilha 1).
-        """
+        """Aplica o alto-falante de cada peça (POR-UNIDADE-01)."""
         setter = getattr(self.controller, "set_speaker_volume", None)
         if not callable(setter):
             return
@@ -614,27 +399,7 @@ class DraftApplier:
         )
 
     def _apply_rumble(self, rumble_raw: Any) -> None:
-        """Aplica a seção rumble do "Aplicar" do RODAPÉ.
-
-        NATIVO-RUMBLE-01 (19/08/2026) — **no Modo Nativo esta seção é recusada
-        inteira, sem tocar em nada.** Este era o vazamento silencioso da cura:
-        o rodapé emite a seção rumble em TODO "Aplicar" (mexer só no brilho já
-        basta — ABAS-04), então não passa por handler de rumble nenhum, e
-        gravar `rumble_active` aqui desarmava a HARM-16 pela porta de trás,
-        mesmo com o `rumble.set` já recusando. Ver o bloco de comentário em
-        `daemon.subsystems.rumble`.
-
-        Recusar SEM ESCREVER, e não "gravar passthrough", é deliberado: como a
-        seção viaja de carona em qualquer edição, zerar aqui apagaria um par
-        que ela tenha fixado por outro caminho num gesto que não era sobre
-        vibração.
-
-        A recusa sai como EXCEÇÃO, não como `return`, por APLICAR-VERDADE-01:
-        quem retorna sem levantar entra em `applied`, e o rodapé anunciaria
-        "aplicado" sobre uma seção que não encostou no controle — a mesma
-        mentira que esta leva inteira veio consertar. Levantando, a seção cai
-        em `self.failed` com o motivo e a tela conta a verdade.
-        """
+        """Aplica a seção rumble do "Aplicar" do RODAPÉ."""
         from hefesto_dualsense4unix.daemon.subsystems.rumble import (
             modo_nativo_manda_nos_motores,
         )
@@ -646,9 +411,6 @@ class DraftApplier:
                 "draft_rumble_recusado_modo_nativo",
                 pedido=rumble_raw,
             )
-            # Motivo curto de propósito (`_apply_section` corta em 120): serve
-            # de diagnóstico. A frase que a usuária lê é a de
-            # `daemon.subsystems.rumble`.
             raise ValueError("Modo Nativo: quem manda nos motores é o jogo")
         weak = rumble_raw.get("weak", 0)
         strong = rumble_raw.get("strong", 0)
@@ -657,31 +419,14 @@ class DraftApplier:
         weak = max(0, min(255, weak))
         strong = max(0, min(255, strong))
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
-        # BUG-RUMBLE-APPLY-KILLS-GAME-01: (0,0) num "Aplicar" significa "não force
-        # rumble" (passthrough), NÃO "force silêncio". Antes, rumble_active=(0,0)
-        # fazia o poll loop (_reassert_rumble) reescrever set_rumble(0,0) a cada
-        # tick, SOBRESCREVENDO o rumble do JOGO — qualquer "Aplicar" com sliders em
-        # 0 (o default) matava a vibração in-game. Passthrough = rumble_active None
-        # (o poll loop deixa o jogo controlar; idêntico a rumble.passthrough);
-        # aplica (0,0) uma vez para soltar um rumble contínuo anterior. "Parar"
-        # (rumble.stop) continua fixando (0,0) como silêncio deliberado.
         if weak == 0 and strong == 0:
             if daemon_cfg is not None:
                 daemon_cfg.rumble_active = None
-                # MESA-CHEIA-05 (E0): sem par fixado não há dono a lembrar.
                 daemon_cfg.rumble_active_uniq = None
             self.controller.set_rumble(weak=0, strong=0)
             return
-        # AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01:
-        # Persiste valores brutos para que o poll loop (_reassert_rumble)
-        # continue reaplicando a política a cada tick. Antes de enviar ao
-        # hardware, escala via apply_rumble_policy — mesmo comportamento
-        # canônico de _handle_rumble_set.
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
-            # MESA-CHEIA-05 (E0): o "Aplicar" do rodapé mira o alvo do seletor
-            # tanto quanto a aba Rumble — então congela o dono junto do par,
-            # senão o valor migra para quem entrar no seletor depois.
             daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
@@ -748,13 +493,6 @@ class DraftApplier:
         antes = bool(getattr(self.daemon.config, "mic_button_toggles_system", True))
         self.daemon.config.mic_button_toggles_system = valor
         logger.info("mic_button_toggles_system_aplicado", enabled=valor)
-        # DESLIGAR TEM DE DEVOLVER A LUZ (auditoria de 02/09/2026). O comentário
-        # do campo em `daemon/lifecycle.py` promete que, desligado, "o kernel
-        # segue dono do mudo E da luz do próprio controle". Isso era falso
-        # depois da primeira eleição: a posse do `common[8]` só cai por
-        # `set_microphone_led(None)`, e este caminho é reentrante em runtime —
-        # ela carrega um perfil de gravação e a luz fica CONGELADA no que a
-        # última eleição deixou, com o botão físico já sem efeito sobre ela.
         if antes and not valor:
             from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
                 devolver_a_luz_ao_kernel,
@@ -763,24 +501,7 @@ class DraftApplier:
             devolver_a_luz_ao_kernel(self.daemon)
 
     def _apply_speaker(self, speaker_raw: Any) -> None:
-        """Aplica a seção `speaker` do rascunho — O-VERDE-NAO-LEVAVA-O-SOM-01.
-
-        Três campos, os MESMOS do `ProfileSpeakerConfig` e do `SpeakerDraft`:
-        ``volume`` (0 a 255, byte do registrador), ``muted`` e ``rota`` (o canal de saída). Um nome
-        diferente aqui criaria um terceiro vocabulário para o mesmo fato.
-
-        **Reusa a porta que já existe**, `Daemon.apply_profile_speaker`, e isso
-        é requisito, não conveniência: ela é a mesma que a ativação de perfil
-        usa, já sabe conversar por-`uniq` e já carrega a política de silêncio da
-        SOM-02/E4. Um caminho novo direto ao backend seria um segundo dono dos
-        bytes de áudio — e o `set_speaker_volume` do backend, medido em 10/08,
-        **não tem gate de `_output_mute`**: chamá-lo por fora responderia `ok` em
-        Modo Nativo sem mandar byte nenhum, e a tela diria que aplicou.
-
-        Campo ausente é campo NÃO tocado (`volume` obrigatório, o resto opcional):
-        o rascunho só emite esta seção quando ela mexeu, e mesmo assim o mudo e a
-        rota podem não ter opinião. Sem opinião é silêncio, nunca ordem.
-        """
+        """Aplica a seção `speaker` do rascunho — O-VERDE-NAO-LEVAVA-O-SOM-01."""
         if not isinstance(speaker_raw, dict):
             raise ValueError("speaker deve ser objeto")
         if "volume" not in speaker_raw:
@@ -788,15 +509,6 @@ class DraftApplier:
         volume = speaker_raw.get("volume")
         if not isinstance(volume, int) or isinstance(volume, bool):
             raise ValueError("speaker.volume deve ser inteiro")
-        # A RÉGUA É 0..255, e errar isso recusa o volume NORMAL dela. Medido em
-        # 10/08/2026: a primeira versão desta guarda usou 0..100, por eu ter lido
-        # "volume" como porcentagem — e o controle deslizante do card em 100 %
-        # sai como **102**. A seção cairia em `failed` e o rodapé diria que o som
-        # falhou, no gesto mais comum que existe. O registrador do controle é um
-        # byte, e é assim em toda a casa: `ProfileSpeakerConfig` (`ge=0, le=255`),
-        # o `SpeakerDraft`, o IPC `speaker.set` e o `set_speaker_volume` do
-        # backend. Aqui não pode ser diferente — quatro réguas iguais e uma
-        # sozinha é como se recusa em silêncio o que a pessoa acabou de escolher.
         if not 0 <= volume <= 255:
             raise ValueError("speaker.volume fora de 0..255")
         muted = speaker_raw.get("muted", False)
@@ -842,16 +554,9 @@ class DraftApplier:
 
         device.set_bindings(resolve_key_bindings(raw))
 
-    # --- O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 (26/09/2026) ---
 
     def _politica_viva(self) -> tuple[str, float | None]:
-        """A política global de vibração do daemon, e o teto dela — o denominador.
-
-        Um lugar só para as duas contas do «Aplicar» que precisam dele: o fator
-        de cada peça (`_publicar_escalas_de_vibracao`) e a vibração da peça na
-        economia (`_com_o_teto_da_economia`). Sem daemon (CLI/testes), o
-        ``balanceado`` padrão.
-        """
+        """A política global de vibração do daemon, e o teto dela — o denominador."""
         from hefesto_dualsense4unix.profiles.manager import _RUMBLE_POLICY_PADRAO
 
         cfg = getattr(self.daemon, "config", None) if self.daemon else None
@@ -929,10 +634,6 @@ class DraftApplier:
         politica, custom = self._politica_viva()
         mapa = {str(u): _override_do_rascunho(e) for u, e in (
             ctrl_raw.items() if isinstance(ctrl_raw, dict) else ()) if isinstance(e, dict)}
-        # SEM A SEÇÃO GLOBAL NO RASCUNHO NÃO HÁ O QUE HERDAR: o controle que
-        # liga a sua economia herda do perfil o que não escreveu, e o global que
-        # não viajou não é o do perfil. Com a mesa, o global da vista é pedido
-        # pelo dono e descartado aqui.
         vista = _perfil_na_economia(
             Profile.model_construct(
                 leds=leds if leds is not None else (LedsConfig() if mesa else None),
@@ -966,12 +667,6 @@ class DraftApplier:
         if controles:
             novo["controllers"] = controles
         self._em_economia = em_economia
-        # O NÚMERO DE CADA COR vai com a camada do perfil, pelo MESMO dono da
-        # ativação (`manager._controllers_to_procedencias`): sem ele a cor do
-        # controle em economia entrava `LEGADO`, e na «Bateria longa» o tom que
-        # é o número de outro da mesa virava fóssil pela forma — o P4 no tom do
-        # número 2 acendia, depois do «Aplicar», a cor do número dele
-        # (conferência da O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09).
         self._procedencias_da_economia = _controllers_to_procedencias(
             {u: da_vista[u] for u in em_economia})
         return novo
@@ -1005,11 +700,6 @@ class DraftApplier:
             _aplicar_com_procedencia(
                 self.controller.apply_output_for, uniq, spec,
                 procedencias.get(uniq, LEGADO))
-
-
-# ---------------------------------------------------------------------------
-# A tradução do rascunho para o esquema, e de volta — só o que o teto lê
-# ---------------------------------------------------------------------------
 
 
 def _leds_do_rascunho(leds_raw: dict[str, Any]) -> Any:
@@ -1070,11 +760,7 @@ def _gatilho_para_o_rascunho(gatilho: Any) -> dict[str, Any]:
 
 
 def _entrada_na_economia(entrada: Any, dele: Any) -> dict[str, Any]:
-    """A entrada de um controle com a luz, os gatilhos e a vibração da vista da economia.
-
-    O resto da entrada (o alto-falante) segue como veio: a economia não o toca
-    (`schema.A_ECONOMIA_EM_CADA_PECA`).
-    """
+    """A entrada de um controle com a luz, os gatilhos e a vibração da vista da economia."""
     saida = {k: v for k, v in (entrada or {}).items()
              if k not in ("leds", "triggers", "rumble")}
     luz = getattr(dele, "leds", None)

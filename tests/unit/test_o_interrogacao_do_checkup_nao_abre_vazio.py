@@ -65,12 +65,7 @@ def _ordem(acao: str = "") -> Ordem:
 
 
 def _item_de_ordem(acao: str = "") -> Item:
-    """O `Item` que `exame_da_mesa.itens_das_ordens` monta a partir dela.
-
-    A forma é a de lá, e não uma invenção: `chave=ordem.chave`,
-    `cura=ordem.acao or None` e `porque=ordem.o_que_eu_vi.texto`. É essa forma
-    que produz o buraco — a chave não é de regra, logo não tem verbete.
-    """
+    """O `Item` que `exame_da_mesa.itens_das_ordens` monta a partir dela."""
     ordem = _ordem(acao)
     return Item(
         chave=ordem.chave,
@@ -83,8 +78,7 @@ def _item_de_ordem(acao: str = "") -> Item:
 
 
 def test_a_chave_de_uma_ordem_nao_tem_verbete_e_e_por_isso_que_doia() -> None:
-    """A PREMISSA, medida: sem esta guarda os testes abaixo podem ficar verdes
-    por a chave ter ganhado verbete, e não por a cura funcionar."""
+    """A PREMISSA, medida: sem esta guarda os testes abaixo podem ficar verdes"""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import (
         DICAS_DAS_LINHAS,
     )
@@ -97,12 +91,7 @@ def test_a_chave_de_uma_ordem_nao_tem_verbete_e_e_por_isso_que_doia() -> None:
 
 
 def test_o_interrogacao_de_uma_ordem_nao_abre_vazio() -> None:
-    """O CORAÇÃO: a linha da ordem tem o que dizer, e diz.
-
-    A MORDIDA: tire o `if ordem is not None:` de `_dica_da_linha` — esta linha
-    reprova mostrando a dica vazia que o `escrever()` viraria num travessão
-    dentro de uma caixa de 330px.
-    """
+    """O CORAÇÃO: a linha da ordem tem o que dizer, e diz."""
     dica = a08._linha(_item_de_ordem())["dica"]
     assert dica, (
         "o `?` desta linha continua sem nada dentro — a caixa de 330px abre "
@@ -110,11 +99,7 @@ def test_o_interrogacao_de_uma_ordem_nao_abre_vazio() -> None:
 
 
 def test_ele_traz_as_duas_frases_do_produto_com_o_rotulo_delas() -> None:
-    """"Por que importa" e "Ganho esperado", as duas do dono, rotuladas.
-
-    O rótulo vem de `ROTULOS_DA_ORDEM` e não é digitado aqui: uma segunda
-    grafia é a que fica para trás no dia em que a primeira mudar.
-    """
+    """"Por que importa" e "Ganho esperado", as duas do dono, rotuladas."""
     dica = a08._linha(_item_de_ordem())["dica"]
     for rotulo, texto in zip(ROTULOS_DA_ORDEM[1:], (IMPORTA, GANHO), strict=True):
         assert f"<b>{rotulo}:</b>" in dica, (
@@ -123,12 +108,7 @@ def test_ele_traz_as_duas_frases_do_produto_com_o_rotulo_delas() -> None:
 
 
 def test_ele_nao_repete_a_linha_que_esta_ao_lado() -> None:
-    """DECISÃO 9 DELA, e ela continua valendo: *"o `?` para de repetir a linha"*.
-
-    A primeira das três (`O que eu vi aqui`) é o `Item.porque`, que a linha ao
-    lado mostra. Trazê-la para a dica faria a pessoa ler a mesma frase duas
-    vezes — que é exatamente o que ela mandou tirar.
-    """
+    """DECISÃO 9 DELA, e ela continua valendo: *"o `?` para de repetir a linha"*."""
     linha = a08._linha(_item_de_ordem())
     assert linha["porque"] == VI, "a linha deixou de mostrar a medição"
     assert VI not in linha["dica"], (
@@ -137,11 +117,7 @@ def test_ele_nao_repete_a_linha_que_esta_ao_lado() -> None:
 
 
 def test_a_cura_continua_vindo_depois_das_duas() -> None:
-    """Uma ordem COM ação tem as três coisas, e o "o que fazer" é a última.
-
-    A ordem entre elas é a leitura: por que importa, o que se ganha, e só então
-    o que fazer. Invertida, a pessoa lê a instrução antes de saber por quê.
-    """
+    """Uma ordem COM ação tem as três coisas, e o "o que fazer" é a última."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import (
         PREFIXO_DA_CURA,
     )
@@ -155,11 +131,7 @@ def test_a_cura_continua_vindo_depois_das_duas() -> None:
 
 
 def test_uma_linha_de_regra_nao_ganhou_frase_nenhuma_a_mais() -> None:
-    """A cura é PARA A ORDEM, e não pode ter mexido nas cinco regras.
-
-    Um item de regra não traz `ordem`, então nada muda nele. Sem esta guarda a
-    cura poderia ter posto rótulo em toda dica da aba.
-    """
+    """A cura é PARA A ORDEM, e não pode ter mexido nas cinco regras."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import (
         DICAS_DAS_LINHAS,
     )
@@ -178,4 +150,3 @@ def test_uma_linha_de_regra_nao_ganhou_frase_nenhuma_a_mais() -> None:
         assert rotulo not in dica
 
 
-# "O homem é a medida de todas as coisas." — Protágoras

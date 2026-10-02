@@ -1,11 +1,4 @@
-"""Garante que _evdev.snapshot() é chamado exatamente 1x por tick no poll loop.
-
-Contexto (armadilha A-09): antes do refactor REFACTOR-HOTKEY-EVDEV-01,
-_dispatch_mouse_emulation e o consumer de hotkey chamavam snapshot()
-independentemente — 2 snapshots/tick com ambos ativos. Este teste prova
-que após o refactor há exatamente 1 chamada por tick, independentemente
-de quantos consumidores estejam ativos.
-"""
+"""Garante que _evdev.snapshot() é chamado exatamente 1x por tick no poll loop."""
 from __future__ import annotations
 
 import asyncio
@@ -17,10 +10,6 @@ import pytest
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.testing import FakeController
-
-# ---------------------------------------------------------------------------
-# Auxiliares
-# ---------------------------------------------------------------------------
 
 
 def _mk_states(n: int) -> list[ControllerState]:
@@ -48,18 +37,9 @@ class _FakeSnapComBotoes:
     buttons_pressed: ClassVar[list[str]] = ["cross", "ps"]
 
 
-# ---------------------------------------------------------------------------
-# Testes
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
-    """Com evdev disponível mas sem mouse nem hotkey ativos, snapshot() deve ser
-    chamado 1x por tick (via _evdev_buttons_once, mesmo que nenhum consumidor use).
-
-    Valida que o refactor não introduziu chamada extra em _poll_loop.
-    """
+    """Com evdev disponível mas sem mouse nem hotkey ativos, snapshot() deve ser"""
     n_ticks = 10
     call_counter: list[int] = []
 
@@ -83,14 +63,12 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
     )
 
     run_task = asyncio.create_task(daemon.run())
-    # Aguarda n_ticks ticks a 200Hz (~50ms)
     await asyncio.sleep(0.15)
     daemon.stop()
     await run_task
 
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks, f"poll.tick esperado >= {n_ticks}, obtido {ticks}"
-    # snapshot() deve ser chamado exatamente 1x por tick
     assert len(call_counter) == ticks, (
         f"snapshot() chamado {len(call_counter)}x para {ticks} ticks "
         f"(esperado 1:1 — sem duplicatas)"
@@ -101,16 +79,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
 async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Com hotkey_manager E mouse_device ativos, snapshot() deve ser chamado
-    1x por tick (não 2x como era antes do refactor REFACTOR-HOTKEY-EVDEV-01).
-
-    Este é o cenário crítico da armadilha A-09: 2 consumidores → antes=20 chamadas,
-    depois=10 chamadas para 10 ticks.
-
-    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que o mouse.dispatch
-    ocorra desde o 1º tick (o snapshot evdev é lido fora do gate de settling,
-    mas o dispatch de mouse é suprimido durante o grace).
-    """
+    """Com hotkey_manager E mouse_device ativos, snapshot() deve ser chamado"""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
@@ -136,13 +105,10 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse(
         ),
     )
 
-    # Instancia HotkeyManager diretamente (sem _start_hotkey_manager para
-    # evitar dependência de steam_launcher no ambiente de CI).
     from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
     daemon._hotkey_manager = HotkeyManager()
 
-    # Mock de mouse device que registra chamadas a dispatch().
     dispatch_calls: list[Any] = []
     mock_mouse = MagicMock()
     mock_mouse.dispatch.side_effect = lambda **kw: dispatch_calls.append(kw)
@@ -156,13 +122,11 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse(
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks, f"poll.tick esperado >= {n_ticks}, obtido {ticks}"
 
-    # CRITÉRIO PRINCIPAL: 1 snapshot por tick, não 2.
     assert len(call_counter) == ticks, (
         f"snapshot() chamado {len(call_counter)}x para {ticks} ticks "
         f"(esperado 1:1 — refactor A-09 falhou se > ticks)"
     )
 
-    # Subproduto: dispatch foi chamado uma vez por tick (mouse ativo).
     assert len(dispatch_calls) == ticks, (
         f"mouse.dispatch chamado {len(dispatch_calls)}x para {ticks} ticks"
     )
@@ -205,9 +169,7 @@ async def test_snapshot_nao_chamado_quando_evdev_indisponivel():
 
 @pytest.mark.asyncio
 async def test_snapshot_excecao_retorna_frozenset_vazio():
-    """Se snapshot() lança exceção, _evdev_buttons_once retorna frozenset() vazio
-    e o poll loop continua sem travar.
-    """
+    """Se snapshot() lança exceção, _evdev_buttons_once retorna frozenset() vazio"""
     n_ticks = 5
     fc = FakeController(transport="usb", states=_mk_states(n_ticks * 4))
     mock_evdev = MagicMock()
@@ -233,7 +195,6 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
     daemon.stop()
     await run_task
 
-    # Poll loop continuou normalmente apesar da exceção no evdev.
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks, (
         f"poll loop parou precocemente ({ticks} ticks) após exceção no evdev"
@@ -244,13 +205,7 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
 async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Botões retornados por _evdev_buttons_once devem chegar ao hotkey_manager.observe
-    E ao mouse_device.dispatch — o mesmo conjunto, não snapshots independentes.
-
-    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que observe/dispatch
-    ocorram desde o 1º tick (do contrário a asserção `all(...)` ficaria vacuamente
-    verdadeira sobre listas vazias durante o settling).
-    """
+    """Botões retornados por _evdev_buttons_once devem chegar ao hotkey_manager.observe"""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
@@ -266,14 +221,9 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
 
     from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
-    # O daemon cria o próprio HotkeyManager em run() (start_hotkey_manager), então
-    # espionamos o método real em vez de injetar uma instância (que seria
-    # sobrescrita). Assim testamos o wiring de verdade.
     _orig_observe = HotkeyManager.observe
 
     def _spy_observe(self: Any, pressed: Any, *, now: Any = None, de: Any = None) -> Any:
-        # `de` é o controle dos botões (O-MODO-XBOX-NAO-E-QUEDA-02, item 5); com
-        # o FakeController há um só, o primário, e a chave dele é None.
         assert de is None, f"o laço leu um controle que o FakeController não tem: {de}"
         hotkey_observes.append(frozenset(pressed))
         return _orig_observe(self, pressed, now=now, de=de)
@@ -308,11 +258,6 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks
 
-    # FEAT-HOTKEY-COMBO-NO-LEAK-01/02: observe() SEMPRE recebe o conjunto
-    # completo (precisa do 'ps' para detectar combos), mas a emulação NÃO recebe
-    # os membros de um combo PS+X. Aqui 'ps' é membro dos combos (PS+Options
-    # etc.) e fica latchado enquanto pressionado, então mouse.dispatch recebe só
-    # {cross} — o 'ps' não vaza para a emulação.
     observe_esperado = frozenset(["cross", "ps"])
     dispatch_esperado = frozenset(["cross"])
     assert hotkey_observes, "hotkey_manager.observe nunca foi chamado"

@@ -1,25 +1,8 @@
-"""Cards de controle da aba Início (FEAT-STATE-PER-CONTROLLER-01 + LEIGO-02).
-
-Duas camadas, ambas herméticas (sem GTK real):
-
-1. Funções puras de formatação (`_format_controller_subtitle`,
-   `_format_controller_title`, `_format_players_hint`, `_mode_label`) — o
-   contrato de texto dos cards e dos toasts.
-2. `_render_home_controllers` com um Gtk fake injetado em ``sys.modules``
-   (o método importa ``gi.repository`` dentro da função, então o
-   ``monkeypatch.setitem`` cobre com ou sem PyGObject instalado — A-12).
-
-Os handlers do SegmentedSelector (BUG-HOME-SEGMENTED-SIGNATURE-01) NÃO são
-tocados aqui — seguem cobertos por ``test_home_actions_handlers.py``.
-"""
+"""Cards de controle da aba Início (FEAT-STATE-PER-CONTROLLER-01 + LEIGO-02)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_controller_cards: importa código da janela GTK")
 
 import sys
@@ -37,10 +20,6 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     _format_players_hint,
     _mode_label,
 )
-
-# ---------------------------------------------------------------------------
-# 1. Funções puras de formatação
-# ---------------------------------------------------------------------------
 
 
 class TestFormatSubtitle:
@@ -71,17 +50,7 @@ class TestFormatSubtitle:
         )
 
     def test_transport_ausente_diz_que_nao_sabe(self) -> None:
-        """NOTA DATADA — 25/08/2026 (I9). Este teste se chamava
-        `test_transport_ausente_vira_interrogacao` e travava o `"?"`.
-
-        `"?"` não é resposta: é a tela encolhendo os ombros num lugar onde ela
-        tem de dizer o que sabe e o que não sabe. E `USB`/`BT`, que este mesmo
-        card mostrava, são o nome do barramento e a sigla do protocolo — não as
-        palavras de quem quer jogar. O mapa de canais, que é o portão, fala
-        **cabo** e **rádio**; a TELA voltou a dizer `USB`/`BT` em 21/09/2026,
-        por palavra dela (*"USB e BT é muito bom"*), e quem responde por ela é
-        `home_actions.palavra_do_transporte`. O `"?"` é que nunca volta.
-        """
+        """NOTA DATADA — 25/08/2026 (I9). Este teste se chamava"""
         assert (
             _format_controller_subtitle(None, is_primary=False, battery_pct=None)
             == "não sei por onde"
@@ -101,8 +70,7 @@ class TestLabelsDosToasts:
         assert _flavor_label("dualsense") == "DualSense (botões PlayStation)"
 
     def test_id_desconhecido_nao_vira_vazio(self) -> None:
-        """Daemon mais novo com um modo que esta GUI não conhece: mostra o id
-        cru em vez de um toast em branco."""
+        """Daemon mais novo com um modo que esta GUI não conhece: mostra o id"""
         assert _mode_label("modo_do_futuro") == "modo_do_futuro"
         assert _flavor_label(None) == "None"
 
@@ -123,8 +91,6 @@ class TestFormatControllerTitle:
     """
 
     def test_numero_do_controle_e_jogador_podem_divergir(self) -> None:
-        # Controle 2 sendo o jogador 3 é real: índices de jogador são reusados
-        # quando um sai e outro entra.
         assert (
             _format_controller_title({"player_slot": 2, "player": 3})
             == "Controle 2 — P3"
@@ -166,11 +132,6 @@ class TestFormatPlayersHint:
             _format_players_hint([{"player": n} for n in (1, 2, 3, 4)])
             == "4 controles = 4 jogadores"
         )
-
-
-# ---------------------------------------------------------------------------
-# 2. Render dos cards com Gtk fake
-# ---------------------------------------------------------------------------
 
 
 class _StyleCtx:
@@ -245,11 +206,7 @@ def _card_texts(card: _FakeWidget) -> list[str]:
 
 
 def test_render_mostra_bateria_e_nunca_o_mac(fake_gtk: None) -> None:
-    """LEIGO-02: o fim do MAC saiu do card — a bateria e o jogador ficam.
-
-    O hash não casa com nada que ela consiga ler no controle físico; quem
-    distingue os aparelhos na mesa é a cor da luz e o LED de jogador.
-    """
+    """LEIGO-02: o fim do MAC saiu do card — a bateria e o jogador ficam."""
     host = _Host()
     controllers: list[dict[str, Any]] = [
         {
@@ -284,7 +241,6 @@ def test_render_mostra_bateria_e_nunca_o_mac(fake_gtk: None) -> None:
 
     texts_p2 = _card_texts(cards[1])
     assert "BT" in texts_p2
-    # Sem bateria: nada de "%" no segundo card.
     assert not any("%" in t for t in texts_p2)
 
 

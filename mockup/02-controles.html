@@ -733,8 +733,8 @@
      "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
 
      ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
-     seis lugares (`monta.py:267`, `aba01.py:936`, `aba04.py:832`,
-     `aba05.py:1105`, `aba06.py:1181`, `aba10.py:584`), assim:
+     seis lugares (`monta.py:84`, `aba01.py:650`, `aba04.py:689`,
+     `aba05.py:778`, `aba06.py:1042`, `aba10.py:380`), assim:
      "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
      um controle; um desenho cinza diz."
      O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
@@ -744,11 +744,11 @@
      É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
      cobram a regra e o elemento no publicado
      (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
-     por ÍNDICE — `aba06.py:1186` avisa que "um lugar vazio sem endereço tiraria
+     por ÍNDICE — `aba06.py:1047` avisa que "um lugar vazio sem endereço tiraria
      uma casa da fila e o P4 receberia a cor do P3".
 
      UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
-     gerador E pelo piloto (`hefesto_vivo.py:603`), e reaberta quando o controle
+     gerador E pelo piloto (`hefesto_vivo.py:425`), e reaberta quando o controle
      chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
      aba01/04/05/06/10. */
   [data-conectado="nao"] .ds-svg,
@@ -1357,13 +1357,13 @@
      fluindo. O `paridade-gtk-html.csv:55` já nomeava isso.
 
      E NÃO É A LINHA DA VERDADE. Ela foi a primeira escolha desta sprint e a
-     medição a derrubou: a linha de `controller_card.py:1729` SAIU DA TELA DA
+     medição a derrubou: a linha de `controller_card.py:892` SAIU DA TELA DA
      GTK em 17/08/2026, a pedido dela (*"remover guia dos status em tempo real"*,
      SEM-BARRA-DA-VERDADE-01), e continua criada e alimentada fora da tela —
-     `controller_card.py:2916` diz isso com todas as letras, e o
+     `controller_card.py:1688` diz isso com todas as letras, e o
      `paridade-gtk-html.csv:56` avisa que reconstruí-la aqui seria reintroduzir
      o que ela mandou tirar. **Quem OCUPA este lugar na GTK dela é justamente o
-     `_motion_label`** (`controller_card.py:2770`), que é esta frase.
+     `_motion_label`** (`controller_card.py:1615`), que é esta frase.
 
      O NOME DAQUELA FUNÇÃO NÃO SE SOLETRA NESTE ARQUIVO, e não é preciosismo: o
      portão da paridade vigia a AUSÊNCIA do símbolo do lado HTML, e ele não
@@ -1621,7 +1621,7 @@
      — fotografado em 02/09 às 19h, `touch-estado` dizendo "Sem toque" com o
      ponto ciano no lugar. A CLASSE é o único alvo do piloto que serve: os sete
      são texto·largura·fundo·valor·html·classe·cor, e `classe` é o único
-     idempotente que liga e desliga (`hefesto_vivo.py:499-515`). */
+     idempotente que liga e desliga (`hefesto_vivo.py:321-337`). */
   .touch .ponto{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan);
                 box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%);opacity:0}
   .touch .ponto.on{opacity:1}
@@ -1644,7 +1644,7 @@
      deu `rgb(0, 0, 255)` depois da escrita e `rgb(40, 42, 54)` (o `--panel`)
      depois do vazio, na mesma medição.
 
-     FATO QUE ISTO DERRUBA: `pacotes/__init__.py:375-382` explica o `fundo`
+     FATO QUE ISTO DERRUBA: `pacotes/__init__.py:203-210` explica o `fundo`
      dizendo que o problema é o TRAVESSÃO (`background: "—"` é inválido). É
      verdade, e é MENOR que o defeito: uma cor perfeitamente VÁLIDA infla o
      contador do mesmo jeito.
@@ -1947,7 +1947,7 @@
      coisas — a dica e o atributo que apaga o botão —, e as duas querem valores
      opostos para "não há o que dizer": o atributo quer VAZIO (o piloto o
      remove) e a dica queria o marcador. Com o vazio, `escrever()` escreve o
-     travessão no `innerHTML` (`hefesto_vivo.py:245`, para TODOS os alvos), a
+     travessão no `innerHTML` (`hefesto_vivo.py:99`, para TODOS os alvos), a
      dica deixa de ser vazia e o `?` apareceu na tela — **com um `—` dentro**,
      ao lado dos dois botões que estavam clicáveis. Ruído com cara de dado, que
      é exatamente o que o `?` da D-03 existe para não ser.
@@ -2896,7 +2896,7 @@
                SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
                ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
                LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
-               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               piloto lê (`hefesto_vivo.py:51`). Um endereço só escreveria o
                número DENTRO da barra. -->
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
@@ -3088,7 +3088,7 @@
                  sentido o liberar ali"*.
 
                  EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:6473`) e devolve a
+                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:4742`) e devolve a
                  posse ao `hid-playstation` — a minha objeção era que o botão tinha
                  dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
                  nunca deixa de comandar a interface, não há posse a devolver, e um
@@ -3170,7 +3170,7 @@
               <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
                    razão do `data-gesto="mudo"` lá em cima: o piloto monta o
                    nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:221`). Sem ele, Virtual e Nativo
+                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
                    chegavam ao despachante chamando-se `clique`, disputando um
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
@@ -3463,7 +3463,7 @@
                SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
                ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
                LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
-               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               piloto lê (`hefesto_vivo.py:51`). Um endereço só escreveria o
                número DENTRO da barra. -->
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
@@ -3655,7 +3655,7 @@
                  sentido o liberar ali"*.
 
                  EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:6473`) e devolve a
+                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:4742`) e devolve a
                  posse ao `hid-playstation` — a minha objeção era que o botão tinha
                  dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
                  nunca deixa de comandar a interface, não há posse a devolver, e um
@@ -3737,7 +3737,7 @@
               <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
                    razão do `data-gesto="mudo"` lá em cima: o piloto monta o
                    nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:221`). Sem ele, Virtual e Nativo
+                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
                    chegavam ao despachante chamando-se `clique`, disputando um
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
@@ -4030,7 +4030,7 @@
                SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
                ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
                LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
-               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               piloto lê (`hefesto_vivo.py:51`). Um endereço só escreveria o
                número DENTRO da barra. -->
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
@@ -4222,7 +4222,7 @@
                  sentido o liberar ali"*.
 
                  EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:6473`) e devolve a
+                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:4742`) e devolve a
                  posse ao `hid-playstation` — a minha objeção era que o botão tinha
                  dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
                  nunca deixa de comandar a interface, não há posse a devolver, e um
@@ -4304,7 +4304,7 @@
               <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
                    razão do `data-gesto="mudo"` lá em cima: o piloto monta o
                    nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:221`). Sem ele, Virtual e Nativo
+                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
                    chegavam ao despachante chamando-se `clique`, disputando um
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
@@ -4597,7 +4597,7 @@
                SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
                ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
                LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
-               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               piloto lê (`hefesto_vivo.py:51`). Um endereço só escreveria o
                número DENTRO da barra. -->
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
@@ -4789,7 +4789,7 @@
                  sentido o liberar ali"*.
 
                  EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:6473`) e devolve a
+                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:4742`) e devolve a
                  posse ao `hid-playstation` — a minha objeção era que o botão tinha
                  dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
                  nunca deixa de comandar a interface, não há posse a devolver, e um
@@ -4871,7 +4871,7 @@
               <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
                    razão do `data-gesto="mudo"` lá em cima: o piloto monta o
                    nome do gesto como `d.gesto || d.hefGesto || d.papel ||
-                   'clique'` (`hefesto_vivo.py:221`). Sem ele, Virtual e Nativo
+                   'clique'` (`hefesto_vivo.py:80`). Sem ele, Virtual e Nativo
                    chegavam ao despachante chamando-se `clique`, disputando um
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
@@ -5141,7 +5141,7 @@
 
   <h2>O que mudou em 31/08</h2>
   <ul>
-    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:490</code>) e o daemon aceita <code>mic.set {muted: null}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
+    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:238</code>) e o daemon aceita <code>mic.set {muted: null}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
     <li><b>Esta legenda anunciava o botão de cima como novidade — dois dias depois de ele sair da tela.</b> É o defeito que esta aba existe para não cometer, virado para dentro: <i>a prosa afirmando o que o produto não faz</i>. Agora o gerador <b>para</b> se a legenda citar um rótulo que o desenho não escreve, e só um <code>&lt;li class="foi"&gt;</code> — a lápide, o item recuado aqui em cima — tem licença de nomear o que saiu. A mesma régua recusa título com data relativa: foi um <i>"hoje"</i> num <code>&lt;h2&gt;</code> que envelheceu calado.</li>
   </ul>
 
@@ -5220,8 +5220,8 @@
   <h2>Ainda aberto</h2>
   <ul>
     <li><b>Os 16 quadradinhos viram o desenho do DualSense?</b> A pergunta é sua, do contrato da aba. A medição pende para os quadradinhos: a coluna deles tem 212 px e é a única das cinco que ainda estica sem estourar — o desenho inteiro do controle nessa largura empurraria o card muito além dos 304 px, e o card tem exatamente <b>24 px</b> de folga.</li>
-    <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:499</code>).</li>
-    <li><b>Histórico de bateria.</b> O diário grava por controle desde sempre e ninguém lê (<code>daemon/battery_journal.py:214</code>). Com 4 ligados o P3 já aparece em 31%.</li>
+    <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:267</code>).</li>
+    <li><b>Histórico de bateria.</b> O diário grava por controle desde sempre e ninguém lê (<code>daemon/battery_journal.py:153</code>). Com 4 ligados o P3 já aparece em 31%.</li>
     <li><b>Fechou:</b> o acelerômetro <b>é</b> pintado ao vivo. Os três eixos em <b>g</b> saem do mesmo caminho do giroscópio, escritos a cada tique pelo pacote desta aba. Esta linha dizia o contrário desde 30/08 — que a ponte procurava <code>acel-x</code> e a tela escrevia <code>accel-x</code> —, e a varredura de 10/09 mediu os três elos e desmentiu os três: o pacote escreve, a página tem os endereços, e o piloto que a frase citava já registrava, em comentário, que aquele nome não existia mais. <b>A tela estava confessando uma dívida que o produto não tinha</b> — o oposto exato do defeito que esta aba persegue, e igualmente caro.</li>
     <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e 1 linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que ela não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que ela ocupa no "Todos" inclusive.</li>
   </ul>

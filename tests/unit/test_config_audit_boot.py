@@ -1,9 +1,4 @@
-"""Auditoria de perfis no boot (FEAT-CONFIG-AUDIT-BOOT-01).
-
-`audit_profiles()` valida todos os perfis e coleta os corrompidos (sem levantar);
-o daemon usa isso no boot para AVISAR o usuário (log + notificação), em vez de
-só pular o perfil silenciosamente no fallback.
-"""
+"""Auditoria de perfis no boot (FEAT-CONFIG-AUDIT-BOOT-01)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,14 +21,13 @@ def test_audit_profiles_detecta_corrompido(
         return target
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
-    # Perfil válido (formato garantido) + um corrompido.
     loader_module.save_profile(Profile(name="ok", match=MatchAny(), priority=0))
     (target / "lixo.json").write_text("{{ broken json [", encoding="utf-8")
 
     invalid = loader_module.audit_profiles()
     nomes = [name for name, _err in invalid]
     assert "lixo.json" in nomes
-    assert all("ok" not in n for n in nomes)  # o válido não é reportado
+    assert all("ok" not in n for n in nomes)
 
 
 def test_notify_config_errors_vazio_nao_notifica(
@@ -47,6 +41,5 @@ def test_notify_config_errors_vazio_nao_notifica(
 
     assert dn.notify_config_errors([]) is False
     assert called == []
-    # Com inválidos, notifica uma vez.
     assert dn.notify_config_errors([("x.json", "erro")]) is True
     assert len(called) == 1

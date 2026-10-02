@@ -19,10 +19,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("controller target ui")
 
 from pathlib import Path
@@ -41,7 +37,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: MACs forjados da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 
@@ -88,13 +83,7 @@ def test_active_position_alvo_segundo_controle() -> None:
 
 def test_active_position_alvo_inexistente_cai_em_todos() -> None:
     rows = StatusActionsMixin._controller_target_rows([_conectado(0, "usb")])
-    # alvo aponta para um índice que não está na lista → "Todos" (posição 0).
     assert StatusActionsMixin._target_active_position(rows, 5) == 0
-
-
-# ---------------------------------------------------------------------------
-# PERFIL-04: alvo de EDIÇÃO derivado do seletor + badge
-# ---------------------------------------------------------------------------
 
 
 class _FakeBadge:
@@ -166,21 +155,13 @@ def test_sync_edit_target_todos_esconde_badge() -> None:
     inst._update_target_maps([_conectado_com_uniq(0, "bt", UNIQ_1)])
     inst._sync_edit_target(0)
     assert inst._edit_target_uniq == UNIQ_1
-    inst._sync_edit_target(None)  # "Todos"
+    inst._sync_edit_target(None)
     assert inst._edit_target_uniq is None
     assert not inst._edit_badge.visible
 
 
 def test_sync_edit_target_alvo_sem_mac_edita_global() -> None:
-    """Controle sem MAC estável (key por path): edição segue GLOBAL.
-
-    PLAYER-01 (25/07) TROCOU o contrato do selo de propósito. Antes o badge
-    ficava ESCONDIDO neste caso — e este era justamente o caso em que ela mais
-    precisava do aviso: ela escolhe "Controle 1" no cabeçalho, mexe na cor, e a
-    mexida vale para TODOS, sem nada na tela dizendo isso. O selo agora aparece
-    e diz a verdade incômoda ("sem endereço fixo, vale para todos"); o alvo de
-    edição continua ``None`` (rota global), que é a parte que não mudou.
-    """
+    """Controle sem MAC estável (key por path): edição segue GLOBAL."""
     inst = _status_instance()
     inst._update_target_maps([_conectado_com_uniq(0, "usb", None)])
     inst._sync_edit_target(0)
@@ -201,7 +182,7 @@ def test_sync_edit_target_repopula_abas_por_controle() -> None:
     inst._sync_edit_target(0)
     assert chamadas == ["lightbar", "triggers"]
     chamadas.clear()
-    inst._sync_edit_target(0)  # idempotente: alvo igual não repinta
+    inst._sync_edit_target(0)
     assert chamadas == []
 
 
@@ -214,18 +195,13 @@ def test_edit_badge_text_vazio_sem_alvo() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# PERFIL-04: API por-controle do DraftConfig (seletor → draft.controllers)
-# ---------------------------------------------------------------------------
-
-
 def _perfil_base(name: str = "vitoria") -> Profile:
     return Profile(
         name=name,
         match=MatchAny(),
         priority=5,
         leds=LedsConfig(
-            lightbar=(129, 61, 156),  # o roxo dela
+            lightbar=(129, 61, 156),
             player_leds=[True, False, False, False, False],
             lightbar_brightness=1.0,
         ),
@@ -236,36 +212,23 @@ def test_with_controller_leds_grava_so_no_override() -> None:
     """Editar leds do alvo NÃO toca a seção global nem outros controles."""
     draft = DraftConfig.from_profile(_perfil_base())
     base = draft.effective_leds_for(UNIQ_2)
-    assert base.lightbar_rgb == (129, 61, 156)  # sem override herda o global
+    assert base.lightbar_rgb == (129, 61, 156)
 
     novo = draft.with_controller_leds(
         UNIQ_2, base.model_copy(update={"lightbar_rgb": (0, 0, 255)})
     )
-    # Override do alvo criado, semeado com o que estava NA TELA.
     assert novo.effective_leds_for(UNIQ_2).lightbar_rgb == (0, 0, 255)
     assert novo.effective_leds_for(UNIQ_2).player_leds == (
         True, False, False, False, False,
     )
-    # Global e o outro controle seguem intactos.
     assert novo.leds.lightbar_rgb == (129, 61, 156)
     assert novo.effective_leds_for(UNIQ_1).lightbar_rgb == (129, 61, 156)
     assert novo.controller_override(UNIQ_1) is None
-    # O draft original não foi mutado (frozen + mapa novo).
     assert draft.controller_override(UNIQ_2) is None
 
 
 def test_with_controller_triggers_merge_por_secao() -> None:
-    """Override só de gatilhos: leds do alvo continuam herdando o global.
-
-    NASCE-LIGADO-01 (20/09/2026): o lado que ela NÃO tocou nasce com o
-    nascimento do esquema, que deixou de ser `Off`. Duas coisas mudaram aqui,
-    e as duas são para a régua continuar mordendo:
-
-    * o modo editado passou a ser `Pulse`, porque `Rigid` virou o fundo — uma
-      edição do mesmo valor que já estava lá não prova override nenhum;
-    * o lado intocado é comparado com o que foi LIDO ANTES da edição, em vez
-      de um modo digitado. Digitar o modo é o que fez esta linha envelhecer.
-    """
+    """Override só de gatilhos: leds do alvo continuam herdando o global."""
     draft = DraftConfig.from_profile(_perfil_base())
     trigs = draft.effective_triggers_for(UNIQ_2)
     lado_intocado_antes = trigs.left
@@ -275,7 +238,6 @@ def test_with_controller_triggers_merge_por_secao() -> None:
     )
     assert novo.effective_triggers_for(UNIQ_2).right.mode == "Pulse"
     assert novo.effective_triggers_for(UNIQ_2).left == lado_intocado_antes
-    # A seção leds do override ficou SEM opinião → exibe o global.
     assert novo.effective_leds_for(UNIQ_2).lightbar_rgb == (129, 61, 156)
     override = novo.controller_override(UNIQ_2)
     assert override is not None and override.leds is None
@@ -296,7 +258,7 @@ def test_to_ipc_dict_emite_secao_controllers() -> None:
     assert secao is not None
     assert secao[UNIQ_2]["leds"]["lightbar_rgb"] == [0, 0, 255]
     assert secao[UNIQ_2]["leds"]["lightbar_brightness"] == pytest.approx(0.5)
-    assert "triggers" not in secao[UNIQ_2]  # seção sem opinião não viaja
+    assert "triggers" not in secao[UNIQ_2]
 
 
 def test_to_ipc_dict_sem_mapa_secao_none() -> None:
@@ -308,11 +270,6 @@ def test_to_ipc_dict_sem_mapa_secao_none() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# PERFIL-04: handlers das abas gravam no override do alvo selecionado
-# ---------------------------------------------------------------------------
-
-
 class _AppStub:
     """Hospedeiro mínimo para os mixins de aba: draft + alvo + widgets nulos."""
 
@@ -321,7 +278,7 @@ class _AppStub:
         self._edit_target_uniq = uniq
 
     def _get(self, _widget_id: str) -> None:
-        return None  # nenhum widget real (preview/checkboxes ausentes)
+        return None
 
     def _toast_light(self, _msg: str) -> None:
         return None
@@ -361,7 +318,7 @@ def test_lightbar_com_alvo_grava_no_override(monkeypatch: pytest.MonkeyPatch) ->
     host = _lightbar_host(DraftConfig.from_profile(_perfil_base()), UNIQ_2)
     host.on_lightbar_color_set(_FakeColorButton((0, 0, 255)))
     assert host.draft.effective_leds_for(UNIQ_2).lightbar_rgb == (0, 0, 255)
-    assert host.draft.leds.lightbar_rgb == (129, 61, 156)  # global intacto
+    assert host.draft.leds.lightbar_rgb == (129, 61, 156)
     assert host.draft.controller_override(UNIQ_1) is None
 
 
@@ -370,7 +327,7 @@ def test_lightbar_sem_alvo_grava_no_global() -> None:
     host = _lightbar_host(DraftConfig.from_profile(_perfil_base()), None)
     host.on_lightbar_color_set(_FakeColorButton((0, 255, 0)))
     assert host.draft.leds.lightbar_rgb == (0, 255, 0)
-    assert host.draft.source_controllers is None  # nenhum mapa inventado
+    assert host.draft.source_controllers is None
 
 
 def test_brilho_com_alvo_persiste_no_override() -> None:
@@ -385,8 +342,8 @@ def test_brilho_com_alvo_persiste_no_override() -> None:
     host.on_lightbar_brightness_changed(_FakeScale())
     efetivo = host.draft.effective_leds_for(UNIQ_2)
     assert efetivo.lightbar_brightness == 40
-    assert efetivo.lightbar_rgb == (129, 61, 156)  # cor semeada da tela
-    assert host.draft.leds.lightbar_brightness == 100  # global intacto
+    assert efetivo.lightbar_rgb == (129, 61, 156)
+    assert host.draft.leds.lightbar_brightness == 100
 
 
 def test_triggers_com_alvo_gravam_no_override() -> None:
@@ -401,28 +358,23 @@ def test_triggers_com_alvo_gravam_no_override() -> None:
     class _FakeModeCombo:
         @staticmethod
         def get_active_id() -> str:
-            # NASCE-LIGADO-01: `Pulse` e não `Rigid`, porque `Rigid` virou o
-            # NASCIMENTO dos dois lados — escolher na tela o mesmo valor que
-            # já estava lá não prova que a escrita caiu no override.
             return "Pulse"
 
     host = _Host(DraftConfig.from_profile(_perfil_base()), UNIQ_2)
     global_antes = host.draft.triggers.right
     outro_controle_antes = host.draft.effective_triggers_for(UNIQ_1).right
     host._trigger_mode = {"right": _FakeModeCombo()}
-    host._trigger_param_widgets = {"right": {}}  # sliders ausentes → defaults
+    host._trigger_param_widgets = {"right": {}}
     host._persist_params_to_draft("right")
 
     efetivo = host.draft.effective_triggers_for(UNIQ_2)
     assert efetivo.right.mode == "Pulse"
-    # Intactos: medidos contra o que foi lido ANTES, não contra modo digitado.
     assert host.draft.triggers.right == global_antes
     assert host.draft.effective_triggers_for(UNIQ_1).right == outro_controle_antes
 
 
 def test_refresh_lightbar_exibe_o_efetivo_do_alvo() -> None:
-    """Com o alvo selecionado, a aba exibe o override (brilho incluso, lido
-    do PERFIL — não do backend)."""
+    """Com o alvo selecionado, a aba exibe o override (brilho incluso, lido"""
     draft = DraftConfig.from_profile(_perfil_base())
     base = draft.effective_leds_for(UNIQ_2)
     draft = draft.with_controller_leds(
@@ -436,16 +388,10 @@ def test_refresh_lightbar_exibe_o_efetivo_do_alvo() -> None:
     assert host._current_rgb == (0, 0, 255)
     assert host._current_brightness == pytest.approx(0.4)
 
-    # O MESMO draft exibido em "Todos" mostra o global.
     host_global = _lightbar_host(draft, None)
     host_global._refresh_lightbar_from_draft()
     assert host_global._current_rgb == (129, 61, 156)
     assert host_global._current_brightness == pytest.approx(1.0)
-
-
-# ---------------------------------------------------------------------------
-# PERFIL-04: o round-trip do pedido dela, de ponta a ponta
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -462,14 +408,6 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
     return target
 
 
-# ---------------------------------------------------------------------------
-# Fix HIGH do review 2026-07-16: editar em "Todos" limpa o campo editado dos
-# overrides do draft — espelho da regra do backend ao vivo. Sem isso, "mudei
-# todos para azul" + "Salvar Perfil" ressuscitava a cor antiga do alvo na
-# próxima ativação (o "voltou verde" que o sprint doc proíbe).
-# ---------------------------------------------------------------------------
-
-
 def _draft_com_override_verde() -> DraftConfig:
     """Draft do perfil dela + override DENSO (semeado pela GUI) verde no C2."""
     draft = DraftConfig.from_profile(_perfil_base())
@@ -480,12 +418,8 @@ def _draft_com_override_verde() -> DraftConfig:
 
 
 def test_editar_cor_em_todos_limpa_a_cor_do_override() -> None:
-    """Cor global editada em "Todos" → o campo de cor (e o brilho, que forma
-    UM campo com ela no backend) sai do override; o efetivo do C2 vira azul.
-    COR-04: a GUI só grava no override o que a usuária mexeu (a cor), então
-    essa era a única opinião do C2 — limpá-la poda a entrada e o C2 herda o
-    azul (nada de player-LEDs congelados por trás)."""
-    host = _lightbar_host(_draft_com_override_verde(), None)  # alvo: Todos
+    """Cor global editada em "Todos" → o campo de cor (e o brilho, que forma"""
+    host = _lightbar_host(_draft_com_override_verde(), None)
     host.on_lightbar_color_set(_FakeColorButton((0, 0, 255)))
 
     assert host.draft.leds.lightbar_rgb == (0, 0, 255)
@@ -494,11 +428,7 @@ def test_editar_cor_em_todos_limpa_a_cor_do_override() -> None:
 
 
 def test_editar_player_leds_em_todos_preserva_a_cor_do_override() -> None:
-    """Granularidade POR CAMPO: mexer nos player-LEDs em "Todos" não apaga a
-    cor própria do C2 — só o campo editado sai do override. ONDA-U (U9):
-    `_perfil_base()` nasce com o automático LIGADO, então este clique também
-    dispara o D4 (fora do escopo deste teste — coberto em
-    test_lightbar_auto_colors.py)."""
+    """Granularidade POR CAMPO: mexer nos player-LEDs em "Todos" não apaga a"""
     host = _lightbar_host(_draft_com_override_verde(), None)
     host._persist_leds_update({"player_leds": (True, True, False, False, False)})
 
@@ -506,15 +436,14 @@ def test_editar_player_leds_em_todos_preserva_a_cor_do_override() -> None:
     override = host.draft.controller_override(UNIQ_2)
     assert override is not None and override.leds is not None
     assert "player_leds" not in override.leds.model_fields_set
-    assert override.leds.lightbar == (0, 255, 0)  # a cor dele ficou
+    assert override.leds.lightbar == (0, 255, 0)
     efetivo = host.draft.effective_leds_for(UNIQ_2)
     assert efetivo.lightbar_rgb == (0, 255, 0)
-    assert efetivo.player_leds == (True, True, False, False, False)  # herdado
+    assert efetivo.player_leds == (True, True, False, False, False)
 
 
 def test_editar_tudo_em_todos_esvazia_e_poda_o_override() -> None:
-    """Override cuja última opinião foi limpa some do mapa; mapa vazio volta
-    a None (nenhuma chave fantasma no JSON salvo)."""
+    """Override cuja última opinião foi limpa some do mapa; mapa vazio volta"""
     host = _lightbar_host(_draft_com_override_verde(), None)
     host._persist_leds_update({"lightbar_rgb": (0, 0, 255)})
     host._persist_leds_update({"player_leds": (False,) * 5})
@@ -524,10 +453,9 @@ def test_editar_tudo_em_todos_esvazia_e_poda_o_override() -> None:
 
 
 def test_editar_com_alvo_selecionado_nao_poda_outros_overrides() -> None:
-    """A limpeza é SÓ do ramo "Todos": editar com um alvo selecionado não
-    mexe nos overrides dos outros controles."""
+    """A limpeza é SÓ do ramo "Todos": editar com um alvo selecionado não"""
     draft = _draft_com_override_verde()
-    host = _lightbar_host(draft, UNIQ_1)  # alvo: Controle 1
+    host = _lightbar_host(draft, UNIQ_1)
     host.on_lightbar_color_set(_FakeColorButton((255, 0, 0)))
 
     assert host.draft.effective_leds_for(UNIQ_1).lightbar_rgb == (255, 0, 0)
@@ -535,8 +463,7 @@ def test_editar_com_alvo_selecionado_nao_poda_outros_overrides() -> None:
 
 
 def test_editar_gatilho_em_todos_limpa_so_o_lado_editado() -> None:
-    """Gatilho global editado em "Todos" limpa SÓ aquele lado dos overrides;
-    o lado não editado do override fica."""
+    """Gatilho global editado em "Todos" limpa SÓ aquele lado dos overrides;"""
     from hefesto_dualsense4unix.app.actions.triggers_actions import (
         TriggersActionsMixin,
     )
@@ -558,17 +485,16 @@ def test_editar_gatilho_em_todos_limpa_so_o_lado_editado() -> None:
         ),
     )
 
-    host = _Host(draft, None)  # alvo: Todos
+    host = _Host(draft, None)
     host._trigger_mode = {"right": _FakeModeCombo()}
     host._trigger_param_widgets = {"right": {}}
     host._persist_params_to_draft("right")
 
-    assert host.draft.triggers.right.mode == "Rigid"  # global editado
+    assert host.draft.triggers.right.mode == "Rigid"
     override = host.draft.controller_override(UNIQ_2)
     assert override is not None and override.triggers is not None
     assert "right" not in override.triggers.model_fields_set
-    assert override.triggers.left.mode == "Resistance"  # o lado dele ficou
-    # O efetivo do C2 no lado editado segue o global novo.
+    assert override.triggers.left.mode == "Resistance"
     assert host.draft.effective_triggers_for(UNIQ_2).right.mode == "Rigid"
     assert host.draft.effective_triggers_for(UNIQ_2).left.mode == "Resistance"
 
@@ -576,10 +502,7 @@ def test_editar_gatilho_em_todos_limpa_so_o_lado_editado() -> None:
 def test_round_trip_editar_todos_nao_ressuscita_a_cor_antiga(
     isolated_profiles_dir: Path,
 ) -> None:
-    """A reprodução do achado HIGH, fechada de ponta a ponta: override verde
-    no C2 salvo no perfil → sessão nova em "Todos" muda a cor para azul →
-    "Salvar Perfil" → ATIVAR pinta os DOIS controles de azul (nada de
-    "voltou verde" na próxima ativação/autoswitch)."""
+    """A reprodução do achado HIGH, fechada de ponta a ponta: override verde"""
     from hefesto_dualsense4unix.core.backend_pydualsense import (
         PyDualSenseController,
     )
@@ -594,17 +517,14 @@ def test_round_trip_editar_todos_nao_ressuscita_a_cor_antiga(
 
     save_profile(_perfil_base("vitoria"))
 
-    # Sessão 1: ela cria o override verde no C2 e salva.
     host = _lightbar_host(DraftConfig.from_profile(load_profile("vitoria")), UNIQ_2)
     host.on_lightbar_color_set(_FakeColorButton((0, 255, 0)))
     save_profile(host.draft.to_profile("vitoria"))
 
-    # Sessão 2: em "Todos", muda a cor global para azul e salva.
     host2 = _lightbar_host(DraftConfig.from_profile(load_profile("vitoria")), None)
     host2.on_lightbar_color_set(_FakeColorButton((0, 0, 255)))
     save_profile(host2.draft.to_profile("vitoria"))
 
-    # Ativação (o que o autoswitch refaz a ~1s): TUDO azul, como ela viu.
     backend = PyDualSenseController(evdev_reader=_null_evdev())
     h1, h2 = _FakeHandle(), _FakeHandle()
     backend._handles = {KEY_1: h1, KEY_2: h2}
@@ -612,16 +532,9 @@ def test_round_trip_editar_todos_nao_ressuscita_a_cor_antiga(
     ProfileManager(controller=backend, store=StateStore()).activate("vitoria")
 
     assert h1.light.colors[-1] == (0, 0, 255)
-    assert h2.light.colors[-1] == (0, 0, 255)  # era o "voltou verde"
-    # O que restou do override (player-LEDs semeados) não guarda cor nenhuma.
+    assert h2.light.colors[-1] == (0, 0, 255)
     residual = backend._desired_by_uniq.get(UNIQ_2)
     assert residual is None or residual.led is None
-
-
-# ---------------------------------------------------------------------------
-# Fix MED do review 2026-07-16: override PARCIAL escrito à mão não densifica
-# na exibição, na semeadura nem no payload do "Aplicar"
-# ---------------------------------------------------------------------------
 
 
 def _perfil_com_override_parcial() -> Profile:
@@ -633,14 +546,12 @@ def _perfil_com_override_parcial() -> Profile:
 
 
 def test_effective_leds_de_override_parcial_herda_o_global() -> None:
-    """A aba exibe o merge POR CAMPO: cor do override + brilho/player-LEDs do
-    GLOBAL — e a semeadura da próxima edição parte desses valores (antes,
-    partia dos defaults do schema e os gravava por cima do global)."""
+    """A aba exibe o merge POR CAMPO: cor do override + brilho/player-LEDs do"""
     draft = DraftConfig.from_profile(_perfil_com_override_parcial())
     efetivo = draft.effective_leds_for(UNIQ_2)
-    assert efetivo.lightbar_rgb == (0, 255, 0)  # o campo escrito
-    assert efetivo.player_leds == (True, False, False, False, False)  # global
-    assert efetivo.lightbar_brightness == 50  # global (0.5)
+    assert efetivo.lightbar_rgb == (0, 255, 0)
+    assert efetivo.player_leds == (True, False, False, False, False)
+    assert efetivo.lightbar_brightness == 50
 
 
 def test_effective_triggers_de_override_parcial_herda_o_outro_lado() -> None:
@@ -651,51 +562,41 @@ def test_effective_triggers_de_override_parcial_herda_o_outro_lado() -> None:
     }
     draft = DraftConfig.from_profile(Profile.model_validate(raw))
     efetivo = draft.effective_triggers_for(UNIQ_2)
-    assert efetivo.left.mode == "Resistance"  # o lado escrito
-    assert efetivo.right.mode == "Rigid"  # herdado do global
+    assert efetivo.left.mode == "Resistance"
+    assert efetivo.right.mode == "Rigid"
 
 
 def test_to_ipc_dict_override_parcial_nao_densifica() -> None:
-    """O "Aplicar" emite SÓ os campos escritos do override; cor sem brilho
-    resolve o brilho do GLOBAL na borda (cor e brilho são UM campo no
-    backend), em paridade com a ativação de perfil."""
+    """O "Aplicar" emite SÓ os campos escritos do override; cor sem brilho"""
     draft = DraftConfig.from_profile(_perfil_com_override_parcial())
     secao = draft.to_ipc_dict()["controllers"]
     assert secao is not None
     leds = secao[UNIQ_2]["leds"]
     assert leds["lightbar_rgb"] == [0, 255, 0]
-    assert leds["lightbar_brightness"] == pytest.approx(0.5)  # do global
-    assert "player_leds" not in leds  # campo não escrito não viaja
+    assert leds["lightbar_brightness"] == pytest.approx(0.5)
+    assert "player_leds" not in leds
     assert "triggers" not in secao[UNIQ_2]
 
 
 def test_round_trip_do_pedido_dela(isolated_profiles_dir: Path) -> None:
-    """O fluxo inteiro: selecionar o Controle 2 → mudar a lightbar → "Salvar
-    Perfil" (vitoria) → recarregar → o Controle 2 tem a cor salva PARA ELE
-    dentro do perfil; o Controle 1 e a seção global seguem como estavam."""
+    """O fluxo inteiro: selecionar o Controle 2 → mudar a lightbar → "Salvar"""
     save_profile(_perfil_base("vitoria"))
 
-    # Abrir a GUI: draft carregado do perfil ativo.
     draft = DraftConfig.from_profile(load_profile("vitoria"))
 
-    # Ela clica "2 - USB" no seletor e muda a cor para azul.
     host = _lightbar_host(draft, UNIQ_2)
     host.on_lightbar_color_set(_FakeColorButton((0, 0, 255)))
 
-    # "Salvar Perfil" do rodapé (mesmo caminho do footer: to_profile+save).
     save_profile(host.draft.to_profile("vitoria"))
 
-    # Recarrega do disco (reabrir a GUI / ativar o perfil).
     recarregado = load_profile("vitoria")
     assert recarregado.controllers is not None
     assert UNIQ_2 in recarregado.controllers
     assert recarregado.controllers[UNIQ_2].leds is not None
     assert recarregado.controllers[UNIQ_2].leds.lightbar == (0, 0, 255)
-    # Controle 1 NÃO ganhou entrada; seção global intacta (o roxo dela).
     assert UNIQ_1 not in recarregado.controllers
     assert recarregado.leds.lightbar == (129, 61, 156)
 
-    # Reabrir a GUI mostra o override para o alvo e o global para o resto.
     draft2 = DraftConfig.from_profile(recarregado)
     assert draft2.effective_leds_for(UNIQ_2).lightbar_rgb == (0, 0, 255)
     assert draft2.effective_leds_for(UNIQ_1).lightbar_rgb == (129, 61, 156)

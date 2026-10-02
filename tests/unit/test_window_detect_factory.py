@@ -1,19 +1,4 @@
-"""Testes da factory `detect_window_backend` em `window_detect`.
-
-Cobre os 4 cenários de seleção de backend conforme variáveis de ambiente:
-  1. X11 puro (DISPLAY sem WAYLAND_DISPLAY) → XlibBackend.
-  2. Wayland puro (WAYLAND_DISPLAY sem DISPLAY) → _WaylandCascadeBackend
-     (BUG-COSMIC-WLR-BACKEND-REGRESSION-01, v3.1.0).
-  3. XWayland (ambas presentes) → `_XlibComCosmicBackend`, com o xlib DENTRO.
-  4. Nenhum display → NullBackend.
-
-MUDANÇA DE 02/09/2026 no cenário 3, e a razão é medida: era `XlibBackend`
-sozinho, e numa sessão COSMIC isso deixava o único backend que enxerga app
-Wayland nativo do lado de fora — com o Chrome/Wayland em foco, o produto lia
-`unknown` e o `zcosmic_toplevel_info_v1` lia `google-chrome` no mesmo instante
-(JANELA-WAYLAND-CEGA-01). O xlib continua sendo o primeiro a ser perguntado; o
-que mudou é que agora existe um segundo.
-"""
+"""Testes da factory `detect_window_backend` em `window_detect`."""
 from __future__ import annotations
 
 import pytest
@@ -43,9 +28,7 @@ class TestDetectWindowBackendX11:
 
 
 class TestDetectWindowBackendWayland:
-    """WAYLAND_DISPLAY presente, sem DISPLAY → _WaylandCascadeBackend
-    (cascade portal XDG → wlrctl → None). A partir de v3.1.0
-    (BUG-COSMIC-WLR-BACKEND-REGRESSION-01)."""
+    """WAYLAND_DISPLAY presente, sem DISPLAY → _WaylandCascadeBackend"""
 
     def test_retorna_wayland_cascade_backend(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DISPLAY", raising=False)
@@ -138,11 +121,7 @@ class TestDetectWindowBackendXWayland:
         assert type(backend).__name__ == "_XlibComCosmicBackend"
 
     def test_o_xlib_continua_sendo_o_de_dentro(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """O composto PREFERE o xlib — é o único que resolve o `exe_basename`.
-
-        MORDIDA: inverter a ordem dentro do composto (Wayland primeiro) e o
-        `backend_name` inicial deixa de ser "xlib".
-        """
+        """O composto PREFERE o xlib — é o único que resolve o `exe_basename`."""
         monkeypatch.setenv("DISPLAY", ":0")
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()

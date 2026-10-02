@@ -1,48 +1,5 @@
 #!/usr/bin/env python3
-"""a_folha_dos_ensaios.py — todos os ensaios de byte numa folha só, com os controles dela.
-
-A ENCOMENDA É DELA, 09/09/2026: *"faz uma folha só com todos os testes, com
-controles e slicers pra eu ir testando todos de uma vez"*.
-
-E ela nasceu de um achado do mesmo dia. O `o_painel_do_brilho.py` pôs UM byte
-num controle deslizante e ela viu, em dois minutos, o que a casa afirmava
-errado desde 11/08: o `common[42]` não atenua a barra, atenua as lâmpadas de
-numeração. A frase dela foi *"se não fosse o slicers era impossível notar"* —
-e a conclusão de processo é que **o instrumento que ela dirige acha o que a
-escada automática esconde**.
-
-O DESENHO, e por que ele é uma TABELA
---------------------------------------
-`ENSAIOS` declara cada medição: o byte, o bit que a autoriza, a faixa, o que
-ela deve olhar e a sprint que a espera. A folha se MONTA dessa tabela. Ensaio
-novo é linha nova, não painel novo — que é o que faz esta folha aguentar o
-resto da fila.
-
-O ESTADO É POR APARELHO, e isso é o que deixa combinar
--------------------------------------------------------
-Cada controle físico tem UM `common` vivo aqui. Um deslizante escreve o campo
-dele nesse `common`; a chave do ensaio liga o bit de autorização. Assim ela
-pode acender a barra E atenuar as lâmpadas ao mesmo tempo — que foi como o
-brilho dos LEDs de jogador ficou visível.
-
-**O bit só liga quando ela liga.** Assumir a posse de tudo de uma vez briga com
-o daemon em todas as frentes e emborca a medição; aqui a posse é por ensaio.
-
-O MARTELO, e por que ele é obrigatório
----------------------------------------
-Cada report do daemon reescreve o que este painel mandou. Cada aparelho tem um
-martelo a 10 Hz. Se a coisa PISCAR entre dois estados, isso é um **sim** — é o
-daemon e a folha disputando, e disputa só existe se o byte age.
-
-Porta: o broker (`escrita_pelo_broker.Escritor`), com o daemon VIVO.
-Escreve no aparelho? SIM — e só os campos dos ensaios que ela ligar.
-
-USO
-    a_folha_dos_ensaios.py --so-ajustes --so-falta   # só os controles do que FALTA
-    a_folha_dos_ensaios.py --so-ajustes   # SÓ os controles, sem uma linha de prosa
-    a_folha_dos_ensaios.py                # na tela dela
-    a_folha_dos_ensaios.py --oculta       # sem tela, para régua
-"""
+"""a_folha_dos_ensaios.py — todos os ensaios de byte numa folha só, com os controles dela."""
 
 from __future__ import annotations
 
@@ -65,8 +22,6 @@ _SRC = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), "src")
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-# O ESCAPE É DECLARADO (TELA-DELA-02): sem `--oculta` esta folha é DELA e nasce
-# na tela dela — vê-la é o ponto inteiro.
 if "--oculta" not in sys.argv:
     os.environ["HEFESTO_NA_TELA"] = "1"
 
@@ -93,45 +48,24 @@ from os_nos_de_som_por_controle import censo
 
 HZ = 10.0
 
-#: AS TREZE DA LINHA DE COR — decisão dela, 09/09/2026: *"deixar na tela 11 cores
-#: principais (primárias e interseções) + preto + branco"*, e *"na linha de cor,
-#: terão as cores apenas sem abrir essa tela"*.
-#:
-#: São os onze matizes do círculo andando de 30 em 30 graus, de 0° a 300° — o
-#: passo que dá nomes canônicos a todos e cobre o círculo sem repetir vizinho.
-#: Preto e branco entram porque não são matiz nenhum: um apaga a barra, o outro
-#: é a referência de intensidade cheia.
-#:
-#: OS TONS SÃO PASTÉIS, e é decisão dela ao ver a primeira versão saturada:
-#: *"os tons de cores pré disponíveis tem que serem na mesma pega de tons
-#: pastéis"* — a mesma pegada da fileira que a aba Iluminação já mostra. Cada
-#: matiz sai de HSL com saturação cheia e luminosidade 72 %; branco e preto
-#: ficam como estão, porque não são matiz.
-#:
-#: POR QUE UMA FILEIRA E NÃO O SELETOR DO GTK: ela abriu o diálogo «Select
-#: Color» e ele toma a tela inteira para escolher uma cor que o aparelho mostra
-#: em cinco lâmpadas. Escolher cor aqui é um clique, não um formulário.
 CORES_DA_LINHA: tuple[tuple[str, tuple[int, int, int]], ...] = (
-    ("Vermelho", (255, 112, 112)),  # 0°  #FF7070
-    ("Laranja", (255, 184, 112)),  # 30°  #FFB870
-    ("Amarelo", (255, 255, 112)),  # 60°  #FFFF70
-    ("Verde-limão", (184, 255, 112)),  # 90°  #B8FF70
-    ("Verde", (112, 255, 112)),  # 120°  #70FF70
-    ("Verde-água", (112, 255, 184)),  # 150°  #70FFB8
-    ("Ciano", (112, 255, 255)),  # 180°  #70FFFF
-    ("Azul-céu", (112, 184, 255)),  # 210°  #70B8FF
-    ("Azul", (112, 112, 255)),  # 240°  #7070FF
-    ("Violeta", (184, 112, 255)),  # 270°  #B870FF
-    ("Magenta", (255, 112, 255)),  # 300°  #FF70FF
+    ("Vermelho", (255, 112, 112)),
+    ("Laranja", (255, 184, 112)),
+    ("Amarelo", (255, 255, 112)),
+    ("Verde-limão", (184, 255, 112)),
+    ("Verde", (112, 255, 112)),
+    ("Verde-água", (112, 255, 184)),
+    ("Ciano", (112, 255, 255)),
+    ("Azul-céu", (112, 184, 255)),
+    ("Azul", (112, 112, 255)),
+    ("Violeta", (184, 112, 255)),
+    ("Magenta", (255, 112, 255)),
     ("Branco", (255, 255, 255)),
     ("Preto", (0, 0, 0)),
 )
 
-#: Onde os WAV desta corrida vivem. Fora da árvore, de propósito: é rascunho.
 PASTA = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "hefesto-folha-dos-ensaios")
 
-#: Quanto dura uma gravação do microfone. Três segundos é o que ela leva para
-#: dizer «aaaa» sem pressa, e o pico não precisa de mais.
 SEGUNDOS_DE_GRAVACAO = 3.0
 
 
@@ -154,15 +88,10 @@ def _ferramenta(*candidatas: str) -> str:
     return ""
 
 
-#: O caderno. É dele que sai o que já foi respondido — a lista NÃO se digita.
-#: Digitar quem já respondeu é a família de defeito que esta casa mais pagou:
-#: a régua envelhece no dia seguinte e passa a esconder o que voltou a faltar.
 CADERNO = os.path.join(
     os.path.dirname(os.path.dirname(_AQUI)), "docs", "data", "ensaios.csv"
 )
 
-#: As fontes que contam como «respondido por esta bancada». Uma medição antiga,
-#: de outro instrumento, não fecha um ensaio desta folha.
 FONTES_DESTA_BANCADA = (
     "scripts/ensaios/a_folha_dos_ensaios.py",
     "scripts/ensaios/o_painel_do_brilho.py",
@@ -224,8 +153,6 @@ def pico_do_wav(caminho: str) -> float:
     amostras.frombytes(dados[: len(dados) // 2 * 2])
     return max(abs(min(amostras)), abs(max(amostras))) / 32768.0
 
-#: `common[7]` carrega a rota (bits 4-5) E o caminho do microfone. Escrever o
-#: byte cru apaga o mic em silêncio — a casa já pagou por isso (SOM-CANAL-01).
 BASE_DO_BYTE_7 = rep.AUDIO_CONTROL_BASE_SEGURA
 
 
@@ -235,19 +162,14 @@ class Campo:
 
     rotulo: str
     offset: int
-    forma: str = "escala"  # escala | cor | escolha
+    forma: str = "escala"
     minimo: int = 0
     maximo: int = 255
     marcas: tuple[tuple[int, str], ...] = ()
     inicial: int = 0
     escolhas: tuple[tuple[int, str], ...] = ()
-    #: `common[7]` precisa preservar o meio-byte do microfone.
     desloca: int = 0
     base: int = 0
-    #: O dono deste campo no mapa de canais. Vazio = herda o do ensaio. Existe
-    #: porque um ensaio pode tocar DUAS linhas do mapa — os dois motores de
-    #: vibração são uma chave cada, e uma linha de caderno que some os dois não
-    #: responde a nenhuma das duas.
     linha_do_mapa: str = ""
 
 
@@ -262,17 +184,9 @@ class Ensaio:
     sprint: str
     linha_do_mapa: str
     campos: tuple[Campo, ...]
-    #: OS BITS QUE AUTORIZAM, como `(offset do flag, bit)`. É uma LISTA porque
-    #: um ensaio pode precisar de mais de um, e a casa pagou por supor que não:
-    #: a vibração ficou muda na primeira folha com só o `COMPATIBLE_VIBRATION`
-    #: ligado — ela reportou *"não funciona, mas na interface isso funciona"*, e
-    #: o produto liga QUATRO (`backend_pydualsense.py:1351-1372`).
     autorizacoes: tuple[tuple[int, int], ...]
     flag_nome: str
     estado: str = "aberto"
-    #: Os botões deste ensaio. O byte muda a condição; o ATO é o que ela ouve
-    #: ou sente. Pedido dela, 09/09: *"um botão pra gravar e reproduzir por
-    #: cada controle. fone, autofalante, pre amplificador e todos os demais"*.
     acoes: tuple[str, ...] = ()
 
 
@@ -364,21 +278,6 @@ ENSAIOS: tuple[Ensaio, ...] = (
         sprint="SOM-POR-CONTROLE-01",
         linha_do_mapa="audio.alto_falante.rota@dualsense",
         campos=(
-            # REDUZIDAS ÀS QUE FUNCIONAM — decisão dela, 09/09/2026: *"reduzir
-            # pras que funcionam"*, depois de medir as quatro e achar
-            # *"NA REAL TODOS SÃO MONO NO FONE, O DO ALTO FALANTE NÃO FUNCIONA
-            # AQUI MAS FUNCIONOU NO SOM DO CONTROLE"*.
-            #
-            # Ficam as DUAS que fazem o que o nome diz. As outras continuam no
-            # `ds_output_report` — o firmware as aceita, e apagá-las de lá seria
-            # apagar protocolo. O que sai é a OFERTA: a tela não nomeia por
-            # consequência três rotas que produzem a mesma coisa.
-            #
-            # A CONTRADIÇÃO MEDIDA, e ela pede uma segunda passada: «só no
-            # alto-falante» não saiu por esta rota, mas o alto-falante TOCA pelo
-            # ensaio de volume. Ou a rota não é o caminho, ou o valor 3 não é o
-            # que a fonte externa diz. Enquanto não se medir, ela fica na oferta
-            # com o nome que o ensaio sustenta.
             Campo("Rota", rep.COMMON_AUDIO_PATH, forma="escolha",
                   desloca=rep.OUTPUT_PATH_SEL_SHIFT, base=BASE_DO_BYTE_7,
                   escolhas=(
@@ -470,22 +369,12 @@ class Aparelho:
     escritas: int = 0
     erro: str | None = None
     escritor: Escritor = None  # type: ignore[assignment]
-    #: Os nós de som DESTE controle, do censo. Vazio quando não há — e aí o
-    #: botão diz por quê, em vez de ficar mudo: recusar dizendo é obrigatório.
     sink_fisico: str = ""
     fonte_fisica: str = ""
     ultimo_wav: str = ""
     gravando: subprocess.Popen | None = None
-    #: A cor pedida e o quanto dela sai. A barra NÃO tem brilho de hardware —
-    #: medido por ela em 09/09 — então a única intensidade que existe é esta:
-    #: multiplicar o RGB antes de mandar, que é o que o produto faz em
-    #: `led.set {brightness}`. Ela viu isso na paleta do seletor de cor, onde a
-    #: coluna de tons do mesmo verde É a escada de intensidade.
     cor_base: tuple[int, int, int] = (255, 255, 255)
     intensidade: float = 1.0
-    #: O tom do PLÁSTICO deste controle, perguntado a ELE. É a borda que marca
-    #: a cor escolhida, e o X que marca a cor tomada na coluna do vizinho.
-    #: Vazio = não sei, e aí a borda é neutra em vez de mentir uma cor.
     tom_do_plastico: str = ""
     nome_do_plastico: str = ""
 
@@ -494,12 +383,7 @@ class Aparelho:
         self.escritor = Escritor(self.alvo)
 
     def ler_o_plastico(self) -> None:
-        """Pergunta a cor do plástico AO APARELHO, pelo caminho do produto.
-
-        `ler_pelo_cabo` monta o `SET_FEATURE 0x80` e decodifica o serial. Não
-        responder é caso comum, e falhar em silêncio pintaria uma borda
-        inventada: sem resposta o tom fica vazio e a borda vira neutra.
-        """
+        """Pergunta a cor do plástico AO APARELHO, pelo caminho do produto."""
         try:
             from hefesto_dualsense4unix.integrations.cor_do_plastico import ler_pelo_cabo
 
@@ -568,7 +452,6 @@ class Aparelho:
         self.devolver()
         self.escritor.fechar()
 
-    # -- os ATOS: o que ela ouve e sente, não o que o byte diz ---------------
     @property
     def curto(self) -> str:
         return "cabo" if self.alvo.transporte == CABO else "radio"
@@ -647,8 +530,7 @@ class Aparelho:
         return None
 
     def vibrar(self, ensaio) -> str | None:
-        """Um PULSO de 1 s com a força dos deslizantes. Martelar força contínua
-        deixa o controle tremendo até ela desligar, e ninguém mede assim."""
+        """Um PULSO de 1 s com a força dos deslizantes. Martelar força contínua"""
         antes = ensaio.id in self.ligados
         self.por_o_bit(ensaio, True)
 
@@ -667,25 +549,9 @@ class Folha:
         self.aparelhos = aparelhos
         self.fechados = respondidos() if so_falta else set()
         self.escondidos = 0
-        #: `--so-ajustes`, pedido dela: só os controles, sem uma linha de prosa.
-        #: A folha completa continua existindo; esta é a MESMA tabela sem o
-        #: texto — quem já sabe o que está medindo não relê a pergunta a cada
-        #: ensaio, e a rolagem encolhe.
         self.enxuta = enxuta
-        #: UMA NOTA POR (ensaio, aparelho). Era uma por ensaio até 09/09 e o
-        #: defeito apareceu na primeira leva dela: o que ela viu NO CABO saiu
-        #: escrito também na linha do RÁDIO — que nem nó de áudio tem. Régua
-        #: que afirma sobre o que não mediu é a família de defeito mais cara
-        #: desta casa.
         self.notas: dict[tuple[str, str], Gtk.Entry] = {}
-        #: As escadas de tom, redesenhadas no tique. Decisão dela, 09/09/2026:
-        #: *"na linha de brilho vamos fazer a ilusão de que o slicer funciona.
-        #: Subindo tons ou diminuindo eles"* — e a palavra ILUSÃO é exata: a
-        #: barra não tem brilho de hardware (medido de manhã), então o que sobe
-        #: e desce é o RGB multiplicado, que é a mesma conta do produto.
         self.escadas: list[tuple[Gtk.DrawingArea, Aparelho]] = []
-        #: As amostras de cor, redesenhadas no tique: o X de uma depende do que
-        #: o OUTRO controle escolheu, e isso muda por fora dela.
         self.amostras: list[Gtk.DrawingArea] = []
         self.recados_de_cor: dict[str, Gtk.Label] = {}
         self.contadores: list[tuple[Aparelho, Gtk.Label]] = []
@@ -718,21 +584,10 @@ class Folha:
         GLib.timeout_add(int(1000 / HZ), self._tique)
 
     def _fundo_opaco(self) -> None:
-        """Um fundo SÓLIDO, e a razão é dela: *"o fundo tá muito transparente"*.
-
-        Uma `Gtk.Window` sem widget de fundo herda o do compositor, e sob o
-        COSMIC isso vira uma folha translúcida com o desktop dela atravessando
-        — que é o pior fundo possível para um instrumento onde ela olha uma
-        lâmpada acender. A cor sai do tema (`prefer-dark` na máquina dela), com
-        alfa 1 escrito à mão: o que não pode é herdar transparência.
-        """
-        # O DONO É `comum.pintar_fundo_solido` DESDE 10/09/2026, e a razão está
-        # lá: estas três folhas decidiam o tema por `prefer-dark`, que é False
-        # na máquina dela sob um tema ESCURO — e o rótulo do botão sumia dentro
+        """Um fundo SÓLIDO, e a razão é dela: *"o fundo tá muito transparente"*."""
         # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal dela)
         pintar_fundo_solido(self.janela)
 
-    # ------------------------------------------------------------------ topo
     def _topo(self) -> Gtk.Widget:
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         caixa.set_margin_top(10)
@@ -772,7 +627,6 @@ class Folha:
         caixa.pack_start(Gtk.Separator(), False, False, 6)
         return caixa
 
-    # ----------------------------------------------------------------- seção
     def _secao(self, ensaio: Ensaio) -> Gtk.Widget:
         moldura = Gtk.Frame()
         dentro = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -845,8 +699,6 @@ class Folha:
             caixa.pack_start(nota, False, False, 4)
         return caixa
 
-    #: O rótulo de cada botão, e o que ele faz. A tabela existe para o botão
-    #: novo nascer aqui, e não espalhado por dez `if`.
     _ATOS: ClassVar[dict[str, str]] = {
         "gravar": "Gravar 3 s",
         "reproduzir": "Reproduzir",
@@ -878,15 +730,7 @@ class Folha:
         return str(aparelho.common[campo.offset])
 
     def _amostra(self, nome: str, rgb: tuple[int, int, int], aparelho: Aparelho) -> Gtk.Widget:
-        """Um quadrado da cor, desenhado — porque ele carrega TRÊS estados.
-
-        Livre; ESCOLHIDO por este controle (borda da cor do plástico dele); ou
-        TOMADO por outro (um X na cor do plástico do outro, e o clique recusa
-        dizendo de quem é). Decisão dela, 09/09/2026: *"onde eu escolher uma
-        cor, em volta dela fica a borda da cor do plastico do controle e um X
-        na cor selecionada por mim de forma que me impeça de setar alguma cor
-        de um coleguinha"*.
-        """
+        """Um quadrado da cor, desenhado — porque ele carrega TRÊS estados."""
         area = Gtk.DrawingArea()
         area.set_size_request(-1, 26)
         area.connect("draw", self._pintar_amostra, rgb, aparelho)
@@ -914,13 +758,11 @@ class Folha:
 
         dono = self._dono_da_cor(rgb, aparelho)
         if aparelho.cor_base == rgb:
-            # A ESCOLHIDA: a borda é a cor do plástico DESTE controle.
             cr.set_source_rgb(*_hex_para_rgb(aparelho.tom_do_plastico or "#c0c0c0"))
             cr.set_line_width(3.0)
             cr.rectangle(1.5, 1.5, largura - 3, altura - 3)
             cr.stroke()
         elif dono is not None:
-            # TOMADA: o X na cor do plástico de quem a tem.
             cr.set_source_rgb(*_hex_para_rgb(dono.tom_do_plastico or "#101010"))
             cr.set_line_width(3.0)
             cr.move_to(5, 5)
@@ -1066,8 +908,6 @@ class Folha:
         return caixa
 
 
-    #: Quantos degraus a escada mostra. Onze é o mesmo número dos matizes da
-    #: linha de cor — de 0 a 100 % de dez em dez.
     DEGRAUS_DA_ESCADA: ClassVar[int] = 11
 
     def _pintar_escada(self, area: Gtk.DrawingArea, cr, aparelho: Aparelho) -> bool:
@@ -1089,7 +929,6 @@ class Folha:
                 cr.stroke()
         return False
 
-    # ---------------------------------------------------------------- laço
     def _tique(self) -> bool:
         for aparelho in self.aparelhos:
             aparelho.bater()
@@ -1151,8 +990,6 @@ def main() -> int:
         print("nenhum DualSense físico encontrado. Plugue ou pareie e rode de novo.")
         return 1
     aparelhos = [Aparelho(a) for a in alvos]
-    # OS NÓS DE SOM VÊM DO CENSO, não de um `pactl` próprio: um segundo parser
-    # da mesma lista é a segunda régua que diverge da primeira em silêncio.
     try:
         for no in censo(alvos):
             for aparelho in aparelhos:

@@ -24,10 +24,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("status cards")
 
 import re
@@ -40,8 +36,6 @@ gi.require_version("Gtk", "3.0")
 
 import pytest
 
-# CI headless sem libcairo: pula o módulo (o ControllerCard renderiza os sticks
-# via cairo e cai num stub sem os sub-widgets quando o GTK real não está pronto).
 pytest.importorskip("cairo")
 
 from gi.repository import Gtk
@@ -64,14 +58,8 @@ from hefesto_dualsense4unix.utils.color_contrast import (
     rgb_para_hex,
 )
 
-# Cores de exercício: a medida ao vivo na máquina de referência + 1 distinta.
 COR_A = (16, 32, 72)
 COR_B = (0, 255, 0)
-
-
-# ---------------------------------------------------------------------------
-# Fakes mínimos (labels/barras do frame Estado) + host com slot REAL
-# ---------------------------------------------------------------------------
 
 
 class _FakeLabel:
@@ -113,8 +101,6 @@ class _Builder:
 
     def __init__(self) -> None:
         self._w: dict[str, Any] = {
-            # STATUS-GRID-2COL-01: o slot é um GtkGrid (2 colunas), não mais
-            # um GtkBox vertical — empilhado, 2 controles forçavam rolagem.
             "status_players_slot": Gtk.Grid(
                 row_spacing=12, column_spacing=12, column_homogeneous=True
             ),
@@ -135,12 +121,7 @@ class _Host(StatusActionsMixin):
         return self.builder.get_object("status_players_slot")
 
     def cards(self) -> list[Any]:
-        """Cards na ordem de LEITURA (esq→dir, cima→baixo).
-
-        `Gtk.Grid.get_children()` devolve na ordem INVERSA de inserção, então
-        a posição real (`left-attach`/`top-attach`) é a única ordem confiável
-        — e é a que o usuário enxerga.
-        """
+        """Cards na ordem de LEITURA (esq→dir, cima→baixo)."""
         grid = self.slot
         return sorted(
             grid.get_children(),
@@ -153,8 +134,6 @@ class _Host(StatusActionsMixin):
 
 @pytest.fixture()
 def host(monkeypatch: pytest.MonkeyPatch) -> _Host:
-    # Sem popup nos testes — força o caminho de render
-    # (BUG-COMBO-POPUP-FLICKER-02 pausa tudo com grab ativo).
     monkeypatch.setattr(
         StatusActionsMixin, "_popup_is_open", staticmethod(lambda: False)
     )
@@ -209,11 +188,6 @@ def _state(*controllers: dict[str, Any], **top: Any) -> dict[str, Any]:
     return st
 
 
-# ---------------------------------------------------------------------------
-# 2 controles → 2 cards com identidade própria
-# ---------------------------------------------------------------------------
-
-
 def test_dois_controles_criam_dois_cards_com_titulo_e_bateria_proprios(
     host: _Host,
 ) -> None:
@@ -266,15 +240,9 @@ def test_titulo_do_card_funcao_pura() -> None:
         "Controle 3 — BT · Jogador 2"
     )
     assert titulo_do_card(_entry(index=1, transport="usb")) == "Controle 2 — USB"
-    # bool não é int válido (payload malformado não vira número).
     assert titulo_do_card(_entry(player_slot=True, player=True)).startswith(
         "Controle 1 — BT"
     )
-
-
-# ---------------------------------------------------------------------------
-# Reconstrução SÓ quando o conjunto muda
-# ---------------------------------------------------------------------------
 
 
 def test_mesmo_conjunto_mesmos_objetos_de_widget(host: _Host) -> None:
@@ -285,10 +253,10 @@ def test_mesmo_conjunto_mesmos_objetos_de_widget(host: _Host) -> None:
     host._render_live_state(state)
     ids_1 = [id(c) for c in host.cards()]
 
-    host._render_live_state(state)  # 2º tick com o MESMO conjunto
+    host._render_live_state(state)
     ids_2 = [id(c) for c in host.cards()]
 
-    assert ids_1 == ids_2  # sem rebuild
+    assert ids_1 == ids_2
 
 
 def test_conjunto_novo_reconstroi(host: _Host) -> None:
@@ -304,12 +272,7 @@ def test_conjunto_novo_reconstroi(host: _Host) -> None:
     )
     cards = host.cards()
     assert len(cards) == 2
-    assert id(cards[0]) != id_antes  # conjunto mudou → rebuild
-
-
-# ---------------------------------------------------------------------------
-# Inputs do card N vêm exclusivamente de controllers[N]
-# ---------------------------------------------------------------------------
+    assert id(cards[0]) != id_antes
 
 
 def test_inputs_do_card_2_vem_exclusivamente_de_controllers_1(
@@ -333,15 +296,10 @@ def test_inputs_do_card_2_vem_exclusivamente_de_controllers_1(
     assert card_2._stick_left._x == 250
 
 
-# ---------------------------------------------------------------------------
-# Card fantasma: placeholder offline e uniq None
-# ---------------------------------------------------------------------------
-
-
 def test_placeholder_offline_nao_cria_card_fantasma(host: _Host) -> None:
     """HARM-CARD-FANTASMA-01: a entrada com connected=False não vira card."""
-    state = _state()  # sem controles conectados
-    state["controllers"] = [{"connected": False}]  # o placeholder do daemon
+    state = _state()
+    state["controllers"] = [{"connected": False}]
     host._render_live_state(state)
     assert host.cards() == []
 
@@ -356,12 +314,7 @@ def test_uniq_none_nao_cria_fantasma_nem_colide(host: _Host) -> None:
     cards = host.cards()
     assert len(cards) == 2
     assert id(cards[0]) != id(cards[1])
-    assert len(host._status_cards) == 2  # chaves não colidiram
-
-
-# ---------------------------------------------------------------------------
-# inputs None → "—" (sem leitor; nunca congela o último valor)
-# ---------------------------------------------------------------------------
+    assert len(host._status_cards) == 2
 
 
 def test_inputs_none_mostra_travessao(host: _Host) -> None:
@@ -380,7 +333,7 @@ def test_inputs_none_nao_congela_o_ultimo_valor(host: _Host) -> None:
 
     host._render_live_state(_state(_entry(inputs=None)))
     assert card._sem_leitor_label.get_visible() is True
-    assert card._l2_bar.get_text() == "0 / 255"  # área resetada, não congelada
+    assert card._l2_bar.get_text() == "0 / 255"
 
     host._render_live_state(_state(_entry(inputs=_inputs(l2_raw=0))))
     assert card._sem_leitor_label.get_visible() is False
@@ -404,11 +357,6 @@ def test_reset_live_widgets_vira_sem_leitor_em_todos_os_cards(
         assert card._inputs_area.get_visible() is False
 
 
-# ---------------------------------------------------------------------------
-# Rótulos da lightbar pela FONTE (STATUS-03)
-# ---------------------------------------------------------------------------
-
-
 def test_rotulo_sysfs_apagada(host: _Host) -> None:
     host._render_live_state(
         _state(
@@ -419,7 +367,6 @@ def test_rotulo_sysfs_apagada(host: _Host) -> None:
     card = host.cards()[0]
     assert card._lightbar_label.get_visible() is True
     assert card._lightbar_label.get_text() == "Lightbar: apagada"
-    # Accent neutro AJUSTADO nos traços.
     assert card._accent == ensure_min_contrast(ACCENT_NEUTRO)
 
 
@@ -437,11 +384,7 @@ def test_rotulo_desconhecida_nunca_diz_apagada(host: _Host) -> None:
 
 
 def test_no_nativo_a_cor_conhecida_e_acesa_fica_sem_rotulo(host: _Host) -> None:
-    """NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): era
-    `test_rotulo_nativo_o_jogo_e_dono_do_led`, e o card dizia «Em Nativo o jogo
-    é dono do LED». Com a `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` a
-    barra é do Hefesto no Nativo também, e a `D-2409-NO-NATIVO-A-TELA-MOSTRA-
-    A-COR` manda mostrar a cor como em todo modo."""
+    """NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): era"""
     host._render_live_state(_state(_entry(), native_mode=True))
     card = host.cards()[0]
     assert card._lightbar_label.get_visible() is False
@@ -458,49 +401,42 @@ def test_cor_conhecida_e_acesa_sem_rotulo(host: _Host) -> None:
 @pytest.mark.parametrize(
     ("entry_kw", "state_kw", "esperado"),
     [
-        # sysfs + on=False → apagada (escrita foi NOSSA).
         (
             {"lightbar_rgb": [10, 10, 10], "lightbar_on": False,
              "lightbar_source": "sysfs"},
             {},
             "Lightbar: apagada",
         ),
-        # sysfs + rgb preto → apagada mesmo com on=True defensivo.
         (
             {"lightbar_rgb": [0, 0, 0], "lightbar_on": True,
              "lightbar_source": "sysfs"},
             {},
             "Lightbar: apagada",
         ),
-        # desired preto (nós mandamos apagar por hidraw) → apagada.
         (
             {"lightbar_rgb": [0, 0, 0], "lightbar_on": False,
              "lightbar_source": "desired"},
             {},
             "Lightbar: apagada",
         ),
-        # desconhecida → NUNCA "apagada".
         (
             {"lightbar_rgb": None, "lightbar_on": False,
              "lightbar_source": "desconhecida"},
             {},
             "Lightbar: cor desconhecida",
         ),
-        # rgb ausente com fonte estranha → desconhecida.
         (
             {"lightbar_rgb": None, "lightbar_on": True,
              "lightbar_source": "sysfs"},
             {},
             "Lightbar: cor desconhecida",
         ),
-        # Nativo: como em todo modo (a barra é do Hefesto — D-2409, 24/09/2026).
         (
             {"lightbar_rgb": [16, 32, 72], "lightbar_on": True,
              "lightbar_source": "sysfs"},
             {"native_mode": True},
             None,
         ),
-        # cor conhecida acesa → sem rótulo.
         (
             {"lightbar_rgb": [16, 32, 72], "lightbar_on": True,
              "lightbar_source": "sysfs"},
@@ -516,11 +452,6 @@ def test_rotulo_lightbar_funcao_pura(
     assert rotulo == esperado
 
 
-# ---------------------------------------------------------------------------
-# Badge de degradação (BT-03)
-# ---------------------------------------------------------------------------
-
-
 def test_badge_degradado_acende_com_uinput_e_motivo_e_some_com_uhid(
     host: _Host,
 ) -> None:
@@ -534,7 +465,6 @@ def test_badge_degradado_acende_com_uinput_e_motivo_e_some_com_uhid(
     assert texto.startswith("Emulação degradada (uinput): ")
     assert MOTIVOS_DEGRADACAO_LEIGOS["uhid_bind_falhou"] in texto
 
-    # Promovido a uhid → o badge some (mesmo card, sem rebuild).
     host._render_live_state(_state(_entry(vpad_backend="uhid")))
     assert card._degradacao_badge.get_visible() is False
 
@@ -569,7 +499,6 @@ def test_frases_leigas_nunca_cravam_o_mecanismo_do_sono_bt(
     minusculo = texto.lower()
     for proibido in ("bluetooth", " bt", "sono", "dormiu", "adormec"):
         assert proibido not in minusculo, f"{motivo!r} crava mecanismo: {texto}"
-    # Frase leiga: sem o jargão cru do motivo.
     assert "uhid_" not in texto
 
 
@@ -578,11 +507,6 @@ def test_texto_degradacao_motivo_desconhecido_vira_legivel() -> None:
         _entry(vpad_backend="uinput", vpad_motivo="motivo_novo_do_daemon")
     )
     assert texto == "Emulação degradada (uinput): motivo novo do daemon"
-
-
-# ---------------------------------------------------------------------------
-# Tinting: glyphs/sticks/barras recebem a cor AJUSTADA (espião nos widgets)
-# ---------------------------------------------------------------------------
 
 
 def test_glyphs_e_sticks_recebem_set_accent_com_a_cor_ajustada(
@@ -612,7 +536,6 @@ def test_glyphs_e_sticks_recebem_set_accent_com_a_cor_ajustada(
     ajustada = ensure_min_contrast(COR_B)
     assert recebidos["stick"] == ajustada
     assert recebidos["glyph"] == ajustada
-    # Barras L2/R2 tintadas com o MESMO hex ajustado (helper por widget).
     assert card._l2_bar._hefesto_tint_hex == rgb_para_hex(ajustada)
     assert card._r2_bar._hefesto_tint_hex == rgb_para_hex(ajustada)
 
@@ -627,11 +550,6 @@ def test_sem_cor_conhecida_accent_neutro_ajustado_nos_widgets(
     neutro_ajustado = ensure_min_contrast(ACCENT_NEUTRO)
     assert card._accent == neutro_ajustado
     assert card._l2_bar._hefesto_tint_hex == rgb_para_hex(neutro_ajustado)
-
-
-# ---------------------------------------------------------------------------
-# Frame Estado: a bateria do primário some com 2+ (cada card tem a sua)
-# ---------------------------------------------------------------------------
 
 
 def test_bateria_do_frame_estado_some_com_dois_ou_mais(host: _Host) -> None:
@@ -672,39 +590,8 @@ def test_render_offline_limpa_os_cards_e_restaura_a_bateria(
     assert host.builder.get_object("status_battery_bar").visible is True
 
 
-# ---------------------------------------------------------------------------
-# Gate de timers — diff contra o baseline da mixin (aceite do STATUS-02)
-# ---------------------------------------------------------------------------
-
-
 def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
-    """Baseline da mixin: 2 periódicos em ms + 1 periódico em segundos +
-    1 one-shot de 5 s (ambos via timeout_add_seconds) + 2 idle one-shot.
-
-    O card agenda DOIS repousos, e os dois são da mesma natureza: disparo
-    ÚNICO armado por gesto humano, desarmado ao disparar. Um é o do controle
-    deslizante do alto-falante (SOM-02/E1); o outro é o do microfone
-    (MIC-VOLUME-01, 16/08/2026), que nasceu quando ela pediu o controle que
-    faltava: *"dá espaço a um slicer de microfone pra definir o volume do
-    microfone real"*.
-
-    **Por que o baseline sobe de 1 para 2, e por que isso não afrouxa o gate.**
-    A linha que ele protege nunca foi "zero timers" — é **"nada de laço no
-    card"**: foi um ``idle_add`` devolvendo True que rendeu os 104% de CPU da
-    v3.8.1, e um PERIÓDICO aqui roda por CARD, multiplicado pelos quatro
-    controles. Um disparo único por gesto não é laço: ele existe entre o
-    movimento da mão dela e o pedido, some depois, e sem gesto nenhum não há
-    timer nenhum.
-
-    O que o gate continua exigindo, e é o que importa: **todo `timeout_add` do
-    card tem de ser one-shot**. Subir este número sem que o novo timer devolva
-    ``False`` é o que reabriria o defeito — e isso é aferido no COMPORTAMENTO,
-    com o card real, em ``test_status_som_02_controle_de_volume``.
-
-    O que continua reprovando: qualquer ``timeout_add_seconds``, qualquer
-    ``idle_add``, e um terceiro ``timeout_add`` sem que alguém releia este
-    texto e decida de novo.
-    """
+    """Baseline da mixin: 2 periódicos em ms + 1 periódico em segundos +"""
     src_mixin = Path(sa_mod.__file__).read_text(encoding="utf-8")
     src_card = Path(cc_mod.__file__).read_text(encoding="utf-8")
 
@@ -712,41 +599,14 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
     assert len(re.findall(r"GLib\.timeout_add_seconds\(", src_mixin)) == 2
     assert len(re.findall(r"GLib\.idle_add\(", src_mixin)) == 2
 
-    # Dois one-shot: o repouso do alto-falante e o do microfone.
     assert len(re.findall(r"GLib\.timeout_add\(", src_card)) == 2
-    # E os DOIS têm de ser one-shot: um `return False` para cada, no corpo do
-    # disparo. É esta linha, e não a contagem, que segura o defeito de 104% de
-    # CPU — um `return True` aqui vira laço por card, vezes quatro controles.
     assert len(re.findall(r"def _on_\w+_repouso\(self\)", src_card)) == 2
     assert re.search(r"GLib\.timeout_add_seconds\(", src_card) is None
     assert re.search(r"GLib\.idle_add\(", src_card) is None
 
 
-# ---------------------------------------------------------------------------
-# Tamanho dos sticks: o compacto com 2+ cards, o cheio com 1
-# ---------------------------------------------------------------------------
-
-
 def test_os_sticks_nao_encolhem_mais_com_dois_cards(host: _Host) -> None:
-    """EMPILHA-02 (02/08/2026): com UMA coluna, todo card tem largura inteira.
-
-    **A regra anterior estava certa para o desenho anterior**, e fica
-    registrada: com dois cards LADO A LADO, cada um recebia metade da janela,
-    e o stick de 120px empurrava a coluna. O compacto existia para isso.
-
-    Empilhados numa coluna (decisão dela, EMPILHA-01), cada card recebe a
-    largura INTEIRA — e continuar desenhando para meia deixava o conteúdo
-    espremido à esquerda com um vazio à direita. Foi o que ela apontou no
-    print de 02/08: *"layout quebrou, e piorou algumas coisas. antes ele tava
-    bem distribuido"*.
-
-    O `compact` controlava DUAS coisas misturadas — o tamanho dos desenhos e a
-    presença do par global "Perfil ativo / Hefesto" — e elas andavam juntas
-    por acidente. Agora são parâmetros separados: o tamanho é sempre o grande,
-    e o par global só aparece quando NÃO há frame Estado para mostrá-lo.
-
-    Mordida: voltar `ControllerCard(compact=compact)` no `_rebuild_status_cards`.
-    """
+    """EMPILHA-02 (02/08/2026): com UMA coluna, todo card tem largura inteira."""
     assert STICK_SIZE_COMPACT < STICK_SIZE_SINGLE, (
         "as duas constantes continuam existindo — o card compacto ainda é "
         "construível, e é o que um chamador avulso pede"
@@ -773,14 +633,7 @@ def test_os_sticks_nao_encolhem_mais_com_dois_cards(host: _Host) -> None:
 
 
 def test_o_par_global_aparece_uma_vez_so_na_tela(host: _Host) -> None:
-    """E o que a quantidade de controles DECIDE agora é outra coisa.
-
-    Com um controle, o frame "Estado" sai da tela e o card responde por perfil
-    e daemon. Com dois, o frame volta — e nenhum dos cards os mostra, senão a
-    mesma informação apareceria três vezes.
-
-    Mordida: passar `mostrar_estado_global=True` fixo no `_rebuild_status_cards`.
-    """
+    """E o que a quantidade de controles DECIDE agora é outra coisa."""
     host._render_live_state(_state(_entry()))
     assert host.cards()[0]._linha_estado_global is not None
 
@@ -801,4 +654,4 @@ def test_swatch_guarda_a_cor_crua_nao_a_ajustada(host: _Host) -> None:
     card = host.cards()[0]
     assert card._swatch_rgb == COR_A
     assert card._accent == ensure_min_contrast(COR_A)
-    assert card._swatch_rgb != card._accent  # 16,32,72 é ilegível cru (1.12:1)
+    assert card._swatch_rgb != card._accent

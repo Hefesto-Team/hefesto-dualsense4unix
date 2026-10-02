@@ -1,8 +1,4 @@
-"""Z6-03 — `Fala`, `Pendencia`, `NAO_MEDIDO`: a recusa mora no tipo.
-
-A mordida da sprint: "Construir uma `Pendencia` com valor numérico ou
-booleano → tem de levantar; trocar a recusa por `pass` → o teste reprova."
-"""
+"""Z6-03 — `Fala`, `Pendencia`, `NAO_MEDIDO`: a recusa mora no tipo."""
 from __future__ import annotations
 
 import ast
@@ -143,24 +139,11 @@ def test_numero_recusa_valor_nao_numerico() -> None:
         Numero(constante="X", valor="260,4", chave="a@b", coluna="c")  # type: ignore[arg-type]
 
 
-# ===========================================================================
-# A VÍRGULA TEM UM DONO SÓ (BG-03, 26/08/2026)
-# ===========================================================================
-
 _SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 
-#: O dono único da conversão `260.4` → `260,4`.
 _DONO = "app/fala_do_mapa.py"
 
-#: A ÚNICA cópia que sobrou, e ela está declarada porque não é minha de curar:
-#: `app/widgets/calibrar_entradas.py::_virgula` está FORA da posse da frente
-#: L3-F (regra R-A da leva de 26/08: precisou de arquivo alheio, relata e para),
-#: e o relato está em `docs/process/agentes/2026-08-26/LEVA-3-F.md`.
-#:
-#: **No dia em que alguém a converter, este teste REPROVA** — e o conserto é
-#: apagar a linha daqui, não silenciar. É a mesma disciplina da lápide de
 #: `portao_a_casa_sabe_e_o_produto_nao_faz.py`: registro que sobrevive à cura
-#: vira mentira.
 _COPIAS_DECLARADAS: dict[str, str] = {
     "app/widgets/calibrar_entradas.py": (
         "`_virgula`, dono do texto OS_DOIS_RELOGIOS. Fora da posse da L3-F "
@@ -213,25 +196,7 @@ def _onde_a_virgula_e_reescrita() -> dict[str, list[int]]:
 
 
 def test_a_virgula_tem_um_dono_so() -> None:
-    """A MORDIDA de BG-03: nenhuma cópia nova da conversão em `src/`.
-
-    Eram TRÊS implementações independentes da mesma regra — `formata_pt_br`,
-    o `_numero` de `app/actions/config/secao_controles.py` e o `_numero` de
-    `integrations/plano_de_radio.py`, que ainda dizia em comentário *"mesma
-    forma que…"* enquanto reescrevia a conta. A saída das três era idêntica,
-    então **nenhum texto mudou na tela**; o que muda é que no dia em que uma
-    delas mudar de arredondamento, duas células param de discordar.
-
-    Devolvendo uma cópia a qualquer arquivo, este teste reprova nomeando
-    `arquivo:linha`.
-
-    **O que esta régua NÃO pega**, escrito para ninguém confiar demais nela:
-    uma cópia escrita de outro jeito (`format()`, `locale`, `str.translate`)
-    passa. Quem morde o FORMATO em si é
-    `tests/unit/test_a_regua_e_a_legenda_sao_a_mesma_peca.py`, que reescreve
-    `formata_pt_br` na árvore de mentira e exige que o portão do mapa mude de
-    veredito junto.
-    """
+    """A MORDIDA de BG-03: nenhuma cópia nova da conversão em `src/`."""
     achados = _onde_a_virgula_e_reescrita()
 
     assert _DONO in achados, (
@@ -259,12 +224,7 @@ def test_a_virgula_tem_um_dono_so() -> None:
 
 
 def test_nenhuma_copia_declarada_sobreviveu_a_propria_cura() -> None:
-    """O outro lado: registro que descreve uma árvore que não existe mais.
-
-    Sem este caso, `_COPIAS_DECLARADAS` viraria o lugar onde se esconde o que
-    incomoda — e a próxima pessoa perderia uma tarde procurando uma cópia que
-    alguém já curou.
-    """
+    """O outro lado: registro que descreve uma árvore que não existe mais."""
     achados = _onde_a_virgula_e_reescrita()
     curadas = sorted(set(_COPIAS_DECLARADAS) - set(achados))
     assert not curadas, (
@@ -275,11 +235,7 @@ def test_nenhuma_copia_declarada_sobreviveu_a_propria_cura() -> None:
 
 
 def test_as_duas_convertidas_devolvem_o_que_o_dono_devolve() -> None:
-    """Saída idêntica: a prova de que nenhum texto da tela mudou em BG-03.
-
-    Sem este caso, a régua acima passaria também numa "cura" que trocasse a
-    conta por outra coisa qualquer.
-    """
+    """Saída idêntica: a prova de que nenhum texto da tela mudou em BG-03."""
     from hefesto_dualsense4unix.app.actions.config import secao_controles
     from hefesto_dualsense4unix.integrations import plano_de_radio
 

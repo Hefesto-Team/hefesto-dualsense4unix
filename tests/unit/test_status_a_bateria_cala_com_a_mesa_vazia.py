@@ -28,7 +28,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("status: a bateria cala com a mesa vazia")
 
 import ast
@@ -46,8 +45,6 @@ _STATUS_PY = (
     / "status_actions.py"
 )
 
-#: O payload medido em 23/08 às 21h53, campo a campo. O topo afirma; a lista
-#: nega. Nada aqui é inventado para o teste.
 _MESA_VAZIA_COM_TOPO_MENTINDO: dict[str, Any] = {
     "connected": True,
     "transport": "bt",
@@ -63,8 +60,6 @@ _MESA_VAZIA_COM_TOPO_MENTINDO: dict[str, Any] = {
     ],
 }
 
-#: A mesma mesa, com um controle DE VERDADE na lista. É a contraprova: sem
-#: ela, "não mostrar nunca" passaria neste arquivo inteiro.
 _MESA_COM_UM_CONTROLE: dict[str, Any] = {
     "connected": True,
     "transport": "usb",
@@ -84,10 +79,7 @@ _MESA_COM_UM_CONTROLE: dict[str, Any] = {
 
 
 def test_a_bateria_cala_com_a_mesa_vazia() -> None:
-    """**A mordida:** arranque a checagem da lista em `_bateria_da_mesa` — o
-    ``if mesa_publicada and not ...`` — e a barra volta a escrever "75 %" com
-    a mesa vazia. O teste reprova citando o payload inteiro.
-    """
+    """**A mordida:** arranque a checagem da lista em `_bateria_da_mesa` — o"""
     fracao, texto = S._bateria_da_mesa(_MESA_VAZIA_COM_TOPO_MENTINDO)
 
     assert "%" not in texto or texto == "— %", (
@@ -103,15 +95,7 @@ def test_a_bateria_cala_com_a_mesa_vazia() -> None:
 
 
 def test_a_bateria_continua_dizendo_o_numero_com_controle_na_mesa() -> None:
-    """A contraprova, e ela é obrigatória.
-
-    "Não mostrar nunca" passaria no teste de cima e seria um defeito pior —
-    a T12 não é para tirar o número, é para ele parar de aparecer quando a
-    fonte não existe.
-
-    **A mordida:** troque o corpo de `_bateria_da_mesa` por um
-    ``return (0.0, "— %")`` fixo e este teste reprova.
-    """
+    """A contraprova, e ela é obrigatória."""
     fracao, texto = S._bateria_da_mesa(_MESA_COM_UM_CONTROLE)
     assert texto == "75 %", (
         f"com um controle conectado na lista a barra escreveu {texto!r} em "
@@ -121,16 +105,7 @@ def test_a_bateria_continua_dizendo_o_numero_com_controle_na_mesa() -> None:
 
 
 def test_sem_lista_publicada_o_topo_continua_valendo() -> None:
-    """Hipótese tem de explicar o que JÁ funcionava.
-
-    Daemon antigo, ou payload parcial, não publica ``controllers``. Recusar o
-    número aí seria trocar um erro por outro: **ausência de lista não é
-    evidência de mesa vazia**, e a aba ficaria muda contra um daemon que só
-    fala a língua antiga.
-
-    **A mordida:** faça a guarda disparar sem olhar se a lista existe e este
-    teste reprova.
-    """
+    """Hipótese tem de explicar o que JÁ funcionava."""
     _fracao, texto = S._bateria_da_mesa(
         {"connected": True, "transport": "usb", "battery_pct": 88}
     )

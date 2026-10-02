@@ -1,25 +1,8 @@
-"""Sincronia da seleção da aba Perfis com perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01).
-
-Testa os 3 cenários do spec:
-
-1. Daemon rodando com perfil explícito (``meu_perfil``) ativo → GUI seleciona ``meu_perfil``.
-2. Daemon offline → callback de falha dispara; seleção fallback preservada.
-3. Daemon rodando mas ``active_profile`` é ``None`` (startup sem switch explícito
-   nem last_profile persistido) → no-op; fallback preservado.
-
-Abordagem: evita subir GTK via stubs de ``gi.repository`` (padrão replicado de
-``test_status_actions_reconnect.py``). Assim o teste roda no ``.venv`` mesmo sem
-PyGObject instalado (armadilha A-12 do BRIEF).
-"""
+"""Sincronia da seleção da aba Perfis com perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("a janela sincroniza os perfis com o daemon")
 
 import sys
@@ -30,14 +13,7 @@ from unittest.mock import MagicMock
 
 
 def _install_gi_stubs() -> None:
-    """Instala stubs mínimos de ``gi.repository`` se o módulo real não estiver disponível.
-
-    Réplica do helper de ``test_status_actions_reconnect.py`` para evitar requerer
-    GTK/PyGObject em CI e no ``.venv`` sem ``--with-tray`` (A-12).
-    """
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
-    # "ambiente sem GTK" mesmo com o GTK real presente.
+    """Instala stubs mínimos de ``gi.repository`` se o módulo real não estiver disponível."""
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -102,16 +78,9 @@ _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
-# ---------------------------------------------------------------------------
-# Stubs de Gtk.ListStore / Gtk.TreeView para iteração de linhas.
-# ---------------------------------------------------------------------------
-
 
 def _make_store(rows: list[tuple[str, int, str]]):
-    """Cria stub de ``Gtk.ListStore`` compatível com ``_select_profile_by_name``.
-
-    Cada ``iter`` é o próprio índice (``int``); ``None`` sinaliza fim da lista.
-    """
+    """Cria stub de ``Gtk.ListStore`` compatível com ``_select_profile_by_name``."""
     store = MagicMock()
 
     def get_iter_first():
@@ -143,11 +112,7 @@ def _make_tree():
 
 
 def _stub_with(rows, tree) -> Any:
-    """Monta stub com ``_profiles_store``, ``_get`` e ``_select_profile_by_name`` bound.
-
-    ``_on_daemon_status_for_sync`` (método do mixin) chama ``self._select_profile_by_name``
-    — precisamos bindar o método do mixin ao stub para a chamada resolver.
-    """
+    """Monta stub com ``_profiles_store``, ``_get`` e ``_select_profile_by_name`` bound."""
     store = _make_store(rows)
     stub = SimpleNamespace(_profiles_store=store)
 
@@ -157,15 +122,9 @@ def _stub_with(rows, tree) -> Any:
         raise KeyError(f"widget desconhecido no stub: {widget_id}")
 
     stub._get = _get  # type: ignore[attr-defined]
-    # Binda o método do mixin ao stub preservando ``self`` como o próprio stub.
     stub._select_profile_by_name = lambda name: (  # type: ignore[attr-defined]
         ProfilesActionsMixin._select_profile_by_name(stub, name)
     )
-    # NUNCA-TROCA-O-ALVO-01 (06/08/2026): o sync deixou de mover a barra azul
-    # cegamente — ele pergunta antes se há trabalho não salvo no editor, e
-    # marca a mexida como PROGRAMÁTICA para o handler de seleção não repintar
-    # o editor. Os três ajudantes vêm do mixin REAL: com dublês aqui, este
-    # arquivo passaria a testar o dublê em vez da recusa que ele mede.
     stub._selecao_programatica = False  # type: ignore[attr-defined]
     stub._alvo_do_salvar = None  # type: ignore[attr-defined]
     stub._ha_trabalho_no_editor = lambda: (  # type: ignore[attr-defined]
@@ -177,18 +136,10 @@ def _stub_with(rows, tree) -> Any:
     stub._mover_selecao_sem_gesto = lambda linha: (  # type: ignore[attr-defined]
         ProfilesActionsMixin._mover_selecao_sem_gesto(stub, linha)
     )
-    # UX-PROFILES-ACTIVE-HIGHLIGHT-01: o sync também realça a linha ativa; o
-    # store fake destes testes tem 3 colunas (sem a de peso), então o stub só
-    # registra a intenção.
     stub._mark_active_profile_row = lambda active: setattr(  # type: ignore[attr-defined]
         stub, "_active_profile_hint", active
     )
     return stub
-
-
-# ---------------------------------------------------------------------------
-# _select_profile_by_name
-# ---------------------------------------------------------------------------
 
 
 class TestSelectProfileByName:
@@ -227,11 +178,6 @@ class TestSelectProfileByName:
         selection.select_iter.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# _on_daemon_status_for_sync / _on_daemon_status_sync_failed
-# ---------------------------------------------------------------------------
-
-
 class TestOnDaemonStatusForSync:
     def test_cenario_1_perfil_explicito_ativo_seleciona(self):
         """Daemon respondeu com ``meu_perfil`` ativo → seleção muda."""
@@ -243,7 +189,7 @@ class TestOnDaemonStatusForSync:
             stub, {"active_profile": "meu_perfil", "connected": True}
         )
 
-        assert result is False  # convenção GLib.idle_add
+        assert result is False
         selection.select_iter.assert_called_once_with(1)
 
     def test_cenario_2_daemon_offline_fallback_preservado(self):
@@ -310,11 +256,6 @@ class TestOnDaemonStatusForSync:
         selection.select_iter.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# _sync_selection_with_active_profile — dispara call_async com parâmetros certos
-# ---------------------------------------------------------------------------
-
-
 class TestSyncSelectionWithActiveProfile:
     def test_sync_chama_call_async_com_daemon_status(self, monkeypatch):
         import hefesto_dualsense4unix.app.actions.profiles_actions as mod
@@ -330,8 +271,6 @@ class TestSyncSelectionWithActiveProfile:
 
         monkeypatch.setattr(mod, "call_async", fake_call_async)
 
-        # Stub precisa expor os callbacks bound via referência direta aos métodos
-        # do mixin (compat com ``self._on_daemon_status_for_sync``).
         stub = SimpleNamespace()
         stub._on_daemon_status_for_sync = lambda _r: False  # type: ignore[attr-defined]
         stub._on_daemon_status_sync_failed = lambda _e: False  # type: ignore[attr-defined]
@@ -340,15 +279,9 @@ class TestSyncSelectionWithActiveProfile:
 
         assert captured["method"] == "daemon.status"
         assert captured["params"] is None
-        # Timeout generoso para GUI (spec permite até 500ms).
         assert captured["timeout_s"] == 0.5
         assert captured["on_success"] is not None
         assert captured["on_failure"] is not None
-
-
-# ---------------------------------------------------------------------------
-# UI-PROFILES-RADIO-GROUP-REDESIGN-01: combo "Aplica a:"
-# ---------------------------------------------------------------------------
 
 
 class _FakeCombo:
@@ -370,11 +303,7 @@ class _FakeCombo:
 
 
 class _FakeBox:
-    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
-
-    CAMPO-QUE-NAO-NASCIA-01: nasce com ``no_show_all`` armado como no glade;
-    ``show()`` para na caixa e só ``show_all()`` desarmado desce nos filhos.
-    """
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK."""
 
     def __init__(self) -> None:
         self.visible = True
@@ -398,12 +327,7 @@ class _FakeBox:
 
 
 def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNamespace:
-    """Stub com _get + ref do seletor "Aplica a:", para testes sem GTK.
-
-    FEAT-DSX-COMBO-TO-SEGMENTED-01: `_selected_simple_choice`/`_select_radio` agora
-    leem `self._aplica_a` (o SegmentedSelector) em vez de `_get(...)`. O ``_FakeCombo``
-    serve de stub por expor a mesma API por-ID (get/set_active_id).
-    """
+    """Stub com _get + ref do seletor "Aplica a:", para testes sem GTK."""
     stub = SimpleNamespace()
     widgets: dict[str, Any] = {}
     if box is not None:
@@ -414,11 +338,6 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
 
     stub._get = _get  # type: ignore[attr-defined]
     stub._aplica_a = combo  # type: ignore[attr-defined]
-    # A caixinha do Steam Input (decisão dela, 07/08/2026) é irmã do box do
-    # jogo, e `_on_aplica_a_changed` a mostra/esconde junto. O método REAL é
-    # amarrado ao stub — e não substituído por um no-op — para este arquivo
-    # continuar exercitando o handler de produção inteiro; sem o widget no
-    # `_get`, ele sai pela porta que já existe para glade desatualizado.
     from types import MethodType
 
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
@@ -428,11 +347,6 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
     stub._mostrar_caixa_do_steam_input = MethodType(  # type: ignore[attr-defined]
         ProfilesActionsMixin._mostrar_caixa_do_steam_input, stub
     )
-    # JOGO-QUE-SE-DIZ-01 (13/08/2026): o handler passou a atualizar também o
-    # rótulo com o NOME do jogo ao lado do número. Amarrado pela mesma razão do
-    # de cima — sem o widget no `_get`, o método real sai pela porta que já
-    # existe para glade desatualizado, e este arquivo continua exercitando o
-    # `_on_aplica_a_changed` de produção inteiro em vez de uma versão podada.
     stub._atualizar_frase_do_jogo = MethodType(  # type: ignore[attr-defined]
         ProfilesActionsMixin._atualizar_frase_do_jogo, stub
     )
@@ -448,11 +362,9 @@ class TestProfileSimpleCombo:
         combo = _FakeCombo(initial_id="editor")
         stub = _stub_with_combo(combo)
 
-        # _selected_simple_choice lê get_active_id() do combo stub
         choice = ProfilesActionsMixin._selected_simple_choice(stub)
         assert choice == "editor"
 
-        # _select_radio escreve via set_active_id
         ProfilesActionsMixin._select_radio(stub, "steam")
         assert combo.get_active_id() == "steam"
 
@@ -461,12 +373,10 @@ class TestProfileSimpleCombo:
         _install_gi_stubs()
         from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
-        # Combo inexistente (caso raro — glade desatualizado)
         stub = SimpleNamespace()
         stub._get = lambda _w: None  # type: ignore[attr-defined]
         assert ProfilesActionsMixin._selected_simple_choice(stub) == "any"
 
-        # Combo com id fora do enum _RADIO_IDS
         combo = _FakeCombo(initial_id="outro_qualquer")
         stub2 = _stub_with_combo(combo)
         assert ProfilesActionsMixin._selected_simple_choice(stub2) == "any"
@@ -489,7 +399,7 @@ class TestProfileSimpleCombo:
 
         combo = _FakeCombo(initial_id="game")
         box = _FakeBox()
-        box.hide()  # estado inicial oculto
+        box.hide()
         assert box.visible is False
 
         stub = _stub_with_combo(combo, box)
@@ -512,15 +422,6 @@ class TestProfileSimpleCombo:
         assert box.visible is False
 
 
-# ---------------------------------------------------------------------------
-# UI-PROFILES-RIGHT-PANEL-REBALANCE-01: preview JSON
-# ---------------------------------------------------------------------------
-
-
-# PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: cache em memoria + carga assincrona
-# ---------------------------------------------------------------------------
-
-
 class TestProfilesCacheNonBlocking:
     def test_find_cached_profile_retorna_do_cache(self):
         _install_gi_stubs()
@@ -537,7 +438,7 @@ class TestProfilesCacheNonBlocking:
         _install_gi_stubs()
         from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
-        stub = SimpleNamespace()  # sem _profiles_cache atribuido
+        stub = SimpleNamespace()
         assert ProfilesActionsMixin._find_cached_profile(stub, "x") is None
 
     def test_on_profile_selection_changed_le_do_cache_sem_disco(self, monkeypatch):
@@ -553,8 +454,6 @@ class TestProfilesCacheNonBlocking:
 
         alvo = SimpleNamespace(name="meu_perfil")
         populados: list = []
-        # NUNCA-TROCA-O-ALVO-01: sem seleção programática em curso, o handler
-        # repinta o editor como sempre repintou — que é o que este teste mede.
         stub = SimpleNamespace(_profiles_cache=[alvo], _selecao_programatica=False)
         stub._selected_profile_name = lambda _sel: "meu_perfil"  # type: ignore[attr-defined]
         stub._find_cached_profile = (  # type: ignore[attr-defined]
@@ -565,7 +464,7 @@ class TestProfilesCacheNonBlocking:
         ProfilesActionsMixin.on_profile_selection_changed(stub, MagicMock())
 
         assert populados == [alvo]
-        assert tocou_disco == []  # não releu o disco a cada clique
+        assert tocou_disco == []
 
     def test_reload_profiles_store_usa_worker_e_popula_cache(self, monkeypatch):
         """_reload_profiles_store carrega via run_in_thread e popula o cache."""
@@ -574,7 +473,7 @@ class TestProfilesCacheNonBlocking:
         from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         def fake_run_in_thread(fn, on_success, on_failure=None):
-            on_success(fn())  # simula worker + idle_add sincronos no teste
+            on_success(fn())
 
         monkeypatch.setattr(mod, "run_in_thread", fake_run_in_thread)
 
@@ -594,4 +493,4 @@ class TestProfilesCacheNonBlocking:
 
         assert stub._profiles_cache == [p1]
         assert populados == [([p1], "a")]
-        assert feito == [True]  # on_done roda apos popular o store
+        assert feito == [True]

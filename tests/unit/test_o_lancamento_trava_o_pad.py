@@ -1,14 +1,4 @@
-"""O pad que o lançamento deixa de pé é o que o jogo abre.
-
-O R-04 só recusa recriar quando `display_authority == "game"`. Essa
-autoridade chega segundos depois do `exec`, e não chega quando a janela não
-tem classe. No vão, o perfil de fora do jogo reaplicava o caminho dele e o
-jogo perdia o aparelho que acabara de abrir — trabalha, depois para.
-
-A trava nasce no `arm_launch_profile`, antes do `exec`. O gesto dela
-(`manual`, `gesto_de_perfil`) continua passando. Um lançamento novo solta a
-trava anterior antes de vestir o pad dele, senão o arming se bloqueava.
-"""
+"""O pad que o lançamento deixa de pé é o que o jogo abre."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -57,9 +47,7 @@ def test_sem_a_trava_e_sem_autoridade_o_automatico_recria() -> None:
 def test_jogo_sem_perfil_trava_o_pad_que_ja_esta_de_pe(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Sem perfil não há modo a impor. O que há é o pad de pé, e é ele que
-    o jogo vai abrir — a trava segura esse, sem aplicar modo nenhum.
-    """
+    """Sem perfil não há modo a impor. O que há é o pad de pé, e é ele que"""
     (tmp_path / "last_run").write_text(
         "appid=2111190\nepoch=1000\npid=1\n", encoding="utf-8"
     )
@@ -78,9 +66,7 @@ def test_jogo_sem_perfil_trava_o_pad_que_ja_esta_de_pe(
 def test_o_lancamento_novo_solta_a_trava_antes_de_vestir(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Se a soltura viesse depois do apply, o arming do jogo novo seria
-    bloqueado pela trava do jogo anterior.
-    """
+    """Se a soltura viesse depois do apply, o arming do jogo novo seria"""
     (tmp_path / "last_run").write_text(
         "appid=2111190\nepoch=2000\npid=1\n", encoding="utf-8"
     )

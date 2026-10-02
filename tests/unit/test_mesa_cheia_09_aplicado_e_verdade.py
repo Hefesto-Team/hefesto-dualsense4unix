@@ -55,14 +55,7 @@ def _key_de(uniq: str) -> str:
 
 
 class _FakeTrigger:
-    """O par `triggerL`/`triggerR` do handle real.
-
-    CONSERTO 1.3: o dublê não os tinha, e `_apply_trigger` levantava
-    `AttributeError` a cada escrita de gatilho — que o `except` de
-    `_write_partial_output` engolia. Com o retorno honesto do defeito B, o
-    dublê mudo passou a REPROVAR os testes de gatilho desta mesma sprint: eles
-    afirmavam "escreveu" sobre uma escrita que só o log sabia ter falhado.
-    """
+    """O par `triggerL`/`triggerR` do handle real."""
 
     def __init__(self) -> None:
         self.mode = 0
@@ -88,13 +81,7 @@ class _FakeHandle:
 
 
 class _FakeNodeSysfs:
-    """O nó `sysfs` do kernel, só com o que a rota de LED usa.
-
-    CONSERTO 1.3: existe para medir a PROMESSA de "registrado" no Modo Nativo
-    — que o desmute re-escreve o que ficou guardado. É a única rota que
-    restaura a cor ao sair do Modo Nativo, e sem um nó o teste mediria o
-    caminho errado (o `handle.light`, que só mexe em estado interno).
-    """
+    """O nó `sysfs` do kernel, só com o que a rota de LED usa."""
 
     def __init__(self) -> None:
         self.cores: list[tuple[int, int, int]] = []
@@ -175,12 +162,7 @@ class TestE1ApplyOutputForDeixaDeSerSilenciosa:
         assert backend.apply_output_for(NA_MESA, OutputSpec()) == "nada_a_fazer"
 
     def test_a_base_do_icontroller_tambem_separa_spec_vazio(self) -> None:
-        """CONSERTO 1.3/C — a base juntava o que o vocabulário separa.
-
-        `IController.apply_output_for` devolvia "sem_alvo" até para spec vazio,
-        enquanto a subclasse devolvia "nada_a_fazer": o mesmo pedido, duas
-        palavras, dependendo do backend.
-        """
+        """CONSERTO 1.3/C — a base juntava o que o vocabulário separa."""
         from hefesto_dualsense4unix.testing import FakeController
 
         fc = FakeController(transport="usb")
@@ -195,31 +177,10 @@ class TestE1ApplyOutputForDeixaDeSerSilenciosa:
 
 
 class TestConserto13OQueDizEscreveuSemByteNenhum:
-    """MORDIDA NOVA — os dois estados em que "escreveu" mentia.
-
-    O Modo Nativo é a TERCEIRA condição da tabela de mentiras da sprint
-    (`docs/process/sprints/arquivados/2026-08-13-MESA-CHEIA-09-aplicado-sem-byte-nenhum.md`,
-    §1). A primeira leva matou as duas primeiras e deu afirmação POSITIVA a
-    esta: `apply_output_for` lia `muted` e não o usava no retorno.
-    """
+    """MORDIDA NOVA — os dois estados em que "escreveu" mentia."""
 
     def test_modo_nativo_so_diz_escreveu_da_luz_e_do_numero(self) -> None:
-        """Mutado, o `report_thread` cala — e a luz e o número saem por fora.
-
-        A palavra do gatilho é "registrado" porque o caso é semanticamente
-        IDÊNTICO ao do controle fora da mesa — o desejado fica guardado e o
-        `set_output_mute` o re-escreve ao desmutar. A da LUZ passou a ser
-        "escreveu" em 23/09/2026: `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-
-        HEFESTO` (STEAM-NO-FISICO-01) — no Modo Nativo o Hefesto escreve a
-        barra e o número sempre. Pedido misto diz "registrado": dizer
-        "escreveu" prometeria o gatilho que só vale no desmute.
-
-        CORREÇÃO DE FATO (conferência de 24/09/2026): a luz sai «na hora» só
-        por FORA do fluxo mudo — a classe LED (o nó) ou o `0x31` do rádio. Este
-        teste afirmava «escreveu» sobre um handle USB SEM nó, em que a cor cai
-        no `handle.light` e espera o `report_thread` calado: zero byte no fio.
-        Agora o nó entra, e o cabo sem nó diz «registrado», que é a verdade.
-        """
+        """Mutado, o `report_thread` cala — e a luz e o número saem por fora."""
         backend = _backend_com_um_conectado()
         backend.set_output_mute(True)
         efeito = build_from_name("Rigid", [5, 200])
@@ -247,21 +208,7 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
         assert backend._desired_by_uniq[NA_MESA].led == (9, 8, 7)
 
     def test_o_desmute_paga_a_promessa_do_guardado(self) -> None:
-        """A prova que ESCOLHE a palavra, e que faltava.
-
-        "Registrado" não diz só "ficou no mapa" — diz **vale quando o evento
-        que o segura passar**. Para o controle fora da mesa, quem paga é o
-        hotplug, e há teste. Para o Modo Nativo, quem paga é o desmute, e a
-        entrega escolheu a palavra sobre uma afirmação que nenhum teste
-        cobria: sem esta mordida, trocar `set_output_mute` para NÃO re-aplicar
-        deixaria a suíte inteira verde com a janela prometendo o que o backend
-        não cumpre — e "guardado" viraria a quinta mentira, pior que
-        "aplicado", porque manda ela esperar.
-
-        A rota medida é a do `sysfs`, que é a ÚNICA que restaura a cor ao sair
-        do Modo Nativo (o `report_thread` não pinta LED de controle coberto
-        por nó — `_suppress_leds`).
-        """
+        """A prova que ESCOLHE a palavra, e que faltava."""
         backend = _backend_com_um_conectado()
         node = _FakeNodeSysfs()
         backend._sysfs = {_key_de(NA_MESA): node}  # type: ignore[dict-item]
@@ -271,9 +218,6 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
         assert backend.apply_output_for(
             NA_MESA, OutputSpec(led=(9, 8, 7), trigger_left=efeito)
         ) == "registrado"
-        # A LUZ sai na hora desde 23/09/2026
-        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`); o gatilho é o
-        # que fica guardado para o desmute.
         assert node.cores == [(9, 8, 7)]
 
         backend.set_output_mute(False)
@@ -284,14 +228,7 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
         assert backend._desired_by_uniq[NA_MESA].trigger_left == efeito
 
     def test_o_desmute_rearma_o_report_para_gatilho_e_mic(self) -> None:
-        """A outra metade da promessa: o que não passa pelo `sysfs`.
-
-        Gatilho e LED do mic só saem pelo `report_thread`, que deduplica pelo
-        último report enviado (`_last_out_report`). Guardado em Modo Nativo, o
-        estado interno já é o desejado — e sem limpar o cache o report novo
-        seria idêntico ao último e NÃO sairia: o guardado nunca chegaria ao
-        aparelho, mesmo com o Modo Nativo já desligado.
-        """
+        """A outra metade da promessa: o que não passa pelo `sysfs`."""
         backend = _backend_com_um_conectado()
         handle = next(iter(backend._handles.values()))
         backend.set_output_mute(True)
@@ -315,13 +252,7 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
         )
 
     def test_escrita_que_levanta_nao_pode_dizer_que_escreveu(self) -> None:
-        """DEFEITO B — `_write_partial_output` engole a exceção e loga.
-
-        O `hidraw` que some debaixo da escrita levantava `OSError`, o `except`
-        registrava `reapply_perfil_no_hotplug_falhou` e o caminho seguia para
-        "escreveu": a janela dizia "aplicado" por causa da MESMA falha que o
-        log denunciava.
-        """
+        """DEFEITO B — `_write_partial_output` engole a exceção e loga."""
         backend = _backend_com_um_conectado()
         handle = next(iter(backend._handles.values()))
 
@@ -409,14 +340,7 @@ class TestE2OTriggerDizOndePegou:
     async def test_sem_uniq_diz_em_quem_a_escrita_global_pegou(
         self, servidor: tuple[IpcServer, Any]
     ) -> None:
-        """Rota clássica (CONSERTO 1.4): dizia "[]" mesmo tendo escrito.
-
-        Era o "não sei em quem" — e o `led.set` irmão, no mesmo arquivo e sem
-        `uniq`, já respondia a mesa inteira. Duas rotas irmãs, respostas
-        opostas, e a tela lê as duas ("Todos" no seletor manda sem `uniq`).
-        O que a rota clássica continua NÃO fazendo está em
-        `test_conserto_1_4_a_rota_classica_diz_onde_pegou.py`.
-        """
+        """Rota clássica (CONSERTO 1.4): dizia "[]" mesmo tendo escrito."""
         server, _backend = servidor
         resposta = await server._handle_trigger_set(
             {"side": "left", "mode": "Rigid", "params": [5, 200]}

@@ -1,16 +1,4 @@
-"""BORDA-DE-QUEDA-01 (26/08/2026): o motor para ANTES de o vpad morrer.
-
-O defeito, medido na sessão dela: jogando com dois ou mais no rádio, um cai e
-o motor do controle **fica vibrando** até o teto de 3 s do relógio cortar —
-quatro vezes em 28 s, uma delas em (230, 230), quase máximo. O
-`_teardown_player` desmontava reader, motion_reader e vpad sem uma única linha
-que zerasse o rumble.
-
-A mordida é de **ORDEM**, não de efeito: depois do `vpad.stop()` o sink de FF
-daquele jogador já morreu, e um stop mandado ali não teria por onde sair. O
-teste grava uma fita única de chamadas e afirma que `force_rumble_stop(uniq)`
-aparece ANTES de `vpad.stop()`.
-"""
+"""BORDA-DE-QUEDA-01 (26/08/2026): o motor para ANTES de o vpad morrer."""
 from __future__ import annotations
 
 import contextlib
@@ -55,11 +43,7 @@ class _VpadDeFita:
 
 
 class _ControllerDeFita:
-    """Backend dublê com a API por-uniq do `force_rumble_stop` (BORDA-01).
-
-    Guarda o estado dos motores para que a fita conte a história inteira: o
-    jogador entra vibrando em (230, 230) e tem de sair em (0, 0).
-    """
+    """Backend dublê com a API por-uniq do `force_rumble_stop` (BORDA-01)."""
 
     def __init__(self, fita: _Fita) -> None:
         self.fita = fita
@@ -121,8 +105,6 @@ def _mesa(
         vpad=_VpadDeFita(fita) if com_vpad else None,  # type: ignore[arg-type]
     )
     manager._players[identity] = player
-    # O jogador está VIBRANDO no instante em que cai — é o (230, 230) do
-    # journal dela, e sem ele o teste mediria uma borda em silêncio.
     daemon.controller.motores[identity] = (230, 230)
     return manager, daemon, fita, player
 
@@ -142,35 +124,24 @@ def test_o_teardown_zera_o_motor_antes_de_matar_o_vpad() -> None:
         "o stop saiu DEPOIS de o vpad morrer: o sink de FF daquele jogador já "
         f"não existe mais e o report não tem por onde sair — fita: {fita.nomes}"
     )
-    # E ele foi endereçado a ESTE jogador, não à mesa inteira: os outros três
-    # continuam jogando, e um broadcast os deixaria mudos no meio da partida.
     alvos = [alvo for nome, alvo in fita.eventos if nome == "force_rumble_stop"]
     assert alvos == [_MAC], f"stop endereçado errado (broadcast?): {alvos}"
     assert daemon.controller.motores[_MAC] == (0, 0)
 
 
 def test_o_backend_que_explode_nao_aborta_o_teardown() -> None:
-    """Best-effort sagrado: motor preso é ruim, nó 0600 sem dono é pior.
-
-    O caso REAL do hotplug-out — o handle morreu junto com o controle — e o
-    teardown tem de seguir até o fim mesmo assim.
-    """
+    """Best-effort sagrado: motor preso é ruim, nó 0600 sem dono é pior."""
     manager, daemon, fita, player = _mesa()
     daemon.controller.explode = True
 
-    manager._teardown_player(player.identity)  # não levanta
+    manager._teardown_player(player.identity)
 
     assert "vpad.stop" in fita.nomes
     assert manager._players == {}
 
 
 def test_jogador_sem_mac_nao_para_a_mesa_inteira() -> None:
-    """Identidade `path:*` (externo) é NO-OP, e é decisão, não esquecimento.
-
-    Sem MAC não há endereço; a única chamada possível seria o broadcast, que
-    pararia o motor de quem continua jogando. O relógio do
-    `uhid_gamepad._expirar_rumble_preso` é o segundo cinto para esse caso.
-    """
+    """Identidade `path:*` (externo) é NO-OP, e é decisão, não esquecimento."""
     manager, _daemon, fita, player = _mesa("path:/dev/input/event9")
 
     manager._teardown_player(player.identity)
@@ -186,13 +157,10 @@ def test_backend_sem_a_api_nao_explode() -> None:
         _evdev=SimpleNamespace(set_grab=lambda _g: True, grab_state="held"),
     )
 
-    manager._teardown_player(player.identity)  # não levanta
+    manager._teardown_player(player.identity)
 
     assert "force_rumble_stop" not in fita.nomes
     assert "vpad.stop" in fita.nomes
-
-
-# --- o lado do backend: o alvo é UM, e o broadcast continua existindo -------
 
 
 class _HandleFalso:

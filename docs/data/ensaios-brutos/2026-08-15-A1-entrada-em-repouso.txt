@@ -159,10 +159,10 @@ vpad P4 <- 44:46:48:00:00:03  RY    128     128   0     128 129            128 1
   O DÉCIMO SEXTO é o achado: o único eixo em que o físico está a 4 LSB do
   centro e NÃO TEVE UMA ÚNICA TRANSIÇÃO na janela (`distintos = 1`) é o único
   que o vpad publica errado — e publica exatamente 128, que é o valor de
-  inicialização do snapshot do leitor (`core/evdev_reader.py:50`,
+  inicialização do snapshot do leitor (`core/evdev_reader.py:40`,
   `lx: int = 128`). O mecanismo é o evdev não emitir `EV_ABS` para valor que
   não muda: o leitor lê `absinfo` no open para saber a FAIXA do eixo
-  (`core/evdev_reader.py:57`), mas não semeia a posição com o `absinfo.value`,
+  (`core/evdev_reader.py:47`), mas não semeia a posição com o `absinfo.value`,
   que o kernel já tem — e a seção (2) mostra que o kernel TEM: o `EVIOCGABS`
   daquele nó devolve 124.
 

@@ -1,35 +1,4 @@
-"""CR-02: o formato do efeito próprio RECUSA valor sem proveniência.
-
-Portão da sprint
-`docs/process/sprints/arquivados/2026-07-25-CR-02-formato-e-proveniencia.md`, sob a regra
-R3 do `docs/process/CLEAN-ROOM.md`: *"Todo valor entra no projeto com o registro
-de como nasceu (...). Valor sem proveniência não entra."*
-
-O que este arquivo cobra, e por que cada coisa é um portão e não um detalhe:
-
-1. **A recusa é erro, não aviso.** Uma curva com `medido_por` vazio tem de
-   levantar. Teste que aceita a tabela sem proveniência não testa nada — é a
-   frase da própria sprint, e é o motivo de metade deste arquivo ser recusa.
-
-2. **A recusa é insensível à caixa nos nomes do DSX.** `Hard` e `hard` são o
-   mesmo problema. Vale especialmente para `Rigid`, que é ao mesmo tempo o
-   sétimo modo "pronto" do DSX (recusado) e um dos 19 presets paramétricos que
-   o Hefesto implementa (legítimo) — a colisão é real e está registrada em
-   `docs/process/sprints/2026-07-31-CR-SEQUENCIA-01-*.md`.
-
-3. **A lista de nomes recusados não é transcrita aqui.** Ela é lida do
-   `DSX_CANNED_TRIGGER_MODES` do `daemon/udp_server.py`. Duas listas divergem;
-   uma, não.
-
-4. **A largura da curva é fato medido, não preferência.** Sete bytes porque o
-   `TriggerEffect.forces` tem sete posições — este arquivo confere isso contra
-   o `core.trigger_effects` de verdade, para que a constante não possa mentir.
-
-O que este arquivo NÃO faz: escrever qualquer valor de curva de verdade. Os
-bytes usados aqui são dado de teste sintético para exercitar o formato, e não
-entram em `docs/protocol/curvas-proprias.md` — quem preenche aquela tabela é a
-CR-04, com a mão da mantenedora no gatilho.
-"""
+"""CR-02: o formato do efeito próprio RECUSA valor sem proveniência."""
 from __future__ import annotations
 
 import re
@@ -47,8 +16,6 @@ from hefesto_dualsense4unix.profiles.curva_propria import (
     gerar_tabela_markdown,
 )
 
-#: Curva sintética completa. Serve de base para as variações: cada teste de
-#: recusa muda UM campo, para provar que é aquele campo que reprova.
 CURVA_COMPLETA = {
     "nome": "Pesado",
     "curva": [2, 30, 200, 0, 0, 0, 0],
@@ -147,12 +114,7 @@ class TestADataEDatada:
         assert curva.medido_em == "2026-07-25"
 
     def test_o_limite_nao_depende_do_relogio(self) -> None:
-        """Data FIXA, não `date.today()`.
-
-        A cicatriz desta casa é portão que reprova sozinho quando o relógio da
-        máquina muda. Se alguém trocar a constante por uma leitura do relógio,
-        este teste é quem avisa.
-        """
+        """Data FIXA, não `date.today()`."""
         assert DATA_MINIMA_DE_MEDICAO.isoformat() == "2026-07-25"
 
 
@@ -177,13 +139,7 @@ class TestAGuardaDeNomes:
             CurvaPropria(**_sem("nome", variante))  # type: ignore[arg-type]
 
     def test_rigid_reprova_apesar_de_ser_preset_nosso(self) -> None:
-        """A colisão que prova que o risco da R2 não é teórico.
-
-        `Rigid` é o modo enlatado nº 7 do DSX (recusado) E um dos 19 presets
-        paramétricos do Hefesto (legítimo, anterior ao processo). Como nome de
-        efeito NOVO, ele reprova — é justamente o caso em que a comparação byte
-        a byte seria convidada.
-        """
+        """A colisão que prova que o risco da R2 não é teórico."""
         from hefesto_dualsense4unix.core.trigger_effects import PRESET_FACTORIES
 
         assert "Rigid" in PRESET_FACTORIES, "o preset paramétrico sumiu"
@@ -305,7 +261,6 @@ class TestATabelaEGeradaDoDado:
         )
         linha = gerar_tabela_markdown(catalogo).splitlines()[2]
         assert r"\|" in linha, "o pipe da nota não foi escapado"
-        # Só os separadores de coluna contam: os escapados não abrem coluna.
         separadores = len(re.findall(r"(?<!\\)\|", linha))
         assert separadores == 7, f"a linha ganhou coluna: {linha}"
 
@@ -314,12 +269,7 @@ class TestODocumentoDeProvenienciaSegueVazio:
     """R3 na direção contrária: nenhum valor pode ter entrado sem a mão dela."""
 
     def test_curvas_proprias_md_nao_tem_tabela_de_valores(self) -> None:
-        """Se alguém colar uma curva no documento, este portão avisa.
-
-        Nenhum valor entra antes da CR-04, e a CR-04 é a sprint que exige a
-        medição no hardware. Uma tabela preenchida aqui significa valor sem
-        mão — exatamente o que a R3 recusa.
-        """
+        """Se alguém colar uma curva no documento, este portão avisa."""
         import pathlib
 
         raiz = pathlib.Path(__file__).resolve().parents[2]

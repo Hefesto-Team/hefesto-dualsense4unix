@@ -1,27 +1,9 @@
-"""tests/unit/test_status_tinting_widgets.py — tinting dos widgets (STATUS-03).
-
-Exercita com GTK REAL (a suíte roda com display; widgets são instanciados):
-
-  * ButtonGlyph.set_accent: cache por (nome, size, hex) — trocar a cor N
-    vezes gera NO MÁXIMO 1 carga de pixbuf por combinação (contador via
-    monkeypatch no loader de MISS), lendo do GLYPHS_DIR resolvido
-    (dir FAKE em tmp_path — não caminho fixo);
-  * _tintar_svg: replace-all do literal #bd93f9 no texto do SVG;
-  * StickPreviewGtk.set_accent: desenha num surface cairo offscreen sem
-    erro, o accent muda o render e None restaura o comportamento clássico;
-  * tintar_progressbar: CssProvider POR WIDGET alcança trough/progress
-    (pixels amostrados de render offscreen), provider recriado SÓ quando a
-    cor muda.
-"""
+"""tests/unit/test_status_tinting_widgets.py — tinting dos widgets (STATUS-03)."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("status tinting widgets")
 
 from collections.abc import Iterator
@@ -34,8 +16,6 @@ gi.require_version("Gdk", "3.0")
 
 import pytest
 
-# CI sem libcairo (não está nas deps do build): pula o módulo inteiro em vez de
-# estourar ModuleNotFoundError na coleta — mesmo padrão de `importorskip("gi")`.
 pytest.importorskip("cairo")
 
 import cairo
@@ -51,7 +31,6 @@ from hefesto_dualsense4unix.utils.color_contrast import (
     tintar_progressbar,
 )
 
-# Cores de exercício: a real medida ao vivo + um vermelho bem distinto.
 COR_A = (16, 32, 72)
 COR_B = (255, 0, 0)
 
@@ -100,11 +79,6 @@ def _hex_para_rgb(hex_cor: str) -> tuple[int, int, int]:
     )
 
 
-# ---------------------------------------------------------------------------
-# ButtonGlyph — cache do tinting
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def glyphs_dir_fake(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -143,7 +117,6 @@ def test_glyph_trocar_cor_n_vezes_carrega_1x_por_combinacao(
         f"esperado 1 carga por (nome, size, hex) — 2 no total; "
         f"houve {contador['cargas']}"
     )
-    # O pixbuf tintado respeita o set_size e NÃO é o stock.
     assert glyph._pb_active is not stock
     assert glyph._pb_active.get_width() == 24
     assert glyph._pb_active.get_height() == 24
@@ -168,7 +141,6 @@ def test_glyph_set_accent_none_restaura_stock_sem_recarga(
     assert contador["cargas"] == 1
     glyph.set_accent(None)
     assert glyph._pb_active is stock
-    # Voltar à MESMA cor pós-None é cache HIT (0 cargas novas); repetir idem.
     glyph.set_accent(COR_A)
     glyph.set_accent(COR_A)
     assert contador["cargas"] == 1
@@ -188,7 +160,6 @@ def test_glyph_pixbuf_tintado_contem_a_cor_ajustada(
     assert alvo in pixels, (
         f"pixbuf tintado devia conter a cor ajustada {ajustada}"
     )
-    # E não contém mais o roxo stock puro (o rect inteiro foi substituído).
     assert bytes((0xBD, 0x93, 0xF9)) not in pixels
 
 
@@ -205,20 +176,6 @@ def test_glyphs_reais_shipados_tem_o_literal_stock() -> None:
     real = glyph_mod._resolver_dir_glyphs()
     ativos = sorted(real.glob("*_active.svg"))
 
-    # A GUARDA DE CONTAGEM SAI DA FONTE, E NÃO É MAIS DIGITADA (29/08/2026).
-    # Ela existe para o teste não passar vazio — se o `glob` não achar nada, os
-    # dois `assert` de baixo passariam sem olhar um único arquivo. Mas o número
-    # estava CRAVADO em 19, e havia 27 no disco: o teste reprovava há semanas
-    # por caducidade, não por defeito, e um vermelho permanente é um vermelho
-    # que ninguém lê.
-    #
-    # Agora o número vem de `docs/data/pecas-do-dualsense.csv`, que é a fonte da
-    # verdade das peças e o mesmo mapa que nomeia os glifos. Assim a guarda
-    # acompanha a peça que entrar ou sair, em vez de caducar na primeira.
-    #
-    # O MESMO 19 estava no gerador do mockup e foi corrigido lá em 28/08 —
-    # e aqui não, porque `tests/` não era arquivo daquele agente. É a correção
-    # pela metade que a regra desta casa existe para matar.
     import csv as _csv
 
     _csv_pecas = Path(__file__).resolve().parents[2] / "docs/data/pecas-do-dualsense.csv"
@@ -243,11 +200,6 @@ def test_glyphs_reais_shipados_tem_o_literal_stock() -> None:
         if "#bd93f9" not in p.read_text(encoding="utf-8").lower()
     ]
     assert not sem_literal, f"SVGs sem o literal #bd93f9: {sem_literal}"
-
-
-# ---------------------------------------------------------------------------
-# StickPreviewGtk.set_accent — desenho offscreen
-# ---------------------------------------------------------------------------
 
 
 def _render_stick(sp: StickPreviewGtk) -> bytes:
@@ -277,13 +229,11 @@ def test_stick_preview_set_accent_desenha_offscreen_sem_erro() -> None:
     render_accent = _render_stick(sp)
     assert render_accent != render_padrao, "accent devia mudar o desenho"
 
-    # Pressionado continua distinguível com accent ativo.
     sp.set_l3_pressed(True)
     render_accent_l3 = _render_stick(sp)
     assert render_accent_l3 != render_accent
     sp.set_l3_pressed(False)
 
-    # None restaura EXATAMENTE o comportamento clássico.
     sp.set_accent(None)
     assert sp._accent is None
     assert _render_stick(sp) == render_padrao
@@ -294,15 +244,9 @@ def test_stick_preview_set_accent_aceita_lista_e_e_idempotente() -> None:
     sp = StickPreviewGtk(label="R3")
     sp.set_accent([16, 32, 72])
     accent_1 = sp._accent
-    # Passar a cor JÁ ajustada dá no mesmo accent (idempotência do ensure).
     ajustada = ensure_min_contrast((16, 32, 72))
     sp.set_accent(ajustada)
     assert sp._accent == accent_1
-
-
-# ---------------------------------------------------------------------------
-# tintar_progressbar — CssProvider por widget
-# ---------------------------------------------------------------------------
 
 
 def test_tintar_progressbar_provider_por_widget_e_pixels() -> None:
@@ -322,8 +266,6 @@ def test_tintar_progressbar_provider_por_widget_e_pixels() -> None:
     esperado_fill = _hex_para_rgb(hex_aplicado)
     esperado_trough = _hex_para_rgb(TROUGH_HEX)
 
-    # A geometria vertical do trough depende do tema (min-height, centragem):
-    # varre a COLUNA inteira procurando a cor — hermético contra o tema.
     def _coluna_contem(x: int, esperado: tuple[int, int, int]) -> bool:
         for y in range(altura_img):
             r, g, b, a = _pixel(dados, stride, x, y)
@@ -333,7 +275,6 @@ def test_tintar_progressbar_provider_por_widget_e_pixels() -> None:
                 return True
         return False
 
-    # fraction=0.5: x=20 cai no preenchimento; x=180 cai no trough.
     assert _coluna_contem(20, esperado_fill), (
         f"coluna x=20 devia conter o fill {esperado_fill}"
     )
@@ -349,17 +290,14 @@ def test_tintar_progressbar_atualiza_so_quando_a_cor_muda() -> None:
     hex_1 = tintar_progressbar(barra, COR_A)
     provider_1 = barra._hefesto_tint_provider
 
-    # Mesma cor => no-op total (provider intacto).
     hex_2 = tintar_progressbar(barra, COR_A)
     assert hex_2 == hex_1
     assert barra._hefesto_tint_provider is provider_1
 
-    # Cor crua diferente com o MESMO hex ajustado => também no-op.
     hex_3 = tintar_progressbar(barra, ensure_min_contrast(COR_A))
     assert hex_3 == hex_1
     assert barra._hefesto_tint_provider is provider_1
 
-    # Cor nova => provider substituído.
     hex_4 = tintar_progressbar(barra, COR_B)
     assert hex_4 != hex_1
     assert barra._hefesto_tint_provider is not provider_1

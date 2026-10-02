@@ -1,72 +1,5 @@
 #!/usr/bin/env python3
-"""O «Reconectar controles» fica onde está — JOGAR-A-FAIXA-QUE-PULA-01.
-
-13/09/2026, 02:48. Duas fotos dela da aba Jogar, no mesmo minuto:
-
-    *"botoes que mudam de lugar direto."*  # noqa-acento: citação literal dela
-
-O QUE O PILOTO MEDIU ANTES DA CURA (WebKit, oculto, 1212/1228/1282/1300 de
-largura): parado por 60 s o botão não se move, e acender ou apagar a pendência
-também não. O que o movia era o recibo do Reconectar pousando na `.faixa-final`
-vestido de `.pendente` — 223 px para a esquerda com a frase curta, 301 com a
-longa, e até a outra ponta com três frases —, e INVISÍVEL, porque a faixa sem
-`.ha` esconde tudo o que veste `.pendente`.
-
-AS TRÊS METADES, e cada uma morde sozinha:
-
-1. **A página** — a faixa não declara lugar de recado. Era o nó que empurrava.
-2. **O layout** — no Chrome headless, nas larguras das duas fotos, o botão não
-   sai do lugar em nenhuma cena que o piloto produz nem quando um vizinho de
-   texto longo entra na fileira: uma linha, colado à direita, x e y iguais.
-   Quem prova no motor dela (WebKit) é o piloto, e a tabela está na entrega.
-3. **O pacote** — as duas frases desta aba não chegam à tela: a ressalva da
-   máscara e a pendência saem vazias, e a pendência vai ao diário da janela.
-
-E O §3.2 DA SPRINT, medido em dublê e no código (não no aparelho): o chip Xbox
-pede com `origin="manual"`, a trava de jogo aberto não segura essa origem, e o
-chip acende o `flavor` que o daemon grava. É o que autoriza a faixa a apagar.
-
-AS MORDIDAS, aplicadas e com a saída na entrega:
-
-* devolva o `recibo-do-reconectar` com `data-hef-recados="sucesso"` ao MIOLO de
-  `aba01.py`, regere e publique — a metade 1 reprova;
-* tire as três regras `.faixa-final …` que a sprint escreveu no CSS de
-  `aba01.py` — a cena «um vizinho longo entra na fileira» reprova;
-* devolva `return RESSALVA_DA_MASCARA` em `_ressalva_da_mascara`, ou a `frase`
-  no `"pendente"` do `pacote()` — a metade 3 reprova.
-
-E O PULO VERTICAL — RECONECTAR-SAMBA-02, 13/09/2026. A queixa voltou no índice
-da terceira lista dela:
-
-    *"reconectar c ontroles segue dando pau,. falo do posicionamento e formato
-    dele. ele segue sambando."*
-
-Com a fileira à prova de vizinho, o que ainda movia o botão era o ESTADO. No
-piloto oculto (WebKit, vista de 1212x809), antes da cura:
-
-* **o tique em que o serviço não responde a tempo** pintava `{}`: os quatro
-  lugares apagavam, o chip do lugar vazio saía do fluxo, o cartão caía de 128
-  para 67 px e o botão subia 61 px (y 463 → 402), voltando no tique seguinte;
-* **a lista de controles vazia** acendia a frase da mesa NO FLUXO, acima dos
-  cartões, e o saldo era de 34 px para cima (463 → 429).
-
-AS TRÊS CURAS, e cada uma morde sozinha:
-
-4. **o chip do lugar vazio guarda o vão** — volte a regra dele em `aba01.py`
-   para `display:none`, regere e publique: as cenas dos lugares apagados e o
-   clique no chip escondido reprovam;
-5. **a frase da mesa pousa por cima dos lugares apagados**, fora do fluxo — tire o
-   `position:absolute` de `.mesa-notas`: a cena da lista vazia reprova, com o
-   botão 26 px abaixo e a frase fora da fileira;
-6. **o tique mudo repinta o último estado bom por uma folga medida**
-   (`hefesto_vivo.FolgaDoServicoMudo`) — troque `st = self._folga.mudo(e)` por
-   `st = {}` no `_tique`: a régua do WebKit reprova com os lugares apagados
-   dentro da folga;
-7. **por cima SÓ dos lugares apagados** — achado da validação: tire o
-   `:not(:has(…))` das duas regras de `.mesa-notas` em `aba01.py`, regere e
-   publique: a frase do quinto controle cobre o chip da máscara de dois cartões
-   cheios, e a régua dela reprova.
-"""
+"""O «Reconectar controles» fica onde está — JOGAR-A-FAIXA-QUE-PULA-01."""
 from __future__ import annotations
 
 import pathlib
@@ -94,25 +27,14 @@ from pacotes import a01_jogar as aba
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-#: As larguras das duas fotos dela: ≈1228 e ≈1300 com a moldura do COSMIC.
 LARGURAS = (1228, 1300)
 
-#: Três frases REAIS do produto coladas — um dublê de COMPRIMENTO, e não uma
-#: frase de tela: é o tamanho que levou o botão à outra ponta no piloto.
-#:
-#: LIDAS DO DONO DESDE 24/09/2026, e são o recado MAIS LONGO que o «Reconectar»
-#: ainda monta: as duas do rádio e a falha mais longa do passo 2. A primeira
-#: das três de antes era a da numeração que mudou, que saiu do produto pela
-#: decisão dela (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`); digitada aqui, ela seria
-#: uma frase que o produto não diz mais.
 TRES_FRASES = " ".join((painel.recado_do_radio(1, 1), painel._NAO_CONFERIU))
 
 VIVO_DUALSENSE: dict[str, Any] = {
     "connected": True, "native_mode": False, "paused": False,
     "gamepad_emulation": {"enabled": True, "flavor": "dualsense", "backend": "uhid"},
 }
-#: AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026: o daemon publica o
-#: CAMINHO, e é por ele que o chip de modo acende. O `backend` `uhid` do estado
 #: DualSense já responde por si; o `uinput` sozinho não separa o Xbox escolhido
 #: do DualSense degradado, e por isso o estado Xbox traz o campo.
 VIVO_XBOX: dict[str, Any] = {
@@ -156,18 +78,9 @@ def _ctx(state: dict[str, Any]) -> Contexto:
     return Contexto(state=state, mesa=[], conectados=[], estados={})
 
 
-# ---------------------------------------------------------------------------
-# 1. A PÁGINA — a faixa não tem onde pousar recado
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
 def test_a_faixa_final_nao_declara_lugar_de_recado(publicado: bool) -> None:
-    """O nó que empurrava o botão, nos DOIS lados.
-
-    O piloto pousa o recado de sucesso no primeiro `[data-hef-recados~=…]` que
-    a página declara (`hefesto_vivo.BOOTSTRAP`, `pintar_recados`). Na 01 esse
-    lugar era um irmão do botão dentro da `.faixa-final`, e crescia com a frase.
-    Olhar só a bancada daria verde com o produto dela ainda empurrando.
-    """
+    """O nó que empurrava o botão, nos DOIS lados."""
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
     assert "data-hef-recados=" not in corpo, (
         "a 01 voltou a declarar um lugar de recado: o recibo volta a entrar na "
@@ -175,11 +88,6 @@ def test_a_faixa_final_nao_declara_lugar_de_recado(publicado: bool) -> None:
     assert 'class="recibo-do-reconectar"' not in corpo
 
 
-# ---------------------------------------------------------------------------
-# 2. O LAYOUT — o botão não muda de lugar em cena nenhuma
-# ---------------------------------------------------------------------------
-#: A MEDIDA. `direita` é o que sobra entre a borda direita do botão e a do
-#: conteúdo da faixa; `linhas` conta as caixas de linha do texto do botão.
 MEDIR = """() => {
   const f = document.querySelector('.faixa-final');
   const b = document.querySelector('[data-gesto="reconectar"]');
@@ -193,8 +101,6 @@ MEDIR = """() => {
   return {x: rb.left, y: rb.top, direita: borda - rb.right, linhas: tops.size};
 }"""
 
-#: AS CENAS — cada uma é o que o piloto ou a folha da casa fazem com a fileira.
-#: O argumento chega como `a` e só as que precisam o leem.
 CENAS: tuple[tuple[str, str], ...] = (
     ("a página como nasce", "(a) => 0"),
     ("a faixa apaga (sai o .ha)",
@@ -205,8 +111,6 @@ CENAS: tuple[tuple[str, str], ...] = (
     ("a frase do produto acende",
      "(a) => { document.querySelector('[data-campo=\"pendente\"]').textContent = a.frase;"
      " document.querySelector('.faixa-final').classList.add('ha'); return 0; }"),
-    # O MESMO CAMINHO DO `pintar_recados`: o recado entra DENTRO do lugar que a
-    # página declara, vestido das classes que ela pede.
     ("o piloto pousa o recibo de sucesso",
      "(a) => { const f = document.querySelector('[data-hef-recados~=\"sucesso\"]');"
      " if (!f) return 0; const el = document.createElement('div');"
@@ -224,12 +128,7 @@ CENAS: tuple[tuple[str, str], ...] = (
 
 @pytest.mark.parametrize("largura", LARGURAS)
 def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
-    """Uma linha, colado à direita, e x e y iguais (±1 px) nas sete cenas.
-
-    NO CHROME, e é declarado: o motor dela é o WebKit, e quem mede lá é o
-    piloto (a tabela da entrega). O Chrome headless é o que a suíte alcança sem
-    abrir janela nenhuma — a mesma escolha de `olhar.py`.
-    """
+    """Uma linha, colado à direita, e x e y iguais (±1 px) nas sete cenas."""
     if not CHROME.exists():
         pytest.skip("sem /usr/bin/google-chrome: o layout não se mede sem motor")
     sync_api = pytest.importorskip("playwright.sync_api")
@@ -250,7 +149,6 @@ def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
                 try:
                     pg.goto(pagina)
                     pg.wait_for_load_state("networkidle")
-                    # A FOLHA DO PILOTO, que é o que o produto põe por cima.
                     pg.add_style_tag(content=FOLHA_DA_CASA)
                     pg.evaluate(cena, argumento)
                     pg.wait_for_timeout(50)
@@ -274,16 +172,8 @@ def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
             f"y {base['y']:.1f} → {m['y']:.1f}")
 
 
-# ---------------------------------------------------------------------------
-# 4. O ESTADO — os lugares apagam e o botão fica (RECONECTAR-SAMBA-02)
-# ---------------------------------------------------------------------------
-#: O VALOR DO ATRIBUTO que o piloto escreve num lugar sem controle (o passo `1b`
-#: do BOOTSTRAP). Vai às cenas como argumento, para nenhuma o digitar.
 LUGAR_VAZIO = "nao"  # noqa-acento: valor do atributo `data-conectado`, não a palavra
 
-#: O QUE O PILOTO FAZ COM A FILEIRA quando o tique pinta `{}` (os quatro lugares
-#: viram vazios) e quando a lista de controles chega vazia (o mesmo, e a frase
-#: da mesa acende).
 APAGAR_OS_QUATRO = ("for (const el of document.querySelectorAll('[data-controle]'))"
                     " { el.dataset.conectado = a.vazio; el.classList.add('off'); }")
 ACENDER_A_FRASE = ("document.querySelector('.mesa-notas[data-campo=\"mesa-frase\"]')"
@@ -295,13 +185,8 @@ CENAS_DO_ESTADO: tuple[tuple[str, str], ...] = (
      "(a) => { " + APAGAR_OS_QUATRO + " " + ACENDER_A_FRASE + " return 0; }"),
 )
 
-#: A TOLERÂNCIA DAS CENAS DO ESTADO, declarada: com os quatro lugares vazios o
-#: cartão mede 1 px a menos (128 em vez de 129 no Chrome). Não é o botão
-#: andando — com a cura arrancada ele anda 61.
 TOLERANCIA_DO_ESTADO = 2
 
-#: A MEDIDA DAS CENAS DO ESTADO: a do botão, mais a caixa da frase da mesa e a
-#: da fileira. Sem as duas, esconder a frase passaria por pousá-la por cima.
 MEDIR_O_ESTADO = """() => {
   const f = document.querySelector('.faixa-final');
   const b = document.querySelector('[data-gesto="reconectar"]');
@@ -320,9 +205,6 @@ MEDIR_O_ESTADO = """() => {
           fileira: {topo: rp.top, base: rp.bottom}};
 }"""
 
-#: O CLIQUE NO CHIP ESCONDIDO: quem recebe um clique no centro de cada chip dos
-#: lugares apagados. É o ponto que um clique de verdade alcança, e a caixa vem
-#: junto — um chip sem altura não tem centro a clicar, e a régua mediria nada.
 CLIQUE_NO_CHIP_ESCONDIDO = "(a) => { " + APAGAR_OS_QUATRO + """
   const saida = [];
   for (const chip of document.querySelectorAll('[data-controle] .mascara .chip')) {
@@ -336,9 +218,6 @@ CLIQUE_NO_CHIP_ESCONDIDO = "(a) => { " + APAGAR_OS_QUATRO + """
   return saida;
 }"""
 
-#: A MESMA LINHA COM MAIS CONTROLES QUE LUGARES: os quatro cheios e a frase do
-#: quinto acesa, com o texto que o pacote escreve. Devolve o que ela cobre de
-#: clicável e visível num cartão cheio.
 O_QUE_A_FRASE_DO_QUINTO_COBRE = "(a) => { " + (
     "for (const el of document.querySelectorAll('.pecas [data-controle]'))"
     " { el.dataset.conectado = 'sim'; el.classList.remove('off'); } "
@@ -390,16 +269,7 @@ def _medir_no_chrome(largura: int, cenas: tuple[tuple[str, str], ...],
 
 @pytest.mark.parametrize("largura", LARGURAS)
 def test_o_botao_nao_muda_de_lugar_quando_o_estado_apaga_os_lugares(largura: int) -> None:
-    """As duas cenas do estado contra a página como nasce.
-
-    NO CHROME, ANTES DA CURA, na página publicada: com os quatro lugares
-    apagados o botão subia 61 px (o chip do lugar vazio saía do fluxo e o
-    cartão caía de 129 para 68 px); com a lista vazia a frase entrava acima dos
-    cartões, e o saldo era de 34 px para cima. Com a cura, 1 px nas duas.
-
-    A FRASE TEM DE ESTAR LÁ, e sobre a fileira: sem esta metade, sumir com ela
-    passaria nesta régua como se fosse a cura.
-    """
+    """As duas cenas do estado contra a página como nasce."""
     medidas = _medir_no_chrome(
         largura, (("a página como nasce", "(a) => 0"), *CENAS_DO_ESTADO),
         {"vazio": LUGAR_VAZIO}, MEDIR_O_ESTADO)
@@ -428,13 +298,7 @@ def test_o_botao_nao_muda_de_lugar_quando_o_estado_apaga_os_lugares(largura: int
 
 
 def test_o_clique_no_chip_escondido_nao_devolve_o_chip() -> None:
-    """O lugar apagado guarda o vão do chip, e o clique no centro dele cai fora.
-
-    AS DUAS METADES, e cada uma pega uma cura torta diferente: o chip TEM altura
-    (sem ela a fileira volta a cair, e o `elementFromPoint` num ponto sem caixa
-    não mede nada), e o ponto NÃO É o chip (senão o lugar sem controle voltou a
-    oferecer a escolha — a decisão de 31/08 citada em `aba01.py`).
-    """
+    """O lugar apagado guarda o vão do chip, e o clique no centro dele cai fora."""
     [(_, chips)] = _medir_no_chrome(
         LARGURAS[0], (("os quatro lugares apagam", "(a) => 0"),),
         {"vazio": LUGAR_VAZIO}, CLIQUE_NO_CHIP_ESCONDIDO)
@@ -475,9 +339,6 @@ def test_a_frase_do_quinto_controle_nao_cobre_cartao_cheio(largura: int) -> None
         f"cheio — " + ", ".join(m["cobre"]))
 
 
-# ---------------------------------------------------------------------------
-# 3. O PACOTE — as duas frases desta aba não chegam à tela
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("estado", [VIVO_NATIVO, VIVO_NAVEGACAO, VIVO_DUALSENSE, {}],
                          ids=["nativo", "navegacao", "jogo", "sem-daemon"])
 def test_a_ressalva_da_mascara_nao_chega_a_tela(estado: dict[str, Any]) -> None:
@@ -487,13 +348,7 @@ def test_a_ressalva_da_mascara_nao_chega_a_tela(estado: dict[str, Any]) -> None:
 
 def test_a_pendencia_nao_acende_a_faixa_e_vai_ao_diario(
         capsys: pytest.CaptureFixture[str]) -> None:
-    """§3.2: o daemon ainda não alcançou o Xbox — a dona sabe, a tela não fala.
-
-    AS TRÊS METADES, e cada uma pega uma cura torta diferente: os três
-    endereços vazios (a faixa não acende); a dona ainda medindo (sem ela a
-    pendência some do diário também); e UMA linha no diário por mudança, não
-    dez por segundo.
-    """
+    """§3.2: o daemon ainda não alcançou o Xbox — a dona sabe, a tela não fala."""
     aba.modo_xbox(_ctx(VIVO_DUALSENSE), {"texto": "Xbox"}, PonteDeMentira())
     capsys.readouterr()
 
@@ -512,24 +367,14 @@ def test_a_pendencia_nao_acende_a_faixa_e_vai_ao_diario(
 
 
 def test_o_chip_xbox_pede_com_origem_manual() -> None:
-    """§3.2, primeiro elo: sem `manual` o daemon leria reconciliação e poderia recusar.
-
-    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o
-    chip pedia `flavor: "xbox"` — a MÁSCARA, que o cartão do controle vencia e
-    o daemon respondia `ja_estava`. AGORA confere que ele pede o `caminho`, e a
-    origem `manual` continua sendo o elo que esta régua trava.
-    """
+    """§3.2, primeiro elo: sem `manual` o daemon leria reconciliação e poderia recusar."""
     plano = aba._plano_do_chip("xbox")
     pedidos = [p for m, p in plano if m == "gamepad.emulation.set"]
     assert pedidos == [{"enabled": True, "origin": "manual", "caminho": "xbox"}], plano
 
 
 def test_a_trava_do_jogo_aberto_nao_segura_o_gesto_dela() -> None:
-    """§3.2, segundo elo: com o jogo na autoridade, só a AUTOMAÇÃO é segurada.
-
-    O dublê sabe recusar — é a mesma trava devolvendo `True` para `profile` — e
-    é por isso que o `False` do `manual` diz alguma coisa.
-    """
+    """§3.2, segundo elo: com o jogo na autoridade, só a AUTOMAÇÃO é segurada."""
     from hefesto_dualsense4unix.daemon.subsystems import gamepad
 
     com_jogo = SimpleNamespace(display_authority="game", store=None)
@@ -541,22 +386,13 @@ def test_a_trava_do_jogo_aberto_nao_segura_o_gesto_dela() -> None:
 
 
 def test_o_chip_acende_o_flavor_que_o_daemon_grava() -> None:
-    """§3.2, terceiro elo: o chip lê o que o daemon publica, e a pendência some quando chega.
-
-    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES o chip lia o
-    `flavor` — a máscara —, e o nome do teste ficou dessa época; AGORA ele lê o
-    `caminho` publicado (`painel.caminho_vivo`), e é o estado Xbox com o campo
-    que apaga a pendência do clique «Xbox».
-    """
+    """§3.2, terceiro elo: o chip lê o que o daemon publica, e a pendência some quando chega."""
     assert aba._estado_da_tela(VIVO_DUALSENSE)["modo-aceso"] == "dualsense"
     assert aba._estado_da_tela(VIVO_XBOX)["modo-aceso"] == "xbox"
     aba.modo_xbox(_ctx(VIVO_DUALSENSE), {"texto": "Xbox"}, PonteDeMentira())
     assert aba._faixa_do_pendente(VIVO_XBOX) == ("", "")
 
 
-# ---------------------------------------------------------------------------
-# 5. O TIQUE MUDO — a folga, sozinha e no piloto de verdade (RECONECTAR-SAMBA-02)
-# ---------------------------------------------------------------------------
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 
@@ -586,12 +422,7 @@ def _mudo_por(causa: BaseException) -> Exception:
 
 
 def test_a_folga_repinta_o_ultimo_estado_bom_e_depois_diz_a_verdade() -> None:
-    """Os mudos da folga devolvem o último bom; o seguinte, `{}`, e ele não volta.
-
-    A TERCEIRA METADE é a que impede a cura de virar mentira: depois de a tela
-    dizer que o serviço calou, um mudo a mais não ressuscita o estado velho.
-    Só uma resposta nova o traz.
-    """
+    """Os mudos da folga devolvem o último bom; o seguinte, `{}`, e ele não volta."""
     import hefesto_vivo as hv
 
     folga = hv.FolgaDoServicoMudo()
@@ -632,8 +463,6 @@ def test_sem_resposta_boa_nao_ha_o_que_repintar() -> None:
     assert hv.FolgaDoServicoMudo().mudo(_mudo_por(TimeoutError("timed out"))) == {}
 
 
-#: O QUE A RÉGUA DO WEBKIT LÊ a cada amostra: o topo do botão, a marca do P1 e
-#: se a frase da mesa está acesa.
 LER_A_FILEIRA = r"""(() => {
   const b = document.querySelector('[data-gesto="reconectar"]');
   const p1 = document.querySelector('[data-controle="p1"]');
@@ -646,13 +475,7 @@ LER_A_FILEIRA = r"""(() => {
 
 @pytest.fixture(scope="module")
 def tique_mudo() -> dict[str, Any]:
-    """O piloto de verdade, oculto, na página publicada: bom → mudo → lista vazia.
-
-    O SERVIÇO É DUBLÊ, e o mudo tem a forma do produto: `DaemonMudo` com
-    `TimeoutError` na causa. A ponte também, para nenhuma leitura sair deste
-    processo. Os dois voltam no fim — `mesa_viva` e `pacotes.ponte` são módulos
-    compartilhados, e um dublê esquecido entrega mesa de mentira ao vizinho.
-    """
+    """O piloto de verdade, oculto, na página publicada: bom → mudo → lista vazia."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -744,8 +567,6 @@ def tique_mudo() -> dict[str, Any]:
         while not fora.get("completou") and time.monotonic() < limite:
             Gtk.main()
     finally:
-        # OS DOIS TIMERS SE DESARMAM SOZINHOS no próximo disparo: um relógio que
-        # sobra da fixture dispara dentro do laço do PRÓXIMO teste de GUI.
         fora["parar"] = True
         GLib.source_remove(guarda)
         piloto.pronto = False
@@ -761,11 +582,7 @@ def tique_mudo() -> dict[str, Any]:
 
 
 def test_no_webkit_o_tique_mudo_repinta_o_ultimo_estado_bom(tique_mudo: dict[str, Any]) -> None:
-    """Dentro da folga os lugares continuam cheios — no motor dela.
-
-    A MORDIDA: troque `st = self._folga.mudo(e)` por `st = {}` no `_tique` e o
-    P1 apaga já no primeiro tique mudo.
-    """
+    """Dentro da folga os lugares continuam cheios — no motor dela."""
     folga = tique_mudo["folga"]
     dentro = [a for a in tique_mudo["amostras"]
               if a["fase"] == "mudo" and 1 <= a["mudos"] <= folga]
@@ -790,11 +607,7 @@ def test_no_webkit_depois_da_folga_a_tela_diz_que_o_servico_calou(
 
 def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
         tique_mudo: dict[str, Any]) -> None:
-    """O y do botão no repouso, com os lugares apagados e com a frase acesa.
-
-    ANTES DA CURA, no piloto: 463 → 402 com os lugares apagados, 463 → 429 com a
-    lista vazia. Com a cura, 462 nas duas.
-    """
+    """O y do botão no repouso, com os lugares apagados e com a frase acesa."""
     amostras = tique_mudo["amostras"]
     repouso = [a["y"] for a in amostras if a["fase"] == "bom" and a["p1"] == "sim"]
     apagados = [a for a in amostras if a["p1"] == LUGAR_VAZIO and not a["frase"]]

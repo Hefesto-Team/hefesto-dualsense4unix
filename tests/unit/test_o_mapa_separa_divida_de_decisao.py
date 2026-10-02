@@ -182,18 +182,11 @@ RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
-# Z6-05 (24/08/2026): o domínio ganhou dono só —
-# `check_paridade_transporte.DOMINIO_POR_SUFIXO["por_que_nao_aciona"]` — e este
-# arquivo passou a IMPORTAR em vez de manter cópia própria, fechando o que o
-# cabeçalho pediu: "a lista continuar tendo UM dono". O quinto valor,
-# `o-aparelho-recusa`, entrou nesse gesto.
 from check_paridade_transporte import DOMINIO_POR_SUFIXO as _DOMINIO_DO_PORTAO
 
 LADOS = ("cabo", "radio")
 SUFIXO = "por_que_nao_aciona"
 
-#: O que conta como "a casa mediu e o produto não faz". As duas colunas são
-#: OUTRAS que a conferida — é isso que faz a régua valer.
 DE_ONDE_SEI_MEDIDO = "medido"
 ACIONA_NAO = "não"
 
@@ -201,164 +194,11 @@ DIVIDA = "divida"
 DECISAO = "decisao-tomada"
 NADA_A_ACIONAR = "nada-a-acionar"
 SO_ELA_DECIDE = "so-ela-decide"
-#: O quinto valor (Z6-05, 24/08/2026): causa FORA do nosso código, como o
-#: `HANDSHAKE 0x04` da cor por rádio — nunca `decisao-tomada`, que diria que a
-#: escolha foi nossa.
 O_APARELHO_RECUSA = "o-aparelho-recusa"
 
-#: O domínio. Valor fora daqui reprova, de propósito: acrescentar resposta nova
-#: ao mapa é acrescentá-la aqui no mesmo gesto — e desde Z6-05 o gesto é no
-#: portão (`DOMINIO_POR_SUFIXO["por_que_nao_aciona"]`), nunca mais aqui.
 DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 
-#: ─────────────────────────────────────────────────────────────────────────
-#: O TETO DA DÍVIDA — retrato de 24/08/2026 (baixado de 22/08), e ele só desce.
-#: ─────────────────────────────────────────────────────────────────────────
-#: PAGA em 24/08/2026 (Z6-05): `identidade.cor_do_aparelho@dualsense` (rádio)
-#: saiu desta lista. Não é mais dívida — a medição de 23/08/2026 (`HANDSHAKE
-#: 0x04`, `btmon`) nomeou a causa como `o-aparelho-recusa`, e causa do
-#: APARELHO não é "ninguém escreveu o código". Ficam as três:
-#:
-#:   audio.saida_dedicada@dualsense          rádio — som no controle sem fio;
-#:                                           o canal existe e responde, o
-#:                                           conteúdo do payload não foi
-#:                                           identificado;
-#:   movimento.imu.perda@dualsense           cabo — o contador de reports do
-#:                                           `corpo[11..14]`, medido e nunca lido;
-#:   movimento.imu.perda@pro                 rádio — 1613 episódios num dia, e
-#:                                           nada no produto os mostra.
-#:
-#: SUBIR ESTE NÚMERO É CONFISSÃO, não conserto: quem o subir está dizendo que a
-#: casa passou a dever mais do que devia. Pagar uma dívida é BAIXÁ-LO no mesmo
-#: commit — senão o teto vira folga e o portão para de morder.
-#:
-#: ─────────────────────────────────────────────────────────────────────────
-#: SUBIU PARA 23 EM 03/09/2026, e a confissão vem com a distinção que importa.
-#: ─────────────────────────────────────────────────────────────────────────
-#: **A CASA NÃO PASSOU A DEVER MAIS. A MEDIÇÃO PASSOU A DIZER.** As vinte
-#: células novas saíram da leva "as setenta e nove células mudas": oito agentes
-#: responderam `aciona` onde NINGUÉM tinha respondido — as mudas caíram de 208
-#: para 47 —, e vinte dessas respostas foram `não, e a razão é dívida NOSSA`.
-#:
-#: A dívida existia antes e não tinha nome. Uma célula muda não é uma casa sem
-#: dívida: é uma casa que não sabe. O teto de 3 aferia o que estava ESCRITO,
-#: não
-#: o que era verdade — e é por isso que subi-lo aqui é o gesto honesto, e
-#: mantê-lo em 3 apagando as respostas seria o desonesto.
-#:
-#: **AS VINTE, por família:**
-#:
-#:   áudio (7)        alto_falante, microfone, microfone.mudo,
-#:                    microfone.volume (cabo e rádio), saida_dedicada e o
 #:                    payload_do_degrau dela — todas do DualSense
-#:   vibração (10)    haptics_vcm@dualsense (os dois lados) e rumble
-#:                    direito/esquerdo do `pro` e do `sn30`, nos dois lados
-#:   gatilho (2)      `gatilho.leitura@dualsense`, cabo e rádio
-#:   o resto (4)      identidade.pareamento, movimento.imu.perda@pro (rádio),
-#:                    plataforma.vigia_zumbi@pro
-#:
-#: **A REGRA NÃO MUDOU, e é o que impede este número de virar folga:** daqui
-#: para a frente ele só desce. Quem pagar uma delas baixa o teto no mesmo
-#: commit; quem quiser subi-lo de novo escreve, como está escrito aqui, por que
-#: a casa passou a dever mais — ou por que a medição passou a dizer mais.
-#:
-#: ─────────────────────────────────────────────────────────────────────────
-#: SUBIU PARA 25 EM 06/09/2026, e de novo a casa NÃO passou a dever mais.
-#: ─────────────────────────────────────────────────────────────────────────
-#: As duas células novas são `vibracao.rumble.ff@pro`, cabo e rádio, e vêm da
-#: leva que levantou na FONTE as 38 células `nao-medido` do Nintendo Pro.
-#:
-#: **É A MESMA FALTA que já estava confessada**, e é isso que precisa ficar
-#: escrito para ninguém a ler como dívida nova: as quatro células de
-#: `vibracao.rumble.direito@pro` e `vibracao.rumble.esquerdo@pro` já diziam
-#: `divida` desde 03/09, com a razão «o Hefesto simplesmente não tem escritor
-#: de force feedback para controle externo» — e as duas linhas filhas DECLARAM,
-#: no próprio `detalhe`, que não repetem o levantamento e apontam para
-#: `vibracao.rumble.ff@pro`. A linha DONA do levantamento é que estava muda.
-#:
-#: Ficar em `nao-medido` seria dizer «ninguém olhou para o aparelho», e
-#: olharam: o caminho (`EV_FF`/`FF_RUMBLE` no nó de gamepad) está lido no
-#: driver e a ausência do escritor está medida por `grep` na árvore. A escolha
-#: era entre um número honesto e uma célula que mente calada.
-#:
-#: **O LEVE QUE ISSO DEIXA, e ele baixa QUATRO de uma vez:** um escritor de
-#: force feedback para externo fecha as SEIS células juntas (`ff`, `direito`,
-#: `esquerdo`, nos dois lados) e este teto cai para 19. Quem, em vez disso,
-#: decidir que as filhas não devem recontar o que a mãe já conta, colapsa as
-#: quatro delas e baixa o teto para 21 sem escrever uma linha de produto.
-#:
-#: ─────────────────────────────────────────────────────────────────────────
-#: DESCEU PARA 23 EM 06/09/2026 (SPECS-A-PROCEDENCIA-01), e desceu pelo MOTIVO
-#: CERTO — que é para isso que este número está aqui.
-#: ─────────────────────────────────────────────────────────────────────────
-#: As duas células que saíram são `audio.microfone.volume@dualsense`, cabo e
-#: rádio. Elas diziam `divida`, e não era: a decisão está DATADA no código —
-#: `core/backend_pydualsense.py`, SOM-SEMPRE-01, deixa o volume do microfone
-#: FORA da chamada de propósito, porque o dono do microfone no Linux é o kernel
-#: (AUDIO-OWNER-01). As duas passaram a `decisao-tomada`.
-#:
-#: **NENHUMA dívida foi paga com código nesta descida**, e é isso que precisa
-#: ficar escrito para ninguém a ler como trabalho feito: o que mudou é a
-#: CLASSIFICAÇÃO, não o produto. A diferença importa porque `divida` chama
-#: alguém para trabalhar e `decisao-tomada` não — as duas células estavam na
-#: fila de quem procura o que fazer, e não havia nada a fazer nelas. O achado é
-#: da A-RECUSA-QUE-CITOU-O-MAPA-01 §4.4.
-#:
-#: ESTE ARQUIVO NÃO ESTAVA NA `posse:` DA SPECS-A-PROCEDENCIA-01. Ele foi
-#: tocado porque a mudança do mapa move este número por construção — o
-#: `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv` exige que o teto seja
-#: exatamente a conta de hoje —, e deixá-lo velho entregaria a suíte vermelha a
-#: quem costura. Está declarado na entrega daquela sprint.
-#:
-#: ─────────────────────────────────────────────────────────────────────────
-#: SUBIU PARA 24 EM 08/09/2026, e subir é DIZER QUE A CASA PASSOU A DEVER MAIS
-#: ─────────────────────────────────────────────────────────────────────────
-#: **O número já era 24 desde 07/09 e ninguém viu.** O teto ficou em 23 e a
-#: suíte carregou esta vermelha por um dia inteiro — a leva de 08/09 encontrou
-#: a régua já reprovando na BASE (medido: base 24, branch 24, ZERO células
-#: entraram com o merge). Não é dívida nova de hoje; é um teto que parou de
-#: bater com a realidade e uma reprova que virou paisagem.
-#:
-#: QUANDO CRUZOU, e o commit é nomeado: `ef61c628` (07/09, *"as 53 células
-#: mudas do Pro e do 8BitDo respondidas no fonte do driver"*). O saldo dele
-#: foi +2 -1:
-#:
-#:   ENTRARAM  `combinacao.rumble_simultaneo@pro`, cabo E rádio
-#:   SAIU      `audio.saida_dedicada.payload_do_degrau@dualsense`, rádio
-#:
-#: E AS DUAS QUE ENTRARAM SÃO DÍVIDA DE VERDADE, não erro de classificação —
-#: é a diferença que importa aqui. Aquele commit foi LER o fonte do
-#: `hid-nintendo` e responder o que estava mudo; o que ele descobriu foi que o
-#: rumble simultâneo no Pro é coisa que o driver permite e o Hefesto não faz.
-#: Uma célula muda virou uma célula que CHAMA alguém para trabalhar. É
-#: exatamente o que este número existe para tornar visível, e por isso ele
-#: sobe em vez de a régua ser afrouxada.
-#:
-#: A REGRA NÃO MUDA: pagar baixa o teto no mesmo commit. O que muda é que o
-#: teto volta a ser a conta de hoje, que é o que o
-#: `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv` cobra — e um teto que
-#: não bate transforma a régua inteira em ruído que se aprende a ignorar.
-#:
-#: ─────────────────────────────────────────────────────────────────────────
-#: DESCEU PARA 23 EM 18/09/2026 — uma dívida PAGA, e é para isto que ele existe
-#: ─────────────────────────────────────────────────────────────────────────
-#: SAIU `audio.alto_falante@dualsense`, rádio. O canal abriu: o som saiu do
-#: plástico pelo rádio em 10/09 (report `0x35`, 70 s com a orelha dela) e a
-#: háptica passou pelo MESMO fio em 18/09 (`0x32` com o bloco `0x91` antes do
-#: `0x92`, com a mão dela). O commit `9f1920152` virou a célula para `sim` com a
-#: régua que morde; o teto não desceu junto porque a suíte daquela leva rodou
-#: antes dele — e o `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv`
-#: reprovou na suíte seguinte, que é exatamente o serviço dele. Nenhuma célula
-#: entrou.
-#:
-#: ─────────────────────────────────────────────────────────────────────────
-#: DESCEU PARA 22 EM 24/09/2026 — a dívida do som pelo rádio, paga
-#: ─────────────────────────────────────────────────────────────────────────
-#: SAIU `audio.saida_dedicada@dualsense`, rádio (AS-FRASES-QUE-A-BANCADA-
-#: ACHOU-01). Era uma das três de 24/08: o conteúdo foi identificado em
-#: 10/09 (o `0x35`, com a orelha dela) e o produto passou a levar o som de
-#: cada «Alto-falante do Controle N» ao aparelho pela ponte. A célula dizia
-#: `divida` e «NÃO ENCONTRAMOS O CAMINHO DO ÁUDIO» até hoje. Nenhuma entrou.
 TETO_DA_DIVIDA = 22
 
 
@@ -377,13 +217,7 @@ def _celula(linha: dict[str, str], coluna: str) -> str:
 
 
 def populacao(caminho: Path | str) -> list[tuple[str, str]]:
-    """As células em que a casa MEDIU e o produto NÃO ACIONA.
-
-    Lê `de_onde_sei` e `aciona`, e NUNCA a coluna que este arquivo confere: uma
-    população derivada da própria coluna conferida encolheria junto com o
-    descuido, e o portão ficaria verde exatamente quando alguém esquecesse de
-    responder.
-    """
+    """As células em que a casa MEDIU e o produto NÃO ACIONA."""
     achadas: list[tuple[str, str]] = []
     for linha in _linhas(caminho):
         for lado in LADOS:
@@ -404,12 +238,7 @@ def respostas(caminho: Path | str) -> dict[tuple[str, str], str]:
 
 
 def conta_dividas(caminho: Path | str) -> list[tuple[str, str]]:
-    """Toda célula que se declara DÍVIDA, esteja ou não na população.
-
-    Conta o arquivo inteiro de propósito: uma dívida escrita numa célula que o
-    recorte de hoje não alcança continua sendo dívida, e o teto existe para
-    contar o que a casa deve — não o que este recorte enxerga.
-    """
+    """Toda célula que se declara DÍVIDA, esteja ou não na população."""
     return sorted(chave for chave, valor in respostas(caminho).items() if valor == DIVIDA)
 
 
@@ -437,9 +266,6 @@ def _csv_de_mentira(destino: Path, trocas: dict[tuple[str, str], str] | None = N
     csv.writer(buffer, lineterminator="\n").writerows(saida)
     destino.write_text(buffer.getvalue(), encoding="utf-8")
     return destino
-
-
-# ── as quatro regras ────────────────────────────────────────────────────────
 
 
 def test_a_coluna_existe_nos_dois_lados() -> None:
@@ -491,26 +317,10 @@ def test_a_divida_nao_cresce() -> None:
 
 
 def test_a_decisao_pode_crescer_sem_reprovar() -> None:
-    """A promessa da regra 3, exercida — senão ela é só uma frase no docstring.
-
-    Um mapa em que TODA célula da população virou `decisao-tomada` continua
-    verde. É
-    isto que separa este portão do que nunca foi escrito: ele não cobra a
-    lacuna, cobra a dívida.
-    """
+    """A promessa da regra 3, exercida — senão ela é só uma frase no docstring."""
     import tempfile
 
     with tempfile.TemporaryDirectory() as pasta:
-        # A POPULAÇÃO **E** AS DÍVIDAS DE FORA DELA — corrigido em 03/09/2026.
-        # Este teste trocava só a lista da função de população e exigia zero
-        # dívida no fim,
-        # o que só valia enquanto toda dívida estivesse dentro dela. A leva das
-        # células mudas escreveu `divida` em vinte células cujo `de_onde_sei`
-        # não é `medido`, e o `conta_dividas` DECLARA que isso é legítimo:
-        # *"uma dívida escrita numa célula que o recorte de hoje não alcança
-        # continua sendo dívida"*. Quem estava errado era a suposição do teste,
-        # não o dado — então ele passa a trocar o que de fato precisa trocar
-        # para exercer o que promete: que `decisao-tomada` pode crescer.
         alvos = set(populacao(MAPA)) | set(conta_dividas(MAPA))
         falso = _csv_de_mentira(
             Path(pasta) / "mapa.csv",
@@ -518,9 +328,6 @@ def test_a_decisao_pode_crescer_sem_reprovar() -> None:
         )
         assert len(conta_dividas(falso)) == 0
         assert not [chave for chave in populacao(falso) if not respostas(falso).get(chave)]
-
-
-# ── as duas provas de que a régua é régua ───────────────────────────────────
 
 
 def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
@@ -554,33 +361,6 @@ def test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv() -> None:
         assert len(conta_dividas(pior)) == TETO_DA_DIVIDA + 1
 
 
-#: O "ou EXPLICADO" do nome deste teste, que até 29/08/2026 não existia no
-#: código: valor do domínio que ninguém usa HOJE e que fica assim mesmo, com a
-#: razão datada. Sem esta porta, a única saída para um valor que deixou de ser
-#: usado era apagá-lo — e apagar palavra porque o último caso dela foi
-#: CONSERTADO é o avesso do que este arquivo quer.
-#:
-#: A porta é estreita de propósito: entrar aqui exige escrever por que a
-#: palavra sobrevive à ausência de uso, e a lista é lida na reprovação.
-#: VAZIO DESDE 03/09/2026, e a razão é a melhor possível: `so-ela-decide`
-#: VOLTOU AO USO. A leva das células mudas o escreveu de novo — há linha em que
-#: o produto pode e a escolha é dela, exatamente o estado que a palavra nomeia,
-#: e que a reserva de 29/08 previa que voltaria (*"a ONDA-CONTROLES-07 e a 08
-#: nascem exatamente nele"*).
-#:
-#: A reserva sai porque a reserva é para o que NÃO tem uso; mantê-la sobre um
-#: valor vivo esconderia o dia em que ele morrer de novo. É o próprio teste
-#: quem manda, com essas palavras.
-#:
-#: O TEXTO DE 29/08 FICA AQUI, fora do dicionário, porque ele registra por que a
-#: palavra sobreviveu ao dia em que ninguém a usava — e é esse registro que
-#: impede a próxima pessoa de apagá-la na próxima folga:
-#:
-#:     "O último uso era `movimento.acelerometro@dualsense`, nos dois lados, e
-#:     ele saiu porque a causa FOI RESOLVIDA: ela decidiu (*'não era pra ele
-#:     sair. era pra ele FUNCIONAR'*), o produto passou a ler `ABS_X/Y/Z` e a
-#:     célula virou `aciona=sim`. A palavra fica porque o ESTADO que ela nomeia
-#:     — o produto pode, e a escolha é dela — não deixou de existir."
 RESERVADOS: dict[str, str] = {}
 
 _A_RESERVA_DE_29_08_QUE_CADUCOU = {
@@ -602,14 +382,7 @@ _A_RESERVA_DE_29_08_QUE_CADUCOU = {
 
 @pytest.mark.parametrize("valor", [DIVIDA, DECISAO, NADA_A_ACIONAR, SO_ELA_DECIDE])
 def test_cada_valor_do_dominio_e_usado_ou_explicado(valor: str) -> None:
-    """Valor de domínio que ninguém usa é vocabulário morto — ou é dívida de fila.
-
-    Os quatro estavam em uso em 22/08/2026. Se um deixar de estar, há DUAS
-    saídas, e a escolha é de quem causou a saída: tirá-lo do domínio no mesmo
-    gesto, ou declará-lo em `RESERVADOS` com a razão datada de por que a
-    palavra sobrevive sem uso. O que o teste recusa é a terceira, que é deixar
-    o vocabulário apodrecendo calado.
-    """
+    """Valor de domínio que ninguém usa é vocabulário morto — ou é dívida de fila."""
     usados = set(respostas(MAPA).values())
     if valor in RESERVADOS:
         assert valor not in usados, (
@@ -637,19 +410,6 @@ def test_reservado_que_ninguem_explica_nao_entra() -> None:
     )
 
 
-# ── as respostas dela de 24/09/2026 ─────────────────────────────────────────
-
-#: As doze linhas que ela respondeu em 24/09/2026, na página «Decisões do
-#: Hefesto» (O-MAPA-OUVE-AS-RESPOSTAS-DE-24-09-01). Onze são o veto de 19/07 —
-#: a família do SN30 e o `tres_na_mesa@pro`, medidas por grep de «veto de
-#: 19/07» com `so-ela-decide` — e uma é a calibração dos analógicos. Saíram de
-#: `so-ela-decide` para `decisao-tomada`, e cada uma cita a decisão pelo id.
-#:
-#: A LISTA É DIGITADA AQUI, e não lida do mapa: derivada do CSV, uma linha que
-#: voltasse a `so-ela-decide` sairia da lista junto com o defeito — a trava
-#: medida contra a própria saída. Quando a pergunta voltar (o veto é «até o
-#: release»), a decisão deixa de estar `decidida` e esta régua reprova até
-#: alguém mover as linhas de propósito.
 VETO_DOS_EXTERNOS = "D-2409-O-VETO-DOS-EXTERNOS-SEGUE-ATE-O-RELEASE"
 NUNCA_GRAVA_A_CALIBRACAO = "D-2409-O-HEFESTO-NUNCA-GRAVA-A-CALIBRACAO"
 RESPONDIDAS_POR_ELA: dict[str, str] = {
@@ -668,22 +428,6 @@ RESPONDIDAS_POR_ELA: dict[str, str] = {
 }
 DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-dela.csv"
 
-#: O VETO ALCANÇA O PRO (25/09/2026, O-MAPA-QUE-A-6E-DEIXOU-01). A pergunta que
-#: ela respondeu nomeava os DOIS externos — «O 8BitDo e o Pro da Nintendo viram
-#: jogador, com controle virtual, perfil e Mira?» —, e a resposta chegou só às
-#: linhas do SN30: as do Pro cuja causa era a mesma não-adoção seguiram dizendo
-#: `nada-a-acionar` («não há o que fazer»), com a divergência declarada em vez
-#: de resolvida. As sete primeiras saíram de `nada-a-acionar`; as duas da
-#: taxa já eram `decisao-tomada` pelo veto de 19/07 e não citavam o id.
-#:
-#: DIGITADA AQUI pelo mesmo motivo da lista de cima: derivada do CSV, a linha que
-#: voltasse a `nada-a-acionar` sairia da lista junto com o defeito.
-#:
-#: A BATERIA ESPELHADA AO JOGO entrou na conferência do mesmo dia: é o mesmo
-#: espelho ao vpad do giroscópio e do acelerômetro, e o `cabo_detalhe` do Pro
-#: já dizia «por decisão de arquitetura (8BIT-02), não por limite de
-#: protocolo». A do SN30 vai junto: a passada de 24/09 procurou «veto de
-#: 19/07» com `so-ela-decide`, e ela dizia `nada-a-acionar`.
 O_VETO_ALCANCA_O_PRO: dict[str, str] = {
     "plataforma.adocao@pro": VETO_DOS_EXTERNOS,
     "entrada.combo.ponte@pro": VETO_DOS_EXTERNOS,
@@ -702,22 +446,7 @@ def respostas_que_voltaram(
     decisoes: Path | str,
     respondidas: dict[str, str] | None = None,
 ) -> list[str]:
-    """O que desfaz uma resposta dela, por linha. Lista vazia: nada voltou.
-
-    `respondidas` é `{id da linha: id da decisão}`; sem ela, as doze de
-    `RESPONDIDAS_POR_ELA`.
-
-    Quatro perguntas por linha: a decisão continua `decidida` no arquivo dela;
-    os DOIS lados dizem `aciona = não`, que é a resposta; a causa dos dois é
-    `decisao-tomada`; e a linha cita a decisão pelo id e não diz mais
-    `so-ela-decide` em célula nenhuma.
-
-    OS DOIS LADOS, SEMPRE (conferência de 24/09/2026): a primeira versão só
-    olhava a causa do lado que dizia `aciona = não` — a população saía de uma
-    coluna da própria linha. Apagar o `aciona` (a resposta some) ou virá-lo
-    para `sim` (o SN30 adotado com o veto de pé) tirava o lado da conta, e a
-    régua ficava verde.
-    """
+    """O que desfaz uma resposta dela, por linha. Lista vazia: nada voltou."""
     linhas = {_celula(linha, "id"): linha for linha in _linhas(mapa)}
     decididas = {
         _celula(linha, "id")
@@ -776,10 +505,7 @@ def test_a_regua_das_respostas_ve_uma_que_volta() -> None:
 
 
 def _mapa_com_a_linha_mexida(destino: Path, ident: str, colunas: dict[str, str]) -> Path:
-    """Uma cópia do mapa com QUALQUER coluna de uma linha trocada.
-
-    O `_csv_de_mentira` só troca a causa; aqui o que se mexe é o `aciona`.
-    """
+    """Uma cópia do mapa com QUALQUER coluna de uma linha trocada."""
     linhas = list(csv.reader(io.StringIO(MAPA.read_text(encoding="utf-8"))))
     cabecalho = linhas[0]
     i_id = cabecalho.index("id")
@@ -796,11 +522,8 @@ def _mapa_com_a_linha_mexida(destino: Path, ident: str, colunas: dict[str, str])
 @pytest.mark.parametrize(
     ("ident", "lado", "aciona"),
     [
-        # a resposta some: o `aciona` e a causa do cabo apagados
         ("entrada.bruta@sn30", "cabo", ""),
-        # o SN30 adotado com o veto de pé, e a causa apagada junto
         ("plataforma.adocao@sn30", "radio", "sim"),
-        # a leitura do finetune entrando sem ninguém mover a linha
         ("entrada.stick.calibracao@dualsense", "cabo", "parcial"),
     ],
 )
@@ -813,9 +536,6 @@ def test_a_regua_das_respostas_ve_o_aciona_que_muda(ident: str, lado: str, acion
         falso = _mapa_com_a_linha_mexida(Path(pasta) / "mapa.csv", ident, colunas)
         voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
     assert any(achado.startswith(f"{ident} ({lado}): `aciona`") for achado in voltaram), voltaram
-
-
-# ── o veto alcança o Pro (25/09/2026) ───────────────────────────────────────
 
 
 def test_o_veto_alcanca_o_pro() -> None:
@@ -833,10 +553,8 @@ def test_o_veto_alcanca_o_pro() -> None:
 @pytest.mark.parametrize(
     ("ident", "colunas", "achado"),
     [
-        # o Pro volta a dizer «não há o que fazer»
         ("plataforma.adocao@pro", {"cabo_por_que_nao_aciona": NADA_A_ACIONAR},
          "plataforma.adocao@pro (cabo): `por_que_nao_aciona`"),
-        # a taxa perde o id da decisão que a sustenta
         ("combinacao.cabo_e_radio.taxa@sn30", {"radio_ressalva": ""},
          "combinacao.cabo_e_radio.taxa@sn30: nenhuma célula cita"),
     ],

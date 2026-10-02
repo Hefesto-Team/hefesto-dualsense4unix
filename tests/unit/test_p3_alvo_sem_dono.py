@@ -1,25 +1,8 @@
-"""P3 — o alvo sem dono: "Todos" e "não sei" tinham o mesmo valor.
-
-O defeito de forma, medido em 23/08/2026: ``_edit_target_uniq`` era um
-atributo de CLASSE com default ``None`` em ``StatusActionsMixin``, e ``None``
-quer dizer, para os nove leitores, *"escreva em TODOS os controles"*. Uma
-janela que ainda não sabia qual era o alvo — aba Status recém-montada, mesa
-vazia, daemon desligado — respondia "global" com toda a confiança.
-
-O pior caso medido: com os dois controles desligados, o tique de 2 Hz zerava o
-alvo (``total < 1`` → ``_sync_edit_target(None)``) e um pixel de arrasto no
-brilho da Lightbar apagava os overrides por controle do perfil INTEIRO, com
-zero palavras na tela.
-
-Estes testes trancam a separação: ``TODOS`` é escolha dela e continua
-escrevendo global byte-a-byte igual; ``DESCONHECIDO`` é ausência de
-informação, se declara e não vira ação.
-"""
+"""P3 — o alvo sem dono: "Todos" e "não sei" tinham o mesmo valor."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("p3 alvo sem dono")
 
 from typing import Any
@@ -37,18 +20,12 @@ from hefesto_dualsense4unix.app.alvo_de_edicao import (
     esquecer_alvo,
 )
 
-#: MACs forjados da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 
 
 class _Janela:
     """Hospedeiro mínimo: só carrega atributos, como a janela real."""
-
-
-# ----------------------------------------------------------------------
-# O módulo dono do alvo
-# ----------------------------------------------------------------------
 
 
 def test_p3_host_virgem_e_desconhecido_nunca_todos() -> None:
@@ -72,7 +49,6 @@ def test_p3_todos_e_desconhecido_sao_estados_diferentes() -> None:
     assert alvo_de_edicao(escolheu_todos).estado is EstadoDoAlvo.TODOS
     assert alvo_de_edicao(nao_sabe).estado is EstadoDoAlvo.DESCONHECIDO
     assert alvo_de_edicao(escolheu_todos) != alvo_de_edicao(nao_sabe)
-    # "Todos" é escolha dela e continua escrevendo, byte-idêntico ao de hoje.
     assert alvo_de_edicao(escolheu_todos).pode_escrever()
     assert not alvo_de_edicao(nao_sabe).pode_escrever()
 
@@ -93,7 +69,6 @@ def test_p3_esquecer_apaga_o_atributo_legado_da_instancia() -> None:
     esquecer_alvo(janela, MOTIVO_DAEMON_DESLIGADO)
     assert not hasattr(janela, ATRIBUTO_LEGADO_UNIQ)
     assert not hasattr(janela, ATRIBUTO_LEGADO_LABEL)
-    # o leitor não migrado volta ao `None` de hoje: nenhuma colisão.
     assert getattr(janela, ATRIBUTO_LEGADO_UNIQ, None) is None
 
 
@@ -111,9 +86,6 @@ def test_p3_ponte_le_quem_ainda_escreve_o_atributo_antigo() -> None:
     assert alvo_de_edicao(global_na_mao).estado is EstadoDoAlvo.TODOS
 
 
-# ----------------------------------------------------------------------
-# A aba Status: o escritor único
-# ----------------------------------------------------------------------
 class _FakeBadge:
     def __init__(self) -> None:
         self.text = ""
@@ -142,7 +114,6 @@ def _instancia() -> Any:
     inst._numero_faixa = None
     inst._numero_box = None
     inst._edit_badge = _FakeBadge()
-    # Widgets da fita: só o que o caminho medido toca.
     inst._rebuild_target_buttons = lambda box, rows: None
     inst._set_target_active = lambda pos: None
     inst._set_target_strip_visible = lambda visivel: None
@@ -187,7 +158,7 @@ def test_p3_mesa_esvaziou_o_alvo_fica_desconhecido() -> None:
     inst._refresh_controller_target_combo(_estado(_controle(0, UNIQ_1), _controle(1, UNIQ_2)))
     assert alvo_de_edicao(inst).uniq == UNIQ_1
 
-    inst._refresh_controller_target_combo(_estado())  # mesa vazia
+    inst._refresh_controller_target_combo(_estado())
 
     alvo = alvo_de_edicao(inst)
     assert alvo.desconhecido, "mesa vazia virou 'Todos' — a edição global voltou"
@@ -202,7 +173,7 @@ def test_p3_clique_em_todos_continua_global() -> None:
     inst._sync_edit_target(0)
     assert alvo_de_edicao(inst).por_controle
 
-    inst._sync_edit_target(None)  # o clique dela em "Todos"
+    inst._sync_edit_target(None)
 
     alvo = alvo_de_edicao(inst)
     assert alvo.estado is EstadoDoAlvo.TODOS
@@ -234,7 +205,6 @@ def test_p3_numero_recusa_com_o_motivo_quando_nao_sabe() -> None:
     assert MOTIVO_MESA_VAZIA in toasts[0][1]
     assert "Nada foi alterado" in toasts[0][1]
 
-    # "Todos" (escolha dela) mantém a instrução de sempre, que ali cabe.
     toasts.clear()
     definir_alvo(inst, None, None)
     inst._on_numero_button_toggled(botao, 2)

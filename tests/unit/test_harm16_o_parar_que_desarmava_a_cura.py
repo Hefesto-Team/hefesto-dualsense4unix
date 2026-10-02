@@ -44,13 +44,7 @@ from hefesto_dualsense4unix.testing import FakeController
 
 @pytest.fixture
 async def servidor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """IpcServer + Daemon com FakeController. Devolve (server, daemon, fc).
-
-    Mesmo molde do `test_nativo_rumble_01_a_recusa_com_motivo.py`, pelo mesmo
-    motivo: o defeito mora na conversa entre o handler de IPC e o par gravado
-    no `DaemonConfig`, e um dublê que só tivesse o `config` não exercitaria a
-    porta por onde o `(0, 0)` entra de verdade.
-    """
+    """IpcServer + Daemon com FakeController. Devolve (server, daemon, fc)."""
     fc = FakeController(transport="usb")
     fc.connect()
     store = StateStore()
@@ -87,23 +81,13 @@ def _rumbles(fc: FakeController) -> list[tuple[int, int]]:
     return [c.payload for c in fc.commands if c.kind == "set_rumble"]
 
 
-# --- 1. O caminho de produção inteiro, do clique à saída do modo -------------
-
-
 @pytest.mark.asyncio
 async def test_o_parar_da_aba_nao_desarma_a_saida_de_modo(servidor: Any) -> None:
-    """O gesto que a usuária faz, na ordem em que ela o faz.
-
-    MORDE: com a guarda antiga (`rumble_active is not None`), o `(0, 0)`
-    gravado pelo "Parar" faz `zero_motors_on_mode_exit` voltar sem escrever
-    nada — `_rumbles(fc)` fica vazio e o motor que o jogo deixou girando por
-    fora continua girando.
-    """
+    """O gesto que a usuária faz, na ordem em que ela o faz."""
     server, daemon, fc = servidor
 
     r = await server._handle_rumble_stop({})
     assert r["desfecho"] == RUMBLE_PARADO
-    # É este par — e não `None` — que a guarda antiga lia como "o dono é ela".
     assert daemon.config.rumble_active == (0, 0)
 
     fc.commands.clear()
@@ -137,21 +121,11 @@ async def test_o_parar_continua_desarmando_depois_de_trocar_de_perfil(
     assert _rumbles(fc) == [(0, 0), (0, 0)]
 
 
-# --- 2. A cura não pode virar o defeito oposto ------------------------------
-
-
 @pytest.mark.asyncio
 async def test_o_par_nao_nulo_que_ela_fixou_continua_intocado(
     servidor: Any,
 ) -> None:
-    """A metade que impede o conserto de reintroduzir outro defeito.
-
-    Com um par NÃO-NULO o dono é a usuária: o reassert re-afirma o valor em
-    200 ms de qualquer forma, e zerar aqui seria desfazer o gesto dela.
-
-    MORDE: uma cura que zerasse sempre (guarda apagada inteira) escreveria
-    `(0, 0)` aqui e apagaria a vibração que ela acabou de travar.
-    """
+    """A metade que impede o conserto de reintroduzir outro defeito."""
     server, daemon, fc = servidor
 
     await server._handle_rumble_set({"weak": 160, "strong": 220})
@@ -164,11 +138,7 @@ async def test_o_par_nao_nulo_que_ela_fixou_continua_intocado(
 
 
 def test_passthrough_continua_sendo_o_caso_canonico() -> None:
-    """O caso para o qual a HARM-16 nasceu não pode ter mudado.
-
-    MORDE: qualquer reescrita da guarda que perca o `None` (por exemplo trocar
-    o teste inteiro por `if not any(par)`, que estoura em `None`) reprova aqui.
-    """
+    """O caso para o qual a HARM-16 nasceu não pode ter mudado."""
     chamadas: list[str] = []
     daemon = SimpleNamespace(
         config=SimpleNamespace(rumble_active=None),

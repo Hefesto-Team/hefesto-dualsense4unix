@@ -27,10 +27,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("empate01 a cor volta a ser dela")
 
 import json
@@ -95,14 +91,10 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: appid do Pragmata, o jogo em que o defeito foi diagnosticado ao vivo.
 APPID = "3357650"
 WM_JOGO = f"steam_app_{APPID}"
 
 RAIZ = Path(__file__).resolve().parents[2]
-#: PERFIS-SAO-PERFIS-01 (06/09/2026): o `fallback` saiu da semeadura para
-#: `assets/estilos_de_jogo/` junto com os outros sete. O ARQUIVO é o mesmo — a
-#: EMPATE-01 continua sendo sobre o que ele NÃO diz sobre a cor.
 FALLBACK_JSON = RAIZ / "assets" / "estilos_de_jogo" / "fallback.json"
 
 
@@ -124,12 +116,7 @@ class _FakeEntry:
 
 
 class _FakeScale:
-    """Escala com TETO, como o `profile_priority_adj` do glade.
-
-    O clamp não é detalhe de dublê: é o que um `GtkAdjustment` faz de verdade
-    com `set_value` fora da faixa, e é por ele que uma prioridade acima do teto
-    já ABRIA rebaixada no editor.
-    """
+    """Escala com TETO, como o `profile_priority_adj` do glade."""
 
     def __init__(self, value: float = 0.0, teto: float | None = None) -> None:
         self._teto = float(pa.PRIORIDADE_MAXIMA if teto is None else teto)
@@ -145,8 +132,7 @@ class _FakeScale:
         return self._value
 
     def set_value(self, value: float) -> None:
-        """Emite `value-changed` como o GtkScale de verdade — inclusive quando o
-        valor CLAMPADO coincide com o anterior: quem arrasta emite o sinal."""
+        """Emite `value-changed` como o GtkScale de verdade — inclusive quando o"""
         self._value = max(0.0, min(self._teto, float(value)))
         for handler in self._handlers:
             handler(self)
@@ -169,11 +155,7 @@ class _FakeSwitch:
 
 
 class _FakeBox:
-    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
-
-    CAMPO-QUE-NAO-NASCIA-01: nasce com ``no_show_all`` armado como no glade;
-    ``show()`` para na caixa e só ``show_all()`` desarmado desce nos filhos.
-    """
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK."""
 
     def __init__(self) -> None:
         self.visivel = False
@@ -238,7 +220,6 @@ class _Editor(pa.ProfilesActionsMixin):
         self._mode_kind_selector = None
         self._aplica_a = _FakeSelector("any")
         self._aplica_a.connect("changed", self._on_aplica_a_changed)
-        # Espelha a fiação de `install_profiles_tab`: o gesto na escala marca.
         self._widgets["profile_priority_scale"].connect(
             "value-changed", self._on_prioridade_tocada
         )
@@ -267,13 +248,7 @@ class _Editor(pa.ProfilesActionsMixin):
 
 
 def _perfil_do_pragmata() -> Profile:
-    """O perfil como ele ficou depois do conserto à mão de 26/07.
-
-    Regra do jogo (não catch-all) e prioridade 110 — um valor que a janela, na
-    época, não aceitava digitar. O `window_title_regex` junto é o que faz o
-    editor simples não reconhecer o match e cair no avançado, que é o caminho
-    onde o rebaixamento acontece.
-    """
+    """O perfil como ele ficou depois do conserto à mão de 26/07."""
     return Profile(
         name="Pragmata",
         match=MatchCriteria(window_class=[WM_JOGO], window_title_regex="Pragmata"),
@@ -285,15 +260,7 @@ class TestSalvarNaoRebaixaARegra:
     def test_desligar_o_modo_avancado_e_salvar_preserva_a_regra(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O gesto: abrir o perfil, desligar "Modo avançado", clicar Salvar.
-
-        A página simples reaparece mostrando "Qualquer" (ela nunca escolheu
-        isso — é o estado inicial daquela página) e o Salvar gravava esse
-        "Qualquer" por cima da regra do jogo. É o perfil virando catch-all,
-        que é exatamente o que o disco dela mostrou em 27/07 às 23h04.
-
-        Com a cura arrancada, o match sai `MatchAny`.
-        """
+        """O gesto: abrir o perfil, desligar "Modo avançado", clicar Salvar."""
         monkeypatch.setattr(pa, "set_pref", lambda *_a, **_kw: None)
         editor = _Editor()
         editor._populate_editor(_perfil_do_pragmata())
@@ -310,10 +277,7 @@ class TestSalvarNaoRebaixaARegra:
         assert salvo.match.window_title_regex == "Pragmata"
 
     def test_mexer_na_regra_continua_valendo_na_hora(self) -> None:
-        """A guarda não pode virar "nunca mais dá para mudar".
-
-        Ela troca o alvo no editor avançado e salva: o valor NOVO manda.
-        """
+        """A guarda não pode virar "nunca mais dá para mudar"."""
         editor = _Editor()
         editor._populate_editor(_perfil_do_pragmata())
 
@@ -355,15 +319,7 @@ class TestSalvarNaoRebaixaARegra:
 
 class TestSalvarNaoRebaixaAPrioridade:
     def test_prioridade_acima_do_teto_da_escala_sobrevive(self) -> None:
-        """Prioridade que a escala não consegue representar não pode ser perdida.
-
-        É o mecanismo medido com o teto em 100 e o `Pragmata` em 110: o perfil
-        ABRIA já clampado na tela, e salvar gravava o número da tela. Subir o
-        teto para 200 dá folga, mas não fecha a classe do defeito — quem fecha
-        é a prioridade do disco sobreviver a um Salvar que não a tocou.
-
-        Com a cura arrancada, o valor salvo é o teto.
-        """
+        """Prioridade que a escala não consegue representar não pode ser perdida."""
         acima = pa.PRIORIDADE_MAXIMA + 50
         editor = _Editor()
         editor._populate_editor(
@@ -377,16 +333,7 @@ class TestSalvarNaoRebaixaAPrioridade:
         assert salvo.priority == acima
 
     def test_arrastar_ate_o_teto_num_perfil_clampado_vale(self) -> None:
-        """O gesto dela vence a coincidência de valor.
-
-        Perfil com prioridade acima do teto abre CLAMPADO: 250 no disco, 200 na
-        tela. Se ela arrastar a escala e parar exatamente no teto, o valor final
-        coincide com o da abertura — e comparar valores diria "não mexeu",
-        devolvendo 250 ao disco. Quem desempata é a marca de gesto, emitida pelo
-        próprio widget.
-
-        Com a marca arrancada, o valor salvo volta a ser o do disco.
-        """
+        """O gesto dela vence a coincidência de valor."""
         acima = pa.PRIORIDADE_MAXIMA + 50
         editor = _Editor()
         editor._populate_editor(
@@ -396,7 +343,6 @@ class TestSalvarNaoRebaixaAPrioridade:
         escala = editor._get("profile_priority_scale")
         assert escala.get_value() == pa.PRIORIDADE_MAXIMA
 
-        # o arrastar dela: passa por outro valor e volta ao teto
         escala.set_value(120)
         escala.set_value(pa.PRIORIDADE_MAXIMA)
         salvo = editor._build_profile_from_editor()
@@ -404,11 +350,7 @@ class TestSalvarNaoRebaixaAPrioridade:
         assert salvo.priority == pa.PRIORIDADE_MAXIMA
 
     def test_abrir_o_perfil_nao_conta_como_gesto(self) -> None:
-        """O `set_value` da abertura emite o sinal, e não pode contar.
-
-        É o mesmo cuidado do `_regra_tocada`: a marca é zerada DEPOIS de
-        posicionar os widgets. Sem isso, a guarda inteira morre no nascimento.
-        """
+        """O `set_value` da abertura emite o sinal, e não pode contar."""
         acima = pa.PRIORIDADE_MAXIMA + 50
         editor = _Editor()
         editor._populate_editor(
@@ -461,11 +403,7 @@ class TestPerfilNasceComOJogoEmFoco:
     def test_nasce_com_a_regra_do_jogo_e_acima_do_catch_all(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O arranjo real: catch-all dela em 100, perfil novo com o jogo aberto.
-
-        Com a cura arrancada, ele nasce "Qualquer" com prioridade 0 — que é o
-        perfil que ela criou para o Pragmata e que nunca valeu no Pragmata.
-        """
+        """O arranjo real: catch-all dela em 100, perfil novo com o jogo aberto."""
         self._com_daemon_respondendo(monkeypatch, WM_JOGO)
         editor = _Editor(
             cache=[
@@ -534,13 +472,7 @@ class TestSementeSemOpiniaoSobreCor:
     """EMPATE-01/E-1: o `fallback` do repositório para de apagar o controle."""
 
     def test_o_fallback_semeado_nao_manda_na_cor(self) -> None:
-        """Com a cura arrancada, o campo volta e o teste reprova.
-
-        `[40, 40, 40]` num LED RGB é, a olho nu, um controle APAGADO — e era a
-        semente do projeto, não configuração dela. Sem o campo, vale a cor
-        automática por jogador (azul, vermelho, verde, rosa), que é o padrão
-        Sony e continua certo com um, dois, três ou quatro controles.
-        """
+        """Com a cura arrancada, o campo volta e o teste reprova."""
         bruto = json.loads(FALLBACK_JSON.read_text(encoding="utf-8"))
         leds = bruto.get("leds") or {}
 
@@ -550,8 +482,7 @@ class TestSementeSemOpiniaoSobreCor:
         )
 
     def test_o_desenho_do_numero_do_jogador_fica(self) -> None:
-        """Só uma das duas metades estava errada: acender a luz central é o
-        padrão PS5 para um jogador, e continua."""
+        """Só uma das duas metades estava errada: acender a luz central é o"""
         bruto = json.loads(FALLBACK_JSON.read_text(encoding="utf-8"))
         leds = bruto.get("leds") or {}
 

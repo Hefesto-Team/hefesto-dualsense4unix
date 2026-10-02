@@ -47,150 +47,32 @@ logger = get_logger(__name__)
 
 UINPUT_DEV = "/dev/uinput"
 
-# --- CONTAGEM-E-COOP-01 (E2): o campo "Gamepads:" para de contar NÓ ---------
-# O rótulo dizia "N controles detectados pelo sistema" com `N = len(glob(
 # "/dev/input/js*"))`. Medido nesta máquina em 31/07/2026, com UM DualSense no
-# cabo, o vpad do Hefesto de pé e a Steam aberta, o campo dizia SEIS:
-#
 #   js0  Sony … DualSense Wireless Controller           uniq=<MAC dela>
 #   js1  Sony … DualSense … Motion Sensors              uniq=<O MESMO MAC>
 #   js2  DualSense Wireless Controller (Hefesto P1)    uniq=02:fe:00:00:00:01
 #   js3  DualSense … (Hefesto P1) Motion Sensors        uniq=<O MESMO>
-#
 #   (o nome do vpad era `Hefesto Virtual DualSense P1` quando isto foi medido;
-#    a BT-E-VPAD-01, furo 1, o trocou pelo de hoje — `uhid_gamepad.py:1065`.
-#    Os números da medição não mudam: o que se conta é aparelho, não nome.)
-#   js4  Microsoft X-Box 360 pad 0    /devices/virtual/input/input329/js4
-#   js5  Microsoft X-Box 360 pad 1    /devices/virtual/input/input61/js5
-#
-# Duas razões independentes, e as duas continuam valendo (a medição de 25/07
-# que originou este código, no commit `0c08e77` da linhagem descartada, viu as
-# mesmas duas com quatro controles e nove nós):
-#
 # 1. todo controle da classe DualSense abre DOIS nós (o gamepad e os sensores
-#    de movimento) — contar nós é contar quase o dobro. O que colapsa os dois
-#    é a IDENTIDADE do aparelho, o `uniq`;
-# 2. o caminho no sysfs NÃO separa "nosso" de "dela": desde o BLUEZ-UHID-01 o
-#    BlueZ cria o HID dos controles BLUETOOTH FÍSICOS em
-#    `/devices/virtual/misc/uhid/`, exatamente onde mora o nosso vpad uhid.
-#    Quem separa é o MAC forjado `02:fe:…`, o mesmo sinal que
-#    `core.evdev_reader._is_virtual_evdev` já usa para não se auto-adotar.
-#
-# Duas correções ao código de origem, medidas aqui e não lá:
-#
-# (a) o `0c08e77` reconhecia o vpad por DUAS assinaturas (`uniq` `02:fe:` e a
-#     marca no nome), as duas do backend **uhid**. O fallback degradado do
-#     VPAD-05 é **uinput**, não publica `uniq` e usa as máscaras de
-#     `integrations.uinput_gamepad`: nenhuma das duas carrega a marca
-#     `(Hefesto P` — a xbox contém "Hefesto" noutra forma, e a dualsense
-#     (`DUALSENSE_EDGE_NAME`) não contém "Hefesto" em lugar nenhum. Sem a
-#     quarta regra o nosso próprio vpad seria acusado de "gamepad virtual de
-#     outro programa" — troca do silêncio de hoje por uma mentira nova;
-# (b) o agrupamento sem `uniq` subia TRÊS níveis do nó (`<hid>/input/inputNN/
-#     jsN` → `<hid>`), o que está certo para device HID e erra para uinput:
-#     `/devices/virtual/input/inputNN/jsN` não tem a camada `input/` do HID, e
-#     três níveis chegam em `/devices/virtual`, colapsando TODOS os gamepads
-#     de uinput num só. Na mesa medida acima, os dois pads da Steam virariam
-#     um. Em uinput cada `inputNN` é um aparelho (um device de uinput publica
-#     exatamente um nó evdev), então a chave para eles é o próprio `inputNN`.
 
-#: Prefixo do MAC que o vpad **uhid** forja por jogador (`uhid_gamepad`).
-#: Contrato de fio replicado aqui de propósito: importar o módulo do vpad uhid
-#: só por causa de uma string acoplaria a aba a ele. O teste
-#: `test_contagem_emulacao_conta_aparelho.py` trava as duas pontas.
 _VPAD_UNIQ_PREFIX = "02:fe:"
 
-#: A marca humana no nome do vpad uhid — SUBSTRING, nunca prefixo.
-#:
-#: FATO ERRADO SUBSTITUÍDO em 25/08/2026 (EMULACAO-UM-DONO-SO-01/E11). Esta
-#: constante dizia `"Hefesto Virtual"` e a docstring afirmava ser "o nome que o
-#: vpad uhid publica no evdev". Não era desde a BT-E-VPAD-01 (furo 1): o vpad
 #: publica `DualSense Wireless Controller (Hefesto P{n})`
-#: (`integrations/uhid_gamepad.py:1065`), porque jogos sob Proton casam pela
-#: substring "Wireless Controller". A segunda das duas regras que separam "o
-#: nosso" de "o de outro programa" estava MORTA, e ninguém soube porque o teste
-#: alimentava o dublê com o nome antigo.
-#:
 #: POR QUE SUBSTRING E NÃO PREFIXO: o nome de hoje COMEÇA por "DualSense
-#: Wireless Controller", que é o que um aparelho de verdade também publica.
-#: Casar por prefixo aqui seria trocar uma regra morta por uma regra ERRADA —
-#: pior que o defeito. O que só este produto escreve é `(Hefesto P`.
-#:
-#: A REDAÇÃO NÃO É NOVA: é a `VPAD_MARCA_NO_NOME` de
-#: `scripts/identidade_do_vpad.py`, a régua única desta casa para a pergunta
-#: "este nó é um vpad nosso?" — cujo próprio cabeçalho já registrava que "há
-#: código nesta casa que ainda procura o nome velho". Era este. Não se importa
-#: de lá porque `scripts/` não é pacote; o portão
-#: `test_a_marca_do_vpad_no_nome_e_a_de_hoje.py` amarra as duas pontas, e mais
-#: a terceira: o nome que o `uhid_gamepad` REALMENTE publica.
 _VPAD_MARCA_NO_NOME = "(Hefesto P"
 
-#: Subárvore dos devices criados por uinput — Steam Input, teclado virtual do
-#: daemon, qualquer programa. NÃO inclui `/devices/virtual/misc/uhid/`, que
-#: hospeda tanto o nosso vpad quanto os controles BT físicos (BLUEZ-UHID-01).
 _UINPUT_SUBTREE = "/devices/virtual/input/"
 
-#: A QUARTA REGRA (item (a) acima): nomes exatos das máscaras do vpad em
-#: uinput. Só valem DENTRO de `_UINPUT_SUBTREE` — restrição que o código não
 #: mostra: um DualSense Edge REAL publica exatamente `DUALSENSE_EDGE_NAME`, e
-#: o que o distingue da nossa máscara é morar sob o barramento (USB) ou sob
-#: `/devices/virtual/misc/uhid/` (Bluetooth), nunca sob uinput.
 _VPAD_NOMES_EM_UINPUT = (XBOX360_NAME, DUALSENSE_EDGE_NAME)
 
-#: Teto de quebra do rótulo "Gamepads:", em caracteres. Ver a medição no corpo
-#: de `_refresh_emulation_view`: ele existe para a frase longa não inflar a
-#: largura NATURAL do cartão de diagnóstico (LARGURA-01).
 LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS = 52
 
 
-# ── EMULACAO-UM-DONO-SO-01/E8 — o transporte por trás de cada promessa ──────
-#
-# 25/08/2026. As quatro frases desta aba afirmavam que a vibração funciona sem
-# uma palavra de transporte, e a mais forte delas dizia que jogos com suporte a
 # DualSense "funcionam completos: vibração, giroscópio e lightbar". O mapa de
-# canais não sustenta a parte da vibração — e NÃO SUSTENTA EM NENHUM DOS DOIS
-# TRANSPORTES, que é onde a própria sprint errou ao propor a cura:
-#
-#   `vibracao.rumble.passthrough@dualsense` — cabo `de_onde_sei` =
-#   `inferido-do-codigo` (rebaixado de `medido` em 15/08/2026, D-14: a
-#   evidência da célula descrevia LEITURA DE FONTE, não medição no aparelho) e
-#   rádio idem, com a ressalva escrita: *"Implementado sem gate, mas NÃO MEDIDO
-#   por Bluetooth […] o aparelho ainda não confirmou"*. A coluna `mordida`
-#   fecha a conta: *"não desce até o envelope do físico, então nem o cabo nem o
-#   rádio são provados de ponta a ponta"*.
-#
-# As outras duas SUSTENTAM, e por isso a frase pode afirmá-las:
-# `movimento.giroscopio.jogo@dualsense` e `luz.lightbar.cor@dualsense` têm
-# `de_onde_sei = medido` e `aciona = sim` nos DOIS lados.
-#
-# O que este bloco declara não é o texto — o texto mora no `gui/main.glade`,
-# que é onde ela o lê. Declara-se aqui a AMARRA: qual frase fala de qual célula
-# do mapa, e a ressalva única que a frase tem de carregar enquanto a célula não
-# tiver lastro nos dois lados. O portão
-# `tests/unit/test_a_aba_emulacao_nao_promete_transporte_sem_lastro.py` cruza os
-# três: este bloco (por AST), o `gui/main.glade` e o CSV do mapa.
 
-#: A ressalva única da vibração. UMA, e verbatim nas três frases que a afirmam:
-#: correção pela metade deixa duas versões vivas, que é o defeito que a regra
-#: da casa sobre fato errado existe para matar. Sem artigo na frente de
-#: propósito, para casar tanto com "A vibração…" quanto com "…a vibração…".
-#: VAZIO desde 05/09/2026, e o vazio é o desfecho, não o esquecimento. A única
-#: entrada daqui era a vibração, e ela ganhou lastro nos dois transportes: a
-#: prova morava no repositório desde sempre
-#: (`integrations/uinput_gamepad.py:174` — *"a vibração funciona, provado com
-#: SDL2 e validado em gameplay"*) e o mapa é que não a registrava. ELA fechou:
-#: *"hj as máscaras funcionam super legal em tudo"*.
-#:
-#: A REGRA QUE ISSO DEIXA: a ressalva sai JUNTO com a dívida. Enquanto a célula
-#: do mapa disser `medido` dos dois lados, uma entrada aqui volta a ser fato
-#: errado na tela — e a régua deste arquivo reprova nas duas direções.
 RESSALVA_DE_TRANSPORTE: dict[str, str] = {}
 
-#: Que célula do mapa cada texto desta aba afirma. O portão exige as DUAS
-#: direções: uma célula declarada sem lastro obriga a ressalva no texto; e um
-#: texto que cite um dos radicais de `RADICAIS_DE_TRANSPORTE` sem estar
-#: declarado aqui também reprova — declaração que só cobre o que alguém lembrou
-#: de declarar é lembrança, não portão.
 AFIRMACOES_DE_TRANSPORTE_DA_ABA: dict[str, tuple[str, ...]] = {
     "emulation_gamepad_dualsense_button": ("vibracao.rumble.passthrough@dualsense",),
     "emulation_gamepad_xbox_button": (
@@ -204,8 +86,6 @@ AFIRMACOES_DE_TRANSPORTE_DA_ABA: dict[str, tuple[str, ...]] = {
     ),
 }
 
-#: O radical que denuncia uma afirmação sobre cada célula. Radical e não
-#: palavra inteira: "vibra", "vibração" e "vibrar" são a mesma promessa.
 RADICAIS_DE_TRANSPORTE: dict[str, str] = {
     "vibracao.rumble.passthrough@dualsense": "vibra",
     "movimento.giroscopio.jogo@dualsense": "giroscóp",
@@ -226,10 +106,10 @@ def _chave_do_aparelho(no: dict[str, str]) -> str:
     sysfs = no.get("sys", "")
     if not sysfs:
         return no.get("path", "")
-    dir_input = os.path.dirname(sysfs)  # .../inputNN
+    dir_input = os.path.dirname(sysfs)
     if _UINPUT_SUBTREE in sysfs:
         return dir_input
-    return os.path.dirname(os.path.dirname(dir_input))  # o device HID
+    return os.path.dirname(os.path.dirname(dir_input))
 
 
 def _e_vpad_do_hefesto(no: dict[str, str]) -> bool:
@@ -244,11 +124,7 @@ def _e_vpad_do_hefesto(no: dict[str, str]) -> bool:
 
 
 def classificar_joysticks(nos: list[dict[str, str]]) -> tuple[int, int, int]:
-    """`(físicos, nossos, de outros programas)` — APARELHOS, não nós.
-
-    Função pura (recebe os atributos já lidos do sysfs) porque é ela que
-    carrega o julgamento; a leitura de arquivo fica no chamador.
-    """
+    """`(físicos, nossos, de outros programas)` — APARELHOS, não nós."""
     por_aparelho: dict[str, dict[str, str]] = {}
     for no in nos:
         por_aparelho.setdefault(_chave_do_aparelho(no), no)
@@ -264,13 +140,7 @@ def classificar_joysticks(nos: list[dict[str, str]]) -> tuple[int, int, int]:
 
 
 def _atributos_do_joystick(caminho: str) -> dict[str, str]:
-    """Lê do sysfs o que :func:`classificar_joysticks` precisa julgar.
-
-    Tolerante a tudo: nó que sumiu entre o `glob` e a leitura, atributo que o
-    driver não publica, sysfs indisponível. Campo ilegível vira string vazia —
-    o aparelho cai em "físico", que é a leitura CONSERVADORA (contá-lo como
-    nosso inflaria o que dizemos ter criado).
-    """
+    """Lê do sysfs o que :func:`classificar_joysticks` precisa julgar."""
     nome_no = os.path.basename(caminho)
     base = f"/sys/class/input/{nome_no}"
     atributos = {"path": caminho, "name": "", "uniq": "", "sys": ""}
@@ -285,13 +155,7 @@ def _atributos_do_joystick(caminho: str) -> dict[str, str]:
 
 
 def rotulo_gamepads(fisicos: int, nossos: int, outros: int, nos: int) -> str:
-    """Texto do campo "Gamepads:" da aba Emulação.
-
-    Diz o que aquilo É — quantos APARELHOS, separados por dono — e termina
-    dizendo quantos NÓS de `/dev/input/js*` existem, que é o número cru que o
-    campo mostrava sozinho. Os dois juntos EXPLICAM a diferença em vez de
-    escondê-la: um controle na mesa pode render seis nós.
-    """
+    """Texto do campo "Gamepads:" da aba Emulação."""
     if nos <= 0:
         return "Nenhum controle detectado pelo sistema"
     partes: list[str] = []
@@ -316,27 +180,11 @@ def rotulo_gamepads(fisicos: int, nossos: int, outros: int, nos: int) -> str:
     return f"{', '.join(partes)} — {nos} nós em /dev/input/js*"
 
 
-# --- HONESTIDADE-STEAM-01: contrato de saída do disable_steam_input.sh ------
-# O bug: o botão mostrava "desligando Steam Input (fecha e reabre a Steam)…",
-# rodava `--apply-quiet` (que por contrato NUNCA fecha a Steam — se ela está
-# viva, ADIA e sai 0) e em seguida anunciava "Steam Input desligado"
-# incondicionalmente (`check=False` + `contextlib.suppress` engoliam tudo).
-# Afirmação de sucesso sobre um no-op, com o tooltip mentindo junto.
-#
-# A cura tem três pernas: (1) o script passou a terminar com uma linha
-# `[steam-input] resultado=<tag>`; (2) a GUI lê a tag E o rc; (3) o veredito
-# final ainda é CONFERIDO relendo o vdf (`_steam_input_is_on`) — tag e rc
-# dizem o que o script achou que fez, a releitura diz o que de fato ficou.
 _RESULTADO_RE = re.compile(r"^\[steam-input\] resultado=(\S+)\s*$", re.MULTILINE)
 
 
 def steam_input_result_tag(saida: str) -> str | None:
-    """Tag `resultado=` da saída do script (a ÚLTIMA, se houver mais de uma).
-
-    `None` quando o script é antigo (instalação anterior a esta onda) e não
-    emite a linha — nesse caso a GUI cai no veredito por releitura do vdf, que
-    nunca depende do script.
-    """
+    """Tag `resultado=` da saída do script (a ÚLTIMA, se houver mais de uma)."""
     achados = _RESULTADO_RE.findall(saida or "")
     return achados[-1] if achados else None
 
@@ -380,7 +228,6 @@ def format_steam_input_result(
             "própria Steam e clique de novo."
         )
     if tag == "adiado-steam-aberta":
-        # O caminho que a GUI ESCONDIA: o script adiou e nada mudou.
         return (
             "A Steam está aberta — a correção foi ADIADA e nada mudou. "
             "Feche a Steam e clique de novo."
@@ -405,13 +252,6 @@ def format_steam_input_result(
     )
 
 
-#: AMBIENTE-PRESUMIDO-01 (23/08/2026): a frase era só "Steam não encontrado", e
-#: era o que a aba dizia para quem tem a Steam em Flatpak, em Snap ou em
-#: ``~/.local/share/Steam`` — porque a busca só olhava ``~/.steam/steam``. A
-#: busca foi corrigida; a frase passou a DIZER ONDE PROCUROU, que é o que
-#: permite a pessoa responder "mas a minha está em outro lugar". Os quatro
-#: lugares citados são os de `steam_launch_options.RAIZES_STEAM_RELATIVAS` — há
-#: teste que reprova se a lista crescer e esta frase ficar para trás.
 STEAM_NAO_ENCONTRADA = (
     "Steam não encontrada — procurei em ~/.steam, ~/.local/share/Steam, "
     "Flatpak e Snap"
@@ -423,30 +263,7 @@ def markup_status_steam_input(
     jogos: Sequence[str],
     excecoes: Sequence[int],
 ) -> str:
-    """Markup da linha "Steam Input" da aba Emulação — pura, testável sem GTK.
-
-    D-33 (05/08/2026): a linha dizia ``"Ligado — conflita com o Hefesto"``.
-    Ela não dizia de qual JOGO falava, e chamava de *conflito* uma escolha que
-    a usuária tinha tomado na janela da própria Steam ("não faço ideia de
-    quando é pra ativar os controles Steam e quando não"). O texto agora nomeia
-    o jogo e diz o que o Hefesto VAI fazer, e por quê — a palavra "conflito"
-    saiu porque não é conflito nenhum: é uma regra do Hefesto contra uma
-    escolha dela, e quem perde é sempre a escolha dela.
-
-    **O RAMO LIGADO VIROU RÓTULO CURTO EM 13/09/2026 — FRASES-E-DICAS-02.** A
-    janela GTK desta linha saiu em 06/09 (`D-0609-GTK-LEVA-INTEIRA`), e quem a
-    mostra hoje é o cartão da Steam na aba Lançadores, a cada tique e sem
-    clique. A frase longa — o nome de cada jogo, o que o Hefesto faria no
-    próximo ciclo e por quê — era narração, e a ordem dela de 13/09 deixa na
-    tela só estado: *Ligado em N jogos*, ou o ajuste global. A palavra
-    "conflito" continua fora, e o «Desligar o Steam Input» do cartão continua
-    sendo a saída.
-
-    `jogos` são rótulos JÁ traduzidos (`rotulo_do_jogo`), porque traduzir lê o
-    disco e isto aqui roda no laço da interface; desde 13/09 só a QUANTIDADE vai
-    à tela. Lista vazia com ``on`` verdade = a chave GLOBAL da Steam, que não
-    pertence a jogo nenhum.
-    """
+    """Markup da linha "Steam Input" da aba Emulação — pura, testável sem GTK."""
     if on is None:
         markup = f'<span foreground="#8b8fa8">{STEAM_NAO_ENCONTRADA}</span>'
     elif on:
@@ -458,15 +275,6 @@ def markup_status_steam_input(
     else:
         markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'
     if excecoes:
-        # R-06 dizia: *a usuária precisa ver se o opt-in dela está VALENDO, não
-        # só se está escrito no arquivo* — e a linha narrava o `efetiva` depois
-        # de um travessão. NOTA DATADA, 13/09/2026 (FRASES-E-DICAS-03): a ordem
-        # dela no índice da terceira lista
-        # (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
-        # deixa na tela só estado, e a mais nova vence. A contagem fica porque a
-        # aba 07 não mostra a lista das exceções em outro lugar. E o `efetiva`
-        # SAIU DA ASSINATURA no mesmo dia (RESTOS-DA-ONDA-DOIS-01): nada vivo o
-        # lia, e a 07 varria os hidraw a cada leitura só para passá-lo aqui.
         markup += (
             f' <span foreground="#8b8fa8">· Exceção por jogo: '
             f'{len(excecoes)} jogo(s)</span>'
@@ -474,23 +282,8 @@ def markup_status_steam_input(
     return markup
 
 
-#: EMULACAO-NO-JOGO-01/E1(c): tradução do vocabulário FECHADO de ``bloqueio``,
 #: publicado pelo daemon no bloco ``keyboard_emulation`` do ``daemon.status`` e
 #: do ``daemon.state_full`` (``daemon/ipc_handlers.py:_keyboard_emulation_payload``;
-#: a constante do último caso mora em ``daemon/lifecycle.CALADA_VPAD_SUSPENSO``).
-#:
-#: Invariante que o daemon deixou por escrito e que estas frases respeitam: nos
-#: dois casos de PAUSA (``modo_jogo`` e ``vpad_suspenso_pelo_steam_input``) o
-#: ``enabled`` continua TRUE. O teclado dela não foi desligado — ele está em
-#: pausa. Nenhuma dessas duas frases pode dizer "desligado".
-#:
-#: NOTA DATADA — 07/08/2026, sobre a frase do ``vpad_suspenso_pelo_steam_input``.
-#: Ela abria com *"o jogo assumiu o controle"*, e isso está **refutado** para
-#: este caso pela medição dela de 06/08 (``CONTROLE-SONY-MEDIDO-01``, seção
-#: *A INVERSÃO*, grau MEDIDO): num jogo da lista de exceções o jogo assume a
-#: **entrada** — a luz e os gatilhos continuam dela. Quem "assume o controle"
-#: inteiro é o jogo que está **fora** da lista, e é justo o contrário do que a
-#: frase antiga fazia a pessoa concluir.
 BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "desligada": (
         "Desligado: o controle não digita mais nada — nem os atalhos da lista "
@@ -504,34 +297,7 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "modo_jogo": (
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
     ),
-    # ── INALCANÇÁVEL HOJE, e a decisão de apagar ou reviver é DELA ──────────
-    #
-    # 25/08/2026 (EMULACAO-UM-DONO-SO-01/E15). Esta frase NUNCA apareceu na tela
-    # e não pode aparecer: `lifecycle._jogo_no_controle_do_desktop` (`:2209`) só
-    # devolve `CALADA_VPAD_SUSPENSO` sob `if steam_input_vpad_suspenso(self)`, e
-    # nada em produção põe essa flag em `True` — o armador
-    # `suspend_vpads_for_steam_input` tem ZERO chamadores em `src/`. Cadeia
-    # conferida ponta a ponta pela VPAD-SUSPENSO-MORTO-01/E1 (25/08); daqui
-    # `bloqueio` só pode ser `"desligada"`, `"sem_device"`, `"modo_jogo"` ou
-    # `None`.
-    #
-    # NÃO É DESCUIDO, E POR ISSO A FRASE FICA. O commit `d8022ea` (09/08/2026)
-    # tirou a suspensão da borda de entrada da exceção de Steam Input e pôs
-    # `esconder_o_fisico_para_o_jogo` no lugar, por decisão DELA
-    # (ESCONDER-EM-VEZ-DE-SAIR-01: *a allowlist do Steam Input NÃO tira o
-    # Hefesto da frente*), depois do preço medido em 08/08 — derrubar os
-    # virtuais para curar o duplicado do P1 derrubava o JOGADOR 2 junto.
-    #
-    # POR QUE MARCAR EM VEZ DE APAGAR, e é escolha declarada: apagar decide por
-    # ela. A `VPAD-SUSPENSO-MORTO-01` está ABERTA e a pergunta que ela deixou —
-    # *"o par (excecao_ativa, vpad_suspenso) vira um estado só?"* — é da
-    # mantenedora; se a resposta reviver a suspensão, esta frase volta a valer
     # inteira, com a nota datada de 07/08 que ela já custou (abaixo). Marcar
-    # custa este comentário; apagar custa a frase e a medição junto. O que a
-    # marca tem de garantir é que ninguém mais acredite que ela aparece — e é o
-    # que `tests/unit/test_a_frase_do_teclado_fala_de_um_estado_que_existe.py`
-    # cobra, dos dois lados: reprova se a frase deixar de estar declarada morta,
-    # E reprova no dia em que a suspensão religar, mandando revisitar o texto.
     "vpad_suspenso_pelo_steam_input": (
         "Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, "
         "e o controle virtual foi recolhido. Não foi desligado — volta sozinho "
@@ -539,34 +305,18 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     ),
 }
 
-#: As entradas de `BLOQUEIO_DO_TECLADO_EM_PORTUGUES` que descrevem um estado que
-#: NENHUM caminho de produção alcança hoje, cada uma com a razão e quem decide.
-#: Nasce com uma, e é para encolher — não para crescer.
-#:
-#: OS VALORES DESTE DICIONÁRIO NÃO NOMEIAM FUNÇÃO DO DAEMON, e não é estilo:
-#: MEDIDO em 25/08/2026. O portão irmão
-#: (`tests/unit/test_portao_o_par_com_metade_ligada.py`) trata TODA string
-#: constante que não seja docstring como possível despacho por nome — é a cura
-#: que ele precisa para enxergar `getattr(x, "nome")`. Escrever o nome do
-#: armador aqui o pôs na lista de "palavras", e o portão passou a responder que
-#: a função TEM chamador: as três reprovações dele viraram verde por causa
-#: desta frase. Os endereços (`arquivo:linha`) dizem a mesma coisa e não
-#: acionam a heurística. O defeito do instrumento está relatado a quem coordena.
 BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO: dict[str, str] = {
     "vpad_suspenso_pelo_steam_input": (
         "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1, reconferido aqui). O "
-        "predicado de daemon/lifecycle.py:2628 só devolve esta constante sob a "
+        "predicado de daemon/lifecycle.py:1581 só devolve esta constante sob a "
         "flag do vpad suspenso, e nada em produção a põe em True: o armador de "
-        "daemon/subsystems/gamepad.py:797 tem zero chamadores em src/. A causa "
+        "daemon/subsystems/gamepad.py:461 tem zero chamadores em src/. A causa "
         "é decisão dela (ESCONDER-EM-VEZ-DE-SAIR-01, `d8022ea`, 09/08/2026), e "
         "reviver ou apagar a frase é da mantenedora — a pergunta aberta é se o "
         "par (excecao ativa, vpad suspenso) vira um estado só."
     ),
 }
 
-#: Sem o bloco não se sabe a posição do interruptor — e oferecer um interruptor
-#: cuja posição você não conhece é exatamente o que mentia no lado do mouse
-#: (HARM-05). A frase diz o que fazer, não o que faltou no protocolo.
 TECLADO_SEM_ESTADO = (
     "Não consegui ler o estado do teclado emulado — o Hefesto pode estar "
     "desligado. Veja a aba Sistema."
@@ -574,12 +324,7 @@ TECLADO_SEM_ESTADO = (
 
 
 def descrever_teclado_emulado(bloco: object) -> tuple[bool | None, str]:
-    """(posição do interruptor, frase embaixo dele) a partir do bloco do daemon.
-
-    Pura de propósito: é o miolo que decide o que ela vê, e ele precisa ter
-    teste sem montar janela. ``None`` na primeira posição significa "não sei" —
-    o interruptor fica insensível e nada é afirmado.
-    """
+    """(posição do interruptor, frase embaixo dele) a partir do bloco do daemon."""
     if not isinstance(bloco, dict) or not isinstance(bloco.get("enabled"), bool):
         return None, TECLADO_SEM_ESTADO
     ligado = bool(bloco["enabled"])
@@ -591,43 +336,9 @@ def descrever_teclado_emulado(bloco: object) -> tuple[bool | None, str]:
     texto = BLOQUEIO_DO_TECLADO_EM_PORTUGUES.get(bloqueio)
     if texto is not None:
         return ligado, texto
-    # Motivo NOVO, vindo de um daemon mais novo que esta janela: dizer o código
-    # cru é feio, mas é honesto — e é melhor que afirmar que está funcionando.
     return ligado, f"Ligado, em pausa agora (motivo: {bloqueio})."
 
 
-# --- PERFIL-SALVA-TUDO-01/E3: o "modo jogo" chega ao RASCUNHO ---------------
-#
-# Ela ESCLARECEU (29/07) que o "modo jogo" dela é suspender mouse e teclado. O
-# toggle desta aba só mandava `daemon.emulation.suppress` — o próprio comentário
-# do `on_emulation_pause` diz "NÃO persiste" — então o gesto morria com a sessão
-# e o "Salvar Perfil" gravava `suppress_desktop_emulation: false` por cima.
-#
-# REGISTRAR não é APLICAR: a mesma linha do HARM-05 que vale para o modo (ver o
-# cabeçalho de `rascunho_com_modo`, em home_actions). Quem suspende ao vivo é o
-# IPC, no clique dela; aqui só se anota o que ficou.
-
-
-#: NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Esta constante se
-#: chamava ``MODO_JOGO_NAO_GUARDADO`` e dizia *"Não guardei no perfil"*. A
-#: recusa que ela anunciava CAIU hoje, por decisão dela: **a vontade na GUI
-#: prevalece sempre**. Cinco dos perfis dela são catch-all, e para ela a recusa
-#: era literalmente *"liguei e não ficou salvo"*.
-#:
-#: O raciocínio antigo NÃO estava errado — ele está datado. Ele dizia que
-#: ``suppress: true`` num catch-all era alçapão de mão única, porque
-#: ``lifecycle.apply_profile_suppression`` ligava a supressão sem gate no ramo
-#: ``if desired:``. Isso valia quando foi escrito (30/07/2026). O gate nasceu em
-#: 05/08 (``PERFIL-REESCRITO-NA-PARTIDA-01``, item 2) e ninguém voltou aqui: a
-#: janela seguiu recusando por quatro dias apoiada num defeito já curado. O que
-#: permitiu a recusa cair é aquele gate, e só ele — por isso ele agora carrega
-#: uma nota que o declara CONDIÇÃO desta entrega, e por isso a mordida dele mora
-#: em ``tests/unit/test_modo_jogo_a_vontade_dela_prevalece.py``.
-#:
-#: A frase que sobra não é comemoração: num perfil "vale sempre" o modo jogo é
-#: guardado mas NÃO volta sozinho na próxima ativação, justamente porque o gate
-#: existe. Calar isso seria a janela mentindo a favor dela, que é o defeito-mãe
-#: desta sprint — só que ao contrário.
 MODO_JOGO_GUARDADO_SEM_REGRA = (
     "Modo jogo ligado — mouse e teclado suspensos agora, e guardei no perfil. "
     "Como ele vale para qualquer janela, o Hefesto não liga o modo jogo sozinho "
@@ -637,17 +348,7 @@ MODO_JOGO_GUARDADO_SEM_REGRA = (
 
 
 def perfil_do_rascunho_tem_opiniao(draft: DraftConfig | None) -> bool:
-    """Espelha `lifecycle._perfil_tem_opiniao` para o perfil de ORIGEM do rascunho.
-
-    Pergunta o MESMO predicado do daemon (`Profile.e_catch_all`, dono único do
-    R-01: `MatchAny` e `MatchCriteria` vazio contam igual) sondando o `match` que
-    a fotografia do rascunho guardou. Sem `match` legível responde False.
-
-    NOTA DATADA — 09/08/2026: este predicado deixou de decidir se GUARDA (agora
-    guarda sempre — ver `rascunho_com_modo_jogo`) e passou a decidir o que a
-    janela DIZ. O fail-safe mudou de lugar junto: na dúvida ela recebe o aviso,
-    porque prometer que volta ligado é o único erro que custa caro aqui.
-    """
+    """Espelha `lifecycle._perfil_tem_opiniao` para o perfil de ORIGEM do rascunho."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     match = getattr(draft, "source_match", None)
@@ -663,44 +364,7 @@ def perfil_do_rascunho_tem_opiniao(draft: DraftConfig | None) -> bool:
 def rascunho_com_modo_jogo(
     draft: DraftConfig | None, ligado: bool
 ) -> tuple[DraftConfig | None, bool]:
-    """(rascunho, guardei?) para o "modo jogo". Pura: NÃO aplica nada.
-
-    Os DOIS ramos entram no rascunho. É gesto dela, e o gesto dela é o que a
-    janela guarda — `guardei?` só responde `False` quando não há rascunho onde
-    escrever (janela sem perfil aberto), que não é recusa, é ausência de papel.
-
-    O ramo de DESLIGAR sempre valeu: `False` é o default do esquema, e na
-    ativação o applier só LIBERA quando a supressão veio de perfil e o perfil tem
-    opinião (R-02). Sem ele, salvar um perfil que dizia `suppress: true` (o
-    `sackboy_nativo` e o `coop_local` dela) ressuscitaria a supressão que ela
-    acabou de desligar.
-
-    NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Até hoje o ramo de
-    LIGAR era RECUSADO em perfil catch-all. A recusa foi retirada por decisão
-    dela — *"a vontade na GUI prevalece sempre"* —, e o raciocínio que ela
-    carregava não é apagado porque não era capricho: ele dizia, com razão em
-    30/07/2026, que `daemon/lifecycle.apply_profile_suppression` ligava a
-    supressão no ramo ``if desired:`` SEM gate de catch-all, e que gravar
-    `suppress: true` num dos cinco perfis "vale sempre" dela seria alçapão de mão
-    única — liga em toda ativação (o restauro do boot inclusive) e o caminho de
-    volta fechado pelo R-02, isto é, mouse e teclado suspensos no desktop dela
-    sem ela pedir.
-
-    O que caducou foi a premissa, não o medo: o gate nasceu em 05/08
-    (`PERFIL-REESCRITO-NA-PARTIDA-01`, item 2, `_perfil_e_catch_all`) e esta
-    docstring não soube. A recusa continuou de pé por quatro dias defendendo
-    contra um defeito já curado, cobrando dela a configuração que ela pedia. A
-    verificação de que o alçapão SEGUE fechado — e não a palavra desta docstring
-    — é o que sustenta a retirada: `tests/unit/
-    test_modo_jogo_a_vontade_dela_prevalece.py`, com a mordida feita arrancando
-    o gate do daemon.
-
-    O preço que sobra é honesto e vai para a tela (`MODO_JOGO_GUARDADO_SEM_REGRA`):
-    num catch-all o valor fica guardado no arquivo, mas o daemon não o liga
-    sozinho na ativação seguinte — porque é exatamente isso que impede o desktop
-    de acordar sem ponteiro. Quem escolhe entre as duas coisas é ela, com o preço
-    na mesa, e não este `if`.
-    """
+    """(rascunho, guardei?) para o "modo jogo". Pura: NÃO aplica nada."""
     if draft is None:
         return draft, False
     return draft.with_suppress(ligado), True
@@ -726,19 +390,7 @@ def frase_do_modo_jogo(
 
 
 def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
-    """Anota o "modo jogo" na janela; devolve se ele foi GUARDADO no rascunho.
-
-    Função de MÓDULO pela mesma razão de `registrar_modo_no_rascunho` (dono
-    único, e dublê parcial de teste não pode quebrar por causa da MRO).
-
-    NOTA DATADA — 09/08/2026: o ``False`` já significou "recusei plantar
-    `suppress: true` num catch-all". Não significa mais (ver a nota em
-    `rascunho_com_modo_jogo`): hoje ele só diz que não havia rascunho onde
-    escrever. O log de "guardei num perfil que vale sempre" fica, porque é o
-    caso em que o arquivo dela passa a dizer uma coisa que a ativação seguinte
-    não vai fazer — e isso precisa de rastro no journal tanto quanto a recusa
-    precisava.
-    """
+    """Anota o "modo jogo" na janela; devolve se ele foi GUARDADO no rascunho."""
     draft = getattr(janela, "draft", None)
     if draft is None:
         return False
@@ -754,68 +406,10 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
     return guardado
 
 
-# ---------------------------------------------------------------------------
-# ENGASGO-VULKAN-01 — "Tirar a sobreposição Vulkan"
-# ---------------------------------------------------------------------------
-#
-# O NOME MUDOU EM 05/09/2026, E QUEM O MUDOU FOI ELA: *"o procurar sobreposição
-# de novo deveria ser Corrigir Sobreposição do Vulkan, não?"*. Até aqui o rótulo
-# era "Tirar o que faz engasgar", e a razão escrita era esta — *ninguém que joga
-# procura por "camada Vulkan implícita"; ela procura pelo que SENTE, e a palavra
-# é dela: "o Sackboy engasga"*, no molde do "A luz não acende"
-# (`app/actions/config/secao_controles.py`).
-#
-# A PREMISSA CAIU PELA BOCA DA DONA DA PALAVRA. Ela procurou por Vulkan, com
-# todas as letras — então a palavra entra, e entra com K, que é como a Khronos a
-# escreve (e é como o registro do prefixo a escreve: `Software\Khronos\Vulkan\
-# ImplicitLayers`). O que NÃO entrou foi o verbo dela, e essa é a única parte do
-# pedido que a medição desqualifica: "corrigir" promete cura de engasgo, e o A/B
-# de 23/08 derrubou a hipótese (números logo abaixo). "Tirar" é o que o botão
-# faz e o teto do que ele pode prometer.
-#
-# O verbo na frente vem do vizinho de fileira — "Consertar problemas
-# conhecidos", "Copiar opções para os jogos", "Fixar a versão que funciona" —,
-# que é a gramática do bloco Avançado onde o botão mora. (Os dois vizinhos
-# citados chamavam-se "Aplicar correções" e "Travar Proton validado" até
-# 26/08/2026, quando a BG-PALAVRA-02 pagou a dívida da E3 da PALAVRA-01.)
-#
-# O QUE ELE FAZ: desliga, dentro do prefixo Wine de cada jogo, as camadas Vulkan
-# implícitas que não são o driver do Wine nem ferramenta reconhecida. A hipótese
-# de 23/08/2026 era que elas embrulhassem a apresentação de cada quadro: 60 fps
-# de média com ~70 quadros longos por minuto, e de 27 prefixos só um com camada
-# a mais (o do Sackboy, com o overlay do Epic Online Services), o único que
-# engasgava. **O A/B de 23/08 DERRUBOU a hipótese** (desligada mediu PIOR: p99
-# +4,19 ms/min contra +2,35, 121 picos/min contra 51), e em 26/09 a leitura do
-# Wine disse por quê: o `vulkan-1` do Wine devolve zero camadas, e o vkd3d-proton
-# chama o `winevulkan` direto. Os números e a ressalva de carga estão em
-# `integrations/camadas_vulkan.py`. A interface não promete cura de engasgo, e
-# não pode: promete o que tirou, que é o contrato honesto deste botão.
-#
-# REVERSÍVEL NO MESMO GESTO, e é por isso que o botão abre diálogo em vez de
-# agir direto: o diálogo É o relatório (ELO-MUDO-01, silêncio não é resposta) e
-# leva os dois caminhos. "Devolver" só aparece quando há o que devolver, e
-# devolver marca a escolha dela — o gancho de lançamento não desfaz no jogo
-# seguinte.
-
-
 def frase_do_censo(
     prefixos: Sequence[Any], *, bibliotecas: int = 1
 ) -> tuple[str, bool, bool]:
-    """Texto do diálogo + (tem o que tirar, tem o que devolver).
-
-    Pura de propósito: é a frase que a pessoa lê antes de decidir, e ela tem de
-    ser testável sem GTK e sem disco. Diz jogo por jogo o que existe, com o
-    estado de cada camada — inclusive "o arquivo não está no disco", que é
-    exatamente o estado em que a máquina dela estava (os dois manifestos do
-    Epic renomeados à mão para medir). Chamar isso de "ligada" seco seria o
-    instrumento mentindo.
-
-    `bibliotecas` é a contagem de `steamapps/compatdata` que o censo alcançou,
-    e existe por causa da armadilha número um desta casa: **"não achei nada" e
-    "não consegui olhar" produzem a mesma lista vazia**, e dizer o primeiro
-    quando o certo é o segundo faz a pessoa parar de procurar. Medido em
-    23/08/2026 na CLI avulsa, que respondia exatamente essa mentira.
-    """
+    """Texto do diálogo + (tem o que tirar, tem o que devolver)."""
     if not bibliotecas:
         return (
             "Não achei nenhuma biblioteca da Steam nesta máquina, então não "
@@ -873,12 +467,7 @@ def frase_do_censo(
 
 
 def frase_do_resultado(resultados: Sequence[Any], *, devolver: bool) -> str:
-    """A frase do rodapé depois de agir. Nunca some, nunca mente.
-
-    Conta o que aconteceu em número de jogos e nomes, separa o que foi
-    respeitado (escolha dela) e o que deu erro. "Nada mudou" é resposta
-    legítima e é dita com todas as letras — ELO-MUDO-01.
-    """
+    """A frase do rodapé depois de agir. Nunca some, nunca mente."""
     mexidos = [r for r in resultados if r.desligadas or r.religadas]
     erros = [r for r in resultados if r.erro]
     respeitados = [r for r in resultados if r.respeitadas and not r.mexeu]
@@ -910,20 +499,12 @@ class EmulationActionsMixin(WidgetAccessMixin):
         self._get("emulation_vidpid_label").set_text(
             f"{XBOX360_VENDOR:04X}:{XBOX360_PRODUCT:04X} (Xbox 360)"
         )
-        # FEAT-HOTKEY-PROFILE-CYCLE-01: os combos PS+D-pad ciclam o perfil
-        # (next=PS+↑, prev=PS+↓), aplicando triggers/LEDs/bindings e piscando o
-        # lightbar como feedback. Ligado em subsystems/hotkey.py.
         self._get("emulation_combo_next_label").set_markup(
             "PS + ↑ (D-pad) — próximo perfil"
         )
         self._get("emulation_combo_prev_label").set_markup(
             "PS + ↓ (D-pad) — perfil anterior"
         )
-        # BUG-EMULATION-HOTKEY-CARD-FIXO-01: estas duas linhas escreviam a
-        # CONSTANTE de compilação uma única vez e ninguém mais as tocava — a
-        # tela afirmava "buffer 150" e "Passthrough: Não" como se fossem estado
-        # lido do daemon, mesmo com o daemon offline. Agora saem rotuladas como
-        # padrão e o `_sync_hotkey_card` as substitui pelo valor efetivo assim
         # que o `state_full` traz o bloco `hotkey`.
         self._sync_hotkey_card(None)
         self._refresh_emulation_view()
@@ -963,11 +544,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             "_refresh_gamepad_and_gamemode",
             "_refresh_mic_status",
             "_refresh_steam_input_status",
-            # EMULACAO-NO-JOGO-01/E1: o interruptor do teclado. Ele DESENHA na
-            # aba Navegação, mas o assunto é emulação e o dono é este mixin —
-            # e é por aqui que ele é relido no botão "Atualizar" e ao entrar na
-            # aba Emulação. Desde 22/08/2026 o gancho da aba Navegação também o
-            # relê: ver SEGUNDO-ESCRITOR-01 em `app._REFRESH_POR_ABA`.
             "_refresh_keyboard_switch",
         ):
             fn = getattr(self, name, None)
@@ -1057,28 +633,8 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
         self._refresh_emulation_view()
 
-    # BOTÃO-QUE-NÃO-MENTE-01 (entregas 5 e 6): o `on_emulation_open_toml` SAIU.
-    #
-    # A entrega 3 tirou do glade o botão "Ver daemon.toml (referência)" e
-    # deixou a decisão sobre o Python escrita ali (`gui/main.glade:2564-2569`):
-    # *"quem cuida do Python nesta leva decide se o código sai junto"*. Ele
-    # ficou — handler vivo, registrado em `app/app.py`, sem nada que o
-    # chamasse. Isto é o que sai agora.
-    #
-    # Por que remover em vez de deixar dormindo: o método CRIAVA
-    # `~/.config/hefesto-dualsense4unix/daemon.toml` no disco dela, um arquivo
-    # com cara de configuração que o daemon não lê
-    # (`BUG-DAEMON-TOML-DEAD-01` — a configuração efetiva vem de variáveis de
     # ambiente e do canal `daemon.reload`). Enquanto o código existisse, bastava
-    # alguém reconectar o nome no glade para o arquivo fantasma voltar a
-    # nascer: armadilha carregada, que é o mesmo padrão que a CÓDIGO-MORTO-01
-    # descreveu no `xlib_window`.
-    #
-    # Volta quando (e se) existir arquivo de configuração de verdade — proposto
-    # no bloco C da PROMESSA-NÃO-CUMPRIDA-01. Aí o botão e o handler nascem
-    # juntos, apontando para um arquivo que o daemon lê de fato.
 
-    # --- helpers ---
 
     def _refresh_emulation_view(self) -> None:
         uinput_label = self._get("emulation_uinput_label")
@@ -1092,7 +648,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
         dev_writable = os.access(UINPUT_DEV, os.W_OK) if dev_exists else False
 
         if module_ok and dev_writable:
-            # ADR-011: &#9679; (BLACK CIRCLE) via NCR — sobrevive ao sanitizer.
             uinput_label.set_markup(
                 '<span foreground="#50fa7b">&#9679; Gamepad virtual pronto</span>'
             )
@@ -1113,28 +668,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
 
         js_label = self._get("emulation_js_label")
-        # A frase honesta é ~4x mais longa que o "N controles" que substituiu, e
-        # o rótulo do glade quebra linha (`wrap=True`). Medido em
-        # `Gtk.OffscreenWindow` com o glade real, largura PEDIDA pelo rótulo:
-        #
-        #                                    mínimo   natural
-        #   "6 controles detectados …"          67       220
-        #   a frase nova, sem teto              64       799
-        #   a frase nova, com o teto abaixo     64       363
-        #
-        # O teto existe pelo NATURAL, que é o que o GTK entrega quando há folga:
-        # sem ele este cartão pediria 799px de largura numa janela larga, quase
-        # o dobro dos 454px que o grid inteiro pedia antes (LARGURA-01).
-        #
-        # O que ele NÃO faz, e a medição foi clara: não desespreme a coluna. O
-        # MÍNIMO do rótulo é a maior palavra (64px) e é o mínimo que esta aba
-        # recebe hoje — o `emulation_diagnostico_row` é alocado em 721px, o
-        # próprio mínimo dele. Por isso a frase quebra em muitas linhas (51px de
-        # altura viraram 204px). Alargar o mínimo com `set_width_chars` curaria
-        # a aparência e SUBIRIA o mínimo da aba inteira — é exatamente a
-        # regressão que o comentário do glade sobre esta linha registra ter
-        # custado rolagem em TODAS as páginas do notebook. Fica assim de
-        # propósito: o espremido é da aba, não desta frase.
         with contextlib.suppress(Exception):
             js_label.set_line_wrap(True)
             js_label.set_max_width_chars(LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS)
@@ -1151,17 +684,8 @@ class EmulationActionsMixin(WidgetAccessMixin):
             js_label.set_markup('<i>Nenhum controle detectado pelo sistema</i>')
 
     # --- microfone do DualSense (FEAT-DUALSENSE-MIC-TOGGLE-01) ---
-    # Liga/desliga o mic embutido reusando o mesmo caminho do CLI/install
     # (scripts/fix_wireplumber_default_source.sh). Mic ON = sem os drop-ins de
-    # supressão 52/53; OFF = com eles. O quirk segura o storm com o mic ligado.
 
-    #: CANARIO-FS-01 (05/08/2026, decisão dela): isto ERA
-    #: `_WP_DROPIN_DIR = Path.home() / ...`, atributo de classe avaliado no
-    #: IMPORT — e este é DIRETÓRIO DE ESCRITA em produção. Congelado no import,
-    #: nenhum `monkeypatch` de `HOME` o alcançava, e um teste que exercitasse
-    #: este caminho escreveria na configuração real do WirePlumber da máquina.
-    #: Em método, `Path.home()` resolve na hora da chamada: a suíte volta a ser
-    #: isolável e produção não muda. Irmão de `storm_doctor._allowlist_path`.
     @staticmethod
     def _wp_dropin_dir() -> Path:
         """Diretório dos drop-ins do WirePlumber, resolvido a cada chamada.
@@ -1179,42 +703,16 @@ class EmulationActionsMixin(WidgetAccessMixin):
         "53-hefesto-dualsense-disable-output.conf",
     )
 
-    #: LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026): o 51 NÃO é supressão. Desde
-    #: MONITOR-QUE-VENCE-01 (08/08, commit 6c428cd) ele é o PROMOTOR — põe a
-    #: entrada do controle em `priority.session = 1500`, a faixa medida que fica
-    #: acima de qualquer monitor (1109) e abaixo de qualquer captura real (2009).
-    #: Sem ele a entrada volta ao 50 de fábrica e o monitor da saída vence: o que
-    #: qualquer aplicativo grava é o eco do que sai, não a voz dela.
     _WP_PROMOTER_DROPIN = "51-hefesto-dualsense-no-default-source.conf"
 
-    #: Os três estados que os drop-ins sabem dizer. São três porque a diferença
-    #: entre eles importa para quem está olhando: "suprimido" é escolha, "sem
-    #: prioridade" é o mic livre porém desprotegido, e só o terceiro é o que a
-    #: tela pode chamar de Ligado sem mentir.
     MIC_SUPRIMIDO = "suprimido"
     MIC_SEM_PROMOTOR = "sem-promotor"
     MIC_LIGADO = "ligado"
 
-    #: EMULACAO-UM-DONO-SO-01/E3 (25/08/2026) — o QUARTO estado: não há alvo
-    #: que este botão alcance. Os três de cima decidiam olhando SÓ a presença de
-    #: arquivos em `~/.config/wireplumber/wireplumber.conf.d/`. Sem nenhuma
     #: placa de áudio do controle no sistema o ramo era o mesmo, e a tela
-    #: escrevia **Ligado** em `#50fa7b` com a dica "o microfone do controle está
-    #: livre e com prioridade acima do eco da saída" — verde sobre um alvo que a
-    #: aba nunca olhou.
     MIC_SEM_ALVO = "sem-alvo"
 
-    #: A régua do alvo, DECLARADA porque a sprint exige que ela seja: a presença
     #: de PLACA ALSA do DualSense em `/proc/asound/cards`, contada pela função
-    #: pura `storm_doctor.contar_placas_dualsense` (não redigitada aqui — o
-    #: cabeçalho dela registra por que contar a palavra dá o dobro).
-    #:
-    #: O QUE ELA PROVA, E O QUE NÃO PROVA — a distinção é do próprio mapa
-    #: (`audio.microfone@dualsense`, `assimetria_declarada`, medido 15/08/2026)
-    #: e escrevê-la errada vira fato falso amanhã: os controles do RÁDIO não têm
-    #: placa ALSA nenhuma, e isso prova que **a ROTA ALSA não existe no rádio —
-    #: NÃO prova que o aparelho não capta por rádio**. Por isso a frase da tela
-    #: fala de "placa de áudio neste computador", nunca do microfone do aparelho.
     _PLACAS_ALSA = "/proc/asound/cards"
 
     def _mic_script(self) -> Path | None:
@@ -1244,17 +742,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         return contar_placas_dualsense(texto)
 
     def _mic_state(self) -> str:
-        """O que os drop-ins do WirePlumber dizem sobre o mic, em quatro estados.
-
-        Só LÊ arquivo — é chamada a cada entrada na aba Emulação e não pode ter
-        efeito colateral nenhum (ver `_refresh_emulation_tab`).
-
-        POR QUE O ALVO SÓ FECHA O RAMO VERDE (E3, 25/08/2026). Os dois estados
-        laranja descrevem a NOSSA configuração — um drop-in que escrevemos está
-        lá, ou o promotor está faltando — e isso é verdade com placa ou sem
-        placa. O ramo verde descreve **o aparelho** ("o microfone do controle
-        está livre"), e é só esse que precisa de um alvo para não mentir.
-        """
+        """O que os drop-ins do WirePlumber dizem sobre o mic, em quatro estados."""
         dropins = self._wp_dropin_dir()
         if any((dropins / name).exists() for name in self._WP_DISABLE_DROPINS):
             return self.MIC_SUPRIMIDO
@@ -1265,19 +753,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
         return self.MIC_LIGADO
 
     def _mic_is_on(self) -> bool:
-        """Mic ligado DE VERDADE: sem supressão (52/53) **e** com o promotor (51).
-
-        LIGAR-QUE-APAGAVA-A-CURA-01: esta função perguntava só pelo 52/53, e o
-        próprio botão "Ligar" apagava o 51 — então a tela escrevia "Ligado" em
-        verde no exato instante em que a captura padrão voltava a poder cair no
-        monitor da saída. Sem o promotor o microfone existe, mas perde a eleição
-        para o eco do que sai; chamar isso de Ligado é afirmar o contrário do
-        que aconteceu.
-        """
+        """Mic ligado DE VERDADE: sem supressão (52/53) **e** com o promotor (51)."""
         return self._mic_state() == self.MIC_LIGADO
 
     # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
-    # (usbcore.quirks=054c:0ce6:gn) é o que segura o storm -71 COM o mic ligado.
     _USB_QUIRK_MARKER = "054c:0ce6:gn"
     _USB_QUIRK_PATHS: ClassVar[tuple[str, ...]] = (
         "/proc/cmdline",
@@ -1286,12 +765,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     @staticmethod
     def _usb_quirk_active() -> bool:
-        """True se o quirk de áudio USB protege a SESSÃO ATUAL.
-
-        Só /proc/cmdline (ATIVO) ou /sys/module/usbcore/parameters/quirks
-        (runtime) valem agora; o agendado no bootloader só pega no próximo boot.
-        Espelha o check_usb_quirk do doctor.sh, restrito aos sinais da sessão.
-        """
+        """True se o quirk de áudio USB protege a SESSÃO ATUAL."""
         marker = EmulationActionsMixin._USB_QUIRK_MARKER
         for path in EmulationActionsMixin._USB_QUIRK_PATHS:
             with contextlib.suppress(OSError):
@@ -1299,9 +773,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     return True
         return False
 
-    #: O texto curto de cada estado, e a explicação inteira que não cabe nele.
-    #: O rótulo tem `width-chars = 11` e quebra linha (VAO-01/E2): a frase longa
-    #: vai na dica de tooltip, onde não empurra a largura da aba.
     _MIC_ROTULOS: ClassVar[dict[str, tuple[str, str, str]]] = {
         MIC_LIGADO: (
             "#50fa7b",
@@ -1323,15 +794,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             "O microfone do controle está desligado por escolha — clique em "
             "“Ligar” para liberá-lo.",
         ),
-        # E3 (25/08/2026). Laranja, e não uma cor nova: a linha já ensina duas
-        # cores (verde = tudo certo, laranja = olhe isto), e inventar uma
-        # terceira é vocabulário visual novo, que é decisão dela.
-        #
-        # A FRASE NÃO PODE DIZER MAIS DO QUE A RÉGUA MEDE — ver o cabeçalho de
-        # `_PLACAS_ALSA`: ausência de placa prova que a ROTA ALSA não existe,
-        # não que o aparelho não capte. Por isso ela fala de "placa de áudio
-        # neste computador" e nomeia o rádio como o caso comum, em vez de
-        # concluir que o microfone está mudo.
         MIC_SEM_ALVO: (
             "#ffb86c",
             "Sem microfone à vista",
@@ -1343,20 +805,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
         ),
     }
 
-    #: EMULACAO-UM-DONO-SO-01/E4, metade de tela (25/08/2026). A palavra
-    #: "microfone" nomeia TRÊS coisas em três abas, e nenhuma dizia de qual não
-    #: estava falando: aqui é a ROTA DE ÁUDIO DA MÁQUINA (drop-ins do
-    #: WirePlumber, `_run_mic`); em Status/Perfis é o `ProfileMicConfig` —
-    #: volume de captura e mudo de FIRMWARE, que entram no perfil do jogo; em
-    #: Configurações é o interruptor da ponte por Bluetooth. Ela ajustava aqui,
-    #: salvava o perfil e na sessão seguinte voltava ao que estava.
-    #:
-    #: Vai no fim de TODA dica desta linha, e não só na do estado novo: o
-    #: escopo não muda com o estado, e uma frase que só aparece num ramo é uma
-    #: frase que a maioria das visitas não lê.
-    #:
-    #: A DECISÃO DE ENTRAR NO PERFIL É DELA (§9 da sprint) e este texto não a
-    #: antecipa — ele diz o que o botão faz HOJE, que é fato medido.
     ESCOPO_DO_MICROFONE_DESTA_ABA = (
         "Isto vale para o computador inteiro, não para este jogo: não entra no "
         "perfil e não mexe na ponte de microfone por Bluetooth (aba "
@@ -1392,33 +840,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
         return False
 
     def on_emulation_mic_on(self, _btn: Gtk.Button) -> None:
-        # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: a GUI não vê o stderr do script —
-        # então, se o quirk de áudio USB não estiver ativo nesta sessão, o aviso
-        # vai na mensagem FINAL (persiste no status bar). Um toast ANTES de ligar
-        # seria sobrescrito pelo "aplicando no microfone..." do _run_mic e ficaria
-        # invisível. Ligar sem o quirk pode reabrir o storm -71; não bloqueia e
-        # NÃO mexemos no cmdline (gerido pela toolchain pessoal Aurora).
         if self._usb_quirk_active():
             done = "Mic do DualSense ligado"
         else:
-            # O NOME DO BOTÃO SE PERGUNTA, E NÃO SE DIGITA — 06/09/2026, achado
-            # da GTK-3. Esta frase trazia digitado o rótulo da JANELA QUE ESTÁ
-            # SAINDO, e na aba Sistema que ela usa o botão tem outro nome. É a
-            # forma que o glossário desta casa proíbe com todas as letras —
-            # *qualquer frase que mande a pessoa procurar um botão que não
-            # existe* — e era o TERCEIRO escritor do mesmo rótulo.
-            #
-            # E O RÓTULO VELHO NÃO SE ESCREVE AQUI, nem em comentário: a marca
-            # `xfail` que a GTK-3 instalou procurava a frase NO FONTE deste
-            # arquivo, então explicá-la em prosa a manteria ligada sobre a cura.
-            # Pela sexta vez nesta casa um comentário viraria o defeito que
-            # descreve; desta vez ele foi medido antes de entrar.
-            #
-            # A régua dava verde porque lia o glade: o instrumento respondia
-            # sobre a tela que está saindo. `rotulo_do_botao` já pergunta na
-            # ordem certa — a página que o produto renderiza primeiro, o glade
-            # depois, e o `se_faltar` só quando nenhuma responde —, e por isso a
-            # frase segue certa no dia em que o glade sair (GTK-3, volta 2).
             from hefesto_dualsense4unix.integrations.storm_doctor import (
                 rotulo_do_botao,
             )
@@ -1435,12 +859,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def on_emulation_mic_off(self, _btn: Gtk.Button) -> None:
         self._run_mic("--disable-source", "Mic do DualSense desligado")
 
-    # --- gamepad virtual + modo-jogo (FEAT-DSX-GAMEPAD-FLAVOR-01) ---
-    # Tudo via IPC pro daemon (gamepad.emulation.set / daemon.pause|resume),
-    # que é o único leitor do controle — sem o input dobrado do bridge avulso.
 
-    # Seletor de gamepad: 3 botões = 3 modos. Realçamos o ativo (GtkButton não
-    # tem :checked, então marcamos a classe .hefesto-active-mode via código).
     _GAMEPAD_BUTTON_IDS: ClassVar[dict[str, str]] = {
         "off": "emulation_gamepad_off_button",
         "dualsense": "emulation_gamepad_dualsense_button",
@@ -1448,10 +867,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
     }
 
     def _highlight_gamepad(self, active_key: str | None) -> None:
-        """Destaca o botão do modo de gamepad atual (off/dualsense/xbox).
-
-        ``None`` (daemon offline / estado desconhecido) limpa o realce de todos.
-        """
+        """Destaca o botão do modo de gamepad atual (off/dualsense/xbox)."""
         for key, wid in self._GAMEPAD_BUTTON_IDS.items():
             btn = self._get(wid)
             if btn is None:
@@ -1463,17 +879,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 ctx.remove_class("hefesto-active-mode")
 
     def _sync_gamemode_button(self, mode: str | None) -> None:
-        """HARM-03/EMU-07: "Modo jogo" só faz sentido "jogando pelo Hefesto".
-
-        Em "Controlar o PC" o controle SÓ faz mouse/teclado — suspendê-los
-        deixava o controle sem função nenhuma. Em "Conexão Nativa (Sony)" o jogo
-        fala direto com o controle: não há mouse/teclado nem gamepad virtual
-        para suspender, e o toast ainda afirmava "gamepad ativo". Nos dois casos
-        o botão fica desabilitado com a razão em texto simples ao lado.
-
-        "Sair do modo jogo" continua sensível em TODOS os modos: é a saída de
-        emergência de quem caiu em desktop+suspenso pelo combo PS+Options.
-        """
+        """HARM-03/EMU-07: "Modo jogo" só faz sentido "jogando pelo Hefesto"."""
         pause_btn = self._get("emulation_pause_button")
         hint = self._get("emulation_gamemode_hint_label")
         blocked = mode is None or mode in {MODE_DESKTOP, MODE_NATIVE}
@@ -1500,10 +906,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             mode = mode_of_state(state if isinstance(state, dict) else None)
             gp = state.get("gamepad_emulation") if isinstance(state, dict) else None
             gp_label = self._get("emulation_gamepad_status_label")
-            # HARM-01: no Modo Nativo o vpad está desligado, mas dizer só
-            # "desligado" (e realçar "Desligado") fazia esta aba contradizer a
-            # Início, que mostra "Conexão Nativa (Sony)". Nenhum dos três botões
-            # é a verdade aqui — o realce sai e o label conta o modo real.
             if mode == MODE_NATIVE:
                 active_key = None
                 if gp_label is not None:
@@ -1523,17 +925,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     gp_label.set_markup('<span foreground="#8b8fa8">Desligado</span>')
             self._highlight_gamepad(active_key)
             self._sync_gamemode_button(mode)
-            # BUG-EMULATION-UINPUT-CARD-STALE-01: o cartão UINPUT mostrava
-            # SEMPRE "X-Box 360 / 045E:028E" (constantes de install) mesmo com
             # a máscara real em DualSense — informação contraditória na mesma
-            # tela. Reflete o device/VID:PID do vpad REALMENTE ativo.
             self._sync_uinput_card(active_key)
             self._sync_hotkey_card(state)
             gm_label = self._get("emulation_gamemode_status_label")
             if gm_label is not None and isinstance(state, dict):
-                # BUG-GAMEMODE-LABEL-AMBIGUO-01: o label dizia "ativo" quando o
-                # modo jogo estava DESLIGADO (referia-se à emulação) — lido como
-                # "Modo jogo: ativo", significava o CONTRÁRIO do exibido.
                 if state.get("emulation_suppressed"):
                     gm_label.set_markup(
                         '<span foreground="#ffb86c">LIGADO — mouse/teclado suspensos</span>'
@@ -1553,25 +949,16 @@ class EmulationActionsMixin(WidgetAccessMixin):
             if lbl is not None:
                 lbl.set_markup('<span foreground="#8b8fa8">O Hefesto está desligado</span>')
             self._highlight_gamepad(None)
-            # BUG-EMULATION-UINPUT-CARD-STALE-02: offline, o cartão UINPUT não
-            # pode seguir afirmando o device/VID:PID do último estado online.
             sync_card = getattr(self, "_sync_uinput_card", None)
             if sync_card is not None:
                 sync_card(None)
-            # Offline o buffer/passthrough voltam a ser "padrão", não o último
-            # valor lido — a mesma regra do cartão UINPUT logo acima.
             sync_hotkey = getattr(self, "_sync_hotkey_card", None)
             if sync_hotkey is not None:
                 sync_hotkey(None)
-            # HARM-03: sem estado não dá para saber se "Modo jogo" faz sentido;
-            # oferecê-lo às cegas pode cair no caso que mata o controle.
             self._sync_gamemode_button(None)
             return False
 
         # HARM-15: a folga do state_full vale AQUI também — sem ela esta aba
-        # (para onde a UI inteira manda a usuária quando algo dá errado) se pinta
-        # de "daemon offline" com o daemon VIVO, sempre que ele passa dos 0,25s
-        # default (hotplug, co-op subindo). O timeout mora no mode_transition
         # junto do `mode_of_state`: é a mesma leitura.
         call_async(
             "daemon.state_full", {}, on_success=_on_state, on_failure=_on_err,
@@ -1579,18 +966,8 @@ class EmulationActionsMixin(WidgetAccessMixin):
         )
 
     def _apply_mode(self, mode_id: str, flavor: str | None, msg: str) -> None:
-        """Muda o modo pelo MESMO caminho da Início (HARM-01).
-
-        Antes esta aba chamava `gamepad.emulation.set` cru, sem sair do Modo
-        Nativo: nativo + gamepad ligados juntos = físico grabado pelo jogo +
-        vpad congelado, ou seja, JOGO SEM CONTROLE NENHUM — e a Início ainda
-        exibia "Conexão Nativa (Sony)", escondendo o estado real. Delegar a
-        `mode_transition` mantém um dono só para a sequência e o timeout.
-        """
+        """Muda o modo pelo MESMO caminho da Início (HARM-01)."""
         def _on_ok(_res: Any) -> bool:
-            # PERFIL-SALVA-TUDO-01/E3: o modo entra no rascunho DEPOIS da
-            # confirmação do daemon — o rascunho guarda o que ficou de pé, não a
-            # intenção. Registrar não aplica nada (`rascunho_com_modo`).
             registrar_modo_no_rascunho(self, mode_id, flavor)
             self._refresh_gamepad_and_gamemode()
             self._toast_emulation(msg)
@@ -1607,9 +984,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
         apply_mode(mode_id, flavor=flavor, on_done=_on_ok, on_fail=_on_err)
 
     def on_emulation_gamepad_off(self, _btn: Gtk.Button) -> None:
-        # "Desligado" = o modo "Controlar o PC" da Início. Desligar só o vpad
-        # deixaria o Modo Nativo de pé com o botão realçado como "Desligado" —
-        # duas abas contando histórias diferentes sobre o mesmo estado.
         self._apply_mode(
             MODE_DESKTOP, None, "Gamepad virtual desligado — o controle controla o PC"
         )
@@ -1622,20 +996,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
         )
 
     def on_emulation_gamepad_xbox(self, _btn: Gtk.Button) -> None:
-        # BG-TOAST-01 (26/08/2026): o recibo dizia "(vibra no jogo)" enquanto o
-        # tooltip do MESMO botão já carregava a ressalva da EMULACAO-UM-DONO-SO-01
-        # — e quem clica lê o toast, não o tooltip.
-        #
-        # A RESSALVA SAIU DAQUI EM 05/09/2026, com a medição que a derrubou: a
-        # vibração do jogo chega ao controle nos dois transportes
-        # (`integrations/uinput_gamepad.py:174` repassa o FF_RUMBLE ao hidraw
-        # sem consultar o barramento), medida na bancada dela. Colar a ressalva
-        # aqui passou a ser afirmar na tela que uma feature que funciona não foi
-        # conferida — ver `RESSALVA_DE_TRANSPORTE`, hoje vazio pela mesma razão.
-        #
-        # E o recibo NÃO ganhou no lugar dela uma lista do que o Xbox não faz:
-        # decisão dela, 05/09/2026 — *"o Hefesto não descreve falha e limitação.
-        # Criamos mecanismos pra usarmos todas as feature."*
         self._apply_mode(
             MODE_GAMEPAD,
             "xbox",
@@ -1644,11 +1004,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
         def _on_ok(_res: Any) -> bool:
-            # PERFIL-SALVA-TUDO-01/E3: o "modo jogo" dela vira configuração do
-            # perfil. MODO-JOGO-VONTADE-DELA-01 (09/08): qualquer perfil o
-            # recebe — o que muda com o catch-all é a FRASE, não o que é
-            # guardado. A janela não pode ficar calada sobre o que o daemon vai
-            # (ou não vai) fazer com aquilo na próxima ativação.
             guardado = registrar_modo_jogo_no_rascunho(self, suppressed)
             self._refresh_gamepad_and_gamemode()
             self._toast_emulation(
@@ -1678,34 +1033,15 @@ class EmulationActionsMixin(WidgetAccessMixin):
         )
 
     def on_emulation_pause(self, _btn: Gtk.Button) -> None:
-        # FEAT-DSX-GAMEMODE-SUPPRESS-01: o botão "Modo jogo" usa
-        # daemon.emulation.suppress (transitório, paridade real com o combo
-        # PS+Options) em vez de daemon.pause. daemon.pause persistia paused.flag
-        # e o daemon RENASCIA pausado no boot (controle morto no jogo até
-        # "Retomar"), além de ser um kill-switch mais amplo (parava gatilhos/LED/
-        # edges). Suppress suspende SÓ mouse/teclado e NÃO persiste; o gamepad
-        # segue vivo no jogo (FEAT-DSX-GAMEPAD-ALWAYS-LIVE-01). Como o label
-        # 'Modo jogo' lê emulation_suppressed, ele passa a refletir o estado certo.
         self._set_suppress(True, "Modo jogo ligado — mouse e teclado suspensos")
 
     def on_emulation_resume(self, _btn: Gtk.Button) -> None:
         self._set_suppress(False, "Modo jogo desligado: mouse/teclado retomados")
 
-    # --- interruptor do teclado emulado (EMULACAO-NO-JOGO-01/E1) -----------
-    # O teclado emulado não tinha interruptor NENHUM: o único switch da aba
-    # dizia "Emular mouse+teclado" e governava só o mouse. A cura do motor
     # (`keyboard.emulation.set` + bloco `keyboard_emulation`) já está no daemon;
-    # aqui é a chave que a alcança.
 
-    #: Guard contra loop switch -> IPC -> refresh -> switch. Em GTK3
-    #: `set_active` reemite `state-set` SINCRONAMENTE — `return True` no handler
-    #: não evita (repro real do lado do mouse: 999 reentradas + RecursionError).
     _keyboard_guard_refresh: bool = False
 
-    #: Última posição CONFIRMADA pelo daemon. É para ela que uma falha reverte,
-    #: e NÃO para `not enabled` capturado no clique: com dois cliques rápidos e
-    #: o daemon travado, o `not enabled` do segundo RPC deixava o interruptor
-    #: preso na posição errada (BUG-MOUSE-TOGGLE-STALE-REVERT-01, mesma classe).
     _keyboard_confirmado: bool = True
 
     def _refresh_keyboard_switch(self) -> None:
@@ -1726,8 +1062,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             return False
 
         # HARM-15: a mesma folga do resto da casa para LER o `state_full` — sem
-        # ela a chave nasce cinza com o daemon VIVO sempre que ele passa dos
-        # 0,25s default (hotplug, co-op subindo).
         call_async(
             "daemon.state_full", {}, on_success=_on_state, on_failure=_on_err,
             timeout_s=STATE_IPC_TIMEOUT_S,
@@ -1770,8 +1104,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             if ligado:
                 self._toast_keyboard("Teclado emulado ligado")
             else:
-                # O custo de desligar NÃO é óbvio e foi medido: sai o teclado na
-                # tela (L3/R3) e as três regiões do touchpad, não só o Alt+Tab.
                 self._toast_keyboard(
                     "Teclado emulado desligado — saem também o teclado na tela "
                     "(L3/R3) e as três regiões do touchpad"
@@ -1792,8 +1124,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             on_success=_on_ok,
             on_failure=_on_err,
         )
-        # Otimista: o handler default do GtkSwitch aplica a posição; a falha
-        # reverte no callback.
         return False
 
     def _reverter_keyboard_switch(self, ativo: bool) -> None:
@@ -1811,18 +1141,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _toast_keyboard(self, msg: str) -> None:
         self._status_toast("keyboard_emulation", msg)
 
-    # --- Steam Input (FEAT-STEAM-INPUT-SELF-HEAL-01 via GUI) ---
-    # Steam Input PSSupport ligado SEQUESTRA o controle e conflita com o daemon
-    # (touchpad/teclado vazam, mic spam). Botão pra verificar/desligar.
 
     def _steam_input_script(self) -> Path | None:
-        """BG-BASES-01 (26/08/2026): a lista curta é que fazia o botão calar.
-
-        No Flatpak o `disable_steam_input.sh` **está** instalado (o manifesto
-        o põe em `/app/share/hefesto-dualsense4unix/scripts/`), e nenhuma das
-        três bases desta lista olhava para lá: quem clicasse em "Verificar" ou
-        "Desligar Steam Input" recebia *"Não encontrei o script…"*.
-        """
+        """BG-BASES-01 (26/08/2026): a lista curta é que fazia o botão calar."""
         return encontrar_arquivo_do_repo("scripts/disable_steam_input.sh")
 
     @staticmethod
@@ -1867,24 +1188,13 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     @staticmethod
     def _steam_input_appids_ligados() -> list[str]:
-        """AppIDs com Steam Input per-app ligado FORA da allowlist, sem repetir.
-
-        D-33 (05/08/2026): o `_steam_input_is_on` responde SIM/NÃO, e era com
-        esse SIM que a aba escrevia "Ligado — conflita com o Hefesto". Ela
-        precisa saber DE QUAL JOGO se fala — o appid é o mínimo honesto, e o
-        nome vem junto quando a Steam tem o `appmanifest` em disco.
-
-        Só os JOGOS: a chave global (PSSupport/SwitchSupport) não pertence a
-        jogo nenhum e por isso não entra aqui.
-        """
+        """AppIDs com Steam Input per-app ligado FORA da allowlist, sem repetir."""
         from hefesto_dualsense4unix.integrations.storm_doctor import (
             find_localconfig_vdfs,
             steam_input_allowlist,
             steam_input_fora_da_allowlist,
         )
 
-        # A MESMA régua do `_steam_input_is_on` (AMBIENTE-PRESUMIDO-01): as
-        # quatro raízes de Steam, não só a nativa.
         vdfs = find_localconfig_vdfs(Path.home())
         allow = steam_input_allowlist()
         achados: list[str] = []
@@ -1934,16 +1244,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
 
             on = self._steam_input_is_on()
-            # A tradução appid -> nome LÊ O DISCO (appmanifest da Steam), e por
-            # isso acontece aqui, na thread — nunca no `_on_ok`, que roda no
-            # laço da interface. Só quando há algo ligado: sem isso, todo
-            # refresh pagaria a varredura das bibliotecas da Steam à toa.
             jogos = (
                 [rotulo_do_jogo(a) for a in self._steam_input_appids_ligados()]
                 if on
                 else []
             )
-            # A CONTAGEM DAS EXCEÇÕES, e só ela — ver `_steam_input_excecoes`.
             return (on, jogos, self._steam_input_excecoes())
 
         def _on_ok(dados: tuple[bool | None, list[str], list[int]]) -> bool:
@@ -1957,32 +1262,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         self._toast_emulation("Steam Input verificado")
 
     def on_emulation_steam_input_disable(self, _btn: Gtk.Button) -> None:
-        """Desliga o Steam Input — com consentimento e com veredito conferido.
-
-        HONESTIDADE-STEAM-01. Antes: toast "desligando Steam Input (fecha e
-        reabre a Steam)…" → `--apply-quiet` (que NÃO fecha nada; com a Steam
-        viva ele ADIA) → toast "Steam Input desligado", incondicional. Duas
-        mentiras encadeadas — a promessa de fechar e a afirmação de sucesso.
-
-        Agora, no clique:
-
-        1. JOGO aberto ⇒ RECUSA. `steam -shutdown` mataria o jogo (progresso
-           não salvo perdido) — mesma decisão do DEDUP-05 no lado Python;
-        2. só a Steam aberta ⇒ DIÁLOGO pedindo permissão para fechá-la por
-           ~20 s (e avisando para pausar downloads). Sem sim explícito nada
-           acontece: `stop_steam()` escala para `pkill -TERM/-KILL` depois de
-           30 s, e isso jamais pode rodar às costas da usuária;
-        3. Steam fechada ⇒ aplica direto.
-
-        O toast final sai de `format_steam_input_result`, que exige EVIDÊNCIA
-        (releitura do vdf) antes de dizer "Pronto".
-
-        A SONDAGEM (dois `pgrep` com timeout de 5 s cada) roda em worker, não
-        na thread GTK: no clique, o pior caso seriam 10 s de janela congelada
-        — o mesmo modo de falha que BUG-GUI-DAEMON-STATUS-INITIAL-01 já pagou
-        na aba Sistema. O diálogo volta pela `GLib.idle_add` (widget só na
-        thread GTK).
-        """
+        """Desliga o Steam Input — com consentimento e com veredito conferido."""
         script = self._steam_input_script()
         if script is None:
             self._toast_emulation(format_steam_input_result(status="sem_script"))
@@ -2014,7 +1294,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._steam_input_apply_async(script, fechar_a_steam=False)
             return False
 
-        # Steam viva: pede consentimento ANTES de qualquer coisa.
         from hefesto_dualsense4unix.app.actions.daemon_actions import (
             build_steam_close_consent_dialog,
         )
@@ -2044,7 +1323,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             rotulo_ok="Fechar e desligar",
             on_response=_resposta,
         ).show_all()
-        return False  # GLib.idle_add: não reagenda
+        return False
 
     def _steam_input_apply_async(self, script: Path, *, fechar_a_steam: bool) -> None:
         """Roda o script em worker e devolve o veredito CONFERIDO à GUI.
@@ -2084,15 +1363,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 else:
                     rc, saida = _rodar()
                 tag = steam_input_result_tag(saida)
-                # Veredito por EVIDÊNCIA: relê os vdf em vez de crer no rc.
                 ainda_ligado = (
                     self._steam_input_is_on() if status == "executado" else None
                 )
             except Exception as exc:
-                # `except Exception` largo DE PROPÓSITO: este worker roda no
-                # executor, onde exceção não propagada morre calada — e toast
-                # que nunca chega é a mesma doença do "Steam Input desligado"
-                # incondicional, só que ao contrário. Falha vira frase.
                 logger.warning("steam_input_script_falhou", erro=str(exc))
                 GLib.idle_add(
                     self._on_steam_input_done,
@@ -2116,27 +1390,13 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _toast_emulation(self, msg: str) -> None:
         self._status_toast("emulation", msg)
 
-    # -- ENGASGO-VULKAN-01 — "Tirar a sobreposição Vulkan" -----------------
 
     def _toast_camadas(self, msg: str) -> None:
         """Rodapé das camadas. Contexto próprio para não brigar com os outros."""
         self._status_toast("camadas_vulkan", msg)
 
     def on_camadas_engasgo(self, _btn: object) -> None:
-        """Botão "Tirar a sobreposição Vulkan" (bloco Avançado, aba Sistema).
-
-        O CLIQUE NÃO TIRA NADA — ele OLHA. Este handler dispara o censo e abre o
-        relatório; quem tira é ela, no botão "Tirar" do diálogo, e quem devolve é
-        ela no "Devolver". Está escrito aqui porque o rótulo diz o verbo do fim
-        do caminho, e a próxima pessoa a ler só este método concluiria que o
-        rótulo mente.
-
-        Consulta ANTES de perguntar: o censo lê o `system.reg` de cada prefixo
-        (5,5 MB no maior desta máquina, ~1 s no total) e travaria a janela se
-        rodasse na linha do GTK. Por isso o clique só dispara o worker; o
-        diálogo nasce com o resultado na mão, e é ele que mostra o preço —
-        precedente do "Travar Proton validado".
-        """
+        """Botão "Tirar a sobreposição Vulkan" (bloco Avançado, aba Sistema)."""
         self._toast_camadas("Olhando os jogos instalados…")
 
         def _worker() -> None:
@@ -2144,8 +1404,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
                 prefixos = cv.censo()
-                # Contado no worker, junto do censo, para o diálogo poder
-                # separar "olhei e não achei" de "não tinha onde olhar".
                 bibliotecas = len(cv.pastas_compatdata())
             except Exception as exc:  # pragma: no cover - defesa de worker
                 logger.warning("censo_de_camadas_falhou", erro=str(exc))
@@ -2170,12 +1428,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _build_camadas_dialog(
         self, prefixos: Sequence[Any], *, bibliotecas: int = 1
     ) -> Gtk.MessageDialog:
-        """Monta o diálogo (sem exibir) — separado para o teste alcançar.
-
-        Os botões seguem o que EXISTE: "Tirar" só aparece quando há camada
-        ligada; "Devolver" só quando há camada que nós desligamos. Botão que
-        aparece e não faz nada ensina que a tela é enfeite.
-        """
+        """Monta o diálogo (sem exibir) — separado para o teste alcançar."""
         corpo, tem_sobra, tem_devolucao = frase_do_censo(
             prefixos, bibliotecas=bibliotecas
         )
@@ -2209,17 +1462,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._camadas_worker(devolver=True)
 
     def _camadas_worker(self, *, devolver: bool) -> None:
-        """Aplica em todos os prefixos, em worker, com o portão do jogo aberto.
-
-        RECUSA com jogo da Steam rodando: o Wine mantém o registro do prefixo
-        em MEMÓRIA e o regrava ao sair, então escrever agora seria trabalho
-        perdido — e pior, perdido em silêncio. Mesmo portão que o "Travar
-        Proton validado" usa para a Steam.
-
-        `forcar=True`: o clique é gesto explícito, e a vontade da GUI prevalece
-        (regra dela, 09/08/2026). Só o gancho de lançamento respeita a memória
-        sem perguntar.
-        """
+        """Aplica em todos os prefixos, em worker, com o portão do jogo aberto."""
         self._toast_camadas("Devolvendo…" if devolver else "Tirando…")
 
         def _worker() -> None:

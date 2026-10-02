@@ -1,53 +1,4 @@
-"""RECONEXÃO-BT-01 (16/08/2026) — o leitor tem de voltar sozinho, no nó NOVO.
-
-**O defeito, medido com o aparelho na mão dela.** O controle cai e volta no
-rádio (ou sai do cabo para o rádio) e o daemon nunca reabre os leitores::
-
-    19:15:29  evdev_read_lost            errno 19   event25
-    19:15:30  motion_reader_open_failed  errno 2    /dev/hidraw5
-    19:15:30  controller_disconnected    reason=probe_offline
-              … e depois disso, NADA.
-
-O controle reconecta, o link BT fica autenticado e criptografado, o daemon diz
-``connected=True`` — e os eixos ficam **congelados no último valor lido**.
-
-**A parte cara é a mentira.** O vpad continua emitindo: 396 reports em 8 s, ID
-``0x01``, sequência perfeita sem um salto — e ``LX`` travado em 128. Para o jogo
-isso é um controle **vivo que nunca se mexe**; ele enumera, mostra "PlayStation"
-nas opções, abre o hidraw pelo `winedevice.exe`, e nada acontece. Daí o relato
-dela: *"recebeu um pouco de input e morreu"*, em três jogos diferentes.
-
-**Por que os testes de hoje não pegaram.** Havia teste para a PERDA
-(`test_read_lost_real_continua_com_warning_e_reset`) e para o estado estático.
-Não havia nenhum para o **ciclo**: perde → o nó muda de número → volta. E é
-exatamente aí que mora o defeito, porque na reconexão o kernel renumera: o
-físico dela era ``event25`` antes e virou ``event26/27/28`` depois.
-
-O `_locate` já procura por IDENTIDADE justamente por isso — a docstring dele
-avisa que *"um externo que trocasse de eventN (replug, re-enumeração) nunca mais
-era reencontrado"*. **Faltava o portão que prova que essa cura segura no ciclo
-inteiro**, e é ele que este arquivo traz.
-
-**O QUE ESTE ARQUIVO ELIMINOU** (16/08/2026, e é o resultado principal dele):
-os três testes abaixo **passam** contra o código de hoje. Ou seja, o
-`EvdevReader` reabre sim no nó novo, não insiste no número velho, e sobrevive a
-um sumiço prolongado. **O defeito de 16/08 não está no leitor de evdev.**
-
-Isso vale tanto quanto uma reprovação: fecha um suspeito com portão permanente e
-manda a próxima investigação para o nível ACIMA. O que sobra do log daquele dia,
-e ainda não tem portão:
-
-- ``motion_reader_open_failed  errno 2  /dev/hidraw5`` — o leitor de movimento
-  depende do broker devolver o fd, e o caminho dele é outro;
-- ``controller_disconnected  reason=probe_offline`` (`daemon/connection.py`) —
-  o daemon marcou o controle offline; se o probe não refizer, não adianta o
-  leitor estar de pé;
-- ``primary_grab_state = pending`` — foi o estado observado ao vivo com a
-  entrada morta, e é o mais suspeito dos três.
-
-**A regra que o dia acrescentou:** regressão que volta é regressão sem portão.
-Um teste de estado estático não protege um defeito de transição.
-"""
+"""RECONEXÃO-BT-01 (16/08/2026) — o leitor tem de voltar sozinho, no nó NOVO."""
 from __future__ import annotations
 
 import sys
@@ -62,8 +13,6 @@ import pytest
 from hefesto_dualsense4unix.core import evdev_reader as er_mod
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
-#: Os nós ANTES e DEPOIS da reconexão. Os números são os reais medidos na
-#: máquina dela em 16/08: o físico caiu no `event25` e voltou no `event26`.
 _NO_ANTES = Path("/dev/input/event25")
 _NO_DEPOIS = Path("/dev/input/event26")
 
@@ -109,7 +58,6 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     fake.ecodes = MagicMock()
     monkeypatch.setitem(sys.modules, "evdev", fake)
 
-    # A descoberta devolve o nó VIGENTE — é o que muda quando o controle volta.
     monkeypatch.setattr(
         er_mod, "find_dualsense_evdev",
         lambda: Path(estado["no_atual"]) if estado["no_atual"] else None,
@@ -117,15 +65,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(er_mod, "discover_dualsense_evdevs", lambda: {})
 
     class _AvisoDaBancada:
-        """O `/dev/input` desta bancada: muda quando o nó vigente muda.
-
-        No aparelho, o controle que some e volta tira e põe `eventN` na pasta,
-        e é esse aviso que o leitor sem nó espera
-        (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Uma bancada
-        em que o nó volta sem a pasta mudar seria mais frouxa que o kernel, e
-        também a que acorda o leitor quando o nó SAI: o `InputDirWatch` diz
-        `nasceu` só quando a mudança trouxe um nó.
-        """
+        """O `/dev/input` desta bancada: muda quando o nó vigente muda."""
 
         def __init__(self) -> None:
             self.visto = estado["no_atual"]
@@ -162,26 +102,16 @@ class TestOCicloCompleto:
     def test_o_leitor_reabre_no_no_novo_depois_da_reconexao(
         self, bancada: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA. É o defeito de 16/08 inteiro, em três atos.
-
-        1. o reader abre no `event25`;
-        2. o controle cai (ENODEV) e o nó SOME;
-        3. o controle volta noutro número (`event26`).
-
-        Se o reader não reabrir no nó novo, o daemon fica dizendo
-        `connected=True` com os eixos congelados — que é o que aconteceu.
-        """
+        """A MORDIDA. É o defeito de 16/08 inteiro, em três atos."""
         reader = _reader_com_morte(bancada, monkeypatch)
         assert reader.start() is True
         try:
             _esperar(lambda: str(_NO_ANTES) in bancada["abertos"], 2.0)
 
-            # ato 2: o controle cai e o nó some do mundo
             bancada["no_atual"] = ""
             bancada["morrer"].set()
             time.sleep(0.3)
 
-            # ato 3: volta com OUTRO número
             bancada["no_atual"] = str(_NO_DEPOIS)
 
             reabriu = _esperar(
@@ -199,12 +129,7 @@ class TestOCicloCompleto:
     def test_o_no_velho_nao_e_reaberto_as_cegas(
         self, bancada: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Reabrir o número antigo pegaria OUTRO aparelho.
-
-        O kernel recicla `eventN`. Insistir no caminho memorizado, depois de um
-        ENODEV, é como reabrir um fd reciclado — o reader passaria a ler o
-        controle de outra pessoa na mesa, ou um teclado.
-        """
+        """Reabrir o número antigo pegaria OUTRO aparelho."""
         reader = _reader_com_morte(bancada, monkeypatch)
         assert reader.start() is True
         try:
@@ -225,11 +150,7 @@ class TestOCicloCompleto:
     def test_sumico_prolongado_nao_derruba_a_thread(
         self, bancada: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Controle desligado por um tempo não pode matar o leitor.
-
-        Se a thread morre no sumiço, nem a reconexão salva: não sobra ninguém
-        para reabrir. É o modo de falha que produz o silêncio total no journal.
-        """
+        """Controle desligado por um tempo não pode matar o leitor."""
         reader = _reader_com_morte(bancada, monkeypatch)
         assert reader.start() is True
         try:

@@ -55,21 +55,14 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 
-#: A mesa forjada da casa (octetos 4 e 5 zerados).
 MAC_P1 = "aabbcc000001"
 MAC_P2 = "aabbcc000002"
 
-#: O jogo que OPINA — é o `dont_scream.json` dela, que pede `"caminho": "xbox"`.
 CAMINHO_DO_JOGO_QUE_OPINA = "xbox"
 
 
 class _PadFalso:
-    """Um vpad com o que o produto lê dele: máscara, canal e caminho de origem.
-
-    O canal NÃO é digitado: sai de `virtual_pad.quer_uhid`, a mesma função que o
-    produto usa. Uma régua que cravasse `backend="uhid"` aqui passaria verde com
-    o gate do canal quebrado — que é exatamente o defeito sob medição.
-    """
+    """Um vpad com o que o produto lê dele: máscara, canal e caminho de origem."""
 
     def __init__(self, flavor: str, caminho: str | None) -> None:
         self.flavor = flavor
@@ -148,11 +141,7 @@ def _daemon(*, escolha_dela: str | None = None) -> Any:
 
 @pytest.fixture(autouse=True)
 def _bancada(monkeypatch: pytest.MonkeyPatch) -> list[_PadFalso]:
-    """Nenhum nó de kernel, e a lista de todo vpad que a sessão pediu.
-
-    A suíte desta casa já derrubou a sessão gráfica dela criando 1289 nós uinput
-    de verdade num dia (20/08/2026). Esta bateria não cria nenhum.
-    """
+    """Nenhum nó de kernel, e a lista de todo vpad que a sessão pediu."""
     nascidos: list[_PadFalso] = []
 
     def _fabrica(flavor: str | None, **kwargs: Any) -> _PadFalso:
@@ -200,41 +189,26 @@ def _o_jogo_que_nao_opina(daemon: Any) -> None:
 
 
 def _heranca_pelo_slot_da_sessao(daemon: Any) -> str | None:
-    """A MORDIDA: `_caminho_a_herdar` como estava até 17/09/2026.
-
-    Uma linha, e é a diferença entre a IMU viva e a IMU morta: herdar do slot da
-    SESSÃO é herdar o canal que o jogo anterior deixou de pé.
-    """
+    """A MORDIDA: `_caminho_a_herdar` como estava até 17/09/2026."""
     return vp.normalizar_caminho(getattr(daemon.config, "gamepad_caminho", None))
 
 
 def _guardar_sem_limpar(
     daemon: Any, caminho: str | None, *, origin: str, da_sessao: Any = None
 ) -> None:
-    """A MORDIDA da mesa: `_guardar_o_caminho` como estava até 17/09/2026.
-
-    O corpo velho: quem não manda caminho não apaga o que estava. Era certo
-    enquanto havia UM slot só (apagar teria apagado a escolha dela junto) e
-    virou o vazamento assim que a escolha dela ganhou casa própria.
-    """
+    """A MORDIDA da mesa: `_guardar_o_caminho` como estava até 17/09/2026."""
     escolhido = vp.normalizar_caminho(caminho)
     if escolhido is None:
         return
     daemon.config.gamepad_caminho = escolhido
 
 
-# ===========================================================================
 # R1 — O P1: o jogo que não opina abre no caminho DualSense
-# ===========================================================================
 
 
 class TestOJogoSeguinteNaoHerdaOCanal:
     def test_o_jogo_que_opina_e_obedecido(self) -> None:
-        """PRIMEIRO o que NÃO pode regredir: a escolha dela para AQUELE jogo.
-
-        Ela confirmou que escolheu Xbox no DON'T SCREAM e que funcionou. A cura
-        do vazamento não pode custar isso — o perfil que opina manda.
-        """
+        """PRIMEIRO o que NÃO pode regredir: a escolha dela para AQUELE jogo."""
         daemon = _daemon()
 
         _o_jogo_que_opina(daemon)
@@ -247,13 +221,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         )
 
     def test_o_perfil_nao_escreve_a_escolha_global_dela(self) -> None:
-        """O apply de um perfil não vira lei sobre os outros 29.
-
-        É a metade da cura que mora em `_guardar_o_caminho`: só o gesto MANUAL
-        escreve a escolha dela. Medido no disco dela em 17/09: o
-        `gamepad_caminho.flag` diz `dualsense` enquanto dois perfis pedem
-        `xbox` — a disciplina já valia para o DISCO e faltava para a memória.
-        """
+        """O apply de um perfil não vira lei sobre os outros 29."""
         daemon = _daemon()
 
         _o_jogo_que_opina(daemon)
@@ -266,13 +234,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
     def test_o_jogo_sem_opiniao_abre_em_uhid_com_o_espelho_de_motion_de_pe(
         self, _bancada: list[_PadFalso]
     ) -> None:
-        """A QUEIXA DELA, em duas asserções: o canal E o espelho.
-
-        Os dois starts em sequência, que são o DON'T SCREAM e o PRAGMATA na
-        mesma sessão do daemon dela. O segundo tem de nascer em `uhid` — e o
-        `start_motion_reader` tem de PASSAR do gate, senão o jogo recebe um
-        giroscópio neutro a 0 Hz com o backend certo na tela.
-        """
+        """A QUEIXA DELA, em duas asserções: o canal E o espelho."""
         daemon = _daemon()
         _o_jogo_que_opina(daemon)
 
@@ -323,24 +285,12 @@ class TestOJogoSeguinteNaoHerdaOCanal:
 
         assert daemon._gamepad_device.backend == "uhid"
         assert daemon._gamepad_device.caminho == "dualsense"
-        # E a escolha dela NÃO foi apagada pelo caminho — ela continua no slot,
-        # para a tela ter o que mostrar. Quem a devolve ao default é o boot
-        # (`lifecycle._a_escolha_dela_sem_o_vazamento`), uma vez só.
         assert daemon.config.gamepad_caminho_global == "xbox"
 
     def test_a_mordida_a_heranca_pelo_slot_da_sessao_devolve_o_defeito(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA: a linha de antes de 17/09 reposta, o defeito de volta.
-
-        Regra desta casa: *um teste que passa com a cura arrancada não testa
-        nada*. Aqui a cura é UMA função (`_caminho_a_herdar`) e o laço de
-        produção inteiro roda por cima dela — a mordida mede o CAMINHO, não o
-        método.
-
-        Medido: com a cura, o segundo start dá `uhid` + reader de pé; com ela
-        arrancada, `uinput` + reader `None`.
-        """
+        """A MORDIDA: a linha de antes de 17/09 reposta, o defeito de volta."""
         daemon = _daemon()
         _o_jogo_que_opina(daemon)
         monkeypatch.setattr(gp, "_caminho_a_herdar", _heranca_pelo_slot_da_sessao)
@@ -355,22 +305,11 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         assert daemon._motion_reader is None
 
 
-# ===========================================================================
-# R2 — A MESA DE QUATRO: o mesmo defeito pelo co-op
-# ===========================================================================
-
-
 class TestAMesaNaoHerdaOCanalDoJogoAnterior:
     def test_o_jogador_2_nasce_em_uhid_depois_de_um_jogo_em_xbox(
         self, _mesa_de_dois: None, _bancada: list[_PadFalso]
     ) -> None:
-        """*"O modo é um para todos"* — e todos é a mesa de AGORA, não a de ontem.
-
-        Sem esta régua, a cura do P1 deixaria a mesa de quatro amputada e
-        ninguém veria: o P1 em uhid com giroscópio, e os três secundários em
-        uinput, sem `_start_player_motion_reader`, entregando ~0,4 Hz de motion
-        ao jogo contra os 165-196 Hz do jogador 1 (medido em 15/08/2026).
-        """
+        """*"O modo é um para todos"* — e todos é a mesa de AGORA, não a de ontem."""
         daemon = _daemon()
         _o_jogo_que_opina(daemon)
         _o_jogo_que_nao_opina(daemon)
@@ -388,14 +327,7 @@ class TestAMesaNaoHerdaOCanalDoJogoAnterior:
     def test_a_mordida_o_slot_rancoso_devolve_a_mesa_amputada(
         self, _mesa_de_dois: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA da mesa: o corpo velho de `_guardar_o_caminho` reposto.
-
-        O co-op lê `config.gamepad_caminho` — e é a leitura CERTA, desde que o
-        slot acompanhe a sessão. Com o retorno cedo de antes de 17/09 ele fica
-        com o `xbox` do jogo anterior, e o jogador 2 nasce em uinput enquanto o
-        P1 já está em uhid: a divergência que ninguém vê, porque a tela mostra
-        só o P1.
-        """
+        """A MORDIDA da mesa: o corpo velho de `_guardar_o_caminho` reposto."""
         daemon = _daemon()
         _o_jogo_que_opina(daemon)
         monkeypatch.setattr(gp, "_guardar_o_caminho", _guardar_sem_limpar)

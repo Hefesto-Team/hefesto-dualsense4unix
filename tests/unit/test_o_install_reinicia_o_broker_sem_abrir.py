@@ -1,24 +1,4 @@
-"""O install troca o broker em memória sem abrir os nós — HIDE-SO-O-HIDRAW-02.
-
-Medido em 24/09/2026: o `hefesto-hidraw-broker.service` rodava desde 22/09
-com o código velho na memória. Dois installs seguidos copiaram o binário novo
-para /usr/local/lib e nenhum reiniciou o serviço: a cura do broker (o Edge
-fechado, a recusa do vpad pelas marcas) não valia. Quem coordena reiniciou à
-mão, com a Steam fechada.
-
-Um restart puro também não serve: o ExecStopPost (`--restore-all-and-exit`)
-ABRE os nós, e a Steam aberta pega o físico nessa janela. A cura tem três
-peças, e esta régua cobra as três e a ordem delas:
-
-1. o marcador `reinicio-sem-abrir`, cujo caminho é o do broker (dono único);
-2. o SIGKILL antes do restart, porque o processo velho não conhece o marcador;
-3. o restart, e só depois o marcador sai.
-
-E duas vizinhas: o `.service` habilitado no boot (sem ele o cabo do boot
-nasce aberto até o daemon conectar), e a 72 pela variante aberta quando a
-pessoa pede `--no-fechar-o-no` (com a 70 aberta e a 72 fechada o estado fica
-incoerente).
-"""
+"""O install troca o broker em memória sem abrir os nós — HIDE-SO-O-HIDRAW-02."""
 from __future__ import annotations
 
 import pathlib
@@ -72,8 +52,7 @@ def test_o_service_nasce_habilitado_no_boot() -> None:
 
 
 def test_o_broker_troca_antes_do_daemon_renascer() -> None:
-    """O 3h (broker) roda antes do 7a (daemon): um daemon que renasce com o
-    broker velho recebe `reject_bad_path` e fica cego."""
+    """O 3h (broker) roda antes do 7a (daemon): um daemon que renasce com o"""
     texto = INSTALL.read_text(encoding="utf-8")
     chamada = texto.index("\n    install_broker_host\n")
     daemon = texto.index('systemctl --user restart "${DAEMON_UNIT_NAME}"')

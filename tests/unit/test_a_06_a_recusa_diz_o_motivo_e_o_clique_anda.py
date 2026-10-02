@@ -10,7 +10,7 @@ o gesto ainda mandava LIGAR o teclado.
 
 O produto já tinha as duas peças e ninguém as chamava:
 
-    ponte.resultado                          traz o corpo (`ponte.py:157`)
+    ponte.resultado                          traz o corpo (`ponte.py:110`)
     mouse_actions.frase_da_recusa_do_mouse   traduz cinco motivos, desde 25/08
     emulation_actions.descrever_teclado_emulado   idem, do lado do teclado
 
@@ -66,11 +66,7 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 
 
 class _Ponte:
-    """Um daemon de mentira que responde o CORPO — recusando ou não.
-
-    Ele não expõe `chamar` de propósito: um gesto que volte ao caminho que perde
-    o motivo levanta `AttributeError` aqui, e a régua o nomeia.
-    """
+    """Um daemon de mentira que responde o CORPO — recusando ou não."""
 
     def __init__(self, corpo: dict | None = None, muda: bool = False) -> None:
         self.corpo = corpo if corpo is not None else {"status": "ok"}
@@ -96,11 +92,7 @@ def _ctx(**mouse: object):
 
 @pytest.fixture(autouse=True)
 def _memoria_limpa():
-    """A memória do último alvo é de MÓDULO — cada régua parte do zero.
-
-    Sem isto, a ordem dos testes decidiria o resultado, que é a forma de régua
-    que dá verde por acidente.
-    """
+    """A memória do último alvo é de MÓDULO — cada régua parte do zero."""
     from pacotes import a06_navegacao as mod
 
     mod._PEDIDO.clear()
@@ -108,9 +100,6 @@ def _memoria_limpa():
     mod._PEDIDO.clear()
 
 
-# ---------------------------------------------------------------------------
-# 1. A RECUSA DIZ O MOTIVO
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("bloqueio", sorted(BLOQUEIO_DO_MOUSE_EM_PORTUGUES))
 def test_a_velocidade_recusada_diz_por_que(bloqueio: str) -> None:
     """A frase é a do produto, inteira — e ela chega ao cartão dela.
@@ -130,11 +119,7 @@ def test_a_velocidade_recusada_diz_por_que(bloqueio: str) -> None:
 
 
 def test_a_recusa_sem_motivo_nao_vira_queda_de_linha() -> None:
-    """"Recusou e não disse por quê" é outra coisa de "ninguém respondeu".
-
-    Culpar a rede quando o daemon respondeu é a ELO-MUDO-01 ao contrário, e a
-    GTK já separava os dois em `RECUSA_SEM_MOTIVO`.
-    """
+    """"Recusou e não disse por quê" é outra coisa de "ninguém respondeu"."""
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte({"status": "failed"})
@@ -204,11 +189,7 @@ def test_o_teclado_recusado_diz_o_estado_que_o_daemon_devolveu() -> None:
 
 
 def test_o_teclado_recusado_sem_bloco_nao_culpa_o_hefesto_de_estar_morto() -> None:
-    """A frase de "não sei" da GTK fala do daemon, e aqui ele respondeu.
-
-    `TECLADO_SEM_ESTADO` diz *"o Hefesto pode estar desligado"*. Usá-la numa
-    recusa seria acusar de queda de linha um daemon que disse não.
-    """
+    """A frase de "não sei" da GTK fala do daemon, e aqui ele respondeu."""
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte({"status": "failed"})
@@ -218,46 +199,15 @@ def test_o_teclado_recusado_sem_bloco_nao_culpa_o_hefesto_de_estar_morto() -> No
     assert "não disse por quê" in str(caiu.value), caiu.value
 
 
-# ---------------------------------------------------------------------------
-# 2. A BARRA MANDA O NÚMERO INTEIRO — e o que a memória curava não existe mais
-# ---------------------------------------------------------------------------
-# **A SEÇÃO INTEIRA FOI REESCRITA EM 05/09/2026, e a razão é uma decisão dela:**
-# *"velocidade do cursor e da rolagem coloca um slicer pra cada"*. Até aqui as
 # duas linhas eram um par de botões `-`/`+`, e os gestos `vel-cursor-menos` e
 # `vel-cursor-mais` somavam ±1 ao número do ÚLTIMO TIQUE (500 ms). Daí vinha
-# tudo o que esta seção mede: a memória `_PEDIDO`, o `_partir_de`, o
-# `_reservar`, as três condições que a desligam.
-#
-# **UMA BARRA NÃO TEM DE ONDE PARTIR.** Ela manda o número inteiro, e a partida
-# é o polegar dela — não há passo engolido a curar. Os quatro testes que
-# mediam a memória da VELOCIDADE não medem mais nada: o produto que eles
-# guardavam saiu com os botões.
-#
-# A MEMÓRIA CONTINUA VIVA E CONTINUA COBRADA — pelo interruptor "Status do
-# Modo", que tem UM gesto e por isso depende dela para o segundo clique ser
-# *desfaça*. As cinco mordidas do `test_a_06_o_segundo_clique_nao_e_engolido.py`
-# continuam de pé para ele.
-#
-# O QUE ENTRA NO LUGAR são as três coisas que a barra pode errar, e nenhuma
-# delas existia antes: mandar sem número, mandar fora da faixa, e consultar o
-# tique em vez do polegar.
 
 
 def test_a_barra_sem_numero_reprova_e_nao_manda_nada() -> None:
-    """Clicar no rótulo ao lado da barra não pode virar um pedido em branco.
-
-    O `data-hef-alvo="valor"` do `<input type=range>` faz o ouvinte mandar
-    `valor: alvo.value`. Um clique que NÃO nasce da barra chega sem `valor` —
-    e mandar `speed` vazio ao daemon seria pedir que ele adivinhasse.
-    """
+    """Clicar no rótulo ao lado da barra não pode virar um pedido em branco."""
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()
-    # O RECORTE MUDOU DE METADE — 11/09/2026, A5-028, aprovada por ela. A frase
-    # abria com *"a barra não mandou número nenhum, e …"*, que é o que o CÓDIGO
-    # viu; a de hoje abre pelo que ela precisa — *"{campo} ficou como estava"* —
-    # e ensina o gesto na segunda oração. A régua passa a cobrar as DUAS coisas
-    # que a recusa tem de dizer: que nada mudou, e o que fazer em vez disso.
     with pytest.raises(RuntimeError, match="ficou como estava"):
         mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor"}, ponte)
     with pytest.raises(RuntimeError, match="Arraste o cursor da barra"):
@@ -268,12 +218,7 @@ def test_a_barra_sem_numero_reprova_e_nao_manda_nada() -> None:
 
 
 def test_dois_arrastes_mandam_os_dois_numeros() -> None:
-    """Cada arraste é absoluto: o `ctx` não muda entre eles e não precisa mudar.
-
-    É o mesmo caso que os `+`/`-` erravam — dois gestos dentro do mesmo tique —,
-    e com a barra ele é trivial por construção. A régua fica porque o caso é o
-    mesmo, e porque uma volta a `_partir_de` faria o segundo número sumir.
-    """
+    """Cada arraste é absoluto: o `ctx` não muda entre eles e não precisa mudar."""
     from pacotes import a06_navegacao as mod
 
     ctx, ponte = _ctx(speed=DEFAULT_MOUSE_SPEED), _Ponte()
@@ -283,27 +228,16 @@ def test_dois_arrastes_mandam_os_dois_numeros() -> None:
 
 
 def test_a_barra_nao_consulta_o_tique() -> None:
-    """O número vem do polegar dela, e o estado do daemon não entra na conta.
-
-    A MORDIDA: some o valor ao `ctx` em `_velocidade` e esta régua reprova —
-    é o retorno da partida-pelo-tique que a barra existe para não ter.
-    """
+    """O número vem do polegar dela, e o estado do daemon não entra na conta."""
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()
-    # O daemon diz 3; o polegar dela diz 10. Vale o polegar.
     mod.vel_cursor(_ctx(speed=3), {"gesto": "vel-cursor", "valor": "10"}, ponte)
     assert ponte.chamadas[0][1]["speed"] == 10
 
 
 def test_a_barra_apara_na_faixa_e_a_faixa_tem_dono() -> None:
-    """Número fora do `min`/`max` é aparado aqui, e a faixa não é digitada.
-
-    `MOUSE_SPEED_MIN`/`MAX` vêm de `integrations/uinput_mouse.py`, o mesmo
-    módulo de onde o `set_speed` do daemon tira a sua — aparar aqui é a rede
-    para o dia em que alguém publicar a página sem regerar o desenho, não uma
-    segunda verdade.
-    """
+    """Número fora do `min`/`max` é aparado aqui, e a faixa não é digitada."""
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()
@@ -325,4 +259,3 @@ def test_a_rolagem_tem_a_faixa_dela() -> None:
     assert ponte.chamadas[0][1]["scroll_speed"] == SCROLL_SPEED_MIN
 
 
-# "O homem é a medida de todas as coisas." — Protágoras

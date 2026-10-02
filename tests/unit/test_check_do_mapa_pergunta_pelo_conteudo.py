@@ -1,39 +1,4 @@
-"""O `--check` do mapa pergunta pelo CONTEÚDO — ou este arquivo reprova.
-
-O defeito, medido na árvore de verdade em 12/08/2026: o `specs.html` publicado
-divergia do `docs/data/ensaios.csv` do MESMO commit em quatorze linhas — a
-página mostrava os dezesseis dias de isolamento da lightbar como "os ensaios se
-contradizem" enquanto o caderno já tinha o culpado isolado — e
-`python3 scripts/gerar-mapa.py --check` respondia `specs.html: atualizado`.
-
-Verde falso por duas causas, as duas no `--check`:
-
-1. a lista de fontes era `[CSV, *SVGS, este arquivo]` e NÃO trazia o
-   `docs/data/ensaios.csv`, que alimenta a página desde o caderno de
-   eliminação: editar o caderno nunca fazia o portão reclamar;
-2. a comparação era de MTIME, e mtime não responde à pergunta do portão. O
-   `specs.html` publicado tinha o selo de 11/08 23:04 e o commit que o publica
-   é de 12/08 00:38 — qualquer ferramenta que TOQUE o arquivo depois da
-   geração (o `--fix` do `scripts/validar-acentuacao.py` reescreve arquivos) o
-   deixa "mais novo" que as fontes, e o portão passa. No CI é pior: o
-   `actions/checkout` escreve em ordem de caminho e o `specs.html` da raiz
-   nasce sempre depois de `docs/` e de `scripts/`.
-
-Cada teste daqui roda o CLI de verdade contra uma árvore de brinquedo com a
-mesma FORMA da real (os mesmos desenhos, o mesmo cabeçalho de CSV, um bloco de
-três linhas). Árvore de brinquedo e não a de verdade por um motivo: a de
-verdade tem hoje o `specs.html` desatualizado que originou tudo isto, e um
-teste que dependesse dela mediria a hora da última regeração, não o portão.
-
-PROVA DE QUE MORDE (12/08/2026) — em `scripts/gerar-mapa.py`, trocado o corpo
-do `--check` pela comparação de mtime que havia antes
-(`velhos = [f for f in [CSV, *SVGS.values(), Path(__file__)] if
-f.stat().st_mtime > SAIDA.stat().st_mtime]`): caíram os três testes que cobram
-o conteúdo — `test_mexer_no_caderno_de_ensaios_faz_o_check_reprovar`,
-`test_mexer_no_csv_do_mapa_faz_o_check_reprovar` e
-`test_pagina_divergente_com_mtime_mais_novo_e_acusada` —, todos com
-`saiu 0, dizendo 'specs.html: atualizado'`. Cura devolvida, os seis verdes.
-"""
+"""O `--check` do mapa pergunta pelo CONTEÚDO — ou este arquivo reprova."""
 from __future__ import annotations
 
 import csv
@@ -47,49 +12,21 @@ from pathlib import Path
 
 import pytest
 
-# O caminho do `specs.html` tem um dono só; esta folha o pede ao irmão.
 from tests.unit.test_check_paridade_transporte import _specs_de
 
 RAIZ = Path(__file__).resolve().parents[2]
 GERADOR = RAIZ / "scripts" / "gerar-mapa.py"
 
-#: Um bloco inteiro do mapa: a mesma chave nos três controles. Menos que isto
-#: geraria uma página que o gerador nunca produz de verdade.
 LINHAS_DO_BRINQUEDO = 3
 
 
 @pytest.fixture
 def arvore(tmp_path: Path) -> Path:
-    """Uma árvore de brinquedo, já com o `specs.html` recém-gerado nela.
-
-    Os desenhos são os de verdade (copiados) porque é deles que vem o espaço no
-    fim da linha dentro dos `<style>` — a armadilha que um comparador ingênuo
-    não sobrevive. Os dois CSV são recortes dos de verdade: cabeçalho real,
-    poucas linhas.
-    """
+    """Uma árvore de brinquedo, já com o `specs.html` recém-gerado nela."""
     (tmp_path / "scripts").mkdir()
     (tmp_path / "docs" / "data").mkdir(parents=True)
     (tmp_path / "assets" / "control-svg").mkdir(parents=True)
 
-    # `check_paridade_transporte.py` entra desde 19/08/2026: ele é o dono da
-    # ESCADA de `ate_onde_foi`, e o gerador importa os degraus de lá para montar
-    # a legenda em vez de redigitá-los. Sem ele na árvore de brinquedo o gerador
-    # nem carrega — que é o comportamento que se quer: régua e legenda que
-    # divergem publicariam uma página descrevendo um domínio que o portão não
-    # aceita, e um `ImportError` grita, enquanto duas listas envelhecem caladas.
-    # `paleta_da_casa.py` entrou nesta lista em 23/08/2026: a paleta saiu de
-    # dentro do `gerar-mapa.py` para ser DIVIDIDA com as outras páginas, e sem
-    # ela a cópia do gerador morre com `ModuleNotFoundError` na árvore de teste.
-    #
-    # Esta lista é o preço de copiar scripts para um tmp em vez de rodá-los na
-    # árvore: toda dependência nova precisa ser lembrada aqui. O `ImportError`
-    # grita, que é o comportamento certo — foi assim que este teste avisou.
-    # `carimbo_da_casa.py` entrou em 25/08/2026, pelo MESMO caminho da paleta:
-    # os quatro instrumentos HTML passaram a dividir um rodapé de procedência
-    # (commit, branch e data — a contagem de arquivos sujos saiu em 20/09/2026,
-    # porque mudava o TAMANHO do arquivo gerado), e sem ele a cópia do gerador
-    # morre com `ModuleNotFoundError` na árvore de teste. O aviso veio deste
-    # teste, como o comentário acima previa que viria.
     for script in (
         "gerar-mapa.py",
         "paleta_da_casa.py",
@@ -134,12 +71,7 @@ def pagina(arvore: Path) -> Path:
 
 
 def envelhece_as_fontes(arvore: Path) -> None:
-    """Deixa o `specs.html` mais NOVO que tudo — o verde falso do mtime.
-
-    É o estado em que o portão antigo passava sempre, e é o estado em que a
-    árvore de verdade estava: página publicada mais nova que as fontes, e
-    divergente delas.
-    """
+    """Deixa o `specs.html` mais NOVO que tudo — o verde falso do mtime."""
     ontem = time.time() - 86400
     for fonte in list(arvore.rglob("*.csv")) + list(arvore.rglob("*.svg")):
         os.utime(fonte, (ontem, ontem))
@@ -148,11 +80,7 @@ def envelhece_as_fontes(arvore: Path) -> None:
 
 
 def um_ensaio_novo(arvore: Path) -> None:
-    """Acrescenta ao caderno um ensaio da primeira linha do mapa.
-
-    Um ensaio só já muda a página: o lado sai de `nunca-investigado` para
-    `inconclusivo`, e o rodapé conta uma linha ensaiada a mais.
-    """
+    """Acrescenta ao caderno um ensaio da primeira linha do mapa."""
     mapa = arvore / "docs" / "data" / "mapa-controles.csv"
     with open(mapa, encoding="utf-8", newline="") as fh:
         primeira = next(csv.DictReader(fh))
@@ -172,12 +100,7 @@ def um_ensaio_novo(arvore: Path) -> None:
 
 
 def test_a_pagina_recem_gerada_passa_no_check(arvore: Path) -> None:
-    """O controle. Sem ele, os outros cinco poderiam estar reprovando por nada.
-
-    É aqui que a armadilha do espaço no fim da linha apareceria: se a
-    comparação fosse byte a byte, nem a página recém-escrita pelo próprio
-    gerador passaria.
-    """
+    """O controle. Sem ele, os outros cinco poderiam estar reprovando por nada."""
     saida = confere(arvore)
     assert saida.returncode == 0, saida.stderr
     assert "atualizado" in saida.stdout
@@ -186,7 +109,7 @@ def test_a_pagina_recem_gerada_passa_no_check(arvore: Path) -> None:
 def test_mexer_no_caderno_de_ensaios_faz_o_check_reprovar(arvore: Path) -> None:
     """A causa 1: o `ensaios.csv` alimenta a página e ninguém o vigiava."""
     um_ensaio_novo(arvore)
-    envelhece_as_fontes(arvore)   # e ainda assim tem de reprovar
+    envelhece_as_fontes(arvore)
     saida = confere(arvore)
     assert saida.returncode == 1, (
         "editar o caderno de ensaios não fez o `--check` reclamar — foi assim "
@@ -208,13 +131,7 @@ def test_mexer_no_csv_do_mapa_faz_o_check_reprovar(arvore: Path) -> None:
 
 
 def test_pagina_divergente_com_mtime_mais_novo_e_acusada(arvore: Path) -> None:
-    """O CORAÇÃO: é o defeito que aconteceu de verdade, na árvore dela.
-
-    O `specs.html` publicado era mais novo que todas as fontes — e não era a
-    página que elas produzem. Trocar uma palavra do rodapé é a versão mínima
-    disso: nada nas fontes mudou, o relógio diz que a página é a mais recente,
-    e mesmo assim ela mente sobre o dado.
-    """
+    """O CORAÇÃO: é o defeito que aconteceu de verdade, na árvore dela."""
     alvo = pagina(arvore)
     texto = alvo.read_text(encoding="utf-8")
     assert "rede contra regressão" in texto
@@ -231,30 +148,11 @@ def test_pagina_divergente_com_mtime_mais_novo_e_acusada(arvore: Path) -> None:
 
 
 def test_o_espaco_no_fim_da_linha_nao_derruba_o_check(arvore: Path) -> None:
-    """A armadilha medida: alguma ferramenta da casa apara o espaço sobrando.
-
-    O `universal-sanitizer` do pre-commit apara espaço no fim de linha. Um
-    `--check` que comparasse byte a byte reprovaria em toda árvore que passou
-    pelo hook — e portão que reprova sempre é portão desligado.
-
-    **A ARMADILHA MUDOU DE MÃO EM 22/08/2026, e é uma melhora.** Até aqui o
-    teste dependia de o GERADOR emitir as caudas: ele aparava a saída e
-    conferia que o `--check` tolerava a diferença. Só que o gerador emitir
-    cauda era, ele mesmo, um defeito — `specs.html` ficava permanentemente sujo
-    no `git status` depois de toda regeração, e arquivo que nunca fica limpo
-    ensina a ignorar o `git status` inteiro. O gerador passou a aparar na
-    escrita, e este teste perdeu o objeto: a asserção que o guardava
-    (*"a página gerada não tem espaço no fim de linha nenhum"*) disparou, que é
-    o portão fazendo exatamente o trabalho dele.
-
-    Agora o teste PLANTA a cauda em vez de esperá-la. A garantia é a mesma e
-    não depende mais de um defeito do gerador para ser exercida.
-    """
+    """A armadilha medida: alguma ferramenta da casa apara o espaço sobrando."""
     alvo = pagina(arvore)
     texto = alvo.read_text(encoding="utf-8")
     assert "\n" in texto, "a página gerada veio vazia — este teste ficou cego"
 
-    # Cauda em TODA linha não vazia: é o pior caso, e é barato.
     sujo = (
         "\n".join(
             linha + "  " if linha.strip() else linha for linha in texto.splitlines()
@@ -288,19 +186,8 @@ def test_o_gerador_existe_onde_os_portoes_o_chamam() -> None:
     assert GERADOR.is_file()
 
 
-# --------------------------------------------------------------------------
-# PECA-ORFA-01 (13/08/2026) — o id de desenho que sumiu do SVG
-#
-# A peça é o alvo que a página acende no desenho quando alguém clica na linha.
-# Até 13/08 a órfã era acumulada, impressa em stderr como "aviso" e o processo
-# devolvia 0 — inclusive no `--check`, que é o passo do pre-commit e do CI.
-# --------------------------------------------------------------------------
 def orfana_a_primeira_peca(arvore: Path) -> str:
-    """Troca a `peca` da primeira linha por um id que nenhum desenho tem.
-
-    Devolve o id inventado. Ele carrega `ERRADO` no nome de propósito: se algum
-    dia um desenho ganhar essa peça, o teste morre com uma mensagem que se lê.
-    """
+    """Troca a `peca` da primeira linha por um id que nenhum desenho tem."""
     mapa = arvore / "docs" / "data" / "mapa-controles.csv"
     with open(mapa, encoding="utf-8", newline="") as fh:
         linhas = list(csv.reader(fh))
@@ -317,18 +204,8 @@ def orfana_a_primeira_peca(arvore: Path) -> str:
 
 
 def test_peca_orfa_faz_o_check_reprovar(arvore: Path) -> None:
-    """A cura: `--check` sai 1 quando o CSV cita peça que sumiu do desenho.
-
-    MORDE? Arrancar o `return 1` do bloco `if orfas:` em `main()` faz este teste
-    reprovar com `saiu 0` — que é literalmente o estado da árvore antes de
-    13/08/2026. Medido: com a órfã publicada e o `return 1` fora, o `--check`
-    imprimia as duas linhas de aviso em stderr e devolvia EXIT=0.
-    """
+    """A cura: `--check` sai 1 quando o CSV cita peça que sumiu do desenho."""
     inventado = orfana_a_primeira_peca(arvore)
-    # A página é regerada COM a órfã, para que sobre UMA variável só: sem isto o
-    # `--check` reprovaria por `DESATUALIZADO` mesmo com a cura arrancada, e o
-    # teste passaria sem medir nada. O gerador escreve a página e SÓ ENTÃO
-    # reprova — é por isso que aqui se ignora o código de saída dele.
     roda(arvore)
     assert inventado in pagina(arvore).read_text(encoding="utf-8"), (
         "o gerador reprovou ANTES de escrever a página: a órfã não chegou ao "
@@ -343,12 +220,7 @@ def test_peca_orfa_faz_o_check_reprovar(arvore: Path) -> None:
 
 
 def test_peca_orfa_reprova_tambem_na_geracao(arvore: Path) -> None:
-    """O outro modo, pela mesma razão: dado quebrado não devolve 0.
-
-    Regerar não conserta uma órfã — ela é defeito do CSV, não da página. Um
-    gerador que dissesse "952 KB, 293 linhas" e saísse 0 mandaria a pessoa
-    embora achando que estava tudo certo.
-    """
+    """O outro modo, pela mesma razão: dado quebrado não devolve 0."""
     orfana_a_primeira_peca(arvore)
     saida = roda(arvore)
     assert saida.returncode == 1, (
@@ -357,24 +229,13 @@ def test_peca_orfa_reprova_tambem_na_geracao(arvore: Path) -> None:
 
 
 def test_sem_orfa_o_gerador_e_o_check_seguem_saindo_zero(arvore: Path) -> None:
-    """O contrapeso. Portão que reprova sempre é portão desligado.
-
-    Medido na árvore REAL em 13/08/2026, antes de ligar a reprovação: ZERO
-    linhas órfãs nas 293 do mapa. Ligar isto custou zero reprovações.
-    """
+    """O contrapeso. Portão que reprova sempre é portão desligado."""
     assert roda(arvore).returncode == 0
     assert confere(arvore).returncode == 0
 
 
 def test_o_mapa_real_nao_tem_peca_orfa() -> None:
-    """Contra a ÁRVORE REAL, com régua independente da do gerador.
-
-    O teste relê os ids de cada SVG por conta própria em vez de importar
-    `pecas_orfas`: se a régua do gerador começar a enxergar de menos — uma
-    expressão regular que perca um id, um `strip()` que suma —, os dois lados
-    divergem aqui em vez de daqui a três levas. Nesta casa o instrumento já
-    mentiu mais que o produto.
-    """
+    """Contra a ÁRVORE REAL, com régua independente da do gerador."""
     desenhos = {
         "dualsense": "dualsense.svg",
         "pro": "nintendo-pro.svg",

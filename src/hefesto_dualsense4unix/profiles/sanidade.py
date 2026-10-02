@@ -1,31 +1,4 @@
-"""Verificador SEMÂNTICO dos perfis — o que o schema aceita mas machuca.
-
-PERFIL-NASCE-CERTO-01, entrega 4 ("Um detector de armadilha, rodando sozinho"),
-que nunca foi feita. O `Profile` do pydantic responde uma pergunta só: *este
-JSON tem os campos certos?* Todo arranjo que quebrou a máquina dela passou por
-essa validação sem um arranhão — um ``{"type": "any"}`` é um match perfeitamente
-válido, e ``priority: 191`` é um inteiro perfeitamente válido. O que falta é a
-pergunta seguinte: *este CONJUNTO de perfis se comporta como ela espera?*
-
-Cada regra daqui tem um caso REAL no disco dela (medido em 04/08/2026):
-
-- ``vitoria`` (catch-all, prioridade 100) vencendo ``pragmata``, o perfil do
-  jogo — o defeito que abriu a sprint;
-- ``pragmata`` com ``match`` de jogo trocado por ``{"type": "any"}`` pela
-  janela — perdeu a regra e virou catch-all;
-- prioridades escalando até 191, e empatando entre si;
-- quatro catch-all no mesmo diretório disputando a mesma vaga.
-
-Duas decisões de projeto, ambas contra o alarme que se aprende a ignorar:
-
-1. **``fallback`` é catch-all LEGÍTIMO** e tem dispensa NOMEADA
-   (`CATCH_ALL_LEGITIMOS`). Um perfil que existe para valer quando nada mais
-   vale não pode ser acusado de existir. A dispensa vale enquanto ele estiver
-   no piso da escala — um "fallback" que SOBE deixa de ser fundo e passa a
-   competir, e aí é exatamente o defeito que se quer ver.
-2. **Todo achado diz o que FAZER.** "Está errado" sem "faça isto" transfere o
-   trabalho para quem menos pode fazê-lo.
-"""
+"""Verificador SEMÂNTICO dos perfis — o que o schema aceita mas machuca."""
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
@@ -39,41 +12,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.profiles.slug import slugify
 
-# PRIORIDADE_MINIMA / PRIORIDADE_MAXIMA: a faixa que a JANELA oferece no
-# controle de prioridade. Um número fora dela NÃO veio da janela — veio de
-# edição à mão ou de algo somando sozinho, e é essa a informação que o achado
-# `prioridade_fora_da_faixa` entrega. Reexportadas no `__all__` deste módulo
-# porque fazem parte do vocabulário público do verificador.
-#
-# NOTA DE 05/08/2026 (UNIFICA-CONSTANTE-01). Até aqui as duas eram cópia
-# DELIBERADA dos números de `app/actions/profiles_actions.py`, com a
-# justificativa: *"repetida aqui de propósito, e não importada: `profiles/` não
-# pode depender de `app/` (a GUI importa o loader, nunca o contrário), e o CLI
-# carregaria GTK atrás dela."* **Essa justificativa continua CERTA e continua
-# valendo** — nada aqui importa `app/`, e nenhum caminho de CLI carrega GTK. O
-# que caducou foi só a conclusão de que a cópia era a única saída: a constante
-# DESCEU para `profiles/schema.py` (stdlib + pydantic), em vez de subir para
-# `app/`. `profiles/` continua sem depender de `app/`, e agora existe um número
-# só, com portão (`tests/unit/test_teto_da_prioridade_tem_uma_fonte_so.py`).
 
-#: Catch-all com dispensa nomeada (ver docstring do módulo). Comparado por
-#: SLUG, então "Fallback" e "fallback" são o mesmo perfil.
 CATCH_ALL_LEGITIMOS: frozenset[str] = frozenset({"fallback"})
 
-#: A dispensa do `fallback` vale só no PISO da escala. Acima disso ele deixou
-#: de ser fundo de escala e passou a disputar — foi assim que a corrupção
-#: apareceu (prioridades subindo sozinhas até 191).
 PRIORIDADE_DE_FUNDO = 0
 
-#: Quantos catch-all SEM dispensa o diretório tolera. Um é o "perfil de
-#: desktop" de quem não quer regra nenhuma; a partir do segundo eles disputam
-#: entre si por prioridade, e quem chega ao controle vira sorteio.
 MAX_CATCH_ALL_TOLERADOS = 1
 
-#: Vocabulário de perfil GENÉRICO — nomes que dizem "vale para tudo" e por isso
-#: não levantam suspeita de serem um jogo que perdeu a regra. Fora desta lista,
-#: um catch-all com nome próprio é o padrão exato do `pragmata`: alguém criou
-#: para UM programa e o `match` foi embora.
 VOCABULARIO_GENERICO: frozenset[str] = frozenset(
     {
         "fallback",
@@ -91,8 +36,8 @@ VOCABULARIO_GENERICO: frozenset[str] = frozenset(
         "video",
         "filme",
         "musica",  # (noqa-acento): slug, sempre ASCII
-        "meu_perfil",  # nome antigo do padrão, ainda vivo em disco velho
-        "personalizado", "freestyle",  # o padrão de 05/09 a 24/09, e o de hoje
+        "meu_perfil",
+        "personalizado", "freestyle",
         "perfil_padrao",
         "teste",
     }
@@ -101,11 +46,7 @@ VOCABULARIO_GENERICO: frozenset[str] = frozenset(
 
 @dataclass(frozen=True)
 class Achado:
-    """Um problema semântico, com o conserto junto.
-
-    `gravidade` é ``"erro"`` (configuração que já está machucando hoje) ou
-    ``"aviso"`` (armadilha armada, ainda sem vítima).
-    """
+    """Um problema semântico, com o conserto junto."""
 
     regra: str
     gravidade: str
@@ -114,11 +55,7 @@ class Achado:
     perfis: tuple[str, ...] = field(default=())
 
     def linha(self) -> str:
-        """Uma linha de terminal: o problema e o que fazer, nesta ordem.
-
-        O rótulo "Cura:" não é enfeite — várias mensagens já contêm um
-        travessão, e sem ele os dois textos viram um parágrafo só na tela.
-        """
+        """Uma linha de terminal: o problema e o que fazer, nesta ordem."""
         return f"{self.mensagem} — Cura: {self.cura}"
 
 
@@ -140,12 +77,7 @@ def _e_manual(profile: Profile) -> bool:
 
 
 def _tem_dispensa(profile: Profile) -> bool:
-    """True para o catch-all legítimo AINDA no fundo da escala.
-
-    A dispensa é do arranjo, não do nome: `fallback` em 0 é o fundo que o
-    projeto recomenda; `fallback` em 100 é um competidor com nome de fundo, e
-    justamente o que a corrupção produziu.
-    """
+    """True para o catch-all legítimo AINDA no fundo da escala."""
     return (
         _slug(profile) in CATCH_ALL_LEGITIMOS
         and profile.priority <= PRIORIDADE_DE_FUNDO
@@ -153,14 +85,7 @@ def _tem_dispensa(profile: Profile) -> bool:
 
 
 def _catch_all_vence_especifico(perfis: Sequence[Profile]) -> list[Achado]:
-    """PERFIL-NASCE-CERTO-01/E4: catch-all com prioridade >= a de um específico.
-
-    É a armadilha que abriu a sprint: `vitoria` (any, 100) tem prioridade maior
-    que `pragmata` (o perfil do jogo), então abrir o jogo entrega o perfil de
-    desktop. Empate conta — no empate o desempate é acidental (ordem de leitura
-    do diretório), e "às vezes vale o certo" é pior de diagnosticar do que
-    "nunca vale".
-    """
+    """PERFIL-NASCE-CERTO-01/E4: catch-all com prioridade >= a de um específico."""
     catch_all = [p for p in perfis if _e_catch_all(p) and not _tem_dispensa(p)]
     especificos = [
         p for p in perfis if not _e_catch_all(p) and not _e_manual(p)
@@ -192,19 +117,7 @@ def _catch_all_vence_especifico(perfis: Sequence[Profile]) -> list[Achado]:
 
 
 def _catch_all_com_cara_de_jogo(perfis: Sequence[Profile]) -> list[Achado]:
-    """Perfil com nome de jogo (ou modo de jogo) e ``match.type == "any"``.
-
-    Dois sinais, e basta um:
-
-    - **declarado**: o perfil pede modo ``gamepad`` ou suprime a emulação de
-      desktop — ele SABE que é de jogo, e mesmo assim casa com tudo;
-    - **pelo nome**: o nome está fora do `VOCABULARIO_GENERICO`, isto é, é nome
-      próprio. Foi o caso do `pragmata`: criado para um jogo, com o `match`
-      perdido depois.
-
-    A heurística de nome é declaradamente heurística — por isso a gravidade é
-    "aviso" e a cura diz como silenciá-la de propósito (``manual``).
-    """
+    """Perfil com nome de jogo (ou modo de jogo) e ``match.type == "any"``."""
     achados: list[Achado] = []
     for p in perfis:
         if not _e_catch_all(p) or _tem_dispensa(p):
@@ -213,14 +126,6 @@ def _catch_all_com_cara_de_jogo(perfis: Sequence[Profile]) -> list[Achado]:
         declarado = bool(p.suppress_desktop_emulation) or bool(
             modo is not None and getattr(modo, "kind", None) == "gamepad"
         )
-        # O sinal de NOME só vale acima do fundo da escala, e a razão é o
-        # direito de silenciar: um catch-all parado na prioridade 0 se comporta
-        # como fundo de escala qualquer que seja o nome dele — só entra quando
-        # nada mais entrou, e não tira a vez de ninguém. Sem esta condição, o
-        # perfil de desktop com nome próprio (o caso dela) receberia um aviso
-        # perpétuo que nenhuma ação dela apagaria, e o alarme inteiro perderia
-        # o crédito. O sinal DECLARADO não tem essa folga: um perfil que pede
-        # modo de jogo casando com tudo empurra o modo no desktop mesmo em 0.
         nome_proprio = (
             _slug(p) not in VOCABULARIO_GENERICO and p.priority > PRIORIDADE_DE_FUNDO
         )
@@ -257,16 +162,7 @@ def _catch_all_com_cara_de_jogo(perfis: Sequence[Profile]) -> list[Achado]:
 
 
 def _alvos(perfil: Profile) -> tuple[frozenset[str], frozenset[str], bool] | None:
-    """Os endereços de janela de um perfil: `(classes, processos, tem_regex)`.
-
-    ``None`` para quem não casa por critério (manual, catch-all) — esses têm
-    regras próprias neste arquivo e não entram na conta de empate.
-
-    A caixa é ignorada porque o produto a ignora: `MatchCriteria.matches` casa
-    com `re.IGNORECASE` e `_casa_sem_caixa`. Uma régua com regra de caixa
-    diferente da do produto responde sobre outra coisa — que é o defeito que
-    esta casa mais caçou.
-    """
+    """Os endereços de janela de um perfil: `(classes, processos, tem_regex)`."""
     match = perfil.match
     classes = getattr(match, "window_class", None)
     processos = getattr(match, "process_name", None)
@@ -281,15 +177,7 @@ def _alvos(perfil: Profile) -> tuple[frozenset[str], frozenset[str], bool] | Non
 
 
 def _podem_disputar(a: Profile, b: Profile) -> bool:
-    """Existe alguma janela do mundo que case com os DOIS?
-
-    A resposta é conservadora de propósito: só devolve ``False`` quando é
-    IMPOSSÍVEL colidirem. `MatchCriteria` é AND entre os campos preenchidos e
-    OR dentro de cada lista — então basta um campo preenchido nos dois **sem
-    interseção** para que nenhuma janela case com ambos. O `window_title_regex`
-    nunca prova impossibilidade (dois regexes podem casar com o mesmo título),
-    e por isso não é usado para calar nada.
-    """
+    """Existe alguma janela do mundo que case com os DOIS?"""
     alvo_a, alvo_b = _alvos(a), _alvos(b)
     if alvo_a is None or alvo_b is None:
         return True
@@ -301,31 +189,7 @@ def _podem_disputar(a: Profile, b: Profile) -> bool:
 
 
 def _prioridades_empatadas(perfis: Sequence[Profile]) -> list[Achado]:
-    """Perfis que DISPUTAM A MESMA JANELA na mesma prioridade.
-
-    Perfis só-manuais ficam de fora: eles nunca são candidatos do autoswitch,
-    então empatar não decide nada.
-
-    E DESDE 21/09/2026 O ALVO ENTRA NA CONTA — antes desta data a regra
-    agrupava só por número, e isso a tornava um alarme que o próprio produto
-    fabricava. Medido no disco dela naquele dia: **28 dos 29 perfis em
-    `priority: 80`**, porque `PRIORIDADE_DO_PERFIL_DE_JOGO = 80` é o que o
-    semeador escreve em todo perfil de jogo que ele cria. Os 28 têm
-    `window_class` próprio — `steam_app_1088850`, `steam_app_1245620`… — e
-    portanto **nenhum par deles podia disputar coisa nenhuma**.
-
-    O preço do alarme falso era duplo: a cura que ele imprimia mandava dar 28
-    números diferentes à mão (trabalho sem efeito, e ninguém o faria), e um
-    aviso permanente que não tem ação é o que ensina a ignorar os avisos que
-    têm. *O produto gerava o empate, avisava sobre ele, e a cura era
-    impossível.*
-
-    O QUE NÃO SE FEZ, e é decisão registrada: dar um passo de prioridade ao
-    semeador. Perfis de jogo não competem entre si — inventar hierarquia entre
-    o Elden Ring e o Stray seria dado novo que ninguém pediu, e um número por
-    jogo tem de acabar em algum lugar (`PRIORIDADE_MAXIMA`). O empate entre
-    endereços disjuntos não é defeito; é a forma certa.
-    """
+    """Perfis que DISPUTAM A MESMA JANELA na mesma prioridade."""
     disputantes = [p for p in perfis if not _e_manual(p)]
     por_prioridade: dict[int, list[Profile]] = {}
     for p in disputantes:
@@ -334,9 +198,6 @@ def _prioridades_empatadas(perfis: Sequence[Profile]) -> list[Achado]:
     for prioridade, grupo in sorted(por_prioridade.items()):
         if len(grupo) < 2:
             continue
-        # Só entra no achado quem tem PELO MENOS UM par que pode casar com a
-        # mesma janela. Um perfil sozinho no grupo, depois deste filtro, não
-        # disputa com ninguém.
         em_disputa: set[str] = set()
         for i, um in enumerate(grupo):
             for outro in grupo[i + 1 :]:
@@ -368,11 +229,7 @@ def _prioridades_empatadas(perfis: Sequence[Profile]) -> list[Achado]:
 
 
 def _prioridade_fora_da_faixa(perfis: Sequence[Profile]) -> list[Achado]:
-    """`priority` fora de 0-200, a faixa que a própria janela oferece.
-
-    Um 191 não sai do slider por acidente, e um 250 não sai dele de jeito
-    nenhum. Achado aqui = o número não veio de onde ela pensa que veio.
-    """
+    """`priority` fora de 0-200, a faixa que a própria janela oferece."""
     achados: list[Achado] = []
     for p in perfis:
         if PRIORIDADE_MINIMA <= p.priority <= PRIORIDADE_MAXIMA:
@@ -422,8 +279,6 @@ def _catch_all_demais(perfis: Sequence[Profile]) -> list[Achado]:
     ]
 
 
-#: As regras, na ordem em que aparecem no relatório: primeiro o que já está
-#: machucando, depois a armadilha ainda sem vítima.
 REGRAS: tuple[Callable[[Sequence[Profile]], list[Achado]], ...] = (
     _catch_all_vence_especifico,
     _prioridade_fora_da_faixa,
@@ -458,7 +313,7 @@ def verificar_perfis_do_disco() -> list[Achado]:
     um traceback na cara de quem foi justamente pedir diagnóstico. Seria piorar
     o produto para fechar uma lápide.
     Ela fica de pé como atalho de teste (é assim que
-    `test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py:319` a usa) — e
+    `test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py:177` a usa) — e
     quem precisar da corrente em produção usa as duas metades separadas, como o
     doctor usa.
 
@@ -477,11 +332,7 @@ def verificar_perfis_do_disco() -> list[Achado]:
 def linhas_de_relatorio(
     achados: Sequence[Achado], *, total_perfis: int | None = None
 ) -> list[tuple[str, str]]:
-    """Formata os achados no par ``(tag, mensagem)`` que o doctor imprime.
-
-    Mesma gramática dos outros blocos (`[ OK ]`, `[WARN]`, `[FAIL]`), para a
-    saída continuar legível de cima a baixo.
-    """
+    """Formata os achados no par ``(tag, mensagem)`` que o doctor imprime."""
     if not achados:
         quantos = "" if total_perfis is None else f" ({total_perfis} no disco)"
         return [("[ OK ]", f"perfis coerentes entre si{quantos}")]

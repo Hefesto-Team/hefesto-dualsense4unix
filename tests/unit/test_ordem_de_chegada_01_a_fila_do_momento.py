@@ -64,7 +64,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     make_auto_output_provider,
 )
 
-# --- a mesa dela, mascarada -------------------------------------------------
 
 VERMELHO = "aabbcc000001"
 AZUL = "aabbcc000002"
@@ -72,33 +71,19 @@ BRANCO = "aabbcc000003"
 ROXO = "aabbcc000004"
 MAC_EXTERNO = "aabbcc0000fe"
 
-#: A ordem em que ELA conectou, às 03:39, 03:41, 03:45 e 03:47.
 ORDEM_DE_CONEXAO = (VERMELHO, AZUL, BRANCO, ROXO)
 
-#: O que ela PEDIU, que é a ordem de conexão numerada 1..4.
 O_QUE_ELA_PEDIU = {VERMELHO: 1, AZUL: 2, BRANCO: 3, ROXO: 4}
 
-#: A fila GRAVADA no `controllers.json` dela — a de um dia qualquer do
-#: passado. É esta ordem que produzia a queixa "vermelho 1, branco 2, roxo 3,
-#: azul 4", e é ela que continua no disco: não se destrói o gravado, ele vira
-#: desempate.
 FILA_GRAVADA = {VERMELHO: 1, BRANCO: 2, ROXO: 3, AZUL: 4}
 
-#: O que o produto exibia antes desta entrega — a queixa dela, em quatro
-#: inteiros. Com a fila do momento arrancada, é aqui que os testes voltam.
 O_QUE_ELA_VIU = dict(FILA_GRAVADA)
 
 BOOT = "boot-teste-ordem-de-chegada"
 
 
 class Relogio:
-    """Relógio monotônico de mentira — move o tempo sem dormir um segundo.
-
-    A entrega inteira tem duas janelas de tempo (a ONDA de chegada e a
-    ESTABILIDADE da mesa) e nenhuma delas pode ser medida com `sleep`: um
-    teste de 4 segundos por caso é um teste que ninguém roda. O registro
-    aceita o relógio injetado só por isto.
-    """
+    """Relógio monotônico de mentira — move o tempo sem dormir um segundo."""
 
     def __init__(self, inicio: float = 1000.0) -> None:
         self.agora = inicio
@@ -165,12 +150,7 @@ def conectar_um_a_um(
     ordem: tuple[str, ...] = ORDEM_DE_CONEXAO,
     intervalo: float = 60.0,
 ) -> None:
-    """A mesa dela sendo montada: um controle de cada vez, minutos entre eles.
-
-    `intervalo` é generoso de propósito — ela levou de dois a quatro minutos
-    entre cada pareamento. O que o registro precisa é só que cada chegada caia
-    numa ONDA própria (`JANELA_DE_ONDA_SEC`); o resto do tempo é realismo.
-    """
+    """A mesa dela sendo montada: um controle de cada vez, minutos entre eles."""
     na_mesa: list[str] = []
     for uniq in ordem:
         na_mesa.append(uniq)
@@ -179,37 +159,21 @@ def conectar_um_a_um(
 
 
 class TestOCasoDela:
-    """MORDIDA 1 — o caso dela, sem tradução: quatro controles, uma ordem.
-
-    Arrancar a fila do momento (ordenar por `rank`, como antes de D-30) faz
-    todo este bloco voltar para `O_QUE_ELA_VIU`, que é a queixa de 03:54.
-    """
+    """MORDIDA 1 — o caso dela, sem tradução: quatro controles, uma ordem."""
 
     def test_a_fila_gravada_e_a_queixa_dela(self, config_isolado: Path) -> None:
-        """Ancoragem: sem isto, o resto do arquivo não prova nada.
-
-        A fila gravada dela, sozinha, produz exatamente os quatro números da
-        queixa. Se esta montagem deixar de reproduzir a queixa, os testes
-        abaixo passam a medir outra coisa.
-        """
+        """Ancoragem: sem isto, o resto do arquivo não prova nada."""
         gravar_a_fila_dela(config_isolado)
         reg = ControllerIdentityRegistry(clock=Relogio())
         reg.load()
         assert reg.snapshot() == FILA_GRAVADA
-        # Todos vistos na MESMA olhada: sem informação de ordem, a exibição é
-        # a gravada — e a gravada é a queixa.
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
         assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_VIU
 
     def test_o_numero_segue_a_ordem_de_conexao_do_momento(
         self, config_isolado: Path
     ) -> None:
-        """A mordida principal: vermelho 1, azul 2, branco 3, roxo 4.
-
-        Falha-sem: com a exibição saindo do `rank`, saem os quatro números de
-        `O_QUE_ELA_VIU` — o produto funcionando como projetado e contrariando
-        a decisão dela.
-        """
+        """A mordida principal: vermelho 1, azul 2, branco 3, roxo 4."""
         gravar_a_fila_dela(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -220,12 +184,7 @@ class TestOCasoDela:
     def test_a_ordem_do_momento_nao_repete_nem_pula_numero(
         self, config_isolado: Path
     ) -> None:
-        """A cada controle que entra, a mesa exibe exatamente 1..N.
-
-        O critério que resume NUM-01 ("nunca existe um jogador 2 sem um
-        jogador 1") não pode ser vítima da troca de fonte: ele vale a cada
-        passo da montagem, não só no fim.
-        """
+        """A cada controle que entra, a mesa exibe exatamente 1..N."""
         gravar_a_fila_dela(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -243,11 +202,7 @@ class TestOCasoDela:
     def test_quem_chega_depois_entra_no_fim_e_nao_no_meio(
         self, config_isolado: Path
     ) -> None:
-        """Um quinto controle chegando não empurra ninguém para cima.
-
-        É o outro lado da promessa: a ordem é de CHEGADA, então quem chega
-        por último é o último — mesmo tendo lugar baixo no gravado.
-        """
+        """Um quinto controle chegando não empurra ninguém para cima."""
         gravar_a_fila_dela(config_isolado, {ROXO: 1, VERMELHO: 2})
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -255,23 +210,11 @@ class TestOCasoDela:
         reg.sync_connected([VERMELHO])
         relogio.avancar(60.0)
         reg.sync_connected([VERMELHO, ROXO])
-        # O roxo tem o lugar 1 no gravado e mesmo assim chega em segundo.
         assert numeros(reg, VERMELHO, ROXO) == {VERMELHO: 1, ROXO: 2}
 
 
 class TestCongelarEGravar:
-    """MORDIDA 2 — a ordem congela quando a mesa fica estável, e congelar é GRAVAR.
-
-    O critério de "mesa estável" é `JANELA_MESA_ESTAVEL_SEC` sem ninguém
-    entrar nem sair. Enquanto a mesa se mexe, a fila gravada NÃO é tocada
-    (ela ainda é o desempate de quem chegar junto); quando estabiliza, a
-    ordem do momento é escrita nela — e é por isso que sobrevive ao restart
-    do daemon, que é a promessa de R-23.
-
-    Arrancar o critério (congelar na hora) derruba
-    `test_enquanto_a_mesa_se_mexe_o_gravado_nao_e_tocado`; arrancar o
-    congelamento derruba os outros três.
-    """
+    """MORDIDA 2 — a ordem congela quando a mesa fica estável, e congelar é GRAVAR."""
 
     def montar(self, tmp: Path) -> tuple[ControllerIdentityRegistry, Relogio]:
         gravar_a_fila_dela(tmp)
@@ -284,12 +227,7 @@ class TestCongelarEGravar:
     def test_enquanto_a_mesa_se_mexe_o_gravado_nao_e_tocado(
         self, config_isolado: Path
     ) -> None:
-        """Mesa em montagem: exibe a ordem do momento, grava a antiga.
-
-        Nove segundos de relógio se passam nesta montagem — mais que a janela
-        de estabilidade — e mesmo assim nada congela, porque a cada passo
-        alguém entrou. Congelar uma mesa em movimento é gravar meia mesa.
-        """
+        """Mesa em montagem: exibe a ordem do momento, grava a antiga."""
         gravar_a_fila_dela(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -298,7 +236,6 @@ class TestCongelarEGravar:
         assert not reg.mesa_congelada()
         assert reg.snapshot() == FILA_GRAVADA
         assert fila_no_disco(config_isolado) == FILA_GRAVADA
-        # …e a exibição já é a dela, mesmo com o gravado intacto.
         assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
 
     def test_a_mesa_parada_congela_e_a_ordem_do_momento_vira_a_gravada(
@@ -308,23 +245,16 @@ class TestCongelarEGravar:
         reg, relogio = self.montar(config_isolado)
         assert not reg.mesa_congelada()
         relogio.avancar(JANELA_MESA_ESTAVEL_SEC)
-        reg.sync_connected(list(ORDEM_DE_CONEXAO))  # o tick lento, sem novidade
+        reg.sync_connected(list(ORDEM_DE_CONEXAO))
         assert reg.mesa_congelada()
         assert reg.snapshot() == O_QUE_ELA_PEDIU
         assert fila_no_disco(config_isolado) == O_QUE_ELA_PEDIU
-        # Congelar não mexe em número nenhum na tela: a exibição já era esta.
         assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
 
     def test_o_congelado_atravessa_o_restart_do_daemon(
         self, config_isolado: Path
     ) -> None:
-        """R-23 continua de pé — e agora com a ordem QUE ELA PEDIU.
-
-        O daemon novo não tem fila do momento nenhuma (ela é da sessão): os
-        quatro chegam na MESMA olhada, e é o gravado que responde. Se o
-        congelamento não tivesse acontecido, o restart devolveria a queixa de
-        03:54.
-        """
+        """R-23 continua de pé — e agora com a ordem QUE ELA PEDIU."""
         reg, relogio = self.montar(config_isolado)
         relogio.avancar(JANELA_MESA_ESTAVEL_SEC)
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
@@ -338,13 +268,7 @@ class TestCongelarEGravar:
     def test_congelar_nao_muda_o_conjunto_de_postos(
         self, config_isolado: Path
     ) -> None:
-        """A trava que impede a janela de DUPLICATA que R-15 mediu.
-
-        Congelar é uma PERMUTAÇÃO: os postos que os presentes ocupam são os
-        mesmos antes e depois, só troca o dono de cada um. Nenhum posto some
-        e nenhum vale 0 no meio do caminho — que era exatamente o buraco por
-        onde `_ds_reserve()` lia piso 0 e nasciam "dois player 1".
-        """
+        """A trava que impede a janela de DUPLICATA que R-15 mediu."""
         reg, relogio = self.montar(config_isolado)
         antes = set(reg.snapshot().values())
         piso_antes = max(reg.snapshot().values())
@@ -387,9 +311,9 @@ class TestQuemCaiEVolta:
     ) -> None:
         """O cenário LITERAL de R-15, com o relógio andando entre as pontas."""
         reg, relogio = self.mesa_de_dois(config_isolado)
-        reg.sync_connected([])  # "desliguei os dois pra jantar"
+        reg.sync_connected([])
         relogio.avancar(600.0)
-        reg.sync_connected([AZUL])  # o azul acorda PRIMEIRO
+        reg.sync_connected([AZUL])
         relogio.avancar(30.0)
         reg.sync_connected([AZUL, VERMELHO])
         assert numeros(reg, VERMELHO, AZUL) == {VERMELHO: 1, AZUL: 2}
@@ -397,12 +321,7 @@ class TestQuemCaiEVolta:
     def test_a_cor_automatica_tambem_nao_troca_de_dono(
         self, config_isolado: Path
     ) -> None:
-        """A queixa de R-15 era sobre COR e número — os dois saem daqui.
-
-        A cor é lida pelo provider de PRODUÇÃO (`make_auto_output_provider`),
-        o mesmo que o backend chama no reconcile: se o número trocar de dono,
-        a cor troca junto e o teste cai.
-        """
+        """A queixa de R-15 era sobre COR e número — os dois saem daqui."""
         reg, relogio = self.mesa_de_dois(config_isolado)
         provider = make_auto_output_provider(reg)
         antes = {uniq: provider(uniq).led for uniq in (VERMELHO, AZUL)}  # type: ignore[union-attr]
@@ -420,18 +339,7 @@ class TestQuemCaiEVolta:
     def test_o_replug_no_meio_da_partida_devolve_o_mesmo_numero(
         self, config_isolado: Path
     ) -> None:
-        """Mesa de quatro, congelada: um cai e volta, e nada se mexe.
-
-        É a pergunta que a sprint deixou para ela (*"o que acontece com um
-        replug no meio da partida?"*) respondida em código: nada acontece.
-
-        TROCA DELIBERADA DE CONTRATO, 24/09/2026 (O-ASSENTO-GUARDADO-NAO-ANDA-01,
-        ``D-2409-O-ASSENTO-GUARDADO-NAO-ANDA``): esta régua dizia que, enquanto
-        o azul (o P2) está fora, os três que ficaram fecham 1..3. Agora, dentro
-        do prazo do lugar guardado, NINGUÉM anda — é a linha 17 dela. A
-        compactação do NUM-01 continua valendo, DEPOIS do prazo, e a segunda
-        metade desta régua a mede.
-        """
+        """Mesa de quatro, congelada: um cai e volta, e nada se mexe."""
         gravar_a_fila_dela(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -441,31 +349,23 @@ class TestQuemCaiEVolta:
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
 
         sobraram = [VERMELHO, BRANCO, ROXO]
-        reg.sync_connected(sobraram)  # o azul (o P2) caiu
+        reg.sync_connected(sobraram)
         assert numeros(reg, *sobraram) == {VERMELHO: 1, BRANCO: 3, ROXO: 4}
 
         relogio.avancar(20.0)
-        reg.sync_connected(list(ORDEM_DE_CONEXAO))  # e voltou
+        reg.sync_connected(list(ORDEM_DE_CONEXAO))
         assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
 
-        # Passado o prazo, a NUM-01 volta: os três fecham 1..3 sem buraco…
         reg.sync_connected(sobraram)
         relogio.avancar(id_mod.prazo_do_lugar_guardado() + 1.0)
         assert numeros(reg, *sobraram) == {VERMELHO: 1, BRANCO: 2, ROXO: 3}
-        # …e o azul que volta, mesmo depois do prazo, recupera o dele (D2).
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
         assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
 
     def test_volta_recupera_o_lugar_mesmo_sem_a_mesa_ter_congelado(
         self, config_isolado: Path
     ) -> None:
-        """A promessa não depende do congelamento — nem podia.
-
-        Um flap de rádio nos primeiros segundos é justamente quando a mesa
-        ainda não estabilizou. Se a marca de chegada fosse solta nessa
-        janela, o defeito de ORDEM DE WAKE voltaria pela porta dos fundos, no
-        pior momento possível.
-        """
+        """A promessa não depende do congelamento — nem podia."""
         gravar_a_fila_dela(config_isolado, {AZUL: 1, VERMELHO: 2})
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -474,7 +374,7 @@ class TestQuemCaiEVolta:
         relogio.avancar(1.0)
         reg.sync_connected([VERMELHO, AZUL])
         relogio.avancar(1.0)
-        reg.sync_connected([AZUL])  # flap: o vermelho pisca fora
+        reg.sync_connected([AZUL])
         relogio.avancar(1.0)
         reg.sync_connected([AZUL, VERMELHO])
         assert not reg.mesa_congelada()
@@ -482,17 +382,7 @@ class TestQuemCaiEVolta:
 
 
 class TestOGravadoEDesempate:
-    """MORDIDA 4 — o gravado sobrevive como desempate, não como fonte.
-
-    Dois controles vistos na MESMA olhada para a mesa chegaram juntos, para a
-    casa: aí o registro não inventa ordem, ele lê a que já tinha. Vistos em
-    olhadas DIFERENTES, o gravado perde.
-
-    Arrancar a onda (dar uma onda própria a cada chegada, mesmo dentro da
-    mesma olhada) derruba `test_quem_chega_na_mesma_olhada_e_desempatado_pelo_
-    gravado`: a ordem passaria a sair da iteração de `describe_controllers`,
-    que é ordem de enumeração do backend, não de conexão.
-    """
+    """MORDIDA 4 — o gravado sobrevive como desempate, não como fonte."""
 
     def test_quem_chega_na_mesma_olhada_e_desempatado_pelo_gravado(
         self, config_isolado: Path
@@ -501,17 +391,13 @@ class TestOGravadoEDesempate:
         gravar_a_fila_dela(config_isolado, {VERMELHO: 1, AZUL: 2})
         reg = ControllerIdentityRegistry(clock=Relogio())
         reg.load()
-        reg.sync_connected([AZUL, VERMELHO])  # a ordem do iterável não decide
+        reg.sync_connected([AZUL, VERMELHO])
         assert numeros(reg, VERMELHO, AZUL) == {VERMELHO: 1, AZUL: 2}
 
     def test_em_olhadas_diferentes_o_gravado_perde(
         self, config_isolado: Path
     ) -> None:
-        """A mesma dupla, o mesmo gravado — e a ordem do momento vencendo.
-
-        O par com o teste acima é o que prova que o gravado é DESEMPATE: ele
-        só é consultado quando a fila do momento não tem opinião.
-        """
+        """A mesma dupla, o mesmo gravado — e a ordem do momento vencendo."""
         gravar_a_fila_dela(config_isolado, {VERMELHO: 1, AZUL: 2})
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -524,13 +410,7 @@ class TestOGravadoEDesempate:
     def test_o_restart_com_a_mesa_cheia_nao_embaralha_nada(
         self, config_isolado: Path
     ) -> None:
-        """R-23 em uma linha: reiniciar o daemon não renumera ninguém.
-
-        Era a queixa de 25/07 (*"ao abrir os jogos ou o perfil, os controles
-        se reenumeram e nunca sei o que é o quê"*). Com os quatro já ligados,
-        o daemon novo vê todos na primeira olhada — uma onda só — e o gravado
-        responde inteiro, em qualquer ordem de entrega.
-        """
+        """R-23 em uma linha: reiniciar o daemon não renumera ninguém."""
         gravar_a_fila_dela(config_isolado, O_QUE_ELA_PEDIU)
         for entrega in (
             list(ORDEM_DE_CONEXAO),
@@ -545,11 +425,7 @@ class TestOGravadoEDesempate:
     def test_a_fila_gravada_continua_existindo_e_sendo_salva(
         self, config_isolado: Path
     ) -> None:
-        """"Não destruir o gravado" é literal: o arquivo continua completo.
-
-        Inclusive as entradas de quem NÃO está na mesa — a promessa D2 (o
-        ausente não perde o lugar) não foi tocada por D-30.
-        """
+        """"Não destruir o gravado" é literal: o arquivo continua completo."""
         gravar_a_fila_dela(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
@@ -559,8 +435,6 @@ class TestOGravadoEDesempate:
         reg.sync_connected([VERMELHO, AZUL])
         no_disco = fila_no_disco(config_isolado)
         assert set(no_disco) == set(FILA_GRAVADA), "ninguém foi dropado"
-        # Os dois ausentes seguem com os lugares que tinham; só os PRESENTES
-        # foram permutados entre si.
         assert no_disco[BRANCO] == FILA_GRAVADA[BRANCO]
         assert no_disco[ROXO] == FILA_GRAVADA[ROXO]
         assert (no_disco[VERMELHO], no_disco[AZUL]) == (1, 4)
@@ -604,8 +478,6 @@ class TestALampadaEORotuloSeguemJuntos:
                 player_index=i + 2,
                 vpad=object(),  # type: ignore[arg-type]
             )
-            # a ordem em que o grab confirmou — de propósito diferente da de
-            # conexão, que é a que ela pediu.
             for i, mac in enumerate((ROXO, AZUL, BRANCO))
         }
         return coop
@@ -645,8 +517,6 @@ class TestAMesaMistaContinuaFechando:
         ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
         ds.load()
 
-        # O azul chega primeiro (contra o gravado), depois o vermelho, e o
-        # externo entra por último.
         ds.sync_connected([AZUL])
         relogio.avancar(60.0)
         ds.sync_connected([AZUL, VERMELHO])

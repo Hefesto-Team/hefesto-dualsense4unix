@@ -43,14 +43,8 @@ from hefesto_dualsense4unix.profiles import loader
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 
-#: O ENDEREÇO DA BARRA. Um só nome, nos dois lados — o gerador o escreve no
-#: HTML e o pacote o emite; digitá-lo em dois lugares é o que faz uma cura
-#: passar pela metade.
 BARRA = "guarda.plastico"
 
-#: A MESA DE PROVA — endereços MASCARADOS, faixa sintética da casa (há dois
-#: portões de anonimato nesta árvore). As cores são as DELA: um no cabo e um no
-#: rádio, que é a mesa que originou a lei.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb", "alvo": True,
@@ -60,9 +54,7 @@ MESA = [
      "alvo": False, "mascara": "DualSense"},
 ]
 
-#: O CONTROLE CUJA COR NÃO FOI LIDA. Não é hipótese: pelo rádio a cor não vem —
 #: o mapa de canais diz `identidade.cor_do_aparelho = não` — e `mesa_do_estado`
-#: entrega `cor: ""` com o nome "Não sei".
 SEM_COR = {"pref": "p3", "uniq": "aabbcc000003", "jogador": 3, "cor": "",
            "nome": "Não sei", "via": "BT", "transporte": "bluetooth",
            "alvo": False, "mascara": "DualSense"}
@@ -101,12 +93,8 @@ def _pacote(mesa: list[dict[str, Any]]) -> dict[str, Any]:
     return a10_perfis.pacote(ctx)
 
 
-# --------------------------------------------------------------------------
-# 1. A BANCADA DÁ ENDEREÇO — e não sobrou cor congelada no miolo
-# --------------------------------------------------------------------------
 def test_a_barra_do_plastico_tem_endereco_na_bancada() -> None:
-    """MORDIDA: tire o ``data-hef`` do ``<span class="pl">`` em
-    ``aba10.linha_do_controle``, regere, e a conta cai a zero."""
+    """MORDIDA: tire o ``data-hef`` do ``<span class="pl">`` em"""
     html = _bancada()
     quantas = html.count(f'data-hef="{BARRA}"')
     assert quantas == 4, (
@@ -116,11 +104,7 @@ def test_a_barra_do_plastico_tem_endereco_na_bancada() -> None:
 
 
 def test_o_alvo_da_barra_e_cor_e_nao_fundo() -> None:
-    """O alvo `fundo` guarda ``#ae335a`` e lê ``rgb(174, 51, 90)`` de volta: a
-    comparação nunca casa e o contador de pinturas soma +1 por tique, para
-    sempre. O ramo `cor` escreve e depois compara, e por isso é idempotente.
-
-    MORDIDA: troque o alvo por ``fundo`` no gerador e regere."""
+    """O alvo `fundo` guarda ``#ae335a`` e lê ``rgb(174, 51, 90)`` de volta: a"""
     html = _bancada()
     assert html.count('data-hef-alvo="cor"') == 4, (
         "a barra do plástico perdeu o alvo `cor` — com `fundo` o contador de "
@@ -146,26 +130,14 @@ def test_nenhum_plastico_congelado_sobrou_no_miolo_da_bancada() -> None:
         "escrita à mão numa página é o desenho mandando na tela do produto")
 
 
-# --------------------------------------------------------------------------
-# 2. O PACOTE ESCREVE — endereço sem escritor é um vazio no lugar de um erro
-# --------------------------------------------------------------------------
 def test_o_pacote_manda_a_cor_do_plastico_de_cada_controle(disco: list[Any]) -> None:
-    """As cores são as do MAPA, lidas por ``monta.cor_da_zona``.
-
-    MORDIDA: apague a linha ``fora["guarda.plastico"] = …`` de ``pacote()`` —
-    ou o ``"plastico": _plastico(c)`` de ``_mesa_com_rotulo`` — e este teste
-    nomeia o que sumiu.
-    """
+    """As cores são as do MAPA, lidas por ``monta.cor_da_zona``."""
     from hefesto_dualsense4unix.interface import monta
 
     fora = _pacote(MESA)
     assert BARRA in fora, (
         "o pacote da 10 não manda a cor do plástico: a barra fica com a do "
         "mockup para sempre, e dar endereço sem escritor é maquiagem")
-    # A LISTA TEM AS QUATRO LINHAS DA TABELA desde 05/09/2026 (ver
-    # `_com_os_lugares_vazios`); as duas de baixo não têm peça, logo não têm
-    # cor — `""` devolve a barra ao `transparent` da classe, que é o lugar
-    # vazio não afirmando cor nenhuma.
     assert fora[BARRA] == [monta.cor_da_zona("white"),
                            monta.cor_da_zona("galactic-purple"), "", ""], (
         "a cor da barra não é a do mapa. Ela tem de sair de "
@@ -173,28 +145,15 @@ def test_o_pacote_manda_a_cor_do_plastico_de_cada_controle(disco: list[Any]) -> 
 
 
 def test_a_lista_da_barra_acompanha_a_da_linha(disco: list[Any]) -> None:
-    """A pintura DISTRIBUI listas pelos elementos de mesmo endereço, na ordem —
-    então a barra e o nome têm de ter o mesmo tamanho, ou a linha 2 recebe a cor
-    da linha 1."""
+    """A pintura DISTRIBUI listas pelos elementos de mesmo endereço, na ordem —"""
     fora = _pacote(MESA)
     assert len(fora[BARRA]) == len(fora["guarda.nome"]), (
         "a lista da barra e a do nome têm tamanhos diferentes: a distribuição "
         "por ordem daria a cor de um controle à linha de outro")
 
 
-# --------------------------------------------------------------------------
-# 3. SEM COR LIDA, NADA — nunca a do mockup, nunca um cinza inventado
-# --------------------------------------------------------------------------
 def test_sem_cor_lida_a_barra_fica_vazia(disco: list[Any]) -> None:
-    """Regra dela: *campo sem informação não mostra nada*.
-
-    O vazio faz o piloto escrever ``''`` no alvo `cor` — o `style` de linha cai,
-    o ``color:transparent`` da classe volta, e a barra SOME. Um cinza inventado,
-    ou a cor do desenho, seria a tela afirmando um modelo que ninguém pode
-    conferir.
-
-    MORDIDA: devolva um hexadecimal padrão em ``_plastico`` e este teste o pega.
-    """
+    """Regra dela: *campo sem informação não mostra nada*."""
     assert a10_perfis._plastico(SEM_COR) == "", (
         "a aba inventou uma cor para um controle cuja cor não foi lida")
     fora = _pacote([*MESA, SEM_COR])
@@ -203,24 +162,12 @@ def test_sem_cor_lida_a_barra_fica_vazia(disco: list[Any]) -> None:
 
 
 def test_um_colorway_que_o_mapa_nao_tem_nao_derruba_a_aba() -> None:
-    """``cor_da_zona`` ergue ``SystemExit`` — que **não** é ``Exception`` — para
-    um colorway ausente. Foi assim que o piloto morreu na primeira execução da
-    fita viva: um ``except Exception`` passa ao lado e a janela inteira cai.
-
-    MORDIDA: tire o ``SystemExit`` do ``except`` de ``_plastico``.
-    """
+    """``cor_da_zona`` ergue ``SystemExit`` — que **não** é ``Exception`` — para"""
     assert a10_perfis._plastico({"cor": "cor-que-nao-existe"}) == ""
 
 
-# --------------------------------------------------------------------------
-# 4. O QUE ESPERA O ATO DELA NÃO VIRA PONTO CEGO
-# --------------------------------------------------------------------------
 def test_o_que_espera_publicacao_ja_esta_na_bancada() -> None:
-    """Declarar "espera a publicação" sobre um endereço que nem a bancada tem é
-    dizer que está pronto o que não foi feito.
-
-    MORDIDA: ponha um nome inventado em ``ESPERANDO_A_PUBLICACAO``.
-    """
+    """Declarar "espera a publicação" sobre um endereço que nem a bancada tem é"""
     tem = _enderecos(_bancada())
     faltando = set(a10_perfis.ESPERANDO_A_PUBLICACAO) - tem
     assert not faltando, (
@@ -229,11 +176,7 @@ def test_o_que_espera_publicacao_ja_esta_na_bancada() -> None:
 
 
 def test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar() -> None:
-    """Uma declaração que envelheceu é a régua se desligando sem ninguém
-    decidir isso — no dia em que ela publicar, o nome sai desta lista.
-
-    MORDIDA: ponha ``perfis.conta`` (que a publicada já tem) na lista.
-    """
+    """Uma declaração que envelheceu é a régua se desligando sem ninguém"""
     ja_publicados = set(a10_perfis.ESPERANDO_A_PUBLICACAO) & _enderecos(_publicada())
     assert not ja_publicados, (
         f"{sorted(ja_publicados)} já está na página PUBLICADA e continua "

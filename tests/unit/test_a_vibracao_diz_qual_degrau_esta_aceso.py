@@ -14,7 +14,7 @@ DOIS controles na mesa (um no `usb`, um no `bt`).
    A cura NÃO É ESCREVER TEXTO nos botões: isso já foi tentado na manhã do
    mesmo dia e apagou os quatro rótulos, tirando dela a escolha. QUAL dos
    quatro está aceso é a **classe** ``on``, e o alvo ``classe`` do
-   ``escrever()`` (``hefesto_vivo.py:227``) acende quem casa com o
+   ``escrever()`` (``hefesto_vivo.py:83``) acende quem casa com o
    ``data-hef-quando`` e apaga as irmãs.
 
 2. **``motor-e-pct`` NÃO É ENDEREÇO MORTO** — a acusação da régua do mockup é
@@ -65,14 +65,8 @@ from hefesto_dualsense4unix.interface import regua_do_mockup as _regua
 
 PAGINA = "05-vibracao.html"
 
-#: Dois controles de mentira. MAC da faixa SINTÉTICA da casa — há dois portões
-#: de anonimato nesta árvore, e um endereço mascarado ainda carrega o OUI dela.
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
 
-#: O TOKEN QUE NENHUM BOTÃO CONHECE — vizinho do certo, e sem acento de
-#: propósito: chave de máquina não leva acento nesta casa. Ele mora numa
-#: constante para não se repetir em prosa, onde o portão de acentuação o leria
-#: como palavra mal escrita.
 TOKEN_VIZINHO = "maximo"  # (noqa-acento) chave de máquina
 
 
@@ -86,12 +80,7 @@ def bancada() -> str:
 
 
 def _bloco_do_lugar(html: str, pref: str) -> str:
-    """O HTML de UM lugar da mesa, do `<div class="ctrl…">` até o próximo.
-
-    ELE SUBSTITUIU O `split('class="ctrl vazia"')` EM 07/09/2026: a classe
-    `vazia` morreu com a fusão dos dois ramos de coluna, e um `split` por ela
-    devolveria lista VAZIA — a régua ficaria verde por vacuidade.
-    """
+    """O HTML de UM lugar da mesa, do `<div class="ctrl…">` até o próximo."""
     ate_a_faixa = html.split('class="vib-estado"', 1)[0]
     for pedaco in ate_a_faixa.split('<div class="ctrl')[1:]:
         achado = re.search(r'data-controle="(p\d+)"', pedaco.split(">", 1)[0])
@@ -126,45 +115,20 @@ def pacote():
     return pacotes.pacote_da_pagina(PAGINA, _ctx())
 
 
-# --------------------------------------------------------------------------
-# 1. o endereço existe, e cada botão diz quem ele é
-# --------------------------------------------------------------------------
 def test_cada_degrau_diz_quem_ele_e(bancada) -> None:
-    """Os quatro botões dividem UM `data-campo` e se distinguem pelo `quando`.
-
-    SEM O `data-hef-quando` O ALVO VIRA BOOLEANO (`hefesto_vivo.py:229`), e
-    `ligado('balanceado')` é verdadeiro: os quatro degraus acenderiam juntos, e
-    a tela passaria a afirmar quatro políticas ao mesmo tempo.
-
-    OS DEGRAUS VÊM DO PRODUTO, e não de uma lista digitada aqui:
-    `app/telas/vibracao.degraus_da_forca()` é o dono. E o gerador NÃO é
-    importado — importar `aba05` REESCREVE a bancada dela como efeito de um
-    `import`, e uma régua não mexe no que mede.
-    """
+    """Os quatro botões dividem UM `data-campo` e se distinguem pelo `quando`."""
     for _rot, chave in _aba05.FORCA:
         alvo = (f'data-campo="degrau" data-hef-alvo="classe" '
                 f'data-hef-quando="{chave}"')
         assert alvo in bancada, f"o degrau {chave!r} não tem endereço de classe"
 
     # A CONTA É DOS DEGRAUS, e o filtro por `data-campo="degrau"` entrou em
-    # 14/09/2026: o interruptor de punho ganhou fonte nesse dia e usa o MESMO
     # vocabulário (`data-campo="lado-<sigla>" data-hef-alvo="classe"
-    # data-hef-quando="1"`). Contar todo `data-hef-quando` da página passou a
-    # somar oito botões que não são degrau — e a régua reprovaria a cura em vez
-    # do defeito, que é a forma que esta casa já nomeou.
     quandos = re.findall(
         r'data-campo="degrau" data-hef-alvo="classe" data-hef-quando="([^"]+)"',
         bancada)
     lugares = bancada.count('data-controle="p')
-    # A LINHA DE MESA SAIU EM 05/09/2026 — decisão dela. Os degraus vivem só
-    # dentro das colunas agora, e a conta é `degraus x LUGARES`.
-    #
-    # `lugares` E NÃO `colunas vivas` — 07/09/2026. A conta era
-    # `bancada.count('<div class="ctrl" data-controle=')`, que só casa a coluna
-    # CHEIA: a régua respondia sobre o mundo do DESENHO, e não sobre a mesa
     # dela. Com quatro DualSense ligados o pacote manda quatro colunas e duas
-    # não tinham um `data-campo` para receber. Os quatro lugares saem do mesmo
-    # molde agora (`aba05._coluna`).
     assert 'class="vib-mesa"' not in bancada, (
         "a linha de mesa voltou ao desenho da aba 05")
     assert lugares == len(_aba05.MESA), (
@@ -180,12 +144,7 @@ def test_cada_degrau_diz_quem_ele_e(bancada) -> None:
 
 
 def test_o_degrau_nunca_e_nome_de_clique(bancada) -> None:
-    """`degrau` é endereço de PINTURA; `forca` é endereço de CLIQUE.
-
-    O ouvinte lê `data-papel` como o nome do gesto (`hefesto_vivo.py:288`) e o
-    pintor procura o valor pelos três endereços. Um nome nos dois papéis faz a
-    pintura escrever dentro do botão — foi o defeito da manhã de 02/09.
-    """
+    """`degrau` é endereço de PINTURA; `forca` é endereço de CLIQUE."""
     assert 'data-papel="degrau"' not in bancada
     assert 'data-campo="forca"' not in bancada
 
@@ -222,9 +181,6 @@ def test_o_lugar_vazio_nao_acende_degrau_mas_tem_onde_receber(bancada) -> None:
             f"o lugar vazio {pref} nasceu com um degrau ACESO")
 
 
-# --------------------------------------------------------------------------
-# 2. o pacote emite o que o produto calculou
-# --------------------------------------------------------------------------
 def test_o_pacote_emite_o_degrau_que_o_produto_calculou(pacote) -> None:
     """O valor é a CHAVE do produto, e ele sai do `app/telas/vibracao`.
 
@@ -233,24 +189,6 @@ def test_o_pacote_emite_o_degrau_que_o_produto_calculou(pacote) -> None:
     """
     colunas = pacote["colunas"]
     assert len(colunas) == 2, f"a mesa de mentira tem dois controles: {list(colunas)}"
-    # A COLUNA HERDADA ACENDE, E A MARCA DIZ DE ONDE VEM — 17/09/2026,
-    # VIBRA-ACESA-01.
-    #
-    # ESTA RÉGUA PEDIA O CONTRÁRIO ATÉ HOJE, e o que ela guardava era meia
-    # decisão. A decisão [05] dela (04/09) mandava a coluna sem ajuste próprio
-    # NÃO acender, *"e passar a apontar para essa linha"* — a LINHA DE MESA,
-    # que acenderia o degrau em vigor. A linha de mesa foi apagada UM DIA
-    # DEPOIS, em 05/09, por outra decisão dela (*"não é pra ter mesa em nada da
-    # interface"*), e o `""` ficou apontando para o nada: os três botões
-    # apagados, sem nenhum outro lugar dizendo qual força vale.
-    #
-    # O PREÇO, medido na tela dela em 17/09 com o DON'T SCREAM aberto (global
-    # `max`, zero override): *"o botão não tá ativo"* — nenhum dos três aceso,
-    # e `150%` na coluna ao lado.
-    #
-    # O QUE A DECISÃO [05] QUERIA CONTINUA DE PÉ e é o que se mede abaixo:
-    # herdado ≠ escolhido. O que mudou é o ENDEREÇO da distinção — ela saiu do
-    # apagão e foi para a marca `degrau-herdado`, na caixa dos três botões.
     for uniq, col in colunas.items():
         assert col["degrau"] == "balanceado", (
             f"a coluna {uniq} não acendeu o degrau que está valendo — sem "
@@ -267,13 +205,7 @@ def test_o_pacote_emite_o_degrau_que_o_produto_calculou(pacote) -> None:
 
 
 def test_o_degrau_emitido_e_sempre_um_dos_quatro() -> None:
-    """Um token que nenhum botão conhece APAGA os quatro, calado.
-
-    O `escrever()` só acende quem casa com o `data-hef-quando`; o
-    :data:`TOKEN_VIZINHO` no lugar de `'max'` deixaria a coluna inteira
-    apagada e ninguém veria erro. Por isso o que sai daqui é a chave do
-    produto, e não um rótulo.
-    """
+    """Um token que nenhum botão conhece APAGA os quatro, calado."""
     import pacotes
 
     conhecidos = {c for _, c in _aba05.FORCA}
@@ -282,23 +214,13 @@ def test_o_degrau_emitido_e_sempre_um_dos_quatro() -> None:
         assert pac["mesa"] == {}, (
             f"a mesa emitiu {sorted(pac['mesa'])!r} para a "
             f"política {policy!r}")
-        # `""` É RESPOSTA VÁLIDA NA COLUNA desde 04/09/2026 — quer dizer
-        # "herdado", e os quatro apagam. O que continua proibido é um token
-        # que nenhum botão conhece: ele apagaria os quatro do mesmo jeito, e
-        # ninguém veria erro. Por isso o teste é a pertinência, não o vazio.
         for col in pac["colunas"].values():
             assert col["degrau"] in conhecidos | {""}, (
                 f"o pacote emitiu {col['degrau']!r} para a política {policy!r}")
 
 
 def test_a_mesa_sem_politica_nao_acende_degrau_nenhum() -> None:
-    """Campo sem informação NÃO MOSTRA NADA — a regra dela, 02/09/2026.
-
-    *"Se não tá mostrando agora, não tem info pra mostrar no produto. Mas quando
-    tiver, aparece a info correta."* Com o daemon calado sobre a política, o
-    valor emitido é vazio, o `escrever()` põe o travessão, e travessão não casa
-    com `data-hef-quando` nenhum: os quatro apagam.
-    """
+    """Campo sem informação NÃO MOSTRA NADA — a regra dela, 02/09/2026."""
     import pacotes
 
     pac = pacotes.pacote_da_pagina(PAGINA, _ctx(policy=""))
@@ -306,59 +228,31 @@ def test_a_mesa_sem_politica_nao_acende_degrau_nenhum() -> None:
         assert col["degrau"] == "", f"o vazio virou {col['degrau']!r}"
 
 
-# --------------------------------------------------------------------------
-# 3. a régua do mockup julga o degrau, e julga certo
-# --------------------------------------------------------------------------
 def _campos(bancada: str, chave: str) -> list:
     return [c for c in _regua._campos_cravados(bancada) if c.chave == chave]
 
 
 def test_a_regua_ve_os_oito_degraus_com_alvo_classe(bancada) -> None:
-    """O parser da régua lê o mesmo endereço que o pintor escreve.
-
-    Se os dois lerem coisas diferentes, a medição da aba passa a falar de uma
-    página que não existe — é a cegueira que o `--prova-de-mockup` reprova.
-    """
-    # A CONTA É POR LUGAR desde 07/09/2026 — ver
-    # `test_o_lugar_vazio_nao_acende_degrau_mas_tem_onde_receber`.
+    """O parser da régua lê o mesmo endereço que o pintor escreve."""
     esperado = len(_aba05.FORCA) * len(_aba05.MESA)
     degraus = _campos(bancada, "degrau")
     assert len(degraus) == esperado, (
         f"a régua achou {len(degraus)} degraus, e são {esperado}")
     assert {c.alvo for c in degraus} == {"classe"}
     assert {c.quando for c in degraus} == {c for _, c in _aba05.FORCA}
-    # O CRAVADO de um alvo `classe` é o `quando` de quem tem a classe `on`, e
-    # `''` para as irmãs.
-    #
-    # **UM SÓ, E É A DECISÃO [05] DELA — 04/09/2026.** A cena tem o P1 com
-    # ajuste PRÓPRIO (acende `max` na coluna) e o P2 HERDANDO (nenhum aceso).
-    # Antes eram dois acesos, e as duas colunas mentiam sobre a mesma coisa: o
-    # degrau da coluna sem override era o do Hefesto, com a cara do dela.
     acesos = sorted(c.quando for c in degraus if c.valor)
     assert acesos == ["max"], (
         f"o desenho crava {acesos} — a cena tem UMA coluna com ajuste próprio "
         f"e UMA herdando, e é o que a decisão [05] existe para ensinar")
-    # E NÃO HÁ MAIS DEGRAU DE MESA: o endereço `degrau-mesa` saiu do desenho em
-    # 05/09/2026, com a linha que ele pintava. Esta régua guarda a remoção — um
-    # `degrau-mesa` de volta no desenho seria endereço sem campo que o alimente.
     assert not _campos(bancada, "degrau-mesa"), (
         "o `degrau-mesa` voltou ao desenho da aba 05")
 
 
 def test_o_degrau_deixa_de_ser_desenho_quando_o_pacote_o_declara(bancada, pacote) -> None:
-    """O veredito da régua sobre os quatro botões da coluna do P1.
-
-    ANTES do endereço eles eram `MOCKUP` — *"nenhum pacote declara este
-    endereço"*. Com o endereço e a declaração, a régua julga `PRODUTO`, e o
-    "Máximo" que o desenho cravava sai do ar.
-    """
+    """O veredito da régua sobre os quatro botões da coluna do P1."""
     cravados = [c for c in _regua._campos_cravados(bancada)
                 if c.chave == "degrau" and c.dono == "p1"]
     declarados = {("p1", "degrau"): "balanceado"}
-    # O QUE A TELA MOSTRA depois da pintura: acende `balanceado`, apagam as três
-    # irmãs. O desenho da cena crava `max` no P1 (ajuste próprio), então o
-    # veredito continua sendo PRODUTO por um caminho ainda mais claro — o vivo
-    # e o cravado diferem.
     vivos = ["balanceado" if c.quando == "balanceado" else "" for c in cravados]
     selos = [True] * len(cravados)
     vereditos = _regua._classificar(cravados, vivos, declarados, selos)
@@ -369,12 +263,7 @@ def test_o_degrau_deixa_de_ser_desenho_quando_o_pacote_o_declara(bancada, pacote
 
 
 def test_a_regua_acusa_o_degrau_que_ninguem_conhece(bancada) -> None:
-    """A MORDIDA de dentro: um token errado tem de ser ACUSADO, não perdoado.
-
-    Com o :data:`TOKEN_VIZINHO` os quatro apagariam e a tela ficaria sem
-    degrau aceso. A régua distingue isso de "apagado de propósito" porque
-    conhece os `quando` do grupo inteiro.
-    """
+    """A MORDIDA de dentro: um token errado tem de ser ACUSADO, não perdoado."""
     cravados = [c for c in _regua._campos_cravados(bancada)
                 if c.chave == "degrau" and c.dono == "p1"]
     vivos = ["" for _ in cravados]
@@ -385,34 +274,13 @@ def test_a_regua_acusa_o_degrau_que_ninguem_conhece(bancada) -> None:
         "a régua deu verde sobre um grupo inteiramente apagado")
 
 
-# --------------------------------------------------------------------------
-# 4. o contrato da largura — o que desmente o "endereço morto" do motor-e-pct
-# --------------------------------------------------------------------------
 def test_a_largura_sai_sem_o_por_cento(pacote, bancada) -> None:
-    """O alvo `largura` faz `el.style.width = valor + '%'` — o `%` é do pintor.
-
-    Emitir `'46.7%'` produziria `width:46.7%%`, que o CSS descarta: a barra
-    ficaria congelada no que o desenho cravou. É por isso que o pacote emite o
-    número pelado — e é essa tradução que a régua do mockup não refaz quando
-    acusa o `motor-e-pct` de endereço morto.
-    """
+    """O alvo `largura` faz `el.style.width = valor + '%'` — o `%` é do pintor."""
     largura = {c.chave for c in _regua._campos_cravados(bancada)
                if c.alvo == "largura"}
-    # ERAM TRÊS, VIRARAM DOIS E HOJE SÃO ZERO — e a conta é sempre a mesma: cada
-    # `<span class="cheio">` que virou `<input type=range>` levou junto o alvo
-    # `largura`, porque o que move um range é o `value`.
-    #
-    # * 03/09 — a linha "Personalizado" (`forca-pct` saiu do desenho);
-    # * 04/09 — as DUAS de motor, com a decisão dela de que a barra do motor é
-    #   POLÍTICA. `motor-e-pct` e `motor-d-pct` continuam sendo EMITIDOS pelo
-    #   pacote, e é de propósito: eles são a PONTE DE PUBLICAÇÃO, porque a
-    #   página que ela abre hoje ainda tem a linha como leitura.
     assert not largura, (
         f"voltou alvo `largura` a esta aba: {sorted(largura)} — as três barras "
         f"são `<input type=range>`, e o que o pintor escreve nelas é o `value`")
-    # O CONTRATO DO NÚMERO PELADO CONTINUA, e é o que esta régua guarda: quem
-    # emitir para um alvo `largura` (na página publicada, hoje) manda o número
-    # sem `%`, porque o pintor faz `el.style.width = valor + '%'`.
     for uniq, col in pacote["colunas"].items():
         for chave in ("motor-e-pct", "motor-d-pct", "forca-pct"):
             assert "%" not in str(col.get(chave, "")), (
@@ -436,17 +304,8 @@ def test_os_dois_motores_tem_o_mesmo_destino(pacote) -> None:
             f"e saíram {col['motor-e-pct']!r} e {col['motor-d-pct']!r}")
 
 
-# --------------------------------------------------------------------------
-# 6. o Testar aceso e os degraus do dono — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026
-# --------------------------------------------------------------------------
 def test_o_testar_de_cada_lugar_tem_endereco_de_estado(bancada) -> None:
-    """O "Testar" acende pelo alvo `classe`, e diz o mesmo pelo `aria-pressed`.
-
-    Desde 07/09 o "Testar" é ESTADO (`a05_vibracao._EM_TESTE`) e a tela não o
-    mostrava. O endereço é `em-teste`, um por lugar da mesa, e ele não leva a
-    marca de rótulo: com o alvo `classe`, o que a régua do mockup mede no
-    elemento é o estado, como nos degraus.
-    """
+    """O "Testar" acende pelo alvo `classe`, e diz o mesmo pelo `aria-pressed`."""
     lugares = bancada.count('data-controle="p')
     tags = re.findall(r'<button class="btn" data-papel="testar"[^>]*>', bancada)
     assert len(tags) == lugares, (
@@ -463,12 +322,7 @@ def test_o_testar_de_cada_lugar_tem_endereco_de_estado(bancada) -> None:
 
 
 def test_o_testar_acende_so_na_coluna_em_teste() -> None:
-    """O campo `em-teste` vale `"1"` na coluna do teste ligado, e só nela.
-
-    A MORDIDA: troque o valor por `""` no `a05_vibracao.pacote` e o primeiro
-    `assert` reprova; troque a comparação por `bool(em_teste())` e o P1 acende
-    junto com o P2.
-    """
+    """O campo `em-teste` vale `"1"` na coluna do teste ligado, e só nela."""
     import pacotes
     from pacotes import a05_vibracao as a05
 
@@ -487,13 +341,7 @@ def test_o_testar_acende_so_na_coluna_em_teste() -> None:
 
 
 def test_a_recusa_do_clique_sem_degrau_pergunta_ao_dono(monkeypatch) -> None:
-    """A frase que lista os degraus sai de `degraus_da_forca`, e não da escada.
-
-    Até 28/09 `_degraus_que_a_tela_oferece` lia `RUMBLE_POLICY_MULT` por conta
-    própria. Os dois têm hoje as mesmas três chaves, então comparar valores
-    não separa a cura do defeito: a régua troca o dono e vê a frase seguir.
-    A MORDIDA: devolva o laço a `RUMBLE_POLICY_MULT` e ela reprova.
-    """
+    """A frase que lista os degraus sai de `degraus_da_forca`, e não da escada."""
     from hefesto_dualsense4unix.app.telas import vibracao as tela
     from pacotes import a05_vibracao as a05
 
@@ -504,12 +352,7 @@ def test_a_recusa_do_clique_sem_degrau_pergunta_ao_dono(monkeypatch) -> None:
 
 
 def test_os_degraus_do_dono_sao_os_botoes_da_tela() -> None:
-    """`degraus_da_forca` devolve os três botões, na ordem da fileira desenhada.
-
-    O `Auto` saiu da tela em 05/09 e a função continuava devolvendo quatro,
-    sem ninguém que a perguntasse. A fileira do gerador (`aba05.FORCA`) é a
-    segunda testemunha: o gerador reprova a si mesmo se ela divergir.
-    """
+    """`degraus_da_forca` devolve os três botões, na ordem da fileira desenhada."""
     from hefesto_dualsense4unix.app.telas import vibracao as tela
 
     assert tela.degraus_da_forca() == tuple(c for _, c in _aba05.FORCA)

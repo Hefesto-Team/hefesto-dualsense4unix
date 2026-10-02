@@ -12,10 +12,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_numero_do_controle_unico: importa código da janela GTK")
 
 from typing import Any
@@ -59,8 +55,8 @@ class TestTelasConcordam:
         [
             {"player_slot": 3, "index": 0, "transport": "bt"},
             {"player_slot": 1, "index": 2, "transport": "usb"},
-            {"index": 1, "transport": "bt"},  # sem slot: cai na posição
-            {"transport": "bt"},  # sem nada
+            {"index": 1, "transport": "bt"},
+            {"transport": "bt"},
         ],
     )
     def test_inicio_status_e_cabecalho_dao_o_mesmo_numero(
@@ -74,22 +70,14 @@ class TestTelasConcordam:
 
         esperado = numero_do_controle(entry)
 
-        # cabeçalho / seletor
         assert _display_slot(entry) == esperado
 
-        # card da aba Início — recebe a entry, então o teste cobre de ONDE o
-        # número sai, que é exatamente onde estava o defeito.
         assert _format_controller_title(entry).startswith(f"Controle {esperado}")
 
-        # card da aba Status
         assert titulo_do_card(entry).startswith(f"Controle {esperado} ")
 
     def test_numero_do_jogador_pode_divergir_do_numero_do_controle(self) -> None:
-        """Divergir aqui é CORRETO: são coisas diferentes.
-
-        O daemon reusa índices de jogador quando alguém sai e outro entra, então
-        o controle 2 pode legitimamente ser o jogador 3.
-        """
+        """Divergir aqui é CORRETO: são coisas diferentes."""
         from hefesto_dualsense4unix.app.actions.home_actions import (
             _format_controller_title,
         )

@@ -61,7 +61,6 @@ MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 DRIVER = RAIZ / "assets" / "dkms" / "hid-playstation" / "hid-playstation.c"
 LEITURA = RAIZ / "docs" / "protocol" / "dualsense-modo-de-relatorio.md"
 
-#: As linhas que a leva de 03/09/2026 escreveu, e o que ela afirmou em cada uma.
 LINHAS_DA_LEVA = (
     "plataforma.modo_relatorio",
     "plataforma.handshake_usb",
@@ -70,14 +69,11 @@ LINHAS_DA_LEVA = (
     "plataforma.escrita_crua",
 )
 
-#: As duas que a leva DECIDIU não serem canal do aparelho. Ver o item 5 acima.
 SEM_CANAL_NO_APARELHO = (
     "plataforma.handshake_usb",
     "plataforma.taxa_relatorios.botao",
 )
 
-#: `#define` do driver -> valor que o mapa e a leitura citam. É esta tabela que
-#: transforma "eu li num repositório" em "confere com o que roda aqui".
 DEFINES_QUE_O_MAPA_CITA = {
     "DS_INPUT_REPORT_USB": "0x01",
     "DS_INPUT_REPORT_USB_SIZE": "64",
@@ -93,7 +89,6 @@ DEFINES_QUE_O_MAPA_CITA = {
     "DS_OUTPUT_TAG": "0x10",
 }
 
-#: A ordem que sustenta a célula `radio_comando` de `plataforma.modo_relatorio`.
 ORDEM_DA_PROBE = (
     "dualsense_get_mac_address",
     "dualsense_get_firmware_info",
@@ -159,12 +154,7 @@ def test_o_numero_que_o_mapa_cita_e_o_numero_do_driver(
 def test_o_common_de_saida_tem_os_47_bytes_que_a_casa_conta(
     fonte_do_driver: str,
 ) -> None:
-    """Os 47 bytes do `common` e os 63 do 0x02 sustentam a `cabo_detalhe`.
-
-    A célula de `plataforma.escrita_crua@dualsense` diz que os 15 bytes finais
-    do report de saída por cabo são enchimento OPCIONAL, e a conta que sustenta
-    isso é 1 + 47 + 15 == 63. Se qualquer parcela mudar, a conta some.
-    """
+    """Os 47 bytes do `common` e os 63 do 0x02 sustentam a `cabo_detalhe`."""
     assert (
         "static_assert(sizeof(struct dualsense_output_report_common) == 47);"
         in fonte_do_driver
@@ -181,13 +171,7 @@ def test_o_common_de_saida_tem_os_47_bytes_que_a_casa_conta(
 def test_a_probe_le_os_features_antes_de_criar_o_gamepad(
     fonte_do_driver: str,
 ) -> None:
-    """A ORDEM é o argumento inteiro da linha `plataforma.modo_relatorio`.
-
-    As três leituras de feature (0x09, 0x20, 0x05) acontecem antes de o driver
-    passar a consumir report de entrada. É por isso que ele nunca vê o modo
-    básico por rádio — e é por isso que ele pode não ter ramo para o `0x01`
-    por Bluetooth. Inverter a ordem mata a explicação.
-    """
+    """A ORDEM é o argumento inteiro da linha `plataforma.modo_relatorio`."""
     corpo = _corpo(fonte_do_driver, "dualsense_create")
     posicoes = []
     for chamada in ORDEM_DA_PROBE:
@@ -235,12 +219,7 @@ def test_o_parser_do_dualsense_nao_tem_ramo_para_o_0x01_por_radio(
 def test_nada_desta_leva_se_promoveu_a_medido(
     linhas_do_mapa: dict[str, dict[str, str]], chave: str
 ) -> None:
-    """Nada foi ao aparelho em 03/09/2026, e o grau tem de continuar dizendo isso.
-
-    O portão de paridade confere a FORMA — quem afirma diz de onde sabe — e não
-    tem como saber que a origem foi um repositório na internet. Esta é a régua
-    que sabe.
-    """
+    """Nada foi ao aparelho em 03/09/2026, e o grau tem de continuar dizendo isso."""
     linha = linhas_do_mapa[chave]
     for lado in ("cabo", "radio"):
         assert not linha[f"{lado}_ate_onde_foi"].strip(), (
@@ -291,9 +270,6 @@ def test_a_leitura_da_leva_continua_na_arvore() -> None:
     )
 
 
-#: Os CINCO ids que a célula `radio_comando` de `plataforma.modo_relatorio` tem
-#: direito de nomear: os dois reports de ENTRADA que ela contrasta e os TRÊS
-#: features cuja leitura dispara a troca. Nem um a mais, nem um a menos.
 IDS_DO_GATILHO = {
     "0x01": "DS_INPUT_REPORT_USB",
     "0x31": "DS_INPUT_REPORT_BT",
@@ -306,20 +282,7 @@ IDS_DO_GATILHO = {
 def test_os_ids_que_a_celula_do_gatilho_nomeia_sao_os_do_driver(
     linhas_do_mapa: dict[str, dict[str, str]], fonte_do_driver: str
 ) -> None:
-    """O BURACO QUE ESTE TESTE FECHA, medido em 03/09/2026 com a cura arrancada.
-
-    O `test_o_numero_que_o_mapa_cita_e_o_numero_do_driver` lê SÓ o driver: ele
-    confere que o `#define` continua valendo o que a leva citou, e **nunca abre
-    o CSV**. A docstring deste arquivo prometia que trocar `0x09` por `0x0B`
-    numa célula reprovaria — e a mordida mediu que NÃO reprovava: 23 testes
-    passaram com o id trocado. É a forma que esta casa já conhece de cor, a
-    régua confundindo *«a fonte ainda diz X»* com *«a célula diz X»*.
-
-    Este teste lê os DOIS lados. Ele cobra que o conjunto de ids nomeado na
-    célula seja exatamente `IDS_DO_GATILHO` — trocar um reprova, apagar um
-    reprova, inventar um sexto reprova — e que cada um valha, no driver desta
-    máquina, o que a célula diz que vale.
-    """
+    """O BURACO QUE ESTE TESTE FECHA, medido em 03/09/2026 com a cura arrancada."""
     celula = linhas_do_mapa["plataforma.modo_relatorio"]["radio_comando"]
     citados = set(re.findall(r"0x[0-9A-Fa-f]{2}", celula))
 

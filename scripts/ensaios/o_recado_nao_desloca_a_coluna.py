@@ -13,15 +13,10 @@ medição.
 import sys
 import pathlib
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA — a armadilha que oito arquivos desta
-# casa já pagaram quando a pasta mudou de nome.
 _RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 sys.path.insert(0, str(_RAIZ / "src"))
 import argparse
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -70,7 +65,6 @@ def passo_a():
     return False
 
 def passo_b():
-    # a recusa pelo caminho do produto — o mesmo que um RuntimeError faz
     mesa = piloto._mesa_de_agora or {}
     primeiro = next(iter(mesa), None) or {}
     uniq = primeiro.get("uniq") if isinstance(primeiro, dict) else str(primeiro)

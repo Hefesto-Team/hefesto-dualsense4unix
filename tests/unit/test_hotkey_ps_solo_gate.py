@@ -59,7 +59,6 @@ def _patch_steam(monkeypatch) -> list[Any]:
     monkeypatch.setattr(
         steam_launcher, "open_or_focus_steam", lambda: opened.append(True) or True
     )
-    # Guard-rail do review: o gate NÃO pode chamar subprocess (pgrep) no poll loop.
     def _boom(*_a, **_kw):  # pragma: no cover
         raise AssertionError("gate do PS-solo não pode rodar subprocess/pgrep")
 
@@ -101,13 +100,7 @@ def test_ps_solo_none_nao_faz_nada(monkeypatch):
     assert opened == []
 
 
-# ===========================================================================
-# PS-TOQUE-CURTO-01 — o gate de DURAÇÃO do toque curto
-# ===========================================================================
-
-# O hold do religamento, em segundos, como saiu do journal dela em 02/08/2026.
 HOLD_RELIGAMENTO_S = 5.0382
-# Um clique intencional humano fica em 80-250 ms.
 HOLD_TOQUE_S = 0.200
 
 
@@ -117,19 +110,8 @@ def _press_release(mgr: HotkeyManager, *, hold_s: float) -> str | None:
     return mgr.observe([], now=hold_s)
 
 
-# ---------------------------------------------------------------------------
-# E1 — a mordida
-# ---------------------------------------------------------------------------
-
-
 def test_segurar_para_religar_nao_abre_a_steam() -> None:
-    """5.038 ms NÃO é toque; 200 ms É. Os dois no mesmo teste, de propósito.
-
-    Um teste que só afirmasse "o hold longo não dispara" passaria com a cura
-    virando "o botão PS parou de funcionar". Um que só afirmasse "o toque curto
-    dispara" passaria com a cura arrancada. Os dois juntos mordem dos dois
-    lados.
-    """
+    """5.038 ms NÃO é toque; 200 ms É. Os dois no mesmo teste, de propósito."""
     longo: list[str] = []
     mgr_longo = HotkeyManager(on_ps_solo=lambda: longo.append("solo"))
     evento_longo = _press_release(mgr_longo, hold_s=HOLD_RELIGAMENTO_S)
@@ -193,18 +175,13 @@ def test_o_hold_longo_nao_arma_o_proximo_toque() -> None:
     assert mgr.observe([], now=HOLD_RELIGAMENTO_S) is None
     assert fired == []
 
-    # Agora um toque de verdade, logo em seguida.
     mgr.observe(["ps"], now=6.0)
     assert mgr.observe([], now=6.2) == "ps_solo"
     assert fired == ["solo"]
 
 
 def test_o_teto_nao_atrapalha_o_long_press_quando_ele_esta_ligado() -> None:
-    """Com o long-press LIGADO, quem suprime o release continua sendo ele.
-
-    O teto não transforma o gesto em nada: o long-press já disparou durante o
-    hold, e o release só confirma a supressão que já existia.
-    """
+    """Com o long-press LIGADO, quem suprime o release continua sendo ele."""
     solo: list[str] = []
     longp: list[str] = []
     mgr = HotkeyManager(
@@ -219,17 +196,8 @@ def test_o_teto_nao_atrapalha_o_long_press_quando_ele_esta_ligado() -> None:
     assert solo == []
 
 
-# ---------------------------------------------------------------------------
-# E2 — a recusa APARECE no journal
-# ---------------------------------------------------------------------------
-
-
 def test_a_recusa_do_hold_longo_vai_para_o_journal() -> None:
-    """Um hold engolido em silêncio manda a próxima investigação ao lugar errado.
-
-    O evento carrega `held_ms` E `teto_ms`: sem o segundo não dá para saber, no
-    journal, se o teto de então era o de hoje.
-    """
+    """Um hold engolido em silêncio manda a próxima investigação ao lugar errado."""
     mgr = HotkeyManager(on_ps_solo=lambda: None)
     with structlog.testing.capture_logs() as registros:
         _press_release(mgr, hold_s=HOLD_RELIGAMENTO_S)
@@ -260,11 +228,6 @@ def test_as_tres_saidas_do_botao_tem_eventos_distintos() -> None:
     assert "ps_solo_ignorado_hold_longo" not in honrado
     assert "ps_solo_ignorado_hold_longo" in recusado
     assert "ps_solo_released" not in recusado
-
-
-# ---------------------------------------------------------------------------
-# A configuração — mesmo lugar e mesma forma do `ps_long_press_ms`
-# ---------------------------------------------------------------------------
 
 
 def test_o_teto_sai_da_env_var(monkeypatch) -> None:

@@ -1,16 +1,4 @@
-"""Editor de perfis e o sentinel `{"type": "manual"}` (débito R-12 item 3).
-
-O sentinel só serve para alguma coisa se a GUI souber escrevê-lo e lê-lo:
-
-- editor avançado com os TRÊS campos vazios grava `MatchManual` (era um
-  `MatchCriteria` vazio, que nunca casa e é indistinguível do acidente);
-- abrir esse perfil e salvar de novo o mantém manual — sem o round-trip, uma
-  visita à aba Perfis rebaixaria a declaração para o acidente;
-- a coluna "Quando usar" diz a mesma frase do criteria vazio.
-
-Hermético: stubs de `gi.repository` quando falta PyGObject (padrão de
-`test_r12_editor_simples_gui.py`), widgets fake, nenhum GTK real construído.
-"""
+"""Editor de perfis e o sentinel `{"type": "manual"}` (débito R-12 item 3)."""
 from __future__ import annotations
 
 import sys
@@ -19,9 +7,6 @@ from typing import Any
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o
-# stub que outro arquivo de teste planta em sys.modules — e por isso
-# deixava este módulo rodar contra um GTK de mentira.
 exigir_gi_real("editor manual de perfil")
 
 
@@ -122,11 +107,7 @@ class _FakeSwitch:
 
 
 class _FakeBox:
-    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
-
-    CAMPO-QUE-NAO-NASCIA-01: nasce com ``no_show_all`` armado como no glade;
-    ``show()`` para na caixa e só ``show_all()`` desarmado desce nos filhos.
-    """
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK."""
 
     def __init__(self) -> None:
         self.visivel = False

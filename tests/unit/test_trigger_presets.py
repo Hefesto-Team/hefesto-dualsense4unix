@@ -19,18 +19,10 @@ from hefesto_dualsense4unix.profiles.trigger_presets import (
     resolve_vibration_preset,
 )
 
-# ---------------------------------------------------------------------------
-# Constantes de referência
-# ---------------------------------------------------------------------------
 
 _RANGE_MIN = 0
 _RANGE_MAX = 8
 _N_POSICOES = 10
-
-
-# ---------------------------------------------------------------------------
-# Testes — Feedback por posicao
-# ---------------------------------------------------------------------------
 
 
 class TestFeedbackPositionPresets:
@@ -76,7 +68,6 @@ class TestFeedbackPositionPresets:
         valores = FEEDBACK_POSITION_PRESETS["rampa_crescente"]
         assert valores[0] == 0, "rampa_crescente deve comecar em 0"
         assert valores[-1] == 8, "rampa_crescente deve terminar em 8"
-        # Deve ser não-decrescente
         for i in range(len(valores) - 1):
             assert valores[i] <= valores[i + 1], (
                 f"rampa_crescente não é monotonica na posicao {i}"
@@ -86,16 +77,10 @@ class TestFeedbackPositionPresets:
         valores = FEEDBACK_POSITION_PRESETS["rampa_decrescente"]
         assert valores[0] == 8, "rampa_decrescente deve comecar em 8"
         assert valores[-1] == 0, "rampa_decrescente deve terminar em 0"
-        # Deve ser não-crescente
         for i in range(len(valores) - 1):
             assert valores[i] >= valores[i + 1], (
                 f"rampa_decrescente não é monotonica na posicao {i}"
             )
-
-
-# ---------------------------------------------------------------------------
-# Testes — Vibracao por posicao
-# ---------------------------------------------------------------------------
 
 
 class TestVibrationPositionPresets:
@@ -140,17 +125,11 @@ class TestVibrationPositionPresets:
     def test_machine_gun_alterna(self) -> None:
         """machine_gun deve ter padrão alternado de alta/baixa amplitude."""
         valores = VIBRATION_POSITION_PRESETS["machine_gun"]
-        # Posicoes impares (1, 3, 5, 7, 9) devem ser maiores que as pares vizinhas
         for i in range(1, len(valores), 2):
             assert valores[i] >= valores[i - 1], (
                 f"machine_gun: posicao {i} ({valores[i]}) deveria ser >= posicao "
                 f"{i-1} ({valores[i-1]})"
             )
-
-
-# ---------------------------------------------------------------------------
-# Testes de integridade das constantes exportadas
-# ---------------------------------------------------------------------------
 
 
 class TestIntegridadeExportacoes:

@@ -1,24 +1,4 @@
-"""MODO-DE-CONEXAO-01 — o texto do modo não fala da máscara.
-
-A queixa dela, 13/09/2026, está citada na sprint: *"o texto do modo do xbox tá
-errado aquilo é o texto da mascara do xbox"*. As dicas dos chips de modo diziam
-como o jogo DESENHA os botões — que é assunto da máscara, e a máscara mora no
-cartão de cada controle. Os textos novos são os do §D.9 da sprint.
-
-A régua lê a página PUBLICADA (`interface/paginas/01-jogar.html`), que é o que o
-produto renderiza — e não o gerador: uma dica certa no `aba01.py` que não foi
-publicada não chega à tela dela. Lê:
-
-* o `title` de todo `[data-gesto^="modo-"]` — a dica de cada chip de modo;
-* o «?» do quadro **Modo**;
-
-e proíbe ali o vocabulário da máscara. E exige que o assunto continue onde ele
-mora, no «?» do quadro dos cartões: tirar a máscara do modo não pode apagá-la
-da tela.
-
-MORDE: devolver a `aba01.MODOS` a dica de antes (*"O jogo desenha os botões do
-PlayStation."*) e regerar e publicar a 01.
-"""
+"""MODO-DE-CONEXAO-01 — o texto do modo não fala da máscara."""
 from __future__ import annotations
 
 import html
@@ -32,7 +12,6 @@ PUBLICADA = (
     / "01-jogar.html"
 )
 
-#: O vocabulário da máscara — a lista é a do §V da sprint.
 DA_MASCARA = (
     "desenha",
     "botões do",
@@ -44,11 +23,8 @@ DA_MASCARA = (
     "Y B A X",
 )
 
-#: O que o «?» dos cartões tem de continuar dizendo: os nomes das três máscaras
-#: e os botões que cada uma põe na tela do jogo.
 O_CARTAO_GUARDA = ("botões", "Xbox 360", "Nintendo", "△ ○ ✕ ▢", "Y B A X")
 
-#: Os quatro chips da fileira de modos.
 CHIPS_DE_MODO = {"modo-dualsense", "modo-xbox", "modo-steam", "modo-navegacao"}
 
 

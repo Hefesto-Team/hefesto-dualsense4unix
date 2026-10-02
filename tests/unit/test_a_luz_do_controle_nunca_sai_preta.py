@@ -1,26 +1,4 @@
-"""A luz do controle nunca sai preta, e a cor de um não depende do brilho de outro.
-
-A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01, o achado 10 da bancada de 29/09 (02h30):
-*«a lightbar do controle tá preto (preto tinha sido banido) e pra piorar a cor
-do lightbar do branco é azul»*. A luz do White saía `(0, 0, 20)`: a cor
-guardada era fóssil, a do número dele estava com o Cosmic Red, o resolvedor a
-deslocava ao primeiro tom livre (o azul), e tudo no brilho de 8% dele.
-
-As réguas, e nenhuma mede a própria saída:
-
-4. o tom de uma peça não depende do brilho de outra: o resolvedor comparado
-   consigo mesmo, com o brilho de cada OUTRA peça variando;
-5. a tela e o daemon dizem o mesmo fóssil: a aba Iluminação e a mesa que o
-   backend real monta, peça a peça, em todos os brilhos da régua 4.
-
-COMO MORDER:
-
-* régua 4 — volte qualquer uma das três perguntas de `led_control` para o
-  byte (`peca.pedida in numeros` no legado de `_e_fossil`, `in tomadas` na
-  repetida, `not in tomadas` no global): a mesa dela reprova;
-* régua 5 — a tela volta a montar a peça com as cores cheias e a comparar
-  pelo byte (`peca.pedida in numeros`).
-"""
+"""A luz do controle nunca sai preta, e a cor de um não depende do brilho de outro."""
 from __future__ import annotations
 
 import pathlib
@@ -47,12 +25,9 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
 RGB = tuple[int, int, int]
 
-#: Uniqs FORJADOS (faixa `aa:bb:cc`), nunca a máscara de um endereço real.
 UNIQS = [f"aabbcc00000{n}" for n in (1, 2, 3, 4)]
 MACS = [f"AA:BB:CC:00:00:0{n}" for n in (1, 2, 3, 4)]
 
-#: Os brilhos da régua 4: o de 8% é o do White das 02:30, e o de 99% e 100%
-#: são a borda em que o byte trocava a resposta.
 BRILHOS = (0.01, 0.08, 0.5, 0.99, 1.0)
 
 
@@ -76,10 +51,6 @@ BRANCO: RGB = (255, 255, 255)
 AZUL: RGB = (0, 0, 255)
 VERDE: RGB = (0, 255, 0)
 
-#: A mesa das 02:30 (`demo/05-estado.txt` e o `freestyle.json` lido): o Cosmic
-#: Red com o vermelho legado, o White com o amarelo escolhido para o 1 a 8%, o
-#: Starlight Blue com o laranja do 3 e o Galactic Purple com o verde-água do 4
-#: a 99%.
 MESA_DAS_0230 = (
     Escolha(UNIQS[0], 1, VERMELHO, LEGADO, 1.0),
     Escolha(UNIQS[1], 2, AMARELO, 1, 0.08),
@@ -87,8 +58,6 @@ MESA_DAS_0230 = (
     Escolha(UNIQS[3], 4, VERDE_AGUA, 4, 0.99),
 )
 
-#: A mesa das 01:24: o Starlight Blue com o rosa legado (a cor do número 4) e
-#: o Galactic Purple a 99%. O rosa dele ficava aceso por 1% de brilho do outro.
 MESA_DAS_0124 = (
     Escolha(UNIQS[0], 1, VERMELHO, LEGADO, 1.0),
     Escolha(UNIQS[1], 2, AMARELO, 1, 0.08),
@@ -96,8 +65,6 @@ MESA_DAS_0124 = (
     Escolha(UNIQS[3], 4, BRANCO, 4, 0.99),
 )
 
-#: A paleta desligada: uma escolha repetida (o azul do P1 no P2, a 50%) e um
-#: controle no azul GLOBAL a 50% ao lado do P1 azul.
 MESA_SEM_PALETA = (
     Escolha(UNIQS[0], 1, AZUL, 1, 1.0),
     Escolha(UNIQS[1], 2, AZUL, 2, 0.5),
@@ -106,9 +73,6 @@ MESA_SEM_PALETA = (
 )
 GLOBAL_AZUL: RGB = AZUL
 
-#: Um legado ESCURECIDO: o azul do P1 a 82%, `(0, 0, 209)`, gravado como cor
-#: por um «Salvar» que leu o aparelho. Pelo byte cheio ele não é a cor de
-#: número de ninguém; pelo tom, é o azul do 1, e é fóssil no P2.
 MESA_DO_LEGADO_ESCURO = (
     Escolha(UNIQS[0], 1, None, DA_PALETA, 1.0),
     Escolha(UNIQS[1], 2, (0, 0, 209), LEGADO, 1.0),
@@ -157,17 +121,9 @@ def _variacoes(escolhas: tuple[Escolha, ...]):
             yield i, brilho, tuple(nova)
 
 
-# ===========================================================================
-# 4. O tom de uma peça não depende do brilho de outra
-# ===========================================================================
 @pytest.mark.parametrize("nome", sorted(MESAS))
 def test_o_tom_de_uma_peca_nao_depende_do_brilho_de_outra(nome: str) -> None:
-    """A saída de cada peça é a mesma com o trilho de qualquer OUTRA em qualquer ponto.
-
-    Antes da cura, com o byte: o Cosmic Red virava azul com o White a 100%, o
-    Starlight Blue virava verde com o Galactic Purple a 100%, e a repetida e o
-    global só se deslocavam no brilho igual ao do dono da cor.
-    """
+    """A saída de cada peça é a mesma com o trilho de qualquer OUTRA em qualquer ponto."""
     escolhas, paleta = MESAS[nome]
     base = cores_sem_colisao(_pecas(escolhas, paleta))
     trocas = []
@@ -182,18 +138,12 @@ def test_o_tom_de_uma_peca_nao_depende_do_brilho_de_outra(nome: str) -> None:
 
 
 def test_a_repetida_e_o_global_cedem_pelo_tom() -> None:
-    """A escolha repetida a 50% e o global a 50% ao lado do P1 azul cheio saem do azul.
-
-    O byte deixava os dois no azul, porque `(0, 0, 127)` não é `(0, 0, 255)`.
-    """
+    """A escolha repetida a 50% e o global a 50% ao lado do P1 azul cheio saem do azul."""
     saida = cores_sem_colisao(_pecas(MESA_SEM_PALETA, False))
     for uniq in (UNIQS[1], UNIQS[2]):
         assert not lc._mesmo_tom(saida[uniq], saida[UNIQS[0]]), saida
 
 
-# ===========================================================================
-# 5. A tela e o daemon dizem o mesmo fóssil
-# ===========================================================================
 def _provider(ranks: dict[str, int]) -> Any:
     """O provider com as duas companheiras do daemon (o número e a mesa)."""
 
@@ -278,10 +228,6 @@ def test_o_legado_da_cor_de_outro_numero_e_fossil_em_todo_brilho() -> None:
         assert UNIQS[2] in _fosseis_do_daemon(variada)
 
 
-# ===========================================================================
-# 6. A cor automática tem um dono, e ele sabe o plástico
-#    (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO, a resposta (b))
-# ===========================================================================
 BRANCO_ID = "aabbcc0000b1"
 BRANCO_ID_2 = "aabbcc0000b2"
 SEM_PLASTICO = "aabbcc0000c1"
@@ -289,12 +235,7 @@ SEM_PLASTICO = "aabbcc0000c1"
 
 @pytest.fixture
 def registro(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """O registro de identidade REAL, num disco de mentira, com o leitor de dublê.
-
-    O leitor de dublê responde como o de verdade (`IdentidadeDeFabrica`), e
-    quem o chama é o registro, pelo mesmo fio que o daemon arma
-    (`make_auto_output_provider`). Nenhum byte vai a aparelho nenhum.
-    """
+    """O registro de identidade REAL, num disco de mentira, com o leitor de dublê."""
     from hefesto_dualsense4unix.daemon.subsystems import identity as id_mod
     from hefesto_dualsense4unix.integrations import cor_do_plastico as cp
     from hefesto_dualsense4unix.utils import xdg_paths
@@ -392,12 +333,6 @@ def test_o_degrau_4_da_tela_diz_o_mesmo_que_o_provider(registro: Any) -> None:
         assert a04._a_cor_de_agora(ctx, None, c) == provider(c["uniq"]).led, c
 
 
-# ===========================================================================
-# 6b. A escolha não cede à vizinhança do plástico; a automática cede
-#     (conferência de 29/09/2026)
-# ===========================================================================
-#: Os tons de luz dos plásticos da mesa dela, pela regra do dono
-#: (`cor_do_plastico.tom_da_luz`), lidos e não digitados.
 def _tom(nome: str) -> RGB:
     from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_da_luz_do_nome
 
@@ -430,30 +365,16 @@ def _escolhida(uniq: str, numero: int, cor: RGB, plastico: str | None,
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
 @pytest.mark.parametrize(("plastico", "escolha"), [
-    ("Galactic Purple", ROXO_DA_PALETA),  # a 0,8° do roxo da paleta
-    ("Cosmic Red", ROSA),                  # a 10,7° do rosa
-    ("White", (252, 252, 252)),           # a casa do branco da fileira
+    ("Galactic Purple", ROXO_DA_PALETA),
+    ("Cosmic Red", ROSA),
+    ("White", (252, 252, 252)),
 ], ids=["roxo-ao-lado-do-galactic", "rosa-ao-lado-do-cosmic", "branco-ao-lado-do-white"])
 def test_a_escolha_ao_lado_de_um_plastico_vizinho_fica(plastico: str, escolha: RGB,
                                                         k: int, via: str) -> None:
-    """A cor que ela escolheu fica, e o plástico vizinho de outro controle cede ao número.
-
-    A tela recusa com o X só a casa EXATA (`_sem_repetir_a_cor_do_vizinho`): o
-    roxo da paleta ao lado do Galactic Purple aceso não tem X, e o daemon não
-    pode deslocá-lo calado (D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X,
-    *«nada se desloca sozinho»*). Vale para o plástico em qualquer número,
-    antes ou depois da escolha na ordem; `via` não muda a mesa (a cor chega
-    pelo mesmo RGB nos dois transportes) e fica para a matriz dizer os dois.
-
-    **A MORDIDA:** tire de `_repetida` a volta que faz o plástico ceder à
-    escolha de quem vem depois (`escolhas_que_ficam`): o Galactic Purple no P1
-    fica no roxo dele ao lado do roxo escolhido pelo P2, duas luzes iguais na
-    mão. Tirando também o `vizinhanca=False` da escolha (o código de antes da
-    conferência), o roxo do P2 sai deslocado, calado.
-    """
+    """A cor que ela escolheu fica, e o plástico vizinho de outro controle cede ao número."""
     del via
     numeros = [1, 2, 3, 4]
-    quem_escolhe = numeros[(k % 4)]  # o vizinho de número do plástico
+    quem_escolhe = numeros[(k % 4)]
     mesa = []
     for n in numeros:
         uniq = UNIQS[n - 1]
@@ -473,13 +394,7 @@ def test_a_escolha_ao_lado_de_um_plastico_vizinho_fica(plastico: str, escolha: R
 
 
 def test_na_mesa_das_0230_cada_plastico_acende_a_luz_da_prova() -> None:
-    """A prova da sprint na função pura: a mesa das 02:30 com os plásticos lidos.
-
-    O Cosmic Red fica no vermelho legado (a escolha antiga, que não é a
-    automática de ninguém), o White volta do amarelo fóssil ao branco do
-    plástico no piso do brilho dele, e o Starlight Blue e o Galactic Purple
-    ficam nas escolhas das 02:01.
-    """
+    """A prova da sprint na função pura: a mesa das 02:30 com os plásticos lidos."""
     mesa = [
         replace(_automatica(UNIQS[0], 1, "Cosmic Red"), pedida=VERMELHO,
                 procedencia=LEGADO),
@@ -497,16 +412,12 @@ def test_na_mesa_das_0230_cada_plastico_acende_a_luz_da_prova() -> None:
     }, saida
 
 
-# ===========================================================================
-# 7. O daemon sabe o plástico sem a janela
-# ===========================================================================
 def test_o_tique_de_presenca_pergunta_o_plastico_sem_state_full(registro: Any) -> None:
     """O `sync_connected` agenda a pergunta de quem chega, e o provider vê o plástico."""
     provider = _mesa_do_registro(registro, [BRANCO_ID])
     _esperar_o_plastico(registro, BRANCO_ID)
     assert registro.perguntas == [BRANCO_ID]
     assert provider.tom_do_plastico(BRANCO_ID) == BRANCO
-    # A resposta definitiva não se pergunta de novo.
     registro.sync_connected([BRANCO_ID])
     assert registro.perguntas == [BRANCO_ID]
 
@@ -515,16 +426,7 @@ def test_o_tique_de_presenca_pergunta_o_plastico_sem_state_full(registro: Any) -
                          ids=["plastico-com-tom", "sem-plastico"])
 def test_a_luz_converge_quando_o_plastico_chega(registro: Any, uniq: str,
                                                reafirma: bool) -> None:
-    """O plástico com tom chega e o backend reafirma a luz na hora, sem esperar o `connect()`.
-
-    Conferência de 29/09/2026: a cor do plástico chegava ao provider, e a
-    barra só a acendia no próximo `connect()` (até 30 s, e 300 s com a volta
-    online pelo evento). Sem tom, a automática não muda, e nada se reafirma.
-
-    **A MORDIDA:** tire o `avisar(self.reassert_resolved_outputs)` de
-    `set_auto_output_provider` (ou o `aviso()` do registro): o branco lido
-    nunca reafirma a luz.
-    """
+    """O plástico com tom chega e o backend reafirma a luz na hora, sem esperar o `connect()`."""
     import threading
 
     chegou = threading.Event()
@@ -544,13 +446,6 @@ def test_sem_a_fiacao_do_daemon_nenhuma_pergunta_sai(registro: Any) -> None:
     assert registro.identidade_de_fabrica(BRANCO_ID) is None
 
 
-# ===========================================================================
-# 8. A luz acesa se vê (D-2909-O-BRILHO-TEM-PISO)
-# ===========================================================================
-#: O FATO DE FORA DO DONO que ancora a régua: às 02:30 de 29/09 a luz do
-#: White a 8% era `(0, 0, 20)`, e ela a leu como preto. Sem esta âncora,
-#: zerar a constante do piso deixaria a régua verde, porque ela leria o zero
-#: do próprio dono.
 LIDA_COMO_PRETO = 20
 BRILHO_DAS_0230 = 0.08
 
@@ -602,11 +497,7 @@ def test_o_provider_acende_no_piso(registro: Any) -> None:
 
 @pytest.mark.parametrize("brilho_do_perfil", [1.0, None], ids=["com-o-perfil", "fator-sem-base"])
 def test_o_trilho_por_controle_acende_no_piso(brilho_do_perfil: float | None) -> None:
-    """O merge do backend com o trilho de um controle a 8% e o perfil a 100%.
-
-    `fator-sem-base` é o backend a quem o perfil não publicou o brilho: a conta
-    do fator relativo passa pelo dono da escala, e não por conta própria.
-    """
+    """O merge do backend com o trilho de um controle a 8% e o perfil a 100%."""
     escolhas = MESA_DO_LEGADO_ESCURO
     ctl = bp.PyDualSenseController()
     ctl._handles = dict.fromkeys(MACS)

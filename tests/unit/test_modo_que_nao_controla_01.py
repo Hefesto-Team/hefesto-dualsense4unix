@@ -32,10 +32,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_modo_que_nao_controla_01: importa código da janela GTK")
 
 import sys
@@ -105,16 +101,14 @@ class TestAFraseCerta:
         )
 
     def test_os_dois_desligados_falam_dos_dois(self) -> None:
-        """Com os dois desligados o modo não faz NADA — dizer só do mouse
-        mandaria ela ligar um interruptor e continuar sem entender o outro."""
+        """Com os dois desligados o modo não faz NADA — dizer só do mouse"""
         assert (
             texto_do_desktop_sem_emulacao(_estado(mouse=False, teclado=False))
             == TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO
         )
 
     def test_a_frase_diz_onde_ligar(self) -> None:
-        """Padrão do `_reconciliar_gate_text`: dizer o que não vai acontecer
-        E o caminho. Sem o "onde", o aviso vira só má notícia."""
+        """Padrão do `_reconciliar_gate_text`: dizer o que não vai acontecer"""
         for frase in (
             TEXTO_DESKTOP_SEM_MOUSE,
             TEXTO_DESKTOP_SEM_TECLADO,
@@ -131,8 +125,7 @@ class TestSemAlarmeFalso:
         assert texto_do_desktop_sem_emulacao(_estado(mouse=True, teclado=True)) is None
 
     def test_no_modo_jogo_o_mouse_desligado_e_o_desenho_normal(self) -> None:
-        """Em "Jogar pelo Hefesto" a exclusão mútua do daemon desliga o mouse —
-        avisar ali seria acusar o produto de fazer exatamente o que deve."""
+        """Em "Jogar pelo Hefesto" a exclusão mútua do daemon desliga o mouse —"""
         assert (
             texto_do_desktop_sem_emulacao(
                 _estado(mouse=False, teclado=True, gamepad=True)
@@ -149,8 +142,7 @@ class TestSemAlarmeFalso:
         )
 
     def test_saindo_do_desktop_o_aviso_cala(self) -> None:
-        """AGORA-E-DEPOIS-01: com pendência, a caixa mostra a ESCOLHA dela.
-        Avisar sobre o modo que ela está deixando responde a pergunta errada."""
+        """AGORA-E-DEPOIS-01: com pendência, a caixa mostra a ESCOLHA dela."""
         assert (
             texto_do_desktop_sem_emulacao(
                 _estado(mouse=False, teclado=True), modo_exibido="gamepad"
@@ -184,25 +176,7 @@ class TestSemAlarmeFalso:
 
 
 class TestAEntradaLigaOMouse:
-    """A saída que 09/08 não tomou, e por que 29/09 a tomou.
-
-    ANTES (09/08): ligar o mouse ao entrar em "Controlar o PC" sobrescreveria o
-    interruptor que ela desligou na aba Navegação, e *"a vontade na GUI
-    prevalece sempre"* (a letra dela de 09/08) valia para o gesto do
-    interruptor tanto quanto para o gesto do modo.
-
-    DESDE 29/09 (D-2909-A-NAVEGACAO-LIGA-O-MOUSE, decidida pelo padrão dela e
-    reversível): o `false` que o chip obedecia não era gesto dela na GUI — era
-    o `{false, 6, 1}` que a janela copiava do estado vivo para o perfil, em oito
-    perfis iguais —, e o chip é. Entre dois gestos dela vale o mais novo, que é
-    a regra de ORDEM que o produto já segue na ativação. Na bancada de 29/09
-    (achado 13) ela tocou o chip e o cursor não andou; o PS + R3, pela mesma
-    porta, ligava. O interruptor da aba Navegação segue valendo enquanto ela
-    estiver lá, e numa ativação de perfil que diga Navegação.
-
-    Quem mede o mouse ligado é o daemon
-    (`test_o_mouse_segue_a_navegacao.py`); aqui fica o plano da tela.
-    """
+    """A saída que 09/08 não tomou, e por que 29/09 a tomou."""
 
     def test_o_plano_do_desktop_passa_pelo_arranjo(self) -> None:
         """O plano entra pelo arranjo, que é quem liga o mouse no daemon.
@@ -221,12 +195,7 @@ class TestAEntradaLigaOMouse:
             "mouse na entrada da Navegação")
 
     def test_o_chip_nao_manda_parametro_que_o_ps_r3_nao_manda(self) -> None:
-        """As duas portas pedem o mesmo: o `forcar_mouse` saiu com o socorro.
-
-        Até 29/09 o PS + R3 mandava `forcar_mouse=True` e o clique não; agora
-        entrar liga o mouse pelas duas, e um parâmetro só de uma porta seria
-        as duas voltando a fazer coisas diferentes.
-        """
+        """As duas portas pedem o mesmo: o `forcar_mouse` saiu com o socorro."""
         passos = dict(plan_mode_transition(MODE_DESKTOP))
 
         assert "forcar_mouse" not in passos["desktop.arranjo.apply"]
@@ -247,9 +216,6 @@ class TestAEntradaLigaOMouse:
         passos = dict(plan_mode_transition(MODE_DESKTOP))
 
         assert passos["desktop.arranjo.apply"] == {"origin": "manual"}
-
-
-# --- a aba: a frase chega ao widget -----------------------------------------
 
 
 class _StyleCtx:
@@ -347,7 +313,6 @@ class _HomeStub:
         self._home_shutdown_btn = _FakeWidget()
         self._home_reconciliar_btn = _FakeWidget()
         self._home_reconciliar_hint = _FakeWidget()
-        # MODO-QUE-NAO-CONTROLA-01: o widget desta leva.
         self._home_desktop_aviso = _FakeWidget()
 
 
@@ -364,8 +329,7 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
 
 class TestAAbaEscreveAFrase:
     def test_o_segundo_tique_no_desktop_acende_o_aviso(self, fake_gtk: None) -> None:
-        """Dois tiques de propósito: o primeiro é o da transição (o restore
-        pode estar em voo), o segundo é o que fala do que ficou de pé."""
+        """Dois tiques de propósito: o primeiro é o da transição (o restore"""
         host = _HomeStub()
         estado = _estado(mouse=False, teclado=True)
 
@@ -396,15 +360,14 @@ class TestAAbaEscreveAFrase:
 
     def test_offline_apaga_o_aviso(self, fake_gtk: None) -> None:
         host = _HomeStub()
-        host._home_desktop_aviso.visible = True  # sobra de um render anterior
+        host._home_desktop_aviso.visible = True
 
         host._render_home(None)
 
         assert host._home_desktop_aviso.visible is False
 
     def test_o_aviso_nasce_invisivel(self, fake_gtk: None) -> None:
-        """Sem estado nenhum não há o que avisar (o widget é montado no
-        `install_home_tab` com `visible=False`); o render é quem acende."""
+        """Sem estado nenhum não há o que avisar (o widget é montado no"""
         host = _HomeStub()
 
         host._render_home(_estado(mouse=True, teclado=True))
@@ -413,22 +376,7 @@ class TestAAbaEscreveAFrase:
 
 
 def test_a_descricao_do_desktop_aponta_para_uma_aba_que_existe() -> None:
-    """A linha VIZINHA do aviso, e ela mentia desde 28/07.
-
-    `_MODE_DESCRIPTIONS["desktop"]` mandava para "as abas Mouse e Teclado" —
-    duas abas que a janela não tem desde a PALAVRA-01, quando as duas colunas
-    passaram a viver numa aba só, "Navegação". Ficou visível agora porque o
-    aviso desta leva diz ONDE ligar o mouse, e duas linhas coladas não podem
-    mandar a usuária para lugares diferentes.
-
-    O teste morde nos dois lados: a frase tem de citar a aba, e a aba tem de
-    existir NA TELA — trocar o nome da aba sem trocar a frase reprova aqui.
-
-    **A TELA MUDOU DE ARQUIVO EM 06/09/2026** (`GTK-3`, primeira volta): o
-    segundo lado era o `<property>` do `gui/main.glade`, e a janela GTK sai
-    inteira (`D-0609-GTK-LEVA-INTEIRA`). O nome da aba sai agora da BARRA que
-    as dez páginas publicadas compartilham — a mesma que ela lê ao clicar.
-    """
+    """A linha VIZINHA do aviso, e ela mentia desde 28/07."""
     import re
     from pathlib import Path
 
@@ -456,12 +404,7 @@ def test_a_descricao_do_desktop_aponta_para_uma_aba_que_existe() -> None:
 
 
 def test_a_frase_do_mouse_espelha_o_gate_da_aba_navegacao() -> None:
-    """As duas pontas do mesmo caminho, e elas têm de casar.
-
-    `mouse_actions.MODE_GATE_HINT` já mandava a usuária de lá para cá ("Só dá
-    para ligar o mouse em "Controlar o PC" (aba Início)"). Faltava a volta —
-    e é ela que esta leva entrega.
-    """
+    """As duas pontas do mesmo caminho, e elas têm de casar."""
     from hefesto_dualsense4unix.app.actions.mouse_actions import MODE_GATE_HINT
 
     assert "Controlar o PC" in MODE_GATE_HINT

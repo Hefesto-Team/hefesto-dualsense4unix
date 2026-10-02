@@ -1,9 +1,4 @@
-"""Testes da ONDA0-Z7 · O AMBIENTE PRESUMIDO 01 — o que a máquina não tem (Z7-D).
-
-Cobre T-11 (o teclado na tela conhece mais que dois programas), T-12
-(`osk_disponivel` ganha o primeiro leitor, num arquivo próprio) e T-13 (o
-systemd de usuário deixa de ser presumido).
-"""
+"""Testes da ONDA0-Z7 · O AMBIENTE PRESUMIDO 01 — o que a máquina não tem (Z7-D)."""
 from __future__ import annotations
 
 from typing import ClassVar
@@ -14,11 +9,6 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions import ambiente_na_tela
 from hefesto_dualsense4unix.daemon.subsystems import keyboard
-
-
-# ---------------------------------------------------------------------------
-# T-11 — o teclado na tela conhece mais que dois programas
-# ---------------------------------------------------------------------------
 
 
 class TestSqueekboardEMaliit:
@@ -61,8 +51,7 @@ class TestSqueekboardEMaliit:
     def test_path_so_com_squeekboard_fica_disponivel(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA de T-11: só squeekboard instalado -> disponível=True, e
-        `_osk_candidatos()` o coloca primeiro em sessão Wayland."""
+        """A MORDIDA de T-11: só squeekboard instalado -> disponível=True, e"""
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-1")
         keyboard._OSK_SONDA[0] = (float("-inf"), False)
         monkeypatch.setattr(
@@ -78,9 +67,7 @@ class TestSqueekboardEMaliit:
     def test_arrancar_o_candidato_novo_faz_devolver_false(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida na direção contrária: um `_osk_candidatos()` que NÃO
-        conhece squeekboard (o comportamento antes de T-11) devolve False
-        mesmo com o binário instalado."""
+        """A mordida na direção contrária: um `_osk_candidatos()` que NÃO"""
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-1")
         monkeypatch.setattr(
             keyboard, "_osk_candidatos", lambda: (keyboard._OSK_BIN_WAYLAND, keyboard._OSK_BIN_X11)
@@ -104,11 +91,6 @@ class TestSqueekboardEMaliit:
         monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
         monkeypatch.setenv("XDG_SESSION_TYPE", "x11")
         assert keyboard.osk_disponivel_no_sistema() is False
-
-
-# ---------------------------------------------------------------------------
-# T-12 — osk_disponivel ganha o primeiro leitor, num arquivo próprio
-# ---------------------------------------------------------------------------
 
 
 class TestDescreverTecladoNaTela:
@@ -162,9 +144,7 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
     """
 
     #: O `state_full` como o daemon o publica: a chave mora DENTRO do bloco.
-    #: Não é dublê de conveniência — é a forma que
     #: `tests/fixtures/state_full_quatro_controles.json` traz, e a que
-    #: `mouse_actions._anotar_teclado_na_tela` lê.
     PAYLOAD_REAL: ClassVar[dict[str, dict[str, bool]]] = {
         "keyboard_emulation": {"osk_disponivel": True}
     }
@@ -189,13 +169,7 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
         assert state["keyboard_emulation"]["osk_disponivel"] is True
 
     def test_contra_o_payload_real_a_frase_diz_que_nao_conseguiu_ler(self) -> None:
-        """A MORDIDA: a máquina TEM teclado na tela e a frase não vê.
-
-        Consertado o nível da chave, este teste reprova — e é para reprovar:
-        ele é o lembrete de que a frase corrigida vira a SEGUNDA frase sobre o
-        mesmo fato na legenda do L3, e de que a casa não deixa duas versões
-        vivas do mesmo fato.
-        """
+        """A MORDIDA: a máquina TEM teclado na tela e a frase não vê."""
         texto = ambiente_na_tela.descrever_teclado_na_tela(self.PAYLOAD_REAL)
         assert "não consegui ler" in texto, (
             "`descrever_teclado_na_tela` passou a alcançar "
@@ -295,12 +269,7 @@ class TestDescreverSteamEncontrada:
 
 
 def _leitores_de_osk(raiz_app: Path) -> list[Path]:
-    """Os arquivos de `app/` que mencionam a chave. DONO ÚNICO da varredura.
-
-    O portão e a mordida faziam a mesma busca escrita duas vezes — e foi por
-    isso que elas puderam divergir sem ninguém notar. Ver a nota de 25/08 na
-    mordida abaixo.
-    """
+    """Os arquivos de `app/` que mencionam a chave. DONO ÚNICO da varredura."""
     return sorted(
         p
         for p in raiz_app.rglob("*.py")
@@ -309,18 +278,14 @@ def _leitores_de_osk(raiz_app: Path) -> list[Path]:
 
 
 class TestOPortaoDeCompletudeDoOskDisponivel:
-    """T-12: `osk_disponivel` deixa de ser chave órfã (item 8 do aceite §9.2).
-
-    Nasce reprovando contra a árvore de 23/08 (medido, §3.6 da sprint: `grep
-    -rn osk_disponivel app/ gui/` devolvia vazio); T-12 o faz passar.
-    """
+    """T-12: `osk_disponivel` deixa de ser chave órfã (item 8 do aceite §9.2)."""
 
     def test_ha_leitor_de_osk_disponivel_em_app(self, repo_root: Path) -> None:
         alvo = repo_root / "src" / "hefesto_dualsense4unix" / "app"
         achados = _leitores_de_osk(alvo)
         assert achados, (
             "nenhum arquivo em app/ lê 'osk_disponivel' -- a chave publicada "
-            "em daemon/ipc_handlers.py:2091 continua órfã (F2)"
+            "em daemon/ipc_handlers.py:1568 continua órfã (F2)"
         )
         assert any(p.name == "ambiente_na_tela.py" for p in achados)
 
@@ -358,7 +323,6 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
         copia = tmp_path / "app_sem_leitor_de_osk"
         _shutil.copytree(alvo, copia)
 
-        # (1) o dono da frase sai: a asserção que o NOMEIA deixa de valer.
         (copia / "actions" / "ambiente_na_tela.py").unlink()
         sobraram = _leitores_de_osk(copia)
         assert not any(p.name == "ambiente_na_tela.py" for p in sobraram), (
@@ -366,7 +330,6 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
             "`actions/ambiente_na_tela.py` mudou de lugar?"
         )
 
-        # (2) e agora TODOS os outros: a asserção de existência cai também.
         for arquivo in sobraram:
             arquivo.write_text(
                 arquivo.read_text(encoding="utf-8").replace(
@@ -381,17 +344,11 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
         )
 
 
-# ---------------------------------------------------------------------------
-# T-13 — o systemd de usuário deixa de ser presumido
-# ---------------------------------------------------------------------------
-
-
 class TestUserUnitDirNaoCriaMaisNada:
     def test_so_responde_o_caminho(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA central: `user_unit_dir()` num `XDG_CONFIG_HOME` dublê
-        NÃO cria nada."""
+        """A MORDIDA central: `user_unit_dir()` num `XDG_CONFIG_HOME` dublê"""
         from hefesto_dualsense4unix.daemon import service_install as si
 
         xdg = tmp_path / "config-novo"
@@ -420,9 +377,7 @@ class TestUserUnitDirNaoCriaMaisNada:
 class TestStatusTextSemSystemd:
     @staticmethod
     def _plantar_unit_instalada(tmp_path: Path) -> None:
-        """Unit COPIADA (arquivo existe) — para `detect_installed_unit()` não
-        ser o motivo do atalho e o teste medir de verdade a conferência de
-        `status_text` sobre `systemctl`, não o ramo "nem instalei"."""
+        """Unit COPIADA (arquivo existe) — para `detect_installed_unit()` não"""
         unit_dir = tmp_path / "config" / "systemd" / "user"
         unit_dir.mkdir(parents=True)
         (unit_dir / "hefesto-dualsense4unix.service").write_text("stub")
@@ -430,10 +385,7 @@ class TestStatusTextSemSystemd:
     def test_systemctl_ausente_do_path_nao_propaga_excecao(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA de T-13: `PATH` dublê sem `systemctl` -> `status_text()`
-        contém o caminho sem systemd e NÃO contém a palavra 'systemctl' crua
-        — mesmo com a unit JÁ instalada (senão o teste mediria só o atalho de
-        'não instalei', que existia antes de T-13 e não prova nada novo)."""
+        """A MORDIDA de T-13: `PATH` dublê sem `systemctl` -> `status_text()`"""
         from hefesto_dualsense4unix.daemon import service_install as si
 
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
@@ -449,9 +401,7 @@ class TestStatusTextSemSystemd:
     def test_sem_instancia_de_usuario_tambem_cai_na_mensagem_amigavel(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`systemctl` existe no PATH mas não responde (stdout vazio, bus
-        indisponível) -- mesmo tratamento do binário ausente, com a unit
-        instalada pela mesma razão do teste acima."""
+        """`systemctl` existe no PATH mas não responde (stdout vazio, bus"""
         from hefesto_dualsense4unix.daemon import service_install as si
 
         class _Vazio:
@@ -473,11 +423,7 @@ class TestStatusTextSemSystemd:
     def test_o_systemctl_por_baixo_ainda_sabe_explodir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida na direção contrária: chamar `_systemctl` DIRETO (sem
-        passar por `status_text`, que agora tem a conferência na frente)
-        ainda propaga `RuntimeError` quando o binário some do PATH de
-        verdade — é exatamente o defeito que a conferência de `status_text`
-        existe para o usuário nunca ver."""
+        """A mordida na direção contrária: chamar `_systemctl` DIRETO (sem"""
         from hefesto_dualsense4unix.daemon import service_install as si
 
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
@@ -488,5 +434,4 @@ class TestStatusTextSemSystemd:
         with pytest.raises(RuntimeError, match="systemctl não encontrado"):
             installer._systemctl("status", si.SERVICE_NORMAL, capture=True, check=False)
 
-        # E é justamente esse caminho que `status_text()` agora NUNCA percorre:
         assert "systemctl" not in installer.status_text()

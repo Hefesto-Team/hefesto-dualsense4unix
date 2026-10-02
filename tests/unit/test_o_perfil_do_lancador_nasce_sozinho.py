@@ -1,23 +1,4 @@
-"""PERFIL-DOS-LANCADORES-E1 (11/09/2026) — todo jogo instalado ganha perfil.
-
-**A QUEIXA DELA, com a foto junto:** digitou ``guar`` na lupa da aba Perfis
-procurando *Marvel's Guardians of the Galaxy* — instalado, pelo Heroic — e a
-lista voltou vazia, *"27 fora da busca"*.  # noqa-acento: citação literal dela
-
-**A DECISÃO DELA**, posta a escolha entre semear todos, semear ao abrir o jogo
-e deixar como estava:
-
-    "2-a e se por algum motivo não encontrar eu posso criar ou criar um perfil
-     duplicado do mesmo jogo."  # noqa-acento: citação literal dela
-
-A segunda metade é REQUISITO e não ressalva: criar à mão o que a semeadura não
-achou não pode ser recusado nem ser sobrescrito na varredura seguinte.
-
-**A BIBLIOTECA DESTES TESTES É FALSA, SEMPRE.** Nenhum deles lê o Heroic dela
-nem escreve no diretório de perfis dela: ou o `dest_dir` é `tmp_path`, ou o
-`home` é `tmp_path`, ou os dois. Nenhum abre o piloto nem fala com o daemon
-vivo — rodar o piloto dispara as migrações one-shot no `~/.config` REAL dela.
-"""
+"""PERFIL-DOS-LANCADORES-E1 (11/09/2026) — todo jogo instalado ganha perfil."""
 from __future__ import annotations
 
 import ast
@@ -46,21 +27,9 @@ from hefesto_dualsense4unix.integrations.identidade_de_janela import (
 from hefesto_dualsense4unix.testing import FakeController
 from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 
-#: **UMA CHAVE DE JANELA QUALQUER, e não mais «a real» — 21/09/2026.**
-#:
-#: Esta linha dizia que `gotg.exe` era a `wm_class` do jogo dela, derivada do
-#: `install.executable`. Medido com o jogo aberto, a janela anuncia
-#: `steam_app_1088850` — o Heroic lança pelo umu, que exporta `SteamAppId`, e
-#: o Proton batiza a janela com ele. A derivação caiu.
-#:
-#: O valor fica porque as réguas que o usam INJETAM o `JogoLocal` pronto: elas
-#: medem o semeador (marca, colisão, recusa), não o censo, e para isso a chave
-#: só precisa ser uma chave. Quem mede o censo são as duas réguas de disco lá
-#: embaixo, e essas usam a chave de verdade, lida do `umu.json`.
 GOTG_CHAVE = "gotg.exe"
 GOTG_NOME = "Marvel's Guardians of the Galaxy"
 
-#: O umu-id do jogo dela, como o `store_cache/umu.json` do Heroic o traz.
 UMU_DO_GOTG = "umu-1088850"
 
 
@@ -92,23 +61,13 @@ def _linhas_da_marca(directory: Path) -> list[str]:
 
 @pytest.fixture(autouse=True)
 def cadastro_limpo() -> Iterator[None]:
-    """O cadastro de classes de jogo é POR PROCESSO — devolve como estava.
-
-    `schema._CLASSES_DE_JOGO_CONHECIDAS` é estado de módulo, e estado de módulo
-    que vaza entre testes é a armadilha que esta casa já pagou (*"o dublê
-    envenenava outro arquivo por ordem de teste"*). Aqui ele é fotografado
-    antes e reposto depois, então a ordem dos testes deixa de importar.
-    """
+    """O cadastro de classes de jogo é POR PROCESSO — devolve como estava."""
     antes = schema_mod.classes_de_jogo_conhecidas()
     try:
         yield
     finally:
         schema_mod.registrar_classes_de_jogo(antes)
 
-
-# =============================================================================
-# 1. A semeadura passa a ler os outros lançadores
-# =============================================================================
 
 def test_o_jogo_do_heroic_ganha_perfil_com_a_classe_da_janela(
     tmp_path: Path,
@@ -133,8 +92,6 @@ def test_o_jogo_do_heroic_ganha_perfil_com_a_classe_da_janela(
         "process_name": [],
     }
     assert dados["priority"] == loader.PRIORIDADE_DO_PERFIL_DE_JOGO == 80
-    # O mesmo contrato do perfil da Steam (PERFIS-SAO-PERFIS-01): nome, match e
-    # prioridade, e NADA mais — nem cor, nem gatilho, nem modo.
     assert list(dados) == list(loader.CHAVES_DO_PERFIL_DE_JOGO), dados
 
 
@@ -154,8 +111,6 @@ def test_o_perfil_do_lancador_casa_com_a_janela_do_jogo(tmp_path: Path) -> None:
     )
 
     assert perfil.matches({"wm_class": "gotg.exe"}) is True
-    # O `pga.db` do Lutris guarda `GOTG.exe`; a janela pelo Heroic anuncia
-    # `gotg.exe`. O matcher do esquema dobra a caixa, e é ele que decide.
     assert perfil.matches({"wm_class": "GOTG.exe"}) is True
     assert perfil.matches({"wm_class": "firefox"}) is False
 
@@ -194,13 +149,8 @@ def test_jogo_sem_appid_e_sem_chave_nao_vira_perfil_mudo(tmp_path: Path) -> None
     assert [r.jogo for r in resultado.por_desfecho("sem_endereco")] == [
         "ROM sem janela"
     ]
-    # E a recusa NÃO vira marca: ela pode deixar de valer.
     assert _linhas_da_marca(destino) == []
 
-
-# =============================================================================
-# 2. A marca distingue appid de chave de janela
-# =============================================================================
 
 def test_a_marca_escreve_a_chave_de_janela_com_prefixo(tmp_path: Path) -> None:
     destino = tmp_path / "perfis"
@@ -223,13 +173,7 @@ def test_a_marca_escreve_a_chave_de_janela_com_prefixo(tmp_path: Path) -> None:
 def test_um_appid_e_uma_chave_iguais_nao_disputam_a_mesma_linha(
     tmp_path: Path,
 ) -> None:
-    """O caso que a sprint nomeia: sem prefixo, os dois viram a MESMA marca.
-
-    Um lançador é livre para usar um número como chave de janela. Sem o
-    `janela:` na frente, o jogo da Steam de appid ``910001`` e o jogo de
-    lançador cuja janela se chama ``910001`` ocupariam a mesma linha — e o
-    segundo sairia como `ja_semeado` sem nunca ter nascido.
-    """
+    """O caso que a sprint nomeia: sem prefixo, os dois viram a MESMA marca."""
     destino = tmp_path / "perfis"
 
     resultado = loader.semear_perfis_dos_jogos(
@@ -245,12 +189,7 @@ def test_um_appid_e_uma_chave_iguais_nao_disputam_a_mesma_linha(
 
 
 def test_o_perfil_do_lancador_que_ela_apagou_nao_ressuscita(tmp_path: Path) -> None:
-    """Mesmo contrato do `.seeded_presets` — e ele só vale se a marca RELER.
-
-    Sem o prefixo, `_linhas_da_marca` descartava a linha (não é dígito), a
-    varredura seguinte não via nada tratado e o perfil renascia. É a metade
-    silenciosa do defeito: o arquivo voltava depois de ela o apagar.
-    """
+    """Mesmo contrato do `.seeded_presets` — e ele só vale se a marca RELER."""
     destino = tmp_path / "perfis"
     jogos = [_do_heroic(GOTG_CHAVE, GOTG_NOME)]
     loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=jogos)
@@ -295,10 +234,6 @@ def test_a_marca_do_lancador_sobrevive_a_linha_estragada(tmp_path: Path) -> None
     assert resultado.criados == ("marvels_guardians_of_the_galaxy.json",)
 
 
-# =============================================================================
-# 3. A troca automática aceita perfil de jogo que não é da Steam
-# =============================================================================
-
 def test_sem_cadastro_o_predicado_e_exatamente_o_de_antes() -> None:
     """VAZIO = comportamento histórico. É o fail-safe da mudança."""
     schema_mod.registrar_classes_de_jogo([])
@@ -323,30 +258,16 @@ def test_o_perfil_do_heroic_vira_regra_de_jogo_depois_de_declarado() -> None:
 
     schema_mod.registrar_classes_de_jogo([GOTG_CHAVE])
     assert perfil_e_regra_de_jogo(perfil, janela) is True
-    # E sem caixa, como o matcher (a janela pode anunciar `GOTG.exe`).
     assert perfil_e_regra_de_jogo(perfil, {"wm_class": "GOTG.exe"}) is True
 
 
 def test_a_janela_do_proprio_hefesto_nunca_e_regra_de_jogo() -> None:
-    """O QUE A LINHA 1799 PROTEGIA — medido no disco dela em 11/09/2026.
-
-    O `personalizado.json` dela mira ``Hefesto-Dualsense4Unix`` com prioridade
-    1: a janela DO PRODUTO, gravada ali pelo «Detectar». Afrouxar o predicado
-    para "qualquer `window_class` que case" faria focar a janela do Hefesto
-    valer como *a regra própria do jogo* — o cadeado cederia e o
-    `manual_trigger_active` seria LIMPO em `AutoSwitcher._activate`, pisando no
-    gatilho que ela acabou de aplicar na aba que está olhando.
-
-    Foi o ÚNICO perfil do disco dela cujo veredito mudava com a linha solta —
-    os outros 26 são todos `steam_app_<id>` e não mudam.
-    """
+    """O QUE A LINHA 1799 PROTEGIA — medido no disco dela em 11/09/2026."""
     personalizado = Profile(
         name="Personalizado",
         match=MatchCriteria(window_class=["Hefesto-Dualsense4Unix"]),
         priority=1,
     )
-    # Com o cadastro CHEIO — o pior caso, porque é quando o predicado tem a
-    # porta aberta para a segunda resposta.
     schema_mod.registrar_classes_de_jogo([GOTG_CHAVE])
 
     assert e_endereco_de_jogo("Hefesto-Dualsense4Unix") is False
@@ -383,18 +304,11 @@ def test_a_semeadura_declara_as_classes_ao_esquema(tmp_path: Path) -> None:
     )
 
     assert GOTG_CHAVE in schema_mod.classes_de_jogo_conhecidas()
-    # O jogo da Steam NÃO entra no cadastro: ele tem carimbo próprio, e uma
-    # segunda resposta para o mesmo endereço é a duplicata que esta casa paga.
     assert schema_mod.classes_de_jogo_conhecidas() == frozenset({GOTG_CHAVE})
 
 
 def test_a_classe_declarada_sobrevive_ao_jogo_ja_semeado(tmp_path: Path) -> None:
-    """A segunda varredura não cria nada — e ainda assim tem de DECLARAR.
-
-    Sem a metade que lê a MARCA, um daemon que sobe com tudo já semeado
-    declararia o conjunto certo só enquanto a biblioteca fosse legível; e o
-    jogo recusado por colisão de nome (que continua sendo jogo) nunca entraria.
-    """
+    """A segunda varredura não cria nada — e ainda assim tem de DECLARAR."""
     destino = tmp_path / "perfis"
     jogos = [_do_heroic(GOTG_CHAVE, GOTG_NOME)]
     loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=jogos)
@@ -406,18 +320,10 @@ def test_a_classe_declarada_sobrevive_ao_jogo_ja_semeado(tmp_path: Path) -> None
     assert schema_mod.classes_de_jogo_conhecidas() == frozenset({GOTG_CHAVE})
 
 
-# =============================================================================
-# 4. Criar à mão o que a semeadura não achou — a segunda metade da frase dela
-# =============================================================================
-
 def test_criar_a_mao_um_segundo_perfil_para_o_mesmo_jogo_nao_e_recusado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """*"eu posso criar ou criar um perfil duplicado do mesmo jogo"*.
-
-    A prova é em BYTE dos dois lados: o perfil dela nasce no disco com o que
-    ela pediu, e o perfil semeado continua com os bytes que tinha.
-    """
+    """*"eu posso criar ou criar um perfil duplicado do mesmo jogo"*."""
     destino = tmp_path / "perfis"
     monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: destino)
     loader.semear_perfis_dos_jogos(
@@ -440,9 +346,7 @@ def test_criar_a_mao_um_segundo_perfil_para_o_mesmo_jogo_nao_e_recusado(
         dela = json.load(fh)
     assert dela["match"]["window_class"] == [GOTG_CHAVE]
     assert dela["priority"] == 90
-    # O semeado não foi tocado.
     assert semeado.read_bytes() == bytes_do_semeado
-    # E os dois convivem no disco.
     assert sorted(p.name for p in destino.glob("*.json")) == [
         "guardioes_do_meu_jeito.json",
         "marvels_guardians_of_the_galaxy.json",
@@ -499,8 +403,6 @@ def test_o_perfil_dela_feito_antes_impede_o_semeado_e_fica_intacto(
     assert [(r.jogo, r.arquivo) for r in ja_tinha] == [
         (GOTG_NOME, "o_meu_guardioes.json")
     ]
-    # Registrado na marca SEM arquivo: o produto sabe que tratou, e sabe que o
-    # arquivo não é dele.
     assert _linhas_da_marca(destino) == [
         f"{loader.PREFIXO_DA_CHAVE_DE_JANELA}gotg.exe\t"
     ]
@@ -555,29 +457,9 @@ def test_a_prioridade_decide_entre_o_dela_e_o_semeado(
     assert escolhido.name == "Guardiões do meu jeito"
 
 
-# =============================================================================
-# A BIBLIOTECA FALSA NO DISCO — o caminho inteiro, sem um dublê
-# =============================================================================
-
 def _heroic_de_mentira(casa: Path, itens: list[dict[str, object]],
                        config: Path | None = None) -> Path:
-    """O `store_cache` do Heroic de mentira — a biblioteca E o `umu.json`.
-
-    **O INSTALADO É O REGISTRO DA LOJA (02/10/2026)**, o que o Heroic lê: o item
-    com `is_installed` entra no `legendary/installed.json`
-    (`plantar_o_registro`), e é por ele que o `umu.json` se decide. ``config``
-    é o `XDG_CONFIG_HOME` do Heroic nativo; sem ele, o `<casa>/.config`.
-
-    **O `umu.json` ENTROU EM 21/09/2026.** É dele que sai a chave de janela do
-    jogo (`umu-1088850` -> `steam_app_1088850`); sem ele a fixture mede um
-    Heroic que nunca lançou nada, e o jogo responde «não sei» — caso legítimo,
-    mas não o da máquina dela, que é o que estas duas réguas medem.
-
-    **SÓ O QUE ESTÁ BAIXADO GANHA umu-id**, como no disco dela: o Heroic
-    escreve a entrada quando o jogo roda. Dar umu-id ao que não está instalado
-    faria a fixture mentir na direção mais cara — a de um catálogo que sabe
-    mais do que o produto pode saber.
-    """
+    """O `store_cache` do Heroic de mentira — a biblioteca E o `umu.json`."""
     heroic = (casa / ".config" if config is None else config) / "heroic"
     cache = heroic / "store_cache"
     cache.mkdir(parents=True, exist_ok=True)
@@ -601,17 +483,7 @@ def _heroic_de_mentira(casa: Path, itens: list[dict[str, object]],
 
 
 def test_o_jogo_do_heroic_ganha_perfil_sem_dubles(tmp_path: Path) -> None:
-    """DO `legendary_library.json` AO `.json` NO DISCO — e é aqui que se morde.
-
-    **A MORDIDA DESTA ENTREGA:** arrancar `jogos_dos_lancadores(home)` da soma
-    de `semear_perfis_dos_jogos` faz este teste reprovar, porque ele não injeta
-    `jogos` — ele põe a biblioteca no disco e deixa o produto achá-la.
-
-    Este é também o teste das EXCLUSÕES, e cada uma tem razão escrita na
-    sprint: o jogo que não está no disco (a biblioteca dela tem 29 e 1
-    baixado), o DLC (`install.is_dlc`) e o jogo sem executável — as ROMs dos
-    emuladores, que rodam todas no MESMO processo.
-    """
+    """DO `legendary_library.json` AO `.json` NO DISCO — e é aqui que se morde."""
     casa = tmp_path / "casa"
     _heroic_de_mentira(
         casa,
@@ -658,7 +530,6 @@ def test_o_jogo_do_heroic_ganha_perfil_sem_dubles(tmp_path: Path) -> None:
     ) as fh:
         assert json.load(fh)["match"]["window_class"] == [
             classe_do_umu_id(UMU_DO_GOTG)]
-    # E o cadastro do esquema saiu declarado pelo mesmo caminho.
     assert schema_mod.classes_de_jogo_conhecidas() == frozenset(
         {classe_do_umu_id(UMU_DO_GOTG)})
 
@@ -672,25 +543,8 @@ def test_maquina_sem_lancador_nenhum_nao_semeia_nem_reclama(tmp_path: Path) -> N
     assert resultado.linhas == ()
 
 
-# =============================================================================
-# A FIAÇÃO — as três chamadas que fazem isto ser AUTOMÁTICO, e não um botão
-# =============================================================================
-#
-# Palavra dela sobre a semeadura da Steam, e vale igual aqui: *"é automático, e
-# não um botão"*. O que faz isto ser automático são três nomes dentro de duas
-# funções, e nenhum deles tem efeito observável numa régua hermética — arrancar
-# qualquer um deixa a suíte verde e o produto mudo. Então a régua lê a ÁRVORE
-# DE SINTAXE e cobra o nome, que é o mesmo idioma de
-# `test_a_regua_da_fiacao_pega_a_chamada_arrancada`.
-
-
 def _chamados_por(alvo: str) -> set[str]:
-    """Os nomes CHAMADOS dentro de `alvo`, lidos da árvore de sintaxe.
-
-    Chamados, e não citados: um `from … import jogos_dos_lancadores` que ficou
-    para trás depois de alguém apagar a chamada continuaria "citando" o nome, e
-    a régua daria verde sobre uma fiação cortada.
-    """
+    """Os nomes CHAMADOS dentro de `alvo`, lidos da árvore de sintaxe."""
     arvore = ast.parse(inspect.getsource(loader))
     for no in ast.walk(arvore):
         if isinstance(no, ast.FunctionDef) and no.name == alvo:
@@ -730,20 +584,7 @@ def test_o_gatilho_automatico_assina_as_duas_bibliotecas() -> None:
 def test_o_jogo_do_heroic_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O daemon dela fica DIAS de pé — e a biblioteca que muda é a do Heroic.
-
-    **ESTE É O DEFEITO QUE A ASSINATURA SOZINHA DA STEAM DEIXAVA PASSAR:** ela
-    baixa um jogo pelo Heroic, o `mtime` da `steamapps` não muda, a assinatura
-    dá igual e a varredura volta sem olhar. O jogo só ganharia perfil no
-    próximo arranque do daemon.
-
-    A biblioteca falsa mora no Heroic nativo do lar do teste — o
-    `$XDG_CONFIG_HOME`, que a `tests/conftest.py` desvia para um lar de
-    mentira, e que o censo segue como o Heroic segue (02/10/2026) —, então o
-    caminho inteiro roda sem dublê do lado dos lançadores:
-    `_talvez_semear_jogos` chama `assinatura_das_bibliotecas` e
-    `jogos_dos_lancadores` de verdade.
-    """
+    """O daemon dela fica DIAS de pé — e a biblioteca que muda é a do Heroic."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     casa = Path.home()
@@ -754,8 +595,6 @@ def test_o_jogo_do_heroic_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
     monkeypatch.setattr(loader, "_ultima_varredura_de_jogos", None, raising=False)
     monkeypatch.setattr(loader, "_assinatura_da_biblioteca_vista", None, raising=False)
     monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: destino)
-    # A metade da STEAM fica CONGELADA de propósito: se a varredura acontecer,
-    # foi a assinatura do Heroic que a acordou.
     monkeypatch.setattr(
         jogos_locais, "assinatura_da_biblioteca", lambda home=None: (("/x", 1),)
     )
@@ -764,7 +603,6 @@ def test_o_jogo_do_heroic_instalado_amanha_e_semeado_sem_reiniciar_o_daemon(
     loader._talvez_semear_jogos()
     assert list(destino.glob("*.json")) == []
 
-    # Amanhã: ela baixa o jogo pelo Heroic.
     _heroic_de_mentira(
         casa,
         [

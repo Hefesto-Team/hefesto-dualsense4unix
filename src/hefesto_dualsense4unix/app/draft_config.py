@@ -1,19 +1,4 @@
-"""Estado central de configuração da GUI — DraftConfig (FEAT-PROFILE-STATE-01).
-
-``DraftConfig`` é imutável (``frozen=True`` pydantic v2). Toda mudança de
-campo deve criar uma nova instância via ``model_copy(update=...)``. O objeto
-é mantido em ``HefestoApp.draft`` e compartilhado por todos os *ActionsMixin.
-
-Ciclo de vida:
-- Criado em ``HefestoApp.__init__`` via ``DraftConfig.default()``.
-- Populado em ``_load_draft_from_active_profile()`` após daemon conectar.
-- Cada mixin lê ``self.draft.<secao>`` para popular widgets.
-- Cada handler de signal substitui ``self.draft`` por ``model_copy(update=...)``.
-- Aplicação atômica via IPC ``profile.apply_draft`` (método ``apply_draft``
-  em ``ipc_bridge``) — consumido pela sprint UI-GLOBAL-FOOTER-ACTIONS-01.
-
-Persistência entre sessões NÃO é escopo desta sprint; o draft é in-memory only.
-"""
+"""Estado central de configuração da GUI — DraftConfig (FEAT-PROFILE-STATE-01)."""
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -21,22 +6,11 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# HARM-19 / 11/08/2026: o teto do multiplicador tem UM dono, e este arquivo era
-# a ponta que o repetia à mão (`le=2.0`) — quando o esquema baixou para 1.0, o
-# rascunho da GUI continuou aceitando 2.0 e a divergência só aparecia no
-# "Salvar Perfil", com erro de validação. Import em tempo de execução (e não sob
-# TYPE_CHECKING como o `Profile` abaixo) porque o pydantic precisa do valor na
-# hora de construir a classe.
 from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, LedsConfig
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.profiles.schema import Profile
-
-
-# ---------------------------------------------------------------------------
-# Sub-drafts (um por secao de hardware)
-# ---------------------------------------------------------------------------
 
 
 class TriggerDraft(BaseModel):
@@ -98,14 +72,8 @@ class LedsDraft(BaseModel):
     lightbar_rgb: tuple[int, int, int] | None = (255, 128, 0)
     lightbar_brightness: int = Field(default=100, ge=0, le=100)
     player_leds: tuple[bool, bool, bool, bool, bool] = (False, False, False, False, False)
-    mic_led: bool = False  # reservado V2
-    auto_player_colors: bool = True  # COR-04 (default do schema: ligado)
-    #: O brilho das luzes de número (O-BRILHO-DAS-LUZES-DE-NUMERO-01, 25/09/2026)
-    #: — a PALAVRA do disco, com o padrão lido do esquema, que é o dono dele.
-    #: Só a seção GLOBAL o leva ao disco (`_leds_draft_to_config` com
-    #: `include_auto=True`); o de cada controle a janela não edita, e o
-    #: `with_controller_leds` o PRESERVA do override. Sem ele, o «Salvar»
-    #: regravava o padrão por cima do que a pílula tinha gravado.
+    mic_led: bool = False
+    auto_player_colors: bool = True
     player_led_brightness: str = str(
         LedsConfig.model_fields["player_led_brightness"].default
     )
@@ -138,26 +106,7 @@ class RumbleDraft(BaseModel):
 
 
 class MouseDraft(BaseModel):
-    """Draft da emulacao de mouse.
-
-    ``dirty``: True enquanto houver edição de mouse POR APLICAR (a usuária
-    mexeu no toggle ou nos sliders nesta sessão). ``to_ipc_dict`` só emite a
-    seção mouse quando dirty — BUG-MOUSE-GUI-SYNC-01 (A2): o "Aplicar" com
-    seção intocada NÃO pode desligar (nem persistir off) uma emulação ligada
-    por CLI/applet. Sincronizações programáticas (bootstrap, refresh da aba)
-    NÃO marcam dirty, e o rodapé o baixa depois de aplicar com sucesso
-    (HARM-05: sem isso ele nunca baixava e todo "Aplicar" seguinte religava o
-    mouse, matando o vpad no meio do jogo).
-
-    ``in_profile``: True quando a seção ``mouse`` FAZ PARTE da configuração —
-    o perfil de origem já a tinha, ou a usuária a editou e aplicou. Separa
-    "a seção existe" de "há edição pendente" (``dirty``)
-    (BUG-MOUSE-SAVE-DROPS-SECTION-01): sem essa distinção, salvar um perfil
-    point-and-click sem mexer na aba Mouse descartava a seção e matava a
-    feature. ``to_profile`` persiste a seção quando ``dirty`` OU
-    ``in_profile``; o overlay do bootstrap e o refresh da aba preservam este
-    flag (só atualizam enabled/speed/scroll para exibir o estado vivo).
-    """
+    """Draft da emulacao de mouse."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -180,7 +129,7 @@ class MicDraft(BaseModel):
     """Draft do MICROFONE (MIC-EXPOSE-01, 25/07; volume e mudo em 18/08/2026).
 
     ``button_toggles_system`` espelha ``ProfileMicConfig.button_toggles_system``
-    e o ``DaemonConfig.mic_button_toggles_system`` (daemon/lifecycle.py:272): o
+    e o ``DaemonConfig.mic_button_toggles_system`` (daemon/lifecycle.py:163): o
     botão de mic do controle alterna (ou não) o mute do microfone PADRÃO DO
     SISTEMA. ``None`` = **sem opinião**, e é o default DAQUI de propósito —
     ver o gate por campo no parágrafo abaixo.
@@ -225,59 +174,22 @@ class MicDraft(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    #: ``None`` = sem opinião (o default): ninguém escolheu, e o "Aplicar" não
-    #: manda a chave. Quem lhe der superfície escreve ``True``/``False`` aqui e
-    #: o gate abre sozinho.
     button_toggles_system: bool | None = None
-    #: Volume da captura no sistema, em por cento (a escala do
-    #: ``ProfileMicConfig.volume``, NÃO a do alto-falante, que é 0-255).
     volume: int | None = Field(default=None, ge=0, le=100)
-    #: Mudo do FIRMWARE — o mesmo que apaga a luz vermelha do microfone. Desde
-    #: a O-MUDO-E-DO-CONTROLE-01 (28/09/2026) ele é do CONTROLE (o
-    #: ``maquina.json``) e nenhum gesto o escreve aqui: o campo só carrega o
-    #: que um perfil de antes da migração ainda diga, e atravessa como estava.
     muted: bool | None = None
-    #: **O GANHO DE ENTRADA, 0..100 — 21/09/2026, ordem dela** (*"OS DOIS
-    #: SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO"*).
-    #: Espelha ``ProfileMicConfig.gain``/``ControllerMicOverride.gain``, e é
-    #: EIXO DIFERENTE do ``volume`` logo acima: aquele é o ganho da FONTE no
-    #: PipeWire, este é o ganho de captura da PLACA ALSA daquele controle.
     gain: int | None = Field(default=None, ge=0, le=100)
     dirty: bool = False
     in_profile: bool = False
 
 
 class SpeakerDraft(BaseModel):
-    """Draft do ALTO-FALANTE do controle (SOM-02/E4, 29/07).
-
-    ``volume`` 0-255 (o range do protocolo, não a porcentagem da tela) e
-    ``muted`` espelham ``ProfileSpeakerConfig``. ``dirty``/``in_profile``
-    seguem a MESMA disciplina do ``MouseDraft``/``MicDraft``: ``to_profile``
-    só persiste a seção quando ela foi mexida OU o perfil de origem já a
-    tinha — perfil legado faz round-trip sem ganhar seção fantasma, que é
-    metade do critério de aceite da entrega.
-
-    ``volume=None`` = a seção NÃO existe no rascunho. É deliberado que o
-    default não seja um número: qualquer número aqui seria uma opinião que
-    ninguém deu, e persistir opinião não dada é tomar a posse do volume do
-    controle por conta própria (armadilha 1 da sprint — a chamada sem volume
-    manda ZERO e o mudo não a solta).
-
-    ``rota`` é o canal de SAÍDA do controle (``OUTPUT_PATH_SEL``, 0-3 — ver
-    ``ProfileSpeakerConfig``), pedido dela em 09/08/2026. ``None`` = sem
-    opinião, e o mesmo argumento do volume vale aqui: o byte ``common[7]``
-    carrega também o caminho do microfone, então "não sei" tem de continuar
-    sendo "não escrevo".
-    """
+    """Draft do ALTO-FALANTE do controle (SOM-02/E4, 29/07)."""
 
     model_config = ConfigDict(frozen=True)
 
     volume: int | None = Field(default=None, ge=0, le=255)
     muted: bool = False
     rota: int | None = Field(default=None, ge=0, le=3)
-    #: O QUE ENTRA NO NÓ daquele controle — `mix` (o som do PC cai também
-    #: aqui, sem sair da televisão) ou `sfx` (só o que o jogo mandar).
-    #: `None` = sem opinião, e vale a mesma regra do `rota`: "não sei" é "não
     #: escrevo".
     #:
     #: **ELE FALTAVA AQUI, e a falta DESTRUÍA a escolha dela** — 10/09/2026.
@@ -291,36 +203,17 @@ class SpeakerDraft(BaseModel):
     in_profile: bool = False
 
 
-# ---------------------------------------------------------------------------
-# Conversores sub-draft <-> schema (compartilhados por from_profile/to_profile
-# e pelos overrides por-controle do PERFIL-04)
-# ---------------------------------------------------------------------------
-
-
 def _leds_config_to_draft(leds_cfg: Any) -> LedsDraft:
-    """Converte ``LedsConfig`` (schema) no sub-draft de LEDs da GUI.
-
-    Mesma conversão histórica de ``from_profile``: brilho float 0.0-1.0 vira
-    percentual inteiro 0-100 e ``player_leds`` é normalizado para 5 flags.
-    COR-04: ``auto_player_colors`` é lido junto (perfil antigo sem o campo
-    valida com o default True do schema — o getattr é só defesa contra
-    objetos parciais de teste). Para OVERRIDES por-controle o valor lido é
-    inócuo: o toggle é do perfil e ninguém consulta o campo no efetivo.
-    """
-    rgb_raw = leds_cfg.lightbar  # tuple[int, int, int]
-    brightness_raw = float(leds_cfg.lightbar_brightness)  # 0.0-1.0
+    """Converte ``LedsConfig`` (schema) no sub-draft de LEDs da GUI."""
+    rgb_raw = leds_cfg.lightbar
+    brightness_raw = float(leds_cfg.lightbar_brightness)
     brightness_pct = max(0, min(100, round(brightness_raw * 100)))
     player = tuple(bool(b) for b in leds_cfg.player_leds)
-    # Garante 5 elementos (schema valida, mas defensive)
     while len(player) < 5:
         player = (*player, False)
     player_5: tuple[bool, bool, bool, bool, bool] = (
         player[0], player[1], player[2], player[3], player[4]
     )
-    # O PRETO QUE JÁ ESTÁ NO DISCO TAMBÉM NÃO É COR — 22/09/2026, ordem dela.
-    # Sete dos perfis dela guardam `[0,0,0]` no global, e sem esta linha eles
-    # chegariam à tela como uma cor escolhida — e o Salvar seguinte os
-    # reescreveria, fechando o círculo. Ver `led_control.cor_escolhida`.
     from hefesto_dualsense4unix.core.led_control import cor_escolhida
 
     lida = cor_escolhida((int(rgb_raw[0]), int(rgb_raw[1]), int(rgb_raw[2])))
@@ -358,14 +251,6 @@ def _leds_draft_to_config(
     """
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
 
-    # O PRETO NÃO É COR — 22/09/2026, ordem dela (`led_control.cor_escolhida`).
-    # Aqui estava `leds.lightbar_rgb or (0, 0, 0)`, e era a PORTA DE ENTRADA do
-    # defeito: `None` quer dizer *"não sei a cor deste controle"*, e virava
-    # preto GRAVADO no arquivo. Foi assim que a peça do Starlight Blue nasceu
-    # com `[0,0,0]` num "Salvar Perfil" e passou a apagar a barra dele em toda
-    # conexão. Sem cor conhecida, o campo NÃO entra: quem decide é a paleta
-    # automática do número, e o arquivo fica sem opinião em vez de com uma
-    # opinião que ninguém deu.
     rgb = leds.lightbar_rgb
     kwargs: dict[str, Any] = {
         "player_leds": list(leds.player_leds),
@@ -424,16 +309,7 @@ def _triggers_config_to_draft(cfg: Any) -> TriggersDraft:
 
 
 def _override_vazio(override: Any) -> bool:
-    """True quando um ``ControllerOverrides`` não tem mais NENHUMA seção.
-
-    Entrada vazia some do mapa — se ficasse, o JSON salvo carregaria uma chave
-    de MAC apontando para ``{}`` e a próxima leitura acharia que aquela peça
-    tem opinião. A checagem varre os campos DECLARADOS do modelo em vez de
-    listá-los à mão: até 10/08/2026 a linha era ``leds is None and triggers is
-    None``, e cada seção nova por unidade (``rumble``, ``speaker``) teria de
-    lembrar de vir aqui — o tipo de esquecimento que só aparece meses depois,
-    como um override fantasma que ninguém consegue apagar pela janela.
-    """
+    """True quando um ``ControllerOverrides`` não tem mais NENHUMA seção."""
     campos = getattr(type(override), "model_fields", None)
     if not campos:
         return False
@@ -479,20 +355,8 @@ def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     )
 
 
-# ---------------------------------------------------------------------------
-# DraftConfig raiz
-# ---------------------------------------------------------------------------
-
-
 class DraftConfig(BaseModel):
-    """Estado central imutavel da GUI — snapshot de tudo que o daemon pode aplicar.
-
-    Uso correto:
-        self.draft = self.draft.model_copy(update={"leds": novo_leds_draft})
-
-    Nunca mute campos diretamente — pydantic v2 frozen bloqueia, mas
-    a convencao explicita e mais fácil de rastrear em code review.
-    """
+    """Estado central imutavel da GUI — snapshot de tudo que o daemon pode aplicar."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -501,137 +365,32 @@ class DraftConfig(BaseModel):
     rumble: RumbleDraft = Field(default_factory=RumbleDraft)
     mouse: MouseDraft = Field(default_factory=MouseDraft)
     emulation: EmulationDraft = Field(default_factory=EmulationDraft)
-    # MIC-EXPOSE-01: comportamento do botão de mic (ver `MicDraft`).
     mic: MicDraft = Field(default_factory=MicDraft)
-    # SOM-02/E4: volume do alto-falante do controle (ver `SpeakerDraft`).
     speaker: SpeakerDraft = Field(default_factory=SpeakerDraft)
-    # FEAT-KEYBOARD-UI-01: bindings de teclado do perfil em edição.
     # None = herdar DEFAULT_BUTTON_BINDINGS; {} = teclado silencioso; dict
-    # parcial = override explícito. Mapeia 1:1 para `Profile.key_bindings`.
     key_bindings: dict[str, list[str]] | None = None
 
-    # BUG-FOOTER-SAVE-DROPS-SECTIONS-01: seções do perfil que o draft NÃO
-    # edita (match, mode, suppress_desktop_emulation, priority) transportadas
-    # do perfil de origem e reemitidas em ``to_profile`` — sem isso, o
-    # "Salvar Perfil" do rodapé zerava o match para "any", apagava a seção
-    # mode e resetava a prioridade do perfil ativo. ``Any`` evita importar o
-    # schema aqui (os valores são revalidados no ``model_validate`` final).
     source_match: Any | None = None
     source_mode: Any | None = None
     source_suppress: bool = False
     source_priority: int | None = None
-    # PERFIL-SALVA-TUDO-01 (29/07): `source_mode` e `source_suppress` deixam de
-    # ser SÓ-transporte e ganham dono — como já acontece com
-    # `source_controllers`, o único outro `source_*` que a janela edita.
-    #
-    # Medido na queixa dela ("fiz alterações em todas as abas e salvei o perfil,
-    # e essas configurações de outras abas não ficam salvas"): as abas Emulação e
-    # Início não tinham UMA linha escrevendo no rascunho
-    # (`grep -c 'self\.draft'` = 0 nas duas), então o modo/máscara/co-op e o
-    # "modo jogo" (suspender mouse e teclado) iam só para o estado VIVO do
-    # daemon. No "Salvar Perfil" do rodapé, `to_profile` reemitia a fotografia
-    # do boot — e com nome novo reescrevia `mode: null` e `suppress: false`. O
-    # daemon dela tinha `gamepad_emulation.flag = dualsense` de pé enquanto
-    # `pragmata2.json` dizia `"mode": null`.
-    #
-    # Estes dois flags são o "ela mexeu NESTA sessão", a mesma disciplina do
-    # `MouseDraft.dirty`/`MicDraft.dirty`: com o flag ligado, `to_profile`
-    # persiste o valor DELA mesmo com nome novo (é gesto dela, não a regra de
-    # outro perfil — a distinção que o R-11 protege). Sem o flag, nada muda: o
-    # passthrough segue gateado por `mesmo_perfil`. `with_profile_identity` os
-    # baixa (depois de gravar, o rascunho descreve o disco).
     mode_dirty: bool = False
     suppress_dirty: bool = False
-    # PERFIL-02 (sprint perfis-por-controle): o mapa ``controllers`` do
-    # perfil (overrides por MAC) atravessa o draft — ``to_profile`` reconstrói
-    # o Profile do zero e o apagaria no primeiro "Salvar Perfil" (a mesma
-    # classe de bug dos dois BUG-*-DROPS-SECTION acima). Mesmo padrão dos
-    # ``source_*`` vizinhos: ``Any`` evita importar o schema aqui.
-    # PERFIL-04: diferente dos demais ``source_*``, este a GUI EDITA — os
-    # handlers de lightbar/gatilhos com um controle selecionado no seletor
-    # gravam via ``with_controller_leds``/``with_controller_triggers``
-    # (entradas não tocadas seguem passthrough byte-idêntico).
     source_controllers: Any | None = None
-    # Z4/T8 (24/08/2026): ``source_controllers`` já colapsa "mapa vazio" e
-    # "nunca houve mapa" no MESMO ``None`` (ver ``with_override_fields_cleared``
-    # / ``with_controller_fields_cleared`` — "mapa vazio volta a None"), e essa
-    # colisão é de propósito PARA O ARQUIVO DO PERFIL (nenhuma chave fantasma
-    # no JSON). Mas o CONTRATO IPC (``_controllers_to_ipc``) precisa da
-    # distinção que o modelo já perdeu: "sem opinião" (não mexe no daemon) é
-    # diferente de "ela apagou o último override" (apague os overrides no
-    # daemon). Esta flag é o crachá dessa história, só para dentro da SESSÃO —
-    # começa False, vira True quando um "clear" esvazia o mapa, volta a False
-    # quando qualquer override novo é gravado (``_with_override_section``).
-    # Nunca vai para o disco (não é campo de ``Profile``).
     controllers_esvaziados_nesta_edicao: bool = False
-    # PONTE-CONFIRMADA-01 (19/08/2026) — passthrough SOMENTE-LEITURA do carimbo
-    # `Profile.ponte`: qual ponte já foi CONFIRMADA naquele jogo, quando e por
-    # qual dos três caminhos. `to_profile` reconstrói o Profile do zero e o
-    # deixava de fora, então TODO "Salvar Perfil" pelo rodapé o apagava — e a aba
-    # Perfis junto, que usa `to_profile(ativo)` como base
     # (`profiles_actions._build_profile_from_editor`). O gesto mais banal dela
-    # apagava o que o produto aprendeu sozinho: o jogo caía do
     # `manager.pontes_confirmadas()` e a escada de `integrations/ponte_escada.py`
-    # recomeçava do primeiro degrau no lançamento seguinte — que é recriar o vpad
-    # com o jogo aberto e arrancar o controle da mão dela (R-04, 23/07).
-    #
-    # SEM ESCRITOR, e a ausência é a entrega: nenhuma aba ganha campo para isto.
-    # Quem carimba é `profiles.manager.confirmar_ponte`, e só depois de uma
-    # confirmação de verdade (gesto, silêncio ou escolha dela). Se a janela
-    # escrevesse aqui, todo save carimbaria como confirmada uma ponte que ninguém
-    # confirmou e a escada pararia em TODO jogo, convencida por um carimbo que
-    # nasceu de um clique em Salvar — a razão inteira está na isenção de
-    # `tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py`.
     source_ponte: Any | None = None
-    # R-11 (auditoria 23/07): DE QUAL perfil os `source_*` acima vieram.
-    # `to_profile` reemitia `match`/`priority`/`mode` do snapshot do BOOT para
-    # QUALQUER nome — então "Salvar Perfil" com um nome NOVO produzia um perfil
-    # com a regra de casamento e a prioridade de OUTRO perfil, e salvar por cima
-    # do ativo depois de mexer no Modo pela aba Perfis APAGAVA a seção `mode`
-    # recém-configurada (o snapshot ainda era o do boot, com mode=None).
-    # Reemitir só faz sentido quando o alvo é o MESMO perfil de onde vieram.
-    # OS DOIS QUE TODO "SALVAR" APAGAVA — medido em 05/09/2026, com o
-    # round-trip mais favorável possível (mesmo nome, todo passthrough
     # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;
-    # `teclado_emulado=True` entrava e saía `None`. Os dois são campos do
     # `Profile` (`Profile.button_actions` e `Profile.teclado_emulado`, em
-    # `profiles/schema.py`) e os dois nomes apareciam ZERO
-    # vezes neste arquivo — o `Profile(...)` de `to_profile` simplesmente não
-    # os emitia, então cada Salvar zerava um campo que ninguém tinha tocado.
-    #
-    # O ALCANCE ERA MAIOR QUE A INTERFACE NOVA: `footer_actions.py` (o Salvar
-    # da janela GTK) e `profiles_actions.py` (a aba Perfis) chamam este mesmo
     # método. O `button_actions` nasceu por decisão dela em 01/09 e nenhum
-    # Salvar do produto o preservava.
-    #
-    # POR QUE PASSTHROUGH E NÃO CAMPO EDITÁVEL: quem os escreve hoje é a aba
-    # 06, direto no disco, no clique. `from_profile` lê o disco; reemitir o que
-    # veio é exatamente "não destrua". Um campo editável aqui exigiria um
-    # escritor, e escrever campo sem leitor é o defeito que
-    # `test_perfil_por_controle_o_campo_espera_o_caminho.py` proíbe.
-    #
-    # FORA DO GATE `mesmo_perfil`, junto de `controllers` e `key_bindings` e
-    # não de `match`/`mode`/`priority`: os dois são CONFIGURAÇÃO dela, não
-    # regra de identidade do perfil. "Salvar com nome novo" leva a config
-    # junto; a regra do outro perfil, não (R-11).
     source_button_actions: Any | None = None
     source_teclado_emulado: bool | None = None
-    # F1-REMAPEAR (13/09/2026): o TERCEIRO que o Salvar apagaria, e pela mesma
-    # razão dos dois de cima — `Profile.remapeamento` nasceu hoje, quem o
-    # escreve é a aba 06 direto no disco, e `to_profile` reconstrói o perfil do
-    # zero. Sem esta passagem, todo "Salvar Perfil" da aba Perfis zeraria a
-    # troca de botões que ela acabou de guardar. Passthrough, fora do gate
-    # `mesmo_perfil`: é configuração dela, não regra de identidade.
     source_remapeamento: dict[str, str] | None = None
-    # MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026): o QUARTO. `Profile.movimento`
-    # nasceu sem escritor na janela, e o Salvar o apagava — medido na suíte do
-    # mesmo dia: o perfil entrava com a mira por movimento e saía de
-    # `to_profile` com `None`. Passthrough, fora do gate, pela mesma razão.
     source_movimento: Any | None = None
 
     source_name: str | None = None
 
-    # --- construtores ---
 
     @classmethod
     def default(cls) -> DraftConfig:
@@ -640,31 +399,16 @@ class DraftConfig(BaseModel):
 
     @classmethod
     def from_profile(cls, profile: Profile) -> DraftConfig:
-        """Constroi DraftConfig a partir de um Profile persistido.
-
-        Mapeia os campos do schema ``Profile`` para o draft equivalente.
-        Campos ausentes no perfil recebem defaults seguros.
-        """
-        # Triggers e LEDs — conversores compartilhados (mesma semântica
-        # histórica; ver _triggers_config_to_draft/_leds_config_to_draft).
+        """Constroi DraftConfig a partir de um Profile persistido."""
         triggers = _triggers_config_to_draft(profile.triggers)
         leds = _leds_config_to_draft(profile.leds)
 
-        # Rumble — weak/strong não persistem no perfil (teste de motores);
-        # a POLÍTICA persiste (FEAT-RUMBLE-POLICY-PROFILE-01): policy e
-        # custom_mult vêm da seção ``rumble`` (None = perfil sem opinião) e
-        # ``passthrough`` é preservado para o round-trip.
         rumble = RumbleDraft(
             policy=profile.rumble.policy,
             custom_mult=profile.rumble.custom_mult,
             passthrough=profile.rumble.passthrough,
         )
 
-        # Mouse — FEAT-POINT-AND-CLICK-01: a seção opcional ``profile.mouse``
-        # popula o draft (dirty=False: carga programática não é toque da
-        # usuária). Perfil sem a seção mantém os defaults do draft.
-        # BUG-MOUSE-SAVE-DROPS-SECTION-01: ``in_profile=True`` marca que o
-        # perfil TINHA a seção, para ``to_profile`` preservá-la mesmo sem toque.
         if profile.mouse is not None:
             mouse = MouseDraft(
                 enabled=profile.mouse.enabled,
@@ -675,23 +419,13 @@ class DraftConfig(BaseModel):
             )
         else:
             mouse = MouseDraft()
-        # Emulacao (xbox360) — não presente no Profile v1; defaults
         emulation = EmulationDraft()
 
-        # Mic — MIC-EXPOSE-01, mesmo contrato do `mouse`: seção presente no
-        # perfil vira draft com `in_profile=True` (para o round-trip do
-        # "Salvar Perfil" não a descartar); ausente mantém o default.
         if profile.mic is not None:
             mic = MicDraft(
                 button_toggles_system=profile.mic.button_toggles_system,
-                # PERFIL-GUARDA-O-MIC-01 (18/08/2026): volume e mudo vêm junto,
-                # senão abrir o perfil na janela e salvar de novo os apagaria.
                 volume=profile.mic.volume,
                 muted=profile.mic.muted,
-                # O GANHO VEM JUNTO pela MESMA razão do par acima: sem esta
-                # linha, abrir o perfil na janela e salvar de novo apagaria o
-                # ganho que ela escolheu — que é literalmente o defeito
-                # «o Salvar DESTRUÍA» desta casa.
                 gain=profile.mic.gain,
                 dirty=False,
                 in_profile=True,
@@ -699,10 +433,6 @@ class DraftConfig(BaseModel):
         else:
             mic = MicDraft()
 
-        # Alto-falante — SOM-02/E4, mesmo contrato do `mic`: seção presente
-        # vira draft com `in_profile=True` (o "Salvar Perfil" não a descarta);
-        # ausente mantém o default, que é a AUSÊNCIA de volume — perfil sem
-        # opinião não ganha uma opinião ao ser aberto na janela.
         if profile.speaker is not None:
             speaker = SpeakerDraft(
                 volume=profile.speaker.volume,
@@ -797,20 +527,6 @@ class DraftConfig(BaseModel):
             if (self.mouse.dirty or self.mouse.in_profile)
             else None
         )
-        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): os TRÊS campos viajam juntos.
-        # `volume`/`muted` a `None` continuam sendo "sem opinião" DENTRO de uma
-        # seção que existe — diferente do alto-falante, cujo gate exige número
-        # (lá o `volume` é obrigatório no esquema; aqui é opcional, porque
-        # `button_toggles_system` sozinho já é uma seção legítima).
-        # MIC-GATE-POR-CAMPO-01 (22/08/2026): no DISCO o campo continua sendo
-        # booleano obrigatório (`ProfileMicConfig.button_toggles_system`, sem
-        # default), então "sem opinião" não tem como ser escrito e vira `True`,
-        # que é o default do daemon (daemon/lifecycle.py:272) — o mesmo valor
-        # que o rascunho persistia antes desta data, e a ativação de perfil não
-        # lê o campo. O resíduo: reaberto na janela, esse `True` volta como
-        # opinião e passa a viajar no Aplicar. Fechá-lo exige o campo virar
-        # opcional no esquema (e um perfil sem a chave é recusado por binário
-        # antigo, que é decisão de compatibilidade) ou nascer a superfície.
         mic_cfg = (
             ProfileMicConfig(
                 button_toggles_system=(
@@ -825,11 +541,6 @@ class DraftConfig(BaseModel):
             if (self.mic.dirty or self.mic.in_profile)
             else None
         )
-        # SOM-02/E4: a seção só existe com VOLUME. O gate tem o `volume is not
-        # None` junto de propósito — um rascunho marcado (dirty/in_profile) mas
-        # sem número não pode virar uma seção pela metade: o esquema a recusa,
-        # e a razão é medida (perfil só com `muted` faria a ativação mandar
-        # ZERO e tomar a posse do alto-falante).
         speaker_cfg = (
             ProfileSpeakerConfig(
                 volume=self.speaker.volume,
@@ -844,52 +555,11 @@ class DraftConfig(BaseModel):
             else None
         )
 
-        # R-11: os `source_*` só valem para o perfil DE ONDE VIERAM.
-        #
-        # Salvando por cima do MESMO perfil, reemitir preserva as seções que o
-        # draft não edita — é exatamente o que BUG-FOOTER-SAVE-DROPS-SECTIONS-01
-        # quis proteger, e continua valendo.
-        #
-        # Com um nome NOVO, reemitir é o defeito: o perfil nasce com a regra de
-        # casamento e a prioridade de outro perfil. Medido: com o FPS ativo,
-        # "Salvar Perfil" como "MadJack" produzia um perfil com o regex de
         # título do FPS e prioridade 60 — e nenhuma regra para o jogo dela.
-        #
-        # `MatchAny()` para nome novo era deliberado e casava com o contrato do
-        # diálogo do rodapé, que não tem campo de regra: o perfil nascia
-        # "sempre", e a regra específica seria definida na aba Perfis. Não
-        # nascia com a regra ERRADA, que era o ponto.
-        #
-        # NOTA DATADA — 05/08/2026, REGRA-NAO-SE-PERDE-02 (decisão dela): esse
-        # parágrafo CADUCOU como contrato e sobrevive como DEFAULT DE
-        # CONVERSÃO. Medido no mesmo dia: `MatchAny` não é neutro, é catch-all
-        # — perde para qualquer regra na chave de seleção do
-        # `profiles/manager.py`, dispara o veto R-21 (janela `steam_app_*` só
-        # com catch-all candidato = nenhum perfil) e por isso NUNCA ativa
-        # dentro do jogo, ao mesmo tempo em que nasce com `max(catch-all) +
-        # folga` e ganha o desktop inteiro carregando a supressão. Um perfil
-        # que ela acabou de salvar com o jogo em foco não valia no jogo.
-        #
-        # A decisão de qual regra o perfil recebe MUDOU DE LUGAR: agora ela é
-        # do RODAPÉ (`app/actions/footer_actions._regra_do_save`), que herda a
-        # regra da origem quando ela é regra de verdade e usa `MatchManual()`
-        # para o órfão. Aqui não se mexeu de propósito — `to_profile` tem outro
-        # chamador, e este gate governa quatro campos com a mesma regra. Quem
-        # chama `to_profile` direto continua recebendo `MatchAny()`, e é isso
-        # que as testemunhas deste ramo ainda medem.
-        # R-10: a identidade de um perfil em disco é o SLUG, não o nome de
-        # exibição — `save_profile` grava `<slugify(name)>.json`. Comparar
-        # string crua aqui fazia "Navegação" (no disco) e "Navegacao" (digitado
-        # no diálogo do rodapé) caírem no ramo "nome novo": o MESMO arquivo era
-        # sobrescrito com regra, prioridade, modo e supressão zerados. O projeto
         # já tem a comparação certa (`profiles/slug.mesmo_slug`, usada nas duas
-        # guardas da aba Perfis); este gate era o último que ainda não a usava.
         mesmo_perfil = self.source_name is not None and (
             name == self.source_name or mesmo_slug(name, self.source_name)
         )
-        # PERFIL-SALVA-TUDO-01: sem número inventado. Origem > chamador >
-        # default do ESQUEMA (`Profile.priority`), lido do próprio esquema para
-        # não haver dois lugares dizendo qual é o default.
         prioridade_final: int
         if mesmo_perfil and self.source_priority is not None:
             prioridade_final = int(self.source_priority)
@@ -905,9 +575,6 @@ class DraftConfig(BaseModel):
                 if (mesmo_perfil and self.source_match is not None)
                 else MatchAny()
             ),
-            # PERFIL-SALVA-TUDO-01: `mode_dirty`/`suppress_dirty` = ela mexeu na
-            # aba Emulação/Início nesta sessão. Aí o valor é DELA e sobrevive ao
-            # nome novo; sem toque, segue o passthrough gateado pelo R-11.
             mode=self.source_mode if (mesmo_perfil or self.mode_dirty) else None,
             suppress_desktop_emulation=(
                 self.source_suppress
@@ -915,8 +582,6 @@ class DraftConfig(BaseModel):
                 else False
             ),
             triggers=_triggers_draft_to_config(self.triggers),
-            # COR-04: a seção GLOBAL emite auto_player_colors explicitamente
-            # (round-trip do toggle "Cores automáticas por controle").
             leds=_leds_draft_to_config(self.leds, include_auto=True),
             rumble=RumbleConfig(
                 passthrough=self.rumble.passthrough,
@@ -924,7 +589,6 @@ class DraftConfig(BaseModel):
                 custom_mult=self.rumble.custom_mult,
             ),
             key_bindings=self.key_bindings,
-            # OS DOIS QUE O SALVAR APAGAVA — ver o bloco dos campos.
             button_actions=self.source_button_actions,
             teclado_emulado=self.source_teclado_emulado,
             remapeamento=self.source_remapeamento,
@@ -932,65 +596,16 @@ class DraftConfig(BaseModel):
             mouse=mouse_cfg,
             mic=mic_cfg,
             speaker=speaker_cfg,
-            # R-11: `controllers` NÃO entra no gate de `mesmo_perfil`, ao
-            # contrário de match/priority/mode. A distinção é o que a coisa É:
-            # match/priority/mode são REGRA (identidade do perfil, de onde ele
-            # veio); os overrides por-controle são CONFIGURAÇÃO dela, e este
-            # campo — único entre os `source_*` — a GUI edita de verdade
-            # (`with_controller_leds`/`with_controller_triggers`). "Salvar
-            # Perfil" com nome novo significa "guarde o que eu tenho agora",
-            # então a config vai junto; a regra do outro perfil, não.
             controllers=self.source_controllers,
-            # PONTE-CONFIRMADA-01: o carimbo entra no gate do R-11 junto com
-            # match/mode/priority, e NÃO com `controllers` — ele não é
-            # configuração dela que viaja entre perfis, é o REGISTRO de uma
-            # confirmação feita naquele perfil, para aquele jogo. Com nome NOVO,
-            # o perfil que nasce ainda não confirmou nada, e "ainda não sei" é a
-            # resposta honesta; o jogo não perde por isso, porque
-            # `manager.perfil_do_appid` desempata por `(ponte is not None,
-            # priority, name)` e continua achando o carimbo no perfil que o tem.
             ponte=self.source_ponte if mesmo_perfil else None,
         )
-        # Revalida para garantir round-trip (captura regressoes de schema).
-        # Fix do review (2026-07-16): o `model_dump` DENSIFICA as seções
-        # PARCIAIS dos overrides por-controle (campos não escritos viram
-        # defaults do schema marcados como explícitos) — reintroduziria a
-        # resolução-por-objeto refutada um save depois (a ativação pisaria o
-        # global do controle). Passamos as INSTÂNCIAS já validadas: pydantic
-        # (revalidate_instances="never") as preserva com o `model_fields_set`
-        # original — parcial continua parcial.
         payload = profile.model_dump(mode="python")
         payload["controllers"] = profile.controllers
         return Profile.model_validate(payload)
 
-    # --- identidade do perfil de origem (ABAS-01) ---
 
     def with_profile_identity(self, profile: Any) -> DraftConfig:
-        """Rascunho reapontado para ``profile``, o perfil ACABADO DE GRAVAR.
-
-        ABAS-01 (sprint "as abas brigam pelo mesmo estado", 25/07). Os campos
-        ``source_*`` são a FOTOGRAFIA do perfil de onde o rascunho veio — e
-        quem os tirava era só o bootstrap, no boot da janela. Duas superfícies
-        gravam perfil sem passar por ali (a aba Perfis, que escreve ``mode``,
-        ``match``, ``priority`` e ``suppress_desktop_emulation`` direto no
-        disco, e o "Salvar Perfil" do rodapé, que grava com um nome NOVO), e
-        nenhuma das duas atualizava a fotografia. O resultado medido:
-
-        - aba Perfis → Modo = "Jogar pelo Hefesto" → Salvar *(grava certo)* →
-          aba Lightbar → muda a cor → rodapé "Salvar Perfil" com o MESMO nome
-          → a seção ``mode`` SOME do arquivo, porque ``to_profile`` reemitiu o
-          ``source_mode`` do boot (que era ``None``);
-        - rodapé "Salvar Perfil" como "MadJack" → ``source_name`` continuava
-          apontando para o perfil anterior, então o SEGUNDO "Salvar Perfil"
-          com o mesmo "MadJack" caía no ramo "nome novo" de ``to_profile`` e
-          zerava regra, prioridade e modo do perfil que ela acabara de criar.
-
-        Reapontar aqui fecha os dois: depois de gravar, o rascunho descreve o
-        que está em DISCO, e o ``mesmo_perfil`` de ``to_profile`` volta a
-        responder a verdade. As seções que a GUI edita (leds, gatilhos, rumble,
-        mouse, teclado e os overrides por-controle) não são tocadas — elas já
-        são a fonte do que foi gravado.
-        """
+        """Rascunho reapontado para ``profile``, o perfil ACABADO DE GRAVAR."""
         return self.model_copy(
             update={
                 "source_name": profile.name,
@@ -998,53 +613,19 @@ class DraftConfig(BaseModel):
                 "source_mode": profile.mode,
                 "source_priority": profile.priority,
                 "source_suppress": bool(profile.suppress_desktop_emulation),
-                # PONTE-CONFIRMADA-01: o carimbo também é fotografia, e sai do
-                # perfil GRAVADO — não do que o rascunho trazia. Salvar com nome
-                # novo produz um perfil sem carimbo, e é isso que o rascunho
-                # passa a dizer; do contrário o save seguinte, já com
-                # `mesmo_perfil` verdadeiro, carimbaria o perfil novo com uma
-                # confirmação que nunca foi feita nele.
                 "source_ponte": profile.ponte,
-                # PERFIL-SALVA-TUDO-01: o que estava pendente virou disco — os
-                # dois flags de edição baixam junto, senão um "Salvar Perfil"
-                # posterior com OUTRO nome levaria o modo deste perfil embora.
                 "mode_dirty": False,
                 "suppress_dirty": False,
             }
         )
 
-    # --- modo e modo-jogo, editáveis pelas abas Emulação/Início ---
 
     def with_mode(self, mode: Any | None) -> DraftConfig:
-        """Rascunho com o MODO do perfil trocado por gesto DELA.
-
-        PERFIL-SALVA-TUDO-01. ``mode`` é um ``ProfileModeConfig`` (ou ``None``
-        para "sem opinião") — a mesma seção que a aba Perfis grava por
-        ``_mode_section_from_editor``. Quem chama são as abas Emulação e Início,
-        DEPOIS de o daemon confirmar a mudança ao vivo: o rascunho registra o que
-        está de pé, e o "Salvar Perfil" do rodapé passa a persistir isso.
-
-        Marca ``mode_dirty``: é isso que faz o valor sobreviver a um save com
-        nome NOVO (gesto dela) sem reabrir o R-11 (regra herdada de outro perfil,
-        que continua gateada por ``mesmo_perfil``).
-        """
+        """Rascunho com o MODO do perfil trocado por gesto DELA."""
         return self.model_copy(update={"source_mode": mode, "mode_dirty": True})
 
     def with_suppress(self, suppress: bool) -> DraftConfig:
-        """Rascunho com o "modo jogo" (suspender mouse/teclado) trocado por ela.
-
-        PERFIL-SALVA-TUDO-01, mesma disciplina de ``with_mode``. Ela ESCLARECEU
-        que o "modo jogo" dela é suspender a emulação de mouse e teclado — hoje
-        o toggle da aba Emulação só manda ``daemon.emulation.suppress`` e o
-        próprio comentário do handler diz "NÃO persiste".
-
-        ATENÇÃO (declarado na sprint e MEDIDO aqui): ``suppress: true`` num perfil
-        CATCH-ALL é aplicado na ativação sem passar pelo gate R-02 — em
-        ``lifecycle.apply_profile_suppression`` o ``_perfil_tem_opiniao`` só
-        guarda o ramo de LIBERAR (``desired=False``), não o de ligar. Persistir
-        aqui é o que ela pediu; quem liga precisa saber que num catch-all isso
-        vale em TODA ativação, inclusive no restauro do último perfil no boot.
-        """
+        """Rascunho com o "modo jogo" (suspender mouse/teclado) trocado por ela."""
         return self.model_copy(
             update={"source_suppress": bool(suppress), "suppress_dirty": True}
         )
@@ -1056,29 +637,8 @@ class DraftConfig(BaseModel):
         muted: bool | None = None,
         soltar_mudo: bool = False,
     ) -> DraftConfig:
-        """Rascunho com o MICROFONE trocado por gesto DELA (18/08/2026).
-
-        PERFIL-GUARDA-O-MIC-01. Quem chama é a superfície que MANDOU o pedido
-        ao daemon (o controle deslizante do mic), DEPOIS de o daemon confirmar
-        — o rascunho registra o que está de pé para o "Salvar Perfil"
-        persistir, exatamente como ``with_speaker``.
-
-        **``volume=None`` é gesto SEM OPINIÃO sobre o volume**, e preserva o
-        que já estava registrado — a mesma regra do ``rota`` em
-        ``with_speaker``.
-
-        Não há ``without_mic``: aqui não existe o byte inteiro para devolver. O
-        volume é do PipeWire (o kernel continua dono da fonte).
-
-        **``muted`` E ``soltar_mudo`` NÃO MEXEM MAIS NO RASCUNHO —
-        O-MUDO-E-DO-CONTROLE-01 (28/09/2026).** O mudo é do controle (resposta
-        9 dela: *vale em todo jogo*), mora no ``maquina.json`` e tem UM
-        escritor, o ato do microfone no daemon. Os dois argumentos ficam na
-        assinatura porque o cartão do controle (``app/widgets/controller_card``)
-        ainda os passa; o ``muted`` que o rascunho carrega é o que o disco já
-        dizia, e atravessa como estava.
-        """
-        del muted, soltar_mudo  # o mudo é do controle, não do rascunho
+        """Rascunho com o MICROFONE trocado por gesto DELA (18/08/2026)."""
+        del muted, soltar_mudo
         return self.model_copy(
             update={
                 "mic": self.mic.model_copy(
@@ -1098,35 +658,13 @@ class DraftConfig(BaseModel):
     def with_speaker(
         self, volume: int, *, muted: bool = False, rota: int | None = None
     ) -> DraftConfig:
-        """Rascunho com o ALTO-FALANTE trocado por gesto DELA.
-
-        SOM-02/E4. Quem chama é a superfície que MANDOU o volume ao daemon
-        (o controle deslizante da E1), DEPOIS de o daemon confirmar — o
-        rascunho registra o que está de pé para o "Salvar Perfil" persistir,
-        exatamente como ``with_mode``/``with_suppress``.
-
-        ``volume`` é sempre explícito, 0-255: não existe caminho aqui para
-        marcar a seção sem número, porque não existe caminho no protocolo para
-        mandar mudo sem volume sem trancar o alto-falante em zero (SOM-02,
-        armadilhas 1 e 2). ``dirty`` liga porque é gesto dela — é o que faz o
-        valor sobreviver a um "Salvar Perfil" com nome NOVO.
-
-        ``rota=None`` NÃO apaga a rota já registrada: significa "este gesto não
-        tem opinião sobre o canal", que é a verdade do controle deslizante e do
-        botão de mudo — nenhum dos dois toca no ``OUTPUT_PATH_SEL``. Quem apaga
-        a rota é ``without_speaker``, porque soltar a posse solta o byte
-        inteiro. Sem essa preservação, mexer no volume depois de escolher o
-        canal desfaria o canal no rascunho em silêncio.
-        """
+        """Rascunho com o ALTO-FALANTE trocado por gesto DELA."""
         return self.model_copy(
             update={
                 "speaker": SpeakerDraft(
                     volume=max(0, min(255, int(volume))),
                     muted=bool(muted),
                     rota=self.speaker.rota if rota is None else int(rota),
-                    # A FONTE SOBREVIVE AO VOLUME pela mesma razão escrita
-                    # acima para o canal: mexer no volume depois de escolher
-                    # «Ouvir junto» não pode desfazer a escolha em silêncio.
                     fonte=self.speaker.fonte,
                     dirty=True,
                     in_profile=True,
@@ -1152,7 +690,6 @@ class DraftConfig(BaseModel):
         """
         return self.model_copy(update={"speaker": SpeakerDraft()})
 
-    # --- overrides por-controle (PERFIL-04) ---
 
     def controller_override(self, uniq: str | None) -> Any | None:
         """Override do controle ``uniq`` no mapa em edição, ou None.
@@ -1178,20 +715,7 @@ class DraftConfig(BaseModel):
         return ControllerOverrides.model_validate(entry)
 
     def effective_leds_for(self, uniq: str | None) -> LedsDraft:
-        """LEDs EFETIVOS que a aba exibe para o alvo ``uniq``.
-
-        Override presente → a seção ``leds`` dele (brilho incluso, LIDO DO
-        PERFIL — nunca do backend, senão o valor exibido diverge do salvo);
-        sem override (ou alvo "Todos") → a seção global do draft.
-
-        Fix do review (2026-07-16): o merge aqui é POR CAMPO, guiado pelo
-        ``model_fields_set`` do pydantic — campo NÃO escrito no JSON do
-        override herda o global (paridade com a ativação de perfil). Sem
-        isso, um override parcial escrito à mão exibia (e, via semeadura,
-        SALVAVA) os defaults do schema no lugar do global. Overrides criados
-        pela GUI carregam SÓ os campos que a usuária mudou (COR-04) — este
-        mesmo caminho por campo herda o resto do global.
-        """
+        """LEDs EFETIVOS que a aba exibe para o alvo ``uniq``."""
         override = self.controller_override(uniq)
         leds_cfg = getattr(override, "leds", None)
         if leds_cfg is None:
@@ -1208,11 +732,7 @@ class DraftConfig(BaseModel):
         return base.model_copy(update=herdados) if herdados else base
 
     def effective_triggers_for(self, uniq: str | None) -> TriggersDraft:
-        """Gatilhos EFETIVOS que a aba exibe para o alvo ``uniq`` (ver leds).
-
-        Merge POR LADO: um override só de ``left`` exibe o ``right`` global
-        (mesma regra de ``effective_leds_for``, fix do review 2026-07-16).
-        """
+        """Gatilhos EFETIVOS que a aba exibe para o alvo ``uniq`` (ver leds)."""
         override = self.controller_override(uniq)
         triggers_cfg = getattr(override, "triggers", None)
         if triggers_cfg is None:
@@ -1227,28 +747,8 @@ class DraftConfig(BaseModel):
         return base.model_copy(update=herdados) if herdados else base
 
     def with_controller_leds(self, uniq: str, leds: LedsDraft) -> DraftConfig:
-        """Novo draft com a seção ``leds`` do override de ``uniq`` substituída.
-
-        PERFIL-04: é por aqui que a edição de lightbar/player-LEDs com um
-        controle selecionado no seletor entra no mapa ``controllers`` do
-        perfil (e o "Salvar Perfil" do rodapé a persiste). O chamador semeia
-        ``leds`` com o efetivo em tela (``effective_leds_for`` + o campo
-        editado) — o que a usuária vê é o que salva.
-
-        COR-04: o override guarda SÓ os campos de LED que DIVERGEM do global do
-        draft (o efetivo semeado = global + o que a usuária mexeu). Campo igual
-        ao global não entra no override — herda o global no merge por campo do
-        backend; no caso dos player-LEDs, isso deixa a paleta automática acender
-        o LED do NÚMERO do controle em vez de congelá-lo. Sem nenhuma
-        divergência, o alvo não precisa de opinião própria: a seção ``leds`` do
-        override é limpa (herda tudo do global).
-        """
+        """Novo draft com a seção ``leds`` do override de ``uniq`` substituída."""
         campos: set[str] = set()
-        # SEM COR LIDA NÃO NASCE PEÇA — 22/09/2026, ordem dela sobre o preto.
-        # `None` aqui é *"não sei a cor deste controle"*, e comparado com o
-        # global ele SEMPRE diverge: era assim que um controle sem leitura
-        # ganhava peça própria — e a peça saía preta. Ver
-        # `led_control.cor_escolhida` e o `_leds_draft_to_config` acima.
         if leds.lightbar_rgb is not None and leds.lightbar_rgb != self.leds.lightbar_rgb:
             campos.add("lightbar")
         if leds.lightbar_brightness != self.leds.lightbar_brightness:
@@ -1259,12 +759,6 @@ class DraftConfig(BaseModel):
             return self.with_controller_fields_cleared(
                 uniq, "leds", {"lightbar", "lightbar_brightness", "player_leds"}
             )
-        # O BRILHO DAS LUZES DE NÚMERO NÃO É DESTE ESCRITOR (25/09/2026): quem o
-        # grava é a pílula da linha LEDs, direto no override. A seção é trocada
-        # INTEIRA logo abaixo, e sem o dono da regra o «Salvar» do rodapé
-        # apagava o brilho que ela escolheu para o controle.
-        # E A MESMA COR GUARDA O NÚMERO PARA O QUAL FOI ESCOLHIDA
-        # (`_com_a_procedencia_da_mesma_cor`, no fim deste arquivo).
         from hefesto_dualsense4unix.profiles.schema import com_o_brilho_das_luzes_de
 
         antes = getattr(self.controller_override(uniq), "leds", None)
@@ -1281,17 +775,9 @@ class DraftConfig(BaseModel):
             uniq, "triggers", _triggers_draft_to_config(triggers)
         )
 
-    # --- POR-UNIDADE-01 (10/08/2026): vibração e som por peça ---
 
     def effective_rumble_for(self, uniq: str | None) -> RumbleDraft:
-        """Vibração EFETIVA que a aba Rumble exibe para o alvo ``uniq``.
-
-        MESMA regra de ``effective_leds_for``, campo por campo: o override
-        traz só a INTENSIDADE (``policy``/``custom_mult``) e herda o resto do
-        global — inclusive ``weak``/``strong``, que são o teste de motores e
-        nunca foram do perfil, e ``passthrough``, que é da sessão (ver
-        ``ControllerRumbleOverride``).
-        """
+        """Vibração EFETIVA que a aba Rumble exibe para o alvo ``uniq``."""
         override = self.controller_override(uniq)
         cfg = getattr(override, "rumble", None)
         if cfg is None:
@@ -1304,20 +790,7 @@ class DraftConfig(BaseModel):
         )
 
     def with_controller_rumble(self, uniq: str, rumble: RumbleDraft) -> DraftConfig:
-        """Novo draft com a INTENSIDADE de ``uniq`` substituída.
-
-        Contrato copiado de ``with_controller_leds``, incluindo a regra COR-04:
-        o override guarda só o que DIVERGE do global do rascunho. Intensidade
-        igual à global não vira override — herda, e a peça some do mapa quando
-        não sobra mais nada nela. É o que faz "voltei os dois para Balanceado"
-        deixar o perfil limpo em vez de guardar dois overrides idênticos ao
-        global que a próxima ativação teria de reaplicar.
-
-        ``auto`` NÃO chega aqui como override: o esquema o recusa por unidade
-        (escala pela bateria do controle PRIMÁRIO). Escolher "Auto" com uma
-        peça selecionada limpa o override dela e devolve a peça ao global —
-        que é a leitura honesta do gesto, e não um erro silencioso.
-        """
+        """Novo draft com a INTENSIDADE de ``uniq`` substituída."""
         from hefesto_dualsense4unix.profiles.schema import ControllerRumbleOverride
 
         igual_ao_global = (
@@ -1336,13 +809,7 @@ class DraftConfig(BaseModel):
         )
 
     def effective_speaker_for(self, uniq: str | None) -> SpeakerDraft:
-        """Alto-falante EFETIVO que o card exibe para o alvo ``uniq``.
-
-        Sem merge por campo, e é o esquema que decide: ``volume`` é
-        OBRIGATÓRIO em ``ProfileSpeakerConfig`` (SOM-02, armadilhas 1 e 2),
-        então a seção nunca é parcial — o override substitui a seção inteira
-        daquela peça, ou não existe.
-        """
+        """Alto-falante EFETIVO que o card exibe para o alvo ``uniq``."""
         override = self.controller_override(uniq)
         cfg = getattr(override, "speaker", None)
         if cfg is None:
@@ -1357,21 +824,9 @@ class DraftConfig(BaseModel):
         )
 
     def with_controller_speaker(self, uniq: str, speaker: SpeakerDraft) -> DraftConfig:
-        """Novo draft com o alto-falante de ``uniq`` substituído.
-
-        Mesma regra COR-04 do ``with_controller_leds``: valor igual ao global
-        não vira override. ``volume=None`` é "esta peça não tem mais opinião"
-        e LIMPA o override — nunca grava a seção sem número, porque uma seção
-        sem volume manda ZERO ao firmware e tranca o alto-falante (SOM-02,
-        armadilha 1); o esquema também a recusaria.
-        """
+        """Novo draft com o alto-falante de ``uniq`` substituído."""
         from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
 
-        # A FONTE ENTRA NAS DUAS CONTAS — 10/09/2026, e nas duas ela faltava:
-        # fora do `igual_ao_global`, um controle cuja ÚNICA diferença fosse a
-        # fonte era lido como igual ao global e tinha o override APAGADO; fora
-        # do `ProfileSpeakerConfig`, ela era descartada na escrita. Os dois
-        # perdem em silêncio a escolha que o daemon obedece.
         igual_ao_global = (
             speaker.volume == self.speaker.volume
             and speaker.muted == self.speaker.muted
@@ -1394,59 +849,19 @@ class DraftConfig(BaseModel):
         )
 
     def effective_mic_for(self, uniq: str | None) -> MicDraft:
-        """Microfone EFETIVO que o card exibe para o alvo ``uniq``.
-
-        Merge POR CAMPO, como o de LEDs e pela mesma razão: o
-        ``ControllerMicOverride`` é um subconjunto ESTRITO do global — só
-        ``muted`` e ``volume`` —, então ``button_toggles_system`` **sempre**
-        vem do global, e um override que só diz ``muted`` não pode zerar o
-        volume que a seção global carrega.
-        """
+        """Microfone EFETIVO que o card exibe para o alvo ``uniq``."""
         override = self.controller_override(uniq)
         cfg = getattr(override, "mic", None)
         if cfg is None:
             return self.mic
         campos = cfg.model_fields_set
-        # A LISTA É LIDA DO ESQUEMA, NÃO DIGITADA — 21/09/2026. Ela dizia
-        # `("muted", "volume")` e o `gain` teria nascido invisível aqui: o
-        # override guardaria o ganho e o card mostraria o global. É a classe de
-        # defeito «campo que grava e ninguém lê», e o esquema já sabe responder.
         return self.mic.model_copy(update={
             nome: getattr(cfg, nome)
             for nome in type(cfg).model_fields if nome in campos
         } | {"in_profile": True})
 
     def with_controller_mic(self, uniq: str, mic: MicDraft) -> DraftConfig:
-        """Novo draft com o microfone de ``uniq`` substituído.
-
-        ESCRITA EM 05/09/2026, e o que a fez faltar é o que a fez nascer: o
-        ``ControllerOverrides`` do esquema tem SEIS seções e o ``DraftConfig``
-        sabia escrever QUATRO — ``mic`` e ``sensores`` só atravessavam pelo
-        passthrough byte-idêntico de ``source_controllers``. Enquanto a peça
-        não existisse, "Salvar" não tinha por onde levar ao disco o que ela
-        escolheu no card daquele microfone; o pedido dela era *"cada config
-        pra cada controle"*.
-
-        AS DUAS REGRAS SÃO AS DAS IRMÃS, e nenhuma é nova:
-
-        * **igual ao global não vira override** (COR-04) — um override que
-          repete o global é dívida silenciosa: some da tela e reaparece quando
-          o global mudar, contradizendo a peça sem ninguém ver;
-        * **só os campos MEXIDOS entram** — o esquema declara ``None`` como
-          *sem opinião*, e escrever o valor de leitura transformaria "não
-          pedi nada" em "pedi exatamente isto".
-
-        ``button_toggles_system`` NÃO ENTRA, e a razão está medida no esquema
-        (``ControllerMicOverride``): ``hotkey.mic_button_loop`` consulta o
-        ``DaemonConfig``, que é um por máquina — o campo não tem caminho por
-        unidade, e campo que grava sem quem leia faz a tela prometer.
-
-        **O ``muted`` TAMBÉM NÃO ENTRA — O-MUDO-E-DO-CONTROLE-01 (28/09/2026).**
-        O mudo é do controle (resposta 9 dela: *vale em todo jogo*), mora no
-        ``maquina.json`` e tem UM escritor, o ato do microfone no daemon. O
-        rascunho não o escreve nem o apaga: um ``muted`` que a peça ainda
-        carregue no disco (de antes da migração) atravessa como estava.
-        """
+        """Novo draft com o microfone de ``uniq`` substituído."""
         from hefesto_dualsense4unix.profiles.schema import ControllerMicOverride
 
         campos: dict[str, Any] = {}
@@ -1464,14 +879,7 @@ class DraftConfig(BaseModel):
         )
 
     def effective_sensores_for(self, uniq: str | None) -> Any:
-        """Giroscópio e acelerômetro DESTA peça, ou ``None`` — sem opinião.
-
-        SEM MERGE COM GLOBAL, e a ausência é o desenho: ``sensores`` **não
-        tem seção global** no ``Profile``. O override é o único lugar onde a
-        opinião existe, e ``None`` significa o que ``D-AUDIO-E-GIRO-NASCEM-
-        LIGADOS`` (25/08/2026) manda: **ligado**. Um perfil que não pediu nada
-        não desliga o sensor dela por omissão.
-        """
+        """Giroscópio e acelerômetro DESTA peça, ou ``None`` — sem opinião."""
         override = self.controller_override(uniq)
         return getattr(override, "sensores", None)
 
@@ -1480,18 +888,7 @@ class DraftConfig(BaseModel):
         giroscopio: bool | None = None,
         acelerometro: bool | None = None,
     ) -> DraftConfig:
-        """Novo draft com os sensores de ``uniq`` substituídos.
-
-        DOIS CAMPOS E NÃO UM porque ela disse *"ambos independente do modo e
-        da mascara"* e cada um por si — giroscópio e acelerômetro viajam na
-        mesma janela de 25 bytes, em faixas distintas, e zerar meia faixa
-        desliga um sem tocar no outro.
-
-        ``None`` em um campo é *sem opinião* e o deixa fora do override; os
-        dois ``None`` limpam a seção inteira, que é o caminho de volta ao
-        default ligado. Não há "igual ao global" a conferir aqui: o esquema
-        não tem seção global de sensores — a peça É o único dono.
-        """
+        """Novo draft com os sensores de ``uniq`` substituídos."""
         from hefesto_dualsense4unix.profiles.schema import ControllerSensoresOverride
 
         campos: dict[str, Any] = {}
@@ -1508,26 +905,7 @@ class DraftConfig(BaseModel):
         )
 
     def with_controller_mascara(self, uniq: str, mascara: str | None) -> DraftConfig:
-        """Novo draft com a MÁSCARA de ``uniq`` substituída (08/09/2026).
-
-        MASCARA-NO-PERFIL-01, decisão dela: *"pode entrar sim"*. ``None`` limpa
-        a escolha daquela peça — ela volta a herdar a máscara do perfil —, e é
-        o caminho de volta, sem o qual um registro em que só se entra vira
-        armadilha.
-
-        VALOR DESCONHECIDO É ERRO, NÃO "LIMPAR". Um `mascara="xbox 360"` que
-        virasse `None` apagaria a escolha dela em silêncio — o mesmo defeito do
-        `or "xbox"` do editor de perfis (ESCOLHE-DELA-VENCE-01), só que do outro
-        lado. Quem recusa é o `normalizar_gamepad_flavor` do esquema, que é a
-        fronteira já existente; não há um segundo catálogo aqui.
-
-        NÃO HÁ "IGUAL AO GLOBAL" A CONFERIR, e a diferença com as seções irmãs é
-        medida: o vizinho global desta escolha é o `mode.gamepad_flavor`, que
-        vale para a SESSÃO inteira e não é uma seção por peça. Escrever a
-        máscara de uma peça igual à do modo é uma afirmação legítima — *"este
-        controle segue o jogo, e eu quero que continue seguindo mesmo se o jogo
-        mudar"*.
-        """
+        """Novo draft com a MÁSCARA de ``uniq`` substituída (08/09/2026)."""
         from hefesto_dualsense4unix.profiles.schema import normalizar_gamepad_flavor
 
         if mascara is None:
@@ -1541,19 +919,7 @@ class DraftConfig(BaseModel):
         return self._with_override_section(uniq, "mascara", valor)
 
     def _with_override_scalar_cleared(self, uniq: str, section: str) -> DraftConfig:
-        """Apaga uma seção de UM VALOR SÓ do override de ``uniq``.
-
-        Irmã de ``with_controller_fields_cleared``, e separada dela por
-        construção: aquela limpa CAMPOS de dentro de uma seção
-        (``cfg.model_fields_set``), e uma seção escalar não tem campos dentro —
-        ``"xbox".model_fields_set`` não existe. Chamar a irmã aqui daria
-        ``AttributeError`` na primeira vez que ela apagasse a máscara.
-
-        Sem override, ou já sem a seção, devolve ``self`` intacto. A entrada que
-        esvaziou some do mapa, pela mesma razão do resto do arquivo: um `uniq`
-        apontando para `{}` faz a próxima leitura achar que aquela peça tem
-        opinião.
-        """
+        """Apaga uma seção de UM VALOR SÓ do override de ``uniq``."""
         override = self.controller_override(uniq)
         if override is None or getattr(override, section, None) is None:
             return self
@@ -1573,19 +939,12 @@ class DraftConfig(BaseModel):
     def _with_override_section(
         self, uniq: str, section: str, value: Any
     ) -> DraftConfig:
-        """Grava ``value`` na seção ``section`` do override de ``uniq``.
-
-        Nunca muta o dict compartilhado do draft congelado: constrói um mapa
-        NOVO (entradas não tocadas seguem os mesmos objetos — passthrough
-        byte-idêntico preservado) e devolve o draft substituído.
-        """
+        """Grava ``value`` na seção ``section`` do override de ``uniq``."""
         from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
         mapa: dict[str, Any] = dict(self.source_controllers or {})
         atual = self.controller_override(uniq) or ControllerOverrides()
         mapa[uniq] = atual.model_copy(update={section: value})
-        # Z4/T8: gravar um override é o oposto de apagar o último — a
-        # próxima leitura do mapa não é mais "ela esvaziou", é "tem conteúdo".
         return self.model_copy(
             update={
                 "source_controllers": mapa,
@@ -1596,21 +955,7 @@ class DraftConfig(BaseModel):
     def with_override_fields_cleared(
         self, section: str, fields: Iterable[str]
     ) -> DraftConfig:
-        """Limpa ``fields`` da seção ``section`` de TODOS os overrides do mapa.
-
-        Fix do review (2026-07-16, HIGH): espelha no DRAFT a regra que o
-        backend já aplica ao vivo (`_record_desired_locked` com broadcast) —
-        uma edição em "Todos" vale para todo mundo, então o campo editado sai
-        dos overrides por-controle. Sem isso, "mudei todos para azul" ao vivo
-        + "Salvar Perfil" persistia o override antigo intacto e a PRÓXIMA
-        ativação ressuscitava a cor velha no alvo (o "voltou verde" que o
-        sprint doc proíbe, na camada de persistência).
-
-        Granularidade guiada pelo ``model_fields_set``: só os campos pedidos
-        saem; o resto do override (ex.: player-LEDs próprios) fica. Seção que
-        esvazia vira ``None``; entrada sem nenhuma seção some do mapa; mapa
-        vazio volta a ``None`` (nenhuma chave fantasma no JSON salvo).
-        """
+        """Limpa ``fields`` da seção ``section`` de TODOS os overrides do mapa."""
         mapa = self.source_controllers
         if not isinstance(mapa, dict) or not mapa:
             return self
@@ -1624,7 +969,6 @@ class DraftConfig(BaseModel):
                 continue
             cfg = getattr(override, section, None)
             if cfg is None or not (cfg.model_fields_set & alvo_campos):
-                # Nada da seção/campos editados aqui — passthrough intacto.
                 novo[uniq] = entry
                 continue
             mudou = True
@@ -1636,13 +980,10 @@ class DraftConfig(BaseModel):
             )
             novo_override = override.model_copy(update={section: nova_secao})
             if _override_vazio(novo_override):
-                continue  # entrada esvaziou — some do mapa
+                continue
             novo[uniq] = novo_override
         if not mudou:
             return self
-        # Z4/T8: só entra True quando o mapa TINHA algo (o guarda do topo já
-        # garantiu isso) e ficou vazio agora — é exatamente "ela apagou o
-        # último override", a metade que ``_controllers_to_ipc`` precisa saber.
         return self.model_copy(
             update={
                 "source_controllers": novo or None,
@@ -1653,16 +994,7 @@ class DraftConfig(BaseModel):
     def with_controller_fields_cleared(
         self, uniq: str, section: str, fields: Iterable[str]
     ) -> DraftConfig:
-        """Limpa ``fields`` da seção ``section`` do override de UM ``uniq``.
-
-        COR-04 ("Voltar ao automático" com um controle selecionado): remove a
-        cor explícita SÓ do alvo — a automática (ou o global, com o auto
-        desligado) volta a valer nele no próximo Aplicar. Mesma granularidade
-        por campo de ``with_override_fields_cleared``: campos não pedidos
-        (ex.: player-LEDs próprios, gatilhos) ficam; seção que esvazia vira
-        ``None``; entrada sem nenhuma seção some do mapa; mapa vazio volta a
-        ``None``. Sem override (ou sem os campos) devolve ``self`` intacto.
-        """
+        """Limpa ``fields`` da seção ``section`` do override de UM ``uniq``."""
         override = self.controller_override(uniq)
         if override is None:
             return self
@@ -1679,12 +1011,9 @@ class DraftConfig(BaseModel):
         novo_override = override.model_copy(update={section: nova_secao})
         mapa: dict[str, Any] = dict(self.source_controllers or {})
         if _override_vazio(novo_override):
-            mapa.pop(uniq, None)  # entrada esvaziou — some do mapa
+            mapa.pop(uniq, None)
         else:
             mapa[uniq] = novo_override
-        # Z4/T8: mesma lógica de ``with_override_fields_cleared`` — aqui só o
-        # ÚLTIMO ``uniq`` do mapa podia ter sobrado, então `not mapa` é
-        # exatamente "esvaziou agora".
         return self.model_copy(
             update={
                 "source_controllers": mapa or None,
@@ -1764,9 +1093,6 @@ class DraftConfig(BaseModel):
                         leds_entry["lightbar_brightness"] = brilho
                         # O NÚMERO PARA O QUAL A COR FOI ESCOLHIDA viaja com
                         # ela: o controle em economia vai na camada do perfil,
-                        # e sem o número a cor seria `LEGADO` — o fóssil pela
-                        # forma na «Bateria longa» (conferência da
-                        # O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09).
                         numero = override.leds.lightbar_para_o_numero
                         if "lightbar" in campos and numero is not None:
                             leds_entry["lightbar_para_o_numero"] = int(numero)
@@ -1776,8 +1102,6 @@ class DraftConfig(BaseModel):
                     leds_entry["player_leds"] = [
                         bool(b) for b in override.leds.player_leds
                     ]
-                # O FRACO, O MÉDIO OU O FORTE DESTE CONTROLE, só quando foi
-                # escrito (O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09).
                 if "player_led_brightness" in campos:
                     leds_entry["player_led_brightness"] = str(
                         override.leds.player_led_brightness)
@@ -1798,10 +1122,6 @@ class DraftConfig(BaseModel):
                     }
                 if trig_entry:
                     entry["triggers"] = trig_entry
-            # POR-UNIDADE-01: a INTENSIDADE de vibração da peça viaja no
-            # "Aplicar" (o global não viaja — a aba já o aplicou ao vivo pelo
-            # `rumble.policy_set`, e não existe IPC vivo por unidade). Sem
-            # isto, a escolha por peça só valeria na PRÓXIMA ativação.
             if override.rumble is not None:
                 campos_r = override.rumble.model_fields_set
                 if "policy" in campos_r and override.rumble.policy is not None:
@@ -1907,9 +1227,6 @@ class DraftConfig(BaseModel):
         rota speed-only do applier, que não liga nem desliga nada.
         """
         rgb = self.leds.lightbar_rgb
-        # SOM-NO-AGORA-01 (10/08/2026) — ver a NOTA DATADA acima. Montada fora
-        # do dicionário porque o gate tem duas perguntas e a ``rota`` é
-        # condicional: um literal aninhado esconderia as duas.
         speaker_ipc: dict[str, Any] | None = None
         if self.speaker.dirty and self.speaker.volume is not None:
             speaker_ipc = {
@@ -1918,17 +1235,8 @@ class DraftConfig(BaseModel):
             }
             if self.speaker.rota is not None:
                 speaker_ipc["rota"] = int(self.speaker.rota)
-        # MIC-GATE-POR-CAMPO-01 (22/08/2026) — montada fora do dicionário pela
-        # MESMA razão do alto-falante: o gate tem duas perguntas. A seção viaja
-        # quando ela mexeu no microfone (``dirty``); o ``button_toggles_system``
-        # viaja só quando ALGUÉM o escolheu, porque ele é o único dos três que
-        # ainda não tem superfície — sem esta condicional, arrastar o volume
-        # mandava o default de fábrica ao daemon e derrubava calado um `False`
-        # do ``DaemonConfig`` (ver ``MicDraft``).
         mic_ipc: dict[str, Any] | None = None
         if self.mic.dirty:
-            # O MUDO NÃO VIAJA (O-MUDO-E-DO-CONTROLE-01): é do controle, e o
-            # «Aplicar» não é ato sobre ele.
             mic_ipc = {"volume": self.mic.volume}
             if self.mic.button_toggles_system is not None:
                 mic_ipc["button_toggles_system"] = self.mic.button_toggles_system
@@ -1947,12 +1255,7 @@ class DraftConfig(BaseModel):
                 "lightbar_rgb": list(rgb) if rgb is not None else None,
                 "lightbar_brightness": self.leds.lightbar_brightness / 100.0,
                 "player_leds": list(self.leds.player_leds),
-                # COR-04: o toggle viaja no "Aplicar" — o DraftApplier o
-                # propaga ao registro de identidade (mesmo destino da
-                # ativação de perfil); daemon antigo ignora a chave (aditivo).
                 "auto_player_colors": self.leds.auto_player_colors,
-                # O «Todos» das luzes de número; o de cada controle viaja em
-                # `controllers` (O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01).
                 "player_led_brightness": self.leds.player_led_brightness,
             },
             "rumble": {
@@ -1967,23 +1270,7 @@ class DraftConfig(BaseModel):
                 if self.mouse.dirty
                 else None
             ),
-            # MIC-EXPOSE-01: só quando a usuária mexeu na seção (mesma regra
-            # do `mouse`) — um "Aplicar" de outra aba não pode religar/desligar
-            # o botão de mic pelas costas dela. Daemon antigo ignora a chave.
-            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): `volume` e `mudo` viajam
-            # junto do booleano. O nome das chaves é o do IPC `mic.volume.set`/
-            # `mic.set` de propósito, pela mesma razão do `speaker`: o daemon
-            # já sabe validá-las e um segundo vocabulário para o mesmo fato
-            # seria mais uma tradução sem necessidade. Daemon antigo (e o
-            # `ipc_draft_applier` de hoje) ignoram chave que não conhecem.
-            # MIC-GATE-POR-CAMPO-01 (22/08/2026): montada acima — o booleano só
-            # entra com opinião.
             "mic": mic_ipc,
-            # SOM-NO-AGORA-01: volume, mudo e canal do alto-falante — só quando
-            # ela mexeu no som nesta sessão (``dirty``) e há número para mandar.
-            # O nome das três chaves é o do IPC ``speaker.set`` de propósito: o
-            # daemon já sabe validá-las, e um segundo vocabulário para o mesmo
-            # byte seria mais uma tradução onde não há necessidade nenhuma.
             "speaker": speaker_ipc,
             "keyboard": {
                 "key_bindings": (
@@ -1992,9 +1279,6 @@ class DraftConfig(BaseModel):
                     else None
                 ),
             },
-            # PERFIL-04: overrides por-controle do mapa em edição — o
-            # DraftApplier os aplica via API por-uniq (apply_output_for),
-            # DEPOIS das seções globais (o override vence no alvo). None
             # quando não há mapa (seção pulada; daemon antigo ignora).
             "controllers": self._controllers_to_ipc(),
         }
@@ -2043,11 +1327,6 @@ class DraftConfig(BaseModel):
         )
 
 
-# ---------------------------------------------------------------------------
-# Registro do ALTO-FALANTE no rascunho (SOM-02/E4 — a fiação que faltava)
-# ---------------------------------------------------------------------------
-
-
 def registrar_alto_falante_no_rascunho(
     janela: Any,
     *,
@@ -2056,75 +1335,17 @@ def registrar_alto_falante_no_rascunho(
     rota: int | None = None,
     uniq: str | None = None,
 ) -> None:
-    """Anota no rascunho o alto-falante que ficou DE PÉ. NÃO aplica nada.
-
-    A fiação que faltava desde a SOM-02/E4: ``with_speaker`` existia, tinha
-    teste e **nenhum chamador no produto**. O bloco "Alto-falante" do card
-    mandava o volume por IPC e não tocava no rascunho, então o "Salvar Perfil"
-    persistia o número VELHO — e a ativação seguinte o devolvia ao controle
-    (``lifecycle.apply_profile_speaker``). Ela ajustava o volume, salvava, e o
-    próprio gesto de salvar desfazia o ajuste.
-
-    Quem chama é o CALLBACK DE SUCESSO do gesto no card, nunca o gesto em si:
-    o rascunho descreve o que ficou de pé, não a intenção — a mesma disciplina
-    de ``registrar_modo_no_rascunho`` (Emulação) e do "Aplicar" do rodapé. Um
-    pedido recusado pelo daemon não registra nada.
-
-    ``volume=None`` significa **soltar** (a devolução da posse da SOM-02/E3) e
-    apaga a seção; qualquer número registra volume e mudo juntos, que é o
-    único par que o protocolo aceita sem trancar o alto-falante em zero.
-    ``rota`` só vem do gesto que MEXEU no canal — ``None`` preserva a rota já
-    registrada em vez de apagá-la (ver ``with_speaker``).
-
-    Função de MÓDULO, e um escritor só, pela razão já paga por esta base em
-    ``registrar_modo_no_rascunho``: o dono do rascunho do alto-falante tem de
-    ser único e visível ao portão de AST — a classe de defeito desta casa é
-    *"três escritores do perfil sem dono"*. ``janela`` sem ``draft`` (card
-    avulso de teste, ou antes de a janela terminar de nascer) é caso normal e
-    sai calado: o gesto ao vivo já foi, e não há rascunho para anotar.
-
-    ``uniq`` — POR-UNIDADE-01 (10/08/2026), o alcance que ela pediu: *"uma guia
-    específica do perfil X pro controle branco e outra pro mesmo perfil pra um
-    controle preto"*. O card SEMPRE soube de quem é o bloco (o ``speaker.set``
-    dele já sai com ``uniq``); o que faltava era o perfil ter onde guardar isso.
-
-    QUEM DECIDE se a anotação é da casa ou da peça é o SELETOR DE ALVO, o
-    mesmo dono único (``app/alvo_de_edicao.py``) que a Lightbar, os Gatilhos
-    e a Rumble já obedecem (Z2-1) — e o mesmo selo ao lado dele que diz, na
-    tela, qual peça está sendo editada. Só quando ela ESCOLHEU aquela peça no
-    seletor a anotação vira override; com o seletor em "Todos" (o padrão, e o
-    caso de quem tem um controle só) nada muda: a escrita é a GLOBAL de
-    sempre, byte-idêntica. **Com a janela sem saber o alvo (DESCONHECIDO),
-    Z2-4 (24/08/2026) faz o registro recusar — zero escrita —, em vez de
-    cair no mesmo ramo GLOBAL de "Todos" e anotar a peça errada.**
-
-    A alternativa — deduzir a peça do card em que ela encostou — foi medida e
-    RECUSADA: com um controle só, todo gesto de volume viraria um override por
-    MAC e a seção global do perfil nunca mais seria escrita
-    (``test_a_secao_do_alto_falante_so_viaja_quando_ela_mexeu_no_som`` reprova
-    exatamente isso). O card diz de quem foi o gesto; o SELETOR diz para quem
-    ela quer que valha, e é essa a pergunta.
-
-    Dentro do ramo por peça vale a regra COR-04 de ``with_controller_leds``:
-    valor igual ao global não vira override (herda), e a entrada some do mapa
-    quando esvazia.
-    """
+    """Anota no rascunho o alto-falante que ficou DE PÉ. NÃO aplica nada."""
     draft = getattr(janela, "draft", None)
     if not isinstance(draft, DraftConfig):
         return
     if volume is None:
-        # "Soltar" a posse é da CASA: solta em todo mundo (o byte de áudio
-        # volta a ser do firmware) e nenhuma peça pode continuar carregando um
-        # número que a próxima ativação reaplicaria.
         janela.draft = draft.without_speaker().with_override_fields_cleared(
             "speaker", {"volume", "muted", "rota"}
         )
         return
     estado_alvo = alvo_de_edicao(janela)
     if estado_alvo.desconhecido:
-        # Z2-4: a janela não sabe o alvo — zero escrita no rascunho. Nunca
-        # cai no ramo GLOBAL (que anotaria o volume na peça errada: a que
-        # ninguém escolheu, não a que gerou o gesto).
         return
     alvo = estado_alvo.uniq
     if uniq and alvo and str(alvo) == str(uniq):
@@ -2142,11 +1363,6 @@ def registrar_alto_falante_no_rascunho(
     janela.draft = draft.with_speaker(volume, muted=muted, rota=rota)
 
 
-# ---------------------------------------------------------------------------
-# Registro do MICROFONE no rascunho (PERFIL-GUARDA-O-MIC-01 — 18/08/2026)
-# ---------------------------------------------------------------------------
-
-
 def registrar_microfone_no_rascunho(
     janela: Any,
     *,
@@ -2154,46 +1370,11 @@ def registrar_microfone_no_rascunho(
     muted: bool | None = None,
     soltar_mudo: bool = False,
 ) -> None:
-    """Anota no rascunho o MICROFONE que ficou DE PÉ. NÃO aplica nada.
-
-    Irmão exato de ``registrar_alto_falante_no_rascunho``, e nasceu do mesmo
-    defeito, um andar ao lado. Pedido dela em 18/08/2026, depois de o microfone
-    ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de microfone e
-    som, touch, acelerômetro, giroscópio e afins. cara, temos que salvar isso
-    no perfil sempre."* Medido no mesmo dia: nenhum dos 18 perfis dela tinha a
-    seção ``mic``, embora ``ProfileMicConfig`` guarde ``volume`` e ``muted``
-    desde 16/08 — a classe de defeito *"a casa sabe e o produto não faz"*.
-
-    Quem chama é o CALLBACK DE SUCESSO do gesto no card, nunca o gesto em si:
-    o rascunho descreve o que ficou de pé, não a intenção. Um pedido recusado
-    pelo daemon (ou uma fonte de captura que não existe) não registra nada.
-
-    ``volume=None`` significa **este gesto não tem opinião sobre o volume** e
-    preserva o que já estava anotado (ver ``with_mic``). ``muted`` e
-    ``soltar_mudo`` ficam na assinatura e não anotam nada: o mudo é do
-    controle e mora no ``maquina.json`` (O-MUDO-E-DO-CONTROLE-01).
-
-    NÃO há alvo por ``uniq``, e a ausência é deliberada: ``ControllerOverrides``
-    não tem seção ``mic`` (decisão de POR-UNIDADE-01), e o volume da captura é
-    de MÁQUINA — há uma fonte por PC, não uma por controle
-    (``_handle_mic_volume_set``). Aceitar um alvo aqui seria prometer um
-    endereço que o esquema não guarda.
-
-    Função de MÓDULO, e um escritor só, pela razão já paga por esta base em
-    ``registrar_modo_no_rascunho``/``registrar_alto_falante_no_rascunho``: o
-    dono do rascunho de um assunto tem de ser único e visível ao portão de AST
-    — a classe de defeito desta casa é *"três escritores do perfil sem dono"*.
-    ``janela`` sem ``draft`` (card avulso de teste, ou antes de a janela
-    terminar de nascer) é caso normal e sai calado.
-    """
+    """Anota no rascunho o MICROFONE que ficou DE PÉ. NÃO aplica nada."""
     draft = getattr(janela, "draft", None)
     if not isinstance(draft, DraftConfig):
         return
     if volume is None:
-        # Gesto sem opinião sobre o volume não marca a seção como tocada:
-        # marcar aqui faria um perfil legado ganhar seção `mic` fantasma por um
-        # clique que não mudou nada. O MUDO não conta como opinião do rascunho
-        # desde a O-MUDO-E-DO-CONTROLE-01: ele é do controle (ver `with_mic`).
         return
     janela.draft = draft.with_mic(
         volume=volume, muted=muted, soltar_mudo=soltar_mudo
@@ -2201,24 +1382,7 @@ def registrar_microfone_no_rascunho(
 
 
 def _com_a_procedencia_da_mesma_cor(antes: Any, novos: Any) -> Any:
-    """``novos`` com o número para o qual a MESMA cor de ``antes`` foi escolhida.
-
-    O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01 achou, e a
-    O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 trouxe a regra para cá, que é o
-    dono (26/09/2026): o tom, a caixa `#RRGGBB` e o interruptor «Cores
-    automáticas» da aba 04 gravam a cor COM a procedência
-    (`LedsConfig.lightbar_para_o_numero`, a decisão de 08/09), e o
-    `with_controller_leds` troca a seção inteira por uma que só conhece cor,
-    brilho e lâmpadas. Sem o número a cor vira `LEGADO`, e o resolvedor volta a
-    provar fóssil pela forma: o P4 no tom do número 2 acendia, depois do
-    «Salvar» e da troca manual seguinte, a cor do número dele. Até hoje a regra
-    morava no rodapé, que usava o `_with_override_section` privado para isso.
-
-    Só a MESMA cor leva a procedência: a cor que difere (a que atravessou a
-    troca automática) não tem, no disco, para qual número foi escolhida, e
-    inventar um seria afirmar o que ninguém sabe. É o irmão do
-    `schema.com_o_brilho_das_luzes_de`, que devolve o brilho das luzes.
-    """
+    """``novos`` com o número para o qual a MESMA cor de ``antes`` foi escolhida."""
     campo = "lightbar_para_o_numero"
     if antes is None or not {"lightbar", campo} <= antes.model_fields_set:
         return novos

@@ -21,10 +21,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_t04_o_proton_nao_comemora_o_que_recusou: importa código da janela GTK")
 
 import pytest
@@ -33,9 +29,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
     format_proton_lock_result,
 )
 
-#: O dicionário EXATO que a recusa produzia antes da cura — as três contagens
-#: em zero. Ele é o corpo de delito: nada aqui distingue recusa de "nada a
-#: fazer", e é por isso que `status` precisou atravessar a ponte.
 RECUSA_COMO_ERA = {"locked": 0, "skipped": 0, "errors": 0, "tool": "GE-Proton10-34"}
 
 
@@ -60,10 +53,7 @@ class TestARecusaNaoViraComemoracao:
         assert "já estão no Proton validado" not in frase
 
     def test_recusa_diz_o_que_fazer_a_seguir(self) -> None:
-        """Regra desta casa: o quê, por quê e O QUE FAZER.
-
-        Uma recusa que só recusa deixa a pessoa parada na frente do botão.
-        """
+        """Regra desta casa: o quê, por quê e O QUE FAZER."""
         frase = format_proton_lock_result(
             {
                 **RECUSA_COMO_ERA,
@@ -75,12 +65,7 @@ class TestARecusaNaoViraComemoracao:
         assert "clique de novo" in frase
 
     def test_motivo_desconhecido_nao_inventa_causa(self) -> None:
-        """`_steam_gate` pode ganhar um motivo novo; a frase não pode chutar.
-
-        Dizer "havia um jogo aberto" para um motivo que a tela não conhece
-        seria trocar uma mentira por outra. A frase confessa a recusa e manda
-        para os Detalhes técnicos.
-        """
+        """`_steam_gate` pode ganhar um motivo novo; a frase não pode chutar."""
         frase = format_proton_lock_result(
             {**RECUSA_COMO_ERA, "status": "recusado", "reason": "motivo_do_futuro"}
         )
@@ -95,11 +80,7 @@ class TestOsOutrosDesfechosNaoMudaram:
     """A régua tem de saber ACEITAR — senão vira "tudo é recusa"."""
 
     def test_nada_a_fazer_de_verdade_continua_dizendo_nada_a_fazer(self) -> None:
-        """`status="noop"` é o caso REAL de "já estavam travados".
-
-        Se a cura tivesse transformado toda contagem zerada em recusa, ela
-        teria trocado uma mentira por outra na direção oposta.
-        """
+        """`status="noop"` é o caso REAL de "já estavam travados"."""
         frase = format_proton_lock_result(
             {**RECUSA_COMO_ERA, "status": "noop", "reason": "ja_travado"}
         )
@@ -123,11 +104,7 @@ class TestOsOutrosDesfechosNaoMudaram:
         assert "3 jogo(s)" in frase
 
     def test_dicionario_sem_status_se_comporta_como_antes(self) -> None:
-        """Compatibilidade: `status` é opcional no contrato.
-
-        Um chamador antigo (ou um teste de terceiro) que ainda não manda a
-        chave não pode passar a receber recusa por omissão.
-        """
+        """Compatibilidade: `status` é opcional no contrato."""
         frase = format_proton_lock_result(RECUSA_COMO_ERA)
 
         assert "Nada a mudar" in frase
@@ -160,5 +137,4 @@ class TestOStatusAtravessaAPonte:
 
         assert saida["status"] == "recusado"
         assert saida["reason"] == "jogo_da_steam_aberto"
-        # E o caminho inteiro, ponta a ponta: o que o botão realmente exibe.
         assert "havia um jogo aberto" in format_proton_lock_result(saida)

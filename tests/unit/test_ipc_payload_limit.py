@@ -1,9 +1,4 @@
-"""Testes de limite de bytes no dispatch IPC (HARDEN-IPC-PAYLOAD-LIMIT-01).
-
-Cobrem rejeição de payloads gigantes via campo arbitrário de padding, sem
-afetar payloads legítimos. Não precisam de socket real — invocam `_dispatch`
-diretamente sobre bytes.
-"""
+"""Testes de limite de bytes no dispatch IPC (HARDEN-IPC-PAYLOAD-LIMIT-01)."""
 from __future__ import annotations
 
 import json
@@ -34,7 +29,6 @@ async def test_payload_pequeno_normal_nao_rejeita() -> None:
     resp = await srv._dispatch(raw)
     assert resp is not None
     body = json.loads(resp.decode("utf-8"))
-    # Pode falhar por daemon=None, mas NÃO deve ser erro de tamanho (-32600).
     assert body.get("error", {}).get("code") != CODE_INVALID_REQUEST
 
 

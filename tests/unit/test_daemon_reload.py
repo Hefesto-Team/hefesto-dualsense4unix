@@ -20,10 +20,6 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.testing import FakeController
 
-# ---------------------------------------------------------------------------
-# Auxiliares
-# ---------------------------------------------------------------------------
-
 
 def _make_daemon(
     ps_button_action: str = "steam",
@@ -57,11 +53,6 @@ def _make_ipc(daemon: Daemon | None = None) -> IpcServer:
     )
 
 
-# ---------------------------------------------------------------------------
-# reload_config — comportamento de ps_button_action
-# ---------------------------------------------------------------------------
-
-
 def test_reload_config_none_nao_abre_steam(monkeypatch):
     """Após reload com ps_button_action='none', on_ps_solo não chama Steam."""
     from hefesto_dualsense4unix.integrations import steam_launcher as _sl
@@ -72,7 +63,6 @@ def test_reload_config_none_nao_abre_steam(monkeypatch):
     daemon = _make_daemon(ps_button_action="steam")
     daemon._start_hotkey_manager()
 
-    # Reload: muda ação para "none".
     novo_cfg = DaemonConfig(
         ps_button_action="none",
         ipc_enabled=False,
@@ -81,10 +71,8 @@ def test_reload_config_none_nao_abre_steam(monkeypatch):
     )
     daemon.reload_config(novo_cfg)
 
-    # Dispara on_ps_solo diretamente — não deve chamar Steam.
     assert daemon._hotkey_manager is not None
     daemon._hotkey_manager.on_ps_solo()
-    # A Steam corre no fio do gesto, e não no laço: a régua espera o fio.
     assert daemon._hotkey_manager.on_ps_solo.esperar(5.0)
     assert chamadas == [], "Steam não deve ser chamado após reload para 'none'"
 
@@ -108,7 +96,6 @@ def test_reload_config_steam_chama_launcher(monkeypatch):
     daemon.reload_config(novo_cfg)
 
     daemon._hotkey_manager.on_ps_solo()
-    # A Steam corre no fio do gesto, e não no laço: a régua espera o fio.
     assert daemon._hotkey_manager.on_ps_solo.esperar(5.0)
     assert chamadas == ["steam"]
 
@@ -131,11 +118,6 @@ def test_reload_config_recria_hotkey_manager():
     assert daemon._hotkey_manager is not None
 
 
-# ---------------------------------------------------------------------------
-# reload_config — mouse_emulation_enabled
-# ---------------------------------------------------------------------------
-
-
 def test_reload_config_mouse_ligado_chama_set_mouse_emulation(monkeypatch):
     """Reload com mouse_emulation_enabled=True chama set_mouse_emulation(True, origin="manual")."""
     daemon = _make_daemon(mouse_emulation_enabled=False)
@@ -147,7 +129,7 @@ def test_reload_config_mouse_ligado_chama_set_mouse_emulation(monkeypatch):
         enabled: bool,
         speed: int | None = None,
         scroll_speed: int | None = None,
-        **_kw: object,  # ORIGEM-QUE-MENTE-01: o `origin` agora viaja explícito
+        **_kw: object,
     ) -> bool:
         chamadas.append((enabled, speed, scroll_speed))
         return True
@@ -183,7 +165,6 @@ def test_reload_config_mouse_sem_mudanca_nao_chama_set_mouse_emulation(monkeypat
         lambda enabled, **_kw: chamadas.append(enabled) or True,
     )
 
-    # Novo config: mouse continua False.
     novo_cfg = DaemonConfig(
         mouse_emulation_enabled=False,
         ps_button_action="none",
@@ -196,9 +177,7 @@ def test_reload_config_mouse_sem_mudanca_nao_chama_set_mouse_emulation(monkeypat
     assert chamadas == [], "set_mouse_emulation não deve ser chamado se estado não mudou"
 
 
-# ---------------------------------------------------------------------------
 # IPC daemon.reload
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -216,7 +195,6 @@ async def test_ipc_daemon_reload_retorna_config_atualizado():
     assert resultado["status"] == "ok"
     assert "config" in resultado
     assert resultado["config"]["ps_button_action"] == "none"
-    # Config do daemon deve ter sido atualizado.
     assert daemon.config.ps_button_action == "none"
 
 

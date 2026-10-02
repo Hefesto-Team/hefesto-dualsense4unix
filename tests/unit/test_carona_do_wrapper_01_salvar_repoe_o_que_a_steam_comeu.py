@@ -1,39 +1,8 @@
-"""CARONA-DO-WRAPPER-01: salvar ou aplicar um perfil repõe o wrapper.
-
-16/08/2026, e o desenho é DELA: *"nem precisa ter um botão na gui, mas ele se
-auto corrigir ao clicarmos em aplicar ou salvar o perfil seja dentro ou fora da
-guia de perfis."*
-
-O defeito por trás (SENTINELA-WRAPPER-01, medido ao vivo às 02h30): a Steam
-guarda UMA linha de `LaunchOptions` por jogo, e qualquer coisa escrita nela
-substitui a chamada do `hefesto-launch` em silêncio. Sem o wrapper, o
-`launch_env` que o daemon materializa nunca é lido, e vence a lista de IGNORE
-da própria Steam — que manda o jogo ignorar o PID do NOSSO vpad. O controle
-fica vivo, a luz acesa, o perfil aplicado, e só o JOGO não enxerga.
-
-A cura existia desde as 04h (`integrations/sentinela_do_wrapper`, 19 testes) e
-**ninguém a chamava**: `grep sentinela_do_wrapper app/` devolvia zero. Estes
-testes travam o fio que faltava.
-
-A MORDIDA, que é o que este arquivo existe para ser: arranque a linha
-``self.pegar_carona_no_gesto(...)`` de qualquer um dos cinco gestos e o teste
-correspondente reprova com o wrapper AINDA faltando no vdf de fixture.
-(Medido em 16/08 arrancando a do ``app.py``: três reprovações, e a de
-comportamento reprova no ``_tem_wrapper`` — não só no portão de fonte.)
-
-**Nenhum `localconfig.vdf` real é tocado** — tudo em `tmp_path`, e a carona só
-liga porque este arquivo religa o `HEFESTO_CARONA_WRAPPER` que o `conftest.py`
-desliga em toda a suíte (justamente para a suíte não reescrever a biblioteca
-Steam dela).
-"""
+"""CARONA-DO-WRAPPER-01: salvar ou aplicar um perfil repõe o wrapper."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito. Os
-# `footer_actions`/`profiles_actions` importados abaixo puxam `app.gui_dialogs`,
-# que faz `import gi` no topo — sem esta guarda o módulo derruba a COLETA
-# inteira no CI headless (censo de coleta), em vez de pular.
 exigir_gi_real("carona do wrapper 01 (footer/profiles actions puxam GTK)")
 
 import json
@@ -56,19 +25,10 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 _TAB = "\t"
 
-#: O jogo dela, e a linha literal que comeu o wrapper (conferida em seis
-#: backups datados do `localconfig.vdf`).
 PRAGMATA = "3357650"
 LINHA_PRAGMATA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
-#: Um segundo jogo, que JÁ tem o wrapper: prova que a passada é idempotente e
-#: que o reparo não estraga quem estava bem.
 SACKBOY = "1599660"
-
-
-# ---------------------------------------------------------------------------
-# Aparelhagem — fixtures em tmp_path, nenhuma leitura do disco real dela
-# ---------------------------------------------------------------------------
 
 
 def _vdf(apps: dict[str, str | None]) -> str:
@@ -119,8 +79,6 @@ def biblioteca(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         sw, "caminho_do_registro", lambda home=None: tmp_path / "wrapper-visto.json"
     )
-    # Sem `appmanifest` de mentira o rótulo é o appid cru, e é honesto — o que
-    # NÃO pode acontecer é a frase da tela sair vasculhando os steamapps dela.
     monkeypatch.setattr(slo, "nome_do_appid", lambda appid, home=None: None)
     return alvo
 
@@ -143,27 +101,13 @@ def steam_aberta(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def carona_ligada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Religa a carona, que o `conftest.py` desliga em toda a suíte.
-
-    O desligador global nasceu porque o `HOME` da suíte não era isolado: sem
-    ele, qualquer teste de GUI que clicasse "Salvar" varreria — e reescreveria
-    — o `localconfig.vdf` de verdade dela. Desde 24/08/2026 (cauda de
-    BERÇO-DE-TMP-01) o `HOME` também é isolado num diretório vazio por teste,
-    mas o desligador FICA como segunda camada: carona é opt-in sob teste, não
-    ruído incidental em dezenas de testes de GUI que só clicam "Salvar" por
-    outro motivo. Aqui a religamos por escrito, com o `discover_vdfs` já
-    desviado para o `tmp_path` pela fixture `biblioteca`.
-    """
+    """Religa a carona, que o `conftest.py` desliga em toda a suíte."""
     monkeypatch.delenv(carona.CARONA_ENV, raising=False)
 
 
 @pytest.fixture(autouse=True)
 def carona_sincrona(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A troca de thread da carona, sem thread — worker e callback aqui mesmo.
-
-    Mesma técnica que a suíte já usa com ``ipc_bridge.run_in_thread``: sem loop
-    GTK, o callback nunca rodaria, e o teste mediria só metade do caminho.
-    """
+    """A troca de thread da carona, sem thread — worker e callback aqui mesmo."""
 
     def _sincrono(trabalho: Any, ao_terminar: Any) -> None:
         ao_terminar(trabalho())
@@ -208,12 +152,7 @@ def _perfil() -> Profile:
 
 
 def _janela(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Dublê com os DOIS mixins que o ``HefestoApp`` compõe de verdade.
-
-    Os quatro gestos que pegam carona moram nos dois: "Salvar este perfil" e
-    "Ativar" na aba Perfis, "Salvar Perfil" e o botão verde "Aplicar" no
-    rodapé. Testá-los separados mediria uma composição que não existe.
-    """
+    """Dublê com os DOIS mixins que o ``HefestoApp`` compõe de verdade."""
     from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         ProfilesActionsMixin,
@@ -235,7 +174,6 @@ def _janela(monkeypatch: pytest.MonkeyPatch) -> Any:
             builder.get_object.return_value = MagicMock()
             self.builder = builder
 
-        # --- o que a aba Perfis leria dos widgets ---
         def _build_profile_from_editor(self) -> Profile:
             return perfil
 
@@ -254,18 +192,15 @@ def _janela(monkeypatch: pytest.MonkeyPatch) -> Any:
         def _notify_launch_env_refresh(self) -> None:
             return None
 
-        # --- o AGORA do botão verde, que não é o assunto deste arquivo ---
         def _apply_draft_agora(self, *a: Any, **k: Any) -> None:
             self.aplicou_o_rascunho += 1
 
-        # --- a barra de status ---
         def _footer_toast(self, msg: str, context: str = "footer") -> None:
             self.toasts.append(msg)
 
         def _toast_profile(self, msg: str) -> None:
             self.toasts.append(msg)
 
-    # O daemon não participa de nenhum destes testes.
     monkeypatch.setattr(profiles_actions, "call_async", lambda **k: None)
     monkeypatch.setattr(profiles_actions, "active_profile_name", lambda: None)
     return _Janela()
@@ -283,11 +218,6 @@ def _salvar_pelo_rodape(janela: Any, nome: str = "Pragmata") -> None:
 def _tem_wrapper(vdf: Path, appid: str) -> bool:
     valor = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8")).get(appid)
     return valor is not None and slo.WRAPPER_PREFIX in valor
-
-
-# ---------------------------------------------------------------------------
-# A MORDIDA — os cinco gestos dela
-# ---------------------------------------------------------------------------
 
 
 def test_salvar_na_aba_perfis_repoe_o_wrapper(
@@ -320,11 +250,7 @@ def test_ativar_na_aba_perfis_repoe_o_wrapper(
 def test_salvar_perfil_pelo_rodape_repoe_o_wrapper(
     biblioteca: Path, steam_fechada: None, disco: Path, monkeypatch: Any
 ) -> None:
-    """"Salvar Perfil" do rodapé — FORA da guia de perfis, pelo funil.
-
-    Este é o caminho que cobre três botões de uma vez (Salvar, Importar e
-    Restaurar Padrão passam todos pelo ``_gravar_perfil_async``).
-    """
+    """"Salvar Perfil" do rodapé — FORA da guia de perfis, pelo funil."""
     janela = _janela(monkeypatch)
     _salvar_pelo_rodape(janela)
 
@@ -339,22 +265,13 @@ def test_botao_verde_aplicar_repoe_o_wrapper(
     janela.on_apply_draft(None)
 
     assert _tem_wrapper(biblioteca, PRAGMATA)
-    # E o gesto dela continua fazendo o que fazia: a carona é efeito colateral,
-    # nunca substituta.
     assert janela.aplicou_o_rascunho == 1
-
-
-# ---------------------------------------------------------------------------
-# O reparo PRESERVA a linha dela — o Pragmata precisa dos dois
-# ---------------------------------------------------------------------------
 
 
 def test_o_reparo_nao_joga_fora_o_vkd3d_dela(
     biblioteca: Path, steam_fechada: None, monkeypatch: Any
 ) -> None:
-    """Repor o wrapper jogando fora o `VKD3D_CONFIG` trocaria "o jogo não vê o
-    controle" por "o jogo fecha sozinho" — a cura do crash de 14/08. Não é
-    conserto nenhum, e já aconteceu de verdade em 16/08 às 03h33."""
+    """Repor o wrapper jogando fora o `VKD3D_CONFIG` trocaria "o jogo não vê o"""
     _janela(monkeypatch).on_apply_draft(None)
 
     linha = slo.read_apps_by_appid(biblioteca.read_text(encoding="utf-8"))[PRAGMATA]
@@ -373,19 +290,10 @@ def test_quem_ja_tinha_o_wrapper_nao_e_tocado(
     assert depois == antes
 
 
-# ---------------------------------------------------------------------------
-# O QUE ELA VÊ — e o que ela NÃO vê
-# ---------------------------------------------------------------------------
-
-
 def test_sem_nada_a_reparar_a_carona_fica_muda(
     tmp_path: Path, steam_fechada: None, disco: Path, monkeypatch: Any
 ) -> None:
-    """O caso comum: todo jogo com o wrapper. Nenhuma palavra no rodapé.
-
-    Uma linha a cada Salvar viraria ruído no gesto mais comum da janela — e o
-    pedido dela começa justamente recusando mais um clique.
-    """
+    """O caso comum: todo jogo com o wrapper. Nenhuma palavra no rodapé."""
     alvo = tmp_path / "localconfig.vdf"
     alvo.write_text(_vdf({SACKBOY: slo.WRAPPER_LAUNCH}), encoding="utf-8")
     for mod in (sw, slo):
@@ -415,16 +323,10 @@ def test_reparado_a_frase_nomeia_o_jogo(
     assert "preservadas" in frases[0]
 
 
-# ---------------------------------------------------------------------------
-# A STEAM ABERTA — a restrição dura, e a vigia que a resolve
-# ---------------------------------------------------------------------------
-
-
 def test_com_a_steam_aberta_nao_escreve_e_avisa(
     biblioteca: Path, steam_aberta: None, monkeypatch: Any
 ) -> None:
-    """Reparar com a Steam viva é jogar o reparo fora: ela regrava o vdf ao
-    sair. Aconteceu em 16/08 e o reparo de 03h33 foi desfeito."""
+    """Reparar com a Steam viva é jogar o reparo fora: ela regrava o vdf ao"""
     antes = biblioteca.read_text(encoding="utf-8")
     janela = _janela(monkeypatch)
     janela.on_apply_draft(None)
@@ -440,11 +342,7 @@ def test_com_a_steam_aberta_nao_escreve_e_avisa(
 def test_o_aviso_nao_repete_no_mesmo_episodio(
     biblioteca: Path, steam_aberta: None, monkeypatch: Any
 ) -> None:
-    """Ela salva cinco vezes seguidas com a Steam aberta: UM aviso, não cinco.
-
-    O episódio é o CONJUNTO de jogos faltantes. Enquanto ele não mudar, a
-    carona já disse o que tinha para dizer.
-    """
+    """Ela salva cinco vezes seguidas com a Steam aberta: UM aviso, não cinco."""
     janela = _janela(monkeypatch)
     for _ in range(5):
         janela.on_apply_draft(None)
@@ -456,22 +354,11 @@ def test_o_aviso_nao_repete_no_mesmo_episodio(
 def test_um_episodio_novo_com_os_mesmos_jogos_volta_a_falar(
     biblioteca: Path, steam_aberta: None, monkeypatch: Any
 ) -> None:
-    """Calar o repeteco é uma coisa; calar o episódio seguinte é outra.
-
-    O roteiro é real: ela salva com a Steam aberta e é avisada; conserta a
-    linha na mão (ou o `install.sh` conserta); um Salvar depois a carona diz
-    "nada a fazer" e fica MUDA — e é aí que a memória do aviso tem de morrer.
-    Semanas depois a Steam come o wrapper do MESMO jogo. Se o episódio velho
-    ainda estivesse de pé, este segundo defeito nasceria silencioso.
-
-    MORDIDA: tire o ``self._carona_ja_avisado = frozenset()`` do ramo "não
-    adiado" de ``_carona_reagir`` e a última asserção volta a zero.
-    """
+    """Calar o repeteco é uma coisa; calar o episódio seguinte é outra."""
     janela = _janela(monkeypatch)
     janela.on_apply_draft(None)
     assert len([t for t in janela.toasts if "Inicialização" in t]) == 1
 
-    # Ela conserta na mão: agora todo jogo tem o wrapper, e a carona se cala.
     biblioteca.write_text(
         _vdf({PRAGMATA: slo.WRAPPER_LAUNCH, SACKBOY: slo.WRAPPER_LAUNCH}),
         encoding="utf-8",
@@ -480,7 +367,6 @@ def test_um_episodio_novo_com_os_mesmos_jogos_volta_a_falar(
     assert len([t for t in janela.toasts if "Inicialização" in t]) == 1
     assert janela._carona_vigia_id is None, "sem pendência, a vigia tinha de sair"
 
-    # Semanas depois: a Steam come a linha do MESMO jogo. Episódio novo.
     biblioteca.write_text(
         _vdf({PRAGMATA: LINHA_PRAGMATA, SACKBOY: slo.WRAPPER_LAUNCH}),
         encoding="utf-8",
@@ -496,23 +382,16 @@ def test_um_episodio_novo_com_os_mesmos_jogos_volta_a_falar(
 def test_a_vigia_repara_sozinha_quando_a_steam_fecha(
     biblioteca: Path, steam_aberta: None, monkeypatch: Any
 ) -> None:
-    """O coração do pedido dela: **ela não precisa lembrar de nada.**
-
-    Salvou com a Steam aberta, o reparo foi adiado e uma vigia ficou armada.
-    Quando ela fecha a Steam, o reparo simplesmente ACONTECE — sem clique,
-    sem diálogo, sem ter de voltar à janela.
-    """
+    """O coração do pedido dela: **ela não precisa lembrar de nada.**"""
     janela = _janela(monkeypatch)
     janela.on_apply_draft(None)
     assert not _tem_wrapper(biblioteca, PRAGMATA)
     assert janela._carona_vigia_id is not None, "a vigia tinha de ficar armada"
 
-    # Um tique com a Steam ainda viva: barato, e não abre o vdf.
     janela._carona_tique_da_vigia()
     assert not _tem_wrapper(biblioteca, PRAGMATA)
     assert janela._carona_vigia_id is not None
 
-    # Ela fecha a Steam. O tique seguinte repara e a vigia se desarma.
     for mod in (sw, slo):
         monkeypatch.setattr(mod, "steam_running", lambda: False)
         monkeypatch.setattr(mod, "steam_game_running", lambda: False)
@@ -525,16 +404,7 @@ def test_a_vigia_repara_sozinha_quando_a_steam_fecha(
 def test_o_tique_da_vigia_nao_le_o_vdf_a_toa(
     biblioteca: Path, steam_aberta: None, monkeypatch: Any
 ) -> None:
-    """A vigia bate de 45 em 45 segundos; ela não pode reler a biblioteca toda.
-
-    NOTA HONESTA — este teste NÃO trava uma cura, trava um CUSTO. Arrancado o
-    gate barato de ``passada(completa=False)``, nenhum outro teste deste
-    arquivo reprova (medido por arrancamento em 16/08): a correção continua
-    certa, porque `reparar_ou_adiar` recusa a Steam aberta de qualquer jeito.
-    O que muda é o preço — o `localconfig.vdf` dela passa a ser lido inteiro a
-    cada tique, para sempre, enquanto a Steam estiver de pé. Sem esta asserção
-    isso sairia de fininho na primeira refatoração.
-    """
+    """A vigia bate de 45 em 45 segundos; ela não pode reler a biblioteca toda."""
     leituras: list[int] = []
     original = sw.discover_vdfs
 
@@ -561,8 +431,7 @@ def test_o_tique_da_vigia_nao_le_o_vdf_a_toa(
 def test_com_jogo_aberto_a_carona_nem_cogita(
     biblioteca: Path, monkeypatch: Any
 ) -> None:
-    """Fechar a Steam com um jogo aberto mataria o jogo. A ordem dos portões
-    da sentinela é jogo ANTES de Steam, e a carona a herda inteira."""
+    """Fechar a Steam com um jogo aberto mataria o jogo. A ordem dos portões"""
     for mod in (sw, slo):
         monkeypatch.setattr(mod, "steam_running", lambda: True)
         monkeypatch.setattr(mod, "steam_game_running", lambda: True)
@@ -576,11 +445,6 @@ def test_com_jogo_aberto_a_carona_nem_cogita(
     assert len(frases) == 1
     assert "o jogo e a Steam fecharem" in frases[0]
     janela._carona_desarmar_vigia()
-
-
-# ---------------------------------------------------------------------------
-# A recusa dela, a memória, e o que a carona NUNCA pode fazer
-# ---------------------------------------------------------------------------
 
 
 def test_jogo_que_ela_recusou_nao_recebe_o_wrapper_de_carona(
@@ -604,11 +468,7 @@ def test_jogo_que_ela_recusou_nao_recebe_o_wrapper_de_carona(
 def test_a_carona_alimenta_a_memoria_de_quem_tinha_o_wrapper(
     biblioteca: Path, steam_fechada: None, tmp_path: Path, monkeypatch: Any
 ) -> None:
-    """É o que separa "perdeu" de "nunca teve" na PRÓXIMA vez.
-
-    Também é o que fecha, de graça, a única lacuna do botão "Aplicar aos jogos
-    da Steam", que aplica em massa sem anotar nada.
-    """
+    """É o que separa "perdeu" de "nunca teve" na PRÓXIMA vez."""
     _janela(monkeypatch).on_apply_draft(None)
 
     registro = json.loads((tmp_path / "wrapper-visto.json").read_text("utf-8"))
@@ -619,11 +479,7 @@ def test_a_carona_alimenta_a_memoria_de_quem_tinha_o_wrapper(
 def test_a_carona_nunca_derruba_o_gesto_dela(
     biblioteca: Path, steam_fechada: None, disco: Path, monkeypatch: Any
 ) -> None:
-    """Salvar um perfil tem de salvar o perfil, aconteça o que acontecer.
-
-    A carona é efeito colateral de um gesto dela; uma exceção aqui não pode
-    virar "não consegui salvar". O perfil vai para o disco do mesmo jeito.
-    """
+    """Salvar um perfil tem de salvar o perfil, aconteça o que acontecer."""
 
     def _explode(**_k: Any) -> Any:
         raise RuntimeError("a Steam sumiu do mapa")
@@ -639,8 +495,7 @@ def test_a_carona_nunca_derruba_o_gesto_dela(
 def test_desligada_a_carona_nao_toca_em_nada(
     biblioteca: Path, steam_fechada: None, monkeypatch: Any
 ) -> None:
-    """O desligador do `conftest.py` tem de valer de verdade — é ele que impede
-    a suíte inteira de reescrever a biblioteca Steam DELA."""
+    """O desligador do `conftest.py` tem de valer de verdade — é ele que impede"""
     monkeypatch.setenv(carona.CARONA_ENV, "0")
     antes = biblioteca.read_text(encoding="utf-8")
 
@@ -651,51 +506,13 @@ def test_desligada_a_carona_nao_toca_em_nada(
     assert janela.aplicou_o_rascunho == 1
 
 
-# ---------------------------------------------------------------------------
-# O PORTÃO — a cura não pode voltar a ser código que ninguém chama
-# ---------------------------------------------------------------------------
-
-
-# OS DOIS TESTES DA BANDEJA SAÍRAM — 08/09/2026.
-#
-# Mediam `HefestoApp._trocar_perfil_de_fora`, o caminho por onde a BANDEJA (e a
-# janela compacta) trocava de perfil e pegava a carona no `finally`. O método
-# saiu do disco com a janela GTK (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`), e o
-# inventário `docs/data/o-que-ainda-aponta-para-a-janela.csv:206` já os tinha
-# julgado: **SAI-COM-A-JANELA**, linhas 671;696;722 deste arquivo.
-#
-# MEDIDO ANTES DE TIRAR, e é o que separa "sai com a janela" de "perdemos um
-# comportamento em silêncio": a bandeja INTEIRA ficou órfã. `app/tray.py` está
-# no disco mas ninguém o importa em `src/` (o fecho de import da GTK-3 largou
-# `app.tray` junto com `app.app` e `app.compact_window`), e o `on_switch_profile`
-# dela é um callback que só o `HefestoApp` preenchia — hoje não tem quem o
-# forneça. Não há, portanto, gesto de bandeja vivo a quem pendurar a carona:
-# repontar a régua seria inventar um alvo.
-#
-# O REQUISITO FICA ESCRITO, para não se perder com o mecanismo: se a bandeja
-# voltar a ter dono, trocar de perfil por ela tem de repor o wrapper que a
-# Steam come — e a carona vai no `finally`, porque quem está com o daemon caído
-# é justamente quem mais precisa do conserto.
-
-
 def test_os_cinco_gestos_chamam_a_carona() -> None:
-    """`grep sentinela_do_wrapper app/` devolvia ZERO até 16/08.
-
-    Este portão existe para que a resposta nunca volte a ser zero: cada gesto
-    que ela nomeou tem de ter a chamada no fonte. Reprova antes mesmo de o
-    teste de comportamento chegar lá, e diz qual arquivo perdeu o fio.
-
-    `app/app.py` SAIU DO DICIONÁRIO em 08/09/2026 — o arquivo deixou o disco
-    com a janela (`D-0609-GTK-LEVA-INTEIRA`) e a leitura estourava
-    `FileNotFoundError`, derrubando a conta dos outros três antes de contar.
-    Os gestos que sobram aqui são os do motor; os da interface nova têm régua
-    própria no bloco abaixo, que conta POR GESTO em vez de por arquivo.
-    """
+    """`grep sentinela_do_wrapper app/` devolvia ZERO até 16/08."""
     raiz = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
     esperado = {
-        "app/actions/profiles_actions.py": 2,  # Salvar e Ativar, na aba
-        "app/actions/profile_writer.py": 1,  # o funil: Salvar/Importar/Restaurar
-        "app/actions/footer_actions.py": 1,  # o botão verde "Aplicar"
+        "app/actions/profiles_actions.py": 2,
+        "app/actions/profile_writer.py": 1,
+        "app/actions/footer_actions.py": 1,
     }
     for relativo, quantas in esperado.items():
         texto = (raiz / relativo).read_text(encoding="utf-8")
@@ -706,67 +523,19 @@ def test_os_cinco_gestos_chamam_a_carona() -> None:
         )
 
 
-#: OS GESTOS DA INTERFACE NOVA QUE TÊM DE PEGAR A CARONA — 06/09/2026, ONDA5-07-02.
-#:
-#: A régua acima mede o mundo de ontem: ela conta só nos quatro arquivos da
-#: janela GTK, e `interface/pacotes/` não estava no dicionário. Ela ficou VERDE
-#: enquanto o produto novo perdia quatro quintos do comportamento que ela
-#: guarda — dos quatro gestos da interface nova que aplicam ou gravam perfil,
-#: **um** pegava carona.
-#:
-#: A CONTAGEM É POR GESTO, E NÃO POR ARQUIVO, e a diferença é o que a mordida
 #: entrega: um `texto.count(...)` diria *"rodape.py: 2, esperadas 3"* e deixaria
-#: quem lê procurando QUAL dos três perdeu o fio. Este anda a árvore de sintaxe
-#: e nomeia a função.
 GESTOS_DA_INTERFACE_NOVA = {
-    # O rodapé é das DEZ abas: o "fora da guia de perfis" do pedido dela.
     "interface/pacotes/rodape.py": {
-        "aplicar",  # o botão verde: manda o perfil aos controles
-        "salvar",  # grava o perfil ativo no disco dela
-        "importar",  # um perfil novo entra na pasta e passa a valer
+        "aplicar",
+        "salvar",
+        "importar",
     },
-    # E o "dentro da guia", que já pegava desde 03/09 — mais os DOIS funis que
-    # a PERFIL-MODO-01 fechou em 06/09 (ver o bloco abaixo).
     "interface/pacotes/a10_perfis.py": {"ativar", "_gravar",
                                         "voltar_a_de_ontem"},
 }
 
-# OS NOVE QUE FALTAVAM — MEDIDOS EM 06/09/2026 pela `ONDA5-07-02`, FECHADOS no
-# mesmo dia pela `PERFIL-MODO-01`.
-#
-# O censo dos treze gestos da aba Perfis (`ast`, contra `save_profile`,
-# `delete_profile`, `restaurar_do_historico`, `profile_switch` e o funil
-# `_gravar`) devolveu NOVE que gravavam o perfil INTEIRO sem repor o atalho de
-# inicialização que a Steam come:
-#
 #     voltar-a-de-ontem   restaurar_do_historico + switch + launch_env.refresh
-#                         — é o «Restaurar Padrão» da janela velha, que PEGA
-#                           carona pelo `profile_writer`
-#     editor.nome · editor.prioridade · editor.ambiente · editor.estilo ·
-#     editor.jogo · detectar · novo · duplicar
-#                         — os que passam pelo funil `a10_perfis._gravar`
-#                           (o `detectar` entra: ele grava o jogo achado no
-#                           perfil, pelo mesmo funil). O `editor.modo`, que
-#                           nasceu em 06/09, entra pela MESMA porta — e é por
-#                           isso que o portão cobra o FUNIL e não os gestos um a
-#                           um: um gesto novo que grave perfil nasce coberto.
-#
-# **POR QUE O NOME DO FUNIL E NÃO OS OITO NOMES:** este portão anda a árvore de
-# sintaxe e nomeia a FUNÇÃO que perdeu o fio. Listar `editor_nome`,
-# `editor_estilo`… exigiria uma chamada de carona DENTRO de cada um — oito
-# cópias da mesma linha, e a nona é a que alguém esquece. `_gravar` é o
-# estrangulamento por onde os nove passam, e é lá que a carona mora; arrancá-la
-# reprova nomeando `_gravar`, que é exatamente o endereço da cura.
-#
-# E os que ficam de fora com razão: `remover` (apagar um perfil não põe perfil
-# nenhum em vigor — a janela velha também não o cobre), `selecionar` e
-# `recarregar` (não escrevem nada).
 
-#: QUEM NÃO PEGA, E TEM DE CONTINUAR NÃO PEGANDO. Declarar o de fora é o que
-#: separa dívida de esquecimento — e trava a razão medida: o «Exportar» COPIA um
-#: arquivo para fora (`origem.read_bytes()`) e não toca o perfil ativo. Não há
-#: nada a repor, e uma varredura do `localconfig.vdf` a cada exportação seria
-#: custo sem cura.
 GESTOS_SEM_CARONA = {"interface/pacotes/rodape.py": {"exportar"}}
 
 
@@ -825,15 +594,6 @@ def test_a_interface_nova_tambem_pega_a_carona() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# O RODAPÉ DA INTERFACE NOVA — o ATO, não a linha (ONDA5-07-02, 06/09/2026)
-# ---------------------------------------------------------------------------
-#
-# O portão acima lê o fonte; estes três medem o `localconfig.vdf` de mentira
-# depois do gesto. A lição de 03/09 é a razão de existirem os dois: *ler a
-# linha não é medir o ato*.
-
-
 def _ctx_do_rodape() -> Any:
     """Um `Contexto` com o perfil ativo e a mesa vazia.
 
@@ -868,13 +628,8 @@ def test_o_salvar_do_rodape_repoe_o_atalho_de_inicializacao(
     resposta = rodape.salvar(_ctx_do_rodape(), {}, MagicMock())
 
     assert _tem_wrapper(biblioteca, PRAGMATA)
-    # A NOTÍCIA NÃO VOLTA MAIS À TELA — 13/09/2026, TELA-CALADA-01, pedido dela:
-    # *"essas frases de status que aparecem no rodapé isso não deveria estar
-    # aparecendo"*. Até aqui esta linha exigia o `recado` na resposta; agora o
-    # gesto devolve `None` e a frase vai ao diário da janela.
     assert resposta is None, resposta
     assert PRAGMATA in capsys.readouterr().err
-    # O gesto dela continua fazendo o que fazia: a carona é efeito colateral.
     assert (disco / "pragmata.json").exists()
 
 
@@ -892,11 +647,8 @@ def test_o_aplicar_verde_do_rodape_repoe_o_atalho(
     resposta = rodape.aplicar(_ctx_do_rodape(), {}, ponte)
 
     assert _tem_wrapper(biblioteca, PRAGMATA)
-    # SEM `recado` DESDE 13/09/2026 (TELA-CALADA-01): a notícia vai ao diário
-    # da janela, e não à tela — ver o irmão do «Salvar», logo acima.
     assert resposta is None, resposta
     assert PRAGMATA in capsys.readouterr().err
-    # A carona NUNCA substitui o gesto: o perfil foi mesmo aos controles.
     assert ponte.profile_reaplicar.call_count == 1
 
 
@@ -941,7 +693,6 @@ def test_a_carona_sozinha_nao_deixa_separador_orfao(
     assert sozinha.startswith("Reposta"), sozinha
     assert " · " not in sozinha.split(":")[0]
 
-    # E com frase base ela continua GRUDANDO, que é o contrato da aba Perfis.
     biblioteca.write_text(
         _vdf({PRAGMATA: LINHA_PRAGMATA, SACKBOY: slo.WRAPPER_LAUNCH}),
         encoding="utf-8",

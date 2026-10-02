@@ -161,127 +161,32 @@ MOTION_WINDOW_OFFSET = 15
 MOTION_WINDOW_LEN = 25
 
 #: TOUCH-CLICK-01 — o CLIQUE do touchpad dentro do payload: `buttons[2]` do
-#: `struct dualsense_input_report` (payload[9]), bit 1 = `DS_BUTTONS2_TOUCHPAD`
-#: do hid-playstation.c. Mesmos números do `_BUTTONS2_OFFSET`/`_TOUCHPAD_BIT`
-#: do vpad (`integrations/uhid_gamepad.py`) — travados um no outro por teste.
-#:
-#: Ele está FORA da janela de motion (que começa no 15) e fora do vocabulário
-#: do evdev principal (o `BUTTON_MAP` do `EvdevReader` não tem touchpad: o nó
-#: do touchpad é separado, e quem o lê é o `TouchpadReader`, do caminho do
-#: teclado/cursor). Este byte é a ÚNICA fonte de clique que o caminho do jogo
-#: alcança sem depender de nó extra nem de janela aberta — e ele já chega aqui
-#: de graça, no mesmo report que o motion.
 BUTTONS2_OFFSET = 9
 TOUCHPAD_CLICK_BIT = 0x02
 
-#: O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01 (28/09/2026) — o BOTÃO do microfone, no
-#: mesmo `buttons[2]`: bit 2 = `DS_BUTTONS2_MIC_MUTE` do hid-playstation.c.
-#: É o dedo dela, e não a consequência dele: o bit `MIC_MUTE` de `status[1]`
-#: muda com quem escrever o mudo no firmware (o kernel, o daemon, o que vier
-#: por outra ponte), e este só muda quando alguém aperta. Mesmo número do
-#: `"mic_btn": 0x04` do vpad (`integrations/uhid_gamepad.py`).
 MIC_BUTTON_BIT = 0x04
 
-#: JACK-QUE-NAO-LIGOU-01 — o byte de `status[1]` dentro do payload
-#: (`payload[53]`): fone plugado (bit 0), microfone presente (bit 1) e
 #: microfone mudo no firmware (bit 2). Mesmo número do `_STATUS1_OFFSET` do
-#: vpad (`integrations/uhid_gamepad.py`) — travados um no outro por teste.
-#:
-#: Ele pega carona aqui pelo MESMO argumento que o clique do touchpad já usou:
 #: mora fora da janela de motion (15..39), chega de graça no mesmo report cru,
-#: e o reader é POR JOGADOR e vive com o daemon — não com a janela. O
-#: `forward_jack` do vpad existia desde 02/08 sem um único chamador, e a
-#: sprint `2026-08-03-ENTREGA-QUE-NAO-LIGOU-01` já o tinha declarado órfão.
 JACK_STATUS_OFFSET = 53
 
-#: BATERIA-QUE-NAO-CHEGOU-01 (09/08/2026) — o byte de `status[0]` dentro do
-#: payload (`payload[52]`): nibble baixo = nível, nibble alto = estado de
-#: carga. Mesmo número do `_STATUS_OFFSET` do vpad
-#: (`integrations/uhid_gamepad.py`) — travados um no outro por teste.
 #:
-#: Terceiro passageiro da mesma carona, pelo mesmo argumento do clique e do
-#: jack: mora fora da janela de motion (15..39) e chega de graça no mesmo
-#: report cru. O `forward_battery` do vpad nasceu em 15/07 (`69951a7`) e
-#: passou 25 dias com ZERO chamadores em `src/` — a consequência estava
-#: escrita na própria docstring dele desde o primeiro dia: *"o vpad anuncia 5%
-#: descarregando para sempre e o jogo mostra alerta de bateria fraca num
-#: controle cheio"*.
 BATTERY_STATUS_OFFSET = 52
 
-#: A tabela do `dualsense_parse_report` (kernel 6.18, `hid-playstation.c`) —
-#: grau **ALTA** pela régua da referência canônica (§6 e a linha 52,
-#: `ucBatteryLevel` = `nibble*10+5`), porque está no kernel mainline e é o
-#: MESMO código que vai ler o report do nosso vpad do outro lado.
-#:
-#: nibble alto  significado                       o que o kernel faz
-#: -----------  -------------------------------   ------------------------
-#: 0x0          descarregando                     capacidade = nibble*10+5
-#: 0x1          carregando                        capacidade = nibble*10+5
-#: 0x2          cheio (na base)                   capacidade = 100
-#: 0xa, 0xb     tensão/temperatura fora de faixa  capacidade = 0
-#: 0xf          erro de carga                     capacidade = 0
 _CARGA_DESCARREGANDO = 0x0
 _CARGA_CARREGANDO = 0x1
 _CARGA_CHEIO = 0x2
 
-#: Cap da taxa de emissão ao vpad. 250 Hz = a faixa da taxa nativa do físico em
-#: USB e o mesmo teto do rate-limit do REPLICA-03; em BT
-#: (rajada, pico de ~797 Hz) vira downsample com coalescência — o estudo
-#: aceita 250-500 Hz.
-#:
-#: TETO-DE-EMISSÃO-01 (13/08/2026) — POR QUE O TETO FICA. A remedição de
-#: 11/08/2026 (veja o bloco "A taxa do rádio é RAJADA", no topo do módulo)
-#: registra o rádio sustentando "entre ~55 e ~392 Hz"
-#: (`docs/protocol/driver-hid-playstation.md:902`). Ler isso como "o rádio é
-#: mais lento que 250 Hz, logo o cap sobrou" é a leitura ERRADA, e é o motivo
-#: desta nota existir: o que o /dev/uhid tem de aguentar não é a média, é o
-#: PICO DENTRO da rajada — p05 do intervalo em 1255 us, ~797 Hz (:757-758).
-#: Sem teto, quatro vpads em co-op fariam ~3200 writes/s no /dev/uhid.
-#:
-#: O valor 250.0 NÃO muda: é decisão medida e o estudo do IMU a aceita. O que a
-#: remedição corrigiu foi o número que a justificava, não ela.
-#:
-#: GRADE-QUE-NAO-BATIA-01 (19/08/2026) — "onde nada se perde" ERA FALSO, e por
-#: quatro dias. A fonte do cabo foi medida em 250,88 Hz (6272 pacotes de motion
-#: em 25 s, nó evdev do físico) — ACIMA deste teto, não igual a ele. Com a
 #: contagem antiga isso jogava fora 36% das amostras justamente no transporte em
-#: que a frase prometia zero perda. A casa já tinha o número: em 15/08 o mapa de
-#: canais registrou a fonte em "250,1 Hz" contra um cap de 250,0, e ninguém
-#: reparou que a fonte estava do lado errado. A frase saiu; o teto ficou. Quem
-#: mexer aqui: o problema nunca foi o valor, era a aritmética que o implementava.
-#: Ver `TestAFonteDoCaboColadaNoTeto`. `tests/unit/test_teto_de_emissao.py`
-#: reprova se esta constante sumir, subir, ou deixar de ser o default do
-#: `PhysicalReportReader`.
 MOTION_EMIT_MAX_HZ = 250.0
 
-#: Tamanho de leitura: cobre 64 (USB) e 78 (BT) com folga.
 _READ_LEN = 128
 
-#: Timeout do select por iteração — o teto de latência para ver o stop_flag e
-#: para o flush da janela retida pelo throttle quando o fluxo para.
 _SELECT_TIMEOUT_S = 0.25
 
-#: Silêncio máximo com o fd aberto antes de declarar o físico mudo e reabrir.
-#: Larga o fd, desliga o streaming (fail-safe p/ 60 Hz) e re-resolve o path
-#: (o provider aponta o primário ATUAL).
-#:
-#: GYRO-BT-SILENCIO-01: o teto é POR TRANSPORTE porque a premissa "um
 #: DualSense vivo emite SEMPRE" só vale NO CABO, onde os 250 Hz são
-#: constantes. No rádio ele emite em RAJADA — o p95 do intervalo chega a
-#: 187 ms mesmo com o enlace vivo (11/08/2026,
-#: `docs/protocol/driver-hid-playstation.md:757-758`) — e o
-#: firmware emudece quando o controle está em repouso: o mesmo fato que o
-#: projeto já tinha medido em outro contexto ("firmware BT ocioso emudece",
-#: achado do veneno do launch option). Com 1 s valendo para os dois, um
 #: DualSense parado em BT caía num ciclo eterno a ~1 Hz: silêncio -> larga o
-#: fd -> `set_motion_streaming(False)` -> reabre pelo broker -> streaming
-#: True -> silêncio de novo. Isso queimava um round-trip de SCM_RIGHTS por
 #: segundo, piscava o motion do vpad na mesma cadência e enchia o journal
-#: (~1.600 linhas em 45 min só desse laço).
-#:
-#: No cabo o valor antigo continua: 1 s mudo com 250 Hz nominais É link morto.
-#: Em BT o silêncio não é evidência de nada, então o teto vira só uma rede de
-#: segurança para o nó obsoleto que não deu ENODEV — 30 s custa um reopen a
 #: cada meio minuto no pior caso, contra 30 no arranjo anterior.
 _SILENCE_REOPEN_USB_S = 1.0
 _SILENCE_REOPEN_BT_S = 30.0
@@ -341,26 +246,12 @@ def uniq_do_hidraw(path: str) -> str | None:
 
 
 def _open_por_caminho(path: str) -> int:
-    """Opener default (sem broker): o `os.open` por caminho de sempre.
-
-    BROKER-01 (Onda S): o construtor aceita um `opener` injetável — o
-    broker-aware (`integrations.hidraw_broker_client.make_broker_opener`)
-    pede o fd ao broker root (funciona com o nó ESCONDIDO pelo hide) e cai
-    neste mesmo `os.open` quando o broker está ausente/recusou/timeout.
-    """
+    """Opener default (sem broker): o `os.open` por caminho de sempre."""
     return os.open(path, os.O_RDONLY)
 
 
 def _novo_wake_pipe() -> tuple[int, int]:
-    """Par de self-pipe (não-bloqueante) para acordar o select do reader.
-
-    GYRO-FD-01: `stop()`/`request_reopen()` NUNCA fecham o fd do hidraw de
-    fora — só escrevem 1 byte aqui. Fechar de fora libera o NÚMERO do fd
-    enquanto a thread ainda está em select/read nele; qualquer open
-    concorrente do daemon (eventX do `_recompute_primary`, /dev/uhid de um
-    vpad novo) recicla o número e o reader passa a drenar um fd ALHEIO —
-    input do jogo congela e a janela fatiada vira gyro-lixo no vpad.
-    """
+    """Par de self-pipe (não-bloqueante) para acordar o select do reader."""
     lado_r, lado_w = os.pipe()
     os.set_blocking(lado_r, False)
     os.set_blocking(lado_w, False)
@@ -368,20 +259,7 @@ def _novo_wake_pipe() -> tuple[int, int]:
 
 
 def silence_budget_for(path: str | None) -> float:
-    """Teto de silêncio (s) do nó `path`, decidido pelo BUS do sysfs.
-
-    GYRO-BT-SILENCIO-01. O bus sai de `/sys/class/hidraw/<nó>/device/uevent`
-    (`HID_ID=000<bus>:<vendor>:<product>`) — o mesmo campo que o resto do
-    projeto já usa para separar cabo de rádio, e um fato do kernel, não uma
-    inferência sobre o conteúdo dos reports. Decidir pelo primeiro report
-    lido não serviria: o caso que interessa é justamente o do controle que
-    NUNCA emitiu.
-
-    Desconhecido cai no teto de BT (o generoso): errar para o lado do cabo
-    devolveria o laço a 1 Hz, enquanto errar para o lado do rádio custa no
-    máximo meio minuto a mais para largar um nó já morto — e o ENODEV do
-    hotplug continua sendo o caminho normal de saída nos dois transportes.
-    """
+    """Teto de silêncio (s) do nó `path`, decidido pelo BUS do sysfs."""
     if not path:
         return _SILENCE_REOPEN_BT_S
     nome = os.path.basename(path)
@@ -444,12 +322,6 @@ def _struct_base(report: bytes) -> int | None:
         #: BATERIA-QUE-PULA-01 (16/09/2026) — o tamanho passou a ser conferido
         #: TAMBÉM no cabo. Esta linha era um `return` seco, e um `0x01` de dez
         #: bytes atravessava: medido, `_struct_base(bytes([0x01]) + bytes(9))`
-        #: devolvia 1. Quem chamasse `extract_battery_status` em cima disso
-        #: leria além do fim e o `IndexError` viraria campo vazio ou pior.
-        #: O piso é o último byte que este arquivo lê a partir da base USB
-        #: (`JACK_STATUS_OFFSET`, o maior dos quatro), e não os 64 do report
-        #: cheio: recusar um report curto porém SUFICIENTE calaria o cabo por
-        #: rigor que nada protege.
         if len(report) <= _USB_STRUCT_BASE + JACK_STATUS_OFFSET:
             return None
         return _USB_STRUCT_BASE
@@ -457,7 +329,6 @@ def _struct_base(report: bytes) -> int | None:
         if len(report) != INPUT_REPORT_BT_SIZE:
             return None
         if report[1] & INPUT_FLAG_AUDIO:
-            # Áudio, não input. Descartar é o certo: o payload aqui é Opus.
             return None
         crc = int.from_bytes(report[-4:], "little")
         if bt_crc32(report[:-4], seed=BT_INPUT_CRC_SEED) != crc:
@@ -467,66 +338,16 @@ def _struct_base(report: bytes) -> int | None:
 
 
 def eh_report_de_estado(report: bytes) -> bool:
-    """Este report cru é ESTADO DE INPUT? — a porta pública do `_struct_base`.
-
-    BATERIA-QUE-PULA-01, 16/09/2026. **Não é régua nova**: é o MESMO
-    `_struct_base` (id, tamanho, o bit `INPUT_FLAG_AUDIO` e o CRC-32 do BT) com
-    uma porta para quem precisa só do SIM/NÃO e de campo nenhum.
-
-    Quem a chamava era o laço de leitura do `core/backend_pydualsense`, antes
-    de entregar o report ao `readInput`, que **não confere nada**. Desde
-    29/09/2026 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01) o laço usa como guarda o
-    `extract_estado_do_mic`, que roda o mesmo `_struct_base`, e esta porta
-    ficou só com as réguas: é lápide da casa-sabe, e sai ou ganha chamador.
-    """
+    """Este report cru é ESTADO DE INPUT? — a porta pública do `_struct_base`."""
     return _struct_base(report) is not None
 
 
-# --- os quatro campos, JÁ com a base na mão ---------------------------------
-#
-# DAEMON-ACORDADO-01 (25/08/2026) — POR QUE ESTA CAMADA EXISTE.
-#
-# O laço de leitura precisa de QUATRO campos do mesmo report (clique, jack,
-# bateria e a janela de motion), e cada extrator público começava chamando o
-# `_struct_base` por conta própria. Num report de BT o `_struct_base` valida
-# CRC-32 — logo o laço pagava **quatro** CRC-32 por report onde um basta, mais
-# as três cópias de buffer que cada `bt_crc32` faz (`report[:-4]`, o `bytes()`
-# de dentro e a concatenação com o byte de seed).
-#
-# A conta, medida em 25/08/2026 nesta bancada (Ryzen 5800X, CPython 3.13,
-# report BT de 78 B; `timeit`, mínimo de 5 repetições de 200 mil chamadas):
-#
-#   quatro extratores............ 3,10 us por report
-#   `_struct_base` sozinho....... 0,68 us
-#   base uma vez + os 4 `_com_base`  1,11 us
-#
 # Na mesa dela — quatro DualSense por rádio, ~2.400 relatórios/s no total
-# (QUATRO-MICROFONES-01, 22/08) — isso é **0,74 % de um núcleo contra 0,27 %**,
-# e são 9.600 validações de CRC por segundo viradas em 2.400.
-#
-# Não é o defeito inteiro dos 15,2 % medidos em 23/08 — aquilo é contado em
-# SYSCALLS (6.393 `read`/s) e isto é CPU de usuário, que syscall nenhuma
-# explica. É a fatia que este arquivo responde, e é a única que se prova sem o
 # aparelho dela. O portão que trava a economia é
-# `tests/unit/test_daemon_acordado_01_o_laco_que_valida_quatro_vezes.py`, que
-# CONTA as validações por report em vez de cronometrar — número estável em
-# máquina de CI.
-#
-# Os extratores públicos do clique, do jack e da bateria continuam existindo e
-# calculando a base sozinhos: são a porta de quem tem UM report na mão (a
-# suíte, um ensaio, quem lê um dump). Quem está no caminho quente usa as funções
-# `_..._com_base`. O da janela de motion, `extract_motion_window`, SAIU em
-# 28/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01): só a suíte o chamava, e a
-# janela tem um dono só, o par `_struct_base` + `_janela_com_base` que o laço
-# usa. As réguas dele passaram a esse par.
 
 
 def _janela_com_base(report: bytes, base: int) -> bytes | None:
-    """Janela de motion (25 B) a partir da base já resolvida.
-
-    Com a base do `_struct_base`: ``0x01`` (USB) dá ``report[16:41]`` e ``0x31``
-    (BT, só com CRC válido) dá ``report[17:42]``. Report curto demais → None.
-    """
+    """Janela de motion (25 B) a partir da base já resolvida."""
     start = base + MOTION_WINDOW_OFFSET
     end = start + MOTION_WINDOW_LEN
     if len(report) < end:
@@ -567,14 +388,7 @@ def _bateria_com_base(report: bytes, base: int) -> int | None:
 
 
 def extract_touchpad_click(report: bytes) -> bool | None:
-    """Clique do touchpad de um report CRU do físico, ou None (TOUCH-CLICK-01).
-
-    ``None`` significa "este report não diz nada sobre o clique" (id
-    desconhecido, tamanho curto, CRC de BT ruim) — e é DIFERENTE de ``False``,
-    que é "o report chegou íntegro e o dedo não está apertando". Quem consome
-    tem de tratar os dois separados: transformar um CRC ruim em ``False``
-    soltaria o botão no meio de uma pressionada.
-    """
+    """Clique do touchpad de um report CRU do físico, ou None (TOUCH-CLICK-01)."""
     base = _struct_base(report)
     if base is None:
         return None
@@ -582,19 +396,7 @@ def extract_touchpad_click(report: bytes) -> bool | None:
 
 
 def extract_jack_status(report: bytes) -> int | None:
-    """Byte de fone/microfone (`status[1]`) de um report CRU, ou None.
-
-    JACK-QUE-NAO-LIGOU-01. Mesma disciplina de transporte do clique
-    (`_struct_base`, com CRC do BT): ``None`` é *"este report não diz nada
-    sobre o jack"* — id desconhecido, tamanho curto, CRC ruim — e é DIFERENTE
-    de ``0x00``, que é *"o report chegou íntegro e não há fone nem microfone"*.
-    Confundir os dois faria um pacote corrompido de rádio desplugar o fone
-    dentro do jogo.
-
-    Devolve o byte INTEIRO, sem máscara: quem decide o que encaminhar é o vpad
-    (`forward_jack` filtra pelos três bits conhecidos). O extrator lê o
-    aparelho; a política de o que sai no report é do outro lado.
-    """
+    """Byte de fone/microfone (`status[1]`) de um report CRU, ou None."""
     base = _struct_base(report)
     if base is None:
         return None
@@ -605,15 +407,7 @@ def extract_jack_status(report: bytes) -> int | None:
 
 
 def extract_estado_do_mic(report: bytes) -> tuple[int, bool] | None:
-    """`(status[1], botão do microfone apertado)` de um report CRU, ou None.
-
-    O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01 (28/09/2026). Quem conta o gesto do
-    botão precisa das DUAS leituras do MESMO report: o botão diz que houve
-    aperto, e o `status[1]` diz o que o firmware segurava naquele instante
-    (o aperto pede o contrário). Uma base só, uma conferência de CRC só, e a
-    mesma disciplina de transporte do `extract_jack_status`: ``None`` é
-    *"este report não diz nada"* — nunca *"botão solto e microfone livre"*.
-    """
+    """`(status[1], botão do microfone apertado)` de um report CRU, ou None."""
     base = _struct_base(report)
     if base is None:
         return None
@@ -625,18 +419,7 @@ def extract_estado_do_mic(report: bytes) -> tuple[int, bool] | None:
 
 
 def extract_battery_status(report: bytes) -> int | None:
-    """Byte de bateria (`status[0]`) de um report CRU, ou None.
-
-    BATERIA-QUE-NAO-CHEGOU-01. Mesma disciplina de transporte do clique e do
-    jack (`_struct_base`, com CRC do BT): ``None`` é *"este report não diz
-    nada sobre bateria"* — id desconhecido, tamanho curto, CRC ruim — e é
-    DIFERENTE de ``0x00``, que é um controle descarregando com 5%. Confundir
-    os dois faria um pacote corrompido de rádio anunciar bateria acabando no
-    meio da partida dela.
-
-    Devolve o byte INTEIRO, sem decodificar: a leitura é do aparelho, e o que
-    significa cada nibble é a `decodificar_bateria`, logo abaixo.
-    """
+    """Byte de bateria (`status[0]`) de um report CRU, ou None."""
     base = _struct_base(report)
     if base is None:
         return None
@@ -685,19 +468,7 @@ def decodificar_bateria(status0: int) -> tuple[int | None, bool]:
 
 
 class PhysicalReportReader:
-    """Thread que espelha a janela de motion do hidraw físico no vpad.
-
-    `path_provider` (e não um path fixo) é a chave do retarget: a cada
-    (re)abertura o reader pergunta "qual é o hidraw AGORA?" — troca de
-    primário, reconexão BT e re-enumeração convergem sozinhas, e
-    `request_reopen()` (chamado pelo backend em `_recompute_primary`) só
-    precisa SINALIZAR (flag + self-pipe) para a própria thread largar o fd
-    e a próxima volta resolver o nó certo — nunca um close de fora
-    (GYRO-FD-01: número de fd liberado sob select seria reciclável).
-
-    O contrato com o vpad são dois métodos: `set_motion_streaming(bool)` nas
-    bordas abrir/perder e `forward_motion(window)` por janela (já throttled).
-    """
+    """Thread que espelha a janela de motion do hidraw físico no vpad."""
 
     def __init__(
         self,
@@ -712,79 +483,35 @@ class PhysicalReportReader:
         self._vpad = vpad
         self._min_interval = 1.0 / float(max_hz) if max_hz > 0 else 0.0
         self._time_fn = time_fn
-        # BROKER-01 (Onda S §6.2): opener injetável — TODOS os gatilhos de
-        # reopen (start inicial, silêncio ≥1 s, request_reopen do retarget,
-        # ENODEV de wake BT/hotplug, backoff pós-falha) convergem no ÚNICO
-        # open do `_run()`, então a injeção cobre todos por construção.
-        # Contrato: devolve fd pronto para select/read; levanta OSError em
         # falha (o loop já trata com o backoff). Default = comportamento de
-        # hoje (os.open por caminho). GYRO-FD-01 intacto: o opener é chamado
-        # SEMPRE da própria thread do reader, que segue dona única do fd.
         self._opener: Callable[[str], int] = (
             opener if opener is not None else _open_por_caminho
         )
         self._stop_flag = threading.Event()
         self._thread: threading.Thread | None = None
-        # fd ativo — a thread do reader é a ÚNICA dona (abre, usa e fecha).
-        # Quem está fora só SINALIZA (flag + 1 byte no self-pipe): fechar de
-        # fora liberaria o número do fd com a thread ainda em select/read
-        # nele, e um open concorrente do daemon poderia RECICLAR o número
-        # (reader drenando fd alheio = input congelado + gyro-lixo).
         self._fd: int | None = None
         self._fd_lock = threading.Lock()
-        #: SENSOR-DE-VERDADE-01: de quem é a janela que este reader copia.
-        #: Preenchido no open; `None` = não sei, e aí o filtro não age.
         self._uniq_aberto: str | None = None
-        # Self-pipe de wake + flag de reopen (GYRO-FD-01). O par é recriado
-        # no `start()` se um `stop()` anterior o fechou. O lock cobre a
-        # corrida `_wake()` vs `_close_wake_pipe()`: escrever num número já
-        # fechado/reciclado seria o mesmo defeito em miniatura.
         self._reopen_flag = threading.Event()
         self._wake_lock = threading.Lock()
         self._wake_r, self._wake_w = _novo_wake_pipe()
-        # Throttle: último valor ENTREGUE (dedup), retido (coalescência) e o
-        # instante da última entrega.
         self._last_window: bytes | None = None
         self._pending: bytes | None = None
         self._last_emit_at = float("-inf")
         self._next_emit_at = float("-inf")
-        # TOUCH-CLICK-01: último clique ENTREGUE ao vpad. `None` = nada
-        # entregue ainda nesta abertura do fd — é o que faz o primeiro report
-        # depois de reabrir re-sincronizar o botão, mesmo que o estado seja o
-        # mesmo de antes da queda (o vpad solta o clique no
-        # `set_motion_streaming(False)` do fail-safe, então o cache tem de
-        # esquecer junto ou a pressionada não voltaria a ser entregue).
         self._touchpad_click: bool | None = None
         self._touchpad_clicks = 0
-        # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: último estado do botão do
-        # microfone ENTREGUE ao vpad, pelo contrato do clique acima (`None` =
-        # nada entregue nesta abertura do fd; o vpad solta o botão no
-        # fail-safe e o cache esquece junto).
         self._mic_button: bool | None = None
         self._mic_button_forwards = 0
-        # JACK-QUE-NAO-LIGOU-01: último byte de fone/mic ENTREGUE ao vpad.
-        # `None` = nada entregue nesta abertura do fd, e é o que faz o primeiro
-        # report depois de reabrir re-sincronizar o jack — o vpad zera o byte no
-        # fail-safe de `set_motion_streaming(False)`, então o cache do reader
-        # tem de esquecer junto ou um fone plugado antes da queda nunca mais
-        # seria anunciado ao jogo.
         self._jack_status: int | None = None
         self._jack_forwards = 0
-        # BATERIA-QUE-NAO-CHEGOU-01: último byte de bateria ENTREGUE ao vpad,
-        # pelo mesmo contrato do jack acima. `None` = nada entregue nesta
-        # abertura do fd — e é ele que faz o primeiro report depois de reabrir
-        # re-sincronizar a carga, porque o vpad volta a "não sei" no fail-safe
-        # de `set_motion_streaming(False)`.
         self._battery_status: int | None = None
         self._battery_forwards = 0
-        # Telemetria (GYRO-03 lê): reports vistos, janelas emitidas, drops de
-        # CRC/tamanho no caminho BT e a taxa de emissão (EMA em Hz).
         self._reports_seen = 0
         self._windows_emitted = 0
         self._bt_drops = 0
         self._emit_hz_ema = 0.0
 
-    # -- telemetria -------------------------------------------------------
 
     @property
     def is_running(self) -> bool:
@@ -837,7 +564,6 @@ class PhysicalReportReader:
             return 0.0
         return round(self._emit_hz_ema, 1)
 
-    # -- ciclo de vida ----------------------------------------------------
 
     def start(self) -> bool:
         """Sobe a thread (idempotente). O device é aberto DENTRO do loop."""
@@ -846,7 +572,6 @@ class PhysicalReportReader:
         self._stop_flag.clear()
         self._reopen_flag.clear()
         if self._wake_r < 0 or self._wake_w < 0:
-            # Um stop() anterior fechou o self-pipe — recria para esta vida.
             self._wake_r, self._wake_w = _novo_wake_pipe()
         player = getattr(self._vpad, "player", "?")
         self._thread = threading.Thread(
@@ -872,16 +597,9 @@ class PhysicalReportReader:
             thread.join(timeout=2.0)
             self._thread = None
             if not thread.is_alive():
-                # Thread morta de verdade: o self-pipe pode ir sem risco de
-                # reciclagem (o start() recria se este reader voltar).
                 self._close_wake_pipe()
         else:
             self._close_wake_pipe()
-        # Idempotente com o finally do loop — cinto e suspensório: o vpad não
-        # pode ficar em streaming sem reader vivo (input congelaria no jogo),
-        # nem com o clique do touchpad preso (TOUCH-CLICK-01), nem com um fone
-        # fantasma anunciado ao jogo (JACK-QUE-NAO-LIGOU-01), nem com a bateria
-        # de um controle que já foi embora (BATERIA-QUE-NAO-CHEGOU-01).
         self._reset_touchpad_click()
         self._reset_mic_button()
         self._reset_jack()
@@ -890,13 +608,7 @@ class PhysicalReportReader:
             self._vpad.set_motion_streaming(False)
 
     def request_reopen(self, reason: str = "retarget") -> None:
-        """Pede à thread que largue o fd atual e reabra pelo `path_provider`.
-
-        Barato e não-bloqueante de propósito: o backend chama isto de dentro
-        do `_recompute_primary` (sob o `_io_lock` dele). GYRO-FD-01: NUNCA
-        toca o fd — fechar de fora liberaria o número com a thread ainda em
-        select/read e um open concorrente o reciclaria (fd alheio drenado).
-        """
+        """Pede à thread que largue o fd atual e reabra pelo `path_provider`."""
         logger.info("motion_reader_reopen_requested", reason=reason)
         self._reopen_flag.set()
         self._wake()
@@ -931,14 +643,10 @@ class PhysicalReportReader:
             with contextlib.suppress(OSError):
                 os.close(fd)
 
-    # -- loop -------------------------------------------------------------
 
     def _run(self) -> None:
         backoff = _BACKOFF_START_S
         while not self._stop_flag.is_set():
-            # Pedido de reopen anterior a este resolve já está atendido POR
-            # este resolve (o provider aponta o alvo ATUAL); um set depois
-            # do clear é pedido novo e derruba o fd na 1ª iteração do loop.
             self._reopen_flag.clear()
             path = self._resolve_path()
             if path is None:
@@ -957,11 +665,6 @@ class PhysicalReportReader:
             with self._fd_lock:
                 self._fd = fd
             backoff = _BACKOFF_START_S
-            # SENSOR-DE-VERDADE-01: de QUAL peça é esta janela. Resolvido no
-            # open (uma vez por conexão) e não por janela: a ~250 Hz, ler o
-            # sysfs por report seria a tempestade de syscalls que o
-            # `_motores_do_perfil_ativo` já pagou uma vez. Sem `uniq` o filtro
-            # não age — nunca desliga o sensor "do controle errado".
             self._uniq_aberto = uniq_do_hidraw(path)
             logger.info("motion_reader_started", path=path)
             with contextlib.suppress(Exception):
@@ -970,15 +673,6 @@ class PhysicalReportReader:
                 self._read_until_lost(fd, silence_budget_for(path))
             finally:
                 self._close_fd("read_lost")
-                # Fail-safe: sem fonte de motion o vpad volta ao ritmo do poll
-                # com IMU neutra (nunca um gyro congelado na mira do jogo) e
-                # com o clique do touchpad SOLTO (TOUCH-CLICK-01 — nunca um
-                # botão preso abrindo o mapa sozinho). O reset local vem junto:
-                # o vpad esqueceu, o cache do reader tem de esquecer também.
-                # O jack anda junto (JACK-QUE-NAO-LIGOU-01, mesmo fail-safe), e
-                # a bateria também (BATERIA-QUE-NAO-CHEGOU-01): perder o físico
-                # com 8% no cache deixaria o jogo alertando bateria fraca para
-                # um controle que nem está mais lá.
                 self._reset_touchpad_click()
                 self._reset_mic_button()
                 self._reset_jack()
@@ -986,7 +680,7 @@ class PhysicalReportReader:
                 with contextlib.suppress(Exception):
                     self._vpad.set_motion_streaming(False)
             if not self._stop_flag.is_set():
-                time.sleep(0.1)  # graça antes de reabrir (padrão do evdev)
+                time.sleep(0.1)
 
     def _resolve_path(self) -> str | None:
         try:
@@ -999,26 +693,16 @@ class PhysicalReportReader:
     def _read_until_lost(
         self, fd: int, silencio_max: float = _SILENCE_REOPEN_BT_S
     ) -> None:
-        """Lê reports até o fd morrer (ENODEV), silêncio longo ou sinal de fora.
-
-        `silencio_max` vem do transporte (`silence_budget_for`) — ver
-        GYRO-BT-SILENCIO-01 na constante.
-
-        GYRO-FD-01: o select vigia TAMBÉM o self-pipe — `stop()` e
-        `request_reopen()` acordam a thread na hora sem nunca fechar o fd
-        (que é fechado pelo finally do `_run`, sempre pela própria thread).
-        """
+        """Lê reports até o fd morrer (ENODEV), silêncio longo ou sinal de fora."""
         silencio = 0.0
         while not self._stop_flag.is_set():
             if self._reopen_flag.is_set():
-                # Sinal que chegou fora do select (ex.: entre o open e a 1ª
-                # iteração): larga o fd para o loop re-resolver o alvo.
                 self._reopen_flag.clear()
                 return
             try:
                 pronto = prontos_para_ler([fd, self._wake_r], _SELECT_TIMEOUT_S)
             except (OSError, ValueError):
-                return  # fd morreu debaixo do select (ENODEV de hotplug)
+                return
             if self._wake_r in pronto:
                 self._drain_wake()
                 if self._stop_flag.is_set():
@@ -1026,14 +710,11 @@ class PhysicalReportReader:
                 if self._reopen_flag.is_set():
                     self._reopen_flag.clear()
                     return
-                continue  # byte velho de um wake já atendido — segue
+                continue
             if not pronto:
                 silencio += _SELECT_TIMEOUT_S
                 self._flush_pending()
                 if silencio >= silencio_max:
-                    # No cabo isto é nó obsoleto/link morto; em BT é só o teto
-                    # de segurança do controle em repouso. Larga e re-resolve
-                    # (o provider re-aponta).
                     logger.info(
                         "motion_reader_silencio_reabrindo", limite_s=silencio_max
                     )
@@ -1043,61 +724,24 @@ class PhysicalReportReader:
             try:
                 data = os.read(fd, _READ_LEN)
             except OSError:
-                return  # ENODEV: hotplug-out (o fd é sempre o NOSSO, vivo)
+                return
             if not data:
                 return
             self._reports_seen += 1
-            # DAEMON-ACORDADO-01 (25/08/2026): a base do report sai UMA vez, e
-            # os quatro consumidores abaixo a recebem pronta. Antes, cada um
-            # chamava `_struct_base` por conta própria — quatro validações de
-            # CRC-32 por report de BT onde uma basta. Ver o bloco
-            # "os quatro campos, JÁ com a base na mão" e o portão
-            # `test_daemon_acordado_01_o_laco_que_valida_quatro_vezes.py`, que
-            # CONTA as validações por report.
-            #
-            # `None` aqui é o report que não é estado de input — id estranho,
-            # tamanho errado, CRC ruim, ou o report de ÁUDIO do BT (PS-PRESO-01).
-            # Os quatro consumidores já o tratavam como "não sei" e não mexiam
-            # em estado nenhum; sair antes deles preserva isso exatamente, e é
-            # o que mantém a contagem de `bt_drops` idêntica.
             base = _struct_base(data)
             if base is None:
                 if data[0] == INPUT_REPORT_BT:
                     self._bt_drops += 1
                 continue
-            # TOUCH-CLICK-01: o clique sai ANTES do motion e por caminho
-            # próprio. Não pode entrar no `_maybe_emit`: aquele dedupa e capa
-            # pela JANELA, e o clique não está nela — um controle parado
-            # (janela repetida) engoliria a pressionada. Aqui é por borda e na
-            # hora; o custo é 2 writes extras por clique, contra os 250/s que
-            # o throttle já governa.
             self._observe_touchpad_click(data, base)
-            # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: o botão do microfone
-            # mora no MESMO byte do clique, e o `hid-playstation` o consome
-            # (o evdev não o traz). Sem esta carona o jogo nunca o via, no
-            # cabo e no rádio, P1 a P4; o Hefesto segue vendo pelo backend.
             self._observe_mic_button(data, base)
-            # JACK-QUE-NAO-LIGOU-01: o fone/microfone sai pelo mesmo caminho e
-            # pelo mesmo motivo do clique — mora fora da janela de motion, e o
-            # `_maybe_emit` dedupa e capa POR JANELA. Um controle parado na
-            # mesa (janela repetida, ou BT em repouso) engoliria o "plugou o
-            # fone" se ele dependesse da janela para viajar. Por BORDA: o byte
-            # muda uma vez por plugada, não 250 vezes por segundo.
             self._observe_jack(data, base)
-            # BATERIA-QUE-NAO-CHEGOU-01: e a bateria, pelo terceiro motivo
-            # idêntico. Ela muda ~11 vezes numa descarga inteira, então o custo
-            # de olhar por report é uma comparação de inteiro, e o de entregar
-            # por borda é irrisório perto dos 250/s do motion.
             self._observe_battery(data, base)
             window = _janela_com_base(data, base)
             if window is None:
-                # Com a base RESOLVIDA, isto é só "o report é curto demais para
-                # a janela" — e no BT não acontece, porque a base só sai com os
-                # 78 bytes exatos. O `bt_drops` do CRC/áudio já subiu acima.
                 continue
             self._maybe_emit(window)
 
-    # -- clique do touchpad (TOUCH-CLICK-01) ------------------------------
 
     def _observe_touchpad_click(self, report: bytes, base: int | None = None) -> None:
         """Entrega ao vpad a BORDA do clique do touchpad deste report cru.
@@ -1136,26 +780,12 @@ class PhysicalReportReader:
             logger.warning("motion_reader_touchpad_click_failed", err=str(exc))
 
     def _reset_touchpad_click(self) -> None:
-        """Esquece o clique ao perder o fd — o vpad já o soltou no fail-safe.
-
-        Sem este esquecimento, um dedo apertado no instante do hotplug ficaria
-        `True` no cache: o vpad solta o botão em `set_motion_streaming(False)`
-        e, na reabertura, o reader compararia `True == True` e nunca
-        reentregaria a pressionada — clique morto até soltar e apertar de novo.
-        """
+        """Esquece o clique ao perder o fd — o vpad já o soltou no fail-safe."""
         self._touchpad_click = None
 
-    # -- botão do microfone (O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01) ------
 
     def _observe_mic_button(self, report: bytes, base: int | None = None) -> None:
-        """Entrega ao vpad a BORDA do botão do microfone deste report cru.
-
-        Quarto irmão do `_observe_touchpad_click`, com as três defesas dele:
-        só borda; ``None`` (id estranho, curto, CRC ruim do rádio, report de
-        áudio) é "não sei" e não solta um botão apertado; vpad sem o método
-        (uinput, dublês) degrada calado. O ato do mudo não passa por aqui: ele
-        é do Hefesto, pelo backend; isto só deixa o JOGO ver o aperto.
-        """
+        """Entrega ao vpad a BORDA do botão do microfone deste report cru."""
         if base is None:
             base = _struct_base(report)
             if base is None:
@@ -1175,14 +805,9 @@ class PhysicalReportReader:
             logger.warning("motion_reader_mic_button_failed", err=str(exc))
 
     def _reset_mic_button(self) -> None:
-        """Esquece o botão ao perder o fd: o vpad já o soltou no fail-safe.
-
-        Sem isto, um dedo no botão no instante do hotplug ficaria `True` no
-        cache e a reabertura nunca reentregaria o aperto seguinte à soltura.
-        """
+        """Esquece o botão ao perder o fd: o vpad já o soltou no fail-safe."""
         self._mic_button = None
 
-    # -- fone e microfone do controle (JACK-QUE-NAO-LIGOU-01) -------------
 
     def _observe_jack(self, report: bytes, base: int | None = None) -> None:
         """Entrega ao vpad a MUDANÇA de fone/microfone deste report cru.
@@ -1222,37 +847,12 @@ class PhysicalReportReader:
             logger.warning("motion_reader_jack_failed", err=str(exc))
 
     def _reset_jack(self) -> None:
-        """Esquece o fone ao perder o fd — o vpad já o zerou no fail-safe.
-
-        Sem este esquecimento, um fone plugado no instante do hotplug ficaria
-        no cache: o vpad zera o byte em `set_motion_streaming(False)` e, na
-        reabertura, o reader compararia igual e nunca reentregaria — o jogo
-        ficaria sem saber do fone até ela desplugar e plugar de novo.
-        """
+        """Esquece o fone ao perder o fd — o vpad já o zerou no fail-safe."""
         self._jack_status = None
 
-    # -- bateria do controle (BATERIA-QUE-NAO-CHEGOU-01) ------------------
 
     def _observe_battery(self, report: bytes, base: int | None = None) -> None:
-        """Entrega ao vpad a MUDANÇA de bateria deste report cru.
-
-        Terceiro irmão do `_observe_touchpad_click`, com as três defesas dele
-        pelas mesmas razões: só borda, ``None`` do extrator não mexe no estado
-        (CRC ruim de rádio não descarrega o controle dela) e vpad sem o método
-        degrada calado — que aqui não é hipótese de teste: o `UinputGamepad`
-        **não tem** `forward_battery`, porque o evdev não carrega bateria no
-        mesmo canal. Vale para USB e para BT (o `_struct_base` já cuida dos
-        dois transportes) e para os N controles, um reader por jogador.
-
-        A comparação é com o byte CRU, e quem o traduz é a
-        `decodificar_bateria`. É de propósito, e o motivo é o mesmo do jack:
-        se o firmware mexer num bit que não sabemos ler, o cache muda, a
-        tradução dá o mesmo par e o `forward_battery` sai cedo — nenhum report
-        a mais no /dev/uhid.
-
-        `base` tem o mesmo contrato do `_observe_touchpad_click`: quem já a
-        resolveu passa, quem só tem o report omite.
-        """
+        """Entrega ao vpad a MUDANÇA de bateria deste report cru."""
         status = (
             _bateria_com_base(report, base)
             if base is not None
@@ -1272,17 +872,9 @@ class PhysicalReportReader:
             logger.warning("motion_reader_battery_failed", err=str(exc))
 
     def _reset_battery(self) -> None:
-        """Esquece a bateria ao perder o fd — o vpad já voltou a "não sei".
-
-        Mesma armadilha do fone, com um custo maior: sem este esquecimento, um
-        controle que caiu com 8% ficaria 8% no cache do reader; o vpad volta
-        para `_STATUS_DESCONHECIDO` no fail-safe e, na reabertura, o reader
-        compararia igual e NUNCA reentregaria — o jogo passaria a partida
-        inteira achando que o controle está cheio e carregando.
-        """
+        """Esquece a bateria ao perder o fd — o vpad já voltou a "não sei"."""
         self._battery_status = None
 
-    # -- throttle ---------------------------------------------------------
 
     def _maybe_emit(self, window: bytes, now: float | None = None) -> None:
         """Dedup por valor + cap de taxa com coalescência do último valor."""
@@ -1291,8 +883,6 @@ class PhysicalReportReader:
         if now is None:
             now = self._time_fn()
         if now < self._next_emit_at:
-            # Retida pelo cap — a mais nova SEMPRE sobrescreve (coalescência);
-            # sai no próximo report pós-janela ou no flush do select-timeout.
             self._pending = window
             return
         self._pending = None
@@ -1313,9 +903,6 @@ class PhysicalReportReader:
         self._emit(pending, now)
 
     def _emit(self, window: bytes, now: float) -> None:
-        # EMA da taxa ANTES de carimbar o novo instante (o intervalo é entre
-        # a entrega anterior e esta). A 1ª entrega não tem intervalo (last é
-        # -inf) e a EMA fica em 0 até a 2ª.
         intervalo = now - self._last_emit_at
         if 0.0 < intervalo < _HZ_STALE_S:
             inst = 1.0 / intervalo
@@ -1325,13 +912,8 @@ class PhysicalReportReader:
                 else _HZ_EMA_ALPHA * inst + (1.0 - _HZ_EMA_ALPHA) * self._emit_hz_ema
             )
         elif intervalo >= _HZ_STALE_S:
-            # Fluxo voltou depois de um buraco: recomeça a medição do zero
-            # (misturar a EMA de antes do buraco distorceria a taxa nova).
             self._emit_hz_ema = 0.0
         proximo = self._next_emit_at + self._min_interval
-        # A grade tolera ficar UM período atrasada (jitter do host); mais
-        # que isso é buraco de fluxo de verdade, e aí ela recomeça de AGORA
-        # — sem isso um silêncio longo viraria crédito represado.
         self._next_emit_at = (
             proximo
             if proximo >= now - self._min_interval
@@ -1339,13 +921,6 @@ class PhysicalReportReader:
         )
         self._last_emit_at = now
         self._last_window = window
-        # SENSOR-DE-VERDADE-01 — O BRAÇO DO REPORT, e é a última coisa que
-        # acontece com a janela antes de ela virar dado do jogo. Fica DEPOIS do
-        # `_last_window` de propósito: o cache do reader guarda o que o FÍSICO
-        # mandou (é ele que decide "mudou?" e alimenta a telemetria), e o
-        # filtro é sobre o que SAI. Guardar a janela já filtrada faria um
-        # sensor desligado congelar o dedup — todas as janelas ficariam iguais
-        # e o touchpad, que viaja na mesma fatia, pararia junto.
         try:
             self._vpad.forward_motion(REGISTRO.filtrar(self._uniq_aberto, window))
             self._windows_emitted += 1

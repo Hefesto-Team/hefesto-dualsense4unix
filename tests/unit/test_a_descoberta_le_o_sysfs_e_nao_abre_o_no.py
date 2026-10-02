@@ -1,33 +1,4 @@
-"""A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01 — a descoberta não abre o nó.
-
-O que o diário de 26/09 mediu (o `journalctl` do daemon, relido em 28/09):
-
-- das 7h51 às 10h42, com o controle de acelerômetro desligado (perfil
-  Freestyle) fora da mesa, o daemon pediu ao broker o nó de movimento dos
-  OUTROS dois controles a cada 5,30 s (mediana), 1.933 vezes em cada nó. É o
-  leitor de movimento do ausente — que o hub mantém vivo por causa do
-  sensor desligado — repetindo a descoberta no recuo que para em 5 s;
-- das 10h42 às 11h47, depois do reinício do daemon, os mesmos dois nós a cada
-  1,28 s (mediana), 3.023 vezes em cada um: não havia leitor do ausente, e o
-  hub repetia a descoberta a cada volta de manutenção (1 s mais a volta) para
-  achar a peça com o sensor desligado. É a «rajada das 11h45» da sprint, e ela
-  começou às 10h42;
-- das 16h16 às 18h23, o primeiro laço de novo, 1.444 vezes num dos nós.
-
-Cada descoberta abria cada nó auxiliar de cada controle, pelo broker, só para
-ler vendor, product, nome e endereço — que o sysfs publica sem abrir nada.
-
-As réguas, com a Mesa de mentira (quatro controles, um vpad, os nós do físico
-fechados como o `0600 root` e o socket do broker de pé):
-
-1. a descoberta devolve os quatro endereços com ZERO `open` — nem pelo
-   caminho, nem pelo broker. MORDIDA: devolva o `abrir_input_device` à
-   descoberta e a conta passa de zero;
-2. o leitor de um endereço ausente, com o aviso de `/dev/input` parado, faz no
-   máximo UMA descoberta em 30 s; com o aviso disparado, descobre na hora;
-3. o hub, com o sensor desligado de uma peça fora da mesa, só procura de novo
-   quando `/dev/input` muda.
-"""
+"""A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01 — a descoberta não abre o nó."""
 from __future__ import annotations
 
 import contextlib
@@ -46,8 +17,6 @@ pytest.importorskip("evdev")
 from hefesto_dualsense4unix.core import evdev_reader as er
 from tests.unit.sysfs_de_entrada_de_mentira import publicar_no
 
-#: Quatro controles de mentira (a faixa forjada da casa), um em cada lugar da
-#: mesa, dois no cabo e dois no rádio — nunca só o P1.
 CONTROLES = (
     ("aa:bb:cc:00:00:01", 0x03),
     ("aa:bb:cc:00:00:02", 0x03),
@@ -59,18 +28,12 @@ NOMES = {
     "Motion Sensors": "DualSense Wireless Controller Motion Sensors",
     "Touchpad": "DualSense Wireless Controller Touchpad",
 }
-#: O bitmap `capabilities/key` que o kernel publica para cada nó (o mesmo da
-#: régua da HIDE-SO-O-HIDRAW-02): o do gamepad tem BTN_SOUTH..BTN_THUMBR na
-#: palavra 4, o do touchpad não tem o BTN_GAMEPAD, e o de movimento é vazio.
 TECLAS = {
     NOMES["gamepad"]: "7fdb000000000000 0 0 0 0",
     NOMES["Motion Sensors"]: "0",
     NOMES["Touchpad"]: "e520 10000 0 0 0 0",
 }
 
-#: O vpad do próprio daemon: os mesmos nomes, o MAC forjado `02:fe`, e a
-#: morada de `/devices/virtual/misc/uhid/`. Adotá-lo seria o daemon lendo a
-#: própria saída.
 VPAD = "02:fe:00:00:00:01"
 
 
@@ -83,11 +46,8 @@ class Mesa:
         self.devices = raiz / "devices"
         self.sys.mkdir()
         self.dev.mkdir()
-        #: `/dev/input/eventN` -> (nome, uniq, bus) — o que o nó publica.
         self.nos: dict[str, tuple[str, str, int]] = {}
-        #: Morada real de cada nó, para o `_is_virtual_evdev`.
         self.moradas: dict[str, str] = {}
-        #: Toda abertura, venha de onde vier.
         self.aberturas: list[str] = []
         self.pedidos_ao_broker: list[str] = []
         numero = 9101
@@ -115,7 +75,7 @@ class Mesa:
         self.moradas[f"/sys/class/input/{evento}/device"] = str(morada)
         no = Path(caminho)
         no.write_text("", encoding="ascii")
-        no.chmod(0o000)  # o `0600 root` do físico, visto por ela
+        no.chmod(0o000)
         self.nos[caminho] = (nome, uniq, bus)
         return caminho
 
@@ -166,8 +126,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Mesa:
     socket_do_broker.write_text("", encoding="ascii")
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(socket_do_broker))
 
-    # O `list_devices` da BIBLIOTECA: só o nó que o processo abre. Os do
-    # físico estão fechados, e só entram pelo `_nos_de_evento` com o broker.
     def listar(*_a: Any) -> list[str]:
         return [str(c) for c in sorted(m.dev.glob("event*")) if os.access(c, os.R_OK | os.W_OK)]
 
@@ -194,9 +152,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Mesa:
     return m
 
 
-# ---------------------------------------------------------------------------
-# 1. A descoberta lê o sysfs e não abre o nó
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("marcador", "descobre"),
     [
@@ -207,12 +162,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Mesa:
 def test_a_descoberta_devolve_os_quatro_sem_abrir_nada(
     mesa: Mesa, marcador: str, descobre: Any
 ) -> None:
-    """Os quatro endereços, cabo e rádio, e nenhum `open`.
-
-    **A MORDIDA:** devolva o `abrir_input_device` à descoberta (o laço de
-    antes de 28/09) e a conta passa de zero — doze aberturas por volta com
-    quatro controles, e o broker pedido para cada nó auxiliar fechado.
-    """
+    """Os quatro endereços, cabo e rádio, e nenhum `open`."""
     achados = descobre()
 
     esperado = {
@@ -238,11 +188,7 @@ def test_o_vpad_do_daemon_fica_de_fora(mesa: Mesa) -> None:
 def test_o_no_fechado_sem_broker_fica_de_fora(
     mesa: Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Sem o socket do broker, o nó fechado não tem porta: não entra no mapa.
-
-    A descoberta continua devolvendo só o nó que alguém pode abrir depois, como
-    antes — o `_nos_de_evento` é quem decide a lista, não o sysfs.
-    """
+    """Sem o socket do broker, o nó fechado não tem porta: não entra no mapa."""
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(tmp_path / "nao-ha.sock"))
     assert er.discover_dualsense_motion_evdevs() == {}
     assert mesa.aberturas == []
@@ -277,11 +223,6 @@ def test_o_controle_que_saiu_nao_aparece(mesa: Mesa) -> None:
     assert mesa.aberturas == []
 
 
-# ---------------------------------------------------------------------------
-# 2. O leitor de um controle ausente espera o aviso, e não o relógio
-# ---------------------------------------------------------------------------
-#: O passo da espera nos testes. Em produção é o `_SELECT_TIMEOUT_S` (0,5 s):
-#: uma volta do aviso por passo, e 60 voltas são 30 s de produção.
 PASSO = 0.01
 VOLTAS_EM_30_S = int(30 / 0.5)
 
@@ -297,7 +238,7 @@ class _NoDoLeitor:
 
     def read(self) -> Any:
         os.read(self.r, 64)
-        raise OSError(errno.ENODEV, "No such device")  # o controle saiu
+        raise OSError(errno.ENODEV, "No such device")
 
     def absinfo(self, _codigo: int) -> Any:
         raise OSError(errno.EINVAL, "sem absinfo")
@@ -353,7 +294,6 @@ class _Cena:
         classe, descobridor = LEITORES[marcador]
         original = getattr(er, descobridor)
 
-        #: O que acontece na mesa DURANTE a próxima procura (uma vez só).
         self.na_busca: Callable[[], Any] | None = None
 
         def contar() -> dict[str, Path]:
@@ -416,12 +356,7 @@ def cena(mesa: Mesa, monkeypatch: pytest.MonkeyPatch, request: Any) -> Any:
 
 
 def test_sem_aviso_o_leitor_procura_uma_vez_em_30_s(cena: _Cena) -> None:
-    """Com `/dev/input` parado, UMA descoberta em 30 s (60 passos de 0,5 s).
-
-    **A MORDIDA:** troque o `_esperar_o_no(self)` do `_run` pelo recuo de
-    antes (`_esperar_o_backoff(self, backoff)` e o `backoff` que dobra) e o
-    leitor procura de novo a cada volta — 0,5, 1, 2, 4 e 5 s para sempre.
-    """
+    """Com `/dev/input` parado, UMA descoberta em 30 s (60 passos de 0,5 s)."""
     cena.abrir_e_perder()
 
     def trinta_segundos_ou_outra_busca() -> bool:
@@ -451,16 +386,7 @@ def test_com_o_aviso_o_leitor_descobre_e_abre_na_hora(cena: _Cena) -> None:
 
 
 def test_o_no_que_nasce_durante_a_procura_acorda_o_leitor(cena: _Cena) -> None:
-    """O nó que nasce no meio da procura não pode sumir dentro da linha de base.
-
-    O `_procurar_o_no` tira a linha de base do aviso ANTES do `_find_device`:
-    o nó que nasce depois de a descoberta ler o sysfs muda a pasta depois da
-    linha de base, e a primeira volta da espera o enxerga.
-
-    **A MORDIDA:** tire a linha de base DEPOIS da procura e o nó que nasceu no
-    meio dela entra na linha de base: o leitor dorme até o teto de 60 s com o
-    nó do controle na pasta.
-    """
+    """O nó que nasce no meio da procura não pode sumir dentro da linha de base."""
     cena.na_busca = cena.devolver
     cena.abrir_e_perder()
     assert _esperar(lambda: len(cena.abertos) == 2, prazo=5.0), (
@@ -470,13 +396,7 @@ def test_o_no_que_nasce_durante_a_procura_acorda_o_leitor(cena: _Cena) -> None:
 
 
 def test_o_controle_que_sai_nao_faz_o_ausente_procurar(cena: _Cena) -> None:
-    """A pasta que só perde entradas não traz nó nenhum de volta.
-
-    Outro controle sai da mesa (o P2): `/dev/input` muda, e o leitor do
-    ausente segue dormindo. **A MORDIDA:** troque o `aviso.poll() and
-    getattr(aviso, "nasceu", True)` por `aviso.poll()` e cada saída vira uma
-    descoberta — mais as três no relógio.
-    """
+    """A pasta que só perde entradas não traz nó nenhum de volta."""
     cena.abrir_e_perder()
     assert _esperar(lambda: bool(cena.avisos)), "o leitor não armou o aviso"
     aviso = cena.avisos[-1]
@@ -489,21 +409,13 @@ def test_o_controle_que_sai_nao_faz_o_ausente_procurar(cena: _Cena) -> None:
 def test_o_no_que_nasce_sem_permissao_e_achado_no_relogio(
     cena: _Cena, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Sem broker, o nó nasce fechado e o udev o abre DEPOIS, sem mudar a pasta.
-
-    É o que o recuo no relógio cobria antes e o aviso sozinho não cobre: a
-    troca de dono e permissão não muda a lista de `/dev/input`. Depois de cada
-    aviso, o leitor procura mais três vezes no relógio (0,5 → 1 → 2 s).
-
-    **A MORDIDA:** ponha `_BUSCAS_DEPOIS_DO_AVISO = 0` e o leitor dorme até o
-    teto de 60 s com o nó já aberto na pasta.
-    """
+    """Sem broker, o nó nasce fechado e o udev o abre DEPOIS, sem mudar a pasta."""
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(tmp_path / "nao-ha.sock"))
     cena.abrir_e_perder()
-    caminho = cena.devolver()  # nasce 0000: sem broker, a lista não o traz
+    caminho = cena.devolver()
     assert _esperar(lambda: len(cena.buscas) >= 2, prazo=5.0), "o aviso não chegou"
     assert len(cena.abertos) == 1
-    Path(caminho).chmod(0o660)  # o udev deu dono e permissão
+    Path(caminho).chmod(0o660)
     assert _esperar(lambda: len(cena.abertos) == 2, prazo=5.0), (
         "o nó ficou aberto na pasta e o leitor não o achou — ele esperava um "
         "aviso que a troca de permissão não dá"
@@ -525,9 +437,6 @@ def test_o_stop_acorda_o_leitor_que_espera(cena: _Cena) -> None:
     assert time.monotonic() - inicio < 1.0, "o stop esperou o passo inteiro"
 
 
-# ---------------------------------------------------------------------------
-# 3. O hub não procura de novo a peça desligada que não está na mesa
-# ---------------------------------------------------------------------------
 class _AvisoDoHub:
     def __init__(self) -> None:
         self.mudou = False
@@ -576,11 +485,7 @@ def _hub(descobrir: Callable[[], dict[str, Any]]) -> Any:
 
 
 def test_o_hub_procura_a_peca_desligada_fora_da_mesa_uma_vez(registro: Any) -> None:
-    """A «rajada» de 26/09: uma descoberta por volta de manutenção, das 10h42 às 11h47.
-
-    **A MORDIDA:** tire o `not faltando <= self._desligados_procurados` e as
-    dez voltas pagam dez descobertas.
-    """
+    """A «rajada» de 26/09: uma descoberta por volta de manutenção, das 10h42 às 11h47."""
     chamadas: list[int] = []
 
     def descobrir() -> dict[str, Any]:
@@ -608,7 +513,7 @@ def test_o_hub_procura_de_novo_quando_a_pasta_muda_e_acha(registro: Any) -> None
     hub.reconciliar()
     assert len(chamadas) == 1
 
-    mesa_viva["aa:bb:cc:00:00:04"] = "/dev/input/event9111"  # o controle voltou
+    mesa_viva["aa:bb:cc:00:00:04"] = "/dev/input/event9111"
     hub._watch.mudou = True
     hub.reconciliar()
 
@@ -618,23 +523,14 @@ def test_o_hub_procura_de_novo_quando_a_pasta_muda_e_acha(registro: Any) -> None
 
 
 def test_o_hub_procura_de_novo_na_volta_seguinte_a_mudanca(registro: Any) -> None:
-    """O nó nasce antes da permissão, e a troca de permissão não muda a pasta.
-
-    Sem broker, a lista da descoberta só traz o nó que o processo abre, e o
-    udev dá dono e permissão DEPOIS de o nó nascer. A volta da mudança procura,
-    e a volta seguinte, sem mudança, procura mais uma vez: só então a peça vira
-    «procurada». É o que as três buscas no relógio fazem no leitor.
-
-    **A MORDIDA:** marque a peça como procurada já na volta da mudança e o nó
-    que ganhou permissão uma volta depois nunca é achado.
-    """
+    """O nó nasce antes da permissão, e a troca de permissão não muda a pasta."""
     mesa_viva: dict[str, Any] = {}
     hub = _hub(lambda: dict(mesa_viva))
     registro.definir("aa:bb:cc:00:00:04", acelerometro=False)
     hub.reconciliar()
-    hub._watch.mudou = True  # o controle voltou: o nó nasceu, ainda fechado
+    hub._watch.mudou = True
     hub.reconciliar()
-    mesa_viva["aa:bb:cc:00:00:04"] = "/dev/input/event9111"  # o udev o abriu
+    mesa_viva["aa:bb:cc:00:00:04"] = "/dev/input/event9111"
     hub.reconciliar()
 
     assert hub.grab_do_movimento("aa:bb:cc:00:00:04") == "held", (

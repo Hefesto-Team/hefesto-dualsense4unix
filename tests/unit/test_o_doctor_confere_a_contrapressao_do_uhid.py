@@ -1,16 +1,4 @@
-"""O doctor sabe dizer se a contrapressão do uhid, quando pedida, está de pé.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), os pedidos P-1 e P-7: o uhid com
-contrapressão é opt-in (`--uhid-contrapressao`), o uninstall o desliga a quente
-e os dois instaladores o rearmam — e o doctor não dizia nada. O pedido é a conf
-em /etc/modprobe.d; o que vale é o parâmetro do módulo CARREGADO; e o DKMS só
-constrói nos kernels do `patch/BASELINE` (`KERNELS_VALIDADOS`), que o doctor
-lê em vez de digitar.
-
-A MORDIDA, medida: tirar o laço dos kernels conferidos (todo kernel vira
-«próximo boot») reprova o caso do kernel fora da lista; trocar o `warn` do
-parâmetro desligado por `pass`, o dele.
-"""
+"""O doctor sabe dizer se a contrapressão do uhid, quando pedida, está de pé."""
 
 from __future__ import annotations
 

@@ -1,28 +1,5 @@
 #!/usr/bin/env python3
-"""bancada_do_mapa.py — a superfície de MEDIÇÃO do mapa de canais.
-
-O `specs.html` é o artefato: consulta, versiona, abre em qualquer lugar sem
-servidor. Esta bancada é o oposto — existe para o momento em que ela está com o
-controle na mão, mede uma coisa, e precisa gravar o que mediu no mesmo CSV.
-
-Os dois leem e escrevem `docs/data/mapa-controles.csv`. Depois de gravar aqui,
-rode `python3 scripts/gerar-mapa.py` para o artefato acompanhar — o `--check`
-acusa quem esquecer.
-
-Em 11/08/2026, quando esta linha foi conferida, o `--check` ainda precisava ser
-chamado À MÃO: nenhum portão do CI, do pre-commit ou da suíte o invocava. Ele
-está escrito e provado nos três casos, mas escrito não é ligado — e chamar de
-"portão" o que ninguém chama é o defeito mais caro desta casa.
-
-Desde a migração v2 o grão é `(chave, controle)`: uma feature de um controle é
-UMA linha, com o cabo e o rádio lado a lado em colunas `cabo_*` / `radio_*`. O
-caderno de eliminação, porém, continua julgando os dois lados SEPARADAMENTE —
-juntá-los faria os sete ensaios da lightbar por rádio brigarem com o do cabo e
-o veredicto viraria "os ensaios se contradizem".
-
-    .venv/bin/pip install -e ".[bancada]"   # não é dependência do produto
-    .venv/bin/streamlit run scripts/bancada_do_mapa.py
-"""
+"""bancada_do_mapa.py — a superfície de MEDIÇÃO do mapa de canais."""
 from __future__ import annotations
 
 import csv
@@ -40,111 +17,29 @@ except ModuleNotFoundError as e:      # pragma: no cover - caminho de ajuda
         "    .venv/bin/streamlit run scripts/bancada_do_mapa.py"
     ) from e
 
-#: A bancada mora em `scripts/`, e a raiz da árvore é a pasta de cima. Os
-#: módulos vizinhos que ela importa moram na própria pasta.
 AQUI = Path(__file__).resolve().parent
 RAIZ = Path(__file__).resolve().parents[1]
 CSV_ = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ENSAIOS_ = RAIZ / "docs" / "data" / "ensaios.csv"
 
 sys.path.insert(0, str(AQUI))
-# O `src` entra no caminho pela mesma razão que o `scripts`: a bancada precisa
-# do vocabulário de PONTES, e o dono dele é `integrations/ponte_escada.py`.
-# Com o install editável do produto o import já funcionaria; sem ele (uma
-# `streamlit` de fora do `.venv`, que é como esta bancada costuma ser aberta)
-# não funcionaria, e o remédio seria redigitar as quatro pontes aqui — que é
-# exatamente a segunda cópia do vocabulário que a nota ESCADA-COM-UM-DONO-SO,
-# logo abaixo, existe para não deixar acontecer de novo.
 sys.path.insert(0, str(RAIZ / "src"))
 import eliminacao
 
-#: Só estas colunas se escrevem daqui. As outras vieram da escavação e mudam
-#: por auditoria, não por digitação — é o que impede a bancada de virar um
-#: editor de fatos.
-#:
-#: O degrau (`ate_onde_foi`) e a ressalva vêm EM PAR desde a migração v2
-#: pela mesma razão que `aceita` e `aciona` vêm: uma feature é UMA linha, e o
-#: que muda entre os transportes fica lado a lado na mesma linha. Editar só o
-#: lado selecionado seria inventar aqui o modo do caderno de eliminação — que
-#: separa os dois de propósito, e cuja razão está na docstring lá em cima.
 EDITAVEIS = ["cabo_ate_onde_foi", "radio_ate_onde_foi", "provado_em", "provado_por",
              "validade_dias", "estado_hoje", "teste_que_morde", "mordida",
              "mordida_provada_em", "assimetria_declarada",
              "cabo_ressalva", "radio_ressalva"]
 
-# ESCADA-COM-UM-DONO-SO (19/08/2026). Esta lista era a SEGUNDA cópia do
-# vocabulário: o portão tinha a dele e a bancada tinha esta, e em 19/08 os dois
-# degraus novos da direção de ENTRADA (`O JOGO RECEBEU`, `O JOGO REAGIU`)
-# entraram só no portão — o resultado é que ele os ACEITAVA e o formulário não
-# os OFERECIA, então ninguém conseguia escrevê-los. Duas listas do mesmo
-# vocabulário divergem no dia em que alguém mexe numa; agora há um dono só.
 from check_paridade_transporte import VALORES_DA_ESCADA
 
 GRAUS = ["", *VALORES_DA_ESCADA]
 
-# ENSAIO-QUE-NAO-DIZ-A-PONTE-01 (20/08/2026), e a mesma disciplina da linha
-# acima: as pontes NÃO se redigitam aqui. Elas saem da `ESCADA` de
-# `integrations/ponte_escada.py`, que é quem decide qual ponte o produto tenta
-# e em que ordem — se um degrau novo entrar lá, ele aparece neste formulário no
-# mesmo instante, sem ninguém lembrar de vir aqui.
 from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA
 
-#: O `""` na frente é o padrão, e ele quer dizer **"não declarou"** — NUNCA
-#: "serve para toda ponte". A distinção não é filosofia: os 177 ensaios do
-#: caderno nasceram sem o campo, e ler o vazio deles como "vale para qualquer
-#: ponte" transformaria medição feita sem jogo nenhum em prova sobre a ponte que
-#: alguém quisesse. Quem consome isto é o `eliminacao.sustentam_a_ponte`, e lá a
-#: regra está escrita por extenso.
 PONTES = ["", *[degrau.ponte.chave for degrau in ESCADA]]
-#: O vocabulário de `provado_por` DIVERGE do que o método declara, e a lista
-#: abaixo é a soma dos dois — medido em 12/08/2026, com o CSV na mão:
-#: o `METODO-DE-ISOLAMENTO.md` prevê `ci`/`bancada`/`olho-dela`, e o mapa usa
-#: `aparelho` (19), `fonte-do-driver` (12) e `descritor` (2). `olho-dela` NÃO
-#: aparece em nenhuma das 293 linhas. São duas perguntas diferentes que caíram
-#: na mesma coluna: o método pergunta QUEM viu, o mapa responde DE ONDE veio a
-#: afirmação. Quem sustenta o degrau `O APARELHO OBEDECEU` é o `observado_por`
-#: do CADERNO (`docs/data/ensaios.csv`, `olho-dela` em 53 dos 57), e é lá que o
-#: portão foi cobrar (regra 10 do `check_paridade_transporte.py`).
-#: Somar em vez de escolher é deliberado: um seletor que não contém nenhum dos
-#: 33 valores existentes apaga medição na primeira gravação. Qual vocabulário
-#: fica é decisão dela.
-#: **`instrumento` ENTROU EM 21/09/2026**, pela mesma regra do parágrafo
-#: acima: o `audio.microfone.ganho` do mapa responde `instrumento` — a medição
-#: veio do `amixer`, e não de um olho nem do CI. Sem ele na lista, abrir a
-#: bancada e gravar QUALQUER célula apagaria aquela procedência, porque a grade
-#: devolve o que o seletor oferece. O CSV é quem manda; a lista o acompanha.
 QUEM = ["", "ci", "bancada", "olho-dela",
         "aparelho", "fonte-do-driver", "descritor", "instrumento"]
-#: BANCADA-ESTADOS-01 (13/08/2026): as duas prosas abaixo NÃO são vocabulário —
-#: são o texto que o mapa JÁ tem em `estado_hoje`, nas duas únicas das 293 linhas
-#: em que a coluna está preenchida: `combinacao.rumble_simultaneo@dualsense` e
-#: `vibracao.rumble.ff@dualsense`, a dose-resposta do keepalive medida em
-#: 11/08/2026. Estão aqui pela razão já escrita acima para `provado_por`, e que
-#: ninguém tinha aplicado a esta lista.
-#:
-#: Com os graus de confiança separados, porque eles diferem:
-#: - MEDIDO (13/08/2026, `csv.DictReader` sobre as 293 linhas): `estado_hoje` tem
-#:   2 valores não vazios, e o `ESTADOS` de antes desta linha não continha
-#:   NENHUM dos dois. O seletor estava cego a 100% do dado da coluna.
-#: - LIDO NO CÓDIGO: `estado_hoje` está em `EDITAVEIS`, e o botão "Gravar no CSV"
-#:   (logo abaixo) regrava TODA coluna editável de toda linha visível, com o que
-#:   voltou da grade — não há caminho que preserve o valor original.
-#: - INFERIDO: que o `SelectboxColumn` COAJA um valor fora de `options` em vez de
-#:   deixá-lo passar. Não foi possível medir: `streamlit` não está instalado
-#:   nesta máquina (conferido em 13/08/2026), e ele não é dependência do produto.
-#:   É a única parte da cadeia que não foi vista rodar.
-#:
-#: Somar em vez de escolher é o mesmo gesto do `provado_por`: enquanto a inferência
-#: não for derrubada, o lado barato do erro é oferecer o valor que já existe.
-#: Transcritas byte a byte, com os acentos que faltam no original: o valor tem de
-#: casar com o CSV, e "corrigir" o texto aqui traria de volta a perda que este
-#: bloco existe para impedir. O
-#: `tests/unit/test_bancada_nomeia_coluna_que_o_csv_nao_tem.py` cruza as opções
-#: de todo `SelectboxColumn` com os valores que o CSV realmente tem, e reprova
-#: nomeando a coluna e o valor que ficaria órfão — inclusive se a transcrição
-#: abaixo divergir de uma letra.
-#: Se `estado_hoje` fica sendo vocabulário curto ou texto livre é decisão dela;
-#: até ela decidir, o dado não some por omissão.
 _ESTADO_RUMBLE_SIMULTANEO = (
     "RESPONDIDA em 11/08/2026 com a mesa cheia, e a causa do estorvo esta ISOLADA: quatro"
     " controles vibram ao mesmo tempo nos dois transportes; o que os cancelava era o "
@@ -158,23 +53,10 @@ _ESTADO_RUMBLE_FF = (
     "não pelos bits — provado por dose-resposta (0,5s -> pulso; 8,0s -> oito segundos) e "
     "por troca de lado (bits desligados trocaram o motor que vibra). A cura ESTA escrita e "
     "LIGADA: `OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC = 2.0` "
-    "(core/backend_pydualsense.py:273), consumida no laco vivo em :973-980, com mordida em "
+    "(core/backend_pydualsense.py:198), consumida no laco vivo em :973-980, com mordida em "
     "tests/unit/test_rumble_sem_dono_01.py. O que ela NAO tem e medicao de radio: a mordida "
     "prova o LACO, nunca o motor."
 )
-#: BANCADA-ESTADOS-02 (15/08/2026): mais TRÊS, e a lista cresceu por medição, não
-#: por gosto. O `estado_hoje` recebeu neste dia o bias do giroscópio em repouso, a
-#: busca que fechou o `imu.ligar` e o contador de reports do `imu.perda` — as três
-#: escritas por quem estava medindo, e as três reprovadas pelo portão, como tinha
-#: de ser. Transcritas aqui pela mesma razão de 13/08.
-#:
-#: A tentação, e por que ela foi DESCARTADA: derivar a lista do próprio CSV em
-#: tempo de execução acaba com a transcrição para sempre. Foi escrito, e o
-#: `test_a_regua_dos_selectbox_ainda_alcanca_a_grade` reprovou na hora — a régua
-#: lê `options` ESTATICAMENTE, pelo AST, e uma lista computada ela não consegue
-#: conferir contra o CSV. O incômodo da transcrição é o preço de a régua existir;
-#: trocá-lo por conveniência desligaria a guarda em silêncio, que é o defeito que
-#: ela guarda. Fica como está até ela decidir se `estado_hoje` é vocabulário curto.
 _ESTADO_GIROSCOPIO_BIAS = (
     'Fechado nos dois transportes em 15/08/2026 pelo E-8. O número de repouso NÃO é zero: '
     'as quatro unidades ficam entre 0,19 e 1,53 graus/s de bias de velocidade angular, '
@@ -187,7 +69,7 @@ _ESTADO_IMU_LIGAR = (
     'PERGUNTA FECHADA POR BUSCA, 15/08/2026: NÃO existe, nesta árvore, código que tente '
     'ligar a IMU do DualSense — logo não há nada a podar aqui. O `set_motion_streaming` é '
     'flag DO VPAD (decide se o espelho emite) e o único Enable-IMU do projeto é o '
-    'subcomando 0x40 do protocolo Switch, em `core/external_leds.py:149`, que é do '
+    'subcomando 0x40 do protocolo Switch, em `core/external_leds.py:142`, que é do '
     'Nintendo Pro REAL. Procurado por `git grep` em `imu`, `motion`, `enable_motion` e '
     '`ligar` sobre `src/` e `app/`.'
 )
@@ -198,8 +80,6 @@ _ESTADO_IMU_PERDA = (
     'o contador que ele nunca teve e ao rádio um que mede perda de verdade, em vez do '
     '`bt_drops`, que conta o que o PRODUTO descartou.'
 )
-#: O-BRILHO-DAS-LUZES-DE-NUMERO-01 (25/09/2026): o brilho das lâmpadas deixou de
-#: ser inerte, e a frase de 24/09 saiu do mapa. Transcrita de novo.
 _ESTADO_BRILHO_DO_PERFIL = (
     'o perfil escolhe o brilho das luzes de número por controle — Fraco, '
     'Médio ou Forte (`leds.player_led_brightness`, no global e no override de '
@@ -317,14 +197,6 @@ if col_a.button("Gravar no CSV", type="primary"):
         "`python3 scripts/gerar-mapa.py` para o specs.html acompanhar"
     )
 
-# ─────────────────────────────────────────────────────────────────────────
-# O CADERNO DE ELIMINAÇÃO
-#
-# É aqui que ela repete, para qualquer feature, o que fez com a lightbar: cria
-# um suspeito, ensaia COM ele e ensaia SEM ele, e o instrumento diz se isolou.
-# A regra que o eliminacao.py implementa: enquanto só houver ensaio de um lado,
-# o veredicto é INCONCLUSIVO e o que aparece é QUAL ensaio falta.
-# ─────────────────────────────────────────────────────────────────────────
 st.divider()
 st.header("Caderno de eliminação")
 
@@ -345,16 +217,8 @@ else:
     ens = cadernos.get((linha_id, lado), [])
     estado, agora = eliminacao.estado_da_linha(ens)
 
-    # Símbolos geométricos, não emoji: o projeto proíbe emoji e há portão
-    # (validar-glifos.py). São os MESMOS que o specs.html usa, então o
-    # vocabulário visual não se parte entre as duas superfícies.
     CORES = {"culpado": "\u25cf", "inconclusivo": "\u25d0", "confuso": "\u25d1",
              "inocente": "\u25cb", "nunca-investigado": "\u25cc"}
-    #: PY310-FSTRING-01 (13/08/2026): o glifo de fallback sai para uma constante
-    #: porque reaproveitar a aspa de fora DENTRO da f-string só é sintaxe válida
-    #: a partir do Python 3.12, e o `pyproject.toml` desta casa declara `py310`.
-    #: O `ruff` do pre-commit acusou `invalid-syntax` em 3.10 e 3.11 — ou seja, a
-    #: bancada não COMPILAVA nas duas versões que o `ci.yml` testa.
     _SEM_COR = "\u25cc"
     st.markdown(f"### {CORES.get(estado, _SEM_COR)} {estado.upper()}")
     st.caption(agora)
@@ -388,15 +252,6 @@ else:
         c3, c4 = st.columns(2)
         resultado = c3.text_input("Resultado", placeholder="obedece / não obedece / acendeu / mudo")
         quem = c4.selectbox("Observado por", ["olho-dela", "bancada", "ci"])
-        # ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 (20/08/2026). O ensaio passa a dizer o
-        # que ele mediu. As opções saem de `GRAUS`, que sai de `VALORES_DA_ESCADA`
-        # — nunca redigitadas, mesma disciplina do resto deste arquivo.
-        #
-        # O padrão é VAZIO e continua sendo: os 177 ensaios do caderno nasceram
-        # sem o campo e vazio quer dizer "não declarou", que é a verdade sobre
-        # eles. O que vazio NÃO quer dizer é "serve para tudo" — os dois degraus
-        # de ENTRADA exigem declaração, porque foi lá que o portão aceitou ensaio
-        # de acender lightbar como prova de que um JOGO REAGIU.
         degrau_medido = st.selectbox(
             "Até onde este ensaio mediu?",
             GRAUS,
@@ -405,18 +260,7 @@ else:
                  "medido a VOLTA (aparelho -> vpad -> JOGO): sem esta palavra o "
                  "ensaio não sustenta `O JOGO RECEBEU` nem `O JOGO REAGIU`.",
         )
-        # ENSAIO-QUE-NAO-DIZ-A-PONTE-01 (20/08/2026). Irmã da de cima, e do
-        # mesmo dia: o `degrau` diz ATÉ ONDE a medição foi, e esta diz POR ONDE
         # ela chegou — máscara DualSense, máscara Xbox, nativo, ou Steam Input.
-        # As opções vêm de `PONTES`, que vem da `ESCADA`; nunca redigitadas.
-        #
-        # O padrão é VAZIO e continua sendo: nenhum dos 177 ensaios do caderno
-        # declara a ponte, e vazio quer dizer "não declarou", que é a verdade
-        # sobre eles. O que vazio NÃO quer dizer é "serve para toda ponte" — se
-        # quisesse, o ensaio de acender lightbar pelo hidraw, sem jogo e sem
-        # vpad no meio, sustentaria afirmação sobre a ponte que desse na
-        # telha. A regra que separa os dois casos está no
-        # `eliminacao.sustentam_a_ponte`.
         ponte_medida = st.selectbox(
             "Por qual ponte este ensaio mediu?",
             PONTES,
@@ -425,12 +269,6 @@ else:
                  "caderno. Preencha quando houver um JOGO do outro lado: a "
                  "ponte é a máscara/modo por onde ele recebeu.",
         )
-        # PECA da cura de 13/08/2026: o `Resultado` acima responde pelo SUSPEITO
-        # da linha, e há ensaio em que as duas respostas são OPOSTAS sem que
-        # nenhuma esteja errada — o `gatilho-lado-nao-esta-invertido` eliminou o
-        # suspeito ("não obedece") na mesma rodada em que o R2 endureceu. Vazio é
-        # o padrão e quer dizer "o Resultado também responde pela feature"; é
-        # assim que 76 dos 77 ensaios continuam válidos sem ninguém tocá-los.
         feature = st.selectbox(
             "E a FEATURE, obedeceu? (só se for diferente do Resultado)",
             ["", "obedece", "não obedece", "parcial", "inconclusivo"],
@@ -452,18 +290,7 @@ else:
                           f"{datetime.now():%H%M%S}",
                     "linha_id": linha_id,
                     "transporte": lado,
-                    # ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 (20/08/2026): o ensaio passa
-                    # a DIZER o que mediu. Vazio quer dizer "não declarou", nunca
-                    # "serve para tudo" — e por isso os dois degraus de ENTRADA
-                    # exigem que ele venha preenchido. O que sai daqui é o valor
-                    # escolhido no formulário; as opções vêm de `VALORES_DA_ESCADA`,
-                    # nunca redigitadas.
                     "degrau": degrau_medido,
-                    # ENSAIO-QUE-NAO-DIZ-A-PONTE-01 (20/08/2026): ao lado do
-                    # `degrau`, porque é o mesmo tipo de eixo — ele diz até onde
-                    # a medição foi, esta diz por onde ela chegou. Vazio quer
-                    # dizer "não declarou", nunca "serve para toda ponte"; as
-                    # opções vêm da `ESCADA`, nunca redigitadas.
                     "ponte": ponte_medida,
                     "quando": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
                     "suspeito": susp,

@@ -54,7 +54,6 @@ from hefesto_dualsense4unix.utils import maquina as mq
 
 PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: Quatro controles da faixa sintética da casa: dois no cabo, dois no rádio.
 CONTROLES = [
     ("aa:bb:cc:00:00:01", "usb", 1),
     ("aa:bb:cc:00:00:02", "bt", 2),
@@ -63,9 +62,6 @@ CONTROLES = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Dublês
-# ---------------------------------------------------------------------------
 class _Controle:
     """O `describe_controllers` do backend, com os quatro da faixa sintética."""
 
@@ -99,12 +95,7 @@ def _daemon(gestos: dict[str, Any] | None = None, *, autoridade: str = "daemon",
 
 @pytest.fixture
 def atendentes(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
-    """Os atendentes de antes trocados por anotadores — o que muda é QUEM se chama.
-
-    Os `build_*` são trocados ANTES de o `start_hotkey_manager` montar os atos:
-    cada um devolve uma corrotina que só anota. A Steam, a bandeja e o script
-    também anotam, e o jogo do wrapper nasce fechado.
-    """
+    """Os atendentes de antes trocados por anotadores — o que muda é QUEM se chama."""
     feitos: dict[str, list[Any]] = {"chamou": []}
 
     def _corrotina(nome: str) -> Any:
@@ -132,11 +123,7 @@ def _rodar(resultado: Any) -> None:
 
 def _apertar(mgr: HotkeyManager, botoes: tuple[str, ...], *, de: str | None = None,
              t0: float = 0.0) -> None:
-    """Segura o combo além do buffer e solta — um gesto inteiro, de um controle.
-
-    Dentro de um laço, como no daemon: o `HotkeyManager._fire` cria a tarefa do
-    ato DENTRO do `observe`, e é a tarefa que leva a pergunta «de quem é o gesto».
-    """
+    """Segura o combo além do buffer e solta — um gesto inteiro, de um controle."""
 
     async def _cena() -> None:
         mgr.observe(list(botoes), now=t0, de=de)
@@ -150,9 +137,6 @@ def _apertar(mgr: HotkeyManager, botoes: tuple[str, ...], *, de: str | None = No
     asyncio.run(_cena())
 
 
-# ---------------------------------------------------------------------------
-# 1 — a lista é o vocabulário, e todo token tem atendente
-# ---------------------------------------------------------------------------
 def _listas_da_bancada() -> dict[str, list[str]]:
     import onde
 
@@ -167,11 +151,7 @@ def _listas_da_bancada() -> dict[str, list[str]]:
 
 
 def test_a_lista_da_bancada_e_o_vocabulario_do_produto() -> None:
-    """As seis listas do mockup regerado oferecem EXATAMENTE os rótulos do dono.
-
-    MORDIDA: devolver «Religar o controle» ao gerador, ou tirar o «— Nada —» do
-    vocabulário (a §14, dela: ele volta nos seis), reprova aqui.
-    """
+    """As seis listas do mockup regerado oferecem EXATAMENTE os rótulos do dono."""
     listas = _listas_da_bancada()
     assert set(listas) == set(ag.GESTOS), listas.keys()
     rotulos = [r for _g, ops in ag.por_grupo() for r in ops]
@@ -183,11 +163,7 @@ def test_a_lista_da_bancada_e_o_vocabulario_do_produto() -> None:
 
 def test_todo_token_tem_atendente(atendentes: dict[str, list[Any]],
                                   monkeypatch: pytest.MonkeyPatch) -> None:
-    """Cada ato do vocabulário chega a QUEM o faz — nenhum cai no vazio.
-
-    MORDIDA: um token novo em `ACOES` sem ramo em `_AtosDoGesto` cai em
-    `gesto_sem_atendente` e reprova aqui.
-    """
+    """Cada ato do vocabulário chega a QUEM o faz — nenhum cai no vazio."""
     rodados: list[str] = []
     monkeypatch.setattr(hotkey, "_rodar_o_script_do_gesto",
                         lambda _d, gesto, caminho, quem: rodados.append(caminho))
@@ -221,15 +197,8 @@ def test_todo_token_tem_atendente(atendentes: dict[str, list[Any]],
             pytest.fail(f"o token {faz!r} não tem atendente nesta régua")
 
 
-# ---------------------------------------------------------------------------
-# 2 — o de fábrica pergunta ao dono
-# ---------------------------------------------------------------------------
 def test_o_de_fabrica_e_o_ato_de_antes(atendentes: dict[str, list[Any]]) -> None:
-    """Sem declaração, cada gesto faz o que o `start_hotkey_manager` fazia.
-
-    E as peças de `GESTOS` são as que o gerente compara (`DEFAULT_COMBO_*`).
-    MORDIDA: trocar o `PADRAO["ps_r3"]` reprova (o PS + R3 deixa de ser o modo).
-    """
+    """Sem declaração, cada gesto faz o que o `start_hotkey_manager` fazia."""
     assert {g.nome_no_gerente: g.botoes for g in ag.GESTOS.values()} == {
         "gamemode": hotkey_daemon.DEFAULT_COMBO_GAMEMODE,
         "next": hotkey_daemon.DEFAULT_COMBO_NEXT,
@@ -253,9 +222,6 @@ def test_o_de_fabrica_e_o_ato_de_antes(atendentes: dict[str, list[Any]]) -> None
     assert d.chamados == [("suspender", ())], "o PS + Options deixou de suspender"
 
 
-# ---------------------------------------------------------------------------
-# 3 — escolher na tela muda o controle
-# ---------------------------------------------------------------------------
 class _PonteDoDaemon:
     """A ponte da janela com o `machine.declare` ligado ao handler de VERDADE."""
 
@@ -292,11 +258,7 @@ def _clicar(ponte: Any, gesto: str, rotulo: str) -> Any:
 
 
 def test_escolher_na_tela_muda_o_controle(atendentes: dict[str, list[Any]]) -> None:
-    """A 06 grava pelo `machine.declare` de verdade, e o PS + Options passa a trocar de perfil.
-
-    MORDIDA: o despachante ler o ato fixo (o `set_emulation_suppressed` de antes)
-    reprova: o perfil não é chamado e a suspensão é.
-    """
+    """A 06 grava pelo `machine.declare` de verdade, e o PS + Options passa a trocar de perfil."""
     d = _daemon()
     hotkey.start_hotkey_manager(d)
     _clicar(_PonteDoDaemon(d), "ps_options", "Próximo perfil")
@@ -317,17 +279,10 @@ def test_a_pagina_de_antes_recusa_como_antes() -> None:
     assert ponte.declarados == []
 
 
-# ---------------------------------------------------------------------------
-# 4 — os quatro controles, cabo e rádio
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("mac,via,numero", CONTROLES)
 def test_o_gesto_de_qualquer_controle_faz_o_escolhido(
         atendentes: dict[str, list[Any]], mac: str, via: str, numero: int) -> None:
-    """O PS + L3 em «Próximo perfil» troca de perfil, venha de P1 a P4, no cabo ou no rádio.
-
-    E o ato sabe de quem é o gesto. MORDIDA: o despachante perguntar pelo
-    primário (e não por quem fez) reprova no P3.
-    """
+    """O PS + L3 em «Próximo perfil» troca de perfil, venha de P1 a P4, no cabo ou no rádio."""
     d = _daemon({"ps_l3": {"faz": "mascara_seguinte"}, "ps_cima": {"faz": "modo_seguinte"}})
     hotkey.start_hotkey_manager(d)
     _apertar(d._hotkey_manager, ("ps", "l3"), de=mac)
@@ -335,9 +290,6 @@ def test_o_gesto_de_qualquer_controle_faz_o_escolhido(
     assert atendentes["chamou"] == [("mascara", mac), ("modo", mac)]
 
 
-# ---------------------------------------------------------------------------
-# 5 — o script roda com as guardas, uma vez só
-# ---------------------------------------------------------------------------
 def _script(pasta: pathlib.Path, nome: str = "limpa.sh", *, corpo: bytes = b"#!/bin/sh\nexit 0\n",
             modo: int = 0o700) -> pathlib.Path:
     pasta.chmod(0o700)
@@ -348,10 +300,7 @@ def _script(pasta: pathlib.Path, nome: str = "limpa.sh", *, corpo: bytes = b"#!/
 
 
 def test_as_guardas_do_arquivo(tmp_path: pathlib.Path) -> None:
-    """Cada regra recusa com o seu motivo; o arquivo bom passa.
-
-    MORDIDA: tirar a conferência do dono deixa o `uid` de outra pessoa passar.
-    """
+    """Cada regra recusa com o seu motivo; o arquivo bom passa."""
     bom = _script(tmp_path)
     assert ag.conferir_o_script(str(bom)) is None
     assert ag.conferir_o_script("limpa.sh") == ag.CAMINHO_INVALIDO
@@ -392,10 +341,7 @@ def gerenciador(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 def test_o_script_roda_sem_shell_com_teto_e_diz_quem_fez(
         tmp_path: pathlib.Path, gerenciador: dict[str, Any]) -> None:
-    """Um argumento só depois do `--`, `RuntimeMaxSec=60`, `--wait`, e o jogador e o transporte.
-
-    MORDIDA: montar o `argv` com `["sh", "-c", caminho]` reprova.
-    """
+    """Um argumento só depois do `--`, `RuntimeMaxSec=60`, `--wait`, e o jogador e o transporte."""
     arquivo = _script(tmp_path)
     d = _daemon()
     hotkey._rodar_o_script_do_gesto(d, "ps_l3", str(arquivo), "aa:bb:cc:00:00:02")
@@ -412,11 +358,7 @@ def test_o_script_roda_sem_shell_com_teto_e_diz_quem_fez(
 
 def test_o_script_que_sai_com_3_roda_uma_vez_e_da_o_recado(
         tmp_path: pathlib.Path, gerenciador: dict[str, Any]) -> None:
-    """O código do script não é recusa do gerenciador: uma chamada, e o recado com o 3.
-
-    MORDIDA: passar o script pelo `abrir` de hoje (que tenta de novo com rc != 0)
-    faz o gerenciador ser chamado mais de uma vez.
-    """
+    """O código do script não é recusa do gerenciador: uma chamada, e o recado com o 3."""
     gerenciador["rc"] = 3
     gerenciador["fim"] = ("Finished with result: exit-code\n"
                           "Main processes terminated with: code=exited/status=3")
@@ -489,9 +431,6 @@ def test_o_script_escolhido_vai_para_a_maquina(tmp_path: pathlib.Path) -> None:
     assert (gesto.faz, gesto.script) == (ag.SCRIPT, os.path.realpath(bom))
 
 
-# ---------------------------------------------------------------------------
-# 6 — o perfil não carrega script
-# ---------------------------------------------------------------------------
 def test_o_perfil_nao_carrega_gesto_nem_script() -> None:
     """Um perfil importado de outra pessoa não traz script (`D-2909-OS-GESTOS-SAO-DA-MAQUINA`)."""
     from pydantic import ValidationError
@@ -520,14 +459,8 @@ def test_a_maquina_so_aceita_a_forma_certa() -> None:
     assert "ps" not in mq.carregar_maquina().gestos
 
 
-# ---------------------------------------------------------------------------
-# 7 — a bandeja e o controle chamam o mesmo ato
-# ---------------------------------------------------------------------------
 def test_a_bandeja_e_o_controle_chamam_o_mesmo_ato(atendentes: dict[str, list[Any]]) -> None:
-    """O `cmd_tray` usa os atos do dono (`is`), e o gesto os abre noutro processo.
-
-    MORDIDA: uma cópia do `_servico` no `cmd_tray` reprova no `is`.
-    """
+    """O `cmd_tray` usa os atos do dono (`is`), e o gesto os abre noutro processo."""
     from hefesto_dualsense4unix.app.actions import atos_da_bandeja as ab
     from hefesto_dualsense4unix.cli import cmd_tray
 
@@ -556,21 +489,15 @@ def test_o_main_da_bandeja_e_o_ato_dela(monkeypatch: pytest.MonkeyPatch) -> None
     assert ab.main(["ativar-de-mentira"]) == 2
 
 
-# ---------------------------------------------------------------------------
-# 8 — a tela pinta o que vale, e sobrevive a reabrir
-# ---------------------------------------------------------------------------
 def _pintar() -> dict[str, Any]:
     from pacotes import a06_navegacao
 
-    a06_navegacao._A_MAQUINA = None  # a janela reaberta: nada em memória
+    a06_navegacao._A_MAQUINA = None
     return a06_navegacao._o_que_os_gestos_fazem()
 
 
 def test_a_tela_pinta_o_que_a_maquina_diz(tmp_path: pathlib.Path) -> None:
-    """Com o `maquina.json` dizendo `ps_l3: abrir_o_hefesto`, a linha 5 diz «Abrir o Hefesto».
-
-    MORDIDA: a pintura ler o de fábrica (`aba06.COMBOS`) em vez da máquina reprova.
-    """
+    """Com o `maquina.json` dizendo `ps_l3: abrir_o_hefesto`, a linha 5 diz «Abrir o Hefesto»."""
     bom = _script(tmp_path)
     assert mq.gravar_maquina({"gestos": {
         "ps_l3": {"faz": "abrir_o_hefesto"}, "ps": {"faz": "nada"},
@@ -587,10 +514,7 @@ def test_a_tela_pinta_o_que_a_maquina_diz(tmp_path: pathlib.Path) -> None:
 
 
 def test_a_escolha_sobrevive_a_reabrir_a_aba(atendentes: dict[str, list[Any]]) -> None:
-    """O «— Nada —» escolhido na 06 continua lá depois de a aba (ou a janela) reabrir.
-
-    É a noite de 01/10: a lista voltava a «Abrir a Steam» a cada troca de perfil.
-    """
+    """O «— Nada —» escolhido na 06 continua lá depois de a aba (ou a janela) reabrir."""
     d = _daemon()
     _clicar(_PonteDoDaemon(d), "ps", "— Nada —")
     assert _pintar()["faz-ps"] == "— Nada —"
@@ -620,9 +544,6 @@ def test_a_bancada_tem_os_enderecos_da_pintura() -> None:
     assert 'data-campo="gestos-dica"' in doc
 
 
-# ---------------------------------------------------------------------------
-# §14 — o PS sozinho na matriz inteira
-# ---------------------------------------------------------------------------
 MODOS = {
     "dualsense": {"gamepad_caminho": "dualsense"},
     "xbox": {"gamepad_caminho": "xbox"},
@@ -640,12 +561,7 @@ SEXTOS = {"nada": {"ps": {"faz": "nada"}}, "steam": {"ps": {"faz": "abrir_a_stea
 @pytest.mark.parametrize("modo", list(MODOS))
 def test_o_ps_sozinho_so_abre_a_steam_sem_jogo_e_com_o_sexto_na_steam(
         monkeypatch: pytest.MonkeyPatch, modo: str, jogo: str, sexto: str) -> None:
-    """A Steam abre se, e só se, não há jogo e o ⑥ diz Steam (declarado ou de fábrica).
-
-    Nos quatro controles, cabo e rádio, em todo modo. MORDIDAS: tirar o
-    `jogo_do_wrapper_vivo` do fio reprova no `vivo_sem_autoridade` (a noite
-    dela); tirar o «— Nada —» reprova no `nada`.
-    """
+    """A Steam abre se, e só se, não há jogo e o ⑥ diz Steam (declarado ou de fábrica)."""
     abertas: list[str | None] = []
     autoridade, appid = JOGOS[jogo]
     monkeypatch.setattr(steam_launcher, "open_or_focus_steam",
@@ -667,14 +583,7 @@ def test_o_ps_sozinho_so_abre_a_steam_sem_jogo_e_com_o_sexto_na_steam(
 @pytest.mark.parametrize("gesto", list(ag.GESTOS))
 def test_o_nada_cala_os_seis(atendentes: dict[str, list[Any]], gesto: str,
                              monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «— Nada —» vale nos seis gestos (a §14, dela): nenhum atendente é chamado.
-
-    E ele não chega ao fio dos atos de fora: um token que chegasse lá sem
-    atendente também não chamaria ninguém, e o diário diria
-    ``gesto_sem_atendente`` sobre a escolha dela. Medido na conferência de
-    02/10/2026: sem a linha do «— Nada —» no despachante, a régua de antes
-    passava. MORDIDA: tirar o ``nada`` do ``_AtosDoGesto.fazer`` reprova.
-    """
+    """O «— Nada —» vale nos seis gestos (a §14, dela): nenhum atendente é chamado."""
     no_fio: list[str] = []
     original = hotkey._AtosDoGesto._fio
 

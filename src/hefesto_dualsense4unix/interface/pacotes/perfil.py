@@ -51,19 +51,11 @@ import sys
 import time
 from typing import Any
 
-#: A árvore, para achar o `src/`. Este módulo mora em
-#: `src/hefesto_dualsense4unix/interface/pacotes/`, logo a raiz está três níveis acima.
 RAIZ = pathlib.Path(__file__).resolve().parents[4]
 
 
 def _com_o_src() -> Any:
-    """Põe o `src/` DESTA árvore no caminho, e devolve o `loader`.
-
-    O `sys.path.insert(0, ...)` é a segunda trava do `.envrc-voo`: sem ele, um
-    python chamado por hábito importaria o `hefesto_dualsense4unix` da árvore
-    DELA — o defeito que `tests/unit/test_a_suite_mede_esta_arvore.py` mede,
-    cujo sintoma é a AUSÊNCIA de dado e se lê como "a mudança não pegou".
-    """
+    """Põe o `src/` DESTA árvore no caminho, e devolve o `loader`."""
     src = str(RAIZ / "src")
     if src not in sys.path:
         sys.path.insert(0, src)
@@ -73,18 +65,7 @@ def _com_o_src() -> Any:
 
 
 def pasta() -> pathlib.Path | None:
-    """A pasta de perfis DESTA variante, perguntada a quem é dono dela.
-
-    É FUNÇÃO E NÃO TEM CACHE, e a razão está escrita no `mesa_viva.py` — que
-    aprendeu isto antes de mim: a variante mora em `HEFESTO_VARIANTE`, e um
-    valor calculado no import congela o ambiente de quem importou primeiro.
-
-    EU REPETI ESSE ERRO NESTE ARQUIVO, em 01/09/2026: a primeira versão tinha um
-    `@lru_cache(maxsize=1)` aqui, e `lista()` devolveu **0 perfis** com 33 no
-    disco dela — o processo de teste não tinha a variante posta, e o `None` do
-    primeiro chamador ficou valendo para sempre. Com `HEFESTO_VARIANTE=dev` a
-    pasta é `hefesto-dev-dualsense4unix/profiles`; sem ela, é a do estável.
-    """
+    """A pasta de perfis DESTA variante, perguntada a quem é dono dela."""
     try:
         _com_o_src()
         from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
@@ -199,16 +180,7 @@ def ativo(nome: str | None) -> dict[str, Any]:
 
 
 def ativo_que_vale(nome: str | None) -> dict[str, Any]:
-    """O perfil ativo com o padrão do computador por baixo: o que a tela PINTA.
-
-    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. A mesma forma de
-    :func:`ativo` (o dicionário do arquivo), com o que o computador dá no
-    lugar do que o perfil não escolheu. Quem GRAVA continua lendo
-    :func:`ativo`: o computador não pode ir parar no perfil.
-
-    Computador vazio, perfil vazio ou perfil que o esquema recusa devolvem o
-    cru, como antes. Nunca levanta: é pintura de tique.
-    """
+    """O perfil ativo com o padrão do computador por baixo: o que a tela PINTA."""
     cru = ativo(nome)
     if not cru:
         return cru
@@ -232,34 +204,15 @@ def ativo_que_vale(nome: str | None) -> dict[str, Any]:
         return cru
 
 
-#: `nome -> (chave, vista)`: a vista de cada perfil, refeita quando o arquivo
-#: ou o `maquina.json` mudam (o tique pinta várias vezes por segundo).
 _VISTA_LIDA: dict[str, tuple[Any, dict[str, Any]]] = {}
 
 
-#: POR QUANTO TEMPO a resposta de :func:`arquivo` vale sem perguntar de novo, em
-#: segundos. A varredura por `name` custa ~7 ms com 34 perfis, e a aba aberta e
-#: a dica do rodapé perguntam a cada tique, no laço do GTK. Medido em 25/09/2026
-#: num lar de mentira, com um Estilo de Jogo ativo (a subpasta é a última perna,
-#: e a varredura vem antes dela): o tique da aba 06 custava 6,0 ms sem memória e
-#: custa 0,2 ms com ela. A
-#: assinatura da pasta derruba a memória antes do prazo quando um arquivo nasce,
-#: some ou muda de nome; o prazo cobre o que a assinatura não vê (o `name`
-#: editado no lugar, ou dois movimentos na pasta dentro do mesmo tique do
-#: relógio do sistema de arquivos).
 VALIDADE_DO_ARQUIVO_S = 1.0
 
-#: SÓ SE GUARDA O QUE CUSTOU, em segundos. O nome e o slug respondem em ~0,1 ms
-#: (dois `exists`), e guardá-los só trocaria uma pergunta exata por uma
-#: lembrança; a varredura e a subpasta passam de 1 ms com qualquer pasta de
-#: verdade. A régua que prova a memória põe este limiar em zero.
 CUSTO_QUE_SE_GUARDA_S = 0.001
 
-#: `(pasta, nome) -> (assinatura, quando, arquivo)`. Ver :func:`arquivo`.
 _ONDE_ACHOU: dict[tuple[str, str], tuple[tuple[Any, ...], float, pathlib.Path | None]] = {}
 
-#: `(pasta, slug) -> texto` do último arquivo lido de cada perfil. Ver
-#: :func:`_lembrar`.
 _LIDO: dict[tuple[str, str], str] = {}
 
 
@@ -275,12 +228,7 @@ def _carimbo(p: pathlib.Path | None) -> tuple[int, int] | None:
 
 
 def _assinatura_da_pasta(onde: pathlib.Path) -> tuple[Any, ...]:
-    """O carimbo da pasta e o da subpasta dos Estilos: nasce, some, renomeia.
-
-    Tomado ANTES da pergunta ao loader: um arquivo que nasça durante a
-    varredura muda a pasta depois do carimbo, e a próxima chamada pergunta de
-    novo em vez de guardar uma resposta que já nasceu velha.
-    """
+    """O carimbo da pasta e o da subpasta dos Estilos: nasce, some, renomeia."""
     _com_o_src()
     from hefesto_dualsense4unix.profiles.loader import ESTILOS_DE_JOGO_DIR_NAME
 
@@ -288,11 +236,7 @@ def _assinatura_da_pasta(onde: pathlib.Path) -> tuple[Any, ...]:
 
 
 def _assinatura(onde: pathlib.Path, achado: pathlib.Path | None) -> tuple[Any, ...]:
-    """O que muda quando a resposta de :func:`arquivo` pode ter mudado.
-
-    A pasta e a subpasta dos Estilos (:func:`_assinatura_da_pasta`), e o arquivo
-    achado (o `name` dele editado no lugar). Três `stat`, nenhuma leitura.
-    """
+    """O que muda quando a resposta de :func:`arquivo` pode ter mudado."""
     return (*_assinatura_da_pasta(onde), _carimbo(achado))
 
 
@@ -356,18 +300,7 @@ def _chave_da_lembranca(onde: pathlib.Path, nome: str) -> tuple[str, str]:
 
 
 def _lembrar(onde: pathlib.Path, nome: str, texto: str) -> None:
-    """Guarda o TEXTO do último arquivo lido deste perfil.
-
-    É o que o daemon aplicou: ele lê o mesmo arquivo ao ativar, e todo gesto
-    que grava reaplica. Quando o arquivo some com o perfil ainda valendo, o
-    controle segue com isso (`profiles_actions._AVISO_DA_REMOCAO_DO_ATIVO`: *"a
-    cor, os gatilhos e a vibração dele seguem aplicados até você ativar outro
-    perfil"*), e a tela segue dizendo o mesmo em vez de pintar um perfil vazio.
-
-    O TEXTO, e não o dicionário: cada chamada de `ativo()` devolve um
-    dicionário novo, como sempre devolveu — um chamador que mexa no que
-    recebeu não mexe no que o próximo vai ler.
-    """
+    """Guarda o TEXTO do último arquivo lido deste perfil."""
     _LIDO[_chave_da_lembranca(onde, nome)] = texto
 
 
@@ -384,12 +317,7 @@ def _o_que_a_tela_leu(onde: pathlib.Path, nome: str) -> dict[str, Any]:
 
 
 def lista() -> list[dict[str, Any]]:
-    """Todos os perfis do disco: nome, prioridade e tipo de casamento.
-
-    A aba Perfis pergunta isto ao daemon por `profile.list`; esta função é a
-    mesma resposta sem o socket, para quando o daemon está mudo. **Ela não
-    substitui o IPC** — o daemon sabe qual está ATIVO, e o disco não.
-    """
+    """Todos os perfis do disco: nome, prioridade e tipo de casamento."""
     onde = pasta()
     if onde is None or not onde.exists():
         return []
@@ -425,7 +353,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
 
     A COMPARAÇÃO É POR SLUG, não por string: com "Navegação" no disco e
     "Navegacao" no daemon, um `==` cru diria que são perfis diferentes e o
-    reaplicar não aconteceria (R-10, `profiles/slug.py:52`). `era` é o nome
+    reaplicar não aconteceria (R-10, `profiles/slug.py:37`). `era` é o nome
     ANTERIOR — num renomear, é ele que tem de casar com o ativo, porque o daemon
     ainda não ouviu falar do nome novo.
 
@@ -491,13 +419,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
 
 
 def reaplicar(nome: str, ctx: Any, p: Any, *, era: str = "") -> None:
-    """Manda o daemon reaplicar o perfil ``nome`` se ele for o ATIVO, e avisa o lançamento.
-
-    A metade de :func:`gravar_e_reaplicar` que não grava perfil. Quem a chama
-    sozinha é o escritor de um cartão do computador
-    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o clique foi ao
-    ``maquina.json``, o perfil não mudou, e o aparelho tem de receber igual.
-    """
+    """Manda o daemon reaplicar o perfil ``nome`` se ele for o ATIVO, e avisa o lançamento."""
     _com_o_src()
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         perfil_que_esta_valendo,
@@ -507,8 +429,6 @@ def reaplicar(nome: str, ctx: Any, p: Any, *, era: str = "") -> None:
     ativo_agora = perfil_que_esta_valendo(getattr(ctx, "state", None)).nome or ""
     if ativo_agora and mesmo_slug(ativo_agora, era or nome):
         p.profile_reaplicar(nome)
-    # A ANTECIPAÇÃO DE LANÇAMENTO relê o que os jogos vão receber. Sem ela, o
-    # perfil novo só chega ao jogo no próximo start do daemon.
     p.chamar("launch_env.refresh")
 
 
@@ -553,7 +473,7 @@ def com_a_carona(frase: str = "") -> str:
 
     O SILÊNCIO É O CASO COMUM, DE PROPÓSITO. `frase` vazia de volta quer dizer
     *não diga nada*: sem nada a repor, `ResultadoDaCarona.frase` é vazia
-    (`carona_do_wrapper.py:402`) e quem chamou volta a devolver `None` — o "deu
+    (`carona_do_wrapper.py:317`) e quem chamou volta a devolver `None` — o "deu
     certo" é a piscada verde de ~1,5 s (decisão dela, `03-Q4`), **sem palavra
     nova na tela**. A carona só fala quando tem notícia.
 
@@ -579,36 +499,15 @@ def com_a_carona(frase: str = "") -> str:
     try:
         resultado = carona.passada(completa=True)
     except Exception:
-        # Nem o log: um pacote de aba não tem logger, e o gesto já deu certo.
         return frase
     if not resultado.frase:
         return frase
     return f"{frase} · {resultado.frase}" if frase else resultado.frase
 
 
-# ---------------------------------------------------------------------------
-# A VOLTA DO PERFIL — O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01 (02/10/2026)
-# ---------------------------------------------------------------------------
 def os_jogadores_de_volta(p: Any) -> tuple[Any, Any]:
-    """Os passos 1 e 2 do «Reconectar controles»: devolve ``(sync, renumerou)``.
-
-    1. ``coop.sync``: o ciclo FORÇADO de reconciliação, o único que traz de
-       volta o jogador cujo grab foi recusado ou cujo vpad morreu sem que
-       ``/dev/input`` mudasse. LEVANTA quando o daemon não responde: quem chama
-       decide o que isso é (o «Reconectar» recusa; a volta do rodapé só anota).
-    2. ``identity.renumber``: compacta a numeração. A recusa por jogo aberto
-       chega DENTRO de uma resposta bem-sucedida e não é erro; sem resposta,
-       ``None``, e os jogadores já voltaram no passo 1.
-
-    A ORDEM É A DO BOTÃO ANTIGO (``home_actions._on_home_reconciliar_clicked``):
-    renumerar antes de reconciliar compactaria uma mesa ainda incompleta.
-
-    UM DONO: o «Reconectar» (``a01_jogar.reconectar``) e a volta do rodapé
-    (:func:`a_volta_do_perfil`) chamam esta função.
-    """
+    """Os passos 1 e 2 do «Reconectar controles»: devolve ``(sync, renumerou)``."""
     sync = p.resultado("coop.sync")
-    # O `except` LARGO é de propósito: o `_safe_call` da ponte propaga
-    # `ValueError`/`TypeError` de bug interno, e a numeração é acabamento.
     try:
         renumerou = p.resultado("identity.renumber")
     except Exception:
@@ -646,7 +545,7 @@ def o_radio_de_volta(ctx: Any, *, so_o_elo_morto: bool = False) -> tuple[int, in
     voltaram = esperam = 0
     try:
         conhecidos = radio.dualsenses_do_radio()
-    except Exception:  # best-effort: o rádio não derruba o gesto
+    except Exception:
         return (0, 0)
     for mac, conectado in conhecidos:
         if (norm_mac(mac) or "") in na_mesa:
@@ -704,12 +603,4 @@ def a_volta_do_perfil(ctx: Any, p: Any) -> None:
         _relatar_a_volta("coop.sync", erro)
 
 
-# ---------------------------------------------------------------------------
-# A SEÇÃO `mode` DO PERFIL não se escreve daqui
-# ---------------------------------------------------------------------------
-#: O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026): `secao_do_modo` e
-#: `gravar_o_modo_no_ativo` saíram deste módulo. Eram o escritor do modo pela
-#: janela, chamado depois da resposta do plano; com quatro controles a troca
-#: passa do teto da janela, e a escolha dela não chegava ao perfil. Quem grava
 #: é o daemon, que aplicou (`Daemon.gravar_o_modo_escolhido`), pela regra do
-#: dono (`profiles.manager.secao_do_modo_com_o_caminho`).

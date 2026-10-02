@@ -1,33 +1,8 @@
-"""P8 — a aba que OFERECE o Modo Nativo não avisava que o rádio pode não dar.
-
-PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/8 (24/08/2026), medido:
-
-    $ grep -rln "native_bt_fragil" src/hefesto_dualsense4unix/app/
-    src/hefesto_dualsense4unix/app/actions/home_actions.py
-
-**Um arquivo só.** E "Conexão Nativa (Sony)" é um dos quatro botões do editor
-de perfil — inclusive num perfil de co-op, onde Modo Nativo com dois ou mais
-controles no rádio é exatamente a pergunta que ninguém mediu (§6 da sprint).
-
-**A asserção central deste arquivo é de IGUALDADE, não de conteúdo.** A frase
-tem de ser a MESMA da aba Início, byte a byte: uma segunda redação para o mesmo
-fato é como esta casa ganhou os oito pares da F5, e oito estão sendo curados
-nesta mesma noite. Por isso `texto_do_radio_fragil` virou o dono único e as
-duas abas o chamam — se alguém reescrever a frase aqui, os testes abaixo
-reprovam.
-
-**O gatilho é próprio daqui, e é de propósito:** fora do Modo Nativo o editor
-cala. O aviso fala do modo que ela está ESCOLHENDO, não do que o sistema está
-fazendo agora — esse já tem banner na Início, e repetir os dois na mesma janela
-é ruído, não redundância.
-"""
+"""P8 — a aba que OFERECE o Modo Nativo não avisava que o rádio pode não dar."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
-# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
-# falso. Sem aquele plantio, a guarda vem antes do import da janela.
 exigir_gi_real("p8: o aviso de rádio frágil na aba Perfis")
 
 from typing import Any
@@ -38,14 +13,11 @@ from hefesto_dualsense4unix.app.actions import home_actions as ha
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 
 #: Payload do `daemon.state_full` com a mesa conhecida e DOIS controles no
-#: rádio sob Modo Nativo — o caso que nomeia quem está frágil.
 DOIS_NO_RADIO: dict[str, Any] = {
     "native_bt_fragil": True,
     "native_bt_fragil_controles": [2, 3],
 }
 
-#: E o payload do daemon VELHO, que sabe dizer que há fragilidade e não sabe
-#: dizer de quem (install editable deixa os dois convivendo).
 SEM_SABER_QUEM: dict[str, Any] = {"native_bt_fragil": True}
 
 
@@ -92,11 +64,6 @@ class TestForaDoModoNativoOEditorCala:
     def test_daemon_calado_nao_diz_nada(self) -> None:
         """Sem resposta o cache é `None` — e `None` é silêncio, não "está ok"."""
         assert pa.frase_do_radio_fragil_no_modo("native", None) is None
-
-
-# ---------------------------------------------------------------------------
-# A costura: a linha chega ao rótulo da seção "Modo"
-# ---------------------------------------------------------------------------
 
 
 class _Rotulo:

@@ -1,32 +1,4 @@
-"""O daemon do Flatpak alcança o BlueZ e o diário do root — O-FLATPAK-ALCANCA-O-BLUEZ-01.
-
-O daemon fala com o BlueZ pelo barramento de SISTEMA (``bluez_dbus.BarramentoGio``),
-e sem ``--system-talk-name`` o sandbox não tem esse barramento. Com a linha, o
-Flatpak põe um ``xdg-dbus-proxy`` entre o sandbox e o barramento, com
-``--filter`` e um ``--talk=`` por nome. A dúvida da O-FLATPAK-ALCANCA-O-BROKER-01
-era se o ``Agent1`` próprio (R5) atravessa esse proxy: o ``bluetoothd`` CHAMA o
-agente, no sentido contrário ao de toda outra chamada.
-
-Medido em 24/09/2026 (flatpak 1.18.1, org.gnome.Platform//47 com o ``src/`` do
-produto, um bluetoothd de mentira num barramento de sistema de mentira):
-atravessa, nos dois sentidos, e o sandbox só vê o ``org.bluez``. Esta régua
-refaz a medição sem o Flatpak: o MESMO ``xdg-dbus-proxy``, com os argumentos
-que o Flatpak deriva do manifesto, na frente do BlueZ de mentira da bancada
-(``bluez_de_mentira.BluezParticular``), e o dono do produto pareando por ele.
-Sem ``xdg-dbus-proxy`` na máquina essa parte pula; a leitura do manifesto e da
-página roda sempre.
-
-A MORDIDA, medida: tirar o ``--system-talk-name=org.bluez``, ou trocá-lo por
-``--socket=system-bus``, reprova o do nome, o do pareamento pelo proxy, o do
-intruso e o da página; pôr o ``--socket=system-bus`` AO LADO dela, ou o curinga
-``org.bluez.*``, reprova o do nome; tirar a linha do diário, ou o ``:ro`` dela,
-reprova o do diário e o da página; o daemon passando a escrever no diário do
-root (pelo dono ou pelo caminho escrito à mão) reprova o da leitura; um
-``BusType.SYSTEM`` fora do ``bluez_dbus`` reprova o do barramento; tirar a
-checagem do remetente do agente reprova o do intruso; o ``DonoVivo`` deixando de
-refotografar no ``NameOwnerChanged`` reprova o do ``bluetoothd`` que reinicia; a
-linha da pasta de execução voltando a dizer ``app/<id>`` reprova o da pasta.
-"""
+"""O daemon do Flatpak alcança o BlueZ e o diário do root — O-FLATPAK-ALCANCA-O-BLUEZ-01."""
 
 from __future__ import annotations
 
@@ -54,8 +26,6 @@ from tests.unit.test_o_flatpak_alcanca_o_broker import (
 
 DISPOSITIVO = bm.no_de(bm.CONTROLE)
 
-#: As políticas de nome do barramento de sistema no ``finish-args``, e o
-#: argumento que cada uma vira no ``xdg-dbus-proxy``.
 _POLITICAS = {"--system-talk-name=": "--talk=", "--system-own-name=": "--own="}
 
 
@@ -73,18 +43,8 @@ def nomes_de_sistema() -> list[str]:
     ]
 
 
-# ---------------------------------------------------------------------------
-# O manifesto e o código
-# ---------------------------------------------------------------------------
-
-
 def test_o_barramento_de_sistema_e_so_do_dono_do_bluez() -> None:
-    """Controle: quem abre o barramento de sistema é o ``bluez_dbus``, e só ele.
-
-    É o que faz o ``org.bluez`` ser o ÚNICO nome de que o sandbox precisa. Um
-    segundo leitor do barramento de sistema (o logind, o NetworkManager…) pede
-    uma decisão nova sobre o manifesto, e esta régua a cobra.
-    """
+    """Controle: quem abre o barramento de sistema é o ``bluez_dbus``, e só ele."""
     assert BARRAMENTO_DE_SISTEMA, "o varredor não achou o `BusType.SYSTEM`: a régua ficou cega"
     fora = [
         onde for onde in BARRAMENTO_DE_SISTEMA if not onde.startswith("integrations/bluez_dbus.py:")
@@ -111,7 +71,6 @@ def test_o_manifesto_abre_o_barramento_de_sistema_so_para_o_bluez() -> None:
 def test_o_diario_do_root_se_monta_so_de_leitura() -> None:
     """A PASTA, e ``:ro``: o diário gira por renomeação e pode nascer depois."""
     pasta = str(diario_do_radio.DIARIO_DO_ROOT.parent)
-    #: Toda linha que alcançaria o diário: a pasta, o arquivo, ou uma de cima.
     alcancam = (pasta, str(diario_do_radio.DIARIO_DO_ROOT), "host", "host-os", "/var", "/var/lib")
     linhas = [
         arg.removeprefix("--filesystem=")
@@ -143,7 +102,6 @@ class _Usos(ast.NodeVisitor):
     visit_AsyncFunctionDef = _funcao  # noqa: N815
 
     def visit_Name(self, no: ast.Name) -> None:
-        # Só a LEITURA do nome: a definição da constante não é um uso.
         if no.id == self.nome and isinstance(no.ctx, ast.Load):
             self.achadas.append(self.pilha[-1])
 
@@ -154,10 +112,7 @@ class _Usos(ast.NodeVisitor):
 
 
 def _referencias(nome: str) -> list[tuple[str, str]]:
-    """``[(arquivo, função)]`` de cada uso de ``nome`` no pacote (fora do broker).
-
-    O que é usado fora de função sai como ``<módulo>``.
-    """
+    """``[(arquivo, função)]`` de cada uso de ``nome`` no pacote (fora do broker)."""
     achadas: list[tuple[str, str]] = []
     for arquivo in sorted(PACOTE.rglob("*.py")):
         relativo = arquivo.relative_to(PACOTE)
@@ -170,8 +125,7 @@ def _referencias(nome: str) -> list[tuple[str, str]]:
 
 
 def _textos_com(trecho: str) -> list[str]:
-    """``["arquivo:linha"]`` de cada texto do pacote com ``trecho`` (fora das
-    docstrings e do broker): o caminho escrito à mão, fora do dono."""
+    """``["arquivo:linha"]`` de cada texto do pacote com ``trecho`` (fora das"""
     achados: list[str] = []
     for arquivo in sorted(PACOTE.rglob("*.py")):
         relativo = arquivo.relative_to(PACOTE)
@@ -212,11 +166,6 @@ def test_o_daemon_so_le_o_diario_do_root() -> None:
     assert set(_referencias("DIARIO_DO_ROOT")) == {
         ("integrations/diario_do_radio.py", "caminho_do_diario_do_root")
     }
-
-
-# ---------------------------------------------------------------------------
-# A página
-# ---------------------------------------------------------------------------
 
 
 def _secao(pagina: str, titulo: str) -> str:
@@ -268,11 +217,6 @@ def test_a_pasta_de_execucao_e_a_mesma_do_host() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O proxy do Flatpak, de verdade, na frente do BlueZ de mentira
-# ---------------------------------------------------------------------------
-
-
 def _ha_proxy() -> bool:
     return shutil.which("xdg-dbus-proxy") is not None and bm.ha_dbus_daemon()
 
@@ -319,8 +263,7 @@ def _dono(endereco: str) -> bd.DonoVivo:
 
 @pede_o_proxy
 def test_o_agente_proprio_atravessa_o_proxy_do_flatpak(tmp_path: Path) -> None:
-    """``RegisterAgent`` e ``Pair`` saem com o mesmo remetente, e o BlueZ chama o
-    agente de volta. MORDIDA: sem a linha no manifesto, o proxy esconde o BlueZ."""
+    """``RegisterAgent`` e ``Pair`` saem com o mesmo remetente, e o BlueZ chama o"""
     with (
         bm.BluezParticular(tmp_path) as bluez,
         _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
@@ -350,10 +293,7 @@ def test_o_agente_proprio_atravessa_o_proxy_do_flatpak(tmp_path: Path) -> None:
 
 @pede_o_proxy
 def test_o_bluetoothd_que_reinicia_chega_de_novo_pelo_proxy(tmp_path: Path) -> None:
-    """O ``NameOwnerChanged`` do ``org.bluez`` atravessa o proxy: o agente passa
-    a aceitar SÓ o ``bluetoothd`` novo, e o ``Pair`` seguinte registra de novo e
-    é atendido por ele. Sem o sinal, o agente seguiria esperando o nome velho e
-    recusaria o pareamento. É o caminho de todo restart do ``bluetoothd``."""
+    """O ``NameOwnerChanged`` do ``org.bluez`` atravessa o proxy: o agente passa"""
     with (
         bm.BluezParticular(tmp_path) as bluez,
         _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
@@ -380,8 +320,7 @@ def test_o_bluetoothd_que_reinicia_chega_de_novo_pelo_proxy(tmp_path: Path) -> N
 
 @pede_o_proxy
 def test_sem_a_linha_o_proxy_esconde_o_bluez(tmp_path: Path) -> None:
-    """Controle da régua acima: o proxy filtra de fato, e sem o ``--talk`` o dono
-    não vê o BlueZ — é por isso que a linha do manifesto MORDE."""
+    """Controle da régua acima: o proxy filtra de fato, e sem o ``--talk`` o dono"""
     with (
         bm.BluezParticular(tmp_path) as bluez,
         _pelo_proxy(bluez, tmp_path, []) as endereco,
@@ -397,9 +336,7 @@ def test_sem_a_linha_o_proxy_esconde_o_bluez(tmp_path: Path) -> None:
 
 @pede_o_proxy
 def test_o_intruso_chega_ao_agente_e_o_agente_recusa(tmp_path: Path) -> None:
-    """O proxy entrega ao agente a chamada de QUALQUER remetente (medido): quem
-    recusa o que não vem do ``bluetoothd`` é o agente. MORDIDA: tire a checagem
-    do remetente em ``AgenteDePareamento._atender``."""
+    """O proxy entrega ao agente a chamada de QUALQUER remetente (medido): quem"""
     with (
         bm.BluezParticular(tmp_path) as bluez,
         _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,

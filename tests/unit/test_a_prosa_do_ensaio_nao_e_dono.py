@@ -1,23 +1,4 @@
-"""A frase do `--dry-run` não é quem instala — a paridade não a aceita como dono.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o P-17 que a conferência da
-O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 achou: a seção «artefato de sistema sem dono»
-do `check_packaging_parity.sh` lia como dono qualquer linha de código que citasse
-o artefato — e o `_faria_root "instalar …hefesto-wifi-usb-vigia.service…"` do
-ensaio do install é uma FRASE sobre a instalação. Medido: com a lib
-`camada_de_maquina.sh` (quem instala de verdade) arrancada da lista de donos, a
-seção seguia verde.
-
-A régua roda o portão numa árvore sintética (a da família do vigia) com a lib
-fora da lista de donos, e exige que o vigia apareça órfão. Na árvore inteira
-não dá para medir: o `install-host-udev.sh` procura as units numa lista de
-pastas que inclui `assets/systemd`, e a seção lê a pasta como cópia de
-diretório — é o furo que fica declarado na sprint.
-
-A MORDIDA, medida: tirar o filtro das linhas que só falam (`_faria*`, `log`,
-`echo`…) do `_dono_codigo` deixa o vigia «com dono» pela frase, e o teste
-reprova.
-"""
+"""A frase do `--dry-run` não é quem instala — a paridade não a aceita como dono."""
 
 from __future__ import annotations
 

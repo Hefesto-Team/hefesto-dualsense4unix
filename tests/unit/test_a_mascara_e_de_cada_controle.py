@@ -31,9 +31,6 @@ from __future__ import annotations
 
 import pytest
 
-#: DOIS ENDEREÇOS FORJADOS, na faixa que o portão de anonimato reserva para
-#: fixture (`aa:bb:cc`). Endereço real podado não serve: a máscara da casa
-#: preserva o OUI, e o OUI é identidade de fabricante do aparelho dela.
 UNIQ_A = "aa:bb:cc:00:00:01"
 UNIQ_B = "aa:bb:cc:00:00:02"
 
@@ -50,9 +47,6 @@ def registro(tmp_path, monkeypatch):
     em._zerar_registro_de_mascaras()
 
 
-# --------------------------------------------------------------------------
-# 1. A HERANÇA — o contrato que o registro já tinha
-# --------------------------------------------------------------------------
 def test_sem_escolha_o_aparelho_herda_a_sessao(registro) -> None:
     """Quem não escolheu segue o jogo. É a semântica de `ControllerOverrides`."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
@@ -75,11 +69,7 @@ def test_dois_aparelhos_com_mascaras_diferentes(registro) -> None:
 
 
 def test_a_escolha_sobrevive_a_troca_de_sessao(registro) -> None:
-    """Trocar a máscara do JOGO não apaga a escolha do APARELHO.
-
-    Sem isto a escolha dela duraria até o próximo alt-tab, e um registro que se
-    apaga sozinho é pior que registro nenhum — ele promete e não cumpre.
-    """
+    """Trocar a máscara do JOGO não apaga a escolha do APARELHO."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
 
     registro.set_mask(UNIQ_A, "dualsense")
@@ -96,9 +86,6 @@ def test_limpar_devolve_a_heranca(registro) -> None:
     assert mascara_efetiva(UNIQ_A, "xbox") == "xbox"
 
 
-# --------------------------------------------------------------------------
-# 2. A TELA — o degrau que faltava, lado da leitura
-# --------------------------------------------------------------------------
 def _mesa(por_aparelho: dict[str, str], da_sessao: str = "xbox"):
     from hefesto_dualsense4unix.interface import mesa_viva
 
@@ -113,42 +100,25 @@ def _mesa(por_aparelho: dict[str, str], da_sessao: str = "xbox"):
 
 
 def test_a_mesa_mostra_a_mascara_de_cada_aparelho() -> None:
-    """É O DEFEITO QUE ESTE ARQUIVO CURA, e ele era invisível.
-
-    `mesa_viva` lia `gamepad_emulation.flavor` — UM valor — e o escrevia nos
-    quatro cartões. A escolha por aparelho já existia no disco e o produto já a
-    respeitava ao criar o vpad; só a TELA não sabia.
-    """
+    """É O DEFEITO QUE ESTE ARQUIVO CURA, e ele era invisível."""
     vistas = _mesa({UNIQ_A: "dualsense"}, da_sessao="xbox")
     assert vistas[UNIQ_A] == "DualSense", vistas
     assert vistas[UNIQ_B] == "Xbox 360", vistas
 
 
 def test_sem_por_aparelho_a_mesa_faz_o_que_fazia() -> None:
-    """Um daemon velho não pode quebrar a tela.
-
-    Sem a chave nova, os quatro recebem a máscara da sessão — byte por byte o
-    comportamento anterior a esta leva.
-    """
+    """Um daemon velho não pode quebrar a tela."""
     assert set(_mesa({}, da_sessao="dualsense").values()) == {"DualSense"}
 
 
 def test_o_rotulo_sai_do_dono_da_traducao() -> None:
-    """A tela mostra o RÓTULO, e a tradução tem um dono só.
-
-    `NOME_DA_MASCARA` serve à pintura desde que a mesa viva nasceu. Um segundo
-    mapa em qualquer lugar faria a tela e o gesto discordarem no dia em que um
-    rótulo mudasse — e é o gesto que grava.
-    """
+    """A tela mostra o RÓTULO, e a tradução tem um dono só."""
     from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
 
     for flavor, rotulo in NOME_DA_MASCARA.items():
         assert _mesa({UNIQ_A: flavor})[UNIQ_A] == rotulo
 
 
-# --------------------------------------------------------------------------
-# 3. O GESTO — o degrau que faltava, lado da escrita
-# --------------------------------------------------------------------------
 class _Ponte:
     """Anota o que o gesto mandaria ao daemon, sem mandar nada.
 
@@ -173,34 +143,15 @@ class _Ponte:
         self.chamadas: list[tuple[str, dict]] = []
 
     def chamar(self, metodo: str, timeout: float | None = None, **p):  # (parâmetro) noqa-acento
-        # O `timeout` é engolido de propósito: o que esta régua mede é O QUE foi
-        # pedido, não quanto tempo se esperou. Mas ele existe na assinatura para
-        # um dicionário posicional voltar a estourar aqui, como estoura lá.
         self.chamadas.append((metodo, p))
 
     def chamar_detalhado(self, metodo: str, **p) -> tuple[bool, str | None]:
-        """A que o gesto da máscara usa desde 11/09/2026 — `(ok, motivo)`.
-
-        **SEM `timeout` NA ASSINATURA, e isso é a ponte real.** A dela é
-
-            chamar_detalhado(metodo, **params)  # (assinatura) noqa-acento
-
-        e não tem o parâmetro: ela pergunta o teto ao `teto()` da própria ponte.
-        Copiar aqui o `timeout` do `chamar` faria este dublê aceitar uma chamada
-        que a ponte recusa, que é a doença que o docstring desta classe já
-        descreve.
-
-        DEVOLVE `(True, None)` — o daemon aceitou e GRAVOU. A recusa no corpo é
-        medida em `test_a_perna_que_falta_01_*`, com um dublê que a devolve.
-        """
+        """A que o gesto da máscara usa desde 11/09/2026 — `(ok, motivo)`."""
         self.chamadas.append((metodo, p))
         return True, None
 
 
 def _clicar(**o):
-    # O CAMINHO DE IMPORT É O DA INTERFACE, e não o `pacotes` solto: este
-    # arquivo não roda dentro de `src/hefesto_dualsense4unix/interface`, que é
-    # onde o `.envrc-voo` põe os outros testes de aba.
     from hefesto_dualsense4unix.interface import pacotes  # noqa: F401
     from hefesto_dualsense4unix.interface.pacotes import Contexto, a01_jogar
 
@@ -223,11 +174,7 @@ def test_o_chip_do_dualsense_tambem() -> None:
 
 
 def test_o_chip_sem_controle_recusa_dizendo() -> None:
-    """Sem `uniq` não há a quem aplicar — e "todos" é o botão de cima.
-
-    A recusa separa os DOIS casos, como a `03-gatilhos` faz: coluna vazia é uma
-    frase, clique sem controle é outra.
-    """
+    """Sem `uniq` não há a quem aplicar — e "todos" é o botão de cima."""
     with pytest.raises(RuntimeError, match="Não há controle no lugar P3"):
         _clicar(controle="p3", mascara="Xbox 360")
     with pytest.raises(ValueError, match="não disse em qual controle"):
@@ -235,24 +182,13 @@ def test_o_chip_sem_controle_recusa_dizendo() -> None:
 
 
 def test_o_rotulo_sem_motor_recusa_dizendo_o_que_existe() -> None:
-    """TRÊS CHIPS DESENHADOS, TRÊS MÁSCARAS DE VERDADE (desde 07/09/2026).
-
-    NOTA DATADA: esta régua se chamava `test_o_nintendo_pro_recusa_dizendo_o_
-    que_existe` e usava o "Nintendo Pro" como o rótulo sem motor. Ele ganhou
-    motor por ordem dela, e o exemplo mudou — a REGRA não: gravar um valor que
-    o daemon não entende, ou calar, seria repetir o defeito que este gesto veio
-    curar.
-    """
+    """TRÊS CHIPS DESENHADOS, TRÊS MÁSCARAS DE VERDADE (desde 07/09/2026)."""
     with pytest.raises(RuntimeError, match=r"Wiimote.*não sabe montar"):
         _clicar(uniq=UNIQ_A, mascara="Wiimote")
 
 
 def test_o_nintendo_pro_deixou_de_ser_recusado_e_chega_ao_daemon() -> None:
-    """O outro lado do dia: o chip que era cinza agora escreve.
-
-    Se esta régua reprovar, o produto voltou a não montar a máscara — e o chip
-    do cartão volta a mentir aceso.
-    """
+    """O outro lado do dia: o chip que era cinza agora escreve."""
     _clicar(uniq=UNIQ_A, mascara="Nintendo Pro")
 
 

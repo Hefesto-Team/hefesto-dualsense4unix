@@ -1,25 +1,4 @@
-"""Wire-up do botão de microfone no daemon.
-
-MIC-DA-MESA-ELEICAO-01 (01/09/2026) — ESTE ARQUIVO MUDOU DE CONTRATO, e o
-contrato velho está aqui em cima porque é o que ele afirmava:
-
-    1. `BUTTON_DOWN` com `button='mic_btn'` dispara
-       `AudioControl.toggle_default_source_mute()`;
-    2. o retorno do toggle é repassado ao `controller.set_mic_led()`.
-
-Os dois CAÍRAM por decisão dela: *"O botão de silenciar é confuso e mexendo com
-ambos os canais de áudio é péssimo."* O botão agora ELEGE o canal do controle
-que apertou, e não muta nada. E a borda não vem mais do `BUTTON_DOWN` — que não
-carrega `uniq`, e onde o botão do mic nem chega, porque o `hid-playstation`
-consome a borda —, vem do tópico `MIC_DA_MESA`.
-
-O que este arquivo continua guardando, e continua valendo palavra por palavra:
-
-    3. com `mic_button_toggles_system=False`, nada é acionado;
-    4. eventos de OUTROS botões não acionam o microfone.
-
-As réguas do gesto novo moram em `test_mic_da_mesa_*`.
-"""
+"""Wire-up do botão de microfone no daemon."""
 from __future__ import annotations
 
 import asyncio
@@ -31,10 +10,6 @@ from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 
 def _make_state(buttons: frozenset[str] | None = None) -> ControllerState:
@@ -55,11 +30,7 @@ async def _run_daemon_ticks(
     *,
     timeout: float = 5.0,
 ) -> None:
-    """Executa o daemon por n_ticks de poll e para.
-
-    Substitui _poll_loop por versão limitada que publica BUTTON_DOWN
-    e para apos n_ticks, permitindo que _mic_button_loop consuma eventos.
-    """
+    """Executa o daemon por n_ticks de poll e para."""
     poll_count = 0
 
     async def _limited_poll() -> None:
@@ -105,24 +76,9 @@ def _config_base(*, mic_button_toggles_system: bool = True) -> DaemonConfig:
     )
 
 
-# ---------------------------------------------------------------------------
-# Testes
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_mic_btn_do_button_down_nao_muta_mais_nada() -> None:
-    """O `BUTTON_DOWN` do `mic_btn` deixou de mexer no mudo do sistema.
-
-    ERA o teste `test_mic_btn_down_dispara_toggle_e_set_mic_led`, e o que ele
-    exigia é justamente o que ela mandou parar de fazer. A cena é a mesma — o
-    botão apertado, com o wire-up ligado —, e o desfecho esperado inverteu:
-    **nenhum toggle**.
-
-    Não é "o botão parou de funcionar": o gesto mudou de porta. Ele age pelo
-    tópico `MIC_DA_MESA`, que carrega o `uniq` de quem apertou, e o que ele faz
-    é ELEGER (ver `test_mic_da_mesa_o_ipc_a_tela_e_o_gesto.py`).
-    """
+    """O `BUTTON_DOWN` do `mic_btn` deixou de mexer no mudo do sistema."""
     states = [
         _make_state(frozenset()),
         _make_state(frozenset({"mic_btn"})),
@@ -131,7 +87,7 @@ async def test_mic_btn_do_button_down_nao_muta_mais_nada() -> None:
     fc = FakeController(states=states)
 
     mock_audio = MagicMock()
-    mock_audio.toggle_default_source_mute.return_value = True  # mutado
+    mock_audio.toggle_default_source_mute.return_value = True
 
     with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
@@ -161,11 +117,8 @@ async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=False))
         await _run_daemon_ticks(daemon, n_ticks=2)
 
-    # _audio nunca foi criado — nenhum subscriber registrado.
     assert daemon._audio is None
-    # toggle_default_source_mute nunca foi invocado.
     mock_audio.toggle_default_source_mute.assert_not_called()
-    # mic_led nunca foi colocado True pelo wire-up (somente False pode vir do perfil).
     assert True not in fc.mic_led_history
 
 
@@ -191,20 +144,13 @@ async def test_outros_botoes_nao_disparam_toggle() -> None:
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
         await _run_daemon_ticks(daemon, n_ticks=3)
 
-    # toggle não foi chamado para botoes que não são mic_btn.
     mock_audio.toggle_default_source_mute.assert_not_called()
-    # mic_led nunca foi colocado True (mutado) pelo wire-up.
     assert True not in fc.mic_led_history
 
 
 @pytest.mark.asyncio
 async def test_o_led_do_mic_nao_e_pintado_pelo_button_down() -> None:
-    """ERA `test_toggle_retorna_false_set_mic_led_false`, e caiu com o toggle.
-
-    O LED passou a ser pintado da RELEITURA da eleição — nunca do eco de uma
-    escrita —, e só pelo caminho que tem `uniq`. Aqui, com o gesto vindo do
-    `BUTTON_DOWN`, nada é aceso nem apagado.
-    """
+    """ERA `test_toggle_retorna_false_set_mic_led_false`, e caiu com o toggle."""
     states = [
         _make_state(frozenset()),
         _make_state(frozenset({"mic_btn"})),

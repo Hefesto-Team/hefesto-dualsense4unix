@@ -1,22 +1,4 @@
-"""O FUNIL DIZ O CAMPO, E O DIÁRIO É CITAÇÃO — O-FUNIL-DIZ-O-CAMPO-E-O-DIARIO-E-CITACAO-01.
-
-O funil de execução (`hefesto_vivo._json`) acusava `[texto banido] 'MAC' foi
-para a tela` a cada abertura da aba Sistema, e não dizia de onde. A palavra era
-do painel «Registro do serviço»: as linhas do daemon (`uhid_device_created
-mac=…`, `backend_conectado uniq=…`), que ela quer sempre à vista para copiar
-num relato de defeito (25/09). A cura tem duas metades:
-
-* o que a tela CITA de outro programa é registrado pelo dono
-  (`frases_que_ela_baniu.citar`, chamado pelo `a09_sistema._diario`), e o funil
-  o tira da leitura — o texto que vai à tela não muda um byte;
-* a denúncia diz a página e o campo, nomeia TODO trecho do valor e lembra por
-  palavra, página e campo.
-
-O `journalctl` e o `systemctl` são dublês: nenhuma régua daqui lê o diário de
-ninguém. Os endereços são da faixa sintética da casa (`aa:bb:cc`).
-
-AS MORDIDAS, uma por régua, estão escritas em cada uma.
-"""
+"""O FUNIL DIZ O CAMPO, E O DIÁRIO É CITAÇÃO — O-FUNIL-DIZ-O-CAMPO-E-O-DIARIO-E-CITACAO-01."""
 from __future__ import annotations
 
 import ast
@@ -47,10 +29,8 @@ from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 PAGINA = "09-sistema.html"
 CAMPO = a09.REGISTRO
 
-#: A mesa de quatro da casa: dois no cabo e dois no rádio, faixa sintética.
 FIXTURE = RAIZ / "tests/fixtures/state_full_quatro_controles.json"
 
-#: O STATUS DO SERVIÇO, de mentira. Com `-n 0` ele não traz linha de diário.
 STATUS = ("● hefesto-dualsense4unix.service - Hefesto\n"
           "     Loaded: loaded\n"
           "     Active: active (running)")
@@ -108,9 +88,6 @@ def _painel() -> str:
     return a09._repouso_do_painel(_estado())
 
 
-# --------------------------------------------------------------------------
-# 1. o diário citado não denuncia — nos dois modos, com os quatro controles
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("modo", ["dualsense", "xbox"])
 def test_o_diario_citado_nao_denuncia(servico: dict[str, Any], modo: str,
                                       capsys: pytest.CaptureFixture[str]) -> None:
@@ -128,16 +105,9 @@ def test_o_diario_citado_nao_denuncia(servico: dict[str, Any], modo: str,
     assert [c[0] for c in servico["comandos"]] == ["journalctl"]
 
 
-# --------------------------------------------------------------------------
-# 2. o resto do valor segue lido
-# --------------------------------------------------------------------------
 def test_a_frase_do_produto_no_mesmo_campo_continua_lida(
         servico: dict[str, Any], capsys: pytest.CaptureFixture[str]) -> None:
-    """Uma resposta de gesto com `uinput`, fora do citado, é denunciada.
-
-    A MORDIDA: faça o funil pular o campo inteiro quando ele tiver citação
-    (`sem_o_citado` devolvendo `""`), e esta reprova.
-    """
+    """Uma resposta de gesto com `uinput`, fora do citado, é denunciada."""
     diario = a09._diario()
     painel = "O gesto mexeu no uinput do controle.\n\nRegistro do serviço\n" + diario
     hv._json({"mesa": {CAMPO: painel}}, pagina=PAGINA)
@@ -146,45 +116,27 @@ def test_a_frase_do_produto_no_mesmo_campo_continua_lida(
     assert "'MAC'" not in erro and "'uniq'" not in erro, erro
 
 
-# --------------------------------------------------------------------------
-# 3. a denúncia diz a página e o campo
-# --------------------------------------------------------------------------
 def test_a_denuncia_diz_a_pagina_e_o_campo(
         limpo: None, capsys: pytest.CaptureFixture[str]) -> None:
-    """`[texto banido] 'hidraw' em 02-controles.html · aviso-texto`.
-
-    A MORDIDA: devolva o `print` antigo (`… foi para a tela.`) e esta reprova.
-    """
+    """`[texto banido] 'hidraw' em 02-controles.html · aviso-texto`."""
     hv._json({"colunas": {"p1": {"aviso-texto": ["o hidraw caiu"]}}},
              pagina="02-controles.html")
     erro = capsys.readouterr().err
     assert "[texto banido] 'hidraw' em 02-controles.html · aviso-texto" in erro, erro
 
 
-# --------------------------------------------------------------------------
-# 4. dois trechos no mesmo valor saem os dois
-# --------------------------------------------------------------------------
 def test_dois_trechos_no_mesmo_valor_saem_os_dois(
         limpo: None, capsys: pytest.CaptureFixture[str]) -> None:
-    """`MAC` vem antes de `uniq` na lista, e não o esconde mais.
-
-    A MORDIDA: pare o laço do `_json` no primeiro trecho e só sai `'MAC'`.
-    """
+    """`MAC` vem antes de `uniq` na lista, e não o esconde mais."""
     hv._json({"mesa": {"aviso": "o MAC e o uniq do controle"}}, pagina=PAGINA)
     erro = capsys.readouterr().err
     assert f"'MAC' em {PAGINA} · aviso" in erro, erro
     assert f"'uniq' em {PAGINA} · aviso" in erro, erro
 
 
-# --------------------------------------------------------------------------
-# 5. dois donos da mesma palavra saem os dois, e cada um uma vez só
-# --------------------------------------------------------------------------
 def test_dois_donos_da_mesma_palavra_saem_os_dois(
         limpo: None, capsys: pytest.CaptureFixture[str]) -> None:
-    """`'MAC'` no campo A e depois no B: duas linhas; o mesmo dono de novo: nada.
-
-    A MORDIDA: a memória volta a ser por palavra, e o dono B some.
-    """
+    """`'MAC'` no campo A e depois no B: duas linhas; o mesmo dono de novo: nada."""
     hv._json({"mesa": {"a": "o MAC do controle"}}, pagina=PAGINA)
     hv._json({"mesa": {"b": "outro MAC"}}, pagina=PAGINA)
     hv._json({"mesa": {"b": "outro MAC, de novo"}}, pagina=PAGINA)
@@ -194,16 +146,9 @@ def test_dois_donos_da_mesma_palavra_saem_os_dois(
     assert erro.count("[texto banido]") == 2, erro
 
 
-# --------------------------------------------------------------------------
-# 6. o texto não muda: nem o que vai à tela, nem o que o «Copiar» leva
-# --------------------------------------------------------------------------
 def test_a_citacao_nao_muda_um_byte(servico: dict[str, Any],
                                     monkeypatch: pytest.MonkeyPatch) -> None:
-    """O painel, o JSON e o «Copiar» saem iguais com e sem a marca.
-
-    A MORDIDA: faça o `citar` acrescentar um caractere invisível ao texto, e
-    as três comparações reprovam.
-    """
+    """O painel, o JSON e o «Copiar» saem iguais com e sem a marca."""
     marcado = _painel()
     carga = {"mesa": {CAMPO: marcado}}
     assert hv._json(carga, pagina=PAGINA) == json.dumps(
@@ -235,15 +180,8 @@ def test_as_frases_do_produto_no_diario_nao_sao_citacao(
     assert vazio not in fb.citados()
 
 
-# --------------------------------------------------------------------------
-# 7. todo chamador do Piloto passa a página
-# --------------------------------------------------------------------------
 def test_todo_chamador_do_piloto_passa_a_pagina() -> None:
-    """Por AST: toda chamada de `_json` dentro de `class Piloto` leva a página (`pagina=`).
-
-    A MORDIDA: tire o `pagina=` de uma das sete, e esta reprova nomeando a
-    linha.
-    """
+    """Por AST: toda chamada de `_json` dentro de `class Piloto` leva a página (`pagina=`)."""
     arvore = ast.parse((INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8"))
     piloto = next(no for no in arvore.body
                   if isinstance(no, ast.ClassDef) and no.name == "Piloto")

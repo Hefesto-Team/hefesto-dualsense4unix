@@ -40,7 +40,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: MACs forjados (faixa aa:bb:cc — teste-guarda de anonimato).
 UNIQ_BRANCO = "aabbcc000001"
 UNIQ_ROXO = "aabbcc000002"
 MAC_8BITDO = "aabbcc0000fe"
@@ -88,11 +87,6 @@ def _server(tmp_path: Path, ds: Any, ext: Any) -> IpcServer:
     )
 
 
-# ---------------------------------------------------------------------------
-# R-15 — "Renumerar agora" com reserva offline segurando a faixa baixa
-# ---------------------------------------------------------------------------
-
-
 class TestRenumerarNaoPresoNaReservaOffline:
     @pytest.mark.asyncio
     async def test_conectados_descem_para_1_a_n_e_reserva_vai_para_o_fim(
@@ -112,14 +106,13 @@ class TestRenumerarNaoPresoNaReservaOffline:
 
         ext = ExternalIdentityRegistry()
         ext._ordem[MAC_8BITDO] = 1
-        ext.sync_connected([])  # dormindo: só RESERVA
+        ext.sync_connected([])
 
         server = _server(isolated_config, ds, ext)
         resultado = await server._handle_identity_renumber({})
 
         assert resultado["ok"] is True
         assert ds.snapshot() == {UNIQ_BRANCO: 1, UNIQ_ROXO: 2}
-        # A reserva NÃO é dropada (promessa D2) — só perde a fila.
         assert ext.snapshot() == {MAC_8BITDO: 3}
         assert resultado["renumbered"] == {
             UNIQ_BRANCO: 1,
@@ -129,11 +122,7 @@ class TestRenumerarNaoPresoNaReservaOffline:
 
     @pytest.mark.asyncio
     async def test_ja_compacto_responde_vazio(self, isolated_config: Path) -> None:
-        """Numeração já compacta = nenhum controle renumerado.
-
-        Falha-sem: o retorno era o plano inteiro, e a GUI (que conta as
-        chaves) toastava "2 controle(s) renumerado(s)" sem nada ter mudado.
-        """
+        """Numeração já compacta = nenhum controle renumerado."""
         ds = ControllerIdentityRegistry()
         ds.slot_for(UNIQ_BRANCO)
         ds.slot_for(UNIQ_ROXO)
@@ -147,9 +136,7 @@ class TestRenumerarNaoPresoNaReservaOffline:
     async def test_registro_sem_snapshot_connected_degrada(
         self, isolated_config: Path
     ) -> None:
-        """Dublê antigo (sem ``snapshot_connected``) não quebra o handler:
-        todo mundo conta como conectado e o plano vira a compactação global do
-        HEAD."""
+        """Dublê antigo (sem ``snapshot_connected``) não quebra o handler:"""
 
         class _RegistroAntigo:
             def __init__(self) -> None:
@@ -178,7 +165,7 @@ class TestSnapshotConnected:
         ds.slot_for(UNIQ_ROXO)
         ds.sync_connected({UNIQ_BRANCO})
         assert ds.snapshot_connected() == {UNIQ_BRANCO}
-        assert set(ds.snapshot()) == {UNIQ_BRANCO, UNIQ_ROXO}  # reserva viva
+        assert set(ds.snapshot()) == {UNIQ_BRANCO, UNIQ_ROXO}
 
         ext = ExternalIdentityRegistry()
         ext.slot_for(MAC_8BITDO, reserve=2)
@@ -187,11 +174,6 @@ class TestSnapshotConnected:
         ext.sync_connected([])
         assert ext.snapshot_connected() == set()
         assert ext.snapshot() == {MAC_8BITDO: 3}
-
-
-# ---------------------------------------------------------------------------
-# R-14 — o piso dos externos não depende mais do flag de cor
-# ---------------------------------------------------------------------------
 
 
 class TestNumeracaoGlobalComAutoDesligado:

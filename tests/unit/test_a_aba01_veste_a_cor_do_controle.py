@@ -62,22 +62,9 @@ from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
 #: O `--plastico` escrito à mão, na forma que a régua nova procura. Ele é a
-#: cor que o produto NÃO alcança: nenhum dos sete alvos do `escrever()` do
-#: piloto escreve uma custom property.
 PLASTICO_CRAVADO = re.compile(r"--plastico\s*:\s*#[0-9a-fA-F]{3,8}")
 
-#: A fileira de cartões, do `<div class="pecas"` até o fim do quadro. Cobrar a
-#: página inteira misturaria o cartão com a FITA, que é do `monta.py` e não
-#: desta aba — e faria esta régua acusar quem não pode consertar.
 INICIO_DA_FILEIRA = '<div class="pecas" data-lista="cartoes">'
-#: ERA `<div class="col-atencao"` ATÉ 07/09/2026, quando a coluna Atenção saiu
-#: da Jogar por ordem dela. A faixa do botão é o que ficou logo abaixo dos
-#: cartões, e é o novo fim.
-#:
-#: E O `doc.index` ABAIXO É O QUE FAZ ISTO SER SEGURO: com o delimitador
-#: ausente ele LEVANTA, e as quatro réguas deste arquivo reprovaram na hora. Um
-#: `split()` teria devolvido o resto da página em silêncio, e elas continuariam
-#: verdes medindo cartão mais faixa mais legenda como se fosse a fileira.
 FIM_DA_FILEIRA = '<div class="faixa-final'
 
 
@@ -92,11 +79,7 @@ def fileira_de_cartoes() -> str:
 
 
 def nomes_de_colorway() -> list[str]:
-    """Os 28 nomes, lidos do CSV que é dono deles — nunca digitados aqui.
-
-    Uma lista escrita à mão neste arquivo envelheceria sozinha, e é o defeito
-    que o `cores-do-dualsense.csv` existe para não ter.
-    """
+    """Os 28 nomes, lidos do CSV que é dono deles — nunca digitados aqui."""
     caminho = RAIZ / "docs/data/cores-do-dualsense.csv"
     linhas = [
         linha
@@ -107,9 +90,6 @@ def nomes_de_colorway() -> list[str]:
     return sorted(n for n in nomes if len(n) >= 4)
 
 
-# ---------------------------------------------------------------------------
-# 1. O cartão parou de trazer a identidade cravada
-# ---------------------------------------------------------------------------
 def test_o_cartao_nao_traz_mais_plastico_cravado() -> None:
     """A borda vinha de `style="--plastico:#ae335a"`, e o produto não a alcança."""
     achados = PLASTICO_CRAVADO.findall(fileira_de_cartoes())
@@ -121,12 +101,7 @@ def test_o_cartao_nao_traz_mais_plastico_cravado() -> None:
 
 
 def test_o_cartao_nao_tem_dica_com_nome_de_colorway() -> None:
-    """O `title` do cartão dizia `Sony • Player 1 • Cosmic Red • USB`.
-
-    `title` é ATRIBUTO, e o piloto não tem alvo de pintura para atributo — a
-    razão já estava escrita na `aba04.py`, na dica que saiu de lá pelo mesmo
-    motivo. Ele repetia o rótulo palavra por palavra, quatro pixels ao lado.
-    """
+    """O `title` do cartão dizia `Sony • Player 1 • Cosmic Red • USB`."""
     fileira = fileira_de_cartoes()
     for atributo in re.findall(r'title="([^"]*)"', fileira):
         for nome in nomes_de_colorway():
@@ -138,12 +113,7 @@ def test_o_cartao_nao_tem_dica_com_nome_de_colorway() -> None:
 
 
 def test_a_prosa_da_legenda_nao_nomeia_um_colorway() -> None:
-    """A legenda citava a fita com um exemplo: `[P1 · Cosmic Red · USB]`.
-
-    Nome de plástico em prosa é nome que contradiz a fita três centímetros
-    acima. E o rótulo da fita tem DONO (`monta.ROTULO_DA_FITA`): a prosa dizia
-    `Ajustes vão para:`, que ela trocou em 31/08.
-    """
+    """A legenda citava a fita com um exemplo: `[P1 · Cosmic Red · USB]`."""
     doc = bancada()
     legenda = doc[doc.index('<div class="nota">'):]
     for nome in nomes_de_colorway():
@@ -157,9 +127,6 @@ def test_a_prosa_da_legenda_nao_nomeia_um_colorway() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. A pele existe, e está no lugar certo
-# ---------------------------------------------------------------------------
 def test_cada_lugar_da_mesa_tem_a_pele_enderecada() -> None:
     """Uma por LUGAR da mesa — os quatro, e não só os conectados.
 
@@ -185,8 +152,6 @@ def test_cada_lugar_da_mesa_tem_a_pele_enderecada() -> None:
         f"são {len(peles)} peles para {len(monta.MESA)} LUGARES na mesa — sem a "
         f"pele, o cartão que reabre fica com a borda do desenho"
     )
-    # E ELA SOME PELO ESCURO, não pela ausência. Sem esta regra a unificação
-    # acenderia a borda do lugar vazio na cor do plástico do mockup.
     folha = bancada()
     assert ".cartao.off > .pele{display:none}" in folha, (
         "a regra que esconde a pele do lugar vazio saiu da folha — o cartão "
@@ -195,13 +160,7 @@ def test_cada_lugar_da_mesa_tem_a_pele_enderecada() -> None:
 
 
 def test_a_pele_nao_e_o_cartao() -> None:
-    """Pintar a cor no `.cartao` repintaria o desenho inteiro.
-
-    `ds_limpo.svg` tem 16 traços em `currentColor` — é como o glifo herda a cor
-    da linha em que está. O alvo `cor` escreve `style.color`, e `color` HERDA:
-    posto no cartão, ele desceria até o SVG. A pele é um elemento vazio, e é o
-    que permite trocar a borda sem tocar no controle desenhado.
-    """
+    """Pintar a cor no `.cartao` repintaria o desenho inteiro."""
     assert "currentColor" in (INTERFACE / "ds_limpo.svg").read_text(encoding="utf-8"), (
         "o desenho deixou de usar `currentColor` — a razão da pele mudou, e "
         "esta régua tem de ser relida antes de qualquer simplificação"
@@ -213,9 +172,6 @@ def test_a_pele_nao_e_o_cartao() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# 3. O PACOTE ESCREVE — dar endereço não é entregar
-# ---------------------------------------------------------------------------
 def _ctx(cor: str, nome: str) -> Contexto:
     """Um controle no cabo, com a cor que o argumento disser."""
     uniq = "aa:bb:cc:00:00:01"
@@ -232,12 +188,7 @@ def cartao(ctx: Contexto) -> dict[str, Any]:
 
 
 def test_o_pacote_escreve_a_cor_do_plastico_lida() -> None:
-    """Com o White no cabo, o pacote manda o hex do White — não o do desenho.
-
-    O hex NÃO está digitado aqui: ele sai de `monta.cor_da_zona`, que lê a
-    folha que pinta o SVG. Digitá-lo criaria a segunda verdade que o
-    `check_cores_do_dualsense.py` existe para matar.
-    """
+    """Com o White no cabo, o pacote manda o hex do White — não o do desenho."""
     esperado = monta.cor_da_zona("white")
     assert cartao(_ctx("white", "White"))["plastico"] == esperado, (
         "o pacote parou de escrever a cor do plástico. Sem esta chave o "
@@ -247,50 +198,24 @@ def test_o_pacote_escreve_a_cor_do_plastico_lida() -> None:
 
 
 def test_o_hex_nao_e_o_do_mockup() -> None:
-    """A régua acima passaria se o pacote copiasse o desenho. Esta não passa.
-
-    `#ae335a` é o Cosmic Red do cartão do P1 no mockup. Com o White na mesa, o
-    pacote que devolvesse aquele hex estaria pintando o mockup por cima do
-    mockup — verde sobre nada.
-    """
+    """A régua acima passaria se o pacote copiasse o desenho. Esta não passa."""
     assert cartao(_ctx("white", "White"))["plastico"] != monta.cor_da_zona("cosmic-red")
 
 
 def test_sem_leitura_de_cor_o_pacote_nao_inventa() -> None:
-    """A cor só vem pelo CABO. Pelo rádio ela não vem, e é para não mostrar nada.
-
-    Regra dela: campo sem informação não mostra nada. O vazio faz o alvo `cor`
-    apagar o `style.color`, e a pele volta ao neutro do CSS — em vez de manter
-    aceso o `#7eb8d4` que o desenho deixou no cartão do P2.
-    """
+    """A cor só vem pelo CABO. Pelo rádio ela não vem, e é para não mostrar nada."""
     assert cartao(_ctx("", "Não sei"))["plastico"] == "", (
         "o pacote inventou uma cor para um controle cuja cor ninguém leu"
     )
 
 
 def test_um_modelo_que_o_desenho_nao_conhece_nao_derruba_a_aba() -> None:
-    """`monta.cor_da_zona` levanta `SystemExit` — e ele não é `Exception`.
-
-    Um modelo novo derrubaria a pintura da aba INTEIRA: trocaríamos uma borda
-    que falta por uma tela congelada. Esta régua morde a guarda: com
-    `except Exception` no lugar de `except BaseException`, ela reprova.
-    """
+    """`monta.cor_da_zona` levanta `SystemExit` — e ele não é `Exception`."""
     assert cartao(_ctx("cor-que-nao-existe", "Novo"))["plastico"] == ""
 
 
 def test_a_cobertura_conta_o_campo_novo() -> None:
-    """O contador é O instrumento com que esta casa prova que um endereço existe.
-
-    Ele diz quantos valores a aba promete pintar. Deixá-lo em três por cartão
-    depois de acrescentar o quarto é o começo de um contador que mente.
-
-    O QUATRO SAIU DAQUI EM 03/09/2026, e a razão é a mesma que o comentário
-    abaixo já registra: a aba ganhou o `desenho` (o `data-colorway` do SVG, o
-    quinto campo do cartão) e esta linha reprovou a ENTREGA em vez do defeito.
-    O número passa a sair de `POR_CARTAO`, que é o DONO da lista — o que se
-    prova aqui é que o pacote emite exatamente o que promete, e é isso que
-    pega um contador mentiroso nos dois sentidos.
-    """
+    """O contador é O instrumento com que esta casa prova que um endereço existe."""
     fora = aba.pacote(_ctx("white", "White"))
     por_cartao = {len(c) for c in fora["cartoes"].values()}
     assert por_cartao == {len(aba.POR_CARTAO)}, (
@@ -299,16 +224,6 @@ def test_a_cobertura_conta_o_campo_novo() -> None:
     assert set(next(iter(fora["cartoes"].values()))) == set(aba.POR_CARTAO), (
         "o pacote emite um campo de cartão que `POR_CARTAO` não lista — a "
         "cobertura contaria menos do que a aba pinta")
-    # A CONTA SAI DA FORMA DO PACOTE, E NÃO DE UM NÚMERO DIGITADO — 03/09/2026.
-    # Ela era `3 + cartoes * 4`, e o 3 era a quantidade de endereços de PÁGINA
-    # daquele dia. A aba ganhou os endereços que faltavam (a posição do
-    # interruptor, o chip aceso, a máscara viva, as linhas da coluna Atenção) e
-    # a régua reprovou a ENTREGA em vez do defeito — é a forma exata que esta
-    # casa já pagou onze vezes numa tarde só.
-    #
-    # ELA CONTINUA MORDENDO, e agora pela pergunta certa: o contador tem de
-    # bater com o que o pacote EMITE. Emitir uma chave e esquecê-la em
-    # `DA_PAGINA` deixa o número menor que o dicionário, e é aqui que aparece.
     da_pagina = [k for k in fora if k not in {"cartoes", "cobertura", "sem_dono", "blocos"}]
     esperado = len(da_pagina) + sum(len(c) for c in fora["cartoes"].values())
     assert fora["cobertura"]["pintados"] == esperado, (

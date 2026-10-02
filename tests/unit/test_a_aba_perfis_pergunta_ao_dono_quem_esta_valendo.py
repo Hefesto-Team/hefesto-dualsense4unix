@@ -64,10 +64,6 @@ class PonteDeMentira:
         self.chamadas.append((metodo, args))
         return True
 
-    # `resultado` ENTROU EM 03/09/2026 com o ELO-MUDO-01: o `ativar` passou a
-    # ler o CORPO da resposta do daemon (`secoes`) em vez do booleano, que é a
-    # diferença entre "ativado" e "ativado, menos o que o lock manual
-    # descartou". O dublê devolve `{}` — corpo sem relatório, que é o caso do
     # daemon antigo e faz `mensagem_de_ativacao` cair na frase de sempre.
     def resultado(self, metodo: str, *args: Any, **kw: Any) -> Any:
         self.chamadas.append((metodo, tuple(kw.values())))
@@ -76,25 +72,16 @@ class PonteDeMentira:
 
 @pytest.fixture(autouse=True)
 def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`_ESCOLHIDO` e `_ARMADO` são estado de MÓDULO — nenhum teste herda o do
-    anterior. O `_ARMADO` importa em especial: é ele que decide se o segundo
-    clique do Remover APAGA."""
+    """`_ESCOLHIDO` e `_ARMADO` são estado de MÓDULO — nenhum teste herda o do"""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ARMADO", None, raising=False)
 
 
 def _o_disco_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
-    """O marcador em disco, sem escrever no disco.
-
-    ``perfil_que_esta_valendo`` engole exceções desta chamada e devolve
-    ``nao_sei``; então ``None`` aqui é "o disco não sabe", e não "não há".
-    """
+    """O marcador em disco, sem escrever no disco."""
     monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: nome)
 
 
-# --------------------------------------------------------------------------
-# 1. O ATIVAR
-# --------------------------------------------------------------------------
 def test_ativar_recusa_o_mesmo_perfil_mesmo_com_o_daemon_calado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -121,11 +108,7 @@ def test_ativar_recusa_o_mesmo_perfil_mesmo_com_o_daemon_calado(
 def test_o_daemon_vence_o_disco_quando_os_dois_falam(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A ordem do dono é deliberada: o daemon é quem APLICOU as seções.
-
-    Com o daemon dizendo "Ação" e o disco dizendo "meu_perfil", ativar
-    "meu_perfil" tem de PASSAR — o marcador em disco está velho.
-    """
+    """A ordem do dono é deliberada: o daemon é quem APLICOU as seções."""
     _o_disco_diz(monkeypatch, "meu_perfil")
     a10_perfis._ESCOLHIDO = "meu_perfil"
     ponte = PonteDeMentira()
@@ -134,9 +117,6 @@ def test_o_daemon_vence_o_disco_quando_os_dois_falam(
     assert ponte.chamadas == [("profile.switch", ("meu_perfil",))]
 
 
-# --------------------------------------------------------------------------
-# 2. O REMOVER — o §P7, que é o mais caro
-# --------------------------------------------------------------------------
 def _remover(nome: str, state: dict[str, Any]) -> tuple[PonteDeMentira, Exception | None]:
     a10_perfis._ESCOLHIDO = nome
     ponte = PonteDeMentira()
@@ -172,10 +152,7 @@ def test_remover_recusa_o_perfil_que_vale_pelo_disco(
 def test_a_recusa_do_remover_e_a_frase_inteira_do_produto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """As TRÊS partes da frase chegam: o quê, o que não se desfaz, e o que fazer.
-
-    A frase escrita à mão que estava aqui só tinha a primeira e a terceira.
-    """
+    """As TRÊS partes da frase chegam: o quê, o que não se desfaz, e o que fazer."""
     _o_disco_diz(monkeypatch, "meu_perfil")
     _, erro = _remover("meu_perfil", {})
     texto = str(erro)
@@ -187,32 +164,11 @@ def test_a_recusa_do_remover_e_a_frase_inteira_do_produto(
 def test_com_ninguem_valendo_o_remover_nao_trava(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem daemon e sem marcador em disco, o Remover SEGUE para a pergunta.
-
-    A tela não pode AFIRMAR que este é o perfil que está valendo. A guarda que
-    sobra é a pergunta no rótulo do botão, que continua de pé: o primeiro clique
-    arma e levanta.
-
-    TÍTULO CORRIGIDO — 02/09/2026, achado de auditoria. Ele dizia
-    ``…quando_ninguem_sabe_quem_vale…`` e a docstring prometia cobrir o ramo
-    ``nao_sei``. **Ele nunca chega lá, e não é bug deste teste — é inalcançável
-    por esta aba:** ``perfil_que_esta_valendo`` só devolve ``nao_sei`` quando o
-    ``state`` NÃO é dicionário (``houve_resposta = isinstance(state, dict)``), e
-    ``Contexto.state`` é tipado ``dict[str, Any]`` e nasce dicionário nos dois
-    únicos lugares onde o piloto o constrói. O que esta régua exercita é o ramo
-    ``nenhum`` — daemon calado E disco calado —, que é um estado real da máquina
-    dela. A distinção ``nao_sei``/``nenhum`` continua sendo do produto, e quem a
-    cobre é ``test_p7_remover_diz_que_esta_apagando_o_que_vale.py``.
-
-    MORDIDA: faça a recusa disparar quando ``perfil_que_esta_valendo`` não sabe
-    de ninguém (``if aviso or not _vale.nome:``) e este teste reprova — o
-    Remover ficaria travado numa máquina com o daemon parado e sem marcador.
-    """
+    """Sem daemon e sem marcador em disco, o Remover SEGUE para a pergunta."""
     def _explode() -> str:
         raise OSError("o disco não respondeu")
 
     monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", _explode)
-    # O ramo medido, escrito no próprio teste para não voltar a ser suposto.
     assert profiles_actions.perfil_que_esta_valendo({}).fonte == "nenhum"
     _, erro = _remover("meu_perfil", {})
     assert isinstance(erro, RuntimeError), (
@@ -223,10 +179,7 @@ def test_com_ninguem_valendo_o_remover_nao_trava(
 def test_remover_outro_perfil_continua_perguntando_e_apagando(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A guarda não pode fechar o gesto: apagar um perfil é o trabalho dele.
-
-    O primeiro clique ARMA (``RuntimeError`` com a pergunta) e o segundo apaga.
-    """
+    """A guarda não pode fechar o gesto: apagar um perfil é o trabalho dele."""
     _o_disco_diz(monkeypatch, "meu_perfil")
     apagados: list[str] = []
     from hefesto_dualsense4unix.profiles import loader
@@ -244,9 +197,6 @@ def test_remover_outro_perfil_continua_perguntando_e_apagando(
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 
-# --------------------------------------------------------------------------
-# 3. NENHUM LUGAR DA ABA VOLTA A LER O `state` CRU
-# --------------------------------------------------------------------------
 def test_a_aba_nao_le_mais_o_active_profile_cru() -> None:
     """A régua mecânica, e ela é o que impede a volta pela porta dos fundos.
 
@@ -277,8 +227,6 @@ def test_a_aba_nao_le_mais_o_active_profile_cru() -> None:
     fonte = inspect.getsource(a10_perfis)
     linhas = [(i, x) for i, x in enumerate(fonte.splitlines(), 1)
               if 'ctx.state.get("active_profile")' in x
-              # A docstring do `_valendo` CITA a leitura crua para explicar o
-              # defeito. Citar não é ler.
               and not x.lstrip().startswith(("#", "`", "*"))
               and "_valendo" not in x]
     assert not linhas, (

@@ -52,18 +52,10 @@ import pytest
 
 from tests import conftest as berco
 
-#: Endereço de fixture desta régua. Faixa sintética da casa, sem fabricante.
 UNIQ_DA_REGUA = "e8473a0000f1"
 
-#: O que a régua 2 procura na mesa de mentira. Dois arquivos: o do produto
-#: (`controllers.json`, que `_save_locked` grava e que engole exceção) e um
-#: marcador CRU. O marcador existe porque `_save_locked` nunca propaga erro —
-#: sem ele, um `_save_locked` que falhasse por outro motivo faria a régua
-#: declarar "curado" sem ter medido nada.
 NOME_DO_MARCADOR = "prova-de-escrita-tardia.txt"
 
-#: O arquivo que JÁ mora na mesa de mentira quando o ninho começa — o que
-#: faz dela a mesa DELA, e não um diretório inexistente.
 NOME_DA_FILA_DELA = "a-fila-que-ja-estava-la.json"
 
 
@@ -75,13 +67,7 @@ def repo() -> Path:
 
 @pytest.fixture(scope="session")
 def ambiente_de_fora_do_caso() -> dict[str, str | None]:
-    """As cinco variáveis COMO ELAS ESTÃO fora de todo patch de função.
-
-    O escopo de SESSÃO não é economia: é a régua. Fixture de sessão monta
-    antes de qualquer fixture de escopo de função, então o que se lê aqui é
-    exatamente o valor que o `monkeypatch` do `_hefesto_fake_env` repõe no
-    teardown de CADA caso — que é o valor por onde o vazamento saía.
-    """
+    """As cinco variáveis COMO ELAS ESTÃO fora de todo patch de função."""
     return {var: os.environ.get(var) for var, _sub in berco._VARS_DO_LAR}
 
 
@@ -99,13 +85,7 @@ class TestOAmbienteDeForaDoCaso:
     def test_o_valor_que_o_teardown_repoe_e_o_duble(
         self, ambiente_de_fora_do_caso: dict[str, str | None]
     ) -> None:
-        """As cinco variáveis, vistas FORA de qualquer patch de função.
-
-        A fixture é de escopo de SESSÃO, e é isso que a torna a régua certa:
-        fixture de sessão monta antes de toda fixture de função, então o que
-        ela lê é exatamente o valor para o qual o `monkeypatch` do
-        `_hefesto_fake_env` vai desfazer no fim de cada caso.
-        """
+        """As cinco variáveis, vistas FORA de qualquer patch de função."""
         lar = berco.lar_de_sessao()
         assert lar is not None
         for var, valor in ambiente_de_fora_do_caso.items():
@@ -117,12 +97,7 @@ class TestOAmbienteDeForaDoCaso:
             )
 
     def test_o_lar_real_continua_conhecido(self) -> None:
-        """`lar_real()` tem de devolver o `$HOME` de ANTES do desvio.
-
-        Não é conforto: o `_hefesto_fake_env` aponta `RUSTUP_HOME`/`CARGO_HOME`
-        para ele, e sem isso o `cargo` de verdade recusa com "no default
-        toolchain configured" (medido em 24/08).
-        """
+        """`lar_real()` tem de devolver o `$HOME` de ANTES do desvio."""
         real = berco.lar_real()
         lar = berco.lar_de_sessao()
         assert lar is not None
@@ -134,19 +109,7 @@ class TestOAmbienteDeForaDoCaso:
 
 
 class TestOEspelhoNaoEUmDiretorioVazio:
-    """O dublê ESPELHA a casa dela, e só os quatro do produto nascem vazios.
-
-    Um lar de mentira vazio fechava o vazamento e QUEBRAVA quatro testes de
-    layout: o GTK e o fontconfig leem `~/.config/gtk-3.0/settings.ini` no
-    `Gtk.init()`, que roda na importação dos módulos — depois do desvio —, e
-    sem os ajustes de fonte dela as larguras medidas em pixel mudam. Medido em
-    25/08/2026, `test_layout_orcamento_altura.py` (3) e
-    `test_status_som_02_controle_de_volume.py` (1).
-
-    As duas metades têm de valer JUNTAS, e é por isso que este caso mede as
-    duas: se o produto virar symlink, a escrita tardia atravessa e chega ao
-    disco dela; se o vizinho deixar de ser symlink, o GTK perde os ajustes.
-    """
+    """O dublê ESPELHA a casa dela, e só os quatro do produto nascem vazios."""
 
     def test_o_que_o_produto_escreve_nasce_vazio_e_nao_e_symlink(
         self, tmp_path: Path
@@ -203,14 +166,7 @@ class TestARecusaDoInstrumento:
     """O dublê tem de saber DIZER NÃO — régua que só passa não é régua."""
 
     def test_o_ambiente_real_nao_volta_para_sessao_de_mentira(self) -> None:
-        """Uma Session que não armou o desvio não pode desfazê-lo.
-
-        `test_conftest_canario_fs.py` chama `pytest_sessionfinish` com uma
-        Session forjada, de propósito, para provar que o canário reprova. Sem
-        esta recusa, a primeira dessas chamadas devolveria o `$HOME` REAL no
-        meio da sessão VIVA — e a partir dali todo teste seguinte gravaria na
-        mesa dela. É o mesmo defeito que o `_SESSAO_REAL` do berço já pagou.
-        """
+        """Uma Session que não armou o desvio não pode desfazê-lo."""
         lar = berco.lar_de_sessao()
         assert lar is not None
         antes = os.environ.get("HOME")
@@ -229,13 +185,7 @@ class TestARecusaDoInstrumento:
     def test_o_ambiente_real_volta_para_a_sessao_dona(
         self, request: pytest.FixtureRequest
     ) -> None:
-        """E, com a Session DONA, ele volta mesmo — senão o canário cega.
-
-        O CANARIO-FS-01 e a FAIXA-NO-BERCO-01 resolvem os alvos contra o `HOME`
-        VIVO. Se o dublê continuasse de pé enquanto eles medem, a foto do FIM
-        seria de outra árvore que a do INÍCIO: o canário acusaria o `$HOME`
-        inteiro de ter sumido, e a faixa ficaria calada para sempre.
-        """
+        """E, com a Session DONA, ele volta mesmo — senão o canário cega."""
         lar = berco.lar_de_sessao()
         assert lar is not None
         dona = request.session
@@ -268,12 +218,7 @@ class TestARecusaDoInstrumento:
 
 
 class TestOSingletonNaoAtravessa:
-    """RÉGUA 3 — `identity._registry` morre com o caso que o criou.
-
-    Os dois casos abaixo dependem da ORDEM (pytest roda na ordem de
-    declaração), e é essa dependência que é o ponto: o primeiro suja, o
-    segundo prova que a sujeira não passou.
-    """
+    """RÉGUA 3 — `identity._registry` morre com o caso que o criou."""
 
     def test_a_um_semeia_o_singleton(self) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.identity import (
@@ -299,9 +244,6 @@ class TestOSingletonNaoAtravessa:
         )
 
 
-#: O teste ANINHADO. Ele semeia a fila e agenda a gravação para o `atexit`, que
-#: é a escrita mais tardia que existe num processo Python — depois de todo
-#: teardown, de todo `sessionfinish`, de todo finalizador de fixture.
 _NINHO = '''
 import atexit
 
@@ -332,13 +274,7 @@ def test_semeia_a_fila_e_agenda_a_escrita_tardia():
 def _rodar_o_ninho(
     tmp_path: Path, repo: Path, *, com_a_cura: bool
 ) -> tuple[Path, subprocess.CompletedProcess[str]]:
-    """Um pytest ANINHADO com um `$HOME` de mentira no lugar da mesa dela.
-
-    O `conftest.py` entra por SYMLINK, e não por cópia: o conftest resolve
-    `Path(__file__).resolve().parents[1]` para achar `scripts/`, e `resolve()`
-    segue o link — uma cópia apontaria para o diretório temporário e o pedaço
-    da FAIXA-NO-BERCO-01 ficaria mudo dentro do próprio teste que o mede.
-    """
+    """Um pytest ANINHADO com um `$HOME` de mentira no lugar da mesa dela."""
     quintal = tmp_path / ("com-a-cura" if com_a_cura else "sem-a-cura")
     quintal.mkdir()
     (quintal / "conftest.py").symlink_to(repo / "tests" / "conftest.py")
@@ -346,11 +282,6 @@ def _rodar_o_ninho(
         textwrap.dedent(_NINHO).format(uniq=UNIQ_DA_REGUA, marcador=NOME_DO_MARCADOR),
         encoding="utf-8",
     )
-    # A mesa de mentira nasce COMO A DELA: com o diretório do produto já lá e
-    # um arquivo dentro. Não é enfeite — foi medido em 25/08/2026 que uma mesa
-    # sem esse diretório NÃO exercita o ramo do espelho que decide entre
-    # symlink e dublê, e a régua ficava verde mesmo com o produto virando link
-    # para o disco de verdade. Régua que só sabe passar não é régua.
     mesa = tmp_path / ("mesa-com" if com_a_cura else "mesa-sem")
     (mesa / ".config" / "hefesto-dualsense4unix").mkdir(parents=True)
     (mesa / ".config" / "hefesto-dualsense4unix" / NOME_DA_FILA_DELA).write_text(
@@ -363,8 +294,6 @@ def _rodar_o_ninho(
         ambiente.pop(var, None)
     ambiente["PYTHONPATH"] = str(repo / "src")
     ambiente["PYTEST_ADDOPTS"] = ""
-    # O canário do ninho compararia a mesa de mentira consigo mesma; desligá-lo
-    # tira ruído sem tirar régua nenhuma desta medição.
     ambiente["HEFESTO_SEM_CANARIO_FS"] = "1"
     if com_a_cura:
         ambiente.pop(berco._LAR_DESLIGADO_ENV, None)
@@ -383,11 +312,7 @@ def _rodar_o_ninho(
 
 
 def _nasceram_na_mesa(mesa: Path) -> list[str]:
-    """O que NASCEU no `~/.config` da mesa de mentira durante o ninho.
-
-    O arquivo que já estava lá antes fica de fora: a pergunta é "apareceu
-    coisa nova?", e não "existe coisa?" — a mesa dela nunca está vazia.
-    """
+    """O que NASCEU no `~/.config` da mesa de mentira durante o ninho."""
     raiz = mesa / ".config" / "hefesto-dualsense4unix"
     if not raiz.is_dir():
         return []
@@ -399,22 +324,12 @@ def _nasceram_na_mesa(mesa: Path) -> list[str]:
 
 
 class TestAEscritaTardiaNaoAlcancaAMesa:
-    """RÉGUA 2 — o fim a fim, e a MORDIDA nos dois sentidos.
-
-    Custa dois pytest aninhados de UM arquivo cada. É o único instrumento
-    daqui que exercita a cadeia inteira — `sessionstart`, coleta, teste,
-    teardown, `sessionfinish` e `atexit` —, e é a cadeia inteira que falhou.
-    """
+    """RÉGUA 2 — o fim a fim, e a MORDIDA nos dois sentidos."""
 
     def test_sem_a_cura_a_escrita_tardia_alcanca_a_mesa(
         self, tmp_path: Path, repo: Path
     ) -> None:
-        """A MORDIDA. Com a escotilha ligada, o vazamento volta a acontecer.
-
-        Se este caso ficar VERDE-por-ausência (nada na mesa), a régua irmã
-        abaixo não prova nada: ela estaria medindo um vazamento que já não
-        existe por outro motivo qualquer.
-        """
+        """A MORDIDA. Com a escotilha ligada, o vazamento volta a acontecer."""
         mesa, saida = _rodar_o_ninho(tmp_path, repo, com_a_cura=False)
         assert saida.returncode == 0, saida.stdout + saida.stderr
         rastros = _nasceram_na_mesa(mesa)
@@ -440,14 +355,7 @@ class TestAEscritaTardiaNaoAlcancaAMesa:
 
 
 class TestOCabecalhoRelataAMesaParada:
-    """O `--casa` do `check_faixa_sintetica.py` ganhou chamador.
-
-    Até 25/08 o `~/.config` REAL não era olhado por instrumento nenhum em
-    estado PARADO: `scripts/portoes.sh` só roda o `--arvore`, e a
-    FAIXA-NO-BERCO-01 é DELTA — cega para a sujeira que já estava lá quando a
-    sessão começou. Foi essa cegueira que deixou quatro forjados morarem na
-    fila dela de 22/08 a 25/08 sem ninguém ver.
-    """
+    """O `--casa` do `check_faixa_sintetica.py` ganhou chamador."""
 
     def test_o_cabecalho_diz_quantos_ja_moram_la(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

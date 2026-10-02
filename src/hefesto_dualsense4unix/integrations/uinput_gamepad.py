@@ -59,142 +59,43 @@ XBOX360_PRODUCT = 0x028E
 XBOX360_NAME = "Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"
 
 # DualSense (Sony) FÍSICO (054c:0ce6). NÃO entra em máscara de vpad nenhuma:
-# é o VID/PID que a launch option IGNORE_DEVICES manda o SDL esconder — um vpad
-# com este PID some junto com o físico (VPAD-04). As constantes ficam porque
-# identificam o controle REAL em outros módulos (espelham `evdev_reader` e
-# `uhid_gamepad.DUALSENSE_PRODUCT`).
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PRODUCT = 0x0CE6
 DUALSENSE_NAME = "Sony Interactive Entertainment DualSense Wireless Controller"
 
 # DualSense **Edge** — a máscara "dualsense" do vpad (VPAD-04). Espelha o
-# `uhid_gamepad.VPAD_PRODUCT`: uhid E uinput apresentam o MESMO Edge 0x0df2,
-# então o invariante VPAD-06 (vpad nunca divide VID/PID com o físico) vale em
-# TODOS os caminhos de criação, inclusive neste fallback degradado. Ressalva
-# honesta (refutação nº 2 do sprint doc): um vpad uinput 0df2 não tem hidraw —
-# o SDL não usa o driver HIDAPI PS5 nele e cai no matching evdev com um GUID
-# (version 0x3) ausente do gamecontrollerdb; esse mapeamento NUNCA foi validado
-# ao vivo. NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: aqui dizia que por
-# isso "as envs materializadas para o wrapper omitem o IGNORE_DEVICES quando
-# qualquer vpad está neste backend degradado". Não omitem mais. Desde o caminho
-# Xbox (13/09) o uinput é ESCOLHA dela, e desde 14/09 vale a decisão
-# D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL: fora do Modo Nativo o jogo vê só
-# o virtual, em qualquer canal. O mapeamento evdev deste vpad continua sem
-# validação ao vivo, e isso segue escrito aqui porque é o preço que sobrou (ver
-# `daemon.launch_env.compose_env`).
 DUALSENSE_EDGE_PRODUCT = 0x0DF2
 DUALSENSE_EDGE_NAME = (
     "Sony Interactive Entertainment DualSense Edge Wireless Controller"
 )
 
-# Nintendo Switch Pro Controller — a TERCEIRA máscara (ordem dela, 07/09/2026).
-#
 # É EMULAÇÃO, não suporte a aparelho Nintendo físico: o Hefesto faz o DualSense
-# DELA se apresentar ao jogo como um Pro. O foco do produto continua sendo os
 # quatro DualSense (decisão dela, 06/09/2026).
-#
-# VID/PID lidos no fonte C em `assets/dkms/hid-nintendo/hid-ids.h:1068,1073`
-# (`USB_VENDOR_ID_NINTENDO` / `USB_DEVICE_ID_NINTENDO_PROCON`) — o mesmo par que
-# `core.linhagem_nintendo.VIDPID_PRO` já nomeia.
-#
-# O PID É 0x2009 E TEM DE SER, e isto DERRUBA a afirmação que estava escrita em
-# `interface/aba02.py` (*"o PID forjado não pode ser 0x2009"*). MEDIDO em
-# 07/09/2026 dirigindo a libSDL2 desta máquina por ctypes, com o nó de pé:
-#
-#     057e:2009 -> SDL_GameControllerGetType = 5 (NINTENDO_SWITCH_PRO)
-#     057e:2017 -> a SDL responde outro aparelho (SNES), não o Pro
-#
-# A SDL decide o TIPO — e portanto os prompts — pelo par VID/PID, e 0x2009 é o
-# único que devolve Switch Pro. Um PID "seguro" entrega uma máscara que não
-# mostra prompt de Nintendo nenhum, que é a máscara inteira.
-#
-# O QUE A RESSALVA DAQUELE TEXTO ACERTAVA, E FICA DECLARADO: se um Pro
-# Controller (ou o clone 8BitDo em modo Switch, que mente o mesmo par) estiver
-# na mesa E a lista de `SDL_GAMECONTROLLER_IGNORE_DEVICES` contiver
-# `0x057e/0x2009`, o jogo perde o físico E o vpad juntos — é o VPAD-04 com
-# outro fabricante. O produto NUNCA emite esse par no IGNORE dele
-# (`daemon.launch_env._IGNORE_VALUE` é 054c:0ce6 + 28de:11ff); o risco só nasce
-# de uma lista que a pessoa escreveu à mão. Não há saída por outro PID: ou é
-# 0x2009 e a máscara existe, ou não é e ela não faz o que promete.
 NINTENDO_VENDOR = 0x057E
 NINTENDO_PROCON_PRODUCT = 0x2009
-#: O nome que o `hid-nintendo` escreve (`ctlr->input->name = hdev->name`,
-#: `hid-nintendo.c:2415`) mais o sufixo da casa — o mesmo padrão da máscara
-#: Xbox, e serve a quem lê `/proc/bus/input/devices` com quatro vpads na mesa.
-#:
-#: **FATO SUBSTITUÍDO — 07/09/2026.** Esta linha dizia *"o nome NÃO entra no
-#: GUID da SDL, então o sufixo é de graça"*. **As duas metades são falsas**, e
-#: a medição está abaixo. O nome ENTRA no GUID, e o sufixo NÃO é de graça.
-#:
-#: MEDIDO com a libSDL2 desta máquina (`libSDL2-2.0.so.0.3000.0`), enumerando
 #: os quatro vpads dela sem abrir nenhum. Os bytes 2-3 do GUID são o **CRC16
-#: do nome** (`SDL_crc16`, refletido, poly 0xA001) — conferido nos quatro,
-#: 4 de 4:
-#:
-#:     nome ................................ crc16   bytes[2:4] do GUID
 #:     DualSense ... (Hefesto P1) .......... 0x8076  7680
 #:     DualSense ... (Hefesto P2) .......... 0x7076  7670
 #:     DualSense ... (Hefesto P3) .......... 0xe077  77e0
 #:     DualSense ... (Hefesto P4) .......... 0xd075  75d0
-#:
-#: O QUE ISSO CUSTA, e é a parte que importa para quem mexer no nome: trocar o
-#: nome troca o GUID. A busca de mapping da SDL cai de volta para o GUID com
-#: esse CRC ZERADO quando o primeiro não casa, então um mapping do
-#: `gamecontrollerdb` continua sendo encontrado — mas os quatro vpads colapsam
-#: no MESMO GUID (`030000004c050000f20d000000810000`) e passam a ser servidos
-#: por UM mapping só, o primeiro registrado. Consequência medida:
-#: `SDL_JoystickNameForIndex` devolve o nome certo de cada um, e
-#: `SDL_GameControllerNameForIndex` devolve **"Hefesto P1" nos quatro**.
-#:
-#: Ou seja: **o número dentro do nome não chega a um jogo que use a API
-#: GameController** — ele chega pelo evdev, pelo `/proc/bus/input/devices` e
-#: pela API Joystick crua. Ver `CoopManager.numero_para_o_nome`, que é quem põe
-#: o número ali, e a ressalva escrita na docstring dela.
 NINTENDO_PROCON_NAME = (
     "Nintendo Co., Ltd. Pro Controller (Hefesto - Dualsense4Unix virtual)"
 )
 
-# Bus USB (0x03): apresentar como controle USB real ajuda o match da SDL no
-# gamecontrollerdb (o GUID inclui bustype+vendor+product). O default do
-# python-evdev é BUS_USB, mas mantemos explícito.
 BUS_USB = 0x03
 
-#: Versão do input_id do device virtual. O python-uinput usava 0x3 por default
-#: e o GUID SDL inclui a versão — preservamos o valor para o match no
-#: gamecontrollerdb não mudar entre releases (validado ao vivo em gameplay).
 DEVICE_VERSION = 0x3
 
-#: FEAT-VPAD-FF-PASSTHROUGH-01 — nº máximo de efeitos FF simultâneos que o
-#: vpad anuncia ao kernel (`ff_effects_max`). O uinput exige > 0 quando EV_FF
-#: está nas capabilities; SDL usa tipicamente 1-2 efeitos por jogo.
 MAX_FF_EFFECTS = 16
 
-#: Cap de eventos FF drenados por tick — proteção contra flood no fd (jogo
-#: emitindo play/stop em rajada); o excedente fica para o próximo tick.
 _FF_MAX_EVENTS_PER_PUMP = 64
 
-#: O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01: de quanto em quanto o fio
-#: da vibração acorda sem evento, só para ver se o `stop()` pediu para ele sair.
 _FF_FIO_ACORDA_S = 0.25
 
 
 @functools.cache
 def _uinput_sem_no_proprio(base: type) -> type:
-    """A classe do `UInput` que NÃO abre o próprio nó depois de criar.
-
-    O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 (27/09/2026). O
-    construtor do python-evdev faz `self.device = self._find_device(self.fd)`
-    logo depois do `UI_DEV_CREATE`: abre `/dev/input/eventN` e tenta de novo a
-    cada 100 ms enquanto o udev não dá o grupo ao nó. Com o `cosmic-osk` de pé,
-    o `gilrs` dele manda um efeito de vibração ao pad novo nesse meio-tempo; o
-    kernel espera o DONO responder segurando a trava do nó por até 30 s, e o
-    dono somos nós, parados no `open()` do mesmo nó. O logind (um fio só) trava
-    junto no `TakeDevice`, e o `cosmic-comp` aborta com a sessão dela: medido
-    duas vezes na noite de 27/09 e reproduzido de propósito na tela de login.
-
-    Nenhum código do Hefesto usa esse `InputDevice`: a vibração é atendida
-    pelo fd do uinput. Sem o `open()`, não há espera circular.
-    """
+    """A classe do `UInput` que NÃO abre o próprio nó depois de criar."""
 
     class _UInputSemNoProprio(base):  # type: ignore[misc]
         def _find_device(self, _fd: int) -> None:
@@ -203,19 +104,8 @@ def _uinput_sem_no_proprio(base: type) -> type:
     _UInputSemNoProprio.__name__ = f"{base.__name__}SemNoProprio"
     return _UInputSemNoProprio
 
-#: Teto de segurança para efeito de duração 0 ("toca até mandar parar").
-#:
-#: Sem ele o deadline é infinito e SÓ o jogo pode parar o motor — se ele fecha
-#: no meio de uma vibração, trava, ou o evento de stop se perde, o controle
-#: vibra indefinidamente (relatado ao vivo: "não parava por nada", e a saída
-#: foi o botão "Parar", que por sua vez trava o rumble em silêncio).
-#:
-#: 30 s é generoso de propósito: qualquer novo play do mesmo efeito RENOVA o
-#: prazo, então uma cena que vibra continuamente segue vibrando enquanto o jogo
-#: mantiver o pedido. O teto só age quando ninguém está mais pedindo nada.
 FF_TETO_SEM_DURACAO_S = 30.0
 
-# Catálogo de flavors. `name`/`vendor`/`product` definem a máscara.
 # VPAD-04: a entrada dualsense usa o Edge (0x0df2) — NUNCA o 0x0ce6 do físico.
 FLAVORS: dict[str, dict[str, Any]] = {
     "dualsense": {
@@ -234,80 +124,14 @@ FLAVORS: dict[str, dict[str, Any]] = {
         "product": NINTENDO_PROCON_PRODUCT,
     },
 }
-#: SPRINT-GAME-RUMBLE-01: o default é **xbox**, não dualsense. Na época da
-#: decisão o vpad dualsense-uinput tinha o MESMO VID/PID do físico (054c:0ce6)
-#: e SEM hidraw — o SDL/HIDAPI do jogo adotava o FÍSICO pelo hidraw e IGNORAVA
-#: o vpad (rumble in-game MORTO + controle DUPLICADO). Com a máscara Xbox 360
-#: (045e:028e) o jogo vê o vpad pelo caminho evdev/FF e a vibração funciona —
 #: provado com SDL2 e validado em gameplay. Hoje a máscara DualSense vibra pelo
-#: backend uhid (Edge 0x0df2 com hidraw de verdade) e o fallback uinput também
-#: é Edge (VPAD-04), mas o default segue xbox: é o piso de compatibilidade que
-#: funciona validado em QUALQUER backend. Quem prefere prompts de PlayStation
-#: escolhe "dualsense" na GUI/perfil (documentado no README).
-#:
-#: NOTA DATADA — 22/08/2026 (MASCARA-QUE-GRUDA-01): a decisão dela — *"a máscara
-#: deve vir da escolha do user"* — tirou a máscara dos PRESETS, e **não** daqui.
-#: São duas perguntas, e confundi-las foi o que fez o `xbox` viajar do daemon
-#: para dentro do arquivo dela:
-#:
-#: * o que um PERFIL shipa: nada. Os presets de jogo passam a `gamepad_flavor:
-#:   null`, e um perfil novo nasce sem botão marcado no editor (`null` = "mantém
-#:   a máscara que estiver valendo"). Nenhum arquivo ganha máscara sem gesto;
-#: * o que o DAEMON usa quando ninguém nunca escolheu: **`dualsense`**, e NÃO
-#:   este valor. Quem decide numa instalação nova é
-#:   `DaemonConfig.gamepad_flavor` (HARMONIA-MASK-01, `lifecycle.py`), e
-#:   `start_gamepad_emulation` faz `normalize_flavor(flavor or
-#:   daemon.config.gamepad_flavor)` — o `DEFAULT_FLAVOR` só entra quando a
 #:   config vem `None` ou com valor desconhecido. A primeira escolha dela na
-#:   GUI substitui os dois e passa a grudar (`2b11172`).
-#:
-#: NOTA DATADA — 23/08/2026. Esta nota nasceu em 22/08 dizendo que este valor
-#: era "o que o daemon usa quando ninguém nunca escolheu" e que "a H1 **não foi
-#: remedida**". As duas afirmações são falsas, e a medição que as derruba já
-#: estava no repositório:
-#:
-#: * MEDIDO num `XDG_CONFIG_HOME` vazio: `DaemonConfig.gamepad_flavor` de
-#:   fábrica é `'dualsense'`; `DEFAULT_FLAVOR` aqui é `'xbox'`. Numa instalação
 #:   nova o jogo recebe a máscara DualSense;
-#: * a H1 FOI remedida, e a cronologia fecha: o portão que a citava nasceu em
-#:   **14/07** (`56564de`), o vpad passou a subir em `uhid` em **16/07**
-#:   (`b0596f0`/`389e429`), e em **22/07** a HARMONIA-MASK-01 — decisão dela —
-#:   registrou a máscara dualsense *"validada em jogo real
-#:   (Sackboy/Mad King/Pragmata)"* e a razão do xbox como *"de antes da máscara
-#:   dualsense vibrar — **superado** pela validação da Onda Harmonia"*. É essa
-#:   remedição que virou o default do daemon.
-#:
-#: Este piso continua `xbox` por um motivo mais estreito, e só ele: é o valor
-#: que `normalize_flavor` devolve para entrada CORROMPIDA (config ausente ou
-#: desconhecida), onde nenhuma das duas máscaras é a resposta certa e o que
-#: importa é não estourar. Trocá-lo é decisão de produto separada, não a
-#: consequência de uma H1 que ninguém remediu.
 DEFAULT_FLAVOR = "xbox"
 
-# Retrocompat: nome histórico apontando para o flavor Xbox.
 DEVICE_NAME = XBOX360_NAME
 
 
-#: Sinônimos tolerados na CLI/IPC → chave canônica de :data:`FLAVORS`. As
-#: chaves canônicas NÃO entram aqui (o resolvedor consulta o `FLAVORS` antes,
-#: para que um terceiro sabor no catálogo valha sem uma linha de edição nesta
-#: tabela — a mesma regra de fonte única do `external_mask.mascaras_validas`).
-#:
-#: NOTA DATADA — 10/08/2026: **"sony"** e **"ps5"** entraram aqui porque eram a
-#: palavra que ela usa para pedir a máscara de PlayStation, e caíam no `else`
-#: junto com o lixo: `normalize_flavor("sony")` devolvia **"xbox"** — a máscara
-#: OPOSTA à pedida, sem erro e sem log. Nome desconhecido é ERRO no portão do
-#: IPC (`ipc_handlers._handle_gamepad_emulation_set`), não default.
-#:
-#: NOTA DATADA — 07/09/2026. Esta nota dizia, com todas as letras, que
-#: "nintendo"/"switch"/"pro" NÃO entram aqui porque *"não existe máscara de
-#: Switch neste catálogo"*. **A máscara passou a existir nesta leva**, e a
-#: razão daquela recusa caiu junto com o fato que a sustentava. As três entram
-#: agora, e a chave canônica `nintendo` NÃO precisou de linha nenhuma nesta
-#: tabela — o `resolver_flavor` consulta o `FLAVORS` antes, exatamente como o
-#: comentário acima prometia. Isso foi MEDIDO, não deduzido: com o sabor no
-#: catálogo e esta tabela intocada, `resolver_flavor("nintendo")` já devolvia
-#: `"nintendo"`.
 FLAVOR_SINONIMOS: dict[str, str] = {
     "ps": "dualsense",
     "ps5": "dualsense",
@@ -324,18 +148,7 @@ FLAVOR_SINONIMOS: dict[str, str] = {
 
 
 def resolver_flavor(flavor: object) -> str | None:
-    """A máscara canônica de `flavor`, ou **None** quando ninguém a reconhece.
-
-    A metade ESTRITA do par: aceita as chaves de :data:`FLAVORS` e os
-    :data:`FLAVOR_SINONIMOS` (sem caixa e sem espaço em volta) e devolve `None`
-    para qualquer outra coisa — inclusive `None`, número e `""`. Quem chama
-    decide o que fazer com a recusa; o que esta função JAMAIS faz é escolher uma
-    máscara por conta própria.
-
-    É a função que o portão do IPC usa. O :func:`normalize_flavor` continua
-    tolerante porque os caminhos internos (perfil em disco, config do daemon,
-    co-op) precisam de um valor sempre — mas nenhum deles é a usuária digitando.
-    """
+    """A máscara canônica de `flavor`, ou **None** quando ninguém a reconhece."""
     if not isinstance(flavor, str):
         return None
     key = flavor.strip().lower()
@@ -345,27 +158,17 @@ def resolver_flavor(flavor: object) -> str | None:
 
 
 def nomes_de_flavor_aceitos() -> tuple[str, ...]:
-    """Todo nome que :func:`resolver_flavor` reconhece, ordenado.
-
-    Existe para a mensagem de recusa do portão poder DIZER o que vale — recusar
-    sem listar a alternativa é trocar um default calado por um erro calado.
-    """
+    """Todo nome que :func:`resolver_flavor` reconhece, ordenado."""
     return tuple(sorted(set(FLAVORS) | set(FLAVOR_SINONIMOS)))
 
 
 def normalize_flavor(flavor: str | None) -> str:
-    """Resolve um flavor válido; cai no default se desconhecido/None.
-
-    TOLERANTE de propósito, e por isso NÃO serve de portão: o desconhecido vira
-    :data:`DEFAULT_FLAVOR` em silêncio. Quem valida entrada de gente (IPC, CLI)
-    usa :func:`resolver_flavor`, que devolve `None` em vez de escolher.
-    """
+    """Resolve um flavor válido; cai no default se desconhecido/None."""
     if flavor is None:
         return DEFAULT_FLAVOR
     return resolver_flavor(flavor) or DEFAULT_FLAVOR
 
 # Mapeamento canonico Hefesto - DualSense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
-# Layout Xbox: cross=A, circle=B, square=X, triangle=Y.
 BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_A",
     "circle": "BTN_B",
@@ -380,61 +183,22 @@ BUTTON_TO_UINPUT: dict[str, str] = {
     "r3": "BTN_THUMBR",
 }
 
-#: O mesmo mapa para a máscara **nintendo**, e a diferença é o par X/Y.
-#:
-#: POR QUE ELE EXISTE, MEDIDO em 07/09/2026 (não lido). Com o nó de pé, a
-#: libSDL2 desta máquina tem DUAS tabelas para o Switch Pro e escolhe entre
-#: elas pelo `SDL_GAMECONTROLLER_USE_BUTTON_LABELS`:
-#:
-#:     =1 (default da SDL) -> a:b1,b:b0,x:b2,y:b3   (segue o RÓTULO impresso)
-#:     =0                  -> a:b0,b:b1,x:b3,y:b2   (segue a POSIÇÃO)
-#:
-#: `bN` é o índice do botão na ORDEM DE CÓDIGO evdev do próprio nó, então
-#: `b0`=BTN_SOUTH(0x130), `b1`=BTN_EAST(0x131), `b2`=BTN_NORTH(0x133) e
-#: `b3`=BTN_WEST(0x134). Os dois pares viram juntos: o **A** de um Pro fica à
-#: DIREITA e o **X** fica em CIMA, ao contrário do Xbox.
-#:
-#: ESTA CASA JÁ ESCOLHEU, E A ESCOLHA É `=0`. O `daemon.launch_env.compose_env`
-#: crava `SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0` em TODA variante desde a
-#: 8BIT-03, para que os Nintendo FÍSICOS dela (o Pro e o 8BitDo em modo Switch)
-#: sejam mapeados por posição, *"como o resto do ecossistema PC espera"*. Uma
-#: máscara que decidisse ao contrário faria a casa ter duas regras para a mesma
-#: pergunta.
-#:
-#: Logo esta tabela é POSICIONAL — e, sendo posicional, ela é a IDENTIDADE dos
 #: códigos que o kernel já usa para o DualSense físico
-#: (`core.evdev_reader.BUTTON_MAP`: cross=BTN_SOUTH, circle=BTN_EAST,
-#: triangle=BTN_NORTH, square=BTN_WEST). O botão de baixo continua sendo
-#: "confirmar"; o que muda é só o desenho na tela do jogo.
-#:
-#: O QUE ISSO CUSTA, DECLARADO: fora do wrapper do Hefesto o default da SDL é
-#: `=1`, e aí os quatro botões da frente chegam trocados aos pares. MEDIDO
-#: nesta bancada, com esta tabela: com `=0`, cross→`a`; com `=1`, cross→`b`.
-#: **Não é limite novo desta máscara** — é o mesmo de todo Nintendo físico
-#: nesta máquina desde a 8BIT-03, e a cura, se um dia for pedida, é a mesma
-#: para os dois: cravar o mapeamento por `SDL_GAMECONTROLLERCONFIG` em vez de
-#: depender do hint.
-#:
-#: `l2_btn`/`r2_btn` NÃO entram aqui de propósito: no Pro os gatilhos são
 #: DIGITAIS (`BTN_TL2`/`BTN_TR2`, ver :func:`_capacidades_procon`) e quem os
-#: escreve é o `forward_analog`, para haver **um escritor só** por código.
 BOTOES_PROCON: dict[str, str] = {
-    "cross": "BTN_SOUTH",    # b0 -> `a` da SDL  (confirmar)
-    "circle": "BTN_EAST",    # b1 -> `b` da SDL  (voltar)
-    "square": "BTN_WEST",    # b3 -> `x` da SDL  (0x134; é o BTN_Y do Xbox)
-    "triangle": "BTN_NORTH", # b2 -> `y` da SDL  (0x133; é o BTN_X do Xbox)
-    "l1": "BTN_TL",          # b5 -> leftshoulder
-    "r1": "BTN_TR",          # b6 -> rightshoulder
-    "create": "BTN_SELECT",  # b9 -> back
-    "options": "BTN_START",  # b10 -> start
-    "ps": "BTN_MODE",        # b11 -> guide
-    "l3": "BTN_THUMBL",      # b12 -> leftstick
-    "r3": "BTN_THUMBR",      # b13 -> rightstick
+    "cross": "BTN_SOUTH",
+    "circle": "BTN_EAST",
+    "square": "BTN_WEST",
+    "triangle": "BTN_NORTH",
+    "l1": "BTN_TL",
+    "r1": "BTN_TR",
+    "create": "BTN_SELECT",
+    "options": "BTN_START",
+    "ps": "BTN_MODE",
+    "l3": "BTN_THUMBL",
+    "r3": "BTN_THUMBR",
 }
 
-#: máscara -> tabela de botões. Fonte única: quem acrescentar um sabor ao
-#: :data:`FLAVORS` sem entrada aqui é reprovado pelo portão
-#: `tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py`.
 BOTOES_POR_FLAVOR: dict[str, dict[str, str]] = {
     "dualsense": BUTTON_TO_UINPUT,
     "xbox": BUTTON_TO_UINPUT,
@@ -442,13 +206,6 @@ BOTOES_POR_FLAVOR: dict[str, dict[str, str]] = {
 }
 
 #: Acima deste valor (0-255) o gatilho analógico do DualSense vira o botão
-#: digital do Pro; abaixo de :data:`LIMIAR_GATILHO_SOLTO` ele solta. Os dois
-#: valores são diferentes de propósito (histerese): com um limiar só, um dedo
-#: parado em cima do ponto emitiria press/release a 60 Hz.
-#:
-#: O aparelho não decide isto por nós — é a consequência declarada de o Pro
-#: **não ter gatilho analógico** (medido em `hid-nintendo.c`: o `procon` não
-#: registra `ABS_Z`/`ABS_RZ`, e ZL/ZR são `BTN_TL2`/`BTN_TR2`).
 LIMIAR_GATILHO_PRESSIONADO = 32
 LIMIAR_GATILHO_SOLTO = 16
 
@@ -502,8 +259,8 @@ def _capacidades_padrao(*, with_ff: bool) -> dict[int, Any]:
             (ecodes.ABS_Y, axis),
             (ecodes.ABS_RX, axis),
             (ecodes.ABS_RY, axis),
-            (ecodes.ABS_Z, axis),   # LT
-            (ecodes.ABS_RZ, axis),  # RT
+            (ecodes.ABS_Z, axis),
+            (ecodes.ABS_RZ, axis),
             (ecodes.ABS_HAT0X, hat),
             (ecodes.ABS_HAT0Y, hat),
         ],
@@ -578,22 +335,21 @@ def _capacidades_procon(*, with_ff: bool) -> dict[int, Any]:
             (ecodes.ABS_HAT0X, hat),
             (ecodes.ABS_HAT0Y, hat),
         ],
-        # Na ordem de CÓDIGO, que é a ordem em que a SDL os numera.
         ecodes.EV_KEY: [
-            ecodes.BTN_SOUTH,    # 0x130  b0  <- B do Pro
-            ecodes.BTN_EAST,     # 0x131  b1  <- A do Pro
-            ecodes.BTN_NORTH,    # 0x133  b2  <- X do Pro
-            ecodes.BTN_WEST,     # 0x134  b3  <- Y do Pro
-            ecodes.BTN_Z,        # 0x135  b4  <- Capture (declarado e mudo)
-            ecodes.BTN_TL,       # 0x136  b5  <- L
-            ecodes.BTN_TR,       # 0x137  b6  <- R
-            ecodes.BTN_TL2,      # 0x138  b7  <- ZL (gatilho DIGITAL)
-            ecodes.BTN_TR2,      # 0x139  b8  <- ZR (gatilho DIGITAL)
-            ecodes.BTN_SELECT,   # 0x13a  b9  <- Minus
-            ecodes.BTN_START,    # 0x13b  b10 <- Plus
-            ecodes.BTN_MODE,     # 0x13c  b11 <- Home
-            ecodes.BTN_THUMBL,   # 0x13d  b12
-            ecodes.BTN_THUMBR,   # 0x13e  b13
+            ecodes.BTN_SOUTH,
+            ecodes.BTN_EAST,
+            ecodes.BTN_NORTH,
+            ecodes.BTN_WEST,
+            ecodes.BTN_Z,
+            ecodes.BTN_TL,
+            ecodes.BTN_TR,
+            ecodes.BTN_TL2,
+            ecodes.BTN_TR2,
+            ecodes.BTN_SELECT,
+            ecodes.BTN_START,
+            ecodes.BTN_MODE,
+            ecodes.BTN_THUMBL,
+            ecodes.BTN_THUMBR,
         ],
     }
     if with_ff:
@@ -602,21 +358,11 @@ def _capacidades_procon(*, with_ff: bool) -> dict[int, Any]:
 
 
 class _FabricaDeCapacidades(Protocol):
-    """A forma dos dois construtores de capabilities — `(*, with_ff)`.
-
-    POR QUE UM PROTOCOL E NÃO `Callable[..., dict[int, Any]]`: as reticências
-    dizem *"assinatura desconhecida"*, e sob `strict` o mypy trata chamar isso
-    como chamar função sem tipo — `no-untyped-call` mais `no-any-return`, os
-    dois no `construtor(with_ff=with_ff)` logo abaixo. `Callable` também não
-    saberia escrever este par, porque os dois argumentos são SOMENTE-NOMEADOS e
-    a forma `Callable[[bool], …]` é posicional.
-    """
+    """A forma dos dois construtores de capabilities — `(*, with_ff)`."""
 
     def __call__(self, *, with_ff: bool) -> dict[int, Any]: ...
 
 
-#: máscara -> construtor de capabilities. Fonte única, como o
-#: :data:`BOTOES_POR_FLAVOR`.
 CAPACIDADES_POR_FLAVOR: dict[str, _FabricaDeCapacidades] = {
     "dualsense": _capacidades_padrao,
     "xbox": _capacidades_padrao,
@@ -632,108 +378,36 @@ def _build_capabilities(*, with_ff: bool, flavor: str = DEFAULT_FLAVOR) -> dict[
 
 @dataclass
 class UinputGamepad:
-    """Wrapper do device virtual. Lazy-creates no `start()`.
-
-    O default mantém o flavor Xbox para retrocompatibilidade dos call-sites
-    antigos; o daemon e a CLA usam `UinputGamepad.for_flavor("dualsense")`.
-    """
+    """Wrapper do device virtual. Lazy-creates no `start()`."""
 
     name: str = DEVICE_NAME
     vendor: int = XBOX360_VENDOR
     product: int = XBOX360_PRODUCT
     bustype: int = BUS_USB
     flavor: str = "xbox"
-    #: FEAT-VPAD-FF-PASSTHROUGH-01: destino do rumble vindo do JOGO via FF.
-    #: Recebe (weak, strong) já convertidos para 0-255; injetado por quem cria
-    #: o vpad (gamepad.py → controle primário; coop.py → controle do jogador).
-    #: None = FF aceito no handshake mas descartado (vpad "mudo").
     rumble_sink: Callable[[int, int], None] | None = None
-    #: Relógio monotônico injetável (testes de expiração de duração).
     time_fn: Callable[[], float] = time.monotonic
-    #: VPAD-05 — por que o flavor dualsense caiu NESTE backend (uinput), setado
-    #: pela factory (`make_virtual_pad`): "uhid_indisponivel",
-    #: "uhid_start_falhou", "uhid_bind_falhou" ou "uhid_vetado_pelo_chamador".
-    #: None = uinput por design (máscara xbox), não é degradação. Exposto no
     #: `state_full` (`gamepad_emulation.degraded_motivo`) para GUI/doctor.
     fallback_motivo: str | None = None
-    #: NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026) — o aparelho que o JOGO vê,
-    #: quando não é o da máscara. ``None`` = o da máscara, como sempre foi.
-    #:
-    #: O `flavor` é o eixo da máscara (a escolha do cartão), e os juízes de
-    #: recriação do daemon o comparam com a máscara efetiva. O modo Xbox veste
-    #: todo pad de Xbox 360, porque no canal comum só ele é visto pelo jogo:
-    #: o Edge e o Pro no `uinput`, sem hidraw, somem sob o Proton (medido na
-    #: sessão dela, 27/09: `medidas/sessao/G1-…` e `G3-…`). Quem escreve este
-    #: campo é a fábrica (`virtual_pad.make_virtual_pad`), por :meth:`vestir`.
     aparelho: str | None = None
 
     _device: Any = None
-    #: Módulo `evdev.ecodes` (guardado no start p/ não reimportar por tick).
     _ecodes: Any = None
     _last_buttons: frozenset[str] = field(default_factory=frozenset)
-    # PERF-MULTI-CONTROLLER-01: último sexteto analógico emitido — o forward
-    # roda a cada tick (60Hz) por vpad; sem delta eram 7 writes/tick/vpad no
-    # /dev/uinput mesmo com tudo parado.
     _last_axes: tuple[int, int, int, int, int, int] | None = None
-    # -- estado FF (FEAT-VPAD-FF-PASSTHROUGH-01) -------------------------
-    #: True quando o device nasceu com EV_FF (ambiente pode degradar sem FF).
     _ff_supported: bool = False
-    #: id do efeito → (weak16, strong16, duração_ms) do último upload.
     _ff_effects: dict[int, tuple[int, int, int]] = field(default_factory=dict)
-    #: id do efeito em reprodução → deadline monotônico. Efeito sem duração
-    #: recebe `FF_TETO_SEM_DURACAO_S` em vez de infinito (ver a constante).
     _ff_playing: dict[int, float] = field(default_factory=dict)
-    #: Ganho global (FF_GAIN, 0.0-1.0); SDL manda 0xFFFF (1.0) por padrão.
     _ff_gain: float = 1.0
-    #: Último par (weak, strong) 0-255 entregue ao sink — o sink escreve HID,
-    #: então só é chamado quando o par MUDOU (throttle por mudança).
     _ff_last_sent: tuple[int, int] = (0, 0)
-    #: SPRINT-GAME-RUMBLE-01 — nº de "play" de FF que o JOGO pediu neste vpad
-    #: desde a criação (diagnóstico: "o jogo mandou rumble? quantas vezes?").
-    #: Incrementa em cada `_start_ff_effect` de efeito válido; exposto no
     #: state_full para a GUI/doctor confirmarem se o jogo enxerga o vpad.
     _ff_play_count: int = 0
-    # --- MASCARA-XBOX-MUDA-01 (09/08/2026) ------------------------------
-    #
-    #: Nº de pares NÃO-NULOS que saíram para o `rumble_sink` — o irmão do
-    #: `ff_nao_nulo_count` do caminho uhid.
-    #:
-    #: **Por que ele existe, e é defeito de verdade.** O painel da aba Rumble
     #: (`app/actions/rumble_actions.texto_dos_pedidos_de_vibracao`) pergunta
-    #: `nao_nulos` ANTES de `plays`, e o `daemon/ipc_handlers` lê os dois com
-    #: `getattr(vp, ..., 0)`. Como este backend nunca teve `ff_nao_nulo_count`,
-    #: o zero do default virava afirmação: com a máscara **Xbox** funcionando
-    #: perfeitamente, a tela dizia *"o jogo falou de vibração Nx, mas pediu
-    #: força zero em todas"* — e a frase manda caçar no jogo/máscara, que é o
-    #: lado oposto do código. Um modo inteiro do produto era, por construção,
-    #: impossível de medir; e o número que ele mostrava acusava o inocente.
-    #:
-    #: A contagem é no `_refresh_ff`, no instante em que o par vai ao sink:
-    #: é o mesmo ponto do caminho uhid (o PEDIDO do jogo em 0-255, antes do
-    #: multiplicador da política) e, aqui, DEPOIS do ganho e do `>> 8` — que
-    #: é honesto: um efeito de magnitude 200/65535 vira zero nos motores, e
-    #: contá-lo como "pediu força" seria a mesma mentira ao contrário.
     _ff_nao_nulo_count: int = 0
-    #: Maior par pedido (weak, strong) — "dava para SENTIR?". Comparado por
-    #: intensidade (o maior motor, desempate pela soma) e nunca por ordem
-    #: lexicográfica de tupla: `(0, 255)` é um pedido enorme e `(1, 0)` é
-    #: imperceptível, mas `(1, 0) > (0, 255)` em Python.
     _ff_maior_pedido: tuple[int, int] = (0, 0)
-    #: Play de efeito que nunca foi uploadado — pedido do jogo que NÃO virou
-    #: vibração por falha nossa (catálogo perdido). Sem contá-lo, o descarte
-    #: era invisível e a tela dizia "o jogo não pediu".
     _ff_descartado_count: int = 0
-    # --- O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 (27/09/2026) -----
-    #: O fio que atende o protocolo de vibração por prontidão, desde a linha
-    #: seguinte à criação. Sem ele, quem manda um efeito ao pad (o jogo, ou o
-    #: `cosmic-osk` de toda sessão do COSMIC) esperava o tique do repasse da
-    #: entrada, de 8 ms a mais de 1 s, com a trava do nó presa no kernel.
-    #: None = pad sem fd de verdade (os dublês da suíte): o tique atende, como
-    #: antes.
     _ff_fio: threading.Thread | None = None
-    #: Guarda o catálogo de efeitos entre o fio e o tique (`_refresh_ff`).
     _ff_trava: threading.Lock = field(default_factory=threading.Lock)
-    #: Pedido de saída do fio, feito pelo `stop()`.
     _ff_pare: threading.Event = field(default_factory=threading.Event)
 
     @classmethod
@@ -744,19 +418,7 @@ class UinputGamepad:
         rumble_sink: Callable[[int, int], None] | None = None,
         identity: str | None = None,
     ) -> UinputGamepad:
-        """Constrói o gamepad com a máscara (VID/PID/nome) do flavor dado.
-
-        `rumble_sink` (FEAT-VPAD-FF-PASSTHROUGH-01) recebe o rumble do jogo
-        já em 0-255 (weak, strong); ver docstring do campo.
-
-        `identity` (MÁSCARA-POR-JOGADOR-01, 15/08/2026) é o MAC canônico do
-        controle FÍSICO deste jogador — o mesmo que `discover_dualsense_evdevs`
-        usa como chave. Quando ele vem, `flavor` deixa de ser a resposta e passa
-        a ser o **padrão herdado**: a máscara que este aparelho escolheu vence
-        (`external_mask.mascara_efetiva`), e sem escolha nada muda. `None` = o
-        chamador não sabe de quem é o vpad, e aí a máscara é a do jogo, como
-        sempre foi.
-        """
+        """Constrói o gamepad com a máscara (VID/PID/nome) do flavor dado."""
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             mascara_efetiva,
         )
@@ -797,12 +459,7 @@ class UinputGamepad:
         self.product = spec["product"]
 
     def start(self) -> bool:
-        """Cria o device. Retorna False se /dev/uinput indisponível.
-
-        FEAT-VPAD-FF-PASSTHROUGH-01: tenta criar COM force-feedback (EV_FF);
-        em kernel/ambiente sem suporte, degrada para o vpad sem FF (o jogo
-        não vibra, input segue funcionando) — nunca crasha.
-        """
+        """Cria o device. Retorna False se /dev/uinput indisponível."""
         if self._device is not None:
             return True
         try:
@@ -845,28 +502,17 @@ class UinputGamepad:
         try:
             fio.start()
         except RuntimeError as exc:
-            # O processo no teto de fios: o pad nasce assim mesmo e o tique
-            # atende a vibração (`pump_ff` lê o fd quando o fio não está vivo).
-            # Sem isto o `start()` levantava com o nó já criado no kernel, e
-            # ninguém o destruiria: um controle a mais que o jogo vê e ninguém
-            # alimenta. É a cura do irmão `uhid` (A-ENTRADA-DE-CADA-JOGADOR-
-            # CHEGA-INTEIRA-01, 28/09/2026), no pad do modo Xbox.
             logger.warning("uinput_fio_da_vibracao_nao_nasceu", err=str(exc),
                            name=self.name)
             self._ff_fio = None
 
     def _atender_a_vibracao(self, device: Any, fd: int, pare: threading.Event) -> None:
-        """O laço do fio: acorda quando o fd tem evento e atende na hora.
-
-        Atende o handshake (`UI_FF_UPLOAD`/`UI_FF_ERASE`), o play/stop e o
-        ganho, sob a trava do catálogo. A expiração e a entrega ao físico
-        (`_refresh_ff`) seguem no tique, com o rate-limit e o dedup de sempre.
-        """
+        """O laço do fio: acorda quando o fd tem evento e atende na hora."""
         while not pare.is_set():
             try:
                 prontos = prontos_para_ler([fd], _FF_FIO_ACORDA_S)
             except (OSError, ValueError):
-                return  # fd fechado pelo stop()
+                return
             if not prontos or pare.is_set():
                 continue
             with self._ff_trava:
@@ -883,13 +529,7 @@ class UinputGamepad:
                         logger.warning("vpad_ff_event_failed", err=str(exc))
 
     def _create_device(self, *, with_ff: bool) -> Any | None:
-        """Cria o UInput do python-evdev; None em falha (o start decide o fallback).
-
-        O pad nasce da classe que não abre o próprio nó
-        (:func:`_uinput_sem_no_proprio`). Quando o `evdev.UInput` não é uma
-        classe (a vigia da suíte o troca por uma função), a chamada vai direto
-        a ele, e a vigia registra e recusa como sempre.
-        """
+        """Cria o UInput do python-evdev; None em falha (o start decide o fallback)."""
         from evdev import UInput
 
         fabrica = _uinput_sem_no_proprio(UInput) if isinstance(UInput, type) else UInput
@@ -908,22 +548,10 @@ class UinputGamepad:
             return None
 
     def stop(self) -> None:
-        """Fecha o pad UMA vez, mesmo com dois `stop()` ao mesmo tempo.
-
-        O NÓ É DE QUEM O TIRA PRIMEIRO (`dict.pop`, atômico sob o GIL), e é a
-        cura que a A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 deu ao irmão
-        `uhid` em 28/09/2026. Dois `stop()` juntos (a interface troca o modo
-        enquanto o laço derruba o pad) liam o mesmo `_device` e chamavam o
-        `close()` dele duas vezes; o do python-evdev confere o `fd` e só depois
-        o zera, e o segundo `close` caía num descritor que outra thread já
-        tinha reaproveitado. Quem chega depois só espera o fio sair.
-        """
+        """Fecha o pad UMA vez, mesmo com dois `stop()` ao mesmo tempo."""
         fio = getattr(self, "_ff_fio", None)
         if self._device is None and fio is None:
             return
-        # O fio da vibração sai ANTES do fd fechar: um select num fd fechado
-        # (e talvez reaproveitado por outro aparelho) atenderia o pad errado.
-        # Os dois `stop()` esperam por ele; o nó só sai depois, e de um só.
         if fio is not None:
             self._ff_pare.set()
             fio.join(timeout=2 * _FF_FIO_ACORDA_S + 0.5)
@@ -932,8 +560,6 @@ class UinputGamepad:
         device = self.__dict__.pop("_device", None)
         if device is None:
             return
-        # FEAT-VPAD-FF-PASSTHROUGH-01: se o FF do jogo deixou motor ligado,
-        # zera o rumble físico antes de fechar (o vpad some; ninguém mais
         # mandaria o stop e o DualSense ficaria vibrando).
         if self._ff_last_sent != (0, 0) and self.rumble_sink is not None:
             with contextlib.suppress(Exception):
@@ -969,12 +595,7 @@ class UinputGamepad:
 
     @property
     def ff_nao_nulo_count(self) -> int:
-        """Nº de pedidos com FORÇA — os que fariam o motor mexer.
-
-        MASCARA-XBOX-MUDA-01. Este é o número que a aba Rumble pergunta
-        primeiro; sem ele a máscara Xbox respondia zero por ausência e a tela
-        acusava o jogo de pedir silêncio. Ver o campo `_ff_nao_nulo_count`.
-        """
+        """Nº de pedidos com FORÇA — os que fariam o motor mexer."""
         return self._ff_nao_nulo_count
 
     @property
@@ -994,12 +615,7 @@ class UinputGamepad:
 
     @property
     def backend(self) -> str:
-        """Sempre "uinput": device de evdev (sem hidraw). É o backend da máscara
-        Xbox 360 e o fallback do flavor dualsense quando o uhid não sobe. Mesmo
-        degradado o PID é o Edge 0x0df2 (invariante VPAD-06 — nunca o 0ce6 do
-        físico), mas sem hidraw o mapeamento SDL desse GUID nunca foi validado:
-        o botão de Launch Options usa isto para NÃO anunciar IGNORE_DEVICES no
-        ramo degradado (plano B da refutação nº 2 do sprint doc)."""
+        """Sempre "uinput": device de evdev (sem hidraw). É o backend da máscara"""
         return "uinput"
 
     def forward_analog(
@@ -1012,18 +628,7 @@ class UinputGamepad:
         l2: int,
         r2: int,
     ) -> None:
-        """Aplica valores analógicos no device virtual (só o que MUDOU).
-
-        PERF-MULTI-CONTROLLER-01: emite apenas os eixos com valor novo e o SYN
-        só quando algo foi emitido. Valor repetido não escreve nada (o kernel de
-        qualquer forma descartaria ABS repetido, mas o write/syscall era pago).
-
-        O stick parado na mesa ainda escreve: o repouso de alguns eixos cai na
-        fronteira entre dois valores do conversor, e o aparelho publica a troca
-        de 1 LSB (29/09/2026: 4.079 eventos de eixo em 60 s nos quatro pads).
-        O pad repete o byte do aparelho, chiado incluído, e não põe filtro nem
-        zona morta: a zona é do jogo (D-2909-O-CHIADO-DO-ANALOGICO-VAI-AO-JOGO).
-        """
+        """Aplica valores analógicos no device virtual (só o que MUDOU)."""
         if self._device is None or self._ecodes is None:
             return
         axes = (lx, ly, rx, ry, l2, r2)
@@ -1050,17 +655,7 @@ class UinputGamepad:
         last: tuple[int, int, int, int, int, int] | None,
         ec: Any,
     ) -> None:
-        """O mesmo trabalho sob a máscara `nintendo`: 4 eixos + 2 botões.
-
-        O Pro não tem `ABS_Z`/`ABS_RZ` (ver :func:`_capacidades_procon`), então
-        L2 e R2 saem por `BTN_TL2`/`BTN_TR2`. **Este é o único escritor desses
-        dois códigos** — `BOTOES_PROCON` não os tem de propósito — porque um
-        código com dois escritores é um código cujo estado ninguém sabe.
-
-        A conversão é por histerese (:data:`LIMIAR_GATILHO_PRESSIONADO` /
-        :data:`LIMIAR_GATILHO_SOLTO`): o valor anterior decide o limiar de
-        agora, e um dedo parado em cima do ponto não emite nada.
-        """
+        """O mesmo trabalho sob a máscara `nintendo`: 4 eixos + 2 botões."""
         emitido = False
         for idx, code in enumerate((ec.ABS_X, ec.ABS_Y, ec.ABS_RX, ec.ABS_RY)):
             if last is None or axes[idx] != last[idx]:
@@ -1118,31 +713,16 @@ class UinputGamepad:
             key = tabela[hefesto_name]
             code = getattr(ecodes_mod, key, None)
             return int(code) if isinstance(code, int) else None
-        # l2_btn / r2_btn digital viram triggers (ABS nas máscaras dualsense e
-        # xbox, BTN_TL2/BTN_TR2 na nintendo) — os dois casos no forward_analog.
         return None
 
-    # -- force-feedback (FEAT-VPAD-FF-PASSTHROUGH-01) ---------------------
 
     def pump_ff(self) -> None:
-        """Drena o protocolo de FF do vpad e repassa o rumble do jogo ao sink.
-
-        Não-bloqueante; chamado a cada tick do poll loop. Três papéis:
-          1. upload/erase (EV_UINPUT): responde o handshake obrigatório do
-             kernel (begin/end) e mantém o catálogo local de efeitos
-             (id → magnitudes + duração);
-          2. play/stop (EV_FF): liga/desliga efeitos (value = nº de
-             repetições; 0 = stop) e captura FF_GAIN;
-          3. expiração: zera o rumble quando a duração venceu (jogos que dão
-             play sem nunca mandar stop).
-        Vpad sem FF (degradado) ou parado = no-op.
-        """
+        """Drena o protocolo de FF do vpad e repassa o rumble do jogo ao sink."""
         device = self._device
         if device is None or not self._ff_supported:
             return
         fio = getattr(self, "_ff_fio", None)
         if fio is not None and fio.is_alive():
-            # O fio já atendeu o protocolo; o tique só expira e entrega.
             with self._ff_trava:
                 self._refresh_ff()
             return
@@ -1150,7 +730,7 @@ class UinputGamepad:
             try:
                 event = device.read_one()
             except (BlockingIOError, OSError):
-                break  # sem eventos pendentes / fd em estado transitório
+                break
             if event is None:
                 break
             try:
@@ -1168,9 +748,6 @@ class UinputGamepad:
         if etype == ec.EV_UINPUT and code == ec.UI_FF_UPLOAD:
             upload = self._device.begin_upload(value)
             effect = upload.effect
-            # Re-upload do mesmo id ATUALIZA o efeito (jogos "reprogramam" o
-            # efeito em vez de criar outro); o deadline de um play em curso
-            # não muda, só as magnitudes.
             self._ff_effects[int(effect.id)] = self._parse_ff_effect(effect)
             upload.retval = 0
             self._device.end_upload(upload)
@@ -1184,26 +761,13 @@ class UinputGamepad:
         elif etype == ec.EV_FF and code == ec.FF_GAIN:
             self._ff_gain = max(0, min(0xFFFF, value)) / 0xFFFF
         elif etype == ec.EV_FF:
-            # code = id do efeito (< MAX_FF_EFFECTS, nunca colide com FF_GAIN).
             if value > 0:
                 self._start_ff_effect(code, repeats=value)
             else:
                 self._ff_playing.pop(code, None)
-        # Demais eventos no fd (ex.: eco de EV_SYN) são ignorados.
 
     def _parse_ff_effect(self, effect: Any) -> tuple[int, int, int]:
-        """Extrai (weak16, strong16, duração_ms) de um efeito FF do kernel.
-
-        Conversões (documentadas):
-          - FF_RUMBLE: magnitudes 0-65535 dos dois motores, direto do efeito.
-          - FF_PERIODIC: UMA magnitude signed (pico da onda, 0-32767) —
-            usamos ``|magnitude| * 2`` nos DOIS motores (aproximação padrão de
-            quem só tem rumble; é o que a SDL espera).
-          - Tipo não suportado: (0, 0) — aceito no handshake (retval 0) mas
-            mudo, sem quebrar o jogo.
-        A duração vem de `ff_replay.length` (ms; 0 = toca até o stop). O
-        `ff_replay.delay` é ignorado (raro; SDL não usa).
-        """
+        """Extrai (weak16, strong16, duração_ms) de um efeito FF do kernel."""
         ec = self._ecodes
         duration_ms = int(effect.ff_replay.length)
         etype = int(effect.type)
@@ -1221,40 +785,19 @@ class UinputGamepad:
         """Marca o efeito como tocando, com deadline = duração x repetições."""
         params = self._ff_effects.get(effect_id)
         if params is None:
-            # MASCARA-XBOX-MUDA-01: play de efeito nunca uploadado é um pedido
-            # do jogo que NÃO vira vibração — descartar é certo (não há o que
-            # tocar), descartar EM SILÊNCIO não é. Sem o contador, a tela
-            # afirmava "o jogo não pediu" sem ter como saber.
             self._ff_descartado_count += 1
             return
         duration_ms = params[2]
         if duration_ms <= 0:
-            # Duração 0 significa "toca até o jogo mandar parar" (semântica do
-            # kernel). O deadline era `math.inf`, então o ÚNICO jeito de o motor
-            # parar era o jogo enviar stop/erase — e se ele fecha no meio de uma
-            # vibração, trava, ou o evento se perde, o controle fica vibrando
-            # para sempre. Relatado ao vivo: "não parava por nada".
-            #
-            # O teto não corta vibração legítima: qualquer novo play do MESMO
-            # efeito renova o prazo, e jogos que vibram continuamente ficam
-            # remandando efeito enquanto a cena dura. Ele só age quando o jogo
-            # PAROU de pedir sem dizer que parou.
             deadline = self.time_fn() + FF_TETO_SEM_DURACAO_S
         else:
             deadline = self.time_fn() + (duration_ms * max(1, repeats)) / 1000.0
         self._ff_playing[effect_id] = deadline
-        # SPRINT-GAME-RUMBLE-01: instrumentação — um play de efeito válido = o
-        # jogo pediu rumble neste vpad. Se o contador fica em 0 durante o jogo,
         # o jogo NÃO enxerga o vpad (ex.: máscara DualSense atraindo o hidraw
-        # do físico); se sobe mas o controle não vibra, o elo é o sink/hardware.
         self._ff_play_count += 1
 
     def _refresh_ff(self) -> None:
-        """Expira efeitos vencidos e entrega o rumble alvo ao sink (se mudou).
-
-        Efeitos simultâneos SOMAM magnitude (clamp em 0xFFFF) — espelha o
-        ff-memless do kernel. Conversão 0-65535 → 0-255 por `>> 8`.
-        """
+        """Expira efeitos vencidos e entrega o rumble alvo ao sink (se mudou)."""
         now = self.time_fn()
         for effect_id in [i for i, deadline in self._ff_playing.items() if now >= deadline]:
             del self._ff_playing[effect_id]
@@ -1272,11 +815,6 @@ class UinputGamepad:
         pair = (weak, strong)
         if pair == self._ff_last_sent:
             return
-        # MASCARA-XBOX-MUDA-01: as duas perguntas que a aba Rumble faz — "o
-        # jogo pediu FORÇA?" e "dava para sentir?" — respondidas no MESMO
-        # ponto em que o par vai ao sink. Antes do dedup não serve: um jogo
-        # que reafirma o mesmo valor 60x/s inflaria a contagem; depois dele,
-        # cada número é uma mudança real de pedido, igual ao caminho uhid.
         if weak or strong:
             self._ff_nao_nulo_count += 1
             self._ff_maior_pedido = pedido_mais_forte(self._ff_maior_pedido, pair)

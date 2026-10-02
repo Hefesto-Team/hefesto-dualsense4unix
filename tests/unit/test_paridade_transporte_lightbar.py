@@ -36,12 +36,8 @@ from hefesto_dualsense4unix.core import ds_output_report as rep
 
 from tests.conftest import EnvelopeDeTransporte
 
-#: Offsets da cor dentro do common (espelho do `dualsense_output_report_common`).
 COR_R, COR_G, COR_B = 44, 45, 46
 
-#: Vetores de cor com R != B SEMPRE — é o que faz a troca de canais reprovar.
-#: `(0xFF, 0x00, 0x00)` e `(0x00, 0x00, 0xFF)` estão aqui nomeadamente porque
-#: são o vermelho e o azul da mutação do diagnóstico.
 CORES = [
     (0xFF, 0x00, 0x00),
     (0x00, 0x00, 0xFF),
@@ -52,15 +48,7 @@ CORES = [
 
 
 def _com_leds_do_hefesto(handle: Any) -> Any:
-    """Tira a supressão de LED: o report volta a ser a rota da cor.
-
-    `_suppress_leds` NASCE True em produção (LIGHTBAR-BT-ADOPT-01: a janela de
-    ~3,4 s pós-connect por BT em que um report malformado LATCHEIA a lightbar
-    apagada até o power-off). Quando o sysfs do kernel não é gravável,
-    `_refresh_sysfs_leds` o desliga e a cor volta a sair pelo report — é ESSE o
-    estado que este arquivo mede, e ele está declarado aqui em vez de escondido
-    numa fixture.
-    """
+    """Tira a supressão de LED: o report volta a ser a rota da cor."""
     handle._suppress_leds = False
     return handle
 
@@ -117,12 +105,7 @@ def test_o_flag1_autoriza_a_lightbar_nos_dois_transportes(
 def test_a_cor_e_identica_nos_dois_e_so_o_envelope_muda(
     transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
 ) -> None:
-    """O common de 47 bytes é o MESMO; o que muda é o que o embrulha.
-
-    É a afirmação que o cabeçalho de `ds_output_report.py` faz em prosa desde o
-    BTREPORT-02 e que nenhum caso checava: *"o payload common tem 47 bytes e é
-    IDÊNTICO nos dois transportes; muda só o envelope"*.
-    """
+    """O common de 47 bytes é o MESMO; o que muda é o que o embrulha."""
     commons: dict[str, bytes] = {}
     envelopes: dict[str, bytes] = {}
     for envelope in transportes:
@@ -144,14 +127,7 @@ def test_a_cor_e_identica_nos_dois_e_so_o_envelope_muda(
 def test_sob_supressao_a_cor_nao_sai_em_nenhum_dos_dois(
     ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
 ) -> None:
-    """Com o kernel dono do LED, o report é LED-neutro — nos dois transportes.
-
-    LIGHTBAR-BT-KEEPALIVE-01: sob supressão não basta zerar os bytes de cor; os
-    bits de SETUP/BRILHO do flag2 (0x02|0x01) também têm de cair, senão o
-    keepalive a 2 Hz reengata a máquina de estados da lightbar do firmware e a
-    barra trava apagada. O defeito foi medido no BT — e a regra vale nos dois,
-    que é o que este caso trava.
-    """
+    """Com o kernel dono do LED, o report é LED-neutro — nos dois transportes."""
     handle = ds5_de_bancada
     handle._suppress_leds = True
     handle.light.setColorI(0xFF, 0x00, 0x00)

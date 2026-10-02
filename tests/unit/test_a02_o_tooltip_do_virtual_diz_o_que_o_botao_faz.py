@@ -1,31 +1,4 @@
-"""O `title` do "Virtual" MENTIA, e a medição da leva anterior o provou.
-
-Ele prometia três coisas, e as três descreviam OUTRO botão ou coisa nenhuma:
-
-1. *"cria uma fonte de áudio própria"* — só no RÁDIO. No cabo o filtro de
-   `integrations/dualsense_bt_audio.nos_dualsense_bluetooth` exige
-   ``bus == BLUETOOTH`` e descarta o nó, então `bt_mic.alvos()` não o vê e o
-   clique só grava uma chave no `maquina.json`;
-2. *"entrega o microfone do controle ao PC por ela"* — o gesto `mic-modo` faz
-   UM `machine.declare` e mais nada. Quem chama `mic.canal.set`, elege o canal,
-   escreve no firmware e manda o `0x32` é o 🎙, pelo gesto `mudo`;
-3. a promessa de que o microfone soa IGUAL nos dois transportes — contradita
-   pela linha `audio.microfone.mudo@dualsense` do mapa, `radio_aciona=parcial`,
-   com a assimetria declarada desde 03/08/2026.
-
-**SÃO DOIS BOTÕES, DOIS CAMINHOS**, e o `title` tem de dizer o que ESTE faz.
-
-E O PREÇO DAQUELA FRASE JÁ FOI PAGO UMA VEZ: em 04/09/2026 ela foi usada como
-PROVA para mudar o comportamento do gesto — *a frase da tela virou o
-argumento*. O gesto ficou de pé por outros dois motivos; o argumento caiu.
-
-A REGRA DELA QUE ESTE ARQUIVO TAMBÉM TRAVA (07/09/2026): **a tela nunca
-confessa dívida nossa.** O texto novo diz o que o botão FAZ; o que falta mora
-em `docs/data/mapa-controles.csv`.
-
-NENHUM TESTE DESTE ARQUIVO FALA COM O DAEMON DELA. Tudo aqui é o texto do
-gerador, a página publicada e o gesto com uma ponte de mentira.
-"""
+"""O `title` do "Virtual" MENTIA, e a medição da leva anterior o provou."""
 
 from __future__ import annotations
 
@@ -41,23 +14,13 @@ PUBLICADA = (
     RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
 )
 
-#: A promessa que caiu, montada em PEDAÇOS de propósito. Escrevê-la inteira
-#: aqui criaria a primeira ocorrência dela no repositório — é a ARMADILHA DA
-#: PROSA, que esta casa já pagou cinco vezes: *um comentário que cita o padrão
-#: proibido VIRA a primeira ocorrência dele*.
 _SIMETRIA = "soar igual " + "no cabo e no rádio"
 
-#: E a outra metade, pela mesma razão.
 _FONTE_PROPRIA = "cria uma fonte de " + "áudio própria"
 
 
 def _titulo_do_virtual(html: str) -> str:
-    """O `title` do botão Virtual, lido da PÁGINA e não da constante.
-
-    Ler a constante mediria o gerador; a pessoa lê a página. São dois lugares,
-    e o defeito de 08/09 nasceu exatamente da diferença entre eles noutro
-    arquivo (a afirmação valia na chamada direta e não no caminho rodado).
-    """
+    """O `title` do botão Virtual, lido da PÁGINA e não da constante."""
     achado = re.search(
         r'data-mic-modo="virtual"[^>]*?\n?\s*title="([^"]*)"', html, re.S
     )
@@ -66,10 +29,7 @@ def _titulo_do_virtual(html: str) -> str:
 
 
 def test_o_tooltip_nao_promete_mais_a_simetria_entre_os_transportes() -> None:
-    """A promessa que o mapa contradiz não pode voltar à tela.
-
-    Devolva a frase ao `title` do Virtual e esta régua REPROVA.
-    """
+    """A promessa que o mapa contradiz não pode voltar à tela."""
     html = PUBLICADA.read_text(encoding="utf-8")
     assert _SIMETRIA not in html, (
         "a promessa de que o microfone soa igual nos dois transportes voltou à "
@@ -82,11 +42,7 @@ def test_o_tooltip_nao_promete_mais_a_simetria_entre_os_transportes() -> None:
 
 
 def test_o_tooltip_manda_para_o_botao_que_poe_o_microfone_no_ar() -> None:
-    """Dois botões, dois caminhos — e o texto diz qual é qual.
-
-    Sem esta linha a pessoa lê "Virtual", clica, e nada vai ao ar: ela não tem
-    como saber que o ato é do 🎙. Tire a menção ao 🎙 e a régua REPROVA.
-    """
+    """Dois botões, dois caminhos — e o texto diz qual é qual."""
     titulo = _titulo_do_virtual(PUBLICADA.read_text(encoding="utf-8"))
     assert "🎙" in titulo, (
         f"o `title` do Virtual não diz quem põe o microfone no ar: {titulo!r}"
@@ -97,12 +53,7 @@ def test_o_tooltip_manda_para_o_botao_que_poe_o_microfone_no_ar() -> None:
 
 
 def test_o_tooltip_nao_confessa_divida() -> None:
-    """Regra dela, 07/09/2026: a tela nunca confessa dívida NOSSA.
-
-    Um texto que dissesse *"ainda não funciona no cabo"* seria honesto e
-    proibido: o que falta mora no mapa. Ponha uma dessas palavras no `title` e
-    a régua REPROVA.
-    """
+    """Regra dela, 07/09/2026: a tela nunca confessa dívida NOSSA."""
     titulo = _titulo_do_virtual(PUBLICADA.read_text(encoding="utf-8")).lower()
     for confissao in ("ainda não", "por enquanto", "não funciona", "falta ",
                       "em breve", "não suportado", "limitação"):
@@ -112,32 +63,7 @@ def test_o_tooltip_nao_confessa_divida() -> None:
 
 
 def test_o_gesto_do_modo_nao_faz_o_ato_do_microfone(monkeypatch) -> None:
-    """O FATO que o texto descreve, medido no gesto — e é a trava de verdade.
-
-    Se alguém fizer o `mic-modo` eleger canal ou mandar `0x32`, o texto novo
-    passa a ser incompleto — e esta régua avisa antes de a tela mentir de
-    novo. Ela é o par da de cima: uma mede a FRASE, a outra mede o ATO.
-
-    ARRANQUE a cura ao contrário (faça o gesto chamar `mic_canal_set_detalhado`)
-    e esta régua REPROVA.
-
-    **O `monkeypatch` NÃO É ASSEIO — 08/09/2026.** Esta régua nasceu trocando
-    `a02._controles_declarados` A CRU, sem restaurar. O símbolo ficava trocado no
-    módulo pelo resto do PROCESSO, e todo teste posterior que lesse o modo
-    declarado lia `{}` e caía no `nativo`: dois testes de
-    `test_aba02_os_acesos_sao_leitura_e_nao_desenho.py` reprovaram com
-    `assert 'nativo' == 'virtual'` — e reprovavam SÓ no lote, nunca isolados.
-
-    É a cicatriz nomeada da casa pela terceira vez (*"o dublê do co-op era mais
-    frouxo que a função real e envenenava outro arquivo por ordem de teste"*,
-    04/09), e a forma certa estava aberta no arquivo irmão: o
-    `test_a02_mic_e_um_ato_so_nos_dois_transportes.py` usa `monkeypatch.setattr`
-    para o MESMO símbolo, quatro vezes.
-
-    **A REGRA QUE SOBRA:** comparar quais ARQUIVOS falham esconde contaminação
-    por ordem — a vítima passa sozinha nas duas árvores. Compare TESTES, na
-    mesma composição de lote.
-    """
+    """O FATO que o texto descreve, medido no gesto — e é a trava de verdade."""
     import pacotes
     import pacotes.a02_controles as a02
 
@@ -172,11 +98,7 @@ def test_o_gesto_do_modo_nao_faz_o_ato_do_microfone(monkeypatch) -> None:
 
 
 def test_a_pagina_publicada_e_a_que_o_gerador_emite() -> None:
-    """O texto novo está nos QUATRO cartões, e veio do gerador.
-
-    A incoerência entre o HTML commitado e o gerador commitado já custou uma
-    leva inteira nesta casa: os portões passam porque ninguém regerou.
-    """
+    """O texto novo está nos QUATRO cartões, e veio do gerador."""
     import aba02
 
     html = PUBLICADA.read_text(encoding="utf-8")

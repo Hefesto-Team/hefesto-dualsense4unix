@@ -23,18 +23,8 @@ peça está inteiramente coberta e ninguém consegue apontá-la.
 import sys, csv, pathlib
 from playwright.sync_api import sync_playwright
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
-# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
-# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
-# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
-# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
-# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
-# segunda árvore de trabalhar sem tocar na primeira.
 R = pathlib.Path(__file__).resolve().parents[1]
 
-# QUEM DIZ ONDE E O `onde.py` — este portao repetia `layout/`, e quando a pasta
-# virou `interface/paginas/` ele morreu num traceback de Playwright em vez de
-# dizer o que quebrou. Regua que aponta para o lugar errado da veredicto errado.
 import sys as _sys
 _sys.path.insert(0, str(R / "src"))
 from hefesto_dualsense4unix.interface import onde as _onde
@@ -56,17 +46,11 @@ with sync_playwright() as pw:
     for p in pecas:
         i = p["id"]; desenhada = p["x1"] != "-"
         pg.hover(f".item-{i}"); pg.wait_for_timeout(70)
-        # O PS não tem tinta na PEÇA: o glifo é o botão (decisão dela, 27/08), e
-        # portanto quem tem de acender é o glifo. A régua olha os dois e aceita
-        # qualquer um — senão reprovaria a peça justamente por ela estar certa.
         ida = pg.evaluate(f"""() => {{const e=document.querySelector('#mp-{i} {PINTAVEL}');
             const g=document.querySelector('.s-{i}');
             const acesa = e && (getComputedStyle(e).stroke==='{ROSA}' || getComputedStyle(e).fill==='{ROSA}');
             const glifo = g && getComputedStyle(g).color==='rgb(248, 248, 242)';
             return (e||g) ? !!(acesa || glifo) : null;}}""")
-        # As peças cuja região É o corpo (giroscópio e acelerômetro) não têm alvo
-        # próprio: três alvos sobre a mesma área viram sorteio. Elas acendem pela
-        # lista, que é o sentido que importa. Está escrito no gerador, em SEM_ALVO.
         SEM_ALVO = {"feat-giroscopio", "feat-acelerometro", "feat-bateria"}
         volta = None
         if desenhada and i not in SEM_ALVO:
@@ -95,18 +79,6 @@ with sync_playwright() as pw:
         if not ok: falhas.append(i)
         print(("  OK   " if ok else "  FALHA") + f" {i:22} glifo→peça={ida}  peça→glifo={volta}")
 
-    # NENHUMA LINHA PODE CAIR FORA DA CAIXA. A linha "Corpo" ficou invisível e
-    # inalcançável por semanas — a lista transbordava para uma coluna recortada,
-    # e recorte também mata o hit-test. Contar itens não pegava: eram 28 no DOM.
-    #
-    # RÉGUA CEGA, CURADA em 27/08/2026 (à noite). A medição acontecia DEPOIS do laço de
-    # hover acima — e `pg.hover()` do Playwright chama `scrollIntoViewIfNeeded`
-    # antes de apontar. A rolagem que ele provoca traz a coluna transbordada para
-    # dentro da vista, e o `getBoundingClientRect` passa a devolver a posição
-    # ROLADA. Resultado medido: a linha "Corpo" estava em x=1861 numa caixa que
-    # termina em 1860, e este portão dava **verde**. Quem abre a página não rola
-    # nada: vê o estado inicial. Agora a página é RECARREGADA e a medição é a
-    # primeira coisa a acontecer — sem hover, sem rolagem, sem scroll herdado.
     pg.reload()
     pg.wait_for_load_state("networkidle")
     pg.wait_for_timeout(300)
@@ -117,19 +89,11 @@ with sync_playwright() as pw:
     falhas.extend(fora)
     print(("  OK   " if not fora else "  FALHA") + f" toda linha da lista cabe na caixa — fora: {fora}")
 
-    # NO HOVER, O GLIFO NÃO PODE SUMIR. Ele estava CRAVADO em cinza claro — a
-    # troca para `currentColor` só cobria dois hexadecimais, e o glifo escrito com
-    # outra cor ficava com a dele. Sobre a peça acesa em rosa, sumia por baixo
-    # contraste. Ela viu antes de qualquer régua: "ao passar o mouse em cima de um
-    # botão o glifo some."
     CLARO = "rgb(248, 248, 242)"
     somem = []
     for k in pg.evaluate("() => [...document.querySelectorAll('.sobre')]"
                          ".map(g=>[...g.classList].find(c=>c.startsWith('s-')).slice(2))"):
         pg.hover(f".item-{k}"); pg.wait_for_timeout(80)
-        # TODOS os descendentes, não só o primeiro: o glifo do PS que ela desenhou
-        # tem o path dentro de um <g> de transform, e olhar só o primeiro filho
-        # encontra o grupo — que não pinta nada — em vez da tinta.
         v = pg.evaluate(f"""() => {{const g=document.querySelector('.s-{k}');
           const cores=[];
           g.querySelectorAll('*').forEach(e=>{{ if(e.tagName==='svg'||e.tagName==='g') return;
@@ -145,8 +109,6 @@ with sync_playwright() as pw:
     b.close()
 
 ids = {p["id"] for p in pecas}
-# os `grupo-*` organizam a árvore no editor dela e os `glifo-*` são os símbolos:
-# nenhum dos dois é PEÇA, e por isso não têm linha na fonte da verdade.
 sobra = [x for x in no_svg if x not in ids
          and not x.startswith(("led-jogador-", "titulo", "grupo-", "glifo-"))]
 falta = [p["id"] for p in pecas if p["no_svg"] not in ("falta", "") and p["no_svg"] not in no_svg]

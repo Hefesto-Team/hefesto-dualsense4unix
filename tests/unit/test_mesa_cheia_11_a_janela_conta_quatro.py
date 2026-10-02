@@ -2,12 +2,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`. A primeira versão deste
-# arquivo plantava um stub cru em `sys.modules` (copiado de um vizinho) e o
-# portão `test_guarda_gi_falso_precisa_de_exigir_gi_real` o reprovou com razão:
-# contra `Gtk.Box = object` este arquivo ficaria verde sem nunca entrar no job
-# gtk-real. Aqui o `gi` só é preciso porque `home_actions` importa o
-# `ipc_bridge` — nada nesta suíte abre janela.
 exigir_gi_real("mesa cheia 11: a janela conta um quando são quatro")
 
 import json
@@ -35,11 +29,6 @@ def mesa_cheia() -> dict[str, Any]:
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
-# ---------------------------------------------------------------------------
-# E2 (1.8) — o banner do co-op NOMEIA o jogador
-# ---------------------------------------------------------------------------
-
-
 class TestBannerDoCoopNomeiaOJogador:
     def _mesa_com_jogadores_caidos(self, motivo: str) -> dict[str, Any]:
         state = mesa_cheia()
@@ -49,7 +38,6 @@ class TestBannerDoCoopNomeiaOJogador:
         return state
 
     def test_le_os_numeros_do_dedup_motivo(self) -> None:
-        # O campo chega como lista separada por vírgula e MISTURA motivos.
         assert jogadores_degradados("jogador_3_uinput") == [3]
         assert jogadores_degradados(
             "jogador_2_uinput, jogador_4_uinput, jogo_sem_wrapper"
@@ -64,7 +52,6 @@ class TestBannerDoCoopNomeiaOJogador:
         texto = vpad_degradation_text(state)
         assert texto is not None
         assert "Jogador 3" in texto
-        # A mordida: a frase antiga não pode sobreviver disfarçada.
         assert "um dos jogadores" not in texto
         assert texto != VPAD_COOP_DEGRADED_TEXT
 
@@ -90,12 +77,6 @@ class TestBannerDoCoopNomeiaOJogador:
             assert "vibração" in texto
 
 
-# ---------------------------------------------------------------------------
-# E3 (1.9) — o áudio se CONTA
-# ---------------------------------------------------------------------------
-
-#: O `/proc/asound/cards` real da mesa cheia (14/08/2026, quatro controles: dois
-#: no cabo e dois no rádio). Cada placa ocupa DUAS linhas e a palavra
 #: "DualSense" aparece nas duas — contar ocorrências daria 4 onde há 2 placas.
 CARDS_MESA_CHEIA = """\
  0 [NVidia         ]: HDA-Intel - HDA NVidia
@@ -129,9 +110,6 @@ class TestAudioSeConta:
         assert sd.controles_no_cabo(mesa_cheia()) == 2
         assert sd.controles_no_cabo(None) is None
         assert sd.controles_no_cabo({}) is None
-        # Sem controle nenhum o `describe_controllers` devolve UMA entrada
-        # offline (`{"connected": False, "transport": None, ...}`, contrato do
-        # backend) — ela não pode virar um controle no cabo.
         assert sd.controles_no_cabo(
             {"controllers": [{"connected": False, "transport": None}]}
         ) == 0
@@ -155,13 +133,7 @@ class TestAudioSeConta:
         assert "2" in msg
 
     def test_bt_sozinho_nao_vira_alarme_falso(self) -> None:
-        """Nenhum no cabo, nenhuma placa: não há áudio USB a cobrar.
-
-        Conserto de 14/08: este teste dizia só `tag != sd.WARN`, e com isso o
-        ramo podia passar a MENTIR ("[ OK ] áudio presente") sem nada ficar
-        vermelho — dois vereditos dos cinco não tinham dono. Agora a asserção é
-        de TAG **e** de TEXTO.
-        """
+        """Nenhum no cabo, nenhuma placa: não há áudio USB a cobrar."""
         state = mesa_cheia()
         for c in state["controllers"]:
             c["transport"] = "bt"
@@ -207,18 +179,6 @@ class TestAudioSeConta:
         assert any("1 de 4" in msg for _tag, msg in linhas)
 
 
-# ---------------------------------------------------------------------------
-# E3 / conserto de 14/08 — os CINCO vereditos e o português do caso comum
-# ---------------------------------------------------------------------------
-#
-# Por que este bloco existe: a primeira entrega da E3 escreveu oito testes com
-# denominador `None`, `0`, `2` e `4` — **nunca `1`**, que é o caso mais comum do
-# produto (um controle no cabo). O resultado saía verbatim pela tela e pelo
-# `doctor`: "áudio presente nos 1 controles no cabo". E dois dos cinco
-# vereditos não tinham asserção nenhuma de tag, então trocar INFO por WARN — ou
-# fazer o ramo mentir "áudio presente" — deixava a suíte verde.
-
-
 class TestOsCincoVereditosDoAudio:
     """Cada ramo com TAG e TEXTO — inclusive o denominador 1, que ninguém testou."""
 
@@ -237,12 +197,7 @@ class TestOsCincoVereditosDoAudio:
         assert "áudio ausente no único controle no cabo" in msg
 
     def test_zero_placas_com_gente_no_cabo_e_informativo_e_diz_ausente(self) -> None:
-        """Veredito órfão nº 1: só havia `tag != sd.OK` cobrindo este ramo.
-
-        É INFO de propósito, e o texto explica por quê: com o áudio-off ligado
-        a placa não sobe, e logo depois do plug ela ainda está subindo. Alarme
-        vermelho aqui viraria ruído permanente.
-        """
+        """Veredito órfão nº 1: só havia `tag != sd.OK` cobrindo este ramo."""
         tag, msg = sd.check_snd_audio_healthy("", controles_no_cabo=4)
         assert tag == sd.INFO, "este ramo não é alarme — é informação"
         assert "áudio ausente nos 4 controles no cabo" in msg
@@ -280,12 +235,7 @@ class TestOsCincoVereditosDoAudio:
         assert "áudio presente em 2 placas DualSense (nenhum no cabo)" in msg
 
     def test_nenhuma_frase_do_check_sai_com_numero_grudado_no_plural(self) -> None:
-        """Varredura: nenhum denominador pode voltar a produzir " 1 <plural>s".
-
-        Rede contra a regressão inteira da família, não só contra as três
-        frases medidas — se alguém acrescentar um ramo novo interpolando o
-        plural fixo, o `1` o denuncia aqui.
-        """
+        """Varredura: nenhum denominador pode voltar a produzir " 1 <plural>s"."""
         errado = re.compile(r"\b1 \w+s\b")
         for placas_texto in ("", CARDS_UM_SO, CARDS_MESA_CHEIA):
             for denominador in (None, 0, 1, 2, 4):
@@ -295,29 +245,13 @@ class TestOsCincoVereditosDoAudio:
                 assert not errado.search(msg), f"plural com 1: {msg!r}"
 
 
-# ---------------------------------------------------------------------------
-# E3 / conserto de 14/08 — os DOIS chamadores, agora COM dente
-# ---------------------------------------------------------------------------
-#
-# A manchete da entrega era "os dois chamadores foram ligados", e nada em
-# `tests/` chamava `_print_storm_block` nem `_refresh_storm_diag` com
 # denominador: arrancando `controles_no_cabo=no_cabo` dos dois, a suíte INTEIRA
-# ficava verde. Havia até um teste com APARÊNCIA de cobrir o fio do CLI
-# (`test_o_doctor_do_cli_nao_explode_sem_daemon`), mas ele só exercita o helper
 # `_state_full_ou_none` — nunca afirma que o denominador atravessa.
-#
-# É o defeito mais caro desta casa: a cura escrita e nunca ligada. Os dois
 # testes abaixo percorrem o fio inteiro — `state_full` dublado -> denominador
-# -> `storm_report` -> a saída que ela lê — e exigem a fração no fim.
 
 
 def _dublar_cards(monkeypatch: pytest.MonkeyPatch, texto: str) -> None:
-    """Faz o `/proc/asound/cards` do check ser `texto`, e só ele.
-
-    Sem isto o teste leria as placas REAIS da máquina de quem roda a suíte —
-    quatro controles na mesa dela — e o resultado mudaria conforme o que está
-    plugado. Hermeticidade: os demais arquivos continuam sendo lidos de fato.
-    """
+    """Faz o `/proc/asound/cards` do check ser `texto`, e só ele."""
     original = sd._safe_read
 
     def _lendo(path: Path) -> str:
@@ -326,8 +260,6 @@ def _dublar_cards(monkeypatch: pytest.MonkeyPatch, texto: str) -> None:
         return original(path)
 
     monkeypatch.setattr(sd, "_safe_read", _lendo)
-    # A varredura das localconfig.vdf da Steam não tem nada a ver com áudio e
-    # custa I/O na home de verdade.
     monkeypatch.setattr(sd, "find_localconfig_vdfs", lambda *_a, **_k: [])
 
 
@@ -454,68 +386,8 @@ class TestOsDoisChamadoresLevamODenominador:
         assert "áudio do controle presente" not in rotulo.markup
 
 
-# ---------------------------------------------------------------------------
-# E4 (1.11) — o singular que virou mentira com quatro na mesa
-# ---------------------------------------------------------------------------
-#
-# O CENSO, refeito em 14/08/2026 sobre o `main.glade` de hoje. A sprint de
-# 13/08 listou OITO frases; o censo completo achou **61 textos traduzíveis**
-# dizendo "o/do/ao/no controle" no singular — as oito eram a amostra, não o
-# total, e o número certo entra no lugar do errado (regra da casa: fato errado
-# se SUBSTITUI).
-#
-# A CONTAGEM ABAIXO TAMBÉM FOI SUBSTITUÍDA (conserto de 14/08, à tarde). A
-# primeira versão dizia "38 corrigidos — 18 plural, 20 sujeito", e nenhum dos
-# três números resistiu a ser medido de novo: a soma nem fechava com o total.
-# Os de hoje saem de uma comparação entre o `main.glade` de `CENSO_BASE` e o da
-# árvore, e `test_o_censo_do_comentario_bate_com_a_arvore` os recomputa a cada
-# rodada, para que este
-# comentário não volte a envelhecer calado. Dos 61:
-#
-#   41 mexidos aqui — em 16 o singular SUMIU (viraram plural ou foram
-#      reescritos), 22 ganharam sujeito ou alvo, e 3 foram corrigidos EM PARTE
-#      (o singular que restou em cada um tem motivo escrito na lista abaixo);
-#   20 intocados — 5 já diziam "controle selecionado" antes (a Lightbar, que
-#      deu o léxico) e 15 continuam singulares com o motivo escrito na lista.
-#
-# Fora do `.glade`, mais duas frases do `integrations/storm_doctor.py`
-# ("reconecte o controle" → os quatro é que reconectam).
-#
-# E uma quarta cura que a régua NÃO enxergava, porque o erro dela estava no
-# PLURAL: o `profile_steam_input_hint` — o rótulo itálico sempre visível abaixo
-# da caixinha do Steam Input — dizia "Marque quando o jogo mostrar dois
-# controles", que é o mundo de um controle só (com quatro na mesa o jogo mostra
-# OITO). Passou a dizer "os seus controles dobrados", que é o léxico da
-# caixinha logo acima. O portão que a pegaria está em
-# `test_nenhuma_frase_promete_o_mundo_de_dois_controles`.
-#
-# As três curas, e elas NÃO são intercambiáveis:
-#   PLURAL   — o gesto atinge os quatro (Ativar perfil, Desligar o Hefesto,
-#              esconder o físico, Aplicar do rodapé);
-#   SUJEITO  — o efeito é de UM só e a frase não dizia qual. Existe um
-#              `EvdevReader`, atrelado ao primário ("single-controller por
-#              construção", `core/backend_pydualsense.py:read_state`): mouse,
-#              teclado e o combo PS+Options são "quem comanda o PC" (D-10).
-#              Pluralizar aqui PIORA a mentira;
-#   ALVO     — o gesto vai para quem está no seletor (`_edit_target_uniq`,
-#              compartilhado por Lightbar, Gatilhos, LEDs e Rumble): a palavra
-#              é "controle selecionado", que a Lightbar já usava.
-
-#: O padrão do censo: "o/do/ao/no controle" no singular.
 SINGULAR_RE = re.compile(r"\b(?:o|do|ao|no)\s+controle\b(?!s)", re.IGNORECASE)
 
-#: As curas que dão sujeito ou alvo — quem as traz não é mentira no singular.
-#:
-#: E cada marca vem AMARRADA ao substantivo, não solta. O mecanismo que furou
-#: as duas versões anteriores do portão não era o tamanho da unidade — era
-#: `marca in unidade` com a marca solta, que isenta a oração inteira mesmo
-#: quando a palavra qualifica OUTRO substantivo. Com a marca solta,
-#: *"Aplica o perfil selecionado no controle."* — uma oração só, sem vírgula
-#: nem travessão, portanto fora do alcance do corte fino — atravessa calada: o
-#: "selecionado" fala do PERFIL. Medido em 14/08/2026: amarrar as quatro marcas
-#: custa ZERO na árvore de hoje (as 24 orações que as trazem dizem todas
-#: "controle selecionado" ou "controle que comanda o PC") e fecha a escotilha
-#: que sobrava. `test_a_marca_de_alvo_tem_de_falar_do_controle` cobra isso.
 SUJEITO_OU_ALVO = (
     "controle selecionado",
     "controle que comanda o PC",
@@ -523,77 +395,12 @@ SUJEITO_OU_ALVO = (
     "neste controle",
 )
 
-#: O corte em ORAÇÕES, e ele é a diferença entre portão e escotilha.
-#:
-#: DUAS versões deste portão já foram furadas pelo MESMO mecanismo, e a segunda
-#: só encolheu a unidade em vez de trocá-la:
-#:
-#:   1ª — `marca in texto` sobre o texto INTEIRO. Bastava a palavra
-#:        "selecionado" aparecer em QUALQUER ponto para isentar tudo o que
-#:        viesse depois. A prova é a frase número 1 da própria sprint:
-#:        *"Passa a usar o perfil selecionado agora: … vão para o controle."*
-#:        O "selecionado" fala do PERFIL, o "controle" ofensor está na outra
-#:        oração, e o portão dizia que estava tudo bem.
-#:   2ª — o mesmo `marca in unidade`, com a unidade cortada só em `[.!?;:]`.
-#:        Sentença única com VÍRGULA, TRAVESSÃO ou PARÊNTESES continuava sendo
-#:        uma unidade só, e a escotilha continuava aberta. Medido no `.glade`
-#:        de 14/08/2026: dos **470** trechos que aquela régua chamava de
-#:        "sentença", **88 tinham vírgula dentro, 34 travessão e 42 um
-#:        parêntese de abertura** (45, contando também os que só trazem o de
-#:        fechamento). Somar os três dá 164 e conta o mesmo trecho duas vezes;
-#:        a UNIÃO, que é o número honesto, é **135** — e a régua de hoje parte
-#:        **133** deles em mais de uma oração. Cada um é um lugar onde a frase
-#:        número 1 voltava a passar calada, bastando trocar os dois-pontos por
-#:        uma vírgula. `test_a_regua_anterior_calava_na_pontuacao_fraca` reconta
-#:        tudo isso na árvore e cobra as RELAÇÕES (a união é menor que a soma; a
-#:        superfície é de centenas; a régua parte quase todas) — números fixos
-#:        ficariam vermelhos a cada palavra mexida no `.glade`, e alarme falso
-#:        ninguém investiga duas vezes.
-#:
-#: Agora a pergunta é feita à ORAÇÃO que ofende: o corte inclui a pontuação
-#: fraca que separa orações coordenadas em português — vírgula, travessão (o
-#: EM DASH e o EN DASH), hífen entre espaços e parênteses. Quem declara o alvo
-#: numa oração NÃO compra silêncio para as vizinhas, estejam elas atrás de um
-#: ponto ou de uma vírgula.
-#: `test_declarar_o_alvo_numa_oracao_nao_isenta_as_outras` planta as quatro
-#: pontuações e cobra as quatro.
-#:
-#: O preço do corte fino, declarado: uma marca de `SINGULAR_LEGITIMO` não pode
-#: atravessar o corte, ou nunca casa. Foi o caso de "o controle navega na
-#: Steam, mas fica morto", encurtada para caber numa oração —
-#: `test_nenhuma_excecao_atravessa_o_corte_das_oracoes` impede que a próxima
-#: entre torta.
 ORACAO_RE = re.compile(r"(?<=[.!?;:,])\s+|\n+|\s+[—\u2013]\s+|\s+-\s+|[()]")
 
 
-#: O `.glade` de ANTES da E4, para o censo se recontar sozinho. É o commit que
-#: tocou o arquivo por último antes desta leva; se a árvore for rebaseada e o
-#: blob sumir, `test_o_censo_do_comentario_bate_com_a_arvore` PULA em vez de
-#: reprovar — a contagem é histórica, e história perdida não é defeito de hoje.
 CENSO_BASE = "874fddaf003bc7b81971b74e915242b06ff4f865"
 
 
-#: A lista de exceções da MORDIDA 4, e cada linha traz a CATEGORIA e o MOTIVO.
-#:
-#: O CONTRATO, reescrito no conserto de 14/08 porque o anterior se contradizia:
-#: a docstring dizia "só entra quando o singular é VERDADE", e a linha do
-#: "Como o jogo vê o controle" dizia "pluralizar é dela" — que é adiamento, não
-#: verdade. Um contrato que a própria lista viola não segura ninguém. Em vez de
-#: apagar a linha (o que forçaria a pluralização e responderia POR ELA pela
-#: porta dos fundos — o erro que o `test_a_intensidade_global_fica_de_fora_ate_
-#: a_d_4` já existe para impedir), o contrato passou a admitir DUAS categorias,
-#: e o prefixo de cada valor diz qual:
-#:
-#:   VERDADE: — o singular é verdade naquela linha, e o motivo diz por quê.
-#:   ADIADO:  — o singular MENTE, e a correção NÃO é minha para fazer. Só vale
-#:              para léxico dela; o motivo tem de nomear o dono (a palavra
-#:              "dela") e o preço. Categoria cara de propósito: hoje tem UMA
-#:              linha, e `test_toda_excecao_declara_categoria` cobra o formato.
-#:
-#: Ressalva de método, declarada: varredura de texto erra nas duas direções.
-#: Este teste é AVISO COM LISTA, não portão cego — ele cobra que toda frase
-#: nova no singular seja justificada por escrito, e é isso que impede as
-#: frases de voltarem em três meses.
 SINGULAR_LEGITIMO: dict[str, str] = {
     "Ouvir no controle":
         "VERDADE: nome do botão; o alvo é o CARTÃO, e há um cartão por controle",
@@ -631,26 +438,8 @@ SINGULAR_LEGITIMO: dict[str, str] = {
     "escolha um botão do controle": "VERDADE: o atalho é do PERFIL, não de uma peça",
 }
 
-#: Os prefixos que a lista admite. Fora deles, o motivo não conta como motivo.
 CATEGORIAS = ("VERDADE:", "ADIADO:")
 
-
-# ---------------------------------------------------------------------------
-# E1 (1.7) — o `native_bt_fragil` POR CONTROLE
-# ---------------------------------------------------------------------------
-#
-# O pior dos três defeitos desta sprint, porque é FALSO NEGATIVO: a flag era
-# `native_mode and transport == "bt"` com o `transport` do PRIMÁRIO, então com
-# o Controle 1 no cabo e os outros no rádio o aviso calava justamente para os
-# frágeis — e ela concluía que estava tudo bem.
-#
-# A AMBIGUIDADE DO DADO DE HOJE, resolvida e escrita aqui para não se
-# reinvestigar: o payload real de 14/08 tem DOIS controles em BT e
-# `native_bt_fragil: false`. Isso NÃO prova o defeito — o mesmo payload traz
-# `native_mode: false`, e com o Modo Nativo desligado `false` é a resposta
-# CERTA. A prova está no primeiro teste abaixo, que liga o Modo Nativo sobre o
-# mesmo payload: a regra velha continua dizendo `False` com dois frágeis na
-# mesa.
 
 import asyncio
 from unittest.mock import MagicMock
@@ -684,15 +473,10 @@ class TestOAvisoDeBtFragilOlhaTodaAMesa:
         assert ih.controles_bt_frageis(state["controllers"], native_mode=False) == []
 
     def test_a_mordida_o_primario_no_cabo_calava_pelos_do_radio(self) -> None:
-        """MORDIDA 1: mesmo payload, Modo Nativo LIGADO — a regra velha cala.
-
-        Dois controles no rádio, o primário no cabo: `native_mode and
-        transport == "bt"` devolve False e a janela não diz nada. A regra nova
-        nomeia os dois.
-        """
+        """MORDIDA 1: mesmo payload, Modo Nativo LIGADO — a regra velha cala."""
         state = mesa_cheia()
         state["native_mode"] = True
-        assert state["transport"] == "usb"  # o primário está no cabo
+        assert state["transport"] == "usb"
         assert regra_velha(state) is False, "a régua da mordida"
 
         frageis = ih.controles_bt_frageis(state["controllers"], native_mode=True)
@@ -734,14 +518,7 @@ class TestOAvisoDeBtFragilOlhaTodaAMesa:
 
 class TestONumeroEODoCard:
     def test_o_daemon_numera_igualzinho_a_janela(self) -> None:
-        """O portão contra a divergência das duas cópias da regra.
-
-        `daemon/ipc_handlers._numero_de_exibicao` e
-        `app/actions/base.numero_do_controle` são a MESMA regra em dois lados
-        do socket (a da janela mora em `base.py`, que importa `gi` — o daemon
-        não pode importá-la). Se uma mudar sozinha, o aviso passa a apontar um
-        card que não existe.
-        """
+        """O portão contra a divergência das duas cópias da regra."""
         for entry in mesa_cheia()["controllers"]:
             assert ih._numero_de_exibicao(entry) == numero_do_controle(entry)
 
@@ -756,7 +533,6 @@ class TestONumeroEODoCard:
 
         state["native_mode"] = True
         frageis = ih.controles_bt_frageis(state["controllers"], native_mode=True)
-        # Os frágeis são os índices 2 e 3: slots 3 e 2, jogadores 3 e 4.
         assert frageis == [2, 3]
         assert frageis != sorted(jogadores[2:])
 
@@ -781,12 +557,7 @@ class TestOBannerDaJanelaNomeiaOsFrageis:
         assert "o Controle 4 em Bluetooth" in texto_native_bt_fragil([4])
 
     def test_daemon_velho_ainda_acende_o_aviso_generico(self) -> None:
-        """Install editable: o daemon vivo é mais velho que a janela.
-
-        Sem a chave nova, o booleano antigo continua acendendo o banner — só
-        que sem nomes. Perder o aviso aqui seria trocar um falso negativo por
-        outro.
-        """
+        """Install editable: o daemon vivo é mais velho que a janela."""
         state = mesa_cheia()
         state["native_mode"] = True
         state["native_bt_fragil"] = True
@@ -815,8 +586,6 @@ class TestOBannerDaJanelaNomeiaOsFrageis:
             assert "Bluetooth" in texto
 
 
-#: Primário no CABO, os outros três no rádio — o caso da sprint. MACs com a
-#: máscara de `tests/` (prefixo `aabbcc`, allowlist do portão de anonimato).
 MESA_UM_NO_CABO = [
     {"index": 0, "connected": True, "transport": "usb",
      "is_primary": True, "uniq": "aabbcc0000d8"},
@@ -871,9 +640,6 @@ class TestAFiacaoNoStateFull:
 
     def test_o_state_full_publica_os_quatro_numeros(self) -> None:
         resultado = self._resultado(MESA_UM_NO_CABO, nativo=True)
-        # O `transport` do topo é o do PRIMÁRIO — aqui ele não é "bt" (o
-        # FakeController não alimenta o último estado, então sai `None`), e é
-        # exatamente por isso que a flag velha calaria com três no rádio.
         assert resultado["transport"] != "bt"
         assert resultado["controllers"][0]["transport"] == "usb"
         assert regra_velha(resultado) is False, "a régua: a flag velha calaria"
@@ -888,17 +654,7 @@ class TestAFiacaoNoStateFull:
         assert resultado["native_bt_fragil"] is False
 
     def test_o_doctor_le_a_lista_nova(self) -> None:
-        """Rede de RENOME — a mordida do doctor NÃO está aqui (CONSERTO 1.7).
-
-        Este assert é substring de fonte, e substring de fonte não morde: em
-        14/08/2026 um cético arrancou a cura inteira do `scripts/doctor.sh` (o
-        ramo que nomeia, a variável e o `sed` que a extrai, deixando só o
-        `print` do trecho python) e 756 testes seguiram verdes, este inclusive
-        — o anti-padrão que TESTE-HONESTO-01 condenou por escrito para ESTA
-        MESMA flag. Quem EXECUTA o doctor contra um daemon de mentira é
-        `tests/unit/test_conserto_1_7_o_ramo_sem_mesa_e_o_plural_do_doctor.py`.
-        O que sobra aqui é só a mensagem legível para quem renomear a chave.
-        """
+        """Rede de RENOME — a mordida do doctor NÃO está aqui (CONSERTO 1.7)."""
         doctor = (
             Path(__file__).resolve().parents[2] / "scripts" / "doctor.sh"
         ).read_text(encoding="utf-8")

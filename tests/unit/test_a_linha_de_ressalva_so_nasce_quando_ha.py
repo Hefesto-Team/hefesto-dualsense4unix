@@ -1,54 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA D-02: a linha de ressalva NASCE quando há o que dizer, e só então.
-
-Decisão dela, 04/09/2026: *"Linha fixa só quando HÁ ressalva."*
-
-O QUE ESTAVA EM JOGO: as ressalvas que explicam um valor estranho — *"em Nativo
-o jogo é dono do LED"*, *"a Steam segurou"*, *"barra apagada"* — vivem só no
-`title` de hover. Medido nas dezesseis decisões: a cura de quatro das cinco
-conferências da aba 08 chega à tela SÓ dentro de um tooltip.
-
-E O PREÇO QUE ELA NÃO ACEITA PAGAR é o contrário: uma linha permanente cobra a
-altura da fonte em toda tela, inclusive nas que não têm nada a ressalvar. A
-regra dela de 30/08 é *"texto na interface é zero"*. A peça concilia as duas —
-**zero pixel no repouso, uma linha curta no estado estranho**.
-
-**AS DUAS METADES SÃO A MESMA PEÇA**, e faltando uma a linha reaparece calada
-num dos dois caminhos de emissão:
-
-* `:empty{display:none}` — a linha que nasce vazia no desenho e nunca é pintada;
-* `:has(.nada){display:none}` — a que o piloto pinta a CADA tique. Aqui o
-  `:empty` não alcança: `escrever()` troca valor vazio por travessão, de
-  propósito (um lugar vazio da mesa tem de apagar o que estava lá), e a linha
-  ficaria com um `—` solto. Foi o que a primeira foto da `06-navegacao` mostrou.
-
-**ELA LÊ, NÃO DIGITA.** Nenhum `display` e nenhum pixel estão escritos aqui. A
-régua monta uma página pelo `monta.monta()`, abre no Chrome e compara a altura
-de cada cena com a de uma cena de REFERÊNCIA medida na mesma página — o valor
-sozinho, sem linha nenhuma. `display` é o mecanismo, e medir o mecanismo
-deixaria passar uma linha escondida que ainda cobra espaço.
-
-**A CENA É UMA COLUNA COM VÃO, e isso é medição, não cenário inventado.**
-Primeira redação desta régua mediu a linha VAZIA dentro de um bloco comum e
-dava VERDE COM A CURA ARRANCADA — as duas metades comentadas, sete casos
-verdes. A causa está medida nesta bancada, com o Chrome:
-
-    a linha vazia mede ZERO de altura mesmo SEM `display:none`
-    (bloco vazio não gera caixa de linha, e o `margin-top` colapsa)
-
-    e mesmo assim ela CUSTA 11 px na cena: 6 do `gap` da coluna + 5 do
-    `margin-top` que, dentro de um flex, não colapsa com nada
-
-Ou seja: **medir a altura do elemento responde "não ocupa" sobre uma linha que
-ocupa.** Quem paga o pixel é o pai, e é lá que a régua tem de olhar. A coluna
-com vão é como as abas empilham de verdade — `.vib-estado` da `05-vibracao`
-(`display:flex;flex-direction:column;gap:6px`) e `.estados` da `06-navegacao`
-são as duas precedentes vivas.
-
-A MORDIDA: comente as duas metades no `monta.CSS_FOLHA` e rode. As cenas sem
-ressalva ficam 11 px mais altas que a referência — a régua vê a ressalva sem
-ressalva cobrando pixel na tela dela.
-"""
+"""A RÉGUA DA D-02: a linha de ressalva NASCE quando há o que dizer, e só então."""
 from __future__ import annotations
 
 import pathlib
@@ -67,28 +18,16 @@ from hefesto_dualsense4unix.interface import onde
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-#: A ressalva de prova. NÃO é texto de tela — o que cada aba vai dizer sai do
-#: produto. Aqui ela só precisa ter forma reconhecível para a régua provar que
-#: atravessa de quem chama até a altura na tela.
 DIZ = "ressalva de prova: em Nativo o jogo é dono do LED"
 
 
 def _pagina_de_prova(destino: pathlib.Path) -> pathlib.Path:
-    """Uma página montada pelo `monta()`, com as quatro cenas da linha.
-
-    Ela nasce num diretório temporário, pelo desvio `HEFESTO_BANCADA` que o
-    `onde.py` documenta: a régua não toca a bancada dela.
-    """
+    """Uma página montada pelo `monta()`, com as quatro cenas da linha."""
     import os
 
     anterior = os.environ.get("HEFESTO_BANCADA")
     os.environ["HEFESTO_BANCADA"] = str(destino)
     try:
-        # A COLUNA COM VÃO — a forma em que as abas empilham valor e ressalva
-        # (`.vib-estado` da 05, `.estados` da 06). É onde o custo da linha
-        # invisível aparece: dentro de um flex o `gap` conta todo filho que
-        # exista, e a margem não colapsa. Fora dele a régua dá verde sobre
-        # defeito — medido, e está no cabeçalho.
         col = 'style="display:flex;flex-direction:column;gap:6px"'
         miolo = f"""    <div class="quadro"><div class="quadro-corpo">
       <div id="cena-so-valor" {col}><span>valor</span></div>
@@ -155,17 +94,8 @@ def medido(tmp_path_factory: pytest.TempPathFactory) -> dict:
     return dict(saida)
 
 
-# ---------------------------------------------------------------------------
-# 1. A PEÇA CHEGA
-# ---------------------------------------------------------------------------
 def test_a_peca_da_ressalva_entra_nas_dez_paginas_da_bancada() -> None:
-    """As dez páginas carregam as duas metades — e é `monta()` quem as põe lá.
-
-    SÓ AS ABAS: a bancada guarda três páginas avulsas (`mapa-do-controle`,
-    `mapa-das-portas`, `calibrar-sensores`) que abrem por fora da janela e não
-    passam por `monta()`. O filtro é o número no nome, como no
-    `test_os_dez_geradores_rodam`.
-    """
+    """As dez páginas carregam as duas metades — e é `monta()` quem as põe lá."""
     paginas = sorted(onde.BANCADA.glob("[0-9][0-9]-*.html"))
     assert len(paginas) >= 10, (
         f"achei {len(paginas)} aba(s) em {onde.BANCADA} — uma lista curta "
@@ -185,13 +115,7 @@ def test_a_peca_da_ressalva_entra_nas_dez_paginas_da_bancada() -> None:
 
 
 def test_a_ressalva_vazia_manda_o_marcador_e_nunca_o_travessao() -> None:
-    """Sem o marcador, o piloto pinta `—` e a linha vira ruído com cara de dado.
-
-    Esta é a metade que o navegador não pode provar sozinho: a página parada
-    não sabe o que o piloto vai escrever nela. Aqui a régua cobra o CONTRATO —
-    quem não tem o que dizer manda o marcador, e o alvo é `html`, que é o único
-    por onde um `<i>` chega como ELEMENTO em vez de virar texto na tela.
-    """
+    """Sem o marcador, o piloto pinta `—` e a linha vira ruído com cara de dado."""
     vazia = monta.ressalva("x")
     assert monta.NADA_A_DIZER in vazia, (
         f"a ressalva sem texto não manda o marcador:\n  {vazia}")
@@ -231,9 +155,6 @@ def test_a_ressalva_sem_endereco_para_a_geracao() -> None:
         monta.ressalva("", DIZ)
 
 
-# ---------------------------------------------------------------------------
-# 2. O QUE O MOTOR DESENHA
-# ---------------------------------------------------------------------------
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_com_ressalva_a_linha_ocupa_a_tela(medido: dict) -> None:
@@ -252,12 +173,7 @@ def test_com_ressalva_a_linha_ocupa_a_tela(medido: dict) -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_sem_ressalva_a_linha_nao_ocupa_nada(medido: dict) -> None:
-    """No repouso ela custa ZERO pixel — as duas metades, medidas.
-
-    A REFERÊNCIA É A CENA SEM LINHA NENHUMA, medida na mesma página: "não ocupa
-    nada" quer dizer *idêntica à tela que nunca teve a linha*, e não um número
-    escrito aqui.
-    """
+    """No repouso ela custa ZERO pixel — as duas metades, medidas."""
     sem_linha = medido["sem_linha"]["altura_da_cena"]
     assert sem_linha > 0, (
         "a cena de referência mede zero — a página não desenhou nada, e as "
@@ -277,13 +193,7 @@ def test_sem_ressalva_a_linha_nao_ocupa_nada(medido: dict) -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_o_travessao_solto_e_o_que_o_marcador_evita(medido: dict) -> None:
-    """A cena que PROVA por que o marcador existe, e não é zelo.
-
-    Uma `.ressalva` com o travessão que `escrever()` põe no lugar do vazio
-    OCUPA a tela — é o `—` solto que a primeira foto da `06-navegacao` mostrou.
-    Este caso mede o custo do caminho errado; os de cima medem que o caminho
-    certo não o paga.
-    """
+    """A cena que PROVA por que o marcador existe, e não é zelo."""
     assert (medido["travessao"]["altura_da_cena"]
             > medido["sem_linha"]["altura_da_cena"]), (
         "um `—` solto numa ressalva não ocupou nada — se isto passar a ser "

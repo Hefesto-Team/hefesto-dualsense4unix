@@ -39,44 +39,27 @@ class TestSchema:
         assert perfil.mic.button_toggles_system is False
 
     def test_campo_desconhecido_e_rejeitado(self) -> None:
-        """`extra="forbid"`: um campo que não existe no schema é recusado.
-
-        O exemplo era `volume=3` até 16/08/2026, quando `volume` PASSOU a ser
-        campo de verdade (MIC-VOLUME-01) e este teste virou verde por engano —
-        ele afirmava que `volume` não existia. Trocado por um nome que não é
-        campo de nada: o que se trava aqui é a POLÍTICA de recusar
-        desconhecidos, e ela não pode depender de qual campo ainda não foi
-        criado.
-        """
+        """`extra="forbid"`: um campo que não existe no schema é recusado."""
         with pytest.raises(ValidationError):
             ProfileMicConfig(  # type: ignore[call-arg]
                 button_toggles_system=True, ganho_do_preamp=3
             )
 
     def test_o_volume_e_o_mudo_agora_sao_campos(self) -> None:
-        """MIC-VOLUME-01: o par que faltava para o mic ter a mesma gramática
-        do alto-falante — e ser LEMBRADO ao salvar o perfil, que foi o pedido
-        dela ("na próxima sessão lembra disso")."""
+        """MIC-VOLUME-01: o par que faltava para o mic ter a mesma gramática"""
         mic = ProfileMicConfig(button_toggles_system=True, volume=70, muted=False)
         assert mic.volume == 70
         assert mic.muted is False
 
     def test_sem_opiniao_continua_sendo_o_default(self) -> None:
-        """Perfil que não pediu volume não pode tomar posse do microfone.
-
-        Mesmo contrato do `mouse` e do `speaker`. É a regra que nasceu da
-        queixa "a config que eu deixo nunca é respeitada" — e ela vale nos dois
-        sentidos: não respeitar o que ela pôs, e impor o que ela não pediu.
-        """
+        """Perfil que não pediu volume não pode tomar posse do microfone."""
         mic = ProfileMicConfig(button_toggles_system=True)
         assert mic.volume is None
         assert mic.muted is None
 
     @pytest.mark.parametrize("fora", [-1, 101, 255])
     def test_volume_fora_da_faixa_e_recusado(self, fora: int) -> None:
-        """0-100 por cento. O 255 entra de propósito: é a escala do
-        alto-falante (que escreve um byte do report), e confundir as duas
-        mandaria 255% ao sistema de som."""
+        """0-100 por cento. O 255 entra de propósito: é a escala do"""
         with pytest.raises(ValidationError):
             ProfileMicConfig(button_toggles_system=True, volume=fora)
 
@@ -99,13 +82,7 @@ def _applier() -> tuple[Any, Any]:
 
 class TestDraft:
     def test_o_default_do_rascunho_e_nao_ter_opiniao(self) -> None:
-        """NOTA DATADA — 22/08/2026 (MIC-GATE-POR-CAMPO-01).
-
-        Este caso afirmava `is True`, "espelha o default do daemon". Espelhar
-        aqui era o defeito: o rascunho nascia com uma opinião que ninguém deu,
-        e o "Aplicar" a escrevia na config viva. O default do DAEMON continua
-        `True` (daemon/lifecycle.py:272); o do RASCUNHO é o silêncio.
-        """
+        """NOTA DATADA — 22/08/2026 (MIC-GATE-POR-CAMPO-01)."""
         assert DraftConfig.default().mic.button_toggles_system is None
 
     def test_round_trip_perfil_para_draft_e_de_volta(self) -> None:
@@ -128,16 +105,7 @@ class TestDraft:
         assert salvo.mic is None
 
     def test_to_ipc_dict_so_emite_quando_tocado(self) -> None:
-        """Mesma regra do mouse: "Aplicar" de outra aba não mexe no botão.
-
-        NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01): a seção passou a
-        carregar `volume` e `muted` junto do booleano. O que este caso mede
-        continua sendo o GATE (`dirty`), não a lista de chaves — e por isso
-        `None` nos dois campos novos, que é o rascunho sem opinião sobre eles.
-
-        NOTA DATADA — 29/09/2026 (O-MUDO-E-DO-CONTROLE-01): o `muted` saiu da
-        seção. O mudo é do controle, e o rascunho não fala dele.
-        """
+        """Mesma regra do mouse: "Aplicar" de outra aba não mexe no botão."""
         limpo = DraftConfig.default()
         assert limpo.to_ipc_dict()["mic"] is None
 
@@ -151,18 +119,7 @@ class TestDraft:
 
 
 class TestGatePorCampo:
-    """MIC-GATE-POR-CAMPO-01 (22/08/2026) — o gate era por SEÇÃO.
-
-    Arrastar o volume marcava `dirty`, e o "Aplicar" levava junto um
-    `button_toggles_system` que nenhuma superfície escreve: o default de
-    fábrica, uma opinião que ninguém deu. Do outro lado,
-    `ipc_draft_applier._apply_mic` a escreve na config VIVA do daemon.
-
-    MORDIDA (arrancada e conferida em 22/08/2026): devolvendo o default do
-    campo para `True` em `MicDraft` e apagando a condicional de `mic_ipc` em
-    `to_ipc_dict`, os dois primeiros casos reprovam — a chave volta ao payload
-    e o `False` da config viva vira `True`.
-    """
+    """MIC-GATE-POR-CAMPO-01 (22/08/2026) — o gate era por SEÇÃO."""
 
     def test_o_gesto_do_volume_nao_arrasta_o_botao_junto(self) -> None:
         """O molde é o `rota` do alto-falante: sem opinião, a chave não viaja."""
@@ -175,12 +132,7 @@ class TestGatePorCampo:
         )
 
     def test_o_aplicar_do_volume_nao_derruba_o_flag_vivo_do_daemon(self) -> None:
-        """A ponta que dói: a config VIVA do daemon, escrita pelas costas dela.
-
-        O `False` aqui é o caso que o defeito derrubava — alguém que desligou o
-        botão de mic no `DaemonConfig` (perfil de gravação/live, a razão escrita
-        em `ProfileMicConfig`) e depois arrastou o volume na janela.
-        """
+        """A ponta que dói: a config VIVA do daemon, escrita pelas costas dela."""
         applier, daemon = _applier()
         daemon.config.mic_button_toggles_system = False
 
@@ -194,16 +146,7 @@ class TestGatePorCampo:
         assert "mic" in aplicadas, "sem opinião não é FALHA — é nada a fazer"
 
     def test_a_chave_nula_e_silencio_e_nao_falha_a_secao(self) -> None:
-        """Nulo explícito é "sem opinião", não payload torto.
-
-        A seção já viaja com `volume`/`muted` nulos (é a forma dela desde
-        18/08/2026), e quem monta o payload fora da janela — CLI, applet, um
-        roteiro — serializa o mesmo `None` no booleano. Sem esta régua a seção
-        cairia em `failed` e o rodapé diria que o microfone falhou.
-
-        MORDIDA: trocando a guarda de `_apply_mic` de volta por
-        `if "button_toggles_system" not in mic_raw`, este caso reprova.
-        """
+        """Nulo explícito é "sem opinião", não payload torto."""
         applier, daemon = _applier()
 
         aplicadas = applier.apply(
@@ -215,11 +158,7 @@ class TestGatePorCampo:
         assert daemon.config.mic_button_toggles_system is True
 
     def test_com_opiniao_a_chave_viaja_e_e_aplicada(self) -> None:
-        """A outra metade: quem escolher o campo continua sendo obedecido.
-
-        Sem este caso a cura poderia ser "nunca mandar o booleano", que cala o
-        único caminho que o campo tem hoje até a superfície nascer.
-        """
+        """A outra metade: quem escolher o campo continua sendo obedecido."""
         draft = DraftConfig.default().model_copy(
             update={"mic": MicDraft(button_toggles_system=False, dirty=True)}
         )
@@ -230,11 +169,7 @@ class TestGatePorCampo:
         assert daemon.config.mic_button_toggles_system is False
 
     def test_o_disco_continua_lembrando_do_que_ela_desligou(self) -> None:
-        """Sem opinião no rascunho não pode virar `False` no arquivo.
-
-        O esquema exige booleano; "sem opinião" vira `True`, o default do
-        daemon — e é o que `to_profile` já persistia antes de 22/08/2026.
-        """
+        """Sem opinião no rascunho não pode virar `False` no arquivo."""
         salvo = DraftConfig.default().with_mic(volume=70).to_profile("p")
         assert salvo.mic is not None
         assert salvo.mic.button_toggles_system is True

@@ -31,9 +31,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: Enquadramentos que uma decisão dela derrubou, com a data e o que dizer no
-#: lugar. Não é lista de jargão (isso é o `validar-palavra-de-tela.py`): é
-#: lista de afirmações que a medição ou a decisão dela tornaram FALSAS.
 FRASES_DERRUBADAS: dict[str, tuple[str, str]] = {
     "entregue pela Steam": (
         "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
@@ -41,12 +38,6 @@ FRASES_DERRUBADAS: dict[str, tuple[str, str]] = {
         "controle à Steam. Diga o que a caixinha da aba Perfis diz: "
         "'o controle físico fica escondido'.",
     ),
-    # S4 (28/08/2026). A frase de 09/08 tinha UMA redação nesta lista, e a
-    # MESMA afirmação sobrevivia em outras quatro — o `cmd_steam.py` dizia "a
-    # Steam entrega o controle" e "entrada pela Steam"; o toast de "Este jogo
-    # não funciona" dizia "recebe o controle direto pela Steam" e "passa a
-    # enxergar o controle físico direto". Régua que pega uma redação só não
-    # pega o fato; é o mesmo defeito que ela existe para matar.
     "a Steam entrega o controle": (
         "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
         "Quem entrega o controle ao jogo continua sendo o Hefesto, marcado "
@@ -70,17 +61,7 @@ FRASES_DERRUBADAS: dict[str, tuple[str, str]] = {
     ),
 }
 
-#: Onde a frase morta PODE aparecer, e por quê. Só documento histórico —
-#: apagar a nota datada seria apagar a decisão, que é o oposto da regra.
 ARQUIVOS_ISENTOS = {
-    # A nota datada do glade é o REGISTRO da morte da frase: ela cita a frase
-    # para dizer que ela morreu. Apagá-la faria a próxima pessoa reescrever o
-    # enquadramento antigo sem saber que ele já foi derrubado uma vez.
-    #
-    # CINTO, não caminho: `_arquivos_python` varre `*.py`, então o glade já
-    # está fora do alcance hoje. A linha fica para o dia em que alguém alargar
-    # o glob — o que este portão precisaria, porque o `main.glade` PINTA texto
-    # e nenhuma régua desta lista o alcança. Está no relato da S4.
     SRC / "gui" / "main.glade",
 }
 
@@ -90,23 +71,7 @@ def _arquivos_python() -> list[Path]:
 
 
 def _strings_de_tela(texto: str) -> list[tuple[int, str]]:
-    """[(linha, texto)] de toda string que PINTA — docstring excluída.
-
-    Por AST, e não por linha, e a diferença é a mordida deste portão: o
-    interpretador já junta literais adjacentes (`"a" "b"` vira UM
-    `ast.Constant`, e o mesmo vale para os pedaços de uma f-string
-    concatenada), então uma frase quebrada em duas linhas chega aqui inteira.
-
-    FATO ERRADO, SUBSTITUÍDO (28/08/2026, S4): até hoje esta varredura era
-    `frase in linha`, e por isso era CEGA a exatamente esse caso — o toast de
-    "Este jogo não funciona" pintava *"ele passa a enxergar o controle "* /
-    *"físico direto"* em duas linhas, e nenhuma delas continha a frase. A
-    correção fecha o buraco em vez de contorná-lo com uma segunda redação na
-    lista.
-
-    Comentário não existe na AST, então continua isento de graça — que é o
-    ponto: uma frase derrubada CITADA num comentário é a nota datada da casa.
-    """
+    """[(linha, texto)] de toda string que PINTA — docstring excluída."""
     arvore = ast.parse(texto)
     docstrings: set[int] = set()
     for no in ast.walk(arvore):
@@ -136,11 +101,7 @@ def _strings_de_tela(texto: str) -> list[tuple[int, str]]:
 
 @pytest.mark.parametrize("frase", sorted(FRASES_DERRUBADAS))
 def test_frase_derrubada_nao_e_pintada_na_tela(frase: str) -> None:
-    """A mordida: ponha a frase numa string de código e isto reprova.
-
-    Em comentário ou docstring ela pode ficar — e deve, onde a nota datada
-    explica que morreu.
-    """
+    """A mordida: ponha a frase numa string de código e isto reprova."""
     quando, o_que_dizer = FRASES_DERRUBADAS[frase]
 
     achados: list[str] = []
@@ -158,14 +119,7 @@ def test_frase_derrubada_nao_e_pintada_na_tela(frase: str) -> None:
 
 
 def test_o_portao_sabe_recusar_uma_frase_pintada() -> None:
-    """Régua que só sabe passar não é régua.
-
-    Exercita o caminho de erro com um arquivo plantado: a MESMA frase em
-    comentário (permitida), em docstring (permitida), numa string de código
-    (proibida), com `#` no fim da linha (proibida — um `#` no fim não
-    transforma o que vem antes em explicação) e **quebrada em duas linhas**
-    (proibida — foi assim que ela sobreviveu ao portão até 28/08/2026).
-    """
+    """Régua que só sabe passar não é régua."""
     plantado = (
         "# jogos cujo DualSense é entregue pela Steam — nota datada\n"
         "def f() -> str:\n"
@@ -191,13 +145,7 @@ def test_o_portao_sabe_recusar_uma_frase_pintada() -> None:
 
 
 def test_o_lexico_novo_e_o_mesmo_da_caixinha_de_perfis() -> None:
-    """A frase da aba Sistema e a da aba Perfis marcam a MESMA coisa.
-
-    Duas maneiras de dizer o mesmo gesto obrigam quem lê a descobrir que são
-    o mesmo gesto. Este teste trava as duas na mesma palavra — "o controle
-    físico fica escondido" — para que a próxima reescrita mexa nas duas ou em
-    nenhuma.
-    """
+    """A frase da aba Sistema e a da aba Perfis marcam a MESMA coisa."""
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         texto_da_marca_do_steam_input,
     )

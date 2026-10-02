@@ -62,12 +62,8 @@ MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"
 PONTE_ESCADA = Path("src/hefesto_dualsense4unix/integrations/ponte_escada.py")
 
-#: A linha da regressão: `uhid` nos dois lados, `ponte_alcanca` vazia, e uma
-#: feature que o Pro NÃO tem — o que a torna o pior caso possível de promover.
 LINHA_SEM_PONTE = ("luz.replica_output_jogo", "pro")
 
-#: Um nó de pytest que existe de verdade, para a promoção não reprovar pela
-#: regra 1 (`sem-mordida`) e o teste medir só a regra nova.
 MORDIDA_REAL = "tests/unit/test_a_ponte_nao_declarada_01.py::test_a_regra_enxerga_o_que_promete"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
@@ -89,14 +85,7 @@ def _rodar(raiz: Path) -> subprocess.CompletedProcess[str]:
 
 @pytest.fixture
 def arvore(tmp_path: Path) -> Path:
-    """Cópia mínima e DESCARTÁVEL — o portão nunca roda contra a árvore real.
-
-    Leva o `ponte_escada.py` junto, e isso não é detalhe: sem ele a conferência
-    de DOMÍNIO se desliga sozinha (é o comportamento de `dominio_das_pontes`), e
-    um teste de tipografia rodando com a régua desligada aprovaria qualquer
-    coisa. `tests/` e `specs.html` ficam de fora de propósito — as regras 2 e 5
-    se desligam, dizem isso em voz alta, e não têm nada a ver com a ponte.
-    """
+    """Cópia mínima e DESCARTÁVEL — o portão nunca roda contra a árvore real."""
     for rel in ("scripts", "docs/data", str(PONTE_ESCADA.parent)):
         (tmp_path / rel).mkdir(parents=True, exist_ok=True)
     for nome in ("check_paridade_transporte.py", "eliminacao.py"):
@@ -148,9 +137,6 @@ def _numero_do_resumo(saida: str, rotulo: str) -> int:
     return int(achado.group(1))
 
 
-# --------------------------------------------------------------------------
-# A MORDIDA
-# --------------------------------------------------------------------------
 def test_o_portao_reprova_uhid_forte_que_nao_diz_a_ponte(arvore: Path) -> None:
     """A regressão que o plano nomeia, reproduzida em cópia descartável."""
     _promove_sem_dizer_a_ponte(arvore / "docs/data/mapa-controles.csv")
@@ -191,17 +177,8 @@ def test_a_mordida_nomeia_os_dois_lados_e_a_linha(arvore: Path) -> None:
     assert "ponte_alcanca" in linha, linha
 
 
-# --------------------------------------------------------------------------
-# A CONTRAPROVA — a regra não machuca afirmação verdadeira
-# --------------------------------------------------------------------------
 def test_o_portao_continua_verde_na_arvore_de_verdade(arvore: Path) -> None:
-    """Dia 1 verde, sem medição nova.
-
-    As quatro linhas `uhid` que afirmam forte estão entre as dez que já
-    declaram `gamepad/dualsense`, e as doze que calam continuam podendo calar.
-    Se este teste reprovar, a regra ficou larga demais — é o erro de 12/08 e
-    13/08 ao contrário.
-    """
+    """Dia 1 verde, sem medição nova."""
     saida = _rodar(arvore)
     assert saida.returncode == 0, (
         "o portão reprovou a árvore INTACTA depois da regra nova:\n"
@@ -212,13 +189,6 @@ def test_o_portao_continua_verde_na_arvore_de_verdade(arvore: Path) -> None:
 def test_a_linha_uhid_que_nao_afirma_nada_continua_podendo_calar(arvore: Path) -> None:
     """Vazio é PERGUNTA ABERTA. A regra cobra promessa máxima, não silêncio."""
     mapa = arvore / "docs/data/mapa-controles.csv"
-    # `cabo_por_que_nao_aciona` cala a regra 16 (`causa-nao-declarada`, nascida
-    # em 24/08/2026), que cobra causa de TODO `aciona = não` medido. É a mesma
-    # técnica de `_promove_sem_dizer_a_ponte`, que preenche `teste_que_morde`
-    # para a regra vizinha não roubar a medição desta. O valor é o que a
-    # própria `cabo_ressalva` desta linha já diz — "o Pro não tem lightbar nem
-    # gatilho adaptativo para onde replicar" —, e nada muda na árvore real: lá
-    # a célula segue `inferido-do-codigo`, que a regra 16 não cobra.
     _escreve(
         mapa,
         LINHA_SEM_PONTE,
@@ -234,17 +204,8 @@ def test_a_linha_uhid_que_nao_afirma_nada_continua_podendo_calar(arvore: Path) -
     assert "ponte-nao-declarada" not in saida.stdout, saida.stdout[-1500:]
 
 
-# --------------------------------------------------------------------------
-# ELE ENXERGA? — portão que não vê nada passa sempre
-# --------------------------------------------------------------------------
 def test_a_regra_enxerga_o_que_promete() -> None:
-    """A régua do portão contra uma contagem independente do mesmo CSV.
-
-    Nenhum número fica ESCRITO aqui: os dois lados são medidos na hora. Se a
-    regra parar de descobrir as linhas `uhid` — um `strip()` que suma, um nome
-    de coluna que mude —, os números divergem neste teste, e não daqui a três
-    levas. É a lição de 16/08: duas réguas independentes é o que revela.
-    """
+    """A régua do portão contra uma contagem independente do mesmo CSV."""
     saida = subprocess.run(
         [sys.executable, str(RAIZ / "scripts" / "check_paridade_transporte.py")],
         cwd=str(RAIZ),
@@ -303,9 +264,6 @@ def test_o_mapa_tem_a_coluna_que_a_regra_le(arvore: Path) -> None:
     assert "integridade" in saida.stdout and "ponte_alcanca" in saida.stdout
 
 
-# --------------------------------------------------------------------------
-# O DOMÍNIO — para "Steam Input", "steam input" e "SteamInput" não virarem três
-# --------------------------------------------------------------------------
 def test_tipografia_de_ponte_reprova(arvore: Path) -> None:
     """Ponte que o produto não conhece é ponte que o mapa não pode aceitar."""
     _escreve(
@@ -337,14 +295,7 @@ def test_procedencia_da_ponte_reusa_o_dominio_que_ja_existe(arvore: Path) -> Non
 
 
 def test_o_dominio_sai_da_escada_de_verdade() -> None:
-    """As duas réguas do mesmo dado, conferidas uma contra a outra.
-
-    O portão roda num runner PELADO (`checkout` + `setup-python`, sem `pip
-    install`) e por isso não pode importar `ponte_escada`, que puxa `structlog`.
-    Ele lê a `ESCADA` por AST e recalcula a `chave` numa cópia da fórmula — e
-    este teste é o preço pago por essa cópia: ele importa a `ESCADA` de verdade
-    e exige as MESMAS chaves. Fórmula que mude de um lado só reprova aqui.
-    """
+    """As duas réguas do mesmo dado, conferidas uma contra a outra."""
     por_ast, motivo = dominio_das_pontes(RAIZ)
     assert por_ast is not None, motivo
     assert por_ast == frozenset(degrau.ponte.chave for degrau in ESCADA), (
@@ -355,13 +306,7 @@ def test_o_dominio_sai_da_escada_de_verdade() -> None:
 
 
 def test_sem_a_escada_so_o_dominio_se_desliga_e_a_regra_continua(arvore: Path) -> None:
-    """O desligamento é DITO — e não leva a regra 15 junto.
-
-    Este é o teste que separa "a régua do domínio sumiu" de "o portão ficou
-    cego": sem `ponte_escada.py` a conferência de tipografia se desliga em voz
-    alta, mas a reprovação de `uhid` forte sem ponte continua de pé, porque para
-    saber se a célula está VAZIA basta o CSV.
-    """
+    """O desligamento é DITO — e não leva a regra 15 junto."""
     (arvore / PONTE_ESCADA).unlink()
 
     verde = _rodar(arvore)

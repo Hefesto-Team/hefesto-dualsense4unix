@@ -1,48 +1,4 @@
-"""O «Examinar» diz quem mudou de lugar, o hub não cabe onde há aparelho direto,
-e a ponta do extensor grava.
-
-O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, 26/09/2026. A conferência da 01 mediu três
-buracos no mapa das conexões publicado:
-
-1. o «Examinar» dizia sempre «Nada Mudou de Lugar»: as duas leituras nasciam
-   iguais, o gesto não tinha por onde entregar outra, e o ``id`` do aparelho
-   era o caminho de barramento, que é justamente o que muda quando ele muda
-   de entrada («Estava em undefined»);
-2. com um dongle direto na 5, declarar «Hub» na 5 desenhava um hub que não
-   pode estar ali, e a Sugestão mandava o dongle «da Entrada 5 para a 5.1»;
-3. o que ela declarava nas entradas desenhadas sumia ao reabrir, sem aviso.
-
-TUDO AQUI É DE MENTIRA E DE NINGUÉM: barramento ``usb9``, caminhos ``9-*``,
-seriais que não são endereço de nada, e o ``maquina.json`` no ``tmp_path``
-que o ``conftest`` desvia.
-
-AS MORDIDAS, uma por cura (arranque, veja reprovar, devolva):
-
-* ``identidades`` devolvendo o caminho como ``id`` → caem as réguas da
-  identidade e o reexame na página («Estava em» some);
-* o ``if (doProduto()) return;`` do clique do «Examinar» → a página pinta o
-  reexame antes de a leitura nova chegar, e diz «Nada Mudou de Lugar»;
-* o ``!doHubDesenhado(p)`` do ``planejar`` → a Sugestão volta a mandar o
-  dongle para a 5.1;
-* o ramo do «Hub» cinza no editor → o «Hub» volta a levar o gesto ao disco;
-* o ramo da ponta no ``_declarar_na_entrada`` → a ponta volta a recusar.
-
-E AS DA CONFERÊNCIA (26/09/2026), cada uma sem régua que a pegasse:
-
-* o ``parados`` de ``identidades`` → o gêmeo que chega (ou sai) faz o
-  reexame dizer que o aparelho parado «mudou de lugar»;
-* o modelo fora da semente do caminho → outro modelo que chega no caminho de
-  quem saiu herda o ``id`` dele, e o reexame não o vê chegar;
-* o ``examinaNoProduto()`` do «Já movi» das Sugestões → no produto o botão
-  fica morto (a página não pinta, e o piloto não é chamado);
-* o ``mapaDaTela`` do ``hefestoArranjo`` → o reexame joga fora o que ela
-  ensinou nesta tela. CADUCOU em 26/09/2026 (O-MAPA-QUE-ELA-CORRIGE-01,
-  D-2609-ENSINAR-GRAVA-O-NO): o ensinar grava o nó no disco e o reexame o
-  relê, então o mapa da tela saiu; a mordida agora é devolver o ``MAPA[n]``
-  só na memória (``test_ensinar_a_entrada_grava_o_no``);
-* o ``quem.classe !== "hub"`` do «Hub» cinza → o hub de verdade na entrada
-  também apaga o «Hub».
-"""
+"""O «Examinar» diz quem mudou de lugar, o hub não cabe onde há aparelho direto,"""
 
 from __future__ import annotations
 
@@ -73,13 +29,10 @@ from hefesto_dualsense4unix.utils.maquina import (
     gravar_maquina,
 )
 
-# ── os dublês ─────────────────────────────────────────────────────────────
 
 _TRIPLA_TECLADO = ("03", "01", "01")
 _TRIPLA_BT = ("e0", "01", "01")
 
-#: Os seriais de mentira, por nó. Não são endereço de nada — e a régua
-#: confere que nenhum deles chega à página.
 _SERIAIS = {
     "/sys/de-mentira/teclado": "SERIE-DE-PROVA-TECLADO",
     "/sys/de-mentira/dongle": "SERIE-DE-PROVA-DONGLE",
@@ -134,12 +87,7 @@ def _mapa(**declarado: dict[str, Any]) -> MapaDaMesa:
 
 @pytest.fixture()
 def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes.
-
-    E o barramento é o de mentira (o teclado na 1): o gesto do editor relê a
-    máquina depois de gravar (O-MAPA-QUE-ELA-CORRIGE-01), e a régua não lê o
-    ``/sys`` de ninguém. A régua que precisa de outro barramento o troca.
-    """
+    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes."""
     from hefesto_dualsense4unix.integrations import censo_do_barramento
 
     alvo = caminho_da_maquina()
@@ -161,9 +109,6 @@ def _ler(*aparelhos: Aparelho, reexame: bool = False) -> dict[str, Any]:
             else arranjo_desta_maquina.para_a_pagina(**fontes))
     assert dado is not None
     return dado
-
-
-# ── 1. a identidade do aparelho não é o caminho ──────────────────────────
 
 
 def test_o_aparelho_que_muda_de_entrada_continua_sendo_ele() -> None:
@@ -215,12 +160,7 @@ def _mudaram(dado: dict[str, Any]) -> dict[str, tuple[str | None, str]]:
 
 
 def test_o_gemeo_que_chega_nao_move_quem_ficou(disco: Path) -> None:
-    """Sem serial, o gêmeo que chega ou sai não move quem não se mexeu.
-
-    O único mouse daquele modelo tem o ``id`` do modelo; quando chega o gêmeo,
-    o modelo deixa de separar os dois, e a semente de quem ficou na 9-3 virava
-    o caminho: o reexame dizia «Agora Está em 9-3» de quem não saiu dali.
-    """
+    """Sem serial, o gêmeo que chega ou sai não move quem não se mexeu."""
     _ler(_mouse("/sys/x/a", "9-3"))
     chegou = _ler(_mouse("/sys/x/a", "9-3"), _mouse("/sys/x/b", "9-4"), reexame=True)
     assert [c for _a, c in _mudaram(chegou).values()] == ["9-4"], (
@@ -228,7 +168,6 @@ def test_o_gemeo_que_chega_nao_move_quem_ficou(disco: Path) -> None:
         f"{_mudaram(chegou)}")
     saiu = _ler(_mouse("/sys/x/a", "9-3"), reexame=True)
     assert _mudaram(saiu) == {}, f"o gêmeo saiu e o que ficou «mudou»: {_mudaram(saiu)}"
-    # e o único, quando se move, continua reconhecido pelo modelo
     movido = _ler(_mouse("/sys/x/a", "9-5"), reexame=True)
     assert list(_mudaram(movido).values()) == [("9-3", "9-5")], _mudaram(movido)
 
@@ -259,9 +198,6 @@ def test_o_serial_nao_chega_a_pagina(disco: Path) -> None:
     assert set(dado["leituras"]["agora"]["caminho"]) == ids
 
 
-# ── 2. o «Examinar» relê, e o «antes» é o que a página tinha ─────────────
-
-
 def test_o_reexame_leva_a_leitura_anterior(disco: Path) -> None:
     aberta = _ler(_teclado("9-1"), _dongle("9-5"))
     assert aberta["leituras"]["antes"]["caminho"] == aberta["leituras"]["agora"]["caminho"], (
@@ -273,7 +209,6 @@ def test_o_reexame_leva_a_leitura_anterior(disco: Path) -> None:
     assert relida["leituras"]["agora"]["caminho"][teclado] == "9-2"
     assert relida["leituras"]["antes"]["rotulo"] == arranjo_desta_maquina.ROTULO_DA_ANTERIOR
 
-    # o próximo «Examinar» compara com ESTA, não com a da abertura
     outra = _ler(_teclado("9-2"), _dongle("9-5"), reexame=True)
     assert outra["leituras"]["antes"]["caminho"] == outra["leituras"]["agora"]["caminho"]
 
@@ -349,7 +284,6 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
         outra, arranjo_desta_maquina.PAGINA, {chave: dado})
     rodar_o_laco()
     assert len(perguntas) == 1, "o arranjo foi entregue a outra página"
-    # noutra página a chave é campo dela: segue para a pintura, inteira
     de_outra = {chave: "campo da 08", "outro": 2}
     assert hefesto_vivo.Piloto._o_arranjo_relido(
         outra, "08-conexoes.html", de_outra) is de_outra, (
@@ -357,7 +291,6 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
     rodar_o_laco()
     assert len(perguntas) == 1, "o piloto tentou entregar um arranjo a outra página"
 
-    # e é a volta do gesto que tira o arranjo da resposta, antes da pintura
     import inspect
 
     fonte = inspect.getsource(hefesto_vivo.Piloto._gesto)
@@ -413,19 +346,14 @@ def test_a_primeira_entrega_nao_le_no_fio_da_janela(monkeypatch: pytest.MonkeyPa
     assert perguntas == [arranjo_desta_maquina.js_da_entrega(dado)], perguntas
 
 
-#: A volta do gesto no piloto, como o `_gesto` a escreve: os nomes são
-#: variáveis do código dele.
 _A_VOLTA_DO_GESTO = re.compile(
     r"_deu_certo_dizendo\(\s*pagina, nome, alvo, "  # noqa-acento: código do piloto
     r"self\._o_arranjo_relido\(pagina, r\)\)")  # noqa-acento: código do piloto
 
 
-# ── 3. a ponta do extensor grava; a entrada do hub desenhado não ─────────
-
-
 def test_a_ponta_do_extensor_grava_como_a_entrada_filha(disco: Path) -> None:
     with pytest.raises(ValueError):
-        ee.declarar_a_velocidade("3a", 2)  # a 3 não tem extensor
+        ee.declarar_a_velocidade("3a", 2)
     assert ee.declarar_a_ligacao("3", "extensor").gravou
     assert ee.declarar_a_velocidade("3a", 2).gravou
     assert ee.declarar_a_ligacao("3a", "hub").gravou
@@ -444,7 +372,6 @@ def test_a_ponta_do_extensor_grava_como_a_entrada_filha(disco: Path) -> None:
         with pytest.raises(ValueError):
             ee.declarar_a_velocidade(numero, 3)
 
-    # «Direto» na 3: a ponta que só o editor escreveu sai junto
     assert ee.declarar_a_ligacao("3", None).gravou
     assert "3a" not in carregar_maquina().mapa.portas
     dado = _ler(_teclado("9-1"))
@@ -475,8 +402,6 @@ def test_a_ponta_com_aparelho_mapeado_nao_sai_com_o_direto(disco: Path) -> None:
     assert ee.declarar_a_ligacao("3", None).gravou
     assert carregar_maquina().mapa.portas["3a"].caminho == "9-7"
 
-
-# ── 4. a página, no WebKit, pela ponte do piloto ─────────────────────────
 
 _LER = r"""
 (function(){
@@ -516,13 +441,7 @@ def _clicar(seletor: str) -> str:
 
 
 def _na_pagina(passos: list[str]) -> tuple[list[Any], list[dict[str, Any]]]:
-    """A página publicada num WebKit fora da tela (``_na_pagina_sem_recolher``),
-    e o lixo do WebKit recolhido aqui, no fio do GTK.
-
-    Deixado para o coletor, ele era recolhido no fio de outro teste (medido no
-    CI de 26/09: ``Garbage-collecting`` no ``sensor_hub._loop_manutencao``), e o
-    GTK abortava o processo inteiro com ``Fatal Python error: Aborted``.
-    """
+    """A página publicada num WebKit fora da tela (``_na_pagina_sem_recolher``),"""
     try:
         return _na_pagina_sem_recolher(passos)
     finally:
@@ -534,12 +453,7 @@ def _na_pagina(passos: list[str]) -> tuple[list[Any], list[dict[str, Any]]]:
 
 
 def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str, Any]]]:
-    """A página PUBLICADA num WebKit fora da tela, com o BOOTSTRAP do piloto.
-
-    Devolve o que cada passo respondeu (JSON já lido) e as mensagens que a
-    página mandou pelo canal do piloto. ``Gtk.OffscreenWindow``: janela de
-    teste não nasce na tela dela.
-    """
+    """A página PUBLICADA num WebKit fora da tela, com o BOOTSTRAP do piloto."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre a página num WebKit")
@@ -575,7 +489,7 @@ def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str
         def respondeu(v: Any, res: Any, _u: Any = None) -> None:
             try:
                 respostas.append(v.evaluate_javascript_finish(res).to_string())
-            except Exception as erro:  # a exceção É a resposta do passo
+            except Exception as erro:
                 respostas.append(f"ERRO {erro}")
             GLib.idle_add(seguinte)
 
@@ -615,13 +529,7 @@ def _webcam(caminho: str) -> Aparelho:
 
 
 def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
-    """O teclado sai da 1 e vai para a 2, e uma webcam chega no hub.
-
-    O «Examinar» diz os dois, com o caminho e a entrada: o teclado «estava»
-    na 1; a webcam não estava em lugar nenhum («Estava em undefined» era o
-    que a página dizia de quem chegou), e ela está no hub — a região se acha
-    pela classe, não pelo `id` "hub" do exemplo.
-    """
+    """O teclado sai da 1 e vai para a 2, e uma webcam chega no hub."""
     aberta = _ler(_teclado("9-1"), _dongle("9-5"), _hub("9-3"))
     relida = _ler(_teclado("9-2"), _dongle("9-5"), _hub("9-3"), _webcam("9-3.1"),
                   reexame=True)
@@ -675,12 +583,7 @@ def test_o_ja_movi_das_sugestoes_tambem_rele(disco: Path) -> None:
 def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(
     disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ela ensina que a webcam está na 4, e o «Examinar» não desfaz isso.
-
-    Desde a O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO) o clique no
-    plugue grava o nó da webcam na 4, e o reexame o relê do disco: o que ela
-    ensinou vem da releitura, e não de um mapa da tela guardado por cima dela.
-    """
+    """Ela ensina que a webcam está na 4, e o «Examinar» não desfaz isso."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -740,14 +643,7 @@ def test_o_hub_de_verdade_na_entrada_nao_apaga_o_hub(disco: Path) -> None:
 
 
 def test_declarar_o_hub_lido_nao_cria_outra_face(disco: Path) -> None:
-    """O hub da 3 já tem face no disco (a 6 e a 7 descem de ``9-3``): a face diz
-    «Hub na Entrada 3», o «Hub» da 3 nasce apertado, e CLICÁ-LO grava sem criar
-    a face de quatro buracos — o painel continua «de 7».
-
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA). Antes, declarar
-    o hub numa entrada com face ligada fazia nascer uma segunda face e o painel
-    ir para «de 11»: a deduplicação comparava só o nome da face.
-    """
+    """O hub da 3 já tem face no disco (a 6 e a 7 descem de ``9-3``): a face diz"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -783,15 +679,8 @@ def test_declarar_o_hub_lido_nao_cria_outra_face(disco: Path) -> None:
     assert "de 7 entradas" in depois["painel"].lower(), depois["painel"]
 
 
-#: O «Já movi» das Sugestões. Até 01/10/2026 ele era o segundo botão com o id
-#: `reexaminar`, o mesmo do «Examinar» do cabeçalho; desde a
-#: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 ele é a classe `ja-movi`, e o
-#: id é só do cabeçalho. A página publicada recebe a classe no `--publicar` do
-#: mapa: até lá a régua acha o botão pelo id de antes, e depois, pela classe. O
-#: `#painel #reexaminar` sai daqui no mesmo commit do `--publicar`.
 _O_JA_MOVI = "#painel .ja-movi, #painel #reexaminar"
 
-#: O gesto do «Já movi» das Sugestões.
 _LER_O_JA_MOVI = (
     f"(function(){{const b=document.querySelector('{_O_JA_MOVI}');"
     "return b ? (b.dataset.gesto || '') : 'sem o botão';})()")
@@ -826,7 +715,6 @@ def test_o_hub_fica_cinza_onde_ha_um_aparelho_direto(disco: Path) -> None:
     assert not [m for m in mensagens if m.get("liga") == "hub"], mensagens
     assert ee.FACE_DO_HUB_DECLARADO.format(numero="5") not in depois["faces"]
     assert carregar_maquina().mapa.portas["5"].liga is None
-    # a entrada vazia continua oferecendo o hub
     assert na_3["hub"] is not None and na_3["hub"]["cinza"] is None, na_3["hub"]
     assert na_3["hub"]["gesto"] == "entrada-o-que-tem"
 
@@ -849,11 +737,7 @@ def test_a_sugestao_nunca_manda_para_dentro_do_hub_desenhado(disco: Path) -> Non
 
 
 def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> None:
-    """Extensor na 3 → a ponta 3a leva o gesto; hub na 4 → a 4.1 não edita.
-
-    A 3 não tem nó gravado, e a velocidade dela é USB 2.0: a ponta herda isso.
-    Ela diz USB 3.0 na ponta, e é o azul da ponta relida que prova o disco.
-    """
+    """Extensor na 3 → a ponta 3a leva o gesto; hub na 4 → a 4.1 não edita."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -869,8 +753,6 @@ def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> N
             dono(None, m, None)
         return [(m["gesto"], m.get("entrada")) for m in pedidos]
 
-    # A TELA ESPERA O DISCO (O-MAPA-QUE-ELA-CORRIGE-01): a ponta só existe
-    # depois que o «Extensor» foi ao disco e o arranjo relido chegou.
     _, mensagens = _na_pagina([
         _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="3"]'),

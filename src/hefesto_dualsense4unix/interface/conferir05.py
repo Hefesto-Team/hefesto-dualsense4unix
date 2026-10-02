@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""05 · Vibração — a conferência da aba, medida no Chrome.
-
-A versão anterior conferia UM controle: quatro botões abaixo do desenho, três
-trilhos no mesmo x, a Força parando em 150%. Aquilo estava bem conferido, e
-deixou de fazer sentido quando a mesa virou quatro — `.acoes-col .btn` passou a
-casar oito botões, e "os 3 trilhos no mesmo x" virou doze trilhos em quatro
-colunas, que NÃO devem começar no mesmo x.
-
-O que ela conferia continua conferido, agora por coluna. E entram as perguntas que a
-mesa de quatro criou, todas contra o MAPA — nunca contra um número digitado
-aqui:
-
-* a cor de cada moldura é a que `cor_da_zona()` lê do desenho (o hex digitado é
-  exatamente o defeito que o `check_cores_do_dualsense.py` existe para matar);
-* os ids dos motores são os do `docs/data/pecas-do-dualsense.csv`;
-* o lado ACESO do desenho é o lado LIGADO no interruptor;
-* as cinco lâmpadas acendem no padrão do produto (`core/led_control.py`).
-
-Uso: python3 conferir05.py
-"""
+"""05 · Vibração — a conferência da aba, medida no Chrome."""
 import pathlib
 import sys
 
@@ -31,8 +12,6 @@ from monta import MESA, PADRAO_JOGADOR, cor_da_zona  # noqa: E402
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from aba05 import DIR, ESQ, ESTADO, TETO  # noqa: E402
 
-# MEDE A BANCADA (`mockup/`) — 31/08/2026. Este caminho era `parent.parent`,
-# que resolvia para `layout/`; apontá-lo lá hoje mediria a página congelada.
 D = onde.BANCADA
 
 

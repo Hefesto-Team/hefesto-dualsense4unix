@@ -1,20 +1,4 @@
-"""CACHE NÃO É BOND — o doctor reprovava a máquina sem controle pareado.
-
-MEDIDO em 30/09/2026, nesta máquina. Às 01h13 ela removeu três controles pelo
-sistema; o install das 01h16 terminou com
-
-    [FAIL] ZERO bonds em disco com cache de 159 devices — pareamentos vivendo
-    só em memória (...) se houver snapshot: sudo .../bt_bonds_restore.sh --list
-
-e a receita era restaurar o snapshot: desfazer o que ela tinha feito de
-propósito. O cache guarda o nome de todo aparelho visto numa busca; o
-RemoveDevice do BlueZ apaga o bond e o `[ServiceRecords]` do cache, e os três
-caches ficaram com 46 bytes, só o nome. O que denuncia um bond que evaporou é o
-registro de serviço sem o `info` — só esse órfão reprova.
-
-Nenhum teste toca o `/var/lib/bluetooth` de verdade: o `sudo` é um dublê que
-troca o caminho por uma árvore temporária.
-"""
+"""CACHE NÃO É BOND — o doctor reprovava a máquina sem controle pareado."""
 from __future__ import annotations
 
 import os
@@ -47,7 +31,6 @@ def _orfaos(entrada: str) -> str:
 
 class TestOrfaoPuro:
     def test_cache_so_com_o_nome_nao_entra_na_conta(self) -> None:
-        # O chamador só passa caches COM registro de serviço: sem nenhum, zero.
         assert _orfaos("") == "0"
 
     def test_registro_de_servico_sem_info_e_orfao(self) -> None:
@@ -103,7 +86,6 @@ def _arvore(tmp_path: Path, caches: dict[str, str], bonds: tuple[str, ...] = ())
 
 class TestOCheck:
     def test_removidos_pelo_sistema_nao_reprovam(self, tmp_path: Path) -> None:
-        # O retrato de 30/09: os removidos ficaram só com o nome.
         _arvore(tmp_path, {CONTROLE: SO_O_NOME, OUTRO: SO_O_NOME})
         saida = _check(tmp_path)
         assert "[FAIL]" not in saida

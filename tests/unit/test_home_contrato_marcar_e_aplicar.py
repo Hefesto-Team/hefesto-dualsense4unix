@@ -1,41 +1,8 @@
-"""O portão do contrato MARCAR e APLICAR — I12 da INÍCIO NÃO MENTE-01.
-
-O contrato mora em ``app/actions/contrato_da_mascara.py`` e é só dado. Este
-arquivo é a régua que o faz valer: **nenhuma superfície da janela aplica modo
-ou máscara além do rodapé**, salvo as exceções registradas com data.
-
-POR QUE A RÉGUA MEDE `apply_mode`, E NÃO A STRING `gamepad.emulation.set`
--------------------------------------------------------------------------
-
-Porque medir a string mediria a coisa errada, e o produto já provou isso: a
-HARM-01 tirou o ``gamepad.emulation.set`` CRU da aba Emulação e o fez passar
-pelo ``mode_transition``. Uma régua que procurasse a string daria a Emulação
-por curada — ela não a escreve mais — enquanto a aba continua APLICANDO no
-clique. O gesto é `apply_mode`; a string é só o último degrau dele.
-
-O "ANTES" ESTÁ AQUI DENTRO, E É EXECUTÁVEL
--------------------------------------------
-
-Hoje o portão **passaria vazio** se não houvesse registro: a Emulação aplica.
-Ela está em ``EXCECOES_QUE_APLICAM_HOJE``, com data e razão, e há duas réguas
-sobre esse registro:
-
-* ``test_a_excecao_registrada_ainda_e_uma_excecao`` — se a Emulação parar de
-  aplicar, a linha tem de SAIR. Exceção que sobrevive à própria cura vira
-  norma;
-* ``test_nenhuma_superficie_alem_do_rodape_aplica`` está marcado
-  ``xfail(strict=True)``: é o contrato SEM exceção nenhuma. No dia em que a
-  onda da Emulação fechar, ele passa, o `strict` reprova, e quem integrar é
-  obrigado a apagar o `xfail` e o registro no mesmo gesto.
-"""
+"""O portão do contrato MARCAR e APLICAR — I12 da INÍCIO NÃO MENTE-01."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_contrato_marcar_e_aplicar: importa código da janela GTK")
 
 import ast
@@ -51,18 +18,11 @@ APP = SRC / "app"
 
 
 def _superficies_que_aplicam() -> dict[str, list[int]]:
-    """`{caminho relativo: [linhas]}` de quem chama `apply_mode` dentro de `app/`.
-
-    Só o pacote da JANELA: a CLI tem porta própria (``cmd_gamepad``), e ela não
-    é superfície de tela — o contrato desta sprint é sobre o que a pessoa vê e
-    clica.
-    """
+    """`{caminho relativo: [linhas]}` de quem chama `apply_mode` dentro de `app/`."""
     achados: dict[str, list[int]] = {}
     for arquivo in sorted(APP.rglob("*.py")):
         relativo = str(arquivo.relative_to(SRC)).replace("\\", "/")
         if relativo == contrato.MECANISMO_DA_TRANSICAO:
-            # O mecanismo DEFINE `apply_mode`; chamá-lo lá dentro seria a
-            # própria implementação, não uma superfície decidindo aplicar.
             continue
         try:
             arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
@@ -94,12 +54,7 @@ def test_o_contrato_esta_no_disco_e_nomeia_os_dois_gestos() -> None:
 
 
 def test_a_regua_enxerga_quem_aplica() -> None:
-    """Valide o instrumento contra o que você já sabe (A5, 23/08/2026).
-
-    Duas respostas conhecidas: o rodapé aplica (é o dono declarado) e a
-    Emulação aplica (é a exceção registrada). Uma varredura que não achasse
-    nenhum dos dois deixaria o portão abaixo verde por cegueira.
-    """
+    """Valide o instrumento contra o que você já sabe (A5, 23/08/2026)."""
     quem = _superficies_que_aplicam()
     assert contrato.SUPERFICIE_QUE_APLICA in quem, (
         "a varredura não acha nem o rodapé, que é o dono declarado do gesto de "
@@ -113,12 +68,7 @@ def test_a_regua_enxerga_quem_aplica() -> None:
 
 
 def test_nenhuma_superficie_nova_entrou_no_gesto_de_aplicar() -> None:
-    """O portão de verdade: quem aplica é o rodapé, mais o que está registrado.
-
-    Uma aba nova que resolva aplicar direto reprova aqui — que é exatamente o
-    que faltava quando a Emulação passou a aplicar e ninguém percebeu que duas
-    telas mandavam no mesmo valor.
-    """
+    """O portão de verdade: quem aplica é o rodapé, mais o que está registrado."""
     permitidas = {contrato.SUPERFICIE_QUE_APLICA, *contrato.EXCECOES_QUE_APLICAM_HOJE}
     intrusas = sorted(set(_superficies_que_aplicam()) - permitidas)
     assert not intrusas, (
@@ -131,11 +81,7 @@ def test_nenhuma_superficie_nova_entrou_no_gesto_de_aplicar() -> None:
 
 
 def test_a_excecao_registrada_ainda_e_uma_excecao() -> None:
-    """Exceção que sobreviveu à própria cura vira norma. Esta não vai.
-
-    Mesma disciplina do `test_nenhuma_lapide_sobreviveu_a_propria_cura` do
-    portão da promessa sem caminho.
-    """
+    """Exceção que sobreviveu à própria cura vira norma. Esta não vai."""
     quem = _superficies_que_aplicam()
     curadas = [alvo for alvo in contrato.EXCECOES_QUE_APLICAM_HOJE if alvo not in quem]
     assert not curadas, (
@@ -176,12 +122,7 @@ def test_nenhuma_superficie_alem_do_rodape_aplica() -> None:
 
 
 def test_o_vocabulario_atravessa_a_fronteira_por_nome_publico() -> None:
-    """A aba "No jogo" deixou de importar nome privado da aba Início.
-
-    O alias é o MESMO objeto, nunca cópia: um segundo dono do vocabulário faria
-    a aba No jogo dizer o rótulo velho no dia em que a Início mudasse o dele —
-    em silêncio, que é como esta casa já perdeu um dia.
-    """
+    """A aba "No jogo" deixou de importar nome privado da aba Início."""
     from hefesto_dualsense4unix.app.actions import home_actions
     from hefesto_dualsense4unix.app.widgets import painel_no_jogo
 

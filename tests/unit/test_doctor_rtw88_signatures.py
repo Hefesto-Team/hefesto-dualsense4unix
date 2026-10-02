@@ -1,22 +1,4 @@
-"""Onda W — os 3 checks novos do rtw88 no doctor.sh.
-
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md (§3):
-1. check_hefesto_rtw88_usb_dkms — status do patch DKMS + marcador de carga
-   pelo PARÂMETRO hang_reset (o in-tree JÁ expõe parameters/ com
-   switch_usb_mode: o diretório sozinho NÃO distingue — armadilha própria
-   da Onda W, diferente do hid_nintendo);
-2. check_usb_fantasma — a assinatura MEDIDA do incidente de 20/07 (13h de
-   device retido após port-status-change perdido no xHCI): duplicata de
-   idVendor:idProduct no driver rtw88_usb, colisão de rename do udev
-   (wlx… File exists) e device sem net/ com -71 no boot;
-3. check_wifi_powersave — powersave EFETIVO do NM lido SÓ de arquivo
-   (conf.d), sem julgamento até a medição W2, + contagem de
-   'failed to leave lps state' (assinatura do LPS raso).
-
-Cobertura (falha-sem/passa-com, sem journal/sysfs reais — funções extraídas
-rodam em bash com stub de journalctl e sysfs/conf.d sintéticos via
-substituição textual da raiz, mesma técnica de fixture dos testes da Onda T).
-"""
+"""Onda W — os 3 checks novos do rtw88 no doctor.sh."""
 
 from __future__ import annotations
 
@@ -59,8 +41,7 @@ def _sem_comentarios(texto: str) -> str:
 def _roda_check(
     tmp_path: Path, nome: str, raiz_original: str, raiz_fixture: Path, jornal: str
 ) -> subprocess.CompletedProcess[str]:
-    """Extrai o check, aponta a raiz hardcoded (sysfs/etc) p/ a fixture e
-    roda com journalctl stubado — determinístico, sem depender do host."""
+    """Extrai o check, aponta a raiz hardcoded (sysfs/etc) p/ a fixture e"""
     stubs = tmp_path / "bin"
     stubs.mkdir(exist_ok=True)
     fixture = tmp_path / "jornal.txt"
@@ -190,8 +171,6 @@ class TestAssinaturaFantasmaUsb:
         )
 
     def test_duplicata_do_mesmo_dongle_dispara_warn(self, tmp_path: Path) -> None:
-        # A assinatura REAL do incidente: fantasma 4-3 + device vivo 4-2,
-        # mesmos idVendor:idProduct, mesmo driver — só existe um dongle físico.
         raiz = tmp_path / "sysdev"
         _device_usb(raiz, "4-2")
         _device_usb(raiz, "4-3")
@@ -215,8 +194,6 @@ class TestAssinaturaFantasmaUsb:
         )
 
     def test_device_sem_net_com_eproto_dispara_warn(self, tmp_path: Path) -> None:
-        # Firmware wedged/disconnect perdido: driver ligado, nenhuma
-        # interface de rede e -71 no kernel log do MESMO device.
         raiz = tmp_path / "sysdev"
         _device_usb(raiz, "4-3", com_net=False)
         jornal = (
@@ -238,8 +215,6 @@ class TestAssinaturaFantasmaUsb:
         assert "PASS: sem sinal de device USB fantasma" in resultado.stdout
 
     def test_devices_de_outros_drivers_sao_ignorados(self, tmp_path: Path) -> None:
-        # Dois devices com os MESMOS ids mas sem vínculo com rtw88_usb
-        # (ex.: dois controles) não podem virar falso fantasma.
         raiz = tmp_path / "sysdev"
         _device_usb(raiz, "3-2", com_driver=False)
         _device_usb(raiz, "3-4", com_driver=False)

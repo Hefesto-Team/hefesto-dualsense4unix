@@ -1,14 +1,4 @@
-"""INSTALL-HEADLESS-01 (auditoria 21/07) — install/uninstall sem TTY.
-
-`install.sh` roda com `set -euo pipefail`. O `ask_yn` fazia `read` de um
-prompt; sem TTY (stdin em /dev/null — CI, pipe, headless) o `read` batia EOF,
-retornava não-zero e o `set -e` MATAVA o script no 1o prompt (passo 4,
-atalho/launcher), pulando os passos seguintes. O fix: sem TTY, `ask_yn` usa o
-default seguro (o mesmo que o `-y` usaria) e nunca mata o script.
-
-Também prova o suporte a SUDO_ASKPASS no `acquire_sudo` (install e uninstall):
-com o helper setado, a credencial é validada por `-A` (sem exigir TTY).
-"""
+"""INSTALL-HEADLESS-01 (auditoria 21/07) — install/uninstall sem TTY."""
 from __future__ import annotations
 
 import re
@@ -32,9 +22,7 @@ def _extract_bash_function(source: str, name: str) -> str:
 
 
 def _run_ask_yn(default: str) -> str:
-    """Roda o `ask_yn` real de install.sh sob `set -euo pipefail`, stdin fechado
-    (headless), e devolve o REPLY. Se o script morresse no EOF do read, o
-    subprocess sairia !=0 e o teste falharia com o rc."""
+    """Roda o `ask_yn` real de install.sh sob `set -euo pipefail`, stdin fechado"""
     fn = _extract_bash_function(INSTALL, "ask_yn")
     script = (
         "set -euo pipefail\n"
@@ -65,8 +53,6 @@ class TestAskYnHeadless:
         assert _run_ask_yn("n") == "n"
 
     def test_ask_yn_tem_guarda_de_tty(self) -> None:
-        # A guarda `[[ ! -t 0 ]]` precisa existir ANTES do read — é ela que
-        # impede o EOF de matar o set -e.
         fn = _extract_bash_function(INSTALL, "ask_yn")
         assert "! -t 0" in fn
         pos_guarda = fn.index("! -t 0")

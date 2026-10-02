@@ -12,86 +12,23 @@ from monta import (  # noqa: E402
     CSS_GLIFO,
 )
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
-# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
-# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
-# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
-# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
-# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
-# segunda árvore de trabalhar sem tocar na primeira.
-# A RAIZ TEM DONO, e é o `onde.py`. Ela era `parents[2]` aqui — o que dava
-# a pasta `src/` depois que a interface se mudou para dentro dela em
-# 01/09/2026, e fazia toda leitura de fonte procurar em `src/src/…`. Os
 # geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
-# `FileNotFoundError: .../src/src/hefesto_dualsense4unix/app/actions/...`.
-# O contador de níveis é o defeito que o `onde.py` existe para não repetir.
 import onde  # noqa: E402
 from onde import RAIZ as R  # noqa: E402
 
-# O PISO DO MIOLO TEM UM DONO SÓ, e ele mora na ponte da janela — §3.5 da
-# ALTURA-DA-VISTA-01. Custa 0,13 s e NÃO abre tela: o módulo importa o `gi`
-# dentro da função que cria a janela, não no topo.
 from hefesto_dualsense4unix.gui import ponte_da_tela as _ponte  # noqa: E402
 
-# A LINHA DO VULKAN NO EXAME TEM DONO, e é o módulo das camadas (stdlib, sem
-# GTK): o produto pinta a mesma frase em `a09_sistema.linha_da_sobreposicao_vulkan`.
 from hefesto_dualsense4unix.integrations.camadas_vulkan import (  # noqa: E402
     frase_do_estado as _frase_do_vulkan,
 )
 
-# ---------------------------------------------------------------------------
-# A MESA MANDA NOS NÚMEROS DESTA ABA.
-#
-# Nada aqui digita "quatro". A aba Sistema é, do começo ao fim, uma CONTAGEM —
-# quantos aparelhos existem, quantos o Hefesto criou, quantos o jogo enxerga —
-# e uma contagem digitada é a que diverge no dia em que a mesa muda. Foi assim
-# que o cabeçalho dizia "2 controles" com quatro chips na fita, em 27/08.
-# ---------------------------------------------------------------------------
-# O `N` CONTA OS CONECTADOS — 01/09/2026, e era o mesmo defeito de três outras
-# abas hoje: a tela dizia *"Os 4 controles"* com dois na mesa. A `MESA` sabe dos
-# quatro LUGARES; toda frase que promete alcance tem de contar os ocupados.
 N = len(CONECTADOS)
 LUGARES = len(MESA)
 USB = [c for c in CONECTADOS if c["via"] == "USB"]
 BT = [c for c in CONECTADOS if c["via"] == "BT"]
-#: A CONTA DOS NÓS DE `/dev/input/js*` SAIU DA TELA — 11/09/2026, A1-032. Ela
 #: era `2 * N + N` (cada DualSense publica DOIS — o gamepad e os sensores de
-#: movimento —, e cada gamepad virtual publica um) e aparecia na nota do co-op.
-#: Caminho de kernel na tela é da mesma família de `uinput` e `hidraw`, que o
-#: glossário proíbe, e a frase acima já explicava o co-op inteiro. A conta
-#: continua viva onde ela tem dono: `emulation_actions._chave_do_aparelho`.
 
 
-#: MEDIDO no Chrome (1920×1080) com o `olhar.py` desta pasta, 28/08/2026 — e é
-#: número de FOTO: mexeu no miolo, meça de novo antes de repetir a frase.
-#: O miolo desta janela tem `MIOLO_H` de altura útil; o conteúdo da aba mede
-#: `ALTURA`. Enquanto `ALTURA <= MIOLO_H`, nada rola por dentro e nada é fatiado.
-#: REMEDIDOS EM 06/09/2026, e os dois estavam ERRADOS — não caducos, errados.
-#: O par dizia `544, 542`; medido de novo no Chrome, pelo mesmo caminho de
-#: sempre, o miolo tem **564** e o conteúdo tinha **508**. A folga real era de
-#: 22px, e não de 2 — e o `.quadro` não a preenche, porque o miolo ainda gasta
-#: 34px de recuo (16 em cima, 18 embaixo) que o número velho contava dentro.
-#:
-#: O NÚMERO ERRADO CUSTA, e custou aqui: com ele, o quarto botão dos gestos
-#: raros parecia impossível antes de alguém abrir o navegador. A conta de hoje,
-#: medida: `.avancado` foi de 110 para 136 (o botão novo, sem vão entre eles) e
-#: o vão entre faixas caiu 2px em cada `sec-alta` — a página fecha em **530 de
-#: conteúdo para 530 de espaço útil**, e o miolo não rola um pixel.
-#:
-#: O `MIOLO_H` DEIXOU DE SER DIGITADO — 10/09/2026, §3.5 da ALTURA-DA-VISTA-01.
-#: Ele dizia **564**, que era o miolo de uma janela de altura FIXA; no instante
-#: em que a altura passou a seguir a vista (decisão dela, «1 + rodapé») esse
-#: número parou de ser verdade em qualquer tela.
-#:
-#: A REGRA QUE O RESOLVE: *um gerador não pode assegurar contra a vista, porque
-#: ele roda sem tela.* Ele assegura contra o PISO — a menor vista prometida —,
-#: e quem mede a vista de verdade é
-#: `scripts/ensaios/a_janela_cabe_no_que_ela_ve.py --vista=N`, com a janela
-#: aberta. O dono do piso é um só: `gui/ponte_da_tela.MIOLO_NO_PISO`.
-#:
-#: NA TELA DELA ELE SOBRA, e é o ponto do piso: medido com a vista de 840 px
-#: da TV dela, o miolo desta aba vai a **666**, não a estes 634. Assegurar
-#: contra o menor é o que faz a promessa valer nas duas pontas.
 MIOLO_H, ALTURA = _ponte.MIOLO_NO_PISO, 530
 
 
@@ -100,60 +37,14 @@ def _lista(nomes):
     return nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
 
 
-
-
 def _frase(nomes, curto=True):
-    """A mesma lista, em CAIXA DE FRASE: só a primeira letra é maiúscula.
-
-    Regra dela, 30/08: *"a maiúscula a regra é sobre a primeira letra a ser
-    capitalizada"*. `LINHAS_DO_TETO` guarda cada nome capitalizado porque lá
-    cada um é um TÍTULO de linha; enroladas num valor de campo só, elas viram
-    uma frase — e "Gatilhos, Barra de luz e Giroscópio" tem três maiúsculas no
-    meio de uma. Nenhum dos nomes é próprio, caminho ou sigla, então nenhum
-    perde forma ao descer. Derivado, nunca digitado: o dono continua sendo o
-    produto.
-    """
-    # `curto=False` devolve a frase INTEIRA, e é o que vai para o `title`.
-    # Encurtar sem guardar o completo em lugar nenhum não é simplificar — é
-    # apagar: "barra de luz" e "microfone POR RÁDIO" carregam o qualificador que
-    # diz de qual microfone se fala.
+    """A mesma lista, em CAIXA DE FRASE: só a primeira letra é maiúscula."""
     curtos = [APELIDO_NA_TELA.get(n, n) for n in nomes] if curto else list(nomes)
     return _lista([curtos[0]] + [n[0].lower() + n[1:] for n in curtos[1:]])
 
 
-# ---------------------------------------------------------------------------
-# O PERFIL DE BATERIA SAI DO PRODUTO, LIDO POR AST — NENHUM RÓTULO DIGITADO.
-#
-# Os três rótulos, a tradução perfil->disco e o degrau do teto têm dono no
-# produto (`app/actions/config/secao_orcamento.py` e `daemon/subsystems/
-# rumble.py`). Digitá-los aqui é o defeito que aquele módulo existe para
-# evitar, e ele já mordeu esta casa: em 28/08 a dica da Conexões afirmava que
-# "Bateria longa" corta a força em 60%, e o produto corta em 30% —
-# `RUMBLE_POLICY_MULT["economia"] = 0.3`. O dobro do limite real, e nenhuma
-# régua podia vê-lo, porque era literal.
-#
-# POR AST E NÃO POR IMPORT, pela mesma razão do `aba08.py`: importar o módulo
-# do produto puxa `structlog` e a GUI, e o `python3 abaNN.py` desta pasta não
-# roda no `.venv`. É o que `scripts/validar-fala-de-tela.py` já faz — "nunca
-# importando este módulo".
-#
-# POR QUE UMA CÓPIA DO LEITOR DO `aba08.py`, e não um import: importar outro
-# gerador o EXECUTA, e ele reescreveria o HTML da aba dele (aviso escrito no
-# próprio `aba08.py`). O lugar natural deste leitor é o `monta.py`, que é
-# território de outro agente nesta rodada; quando ele voltar a ser mexível, as
-# duas cópias viram uma.
-# ---------------------------------------------------------------------------
 def _valor(no, ja):
-    """O valor de um nó de AST, resolvendo NOME contra o que já foi lido.
-
-    `ast.literal_eval` sozinho não dá conta de `{PERFIL_TUDO_LIGADO: "Tudo
-    ligado"}` — a chave é um `Name`, não um literal. Como o módulo é lido de
-    cima para baixo, o nome já está no `ja` quando a linha que o usa aparece.
-
-    `Call` vira dicionário posicional: `LINHAS_DO_TETO` é uma tupla de
-    `LinhaDoTeto(nome, vem_de, ponto_de_aplicacao=None)`, e o que esta tela
-    precisa dela é só o nome e se existe ponto — o `tem_ponto` do produto.
-    """
+    """O valor de um nó de AST, resolvendo NOME contra o que já foi lido."""
     if isinstance(no, ast.Name):
         return ja[no.id]
     if isinstance(no, ast.Dict):
@@ -167,11 +58,7 @@ def _valor(no, ja):
 
 
 def _constantes(caminho, nomes):
-    """As constantes de módulo daquele arquivo, lidas sem importar nada.
-
-    Reprova em voz alta quando um nome some: uma constante renomeada no produto
-    tem de derrubar a geração da tela, não sumir dela em silêncio.
-    """
+    """As constantes de módulo daquele arquivo, lidas sem importar nada."""
     ja, achado = {}, {}
     for no in ast.parse(pathlib.Path(caminho).read_text()).body:
         if isinstance(no, ast.Assign) and len(no.targets) == 1:
@@ -185,7 +72,7 @@ def _constantes(caminho, nomes):
         try:
             ja[alvo.id] = _valor(valor, ja)
         except (ValueError, TypeError, KeyError, IndexError, SyntaxError):
-            continue  # o que não é literal não interessa — e não pode parar a leitura
+            continue
         if alvo.id in nomes:
             achado[alvo.id] = ja[alvo.id]
     if faltam := set(nomes) - set(achado):
@@ -197,46 +84,17 @@ def _constantes(caminho, nomes):
 ORC = _constantes(R / "src/hefesto_dualsense4unix/app/actions/config/secao_orcamento.py",
                   {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL", "LINHAS_DO_TETO"})
 
-#: OS ENDEREÇOS E OS GESTOS SÃO DO PRODUTO, NÃO DESTA TELA. Eles moram em
 #: `src/hefesto_dualsense4unix/gui/aba_sistema.py` — que é versionado, viaja em
-#: worktree e é medido por `ruff`/`mypy` —, e o gerador os LÊ pelo mesmo leitor
-#: de AST que já lê o `secao_orcamento`. Digitar a lista aqui criaria o segundo
-#: dono: a página passaria a ter endereços que a ponte não conhece, ou o
-#: contrário, e nenhum dos dois lados reprovaria.
 _CONTRATO = _constantes(R / "src/hefesto_dualsense4unix/gui/aba_sistema.py",
                         {"ENDERECOS", "GESTOS"})
 ENDERECOS = _CONTRATO["ENDERECOS"]
 GESTOS = _CONTRATO["GESTOS"]
 
-#: OS NOMES LONGOS, ENCURTADOS SÓ PARA A TELA — 01/09/2026, pedido dela.
-#:
-#: **O DONO MUDOU DE CASA EM 06/09/2026** e é `pacotes/a09_sistema.py`, lido
-#: aqui sem importar nada. A razão é que as duas linhas do Perfil de Bateria
-#: passaram a ser VIVAS: quem escreve o valor a cada tique é o pacote, e quem
-#: escreve o desenho é este arquivo. Digitado nos dois, o apelido se afastaria
-#: no dia em que um mudasse — que é como a fita viva morreu calada em 27/08.
-#:
-#: MEDIDO: a frase inteira tem 303px e a linha dela ocupa TUDO, do rótulo à
-#: borda direita do bloco, enquanto as outras três do mesmo quadro ("Nada é
-#: limitado", "Os 2 controles", "Vibração") sobram espaço. Ela lê como se
-#: estivesse vazando, e é o que ela viu.
-#:
-#: O DADO NÃO MUDA: o dono da LISTA continua sendo `ORC["LINHAS_DO_TETO"]`, do
-#: produto, e a frase INTEIRA continua no `title` do valor — a cura de 31/08 que
-#: pôs as reticências também pôs o `title`, e é ele que segura a informação. O
-#: que encurta é a etiqueta, e só onde ela não cabe.
-#: O ENDEREÇO DO BOTÃO DO MODO IMPROVISADO É LIDO DO PACOTE, nunca digitado —
-#: 06/09/2026. O par gerador/pacote já mordeu esta casa uma vez: os dois
-#: endereços da fita foram escritos duas vezes, se afastaram, e a fita viva
-#: morreu em silêncio em 27/08. Aqui a segunda cópia nem chega a nascer: quem
-#: escreve NO campo é `pacotes/a09_sistema.py`, e é de lá que o nome vem.
 _DO_PACOTE = _constantes(
     R / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py",
     {"APELIDO_NA_TELA", "CAMPO_DO_MODO_AVULSO", "CAMPO_DO_STATUS", "CAMPO_DO_VERDE"})
 APELIDO_NA_TELA = _DO_PACOTE["APELIDO_NA_TELA"]
 CAMPO_DO_MODO_AVULSO = _DO_PACOTE["CAMPO_DO_MODO_AVULSO"]
-#: O Status inteiro e o verde do botão do serviço — os dois endereços que o
-#: pacote escreve, lidos dele (25/09/2026), pela mesma razão do de cima.
 CAMPO_DO_STATUS = _DO_PACOTE["CAMPO_DO_STATUS"]
 CAMPO_DO_VERDE = _DO_PACOTE["CAMPO_DO_VERDE"]
 
@@ -257,24 +115,10 @@ def _gesto(nome):
     return nome
 
 
-#: O SUFIXO DA RAZÃO DE UM BOTÃO CINZA — decisão [02] do PO, 04/09/2026.
-#:
-#: O endereço da razão DERIVA DO GESTO, e não de um nome novo: quem fica cinza
-#: é o botão, e o botão É o gesto. `_gesto()` já cobra que ele tenha dono
-#: declarado no produto, então nenhuma razão pode nascer apontando para um
-#: clique que ninguém atende.
-#:
 #: POR QUE NÃO UMA ENTRADA EM `aba_sistema.ENDERECOS`: aquele dicionário é o
-#: contrato dos VALORES que a camada do produto produz — cada linha dele nomeia
 #: a fonte do dado (`state_full["paused"]`, `storm_report:755`). A razão do
 #: cinza não é um valor novo do produto: é a MESMA `aba_sistema.travas()` que a
-#: aba já consulta desde 03/09, endereçada. É a mesma derivação que o `-g` do
-#: glifo faz desde 03/09, e ela vale pelo mesmo motivo — a base tem dono, e o
-#: sufixo diz qual metade daquele dono está sendo escrita.
-#:
 #: `gui/aba_sistema.py` está FORA da posse desta frente, e por isso a derivação
-#: fica aqui e é RELATADA. Se um dia `ENDERECOS` ganhar as três linhas, este
-#: helper passa a validá-las contra ele sem mudar um `data-campo`.
 SUFIXO_DA_RAZAO = "-razao"
 
 
@@ -284,40 +128,19 @@ def _razao(nome):
 
 
 #: AS DUAS LINHAS DO TETO («Com limite», «Sem limite») SAÍRAM EM 25/09/2026,
-#: pedido dela: as tabelas de baixo do Perfil de Bateria somem. O dono delas
-#: continua sendo `pacotes/a09_sistema.frases_do_teto`, e a frase inteira segue
-#: no `?` da coluna.
 MULT = _constantes(R / "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py",
                    {"RUMBLE_POLICY_MULT"})["RUMBLE_POLICY_MULT"]
-#: A ÚNICA chave de disco que impõe teto. `balanceado`, `max`, `auto` e o
-#: não-declarado devolvem `None` em `core.rumble.teto_do_orcamento` — quatro
-#: nomes para um comportamento só, e é isso que a `D-PERFIL-DE-DESEMPENHO`
-#: colapsou em três perfis.
 COM_TETO = _constantes(R / "src/hefesto_dualsense4unix/core/rumble.py",
                        {"_ORCAMENTO_COM_TETO"})["_ORCAMENTO_COM_TETO"]
 
 ROT_PERFIL = ORC["ROTULOS_DOS_PERFIS"]
-#: O perfil que a mesa mostra escolhido. É o MESMO que a Conexões mostrava no
-#: dropdown que se mudou para cá (`PERFIS[0]`, "Tudo ligado") — trocar o estado
-#: no transplante faria as quatro linhas de teto por controle da Conexões
-#: passarem a mentir sobre o global. O estado é dela, não meu.
 PERFIL_DA_MESA = ORC["PERFIS"][0]
-#: As coisas que o perfil DEVERIA alcançar, e as que ele alcança hoje. Dono
-#: único no produto (`LINHAS_DO_TETO`); a tela deriva a frase em vez de repetir
-#: a lista, que é a mesma cura do `alcance_de_hoje()` de lá.
 ALCANCA = [linha["nome"] for linha in ORC["LINHAS_DO_TETO"] if linha["tem_ponto"]]
 PENDENTES = [linha["nome"] for linha in ORC["LINHAS_DO_TETO"] if not linha["tem_ponto"]]
 
 
 def teto_do_perfil(perfil):
-    """O teto que um perfil da TELA impõe, ou `None` quando não há teto.
-
-    É a conta de `core.rumble.teto_do_orcamento`, com as duas pontas lidas do
-    produto: a tradução perfil->disco (`TETO_POR_PERFIL`) e o degrau
-    (`RUMBLE_POLICY_MULT`). **A palavra "Sem teto" não aparece aqui** — ela saiu
-    dos dois lugares onde vivia por decisão dela (D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES),
-    e `None` é a ausência de teto, que a frase diz com outras palavras.
-    """
+    """O teto que um perfil da TELA impõe, ou `None` quando não há teto."""
     chave = ORC["TETO_POR_PERFIL"][perfil]
     return None if chave != COM_TETO else MULT[COM_TETO]
 
@@ -328,10 +151,6 @@ def forca_do_perfil(perfil):
     return None if teto is None else f"{round(teto * 100)}% da força"
 
 
-#: O perfil que é o único a pôr teto hoje — DESCOBERTO, não digitado. A frase da
-#: tela está escrita no singular ("é o único que põe teto"), e por isso a
-#: suposição tem de reprovar EM VOZ ALTA no dia em que deixar de valer, em vez
-#: de a tela passar a afirmar sozinha uma coisa que o produto desmentiu.
 _COM_TETO = [p for p in ORC["PERFIS"] if teto_do_perfil(p) is not None]
 if len(_COM_TETO) != 1:
     raise SystemExit("ERRO: a frase do Perfil de Bateria afirma que UM perfil põe teto, "
@@ -345,32 +164,6 @@ def impoe(perfil):
     return f"Vibração em {forca}" if forca else "Nada é limitado"
 
 
-# ---------------------------------------------------------------------------
-# UM QUADRO SÓ, E É A NORMA DA CASA — não uma invenção desta aba.
-#
-# DEFEITO CURADO em 28/08/2026. A aba tinha QUATRO quadros em três fileiras e o
-# miolo escondia 93px: na foto, o segundo botão do "Avançado" saía fatiado ao
-# meio e o painel de registro mostrava UMA linha das quatro.
-#
-# A conta que explica o defeito, medida no Chrome:
-#
-#   • o miolo tem 542px, dos quais 508 de conteúdo (34 de padding);
-#   • cada quadro custa 54px SÓ de moldura — 28 do `quadro-topo`, 24 do padding
-#     do corpo, 2 de borda —, mais 14px de vão entre fileiras;
-#   • quatro quadros em três fileiras = 190px de moldura para 411px de conteúdo.
-#     411 + 190 + 34 = 635, e a janela tem 542.
-#
-# Espremer o conteúdo não fecha essa conta: com TODA linha no seu mínimo (botão
-# colado em botão, rótulo sem respiro) as três fileiras ainda somavam ~550. O
-# que sobra na conta é a MOLDURA REPETIDA, e é ela que sai.
-#
-# E a saída não é invenção: das dez abas, sete têm UM quadro só, com o nome da
-# aba no título e as seções por dentro (`sec-rot`, como a Navegação e a
-# Vibração). As duas que fugiam disso — esta e a Conexões — eram exatamente as
-# duas que escondiam conteúdo. Aqui as quatro seções viram quatro faixas
-# rotuladas dentro de um quadro só: 54px de moldura no lugar de 190, e as três
-# barras de 1px continuam separando os blocos irmãos.
-# ---------------------------------------------------------------------------
 CSS = """
   /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
      Pedido dela: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
@@ -504,19 +297,7 @@ CSS = """
 """ + CSS_GLIFO
 
 
-#: O ESTADO DOS TRÊS LIGÁVEIS NA CENA DO DESENHO. Nenhum deles é verdade da
-#: máquina de ninguém: na tela viva quem acende é o produto, a cada tique. O
-#: desenho mostra os dois estados para ela ver a pílula acesa e a apagada.
-#:
 #: A DICA DO «Corrigir Vulkan» DIZ O QUE ELE FAZ E O PREÇO — 28/09/2026,
-#: O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01. Até aqui ela dizia que o botão
-#: tirava as sobreposições do registro do Proton e «não cura engasgo»: a tela
-#: contradizia o próprio botão. Agora ele tira do jogo as duas camadas da
-#: Steam, onde elas carregam (o lançador, `integrations/camadas_vulkan.py`), e
-#: a dica não promete cura: diz o ato e o preço. O preço sai do mecanismo (a
-#: sobreposição da Steam é quem desenha o Shift+Tab num jogo Vulkan; o gravador
-#: guarda os shaders dele), e o ensaio 1 da sprint o confere. O rótulo é dela e
-#: fica; o texto novo vai à sessão dos desenhos.
 LIGAVEIS = (
     ("Iniciar com o sistema", "autostart", "hefesto-autostart", True,
      "Liga o serviço junto com o computador. Clique para trocar."),
@@ -540,12 +321,7 @@ def ligavel(rotulo, gesto, campo, ligado, dica):
 
 
 def linha(selo, cls, g, txt, ident="", href="", title=""):
-    """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto.
-
-    O produto monta as mesmas linhas em `pacotes/a09_sistema.linha_do_status`
-    e `_linha_do_exame`; o desenho não pode ter uma forma que a tela viva não
-    tenha, senão a primeira pintura muda a cara da aba.
-    """
+    """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto."""
     tag = "a" if href else "div"
     vai = " vai" if href else ""
     i = f' data-id="{ident}"' if ident else ""
@@ -557,23 +333,14 @@ def linha(selo, cls, g, txt, ident="", href="", title=""):
 
 
 def item(rotulo, diz, cls="btn", gesto="", em_voo="", extra=""):
-    """Um botão com o que ele faz no `title` — pedido dela em 27/08.
-
-    `em_voo` é o rótulo da espera (decisão [03] do PO, 04/09/2026): o botão diz
-    que está trabalhando, no lugar exato do clique.
-    """
+    """Um botão com o que ele faz no `title` — pedido dela em 27/08."""
     g = f' data-gesto="{gesto}"' if gesto else ""
     v = f' data-hef-em-voo="{em_voo}"' if em_voo else ""
     return f'''            <button class="{cls}" title="{diz}"{g}{v}{extra}>{rotulo}</button>'''
 
 
 def item_escondido(rotulo, diz, gesto, campo, cls="btn"):
-    """Um botão que o desenho tem e a tela só mostra quando o produto manda.
-
-    O `campo` é o `data-campo` que o pacote escreve a cada tique — e ele escreve
-    SEMPRE, inclusive vazio, que é o que faz o botão SUMIR de volta quando o
-    estado passa. Ver `pacotes/a09_sistema.CAMPO_DO_MODO_AVULSO`.
-    """
+    """Um botão que o desenho tem e a tela só mostra quando o produto manda."""
     return (f'            <button class="{cls} so-avulso" title="{diz}"'
             f' data-gesto="{_gesto(gesto)}" data-campo="{campo}"'
             f' data-hef-alvo="classe" data-hef-classe="mostra">{rotulo}</button>')
@@ -591,17 +358,6 @@ def item_cinza(rotulo, diz, gesto, cls=""):
             + "</div>")
 
 
-#: Os três botões do Perfil Global de Bateria. NENHUM nome e NENHUMA dica
-#: digitados: o rótulo vem de `ROTULOS_DOS_PERFIS` e a dica de `impoe()`, que é
-#: a conta do `RUMBLE_POLICY_MULT` do daemon. `data-v` é o que o CLIQUE manda
-#: ao Python (o piloto encaminha `v`); `data-hef-quando` é o que a PINTURA
-#: compara — as duas pontas do mesmo botão, e o teste
-#: `test_o_aceso_do_perfil_de_bateria_e_dado` cobra que sejam iguais.
-#:
-#: A RELAÇÃO COM O CARTÃO DE CADA CONTROLE (26/09/2026,
-#: `D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`) é a regra do esquema:
-#: o perfil que põe teto vale para todos, sem exceção; nos outros, cada
-#: controle pode ter o seu na aba Conexões.
 def _botoes_bateria():
     return "".join(
         f'<button class="{"on" if p == PERFIL_DA_MESA else ""}"'
@@ -614,15 +370,7 @@ def _botoes_bateria():
         for p in ORC["PERFIS"])
 
 
-# --- o Status -----------------------------------------------------------------
-# A cena do desenho: o serviço ligado, a troca de perfil vendo a janela, o
-# ambiente de uma máquina COSMIC e o rádio com os controles da mesa que estão
-# nele. As palavras da pílula e as frases são as da camada do produto
 # (`gui/aba_sistema.status_do_*`) — o teste da forma compara as duas.
-#
-# SEM O `?` NA LINHA — pedido dela, 25/09/2026, 22h13: *«remove a tooltip»*,
-# com o risco em cima da coluna dos quatro `?`. A frase de cada um vai para o
-# `title` da linha, como a frase inteira do exame: sem ícone, no passar do mouse.
 _NO_RADIO = len(BT)
 STATUS = [
     linha("LIGADO", "ok", "✓", "Serviço", ident="hefesto-estado",
@@ -640,20 +388,6 @@ STATUS = [
           title="Clique para ver os adaptadores na aba Conexões."),
 ]
 
-# --- o exame de hoje ------------------------------------------------------------
-# AS LINHAS SÃO CURTAS, E A FRASE INTEIRA FICA NO `title` — pedido dela, 25/09:
-# *«Vamos simplificar cada texto, seja tooltip ou seja do doctor que aparece
-# ali.»* O produto corta a frase do `doctor` na cabeça
-# (`a09_sistema.frase_curta_do_exame`); o desenho mostra frases dessa forma. O
-# Bluetooth SAIU daqui e foi para o Status: duas linhas dizendo a mesma coisa
-# na mesma faixa seria dizer duas vezes.
-#
-# A LINHA DO VULKAN É A QUE O PRODUTO PINTA — 26/09/2026. Aqui morava «✓ OK ·
-# Nenhuma sobreposição picotando o jogo»: a tela viva só a mostrava antes da
-# primeira pintura (o exame é repintado) e ela prometia o que o A/B de 23/08
-# derrubou. A frase vem do dono, com o selo NOTA do produto, e fica por último,
-# onde o produto a acrescenta. Desde 28/09 ela diz o que chega ao jogo, e segue
-# a pílula da cena.
 _VULKAN_ACESO = next(lig for _r, g, _c, lig, _d in LIGAVEIS if g == "corrigir-vulkan")
 FRASE_DO_VULKAN = _frase_do_vulkan(_VULKAN_ACESO)
 ACHADOS = [
@@ -675,8 +409,6 @@ ACHADOS = [
 ]
 MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
 
-# AS DICAS DOS RÓTULOS, CURTAS — uma frase cada. O que explicava o que cada
-# linha faz foi para o `?` da própria linha.
 D_STATUS = ('<span class="ajuda">?<span class="dica">'
             'Como o Hefesto está agora neste computador. A pílula diz o estado.'
             '</span></span>')
@@ -697,18 +429,11 @@ D_LOG = ('<span class="ajuda">?<span class="dica">'
          'O registro do serviço, sempre à vista. Copie para relatar um problema.'
          '</span></span>')
 
-# O BOTÃO SE CHAMA "ATUALIZAR", E O NOME É PALAVRA DELA — 05/09/2026, a 09-Q1:
-# *"Segue fazendo os dois. Com mesmo nome"*. A dica diz os dois trabalhos, e o
-# `data-hef-em-voo` é o rótulo da espera (a 09-Q3).
 ROTULO_ATUALIZAR = "Atualizar"
 EM_VOO_ATUALIZAR = "Atualizando…"
 DICA_ATUALIZAR = ("Manda o serviço reler os atalhos do controle e os arquivos "
                   "que a Steam usa para abrir os jogos. Leva alguns segundos.")
 
-#: O BOTÃO DO SERVIÇO NA CENA DO DESENHO: o serviço de pé e sem pausa, que é o
-#: estado de quase sempre — por isso ele diz «Parar o serviço», vermelho. Com a
-#: pausa ativa o produto o troca por «Retomar» (verde), e com o serviço parado
-#: por «Ativar o serviço» (verde) — `a09_sistema._rotulo_de_agora`.
 ROTULO_PARAR = "Parar o serviço"
 
 MIOLO = f'''
@@ -825,14 +550,6 @@ LEGENDA = '''<div class="nota">
 </html>
 '''
 
-# ---------------------------------------------------------------------------
-# AS RÉGUAS DO GERADOR — elas rodam no IMPORT e leem `MIOLO`, que é memória:
-# `import aba09` reprova um desenho quebrado sem tocar em disco nenhum.
-#
-# A FORMA MUDOU EM 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01). Cada régua que
-# olhava a forma velha acompanha a nova; a que perdeu o objeto sai com a razão
-# numa linha no lugar dela.
-# ---------------------------------------------------------------------------
 def _medida(texto, regra, prop):
     """`height:30px` de dentro de uma regra de CSS — lido, nunca digitado."""
     bloco = re.search(re.escape(regra) + r"\{([^}]*)\}", texto)
@@ -860,17 +577,9 @@ def _entre(html, de, ate):
 
 
 _TOPO = (pathlib.Path(__file__).parent / "topo.html").read_text()
-H_ACAO = _token(_TOPO, "--h-acao")                     # botão de ação
+H_ACAO = _token(_TOPO, "--h-acao")
 
-# O PORTÃO DOS DOIS BLOCOS DA PRIMEIRA FAIXA (31/08/2026) SAIU: o Perfil de
-# Bateria e «O serviço» deixaram de ser blocos irmãos — os dois viraram colunas
-# da seção 2, e a promessa deles («acabam no mesmo y») é a régua A, abaixo.
 
-# A. AS QUATRO COLUNAS DA SEÇÃO 2 ACABAM NO MESMO y — e as três da seção 1.
-#    Conta o que ocupa linha em cada coluna (o botão escondido do modo
-#    improvisado não conta, e a exclusão é amarrada à regra de CSS que o
-#    esconde) e exige a MESMA conta e a MESMA altura por item. Uma coluna com um
-#    botão a mais é o vão de 58px que ela apontou em 31/08, de outro jeito.
 _ESCONDE_O_AVULSO = ".so-avulso:not(.mostra){display:none}" in CSS
 _COLUNAS = re.findall(r'<div class="coluna[^"]*">(.*?)\n          </div>\n',
                       _entre(MIOLO, '<div class="avancadas">', "3. DETALHES"), re.S)
@@ -899,10 +608,6 @@ if len(STATUS) != MEIO:
                      f"exame tem {MEIO} — as três colunas da seção 1 deixam de "
                      "acabar no mesmo y.")
 
-# B. O PORTÃO DA PALAVRA — 31/08/2026, e ele guarda uma decisão DELA: «Hefesto»
-#    ficou com a aba Jogar, onde nomeia o MODO; aqui o rótulo nomeia o SERVIÇO.
-#    Ele olha SÓ o que a pessoa lê como nome (o rótulo da coluna, a linha do
-#    Status e os botões da coluna do serviço); o `title` PODE dizer Hefesto.
 _ACOES_DO_SERVICO = _entre(MIOLO, '<div class="coluna col-servico">', '<div class="risco">')
 _ROTULOS = {
     "a coluna": re.search(r'<div class="sec-rot sr-avancadas">\s*<span>([^<]*)<',
@@ -924,10 +629,6 @@ if _RECAIDA:
         '"Hefesto" ficou com a aba Jogar por decisão dela (31/08/2026). O `title` '
         "do botão PODE dizer Hefesto — é lá que a diferença se explica.")
 
-# 1. NENHUMA LINHA SEM GLIFO NA PÍLULA. Era sobre a `.est` (a chave do autostart
-#    montada à mão, sem glifo); a linha de estado virou a do exame, e a régua
-#    vai junto: toda pílula carrega símbolo E cor, para quem não distingue verde
-#    de laranja ler o estado pelo desenho.
 _SEM_GLIFO = re.findall(r'<span class="selo [a-z]+"><span class="sg">\s*</span>([^<]*)',
                         MIOLO)
 _PILULAS = MIOLO.count('<span class="selo ')
@@ -937,11 +638,6 @@ if not _PILULAS:
 if _SEM_GLIFO:
     raise SystemExit("ERRO: pílula sem glifo: " + " · ".join(repr(r) for r in _SEM_GLIFO))
 
-# 2. OS LIGÁVEIS TÊM A PEÇA INTEIRA. Era a coerência da chave «Ligar junto com
-#    o computador» (chave, glifo e classe saindo de um lugar só); a chave virou
-#    o ligável «Iniciar com o sistema», e a régua cobra os três: o gesto (o
-#    clique CHEGA), o endereço com alvo `classe` e `ligada` (o PRODUTO acende),
-#    e o aceso do desenho igual ao que `LIGAVEIS` declara — nada digitado à mão.
 _PILULAS_LIGAVEIS = re.findall(r'<button class="cadeado( ligada)?"[^>]*>', MIOLO)
 if len(_PILULAS_LIGAVEIS) != len(LIGAVEIS):
     raise SystemExit(f"ERRO: a coluna Automático tem {len(_PILULAS_LIGAVEIS)} "
@@ -961,7 +657,6 @@ for _rot, _g, _c, _lig, _d in LIGAVEIS:
                          f"{'aceso' if ' ligada' in _tag.group(0) else 'apagado'} "
                          "e `LIGAVEIS` diz o contrário.")
 
-# 3. OS TRÊS BOTÕES DO PERFIL DE BATERIA, e o rótulo que ela mandou tirar.
 _BOTOES_BAT = re.findall(r'<button class="(on)?"[^>]*data-v="([^"]+)"[^>]*>([^<]+)</button>',
                          _entre(MIOLO, '<div class="seg bat-perfis"', "</div>"))
 if len(_BOTOES_BAT) != len(ORC["PERFIS"]):
@@ -977,11 +672,7 @@ if sum(1 for on, _, _ in _BOTOES_BAT if on) != 1:
 if '<span class="rot">O perfil da mesa' in MIOLO:
     raise SystemExit('ERRO: o rótulo "O perfil da mesa" voltou (ponto 7.1 dela).')
 
-# 4. (O valor da linha de estado ancorado à direita) SAIU: a `.est` saiu da aba
-#    — o Status usa a linha do exame, que não tem coluna de valor.
 
-# 5. NENHUMA FAIXA PODE ESTOURAR. `1fr` tem por piso o tamanho do conteúdo;
-#    `minmax(0,1fr)` é o que deixa a coluna encolher.
 for _faixa in (".status3", ".avancadas", ".saude-cols"):
     _r = re.search(re.escape(_faixa) + r"\{[^}]*grid-template-columns:([^;]*);", CSS)
     if not _r:
@@ -992,12 +683,7 @@ for _faixa in (".status3", ".avancadas", ".saude-cols"):
                          f"`{_r.group(1).strip()}`. O piso é o CONTEÚDO, e a coluna "
                          "sai do limite da janela. Use `minmax(0,1fr)`.")
 
-# 6. (O nome da linha de estado fora do verde) SAIU com a `.est`: na linha do
-#    exame o verde é da PÍLULA, e o texto é `--texto-suave`.
 
-# 7. O BOTÃO CINZA TEM A PEÇA INTEIRA — decisão [02], 04/09/2026. O «Retomar»
-#    deixou de ser um botão (virou uma cara do botão do serviço), e fica o
-#    Reiniciar.
 _CINZAS = ("reiniciar",)
 for _g in _CINZAS:
     _campo = f"{_g}{SUFIXO_DA_RAZAO}"
@@ -1015,7 +701,6 @@ for _g in _CINZAS:
                      + r'" data-hef-alvo="html">', MIOLO):
         raise SystemExit(f"ERRO: o `?` de {_g!r} não recebe `{_campo}` pelo alvo `html`.")
 
-# 8. O `?` DA RAZÃO NÃO PODE VIRAR FILEIRA — ele mora na `.acao`, na linha do botão.
 _PORQUES = MIOLO.count('class="ajuda porque"')
 _PORQUES_NA_CAIXA = sum(
     _bloco.count('class="ajuda porque"')
@@ -1026,8 +711,6 @@ if len(_CINZAS) != _PORQUES or _PORQUES_NA_CAIXA != _PORQUES:
         f"deles dentro de uma `.acao` (esperados {len(_CINZAS)} nos dois).")
 
 # 9. O BOTÃO DO `daemon.reload` SE CHAMA "ATUALIZAR" PORQUE ELA MANDOU (09-Q1),
-#    fala durante a espera (09-Q3) e a dica não nega o trabalho caro. A palavra
-#    dela entra LITERAL: comparar com a constante seria a régua apontando para si.
 _RELOAD = re.search(r'<button class="btn"([^>]*)>([^<]*)</button>', "".join(
     linha_ for linha_ in _ACOES_DO_SERVICO.splitlines()
     if 'data-gesto="atualizar"' in linha_))
@@ -1046,9 +729,6 @@ if "Não muda nada" in _ATRS:
     raise SystemExit("ERRO: a dica do `daemon.reload` voltou a dizer 'Não muda nada' — "
                      "é falso: ele relê os atalhos e reescreve o ambiente da Steam.")
 
-# 10. O BOTÃO DO SERVIÇO É UM SÓ E TEM AS DUAS CORES — pedido dela, 25/09/2026:
-#     «Retomar/Parar (um botão só, que alterna)». O vermelho é do desenho; o
-#     verde é o produto quem acende, pelo campo do pacote.
 _PARAR = re.search(r'<button class="btn vermelho"[^>]*data-gesto="parar-ou-retomar"[^>]*>',
                    _ACOES_DO_SERVICO)
 if not _PARAR:
@@ -1070,50 +750,12 @@ CAMPO_DO_CHIP = "fita-chip"
 
 
 def escrever_a_bancada():
-    """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`.
-
-    ELA ESTAVA SOLTA NO MÓDULO ATÉ 06/09/2026, e o preço era de EFEITO: um
-    `import aba09` — o do teste que só quer uma constante, o da coleta do
-    pytest — reescrevia a bancada DELA no disco, com o estado vivo da mesa
-    dentro. Medido na costura desta leva com a irmã `aba05`: bastou COLETAR um
-    teste que a importava no topo para `mockup/05-vibracao.html` mudar no disco.
-    Oito dos dez geradores estavam assim; a forma certa é a da `aba01.py`.
-
-    AS RÉGUAS 1 A 9 CONTINUAM NO IMPORT, e é de propósito: elas leem `MIOLO`,
-    que é memória, e são o que faz `import aba09` reprovar um desenho quebrado
-    sem tocar em disco nenhum. O que desce para cá é só quem ESCREVE.
-    """
+    """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`."""
     n = monta("09-sistema", "Sistema", MIOLO, CSS, legenda=LEGENDA)
 
-    # ---------------------------------------------------------------------------
-    # O ENDEREÇO DA FITA, POSTO NA SAÍDA — 03/09/2026, a lei dela:
-    #
-    #     "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    #      os controles lá de cima. Não mistura com a info dos mockups."
-    #
-    # A fita inteira sai de `monta.fita()`, que é o dono dela nas DEZ páginas e não
-    # é território desta aba. É a mesma situação que a `aba06.py` já resolve assim
-    # desde 28/08 — *"trocado na saída, porque o texto mora no esqueleto (topo.html)
-    # e esta aba só pode mexer no arquivo dela"*.
-    #
-    # O QUE ISTO NÃO É: maquiagem. `data-campo` sem escritor zera a régua da
-    # identidade e deixa a tela mentindo igual — trocaria um congelado por um vazio.
-    # Quem escreve neste endereço é `pacotes/a09_sistema.py`, e o par de nomes tem
-    # régua: `test_aba09_a_fita_vem_de_cima.py` reprova se os dois arquivos
-    # divergirem.
-    #
-    # NENHUM PIXEL MUDA. `data-campo` e `data-hef-alvo` estão nos INVISIVEIS do
-    # `check_o_desenho_aprovado.py`, que compara o que se VÊ — decisão dela em
-    # 01/09: *"ok, pode comparar então o que se vê."*
-    # ---------------------------------------------------------------------------
     p = onde.pagina("09-sistema.html")
     s = p.read_text()
 
-    # A ÂNCORA EXIGE A CLASSE INTEIRA. `'<div class="fita'` cru casa PRIMEIRO com
-    # `<div class="fita-linha">`, o invólucro que também guarda o Perfil ativo — e
-    # endereçar o invólucro com alvo `html` mandaria o produto reescrever o miolo
-    # dele a cada tique, apagando o `data-campo="perfil"` do cabeçalho, que é das
-    # dez abas. Aconteceu na primeira execução deste bloco, em 03/09/2026.
     abre = re.search(r'<div class="fita[ "][^>]*>', s)
     if not abre:
         raise SystemExit("ERRO: a `.fita` sumiu do esqueleto — o endereço da fita "
@@ -1125,22 +767,6 @@ def escrever_a_bancada():
         abre.group(0),
         f'{abre.group(0)[:-1]} data-campo="{CAMPO_DA_FITA}" data-hef-alvo="html">',
         1)
-    # O ENDEREÇO DO CHIP É DO `monta.fita()`, E ESTE BLOCO SÓ CONFERE — 03/09/2026.
-    #
-    # ELE ESCREVIA O `data-campo` DO CHIP, E O ESQUELETO PASSOU A ESCREVÊ-LO
-    # TAMBÉM (`interface/monta.py:582`). Como este arquivo não foi rodado depois
-    # daquela mudança, o defeito ficou latente: a primeira regeração da aba saiu com
-    # `data-campo="fita-chip" data-campo="fita-chip"` nos dois chips — atributo
-    # repetido, que o navegador aceita calado ignorando o segundo. Medido aqui, na
-    # primeira execução do gerador nesta frente.
-    #
-    # O CHIP `Todos` CONTINUA DE FORA, e agora é o `monta` quem o deixa de fora: ele
-    # não é aparelho nenhum, não traz cor nem nome de plástico, e endereço morto é o
-    # defeito que esta leva existe para não repetir.
-    #
-    # A CONTA FICA. Ela é a régua da forma da fita: se o esqueleto deixar de
-    # endereçar os chips, ou passar a endereçar o `Todos`, o número deixa de casar
-    # com a mesa e o gerador reprova em voz alta em vez de gravar uma fita muda.
     quantos = novo.count(f'data-campo="{CAMPO_DO_CHIP}"')
     if len(CONECTADOS) != quantos:
         raise SystemExit(f"ERRO: o esqueleto endereçou {quantos} chips e a mesa tem "
@@ -1158,9 +784,6 @@ if __name__ == "__main__":
     import shutil
     import tempfile
 
-    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
-    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
-    # no fim do `aba04.py`.
     _real = onde.saida()
     _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-09-"))
     for _vizinha in _real.glob("*.html"):

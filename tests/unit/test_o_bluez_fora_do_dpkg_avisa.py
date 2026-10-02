@@ -1,20 +1,4 @@
-"""O BlueZ sem as curas avisa também fora do dpkg — B2 da O-PRODUTO.
-
-``O-PRODUTO-EM-QUALQUER-MAQUINA-01`` (28/09/2026), a L2 (b) do estudo
-``2026-09-27-o-basico-e-os-jogos/03-qualquer-maquina.md``: o backport do BlueZ
-desta casa é ``.deb``, e o ``check_bluez_curas_do_backport`` do doctor dizia
-``info «sem dpkg nesta distro… não há o que conferir aqui»`` ANTES de perguntar
-ao binário. No Fedora COSMIC e no Arch o ``bluetoothd`` é o 5.8x sem o
-``hefesto-0002``, e com três ou mais controles pelo rádio a sessão cai no
-EAGAIN — o mesmo defeito, sem a cura e sem aviso.
-
-A régua roda o doctor REAL com um ``bluetoothd`` de mentira (um arquivo com as
-marcas escolhidas) e um ``dpkg`` que não existe.
-
-A MORDIDA, feita em 28/09/2026: devolver o ``info`` de antes (a guarda do dpkg
-antes do laço das marcas) faz ``test_sem_o_0002_e_sem_dpkg_avisa_o_efeito``
-reprovar. Devolvido, md5 conferido.
-"""
+"""O BlueZ sem as curas avisa também fora do dpkg — B2 da O-PRODUTO."""
 
 from __future__ import annotations
 

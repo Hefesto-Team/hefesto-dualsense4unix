@@ -134,55 +134,20 @@ from hefesto_dualsense4unix.core.linhagem_nintendo import (
 )
 from hefesto_dualsense4unix.integrations import bluez_dbus
 
-#: O prefixo que tira o Pro Controller do sniff frágil. Caixa canônica, igual à
 #: de ``scripts/bt_active_mode.sh:142`` — os dois escritores têm de produzir a
-#: MESMA string, ou cada um desfaz o outro.
 PREFIXO_NINTENDO = "Nintendo"
 
-#: Teto do alias em BYTES UTF-8. MEDIDO em 22/08/2026, BlueZ 5.86 — ver o
-#: cabeçalho. Não é o 248 do ``MGMT_MAX_NAME_LENGTH``: o que esta bancada
-#: devolveu foi 247, e o número que vale é o medido.
 TETO_DE_BYTES = 247
 
-#: Como este módulo assina na trava e no diário comuns do rádio.
 QUEM = "apelido-do-dongle"
 
-#: OUIs da linhagem Nintendo, minúsculas com ``:`` — a faixa do Pro desta
-#: bancada e a do 8BitDo em modo Switch, que mente VID/PID como ``057E:2009``
-#: mas nunca mente a OUI.
-#:
-#: O 8BitDo entra na lista de propósito, e o A/B de 23/07/2026 é quem autoriza:
-#: *"o alias 'Nintendo' seguiu aplicado — ou seja, o NOME não atrapalha o
-#: clone"* (``bt_active_mode.sh:170-174``). O que atrapalha o clone é o
-#: no-sniff, que não é deste módulo.
-#:
-#: **UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026):** as faixas deixaram de ser
-#: literais aqui e vêm de ``core/linhagem_nintendo``, que é a casa única delas
-#: no ``src/``. A frase que este comentário trazia antes — *"mesma fonte da
-#: verdade de ``NINTENDO_REAL_OUI``"* — descrevia quatro cópias que se citavam
-#: mutuamente, que é a assinatura de uma fonte da verdade que não existe.
-#: Agora existe.
 OUIS_NINTENDO = OUIS_LINHAGEM_COM_DOIS_PONTOS
 
-#: Pedaços de ``HID_NAME`` que denunciam a linhagem, em minúsculas. Existem
-#: além das OUIs porque OUI é lista fechada e nome é o que o kernel deduziu do
-#: driver: um aparelho novo do mesmo firmware entra por aqui sem ninguém
-#: precisar descobrir a OUI dele primeiro.
-#:
-#: ``"pro controller"`` é o nome que o ``hid-nintendo`` dá ao Pro e ao clone.
 #: NÃO casa ``"DualSense Wireless Controller"``, e não casa ``"8BitDo Pro 2"``
-#: em modo X-input — que é um gamepad comum e não tem nada a ver com o sniff.
 NOMES_NINTENDO = NOMES_LINHAGEM
 
-#: MAC bem-formado, minúsculo. Mesma forma de
-#: ``integrations/radio_da_mesa.py:152``. É o que separa um ``HID_PHYS`` de
-#: rádio (``ac:a7:f1:...``) de um de cabo
-#: (``usb-0000:0c:00.3-1/input3``) — sem esta guarda, o caminho USB vira um
-#: endereço de adaptador inventado.
 _MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 
-#: O caminho de UM adaptador na árvore do BlueZ, e nada mais fundo. A âncora de
-#: fim é o que deixa de fora ``/org/bluez/hci0/dev_XX``, que é dispositivo.
 _CAMINHO_DE_ADAPTADOR = re.compile(r"/org/bluez/hci[0-9]+")
 
 _MARCA_NOME = "HID_NAME="
@@ -192,19 +157,7 @@ _MARCA_UNIQ = "HID_UNIQ="
 
 @dataclass(frozen=True)
 class Dongle:
-    """Um adaptador Bluetooth pela ótica de quem quer dar nome a ele.
-
-    ``endereco`` é o BD Address em MAIÚSCULAS com ``:`` — a identidade, a mesma
-    forma que o ``bluetoothctl list`` imprime e que o
-    ``docs/usage/bluetooth-varios-adaptadores.md`` §3.2 manda anotar.
-
-    ``objeto`` é o ``/org/bluez/hciN`` de AGORA. Ele existe para que a escrita
-    da mesma leitura não precise varrer a árvore de novo, e é a única coisa
-    aqui que caduca: o índice inverte entre boots. Nunca guarde em disco.
-
-    ``alias`` é o que está no BlueZ, costurado. ``nome`` é o dela, limpo — é o
-    que a tela mostra.
-    """
+    """Um adaptador Bluetooth pela ótica de quem quer dar nome a ele."""
 
     endereco: str
     alias: str = ""
@@ -220,24 +173,13 @@ class Dongle:
 
     @property
     def protegido(self) -> bool:
-        """O alias de hoje já tira o Pro do sniff frágil?
-
-        ``True`` também quando não há Nintendo nenhum ali: não há o que
-        proteger, e a resposta honesta para "este adaptador está em risco?" é
-        "não". Quem quer saber se a costura FOI aplicada olha
-        :attr:`Renomeacao.costurado`.
-        """
+        """O alias de hoje já tira o Pro do sniff frágil?"""
         return not self.hospeda_nintendo or self.alias.startswith(PREFIXO_NINTENDO)
 
 
 @dataclass(frozen=True)
 class Renomeacao:
-    """O que aconteceu (ou aconteceria) ao renomear um dongle.
-
-    Existe para que a tela possa mostrar o resultado sem reler o BlueZ — e para
-    que ela POSSA mostrar: a escrita é assíncrona, e reler logo depois devolve o
-    valor antigo (medido, ver o cabeçalho).
-    """
+    """O que aconteceu (ou aconteceria) ao renomear um dongle."""
 
     endereco: str
     nome: str = ""
@@ -248,44 +190,15 @@ class Renomeacao:
     porque: str = ""
 
 
-# ---------------------------------------------------------------------------
-# A costura — funções puras, sem D-Bus, sem sysfs, sem subprocesso.
-# ---------------------------------------------------------------------------
-
-
 def costurar_o_nome(nome: str, *, hospeda_nintendo: bool) -> str:
-    """O nome dela vira o alias que vai ao BlueZ.
-
-    Três regras, nesta ordem:
-
-    1. **sem Nintendo no adaptador, o nome vai como ela escreveu.** O produto
-       não acrescenta palavra que não protege nada;
-    2. **com Nintendo, o alias começa com** :data:`PREFIXO_NINTENDO`. Se o nome
-       dela já começa assim, nada é acrescentado — a costura é idempotente, e
-       tem de ser: ``bt_active_mode.sh`` roda a cada tique da vigia e o nome
-       cresceria a cada passagem;
-    3. **o resultado cabe em** :data:`TETO_DE_BYTES` **bytes**, cortado em
-       fronteira de caractere e sempre pela cauda.
-
-    O caso do nome VAZIO é o que menos parece e mais morde. No BlueZ, alias
-    ``""`` significa *"esqueça o apelido e volte ao nome do sistema"* — medido
-    em 22/08/2026: escrever ``""`` devolveu o adaptador ao ``Name``. Num
-    adaptador com Pro isso apagaria a proteção junto. Por isso, com Nintendo
-    presente e nome vazio, o alias é o prefixo sozinho: protege, e ainda é um
-    nome legível.
-    """
+    """O nome dela vira o alias que vai ao BlueZ."""
     bruto = _alias_sem_tesoura(nome, hospeda_nintendo=hospeda_nintendo)
     intocavel = len(PREFIXO_NINTENDO) if hospeda_nintendo else 0
     return _caber(bruto, intocavel=intocavel)
 
 
 def _alias_sem_tesoura(nome: str, *, hospeda_nintendo: bool) -> str:
-    """A costura ANTES do teto — separada para que se possa dizer se cortou.
-
-    Sem esta separação, "o produto acrescentou o prefixo" e "o produto cortou o
-    fim" viram a mesma comparação contra o nome dela, e as duas saem erradas
-    quando acontecem juntas.
-    """
+    """A costura ANTES do teto — separada para que se possa dizer se cortou."""
     limpo = nome.strip()
     if not hospeda_nintendo:
         return limpo
@@ -297,35 +210,7 @@ def _alias_sem_tesoura(nome: str, *, hospeda_nintendo: bool) -> str:
 
 
 def limpar_o_nome(alias: str, *, hospeda_nintendo: bool) -> str:
-    """O alias do BlueZ vira o nome dela — o que a tela mostra.
-
-    **A limpeza é condicional, e a condição é o que impede o produto de comer
-    uma palavra dela.** Só se tira o prefixo de um adaptador que hospeda
-    Nintendo, porque só ali o produto poderia tê-lo posto.
-
-    O defeito que isso evita, se a limpeza fosse incondicional: ela batiza um
-    dongle SEM Nintendo de ``"Nintendo do sofá"``. A tela mostraria
-    ``"do sofá"``; ela salva de novo; sem Nintendo o produto não recosturaria
-    nada, e o alias viraria ``"do sofá"``. A palavra dela desapareceria no
-    segundo salvamento, sem ninguém ter pedido.
-
-    Com a condição, os dois sentidos fecham em ida e volta:
-
-    * **com Nintendo:** ``"Nintendo do sofá"`` -> ``"do sofá"`` -> costura ->
-      ``"Nintendo do sofá"``;
-    * **sem Nintendo:** ``"Nintendo do sofá"`` -> ``"Nintendo do sofá"`` ->
-      costura -> ``"Nintendo do sofá"``.
-
-    A comparação é sem caixa porque o objetivo aqui é ESCONDER a costura, e um
-    ``"nintendo casa"`` vindo de um BlueZ antigo é costura tanto quanto o
-    canônico. Já a ESCRITA usa sempre a caixa de :data:`PREFIXO_NINTENDO` —
-    ``costurar_o_nome`` não confia na caixa para proteger o Pro.
-
-    Consequência conhecida e aceita: mover o Pro para outro dongle muda o nome
-    que a tela mostra para os dois, porque muda quem hospeda Nintendo. O alias
-    no BlueZ não muda em nenhum dos dois — o que ela vê fica diferente, o que
-    protege o controle fica igual.
-    """
+    """O alias do BlueZ vira o nome dela — o que a tela mostra."""
     texto = alias.strip()
     if not hospeda_nintendo:
         return texto
@@ -335,31 +220,17 @@ def limpar_o_nome(alias: str, *, hospeda_nintendo: bool) -> str:
         return texto
     resto = texto[len(PREFIXO_NINTENDO) :]
     if not resto[:1].isspace():
-        # `NintendoCasa` não é costura deste produto — o script e este módulo
-        # sempre põem um espaço. Devolver `Casa` aqui inventaria uma separação
-        # que ninguém escreveu.
         return texto
     return resto.strip()
 
 
 def _caber(texto: str, *, intocavel: int = 0) -> str:
-    """Corta ``texto`` para :data:`TETO_DE_BYTES` bytes, sem partir caractere.
-
-    ``intocavel`` é quantos caracteres do começo não podem sumir de jeito
-    nenhum — o prefixo. Se nem ele couber (o que exigiria um teto absurdo de
-    pequeno), volta o prefixo cortado: um nome truncado é ruim, um nome que o
-    BlueZ recusa é pior.
-    """
+    """Corta ``texto`` para :data:`TETO_DE_BYTES` bytes, sem partir caractere."""
     bruto = texto.encode("utf-8")
     if len(bruto) <= TETO_DE_BYTES:
         return texto
     cortado = bruto[:TETO_DE_BYTES].decode("utf-8", errors="ignore").rstrip()
     return cortado if cortado else texto[:intocavel]
-
-
-# ---------------------------------------------------------------------------
-# Quem hospeda Nintendo — pelo sysfs, sem root e sem subprocesso.
-# ---------------------------------------------------------------------------
 
 
 def adaptadores_com_nintendo(
@@ -368,37 +239,11 @@ def adaptadores_com_nintendo(
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> frozenset[str]:
-    """Endereços (minúsculos, com ``:``) dos adaptadores que hospedam Nintendo.
-
-    A fonte é o ``uevent`` de cada nó ``/sys/class/hidraw/*/device/``, que o
-    kernel publica e que abre como uid 1000 — medido nesta bancada em
-    22/08/2026, sem sudo. ``HID_PHYS`` traz o MAC do ADAPTADOR, ``HID_UNIQ`` o
-    do controle e ``HID_NAME`` o nome que o driver deu. É a mesma leitura de
-    ``integrations/radio_da_mesa.py:adaptador_por_uniq``, com a pergunta
-    invertida: lá se procura o adaptador de um controle, aqui se procura a
-    linhagem dos controles de cada adaptador.
-
-    **A regra é permissiva de propósito, e o motivo é custo assimétrico.**
-    Prefixo sobrando num adaptador que não precisa: nada acontece — o A/B de
-    23/07/2026 mediu o clone 8BitDo funcionando com o alias aplicado. Prefixo
-    faltando num que precisa: o Pro cai sob carga. Diante da dúvida, a resposta
-    que custa menos é ``True``.
-
-    Controle no CABO não entra: ``HID_PHYS`` dele é caminho de barramento
-    (``usb-0000:0c:00.3-1/input3``), não MAC, e ele não está no rádio de
-    adaptador nenhum. O nosso vpad também não, pela mesma porta: ele anuncia
-    ``hefesto-vpad``.
-
-    Conjunto VAZIO é resposta legítima e é a mais comum: mesa sem Nintendo
-    nenhum, ou máquina sem controle no rádio.
-    """
+    """Endereços (minúsculos, com ``:``) dos adaptadores que hospedam Nintendo."""
     leitor = _ler_texto if ler is None else ler
     try:
         nos = sorted(listar(raiz))
     except OSError:
-        # Sysfs ilegível é "não sei". Devolver vazio aqui faz o produto NÃO
-        # costurar, e é a falha para o lado errado — mas inventar adaptador é
-        # pior, e quem chama vê a mesa vazia e não escreve nada em ninguém.
         return frozenset()
 
     achados: set[str] = set()
@@ -418,11 +263,6 @@ def adaptadores_com_nintendo(
     return frozenset(achados)
 
 
-# ---------------------------------------------------------------------------
-# Ler e escrever o alias — por BD Address, nunca por hciN.
-# ---------------------------------------------------------------------------
-
-
 def ler_os_dongles(
     *,
     executar: Callable[[Sequence[str]], str | None] | None = None,
@@ -430,18 +270,7 @@ def ler_os_dongles(
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> tuple[Dongle, ...]:
-    """Todos os adaptadores, com nome, endereço e quem eles hospedam.
-
-    Ordenados por endereço, que é a única ordem estável que existe aqui: a da
-    árvore do BlueZ segue o ``hciN``, e o ``hciN`` inverte entre boots — uma
-    tabela que troca de ordem sozinha depois de reiniciar é uma tabela em que
-    ninguém confia.
-
-    Tupla VAZIA é resposta legítima: sem ``busctl``, com o ``bluetoothd``
-    parado, num sandbox sem o ``org.bluez`` ou numa máquina sem adaptador
-    nenhum. Quem chama diz isso na tela — nunca uma
-    tabela em branco.
-    """
+    """Todos os adaptadores, com nome, endereço e quem eles hospedam."""
     leitor = _leitor(executar)
     caminhos = leitor.caminhos()
     if caminhos is None:
@@ -455,9 +284,6 @@ def ler_os_dongles(
             continue
         endereco = leitor.endereco_do_adaptador(caminho)
         if not endereco:
-            # Adaptador sem endereço legível não tem identidade, e sem
-            # identidade não há o que renomear: `hciN` não serve, e é
-            # exatamente a troca que este módulo existe para não fazer.
             continue
         achados.append(
             Dongle(
@@ -486,21 +312,7 @@ def renomear_o_dongle(
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> Renomeacao:
-    """Grava o nome dela num dongle, com a costura do prefixo por cima.
-
-    ``endereco`` é o BD Address, em qualquer caixa. O ``/org/bluez/hciN`` é
-    resolvido AGORA, a partir dele — nunca recebido de fora e nunca guardado.
-
-    ``dongles`` é a leitura que a tela já tem em mãos; sem ela, uma leitura
-    nova. Passar a de mão poupa uma varredura, mas tem um preço declarado: se o
-    Pro mudou de adaptador desde aquela leitura, a costura sai pela informação
-    velha. Em tela isso é uma janela de segundos; para o passe de reparo, use
-    :func:`costurar_a_mesa`, que sempre relê.
-
-    Não confere o que gravou, e é de propósito: a escrita é assíncrona (medido
-    — ler logo depois devolve o valor antigo), e uma conferência com espera
-    dentro travaria a interface por um segundo a cada salvamento.
-    """
+    """Grava o nome dela num dongle, com a costura do prefixo por cima."""
     tabela = (
         tuple(dongles)
         if dongles is not None
@@ -563,41 +375,7 @@ def costurar_a_mesa(
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> tuple[Renomeacao, ...]:
-    """O passe de reparo: põe o prefixo em TODO adaptador que hospeda Nintendo.
-
-    Devolve só o que MUDOU. Mesa já protegida devolve tupla vazia, e é o que se
-    espera na esmagadora maioria das chamadas.
-
-    Por que este passe nasceu, medido nesta bancada em 22/08/2026 com três
-    adaptadores e um Pro Controller no rádio: o ``bt_active_mode.sh`` fazia
-    ``head -1`` e costurava **um** adaptador, o primeiro que o
-    ``/sys/class/bluetooth`` listava. Nesta mesa o Pro está no SEGUNDO, então o
-    script protegia um adaptador que não hospeda Nintendo nenhum e deixava o
-    Pro sem proteção — e ninguém percebia, porque o sintoma do Pro sem prefixo
-    é queda **sob carga** (rumble e IMU juntos), que parece defeito do controle.
-
-    .. note:: **CORREÇÃO DATADA — 23/08/2026.** Este bloco descrevia o script
-       no presente (*"costura um adaptador… ``_adaptador()``, linha 75"*) e
-       isso caducou no mesmo dia em que foi escrito. Desde ``e5376a0`` (22/08,
-       21h26) o script itera **todos** os que hospedam Nintendo
-       (``mapfile -t COM_NINTENDO < <(_hci_com_nintendo)``, laço em
-       ``scripts/bt_active_mode.sh:281``); ``_adaptador()`` não existe mais.
-       O mesmo commit diz, com todas as letras, que resolveu *"a duplicidade …
-       dois escritores do mesmo alias"* — este módulo de um lado e o script do
-       outro.
-
-       **Consequência para quem for fiar esta função:** ligá-la no install ou
-       no arranque do daemon **recria** a duplicidade que aquele commit
-       desfez. O defeito original está curado no script; o que sobra aqui é a
-       rota do produto, e ela precisa de dono declarado antes de ganhar
-       chamador.
-
-    Este passe é por adaptador e por linhagem, não pela ordem de enumeração, e
-    por isso a mesa de três acerta pelo mesmo caminho que a de um.
-
-    O passe **nunca subtrai**: adaptador que carrega o prefixo e não hospeda
-    Nintendo fica como está. Ver :func:`limpar_o_nome`.
-    """
+    """O passe de reparo: põe o prefixo em TODO adaptador que hospeda Nintendo."""
     tabela = ler_os_dongles(
         executar=executar, raiz_hidraw=raiz_hidraw, listar=listar, ler=ler
     )
@@ -616,22 +394,10 @@ def costurar_a_mesa(
     return tuple(feitos)
 
 
-# ---------------------------------------------------------------------------
-# Encanamento.
-# ---------------------------------------------------------------------------
-
-
 def _leitor(
     executar: Callable[[Sequence[str]], str | None] | None,
 ) -> bluez_dbus.LeitorDoBluez:
-    """O dono do BlueZ (BLUEZ-UM-DONO-01), ou um sobre o dublê de quem injetou.
-
-    Ler e escrever o ``Alias`` era um ``busctl`` deste módulo, com o único
-    desembrulho que não mutilava nome com espaço. O desembrulho foi com ele
-    para o dono, e a escrita passa pela borda de lá: a guarda da suíte e a
-    trava comum do rádio — o ``bt_active_mode.sh`` do watchdog escreve o mesmo
-    ``Alias``.
-    """
+    """O dono do BlueZ (BLUEZ-UM-DONO-01), ou um sobre o dublê de quem injetou."""
     return bluez_dbus.dono() if executar is None else bluez_dbus.pelo_executor(executar)
 
 

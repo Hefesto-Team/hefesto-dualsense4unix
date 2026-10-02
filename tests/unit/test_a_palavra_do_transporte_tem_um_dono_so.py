@@ -3,7 +3,7 @@
 
 ONDA4-S10, 06/09/2026. A decisão é dela (D-05), verbatim: *"cabo / rádio, pela
 função que já existe."* A função é a dona da frase longa da janela estável,
-em ``app/actions/home_actions.py:1407``; esta régua mede que a interface nova a
+em ``app/actions/home_actions.py:868``; esta régua mede que a interface nova a
 CHAMA em vez de reescrever a tradução, e — o que é mais caro — que **nenhuma
 conta desta casa depende da palavra**.
 
@@ -68,20 +68,9 @@ from hefesto_dualsense4unix.interface.pacotes import (
     a09_sistema,
 )
 
-#: DOIS ENDEREÇOS DE MENTIRA, com a máscara da casa (octetos 4 e 5 zerados).
-#: Uma mesa de UM controle não distingue as duas palavras, e foi por isso que
-#: este defeito sobreviveu a quatro leituras.
 UNIQ_A = "aa:bb:cc:00:00:01"
 UNIQ_B = "aa:bb:cc:00:00:02"
 
-#: A palavra que a dona NÃO diz hoje. Ela entra no lugar de `cabo` para provar
-#: que a tela SEGUE a dona em vez de repetir o que decorou.
-#: OS GERADORES JÁ CURADOS — os que põem a escrita da bancada debaixo do
-#: `if __name__ == "__main__":`. Lista explícita, e não um glob: a `aba06` ainda escreve
-#: no nível do módulo, e um `aba*.py` a reprovaria sem
-#: que ninguém tivesse decidido curá-la. Acrescentar um nome aqui é um ato que
-#: se vê no diff — que é o oposto de um glob que passa a cobrar (ou a deixar de
-#: cobrar) sozinho.
 _GERADORES_JA_CURADOS = ("aba01.py", "aba02.py", "aba03.py", "aba04.py",
                          "aba05.py", "aba06.py", "aba07.py", "aba08.py",
                          "aba09.py", "aba10.py")
@@ -102,36 +91,17 @@ def _estado(*transportes: str) -> dict[str, Any]:
 
 
 def _mesa(*transportes: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """`(estado, mesa)` — a mesa sai do DONO dela, nunca montada à mão aqui.
-
-    Montá-la à mão escreveria uma segunda vez as regras de ordem, de cor e de
-    transporte, e a cópia daqui envelheceria sozinha — que é exatamente o
-    defeito que esta régua mede.
-    """
+    """`(estado, mesa)` — a mesa sai do DONO dela, nunca montada à mão aqui."""
     estado = _estado(*transportes)
     return estado, mesa_viva.mesa_do_estado(estado, {})
 
 
-# ---------------------------------------------------------------------------
-# 1 e 2 — QUEM CONTA LÊ O TRANSPORTE, NUNCA A PALAVRA
-# ---------------------------------------------------------------------------
 def test_a_contagem_do_cabecalho_nao_se_mexe_quando_a_palavra_muda(monkeypatch) -> None:
-    """A mordida do P1: a palavra muda, a conta não.
-
-    A troca é feita na tabela que alimenta a chave `via` — o texto que a tela
-    escreve. Com a contagem lendo `via`, esta régua reprovava com
-    `0 USB · 2 BT` e os dois controles no CABO.
-    """
+    """A mordida do P1: a palavra muda, a conta não."""
     _, mesa = _mesa("usb", "usb")
     assert mesa_viva.texto_da_contagem(mesa) == ("● 2 controles: ", "2 USB")
 
-    # O PONTO DE INJEÇÃO MUDOU NA COSTURA DA ONDA B (06/09/2026), e a PERGUNTA
     # não. A `via` deixou de vir da tabela `VIA_DO_TRANSPORTE` e passou a vir da
-    # dona da frase — `home_actions.palavra_do_transporte` —, que é o que a
-    # própria ONDA4-S10 desenhou e não pôde executar (os cinco pontos que
-    # COMPARAVAM a chave não eram da posse dela). Com a injeção no lugar velho
-    # esta régua parava de morder, e foi ELA quem acusou: a asserção do meio,
-    # *"a troca não chegou à mesa"*, reprovou primeiro.
     monkeypatch.setattr(
         mesa_viva, "_via_do_transporte", lambda _t: SENTINELA)
     _, mesa_depois = _mesa("usb", "usb")
@@ -183,9 +153,6 @@ def test_a_mesa_do_desenho_tambem_publica_a_chave_crua() -> None:
         f"a mesa do desenho conta {usb} USB e {bt} BT; o desenho aprovado diz "
         "`2 controles: 1 USB · 1 BT` e é ele que manda")
 
-    # E AS DUAS CHAVES TÊM DE CONCORDAR: a `via` desta tabela ainda é a SIGLA
-    # (seis geradores a escrevem direto na tela), e uma tabela que diga `USB`
-    # numa chave e `bt` na outra publicaria dois fatos sobre o mesmo controle.
     for c in monta.MESA:
         assert str(c["via"]).lower() == str(c["transporte"]).lower(), (
             f'{c["pref"]}: `via`={c["via"]!r} e `transporte`={c["transporte"]!r} '
@@ -193,18 +160,7 @@ def test_a_mesa_do_desenho_tambem_publica_a_chave_crua() -> None:
 
 
 def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
-    """Importar um gerador NÃO pode reescrever o desenho dela no disco.
-
-    **MEDIDO EM 06/09/2026:** bastava o `pytest` COLETAR
-    `test_a_vibracao_diz_qual_degrau_esta_aceso.py`, que importava `aba05` no
-    topo, para `mockup/05-vibracao.html` mudar no disco — com a contagem viva
-    de controles dentro. A ironia estava escrita: aquele mesmo teste avisa, na
-    docstring, que *"importar `aba05` REESCREVE a bancada dela como efeito de
-    um `import`, e uma régua não mexe no que mede"*.
-
-    A MORDIDA: tire o `if __name__ == "__main__":` de qualquer arquivo de
-    `curados` e esta régua reprova nomeando o arquivo.
-    """
+    """Importar um gerador NÃO pode reescrever o desenho dela no disco."""
     import pathlib as _pl
     import re as _re
 
@@ -221,20 +177,6 @@ def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
         "aprovado no disco, com o estado vivo da mesa dentro")
 
 
-# A SEGUNDA CONTA SAIU EM 11/09/2026 — junto com a frase que ela vigiava.
-# `test_o_quantos_da_lancadores_nao_se_mexe_quando_a_palavra_muda` mordia o "?"
-# da aba Lançadores, que dizia *"a resposta vale igual para os N (x no cabo, y
-# no rádio)"*. Aquela oração saiu por decisão dela (A2-002): ela repetia o
-# cabeçalho a dois centímetros, que é o dono do número — e com ela saiu o
-# `a07_lancadores.quantos_da_mesa`.
-#
-# A LEI NÃO MUDOU, e as superfícies que sobraram continuam medidas logo abaixo:
-# **quem conta lê o `transporte`, nunca a `via`**, que é a palavra da tela.
-
-
-# ---------------------------------------------------------------------------
-# 3 — A PALAVRA DA TELA SAI DA DONA, nas quatro superfícies
-# ---------------------------------------------------------------------------
 def _primeiro_chip(fita: str) -> str:
     """O primeiro chip de controle da fita — o `Todos` não é aparelho."""
     chips = [c for c in fita.split('<label class="chip')[1:] if ">Todos<" not in c]
@@ -247,8 +189,6 @@ def _superficies(estado: dict[str, Any], mesa: list[dict[str, Any]]) -> dict[str
     cartoes = a01_jogar.pacote(ctx)["cartoes"]
     return {
         "cartão da Jogar": str(cartoes[UNIQ_A]["identidade"]),
-        # A FITA PRÓPRIA DA 07 SAIU EM 22/09/2026; o chip que a Lançadores
-        # mostra é o do piloto, o mesmo das dez abas.
         "chip da Lançadores": _primeiro_chip(hefesto_vivo._fita(mesa, "07-lancadores.html")),
         "chip da Sistema": a09_sistema._um_chip(mesa[0]),
         "linha da Sistema": a09_sistema._linha_de_identidade(estado["controllers"][0], mesa),
@@ -256,12 +196,7 @@ def _superficies(estado: dict[str, Any], mesa: list[dict[str, Any]]) -> dict[str
 
 
 def test_as_quatro_superficies_seguem_a_dona(monkeypatch) -> None:
-    """Troque a palavra NA DONA e as quatro acompanham — nenhuma tem cópia.
-
-    A 09 é o caso que fecha o argumento: a foto da mesa dela de 03/09/2026 pegou
-    a fita e o painel logo abaixo, na MESMA tela, em duas línguas. As duas estão
-    aqui, e as duas têm de trocar juntas.
-    """
+    """Troque a palavra NA DONA e as quatro acompanham — nenhuma tem cópia."""
     monkeypatch.setitem(home_actions._PALAVRA_DO_TRANSPORTE, "usb", SENTINELA)
     estado, mesa = _mesa("usb", "bt")
     for onde, texto in _superficies(estado, mesa).items():
@@ -272,21 +207,7 @@ def test_as_quatro_superficies_seguem_a_dona(monkeypatch) -> None:
 
 
 def test_as_quatro_superficies_dizem_a_palavra_dela_hoje() -> None:
-    """E o que elas dizem HOJE é `USB` e `BT` — palavra dela, 21/09/2026.
-
-    **A PALAVRA NÃO SE DIGITA AQUI**, e é o ponto do arquivo: ela sai do dono
-    (`home_actions.palavra_do_transporte`), do mesmo jeito que as quatro
-    superfícies a tiram. A versão de 06/09 desta régua NEGAVA `"USB"` no texto
-    de tela — e teria reprovado a decisão dela em vez de reprovar um segundo
-    dono, que é o defeito que este arquivo existe para pegar. Régua de dono
-    mede DONO; a palavra é de quem manda na tela.
-
-    Sem este caso, uma superfície que escrevesse a sentinela em qualquer
-    situação passaria no teste de cima.
-    """
-    # DUAS VOLTAS, e não uma: `_superficies` lê sempre o PRIMEIRO da mesa,
-    # então uma volta só mediria metade do dicionário — e foi assim que o
-    # defeito original sobreviveu a quatro leituras.
+    """E o que elas dizem HOJE é `USB` e `BT` — palavra dela, 21/09/2026."""
     for cru in ("usb", "bt"):
         dela = home_actions.palavra_do_transporte(cru)
         estado, mesa = _mesa(cru, cru)
@@ -296,16 +217,7 @@ def test_as_quatro_superficies_dizem_a_palavra_dela_hoje() -> None:
 
 
 def test_a_tela_e_o_desenho_falam_a_mesma_palavra() -> None:
-    """A DIVERGÊNCIA DE UM MÊS FECHOU — 21/09/2026, por decisão dela.
-
-    A mesa do DESENHO (`interface/monta.MESA`) sempre disse `USB`/`BT` e o
-    produto dizia `cabo`/`rádio`: duas telas, duas línguas, e a
-    `A-PALAVRA-MESA-SAI-01` existia só para escolher uma. Ela escolheu vendo
-    as duas — *"USB e BT é muito bom"*.
-
-    MORDE: devolva `"cabo"` ao dono e esta régua reprova, porque o desenho
-    continua em `USB`.
-    """
+    """A DIVERGÊNCIA DE UM MÊS FECHOU — 21/09/2026, por decisão dela."""
     from hefesto_dualsense4unix.interface import monta
 
     for controle in monta.MESA:
@@ -316,25 +228,13 @@ def test_a_tela_e_o_desenho_falam_a_mesma_palavra() -> None:
 
 
 def test_a_contagem_e_a_unica_excecao_e_ela_continua_em_sigla() -> None:
-    """O cabeçalho fica em `USB`/`BT` — decisão dela, 06/09/2026.
-
-    A razão é gramática: *"2 cabo · 0 rádio"* não é português. Esta régua existe
-    para que a próxima leva não "termine o trabalho" traduzindo a contagem.
-    """
+    """O cabeçalho fica em `USB`/`BT` — decisão dela, 06/09/2026."""
     _, mesa = _mesa("usb", "bt")
     assert mesa_viva.texto_da_contagem(mesa)[1] == "1 USB · 1 BT"
 
 
-# ---------------------------------------------------------------------------
-# 4 — O TERCEIRO ESTADO DA DONA CHEGA À TELA
-# ---------------------------------------------------------------------------
 def test_o_transporte_ausente_diz_que_nao_se_sabe() -> None:
-    """Um `·` seguido de nada não é resposta, e `rádio` sobre o vazio é mentira.
-
-    As duas cópias que morreram erravam aqui de formas opostas: o `.upper()` da
-    aba 01 devolvia `""`, e o `if/else` da aba 09 afirmava **rádio** sobre um
-    campo que o daemon nunca publicou.
-    """
+    """Um `·` seguido de nada não é resposta, e `rádio` sobre o vazio é mentira."""
     estado = {"controllers": [{"uniq": UNIQ_A, "connected": True, "player_slot": 1}]}
     mesa = mesa_viva.mesa_do_estado(estado, {})
     frase = home_actions.PALAVRA_DE_TRANSPORTE_DESCONHECIDO
@@ -345,11 +245,7 @@ def test_o_transporte_ausente_diz_que_nao_se_sabe() -> None:
 
 
 def test_um_transporte_que_o_mapa_nao_conhece_aparece_cru() -> None:
-    """Transporte novo TEM de aparecer, e não sumir atrás de uma frase genérica.
-
-    É a razão escrita na dona, e é o que separa "não sei" de "não conheço":
-    um daemon mais recente com um transporte novo precisa ser VISTO por alguém.
-    """
+    """Transporte novo TEM de aparecer, e não sumir atrás de uma frase genérica."""
     estado, mesa = _mesa("thunderbolt")
     ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"], estados={})
     cartao = str(a01_jogar.pacote(ctx)["cartoes"][UNIQ_A]["identidade"])
@@ -360,9 +256,6 @@ def test_um_transporte_que_o_mapa_nao_conhece_aparece_cru() -> None:
         "ombros sobre um fato que ela leu")
 
 
-# ---------------------------------------------------------------------------
-# 5 — O DESCARTE DO ÚLTIMO DEGRAU PERGUNTA AO DONO
-# ---------------------------------------------------------------------------
 def test_o_descarte_da_09_segue_o_ultimo_degrau_de_identidade(monkeypatch) -> None:
     """`P2 · BT · rádio` afirma o mesmo fato duas vezes — e o descarte tem de
     acompanhar quem produz o degrau, não uma lista congelada no import.
@@ -388,14 +281,6 @@ def test_o_descarte_nao_come_um_nome_de_verdade() -> None:
     assert a09_sistema._nome_do_plastico(com_nome, []) == "White"
 
 
-# ---------------------------------------------------------------------------
-# 6 — NENHUM ARQUIVO DESTA POSSE REDIGITA A TRADUÇÃO
-# ---------------------------------------------------------------------------
-#: A tabela da SIGLA continua viva, e é dívida DECLARADA: a chave `via` da mesa
-#: é COMPARADA em `interface/monta.py:877` e em quatro linhas de
-#: `interface/pacotes/a08_conexoes.py`, nenhum dos dois da posse desta sprint.
-#: Trocar a palavra dela sem tocar nesses cinco pontos faria a aba Conexões
-#: mostrar ZERO controles no rádio com os dois no rádio.
 DONOS_DA_PALAVRA = (
     "src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py",
     "src/hefesto_dualsense4unix/interface/pacotes/a07_lancadores.py",
@@ -405,12 +290,7 @@ DONOS_DA_PALAVRA = (
 
 @pytest.mark.parametrize("caminho", DONOS_DA_PALAVRA)
 def test_nenhuma_aba_desta_posse_escreve_a_traducao(caminho: str) -> None:
-    """A palavra não se digita em CÓDIGO — ela se pergunta.
-
-    A varredura é por LINHA DE CÓDIGO e pula comentário e prosa: uma docstring
-    que explique a cura (e há três) não pode reprovar a cura que ela explica —
-    foi assim que um aviso virou o defeito que descrevia, em 05/09/2026.
-    """
+    """A palavra não se digita em CÓDIGO — ela se pergunta."""
     fonte = (RAIZ / caminho).read_text(encoding="utf-8")
     dentro_de_prosa = False
     acusados: list[str] = []
@@ -422,14 +302,12 @@ def test_nenhuma_aba_desta_posse_escreve_a_traducao(caminho: str) -> None:
         if dentro_de_prosa or nua.startswith("#") or not nua:
             continue
         codigo = nua.split("#", 1)[0]
-        # `set` E NÃO os valores crus: a tabela da dona mapeia SEIS chaves em
-        # duas palavras, e sem isto a mesma linha sairia acusada cinco vezes.
         if any(f'"{p}"' in codigo or f"'{p}'" in codigo
                for p in set(home_actions._PALAVRA_DO_TRANSPORTE.values())):
             acusados.append(f"{caminho}:{numero}: {nua}")
     assert not acusados, (
         "a tradução do transporte foi redigitada em código:\n  "
         + "\n  ".join(acusados)
-        + "\nA palavra vem da dona (`app/actions/home_actions.py:1407`) e de "
+        + "\nA palavra vem da dona (`app/actions/home_actions.py:868`) e de "
           "mais lugar nenhum — foi a QUARTA cópia dela que esta sprint matou"
     )

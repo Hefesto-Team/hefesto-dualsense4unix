@@ -93,10 +93,6 @@ PACOTE = RAIZ / "src" / "hefesto_dualsense4unix"
 DRIVER = RAIZ / "assets" / "dkms" / "hid-playstation" / "hid-playstation.c"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
-#: As palavras que só um gate de TRANSPORTE escreveria. Igualdade exata e em
-#: minúsculas, nunca substring: `uhid` é backend e `bus` sozinho é o barramento
-#: de EVENTOS do daemon (`self.bus.publish`) — uma régua por substring acusaria
-#: os dois.
 PALAVRAS_DE_TRANSPORTE = frozenset(
     {
         "usb",
@@ -112,14 +108,10 @@ PALAVRAS_DE_TRANSPORTE = frozenset(
     }
 )
 
-#: Nome de variável, atributo ou argumento que decidiria por fio. `bus` fica de
-#: FORA de propósito (é o barramento de eventos); `bustype` fica dentro.
 NOMES_DE_TRANSPORTE = frozenset(
     {"transport", "_transport", "transporte", "bustype", "con_type", "contype"}
 )
 
-#: Os quatro escopos que carregam o gatilho/analógico do plástico até o cursor.
-#: `None` quer dizer "o módulo inteiro"; um nome, só aquela função.
 ESCOPOS: tuple[tuple[str, str | None], ...] = (
     ("daemon/subsystems/mouse.py", None),
     ("integrations/uinput_mouse.py", None),
@@ -129,12 +121,7 @@ ESCOPOS: tuple[tuple[str, str | None], ...] = (
 
 
 def _decisoes(escopo: ast.AST) -> list[ast.AST]:
-    """Os nós que DECIDEM alguma coisa dentro de `escopo`.
-
-    A distinção é o ponto inteiro da régua: `transport=state.transport` num log
-    é VALOR, e o `read_state` publica o transporte como campo do estado o tempo
-    todo. O que seria defeito é um `if` que muda o comportamento por fio.
-    """
+    """Os nós que DECIDEM alguma coisa dentro de `escopo`."""
     testes: list[ast.AST] = []
     for no in ast.walk(escopo):
         if isinstance(no, ast.If | ast.While | ast.IfExp | ast.Assert):
@@ -179,13 +166,7 @@ def gates_de_transporte(fonte: str, alvo: str | None) -> list[str]:
 def test_o_caminho_do_mouse_emulado_nao_decide_por_transporte(
     relativo: str, escopo_alvo: str | None
 ) -> None:
-    """Nenhum dos quatro escopos pode passar a mudar de comportamento por fio.
-
-    MORDE: plante `if state.transport == "bt": return` no começo de
-    `dispatch_mouse` e este nó reprova nomeando o arquivo e a linha. É a forma
-    exata do defeito que o mapa de canais existe para pegar — o aparelho
-    aceita, e quem recusa é uma linha nossa.
-    """
+    """Nenhum dos quatro escopos pode passar a mudar de comportamento por fio."""
     caminho = PACOTE / relativo
     achados = gates_de_transporte(caminho.read_text(encoding="utf-8"), escopo_alvo)
     assert achados == [], (
@@ -199,15 +180,10 @@ def test_o_caminho_do_mouse_emulado_nao_decide_por_transporte(
     )
 
 
-# --- o driver que esta casa instala ---------------------------------------
-
-#: As âncoras do `dualsense_parse_report`, na ordem em que têm de aparecer.
 _ARM_USB = "if (hdev->bus == BUS_USB && report->id == DS_INPUT_REPORT_USB &&"
 _ARM_BT = "} else if (hdev->bus == BUS_BLUETOOTH && report->id == DS_INPUT_REPORT_BT &&"
 _FECHA = 'hid_err(hdev, "Unhandled reportID=%d\\n", report->id);'
 
-#: Os seis eixos que o mouse emulado lê: dois de stick (cursor) e dois de
-#: gatilho (botão). `ABS_RX`/`ABS_RY` entram porque são a rolagem.
 EIXOS_DO_GAMEPAD = ("ABS_X", "ABS_Y", "ABS_RX", "ABS_RY", "ABS_Z", "ABS_RZ")
 
 
@@ -227,15 +203,7 @@ def _ancoras_do_parse() -> tuple[list[str], int, int, int]:
 
 
 def test_os_eixos_do_gamepad_nascem_depois_da_porta_de_barramento() -> None:
-    """Os seis eixos saem do MESMO `ds_report`, fora dos dois braços de fio.
-
-    É a prova de que o evdev normaliza: o que muda entre USB e Bluetooth é o
-    OFFSET do payload (`&data[1]` contra `&data[2]`, este sob CRC-32) e mais
-    nada. Depois da porta há um caminho só.
-
-    MORDE: mova qualquer `input_report_abs(ds->gamepad, ABS_*, ...)` para
-    dentro do braço USB e este nó reprova.
-    """
+    """Os seis eixos saem do MESMO `ds_report`, fora dos dois braços de fio."""
     linhas, i_usb, i_bt, i_fecha = _ancoras_do_parse()
     assert i_usb < i_bt < i_fecha, "a ordem dos braços de barramento mudou no driver"
     janela = range(i_usb, min(i_fecha + 60, len(linhas)))
@@ -255,14 +223,7 @@ def test_os_eixos_do_gamepad_nascem_depois_da_porta_de_barramento() -> None:
 
 
 def test_no_cabo_nao_ha_crc_de_entrada_a_conferir() -> None:
-    """O `0x01` de 64 B do cabo não tem trailer de CRC — logo não há falha.
-
-    É o que fecha o lado CABO de `combinacao.dois_no_radio.crc@dualsense`:
-    `cabo_aciona = não` com `nada-a-acionar`, e a causa é o protocolo.
-
-    MORDE: acrescente uma chamada de `ps_check_crc32` no braço USB e este nó
-    reprova; troque o `static_assert` e ele reprova também.
-    """
+    """O `0x01` de 64 B do cabo não tem trailer de CRC — logo não há falha."""
     linhas, i_usb, i_bt, i_fecha = _ancoras_do_parse()
     conferencias = [i for i in range(i_usb, i_fecha) if "ps_check_crc32(" in linhas[i]]
     assert len(conferencias) == 1, (
@@ -286,30 +247,16 @@ def test_no_cabo_nao_ha_crc_de_entrada_a_conferir() -> None:
     )
 
 
-# --- o dono do cursor do touchpad -----------------------------------------
-
-
 def test_o_cursor_do_touchpad_tem_outro_dono() -> None:
-    """Com o libinput no comando, o `TouchpadReader` NÃO acumula movimento.
-
-    É a premissa derrubada: o touchpad e o par gatilho/analógico não passam
-    pelo mesmo dono, então a observação dela de 11/08 não descreve três coisas
-    simétricas. Aqui a régua é de COMPORTAMENTO, não de texto.
-
-    MORDE: tire o `not self._ponteiro_do_sistema` de `_acumula_agora` e este nó
-    reprova — o delta passa a acumular com o libinput já movendo o cursor, que
-    é o cursor andando duas vezes.
-    """
+    """Com o libinput no comando, o `TouchpadReader` NÃO acumula movimento."""
     from hefesto_dualsense4unix.core.evdev_reader import TouchpadReader
 
-    # Caminho inexistente de propósito: o `__init__` não abre nada, e assim o
-    # teste não enumera `/dev/input` nem toca no aparelho dela.
     leitor = TouchpadReader(device_path=Path("/dev/input/event-que-nao-existe"))
     leitor._touching = True
 
     leitor._ponteiro_do_sistema = True
-    leitor._accumulate_axis_x(100)  # só ancora
-    leitor._accumulate_axis_x(160)  # andaria 60, se o dono fosse o hefesto
+    leitor._accumulate_axis_x(100)
+    leitor._accumulate_axis_x(160)
     assert leitor.consume_motion() == (0, 0), (
         "o `TouchpadReader` acumulou movimento com o libinput como dono do "
         "cursor (TOUCHPAD-DO-SISTEMA-01)"
@@ -326,14 +273,7 @@ def test_o_cursor_do_touchpad_tem_outro_dono() -> None:
 
 
 def test_o_gatilho_e_o_analogico_nao_passam_pelo_touchpad() -> None:
-    """As duas fontes do cursor são funções DIFERENTES, e é isso que se guarda.
-
-    `dispatch_mouse` lê o gatilho e o analógico de `state` (o snapshot do
-    controle) e o touchpad de `_touchpad_reader.consume_motion()`. Fundir as
-    duas apagaria a explicação da assimetria que ela observou.
-
-    MORDE: faça o dreno do touchpad sair de `state` e este nó reprova.
-    """
+    """As duas fontes do cursor são funções DIFERENTES, e é isso que se guarda."""
     fonte = (PACOTE / "daemon" / "subsystems" / "mouse.py").read_text(encoding="utf-8")
     arvore = ast.parse(fonte)
     despacho = next(
@@ -354,13 +294,7 @@ def test_o_gatilho_e_o_analogico_nao_passam_pelo_touchpad() -> None:
     )
 
 
-# --- as células do mapa ----------------------------------------------------
-
-#: `id` -> (coluna, valor) que esta frente escreveu em 03/09/2026. Apagar
-#: qualquer uma reabre uma pergunta que já foi respondida.
 CELULAS_ESPERADAS: dict[str, dict[str, str]] = {
-    # As seis células abaixo mudaram em 05/09/2026, medidas por ela nos dois
-    # transportes — ver o bloco O LADO DO RÁDIO FOI MEDIDO, no topo.
     "entrada.emulacao_mouse.gatilhos@dualsense": {
         "cabo_aciona": "sim",
         "cabo_de_onde_sei": "medido",
@@ -387,42 +321,17 @@ CELULAS_ESPERADAS: dict[str, dict[str, str]] = {
         "cabo_aceita": "sim",
         "cabo_aciona": "não",
         "radio_aciona": "não",
-        # 24/09/2026: ela respondeu a metade da ESCRITA —
-        # `D-2409-O-HEFESTO-NUNCA-GRAVA-A-CALIBRACAO` (o desvio se corrige no
-        # computador) —; a da LEITURA, que não estava na pergunta, fica fora
-        # por delegação, pelo padrão dela. A causa saiu da fila dela para
-        # `decisao-tomada`.
         "cabo_por_que_nao_aciona": "decisao-tomada",
         "radio_por_que_nao_aciona": "decisao-tomada",
     },
     "luz.recursos_proprios@dualsense": {
         "cabo_aciona": "não",
         "radio_aciona": "não",
-        # O "VAZIA DE PROPÓSITO" CADUCOU EM 06/09/2026, e não por decisão desta
-        # sprint: a regra 16 do `check_paridade_transporte.py` deixou de valer
-        # só para o `medido` e passou a cobrar causa de TODO `aciona = não`. A
-        # partir daí a célula vazia é reprovação, e vazio deixou de ser uma
-        # opção que esta régua pudesse defender.
-        #
-        # O texto que estava aqui dizia: *"a causa fica VAZIA de propósito —
-        # ela é mista, e o `cabo_detalhe` diz por quê"*. A frase descrevia um
-        # mundo em que a coluna admitia silêncio; ela não descreve mais o mapa,
-        # e uma régua que insiste nela reprova quem escreveu a resposta certa —
-        # que é exatamente o que aconteceu: este nó chegou VERMELHO a
-        # 06/09/2026 na base `onda/atual-0609`, medido antes de esta sprint
-        # tocar em qualquer coisa.
-        #
-        # O QUE FICA EM ABERTO, e não é desta sprint decidir: se `nao-medido`
-        # é a causa CERTA para uma linha cujo `cabo_detalhe` chama a causa de
-        # MISTA. `nao-medido` diz *"ninguém olhou para o aparelho"*, e uma
-        # causa mista pode ser outra coisa. Quem escreveu a célula responde.
         "cabo_por_que_nao_aciona": "nao-medido",
         "radio_por_que_nao_aciona": "nao-medido",
     },
 }
 
-#: As linhas cuja `assimetria_declarada` carrega a explicação — vazia, a régua
-#: 7 do `check_paridade_transporte.py` volta a acusar assimetria não declarada.
 COM_ASSIMETRIA = (
     "entrada.emulacao_mouse.gatilhos@dualsense",
     "entrada.emulacao_mouse.analogico@dualsense",
@@ -455,10 +364,7 @@ def test_as_celulas_respondidas_seguem_respondidas() -> None:
 
 @pytest.mark.parametrize("ident", COM_ASSIMETRIA)
 def test_a_assimetria_continua_declarada(ident: str) -> None:
-    """A diferença entre os dois fios calada é o defeito que o mapa pega.
-
-    MORDE: apague a `assimetria_declarada` de qualquer uma e este nó reprova.
-    """
+    """A diferença entre os dois fios calada é o defeito que o mapa pega."""
     linha = _linhas_do_mapa()[ident]
     assert (linha.get("assimetria_declarada") or "").strip(), (
         f"`{ident}` voltou a divergir entre cabo e rádio sem uma palavra de "

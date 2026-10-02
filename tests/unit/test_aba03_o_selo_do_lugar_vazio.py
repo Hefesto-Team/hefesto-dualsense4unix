@@ -67,8 +67,6 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "03-gatilhos.html"
 
-#: UM CONTROLE DE MENTIRA, com a forma que o daemon devolve. O MAC é da faixa
-#: sintética da casa (`aa:bb:cc`): há dois portões de anonimato nesta árvore.
 NO_CABO = {
     "uniq": "aa:bb:cc:00:00:01", "player": 1, "transport": "usb",
     "is_primary": True, "inputs": {"l2_raw": 0, "r2_raw": 0},
@@ -78,7 +76,6 @@ NO_RADIO = {
     "is_primary": False, "inputs": {"l2_raw": 0, "r2_raw": 0},
 }
 
-#: A MESA DELA DE HOJE: um **White no cabo** e um **por rádio sem cor lida**.
 MESA_DELA = [
     {"pref": "p1", "jogador": 1, "uniq": NO_CABO["uniq"], "nome": "White",
      "via": "USB", "cor": "white", "mascara": "DualSense", "alvo": True},
@@ -86,8 +83,6 @@ MESA_DELA = [
      "via": "BT", "cor": "", "mascara": "DualSense", "alvo": False},
 ]
 
-#: A MESA DE UM SÓ. É o caso em que o P2 fica sem dono e a PÁGINA continua
-#: dando aquela coluna por conectada — o lugar que o `blocos` ainda cobre.
 MESA_DE_UM = [MESA_DELA[0]]
 
 
@@ -97,8 +92,6 @@ def a03():
     from pacotes import a03_gatilhos
 
     return a03_gatilhos
-
-
 
 
 def _pacote(a03, mesa, conectados):
@@ -123,19 +116,7 @@ def _chip_de_bloco(a03, r, pref: str) -> str | None:
 
 
 def _o_que_a_tela_recebe(a03, mesa, conectados):
-    """A carga na forma EXATA em que o piloto a manda ao JS.
-
-    ELA É O PONTO DESTA RÉGUA. Todos os testes acima param no que `pacote()`
-    devolve — e foi por isso que eles ficaram VERDES enquanto o P2 mostrava um
-    travessão na tela dela. Entre o pacote e o DOM há dois passos que mudam o
-    que chega: `normalizar()` e `apagar_os_lugares_sem_dono()`, e é o segundo
-    que enchia a coluna sem dono com `dict.fromkeys(chaves, '—')`.
-
-    A ORDEM É A DO PRODUTO, copiada de `hefesto_vivo.Piloto._tique`
-    (`pacotes.normalizar(...)` e depois `pacotes.apagar_os_lugares_sem_dono(
-    carga, _com_dono(ctx))`). Medir noutra ordem seria a régua respondendo
-    sobre um produto que não existe.
-    """
+    """A carga na forma EXATA em que o piloto a manda ao JS."""
     import pacotes
 
     r = _pacote(a03, mesa, conectados)
@@ -144,23 +125,8 @@ def _o_que_a_tela_recebe(a03, mesa, conectados):
     return carga
 
 
-# ---------------------------------------------------------------------------
-# 1. O SELO — e ele só chega pelo caminho do CAMPO.
-# ---------------------------------------------------------------------------
-
 def test_o_lugar_vazio_sai_por_campo(a03):
-    """O cabeçalho do P3 e do P4 sai em `colunas`, e NÃO em `blocos`.
-
-    É a diferença entre escrever e PROVAR que escreveu. `hefesto_vivo.pintar`
-    tem dois caminhos, e só um deles carimba o selo::
-
-        blocos:  alvo.innerHTML = html          (nenhum selo)
-        colunas: escrever(el, v) → el.dataset.hefVisto = '1'
-
-    ARRANQUE a linha `vazia[CAMPO_DO_CHIP] = ...` do laço dos vazios em
-    `pacote()` e esta régua reprova nomeando a coluna — o chip volta a sair só
-    por bloco, e a régua do mockup volta a contar dois campos como desenho.
-    """
+    """O cabeçalho do P3 e do P4 sai em `colunas`, e NÃO em `blocos`."""
     r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
     vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
     assert vazios, "a página não marca lugar vazio nenhum — a régua ficou cega"
@@ -206,10 +172,6 @@ def test_nenhum_lugar_sem_aparelho_fica_sem_chip(a03):
             f"{pref} recebeu {escritos[0]!r} e não há controle nele")
 
 
-# ---------------------------------------------------------------------------
-# 2. A COR — ela mora no EMBRULHO, que é o que o produto pode pintar.
-# ---------------------------------------------------------------------------
-
 def test_a_cor_saiu_de_dentro_do_chip(a03):
     """O `<span>` do chip não carrega cor nem endereço. Quem carrega é o pai.
 
@@ -245,9 +207,6 @@ def test_a_cor_saiu_de_dentro_do_chip(a03):
         f"página é estática: sem ele, o dia em que um controle entrar no P3 a "
         f"cor não terá por onde chegar.")
 
-    # E O CONECTADO SEM COR LIDA cai do mesmo lado do vazio: pelo rádio a cor
-    # ainda não chega, e o cabeçalho sai sem `style` — a queda do `topo.html`
-    # deixa a borda neutra em vez de vestir o plástico de outro controle.
     sem_leitura = a03._cabeca_do_controle(2, "", "BT", "")
     assert "--plastico" not in sem_leitura, (
         f"o cabeçalho do controle por rádio, sem cor lida, vestiu plástico: "
@@ -255,17 +214,7 @@ def test_a_cor_saiu_de_dentro_do_chip(a03):
 
 
 def test_o_lugar_vazio_apaga_a_cor(a03):
-    """O que o produto escreve num lugar vazio APAGA a borda de quem saiu.
-
-    O `escrever()` do alvo `plastico` chama `removeProperty` no vazio e no
-    travessão — é assim que a decisão dela vale nos dois sentidos: *"os demais 3
-    e o 4 ficam lá com os espaços mas tudo com Desligado e Nenhum, fora a borda
-    do P1 e P2."* Sem esta escrita, um controle que SAI do P1 deixaria a borda
-    dele acesa num lugar sem aparelho.
-
-    ARRANQUE a linha `vazia[CAMPO_DO_PLASTICO] = ""` do laço dos vazios e esta
-    régua reprova nomeando a coluna.
-    """
+    """O que o produto escreve num lugar vazio APAGA a borda de quem saiu."""
     r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
     for pref in sorted(a03._lugares_que_o_desenho_da_por_vazios()):
         col = r["colunas"].get(pref) or {}
@@ -279,12 +228,7 @@ def test_o_lugar_vazio_apaga_a_cor(a03):
 
 
 def test_o_pacote_nao_emite_o_selo(a03):
-    """O selo é um fato do PILOTO. O pacote que o escrevesse assinaria a visita.
-
-    Ele faria a conta fechar sem que ninguém tivesse pintado — que é a família
-    exata do `77%` que esta casa publicou lendo código, e o oposto do que a
-    régua do mockup existe para medir.
-    """
+    """O selo é um fato do PILOTO. O pacote que o escrevesse assinaria a visita."""
     r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
     tudo = "".join(str(v) for col in r["colunas"].values() for v in col.values())
     tudo += "".join(str(v) for v in r["blocos"].values())
@@ -293,10 +237,6 @@ def test_o_pacote_nao_emite_o_selo(a03):
         "que esteve no elemento; escrevê-lo aqui seria a aba assinando a visita "
         "que não fez — e a régua do mockup passaria a medir a si mesma.")
 
-
-# ---------------------------------------------------------------------------
-# 3. O QUE CHEGA À TELA — e é aqui que a queixa dela de 11/09/2026 morde.
-# ---------------------------------------------------------------------------
 
 def test_o_p2_sem_aparelho_diz_desconectado_na_tela(a03):
     """Com UM controle na mesa, o P2 chega à tela dizendo, não com um traço.

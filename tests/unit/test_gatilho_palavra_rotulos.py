@@ -7,7 +7,7 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
 
 1. O `name` de cada preset é CHAVE SERIALIZADA, não texto: ele está no perfil
    no disco dela (`triggers.left.mode`, validado contra `PRESET_FACTORIES` em
-   `profiles/schema.py:161`), no IPC (comando `trigger.set`) e no protocolo DSX
+   `profiles/schema.py:67`), no IPC (comando `trigger.set`) e no protocolo DSX
    (`daemon/udp_server.py`). Trocar um `name` faz `acao.json`, `corrida.json`,
    `esportes.json` e `pragmata.json` pararem de abrir com `ValueError`. Este
    arquivo trava os dezenove nomes, na ordem em que aparecem na tela.
@@ -18,7 +18,7 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
    caracteres passam onde 23 quebram. Quando um rótulo quebra, a linha da grade
    sai de 32px para 42px e o mínimo da grade sobe de 306px para 357px — que é
    exatamente o mecanismo da barra de rolagem descrito em
-   `app/widgets/segmented_selector.py:168-180`, porque o `GtkNotebook` adota o
+   `app/widgets/segmented_selector.py:91-103`, porque o `GtkNotebook` adota o
    maior mínimo entre as páginas.
 
    **NOTA DATADA — 07/08/2026, remedido.** O 22 continua sendo o TETO que
@@ -46,7 +46,7 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
    - **medir um lado só mente.** Com um `SegmentedSelector` só na aba, o botão
      ganha 212px e NADA quebra — inclusive os 24 caracteres do rótulo antigo;
    - **`apply_theme` compounda.** Ele lê o `gtk-font-name` atual e soma o delta
-     (`app/theme.py:154`): duas configurações medidas no mesmo processo não são
+     (`app/theme.py:108`): duas configurações medidas no mesmo processo não são
      comparáveis, porque a segunda mede uma fonte maior. Uma medição por
      processo. (E o seletor injetado depois do `show_all()` só é alocado depois
      de um `janela.check_resize()`: sem ele mede 1x1, e drenar o laço não
@@ -69,11 +69,8 @@ from __future__ import annotations
 
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 
-# Medido no piso de 1040px com a grade de três colunas. Se um dia o piso passar
-# a ter quatro colunas, este número tem de ser REMEDIDO, não deduzido.
 LIMITE_DE_CARACTERES = 22
 
-# A ordem é a da tela, e o conteúdo é contrato de disco/IPC/DSX.
 NOMES_CONTRATADOS = (
     "Off",
     "Rigid",
@@ -96,38 +93,11 @@ NOMES_CONTRATADOS = (
     "Custom",
 )
 
-# A isenção `PENDENCIA_DE_LARGURA = {"Custom"}` morava AQUI, e SAIU em
-# 07/08/2026. Ela existia por um motivo honesto — "Personalizado (avançado)"
-# tinha 24 caracteres, não cabia, e escolher a palavra nova era decisão dela.
-# Ela decidiu ("Montar do zero", 14 caracteres, resposta 5 do painel), o rótulo
-# passou a caber, e isenção sem motivo é buraco: qualquer rótulo novo do `name`
-# `Custom` passaria a se esconder nela sem ninguém notar. Tirar a isenção é
-# parte da entrega, e não faxina.
 
-# "Feedback" é nome da função `feedback()` em `core/trigger_effects.py:203` que
-# vazou para a tela: é a única palavra em inglês da grade que não serve para
-# achar o modo em guia de jogo nenhum.
 PALAVRA_QUE_VAZOU = "Feedback"
 
-# Os cinco `name` que também eram lidos na tela, entre parênteses, ao lado do
-# português. O `name` segue em inglês porque é contrato; o rótulo é texto de
-# tela e fica na língua dela.
 TERMOS_DO_DSX = ("Rigid", "Bow", "Galloping", "Machine", "Weapon")
 
-# Os rótulos que ainda carregam o termo em inglês. Até 06/08 isso era
-# PENDÊNCIA — "Arco" é ambíguo em português (arco de círculo, arco elétrico) e
-# "Arma" não separava de "Arma automática" nem de "Arma semi-automática".
-#
-# NOTA DATADA — 07/08/2026: deixou de ser pendência e virou DECISÃO DELA
-# (resposta 6 do painel): "Arco de flecha (Bow)" e "Disparo (Weapon)". O termo
-# em inglês FICAVA nos dois, de propósito, para ela reconhecer o modo num guia
-# de jogo em inglês.
-#
-# NOTA DATADA — 11/09/2026: ELA VOLTOU ATRÁS, e o conjunto FECHOU EM ZERO. Na
-# leva de língua (A4-013 e A4-014) os dois rótulos passaram a "Arco de flecha" e
-# "Disparo", sem parênteses. O que a decisão de 07/08 comprou — a desambiguação
-# — continua de pé: é o "de flecha" e o "Disparo", e não o termo em inglês.
-# Com a isenção vazia, o portão logo abaixo passa a cobrar os DEZENOVE.
 PENDENCIA_DE_PALAVRA: frozenset[str] = frozenset()
 
 
@@ -137,12 +107,7 @@ def test_os_dezenove_names_sao_exatamente_os_de_hoje() -> None:
 
 
 def test_nenhum_rotulo_passa_de_vinte_e_dois_caracteres() -> None:
-    """Passar de 22 no piso quebra a linha e sobe o mínimo da grade.
-
-    SEM ISENÇÃO NENHUMA desde 07/08/2026: os dezenove respondem pelo mesmo
-    limite. Devolver "Personalizado (avançado)" (24) ao `Custom` reprova aqui —
-    é essa a mordida da decisão dela.
-    """
+    """Passar de 22 no piso quebra a linha e sobe o mínimo da grade."""
     estourando = {
         spec.name: (spec.label, len(spec.label))
         for spec in PRESETS
@@ -155,12 +120,7 @@ def test_nenhum_rotulo_passa_de_vinte_e_dois_caracteres() -> None:
 
 
 def test_nenhum_rotulo_esta_dispensado_do_limite() -> None:
-    """A isenção saiu em 07/08, e não pode voltar por dentro deste arquivo.
-
-    Enquanto ela existia, um rótulo novo com o `name` `Custom` herdava a
-    dispensa sem que ninguém percebesse. O portão agora conta os dezenove: se
-    alguém reintroduzir uma lista de dispensados, a contagem denuncia.
-    """
+    """A isenção saiu em 07/08, e não pode voltar por dentro deste arquivo."""
     dispensados = {
         nome for nome in globals() if nome.startswith("PENDENCIA_DE_LARGURA")
     }
@@ -187,12 +147,7 @@ def test_nenhum_rotulo_nem_descricao_de_gatilho_ainda_diz_feedback() -> None:
 
 
 def test_nenhum_rotulo_repete_na_tela_o_nome_do_modo_em_ingles() -> None:
-    """Mordida: devolver "(Rigid)", "(Galloping)" ou "(Machine)" ao rótulo reprova.
-
-    O par `name`/`label` tem donos diferentes: o `name` é a chave em inglês e
-    fica; o rótulo é a palavra dela. Os dois campos são lidos aqui, e só o
-    segundo é cobrado.
-    """
+    """Mordida: devolver "(Rigid)", "(Galloping)" ou "(Machine)" ao rótulo reprova."""
     culpados = [
         (spec.name, spec.label, termo)
         for spec in PRESETS
@@ -207,14 +162,7 @@ def test_nenhum_rotulo_repete_na_tela_o_nome_do_modo_em_ingles() -> None:
 
 
 def test_a_pendencia_de_palavra_nao_cresce_nem_envelhece() -> None:
-    """O conjunto é VAZIO desde 11/09/2026 — e um nome novo aqui é um buraco.
-
-    Foram DUAS de 07/08 a 11/09 ("Bow" e "Weapon"), por decisão dela; na leva de
-    língua ela aprovou tirar o termo em inglês dos dois rótulos, e a isenção
-    fechou. O portão continua estreito pelo mesmo motivo de antes: acrescentar
-    um nome aqui dispensa um rótulo de estar em português sem ninguém decidir
-    nada.
-    """
+    """O conjunto é VAZIO desde 11/09/2026 — e um nome novo aqui é um buraco."""
     assert sorted(PENDENCIA_DE_PALAVRA) == [], (
         "a isenção de palavra fechou em 11/09/2026 e os dezenove rótulos "
         "respondem pelo mesmo limite; acrescentar nome aqui é abrir buraco no "

@@ -79,11 +79,7 @@ class _Diag:
 
 
 class _GerenciadorFalso:
-    """Dublê do gerenciador: registra os alvos e encerra o laço na 1ª volta.
-
-    `dormir` devolvendo True é o mesmo sinal que o Ctrl-C manda — assim o laço
-    de `_mic_bt` roda exatamente UMA reconciliação e volta, sem relógio.
-    """
+    """Dublê do gerenciador: registra os alvos e encerra o laço na 1ª volta."""
 
     def __init__(self) -> None:
         self.alvos: list[list[str]] = []
@@ -124,11 +120,6 @@ def _montar(monkeypatch, *, controles: list[_No], daemon: tuple[frozenset[str], 
     return gerenciador
 
 
-# ---------------------------------------------------------------------------
-# A régua que lê o daemon — e ela sabe dar as TRÊS respostas (armadilha A2)
-# ---------------------------------------------------------------------------
-
-
 def test_a_regua_sabe_dizer_quem_ja_tem_ponte():
     uniqs, situacao = cmd_mic._ler_bloco_bt_mic(
         {"bt_mic": {"enabled": True, "running": True, "uniqs": [UNIQ_A]}}
@@ -145,11 +136,7 @@ def test_a_regua_sabe_dizer_ninguem():
 
 
 def test_a_regua_sabe_dizer_nao_sei():
-    """Ausência de notícia NÃO é notícia boa: `running` sem `uniqs` é `velho`.
-
-    É o daemon de 22/08, que publicava duas chaves. Ele diz que há ponte de pé
-    e não diz de quem — a única resposta honesta é "não sei".
-    """
+    """Ausência de notícia NÃO é notícia boa: `running` sem `uniqs` é `velho`."""
     assert cmd_mic._ler_bloco_bt_mic({"bt_mic": {"running": True}})[1] == (
         cmd_mic._DAEMON_VELHO
     )
@@ -164,11 +151,6 @@ def test_a_reparticao_separa_livre_de_tomado():
 
 def _livres_de(nos: list[_No]):
     return cmd_mic._livres(nos, frozenset({"e8473a000011"}))
-
-
-# ---------------------------------------------------------------------------
-# A arbitragem da porta
-# ---------------------------------------------------------------------------
 
 
 def test_recusa_quando_o_daemon_nao_diz_de_quem_sao_as_pontes(monkeypatch, capsys):
@@ -216,11 +198,7 @@ def test_sobe_so_no_controle_que_o_daemon_nao_segura(
 def test_sem_daemon_o_caminho_a_mao_continua_livre(
     monkeypatch, capsys, sinais_intactos
 ):
-    """Sem daemon não há subsystem, logo não há ponte do produto de pé.
-
-    É a única ausência que se pode LER como "o caminho está livre", e é por
-    isso que ela é uma situação própria e não cai no `velho`.
-    """
+    """Sem daemon não há subsystem, logo não há ponte do produto de pé."""
     gerenciador = _montar(
         monkeypatch,
         controles=[_No("/dev/hidraw3", UNIQ_A), _No("/dev/hidraw4", UNIQ_B)],

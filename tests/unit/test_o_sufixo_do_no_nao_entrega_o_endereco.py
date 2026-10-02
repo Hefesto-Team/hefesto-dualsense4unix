@@ -1,18 +1,4 @@
-"""O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01 — as duas réguas que veem o pedaço.
-
-A máscara da casa zera os octetos 4 e 5. Os portões procuravam o endereço
-inteiro, e por isso deixavam passar os pedaços que entregam o escondido:
-
-- o nome de nó `hefesto_som_<octetos 4, 5 e 6>` (a régua de forma,
-  `check_endereco_de_radio.py`, passa a lê-lo fora de `tests/`);
-- a janela de três octetos com o 4 ou o 5, em qualquer forma, inclusive dentro
-  do endereço colado de 12 hex (a régua que pergunta ao dono,
-  `check_o_endereco_dela_em_toda_forma.py`).
-
-**Nenhum endereço aparece literal aqui**: os dois portões varrem `tests/`. Ele é
-montado em tempo de execução, na faixa localmente administrada (`06:de:ad`),
-que a IEEE nunca dá a fabricante.
-"""
+"""O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01 — as duas réguas que veem o pedaço."""
 from __future__ import annotations
 
 import importlib.util
@@ -72,7 +58,6 @@ def test_o_dono_acha_a_janela_dentro_do_endereco_colado() -> None:
     coladas = DONO.janelas_coladas({_OCTETOS})
     assert DONO.achados_colados("uniq=" + "".join(_OCTETOS), coladas)
     assert DONO.achados_colados(_no("hefesto_som_", _OCTETOS), coladas)
-    # desalinhado de octeto não é endereço
     assert DONO.achados_colados("f" + "".join(_OCTETOS[3:]) + "f", coladas) == []
 
 

@@ -47,7 +47,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     ControllerIdentityRegistry,
 )
 
-#: MACs forjados (faixa aa:bb:cc — teste-guarda de anonimato; NUNCA 14:3a).
 UNIQ_DS_A = "aabbcc000001"
 UNIQ_DS_B = "aabbcc000002"
 MAC_EXT_A = "aabbcc0000fe"
@@ -77,12 +76,7 @@ def _arquivo(tmp: Path) -> dict[str, Any]:
 
 
 def _fila_no_disco(tmp: Path, kind: str) -> dict[str, int]:
-    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3).
-
-    Os namespaces ``slots``/``externals`` viraram UMA fila só, com o ``kind``
-    de cada entrada dizendo de quem ela é. O lock e o cross-check continuam
-    valendo palavra por palavra — o que mudou foi a forma do que se grava.
-    """
+    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3)."""
     return {
         str(e["addr"]): int(e["rank"])
         for e in _arquivo(tmp)[id_mod.ORDER_FIELD]
@@ -108,9 +102,6 @@ def _gravar_fila(
     (tmp / "controllers.json").write_text(
         json.dumps(
             {
-                # R-23: é a VERSÃO que autoriza o load (o boot_id virou
-                # anotação) — arquivo de outra versão é descartado antes de
-                # qualquer cross-check.
                 "version": CONTROLLERS_SCHEMA_VERSION,
                 "boot_id": BOOT,
                 id_mod.ORDER_FIELD: entradas,
@@ -121,8 +112,7 @@ def _gravar_fila(
 
 
 class TestLockCompartilhado:
-    """``external_identity.py`` IMPORTA o lock de ``identity.py`` — nunca cria
-    o seu (a fiação exigida pela spec, não um acidente de nomes iguais)."""
+    """``external_identity.py`` IMPORTA o lock de ``identity.py`` — nunca cria"""
 
     def test_e_o_mesmo_objeto_nos_dois_modulos(self) -> None:
         assert ei_mod.CONTROLLERS_FILE_LOCK is CONTROLLERS_FILE_LOCK
@@ -130,10 +120,7 @@ class TestLockCompartilhado:
 
 
 class TestLockSeguraOSpanCompleto:
-    """O lock cobre o span INTEIRO read→``os.replace`` (save) e o read (load) —
-    não só um pedaço. Falha-sem: no HEAD (antes do NUMA-04) não existe
-    ``CONTROLLERS_FILE_LOCK`` nenhum para checar — o teste pega qualquer
-    remoção futura do ``with`` que deixe uma fresta destampada."""
+    """O lock cobre o span INTEIRO read→``os.replace`` (save) e o read (load) —"""
 
     def test_identity_save_mantem_lock_ate_o_replace(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
@@ -174,10 +161,9 @@ class TestLockSeguraOSpanCompleto:
     def test_identity_load_segura_o_lock_durante_o_read(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Precisa existir arquivo para o read acontecer de fato.
         criador = ControllerIdentityRegistry()
         criador.slot_for(UNIQ_DS_A)
-        criador.sync_connected({UNIQ_DS_A})  # cria o arquivo
+        criador.sync_connected({UNIQ_DS_A})
         vistos: list[bool] = []
         original = Path.read_text
 
@@ -195,7 +181,7 @@ class TestLockSeguraOSpanCompleto:
     ) -> None:
         criador = ExternalIdentityRegistry()
         criador.slot_for(MAC_EXT_A, reserve=0)
-        criador.sync_connected([MAC_EXT_A])  # cria o arquivo
+        criador.sync_connected([MAC_EXT_A])
         vistos: list[bool] = []
         original = Path.read_text
 
@@ -210,20 +196,16 @@ class TestLockSeguraOSpanCompleto:
 
 
 class TestRmwIntercaladoAmbosNamespacesSobrevivem:
-    """O aceite literal do item 12: RMW intercalado dos dois registries não
-    pode fazer nenhum namespace sumir (no HEAD, sem o lock compartilhado,
-    um dos dois desaparece — verificado manualmente trocando o lock do lado
-    externo por um separado antes desta leva; não repetir aqui: o teste já
-    falha nesse cenário por construção, é o próprio propósito do lock)."""
+    """O aceite literal do item 12: RMW intercalado dos dois registries não"""
 
     def test_rmw_intercalado_preserva_slots_e_externals(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         ds = ControllerIdentityRegistry()
-        ds.slot_for(UNIQ_DS_A)  # marca sujo, save pendente
+        ds.slot_for(UNIQ_DS_A)
 
         ext = ExternalIdentityRegistry()
-        ext.slot_for(MAC_EXT_A, reserve=0)  # marca sujo, save pendente
+        ext.slot_for(MAC_EXT_A, reserve=0)
 
         ds_entrou_no_read = threading.Event()
         pode_prosseguir = threading.Event()
@@ -232,10 +214,6 @@ class TestRmwIntercaladoAmbosNamespacesSobrevivem:
 
         def read_text_com_barreira(self_path: Path, *a: Any, **kw: Any) -> str:
             # Pausa a PRIMEIRA leitura de controllers.json (a do DualSense,
-            # que entra no read_text primeiro — garantido pelo wait abaixo
-            # antes de a thread do externo sequer existir) DENTRO do lock:
-            # se o lock protege de verdade, a thread do externo bloqueia no
-            # próprio `.acquire()` até esta pausa liberar.
             if self_path.name == "controllers.json" and not pausado_uma_vez["sim"]:
                 pausado_uma_vez["sim"] = True
                 ds_entrou_no_read.set()
@@ -262,9 +240,7 @@ class TestRmwIntercaladoAmbosNamespacesSobrevivem:
         t_ds.start()
         assert ds_entrou_no_read.wait(timeout=5.0), "ds não entrou no read a tempo"
 
-        # A thread do externo só existe (e só tenta o lock) DEPOIS que o
         # DualSense já está parado dentro da seção crítica — a intercalação
-        # que no HEAD perde um dos dois namespaces.
         t_ext = threading.Thread(target=rodar_ext, name="ext-save")
         t_ext.start()
 
@@ -295,7 +271,7 @@ class TestColisaoNoLoad:
             dualsense={UNIQ_DS_A: 1},
             externos={
                 MAC_EXT_A: 1,  # COLIDE com o lugar 1 do DualSense
-                MAC_EXT_B: 2,  # não colide — sobrevive intacto
+                MAC_EXT_B: 2,
             },
         )
 
@@ -331,7 +307,6 @@ class TestColisaoNoLoad:
         ds = ControllerIdentityRegistry()
         ds.load()
         # O DualSense nunca sabe da colisão nem muda de comportamento — ele
-        # nem lê o namespace `externals`. Nenhuma realocação de slot.
         assert ds.snapshot() == {UNIQ_DS_A: 1}
 
     def test_colisao_nao_poda_bilateralmente(self, isolated_config: Path) -> None:
@@ -344,24 +319,17 @@ class TestColisaoNoLoad:
         ext = ExternalIdentityRegistry()
         ext.load()
 
-        assert ds.snapshot() == {UNIQ_DS_A: 1}  # sobrevive
-        assert ext.snapshot() == {MAC_EXT_B: 2}  # só o não-colidente sobrevive
-        # E ninguém rouba o slot 1 de volta por realocação automática.
+        assert ds.snapshot() == {UNIQ_DS_A: 1}
+        assert ext.snapshot() == {MAC_EXT_B: 2}
         assert 1 not in ext.snapshot().values()
 
     def test_arquivo_saneado_no_proximo_save(self, isolated_config: Path) -> None:
-        """Depois do load com colisão, o próximo save do lado externo grava
-        só o que sobreviveu — a entrada colidente nunca mais reaparece."""
+        """Depois do load com colisão, o próximo save do lado externo grava"""
         self._grava_arquivo_colidido(isolated_config)
 
         ext = ExternalIdentityRegistry()
         ext.load()
-        # Nova atribuição para marcar sujo e disparar o save (reserve=1
         # espelha `_ds_reserve()` em produção: o DualSense detém o lugar 1).
-        # NUM-01: o LUGAR é o 3 (fim da fila, atrás do externo B que dorme no
-        # 2); o número EXIBIDO é 2, porque B não está na mesa. A asserção
-        # antiga era sobre o retorno de `slot_for`, que naquele schema ainda
-        # era o lugar.
         assert ext.slot_for("aabbcc001234", reserve=1) == 2
         assert ext.snapshot()["aabbcc001234"] == 3
         ext.sync_connected([MAC_EXT_B, "aabbcc001234"])
@@ -376,8 +344,7 @@ class TestColisaoNoLoad:
     def test_sem_colisao_carrega_normalmente(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Falha-sem inverso: sem sobreposição de slot nenhum, o cross-check
-        não descarta nada nem loga o WARN (regressão do comportamento são)."""
+        """Falha-sem inverso: sem sobreposição de slot nenhum, o cross-check"""
         _gravar_fila(
             isolated_config, dualsense={UNIQ_DS_A: 1}, externos={MAC_EXT_A: 2}
         )

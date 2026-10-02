@@ -77,7 +77,6 @@ from typing import Any
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 
-#: Três adaptadores. O ``hci`` é sorteio de enumeração, como na vida.
 SALA = "aa:bb:cc:00:00:a1"
 QUARTO = "aa:bb:cc:00:00:b2"
 VARANDA = "aa:bb:cc:00:00:c3"
@@ -89,13 +88,10 @@ VERDE = "aa:bb:cc:00:00:03"
 ROXO = "aa:bb:cc:00:00:04"
 FONE = "aa:bb:cc:00:00:f0"
 
-#: *Class of device* de um gamepad (periférico, menor 0x02), de um fone e de
-#: um teclado (periférico, menor 0x10).
 CLASSE_DE_CONTROLE = 0x002508
 CLASSE_DE_FONE = 0x240404
 CLASSE_DE_TECLADO = 0x002540
 
-#: O ``Name`` de fábrica — o ``Alias`` nasce igual a ele.
 NOME_DE_FABRICA: dict[int | None, str] = {CLASSE_DE_CONTROLE: "DualSense Wireless Controller",
                    CLASSE_DE_FONE: "Fone de mentira", CLASSE_DE_TECLADO: "BT5.0 Keyboard"}
 #: O ``Modalias`` do DualSense (Sony 054C, produto 0CE6), como o BlueZ publica.
@@ -115,25 +111,16 @@ class Fisico:
     """O aparelho na mão dela: o host que ELE guarda, e onde está conectado."""
 
     endereco: str
-    #: ``None`` é o aparelho de baixo consumo, que não publica ``Class``.
     classe: int | None
     host: str = ""
     conectado_em: str = ""
     pareando: bool = False
     hz: float = 250.0
-    #: Os hosts de ANTES do de agora, o mais recente primeiro — o pareamento
-    #: antigo a que ele volta sozinho quando a chave ainda existe lá.
     antigos: list[str] = field(default_factory=list)
     #: O ``Modalias`` que o BlueZ publica; ``None`` = o da classe (o DualSense
-    #: no controle, nada no resto).
     modalias: str | None = None
-    #: O ``Icon`` que o BlueZ deriva — o único tipo do aparelho sem ``Class``.
     icone: str = ""
-    #: Tem hidraw no rádio? ``None`` = pela classe (periférico, maior ``0x05``);
-    #: o aparelho de baixo consumo, que não tem classe, diz aqui.
     hid: bool | None = None
-    #: Chamando o host que ELE guarda, que esqueceu a chave dele
-    #: (:meth:`RadioDeMentira.chamar_o_host`): o ``Pair`` daquele host dá.
     chamando: bool = False
 
     @property
@@ -180,27 +167,19 @@ class RadioDeMentira:
         self.fechado = False
         self.pair_falha = False
         self.pair_mente = False
-        #: A ponte de mentira RECUSA o ``esquecer`` (não instalada, ou o sudo
-        #: dizendo não): nada sai, e nenhuma lápide nasce.
         self.ponte_recusa = False
         self.exportar_da = True
-        #: ``(caminho, interface, método, argumentos)`` de toda chamada.
         self.chamadas: list[tuple[str, str, str, tuple[Any, ...]]] = []
-        #: ``(caminho, interface, nome, valor)`` de toda escrita de propriedade.
         self.escritas: list[tuple[str, str, str, Any]] = []
         self.exportados: dict[str, Callable[[str, str, tuple[Any, ...]], Any]] = {}
         self.agentes: dict[str, str] = {}
         self.o_padrao_atendeu: list[str] = []
         self.o_nosso_atendeu: list[str] = []
-        #: As lápides que a ponte de mentira escreveu: ``(adaptador, aparelho)``.
         self.lapides: list[tuple[str, str]] = []
-        #: Tudo em ordem, para a régua da ORDEM: ``("Pair", adaptador, aparelho)``…
         self.linha_do_tempo: list[tuple[str, str, str]] = []
-        #: Os PS + Create que ela segurou com o controle LIGADO — e não deram em nada.
         self.gestos_perdidos: list[str] = []
         self._ao_sinal: Callable[[bd.Sinal], None] | None = None
 
-    # -- montar a mesa --------------------------------------------------------
 
     def pareado(
         self,
@@ -215,11 +194,7 @@ class RadioDeMentira:
         icone: str = "",
         hid: bool | None = None,
     ) -> None:
-        """Um bond que já existe. ``host`` diz se o CONTROLE guarda este adaptador.
-
-        ``nome`` é o ``Alias`` que ela deu; sem ele, o de fábrica. ``classe``
-        ``None`` é o aparelho de baixo consumo, que o BlueZ conhece pelo
-        ``icone``."""
+        """Um bond que já existe. ``host`` diz se o CONTROLE guarda este adaptador."""
         fisico = self.fisicos.setdefault(
             aparelho, Fisico(aparelho, classe, modalias=modalias, icone=icone, hid=hid))
         if host:
@@ -242,7 +217,6 @@ class RadioDeMentira:
             }
         }
 
-    # -- a física, pela mão dela ----------------------------------------------
 
     def segurar_ps_create(self, aparelho: str) -> None:
         """Ela segura PS + Create: DESLIGADO, o controle anuncia que pareia.
@@ -271,12 +245,7 @@ class RadioDeMentira:
                 self._mudar(no_de(antes, aparelho), bd.APARELHO, "Connected", False)
 
     def voltar_sozinho(self, aparelho: str) -> str:
-        """O controle volta sozinho ao pareamento ANTIGO quando ele existe.
-
-        É o passo c2 da lista dela: ele muda, fica um tempo, e volta para o
-        anterior. Devolve o adaptador a que voltou, ou ``""`` quando nenhum dos
-        hosts antigos ainda tem a chave dele — aí ele fica onde está.
-        """
+        """O controle volta sozinho ao pareamento ANTIGO quando ele existe."""
         with self.tranca:
             fisico = self.fisicos[aparelho]
             for antigo in fisico.antigos:
@@ -306,19 +275,7 @@ class RadioDeMentira:
                 self._mudar(caminho, bd.APARELHO, "Connected", True)
 
     def chamar_o_host(self, aparelho: str, *, rssi: int | None = None) -> None:
-        """Ela liga só com o PS um controle cujo host ESQUECEU a chave dele.
-
-        O 01:23:40 da madrugada dela de 30/09 (O-PAREAR-ESPERA-O-CLIQUE-01, a
-        causa 4): o adaptador perdeu a metade dele da chave (o X, o COSMIC, ou a
-        central depois de um ``Connect`` que falhou), e o controle guardou a
-        dele. Ligado só com o PS, sem piscar rápido, ele chama o host que
-        guarda; sem a chave lá, não conecta, e o BlueZ cria o objeto dele sob
-        aquele adaptador, sem ``Paired``. O ``Pair`` daquele host dá (o controle
-        aceita quem ele guarda). Com a chave lá, é o :meth:`apertar_ps`.
-
-        O ``RSSI`` desse objeto NÃO está medido (a prova 0 b da sprint): a
-        régua diz qual quer, e sem ele o objeto nasce sem sinal.
-        """
+        """Ela liga só com o PS um controle cujo host ESQUECEU a chave dele."""
         with self.tranca:
             fisico = self.fisicos[aparelho]
             if not fisico.host or fisico.conectado_em:
@@ -333,10 +290,7 @@ class RadioDeMentira:
                 self._mudar(caminho, bd.APARELHO, "RSSI", rssi)
 
     def onde_esta(self, u: str) -> str:
-        """O ``HID_PHYS``: o adaptador em que o aparelho HID está conectado agora.
-
-        TODO aparelho HID — o kernel dá hidraw ao teclado e ao mouse pelo rádio
-        também, com o ``HID_PHYS`` no adaptador. O fone não é HID."""
+        """O ``HID_PHYS``: o adaptador em que o aparelho HID está conectado agora."""
         with self.tranca:
             for fisico in self.fisicos.values():
                 if uniq(fisico.endereco) == u and fisico.tem_hidraw:
@@ -365,10 +319,6 @@ class RadioDeMentira:
                 self._remover(caminho)
         return True, ""
 
-    # -- os gestos DE FORA do Hefesto (ESQUECER-E-LIMPAR-AS-CONEXOES-01) -------
-    # Outro programa (as Configurações do COSMIC, o ``bluetoothctl``), o
-    # autorestore, o desplugue e o ``bluetoothd`` que reinicia — nenhum deles
-    # segura a trava do rádio, e tudo sai como sinal, como no BlueZ.
 
     def remover_por_fora(self, adaptador: str, aparelho: str) -> None:
         """Outro programa tira a chave de ``aparelho`` em ``adaptador``."""
@@ -379,16 +329,13 @@ class RadioDeMentira:
             self._remover(no_de(adaptador, aparelho))
 
     def chave_que_volta(self, adaptador: str, aparelho: str) -> None:
-        """A chave velha volta (o autorestore, ou um pareamento antigo que
-        ninguém tirou): ``Paired`` ali, e o controle não guarda este host."""
+        """A chave velha volta (o autorestore, ou um pareamento antigo que"""
         with self.tranca:
             self.fisicos.setdefault(aparelho, Fisico(aparelho, CLASSE_DE_CONTROLE))
             self._entrar_pareado(adaptador, aparelho, conectado=False)
 
     def parear_por_fora(self, adaptador: str, aparelho: str) -> None:
-        """Outro programa pareia ``aparelho`` em ``adaptador`` (ela segurou PS +
-        Create pelas Configurações): o controle passa a guardar este host e
-        conecta nele; a chave que ele tinha noutro adaptador fica lá, morta."""
+        """Outro programa pareia ``aparelho`` em ``adaptador`` (ela segurou PS +"""
         with self.tranca:
             fisico = self.fisicos.setdefault(aparelho, Fisico(aparelho, CLASSE_DE_CONTROLE))
             antes = fisico.conectado_em
@@ -403,8 +350,7 @@ class RadioDeMentira:
             self._entrar_pareado(adaptador, aparelho, conectado=True)
 
     def para_o_cabo(self, aparelho: str) -> None:
-        """Ela liga o controle no cabo: sai do rádio (o ``Connected`` cai e o
-        ``HID_PHYS`` deixa de ser um adaptador); o host que ele guarda não muda."""
+        """Ela liga o controle no cabo: sai do rádio (o ``Connected`` cai e o"""
         self.desligar(aparelho)
 
     def desplugar(self, adaptador: str) -> None:
@@ -436,7 +382,6 @@ class RadioDeMentira:
         self.mesa[caminho] = copy.deepcopy(propriedades)
         self._emitir(bd.Sinal("entrou", caminho=caminho, propriedades=propriedades))
 
-    # -- a costura Barramento -------------------------------------------------
 
     def vivo(self) -> bool:
         return not self.fechado
@@ -502,7 +447,6 @@ class RadioDeMentira:
     def fechar(self) -> None:
         self.fechado = True
 
-    # -- o que a régua lê ------------------------------------------------------
 
     def metodos(self, metodo: str) -> list[tuple[str, tuple[Any, ...]]]:
         return [(c, a) for c, _i, m, a in self.chamadas if m == metodo]
@@ -516,7 +460,6 @@ class RadioDeMentira:
     def escritas_no(self, adaptador: str, nome: str) -> list[Any]:
         return [v for c, _i, n, v in self.escritas if c == HCIS[adaptador] and n == nome]
 
-    # -- por dentro -----------------------------------------------------------
 
     def _emitir(self, sinal: bd.Sinal) -> None:
         if self._ao_sinal is not None:
@@ -540,8 +483,6 @@ class RadioDeMentira:
                 "Address": fisico.endereco.upper(),
                 "Name": fabrica,
                 "Alias": fabrica,
-                # o Modalias chega com o pareamento (o registro PnP do SDP), e o
-                # aparelho achado na busca ainda não o tem
                 "Modalias": "",
                 "Icon": fisico.icone,
                 "Paired": False,
@@ -639,7 +580,6 @@ class RadioDeMentira:
             self._mudar(caminho, bd.APARELHO, "Connected", True)
             return bd.Escrita(True, resposta=())
         if metodo == "Disconnect":
-            # O HOST QUE SOLTA O ENLACE TIRA O CONTROLE DO AR (o kernel tira o nó).
             self.linha_do_tempo.append(("Disconnect", adaptador, aparelho))
             if fisico is not None and fisico.conectado_em == adaptador:
                 fisico.conectado_em = ""
@@ -665,13 +605,7 @@ class RadioDeMentira:
 
 
 def o_clique_no_parear(central: Any, aparelho: str) -> Callable[[], None]:
-    """O clique dela no «Parear» da linha de ``aparelho``, como a tela o manda.
-
-    O-PAREAR-ESPERA-O-CLIQUE-01: o ``radio.mover`` com o aparelho e o
-    adaptador em que a busca do «Conectar» ESTÁ — o que a central publica, e
-    que a tela lê (``a08_conexoes._onde_espera``). Sem busca de pé não há lista,
-    e não há clique.
-    """
+    """O clique dela no «Parear» da linha de ``aparelho``, como a tela o manda."""
     def clicar() -> None:
         busca = next((m.destino for m in central.movimentos()
                       if m.aparelho == "" and m.em_curso), "")
@@ -682,8 +616,7 @@ def o_clique_no_parear(central: Any, aparelho: str) -> Callable[[], None]:
 
 def ela_pareia(relogio: Relogio, mundo: RadioDeMentira, central: Any, aparelho: str,
                depois_de: float = 2.0) -> None:
-    """Ela segura PS + Create aos ``depois_de`` segundos e, um segundo depois —
-    a linha dele já na lista —, clica em «Parear» (:func:`o_clique_no_parear`)."""
+    """Ela segura PS + Create aos ``depois_de`` segundos e, um segundo depois —"""
     relogio.agendar(depois_de, lambda: mundo.segurar_ps_create(aparelho))
     relogio.agendar(depois_de + 1.0, o_clique_no_parear(central, aparelho))
 

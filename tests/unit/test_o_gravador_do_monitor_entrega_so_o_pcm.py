@@ -44,16 +44,10 @@ import pytest
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import filho_de_som
 
-#: O que o ``pw-record`` 1.6.8 escreveu ANTES do PCM, com o argv do produto
-#: sem ``--raw``, ``--rate=48000 --channels=4`` (02/10/2026, PipeWire privado,
-#: a saída num cano). Digitado da medida: a régua do dublê o compara com isto,
-#: e não com a função que o monta.
 CABECALHO_MEDIDO_48K_4CH = bytes.fromhex(
     "646e732e" "18000000" "ffffffff" "03000000" "80bb0000" "04000000"
 )
 
-#: O código com que o ``pw-record`` sai no TERM (o diário dela: ``codigo=1
-#: por=saiu`` em toda ponte colhida).
 CODIGO_DO_TERM = 1
 
 
@@ -67,13 +61,7 @@ def _valor(argv: list[str], chave: str) -> str:
 
 
 class GravadorDeMentira:
-    """O ``pw-record`` do produto, com o comportamento medido do real.
-
-    Lê o próprio argv como o real lê: ``--target`` (o serial do nó), ``--rate``,
-    ``--channels`` e ``--raw``. Sem ``--raw``, o cabeçalho vai antes do PCM. O
-    PCM é o que ``tocando(serial)`` diz, um bloco de 480 quadros por volta, no
-    formato pedido. O TERM sai com 1, como o real.
-    """
+    """O ``pw-record`` do produto, com o comportamento medido do real."""
 
     def __init__(self, argv: list[str], tocando: Callable[[int, int], bytes]) -> None:
         self.argv = list(argv)
@@ -167,23 +155,12 @@ def gravadores(monkeypatch: pytest.MonkeyPatch) -> Any:
     g.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 0. O dublê não é mais frouxo que o real
-# ---------------------------------------------------------------------------
-
-
 def test_o_duble_escreve_o_cabecalho_que_o_pw_record_escreveu() -> None:
     """O cabeçalho do dublê é o byte a byte medido em 02/10, para 48 kHz e 4 canais."""
     assert cabecalho_au(48_000, 4) == CABECALHO_MEDIDO_48K_4CH
-    # E ele TEM sinal pelas regras do produto: é por isso que o ouvido mentia.
     pcm = CABECALHO_MEDIDO_48K_4CH + bytes(4096 - len(CABECALHO_MEDIDO_48K_4CH))
     assert af.tem_sinal_no_pcm(pcm, canais=af.CANAIS_DA_HAPTICA)
     assert af.tem_sinal_no_pcm(pcm[:1920], canais=af.CANAIS_DO_ENCODER)
-
-
-# ---------------------------------------------------------------------------
-# 1. O primeiro bloco de um nó mudo é mudo, nos dois papéis
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -197,14 +174,7 @@ def test_o_primeiro_bloco_do_monitor_mudo_e_mudo(
     gravadores: Gravadores, monkeypatch: pytest.MonkeyPatch,
     papel: str, canais: int, tamanho: int,
 ) -> None:
-    """O gravador novo de um nó em silêncio: o ouvido diz «escutado e mudo».
-
-    Pelo ``fonte_do_monitor_do_no`` de produção, com o argv que ele monta.
-
-    MORDIDA: tire o ``"--raw"`` do ``pw-record`` em ``GRAVADORES_DO_MONITOR`` —
-    o primeiro bloco traz o cabeçalho, o ouvido diz que o nó tem sinal, e
-    reprova.
-    """
+    """O gravador novo de um nó em silêncio: o ouvido diz «escutado e mudo»."""
     ouvido = af.OuvidoDosNos()
     monkeypatch.setattr(af, "OUVIDO", ouvido)
     no = "hefesto_som_0000ab" if papel == "som" else "endpoint-do-lugar-1"
@@ -247,24 +217,10 @@ def test_o_sinal_que_o_jogo_toca_ainda_chega_inteiro(
         proc.stdout.close()
 
 
-# ---------------------------------------------------------------------------
-# 2. A ponte que sobe em háptica não desce pelo gravador novo do alto-falante
-# ---------------------------------------------------------------------------
-
-
 def test_a_ponte_em_haptica_fica_com_o_gravador_novo_do_alto_falante(
     gravadores: Gravadores, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O desenho de 18h22m44 do diário dela, na volta de produção.
-
-    O jogo toca nos motores do endpoint e o alto-falante fica aberto e mudo.
-    A ponte sobe no ``0x35`` (o ouvido do endpoint vai junto), passa ao
-    ``0x32`` quando o motor toca, e FICA nele: o gravador novo do nó do som,
-    que a ponte da háptica abre só para ouvir, não pode virar sinal.
-
-    MORDIDA: tire o ``"--raw"`` — a volta seguinte à subida em háptica ouve o
-    cabeçalho no nó do som e devolve a ponte ao ``0x35``, e reprova.
-    """
+    """O desenho de 18h22m44 do diário dela, na volta de produção."""
     from tests.unit.test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio import (
         P4,
         Mesa,
@@ -286,8 +242,6 @@ def test_a_ponte_em_haptica_fica_com_o_gravador_novo_do_alto_falante(
         sala.mexer(P4)
         sala.volta()
         assert sala.arranjo(P4) == af.ARRANJO_HAPTICA_032.nome
-        # O fio do ouvido da ponte nova leu o nó do som: a volta de agora é a
-        # que, no diário dela, vinha 10 a 18 ms depois da subida.
         subiu = time.monotonic()
         fim = subiu + 5.0
         while time.monotonic() < fim:

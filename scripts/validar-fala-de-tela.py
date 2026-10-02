@@ -1,49 +1,5 @@
 #!/usr/bin/env python3
-"""validar-fala-de-tela.py — o portão, nos dois sentidos.
-
-Executa Z6-04 (docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01…
-.md), a Peça 3 do contrato desenhado na
-docs/process/sprints/arquivados/2026-08-24-PAREAMENTO-01-a-medicao-nova-tem-de-chegar-sozinha-na-tela.md.
-
-A DESCOBERTA DO DESENHO: "A TELA AFIRMA ALÉM DO MAPA" E "O MAPA MUDOU E
-DEIXOU A TELA PARA TRÁS" SÃO A MESMA COMPARAÇÃO
---------------------------------------------------------------------------
-`Fala.afirma` contra `FATOS[chave][lado]`. Não importa qual lado mudou por
-último — o portão só sabe comparar os dois, e a mensagem de erro é honesta
-sobre o que mudou (ver `_explica_afirma_nao_aciona` e companhia).
-
-VARRE AS DUAS RAÍZES DE TELA — `app/` E `interface/`
--------------------------------------------------------
-Desde 06/09/2026. Até então a régua conhecia só `app/`, e a tela nova mora em
-`interface/`: das 170 frases de transporte que o `--censo-de-transporte` conta
-hoje, **123 estavam fora do alcance** — contra 47 dentro. Pela régua mais
-grossa da sprint (todo literal com mais de 25 caracteres, docstring incluída),
-a proporção é a mesma: 231 em `interface/` contra 163 em `app/`.
-`RAIZES_DE_TELA` é o dono desse alcance, e ele tem piso — encolher a tupla
-reprova.
-
-LÊ AS `Fala` POR AST, NUNCA IMPORTANDO O PACOTE `app/`
----------------------------------------------------------
-`app/**.py` importa GTK e companhia — um runner sem essas dependências
-transformaria `ImportError` em "zero `Fala` encontradas", que é o jeito
-silencioso de este portão se desligar (a mesma razão escrita em
-`scripts/gerar-contrato-ipc.py`). Os dois módulos de REGISTRO
-(`app/fala_do_mapa.py`, `app/fatos_do_mapa.py`) são zero-dependência de
-propósito — só stdlib — e ESSES dois este portão importa direto, por caminho
-de arquivo, sem passar pelo `__init__.py` do pacote.
-
-O QUE O PORTÃO NÃO COMPARA, PARA NÃO GRITAR FALSO
-----------------------------------------------------
-`provado_em`, `*_evidencia`, `*_detalhe`, `nota` — só as colunas de que o
-`afirma` depende (`existe`, `aciona`, `por_que_nao_aciona`). Recarimbar uma
-prova não acorda o portão; mudar o veredito acorda.
-
-Uso:
-    python3 scripts/validar-fala-de-tela.py --all            # roda no CI
-    python3 scripts/validar-fala-de-tela.py --fila           # placeholders abertos
-    python3 scripts/validar-fala-de-tela.py --exigir-prazo   # prazo vencido é FALHA
-    python3 scripts/validar-fala-de-tela.py --censo-de-transporte  # o número de hoje
-"""
+"""validar-fala-de-tela.py — o portão, nos dois sentidos."""
 from __future__ import annotations
 
 import argparse
@@ -65,38 +21,11 @@ FALA_DO_MAPA_RELATIVO = f"{APP_RELATIVO}/fala_do_mapa.py"
 FATOS_DO_MAPA_RELATIVO = f"{APP_RELATIVO}/fatos_do_mapa.py"
 MAPA_RELATIVO = "docs/data/mapa-controles.csv"
 
-#: AS RAÍZES DE TELA — as DUAS, e a segunda entrou em 06/09/2026.
-#:
-#: Até esta data a régua varria só `app/`, e era a única raiz que ela conhecia.
-#: `app/` continua sendo tela em parte, então nada foi trocado: `interface/`
-#: foi ACRESCENTADA. Trocar uma pela outra devolveria o mesmo defeito virado
-#: para o outro lado.
-#:
-#: O QUE ISSO DEIXAVA PASSAR, medido em 06/09/2026 com `--censo-de-transporte`:
-#: 169 literais de transporte em `app/` (vistos) contra **227 em `interface/`**
-#: (invisíveis). **A maior parte do texto de transporte da casa estava fora do
-#: alcance da régua que existe para ele** — e não foi decisão: a régua é de
-#: 24/08 e a tela nova nasceu depois, então ela mediu o mundo em que a única
-#: tela era `app/`.
-#:
-#: A pergunta que desenterrou isto é dela, em 06/09/2026: *"olharam o mapa dos
-#: controles e o csv que alimenta o specs.html?"* — e, na sequência: *"se
-#: coisas assim aconteceram antes não so nessas duas sprints. entao tem coisa
 #: errada."*  <!-- noqa-acento: citação literal dela -->
-#:
-#: Encolher esta tupla é perder alcance em silêncio, e por isso ela tem piso:
-#: `PISO_DA_REGUA["raizes"]`.
 RAIZES_DE_TELA: tuple[str, ...] = (APP_RELATIVO, INTERFACE_RELATIVO)
 
-#: Z6-08 — onde `NUMEROS_MEDIDOS_NO_MAPA` mora hoje. Lido por AST, como tudo
-#: neste portão: `integrations/radio_da_mesa.py` puxa `structlog` por
-#: `core.sysfs_leds`, e importar o puxaria também.
 NUMEROS_RELATIVO = "src/hefesto_dualsense4unix/integrations/radio_da_mesa.py"
 
-#: Os nomes dos dois módulos de registro que este portão importa DIRETO — os
-#: únicos dois, de propósito. Nunca `app/__init__.py`, nunca um arquivo de
-#: tela: os dois aqui não têm import de GTK, e o teste
-#: `test_os_dois_modulos_de_registro_nao_tem_dependencia_pesada` prova isso.
 _MODULOS_QUE_ESTE_PORTAO_IMPORTA = (FALA_DO_MAPA_RELATIVO, FATOS_DO_MAPA_RELATIVO)
 
 
@@ -115,11 +44,6 @@ def carrega_registro(raiz: Path) -> tuple[ModuleType, ModuleType]:
     fala_do_mapa = _carrega_modulo(raiz / FALA_DO_MAPA_RELATIVO, "fala_do_mapa_lido_pelo_portao")
     fatos_do_mapa = _carrega_modulo(raiz / FATOS_DO_MAPA_RELATIVO, "fatos_do_mapa_lido_pelo_portao")
     return fala_do_mapa, fatos_do_mapa
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# A DESCOBERTA POR AST
-# ─────────────────────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -172,9 +96,6 @@ def _le_pendencia(no: ast.expr | None) -> dict[str, object] | None:
 
 def _le_fala(no: ast.Call, caminho: Path, raiz: Path) -> FalaEncontrada:
     kwargs = {kw.arg: kw.value for kw in no.keywords if kw.arg}
-    # posicionais também são aceitos, na ORDEM da assinatura de `Fala`
-    # (chave, lado, aba, texto, afirma, porque, pendente) — para não obrigar
-    # quem escreve a nomear todo argumento.
     ordem = ("chave", "lado", "aba", "texto", "afirma", "porque", "pendente")
     for indice, arg in enumerate(no.args):
         if indice < len(ordem) and ordem[indice] not in kwargs:
@@ -227,39 +148,13 @@ def _le_fala(no: ast.Call, caminho: Path, raiz: Path) -> FalaEncontrada:
 
 
 def descobre_falas(app_dir: Path, raiz: Path) -> list[FalaEncontrada]:
-    """Toda chamada `Fala(...)` em `app/**.py`, por AST — nunca por `grep`.
-
-    A população desta função é a de `Fala` DECLARADA, e é ela que o portão
-    compara contra `FATOS`. Uma frase que cita transporte e não declarou nada
-    é assunto de `descobre_frases_de_transporte` (P-09), e só nas abas
-    promovidas.
-
-    CORREÇÃO DE FATO, 25/08/2026: até esta data este docstring dizia que
-    "`grep` por palavra (cabo/rádio/Bluetooth) foi TENTADO e MEDIU
-    falso-negativo perto de 100%". Isso trocava duas medições da
-    PAREAMENTO-01. O falso-negativo de ~100% foi da régua que tentou casar as
-    37 linhas fortes do mapa com o texto da tela **pela palavra do `rotulo`**
-    (a direção "o mapa sabe e a tela não oferece"), e essa régua está
-    descartada. A régua por palavra de transporte SOBRE O TEXTO DA TELA é
-    outra coisa, e a própria sprint a publica como **piso** medido: 31 frases
-    em 23/08. Recontada aqui com régua independente (AST, literal de texto
-    fora de docstring, fora de `Fala(...)`, com fronteira de palavra): **38
-    frases em 10 arquivos** na base de 25/08/2026 com as oito frentes da
-    madrugada integradas. Ela não tem falso-negativo perto de 100%; tem
-    falso-POSITIVO alto — a maioria é rótulo ou relato de estado, não
-    afirmação de capacidade — e é por isso que P-09 vem com `FRASES_SEM_FALA`,
-    linha a linha e com razão escrita, em vez de exigir `Fala` para todas.
-
-    **O número acima envelhece, e por isso não é régua de nada.** Quem quiser
-    o de hoje roda `--censo-de-transporte`, que o conta na árvore viva; nenhum
-    portão desta casa o lê daqui.
-    """
+    """Toda chamada `Fala(...)` em `app/**.py`, por AST — nunca por `grep`."""
     encontradas: list[FalaEncontrada] = []
     for caminho in sorted(app_dir.rglob("*.py")):
         if "__pycache__" in caminho.parts:
             continue
         if str(caminho.relative_to(raiz)) in _MODULOS_QUE_ESTE_PORTAO_IMPORTA:
-            continue  # o registro declara os TIPOS de `Fala`, não instâncias
+            continue
         try:
             fonte = caminho.read_text(encoding="utf-8")
             arvore = ast.parse(fonte, filename=str(caminho))
@@ -289,23 +184,11 @@ def descobre_falas(app_dir: Path, raiz: Path) -> list[FalaEncontrada]:
 
 
 def descobre_falas_da_tela(raiz: Path) -> list[FalaEncontrada]:
-    """`descobre_falas` em TODA raiz de tela — é o que o `main()` usa.
-
-    `descobre_falas(app_dir, raiz)` continua recebendo UMA pasta de propósito:
-    `scripts/gerar-mapa.py` e `scripts/gerar-painel.py` a chamam assim, e uma
-    troca de assinatura os quebraria em silêncio (os dois carregam este arquivo
-    por `spec_from_file_location`, então nenhum portão de import os pegaria).
-    Quem quiser as duas raízes chama esta.
-    """
+    """`descobre_falas` em TODA raiz de tela — é o que o `main()` usa."""
     encontradas: list[FalaEncontrada] = []
     for relativo in RAIZES_DE_TELA:
         encontradas.extend(descobre_falas(raiz / relativo, raiz))
     return encontradas
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# A COMPARAÇÃO CONTRA `FATOS`
-# ─────────────────────────────────────────────────────────────────────────
 
 
 def valida(
@@ -345,9 +228,6 @@ def valida(
             )
             continue
 
-        # A dívida de medição: se a Fala ainda promete NAO_MEDIDO mas a
-        # célula já é `medido`, a pressão vira vermelho (PAREAMENTO-01,
-        # "(c) resolve-se sozinha quando a medição chegar").
         lado_dict = entrada.get(fala.lado) if isinstance(entrada, dict) else None
         if fala.texto_e_nao_medido and isinstance(lado_dict, dict):
             de_onde_sei = lado_dict.get("de_onde_sei")
@@ -420,11 +300,6 @@ def valida(
     return problemas
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# --fila
-# ─────────────────────────────────────────────────────────────────────────
-
-
 def monta_fila(falas: list[FalaEncontrada]) -> list[FalaEncontrada]:
     return sorted(
         (f for f in falas if f.pendente is not None and f.resolvel),
@@ -444,11 +319,6 @@ def imprime_fila(fila: list[FalaEncontrada]) -> None:
             f"aberta em {p.get('aberta_em')} · prazo {p.get('prazo_dias')} dia(s) · "
             f"quem fecha: {p.get('quem_fecha')} · falta: {p.get('o_que_falta')}"
         )
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# --exigir-prazo
-# ─────────────────────────────────────────────────────────────────────────
 
 
 def prazos_vencidos(falas: list[FalaEncontrada], hoje: date) -> list[tuple[FalaEncontrada, int]]:
@@ -472,11 +342,6 @@ def prazos_vencidos(falas: list[FalaEncontrada], hoje: date) -> list[tuple[FalaE
     return vencidos
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# Z6-08 — o número medido tem um dono só
-# ─────────────────────────────────────────────────────────────────────────
-
-
 @dataclass
 class NumeroEncontrado:
     constante: str
@@ -488,11 +353,7 @@ class NumeroEncontrado:
 
 
 def _mapa_de_constantes_numericas(arvore: ast.Module) -> dict[str, float]:
-    """`{NOME: valor}` de toda atribuição de módulo `NOME = <número literal>`.
-
-    Cobre `Assign` (`NOME = 1.0`) e `AnnAssign` (`NOME: Final = 1.0`) — as
-    duas formas que `radio_da_mesa.py` usa.
-    """
+    """`{NOME: valor}` de toda atribuição de módulo `NOME = <número literal>`."""
     valores: dict[str, float] = {}
     for no in arvore.body:
         alvo_e_valor: tuple[ast.expr, ast.expr | None] | None = None
@@ -511,26 +372,11 @@ def _mapa_de_constantes_numericas(arvore: ast.Module) -> dict[str, float]:
     return valores
 
 
-#: Os quatro campos de `app/fala_do_mapa.Numero`, na ordem do dataclass — é a
-#: ordem em que um `Numero(...)` posicional os passa.
 CAMPOS_DO_NUMERO: tuple[str, ...] = ("constante", "valor", "chave", "coluna")
 
 
 def _campos_do_numero(item: ast.expr) -> tuple[ast.expr, ast.expr, ast.expr, ast.expr] | None:
-    """Os quatro campos de um item da tupla, se ele for um `Numero(...)`.
-
-    SÓ `Numero(...)` CONTA, desde 28/09/2026 (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-
-    JA-MEDE-01). Até ali a tupla era de tuplas cruas de quatro campos, e o
-    construtor que recusa valor que não é número e chave vazia
-    (`Numero.__post_init__`) nunca rodava sobre ela. Aceitar as duas formas
-    aqui deixaria a tupla crua voltar calada; com uma forma só, quem a devolver
-    faz a régua contar zero números, e o piso (`PISO_DA_REGUA["numeros"]`)
-    reprova em voz alta.
-
-    Os campos vêm por posição ou por nome, como o dataclass aceita. Faltou um,
-    ou sobrou um que o `Numero` não tem: `None`, e o item não conta — o
-    construtor recusaria o mesmo item ao importar o módulo.
-    """
+    """Os quatro campos de um item da tupla, se ele for um `Numero(...)`."""
     if not _e_chamada_de(item, "Numero"):
         return None
     assert isinstance(item, ast.Call)
@@ -547,12 +393,7 @@ def _campos_do_numero(item: ast.expr) -> tuple[ast.expr, ast.expr, ast.expr, ast
 
 
 def descobre_numeros(raiz: Path) -> list[NumeroEncontrado]:
-    """Todo `Numero(...)` de `NUMEROS_MEDIDOS_NO_MAPA` em `integrations/radio_da_mesa.py`.
-
-    Por AST: o arquivo puxa `structlog` por `core.sysfs_leds`, e importar o
-    módulo faria este portão `ImportError` num runner sem GUI/deps — o mesmo
-    motivo de nunca importar `app/`.
-    """
+    """Todo `Numero(...)` de `NUMEROS_MEDIDOS_NO_MAPA` em `integrations/radio_da_mesa.py`."""
     caminho = raiz / NUMEROS_RELATIVO
     if not caminho.exists():
         return []
@@ -605,10 +446,7 @@ def descobre_numeros(raiz: Path) -> list[NumeroEncontrado]:
 
 
 def _le_celulas_do_mapa(raiz: Path) -> dict[str, dict[str, str]]:
-    """`{id: {coluna: valor}}` do CSV — só o que Z6-08 precisa, lido direto:
-    `radio_ressalva` é PROSA (não deriva, nunca entra em `FATOS`), então esta
-    checagem não pode usar `fatos_do_mapa.py`.
-    """
+    """`{id: {coluna: valor}}` do CSV — só o que Z6-08 precisa, lido direto:"""
     import csv
 
     caminho = raiz / MAPA_RELATIVO
@@ -624,18 +462,7 @@ def valida_numeros(
     celulas: dict[str, dict[str, str]],
     formata_pt_br: Callable[[float], str],
 ) -> list[str]:
-    """`formata_pt_br` vem de `app/fala_do_mapa.py`, NUNCA redigitado aqui.
-
-    A régua e a legenda têm de ser a mesma peça — é a regra que P-01 da
-    PAREAMENTO-01 escreveu para o vocabulário e que vale igual para o
-    FORMATO. Até 25/08/2026 esta função trazia a sua própria cópia de
-    `f"{v:.1f}".replace(".", ",")`, e era a QUARTA da árvore (as outras três:
-    `app/fala_do_mapa.py:228`, `app/actions/config/secao_controles.py:434` e
-    `integrations/plano_de_radio.py:214`). Com a cópia, mudar
-    `formata_pt_br` para duas casas deixava este portão conferindo uma casa —
-    verde por cima de uma divergência entre a constante e a célula, que é
-    exatamente o que ele existe para pegar.
-    """
+    """`formata_pt_br` vem de `app/fala_do_mapa.py`, NUNCA redigitado aqui."""
     problemas: list[str] = []
     for numero in numeros:
         origem = f"{numero.arquivo}:{numero.linha}"
@@ -665,85 +492,17 @@ def valida_numeros(
     return problemas
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# P-09 — O PORTÃO CRESCE DE "AVISA" PARA "REPROVA", UMA ABA POR VEZ
-# ─────────────────────────────────────────────────────────────────────────
-#
-# Até aqui o portão só enxerga o que ALGUÉM LEMBROU de declarar: `Fala` é
-# opt-in, e uma frase de transporte nova entra na tela sem nada acusar. É o
-# defeito que dá título à PAREAMENTO-01 — "a medição nova tem de chegar
-# SOZINHA na tela" — visto do outro lado: a tela afirma, e o mapa não fica
-# sabendo.
-#
-# A trava é por ABA, e nunca por árvore inteira, porque a árvore inteira
-# reprovaria hoje em 40 frases e seria desligada na semana seguinte (o motivo
-# está escrito na PAREAMENTO-01, "onde a migração pode dar errado", e é o
-# mesmo de `scripts/validar-palavra-de-tela.py`). Aba FORA de
-# `ABAS_COM_FALA_DECLARADA` é livre; aba DENTRO tem de ter 100% das frases de
-# transporte ou declaradas como `Fala`, ou isentas uma a uma com razão
-# escrita.
-
-#: As abas em que toda frase de tela que cita transporte tem de estar
-#: declarada. **Nasce vazio de propósito** (Z6, "o que fica aberto"): no dia 1
-#: o registro tem uma `Fala` só, e promover uma aba agora exigiria editar
-#: arquivos de outras frentes.
-#:
-#: **O conjunto SÓ CRESCE.** Quem trava isso é
-#: `tests/unit/test_abas_promovidas_so_crescem_p09.py`, e o conjunto de
-#: referência dele é literal DO PRÓPRIO ARQUIVO DE TESTE — nunca lido daqui.
-#: Um teto lido da própria fonte passa sempre, e é o defeito que a ADR-016
-#: pagou por um mês (a lição está em
-#: `tests/unit/test_o_mapa_separa_divida_de_decisao.py`).
-#:
-#: As duas primeiras a promover, quando as abas tiverem dono livre: **Início**
-#: e **Status** — é onde morava a frase falsa de 17/08 e onde a pessoa lê
-#: "isto funciona?".
 ABAS_COM_FALA_DECLARADA: frozenset[str] = frozenset()
 
-#: Quais arquivos desenham cada aba promovida, relativos a uma raiz de tela
-#: (`RAIZES_DE_TELA` — `app/` ou `interface/`, procuradas nessa ordem por
-#: `_caminho_da_aba`). Só é preciso declarar a aba que foi promovida: aba livre
-#: não precisa de linha aqui.
-#:
-#: É mapa escrito à mão, e isso é uma escolha: o produto identifica aba pelo
-#: **id do Glade** (`app/app.py::_REFRESH_POR_ABA`, chaves `tab_home_box` e
-#: companhia) e `Fala.aba` fala o nome que a pessoa lê ("Início"). Não há hoje
-#: nenhuma peça que case os dois, e inventar uma casaria por heurística o que
-#: precisa ser declarado.
-#:
-#: Aba promovida SEM linha aqui **reprova alto** — nunca passa calada. Um
-#: portão que se desliga por omissão de configuração é a forma silenciosa de
-#: portão nenhum (a mesma razão escrita em `anonymity-check.yml:67-70`).
 ARQUIVOS_DA_ABA: dict[str, tuple[str, ...]] = {}
 
-#: As frases de aba promovida que citam transporte e NÃO precisam de `Fala`,
-#: uma a uma, com a razão escrita. Chaveada pelo TEXTO EXATO, no molde de
-#: `DIVIDA_DA_PALAVRA_01` de `scripts/validar-palavra-de-tela.py`: mexer no
-#: texto derruba a isenção e obriga a rejustificá-la, que é o que se quer.
-#:
-#: **Entrada que não casa mais com nenhuma frase de aba promovida REPROVA.**
-#: Lápide que sobrevive à própria cura é o defeito que este tipo de lista
-#: existe para matar — medido em 25/08/2026 no
 #: `portao_a_casa_sabe_e_o_produto_nao_faz`, onde duas notas datadas seguiram
-#: dizendo "nada de produção chama" sobre funções que a produção passou a
-#: chamar.
 FRASES_SEM_FALA: dict[str, str] = {}
 
-#: As palavras que fazem uma frase "citar transporte". Casadas com fronteira
-#: de palavra: sem ela, `cabo` casa dentro de `acabou`.
-#:
-#: `usb` entra e engorda a lista de propósito — no cabo o transporte É USB, e
-#: uma régua que o deixasse de fora perderia "pelo barramento USB". O preço é
-#: falso-positivo, e o preço é pago pela `FRASES_SEM_FALA`, que é declarada e
-#: envelhece; o preço do contrário seria falso-negativo, que é mudo.
 PALAVRAS_DE_TRANSPORTE: frozenset[str] = frozenset(
     {"cabo", "cabos", "rádio", "rádios", "bluetooth", "usb", "sem fio", "sem-fio"}
 )
 
-#: A blindagem declarada da régua, para ninguém a ler como censo completo:
-#: literal curto ou sem espaço fica de fora (é identificador, chave de
-#: dicionário, fragmento de formatação), e f-string montada em tempo de
-#: execução também — o `ast.JoinedStr` só entrega os pedaços literais.
 _MINIMO_DE_FRASE = 12
 
 _TRANSPORTE = re.compile(
@@ -764,12 +523,7 @@ class FraseDeTransporte:
 
 
 def _nos_de_docstring(arvore: ast.Module) -> set[int]:
-    """`id()` de cada `ast.Constant` que é docstring de módulo/função/classe.
-
-    Docstring é prosa para quem lê o código, não fala de tela — contá-la
-    levaria o censo de 40 para bem mais de cem (a PAREAMENTO-01 mediu 31 de
-    piso e 135 de teto justamente por causa disto).
-    """
+    """`id()` de cada `ast.Constant` que é docstring de módulo/função/classe."""
     fora: set[int] = set()
     for no in ast.walk(arvore):
         if not isinstance(no, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -788,11 +542,7 @@ def _nos_de_docstring(arvore: ast.Module) -> set[int]:
 
 
 def _nos_dentro_de_fala(arvore: ast.Module) -> set[int]:
-    """`id()` de cada `ast.Constant` que mora DENTRO de uma chamada `Fala(...)`.
-
-    É o que faz declarar uma `Fala` resolver a reprovação: o texto sai da
-    população de "frase não declarada" por estar onde deveria estar.
-    """
+    """`id()` de cada `ast.Constant` que mora DENTRO de uma chamada `Fala(...)`."""
     dentro: set[int] = set()
     for no in ast.walk(arvore):
         if not _e_chamada_de(no, "Fala"):
@@ -837,16 +587,13 @@ def descobre_frases_de_transporte(app_dir: Path, raiz: Path) -> list[FraseDeTran
         if "__pycache__" in caminho.parts:
             continue
         if str(caminho.relative_to(raiz)) in _MODULOS_QUE_ESTE_PORTAO_IMPORTA:
-            continue  # o registro declara TIPOS, não frase de tela
+            continue
         achadas.extend(frases_de_um_arquivo(caminho, raiz))
     return achadas
 
 
 def descobre_frases_da_tela(raiz: Path) -> list[FraseDeTransporte]:
-    """O censo inteiro — TODA raiz de tela, que é o que `--censo-de-transporte`
-    imprime desde 06/09/2026. Antes disso ele imprimia só `app/`, e publicava
-    como "o censo" um número que deixava de fora a maior parte da tela.
-    """
+    """O censo inteiro — TODA raiz de tela, que é o que `--censo-de-transporte`"""
     achadas: list[FraseDeTransporte] = []
     for relativo in RAIZES_DE_TELA:
         achadas.extend(descobre_frases_de_transporte(raiz / relativo, raiz))
@@ -854,13 +601,7 @@ def descobre_frases_da_tela(raiz: Path) -> list[FraseDeTransporte]:
 
 
 def _caminho_da_aba(raiz: Path, relativo: str) -> Path | None:
-    """O arquivo de uma aba promovida, procurado em TODA raiz de tela.
-
-    `ARQUIVOS_DA_ABA` guarda o caminho relativo à raiz de tela, sem dizer qual
-    — a aba Início pode morar em `app/` hoje e em `interface/` amanhã, e o
-    portão não pode virar vermelho por causa de uma mudança de casa que não
-    mudou uma palavra da tela. Achar em NENHUMA das duas continua reprovando.
-    """
+    """O arquivo de uma aba promovida, procurado em TODA raiz de tela."""
     for base in RAIZES_DE_TELA:
         caminho = raiz / base / relativo
         if caminho.is_file():
@@ -928,50 +669,10 @@ def valida_abas_promovidas(raiz: Path) -> list[str]:
     return problemas
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# O PISO — o "quase não mediu" para de ser só aviso
-# ─────────────────────────────────────────────────────────────────────────
-#
-# 06/09/2026. Até aqui o `main()` terminava com `rc=0` imprimindo *"A RÉGUA
-# QUASE NÃO MEDIU: 1 `Fala` declarada(s), … contra as 308 célula(s)"*. É a
-# forma que a casa nomeou em 04/09/2026: **o instrumento sabe do próprio risco
-# e AVISA em vez de RESOLVER — aviso no cabeçalho de um comando que termina
-# verde ninguém lê.**
-#
-# O que o piso resolve, e é só isto: o conjunto que a régua mede **não pode
-# encolher**. Hoje ele vale exatamente o que está declarado, então o `rc`
-# continua 0 — o verde de hoje é o piso, não uma promessa. Amanhã, apagar a
-# única `Fala` do produto, tirar um número medido, despromover uma aba ou
-# encurtar `RAIZES_DE_TELA` reprova, nomeando o piso e o achado.
-#
-# O QUE O PISO NÃO É: veto de frase de tela. Palavra dela, 06/09/2026, sobre o
-# mapa: *"Esse mapa é funcional e real. tá desatualizado no sentido de não ter
-# sido medido. foi e tudo funciona."* Uma célula atrasada é medição que ninguém
-# escreveu de volta, não aparelho que não funciona — e uma régua que reprovasse
-# a tela por causa disso transformaria mapa atrasado em freio. Esta régua
-# INFORMA, conta e cobra declaração; ela não reprova frase por causa de célula
 # atrasada.  <!-- noqa-acento: citação literal dela -->
-#
-# **NUNCA baixe este piso para ficar verde.** Se ele reprovou, descubra o que
-# encolheu — é a mesma regra escrita em `test_o_mapa_nunca_encolhe.py`.
 
-#: O piso, MEDIDO em 06/09/2026 nesta árvore (não digitado): `--all` contava
-#: `1 Fala declarada(s), 3 número(s) de tela e 0 aba(s) promovida(s)`, com as
-#: duas raízes de `RAIZES_DE_TELA`. `abas` nasce em 0 porque promover uma aba
-#: hoje exigiria editar arquivos de outras frentes — e um piso de zero ainda
-#: vale, porque é ele que faz a PRIMEIRA promoção virar irreversível.
-#:
-#: O conjunto SÓ CRESCE, e crescer PASSA: quem promover uma aba não precisa
-#: tocar aqui. Régua que reprova quem melhora é o defeito que onze réguas
-#: desta casa já tiveram, todas pela mesma forma — digitavam o que deviam ler.
-#:
-#: A catraca deste número é literal DO ARQUIVO DE TESTE
-#: (`tests/unit/test_a_fala_de_tela_alcanca_a_interface_nova.py`), nunca lido
-#: daqui: um teto lido da própria fonte passa sempre.
 PISO_DA_REGUA: dict[str, int] = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 0}
 
-#: O que cada chave de `PISO_DA_REGUA` mede, para a mensagem de erro dizer ao
-#: leitor o que encolheu sem ele precisar abrir este arquivo.
 _O_QUE_O_PISO_MEDE: dict[str, str] = {
     "raizes": "raiz(es) de tela varrida(s) (`RAIZES_DE_TELA`)",
     "falas": "`Fala` declarada(s) na tela",
@@ -981,19 +682,7 @@ _O_QUE_O_PISO_MEDE: dict[str, str] = {
 
 
 def e_a_arvore_do_produto(raiz: Path) -> tuple[bool, str]:
-    """`(é o produto?, por que não)` — o piso vale para o produto, e só.
-
-    As árvores de mentira da suíte montam três arquivos num `tmp_path` para
-    exercer UMA regra; cobrar delas o piso do produto seria cobrar de um
-    instrumento de teste o tamanho da casa inteira. A pergunta tem de ser
-    respondida por coisa que exista no disco, nunca por um caminho gravado —
-    a árvore do produto viaja (`git worktree`), e uma régua presa a
-    `/mnt/…/hefesto-dualsense4unix` mediria a árvore de outra pessoa.
-
-    E ela NUNCA se desliga calada: quando devolve `False`, o `main()` imprime
-    a razão. Um portão que se desliga por omissão é a forma silenciosa de
-    portão nenhum (a mesma razão escrita em `anonymity-check.yml:67-70`).
-    """
+    """`(é o produto?, por que não)` — o piso vale para o produto, e só."""
     if not (raiz / MAPA_RELATIVO).is_file():
         return False, f"não há {MAPA_RELATIVO} nesta árvore"
     faltando = [relativo for relativo in RAIZES_DE_TELA if not (raiz / relativo).is_dir()]
@@ -1003,13 +692,7 @@ def e_a_arvore_do_produto(raiz: Path) -> tuple[bool, str]:
 
 
 def valida_piso_da_regua(medido: dict[str, int], piso: dict[str, int]) -> list[str]:
-    """O conjunto medido hoje contra o piso. Pura de propósito.
-
-    É o miolo do veredito, e o teste a exerce com números sintéticos — sem
-    isso ela poderia estar acertando por ter a resposta escrita, e não por
-    comparar (é o molde de `tem_lastro_nos_dois`, em
-    `test_a_aba_emulacao_nao_promete_transporte_sem_lastro.py`).
-    """
+    """O conjunto medido hoje contra o piso. Pura de propósito."""
     problemas: list[str] = []
     for nome in sorted(piso):
         agora = medido.get(nome, 0)
@@ -1022,11 +705,6 @@ def valida_piso_da_regua(medido: dict[str, int], piso: dict[str, int]) -> list[s
             "piso para ficar verde — descubra o que encolheu"
         )
     return problemas
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# main
-# ─────────────────────────────────────────────────────────────────────────
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1133,19 +811,6 @@ def main(argv: list[str] | None = None) -> int:
             "e o piso de `PISO_DA_REGUA` só vale para ele."
         )
 
-    # O TAMANHO DO CONJUNTO MEDIDO VAI NA FRASE DE SUCESSO — 26/08/2026
-    # (LEVA-4-E). Até aqui esta linha dizia só `OK: 1 Fala declarada(s)`, e
-    # quem lia o verde do `portoes.sh` não tinha como saber que o produto
-    # inteiro tem UMA `Fala` (`app/widgets/external_card.py`) contra um mapa de
-    # 308 células. Com um conjunto desse tamanho, "nenhum desacordo" não é
-    # prova de acordo — é a régua confundindo a PALAVRA com o ATO, que é o
-    # padrão que a casa nomeou em 25/08. `rc` continua 0 de propósito: o
-    # tamanho do conjunto é decisão de produto (quantas abas foram promovidas),
-    # e portão não reprova ninguém por uma fila que ele não enche.
-    #
-    # O QUE MUDOU EM 06/09/2026: o tamanho de hoje virou PISO. Não encher a
-    # fila continua verde; ESVAZIÁ-LA, não. A frase abaixo diz o piso junto do
-    # tamanho, para quem lê o verde saber contra o que ele está sendo medido.
     piso = ", ".join(f"{nome}≥{valor}" for nome, valor in sorted(PISO_DA_REGUA.items()))
     tamanho = (
         f"{len(falas)} `Fala` declarada(s), {len(numeros)} número(s) de tela e "

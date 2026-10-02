@@ -1,30 +1,4 @@
-"""A onda do microfone segue o mudo vivo, e não a cena do desenho.
-
-A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01, o achado 10 da bancada de 29/09 (02h30):
-ela falou perto do White com o microfone dele aberto, e a barra *«se mexeu mas
-não ativou a cor»*. A barra nunca pintou com a luz do controle. O cinza era a
-classe `mudo` que o gerador cravava nos cartões 2 e 4 a partir da cena
-(`aba02.onda`), num elemento que o produto pinta e que nenhum tique desfazia.
-
-As três réguas, e nenhuma mede a própria saída:
-
-1. os cartões só diferem no que o endereço pinta: a classe fora do
-   `data-hef-classe` é a mesma em todos os cartões de cada página, e o
-   gerador com e sem o mudo dá a mesma classe na `.onda`;
-2. o endereço do mudo segue o selo: nos dezesseis arranjos das quatro faces,
-   o pacote pinta `"sim"` exatamente quando `selo_composto` diz MUDO;
-3. a cor que o motor pinta: o WebKit, na página da bancada, dá às barras a cor
-   do `--border-forte` com o endereço aceso, e a do `--cyan` com ele apagado.
-
-COMO MORDER:
-
-* régua 1 — devolva `' mudo' if mudo` ao `<span class="onda"` da versão com
-  endereço de `aba02.onda` e regere o mockup: as duas metades reprovam;
-* régua 2 — pinte o endereço com o `mic_mudo` do firmware cru
-  (o `mic_mudo` lido direto do bloco `audio`): o arranjo com o firmware aberto
-  e o canal mudo reprova;
-* régua 3 — tire a regra `.onda-do-mudo.calada>.onda i` da folha e regere.
-"""
+"""A onda do microfone segue o mudo vivo, e não a cena do desenho."""
 from __future__ import annotations
 
 import html.parser
@@ -56,8 +30,6 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a02_controles as a02
 
-#: As páginas com cartão por controle (`data-controle="p1"` … `"p4"`),
-#: medidas na bancada em 29/09/2026.
 PAGINAS_COM_CARTAO = (
     "01-jogar.html",
     "02-controles.html",
@@ -69,8 +41,6 @@ PAGINAS_COM_CARTAO = (
     "calibrar-sensores.html",
 )
 
-#: Vazia desde o `--publicar 02` de 29/09/2026: a página que ainda não foi
-#: publicada entra aqui com o `xfail` estrito (o `xpass` reprova quem esquece).
 AINDA_NAO_PUBLICADAS: frozenset[str] = frozenset()
 
 _VAZIOS = frozenset({
@@ -127,9 +97,6 @@ def _elementos(texto: str) -> list[tuple[str | None, str, str, frozenset[str]]]:
 
 def _divergencias(texto: str) -> list[str]:
     """Os endereços cuja classe fora do `data-hef-classe` muda de cartão a cartão."""
-    # Um endereço pode aparecer mais de uma vez no mesmo cartão (as duas
-    # tiras da luz), e por isso cada cartão é a LISTA das formas, na ordem do
-    # documento: é ela que tem de ser igual de cartão a cartão.
     por_campo: dict[str, dict[str, list[tuple[str, ...]]]] = {}
     for cartao, campo, _acesa, resto in _elementos(texto):
         if cartao is None:
@@ -144,16 +111,9 @@ def _divergencias(texto: str) -> list[str]:
     return ruins
 
 
-# ===========================================================================
-# 1. Os cartões só diferem no que o endereço pinta
-# ===========================================================================
 @pytest.mark.parametrize("nome", PAGINAS_COM_CARTAO)
 def test_a_bancada_nao_crava_estado_no_que_o_produto_pinta(nome: str) -> None:
-    """Em cada página da bancada, a classe de fora do endereço é a mesma em todo cartão.
-
-    O `mic-onda-lida` da 02 tinha `mudo` no p2 e no p4, e o alvo `classe` do
-    piloto só acende e apaga o `sem-leitura`: o `mudo` ficava para sempre.
-    """
+    """Em cada página da bancada, a classe de fora do endereço é a mesma em todo cartão."""
     texto = (MOCKUP / nome).read_text(encoding="utf-8")
     assert _divergencias(texto) == []
 
@@ -189,12 +149,7 @@ def _classes_do(campo: str, trecho: str) -> tuple[str, ...]:
 
 
 def test_o_gerador_com_e_sem_o_mudo_da_a_mesma_onda() -> None:
-    """A cena mudo e a cena aberta mudam só o invólucro com endereço.
-
-    A comparação entre cartões não vê uma classe cravada igual nos quatro
-    (uma cena com os quatro mudos passaria). Por isso o gerador é chamado nas
-    duas formas, e a `.onda` tem de sair igual.
-    """
+    """A cena mudo e a cena aberta mudam só o invólucro com endereço."""
     vals = [22, 48, 72, 95, 64, 38, 52, 80, 44, 26, 58, 88, 40, 20]
     calado = a02_gerador.onda(vals, True, a02.LADO_MIC)
     aberto = a02_gerador.onda(vals, False, a02.LADO_MIC)
@@ -206,9 +161,6 @@ def test_o_gerador_com_e_sem_o_mudo_da_a_mesma_onda() -> None:
     assert set(_classes_do(campo, calado)) - {"calada"} == set(_classes_do(campo, aberto))
 
 
-# ===========================================================================
-# 2. O endereço do mudo segue o selo
-# ===========================================================================
 UNIQ = "aa:bb:cc:00:00:01"
 BASE: dict[str, Any] = {
     "uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
@@ -258,9 +210,6 @@ def test_o_endereco_so_sai_quando_a_pagina_o_tem() -> None:
     assert a02.campo_da_onda_calada(a02.LADO_MIC) not in fora["cards"][UNIQ]
 
 
-# ===========================================================================
-# 3. A cor que o motor pinta
-# ===========================================================================
 _JS_DA_COR = r"""
 (function(){
   const envolto = document.querySelectorAll('[data-campo="%(campo)s"]')[%(i)d];
@@ -285,8 +234,6 @@ _JS_DA_COR = r"""
 
 def test_o_webkit_pinta_a_onda_pelo_endereco_do_mudo() -> None:
     """Com o endereço em `"sim"` as barras são cinza; em `""`, cianas; sem leitura, cinza e no piso.
-
-    Sob `xvfb-run -a`: sem tela, pula — e pulo não é verde.
     """
     import importlib
     import json
@@ -299,9 +246,6 @@ def test_o_webkit_pinta_a_onda_pelo_endereco_do_mudo() -> None:
     except (ImportError, ValueError) as erro:  # pragma: no cover
         pytest.skip(f"o instrumento não importou ({erro})")
     campo = a02.campo_da_onda_calada(a02.LADO_MIC)
-    # O TÍTULO É O QUE PROVA A CARGA: sem ele o `about:blank` já está
-    # «complete», e a régua olhava uma página vazia (tudo transparente, e as
-    # três comparações passavam iguais). A mordida da folha pegou isso.
     with regua_de_tela.Tela(MOCKUP / "02-controles.html", titulo_esperado="Hefesto") as tela:
         def medir(valor: str, sem_leitura: bool) -> dict[str, Any]:
             bruto = tela.executar(_JS_DA_COR % {
@@ -312,10 +256,6 @@ def test_o_webkit_pinta_a_onda_pelo_endereco_do_mudo() -> None:
         calada = medir("sim", False)
         aberta = medir("", False)
         sem_leitura = medir("", True)
-        # O «NÃO SEI» MANDA SOBRE O MUDO (conferência de 29/09/2026): a regra
-        # do mudo tem três classes e venceria a do `sem-leitura` pela
-        # especificidade, e a onda sem leitura de um microfone calado saía
-        # com a opacidade do mudo. Mordida: tire o `:not(.sem-leitura)`.
         calada_sem_leitura = medir("sim", True)
     transparente = "rgba(0, 0, 0, 0)"
     assert transparente not in {calada["cinza"], calada["ciano"]}, calada

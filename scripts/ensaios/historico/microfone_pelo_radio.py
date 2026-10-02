@@ -69,13 +69,8 @@ import subprocess
 import sys
 import time
 
-#: Quanto o ouvinte espera antes de a medição começar. O `0x32` de LIGAR só sai
-#: quando a source vira `RUNNING`, e o `_talvez_seguir_a_source` olha uma vez
-#: por segundo — medir antes disso mediria a espera, não o microfone.
 _ESPERA_DO_OUVINTE_S = 2.0
 
-#: 10 ms a 48 kHz mono — o quadro que o firmware manda. Contar zeros por bloco
-#: deste tamanho é o que separa "silêncio contínuo" de "sinal com buraco".
 _BLOCO = 480
 
 
@@ -151,7 +146,7 @@ def _medir(caminho: str, segundos: float) -> int:
     if not ponte.iniciar():
         print("a ponte não subiu (libopus, hidraw ou pactl) — nada ficou de pé.")
         return 1
-    source = ponte._source  # o ensaio mede a peça por dentro, de propósito
+    source = ponte._source
     contas = {"ok": 0, "descarte": 0}
     escrever_de_verdade = source.escrever
 
@@ -227,7 +222,6 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    # Histórico desde 28/09/2026: o main fica para leitura, e não roda.
     sys.stderr.write(
         "RECUSADO: ensaio histórico (scripts/ensaios/README.md, «O histórico»).\n"
         "a ponte do produto já segura o microfone de todo controle no rádio; este\n"

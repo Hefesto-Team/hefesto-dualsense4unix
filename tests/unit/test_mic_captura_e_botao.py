@@ -26,7 +26,6 @@ confundindo as duas em três lugares diferentes.
     o cenário-alvo declarado do projeto — o medidor NUNCA aparecia.
 """
 # ruff: noqa: E501 — as amostras do `default-routes` são cópias FIÉIS do
-# arquivo desta máquina; quebrar as linhas mudaria o dado sob teste.
 from __future__ import annotations
 
 import subprocess
@@ -57,11 +56,6 @@ INSTALL = RAIZ / "install.sh"
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
-# ---------------------------------------------------------------------------
-# (A) o instalador chama a cura
-# ---------------------------------------------------------------------------
-
-
 class TestInstaladorChamaACura:
     """Entrega 7 da MIC-USB-01, aberta em 25/07 e nunca feita."""
 
@@ -74,12 +68,7 @@ class TestInstaladorChamaACura:
         )
 
     def test_a_cura_e_best_effort_e_nao_derruba_a_instalacao(self) -> None:
-        """A chamada mora num `if`, que é o que impede o `set -e` de abortar.
-
-        O instalador roda com `set -euo pipefail`: um `bash doctor.sh --fix-mic`
-        solto abortaria a instalação inteira quando o doctor saísse != 0 — e ele
-        sai != 0 a cada FAIL. A regra da casa para este passo é best-effort.
-        """
+        """A chamada mora num `if`, que é o que impede o `set -e` de abortar."""
         linhas = INSTALL.read_text(encoding="utf-8").splitlines()
         chamadas = [
             ln.strip()
@@ -112,11 +101,6 @@ class TestInstaladorChamaACura:
         assert texto.index("--fix-mic") < texto.index('step "11/11"')
 
 
-# ---------------------------------------------------------------------------
-# (B) o falso positivo do alto-falante
-# ---------------------------------------------------------------------------
-
-
 def _rodar_doctor(
     func: str, *args: str, home: str = "/nao-existe"
 ) -> subprocess.CompletedProcess[str]:
@@ -132,9 +116,6 @@ def _rodar_doctor(
     )
 
 
-#: Cópia FIEL do `~/.local/state/wireplumber/default-routes` desta máquina em
-#: 28/07 — a rota muda é a de SAÍDA (o alto-falante do controle) e a de
-#: captura está intacta. Era este arquivo que produzia o [FAIL] de microfone.
 _ROTAS_SO_A_SAIDA_MUDA = """\
 [default-routes]
 alsa_card.pci-0000_0a_00.1:output:hdmi-output-0={"channelMap":["FL", "FR"], "mute":false}
@@ -193,12 +174,7 @@ class TestSaidaNaoEEntrada:
     def test_a_entrada_de_perfil_nao_e_confundida_com_rota_de_captura(
         self, tmp_path: Path
     ) -> None:
-        """`...:profile:output:...+input:analog-stereo` NÃO é rota de captura.
-
-        O `+input:` (com `+`, não com `:`) mora dentro do NOME do perfil. Um
-        filtro que casasse "input" solto reabriria o mesmo falso positivo por
-        outra porta.
-        """
+        """`...:profile:output:...+input:analog-stereo` NÃO é rota de captura."""
         arq = tmp_path / "default-routes"
         arq.write_text(_ROTAS_SO_A_SAIDA_MUDA, encoding="utf-8")
         res = _rodar_doctor("_dualsense_rotas_mudas", str(arq))
@@ -219,11 +195,6 @@ class TestSaidaNaoEEntrada:
         )
 
 
-# ---------------------------------------------------------------------------
-# (C) o botão do microfone, fiado ao mic_set que já existia
-# ---------------------------------------------------------------------------
-
-
 class TestAcaoDoBotaoDeMicrofone:
     """A tabela dos quatro estados — o que o clique MANDA em cada um."""
 
@@ -239,12 +210,7 @@ class TestAcaoDoBotaoDeMicrofone:
         assert acao.valor is True
 
     def test_ativo_com_posse_nossa_oferece_devolver_e_manda_none(self) -> None:
-        """Sem esta saída, o primeiro clique sequestraria o botão FÍSICO.
-
-        `mic_set(False)` desmuta E toma a posse do registrador: enquanto ela
-        durar, o botão de microfone do controle deixa de valer. Um botão que
-        só soubesse mutar/desmutar tiraria o botão físico dela para sempre.
-        """
+        """Sem esta saída, o primeiro clique sequestraria o botão FÍSICO."""
         acao = acao_mic({"audio": {"mic_mudo": False, "mic_mudo_desejado": False}})
         assert acao.rotulo == TEXTO_BOTAO_MIC_DEVOLVER
         assert acao.valor is None
@@ -271,11 +237,7 @@ class TestAcaoDoBotaoDeMicrofone:
         assert acao.dica
 
     def test_o_ciclo_passa_por_todos_os_estados(self) -> None:
-        """Um botão só, e nenhum estado fica inalcançável.
-
-        mudo --Ativar--> ativo/posse nossa --Devolver--> ativo/posse do
-        kernel --Silenciar--> mudo. Nenhum canto sem saída.
-        """
+        """Um botão só, e nenhum estado fica inalcançável."""
         rotulos = [
             acao_mic({"audio": a}).rotulo
             for a in (
@@ -307,8 +269,6 @@ class TestFiacaoDoBotaoNoCard:
             return True
 
         monkeypatch.setattr(controller_card.ipc_bridge, "mic_set", _mic_set)
-        # `run_in_thread` real precisa de GLib.idle_add e de um laço vivo; o
-        # dublê roda a função na hora e mantém o teste determinístico.
         monkeypatch.setattr(
             controller_card.ipc_bridge,
             "run_in_thread",
@@ -388,7 +348,6 @@ class TestFiacaoDoBotaoNoCard:
             {"uniq": "AA:BB:CC:11:22:33", "audio": {"mic_mudo": True}},
         )
         card._mic_botao.clicked()
-        # O daemon ainda não confirmou: o rótulo continua o do estado LIDO.
         assert card._mic_botao_rotulo.get_text() == TEXTO_BOTAO_MIC_ATIVAR
         card.update(
             {
@@ -398,11 +357,6 @@ class TestFiacaoDoBotaoNoCard:
             {},
         )
         assert card._mic_botao_rotulo.get_text() == TEXTO_BOTAO_MIC_DEVOLVER
-
-
-# ---------------------------------------------------------------------------
-# (D) a source da ponte de mic por Bluetooth
-# ---------------------------------------------------------------------------
 
 
 _PACTL_DOIS_CONTROLES_POR_BT = (
@@ -437,20 +391,15 @@ class TestFonteDaPonteBluetooth:
         assert escolher_fonte(fontes, uniqs[2], uniqs) is None
 
     def test_o_prefixo_do_nome_nao_vira_mac_por_acidente(self) -> None:
-        """`hefesto_dualsense_bt_` é cheio de letras hex (e, f, d, a, b).
-
-        Filtrar hex do nome INTEIRO produziria um "MAC" com lixo do prefixo
-        grudado na frente — casamento por acaso, que é o beco que a regra do
-        `bluez_*` já evitava de propósito.
-        """
+        """`hefesto_dualsense_bt_` é cheio de letras hex (e, f, d, a, b)."""
         assert sufixo_da_ponte_bt("hefesto_dualsense_bt_112233") == "112233"
         assert mic_monitor._so_hex("hefesto_dualsense_bt_112233") != "aabbcc"
 
     @pytest.mark.parametrize(
         "nome",
         [
-            "hefesto_dualsense_bt_hidraw3",  # fallback: nó sem HID_UNIQ
-            "hefesto_dualsense_bt_abc",  # curto demais para identificar
+            "hefesto_dualsense_bt_hidraw3",
+            "hefesto_dualsense_bt_abc",
             "hefesto_dualsense_bt_",
             "alsa_input.usb-Sony_Interactive_Entertainment_DualSense-00.mono",
             "bluez_input.AA_BB_CC_11_22_33",

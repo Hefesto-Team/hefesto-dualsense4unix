@@ -1,19 +1,4 @@
-"""TROCA-DENTRO-DO-JOGO-01 — dois combos no mesmo aperto não viram rajada.
-
-Achado da conferência de 14/09/2026, e ele é da classe "o produto age sozinho no
-meio do jogo dela": os combos do Hefesto são todos `PS + alguma coisa`, e o
-casamento é por SUBCONJUNTO. Afundar os dois analógicos com o PS pressionado —
-`{ps, l3, r3}` — contém o `ps+r3` (próximo MODO) e o `ps+l3` (próxima MÁSCARA).
-
-O laço de despacho travava só o ÚLTIMO combo que disparou, então a cada tique ele
-disparava o outro. Medido aqui, com o `HotkeyManager` isolado e o aperto
-segurado: 25 disparos em 0,4 s, alternando modo e máscara. O daemon lê o controle
-a 60 Hz (`lifecycle`), e cada disparo desses recria o vpad e grava o perfil no
-meio da partida. `{ps, dpad_up, r3}` fazia o mesmo desde antes de a máscara
-existir.
-
-MORDE: devolver `if aperto.last_fired == combo` ao laço de `_observe_o_aperto`.
-"""
+"""TROCA-DENTRO-DO-JOGO-01 — dois combos no mesmo aperto não viram rajada."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager

@@ -1,22 +1,4 @@
-"""A-09-SISTEMA-EM-TRES-SECOES-01 — a aba Sistema em três seções, com menos texto.
-
-Pedido dela, 25/09/2026: *«praticamente vamos só mudar de lugar as coisas
-dessa aba»*, com o Status em três colunas, as Configurações Avançadas em
-quatro, e o registro sempre à vista. <!-- noqa-acento: citação literal dela -->
-
-O que estas réguas prendem, cada uma com a mordida escrita:
-
-1. o Status diz o estado na pílula, com a palavra certa em cada caso — a pausa
-   deixou de ter linha própria e virou o PAUSADO do Serviço;
-2. a linha do Bluetooth conta adaptadores e controles no rádio, e leva à aba
-   Conexões;
-3. os três ligáveis acendem pelo PRODUTO, nunca pelo clique;
-4. o botão do serviço é um só e tem três caras;
-5. a frase do exame sai curta, com a inteira no `title`;
-6. o diário sai com os endereços mascarados, nas três formas;
-7. o «Copiar» copia o painel inteiro, e recusa o vazio;
-8. a linha longa do registro dobra, em vez de sair pela direita.
-"""
+"""A-09-SISTEMA-EM-TRES-SECOES-01 — a aba Sistema em três seções, com menos texto."""
 
 from __future__ import annotations
 
@@ -42,9 +24,6 @@ def _pilula(linha: dict[str, str]) -> tuple[str, str]:
     return linha["selo"], linha["cls"]
 
 
-# ---------------------------------------------------------------------------
-# 1. o Status diz o estado na pílula
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("status", "estado", "esperado"), [
     ("online_systemd", {"paused": False}, ("LIGADO", "ok")),
     ("online_systemd", {"paused": True}, ("PAUSADO", "aviso")),
@@ -54,11 +33,7 @@ def _pilula(linha: dict[str, str]) -> tuple[str, str]:
     (None, None, (tela.NAO_DEU, "nt")),
 ])
 def test_a_pilula_do_servico_diz_o_estado(status, estado, esperado) -> None:
-    """LIGADO, PAUSADO ou PARADO — e o improvisado não sai verde.
-
-    MORDIDA: tire o ramo da pausa de `status_do_servico` — o caso pausado
-    reprova dizendo LIGADO.
-    """
+    """LIGADO, PAUSADO ou PARADO — e o improvisado não sai verde."""
     assert _pilula(tela.status_do_servico(status, estado)) == esperado
 
 
@@ -87,14 +62,8 @@ def test_as_quatro_linhas_na_ordem_do_desenho() -> None:
     assert linhas[2]["txt"] == "Ambiente gráfico: Wayland · COSMIC"
 
 
-# ---------------------------------------------------------------------------
-# 2. a linha do Bluetooth
-# ---------------------------------------------------------------------------
 def test_o_bluetooth_conta_adaptadores_e_controles_no_radio() -> None:
-    """Dois no rádio e um no cabo: a linha diz os DOIS do rádio.
-
-    MORDIDA: conte todos os conectados em `controles_no_radio` — reprova com 3.
-    """
+    """Dois no rádio e um no cabo: a linha diz os DOIS do rádio."""
     estado = {"controllers": [
         {"transport": "bt", "connected": True},
         {"transport": "BT"},
@@ -125,9 +94,6 @@ def test_o_status_publicado_e_um_link_na_linha_do_bluetooth(a09) -> None:
     assert html.startswith('<a class="saude vai"') and 'href="08-conexoes.html#rd-secao"' in html
 
 
-# ---------------------------------------------------------------------------
-# 3. os três ligáveis acendem pelo produto
-# ---------------------------------------------------------------------------
 def test_os_tres_ligaveis_tem_o_endereco_do_produto_na_pagina() -> None:
     """Cada pílula leva gesto, `data-campo` e o alvo `classe` com `ligada`.
 
@@ -153,11 +119,7 @@ def test_os_tres_ligaveis_tem_o_endereco_do_produto_na_pagina() -> None:
 ])
 def test_o_proton_fixado_le_o_registro_da_trava(monkeypatch, tmp_path, dado,
                                                 esperado) -> None:
-    """Ligado é «há o que o destravar desfaria» — as mesmas chaves do dono.
-
-    MORDIDA: faça `proton_fixado` devolver `bool(dado)` — o caso das mudanças
-    vazias reprova dizendo True.
-    """
+    """Ligado é «há o que o destravar desfaria» — as mesmas chaves do dono."""
     from hefesto_dualsense4unix.integrations import proton_pin
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
@@ -172,14 +134,7 @@ def test_o_proton_fixado_le_o_registro_da_trava(monkeypatch, tmp_path, dado,
 def test_o_tique_acende_os_ligaveis_pelo_que_leu(
     a09, ctx, monkeypatch, tmp_path
 ) -> None:
-    """A pílula mente se o pacote não escrever — e escreve o que LEU.
-
-    Desde 28/09 (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01) o «Corrigir
-    Vulkan» é a escolha gravada em `camadas_da_steam_fora.env`, que o lançador
-    lê; a régua grava a escolha pelo dono, num `XDG_CONFIG_HOME` de mentira.
-
-    MORDIDA: troque `fora["vulkan-corrigido"] = vulkan_corrigido()` por `True`.
-    """
+    """A pílula mente se o pacote não escrever — e escreve o que LEU."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
@@ -193,11 +148,7 @@ def test_o_tique_acende_os_ligaveis_pelo_que_leu(
 
 
 def test_desligar_o_proton_destrava_pelo_dono(a09, ctx, monkeypatch, tmp_path) -> None:
-    """Ligado, o clique DESTRAVA — pelo `unlock_games_from_pinned_proton`.
-
-    MORDIDA: faça o ramo ligado chamar o `travar` de novo — reprova com a
-    trava chamada e o destravar não.
-    """
+    """Ligado, o clique DESTRAVA — pelo `unlock_games_from_pinned_proton`."""
     from hefesto_dualsense4unix.integrations import proton_pin
 
     chamou: list[str] = []
@@ -215,14 +166,8 @@ def test_desligar_o_proton_destrava_pelo_dono(a09, ctx, monkeypatch, tmp_path) -
     assert chamou == ["destravou"]
 
 
-# ---------------------------------------------------------------------------
-# 4. o botão do serviço é um só e tem três caras
-# ---------------------------------------------------------------------------
 def test_o_botao_do_servico_tem_tres_caras(a09) -> None:
-    """De pé diz o desenho (Parar), pausado diz Retomar, parado diz Ativar.
-
-    MORDIDA: tire o ramo `pausado` de `_rotulo_de_agora`.
-    """
+    """De pé diz o desenho (Parar), pausado diz Retomar, parado diz Ativar."""
     seletor = '[data-gesto="parar-ou-retomar"]'
     assert a09.blocos_dos_botoes(True)[seletor] == a09._rotulo_do_desenho(a09.DESLIGAR)
     assert a09.blocos_dos_botoes(True, pausado=True)[seletor] == a09.RETOMAR
@@ -230,10 +175,7 @@ def test_o_botao_do_servico_tem_tres_caras(a09) -> None:
 
 
 def test_o_verde_acende_quando_o_clique_devolve_o_servico(a09, ctx) -> None:
-    """Verde com a pausa ativa ou parado; vazio (vermelho) com ele de pé.
-
-    MORDIDA: emita `CAMPO_DO_VERDE` sempre vazio.
-    """
+    """Verde com a pausa ativa ou parado; vazio (vermelho) com ele de pé."""
     import pacotes
 
     assert a09.pacote(ctx)[a09.CAMPO_DO_VERDE] == ""
@@ -242,9 +184,6 @@ def test_o_verde_acende_quando_o_clique_devolve_o_servico(a09, ctx) -> None:
     assert a09.pacote(pausado)[a09.CAMPO_DO_VERDE] == a09.MODO_A_CORRIGIR
 
 
-# ---------------------------------------------------------------------------
-# 5. a frase do exame sai curta
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("frase", "cabeca"), [
     ("quirk anti-storm ativo (054c:0ce6 — áudio USB esp)", "Quirk anti-storm ativo"),
     ("regra áudio-off inativa — o mic e o fone do controle estão liberados.",
@@ -258,10 +197,7 @@ def test_a_cabeca_da_frase_do_exame(a09, frase, cabeca) -> None:
 
 
 def test_a_linha_do_exame_guarda_a_frase_inteira_no_title(a09) -> None:
-    """A tela mostra a frase curta; quem passa o mouse lê o resto.
-
-    MORDIDA: escreva `txt` no `<span>` em vez de `frase_curta_do_exame(txt)`.
-    """
+    """A tela mostra a frase curta; quem passa o mouse lê o resto."""
     frase = "quirk anti-storm ativo (054c:0ce6 — áudio USB esp)"
     html = a09._linha_do_exame({"cls": "ok", "g": "✓", "selo": "OK", "txt": frase})
     assert "<span>Proteção do áudio USB ligada</span>" in html, html
@@ -281,27 +217,16 @@ def test_a_linha_do_exame_guarda_a_frase_inteira_no_title(a09) -> None:
      "Ajuste de áudio não instalado"),
     ("cura do travamento do USB ATIVA (mic e fone do controle preservados)",
      "Cura do travamento do USB ativa"),
-    # o que a tabela não conhece cai na regra da cabeça, e nunca sai inteiro
     ("áudio presente nos 2 controles no cabo (mic+fone do DualSense ativos)",
      "Áudio presente nos 2 controles no cabo"),
 ])
 def test_a_frase_do_doctor_sai_na_lingua_de_quem_joga(a09, frase, curta) -> None:
-    """Conferência de 25/09/2026: a cabeça ainda era jargão do terminal.
-
-    MORDIDA: esvazie `FRASES_CURTAS_DO_EXAME` — «Quirk anti-storm ativo» volta.
-    """
+    """Conferência de 25/09/2026: a cabeça ainda era jargão do terminal."""
     assert a09.frase_curta_do_exame(frase) == curta
 
 
 def test_cada_frase_curta_tem_o_seu_achado_no_doctor(a09) -> None:
-    """O começo de cada linha da tabela existe no dono das frases.
-
-    Uma tabela que lê uma frase que o `doctor` deixou de escrever é uma lista
-    digitada que envelheceu calada: a linha da tela cairia na regra da cabeça
-    sem ninguém saber. E a frase curta cabe na coluna do exame.
-
-    MORDIDA: troque um começo da tabela por um que o `doctor` não escreve.
-    """
+    """O começo de cada linha da tabela existe no dono das frases."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/integrations/storm_doctor.py"
              ).read_text(encoding="utf-8").lower()
     orfas = [c for c, _ in a09.FRASES_CURTAS_DO_EXAME if c not in fonte]
@@ -310,9 +235,6 @@ def test_cada_frase_curta_tem_o_seu_achado_no_doctor(a09) -> None:
     assert not longas, f"frases curtas que não cabem na coluna: {longas}"
 
 
-# ---------------------------------------------------------------------------
-# 6. o diário sai mascarado
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("cru", "mascarado"), [
     ("uniq=aa:bb:cc:12:34:ff ok", "uniq=aa:bb:cc:00:00:ff ok"),
     ("uniq=aabbcc1234ff rota=2", "uniq=aabbcc0000ff rota=2"),
@@ -325,14 +247,8 @@ def test_o_diario_mascara_as_tres_formas(a09, cru, mascarado) -> None:
     assert a09.mascarar_o_diario(cru) == mascarado
 
 
-# ---------------------------------------------------------------------------
-# 7. o «Copiar»
-# ---------------------------------------------------------------------------
 def test_copiar_leva_o_painel_inteiro(a09, ctx, monkeypatch) -> None:
-    """O que vai à área de transferência é o que está no painel, inteiro.
-
-    MORDIDA: copie só a última linha do painel.
-    """
+    """O que vai à área de transferência é o que está no painel, inteiro."""
     copiado: list[str] = []
     monkeypatch.setattr(a09, "_por_na_area_de_transferencia",
                         lambda texto: copiado.append(texto) or True)
@@ -360,12 +276,7 @@ def test_o_ver_detalhes_saiu_da_pagina_e_do_contrato() -> None:
 
 
 def test_a_linha_do_registro_dobra_e_nao_sai_pela_direita() -> None:
-    """A linha do journal tem uns 200 caracteres: com `pre` ela saía cortada.
-
-    Medido no clique do lar de mentira (25/09/2026): para ler uma linha
-    inteira era preciso rolar de lado. A regra do painel na página publicada
-    tem de dobrar (`pre-wrap`) e quebrar a palavra longa.
-    """
+    """A linha do journal tem uns 200 caracteres: com `pre` ela saía cortada."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     regra = re.search(r"\n\s*\.log\{([^}]*)\}", pagina)
     assert regra, "a regra do painel do registro sumiu da página"
@@ -375,15 +286,7 @@ def test_a_linha_do_registro_dobra_e_nao_sai_pela_direita() -> None:
 
 
 def test_o_diario_pede_so_a_linha_do_daemon(a09, monkeypatch) -> None:
-    """O diário lê `--output cat`: sem o nome da máquina e sem o segundo carimbo.
-
-    Conferência de 25/09/2026: o painel saía em `short-iso`, e cada linha
-    começava com a data, o NOME DA MÁQUINA e `unidade[pid]:` antes do carimbo
-    que o daemon já escreve — o «Copiar» levava o nome da máquina para o
-    relato, e a linha dobrava duas vezes antes de chegar à mensagem.
-
-    MORDIDA: volte o `--output` do `_diario` para `short-iso`.
-    """
+    """O diário lê `--output cat`: sem o nome da máquina e sem o segundo carimbo."""
     import subprocess
 
     pedidos: list[list[str]] = []
@@ -413,30 +316,17 @@ def test_o_diario_pede_so_a_linha_do_daemon(a09, monkeypatch) -> None:
 ])
 def test_o_ambiente_diz_o_nome_de_tela_em_qualquer_computador(a09, variaveis,
                                                                esperado) -> None:
-    """Conferência de 25/09/2026: saía «Wayland · cosmic», e num KDE «Wayland · outro».
-
-    MORDIDA: devolva `ambiente_efetivo()` cru no lugar do nome de tela.
-    """
+    """Conferência de 25/09/2026: saía «Wayland · cosmic», e num KDE «Wayland · outro»."""
     assert a09._sessao(variaveis) == esperado
 
 
 def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
-    """A dica é estática na página publicada: ela não pode contar controles.
-
-    Conferência de 25/09/2026: a dica do Perfil Global de Bateria e o `title`
-    dos três botões diziam «Vale para os 2 controles» — o 2 da cena do
-    desenho, cravado no HTML, dito também a quem tem um controle ou quatro.
-
-    MORDIDA: volte o `{N}` para a dica em `aba09.D_BATERIA`.
-    """
+    """A dica é estática na página publicada: ela não pode contar controles."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert not re.search(r"Vale para os \d+ controles", pagina)
     assert "Vale para todos os controles" in pagina
 
 
-# ---------------------------------------------------------------------------
-# 9. os quatro ajustes dela das 22h13 (25/09/2026) — «se fizer tá aprovado»
-# ---------------------------------------------------------------------------
 def _faixa_do_status(pagina: str) -> str:
     faixa = re.search(r'<div class="sec-rot sr-status3">(.*?)</div>', pagina, re.S)
     assert faixa, "a faixa dos rótulos da seção 1 sumiu da página publicada"
@@ -444,18 +334,9 @@ def _faixa_do_status(pagina: str) -> str:
 
 
 def test_o_exame_nao_tem_rotulo_nem_contagem_e_o_lugar_fica_vazio() -> None:
-    """*«remove o exame de hoje e tooltip dele»* e *«Remove esse 8 linhas»*.
-
-    O lugar fica VAZIO: a faixa continua com as três colunas (o `Status`, o
-    risco e a do exame, vazia), para nada subir nem andar.
-
-    MORDIDA: devolva «O exame de hoje» ao terceiro `<span>` do `sr-status3` no
-    gerador e publique.
-    """
+    """*«remove o exame de hoje e tooltip dele»* e *«Remove esse 8 linhas»*."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     faixa = _faixa_do_status(pagina)
-    # a frase continua nas CITAÇÕES dela (o CSS diz «no MESMO estilo das linhas
-    # do O exame de hoje»); o que não pode é ser rótulo na tela.
     assert "O exame de hoje" not in faixa and "<span>O exame" not in pagina
     assert "exame-contagem" not in pagina and "linhas <span" not in faixa
     assert faixa.strip().endswith("<span></span><span></span>"), faixa
@@ -464,13 +345,7 @@ def test_o_exame_nao_tem_rotulo_nem_contagem_e_o_lugar_fica_vazio() -> None:
 
 
 def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None:
-    """*«remove a tooltip»*, com o risco na coluna dos quatro `?` do Status.
-
-    Nas duas pontas: a página publicada (a primeira pintura) e a linha que o
-    pacote monta a cada tique. A frase continua, no `title` da linha.
-
-    MORDIDA: devolva o `<span class="ajuda">` em `a09_sistema.linha_do_status`.
-    """
+    """*«remove a tooltip»*, com o risco na coluna dos quatro `?` do Status."""
     html = a09.linha_do_status(tela.status_do_servico("online_systemd",
                                                       {"paused": False}))
     assert 'class="ajuda"' not in html, html
@@ -484,10 +359,7 @@ def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None
 
 
 def test_configuracoes_avancadas_tem_a_letra_do_titulo_sistema() -> None:
-    """*«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
-
-    MORDIDA: tire o `<span class="quadro-titulo">` do `.sec-grupo` no gerador.
-    """
+    """*«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert '<span class="quadro-titulo">Sistema</span>' in pagina
     assert ('<div class="sec-grupo"><span class="quadro-titulo">'
@@ -495,14 +367,7 @@ def test_configuracoes_avancadas_tem_a_letra_do_titulo_sistema() -> None:
 
 
 def test_o_registro_de_exemplo_cita_so_os_controles_da_cena() -> None:
-    """O registro do desenho citava p3 e p4 numa cena com 2 controles.
-
-    Quem conta os controles da cena é a mesma lista que diz «nos 2» e «cor de
-    fábrica lida (p1, p2)» na mesma linha: os jogadores citados têm de ser os
-    mesmos nas três.
-
-    MORDIDA: volte o `for c in MESA` na linha `[23:41:02]` do gerador.
-    """
+    """O registro do desenho citava p3 e p4 numa cena com 2 controles."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     linha = re.search(r"\[23:41:02\] (p\d.*?) · fw 0x0356 nos (\d+) · "
                       r"cor de fábrica lida \(([^)]*)\)", pagina)

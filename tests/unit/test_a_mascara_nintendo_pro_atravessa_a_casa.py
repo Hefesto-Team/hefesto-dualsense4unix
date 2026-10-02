@@ -46,17 +46,8 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
 MASCARA = "nintendo"
 
 
-# -- 1. o catálogo -------------------------------------------------------
-
-
 def test_o_catalogo_tem_a_terceira_mascara_com_o_par_do_driver() -> None:
-    """VID/PID lidos no fonte C: `hid-ids.h:1068,1073`.
-
-    O par TEM de ser 057e:2009: medido em 07/09/2026 contra a libSDL2 desta
-    máquina, é o único que devolve `SDL_GameControllerGetType = 5`
-    (NINTENDO_SWITCH_PRO). Com outro PID a máscara não mostra prompt de
-    Nintendo nenhum, que é a máscara inteira.
-    """
+    """VID/PID lidos no fonte C: `hid-ids.h:1068,1073`."""
     assert MASCARA in FLAVORS
     assert FLAVORS[MASCARA]["vendor"] == NINTENDO_VENDOR == 0x057E
     assert FLAVORS[MASCARA]["product"] == NINTENDO_PROCON_PRODUCT == 0x2009
@@ -64,63 +55,32 @@ def test_o_catalogo_tem_a_terceira_mascara_com_o_par_do_driver() -> None:
 
 
 def test_o_par_do_vpad_nao_e_o_par_que_o_produto_esconde() -> None:
-    """VPAD-04/VPAD-06 para a máscara nova, medido no valor real do IGNORE.
-
-    O invariante da casa é que o vpad nunca divida VID/PID com o aparelho que
-    o produto manda a SDL esconder. Para o Nintendo não há segundo PID (ver
-    o teste acima), então o invariante se verifica pelo outro lado: o par
-    057e/2009 NÃO pode estar no `SDL_GAMECONTROLLER_IGNORE_DEVICES` que este
-    produto emite.
-    """
+    """VPAD-04/VPAD-06 para a máscara nova, medido no valor real do IGNORE."""
     from hefesto_dualsense4unix.daemon.launch_env import _IGNORE_VALUE
 
     assert "0x057e" not in _IGNORE_VALUE.lower()
 
 
-# -- 2. o resolvedor, a CLI e o IPC --------------------------------------
-
-
 @pytest.mark.parametrize("palavra", ["nintendo", "NINTENDO", " switch ", "pro", "procon"])
 def test_o_resolvedor_estrito_aceita_a_palavra(palavra: str) -> None:
-    """`resolver_flavor` é o portão do IPC (`gamepad.emulation.set`).
-
-    Sem isto, pedir a máscara pela CLI ou pela tela devolve `invalid params`.
-    """
+    """`resolver_flavor` é o portão do IPC (`gamepad.emulation.set`)."""
     assert resolver_flavor(palavra) == MASCARA
 
 
 def test_o_normalizador_tolerante_nao_troca_a_mascara_por_outra() -> None:
-    """O caminho do disco: perfil e `DaemonConfig.gamepad_flavor`.
-
-    `normalize_flavor` é tolerante de propósito, e é justamente por isso que
-    ele já entregou CALADO uma máscara que ninguém pediu (o defeito de
-    10/08/2026 com `"sony"`). Aqui ele não pode devolver `DEFAULT_FLAVOR`.
-    """
+    """O caminho do disco: perfil e `DaemonConfig.gamepad_flavor`."""
     assert normalize_flavor(MASCARA) == MASCARA
     assert MASCARA in nomes_de_flavor_aceitos()
 
 
 def test_o_registro_por_aparelho_aceita_a_mascara() -> None:
-    """`external_mask` — a máscara por JOGADOR, que grava no disco.
-
-    `mascaras_validas` deriva do `FLAVORS` e `normalizar_mascara` é ESTRITA:
-    se a derivação quebrar, a escolha dela é recusada na gravação.
-    """
+    """`external_mask` — a máscara por JOGADOR, que grava no disco."""
     assert MASCARA in mascaras_validas()
     assert normalizar_mascara(" Nintendo ") == MASCARA
 
 
-# -- 3. o esquema de perfil ----------------------------------------------
-
-
 def test_o_esquema_de_perfil_conhece_as_mesmas_mascaras_do_catalogo() -> None:
-    """Nos DOIS sentidos — sobrar aqui também é divergência.
-
-    O `Literal` do pydantic é a única lista de máscaras digitada nesta casa
-    (anotação não se calcula), e por ser digitada ela diverge calada: um
-    perfil pedindo a máscara nova era recusado pelo pydantic com a máscara já
-    viva no catálogo.
-    """
+    """Nos DOIS sentidos — sobrar aqui também é divergência."""
     from hefesto_dualsense4unix.profiles.schema import MascaraDeGamepad
 
     assert set(get_args(MascaraDeGamepad)) == set(mascaras_validas())
@@ -134,9 +94,6 @@ def test_o_perfil_guarda_a_mascara_e_o_normalizador_a_devolve() -> None:
 
     assert normalizar_gamepad_flavor(MASCARA) == MASCARA
     assert ProfileModeConfig(kind="gamepad", gamepad_flavor=MASCARA).gamepad_flavor == MASCARA
-
-
-# -- 4. o env de lançamento ----------------------------------------------
 
 
 def test_o_launch_env_esconde_o_fisico_sob_a_mascara_nova() -> None:
@@ -166,37 +123,18 @@ def test_o_launch_env_esconde_o_fisico_sob_a_mascara_nova() -> None:
     assert env["SDL_GAMECONTROLLER_IGNORE_DEVICES"]
     assert env["SDL_JOYSTICK_HIDAPI"] == "0"
     assert env["PROTON_DISABLE_HIDRAW"]
-    # As duas sobem sempre em uinput e são evdev puro: mesmo tratamento.
     assert env == xbox
-
-
-# -- 5. as tabelas por sabor ---------------------------------------------
 
 
 @pytest.mark.parametrize("sabor", sorted(FLAVORS))
 def test_cada_mascara_do_catalogo_tem_botoes_e_capacidades(sabor: str) -> None:
-    """Fonte única de verdade: quem entra no `FLAVORS` entra nas duas tabelas.
-
-    Sem isto, um sabor novo herda por `.get(..., padrão)` o conjunto de outro
-    aparelho — que foi exatamente o defeito medido em 07/09/2026: com as
-    capabilities do Xbox sob o par 057e:2009, a SDL aplica a tabela do Pro e
-    o analógico DIREITO passa a ler o gatilho esquerdo.
-    """
+    """Fonte única de verdade: quem entra no `FLAVORS` entra nas duas tabelas."""
     assert sabor in BOTOES_POR_FLAVOR
     assert sabor in CAPACIDADES_POR_FLAVOR
 
 
 def test_a_mascara_nintendo_imita_o_aparelho_que_o_driver_descreve() -> None:
-    """Os 14 botões e os 4 eixos do `procon`, lidos em `hid-nintendo.c`.
-
-    `procon_button_mappings` (14 entradas) + `joycon_config_left_stick`/
-    `_right_stick`/`_dpad`. Os 14 têm de ser DECLARADOS mesmo os que nunca
-    são pressionados (o Capture, `BTN_Z`): `bN` na tabela da SDL é a POSIÇÃO
-    na ordem de código, e faltar um empurra todos os seguintes.
-
-    E o Pro NÃO tem gatilho analógico — `ABS_Z`/`ABS_RZ` não podem estar aqui,
-    senão `rightx` cai em cima do L2.
-    """
+    """Os 14 botões e os 4 eixos do `procon`, lidos em `hid-nintendo.c`."""
     ecodes = pytest.importorskip("evdev").ecodes
     caps = CAPACIDADES_POR_FLAVOR[MASCARA](with_ff=False)
 
@@ -238,29 +176,17 @@ def test_os_botoes_da_frente_seguem_a_posicao_como_a_casa_ja_decidiu() -> None:
 
 
 def test_os_gatilhos_digitais_tem_um_escritor_so() -> None:
-    """`l2_btn`/`r2_btn` fora da tabela: quem escreve BTN_TL2/TR2 é o analógico.
-
-    Dois escritores do mesmo código é um código cujo estado ninguém sabe.
-    """
+    """`l2_btn`/`r2_btn` fora da tabela: quem escreve BTN_TL2/TR2 é o analógico."""
     assert "l2_btn" not in BOTOES_POR_FLAVOR[MASCARA]
     assert "r2_btn" not in BOTOES_POR_FLAVOR[MASCARA]
     assert UinputGamepad._gatilho_apertado(255, False) is True
     assert UinputGamepad._gatilho_apertado(0, True) is False
-    # Histerese: parado em cima do ponto não oscila.
     assert UinputGamepad._gatilho_apertado(20, False) is False
     assert UinputGamepad._gatilho_apertado(20, True) is True
 
 
-# -- 6. a tela -----------------------------------------------------------
-
-
 def test_a_tela_sabe_nomear_a_mascara_e_o_chip_acende() -> None:
-    """O chip do cartão: `mascaras_montaveis` é a interseção catálogo x rótulo.
-
-    Enquanto `mesa_viva.NOME_DA_MASCARA` não tivesse a chave, o chip
-    continuaria cinza com a máscara já viva no daemon — que é o defeito que
-    esta sprint tinha por nome.
-    """
+    """O chip do cartão: `mascaras_montaveis` é a interseção catálogo x rótulo."""
     from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
     from hefesto_dualsense4unix.interface.pacotes.a01_jogar import mascaras_montaveis
 
@@ -272,11 +198,7 @@ def test_a_tela_sabe_nomear_a_mascara_e_o_chip_acende() -> None:
 
 
 def test_a_tela_diz_o_preco_da_mascara_nova() -> None:
-    """O gatilho analógico é a perda, e ela tem de estar ESCRITA.
-
-    Escolher entre três botões sem saber o que cada um custa não é escolher
-    (MASCARA-QUE-GRUDA-01, decisão dela).
-    """
+    """O gatilho analógico é a perda, e ela tem de estar ESCRITA."""
     from hefesto_dualsense4unix.app.actions.home_actions import (
         texto_do_custo_da_mascara,
     )
@@ -287,31 +209,7 @@ def test_a_tela_diz_o_preco_da_mascara_nova() -> None:
 
 
 def test_a_tela_diz_o_quinto_preco_o_dos_botoes_da_frente() -> None:
-    """Fora do lançador, os quatro botões da frente chegam trocados aos pares.
-
-    A CONFERÊNCIA DE 07/09/2026 ACHOU A METADE QUE FALTAVA. A frase de preço
-    declarava quatro perdas — giroscópio, acelerômetro, touchpad e o gatilho
-    analógico — e calava a quinta, que a mesma medição tinha encontrado. Esta é
-    a pior das cinco justamente porque **não parece defeito**: um jogo com
-    confirmar e cancelar trocados responde a tudo, só responde errado.
-
-    MEDIDO consultando a libSDL2 (2.30.0) desta máquina pelo GUID das TRÊS
-    máscaras que o produto emite, com e sem a env que o
-    `daemon.launch_env.compose_env` materializa
-    (`SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0`):
-
-        057e:2009 (nintendo)  sem a env -> a:b1,b:b0,x:b2,y:b3
-        057e:2009 (nintendo)  com  =0   -> a:b0,b:b1,x:b3,y:b2
-        045e:028e (xbox)                -> a:b0,b:b1,x:b2,y:b3  nos DOIS
-        054c:0df2 (dualsense)           -> a:b0,b:b1,x:b3,y:b2  nos DOIS
-
-    O mapeamento de fábrica do Pro traz `hint:…USE_BUTTON_LABELS:=1` — a
-    etiqueta da Nintendo, em que confirmar fica à direita. É a ÚNICA máscara do
-    catálogo cujo mapa depende do lançador; por isso o preço é dela sozinha, e
-    por isso a frase manda abrir o jogo pelo Hefesto.
-
-    A MORDIDA: tirar da frase a menção aos botões da frente reprova aqui.
-    """
+    """Fora do lançador, os quatro botões da frente chegam trocados aos pares."""
     from hefesto_dualsense4unix.app.actions.home_actions import (
         TEXTO_CUSTO_MASCARA_NINTENDO,
         TEXTO_CUSTO_MASCARA_XBOX,

@@ -1,49 +1,4 @@
-"""O número que se solta é o que acende — A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 1.
-
-**O que o diário dela mostrou, 30/09, 03:07:55:** o gatilho da lightbar soltou
-as lâmpadas em 1, 2 e 3 (``lampadas_liberadas``) e, TRÊS MILISSEGUNDOS
-depois, o mesmo disparo escreveu no aparelho 1, 3 e 4
-(``gatilho_da_cor_escrito``). Vinte e oito das 133 liberações de 24/09 a 30/09
-feitas só pelo rádio escreveram um desenho diferente do número que acabavam
-de soltar.
-
-**A causa:** a camada do co-op é uma CÓPIA do número do registro, fica acima da
-camada automática no merge (``_desired_coop_by_uniq``) e só se atualiza no
-tique do co-op, que roda depois da liberação. O report sai do merge com a
-cópia velha, e a correção vem ~2 s depois, numa escrita ``debug``.
-
-**A cura (a 1 da sprint):** o gatilho ganha um PREPARO, que roda na thread do
-laço antes de a tarefa ir ao executor: solta as lâmpadas e pede ao co-op a
-republicação dos números SEM escrita (``set_coop_outputs(escrever=False)``).
-A escrita é a do gatilho, uma por controle, nos dois transportes.
-
-**A bancada:** a de jogo aberto da O-ASSENTO-GUARDADO-NAO-ANDA-02 (o backend, o
-co-op e o registro de produção), com o provedor automático de produção
-(``make_auto_output_provider``), handles que guardam cada ``writeReport`` e
-nós de LED de verdade (``SysfsLedNode``) num diretório temporário; o
-``disparar_gatilhos_devidos`` de produção roda num laço ``asyncio`` com um
-executor de verdade. O número esperado sai da conta escrita aqui (a fila menos
-quem saiu), e o desenho se lê pela tabela do ``hid-playstation``
-(``player_ids[]``), escrita aqui e não lida do ``led_control``.
-
-AS MORDIDAS (02/10/2026, cada uma devolvida com o md5 conferido):
-
-- sem o preparo (a republicação antes da tarefa): o report diz o número velho
-  e 25 reprovam — as 18 da régua 1, a 3, as quatro da 4, a do número no
-  diário e a da camada publicada entre duas liberações; é o disparo das
-  03:07:55;
-- o preparo publicando COM escrita: duas escritas por controle, e as nove da
-  régua 2 e a 3 reprovam;
-- a publicação dentro do ``_reafirmar`` (o executor): a régua 3 reprova;
-- ``camada_do_coop_escrita`` em ``debug``, ou com o endereço cru: a régua 5;
-- o preparo publicando camada sem secundário: a régua 6;
-- o ``escrever=False`` como padrão do ``set_coop_outputs``: a escrita do
-  co-op cala, e a régua 5 reprova (a linha da camada escrita não sai). A
-  estreia da régua 7 NÃO o distingue, e está medido: quem chega no fim acende
-  pelo priming do hotplug, que lê a camada automática com o mesmo número.
-
-Nenhum endereço real: faixa forjada ``aa:bb:cc``.
-"""
+"""O número que se solta é o que acende — A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 1."""
 
 from __future__ import annotations
 
@@ -83,7 +38,7 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     Relogio,
 )
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
-    config_isolado as config_isolado,  # fixture: o controllers.json num tmp
+    config_isolado as config_isolado,
 )
 from tests.unit.test_o_numero_do_jogador_se_reorganiza_na_hora import _Tempo
 
@@ -91,12 +46,9 @@ QUATRO = (P1, P2, P3, P4)
 PRAZO = prazo_do_lugar_guardado()
 TIQUE = 2.0
 
-#: A tabela do ``hid-playstation`` (``player_ids[]``): bit ``i`` = lâmpada ``i``.
 PLAYER_IDS = {1: 0x04, 2: 0x0A, 3: 0x15, 4: 0x1B}
 NUMERO_DO_VALOR = {valor: numero for numero, valor in PLAYER_IDS.items()}
-#: O ``valid_flag1`` do report: o bit que autoriza o número.
 _FLAG1_DO_NUMERO = 0x10
-#: Onde o ``common`` começa no ``0x31``: id, seq e a etiqueta.
 _COMMON_NO_RADIO = 3
 
 
@@ -164,7 +116,6 @@ class MesaDaLuz(MesaDoJogo):
             "hefesto_dualsense4unix.core.sysfs_leds.discover",
             lambda: {u: self._no_de(u) for u in self.mesa.nodes},
         )
-        # O mecanismo do gatilho pergunta a hora ao mesmo relógio.
         monkeypatch.setattr(cx, "time", _Tempo(relogio))
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="executor")
         self.fio_do_executor: set[int] = set()
@@ -201,7 +152,6 @@ class MesaDaLuz(MesaDoJogo):
         ), patch.object(PyDualSenseController, "_open_one", side_effect=_abrir):
             self.inst.connect()
 
-    # -- o que esta régua lê ----------------------------------------------
 
     def limpar(self) -> None:
         for handle in self.handles.values():
@@ -242,11 +192,10 @@ def mesa_da_luz(
             bancada.mesa.sentar(uniq, transporte=via)
         for _ in range(3):
             bancada.tique()
-        assert bancada.reg.liberar_as_lampadas() is True  # a adoção já pintou
-        bancada.tique()  # o co-op publica a camada com os números de agora
+        assert bancada.reg.liberar_as_lampadas() is True
+        bancada.tique()
         esperado = {UNIQS[n]: n + 1 for n in range(quantos)}
         assert bancada.a_tela() == esperado
-        # A primeira conferência da numeração não arma: é a base da fatia.
         assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is False
         return bancada
 
@@ -267,8 +216,6 @@ def _sai_e_o_prazo_passa(bancada: MesaDaLuz, sai: str) -> dict[str, int]:
     ordem = [u for u in UNIQS if u in bancada.mesa.nodes]
     bancada.mesa.levantar(sai)
     bancada.tique()
-    # A volta do hotplug confere a numeração: a mesa perdeu alguém e o gatilho
-    # arma, mas o lugar guardado segura o número de quem ficou (D-2409).
     _a_volta_e_o_disparo(bancada)
     assert bancada.reg.numeros_da_mesa() == {
         u: n + 1 for n, u in enumerate(ordem) if u != sai
@@ -285,10 +232,6 @@ def _sai_e_o_prazo_passa(bancada: MesaDaLuz, sai: str) -> dict[str, int]:
     bancada.limpar()
     return conta if andou else {}
 
-
-# ---------------------------------------------------------------------------
-# Régua 1 — o primeiro report depois da liberação já diz o número novo
-# ---------------------------------------------------------------------------
 
 SAI = pytest.mark.parametrize("sai", QUATRO, ids=["sai-p1", "sai-p2", "sai-p3", "sai-p4"])
 VIA = pytest.mark.parametrize("transporte", ["bt", "usb", "mista"])
@@ -314,11 +257,6 @@ class TestOPrimeiroReportDizONumeroNovo:
             )
 
 
-# ---------------------------------------------------------------------------
-# Régua 2 — uma escrita por controle por disparo
-# ---------------------------------------------------------------------------
-
-
 class TestUmaEscritaPorControle:
     @VIA
     @SAI
@@ -335,11 +273,6 @@ class TestUmaEscritaPorControle:
             )
 
 
-# ---------------------------------------------------------------------------
-# Régua 3 — o preparo roda no fio do laço, e a tarefa no executor
-# ---------------------------------------------------------------------------
-
-
 class TestOFioDeCadaUm:
     def test_o_preparo_no_laco_a_escrita_no_executor(
         self, mesa_da_luz: Callable[..., MesaDaLuz], monkeypatch: pytest.MonkeyPatch
@@ -354,7 +287,7 @@ class TestOFioDeCadaUm:
             return publicar(*a, **kw)
 
         monkeypatch.setattr(bancada.inst, "set_coop_outputs", espiao)
-        fio_do_laco = threading.get_ident()  # o `asyncio.run` roda neste fio
+        fio_do_laco = threading.get_ident()
         bancada.disparar()
         assert publicacoes, "o disparo não republicou a camada do co-op"
         assert set(publicacoes) == {fio_do_laco}, (
@@ -364,11 +297,6 @@ class TestOFioDeCadaUm:
         assert escritas and escritas <= bancada.fio_do_executor, (
             "a escrita do gatilho saiu do executor"
         )
-
-
-# ---------------------------------------------------------------------------
-# Régua 4 — o «Renumerar» e a volta tardia do P1 também
-# ---------------------------------------------------------------------------
 
 
 class TestORenumerarEAVoltaTardia:
@@ -404,10 +332,6 @@ class TestORenumerarEAVoltaTardia:
         bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
         bancada.limpar()
         bancada.disparar()
-        # A conta: a mesa estável congelou a ordem de chegada (P1 a P4), e quem
-        # volta retoma o lugar dela — o P1 volta a ser o 1, e os três que
-        # ficaram sobem um número cada (o caso da cópia velha: eles JÁ tinham
-        # camada do co-op com o número de antes).
         conta = {P1: 1, P2: 2, P3: 3, P4: 4}
         assert bancada.a_tela() == conta, f"a conta e a tela discordam: {bancada.a_tela()}"
         for uniq, numero in conta.items():
@@ -416,11 +340,6 @@ class TestORenumerarEAVoltaTardia:
             )
 
 
-# ---------------------------------------------------------------------------
-# Régua 5 — o diário diz o número
-# ---------------------------------------------------------------------------
-
-#: A máscara da casa: os octetos 4 e 5 zerados, conferida por expressão aqui.
 _MASCARADO = re.compile(r"^[0-9a-f]{6}0000[0-9a-f]{2}$")
 
 
@@ -442,25 +361,18 @@ class TestODiarioDizONumero:
         from tests.unit.test_backend_multi_controller import _null_evdev
 
         inst = PyDualSenseController(evdev_reader=_null_evdev())
-        # Um endereço da faixa forjada com os octetos 4 e 5 acesos: o cru e o
-        # mascarado são diferentes, e a régua vê qual saiu.
         chave = "AA:BB:CC:12:34:02"
         inst._handles = {chave: _HandleQueGuarda("bt")}  # type: ignore[assignment]
         camada = {"aabbcc123402": OutputSpec(player_leds=player_led_pattern(2))}
         with structlog.testing.capture_logs() as registros:
             inst.set_coop_outputs(camada)
-            inst.set_coop_outputs(camada)  # a mesma camada: nenhuma linha
+            inst.set_coop_outputs(camada)
         linhas = [r for r in registros if r["event"] == "camada_do_coop_escrita"]
         assert len(linhas) == 1, linhas
         assert linhas[0]["log_level"] == "info"
         numeros = linhas[0]["numeros"]
         assert list(numeros.values()) == [2]
         assert all(_MASCARADO.match(endereco) for endereco in numeros), numeros
-
-
-# ---------------------------------------------------------------------------
-# Régua 6 — sem co-op, nada muda
-# ---------------------------------------------------------------------------
 
 
 class TestSemCoOp:
@@ -485,11 +397,6 @@ class TestSemCoOp:
         assert bancada.o_que_acendeu(P1) == [1]
 
 
-# ---------------------------------------------------------------------------
-# Régua 7 — quem chega sem liberação segue aceso pelo co-op
-# ---------------------------------------------------------------------------
-
-
 class TestQuemChegaSemLiberacao:
     def test_a_estreia_acende_sem_esperar_o_gatilho(
         self, mesa_da_luz: Callable[..., MesaDaLuz]
@@ -497,9 +404,6 @@ class TestQuemChegaSemLiberacao:
         bancada = mesa_da_luz("bt", quantos=3)
         bancada.limpar()
         bancada.mesa.sentar(P4, transporte="bt")
-        # UMA volta: o hotplug abre o handle e o ciclo cheio do co-op o
-        # registra. Nenhum gatilho disparou, e o quarto já acende o 4 — o
-        # número de quem chega no fim não muda o de ninguém.
         bancada.tique()
         assert bancada.o_que_acendeu(P4)[-1:] == [4], (
             f"o quarto estreou sem acender o 4: {bancada.o_que_acendeu(P4)}"
@@ -515,7 +419,6 @@ class TestQuemChegaSemLiberacao:
         _a_volta_e_o_disparo(bancada)
         for _ in range(math.ceil(PRAZO / TIQUE) + 1):
             bancada.tique()
-        # O ciclo cheio do co-op (uma chegada) publica com o número ainda preso.
         bancada.coop.sync(force=True)
         assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is True
         bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
@@ -525,11 +428,6 @@ class TestQuemChegaSemLiberacao:
             assert bancada.o_que_acendeu(uniq)[:1] == [numero], (
                 f"{uniq}: {bancada.o_que_acendeu(uniq)}, a conta diz {numero}"
             )
-
-
-# ---------------------------------------------------------------------------
-# Régua 8 — o cabo sem o nó de LED também acende a conta
-# ---------------------------------------------------------------------------
 
 
 class _Luz:
@@ -547,21 +445,7 @@ class TestOCaboSemONo:
     def test_o_cabo_sem_o_no_de_led_acende_a_conta(
         self, mesa_da_luz: Callable[..., MesaDaLuz], monkeypatch: pytest.MonkeyPatch, sai: str
     ) -> None:
-        """O cabo sem nó de LED gravável (sem a regra 77), o caminho degradado de sempre.
-
-        O gatilho não o alcança (o rádio vai pelo ``0x31``, o cabo pela classe
-        LED, nó a nó), e quem leva o número a ele é a escrita do co-op, pelo
-        ``handle`` (o fallback da pydualsense em ``_write_partial_output``). Em
-        f78c0c035 o tique do co-op a fazia depois da liberação; com o preparo
-        publicando a camada sem escrita e o tique vendo a camada já publicada,
-        ninguém a fazia, e o P4 ficava com o 4 depois de a conta dizer 3 (as
-        três reprovavam, medido pelo conferente final em 02/10/2026; na base,
-        as três passam). O P4 é o que muda de número nas três saídas.
-
-        MORDIDA (02/10/2026): o ``escrever=False`` pulando também o cabo sem nó
-        (o ``return`` antes do laço, como estava): as três reprovam, e o md5 do
-        backend volta conferido.
-        """
+        """O cabo sem nó de LED gravável (sem a regra 77), o caminho degradado de sempre."""
         bancada = mesa_da_luz("usb")
         monkeypatch.setattr(
             "hefesto_dualsense4unix.core.sysfs_leds.discover",

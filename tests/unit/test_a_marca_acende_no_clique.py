@@ -1,14 +1,4 @@
-"""A marca "há escolhas por aplicar" acende no CLIQUE, não só na troca de aba.
-
-Achado da conferência de 23/08/2026. A marca do rodapé nasceu junto com o
-diálogo de fechamento, e tinha só dois gatilhos: ir para a bandeja e trocar de
-aba. **Quem declarava e clicava direto no X via o diálogo de fechamento sem
-nunca ter visto o aviso** — e o aviso existe justamente para o diálogo não ser
-surpresa.
-
-As três seções que escrevem `_maquina_pendente` são donos diferentes, e nenhuma
-chamava a marca. Este arquivo prende as três de uma vez.
-"""
+"""A marca "há escolhas por aplicar" acende no CLIQUE, não só na troca de aba."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -52,10 +42,6 @@ def test_o_orcamento_acende_a_marca() -> None:
     """MORDE: sem a chamada, declarar orçamento não avisa que há pendência."""
     host = _HostQueConta()
 
-    # NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`: o seletor devolve o
-    # id do PERFIL, e quem traduz para a chave de disco é `TETO_POR_PERFIL`.
-    # Passar "max" aqui (o id antigo) faria o dublê mentir sobre o que o widget
-    # entrega, e o teste mediria uma tela que não existe mais.
     secao_orcamento._ao_escolher(
         host, _Seletor(secao_orcamento.PERFIL_TUDO_LIGADO)
     )
@@ -70,10 +56,7 @@ def test_o_orcamento_acende_a_marca() -> None:
 
 
 def test_hospedeiro_sem_rodape_nao_derruba_a_declaracao() -> None:
-    """A guarda tolerante: dublê sem a marca não pode perder a declaração.
-
-    MORDE: trocar o `getattr` com guarda por chamada direta.
-    """
+    """A guarda tolerante: dublê sem a marca não pode perder a declaração."""
 
     class _SemRodape:
         def __init__(self) -> None:
@@ -94,15 +77,7 @@ def test_hospedeiro_sem_rodape_nao_derruba_a_declaracao() -> None:
 
 
 def test_as_tres_secoes_pedem_a_marca() -> None:
-    """O portão do padrão: quem escreve a declaração TEM de acender a marca.
-
-    Confere pela fonte, e não por execução, porque as três escrevem em pontos
-    de forma diferente (função de módulo, método com `self._host`, método dentro
-    de `suppress`). Um portão por execução precisaria de três dublês diferentes
-    e passaria a medir o dublê.
-
-    MORDE: apagar a chamada de qualquer uma das três.
-    """
+    """O portão do padrão: quem escreve a declaração TEM de acender a marca."""
     import inspect
 
     for modulo in (secao_orcamento, secao_controles, secao_mesa):

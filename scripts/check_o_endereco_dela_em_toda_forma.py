@@ -1,49 +1,5 @@
 #!/usr/bin/env python3
-"""O endereço dela em toda forma — a régua que PERGUNTA AO DONO (local, fora do CI).
-
-O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01 (27/09/2026).
-
-A máscara da casa zera os octetos 4 e 5 e deixa o 1, 2, 3 e 6 à mostra. Os três
-portões de anonimato procuram o endereço INTEIRO (por OUI ou por forma), e por
-isso não viam os pedaços que entregam o que a máscara esconde:
-
-- o nome de nó `hefesto_som_<6 hex>` / `hefesto_mic_…` / `…HEFESTO<6 hex>`,
-  que são os octetos 4, 5 e 6: ao lado do endereço mascarado do mesmo controle,
-  devolvem o endereço inteiro. Havia 4 sufixos reais em 16 arquivos
-  versionados;
-- a fixture de faixa sintética com os octetos de baixo reais
-  (`aa:bb:cc:<4>:<5>:<6>`): o `check_endereco_de_radio.py` a lê como exemplo
-  didático, e ela carrega exatamente o que a máscara esconde.
-
-Esta régua não adivinha por forma: ela lê os endereços reais DESTA máquina
-(`maquina.json` e `controllers.json` do HOME de verdade, `bluetoothctl` e o
-sysfs) e procura, na árvore versionada, **toda janela de três octetos que
-contenha o octeto 4 ou o 5**. Ela nunca imprime o valor achado: diz o
-arquivo, a linha, o endereço pelo índice e o último octeto (que a máscara já
-mostra).
-
-AS JANELAS SÃO DO DONO (O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01,
-28/09/2026): `core/formas_do_endereco.formas_do_endereco`, nas duas ordens de
-byte, com `:` `-` `_` `.`, espaço e colada. Até ali esta régua lia só `[:-]` e
-a ordem direta, e o despejo invertido com espaço de um ensaio de 15/08 passava
-por ela. E ela procura também os MACs dos virtuais de cada endereço
-(`uhid_gamepad.vpad_macs_do_aparelho`, sem copiar a conta nem o número): o
-virtual é o endereço disfarçado, e dois bytes do hash ao lado da máscara
-bastam para voltar a ele — por isso o virtual com a máscara da casa aplicada
-(`02:fe:<3.º>:00:00:<6.º>`, a forma que a máscara do diário de antes de
-28/09 escrevia) também é achado, lido com o prefixo.
-
-`--arquivo <caminho>` mede o que se colou FORA da árvore (um «Copiar», um
-relato), e `--lar <pasta>` troca a máquina inteira por um lar de mentira: lê
-só o `maquina.json` e o `controllers.json` de lá, sem perguntar ao
-`bluetoothctl` nem ao sysfs.
-
-Fica fora do CI (`FORA-DO-CI` no `portoes.sh`): no runner não há endereço
-nenhum a perguntar.
-
-Isenção de linha, como a do `check_endereco_de_radio.py`:
-`<!-- endereco-de-mentira: <motivo> -->`.
-"""
+"""O endereço dela em toda forma — a régua que PERGUNTA AO DONO (local, fora do CI)."""
 from __future__ import annotations
 
 import argparse
@@ -70,7 +26,6 @@ ISENCAO = re.compile(r"<!--\s*endereco-de-mentira\s*:\s*\S")
 _MAC_COM_SEPARADOR = re.compile(r"(?i)(?<![0-9a-f])([0-9a-f]{2}(?:[:-][0-9a-f]{2}){5})(?![0-9a-f])")
 _MAC_COLADO = re.compile(r"(?i)(?<![0-9a-f])([0-9a-f]{12})(?![0-9a-f])")
 
-#: Os índices (a partir de 0) dos octetos que a máscara esconde.
 _ESCONDIDOS = (3, 4)
 
 
@@ -89,19 +44,7 @@ def sintetico(o: tuple[str, ...]) -> bool:
 
 
 def enderecos_do_texto(texto: str, *, colado: bool) -> set[tuple[str, ...]]:
-    """Os endereços de uma FONTE da máquina (o config, o ``bluetoothctl``, o sysfs).
-
-    O UUID sai antes das regex (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01,
-    29/09/2026): o ``controllers.json`` guarda o ``boot_id``, e o último grupo
-    dele (doze hex) virava um «endereço dela» — a linha do diário que cita o
-    mesmo boot (``arquivo_boot=<uuid>``) era acusada por um endereço que não é
-    de aparelho nenhum. A forma do UUID é a do dono da máscara, a mesma que ele
-    guarda antes da forma colada.
-
-    SÓ NA LEITURA: a varredura (:func:`varrer`) segue lendo o UUID inteiro. Um
-    UUID de versão 1 carrega um endereço no último grupo, e um trecho com forma
-    de UUID não pode virar esconderijo.
-    """
+    """Os endereços de uma FONTE da máquina (o config, o ``bluetoothctl``, o sysfs)."""
     texto = _UUID.sub(" ", texto)
     achados: set[tuple[str, ...]] = set()
     padroes = (_MAC_COM_SEPARADOR, _MAC_COLADO) if colado else (_MAC_COM_SEPARADOR,)
@@ -151,8 +94,6 @@ def janelas(o: tuple[str, ...]) -> list[tuple[int, tuple[str, str, str]]]:
     return saida
 
 
-#: Uma sequência hex solta, de 6 a 12 dígitos: o nome de nó (6), o endereço
-#: colado (12) e tudo entre. Mais longa que 12 é hash, e não endereço.
 _SEQUENCIA_HEX = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{6,12}(?![0-9a-f])")
 
 
@@ -187,15 +128,7 @@ def janelas_coladas(reais: set[tuple[str, ...]]) -> dict[str, str]:
 
 
 def virtuais_da_maquina(reais: set[tuple[str, ...]]) -> dict[str, tuple[str, ...]]:
-    """Rótulo (`V<k> de E<n>`) → os octetos de cada MAC de virtual de cada endereço.
-
-    Todos os que o dono dos vivos pode vestir, até o fim da lista dele: o
-    número de MACs por aparelho é do `uhid_gamepad`, e uma cópia dele aqui
-    envelheceria calada. O jogador não entra na conta de quem tem endereço.
-
-    O rótulo não leva octeto nenhum do virtual: todos os quatro de baixo são
-    hash do endereço.
-    """
+    """Rótulo (`V<k> de E<n>`) → os octetos de cada MAC de virtual de cada endereço."""
     from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_macs_do_aparelho
 
     virtuais: dict[str, tuple[str, ...]] = {}
@@ -205,28 +138,11 @@ def virtuais_da_maquina(reais: set[tuple[str, ...]]) -> dict[str, tuple[str, ...
     return virtuais
 
 
-#: Os separadores do dono, e o colado.
 _SEPARADORES = (":", "-", "_", ".", " ", "")
 
 
 def pedacos_dos_virtuais(virtuais: dict[str, tuple[str, ...]]) -> dict[str, str]:
-    """Os QUATRO bytes do hash de cada virtual, nas duas ordens e em toda grafia → o rótulo.
-
-    Quatro, e não a janela de três do dono, por medida (28/09/2026): a árvore
-    tem 153 mil janelas de três octetos separados por espaço (quase todas no
-    despejo decodificado do HCI de 15/08), e 64 virtuais por endereço fariam
-    dezenas de janelas casarem por acaso — o portão ficaria vermelho de ruído.
-    Os quatro bytes juntos são o virtual inteiro menos o prefixo, e o acaso
-    deles é desprezível.
-
-    E O VIRTUAL COM A MÁSCARA DA CASA (28/09/2026, conferência): zerar o 4.º e
-    o 5.º octetos do virtual deixa o 3.º e o 6.º, dois bytes do hash, e com a
-    máscara do endereço ao lado sobram uns dois candidatos (a medida da
-    sprint). Esses dois bytes sozinhos casariam por acaso com o ruído acima,
-    então eles se leem com o prefixo, os seis octetos juntos
-    (`02:fe:<3.º>:00:00:<6.º>`, nas duas ordens e em toda grafia): com o
-    prefixo, o acaso volta a ser desprezível.
-    """
+    """Os QUATRO bytes do hash de cada virtual, nas duas ordens e em toda grafia → o rótulo."""
     pedacos: dict[str, str] = {}
     for rotulo, o in virtuais.items():
         com_a_mascara = (*o[:3], "00", "00", o[5])
@@ -236,7 +152,6 @@ def pedacos_dos_virtuais(virtuais: dict[str, tuple[str, ...]]) -> dict[str, str]
     return pedacos
 
 
-#: Uma corrida de três octetos ou mais com o MESMO separador, ou colada.
 _CORRIDA = re.compile(
     r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}([:\-_. ])[0-9a-f]{2}(?:\1[0-9a-f]{2})+|[0-9a-f]{8,})"
     r"(?![0-9a-f])"
@@ -244,14 +159,7 @@ _CORRIDA = re.compile(
 
 
 def achados_dos_virtuais(linha: str, pedacos: dict[str, str]) -> list[str]:
-    """Os rótulos dos virtuais cujos quatro bytes de hash (ou os seis octetos
-    com a máscara da casa) estão na linha.
-
-    Por dicionário, e não por regex: são 64 virtuais por endereço, e uma regex
-    por rótulo custaria 64 varreduras de cada linha da árvore. A corrida colada
-    se lê como a do dono: a par, alinhada pelo começo; a ímpar não diz onde
-    começa o octeto, e as duas paridades são lidas.
-    """
+    """Os rótulos dos virtuais cujos quatro bytes de hash (ou os seis octetos"""
     if not pedacos:
         return []
     rotulos = []
@@ -272,11 +180,7 @@ def achados_dos_virtuais(linha: str, pedacos: dict[str, str]) -> list[str]:
 
 
 def achados_colados(linha: str, coladas: dict[str, str]) -> list[str]:
-    """Os rótulos das janelas coladas, alinhadas a octeto, em cada sequência hex.
-
-    Olha DENTRO da sequência: o endereço colado inteiro (`aabbccddeeff`) tem a
-    janela dos octetos 4 a 6 a partir do sétimo dígito, e ela não tem borda.
-    """
+    """Os rótulos das janelas coladas, alinhadas a octeto, em cada sequência hex."""
     rotulos = []
     for m in _SEQUENCIA_HEX.finditer(linha):
         seq = m.group(0).lower()
@@ -301,10 +205,6 @@ def arquivos_versionados() -> list[Path]:
     ]
 
 
-#: O que uma linha tem de ter para carregar um pedaço: três octetos separados
-#: ou seis hex colados. Sem isto, nenhum pedaço cabe nela, e as regex por
-#: endereço nem rodam — medido em 28/09/2026, elas eram 44 dos 55 segundos
-#: da varredura com dez endereços, quase todos gastos em linha de prosa.
 _PODE_TER_PEDACO = re.compile(
     r"(?i)[0-9a-f]{2}[:\-_. ][0-9a-f]{2}[:\-_. ][0-9a-f]{2}|[0-9a-f]{6}"
 )

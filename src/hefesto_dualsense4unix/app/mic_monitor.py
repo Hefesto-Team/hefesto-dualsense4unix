@@ -76,16 +76,11 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Formato da captura. 16 kHz mono s16le é mais que suficiente para um
-#: medidor de nível (não é gravação) e mantém o bloco pequeno: 100 ms = 3200
-#: bytes, um `read()` a cada 100 ms por controle.
 _TAXA_HZ = 16000
 _BYTES_POR_AMOSTRA = 2
 _BLOCO_MS = 100
 _BLOCO_BYTES = int(_TAXA_HZ * _BYTES_POR_AMOSTRA * _BLOCO_MS / 1000)
 
-#: Piso da escala em dBFS. Abaixo disso o medidor mostra vazio — 60 dB de
-#: faixa é o que um medidor de voz precisa mostrar sem virar ruído visual.
 _PISO_DBFS = -60.0
 
 _TIMEOUT_SUBPROCESS_S = 2.0
@@ -93,30 +88,7 @@ _TIMEOUT_SUBPROCESS_S = 2.0
 
 @dataclass(frozen=True)
 class LeituraMic:
-    """O que o card mostra: o mic (nível e mute) e o mudo da SAÍDA do controle.
-
-    ``nivel`` é 0.0-1.0 já em escala de dB (ver `nivel_para_fracao`), pronto
-    para virar altura de barra. ``None`` ali NÃO é o mesmo que ``0.0``: quer
-    dizer que não há captura nenhuma, e o card apaga o medidor em vez de
-    desenhar uma barra parada no zero fingindo silêncio. ``muted`` None = a
-    source existe mas o estado de mute ainda não foi lido — o selo espera em
-    vez de chutar "ATIVO".
-
-    ``saida_muda`` é a CAMADA 1 do alto-falante (o sink do PipeWire) e não diz
-    nada sobre o microfone; viaja junto porque este é o leitor de PipeWire da
-    janela e porque o card já lê o valor desta posição
-    (``controller_card.saida_muda_do_entry``). ``None`` = não deu para saber, o
-    que é diferente de "não está muda" — só ``True`` acende o selo.
-
-    ``sink`` é o NOME desse mesmo sink de saída, e viaja pela mesma carona e
-    pelo mesmo motivo (SOM-04): o som de confirmação e o botão de rota
-    (``app/audio_saida.py``) precisam mandar o áudio para o sink DO CONTROLE,
-    explicitamente, e quem resolve "qual sink é de qual controle" já é este
-    módulo. Publicar o nome aqui é o que evita um SEGUNDO leitor de PipeWire na
-    janela. ``""`` = não deu para casar com certeza — o caso do controle no
-    RÁDIO, que não publica placa de som —, e quem recebe "" não toca e não
-    roteia, em vez de chutar.
-    """
+    """O que o card mostra: o mic (nível e mute) e o mudo da SAÍDA do controle."""
 
     nivel: float | None = 0.0
     muted: bool | None = None
@@ -125,28 +97,8 @@ class LeituraMic:
     sink: str = ""
 
 
-# ---------------------------------------------------------------------------
-# A resolução `uniq -> nó de áudio` MUDOU DE CAMADA (MIC-DA-MESA-ELEICAO-01)
-# ---------------------------------------------------------------------------
-#
-# `CasamentoUSB`, `fontes_dualsense`, `sinks_dualsense`, `escolher_fonte`,
-# `escolher_sink` e `sufixo_da_ponte_bt` desceram para
-# `integrations/fontes_de_captura.py`. O motivo é o mesmo do `app/usb_pai.py`
-# (MIC-DA-MESA-CHEIA-01, 20/08): o DAEMON passou a precisar da mesma resposta —
-# a ELEIÇÃO DE MICROFONE resolve `uniq -> fonte` — e o daemon **não importa
-# nada de `app/`**. Duplicar criaria duas verdades sobre a mesma pergunta.
-#
-# Este arquivo continua a reexportar tudo (ver os imports do topo): quem já
-# importava daqui não muda uma linha.
-
 def muted_de_saida(saida: str) -> bool | None:
-    """Lê ``Mute: yes|no`` do `pactl get-source-mute`/`get-sink-mute`; None se ilegível.
-
-    Os dois comandos respondem com a MESMA linha, então o parser é um só.
-
-    Só funciona com `LC_ALL=C` (ver o cabeçalho do módulo). Saída inesperada
-    vira None — o selo prefere esperar a mentir.
-    """
+    """Lê ``Mute: yes|no`` do `pactl get-source-mute`/`get-sink-mute`; None se ilegível."""
     texto = saida.strip().lower()
     if texto.endswith("yes"):
         return True
@@ -156,11 +108,7 @@ def muted_de_saida(saida: str) -> bool | None:
 
 
 def rms_de_pcm_s16le(bloco: bytes) -> float:
-    """RMS normalizado (0.0-1.0) de um bloco PCM 16 bits little-endian.
-
-    Bloco vazio/ímpar → 0.0: um `read()` truncado no encerramento do `parec`
-    não pode virar pico no medidor.
-    """
+    """RMS normalizado (0.0-1.0) de um bloco PCM 16 bits little-endian."""
     if len(bloco) < 2:
         return 0.0
     amostras = array.array("h")
@@ -168,19 +116,13 @@ def rms_de_pcm_s16le(bloco: bytes) -> float:
     if not amostras:
         return 0.0
     if sys.byteorder == "big":
-        # `parec` entrega s16LE; em máquina big-endian o `array` leria os
-        # bytes trocados e o medidor viraria ruído.
         amostras.byteswap()
     soma = sum(float(a) * float(a) for a in amostras)
     return math.sqrt(soma / len(amostras)) / 32768.0
 
 
 def nivel_para_fracao(rms: float) -> float:
-    """RMS linear → 0.0-1.0 em escala de dB (o que o olho lê como "volume").
-
-    Escala linear é inútil num medidor de voz: fala normal fica com 3% de
-    barra e só um grito enche. Mapeia `_PISO_DBFS`..0 dBFS em 0..1.
-    """
+    """RMS linear → 0.0-1.0 em escala de dB (o que o olho lê como "volume")."""
     if rms <= 0.0:
         return 0.0
     dbfs = 20.0 * math.log10(min(1.0, rms))
@@ -189,31 +131,10 @@ def nivel_para_fracao(rms: float) -> float:
     return min(1.0, (dbfs - _PISO_DBFS) / (-_PISO_DBFS))
 
 
-# ---------------------------------------------------------------------------
-# Monitor (threads)
-# ---------------------------------------------------------------------------
-
-
 class MicMonitor:
-    """Captura o nível do mic dos controles enquanto a aba Status está visível.
+    """Captura o nível do mic dos controles enquanto a aba Status está visível."""
 
-    Uso (a mixin de status é a dona)::
-
-        monitor.set_ativo(True)              # entrou na aba Status
-        monitor.set_controles(("aabb...",))  # tick de 10 Hz, barato
-        leitura = monitor.leitura("aabb...") # None = sem mic atribuível
-        monitor.set_ativo(False)             # saiu da aba: mata tudo
-
-    ``set_ativo(False)`` não é otimização: sem ele, um `parec` por controle
-    ficaria capturando o microfone da usuária a sessão inteira com a janela
-    minimizada.
-    """
-
-    #: Intervalo da supervisora. Descobrir sources é subprocess; 3 s é rápido
-    #: o bastante para plugar um controle e ver o medidor aparecer.
     _SUPERVISAO_S: ClassVar[float] = 3.0
-    #: Frequência de releitura do mute. O nível é contínuo; o mute muda por
-    #: gesto humano — 1 Hz é imperceptível e evita um subprocess por bloco.
     _MUTE_S: ClassVar[float] = 1.0
 
     def __init__(
@@ -249,7 +170,6 @@ class MicMonitor:
         self._parar = threading.Event()
         self._supervisora: threading.Thread | None = None
 
-    # -- API da thread GTK (tudo barato: só dict/tuple sob lock) ----------
 
     def set_ativo(self, ativo: bool) -> None:
         """Liga/desliga a captura. Chamado pelo gancho de troca de aba."""
@@ -270,21 +190,7 @@ class MicMonitor:
         self._acordar.set()
 
     def leitura(self, uniq: str) -> LeituraMic | None:
-        """Leitura deste controle; None = nada a dizer sobre mic NEM sobre saída.
-
-        Duas fontes independentes se encontram aqui: a captura do microfone
-        (thread de `parec`) e o mudo do sink de saída (thread supervisora).
-        Uma pode existir sem a outra, e é por isso que a saída muda NÃO viaja
-        dentro da leitura publicada pela captura: por Bluetooth sem a ponte de
-        mic, ou sem `parec` na máquina, não há captura nenhuma — e o
-        alto-falante continua mudo do mesmo jeito.
-
-        Sem captura, o carona vira uma leitura própria com ``nivel=None``, que
-        o card desenha EXATAMENTE como desenha a ausência de microfone (o
-        bloco fica, o medidor some). E ela só nasce com ``saida_muda is True``:
-        materializar um objeto para dizer "a saída não está muda" seria
-        inventar presença de sensor para não dizer nada.
-        """
+        """Leitura deste controle; None = nada a dizer sobre mic NEM sobre saída."""
         with self._lock:
             base = self._leituras.get(uniq)
             saida_muda = self._saidas_mudas.get(uniq)
@@ -297,12 +203,6 @@ class MicMonitor:
             return LeituraMic(
                 nivel=None, muted=None, fonte="", saida_muda=True, sink=sink
             )
-        # SOM-04, decisão registrada: o NOME do sink **não** materializa a
-        # leitura. Ele é um fato sobre a SAÍDA e não sobre o microfone, e a
-        # regra desta função — não materializar um objeto para dizer nada sobre
-        # o mic — é de outra sprint e está travada em teste. Quem precisa do
-        # nome sem depender do microfone usa :meth:`sink_de`, que devolve o
-        # mesmo mapa sem fingir sensor nenhum.
         return None
 
     def sink_de(self, uniq: str) -> str:
@@ -337,7 +237,6 @@ class MicMonitor:
             thread.join(timeout=2.0)
         self._derrubar_capturas(set())
 
-    # -- Supervisora ------------------------------------------------------
 
     def _garantir_supervisora(self) -> None:
         if self._parar.is_set() or not self._auto_supervisao:
@@ -355,16 +254,13 @@ class MicMonitor:
         while not self._parar.is_set():
             try:
                 self.reconciliar()
-            except Exception as exc:  # nunca derruba a thread
+            except Exception as exc:
                 logger.debug("mic_monitor_reconciliacao_falhou", err=str(exc))
             self._acordar.wait(self._SUPERVISAO_S)
             self._acordar.clear()
 
     def reconciliar(self) -> None:
-        """Casa as capturas vivas com aba visível, controles, sources e sinks.
-
-        Público para o teste exercitar o ciclo sem depender de temporização.
-        """
+        """Casa as capturas vivas com aba visível, controles, sources e sinks."""
         with self._lock:
             ativo = self._ativo
             controles = self._controles
@@ -377,9 +273,6 @@ class MicMonitor:
             return
 
         fontes = self._descobrir_fontes()
-        # Uma varredura de sysfs por ciclo, sem subprocesso: o dispositivo USB
-        # pai de cada controle serve aos DOIS lados (mic e saída) e não muda
-        # dentro do ciclo.
         usb_por_uniq = usb_pai_por_uniq(controles)
         casamento = self._casar_por_usb("sources", fontes, usb_por_uniq)
         alvos: dict[str, str] = {}
@@ -394,9 +287,6 @@ class MicMonitor:
             }
         for uniq, fonte in alvos.items():
             self._garantir_captura(uniq, fonte)
-        # Depois das capturas de propósito: o medidor não espera dois
-        # subprocessos a mais para aparecer, e o mudo da saída muda por gesto
-        # humano — 3 s de atraso ali é invisível.
         saidas, nomes = self._descobrir_saidas(controles, usb_por_uniq)
         with self._lock:
             self._saidas_mudas = saidas
@@ -433,23 +323,7 @@ class MicMonitor:
     def _descobrir_saidas(
         self, controles: tuple[str, ...], usb_por_uniq: dict[str, str] | None = None
     ) -> tuple[dict[str, bool], dict[str, str]]:
-        """Sink de saída de cada controle que dá para casar COM CERTEZA.
-
-        Devolve DOIS mapas do mesmo casamento: o mudo (a camada 1, para o selo)
-        e o NOME (SOM-04, para tocar e rotear). Eles são separados porque não
-        empatam: o nome pode ser conhecido e o mudo, ilegível — e quem toca o
-        som de confirmação precisa do nome mesmo quando o `get-sink-mute` não
-        respondeu. Empacotar os dois num só faria a confirmação sonora depender
-        de uma leitura que ela não usa.
-
-        Os mapas são SUBSTITUÍDOS inteiros a cada ciclo e nunca ganham entrada
-        por chute: controle sem sink atribuível (o do RÁDIO, que não publica
-        placa) ou sem `pactl` na máquina fica DE FORA — e ficar de fora é
-        exatamente o que mantém o selo apagado e o botão de rota parado.
-
-        Nenhuma escrita: `list sinks short` e `get-sink-mute` são leituras. O
-        mudo persistido é escolha da usuária (ver o cabeçalho do módulo).
-        """
+        """Sink de saída de cada controle que dá para casar COM CERTEZA."""
         saida = self._runner(["pactl", "list", "sinks", "short"])
         sinks = sinks_dualsense(saida or "")
         if not sinks:
@@ -558,8 +432,6 @@ class _Captura:
         except Exception as exc:
             logger.debug("mic_captura_nao_abriu", fonte=self.fonte, err=str(exc))
         if proc is None or proc.stdout is None:
-            # Degradação silenciosa: sem `parec` (ou sem permissão) o card
-            # simplesmente não mostra o módulo de microfone.
             return
         self._proc = proc
         muted: bool | None = None
@@ -571,7 +443,7 @@ class _Captura:
             while not self._parar.is_set() and not self._parar_global.is_set():
                 bloco = proc.stdout.read(_BLOCO_BYTES)
                 if not bloco:
-                    break  # `parec` morreu: a supervisora respawna no próximo ciclo
+                    break
                 if contador % blocos_por_leitura_de_mute == 0:
                     muted = self._ler_mute()
                 contador += 1
@@ -606,18 +478,7 @@ def _ambiente_c() -> dict[str, str]:
 
 
 def _rodar(argv: list[str]) -> str:
-    """Roda um comando curto e devolve o stdout ("" em qualquer falha).
-
-    Nunca `shell=True` (invariante do projeto) e sempre com timeout: um
-    `pactl` pendurado num PipeWire morto não pode segurar a supervisora.
-
-    A checagem de disponibilidade da ferramenta mora AQUI, no runner, e não
-    em quem o chama: assim um runner dublado no teste não depende do que
-    está instalado na máquina que roda a suíte.
-
-    A leitura de `pactl` pergunta ao retrato do som antes
-    (`integrations/retrato_do_som`); o «não sei» dele volta como ``""``.
-    """
+    """Roda um comando curto e devolve o stdout ("" em qualquer falha)."""
     from hefesto_dualsense4unix.integrations import retrato_do_som
 
     resposta = retrato_do_som.responder(argv)
@@ -646,8 +507,6 @@ def _abrir_captura(fonte: str) -> Any:
     """Abre o `parec` da source e devolve o processo (None se indisponível)."""
     if shutil.which("parec") is None:
         return None
-    # Sem `shell=True` (invariante do projeto): argv fixo, a source entra como
-    # argumento e não como texto de comando.
     return subprocess.Popen(
         [
             "parec",

@@ -42,13 +42,7 @@ from hefesto_dualsense4unix.core.controller import ControllerState
 
 
 def _handle(nibble: int | None, level: int) -> Any:
-    """Um handle da pydualsense como o ``report_thread`` dela o deixa.
-
-    ``DSBattery`` é um objeto simples com ``Level`` (0-100) e ``State`` (um
-    ``IntFlag`` cujo VALOR é o nibble alto do ``states[53]``). O dublê é um
-    ``SimpleNamespace`` de propósito: usar o enum real da biblioteca faria o
-    teste medir a biblioteca, e o que se quer medir é a nossa tradução.
-    """
+    """Um handle da pydualsense como o ``report_thread`` dela o deixa."""
     battery = SimpleNamespace(Level=level)
     if nibble is not None:
         battery.State = nibble
@@ -56,13 +50,7 @@ def _handle(nibble: int | None, level: int) -> Any:
 
 
 class TestOByteViraPalavra:
-    """Mordida: apague uma linha de :data:`ESTADO_DE_CARGA` e o caso reprova.
-
-    A tabela é a do ``dualsense_parse_report`` do kernel, registrada em
-    ``docs/protocol/driver-hid-playstation.md``: ``0x0`` descarregando, ``0x1``
-    carregando, ``0x2`` cheia, ``0xa``/``0xb`` tensão ou temperatura fora de
-    faixa, ``0xf`` erro.
-    """
+    """Mordida: apague uma linha de :data:`ESTADO_DE_CARGA` e o caso reprova."""
 
     @pytest.mark.parametrize(
         ("nibble", "palavra"),
@@ -85,13 +73,7 @@ class TestOByteViraPalavra:
         )
 
     def test_o_driver_vence_a_biblioteca_no_0xb(self) -> None:
-        """``0xB`` é fora de faixa pelo driver; a pydualsense o chama de
-        ``POWER_SUPPLY_STATUS_NOT_CHARGING``.
-
-        A ordem de precedência desta casa é o aparelho antes da biblioteca, e
-        esta é a única linha em que as duas discordam. Se alguém trocar a
-        tabela pelos nomes do enum, este teste nomeia a troca.
-        """
+        """``0xB`` é fora de faixa pelo driver; a pydualsense o chama de"""
         assert ESTADO_DE_CARGA[0xB] == "fora_de_faixa"
 
     def test_nibble_desconhecido_e_nao_sei_e_nao_um_chute(self) -> None:
@@ -99,14 +81,7 @@ class TestOByteViraPalavra:
 
 
 class TestNinguemReportouAindaNaoEDescarregando:
-    """Mordida: tire a guarda do ``Level`` e o controle recém-plugado passa a
-    anunciar ``"descarregando"`` — inventando leitura antes do primeiro report.
-
-    ``DSBattery.__init__`` nasce com ``Level = 0`` e ``State = 0``, e ``0`` é
-    DESCARREGANDO na tabela do kernel. O discriminador é EXATO: um report de
-    verdade dá ``nibble*10+5``, cujo mínimo é 5 — ``Level == 0`` só existe
-    antes do primeiro report.
-    """
+    """Mordida: tire a guarda do ``Level`` e o controle recém-plugado passa a"""
 
     def test_level_zero_nao_diz_nada_sobre_a_carga(self) -> None:
         assert PyDualSenseController._read_battery_state_opt(_handle(0x0, level=0)) is None
@@ -127,13 +102,7 @@ class TestNinguemReportouAindaNaoEDescarregando:
 
 
 class TestOCampoExisteEChegaAoPayload:
-    """Mordida: tire ``battery_state`` do ``ControllerState`` ou do payload de
-    ``describe_controllers`` e a tela volta a não ter onde ler "carregando".
-
-    O ``daemon/ipc_handlers.py`` repassa o dicionário do
-    ``describe_controllers`` VERBATIM em ``result["controllers"]``, então este
-    é o ponto em que o dado entra na janela.
-    """
+    """Mordida: tire ``battery_state`` do ``ControllerState`` ou do payload de"""
 
     def test_o_snapshot_carrega_o_estado_ao_lado_do_percentual(self) -> None:
         estado = ControllerState(
@@ -155,12 +124,7 @@ class TestOCampoExisteEChegaAoPayload:
         assert estado.battery_state is None
 
     def test_o_campo_novo_entrou_no_fim_e_nao_mexeu_na_ordem_posicional(self) -> None:
-        """Um campo intercalado trocaria o sentido de todo ``ControllerState``
-        construído por POSIÇÃO — e a casa tem dezenas deles em ``tests/``.
-
-        A régua olha a ORDEM declarada, não um valor: ``raw_buttons`` continua
-        sendo o sexto campo, como era antes desta sprint.
-        """
+        """Um campo intercalado trocaria o sentido de todo ``ControllerState``"""
         nomes = list(ControllerState.__dataclass_fields__)
         assert nomes[:6] == [
             "battery_pct",

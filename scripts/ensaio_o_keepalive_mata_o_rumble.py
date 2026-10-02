@@ -1,48 +1,5 @@
 #!/usr/bin/env python3
-"""Fecha a premissa do `keepalive neutro`: o report neutro PARA um motor alheio?
-
-A PERGUNTA, e por que ela precisa de ensaio próprio
----------------------------------------------------
-Em 11/08/2026 ficou medido, por dose-resposta, que o keepalive do daemon cancela
-o rumble que chega por EV_FF no no físico: com `OUT_REPORT_KEEPALIVE_SEC` em
-0,5 s o motor da um pulso; com 8,0 s ele dura oito segundos exatos.
-
-A cura chamada `keepalive neutro` (GUERRA-01, `core/backend_pydualsense.py:780`)
-supoe que desligar os BITS que autorizam vibracao basta para o firmware conservar
-o motor. Mas o report continua carregando `common[2] = 0` e `common[3] = 0` — os
-bytes sao escritos SEMPRE, fora do `if not rumble_asserted`. A premissa e:
-*o firmware honra os bits*. Se ela for falsa, o firmware honra os BYTES, e a cura
-inteira e um endereco errado.
-
-Este ensaio decide isso, e a decisão muda o desenho da cura:
-
-  o motor PARA com o report neutro
-      -> o firmware obedece aos BYTES. A cura tem de deixar de mandar zeros:
-         ou o keepalive não sai quando não ha nada nosso a afirmar, ou ele
-         carrega o último valor conhecido em vez de zero.
-  o motor CONTINUA
-      -> o report neutro e inocente, a premissa se sustenta, e a causa do
-         cancelamento e OUTRA escrita — e este ensaio a inocenta por eliminação.
-
-E ha a metade inversa, que fecha o cerco: com os bits desligados e os bytes
-ALTOS, o motor gira? Se girar, o firmware ignora os bits nos dois sentidos.
-
-A FONTE, DECLARADA
-------------------
-  monta o report ....... `_build_common` do PROPRIO produto, mais
-                         `ds_output_report.build_usb_report` / `build_bt_report`
-  liga o motor ......... python-evdev, EV_FF — o caminho do jogo
-  escreve o report ..... hidraw cru, direto no no do aparelho
-  NAO usa .............. o daemon (que tem de estar parado), nem sysfs
-
-Montar o report pelo `_build_common` do produto e deliberado: um report montado
-a mão mediria o meu palpite, não o que o daemon manda de verdade.
-
-Uso:
-    ensaio_o_keepalive_mata_o_rumble.py --listar
-    ensaio_o_keepalive_mata_o_rumble.py --alvo P4 --fase para
-    ensaio_o_keepalive_mata_o_rumble.py --alvo P4 --fase liga
-"""
+"""Fecha a premissa do `keepalive neutro`: o report neutro PARA um motor alheio?"""
 
 from __future__ import annotations
 
@@ -56,8 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "ensaios"))
-import identidade_do_vpad  # a régua única do vpad (VPAD-NO-ESPELHO-01)
-from comum import (  # o chão dos instrumentos: uma porta só, um grab só
+import identidade_do_vpad
+from comum import (
     PortaFechadaError,
     abrir_no_hidraw,
     declaracao_da_porta,
@@ -78,9 +35,6 @@ PADRAO_DO_JOGADOR = {
 TRANSPORTE_POR_BARRAMENTO = {"0003": "cabo", "0005": "radio"}
 DUALSENSE = (0x054C, 0x0CE6)
 
-#: Onde este instrumento enumera os devices HID. É parâmetro só para o teste
-#: poder montar uma mesa de mentira em `tmp_path` — a medição de verdade não
-#: tem por que apontar para outro lugar.
 RAIZ_SYSFS_HID = "/sys/bus/hid/devices"
 
 
@@ -127,8 +81,6 @@ def inventario(raiz: str = RAIZ_SYSFS_HID) -> list[dict[str, str]]:
         hidraws = os.listdir(os.path.join(dir_hid, "hidraw")) if os.path.isdir(
             os.path.join(dir_hid, "hidraw")
         ) else []
-        # O nó de gamepad é o que tem força-feedback; os irmãos (Motion, Touchpad,
-        # Headset) não têm, e mirar num deles seria medir o nada.
         evdev_no = ""
         for entrada in glob.glob(os.path.join(dir_hid, "input", "input*", "event*")):
             capacidade = _ler(os.path.join(os.path.dirname(entrada), "capabilities", "ff"))
@@ -153,12 +105,7 @@ def _daemon_vivo() -> bool:
 
 
 def _montar_report_neutro(transporte: str, weak: int, strong: int) -> bytes:
-    """O report que o daemon manda no keepalive — montado pelo código dele.
-
-    `rumble_asserted=False` é o estado do keepalive sem rumble nosso: os bits de
-    vibração saem DESLIGADOS. Os bytes de motor são preenchidos aqui depois, para
-    que o ensaio possa separar o efeito dos BITS do efeito dos BYTES.
-    """
+    """O report que o daemon manda no keepalive — montado pelo código dele."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 
@@ -194,28 +141,12 @@ def _montar_report_neutro(transporte: str, weak: int, strong: int) -> bytes:
 
 
 def _montar_report_gatilho(transporte: str, lado: str = "esquerdo") -> bytes:
-    """Um efeito de gatilho escrito COMO SE FOSSE DE TERCEIRO.
-
-    A previsão que este report existe para testar: em 11/08/2026 ficou medido que
-    o firmware obedece aos BYTES de motor mesmo com os bits de vibração
-    desligados. Os blocos de gatilho — `common[10..20]` (direito) e
-    `common[21..31]` (esquerdo) — também são escritos em TODO report do produto,
-    fora de qualquer condicional. Se o firmware os tratar do mesmo jeito, o
-    keepalive apaga o efeito de gatilho que um jogo aplicou, e ninguém nunca
-    mediu isso.
-
-    O efeito é o `rigid(3, 8)` do próprio produto — modo 0x21 (FEEDBACK), forças
-    (248, 3, 0, 0, 0, 0, 0) — para que o ensaio meça o que o produto manda, e não
-    um bloco que eu inventei.
-    """
+    """Um efeito de gatilho escrito COMO SE FOSSE DE TERCEIRO."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
     from hefesto_dualsense4unix.core.trigger_effects import rigid
 
     efeito = rigid(3, 8)
     common = bytearray(rep.COMMON_LEN)
-    # UM lado por vez, e o outro fica sem bit de autorização — ele é o controle
-    # negativo na mesma mão dela. Os offsets vêm de `_build_common` do produto:
-    # `common[10]` é o triggerR (direito) e `common[21]` é o triggerL (esquerdo).
     if lado == "direito":
         common[0] = rep.VALID_FLAG0_RIGHT_TRIGGER_FFB
         base = 10
@@ -301,9 +232,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 5
 
-    # A fase `gatilho` é a única que PRECISA poder rodar com o daemon vivo: o que
-    # ela mede é justamente a briga entre o keepalive dele e um efeito escrito por
-    # terceiro. As outras fases medem o firmware, e ali o daemon só contamina.
     religar = False
     if _daemon_vivo() and not args.com_o_daemon_vivo:
         os.system("systemctl --user stop hefesto-dualsense4unix.service")
@@ -354,8 +282,6 @@ def main(argv: list[str] | None = None) -> int:
     import evdev
     from evdev import ecodes
 
-    # `troca-de-lado`: o EV_FF liga o ESQUERDO (strong); o report pede só o
-    # DIREITO (weak). Nenhuma das duas leituras exige relógio.
     weak, strong = {
         "para": (0, 0),
         "liga": (0, 200),
@@ -367,9 +293,6 @@ def main(argv: list[str] | None = None) -> int:
     print(f"montagem   : {MONTAGEM}")
     print(f"alvo       : {alvo['jogador']} {alvo['transporte']} {alvo['hidraw']} {alvo['evdev']}")
     print(declaracao_da_porta())
-    # O grab importa AQUI mais que em qualquer outro lugar: se outro processo
-    # segurar o evdev, o `upload_effect` abaixo pode subir e o motor não girar,
-    # e "não vibrou" seria a resposta errada à pergunta deste ensaio.
     print(linha_do_grab(alvo["evdev"], estado_do_grab(alvo["evdev"])))
     print(f"fase       : {args.fase}  (report neutro com common[2]={weak}, common[3]={strong})")
     print(f"report     : {len(report)} B, id 0x{report[0]:02x}\n")

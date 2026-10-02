@@ -1,40 +1,5 @@
 #!/usr/bin/env python3
-"""escrita_pelo_broker.py — a porta de ESCRITA dos instrumentos de bancada de 09/09.
-
-Três instrumentos nasceram das decisões dela de 09/09/2026 (*"1-b;2b;3-c"*):
-o do fone (`o_fone_tem_volume_proprio.py`), o do brilho de hardware
-(`o_brilho_de_hardware_da_barra.py`) e o do byte do microfone
-(`o_byte_do_microfone_muda_a_captura.py`). Os três fazem a mesma coisa —
-escrevem UM byte do `common` de 47 e olham o aparelho — e dividem quatro
-decisões, que moram aqui para não nascerem três vezes:
-
-1. **O report certo para o transporte.** Cabo: `0x02` de 64 bytes
-   (`build_usb_report`). Rádio: `0x31` de 78 bytes com tag `0x10` e CRC-32 de
-   semente `0xA2` (`build_bt_report`), com o nibble de sequência rotacionado a
-   cada escrita. Os dois construtores são OS DO PRODUTO — montar à mão aqui
-   mediria a minha memória do formato, não o aparelho.
-2. **O `common` VAZIO.** Nada do estado do daemon entra: só o byte do ensaio e
-   o bit que o autoriza variam entre os passos. É a lição do
-   `corpo_do_degrau.py`: um common cheio de estado torna cada passo uma
-   medição diferente.
-3. **A porta.** `comum.abrir_no_hidraw` — o broker — com o daemon VIVO. Não há
-   `os.open` direto: na mesa com o co-op ligado ele mede `EACCES`, não o
-   aparelho (a armadilha do instrumento que briga com o produto, em
-   `docs/method/COMO-OLHAR-A-TELA.md`).
-4. **O martelo.** O daemon reescreve alguns desses bytes a cada report dele:
-   `_build_common` manda `flag2` com o bit do brilho e `common[42] = 0` sempre
-   que é dono das luzes, e manda fone e alto-falante juntos sempre que é dono
-   do volume. Um byte escrito uma vez pode ser desfeito milissegundos depois —
-   e a barra que escureceu por um instante e voltou é um SIM do firmware, não
-   um não. Por isso `martelar()`: repete a escrita a N Hz durante a janela de
-   observação, e o relatório diz que martelou.
-
-O QUE ESTE MÓDULO NÃO FAZ
---------------------------
-Não conclui nada. Quem conclui é o olho e a orelha dela (fone, brilho) ou o
-pico da captura (microfone), e a linha do caderno sai PROPOSTA no fim de cada
-instrumento — `docs/data/ensaios.csv` é de quem coordena a bancada.
-"""
+"""escrita_pelo_broker.py — a porta de ESCRITA dos instrumentos de bancada de 09/09."""
 
 from __future__ import annotations
 
@@ -64,9 +29,6 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     build_usb_report,
 )
 
-#: A ordem das colunas de `docs/data/ensaios.csv`, lida do cabeçalho em 09/09/2026.
-#: Quem propõe uma linha escreve nesta ordem — e o `validar-caducos` reprova se o
-#: cabeçalho mudar sem que isto mude junto.
 COLUNAS_DO_CADERNO = (
     "id",
     "linha_id",
@@ -113,11 +75,7 @@ def common_vazio() -> bytearray:
 
 
 def report_para(transporte: str, common: bytes | bytearray, seq: int = 0) -> bytes:
-    """O report do transporte, montado pelo produto.
-
-    Cabo -> `0x02` (64 B, sem CRC). Rádio -> `0x31` (78 B, CRC no rabo, `seq`
-    no nibble alto de `[1]`). Qualquer outra coisa é erro, não palpite.
-    """
+    """O report do transporte, montado pelo produto."""
     if transporte == CABO:
         return bytes(build_usb_report(common))
     if transporte == RADIO:

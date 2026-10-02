@@ -53,9 +53,6 @@ from hefesto_dualsense4unix.integrations.api_de_entrada import (
     examinar_pasta,
 )
 
-#: Pastas de `steamapps/common` que são infraestrutura da Steam, não jogos.
-#: São prefixos de NOME DE FERRAMENTA (Proton, os runtimes, os redistribuíveis),
-#: e nenhum deles é um título — um jogo lançado amanhã não precisa entrar aqui.
 INFRAESTRUTURA = (
     "Proton",
     "SteamLinuxRuntime",

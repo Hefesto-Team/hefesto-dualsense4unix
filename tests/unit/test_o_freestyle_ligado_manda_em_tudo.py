@@ -1,38 +1,4 @@
-"""O-FREESTYLE-E-UMA-CAMADA-SO-01 — ligado, o Freestyle manda em tudo.
-
-A palavra dela, 27/09 à noite: *«Aperto o botão do freestyle e o jogo que eu
-tiver jogando vai ter essa config independente do perfil do jogo. Só isso.»*
-(noqa-acento: citação literal dela). `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`,
-que revoga a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`.
-
-O defeito era o botão «Modo Freestyle» ser o cadeado de 23/07, que CEDIA à
-regra própria de todo jogo (LOCK-CEDE-01): em jogo, ele nunca valia. A cura mora
-num lugar só (`profiles/manager.py`, o bloco antes do `ProfileManager`), e esta
-régua mede cada caminho que podia passar por cima dele:
-
-1. **o autoswitch** para antes de casar a janela; o modo jogo padrão só entra
-   quando o Freestyle não diz o modo (o de fábrica não diz);
-2. **o `ProfileManager.activate`** recusa toda ativação automática de outro
-   perfil — é a rede que pega o caminho que esquecer de perguntar;
-3. **o gesto dela decide**: o «Ativar» do Freestyle liga, o de outro desliga,
-   apagar o Freestyle desliga, e reativar o que já vale (o gravar-e-reaplicar
-   das abas) não muda o modo;
-4. **o lançamento** não arma o perfil do jogo, e **a env antecipada** lê o
-   Freestyle;
-5. **o restore do boot** e o **modo do primeiro pad** são os do Freestyle;
-6. **o `freestyle.set`** liga pelo mesmo caminho do «Ativar», e desligar devolve
-   o jogo vivo sem reabrir;
-7. **a migração** do `autoswitch_locked.flag`;
-8. **a matriz**: os quatro controles, P1 e P3 no cabo, P2 e P4 no rádio, no byte
-   do report de cada transporte — com o perfil do jogo casado pela janela;
-9. **a guarda do jogo vivo** (`D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO`): o
-   perfil do jogo que o lançamento pôs não sai por uma janela de fora;
-10. **o `gamepad.emulation.set` sem caminho** pergunta o modo ao perfil ativo,
-    nos três modos (a porta que a conferência da O-MODO-XBOX-NAO-E-QUEDA-02
-    achou).
-
-A mordida de cada célula está no docstring dela. Os `uniq` são da faixa forjada.
-"""
+"""O-FREESTYLE-E-UMA-CAMADA-SO-01 — ligado, o Freestyle manda em tudo."""
 from __future__ import annotations
 
 import asyncio
@@ -74,13 +40,11 @@ from tests.conftest import EnvelopeDeTransporte, envelope_de
 RAIZ = Path(__file__).resolve().parents[2]
 FABRICA = RAIZ / "assets" / "profiles_default"
 
-#: O PRAGMATA, o jogo da noite de 27/09.
 APPID = 3357650
 JANELA = f"steam_app_{APPID}"
 JOGO = "PRAGMATA"
 FREESTYLE = loader.NOME_DO_PADRAO
 
-#: A mesa dela: P1 e P3 no cabo, P2 e P4 no rádio — nunca só o P1.
 MESA: tuple[tuple[str, str], ...] = (
     ("AA:BB:CC:00:00:01", "usb"),
     ("AA:BB:CC:00:00:02", "bt"),
@@ -88,8 +52,6 @@ MESA: tuple[tuple[str, str], ...] = (
     ("AA:BB:CC:00:00:04", "bt"),
 )
 
-#: Offsets do bloco de gatilho DENTRO do common: (modo, primeira das seis forças,
-#: a sétima avulsa). Os mesmos da `test_paridade_transporte_gatilhos.py`.
 OFFSETS_DO_GATILHO = {"right": (10, 11, 19), "left": (21, 22, 30)}
 
 
@@ -129,10 +91,6 @@ def _liga(store: StateStore, controle: Any | None = None) -> ProfileManager:
     return gerente
 
 
-# =============================================================================
-# 1. O AUTOSWITCH — para antes de casar a janela
-# =============================================================================
-
 @pytest.mark.parametrize("janela", [
     {"wm_class": JANELA, "wm_name": "PRAGMATA"},
     {"wm_class": "firefox", "wm_name": "Mozilla Firefox"},
@@ -140,12 +98,7 @@ def _liga(store: StateStore, controle: Any | None = None) -> ProfileManager:
 def test_ligado_o_autoswitch_nao_troca_nem_pela_regra_do_jogo(
     semeadura_ligada: None, janela: dict[str, str],
 ) -> None:
-    """Ligado, nenhuma janela troca o perfil — nem a regra própria do jogo.
-
-    MORDIDA: devolva ao `_tick` a LOCK-CEDE-01 (o cadeado que cede à regra do
-    jogo) no lugar da parada pelo Freestyle e tire a recusa do `activate` — a
-    célula da janela do jogo reprova com o PRAGMATA valendo.
-    """
+    """Ligado, nenhuma janela troca o perfil — nem a regra própria do jogo."""
     loader.load_all_profiles()
     _o_jogo()
     store = StateStore()
@@ -158,12 +111,7 @@ def test_ligado_o_autoswitch_nao_troca_nem_pela_regra_do_jogo(
 
 
 def test_ligado_o_autoswitch_nem_pergunta_a_janela(semeadura_ligada: None) -> None:
-    """A parada é ANTES de casar: o seletor não é chamado, e a ativação também não.
-
-    MORDIDA: tire o `if self.freestyle_ligado():` do `_tick` e o seletor é
-    chamado — a recusa do `activate` segura o perfil, mas o tique já decidiu
-    por cima dele, que é o que esta célula proíbe.
-    """
+    """A parada é ANTES de casar: o seletor não é chamado, e a ativação também não."""
     loader.load_all_profiles()
     _o_jogo()
     store = StateStore()
@@ -198,11 +146,7 @@ def _o_freestyle_diz(mode: dict[str, Any] | None) -> None:
 def test_ligado_e_dizendo_o_modo_o_modo_jogo_padrao_nao_entra(
     semeadura_ligada: None, janela: str,
 ) -> None:
-    """O Freestyle que TEM a seção `mode` manda no modo: o padrão não entra.
-
-    MORDIDA: faça `AutoSwitcher._o_freestyle_diz_o_modo` responder `False` e as
-    duas células reprovam com o espião chamado.
-    """
+    """O Freestyle que TEM a seção `mode` manda no modo: o padrão não entra."""
     loader.load_all_profiles()
     _o_jogo()
     _o_freestyle_diz({"kind": "gamepad", "caminho": "xbox"})
@@ -225,16 +169,7 @@ def test_ligado_e_dizendo_o_modo_o_modo_jogo_padrao_nao_entra(
 def test_ligado_sem_dizer_o_modo_o_jogo_liga_o_modo_padrao(
     semeadura_ligada: None, janela: str,
 ) -> None:
-    """O Freestyle de fábrica não diz o modo: o jogo liga o modo padrão da máquina.
-
-    Conferência de 28/09/2026. Sem a seção `mode` o Freestyle não opina (R-02),
-    e o modo num jogo é o da máquina — o modo jogo padrão, com ou sem perfil
-    próprio do jogo, que não entra. Fora do jogo, o par solta. O perfil não
-    troca em momento nenhum.
-
-    MORDIDA: tire a chamada `_modo_jogo_padrao_sob_o_freestyle` da parada pelo
-    Freestyle no `_tick` e as duas células reprovam sem pedido nenhum.
-    """
+    """O Freestyle de fábrica não diz o modo: o jogo liga o modo padrão da máquina."""
     loader.load_all_profiles()
     _o_jogo()
     store = StateStore()
@@ -269,19 +204,11 @@ def test_desligar_nao_ativa_no_mesmo_tique(semeadura_ligada: None) -> None:
     assert store.active_profile == JOGO
 
 
-# =============================================================================
-# 2 e 3. O DONO — a recusa do `activate`, e o gesto dela que decide
-# =============================================================================
-
 @pytest.mark.parametrize("origem", ["autoswitch", "launch", "system"])
 def test_ligado_nenhuma_ativacao_automatica_passa(
     semeadura_ligada: None, origem: str,
 ) -> None:
-    """A rede de baixo: o caminho que esquecer de perguntar também não passa.
-
-    MORDIDA: tire o bloco `if origin != "manual" and o_freestyle_manda(...)` de
-    `ProfileManager.activate` e as três células reprovam sem a recusa.
-    """
+    """A rede de baixo: o caminho que esquecer de perguntar também não passa."""
     loader.load_all_profiles()
     _o_jogo()
     store = StateStore()
@@ -290,16 +217,11 @@ def test_ligado_nenhuma_ativacao_automatica_passa(
     with pytest.raises(OFreestyleMandaError):
         gerente.activate(JOGO, origin=origem)
     assert store.active_profile == FREESTYLE
-    # O próprio Freestyle entra por qualquer origem: é ele que manda.
     gerente.activate(FREESTYLE, origin=origem)
 
 
 def test_o_gesto_dela_liga_e_desliga_e_o_disco_acompanha(semeadura_ligada: None) -> None:
-    """O «Ativar» do Freestyle liga; o de outro perfil desliga; o disco vai junto.
-
-    MORDIDA: tire o `ligar_o_freestyle(...)` do ramo `origin == "manual"` do
-    `activate` e a primeira asserção reprova.
-    """
+    """O «Ativar» do Freestyle liga; o de outro perfil desliga; o disco vai junto."""
     loader.load_all_profiles()
     _o_jogo()
     store = StateStore()
@@ -324,10 +246,6 @@ def test_apagar_o_freestyle_desliga_o_modo(semeadura_ligada: None) -> None:
     assert (store.freestyle_ligado, session.load_freestyle_ligado()) == (False, False)
 
 
-# =============================================================================
-# 4. O LANÇAMENTO — nem o perfil do jogo, nem a máscara dele
-# =============================================================================
-
 def _marker(tmp_path: Path) -> Path:
     import time
 
@@ -340,11 +258,7 @@ def _marker(tmp_path: Path) -> Path:
 def test_o_lancamento_nao_ativa_o_perfil_do_jogo_com_o_freestyle_ligado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ligado: bool,
 ) -> None:
-    """Ligado, o lançamento não ativa o perfil do jogo; desligado, ativa, como sempre.
-
-    MORDIDA: tire o `if o_freestyle_manda(...)` de `arm_launch_profile` e a
-    célula `ligado` reprova com a ativação do PRAGMATA.
-    """
+    """Ligado, o lançamento não ativa o perfil do jogo; desligado, ativa, como sempre."""
     perfil = Profile(name=JOGO, match=MatchCriteria(window_class=[JANELA]), priority=80,
                      mode=ProfileModeConfig(kind="gamepad", caminho="dualsense"))
     ativados: list[str] = []
@@ -382,12 +296,7 @@ def _perfil_de_mentira(nome: str, mascara: str) -> SimpleNamespace:
 def test_a_mascara_antecipada_le_o_freestyle_ligado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ligado: bool,
 ) -> None:
-    """O jogo lê a env UMA vez, no `exec`: ligado, ela diz a máscara DO FREESTYLE.
-
-    MORDIDA: troque, no laço do `materialize_launch_env`, o
-    `freestyle if freestyle is not None else do_jogo` por `do_jogo` e a célula
-    `ligado` reprova com a máscara do PRAGMATA.
-    """
+    """O jogo lê a env UMA vez, no `exec`: ligado, ela diz a máscara DO FREESTYLE."""
     freestyle = _perfil_de_mentira(FREESTYLE, "xbox")
     jogo = _perfil_de_mentira(JOGO, "dualsense")
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
@@ -420,17 +329,7 @@ def _o_estado_do_arquivo(pasta: Path) -> str:
 def test_o_vigia_ve_o_freestyle_trocar_sem_borda(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quem liga ou desliga sem passar por borda que materializa: o vigia regrava.
-
-    Conferência de 28/09/2026. O ciclo do PS + D-pad ativa com a origem
-    `manual` e muda o modo sem regravar as envs; o jogo seguinte leria no
-    `exec` a máscara do modo de antes. O Modo Freestyle é o sexto campo da
-    assinatura da mesa, e o vigia de 1 Hz vê a troca como vê a de um vpad.
-
-    MORDIDA: tire o `_o_freestyle_na_assinatura(daemon)` da
-    `_assinatura_da_mesa` e do carimbo do `materialize_launch_env` e o vigia
-    não arma — o arquivo do PRAGMATA segue dizendo a máscara do Freestyle.
-    """
+    """Quem liga ou desliga sem passar por borda que materializa: o vigia regrava."""
     freestyle = _perfil_de_mentira(FREESTYLE, "xbox")
     jogo = _perfil_de_mentira(JOGO, "dualsense")
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
@@ -482,10 +381,6 @@ def test_desligar_sem_jogo_regrava_as_envs_do_lancamento(
     assert regravadas == [h.daemon]
 
 
-# =============================================================================
-# 5. O BOOT — o restore e o modo do primeiro pad
-# =============================================================================
-
 async def _bloqueante(fn: Any, *args: Any) -> Any:
     return fn(*args)
 
@@ -494,15 +389,7 @@ async def _bloqueante(fn: Any, *args: Any) -> Any:
 def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
     semeadura_ligada: None, gravado: str,
 ) -> None:
-    """Ligado, o boot volta ao Freestyle — nem a sessão, nem a regra de janela.
-
-    `outro-de-sempre` é um perfil «sempre» (MatchAny) na sessão: sem a cura o
-    restore o ativava por cima do Freestyle ligado.
-
-    MORDIDA: troque o `name = fora_do_jogo if manda else (...)` de
-    `restore_last_profile` pelo nome da sessão antes do de fora do jogo e a célula
-    `outro-de-sempre` reprova (a recusa do `activate` deixa o boot sem perfil).
-    """
+    """Ligado, o boot volta ao Freestyle — nem a sessão, nem a regra de janela."""
     loader.load_all_profiles()
     _o_jogo()
     loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0))
@@ -521,14 +408,7 @@ def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
 
 
 def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(semeadura_ligada: None) -> None:
-    """Ligado e sem o `freestyle.json` (ela o apagou): o boot desliga e segue.
-
-    Sem isto, o modo ligado seguraria o produto sem perfil nenhum, para sempre:
-    toda ativação automática seria recusada, e o restore não teria o que ativar.
-
-    MORDIDA: tire o bloco `if manda and not fora_do_jogo:` de
-    `restore_last_profile` e o boot termina sem perfil, com o modo ainda ligado.
-    """
+    """Ligado e sem o `freestyle.json` (ela o apagou): o boot desliga e segue."""
     loader.load_all_profiles()
     loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0))
     (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
@@ -549,15 +429,7 @@ def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(semeadura_ligada: None) -> N
 def test_sair_do_nativo_com_ele_ligado_volta_ao_freestyle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A saída do Modo Nativo reativa o Freestyle, e não o `session.json`.
-
-    Com o Nativo no boot não há restore, e `active_profile` fica vazio; a
-    sessão pode apontar um perfil que o `activate` recusaria (`origin="system"`),
-    e a saída do Nativo terminaria sem perfil.
-
-    MORDIDA: devolva a `_reapply_last_profile` o `name = active_profile or
-    load_last_profile()` de antes e o pedido sai com a Leitura.
-    """
+    """A saída do Modo Nativo reativa o Freestyle, e não o `session.json`."""
     import hefesto_dualsense4unix.profiles.manager as manager_mod
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
@@ -605,10 +477,6 @@ def test_o_primeiro_pad_nasce_no_modo_do_freestyle(semeadura_ligada: None) -> No
     assert (pelo_disco.name, pelo_disco.mode.caminho) == (FREESTYLE, "xbox")
 
 
-# =============================================================================
-# 6. O `freestyle.set` — ligar é o «Ativar», desligar devolve o jogo vivo
-# =============================================================================
-
 class _Handlers(IpcHandlersMixin):
     """O mixin de verdade, com o gerente de verdade e sem daemon."""
 
@@ -637,13 +505,7 @@ def test_ligar_pelo_botao_e_o_ativar_do_freestyle(semeadura_ligada: None) -> Non
 def test_o_freestyle_de_fora_do_jogo_com_o_modo_desligado_nao_existe_mais(
     semeadura_ligada: None,
 ) -> None:
-    """O estado de todo desktop até 01/10/2026 é recusado na origem.
-
-    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 6):
-    até aqui o boot e a volta do jogo punham o Freestyle valendo com o modo
-    desligado, e esta seção partia desse estado. Desligado, o Freestyle não
-    vale em lugar nenhum: nenhum caminho que não seja a mão dela o põe.
-    """
+    """O estado de todo desktop até 01/10/2026 é recusado na origem."""
     loader.load_all_profiles()
     session.save_freestyle_ligado(False)
     store = StateStore()
@@ -707,11 +569,7 @@ def test_gravar_numa_aba_nao_muda_o_modo(semeadura_ligada: None, ligado: bool) -
 
 
 def test_o_botao_liga_sem_escolha(semeadura_ligada: None) -> None:
-    """O botão no desktop «sem escolha» (nenhum perfil ativo): o Freestyle entra, e o modo liga.
-
-    MORDIDA: tire o `ligar_o_freestyle(self.store, True)` do ramo do Freestyle
-    à mão em `ProfileManager._ativar` e o botão responde desligado.
-    """
+    """O botão no desktop «sem escolha» (nenhum perfil ativo): o Freestyle entra, e o modo liga."""
     loader.load_all_profiles()
     session.save_freestyle_ligado(False)
     store = StateStore()
@@ -727,11 +585,7 @@ def test_o_botao_liga_sem_escolha(semeadura_ligada: None) -> None:
 def test_desligar_devolve_o_jogo_vivo_sem_reabrir(
     semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A prova 3: desligando, o PRAGMATA volta — com a janela dele em outra tela.
-
-    MORDIDA: faça `_o_jogo_vivo_volta` devolver só o `active_profile` e o
-    Freestyle continua valendo com o jogo aberto.
-    """
+    """A prova 3: desligando, o PRAGMATA volta — com a janela dele em outra tela."""
     import hefesto_dualsense4unix.profiles.autoswitch as autoswitch_mod
 
     loader.load_all_profiles()
@@ -765,19 +619,9 @@ def test_o_ligado_recusa_o_que_nao_e_booleano() -> None:
         asyncio.run(h._handle_freestyle_set({"ligado": "sim"}))
 
 
-# =============================================================================
-# 7. A MIGRAÇÃO — o cadeado de 23/07 ligado vira o Freestyle ligado
-# =============================================================================
-
 @pytest.mark.parametrize("cadeado", [True, False], ids=["ligado", "desligado"])
 def test_o_cadeado_antigo_vira_o_freestyle_uma_vez(cadeado: bool) -> None:
-    """Item 5: o `autoswitch_locked.flag` ligado vira `freestyle_ligado.flag`.
-
-    Idempotente: a segunda leitura não acha o antigo, e o novo continua.
-
-    MORDIDA: tire a chamada `_o_cadeado_antigo_vira_freestyle` do
-    `load_freestyle_ligado` e a célula `ligado` reprova.
-    """
+    """Item 5: o `autoswitch_locked.flag` ligado vira `freestyle_ligado.flag`."""
     base = config_dir(ensure=True)
     antigo = base / "autoswitch_locked.flag"
     if cadeado:
@@ -787,10 +631,6 @@ def test_o_cadeado_antigo_vira_o_freestyle_uma_vez(cadeado: bool) -> None:
     assert not antigo.exists()
     assert session.load_freestyle_ligado() is cadeado
 
-
-# =============================================================================
-# 8. A MATRIZ — os quatro controles, USB e BT, no byte
-# =============================================================================
 
 class _FioDeMentira:
     """O `device` de um handle de bancada: guarda o que seria escrito, e só."""
@@ -828,15 +668,7 @@ def _modo_no_fio(nome: str, params: list[int]) -> int:
 def test_os_quatro_controles_ficam_com_o_freestyle_com_o_jogo_em_foco(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """A prova 1 no byte: o jogo em foco, e os quatro com o gatilho do Freestyle.
-
-    O Freestyle de fábrica nasce RÍGIDO e o PRAGMATA pede `Off`: com a cura
-    arrancada o autoswitch põe o PRAGMATA e os quatro vão a `Off` — no cabo e no
-    rádio. Desligando, o PRAGMATA entra e os quatro vão a `Off`.
-
-    MORDIDA: a da primeira célula deste arquivo (a LOCK-CEDE-01 de volta ao
-    `_tick` e sem a recusa do `activate`).
-    """
+    """A prova 1 no byte: o jogo em foco, e os quatro com o gatilho do Freestyle."""
     loader.load_all_profiles()
     _o_jogo(gatilho="Off")
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
@@ -862,10 +694,6 @@ def test_os_quatro_controles_ficam_com_o_freestyle_com_o_jogo_em_foco(
         JOGO, {mac: {"right": desligado, "left": desligado} for mac, _ in MESA})
 
 
-# =============================================================================
-# 9. A GUARDA DO JOGO VIVO — o perfil do lançamento não sai por uma janela de fora
-# =============================================================================
-
 def _vigia_com_o_jogo(store: StateStore, vivo: list[int | None]) -> AutoSwitcher:
     gerente = _gerente(store)
     gerente.activate(JOGO, origin="launch")
@@ -874,18 +702,7 @@ def _vigia_com_o_jogo(store: StateStore, vivo: list[int | None]) -> AutoSwitcher
 
 
 def test_com_o_jogo_vivo_a_janela_de_fora_nao_tira_o_perfil_dele(semeadura_ligada: None) -> None:
-    """A L2 do PRAGMATA (27/09, 21:09:06), curada: a janela em outra tela não o tira.
-
-    Com o jogo morto, a troca volta a sair no debounce de sempre.
-
-    Desde 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5) a troca
-    fora do jogo é para a escolha dela — aqui, o Sofá que ela ativou à mão —,
-    e não para o Freestyle, que desligado não vale em lugar nenhum.
-
-    MORDIDA: devolva à `_recusa_a_troca_com_o_jogo_vivo` o termo antigo — só
-    recusa com a janela do CLIENTE Steam (`e_janela_do_cliente_steam`) — e a
-    primeira asserção reprova com a escolha entrando aos 12 s.
-    """
+    """A L2 do PRAGMATA (27/09, 21:09:06), curada: a janela em outra tela não o tira."""
     loader.load_all_profiles()
     session.save_freestyle_ligado(False)
     _o_jogo()
@@ -921,10 +738,6 @@ def test_com_o_jogo_vivo_a_janela_de_outro_jogo_troca(semeadura_ligada: None) ->
 
     assert store.active_profile == "Sackboy"
 
-
-# =============================================================================
-# 10. O `gamepad.emulation.set` SEM CAMINHO pergunta o modo ao perfil ativo
-# =============================================================================
 
 class _DaemonDoChip:
     """Anota o pedido que chega ao setter — o `set_gamepad_emulation` real tem esta assinatura."""
@@ -991,9 +804,6 @@ def test_o_caminho_que_ela_manda_vence_o_do_perfil(semeadura_ligada: None) -> No
     asyncio.run(h._handle_gamepad_emulation_set(
         {"enabled": True, "origin": "manual", "caminho": "xbox"}))
 
-    # E A PORTA VAI JUNTO (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): o
-    # pedido à mão diz `grava_o_modo="ipc"`, e o setter grava o modo no perfil
-    # ativo depois do aparelho.
     assert daemon.pedidos[-1] == {"enabled": True, "caminho": "xbox",
                                   "caminho_e_escolha": True,
                                   "grava_o_modo": "ipc"}

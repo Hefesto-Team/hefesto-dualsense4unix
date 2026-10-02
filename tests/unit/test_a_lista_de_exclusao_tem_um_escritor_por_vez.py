@@ -1,18 +1,4 @@
-"""A-LISTA-DE-EXCLUSAO-TEM-UM-ESCRITOR-POR-VEZ-01 — as réguas.
-
-A lista de exclusão tem dois processos que leem, juntam e regravam: a janela
-(«Excluir», «Tirar da lista», «Aplicar soluções nos lançadores») e o serviço
-(a carona de cada transição, que anota os `.yml` do Lutris). Medido em
-02/10/2026 num lar de mentira, com 300 «Excluir» seguidos e a anotação em laço
-noutro processo: 147, 222 e 149 das 300 exclusões sumiram do arquivo.
-
-A trava é um `flock` ao lado da lista, e o dono é o `cura_por_estrada`
-(o desfazer do uninstall roda aquele arquivo sozinho, com o `python3` do
-sistema). As réguas usam PROCESSOS de verdade para o outro escritor: um dublê
-no mesmo processo não mediria o `flock`, que é entre processos.
-
-TUDO NUM LAR DE MENTIRA: o `HOME` e os `XDG_*` de cada teste.
-"""
+"""A-LISTA-DE-EXCLUSAO-TEM-UM-ESCRITOR-POR-VEZ-01 — as réguas."""
 
 from __future__ import annotations
 
@@ -75,11 +61,6 @@ def _esperar_o_arquivo(alvo: Path, processo: subprocess.Popen[str], teto: float 
         time.sleep(0.01)
 
 
-# ---------------------------------------------------------------------------
-# 1 · A corrida do estudo, com a trava
-# ---------------------------------------------------------------------------
-#: O serviço: anota o `.yml` do jogo do Lutris em laço, como a carona sobre um
-#: jogo excluído, até a janela terminar; diz a última anotação.
 _O_SERVICO = """
 import hashlib, sys
 from pathlib import Path
@@ -98,11 +79,7 @@ print(hashlib.sha256(str(k).encode()).hexdigest())
 
 
 def test_dois_processos_nao_perdem_exclusao(tmp_path: Path) -> None:
-    """A janela faz N «Excluir» enquanto o serviço anota o `.yml` noutro processo.
-
-    MORDIDA: tire a trava do `anotar_os_ymls` (ou do `adicionar`) e exclusões
-    somem do arquivo — reprova pela contagem.
-    """
+    """A janela faz N «Excluir» enquanto o serviço anota o `.yml` noutro processo."""
     n = 150
     casa = tmp_path / "casa"
     yml = casa / "g.yml"
@@ -133,11 +110,6 @@ def test_dois_processos_nao_perdem_exclusao(tmp_path: Path) -> None:
         "a última anotação do `.yml` sumiu: a janela regravou a lista por cima do serviço")
 
 
-# ---------------------------------------------------------------------------
-# 2 · A lista se lê com a trava na mão
-# ---------------------------------------------------------------------------
-#: O dublê que segura a trava: pega o `flock` do arquivo do dono, escreve uma
-#: exclusão na lista enquanto a segura, e só então solta.
 _O_OUTRO_ESCRITOR = """
 import fcntl, json, os, sys, time
 from pathlib import Path
@@ -155,12 +127,7 @@ os.close(fd)
 
 
 def test_o_adicionar_le_a_lista_depois_de_pegar_a_trava(tmp_path: Path, _lar: Path) -> None:
-    """Outro processo segura a trava e escreve na lista: o «Excluir» espera e
-    junta o seu ao dele.
-
-    MORDIDA: ler a lista antes de pegar a trava (a leitura de `:483` fora do
-    `with`) — a exclusão do outro some.
-    """
+    """Outro processo segura a trava e escreve na lista: o «Excluir» espera e"""
     destino = lx.caminho()
     lx._gravar(destino, [])
     pronto = tmp_path / "pronto"
@@ -178,18 +145,8 @@ def test_o_adicionar_le_a_lista_depois_de_pegar_a_trava(tmp_path: Path, _lar: Pa
         "a exclusão do outro escritor sumiu: o «Excluir» leu a lista antes da trava")
 
 
-# ---------------------------------------------------------------------------
-# 3 · A trava é reentrante no mesmo processo
-# ---------------------------------------------------------------------------
 def test_tirar_a_caixa_chama_a_carona_e_a_anotacao_sem_esperar_a_si_mesmo(_lar: Path) -> None:
-    """O «Tirar da lista» do mGBA: o `tirar` chama a carona, que cobre o `.yml`
-    do jogo excluído do Lutris e chama o `anotar_os_ymls` — tudo com a trava
-    na mão, num processo só.
-
-    MORDIDA: um `flock` novo a cada tomada — a carona espera o próprio `tirar`
-    e desiste, e a caixa do mGBA fica sem o ambiente; a anotação espera 5 s e
-    volta «erro».
-    """
+    """O «Tirar da lista» do mGBA: o `tirar` chama a carona, que cobre o `.yml`"""
     yml = _lutris_flatpak(_lar)
     _flatpak(_lar, _MGBA)
     assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
@@ -215,12 +172,7 @@ def test_tirar_a_caixa_chama_a_carona_e_a_anotacao_sem_esperar_a_si_mesmo(_lar: 
 
 
 def test_outro_fio_do_mesmo_processo_espera(_lar: Path) -> None:
-    """A reentrância é do FIO: outro fio do mesmo processo espera como outro
-    processo esperaria.
-
-    MORDIDA: um contador só do processo, sem o `RLock` — o segundo fio entra
-    com a trava do primeiro na mão.
-    """
+    """A reentrância é do FIO: outro fio do mesmo processo espera como outro"""
     import threading
 
     dentro = threading.Event()
@@ -247,9 +199,6 @@ def test_outro_fio_do_mesmo_processo_espera(_lar: Path) -> None:
         assert na_mao, "a trava não se soltou quando o de fora saiu"
 
 
-# ---------------------------------------------------------------------------
-# 4 · O serviço não espera a janela além de 1 s
-# ---------------------------------------------------------------------------
 _SEGURA_A_TRAVA = """
 import fcntl, os, sys, time
 from pathlib import Path
@@ -282,11 +231,7 @@ def _a_janela_segura(tmp_path: Path, _lar: Path) -> Iterator[subprocess.Popen[st
 
 def test_a_carona_do_servico_nao_espera_a_janela(
         _lar: Path, _a_janela_segura: subprocess.Popen[str]) -> None:
-    """Com a trava na janela, a carona volta em até 1 s, sem escrever, e diz.
-
-    MORDIDA: a espera sem teto (`espera=None` virando um `flock` bloqueante) —
-    a régua estoura o prazo.
-    """
+    """Com a trava na janela, a carona volta em até 1 s, sem escrever, e diz."""
     _flatpak(_lar, _MGBA)
     caixa = _lar / ".local/share/flatpak/overrides" / _MGBA
     antes = time.monotonic()
@@ -299,8 +244,6 @@ def test_a_carona_do_servico_nao_espera_a_janela(
     assert [x for x in diario if x.get("event") == "carona_esperou_a_janela"], diario
 
 
-#: O escritor que retoma a trava logo depois de soltá-la (a carona em
-#: sequência, a anotação em laço): segura 2 ms, solta, reabre e pede de novo.
 _RETOMA_A_TRAVA = """
 import fcntl, os, sys, time
 from pathlib import Path
@@ -318,13 +261,7 @@ while not fim.exists() and time.monotonic() < prazo:
 
 
 def test_quem_espera_nao_perde_para_quem_retoma(tmp_path: Path, _lar: Path) -> None:
-    """Outro processo retoma a trava logo depois de soltá-la: quem espera pega
-    a trava na vez seguinte, e não no fim do prazo.
-
-    MORDIDA: a espera de antes, que perguntava ao `flock` a cada 20 ms (o
-    `LOCK_NB` em laço no lugar de `_esperar_na_fila`) — medido em 02/10/2026,
-    9 de 10 esperas passavam de 2 s, e o «Excluir» voltava «erro».
-    """
+    """Outro processo retoma a trava logo depois de soltá-la: quem espera pega"""
     pronto, fim = tmp_path / "pronto", tmp_path / "fim"
     outro = subprocess.Popen(
         [sys.executable, "-c", _RETOMA_A_TRAVA, str(lx.caminho().parent / cpe.NOME_DA_TRAVA),
@@ -346,13 +283,7 @@ def test_quem_espera_nao_perde_para_quem_retoma(tmp_path: Path, _lar: Path) -> N
 
 
 def test_quem_desistiu_nao_fica_com_a_trava(tmp_path: Path, _lar: Path) -> None:
-    """Quem desistiu no prazo deixa a espera na fila; quando o outro solta, a
-    trava pega e se solta sozinha, e o próximo pedido deste processo entra.
-
-    MORDIDA: o fio que desistiu não solta (`_soltar` fora do `desistiu`) — a
-    trava fica presa num descritor que ninguém mais conhece, e todo pedido
-    seguinte deste processo espera até o prazo.
-    """
+    """Quem desistiu no prazo deixa a espera na fila; quando o outro solta, a"""
     pronto, fim = tmp_path / "pronto", tmp_path / "fim"
     janela = subprocess.Popen(
         [sys.executable, "-c", _SEGURA_A_TRAVA,
@@ -372,25 +303,14 @@ def test_quem_desistiu_nao_fica_com_a_trava(tmp_path: Path, _lar: Path) -> None:
 def test_sem_a_trava_no_prazo_o_excluir_nao_escreve(
         _lar: Path, _a_janela_segura: subprocess.Popen[str],
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O outro lado: sem a trava no prazo da janela, o «Excluir» volta «erro»
-    sem escrever nada (nunca um jogo meio excluído)."""
+    """O outro lado: sem a trava no prazo da janela, o «Excluir» volta «erro»"""
     monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.3)
     assert lx.adicionar("steam_app_9", lancador="heroic", nome="o nove", lar=_lar) == "erro"
     assert not lx.caminho().exists()
 
 
-# ---------------------------------------------------------------------------
-# 5 · O desfazer do uninstall espera como a janela, só com a biblioteca padrão
-# ---------------------------------------------------------------------------
 def test_o_desfazer_pelo_python_do_sistema_espera_a_trava(tmp_path: Path, _lar: Path) -> None:
-    """O desfazer roda com o `python3` do sistema e só a biblioteca padrão; com
-    a trava na mão de outro, ele espera, e termina quando ela se solta.
-
-    MORDIDA: um import de fora da biblioteca padrão no caminho da trava (um
-    `import yaml` no `trava_da_lista`) — o desfazer cai e não diz o que fez.
-    E: o desfazer sem a trava (`desfazer_as_estradas` indo direto ao
-    `_desfazer_na_trava`) — ele escreve com a trava na mão de outro.
-    """
+    """O desfazer roda com o `python3` do sistema e só a biblioteca padrão; com"""
     py = shutil.which("python3", path=SISTEMA)
     if py is None:
         pytest.skip("sem python3 no sistema")
@@ -411,9 +331,6 @@ def test_o_desfazer_pelo_python_do_sistema_espera_a_trava(tmp_path: Path, _lar: 
             env={"HOME": str(_lar), "XDG_CONFIG_HOME": str(_lar / ".config"),
                  "PATH": SISTEMA, "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1"},
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=str(tmp_path))
-        # Dois segundos (o prazo do desfazer é o da janela, 5 s): sem a trava,
-        # o desfazer escreveria bem antes disso, e o `python3` que demora a
-        # nascer numa máquina carregada não passa por «esperou».
         prazo = time.monotonic() + 2.0
         mexeu = False
         while time.monotonic() < prazo and not mexeu and desfazer.poll() is None:

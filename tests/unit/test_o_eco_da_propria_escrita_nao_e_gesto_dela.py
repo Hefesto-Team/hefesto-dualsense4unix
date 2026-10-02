@@ -46,11 +46,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MU
 
 
 class _Handle(bp._PinnedPyDualSense):
-    """O handle de produção por `__new__`, com o estado do DONO ÚNICO.
-
-    Os métodos sob prova — `_registrar_borda_do_mic` e `set_microphone_mute`
-    — são os de verdade; reimplementá-los faria esta régua medir a si mesma.
-    """
+    """O handle de produção por `__new__`, com o estado do DONO ÚNICO."""
 
     def __new__(cls) -> Any:
         return object.__new__(cls)
@@ -94,7 +90,7 @@ def _relogio(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture()
 def handle() -> _Handle:
     h = _Handle()
-    h.report(True)   # a primeira leitura só adota o estado
+    h.report(True)
     assert h._mic_mudo_seq == 0
     return h
 
@@ -130,8 +126,8 @@ def test_o_gesto_DELA_conta_borda(handle: _Handle) -> None:  # noqa: N802
 
 def test_o_eco_da_nossa_escrita_nao_conta_borda(handle: _Handle) -> None:
     """O caso EXATO da bancada dela: nós pedimos, e o eco volta."""
-    handle.set_microphone_mute(False)   # o daemon liga o microfone
-    handle.report(False)                # o firmware ecoa a nossa própria ordem
+    handle.set_microphone_mute(False)
+    handle.report(False)
     assert handle._mic_mudo_seq == 0, (
         "o eco da nossa escrita virou «ela apertou o botão» — é o laço de "
         "10/09/2026, que desligava o microfone 620 ms depois de ligá-lo"
@@ -141,22 +137,16 @@ def test_o_eco_da_nossa_escrita_nao_conta_borda(handle: _Handle) -> None:
 def test_depois_do_eco_o_botao_e_dela(handle: _Handle) -> None:
     """Depois do eco, cada aperto dela conta — nos dois sentidos."""
     handle.set_microphone_mute(False)
-    handle.report(False)                          # o eco
-    handle.aperta(antes=False, depois=True)       # ela calou
+    handle.report(False)
+    handle.aperta(antes=False, depois=True)
     assert handle._mic_mudo_seq == 1
-    handle.aperta(antes=True, depois=False)       # e ligou de novo
+    handle.aperta(antes=True, depois=False)
     assert handle._mic_mudo_seq == 2
 
 
 def test_a_escrita_que_nao_ecoou_nao_engole_o_aperto_seguinte(handle: _Handle) -> None:
-    """O furo da fila de marcas: pedir o que já vale não ecoa, e a marca ficava.
-
-    O «calado» do perfil pede mudo sobre um microfone já mudo. A marca antiga
-    esperava um eco que nunca vinha — e engolia o PRIMEIRO aperto dela que
-    levasse o bit ao mesmo valor. Medido nesta árvore com o leitor de antes:
-    dois apertos, uma borda.
-    """
-    handle.set_microphone_mute(True)              # o bit já está mudo
+    """O furo da fila de marcas: pedir o que já vale não ecoa, e a marca ficava."""
+    handle.set_microphone_mute(True)
     handle.report(True)
     handle.aperta(antes=True, depois=False)
     handle.aperta(antes=False, depois=True)

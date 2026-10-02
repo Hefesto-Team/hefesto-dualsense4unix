@@ -68,8 +68,6 @@ def inst() -> Any:
     return _carregar(_INSTRUMENTO, "_regua_o_travamento_fator_a_fator")
 
 
-# Faixa forjada da casa: nenhum endereço de aparelho. Os octetos 4 e 5 têm
-# letras para que nenhum número da linha os imite.
 VERMELHO = "aabbccd4e7a1"
 AZUL = "aabbccd4e7a3"
 BRANCO = "aabbccd4e7a2"
@@ -122,19 +120,12 @@ def _dez(inst: Any, estado: dict[str, Any] | None, **kw: Any) -> list[Any]:
     return [_amostra(inst, estado, n, **kw) for n in range(10)]
 
 
-# ---------------------------------------------------------------------------
-# 1. «Não sei» não é colapso
-# ---------------------------------------------------------------------------
-
-
 def test_1_nao_sei_nao_e_colapso(inst: Any) -> None:
     rotulos = inst.Rotulos()
-    # 02:13: os três na mesa (o azul e o vermelho no 1, o branco no 2).
     antes = _estado(_controle(VERMELHO, 198), _controle(AZUL, 34, modelo="Starlight Blue"),
                     _controle(BRANCO, 600, modelo="White", adaptador=ADAPTADOR_2))
     _janela(inst, _dez(inst, antes), rotulos)
     # 02:18: o branco desligado (some do state_full), o azul de leitor perdido
-    # (connected, hz nulo), o vermelho sozinho no 1.
     depois = _estado(_controle(VERMELHO, 550),
                      _controle(AZUL, None, modelo="Starlight Blue"))
     linha = _janela(inst, _dez(inst, depois), rotulos)
@@ -143,7 +134,6 @@ def test_1_nao_sei_nao_e_colapso(inst: Any) -> None:
     assert linha["controles"]["Starlight Blue 1"]["movimento"] is None
     assert linha["colapso"] == []
 
-    # O segundo sem resposta não conta: 4 mudos e 6 com o vermelho a 500.
     meio = [_amostra(inst, None, n) for n in range(4)]
     meio += [_amostra(inst, _estado(_controle(VERMELHO, 500)), n) for n in range(4, 10)]
     linha = _janela(inst, meio, rotulos)
@@ -152,14 +142,8 @@ def test_1_nao_sei_nao_e_colapso(inst: Any) -> None:
     assert linha["daemon"] == {"respostas": 6, "sem_resposta": 4, "tiques": 0.0}
     assert linha["colapso"] == []
 
-    # Um connected com 0,0 conta.
     zero = _janela(inst, _dez(inst, _estado(_controle(VERMELHO, 0.0))), rotulos)
     assert zero["colapso"] == ["Cosmic Red 1"]
-
-
-# ---------------------------------------------------------------------------
-# 2. O fator sai do que a janela mediu
-# ---------------------------------------------------------------------------
 
 
 def test_2_o_fator_sai_do_que_a_janela_mediu(inst: Any) -> None:
@@ -175,7 +159,6 @@ def test_2_o_fator_sai_do_que_a_janela_mediu(inst: Any) -> None:
     da_steam = [g for g in grupos if g["fatores"]["steam_dela"] == 1]
     assert len(da_steam) == 1 and da_steam[0]["janelas"] == 1
     assert da_steam[0]["passos"] == ["base"]
-    # O modo é fator da MATRIZ: o mesmo passo em Xbox (``uinput``) e em
     # DualSense (``uhid``) são dois grupos, pelo pad que o estado disse.
     xbox = _janela(inst, _dez(inst, _estado(_controle(VERMELHO, 300,
                                                        extra={"vpad_backend": "uinput"}))),
@@ -185,11 +168,6 @@ def test_2_o_fator_sai_do_que_a_janela_mediu(inst: Any) -> None:
                    rotulos, inst.ContextoDaJanela(passo="base"))
     pelos_pads = {tuple(g["fatores"]["pads"]): g["janelas"] for g in inst.resumir([xbox, sony])}
     assert pelos_pads == {("uinput",): 1, ("uhid",): 1}, pelos_pads
-
-
-# ---------------------------------------------------------------------------
-# 3. A Steam do teste pelo HOME
-# ---------------------------------------------------------------------------
 
 
 def _processo(raiz: Path, pid: int, argv: list[str], home: str) -> None:
@@ -206,7 +184,6 @@ def test_3_a_steam_do_teste_pelo_home(inst: Any, tmp_path: Path) -> None:
               dela)
     _processo(raiz, 200, ["/tmp/pytest-of-ela/pytest-3/lar0/Steam/ubuntu12_32/steam"],
               "/tmp/pytest-of-ela/pytest-3/lar0")
-    # O próprio instrumento, com «steam» no argumento, e o shell que o chamou.
     _processo(raiz, 300, ["python3", "o_travamento_fator_a_fator.py", "janela", "--passo",
                           "steam"], dela)
     _processo(raiz, 299, ["bash", "-c", "python3 o_travamento_fator_a_fator.py janela"], dela)
@@ -220,11 +197,6 @@ def test_3_a_steam_do_teste_pelo_home(inst: Any, tmp_path: Path) -> None:
     assert contagem["pytest"] == 1
 
 
-# ---------------------------------------------------------------------------
-# 4. O controle pela posse
-# ---------------------------------------------------------------------------
-
-
 def test_4_o_controle_pela_posse(inst: Any) -> None:
     rotulos = inst.Rotulos()
     a = _controle(WHITE_A, 500, modelo="White")
@@ -236,11 +208,6 @@ def test_4_o_controle_pela_posse(inst: Any) -> None:
         assert linha["controles"]["White 1"]["movimento"]["mediana"] == 500.0
         assert linha["controles"]["White 2"]["movimento"]["mediana"] == 300.0
         assert linha["controles"]["White 2"]["adaptador"] == 2
-
-
-# ---------------------------------------------------------------------------
-# 5. Nenhum endereço na saída
-# ---------------------------------------------------------------------------
 
 
 def test_5_nenhum_endereco_na_saida(inst: Any, tmp_path: Path) -> None:
@@ -287,11 +254,6 @@ def test_5_nenhum_endereco_na_saida(inst: Any, tmp_path: Path) -> None:
     assert list(linha["adaptadores"]) == ["1"]
 
 
-# ---------------------------------------------------------------------------
-# 6. A linha do diário entra na janela dela
-# ---------------------------------------------------------------------------
-
-
 def _linha_do_diario(epoch: float, texto: str) -> str:
     hora = datetime.fromtimestamp(epoch).astimezone().isoformat(timespec="microseconds")
     return f"{hora} MesaDeMentira {texto}"
@@ -321,15 +283,8 @@ def test_6_a_linha_do_diario_entra_na_janela_dela(inst: Any) -> None:
     assert sem_diario["fatores"]["vigia_do_radio"] is None
 
 
-# ---------------------------------------------------------------------------
-# 7. As réguas que discordam aparecem, e só elas
-# ---------------------------------------------------------------------------
-
-
 def test_7_as_reguas_que_discordam_aparecem_e_so_elas(inst: Any) -> None:
     rotulos = inst.Rotulos()
-    # O par no 1: a soma dos Hz dá 300, o radio_ar do daemon diz 300 (a mesma
-    # fonte), e o medidor do INSTRUMENTO diz 500: 200/s e 40% longe.
     par = _estado(_controle(VERMELHO, 200, voz=70),
                   _controle(AZUL, 30, voz=0, modelo="Starlight Blue", jogador=3),
                   radio_ar={ADAPTADOR_1: {"entrada_por_s": 300, "canais_evitados": []}})
@@ -337,7 +292,6 @@ def test_7_as_reguas_que_discordam_aparecem_e_so_elas(inst: Any) -> None:
     assert discorda["adaptadores"]["1"]["discordam"] is True
     assert discorda["veredito"] is False
     assert discorda["fora_do_veredito"] == ["as réguas discordam no adaptador 1"]
-    # 02:37: o vermelho sozinho no 1, 13,5 de movimento e 22,4 de voz contra 20.
     sozinho = _estado(_controle(VERMELHO, 13.5, voz=22.4),
                       radio_ar={ADAPTADOR_1: {"entrada_por_s": 20,
                                               "canais_evitados": list(range(54))}})
@@ -350,11 +304,6 @@ def test_7_as_reguas_que_discordam_aparecem_e_so_elas(inst: Any) -> None:
     assert grupos[2]["com_colapso"] == 0 and grupos[2]["no_veredito"] == 0
     assert grupos[2]["fora_do_veredito"] == {"as réguas discordam no adaptador 1": 1}
     assert grupos[1]["com_colapso"] == 1
-
-
-# ---------------------------------------------------------------------------
-# 8. As condições tiram a janela, com o motivo
-# ---------------------------------------------------------------------------
 
 
 def test_8_as_condicoes_tiram_a_janela_com_o_motivo(inst: Any) -> None:
@@ -381,11 +330,6 @@ def test_8_as_condicoes_tiram_a_janela_com_o_motivo(inst: Any) -> None:
     assert sum(grupo["fora_do_veredito"].values()) == 4
 
 
-# ---------------------------------------------------------------------------
-# 9. O daemon mudo: o achado de 02/10
-# ---------------------------------------------------------------------------
-
-
 def test_9_o_daemon_mudo_sai_da_janela_e_nao_para_o_instrumento(inst: Any) -> None:
     rotulos = inst.Rotulos()
     _janela(inst, _dez(inst, _estado(_controle(VERMELHO, 300), tique=100)), rotulos)
@@ -396,7 +340,6 @@ def test_9_o_daemon_mudo_sai_da_janela_e_nao_para_o_instrumento(inst: Any) -> No
     assert mudo["fora_do_veredito"] == ["o daemon não respondeu na janela"]
 
     # O soquete que aceita e não responde (o laço parado): o state_full volta
-    # «-» dentro do prazo, e o instrumento segue.
     pasta = Path(tempfile.mkdtemp(prefix="tff-"))
     caminho = pasta / "s.sock"
     servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -415,8 +358,6 @@ def test_9_o_daemon_mudo_sai_da_janela_e_nao_para_o_instrumento(inst: Any) -> No
 
     fio = threading.Thread(target=aceitar, daemon=True)
     fio.start()
-    # A pergunta vai num fio próprio: sem o prazo ela nunca volta, e a régua tem
-    # de REPROVAR, e não pendurar a suíte junto com o instrumento.
     lido: list[Any] = []
     pergunta = threading.Thread(
         target=lambda: lido.append(inst.estado_pelo_ipc(0.3, caminho)), daemon=True)
@@ -426,7 +367,7 @@ def test_9_o_daemon_mudo_sai_da_janela_e_nao_para_o_instrumento(inst: Any) -> No
     passou = time.monotonic() - comeco
     preso = pergunta.is_alive()
     for conexao in presos:
-        conexao.close()  # solta a pergunta presa, se houver
+        conexao.close()
     pergunta.join(2.0)
     caminho.unlink(missing_ok=True)
     pasta.rmdir()

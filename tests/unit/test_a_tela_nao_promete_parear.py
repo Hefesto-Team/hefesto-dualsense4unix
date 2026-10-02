@@ -1,17 +1,4 @@
-"""A-TELA-PROMETE-PAREAR-01 — a frase que oferecia o que o produto não faz.
-
-O `mapa-das-portas` dizia, ao propor mover um controle de adaptador:
-
-    «o Hefesto desfaz o pareamento antigo, limpa o que ficou para trás e
-     pareia de novo no adaptador certo — sem terminal, com o controle na mão.»
-
-**Nenhuma linha de Python jamais chamou a ponte** (`grep -rn
-bt_ponte_privilegiada src/` devolve zero), e os 18 gestos da aba Conexões não
-tocam em pareamento. A tela oferecia um botão que não existe.
-
-Regra desta casa: *fato errado se SUBSTITUI, e sai de TODOS os lugares onde
-aparece.* Aqui são três: o gerador, a bancada e o publicado.
-"""
+"""A-TELA-PROMETE-PAREAR-01 — a frase que oferecia o que o produto não faz."""
 
 from __future__ import annotations
 
@@ -35,11 +22,6 @@ PROMESSA = "pareia de novo no adaptador certo — sem terminal"
 
 
 def test_o_congelado_ainda_tem_a_promessa() -> None:
-    # A origem congelada NÃO se reescreve — ela é o registro de como o motor
-    # falava em 24/08/2026, e o ouro de 120 cenários se apoia nela. A cura é
-    # uma Edicao sobre ela, e este teste é o que garante que a `antes` da
-    # edição continua tendo alvo: zero ocorrências aqui e a troca envelheceu
-    # calada.
     assert PROMESSA in CONGELADO.read_text(encoding="utf-8"), (
         "a promessa sumiu da origem congelada — ou alguém reescreveu o "
         "congelado (o que a decisão proíbe), ou a Edicao perdeu o alvo."
@@ -55,19 +37,11 @@ def test_a_promessa_saiu_da_bancada_e_do_publicado() -> None:
         )
 
 
-#: A LISTA QUE PROPÕE MOVER UM CONTROLE DE ADAPTADOR — é onde a promessa morava.
 LISTA_DE_MOVER = "no adaptador errado"
 
 
 def test_o_texto_novo_diz_o_que_ha_hoje() -> None:
-    """Onde a página propõe mover um controle, ela diz o caminho de hoje.
-
-    26/09/2026 (O-MAPA-DAS-CONEXOES-NO-PRODUTO-01): a seção «Os controles»
-    saiu da página inteira, a pedido dela — os controles no adaptador errado
-    viraram a Sugestão de Conexão da aba. Sem a lista não há onde dizer o
-    caminho; se ela voltar, volta dizendo. A origem congelada prova que o
-    seletor ainda enxerga a lista.
-    """
+    """Onde a página propõe mover um controle, ela diz o caminho de hoje."""
     assert LISTA_DE_MOVER in CONGELADO.read_text(encoding="utf-8")
     for arquivo in (BANCADA, PUBLICADO):
         texto = re.sub(r"\s+", " ", arquivo.read_text(encoding="utf-8"))
@@ -84,8 +58,6 @@ def test_o_texto_novo_diz_o_que_ha_hoje() -> None:
 
 
 def test_a_edicao_esta_no_gerador_e_nao_so_no_html() -> None:
-    # Editar o HTML à mão é o defeito que esta casa já pagou: a próxima corrida
-    # do gerador desfaz tudo, calada.
     texto = GERADOR.read_text(encoding="utf-8")
     assert "A-TELA-PROMETE-PAREAR-01" in texto, (
         "a correção não está no gerador — a próxima geração do "
@@ -94,9 +66,6 @@ def test_a_edicao_esta_no_gerador_e_nao_so_no_html() -> None:
 
 
 def test_a_tela_so_promete_o_que_tem_chamador() -> None:
-    # A régua que impede a PRÓXIMA frase de repetir o defeito: se algum dia
-    # alguém ligar a ponte, este teste cai e a promessa pode voltar — de
-    # propósito.
     ponte_ligada = bool(
         list((RAIZ / "src").rglob("*.py"))
         and [
@@ -107,7 +76,7 @@ def test_a_tela_so_promete_o_que_tem_chamador() -> None:
     )
     texto = PUBLICADO.read_text(encoding="utf-8")
     if ponte_ligada:
-        return  # alguém ligou a ponte: a promessa deixou de ser falsa.
+        return
     assert PROMESSA not in texto, (
         "a tela promete parear e NENHUM Python chama a ponte "
         "(`bt_ponte_privilegiada` não aparece em src/). Ver PONTE-SEM-CHAMADOR-01."

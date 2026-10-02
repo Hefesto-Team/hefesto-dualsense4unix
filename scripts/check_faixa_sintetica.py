@@ -58,16 +58,6 @@ import re
 import sys
 from pathlib import Path
 
-# AS TRÊS FAIXAS TÊM UM DONO, E ELE NÃO É ESTE ARQUIVO — 18/09/2026.
-#
-# Elas moravam aqui, digitadas. Em 18/09 o PRODUTO passou a precisar da mesma
-# lista — o `identity.order_entries` EXPURGA endereço de faixa sintética da
-# fila de numeração, porque quatro deles moraram na mesa dela de 22/08 a 18/09
-# —, e `scripts/` não é pacote: o daemon não tem como importar daqui. Digitar
-# os seis dígitos de novo do outro lado seria a régua e o produto com
-# definições próprias do que é lixo, que é como esta casa perde um dia.
-#
-# O dono é `core/faixa_sintetica.py`. Este portão pergunta a ele.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hefesto_dualsense4unix.core.faixa_sintetica import (
@@ -84,30 +74,11 @@ def _padrao_para(faixa: str) -> re.Pattern[str]:
 
 _PADROES = {faixa: _padrao_para(faixa) for faixa in FAIXAS_SINTETICAS}
 
-#: Extensões que fazem sentido varrer — o `config_dir()` do Hefesto só guarda
-#: JSON, texto e (raramente) log; nada binário mora lá por contrato.
 _EXTENSOES_VARRIDAS = {".json", ".txt", ".log", ".conf", ".ini", ""}
 
 
 def _vale_varrer(caminho: Path) -> bool:
-    """Basta UM sufixo conhecido, em qualquer posição, e não só o último.
-
-    PONTO CEGO MEDIDO — 25/08/2026, e quem o achou foi quem coordena, ao ver a
-    própria régua ficar VERDE sobre um arquivo que ele mesmo acabara de criar:
-    ``controllers.json.antes-de-tirar-fixtures-20260825``, com quatro endereços
-    de fixture dentro, na config viva dela.
-
-    ``Path.suffix`` devolve só o ÚLTIMO sufixo. Todo backup carrega um sufixo
-    próprio — ``.bak``, ``.old``, ``.orig``, ``.2026-08-25``, ``.antes-de-X`` —,
-    e por isso **backup era exatamente a classe de arquivo que esta régua não
-    enxergava**. É a pior forma de ponto cego: some justamente onde alguém
-    guardou uma cópia do estado que a régua existe para vigiar.
-
-    ``Path.suffixes`` parte o nome em todos os pontos, então
-    ``controllers.json.antes-de-X`` traz ``['.json', '.antes-de-X']`` e o
-    ``.json`` basta. Um arquivo sem ponto nenhum continua varrido (o ``""`` da
-    lista), e binário sem sufixo conhecido continua de fora.
-    """
+    """Basta UM sufixo conhecido, em qualquer posição, e não só o último."""
     if not caminho.suffixes:
         return "" in _EXTENSOES_VARRIDAS
     return any(s.lower() in _EXTENSOES_VARRIDAS for s in caminho.suffixes)
@@ -143,22 +114,9 @@ def achados(diretorio: Path) -> list[str]:
 
 
 def enderecos(diretorio: Path) -> set[str]:
-    """``{"<arquivo>::<endereço colado, minúsculo>"}`` — a forma COMPARÁVEL.
-
-    Irmã de :func:`achados`, que devolve texto para pessoa ler. Esta devolve
-    conjunto, para o ``tests/conftest.py`` (FAIXA-NO-BERCO-01) comparar o
-    começo da sessão com o fim: o que interessa lá não é "existe faixa
-    sintética" — numa máquina já poluída existe desde ontem — e sim "apareceu
-    uma que não estava aqui quando a suíte começou".
-
-    A chave inclui o ARQUIVO de propósito: o mesmo endereço migrando para um
-    arquivo onde não estava é escrita nova, e escrita nova é o que se vigia.
-    O número da linha fica de fora — uma linha a mais no arquivo empurraria
-    todas as outras e produziria alarme sem escrita nenhuma.
-    """
+    """``{"<arquivo>::<endereço colado, minúsculo>"}`` — a forma COMPARÁVEL."""
     vistos: set[str] = set()
     for linha in achados(diretorio):
-        # "  <caminho>:<linha>: faixa sintética 'x' -> 'valor'"
         cabeca, _, cauda = linha.rpartition(" -> ")
         caminho = cabeca.strip().split(":")[0]
         valor = cauda.strip().strip("'\"").replace(":", "").lower()
@@ -166,10 +124,6 @@ def enderecos(diretorio: Path) -> set[str]:
     return vistos
 
 
-#: Os arquivos que o produto escreve DENTRO do ``config_dir()``. Um deles na
-#: árvore versionada é artefato de tempo de execução no lugar errado — e é
-#: exatamente o que o ``--arvore`` procura. A lista sai dos donos de cada um:
-#: ``daemon/subsystems/identity.py``, ``external_mask.py``, ``utils/maquina.py``,
 #: ``app/gui_prefs.py``, ``utils/session.py`` e a aba Sistema.
 NOMES_DE_TEMPO_DE_EXECUCAO = (
     "controllers.json",
@@ -181,27 +135,11 @@ NOMES_DE_TEMPO_DE_EXECUCAO = (
     "steam_input_apps.txt",
 )
 
-#: Onde a faixa sintética é LEGÍTIMA e não se procura nada: fixture de teste é
-#: para isso, e documento de sprint cita o achado para não o perder.
 _ARVORE_IGNORADA = ("tests", "docs", ".git", "captures", "examples")
 
 
 def achados_na_arvore(raiz: Path) -> list[str]:
-    """Artefatos de tempo de execução COMMITADOS que trazem faixa sintética.
-
-    A BUSCA É POR PREFIXO, e a correção é de 26/08/2026. Até aqui esta função
-    fazia ``rglob(nome)`` — casamento EXATO —, e por isso o ponto cego que
-    :func:`_vale_varrer` fechou em 25/08 continuava aberto exatamente onde a
-    poluição foi encontrada: num arquivo de BACKUP. A cura de 25/08 foi para
-    :func:`achados`, o varredor ``--casa``, que o cabeçalho deste arquivo
-    declara não reprovar em lugar nenhum; o varredor que o CI roda é este, e
-    ele nunca chamava ``_vale_varrer``.
-
-    ``rglob(nome + "*")`` traz ``controllers.json.antes-de-X`` junto com
-    ``controllers.json``, e ``_vale_varrer`` filtra o que veio a mais: um
-    ``controllers.jsonl`` tem ``suffixes == ['.jsonl']`` e cai fora, um
-    ``controllers.json.bak`` tem ``['.json', '.bak']`` e entra.
-    """
+    """Artefatos de tempo de execução COMMITADOS que trazem faixa sintética."""
     linhas: list[str] = []
     for nome in NOMES_DE_TEMPO_DE_EXECUCAO:
         for caminho in sorted(raiz.rglob(nome + "*")):
@@ -262,11 +200,6 @@ def limpar(diretorio: Path) -> list[str]:
     if not isinstance(dados, dict) or not isinstance(dados.get("order"), list):
         return []
     antes = dados["order"]
-    # A PERGUNTA É DO DONO, não deste arquivo: `_PADROES` existe para varrer
-    # TEXTO (onde o endereço aparece no meio de uma linha de log), e um campo
-    # `addr` de JSON é um endereço inteiro. Usar o regex de varredura aqui
-    # seria uma segunda definição de "é lixo" — o defeito que o dono único
-    # nasceu para matar.
     depois = [
         e
         for e in antes
@@ -278,10 +211,6 @@ def limpar(diretorio: Path) -> list[str]:
         e["addr"] for e in antes if e not in depois and isinstance(e, dict)
     ]
     dados["order"] = depois
-    # Escrita atômica, no molde do produto (`identity._save_locked`): um
-    # `controllers.json` truncado por queda de energia custaria a numeração da
-    # mesa inteira, e este gesto roda no `doctor --fix` de qualquer máquina
-    # (`fix_fila_sem_fixture`) — nunca no install, que não passa `--fix`.
     tmp = alvo.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(dados, indent=1, ensure_ascii=False), encoding="utf-8")
     tmp.replace(alvo)

@@ -1,27 +1,4 @@
-"""Onda W — DKMS rtw88_usb por DEFAULT no install.sh + uninstall simétrico.
-
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md (§3).
-
-Regras da casa cobertas (falha-sem/passa-com):
-- install SEM FLAGS aplica o DKMS (default ON); `--no-dkms` é o MESMO
-  opt-out da Onda T (desliga AMBOS os módulos) — e vale em TODO formato
-  (native E flatpak/appimage/deb, padrão do broker/achado #7);
-- ativação FAIL-SAFE: a função NUNCA chama modprobe/rmmod (substituir o
-  rtw88_usb carregado derrubaria o WiFi da mantenedora AO VIVO) — mensagem
-  honesta nos 3 estados, e o marcador de "patchado carregado" é o PARÂMETRO
-  hang_reset (o in-tree JÁ expõe parameters/ com switch_usb_mode — só o
-  diretório NÃO distingue);
-- fail-safe da lib exercitado de verdade: sem sudo, sem dkms e SEM HEADERS
-  o install avisa e segue (in-tree continua), sem promessa falsa de ativação;
-- uninstall simétrico SEM flag nova: dkms remove + conf.d do NM (se presente);
-- o conf.d de powersave do NM (W2) NÃO entra no install por default —
-  gateado por evidência da medição;
-- paridade packaging (mesmo achado #9 da Onda T): as fontes DKMS viajam em
-  todo formato empacotado e o install-host-udev.sh RODA o DKMS do rtw88.
-
-Dois níveis, como test_install_dkms_default.py: execução REAL da função
-extraída (bash de verdade, stubs, sem root) + contrato de texto.
-"""
+"""Onda W — DKMS rtw88_usb por DEFAULT no install.sh + uninstall simétrico."""
 
 from __future__ import annotations
 
@@ -41,11 +18,6 @@ DKMS_CONF_PATH = REPO_ROOT / "assets" / "dkms" / "rtw88-usb" / "dkms.conf"
 PARITY_PATH = REPO_ROOT / "scripts" / "check_packaging_parity.sh"
 HOST_UDEV_PATH = REPO_ROOT / "scripts" / "install-host-udev.sh"
 
-#: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh`. As curas de HOST
-#: — esta função de DKMS inclusive — mudaram de casa em 31/08/2026, byte por
-#: byte, e os dois instaladores sourceiam a lib. As perguntas deste arquivo
-#: (flags, `--help`, passos, cerca) continuam sendo do `install.sh`; o CORPO
-#: da função vem da lib. Ver `tests/unit/fonte_do_instalador.py`.
 INSTALL = texto_do_instalador() if existe_o_instalador() else ""
 UNINSTALL = UNINSTALL_PATH.read_text(encoding="utf-8") if UNINSTALL_PATH.exists() else ""
 DKMS_CONF = DKMS_CONF_PATH.read_text(encoding="utf-8") if DKMS_CONF_PATH.exists() else ""
@@ -126,8 +98,6 @@ class TestDefaultOnOptOutCompartilhado:
         )
 
     def test_gate_compartilhado_com_a_onda_t(self) -> None:
-        # --no-dkms desliga AMBOS os módulos (hid-nintendo E rtw88_usb) —
-        # nenhuma flag nova nasce aqui.
         assert re.search(r"--no-dkms\)\s+NO_DKMS=1", INSTALL)
         assert "--no-rtw88" not in INSTALL, "opt-out é o --no-dkms compartilhado, sem flag nova"
         assert FN.index('"${NO_DKMS}"') < FN.index("dkms_install_patched_module")
@@ -147,8 +117,6 @@ class TestWiringEmTodoFormato:
         assert "install_dkms_rtw88_usb_host" in INSTALL[indice : indice + 400]
 
     def test_formatos_de_pacote_chamam_antes_do_exit_0(self) -> None:
-        # Mesmo achado #7 do broker: flatpak/appimage/deb dão exit 0 cedo —
-        # o DKMS é mudança de SISTEMA/kernel e vale em todo formato.
         inicio = INSTALL.index('if [[ "${FORMAT}" != "native" ]]; then')
         fim = re.search(r"^\s+exit 0\s*$", INSTALL[inicio:], re.MULTILINE)
         assert fim is not None, "exit 0 do bloco não-native não encontrado"
@@ -165,8 +133,6 @@ class TestFuncaoContrato:
         )
 
     def test_usa_a_lib_generica_com_pkg_versao_e_assets_certos(self) -> None:
-        # 2ª instância da infra da Onda T: ZERO ajuste na lib, só argumentos.
-        # PKG-3 (auditoria 21/07): versão via dkms_pkg_version, não literal.
         assert 'source "${ROOT_DIR}/scripts/dkms_lib.sh"' in FN
         assert '_rtw_src="${ROOT_DIR}/assets/dkms/rtw88-usb"' in FN
         assert _versao_dkms_conf()
@@ -182,9 +148,6 @@ class TestFuncaoContrato:
         ), "recarregar rtw88_usb derrubaria o WiFi em uso (inviolável)"
 
     def test_marcador_do_patchado_e_o_param_hang_reset(self) -> None:
-        # Diferente do hid_nintendo (0 params no in-tree): o rtw88_usb
-        # in-tree JÁ expõe parameters/ (switch_usb_mode) — o diretório
-        # sozinho NÃO distingue; o marcador é o PARÂMETRO NOVO hang_reset.
         assert "-e /sys/module/rtw88_usb/parameters/hang_reset" in FN, (
             "detecção do patchado carregado exige o param exclusivo do patch"
         )
@@ -198,8 +161,6 @@ class TestFuncaoContrato:
         assert "descarregado" in FN, "descarregado: o patchado entra no próximo plug do dongle"
 
     def test_ativacao_gateada_pelo_staging_real(self) -> None:
-        # Mesmo achado #5 do corretor da Onda T: a lib retorna 0 em TODOS os
-        # ramos — o único juiz de "staged" é dkms_module_from_updates.
         assert "dkms_module_from_updates rtw88_usb" in FN
         assert FN.index("dkms_module_from_updates rtw88_usb") < FN.index(
             "/sys/module/rtw88_usb/parameters/hang_reset"
@@ -223,9 +184,6 @@ class TestFuncaoComportamental:
         assert "in-tree continua" in resultado.stdout
 
     def test_staging_falho_nao_anuncia_ativacao_futura(self, tmp_path: Path) -> None:
-        # Máquina SEM dkms (ou build falho): a lib avisa e retorna 0; a
-        # função NÃO pode prometer ativação — nada foi staged e o próximo
-        # plug carrega o in-tree.
         stubs = tmp_path / "bin"
         stubs.mkdir(exist_ok=True)
         _stub(stubs, "uname", 'echo "0.0.0-hefesto-fake"')
@@ -249,9 +207,6 @@ class TestFuncaoComportamental:
             )
 
     def test_sem_headers_do_kernel_avisa_e_segue(self, tmp_path: Path) -> None:
-        # (b) do contrato da onda: warn honesto sem headers. Usa a costura de
-        # teste da lib (HEFESTO_DKMS_MODULES_ROOT) apontando p/ um diretório
-        # vazio — o build nunca é tentado e o in-tree continua.
         stubs = tmp_path / "bin"
         stubs.mkdir(exist_ok=True)
         _stub(stubs, "uname", 'echo "0.0.0-hefesto-fake"')
@@ -276,7 +231,6 @@ class TestFuncaoComportamental:
 
 class TestUninstallSimetrico:
     def test_remove_via_lib_com_a_mesma_versao_do_dkms_conf(self) -> None:
-        # PKG-3: remove parseia a versão do dkms.conf (mesma fonte do install).
         assert 'source "${ROOT_DIR}/scripts/dkms_lib.sh"' in UNINSTALL
         assert re.search(
             r"dkms_remove_patched_module hefesto-rtw88-usb\s*\\\s*"
@@ -305,8 +259,6 @@ class TestUninstallSimetrico:
         )
 
     def test_remove_a_conf_do_nm_se_presente(self) -> None:
-        # Simetria "se instalado, some" (mesmo padrão do storm.conf): o
-        # conf.d do W2 é opt-in, mas o uninstall limpa sem flag nova.
         assert f"sudo rm -f {NM_CONF_ETC}" in UNINSTALL
 
     def test_uninstall_nunca_recarrega_nem_toca_o_radio(self) -> None:
@@ -318,9 +270,6 @@ class TestUninstallSimetrico:
         assert not re.search(r"\brfkill\b", codigo), "uninstall NUNCA chama rfkill"
 
     def test_hang_reset_devolvido_a_0_sem_reload(self) -> None:
-        # Diferente da Onda T não há conf externa: p/ o módulo carregado
-        # ficar menos agressivo até o boot, o uninstall devolve SÓ o
-        # hang_reset a 0 via /sys (0644) — detecção/silenciamento continuam.
         indice = UNINSTALL.index("dkms_remove_patched_module hefesto-rtw88-usb")
         bloco = UNINSTALL[indice : indice + 700]
         assert "/sys/module/rtw88_usb/parameters/hang_reset" in bloco
@@ -328,11 +277,7 @@ class TestUninstallSimetrico:
 
 
 class TestPowersaveGateadoPorEvidencia:
-    """Corretor final (achado #5): a via de PROMOÇÃO documentada no asset e no
-    desenho da Onda W (`./install.sh --wifi-powersave-off`) não existia — o
-    parser só avisava "argumento desconhecido" e seguia com exit 0, e a
-    operadora podia concluir que a cura foi aplicada quando nada mudou.
-    Falha-sem/passa-com: a flag TEM de existir, opt-in, nascendo desligada."""
+    """Corretor final (achado #5): a via de PROMOÇÃO documentada no asset e no"""
 
     def test_flag_opt_in_existe_e_nasce_desligada(self) -> None:
         assert re.search(r"^WIFI_POWERSAVE_OFF=0$", INSTALL, re.MULTILINE), (
@@ -343,14 +288,10 @@ class TestPowersaveGateadoPorEvidencia:
         )
 
     def test_conf_do_nm_so_entra_atras_da_flag(self) -> None:
-        # O sudo install do conf existe (a via de promoção é real)…
         copias = re.findall(
             r"sudo install -Dm644[^\n]*hefesto-wifi-powersave\.conf", INSTALL
         )
-        # (2 linhas: a cópia real + a instrução do warn sem sudo — nenhuma fora
-        # do bloco gateado.)
         assert copias, "a via de promoção precisa copiar o conf para /etc"
-        # …e mora DENTRO do bloco gateado pela flag (nunca no caminho default).
         gate = INSTALL.index('if [[ "${WIFI_POWERSAVE_OFF}" -eq 1 ]]')
         fim_bloco = INSTALL.index("# 3e. Cmdline", gate)
         bloco = INSTALL[gate:fim_bloco]
@@ -358,15 +299,12 @@ class TestPowersaveGateadoPorEvidencia:
             assert linha in bloco, (
                 "cópia do conf de powersave FORA do gate --wifi-powersave-off"
             )
-        # O caminho sem a flag continua sem tocar o conf.d do NM.
         sem_bloco = INSTALL[:gate] + INSTALL[fim_bloco:]
         assert NM_CONF_ETC not in _sem_comentarios(sem_bloco), (
             "o conf.d do NM só pode ser tocado atrás da flag opt-in"
         )
 
     def test_help_aceita_a_flag_sem_aviso_de_desconhecido(self) -> None:
-        # Execução REAL do parser: antes do fix, `--wifi-powersave-off` caía no
-        # `*)` e imprimia "argumento desconhecido" (e nada mais acontecia).
         result = subprocess.run(
             [BASH, str(INSTALL_PATH), "--wifi-powersave-off", "--help"],
             capture_output=True,
@@ -375,7 +313,6 @@ class TestPowersaveGateadoPorEvidencia:
         )
         assert result.returncode == 0, result.stderr
         assert "argumento desconhecido" not in result.stdout + result.stderr
-        # E o --help documenta a flag (o range do sed cobre as linhas novas).
         assert "--wifi-powersave-off" in result.stdout
 
     def test_install_nunca_chama_nmcli_ou_rfkill(self) -> None:
@@ -387,8 +324,7 @@ class TestPowersaveGateadoPorEvidencia:
 
 
 class TestParidadePackaging:
-    """Mesmo achado #9 da Onda T: sem as fontes DKMS nos pacotes, a cura de
-    raiz do fantasma USB nunca chega a usuários de .deb/rpm/arch/flatpak."""
+    """Mesmo achado #9 da Onda T: sem as fontes DKMS nos pacotes, a cura de"""
 
     def test_fontes_dkms_em_todo_formato_empacotado(self) -> None:
         manifestos = {
@@ -409,8 +345,6 @@ class TestParidadePackaging:
             )
 
     def test_install_host_udev_roda_o_dkms_dos_pacotes(self) -> None:
-        # O caminho pós-instalação OFICIAL (postinst/%post/PKGBUILD apontam
-        # p/ este script) precisa construir o módulo, não só carregar fontes.
         assert "dkms_install_patched_module hefesto-rtw88-usb" in HOST_UDEV
         assert "dkms_module_from_updates rtw88_usb" in HOST_UDEV, (
             "mensagem de staging honesta exige a prova por modinfo"
@@ -423,9 +357,6 @@ class TestParidadePackaging:
         )
 
     def test_remocao_de_pacote_nao_deixa_dkms_orfao(self) -> None:
-        # Simetria: o módulo DKMS nasce FORA do manifesto do gerenciador de
-        # pacotes — remove/purge precisam desregistrá-lo, senão o patchado
-        # vence o in-tree para sempre numa máquina que removeu o app.
         hooks = {
             "packaging/debian/prerm": REPO_ROOT / "packaging" / "debian" / "prerm",
             "packaging/debian/postrm": REPO_ROOT / "packaging" / "debian" / "postrm",

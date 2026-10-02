@@ -1,10 +1,4 @@
-"""8BIT-02 — escrita do LED de player dos controles externos (Nintendo/8BitDo).
-
-Cobre o writer PURO ``core/external_leds``: acende os N LEDs verdes à esquerda,
-apaga o resto, garante o 5º (azul) apagado, capa em [1,4], é best-effort (nunca
-levanta sem os nós/permissão) e resolve a instância HID a partir do hidraw.
-Sem daemon, sem GTK — só o sysfs falso em ``tmp_path``.
-"""
+"""8BIT-02 — escrita do LED de player dos controles externos (Nintendo/8BitDo)."""
 from __future__ import annotations
 
 import os
@@ -98,11 +92,7 @@ class TestWritePlayerNumber:
         assert quatro != sete
 
     def test_padroes_de_1_a_9_sao_todos_distintos(self, tmp_path: Path) -> None:
-        """R-25: a barra (4 verdes + azul) codifica 9 números SEM repetir.
-
-        Falha-sem: com o capping em 4, os slots 4..9 escreviam o mesmo padrão
-        — seis controles indistinguíveis.
-        """
+        """R-25: a barra (4 verdes + azul) codifica 9 números SEM repetir."""
         _mk_player_nodes(tmp_path, _INST)
         vistos: list[tuple[str, ...]] = []
         for slot in range(1, 10):
@@ -116,9 +106,7 @@ class TestWritePlayerNumber:
         assert len(set(vistos)) == 9
 
     def test_sem_o_azul_capa_em_4_por_limite_fisico(self, tmp_path: Path) -> None:
-        """Hardware sem a 5ª lâmpada não tem como exibir 5+: capa em 4 (o
-        histórico), nunca apaga a barra inteira (que é o que "5 = só o azul"
-        faria num controle sem azul)."""
+        """Hardware sem a 5ª lâmpada não tem como exibir 5+: capa em 4 (o"""
         _mk_player_nodes(tmp_path, _INST, blue5=False)
         external_leds.write_player_number(_INST, 7, leds_root=str(tmp_path))
         assert [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] == [
@@ -139,14 +127,11 @@ class TestWritePlayerNumber:
         ]
 
     def test_slot_ate_4_apaga_o_5_azul(self, tmp_path: Path) -> None:
-        # R-25: o azul é o bit "+5" — slot ≤4 tem de apagá-lo, senão o 2 seria
-        # lido como 7 (e o tick repintaria o mesmo LED de 2 em 2 segundos).
         _mk_player_nodes(tmp_path, _INST, blue5=True)
         external_leds.write_player_number(_INST, 2, leds_root=str(tmp_path))
         assert _read(tmp_path, _INST, "blue", 5) == "0"
 
     def test_sem_nos_e_best_effort(self, tmp_path: Path) -> None:
-        # Sem a regra udev / sem os nós: NÃO levanta e devolve False (sem regressão).
         assert (
             external_leds.write_player_number(_INST, 2, leds_root=str(tmp_path)) is False
         )
@@ -165,13 +150,7 @@ class TestWritePlayerNumber:
 
 
 class TestReadPlayerPattern:
-    """R-25: o reader tem de decodificar EXATAMENTE o que o writer escreve.
-
-    Se o writer usa o azul como "+5" e o reader ignora o azul, todo controle
-    em slot ≥5 é lido como um número diferente do escrito, o tick o declara
-    "escritor estrangeiro" (NUMA-03) e repinta o MESMO LED a cada 2 s — o
-    bombardeio de subcomando que matou o 8BitDo ao vivo (EXT-04).
-    """
+    """R-25: o reader tem de decodificar EXATAMENTE o que o writer escreve."""
 
     def _escreve(self, tmp: Path, slot: int) -> None:
         external_leds.write_player_number(_INST, slot, leds_root=str(tmp))
@@ -202,8 +181,7 @@ class TestReadPlayerPattern:
         assert external_leds.read_player_pattern(_INST, leds_root=str(tmp_path)) == -1
 
     def test_sem_o_azul_le_como_sem_mais_5(self, tmp_path: Path) -> None:
-        """Nó azul ausente = "sem +5" (é o mesmo hardware em que o writer capa
-        em 4) — nunca `None`, que congelaria a defesa de repintura."""
+        """Nó azul ausente = "sem +5" (é o mesmo hardware em que o writer capa"""
         _mk_player_nodes(tmp_path, _INST, blue5=False)
         self._escreve(tmp_path, 3)
         assert external_leds.read_player_pattern(_INST, leds_root=str(tmp_path)) == 3
@@ -215,7 +193,6 @@ class TestReadPlayerPattern:
 
 class TestHidInstanceForHidraw:
     def test_resolve_via_sysfs(self, tmp_path: Path, monkeypatch) -> None:
-        # /sys/class/hidraw/hidraw2/device -> .../0003:057E:2009.000E
         dev_dir = tmp_path / "sys" / "bus" / "hid" / "devices" / _INST
         dev_dir.mkdir(parents=True)
         link_dir = tmp_path / "sys" / "class" / "hidraw" / "hidraw2"
@@ -276,7 +253,6 @@ class TestWriteLightbarSlot:
         assert _read_lb(tmp_path, "input111", "green") == "0"
 
     def test_sem_nos_best_effort(self, tmp_path: Path) -> None:
-        # Sem a regra udev do DS4 / sem os nós: não levanta e devolve False.
         assert (
             external_leds.write_lightbar_slot("input111", 3, leds_root=str(tmp_path))
             is False
@@ -294,8 +270,6 @@ class TestResolveExternalLeds:
         ) == ("nintendo", _INST)
 
     def test_ds4_lightbar_via_realpath(self, tmp_path: Path, monkeypatch) -> None:
-        # Sem barra verde -> resolve pela lightbar RGB (nó :red cujo device é o
-        # mesmo do hidraw). Prefixo = inputNN real, NÃO a instância HID.
         hid_dir = tmp_path / "hiddev"
         real_red = hid_dir / "leds" / "input111:red"
         real_red.mkdir(parents=True)
@@ -360,26 +334,19 @@ class TestApplyPlayerNumber:
         assert external_leds.apply_player_number("/dev/hidraw9", 3) is False
 
 
-# --- GYRO-02: pacote cru + escrita do Enable-IMU (0x40/0x01) -----------------
-
-
 class TestBuildEnableImuPacket:
-    """Golden bytes do subcomando Enable-IMU (protocolo Switch, hid-nintendo).
-
-    Envelope rumble+subcmd: output_id(1B)=0x01, packet_num(1B), rumble_data
-    neutro (8B), subcmd_id(1B)=0x40, arg(1B)=0x01 — 12 bytes no total.
-    """
+    """Golden bytes do subcomando Enable-IMU (protocolo Switch, hid-nintendo)."""
 
     def test_pacote_padrao_packet_num_zero(self) -> None:
         pacote = external_leds.build_enable_imu_packet()
         assert pacote == bytes(
             (
-                0x01,  # output_id: rumble + subcmd
-                0x00,  # packet_num
-                0x00, 0x01, 0x40, 0x40,  # rumble neutro (esquerda)
-                0x00, 0x01, 0x40, 0x40,  # rumble neutro (direita)
-                0x40,  # subcmd_id: Enable-IMU
-                0x01,  # arg: ligar
+                0x01,
+                0x00,
+                0x00, 0x01, 0x40, 0x40,
+                0x00, 0x01, 0x40, 0x40,
+                0x40,
+                0x01,
             )
         )
         assert len(pacote) == 12
@@ -418,4 +385,4 @@ class TestEnableImu:
         try:
             assert external_leds.enable_imu(str(no)) is False
         finally:
-            os.chmod(no, 0o600)  # devolve p/ o tmp_path poder limpar
+            os.chmod(no, 0o600)

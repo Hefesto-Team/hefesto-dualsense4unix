@@ -1,39 +1,5 @@
 #!/usr/bin/env python3
-"""O lugar sem controle diz o que o desenho diz — O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01.
-
-A QUEIXA DELA, 23/09/2026, com a foto da aba Conexões e nenhum controle na mesa:
-o topo dizia «Nenhum controle» e a Gestão de Controles dizia «Sony • Player 1 •
-Cosmic Red • USB» e «Sony • Player 2 • Starlight Blue • BT», com a barra rosa
-do P1 acesa. Não era cache: o nome do cartão é alvo `html` (fora do molde) e a
-barra é alvo `cor` (o `—` é recusado pelo CSSOM e a cor de antes FICA).
-
-ESTA RÉGUA MEDE A TELA, e não a chave. As réguas do molde perguntavam *"o
-molde alcança este campo?"* — e o `cor` era alcançado por um travessão que o
-navegador joga fora. Aqui o caminho é o do tique inteiro: o pacote de verdade,
-o `normalizar`, o `apagar_os_lugares_sem_dono` com a página, e o `escrever()`
-DO PILOTO, recortado do fonte e rodado no `node` contra elementos de mentira
-cujo `style.color` recusa o que não é cor, como o CSSOM. O ponto de partida de
-cada elemento é o ARQUIVO publicado, lido pela régua do mockup — e o juiz é a
-função que a `--prova-de-mockup` usa: nenhum dos dois é o leitor da cura.
-
-AS MORDIDAS, cada uma com a saída na entrega:
-
-* arranque a regra geral (`diz = {}` em `apagar_os_lugares_sem_dono`) —
-  :func:`test_as_sete_paginas_com_a_mesa_vazia` reprova na 08 com
-  `p1·nome [html] = 'Sony • Player 1 • Cosmic Red • USB'`;
-* arranque só o alvo `cor` (tire-o de `ALVOS_QUE_O_DESENHO_DIZ`) — a mesma
-  reprova com `p1·plastico [cor] = 'rgb(174, 51, 90)'`: a barra acesa;
-* arranque a lista `CAMPOS_DO_LUGAR` do `pacote_da_pagina` —
-  :func:`test_o_p2_sai_e_volta_a_desconectado_no_tique_seguinte` reprova com o
-  P2 dizendo o nome do controle que saiu;
-* arranque a troca do número (`_a_palavra_do_desenho` devolvendo `""` no
-  molde) — :func:`test_os_quatro_cartoes_da_08_dizem_player_n_desconectado`
-  reprova;
-* arranque o `pagina=self.pagina` do `Piloto._tique` —
-  :func:`test_o_tique_do_piloto_leva_a_pagina_ao_apagador` reprova com o P1
-  dizendo `Sony • Player 1 • Cosmic Red • USB`. As outras réguas chamam a
-  conta elas mesmas e ficavam verdes sem a cura do produto.
-"""
+"""O lugar sem controle diz o que o desenho diz — O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01."""
 
 from __future__ import annotations
 
@@ -63,25 +29,14 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, onde
 
 PILOTO = _INTERFACE / "hefesto_vivo.py"
 
-#: AS SETE PÁGINAS COM LUGAR DE CONTROLE, da tabela de quem pinta — nunca
-#: digitadas. A calibração avulsa tem lugar e não é aba; ela fica de fora.
 SETE = sorted(p for p in pacotes.PACOTES
               if p[:2].isdigit() and pacotes.lugares_da_pagina(p))
 
-#: Os alvos que a simulação escreve pelo motor — os três da cura
-#: (`pacotes.ALVOS_QUE_O_DESENHO_DIZ`), escritos aqui para a régua não ler pela
-#: lista da cura. Os outros entram como vazio, que a prova do lugar vazio nunca
-#: acusa; o `texto` é do travessão, e quem o cobra na tela é a
-#: `--prova-de-mockup` do piloto, com o DOM de verdade.
 SIMULADOS = frozenset({"html", "cor", "atributo"})
 
-#: Um bloco que mira UM campo de UM lugar — a forma que o `innerHTML` do passo 0
-#: do piloto troca inteiro (o chip da 03). Bloco de classe (`.ajustes.e`) não
-#: alcança campo `html`, `cor` nem `atributo` em página nenhuma de hoje.
 _BLOCO_DE_UM_CAMPO = re.compile(
     r'\[data-controle="(p\d+)"\]\s*\[data-campo="([^"]+)"\]')
 
-#: Um controle de mentira, da faixa sintética da casa — há dois portões de
 #: anonimato. `player_slot` 2 é o que o põe no P2.
 UNIQ = "aa:bb:cc:00:00:02"
 NO_P2: dict[str, Any] = {
@@ -90,9 +45,6 @@ NO_P2: dict[str, Any] = {
     "audio": {}, "speaker": {}}
 
 
-# ---------------------------------------------------------------------------
-# o tique, do jeito do piloto
-# ---------------------------------------------------------------------------
 def _contexto(controles: list[dict[str, Any]]) -> tuple[pacotes.Contexto, dict[str, str]]:
     """O `Piloto._contexto`, sem o leitor de cor e sem os externos."""
     st: dict[str, Any] = {"connected": True,
@@ -115,9 +67,6 @@ def _carga(pagina: str, controles: list[dict[str, Any]]) -> dict[str, Any]:
     return apagada
 
 
-# ---------------------------------------------------------------------------
-# o motor, rodado no node
-# ---------------------------------------------------------------------------
 def _motor() -> str:
     """O `escrever()` do piloto e o que ele usa — do FONTE, recortado por marcador."""
     fonte = PILOTO.read_text(encoding="utf-8")
@@ -191,11 +140,7 @@ def _node() -> str:
 
 def _a_tela(pagina: str, cargas: list[dict[str, Any]]
             ) -> tuple[list[regua_do_mockup._Campo], list[list[str]], str]:
-    """Os campos do ARQUIVO e o que a tela mostra neles depois de cada carga.
-
-    O vivo sai na língua da régua do mockup — `html` pelo texto, `cor` pela
-    forma do navegador —, que é a mesma que a `--prova-de-mockup` compara.
-    """
+    """Os campos do ARQUIVO e o que a tela mostra neles depois de cada carga."""
     texto = onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
     cravados = regua_do_mockup._campos_cravados(texto)
     simulados = [i for i, c in enumerate(cravados)
@@ -211,8 +156,6 @@ def _a_tela(pagina: str, cargas: list[dict[str, Any]]
         elementos.append({"alvo": c.alvo, "atributo": nome, "inicial": c.valor})
     tiques = []
     for carga in cargas:
-        # A ORDEM DO PILOTO: 0 os blocos, 1 a mesa (solta no documento, e a
-        # lista se distribui na ordem), 2 as colunas de cada lugar.
         escritas: list[list[Any]] = []
         for seletor, bloco in (carga.get("blocos") or {}).items():
             achado = _BLOCO_DE_UM_CAMPO.fullmatch(str(seletor).strip())
@@ -274,9 +217,6 @@ def _o_que_diz(cravados: list[regua_do_mockup._Campo], vivos: list[str],
             if c.dono == pref and c.chave == chave]
 
 
-# ---------------------------------------------------------------------------
-# 1. AS SETE PÁGINAS — nenhum lugar vazio com o desenho de um lugar cheio
-# ---------------------------------------------------------------------------
 def test_as_sete_paginas_sao_as_sete() -> None:
     """A parametrização abaixo não pode passar por vacuidade."""
     assert SETE == ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
@@ -286,8 +226,7 @@ def test_as_sete_paginas_sao_as_sete() -> None:
 
 @pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
 def test_as_sete_paginas_com_a_mesa_vazia(pagina: str) -> None:
-    """Zero controles: nenhum dos quatro lugares mostra o que o desenho pôs
-    num lugar COM controle — nem o nome, nem a cor, nem o atributo."""
+    """Zero controles: nenhum dos quatro lugares mostra o que o desenho pôs"""
     carga = _carga(pagina, [])
     cravados, (vivos,), texto = _a_tela(pagina, [carga])
     vazaram = hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
@@ -307,13 +246,7 @@ def test_as_sete_paginas_com_um_controle_no_p2(pagina: str) -> None:
     assert not vazaram, f"{pagina}:\n  " + "\n  ".join(vazaram)
 
 
-# ---------------------------------------------------------------------------
-# 2. A 08 — a foto dela
-# ---------------------------------------------------------------------------
 PONTO = pacotes.PONTO_DO_ROTULO
-#: O RÓTULO DO LUGAR VAZIO DA 08 — «Desconectado». Era «Player N • Desconectado»
-#: até 25/09/2026: o «P N» virou o campo do dono, ao lado do rótulo, por pedido
-#: dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01).
 VAZIO_DA_08 = "Desconectado"
 
 
@@ -331,11 +264,7 @@ def test_os_quatro_cartoes_da_08_dizem_player_n_desconectado() -> None:
 
 
 def test_o_p2_sai_e_volta_a_desconectado_no_tique_seguinte() -> None:
-    """O P2 cheio, depois a mesa vazia: UM tique basta, sem recarregar a página.
-
-    Medido no piloto oculto antes da cura: três segundos depois de o controle
-    sair, o cartão do P2 ainda dizia o nome dele.
-    """
+    """O P2 cheio, depois a mesa vazia: UM tique basta, sem recarregar a página."""
     pagina = "08-conexoes.html"
     cheio, vazio = _carga(pagina, [NO_P2]), _carga(pagina, [])
     cravados, (com, sem), texto = _a_tela(pagina, [cheio, vazio])
@@ -355,18 +284,9 @@ def test_o_p2_sai_e_volta_a_desconectado_no_tique_seguinte() -> None:
         cravados, sem, vazio["vazios"], texto)
 
 
-# ---------------------------------------------------------------------------
-# 3. O LUGAR QUE ESVAZIA NÃO GUARDA NADA DO CONTROLE, e o que chega apaga o vazio
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
 def test_o_que_a_regra_escreve_no_vazio_a_aba_reescreve_no_cheio(pagina: str) -> None:
-    """A trava da regra: ela só escreve onde a aba escreve.
-
-    Um campo que o desenho diz no lugar vazio e que a aba NÃO pinta quando o
-    controle chega ficaria com o vazio num lugar cheio. Medido para a 06: o
-    `desenho` (o colorway do SVG) não é pintado pela aba, e apagá-lo acenderia
-    a regra `.ds-svg:not([data-colorway])` no controle de verdade.
-    """
+    """A trava da regra: ela só escreve onde a aba escreve."""
     vazio = _carga(pagina, [])
     cheio = _carga(pagina, [NO_P2])
     diz = pacotes.o_que_o_desenho_diz_do_lugar_vazio(pagina).get("p2", {})
@@ -409,9 +329,6 @@ def test_o_que_a_aba_declara_vence_o_desenho() -> None:
         assert carga["colunas"][pref]["luz"] == a04_iluminacao.o_lugar_vazio()["luz"]
 
 
-# ---------------------------------------------------------------------------
-# 4. A PALAVRA DO DESENHO — a troca do número e o que ela recusa
-# ---------------------------------------------------------------------------
 def test_a_troca_do_numero_so_pega_o_numero_do_jogador() -> None:
     troca = pacotes._o_numero_trocado
     assert troca('Player 3 <span class="pt">•</span> Desconectado', 3, 1) == (
@@ -426,19 +343,13 @@ def test_a_palavra_do_desenho() -> None:
     assert palavra("cor", {3: ["#74588e"], 4: ["#e4e0d8"]})(1) == ""
     assert palavra("html", {3: ["—"], 4: ["—"]})(1) == "—"
     assert palavra("html", {3: ["Player 3 • x"], 4: ["Player 4 • x"]})(2) == "Player 2 • x"
-    # exemplos diferentes em cada lugar vazio: o desenho não diz UMA coisa
     assert palavra("atributo", {3: ["galactic-purple"], 4: ["white"]})(1) == ""
-    # UM lugar vazio com o número dentro não se confere — e não se adivinha
     assert palavra("html", {3: ["Cor do Player 3"]})(1) == ""
     assert palavra("html", {3: ["—"]})(1) == "—"
-    # o mesmo texto com o número nos DOIS lugares é paleta, não lugar
     assert palavra("html", {3: ["Cor do Player 3"], 4: ["Cor do Player 3"]})(1) == (
         "Cor do Player 3")
 
 
-# ---------------------------------------------------------------------------
-# 5. A PROVA DO MOCKUP — a pergunta nova, sem janela
-# ---------------------------------------------------------------------------
 _PAGINA_DE_MENTIRA = """
 <div data-controle="p1"><span data-campo="nome" data-hef-alvo="html">Sony <b>P1</b></span>
   <i data-campo="barra" data-hef-alvo="cor" style="color:#ae335a"></i></div>
@@ -454,7 +365,6 @@ def test_a_prova_acusa_o_desenho_cheio_e_poupa_o_vazio() -> None:
     """A pergunta nova da `--prova-de-mockup`, sobre uma página de mentira."""
     cravados = regua_do_mockup._campos_cravados(_PAGINA_DE_MENTIRA)
     enderecos = [c.endereco for c in cravados]
-    # a tela: o P1 esvaziou e ficou com o desenho; o P4 mostra o vazio certo
     tela = {"p1·nome": "Sony P1", "p1·barra": "rgb(174, 51, 90)",
             "p3·nome": "P3 vazio", "p3·barra": "",
             "p4·casca": "rgb(255, 255, 255)", "p4·nome": "P4 vazio"}
@@ -463,10 +373,8 @@ def test_a_prova_acusa_o_desenho_cheio_e_poupa_o_vazio() -> None:
         cravados, vivos, ["p1", "p3", "p4"], _PAGINA_DE_MENTIRA)
     assert acusa == ["p1·nome [html] = 'Sony P1'",
                      "p1·barra [cor] = 'rgb(174, 51, 90)'"], acusa
-    # com o P1 cheio, a mesma tela é o controle dele — nada a acusar
     assert not hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
         cravados, vivos, ["p3", "p4"], _PAGINA_DE_MENTIRA)
-    # o travessão e o vazio nunca são o desenho de ninguém
     limpos = ["" if "barra" in e else pacotes.TRAVESSAO for e in enderecos]
     assert not hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
         cravados, limpos, ["p1", "p3", "p4"], _PAGINA_DE_MENTIRA)
@@ -479,9 +387,6 @@ def test_o_elemento_do_proprio_lugar_nao_e_cobrado() -> None:
     assert proprios == {("p4", "casca")}
 
 
-# ---------------------------------------------------------------------------
-# 6. O TIQUE DO PILOTO — a cura mora numa linha dele, e ela também morde
-# ---------------------------------------------------------------------------
 class _PonteQueGuarda:
     """A ponte do piloto sem WebView: guarda a pintura e devolve a contagem."""
 
@@ -498,16 +403,9 @@ class _PonteQueGuarda:
 
 def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
                       monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
-    """Roda o `Piloto._tique` DE VERDADE, uma vez por mesa, e devolve cada carga.
-
-    Sem janela e SEM DAEMON: o estado, o contexto e os corações são dublês. O
-    `XDG_RUNTIME_DIR` da suíte é o real (`tests/conftest.py`), e o que falasse
-    com o socket falaria com o daemon dela — por isso nada aqui abre socket.
-    """
+    """Roda o `Piloto._tique` DE VERDADE, uma vez por mesa, e devolve cada carga."""
     import types
 
-    # O `pacotes` DO PILOTO, pelo nome longo: o `import pacotes` desta régua é
-    # outro objeto de módulo, e o dublê dos corações tem de cair no do tique.
     from hefesto_dualsense4unix.interface import pacotes as pac
     monkeypatch.setattr(pac, "bater_os_coracoes", lambda *_a, **_k: None)
     agora: dict[str, Any] = {}
@@ -526,11 +424,6 @@ def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
         _estado_do_tique=lambda: agora["st"], _contexto=contexto,
         trocas={}, tiques={}, pinturas={}, voltas=0, custos=[], custo_do_ipc=[],
         _contar_mutacoes=lambda: None)
-    # A JANELA À VISTA E A CARGA MÍNIMA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01,
-    # 25/09/2026. O tique passou a ler se a janela está escondida e a mandar só o
-    # que mudou. O dublê leva o estado inicial e os MÉTODOS DO PRODUTO, ligados a
-    # ele: mais pobre que o piloto, ele reprovaria por atributo, e não pelo que
-    # mede. Cada mesa daqui muda a fita, então cada tique leva a carga inteira.
     for metodo in ("_o_que_mandar", "_esperando_o_estado_novo", "_moldes_da_pagina"):
         setattr(piloto, metodo, types.MethodType(getattr(hefesto_vivo.Piloto, metodo), piloto))
     vars(piloto).update(
@@ -539,8 +432,6 @@ def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
     cargas = []
     for controles in mesas:
         agora["st"] = {"connected": True, "controllers": [dict(c) for c in controles]}
-        # O PRIMEIRO TIQUE LÊ O DESENHO e pode passar do teto; o `_pular` que
-        # ele deixa calaria o segundo, que é justamente o que se mede.
         piloto._pular = 0
         antes = len(ponte.pinturas)
         assert hefesto_vivo.Piloto._tique(piloto) is True
@@ -552,19 +443,7 @@ def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
 
 def test_o_tique_do_piloto_leva_a_pagina_ao_apagador(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `Piloto._tique` DE VERDADE pinta a 08 como o desenho pinta o vazio.
-
-    AS RÉGUAS DE CIMA CHAMAM A CONTA ELAS MESMAS, com `pagina=` — e por isso
-    ficavam verdes com o piloto chamando SEM a página. Medido na conferência de
-    23/09/2026: arrancado o `pagina=self.pagina` do `_tique`, 82 testes das
-    quatro réguas do lugar vazio passavam, e a tela voltava à foto dela.
-
-    O caminho é o do produto inteiro: a mesa vazia, um controle no P2, e a mesa
-    vazia de novo — três tiques, e a TELA simulada com o `escrever()` do piloto.
-
-    A MORDIDA: tire `pagina=self.pagina` da chamada em `Piloto._tique` — esta
-    régua reprova com o P1 mostrando o nome do desenho.
-    """
+    """O `Piloto._tique` DE VERDADE pinta a 08 como o desenho pinta o vazio."""
     pagina = "08-conexoes.html"
     cargas = _tiques_do_piloto(pagina, [[], [NO_P2], []], monkeypatch)
     cravados, telas, texto = _a_tela(pagina, cargas)

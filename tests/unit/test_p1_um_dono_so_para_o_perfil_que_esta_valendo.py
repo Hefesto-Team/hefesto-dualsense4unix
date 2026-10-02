@@ -34,9 +34,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
-# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
-# falso. Sem aquele plantio, a guarda vem antes do import da janela.
 exigir_gi_real("p1: um dono só para o perfil que está valendo")
 
 from typing import Any
@@ -46,18 +43,12 @@ import pytest
 from hefesto_dualsense4unix.app.actions import home_actions as ha
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 
-#: O estado que a máquina DELA reporta hoje: o daemon respondeu, e disse `null`.
 DAEMON_SEM_NOME: dict[str, Any] = {"active_profile": None, "freestyle_ligado": True}
 
 
 @pytest.fixture
 def marcador_no_disco(monkeypatch: pytest.MonkeyPatch) -> str:
-    """O `active_profile.txt` dela, sem tocar no disco dela.
-
-    O dono lê o disco por `perfil_que_ela_ativou` → `resolve_boot_profile`, e é
-    ESSE ponto que o dublê intercepta: assim o teste mede a decisão do dono, e
-    não a montagem de dois arquivos de sessão.
-    """
+    """O `active_profile.txt` dela, sem tocar no disco dela."""
     monkeypatch.setattr(pa, "perfil_que_ela_ativou", lambda: "Sackboy")
     return "Sackboy"
 
@@ -79,12 +70,7 @@ class TestODonoResponde:
     def test_o_daemon_sem_nome_cai_no_disco_e_o_disco_responde(
         self, marcador_no_disco: str
     ) -> None:
-        """MORDE o P1: é o caso VIVO da máquina dela.
-
-        Arranque a segunda perna do dono e este teste reprova com `None` —
-        que é a aba Início ficando vazia ao lado da aba Perfis mostrando
-        "Sackboy" em verde.
-        """
+        """MORDE o P1: é o caso VIVO da máquina dela."""
         vale = pa.perfil_que_esta_valendo(DAEMON_SEM_NOME)
         assert vale.nome == "Sackboy"
         assert vale.fonte == "disco", (
@@ -103,11 +89,7 @@ class TestODonoResponde:
         assert vale.rotulo == pa.ROTULO_NENHUM
 
     def test_daemon_calado_e_disco_vazio_e_nao_sei(self, disco_vazio: None) -> None:
-        """MORDE a distinção: "não sei" não pode virar "não há".
-
-        Arranque o ramo e o rótulo vira "Nenhum" — a tela afirmando ausência
-        de perfil quando o que houve foi ausência de resposta.
-        """
+        """MORDE a distinção: "não sei" não pode virar "não há"."""
         vale = pa.perfil_que_esta_valendo(None)
         assert vale.nome is None
         assert vale.fonte == "nao_sei"
@@ -138,7 +120,6 @@ class TestODonoResponde:
         monkeypatch.setattr(pa, "perfil_que_ela_ativou", _explode)
         with pytest.raises(OSError):
             pa.perfil_que_ela_ativou()
-        # E o dono, que é quem a tela chama, degrada em "não sei".
         assert pa.perfil_que_esta_valendo(None).fonte == "nao_sei"
 
 
@@ -146,13 +127,7 @@ class TestAsSuperficiesConcordam:
     def test_a_aba_inicio_diz_o_mesmo_nome_que_a_aba_perfis(
         self, marcador_no_disco: str
     ) -> None:
-        """MORDE a divergência, e NOMEIA a aba que discordou.
-
-        Com o daemon respondendo `null` e o marcador dizendo "Sackboy", as
-        duas superfícies do meu escopo têm de dizer a mesma coisa. Arranque a
-        fiação de `autoswitch_lock_text` ao dono e a frase da Início volta a
-        sair sem o nome — enquanto a aba Perfis, ao lado, mostra o verde.
-        """
+        """MORDE a divergência, e NOMEIA a aba que discordou."""
         da_aba_perfis = pa.perfil_que_esta_valendo(DAEMON_SEM_NOME).nome
         frase_da_inicio = ha.autoswitch_lock_text(DAEMON_SEM_NOME)
 

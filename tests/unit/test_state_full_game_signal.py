@@ -106,7 +106,7 @@ async def test_sem_daemon_degrada_para_unknown(ipc_server: IpcServer) -> None:
 async def test_atributo_ausente_degrada_igual_a_daemon_none(
     ipc_server: IpcServer,
 ) -> None:
-    daemon = _FakeDaemon()  # sem display_authority nenhum
+    daemon = _FakeDaemon()
     _com_daemon(ipc_server, daemon)
     result = await ipc_server._handle_daemon_state_full({})
     assert result["game_signal"]["authority"] == "unknown"
@@ -123,18 +123,13 @@ async def test_authority_wireada_passa_direto(
     gs = result["game_signal"]
     assert gs["authority"] == valor
     assert gs["degradado"] is False
-    # Wireado com sucesso: o motivo genérico de "sem sinal" NÃO aparece —
-    # sem diagnóstico rico, fica None (nunca "sinal_nao_wireado" fantasma).
     assert gs["motivo"] is None
 
 
 async def test_authority_unknown_wireada_e_degradado_mesmo_sem_motivo(
     ipc_server: IpcServer,
 ) -> None:
-    """`unknown` GENUÍNO (classify() real, `display_authority` wireado) é
-    degradado por definição da síntese — mesmo sem diagnóstico rico (motivo
-    fica None, não "sinal_nao_wireado" — essa string é EXCLUSIVA do "nem
-    wireado ainda")."""
+    """`unknown` GENUÍNO (classify() real, `display_authority` wireado) é"""
     _com_daemon(ipc_server, _FakeDaemon(display_authority="unknown"))
     result = await ipc_server._handle_daemon_state_full({})
     gs = result["game_signal"]
@@ -146,8 +141,7 @@ async def test_authority_unknown_wireada_e_degradado_mesmo_sem_motivo(
 async def test_authority_invalida_degrada_para_unknown(
     ipc_server: IpcServer,
 ) -> None:
-    """Valor fora da tabela ('game'/'daemon'/'unknown') — dublê de teste
-    bronco ou versão futura desalinhada — NUNCA vira autoridade fantasma."""
+    """Valor fora da tabela ('game'/'daemon'/'unknown') — dublê de teste"""
     _com_daemon(
         ipc_server, _FakeDaemon(display_authority="qualquer_coisa")
     )
@@ -204,8 +198,7 @@ async def test_diagnostico_com_motivo_de_queda(ipc_server: IpcServer) -> None:
 async def test_diagnostico_que_levanta_nao_derruba_state_full(
     ipc_server: IpcServer,
 ) -> None:
-    """Exceção em `diagnostico()` é suprimida — `authority` (já lida antes)
-    segue correta; só os campos ricos ficam no default."""
+    """Exceção em `diagnostico()` é suprimida — `authority` (já lida antes)"""
 
     def bomba() -> dict[str, Any]:
         raise RuntimeError("marker ilegível")

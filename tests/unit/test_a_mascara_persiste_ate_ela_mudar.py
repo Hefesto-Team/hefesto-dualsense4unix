@@ -95,13 +95,7 @@ def _perfil_de_jogo(flavor: str | None) -> Profile:
 
 
 def _vpad_obedece(daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> list[str | None]:
-    """Dublê do seam de emulação que TROCA A MÁSCARA VIVA de verdade.
-
-    O que o código sob teste lê é `self._gamepad_device.flavor` — o EFEITO, não
-    o desfecho (ELO-MUDO-01). Um dublê que só devolvesse `EMU_APLICADO` sem
-    mexer no device não mediria nada, e é por isso que existe o companheiro
-    `_vpad_desobedece`.
-    """
+    """Dublê do seam de emulação que TROCA A MÁSCARA VIVA de verdade."""
     pedidos: list[str | None] = []
 
     def _desfecho(
@@ -124,13 +118,7 @@ def _vpad_obedece(daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> list[str |
 def _vpad_desobedece(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch, *, desfecho: str
 ) -> None:
-    """Dublê que responde `desfecho` e NÃO troca a máscara viva.
-
-    É o retrato de dois casos reais: `falhou` (a factory não devolveu device) e
-    `recusado_steam_input`. Nenhum dos dois é `bloqueado_por_jogo`, ou seja: os
-    dois atravessam o filtro do chamador e chegariam ao disco se a guarda
-    olhasse o transporte em vez do efeito.
-    """
+    """Dublê que responde `desfecho` e NÃO troca a máscara viva."""
 
     def _fixo(
         enabled: bool, flavor: str | None = None, *, origin: str = "manual"
@@ -151,43 +139,15 @@ def test_a_regua_ve_o_arquivo(flag: Path) -> None:
 def test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """**ESTA RÉGUA MEDIA A CAUSA DO DEFEITO DELA, e foi invertida em
-    21/09/2026 — MASCARA-CONTAGIO-01.**
-
-    Ela cobrava o contrário: que aplicar um perfil com `gamepad_flavor`
-    ESCREVESSE aquele valor no `gamepad_emulation.flag`, que é o padrão da
-    MÁQUINA. A intenção de 22/08 era boa e a leitura da decisão dela era pela
-    metade — *"a máscara deveria ficar independente do jogo, até que eu mude na
-    interface novamente"*. O que ela chama de *"eu mudar"* é o GESTO dela, e o
-    perfil de um jogo não é gesto de ninguém.
-
-    **O PREÇO, medido no disco dela em 21/09:** de 29 perfis, UM
-    (`future_knight.json`) tinha `mode.gamepad_flavor: "xbox"`. Bastou aquele
-    jogo abrir uma vez para o `xbox` virar o padrão da máquina — e ali ele
-    ficava, porque perfil com `null` retorna cedo e nunca desfaz. Daí em diante
-    TODO controle sem entrada no registro nascia Xbox, sem touchpad, sem
-    giroscópio e sem acelerômetro. A queixa dela chegou como *"O PERFIL
-    PRAGMATA (…) ALGO O MUDA NOVAMENTE PRA XBOX SEMPRE QUE EU O INICIO"* — e o
-    PRAGMATA nunca pediu Xbox. É a mesma família do CAMINHO-CONTAGIO-01.
-
-    **O QUE CONTINUA VALENDO da medição de 22/08:** a borda de processo É o
-    revertedor, e o disco É o que o boot lê. Por isso o conserto não foi
-    deixar o perfil escrever menos — foi tirar dele a caneta e dar ao boot a
-    devolução do vazamento (`_a_mascara_dela_sem_o_vazamento`).
-
-    MORDIDA: devolva o corpo de `_gravar_mascara_do_perfil`. A linha do disco
-    reprova, e com ela volta o defeito que ela relatou.
-    """
+    """**ESTA RÉGUA MEDIA A CAUSA DO DEFEITO DELA, e foi invertida em"""
     save_gamepad_emulation(True, "xbox")
     _vpad_obedece(daemon, monkeypatch)
 
     perfil = _perfil_de_jogo("dualsense")
     assert daemon.apply_profile_mode(perfil.mode, profile=perfil) == "aplicado"
 
-    # O VPAD OBEDECE AO PERFIL — isto não mudou, e é o que o jogo vê.
     assert daemon._gamepad_device is not None
     assert daemon._gamepad_device.flavor == "dualsense"
-    # E O PADRÃO DA MÁQUINA NÃO SE MEXE: só o gesto dela o escreve.
     assert flag.read_text(encoding="utf-8").strip() == "xbox", (
         "o perfil de um jogo voltou a promover a máscara dele a padrão da "
         "máquina — é o contágio que tirou o giroscópio do PRAGMATA dela")
@@ -196,16 +156,7 @@ def test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina(
 def test_o_boot_devolve_o_xbox_que_o_vazamento_deixou(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A outra metade: o arquivo dela JÁ está com o `xbox` do contágio.
-
-    Fechar as portas conserta o amanhã; o disco dela continuaria com o valor
-    que ninguém pediu. `_a_mascara_dela_sem_o_vazamento` o devolve ao default —
-    UMA vez, e não a cada boot: quem devolve grava, e a volta seguinte lê
-    `dualsense` e não faz nada.
-
-    MORDIDA: faça a função devolver `lido` sem gravar. A segunda linha reprova
-    e o `xbox` fica no disco para sempre.
-    """
+    """A outra metade: o arquivo dela JÁ está com o `xbox` do contágio."""
     from hefesto_dualsense4unix.daemon.lifecycle import (
         _a_mascara_dela_sem_o_vazamento,
     )
@@ -214,20 +165,13 @@ def test_o_boot_devolve_o_xbox_que_o_vazamento_deixou(
 
     assert _a_mascara_dela_sem_o_vazamento("xbox") == "dualsense"
     assert flag.read_text(encoding="utf-8").strip() == "dualsense"
-    # E O QUE ELA ESCOLHEU DE PROPÓSITO FICA: `dualsense` no arquivo não é
-    # vazamento, e a função não tem o que consertar.
     assert _a_mascara_dela_sem_o_vazamento("dualsense") == "dualsense"
 
 
 def test_perfil_sem_opiniao_de_mascara_nao_escreve_nada(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`gamepad_flavor: null` é ausência de pedido (E1 da ESCOLHA-DELA-VENCE-01).
-
-    Um perfil que só diz `kind: gamepad` mantém a máscara vigente. Deixar isso
-    virar escrita em disco faria a máscara vigente ser recarimbada por qualquer
-    perfil que passasse — e a origem dela se perderia.
-    """
+    """`gamepad_flavor: null` é ausência de pedido (E1 da ESCOLHA-DELA-VENCE-01)."""
     save_gamepad_emulation(True, "xbox")
     _vpad_obedece(daemon, monkeypatch)
 
@@ -240,17 +184,7 @@ def test_perfil_sem_opiniao_de_mascara_nao_escreve_nada(
 def test_sem_opiniao_e_sem_vpad_de_pe_nao_carimba_o_default(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O caso que faz a guarda de `flavor` vazio valer a linha que ocupa.
-
-    Sem vpad de pé E sem opinião de máscara, "a máscara viva" e "a pedida" são
-    ambas `None` — a comparação de efeito, sozinha, deixaria passar. E o que
-    passaria é o pior: `save_gamepad_emulation(True, None)` grava o DEFAULT do
-    escritor (`dualsense`), ou seja, a escolha dela viraria outra coisa porque
-    um vpad não subiu.
-
-    Alcançável de verdade: com o gamepad desligado, `apply_profile_mode` chama
-    o pedido mesmo sem flavor (`not gamepad_on`), e a factory pode falhar.
-    """
+    """O caso que faz a guarda de `flavor` vazio valer a linha que ocupa."""
     save_gamepad_emulation(True, "xbox")
     daemon.config.gamepad_emulation_enabled = False
     daemon._gamepad_device = None
@@ -266,12 +200,7 @@ def test_sem_opiniao_e_sem_vpad_de_pe_nao_carimba_o_default(
 def test_o_desligado_de_proposito_dela_nao_e_ressuscitado(
     daemon: Daemon, tmp_path: Path, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A metade da R-07 que NÃO mudou: o eixo do LIGA/DESLIGA.
-
-    Com o opt-out gravado (AUTO-01.1), perfil nenhum pode criar o flag — criar
-    o flag é ligar o vpad no próximo boot, decisão que é só dela. A máscara não
-    tem onde morar aqui, e é o preço certo: sem vpad não há máscara.
-    """
+    """A metade da R-07 que NÃO mudou: o eixo do LIGA/DESLIGA."""
     save_gamepad_emulation(False)
     assert (tmp_path / _GAMEPAD_DISABLED_FLAG_FILE).exists()
     _vpad_obedece(daemon, monkeypatch)
@@ -289,13 +218,7 @@ def test_o_desligado_de_proposito_dela_nao_e_ressuscitado(
 def test_so_grava_o_que_o_vpad_vestiu_de_verdade(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch, desfecho: str
 ) -> None:
-    """ELO-MUDO-01: a gravação responde pelo EFEITO, não pelo transporte.
-
-    `falhou` e `recusado_steam_input` não são `bloqueado_por_jogo`, então o
-    chamador os trata como "não adiado" e segue. Se a guarda olhasse só isso, o
-    disco passaria a jurar `dualsense` num daemon que nunca conseguiu vestir a
-    máscara — e o próximo boot nasceria mentindo.
-    """
+    """ELO-MUDO-01: a gravação responde pelo EFEITO, não pelo transporte."""
     save_gamepad_emulation(True, "xbox")
     daemon.config.gamepad_emulation_enabled = True
     daemon._gamepad_device = _Vpad("xbox")
@@ -310,17 +233,10 @@ def test_so_grava_o_que_o_vpad_vestiu_de_verdade(
 def test_mascara_adiada_por_jogo_aberto_nao_chega_ao_disco(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O gate R-04 recusou: nada mudou, nem na mão dela nem no disco.
-
-    Recriar vpad com jogo aberto arranca o controle da mão dela, e por isso o
-    gate existe. Persistir a máscara não pode virar um jeito enviesado de a
-    troca acontecer mesmo assim — nem no boot seguinte, sem ela pedir.
-    """
+    """O gate R-04 recusou: nada mudou, nem na mão dela nem no disco."""
     save_gamepad_emulation(True, "xbox")
     daemon.config.gamepad_emulation_enabled = True
     daemon._gamepad_device = _Vpad("xbox")
-    # `display_authority` é propriedade só-leitura (NUMA-01): quem a produz é o
-    # `GameSignal`. O dublê entra por ali, e não por um setter que não existe.
     daemon._game_signal = type("Sinal", (), {"authority": "game"})()
     _vpad_desobedece(daemon, monkeypatch, desfecho=EMU_BLOQUEADO_POR_JOGO)
 
@@ -336,16 +252,7 @@ def test_mascara_adiada_por_jogo_aberto_nao_chega_ao_disco(
 def test_a_mascara_do_perfil_atravessa_o_modo_nativo(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O segundo revertedor: o stash do Modo Nativo lia a máscara do DISCO.
-
-    O par ligado/máscara vinha inteiro de `load_gamepad_emulation`, e o disco só
-    conhece o gesto manual. Com o flag em `xbox` e o vpad vivo em `dualsense`, a
-    volta do Modo Nativo devolvia `xbox` — a máscara do perfil morria numa
-    transição que ela nem pediu.
-
-    O teste ARRANCA a persistência de propósito (o flag continua `xbox`) para
-    que a segunda cura seja medida sozinha: as duas são independentes.
-    """
+    """O segundo revertedor: o stash do Modo Nativo lia a máscara do DISCO."""
     save_gamepad_emulation(True, "xbox")
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.gamepad_flavor = "dualsense"

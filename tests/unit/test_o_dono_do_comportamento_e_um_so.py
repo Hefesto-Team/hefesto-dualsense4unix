@@ -1,11 +1,4 @@
-"""A régua do portão `donos-de-comportamento` — ela tem de MORDER.
-
-O portão existe para o laudo dos cinco agentes não envelhecer. Uma régua que
-passa com o laudo mentindo não protege nada — então aqui cada uma das quatro
-classes de mentira é escrita à mão e o portão tem de reprovar.
-
-Nasceu com o portão, em 05/09/2026.
-"""
+"""A régua do portão `donos-de-comportamento` — ela tem de MORDER."""
 
 from __future__ import annotations
 
@@ -86,7 +79,6 @@ def test_cura_descosturada_reprova(portao):
     def mexer(linhas):
         for linha in linhas:
             if linha["veredito"] == "CURADO":
-                # o dono existe, mas não é quem a tela chama
                 linha["dono"] = "app/actions/home_actions.py:aviso_de_grab"
                 linha["onde_html"] = "interface/pacotes/a08_conexoes.py:_adaptadores"
                 return

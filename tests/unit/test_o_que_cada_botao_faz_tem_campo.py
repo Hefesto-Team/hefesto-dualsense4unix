@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO CAMPO NOVO: o que cada botão faz sai do perfil e CHEGA ao aparelho.
-
-DECISÃO DELA, 01/09/2026, ao ler a medição de que doze das vinte e uma linhas da
-aba Navegação aceitavam escolha e não tinham onde ser guardadas: *"ganha campo.
-essa é a parte das features que precisam ou serem ajustadas ou desenvolvidas."*
-
-A CADEIA TEM QUATRO ELOS, e esta régua morde os quatro. Faltando um, o campo
-vira a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em tamanho natural: uma escolha que
-grava, aparece na tela e não acende nada.
-
-    1. o PADRÃO é derivado dos mapas do produto, e não digitado
-    2. o CAMPO existe no perfil e recusa o que não conhece
-    3. a RESOLUÇÃO separa quem atende cada escolha — e diz quem NÃO atende
-    4. o DEVICE obedece, e volta ao de fábrica quando o perfil não opina
-
-O ELO 1 É O QUE JUSTIFICA OS OUTROS: o padrão era digitado no gerador da tela, e
-já divergia. Medido no dia: a tela dizia que as três regiões do touchpad fazem
-*Botão esquerdo · Botão direito · F11*, e o produto faz *Backspace · Enter ·
-Delete*. Três linhas de vinte e uma, erradas desde que foram escritas, porque
-nada as comparava.
-"""
+"""A RÉGUA DO CAMPO NOVO: o que cada botão faz sai do perfil e CHEGA ao aparelho."""
 from __future__ import annotations
 
 import pathlib
@@ -32,16 +12,8 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
 
-# --------------------------------------------------------------------------
-# 1. o padrão é DERIVADO
-# --------------------------------------------------------------------------
 def test_o_padrao_sai_dos_mapas_do_produto() -> None:
-    """Cada linha do padrão tem de casar com o mapa que a produz.
-
-    A MORDIDA ESTÁ NA PRÓPRIA FORMA: troque um valor em `BUTTON_TO_UINPUT` e
-    este caso reprova até que a tabela o acompanhe. Era exatamente isso que não
-    acontecia com a cópia escrita no gerador da tela.
-    """
+    """Cada linha do padrão tem de casar com o mapa que a produz."""
     from hefesto_dualsense4unix.core.acoes_de_botao import padrao
     from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
     from hefesto_dualsense4unix.integrations.uinput_mouse import (
@@ -65,11 +37,7 @@ def test_o_padrao_sai_dos_mapas_do_produto() -> None:
 
 
 def test_os_gatilhos_seguem_os_botoes_que_o_produto_injeta() -> None:
-    """L2 e R2 não têm mapa próprio: o produto os injeta como cross e triangle.
-
-    Digitar `BTN_LEFT` para o L2 daria certo hoje e mentiria no dia em que o
-    `cross` mudasse — que é a forma exata do defeito que este módulo cura.
-    """
+    """L2 e R2 não têm mapa próprio: o produto os injeta como cross e triangle."""
     from hefesto_dualsense4unix.core.acoes_de_botao import padrao
 
     p = padrao()
@@ -78,29 +46,7 @@ def test_os_gatilhos_seguem_os_botoes_que_o_produto_injeta() -> None:
 
 
 def test_as_vinte_e_uma_linhas_tem_padrao_e_rotulo() -> None:
-    """Linha sem padrão é `<select>` que abre vazio; sem rótulo, é token cru na tela.
-
-    O NÚMERO DEIXOU DE SER DIGITADO — 06/09/2026. Estava escrito
-    `assert len(BOTOES) == 21`, com a queixa *"a tela mostra 21 linhas e BOTOES
-    tem N"* — e a régua **afirmava** o que a tela mostra em vez de perguntar a
-    ela. Quando o PS entrou no produto (ONDA5-06-01), foi este `21` que
-    reprovou, e a queixa dizia a verdade pela metade: a tela mostrava 21 porque
-    ainda não tinha sido gerada, não porque 21 fosse o certo.
-
-    **AGORA ELA PERGUNTA À TELA**, contando os `data-linha` da página publicada
-    — a que o produto renderiza. É a mesma pergunta, com o dono no lugar do
-    número, e ela passa a pegar o defeito nos DOIS sentidos: o produto que anda
-    sem a tela, e a tela que anda sem o produto.
-
-    A MORDIDA: tire uma linha de `aba06.BOTOES` e regere a página — este caso a
-    nomeia.
-
-    SÓ AS LINHAS DAS DEFINIÇÕES CONTAM — 02/10/2026. A tabela dos seis gestos
-    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01) também põe `data-linha` nos
-    seus `<select>`, com o gesto no valor (`ps_options`, `ps_r3`…), e a régua
-    passou a contá-los como botões a mais assim que a 06 nova foi publicada. A
-    linha de botão se diz pelo próprio gesto, `linha-de-botao`.
-    """
+    """Linha sem padrão é `<select>` que abre vazio; sem rótulo, é token cru na tela."""
     from hefesto_dualsense4unix.core.acoes_de_botao import ACOES, BOTOES, padrao
     from hefesto_dualsense4unix.interface import onde
 
@@ -123,9 +69,6 @@ def test_as_vinte_e_uma_linhas_tem_padrao_e_rotulo() -> None:
         f"assim que as três regiões do touchpad ficaram erradas.")
 
 
-# --------------------------------------------------------------------------
-# 2. o campo existe e recusa dizendo
-# --------------------------------------------------------------------------
 def test_o_perfil_guarda_a_escolha() -> None:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -141,9 +84,7 @@ def test_o_perfil_guarda_a_escolha() -> None:
     [({"nao_existe": "KEY_ENTER"}, "não é um dos botões"),
      ({"cross": "KEY_INVENTADA"}, "não é uma ação conhecida")])
 def test_o_perfil_recusa_dizendo_o_que(ruim: dict[str, str], pedaco: str) -> None:
-    """Um perfil de outra máquina com um nome que esta versão não conhece tem de
-    dizer QUAL — senão a mensagem vira "perfil inválido" e a pessoa perde a tarde.
-    """
+    """Um perfil de outra máquina com um nome que esta versão não conhece tem de"""
     from pydantic import ValidationError
 
     from hefesto_dualsense4unix.profiles.schema import Profile
@@ -153,15 +94,8 @@ def test_o_perfil_recusa_dizendo_o_que(ruim: dict[str, str], pedaco: str) -> Non
     assert pedaco in str(erro.value), str(erro.value)
 
 
-# --------------------------------------------------------------------------
-# 3. a resolução separa quem atende — e diz quem não atende
-# --------------------------------------------------------------------------
 def test_a_escolha_vai_para_o_device_certo() -> None:
-    """`BTN_*` é do mouse, `KEY_*` é do teclado, e um botão fica em UM só.
-
-    Estar nos dois faria o mesmo aperto emitir duas vezes — que é a colisão que
-    o `keyboard_mappings.py:47-52` já registrava para o `r3`.
-    """
+    """`BTN_*` é do mouse, `KEY_*` é do teclado, e um botão fica em UM só."""
     from hefesto_dualsense4unix.core.acoes_de_botao import resolver
 
     do_mouse, do_teclado, _ = resolver({"dpad_up": "BTN_LEFT", "cross": "KEY_ENTER"})
@@ -172,12 +106,7 @@ def test_a_escolha_vai_para_o_device_certo() -> None:
 
 
 def test_o_que_ninguem_atende_sai_pela_terceira_sacola() -> None:
-    """A tela oferece o que o produto ainda não faz — e isso não pode ser silêncio.
-
-    "Abrir a Steam", "Sair do modo jogo" e "Escolher um programa…" estão no
-    desenho que ela aprovou. Guardá-los e não acender nada, sem dizer, seria o
-    botão que responde calado.
-    """
+    """A tela oferece o que o produto ainda não faz — e isso não pode ser silêncio."""
     from hefesto_dualsense4unix.core.acoes_de_botao import (
         TOKEN_CURSOR,
         TOKEN_STEAM,
@@ -206,9 +135,6 @@ def test_sem_escolha_a_resolucao_e_o_de_fabrica() -> None:
     assert padrao()["cross"] == "BTN_LEFT"
 
 
-# --------------------------------------------------------------------------
-# 4. o device obedece — e volta
-# --------------------------------------------------------------------------
 def test_o_device_troca_o_que_o_botao_faz() -> None:
     """O elo que faltava: sem ele o campo grava e nada acende."""
     from hefesto_dualsense4unix.core.acoes_de_botao import resolver
@@ -244,12 +170,8 @@ def test_o_perfil_empurra_ao_ativar() -> None:
         def __init__(self) -> None:
             self.recebeu: dict[str, str] | None = None
 
-        # A ASSINATURA ESPELHA A REAL — 06/09/2026, ONDA3-MOTOR-01. O
         # `set_button_actions` ganhou a sacola dos botões CALADOS (sem ela, seis
-        # linhas em "— Nada —" voltavam ao de fábrica), e um dublê mais estreito
-        # que a função real transformaria a chamada nova em `TypeError` — que o
         # `apply_button_actions` engole e relata como "falhou". O verde seria
-        # sobre nada.
         def set_button_actions(
             self,
             do_mouse: dict[str, str] | None,
@@ -285,11 +207,7 @@ def test_o_perfil_empurra_ao_ativar() -> None:
 
 
 def test_a_fabrica_do_daemon_injeta_o_provider() -> None:
-    """A cura ligada de verdade: quem monta o manager no daemon passa o mouse.
-
-    Esta é a linha que separa a feature do inventário: sem ela, tudo acima passa
-    e nada acontece na máquina dela.
-    """
+    """A cura ligada de verdade: quem monta o manager no daemon passa o mouse."""
     import inspect
 
     from hefesto_dualsense4unix.profiles import manager as mod

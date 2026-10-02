@@ -48,15 +48,6 @@ PAGINA = RAIZ_DEV / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" /
 TITULO_ESPERADO = "aba CONEXÕES"
 TIQUE_MS = 100
 
-#: O OUVINTE DOS GESTOS, e ele se instala sozinho de propósito: o
-#: ``--prova-gesto`` roda com ``--sem-ponte`` (o gesto real mexe no rádio dela),
-#: e sem o tique o ouvinte tinha de continuar lá — antes, ``--sem-ponte``
-#: saía antes de instalar qualquer coisa e a prova nunca rodava.
-#:
-#: O ENDEREÇO É ``data-gesto`` — 23/09/2026, TRANSPLANTE-DA-SECAO-01. O ouvinte
-#: procurava ``[data-g]`` e a página emite ``data-gesto`` desde a aba nova:
-#: todo clique caía em ``null`` e a prova da aba 08 estourava no primeiro.
-#: Curado aqui, no piloto — a página fala a língua das dez abas.
 OUVINTE = r"""
 (function(){
   if(window.__hefOuvinte) return;
@@ -95,10 +86,6 @@ OUVINTE = r"""
 })();
 """
 
-#: A PROVA DO GESTO, genérica: um toque em CADA nome de ``data-gesto`` da seção
-#: nova, o primeiro elemento de cada nome que não esteja cinza. Antes era uma
-#: lista de cinco seletores escritos à mão — e um gesto novo que ninguém
-#: escrevesse ali nunca era clicado, que é a prova mentindo por omissão.
 PROVA_DO_GESTO = r"""
 (function(){
   const marco = document.getElementById('cx8-3');
@@ -140,7 +127,6 @@ PROVA_DO_GESTO = r"""
 })()
 """
 
-#: O bootstrap da aba: o ouvinte, e o sinal de que a página o recebeu.
 BOOTSTRAP = OUVINTE + "\n'HEF-PRONTO'\n"
 
 
@@ -194,14 +180,12 @@ class Janela:
         self.ponte = self.tela.ponte
         self.janela = self.tela.janela
 
-    # -- carga -------------------------------------------------------------
     def _saiu_da_aba(self, titulo: str) -> None:
         self.pronto = False
         print(f"[fora da Conexões] {titulo} — o mockup estático; o tique pausou.")
 
     def _instalar(self) -> None:
         if self.args.secao:
-            # Abre a seção pedida antes de tudo — a foto e a prova olham para ela.
             self.ponte.rodar(
                 f"(function(e){{if(e)e.checked=true;}})"
                 f"(document.getElementById({json.dumps(self.args.secao)}))"
@@ -210,8 +194,6 @@ class Janela:
             print("MORDIDA: a ponte está DESLIGADA — a tela fica na cena fixa do mockup.")
             self.pronto = True
             if self.args.prova_gesto:
-                # Sem o tique, mas COM o ouvinte: a prova do gesto mede o
-                # caminho tela → Python, e ele não passa pelo tique.
                 self.ponte.rodar(OUVINTE)
                 self._marcar_gestos_de_mentira()
             self._agendar_saida()
@@ -233,13 +215,7 @@ class Janela:
         self.ponte.perguntar(BOOTSTRAP, pronto)
 
     def _marcar_gestos_de_mentira(self) -> None:
-        """Cliques SINTÉTICOS: provam o caminho tela → Python, não o desenho.
-
-        `el.click()` percorre o MESMO caminho de eventos do clique do rato — o
-        ouvinte delegado é o que responde. Clicar por coordenada é a armadilha
-        que esta casa já pagou duas vezes. O roteiro é :data:`PROVA_DO_GESTO`:
-        um toque por nome de gesto da seção, lido da página, nunca digitado.
-        """
+        """Cliques SINTÉTICOS: provam o caminho tela → Python, não o desenho."""
         GLib.timeout_add(1200, lambda: (self.ponte.rodar(PROVA_DO_GESTO), False)[1])
 
     def _agendar_saida(self) -> None:
@@ -249,7 +225,6 @@ class Janela:
             antes=(lambda: self.tela.fotografar(foto)) if foto else None,
         )
 
-    # -- o tique -----------------------------------------------------------
     def _estado(self) -> dict[str, Any] | None:
         if self.args.duble:
             bruto = _ler_json(self.args.duble)
@@ -265,11 +240,7 @@ class Janela:
             return None
 
     def _tique(self) -> bool:
-        """Uma volta: a leitura do estado, com o custo dela.
-
-        A pintura é do pacote `a08_conexoes`, pelo piloto; aqui se mede o que
-        cada volta custa para perguntar ao daemon (ou ler o dublê).
-        """
+        """Uma volta: a leitura do estado, com o custo dela."""
         if not self.pronto:
             return True
         t0 = time.perf_counter()
@@ -282,12 +253,7 @@ class Janela:
         return True
 
     def _medir_memoria(self) -> None:
-        """Um vazamento não aparece no relógio — aparece na memória.
-
-        A página fica aberta pelo tempo pedido, e um ouvinte que se acumulasse
-        seria invisível numa régua de tempo. Aqui não há ouvinte por elemento (a
-        delegação é no documento), e esta conta é o que prova que continua assim.
-        """
+        """Um vazamento não aparece no relógio — aparece na memória."""
         try:
             with open("/proc/self/status", encoding="utf-8") as arq:
                 for linha in arq:
@@ -297,7 +263,6 @@ class Janela:
         except OSError:
             pass
 
-    # -- os gestos ---------------------------------------------------------
     def _gesto(self, objeto: dict[str, Any]) -> None:
         nome = str(objeto.get("gesto") or "")
         if nome == "erro-js":
@@ -311,9 +276,6 @@ class Janela:
             return
         dono = _dono_do_gesto(nome)
         if dono is None:
-            # Recusar com motivo, nunca engolir. Um gesto que a tela manda e o
-            # Python não conhece é defeito de um dos dois lados, e calar
-            # esconderia qual.
             self.sem_dono.append(nome)
             print(f"gesto SEM DONO, recusado: {objeto!r}", file=sys.stderr)
             return
@@ -347,7 +309,6 @@ class Janela:
                   and not self.erros_js and not orfaos)
         return passou, "\n".join(linhas)
 
-    # -- o relato ----------------------------------------------------------
     def relato(self) -> str:
         def resumo(nome: str, v: list[float]) -> str:
             if not v:
@@ -368,10 +329,6 @@ class Janela:
             linhas.append(
                 f"orçamento: {med / TIQUE_MS * 100:.1f}% dos {TIQUE_MS} ms do tique"
             )
-        # A RÉGUA POR BLOCO, e ela é o que uma volta só esconde: uma régua de
-        # 29/08 rodou o tique UMA VEZ e não viu uma regressão que só aparecia
-        # aos 181 segundos. Aqui a deriva aparece como a mediana subindo de
-        # bloco para bloco.
         if len(self.custos) >= 600:
             blocos = [
                 f"{i // 300}:{sorted(self.custos[i:i + 300])[150]:.2f}"
@@ -414,12 +371,6 @@ def main() -> int:
             print("ERRO: a prova do gesto não fechou.", file=sys.stderr)
             return 1
 
-    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
-    # guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, estendida às cinco
-    # na costura da ONDA C. O defeito que ela cobra é o de rc=0 sobre janela
-    # vazia; aqui a página existe, e a guarda é o que impede o dia em que ela
-    # deixar de existir de passar calado. O `--sem-ponte` é a exceção e é a
-    # MORDIDA: ele desliga o tique de propósito.
     if j.voltas == 0 and not args.sem_ponte:
         print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1

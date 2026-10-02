@@ -74,41 +74,17 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 )
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
-# --- os aparelhos da mesa dela, mascarados ---------------------------------
 
-#: Todos na faixa `aa:bb:cc:...`, que é o placeholder canônico de fixture
-#: desta casa. As OUIs públicas dos fabricantes (Nintendo, 8BitDo) NÃO entram
-#: aqui de propósito: `tests/unit/test_anonimato_de_fixtures.py` trava os MACs
-#: de teste por ALLOWLIST de faixas forjadas, e afrouxá-la para caber uma OUI
-#: real seria abrir a porta pela qual um endereço de verdade entra depois.
-#: Nada neste arquivo depende da OUI — quem numera olha a fila, não o
-#: fabricante.
-#:
 #: Os dois DualSense (o de `rank=1` estava DESLIGADO na medição das 22h40).
 DS_DESLIGADO = "aa:bb:cc:00:00:01"
 DS_LIGADO = "aa:bb:cc:00:00:02"
-#: Pro Controller Nintendo genuíno — barra VERDE de player (padrão Switch).
 PRO = "aa:bb:cc:00:00:11"
-#: 8BitDo em modo PS4 — lightbar RGB, sem barra de player nenhuma.
 BITDO = "aa:bb:cc:00:00:12"
-
-
-# --- o /sys/class/leds falso, e os escritores/leitores REAIS ---------------
 
 
 @dataclass
 class Lampada:
-    """Uma barra de LEDs no sysfs falso — sabe se acender e se ler.
-
-    ``especie`` decide QUAL escritor de produção governa a lâmpada, e as três
-    são diferentes de verdade (é o achado da sprint: "LED de jogador 3 no
-    8BitDo" é impreciso — o que acende lá é a COR do jogador 3):
-
-    - ``dualsense`` — 5 LEDs brancos + o nó ``:rgb:indicator`` que
-      `sysfs_leds.discover()` usa para achar o dono pelo MAC;
-    - ``nintendo`` — 4 LEDs verdes + o azul ``player-5`` (o bit "+5" do R-25);
-    - ``ds4`` — lightbar RGB (``:red``/``:green``/``:blue``/``:global``).
-    """
+    """Uma barra de LEDs no sysfs falso — sabe se acender e se ler."""
 
     nome: str
     especie: str
@@ -116,15 +92,11 @@ class Lampada:
     prefixo: str
     _raiz: Path = field(repr=False, default=Path())
 
-    # -- construção do sysfs falso ----------------------------------------
 
     def criar(self, raiz: Path) -> None:
         self._raiz = raiz
         leds = raiz / "leds"
         if self.especie == "dualsense":
-            # `discover()` resolve o dono por realpath do :rgb:indicator ->
-            # .../<HID>/leds/<prefixo>:rgb:indicator, e lê o MAC do `uevent`
-            # do <HID>. O sysfs falso tem de ter essa forma exata.
             hid = raiz / "devices" / self.prefixo
             (hid / "leds" / f"{self.prefixo}:rgb:indicator").mkdir(parents=True)
             (hid / "uevent").write_text(
@@ -152,7 +124,6 @@ class Lampada:
         else:  # pragma: no cover - erro de escrita do teste
             raise AssertionError(f"espécie de lâmpada desconhecida: {self.especie}")
 
-    # -- escrita: os escritores de PRODUÇÃO -------------------------------
 
     def acender(self, numero: int) -> None:
         raiz = str(self._raiz / "leds")
@@ -165,7 +136,6 @@ class Lampada:
         else:
             assert external_leds.write_lightbar_slot(self.prefixo, numero, raiz)
 
-    # -- leitura: o número que a lâmpada EXIBE ----------------------------
 
     def numero_aceso(self) -> int | None:
         """Decodifica o número lendo os nós — ``None`` = padrão de ninguém."""
@@ -194,14 +164,7 @@ class Lampada:
 
 @dataclass
 class Aparelho:
-    """Um aparelho da mesa: o que ele é, de quem é, e como ele exibe número.
-
-    ``jogador`` é a IDENTIDADE DO JOGADOR, não o número: o vpad de alguém e o
-    controle físico que ele espelha compartilham a mesma string, e é isso que
-    autoriza os dois a exibirem o mesmo número (e obriga, ver o módulo). Um
-    externo é jogador de ninguém — cada um recebe uma string própria, então
-    ele nunca pode dividir número com quem quer que seja.
-    """
+    """Um aparelho da mesa: o que ele é, de quem é, e como ele exibe número."""
 
     nome: str
     jogador: str
@@ -216,9 +179,6 @@ def raiz_leds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(sysfs_leds, "LEDS_ROOT", str(tmp_path / "leds"))
     monkeypatch.setattr(external_leds, "LEDS_ROOT", str(tmp_path / "leds"))
     return tmp_path
-
-
-# --- a fiação REAL das duas contabilidades ---------------------------------
 
 
 class _ControllerFalso:
@@ -289,7 +249,6 @@ def montar_mesa(
     sync = ExternalLedSync.__new__(ExternalLedSync)
     sync._daemon = daemon
     sync._registry = ext
-    # A ponte de PRESENÇA entre os dois registros, feita pelo código real.
     sync._wire_presence_providers()
     if reserva_dos_externos:
         ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
@@ -313,24 +272,13 @@ def numero_da_lampada(mesa: Mesa, identidade: str, especie: str) -> int:
     """O número que o daemon MANDA acender neste aparelho, código real."""
     if especie == "dualsense":
         usados: set[int] = set()
-        # `_numero_exibido` é a função que o co-op usa para escolher o padrão
-        # da barra — o `fallback` só vale sem registro, e aqui há registro.
         return mesa.coop._numero_exibido(identidade, 1, usados)
     return mesa.ext.slot_for(identidade, reserve=mesa.sync._ds_reserve()) or 0
 
 
 def conferir_sem_repetir(mesa: Mesa) -> None:
-    """O invariante inteiro, nas duas metades (ver o topo do módulo).
-
-    A metade 1 varre APARELHO por aparelho, e não um representante por
-    jogador: com um grupo internamente incoerente (o caso da luz que discorda
-    do nome), escolher um representante esconderia a colisão do outro membro —
-    foi assim que a primeira versão desta função deixou o cenário do Pro no
-    lugar 1 passar quando a metade 2 estava arrancada.
-    """
+    """O invariante inteiro, nas duas metades (ver o topo do módulo)."""
     numeros = mesa.numeros_exibidos()
-    # metade 1: cada número tem UM dono. Repetir só é permitido entre
-    # aparelhos do MESMO jogador (o vpad e o físico que ele espelha).
     donos: dict[int | None, set[str]] = {}
     for ap in mesa.aparelhos:
         donos.setdefault(numeros[ap.nome], set()).add(ap.jogador)
@@ -339,7 +287,6 @@ def conferir_sem_repetir(mesa: Mesa) -> None:
             f"dois jogadores exibem o número {numero}: {sorted(jogadores)} "
             f"(mesa inteira: {numeros})"
         )
-    # metade 2: dentro do mesmo jogador, o número é o MESMO.
     por_jogador: dict[str, dict[str, int | None]] = {}
     for ap in mesa.aparelhos:
         por_jogador.setdefault(ap.jogador, {})[ap.nome] = numeros[ap.nome]
@@ -348,9 +295,6 @@ def conferir_sem_repetir(mesa: Mesa) -> None:
             f"o jogador {jogador} exibe números diferentes em aparelhos seus: "
             f"{aparelhos} — a lâmpada no plástico contradiz o nome que o jogo lê"
         )
-
-
-# --- os cenários -----------------------------------------------------------
 
 
 def _mesa_de_06_08(raiz: Path, *, com_vpad: bool) -> Mesa:
@@ -385,8 +329,6 @@ def _mesa_de_06_08(raiz: Path, *, com_vpad: bool) -> Mesa:
         mesa.aparelhos.append(
             Aparelho(
                 nome=nome,
-                # o físico do P1 e o vpad do P1 são o MESMO jogador; cada
-                # externo é jogador de ninguém, logo é um grupo só dele.
                 jogador="jogador-1" if especie == "dualsense" else f"ninguem:{nome}",
                 lampada=lamp,
             )
@@ -452,26 +394,7 @@ class TestOVpadEntraNaConta:
         assert vpad.mac == f"02:fe:00:00:00:{jogador:02x}"
 
 
-#: A razão do `xfail` das duas classes abaixo, escrita uma vez só porque é a
-#: MESMA fresta vista de dois ângulos: o número da LÂMPADA sai da fila de
-#: identidade (ordem de primeira aparição, persistida em `controllers.json`) e
-#: o vpad carrega no NOME o índice de ALOCAÇÃO do co-op, congelado no instante
-#: em que ele nasceu (`_next_player_index`).
-#:
-#: MESA-CHEIA-12 (15/08/2026) fechou METADE desta fresta, e só metade: o
 #: `player_indexes()` — o número que a GUI, a CLI e o `state_full` publicam —
-#: passou a sair da MESMA função da lâmpada (`numeros_de_jogador`), então a luz
-#: no plástico e o rótulo na tela não podem mais discordar. O que sobra, e é o
-#: que mantém estas duas classes vermelhas, é o NOME DO VPAD: ele é fixado na
-#: criação e a colocação na fila é dinâmica (conta só os presentes), de modo
-#: que um controle que entra ou sai da mesa renumera a lâmpada e não renumera
-#: o nome — casar os dois exigiria RECRIAR o vpad no meio da sessão, que o
-#: jogo enxerga como gamepad desconectando.
-#:
-#: Não se cura aqui por ordem expressa: a cura pode tocar a adoção dos
-#: externos, que ela ADIOU até a máscara por controle existir (decisão dela de
-#: 07/08/2026, resposta 3 — `docs/process/2026-08-07-DECISOES-DELA-as-onze-
-#: respostas-do-painel.md`). O teste fica VERMELHO e declarado.
 RAZAO_XFAIL = (
     "LUGAR-À-MESA-01: o NOME do vpad é congelado na criação e a colocação na "
     "fila é dinâmica — casá-los exigiria recriar o vpad no meio da sessão. "
@@ -536,8 +459,6 @@ class TestExternoNaFrenteNaFila:
                 vpad=UhidDualSense(player=1),
             )
         )
-        # O retrato do que o código de HOJE produz — fica escrito para que a
-        # cura, quando vier, mostre exatamente o que mudou.
         assert mesa.numeros_exibidos() == {
             "Pro Controller": 1,
             "DualSense físico": 2,
@@ -579,7 +500,7 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
         mesa = montar_mesa(
             fila=[(DS_DESLIGADO, "dualsense"), (DS_LIGADO, "dualsense")],
             presentes=[DS_DESLIGADO, DS_LIGADO],
-            primario=DS_LIGADO,  # o backend elegeu o SEGUNDO da fila
+            primario=DS_LIGADO,
         )
         vpad_p2 = UhidDualSense(player=2)
         mesa.coop._players = {
@@ -592,8 +513,6 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
             )
         }
         indices = mesa.coop.player_indexes()
-        # MESA-CHEIA-12: o número PUBLICADO agora é o da fila — o primário
-        # eleito pelo hidapi é o segundo da fila e publica 2, não mais 1.
         assert indices == {DS_LIGADO: 2, DS_DESLIGADO: 1}
         for nome, identidade, prefixo, jogador in (
             ("DualSense A", DS_DESLIGADO, "0005:054C:0CE6.0005", "jogador-2"),
@@ -618,7 +537,6 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
         mesa.aparelhos.append(
             Aparelho(nome="jogo (vpad Hefesto P2)", jogador="jogador-2", vpad=vpad_p2)
         )
-        # O retrato do código de hoje: a luz e o nome TROCADOS entre os dois.
         assert mesa.numeros_exibidos() == {
             "DualSense A": 1,
             "DualSense B": 2,
@@ -629,12 +547,7 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
 
 
 class TestOTesteMorde:
-    """Prova que o invariante reprova quando a numeração de fato colide.
-
-    Sem isto o arquivo inteiro seria decoração: um teste que só passa não
-    mostra nada. Aqui a colisão é FORÇADA na lâmpada e na conta, e o
-    invariante tem de gritar nas duas metades.
-    """
+    """Prova que o invariante reprova quando a numeração de fato colide."""
 
     def test_dois_fisicos_no_mesmo_numero_reprovam(self, raiz_leds: Path) -> None:
         mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
@@ -647,7 +560,6 @@ class TestOTesteMorde:
 
     def test_vpad_no_numero_de_outro_jogador_reprova(self, raiz_leds: Path) -> None:
         mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
-        # O vpad do P1 nasce anunciando 3 — o número do 8BitDo na mesa.
         vpad = next(a for a in mesa.aparelhos if a.vpad is not None)
         vpad.vpad = UhidDualSense(player=3)
         with pytest.raises(AssertionError, match="dois jogadores exibem o número 3"):

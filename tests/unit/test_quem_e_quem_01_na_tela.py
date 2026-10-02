@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("dica do título do card")
 
 from typing import Any
@@ -38,11 +37,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     ControllerCard,
 )
 
-#: Faixa forjada da casa, no formato REAL do payload (`norm_mac`, sem
-#: separador) — o mesmo de `controllers[].uniq`.
 MAC = "aabbcc000002"
-#: Faixa localmente administrada que o PRODUTO carimba no vpad uhid
-#: (`uhid_gamepad.player_mac`): forjada por construção, não é hardware.
 VPAD = "02:fe:00:00:00:02"
 
 _janelas_vivas: list[Any] = []
@@ -88,9 +83,6 @@ def _card_montado() -> Any:
     janela = Gtk.OffscreenWindow()
     janela.add(card)
     janela.show_all()
-    # Sob Xvfb não há gerenciador de janelas — a `OffscreenWindow` é o que se
-    # auto-aloca (armadilha nº 2 da casa). E a referência tem de sobreviver ao
-    # fim da função, senão o GC leva o card junto.
     _janelas_vivas.append(janela)
     return card
 
@@ -110,9 +102,7 @@ def test_o_rotulo_do_titulo_ganha_a_dica_com_o_endereco_do_vpad() -> None:
 
 
 def test_a_dica_some_quando_o_controle_deixa_a_mesa_de_jogadores() -> None:
-    """Diff próprio: a dica muda por motivo diferente do título (o título deste
-    card não muda entre as duas chamadas). Pendurada no diff do TÍTULO, ela
-    ficaria congelada na frase da chamada anterior."""
+    """Diff próprio: a dica muda por motivo diferente do título (o título deste"""
     card = _card_montado()
 
     card.update(_entry(), _estado())
@@ -123,8 +113,7 @@ def test_a_dica_some_quando_o_controle_deixa_a_mesa_de_jogadores() -> None:
 
 
 def test_aguardando_grab_chega_a_tela_com_a_frase_propria() -> None:
-    """O físico já está na mesa e o vpad ainda não nasceu — e a tela diz isso,
-    em vez de calar como se não soubesse."""
+    """O físico já está na mesa e o vpad ainda não nasceu — e a tela diz isso,"""
     card = _card_montado()
 
     card.update(

@@ -1,27 +1,5 @@
 #!/usr/bin/env python3
-"""Duas unidades NUNCA mostram a mesma cor — nem no mesmo perfil e estilo.
-
-A REGRA É DELA, 03/09/2026, e vem inteira:
-
-    *"nenhuma cor dos controles nunca pode ser a mesma, mesmo no mesmo perfil e
-    estilo de jogo. Dentro da paleta de fps tem que ter variações pra cada
-    unidade de controle."*
-
-**NÃO É PREFERÊNCIA ESTÉTICA — É ENDEREÇO.** A barra de luz é a única maneira de
-saber, olhando para a mesa, qual controle é qual. Duas unidades com a mesma cor
-apagam essa informação exatamente quando ela mais importa: com quatro ligados.
-
-E ELA PEGA UM DEFEITO VIVO, medido no perfil dela em 03/09: a seção GLOBAL do
-perfil guarda UMA cor (`leds.lightbar = [40, 80, 180]`), e com
-``auto_player_colors`` desligado os quatro controles a recebem — os quatro
-iguais. Hoje quem impede é aquele interruptor, e ele é um interruptor: alguém
-pode desligá-lo sem perceber o que perde.
-
-A MORDIDA: baixe `GIRO_DE_MATIZ` para `0.0` e
-:func:`test_as_quatro_saem_distintas_em_todo_estilo` reprova nomeando o estilo e
-a distância; troque a família de qualquer estilo por um cinza claro e a mesma
-régua acusa que branco não rende quatro.
-"""
+"""Duas unidades NUNCA mostram a mesma cor — nem no mesmo perfil e estilo."""
 
 from __future__ import annotations
 
@@ -37,9 +15,6 @@ def _pior(cores) -> int:
                for i in range(len(cores)) for j in range(i + 1, len(cores)))
 
 
-# --------------------------------------------------------------------------
-# 1. A REGRA DELA, em toda receita
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("estilo", [e for e in estilos.ESTILOS if e.chave != "personalizado"],
                          ids=lambda e: e.chave)
 def test_as_quatro_saem_distintas_em_todo_estilo(estilo) -> None:
@@ -52,14 +27,7 @@ def test_as_quatro_saem_distintas_em_todo_estilo(estilo) -> None:
 
 
 def test_toda_receita_rende_quatro_sem_levantar() -> None:
-    """Nenhuma família da tabela pode ser escura ou branca demais.
-
-    Foi assim que DUAS receitas caíram na primeira execução, e as duas ensinaram
-    coisas diferentes: o Terror com um vinho escuro (as quatro a 61 — abaixo do
-    meio da luminância não há espaço), e o Retrô com quase-branco (as quatro a
-    **9** — branco não tem matiz para girar nem saturação para variar, e nenhuma
-    abertura de família conserta isso).
-    """
+    """Nenhuma família da tabela pode ser escura ou branca demais."""
     ruins = []
     for e in estilos.ESTILOS:
         if e.chave == "personalizado":
@@ -72,23 +40,7 @@ def test_toda_receita_rende_quatro_sem_levantar() -> None:
 
 
 def test_as_quatro_variam_em_matiz_e_nao_so_em_luz() -> None:
-    """A variação tem de ser de COR, e não uma escala de cinza da mesma cor.
-
-    **ESTA RÉGUA NASCEU DE UMA MORDIDA QUE NÃO MORDEU.** Zerei `GIRO_DE_MATIZ` e
-    os 23 testes ficaram VERDES: o passo de luminância sozinho já separava as
-    quatro pela distância RGB, e a régua não tinha como notar que a família
-    tinha virado quatro tons do mesmo tom.
-
-    Por que isso importa e não é purismo: o alvo é um **LED difuso atrás de
-    plástico leitoso**, e ali a luminância é justamente a dimensão que menos se
-    distingue — quatro azuis mais claros e mais escuros, vistos do outro lado do
-    sofá, são quatro azuis. A regra dela pede *"variações"*, e variação que só
-    existe na conta não cumpre o que ela serve para cumprir: dizer qual controle
-    é qual.
-
-    A MORDIDA, agora de verdade: `GIRO_DE_MATIZ = 0.0` e esta função reprova
-    nomeando o estilo.
-    """
+    """A variação tem de ser de COR, e não uma escala de cinza da mesma cor."""
     import colorsys
 
     ruins = []
@@ -97,10 +49,9 @@ def test_as_quatro_variam_em_matiz_e_nao_so_em_luz() -> None:
             continue
         matizes = [colorsys.rgb_to_hls(*(c / 255 for c in cor))[0]
                    for cor in estilos.as_quatro(e)]
-        # A DISTÂNCIA É NO CÍRCULO: 0.98 e 0.02 são vizinhos, não opostos.
         espalhamento = max(
             min(abs(a - b), 1 - abs(a - b)) for a in matizes for b in matizes)
-        if espalhamento < 0.02:          # ~7 graus, o piso do perceptível
+        if espalhamento < 0.02:
             ruins.append(f"{e.rotulo}: as quatro cabem em {espalhamento*360:.0f} "
                          "graus de matiz — é a mesma cor em quatro brilhos")
     assert not ruins, (
@@ -108,26 +59,15 @@ def test_as_quatro_variam_em_matiz_e_nao_so_em_luz() -> None:
         "separa:\n  " + "\n  ".join(ruins))
 
 
-# --------------------------------------------------------------------------
-# 2. A GARANTIA É MEDIDA, e não prometida
-# --------------------------------------------------------------------------
 def test_uma_familia_que_nao_rende_levanta() -> None:
-    """Devolver um par colidido em silêncio seria o defeito inteiro.
-
-    A função tem de RECUSAR, e a mensagem tem de dizer o que fazer — trocar a
-    família —, senão quem esbarrar nela vai procurar defeito na conta.
-    """
+    """Devolver um par colidido em silêncio seria o defeito inteiro."""
     branco = estilos.Estilo("x", "Teste", None, "balanceado", (250, 250, 250), 1.0, "")
     with pytest.raises(ValueError, match="não separa quatro unidades"):
         estilos.as_quatro(branco)
 
 
 def test_o_personalizado_recusa_dizendo_por_que() -> None:
-    """`Personalizado` não escolhe cor, e perguntar a dele é erro de quem chama.
-
-    Devolver uma cor qualquer ali seria o estilo que diz *"eu ajusto na mão"*
-    passando a mexer na mão dela.
-    """
+    """`Personalizado` não escolhe cor, e perguntar a dele é erro de quem chama."""
     with pytest.raises(ValueError, match="não escolhe cor"):
         estilos.as_quatro("personalizado")
 
@@ -139,16 +79,8 @@ def test_jogador_fora_da_mesa_recusa(fora: int) -> None:
         estilos.cor_da_unidade("fps", fora)
 
 
-# --------------------------------------------------------------------------
-# 3. O QUE A TABELA PROMETE tem de existir no produto
-# --------------------------------------------------------------------------
 def test_todo_gatilho_da_receita_e_um_modo_real() -> None:
-    """A chave do gatilho sai da lista que a aba Gatilhos oferece.
-
-    Digitar `AutoGunn` numa receita passaria calado até alguém escolher aquele
-    estilo com o controle na mão — e então o produto mandaria ao aparelho um
-    modo que não existe. A lista é LIDA da página publicada, não digitada aqui.
-    """
+    """A chave do gatilho sai da lista que a aba Gatilhos oferece."""
     import pathlib
     import re
 
@@ -192,12 +124,7 @@ def _opcoes_do_estilo(pagina: pathlib.Path) -> set[str] | None:
 
 
 def _a_10_esta_em_trabalho() -> bool:
-    """A aba Perfis está declarada em trabalho na bancada (`mockup/DIVERGENCIAS.md`)?
-
-    Enquanto estiver, o publicado pode estar atrás do desenho de propósito — é o
-    contrato do `scripts/check_o_desenho_aprovado.py`, e a direção é `mockup/` →
-    produto. Mesmo desenho do `_em_trabalho` da régua da aba 01.
-    """
+    """A aba Perfis está declarada em trabalho na bancada (`mockup/DIVERGENCIAS.md`)?"""
     from hefesto_dualsense4unix.interface import onde
 
     arquivo = onde.BANCADA / "DIVERGENCIAS.md"
@@ -208,19 +135,7 @@ def _a_10_esta_em_trabalho() -> bool:
 
 
 def test_a_lista_da_tela_e_a_das_receitas_batem() -> None:
-    """Os rótulos das receitas são os que o `<select>` da aba Perfis oferece.
-
-    Sem esta linha, ela escolheria "Ritmo/Música" na tela e o motor procuraria
-    uma receita que não existe — o campo voltaria a aceitar e não fazer, que é
-    o defeito que o motor veio curar.
-
-    A RÉGUA MEDE A BANCADA SEMPRE E O PUBLICADO QUANDO A ABA NÃO ESTÁ EM
-    TRABALHO — 25/09/2026, O-CO-OP-LOCAL-SAI-01. O «Co-op local» saiu do motor
-    e do desenho no mesmo commit, e publicar é ato de quem coordena: cobrar o
-    publicado antes disso reprovaria por uma espera declarada, não por defeito.
-    Ela se rearma sozinha no dia da publicação, quando a seção sai do
-    `DIVERGENCIAS.md`.
-    """
+    """Os rótulos das receitas são os que o `<select>` da aba Perfis oferece."""
     from hefesto_dualsense4unix.interface import onde
 
     das_receitas = {e.rotulo for e in estilos.ESTILOS}

@@ -66,15 +66,9 @@ def _pacote() -> Any:
 
 
 def _ctx() -> Any:
-    """Uma mesa de dois: o primeiro no CABO, o segundo no RÁDIO.
-
-    Os dois transportes na mesma prova é o que impede a régua de passar por
-    acaso: um valor congelado acerta metade dos casos, e uma prova de um
-    controle só não distingue "seguiu o aparelho" de "acertou por sorte".
-    """
+    """Uma mesa de dois: o primeiro no CABO, o segundo no RÁDIO."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    # A FAIXA SINTÉTICA DA CASA — há dois portões de anonimato nesta árvore.
     p1, p2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
     mesa = [
         {"pref": "p1", "uniq": p1, "jogador": 1, "cor": "white",
@@ -96,9 +90,6 @@ def _por_transporte(pac: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {str(c.get("via") or ""): c for c in pac["colunas"].values()}
 
 
-# ---------------------------------------------------------------------------
-# (a) A BANCADA — os endereços que a cura precisa existem no que vai renderizar
-# ---------------------------------------------------------------------------
 def test_os_enderecos_novos_existem_na_bancada() -> None:
     """Os cinco endereços desta leva, no arquivo que o produto vai renderizar.
 
@@ -110,20 +101,10 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
     html = BANCADA.read_text(encoding="utf-8")
     pac = _pacote()
     esperados = (
-        # POR CONTROLE. O `mic-existe` e o `mic-caminho` saíram em 25/09/2026
-        # com o «Microfone e botões» da linha (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01).
-        # A TRAVA MUDOU DE NÓ EM 04/09/2026, e não de dono: ela saiu do
-        # `<button>` para um `<i class="ltrava">` irmão, porque o vocabulário é
-        # UM `data-campo` por nó e o botão precisava do dele para a DICA. A
-        # classe deixou de ser nomeada (`apagado`) e passou a ser o `on` padrão,
-        # que é o que a folha lê pelo `~` — ver `.gc-corpo .ltrava.on ~ .btn`.
         f'data-campo="luz-trava" data-hef-alvo="classe" '
         f'data-hef-quando="{pac.LUZ_TRAVADA}"',
-        # E A DICA DO BOTÃO — a metade que era do desenho e mentia quando o
-        # controle trocava de transporte.
         'data-campo="luz-dica" data-hef-alvo="atributo" '
         'data-hef-atributo="title"',
-        # A CONFISSÃO DO DESENHO
         'data-campo="confissao-nada" data-hef-alvo="classe" '
         'data-hef-classe="sumido" data-hef-quando="sim"',
         'data-campo="confissao-conta"',
@@ -132,33 +113,14 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
         assert endereco in html, (
             f"o endereço `{endereco}` não está na bancada da 08 — sem ele o "
             f"produto não tem onde escrever, e a tela volta ao desenho")
-    # A DICA DA CONFISSÃO SAIU EM 13/09/2026 — FRASES-E-DICAS-02. A abertura
-    # dela confessava numa dica flutuante o que o desenho não conferiu, e a ordem
-    # dela de 13/09 (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
-    # a tira da tela. Fica a contagem.
     assert 'data-campo="confissao-dica"' not in html, (
         "a dica da confissão voltou à bancada da 08")
 
 
-# `test_o_resumo_do_mic_e_o_select_dividem_o_mesmo_endereco` SAIU — o controle
-# «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela
-# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
-# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
-
-
 def test_todo_botao_da_luz_tem_a_trava() -> None:
-    """NENHUM botão "A luz não acende" fica sem endereço de trava.
-
-    A régua compara CONJUNTOS, e não uma contagem: no dia em que a mesa da cena
-    ganhar um terceiro controle conectado, um botão a mais sem `data-campo`
-    passaria por um `== 2` sem que ninguém visse.
-    """
+    """NENHUM botão "A luz não acende" fica sem endereço de trava."""
     html = BANCADA.read_text(encoding="utf-8")
     botoes = re.findall(r'<button[^>]*data-gesto="luz-nao-acende"[^>]*>', html)
-    # A TRAVA É O IRMÃO ANTERIOR desde 04/09/2026 — ver o teste acima. O `~` do
-    # CSS só alcança irmãos POSTERIORES, então o `<i>` colado antes do botão é a
-    # única forma que faz o apagado acender; um `<i>` solto noutro canto passaria
-    # por um `in html` e nunca pintaria nada.
     com_trava = re.findall(
         r'<i class="ltrava[^"]*" data-campo="luz-trava"[^>]*></i><button[^>]*'
         r'data-gesto="luz-nao-acende"', html)
@@ -167,22 +129,8 @@ def test_todo_botao_da_luz_tem_a_trava() -> None:
         f"com o interruptor da trava colado antes deles")
 
 
-# ---------------------------------------------------------------------------
-# (b) O PACOTE ESCREVE — a metade que impede a maquiagem
-# ---------------------------------------------------------------------------
 def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
-    """Todo `data-campo` POR CONTROLE da bancada tem quem o escreva.
-
-    ELA PERGUNTA AOS DOIS LADOS: lê os endereços do arquivo e as chaves do
-    `pacote()`. Uma lista digitada aqui envelheceria no dia em que a aba
-    ganhasse um campo — e a régua reprovaria justamente quem o acrescentou.
-
-    O QUE FICA DE FORA são os endereços que o piloto pinta por OUTRO caminho:
-    `desenho` e `plastico` valem por controle e já têm dono; os de topo
-    (`selo`, `achado`, a fita, o rodapé) não são de controle nenhum. Por isso a
-    régua olha só o que está DENTRO de um `[data-controle]` e cruza com as
-    chaves das `colunas`, que é o dicionário que o piloto distribui ali.
-    """
+    """Todo `data-campo` POR CONTROLE da bancada tem quem o escreva."""
     html = BANCADA.read_text(encoding="utf-8")
     linhas = re.findall(
         r'<div class="gc-item gc-p\d"(?! [^>]*\bfora\b)[^>]*>.*?(?=<div class="gc-item)',
@@ -192,17 +140,6 @@ def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
                for c in re.findall(r'data-campo="([^"]+)"', bloco)}
     pac = _pacote().pacote(_ctx())
     emitidos = {k for coluna in pac["colunas"].values() for k in coluna}
-    # OS CAMPOS DE MÁQUINA CONTAM — 04/09/2026, e é o piloto quem manda: o passo
-    # 1 da pintura faz `achar(document, k)` para as chaves de topo, sem recorte
-    # por `[data-controle]` (`hefesto_vivo.py:612`). Um valor que é UM por
-    # máquina e mora dentro da linha do controle — o escopo do botão físico do
-    # microfone, decisão D-12 dela — é pintado ali do mesmo jeito, e nas duas
-    # linhas com o mesmo valor, que é a verdade dele.
-    #
-    # A RÉGUA NÃO AFROUXA: ela continua reprovando o endereço que NINGUÉM
-    # escreve, que é o defeito que ela existe para pegar. O que ela deixa de
-    # exigir é que todo campo da linha seja POR CONTROLE — e essa exigência era
-    # sobre a arquitetura do pacote, não sobre a tela.
     emitidos |= {k for k, v in pac.items()
                  if not isinstance(v, (dict, list))}
     sem_dono = na_tela - emitidos
@@ -212,12 +149,7 @@ def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
 
 
 def test_a_trava_da_luz_segue_o_transporte() -> None:
-    """No cabo o botão apaga; no rádio ele acende. E a palavra é a do produto.
-
-    O VALOR NÃO É DIGITADO AQUI: ele é lido de `LUZ_TRAVADA`/`LUZ_LIVRE`, que
-    são as constantes que o gerador escreve no `data-hef-quando`. Digitar
-    `"cabo"` na régua faria dela a terceira grafia do mesmo par.
-    """
+    """No cabo o botão apaga; no rádio ele acende. E a palavra é a do produto."""
     pac = _pacote()
     colunas = _por_transporte(pac.pacote(_ctx()))
     assert colunas["USB"]["luz-trava"] == pac.LUZ_TRAVADA, (
@@ -229,12 +161,7 @@ def test_a_trava_da_luz_segue_o_transporte() -> None:
 
 
 def test_a_trava_da_luz_concorda_com_a_recusa_do_gesto() -> None:
-    """A tela e o gesto usam a MESMA regra — e a régua prova isso agindo.
-
-    É a guarda contra a segunda verdade: se um dia o gesto passar a aceitar o
-    cabo (ou a recusar o rádio) e a pintura não acompanhar, a tela ofereceria
-    um botão aceso que recusa, ou apagaria um que funciona.
-    """
+    """A tela e o gesto usam a MESMA regra — e a régua prova isso agindo."""
     import pytest
 
     pac = _pacote()
@@ -246,18 +173,10 @@ def test_a_trava_da_luz_concorda_com_a_recusa_do_gesto() -> None:
         if travado:
             with pytest.raises(RuntimeError):
                 pac.luz_nao_acende(ctx, clique, object())
-        # O RÁDIO NÃO É EXERCITADO AQUI, e é de propósito: chamá-lo pediria um
-        # `Disconnect` de verdade no BlueZ desta máquina. O que esta régua trava
-        # é o lado que a tela apaga — o outro é o `SEM_ECO` do piloto que mede.
 
 
 def test_o_caminho_do_mic_segue_o_transporte() -> None:
-    """A frase do caminho é a do rádio no rádio e a do cabo no cabo.
-
-    E ELA PERGUNTA AO DONO (`caminho_do_microfone`) em vez de digitar as duas
-    frases: o texto é do desenho dela e pode ser reescrito — o que esta régua
-    trava é que o pacote não escolha pela POSIÇÃO.
-    """
+    """A frase do caminho é a do rádio no rádio e a do cabo no cabo."""
     pac = _pacote()
     colunas = _por_transporte(pac.pacote(_ctx()))
     assert colunas["USB"]["mic-caminho"] == pac.caminho_do_microfone("usb")
@@ -269,24 +188,14 @@ def test_o_caminho_do_mic_segue_o_transporte() -> None:
 
 
 def test_o_transporte_que_ninguem_leu_nao_promete_a_ponte() -> None:
-    """Sem transporte lido, o caminho é o do CABO — nunca o da ponte.
-
-    A ponte de rádio é o que CUSTA turno (a régua de Desempenho a mostra).
-    Afirmá-la sem leitura poria na tela um preço que ninguém mediu.
-    """
+    """Sem transporte lido, o caminho é o do CABO — nunca o da ponte."""
     pac = _pacote()
     assert pac.caminho_do_microfone("") == pac.caminho_do_microfone("usb")
     assert pac.trava_da_luz("") == pac.LUZ_TRAVADA
 
 
 def test_o_gerador_e_o_pacote_dizem_a_mesma_frase() -> None:
-    """O gerador não tem mais a frase do caminho do mic — ele a PEDE.
-
-    Enquanto a frase morava nos dois, a linha fechada e a repintura podiam
-    divergir sem ninguém ver. A régua lê o CORPO da função no fonte do gerador
-    — e só ele: procurar a frase no arquivo inteiro reprovaria o COMENTÁRIO que
-    conta esta história, que é a régua confundindo a palavra com o ato.
-    """
+    """O gerador não tem mais a frase do caminho do mic — ele a PEDE."""
     fonte = GERADOR.read_text(encoding="utf-8")
     corpo = re.search(r"^def caminho_do_mic\(.*?^(?=\S)", fonte,
                       flags=re.S | re.M)
@@ -301,9 +210,6 @@ def test_o_gerador_e_o_pacote_dizem_a_mesma_frase() -> None:
             f"`a08_conexoes.caminho_do_microfone`, que os dois lados chamam")
 
 
-# ---------------------------------------------------------------------------
-# (c) A CONFISSÃO — ela é da mesa dela, não da cena
-# ---------------------------------------------------------------------------
 def _com_lacunas(monkeypatch: Any, quantas: int) -> dict[str, str]:
     """O que o pacote emite quando a bancada dela tem `quantas` lacunas."""
     from hefesto_dualsense4unix.app.widgets import mapa_da_mesa
@@ -331,42 +237,26 @@ def test_a_confissao_conta_as_lacunas_da_bancada(monkeypatch: Any) -> None:
             f"{campos['confissao-conta']!r}")
         assert campos["confissao-nada"] == "", (
             "há o que confessar e a linha se apagaria")
-        # A DICA COM OS ITENS SAIU EM 13/09/2026 — ver
-        # `test_os_enderecos_novos_existem_na_bancada`. Fica a contagem.
         assert "confissao-dica" not in campos, (
             f"a confissão voltou a mandar a dica: {campos!r}")
 
 
 def test_sem_lacuna_a_linha_da_confissao_some(monkeypatch: Any) -> None:
-    """Zero lacuna apaga a linha — a mesma regra da janela do desenho.
-
-    Sem o interruptor, a tela leria *"O que eu não consegui conferir neste
-    desenho: nada."* — uma frase que ocupa a linha para não dizer nada.
-    """
+    """Zero lacuna apaga a linha — a mesma regra da janela do desenho."""
     campos = _com_lacunas(monkeypatch, 0)
     assert campos["confissao-nada"] == "sim", (
         "sem lacuna nenhuma a linha da confissão continuaria na tela")
 
 
 def test_sem_censo_a_confissao_nao_emite_nada(monkeypatch: Any) -> None:
-    """Barramento não lido: NÃO se emite — porque vazio vira travessão.
-
-    O `escrever()` do piloto troca `""` por `—`, e a linha diria *"…neste
-    desenho: —."*. Não emitir deixa o desenho como ele nasceu, que é o único
-    estado honesto quando a leitura falhou.
-    """
+    """Barramento não lido: NÃO se emite — porque vazio vira travessão."""
     pac = _pacote()
     monkeypatch.setattr(pac, "_bancada", lambda: None)
     assert pac._confissao_do_mapa() == {}
 
 
 def test_a_palavra_da_conta_nunca_mente_por_extenso() -> None:
-    """Fora da tabela, o número cru — nunca a última palavra que couber.
-
-    A cena pode acender uma sexta lacuna no dia em que `mapa_da_mesa.CONFISSAO`
-    crescer. Escrever "cinco coisas" sobre seis seria a tela afirmando uma
-    contagem que ela não fez.
-    """
+    """Fora da tabela, o número cru — nunca a última palavra que couber."""
     pac = _pacote()
     fora = max(pac.PALAVRA_DA_CONTA) + 1
     assert pac.palavra_da_conta(fora) == str(fora)

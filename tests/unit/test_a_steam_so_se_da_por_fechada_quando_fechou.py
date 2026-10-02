@@ -1,16 +1,4 @@
-"""A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01 — as réguas.
-
-MEDIDO ANTES (01/10/2026), com um dublê do `pgrep` que tem a semântica do real
-sobre a tabela da Steam dela (o cliente em `ubuntu12_32/steam`, que o `-f
-steamrt64/steam` não casa, e o webhelper que o cliente relança ~9 s depois de
-morto, como no diário dela): o `stop_steam` da árvore-base devolveu `True` em
-35 s com o cliente vivo, e o fallback mandou `pkill -TERM -x steamwebhelper`,
-pelo NOME e em qualquer `HOME`.
-
-AQUI O `/proc` É DE MENTIRA: cada processo é uma pasta com `status`, `comm`,
-`cmdline`, `environ` e `stat`, do usuário que roda a régua. O sinal, a espera e
-o `steam -shutdown` são dublês: nada aqui toca a Steam de quem roda.
-"""
+"""A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01 — as réguas."""
 
 from __future__ import annotations
 
@@ -40,9 +28,7 @@ class Mesa:
         self.agora = 0.0
         self.sinais: list[tuple[int, int]] = []
         self.abertos: list[list[str]] = []
-        #: O cliente que nenhum sinal derruba (o caso medido: o KILL não o achou).
         self.cliente_teimoso = False
-        #: Em quantos segundos o cliente relança o webhelper morto.
         self.volta_do_webhelper: float | None = None
         self._morto_em: float | None = None
         raiz.mkdir(parents=True, exist_ok=True)
@@ -57,9 +43,6 @@ class Mesa:
         (pasta / "comm").write_text(comm + "\n")
         (pasta / "cmdline").write_bytes("\0".join(argv).encode() + b"\0")
         casa = self.lar if lar is None else lar
-        #: A FAMÍLIA DO CHROMIUM (o webhelper, o Heroic nativo) regrava a área
-        #: do `environ` com o título do processo: medido no Chrome desta máquina
-        #: em 01/10/2026, nenhum dos treze processos trazia `HOME=`.
         environ = (" ".join(argv) + "\0" * 8 if como_o_chromium
                    else f"PATH=/usr/bin\0HOME={casa}\0")
         (pasta / "environ").write_bytes(environ.encode())
@@ -73,7 +56,6 @@ class Mesa:
         self.webhelper(lar=lar)
 
     def webhelper(self, *, lar: Path | None = None) -> None:
-        #: O webhelper como ele é: Chromium, sem `HOME` no `environ`.
         self.processo(WEBHELPER, "steamwebhelper",
                       ["./steamwebhelper", f"-steampid={CLIENTE}", "-lang=pt"], lar=lar,
                       como_o_chromium=True)
@@ -83,7 +65,6 @@ class Mesa:
             arq.unlink()
         (self.raiz / str(pid)).rmdir()
 
-    # -- os dublês que o `stop_steam` recebe ---------------------------------
     def dormir(self, s: float) -> None:
         self.agora += s
         if (self._morto_em is not None and self.volta_do_webhelper is not None
@@ -112,7 +93,6 @@ def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Mesa:
     lar = tmp_path / "lar"
     lar.mkdir()
     mesa = Mesa(tmp_path / "proc", lar)
-    # O `steam -shutdown` cai no dublê: o `subprocess` do módulo é este.
     monkeypatch.setattr(slo, "subprocess", SimpleNamespace(
         Popen=mesa.abrir, DEVNULL=subprocess.DEVNULL))
     monkeypatch.setattr(slo, "shutil", SimpleNamespace(which=lambda n: f"/usr/bin/{n}"))
@@ -124,14 +104,8 @@ def _parar(mesa: Mesa) -> bool:
                           sinalizar=mesa.sinalizar)
 
 
-# ---------------------------------------------------------------------------
-# 1 · «Fechada» só quando fechou
-# ---------------------------------------------------------------------------
 def test_o_stop_steam_nao_diz_fechada_com_o_cliente_vivo(mesa: Mesa) -> None:
-    """O caso medido: o cliente fica, e o webhelper volta 9 s depois de morto.
-    ARRANQUE o ramo do cliente do `processos_da_steam` e este teste reprova: a
-    conferência cai na janela sem webhelper e diz «fechada» com a Steam de pé
-    — o `True` que a árvore-base devolveu em 35 s."""
+    """O caso medido: o cliente fica, e o webhelper volta 9 s depois de morto."""
     mesa.a_steam_dela()
     mesa.cliente_teimoso = True
     mesa.volta_do_webhelper = 9.0
@@ -140,8 +114,7 @@ def test_o_stop_steam_nao_diz_fechada_com_o_cliente_vivo(mesa: Mesa) -> None:
 
 
 def test_o_fechar_tira_a_steam_inteira_pelo_pid(mesa: Mesa) -> None:
-    """A Steam que não atende o `-shutdown` sai pelo PID, o cliente primeiro,
-    e o `True` só vem com os dois fora."""
+    """A Steam que não atende o `-shutdown` sai pelo PID, o cliente primeiro,"""
     mesa.a_steam_dela()
     assert _parar(mesa) is True
     assert mesa.sinais[:2] == [(CLIENTE, signal.SIGTERM), (WEBHELPER, signal.SIGTERM)]
@@ -149,9 +122,7 @@ def test_o_fechar_tira_a_steam_inteira_pelo_pid(mesa: Mesa) -> None:
 
 
 def test_com_o_home_trocado_nenhum_processo_leva_sinal(mesa: Mesa, tmp_path: Path) -> None:
-    """A Steam de outro `HOME` (a suíte, o `sudo`) não é de quem pede: nem
-    `-shutdown`, nem sinal. ARRANQUE a pergunta do lar (`do_meu_lar`) e este
-    teste reprova — o fallback mataria a Steam dela."""
+    """A Steam de outro `HOME` (a suíte, o `sudo`) não é de quem pede: nem"""
     mesa.a_steam_dela(lar=tmp_path / "home-dela")
     assert _parar(mesa) is True
     assert mesa.sinais == []
@@ -160,9 +131,7 @@ def test_com_o_home_trocado_nenhum_processo_leva_sinal(mesa: Mesa, tmp_path: Pat
 
 
 def test_o_pid_reciclado_nao_leva_o_tiro(mesa: Mesa, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Entre a leitura e o sinal o pid pode ter virado outro processo: o tiro
-    só sai com a mesma hora de nascimento. ARRANQUE a conferência do `inicio`
-    e este teste reprova."""
+    """Entre a leitura e o sinal o pid pode ter virado outro processo: o tiro"""
     mesa.processo(CLIENTE, "steam", ["/x/ubuntu12_32/steam"], inicio="novo")
     velho = slo.ProcessoDaSteam(CLIENTE, "cliente", str(mesa.lar), "velho")
     monkeypatch.setattr(slo, "steam_deste_lar", lambda *a, **k: [velho])
@@ -171,9 +140,7 @@ def test_o_pid_reciclado_nao_leva_o_tiro(mesa: Mesa, monkeypatch: pytest.MonkeyP
 
 
 def test_o_cliente_se_acha_pelo_steampid_do_webhelper(mesa: Mesa) -> None:
-    """O cliente num caminho que não é o do runtime (o flatpak, por exemplo)
-    se acha pelo `-steampid=` que o webhelper carrega. ARRANQUE essa leitura
-    e o cliente some da conta."""
+    """O cliente num caminho que não é o do runtime (o flatpak, por exemplo)"""
     mesa.processo(CLIENTE, "steam", ["/app/bin/steam-wrapper"])
     mesa.webhelper()
     papeis = {x.pid: x.papel for x in slo.processos_da_steam(mesa.raiz)}
@@ -181,12 +148,7 @@ def test_o_cliente_se_acha_pelo_steampid_do_webhelper(mesa: Mesa) -> None:
 
 
 def test_o_pid_que_o_webhelper_cita_so_e_cliente_se_for_a_steam(mesa: Mesa) -> None:
-    """A Steam do Flatpak roda num espaço de PIDs próprio: o `-steampid=` do
-    webhelper é o número do cliente LÁ DENTRO, e aqui fora o mesmo número pode
-    ser qualquer processo do mesmo usuário e do mesmo `HOME` (o `systemd
-    --user`, o servidor de som, o serviço do Hefesto). ARRANQUE a conferência
-    do `comm` no pid citado e este teste reprova: o fecho manda `TERM` e
-    `KILL` num processo que não é a Steam."""
+    """A Steam do Flatpak roda num espaço de PIDs próprio: o `-steampid=` do"""
     steam = f"{mesa.lar}/.local/share/Steam"
     mesa.processo(300, "steam", [f"{steam}/ubuntu12_32/steam", "-srt-logger-opened"])
     mesa.processo(301, "steamwebhelper",
@@ -212,9 +174,6 @@ def test_o_lar_e_o_usuario_se_conferem(mesa: Mesa, tmp_path: Path) -> None:
     assert not slo.e_deste_lar(999, mesa.raiz, mesa.lar)
 
 
-# ---------------------------------------------------------------------------
-# 2 · Abrir e reabrir não põem uma segunda Steam por cima
-# ---------------------------------------------------------------------------
 def _sem_wmctrl(monkeypatch: pytest.MonkeyPatch, abertos: list[list[str]]) -> None:
     monkeypatch.setattr(steam_launcher.shutil, "which",
                         lambda n: None if n == "wmctrl" else f"/usr/bin/{n}")
@@ -226,10 +185,7 @@ def _sem_wmctrl(monkeypatch: pytest.MonkeyPatch, abertos: list[list[str]]) -> No
 
 def test_sem_wmctrl_a_steam_de_outro_lar_nao_ganha_outra(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Sem `wmctrl` e com a Steam de pé num `HOME` que não é o de quem pede, o
-    «abrir ou focar» não lança processo. ARRANQUE a pergunta do lar do
-    `open_or_focus_steam` e este teste reprova: nasce um `steam` com este
-    `HOME`, a segunda Steam que disputou o barramento em 29/09."""
+    """Sem `wmctrl` e com a Steam de pé num `HOME` que não é o de quem pede, o"""
     abertos: list[list[str]] = []
     _sem_wmctrl(monkeypatch, abertos)
     monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [
@@ -240,9 +196,7 @@ def test_sem_wmctrl_a_steam_de_outro_lar_nao_ganha_outra(
 
 
 def test_a_steam_deste_lar_na_bandeja_ainda_se_mostra(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A Steam deste lar sem janela (na bandeja) ou sem `wmctrl`: o `steam`
-    repassa o pedido a ela, que se mostra — é o PS da bandeja. Decisão de
-    01/10 pelo padrão dela; sem isto o PS com a Steam aberta não faria nada."""
+    """A Steam deste lar sem janela (na bandeja) ou sem `wmctrl`: o `steam`"""
     abertos: list[list[str]] = []
     _sem_wmctrl(monkeypatch, abertos)
     monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [
@@ -253,11 +207,7 @@ def test_a_steam_deste_lar_na_bandeja_ainda_se_mostra(monkeypatch: pytest.Monkey
 
 def test_o_abrir_o_lancador_mostra_a_steam_que_esta_na_bandeja(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «Abrir o lançador» do cartão da Steam (aba 07) chama o
-    `reopen_steam`. Com a Steam deste lar de pé e sem janela (na bandeja), o
-    `steam` repassa o pedido à instância viva, que se mostra: é a mesma
-    decisão do PS da bandeja. ARRANQUE o repasse (um «já está de pé, não faço
-    nada» no `reopen_steam`) e este teste reprova: o botão responderia calado."""
+    """O «Abrir o lançador» do cartão da Steam (aba 07) chama o"""
     pedidos: list[list[str]] = []
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo.fora_do_servico, "abrir",
@@ -268,9 +218,7 @@ def test_o_abrir_o_lancador_mostra_a_steam_que_esta_na_bandeja(
 
 
 def test_a_foto_do_reiniciar_so_ve_o_lancador_deste_lar(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «Reiniciar o serviço» só fecha (e reabre) o lançador deste lar.
-    ARRANQUE o filtro do `pids_de` e este teste reprova: o Heroic de outro
-    `HOME` levaria `SIGTERM`."""
+    """O «Reiniciar o serviço» só fecha (e reabre) o lançador deste lar."""
     monkeypatch.setattr(rl, "_rodar", lambda argv: __import__("subprocess").CompletedProcess(
         argv, 0, "300\n301\n", ""))
     monkeypatch.setattr(rl, "_pids_de_flatpak", lambda app: [])
@@ -279,14 +227,8 @@ def test_a_foto_do_reiniciar_so_ve_o_lancador_deste_lar(monkeypatch: pytest.Monk
     assert rl.pids_de(heroic) == [300]
 
 
-# ---------------------------------------------------------------------------
-# 3 · O lar que o `environ` não diz (a conferência de 01/10/2026)
-# ---------------------------------------------------------------------------
 def test_o_webhelper_sem_home_e_do_lar_do_cliente(mesa: Mesa) -> None:
-    """O webhelper é Chromium e não traz `HOME` no `environ`: ele é do lar do
-    cliente que o carrega no `-steampid=`. ARRANQUE essa herança e este teste
-    reprova: a foto do «Reiniciar o serviço» (`pgrep -x steamwebhelper`) nunca
-    via a Steam dela aberta, e o fecho deixava o webhelper sem sinal."""
+    """O webhelper é Chromium e não traz `HOME` no `environ`: ele é do lar do"""
     mesa.a_steam_dela()
     lares = {x.pid: x.lar for x in slo.processos_da_steam(mesa.raiz)}
     assert lares == {CLIENTE: str(mesa.lar), WEBHELPER: str(mesa.lar)}
@@ -294,9 +236,7 @@ def test_o_webhelper_sem_home_e_do_lar_do_cliente(mesa: Mesa) -> None:
 
 
 def test_sem_home_no_environ_o_lar_vem_da_pasta_do_binario(mesa: Mesa) -> None:
-    """O cliente sem `HOME` no `environ` é do lar em que a Steam mora
-    (`<lar>/.steam/…/ubuntu12_32/steam`). ARRANQUE a leitura pela pasta do
-    binário e este teste reprova."""
+    """O cliente sem `HOME` no `environ` é do lar em que a Steam mora"""
     mesa.processo(CLIENTE, "steam",
                   [f"{mesa.lar}/.steam/debian-installation/ubuntu12_32/steam"],
                   como_o_chromium=True)
@@ -305,10 +245,7 @@ def test_sem_home_no_environ_o_lar_vem_da_pasta_do_binario(mesa: Mesa) -> None:
 
 
 def test_a_steam_de_lar_que_nao_se_le_nao_e_fechada_nem_leva_sinal(mesa: Mesa) -> None:
-    """«Não sei» não é «fechada»: com o lar ilegível o `stop_steam` não devolve
-    `True` (editar o vdf com ela viva é edição perdida), e nenhum sinal sai a
-    quem não se conferiu. ARRANQUE o «não sei» do `steam_de_pe` e este teste
-    reprova."""
+    """«Não sei» não é «fechada»: com o lar ilegível o `stop_steam` não devolve"""
     mesa.processo(CLIENTE, "steam", ["/opt/steam/ubuntu12_32/steam"], como_o_chromium=True)
     mesa.cliente_teimoso = True
     assert slo.steam_de_pe(mesa.raiz, mesa.lar)
@@ -317,9 +254,7 @@ def test_a_steam_de_lar_que_nao_se_le_nao_e_fechada_nem_leva_sinal(mesa: Mesa) -
 
 
 def test_o_ps_nao_recusa_a_steam_de_lar_que_nao_se_le(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Um lar que não se lê não é «de outro lar»: o PS da bandeja continua
-    mostrando a Steam. ARRANQUE o «não sei» do `_steam_de_outro_lar` e este
-    teste reprova."""
+    """Um lar que não se lê não é «de outro lar»: o PS da bandeja continua"""
     abertos: list[list[str]] = []
     _sem_wmctrl(monkeypatch, abertos)
     monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [

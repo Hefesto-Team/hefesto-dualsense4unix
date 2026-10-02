@@ -1,11 +1,4 @@
-"""Utilitários de teste e runtime.
-
-`FakeController` fornece implementação de `IController` sem hardware, usada
-tanto em testes unitários quanto em smoke/debug do daemon via
-`HEFESTO_DUALSENSE4UNIX_FAKE=1`. Expor o módulo dentro do pacote canônico evita
-manipulação de `PYTHONPATH` ao rodar `hefesto-dualsense4unix daemon start --foreground`
-fora do wrapper `run.sh` (ver sprint CHORE-FAKEPATH-01).
-"""
+"""Utilitários de teste e runtime."""
 
 from __future__ import annotations
 

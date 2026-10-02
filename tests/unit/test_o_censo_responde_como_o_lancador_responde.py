@@ -1,25 +1,4 @@
-"""O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01 — o censo responde pelo lançador
-como o lançador responde (02/10/2026).
-
-Quatro formas fixas que não eram a regra do lançador, medidas num lar de
-mentira: o «instalado» do Heroic lido de um cache (o `*_install_info.json` e o
-`is_installed` da biblioteca) no lugar do registro de cada loja; a primeira
-casa que existe no lugar do programa instalado; as colunas de uma versão do
-`pga.db`; e as casas nativas sem o XDG. Desde a costura dos Lançadores 3 a
-primeira tirava o device KS de um prefixo em que moravam jogos que ela não
-excluiu.
-
-Todo dado é escrito na forma que o Heroic 2.22.3 e o Lutris 0.5.22 gravam (o
-recorte está em `docs/process/estudos/2026-10-02-o-censo-responde-como-o-lancador-responde-01/`),
-nunca lido da saída do censo. A máquina é de mentira também: o `PATH`, as
-pastas de atalhos e a instalação do Flatpak do sistema são pastas do
-`tmp_path`, e a resposta não depende de onde a régua roda (a suíte põe um
-`lutris` e um `heroic` de mentira no `PATH`).
-
-O ajudante :func:`plantar_o_registro` é o das réguas que plantavam
-`is_installed: true` como a marca do instalado: elas passam a plantar o
-registro, e a afirmação de cada uma não muda.
-"""
+"""O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01 — o censo responde pelo lançador"""
 from __future__ import annotations
 
 import json
@@ -39,19 +18,9 @@ HEROIC = ".var/app/com.heroicgameslauncher.hgl/config/heroic"
 LUTRIS_ID = "net.lutris.Lutris"
 
 
-# ---------------------------------------------------------------------------
-# O ajudante: o registro de cada loja, na forma que o Heroic grava
-# ---------------------------------------------------------------------------
 def plantar_o_registro(casa: Path, jogos: Iterable[str] | Mapping[str, Mapping[str, object]],
                        loja: str = "legendary") -> Path:
-    """Acrescenta estes jogos ao registro dos instalados da loja, na forma do
-    Heroic 2.22.3 (`main.js` do `app.asar` dela, o `refreshInstalled` de cada
-    loja): a Epic é o `installed.json` do legendary, um objeto pelo `app_name`;
-    a GOG, ``{"installed": [{"appName": …}]}``; a Amazon, uma lista pelo `id`.
-
-    ``jogos`` é a lista de chaves ou ``{chave: campos a mais}`` (o
-    `install_path`, o `executable`, o `is_dlc` que o registro traz).
-    """
+    """Acrescenta estes jogos ao registro dos instalados da loja, na forma do"""
     extras = (({j: {} for j in jogos}) if not isinstance(jogos, Mapping)
               else {j: dict(v) for j, v in jogos.items()})
     if loja == "legendary":
@@ -83,9 +52,7 @@ def _escrever(caminho: Path, dado: object) -> None:
 
 @pytest.fixture
 def maquina(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
-    """Uma máquina sem lançador nenhum: o `PATH` só com uma pasta de comandos
-    vazia, as pastas de atalhos do sistema vazias (uma delas a de exports do
-    Flatpak do usuário), e a instalação do Flatpak do sistema vazia."""
+    """Uma máquina sem lançador nenhum: o `PATH` só com uma pasta de comandos"""
     lar = tmp_path / "lar"
     lar.mkdir()
     comandos = tmp_path / "bin"
@@ -114,17 +81,8 @@ def _flatpak_instalado(lar: Path, app_id: str) -> None:
     (meta / "metadata").write_text(f"[Application]\nname={app_id}\n", encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# 1 · O instalado de cada loja é o registro dela
-# ---------------------------------------------------------------------------
 def test_o_registro_de_cada_loja_diz_o_instalado(tmp_path: Path) -> None:
-    """A GOG com `is_installed: false` na biblioteca (o `refresh()` grava assim)
-    e o jogo no `gog_store/installed.json`; a Epic no `installed.json` e fora do
-    `install_info`; a Amazon pelo `id`. Os três são instalados.
-
-    MORDIDA: o leitor de antes (a união do `install_info` com o `is_installed`
-    da biblioteca) diz os três fora.
-    """
+    """A GOG com `is_installed: false` na biblioteca (o `refresh()` grava assim)"""
     casa = tmp_path / HEROIC
     _escrever(casa / "store_cache/legendary_library.json", {"library": [
         {"app_name": "epic1", "title": "Da Epic", "is_installed": False, "install": {}}]})
@@ -146,12 +104,7 @@ def test_o_registro_de_cada_loja_diz_o_instalado(tmp_path: Path) -> None:
 
 
 def test_o_dialogo_aberto_nao_instala(tmp_path: Path) -> None:
-    """A chave no `legendary_install_info.json` (o diálogo de instalar que ela
-    abriu) e fora do registro não é instalado, e o `__timestamp` que o
-    `CacheStore` grava junto não vira jogo.
-
-    MORDIDA: devolver a leitura do `install_info` — o jogo do diálogo conta.
-    """
+    """A chave no `legendary_install_info.json` (o diálogo de instalar que ela"""
     casa = tmp_path / HEROIC
     _escrever(casa / "store_cache/legendary_library.json", {"library": [
         {"app_name": "baixado", "title": "Baixado", "is_installed": True},
@@ -168,9 +121,6 @@ def test_o_dialogo_aberto_nao_instala(tmp_path: Path) -> None:
     assert b.resumo == "2 jogos na biblioteca · 1 instalado"
 
 
-# ---------------------------------------------------------------------------
-# 2 · O prefixo dividido, de ponta a ponta
-# ---------------------------------------------------------------------------
 @pytest.fixture
 def _lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     lar = tmp_path / "lar"
@@ -183,9 +133,7 @@ def _lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _o_prefixo_do_estudo(lar: Path) -> tuple[Path, Path]:
-    """O lar do estudo: A (Epic, instalado), E (Epic, instalado depois da última
-    releitura), G (GOG, instalado) e F (Epic, só o diálogo aberto); A, E e G no
-    mesmo prefixo, e ela exclui A. Devolve ``(casa, prefixo)``."""
+    """O lar do estudo: A (Epic, instalado), E (Epic, instalado depois da última"""
     casa = lar / HEROIC
     prefixo = lar / "Games/Heroic/Prefixes/default/dividido"
     (prefixo / "pfx").mkdir(parents=True)
@@ -216,12 +164,7 @@ def _o_prefixo_do_estudo(lar: Path) -> tuple[Path, Path]:
 
 
 def test_o_prefixo_dividido_fica_de_ponta_a_ponta(_lar: Path) -> None:
-    """E e G moram no prefixo de A, instalados por outras vias que não a
-    biblioteca: o prefixo FICA com o device KS e as camadas.
-
-    MORDIDA: o censo de antes (o `install_info` e o `is_installed`) — E e G
-    saem dos moradores, e o prefixo sai sem ela ter excluído nenhum dos dois.
-    """
+    """E e G moram no prefixo de A, instalados por outras vias que não a"""
     casa, prefixo = _o_prefixo_do_estudo(_lar)
 
     assert lx._moradores(prefixo.resolve(), casa) == {
@@ -230,9 +173,6 @@ def test_o_prefixo_dividido_fica_de_ponta_a_ponta(_lar: Path) -> None:
         "E e G, que ela não excluiu, perderam o device KS")
 
 
-# ---------------------------------------------------------------------------
-# 3 · O registro ausente e o torto
-# ---------------------------------------------------------------------------
 def _dividido(lar: Path) -> tuple[Path, Path]:
     """A (excluído) e B no mesmo prefixo, os dois na biblioteca da Epic."""
     casa = lar / HEROIC
@@ -251,13 +191,7 @@ def _dividido(lar: Path) -> tuple[Path, Path]:
 
 
 def test_o_registro_ausente_sem_instalado_e_nenhum_instalado(tmp_path: Path) -> None:
-    """Sem o registro e sem `is_installed` na biblioteca: ninguém daquela loja
-    é instalado, e a biblioteca segue lida, sem erro (o caso dela na GOG e na
-    Amazon, que não têm jogo baixado).
-
-    MORDIDA: o registro ausente lido como erro — o censo deixa de tirar
-    morador em toda máquina com uma loja sem jogo.
-    """
+    """Sem o registro e sem `is_installed` na biblioteca: ninguém daquela loja"""
     casa = tmp_path / HEROIC
     _escrever(casa / "store_cache/gog_library.json", {"games": [
         {"app_name": "g1", "title": "Só na conta", "is_installed": False}]})
@@ -271,13 +205,7 @@ def test_o_registro_ausente_sem_instalado_e_nenhum_instalado(tmp_path: Path) -> 
 
 @pytest.mark.parametrize("forma", ["ausente-com-instalado", "torto", "forma-errada"])
 def test_o_registro_que_nao_responde_nao_tira_ninguem(_lar: Path, forma: str) -> None:
-    """O registro ausente com a biblioteca dizendo `is_installed: true`, o que
-    não abre e o que não tem a forma do Heroic: o censo volta com erro, e a
-    lista de exclusão não tira ninguém (B segue morando).
-
-    MORDIDA: o torto (ou o ausente contraditório) lido como vazio — B sai dos
-    moradores, e o prefixo de A sai do device KS com B dentro.
-    """
+    """O registro ausente com a biblioteca dizendo `is_installed: true`, o que"""
     casa, prefixo = _dividido(_lar)
     registro = casa / "legendaryConfig/legendary/installed.json"
     if forma == "torto":
@@ -295,12 +223,7 @@ def test_o_registro_que_nao_responde_nao_tira_ninguem(_lar: Path, forma: str) ->
 
 
 def test_a_dlc_instalada_depois_da_releitura_nao_e_jogo(tmp_path: Path) -> None:
-    """A DLC no `installed.json` com `is_dlc: true`, e sem `install` na
-    biblioteca (instalada depois da última releitura), não conta como jogo; o
-    `install_path` e o `executable` do jogo vêm do registro.
-
-    MORDIDA: o `dlc` lido só da biblioteca — o cartão diz um instalado a mais.
-    """
+    """A DLC no `installed.json` com `is_dlc: true`, e sem `install` na"""
     casa = tmp_path / HEROIC
     _escrever(casa / "store_cache/legendary_library.json", {"library": [
         {"app_name": "jogo", "title": "O Jogo", "is_installed": False, "install": {}},
@@ -317,12 +240,7 @@ def test_a_dlc_instalada_depois_da_releitura_nao_e_jogo(tmp_path: Path) -> None:
 
 
 def test_a_assinatura_ve_o_registro(tmp_path: Path) -> None:
-    """Reescrever o `gog_store/installed.json` muda a `assinatura_das_bibliotecas`:
-    sem isso, a aba Perfis seguiria com a resposta velha depois de uma
-    instalação (a nota de `_FONTES`).
-
-    MORDIDA: tirar os registros de `_FONTES["Heroic"]`.
-    """
+    """Reescrever o `gog_store/installed.json` muda a `assinatura_das_bibliotecas`:"""
     casa = tmp_path / HEROIC
     _escrever(casa / "store_cache/gog_library.json", {"games": [
         {"app_name": "g1", "title": "G", "is_installed": False}]})
@@ -336,12 +254,8 @@ def test_a_assinatura_ve_o_registro(tmp_path: Path) -> None:
     assert censo.biblioteca_de("Heroic", lar=tmp_path).instalados
 
 
-# ---------------------------------------------------------------------------
-# 4 · As duas casas: vale a do programa instalado
-# ---------------------------------------------------------------------------
 def _banco(dados: Path, jogos: Iterable[str], *, sem: tuple[str, ...] = ()) -> None:
-    """O `pga.db` com as 23 colunas do 0.5.22 (menos as de ``sem``), e um jogo
-    nativo por slug, com o `.yml` dele."""
+    """O `pga.db` com as 23 colunas do 0.5.22 (menos as de ``sem``), e um jogo"""
     from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import _ESQUEMA
 
     dados.mkdir(parents=True, exist_ok=True)
@@ -359,8 +273,7 @@ def _banco(dados: Path, jogos: Iterable[str], *, sem: tuple[str, ...] = ()) -> N
 
 
 def _misto(lar: Path, na_caixa: Iterable[str] = ()) -> tuple[Path, Path]:
-    """O Lutris nativo com dois jogos e a pasta do Flatpak com o banco vazio
-    (ou com os jogos de ``na_caixa``)."""
+    """O Lutris nativo com dois jogos e a pasta do Flatpak com o banco vazio"""
     nativo = lar / ".local/share/lutris"
     flatpak = lar / ".var/app" / LUTRIS_ID / "data/lutris"
     _banco(nativo, ["jogo-um", "jogo-dois"])
@@ -371,14 +284,7 @@ def _misto(lar: Path, na_caixa: Iterable[str] = ()) -> tuple[Path, Path]:
 @pytest.mark.parametrize("como", ["pelo-path", "pelo-atalho-do-sistema"])
 def test_o_lutris_nativo_instalado_vence_a_sobra_do_flatpak(
         maquina: dict[str, Path], como: str) -> None:
-    """O nativo instalado (o `lutris` no `PATH`, ou só o
-    `net.lutris.Lutris.desktop` numa pasta de atalhos que não é a de exports
-    do Flatpak, o caso do serviço), e a pasta do Flatpak de sobra: o cartão
-    diz os dois jogos do nativo.
-
-    MORDIDA: o Flatpak primeiro, sempre — «A biblioteca está vazia.»; e o
-    nativo achado só pelo `PATH` — o caso do serviço volta ao «vazia».
-    """
+    """O nativo instalado (o `lutris` no `PATH`, ou só o"""
     lar = maquina["lar"]
     nativo, _ = _misto(lar)
     if como == "pelo-path":
@@ -393,12 +299,7 @@ def test_o_lutris_nativo_instalado_vence_a_sobra_do_flatpak(
 
 
 def test_o_atalho_so_nos_exports_e_o_flatpak(maquina: dict[str, Path]) -> None:
-    """O `net.lutris.Lutris.desktop` só na pasta de exports do Flatpak, e o
-    Flatpak instalado: vale o Flatpak (o mesmo nome nas duas instalações, e é
-    a pasta que diz qual).
-
-    MORDIDA: contar o atalho dos exports como o nativo — vale o nativo.
-    """
+    """O `net.lutris.Lutris.desktop` só na pasta de exports do Flatpak, e o"""
     lar = maquina["lar"]
     _, flatpak = _misto(lar)
     (maquina["exports"] / f"{LUTRIS_ID}.desktop").write_text("[Desktop Entry]\n")
@@ -410,11 +311,7 @@ def test_o_atalho_so_nos_exports_e_o_flatpak(maquina: dict[str, Path]) -> None:
 
 
 def test_com_os_dois_instalados_as_casas_se_somam(maquina: dict[str, Path]) -> None:
-    """Os dois Lutris instalados: o cartão soma as duas bibliotecas, e cada jogo
-    aponta o `.yml` da própria casa.
-
-    MORDIDA: uma casa só — o cartão perde os jogos de uma delas.
-    """
+    """Os dois Lutris instalados: o cartão soma as duas bibliotecas, e cada jogo"""
     lar = maquina["lar"]
     nativo, flatpak = _misto(lar, ["jogo-da-caixa"])
     _comando(maquina, "lutris")
@@ -437,11 +334,7 @@ def test_sem_programa_instalado_vale_o_flatpak_primeiro(maquina: dict[str, Path]
 
 
 def test_o_heroic_nativo_instalado_vence_a_sobra_do_flatpak(maquina: dict[str, Path]) -> None:
-    """O mesmo cenário misto no Heroic: o nativo instalado e a casa do Flatpak
-    de sobra — lê-se o nativo, e a carona escreve nele.
-
-    MORDIDA: o Flatpak primeiro, sempre.
-    """
+    """O mesmo cenário misto no Heroic: o nativo instalado e a casa do Flatpak"""
     lar = maquina["lar"]
     nativo = lar / ".config/heroic"
     _escrever(nativo / "store_cache/legendary_library.json", {"library": [
@@ -456,16 +349,8 @@ def test_o_heroic_nativo_instalado_vence_a_sobra_do_flatpak(maquina: dict[str, P
     assert censo.pastas_lidas("Heroic", lar, raiz_sistema=maquina["raiz"]) == (nativo,)
 
 
-# ---------------------------------------------------------------------------
-# 5 · As colunas que faltam
-# ---------------------------------------------------------------------------
 def test_o_banco_sem_as_colunas_novas_da_os_jogos(tmp_path: Path) -> None:
-    """Um banco sem `service`, `service_id` e `discord_id` (que nenhum Lutris
-    novo abriu) dá os dois jogos, com o degrau 2 da chave de janela vazio.
-
-    MORDIDA: a lista fixa de colunas — «no such column: service», e o cartão
-    diz «A biblioteca está vazia.».
-    """
+    """Um banco sem `service`, `service_id` e `discord_id` (que nenhum Lutris"""
     _banco(tmp_path / ".local/share/lutris", ["jogo-um", "jogo-dois"],
            sem=("service", "service_id", "discord_id"))
 
@@ -488,18 +373,8 @@ def test_o_banco_sem_slug_e_erro_e_nao_vazio(tmp_path: Path) -> None:
     assert censo.biblioteca_de("Lutris", lar=tmp_path).erros
 
 
-# ---------------------------------------------------------------------------
-# 6 · O XDG
-# ---------------------------------------------------------------------------
 def test_as_casas_nativas_seguem_o_xdg(tmp_path: Path) -> None:
-    """Com o `XDG_CONFIG_HOME` e o `XDG_DATA_HOME` fora do padrão (e fora do
-    lar), o Lutris e o Heroic nativos são lidos; o `pga.db` vem do
-    `$XDG_DATA_HOME/lutris` com a configuração em `$XDG_CONFIG_HOME/lutris`; e
-    o Proton do jogo se acha no lar, não em `/`.
-
-    MORDIDA: as casas fixas (`<lar>/.config` e `<lar>/.local/share`) — «Abra
-    Lutris uma vez…» e «Abra Heroic uma vez…» com os dois cheios.
-    """
+    """Com o `XDG_CONFIG_HOME` e o `XDG_DATA_HOME` fora do padrão (e fora do"""
     lar, config, dados = tmp_path / "lar", tmp_path / "fora/cfg", tmp_path / "fora/dados"
     lutris = dados / "lutris"
     from tests.unit.test_o_censo_dos_lancadores_le_a_biblioteca import _banco_do_lutris
@@ -527,12 +402,7 @@ def test_as_casas_nativas_seguem_o_xdg(tmp_path: Path) -> None:
 
 def test_o_lar_de_mentira_sem_xdg_le_o_dele(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O lar dado sem XDG fica com o `<lar>/.config`, mesmo com o ambiente
-    apontando o XDG para outro lugar (a suíte o isola em `tmp_path/.xdg/`).
-
-    MORDIDA: ler o XDG do ambiente com um lar explícito — a régua lê a casa
-    errada e passa vazia.
-    """
+    """O lar dado sem XDG fica com o `<lar>/.config`, mesmo com o ambiente"""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "outro"))
     _escrever(tmp_path / ".config/heroic/store_cache/legendary_library.json",
               {"library": [{"app_name": "a1", "title": "Nativo"}]})
@@ -540,19 +410,9 @@ def test_o_lar_de_mentira_sem_xdg_le_o_dele(
     assert censo.biblioteca_de("Heroic", lar=tmp_path).onde == tmp_path / ".config/heroic"
 
 
-# ---------------------------------------------------------------------------
-# 7 · Uma regra só para as casas
-# ---------------------------------------------------------------------------
 def test_o_censo_a_carona_e_a_copia_avulsa_acham_a_mesma_casa(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com o XDG desviado no ambiente (o lar de verdade, ``lar=None``), a carona
-    (`cura_por_estrada._pasta_do_heroic` e a rede do desfazer), o censo e a
-    cópia avulsa do `camadas_vulkan` acham a mesma casa do Heroic e a mesma
-    raiz do Lutris.
-
-    MORDIDA: devolver a cópia `_PASTAS_DO_HEROIC` à carona (a carona não acha o
-    Heroic nativo), ou as raízes fixas ao `camadas_vulkan` (os prefixos somem).
-    """
+    """Com o XDG desviado no ambiente (o lar de verdade, ``lar=None``), a carona"""
     lar, config, dados = tmp_path / "lar", tmp_path / "cfg", tmp_path / "dados"
     lar.mkdir()
     monkeypatch.setenv("HOME", str(lar))
@@ -580,8 +440,7 @@ def test_o_censo_a_carona_e_a_copia_avulsa_acham_a_mesma_casa(
 
 def test_a_copia_avulsa_com_lar_dado_fica_no_lar(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `camadas_vulkan` com um lar dado não lê o XDG do ambiente (o molde de
-    `a_steam_instalou_as_camadas`), como o censo."""
+    """O `camadas_vulkan` com um lar dado não lê o XDG do ambiente (o molde de"""
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "outro"))
     prefixo = tmp_path / ".local/share/lutris/jogo-y"
     (prefixo / "pfx").mkdir(parents=True)
@@ -590,19 +449,8 @@ def test_a_copia_avulsa_com_lar_dado_fica_no_lar(
     assert cv.prefixos_dos_lancadores(tmp_path) == [prefixo]
 
 
-# ---------------------------------------------------------------------------
-# 8 · O que a conferência achou (02/10/2026)
-# ---------------------------------------------------------------------------
 def test_o_redistribuivel_da_gog_sem_registro_nao_e_contradicao(tmp_path: Path) -> None:
-    """A conta da GOG ligada e nenhum jogo baixado: o Heroic instala o
-    «Galaxy Common Redistributables» sozinho, e a biblioteca o grava com
-    `is_installed: true` e `install.is_dlc: true` (no disco dela, o único
-    `true` da GOG), sem `gog_store/installed.json`. O acessório não é jogo e
-    não entra no censo; ele não pode virar a contradição que cala o censo.
-
-    MORDIDA: contar o acessório na contradição — o censo volta com erro, e a
-    lista de exclusão deixa de tirar morador em toda máquina nesse estado.
-    """
+    """A conta da GOG ligada e nenhum jogo baixado: o Heroic instala o"""
     casa = tmp_path / HEROIC
     _escrever(casa / "store_cache/gog_library.json", {"games": [
         {"app_name": "gog-redist", "title": "Galaxy Common Redistributables",
@@ -616,13 +464,7 @@ def test_o_redistribuivel_da_gog_sem_registro_nao_e_contradicao(tmp_path: Path) 
 
 
 def test_os_dois_heroic_da_mesma_conta_nao_contam_em_dobro(maquina: dict[str, Path]) -> None:
-    """Os dois Heroic instalados, logados na mesma conta: a biblioteca de cada
-    casa é a da conta, e o cartão conta cada jogo uma vez, instalado se uma das
-    casas o tem instalado. A carona e a exclusão seguem lendo cada casa.
-
-    MORDIDA: somar as duas bibliotecas do Heroic como as do Lutris — o cartão
-    diz «4 jogos na biblioteca» com dois na conta.
-    """
+    """Os dois Heroic instalados, logados na mesma conta: a biblioteca de cada"""
     lar = maquina["lar"]
     nativo, caixa = lar / ".config/heroic", lar / HEROIC
     for casa in (nativo, caixa):
@@ -641,10 +483,7 @@ def test_os_dois_heroic_da_mesma_conta_nao_contam_em_dobro(maquina: dict[str, Pa
 
 def _dois_heroic(maquina: dict[str, Path], monkeypatch: pytest.MonkeyPatch
                  ) -> tuple[Path, Path, Path]:
-    """Os dois Heroic instalados no lar de verdade de mentira (``HOME``), cada
-    um com um jogo instalado e com o `umu.json` dele: N no nativo, C na caixa.
-    A global do nativo está sem o `PROTON_DISABLE_HIDRAW` e a cópia de N tem
-    tudo; a global da caixa tem tudo. Devolve ``(nativo, caixa, ponte)``."""
+    """Os dois Heroic instalados no lar de verdade de mentira (``HOME``), cada"""
     lar = maquina["lar"]
     monkeypatch.setenv("HOME", str(lar))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(lar / ".config"))
@@ -673,13 +512,7 @@ def _dois_heroic(maquina: dict[str, Path], monkeypatch: pytest.MonkeyPatch
 
 def test_com_os_dois_heroic_a_carona_e_a_janela_seguem_a_casa_do_jogo(
         maquina: dict[str, Path], monkeypatch: pytest.MonkeyPatch) -> None:
-    """Os dois Heroic instalados: a carona tem uma estrada por casa, a cópia de
-    cada jogo é a da casa de onde ele veio, e a falta de cada casa só olha os
-    jogos dela (C, da caixa, não é cobrado pela global do nativo).
-
-    MORDIDAS: a carona só na primeira casa; a janela só na primeira casa; e a
-    falta medida com o Heroic inteiro — C acusa falta pela global do nativo.
-    """
+    """Os dois Heroic instalados: a carona tem uma estrada por casa, a cópia de"""
     nativo, caixa, ponte = _dois_heroic(maquina, monkeypatch)
     lar, atalhos = maquina["lar"], ("com.heroicgameslauncher.hgl",)
 
@@ -694,13 +527,7 @@ def test_com_os_dois_heroic_a_carona_e_a_janela_seguem_a_casa_do_jogo(
 
 
 def test_o_atalho_no_xdg_do_lar_acha_o_nativo(maquina: dict[str, Path]) -> None:
-    """O `net.lutris.Lutris.desktop` só em `$XDG_DATA_HOME/applications` do lar
-    (o atalho que a pessoa instalou para si, fora da lista do sistema): o
-    nativo está instalado, e vale a casa dele.
-
-    MORDIDA: procurar o atalho só nas pastas do sistema — «A biblioteca está
-    vazia.», lida na sobra do Flatpak.
-    """
+    """O `net.lutris.Lutris.desktop` só em `$XDG_DATA_HOME/applications` do lar"""
     lar = maquina["lar"]
     nativo, _ = _misto(lar)
     proprio = lar / ".local/share/applications"
@@ -713,13 +540,7 @@ def test_o_atalho_no_xdg_do_lar_acha_o_nativo(maquina: dict[str, Path]) -> None:
 
 
 def test_a_carona_do_lutris_acha_o_proton_no_lar_de_quem_chama(tmp_path: Path) -> None:
-    """O jogo do Lutris Flatpak com uma versão de Proton que mora no lar dado:
-    a carona (`_pelo_proton_por_yml`) o diz pelo Proton, porque o lar vai junto
-    ao censo, que não o deduz mais do caminho.
-
-    MORDIDA: chamar o censo sem o lar — o Proton é procurado no lar de verdade,
-    e o jogo sai como se não abrisse pelo Proton.
-    """
+    """O jogo do Lutris Flatpak com uma versão de Proton que mora no lar dado:"""
     from tests.unit.test_o_censo_dos_lancadores_le_a_biblioteca import _banco_do_lutris
 
     versao = "GE-Proton-da-regua-0210"

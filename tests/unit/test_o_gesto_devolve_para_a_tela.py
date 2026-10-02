@@ -45,19 +45,11 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 sys.path.insert(0, str(INTERFACE))
 
-#: O controle de mentira, na faixa sintética da casa — há dois portões de
-#: anonimato nesta árvore e eles não perdoam um MAC real.
 UNIQ = "aa:bb:cc:00:00:01"
 
 
 class PonteDeMentira:
-    """Um dublê da ponte que RESPONDE o que o daemon responderia.
-
-    Ele difere do dublê da `test_os_botoes_tem_dono` de propósito: lá o que
-    importa é QUAL função foi chamada, e um `True` para tudo basta. Aqui o que
-    se mede é o que o gesto FAZ com a resposta — e um `True` no lugar da lista
-    de plugins provaria só que o gesto sabe ignorar o daemon.
-    """
+    """Um dublê da ponte que RESPONDE o que o daemon responderia."""
 
     def __init__(self, resposta=None, aceita: bool = True) -> None:
         self.resposta = resposta
@@ -94,13 +86,6 @@ def _enderecos_da_carga(carga: dict) -> list[str]:
     return fora
 
 
-# --------------------------------------------------------------------------
-# 1. o endereço existe na página que o produto renderiza
-# --------------------------------------------------------------------------
-# O «Ver detalhes» SAIU EM 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01): o
-# registro passou a estar SEMPRE no painel, relido pela faixa lenta. As três
-# réguas abaixo mediam o gesto; agora medem o dono do diário, `_diario()`, e o
-# endereço onde ele pousa — o que elas protegiam continua o mesmo.
 def test_o_endereco_do_registro_existe_na_pagina(pac):
     """Escrever num endereço que a página não tem é pintar ZERO, calado."""
     from hefesto_dualsense4unix.interface import onde
@@ -112,17 +97,8 @@ def test_o_endereco_do_registro_existe_na_pagina(pac):
         "em lugar nenhum. Marque-o no gerador `interface/aba09.py` e publique.")
 
 
-# --------------------------------------------------------------------------
-# 2. o conteúdo é o do produto, e não uma frase nossa
-# --------------------------------------------------------------------------
 def test_o_diario_leva_o_journal_para_o_painel(pac, monkeypatch):
-    """As linhas do painel são as do `journalctl`, e a unit tem dono.
-
-    A UNIT É O PONTO: ela foi digitada uma vez neste pacote, com o nome
-    `-dev` que a purga de 01/09 aposentou, e a tela passou a afirmar
-    `not-found` sobre uma unit `enabled`. E o endereço de um controle sai com
-    a máscara da casa: o painel existe para ser copiado num relato.
-    """
+    """As linhas do painel são as do `journalctl`, e a unit tem dono."""
     import subprocess
 
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
@@ -167,15 +143,8 @@ def test_o_diario_repassa_o_motivo_do_journalctl(pac, monkeypatch):
         f"a queixa do journalctl foi trocada por uma frase nossa: {texto!r}")
 
 
-# --------------------------------------------------------------------------
-# 3. o piloto realmente pinta o que o gesto devolveu
-# --------------------------------------------------------------------------
 def test_o_piloto_manda_a_resposta_para_a_pagina():
-    """`_deu_certo` com um dicionário vira `pintar(...)`; com `None`, nada.
-
-    É a metade da cura que nenhuma outra régua vê: os gestos podem devolver a
-    carga certa e o piloto continuar descartando, que era o estado até hoje.
-    """
+    """`_deu_certo` com um dicionário vira `pintar(...)`; com `None`, nada."""
     import hefesto_vivo
 
     class PilotoDeMentira:

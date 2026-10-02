@@ -110,9 +110,7 @@ async def test_state_full_prefere_last_state_do_daemon(running_server: Any) -> N
     """Quando daemon._last_state está populado, vence sobre store.controller_state."""
     _server, socket_path, _fc, store, daemon = running_server
 
-    # Store tem um state estagnado (neutro)
     store.update_controller_state(_make_state(lx=128, ly=128))
-    # Daemon tem o state LIVE com cross apertado e stick mexido
     daemon._last_state = _make_state(
         lx=200, ly=50, l2=180, buttons=frozenset({"cross", "l1"})
     )
@@ -152,7 +150,6 @@ async def test_state_full_neutro_quando_ambos_none(running_server: Any) -> None:
     """Sem store nem daemon._last_state, retorna neutro canônico."""
     _server, socket_path, _fc, _store, daemon = running_server
     daemon._last_state = None
-    # Store fresco (sem update_controller_state) → controller_state é None
 
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("daemon.state_full")
@@ -171,16 +168,9 @@ async def test_state_full_neutro_quando_ambos_none(running_server: Any) -> None:
 async def test_state_full_buttons_de_state_buttons_pressed(
     running_server: Any,
 ) -> None:
-    """`buttons` vem de state.buttons_pressed; não chama _evdev.snapshot.
-
-    Validação indireta da armadilha A-09: o handler IPC NÃO deve adicionar
-    consumidor de evdev paralelo ao poll loop. O FakeController não tem
-    `_evdev`, então qualquer tentativa de chamar `_evdev.snapshot()` aqui
-    quebraria — ainda assim o teste deve passar porque buttons sai de
-    state.buttons_pressed.
-    """
+    """`buttons` vem de state.buttons_pressed; não chama _evdev.snapshot."""
     _server, socket_path, fc, _store, daemon = running_server
-    assert getattr(fc, "_evdev", None) is None  # FakeController sem evdev
+    assert getattr(fc, "_evdev", None) is None
     daemon._last_state = _make_state(
         buttons=frozenset({"triangle", "circle", "r2"})
     )
@@ -206,7 +196,6 @@ async def test_state_full_aciona_warning_quando_neutro_persistente(
         for _ in range(4):
             await client.call("daemon.state_full")
 
-    # bump foi chamado pelo menos 3 vezes (3 chamadas = 3 incrementos)
     assert store.counter("state_full.stale_neutral") >= 3
 
 
@@ -222,8 +211,6 @@ class TestPlayerPorControle:
     @pytest.mark.asyncio
     async def test_controllers_ganham_o_campo_player(self, running_server: Any) -> None:
         _server, socket_path, fc, _store, daemon = running_server
-        # Controller com o método real de descrição (o FakeController não o tem)
-        # e daemon sem gamepad virtual: ninguém é jogador (modo desktop).
         fc.describe_controllers = lambda: [  # type: ignore[attr-defined]
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100"},
@@ -233,75 +220,7 @@ class TestPlayerPorControle:
         async with IpcClient.connect(socket_path) as client:
             result = await client.call("daemon.state_full")
 
-        # STATUS-01/COR-05/BT-03: além do `player`, cada entrada carrega os
-        # campos por controle — aqui tudo None/"desconhecida" (FakeController
-        # sem sysfs/desired, sem coop, sem registry, `_last_state` None).
-        # ESCRITOR-CRU-01: `lightbar_disputada` entra `False` — sem sonda não
-        # se acende aviso nenhum, e "não sondado" nunca vira alarme.
-        #
-        # NOTA DATADA — 25/08/2026 (SINAL-NO-NASCIMENTO-01/E2). Entrou
-        # `nascimento`, e o `==` abaixo ficou vermelho porque ele é EXAUSTIVO —
-        # que é o que ele existe para ser. A régua está certa e o valor
-        # esperado é que estava velho: campo por controle que aparece sem esta
         # linha saber é contrato mudando calado, e o `state_full` é lido pelo
-        # tique de 1 s da GUI inteira. Por isso o campo entra na lista, e não
-        # se afrouxa a comparação para subconjunto.
-        #
-        # `None` aqui é "NÃO CARIMBEI", nunca "nasceu limpa" — o daemon é
-        # dublê nesta bancada e não há cartório para consultar. Ler a ausência
-        # como inocência é o defeito que a BARRA-MUDA-01 §5 nomeou.
-        #
-        # NOTA DATADA — 02/09/2026 (ROTA-A). Entraram `serial`, `modelo` e
-        # `nome_declarado`, e o `==` ficou vermelho de novo, pela mesma razão
-        # boa: campo por controle não aparece calado. Os três são a IDENTIDADE
-        # do aparelho, que o payload nunca teve — sem ela a tela nomeava o
-        # controle pela POSIÇÃO na lista, e o mesmo controle mudava de nome
-        # quando o segundo entrava na mesa.
-        #
-        # `None` nos três é a resposta honesta desta bancada: o `serial`/`modelo`
-        # só saem do `None` depois que a leitura em thread voltar do aparelho
-        # (aqui não há aparelho), e o `nome_declarado` depende de a usuária ter
-        # nomeado o controle no `maquina.json` (aqui o daemon é dublê).
-        #
-        # NOTA DATADA — 23/09/2026 (AR-MEDIDO-01, R10 dela). Entraram
-        # `adaptador`, `hz_movimento`, `hz_voz` e `ponte_do_radio`: os Hz
-        # MEDIDOS de cada controle e a ponte que ocupa o ar. `None` nos quatro
-        # é a resposta desta bancada — controle no cabo (sem adaptador, sem
-        # voz, sem ponte de rádio) e sem nó de movimento para contar.
-        #
-        # NOTA DATADA — 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-01). Entrou
-        # `mira`: o chip «Mira Virtual» daquela peça e os dois deslizantes da
-        # Calibrar, pela mesma pergunta que o tique faz. Aqui ela nasce
-        # DESLIGADA, com os números padrão do motor — a mira é arranjo, e
-        # arranjo não se liga sem o gesto dela.
-        #
-        # NOTA DATADA — 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02). Entraram
-        # `gatilho` e os dois `inverter_*`: o «Só enquanto eu segurar» e os
-        # «Inverter» que ela mandou pôr na tela. Nascem desligados — sem botão
-        # (a mira anda sempre) e sem inversão.
-        #
-        # NOTA DATADA — 25/09/2026 (A-04-PERGUNTA-AO-DAEMON-VIVO-01). Entraram
-        # `brilho_da_barra` e `brilho_das_luzes`: o que o merge acende, para a
-        # aba Iluminação perguntar ao daemon vivo e não ao disco. `None` nos
-        # dois é o «não sei» do FakeController, que não tem as leituras.
-        #
-        # NOTA DATADA — 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01). Entraram
-        # `toque` e `inclinacao` no bloco `mira`: os dois arranjos da resposta
-        # dela das ~16h50 (o touchpad no cursor ou nas zonas, e o analógico que
-        # a inclinação move), lidos de volta pela aba Controles. Nascem
-        # `nenhum`, como no esquema: arranjo não se liga sem o gesto dela.
-        #
-        # NOTA DATADA — 29/09/2026 (O-GANHO-DA-HAPTICA-TEM-DONO-01). Entraram
-        # `haptica_pct` e `haptica_alcanca`: o ganho da háptica por áudio de
-        # cada controle, que a linha «Háptica por áudio» da aba Vibração pinta
-        # (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01). O nível é o padrão do
-        # DONO, lido do esquema e não digitado; e no cabo o Hefesto está sempre
-        # no caminho, então alcança.
-        #
-        # NOTA DATADA — 02/10/2026 (O-GANHO-DA-HAPTICA-TEM-DONO-01, itens 8 e
-        # 11). Entraram `haptica_vale_pct` (o ganho sob o teto da Economia; sem
-        # teto, o escolhido) e `haptica_no_ar` (a luz «no ar»: sem subsystem do
-        # som, ninguém ouviu, e é falso).
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,

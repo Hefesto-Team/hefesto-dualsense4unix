@@ -1,9 +1,4 @@
-"""Pausar/retomar em runtime (FEAT-DAEMON-PAUSE-RESUME-01).
-
-Pausado, o daemon segue lendo estado/bateria e publicando STATE_UPDATE, mas
-NÃO despacha input (BUTTON_DOWN/UP, teclado/mouse/hotkey) — daemon vivo sem
-afetar o sistema. Reusa o gate do grace-period no _poll_loop.
-"""
+"""Pausar/retomar em runtime (FEAT-DAEMON-PAUSE-RESUME-01)."""
 from __future__ import annotations
 
 import asyncio
@@ -86,8 +81,7 @@ def test_session_paused_persistence(
 
 @pytest.mark.asyncio
 async def test_paused_suppresses_button_down(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Pausado (fora do grace), pressionar um botão NÃO publica BUTTON_DOWN,
-    mas o estado segue sendo lido (telemetria preservada)."""
+    """Pausado (fora do grace), pressionar um botão NÃO publica BUTTON_DOWN,"""
     monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.05)
     _no_persist(monkeypatch)
     fc = FakeController(transport="usb", states=[_state()])
@@ -97,9 +91,9 @@ async def test_paused_suppresses_button_down(monkeypatch: pytest.MonkeyPatch) ->
 
     daemon = Daemon(controller=fc, bus=bus, store=store, config=_config())
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.12)  # passa o grace
+    await asyncio.sleep(0.12)
     daemon.pause()
-    fc.set_buttons(["cross"])  # pressiona DEPOIS de pausar
+    fc.set_buttons(["cross"])
     await asyncio.sleep(0.10)
     daemon.stop()
     await run_task
@@ -125,11 +119,11 @@ async def test_resume_restores_dispatch(monkeypatch: pytest.MonkeyPatch) -> None
     daemon.pause()
     fc.set_buttons(["cross"])
     await asyncio.sleep(0.08)
-    assert down_queue.qsize() == 0  # pausado: nada
+    assert down_queue.qsize() == 0
     fc.set_buttons([])
     daemon.resume()
     await asyncio.sleep(0.06)
-    fc.set_buttons(["circle"])  # pressiona após retomar
+    fc.set_buttons(["circle"])
     await asyncio.sleep(0.08)
     daemon.stop()
     await run_task

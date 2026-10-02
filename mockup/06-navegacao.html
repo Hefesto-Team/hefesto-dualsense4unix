@@ -733,8 +733,8 @@
      "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
 
      ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
-     seis lugares (`monta.py:267`, `aba01.py:936`, `aba04.py:832`,
-     `aba05.py:1105`, `aba06.py:1181`, `aba10.py:584`), assim:
+     seis lugares (`monta.py:84`, `aba01.py:650`, `aba04.py:689`,
+     `aba05.py:778`, `aba06.py:1042`, `aba10.py:380`), assim:
      "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
      um controle; um desenho cinza diz."
      O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
@@ -744,11 +744,11 @@
      É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
      cobram a regra e o elemento no publicado
      (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
-     por ÍNDICE — `aba06.py:1186` avisa que "um lugar vazio sem endereço tiraria
+     por ÍNDICE — `aba06.py:1047` avisa que "um lugar vazio sem endereço tiraria
      uma casa da fila e o P4 receberia a cor do P3".
 
      UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
-     gerador E pelo piloto (`hefesto_vivo.py:603`), e reaberta quando o controle
+     gerador E pelo piloto (`hefesto_vivo.py:425`), e reaberta quando o controle
      chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
      aba01/04/05/06/10. */
   [data-conectado="nao"] .ds-svg,
@@ -1119,7 +1119,7 @@
      A causa estava NOMEADA nesta casa desde 04/09, no `a06_navegacao.py`: o P3
      e o P4 nascem `class="nav-ctl vazia"` no esqueleto; o P2 nasce OCUPADO (é
      o mockup de dois controles) e é esvaziado em tempo de execução — e quem o
-     esvazia escreve a classe **`off`** (`hefesto_vivo.py:1329`), *"que folha de
+     esvazia escreve a classe **`off`** (`hefesto_vivo.py:1151`), *"que folha de
      estilo nenhuma menciona"*. A cura daquele dia alcançou a COR, por outro
      caminho (`folha_do_plastico`), e a MOLDURA ficou: `.vazia` põe borda e
      fundo transparente, `off` não põe nada. Por isso o P2 desligado tinha
@@ -1686,7 +1686,7 @@
      tela instalado", que é justamente a que precisa de espaço).
 
      O `.nada` É COMO UMA LINHA SOME, e não o `:empty`: o `escrever()` do piloto
-     troca valor vazio por `—` (`hefesto_vivo.py:141`), então uma frase vazia
+     troca valor vazio por `—` (`hefesto_vivo.py:65`), então uma frase vazia
      viraria um travessão solto na tela dela — foi o que a primeira foto
      mostrou. O pacote manda o marcador, e o `:has()` apaga a linha inteira.
      Emitir a chave sempre (em vez de omiti-la quando não há o que dizer) é o
@@ -1788,7 +1788,7 @@
           quando o gesto RECUSAVA — a tela trocava de lado sozinha e nada a
           devolvia.
 
-          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:636`), e é
+          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:458`), e é
           ele quem acende agora; a palavra virou nó de texto, que o alvo padrão
           escreve. Nasce em `—` de propósito: antes do primeiro tique ninguém
           perguntou ao Hefesto, e "Desligado" seria uma afirmação. ---- */
@@ -4593,11 +4593,11 @@
   <ul>
     <li><b>Mouse, teclado e os seis gestos saem de UM controle só.</b> Com um
     controle ligado ninguém podia ver isso. O poll loop lê o estado do controle
-    <b>primário</b> (<code>daemon/lifecycle.py:5976</code>) e é esse estado que vai
+    <b>primário</b> (<code>daemon/lifecycle.py:3942</code>) e é esse estado que vai
     para o mouse (<code>:6189</code>), para o teclado (<code>:6200</code>) e para o
     <code>hotkey_manager.observe</code> (<code>:6208</code>); os secundários do
     co-op têm um caminho só, o do gamepad virtual
-    (<code>daemon/subsystems/coop.py:2366</code>). Por isso o cartão do
+    (<code>daemon/subsystems/coop.py:1552</code>). Por isso o cartão do
     <b>Player 1</b> diz <i>Navega o PC</i> e os outros dizem <i>Só a janela</i>,
     e por isso o desenho que acende no combo é o dele. A exceção é o giro: na
     Navegação, quem acende a Mira Virtual move o cursor com ele, e o cartão

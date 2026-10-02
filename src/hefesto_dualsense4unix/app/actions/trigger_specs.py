@@ -1,12 +1,4 @@
-"""Metadata dos 19 presets de trigger pra UI dinâmica.
-
-Cada preset expõe uma lista de parâmetros nomeados. A aba Triggers usa
-essa metadata pra montar sliders Gtk.Scale dinamicamente quando o
-usuário troca o preset no dropdown.
-
-A lista é baseada em `docs/protocol/trigger-modes.md` e o registro em
-`hefesto_dualsense4unix.core.trigger_effects.PRESET_FACTORIES`.
-"""
+"""Metadata dos 19 presets de trigger pra UI dinâmica."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,25 +6,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class TriggerParamSpec:
-    """Um slider da aba Gatilhos: o kwarg da factory e como ele se mostra.
+    """Um slider da aba Gatilhos: o kwarg da factory e como ele se mostra."""
 
-    **`help_text` saiu em 25/08/2026 (T8), e a nota é a data.** O campo existiu
-    desde o nascimento deste arquivo com `""` de padrão: **73 parâmetros, 73
-    vazios, zero leitores** — nenhum construtor o preenchia e nenhuma tela o
-    lia. Campo morto com nome de promessa é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`
-    em miniatura: quem chega lê "existe dica fina por parâmetro" e não existe.
-
-    A dica que a aba passou a ter é OUTRA, e é por modo, não por parâmetro:
-    `TriggerPresetSpec.description` no botão de cada um dos 19 modos
-    (`triggers_actions.install_triggers_tab`). Se ela quiser dica por
-    parâmetro, são 73 frases novas — texto de tela, e portanto decisão dela.
-
-    Apagar isto não faz ninguém repetir trabalho nem pagar custo já pago: não
-    havia texto guardado no campo para se perder.
-    """
-
-    name: str          # nome do kwarg na factory
-    label: str         # rótulo visível
+    name: str
+    label: str
     min_value: int
     max_value: int
     default: int = 0
@@ -40,8 +17,8 @@ class TriggerParamSpec:
 
 @dataclass(frozen=True)
 class TriggerPresetSpec:
-    name: str                       # chave usada em PRESET_FACTORIES
-    label: str                      # rótulo visível no dropdown
+    name: str
+    label: str
     params: tuple[TriggerParamSpec, ...]
     description: str = ""
 
@@ -70,9 +47,6 @@ def _strength(default: int = 4) -> TriggerParamSpec:
     return TriggerParamSpec("strength", "Intensidade", 0, 8, default)
 
 
-#: A curva padrão dos presets por posição: firmeza crescente do solto ao
-#: fundo. TRIGGER-CANON-01 — antes eram dez zeros, e dez zeros é "nenhuma zona
-#: ativa": o preset existia na tela e não fazia nada ao ser aplicado.
 _RAMPA_PADRAO: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 8)
 
 
@@ -81,19 +55,6 @@ def _frequency(default: int = 10) -> TriggerParamSpec:
 
 
 # GATILHO-PALAVRA-01 (29/07/2026): dois campos, dois donos.
-#
-# O `name` é CONTRATO e não muda: ele está serializado no perfil no disco dela
-# (`triggers.left.mode`, validado contra PRESET_FACTORIES pelo `_validate_mode`
-# em `profiles/schema.py:220`), no IPC (`daemon/ipc_handlers.py`, comando
-# `trigger.set`) e no protocolo DSX (`daemon/udp_server.py`). Trocar um `name`
-# faz os perfis que ela já salvou pararem de abrir.
-#
-# O `label` é só texto de tela — e tem teto MEDIDO de 22 caracteres. No piso de
-# 1040px a grade de três colunas dá 139px de texto por botão; o 23o caractere
-# quebra o rótulo em duas linhas e sobe o mínimo da grade de 306px para 357px,
-# que é o mecanismo da barra de rolagem descrito em
-# `app/widgets/segmented_selector.py:168-180`. O portão que cobra os dois
-# contratos é `tests/unit/test_gatilho_palavra_rotulos.py`.
 PRESETS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "Off", "Desligado", params=(),
@@ -129,9 +90,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Resistência constante a partir de uma posição.",
     ),
     TriggerPresetSpec(
-        # DECISÃO DELA, 07/08/2026 (resposta 6): "Arco" sozinho é ambíguo em
-        # português (arco de círculo, arco elétrico). O `name` em inglês fica —
-        # ele é contrato de disco, IPC e DSX, e o perfil dela o lê.
         "Bow", "Arco de flecha",
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 1),
@@ -163,12 +121,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
     TriggerPresetSpec(
         "AutoGun", "Arma automática",
-        # TRIGGER-CANON-01: era `_pos(2)`, cujo `name` é "position" — e a
-        # factory `auto_gun` recebe `start`. Pelo caminho POSICIONAL ninguém
-        # notava (a posição batia); pelo NOMEADO ele levantava
-        # `TypeError: auto_gun() got an unexpected keyword argument 'position'`.
-        # O `name` do PRESET é contrato e não mudou; o do parâmetro tinha de
-        # ser o kwarg da factory desde sempre.
         params=(
             _start(0, 9, 2),
             _strength(6),
@@ -194,9 +146,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Barreira a partir de uma posição, com força de 0 a 8.",
     ),
     TriggerPresetSpec(
-        # DECISÃO DELA, 07/08/2026 (resposta 6): "Arma" não separava este modo
-        # de "Arma automática" nem de "Arma semi-automática" — três botões da
-        # mesma grade começavam pela mesma palavra.
         "Weapon", "Disparo",
         params=(_start(0, 9, 2), _end(1, 9, 5), _force(0, 255, 200)),
         description="Disparo de arma padrão.",
@@ -218,11 +167,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
     TriggerPresetSpec(
         "MultiPositionFeedback", "Curva de força",
-        # TRIGGER-CANON-01: os defaults eram TODOS zero, e zero é ZONA
-        # INATIVA — escolher este preset na tela e aplicar mandava "nenhuma
-        # zona ativa", que o firmware honra fazendo nada. A rampa 0..8 é o
-        # exemplo canônico do próprio `_flatten_multi_position`, e é o que
-        # "curva de força" quer dizer: firmeza crescente ao longo do curso.
         params=tuple(
             TriggerParamSpec(
                 f"pos_{i}", f"Posição {i}", 0, 8, _RAMPA_PADRAO[i]
@@ -235,7 +179,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         "MultiPositionVibration", "Vibração por posição",
         params=(
             _frequency(40),
-            # Idem: zero em todas as posições é nenhuma zona ativa.
             *(
                 TriggerParamSpec(
                     f"pos_{i}", f"Posição {i}", 0, 8, _RAMPA_PADRAO[i]
@@ -246,11 +189,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Vibração com perfil de amplitude por posição.",
     ),
     TriggerPresetSpec(
-        # DECISÃO DELA, 07/08/2026 (resposta 5): "Personalizado (avançado)" tem
-        # 24 caracteres e era o rótulo mais comprido da grade — quebrava a linha
-        # no piso da janela e subia a altura mínima. "Montar do zero" (14) cabe,
-        # é verbo do vocabulário dela e diz o que o modo faz. O aviso "avançado"
-        # desceu para a descrição, que é onde há espaço para ele.
         "Custom", "Montar do zero",
         params=(
             TriggerParamSpec("mode", "Modo (byte cru)", 0, 255, 0),
@@ -281,20 +219,10 @@ def preset_to_positional_params(spec: TriggerPresetSpec, values: dict[str, int])
     return [values.get(p.name, p.default) for p in spec.params]
 
 
-# ---------------------------------------------------------------------------
-# Adapter pra presets que exigem coleções (multi_position_*):
-# converter dict com chaves pos_0..pos_9 em lista única.
-# ---------------------------------------------------------------------------
-
-
 def preset_to_factory_args(
     spec: TriggerPresetSpec, values: dict[str, int]
 ) -> dict[str, object] | list[int]:
-    """Formato aceito por `build_from_name`: positional list ou dict nomeado.
-
-    Para multi_position_*: monta a lista `strengths`. Para Custom: monta
-    `forces` tupla. Demais: positional list respeitando a ordem dos params.
-    """
+    """Formato aceito por `build_from_name`: positional list ou dict nomeado."""
     if spec.name == "MultiPositionFeedback":
         strengths = [values.get(f"pos_{i}", 0) for i in range(10)]
         return {"strengths": strengths}

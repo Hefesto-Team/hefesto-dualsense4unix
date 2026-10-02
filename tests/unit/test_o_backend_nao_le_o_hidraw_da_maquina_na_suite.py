@@ -1,22 +1,4 @@
-"""O-BACKEND-NAO-LE-O-HIDRAW-DA-MAQUINA-NA-SUITE-01 — a raiz do hidraw do backend se desvia.
-
-O dedupe do ``_enumerate_device_keys`` pergunta o barramento de cada nó ao
-``uevent`` do pai HID (``_o_cabo_vence``, O-CABO-ASSUME-DO-RADIO-01). A raiz
-estava escrita em duas f-strings, e o ``test_enumerate_device_keys_dedupe_e_filtra``
-lia o ``/sys/class/hidraw`` da MÁQUINA: com o ``hidraw1`` dela no cabo e o
-``hidraw0`` no rádio, o segundo vencia e o teste caía com
-``hidraw1 != hidraw0``, conforme a ordem de boot.
-
-A cura é a ``backend_pydualsense.RAIZ_CLASS_HIDRAW``, lida na chamada, e a irmã
-``_nenhum_hidraw_vivo_na_varredura_de_som`` do ``tests/conftest.py`` que a
-aponta para uma pasta vazia.
-
-Estas réguas não dublam função nenhuma do backend: montam a árvore em
-``tmp_path`` e apontam SÓ a raiz para ela. O ``hidapi`` é de mentira (o
-enumerate real falaria com o aparelho). Seriais na faixa sintética
-(``aa:bb:cc``), nós com número que nenhuma máquina tem (``hidraw900`` em
-diante).
-"""
+"""O-BACKEND-NAO-LE-O-HIDRAW-DA-MAQUINA-NA-SUITE-01 — a raiz do hidraw do backend se desvia."""
 from __future__ import annotations
 
 import os
@@ -134,12 +116,9 @@ class TestODedupePelaRaizDeMentira:
     def test_quatro_controles_cabo_e_radio_misturados_e_o_vpad_sai(
         self, monkeypatch: pytest.MonkeyPatch, raiz: Path
     ) -> None:
-        """P1 a P4, cada um no próprio nó; o vpad (``hefesto-vpad`` sob uhid) sai.
-
-        Mordida: devolva o caminho fixo ao ``_is_virtual_hidraw`` e o vpad entra.
-        """
+        """P1 a P4, cada um no próprio nó; o vpad (``hefesto-vpad`` sob uhid) sai."""
         _no(raiz, "hidraw900", USB, uniq=SERIAIS[0])
-        _no(raiz, "hidraw901", BT, uniq=SERIAIS[1], virtual=True)  # BT pelo bluetoothd
+        _no(raiz, "hidraw901", BT, uniq=SERIAIS[1], virtual=True)
         _no(raiz, "hidraw902", USB, uniq=SERIAIS[2])
         _no(raiz, "hidraw903", BT, uniq=SERIAIS[3])
         _no(
@@ -190,12 +169,7 @@ class TestOVermelhoDas15h15SemDependerDoBoot:
     def test_com_o_hidraw0_no_radio_e_o_hidraw1_no_cabo_o_hidraw1_vence(
         self, monkeypatch: pytest.MonkeyPatch, raiz: Path
     ) -> None:
-        """A máquina de 28/09 às 15h15, reproduzida: o «1º vence» só vale com a raiz vazia.
-
-        A lista é a do teste antigo (os dois nós do mesmo serial). O que ele
-        afirma é o contrato da raiz vazia; uma árvore com o ``hidraw1`` no cabo
-        decide pelo cabo, e é isso que a raiz da máquina fazia com ele.
-        """
+        """A máquina de 28/09 às 15h15, reproduzida: o «1º vence» só vale com a raiz vazia."""
         _no(raiz, "hidraw0", BT, uniq=SERIAIS[0])
         _no(raiz, "hidraw1", USB, uniq=SERIAIS[0])
         keys = _enumerar(

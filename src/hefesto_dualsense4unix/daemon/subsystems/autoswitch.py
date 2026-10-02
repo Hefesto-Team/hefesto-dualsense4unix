@@ -1,12 +1,4 @@
-"""Subsystem Autoswitch — gerencia troca automática de perfis por janela ativa.
-
-Implementa o protocolo Subsystem e expõe start_autoswitch() como função
-utilitária para uso direto pelo Daemon.
-
-O DESLIGAR TEM UM DONO SÓ, e é o `shutdown` de `daemon/connection.py`: ele
-para o autoswitch em linha e descarta a referência. A utilitária
-`stop_autoswitch`, que fazia o mesmo e só a suíte chamava, saiu em 28/09/2026.
-"""
+"""Subsystem Autoswitch — gerencia troca automática de perfis por janela ativa."""
 from __future__ import annotations
 
 import contextlib
@@ -27,17 +19,7 @@ logger = get_logger(__name__)
 
 
 def _ensure_display_env() -> None:
-    """Importa WAYLAND_DISPLAY/DISPLAY de `systemctl --user show-environment`.
-
-    AUTOSWITCH-FLOOD-FIX-01. O .service ancora em default.target (autostart
-    resiliente em qualquer DE) e pode subir ANTES de o compositor exportar
-    WAYLAND_DISPLAY/DISPLAY para o gerenciador de usuário — o processo nasce
-    sem eles, o autoswitch cai em NullBackend e o perfil-por-app fica morto a
-    sessão toda (além do flood). Aqui, se ambos faltam no os.environ, puxamos
-    do systemd user (que os tem após o login do COSMIC). Best-effort: nunca
-    propaga exceção. Complementa o `ExecStartPre=... import-environment` do
-    .service (que cobre o próximo boot); este cobre a sessão atual / restart.
-    """
+    """Importa WAYLAND_DISPLAY/DISPLAY de `systemctl --user show-environment`."""
     if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"):
         return
     import shutil
@@ -54,7 +36,7 @@ def _ensure_display_env() -> None:
             timeout=2,
             check=False,
         )
-    except Exception as exc:  # best-effort, nunca derruba o boot
+    except Exception as exc:
         logger.debug("autoswitch_display_env_probe_failed", err=str(exc))
         return
     for line in result.stdout.splitlines():
@@ -66,79 +48,20 @@ def _ensure_display_env() -> None:
 
 
 def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]:
-    """Constrói o window reader e o instrumenta com diagnóstico no store.
-
-    FEAT-WINDOW-DETECT-DIAG-01: antes, quando a detecção de janela falhava
-    (ex.: cosmic-comp sem wlr-foreign-toplevel-management), o autoswitch
-    ficava silenciosamente cego — perfil-por-jogo virava letra morta e nada
-    apontava qual backend estava ativo. Agora cada leitura do poll grava no
-    StateStore:
-
-      window_detect_backend    -- backend efetivamente ativo, re-lido a cada
-                                  leitura (a cascata Wayland pode migrar
-                                  cosmic -> portal -> wlrctl -> null em
-                                  runtime, e em XWayland o composto alterna
-                                  entre "xlib" e o da cascata leitura a
-                                  leitura — JANELA-WAYLAND-CEGA-01);
-      window_detect_healthy    -- saudável = >= 1 leitura útil desde o boot
-                                  OU PROVA de conexão do backend xlib (T-01,
-                                  ONDA0-Z7: sonda uma vez antes de semear —
-                                  `initial_healthy` só nasce True se o
-                                  servidor X respondeu de fato; DISPLAY
-                                  presente e morto não basta mais);
-      window_detect_last_class -- última wm_class útil (captura o wm_class
-                                  de um jogo direto do estado, sem journal).
-
-    D-TROCA-DE-PERFIL-CEGA (25/08): a saúde é semeada por `_saude_com_prova`
-    nos DOIS caminhos (arranque e resgate), e o gate do resgate pergunta ao
-    leitor (`precisa_de_resgate`) em vez de olhar só para o backend `null` —
-    um `xlib` com a conexão provada morta numa sessão Wayland agora tem para
-    onde ir.
-
-    Retorna um callable compatível com `AutoSwitcher.window_reader` (API
-    legada de dict). O envelope fica AQUI (e não no AutoSwitcher) para o
-    diagnóstico existir mesmo se alguém instanciar o AutoSwitcher com outro
-    reader — o contrato do AutoSwitcher permanece intocado.
-    """
+    """Constrói o window reader e o instrumenta com diagnóstico no store."""
     from hefesto_dualsense4unix.integrations.window_detect import build_window_reader
 
     reader = build_window_reader()
 
     def _backend_name() -> str | None:
-        # Defensivo: readers substitutos (testes/integrações antigas) podem
-        # não expor metadados de diagnóstico — None = "desconhecido".
         name = getattr(reader, "backend_name", None)
         return name if isinstance(name, str) else None
 
-    # T-01 (ONDA0-Z7, 24/08): "xlib" só é ESCOLHIDO com DISPLAY presente, mas
-    # presente não é o mesmo que vivo — a bancada mediu `DISPLAY=:1` presente
-    # e recusando conexão 716x em 6h, com `window_detect_healthy=True` a
-    # sessão toda. A sonda dispara UMA tentativa de conexão real (via
-    # `reader()`, que chama `_ensure_connected()` por baixo) antes de semear;
-    # `initial_healthy` só nasce True com PROVA (`conexao_provada() is True`).
-    # A leitura de sonda é descartada — o poll relê no primeiro tick.
     def _saude_com_prova(backend: str | None) -> bool:
-        """`healthy` inicial de um backend recém-escolhido, com PROVA.
-
-        Extraído em 25/08 (D-TROCA-DE-PERFIL-CEGA) porque a régua existia em
-        DOIS lugares e só um tinha sido corrigido: a T-01 curou a semeadura
-        inicial e deixou intacta a re-semeadura do resgate
-        (AUTOSWITCH-HEAL-01), que seguia fazendo `healthy=(nome == "xlib")` —
-        presunção pura, a MESMA que a T-01 derrubou, 40 linhas abaixo. É a
-        correção pela metade que a regra da casa existe para matar: o defeito
-        sai de todos os lugares onde aparece, não só de onde foi notado.
-
-        Só `xlib` tem o que provar (os outros nascem não-saudáveis até a
-        primeira leitura útil). A sonda dispara UMA tentativa de conexão real
-        via `reader()` — que chama `_ensure_connected()` por baixo — e a
-        leitura é descartada: o poll relê no tick seguinte.
-        """
+        """`healthy` inicial de um backend recém-escolhido, com PROVA."""
         if backend != "xlib":
             return False
         reader()
-        # Defensivo, no mesmo padrão de `_backend_name()`: um reader
-        # substituto (dublê de teste, integração antiga) pode não expor
-        # `conexao_provada` — ausência do método é "sem prova", não crash.
         conexao_provada = getattr(reader, "conexao_provada", None)
         return callable(conexao_provada) and conexao_provada() is True
 
@@ -151,37 +74,9 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
         healthy=initial_healthy,
     )
 
-    # AUTOSWITCH-HEAL-01: próxima tentativa de recuperação do backend Null
-    # (monotonic; lista p/ mutação no closure). 0.0 = tenta já na 1ª leitura.
     _recover_next = [0.0]
 
     def _read() -> dict[str, Any]:
-        # AUTOSWITCH-HEAL-01 (22/07): backend Null = o daemon nasceu antes do
-        # env gráfico (race de login; o import-environment do .service veio
-        # vazio). Re-tenta a detecção no máximo 1x/15s — re-importa o env do
-        # `systemctl --user show-environment` e re-roda a detecção — até sair
-        # do Null. Cura a sessão atual sem restart; custo zero quando o
-        # backend já é saudável.
-        #
-        # D-TROCA-DE-PERFIL-CEGA (25/08): o gate deixou de ser "o backend é
-        # null" e passou a ser a PERGUNTA do leitor (`precisa_de_resgate`),
-        # que conhece o segundo caso cego — `xlib` com a conexão provada
-        # morta numa sessão Wayland. Sem isto, a máquina dela ficava presa
-        # num XWayland recusando conexão com a cascata Wayland ao lado,
-        # nunca tentada. O `== "null"` fica como retaguarda para reader
-        # substituto que não expõe a pergunta nova.
-        #
-        # FATO SUBSTITUÍDO (02/09/2026): esta linha dizia "a cascata `wlrctl`
-        # (que o COSMIC atende)". O cosmic-comp NÃO atende o wlrctl — não
-        # publica `zwlr_foreign_toplevel_manager_v1`, medido com
-        # `wayland-info`. Quem o atende é o `zcosmic_toplevel_info_v1`, e é
-        # ele o primeiro da cascata desde então.
-        #
-        # E o resgate quase não dispara mais: com DISPLAY e WAYLAND_DISPLAY,
-        # `detect_window_backend()` devolve o composto, que já cai para a
-        # cascata a cada leitura que o X perder. O que sobra para o resgate é
-        # o `xlib` PURO que ganha WAYLAND_DISPLAY depois — que é justamente o
-        # que o `_ensure_display_env()` abaixo pode fazer aparecer.
         recover = getattr(reader, "maybe_recover", None)
         precisa = getattr(reader, "precisa_de_resgate", None)
         cego = precisa() if callable(precisa) else (_backend_name() == "null")
@@ -202,11 +97,6 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
                     )
         info = reader()
         wm_class = info.get("wm_class")
-        # JANELA-CEGA-01: o MOTIVO da cegueira vem junto. Sem esta linha o
-        # campo `window_detect_reason` do IPC nasce morto — o backend calcula
-        # o motivo, o store sabe guardar, e ninguém os apresenta. `getattr`
-        # porque o reader legado (dublê de teste, callable puro) não tem o
-        # atributo, e um leitor sem diagnóstico não pode derrubar o tick.
         store.record_window_detect_read(
             _backend_name(),
             wm_class if isinstance(wm_class, str) else None,
@@ -231,19 +121,7 @@ class AutoswitchSubsystem:
 
         _ensure_display_env()
         daemon = getattr(ctx, "daemon", None)
-        # A-FÁBRICA-COM-UM-CLIENTE-01 (22/08/2026): a lista de appliers vem da
-        # FÁBRICA. O que protege o ajuste manual dela na troca de janela NÃO é
-        # a ausência de applier — é a categoria travada, consultada a cada tick
-        # por `ProfileManager.apply_speaker`/`apply_mic`; o mudo do microfone,
-        # em particular, é do controle e ativação de perfil nenhuma o escreve
-        # (O-MUDO-E-DO-CONTROLE-01). `controller`/`store` vêm por fora
-        # porque esta rota sobe pelo `DaemonContext`, e `daemon` pode ser `None`.
         manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
-        # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
-        # saúde/última wm_class útil no store a cada leitura do poll.
-        # MODO-01/B3: o par do modo jogo padrão — o modo que liga quando é um
-        # jogo e NENHUM perfil específico opina. `getattr` com default None
-        # mantém o autoswitch funcional sem daemon (CLI/testes).
         self._autoswitch = AutoSwitcher(
             manager=manager,
             window_reader=_build_diag_window_reader(ctx.store),
@@ -283,14 +161,7 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
     from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
     _ensure_display_env()
-    # A-FÁBRICA-COM-UM-CLIENTE-01: idem `AutoswitchSubsystem.start` — as DUAS
-    # rotas de subida do autoswitch tiram a lista de appliers da mesma fábrica.
     manager = gerente_do_daemon(daemon, store=daemon.store)
-    # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
-    # saúde/última wm_class útil no store a cada leitura do poll.
-    # MODO-01/B3: idem `AutoswitchSubsystem.start` — o modo jogo padrão precisa
-    # existir nas DUAS rotas de subida (esta é a utilitária, usada quando o
-    # Daemon sobe o autoswitch direto).
     daemon._autoswitch = AutoSwitcher(
         manager=manager,
         window_reader=_build_diag_window_reader(daemon.store),

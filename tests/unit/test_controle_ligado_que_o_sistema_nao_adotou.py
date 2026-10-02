@@ -41,10 +41,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GI-REAL-01: este módulo importa `app/`, que sobe PyGObject no import.
-# Sem esta guarda ele não COLETA num runner sem GTK, e o censo de coleta
-# do `ci.yml` reprova a leva inteira. Medido em 13/08/2026: era um dos
-# três módulos que derrubavam o `lint-test` nas três versões de Python.
 exigir_gi_real("controle ligado que o sistema não adotou (importa app.actions.status_actions)")
 
 from hefesto_dualsense4unix.app.actions.status_actions import (
@@ -66,13 +62,11 @@ TIMER = (
     REPO_ROOT / "assets" / "systemd" / "hefesto-bt-health-watchdog.timer"
 )
 
-# Os mesmos dublês do `test_bt_rebind_orphans.py`, e de propósito: as duas
-# leituras da MESMA regra têm de concordar sobre os mesmos devices.
 ORFAO_NO_ESCOPO = "0005:054C:0CE6.000F"       # DualSense por Bluetooth
-ORFAO_NO_ESCOPO_2 = "0005:054C:0CE6.0011"     # o segundo da mesa dela
-ORFAO_FORA_ESCOPO = "0003:057E:2009.0001"     # Pro Controller por USB
-VPAD_COM_DRIVER = "0003:054C:0DF2.0010"       # vpad do hefesto (uhid, bus 0003)
-DUALSENSE_ADOTADO = "0005:054C:0CE6.000A"     # o que subiu bem: TEM driver
+ORFAO_NO_ESCOPO_2 = "0005:054C:0CE6.0011"
+ORFAO_FORA_ESCOPO = "0003:057E:2009.0001"
+VPAD_COM_DRIVER = "0003:054C:0DF2.0010"
+DUALSENSE_ADOTADO = "0005:054C:0CE6.000A"
 
 
 def _monta_sysfs(
@@ -91,33 +85,22 @@ def _monta_sysfs(
     return str(devices)
 
 
-# ---------------------------------------------------------------------------
-# 1. A leitura do sistema
-# ---------------------------------------------------------------------------
-
-
 class TestLeituraDoSistema:
     def test_acha_o_controle_que_perdeu_a_probe(self, tmp_path: Path) -> None:
         dir_ = _monta_sysfs(tmp_path, [ORFAO_NO_ESCOPO], [])
         assert dualsense_sem_driver(dir_) == [ORFAO_NO_ESCOPO]
 
     def test_a_mesa_dela_dois_ligados_um_visivel(self, tmp_path: Path) -> None:
-        # O caso medido: um subiu, o outro abortou. A lista tem de ter UM.
         dir_ = _monta_sysfs(
             tmp_path, [ORFAO_NO_ESCOPO], [DUALSENSE_ADOTADO, VPAD_COM_DRIVER]
         )
         assert dualsense_sem_driver(dir_) == [ORFAO_NO_ESCOPO]
 
     def test_o_que_tem_driver_nunca_conta(self, tmp_path: Path) -> None:
-        # Contar quem TEM driver faria a janela avisar sobre o controle que
-        # está funcionando — e sobre o gamepad virtual do próprio Hefesto.
         dir_ = _monta_sysfs(tmp_path, [], [DUALSENSE_ADOTADO, VPAD_COM_DRIVER])
         assert dualsense_sem_driver(dir_) == []
 
     def test_orfao_alheio_nao_e_nosso(self, tmp_path: Path) -> None:
-        # A cura automática (`bt_rebind_orphans.sh`) NÃO toca em device de
-        # outro fabricante. Avisar sobre ele seria prometer uma cura que não
-        # vem — o aviso diz "o Hefesto tenta sozinho".
         dir_ = _monta_sysfs(tmp_path, [ORFAO_FORA_ESCOPO], [])
         assert dualsense_sem_driver(dir_) == []
 
@@ -129,7 +112,6 @@ class TestLeituraDoSistema:
 
     def test_sysfs_ausente_nao_derruba_a_aba(self, tmp_path: Path) -> None:
         # Este caminho roda dentro do `state_full`: um OSError aqui derrubaria
-        # a aba Status inteira por causa da linha menos importante dela.
         assert dualsense_sem_driver(str(tmp_path / "nao-existe")) == []
 
     def test_nome_de_device_torto_nao_explode(self, tmp_path: Path) -> None:
@@ -137,18 +119,8 @@ class TestLeituraDoSistema:
         assert dualsense_sem_driver(dir_) == []
 
 
-# ---------------------------------------------------------------------------
-# 2. O dono único da regra
-# ---------------------------------------------------------------------------
-
-
 class TestUmDonoSoDaRegra:
-    """A regra é do `bt_rebind_orphans.sh`. Aqui só a LEMOS para exibir.
-
-    Se as duas leituras divergirem, a janela passa a avisar sobre um controle
-    que a cura automática não vai tentar — ou a calar sobre um que ela vai. O
-    defeito que esta casa mais persegue é justamente o segundo dono.
-    """
+    """A regra é do `bt_rebind_orphans.sh`. Aqui só a LEMOS para exibir."""
 
     def test_o_escopo_e_o_mesmo_do_script(self) -> None:
         texto = SCRIPT.read_text(encoding="utf-8")
@@ -157,7 +129,6 @@ class TestUmDonoSoDaRegra:
 
     def test_o_criterio_e_a_ausencia_do_symlink_driver(self) -> None:
         texto = SCRIPT.read_text(encoding="utf-8")
-        # No script: `[[ -e "${dev}/driver" ]] && continue`.
         assert '-e "${dev}/driver"' in texto
         fonte = inspect.getsource(ipc_handlers.dualsense_sem_driver)
         assert '"driver"' in fonte
@@ -173,9 +144,6 @@ class TestUmDonoSoDaRegra:
         )
 
     def test_os_minutos_prometidos_sao_os_do_timer_que_cumpre(self) -> None:
-        # A tela promete "em até N minutos". Quem cumpre é o timer do
-        # watchdog, que chama o `bt_rebind_orphans.sh`. Um número escolhido a
-        # gosto aqui viraria promessa falsa no dia em que o timer mudasse.
         texto = TIMER.read_text(encoding="utf-8")
         achado = re.search(r"OnUnitActiveSec=(\d+)min", texto)
         assert achado is not None, "o timer precisa dizer o intervalo em min"
@@ -186,11 +154,6 @@ class TestUmDonoSoDaRegra:
             encoding="utf-8"
         )
         assert "bt_rebind_orphans.sh" in watchdog
-
-
-# ---------------------------------------------------------------------------
-# 3. O dado no IPC
-# ---------------------------------------------------------------------------
 
 
 class TestOPayloadDoDaemon:
@@ -205,13 +168,7 @@ class TestOPayloadDoDaemon:
     def _payload(
         self, devices_dir: str, monkeypatch: pytest.MonkeyPatch
     ) -> dict[str, Any]:
-        """O payload real, com o sysfs apontado para o diretório temporário.
-
-        O `monkeypatch` mira a CONSTANTE do módulo (e não o default da
-        função) porque é ela o único lugar onde o caminho está escrito — a
-        `dualsense_sem_driver` a resolve na hora da chamada exatamente para
-        isto ser possível sem um segundo dono do caminho.
-        """
+        """O payload real, com o sysfs apontado para o diretório temporário."""
         monkeypatch.setattr(ipc_handlers, "_HID_DEVICES_DIR", devices_dir)
 
         class _Host(ipc_handlers.IpcHandlersMixin):
@@ -237,14 +194,11 @@ class TestOPayloadDoDaemon:
     def test_os_ids_nao_carregam_endereco_bluetooth(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # O nome do diretório é BUS:VID:PID.INSTANCIA — não há MAC nele, e
-        # este payload atravessa o IPC e pode acabar num log colado por ela.
         dir_ = _monta_sysfs(tmp_path, [ORFAO_NO_ESCOPO], [])
         for id_ in self._payload(dir_, monkeypatch)["ids"]:
             assert not re.search(r"([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", id_)
 
     def test_o_state_full_publica_a_chave(self) -> None:
-        # Fiação: a chave existe no handler e vem do método (nunca inline).
         fonte = inspect.getsource(
             ipc_handlers.IpcHandlersMixin._handle_daemon_state_full
         )
@@ -252,11 +206,6 @@ class TestOPayloadDoDaemon:
             'result["controles_sem_driver"] = '
             "self._controles_sem_driver_payload()" in fonte
         )
-
-
-# ---------------------------------------------------------------------------
-# 4. A tela
-# ---------------------------------------------------------------------------
 
 
 def _estado(quantidade: object = "__ausente__") -> dict[str, Any]:
@@ -287,17 +236,12 @@ class TestOTextoDaTela:
 
     @pytest.mark.parametrize("torto", [True, "2", 1.5, None, [], {}])
     def test_payload_torto_nunca_vira_alarme_falso(self, torto: object) -> None:
-        # `True` entra na lista de propósito: em Python `isinstance(True, int)`
-        # é verdadeiro, e um bool aqui viraria "1 controle" fantasma.
         assert texto_de_controle_nao_adotado(_estado(torto)) == ""
 
     def test_bloco_torto_nao_acende(self) -> None:
         assert texto_de_controle_nao_adotado({"controles_sem_driver": 2}) == ""
 
     def test_promete_a_cura_automatica_e_o_prazo(self) -> None:
-        # Não assustar sem dar saída: a cura existe, é automática, e o texto
-        # tem de dizer em quanto tempo — senão ela desliga o controle bom
-        # para "resolver".
         for quantos in (1, 2):
             texto = texto_de_controle_nao_adotado(_estado(quantos))
             assert "Hefesto tenta" in texto
@@ -305,9 +249,6 @@ class TestOTextoDaTela:
             assert "PS" in texto, "a saída manual, se a tentativa não pegar"
 
     def test_fala_a_lingua_dela_e_nao_a_do_mecanismo(self) -> None:
-        # A dona recusa nome que não deriva do que já existe na tela.
-        # "controle", "ligado", "Hefesto" são o léxico dela; o resto descreve
-        # o mecanismo, e o mecanismo não é o que ela vê.
         for quantos in (1, 2):
             texto = texto_de_controle_nao_adotado(_estado(quantos)).lower()
             assert "controle" in texto
@@ -328,15 +269,10 @@ class TestOTextoDaTela:
                 assert jargao not in texto, f"jargão na tela dela: {jargao}"
 
 
-# ---------------------------------------------------------------------------
-# 5. A fiação na aba Status
-# ---------------------------------------------------------------------------
-
-
 class _FakeBanner:
     def __init__(self) -> None:
         self.text = ""
-        self.visible = True  # sobra visível: o refresh precisa apagar
+        self.visible = True
 
     def set_text(self, text: str) -> None:
         self.text = text
@@ -387,12 +323,9 @@ class TestOBannerNaAbaStatus:
         assert banner.visible is False
 
     def test_sem_widget_nao_explode(self) -> None:
-        _stub(None)._refresh_banner_nao_adotado(_estado(1))  # não levanta
+        _stub(None)._refresh_banner_nao_adotado(_estado(1))
 
     def test_o_aviso_nasce_acima_dos_cards(self) -> None:
-        # Sem a reordenação, o `pack_start` empurra o aviso para o FIM da
-        # caixa vertical — abaixo dos cards, que é onde ninguém procura o
-        # motivo de um controle estar faltando.
         caixa = _FakeCaixa()
 
         class _Host:
@@ -424,7 +357,7 @@ class TestOBannerNaAbaStatus:
             def _get(self, _nome: str) -> Any:
                 return None
 
-        _Host()._montar_banner_nao_adotado()  # não levanta
+        _Host()._montar_banner_nao_adotado()
 
 
 class TestFiacao:
@@ -439,9 +372,6 @@ class TestFiacao:
         assert "_montar_banner_nao_adotado()" in fonte
 
     def test_nao_reusa_o_caminho_de_dev_input(self) -> None:
-        # O contador de externos lê /dev/input, que TAMBÉM não existe quando a
-        # probe aborta. Reusar aquele caminho daria zero — e zero é
-        # indistinguível de "não há problema nenhum".
         fonte = inspect.getsource(ipc_handlers.dualsense_sem_driver)
         assert "/dev/input" not in fonte
         assert "/sys/bus/hid/devices" in inspect.getsource(ipc_handlers)

@@ -45,7 +45,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("altura dos cards da seção Os controles")
 
 from pathlib import Path
@@ -66,14 +65,8 @@ from hefesto_dualsense4unix.app.widgets.external_card import (
     ExternalCard,
 )
 
-#: A largura com que a janela abre, do próprio glade. Não é constante copiada:
-#: `test_config_01_a_aba_nasce_vazia` a lê do XML pelo mesmo motivo — um número
-#: duplicado vira mentira no dia em que a janela mudar de tamanho.
 _LARGURA_DA_JANELA = 1180
 
-#: A largura que a grade recebe na janela real: 1180px de janela menos o cromo,
-#: as margens da moldura de seção e a barra de rolagem vertical. Arredondado para
-#: baixo, porque medir com folga esconde exatamente o que se quer ver.
 _LARGURA_DA_GRADE = 1080
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -91,7 +84,6 @@ _CURTO = DadosDoControle(
     endereco="aabbcc0000d8",
 )
 
-#: O card comprido: um 8BitDo. Quatro linhas (cor, modo, botões e jogador).
 _COMPRIDO = DadosDoControle(
     chave="e8473a000007",
     titulo="Jogador 5",
@@ -104,9 +96,6 @@ _COMPRIDO = DadosDoControle(
 )
 
 
-#: O card que mostra a LISTA de cor: nada lido do aparelho e nada declarado.
-#: É onde moram os sete rótulos de cor e o campo livre, que nenhum dos outros
-#: dois exercita.
 _SEM_COR = DadosDoControle(
     chave="aabbcc0000a1",
     titulo="Sem número ainda",
@@ -118,12 +107,7 @@ _SEM_COR = DadosDoControle(
 
 
 def _grade_montada(dados: list[DadosDoControle]) -> tuple[Any, list[Any]]:
-    """A grade da seção, montada como a seção a monta, numa janela offscreen.
-
-    `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
-    janelas, e uma `Gtk.Window` fica 1x1 para sempre — a armadilha está escrita
-    em `docs/method/COMO-OLHAR-A-TELA.md` e já custou caro duas vezes.
-    """
+    """A grade da seção, montada como a seção a monta, numa janela offscreen."""
     grade = Gtk.Grid()
     grade.set_column_spacing(_ESPACAMENTO)
     grade.set_row_spacing(_ESPACAMENTO)
@@ -145,11 +129,7 @@ def _grade_montada(dados: list[DadosDoControle]) -> tuple[Any, list[Any]]:
 
 
 def _assentar() -> None:
-    """Roda o laço até ele parar de ter o que fazer.
-
-    Sem isto, `get_allocated_height` devolve o 1 do widget recém-realizado — e o
-    teste passaria comparando 1 com 1, que é o portão virando carimbo.
-    """
+    """Roda o laço até ele parar de ter o que fazer."""
     for _ in range(200):
         if not Gtk.events_pending():
             break
@@ -174,11 +154,7 @@ def test_dois_cards_de_conteudo_diferente_tem_a_mesma_altura() -> None:
 
 
 def test_cards_de_fileiras_diferentes_tambem_se_igualam() -> None:
-    """A mesa desta casa é de CINCO, e cinco não cabem em três colunas.
-
-    Com duas fileiras, quem iguala as alturas entre elas é o `row_homogeneous` —
-    a metade da receita que o `valign` sozinho não cobre.
-    """
+    """A mesa desta casa é de CINCO, e cinco não cabem em três colunas."""
     mesa = [_CURTO, _CURTO, _CURTO, _CURTO, _COMPRIDO]
     _grade, cards = _grade_montada(mesa)
     alturas = [card.get_allocated_height() for card in cards]
@@ -192,13 +168,7 @@ def test_cards_de_fileiras_diferentes_tambem_se_igualam() -> None:
 
 
 def test_o_seletor_de_jogador_ancora_no_rodape() -> None:
-    """"Jogador:" fica na MESMA altura de tela nos dois cards.
-
-    É o `margin-top:auto` do desenho, e no GTK ele é um `Gtk.Box` vazio com
-    `vexpand=True` antes do último bloco. Sem ele, o bloco do jogador do card
-    curto sobe e a fileira ganha um degrau — os cards teriam a mesma altura e
-    ainda assim leriam como desalinhados.
-    """
+    """"Jogador:" fica na MESMA altura de tela nos dois cards."""
     _grade, cards = _grade_montada([_CURTO, _COMPRIDO])
     bases = []
     for card in cards:
@@ -216,13 +186,7 @@ def test_o_seletor_de_jogador_ancora_no_rodape() -> None:
 
 
 def test_um_card_cabe_na_largura_de_uma_coluna() -> None:
-    """O card não pode empurrar a janela — a rolagem horizontal não existe.
-
-    Três colunas mais os dois vãos têm de caber em `_LARGURA_DA_GRADE`. Se um
-    card sozinho já pede mais que um terço disso, a aba inteira passa a pedir
-    mais que a janela, e o portão de largura de CONFIG-01 reprova depois — com
-    a causa a duas seções de distância de onde ela nasceu.
-    """
+    """O card não pode empurrar a janela — a rolagem horizontal não existe."""
     card = ExternalCard(_COMPRIDO)
     janela = Gtk.OffscreenWindow()
     janela.add(card)
@@ -240,18 +204,7 @@ def test_um_card_cabe_na_largura_de_uma_coluna() -> None:
 
 
 def test_todo_texto_do_card_passa_no_portao_de_redacao() -> None:
-    """O texto do CARD, e não só o da aba vazia, sob as regras de redação.
-
-    O buraco que este teste fecha é medido: `test_config_a_palavra_de_tela_da_
-    aba_montada` monta a aba de verdade, mas monta-a SEM daemon — e sem daemon
-    esta seção mostra o estado vazio. Nenhum dos rótulos do card ("Cor:",
-    "Modo:", "Apple", "Vermelho") atravessa aquele portão, porque nenhum deles
-    chega a existir na árvore que ele anda.
-
-    As regras são as de lá, importadas do mesmo módulo — nunca copiadas. Duas
-    listas de jargão divergem na primeira edição, e essa é a dívida que o portão
-    irmão existe para não criar.
-    """
+    """O texto do CARD, e não só o da aba vazia, sob as regras de redação."""
     from tests.unit.test_config_a_palavra_de_tela_da_aba_montada import (
         _textos_da_arvore,
         _validador,
@@ -284,21 +237,7 @@ def test_todo_texto_do_card_passa_no_portao_de_redacao() -> None:
 
 
 def test_a_secao_monta_a_mesa_de_cinco_e_ela_cabe_na_janela() -> None:
-    """A costura inteira, com o fixture da mesa de CINCO desta casa.
-
-    Os quatro testes acima medem o card; este mede a SEÇÃO — a grade que ela
-    monta, alimentada pelo mesmo dublê que a captura de tela usará. Sem ele, a
-    prova pararia na peça e a montagem ficaria fora do alcance: é o defeito de
-    portão que esta casa mais paga, o verde que olha para o lugar errado.
-
-    `_controles_leitor` é o ponto de injeção da seção, irmão do `_mesa_leitor` de
-    CONFIG-02. Ele existe pelo mesmo motivo: sem dublê, montar a aba num teste
-    conversaria com o daemon vivo da máquina de quem roda a suíte.
-
-    MORDIDA: troquei `COLUNAS` de 3 para 5 (que é o que o desenho mostra) e a
-    largura mínima da página subiu para 1305px contra os 1180 da janela —
-    reprovou, e é exatamente por isso que a grade tem três colunas.
-    """
+    """A costura inteira, com o fixture da mesa de CINCO desta casa."""
     import json
 
     from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
@@ -314,13 +253,9 @@ def test_a_secao_monta_a_mesa_de_cinco_e_ela_cabe_na_janela() -> None:
     class _HospedeiroComMesa(ConfigActionsMixin):
         def __init__(self, builder: Any) -> None:
             self.builder = builder
-            # A marca da bancada de retrato, para a seção não falar com o daemon.
             self._mesa_leitor = lambda: None
             self._controles_leitor = lambda: fixture
 
-    # 06/09/2026 (`GTK-3`): o berço saiu do `gui/main.glade` para
-    # `tests/unit/aba_config_sem_a_janela.py`. A seção do arranjo e os cards
-    # nascem em `app/actions/config/`, que é MOTOR; o XML só dava a caixa.
     builder = BercoDaAbaConfig()
     _HospedeiroComMesa(builder).install_config_tab()
 

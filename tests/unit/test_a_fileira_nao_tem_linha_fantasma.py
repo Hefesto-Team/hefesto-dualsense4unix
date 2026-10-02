@@ -31,9 +31,6 @@ PAGINA = (
     / "01-jogar.html"
 )
 
-#: O menor tamanho que o corpo da página pode ter para a medição valer. A
-#: página publicada tem centenas de KB; 2.000 caracteres é o piso que separa
-#: "li o arquivo" de "li um arquivo vazio e passei".
 PISO_DO_RECORTE = 2000
 
 
@@ -64,11 +61,7 @@ def test_todo_chip_da_tabela_tem_lugar_na_fileira_publicada() -> None:
 
 
 def test_todo_degrau_da_fileira_esta_na_tabela() -> None:
-    """A pergunta 2: nenhum chip na tela sem linha que o descreva.
-
-    É o lado que a conferência da escada não cobre: aquela pergunta sobre a
-    ESCADA do produto, esta sobre o HTML publicado.
-    """
+    """A pergunta 2: nenhum chip na tela sem linha que o descreva."""
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
     da_tabela = {c.chave for c in painel.CHIPS_DA_ESCADA}
@@ -81,18 +74,7 @@ def test_todo_degrau_da_fileira_esta_na_tabela() -> None:
 
 
 def test_a_regua_dos_chips_sem_dono_devolve_vazio() -> None:
-    """O efeito medido da linha fantasma ter saído.
-
-    Não é redundância com a pergunta 1: aquela compara duas listas, esta cobra
-    o DONO de cada chip. Se um chip novo entrar sem ponte e sem modo, a
-    pergunta 1 continua verde e esta reprova.
-
-    A CONTA MORA AQUI desde 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01). Ela era
-    `painel.chips_sem_dono()`, e nenhuma tela a perguntava: marcar um chip como
-    "ainda não tem quem o atenda" seria a tela confessando dívida nossa. Um chip
-    sem degrau na escada e sem modo com escritor é dívida, e a dívida reprova
-    aqui, antes de chegar à tela.
-    """
+    """O efeito medido da linha fantasma ter saído."""
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
     sem_dono = [c.chave for c in painel.CHIPS_DA_ESCADA
@@ -105,12 +87,7 @@ def test_a_regua_dos_chips_sem_dono_devolve_vazio() -> None:
 
 
 def test_o_gerador_continua_recusando_o_point_and_click_na_fileira() -> None:
-    """A trava de `aba01.py` fica de pé, e ela mede OUTRA COISA.
-
-    Ela vigia a PÁGINA; as duas acima vigiam o par página/tabela. Duas réguas
-    independentes sobre dois objetos é o que revela o que uma sozinha esconde —
-    e foi exatamente assim que a linha fantasma sobreviveu dezessete dias.
-    """
+    """A trava de `aba01.py` fica de pé, e ela mede OUTRA COISA."""
     fonte = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "aba01.py"
     ).read_text(encoding="utf-8")

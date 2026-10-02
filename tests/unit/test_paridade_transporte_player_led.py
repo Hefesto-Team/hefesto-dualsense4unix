@@ -26,12 +26,8 @@ from hefesto_dualsense4unix.core import ds_output_report as rep
 
 from tests.conftest import EnvelopeDeTransporte
 
-#: Offset do padrão de player-LED dentro do common.
 PLAYER_LED = 43
 
-#: (nome do jogador, bitmask que o firmware entende). Os quatro canônicos do
-#: `PlayerID` mais o `ALL` — nenhum deles é 1, 2 ou 3, o que é justamente o
-#: ponto: um byte truncado ou deslocado não sobrevive a esta lista.
 JOGADORES = [
     ("PLAYER_1", 4),
     ("PLAYER_2", 10),
@@ -42,13 +38,7 @@ JOGADORES = [
 
 
 def _com_leds_do_hefesto(handle: Any) -> Any:
-    """Tira a supressão de LED — a rota do report volta a ser a que vale.
-
-    `_suppress_leds` nasce True em produção (LIGHTBAR-BT-ADOPT-01); quando o
-    sysfs do kernel não é gravável, `_refresh_sysfs_leds` o desliga e o
-    player-LED sai pelo report. É esse o estado que este arquivo mede, e ele
-    está declarado aqui em vez de escondido numa fixture.
-    """
+    """Tira a supressão de LED — a rota do report volta a ser a que vale."""
     handle._suppress_leds = False
     return handle
 
@@ -103,12 +93,7 @@ def test_o_padrao_do_jogador_e_identico_nos_dois_e_so_o_envelope_muda(
 def test_sob_supressao_o_player_led_nao_sai_em_nenhum_dos_dois(
     ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
 ) -> None:
-    """Com o kernel dono dos LED, nem o byte nem a autorização saem.
-
-    LIGHTBAR-ISOLAR-OS-PLAYERS-01: com o instrumento ligado NENHUMA escrita de
-    player-LED pode vazar, senão a numeração do co-op escreve por trás e a
-    medição perde a variável única — e isso tem de valer nos dois transportes.
-    """
+    """Com o kernel dono dos LED, nem o byte nem a autorização saem."""
     from pydualsense.enums import PlayerID
 
     ds5_de_bancada._suppress_leds = True

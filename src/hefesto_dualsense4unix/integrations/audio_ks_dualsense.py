@@ -109,10 +109,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-#: KSCATEGORY_AUDIO — a pergunta que o jogo faz ao `setupapi`.
 KS = "{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
 
-#: A classe USB do Windows. NÃO a MEDIA (`{4d36e96c…}`), que o GE apaga para
 #: todo caminho de DualSense (`remove_dualsense_media_devices`).
 CLASSE_USB = "{36FC9E60-C465-11CF-8056-444553540000}"
 
@@ -124,13 +122,8 @@ MODELOS: dict[int, str] = {
     0x0DF2: "DualSense Edge Wireless Controller",
 }
 
-#: O marcador da instância. Não colide com o wineusb (`<n>&<n>&<n>&<n>`) nem com
-#: o winebus (`…&MI_03\\<serial>…`), e é por ele que as rodadas seguintes acham
-#: o que é nosso.
 MARCADOR = "HEFESTOKS"
 
-#: A forma das instâncias gravadas à mão na prova de 17/09
-#: (`<nó do pipewire>&<8 hex do endpoint>`) — saem na primeira rodada.
 _LEGADO_DA_PROVA = re.compile(r"^\d+&[0-9A-F]{8}$", re.I)
 
 _BACKUP = ".bak.hefesto-audio-ks"
@@ -139,9 +132,6 @@ _TMP = ".hefesto-audio-ks-tmp"
 _GUID_TXT = re.compile(
     r"\{([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})\}", re.I
 )
-#: O `ContainerId` que o mmdevapi guarda no endpoint: blob VT_CLSID (tipo
-#: `0xBEEF0048`, um dword e os 16 bytes do GUID), com as continuações de linha
-#: já juntadas.
 _BLOB_CONTAINER = re.compile(
     r'"\{8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c\},2"=hex:((?:[0-9a-f]{2},?)+)', re.I
 )
@@ -161,11 +151,7 @@ class Controle:
     pid: int
     bus: int
     dev: int
-    #: `USEC_INITIALIZED` do udev para o `usb_device`, se o banco o tiver.
     usec: int | None
-    #: O par vid/pid que entra na CONTA do `ContainerId`. No cabo é o do
-    #: próprio controle; no rádio é o da âncora, porque é dela que o
-    #: `winepulse` lê o `PRODUCT`.
     container_vid: int = VID_SONY
     container_pid: int | None = None
 
@@ -174,13 +160,7 @@ class Controle:
         return MODELOS[self.pid]
 
     def prefixo_do_container(self) -> str:
-        """Os três primeiros campos do `ContainerId`, sem o Data4.
-
-        **O `& 0xFF` não é zelo:** na origem (`create_usb_dev_container_id`) o
-        barramento e o device são `uint8_t`, e um `devnum` acima de 255 — que
-        acontece em host cheio — dobra ali. Sem a máscara esta conta divergiria
-        da do Wine exatamente nos casos raros, que são os piores de achar.
-        """
+        """Os três primeiros campos do `ContainerId`, sem o Data4."""
         pid = self.pid if self.container_pid is None else self.container_pid
         data1 = ((pid & 0xFFFF) << 16) | (self.container_vid & 0xFFFF)
         return f"{{{data1:08x}-{self.bus & 0xFF:04x}-{self.dev & 0xFF:04x}-"
@@ -243,8 +223,6 @@ def controles_no_cabo(
             continue
         if vid != VID_SONY or pid not in MODELOS:
             continue
-        # Sem placa de som não há endpoint para casar (controle de outra
-        # revisão, ou a interface de áudio desautorizada pela regra 75).
         if not any(dev.glob("*/sound/card*")):
             continue
         bus, num = _ler(dev / "busnum"), _ler(dev / "devnum")
@@ -256,11 +234,6 @@ def controles_no_cabo(
     return achados
 
 
-# --------------------------------------------------------------------------
-# O rádio: o endpoint é um nó nosso, e o ContainerId sai da âncora dele
-# --------------------------------------------------------------------------
-
-#: As marcas que o nó carrega no proplist, e são as MESMAS que o GE lê para
 #: dizer "isto é um DualSense" (`fill_device_info`, `pulse.c:668`).
 _PROP_VID = "device.vendor.id"
 _PROP_PID = "device.product.id"
@@ -270,28 +243,12 @@ _NOME_DO_SINK = re.compile(r"^\tName: (.+)$", re.M)
 
 
 def _pactl(argv: list[str]) -> str | None:
-    """Roda um `pactl` curto. None em qualquer falha — ausência é resposta.
-
-    **`LC_ALL=C` porque o `pactl` desta máquina TRADUZ.** Medido em 18/09/2026:
-    sem isso a saída vem com `Nome:` e `Destino #`, o leitor não acha nenhum
-    campo e o produto responde "não há endpoint" com o endpoint de pé. É a
-    mesma armadilha que esta casa já pagou em 15/08/2026, do outro lado do
-    mesmo comando (`alto_falante_bt._rodar`) — e a segunda vez custou uma prova
-    de ponta a ponta que voltou vazia.
-
-    A leitura pergunta ao retrato do som antes (`integrations/retrato_do_som`);
-    o «não sei» dele volta como ``None``. **Sem importar o pacote**, pela regra
-    stdlib deste módulo: o retrato só existe no processo que o carregou — o
-    daemon, pelo ouvinte do som. No curador que o gancho de lançamento roda com
-    o `python3` do sistema ele não está em `sys.modules`, e ali não há dono
-    nenhum a consultar.
-    """
+    """Roda um `pactl` curto. None em qualquer falha — ausência é resposta."""
     retrato = sys.modules.get("hefesto_dualsense4unix.integrations.retrato_do_som")
     resposta = retrato.responder(argv) if retrato is not None else None
     if resposta is not None:
         return resposta if isinstance(resposta, str) else None
     try:
-        # argv fixo e sem shell: o único argumento é literal.
         proc = subprocess.run(
             argv,
             capture_output=True,
@@ -341,27 +298,7 @@ def endpoints_de_mentira(
 
 
 def pai_usb_device(sysfs_path: str, sysfs: Path = Path("/sys")) -> Path | None:
-    """O `usb_device` ACIMA de um caminho do sysfs — o que o udev acharia.
-
-    É a tradução de `udev_device_get_parent_with_subsystem_devtype(…, "usb",
-    "usb_device")`, e o detalhe que decide está no nome: ele devolve um
-    ANCESTRAL, nunca o próprio device. Por isso a subida começa no PAI.
-
-    **MEDIDO NO JOGO, 18/09/2026, 03h40.** A primeira versão desta função
-    começava no próprio caminho, e o endpoint saiu no prefixo do PRAGMATA com
-    `ContainerId={00021d6b-0003-0001-…}` — o `1d6b:0002`, que é o HUB RAIZ,
-    pai da âncora que tínhamos escolhido. O device KS declarava a âncora, o
-    jogo calculava o pai dela, os dois não casavam e o jogo desistia. Um nível
-    de árvore.
-
-    A consequência para quem publica o nó: o `sysfs.path` declarado tem de ser
-    um FILHO da âncora (a interface `<bus>-<porta>:1.0`), como é o de uma placa
-    de som de verdade — o caminho dela é o do `sound/card`, cujo pai é o
-    aparelho. Declarar a âncora nua faz o GUID subir para o hub raiz, e aí
-    todos os controles do mesmo barramento casariam com o mesmo container.
-
-    Nada é escrito no caminho.
-    """
+    """O `usb_device` ACIMA de um caminho do sysfs — o que o udev acharia."""
     try:
         raiz = sysfs.resolve()
         atual = (sysfs / sysfs_path.lstrip("/")).resolve()
@@ -398,11 +335,8 @@ def controles_no_radio(
         ancora = pai_usb_device(caminho, sysfs)
         if ancora is None:
             continue
-        # ÂNCORA COM PLACA DE SOM É O CABO, e não entra aqui: o `sysfs.path` de
         # um DualSense ligado por USB sobe ao PRÓPRIO controle, e o
         # `controles_no_cabo` já o conhece. Sem esta linha, o mesmo aparelho
-        # sairia nas duas listas e as duas gravariam a MESMA chave do registro.
-        # É a mesma regra que escolhe as âncoras no ensaio, dita uma vez.
         if any(ancora.glob("*/sound/card*")):
             continue
         vendor, produto = _ler(ancora / "idVendor"), _ler(ancora / "idProduct")
@@ -426,10 +360,6 @@ def controles_no_radio(
     return achados
 
 
-#: A FAMÍLIA DO LAÇO DO CABO no dono dos laços (`integrations/laco_de_audio.
-#: Lacos`), que dá aos nós o nome `hefesto-<família>-<chave>`. Mora AQUI, no
-#: módulo stdlib, porque é daqui que o curador a lê no servidor: quem sobe o
-#: laço (`integrations/haptica_do_cabo.py`) importa a mesma constante.
 FAMILIA_DO_LACO_DO_CABO = "haptica-do-cabo"
 MARCA_DO_LACO_DO_CABO = f"hefesto-{FAMILIA_DO_LACO_DO_CABO}-"
 
@@ -440,13 +370,7 @@ _NUMERO_DO_SINK = re.compile(r"^Sink #(\d+)")
 def _lembrando(
     runner: Callable[[list[str]], str | None],
 ) -> Callable[[list[str]], str | None]:
-    """O mesmo `runner`, com UMA pergunta por argv e o servidor mudo lembrado.
-
-    O curador roda dentro do lançamento, com um teto de dez segundos
-    (`hefesto-launch.sh`, `curar_audio_ks`), e cada `pactl` tem cinco. Duas
-    perguntas ao mesmo servidor travado estourariam o teto: a primeira que
-    volta sem resposta cala as seguintes, e a lista sai com o que se sabe.
-    """
+    """O mesmo `runner`, com UMA pergunta por argv e o servidor mudo lembrado."""
     respostas: dict[tuple[str, ...], str | None] = {}
     mudo = False
 
@@ -536,15 +460,7 @@ def controles_do_registro(
     udev_data: Path = Path("/run/udev/data"),
     runner: Callable[[list[str]], str | None] = _pactl,
 ) -> list[Controle]:
-    """A lista que o registro grava — o DONO dela, desde 28/09/2026.
-
-    Os aparelhos com endpoint (:func:`controles_no_radio`, que lê os nós
-    vivos) e o cabo que nenhum endpoint serve (:func:`placas_servidas`), nesta
-    ordem: o cabo primeiro, como sempre, e nunca o mesmo aparelho duas vezes.
-    Um alvo por controle: o cabo servido pelo endpoint é o endpoint. Sem
-    controle no cabo, os fluxos nem se perguntam — é uma ida ao servidor a
-    menos no lançamento de quem joga pelo rádio.
-    """
+    """A lista que o registro grava — o DONO dela, desde 28/09/2026."""
     perguntar = _lembrando(runner)
     endpoints = controles_no_radio(sysfs, udev_data, perguntar)
     cabo = controles_no_cabo(sysfs, udev_data)
@@ -552,11 +468,6 @@ def controles_do_registro(
         servidas = set(placas_servidas(sysfs, perguntar))
         cabo = [c for c in cabo if (c.bus, c.dev) not in servidas]
     return cabo + endpoints
-
-
-# --------------------------------------------------------------------------
-# O registro
-# --------------------------------------------------------------------------
 
 
 def _blocos(texto: str) -> list[str]:
@@ -573,8 +484,6 @@ def _cabecalho(bloco: str) -> str:
 
 def _instancia_da_chave(cabecalho: str) -> str | None:
     """A última parte da instância, numa chave nossa ou legada — ou None."""
-    # A subchave opcional no fim: o Wine pode criar `Properties\…` debaixo do
-    # device, e ela tem de sair junto — senão fica órfã no registro.
     m = re.match(
         r"^\[System\\\\ControlSet001\\\\Enum\\\\USB\\\\VID_054C&PID_(?:0CE6|0DF2)"
         r"\\\\([^\\\]]+)(?:\\\\[^\]]*)?\]$",
@@ -602,13 +511,7 @@ def e_bloco_nosso(bloco: str) -> bool:
 
 
 def data4_do_dono(texto_sem_os_nossos: str, controle: Controle) -> list[bytes]:
-    """Os Data4 que o PRÓPRIO prefixo já registrou para este pid/bus/dev.
-
-    Procura nas duas formas em que o Wine guarda um `ContainerId`: o texto
-    `{…}` das chaves `Enum` (o HID do winebus) e o blob VT_CLSID do endpoint no
-    `MMDevices` (o `winepulse`). Os nossos blocos já saíram do texto, senão a
-    pergunta responderia a si mesma.
-    """
+    """Os Data4 que o PRÓPRIO prefixo já registrou para este pid/bus/dev."""
     alvo = controle.prefixo_do_container().lower()
     achados: list[bytes] = []
     for m in _GUID_TXT.finditer(texto_sem_os_nossos):
@@ -674,10 +577,7 @@ def blocos_do_controle(controle: Controle, data4s: list[bytes], carimbo: int) ->
 
 
 def texto_novo(texto: str, controles: list[Controle], carimbo: int) -> str:
-    """O `system.reg` com os nossos blocos refeitos, e só eles.
-
-    Pura: nenhuma E/S, para a régua medir byte a byte.
-    """
+    """O `system.reg` com os nossos blocos refeitos, e só eles."""
     blocos = _blocos(texto)
     fica = [b for b in blocos if not e_bloco_nosso(b)]
     sem_os_nossos = "\n".join(fica)
@@ -694,12 +594,7 @@ def texto_novo(texto: str, controles: list[Controle], carimbo: int) -> str:
 
 
 def _mesmos_blocos(a: str, b: str) -> bool:
-    """O mesmo CONJUNTO de blocos, a menos de carimbo, `#time=` e ordem.
-
-    O `wineserver` regrava o registro em ordem alfabética e acrescenta
-    `#time=` a cada chave; comparar o texto cru faria este passo reescrever os
-    megabytes do `system.reg` em todo lançamento, sem nada ter mudado.
-    """
+    """O mesmo CONJUNTO de blocos, a menos de carimbo, `#time=` e ordem."""
 
     def normal(texto: str) -> list[str]:
         saida = []
@@ -711,11 +606,6 @@ def _mesmos_blocos(a: str, b: str) -> bool:
         return sorted(saida)
 
     return normal(a) == normal(b)
-
-
-# --------------------------------------------------------------------------
-# O prefixo
-# --------------------------------------------------------------------------
 
 
 def wineserver_do_prefixo_vivo(pfx: Path, proc: Path = Path("/proc")) -> bool:
@@ -745,7 +635,6 @@ class Resultado:
     controles: int = 0
     variantes: int = 0
     escreveu: bool = False
-    #: "sem-registro" · "ocupado" · "" (quando fez o que tinha de fazer)
     motivo: str = ""
 
 
@@ -796,14 +685,7 @@ def aplicar(
 
 
 def prefixos_de_todas_as_bibliotecas() -> list[Path] | None:
-    """Todo prefixo wine com registro, ou None se esta cópia não sabe listar.
-
-    Reusa o `camadas_vulkan.raizes_de_prefixo`, que soma os `compatdata` da
-    Steam (com biblioteca em outro disco e o mesmo `steamapps` por dois
-    caminhos já resolvidos) aos prefixos dos OUTROS lançadores. Import TARDE e nas duas
-    formas, como lá; na cópia avulsa instalada nenhuma resolve, e a resposta
-    honesta é None — não uma lista vazia disfarçada de "não achei nada".
-    """
+    """Todo prefixo wine com registro, ou None se esta cópia não sabe listar."""
     try:
         from . import camadas_vulkan as cv
     except ImportError:  # pragma: no cover - rodando como script da pasta
@@ -813,20 +695,6 @@ def prefixos_de_todas_as_bibliotecas() -> list[Path] | None:
             return None
     if not cv.sabe_enumerar():
         return None
-    # **TODO PREFIXO, E NÃO SÓ O DA STEAM — 21/09/2026,
-    # LANCADOR-AGNOSTICO-01.** Este laço percorria as pastas de compatibilidade
-    # da Steam, uma a uma; o prefixo do Heroic
-    # (`~/Games/Heroic/Prefixes/<Nome do Jogo>`) não está dentro de `steamapps`
-    # nenhuma, e o lote nunca o via.
-    #
-    # O NOME DA FUNÇÃO ANTIGA NÃO É CITADO AQUI de propósito: esta casa já
-    # pagou três vezes por um comentário que descreve o padrão proibido e VIRA
-    # a primeira ocorrência dele — a régua abaixo procura o literal no corpo.
-    #
-    # Medido na máquina dela: três prefixos da Steam traziam a marca
-    # `HEFESTOKS` no `system.reg` (24, 36 e 42 ocorrências) e o do Guardiões da
-    # Galáxia trazia **ZERO**. A háptica nativa não chegava ao jogo dela, e a
-    # leitura dela foi a certa: *"não funciona lá"*.
     return [
         prefixo
         for prefixo in cv.raizes_de_prefixo()
@@ -835,10 +703,7 @@ def prefixos_de_todas_as_bibliotecas() -> list[Path] | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI stdlib, usada pelo gancho de lançamento e pelo uninstall.
-
-    Saídas: 0 feito (ou nada a fazer) · 1 erro · 2 não sei listar · 3 ocupado.
-    """
+    """CLI stdlib, usada pelo gancho de lançamento e pelo uninstall."""
     parser = argparse.ArgumentParser(
         description="Device de áudio KS do DualSense no prefixo Wine (háptica nativa)."
     )
@@ -875,8 +740,6 @@ def main(argv: list[str] | None = None) -> int:
     if args.remover:
         controles: list[Controle] = []
     else:
-        # A LISTA TEM UM DONO (28/09/2026): os endpoints dos aparelhos e o
-        # cabo que nenhum deles serve — a mesma função que o daemon lê.
         controles = controles_do_registro(Path(args.sysfs), Path(args.udev_data))
     try:
         resultado = aplicar(Path(args.prefixo), controles=controles)

@@ -1,23 +1,4 @@
-"""Ensinar grava o nó — O-MAPA-QUE-ELA-CORRIGE-01, passo 7 (D-2609-ENSINAR-GRAVA-O-NO).
-
-Pedido dela: *«corrigir quando for 2.0 e tal. até agora não entendi pq
-identificou errado»*. O «ensinar» da página (o aparelho «fora do mapa» posto
-na mão e clicado numa entrada) guardava o que ela dizia só na MEMÓRIA da
-página: a releitura o mostrava pendente de novo. Agora o nó em que o aparelho
-está (e o ``peer`` dele, se houver) passa a ser da entrada, no disco dela — é
-a cura universal da pista que o firmware da placa não liga.
-<!-- noqa-acento: citação literal dela -->
-
-A MORDIDA: devolva à página o ``MAPA[n]`` só na memória (tire o ``if
-(doProduto()) return;`` do clique no plugue e o gesto do
-``ensinaNaEntrada``) — o clique não chega ao disco, e a releitura mostra o
-pendrive fora do mapa de novo (``test_o_clique_no_plugue_ensina_pelo_disco``).
-
-TUDO AQUI É DE MENTIRA E DE NINGUÉM: a máquina sintética de 15 entradas de
-``test_o_nome_da_entrada_e_da_posicao``, um pendrive a 5000M em ``2-3`` (o nó
-``usb2-port3``, sem ``peer`` e de entrada nenhuma) e o ``maquina.json`` no
-``tmp_path`` que o ``conftest`` desvia.
-"""
+"""Ensinar grava o nó — O-MAPA-QUE-ELA-CORRIGE-01, passo 7 (D-2609-ENSINAR-GRAVA-O-NO)."""
 
 from __future__ import annotations
 
@@ -48,10 +29,8 @@ from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     gravar_o_arquivo_de_antes,
 )
 
-#: A velocidade dos quatro barramentos: o ``usb2`` e o ``usb4`` são os rápidos.
 _BARRAMENTOS = {"usb1": 480.0, "usb2": 10000.0, "usb3": 480.0, "usb4": 10000.0}
 
-#: O pendrive: 5000M no nó ``usb2-port3``, que nenhuma entrada declara.
 _PENDRIVE = "2-3"
 
 
@@ -72,10 +51,7 @@ def _censo(*aparelhos: Aparelho) -> Censo:
 
 
 def _lidas(documento: MaquinaConfig, **plugados: str) -> tuple[NoDeEntrada, ...]:
-    """Os nós do ``/sys``: os das entradas, mais o ``usb2-port3`` do pendrive.
-
-    ``plugados`` é ``{nó: caminho do aparelho nele}``; o pendrive está no dele.
-    """
+    """Os nós do ``/sys``: os das entradas, mais o ``usb2-port3`` do pendrive."""
     dentro = {"usb2-port3": _PENDRIVE, **plugados}
     nos = [no for porta in documento.mapa.portas.values() for no in porta.nos]
     lidas = []
@@ -110,9 +86,7 @@ def _pendente(dado: dict[str, Any], caminho: str = _PENDRIVE) -> bool:
 
 @pytest.fixture()
 def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A máquina sintética no ``tmp_path``, e o barramento de mentira com o
-    pendrive: o gesto relê a máquina depois de gravar, e lê os nós do ``/sys``
-    — aqui, os de mentira."""
+    """A máquina sintética no ``tmp_path``, e o barramento de mentira com o"""
     alvo = gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
     documento = carregar_maquina()
     monkeypatch.setattr(censo_do_barramento, "ler_o_barramento",
@@ -122,16 +96,12 @@ def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return alvo
 
 
-# ── 1. o gravador ─────────────────────────────────────────────────────────
-
-
 def test_o_pendrive_ensinado_na_2_e_lido_na_2(disco: Path) -> None:
     """Pendente → ensinado na 2 → o nó é da 2, e o arranjo o lê lá."""
     com_ele = _censo(_aparelho(_PENDRIVE))
     antes = _arranjo(com_ele)
     assert _pendente(antes), "o pendrive de fora do mapa não aparece pendente"
     def amarras() -> dict[str, str | None]:
-        # o LUGAR de cada entrada é do Mapear, e o ensinar não o mexe
         return {numero: porta.lugar for numero, porta in carregar_maquina().mapa.portas.items()}
 
     antes_das_amarras = amarras()
@@ -151,10 +121,7 @@ def test_o_pendrive_ensinado_na_2_e_lido_na_2(disco: Path) -> None:
 
 
 def test_a_entrada_sem_caminho_ganha_o_do_lado_20() -> None:
-    """Uma entrada do desenho sem nada gravado: o pendrive tem ``peer`` agora
-    (``usb1-port9``), os dois nós vão juntos, e o caminho é o do lado 2.0 —
-    calculado dos nós, porque o caminho não vai ao disco desde a
-    A-ENTRADA-TEM-UM-REGISTRO-SO-01 (28/09/2026)."""
+    """Uma entrada do desenho sem nada gravado: o pendrive tem ``peer`` agora"""
     from dataclasses import replace
 
     from hefesto_dualsense4unix.integrations.lugar_declarado import Recibo
@@ -231,8 +198,6 @@ def test_o_gesto_grava_e_devolve_o_arranjo_relido(disco: Path) -> None:
         dono(None, {"entrada": "2"}, None)
 
 
-# ── 2. o clique na página chega ao disco (WebKit, pela ponte do piloto) ──────
-
 _LER = r"""
 (function(){
   const plugs = {};
@@ -256,14 +221,12 @@ def _entregar(censo: Censo) -> str:
 
 
 def test_o_clique_no_plugue_ensina_pelo_disco(disco: Path) -> None:
-    """Chip do pendrive na mão → plugue 2: a mensagem vai ao dono, e a página
-    não ensina na memória; relida do disco, o pendrive está na 2."""
+    """Chip do pendrive na mão → plugue 2: a mensagem vai ao dono, e a página"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
     from hefesto_dualsense4unix.interface import pacotes
 
-    # o hub na 3 dá região às entradas dele: o pendrive direto no PC não acende lá
     hub = Aparelho(no="/sys/3-1", nome_do_kernel="3-1", produto="Hub de prova",
                    classe="09", velocidade_mbps=480.0, e_hub=True)
     com_ele = _censo(_aparelho(_PENDRIVE), hub)

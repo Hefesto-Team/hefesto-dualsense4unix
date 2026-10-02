@@ -1,26 +1,4 @@
-"""O `uninstall.sh` leva o que a leva do rádio instalou — e só o que é dela.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026). A leva do rádio pôs na máquina
-coisas que o uninstall de antes não conhecia:
-
-- o NOME DO LUGAR no Alias de cada adaptador (ENTRADA-A-ENTRADA-02). O bloco de
-  reversão olhava só o PRIMEIRO adaptador e só tirava o prefixo «Nintendo »; o
-  rádio dela ficava chamado «Sofá» para sempre (P-11);
-- o registro dos lugares dos adaptadores (BLUEZ-UM-DONO-01), que é ESTADO e
-  sai sempre (P-6);
-- o diário do rádio da sessão e a marca do boot do kernel-watch
-  (O-DIARIO-DO-RADIO-01), que são HISTÓRICO e seguem a doutrina dos dados
-  dela: ficam por padrão, saem com --purge-config (P-2).
-
-Os blocos são recortados do `uninstall.sh` REAL e rodados num lar de mentira,
-com `sudo` e `busctl` de mentira que só anotam — nada escala privilégio e nada
-fala com o BlueZ de ninguém.
-
-A MORDIDA, medida: tirar o ramo `_e_do_hefesto` do bloco dos nomes reprova os
-três casos de lugar; tirar o `rm -f` do `lugares-dos-adaptadores.json`, o
-teste dele; trocar o `KEEP_CONFIG` da marca do boot por um `rm` incondicional,
-o teste da marca.
-"""
+"""O `uninstall.sh` leva o que a leva do rádio instalou — e só o que é dela."""
 
 from __future__ import annotations
 
@@ -52,10 +30,6 @@ def _fake(pasta: Path, nome: str, corpo: str) -> None:
     alvo.chmod(alvo.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
 
-# ---------------------------------------------------------------------------
-# 1. Os nomes dos adaptadores (P-11)
-# ---------------------------------------------------------------------------
-
 BLOCO_DOS_NOMES = _recorte(
     "# BT-NINTENDO-ACTIVE-01: reverter a link policy",
     "    # O carimbo da desinstalação, um só:",
@@ -63,13 +37,7 @@ BLOCO_DOS_NOMES = _recorte(
 
 
 def _busctl_como_o_de_verdade(alvo: Path, props: Path) -> None:
-    """O `busctl` de mentira imprime como o de verdade (`tests/unit/busctl_de_verdade.py`).
-
-    O dublê de antes devolvia o texto CRU, e com ele o uninstall que comparava
-    o texto ESCAPADO com o nome do `maquina.json` passava aqui e, na máquina de
-    verdade, deixava o lugar com acento no rádio e gravava de volta o escapado.
-    Propriedade ausente é erro, como no real.
-    """
+    """O `busctl` de mentira imprime como o de verdade (`tests/unit/busctl_de_verdade.py`)."""
     impressor = escrever_impressor(alvo.parent)
     _fake(
         alvo.parent,
@@ -91,9 +59,7 @@ def _mesa(
     documento: dict[str, Any] | None = None,
     copia: dict[str, Any] | None = None,
 ):
-    """A mesa de mentira. ``documento`` é o ``maquina.json`` inteiro (sem ele,
-    o de antes de 28/09, com os nomes em ``lugares``); ``copia``, a
-    ``maquina.json.com-os-lugares`` que a migração deixa ao lado."""
+    """A mesa de mentira. ``documento`` é o ``maquina.json`` inteiro (sem ele,"""
     fakes = tmp_path / "fakes"
     sysfs = tmp_path / "sysfs"
     props = tmp_path / "props"
@@ -118,7 +84,6 @@ def _mesa(
         (config / "maquina.json.com-os-lugares").write_text(json.dumps(copia), encoding="utf-8")
     _fake(fakes, "sudo", 'printf "SUDO:%s\\n" "$(printf "[%s]" "$@")"\nexit 0\n')
     _busctl_como_o_de_verdade(fakes / "busctl", props)
-    # Sem `hciconfig`: a metade da link policy não é o que esta régua mede.
     _fake(fakes, "hciconfig", "exit 1\n")
     script = "set -uo pipefail\n" 'log() { printf "[uninstall] %s\\n" "$*"; }\n' + BLOCO_DOS_NOMES
     ambiente = {
@@ -173,16 +138,7 @@ def test_o_nome_do_lugar_volta_ao_padrao_em_todo_adaptador(tmp_path: Path) -> No
 
 
 def test_os_nomes_do_arquivo_migrado_voltam_ao_padrao(tmp_path: Path) -> None:
-    """Depois da migração (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026) o
-    ``maquina.json`` não tem mais ``lugares``: o nome do adaptador mora em
-    ``adaptadores`` (é o que o ``bt_active_mode.sh`` projeta desde 26/09), o da
-    entrada em ``mapa.portas``, e o nome que o adaptador herdava da porta (a
-    D3) só na cópia de antes. O uninstall lia só o ``lugares``, e depois da
-    migração deixaria os três no rádio.
-
-    MORDIDA: volte a ler só o ``lugares`` do arquivo — os três nomes ficam no
-    rádio e esta régua reprova.
-    """
+    """Depois da migração (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026) o"""
     migrado = {
         "version": 1,
         "adaptadores": {"aabbcc000011": {"nome": "Meio", "ordem": 0}},
@@ -210,16 +166,7 @@ def test_os_nomes_do_arquivo_migrado_voltam_ao_padrao(tmp_path: Path) -> None:
 
 
 def test_o_nome_de_fabrica_do_bluez_com_numero_volta_ao_padrao(tmp_path: Path) -> None:
-    """O « #N» que o BlueZ põe em cada adaptador não faz do nome uma escolha dela.
-
-    Medido no ensaio do uninstall na máquina dela (23/09): o hci0 tinha o Alias
-    «Nintendo MeowSystem #1» e o Name «MeowSystem»; o hci1, «Nintendo
-    MeowSystem» e «MeowSystem #2». O plugin `hostname` do BlueZ dá ao adaptador
-    padrão o nome da máquina e aos outros «<nome> #<índice+1>» — o número muda
-    quando a ordem dos adaptadores muda, e o prefixo guardou o de antes. Tirar
-    só o prefixo deixava os dois com um Alias fixo e trocado. A MORDIDA: voltar
-    a comparar o nome inteiro reprova os dois.
-    """
+    """O « #N» que o BlueZ põe em cada adaptador não faz do nome uma escolha dela."""
     r = _mesa(
         tmp_path,
         {
@@ -235,15 +182,7 @@ def test_o_nome_de_fabrica_do_bluez_com_numero_volta_ao_padrao(tmp_path: Path) -
 
 
 def test_o_lugar_com_acento_volta_ao_padrao_e_nada_sai_escapado(tmp_path: Path) -> None:
-    """O nome dela tem acento, e o `busctl` de verdade o devolve escapado.
-
-    Conferência da INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09): lido sem
-    `--json`, «Nintendo Sofá» chegava ao uninstall como «Nintendo
-    Sof\\303\\241». O lugar não casava com o `maquina.json` (ficava no rádio),
-    e o ramo do prefixo gravava de volta «Sof\\303\\241» — o nome dela trocado
-    por barras e números. A MORDIDA: voltar a ler sem o `--json=short` reprova
-    as três linhas de baixo.
-    """
+    """O nome dela tem acento, e o `busctl` de verdade o devolve escapado."""
     r = _mesa(
         tmp_path,
         {
@@ -272,10 +211,6 @@ def test_sem_maquina_json_o_prefixo_ainda_sai(tmp_path: Path) -> None:
     r = _mesa(tmp_path, {"hci0": ("Nintendo meowsystem", "outra")}, [])
     assert _escritas(r.stdout).get("hci0") == "meowsystem", r.stdout
 
-
-# ---------------------------------------------------------------------------
-# 2. O estado do rádio na sessão (P-2, P-6)
-# ---------------------------------------------------------------------------
 
 BLOCO_DA_SESSAO = _recorte(
     "# O RÁDIO DA SESSÃO (a leva do rádio, 23/09/2026)",
@@ -334,9 +269,7 @@ def test_por_padrao_o_estado_sai_e_o_historico_fica_com_carimbo(tmp_path: Path) 
 
 
 def test_com_purge_config_o_historico_sai_inteiro(tmp_path: Path) -> None:
-    """Inclusive o diário que um uninstall ANTERIOR guardou com carimbo: a fala
-    daquele uninstall prometeu «apagar de vez: --purge-config». MORDIDA: tirar
-    o laço dos `.pre-uninstall-*` deixa os dois guardados na pasta."""
+    """Inclusive o diário que um uninstall ANTERIOR guardou com carimbo: a fala"""
     antigo = tmp_path / "estado" / "hefesto-dualsense4unix"
     antigo.mkdir(parents=True)
     for nome in (
@@ -352,11 +285,6 @@ def test_com_purge_config_o_historico_sai_inteiro(tmp_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. As peças de root, no texto que EXECUTA (a paridade confere o par inteiro)
-# ---------------------------------------------------------------------------
-
-
 def _codigo(texto: str) -> str:
     return "\n".join(
         linha for linha in texto.splitlines() if not linha.lstrip().startswith(("#", "log "))
@@ -370,20 +298,6 @@ def test_a_trava_os_carimbos_e_o_diario_do_root_saem() -> None:
     assert "sudo rmdir /run/hefesto-dualsense4unix" in codigo
     assert "/var/lib/hefesto-dualsense4unix/radio-diario.jsonl" in codigo
 
-
-# ---------------------------------------------------------------------------
-# 4. O diário do root vai JUNTO do acervo de bonds guardado (P-2.2)
-# ---------------------------------------------------------------------------
-#
-# Decisão de quem coordena: o diário do rádio do root é o histórico que explica
-# a mesa que os bonds descrevem — vai para a MESMA pasta carimbada e não se
-# apaga por padrão. O bloco é recortado do uninstall REAL e roda com o
-# /var/lib trocado por uma pasta de mentira; o `sudo` de mentira executa o
-# comando e RECUSA qualquer argumento que ainda aponte para o /var/lib de
-# verdade (a troca tem de ter pegado tudo).
-#
-# A MORDIDA, medida: tirar o `sudo mv -f "${_diarios_root[@]}"` deixa o diário
-# no caminho de antes, e o primeiro teste reprova.
 
 VAR_LIB = "/var/lib/hefesto-dualsense4unix"
 BLOCO_DOS_BONDS = _recorte(
@@ -457,11 +371,7 @@ def test_com_purge_config_bonds_e_diario_saem_juntos(tmp_path: Path) -> None:
 
 
 def test_com_purge_config_a_pasta_do_root_sai_inteira(tmp_path: Path) -> None:
-    """Com --purge-config e as regras saindo, /var/lib/hefesto-dualsense4unix
-    não fica para trás. O `rmdir` do pai rodava ANTES do diário do root sair, e
-    a pasta ficava vazia na máquina. MORDIDA: devolver o `rmdir` para dentro do
-    bloco dos bonds (antes do diário) reprova.
-    """
+    """Com --purge-config e as regras saindo, /var/lib/hefesto-dualsense4unix"""
     raiz = _acervo(tmp_path, purge=True, remove_udev=True)
     assert not raiz.exists(), sorted(p.name for p in raiz.iterdir())
 

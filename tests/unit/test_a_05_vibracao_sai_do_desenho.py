@@ -54,14 +54,8 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA = "05-vibracao.html"
 
-#: DOIS controles de mentira, que é a mesa desta cena — o desenho tem duas
-#: colunas vivas e dois lugares vazios. MACs da faixa sintética da casa: há dois
-#: portões de anonimato nesta árvore e eles não perdoam.
 UNIQS = {"p1": "aa:bb:cc:00:00:01", "p2": "aa:bb:cc:00:00:02"}
 
-#: O degrau que o daemon de mentira responde. Ele é DIFERENTE do que a cena do
-#: mockup acende no P1 (`max`) de propósito: é essa divergência que separa
-#: "a tela mudou" de "a tela continua no desenho".
 POLITICA = "balanceado"
 
 
@@ -84,11 +78,7 @@ def cravados(regua):
 
 @pytest.fixture(scope="module")
 def declarados(regua):
-    """O que o pacote MANDARIA pintar num tique, na forma que o piloto usa.
-
-    Vem do pacote de verdade, nunca de uma lista digitada aqui: uma chave nova
-    entra nesta régua sozinha, e uma que suma faz a régua acusar.
-    """
+    """O que o pacote MANDARIA pintar num tique, na forma que o piloto usa."""
     import pacotes
 
     conectados = [
@@ -104,8 +94,6 @@ def declarados(regua):
                "active_profile": "regua"},
         mesa=mesa, conectados=conectados, estados={})
     carga = pacotes.normalizar(pacotes.pacote_da_pagina(PAGINA, ctx))
-    # A CHAVE DA COLUNA É O `uniq`, e a tela endereça por `pref`. O piloto
-    # traduz; aqui a tradução é uma linha, e sem ela o `dono` nunca casa.
     de_volta = {u: p for p, u in UNIQS.items()}
     return {(de_volta.get(dono, dono), chave): valor
             for (dono, chave), valor in regua._declarados_do_pacote(carga).items()}
@@ -175,9 +163,6 @@ def _por_chave(vereditos, chave):
     return [v for v in vereditos if v.campo.chave == chave]
 
 
-# --------------------------------------------------------------------------
-# 1. os oito degraus são DADO, e saem do produto
-# --------------------------------------------------------------------------
 def test_os_oito_degraus_saem_do_produto(regua, vereditos):
     """Os botões de TODOS os lugares deixaram de mostrar o desenho.
 
@@ -199,17 +184,6 @@ def test_os_oito_degraus_saem_do_produto(regua, vereditos):
     assert len(degraus) == len(aba05.FORCA) * len(aba05.MESA), (
         f"são {len(aba05.FORCA)} degraus em {len(aba05.MESA)} lugares, e a "
         f"régua achou {len(degraus)} — o endereço `degrau` sumiu do desenho")
-    # O VEREDITO É COBRADO DE QUEM TEM CONTROLE NESTE TIQUE, e o corte não é
-    # indulgência — 07/09/2026. Este tique de mentira põe controle em `UNIQS`
-    # (p1 e p2) e deixa os outros lugares vazios; num lugar vazio o pacote manda
-    # o travessão e o desenho já nasce com o degrau apagado, então os dois lados
-    # dizem a MESMA coisa e a régua não tem como separá-los — ela chama isso de
-    # MOCKUP por construção, não por defeito. Cobrar PRODUTO ali seria exigir
-    # que a tela afirmasse uma política para um aparelho que não está na mesa.
-    #
-    # O QUE A RÉGUA GUARDA CONTINUA INTEIRO: a asserção de cima cobra o
-    # ENDEREÇO nos quatro lugares (é o que faltava, e era o defeito), e esta
-    # cobra o VEREDITO onde há dado para comparar.
     vivos = {u for u in UNIQS}
     presos = [(v.campo.dono, v.campo.quando, v.classe) for v in degraus
               if v.campo.dono in vivos and v.classe != regua.PRODUTO]
@@ -220,27 +194,7 @@ def test_os_oito_degraus_saem_do_produto(regua, vereditos):
 
 def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
                                                       declarados):
-    """A cena do mockup acende `max` no P1; o daemon diz que ele HERDA.
-
-    É esta divergência que prova que a tela SAIU do desenho — se a régua fosse
-    alimentada com o mesmo degrau que o mockup cravou, os oito ficariam iguais e
-    o verde não diria nada.
-
-    **A RÉGUA VOLTOU A MEDIR O DEGRAU ACESO — 17/09/2026, VIBRA-ACESA-01.**
-
-    De 04/09 a 17/09 ela mediu o APAGÃO: a decisão [05] dela mandava a coluna
-    sem ajuste próprio não acender nada *"e passar a apontar para essa linha"*,
-    a linha de mesa. A linha foi apagada em 05/09 por outra decisão dela, e o
-    vazio ficou sem destino — a tela parou de dizer qual força estava valendo.
-    Ela leu isso como defeito: *"o botão não tá ativo"*.
-
-    HOJE A COLUNA HERDADA ACENDE o degrau em vigor, com a marca
-    `degrau-herdado` dizendo que ele veio de fora. **E é uma divergência mais
-    forte que a de ontem, não mais fraca:** o mockup crava `max` no P1 e a tela
-    viva acende OUTRO degrau — o do daemon. Um aceso contra um aceso diferente
-    prova que a tela saiu do desenho; um aceso contra nenhum aceso também
-    provava, mas provava junto uma decisão que já tinha caducado.
-    """
+    """A cena do mockup acende `max` no P1; o daemon diz que ele HERDA."""
     cena = {(c.dono, c.quando) for c in cravados
             if c.chave == "degrau" and c.valor}
     assert ("p1", "max") in cena, (
@@ -269,40 +223,13 @@ def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
         "05/09/2026 por decisão dela")
 
 
-# --------------------------------------------------------------------------
-# 2. os oito rótulos, e SÓ eles
-# --------------------------------------------------------------------------
-#: Os endereços marcados `data-hef-rotulo` nesta aba, e por quê. A lista é
-#: EXAUSTIVA de propósito: a categoria dela só não vira esconderijo enquanto
-#: alguém tiver de escrever aqui o nome de cada marca nova.
-#:
-#: O `lado` SAIU DAQUI EM 14/09/2026, e a saída é o desfecho que a própria
-#: nota do desenho prometia: *"quando ela ganhar fonte, o elemento troca a
-#: marca pelo alvo `classe`"* (`aba05`, linha do interruptor de punho). Ele
-#: ganhou — `data-campo="lado-<sigla>"` com alvo `classe`, pintado pela barra
-#: do motor —, e um endereço que o produto PINTA não pode carregar a marca de
-#: rótulo: o veredito `ROTULO` vem antes de todos os outros ramos do
-#: `_classificar` e apagaria da medição justamente o dado novo.
-#:
-#: O `testar` SAIU PELO MESMO CAMINHO EM 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01):
-#: desde 07/09 o «Testar» é ESTADO (`a05_vibracao.em_teste`), e ele passou a
-#: acender pelo alvo `classe` (`data-campo="em-teste"`), com o `aria-pressed`
-#: junto. O texto continua o que ela decidiu em 30/08; o que a régua mede no
-#: elemento agora é o estado, como nos degraus e nos punhos. Fica o «Parar».
 ROTULOS = {
     "parar": "o texto do botão, decidido por ela em 30/08 para NÃO mudar",
 }
 
 
 def test_os_oito_rotulos_estao_declarados(regua, vereditos):
-    """Rótulo declarado sai da conta — e a marca é EXIGIDA, nunca inferida.
-
-    A CONTA É POR LUGAR desde 07/09/2026, e não por coluna viva: com a fusão dos
-    dois ramos de coluna (`aba05._coluna`) os quatro lugares trazem os mesmos
-    elementos. É UMA marca em cada um — o «Parar» — desde que o «Testar» ganhou
-    o alvo `classe` em 28/09/2026; os dois punhos (`lado`) saíram em 14/09. O
-    nome do teste guarda o número de quando ele nasceu.
-    """
+    """Rótulo declarado sai da conta — e a marca é EXIGIDA, nunca inferida."""
     from hefesto_dualsense4unix.interface import aba05
     esperado = len(ROTULOS) * len(aba05.MESA)
     marcados = [v for v in vereditos if v.classe == regua.ROTULO]
@@ -316,13 +243,7 @@ def test_os_oito_rotulos_estao_declarados(regua, vereditos):
 
 
 def test_a_marca_de_rotulo_nao_alcanca_dado(regua, cravados):
-    """A PARCÍMONIA, e ela é o que separa a categoria do esconderijo.
-
-    Um `data-hef-rotulo` num campo que o produto PINTA apagaria o campo da
-    medição para sempre — o veredito `ROTULO` vem antes de todos os outros
-    ramos do `_classificar`. Então nenhum elemento marcado pode ter alvo de
-    pintura, e nenhum pode ser endereço que o pacote emita.
-    """
+    """A PARCÍMONIA, e ela é o que separa a categoria do esconderijo."""
     import pacotes
 
     marcados = [c for c in cravados if c.rotulo]
@@ -341,22 +262,8 @@ def test_a_marca_de_rotulo_nao_alcanca_dado(regua, cravados):
         "das duas afirmações está errada")
 
 
-# --------------------------------------------------------------------------
-# 3. o `Máx` — decisão 11 dela
-# --------------------------------------------------------------------------
 def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
-    """*"esconder RESERVANDO o espaço (`visibility:hidden`)"* — decisão dela.
-
-    Duas metades, e as duas têm de valer: a palavra está SEMPRE no HTML de
-    TODOS os lugares (senão não há o que esconder), e o CSS a esconde por
-    `visibility`, nunca por `display:none` — que tiraria o elemento do fluxo e
-    faria o número ao lado pular a cada mudança de degrau.
-
-    "TODOS OS LUGARES" E NÃO "AS DUAS COLUNAS VIVAS" — 07/09/2026, com a fusão
-    dos dois ramos de coluna (`aba05._coluna`). O lugar vazio nasce com o `Máx`
-    apagado e com o endereço posto: no instante em que o controle chega, o
-    piloto acende ou não pelo alvo `classe`, sem regerar HTML nenhum.
-    """
+    """*"esconder RESERVANDO o espaço (`visibility:hidden`)"* — decisão dela."""
     import onde
 
     from hefesto_dualsense4unix.interface import aba05
@@ -395,9 +302,6 @@ def test_o_teto_do_multiplicador_sai_do_produto():
         "ninguém mediu")
 
 
-# --------------------------------------------------------------------------
-# 4. o que AINDA falta, e ele fica cobrado
-# --------------------------------------------------------------------------
 def test_as_quatro_molduras_continuam_cobradas(regua, vereditos):
     """As quatro molduras do SVG não viraram rótulo — e não podiam virar.
 

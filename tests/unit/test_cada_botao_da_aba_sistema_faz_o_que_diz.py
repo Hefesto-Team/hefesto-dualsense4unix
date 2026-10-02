@@ -50,19 +50,13 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 PAGINA = "09-sistema.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / PAGINA
 
-#: OS CINCO QUE ARMAM, e os três cuja pergunta é o `title` publicado.
-#: 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01): o «Parar» virou o botão
-#: `parar-ou-retomar`, e o «Refazer a fixação do Proton» virou o ligável
-#: «Fixar Proton», que age num clique (desligar desfaz) — saiu dos que armam.
 ARMAM = ("parar-ou-retomar", "restaurar-de-fabrica",
          "refazer-consertos", "aplicar-aos-jogos")
 PERGUNTA_E_O_TITLE = ("parar-ou-retomar", "restaurar-de-fabrica")
 
-#: OS CINCO QUE RECUSAM na tela viva, cada um pelo motivo do §V.
 RECUSAS = ("atualizar", "corrigir-modo", "fixar-proton",
            "aplicar-aos-jogos")
 
-#: O QUE A PINTURA DE PROVA PÕE NO PAINEL quando ninguém pediu nada.
 REPOUSO = "repouso da régua"
 
 
@@ -87,8 +81,6 @@ class JanelaDeMentira:
         return False
 
     def _find_repo_file(self, relpath: str) -> pathlib.Path:
-        # UM CAMINHO QUE NÃO EXISTE, de propósito: se o dublê do `subprocess`
-        # cair um dia, o `bash` recusa o arquivo em vez de rodar o conserto.
         return pathlib.Path("/nao-existe") / relpath
 
     def _invoke_systemctl(self, args, capture=False, check=False):
@@ -151,8 +143,6 @@ def pin(monkeypatch, tmp_path):
     monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina",
                         lambda: estado["pino"])
     monkeypatch.setattr(proton_pin, "steam_running", lambda: estado["steam"])
-    # O REGISTRO DA TRAVA TAMBÉM É DE MENTIRA (25/09/2026): o ligável «Fixar
-    # Proton» lê de lá se está ligado, e a régua não pode ler o disco de quem roda.
     monkeypatch.setattr(proton_pin, "default_lock_state_path",
                         lambda *a, **k: tmp_path / "proton-lock-state.json")
     monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
@@ -203,17 +193,8 @@ def _vencer(mod: Any) -> None:
     mod._ARMADO["ate"] -= mod.segundos_para_confirmar() + 1
 
 
-# ---------------------------------------------------------------------------
-# 1. o painel em repouso não pede o diário
-# ---------------------------------------------------------------------------
 def test_o_painel_em_repouso_nao_pede_o_diario(monkeypatch):
-    """Sem `-n 0`, o `status` emenda as últimas linhas do diário do daemon.
-
-    Medido pela triagem de 13/09: essas linhas trazem o `uniq=` do controle, e
-    o painel em repouso as mostrava sem ninguém clicar.
-
-    MORDIDA: tire o `"-n", "0"` de `_systemctl_status_text`.
-    """
+    """Sem `-n 0`, o `status` emenda as últimas linhas do diário do daemon."""
     from hefesto_dualsense4unix.app.actions import daemon_actions as da
 
     pedidos: list[list[str]] = []
@@ -233,32 +214,17 @@ def test_o_painel_em_repouso_nao_pede_o_diario(monkeypatch):
         f"o `status` do repouso pede o diário junto: {args}")
 
 
-# ---------------------------------------------------------------------------
-# 2. a chave do clique que só arma
-# ---------------------------------------------------------------------------
 def test_a_chave_do_clique_que_so_arma_e_a_do_piloto(a09):
-    """As duas pontas do contrato com a FRASES-E-DICAS-01 dizem a mesma palavra.
-
-    MORDIDA: troque `ARMOU = "armou"` por outra palavra. Reprova aqui, e na tela
-    os cinco que armam voltam a piscar verde.
-    """
+    """As duas pontas do contrato com a FRASES-E-DICAS-01 dizem a mesma palavra."""
     pytest.importorskip("gi", reason="o piloto importa o GTK")
     import hefesto_vivo as hv
 
     assert a09.ARMOU == hv.CHAVE_DO_CLIQUE_QUE_SO_ARMOU
 
 
-# ---------------------------------------------------------------------------
-# 3. o clique 1 pergunta, e o clique 2 limpa
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("nome", ARMAM)
 def test_o_clique_1_arma_pergunta_e_nao_age(a09, ctx, janela, armaveis, nome):
-    """O clique 1 devolve `armou`, a pergunta vai ao painel, e nada sai.
-
-    MORDIDA: faça o clique 1 do `desligar` devolver só os rótulos
-    (`{"blocos": blocos_dos_botoes(True)}`). Reprova no caso `desligar`: sem
-    `armou` e sem pergunta — o que o estudo mediu.
-    """
+    """O clique 1 devolve `armou`, a pergunta vai ao painel, e nada sai."""
     carga = _gesto(nome)(ctx, _clique(a09._rotulo_do_desenho(nome)), None)
 
     assert carga.get(a09.ARMOU) is True, f"o clique 1 do `{nome}` não disse que só armou"
@@ -277,10 +243,7 @@ def test_o_clique_1_arma_pergunta_e_nao_age(a09, ctx, janela, armaveis, nome):
 
 
 def test_o_clique_2_limpa_o_painel_antes_de_agir(a09, ctx, janela):
-    """A pergunta não pode ficar dizendo «clique de novo» sobre um ato já dado.
-
-    MORDIDA: tire o `_limpar_o_painel()` do ramo confirmado do `desligar`.
-    """
+    """A pergunta não pode ficar dizendo «clique de novo» sobre um ato já dado."""
     a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
     a09.desligar(ctx, _clique(a09.CONFIRMA), None)
 
@@ -289,14 +252,8 @@ def test_o_clique_2_limpa_o_painel_antes_de_agir(a09, ctx, janela):
     assert a09._no_painel(REPOUSO) == REPOUSO
 
 
-# ---------------------------------------------------------------------------
-# 4. a pergunta vencida sai no tique seguinte
-# ---------------------------------------------------------------------------
 def test_a_pergunta_vencida_sai_no_tique_seguinte(a09, ctx):
-    """Aos 20 s o botão volta ao rótulo do desenho — e o painel volta junto.
-
-    MORDIDA: tire o `_a_pergunta_venceu()` de `_no_painel`.
-    """
+    """Aos 20 s o botão volta ao rótulo do desenho — e o painel volta junto."""
     carga = a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
     pergunta = carga["mesa"][a09.REGISTRO]
     assert a09._no_painel(REPOUSO) == pergunta
@@ -318,14 +275,6 @@ def test_a_recusa_de_outro_botao_tira_a_pergunta_no_tique(a09, ctx, pin):
     assert a09._no_painel(REPOUSO) == REPOUSO
 
 
-# (O censo das camadas que ficava quando a pergunta vencia SAIU em 25/09/2026:
-# o «Tirar a sobreposição Vulkan» de dois tempos virou o ligável «Corrigir
-# Vulkan», que age num clique e não arma pergunta.)
-
-
-# ---------------------------------------------------------------------------
-# 5. o Proton recusa no clique 1
-# ---------------------------------------------------------------------------
 def test_o_proton_com_a_steam_aberta_recusa_no_clique_1(a09, ctx, pin):
     """Na máquina dela a Steam fica aberta: o botão armava calado e recusava calado.
 
@@ -356,19 +305,8 @@ def test_o_proton_sem_o_pino_no_disco_recusa_no_clique_1_com_a_frase_dele(a09, c
     assert pin["travou"] == []
 
 
-# (O «confere a Steam de novo no clique 2» SAIU em 25/09/2026: o ligável
-# «Fixar Proton» não tem clique 2 — ele confere a Steam no único clique.)
-
-
 def test_o_proton_no_clique_2_trava_todo_jogo(a09, ctx, pin):
-    """A ordem dela de 17/09 chega ao botão — INSTALL-UNIVERSAL, 18/09/2026.
-
-    O install, quando adia a trava, manda usar este botão; e o botão travava
-    com a guarda `preservado` que a ordem revogou (o terminal dizia
-    `--lock --todos`, o botão fazia outra coisa).
-
-    MORDIDA: volte `travar(todos=True)` para `travar()` em `fixar_proton`.
-    """
+    """A ordem dela de 17/09 chega ao botão — INSTALL-UNIVERSAL, 18/09/2026."""
     with contextlib.redirect_stderr(io.StringIO()):
         a09.fixar_proton(ctx, {}, None)
 
@@ -396,9 +334,6 @@ def test_o_proton_sem_o_conf_recusa_em_vez_de_rebentar(a09, ctx, pin, tmp_path, 
     assert pin["travou"] == []
 
 
-# ---------------------------------------------------------------------------
-# 6. os consertos rodam só o vigia da Steam
-# ---------------------------------------------------------------------------
 def test_os_consertos_so_rodam_o_vigia_da_steam(a09, ctx, monkeypatch):
     """O `--install` do WirePlumber é o gesto contrário ao de ligar o mic.
 
@@ -438,9 +373,6 @@ def test_o_title_dos_consertos_nao_promete_o_que_nao_faz():
         assert promessa not in dica, dica
 
 
-# ---------------------------------------------------------------------------
-# 7. o «Ver os plugins» não está em página nenhuma
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("publicado", [True, False], ids=["publicado", "bancada"])
 def test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma(a09, publicado):
     """D-OS-PLUGINS-APARECEM-ONDE-AGEM, dela, em `docs/data/decisoes-dela.csv`.
@@ -452,16 +384,9 @@ def test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma(a09, publicado):
     corpo = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
     assert 'data-gesto="ver-plugins"' not in corpo
     assert "Ver os plugins" not in corpo
-    # O «Retomar» deixou de ser botão cinza em 25/09/2026 (virou uma cara do
-    # botão do serviço).
     assert a09.BOTOES_CINZAS == ("reiniciar",)
 
 
-# ---------------------------------------------------------------------------
-# 8. NA TELA VIVA — o piloto do produto, oculto
-# ---------------------------------------------------------------------------
-#: A ORDEM DO ROTEIRO. As recusas vêm antes das perguntas, e o `vence` empurra
-#: o relógio do consentimento que o último clique armou.
 ROTEIRO = (
     ("recusa", "atualizar"), ("recusa", "corrigir-modo"),
     ("steam", "aberta"), ("recusa", "fixar-proton"), ("steam", "fechada"),
@@ -477,8 +402,6 @@ TETO_S = 10.0
 TETO_DA_PAGINA_S = 30.0
 TETO_DO_ROTEIRO_S = 180.0
 
-#: QUANTO DA FRASE DA RECUSA SE PROCURA NA TELA: o começo basta, e escapa das
-#: quebras que uma dica flutuante faria.
 TRECHO = 40
 
 VIGIAR_E_CLICAR = r"""
@@ -573,9 +496,6 @@ def na_tela(tmp_path_factory) -> dict:
     from hefesto_dualsense4unix.integrations import proton_pin
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-    # O PACOTE QUE O PILOTO ATENDE é o do registro dele — o import pelo nome da
-    # pasta (`pacotes`) é outro objeto de módulo, e dublar aquele não mudaria o
-    # clique.
     a9 = sys.modules[hv.pacotes.gesto_da_pagina(PAGINA, "atualizar").__module__]
 
     berco = tmp_path_factory.mktemp("sistema-botoes")
@@ -615,8 +535,6 @@ def na_tela(tmp_path_factory) -> dict:
         setattr(dono, nome, valor)
     a9._JANELA_ANTIGA[:] = [JanelaDeMentira()]
     _limpar(a9)
-    # A PINTURA DE PROVA: o painel pelo mesmo `_no_painel` do pacote, e os
-    # rótulos pelo mesmo `blocos_dos_botoes`. O resto do pacote lê a máquina.
     hv.pacotes.PACOTES[PAGINA] = lambda _ctx: {
         a9.REGISTRO: a9._no_painel(REPOUSO), "blocos": a9.blocos_dos_botoes(True)}
 

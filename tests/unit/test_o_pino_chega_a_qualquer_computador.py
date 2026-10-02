@@ -1,29 +1,4 @@
-"""O PINO CHEGA A QUALQUER COMPUTADOR — INSTALL-UNIVERSAL, grupo C (18/09/2026).
-
-A ordem dela, citada como ela escreveu:
-*"garantir que o install que todas as correções que fizemos nos
-ultimos dois dias possam seguir  <!-- noqa-acento: citação literal dela -->
-e servir para cada computador não só o meu. ele precisa funcionar como
-produto."*
-
-Três lacunas do Proton pinado, confirmadas por auditor e cético, e cada uma
-funcionava na máquina DELA por acaso de ordem:
-
-1. **acdb2ea1b** — numa máquina SEM Steam nativa, o `--ensure` do install
-   baixava 563 MB e criava `~/.steam/steam` como diretório real; o lançador
-   Debian adota essa pasta como casa da Steam, e o produto inteiro passa a
-   mirar uma raiz que a Steam não usa. Disco cheio e python sem `filter=` no
-   tarfile saíam como *"checksum NÃO bateu"*.
-2. **692cf5343** — a trava `--todos` só acontecia no 11c e só com a Steam
-   fechada; o install reabria a Steam antes dele, e nada tentava de novo. O
-   botão da aba Sistema travava sem `todos`. E "todo jogo" incluía título com
-   versão Linux nativa.
-3. **7b27bb58d** — a entrada ÓRFÃ só era alcançada pelo 11c, e uma órfã de
-   jogo nativo voltava forçada no Proton.
-
-NADA AQUI TOCA A MÁQUINA: todo HOME é `tmp_path`, a Steam é dublê, o download
-é uma cópia local e o `appinfo.vdf` é fabricado byte a byte.
-"""
+"""O PINO CHEGA A QUALQUER COMPUTADOR — INSTALL-UNIVERSAL, grupo C (18/09/2026)."""
 from __future__ import annotations
 
 import ast
@@ -52,9 +27,6 @@ PINO = "GE-Proton11-7-x86_64"
 _TAB = "\t"
 
 
-# ---------------------------------------------------------------------------
-# bancada
-# ---------------------------------------------------------------------------
 def _tarball(onde: Path, nome: str = PINO) -> Path:
     """Tarball mínimo com a forma do release (topo = <nome>/)."""
     src = onde / "tar-src" / nome
@@ -100,11 +72,7 @@ def _config_vdf(entradas: dict[str, str] | None) -> str:
 
 
 def _appinfo(apps: dict[str, str | None], formato: int = 29) -> bytes:
-    """Um `appcache/appinfo.vdf` fabricado no formato binário da Steam.
-
-    `None` = o app está no cache mas não declara `oslist`. A v29 guarda as
-    chaves numa tabela de strings no fim; a v28, inline.
-    """
+    """Um `appcache/appinfo.vdf` fabricado no formato binário da Steam."""
     tabela: list[str] = []
 
     def chave(nome: str) -> bytes:
@@ -192,17 +160,11 @@ def download_local(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
     return estado
 
 
-# ---------------------------------------------------------------------------
-# 1 — acdb2ea1b: sem Steam nativa, o `--ensure` não cria a casa da Steam
-# ---------------------------------------------------------------------------
 class TestSemSteamOEnsureNaoEnvenena:
     def test_sem_steam_baixa_so_para_o_cache_e_nao_cria_a_raiz(
         self, lar: Path, download_local: dict, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """A LACUNA CENTRAL. MORDIDA: tire a consulta a `steam_root_ou_recusa`
-        do `_cmd_ensure`. A segunda muralha (a extração não cria a raiz) ainda
-        seguraria o `~/.steam` — e é por isso que a régua cobra também o CAMINHO:
-        sem Steam, o ensure nem chega a tentar extrair."""
+        """A LACUNA CENTRAL. MORDIDA: tire a consulta a `steam_root_ou_recusa`"""
         cache = lar / ".cache/hefesto-dualsense4unix/proton"
         rc = pp.main(["--ensure", "--conf", str(download_local["conf"]),
                       "--cache-dir", str(cache)])
@@ -218,12 +180,7 @@ class TestSemSteamOEnsureNaoEnvenena:
     def test_steam_na_caixa_nao_baixa_nada(
         self, lar: Path, download_local: dict
     ) -> None:
-        """Flatpak/Snap: o Proton do host nunca serve lá dentro — 563 MB à toa.
-
-        E o código é PRÓPRIO (7), não o 4 do tarball no cache: o install lê o 4
-        prometendo que o vigia extrai do cache, e aqui não há cache nenhum.
-        MORDIDA: devolva o `RC_ADIADO` a este ramo do `_cmd_ensure`.
-        """
+        """Flatpak/Snap: o Proton do host nunca serve lá dentro — 563 MB à toa."""
         (lar / ".var/app/com.valvesoftware.Steam/.steam/steam").mkdir(parents=True)
         cache = lar / "cache"
         rc = pp.main(["--ensure", "--conf", str(download_local["conf"]),
@@ -259,10 +216,7 @@ class TestSemSteamOEnsureNaoEnvenena:
     def test_a_maquina_ja_envenenada_ouve_o_gesto_no_install(
         self, lar: Path, download_local: dict, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Reinstalar não tira a sobra; o install passa a DIZER onde ela está.
-
-        MORDIDA: tire o `_avisar_da_raiz_envenenada()` do `_cmd_ensure`.
-        """
+        """Reinstalar não tira a sobra; o install passa a DIZER onde ela está."""
         sobra = lar / ".steam/steam/compatibilitytools.d" / PINO
         sobra.mkdir(parents=True)
         (sobra / pp.MANIFEST_BASENAME).write_text(
@@ -311,8 +265,7 @@ class TestAExtracaoNuncaCriaARaiz:
     def test_quem_chama_a_extracao_direto_tambem_nao_cria_a_raiz(
         self, tmp_path: Path
     ) -> None:
-        """A muralha mora NA função, não só no ensure. MORDIDA: devolva o
-        `mkdir(parents=True)` e tire o `FileNotFoundError` da extração."""
+        """A muralha mora NA função, não só no ensure. MORDIDA: devolva o"""
         compat = tmp_path / "nao-existe" / "compatibilitytools.d"
         with pytest.raises(FileNotFoundError):
             pp._extract_verified_tarball(_tarball(tmp_path), PINO, compat)
@@ -320,9 +273,7 @@ class TestAExtracaoNuncaCriaARaiz:
 
 
 def _python_sem_filtro(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O python anterior ao 3.10.12/3.11.4: sem `data_filter`, e o
-    `extractall(filter=)` é TypeError. O dublê extrai como aquele python
-    extraía — sem filtro nenhum."""
+    """O python anterior ao 3.10.12/3.11.4: sem `data_filter`, e o"""
     monkeypatch.delattr(tarfile, "data_filter", raising=False)
     original = tarfile.TarFile.extractall
 
@@ -351,8 +302,6 @@ class TestOQueNaoEChecksumNaoSeDizChecksum:
 
         assert rc == pp.RC_EXTRACAO_FALHOU
         assert rc != pp.RC_CHECKSUM
-        # E o estado vem do ensure, não do `except OSError` de reserva do main:
-        # quem chama a função (o `--manter`, a GUI) também lê o desfecho certo.
         conf = pp.parse_pin_conf(download_local["conf"].read_text(encoding="utf-8"))
         r = pp.ensure_pinned_proton(
             conf, compat_dir=lar / ".steam/steam/compatibilitytools.d",
@@ -363,11 +312,7 @@ class TestOQueNaoEChecksumNaoSeDizChecksum:
     def test_python_sem_filter_no_tarfile_extrai(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Python anterior ao 3.10.12/3.11.4: `extractall(filter=)` é TypeError.
-
-        O dublê reproduz esse python: tira `tarfile.data_filter` e faz o
-        `extractall` recusar o argumento. MORDIDA: tire o `hasattr` da extração.
-        """
+        """Python anterior ao 3.10.12/3.11.4: `extractall(filter=)` é TypeError."""
         _python_sem_filtro(monkeypatch)
         tarball = _tarball(tmp_path)
         compat = tmp_path / "compat"
@@ -391,9 +336,7 @@ class TestOQueNaoEChecksumNaoSeDizChecksum:
     def test_sem_filtro_a_extracao_confere_e_nada_sai_do_destino(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A régua de cima chama a conferência direto; esta prova que a
-        extração a chama. MORDIDA: tire o `_conferir_nomes_do_tar(tar)` de
-        `_extract_verified_tarball` — o `../fora.txt` cai ao lado do pino."""
+        """A régua de cima chama a conferência direto; esta prova que a"""
         _python_sem_filtro(monkeypatch)
         ruim = tmp_path / "ruim.tar.gz"
         with tarfile.open(ruim, "w:gz") as tar:
@@ -418,8 +361,7 @@ class TestOQueNaoEChecksumNaoSeDizChecksum:
     def test_sem_filtro_o_link_que_aponta_para_fora_e_recusado(
         self, tmp_path: Path, tipo: bytes, alvo: str
     ) -> None:
-        """A outra metade do filtro "tar": o nome é inocente, o alvo não.
-        MORDIDA: tire a conferência do `linkname`."""
+        """A outra metade do filtro "tar": o nome é inocente, o alvo não."""
         ruim = tmp_path / "ruim.tar.gz"
         with tarfile.open(ruim, "w:gz") as tar:
             info = tarfile.TarInfo(f"{PINO}/files/um-link")
@@ -432,10 +374,7 @@ class TestOQueNaoEChecksumNaoSeDizChecksum:
     def test_sem_filtro_o_link_interno_que_sobe_cinco_niveis_passa(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O NEGATIVO, e ele é o GE-Proton de verdade: o `start.exe` do
-        `default_pfx` sobe cinco níveis e cai dentro de `files/lib/wine/`.
-        Recusar todo `..` no alvo quebraria a extração no python antigo.
-        MORDIDA: troque a conta pela pasta do link por `'..' in parts`."""
+        """O NEGATIVO, e ele é o GE-Proton de verdade: o `start.exe` do"""
         _python_sem_filtro(monkeypatch)
         tarball = tmp_path / "ge.tar.gz"
         pfx = f"{PINO}/files/share/default_pfx/drive_c/windows/system32"
@@ -460,9 +399,6 @@ class TestOQueNaoEChecksumNaoSeDizChecksum:
         assert extraido.resolve() == (compat / PINO / "files/lib/wine/start.exe").resolve()
 
 
-# ---------------------------------------------------------------------------
-# 1b — o install e o doctor falam a língua nova
-# ---------------------------------------------------------------------------
 def _bloco(inicio: str, fim: str) -> str:
     return INSTALL[INSTALL.index(inicio): INSTALL.index(fim, INSTALL.index(inicio))]
 
@@ -486,11 +422,7 @@ class TestOInstallLeCadaCodigo:
         assert "vigia da Steam extrai do cache" in ramo_4
 
     def test_a_trava_do_11c_so_roda_com_o_pino_pronto(self) -> None:
-        """A guarda do install (B9 do validador), com régua agora.
-
-        MORDIDA: tire o ramo `elif [[ "${_pp_pronto}" -ne 1 ]]` do 11c, ou
-        ponha o `_pp_pronto=1` em outro ramo do 11a que não o `0)`.
-        """
+        """A guarda do install (B9 do validador), com régua agora."""
         bloco = _bloco('step "11c"', 'step "11d"')
         guarda = bloco.index('elif [[ "${_pp_pronto}" -ne 1 ]]; then')
         trava = bloco.index('python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?')
@@ -500,12 +432,7 @@ class TestOInstallLeCadaCodigo:
         assert "_pp_pronto=1" in bloco_a[bloco_a.index("        0)"): bloco_a.index("        1)")]
 
     def test_o_vigia_estaciona_durante_a_janela_e_volta_no_fim(self) -> None:
-        """O vigia escreve os MESMOS arquivos que o 11 ao 11c, pelo mesmo
-        `.hefesto-tmp`: rodando junto, um perde a edição do outro.
-
-        MORDIDA: tire o `stop` do 11a-bis, devolva o `enable --now` ao 11, ou
-        tire a chamada que o religa depois do 11d.
-        """
+        """O vigia escreve os MESMOS arquivos que o 11 ao 11c, pelo mesmo"""
         unidades = "hefesto-steam-input-guard.path hefesto-steam-input-guard.timer"
         assert f"enable --now {unidades}" not in INSTALL
         ordem = [
@@ -555,11 +482,7 @@ class TestOInstallLeCadaCodigo:
 def test_steam_que_nunca_entrou_numa_conta_adia_e_nao_falha(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Máquina recém-montada: Steam instalada, sem `config.vdf` ainda.
-
-    O install dizia *"trava do Proton falhou"*. MORDIDA: tire o ramo do
-    `config_vdf_ausente` de `_travar_e_contar` e isto volta a 1.
-    """
+    """Máquina recém-montada: Steam instalada, sem `config.vdf` ainda."""
     monkeypatch.setattr(pp, "steam_running", lambda: False)
     monkeypatch.setattr(pp, "steam_game_running", lambda: False)
     tarball = _tarball(tmp_path)
@@ -594,9 +517,6 @@ class TestOFecharSteamDizOQueFez:
         assert slo.main(["--fechar-steam"]) == slo.RC_STEAM_NAO_FECHOU
 
 
-# ---------------------------------------------------------------------------
-# 2 — 692cf5343: o vigia trava quando a Steam sai, e "todo jogo" tem classe
-# ---------------------------------------------------------------------------
 class TestOVigiaTravaSozinho:
     def _execstarts(self) -> list[str]:
         return [
@@ -606,12 +526,7 @@ class TestOVigiaTravaSozinho:
         ]
 
     def test_o_terceiro_passo_do_vigia_e_o_manter(self) -> None:
-        """MORDIDA: tire a linha do `--manter` da unidade.
-
-        23/09/2026: eram três passos; o quarto, as opções de inicialização por
-        jogo (5075c2bb6, 21/09), entrou depois do pino e a régua ficou contando
-        o mundo de antes.
-        """
+        """MORDIDA: tire a linha do `--manter` da unidade."""
         execs = self._execstarts()
         assert len(execs) == 4, execs
         assert execs[2] == "-/usr/bin/env python3 __PROTON_PIN__ --manter"
@@ -619,7 +534,6 @@ class TestOVigiaTravaSozinho:
 
     def test_o_install_substitui_o_placeholder(self) -> None:
         assert "s#__PROTON_PIN__#${PROTON_PIN_PY}#g" in INSTALL
-        # E o caminho já existe quando o passo 11 renderiza a unidade.
         assert INSTALL.index('PROTON_PIN_PY="${ROOT_DIR}') < INSTALL.index("s#__PROTON_PIN__#")
 
     def test_com_no_proton_pin_so_a_linha_do_pino_sai(self) -> None:
@@ -633,8 +547,7 @@ class TestOVigiaTravaSozinho:
         assert len(execs) == 3 and all("__PROTON_PIN__" not in e for e in execs), execs
 
     def test_com_keep_steam_input_so_a_linha_do_steam_input_sai(self) -> None:
-        """`--keep-steam-input` é opt-out SÓ do PSSupport: o atalho e o pino
-        continuam sendo repostos. MORDIDA: tire o `__SCRIPT__/d` do install."""
+        """`--keep-steam-input` é opt-out SÓ do PSSupport: o atalho e o pino"""
         assert "'/^ExecStart=.*__SCRIPT__/d'" in INSTALL
 
         def _execs(*apagar: str) -> list[str]:
@@ -657,17 +570,7 @@ class TestOVigiaTravaSozinho:
     def test_o_trecho_do_install_renderiza_a_unidade_de_cada_escolha(
         self, tmp_path: Path, keep: int, no_pin: int, esperado: int
     ) -> None:
-        """Roda em bash o TRECHO REAL do install, de `_guard_linhas_que_saem=()`
-        ao `rm` do temporário, e conta os `ExecStart` da unidade que sai.
-
-        Com o vigia fora do `else` do opt-out, a segurança de quem usa
-        `--keep-steam-input` passou a depender de um condicional — antes vinha
-        da estrutura: a unidade nem era instalada. As réguas vizinhas só
-        conferem que a expressão `sed` EXISTE no install. MORDIDA, nos dois
-        sentidos: troque o condicional do `__SCRIPT__/d` por `[[ 0 -eq 1 ]]`
-        (o vigia desliga o Steam Input de quem disse não, a cada meia hora) e
-        por `true` (toda instalação padrão perde o self-heal do Steam Input).
-        """
+        """Roda em bash o TRECHO REAL do install, de `_guard_linhas_que_saem=()`"""
         inicio = INSTALL.index("    _guard_linhas_que_saem=()\n")
         fim = INSTALL.index('    rm -f "${_guard_tmp}"\n', inicio)
         trecho = INSTALL[inicio:fim] + '    rm -f "${_guard_tmp}"\n'
@@ -699,9 +602,7 @@ class TestOVigiaTravaSozinho:
         assert not any(re.search(r"__[A-Z_]+__", e) for e in execs), execs
 
     def test_o_vigia_nao_mora_dentro_do_opt_out_do_pssupport(self) -> None:
-        """Com o vigia dentro do `else` do `--keep-steam-input`, a máquina que
-        instalou antes de existir Steam nunca extraía o pino do cache.
-        MORDIDA: devolva a instalação das unidades para dentro daquele `if`."""
+        """Com o vigia dentro do `else` do `--keep-steam-input`, a máquina que"""
         bloco = _bloco('step "11/11"', 'step "11b"')
         opt_out = bloco.index('if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then')
         fim_do_opt_out = bloco.index("\nfi\n", opt_out)
@@ -711,8 +612,7 @@ class TestOVigiaTravaSozinho:
     def test_com_a_steam_aberta_o_manter_nem_extrai(
         self, lar: Path, download_local: dict, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O `.timer` de meia hora descompactava ~1,5 GB no meio da partida.
-        MORDIDA: tire o `_steam_gate()` que vem antes do ensure no `--manter`."""
+        """O `.timer` de meia hora descompactava ~1,5 GB no meio da partida."""
         raiz = _steam_de_verdade(lar)
         cache = lar / "cache"
         cache.mkdir()
@@ -728,10 +628,7 @@ class TestOVigiaTravaSozinho:
     def test_sem_cache_o_manter_nao_manda_fechar_a_steam(
         self, lar: Path, download_local: dict, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem tarball no cache, o `--fix` mandava fechar a Steam (rc 3) e, na
-        volta, dizia que o tarball não estava lá (rc 2): o conselho chegava em
-        dois saltos. MORDIDA: devolva o `_steam_gate()` para antes da conferência
-        do cache no `--manter`."""
+        """Sem tarball no cache, o `--fix` mandava fechar a Steam (rc 3) e, na"""
         _steam_de_verdade(lar)
         monkeypatch.setattr(pp, "steam_running", lambda: True)
 
@@ -792,10 +689,7 @@ class TestOVigiaTravaSozinho:
     def test_o_manter_tira_do_pino_quem_entrou_na_excecao_depois(
         self, lar: Path, download_local: dict
     ) -> None:
-        """OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01 (21/09/2026). O jogo já
-        estava no NOSSO pino quando entrou em `jogos_fora_do_pino.txt` — pela
-        mão dela ou pela lista de exclusão. O lock só o PULAVA, e o pino ficava.
-        MORDIDA: tire o `destravar_os_de_fora` do `--manter`."""
+        """OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01 (21/09/2026). O jogo já"""
         raiz = _steam_de_verdade(lar)
         _jogo(raiz, "2497900")
         pp._extract_verified_tarball(
@@ -844,8 +738,7 @@ def _mapa(raiz: Path) -> dict[str, str]:
 
 @pytest.fixture()
 def mesa(lar: Path) -> Path:
-    """Uma Steam com o pino instalado, um jogo NATIVO e um só-Windows que já
-    rodou pelo Proton — os dois instalados, e nenhum no `CompatToolMapping`."""
+    """Uma Steam com o pino instalado, um jogo NATIVO e um só-Windows que já"""
     raiz = _steam_de_verdade(lar)
     _pino_na(raiz)
     (raiz / "appcache").mkdir()
@@ -891,19 +784,17 @@ class TestTodoJogoTemClasse:
     def test_jogo_nativo_nao_ganha_entrada_nova(
         self, lar: Path, ctm: dict[str, str] | None
     ) -> None:
-        """MORDIDA: tire o `if appid in nativos` de qualquer um dos dois ramos
-        do build — o que cria o bloco inteiro e o que acrescenta nele."""
+        """MORDIDA: tire o `if appid in nativos` de qualquer um dos dois ramos"""
         raiz = _steam_de_verdade(lar)
         _pino_na(raiz)
         (raiz / "config" / "config.vdf").write_text(_config_vdf(ctm), encoding="utf-8")
         (raiz / "appcache").mkdir()
         (raiz / "appcache" / "appinfo.vdf").write_bytes(_appinfo({
-            "316790": "windows,macos,linux",   # nativo
-            "2497900": "windows",              # só Windows
+            "316790": "windows,macos,linux",
+            "2497900": "windows",
         }))
         for appid in ("316790", "2497900", "555", "556"):
             _jogo(raiz, appid)
-        # 555 e 556 fora do appinfo: decide a pegada do Proton.
         (raiz / "steamapps" / "compatdata" / "555").mkdir(parents=True)
 
         sem = pp.jogos_sem_entrada_nova(["316790", "2497900", "555", "556"], home=lar)
@@ -948,10 +839,6 @@ class TestTodoJogoTemClasse:
         assert pp.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))[
             "2497900"] == PINO
 
-    # Os quatro caminhos que QUALQUER computador roda — o install (`--lock
-    # --todos`, 11c), o vigia (`--manter`) e o botão (`lock_proton_for_all_
-    # games`) —, e não só o do botão: o validador arrancou a classe e a exceção
-    # nomeada do `_cmd_lock` e do `_cmd_manter` com 1365 testes verdes.
 
     def test_o_install_nao_da_entrada_ao_nativo(
         self, mesa: Path, download_local: dict, lar: Path
@@ -996,23 +883,15 @@ class TestTodoJogoTemClasse:
         assert _mapa(mesa)["2497900"] == "proton_11", "o botão atropelou a exceção"
 
 
-# ---------------------------------------------------------------------------
-# 3 — 7b27bb58d: a órfã entra pela ferramenta que ela já tem
-# ---------------------------------------------------------------------------
 class TestAOrfaEntraPelaFerramenta:
     def test_orfa_num_proton_volta_ao_pino_e_a_nativa_fica(self) -> None:
-        """MORDIDA: devolva `ja_no_mapa` a todo appid do mapa, sem o filtro.
-
-        A órfã nativa nem entra no alvo: sem o filtro, a regra da entrada
-        existente ainda a preservaria no arquivo, mas ela viraria `preservado`
-        no registro — e o registro diria que o produto mirou um jogo nativo.
-        """
+        """MORDIDA: devolva `ja_no_mapa` a todo appid do mapa, sem o filtro."""
         texto, mudancas = pp.build_compat_tool_mapping(
             _config_vdf({
                 "0": PINO,
-                "1245620": "proton_11",                 # órfã de Proton → pino
-                "4046520": "steamlinuxruntime_sniper",  # órfã nativa → fica
-                "2369580": "GE-Proton10-34",            # órfã num pino velho → pino
+                "1245620": "proton_11",
+                "4046520": "steamlinuxruntime_sniper",
+                "2369580": "GE-Proton10-34",
             }),
             tool_name=PINO, appids=[], pinos_nossos=(PINO, "GE-Proton10-34"),
             atropelar_escolha_dela=True,
@@ -1032,9 +911,6 @@ class TestAOrfaEntraPelaFerramenta:
         assert texto == original and mudancas == {}
 
 
-# ---------------------------------------------------------------------------
-# 4 — o doctor: a raiz envenenada, a exceção nomeada e o `--fix`
-# ---------------------------------------------------------------------------
 def _doctor(funcao: str, casa: Path) -> str:
     r = subprocess.run(
         ["bash", "-c", f'source "$DOCTOR_SH"; {funcao}'],
@@ -1052,8 +928,7 @@ def _doctor(funcao: str, casa: Path) -> str:
 
 class TestODoctorVeOQueAntesCalava:
     def test_a_raiz_envenenada_e_fail_com_o_gesto(self, tmp_path: Path) -> None:
-        """Antes: *"Steam não detectada"* e silêncio. MORDIDA: tire o bloco da
-        raiz envenenada do `check_proton_pin`."""
+        """Antes: *"Steam não detectada"* e silêncio. MORDIDA: tire o bloco da"""
         casa = tmp_path / "casa"
         sobra = casa / ".steam/steam/compatibilitytools.d" / PINO
         sobra.mkdir(parents=True)
@@ -1067,8 +942,7 @@ class TestODoctorVeOQueAntesCalava:
         assert "mv " in linha and ".sobra-do-hefesto" in linha, linha
 
     def test_o_fix_roda_o_mesmo_passo_do_vigia(self) -> None:
-        """O `--lock --todos` daqui travava sem o pino instalado, e o doctor
-        dizia PASS. O `--manter` repõe do cache e só trava com o pino lá."""
+        """O `--lock --todos` daqui travava sem o pino instalado, e o doctor"""
         texto = DOCTOR.read_text(encoding="utf-8")
         corpo = re.search(r"^apply_fixes\(\) \{$.*?^\}$", texto, re.M | re.S)
         assert corpo and "fix_proton_pinado" in corpo.group(0)
@@ -1080,13 +954,7 @@ class TestODoctorVeOQueAntesCalava:
     def test_quem_disse_nao_ao_pino_nao_ganha_a_trava_pelo_fix(
         self, tmp_path: Path, disse_nao: bool
     ) -> None:
-        """O `--no-proton-pin` tira o `--manter` da unidade do vigia, e é esse
-        o rastro — na linha `ExecStart`, porque o comentário da unidade também
-        diz `--manter`. MORDIDA: tire a leitura da unidade do `fix_proton_pinado`.
-
-        O par "com-o-pino" é o negativo: com a linha lá, o `--fix` roda o passo
-        (e a saída diz o desfecho dele — sem cache, ou com a Steam aberta).
-        """
+        """O `--no-proton-pin` tira o `--manter` da unidade do vigia, e é esse"""
         casa = tmp_path / "casa"
         _steam_de_verdade(casa)
         unidade = casa / ".config/systemd/user/hefesto-steam-input-guard.service"
@@ -1105,8 +973,7 @@ class TestODoctorVeOQueAntesCalava:
     def test_o_check_so_manda_rodar_o_fix_com_o_pino_instalado(
         self, tmp_path: Path, com_pino: bool
     ) -> None:
-        """Sem o pino, o `--fix` não tem em que travar: o conselho é o do
-        AUSENTE. MORDIDA: `_gesto_da_trava_do_pino` sempre devolvendo o `--fix`."""
+        """Sem o pino, o `--fix` não tem em que travar: o conselho é o do"""
         casa = tmp_path / "casa"
         raiz = _steam_de_verdade(casa)
         (raiz / "config" / "config.vdf").write_text(
@@ -1124,11 +991,7 @@ class TestODoctorVeOQueAntesCalava:
     def test_com_o_rastro_do_nao_o_conselho_e_reinstalar(
         self, tmp_path: Path, disse_nao: bool
     ) -> None:
-        """O conselho e o `--fix` leem o MESMO rastro. Com o pino instalado e a
-        unidade do vigia sem a linha do `--manter`, o `--fix` recusa — e o
-        conselho mandava rodá-lo: a pessoa só chegava à cura no segundo salto.
-        MORDIDA: `_gesto_da_trava_do_pino` sem perguntar ao
-        `_o_vigia_recusou_o_pino`."""
+        """O conselho e o `--fix` leem o MESMO rastro. Com o pino instalado e a"""
         casa = tmp_path / "casa"
         raiz = _steam_de_verdade(casa)
         (raiz / "config" / "config.vdf").write_text(
@@ -1166,25 +1029,21 @@ class TestODoctorVeOQueAntesCalava:
         nomes = casa / ".config/hefesto-dualsense4unix/jogos_fora_do_pino.txt"
         nomes.parent.mkdir(parents=True)
         nomes.write_text("2497900\n", encoding="utf-8")
-        os.utime(nomes, (1_758_153_600, 1_758_153_600))  # 18/09/2025 00h UTC
+        os.utime(nomes, (1_758_153_600, 1_758_153_600))
 
         saida = _doctor("check_proton_pin", casa)
 
         nomeado = next(ln for ln in saida.splitlines() if "exceção que você nomeou" in ln)
-        assert nomeado.startswith("       "), nomeado  # INFO, não WARN
+        assert nomeado.startswith("       "), nomeado
         assert "DON'T SCREAM" in nomeado and "/09/2025" in nomeado, nomeado
         nativo = next(ln for ln in saida.splitlines() if "rodar nativo" in ln)
         assert nativo.startswith("       ") and "steamlinuxruntime_sniper" in nativo
         assert "[WARN] jogo(s) fora do Proton pinado" not in saida, saida
 
 
-# ---------------------------------------------------------------------------
-# 5 — correção do grupo (18/09/2026): SEM O PINO, NADA SE TRAVA
-# ---------------------------------------------------------------------------
 @pytest.fixture()
 def steam_sem_pino(lar: Path) -> Path:
-    """Uma Steam de verdade, um jogo só-Windows num outro Proton, e o pino AUSENTE
-    — a máquina do install sem rede, ou do install feito antes de existir Steam."""
+    """Uma Steam de verdade, um jogo só-Windows num outro Proton, e o pino AUSENTE"""
     raiz = _steam_de_verdade(lar)
     _jogo(raiz, "2497900")
     (raiz / "steamapps" / "compatdata" / "2497900").mkdir(parents=True)
@@ -1194,17 +1053,13 @@ def steam_sem_pino(lar: Path) -> Path:
 
 
 class TestSemOPinoNadaSeTrava:
-    """Travar num Proton que não existe aponta cada jogo para uma ferramenta
-    ausente, e a Steam não abre nenhum. Medido pelo validador num HOME de
-    mentira: o `--lock --todos` saía rc 0 com "locked — 2 added", e o doctor
-    imprimia PASS. A guarda é do LOCK, e todo chamador a herda."""
+    """Travar num Proton que não existe aponta cada jogo para uma ferramenta"""
 
     def test_o_lock_todos_recusa_e_o_arquivo_fica_byte_a_byte(
         self, lar: Path, steam_sem_pino: Path, download_local: dict,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """MORDIDA: tire o `compat_dir=` do `_cmd_lock`, ou a pergunta ao pino
-        de `lock_games_to_pinned_proton`."""
+        """MORDIDA: tire o `compat_dir=` do `_cmd_lock`, ou a pergunta ao pino"""
         vdf = steam_sem_pino / "config" / "config.vdf"
         antes = vdf.read_bytes()
 
@@ -1236,9 +1091,6 @@ class TestSemOPinoNadaSeTrava:
 
         assert (r["status"], r["reason"]) == ("recusado", "pino_ausente"), r
         assert vdf.read_bytes() == antes
-        # A frase que já existe para o pino ausente — não a recusa sem motivo,
-        # que diz "a Steam recusou" sobre uma causa que não é a Steam.
-        # MORDIDA: tire o ramo `pino_ausente` de `_frase_de_recusa_do_proton`.
         assert format_proton_lock_result(r) == frase_sem_o_proton_pinado()
 
     def test_o_vigia_sem_cache_nao_toca_no_arquivo(
@@ -1266,9 +1118,7 @@ class TestSemOPinoNadaSeTrava:
         assert _mapa(steam_sem_pino) == {"0": PINO, "2497900": PINO}
 
     def test_todo_chamador_do_lock_diz_onde_o_pino_mora(self) -> None:
-        """A guarda só vale para quem passa `compat_dir`; o chamador novo que
-        esquecer volta a travar no vazio. MORDIDA: tire o `compat_dir=` de
-        qualquer chamada de `lock_games_to_pinned_proton` em `src/`."""
+        """A guarda só vale para quem passa `compat_dir`; o chamador novo que"""
         chamadas: list[str] = []
         sem_pino: list[str] = []
         for arquivo in sorted((RAIZ / "src").rglob("*.py")):
@@ -1286,18 +1136,13 @@ class TestSemOPinoNadaSeTrava:
                 chamadas.append(onde)
                 if not any(k.arg == "compat_dir" for k in no.keywords):
                     sem_pino.append(onde)
-        assert len(chamadas) >= 3, chamadas  # o botão, o `--lock` e o `--manter`
+        assert len(chamadas) >= 3, chamadas
         assert sem_pino == [], sem_pino
 
 
-# ---------------------------------------------------------------------------
-# 6 — o leitor do appinfo.vdf não prende o vigia
-# ---------------------------------------------------------------------------
 class TestOLeitorNaoPrendeOVigia:
     def test_string_larga_sem_fim_e_ilegivel_e_nao_laco_eterno(self, tmp_path: Path) -> None:
-        """Medido pelo validador: `_ler_vdf_binario(b'\\x05chave\\x00ab', 0, None)`
-        só morria pelo `timeout`. O vigia roda isto dentro da trava do
-        `config.vdf`. MORDIDA: devolva o `while buf[fim:fim + 2] != b"\\0\\0"`."""
+        """Medido pelo validador: `_ler_vdf_binario(b'\\x05chave\\x00ab', 0, None)`"""
         vdf = b"\x00appinfo\0\x00common\0\x05oslist\0a\0b"
         cabecalho = (struct.pack("<IIQ", 2, 0, 0) + b"\0" * 20
                      + struct.pack("<I", 1) + b"\0" * 20)
@@ -1324,12 +1169,8 @@ class TestOLeitorNaoPrendeOVigia:
         assert r.stdout.strip() == "None", r.stdout
 
 
-# ---------------------------------------------------------------------------
-# 7 — uma trava por vez no config.vdf, e com prazo
-# ---------------------------------------------------------------------------
 class TestUmaTravaPorVez:
-    """O relatório do implementador dizia *"M23: o flock removido. Reprova no
-    teste de trava concorrente"*, e esse teste não existia. Agora existe."""
+    """O relatório do implementador dizia *"M23: o flock removido. Reprova no"""
 
     @pytest.fixture()
     def vdf(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -1371,8 +1212,7 @@ class TestUmaTravaPorVez:
     def test_quem_segura_demais_faz_o_outro_recusar_em_vez_de_prender(
         self, tmp_path: Path, vdf: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O vigia é um oneshot sem prazo: preso, ele para o Steam Input e a
-        sentinela junto. MORDIDA: volte ao `LOCK_EX` sem `LOCK_NB`."""
+        """O vigia é um oneshot sem prazo: preso, ele para o Steam Input e a"""
         monkeypatch.setattr(pp, "_PACIENCIA_DA_TRAVA_S", 0.2)
         estado = tmp_path / "estado.json"
         antes = vdf.read_text(encoding="utf-8")
@@ -1394,9 +1234,7 @@ class TestUmaTravaPorVez:
         assert vdf.read_text(encoding="utf-8") == antes
 
     def test_a_tela_diz_que_era_outra_trava_e_nao_a_steam(self) -> None:
-        """A recusa do flock caía na frase sem motivo, "a Steam recusou a
-        mudança" — e a Steam nem foi perguntada. MORDIDA: tire a entrada
-        `outra_trava_em_curso` de `_RECUSAS_DO_PROTON`."""
+        """A recusa do flock caía na frase sem motivo, "a Steam recusou a"""
         from hefesto_dualsense4unix.app.actions.daemon_actions import (
             format_proton_lock_result,
         )

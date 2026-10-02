@@ -1,48 +1,4 @@
-"""O esquema aprende o fato físico — ``perto``, ``alto`` e a IRMÃ de cada entrada.
-
-CONEXÕES · MAPA 2D 01 / G3 (25/08/2026).
-
-O DEFEITO, EM UMA FRASE
-------------------------
-
-O motor do arranjo (``integrations/arranjo_da_mesa``) lê ``Face.perto``,
-``Face.alto`` e ``Entrada.par`` para decidir se um aparelho fica bem numa
-entrada — e **nenhum dos três tinha fonte**. O esquema declarado
-(``utils/maquina.MapaDaMesa``) não tinha onde guardá-los, então toda face nascia
-``perto=False``/``alto=False`` e toda entrada nascia sem par. As três penalidades
-de vizinho rádio da tabela de notas — **-30** no teclado, **-45** no Bluetooth,
-**-40** no mouse — nunca podiam disparar, e cada quadrado da tela diria *"aqui
-fica bem"* onde deveria dizer *"aqui não"*.
-
-**Juízo otimista demais é pior que juízo nenhum**: um mapa que só sabe elogiar
-não é um mapa, é um enfeite, e quem seguir o conselho dele põe dois receptores
-de 2,4 GHz encostados.
-
-O QUE ESTA BATERIA MEDE, E O QUE ELA NÃO MEDE
-----------------------------------------------
-
-Mede o ESQUEMA e a JUNÇÃO: que o fato físico tem onde ficar, que ele sobrevive
-ao disco, e que a irmã responde **com o gabinete inteiro vazio** — que é o caso
-que nenhuma leitura de aparelho alcança.
-
-**Não mede o motor.** ``arranjo_da_mesa`` é de outra frente e não foi tocado:
-esta bateria prova que o dado existe e é buscável, não que quem o consome já o
-busca. Quem fecha esse último palmo é a G5 (a janela do desenho que julga).
-
-A BANCADA
-----------
-
-``tests/unit/test_mapa_a_bancada_de_mentira`` — a leitura de 25/08 às 02h30.
-Nenhum caminho de ``/sys`` desta máquina é tocado.
-
-A FONTE DA IRMÃ É UMA SÓ, E É O DESENHO DELA (25/08/2026)
------------------------------------------------------------
-
-Esta bateria nasceu com DUAS fontes para ``Entrada.par`` — o ``peer`` do
-``/sys`` e o desenho dela — e ela reverteu no mesmo dia: o ``peer`` saiu. A
-medição que derrubou a premissa, e a régua que impede o ``peer`` de voltar,
-moram em ``tests/unit/test_o_par_vem_do_desenho_dela.py``.
-"""
+"""O esquema aprende o fato físico — ``perto``, ``alto`` e a IRMÃ de cada entrada."""
 from __future__ import annotations
 
 import pytest
@@ -60,10 +16,6 @@ from hefesto_dualsense4unix.utils.maquina import (
 )
 from tests.unit.test_mapa_a_bancada_de_mentira import bancada_de_agora, mapa_dela
 
-#: Os pares que o mockup dela declara à mão, entrada por entrada
-#: (``mockup/congelados/2026-08-24-mapa-das-portas.html``:341-350). É a
-#: resposta CERTA, escrita por ela antes de existir código, e é contra ela que a
-#: derivação se mede.
 PARES_DO_MOCKUP: dict[str, str] = {
     "1": "2", "2": "1",
     "3": "4", "4": "3",
@@ -74,21 +26,9 @@ PARES_DO_MOCKUP: dict[str, str] = {
     "13": "14", "14": "13",
 }
 
-# --- 1. A face guarda o que só ela sabe --------------------------------------
-
 
 def test_a_face_guarda_perto_e_alto() -> None:
-    """``perto`` e ``alto`` entram no esquema, e são fato DELA.
-
-    O ``/sys`` desta bancada responde ``panel=right``,
-    ``horizontal_position=left`` e ``vertical_position=lower`` — idênticos —
-    para ``usb1-port3`` e ``usb1-port6``, que ficam em faces DIFERENTES do
-    metal. Nenhuma leitura sabe qual face está virada para a pessoa.
-
-    Mordida: tirei os dois campos de ``FaceDeclarada``. Com ``extra="forbid"``,
-    a validação passa a levantar e o teste reprova dizendo que a face não tem
-    onde guardar o fato — que é o defeito inteiro, em uma linha.
-    """
+    """``perto`` e ``alto`` entram no esquema, e são fato DELA."""
     mapa = MapaDaMesa.model_validate(
         {
             "faces": [
@@ -107,11 +47,7 @@ def test_a_face_guarda_perto_e_alto() -> None:
 
 
 def test_o_fato_fisico_sobrevive_ao_disco() -> None:
-    """Ida e volta pelo ``maquina.json``: o que ela marcou continua marcado.
-
-    Campo que não sobrevive à gravação é campo que não existe — a pessoa
-    declara, fecha a janela, e o motor volta a julgar com o mapa de ontem.
-    """
+    """Ida e volta pelo ``maquina.json``: o que ela marcou continua marcado."""
     assert gravar_maquina(
         {
             "mapa": {
@@ -131,23 +67,8 @@ def test_o_fato_fisico_sobrevive_ao_disco() -> None:
     assert de_volta.portas["9"].nos == ["usb1-port5", "usb2-port1"]
 
 
-# --- 2. `nos` é o que alcança a entrada VAZIA --------------------------------
-
-
 def test_a_entrada_vazia_existe_no_esquema_sem_caminho_nenhum() -> None:
-    """Uma entrada sem aparelho tem lugar no mapa — pelo NÓ, não pelo caminho.
-
-    ``caminho`` nomeia o aparelho (``3-1.2``) e some do ``/sys`` quando ele sai;
-    ``nos`` nomeia o buraco (``usb1-port5``), e MEDIDO em 25/08 os 38 nós desta
-    bancada respondem ``state`` com e sem aparelho. Sem este campo, "a entrada
-    7" só existe enquanto houver algo nela — que é como quatro dos cinco
-    aparelhos que ela moveu em 24/08 sumiram do mapa.
-
-    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o ``caminho``
-    deixou de ser guardado. Ele é do BURACO agora, calculado na leitura — o do
-    lado 2.0 dos nós, ou o do lugar com os controladores deste boot — e nunca
-    vai ao disco. Quem diz se há aparelho é o censo, não o caminho.
-    """
+    """Uma entrada sem aparelho tem lugar no mapa — pelo NÓ, não pelo caminho."""
     mapa = MapaDaMesa.model_validate(
         {"portas": {"7": {"nos": ["usb1-port7", "usb2-port3"]}}}
     )
@@ -167,27 +88,13 @@ def test_a_entrada_vazia_existe_no_esquema_sem_caminho_nenhum() -> None:
     ],
 )
 def test_o_no_torto_e_recusado(nos: list[str]) -> None:
-    """A régua sabe RECUSAR — chave sem validador herda lixo.
-
-    O caso ``3-1.2`` é o que mais engana: é um nome de kernel legítimo, só que
-    de APARELHO. Aceitá-lo faria o mapa guardar um endereço que some quando o
-    aparelho sai, exatamente o defeito que ``nos`` existe para fechar.
-    """
+    """A régua sabe RECUSAR — chave sem validador herda lixo."""
     with pytest.raises(ValidationError):
         MapaDaMesa.model_validate({"portas": {"7": {"nos": nos}}})
 
 
-# --- 3. A irmã de cada entrada, inclusive da vazia ---------------------------
-
-
 def test_a_irma_bate_com_o_desenho_dela_entrada_por_entrada() -> None:
-    """As catorze irmãs saem iguais às que ela escreveu à mão no mockup.
-
-    Mordida: arranquei o ``_pelo_desenho`` (deixei só a fonte do ``peer``, que
-    é a que a decisão nomeia). A resposta veio VAZIA e o teste reprovou
-    imprimindo as catorze entradas que perderam a irmã — que é o estado em que
-    as penalidades de vizinho rádio nunca disparam.
-    """
+    """As catorze irmãs saem iguais às que ela escreveu à mão no mockup."""
     achadas = irmas_de(mapa_dela())
     assert achadas == PARES_DO_MOCKUP, (
         "a irmã derivada divergiu do desenho dela: "
@@ -197,14 +104,7 @@ def test_a_irma_bate_com_o_desenho_dela_entrada_por_entrada() -> None:
 
 
 def test_a_irma_responde_com_o_gabinete_inteiro_vazio() -> None:
-    """Nenhum aparelho na mesa, e as catorze irmãs continuam de pé.
-
-    É a propriedade que decide a tarefa: ``vizinhas_de_verdade`` responde pelos
-    pares OCUPADOS AGORA e devolve nada numa mesa vazia — correto para a
-    pergunta dela e inútil para esta. A irmã existe no metal esteja o buraco
-    cheio ou vazio, e o motor precisa dela para dizer "aqui não" ANTES de a
-    pessoa encaixar qualquer coisa.
-    """
+    """Nenhum aparelho na mesa, e as catorze irmãs continuam de pé."""
     mapa = MapaDaMesa.model_validate(
         {
             "faces": [
@@ -221,50 +121,22 @@ def test_a_irma_responde_com_o_gabinete_inteiro_vazio() -> None:
 
 
 def test_a_fileira_impar_deixa_a_ultima_sem_irma_e_a_esticada_de_fora() -> None:
-    """A ``15`` não tem irmã, e a ``15a`` também não — as duas por motivos.
-
-    A fileira do hub tem SETE entradas: a última sobra, e inventar uma irmã
-    para ela seria colar no metal duas coisas que não estão coladas. A ``15a``
-    nasce de um extensor de um metro e não está na fileira — o cabo a põe longe
-    de todo mundo, que é justamente por que o Bluetooth ganha +25 nela.
-    """
+    """A ``15`` não tem irmã, e a ``15a`` também não — as duas por motivos."""
     irmas = irmas_de(mapa_dela())
     assert "15" not in irmas
     assert "15a" not in irmas
 
 
 def test_a_irma_nao_e_a_vizinha_da_fileira() -> None:
-    """Na fileira do hub, a ``9`` é irmã da ``10`` — e NÃO da ``11``.
-
-    Irmã é a outra tomada do mesmo conjunto de metal; vizinha é a próxima da
-    fileira. As duas relações existem, e só a primeira é a que o motor pesa em
-    ``Entrada.par``. Derivar irmã de ``pairwise`` (que é como
-    ``vizinhas_de_verdade`` acha vizinha) daria ``10`` irmã de ``9`` e de
-    ``11`` ao mesmo tempo, e ``Entrada.par`` é um valor só.
-    """
+    """Na fileira do hub, a ``9`` é irmã da ``10`` — e NÃO da ``11``."""
     irmas = irmas_de(mapa_dela())
     assert irmas["9"] == "10"
     assert irmas["10"] == "9", "a relação tem de ser recíproca"
     assert irmas["11"] == "12"
 
 
-# --- 4. O mapa de ontem continua abrindo -------------------------------------
-
-
 def test_o_mapa_de_ontem_continua_valendo() -> None:
-    """Campo novo sem bump de versão: o mapa dela, sem ``perto`` nem ``nos``.
-
-    ``MAQUINA_SCHEMA_VERSION`` não subiu, e não há passo de migração a
-    escrever. Um arquivo declarado antes de 25/08 tem de continuar abrindo, com
-    os campos novos no ``default_factory`` — o contrário faria toda máquina que
-    já declarou perder a mesa na primeira leitura.
-
-    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o ``caminho``
-    deixou de ser guardado. Ele é do BURACO agora, calculado na leitura — o do
-    lado 2.0 dos nós, ou o do lugar com os controladores deste boot — e nunca
-    vai ao disco. Quem diz se há aparelho é o censo, não o caminho. O ``caminho``
-    de ontem vira o nó do buraco, e a leitura devolve o mesmo caminho.
-    """
+    """Campo novo sem bump de versão: o mapa dela, sem ``perto`` nem ``nos``."""
     antigo = mapa_dela()
     assert all(not f.perto and not f.alto for f in antigo.faces)
     assert antigo.portas["1"].nos == ["usb1-port3"] and antigo.portas["1"].caminho == "1-3"

@@ -15,7 +15,7 @@ TRÊS COISAS QUE ESTE ARQUIVO NÃO DEIXA VOLTAR, cada uma com preço medido:
    levaram a fonte de 12,25 a 19 pontos, sem erro nenhum no log. O clique aqui
    GRAVA e diz que vale ao reabrir.
 3. **A sonda da bandeja na thread do GTK.** `statusnotifierwatcher_available`
-   é síncrona com dois segundos de teto (`desktop_notifications.py:33`) — na
+   é síncrona com dois segundos de teto (`desktop_notifications.py:17`) — na
    thread que desenha, ela congela a janela inteira ao abrir a aba.
 
 POR QUE NADA AQUI ESCREVE NO DISCO. As duas pontas de gravação
@@ -76,9 +76,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito. Sem
-# ela, este módulo derruba a COLETA inteira no CI headless em vez de pular — e
-# `pytest.importorskip("gi")` aceitaria o stub que outro arquivo planta.
 exigir_gi_real("seção A janela da aba configurações")
 
 from typing import Any
@@ -94,13 +91,8 @@ from hefesto_dualsense4unix.app import escala as escala_mod
 from hefesto_dualsense4unix.app import theme as theme_mod
 from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG
 from hefesto_dualsense4unix.app.actions.config import secao_janela
-# `id_da_pagina_corrente` saiu do import em 25/08/2026, junto com o teste do
-# botão "Abrir a aba Sistema" que a LEX-4 removeu a pedido dela. Import órfão
-# não é sujeira de estilo: ele faz o arquivo parecer exercitar um caminho que
-# ninguém exercita mais.
 from tests.unit.aba_config_sem_a_janela import HospedeiroDaAbaConfig
 
-#: O id da extensão que a instrução do GNOME precisa carregar.
 EXTENSAO_DO_GNOME = "ubuntu-appindicators@ubuntu.com"
 
 
@@ -179,18 +171,7 @@ def _montar(
     prefs: dict[str, Any] | None = None,
     ambiente: str | None = "COSMIC",
 ) -> _Bancada:
-    """Monta a aba em código, roda o mixin e devolve a bancada.
-
-    `ambiente` entra por `XDG_CURRENT_DESKTOP` — a variável de verdade, para o
-    caminho de produção ser o exercitado. `None` apaga as duas variáveis, que é
-    o caso da sessão headless e o primeiro item do aceite desta sprint.
-
-    06/09/2026 (`GTK-3`): o berço saiu do `gui/main.glade` e virou
-    `tests/unit/aba_config_sem_a_janela.py` — a seção "A janela" sempre nasceu
-    em `app/actions/config/secao_janela.py`, que é MOTOR e fica, e o XML só
-    dava a caixa e o `daemon_autostart_switch` (que o berço entrega, com régua
-    de fidelidade própria).
-    """
+    """Monta a aba em código, roda o mixin e devolve a bancada."""
     bancada = _Bancada()
     bancada.prefs = dict(prefs or {})
 
@@ -222,20 +203,10 @@ def _montar(
     return bancada
 
 
-
-# --- 1. A seção existe, é a última, e não tem combo -------------------------
-
-
 def test_a_secao_e_a_ultima_moldura_e_tem_conteudo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Última porque é a menos urgente das cinco, e o desenho a põe no fim.
-
-    A asserção de conteúdo não é cerimônia: o montador embrulha `montar` em
-    `contextlib.suppress`, então uma exceção na montagem deixaria a moldura na
-    tela e VAZIA, sem uma linha de log. Sem esta asserção, todo o resto deste
-    arquivo falharia com mensagens que não apontam a causa.
-    """
+    """Última porque é a menos urgente das cinco, e o desenho a põe no fim."""
     bancada = _montar(monkeypatch)
     assert bancada.secao.get_label_widget().get_text() == secao_janela.TITULO
     assert bancada.rotulos(), "a seção montou vazia — `montar` levantou e foi engolida"
@@ -246,11 +217,7 @@ def test_a_secao_e_a_ultima_moldura_e_tem_conteudo(
 def test_nenhuma_escolha_desta_secao_e_um_combo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No cosmic-comp o popup do combo fecha no clique e a escolha some.
-
-    Vale para a aba inteira, não só para esta seção: o defeito é do compositor,
-    e uma seção vizinha que trouxesse um combo o traria para a mesma janela.
-    """
+    """No cosmic-comp o popup do combo fecha no clique e a escolha some."""
     bancada = _montar(monkeypatch)
     proibidos = [
         type(widget).__name__
@@ -260,15 +227,10 @@ def test_nenhuma_escolha_desta_secao_e_um_combo(
     assert not proibidos, f"combo na aba Configurações: {proibidos}"
 
 
-
 def test_a_aba_abre_com_a_sessao_sem_declarar_ambiente(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O primeiro item do aceite: `XDG_CURRENT_DESKTOP` vazia.
-
-    É o caso REAL de toda sessão headless — e o caso em que a tela não pode
-    afirmar uma detecção que não houve.
-    """
+    """O primeiro item do aceite: `XDG_CURRENT_DESKTOP` vazia."""
     bancada = _montar(monkeypatch, ambiente=None)
     assert bancada.rotulos(), "a seção sumiu quando a sessão não declarou nada"
     frase = bancada.rotulo_que_comeca_com("A sessão não diz")
@@ -276,18 +238,10 @@ def test_a_aba_abre_com_a_sessao_sem_declarar_ambiente(
     assert "Detectado" not in " ".join(bancada.rotulos())
 
 
-# --- 2. O tamanho do texto --------------------------------------------------
-
-
 def test_a_fileira_nasce_marcando_o_degrau_gravado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quem gravou "Grande" e reabriu tem de ver "Grande" marcado.
-
-    Lê do DISCO e não do cache da sessão (`escala_fonte`), que é o que o tema
-    aplicou na abertura — os dois divergem justamente depois de uma gravação
-    nesta tela.
-    """
+    """Quem gravou "Grande" e reabriu tem de ver "Grande" marcado."""
     grande = theme_mod.DEGRAUS_DE_ESCALA["grande"]
     bancada = _montar(monkeypatch, prefs={theme_mod.CHAVE_ESCALA: grande})
     assert bancada.host._config_escala_seletor.get_active_id() == "grande"
@@ -298,21 +252,7 @@ def test_a_fileira_nasce_marcando_o_degrau_gravado(
 
 
 def test_abrir_a_aba_nao_grava_nada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Montar a tela não é gesto dela, e não pode virar gravação.
-
-    `SegmentedSelector.set_active_id` EMITE "changed" (espelha o
-    `GtkComboBox`), então a marcação inicial tem de acontecer ANTES do
-    `connect`.
-
-    O 5 gravado não é número escolhido a esmo: até esta tela existir, a chave
-    `escala_fonte` só era alcançável editando o arquivo à mão, e qualquer valor
-    de 0 a 8 está lá fora. Ele é o único que revela o defeito — com 6 no disco,
-    a gravação espúria escreveria 6 por cima de 6 e passaria despercebida.
-
-    Mordida: ligar o `connect` antes do `set_active_id` — a abertura reescreve
-    sozinha o 5 como 6, e a escolha dela é perdida por um clique que ninguém
-    deu.
-    """
+    """Montar a tela não é gesto dela, e não pode virar gravação."""
     bancada = _montar(monkeypatch, prefs={theme_mod.CHAVE_ESCALA: 5})
     assert bancada.host._config_escala_seletor.get_active_id() == "grande"
     assert bancada.prefs == {theme_mod.CHAVE_ESCALA: 5}
@@ -321,15 +261,7 @@ def test_abrir_a_aba_nao_grava_nada(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_clique_grava_o_degrau_e_nao_reaplica_o_tema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Grava e diz que vale ao reabrir — é a decisão J1 desta leva.
-
-    `apply_theme` COMPÕE: soma ao `gtk-font-name` já posto e empilha provider
-    sem nunca chamar `remove_provider_for_screen`. Chamá-lo aqui produziria
-    fonte errada em silêncio, e a única pista seria a interface crescendo a
-    cada clique.
-
-    Mordida: acrescentar `apply_theme(host.window)` ao handler.
-    """
+    """Grava e diz que vale ao reabrir — é a decisão J1 desta leva."""
     bancada = _montar(monkeypatch, prefs={theme_mod.CHAVE_ESCALA: 0})
     bancada.botao_de_opcao("Grande").set_active(True)
 
@@ -342,15 +274,7 @@ def test_o_clique_grava_o_degrau_e_nao_reaplica_o_tema(
 def test_a_tela_diz_que_o_tamanho_vale_ao_reabrir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A gravação diferida só é honesta se estiver escrita na tela.
-
-    Sem a frase, o clique não faz nada visível e a pessoa conclui que a opção
-    está quebrada.
-    """
-    # A FRASE VIROU DICA em 25/08/2026 (LEX-2, decisão dela): ela saiu do corpo
-    # da página e passou a morar no tooltip do próprio rótulo. O teste segue o
-    # texto em vez de fossilizar o lugar dele — travar a posição faria esta
-    # régua reprovar toda vez que a aba respirasse.
+    """A gravação diferida só é honesta se estiver escrita na tela."""
     bancada = _montar(monkeypatch)
     rotulo = bancada.rotulo_que_comeca_com("Tamanho do texto")
     assert "abrir o Hefesto" in (rotulo.get_tooltip_text() or ""), (
@@ -359,19 +283,10 @@ def test_a_tela_diz_que_o_tamanho_vale_ao_reabrir(
     )
 
 
-# --- 3. A sonda da barra do sistema -----------------------------------------
-
-
 def test_a_sonda_da_bandeja_sai_da_thread_do_gtk(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dois segundos de D-Bus na thread que desenha congelam a janela.
-
-    Enquanto a resposta não chega, o rótulo diz que está conferindo — afirmar
-    que o ícone está lá antes de perguntar seria a tela adivinhando.
-
-    Mordida: chamar `statusnotifierwatcher_available()` direto no `montar`.
-    """
+    """Dois segundos de D-Bus na thread que desenha congelam a janela."""
     bancada = _montar(monkeypatch)
     assert len(bancada.sondas) == 1, "a sonda não foi despachada para thread worker"
     funcao, _ok, _falhou = bancada.sondas[0]
@@ -380,13 +295,7 @@ def test_a_sonda_da_bandeja_sai_da_thread_do_gtk(
 
 
 def test_o_callback_da_sonda_devolve_false(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Contrato do `GLib.idle_add`: devolver `True` reagenda para sempre.
-
-    Um callback que reagenda sozinho refaz a pintura a cada volta do laço
-    ocioso — é CPU queimada sem nada na tela mudando.
-
-    Mordida: trocar o `return False` por `return True` nos dois callbacks.
-    """
+    """Contrato do `GLib.idle_add`: devolver `True` reagenda para sempre."""
     bancada = _montar(monkeypatch)
     _funcao, pousou, falhou = bancada.sondas[0]
     assert pousou(True) is False
@@ -396,11 +305,7 @@ def test_o_callback_da_sonda_devolve_false(monkeypatch: pytest.MonkeyPatch) -> N
 def test_sem_watcher_no_cosmic_a_secao_ensina_o_applet(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O ícone que não sobe deixa de ser silêncio e vira instrução.
-
-    Laranja, não vermelho: nada foi destruído, a janela continua inteira. É a
-    regra de cor do `theme.css:13` — "VERDE confirma, LARANJA alerta".
-    """
+    """O ícone que não sobe deixa de ser silêncio e vira instrução."""
     bancada = _montar(monkeypatch, ambiente="COSMIC")
     _funcao, pousou, _falhou = bancada.sondas[0]
     pousou(False)
@@ -427,15 +332,7 @@ def test_com_watcher_a_secao_so_relata_o_estado(
 def test_corrigir_para_gnome_troca_a_instrucao_sem_sondar_de_novo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O aceite do GNOME, fechado numa bancada que roda COSMIC.
-
-    É para isto que o ambiente é corrigível: ele informa a MENSAGEM e nada
-    mais. Corrigir para GNOME numa sessão COSMIC não muda uma linha do que o
-    produto faz — muda o que a seção sabe recomendar quando o ícone não sobe.
-
-    Mordida: não repintar depois de gravar a correção — a seção continuaria
-    ensinando o applet do COSMIC a quem acabou de dizer que está no GNOME.
-    """
+    """O aceite do GNOME, fechado numa bancada que roda COSMIC."""
     bancada = _montar(monkeypatch, ambiente="COSMIC")
     _funcao, pousou, _falhou = bancada.sondas[0]
     pousou(False)
@@ -458,25 +355,13 @@ def test_a_correcao_nasce_marcando_o_ambiente_que_vale(
     )
     assert bancada.host._config_ambiente_seletor.get_active_id() == "gnome"
     assert bancada.botao_de_opcao("GNOME").get_active()
-    # A linha do detectado continua contando o que a SESSÃO declarou: é dado
-    # de diagnóstico, e reescrevê-lo com a correção apagaria a discordância.
     assert "COSMIC" in bancada.rotulo_que_comeca_com("Detectado:").get_text()
-
-
-# --- 4. O espelho de "Ligar junto com o computador" -------------------------
 
 
 def test_o_espelho_segue_o_interruptor_da_aba_sistema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Uma direção só: quem escreve é a aba Sistema.
-
-    Dois donos do mesmo gesto é a cicatriz que a casa já pagou uma vez — por
-    isso aqui é rótulo, não um segundo interruptor.
-
-    Mordida: apagar o `connect("notify::active", ...)` — o espelho congela no
-    valor que o Glade trouxe e passa a mentir assim que o estado muda.
-    """
+    """Uma direção só: quem escreve é a aba Sistema."""
     bancada = _montar(monkeypatch)
     interruptor = bancada.builder.get_object("daemon_autostart_switch")
     estado = bancada.host._config_autostart_estado
@@ -498,9 +383,4 @@ def test_o_espelho_nao_e_editavel(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # `test_o_atalho_abre_a_aba_sistema_pelo_id` SAIU em 25/08/2026, e a razão é
-# dela: o botão "Abrir a aba Sistema" foi REMOVIDO da seção "A janela" (LEX-4,
-# pedido literal). Um teste que exige um botão que o produto não tem mais não é
-# regressão — é fóssil, e fóssil protege o defeito que a remoção veio curar.
-#
 # A cobertura não se perdeu, mudou de lado: `test_a_janela_nao_tem_botao_de_abrir_a_aba_sistema`,
-# em `test_o_lexico_da_aba_configuracoes.py:431`, garante que ele NÃO VOLTA.

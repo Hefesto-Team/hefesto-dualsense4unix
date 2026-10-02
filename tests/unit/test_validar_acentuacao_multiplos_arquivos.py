@@ -1,20 +1,4 @@
-"""Regressão GATE-ACENTO-MULTIARQUIVO-01: o gate checava UM arquivo por vez.
-
-O `pre-commit` apenda TODOS os nomes de arquivo staged ao entry do hook
-(`.pre-commit-config.yaml`: `validar-acentuacao.py --check-file`). Enquanto
-`--check-file` aceitava um valor só, o argparse ficava com o primeiro nome e
-empurrava os demais para o positional `paths` — que o `main()` descartava em
-silêncio, porque `if args.check_file:` vencia e os alvos eram exatamente
-`[Path(args.check_file)]`. Resultado medido: com N arquivos no commit, N-1
-passavam sem checagem alguma, e o commit saía verde por sorte de ordem.
-
-O gate irmão de glifos nunca teve o defeito porque o hook dele chama o script
-sem flag, e o caminho dos positionais sempre percorreu todos os alvos.
-
-Os testes daqui cobrem as duas metades do contrato: o comportamento novo
-(checar TODOS os arquivos recebidos e reprovar se QUALQUER um falhar) e o
-comportamento antigo que não pode quebrar (um arquivo só, e o modo `--all`).
-"""
+"""Regressão GATE-ACENTO-MULTIARQUIVO-01: o gate checava UM arquivo por vez."""
 from __future__ import annotations
 
 import shlex
@@ -28,7 +12,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "validar-acentuacao.py"
 CONFIG_PRE_COMMIT = RAIZ / ".pre-commit-config.yaml"
 
-# O texto errado destas fixtures é deliberado: é o insumo do gate, não prosa
 # desta casa. Cada linha carrega o `noqa` para não acusar o próprio arquivo.
 LINHA_SUJA = 'msg = "a configuracao nao tem acao"\n'  # (noqa-acento)
 LINHA_LIMPA = 'msg = "a configuração não tem ação"\n'
@@ -111,11 +94,7 @@ def test_varios_arquivos_limpos_passam(sandbox: Path) -> None:
 
 
 def test_positional_junto_de_check_file_nao_e_descartado(sandbox: Path) -> None:
-    """Rede de segurança: o que cai no positional também é lido.
-
-    Chamada em que o arquivo sujo chega como positional e o limpo como valor da
-    flag. Antes, `if args.check_file:` vencia e o positional era jogado fora.
-    """
+    """Rede de segurança: o que cai no positional também é lido."""
     sujo = _escreve(sandbox, "src/sujo.py", LINHA_SUJA)
     limpo = _escreve(sandbox, "src/limpo.py", LINHA_LIMPA)
 
@@ -138,11 +117,7 @@ def test_um_arquivo_so_continua_valendo(sandbox: Path) -> None:
 
 
 def _entry_do_hook(hook_id: str) -> str:
-    """Extrai o `entry:` do hook pedido lendo o texto do .pre-commit-config.yaml.
-
-    De propósito sem PyYAML: nenhum outro teste desta suíte depende dele, e o
-    portão não pode passar a exigir dependência nova para rodar.
-    """
+    """Extrai o `entry:` do hook pedido lendo o texto do .pre-commit-config.yaml."""
     dentro = False
     for linha in CONFIG_PRE_COMMIT.read_text(encoding="utf-8").splitlines():
         despido = linha.strip()
@@ -155,18 +130,14 @@ def _entry_do_hook(hook_id: str) -> str:
 
 
 def test_entry_do_hook_reprova_lote_com_um_arquivo_sujo(tmp_path: Path) -> None:
-    """O que roda de verdade é o entry do hook — então é ele que se mede.
-
-    O `pre-commit` monta a linha de comando assim: o `entry` como está no
-    arquivo de config, mais os nomes dos arquivos staged no fim.
-    """
+    """O que roda de verdade é o entry do hook — então é ele que se mede."""
     limpo = tmp_path / "limpo.py"
     limpo.write_text(LINHA_LIMPA, encoding="utf-8")
     sujo = tmp_path / "sujo.py"
     sujo.write_text(LINHA_SUJA, encoding="utf-8")
 
     comando = shlex.split(_entry_do_hook("acentuacao-strict"))
-    comando[0] = sys.executable  # não depende de qual python3 está no PATH
+    comando[0] = sys.executable
     res = subprocess.run(
         [*comando, str(limpo), str(sujo)],
         cwd=str(RAIZ),

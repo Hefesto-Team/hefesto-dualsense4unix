@@ -1,21 +1,4 @@
-"""NATIVO-RUMBLE-01, a metade da GUI: a recusa do daemon chega aos olhos dela.
-
-O daemon já recusa `rumble.set` no Modo Nativo, com motivo — mas a recusa vem
-no **corpo** de uma resposta bem-sucedida (`status: "recusado"`), não como erro
-JSON-RPC. O `_call_checked` da aba Gatilhos lê `CODE_INVALID_PARAMS` e devolve
-`(True, None)` para esta forma: para ele, o RPC deu certo.
-
-Sem esta leitura, a aba Rumble diria "Vibração travada (fraca=…, forte=…)" com
-o motor parado — que é exatamente a mentira que a medição de 19/08/2026
-encontrou, e a mesma classe de defeito do HARM-19 pelo avesso: lá a UI acusava
-o daemon de morto quando ele estava vivo e recusando; aqui ela comemora quando
-ele recusou.
-
-**Como estes testes MORDEM:** arranque o `_recusa_no_corpo` (ou faça
-`rumble_set_checked` chamar `rumble_set`) e os quatro reprovam — o toast volta a
-dizer "travada", e o teste do temporizador mostra que um `Parar` seria agendado
-sobre um pedido que nunca chegou ao aparelho.
-"""
+"""NATIVO-RUMBLE-01, a metade da GUI: a recusa do daemon chega aos olhos dela."""
 
 from __future__ import annotations
 
@@ -29,9 +12,6 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     RUMBLE_RECUSADO_MODO_NATIVO,
 )
 
-# A resposta LITERAL que `_handle_rumble_set` devolve sob Modo Nativo. Copiada
-# do handler de propósito: se a forma mudar lá e não aqui, é este arquivo que
-# grita — que é o serviço que um dublê presta.
 RESPOSTA_DE_RECUSA: dict[str, Any] = {
     "status": "recusado",
     "desfecho": RUMBLE_RECUSADO_MODO_NATIVO,
@@ -76,12 +56,7 @@ class TestRumbleSetChecked:
     def test_daemon_velho_sem_o_campo_status_nao_quebra(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O daemon vivo é mais velho que o código: resposta sem `status` vale.
-
-        Instalação editable — a GUI nova conversa com o daemon que subiu antes
-        dela até o próximo start. Uma resposta antiga (`{"weak":…, "strong":…}`)
-        não pode virar recusa fantasma.
-        """
+        """O daemon vivo é mais velho que o código: resposta sem `status` vale."""
         monkeypatch.setattr(
             ipc_bridge, "_safe_call", lambda *a, **k: (True, {"weak": 160, "strong": 220})
         )

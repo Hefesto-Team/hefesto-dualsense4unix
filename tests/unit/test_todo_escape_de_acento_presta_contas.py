@@ -1,61 +1,4 @@
-"""O escape do portão de acentuação tem de prestar contas — todo escape NOVO.
-
-Nasceu em 31/08/2026. O portão `acentuacao` tem uma válvula por linha: qualquer
-linha que contenha ``noqa-acento`` (ou ``noqa: acentuacao``) sai da varredura
-inteira. A válvula é NECESSÁRIA — há palavra que o dicionário do validador
-acusa e que está CERTA sem acento. As quatro classes desta casa:
-
-- *media*, pretérito imperfeito de MEDIR  (noqa-acento: é o exemplo)
-- *referencia*, verbo referenciar  (noqa-acento: é o exemplo)
-- *acao*, *nao*: slug de arquivo e valor de chave  (noqa-acento: é o exemplo)
-- `@media` do CSS, que é palavra-chave de outra linguagem.
-
-O QUE ELA NÃO PODE VIRAR
-------------------------
-Paisagem. Medido nesta árvore em 31/08/2026: dos 170 escapes do repositório,
-**60 não diziam por quê**. Um escape mudo é indistinguível de um erro de
-acentuação que alguém calou para o portão ficar verde — e quem lê depois não
-tem como saber qual dos dois é, a não ser refazendo a análise inteira.
-
-É a mesma doença que o ``SERVE_UM_LADO_SO`` de
-``test_install_serve_os_dois_lados_da_cerca.py`` existe para impedir: lá a
-exceção à cerca do install é um dicionário cujo VALOR é a razão, com data;
-aqui a exceção ao portão de acento é uma linha cuja razão vem escrita ao lado
-da marca.
-
-A REGRA, e ela é de uma linha só
---------------------------------
-A razão tem de morar NA MESMA ANOTAÇÃO da marca. Vale antes ou depois dela —
-as duas formas já são uso desta casa::
-
-    manager.delete("acao")  # slug literal ASCII (noqa-acento)   <- razão ANTES
-    <div data-v="acao">     # (noqa-acento): endereço            <- razão DEPOIS
-
-O que NÃO vale é a marca sozinha (``# (noqa-acento)``, ``<!-- noqa-acento -->``),
-porque ela não diz nada a ninguém.
-
-A LISTA PINADA SÓ ENCOLHE
--------------------------
-Os 60 mudos de hoje ficam em ``SEM_RAZAO_PINADOS``, por arquivo. Escape novo
-sem razão reprova — num arquivo pinado, porque a conta cresce; num arquivo
-fora da lista, porque ele não está lá. Curar um escape mudo faz a conta
-encolher, e encolher PASSA: a régua é ``atual <= pinado``, nunca igualdade.
-
-O QUE ESTA RÉGUA NÃO ALCANÇA, e está escrito de propósito
----------------------------------------------------------
-O escape é POR LINHA, então um erro de acentuação REAL que caia na MESMA linha
-de um ``noqa-acento`` legítimo passa pelos dois portões: pelo de acentuação,
-porque a linha inteira é pulada; e por este, porque a marca dele TEM razão.
-Este é o custo conhecido da válvula por linha, não um defeito desta régua —
-consertá-lo pediria um escape por PALAVRA, e não por linha, no
-``validar-acentuacao.py``. Fica medido e escrito; ver a mordida M6 do relatório
-de 31/08/2026.
-
-E o defeito irmão, que é o mais fácil de cometer: escrever a razão na linha
-DE BAIXO do achado. Aconteceu em 31/08 no
-``test_as_abas_vivas_falam_com_o_daemon_certo.py`` — a marca estava um degrau
-abaixo da palavra e não alcançava nada. A marca vai NA linha da palavra.
-"""
+"""O escape do portão de acentuação tem de prestar contas — todo escape NOVO."""
 from __future__ import annotations
 
 import importlib.util
@@ -66,22 +9,10 @@ from types import ModuleType
 RAIZ = Path(__file__).resolve().parents[2]
 VALIDADOR = RAIZ / "scripts" / "validar-acentuacao.py"
 
-#: Este arquivo fala SOBRE a marca, então ele a escreve dezenas de vezes. Sem
-#: esta exclusão a régua contaria os próprios exemplos como dívida — e cresceria
-#: sozinha a cada linha de documentação que alguém acrescentasse aqui.
 ESTE_ARQUIVO = "tests/unit/test_todo_escape_de_acento_presta_contas.py"
 
-#: Quantos escapes (com razão + sem razão) o repositório tinha quando esta
-#: guarda nasceu. Trava contra varredor quebrado, não meta: um leitor que
-#: devolve zero linhas deixa TODOS os testes abaixo passarem por vacuidade, que
-#: é o pior estado possível para um portão. Ver `PISO_DE_FUNCOES` no
-#: `test_install_serve_os_dois_lados_da_cerca.py`, que nasceu do mesmo medo.
 PISO_DE_ESCAPES = 140
 
-#: Os escapes MUDOS de 31/08/2026, por arquivo. Chave é o caminho relativo;
-#: valor é quantos aquele arquivo tinha no dia. **Esta lista só encolhe.**
-#: Para tirar um daqui: escreva a razão ao lado da marca e baixe o número no
-#: MESMO commit.
 SEM_RAZAO_PINADOS: dict[str, int] = {
     ".github/workflows/ci.yml": 2,
     "scripts/gerar-mapa.py": 2,
@@ -94,9 +25,6 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "src/hefesto_dualsense4unix/profiles/manager.py": 1,
     "src/hefesto_dualsense4unix/profiles/sanidade.py": 1,
     "tests/unit/test_cli_profile_historico.py": 3,
-    # test_coop_default_on_migration.py saiu em 03/09/2026: o escape mudo que ele
-    # tinha não existe mais no arquivo, e a régua da IGUALDADE cobra a linha de
-    # volta — número pinado acima do real é licença em branco para o próximo.
     "tests/unit/test_hidraw_broker_open_fd.py": 1,
     "tests/unit/test_ipc_server.py": 1,
     "tests/unit/test_modo01_o_modo_jogo_liga_sozinho.py": 1,
@@ -107,26 +35,16 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "tests/unit/test_validar_acentuacao_multiplos_arquivos.py": 2,
 }
 
-#: A marca, nas duas grafias que o `validar-acentuacao.py` honra (ver
-#: `checar_arquivo`). Os parênteses opcionais entram no casamento para que
 #: `# (noqa-acento)` não deixe um `)` órfão contando como razão.
 _MARCA = re.compile(r"\(?noqa-acento\)?|\(?noqa:\s*acentuacao\)?")
 
-#: Onde uma anotação começa, em cada linguagem que este repositório escreve.
 _ABRE_ANOTACAO = ("<!--", "/*", "#", "//")
 
-#: Delimitadores que não são razão nenhuma — só fecham o comentário.
 _SO_DELIMITADOR = ("<!--", "-->", "/*", "*/", "#", "//")
 
 
 def _carrega_validador() -> ModuleType:
-    """O validador é um script com hífen no nome: `import` não o alcança.
-
-    Ele é a fonte de QUAIS arquivos existem (`listar_arquivos_git`) e de quais
-    são isentos (`is_whitelisted`). Reimplementar isso aqui criaria uma segunda
-    lista de arquivos, e duas listas divergem — foi assim que o `portoes.sh`
-    nasceu, em 25/08/2026.
-    """
+    """O validador é um script com hífen no nome: `import` não o alcança."""
     spec = importlib.util.spec_from_file_location("_validador_acento", VALIDADOR)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
@@ -135,18 +53,7 @@ def _carrega_validador() -> ModuleType:
 
 
 def tem_razao(linha: str) -> bool:
-    """True se a marca vem acompanhada de razão NA MESMA ANOTAÇÃO.
-
-    A anotação é o comentário que contém a marca — do último abridor
-    (``#``, ``/*``, ``<!--``, ``//``) antes dela até o fim da linha. Fora dela
-    a prosa é CONTEÚDO, não justificativa: numa linha como
-    ``# o glade não os referencia  # (noqa-acento)`` o texto da esquerda explica
-    o código, e não por que o escape existe.
-
-    Linha sem abridor nenhum (prosa de docstring, célula de `.csv`) usa a linha
-    inteira — ali não há como separar anotação de conteúdo, e a régua prefere
-    ABSOLVER a acusar falso.
-    """
+    """True se a marca vem acompanhada de razão NA MESMA ANOTAÇÃO."""
     m = _MARCA.search(linha)
     if m is None:
         return False
@@ -167,8 +74,6 @@ def escapes() -> tuple[list[tuple[str, int, str]], list[tuple[str, int, str]]]:
     sem: list[tuple[str, int, str]] = []
     for arq in val.listar_arquivos_git(RAIZ):
         rel = str(arq.resolve().relative_to(RAIZ))
-        # Arquivo isento do portão não tem escape a prestar contas: a marca ali
-        # não desliga nada, porque nada estava ligado.
         if val.is_whitelisted(rel) or rel == ESTE_ARQUIVO:
             continue
         try:
@@ -189,9 +94,6 @@ def _por_arquivo(achados: list[tuple[str, int, str]]) -> dict[str, int]:
     return contas
 
 
-# ---------------------------------------------------------------------------
-# 0. A TRAVA DO PRÓPRIO VARREDOR
-# ---------------------------------------------------------------------------
 def test_o_varredor_de_escapes_nao_ficou_cego() -> None:
     """Um leitor que devolve zero faz os testes abaixo passarem por vacuidade."""
     com, sem = escapes()
@@ -205,9 +107,6 @@ def test_o_varredor_de_escapes_nao_ficou_cego() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. TODO ESCAPE NOVO EXIGE RAZÃO
-# ---------------------------------------------------------------------------
 def test_nenhum_escape_novo_sem_razao() -> None:
     _com, sem = escapes()
     atual = _por_arquivo(sem)
@@ -235,9 +134,6 @@ def test_nenhum_escape_novo_sem_razao() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. A LISTA SÓ ENCOLHE
-# ---------------------------------------------------------------------------
 def test_a_lista_de_escapes_mudos_so_encolhe() -> None:
     """`atual <= pinado`, no total. Encolher passa; crescer reprova."""
     _com, sem = escapes()
@@ -250,16 +146,7 @@ def test_a_lista_de_escapes_mudos_so_encolhe() -> None:
 
 
 def test_a_lista_pinada_esta_em_dia_com_o_que_existe() -> None:
-    """O outro lado da catraca: número pinado ACIMA do real também reprova.
-
-    Sem esta metade a catraca é decorativa — bastaria inflar um número
-    (``"x.py": 1`` virando ``"x.py": 9``) para o teto subir e oito escapes mudos
-    novos entrarem sem ninguém ver. E arquivo curado que fica na lista vira lixo
-    acumulado, autorizando um escape mudo FUTURO naquele caminho.
-
-    Por isso a régua é IGUALDADE por arquivo, nas duas direções. Curou um
-    escape? Baixe o número no mesmo commit. Curou o último? Apague a linha.
-    """
+    """O outro lado da catraca: número pinado ACIMA do real também reprova."""
     _com, sem = escapes()
     atual = _por_arquivo(sem)
     sobrando = sorted(
@@ -279,9 +166,6 @@ def test_a_lista_pinada_esta_em_dia_com_o_que_existe() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. A RÉGUA DA RÉGUA — `tem_razao` medida contra casos escritos à mão
-# ---------------------------------------------------------------------------
 def test_tem_razao_reconhece_as_duas_formas_da_casa() -> None:
     marca = "noqa" + "-acento"
     com_razao = [
@@ -306,12 +190,7 @@ def test_tem_razao_reconhece_as_duas_formas_da_casa() -> None:
 
 
 def test_a_razao_da_anotacao_vizinha_nao_conta() -> None:
-    """Prosa de OUTRO comentário na mesma linha não é razão do escape.
-
-    `# o glade não os referencia  # (noqa-acento)` — a esquerda explica o  (noqa-acento: verbo)
-    código, não a válvula. Se contasse, bastaria haver qualquer comentário na
-    linha para o escape virar mudo com aparência de justificado.
-    """
+    """Prosa de OUTRO comentário na mesma linha não é razão do escape."""
     marca = "noqa" + "-acento"
     exemplo = "# o glade não os referencia"  # (noqa-acento: verbo referenciar)
     assert not tem_razao(f"{exemplo}  # ({marca})")

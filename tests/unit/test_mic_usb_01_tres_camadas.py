@@ -33,8 +33,6 @@ MACs fake (regra da casa).
 """
 # ruff: noqa: E501 — as amostras de `pactl` e do `default-routes` são cópias
 # FIÉIS da saída desta máquina, e o nome do card do DualSense sozinho já passa
-# de 100 colunas. Quebrar as linhas para caber inventaria uma entrada que o
-# parser jamais receberia, e é justamente o parser que está sendo testado.
 from __future__ import annotations
 
 import subprocess
@@ -61,11 +59,6 @@ MAC1 = "aabbcc000001"
 MAC2 = "aabbcc000002"
 
 
-# ---------------------------------------------------------------------------
-# Cenário: daemon de verdade num socket de teste
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -75,12 +68,7 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
 
 class _ControllerComAudio(FakeController):
-    """FakeController que sabe responder `mic.set` — dublê do backend real.
-
-    Guarda os pedidos como o backend guarda: o VALOR e o `uniq`. Isso permite
-    provar que `False` e `None` chegam DIFERENTES do outro lado do fio, que é a
-    distinção que o projeto pagou caro para aprender.
-    """
+    """FakeController que sabe responder `mic.set` — dublê do backend real."""
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -158,18 +146,12 @@ def _entrada(payload: dict[str, Any], uniq: str) -> dict[str, Any]:
     raise AssertionError(f"controle {uniq} ausente do payload")
 
 
-# ---------------------------------------------------------------------------
-# Camada 3 — `mic.set` no IPC
-# ---------------------------------------------------------------------------
-
-
 class TestMicSetNoProtocolo:
     """Entra pelo fio: se o método não estiver ROTEADO, a chamada nem existe."""
 
     @pytest.mark.asyncio
     async def test_o_metodo_existe_no_despacho(self, daemon_vivo: Any) -> None:
-        """Regressão da própria sprint: `mic.set` não existia entre os 31
-        métodos do IPC, embora o backend tivesse `set_microphone_mute`."""
+        """Regressão da própria sprint: `mic.set` não existia entre os 31"""
         socket_path, _fc = daemon_vivo
         res = await _chamar(socket_path, "mic.set", {"muted": False})
         assert res["status"] == "ok"
@@ -182,12 +164,7 @@ class TestMicSetNoProtocolo:
 
     @pytest.mark.asyncio
     async def test_false_desmuta_e_nao_e_none(self, daemon_vivo: Any) -> None:
-        """O CADEADO da sprint: `False` viaja como `False`, nunca virando `None`.
-
-        Foi confundir os dois que fez o keepalive do upstream mandar
-        `common[9]=0x00` a 60 Hz por cima do kernel (`3d9bb7e`) — "desmuta"
-        escrito onde se queria "não mexe".
-        """
+        """O CADEADO da sprint: `False` viaja como `False`, nunca virando `None`."""
         socket_path, fc = daemon_vivo
         await _chamar(socket_path, "mic.set", {"muted": False})
         assert fc.pedidos_mic == [(False, None)]
@@ -277,8 +254,7 @@ class TestPosseNoStateFull:
     async def test_a_leitura_do_firmware_continua_ao_lado(
         self, daemon_vivo: Any
     ) -> None:
-        """Posse e leitura são perguntas diferentes e viajam juntas: a tela só
-        escolhe entre "aperte o botão" e "desmute pela janela" tendo as duas."""
+        """Posse e leitura são perguntas diferentes e viajam juntas: a tela só"""
         socket_path, fc = daemon_vivo
         fc.mic_mudo_lido = True
         await _chamar(socket_path, "mic.set", {"muted": False, "uniq": MAC1})
@@ -315,11 +291,6 @@ class TestPosseNoStateFull:
         finally:
             await server.stop()
         assert "mic_mudo_desejado" not in _entrada(payload, MAC1)["audio"]
-
-
-# ---------------------------------------------------------------------------
-# Camada 3 — o backend por baixo do IPC
-# ---------------------------------------------------------------------------
 
 
 class _HandleFake:
@@ -369,16 +340,12 @@ class TestBackendMicMute:
         assert h1._mic_mute_desejado is None
 
     def test_sem_handle_devolve_false(self) -> None:
-        """MIC-USB-01: o retorno booleano é o que deixa o `mic.set` responder
-        "sem_controle" em vez de mentir "ok" para uma ordem que caiu no vazio."""
+        """MIC-USB-01: o retorno booleano é o que deixa o `mic.set` responder"""
         inst, _h1, _h2 = _backend_com_dois()
         assert inst.set_microphone_mute(True, uniq="aabbcc0000ff") is False
 
     def test_handle_que_estoura_nao_vira_sucesso(self) -> None:
-        """O outro lado do mesmo contrato, e o que a versão anterior escondia:
-        antes o método engolia a exceção num `suppress` e não devolvia NADA, de
-        modo que um controle que sumiu no meio da escrita (replug, USB caindo)
-        respondia "ok" na janela. Handle presente + escrita falhada = False."""
+        """O outro lado do mesmo contrato, e o que a versão anterior escondia:"""
         inst, h1, _h2 = _backend_com_dois()
 
         def _explode(_muted: bool | None) -> None:
@@ -403,17 +370,8 @@ class TestBackendMicMute:
         assert inst.microphone_mute_for("aabbcc0000ff") is None
 
 
-# ---------------------------------------------------------------------------
-# Camada 3 — o CLI, chamador vivo do método novo
-# ---------------------------------------------------------------------------
-
-
 class TestCliMicFirmware:
-    """`mic mute|unmute|release` falando com um daemon de VERDADE.
-
-    A prova de que o `mic.set` tem chamador: monkeypatchar o `_mic_firmware`
-    provaria só que o teste sabe chamar a si mesmo.
-    """
+    """`mic mute|unmute|release` falando com um daemon de VERDADE."""
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -432,14 +390,10 @@ class TestCliMicFirmware:
         from hefesto_dualsense4unix.cli import cmd_mic
 
         socket_path, fc = daemon_vivo
-        # O CLI resolve o socket por `ipc_socket_path()`; apontamos os dois para
-        # o mesmo arquivo em vez de dublar o cliente.
         monkeypatch.setattr(
             "hefesto_dualsense4unix.cli.ipc_client.ipc_socket_path",
             lambda: socket_path,
         )
-        # O CLI é síncrono e usa `asyncio.run` — roda numa thread para não
-        # colidir com o laço de eventos deste teste.
         import asyncio
 
         with pytest.raises(typer.Exit) as exc:
@@ -490,11 +444,6 @@ class TestCliMicFirmware:
         assert cmd_mic._ACTION_FLAG["demote"] == "--install"
 
 
-# ---------------------------------------------------------------------------
-# Camadas 1 e 2 — o doctor.sh
-# ---------------------------------------------------------------------------
-
-
 def _rodar_doctor(func: str, *args: str, entrada: str | None = None) -> str:
     """Executa uma função shell REAL do doctor (source, sem rodar o main)."""
     linha = " ".join([func, *[f'"{a}"' for a in args]])
@@ -508,12 +457,9 @@ def _rodar_doctor(func: str, *args: str, entrada: str | None = None) -> str:
         env={"PATH": "/usr/bin:/bin", "DOCTOR_SH": str(DOCTOR), "HOME": "/nao-existe"},
     )
     assert res.returncode == 0, res.stderr
-    # `strip("\n")` e não `strip()`: o campo vazio de `_dualsense_perfil_status`
-    # ("nada a trocar") é um TAB final, e comê-lo esconderia a resposta.
     return res.stdout.strip("\n")
 
 
-#: Cópia fiel de `~/.local/state/wireplumber/default-routes` desta máquina, com
 #: o DualSense MUDO (o estado do relato) e o restante intacto.
 _ROTAS_MUDAS = """\
 [default-routes]
@@ -591,8 +537,6 @@ class TestNomeDaSource:
 
 
 #: Recorte fiel de `LC_ALL=C pactl list cards` desta máquina, com o DualSense no
-#: perfil S/PDIF — o estado do relato ("gravação de 4 segundos: pico 0", com o
-#: mudo do firmware ativo; o mesmo perfil gravou pico 4606 em 26/07).
 _CARDS_SPDIF = """\
 Card #52
 \tName: alsa_card.pci-0000_0c_00.4
@@ -633,31 +577,10 @@ _CARD_DS = (
 
 
 class TestCamada2PerfilDaPlaca:
-    """REESCRITOS em 26/07/2026 — a regra que eles travavam foi REFUTADA.
-
-    Estes testes fixavam o comportamento original do `--fix-mic`: sempre que a
-    entrada ativa fosse `iec958`, trocar para `input:analog-stereo`, e — no caso
-    mais explicito — NAO filtrar por `available`. Um deles se chamava
-    literalmente `test_o_alvo_nao_e_filtrado_por_available`, com o argumento de
-    que filtrar "repetiria o erro do WirePlumber e deixaria o microfone embutido
-    inalcancavel para sempre".
-
-    Medido no hardware, com o controle no cabo: forcar o perfil analogico
-    (marcado `available: no` pelo ALSA) produz uma source SEM PORTA DE CAPTURA e
-    a gravacao sai com pico 0 — 327.680 bytes de silencio digital. No
-    `iec958-stereo` a mesma gravacao deu pico 4606 e RMS 374. A regra que estes
-    testes protegiam emudecia o microfone de quem rodasse a cura.
-
-    Não foram apagados: cada um vira o seu contrario, com o porque ao lado. E o
-    argumento antigo não era burrice — ele valia SE o analogico fosse alcancavel.
-    A medicao mostrou que, quando o ALSA diz `available: no`, ele não é.
-    """
+    """REESCRITOS em 26/07/2026 — a regra que eles travavam foi REFUTADA."""
 
     def test_nao_propoe_o_analogico_indisponivel(self) -> None:
-        """Era `test_detecta_o_spdif_e_propoe_o_analogico`.
-
-        O ativo (`iec958`) oferece fonte e esta disponivel: não há o que trocar.
-        """
+        """Era `test_detecta_o_spdif_e_propoe_o_analogico`."""
         saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_SPDIF)
         card, ativo, alvo = saida.split("\t")
         assert card == _CARD_DS
@@ -668,12 +591,7 @@ class TestCamada2PerfilDaPlaca:
         )
 
     def test_quando_precisa_trocar_o_alvo_preserva_a_saida(self) -> None:
-        """Este contrato CONTINUA valendo, e por que ele foi escrito.
-
-        Trocar para um perfil so-de-entrada emudeceria o alto-falante e o fone
-        do controle, e derrubaria o canal de haptic-de-audio junto. So que agora
-        a troca so acontece quando o ativo NAO serve.
-        """
+        """Este contrato CONTINUA valendo, e por que ele foi escrito."""
         sem_fonte = _CARDS_SPDIF.replace(
             "\tActive Profile: output:analog-surround-40+input:iec958-stereo",
             "\tActive Profile: output:analog-surround-40",
@@ -685,12 +603,7 @@ class TestCamada2PerfilDaPlaca:
         )
 
     def test_o_alvo_e_sim_filtrado_por_available(self) -> None:
-        """O CONTRARIO exato do teste que existia aqui.
-
-        O nome antigo era `test_o_alvo_nao_e_filtrado_por_available`. Filtrar
-        por disponibilidade e justamente o que impede a cura de escolher um
-        perfil que o ALSA sabe que não vai funcionar.
-        """
+        """O CONTRARIO exato do teste que existia aqui."""
         assert "priority: 1265, available: no" in _CARDS_SPDIF, (
             "a fixture precisa manter o analogico como indisponivel — e o caso"
         )
@@ -706,18 +619,7 @@ class TestCamada2PerfilDaPlaca:
         )
 
     def test_o_estado_que_a_cura_antiga_deixava_e_desfeito(self) -> None:
-        """Era `test_perfil_ja_analogico_nao_pede_troca`, e a inversao e o ponto.
-
-        `_CARDS_CURADO` e a maquina DEPOIS da cura antiga: perfil analogico
-        ativo. A fixture o descreve como `available: no` — e foi exatamente esse
-        o estado medido no hardware, onde a source nasce sem porta e a gravacao
-        sai com pico 0.
-
-        O teste antigo chamava isso de "curado" e exigia que nada fosse feito.
-        A regra nova reconhece o estado como ruim e propoe o perfil que o ALSA
-        declara disponivel: a cura passa a DESFAZER o estrago que ela mesma
-        causava antes.
-        """
+        """Era `test_perfil_ja_analogico_nao_pede_troca`, e a inversao e o ponto."""
         saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_CURADO)
         card, ativo, alvo = saida.split("\t")
         assert card == _CARD_DS
@@ -770,12 +672,7 @@ class TestFiacaoNoDoctor:
         assert "_source_mute_veredito" in bloco
 
     def test_deteccao_nao_escreve(self) -> None:
-        """As funções de parsing são PURAS: nada de set-*, sed -i ou sudo.
-
-        Comentários saem da conta — eles CITAM os comandos de cura de
-        propósito, e proibir a citação empobreceria a explicação sem tornar o
-        código mais seguro.
-        """
+        """As funções de parsing são PURAS: nada de set-*, sed -i ou sudo."""
         texto = self._texto()
         inicio = texto.index("_dualsense_rotas_mudas() {")
         regiao = "\n".join(
@@ -818,7 +715,6 @@ class TestPromocaoDaFonte:
         bloco = texto[inicio : texto.index("\n}\n", inicio)]
         assert "pick_dualsense_source_id" in bloco
         assert "wpctl set-default" in bloco
-        # Promover uma fonte sem porta de captura seria promover silêncio.
         assert "--fix-mic" in bloco
 
     def test_promocao_ignora_o_monitor_do_sink(self) -> None:
@@ -843,5 +739,4 @@ class TestPromocaoDaFonte:
         ).read_text(encoding="utf-8")
         assert "MIC-USB-01" in conf
         assert "--promote-source" in conf
-        # A política em si NÃO mudou: rebaixar continua sendo o default.
         assert "priority.session = 50" in conf

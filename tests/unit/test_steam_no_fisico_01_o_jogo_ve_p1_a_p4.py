@@ -1,30 +1,4 @@
-"""STEAM-NO-FISICO-01 — o jogo vê a ordem da mesa: os vpads nascem P1→P4.
-
-A terceira obrigação da decisão dela de 23/09/2026: *"O P1 do Hefesto é o
-jogador 1 do jogo: os controles virtuais chegam ao jogo na ordem P1→P4. Meça
-como o SDL e o Proton numeram (pela ordem de criação do nó? pelo índice do
-hidraw?) e faça a criação obedecer ao número da aba Controles."*
-
-A MEDIÇÃO, no fonte (`libsdl-org/SDL@0c8feecc`): o SDL dá a cada joystick novo
-o menor índice livre (`SDL_joystick.c`, `SDL_PrivateJoystickAdded` →
-`SDL_FindFreePlayerIndex`); a enumeração inicial do HIDAPI é o
-`udev_enumerate_scan_devices` do subsistema `hidraw` (`linux/hid.c`), que o
-udev ordena pelo syspath — e o syspath de um vpad uhid leva o número de
-sequência do HID, isto é, a ORDEM DE CRIAÇÃO. O índice do `/dev/hidrawN` não
-entra na conta. O winebus do Proton enumera pelo mesmo udev.
-
-Logo: o jogo numera os vpads na ordem em que eles nascem. O co-op os criava na
-ordem do `eventN` (a ordem em que o kernel viu os controles), e o grab ou a
-calibração que atrasavam um jogador deixavam o seguinte passar na frente.
-
-AS MORDIDAS, exercidas e devolvidas: (1) o `sync` na ordem de `want` cria o P4
-antes do P2; (2) o `_promote_pending` sem a espera deixa o P3 nascer antes do
-P2 de grab pendente; (3) sem o prazo, o P3 espera o P2 para sempre.
-
-AS DUAS RESPOSTAS DELA DE 23/09/2026, 22h (a segunda metade deste arquivo):
-o vpad do PRIMÁRIO espera a carta 1, e o controle fora de ordem com o jogo
-aberto se recria na hora. As mordidas delas estão no relatório da sprint.
-"""
+"""STEAM-NO-FISICO-01 — o jogo vê a ordem da mesa: os vpads nascem P1→P4."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -44,10 +18,8 @@ P2 = "aabbcc000002"
 P3 = "aabbcc000003"
 P4 = "aabbcc000004"
 
-#: A carta de cada um na aba Controles.
 CARTAS = {P1: 1, P2: 2, P3: 3, P4: 4}
 
-#: A ordem em que o kernel os viu (o `eventN`): nada a ver com a carta.
 EVDEVS = {
     P1: "/dev/input/event20",
     P4: "/dev/input/event21",
@@ -154,8 +126,7 @@ def _daemon(cartas: dict[str, int] | None = CARTAS) -> Any:
 
 class TestONascimentoSegueACarta:
     def test_a_mesa_cheia_nasce_na_ordem_da_carta(self, nascimentos: list[str]) -> None:
-        """A MORDIDA (1): na ordem do `eventN` nasceria P4, P2, P3 — e o jogo
-        chamaria o P4 dela de «jogador 2»."""
+        """A MORDIDA (1): na ordem do `eventN` nasceria P4, P2, P3 — e o jogo"""
         mgr = CoopManager(_daemon())
 
         mgr.sync()
@@ -181,13 +152,12 @@ class TestONascimentoSegueACarta:
 
 class TestQuemAtrasaNaoPerdeOLugar:
     def test_o_grab_pendente_do_p2_segura_o_p3(self, nascimentos: list[str]) -> None:
-        """A MORDIDA (2): o grab do P2 confirma um tique depois; sem a espera,
-        o P3 nasceria antes e seria o «jogador 2» do jogo."""
+        """A MORDIDA (2): o grab do P2 confirma um tique depois; sem a espera,"""
         _Leitor.pendentes = {P2}
         mgr = CoopManager(_daemon())
 
         mgr.sync()
-        assert nascimentos == []  # P2 pendente; P3 e P4 esperam a vez dele
+        assert nascimentos == []
 
         mgr._players[P2].reader.grab_state = "held"
         mgr._promote_pending()
@@ -197,8 +167,7 @@ class TestQuemAtrasaNaoPerdeOLugar:
     def test_o_prazo_e_o_piso_de_quem_esta_pronto(
         self, nascimentos: list[str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA (3): o P2 que nunca confirma não deixa o P3 sem controle —
-        passado `ESPERA_PELA_ORDEM_S`, o P3 nasce e o diário diz."""
+        """A MORDIDA (3): o P2 que nunca confirma não deixa o P3 sem controle —"""
         relogio = {"t": 1000.0}
         monkeypatch.setattr(coop_mod.time, "monotonic", lambda: relogio["t"])
         _Leitor.pendentes = {P2}
@@ -216,13 +185,7 @@ class TestQuemAtrasaNaoPerdeOLugar:
         assert mgr._players[P2].vpad is None
 
     def test_quem_ja_tem_vpad_nao_segura_ninguem(self, nascimentos: list[str]) -> None:
-        """A espera é só por quem AINDA não nasceu: um P2 de pé não trava o P3.
-
-        24/09/2026, a segunda resposta dela (`D-2309-FORA-DE-ORDEM-SE-RECRIA-
-        NA-HORA`): o P3 que volta DEPOIS do P4 renasce, e o P4 renasce atrás
-        dele — sem jogo aberto, o jogo que abrir depois os enumera na ordem em
-        que nasceram. Esta linha dizia `[P2, P3, P4, P3]`, e era a desordem.
-        """
+        """A espera é só por quem AINDA não nasceu: um P2 de pé não trava o P3."""
         mgr = CoopManager(_daemon())
         mgr.sync()
         assert nascimentos == [P2, P3, P4]
@@ -237,10 +200,7 @@ class TestOTiqueNaoPagaAOrdem:
     def test_com_todos_nascidos_o_tique_nao_pergunta_a_carta(
         self, nascimentos: list[str]
     ) -> None:
-        """O `_promote_pending` roda a cada tique do poll loop (~10 ms). Com
-        todos os vpads de pé não há fila a ordenar, e ele não pode ir ao
-        registro por carta — seriam centenas de idas por segundo sob o lock
-        dele. A ordem só custa enquanto alguém espera nascer."""
+        """O `_promote_pending` roda a cada tique do poll loop (~10 ms). Com"""
         consultas: list[str] = []
 
         def _carta(mac: str, assign: bool = False) -> int | None:
@@ -260,11 +220,6 @@ class TestOTiqueNaoPagaAOrdem:
         assert consultas == []
 
 
-# ---------------------------------------------------------------------------
-# As duas respostas dela de 23/09/2026, 22h.
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def presentes(
     nascimentos: list[str], monkeypatch: pytest.MonkeyPatch
@@ -282,13 +237,7 @@ def presentes(
 def vpad_do_p1(
     nascimentos: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> list[tuple[Any, ...]]:
-    """O caminho de verdade do vpad do P1 (`gamepad`), com o nascimento anotado.
-
-    Não é mais frouxo que o real nos dois pontos que a mesa lê: o `stop` deixa
-    `_gamepad_device` em ``None`` e o `start` põe um objeto NOVO lá. O CAMINHO
-    ele não conhece — quem o mede com o start de verdade é
-    `TestOP1RenasceNoMesmoCaminho` (conferência de 24/09/2026).
-    """
+    """O caminho de verdade do vpad do P1 (`gamepad`), com o nascimento anotado."""
     eventos: list[tuple[Any, ...]] = []
 
     def _stop(daemon: Any, *, persist: bool = True, release_grab: bool = True) -> None:
@@ -309,9 +258,7 @@ def vpad_do_p1(
 
 
 class TestOPrimarioEsperaACarta1:
-    """`D-2309-O-PRIMARIO-ESPERA-A-CARTA-1`: o vpad do P1 nasce no boot, antes
-    de o daemon saber quem é o primário; «esperar» é renascer DEPOIS do vpad
-    da carta 1, que é o que o jogo enumera."""
+    """`D-2309-O-PRIMARIO-ESPERA-A-CARTA-1`: o vpad do P1 nasce no boot, antes"""
 
     def test_o_p1_renasce_depois_da_carta_1(
         self, nascimentos: list[str], vpad_do_p1: list[tuple[Any, ...]]
@@ -325,7 +272,6 @@ class TestOPrimarioEsperaACarta1:
         assert nascimentos == [P2, "p1", P3, P4]
         assert vpad_do_p1 == [("stop", False, False), ("start", "profile")]
         assert daemon._gamepad_device is not vpad_de_boot
-        # Quem é o primário NÃO muda: «controle novo nunca rouba o posto».
         assert daemon.controller.primary_uniq == P1
 
     def test_com_o_p1_na_carta_1_nada_renasce(
@@ -341,10 +287,7 @@ class TestOPrimarioEsperaACarta1:
     def test_com_o_jogo_na_autoridade_o_p1_espera_o_jogo_fechar(
         self, nascimentos: list[str], vpad_do_p1: list[tuple[Any, ...]]
     ) -> None:
-        """A R-04 medida em 23/07: recriar o vpad do P1 com o jogo na
-        autoridade mata aquele controle até o fim da sessão. O P1 fica, os
-        secundários nascem em ordem entre si, e o P1 renasce quando o jogo
-        devolve a autoridade."""
+        """A R-04 medida em 23/07: recriar o vpad do P1 com o jogo na"""
         daemon = _daemon(cartas={P1: 2, P2: 1, P3: 3, P4: 4})
         daemon.display_authority = "game"
         mgr = CoopManager(daemon)
@@ -354,13 +297,9 @@ class TestOPrimarioEsperaACarta1:
         assert vpad_do_p1 == []
         assert mgr._p1_espera_o_jogo is True
 
-        # O vocabulário do `GameSignal` é game/daemon/unknown: «daemon» é a
-        # evidência positiva de que o jogo largou (conferência de 24/09).
         daemon.display_authority = "daemon"
         mgr.sync()
 
-        # Sem jogo, o jogo que abrir enumera na ordem de nascimento: a carta 1
-        # (o P2) fica, e o resto renasce atrás dela, na ordem da carta.
         assert nascimentos == [P2, P3, P4, "p1", P3, P4]
         assert vpad_do_p1 == [("stop", False, False), ("start", "profile")]
         assert mgr._p1_espera_o_jogo is False
@@ -368,9 +307,7 @@ class TestOPrimarioEsperaACarta1:
     def test_o_p1_que_renasceu_por_outro_caminho_nao_renasce_de_novo(
         self, nascimentos: list[str], vpad_do_p1: list[tuple[Any, ...]]
     ) -> None:
-        """A troca de máscara recria o vpad do P1 (carta 1) DEPOIS dos
-        secundários. Sem jogo, quem volta para trás dele são os secundários —
-        derrubar o P1 de novo seria pagar o preço dele por nada."""
+        """A troca de máscara recria o vpad do P1 (carta 1) DEPOIS dos"""
         daemon = _daemon()
         mgr = CoopManager(daemon)
         mgr.sync()
@@ -384,8 +321,7 @@ class TestOPrimarioEsperaACarta1:
 
 
 class TestForaDeOrdemSeRecriaNaHora:
-    """`D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA`, com o jogo ABERTO: o jogo dá
-    ao vpad que nasce o menor lugar livre."""
+    """`D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA`, com o jogo ABERTO: o jogo dá"""
 
     def test_a_carta_renumerada_recria_os_que_trocaram(
         self, nascimentos: list[str], vpad_do_p1: list[tuple[Any, ...]]
@@ -397,12 +333,11 @@ class TestForaDeOrdemSeRecriaNaHora:
         mgr.sync()
         assert nascimentos == [P2, P3, P4]
 
-        # A aba Controles: o P4 do kernel passa a ser o jogador 2 dela.
         cartas[P2], cartas[P4] = 4, 2
         mgr.sync()
 
         assert nascimentos == [P2, P3, P4, P4, P3, P2]
-        assert vpad_do_p1 == []  # o P1 (carta 1) não se mexe
+        assert vpad_do_p1 == []
         assert list(mgr._mesa_do_jogo.items()) == sorted(
             {0: "<p1>", 1: P4, 2: P3, 3: P2}.items()
         )
@@ -410,8 +345,7 @@ class TestForaDeOrdemSeRecriaNaHora:
     def test_a_carta_menor_que_chega_depois_da_maior(
         self, nascimentos: list[str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O P2 cujo grab demorou além do prazo: o P3 e o P4 nasceram sem ele.
-        Quando o P2 fica pronto, os dois renascem atrás dele."""
+        """O P2 cujo grab demorou além do prazo: o P3 e o P4 nasceram sem ele."""
         relogio = {"t": 1000.0}
         monkeypatch.setattr(coop_mod.time, "monotonic", lambda: relogio["t"])
         _Leitor.pendentes = {P2}
@@ -431,9 +365,7 @@ class TestForaDeOrdemSeRecriaNaHora:
     def test_o_buraco_de_quem_saiu_nao_fica_para_quem_chega(
         self, nascimentos: list[str], presentes: dict[str, str]
     ) -> None:
-        """O P2 cai no meio da partida (as cartas andam: o P3 vira 2, o P4
-        vira 3) e volta como o 4º. O jogo daria a ele o lugar vazio do meio;
-        o P3 e o P4 renascem para ele entrar no fim."""
+        """O P2 cai no meio da partida (as cartas andam: o P3 vira 2, o P4"""
         cartas = dict(CARTAS)
         daemon = _daemon(cartas=cartas)
         daemon.display_authority = "game"
@@ -455,8 +387,7 @@ class TestForaDeOrdemSeRecriaNaHora:
     def test_sem_jogo_o_mesmo_buraco_so_recria_quem_ficou_para_tras(
         self, nascimentos: list[str], presentes: dict[str, str]
     ) -> None:
-        """Sem jogo não há buraco: quem chega vai para o fim — e o P2 que volta
-        como o 4º JÁ está no fim. Nada renasce."""
+        """Sem jogo não há buraco: quem chega vai para o fim — e o P2 que volta"""
         cartas = dict(CARTAS)
         mgr = CoopManager(_daemon(cartas=cartas))
         mgr.sync()
@@ -476,31 +407,26 @@ class TestAOrdemNaoAtropelaOLaco:
     def test_o_worker_da_renumeracao_so_deixa_o_recado(
         self, nascimentos: list[str]
     ) -> None:
-        """A renumeração roda o `sync(force=True)` num worker. Recriar vpad
-        ali disputaria o `forward_all` do poll loop: o worker deixa o recado,
-        e o tique seguinte do laço recria."""
+        """A renumeração roda o `sync(force=True)` num worker. Recriar vpad"""
         cartas = dict(CARTAS)
         mgr = CoopManager(_daemon(cartas=cartas))
         mgr.sync()
-        mgr._fio_do_laco = -1  # o laço é OUTRA thread
+        mgr._fio_do_laco = -1
 
         cartas[P2], cartas[P4] = 4, 2
         mgr.sync(force=True)
         assert nascimentos == [P2, P3, P4]
         assert mgr._ordem_pendente is True
 
-        mgr.forward_all()  # esta thread passa a ser a do laço
+        mgr.forward_all()
 
-        # Sem jogo aberto, o P4 (agora carta 2) sobe sozinho quando os de trás
-        # renascem: só o P3 e o P2 pagam.
         assert nascimentos == [P2, P3, P4, P3, P2]
         assert mgr._ordem_pendente is False
 
     def test_a_mesma_desordem_nao_recria_em_laco(
         self, nascimentos: list[str]
     ) -> None:
-        """Se o jogo discordar do modelo e a MESMA desordem voltar logo depois
-        de recriar, recriar de novo arrancaria o controle dela em laço."""
+        """Se o jogo discordar do modelo e a MESMA desordem voltar logo depois"""
         cartas = dict(CARTAS)
         daemon = _daemon(cartas=cartas)
         daemon.display_authority = "game"
@@ -511,7 +437,7 @@ class TestAOrdemNaoAtropelaOLaco:
         mgr.sync()
         assert nascimentos == [P2, P3, P4, P4, P3, P2]
 
-        mgr._mesa_do_jogo = antes  # o jogo «desfez»: a mesma desordem de novo
+        mgr._mesa_do_jogo = antes
         mgr.sync()
         mgr.sync()
 
@@ -520,8 +446,7 @@ class TestAOrdemNaoAtropelaOLaco:
     def test_a_ordem_que_falha_nao_derruba_o_laco(
         self, nascimentos: list[str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A regra do módulo: o poll loop não cai. Se a recriação do P1
-        levantar, o diário diz, e quem ia nascer nasce assim mesmo."""
+        """A regra do módulo: o poll loop não cai. Se a recriação do P1"""
 
         def _quebra(daemon: Any, **_kw: Any) -> None:
             raise OSError("uhid sumiu")
@@ -534,8 +459,7 @@ class TestAOrdemNaoAtropelaOLaco:
         assert nascimentos == [P2, P3, P4]
 
     def test_o_tique_nao_pergunta_a_carta(self, nascimentos: list[str]) -> None:
-        """O `forward_all` roda a cada ~10 ms: a ordem não pode custar uma ida
-        ao registro por tique."""
+        """O `forward_all` roda a cada ~10 ms: a ordem não pode custar uma ida"""
         consultas: list[str] = []
 
         def _carta(mac: str, assign: bool = False) -> int | None:
@@ -591,19 +515,8 @@ class TestOPlano:
         )
 
 
-# ---------------------------------------------------------------------------
-# A conferência de 24/09/2026: o P1 que renasce pela ordem volta no MESMO
-# caminho.
-# ---------------------------------------------------------------------------
-
-
 class _PadComCaminho:
-    """Um vpad com o que o produto lê dele: máscara, canal e caminho de origem.
-
-    O canal NÃO é digitado: sai de `virtual_pad.quer_uhid`, a mesma função do
-    produto — é o `_PadFalso` de `test_o_caminho_nao_vaza_entre_jogos`, com o
-    que o `forward_all` do co-op pede a um secundário.
-    """
+    """Um vpad com o que o produto lê dele: máscara, canal e caminho de origem."""
 
     def __init__(self, flavor: str, caminho: str | None, identidade: str) -> None:
         from hefesto_dualsense4unix.integrations import virtual_pad as vp
@@ -687,8 +600,6 @@ class TestOP1RenasceNoMesmoCaminho:
         daemon._motion_reader = None
         daemon.controller.hidraw_path = lambda uniq=None: "/dev/hidraw4"
         # O caminho DA SESSÃO em Xbox, com a máscara DualSense de sempre — o
-        # que o chip «Xbox» da aba Jogar ou um perfil que opina deixam de pé.
-        # `origin="profile"` para a régua não gravar nada em disco.
         gamepad_mod.start_gamepad_emulation_desfecho(
             daemon, origin="profile", caminho="xbox"
         )

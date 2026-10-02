@@ -58,7 +58,6 @@ def test_from_capture_carrega_sequencia(tmp_path: Path):
     assert s3.l2_raw == 200
     assert s3.r2_raw == 255
 
-    # Após esgotar, repete último
     s4 = fc.read_state()
     assert s4 == s3
 
@@ -118,7 +117,6 @@ def test_from_capture_real_do_repo_se_existir():
         pytest.skip(f"{real_path} não existe (ok — capture real e opt-in)")
     fc = FakeController.from_capture(real_path)
     fc.connect()
-    # Lê pelo menos os 5 primeiros states sem explodir
     for _ in range(5):
         state = fc.read_state()
         assert state.connected in (True, False)

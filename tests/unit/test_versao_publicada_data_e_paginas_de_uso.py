@@ -1,35 +1,4 @@
-"""O que a release publica sobre si mesma: data do AppStream, tag e endereço.
-
-PUBLICAÇÃO-FIEL-01 (31/07). Três coisas que a v0.4.0 publicou erradas, e a
-régua que deixou passar:
-
-  - `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml` anunciava a 0.4.0 com
-    `date="2026-07-28"` e com o texto da 0.3.0, e a 0.3.0 tinha sumido da série.
-    O commit do bump trocou uma linha — `version="0.3.0"` virou
-    `version="0.4.0"` — porque o `scripts/check_version_consistency.py` conferia
-    o NÚMERO e só. Era a menor edição possível que deixava o portão verde.
-  - `docs/usage/instalacao.md` — a página canônica, para onde o README aponta
-    duas vezes — mandava `git checkout v0.3.0` com a 0.4.0 publicada.
-  - `README.md` e as páginas de uso traziam o literal `[REDACTED]` DENTRO
-    da URL do fork: badge de CI com imagem quebrada e `git clone` impossível de
-    copiar.
-
-Mordidas deste arquivo, uma por uma:
-
-  - arrancar `_conferir_data_da_release` do portão faz
-    `test_portao_reprova_a_data_errada_da_v040` e os dois irmãos passarem a
-    aprovar, porque o número continua batendo — é exatamente o estado do disco
-    em 30/07;
-  - apagar a entrada da 0.3.0 do metainfo derruba
-    `test_toda_secao_datada_0x_do_changelog_tem_release_no_metainfo`;
-  - devolver `v0.3.0` a qualquer uma das páginas de uso derruba
-    `test_paginas_de_uso_nao_mandam_instalar_outra_versao`;
-  - devolver o marcador a qualquer URL derruba
-    `test_nenhum_marcador_de_redacao_dentro_de_url`, que é ESTREITO de
-    propósito: o mesmo marcador num campo de e-mail continua permitido, e
-    `test_a_mordida_da_url_nao_alcanca_o_campo_de_email` prova isso contra os
-    dois arquivos reais que dependem da política.
-"""
+"""O que a release publica sobre si mesma: data do AppStream, tag e endereço."""
 from __future__ import annotations
 
 import re
@@ -48,19 +17,10 @@ CHANGELOG_REL = "CHANGELOG.md"
 INSTALACAO_REL = "docs/usage/instalacao.md"
 PAGINAS_DE_USO = (INSTALACAO_REL, "docs/usage/flatpak.md")
 
-#: Os arquivos que trazem a URL do fork de release e por isso passam pela
-#: peneira do sanitizador global.
 ARQUIVOS_COM_URL_DO_FORK = ("README.md", *PAGINAS_DE_USO)
 
-#: Dispensa NOMEADA da regra do marcador em URL. Em 18/08/2026 a dívida foi
-#: PAGA: o sanitizador global passou a preservar o dono quando ele aparece em
-#: `github.com/<user>/`, e os quatro arquivos saíram da peneira de uma vez.
-#: Badge de CI e `git clone` voltaram a renderizar. A lista fica vazia e os dois
-#: testes seguem de pé — se o marcador voltar a uma URL, o portão reprova.
 PENDENCIA_DO_SANITIZADOR: frozenset[str] = frozenset()
 
-#: Estado do metainfo em 30/07, reproduzido literalmente: número certo, data da
-#: release anterior. É o caso que o portão de então aprovava.
 _METAINFO_COM_DATA_ERRADA = (
     "<releases>\n"
     '  <release version="0.4.0" date="2026-07-28">\n'
@@ -107,16 +67,8 @@ def _rodar_portao(repo: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-# --------------------------------------------------------------------------
-# 1) O portão confere a DATA da release corrente, não só o número.
-# --------------------------------------------------------------------------
-
-
 def test_portao_reprova_a_data_errada_da_v040(tmp_path: Path) -> None:
-    """O caso medido: número certo, data da release anterior, CHANGELOG real.
-
-    Sem a conferência de data o portão sai 0 aqui — o número bate.
-    """
+    """O caso medido: número certo, data da release anterior, CHANGELOG real."""
     repo = _repo_fake(
         tmp_path,
         versao="0.4.0",
@@ -149,8 +101,7 @@ def test_portao_aprova_quando_a_data_bate(tmp_path: Path) -> None:
 
 
 def test_portao_reprova_release_sem_secao_no_changelog(tmp_path: Path) -> None:
-    """Publicar versão que o CHANGELOG não conhece é o mesmo defeito de outro
-    ângulo: a loja anuncia notas que não existem."""
+    """Publicar versão que o CHANGELOG não conhece é o mesmo defeito de outro"""
     repo = _repo_fake(
         tmp_path,
         versao="9.9.9",
@@ -163,9 +114,7 @@ def test_portao_reprova_release_sem_secao_no_changelog(tmp_path: Path) -> None:
 
 
 def test_secao_sem_data_nao_e_lida_como_data(tmp_path: Path) -> None:
-    """`## [0.1.2] — RETIRADA` existe no CHANGELOG real: uma versão puxada de
-    circulação. Se ela virasse a primeira release do metainfo, o portão tem de
-    reprovar, não casar com o travessão."""
+    """`## [0.1.2] — RETIRADA` existe no CHANGELOG real: uma versão puxada de"""
     repo = _repo_fake(
         tmp_path,
         versao="0.1.2",
@@ -180,11 +129,6 @@ def test_portao_real_continua_saindo_zero() -> None:
     proc = _rodar_portao(REPO)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "Data da release corrente confere" in proc.stdout
-
-
-# --------------------------------------------------------------------------
-# 2) A série do metainfo não pode perder uma release publicada.
-# --------------------------------------------------------------------------
 
 
 def _releases_do_metainfo() -> list[tuple[str, str]]:
@@ -253,25 +197,12 @@ def test_a_release_corrente_nao_repete_o_texto_da_anterior() -> None:
     )
 
 
-# --------------------------------------------------------------------------
-# 3) As páginas de uso: tag corrente e endereço copiável.
-# --------------------------------------------------------------------------
-
-
-#: O endereço que as páginas mandam clonar: o repositório da organização.
 CLONE = "git clone https://github.com/Hefesto-Team/hefesto-dualsense4unix.git"
 
 
 @pytest.mark.parametrize("relpath", PAGINAS_DE_USO)
 def test_paginas_de_uso_nao_mandam_instalar_outra_versao(relpath: str) -> None:
-    """A página clona o repositório e não manda para uma tag de outra versão.
-
-    As páginas instalam pelo ramo padrão, como o README: a tag `v0.9.4.5` é de
-    antes da interface das dez abas (ela não tem `interface/`), e mandar para
-    ela instalava um produto diferente do que as páginas descrevem. Quando a
-    release nova sair, a linha volta a ser `git checkout v<nova>`, e aqui ela
-    tem de ser a da versão canônica.
-    """
+    """A página clona o repositório e não manda para uma tag de outra versão."""
     texto = (REPO / relpath).read_text(encoding="utf-8")
     assert CLONE in texto, f"{relpath} perdeu o `{CLONE}`"
     tags = set(re.findall(r"^git checkout v(\S+)", texto, re.MULTILINE))
@@ -282,9 +213,7 @@ def test_paginas_de_uso_nao_mandam_instalar_outra_versao(relpath: str) -> None:
 
 
 def test_prosa_da_pagina_de_instalacao_cita_a_versao_canonica() -> None:
-    """A frase de abertura é o que a pessoa lê antes de rodar o comando; ela
-    envelheceu junto com a tag e não cabe na régua do portão (um regex por
-    alvo, e o alvo de lá é o comando)."""
+    """A frase de abertura é o que a pessoa lê antes de rodar o comando; ela"""
     texto = (REPO / INSTALACAO_REL).read_text(encoding="utf-8")
     achado = re.search(r"A versão corrente é a alfa \*\*([^*]+)\*\*", texto)
     assert achado is not None, "a frase da versão corrente saiu da página"
@@ -293,24 +222,7 @@ def test_prosa_da_pagina_de_instalacao_cita_a_versao_canonica() -> None:
 
 @pytest.mark.parametrize("relpath", ("README.md", *PAGINAS_DE_USO))
 def test_nenhum_marcador_de_redacao_dentro_de_url(relpath: str) -> None:
-    """Marcador seguido de barra é posição de dono de repositório: badge de CI
-    que não renderiza e `git clone` que ninguém consegue copiar.
-
-    PENDÊNCIA DECLARADA, medida em 31/07: esta cura é **inexecutável dentro do
-    repositório**. Quem escreve o marcador é um hook global — o `pre-commit` de
-    `~/.config/git/hooks` chama `universal-sanitizer.py`, que troca o termo de
-    identidade por `[REDACTED]` em todo arquivo cuja extensão não esteja em
-    `safe_config_ext` e cujo nome não esteja em `safe_names`. Arquivo `.md`
-    entra na peneira, e o commit desfaz a edição em silêncio.
-
-    Prova executada: uma cópia do `README.md` com a URL real passada pelo
-    sanitizador voltou com zero ocorrências do dono e três `[REDACTED]`.
-
-    Por isso os quatro arquivos abaixo estão dispensados **por nome**, e não a
-    regra inteira: o dia em que o hook parar de redigi-los, o teste irmão
-    reprova e cobra a retirada da lista. O caminho para fechar de verdade está
-    na PUBLICAÇÃO-FIEL-01, entrega E2, e é decisão dela.
-    """
+    """Marcador seguido de barra é posição de dono de repositório: badge de CI"""
     linhas = (REPO / relpath).read_text(encoding="utf-8").splitlines()
     achados = [
         f"{relpath}:{n}" for n, ln in enumerate(linhas, 1) if "[REDACTED]/" in ln
@@ -326,11 +238,7 @@ def test_nenhum_marcador_de_redacao_dentro_de_url(relpath: str) -> None:
 
 
 def test_a_pendencia_do_sanitizador_nao_cresce() -> None:
-    """A lista está VAZIA desde 18/08/2026 e não volta a crescer por descuido.
-
-    Mordida: acrescentar nome aqui reabre o buraco no portão e reprova. Quem
-    precisar reabrir tem de explicar por que a cura do sanitizador saiu do ar.
-    """
+    """A lista está VAZIA desde 18/08/2026 e não volta a crescer por descuido."""
     assert not PENDENCIA_DO_SANITIZADOR, (
         "a dispensa voltou: algum arquivo foi devolvido à peneira do "
         "sanitizador em vez de ter a URL consertada"
@@ -338,9 +246,7 @@ def test_a_pendencia_do_sanitizador_nao_cresce() -> None:
 
 
 def test_a_mordida_da_url_nao_alcanca_o_campo_de_email() -> None:
-    """Contraprova obrigatória: o marcador protege o e-mail pessoal, e essa
-    política vive em dois arquivos empacotados. Uma mordida larga demais mataria
-    justamente o que ela deveria proteger."""
+    """Contraprova obrigatória: o marcador protege o e-mail pessoal, e essa"""
     for relpath in ("packaging/arch/PKGBUILD", "packaging/cosmic-applet/Cargo.toml"):
         texto = (REPO / relpath).read_text(encoding="utf-8")
         assert "<[REDACTED]>" in texto, (

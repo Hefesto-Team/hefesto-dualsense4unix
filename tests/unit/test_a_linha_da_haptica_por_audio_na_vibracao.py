@@ -1,16 +1,4 @@
-"""A linha «Háptica por áudio» na aba Vibração — A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01.
-
-Ela, 29/09/2026, com a foto da aba: *«precisamos de uma linha disso na
-interface. e precisamos que isso funcione no modo bt também.»*
-<!-- noqa-acento: citação literal dela -->
-E depois: *«temos que ter um controle da parte haptica pq tanto no cabo ficou
-muito baixo»*. <!-- noqa-acento: citação literal dela -->
-
-A linha é o interruptor, o trilho de 0 a 200 e o número, por controle, P1 a P4,
-pelo mesmo gerador da coluna. O que ela grava é o `haptica_pct` do perfil, pelo
-mesmo `rumble.motores.set` dos motores, e a régua relê o DISCO, e não o eco do
-pedido.
-"""
+"""A linha «Háptica por áudio» na aba Vibração — A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01."""
 
 from __future__ import annotations
 
@@ -44,7 +32,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/05-vibracao.html"
 UNIQ = "aa:bb:cc:00:00:01"
 
-#: Os quatro endereços da linha, por lugar.
 ENDERECOS = ("barra-h", "lado-h", "barra-h-pct", "haptica-fora")
 
 
@@ -107,17 +94,9 @@ def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return alvo
 
 
-# ---------------------------------------------------------------------------
-# 1. A linha tem endereço nos quatro lugares
-# ---------------------------------------------------------------------------
-
-
 class TestOEndereco:
     def test_os_quatro_lugares_tem_a_linha(self) -> None:
-        """Régua 1, sobre o HTML que o GERADOR escreve, cheio e vazio.
-
-        MORDIDA: emitir a linha só em quem tem controle → P3 e P4 reprovam.
-        """
+        """Régua 1, sobre o HTML que o GERADOR escreve, cheio e vazio."""
         html = "".join(aba05._coluna(c) for c in aba05.MESA)
         assert len(aba05.MESA) == 4
         for c in aba05.MESA:
@@ -132,16 +111,10 @@ class TestOEndereco:
             bloco = _bloco(html, pref)
             for campo in ENDERECOS:
                 assert f'data-campo="{campo}"' in bloco, (pref, campo)
-        # O RÓTULO É O DELA DESDE 02/10/2026, «Sensor Háptico», e a linha mora
-        # na faixa que era do Personalizado (A-ABA-VIBRACAO-TEM-O-SENSOR-
-        # HAPTICO-E-DOIS-TESTES-01, a resposta [26]).
         assert '<span class="sec-rot">Sensor Háptico' in html
 
     def test_o_teto_e_lido_do_esquema(self) -> None:
-        """Régua 4: o `max` do trilho é o `HAPTICA_PCT_MAX`. MORDIDA: digitar 100.
-
-        No que o gerador escreve agora E no mockup que ele escreveu.
-        """
+        """Régua 4: o `max` do trilho é o `HAPTICA_PCT_MAX`. MORDIDA: digitar 100."""
         for html in ("".join(aba05._coluna(c) for c in aba05.MESA),
                      MOCKUP.read_text(encoding="utf-8")):
             trilhos = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', html)
@@ -151,13 +124,7 @@ class TestOEndereco:
                 assert f'max="{HAPTICA_PCT_MAX}"' in tag and 'data-papel="haptica"' in tag
 
     def test_a_linha_mora_logo_abaixo_da_forca(self) -> None:
-        """A linha é a primeira depois da Força, antes dos dois motores (02/10/2026).
-
-        FATO SUBSTITUÍDO: esta régua cobrava a linha na terceira faixa de motor,
-        paga com 46 px do desenho (124 → 78). O desenho novo dela (a resposta
-        [26] de 29/09) a pôs na faixa do Personalizado, e a altura do desenho
-        mora na régua da A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01.
-        """
+        """A linha é a primeira depois da Força, antes dos dois motores (02/10/2026)."""
         bloco = _bloco("".join(aba05._coluna(c) for c in aba05.MESA), "p1")
         forca = bloco.index('<div class="forca">')
         linha = bloco.index('data-campo="haptica-fora"')
@@ -165,17 +132,9 @@ class TestOEndereco:
         assert forca < linha < esquerdo
 
 
-# ---------------------------------------------------------------------------
-# 2. O arraste grava onde o daemon lê
-# ---------------------------------------------------------------------------
-
-
 class TestOGesto:
     def test_o_arraste_grava_no_perfil(self, perfis: Path) -> None:
-        """Régua 2: o trilho a 180 → o disco lido pelo esquema diz 180.
-
-        MORDIDA: o gesto gravar só na tela (não chamar a ponte) → reprova.
-        """
+        """Régua 2: o trilho a 180 → o disco lido pelo esquema diz 180."""
         save_profile(Profile(name="Bancada", match=MatchAny()))
         ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "haptica")
@@ -226,11 +185,6 @@ class TestOGesto:
             gesto(_ctx(haptica=150), {"uniq": UNIQ, "valor": "90"}, _P())
 
 
-# ---------------------------------------------------------------------------
-# 3. A pintura: o número do dono, o aceso e o cinza
-# ---------------------------------------------------------------------------
-
-
 class TestAPintura:
     def test_o_numero_e_o_do_dono(self) -> None:
         coluna = _coluna(haptica=180, alcanca=True)
@@ -245,10 +199,7 @@ class TestAPintura:
         assert _coluna(haptica=0)["lado-h"] == ""
 
     def test_cinza_onde_o_hefesto_nao_alcanca(self) -> None:
-        """Régua 6: `haptica_alcanca=False` → a linha cinza e o trilho inerte.
-
-        MORDIDA: ignorar o campo → reprova.
-        """
+        """Régua 6: `haptica_alcanca=False` → a linha cinza e o trilho inerte."""
         assert _coluna(haptica=150, alcanca=False)["haptica-fora"] == "1"
         html = MOCKUP.read_text(encoding="utf-8")
         assert 'data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"' in html

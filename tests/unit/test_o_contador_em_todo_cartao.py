@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""O CONTADOR EM TODO CARTÃO — «◆ N jogos já sabem por onde entrar».
-
-A palavra dela, 21/09/2026, olhando a aba Lançadores: *"falta o mesmo textinho
-de contador da steam pros demais. pq não faz sentido só os ouitros não terem e
-a steam ter. todos tem que serem iguais."*  <!-- noqa-acento: citação literal dela -->
-
-Ela escolheu o texto entre três, e escolheu o contador no CORPO de todo cartão
-LOCALIZADO, o zero inclusive. O que esta régua cobra, ponta a ponta:
-
-    o perfil com ponte no disco     `prontuario_dos_jogos.classes_com_ponte`
-    ∩ os jogos DAQUELE lançador     `desenho.medir_no_disco` (na vigia)
-    → o número do cartão            `DoDisco.pontes_de`
-    → o corpo de todo localizado    `desenho.contador_html`, igual nos oito
-
-A MORDIDA DE CADA PONTA está na docstring do teste dela.
-
-NADA AQUI TOCA A MÁQUINA DELA: os perfis são escritos num `tmp_path`, e a
-biblioteca de cada lançador é dublada — uma régua que dependesse dos jogos
-dela mediria a mesa, não o código.
-"""
+"""O CONTADOR EM TODO CARTÃO — «◆ N jogos já sabem por onde entrar»."""
 from __future__ import annotations
 
 import json
@@ -31,7 +12,6 @@ import pytest
 from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
-#: O contador como a TELA o mostra — o texto que ela escolheu.
 _CONTADOR = re.compile(r"◆ (\d+) jogos? já sabem? por onde entrar")
 
 
@@ -48,9 +28,6 @@ def _todos_localizados(**extra) -> desenho.Leitura:
                            **extra)
 
 
-# --------------------------------------------------------------------------
-# a tela — o mesmo contador nos oito
-# --------------------------------------------------------------------------
 def test_todo_cartao_localizado_abre_o_corpo_com_o_contador():
     """Os oito localizados dizem o contador — e o zero também se diz.
 
@@ -69,11 +46,7 @@ def test_todo_cartao_localizado_abre_o_corpo_com_o_contador():
 
 
 def test_o_cartao_que_nao_achou_nao_conta():
-    """Sem o lançador na máquina não há jogo dele — e o contador não nasce.
-
-    Um «0 jogos já sabem» num cartão `NÃO LOCALIZADO` responderia uma pergunta
-    que o produto não fez.
-    """
+    """Sem o lançador na máquina não há jogo dele — e o contador não nasce."""
     onde = tuple((x.chave, "") for x in desenho.EMBUTIDOS)
     for cartao in desenho.cartoes(desenho.Leitura(onde_estao=onde)):
         assert _numero(cartao.diz) is None, (
@@ -82,11 +55,7 @@ def test_o_cartao_que_nao_achou_nao_conta():
 
 
 def test_o_numero_de_cada_cartao_e_o_do_disco_dele():
-    """Cada cartão mostra o SEU número — e a Steam, o da `Leitura`.
-
-    A MORDIDA: faça `DoDisco.pontes_de` devolver sempre 0 e este teste
-    reprova no Heroic.
-    """
+    """Cada cartão mostra o SEU número — e a Steam, o da `Leitura`."""
     do_disco = desenho.DoDisco(pontes=(("heroic", 2), ("lutris", 1)))
     cartoes = {c.chave: c for c in desenho.cartoes(
         _todos_localizados(pontes=3, do_disco=do_disco))}
@@ -97,21 +66,13 @@ def test_o_numero_de_cada_cartao_e_o_do_disco_dele():
         "o singular sumiu — «1 jogos já sabem» é o erro que a tela mostraria")
 
 
-# --------------------------------------------------------------------------
-# o disco — perfis com ponte ∩ jogos do lançador
-# --------------------------------------------------------------------------
 def _perfil(pasta: Path, nome: str, dados: dict) -> None:
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / f"{nome}.json").write_text(json.dumps(dados), encoding="utf-8")
 
 
 def test_classes_com_ponte_so_conta_perfil_carimbado(tmp_path):
-    """Só entra o perfil COM carimbo de ponte e `match` de critério.
-
-    *"Ainda não sei"* é ausência, nunca uma ponte vazia — a mesma regra de
-    `pontes_confirmadas`. A MORDIDA: tire o `continue` do perfil sem `ponte`
-    e o segundo jogo entra na conta.
-    """
+    """Só entra o perfil COM carimbo de ponte e `match` de critério."""
     pasta = pdj.pasta_de_perfis(tmp_path)
     criterio = {"type": "criteria"}
     _perfil(pasta, "com", {"ponte": {"kind": "vpad"},
@@ -124,12 +85,7 @@ def test_classes_com_ponte_so_conta_perfil_carimbado(tmp_path):
 
 
 def test_o_contador_casa_a_janela_sem_ligar_para_maiusculas(monkeypatch):
-    """`medir_no_disco` conta os jogos DAQUELE lançador que têm ponte.
-
-    A janela medida vem com a grafia do programa (`com.libretro.RetroArch`), e
-    o perfil pode tê-la escrito de outro jeito. A MORDIDA: tire o `casefold` da
-    conta em `medir_no_disco` e o número cai de 1 para 0.
-    """
+    """`medir_no_disco` conta os jogos DAQUELE lançador que têm ponte."""
     jogos = [types.SimpleNamespace(classe_de_janela=c)
              for c in ("Com.Um.Jogo", "outro.jogo", "")]
     monkeypatch.setattr(desenho._censo, "biblioteca_do_cartao",
@@ -146,13 +102,7 @@ def test_o_contador_casa_a_janela_sem_ligar_para_maiusculas(monkeypatch):
 
 
 def test_a_vigia_leva_as_pontes_do_disco_ate_a_conta(monkeypatch, tmp_path):
-    """`_ler_do_disco` pergunta ao prontuário e entrega a resposta à conta.
-
-    SEM ESTA RÉGUA as duas pontas de cima poderiam estar certas e o número
-    nunca chegar à tela — a forma de defeito que esta casa chama de *pintura
-    perdida*. A MORDIDA: apague o `com_ponte=com_ponte` da chamada a
-    `medir_no_disco` e este teste reprova.
-    """
+    """`_ler_do_disco` pergunta ao prontuário e entrega a resposta à conta."""
     from hefesto_dualsense4unix.integrations import jogos_locais as jl
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 

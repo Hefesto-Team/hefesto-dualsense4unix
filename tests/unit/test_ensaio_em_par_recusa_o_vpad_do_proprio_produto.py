@@ -93,22 +93,6 @@ def ensaio():
     return modulo
 
 
-# --- a mesa de mentira -----------------------------------------------------
-#
-# Nada aqui toca hardware: monta-se em `tmp_path` a MESMA forma que o sysfs
-# tem, com os símbolos que o instrumento de fato segue —
-#
-#   class/input/eventN            -> devices/<...>/input/inputN/eventN
-#   devices/<...>/input/inputN/eventN/device -> ..
-#
-# — para que `_hid_pai` suba os mesmos degraus que sobe na máquina viva. Um
-# teste que só trocasse o retorno de `inventario` não mediria a régua: mediria
-# o mock.
-#
-# Os MACs são sintéticos e obedecem ao `scripts/check_test_data.sh`: os físicos
-# na faixa de documentação `aa:bb:cc:…`, e os do vpad no `02:fe:…` que o próprio
-# produto forja.
-
 FF_PRESENTE = "107030000 0"
 
 
@@ -213,9 +197,6 @@ def _por_no(itens: list[dict], caminho: str) -> dict:
     return achado
 
 
-# --- (a) o vpad é RECUSADO -------------------------------------------------
-
-
 def test_o_vpad_do_hefesto_nao_e_alvo_mesmo_forjando_054c_0df2_no_cabo(
     ensaio, tmp_path
 ):
@@ -258,15 +239,12 @@ def test_disparar_no_vpad_e_recusado_antes_de_qualquer_efeito_subir(ensaio, tmp_
 def test_o_vpad_e_pego_pelo_uniq_do_no_quando_o_uevent_do_pai_nao_traz_as_marcas(
     ensaio, tmp_path
 ):
-    """Segunda via da MESMA marca: o `hid_playstation` copia `hdev->uniq` para o
-    `input_dev` (hid-playstation.c:704), então o MAC forjado aparece também no
-    `uniq` do nó de entrada. Um `uevent` de pai ilegível não pode devolver o
-    vpad para a lista de alvos."""
+    """Segunda via da MESMA marca: o `hid_playstation` copia `hdev->uniq` para o"""
     no = _monta_no(
         tmp_path,
         evento=275,
         sob="virtual/misc/uhid",
-        nome="DualSense Wireless Controller",  # sem a marca humana no nome
+        nome="DualSense Wireless Controller",
         pid="0df2",
         barramento="0003",
         uniq="02:fe:00:00:00:04",
@@ -279,8 +257,7 @@ def test_o_vpad_e_pego_pelo_uniq_do_no_quando_o_uevent_do_pai_nao_traz_as_marcas
 
 
 def test_o_nome_e_a_segunda_rede_e_nao_a_regua(ensaio, tmp_path):
-    """Sem NENHUMA marca de endereço, o nome ainda salva. É rede, não régua:
-    quem responde nos casos de cima é o `HID_PHYS`/`HID_UNIQ`."""
+    """Sem NENHUMA marca de endereço, o nome ainda salva. É rede, não régua:"""
     no = _monta_no(
         tmp_path,
         evento=99,
@@ -297,19 +274,10 @@ def test_o_nome_e_a_segunda_rede_e_nao_a_regua(ensaio, tmp_path):
     assert item["dualsense_fisico"] is False
 
 
-# --- (b) o rádio continua ACEITO: o que separa cura de contorno -------------
-
-
 def test_o_dualsense_do_radio_continua_alvo_mesmo_morando_em_devices_virtual(
     ensaio, tmp_path
 ):
-    """A ARMADILHA de 11/08/2026, virada teste.
-
-    Com BlueZ ≥ 5.73 o bluetoothd cria o HID do controle FÍSICO por `/dev/uhid`,
-    sob `/sys/devices/virtual/misc/uhid/` — o mesmo lugar do nosso vpad. Se a
-    cura do vpad recusar este nó, ela virou "recusa tudo que é uhid" e derrubou
-    metade da mesa, que é justamente o ensaio.
-    """
+    """A ARMADILHA de 11/08/2026, virada teste."""
     no = _fisico_no_radio(tmp_path, evento=265, mac="aa:bb:cc:00:00:65")
     item = _por_no(ensaio.inventario(raiz=str(tmp_path / "class" / "input")), no)
 
@@ -325,9 +293,6 @@ def test_o_dualsense_do_cabo_continua_alvo(ensaio, tmp_path):
     item = _por_no(ensaio.inventario(raiz=str(tmp_path / "class" / "input")), no)
     assert item["dualsense_fisico"] is True
     assert item["transporte"] == "cabo"
-
-
-# --- as recusas que JÁ funcionavam continuam funcionando --------------------
 
 
 def test_o_gamepad_de_uinput_puro_segue_recusado(ensaio, tmp_path):
@@ -358,9 +323,6 @@ def test_o_espelho_da_steam_segue_recusado_e_com_o_rotulo_dele(ensaio, tmp_path)
     item = _por_no(ensaio.inventario(raiz=str(tmp_path / "class" / "input")), no)
     assert item["espelho_da_steam"] is True
     assert item["dualsense_fisico"] is False
-
-
-# --- a mesa inteira, como ela estava em 12/08 ------------------------------
 
 
 def test_na_mesa_de_quatro_controles_so_os_quatro_fisicos_sao_alvo(ensaio, tmp_path):
@@ -403,13 +365,8 @@ def test_o_listar_carimba_nao_vpad_no_veredito(ensaio, tmp_path, capsys):
     assert " cabo " not in saida
 
 
-# --- o contrato com o produto, travado nas DUAS pontas ---------------------
-
-
 def test_as_marcas_do_instrumento_sao_as_que_o_produto_de_fato_carimba():
-    """As constantes `VPAD_*` do instrumento são contrato de fio replicado — se
-    o `uhid_gamepad` mudar o `phys` ou o MAC forjado, este teste cai junto e
-    ninguém descobre pelo instrumento voltando a mirar no vpad."""
+    """As constantes `VPAD_*` do instrumento são contrato de fio replicado — se"""
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         UhidDualSense,
         player_mac,

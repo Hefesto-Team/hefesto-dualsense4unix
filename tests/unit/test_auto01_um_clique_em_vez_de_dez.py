@@ -40,11 +40,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("auto01: o modo jogo num clique (home_actions, mode_transition)")
 
 import asyncio
@@ -67,17 +62,8 @@ from hefesto_dualsense4unix.utils import session as session_mod
 from tests.unit.fonte_do_instalador import texto_do_instalador
 
 
-# ---------------------------------------------------------------------------
-# Infra do daemon
-# ---------------------------------------------------------------------------
-
-
 class _ControleComInventario(FakeController):
-    """FakeController que responde `describe_controllers` (backend real responde).
-
-    É por esta API — a mesma que o `_sync_identity_registry` já consome no tick
-    lento — que o daemon conta os controles na mesa sem varrer /dev/input.
-    """
+    """FakeController que responde `describe_controllers` (backend real responde)."""
 
     def __init__(self, conectados: int, *, transport: str = "usb") -> None:
         super().__init__(
@@ -112,12 +98,7 @@ class _ControleComInventario(FakeController):
 
 @pytest.fixture()
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Flags de sessão em tmp — o disco DELA não pode decidir o teste.
-
-    Sem isto, o `gamepad_emulation.flag` que existe na máquina da mantenedora
-    faria "nunca decidiu" virar "já decidiu" e o teste passaria/falharia
-    conforme quem roda.
-    """
+    """Flags de sessão em tmp — o disco DELA não pode decidir o teste."""
     monkeypatch.setattr(session_mod, "config_dir", lambda ensure=False: tmp_path)
     return tmp_path
 
@@ -169,16 +150,7 @@ def _daemon(controles: int) -> Daemon:
 async def _gira_o_poll_loop(
     daemon: Daemon, segundos: float = 0.12, teto: float = 3.0
 ) -> None:
-    """Roda o daemon DE VERDADE por um instante (caminho público).
-
-    O INSTANTE CONTA DO PRIMEIRO TIQUE DO LAÇO, e não da criação da tarefa
-    (02/10/2026). A subida do `run()` até o laço é síncrona (as migrações de
-    uma vez, a mesa declarada) e, num lote carregado, passava dos 0,12 s: o
-    `stop()` chegava antes do primeiro tique e o laço não girava nenhuma vez,
-    com o daemon dizendo que não ligou a emulação que ele nem chegou a
-    olhar. As réguas que esperam «nada» continuam valendo: o laço gira pelo
-    menos um tique, como antes.
-    """
+    """Roda o daemon DE VERDADE por um instante (caminho público)."""
     task = asyncio.create_task(daemon.run())
     await asyncio.sleep(segundos)
     laco = asyncio.get_running_loop()
@@ -203,11 +175,6 @@ class _Relogio:
         self.agora += segundos
 
 
-# ---------------------------------------------------------------------------
-# AUTO-01.1 — a emulação liga sozinha com dois controles na mesa
-# ---------------------------------------------------------------------------
-
-
 class TestDoisControlesLigamAEmulacao:
     @pytest.mark.asyncio
     async def test_o_poll_loop_liga_a_emulacao_com_dois_controles(
@@ -229,8 +196,6 @@ class TestDoisControlesLigamAEmulacao:
         assert espiao.chamadas, "a emulação não ligou com dois controles na mesa"
         ligou, _flavor, origem = espiao.chamadas[0]
         assert ligou is True
-        # R-07: origem "profile" NÃO persiste preferência em disco e NÃO carimba
-        # o lock de 30 s — a automação não pode fingir ser gesto dela.
         assert origem == "profile"
 
     @pytest.mark.asyncio
@@ -250,11 +215,7 @@ class TestDoisControlesLigamAEmulacao:
     async def test_desligado_de_proposito_nunca_e_religado(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O pior desfecho possível seria o produto brigando com ela.
-
-        "Controlar o PC" grava o opt-out (`gamepad_disabled.flag`); com dois
-        controles na mesa, a automação tem de ficar quieta para sempre.
-        """
+        """O pior desfecho possível seria o produto brigando com ela."""
         session_mod.save_gamepad_emulation(False)
         d = _daemon(controles=4)
         espiao = _EspiaoDeEmulacao(d)
@@ -268,11 +229,7 @@ class TestDoisControlesLigamAEmulacao:
     async def test_mouse_em_uso_nao_e_derrubado(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Emulação de mouse VIVA = ela está usando o controle como cursor agora.
-
-        Ligar o vpad aqui derrubaria o mouse pela exclusão mútua e o perfil o
-        religaria no tique seguinte: flap sem fim entre cursor e gamepad.
-        """
+        """Emulação de mouse VIVA = ela está usando o controle como cursor agora."""
         d = _daemon(controles=2)
         espiao = _EspiaoDeEmulacao(d)
         espiao.bind(monkeypatch)
@@ -359,11 +316,6 @@ class TestDoisControlesLigamAEmulacao:
         assert d.contar_controles_fisicos() == 0
 
 
-# ---------------------------------------------------------------------------
-# AUTO-01.1 — "nunca decidiu" ≠ "decidiu desligar" (utils.session)
-# ---------------------------------------------------------------------------
-
-
 class TestPreferenciaDeGamepadTemTresEstados:
     def test_instalacao_nova_e_nunca_decidiu(self, config_isolado: Path) -> None:
         assert session_mod.load_gamepad_preference() == (None, None)
@@ -389,11 +341,6 @@ class TestPreferenciaDeGamepadTemTresEstados:
         assert session_mod.load_gamepad_emulation() == (True, "dualsense")
         session_mod.save_gamepad_emulation(False)
         assert session_mod.load_gamepad_emulation() == (False, None)
-
-
-# ---------------------------------------------------------------------------
-# AUTO-01.2 / AUTO-01.3 — a janela
-# ---------------------------------------------------------------------------
 
 
 def _install_gi_stubs() -> None:
@@ -496,14 +443,7 @@ class _FakeWidget:
 
 
 class TestCoopSaiuDaJanelaPorqueDeixouDeSerOpcao:
-    """COOP-SEM-INTERRUPTOR-01 (06/08/2026) — LÁPIDE de ``TestCoopExisteNaJanela``.
-
-    A classe antiga travava a EXISTÊNCIA do botão "Preparar co-op": o id no
-    Glade, o plano de três IPCs, o rótulo com a contagem e as três frases. Tudo
-    isso mediu a mesma pergunta — *"como eu ligo o co-op?"* — e a pergunta
-    morreu com a decisão dela. O que fica no lugar mede que a decisão FOI
-    cumprida, e que o gesto de recuperação não foi junto.
-    """
+    """COOP-SEM-INTERRUPTOR-01 (06/08/2026) — LÁPIDE de ``TestCoopExisteNaJanela``."""
 
     def test_o_plano_de_tres_ipcs_nao_existe_mais(self) -> None:
         assert not hasattr(mode_transition, "plan_coop_prep")
@@ -522,11 +462,7 @@ class TestCoopSaiuDaJanelaPorqueDeixouDeSerOpcao:
             assert not hasattr(home_actions, nome), f"{nome} sobreviveu ao botão"
 
     def test_o_gesto_de_recuperacao_ganhou_dono_antes_de_o_botao_sair(self) -> None:
-        """A armadilha nomeada pela sprint (linhas 72-75 do roteiro).
-
-        Tirar o botão sem isto tiraria dela o único ciclo FORÇADO ao alcance da
-        mão — e o P2 que dura dois segundos ficaria sem gesto de recuperação.
-        """
+        """A armadilha nomeada pela sprint (linhas 72-75 do roteiro)."""
         import inspect
 
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -535,9 +471,6 @@ class TestCoopSaiuDaJanelaPorqueDeixouDeSerOpcao:
         assert hasattr(home_actions.HomeActionsMixin, "_on_home_reconciliar_clicked")
         assert home_actions.RECONCILIAR_LABEL == "Reconciliar jogadores"
         assert hasattr(IpcHandlersMixin, "_handle_coop_sync")
-        # A FIAÇÃO, não só a existência: um handler fora do registro é código
-        # que ninguém alcança (a mesma classe de defeito que a sprint
-        # "o código que existe e ninguém chama" denunciou).
         registro = inspect.getsource(IpcServer.__post_init__)
         assert '"coop.sync": self._handle_coop_sync' in registro
 
@@ -552,13 +485,7 @@ class TestUmDonoSoParaAMascara:
     def test_as_duas_portas_de_entrada_pedem_a_mesma_coisa(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O achado do AUTO-01.3, medido nas duas portas.
-
-        `gamepad on` (linha de comando) e "Jogar pelo Hefesto" (janela) agora
-        emitem params IDÊNTICOS quando ninguém escolheu máscara — antes um
-        preservava a do daemon e o outro impunha `xbox`, e a máscara decide se
-        o jogo reconhece o controle.
-        """
+        """O achado do AUTO-01.3, medido nas duas portas."""
         from typer.testing import CliRunner
 
         import hefesto_dualsense4unix.app.ipc_bridge as bridge
@@ -583,29 +510,13 @@ class TestUmDonoSoParaAMascara:
         assert params_cli == pela_janela
 
     def test_o_plano_manda_a_mascara_que_ela_escolheu(self) -> None:
-        """O outro lado da regra: escolha explícita dela chega intacta ao daemon.
-
-        NOTA DATADA (06/08/2026): esta medida entrava pelo clique em "Preparar
-        co-op", que carregava o `flavor` do seletor até o `gamepad.emulation.set`.
-        Com o botão fora (COOP-SEM-INTERRUPTOR-01), o mesmo invariante é medido
-        no plano de transição de modo — que é quem sempre teve o `flavor` e
-        continua sendo o caminho do comutador da aba.
-
-        (O guard do `_render_home` — payload sem máscara não reescreve o
-        seletor — é travado em `test_home_render_state.py`, onde vive o dublê
-        completo da aba.)
-        """
+        """O outro lado da regra: escolha explícita dela chega intacta ao daemon."""
         passo = mode_transition.plan_mode_transition("gamepad", "dualsense")[-1]
 
         assert passo == (
             "gamepad.emulation.set",
             {"enabled": True, "flavor": "dualsense", "origin": "manual"},
         )
-
-
-# ---------------------------------------------------------------------------
-# AUTO-01.7 — as curas de conexão valem sem reboot nos DOIS caminhos de install
-# ---------------------------------------------------------------------------
 
 
 class TestParamsDeModuloAQuenteNoInstallSh:
@@ -619,10 +530,6 @@ class TestParamsDeModuloAQuenteNoInstallSh:
     """
 
     _RAIZ = Path(__file__).resolve().parents[2]
-    #: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh`: as duas
-    #: funções de DKMS que este teste abre mudaram de arquivo em
-    #: 31/08/2026, sem mudar uma linha do que fazem. Ver
-    #: `tests/unit/fonte_do_instalador.py`.
     _INSTALL = texto_do_instalador()
     _HOST_UDEV = (_RAIZ / "scripts" / "install-host-udev.sh").read_text(
         encoding="utf-8"

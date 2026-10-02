@@ -46,7 +46,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("as dicas dos dezenove modos de gatilho")
 
 from typing import Any
@@ -62,12 +61,7 @@ from hefesto_dualsense4unix.app.actions.triggers_actions import TriggersActionsM
 
 
 class _Host(TriggersActionsMixin):
-    """Monta a aba pelo MÉTODO DE PRODUÇÃO, com widgets GTK de verdade.
-
-    `install_triggers_tab` é o caminho que o produto usa (e é também o que o
-    host de retrato chama, `retratar_abas.py`). Montar os botões à mão aqui
-    mediria uma cópia da aba, não a aba.
-    """
+    """Monta a aba pelo MÉTODO DE PRODUÇÃO, com widgets GTK de verdade."""
 
     def __init__(self) -> None:
         self._widgets: dict[str, Any] = {}
@@ -103,11 +97,7 @@ class TestCadaModoExplicaSeSemSerClicado:
             )
 
     def test_nenhum_modo_fica_sem_dica(self) -> None:
-        """38 botões, 38 dicas — a conta que a sprint mediu ao contrário.
-
-        O briefing falava em "19 frases ausentes"; as 19 frases EXISTIAM e
-        apareciam, uma por vez. O que faltava era alcançá-las sem aplicar.
-        """
+        """38 botões, 38 dicas — a conta que a sprint mediu ao contrário."""
         host = _Host()
         host.install_triggers_tab()
         vazias = [
@@ -138,17 +128,9 @@ class TestCadaModoExplicaSeSemSerClicado:
 
 class TestAFonteEUmaSo:
     def test_a_aba_monta_as_dicas_a_partir_do_presets(self) -> None:
-        """A mordida gêmea: uma CÓPIA dos 19 textos passaria no teste de cima.
-
-        Ela passaria hoje e divergiria no dia em que alguém corrigisse uma
-        frase num dos dois donos. O que se vigia aqui é a expressão que lê o
-        `PRESETS`, no fonte da aba.
-        """
+        """A mordida gêmea: uma CÓPIA dos 19 textos passaria no teste de cima."""
         import inspect
 
-        # SEM os comentários: a linha comentada continuaria casando com um
-        # `in fonte` ingênuo, e um teste que passa com a chamada comentada é
-        # exatamente a régua que só sabe passar.
         fonte = "\n".join(
             linha
             for linha in inspect.getsource(
@@ -162,13 +144,7 @@ class TestAFonteEUmaSo:
         )
 
     def test_nenhuma_das_dezenove_frases_esta_escrita_na_aba(self) -> None:
-        """Se uma delas aparecer como literal em `triggers_actions.py`, virou
-        segundo dono — e a T8 deixa de ser cosmética pré-aprovada.
-
-        Descrição VAZIA não conta: `"" in fonte` é verdade para qualquer
-        arquivo, e deixá-la entrar faria este teste acusar cópia quando o
-        defeito é outro (o de cima, que é quem o vê).
-        """
+        """Se uma delas aparecer como literal em `triggers_actions.py`, virou"""
         from pathlib import Path
 
         fonte = Path(triggers_actions.__file__).read_text(encoding="utf-8")
@@ -177,14 +153,7 @@ class TestAFonteEUmaSo:
 
 
 class TestOCampoMortoSaiu:
-    """A metade da T8 que era DECISÃO, e a decisão foi tirar.
-
-    `TriggerParamSpec.help_text` existia desde o nascimento do arquivo com
-    ``""`` de padrão: 73 parâmetros, 73 vazios, zero leitores. Campo morto com
-    nome de promessa é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura — quem
-    chega lê "existe dica fina por parâmetro" e não existe. Se ela quiser as 73
-    frases, é texto novo e é decisão dela.
-    """
+    """A metade da T8 que era DECISÃO, e a decisão foi tirar."""
 
     def test_o_help_text_nao_existe_mais(self) -> None:
         assert not hasattr(TriggerParamSpec("x", "X", 0, 1), "help_text")
@@ -194,12 +163,7 @@ class TestOCampoMortoSaiu:
         assert sum(len(spec.params) for spec in PRESETS) == 73
 
     def test_o_rotulo_do_slider_continua_com_a_dica_que_ele_tinha(self) -> None:
-        """Hipótese tem de explicar o que JÁ funcionava.
-
-        A linha de parâmetro põe o próprio rótulo como tooltip desde a S3 — ele
-        existe porque o rótulo é elipsado a 150 px e a dica é o que devolve o
-        texto inteiro. Isso NÃO é o `help_text`, e não saiu junto.
-        """
+        """Hipótese tem de explicar o que JÁ funcionava."""
         host = _Host()
         host.install_triggers_tab()
         spec = triggers_actions.get_spec("Bow")

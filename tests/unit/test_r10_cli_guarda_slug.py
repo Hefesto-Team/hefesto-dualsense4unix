@@ -1,15 +1,4 @@
-"""R-10 (auditoria 23/07) — o CLI também gravava por cima do perfil errado.
-
-`save_profile` grava `<slugify(name)>.json`: "Navegacao" e "Navegação" são o
-MESMO arquivo. `profile create`/`profile save --from-active`/`profile apply`
-chamavam `save_profile` direto, então o perfil acentuado da usuária era
-substituído e o comando imprimia "perfil criado" em VERDE.
-
-Cobre também a densificação do clone (`profile save --from-active`), o mesmo
-defeito que a aba Perfis tinha em R-09: `model_dump()` perde o
-`model_fields_set` e um override por-controle PARCIAL (só brilho) vira
-`lightbar:[0,0,0]` — a lightbar daquele controle APAGA no clone.
-"""
+"""R-10 (auditoria 23/07) — o CLI também gravava por cima do perfil errado."""
 from __future__ import annotations
 
 import json
@@ -44,7 +33,6 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         return target
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
-    # Semeadura desligada: o teste é sobre os perfis que ELE cria.
     monkeypatch.setenv(loader_module.SEED_SKIP_ENV_VAR, "1")
 
     from hefesto_dualsense4unix.utils import xdg_paths
@@ -76,7 +64,6 @@ class TestGuardaDeSlugNoCreate:
         assert result.exit_code == 1
         assert "MESMO arquivo" in result.stdout
         assert "Navegação" in result.stdout
-        # O arquivo continua sendo o da usuária.
         raw = json.loads(
             (isolated_profiles_dir / "navegacao.json").read_text(encoding="utf-8")
         )

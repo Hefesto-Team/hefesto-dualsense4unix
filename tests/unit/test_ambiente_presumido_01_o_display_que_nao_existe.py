@@ -1,33 +1,4 @@
-"""Testes da ONDA0-Z7 · O AMBIENTE PRESUMIDO 01 — o display gráfico (Z7-A).
-
-Cobre T-01, T-02 e T-03: o produto para de PRESUMIR que há um servidor X do
-outro lado de `DISPLAY` e passa a exigir PROVA, nos três lugares onde a
-presunção custava caro — o `healthy` do detector de janela (T-01), a decisão
-de forçar XWayland na GUI (T-02) e o volume de log de um XWayland morto por
-horas (T-03). Medido na bancada dela em 23/08/2026: `DISPLAY=:1` presente e
-recusando conexão, 716x em 6h.
-
-T-01 tem cobertura adicional (o seed do `StateStore` via
-`_build_diag_window_reader`) em `test_window_detect_diag.py`, que já tinha o
-molde de dublê certo para isso — não duplicado aqui.
-
-T-04 (o portão de invariante contra `ipc_handlers._window_detect_payload`)
-mora em `test_ambiente_presumido_01_o_portao_de_invariante.py` — arquivo
-próprio porque a régua ali é sobre o PAYLOAD publicado, não sobre estes três
-mecanismos.
-
-O T-02 SAIU DO PRODUTO EM 28/09/2026, e a régua dele virou a guarda do contrário
-----------------------------------------------------------------------------------
-
-O T-02 conferia `forcar_xwayland_no_cosmic` (e a `x11_alcancavel` que ela usava):
-não forçar `GDK_BACKEND=x11` sem prova de X vivo. Desde 19/09, por ordem dela
-(*"o certo é tirar dos dois. Faça"*), o XWayland não é mais o padrão do
-lançador, e a razão dele (os popups de `GtkMenu` no cosmic-comp) morreu com a
-janela GTK. As duas funções nunca ganharam chamador depois que mudaram para
-`app/arranque.py`, e ligá-las desfaria a ordem dela; saíram em 28/09/2026
-(O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01). O bloco T-02 abaixo guarda o outro
-lado: o lançador não força XWayland por conta própria.
-"""
+"""Testes da ONDA0-Z7 · O AMBIENTE PRESUMIDO 01 — o display gráfico (Z7-A)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,11 +9,6 @@ from hefesto_dualsense4unix.app import arranque
 from hefesto_dualsense4unix.integrations.window_backends import xlib
 
 RAIZ = Path(__file__).resolve().parents[2]
-
-
-# ---------------------------------------------------------------------------
-# T-01 — XlibBackend.conexao_provada() e a delegação do WindowReaderDiag
-# ---------------------------------------------------------------------------
 
 
 class TestConexaoProvada:
@@ -77,7 +43,7 @@ class TestConexaoProvada:
         monkeypatch.setattr(Xlib.display, "Display", _recusa)
 
         backend = xlib.XlibBackend()
-        assert backend.conexao_provada() is None  # ainda não tentou
+        assert backend.conexao_provada() is None
         assert backend._ensure_connected() is False
         assert backend.conexao_provada() is False
 
@@ -124,11 +90,6 @@ class TestWindowReaderDiagDelegaConexaoProvada:
         assert reader.conexao_provada() is None
 
 
-# ---------------------------------------------------------------------------
-# T-02 — o lançador não força XWayland por conta própria
-# ---------------------------------------------------------------------------
-
-
 class TestOXwaylandNaoEOPadrao:
     """O `GDK_BACKEND=x11` só entra pelo opt-in do `run.sh`, nunca pelo Python."""
 
@@ -140,11 +101,6 @@ class TestOXwaylandNaoEOPadrao:
         fonte = (RAIZ / "scripts" / "abrir_interface.py").read_text(encoding="utf-8")
         assert "GDK_BACKEND" not in fonte
         assert "forcar_xwayland" not in fonte
-
-
-# ---------------------------------------------------------------------------
-# T-03 — backoff crescente e warning uma vez por episódio
-# ---------------------------------------------------------------------------
 
 
 class TestBackoffCrescenteEWarningUnico:
@@ -170,19 +126,15 @@ class TestBackoffCrescenteEWarningUnico:
             vistos.append(backend._connect_backoff_sec)
             relogio[0] = backend._last_connect_fail + backend._connect_backoff_sec
 
-        # A primeira falha já dobra o piso (30s -> 60s): o piso só existe
-        # como valor de fábrica, nunca como um backoff JÁ aplicado.
         assert vistos[0] == 60.0
         assert vistos[1] == 120.0
         assert vistos[2] == 240.0
-        assert vistos[-1] == xlib._RECONNECT_BACKOFF_MAX_SEC  # teto, 300.0
+        assert vistos[-1] == xlib._RECONNECT_BACKOFF_MAX_SEC
 
     def test_quarenta_leituras_no_maximo_dois_warnings(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA de T-03: 40 leituras com display morto -> no máximo 2
-        linhas de warning, e a última tentativa a pelo menos o piso do
-        backoff (30s) de distância da primeira."""
+        """A MORDIDA de T-03: 40 leituras com display morto -> no máximo 2"""
         backend = self._backend_que_sempre_falha(monkeypatch)
         relogio = [0.0]
         monkeypatch.setattr(xlib.time, "monotonic", lambda: relogio[0])
@@ -199,7 +151,7 @@ class TestBackoffCrescenteEWarningUnico:
             if primeira is None:
                 primeira = relogio[0]
             ultima = relogio[0]
-            relogio[0] += 30.0  # ritmo antigo: uma "leitura" a cada 30s
+            relogio[0] += 30.0
 
         assert len(warnings) <= 2
         assert (ultima or 0.0) - (primeira or 0.0) >= xlib._RECONNECT_BACKOFF_SEC

@@ -58,14 +58,10 @@ from typing import Any
 SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 MODULO_DA_PONTE = "hefesto_dualsense4unix.integrations.dualsense_bt_audio"
 
-#: Os nomes que ABREM o hidraw em RDWR e/ou escrevem o report `0x32`. Importar
-#: um destes é "poder subir a ponte"; importar `INPUT_FLAG_AUDIO` não é.
 _QUEM_SOBE_A_PONTE = frozenset(
     {"GerenciadorMicBluetooth", "PonteMicBluetooth", "abrir_hidraw_rw"}
 )
 
-#: AS PORTAS DECLARADAS — o tamanho da dívida, congelado em 25/08/2026.
-#: Caminho relativo a `src/hefesto_dualsense4unix` -> por que ela existe.
 _PORTAS_DECLARADAS: dict[str, str] = {
     "daemon/subsystems/bt_mic.py": (
         "a porta do PRODUTO. Gate: `DaemonConfig.bt_mic_uniqs` (o que ela ligou "
@@ -80,13 +76,7 @@ _PORTAS_DECLARADAS: dict[str, str] = {
     ),
 }
 
-#: O módulo da própria ponte não é porta: ele É a ponte.
 _A_PROPRIA_PONTE = "integrations/dualsense_bt_audio.py"
-
-
-# ---------------------------------------------------------------------------
-# Medição 1 — a arbitragem do nó existe?
-# ---------------------------------------------------------------------------
 
 
 class _OpsQueAbre:
@@ -123,17 +113,7 @@ def _broker_de_bancada(tmp_path: Path) -> Any:
 
 
 def arbitragem_do_no(estado: Any) -> bool:
-    """MEDE, no comportamento: o segundo pedido do mesmo nó é arbitrado?
-
-    Duas conexões DIFERENTES pedem `open` do mesmo nó. É arbitrado quando o
-    segundo **não** volta como um fd cru indistinguível do primeiro: recusado,
-    sem fd, ou com a resposta carregando algo que o primeiro não tinha (um dono,
-    uma marca de multiplexação).
-
-    O LIMITE DA RÉGUA, declarado: ela não sabe o nome que a arbitragem futura vai
-    dar à sua chave, então usa a FORMA da resposta. Uma chave nova por outro
-    motivo a faria dizer "existe" — e o portão reprova pedindo que alguém leia.
-    """
+    """MEDE, no comportamento: o segundo pedido do mesmo nó é arbitrado?"""
     pedido = b'{"cmd": "open", "node": "/dev/hidraw9"}\n'
     fds: list[int] = []
     try:
@@ -171,21 +151,11 @@ def test_a_regua_da_arbitragem_sabe_dizer_que_existe():
 
 
 def test_a_arbitragem_do_no_ainda_nao_existe(tmp_path):
-    """A dívida 5.a, medida no comportamento do broker REAL — não por grep.
-
-    Quando esta linha ficar vermelha, a arbitragem chegou: feche o 5.a no
-    `O-QUE-FICOU-ABERTO-01`, tire o registro `_PORTAS_DECLARADAS` daqui e apague
-    este arquivo. Um portão que sobrevive à dívida que vigia vira mobília.
-    """
+    """A dívida 5.a, medida no comportamento do broker REAL — não por grep."""
     assert arbitragem_do_no(_broker_de_bancada(tmp_path)) is False, (
         "o broker passou a arbitrar o segundo `open` do mesmo nó — o portão 5.a "
         "existe. Este portão cumpriu o papel dele e sai; ver a docstring."
     )
-
-
-# ---------------------------------------------------------------------------
-# Medição 2 e 3 — quem pode subir a ponte
-# ---------------------------------------------------------------------------
 
 
 def _portas_de(raiz: Path) -> dict[str, set[str]]:
@@ -226,12 +196,7 @@ def test_a_ponte_nao_ganhou_porta_nova():
 
 
 def test_a_janela_nao_alcanca_a_ponte():
-    """A promessa que a docstring de `_ao_alternar_o_microfone` faz, cobrada.
-
-    O processo da janela não pode ter o gesto de abrir o hidraw ao alcance de um
-    clique enquanto a posse não for arbitrada. A janela DECLARA no
-    `maquina.json`; quem sobe a ponte é o daemon.
-    """
+    """A promessa que a docstring de `_ao_alternar_o_microfone` faz, cobrada."""
     dentro_da_janela = sorted(
         caminho for caminho in _portas_de(SRC / "app")
     )

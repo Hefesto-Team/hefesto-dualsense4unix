@@ -26,21 +26,14 @@ from pathlib import Path
 RAIZ_DO_REPO = Path(__file__).resolve().parents[2]
 PONTE = RAIZ_DO_REPO / "scripts" / "bt_ponte_privilegiada.sh"
 
-#: Faixa sintética da casa. NUNCA MAC real nem mascarado em fixture — e aqui há
-#: um motivo extra: o script MEXE no adaptador quando o MAC casa com um vivo.
 ADAPTADOR = "aa:bb:cc:00:00:11"
 CONTROLE = "aa:bb:cc:00:00:22"
 VIZINHO = "aa:bb:cc:00:00:44"
 
 #: O que os seis objetos de DualSense do BlueZ responderam na mesa dela em
-#: 20/09/2026 (`busctl get-property … org.bluez.Device1 Class` -> `u 9480`,
-#: `Icon` -> `input-gaming`). É o ORÁCULO das réguas desta bancada: o número
-#: não sai de nenhuma constante do código, e sim da medição.
 CLASSE_DO_DUALSENSE = 9480
 ICONE_DO_DUALSENSE = "input-gaming"
 
-#: hci9 é de propósito: a mesa dela tem hci0..hci2, e um número fora dessa
-#: faixa é mais uma tranca contra a fixture casar com aparelho vivo.
 HCI = "hci9"
 
 _BUSCTL = """#!/usr/bin/env bash
@@ -70,9 +63,6 @@ esac
 exit 1
 """
 
-#: A janela de mentira: anota o que recebeu, faz aparecer o aparelho atrasado no
-#: meio do caminho e vive exatamente os segundos que lhe pediram — como o
-#: `bluetoothctl --timeout` de verdade.
 _BLUETOOTHCTL = """#!/usr/bin/env bash
 set -u
 raiz="${BUSCTL_FALSO_RAIZ}"
@@ -96,33 +86,19 @@ sleep "${seg}"
 
 
 def ainda_varrendo(raiz: Path) -> bool:
-    """A janela de mentira ainda está de pé AGORA? Pergunta ao processo dela.
-
-    A varredura de verdade morre junto com o `bluetoothctl` que a pediu — o
-    BlueZ solta a descoberta quando o cliente sai do barramento, por qualquer
-    sinal. O arquivo `varrendo` era a resposta enquanto o `trap` de EXIT do
-    dublê o apagava, e o bash NÃO garante esse `trap` sob a sequência de
-    sinais do `timeout` que a ponte usa (TERM no filho, TERM no grupo, CONT nos
-    dois): medido em 27/09/2026, o dublê morreu sem correr o `trap` em 2 de 100
-    com a sequência inteira e em 0 de 100 com cada sinal sozinho — e, dentro da
-    suíte, `test_a_varredura_cai_junto_com_a_ponte` e
-    `test_fechar_derruba_a_varredura` reprovaram de 2 a 4 em 10 com a ponte
-    certa e a janela já morta. O que interessa ao rádio é o processo, e é ele
-    que se pergunta: vivo e com a linha de comando do dublê desta pasta.
-    """
+    """A janela de mentira ainda está de pé AGORA? Pergunta ao processo dela."""
     marcador = raiz / "varrendo"
     try:
         texto = marcador.read_text(encoding="utf-8").strip()
     except FileNotFoundError:
         return False
     if not texto:
-        return True  # o dublê acabou de criar o arquivo e ainda escreve o PID
+        return True
     try:
         linha = Path(f"/proc/{int(texto)}/cmdline").read_bytes()
         estado = Path(f"/proc/{int(texto)}/stat").read_text(encoding="utf-8")
     except (OSError, ValueError):
         return False
-    #: O campo 3 do `stat` é o estado; `Z` é o zumbi que ninguém colheu ainda.
     vivo = estado.rsplit(")", 1)[-1].split()[0] != "Z"
     return vivo and str(raiz / "bin" / "bluetoothctl").encode() in linha
 
@@ -139,12 +115,7 @@ def _prop(raiz: Path, caminho: str, nome: str, valor: str) -> None:
 
 
 def montar(tmp_path: Path) -> Path:
-    """Um BlueZ de mentira: um adaptador, um controle e um vizinho atrasado.
-
-    O vizinho só entra na árvore depois que a janela de busca cria o marcador —
-    é o aparelho que aparece NO MEIO da varredura, que é o caso normal de quem
-    segura PS + Create depois de apertar o botão.
-    """
+    """Um BlueZ de mentira: um adaptador, um controle e um vizinho atrasado."""
     raiz = tmp_path / "barramento"
     (raiz / "bin").mkdir(parents=True)
     (raiz / "props").mkdir(parents=True)
@@ -165,17 +136,11 @@ def montar(tmp_path: Path) -> Path:
     _prop(raiz, controle, "Paired", "b false")
     _prop(raiz, controle, "Class", f"u {CLASSE_DO_DUALSENSE}")
     _prop(raiz, vizinho, "Address", f's "{VIZINHO.upper()}"')
-    #: Nome com tabulação e quebra de linha DE PROPÓSITO: o nome vem do BlueZ,
-    #: que é terceiro, e um `\t` nele quebraria o TSV de quem nos lê.
     _prop(raiz, vizinho, "Alias", 's "fone\tda\nvizinha"')
     _prop(raiz, vizinho, "Paired", "b true")
-    #: Sem `Class`: um aparelho só-LE não publica classe, e a coluna tem de sair
-    #: VAZIA em vez de inventada.
     return raiz
 
 
-#: Faixa sintética para os ADAPTADORES de mentira. Separada da dos aparelhos
-#: pela mesma razão: nada aqui pode casar com adaptador vivo da mesa dela.
 ADAPTADOR_QUE_VARRE = "aa:bb:cc:00:00:a1"
 ADAPTADOR_PARADO = "aa:bb:cc:00:00:a2"
 ADAPTADOR_FOLGADO = "aa:bb:cc:00:00:a3"
@@ -185,23 +150,7 @@ def montar_adaptadores(
     tmp_path: Path,
     adaptadores: dict[str, tuple[str | None, str | None]],
 ) -> Path:
-    """Um BlueZ de mentira feito só de ADAPTADORES, para a leitura de varredura.
-
-    ``adaptadores`` é ``{hciN: (endereço ou None, "true"/"false" ou None)}``.
-    ``None`` em qualquer das duas posições significa **a propriedade não
-    responde** — adaptador em ``down``, ``rfkill``, ou que sumiu entre a árvore
-    e a pergunta. É o arranjo difícil, e é o que separa "não varre" de "não
-    sei".
-
-    O endereço é gravado em MAIÚSCULAS porque é assim que o ``busctl`` devolve
-    o ``Address`` (medido na mesa dela em 20/09/2026: ``s "AC:A7:F1:…"``),
-    enquanto o ``HID_PHYS`` do uevent — a chave dos planos — vem minúsculo.
-    Gravar aqui já normalizado esconderia exatamente o casamento que a régua
-    precisa medir.
-
-    Reusa o ``busctl`` de :data:`_BUSCTL`, que é o mesmo que a ponte usa.
-    Escrever um segundo deixaria duas verdades sobre o mesmo barramento.
-    """
+    """Um BlueZ de mentira feito só de ADAPTADORES, para a leitura de varredura."""
     raiz = tmp_path / "barramento-de-adaptadores"
     (raiz / "bin").mkdir(parents=True)
     (raiz / "props").mkdir(parents=True)
@@ -210,9 +159,6 @@ def montar_adaptadores(
     alvo.chmod(0o755)
 
     caminhos = [f"/org/bluez/{hci}" for hci in adaptadores]
-    #: A árvore de verdade traz o nó raiz e os aparelhos junto com os
-    #: adaptadores; pôr os dois aqui é o que prova que o leitor peneira por
-    #: FORMA e não confia na ordem das linhas.
     linhas = ["/org/bluez", *caminhos, caminho_do(CONTROLE)]
     (raiz / "tree").write_text("\n".join(linhas) + "\n", encoding="utf-8")
 
@@ -226,13 +172,7 @@ def montar_adaptadores(
 
 
 def ambiente_de_leitura(raiz: Path) -> dict[str, str]:
-    """As variáveis que fazem um `busctl` chamado por NOME cair nesta pasta.
-
-    O leitor de varredura não passa pela ponte: ele abre ``busctl`` direto, e é
-    o ``PATH`` que decide qual. Pôr esta pasta na frente é o que deixa a régua
-    exercitar o subprocesso, o parsing e a peneira de verdade — em vez de um
-    dublê de função, que seria mais frouxo que o produto.
-    """
+    """As variáveis que fazem um `busctl` chamado por NOME cair nesta pasta."""
     return {
         "PATH": f"{raiz / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
         "BUSCTL_FALSO_RAIZ": str(raiz),
@@ -244,11 +184,7 @@ def ambiente(raiz: Path) -> dict[str, str]:
     env = dict(os.environ)
     env["HEFESTO_BT_BIN"] = str(raiz / "bin")
     env["BUSCTL_FALSO_RAIZ"] = str(raiz)
-    #: Sem isto a suíte grava, no journal DELA, linhas que descrevem uma
-    #: varredura que nunca aconteceu (DIÁRIO-QUE-NAO-MENTE-01).
     env["HEFESTO_BT_LOG_DEST"] = "none"
-    #: Raiz do BlueZ desviada: nem o `esquecer` nem o `bonds` alcançam a de
-    #: verdade se alguém escorregar num teste futuro desta bancada.
     env["HEFESTO_BT_LIB"] = str(raiz / "lib-de-mentira")
     env.pop("SUDO_UID", None)
     env.pop("SUDO_USER", None)

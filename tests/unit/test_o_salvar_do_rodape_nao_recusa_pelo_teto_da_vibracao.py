@@ -33,8 +33,6 @@ import pytest
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from tests.unit.ponte_do_rodape import PonteDoRodape
 
-#: O ESTADO DELA, medido no daemon vivo em 06/09/2026 às 04h42. O `0.7` é o
-#: teto lembrado de quando o degrau era "custom".
 ESTADO_DELA = {
     "active_profile": "Personalizado",
     "rumble_policy": "balanceado",
@@ -42,7 +40,6 @@ ESTADO_DELA = {
     "rumble_policy_custom_mult": 0.7,
 }
 
-#: Um controle com endereço FORJADO, na grafia do mapa `controllers`.
 UNIQ = "aabbcc0000c1"
 
 
@@ -80,7 +77,6 @@ class _Ponte:
     def profile_switch(self, nome: str) -> bool:
         return True
 
-    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
     def profile_reaplicar(self, nome: str) -> bool:
         return True
 
@@ -91,9 +87,6 @@ class _Ponte:
         return {}
 
 
-# --------------------------------------------------------------------------
-# 1. o teto lembrado pelo daemon não chega ao Salvar
-# --------------------------------------------------------------------------
 def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
     """O caso EXATO da máquina dela: degrau "Balanceado", teto lembrado 0,7."""
     prof = _salvar(ESTADO_DELA)
@@ -123,15 +116,10 @@ def test_o_teto_do_disco_sobrevive_ao_salvar(disco: Any) -> None:
     assert prof.rumble.custom_mult == pytest.approx(1.4)
 
 
-# --------------------------------------------------------------------------
-# 2. o teto é escolha dela no gesto da Vibração, e vai junto com o degrau
-# --------------------------------------------------------------------------
 def test_a_barra_personalizada_grava_o_teto_com_o_degrau(disco: Any) -> None:
     """Arrastar a barra grava `custom` e o número; outro degrau tira o número."""
     from hefesto_dualsense4unix.interface.pacotes import a05_vibracao
 
-    # O QUE VALE: desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 a força
-    # de cada controle é do computador, e o perfil só sobrepõe.
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
         carregar_o_que_vale,
     )

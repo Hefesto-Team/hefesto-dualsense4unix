@@ -1,21 +1,10 @@
 #!/usr/bin/env python3
-"""preview_glyphs.py — janela GTK3 com grade de todos os glyphs SVG.
-
-Abre uma janela 5 colunas x 4 linhas exibindo os 19 glyphs normais e
-suas versões ativas (pressionadas). Usado exclusivamente para proof-of-work
-visual da sprint FEAT-BUTTON-SVG-01.
-
-Uso:
-    .venv/bin/python scripts/preview_glyphs.py
-"""
+"""preview_glyphs.py — janela GTK3 com grade de todos os glyphs SVG."""
 from __future__ import annotations
 
 import pathlib
 import sys
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[1] / "src")
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -39,7 +28,7 @@ GLYPHS = [
 
 TITULO = f"{identidade.atual().nome_longo} — Preview Glyphs SVG"
 COLUNAS = 5
-TAMANHO = 48  # pixels de cada glyph na grade
+TAMANHO = 48
 
 
 def _carregar_pixbuf(caminho: pathlib.Path, tamanho: int):
@@ -75,9 +64,8 @@ def main() -> int:
 
     for idx, nome in enumerate(GLYPHS):
         col = idx % COLUNAS
-        row = (idx // COLUNAS) * 3  # 3 linhas por glyph: icone normal + ativo + label
+        row = (idx // COLUNAS) * 3
 
-        # --- SVG normal ---
         svg_normal = GLYPHS_DIR / f"{nome}.svg"
         if svg_normal.exists():
             try:
@@ -89,7 +77,6 @@ def main() -> int:
             img = Gtk.Label(label="ausente")
         grade.attach(img, col, row, 1, 1)
 
-        # --- SVG ativo ---
         svg_ativo = GLYPHS_DIR / f"{nome}_active.svg"
         if svg_ativo.exists():
             try:
@@ -101,7 +88,6 @@ def main() -> int:
             img_a = Gtk.Label(label="")
         grade.attach(img_a, col, row + 1, 1, 1)
 
-        # --- Label com nome ---
         lbl = Gtk.Label(label=nome)
         lbl.set_xalign(0.5)
         grade.attach(lbl, col, row + 2, 1, 1)

@@ -1,29 +1,4 @@
-"""O recibo só nasce do verde, e da árvore que foi medida.
-
-O-PUSH-SO-COM-O-RECIBO-DOS-PORTOES-01, 28/09/2026. A trava do push da máquina
-pede ``<git comum>/hefesto-recibos/<árvore>.portoes-completo`` e ``….suite``
-para a árvore do commit que sobe, e até aqui nenhum roteiro os escrevia (a
-contraprova de 27/09, T1: o push do fecho, com tudo rodado, era recusado).
-Quem escreve agora é ``scripts/recibo_da_medida.py``, chamado pelo
-``portoes.sh`` na camada completa e pelo ``rodar-a-suite.sh`` na corrida
-inteira.
-
-Tudo aqui roda num repositório git de mentira em ``tmp_path``, com a
-configuração global e a do sistema desligadas: o diretório comum de verdade
-nunca é tocado (``_pasta`` confere).
-
-AS MORDIDAS:
-
-* arranque a comparação da árvore em ``fechar`` e o arquivo acrescentado ao
-  índice no meio da corrida passa a deixar recibo — o
-  ``test_a_mordida_sem_a_comparacao_da_arvore`` faz isso sozinho, numa cópia;
-* tire o ``abrir`` do ``case`` da camada completa do ``portoes.sh`` e o
-  ``--rapido`` passa a deixar recibo;
-* tire a guarda ``so_esta`` do ``rodar-a-suite.sh`` e uma parte só passa a
-  deixar o recibo da suíte inteira;
-* tire o ``PULADOS+=`` do ``portoes.sh`` e o portão pytest que pulou teste
-  sai do recibo como se tivesse medido tudo.
-"""
+"""O recibo só nasce do verde, e da árvore que foi medida."""
 from __future__ import annotations
 
 import hashlib
@@ -41,17 +16,11 @@ SCRIPT = RAIZ / "scripts" / "recibo_da_medida.py"
 PORTOES = RAIZ / "scripts" / "portoes.sh"
 SUITE = RAIZ / "scripts" / "rodar-a-suite.sh"
 
-#: A comparação que a mordida arranca. Mora aqui uma vez: quem a reescrever no
-#: script sem reescrever aqui vê a mordida recusar a troca, que é o aviso certo.
 COMPARACAO_DA_ARVORE = 'agora.arvore != aberta["arvore"]'
 
 
 def _ambiente() -> dict[str, str]:
-    """O ambiente do teste, sem nenhum ``GIT_*`` herdado de um gancho.
-
-    Nem as opções do pytest de quem chama: a suíte e o portão de brinquedo rodam
-    um pytest próprio, e um ``PYTEST_ADDOPTS`` de fora mudaria o que eles medem.
-    """
+    """O ambiente do teste, sem nenhum ``GIT_*`` herdado de um gancho."""
     env = {k: v for k, v in os.environ.items()
            if not k.startswith("GIT_") and k not in {"PYTEST_ADDOPTS", "SUITE_PYTEST_ARGS"}}
     env.update({
@@ -115,13 +84,10 @@ def _acrescenta(repo: Path, nome: str = "b.txt") -> None:
     _git(repo, "add", "--", nome)
 
 
-# ---------------------------------------------------------------------------
-# O script
-# ---------------------------------------------------------------------------
 def test_o_verde_com_a_arvore_intacta_deixa_o_recibo_com_a_arvore_do_indice(repo: Path) -> None:
-    _acrescenta(repo)                      # a árvore do índice não é a do HEAD
+    _acrescenta(repo)
     indice = repo / ".git" / "index"
-    antes = _md5(indice)                   # antes de qualquer write-tree, inclusive o deste teste
+    antes = _md5(indice)
 
     assert _recibo(repo, "abrir", "portoes-completo").returncode == 0
     fecho = _recibo(repo, "fechar", "portoes-completo", "0", "--contagem", "2 de 2 portões verdes",
@@ -152,11 +118,7 @@ def test_a_medida_que_nao_passou_nao_deixa_recibo(repo: Path, rc: str) -> None:
 
 
 def test_o_arquivo_acrescentado_ao_indice_no_meio_nao_deixa_recibo(repo: Path) -> None:
-    """O que foi medido não é o que subiria: a árvore mudou entre abrir e fechar.
-
-    O arquivo nasce DEPOIS do ``abrir``: se existisse antes, a regra do arquivo
-    fora do git o pegaria, e a comparação da árvore ficaria sem prova.
-    """
+    """O que foi medido não é o que subiria: a árvore mudou entre abrir e fechar."""
     _recibo(repo, "abrir", "portoes-completo")
     _acrescenta(repo)
     fecho = _recibo(repo, "fechar", "portoes-completo", "0")
@@ -179,11 +141,7 @@ def test_a_mudanca_rastreada_fora_do_indice_nao_deixa_recibo(repo: Path, quando:
 
 
 def test_a_mudanca_de_antes_da_abertura_desfeita_no_meio_nao_deixa_recibo(repo: Path) -> None:
-    """Os primeiros portões mediram o arquivo mudado; no fecho ele já voltou ao do índice.
-
-    O fecho sozinho vê a árvore limpa e a mesma árvore do começo: só a
-    abertura sabe que a medida começou sobre outro conteúdo.
-    """
+    """Os primeiros portões mediram o arquivo mudado; no fecho ele já voltou ao do índice."""
     original = (repo / "a.txt").read_text(encoding="utf-8")
     (repo / "a.txt").write_text("mudou\n", encoding="utf-8")
     _recibo(repo, "abrir", "suite")
@@ -251,10 +209,9 @@ def test_o_commit_depois_do_recibo_tem_a_arvore_do_nome(repo: Path) -> None:
 
 
 def test_sem_abertura_desta_corrida_nao_ha_recibo(repo: Path, tmp_path: Path) -> None:
-    assert _recibo(repo, "fechar", "suite", "0").returncode != 0      # nunca abriu
+    assert _recibo(repo, "fechar", "suite", "0").returncode != 0
     _recibo(repo, "abrir", "portoes-completo")
-    assert _recibo(repo, "fechar", "suite", "0").returncode != 0      # abriu outro nome
-    # a abertura que falha apaga a velha: a corrida seguinte não herda a anterior
+    assert _recibo(repo, "fechar", "suite", "0").returncode != 0
     fora = tmp_path / "fora-do-git"
     fora.mkdir()
     corrida = repo.parent / "corrida.json"
@@ -289,9 +246,6 @@ def test_a_mordida_sem_a_comparacao_da_arvore(repo: Path, tmp_path: Path) -> Non
         "está segurando o caso, e o teste do arquivo acrescentado não prova a comparação")
 
 
-# ---------------------------------------------------------------------------
-# Os chamadores, pelo texto
-# ---------------------------------------------------------------------------
 def _blocos_case(texto: str) -> list[str]:
     return re.findall(r'case " \$CAMADAS " in\n(.*?)\nesac', texto, re.S)
 
@@ -329,9 +283,6 @@ def test_o_rodar_a_suite_abre_so_na_corrida_inteira() -> None:
         "o `abrir` da suíte perdeu a guarda dos argumentos a mais:\n" + guarda)
 
 
-# ---------------------------------------------------------------------------
-# Os chamadores, rodando: o script DE VERDADE, só com os dados trocados
-# ---------------------------------------------------------------------------
 def _casa_com_portoes(repo: Path, tabela: str) -> None:
     texto = PORTOES.read_text(encoding="utf-8")
     abre = texto.index("_LISTA() {")

@@ -1,82 +1,5 @@
 #!/usr/bin/env python3
-"""régua_de_tela — dirigir a interface nova POR DENTRO, e perguntar a ela.
-
-Pedido dela, 29/08/2026: *"temos que ter no nosso hook do novo dev algo que
-induza a construção de validações via interface pra ver se tal problema foi
-resolvido ou se tal coisa traz regressão"*.
-
-A interface nova é o mockup aprovado rodando num ``WebKit2.WebView`` dentro de
-uma janela GTK3. Isso a torna **dirigível**: ``evaluate_javascript`` clica, lê e
-mede; ``register_script_message_handler`` traz a resposta de volta ao Python.
-Este arquivo é essa capacidade tirada de dentro do piloto da aba Controles
-(``src/hefesto_dualsense4unix/interface/controles_vivos.py --prova-gesto``) e posta onde
-qualquer aba alcança.
-
-    from regua_de_tela import Tela
-
-    with Tela.abrir("02") as t:
-        t.esperar_ate("document.querySelectorAll('.ctl').length === 4")
-        t.clicar_e_ouvir('.ctl [data-mudo="alto-falante"]')   # botão MORTO reprova
-        print(t.medir('.stick[data-stick="l"] .p'))
-
-POR QUE ELE MORA EM ``scripts/`` E NÃO EM ``src/hefesto_dualsense4unix/interface/``
-----------------------------------------------------------------------
-``layout/`` é ``.gitignore:108``. Logo tudo que mora lá **não é versionado
-e não viaja em worktree** — ``git worktree add`` não copia arquivo ignorado. É a
-mesma cicatriz estrutural que fez o ``scripts/portoes.sh`` existir (a lista de
-portões morava num arquivo ignorado), e ela já cobrou aqui: o lançador ``interface``
-carrega um caminho absoluto da máquina dela justamente para achar o piloto de
-volta. Um instrumento permanente — que o hook cita e que toda árvore de agente
-precisa ter — tem de ser versionado. Este é.
-
-O que continua morando em ``layout/`` é o **alvo** (o mockup), não a régua;
-:func:`achar_a_aba` o procura sem caminho chumbado, varrendo os worktrees que o
-``git`` declara.
-
-O QUE ESTE INSTRUMENTO NÃO É
-----------------------------
-Ele **não substitui** o ``src/hefesto_dualsense4unix/interface/olhar.py``. Aquele dirige o
-mockup num Chrome headless pelo Playwright e serve para medir layout, ``:hover``
-e fotografar o DESENHO. O Playwright controla Chromium, Firefox e o WebKit dele
-próprio — **não** um ``WebView`` embutido numa janela GTK. Esta régua alcança o
-motor que ela vai usar, com o daemon vivo. São dois instrumentos com alvos
-diferentes, e o limite de cada um está em :data:`O_QUE_ELE_NAO_FAZ`.
-
-AS QUATRO ARMADILHAS DO WebKit2 4.1, todas já pagas pelo piloto e pagas aqui
----------------------------------------------------------------------------
-1. ``FINISHED`` dispara DEPOIS de um ``load-failed``, com o URI ORIGINAL — e
-   host recusando conexão não dispara ``load-failed`` nenhum, só troca o URI
-   para ``about:blank``, calado. Nem o evento nem o URI bastam: quem confirma a
-   carga é a PÁGINA, perguntada por JS (:meth:`Tela._esperar_a_pagina`).
-2. ``evaluate_javascript`` não devolve Promise (``Unsupported result type
-   (601)``): toda resposta assíncrona da tela volta pelo ``postMessage``.
-3. Na série 4.1 o handler de ``script-message-received`` leva **um** argumento
-   (na 6.0 leva dois).
-4. ``get_title()`` dentro do handler de ``FINISHED`` devolve vazio — o título
-   chega depois. Aqui ninguém chama ``get_title()``: pergunta-se à página.
-
-E os quatro pinos de ``gi.require_version`` são obrigatórios, com o ``Gdk``
-DEPOIS do ``Gtk``.
-
-A REGRA QUE MANDA AQUI
-----------------------
-**Responder sem mentir.** Toda pergunta devolve quantos elementos o seletor
-casou, e ``0`` é ERRO, nunca silêncio — foi o silêncio que deixou o
-``--prova-gesto`` dar verde sobre dois botões mortos (o 🎙 e o ♪ não tinham
-ouvinte, e a régua nem os tocava). Por isso :meth:`Tela.clicar_e_ouvir` existe:
-clicar não é prova, **ser ouvido** é.
-
-**Viver no tempo.** Uma ação acontece aos 3 s e a consequência aos 5. Uma régua
-que roda o tique UMA VEZ mede um INSTANTE, não um comportamento — foi assim que
-uma regressão visível só aos 181 s atravessou com 67 testes verdes. Daí
-:meth:`Tela.esperar_ate`, :meth:`Tela.avancar` e :meth:`Tela.aos`.
-
-Uso pelo terminal (para espiar uma aba sem escrever Python):
-
-    scripts/regua_de_tela.py --listar
-    scripts/regua_de_tela.py --aba 02 --contar .ctl --ler .pa-nome
-    scripts/regua_de_tela.py --aba 04 --medir '.stick' --foto /tmp/a.png
-"""
+"""régua_de_tela — dirigir a interface nova POR DENTRO, e perguntar a ela."""
 from __future__ import annotations
 
 import argparse
@@ -90,9 +13,6 @@ import time
 from collections.abc import Callable
 from typing import Any, NamedTuple
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[1] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -111,9 +31,6 @@ gi.require_version("WebKit2", "4.1")
 
 from gi.repository import GLib, Gtk, WebKit2
 
-#: O que este instrumento NÃO consegue fazer. Fica em código, e não só em
-#: prosa, porque um instrumento que promete demais é pior que um limitado e
-#: honesto — e porque quem for escrever a próxima régua lê daqui.
 O_QUE_ELE_NAO_FAZ = (
     "não clica por COORDENADA nem move o ponteiro: `el.click()` percorre o mesmo "
     "caminho de eventos do clique do rato, mas :hover, drag, roda do rato e "
@@ -145,26 +62,11 @@ O_QUE_ELE_NAO_FAZ = (
     "regera antes de medir, ou mede o arquivo de ontem",
 )
 
-#: O manual desta régua — o vocabulário, a distinção Playwright contra ponte JS e os
-#: sete defeitos de tela já pagos, cada um virando um caso. E o portão que
-#: pergunta pela régua no `pre-commit` é o `scripts/check_regua_de_tela.py`,
-#: que nomeia este arquivo como a biblioteca com que se escreve a próxima.
-#: FORA DO REPOSITÓRIO desde 15/09/2026 (ordem dela): quem tem o arquivo o
-#: segue por este nome; quem não tem lê a própria docstring deste módulo,
-#: que é autossuficiente. Por isso todo uso daqui é CONDICIONAL.
 O_MANUAL = "docs/method/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md"
 
 
-# ---------------------------------------------------------------------------
-# Os erros. Cada um nomeia o que faltou — nenhum é silêncio.
-# ---------------------------------------------------------------------------
 class ErroDeRegua(AssertionError):
-    """Raiz de tudo que esta régua reprova.
-
-    Herda de `AssertionError` de propósito: uma reprovação desta régua É uma
-    reprovação de teste, e o pytest a mostra com o diff em vez de um traceback
-    de exceção estranha.
-    """
+    """Raiz de tudo que esta régua reprova."""
 
 
 class SemElemento(ErroDeRegua):
@@ -210,18 +112,8 @@ class Caixa(NamedTuple):
         )
 
 
-# ---------------------------------------------------------------------------
-# Onde o alvo está — sem caminho chumbado
-# ---------------------------------------------------------------------------
 def _worktrees_do_git(daqui: pathlib.Path) -> list[pathlib.Path]:
-    """Toda árvore que o `git` declara — a principal e as de agente.
-
-    O mockup mora em `layout/`, que é ignorado e por isso existe em UMA
-    árvore só (a principal, quase sempre). Perguntar ao `git` é o que evita o
-    caminho absoluto da máquina dela chumbado num arquivo versionado — que é o
-    que o lançador `interface` teve de fazer, e que não sobrevive a outra
-    máquina.
-    """
+    """Toda árvore que o `git` declara — a principal e as de agente."""
     try:
         saida = subprocess.run(
             ["git", "worktree", "list", "--porcelain"],
@@ -243,17 +135,7 @@ def _worktrees_do_git(daqui: pathlib.Path) -> list[pathlib.Path]:
 
 
 def raizes_candidatas() -> list[pathlib.Path]:
-    """As raízes onde o `layout/` pode estar, em ordem de preferência.
-
-    `HEFESTO_NOVO_LAYOUT` **fixa**: quando ela está posta, é a ÚNICA raiz, e
-    nenhuma outra entra na lista. Defeito medido em 29/08/2026, e quem o achou
-    foi a própria prova de mordida deste instrumento: a variável só ACRESCENTAVA
-    uma raiz, e como :func:`achar_a_aba` escolhe a cópia mais nova, três
-    mordidas aplicadas à cópia apontada foram medidas contra a árvore VIVA — que
-    outra leva estava regerando naquele momento — e passaram todas. Uma régua
-    que mede um alvo diferente do que lhe mandaram é o instrumento mentindo, que
-    é o defeito que este arquivo inteiro existe para não cometer.
-    """
+    """As raízes onde o `layout/` pode estar, em ordem de preferência."""
     fora: list[pathlib.Path] = []
 
     def por(caminho: pathlib.Path | None) -> None:
@@ -265,7 +147,6 @@ def raizes_candidatas() -> list[pathlib.Path]:
 
     variavel = os.environ.get("HEFESTO_NOVO_LAYOUT")
     if variavel:
-        # A variável aponta para o `layout/` OU para a raiz que o contém.
         alvo = pathlib.Path(variavel)
         por(alvo.parent if alvo.name == "layout" else alvo)
         return fora
@@ -276,22 +157,6 @@ def raizes_candidatas() -> list[pathlib.Path]:
     return fora
 
 
-#: ONDE AS PÁGINAS MORAM HOJE, e a ordem importa: a BANCADA primeiro.
-#:
-#: MEDIDO EM 03/09/2026, e o resultado era o pior estado de um instrumento:
-#: `abas_conhecidas()` devolvia **ZERO** abas. Esta biblioteca é aquela com que
-#: se ESCREVE régua de tela nesta casa — uma régua nova escrita sobre ela
-#: passaria por VACUIDADE, medindo nada e dizendo verde.
-#:
-#: A causa é a mesma que `check_regua_de_tela.py` e `test_arranjo_invariantes`
-#: pagaram no mesmo dia: as pastas mudaram de nome e as réguas não foram junto.
-#: `layout/` e `novo-layout/` **não existem** nesta árvore.
-#:
-#: A BANCADA VEM PRIMEIRO por decisão desta casa, escrita em `onde.pagina`:
-#: *"todo instrumento desta casa existe para medir o desenho de HOJE, e
-#: apontá-lo para o publicado o faria dar verde sobre a página congelada"*. O
-#: publicado fica na lista porque é o que o produto RENDERIZA, e há régua que
-#: precisa dos dois.
 PASTAS_DAS_ABAS = ("mockup", "src/hefesto_dualsense4unix/interface/paginas")
 
 
@@ -323,39 +188,11 @@ def candidatas_da_aba(nome: str) -> list[pathlib.Path]:
             miolo = pagina.stem.lower()
             if pedido in (miolo, miolo.split("-", 1)[0], miolo.split("-", 1)[1]):
                 achadas.append((ordem, -pagina.stat().st_mtime, pagina))
-    # A RAIZ VENCE O RELÓGIO, e isto é a armadilha nº 1 desta casa: *medir
-    # contra a biblioteca errada produz alarme convincente e falso*.
-    #
-    # MEDIDO EM 03/09/2026, no minuto em que esta biblioteca voltou a achar
-    # arquivo: ordenando só por `mtime`, a cópia mais nova da aba 04 era
-    # `/tmp/…/audit-cor/wt/…` — a worktree de OUTRO agente, escrita segundos
-    # antes. A régua leria a árvore dele e relataria sobre a nossa.
-    #
-    # `raizes_candidatas()` já põe ESTA árvore em primeiro e as worktrees
-    # depois; o `sorted` por relógio jogava essa ordem fora. Agora a raiz é a
-    # chave primária e o relógio só desempata DENTRO dela — a worktree continua
-    # servindo de reserva para quem não tem o arquivo em casa, que é para o que
-    # ela entrou.
     return [p for _, _, p in sorted(achadas)]
 
 
 def achar_a_aba(nome: str, *, avisar: bool = True) -> pathlib.Path:
-    """`"02"`, `"controles"` ou `"02-controles.html"` → o arquivo.
-
-    **A MAIS NOVA VENCE, e a divergência sai impressa.** Medido em 29/08/2026:
-    `layout/` é ignorado, logo cada worktree tem a SUA cópia, e as duas
-    desta bancada divergiam — a da árvore `interface/nova` era de 28/08 03:09,
-    sem um único `data-mudo`, enquanto a da árvore principal era de 29/08 20:32,
-    com os doze. Uma régua que pegasse a cópia "mais perto de mim" mediria o
-    mockup de ontem e daria verde sobre a cura de hoje.
-
-    Ordenar por mtime é legítimo AQUI porque a página é um artefato GERADO
-    (`src/hefesto_dualsense4unix/interface/monta.py`): cópia velha em worktree é sobra, não
-    variante. `HEFESTO_NOVO_LAYOUT` vence sempre, para quem quiser fixar.
-
-    E quando há mais de uma, o aviso vai para o `stderr` nomeando as duas — o
-    defeito que esta casa mais paga é duas verdades vivas em silêncio.
-    """
+    """`"02"`, `"controles"` ou `"02-controles.html"` → o arquivo."""
     alvo = pathlib.Path(nome)
     if alvo.is_file():
         return alvo.resolve()
@@ -379,9 +216,6 @@ def achar_a_aba(nome: str, *, avisar: bool = True) -> pathlib.Path:
     return achadas[0]
 
 
-# ---------------------------------------------------------------------------
-# O ajudante que mora na página. Toda resposta diz QUANTOS casaram.
-# ---------------------------------------------------------------------------
 AJUDANTE = r"""
 window.__REGUA = (function(){
   function lista(sel){
@@ -466,17 +300,8 @@ class Recado(NamedTuple):
         return str(self.objeto.get("gesto") or "") if isinstance(self.objeto, dict) else ""
 
 
-# ---------------------------------------------------------------------------
-# A tela
-# ---------------------------------------------------------------------------
 class Tela:
-    """Uma aba aberta num WebView oculto, e o vocabulário para interrogá-la.
-
-    O laço principal do GTK **não** é iniciado com ``Gtk.main()``: cada pergunta
-    bombeia o contexto GLib até a resposta chegar (:meth:`_bombear`). É o que
-    deixa a API síncrona — quem escreve a régua não precisa de callback nem de
-    thread — sem perder o tempo real, que é onde a interface vive.
-    """
+    """Uma aba aberta num WebView oculto, e o vocabulário para interrogá-la."""
 
     def __init__(
         self,
@@ -501,8 +326,6 @@ class Tela:
         ucm = WebKit2.UserContentManager()
         for canal in canais:
             ucm.register_script_message_handler(canal)
-            # Na série 4.1 o handler leva UM argumento; o `canal=canal` fecha a
-            # variável do laço, senão todo canal relataria o último nome.
             ucm.connect(
                 f"script-message-received::{canal}",
                 lambda _ucm, resultado, canal=canal: self._da_tela(canal, resultado),
@@ -522,7 +345,6 @@ class Tela:
         self.view.load_uri(pagina.as_uri())
         self._esperar_a_pagina(prazo)
 
-    # -- abertura ----------------------------------------------------------
     @classmethod
     def abrir(cls, aba: str, **kwargs: Any) -> Tela:
         """`Tela.abrir("02")` — o atalho, com o alvo resolvido pelo nome."""
@@ -539,7 +361,6 @@ class Tela:
             self.janela.destroy()
         self._bombear(lambda: False, 0.05)
 
-    # -- o laço ------------------------------------------------------------
     def _bombear(self, pronto: Callable[[], bool], prazo: float) -> bool:
         """Roda o laço GLib até `pronto()` ou até o prazo. Devolve se deu."""
         fim = time.monotonic() + prazo
@@ -567,15 +388,12 @@ class Tela:
         """Segundos desde que esta tela abriu."""
         return time.monotonic() - self._t0
 
-    # -- carga -------------------------------------------------------------
     def _falhou(self, _view: Any, _evento: Any, uri: str, erro: Any) -> bool:
         self._falhas_de_carga.append(f"{uri}: {erro}")
         return False
 
     def _carregou(self, _view: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
-            # O ajudante mora na `window` e sobrevive a `innerHTML`, mas NÃO
-            # sobrevive a navegação — e a tira do mockup navega de verdade.
             self._ajudante_posto = False
 
     def _esperar_a_pagina(self, prazo: float) -> None:
@@ -614,14 +432,8 @@ class Tela:
             self.executar(AJUDANTE)
         self._ajudante_posto = True
 
-    # -- a ponte com o JavaScript ------------------------------------------
     def _cru(self, js: str, prazo: float = 8.0) -> Any:
-        """Avalia `js` e devolve o valor, passando por JSON.
-
-        `evaluate_javascript` não devolve Promise (armadilha 2): tudo aqui é
-        síncrono do lado da página. O `JSON.stringify` é o que faz um objeto
-        atravessar sem virar `"[object Object]"`.
-        """
+        """Avalia `js` e devolve o valor, passando por JSON."""
         caixa: dict[str, Any] = {}
 
         def respondeu(view: Any, res: Any, _u: Any = None) -> None:
@@ -646,12 +458,7 @@ class Tela:
             ) from erro
 
     def executar(self, script: str, prazo: float = 8.0) -> Any:
-        """Roda JavaScript solto e REPROVA se ele levantar.
-
-        É a saída de emergência do vocabulário — instalar uma ponte, chamar
-        `HEF.pinta`. Fire-and-forget não serve: um bootstrap que levanta e passa
-        calado é exatamente o instrumento mentindo.
-        """
+        """Roda JavaScript solto e REPROVA se ele levantar."""
         caixa: dict[str, Any] = {}
 
         def respondeu(view: Any, res: Any, _u: Any = None) -> None:
@@ -690,7 +497,6 @@ class Tela:
             )
         return resposta
 
-    # -- o vocabulário -----------------------------------------------------
     def contar(self, seletor: str) -> int:
         """Quantos casam. Aqui `0` é resposta legítima, e não erro."""
         return int(self._perguntar("contar", seletor)["valor"])
@@ -726,18 +532,9 @@ class Tela:
         return bool(self._exigir("travado", seletor, indice)["valor"])
 
     def clicar(self, seletor: str, indice: int = 0) -> dict[str, Any]:
-        """Clica e devolve o RETRATO do alvo (travado, visível, caixa, texto).
-
-        `el.click()` percorre o mesmo caminho de eventos do clique do rato — o
-        `addEventListener` da página é o que responde. Clicar por coordenada é a
-        armadilha que esta casa já pagou duas vezes e não se usa aqui.
-
-        ATENÇÃO: isto prova que o clique SAIU, não que alguém o ouviu. Para
-        exigir resposta, :meth:`clicar_e_ouvir`.
-        """
+        """Clica e devolve o RETRATO do alvo (travado, visível, caixa, texto)."""
         return self._exigir("clicar", seletor, indice)
 
-    # -- o tempo -----------------------------------------------------------
     def esperar_ate(
         self,
         pergunta: str | Callable[[], bool],
@@ -745,15 +542,7 @@ class Tela:
         prazo: float = 5.0,
         motivo: str = "",
     ) -> float:
-        """Bombeia o laço até a pergunta virar verdade. REPROVA no estouro.
-
-        `pergunta` é uma expressão JavaScript (avaliada na página) ou um
-        callable Python. Devolve em quantos segundos aconteceu — porque "quando"
-        costuma ser o dado que interessa.
-
-        Devolver `False` no estouro seria a régua virando enfeite: quem
-        escreveu o teste esqueceria de conferir, e o silêncio viraria verde.
-        """
+        """Bombeia o laço até a pergunta virar verdade. REPROVA no estouro."""
         comeco = time.monotonic()
         ultimo: dict[str, Any] = {}
 
@@ -779,7 +568,6 @@ class Tela:
             + (f" · última nota: {ultimo['nota']}" if "nota" in ultimo else "")
         )
 
-    # -- a volta: o que a PÁGINA manda -------------------------------------
     def _da_tela(self, canal: str, resultado: Any) -> None:
         valor = resultado.get_js_value() if hasattr(resultado, "get_js_value") else resultado
         bruto = valor.to_string()
@@ -808,22 +596,7 @@ class Tela:
         indice: int = 0,
         ignorar: tuple[str, ...] = (),
     ) -> list[Recado]:
-        """Clica e EXIGE que a página responda — o teste do botão morto.
-
-        É o método que este arquivo existe para ter. Medido em 29/08: o 🎙 e o ♪
-        da aba Controles tinham `cursor:pointer`, eram pintados, e **não tinham
-        ouvinte** — dois cliques produziram ZERO gestos enquanto os botões de
-        rota, ao lado, ecoavam. A régua de então dava verde porque nem os
-        tocava, e um clique que só "sai" não distingue botão vivo de botão
-        morto.
-
-        ``esperados=0`` é a outra metade: prova SILÊNCIO (um botão travado tem
-        de não responder), e aí o prazo inteiro é cumprido antes de concluir —
-        não se prova ausência olhando por um instante.
-
-        ``ignorar`` tira do rodapé gestos de fundo (a pintura do tique, por
-        exemplo) que não são resposta ao clique.
-        """
+        """Clica e EXIGE que a página responda — o teste do botão morto."""
         antes = len(self._recados)
 
         def novos() -> list[Recado]:
@@ -847,7 +620,6 @@ class Tela:
             )
         return vindos
 
-    # -- o olho ------------------------------------------------------------
     def foto(self, caminho: str | pathlib.Path) -> pathlib.Path:
         """Um PNG da janela oculta — para o olho dela, que é a palavra final."""
         if not isinstance(self.janela, Gtk.OffscreenWindow):  # pragma: no cover
@@ -861,9 +633,6 @@ class Tela:
         return destino
 
 
-# ---------------------------------------------------------------------------
-# O terminal
-# ---------------------------------------------------------------------------
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Dirige uma aba da interface nova.")
     p.add_argument("--aba", help='"02", "controles" ou um caminho .html')

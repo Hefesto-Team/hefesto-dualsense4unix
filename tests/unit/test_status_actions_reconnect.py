@@ -1,18 +1,8 @@
-"""Máquina de estado do reconnect do header (UX-RECONNECT-01).
-
-Testa transições INITIAL/ONLINE → RECONNECTING → OFFLINE e o caminho de
-volta (RECONNECTING → ONLINE, OFFLINE → ONLINE) sem acoplar a GTK: usamos
-fakes leves que imitam apenas a API mínima consumida pelos renderers.
-"""
+"""Máquina de estado do reconnect do header (UX-RECONNECT-01)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("status_actions: o reconectar da janela")
 
 import sys
@@ -22,17 +12,10 @@ from typing import Any
 import pytest
 
 
-# GTK é import-by-side-effect no módulo real; para testes em CI sem display
-# injetamos stubs em `gi.repository` antes do import. Isso evita requerer Xvfb
-# para testar lógica pura de transição de estado.
 def _install_gi_stubs() -> None:
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
-    # "ambiente sem GTK" mesmo com o GTK real presente.
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
-            # Se o gi real funciona (ambiente com GTK), não mexe.
             import gi
 
             gi.require_version("Gtk", "3.0")
@@ -65,9 +48,6 @@ def _install_gi_stubs() -> None:
     gtk_mod.Switch = object  # type: ignore[attr-defined]
     gtk_mod.TextView = object  # type: ignore[attr-defined]
     gtk_mod.TextBuffer = object  # type: ignore[attr-defined]
-    # StickPreviewGtk herda de Gtk.DrawingArea; ButtonGlyph herda de Gtk.Box.
-    # Stubs evitam que o import-time class definition exploda em ambientes
-    # sem GTK real (CI minimalista, validação isolada de testes).
     gtk_mod.DrawingArea = object  # type: ignore[attr-defined]
     gtk_mod.Box = object  # type: ignore[attr-defined]
     gtk_mod.Grid = object  # type: ignore[attr-defined]
@@ -104,7 +84,6 @@ class _FakeLabel:
         self.text = text
 
     def set_visible(self, value: bool) -> None:
-        # UX-03: o _render_offline agora esconde o banner de degradação do vpad.
         self.visible = value
 
     def set_fraction(self, _frac: float) -> None:  # pragma: no cover
@@ -158,7 +137,7 @@ def test_ipc_success_keeps_online_and_zeroes_counter(host: _Host) -> None:
     header = host.builder.get_object("header_connection")
     assert header.markup is not None
     assert "Conectado Via" in header.markup
-    assert "#50fa7b" in header.markup  # verde canônico
+    assert "#50fa7b" in header.markup
 
 
 def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
@@ -167,10 +146,8 @@ def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
     assert host._consecutive_failures == 1
     header = host.builder.get_object("header_connection")
     assert "Tentando Reconectar" in header.markup
-    # ADR-011: U+25D0 emitido como NCR `&#9680;` para escapar do sanitizer
-    # global de glyphs.
     assert "&#9680;" in header.markup
-    assert "#ffb86c" in header.markup  # laranja canônico
+    assert "#ffb86c" in header.markup
 
 
 def test_threshold_failures_moves_to_offline(host: _Host) -> None:
@@ -180,9 +157,8 @@ def test_threshold_failures_moves_to_offline(host: _Host) -> None:
     assert host._consecutive_failures == RECONNECT_FAIL_THRESHOLD
     header = host.builder.get_object("header_connection")
     assert "Hefesto desligado" in header.markup
-    # U+25CB via NCR `&#9675;`.
     assert "&#9675;" in header.markup
-    assert "#ff5555" in header.markup  # vermelho canônico
+    assert "#ff5555" in header.markup
 
 
 def test_reconnecting_to_online_recovers(host: _Host) -> None:
@@ -208,23 +184,12 @@ def test_offline_to_online_recovers(host: _Host) -> None:
 
 
 def test_reconnecting_markup_uses_geometric_shape_not_emoji(host: _Host) -> None:
-    """Garante U+25D0 (Geometric Shape) — nunca emojis coloridos.
-
-    ADR-011: o glyph é emitido como NCR `&#9680;` (decimal de 0x25D0)
-    porque o hook global de sanitização strippa o literal U+25D0 e os
-    demais geometric shapes do range U+25AA-U+25FE.
-    """
+    """Garante U+25D0 (Geometric Shape) — nunca emojis coloridos."""
     host._update_reconnect_state(None)
     header = host.builder.get_object("header_connection")
     assert "&#9680;" in header.markup
-    # Defesa contra regressão: blocos de emoji coloridos não podem aparecer.
     for char in header.markup:
         assert ord(char) < 0x1F000, f"emoji encontrado: {char!r}"
-
-
-# ---------------------------------------------------------------------------
-# UI-STATUS-OFFLINE-FALLBACK-01 — fallback acionável após 5 s sem poll OK
-# ---------------------------------------------------------------------------
 
 
 def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
@@ -235,32 +200,15 @@ def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
 
     result = host._check_initial_poll_fallback()
 
-    assert result is False  # one-shot, não reagenda
+    assert result is False
     header = host.builder.get_object("header_connection")
     assert "Desconectado" in header.markup
-    # O ponto do fallback é ser ACIONÁVEL: dizer onde resolver. LEIGO-03
-    # renomeou a aba ("Daemon" → "Sistema") e o botão ("Iniciar" → "Ligar o
-    # Hefesto"); o header aponta para os nomes que existem na tela.
     assert "aba Sistema" in header.markup
-    #
-    # E O NOME DO BOTÃO MUDOU DE NOVO — 06/09/2026, VIBRACAO-O-QUE-SOBROU-01.
-    # *"Ligar o Hefesto"* deixou de existir quando a interface nova passou a
-    # ser a única tela: medido varrendo o texto de todo `<button>` das dez
-    # páginas publicadas, a aba Sistema oferece "Reiniciar o serviço",
-    # "Parar o serviço" e "Retomar" — e nenhuma página tem "Ligar o Hefesto".
-    # A régua exigia o nome que sumiu, que é a forma desta casa de *"a régua
     # media o mundo de ontem"*.  # (noqa-acento: verbo medir, imperfeito)
-    # Ela mantinha a frase impossível verde e teria reprovado a cura. Quem
-    # confere que o rótulo existe de VERDADE é
-    # `tests/unit/test_a_vibracao_nao_manda_num_botao_que_nao_existe.py`, que
-    # pergunta às páginas em vez de decorar.
-    # E ELE É «Reiniciar» desde 25/09/2026: a coluna «Serviço» da aba em três
-    # seções já diz de quem é o botão.
     assert '"Reiniciar"' in header.markup
     assert "#ff5555" in header.markup
     assert host._reconnect_state == "offline"
     daemon_label = host.builder.get_object("status_daemon")
-    # _set_label chama set_text (não set_markup).
     assert "Sem resposta" in (daemon_label.text or "")
 
 
@@ -274,16 +222,7 @@ def test_initial_poll_fallback_no_op_quando_poll_ja_sucedeu(host: _Host) -> None
 
     assert result is False
     assert "Conectado Via USB" in header.markup
-    # Estado não foi forçado para offline.
     assert host._reconnect_state != "offline" or host._consecutive_failures == 0
-
-
-# ---------------------------------------------------------------------------
-# BUG-GUI-IDLE-ADD-BUSY-LOOP-01: a "primeira leitura imediata" via GLib.idle_add
-# passava os ticks (que retornam True pro timeout_add) — idle_add reagenda
-# enquanto o callback devolve True, virando busy-loop a 100% CPU + memory leak.
-# Os wrappers em install_status_polling devem ser one-shot (retornar False).
-# ---------------------------------------------------------------------------
 
 
 def test_idle_add_callbacks_sao_one_shot(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -294,32 +233,22 @@ def test_idle_add_callbacks_sao_one_shot(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(
         mod.GLib, "idle_add", lambda fn, *args: idle_calls.append((fn, args)) or 0
     )
-    # Os demais hooks GLib viram no-op (testamos só idle_add aqui).
     monkeypatch.setattr(mod.GLib, "timeout_add", lambda *_a, **_kw: 0)
     monkeypatch.setattr(mod.GLib, "timeout_add_seconds", lambda *_a, **_kw: 0)
 
-    # Stub mínimo para install_status_polling — sem GTK real.
     host = object.__new__(StatusActionsMixin)
 
     def _no_slot(_id: str) -> None:
         return None
 
     host._get = _no_slot  # type: ignore[attr-defined]
-    # STATUS-02: os inits de sticks/glyphs singleton saíram da mixin (os
-    # cards por controle absorvem os widgets) — sem bypass a fazer aqui.
-    # Substitui os ticks reais por stubs que retornariam True (mantendo o
-    # timeout_add vivo) — provamos que o WRAPPER passado a idle_add devolve False
-    # mesmo quando o tick subjacente devolve True.
     host._tick_live_state = lambda: True  # type: ignore[attr-defined]
     host._tick_profile_state = lambda: True  # type: ignore[attr-defined]
 
     StatusActionsMixin.install_status_polling(host)
 
-    # idle_add foi chamado pelos dois wrappers one-shot.
     assert len(idle_calls) >= 2
     for fn, _args in idle_calls[:2]:
-        # Cada wrapper executa o tick e devolve False (one-shot).
         assert fn() is False
 
 
-# "A consistência é a virtude do burro." — Oscar Wilde.

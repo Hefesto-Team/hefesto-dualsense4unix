@@ -21,7 +21,7 @@ E O QUARTO, que é de ESCRITA e o pior deles: o gesto `cor` chamava
 campo quando ele é passado, e o `led.set` do daemon diz *"Ausente ou inválido ->
 assume 1.0"*. Ou seja: a coluna mostrava `50%` e o fio levava 100% — um clique
 num tom DESFAZIA o brilho que ela tinha escolhido na janela GTK, sem uma palavra
-na tela. A GTK manda o brilho em toda escrita (`lightbar_actions.py:949`).
+na tela. A GTK manda o brilho em toda escrita (`lightbar_actions.py:656`).
 
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 
@@ -47,7 +47,6 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-#: MAC da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 
 MESA = [
@@ -77,14 +76,7 @@ def ctx():
 
 
 class PonteDeMentira:
-    """Um dublê da ponte que devolve o CORPO que o teste mandar.
-
-    Ele é irmão do `PonteDeMentira` de `test_os_botoes_tem_dono.py`, e a
-    diferença é a razão de existir: aquele responde `True` a qualquer nome, o
-    que basta para provar QUE função foi chamada. Aqui a pergunta é outra — o
-    que o gesto FAZ com a resposta —, e para isso o corpo precisa ser o do
-    daemon: `aplicado_em`/`guardado_em`, como o `led.set` os publica.
-    """
+    """Um dublê da ponte que devolve o CORPO que o teste mandar."""
 
     def __init__(self, corpo=None):
         self.corpo = corpo
@@ -101,26 +93,12 @@ class PonteDeMentira:
 
 
 def _com_o_perfil(monkeypatch, a04, perfil_falso):
-    """Faz o pacote ler ESTE perfil, sem tocar o disco dela.
-
-    O `perfil.ativo` abre o JSON do perfil ativo, e escrever um em disco só para
-    a régua faria o teste depender do lar de mentira do `conftest` — que existe,
-    mas prova outra coisa. O que se mede aqui é o que a aba FAZ com o número.
-    """
+    """Faz o pacote ler ESTE perfil, sem tocar o disco dela."""
     monkeypatch.setattr(a04.perfil, "ativo", lambda _nome: perfil_falso)
 
 
-# ---------------------------------------------------------------------------
-# 1. o brilho tem UM dono, e ele lê o override antes do global
-# ---------------------------------------------------------------------------
 def test_o_brilho_le_o_override_antes_do_global(a04):
-    """A ordem é a do merge do `profiles/schema.py`, e `None` é "não sei".
-
-    A MORDIDA: troque a ordem — leia o global antes do override — e a primeira
-    linha reprova. Faça `None` virar `1.0` e a última reprova, que é a diferença
-    entre *"ela escolheu cheio"* e *"ninguém escolheu nada"*: o `led.set` OMITE
-    o campo ausente, e omitir é o retrocompatível.
-    """
+    """A ordem é a do merge do `profiles/schema.py`, e `None` é "não sei"."""
     p = {"leds": {"lightbar_brightness": 0.4},
          "controllers": {UNIQ: {"leds": {"lightbar_brightness": 0.9}}}}
     assert a04.brilho_do_controle(p, UNIQ) == pytest.approx(0.9)
@@ -132,17 +110,8 @@ def test_o_brilho_le_o_override_antes_do_global(a04):
                                   UNIQ) is None
 
 
-# ---------------------------------------------------------------------------
-# 2. a cor pedida volta dos oito tons, em qualquer brilho
-# ---------------------------------------------------------------------------
 def test_os_oito_tons_voltam_inteiros_em_qualquer_brilho(a04):
-    """A marca da cor escolhida sobrevive ao brilho — e é isso que ela vê.
-
-    A MORDIDA: faça `cor_escolhida` devolver a efetiva sempre (que é o que a aba
-    fazia até hoje) e as quatro faixas de brilho reprovam de uma vez. Troque a
-    varredura por uma DIVISÃO (`round(canal / brilho)`) e o `0.5` reprova: o
-    `#00007F` dividido dá 254, e a marca continuaria apagada por UM.
-    """
+    """A marca da cor escolhida sobrevive ao brilho — e é isso que ela vê."""
     for brilho in (0.9, 0.82, 0.5, 0.25, 0.1):
         for tom in a04.tons_da_guia():
             acesa = a04._com_o_brilho(tom, brilho)
@@ -153,12 +122,7 @@ def test_os_oito_tons_voltam_inteiros_em_qualquer_brilho(a04):
 
 
 def test_a_cor_livre_volta_como_esta_no_plastico(a04):
-    """Sem casamento, a EFETIVA volta inteira — inventar um pedido seria pior.
-
-    A MORDIDA: faça o `return` final devolver o primeiro tom da guia em vez da
-    efetiva e esta linha reprova. A tela passaria a afirmar uma escolha que
-    ninguém fez, que é a família de defeito que esta aba inteira persegue.
-    """
+    """Sem casamento, a EFETIVA volta inteira — inventar um pedido seria pior."""
     livre = (0x12, 0xAB, 0x34)
     acesa = a04._com_o_brilho(livre, 0.82)
     assert acesa not in a04.tons_da_guia()
@@ -188,16 +152,8 @@ def test_a_conta_do_brilho_e_a_do_produto(a04):
                 LedSettings(lightbar=tom).apply_brightness(brilho).lightbar)
 
 
-# ---------------------------------------------------------------------------
-# 3. a tira volta ao tom da casa
-# ---------------------------------------------------------------------------
 def test_a_tira_volta_ao_tom_da_casa_com_o_brilho_reduzido(a04):
-    """Com o hex cru a tira acendia uma cor que a guia não mostra em lugar nenhum.
-
-    A MORDIDA: pinte a tira com `_tinta(acesa)` — o que a aba fazia até hoje — e
-    a segunda linha reprova, porque `tom_da_casa` devolve o desconhecido COMO
-    VEIO e `#00007F` não está na tabela dos oito.
-    """
+    """Com o hex cru a tira acendia uma cor que a guia não mostra em lugar nenhum."""
     acesa = a04._com_o_brilho((0, 0, 255), 0.5)
     assert a04._tinta(acesa) == a04._hex(acesa), (
         "a premissa deste teste caiu: `tom_da_casa` passou a conhecer a cor "
@@ -205,9 +161,6 @@ def test_a_tira_volta_ao_tom_da_casa_com_o_brilho_reduzido(a04):
     assert a04._tinta(a04.cor_escolhida(acesa, 0.5)) != a04._hex(acesa)
 
 
-# ---------------------------------------------------------------------------
-# 4. O GESTO MANDA O BRILHO — a mordida do defeito de escrita
-# ---------------------------------------------------------------------------
 def test_o_gesto_da_cor_manda_o_brilho_do_perfil(a04, ctx, monkeypatch):
     """O número que a coluna MOSTRA é o que vai no fio.
 
@@ -268,16 +221,7 @@ def test_sem_brilho_no_perfil_o_campo_nao_viaja(a04, ctx, monkeypatch):
     assert p.chamadas[0][2].get("brightness") is None
 
 
-# ---------------------------------------------------------------------------
-# 5. os três gestos escrevem pela MESMA porta
-# ---------------------------------------------------------------------------
-#: O TERCEIRO GESTO MORREU, e a linha dele saiu junto — 08/09/2026. Havia aqui
 #: um `("auto", {}, ["chamar", "led_set_detalhado"])`, e o gesto por coluna que
-#: ele exercitava saiu da aba no `2c228352`, com o botão. Desde então
-#: `gesto_da_pagina("04-iluminacao.html", "auto")` devolvia `None` e a linha
-#: reprovava com `TypeError: 'NoneType' object is not callable` — uma régua
-#: vermelha sobre um botão que não existe não mede nada, e escondia as duas
-#: que medem. Os gestos de COR desta aba são dois.
 @pytest.mark.parametrize(("nome", "clique", "espera"), [
     ("cor", {"hex": "#FF8000"}, ["led_set_detalhado"]),
     ("apagar", {}, ["led_set_detalhado"]),
@@ -311,9 +255,6 @@ def test_o_apagar_manda_preto_e_o_brilho_nao_o_altera(a04, ctx, monkeypatch):
     assert a04._com_o_brilho((0, 0, 0), 0.5) == (0, 0, 0)
 
 
-# ---------------------------------------------------------------------------
-# 6. o desfecho sai do CORPO do daemon
-# ---------------------------------------------------------------------------
 def test_aplicou_e_o_gesto_cala(a04, ctx, monkeypatch):
     """`aplicado_em` com alguém dentro é o caminho feliz, e o feliz é calado."""
     import pacotes
@@ -347,10 +288,6 @@ def test_guardado_vira_frase_no_cartao_dela(a04, ctx, monkeypatch):
     )
 
     _com_o_perfil(monkeypatch, a04, {"leds": {"lightbar_brightness": 1.0}})
-    # O Modo Nativo ligado não é mais o PORQUÊ de uma cor guardada: desde
-    # 23/09/2026 a luz sai no fio nele (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-
-    # DO-HEFESTO`). O guardado que o daemon ainda declara (o controle fora da
-    # mesa, por exemplo) continua levantando — e a frase não põe o Nativo.
     ctx.state["native_mode"] = True
     p = PonteDeMentira({"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ]})
     fn = pacotes.gesto_da_pagina("04-iluminacao.html", "cor")
@@ -363,11 +300,7 @@ def test_guardado_vira_frase_no_cartao_dela(a04, ctx, monkeypatch):
 
 
 def test_nada_aconteceu_tambem_fala(a04, ctx, monkeypatch):
-    """As DUAS listas vazias significam que nada foi escrito e nada foi guardado.
-
-    É o caso que a bancada mediu em 23/08 — a tela dizendo "aplicado" com o
-    corpo dizendo ZERO destino. A MORDIDA é a mesma do teste acima.
-    """
+    """As DUAS listas vazias significam que nada foi escrito e nada foi guardado."""
     import pacotes
 
     _com_o_perfil(monkeypatch, a04, {"leds": {"lightbar_brightness": 1.0}})
@@ -378,13 +311,7 @@ def test_nada_aconteceu_tambem_fala(a04, ctx, monkeypatch):
 
 
 def test_o_daemon_mudo_continua_dizendo_a_frase_de_sempre(a04, ctx, monkeypatch):
-    """Corpo `None` é *"não houve resposta"*, e a frase é a do Hefesto desligado.
-
-    Ela não muda com esta frente, e o teste está aqui para provar que não mudou:
-    trocar a porta por `_detalhado` não pode transformar "o daemon não respondeu"
-    em "o daemon respondeu e nada entrou" — são diagnósticos diferentes, e
-    mandam olhar em lugares diferentes.
-    """
+    """Corpo `None` é *"não houve resposta"*, e a frase é a do Hefesto desligado."""
     import pacotes
 
     _com_o_perfil(monkeypatch, a04, {})
@@ -395,9 +322,6 @@ def test_o_daemon_mudo_continua_dizendo_a_frase_de_sempre(a04, ctx, monkeypatch)
     assert str(erro.value) == a04.sem_resposta_do_daemon()
 
 
-# ---------------------------------------------------------------------------
-# 7. a aba inteira, com o brilho reduzido
-# ---------------------------------------------------------------------------
 def test_o_pacote_emite_a_cor_pedida_e_nao_a_escurecida(a04, monkeypatch):
     """A coluna inteira, montada como o produto a monta, com o brilho em 50%.
 

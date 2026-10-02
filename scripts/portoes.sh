@@ -230,7 +230,7 @@ rapido|os-quatro-lugares|py|scripts/check_os_quatro_lugares.py
 # OFEREÇA gesto nenhum, que é a decisão dela de 31/08/2026. Os dois são
 # necessários e nenhum vê o buraco do outro: a 01-jogar tinha os doze endereços
 # certos E três chips clicáveis em cada uma das duas colunas sem controle.
-# POR QUE A REDE DA CASA NÃO BASTAVA: a S-04 da folha (`monta.py:1225`) mira
+# POR QUE A REDE DA CASA NÃO BASTAVA: a S-04 da folha (`monta.py:544`) mira
 # `button, input, select, textarea, [contenteditable]`, e o chip de máscara da
 # 01 é um `<span>` — nenhum dos cinco.
 # ELE É `pytest` E NÃO UM SCRIPT DE `scripts/`, e a razão é o motor: a régua

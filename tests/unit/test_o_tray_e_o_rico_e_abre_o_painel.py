@@ -1,23 +1,4 @@
-"""O `tray` sobe o `AppTray`, e ele abre o PAINEL — não a TUI.
-
-`TRAY-ORFAO-01` — 19/09/2026, queixa dela: *"o tray sumiu, não o portamos"*.
-
-**O QUE ELA PERDEU EM 06/09:** a janela GTK saiu do disco
-(`D-0609-GTK-LEVA-INTEIRA`) levando junto o único chamador do `AppTray`
-(`app/app.py:1794`). O subcomando `tray` continuou subindo o
-`integrations.tray.TrayController`, que é estritamente mais pobre — ele abre a
-**TUI** no terminal, não o painel que ela usa.
-
-**O FATO QUE CAIU JUNTO:** estava escrito que em COSMIC o
-`org.kde.StatusNotifierWatcher` *"não existe, então o tray clássico fica
-oculto"* — premissa que fez a janela compacta nascer como surrogate. Medido em
-19/09 na sessão dela: **existe**, servido pelo `cosmic-applet-status-area`. O
-tray funciona, e a prova está na bandeja dela: 4 ícones sem ele, 5 com ele.
-
-Esta régua mede o CONTRATO (quem sobe, com que callbacks, para onde aponta) —
-não o ícone. O ícone foi validado por foto e por diferença de pixels; um teste
-não tem barra do COSMIC para olhar.
-"""
+"""O `tray` sobe o `AppTray`, e ele abre o PAINEL — não a TUI."""
 from __future__ import annotations
 
 import inspect
@@ -53,12 +34,7 @@ def test_os_quatro_callbacks_estao_ligados() -> None:
 
 
 def test_abrir_painel_chama_o_lancador_instalado_e_nao_a_arvore() -> None:
-    """O «Abrir painel» tem de funcionar em QUALQUER computador.
-
-    Apontar para o `interface.sh` da árvore de desenvolvimento amarraria o tray
-    a um caminho que só existe na máquina de quem programa — e o produto é para
-    qualquer pessoa (ordem dela, 11/09).
-    """
+    """O «Abrir painel» tem de funcionar em QUALQUER computador."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     assert cmd_tray.LANCADOR_DO_PAINEL == "hefesto-dualsense4unix-gui", (
@@ -86,11 +62,7 @@ def test_o_estado_vem_do_state_full_e_nao_do_status() -> None:
 
 
 def test_o_ipc_silencia_em_vez_de_levantar() -> None:
-    """Estes callbacks rodam DENTRO do laço do GTK.
-
-    Uma exceção que suba dali derruba o menu no meio do clique dela. O `AppTray`
-    já sabe tratar `None` — é o que ele recebe com o daemon parado.
-    """
+    """Estes callbacks rodam DENTRO do laço do GTK."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     fonte = inspect.getsource(cmd_tray._chamar)
@@ -100,12 +72,7 @@ def test_o_ipc_silencia_em_vez_de_levantar() -> None:
 
 
 def test_o_apptray_espera_o_watcher_no_cosmic() -> None:
-    """A peça que faz o ícone aparecer, e ela é do `AppTray`.
-
-    O `cosmic-applet-status-area` registra o `org.kde.StatusNotifierWatcher`
-    alguns ms DEPOIS do login. Criar o indicador na hora perde a janela — e o
-    sintoma é o ícone que nunca aparece, sem uma linha de erro.
-    """
+    """A peça que faz o ícone aparecer, e ela é do `AppTray`."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/app/tray.py").read_text(
         encoding="utf-8")
     assert "_desktop_is_cosmic" in fonte and "_start_deferred" in fonte, (

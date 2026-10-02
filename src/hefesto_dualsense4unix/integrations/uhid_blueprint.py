@@ -79,7 +79,6 @@ from __future__ import annotations
 from typing import Any
 
 #: Report descriptor USB do DualSense — 289 bytes, SEM o item `85 31` (o input
-#: 0x01 aqui é o de 64 B do transporte USB, que é o que o vpad emite).
 CANONICAL_DESCRIPTOR_USB: bytes = bytes.fromhex(
     "05010905a1018501093009310932093509330934150026ff007508950681020600ff0920"
     "9501810205010939150025073500463b016514750495018142650005091901290f150025"
@@ -92,27 +91,17 @@ CANONICAL_DESCRIPTOR_USB: bytes = bytes.fromhex(
     "c0"
 )
 
-#: Feature 0x05 — calibração de gyro/accel, 41 bytes. TEM que ser bytes de um
 #: DualSense real (o `hid_playstation` usa os campos como divisores/escala em
-#: `dualsense_get_calibration_data`; uma "calibração neutra" inventada, com
-#: zeros, pode rejeitar o probe ou quebrar o motion).
 CANONICAL_FEATURE_0X05: bytes = bytes.fromhex(
     "051700fdfffcffa32285dd87226fdd882275dd1c021c020420f9df711f76dfe71fdedf0d"
     "0000000000"
 )
 
-#: Feature 0x20 — info de firmware, 64 bytes ("Jul  4 2025", update `0x0630`
-#: nos bytes 44-45 LE). Decide `use_vibration_v2` no driver (limiar `0x0215`).
 CANONICAL_FEATURE_0X20: bytes = bytes.fromhex(
     "204a756c202034203230323531303a31303a333203000400100700002a00100100d80000"
     "0000000000000000300600003c0001000a0002000600000000000000"
 )
 
-#: Feature 0x09 — pairing info, 20 bytes (`DS_FEATURE_REPORT_PAIRING_INFO_SIZE`
-#: do hid-playstation.c). SANITIZADO por construção: bytes 1..6 (MAC do device)
-#: e 10..15 (MAC do host pareado) zerados; bytes 7-9 preservam a assinatura
-#: `08 25 00` do report real. O MAC de verdade entra em runtime — o `start()`
-#: do vpad sobrescreve os bytes 1..6 com o MAC forjado que ele veste
 #: (`UhidDualSense.mac`, `02:fe:…`, LE), que é o único campo que o probe USB lê.
 TEMPLATE_FEATURE_0X09: bytes = bytes.fromhex(
     "0900000000000008250000000000000000000000"

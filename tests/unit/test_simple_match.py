@@ -84,26 +84,13 @@ class TestFromSimpleChoice:
         assert result.window_title_regex is None
 
     def test_game_custom_name_preserva_as_maiusculas(self) -> None:
-        """CONTRATO MUDADO de propósito (R-12 item 3, auditoria 23/07).
-
-        O teste antigo (`..._normalizado_para_lowercase`) congelava um
-        `.lower()` que era o BUG: quem casa do outro lado é
-        `MatchCriteria.matches`, comparando com o basename CRU de
-        `/proc/PID/exe`. Os presets de fábrica gravam `Cyberpunk2077.exe`,
-        `Sekiro.exe`, `NieR.exe` — com o lower(), o que a usuária digitasse
-        no editor simples NUNCA casaria com o executável real.
-        """
+        """CONTRATO MUDADO de propósito (R-12 item 3, auditoria 23/07)."""
         result = from_simple_choice("game", custom_name="EldenRing")
         assert isinstance(result, MatchCriteria)
         assert result.process_name == ["EldenRing"]
 
     def test_game_sem_custom_name_levanta(self) -> None:
-        """CONTRATO MUDADO de propósito (R-12 item 2).
-
-        Devolver `MatchAny()` fazia o perfil criado PARA UM JOGO nascer valendo
-        para TUDO — mais um catch-all na disputa (R-01) e o toast dizendo
-        "Perfil salvo". Erro com frase de gente > degradação em silêncio.
-        """
+        """CONTRATO MUDADO de propósito (R-12 item 2)."""
         with pytest.raises(ValueError, match="nome do programa"):
             from_simple_choice("game")
 
@@ -141,17 +128,14 @@ class TestDetectSimplePreset:
         assert detect_simple_preset(m) == "game"
 
     def test_criteria_complexo_retorna_none(self) -> None:
-        # window_class + process_name ao mesmo tempo — não é nenhum preset simples
         m = MatchCriteria(window_class=["steam"], process_name=["doom"])
         assert detect_simple_preset(m) is None
 
     def test_criteria_vazio_retorna_none(self) -> None:
-        # MatchCriteria sem campos não bate com nenhum preset
         m = MatchCriteria()
         assert detect_simple_preset(m) is None
 
     def test_order_window_class_independe(self) -> None:
-        # Ordem diferente ainda detecta browser
         m = MatchCriteria(window_class=["brave", "firefox", "google-chrome", "chromium"])
         assert detect_simple_preset(m) == "browser"
 

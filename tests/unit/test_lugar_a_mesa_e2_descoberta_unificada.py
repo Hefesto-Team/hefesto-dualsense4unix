@@ -51,8 +51,6 @@ MAC_PRO_FORJADO = "aa:bb:cc:00:be:ef"
 IDENT_DUALSENSE = "aabbcc00d501"
 IDENT_PRO = "aabbcc00beef"
 
-#: A forma dos eixos medida em 06/08/2026 com os aparelhos na mesa dela
-#: (LUGAR-À-MESA-01, "uma segunda medição, feita FORA da entregue").
 FAIXA_DUALSENSE = AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)
 FAIXA_PRO = AbsInfo(value=0, min=-32767, max=32767, fuzz=250, flat=500, resolution=0)
 FAIXA_HAT = AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)
@@ -109,12 +107,8 @@ def _reader_com(caps: Any) -> EvdevReader:
     return reader
 
 
-# --- 1. o normalizador: o centro do Pro deixa de ser talo no canto ----------
-
-
 def test_o_centro_do_pro_controller_deixa_de_ser_talo_no_canto() -> None:
-    """Valor cru `0` no Pro é o CENTRO; o `& 0xFF` de hoje devolvia `0`, que em
-    0..255 significa talo à esquerda e para cima."""
+    """Valor cru `0` no Pro é o CENTRO; o `& 0xFF` de hoje devolvia `0`, que em"""
     reader = _reader_com(_caps_pro())
 
     reader._handle_abs(ecodes.ABS_X, 0, ecodes)
@@ -124,7 +118,6 @@ def test_o_centro_do_pro_controller_deixa_de_ser_talo_no_canto() -> None:
         "centro do analógico do Pro lido como talo — o personagem anda sozinho"
     )
 
-    # E os extremos continuam sendo extremos, nos dois sentidos.
     reader._handle_abs(ecodes.ABS_X, -32767, ecodes)
     reader._handle_abs(ecodes.ABS_Y, 32767, ecodes)
     snap = reader.snapshot()
@@ -132,9 +125,7 @@ def test_o_centro_do_pro_controller_deixa_de_ser_talo_no_canto() -> None:
 
 
 def test_o_normalizador_e_do_aparelho_nao_de_uma_tabela_de_conhecidos() -> None:
-    """O MESMO valor cru vira números diferentes em aparelhos com faixas
-    diferentes — é a propriedade que faz a cura valer na máquina de um
-    desconhecido, e não só nesta bancada."""
+    """O MESMO valor cru vira números diferentes em aparelhos com faixas"""
     faixa_de_255 = EixoAbsoluto(minimo=0, maximo=255)
     faixa_com_sinal = EixoAbsoluto(minimo=-32767, maximo=32767, flat=500)
     faixa_de_1023 = EixoAbsoluto(minimo=0, maximo=1023)
@@ -150,9 +141,7 @@ def test_o_normalizador_e_do_aparelho_nao_de_uma_tabela_de_conhecidos() -> None:
 
 
 def test_o_dualsense_sai_bit_a_bit_identico_ao_de_hoje() -> None:
-    """Regressão do caminho quente: com a faixa 0..255 declarada, TODO valor sai
-    exatamente como o `value & 0xFF` de sempre — inclusive FORA da faixa, onde
-    um `clamp` e o `& 0xFF` discordam (256 vira 0, não 255)."""
+    """Regressão do caminho quente: com a faixa 0..255 declarada, TODO valor sai"""
     reader = _reader_com(_caps_dualsense())
 
     for cru in range(256):
@@ -173,9 +162,7 @@ def test_o_dualsense_sai_bit_a_bit_identico_ao_de_hoje() -> None:
 
 
 def test_sem_absinfo_legivel_o_reader_cai_no_comportamento_de_hoje() -> None:
-    """Node que não declara `absinfo` (ou cujo `capabilities()` explode) NÃO
-    pode virar um moedor de eixo: degradar para o que já rodava é o único modo
-    de falha aceitável num caminho quente de input."""
+    """Node que não declara `absinfo` (ou cujo `capabilities()` explode) NÃO"""
     nunca_abriu = EvdevReader(device_path=Path("/dev/input/event999"))
     nunca_abriu._handle_abs(ecodes.ABS_X, 300, ecodes)
     assert nunca_abriu.snapshot().lx == 300 & 0xFF
@@ -186,12 +173,8 @@ def test_sem_absinfo_legivel_o_reader_cai_no_comportamento_de_hoje() -> None:
     assert explodiu._eixos == {}
 
 
-# --- 3. o gatilho digital sintetizado ---------------------------------------
-
-
 def test_gatilho_digital_sintetizado_quando_o_eixo_falta() -> None:
-    """Sem `ABS_Z`/`ABS_RZ`, o `BTN_TL2`/`BTN_TR2` tem de valer 255 pressionado;
-    hoje o gatilho fica 0 para sempre e o dedo não chega ao jogo."""
+    """Sem `ABS_Z`/`ABS_RZ`, o `BTN_TL2`/`BTN_TR2` tem de valer 255 pressionado;"""
     reader = _reader_com(_caps_pro())
     assert reader.snapshot().l2_raw == 0
 
@@ -223,9 +206,7 @@ def test_o_dualsense_nao_sofre_sintese_de_gatilho() -> None:
 
 
 def test_a_queda_do_device_nao_deixa_gatilho_sintetizado_travado() -> None:
-    """Gatilho SINTETIZADO vem do botão, e o reset solta os botões à força —
-    deixá-lo em 255 seria um gatilho travado no fundo. O gatilho ANALÓGICO não
-    é tocado: ali o valor congelado é o comportamento de sempre."""
+    """Gatilho SINTETIZADO vem do botão, e o reset solta os botões à força —"""
     pro = _reader_com(_caps_pro())
     pro._handle_key(ecodes.BTN_TL2, 1, ecodes)
     assert pro.snapshot().l2_raw == 255
@@ -240,19 +221,12 @@ def test_a_queda_do_device_nao_deixa_gatilho_sintetizado_travado() -> None:
     )
 
 
-# --- fakes de evdev + sysfs para a descoberta -------------------------------
-
-
 def _instalar_evdev_fake(
     monkeypatch: pytest.MonkeyPatch,
     registry: dict[str, dict[str, Any]],
     aberturas: list[str] | None = None,
 ) -> None:
-    """`evdev.list_devices`/`evdev.InputDevice` sobre um registro fake.
-
-    `aberturas` (quando passada) registra CADA construção de `InputDevice` — é
-    como se conta quantas vezes a descoberta abre cada node.
-    """
+    """`evdev.list_devices`/`evdev.InputDevice` sobre um registro fake."""
 
     class _FakeDev:
         def __init__(self, path: str) -> None:
@@ -359,7 +333,6 @@ def _mesa_de_tres(
                 "pid": 0x2009,
                 "bus": 0x05,
                 "uniq": MAC_PRO_FORJADO,
-                # Sem caps de gamepad: o nó de motion fica FORA da descoberta.
                 "caps": {ecodes.EV_ABS: [(ecodes.ABS_X, FAIXA_PRO)]},
             },
         },
@@ -374,9 +347,6 @@ def _mesa_de_tres(
             "/sys/class/input/event43/device": imu_dir,
         },
     )
-
-
-# --- 4. a descoberta única --------------------------------------------------
 
 
 def test_descoberta_unica_classifica_os_dois_lados_num_laco_so(
@@ -411,8 +381,7 @@ def test_descoberta_unica_classifica_os_dois_lados_num_laco_so(
 def test_o_absinfo_de_cada_eixo_viaja_na_descoberta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A forma do eixo é o que decide se o controle é jogável — ela sai da
-    descoberta junto com a identidade, não de uma tabela de VID/PID."""
+    """A forma do eixo é o que decide se o controle é jogável — ela sai da"""
     _mesa_de_tres(tmp_path, monkeypatch)
 
     por_especie = {gp.especie: gp for gp in discover_gamepads()}
@@ -431,8 +400,7 @@ def test_o_absinfo_de_cada_eixo_viaja_na_descoberta(
 def test_as_duas_portas_antigas_mantem_o_contrato(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`discover_dualsense_evdevs` e `discover_external_gamepads` viraram vistas
-    da descoberta única — e nenhum consumidor pode notar."""
+    """`discover_dualsense_evdevs` e `discover_external_gamepads` viraram vistas"""
     _mesa_de_tres(tmp_path, monkeypatch)
 
     assert discover_dualsense_evdevs() == {IDENT_DUALSENSE: Path(DS_PATH)}
@@ -450,25 +418,18 @@ def test_as_duas_portas_antigas_mantem_o_contrato(
             "hidraw": "/dev/hidraw7",
         }
     ]
-    # Os consumidores MUTAM o dict (`holders`, identidade carimbada): cada
-    # chamada tem de devolver objetos novos, nunca um cache compartilhado.
     inventario[0]["holders"] = {"steam_pids": [1]}
     assert "holders" not in discover_external_gamepads()[0]
-
-
-# --- 5. o reencontro por identidade -----------------------------------------
 
 
 def test_reencontro_acha_o_externo_depois_do_replug(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`eventN` é volátil; a identidade é o que sobrevive. Sem isto o externo
-    nunca mais é achado depois de um replug."""
+    """`eventN` é volátil; a identidade é o que sobrevive. Sem isto o externo"""
     _mesa_de_tres(tmp_path, monkeypatch)
     reader = EvdevReader(device_path=Path(PRO_PATH), target_uniq=IDENT_PRO)
     assert reader._locate() == Path(PRO_PATH)
 
-    # Replug: o kernel renumera o node do MESMO aparelho.
     novo_path = "/dev/input/event300"
     novo_dir = _arvore_hid(
         tmp_path, "bt/hci0/hci0:31/0005:057E:2009.0011", "nintendo", "hidraw9"
@@ -530,9 +491,6 @@ def test_reencontro_do_dualsense_segue_igual_e_sem_alvo_nao_adota_ninguem(
     assert sem_alvo._locate() is None, (
         "sem alvo o reader adotou um externo — isso é a E3, e ela é dela"
     )
-
-
-# --- o portão anti-recaída da adoção ----------------------------------------
 
 
 def test_a_e2_nao_adota_ninguem_o_coop_segue_fechado_em_dualsense() -> None:

@@ -1,43 +1,4 @@
-"""SENSORES-NO-JOGO-02: o jogo recebe `SDL_ACCELEROMETER_AS_JOYSTICK=0`, do daemon ao env(1).
-
-O DEFEITO QUE A DICA CURA, medido em 13/09/2026
------------------------------------------------
-Sem HIDAPI, o giroscópio e o acelerômetro do vpad chegam ao jogo pelo evdev: o
-SDL casa o nó «Motion Sensors» ao gamepad da mesma peça pelo `uniq`. A libSDL2
-2.30.0 da Ubuntu (e o upstream a partir da 2.30.12) só casa esse nó quando o
-udev dela o classifica como acelerômetro, e com a dica no padrão 1 ela o
-classifica como joystick. Numa sonda só-leitura com o vpad vivo: sem a dica,
-`HasSensor=False` e zero giros; com a dica em 0, `HasSensor=True` e 109 giros
-distintos em 2 s. Nas bibliotecas dos runtimes da Steam a dica foi inócua.
-
-A VARIÁVEL NOVA MORRE CALADA, e é por isso que esta régua atravessa os elos
----------------------------------------------------------------------------
-O daemon materializa o arquivo; o wrapper `sh` o filtra por NOME. Esquecer um
-dos dois lados deixa a dica fora do jogo sem erro nenhum — o risco que a
-sprint escreveu em §R. Então a régua não confere só o dicionário: ela roda
-`materialize_launch_env`, depois o `assets/hefesto-launch.sh` DE VERDADE contra
-um socket de mentira, e lê a variável no processo que o wrapper embrulha.
-
-O wrapper roda com um PATH mínimo: sem `system76-power`, `busctl` e
-`dbus-send` o Game Mode dele não tem com quem falar, e a régua não mexe no
-perfil de energia da máquina.
-
-A MORDIDA, e as três formas de arrancar
----------------------------------------
-* tire a linha `env["SDL_ACCELEROMETER_AS_JOYSTICK"] = "0"` de `compose_env` →
-  as variantes e a travessia reprovam;
-* tire o nome do `ENV_ALLOWLIST` → o espelho reprova (o `case` tem um nome que
-  a allowlist não tem);
-* tire o `case` do wrapper → o espelho e a travessia reprovam (o processo
-  embrulhado lê «ausente»).
-
-E duas do ENSAIO, que sem estas réguas só mordiam com o aparelho na mesa:
-
-* tire os três ints de `_CAMPOS_ATE_A_INTERFACE` → a régua da struct reprova
-  (o `next` cai no 56);
-* tire o `env.update(_SO_LEITURA)`, ou o `--so-medir` do comando do filho → a
-  régua do só-leitura reprova (a biblioteca abriria `hidraw`).
-"""
+"""SENSORES-NO-JOGO-02: o jogo recebe `SDL_ACCELEROMETER_AS_JOYSTICK=0`, do daemon ao env(1)."""
 from __future__ import annotations
 
 import ctypes
@@ -68,8 +29,6 @@ _DICA = "SDL_ACCELEROMETER_AS_JOYSTICK"
 _RAIZ = Path(__file__).resolve().parents[2]
 _WRAPPER = _RAIZ / "assets" / "hefesto-launch.sh"
 
-#: Toda variante que `compose_env` distingue — os modos, as três máscaras, o
-#: degradado, o co-op misto e a falta de cobertura. A dica não tem `if`.
 _VARIANTES: dict[str, dict[str, Any]] = {
     "nativo": dict(native_mode=True, emulation_enabled=False, flavor="dualsense", backends=[]),
     "emulacao_desligada": dict(
@@ -201,7 +160,6 @@ def test_a_dica_atravessa_o_arquivo_e_o_wrapper_ate_o_processo_do_jogo(
     linhas = (pasta / "default.env").read_text(encoding="utf-8").splitlines()
     assert f"{_DICA}=0" in linhas, "o daemon não materializou a dica no default.env"
 
-    # AF_UNIX limita o caminho do socket a ~108 bytes: o tmp_path do pytest estoura.
     runtime = Path(tempfile.mkdtemp(prefix="hefa-"))
     (runtime / "hefesto-dualsense4unix").mkdir()
     servidor = _SocketQueResponde(
@@ -236,7 +194,6 @@ def _carregar_ensaio(nome: str) -> ModuleType:
     spec = importlib.util.spec_from_file_location(f"_ensaio_{caminho.stem}", caminho)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
-    # O `@dataclass` do ensaio procura o próprio módulo em `sys.modules`.
     monkeypatch_modulos = sys.modules
     monkeypatch_modulos[spec.name] = modulo
     try:
@@ -261,13 +218,7 @@ def test_o_ensaio_do_giro_mede_com_a_dica_que_o_jogo_recebe() -> None:
 
 
 def test_a_struct_da_enumeracao_poe_o_next_onde_a_biblioteca_o_poe() -> None:
-    """O `next` do `SDL_hid_device_info` mora no deslocamento 72, na SDL2 e no SDL3.
-
-    Sem os três ints de interface ele caía no 56: a SDL2 devolvia a lista parada
-    no primeiro item, e o SDL3 lia lixo e matava o processo. A conferência do
-    ensaio contra o piso de `/sys/class/hidraw` só morde com o aparelho na mesa;
-    esta morde sem ele.
-    """
+    """O `next` do `SDL_hid_device_info` mora no deslocamento 72, na SDL2 e no SDL3."""
     if ctypes.sizeof(ctypes.c_void_p) != 8:
         pytest.skip("os deslocamentos medidos são os de 64 bits")
     ensaio = _carregar_ensaio("o_jogo_para_de_ver_o_giro.py")
@@ -279,13 +230,7 @@ def test_a_struct_da_enumeracao_poe_o_next_onde_a_biblioteca_o_poe() -> None:
 def test_o_so_medir_da_a_cada_biblioteca_um_ambiente_que_nao_abre_hidraw(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`--so-medir` promete que biblioteca nenhuma abre `hidraw` nem nasce com tela.
-
-    O driver PS5 do HIDAPI escreve efeitos ao abrir o controle. A promessa mora
-    em dois lugares: no ambiente que o pai passa e na opção que o filho recebe,
-    porque o filho refaz o próprio ambiente a partir dela. Os dois processos de
-    cada biblioteca são conferidos, e só o de enumerar desliga o filtro do SDL3.
-    """
+    """`--so-medir` promete que biblioteca nenhuma abre `hidraw` nem nasce com tela."""
     for nome in ("DISPLAY", "WAYLAND_DISPLAY"):
         monkeypatch.setenv(nome, "de-mentira")
     monkeypatch.setenv("SDL_JOYSTICK_HIDAPI", "1")

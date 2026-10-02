@@ -1,11 +1,4 @@
-"""Testes unitários do subsystem UDP (isolamento).
-
-Prova que:
-  - UdpSubsystem.is_enabled segue config.udp_enabled.
-  - UdpSubsystem.stop é idempotente.
-  - UdpSubsystem.stop chama server.stop() quando server existe.
-  - o desligar do daemon tem um dono só: a utilitária `stop_udp` não volta.
-"""
+"""Testes unitários do subsystem UDP (isolamento)."""
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
@@ -33,7 +26,7 @@ class TestUdpSubsystem:
     @pytest.mark.asyncio
     async def test_stop_idempotente_sem_server(self) -> None:
         subsystem = UdpSubsystem()
-        await subsystem.stop()  # _server is None — não deve lançar
+        await subsystem.stop()
 
     @pytest.mark.asyncio
     async def test_stop_chama_server_stop(self) -> None:
@@ -47,14 +40,7 @@ class TestUdpSubsystem:
 
 
 class TestODesligarTemUmDonoSo:
-    """O `shutdown` de `daemon/connection.py` derruba `_udp_server` em linha.
-
-    A utilitária `stop_udp` fazia o mesmo e só a suíte a chamava: duas cópias
-    do desligar, e a do `shutdown` tem o teto de tempo que a outra não tinha.
-    Ela saiu em 28/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01). Quem prova
-    o desligar é `tests/unit/test_daemon_shutdown.py`, que sobe o daemon e
-    confere `_udp_server` zerado depois do `shutdown`.
-    """
+    """O `shutdown` de `daemon/connection.py` derruba `_udp_server` em linha."""
 
     def test_a_utilitaria_de_desligar_nao_volta(self) -> None:
         assert not hasattr(modulo, "stop_udp")

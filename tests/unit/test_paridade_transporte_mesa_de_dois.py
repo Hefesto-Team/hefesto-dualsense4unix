@@ -55,7 +55,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
 )
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
-#: Chaves MAC-formadas na faixa forjada (o guarda de anonimato só aceita essas).
 CHAVE_CABO = "AA:BB:CC:00:00:01"
 CHAVE_RADIO = "AA:BB:CC:00:00:02"
 
@@ -72,7 +71,7 @@ class _FakeTrigger:
 class _FakeLight:
     def __init__(self) -> None:
         self.colors: list[tuple[int, int, int]] = []
-        self.playerNumber: object = None  # espelha o atributo da pydualsense
+        self.playerNumber: object = None
 
     def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
         self.colors.append((r, g, b))
@@ -99,7 +98,6 @@ class _FakeHandle:
         self.right_motor: list[int] = []
         self.closed = False
         self.conType = type("CT", (), {"name": transporte})()
-        #: o que a cura escreve — nasce no valor de UM controle só.
         self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
 
     def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
@@ -140,13 +138,7 @@ def _teto_esperado(n: int) -> float:
 
 
 def test_um_no_cabo_e_um_no_radio_dividem_o_teto_do_laco_de_saida() -> None:
-    """A linha do defeito de 10/08: um no cabo, um no rádio, e a saída dos DOIS.
-
-    MORDIDA: troque o `min(REPORT_THREAD_THROTTLE_SEC * n, ...)` do fim de
-    `connect()` por `REPORT_THREAD_THROTTLE_SEC` e este teste reprova — o
-    controle do cabo volta a martelar o hidraw na taxa de um controle só, que é
-    o que satura o controlador USB onde o adaptador Bluetooth também vive.
-    """
+    """A linha do defeito de 10/08: um no cabo, um no rádio, e a saída dos DOIS."""
     cabo, radio = _mesa("USB", "BT")
     esperado = _teto_esperado(2)
     for onde, handle in (("cabo", cabo), ("rádio", radio)):
@@ -159,14 +151,7 @@ def test_um_no_cabo_e_um_no_radio_dividem_o_teto_do_laco_de_saida() -> None:
 
 
 def test_dois_no_radio_dividem_o_mesmo_teto() -> None:
-    """O braço de controle: com os DOIS no rádio a conta é a mesma.
-
-    Se a escala fosse por transporte (só quando há alguém no cabo), a mesa de
-    dois no rádio ficaria descoberta — e ela é medida do mesmo jeito
-    (`comb-dois-no-radio-saida-2235`, olho-dela, 12/08).
-
-    MORDIDA: a mesma do teste acima.
-    """
+    """O braço de controle: com os DOIS no rádio a conta é a mesma."""
     primeiro, segundo = _mesa("BT", "BT")
     esperado = _teto_esperado(2)
     for i, handle in enumerate((primeiro, segundo), start=1):
@@ -177,8 +162,7 @@ def test_dois_no_radio_dividem_o_mesmo_teto() -> None:
 
 
 def test_a_mesa_cheia_nao_passa_do_teto() -> None:
-    """Quatro controles: a escala existe, mas tem limite — `* N` sem teto viraria
-    latência visível no LED/gatilho."""
+    """Quatro controles: a escala existe, mas tem limite — `* N` sem teto viraria"""
     handles = _mesa("USB", "USB", "BT", "BT")
     for handle in handles:
         assert handle._throttle_sec == pytest.approx(REPORT_THREAD_THROTTLE_MAX_SEC)

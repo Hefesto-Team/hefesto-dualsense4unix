@@ -1,42 +1,4 @@
-"""LICENÇA-QUE-VIAJA-01 — o texto da licença acompanha o fonte GPL que a
-instalação põe em `/usr/src`.
-
-A CR-05 fechou, em 07/08/2026, a caixa *"nenhuma cópia do texto da GPL-2.0
-acompanha os fontes"*: nasceu `LICENSES/`, e os **cinco alvos de empacotamento**
-que carregam `assets/dkms/` passaram a carregar o diretório junto —
-`scripts/build_deb.sh`, o `PKGBUILD`, o `.spec` do Fedora e o `.yml` do Flatpak
-(o sdist entra sozinho). Quem cobra aquela simetria é
-`tests/unit/test_cr05_licencas_de_terceiros_viajam.py`.
-
-**Este arquivo cobre o que ficou fora daquela lista, e é o caminho mais
-usado.** Os fontes GPL-2.0 chegam ao disco de uma máquina por dois caminhos que
-não são empacotamento nenhum, e os dois passam por `scripts/dkms_lib.sh`:
-
-- `./install.sh` — o checkout git, que é como a mantenedora instala;
-- `scripts/install-host-udev.sh` — quem instalou por pacote e roda o helper.
-
-Os dois copiam `assets/dkms/<mod>/.` para `/usr/src/<pkg>-<ver>/` e mais nada:
-`grep -rn LICENSES install.sh scripts/*.sh` devolvia **zero** em 07/08/2026. O
-`LICENSES/README.md` enumera onde os textos viajam e **não menciona nenhum dos
-dois** — nem como carregador, nem como exceção justificada, que é como ele trata
-o wheel e o AppImage. Era lacuna, não decisão.
-
-## As duas mordidas, e por que a segunda existe
-
-1. **A cópia acontece de verdade** (`test_licenca_chega_ao_usr_src_na_execucao`).
-   Roda a biblioteca real, com as raízes apontadas para `tmp` e stubs de
-   `sudo`/`dkms` — o mesmo molde de `tests/unit/test_dkms_lib.py`. Cura
-   arrancada: apagar o bloco `1-bis` deixa vermelho.
-
-2. **A idempotência sobrevive à cópia**
-   (`test_a_licenca_no_destino_nao_quebra_o_no_op_da_segunda_chamada`). Esta é a
-   armadilha, e ela é maior que a entrega: o passo 1 decide se re-sincroniza
-   comparando `diff -rq` entre origem e destino. `LICENSES/` só existe no
-   **destino** — sem `-x LICENSES` o diff acha diferença em TODA execução, e
-   cada install passa a `dkms remove --all` + recopiar + **reconstruir os três
-   módulos**. Cura arrancada: tirar `-x LICENSES` do `diff` faz este teste
-   flagrar o `dkms remove` na segunda chamada.
-"""
+"""LICENÇA-QUE-VIAJA-01 — o texto da licença acompanha o fonte GPL que a"""
 
 from __future__ import annotations
 
@@ -58,9 +20,7 @@ def _stub(diretorio: Path, nome: str, corpo: str) -> None:
 
 
 def _cena(tmp_path: Path) -> dict[str, Path | str]:
-    """Ambiente real da lib SEM root: raízes em `tmp` (a costura
-    `HEFESTO_DKMS_*`), `sudo` que EXECUTA e registra, `dkms` com estado em
-    arquivo. Nada toca o sistema."""
+    """Ambiente real da lib SEM root: raízes em `tmp` (a costura"""
     stubs = tmp_path / "bin"
     stubs.mkdir(exist_ok=True)
     log = tmp_path / "calls.log"
@@ -106,10 +66,6 @@ def _cena(tmp_path: Path) -> dict[str, Path | str]:
     }
 
 
-#: Separa, no registro de chamadas, a 1ª execução das seguintes. É necessário:
-#: a 1ª execução SEMPRE faz `dkms remove` (o destino ainda não existe, então o
-#: passo 1 cai no ramo de recópia por desenho). Sem a marca, o teste de
-#: idempotência contaria essa remoção legítima e reprovaria com a cura no lugar.
 MARCA = "---SEGUNDA-CHAMADA---"
 
 
@@ -121,19 +77,11 @@ def _roda(tmp_path: Path, chamadas: int) -> tuple[str, str, Path]:
     )
     corpo = chamada
     for _ in range(chamadas - 1):
-        # `printf '%s\\n' <marca>`, nunca `printf '<marca>'`: uma marca que
-        # começa com hífen viraria OPÇÃO do printf e nada seria gravado.
         corpo += f"printf '%s\\n' '{MARCA}' >> '{cena['log']}'\n{chamada}"
     env = dict(os.environ)
     env["PATH"] = str(cena["path"])
     env["HEFESTO_DKMS_SRC_ROOT"] = str(cena["src_root"])
     env["HEFESTO_DKMS_MODULES_ROOT"] = str(tmp_path / "modules")
-    # A MÁQUINA DE MENTIRA NÃO TEM SECURE BOOT, e isso é dito aqui: desde a
-    # B4 da O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026) o
-    # `dkms_install_patched_module` lê a efivars e, com Secure Boot sem a
-    # chave, não instala. Herdando o `os.environ`, esta régua lia a efivars
-    # de quem a roda, e numa máquina (ou num runner do CI) com Secure Boot
-    # ligado reprovava sem defeito nenhum (medido na conferência).
     env["HEFESTO_EFIVARS_ROOT"] = "/nao-existe/efivars-sem-secure-boot"
     resultado = subprocess.run(
         [BASH, "-c", f"source '{LIB_PATH}'\n{corpo}"],
@@ -151,8 +99,7 @@ def _roda(tmp_path: Path, chamadas: int) -> tuple[str, str, Path]:
 
 
 def test_o_repositorio_tem_o_que_copiar() -> None:
-    """Controle do teste: sem `LICENSES/` os dois abaixo passariam por
-    vacuidade — o resolvedor devolveria vazio e o passo seria pulado."""
+    """Controle do teste: sem `LICENSES/` os dois abaixo passariam por"""
     assert (LICENSES / "GPL-2.0.txt").is_file(), (
         "LICENSES/GPL-2.0.txt sumiu — o teste desta entrega vira carimbo "
         "(quem cobra a existência do texto é test_cr05_licencas_de_terceiros_viajam)"
@@ -160,9 +107,7 @@ def test_o_repositorio_tem_o_que_copiar() -> None:
 
 
 def test_licenca_chega_ao_usr_src_na_execucao(tmp_path: Path) -> None:
-    """Cura arrancada: apagar o bloco `1-bis` do `dkms_install_patched_module`
-    deixa este teste vermelho — o diretório de destino existe, com o fonte
-    dentro, e sem uma linha de licença."""
+    """Cura arrancada: apagar o bloco `1-bis` do `dkms_install_patched_module`"""
     saida, _registro, destino = _roda(tmp_path, chamadas=1)
     assert "RC=0" in saida, saida
     assert (destino / "mod-teste.c").is_file(), (
@@ -182,16 +127,7 @@ def test_licenca_chega_ao_usr_src_na_execucao(tmp_path: Path) -> None:
 def test_a_licenca_no_destino_nao_quebra_o_no_op_da_segunda_chamada(
     tmp_path: Path,
 ) -> None:
-    """A armadilha da entrega, e ela é maior que a entrega.
-
-    `LICENSES/` existe só no DESTINO. Sem `-x LICENSES` no `diff -rq` do passo
-    1, toda execução veria diferença e faria `dkms remove --all` + recopiar +
-    reconstruir — o contrário do contrato de idempotência do cabeçalho da
-    biblioteca, e caro numa máquina com três módulos DKMS.
-
-    Cura arrancada: tirar `-x LICENSES` do `diff` faz o `sudo dkms remove`
-    aparecer no registro da segunda chamada e este teste reprovar.
-    """
+    """A armadilha da entrega, e ela é maior que a entrega."""
     saida, registro, _destino = _roda(tmp_path, chamadas=2)
     assert saida.count("RC=0") == 2, saida
     assert "já sincronizado" in saida, (
@@ -213,9 +149,7 @@ def test_a_licenca_no_destino_nao_quebra_o_no_op_da_segunda_chamada(
 
 
 def test_a_biblioteca_exclui_licenses_da_comparacao_de_sincronia() -> None:
-    """Morde só TEXTO, e está declarado como tal — existe para a armadilha
-    acima ficar escrita no lugar onde alguém vai editar, não só num teste que
-    demora a rodar."""
+    """Morde só TEXTO, e está declarado como tal — existe para a armadilha"""
     lib = LIB_PATH.read_text(encoding="utf-8")
     assert "-x patch -x LICENSES" in lib, (
         "o diff de sincronia do dkms_lib.sh precisa excluir LICENSES junto com "

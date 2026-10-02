@@ -1,27 +1,4 @@
-"""STEAM-NO-FISICO-01 — o número do jogador e a barra que o diz são do Hefesto.
-
-A PALAVRA DELA, 23/09/2026 (`D-2309-O-HEFESTO-MANDA-NO-NUMERO`):
-
-    *"Hefesto manda e controla sempre, steam sequestrou hefesto corrigiu ao no
-    segundo após e temos que fazer o jogo entender isso."*
-
-A primeira das três obrigações: a réplica da camada do jogo deixa de trocar o
-número do físico, **mesmo em co-op**. O diário dela mostrou a troca acontecendo
-(21/09/2026): `game_output_replicado autoridade=game campos=['player_leds']
-players=(False, True, False, True, False)` e, sob `unknown`, a cor da paleta
-de jogador do SDL junto — `(64, 0, 0)` com o padrão do jogador 2.
-
-A COR QUE É NÚMERO. O SDL só pinta a barra com a paleta dele quando o jogo NÃO
-escolheu cor (`SDL_hidapi_ps5.c`, `ctx->color_set`). Uma cor da paleta é o
-número escrito na barra; recusar só o `player_leds` deixaria o aparelho dizendo
-«jogador 1» nas lâmpadas e «jogador 2» na barra — e o aparelho nunca se
-contradiz (decisão dela de 20/09). A cor que o jogo ESCOLHE continua passando.
-
-AS MORDIDAS, exercidas uma a uma e devolvidas: arrancar a peneira da ENTRADA
-em `set_game_output_for` faz o nó receber o número do jogo; arrancar a do
-MERGE em `_merged_desired_for_key` faz a camada escrita antes da regra voltar
-pelo resolve.
-"""
+"""STEAM-NO-FISICO-01 — o número do jogador e a barra que o diz são do Hefesto."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -39,20 +16,16 @@ UNIQ_1 = "aabbcc000001"
 MAC_2 = "AA:BB:CC:00:00:02"
 UNIQ_2 = "aabbcc000002"
 
-#: O número que o Hefesto dá a cada peça (a camada automática, a cor do número).
 NUMERO_1 = (False, False, True, False, False)
 NUMERO_2 = (False, True, False, True, False)
 COR_DO_NUMERO_1 = (0, 90, 255)
 COR_DO_NUMERO_2 = (255, 40, 40)
 
-#: O que o SDL escreve no vpad quando numera: o padrão e a cor da paleta dele.
 NUMERO_DO_SDL_2 = (False, True, False, True, False)
 NUMERO_DO_SDL_3 = (True, False, True, False, True)
 
-#: Uma cor que o JOGO escolhe de propósito (gameplay) — esta passa.
 COR_DE_GAMEPLAY = (200, 60, 0)
 
-#: As quatro medidas no diário dela, e as três que só o fonte tem.
 PALETA_MEDIDA = [(0, 0, 64), (64, 0, 0), (0, 64, 0), (32, 0, 32)]
 PALETA_DO_FONTE = [(32, 16, 0), (0, 16, 16), (16, 16, 16)]
 
@@ -136,8 +109,7 @@ class TestOPredicado:
 class TestONumeroDoJogoNaoChegaAoFisico:
     @pytest.mark.parametrize("autoridade", ["game", "unknown", "daemon", None])
     def test_nem_camada_nem_escrita_nem_retencao(self, autoridade: str | None) -> None:
-        """A MORDIDA da peneira da ENTRADA: sem ela, sob `game`/`unknown`/sem
-        provider o nó recebe o padrão do SDL, e sob `daemon` ele fica retido."""
+        """A MORDIDA da peneira da ENTRADA: sem ela, sob `game`/`unknown`/sem"""
         ctl, nos = _mesa(autoridade)
 
         assert ctl.set_game_output_for(MAC_1, player_leds=NUMERO_DO_SDL_2) is True
@@ -180,8 +152,7 @@ class TestONumeroDoJogoNaoChegaAoFisico:
 
 class TestMesmoEmCoop:
     def test_o_jogo_numera_os_dois_e_os_dois_ficam_com_o_numero_da_mesa(self) -> None:
-        """«Mesmo em co-op»: o SDL numera cada vpad (o P1 da mesa vira o 2 do
-        jogo, o P2 vira o 3) e nenhum físico muda de número."""
+        """«Mesmo em co-op»: o SDL numera cada vpad (o P1 da mesa vira o 2 do"""
         ctl, nos = _mesa("game", dois=True)
 
         ctl.set_game_output_for(MAC_1, led=(64, 0, 0), player_leds=NUMERO_DO_SDL_2)
@@ -195,8 +166,7 @@ class TestMesmoEmCoop:
             assert no.rgb_calls == []
 
     def test_a_camada_de_coop_do_hefesto_continua_numerando(self) -> None:
-        """O co-op que numera é o do HEFESTO (`set_coop_outputs`) — ele não é o
-        jogo, e a regra não o toca."""
+        """O co-op que numera é o do HEFESTO (`set_coop_outputs`) — ele não é o"""
         ctl, nos = _mesa("game", dois=True)
 
         ctl.set_coop_outputs(
@@ -211,10 +181,7 @@ class TestMesmoEmCoop:
 
 class TestOPortaoDoMerge:
     def test_camada_escrita_antes_da_regra_nao_volta_pelo_resolve(self) -> None:
-        """A MORDIDA da peneira do MERGE: a camada GAME já tem o número e a cor
-        da paleta (escrita por uma versão sem a regra, ou por um caminho que
-        ainda não passe pela entrada) — o resolve não pode devolvê-los, porque
-        é dele que saem o reassert, o priming e o `0x31` do gatilho da cor."""
+        """A MORDIDA da peneira do MERGE: a camada GAME já tem o número e a cor"""
         ctl, _nos = _mesa("game")
         ctl._game_output_by_uniq[UNIQ_1] = bp._DesiredOutput(
             led=(0, 64, 0), player_leds=NUMERO_DO_SDL_3

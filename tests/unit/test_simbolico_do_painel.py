@@ -1,35 +1,4 @@
-"""O ícone SIMBÓLICO do painel — APPLET-MONOCROMÁTICO-01 (07/08/2026).
-
-Pedido dela, olhando a própria barra: *"o applet do hefesto deve ficar em preto
-e branco, talvez só o círculo com borda preta e a borda do martelo ao centro. no
-cosmic todos os applet são assim"*.
-
-Cada asserção daqui nasceu de uma MEDIÇÃO, não de gosto. As três que mais
-importam, porque as três já quebraram o ícone de verdade:
-
-1. **`currentColor` some.** Renderizado sem contexto de cor (rsvg-convert,
-   resvg) ele resolve para PRETO: `srgb(0,0,0)`, 1,59:1 sobre o `#2F2F3A` do
-   painel escuro dela. É o mecanismo reproduzido do "parecia sumir" de 27/06,
-   que trocou o simbólico pelo PNG colorido e deixou o Hefesto como o único
-   ícone cromático da barra;
-2. **`stroke` + `fill="none"` vira DISCO CHAPADO.** O GTK recolore símbolo
-   injetando CSS `rect,circle,path {fill: <cor> !important;}` — o `!important`
-   atropela `fill="none"`. Reproduzido em 07/08: o mesmo aro feito com stroke
-   saiu um disco liso, com o desenho todo sumido dentro. Contorno aqui é
-   sempre `fill-rule="evenodd"` com dois subcaminhos;
-3. **PNG nunca é recolorido.** Por isso o nome pedido pelo código TEM de
-   terminar em `-symbolic` e o arquivo TEM de ser SVG.
-
-**Nota de 07/08/2026, à tarde — o redesenho da DECISÃO 14.** O símbolo foi
-redesenhado para ficar mais parecido com a logo: o aro virou o ARCO ABERTO da
-logo, com a falha de 232 a 269 graus e as duas contas nas pontas, e a cabeça do
-martelo virou CHEIA, com canto arredondado, como a logo desenha. Com isso o
-desenho deixou de ter furo, e a asserção antiga `fill-rule="evenodd"` deixou de
-ter o que travar: ela foi substituída por `test_o_aro_e_faixa_e_nao_disco`, que
-mede os raios do arco e reprova quem transformar o aro num disco. A cura contra
-o `stroke` continua asserida, palavra por palavra, porque é ela que impede a
-regressão medida em 07/08 pela manhã.
-"""
+"""O ícone SIMBÓLICO do painel — APPLET-MONOCROMÁTICO-01 (07/08/2026)."""
 
 from __future__ import annotations
 
@@ -68,8 +37,7 @@ UNINSTALL_SH = RAIZ / "uninstall.sh"
 
 
 def _corpo(svg: str) -> str:
-    """O SVG sem os comentários — o cabeçalho fala de `currentColor` e de
-    `stroke` para EXPLICAR por que eles não podem aparecer no desenho."""
+    """O SVG sem os comentários — o cabeçalho fala de `currentColor` e de"""
     return re.sub(r"<!--.*?-->", "", svg, flags=re.DOTALL)
 
 
@@ -86,21 +54,7 @@ def test_o_simbolico_existe():
 
 
 def test_o_simbolico_e_xml_valido():
-    """Aconteceu de verdade, em 07/08/2026, escrevendo este arquivo.
-
-    O cabeçalho ganhou uma linha de traços de separação, e `--` dentro de
-    comentário fecha o comentário em XML: o `rsvg-convert` passou a recusar o
-    arquivo inteiro ("Comment must not contain double-hyphen"). O painel ainda
-    desenhava (o renderizador dele é mais tolerante), então o defeito era
-    INVISÍVEL na tela e só apareceria em quem usa librsvg — que é a pilha da
-    bandeja GTK. Nenhum dos outros testes daqui pegava: todos leem o SVG como
-    TEXTO.
-
-    Desde 07/08 à tarde as OPÇÕES entram nesta verificação junto com o
-    instalado. O motivo é o mesmo defeito, adiado: um arquivo de opção só é
-    lido no dia em que ela escolher, e um `--` esquecido lá dentro só apareceria
-    nesse dia, com a barra dela já mexida. Válido hoje, válido na troca.
-    """
+    """Aconteceu de verdade, em 07/08/2026, escrevendo este arquivo."""
     import xml.etree.ElementTree as ET
 
     assert OPCOES, "as opções de desenho sumiram de assets/simbolico/"
@@ -153,14 +107,7 @@ def _raios_de_arco(d: str) -> list[float]:
 
 
 def test_o_aro_e_faixa_e_nao_disco(svg: str):
-    """O aro tem de ser uma FAIXA de arco, com raio de fora e raio de dentro.
-
-    Substitui a asserção do `fill-rule="evenodd"`, que caducou no redesenho de
-    07/08 à tarde: o aro aberto é um caminho fechado simples e não precisa de
-    regra de preenchimento nenhuma. O que precisa continuar travado é o defeito
-    de verdade — o aro virar DISCO CHAPADO, que foi o que o `stroke` produziu
-    quando o GTK recoloriu. Um disco tem um raio só; a faixa tem dois.
-    """
+    """O aro tem de ser uma FAIXA de arco, com raio de fora e raio de dentro."""
     caminhos = re.findall(r'<path[^>]*\bd="([^"]+)"', _corpo(svg))
     assert caminhos, "o simbólico perdeu os caminhos"
     aro = max(caminhos, key=lambda d: max(_raios_de_arco(d), default=0.0))
@@ -195,11 +142,6 @@ def test_bandeja_e_applet_servem_o_mesmo_desenho():
     )
 
 
-# --------------------------------------------------------------------------
-# Contrato de NOME — é o que impede a regressão de 27/06 de voltar em silêncio
-# --------------------------------------------------------------------------
-
-
 def test_tray_pede_nome_simbolico():
     from hefesto_dualsense4unix.app.tray import (
         TRAY_ICON_FALLBACK,
@@ -232,13 +174,7 @@ def test_desktop_do_applet_pede_nome_simbolico():
 
 
 def test_instaladores_levam_e_removem_o_simbolico():
-    """Não basta o `install.sh` CITAR o arquivo — tem de COPIÁ-LO.
-
-    A primeira versão deste teste só procurava o caminho do arquivo no texto do
-    script, e passava com a linha de cópia arrancada: o caminho continuava lá,
-    na variável e na mensagem de aviso. Um teste que passa com a cura arrancada
-    não testa nada. Agora a asserção é sobre a linha que copia.
-    """
+    """Não basta o `install.sh` CITAR o arquivo — tem de COPIÁ-LO."""
     instala = INSTALL_SH.read_text(encoding="utf-8")
     assert "assets/simbolico/hefesto-dualsense4unix-symbolic.svg" in instala
     copias = [
@@ -260,11 +196,7 @@ def test_instaladores_levam_e_removem_o_simbolico():
 
 
 def test_a_linha_que_apaga_svg_no_install_nao_alcanca_o_simbolico():
-    """`install.sh` apaga `scalable/apps/${APP_ID}.svg` (placeholder da v3.4.2).
-
-    Se alguém generalizar esse alvo para `${APP_ID}*.svg`, o simbólico é
-    apagado a cada instalação e o sintoma é um joystick genérico na barra dela.
-    """
+    """`install.sh` apaga `scalable/apps/${APP_ID}.svg` (placeholder da v3.4.2)."""
     instala = INSTALL_SH.read_text(encoding="utf-8")
     apagam = [
         ln.strip()
@@ -275,11 +207,6 @@ def test_a_linha_que_apaga_svg_no_install_nao_alcanca_o_simbolico():
     for ln in apagam:
         assert "*" not in ln, f"alvo com curinga apagaria o simbólico: {ln}"
         assert "symbolic" not in ln, f"esta linha alcança o simbólico: {ln}"
-
-
-# --------------------------------------------------------------------------
-# A queda em três degraus — o que a barra dela mostra quando falta arquivo
-# --------------------------------------------------------------------------
 
 
 def _tray_com_tema(monkeypatch: pytest.MonkeyPatch, instalados: set[str]):
@@ -310,11 +237,7 @@ def test_preferred_icon_pede_o_simbolico_quando_ele_existe(
 def test_preferred_icon_pede_o_colorido_no_gnome(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """BUG-TRAY-SIMBOLICO-NAO-DESENHA-01: no painel do GNOME o simbólico sai
-    como três pontinhos — o marcador de ícone faltando — pedido pelo NOME ou
-    pelo CAMINHO ABSOLUTO, medido das duas formas em 18/08/2026. O mesmo painel
-    desenha o PNG colorido. Preferir o simbólico ali não entrega um ícone mais
-    feio: entrega a AUSÊNCIA de ícone."""
+    """BUG-TRAY-SIMBOLICO-NAO-DESENHA-01: no painel do GNOME o simbólico sai"""
     monkeypatch.setenv("XDG_CURRENT_DESKTOP", "pop:GNOME")
     monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
     mod = _tray_com_tema(
@@ -338,11 +261,7 @@ def test_preferred_icon_na_duvida_mantem_o_simbolico(
 def test_preferred_icon_cai_no_colorido_em_instalacao_antiga(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Instalação anterior a 07/08 não tem o simbólico no disco.
-
-    Cair direto no joystick genérico seria trocar um ícone certo por um errado
-    — e o relato dela seria "sumiu o Hefesto da barra", sem pista da causa.
-    """
+    """Instalação anterior a 07/08 não tem o simbólico no disco."""
     mod = _tray_com_tema(monkeypatch, {"hefesto-dualsense4unix"})
     assert mod.AppTray._preferred_icon() == "hefesto-dualsense4unix"
 

@@ -1,65 +1,5 @@
 #!/usr/bin/env python3
-"""a_haptica_pelo_radio.py — qual report faz o motor voice-coil vibrar por Bluetooth?
-
-HISTÓRICO DESDE 28/09/2026 (O-BASICO-MEDIDO-01) — ELE NÃO RODA MAIS
---------------------------------------------------------------------
-Com o daemon vivo ele recusa, e com `--com-daemon` vira um SEGUNDO escritor do
-contador do `0x32`/`0x35` — a classe de defeito que travou o microfone em
-10/09. A ponte do produto (`integrations/haptica_bt.py`) nasceu da medida
-dele e já existe. Fica aqui como a prova de 18/09 (o bloco `0x11` que vibrou);
-quem mede a vibração pelo rádio é o `o_basico.py haptica`, pela ponte do
-produto — e ele diz «não medido» até a parte 1 da
-A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01.
-
-HAPTICA-POR-RADIO-01, passo P1. No cabo a vibração dos jogos da Sony viaja como
-áudio (os canais 3 e 4 da placa do controle, medido em 17/09/2026). Pelo rádio
-não há placa de áudio: a háptica tem de ir dentro de um report HID, num bloco
-TLV de tag ``0x12``. Ninguém nesta casa mediu QUAL report o firmware aceita.
-
-O FORMATO DO BLOCO vem do DS5Dongle e do ``awalol/dualsense-bt-haptics``: int8
-estéreo entrelaçado a 3 kHz, 64 B por bloco (32 amostras x 2 canais) — os mesmos
-10,667 ms do quadro Opus do ``0x35``, que tocou o alto-falante em 10/09/2026.
-
-AS VARIANTES (``--report``), uma por passada — a lição do som foi que variar o
-report é o que separa "não existe" de "perguntei no lugar errado":
-
-    32            0x32 de 142 B · [2]=0x92 [3]=64 [4..67]=o bloco
-    32-com-11     0x32 · bloco 0x11 (AudioControl, 7 B) antes do 0x12
-    35-com-11     0x35 de 334 B · o mesmo arranjo, no report que toca o som
-    36-com-11     0x36 de 398 B (o do Senshi)
-    39-com-11     0x39 de 547 B (o do DS5Dongle)
-
-``--duplo`` troca a tag por ``0xD2`` com comprimento 32 (o bit 6 dobra o
-comprimento — é a forma do Senshi). Os tamanhos e o lugar do CRC são os do
-descritor destes controles, já medidos (``dualsense-referencia-canonica.md``).
-
-AS MORDIDAS, e a terceira é a que importa:
-  --crc-errado    nenhum report vale com o CRC corrompido;
-  --tag-errada    ``0xD5`` no lugar da tag: o firmware tem de ignorar o bloco;
-  --pcm-zerado    o MESMO report com as amostras em zero. O rumble clássico
-                  também vibra; só o PCM zerado CALANDO prova que quem vibrou
-                  foi o voice-coil movido pelo bloco.
-
-ANTES DE RODAR: o daemon PARADO (`systemctl --user stop hefesto-dualsense4unix`).
-Ele escreve ``0x35`` no mesmo controle ~94 vezes por segundo, e dois escritores
-disputam o contador de sequência — foi assim que o microfone caía em 10/09. O
-instrumento recusa rodar com o daemon vivo, a menos que ``--com-daemon``.
-
-ESCREVE NO APARELHO? SIM, com ``--tocar``. Sem ele, mostra os bytes e não abre porta.
-
-    a_haptica_pelo_radio.py --report 32               # só os bytes
-    a_haptica_pelo_radio.py --report 32 --tocar       # 3 s de senoide nos motores
-    a_haptica_pelo_radio.py --report 32 --tocar --pcm-zerado   # a mordida que decide
-
-    a_haptica_pelo_radio.py --sequencia --tocar       # as cinco, cada uma com uma cor
-
-A SEQUÊNCIA existe porque na bancada ela não vê o terminal: antes de cada
-variante a barra acende numa cor (vermelho 32, verde 32-com-11, azul 35-com-11,
-amarelo 36-com-11, branco 39-com-11), os motores recebem 3 s, a barra apaga, e a
-próxima vem. Ela responde com as cores em que sentiu o voice-coil.
-
-O VEREDITO É A MÃO DELA. ``write()`` com sucesso não prova vibração.
-"""
+"""a_haptica_pelo_radio.py — qual report faz o motor voice-coil vibrar por Bluetooth?"""
 
 from __future__ import annotations
 
@@ -91,7 +31,6 @@ from comum import (
 )
 from escrita_pelo_broker import mascarar
 
-#: O tamanho de cada degrau, do descritor destes controles (com o id).
 TAMANHOS = {0x32: 142, 0x35: 334, 0x36: 398, 0x39: 547}
 
 VARIANTES = {
@@ -102,17 +41,12 @@ VARIANTES = {
     "39-com-11": (0x39, True),
 }
 
-#: A taxa do bloco e o tamanho dele: 32 amostras por canal a 3 kHz são os
-#: 10,667 ms do quadro Opus — a cadência que o firmware consome no rádio.
 TAXA_HAPTICA = 3000
-#: Os quadros de 48 kHz que cabem num bloco de 3 kHz: 512, que são os 10,667 ms
-#: do report. É a mesma conta do :mod:`integrations.haptica_bt` (FATOR × 32).
 QUADROS_POR_BLOCO = 512
 AMOSTRAS_POR_CANAL = 32
 BYTES_DO_BLOCO = AMOSTRAS_POR_CANAL * 2
 INTERVALO = 512 / 48000
 
-#: A cor que anuncia cada variante na sequência — ela lê a barra, não a tela.
 CORES = {
     "32": ("vermelho", (255, 0, 0)),
     "32-com-11": ("verde", (0, 255, 0)),
@@ -148,12 +82,7 @@ def blocos_da_senoide(segundos: float, *, frequencia: float, amplitude: int,
 
 
 def monitor_do_endpoint() -> str:
-    """O monitor do nó de mentira publicado para este controle, ou "".
-
-    **`LC_ALL=C`**: o `pactl` desta casa traduz, e um leitor que procura em
-    inglês responde "não há" sobre um nó de pé (medido em 15/08 e de novo em
-    18/09).
-    """
+    """O monitor do nó de mentira publicado para este controle, ou ""."""
     try:
         saida = subprocess.run(
             ["pactl", "list", "short", "sinks"],
@@ -170,15 +99,7 @@ def monitor_do_endpoint() -> str:
 
 
 def blocos_do_jogo(monitor: str, segundos: float, *, ganho: float):
-    """Os blocos que o JOGO manda, lidos do monitor do endpoint de mentira.
-
-    O `parec` é o relógio: 512 quadros a 48 kHz são os 10,667 ms de um report,
-    e a leitura bloqueia até eles existirem. Quem dá o ritmo é o jogo, que é
-    exatamente o que se quer medir — nenhum `sleep` nosso entra no caminho.
-
-    Entram quatro canais s16le; o :class:`ConversorDeHaptica` descarta 1 e 2
-    (a voz) e leva 3 e 4 (os motores) para 3 kHz em int8.
-    """
+    """Os blocos que o JOGO manda, lidos do monitor do endpoint de mentira."""
     conv = ConversorDeHaptica(ganho=ganho)
     proc = subprocess.Popen(
         ["parec", f"--device={monitor}", "--format=s16le", "--rate=48000",
@@ -286,7 +207,7 @@ def tocar(fd: int, report_id: int, com_11: bool, blocos: list[bytes], args, seq:
     return seq, enviados, recusas
 
 
-def escolher_alvo(exigir_mac: str):  # o tipo é o `Aparelho` de `comum`
+def escolher_alvo(exigir_mac: str):
     reais = [a for a in fisicos(descobrir_aparelhos()) if a.transporte == RADIO]
     if exigir_mac:
         pedido = exigir_mac.lower().replace(":", "")
@@ -408,7 +329,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    # Histórico desde 28/09/2026: o main fica para leitura, e não roda.
     sys.stderr.write(
         "RECUSADO: ensaio histórico (scripts/ensaios/README.md, «O histórico»).\n"
         "com o daemon vivo ele seria um segundo escritor do 0x32/0x35 (a classe que\n"

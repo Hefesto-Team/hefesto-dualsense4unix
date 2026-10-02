@@ -1,33 +1,8 @@
-"""HONESTIDADE-STEAM-01 — nenhum toast afirma sucesso sobre um no-op.
-
-O bug curado (medido 25/07): o botão "Desligar Steam Input" da aba Emulação
-
-  1. mostrava "desligando Steam Input (fecha e reabre a Steam)…" — e o
-     tooltip do glade prometia o mesmo;
-  2. rodava `scripts/disable_steam_input.sh --apply-quiet`, cujo contrato é
-     literalmente "nunca fecha a Steam; se ela está viva, ADIA e sai 0";
-  3. anunciava "Steam Input desligado" INCONDICIONALMENTE (`check=False` +
-     `contextlib.suppress` engoliam rc e exceção).
-
-Ou seja: prometia fechar a Steam e não fechava, e afirmava sucesso sobre uma
-execução que não tocou em nada. Este arquivo trava as três pernas da cura:
-
-- **script**: emite `[steam-input] resultado=<tag>` como ÚLTIMA linha e RECUSA
-  (exit 4) quando há um JOGO da Steam aberto — testado por EXECUÇÃO real do
-  bash com HOME em tmp e `pgrep`/`steam`/`sleep` stubados no PATH (nenhum
-  processo da máquina é tocado);
-- **formatter puro**: "Pronto" exige evidência (releitura do vdf);
-- **handler**: jogo aberto ⇒ recusa; Steam viva ⇒ pede permissão para fechar;
-  Steam fechada ⇒ aplica direto.
-"""
+"""HONESTIDADE-STEAM-01 — nenhum toast afirma sucesso sobre um no-op."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_steam_input_honestidade: importa código da janela GTK")
 
 import os
@@ -50,8 +25,6 @@ BASH = shutil.which("bash") or "/bin/bash"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "disable_steam_input.sh"
 
-# VDF mínimo no formato REAL da Steam: tabs LITERAIS entre chave e valor (é o
-# que o awk do script casa — espaço no lugar de tab não seria reescrito).
 _VDF = (
     '"UserLocalConfigStore"\n'
     "{\n"
@@ -71,28 +44,9 @@ _VDF = (
 )
 
 
-# ---------------------------------------------------------------------------
-# 1. O script: contrato `resultado=` + recusa com jogo aberto (bash de verdade)
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture()
 def ambiente(tmp_path: Path) -> dict[str, Any]:
-    """HOME falso com um localconfig.vdf + stubs de pgrep/steam/pkill/sleep no PATH.
-
-    `sleep` vira uma espera de 0,05 s para o `stop_steam` (loop de 15 voltas de
-    2 s + margem) não custar 30 s de suíte; `steam` só registra o que foi
-    pedido — nada na máquina é fechado.
-
-    O `pkill` é dublê, e não por capricho: o `steam -shutdown` do roteiro roda
-    em fundo, e se a espera perder a corrida para ele o roteiro cai no
-    fallback `pkill -TERM/-KILL -f steamrt64/steam` e `-x steamwebhelper`. Com
-    o `pkill` da máquina, isso mataria a Steam de quem roda a suíte. O dublê
-    anota o pedido, e os testes que fecham a Steam exigem que ele não tenha
-    sido chamado. Pelo mesmo motivo o `sleep` espera de verdade: um `sleep`
-    que sai na hora deixava as 15 voltas passarem antes de o `steam` de fundo
-    rodar.
-    """
+    """HOME falso com um localconfig.vdf + stubs de pgrep/steam/pkill/sleep no PATH."""
     home = tmp_path / "home"
     vdf = home / ".steam" / "steam" / "userdata" / "1234" / "config" / "localconfig.vdf"
     vdf.parent.mkdir(parents=True)
@@ -110,8 +64,6 @@ def ambiente(tmp_path: Path) -> dict[str, Any]:
         caminho.write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
         caminho.chmod(0o755)
 
-    # O stub distingue as TRÊS consultas do script: jogo (SteamLaunch AppId=),
-    # runtime da Steam (steamrt64/steam) e webhelper (nome exato).
     _stub(
         "pgrep",
         'case "$*" in\n'
@@ -139,17 +91,7 @@ def _roda(
 ) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["HOME"] = str(ambiente["home"])
-    # CANARIO-FS-01: o script resolve a allowlist por
-    # `${XDG_CONFIG_HOME:-$HOME/.config}`. Sem fixar o XDG aqui, um shell com
-    # XDG_CONFIG_HOME exportado (o caso desta máquina) faria a bancada ler a
-    # allowlist REAL da mantenedora — o resultado do teste passaria a depender
-    # do disco dela. Fixar é o que mantém o HOME falso valendo de ponta a ponta.
     env["XDG_CONFIG_HOME"] = str(ambiente["home"] / ".config")
-    # A `conftest` não isola o XDG_RUNTIME_DIR (os testes de instância única
-    # precisam do de verdade), e ele é a porta do daemon de quem roda a suíte;
-    # o barramento de sessão também. O roteiro não usa nenhum dos dois hoje, e
-    # é justamente por isso que eles vão para o tmp: se um dia usar, a bancada
-    # fala com o nada, e não com o daemon de quem a roda.
     env["XDG_RUNTIME_DIR"] = str(ambiente["runtime"])
     env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={ambiente['runtime'] / 'bus'}"
     env["PATH"] = f"{ambiente['stubs']}:/usr/bin:/bin"
@@ -187,10 +129,10 @@ class TestContratoDoScript:
 
         proc = _roda(ambiente, "--apply-quiet", steam=True)
 
-        assert proc.returncode == 0  # contrato do guard oneshot: adiar não é falhar
+        assert proc.returncode == 0
         assert _tag(proc) == "adiado-steam-aberta"
         assert ambiente["vdf"].read_text(encoding="utf-8") == original
-        assert not (ambiente["estado"] / "steam_calls").exists()  # não fechou nada
+        assert not (ambiente["estado"] / "steam_calls").exists()
 
     def test_apply_quiet_com_steam_fechada_aplica_e_diz_aplicado(
         self, ambiente: dict[str, Any]
@@ -213,12 +155,7 @@ class TestContratoDoScript:
     def test_apply_com_jogo_aberto_recusa_e_nao_encosta_na_steam(
         self, ambiente: dict[str, Any]
     ) -> None:
-        """`steam -shutdown` com jogo aberto MATA o jogo (DEDUP-05).
-
-        O gate mora no SCRIPT (e não só em quem chama) porque install.sh,
-        purge.sh e a GUI chamam `--apply` direto. A prova de que nada foi
-        derrubado é a ausência do arquivo de chamadas do stub `steam`.
-        """
+        """`steam -shutdown` com jogo aberto MATA o jogo (DEDUP-05)."""
         original = ambiente["vdf"].read_text(encoding="utf-8")
 
         proc = _roda(ambiente, "--apply", steam=True, jogo=True)
@@ -246,10 +183,7 @@ class TestContratoDoScript:
         assert _tag(proc) == "aplicado"
         chamadas = (ambiente["estado"] / "steam_calls").read_text(encoding="utf-8")
         assert "-shutdown" in chamadas
-        # A Steam fechou pelo `-shutdown`, e não pelo fallback do `pkill`.
         assert not (ambiente["estado"] / "pkill").exists()
-        # A reabertura é DESANEXADA (`setsid nohup steam &`), então checá-la
-        # pelo arquivo do stub seria corrida — o sinal determinístico é o log.
         assert "reabrindo Steam" in proc.stdout
         assert '"SteamController_PSSupport"\t\t"0"' in ambiente["vdf"].read_text(
             encoding="utf-8"
@@ -273,9 +207,6 @@ class TestContratoDoScript:
         assert linhas[-1].startswith("[steam-input] resultado=")
 
 
-#: Bancada da D-32: SÓ opt-in per-app, e SÓ de appids da allowlist. Nenhuma
-#: chave global — é o estado real dela em 05/08 depois de ligar o Steam Input
-#: pela janela da Steam nos jogos que precisam dele.
 _VDF_SO_ALLOWLIST = (
     '"UserLocalConfigStore"\n'
     "{\n"
@@ -301,11 +232,7 @@ _VDF_SO_ALLOWLIST = (
 
 @pytest.fixture()
 def bancada_allowlist(ambiente: dict[str, Any]) -> dict[str, Any]:
-    """`ambiente`, mas com um vdf que SÓ tem appids da allowlist ligados.
-
-    A allowlist é escrita dentro do HOME falso — o arquivo real dela nunca é
-    lido nem tocado.
-    """
+    """`ambiente`, mas com um vdf que SÓ tem appids da allowlist ligados."""
     ambiente["vdf"].write_text(_VDF_SO_ALLOWLIST, encoding="utf-8")
     lista = (
         ambiente["home"] / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
@@ -320,15 +247,7 @@ def bancada_allowlist(ambiente: dict[str, Any]) -> dict[str, Any]:
 
 
 class TestPreVooNaoFechaSteamAToa:
-    """D-32 (05/08/2026) — o pré-voo do apply casava a allowlist e mentia.
-
-    `needs_fix` responde "tem chave em 1|2 aqui"; a allowlist per-app deixa
-    essas chaves em 1|2 DE PROPÓSITO. Com só appids da allowlist ligados o
-    pré-voo dizia "precisa", o `--apply` fechava e reabria a Steam dela para
-    não mudar byte nenhum, e terminava em `resultado=aplicado` — que a janela
-    lia como "a Steam não sequestra mais o seu controle". Quem decide agora é
-    o `needs_real_fix`: precisa = a transformação MUDARIA o arquivo.
-    """
+    """D-32 (05/08/2026) — o pré-voo do apply casava a allowlist e mentia."""
 
     def test_apply_nao_fecha_a_steam_nem_diz_aplicado(
         self, bancada_allowlist: dict[str, Any]
@@ -339,8 +258,6 @@ class TestPreVooNaoFechaSteamAToa:
 
         assert proc.returncode == 0
         assert _tag(proc) == "nada-a-fazer", proc.stdout
-        # A prova de que a Steam dela não foi derrubada: o stub `steam` nunca
-        # foi chamado, logo o arquivo de chamadas não existe.
         assert not (bancada_allowlist["estado"] / "steam_calls").exists()
         assert bancada_allowlist["vdf"].read_text(encoding="utf-8") == original
 
@@ -359,12 +276,7 @@ class TestPreVooNaoFechaSteamAToa:
     def test_jogo_fora_da_allowlist_continua_fechando_e_aplicando(
         self, bancada_allowlist: dict[str, Any]
     ) -> None:
-        """Contraprova: a cura não anestesiou o guarda.
-
-        Um appid FORA da allowlist ligado ainda fecha a Steam, ainda é zerado e
-        ainda termina em `aplicado`. Sem esta metade, trocar o pré-voo por um
-        `any_needs=0` fixo passaria nos dois testes de cima.
-        """
+        """Contraprova: a cura não anestesiou o guarda."""
         bancada_allowlist["vdf"].write_text(
             _VDF_SO_ALLOWLIST.replace('"3357650"', '"1599660"'), encoding="utf-8"
         )
@@ -379,7 +291,6 @@ class TestPreVooNaoFechaSteamAToa:
         assert "-shutdown" in chamadas
         assert not (bancada_allowlist["estado"] / "pkill").exists()
         texto = bancada_allowlist["vdf"].read_text(encoding="utf-8")
-        # O de fora foi zerado; o da allowlist ficou de pé.
         assert texto.count('"UseSteamControllerConfig"\t\t"0"') == 1
         assert texto.count('"UseSteamControllerConfig"\t\t"2"') == 1
 
@@ -395,14 +306,8 @@ class TestTagParser:
 
     @pytest.mark.parametrize("saida", ["", "nada aqui", "resultado=aplicado"])
     def test_sem_tag_devolve_none(self, saida: str) -> None:
-        """Script de instalação ANTIGA não emite a linha — e isso é dito, não
-        fingido (o formatter cai no ramo "sem confirmação")."""
+        """Script de instalação ANTIGA não emite a linha — e isso é dito, não"""
         assert steam_input_result_tag(saida) is None
-
-
-# ---------------------------------------------------------------------------
-# 2. O formatter: "Pronto" exige evidência
-# ---------------------------------------------------------------------------
 
 
 class TestFormatSteamInputResult:
@@ -413,8 +318,7 @@ class TestFormatSteamInputResult:
         assert "Pronto" in msg
 
     def test_rodou_mas_continua_ligado_nao_diz_pronto(self) -> None:
-        """O caso que a versão antiga chamava de sucesso: script sai 0 e o
-        estado no disco não mudou."""
+        """O caso que a versão antiga chamava de sucesso: script sai 0 e o"""
         msg = format_steam_input_result(
             status="executado", rc=0, tag="aplicado", ainda_ligado=True
         )
@@ -490,11 +394,6 @@ class TestFormatSteamInputResult:
             status=status, rc=0, tag=tag, ainda_ligado=ainda
         )
         assert "Pronto" not in msg
-
-
-# ---------------------------------------------------------------------------
-# 3. O handler: recusa / consentimento / aplicação direta
-# ---------------------------------------------------------------------------
 
 
 class _StubEmu(emulation_actions.EmulationActionsMixin):
@@ -619,8 +518,8 @@ class TestHandlerDesligarSteamInput:
         assert capturado, "nenhum diálogo de consentimento foi montado"
         assert "20 segundos" in capturado["titulo"]
         assert "pause os downloads" in capturado["corpo"].lower()
-        assert slo_fake["runs"] == []  # nada rodou ainda
-        assert slo_fake["parou"] == 0  # e a Steam segue viva
+        assert slo_fake["runs"] == []
+        assert slo_fake["parou"] == 0
 
     @skip_sem_gtk_response
     def test_cancelar_no_dialogo_nao_muda_nada(
@@ -687,8 +586,7 @@ class TestHandlerDesligarSteamInput:
     def test_falha_de_execucao_vira_frase_e_nao_silencio(
         self, sincrono: None, slo_fake: dict[str, Any], monkeypatch
     ) -> None:
-        """Worker no executor engole exceção não tratada — e toast que nunca
-        chega é a mesma doença do "desligado" incondicional, ao contrário."""
+        """Worker no executor engole exceção não tratada — e toast que nunca"""
 
         def _explode(_args, **_kwargs):
             raise OSError("bash sumiu")

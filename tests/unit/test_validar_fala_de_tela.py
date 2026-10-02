@@ -1,17 +1,4 @@
-"""Z6-04 — o portão `validar-fala-de-tela.py`, nos dois sentidos.
-
-As seis mordidas, cada uma arrancada de propósito NUM CSV/árvore DE MENTIRA
-(nunca na árvore real) e vista reprovar, contra o CLI de verdade via
-subprocesso — o mesmo molde de `test_check_paridade_transporte.py`: um portão
-que só sabe passar não é portão.
-
-MORDIDA 1 é a que o aceite da sprint nomeia: "É o defeito de 17/08
-reproduzido como teste" — a frase de `app/audio_saida.py` dizia "no rádio não
-existe alto-falante" enquanto o mapa dizia `existe=tem`, e os três portões de
-23/08/2026 passavam verdes com ela plantada (medido em §2.9 da sprint). Este
-teste planta o EQUIVALENTE (uma `Fala` com `AFIRMA_NAO_EXISTE` na mesma
-chave) numa árvore de mentira e prova que ESTE portão a pega.
-"""
+"""Z6-04 — o portão `validar-fala-de-tela.py`, nos dois sentidos."""
 from __future__ import annotations
 
 import subprocess
@@ -67,9 +54,6 @@ def rodar(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-#: Um `FATOS` mínimo, com a MESMA forma do da árvore real: `audio.alto_falante`
-#: existe (`tem`) e aciona por rádio; a cor não aciona por rádio por causa do
-#: aparelho.
 FATOS_BASE = {
     "audio.alto_falante@dualsense": {
         "existe": "tem",
@@ -117,9 +101,6 @@ DICA = Fala(
     assert processo.returncode == 0, processo.stdout
 
 
-# --------------------------------------------------------------------------
-# MORDIDA 1 — o defeito de 17/08 reproduzido como teste
-# --------------------------------------------------------------------------
 def test_afirma_nao_existe_contra_existe_tem_reprova_nomeando_endereco(tmp_path: Path) -> None:
     arquivo = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_EXISTE, Fala
@@ -140,9 +121,6 @@ TEXTO_SONO_SEM_PLACA = Fala(
     assert "existe='tem'" in processo.stdout or 'existe="tem"' in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# MORDIDA 3 — "a medição chegou"
-# --------------------------------------------------------------------------
 def test_medicao_chegou_com_pendencia_aberta_reprova(tmp_path: Path) -> None:
     arquivo = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
@@ -166,7 +144,6 @@ DICA_SOM_DEDICADO = Fala(
         "audio.saida_dedicada@dualsense": {
             "existe": "tem",
             "cabo": {"aciona": "", "de_onde_sei": "", "por_que_nao_aciona": ""},
-            # a medição CHEGOU — igual à real, ainda diz NAO_MEDIDO
             "radio": {"aciona": "sim", "de_onde_sei": "medido", "por_que_nao_aciona": ""},
         },
     }
@@ -201,9 +178,6 @@ DICA_SOM_DEDICADO = Fala(
     assert processo.returncode == 0, processo.stdout
 
 
-# --------------------------------------------------------------------------
-# MORDIDA 4 — prazo vencido: --all avisa, --exigir-prazo reprova
-# --------------------------------------------------------------------------
 def test_prazo_vencido_all_avisa_exigir_prazo_reprova(tmp_path: Path) -> None:
     arquivo = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
@@ -257,9 +231,6 @@ DICA = Fala(
     assert processo.returncode == 0, processo.stdout
 
 
-# --------------------------------------------------------------------------
-# AFIRMA_NAO_ACIONA e a causa (Z6-05 encostando em Z6-04)
-# --------------------------------------------------------------------------
 def test_afirma_nao_aciona_com_causa_de_fora_passa(tmp_path: Path) -> None:
     arquivo = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala
@@ -336,9 +307,6 @@ DICA_DA_COR_NO_RADIO = Fala(
     assert "causa NOSSA" in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# --fila
-# --------------------------------------------------------------------------
 def test_fila_lista_placeholder_aberto_e_esvazia_quando_fecha(tmp_path: Path) -> None:
     arquivo_com_pendencia = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
@@ -379,15 +347,8 @@ DICA = Fala(
     assert "nenhum placeholder" in fechado.stdout
 
 
-# --------------------------------------------------------------------------
-# MORDIDA 6 — a população vem do AST, e o teto é do arquivo de teste
-# --------------------------------------------------------------------------
 def test_populacao_de_fala_e_a_contagem_exata_e_nao_derivada(tmp_path: Path) -> None:
-    """3 `Fala` plantadas, 3 encontradas — o `3` é literal AQUI, nunca lido
-    de volta do que o portão contou (a lição de
-    `test_o_mapa_separa_divida_de_decisao.py`: um teto que se mede pela mesma
-    régua que o gerou nunca reprova).
-    """
+    """3 `Fala` plantadas, 3 encontradas — o `3` é literal AQUI, nunca lido"""
     arquivo = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_ACIONA, AFIRMA_NAO_ACIONA, Fala
 
@@ -405,11 +366,7 @@ TRES = Fala(chave="identidade.cor_do_aparelho@dualsense", lado="radio", aba="In�
 
 
 def test_fala_dinamica_nao_e_engolida_em_silencio(tmp_path: Path) -> None:
-    """`afirma` construído em runtime (não um `AFIRMA_*` nem literal) reprova
-    em vez de ser contado como se estivesse tudo certo — declarar
-    dinamicamente é o mesmo defeito que a `Fala.__post_init__` da Z6-03
-    recusa em runtime; este portão recusa em tempo de portão.
-    """
+    """`afirma` construído em runtime (não um `AFIRMA_*` nem literal) reprova"""
     arquivo = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import Fala
 
@@ -423,14 +380,8 @@ def _monta(valor):
     assert "não é um AFIRMA_* conhecido" in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# Os dois módulos que este portão importa não têm dependência pesada
-# --------------------------------------------------------------------------
 def test_os_dois_modulos_de_registro_nao_tem_dependencia_pesada() -> None:
-    """`import gi`/`Gtk` em `fala_do_mapa.py` faria este portão ImportError em
-    qualquer runner sem GUI — exatamente o modo de falha que o cabeçalho do
-    script recusa.
-    """
+    """`import gi`/`Gtk` em `fala_do_mapa.py` faria este portão ImportError em"""
     fonte = FALA_DO_MAPA_REAL.read_text(encoding="utf-8")
     proibidos = ("import gi", "from gi", "Gtk", "gi.repository")
     for termo in proibidos:

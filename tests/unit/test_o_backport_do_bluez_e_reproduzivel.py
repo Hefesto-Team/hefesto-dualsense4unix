@@ -1,59 +1,4 @@
-"""BLUETOOTHD-NAO-DERRUBA-01 — o backport do BlueZ se reconstrói do repositório.
-
-O DEFEITO QUE VEM ANTES DO PATCH, medido em 23/09/2026: a máquina dela roda
-``5.86-0ubuntu0.1~hefesto24.04.3`` e nem o fonte, nem o patch, nem a receita
-estavam no repositório ou no disco. O ``install.sh`` só consumia ``.deb``
-prontos de um cache que já não existia. Quem quisesse mudar uma linha do
-bluetoothd — e o ``hefesto-0002`` é exatamente isso — não tinha de onde partir.
-
-Esta bancada prova, SEM REDE e sem sudo, que a receita versionada fecha:
-
-- os patches aplicam com fuzz zero no ``device.c`` do tarball
-  (``tests/fixtures/bluez-5.86/device.c``, byte a byte) e dão os hashes que o
-  ``BASELINE`` fixa;
-- o ``scripts/construir_bluez_backport.sh --preparar`` monta a árvore com
-  ``dpkg-source`` a partir de fontes sintéticas com os MESMOS nomes, e duas
-  corridas dão a mesma árvore;
-- com os ``.deb`` da versão alvo no cache, o ``SHA256SUMS`` batendo e o
-  ``ORIGEM.txt`` dizendo os patches da árvore, a segunda corrida não baixa nem
-  compila — e um ``.deb`` feito com outro patch manda reconstruir;
-- a revisão antiga só se reconstrói num cache que NÃO é o do install, medido
-  pelo caminho e não pela variável;
-- a versão alvo é ``~hefesto24.04.4``;
-- a MORDIDA do ``hefesto-0002``: ``assets/bluez-backport/prova/eagain.c`` roda
-  as ``hidp_send_*`` recortadas do ``device.c`` contra um ``socketpair`` cheio
-  de verdade. O vanilla destrói o aparelho no EAGAIN; o patchado fica, conta o
-  descarte e loga com limite de taxa; o erro terminal derruba nos dois;
-- o script não instala nada.
-
-AS MORDIDAS, provadas em 23/09/2026 (cada uma arrancada, vista vermelha e
-devolvida com md5 conferido):
-
-- tirar ``&& !hidp_send_err_transient(idev->send_err)`` do ``hidp_send_output``
-  no ``hefesto-0002`` → ``test_o_patch_aplica_com_fuzz_zero_e_da_o_hash_do_baseline``
-  e ``test_a_mordida_o_patchado_fica_no_eagain`` reprovam (o hash muda e o
-  aparelho volta a ser destruído mil e uma vezes);
-- tirar o ``rm -rf "${OBRA}"`` do ``preparar`` →
-  ``test_duas_corridas_do_preparo_dao_a_mesma_arvore`` reprova: a segunda
-  corrida acha a série "já aplicada" sobre um ``device.c`` que o tarball
-  devolveu ao vanilla, e o hash do ``device.c`` não confere;
-- fazer ``ja_construido`` devolver sempre 1 →
-  ``test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila`` reprova: o
-  ``curl`` de mentira é chamado;
-- trocar o ``! aead_do_kernel_disponivel`` do test-mesh-crypto por ``true`` →
-  ``test_o_unit_do_bluez_so_perdoa_a_falha_que_a_maquina_explica`` reprova;
-- acrescentar ``sudo apt-get install`` ao script, nu ou dentro de
-  ``bash -c "..."`` → ``test_o_script_nao_instala_nada`` reprova;
-- devolver a guarda da revisão antiga que só olhava se ``HEFESTO_BLUEZ_CACHE``
-  estava vazia → ``test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install``
-  reprova em três dos quatro jeitos de apontar, com rc=4 (foi baixar);
-- tirar a comparação do ``ORIGEM.txt`` do ``ja_construido`` →
-  ``test_debs_feitos_com_outro_patch_mandam_reconstruir`` reprova nos dois casos;
-- trocar o ``morra`` do laço do ``unit_do_bluez`` por ``continue`` →
-  ``test_o_laco_do_unit_so_deixa_passar_o_que_perdoou`` reprova em quatro casos;
-  tirar o ``[[ "${tipo}" == "FAIL" ]]`` → reprova o ``error_do_mesh``; tirar o
-  ``XPASS`` da conta → reprova o ``xpass_ao_lado``.
-"""
+"""BLUETOOTHD-NAO-DERRUBA-01 — o backport do BlueZ se reconstrói do repositório."""
 from __future__ import annotations
 
 import hashlib
@@ -74,8 +19,6 @@ FIXTURE_DEVICE_C = RAIZ_DO_REPO / "tests" / "fixtures" / "bluez-5.86" / "device.
 ALVO = "5.86-0ubuntu0.1~hefesto24.04.4"
 RECEITA = RAIZ_DO_REPO / "docs" / "usage" / "receita-backport-bluez.md"
 
-#: O que o preparo precisa na máquina. Nada disto é dependência de BUILD do
-#: BlueZ: é o dpkg-dev que o CI já tem, o gcc e o cabeçalho do uhid.
 _FERRAMENTAS = ("dpkg-source", "dpkg-parsechangelog", "patch", "gcc", "tar", "xz")
 
 
@@ -164,11 +107,6 @@ def _morder(device_c: Path) -> dict[str, dict[str, str]]:
     return _cenarios(proc.stdout)
 
 
-# ---------------------------------------------------------------------------
-# a versão alvo e a série
-# ---------------------------------------------------------------------------
-
-
 def test_a_versao_alvo_e_a_quatro():
     base = _baseline()
     assert f"{base['VERSAO_BASE']}~hefesto24.04.{base['REVISAO_ULTIMA']}" == ALVO
@@ -202,11 +140,6 @@ def test_o_patch_aplica_com_fuzz_zero_e_da_o_hash_do_baseline(tmp_path, numero_d
     )
 
 
-# ---------------------------------------------------------------------------
-# a mordida do hefesto-0002
-# ---------------------------------------------------------------------------
-
-
 @precisa_das_ferramentas
 def test_a_mordida_o_vanilla_destroi_no_eagain(tmp_path):
     """Sem isto, a régua de baixo não mede o defeito: mediria um socket que não enche."""
@@ -225,14 +158,12 @@ def test_a_mordida_o_patchado_fica_no_eagain(tmp_path):
     eagain = cenarios["eagain"]
     assert eagain["destruido"] == "0", f"o EAGAIN ainda destrói o aparelho: {eagain}"
     assert eagain["descartados"] == "1001", eagain
-    # Mil descartes no mesmo segundo e um no seguinte: duas linhas, não 1001.
     assert eagain["linhas"] == "2", f"o log não tem limite de taxa: {eagain}"
     assert eagain["ultima_linha"].startswith('"BT socket write error: '), (
         "o prefixo de sempre sumiu, e quem lê o journal deixa de casar a linha"
     )
     for nome in ("set_report_eagain", "get_report_eagain"):
         assert cenarios[nome]["destruido"] == "0", cenarios[nome]
-        # O kernel ainda recebe a resposta de erro daquele pedido.
         assert cenarios[nome]["respostas_de_erro"] == "1", cenarios[nome]
 
 
@@ -242,11 +173,6 @@ def test_a_mordida_erro_terminal_derruba_com_o_patch(tmp_path, cenario):
     base = _baseline()
     device_c = _aplicar(_arvore_do_fixture(tmp_path), base["PATCHES_R4"].split())
     assert _morder(device_c)[cenario]["destruido"] == "1"
-
-
-# ---------------------------------------------------------------------------
-# o script: reproduzível, idempotente, sem rede na bancada e sem instalar
-# ---------------------------------------------------------------------------
 
 
 def _tar_xz(destino: Path, arquivos: dict[str, bytes]) -> None:
@@ -282,13 +208,7 @@ _CHANGELOG_RESOLUTE = b"""bluez (5.85-4ubuntu0.1) resolute; urgency=medium
 
 @pytest.fixture
 def bancada(tmp_path):
-    """Um cache com as duas fontes JÁ baixadas, com os nomes do BASELINE.
-
-    O upstream sintético traz só o ``device.c`` do tarball (o fixture); o
-    empacotamento traz o mínimo que o ``dpkg-source`` e os três ajustes do
-    script exigem. O ``BASELINE`` é o real com os dois hashes de fonte
-    trocados — os do ``device.c`` continuam os de verdade.
-    """
+    """Um cache com as duas fontes JÁ baixadas, com os nomes do BASELINE."""
     base_real = (_assets() / "BASELINE").read_text(encoding="utf-8")
     base = _baseline()
     cache = tmp_path / "cache"
@@ -317,7 +237,6 @@ def bancada(tmp_path):
         encoding="utf-8",
     )
 
-    # Um curl que, se chamado, deixa a marca e falha: a bancada nunca vai à rede.
     binarios = tmp_path / "bin"
     binarios.mkdir()
     marca_curl = tmp_path / "curl-foi-chamado"
@@ -377,8 +296,6 @@ def test_o_preparo_monta_a_arvore_da_versao_alvo(bancada):
     assert "0013-transport-Fix-set-volume-failure-with-invalid-device.patch" not in series
     assert series[-2:] == _baseline()["PATCHES_R4"].split()
     assert _sha(arvore / "profiles" / "input" / "device.c") == _baseline()["SHA256_DEVICE_C_R4"]
-    # Sem esta ausência o dpkg-buildpackage desfaz a série ao terminar, e o
-    # make check recompilaria o bluetoothd sem os patches.
     assert not (arvore / ".pc" / ".dpkg-source-unapply").exists()
 
 
@@ -429,12 +346,7 @@ def _cache_pronto(bancada: dict) -> tuple[Path, str]:
 @precisa_das_ferramentas
 @pytest.mark.parametrize("como_envelheceu", ["patch_mudou", "sem_origem"])
 def test_debs_feitos_com_outro_patch_mandam_reconstruir(bancada, como_envelheceu):
-    """O atalho pergunta também COM O QUE os .deb foram feitos.
-
-    Medido em 23/09/2026: com o ORIGEM.txt dizendo outro hefesto-0002 (ou sem
-    ORIGEM.txt nenhum), o script respondia «já construído» — um patch mudado
-    sem subir a revisão deixava o .deb velho no cache que o install lê.
-    """
+    """O atalho pergunta também COM O QUE os .deb foram feitos."""
     saida, _ = _cache_pronto(bancada)
     origem = saida / "ORIGEM.txt"
     if como_envelheceu == "patch_mudou":
@@ -452,7 +364,6 @@ def test_debs_feitos_com_outro_patch_mandam_reconstruir(bancada, como_envelheceu
 
     proc = _rodar(bancada)
     assert "já construído" not in proc.stdout
-    # A reconstrução começa pela rede, que aqui é o curl de mentira.
     assert proc.returncode == 4, proc.stdout + proc.stderr
     assert bancada["marca_curl"].exists()
 
@@ -467,8 +378,6 @@ def test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila(bancada):
     assert not bancada["marca_curl"].exists()
     assert not (bancada["cache"] / "bluez-obra").exists()
 
-    # E o atalho não é cego: um .deb que não confere manda reconstruir — e a
-    # reconstrução começa pela rede, que aqui é o curl de mentira.
     (saida / f"bluez_{ALVO}_{arch}.deb").write_bytes(b"adulterado\n")
     proc = _rodar(bancada)
     assert proc.returncode == 4, proc.stdout + proc.stderr
@@ -485,12 +394,7 @@ def _cache_do_install(env: dict[str, str]) -> Path:
     "como_aponta", ["sem_variavel", "o_caminho_escrito", "com_barra_dupla", "por_um_link"]
 )
 def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada, tmp_path, como_aponta):
-    """A guarda pergunta pelo LUGAR, não pela variável.
-
-    Medido em 23/09/2026: ``HEFESTO_BLUEZ_CACHE`` escrito com o próprio caminho
-    do install passava pela guarda, e o ``--revisao 3`` seguia para a obra — com
-    as fontes no cache, o ``.3`` sobrescreveria o ``SHA256SUMS`` do ``.4``.
-    """
+    """A guarda pergunta pelo LUGAR, não pela variável."""
     env = dict(bancada["env"])
     do_install = _cache_do_install(env)
     if como_aponta == "sem_variavel":
@@ -527,7 +431,6 @@ def test_numero_de_processos_invalido_para_antes_de_baixar(bancada, jobs):
         ["bash", str(_script())], env=env, capture_output=True, text=True, timeout=60
     )
     if jobs == "":
-        # Vazio é o padrão: um processo por núcleo. Segue, e a rede é o curl de mentira.
         assert proc.returncode == 4, proc.stdout + proc.stderr
         return
     assert proc.returncode == 2, proc.stdout + proc.stderr
@@ -547,11 +450,7 @@ def test_revisao_antiga_fora_do_cache_do_install_monta_a_arvore_da_tres(bancada)
 
 
 def _perdoa(tmp_path: Path, teste: str, *, aead_disponivel: bool) -> bool:
-    """Roda a `falha_explicada_pela_maquina` do script com um python3 de mentira.
-
-    O python3 de mentira responde a pergunta da AF_ALG: sai 0 quando o AEAD do
-    kernel está disponível, 1 quando não. Nada é compilado.
-    """
+    """Roda a `falha_explicada_pela_maquina` do script com um python3 de mentira."""
     binarios = tmp_path / f"bin-{int(aead_disponivel)}"
     binarios.mkdir(exist_ok=True)
     python3 = binarios / "python3"
@@ -573,25 +472,14 @@ def _perdoa(tmp_path: Path, teste: str, *, aead_disponivel: bool) -> bool:
 
 
 def test_o_unit_do_bluez_so_perdoa_a_falha_que_a_maquina_explica(tmp_path):
-    """O test-mesh-crypto só é perdoado com o AEAD do kernel medido AUSENTE.
-
-    Medido em 23/09/2026: a máquina dela desliga o algif_aead (CVE-2026-31431)
-    e o test-mesh-crypto reprova ali, sem ligar nada de profiles/input. Um
-    perdão incondicional esconderia a mesma falha numa máquina onde ela é do
-    código; um perdão por nome deixaria passar qualquer outro teste.
-    """
+    """O test-mesh-crypto só é perdoado com o AEAD do kernel medido AUSENTE."""
     assert _perdoa(tmp_path, "unit/test-mesh-crypto", aead_disponivel=False)
     assert not _perdoa(tmp_path, "unit/test-mesh-crypto", aead_disponivel=True)
     assert not _perdoa(tmp_path, "unit/test-hog", aead_disponivel=False)
 
 
 def _script_sem_main(tmp_path: Path) -> Path:
-    """O script inteiro, sem a última linha — as funções DE VERDADE, e nada roda.
-
-    Recortar função por função com ``sed`` por faixas duplica linhas quando uma
-    função cabe numa linha só (a ``diga``): a ``morra`` virava uma função
-    aninhada que não saía, e o dublê respondia verde sobre o próprio defeito.
-    """
+    """O script inteiro, sem a última linha — as funções DE VERDADE, e nada roda."""
     linhas = _script().read_text(encoding="utf-8").rstrip("\n").split("\n")
     assert linhas[-1] == 'main "$@"', (
         f"a última linha do script mudou ({linhas[-1]!r}): carregá-lo rodaria o build"
@@ -637,12 +525,7 @@ def _secao(resultado: str, teste: str) -> str:
 def test_o_laco_do_unit_so_deixa_passar_o_que_perdoou(
     tmp_path, caso, secoes, aead_disponivel, rc_do_make, rc_esperado
 ):
-    """O ``unit_do_bluez`` inteiro, com um ``make`` de mentira.
-
-    A régua de cima prova o PREDICADO; esta prova o LAÇO que o aplica — sem
-    ela, trocar o ``morra`` do laço por ``continue`` perdoava qualquer teste
-    reprovado e as dezesseis réguas continuavam verdes (medido em 23/09/2026).
-    """
+    """O ``unit_do_bluez`` inteiro, com um ``make`` de mentira."""
     arvore = tmp_path / "arvore"
     obra = tmp_path / "obra"
     binarios = tmp_path / "bin"
@@ -682,19 +565,12 @@ def _sem_texto_entre_aspas(linha: str) -> str:
     return re.sub(r"'[^']*'|\"[^\"]*\"", "''", linha)
 
 
-#: Uma linha que só IMPRIME texto para quem lê (o conselho do mk-build-deps
-#: com sudo, por exemplo) — e não encadeia comando nenhum depois.
 _SO_MENSAGEM = re.compile(r"^\s*(diga|morra|printf|echo)\b")
 _ENCADEIA = re.compile(r"\||;|&&|\$\(|`")
 
 
 def test_o_script_nao_instala_nada():
-    """O postinst do bluez reinicia o bluetoothd: instalar é do install.sh.
-
-    O texto entre aspas CONTA, fora das linhas que só imprimem: medido em
-    23/09/2026, a régua anterior apagava tudo o que estava entre aspas antes de
-    procurar, e ``bash -c "sudo apt-get install -y bluez"`` passava verde.
-    """
+    """O postinst do bluez reinicia o bluetoothd: instalar é do install.sh."""
     proibidos = re.compile(
         r"\bsudo\b|\bpkexec\b|\bdoas\b|\bsystemctl\b|\bapt-get\b"
         r"|\bapt\s+(install|remove|purge)\b|\bmk-build-deps\b"

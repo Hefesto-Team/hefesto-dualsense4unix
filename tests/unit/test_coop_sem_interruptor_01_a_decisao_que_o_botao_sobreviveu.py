@@ -1,35 +1,4 @@
-"""COOP-SEM-INTERRUPTOR-01 (06/08/2026) — o co-op deixa de ser uma opção.
-
-A decisão dela, literal, e tomada mais de uma vez: *"Independente do que
-escolhermos, todos e tudo no Hefesto tem que tá com o permitir co-op ligado. Eu
-já havia pedido pra removermos até o botão da aba Início e tirar essa seção de
-lá também, já que isso não faz sentido — afinal, se eu conecto 4 controles no PC
-eu espero, com 4 pessoas jogando, que cada um controle o próprio personagem.
-Ninguém esperaria controlar o mesmo personagem com cada controle."*
-
-Ela pediu, virou sprint (`PEDIDOS-DELA-01`, pedido 1) — **e o botão sobreviveu**.
-Este arquivo é o portão que impede o artefato de sobreviver à decisão outra vez.
-É a mesma família do `0x08` e do `common[8]`: código que ficou depois de o motivo
-morrer.
-
-O caminho é "preservar a FORMA e matar a OPÇÃO", e cada aresta tem uma medida
-aqui:
-
-1. **o piso nasce ligado** — `DaemonConfig.coop_enabled` (medido em
-   `test_coop_optout_migracao.py`, sobre o dataclass CRU: enquanto o `run()`
-   forçava `True`, a cura tinha um sósia);
-2. **`coop.set {enabled:false}` recusa em VOZ ALTA**, mantendo `players` no
-   retorno — a CLI lê esse campo, e quebrar a forma quebraria quem só passava
-   por perto;
-3. **`coop.sync` é o dono novo do ciclo forçado** — e ele não liga, não desliga,
-   não persiste e não toma a posse do eixo `mode`;
-4. **`coop off` explica em vez de desligar**, e sai com código != 0: um `0`
-   silencioso seria a CLI mentindo para um script.
-
-O que este arquivo NÃO mede, de propósito: `CoopManager.disable()`. A suspensão
-por Steam Input não depende da flag e é caso legítimo — ela mora em
-`test_subsystem_coop.py`.
-"""
+"""COOP-SEM-INTERRUPTOR-01 (06/08/2026) — o co-op deixa de ser uma opção."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -90,11 +59,6 @@ def _daemon(coop: _CoopFalso, *, enabled: bool = True) -> Any:
     return d
 
 
-# ---------------------------------------------------------------------------
-# `coop.set` — a forma sobrevive, a opção não
-# ---------------------------------------------------------------------------
-
-
 class TestCoopSetRecusaDesligar:
     @pytest.mark.asyncio
     async def test_desligar_e_recusado_em_voz_alta(self) -> None:
@@ -106,16 +70,13 @@ class TestCoopSetRecusaDesligar:
         assert resultado["status"] == "recusado"
         assert resultado["enabled"] is True
         assert resultado["motivo"] == COOP_SEMPRE_LIGADO_MOTIVO
-        # E não é só a resposta: o estado não se mexeu.
         assert d.setters == [], "o daemon chegou a desligar o co-op"
         assert d.config.coop_enabled is True
         assert coop.disables == 0
 
     @pytest.mark.asyncio
     async def test_a_recusa_preserva_o_contrato_players(self) -> None:
-        """A CLI lê ``result["players"]``. Quebrar a forma quebraria quem só
-        passava por perto — e o roteiro pediu a forma preservada, ao pé da letra.
-        """
+        """A CLI lê ``result["players"]``. Quebrar a forma quebraria quem só"""
         resultado = await _Handlers(_daemon(_CoopFalso(players=4)))._handle_coop_set(
             {"enabled": False}
         )
@@ -139,20 +100,8 @@ class TestCoopSetRecusaDesligar:
             await _Handlers(_daemon(_CoopFalso()))._handle_coop_set({"enabled": "talvez"})
 
 
-# ---------------------------------------------------------------------------
-# `coop.sync` — o dono novo do gesto de recuperação (entrega 5)
-# ---------------------------------------------------------------------------
-
-
 class TestCoopSyncTemDono:
-    """O ciclo FORÇADO precisava de dono ANTES de o botão sair.
-
-    Sem isto, tirar "Preparar co-op" tiraria dela o único gesto capaz de trazer
-    de volta o jogador cujo grab foi recusado ou cujo vpad morreu sem que
-    /dev/input mudasse — o "P2 que dura dois segundos"
-    (COOP-QUE-NÃO-DESMONTA-01). O ciclo normal do poll loop não o alcança: ele
-    só reenumera quando o listdir muda.
-    """
+    """O ciclo FORÇADO precisava de dono ANTES de o botão sair."""
 
     @pytest.mark.asyncio
     async def test_roda_o_ciclo_cheio_e_devolve_os_jogadores(self) -> None:
@@ -165,13 +114,7 @@ class TestCoopSyncTemDono:
 
     @pytest.mark.asyncio
     async def test_nao_liga_nao_desliga_e_nao_persiste(self) -> None:
-        """Reconciliar não é um gesto de MODO.
-
-        `coop.set` toma a posse do eixo `mode` e grava preferência (é gesto
-        manual dela). Reconciliar não pode fazer nada disso — senão apertar
-        "Reconciliar jogadores" no meio da partida arrancaria o modo do perfil
-        ativo pelas costas dela.
-        """
+        """Reconciliar não é um gesto de MODO."""
         coop = _CoopFalso()
         d = _daemon(coop)
 
@@ -182,11 +125,7 @@ class TestCoopSyncTemDono:
 
     @pytest.mark.asyncio
     async def test_com_o_coop_suspenso_reconciliar_nao_ressuscita_nada(self) -> None:
-        """Dentro da exceção de Steam Input o gate está fechado (`active=False`).
-
-        O `sync` roda e apenas desmonta o que sobrou — reconciliar NUNCA
-        ressuscita o que o jogo suspendeu.
-        """
+        """Dentro da exceção de Steam Input o gate está fechado (`active=False`)."""
         coop = _CoopFalso(players=1, active=False)
 
         resultado = await _Handlers(_daemon(coop))._handle_coop_sync({})
@@ -198,11 +137,6 @@ class TestCoopSyncTemDono:
     async def test_sem_daemon_falha_com_mensagem(self) -> None:
         with pytest.raises(ValueError, match="daemon não disponível"):
             await _Handlers(None)._handle_coop_sync({})
-
-
-# ---------------------------------------------------------------------------
-# A CLI — `coop off` explica em vez de desligar
-# ---------------------------------------------------------------------------
 
 
 class TestCliCoopOff:
@@ -228,7 +162,6 @@ class TestCliCoopOff:
         )
         assert "não desliga mais" in resultado.stdout
         assert "cada controle conectado é um jogador" in resultado.stdout
-        # A saída REAL para quem queria um controle de reserva.
         assert "desconectado" in resultado.stdout
 
     def test_on_continua_falando_com_o_daemon(

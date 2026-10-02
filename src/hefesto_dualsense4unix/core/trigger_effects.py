@@ -1,27 +1,4 @@
-"""Factories dos 19 presets de trigger conforme DSX Paliverse.
-
-Cada factory produz um `TriggerEffect` (definido em `hefesto_dualsense4unix.core.controller`)
-com `mode` low-level (valores do enum `pydualsense.TriggerModes`) e 7 bytes
-de `forces` no formato HID. Ver `docs/protocol/trigger-modes.md` para a
-tabela canônica e a distinção entre HID e presets.
-
-Todas as factories validam `ranges`. As de modo LEGADO ou NÃO OFICIAL
-convertem amplitudes nomeadas (0-8) em bytes HID (0-255) multiplicando por
-`AMPLITUDE_SCALE`.
-
-**TRIGGER-CANON-01: os modos OFICIAIS não usam essa escala.** Eles recebem um
-bitmask de zonas ativas (u16) e forças de três bits com valor `força - 1`
-(u32) — ver `_feedback_oficial` e `_vibracao_oficial`. Sete presets desta
-árvore mandavam o modo errado, três deles o `0x05`, que é literalmente OFF, e
-ela mediu pelo tato: *"rígido e desligado sem diferença"*. Uso típico:
-
-    from hefesto_dualsense4unix.core.trigger_effects import galloping, machine
-    controller.set_trigger("right", galloping(0, 9, 7, 7, 10))
-    controller.set_trigger("left",  machine(0, 9, 3, 3, 50, 8))
-
-`TriggerMode` expõe os valores do enum do pydualsense sem exigir
-que o caller faça o import (mantém o backend trocável — ADR-001).
-"""
+"""Factories dos 19 presets de trigger conforme DSX Paliverse."""
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -32,75 +9,16 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-AMPLITUDE_SCALE = 32  # Normaliza 0-8 (DSX) -> 0-255 (HID byte)
+AMPLITUDE_SCALE = 32
 
-# BUG-TRIGGER-MULTIPOS-FORCA8-01 — O REGISTRO ORIGINAL, e a REFUTAÇÃO dele.
-#
-# O que foi registrado em 2026 como medido: *"no bloco multi-position o report
-# NÃO carrega um byte por posição — carrega um campo de TRÊS BITS por posição
-# (10 x 3 = 30 bits). Logo o máximo REAL por posição é 7, não 8. A escala
-# nomeada (DSX) vai a 8 e continua aceita, mas 8 SATURA em 7 com log
-# explícito; antes o `& 0x7` cru fazia 8 virar 0, isto é, força máxima virava
-# NENHUMA força — em silêncio."*
-#
-# ---- REFUTADO em 01/08/2026 (TRIGGER-CANON-01) ----
-#
-# **A observação estava certa e a conclusão errada.** O campo tem mesmo três
-# bits. Mas a codificação não é a força crua: é `(força - 1) & 0x07`, com
-# `força` em 1..8. Assim:
-#
-#   força 1 -> 0b000        força 8 -> 0b111
-#
-# **Os oito níveis SÃO expressáveis.** O que não cabe nos três bits é o ZERO —
-# e zero não é um nível de força: é ZONA INATIVA, e isso se diz no bitmask de
-# zonas ativas (bytes 1-2 do bloco), que esta árvore não escrevia.
-#
-# O sintoma que originou o bug (força máxima virando nenhuma força) era real;
-# a causa era a falta do `- 1` e do bitmask, não um limite do campo. A cura de
-# então — saturar 8 em 7 — não fazia mal, mas escondia a causa e custou um
-# nível de força.
-#
-# Fontes: enum `ScePadTriggerEffectMode` (header da Sony no Steamworks SDK),
-# gist do Nielk1 e wiki do Game Controller Collective, que concordam. Ver
-# `docs/protocol/dualsense-referencia-canonica.md` §4.
-#
-# A constante fica, e é ONDE ela ainda vale: o valor máximo que os três bits
-# guardam. O que caducou foi a leitura de que ela é o teto da FORÇA.
 MULTI_POSITION_MAX_STRENGTH = 7
 
 
-#: TRIGGER-CANON-01 — os modos que CORROMPEM o estado do gatilho.
-#:
-#: `0xFC`-`0xFE` são modos de depuração do firmware. Depois deles o gatilho
-#: fica num estado que só sai desligando o controle. O `CALIBRATION = 0xFC`
-#: era membro público desta enum e alcançável pelo preset `Custom` — que a
-#: própria docstring anuncia como "útil para experimentação".
-#:
-#: Fonte: gist do Nielk1 e a wiki do Game Controller Collective, que
-#: concordam. Ver `docs/protocol/dualsense-referencia-canonica.md` §4.
 MODOS_DE_DEPURACAO: frozenset[int] = frozenset({0xFC, 0xFD, 0xFE})
 
 
 class TriggerMode(IntEnum):
-    """Modos do bloco de gatilho, com os nomes da enum OFICIAL da Sony.
-
-    TRIGGER-CANON-01. Os nomes antigos (`RIGID_A/B/AB`, `PULSE_A/B/AB`) vieram
-    de uma engenharia reversa de 2020 e **não descrevem o que o firmware
-    faz** — `RIGID_B` vale `0x05`, que é literalmente OFF, e três presets desta
-    árvore o mandavam achando que endureciam o gatilho. Ela mediu pelo tato:
-    *"rígido e desligado sem diferença"*.
-
-    Os nomes canônicos vêm de `ScePadTriggerEffectMode`, o header da Sony que
-    a Valve redistribui verbatim no Steamworks SDK (>= 1.55), triangulado com
-    três engenharias reversas independentes que concordam entre si. O header é
-    marcado "SIE CONFIDENTIAL" e **não é copiado para cá** — só a semântica.
-    Ver `docs/protocol/dualsense-referencia-canonica.md` §1 e §4.
-
-    **Os nomes antigos ficam como ALIAS**, e isso não é indecisão: eles estão
-    em perfis no disco dela e no `docs/protocol/trigger-modes.md`. Num
-    `IntEnum` os dois nomes resolvem para o MESMO membro, então nada quebra e
-    o código novo lê o nome honesto.
-    """
+    """Modos do bloco de gatilho, com os nomes da enum OFICIAL da Sony."""
 
     # --- oficiais (a enum da Sony) -----------------------------------------
     OFF = 0x00
@@ -132,30 +50,7 @@ class TriggerMode(IntEnum):
 
 ZERO7 = (0, 0, 0, 0, 0, 0, 0)
 
-#: As dez posições que o gatilho distingue (0 = solto, 9 = fundo).
 _ZONAS_DO_GATILHO = 10
-
-
-# ---------------------------------------------------------------------------
-# TRIGGER-CANON-01 / E2 — o empacotamento que os modos OFICIAIS exigem
-# ---------------------------------------------------------------------------
-#
-# Os modos oficiais **não recebem posições cruas**. Recebem:
-#
-#   bytes 1-2  bitmask u16 LE das ZONAS ATIVAS (bit N = posição N, 0..9)
-#   bytes 3-6  as FORÇAS, 3 bits por zona, u32 LE, com valor `força - 1`
-#
-# E é isso que explica a medição dela. O `0x25` é o Weapon OFICIAL, e ele não
-# fez NADA nas mãos dela (*"resistência nada também"*) mesmo estando com o
-# número de modo certo: sem bitmask, o firmware vê **nenhuma zona ativa**.
-#
-# Por que os cinco presets de `0x26` funcionavam mesmo com o empacotamento
-# errado: os modos oficiais VALIDAM os parâmetros, os não oficiais e os
-# legados não. E os `forces[0]`/`forces[1]` que esta árvore escrevia caíam
-# exatamente em cima do bitmask — cada preset produzia um bitmask acidental
-# diferente, e o firmware respondia a cada um de um jeito. Foi por isso que
-# ela disse *"eles são bem diferentes viu"*, contra a previsão de que seriam
-# idênticos.
 
 
 def _bitmask_de_zonas(posicoes: Iterable[int]) -> int:
@@ -167,17 +62,7 @@ def _bitmask_de_zonas(posicoes: Iterable[int]) -> int:
 
 
 def _forcas_em_tres_bits(forcas_por_zona: dict[int, int]) -> int:
-    """As forças empacotadas em 3 bits por zona, com valor ``força - 1``.
-
-    `força` vai de 1 a 8 e ocupa 0..7 nos três bits. **A força 0 não é
-    representável aqui, e não precisa ser**: zona sem força é zona INATIVA, e
-    isso se expressa no bitmask.
-
-    É esta a codificação que refuta o `BUG-TRIGGER-MULTIPOS-FORCA8-01`, que
-    concluiu *"o campo tem 3 bits, logo o máximo é 7 e a força 8 satura"*. Os
-    oito níveis SÃO expressáveis — o que não cabe é o zero, e o zero não é um
-    nível de força.
-    """
+    """As forças empacotadas em 3 bits por zona, com valor ``força - 1``."""
     empacotado = 0
     for zona, forca in forcas_por_zona.items():
         if forca <= 0:
@@ -189,13 +74,7 @@ def _forcas_em_tres_bits(forcas_por_zona: dict[int, int]) -> int:
 def _forces_oficiais(
     zonas: int, forcas: int, *, extra9: int = 0
 ) -> tuple[int, int, int, int, int, int, int]:
-    """Monta os sete slots de `forces` no layout dos modos oficiais.
-
-    O mapeamento para o fio está em `backend_pydualsense`: `forces[0..5]` vão
-    para os bytes 1-6 do bloco e **`forces[6]` vai para o byte 9** — que é
-    onde mora a `frequency` do `Vibration` oficial. Nenhuma mudança de
-    protocolo foi necessária para esta sprint, só de empacotamento.
-    """
+    """Monta os sete slots de `forces` no layout dos modos oficiais."""
     return (
         zonas & 0xFF,
         (zonas >> 8) & 0xFF,
@@ -208,25 +87,14 @@ def _forces_oficiais(
 
 
 def _zonas_a_partir_de(inicio: int, forca: int) -> dict[int, int]:
-    """Da posição `inicio` até o fim do curso, todas com a mesma força.
-
-    É o que "rígido a partir daqui" e "resistência a partir daqui" significam
-    no firmware: um bloco contíguo de zonas ativas. Força 0 devolve dicionário
-    vazio — nenhuma zona ativa, que é o jeito honesto de dizer "sem efeito".
-    """
+    """Da posição `inicio` até o fim do curso, todas com a mesma força."""
     if forca <= 0:
         return {}
     return {zona: forca for zona in range(inicio, _ZONAS_DO_GATILHO)}
 
 
 def _forca_de_byte(valor: int) -> int:
-    """Converte a força de byte (0-255, o que a tela dela mostra) para 1-8.
-
-    A faixa 0-255 é CONTRATO: está nos perfis dela e nos limites dos controles
-    deslizantes da aba Gatilhos (`trigger_specs`). O firmware quer 1..8. A
-    conversão mora aqui, num lugar só, em vez de mudar a faixa do parâmetro e
-    invalidar os perfis salvos.
-    """
+    """Converte a força de byte (0-255, o que a tela dela mostra) para 1-8."""
     if valor <= 0:
         return 0
     return max(1, min(8, round(valor / 255 * 8)))
@@ -259,11 +127,7 @@ def _vibracao_oficial(
 def _rampa_de_zonas(
     start: int, end: int, forca_inicial: int, forca_final: int
 ) -> dict[int, int]:
-    """As forças de cada zona entre `start` e `end`, interpoladas linearmente.
-
-    Uma zona só (start == end) recebe a força inicial — sem isto a divisão por
-    `end - start` estouraria, e "rampa de um ponto só" é um ponto.
-    """
+    """As forças de cada zona entre `start` e `end`, interpoladas linearmente."""
     if end <= start:
         return {start: forca_inicial}
     passo = (forca_final - forca_inicial) / (end - start)
@@ -280,10 +144,7 @@ def _byte(value: int, *, name: str, lo: int = 0, hi: int = 255) -> int:
 
 
 def _amp(value: int, *, name: str) -> int:
-    """Converte amplitude nomeada (0-8) para byte HID com clamp em 255.
-
-    Fator 32 expande 0-7 para 0-224; 8 satura em 255 (byte máximo).
-    """
+    """Converte amplitude nomeada (0-8) para byte HID com clamp em 255."""
     _byte(value, name=name, lo=0, hi=8)
     return min(255, value * AMPLITUDE_SCALE)
 
@@ -292,28 +153,12 @@ def _pos(value: int, *, name: str) -> int:
     return _byte(value, name=name, lo=0, hi=9)
 
 
-# ---------------------------------------------------------------------------
-# Presets nomeados (19 itens conforme docs/protocol/trigger-modes.md)
-# ---------------------------------------------------------------------------
-
-
 def off() -> TriggerEffect:
     return TriggerEffect(mode=TriggerMode.OFF, forces=ZERO7)
 
 
 def rigid(position: int, force: int) -> TriggerEffect:
-    """Barreira rígida a partir de uma posição.
-
-    TRIGGER-CANON-01: mandava `RIGID_B`, que vale `0x05` — o OFF do bloco de
-    gatilho. Ela mediu: *"rígido e desligado sem diferença"*. Agora manda o
-    `FEEDBACK` oficial (0x21), com as zonas de `position` até o fim marcadas
-    no bitmask, que é o que "rígido a partir daqui" significa no firmware.
-
-    A `force` continua chegando como byte 0-255 (é o que a tela mostra e o
-    que os perfis dela guardam) e é convertida para a escala de 1 a 8 das
-    forças oficiais aqui dentro — o `name` e a faixa do parâmetro são
-    contrato, e não mudam.
-    """
+    """Barreira rígida a partir de uma posição."""
     return _feedback_oficial(
         _zonas_a_partir_de(
             _pos(position, name="position"),
@@ -323,12 +168,7 @@ def rigid(position: int, force: int) -> TriggerEffect:
 
 
 def simple_rigid(strength: int) -> TriggerEffect:
-    """Atalho: rígido em toda a extensão, com força em escala 0-8.
-
-    TRIGGER-CANON-01: mandava `RIGID_B` = `0x05` = OFF, como o `rigid`. Agora
-    é o `FEEDBACK` oficial com TODAS as dez zonas ativas — que é o que "rígido
-    simples" quer dizer: firmeza uniforme do começo ao fim do curso.
-    """
+    """Atalho: rígido em toda a extensão, com força em escala 0-8."""
     _byte(strength, name="strength", lo=0, hi=8)
     return _feedback_oficial(_zonas_a_partir_de(0, strength))
 
@@ -354,18 +194,7 @@ def pulse_b(start: int, end: int, force: int) -> TriggerEffect:
 
 
 def resistance(start: int, force: int) -> TriggerEffect:
-    """Resistência constante a partir de uma posição.
-
-    TRIGGER-CANON-01: mandava `RIGID_AB` = `0x25`, que é o **Weapon
-    oficial** — o número do modo estava até certo para um "arma", mas os
-    parâmetros não. Ela mediu: *"resistência nada também"*. É essa medição que
-    prova que o defeito do empacotamento é INDEPENDENTE do defeito do modo:
-    com o modo oficial certo e sem bitmask, o firmware vê zero zonas ativas e
-    não faz nada.
-
-    Semanticamente isto é feedback, não arma: resistência constante do ponto
-    `start` até o fim do curso.
-    """
+    """Resistência constante a partir de uma posição."""
     return _feedback_oficial(
         _zonas_a_partir_de(
             _pos(start, name="start"), _byte(force, name="force", lo=0, hi=8)
@@ -446,12 +275,7 @@ def machine(
 
 
 def feedback(position: int, strength: int) -> TriggerEffect:
-    """O `Feedback` OFICIAL da Sony: resistência a partir de uma posição.
-
-    TRIGGER-CANON-01: este é o preset cujo nome sempre foi o certo e cujo
-    modo sempre foi o errado — ele mandava `0x05` (OFF) e o modo que leva
-    exatamente este nome na enum da Sony é o `0x21`.
-    """
+    """O `Feedback` OFICIAL da Sony: resistência a partir de uma posição."""
     _byte(strength, name="strength", lo=0, hi=8)
     return _feedback_oficial(
         _zonas_a_partir_de(_pos(position, name="position"), strength)
@@ -484,14 +308,7 @@ def vibration(position: int, amplitude: int, frequency: int) -> TriggerEffect:
 def slope_feedback(
     start: int, end: int, start_strength: int, end_strength: int
 ) -> TriggerEffect:
-    """Firmeza que varia em RAMPA entre duas posições.
-
-    TRIGGER-CANON-01: mandava `RIGID_AB` = `0x25` com posições cruas, e não
-    fazia nada — mesma causa do `resistance`. A enum da Sony chama isto de
-    `SLOPE_FEEDBACK` e **ele não tem byte de modo próprio**: é o `Feedback`
-    (0x21) com o array de zonas preenchido em rampa. Foi essa descoberta que
-    fechou a conta dos sete modos da enum contra os bytes do fio.
-    """
+    """Firmeza que varia em RAMPA entre duas posições."""
     _check_start_end(start, end)
     _byte(start_strength, name="start_strength", lo=1, hi=8)
     _byte(end_strength, name="end_strength", lo=1, hi=8)
@@ -526,13 +343,7 @@ def multi_position_feedback(strengths: list[int]) -> TriggerEffect:
 
 
 def multi_position_vibration(frequency: int, strengths: list[int]) -> TriggerEffect:
-    """Amplitude por posição (array de 10) + frequência.
-
-    TRIGGER-CANON-01: mandava `PULSE_A` = `0x22`, que é o **Bow** — e com a
-    frequência no slot errado. Agora manda o `VIBRATION` oficial (0x26), com
-    as amplitudes no array de zonas e a frequência no byte 9 do bloco, que é
-    onde ela mora e onde `forces[6]` cai.
-    """
+    """Amplitude por posição (array de 10) + frequência."""
     if len(strengths) != 10:
         raise ValueError(
             f"multi_position_vibration: precisa 10 strengths, recebeu {len(strengths)}"
@@ -545,17 +356,7 @@ def multi_position_vibration(frequency: int, strengths: list[int]) -> TriggerEff
 
 
 def custom(mode: int, forces: tuple[int, ...]) -> TriggerEffect:
-    """Escape hatch: envia mode + forces cru. Útil para experimentação.
-
-    TRIGGER-CANON-01: recusa os modos de DEPURAÇÃO (`0xFC`-`0xFE`). Eles
-    corrompem o estado do gatilho, e só sair dele desligando o controle — e
-    este era o caminho por onde eles estavam alcançáveis, já que o
-    `CALIBRATION = 0xFC` era membro público da enum.
-
-    A recusa é um `ValueError`, e não um clamp: quem passou `0xFC` passou de
-    propósito, e trocar o valor em silêncio seria mentir sobre o que foi
-    enviado ao controle.
-    """
+    """Escape hatch: envia mode + forces cru. Útil para experimentação."""
     if mode in MODOS_DE_DEPURACAO:
         raise ValueError(
             f"modo 0x{mode:02X} é de depuração do firmware e corrompe o "
@@ -567,11 +368,6 @@ def custom(mode: int, forces: tuple[int, ...]) -> TriggerEffect:
         forces[0], forces[1], forces[2], forces[3], forces[4], forces[5], forces[6]
     )
     return TriggerEffect(mode=mode, forces=fixed)
-
-
-# ---------------------------------------------------------------------------
-# Helpers internos
-# ---------------------------------------------------------------------------
 
 
 def _check_start_end(start: int, end: int) -> None:
@@ -634,11 +430,6 @@ def _flatten_multi_position(nested: list[list[int]]) -> list[int]:
     )
 
 
-# ---------------------------------------------------------------------------
-# Registry de presets por nome (CLI e perfis JSON referenciam por string).
-# ---------------------------------------------------------------------------
-
-
 PRESET_FACTORIES = {
     "Off": off,
     "Rigid": rigid,
@@ -680,7 +471,7 @@ def _traduzir_params_nomeados(
     if name in ("MultiPositionFeedback", "MultiPositionVibration"):
         strengths = [int(params[f"pos_{i}"]) for i in range(10) if f"pos_{i}" in params]
         if len(strengths) != 10:
-            return dict(params)  # formato já é o da factory (`strengths=[...]`)
+            return dict(params)
         if name == "MultiPositionFeedback":
             return {"strengths": strengths}
         return {"frequency": int(params.get("frequency", 0)), "strengths": strengths}
@@ -712,15 +503,11 @@ def build_from_name(
     if factory is None:
         raise ValueError(f"preset desconhecido: {name}")
 
-    # Detecta formato aninhado e expande para a assinatura correta da factory.
     if (
         isinstance(params, list)
         and params
         and isinstance(params[0], list)
     ):
-        # mypy infere `params` como `list[list[int] | Any]` aqui; o
-        # isinstance(params[0], list) já garante runtime safe — atribuição
-        # via name-binding mantém o tipo concreto sem cast redundante.
         nested: list[list[int]] = params
         if name == "MultiPositionFeedback":
             strengths = _flatten_multi_position(nested)
@@ -736,17 +523,12 @@ def build_from_name(
     elif isinstance(params, dict):
         result = factory(**_traduzir_params_nomeados(name, params))
     elif name == "MultiPositionFeedback":
-        # BUG-TRIGGER-FLAT-MULTIPOS-01: lista posicional PLANA de 10 strengths.
-        # A factory tem assinatura factory(strengths: list) — não 10 posicionais —
-        # então NÃO pode cair em factory(*params). Empacota como uma lista única.
         flat = cast("list[int]", params)
         result = factory([int(x) for x in flat])
     elif name == "MultiPositionVibration" and params:
-        # flat posicional [frequency, s0..s9] -> factory(frequency, strengths)
         flat = cast("list[int]", params)
         result = factory(int(flat[0]), [int(x) for x in flat[1:]])
     elif name == "Custom" and params:
-        # flat posicional [mode, f0..f6] -> factory(mode, forces)
         flat = cast("list[int]", params)
         result = factory(int(flat[0]), tuple(int(x) for x in flat[1:]))
     else:

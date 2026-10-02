@@ -1,45 +1,10 @@
-"""A seção "A mesa" leva a declaração dela ao disco — e a relê ao voltar.
-
-O DEFEITO QUE ESTE PORTÃO EXISTE PARA IMPEDIR (22/08/2026). A aba Configurações
-nasceu com CONFIG-02 (a seção que lê o barramento) e CONFIG-03 (a camada
-`maquina.json`, mais o `machine.declare` do IPC) **no mesmo dia**. As duas
-frentes eram de agentes diferentes, e o `_ao_declarar` da seção ficou com o
-`TODO(CONFIG-03)` intacto: *"enquanto a camada de persistência de mesa não
-existe, o valor morre com a janela"*.
-
-A camada existia. A frase que dizia que não sobreviveu a ela.
-
-É a classe de defeito mais cara desta casa — a cura escrita e nunca ligada
-(`A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01`) — acontecendo dentro da leva que a
-documentou. O sintoma para quem usa: escolher "Acima" na altura da antena,
-fechar a janela, reabrir, e a escolha não está lá. Nada avisa, e o exame da
-mesa continua sem ter como explicar um alcance ruim.
-
-O QUE O PORTÃO COBRA, e por que cada coisa:
-
-1. **O gesto acumula em `_maquina_pendente`**, não grava sozinho. `D-A4`: quem
-   grava é o "Aplicar" do rodapé. Dois donos do gesto de gravar é a classe de
-   defeito que a `ABAS-01` curou.
-2. **`"nao_sei"` vira `None`.** O esquema é `Literal["acima", "abaixo"] | None`
-   com `extra="forbid"`: a string `"nao_sei"` faria o pydantic recusar o
-   DOCUMENTO INTEIRO, e o sintoma na tela seria "não consegui gravar" — nunca
-   "valor inválido".
-3. **A fusão é parcial.** As cinco seções escrevem no MESMO rascunho pelo mesmo
-   gesto. Substituir em vez de fundir faria a última a clicar apagar as outras
-   quatro.
-4. **Montar não suja o rascunho.** `set_active_id` emite `changed`; com o sinal
-   já ligado, abrir a aba marcaria o rascunho como pendente sem ninguém ter
-   clicado em nada, e o rodapé teria o que "Aplicar" do nada.
-5. **O `tipo` de cada rádio tem tela.** `RadioDeclarado.tipo` nasceu em
-   CONFIG-03 e ficou sem widget nenhum — a outra metade do mesmo defeito.
-"""
+"""A seção "A mesa" leva a declaração dela ao disco — e a relê ao voltar."""
 from __future__ import annotations
 
 from typing import Any
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("declaração da mesa")
 
 import pytest
@@ -119,16 +84,8 @@ def _seletores(raiz: Any) -> list[Any]:
     return achados
 
 
-# --- 1. O gesto acumula, e não grava ---------------------------------------
-
-
 def test_declarar_a_altura_acumula_no_rascunho_da_maquina() -> None:
-    """Escolher "Acima" põe o valor em `_maquina_pendente`, sob `mesa`.
-
-    Mordida: devolver o `_ao_declarar` ao corpo antigo
-    (`self.declarado[chave] = seletor.get_active_id()`, e nada mais) — o
-    rascunho fica `None` e este teste reprova.
-    """
+    """Escolher "Acima" põe o valor em `_maquina_pendente`, sob `mesa`."""
     host = _Hospedeiro()
     _montar(host)
 
@@ -142,26 +99,18 @@ def test_declarar_a_altura_acumula_no_rascunho_da_maquina() -> None:
 
 
 def test_nao_sei_vira_ausencia_de_opiniao_e_nao_a_palavra() -> None:
-    """`"nao_sei"` grava `None`, que é o que o esquema aceita.
-
-    Mordida: passar o id cru adiante — o `MaquinaConfig` abaixo levanta, porque
-    `Literal["acima", "abaixo"] | None` não conhece a palavra.
-    """
+    """`"nao_sei"` grava `None`, que é o que o esquema aceita."""
     host = _Hospedeiro()
     _montar(host)
 
     host._painel_da_mesa._ao_declarar(_SeletorFalso("nao_sei"), "linha_de_visada")
 
     assert host._maquina_pendente == {"mesa": {"linha_de_visada": None}}
-    # A régua independente: o esquema de verdade tem de aceitar o que saiu daqui.
     MaquinaConfig.model_validate(host._maquina_pendente)
 
 
 def test_a_segunda_escolha_nao_apaga_a_primeira() -> None:
-    """Fusão parcial: as cinco seções escrevem no MESMO rascunho.
-
-    Mordida: trocar `fundir_declaracao` por atribuição direta em `_acumular`.
-    """
+    """Fusão parcial: as cinco seções escrevem no MESMO rascunho."""
     host = _Hospedeiro()
     _montar(host)
     painel = host._painel_da_mesa
@@ -175,11 +124,7 @@ def test_a_segunda_escolha_nao_apaga_a_primeira() -> None:
 
 
 def test_declarar_nao_manda_ipc_nem_grava_em_disco() -> None:
-    """Quem grava é o rodapé. A seção só marca o rascunho.
-
-    Mordida: chamar `machine.declare` (ou `gravar_maquina`) de dentro do gesto —
-    o dublê abaixo registra a chamada e este teste reprova.
-    """
+    """Quem grava é o rodapé. A seção só marca o rascunho."""
     gravou: list[Any] = []
     host = _Hospedeiro()
     _montar(host)
@@ -197,15 +142,8 @@ def test_declarar_nao_manda_ipc_nem_grava_em_disco() -> None:
     )
 
 
-# --- 2. Montar relê, e não suja -------------------------------------------
-
-
 def test_montar_repoe_a_escolha_que_estava_gravada() -> None:
-    """Abrir a aba mostra o que ela já tinha escolhido.
-
-    Mordida: apagar o bloco de pré-seleção de `_linha_declarada` — o seletor
-    volta sem nada marcado e este teste reprova.
-    """
+    """Abrir a aba mostra o que ela já tinha escolhido."""
     host = _Hospedeiro()
     original = secao_mesa.carregar_maquina
     secao_mesa.carregar_maquina = lambda: MaquinaConfig.model_validate(  # type: ignore[assignment]
@@ -223,13 +161,7 @@ def test_montar_repoe_a_escolha_que_estava_gravada() -> None:
 
 
 def test_montar_nao_marca_o_rascunho_como_pendente() -> None:
-    """Abrir a aba não pode dar ao rodapé o que "Aplicar".
-
-    `set_active_id` emite `changed`. Se a pré-seleção viesse DEPOIS do
-    `connect`, o simples ato de desenhar a tela escreveria no rascunho.
-
-    Mordida: mover o `connect` para antes do bloco de pré-seleção.
-    """
+    """Abrir a aba não pode dar ao rodapé o que "Aplicar"."""
     host = _Hospedeiro()
     original = secao_mesa.carregar_maquina
     secao_mesa.carregar_maquina = lambda: MaquinaConfig.model_validate(  # type: ignore[assignment]
@@ -246,29 +178,11 @@ def test_montar_nao_marca_o_rascunho_como_pendente() -> None:
     )
 
 
-# --- 3. O tipo de cada rádio tem tela --------------------------------------
-
-
 def test_cada_radio_vizinho_ganha_o_seletor_de_tipo() -> None:
-    """A coluna "O que é" existe, com os sete botões do desenho.
-
-    `RadioDeclarado.tipo` nasceu em CONFIG-03 e ficou sem widget nenhum.
-
-    A CONDIÇÃO MUDOU EM 22/08/2026, e sem ela este teste vira decoração: o
-    seletor não nasce mais em toda linha — nasce onde ninguém respondeu. Aqui o
-    censo é VAZIO por construção (`_montar`), que é exatamente esse caso. A
-    linha que o kernel já classificou é assunto do portão irmão,
-    `test_a_coluna_do_que_e_nasce_lida.py`.
-
-    Mordida: não anexar o `_seletor_do_tipo` na grade dos rádios.
-    """
+    """A coluna "O que é" existe, com os sete botões do desenho."""
     host = _Hospedeiro()
     caixa = _montar(host)
 
-    # A régua é a CONTAGEM, contra uma fonte independente do widget: a seção
-    # tem dois seletores de declaração (altura e visada) mais um por rádio
-    # vizinho. Bastasse "existe algum seletor", o teste passaria com a coluna
-    # inteira ausente — e passava, medido em 22/08 antes desta linha.
     esperados = 2 + len(_mesa_de_bancada().radios)
     achados = _seletores(caixa)
     assert len(achados) == esperados, (
@@ -276,8 +190,6 @@ def test_cada_radio_vizinho_ganha_o_seletor_de_tipo() -> None:
         "declaração mais um 'O que é' por rádio vizinho"
     )
 
-    # Os sete ids do módulo são exatamente os `Literal` do esquema mais o
-    # "não sei" — régua independente, contra o esquema e não contra a tela.
     do_esquema = {
         "wifi",
         "teclado",
@@ -295,13 +207,7 @@ def test_cada_radio_vizinho_ganha_o_seletor_de_tipo() -> None:
 
 
 def test_declarar_o_tipo_de_um_radio_acumula_por_vid_pid() -> None:
-    """A chave é `vid:pid`, e não o nó do sysfs.
-
-    O nó muda quando o aparelho troca de porta; a resposta "isto é um teclado"
-    não muda com a porta. O esquema valida a chave por regex.
-
-    Mordida: usar `radio.no` como chave — o `MaquinaConfig` abaixo levanta.
-    """
+    """A chave é `vid:pid`, e não o nó do sysfs."""
     host = _Hospedeiro()
     _montar(host)
 
@@ -314,10 +220,7 @@ def test_declarar_o_tipo_de_um_radio_acumula_por_vid_pid() -> None:
 
 
 def test_montar_repoe_o_tipo_gravado_de_cada_radio() -> None:
-    """O tipo declarado sobrevive a fechar a janela.
-
-    Mordida: apagar o bloco de pré-seleção de `_seletor_do_tipo`.
-    """
+    """O tipo declarado sobrevive a fechar a janela."""
     host = _Hospedeiro()
     original = secao_mesa.carregar_maquina
     secao_mesa.carregar_maquina = lambda: MaquinaConfig.model_validate(  # type: ignore[assignment]
@@ -331,18 +234,8 @@ def test_montar_repoe_o_tipo_gravado_de_cada_radio() -> None:
     assert host._painel_da_mesa.radios_declarados.get("046d:c52b") == "teclado"
 
 
-# --- 4. Nenhum TODO sobrevive à camada que ele esperava ---------------------
-
-
 def test_a_secao_nao_diz_mais_que_a_camada_de_persistencia_nao_existe() -> None:
-    """O comentário caduco é o defeito, não o enfeite dele.
-
-    A frase *"enquanto a camada de persistência de mesa não existe"* ficou no
-    código depois de a camada nascer, no mesmo dia. Quem lesse o módulo
-    concluiria que o buraco era conhecido e aceito — foi o que aconteceu.
-
-    Mordida: escrever `TODO(CONFIG-03)` de volta em `secao_mesa.py`.
-    """
+    """O comentário caduco é o defeito, não o enfeite dele."""
     from pathlib import Path
 
     fonte = Path(secao_mesa.__file__).read_text(encoding="utf-8")

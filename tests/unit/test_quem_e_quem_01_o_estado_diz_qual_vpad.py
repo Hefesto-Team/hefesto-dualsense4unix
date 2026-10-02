@@ -36,11 +36,6 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import player_mac
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 
-#: Os quatro da mesa dela, na faixa FORJADA da casa (`check_anonymity.sh`) e
-#: no formato REAL do payload: `norm_mac`, 12 dígitos hex sem separador — o
-#: MESMO de `controllers[].uniq`. Escrevê-los com dois-pontos aqui esconderia
-#: o fato que sustenta esta cura: é por a chave do `coop` sair no formato
-#: idêntico ao do `controllers` que a GUI consegue casar card↔vpad.
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
@@ -48,8 +43,7 @@ P4 = "aabbcc000004"
 
 
 class _VpadDublado:
-    """Só o que a tabela lê de um vpad: backend, `mac` forjado, nome e o
-    `player` de ALOCAÇÃO — o inteiro que o produto congela dentro dos dois."""
+    """Só o que a tabela lê de um vpad: backend, `mac` forjado, nome e o"""
 
     def __init__(self, jogador: int, backend: str = "uhid") -> None:
         self.backend = backend
@@ -88,18 +82,9 @@ def _mesa_de_quatro() -> CoopManager:
     return mgr
 
 
-# ---------------------------------------------------------------------------
-# O manager responde a pergunta que só o botão respondia
-# ---------------------------------------------------------------------------
-
-
 class TestOManagerSabeDizerQuemAlimentaQuem:
     def test_cada_jogador_traz_o_mac_do_fisico_e_o_endereco_do_vpad(self) -> None:
-        """A MORDIDA central: o par físico↔vpad, sem apertar botão nenhum.
-
-        Arrancada a cura (`mesa` de volta a um número), não há de
-        onde tirar estas quatro linhas — que é exatamente o estado de 15/08.
-        """
+        """A MORDIDA central: o par físico↔vpad, sem apertar botão nenhum."""
         itens = _mesa_de_quatro().mesa()
 
         assert isinstance(itens, list), "número não responde 'quem'; lista responde"
@@ -113,11 +98,7 @@ class TestOManagerSabeDizerQuemAlimentaQuem:
         }, "cada físico ligado ao SEU vpad — a ligação que não era observável"
 
     def test_o_primario_sai_marcado_e_vem_do_vpad_do_daemon(self) -> None:
-        """O P1 não é secundário do co-op: o vpad dele é o `_gamepad_device`.
-
-        Sem esta linha, a tabela responderia só por P2+ — e a pergunta dela é
-        sobre a mesa inteira.
-        """
+        """O P1 não é secundário do co-op: o vpad dele é o `_gamepad_device`."""
         itens = _mesa_de_quatro().mesa()
 
         primarios = [item for item in itens if item["is_primary"]]
@@ -127,12 +108,7 @@ class TestOManagerSabeDizerQuemAlimentaQuem:
         assert primarios[0]["vpad_nome"].endswith("(Hefesto P1)")
 
     def test_jogador_sem_vpad_aparece_declarando_que_aguarda_o_grab(self) -> None:
-        """O físico já está na mesa e o vpad ainda não nasceu — e isso é FATO.
-
-        Omitir a linha esconderia justamente o desequilíbrio (mais um físico,
-        nenhum vpad novo) que o BUG-COOP-GRAB-PENDING-VPAD-01 existe para
-        tornar visível.
-        """
+        """O físico já está na mesa e o vpad ainda não nasceu — e isso é FATO."""
         mgr = CoopManager(_daemon_dublado(_VpadDublado(1)))  # type: ignore[arg-type]
         mgr._players[P2] = _jogador(P2, 2, vpad=None)
 
@@ -142,9 +118,7 @@ class TestOManagerSabeDizerQuemAlimentaQuem:
         assert item["vpad_uniq"] is None
 
     def test_o_numero_do_jogador_vem_da_fonte_unica_da_mesa(self) -> None:
-        """MESA-CHEIA-12: o inteiro sai de `numeros_de_jogador`, não do
-        `player_index` cru — senão o card mostraria a telemetria do vpad de
-        OUTRO controle. Aqui a fila de chegada inverte P2 e P4."""
+        """MESA-CHEIA-12: o inteiro sai de `numeros_de_jogador`, não do"""
         mgr = _mesa_de_quatro()
         fila = {P1: 1, P2: 4, P3: 3, P4: 2}
         mgr._daemon.identity_registry = SimpleNamespace(  # type: ignore[attr-defined]
@@ -164,8 +138,7 @@ class TestOManagerSabeDizerQuemAlimentaQuem:
         assert item["vpad_uniq"] is None
 
     def test_identidade_sem_mac_nao_vira_pseudo_endereco(self) -> None:
-        """Fallback por path (`path:/dev/input/eventN`) não é MAC: `uniq` sai
-        None em vez de publicar um identificador que não casa com nada."""
+        """Fallback por path (`path:/dev/input/eventN`) não é MAC: `uniq` sai"""
         mgr = CoopManager(_daemon_dublado(_VpadDublado(1)))  # type: ignore[arg-type]
         chave = "path:/dev/input/event30"
         mgr._players[chave] = _jogador(chave, 2, vpad=_VpadDublado(2))
@@ -205,17 +178,10 @@ class TestOManagerSabeDizerQuemAlimentaQuem:
         )
 
     def test_o_fisico_calado_pelo_grab_nao_vira_controle_ausente(self) -> None:
-        """MORDIDA 3 da sprint — a de MÉTODO.
-
-        Com o co-op ativo o daemon faz EVIOCGRAB nos nós FÍSICOS: um leitor
-        externo mede ZERO evento neles e um instrumento ingênuo conclui "o
-        aparelho está calado". A mesa publicada tem de continuar afirmando o
-        controle presente e com vpad vivo — é o que grava no código a
-        armadilha que custou o passo manual de 15/08.
-        """
+        """MORDIDA 3 da sprint — a de MÉTODO."""
         mgr = _mesa_de_quatro()
         for jogador in mgr._players.values():
-            jogador.reader.grab_state = "held"  # o físico está mudo AGORA
+            jogador.reader.grab_state = "held"
 
         for item in mgr.mesa():
             assert item["aguardando_grab"] is False
@@ -229,11 +195,6 @@ class TestOManagerSabeDizerQuemAlimentaQuem:
         mgr._players[P2] = _jogador(P2, 2, vpad=object())
 
         json.dumps(mgr.mesa())
-
-
-# ---------------------------------------------------------------------------
-# O fato chega ao estado publicado
-# ---------------------------------------------------------------------------
 
 
 class _Handlers(IpcHandlersMixin):
@@ -273,12 +234,7 @@ class TestOStateFullPublicaATabela:
     async def test_coop_traz_a_lista_ao_lado_do_numero(
         self, config_em_tmp: Path
     ) -> None:
-        """A MORDIDA do contrato publicado: sem `coop.mesa` a GUI, a CLI e
-        quem depurar continuam com um NÚMERO e nenhuma resposta.
-
-        `players` fica ao lado de propósito — ele é lido pela CLI e pelo applet
-        desde a FEAT-DSX-COOP-LOCAL-01, e a chave nova não substitui a velha.
-        """
+        """A MORDIDA do contrato publicado: sem `coop.mesa` a GUI, a CLI e"""
         daemon = _daemon_real_com_a_mesa()
         h = _Handlers(daemon, daemon.store, daemon.controller)
 
@@ -300,8 +256,7 @@ class TestOStateFullPublicaATabela:
     async def test_a_chave_existe_mesmo_com_a_mesa_vazia(
         self, config_em_tmp: Path
     ) -> None:
-        """Shape estável: lista vazia, nunca chave ausente — assim a GUI não
-        precisa distinguir "daemon antigo" de "ninguém na mesa"."""
+        """Shape estável: lista vazia, nunca chave ausente — assim a GUI não"""
         daemon = Daemon(controller=FakeController(transport="usb"))
         h = _Handlers(daemon, daemon.store, daemon.controller)
 
@@ -329,14 +284,7 @@ class TestOStateFullPublicaATabela:
     async def test_per_vpad_passa_a_carregar_a_identidade_do_no(
         self, config_em_tmp: Path
     ) -> None:
-        """E2 da sprint: até aqui o `per_vpad` tinha o inteiro `player` e mais
-        nada que dissesse EM QUE DISPOSITIVO do kernel olhar — o objeto sabia
-        `uniq` e nome desde sempre e não os publicava.
-
-        Arrancar = voltar a publicar só `player`/`backend`. Aí a única ponte
-        entre esta lista e `controllers[]` volta a ser um inteiro, e quem
-        estiver fora da janela refaz o passo manual de 15/08.
-        """
+        """E2 da sprint: até aqui o `per_vpad` tinha o inteiro `player` e mais"""
         daemon = _daemon_real_com_a_mesa()
         h = _Handlers(daemon, daemon.store, daemon.controller)
 
@@ -350,11 +298,6 @@ class TestOStateFullPublicaATabela:
             assert bloco["vpad_nome"].endswith(f"(Hefesto P{numero})")
             assert bloco["vpad_indice"] == numero
         json.dumps(cheio["rumble_ff"])
-
-
-# ---------------------------------------------------------------------------
-# E chega na tela (regra dela, 09/08): a dica do título do card
-# ---------------------------------------------------------------------------
 
 
 class TestADicaDoCardDizQualVpad:
@@ -379,8 +322,7 @@ class TestADicaDoCardDizQualVpad:
         }
 
     def test_o_card_do_controle_diz_qual_vpad_ele_alimenta(self) -> None:
-        """A MORDIDA da tela: sem a dica, o card diz "Controle 2 — USB ·
-        Jogador 2" e não há como conferir QUAL vpad é esse."""
+        """A MORDIDA da tela: sem a dica, o card diz "Controle 2 — USB ·"""
         from hefesto_dualsense4unix.app.widgets.controller_card import dica_do_titulo
 
         dica = dica_do_titulo({"uniq": P2, "index": 1}, self._estado())
@@ -390,8 +332,7 @@ class TestADicaDoCardDizQualVpad:
         assert player_mac(2) in dica, "é o endereço que casa com o /sys e o ensaio"
 
     def test_controle_fora_da_mesa_de_jogadores_nao_ganha_dica(self) -> None:
-        """Cura exagerada reprova: quem não alimenta vpad nenhum não recebe
-        par inventado — a dica some."""
+        """Cura exagerada reprova: quem não alimenta vpad nenhum não recebe"""
         from hefesto_dualsense4unix.app.widgets.controller_card import dica_do_titulo
 
         assert dica_do_titulo({"uniq": P4, "index": 3}, self._estado()) is None
@@ -417,9 +358,7 @@ class TestADicaDoCardDizQualVpad:
         assert dica_do_titulo({"uniq": P2}, estado) == DICA_TITULO_SEM_VPAD
 
     def test_a_divergencia_de_nome_aparece_na_dica(self) -> None:
-        """E3 na tela: quem for conferir card↔dispositivo procura pelo NOME, e
-        desde a MESA-CHEIA-12 o nome pode não trazer o número da fila. Sem esta
-        frase ela procura "Hefesto P2" e acha "Hefesto P4" sem saber por quê."""
+        """E3 na tela: quem for conferir card↔dispositivo procura pelo NOME, e"""
         from hefesto_dualsense4unix.app.widgets.controller_card import dica_do_titulo
 
         estado = self._estado()

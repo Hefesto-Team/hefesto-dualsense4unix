@@ -40,7 +40,6 @@ exigir_gi_real("importa `interface.mesa_viva`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import mesa_viva
 
-#: Os quatro da mesa dela, na ordem em que ela os liga.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
@@ -70,11 +69,7 @@ class TestOCartaoNaoSeContradiz:
     """O endereço do cartão e o número dentro dele dizem a mesma coisa."""
 
     def test_o_instante_medido_de_20_09(self) -> None:
-        """O P3 saiu e o daemon ainda não renomeou o roxo.
-
-        É a leitura de ``23:56:17.998``: três na mesa, e o roxo ainda é o
-        jogador 4. O cartão dele fica no LUGAR 4 — que é o que ele diz ser.
-        """
+        """O P3 saiu e o daemon ainda não renomeou o roxo."""
         cartoes = _cartoes((P1, 1), (P2, 2), (P4, 4))
         assert cartoes[P4] == ("p4", 4), (
             "o cartão do roxo mudou de lugar antes de mudar de nome — é a "
@@ -88,12 +83,7 @@ class TestOCartaoNaoSeContradiz:
         assert cartoes[P4] == ("p3", 3)
 
     def test_nenhuma_leitura_tem_texto_de_um_jogador_em_lugar_de_outro(self) -> None:
-        """A régua da sprint, dita como ela pede: em NENHUMA leitura.
-
-        Varre as duas leituras do vão medido e mais a mesa cheia. É a forma
-        forte porque o defeito era intermitente por desenho — ele só existia
-        entre dois batimentos.
-        """
+        """A régua da sprint, dita como ela pede: em NENHUMA leitura."""
         for mesa in (
             ((P1, 1), (P2, 2), (P3, 3), (P4, 4)),
             ((P1, 1), (P2, 2), (P4, 4)),
@@ -151,14 +141,10 @@ class TestAMordida:
     """Arranque a cura e veja a contradição voltar."""
 
     def test_o_caminho_pre_cura_poe_o_player_4_no_cartao_tres(self) -> None:
-        """A cura arrancada = `pref` pela posição na lista.
-
-        É EXATAMENTE o código anterior a esta sprint, e com ele o cartão `p3`
-        diz «Player 4» — a leitura de ``23:56:17.998``.
-        """
+        """A cura arrancada = `pref` pela posição na lista."""
         mesa = ((P1, 1), (P2, 2), (P4, 4))
         cartoes = _cartoes(*mesa)
-        assert cartoes[P4][0] == "p4"  # com a cura
+        assert cartoes[P4][0] == "p4"
 
         por_posicao = [f"p{i}" for i in range(1, len(mesa) + 1)]
         assert por_posicao[-1] == "p3" and cartoes[P4][1] == 4, (

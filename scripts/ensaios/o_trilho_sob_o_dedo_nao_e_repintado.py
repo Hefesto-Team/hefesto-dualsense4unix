@@ -1,47 +1,5 @@
 #!/usr/bin/env python3
-"""O trilho que ela está arrastando não é repintado por baixo do dedo.
-
-A QUEIXA É DELA, 09/09/2026, com o produto aberto: *"o slicer do brilho tá
-super estranho"*, *"oscila, aplica e não aplica"*.
-
-O DEFEITO, e ele é do MOTOR, não da aba
-----------------------------------------
-O trilho do brilho carrega ``data-campo="brilho-pct"`` com alvo ``valor``, e o
-tique do piloto repinta ``el.value`` dez vezes por segundo com o número que
-está NO DISCO. O gesto só grava no ``change`` — ou seja, no SOLTAR. Entre o
-primeiro milímetro do arraste e o soltar, cada tique devolve o polegar para
-onde ele estava:
-
-    ela arrasta para 60   →   tique (100 ms)   →   el.value = 82   (o do disco)
-    ela arrasta para 61   →   tique            →   el.value = 82
-    ela solta em 63       →   `change`         →   grava 63
-
-«Oscila, aplica e não aplica» descreve isso com precisão: aplica no soltar, e
-não aplica no caminho.
-
-A CURA é a guarda ``sob_o_dedo`` no BOOTSTRAP (``hefesto_vivo.py``), nos dois
-alvos que escrevem em controle de formulário — ``valor`` e ``marcado``.
-
-O QUE ESTE INSTRUMENTO MEDE, e ele traz a própria mordida
-----------------------------------------------------------
-Dois casos no mesmo trilho, sem tocar no fonte:
-
-    SEM FOCO   escreve-se um valor diferente e ninguém segura o campo.
-               O pintor DEVE sobrescrever. Se ele não sobrescrever, a régua
-               está medindo um campo morto e o outro caso não valeria nada.
-    COM FOCO   o mesmo valor, com o campo focado (é o que o arraste faz).
-               O pintor NÃO pode sobrescrever.
-    SOLTANDO   tira-se o foco e espera-se: o valor do disco volta, o que prova
-               que a guarda ADIA e não MATA a pintura.
-
-Os três têm de casar. Um sozinho não decide nada.
-
-Porta: nenhuma — o daemon é de mentira (`_Gravador`), e o disco dela não é
-tocado. Escreve no aparelho? NÃO.
-
-USO
-    o_trilho_sob_o_dedo_nao_e_repintado.py
-"""
+"""O trilho que ela está arrastando não é repintado por baixo do dedo."""
 
 from __future__ import annotations
 
@@ -71,7 +29,6 @@ from hefesto_dualsense4unix.interface.pacotes import ponte
 
 ABA = "04-iluminacao.html"  # (noqa-acento) nome de arquivo
 
-#: Um valor que o disco não vai ter, para a leitura não confundir os dois.
 MEU_VALOR = "37"
 
 BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
@@ -142,8 +99,6 @@ def main() -> int:
 
         return passo
 
-    # A ORDEM É O ENSAIO. Entre um passo e o seguinte cabem vários tiques — é
-    # justamente disso que se trata.
     GLib.timeout_add(400, lambda: piloto._ir(ABA))
     GLib.timeout_add(3000, perguntar(SEM_FOCO, "sem-foco"))
     GLib.timeout_add(5000, perguntar(LER, "sem-foco-depois"))

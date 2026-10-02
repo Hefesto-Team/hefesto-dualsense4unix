@@ -31,20 +31,13 @@ from hefesto_dualsense4unix.broker.hidraw_broker import (
     validate_physical_node,
 )
 
-#: HID_IDs REAIS coletados na máquina de referência (2026-07-18/20, read-only).
 HID_ID_USB = "HID_ID=0003:0000054C:00000CE6"
 HID_ID_BT = "HID_ID=0005:0000054C:00000CE6"
 HID_ID_VPAD = "HID_ID=0003:0000054C:00000DF2"
-#: O Edge FÍSICO tem o mesmo HID_ID do vpad pelo cabo — o que o separa é o pai
-#: USB real; pelo rádio é bus 0005 (STEAM-NO-FISICO-01).
 HID_ID_EDGE_USB = HID_ID_VPAD
 HID_ID_EDGE_BT = "HID_ID=0005:0000054C:00000DF2"
 HID_ID_NINTENDO = "HID_ID=0003:0000057E:00002009"
 
-#: Papel espelhado da evidência viva 2026-07-20 (uhid do BlueZ 5.85):
-#: HID_PHYS = MAC do ADAPTADOR, HID_UNIQ = MAC do CONTROLE. Valores SINTÉTICOS
-#: das faixas permitidas pela regra de anonimato (aa:bb:cc / e8:47:3a) — MAC
-#: real em fixture é vazamento (test_anonimato_de_fixtures).
 MAC_ADAPTADOR = "aa:bb:cc:00:00:01"
 MAC_CONTROLE = "e8:47:3a:00:00:07"
 
@@ -90,14 +83,7 @@ def _make_tree(
     adapters: list[str] | None = None,
     sem_uevent: bool = False,
 ) -> tuple[str, _TreeKwargs]:
-    """Monta dev/ + sys/class/hidraw/<base>/ fake; devolve (node, kwargs).
-
-    `parent`: "real" (dir comum — USB/BT clássico), "uhid" (symlink para
-    /devices/virtual/misc/uhid/ — BlueZ ≥5.73 E uhid forjado) ou "virtual"
-    (symlink para /devices/virtual/input/ — uinput puro).
-    `adapters`: MACs em sys/class/bluetooth/hciN/address; None = diretório
-    AUSENTE (sysfs BT ilegível); lista com "" = hci sem address legível.
-    """
+    """Monta dev/ + sys/class/hidraw/<base>/ fake; devolve (node, kwargs)."""
     dev_root = tmp_path / "dev"
     dev_root.mkdir(exist_ok=True)
     node = dev_root / base
@@ -170,13 +156,10 @@ class TestValidateAceita:
         assert _valida(node, kwargs) == "hidraw3"
 
     def test_dualsense_bt_classico(self, tmp_path: Path) -> None:
-        # BT via hid nativo do kernel (BlueZ <5.73): pai HID fora do virtual.
         node, kwargs = _make_tree(tmp_path, base="hidraw7", hid_id=HID_ID_BT)
         assert _valida(node, kwargs) == "hidraw7"
 
     def test_bt_real_bluez585_sob_uhid(self, tmp_path: Path) -> None:
-        # A ARMADILHA BLUEZ-UHID-01: físico REAL apesar de "virtual" no
-        # caminho. A regra parkada rejeitaria — este teste trava a cura.
         node, kwargs = _make_tree(
             tmp_path,
             base="hidraw7",
@@ -187,31 +170,23 @@ class TestValidateAceita:
         assert _valida(node, kwargs) == "hidraw7"
 
     def test_bt_uhid_sem_sysfs_bluetooth(self, tmp_path: Path) -> None:
-        # D4 é belt best-effort: sem /sys/class/bluetooth legível (rfkill,
-        # adaptador down), NÃO decide — D1-D3 bastam para aceitar.
         node, kwargs = _make_tree(
             tmp_path, base="hidraw7", parent="uhid", uevent=_uevent_bt_uhid(), adapters=None
         )
         assert _valida(node, kwargs) == "hidraw7"
 
     def test_bt_uhid_hci_sem_address_legivel(self, tmp_path: Path) -> None:
-        # Visto ao vivo nesta máquina: hci0 sem `address` legível ⇒ conjunto
-        # vazio ⇒ D4 não decide ⇒ aceita pelas D1-D3.
         node, kwargs = _make_tree(
             tmp_path, base="hidraw7", parent="uhid", uevent=_uevent_bt_uhid(), adapters=[""]
         )
         assert _valida(node, kwargs) == "hidraw7"
 
     def test_uevent_real_completo(self, tmp_path: Path) -> None:
-        # O uevent inteiro como o kernel emite (com MODALIAS etc.).
         uevent = (
             "DRIVER=playstation\n"
             f"{HID_ID_USB}\n"
             "HID_NAME=Sony Interactive Entertainment DualSense Wireless Controller\n"
             "HID_PHYS=usb-0000:2d:00.3-4/input3\n"
-            # Máscara da casa (OUI:00:00:NN): preserva o fabricante e apaga o
-            # aparelho. É a convenção que o test_docs_mac_anonimato impõe e que
-            # o scripts/check_test_data.sh confere.
             "HID_UNIQ=e8:47:3a:00:00:01\n"
             "MODALIAS=hid:b0003g0001v0000054Cp00000CE6\n"
         )
@@ -220,13 +195,7 @@ class TestValidateAceita:
 
 
 class TestOEdgeFisicoEntra:
-    """STEAM-NO-FISICO-01 (24/09/2026) — o Edge físico (0df2) é físico.
-
-    O nó dele nasce fechado desde esta sprint (`assets/73-hefesto-ps5-controller.rules`),
-    e sem o broker aceitá-lo ninguém o abriria: o daemon abre o handle de
-    controle por `expose` e o motion reader por `open`. A MORDIDA: devolva o
-    `if product == VPAD_PRODUCT: return None` e as duas reprovam.
-    """
+    """STEAM-NO-FISICO-01 (24/09/2026) — o Edge físico (0df2) é físico."""
 
     def test_o_edge_pelo_cabo(self, tmp_path: Path) -> None:
         node, kwargs = _make_tree(tmp_path, base="hidraw7", hid_id=HID_ID_EDGE_USB)
@@ -245,10 +214,6 @@ class TestOEdgeFisicoEntra:
 
 class TestValidateRejeitaIdentidade:
     def test_vpad_0df2_sob_uhid_sem_as_marcas(self, tmp_path: Path) -> None:
-        # O vpad 0df2 JAMAIS é escondido/aberto — é por ele que o jogo fala.
-        # STEAM-NO-FISICO-01 (24/09/2026): desde que o Edge FÍSICO entrou, o
-        # PID não o recusa mais; recusa a topologia — USB sob `/misc/uhid/`
-        # (D1), mesmo sem o `phys`/`uniq` do vpad no uevent.
         node, kwargs = _make_tree(
             tmp_path, base="hidraw6", hid_id=HID_ID_VPAD, parent="uhid"
         )
@@ -288,7 +253,6 @@ class TestValidateRejeitaIdentidade:
 
 class TestValidateRejeitaUhidForjado:
     def test_d1_usb_sob_uhid_e_forjado(self, tmp_path: Path) -> None:
-        # USB real NUNCA é uhid: bus 0003 sob /misc/uhid/ = processo forjando.
         node, kwargs = _make_tree(
             tmp_path,
             parent="uhid",
@@ -298,7 +262,6 @@ class TestValidateRejeitaUhidForjado:
         assert _valida(node, kwargs) is None
 
     def test_d2_vpad_anunciando_0ce6_pelo_phys(self, tmp_path: Path) -> None:
-        # Vpad hipotético anunciando 0CE6: a identidade do vpad decide.
         node, kwargs = _make_tree(
             tmp_path,
             parent="uhid",
@@ -307,7 +270,6 @@ class TestValidateRejeitaUhidForjado:
         assert _valida(node, kwargs) is None
 
     def test_d2_vpad_anunciando_0ce6_pelo_uniq(self, tmp_path: Path) -> None:
-        # 02:fe:...  é MAC bem-formado — a D3 sozinha NÃO pegaria; a D2 pega.
         node, kwargs = _make_tree(
             tmp_path,
             parent="uhid",
@@ -336,7 +298,6 @@ class TestValidateRejeitaUhidForjado:
         assert _valida(node, kwargs) is None
 
     def test_d4_phys_nao_casa_adaptador_legivel(self, tmp_path: Path) -> None:
-        # SÓ rejeita porque a leitura dos adaptadores FUNCIONOU e nenhum casou.
         node, kwargs = _make_tree(
             tmp_path,
             parent="uhid",
@@ -346,15 +307,11 @@ class TestValidateRejeitaUhidForjado:
         assert _valida(node, kwargs) is None
 
     def test_virtual_puro_nao_uhid(self, tmp_path: Path) -> None:
-        # uinput/virtual FORA de /misc/uhid/ jamais é físico — mesmo com
         # uevent perfeito de DualSense BT.
         node, kwargs = _make_tree(tmp_path, parent="virtual", uevent=_uevent_bt_uhid())
         assert _valida(node, kwargs) is None
 
     def test_uevent_ausente_sob_uhid_fail_closed(self, tmp_path: Path) -> None:
-        # O inverso deliberado do daemon: ilegível ⇒ rejeita (não esconder/
-        # abrir nó desconhecido), enquanto _is_virtual_hidraw trata como
-        # virtual (o risco lá é auto-adoção).
         node, kwargs = _make_tree(tmp_path, parent="uhid", sem_uevent=True)
         assert _valida(node, kwargs) is None
 
@@ -366,20 +323,16 @@ class TestValidateRejeitaFs:
         assert _valida(fora, kwargs) is None
 
     def test_symlink_plantado(self, tmp_path: Path) -> None:
-        # /dev/hidraw4 -> hidraw3: mesmo com sysfs válido para hidraw4, o
-        # lstat pega o link e rejeita (nó plantado).
         node, kwargs = _make_tree(tmp_path, base="hidraw4")
         os.unlink(node)
         os.symlink("hidraw3", node)
         assert _valida(node, kwargs) is None
 
     def test_nao_char_device(self, tmp_path: Path) -> None:
-        # stat REAL: o arquivo comum do tmp não é S_IFCHR → rejeita.
         node, kwargs = _make_tree(tmp_path)
         assert validate_physical_node(node, **kwargs) is None
 
     def test_major_minor_divergente(self, tmp_path: Path) -> None:
-        # sysfs diz 237:4, o nó é 237:3 → symlink/nó plantado → rejeita.
         node, kwargs = _make_tree(tmp_path, dev="237:4")
         assert _valida(node, kwargs) is None
 
@@ -395,13 +348,7 @@ class TestValidateRejeitaFs:
 
 
 class TestParidadeComOFixBluezUhid01:
-    """As constantes de identidade do vpad são ESPELHADAS do daemon.
-
-    O broker é stdlib autocontido (não importa o pacote em runtime) — este
-    teste trava a paridade com `_is_virtual_hidraw` (backend_pydualsense),
-    dono canônico do fix BLUEZ-UHID-01. Se o blueprint do vpad mudar phys/
-    uniq, os DOIS lados precisam mudar juntos.
-    """
+    """As constantes de identidade do vpad são ESPELHADAS do daemon."""
 
     def test_phys_prefix_igual_ao_backend(self) -> None:
         from hefesto_dualsense4unix.core.backend_pydualsense import _VPAD_PHYS

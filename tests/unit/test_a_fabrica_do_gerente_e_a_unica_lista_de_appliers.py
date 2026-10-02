@@ -98,12 +98,8 @@ _RAIZ = Path(__file__).resolve().parents[2]
 _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 _PACOTE = "hefesto_dualsense4unix"
 
-#: Os nomes de parâmetro que injetam um applier de seção. Derivado do CONTRATO
-#: (`APPLIERS_DO_DAEMON`) e conferido contra o dataclass logo abaixo, porque a
-#: tupla sozinha não é régua — ver o docstring.
 _NOMES_DE_APPLIER = frozenset(parametro for parametro, _ in APPLIERS_DO_DAEMON)
 
-#: Quantos caracteres uma razão precisa ter para ser razão, e não isenção
 #: fingindo ser decisão. Mesmo número do `portao_a_casa_sabe_e_o_produto_nao_faz`.
 _RAZAO_MINIMA = 80
 
@@ -136,9 +132,6 @@ class Razao:
     motivo: str
 
 
-#: A CLASSIFICAÇÃO EXAUSTIVA das construções diretas que declaram applier.
-#: Rota nova que não esteja aqui reprova — e a saída é escrever a razão, ou
-#: passar a usar `gerente_do_daemon`.
 _A_MAO_COM_RAZAO: dict[tuple[str, str], Razao] = {
     (
         "daemon.connection",
@@ -196,12 +189,7 @@ _A_MAO_COM_RAZAO: dict[tuple[str, str], Razao] = {
 
 
 def _construcoes() -> list[Construcao]:
-    """Toda chamada a ``ProfileManager(...)`` em ``src/``, derivada por AST.
-
-    A função que hospeda a chamada é o ``def`` mais próximo acima dela — é ele
-    que dá endereço estável à entrada da tabela. Número de linha apodrece a
-    cada edição; nome de função, não.
-    """
+    """Toda chamada a ``ProfileManager(...)`` em ``src/``, derivada por AST."""
     achados: list[Construcao] = []
     for arquivo in sorted(_SRC.rglob("*.py")):
         if "__pycache__" in arquivo.parts:
@@ -241,20 +229,8 @@ def _construcoes() -> list[Construcao]:
     return achados
 
 
-# ===========================================================================
-# E3 — o portão da classe
-# ===========================================================================
-
-
 def test_a_lista_de_appliers_bate_com_o_dataclass() -> None:
-    """A régua é o CONSTRUTOR, nunca a tupla que ela mesma confere.
-
-    `62d092a`: a primeira versão do teste iterava `APPLIERS_DO_DAEMON` para
-    conferir `APPLIERS_DO_DAEMON` e passava com um par arrancado. A contagem
-    independente é o dataclass — quem declara os parâmetros de verdade.
-
-    Mordida: apagar um par de `APPLIERS_DO_DAEMON`.
-    """
+    """A régua é o CONSTRUTOR, nunca a tupla que ela mesma confere."""
     do_dataclass = {
         nome
         for nome in inspect.signature(ProfileManager).parameters
@@ -270,16 +246,7 @@ def test_a_lista_de_appliers_bate_com_o_dataclass() -> None:
 
 
 def test_toda_construcao_com_applier_tem_razao_escrita() -> None:
-    """A SEXTA ROTA à mão reprova aqui, nomeando arquivo, função e appliers.
-
-    Zero applier é legítimo por construção (a rota não ativa nada). Qualquer
-    applier declarado é uma lista à mão, e uma lista à mão é como esta casa
-    fabricou a divergência que a sprint mede: `gerente_do_daemon` existe
-    justamente para não haver uma segunda.
-
-    Mordida: trocar `gerente_do_daemon(...)` por `ProfileManager(...)` com os
-    sete appliers em qualquer rota convertida — ver a saída colada no relatório.
-    """
+    """A SEXTA ROTA à mão reprova aqui, nomeando arquivo, função e appliers."""
     sem_classificacao = [
         c
         for c in _construcoes()
@@ -357,10 +324,7 @@ def test_toda_rota_que_constroi_o_gerente_esta_viva() -> None:
 
 
 def test_a_razao_e_uma_razao() -> None:
-    """Razão curta e sem data é isenção fingindo ser decisão.
-
-    Mordida: encurtar qualquer `motivo` de `_A_MAO_COM_RAZAO`.
-    """
+    """Razão curta e sem data é isenção fingindo ser decisão."""
     for chave, razao in _A_MAO_COM_RAZAO.items():
         rotulo = f"{chave[0]}::{chave[1]}"
         assert len(razao.motivo) > _RAZAO_MINIMA, (
@@ -374,14 +338,7 @@ def test_a_razao_e_uma_razao() -> None:
 
 
 def test_a_fabrica_nao_tem_saco_generico() -> None:
-    """`**sobrescritas` é a lista à mão de volta, com outro nome.
-
-    Um saco genérico deixa qualquer rota injetar o que quiser sem escrever o
-    porquê em lugar nenhum — e o portão acima não veria, porque a construção
-    passaria a ser da fábrica. Divergência vira PARÂMETRO NOMEADO.
-
-    Mordida: devolver `**sobrescritas: Any` à assinatura de `gerente_do_daemon`.
-    """
+    """`**sobrescritas` é a lista à mão de volta, com outro nome."""
     parametros = inspect.signature(gerente_do_daemon).parameters
     genericos = [
         nome
@@ -401,19 +358,8 @@ def test_a_fabrica_nao_tem_saco_generico() -> None:
     )
 
 
-# ===========================================================================
-# A fábrica: o que ela injeta, e o único desvio que ela aceita
-# ===========================================================================
-
-
 class _DaemonEspiao:
-    """Daemon de bancada com os sete appliers e nada mais.
-
-    O ``store`` é um ``StateStore`` de verdade porque duas das rotas dirigidas
-    aqui gravam diagnóstico nele (``_build_diag_window_reader``) — um dublê
-    magro derrubaria a rota antes de o gerente nascer, e o teste passaria a
-    medir o dublê.
-    """
+    """Daemon de bancada com os sete appliers e nada mais."""
 
     def __init__(self) -> None:
         self.controller = SimpleNamespace()
@@ -430,10 +376,7 @@ class _DaemonEspiao:
 
 
 def test_a_fabrica_entrega_os_sete() -> None:
-    """Sem desvio, os sete vêm do daemon — nenhum fica `None` por descuido.
-
-    Mordida: trocar o laço de injeção da fábrica por um `pass`.
-    """
+    """Sem desvio, os sete vêm do daemon — nenhum fica `None` por descuido."""
     daemon = _DaemonEspiao()
     gerente = gerente_do_daemon(daemon)
     faltando = [
@@ -445,21 +388,11 @@ def test_a_fabrica_entrega_os_sete() -> None:
 
 
 def test_mode_applier_explicito_vence_o_daemon() -> None:
-    """O desvio da allowlist: a fábrica aceita o embrulho, e ele vence.
-
-    `62d092a` mediu que existe um caso em que o gerente nasce DE PROPÓSITO sem
-    o `apply_profile_mode` do daemon — o ramo da allowlist do Steam Input, para
-    o Hefesto não disputar o gamepad. Se a fábrica ignorasse o par explícito, a
-    cura viraria defeito.
-
-    Mordida: apagar o `if mode_applier is not HERDA_DO_DAEMON` da fábrica.
-    """
+    """O desvio da allowlist: a fábrica aceita o embrulho, e ele vence."""
     daemon = _DaemonEspiao()
     embrulho = lambda *a, **k: "so_a_mascara"  # noqa: E731
 
     assert gerente_do_daemon(daemon, mode_applier=embrulho).mode_applier is embrulho
-    # `None` é pedido EXPLÍCITO ("esta rota não aplica a seção mode"), e a
-    # sentinela existe para que ele não seja confundido com "não opinei".
     assert gerente_do_daemon(daemon, mode_applier=None).mode_applier is None
     assert (
         gerente_do_daemon(daemon, mode_applier=HERDA_DO_DAEMON).mode_applier
@@ -468,15 +401,7 @@ def test_mode_applier_explicito_vence_o_daemon() -> None:
 
 
 def test_o_desvio_nao_contamina_as_outras_seis() -> None:
-    """Pedir um `mode_applier` próprio não pode custar as outras seções.
-
-    Foi assim que o `mode_applier=None` da allowlist virou defeito por algumas
-    horas em 22/08: barrar a seção `mode` inteira levava junto o
-    `gamepad_flavor`. Aqui a garantia é mais estreita e mecânica — o desvio de
-    UMA seção não apaga as outras.
-
-    Mordida: fazer a fábrica devolver cedo quando `mode_applier` é informado.
-    """
+    """Pedir um `mode_applier` próprio não pode custar as outras seções."""
     daemon = _DaemonEspiao()
     gerente = gerente_do_daemon(daemon, mode_applier=None)
     for parametro, esperado in daemon.esperado().items():
@@ -485,11 +410,6 @@ def test_o_desvio_nao_contamina_as_outras_seis() -> None:
         assert getattr(gerente, parametro) is esperado, (
             f"{parametro} se perdeu quando a rota pediu um `mode_applier` próprio"
         )
-
-
-# ===========================================================================
-# E2 — as rotas de ativação, dirigidas de verdade
-# ===========================================================================
 
 
 def _sem_ambiente_grafico(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -557,11 +477,7 @@ def test_rota_ipc_subsystem_recebe_os_sete(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_rota_start_ipc_recebe_os_sete(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`start_ipc` — a irmã utilitária, a que o `Daemon` usa direto.
-
-    As DUAS rotas de subida do IPC existem, e é entre irmãs assim que a
-    divergência nasce.
-    """
+    """`start_ipc` — a irmã utilitária, a que o `Daemon` usa direto."""
     from hefesto_dualsense4unix.daemon import ipc_server as ipc_server_mod
     from hefesto_dualsense4unix.daemon.subsystems.ipc import start_ipc
 
@@ -585,12 +501,7 @@ def test_rota_start_ipc_recebe_os_sete(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_rota_autoswitch_subsystem_recebe_os_sete(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`AutoswitchSubsystem.start` — a troca de perfil pela janela em foco.
-
-    Mesmo preço declarado em `test_rota_ipc_subsystem_recebe_os_sete`: o `ctx`
-    de produção não tem `daemon`, e o boot sobe esta rota por
-    `start_autoswitch(self)`.
-    """
+    """`AutoswitchSubsystem.start` — a troca de perfil pela janela em foco."""
     from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsystem
     from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
 
@@ -641,12 +552,7 @@ def test_rota_start_autoswitch_recebe_os_sete(
 
 
 def test_rota_do_ciclo_por_hotkey_recebe_os_sete() -> None:
-    """PS+D-pad — o gesto que ela usa DENTRO do jogo, com o controle na mão.
-
-    O gerente desta rota é local ao `_cycle`; quem o entrega é o
-    `_run_blocking(manager.list_profiles)`, e é pelo `__self__` do método
-    ligado que o teste o alcança — sem tocar na linha de construção.
-    """
+    """PS+D-pad — o gesto que ela usa DENTRO do jogo, com o controle na mão."""
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
         build_profile_cycle_callback,
     )
@@ -662,8 +568,6 @@ def test_rota_do_ciclo_por_hotkey_recebe_os_sete() -> None:
             dono = getattr(fn, "__self__", None)
             if dono is not None:
                 capturado.append(dono)
-            # Uma lista com menos de dois perfis encerra o ciclo logo em
-            # seguida — o que interessa aqui já foi construído.
             return []
 
     daemon = _DaemonComCiclo()
@@ -676,14 +580,7 @@ def test_rota_do_ciclo_por_hotkey_recebe_os_sete() -> None:
 def test_rota_do_lancamento_mantem_o_desvio_da_allowlist(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O jogo na allowlist do Steam Input não pode ter a seção `mode` disputada.
-
-    É a divergência LEGÍTIMA que a E2 tinha de preservar: fora da allowlist o
-    `mode_applier` é o do daemon; dentro, é o embrulho que barra o `kind` e
-    deixa a máscara passar. As outras seis seções entram nos dois casos.
-
-    Mordida: apagar o ramo `if na_allowlist` do `_ativar_o_perfil_do_lancamento`.
-    """
+    """O jogo na allowlist do Steam Input não pode ter a seção `mode` disputada."""
     from hefesto_dualsense4unix.daemon import launch_env as le
 
     capturados: list[dict[str, Any]] = []
@@ -718,25 +615,10 @@ def test_rota_do_lancamento_mantem_o_desvio_da_allowlist(
     )
 
 
-# ===========================================================================
-# E1 — a saída do Modo Nativo, e a lápide que não pode envelhecer calada
-# ===========================================================================
-
-
 def test_sair_do_modo_nativo_devolve_a_vibracao_ao_jogo(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A prova pelo EFEITO, não pela construção.
-
-    O caso é o dela: em Modo Nativo o controle está solto para o jogo; ela testa
-    os motores pela aba Rumble (o "Aplicar" FIXA a vibração em
-    `config.rumble_active`) e desliga o Modo Nativo. O perfil é reaplicado, e
-    `rumble.passthrough=True` — o default de TODO perfil — manda soltar a
-    vibração de volta para o jogo.
-
-    Sem o applier a fixação continua de pé e `apply_game_rumble` ignora o FF do
-    jogo: é a segunda metade do *"testei os motores e o jogo não vibra"*.
-    """
+    """A prova pelo EFEITO, não pela construção."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.profiles import loader as loader_module
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -770,7 +652,6 @@ def test_sair_do_modo_nativo_devolve_a_vibracao_ao_jogo(
         )
     )
     daemon.store.set_active_profile("sackboy_nativo")
-    # O "Aplicar" da aba Rumble, com o Modo Nativo ligado.
     daemon.config.rumble_active = (128, 200)
     daemon.config.rumble_active_uniq = None
 

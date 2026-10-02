@@ -1,29 +1,4 @@
-"""AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01 — a captura do rádio nasce 0600 e sai.
-
-Quatro ferramentas gravam o fio com ``btmon``, e se um controle reconecta no
-meio o ``btmon`` grava a chave de pareamento em claro (o ``Link Key Request
-Reply``). Até 24/09/2026 as quatro deixavam a captura 0644, do root, no
-``/tmp``, para sempre.
-
-A régua roda CADA ferramenta contra um ``btmon`` de mentira e confere três
-coisas: o modo com que a captura NASCEU, o modo com que ela foi LIDA, e que ela
-SAIU depois — com o caminho na saída. A captura é de mentira (o cabeçalho
-``btsnoop``, um ``Link Key Request Reply`` com a chave ``CHAVE-DE-MENTIRA`` e um
-report ``0x31``); nenhuma captura real entra aqui.
-
-**Nada aqui toca o rádio dela.** ``btmon``, ``sudo``, ``rfkill``, ``curl``,
-``hciconfig``, ``hcitool``, ``bluetoothctl``, ``id`` e ``sleep`` são dublês, e
-todo teste confere que o PATH resolve cada um para o dublê ANTES de rodar: o
-``rfkill`` de verdade derruba o WiFi sem root onde a sessão tem ACL no
-``/dev/rfkill``.
-
-O dublê não é mais frouxo que o real onde isso decide: o ``btmon`` de mentira
-abre o arquivo como o ``btsnoop_create`` do BlueZ (``O_CREAT|O_TRUNC``, 0644, a
-umask decide). O que ele NÃO imita é o dono: sem root, o arquivo já nasce de
-quem mede. Por isso o ``chown`` se prova de dois jeitos — nos scripts, pelo
-grupo (o ``SUDO_GID`` aponta para um grupo secundário, e só o ``chown`` o põe
-lá); nos ensaios, pela chamada que o ``sudo`` de mentira registrou.
-"""
+"""AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01 — a captura do rádio nasce 0600 e sai."""
 
 from __future__ import annotations
 
@@ -51,31 +26,20 @@ W3 = REPO_ROOT / "scripts" / "medir_w3_coex.sh"
 ENSAIOS = REPO_ROOT / "scripts" / "ensaios"
 BASH = shutil.which("bash") or "/bin/bash"
 
-#: Todo nome que, de verdade, fala com o rádio, com o WiFi ou com o privilégio.
 DUBLES = (
     "btmon", "sudo", "id", "sleep", "rfkill", "curl", "hciconfig", "hcitool",
     "bluetoothctl",
 )
 
-#: A chave de pareamento da captura de mentira: 16 bytes, e nenhum é de verdade.
 CHAVE = b"CHAVE-DE-MENTIRA"
 
-#: O handle ACL do único report 0x31 da captura de mentira.
 HANDLE = 11
 
-#: Endereço de fixture, da faixa forjada da casa.
 MAC_DE_MENTIRA = "aa:bb:cc:00:00:01"
 
 
 def _captura_de_mentira() -> bytes:
-    """Um ``btsnoop`` do monitor do BlueZ (datalink 2001) com dois registros.
-
-    O primeiro é o COMANDO que faz a captura ser perigosa — um ``Link Key
-    Request Reply`` (``0x040B``) com endereço zerado e a chave de mentira. O
-    segundo é um ACL de saída com um report ``0x31`` no handle 11, com os bits
-    e a cor que a leitura da lightbar tem de achar (``0x04``/``0x02``/``0x02`` e
-    ``11 22 33``).
-    """
+    """Um ``btsnoop`` do monitor do BlueZ (datalink 2001) com dois registros."""
     assert len(CHAVE) == 16
     cabecalho = b"btsnoop\x00" + struct.pack(">II", 1, 2001)
 
@@ -85,17 +49,14 @@ def _captura_de_mentira() -> bytes:
     comando = struct.pack("<HB", 0x040B, 22) + bytes(6) + CHAVE
     report = bytearray(78)
     report[0] = 0x31
-    report[4], report[41], report[44] = 0x04, 0x02, 0x02  # valid_flag1/2, setup
-    report[47:50] = bytes([0x11, 0x22, 0x33])  # R G B
+    report[4], report[41], report[44] = 0x04, 0x02, 0x02
+    report[47:50] = bytes([0x11, 0x22, 0x33])
     corpo = bytes([0xA2]) + bytes(report)
     l2cap = struct.pack("<HH", len(corpo), 0x0041) + corpo
     acl = struct.pack("<HH", 0x2000 | HANDLE, len(l2cap)) + l2cap
     return cabecalho + registro(2, comando) + registro(4, acl)
 
 
-#: O que o ``btmon -r`` de mentira imprime, na forma dos eventos do ``btmon``:
-#: uma desconexão e um erro de hardware — o que o W3 conta. A lightbar não
-#: passa mais pelo ``btmon -r``: ela lê o arquivo binário.
 LEITURA_DE_MENTIRA = """\
 > HCI Event: Disconnect Complete (0x05) plen 4
         Reason: Remote User Terminated Connection (0x13)
@@ -334,16 +295,11 @@ def _morreu(pid: int, segundos: float = 3.0) -> bool:
                 estado = arq.read().rsplit(")", 1)[1].split()[0]
         except OSError:
             return True
-        if estado == "Z":  # já saiu; só falta quem o espere
+        if estado == "Z":
             return True
         if time.monotonic() > fim:
             return False
         time.sleep(0.05)
-
-
-# ---------------------------------------------------------------------------
-# scripts/capturar_a_probe_da_lightbar.sh — o root grava, a usuária compara
-# ---------------------------------------------------------------------------
 
 
 def _rodar_lightbar(
@@ -371,10 +327,7 @@ class BracoDaLightbar:
 
 @pytest.fixture(scope="module")
 def braco_limpo(tmp_path_factory: pytest.TempPathFactory) -> BracoDaLightbar:
-    """O braço ``limpo`` rodado UMA vez: a varredura do ``/proc`` custa segundos.
-
-    O destino já tem a captura crua que a versão anterior deixava, 0644.
-    """
+    """O braço ``limpo`` rodado UMA vez: a varredura do ``/proc`` custa segundos."""
     raiz = tmp_path_factory.mktemp("lightbar")
     dubles = _fazer_dubles(raiz)
     destino = raiz / "destino"
@@ -382,8 +335,6 @@ def braco_limpo(tmp_path_factory: pytest.TempPathFactory) -> BracoDaLightbar:
     velha = destino / "probe-sujo.snoop"
     velha.write_bytes(_captura_de_mentira())
     velha.chmod(0o644)
-    # Um dono de hidraw que a varredura do `/proc` TEM de ver, sem depender do
-    # que está aberto na máquina: o próprio processo da régua segura o arquivo.
     with open(raiz / "hidraw-de-mentira", "wb"):
         resultado = _rodar_lightbar(dubles, destino, "limpo", "1")
     return BracoDaLightbar(dubles, destino, velha, resultado)
@@ -462,11 +413,6 @@ class TestALightbarGravaFechadoLeEApaga:
         assert dubles.escritas() == [], "o btmon não pode rodar com o destino recusado"
 
 
-# ---------------------------------------------------------------------------
-# scripts/medir_w3_coex.sh — tudo como root, três braços
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class CorridaDoW3:
     dubles: Dubles
@@ -534,12 +480,7 @@ class TestOW3GravaFechadoLeEApaga:
 
 
 def test_o_w3_interrompido_no_meio_nao_deixa_btmon_nem_download(tmp_path: Path) -> None:
-    """Um ``kill`` no meio do braço B: o ``restaurar`` para o ``btmon`` e a carga.
-
-    Sem isto o ``btmon`` do root seguia gravando num arquivo já apagado — invisível
-    e crescendo, com a chave se um controle reconectasse — e o laço de download
-    do braço B seguia baixando para sempre.
-    """
+    """Um ``kill`` no meio do braço B: o ``restaurar`` para o ``btmon`` e a carga."""
     dubles = _fazer_dubles(tmp_path)
     amb = dubles.ambiente(SUDO_UID=str(os.getuid()), SUDO_GID=str(os.getgid()))
     processo = subprocess.Popen(
@@ -569,11 +510,6 @@ def test_o_w3_interrompido_no_meio_nao_deixa_btmon_nem_download(tmp_path: Path) 
         with contextlib.suppress(ProcessLookupError):
             os.killpg(processo.pid, signal.SIGKILL)
         processo.wait(timeout=20)
-
-
-# ---------------------------------------------------------------------------
-# Os dois ensaios em Python — a usuária roda, só o btmon é root
-# ---------------------------------------------------------------------------
 
 
 def _carregar(nome: str) -> Any:
@@ -620,7 +556,7 @@ class _Leitor:
         try:
             modo = stat.S_IMODE(os.stat(caminho).st_mode)
         except FileNotFoundError:
-            modo = -1  # não havia captura: quem lê tem de dizer isso, não morrer
+            modo = -1
         self.lidas.append((caminho, modo))
         return self.original(caminho)
 
@@ -686,16 +622,11 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
     def test_apagar_com_o_btmon_de_pe_para_e_apaga(
         self, dubles: Dubles, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O caminho do ``atexit``: o instrumento caiu antes do ``encerrar``.
-
-        O ``apagar`` sozinho para o ``btmon`` e tira a captura e a pasta.
-        """
+        """O caminho do ``atexit``: o instrumento caiu antes do ``encerrar``."""
         for var, valor in dubles.ambiente().items():
             monkeypatch.setenv(var, valor)
         monkeypatch.setattr(tempfile, "tempdir", str(dubles.tmp))
         modulo = _carregar("byte_no_fio")
-        # O SIGTERM parte do padrão, qualquer que seja a ordem dos testes: um
-        # ensaio anterior que não devolvesse o sinal esconderia a mordida.
         sinal_do_pytest = signal.signal(signal.SIGTERM, signal.SIG_DFL)
         try:
             captura = modulo.CapturaDoFio("cai-no-meio")
@@ -721,7 +652,7 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
         assert "(lida e apagada)" in linha
         (pid,) = dubles.pids()
         morreu = _morreu(pid)
-        if not morreu:  # o dublê não fica órfão quando a mordida está no ar
+        if not morreu:
             with contextlib.suppress(ProcessLookupError):
                 os.kill(pid, signal.SIGKILL)
         assert morreu, "o apagar tirou a captura e deixou o btmon gravando"
@@ -730,11 +661,7 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
         self, tmp_path: Path, dubles: Dubles, monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """O ``sudo -n`` que pede senha: «não medi», e não um traceback nem «lida».
-
-        Até 24/09 o arquivo vazio do ``mkstemp`` ficava e virava queixa do parser;
-        com a captura nascendo pelas mãos do root, ele não existe mais.
-        """
+        """O ``sudo -n`` que pede senha: «não medi», e não um traceback nem «lida»."""
         _executavel(dubles.bin / "sudo", (
             "#!/bin/bash\n"
             "printf 'recusado %s\\n' \"$*\" >> \"$SUDO_DE_MENTIRA_LOG\"\n"
@@ -759,11 +686,7 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
         self, tmp_path: Path, dubles: Dubles, monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str], nome: str,
     ) -> None:
-        """O ``sudo`` venceu no meio (a captura armada espera minutos): o relatório diz.
-
-        O ``btmon`` de mentira grava como quem mede, então a leitura ainda passa;
-        o que se confere é que os DOIS chamadores levam a queixa do ciclo à saída.
-        """
+        """O ``sudo`` venceu no meio (a captura armada espera minutos): o relatório diz."""
         _executavel(dubles.bin / "sudo", _SUDO.replace(
             'printf \'%s\\n\' "$*" >> "$SUDO_DE_MENTIRA_LOG"\n',
             'printf \'%s\\n\' "$*" >> "$SUDO_DE_MENTIRA_LOG"\n'
@@ -807,11 +730,7 @@ time.sleep(60)
 def test_o_instrumento_que_cai_no_meio_apaga_e_para_o_btmon(
     tmp_path: Path, dubles: Dubles, como: str
 ) -> None:
-    """Uma exceção, um ``kill`` ou o terminal que fecha: a captura sai e o ``btmon`` para.
-
-    A exceção sai pelo ``atexit``; os dois sinais, que matariam o Python sem
-    ``atexit``, viram ``SystemExit`` enquanto a captura vive.
-    """
+    """Uma exceção, um ``kill`` ou o terminal que fecha: a captura sai e o ``btmon`` para."""
     script = tmp_path / "cai_no_meio.py"
     script.write_text(_CAI_NO_MEIO.format(ensaios=str(ENSAIOS)), encoding="utf-8")
     processo = subprocess.Popen(
@@ -837,11 +756,6 @@ def test_o_instrumento_que_cai_no_meio_apaga_e_para_o_btmon(
         processo.wait(timeout=20)
 
 
-# ---------------------------------------------------------------------------
-# O formato: um dono só, e ele roda como root
-# ---------------------------------------------------------------------------
-
-
 class TestOFormatoLeOBinarioESoUsaABibliotecaPadrao:
     def test_a_leitura_acha_o_report_e_nao_a_chave(self, tmp_path: Path) -> None:
         captura = tmp_path / "captura.btsnoop"
@@ -856,10 +770,7 @@ class TestOFormatoLeOBinarioESoUsaABibliotecaPadrao:
         assert "CHAVE" not in texto
 
     def test_a_leitura_guarda_o_report_inteiro(self, tmp_path: Path) -> None:
-        """A captura crua sai depois de lida: o que não está na leitura não volta.
-
-        O 0x31 de saída não leva chave nem endereço, então ela o guarda byte a byte.
-        """
+        """A captura crua sai depois de lida: o que não está na leitura não volta."""
         captura = tmp_path / "captura.btsnoop"
         captura.write_bytes(_captura_de_mentira())
         formato = _carregar("o_formato_btsnoop")

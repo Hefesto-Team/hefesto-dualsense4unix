@@ -1,20 +1,4 @@
-"""Protocols estruturais para o Daemon e seus handlers/subsystems.
-
-PYDANTIC-PROTOCOL-DAEMON-01: até v3.1.1 todas as funções top-level em
-`daemon/connection.py`, `daemon/subsystems/*.py` e os handlers de IPC
-declaravam o argumento `daemon` como `Any` para evitar import cycle
-(eles são importados *de dentro* de `daemon/lifecycle.py`).
-
-Esse Protocol descreve a superfície da classe `Daemon` que esses módulos
-realmente tocam. Substituindo `daemon: Any` por `daemon: DaemonProtocol`
-recuperamos validação estática (mypy --strict + IDE autocomplete) sem
-forçar import circular.
-
-A classe concreta `Daemon` (dataclass em `daemon/lifecycle.py`) satisfaz
-o Protocol estruturalmente — Python valida em tempo de checagem, não em
-runtime. Se algum atributo desaparecer da `Daemon`, mypy aponta no
-primeiro arquivo que tentar lê-lo.
-"""
+"""Protocols estruturais para o Daemon e seus handlers/subsystems."""
 from __future__ import annotations
 
 import asyncio
@@ -30,115 +14,57 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
-#: A PORTA POR ONDE ELA ESCOLHEU O MODO — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01
-#: (29/09/2026). ``"ipc"`` é a janela, a bandeja e a linha de comando;
-#: ``"controle"`` é o PS + R3. Vai ao diário e ao ``profile_salvo``, para a
-#: linha dizer por onde o modo chegou ao perfil.
 PortaQueGrava = Literal["ipc", "controle"]
 
-#: O parâmetro ``grava_o_modo`` dos três setters do modo. ``False`` (o padrão)
-#: aplica e não grava: é o perfil sendo ativado, o cartão, o boot, a saída do
-#: Nativo, a chamada direta. A porta da escolha dela diz de onde veio, e o setter
-#: grava o modo no perfil ativo DEPOIS de o aparelho trocar.
 GravaOModo = Literal[False, "ipc", "controle"]
 
 
 class DaemonProtocol(Protocol):
-    """Superfície pública/privada do Daemon usada por handlers e subsystems.
+    """Superfície pública/privada do Daemon usada por handlers e subsystems."""
 
-    Os atributos com sufixo `_` continuam acessíveis: o Protocol descreve
-    contrato estrutural, não enforce de encapsulamento. Refactors futuros
-    podem migrar tudo para getters/setters sem mudar quem consome.
-    """
-
-    # Componentes injetados
     controller: IController
     bus: EventBus
     store: StateStore
     config: DaemonConfig
 
-    # Ciclo de vida
     _stop_event: asyncio.Event | None
     _executor: ThreadPoolExecutor | None
-    # HANG-01: pool DEDICADO e ISOLADO do tick de LED dos externos — ver
-    # `Daemon._external_executor` em `daemon/lifecycle.py` pro porquê.
     _external_executor: ThreadPoolExecutor | None
     _tasks: list[asyncio.Task[Any]]
     _reconnect_task: asyncio.Task[Any] | None
 
-    # Subsystems opt-in
     _ipc_server: Any
     _udp_server: Any
     _autoswitch: Any
     _mouse_device: Any
     _keyboard_device: Any
-    # FEAT-DSX-GAMEPAD-FLAVOR-01: gamepad virtual (`integrations.virtual_pad.
-    # VirtualPad` — uhid ou uinput, ver `make_virtual_pad`) ou None.
     _gamepad_device: Any
-    # GYRO-01: `core.physical_report_reader.PhysicalReportReader` do vpad do
-    # P1 (espelho de motion do físico → vpad uhid) ou None.
     _motion_reader: Any
-    # BROKER-01: lease-cliente do broker root hide-hidraw
-    # (`integrations.hidraw_broker_client.HidrawBrokerClient`) ou None.
     _hidraw_broker_client: Any
-    # Achados Onda S #5/#6/#10: executor dedicado (1 worker) das operações do
-    # broker — ver `broker_call_nonblocking`; ou None até o 1º uso.
     _hidraw_broker_executor: Any
-    # FEAT-DSX-COOP-LOCAL-01: CoopManager (jogadores secundários) ou None.
     _coop_manager: Any
     _hotkey_manager: Any
     _audio: Any
     _plugins_subsystem: Any
 
-    # Estado interno
     _last_state: ControllerState | None
     _last_auto_mult: float
     _last_auto_change_at: float
-    # BUG-DAEMON-CONNECT-GHOST-INPUT-01: instante a partir do qual o input
-    # emulado volta a ser despachado após (re)conexão (settling/grace).
     _input_ready_at: float
-    # VPAD-01/VPAD-02: instante (time.monotonic) da última tentativa de
-    # rebackend do vpad do P1 (uinput→uhid); -inf = nunca. Cooldown único
-    # compartilhado entre a promoção do hotplug e a re-seleção pela GUI.
     _last_rebackend_ts: float
-    # FEAT-DAEMON-PAUSE-RESUME-01: despacho de input pausado (daemon vivo).
     _paused: bool
-    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo — emulacao mouse/teclado
-    # suprimida (devices vivos, hotkeys ativos).
     _emulation_suppressed: bool
-    # FEAT-POINT-AND-CLICK-01: instante do último toggle MANUAL do modo-jogo
-    # (-inf = nunca) e origem da supressão atual (True = veio de perfil).
     _suppress_manual_ts: float
     _suppress_from_profile: bool
-    # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: subsystems que falharam ao iniciar.
     _failed_subsystems: dict[str, str]
-    # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth (opt-in) ou None.
     _bt_mic_subsystem: Any
-    # GATILHO-DA-COR-01: `core.gatilho_fim_de_sequencia.RegistroDeGatilhos` —
-    # as reafirmações "no fim da sequência" por nome — ou None até o 1º uso.
     _registro_de_gatilhos: Any
-    # ESCRITOR-CRU-01: `core.escritor_cru.SentinelaDeEscritorCru` — a última
-    # foto de quem segura o hidraw de cada controle (a Steam), ou None até o
-    # 1º uso. Único por daemon: é a MESMA foto que arma o gatilho da cor e que
-    # a aba Status mostra.
     _sentinela_de_escritor_cru: Any
-    # SINAL-NO-NASCIMENTO-01: `integrations.sinal_da_barra.CartorioDoNascimento`
-    # — o veredito de COMO cada conexão viva nasceu, carimbado no tique de
-    # hotplug e guardado POR INSTÂNCIA (nunca global: instâncias travadas e sãs
-    # convivem na mesma mesa). None até o 1º uso.
     _cartorio_do_nascimento: Any
-    # STEAM-NO-FISICO-01: `core.escritor_cru.VigiaDoSequestro` — quem mais
-    # segura o hidraw de cada controle e a cadência da reescrita da barra e do
-    # número. Uma por daemon; None até o 1º uso.
     _vigia_do_sequestro: Any
 
-    # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
-    # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.
     _osk_controller: Any
     _touchpad_reader: Any
-    # NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026): o cursor que o touchpad move
-    # pelo Hefesto com o controle virtual de pé (`uinput_mouse.CursorDoToque`),
-    # `False` depois de um start que falhou, ou None.
     _cursor_do_toque: Any
 
     async def _run_blocking(self, fn: Callable[..., _T], *args: Any) -> _T:
@@ -173,16 +99,6 @@ class DaemonProtocol(Protocol):
         """Substitui a config em runtime (usado pelo IPC `daemon.set_config`)."""
         ...
 
-    # ORIGEM-QUE-MENTE-01 (08/08/2026): os quatro setters abaixo declaram
-    # `origin` SEM default, e é keyword-only. Antes o protocolo NÃO mencionava
-    # `origin` — a armadilha morava no contrato, não só na implementação: quem
-    # programasse contra este protocolo não tinha como saber que existia essa
-    # decisão a tomar, e a implementação assumia `"manual"` no silêncio.
-    #
-    # O custo, MEDIDO: um cliente reconciliando estado furou o portão JOGO-01
-    # com o jogo da allowlist aberto, o gamepad virtual voltou com o grab
-    # pulado, e o jogo passou a ver o físico E o virtual. Ver
-    # JOGADOR-3-FANTASMA-01.
     def set_mouse_emulation(
         self,
         enabled: bool,
@@ -221,15 +137,7 @@ class DaemonProtocol(Protocol):
         caminho_e_escolha: bool = True,
         grava_o_modo: GravaOModo = False,
     ) -> bool:
-        """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01).
-
-        `caminho` (MODO-DE-CONEXAO-01, 13/09/2026) é o MODO de conexão —
-        `"dualsense"` ou `"xbox"` —, separado da máscara; `None` não mexe nele.
-        `caminho_e_escolha=False`: o caminho veio do perfil ativo, e não é
-        escolha nova dela (O-FREESTYLE-E-UMA-CAMADA-SO-01).
-        `grava_o_modo`: a porta da escolha dela; ligado com o aparelho de
-        acordo, o modo vai ao perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
-        """
+        """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
         ...
 
     def set_coop_enabled(
@@ -239,27 +147,13 @@ class DaemonProtocol(Protocol):
         ...
 
     def set_emulation_suppressed(self, value: bool | None = None) -> bool:
-        """Alterna/define a supressão da emulação mouse/teclado (modo jogo).
-
-        FEAT-EMULATION-GAMEMODE-LONGPRESS-01. `value=None` faz toggle. Retorna o
-        novo estado (True = suprimida).
-        """
+        """Alterna/define a supressão da emulação mouse/teclado (modo jogo)."""
         ...
 
     def apply_profile_suppression(
         self, desired: bool, *, profile: Any | None = None, origin: str = "autoswitch"
     ) -> str:
-        """Aplica `suppress_desktop_emulation` de um perfil (FEAT-POINT-AND-CLICK-01).
-
-        Respeita o toggle manual recente (janela de MANUAL_PROFILE_LOCK_SEC) e
-        só libera supressão que veio de perfil. Injetado como
-        `suppression_applier` do ProfileManager pelos callsites.
-
-        R-02: `profile` diz QUEM mandou (catch-all não reverte). R-03: `origin`
-        é a origem da ATIVAÇÃO ("manual" fura o lock) e o retorno é o estado da
-        seção (`"aplicado"`/`"adiado_lock_manual"`/`"ignorado_*"`) — antes tudo
-        era `None` e a seção descartada sumia sem rastro.
-        """
+        """Aplica `suppress_desktop_emulation` de um perfil (FEAT-POINT-AND-CLICK-01)."""
         ...
 
     def aplicar_o_arranjo_do_desktop(
@@ -316,11 +210,7 @@ class DaemonProtocol(Protocol):
         origin: Literal["manual", "profile", "exclusão"],
         grava_o_modo: GravaOModo = False,
     ) -> bool:
-        """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo.
-
-        `grava_o_modo`: a porta da escolha dela; ligando, o modo `native` vai
-        ao perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
-        """
+        """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo."""
         ...
 
     def apply_profile_mouse(
@@ -332,30 +222,13 @@ class DaemonProtocol(Protocol):
         origin: str = "autoswitch",
         profile: Any | None = None,
     ) -> str:
-        """Aplica a seção `mouse` de um perfil (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01).
-
-        Respeita o lock manual recente da emulação (não sequestra um gamepad
-        ligado na mão) e é idempotente. Injetado como `mouse_applier` do
-        ProfileManager nas rotas de ativação (IPC switch, autoswitch, hotkey).
-        R-03: `origin`/retorno — ver `apply_profile_suppression`.
-        `profile`: só o perfil que diz Navegação (`mode.kind == "desktop"`)
-        liga ou desliga o mouse; os outros aplicam as velocidades
-        (O-MOUSE-SEGUE-A-NAVEGACAO-01). Velocidade `None`: a da flag de sessão.
-        """
+        """Aplica a seção `mouse` de um perfil (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01)."""
         ...
 
     def apply_profile_mode(
         self, mode: Any | None, *, profile: Any | None = None, origin: str = "autoswitch"
     ) -> str:
-        """Aplica a seção `mode` de um perfil (FEAT-PROFILE-MODE-01).
-
-        Nativo/gamepad/desktop + co-op por perfil, com lock manual de 30s e
-        origem rastreada. Injetado como `mode_applier` do ProfileManager nas
-        rotas de ativação (IPC switch, autoswitch, hotkey).
-
-        R-03: com ``origin="manual"`` fura o lock; com origem automática devolve
-        `"adiado_lock_manual"` e agenda a pendência que o poll loop drena.
-        """
+        """Aplica a seção `mode` de um perfil (FEAT-PROFILE-MODE-01)."""
         ...
 
     def apply_profile_speaker(
@@ -367,26 +240,7 @@ class DaemonProtocol(Protocol):
         origin: str = "autoswitch",
         rota: int | None = None,
     ) -> str:
-        """Aplica a seção `speaker` de um perfil (SOM-02/E4).
-
-        Injetado como `speaker_applier` do ProfileManager nas rotas de ativação
-        (IPC switch, autoswitch, hotkey e restore de boot) e consumido por
-        `apply_speaker` / `reapply_speaker_on_connect`, que já decidiram antes
-        de chegar aqui que há opinião a aplicar — perfil sem a seção não chama
-        este método, porque tomar a posse dos bytes de áudio por um perfil que
-        não pediu nada é a queixa "a config que eu deixo nunca é respeitada".
-
-        Fala DIRETO com o backend, nunca pelo `speaker.set` do IPC: o handler
-        arma a categoria manual `"audio"`, que é a mesma trava que o
-        ProfileManager consulta para não escrever. Um applier que a armasse
-        faria o perfil funcionar uma vez e nunca mais, calado.
-
-        `volume` é sempre explícito (0-255): chamada sem volume toma a posse e
-        manda ZERO — a armadilha 1, medida na SOM-02.
-
-        `rota` é o CANAL de saída do perfil (SOM-ROTA-01). `None` significa não
-        tocar no `common[7]`, que carrega a rota E o caminho do microfone.
-        """
+        """Aplica a seção `speaker` de um perfil (SOM-02/E4)."""
         ...
 
 

@@ -1,17 +1,4 @@
-"""Os instrumentos de bancada de 09/09 montam o byte certo, no report certo, e só ele.
-
-Três decisões dela (*"1-b;2b;3-c"*) viraram três instrumentos que escrevem UM
-byte do `common` — fone (`[4]`), brilho de hardware (`[42]`), microfone
-(`[6]`) — mais o do envelope do som por rádio e o censo dos nós. A parte que
-toca o aparelho é dela, na bancada. A parte que se prova aqui é a que já
-enganou esta casa: **o byte na posição errada, o bit de autorização
-esquecido, o report do transporte errado**. Uma régua que passasse com o byte
-em `[5]` em vez de `[4]` mediria o alto-falante achando que mede o fone.
-
-MORDE: trocar `COMMON_HEADPHONE_VOLUME` por 5 no instrumento do fone; apagar o
-`c[0] |= VALID_FLAG0_*` de qualquer um; trocar `build_bt_report` por
-`build_usb_report` em `report_para`.
-"""
+"""Os instrumentos de bancada de 09/09 montam o byte certo, no report certo, e só ele."""
 
 from __future__ import annotations
 
@@ -33,7 +20,7 @@ def _instrumento(nome: str):
     spec = importlib.util.spec_from_file_location(apelido, caminho)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
-    sys.modules[apelido] = modulo  # os dataclasses resolvem anotações por aqui
+    sys.modules[apelido] = modulo
     spec.loader.exec_module(modulo)
     return modulo
 
@@ -48,11 +35,6 @@ def rep():
     from hefesto_dualsense4unix.core import ds_output_report
 
     return ds_output_report
-
-
-# ---------------------------------------------------------------------------
-# escrita_pelo_broker — o report do transporte
-# ---------------------------------------------------------------------------
 
 
 def test_o_common_vazio_e_zerado_e_tem_47(broker, rep):
@@ -105,11 +87,6 @@ def test_a_linha_do_caderno_segue_o_cabecalho_do_csv(broker):
     assert '"tem, vírgula"' in linha
 
 
-# ---------------------------------------------------------------------------
-# o fone — common[4] e SÓ ele, com o bit 0x10
-# ---------------------------------------------------------------------------
-
-
 def test_o_fone_escreve_o_byte_4_com_o_bit_0x10_e_nada_mais(rep):
     fone = _instrumento("o_fone_tem_volume_proprio")
     c = fone.common_do_passo(0x40, com_bit=True, alto_falante=None)
@@ -146,11 +123,6 @@ def test_os_cinco_passos_do_fone_tem_um_positivo_e_um_negativo_com_o_bit():
     assert any(not bit for _, bit, _ in fone.PASSOS.values()), "falta o passo SEM o bit"
 
 
-# ---------------------------------------------------------------------------
-# o brilho de hardware — common[42], flag2 bit0, e a cor com o bit da barra
-# ---------------------------------------------------------------------------
-
-
 def test_o_brilho_escreve_o_42_com_o_flag2_bit0_e_a_cor_com_o_bit_da_barra(rep):
     brilho = _instrumento("o_brilho_de_hardware_da_barra")
     c = brilho.common_do_nivel(2, com_bit=True, cor=(255, 255, 255))
@@ -178,11 +150,6 @@ def test_a_escada_padrao_do_brilho_comeca_e_termina_na_base():
     brilho = _instrumento("o_brilho_de_hardware_da_barra")
     assert brilho.ESCADA_PADRAO[0] == 0 and brilho.ESCADA_PADRAO[-1] == 0
     assert 2 in brilho.ESCADA_PADRAO
-
-
-# ---------------------------------------------------------------------------
-# o microfone — common[6], flag0 0x40, e a razão que decide
-# ---------------------------------------------------------------------------
 
 
 def test_o_mic_escreve_o_6_com_o_bit_0x40_e_so_ele(rep):
@@ -221,14 +188,8 @@ def test_o_veredito_do_mic_sem_voz_e_sem_medicao():
     assert mic.veredito([(0x00, muda), (0x40, muda)]).startswith("SEM MEDIÇÃO")
 
 
-# ---------------------------------------------------------------------------
-# o envelope do som no rádio — o ioctl certo e o negativo certo
-# ---------------------------------------------------------------------------
-
-
 def test_o_hidiocsoutput_e_o_do_cabecalho_do_kernel():
     env = _instrumento("o_envelope_do_som_no_radio")
-    # _IOC(_IOC_READ|_IOC_WRITE, 'H', 0x0B, 78) — dir nos bits 30-31, len em 16-29
     assert env.hidiocsoutput(78) == (3 << 30) | (78 << 16) | (ord("H") << 8) | 0x0B
 
 
@@ -253,10 +214,6 @@ def test_o_tom_sai_em_quadros_de_10_ms_de_1920_bytes():
     quadros = env.pcm_do_tom(0.05)
     assert len(quadros) == 5 and all(len(q) == 1920 for q in quadros)
 
-
-# ---------------------------------------------------------------------------
-# os nós de som — o parser do pactl e a falta nomeada
-# ---------------------------------------------------------------------------
 
 PACTL_SINKS = """Sink #61
 \tState: IDLE
@@ -292,18 +249,7 @@ def test_o_loopback_e_lido_dos_modulos_curtos():
 
 
 def test_os_nomes_dos_nos_sao_perguntados_ao_produto():
-    """Os dois rótulos estavam DIGITADOS no censo. Agora ele pergunta ao dono.
-
-    TRES-CONTAS-PARA-UM-NUMERO-01 §6 (12/09/2026). Esta régua afirmava
-    `nos.NOME_DO_ALTO_FALANTE == "Alto-falante do Controle"` — ela comparava
-    duas digitações, a do instrumento e a dela mesma, e nenhuma das duas era o
-    produto. Mude o rótulo em `integrations/` e o par continuava verde enquanto
-    o censo passava a dizer «NÃO EXISTE» a um nó que está na lista dela.
-
-    MORDIDA: volte a digitar o rótulo em `_rotulo_do_produto` e este teste
-    continua verde — mas então mude a constante no produto e ele reprova, que é
-    o que a versão anterior não sabia fazer.
-    """
+    """Os dois rótulos estavam DIGITADOS no censo. Agora ele pergunta ao dono."""
     from hefesto_dualsense4unix.integrations.alto_falante_bt import (
         NOME_DO_ALTO_FALANTE_DO_CONTROLE,
     )
@@ -317,23 +263,7 @@ def test_os_nomes_dos_nos_sao_perguntados_ao_produto():
 
 
 def test_o_censo_casa_o_no_pelo_nome_de_dentro_e_nunca_pela_prosa():
-    """Renomeie o `Description` à mão e o censo continua acertando o dono.
-
-    TRES-CONTAS-PARA-UM-NUMERO-01 §6, e a ressalva dela é o que decide:
-
-        *"aí é foda pq a ideia não é termos nada focado pro meu caso apenas,
-        mas como produto que possa funcionar com outra pessoa."*
-        <!-- noqa-acento: citação literal dela, palavra por palavra -->
-
-    Medido em 09/09 na mesa dela: o mesmo `hefesto_mic_<hex6>` foi atribuído ao
-    controle do CABO numa corrida e ao do RÁDIO na seguinte, sem nada ter mudado
-    no áudio — o assento andou, o texto do `Description` andou junto, e o censo
-    seguiu o texto. A âncora passou a ser o NOME do nó, que o daemon escreve a
-    partir do endereço.
-
-    MORDIDA: faça `_casa` voltar a aceitar o texto do `Description` (ou casar por
-    substring do nome) e a última asserção cai.
-    """
+    """Renomeie o `Description` à mão e o censo continua acertando o dono."""
     from hefesto_dualsense4unix.integrations import canal_do_microfone
 
     nos = _instrumento("os_nos_de_som_por_controle")
@@ -341,12 +271,8 @@ def test_o_censo_casa_o_no_pelo_nome_de_dentro_e_nunca_pela_prosa():
     do_radio = canal_do_microfone.nome_do_canal("aa:bb:cc:00:00:22")
     assert do_cabo and do_radio and do_cabo != do_radio
 
-    # o nó do CABO, com o `Description` que o assento do RÁDIO produziria
     assert nos._casa(do_cabo, do_cabo) is True
     assert nos._casa(do_radio, do_cabo) is False
-    # prosa não casa com nada, nem a que descreve o próprio nó
     assert nos._casa("Microfone do Controle 1", do_cabo) is False
-    # e sem nome de dentro (controle sem identidade legível) a resposta é NÃO
     assert nos._casa(do_cabo, "") is False
-    # nem por substring: um vizinho com um dígito a mais não é o dono
     assert nos._casa(do_cabo + "1", do_cabo) is False

@@ -89,27 +89,17 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Como este gesto assina na trava e no diário comuns do rádio.
 QUEM = "reconectar"
 
-#: Os quatro estados. Nenhum deles é acento — são chaves de máquina.
 ESTADO_DESCONECTOU = "desconectou"
 ESTADO_JA_ESTAVA_FORA = "ja_estava_fora"  # (noqa-acento): chave de máquina
 ESTADO_SEM_ALVO = "sem_alvo"
 ESTADO_NAO_DEU = "nao_deu"  # (noqa-acento): chave de máquina
-#: O controle voltou pelo rádio, sem a mão dela.
 ESTADO_VOLTOU = "voltou"
 #: O elo morto caiu, e o resto é dela: um DualSense dormindo não atende
-#: `Connect`. É o desfecho mais comum quando o controle ficou parado.
 ESTADO_SO_O_PS = "so_o_ps"  # (noqa-acento): chave de máquina
-#: O kernel tem o HID deste controle: ele está no ar, e nada se derruba nem se
-#: chama. Não conta como «voltou» nem como «espera o PS».
 ESTADO_JA_NO_AR = "ja_no_ar"  # (noqa-acento): chave de máquina
 
-#: As frases, uma por estado. Elas vão para a tela como estão — e nenhuma delas
-#: diz "a barra vai acender": este módulo derruba uma conexão, e o que a luz faz
-#: depois é coisa que ninguém aqui consegue ler (`multi_intensity` é a memória
-#: da última escrita, nunca a lâmpada).
 FRASE_DESCONECTOU = "Desconectei o controle. Aperte PS nele para ele voltar."
 FRASE_JA_ESTAVA_FORA = (
     "Este controle já não estava conectado. Aperte PS nele para ele voltar."
@@ -128,14 +118,10 @@ FRASE_NAO_DEU = (
     "caiu. Ele continua pareado."
 )
 FRASE_JA_NO_AR = "Este controle já está conectado."
-#: A dúvida do kernel é um «não deu», com a frase do que não se leu.
 FRASE_SEM_O_KERNEL = (
     "Não consegui ver se o sistema enxerga este controle, então ele ficou como estava."
 )
 
-#: O que roda um `busctl`: recebe os argumentos e devolve a saída, ou ``None``
-#: quando não deu. É por este tipo que o módulo inteiro fica exercitável sem
-#: `bluetoothd`, sem adaptador e sem controle na mesa.
 Executar = Callable[[Sequence[str]], "str | None"]
 
 
@@ -143,46 +129,23 @@ Executar = Callable[[Sequence[str]], "str | None"]
 class Resultado:
     """O que aconteceu com UM controle. Imutável: é uma foto, não estado."""
 
-    #: Um dos quatro ``ESTADO_*``.
     estado: str
-    #: A frase que a tela mostra, em português e escrita para ela.
     porque: str
-    #: O endereço, JÁ MASCARADO. Nunca o de doze hexa inteiro.
     endereco: str = ""
 
     @property
     def caiu(self) -> bool:
-        """O controle está fora do rádio AGORA?
-
-        ``ja_estava_fora`` conta: para quem espera o botão PS, os dois estados
-        pedem exatamente o mesmo gesto. O que NÃO conta é
-        :data:`ESTADO_NAO_DEU` — e essa é a linha inteira deste módulo: um
-        ``False`` aqui significa "não sei", e quem chama não pode fingir que
-        significa "não caiu".
-        """
+        """O controle está fora do rádio AGORA?"""
         return self.estado in (ESTADO_DESCONECTOU, ESTADO_JA_ESTAVA_FORA)
 
 
 def mascarar(mac: str) -> str:
-    """Zera os octetos 4 e 5 — a máscara desta casa, e há portão que a cobra.
-
-    Quem mascara é o dono, ``core/formas_do_endereco``. Um endereço em
-    qualquer grafia (o ``uniq`` do daemon, a chave do ``maquina.json``, o
-    caminho do BlueZ com sublinhado) sai com dois-pontos e minúsculo, que é
-    como a pessoa lê um MAC. O que não é UM endereço passa pela máscara do
-    texto e volta: até 28/09/2026 ele voltava cru.
-    """
+    """Zera os octetos 4 e 5 — a máscara desta casa, e há portão que a cobra."""
     return _formas.mascarar_endereco(mac) or _formas.mascarar(mac)
 
 
 def _normalizar(mac: str) -> str | None:
-    """``aa:bb:cc:11:22:33`` → ``AA_BB_CC_11_22_33``, ou ``None`` se não é MAC.
-
-    É a forma que o BlueZ usa no caminho do objeto. Recusar em vez de tentar é
-    deliberado: um endereço forjado (o que começa em ``02``, do nosso DKMS) não
-    tem dispositivo no bus, e mandar buscá-lo gastaria um subprocesso para
-    receber a mesma resposta.
-    """
+    """``aa:bb:cc:11:22:33`` → ``AA_BB_CC_11_22_33``, ou ``None`` se não é MAC."""
     limpo = mac.replace(":", "").replace("-", "").strip().lower()
     if len(limpo) != 12 or any(c not in "0123456789abcdef" for c in limpo):
         return None
@@ -208,35 +171,19 @@ def _conectado(leitor: bluez_dbus.LeitorDoBluez, caminho: str) -> bool | None:
 
 
 def caminho_do_controle(mac: str, *, executar: Executar | None = None) -> str | None:
-    """O caminho D-Bus deste endereço, em QUALQUER adaptador. ``None`` se não há.
-
-    Casa pelo endereço, que é o que não muda. Não recebe ``hciN`` e não o
-    deduz: numa mesa de três adaptadores o índice é sorteio, e o mesmo controle
-    já apareceu sob ``hci1`` e sob ``hci2`` no mesmo dia.
-    """
+    """O caminho D-Bus deste endereço, em QUALQUER adaptador. ``None`` se não há."""
     return _caminho(_leitor(executar), mac)
 
 
 def esta_conectado(mac: str, *, executar: Executar | None = None) -> bool | None:
-    """O BlueZ diz que este endereço está conectado AGORA? ``None`` = não sei.
-
-    Três respostas e não duas, pelo mesmo motivo do resto do arquivo: sem
-    barramento, com o ``bluetoothd`` fora ou com o dispositivo ausente da
-    árvore, a resposta honesta é ``None``. Quem espera o botão PS tem de tratar
-    ``None`` como "continua esperando", nunca como "voltou".
-    """
+    """O BlueZ diz que este endereço está conectado AGORA? ``None`` = não sei."""
     leitor = _leitor(executar)
     caminho = _caminho(leitor, mac)
     return None if caminho is None else _conectado(leitor, caminho)
 
 
 def tem_hid_no_kernel(mac: str) -> bool | None:
-    """O kernel tem um ``hidraw`` com este endereço? ``None`` = não deu para ler.
-
-    O dono é ``conexao_zumbi.quem_tem_hid`` (o ``HID_UNIQ`` do pai de cada
-    ``hidraw``, no cabo e no rádio), e o endereço passa pelo mesmo
-    ``mac_limpo`` que normaliza o ``HID_UNIQ``.
-    """
+    """O kernel tem um ``hidraw`` com este endereço? ``None`` = não deu para ler."""
     com_hid = conexao_zumbi.quem_tem_hid()
     if com_hid is None:
         return None
@@ -246,13 +193,7 @@ def tem_hid_no_kernel(mac: str) -> bool | None:
 
 
 def desconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
-    """Derruba este controle do rádio. Best-effort, e nunca levanta.
-
-    A ordem das perguntas é a que gasta menos: acha o caminho, confere se ainda
-    está conectado, e só então chama. Um ``Disconnect`` num dispositivo já fora
-    responde ``0`` e não faz nada — mas dizer *"já não estava conectado"* é o
-    que impede a pessoa de esperar um controle que nunca vai cair.
-    """
+    """Derruba este controle do rádio. Best-effort, e nunca levanta."""
     mascara = mascarar(mac)
     caminho = caminho_do_controle(mac, executar=executar)
     if caminho is None:
@@ -319,27 +260,7 @@ def dualsenses_do_radio(
 
 
 def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
-    """Devolve este controle ao rádio: derruba o elo morto e chama de volta.
-
-    ANTES, O KERNEL: com o HID deste endereço vivo, o controle está no ar, e o
-    desfecho é :data:`ESTADO_JA_NO_AR`, sem ``Disconnect`` e sem ``Connect``.
-
-    OS DOIS PASSOS, e o primeiro é o que o botão PS não consegue fazer:
-
-    1. ``Disconnect`` quando o BlueZ ainda diz ``Connected`` (ou não responde)
-       e o kernel não tem o HID — é o elo morto do estado que ela viu, com o
-       rádio de pé e o kernel sem HID. Sem derrubá-lo, o PS dela não tem
-       efeito: para o rádio o controle já está aqui. Se o kernel não puder ser
-       lido, ele NÃO cai (:data:`ESTADO_NAO_DEU`): o rádio é acréscimo, e na
-       dúvida o controle fica;
-    2. ``Connect``, com o teto maior do dono (``ESPERA_DO_CONNECT_S``: o
-       ``Connect`` CHAMA o aparelho). Funciona com o controle ACORDADO; com ele
-       dormindo, o BlueZ recusa e o desfecho é :data:`ESTADO_SO_O_PS` — a
-       metade que continua sendo dela.
-
-    Os dois passos vão na MESMA trava do rádio: ninguém entra entre eles.
-    Nunca levanta, como todo o resto do módulo, e não usa ``sudo``.
-    """
+    """Devolve este controle ao rádio: derruba o elo morto e chama de volta."""
     from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
     mascara = mascarar(mac)
@@ -351,8 +272,6 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     leitor = _leitor(executar)
     try:
         with bluez_dbus.na_trava(QUEM):
-            # O kernel se lê DENTRO da trava, colado à decisão: o controle que
-            # volta enquanto outro gesto segura o rádio não é derrubado.
             com_hid = tem_hid_no_kernel(mac)
             if com_hid:
                 logger.info("reconexao_elo_vivo_preservado", endereco=mascara)
@@ -361,9 +280,6 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
                 if com_hid is None:
                     logger.info("reconexao_sem_o_kernel_elo_preservado", endereco=mascara)
                     return Resultado(ESTADO_NAO_DEU, FRASE_SEM_O_KERNEL, mascara)
-                # O elo morto sai primeiro. Um `Connect` por cima dele responde
-                # "já está conectado" e não levanta sessão de entrada nenhuma —
-                # medido na mesa dela, quatro vezes, com o kernel sem HID.
                 if not leitor.desconectar(caminho, quem=QUEM).feita:
                     logger.warning("reconexao_disconnect_nao_deu", endereco=mascara)
                     return Resultado(ESTADO_NAO_DEU, FRASE_NAO_DEU, mascara)

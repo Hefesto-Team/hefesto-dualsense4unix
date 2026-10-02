@@ -1,43 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA DECISÃO 12: a tabela para de desfazer a escolha de quem clica.
-
-DECISÃO DELA, 02/09/2026: *"o Guardar FICA. As 21 listas param de ser
-repintadas enquanto ela está mexendo, até guardar ou sair. **Não** vira gravação
-automática: ela quer escolher várias, conferir e aplicar de uma vez."*
-
-O DEFEITO QUE ELA CURA, medido no mesmo dia com dublê, escolhendo uma opção como
-uma pessoa escolheria (evento `change`):
-
-    ANTES  (o que a pintura pôs) : Botão direito
-    CLIQUE (a escolha dela)      : F11
-    +100 ms                      : F11
-    +1500 ms (três tiques)       : Botão direito
-
-Eram DUAS causas: os 21 `<select>` não casavam com nenhum endereço clicável do
-ouvinte (`hefesto_vivo.py:367`), logo o `change` morria no navegador; e o tique
-de 500 ms reescrevia o valor do perfil por cima. Enquanto isso valeu, **o
-"Guardar" ao lado nunca recebeu uma forma diferente do perfil** — e a recusa
-dele ainda mandava *"troque a linha antes de clicar"*, um caminho que o próprio
-arquivo declarava não existir.
-
-O QUE ESTA RÉGUA COBRA, e cada item é uma metade da decisão:
-
-1. o tique seguinte ao clique **não desfaz** a escolha;
-2. e o tique **continua pintando** as 21 — a trava não é omissão. Um pacote que
-   simplesmente parasse de emitir as chaves deixaria a tabela sem dono, e a
-   página recarregada mostraria o desenho para sempre;
-3. **guardar, voltar ao padrão, fechar a tela e sair da aba** soltam a trava —
-   as quatro portas de *"até guardar ou sair"*;
-4. o gesto da linha **não grava e não chama o daemon** — *"não vira gravação
-   automática"*;
-5. escolher de volta o que o perfil já tem **esvazia** a trava sozinha;
-6. e a trava do apagador do "Guardar" passou a distinguir *"ela zerou"* de *"a
-   tela ainda não falou"*, que era a coisa que ela não sabia fazer.
-
-A MORDIDA está escrita em cada teste, e a do arquivo inteiro é uma linha: tire
-o `linhas.update(_MEXENDO)` de `_o_que_a_tabela_mostra` e os testes 1, 5 e 6
-reprovam nomeando a linha que voltou a ser desfeita.
-"""
+"""A RÉGUA DA DECISÃO 12: a tabela para de desfazer a escolha de quem clica."""
 from __future__ import annotations
 
 import pathlib
@@ -48,8 +10,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: O controle de mentira e o estado do daemon, na mesma forma do arquivo irmão.
-#: MAC da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
          "battery_pct": 90, "is_primary": True, "inputs": {}, "audio": {},
@@ -96,13 +56,7 @@ class _PerfilDeMentira:
 
 @pytest.fixture
 def aba(monkeypatch):
-    """O pacote da 06 com um perfil de mentira, e a trava sempre limpa.
-
-    A LIMPEZA É OBRIGATÓRIA E É POR ISSO: `_MEXENDO` é estado de MÓDULO — o
-    pacote é chamado uma vez por tique e não tem onde guardar nada entre eles.
-    Um teste que deixasse a trava suja contaminaria o seguinte, e o vazamento
-    seria justamente o defeito que estes testes existem para medir.
-    """
+    """O pacote da 06 com um perfil de mentira, e a trava sempre limpa."""
     import pacotes
     from pacotes import a06_navegacao as mod
     from pacotes import perfil
@@ -137,12 +91,7 @@ def _outra_opcao(botao: str) -> tuple[str, str]:
 
 
 def test_o_tique_seguinte_nao_desfaz_a_escolha(aba):
-    """O coração da decisão dela: clicou, o tique passou, a escolha ficou.
-
-    A MORDIDA: tire o `linhas.update(_MEXENDO)` de `_o_que_a_tabela_mostra` —
-    esta linha reprova mostrando a escolha dela virando o valor do perfil, que é
-    exatamente o `+1500 ms → Botão direito` da medição de 02/09.
-    """
+    """O coração da decisão dela: clicou, o tique passou, a escolha ficou."""
     ctx, mod, _ = aba
     antes = _tique(ctx, mod)
     token, rotulo = _outra_opcao("cross")
@@ -158,16 +107,7 @@ def test_o_tique_seguinte_nao_desfaz_a_escolha(aba):
 
 
 def test_a_trava_nao_e_omissao_as_vinte_e_uma_continuam_pintando(aba):
-    """Parar de repintar não pode virar parar de pintar.
-
-    Um pacote que simplesmente OMITISSE as 21 chaves enquanto ela mexe deixaria
-    a tabela sem dono: a página recarregada mostraria o desenho para sempre, e o
-    contador de pinturas do piloto perderia 21 endereços vivos. A trava faz o
-    contrário — a pintura passa a CONCORDAR com a tela.
-
-    A MORDIDA: troque o `linhas.update(_MEXENDO)` por um `del` das chaves
-    travadas — esta linha reprova dizendo quantas sumiram.
-    """
+    """Parar de repintar não pode virar parar de pintar."""
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     ctx, mod, _ = aba
@@ -206,11 +146,7 @@ def test_o_gesto_da_linha_nao_grava_e_nao_chama_o_daemon(aba):
 
 
 def test_escolher_de_volta_o_do_perfil_esvazia_a_trava(aba):
-    """Desfazer a própria escolha não pode deixar a trava presa.
-
-    A MORDIDA: tire o `_MEXENDO.pop` do ramo de igualdade — esta linha reprova
-    dizendo que a trava ficou cheia sem nada pendente.
-    """
+    """Desfazer a própria escolha não pode deixar a trava presa."""
     ctx, mod, _ = aba
     do_perfil = _tique(ctx, mod)["acao-square"]
     _, rotulo = _outra_opcao("square")
@@ -224,15 +160,7 @@ def test_escolher_de_volta_o_do_perfil_esvazia_a_trava(aba):
 
 
 def test_fechar_a_tela_larga_o_que_ela_nao_guardou(aba):
-    """O fechar e o "Cancelar" são o "sair" da decisão dela.
-
-    E eles devolvem a tabela do perfil NA HORA: um "Cancelar" que só desfaz meio
-    segundo depois deixa a pessoa vendo a própria escolha fantasma quando
-    reabre a tela.
-
-    A MORDIDA: tire o `_largar_o_que_ela_mexeu()` de `fechar_definicoes` — esta
-    linha reprova dizendo que a escolha sobreviveu ao Cancelar.
-    """
+    """O fechar e o "Cancelar" são o "sair" da decisão dela."""
     ctx, mod, _ = aba
     do_perfil = _tique(ctx, mod)["acao-triangle"]
     _, rotulo = _outra_opcao("triangle")
@@ -248,15 +176,7 @@ def test_fechar_a_tela_larga_o_que_ela_nao_guardou(aba):
 
 
 def test_sair_da_aba_larga_o_que_ela_nao_guardou(aba, monkeypatch):
-    """A quarta porta: ela trocou de aba, e o documento que volta é outro.
-
-    A página recarregada traz os 21 `<select>` no que o gerador cravou. Segurar
-    escolhas velhas por cima disso seria pintar uma decisão abandonada — e é o
-    que `PAUSA_DE_OUTRA_ABA` mede, contando o tempo entre duas pinturas.
-
-    A MORDIDA: ponha `PAUSA_DE_OUTRA_ABA` num número enorme — esta linha reprova
-    dizendo que a escolha atravessou a saída da aba.
-    """
+    """A quarta porta: ela trocou de aba, e o documento que volta é outro."""
     import time as _time
 
     ctx, mod, _ = aba
@@ -265,8 +185,6 @@ def test_sair_da_aba_larga_o_que_ela_nao_guardou(aba, monkeypatch):
     mod.linha_de_botao(ctx, {"linha": "l3", "valor": rotulo}, _PonteMuda())
     assert _tique(ctx, mod)["acao-l3"] == rotulo, "a trava nem chegou a pegar"
 
-    # O RELÓGIO ANDA, e a pintura não aconteceu no meio: é o retrato exato de
-    # uma aba que saiu de cena e voltou.
     salto = _time.monotonic() + mod.PAUSA_DE_OUTRA_ABA + 1.0
     monkeypatch.setattr(_time, "monotonic", lambda: salto)
 
@@ -277,11 +195,7 @@ def test_sair_da_aba_larga_o_que_ela_nao_guardou(aba, monkeypatch):
 
 
 def test_uma_pausa_curta_nao_larga_nada(aba, monkeypatch):
-    """E o inverso: um tique atrasado não pode ser lido como "ela saiu".
-
-    Sem esta metade, `PAUSA_DE_OUTRA_ABA` poderia encolher até zero e o teste de
-    cima continuaria verde — a régua estaria medindo o relógio, não a decisão.
-    """
+    """E o inverso: um tique atrasado não pode ser lido como "ela saiu"."""
     import time as _time
 
     ctx, mod, _ = aba
@@ -310,11 +224,6 @@ def disco(monkeypatch):
     monkeypatch.setattr(loader, "save_profile",
                         lambda prof, **_: gravados.append(prof), raising=False)
 
-    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): os gestos
-    # da tabela gravam por `gravar_pelo_gesto`, que escolhe entre o perfil e o
-    # computador. Aqui o disco de mentira é o de um perfil que já sobrepõe o
-    # cartão: o que se mede é o que o gesto grava, e não onde. O onde tem
-    # régua própria em `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
     def _pelo_gesto(_cartao, nome, muda, **_k):
         novo = muda(estado[nome])
         if novo is not None:
@@ -336,11 +245,7 @@ def _forma_de_fabrica(**trocas):
 
 
 def test_o_guardar_solta_a_trava(aba, disco):
-    """Guardado é fim de edição — a outra metade de *"até guardar ou sair"*.
-
-    A MORDIDA: tire o `_largar_o_que_ela_mexeu()` do fim do `guardar_definicoes`
-    — esta linha reprova dizendo que a trava sobreviveu à gravação.
-    """
+    """Guardado é fim de edição — a outra metade de *"até guardar ou sair"*."""
     ctx, mod, _ = aba
     estado, gravados = disco
     estado["regua"] = _PerfilDeMentira("regua")
@@ -358,34 +263,16 @@ def test_o_guardar_solta_a_trava(aba, disco):
 
 
 def test_a_trava_do_apagador_so_vale_quando_ela_nao_mexeu(aba, disco):
-    """A recusa que ensinava um caminho inexistente virou um caminho que existe.
-
-    O "Guardar" recusa zerar as 21 linhas porque a forma toda no de fábrica
-    podia querer dizer duas coisas: *"ela zerou"* ou *"o piloto releu o
-    desenho"*. A recusa mandava *"espere a tabela se preencher e clique de
-    novo"*, e trocar a linha nunca chegava ao Guardar — o tique a desfazia.
-
-    Com a decisão dela, a diferença passou a estar escrita: `_MEXENDO` só tem
-    linha que ELA trocou. Vazio, a trava vale. Cheio, zerar de propósito é
-    pedido legítimo — e o botão atende.
-
-    A MORDIDA: tire o `and not _MEXENDO` da trava — a segunda metade reprova
-    dizendo que o Guardar recusou uma escolha dela.
-    """
+    """A recusa que ensinava um caminho inexistente virou um caminho que existe."""
     ctx, mod, guardadas = aba
     estado, gravados = disco
-    # OS DOIS DUBLÊS DIZEM A MESMA COISA, e tem de ser assim: o `guardar` LÊ o
-    # perfil pelo `loader` e o gesto da linha o lê pelo `perfil.ativo`. Se os
-    # dois discordassem, a régua estaria medindo a discórdia dos dublês.
     guardadas["cross"] = "KEY_ESC"
     estado["regua"] = _PerfilDeMentira("regua", button_actions=dict(guardadas))
 
-    # 1. Sem ela ter mexido: a trava vale, e o perfil não é apagado.
     with pytest.raises(RuntimeError, match="não guardei"):
         mod.guardar_definicoes(ctx, {"forma": _forma_de_fabrica()}, _PonteMuda())
     assert not gravados
 
-    # 2. Ela pôs a linha de volta no de fábrica À MÃO: é escolha, e vai ao disco.
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     de_fabrica = acoes.rotulo(acoes.padrao()["cross"])
@@ -400,8 +287,7 @@ def test_a_trava_do_apagador_so_vale_quando_ela_nao_mexeu(aba, disco):
 
 
 def test_o_padrao_solta_a_trava(aba, disco):
-    """"Voltar ao padrão" zerou o perfil: segurar escolhas por cima disso faria
-    a tabela mostrar o contrário do que o botão acabou de fazer."""
+    """"Voltar ao padrão" zerou o perfil: segurar escolhas por cima disso faria"""
     ctx, mod, _ = aba
     estado, gravados = disco
     estado["regua"] = _PerfilDeMentira("regua", button_actions={"cross": "KEY_ESC"})
@@ -430,16 +316,7 @@ def test_a_linha_recusa_o_que_o_produto_nao_conhece(aba):
 
 
 def test_as_vinte_e_uma_linhas_dizem_ao_python_que_ela_esta_mexendo():
-    """O endereço do `change` está NO DESENHO, e sem ele nada disto acontece.
-
-    O ouvinte do piloto só olha um alvo que case com o `closest` de
-    `manda_do_alvo` (`hefesto_vivo.py:367`) — `data-campo` e `data-linha` não
-    estão na lista. Sem `data-gesto`, o `change` morre no navegador e a decisão
-    dela fica no papel.
-
-    A MORDIDA: tire o `gesto=LINHA_DE_BOTAO` da chamada de `drop()` no gerador —
-    esta linha reprova, e o `_conferir` do próprio gerador reprova antes.
-    """
+    """O endereço do `change` está NO DESENHO, e sem ele nada disto acontece."""
     import re
 
     import onde

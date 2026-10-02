@@ -1,32 +1,5 @@
 #!/usr/bin/env python3
-"""OS SEIS AVISOS que a aba Jogar lia do daemon e parou de ler.
-
-JOGAR-OS-SEIS-AVISOS-01, 06/09/2026. As seis linhas do CSV da paridade que esta
-régua guarda têm todas a MESMA forma, e é o enunciado da sprint: **o daemon
-publica a chave, ou `home_actions` já tem a função pura, e o pacote da aba não
-lê.** Nenhuma delas pedia lógica nova — as seis pediam um LEITOR.
-
-    12  o aviso do "Controlar o PC" sem mouse nem teclado
-    17  o grab dobrado ("o jogo pode receber cada botão duas vezes")
-    25  o RECIBO do "Reconectar Controles"
-    26  a dica do "Reconectar Controles" com jogo aberto
-    28  a divergência de máscara que o daemon já publicava
-    35  a linha de origem ("quem ligou foi o perfil ativo")
-
-O QUE ESTA RÉGUA MEDE, E O QUE ELA DELIBERADAMENTE NÃO MEDE
-------------------------------------------------------------
-Ela mede que **a coluna Atenção emite a frase do DONO** a partir de um `state`,
-e que ela **cala** quando não há o que dizer. Ela NÃO reescreve as frases: toda
-comparação é contra a constante do produto (`home_actions.AVISO_DE_GRAB_LINHA`,
-`RECONCILIAR_JOGO_ABERTO_TEXT`, `TEXTO_DESKTOP_SEM_MOUSE`…). Uma régua que
-digitasse o texto esperado seria a segunda cópia da palavra — o defeito que
-onze réguas desta casa já tiveram, e que o `_do_exame` desta mesma aba pagou
-quando digitou "RÁDIO" e "AVISO" por cima de um selo que o produto emitia.
-
-A MORDIDA DE CADA UMA é a mesma: com o `state` que ACENDE, a linha aparece; com
-o `state` vizinho — o que muda UM termo da condição —, ela some. Uma régua que
-só sabe passar não é régua, e as seis têm as duas respostas aqui.
-"""
+"""OS SEIS AVISOS que a aba Jogar lia do daemon e parou de ler."""
 from __future__ import annotations
 
 import pathlib
@@ -82,18 +55,8 @@ def _textos(state: dict[str, Any]) -> list[str]:
     return [str(a["texto"]) for a in aba._avisos(ctx)]
 
 
-# ---------------------------------------------------------------------------
-# 0. AS SEIS TÊM CANAL — e o canal é UM SÓ
-# ---------------------------------------------------------------------------
 def test_as_cinco_de_coluna_entraram_em_avisos_da_tela() -> None:
-    """O dono da coluna é `painel.AVISOS_DA_TELA`, e a sprint proíbe um segundo.
-
-    *"Os avisos entram na coluna Atenção por `painel.AVISOS_DA_TELA` e
-    `ORDEM_DA_GRAVIDADE` — não invente um segundo lugar."*
-
-    A sexta linha (o recibo do "Reconectar Controles") não é aviso de coluna: é
-    a resposta de um GESTO, e tem régua própria mais abaixo.
-    """
+    """O dono da coluna é `painel.AVISOS_DA_TELA`, e a sprint proíbe um segundo."""
     nomes = {a.nome for a in painel.AVISOS_DA_TELA}
     for esperado in (
         "home_actions.texto_do_desktop_sem_emulacao",
@@ -111,15 +74,7 @@ def test_as_cinco_de_coluna_entraram_em_avisos_da_tela() -> None:
 
 
 def test_a_divergencia_nao_aponta_de_app_para_a_janela() -> None:
-    """O PORTÃO QUE MOVEU ESTA FONTE, e a régua guarda a razão de ela ter mudado.
-
-    `scripts/check_nada_aponta_para_a_janela.py` congela o inventário de quem
-    ainda cita a janela GTK e o faz **só diminuir** (`D-0609-GTK-LEVA-INTEIRA`).
-    A primeira versão desta cura punha `sem_markup` dentro de
-    `app/actions/jogar/painel.py`, e o portão reprovou nomeando arquivo e linha
-    — medido em 06/09/2026. Se alguém devolver a citação para lá, esta régua
-    reprova ANTES do portão, dizendo por quê.
-    """
+    """O PORTÃO QUE MOVEU ESTA FONTE, e a régua guarda a razão de ela ter mudado."""
     fonte = pathlib.Path(painel.__file__).read_text(encoding="utf-8")
     assert "gui.aba_sistema" not in fonte, (
         "`app/actions/jogar/painel.py` voltou a apontar para a janela GTK. "
@@ -128,18 +83,7 @@ def test_a_divergencia_nao_aponta_de_app_para_a_janela() -> None:
 
 
 def test_a_porta_do_markup_e_uma_so() -> None:
-    """O par (arquivo, alvo) do inventário tem contagem 1, e ela não pode subir.
-
-    O portão reprova tanto citação NOVA quanto contagem que CRESCE. As duas
-    fontes que voltam em markup — a ponte e a divergência — passam pela mesma
-    porta de propósito.
-
-    **O NOME COMPLETO DO MÓDULO NÃO SE ESCREVE NESTA RÉGUA**, e não é asseio: o
-    portão varre o TEXTO dos arquivos, então uma régua que soletrasse a agulha
-    viraria a citação que ela mede — foi o que aconteceu na primeira versão
-    deste teste, reprovada pelo portão em 06/09/2026. Contar os `import` que
-    nomeiam o módulo responde à mesma pergunta sem cravar o padrão.
-    """
+    """O par (arquivo, alvo) do inventário tem contagem 1, e ela não pode subir."""
     linhas = pathlib.Path(aba.__file__).read_text(encoding="utf-8").splitlines()
     imports = [linha for linha in linhas
                if linha.lstrip().startswith("from") and "aba_sistema" in linha]
@@ -181,9 +125,6 @@ def test_todo_selo_novo_esta_na_escada_da_gravidade(
         f"Ou eles entram na escada, ou a máquina cheia os esconde atrás do +N.")
 
 
-# ---------------------------------------------------------------------------
-# 1. LINHA 12 — "Controlar o PC" que não controla nada
-# ---------------------------------------------------------------------------
 def test_o_desktop_sem_mouse_nem_teclado_fala() -> None:
     """O MODO-QUE-NAO-CONTROLA-01 chega à coluna. Frase do dono, verbatim."""
     state = _mesa(
@@ -196,11 +137,7 @@ def test_o_desktop_sem_mouse_nem_teclado_fala() -> None:
 
 
 def test_o_desktop_com_o_mouse_ligado_cala() -> None:
-    """A MORDIDA: liga o mouse e o teclado, e a linha some.
-
-    Só o ``False`` LITERAL acende, e é a disciplina do dono — bloco ausente
-    (daemon antigo, payload incompleto) não vira aviso.
-    """
+    """A MORDIDA: liga o mouse e o teclado, e a linha some."""
     state = _mesa(
         gamepad_emulation={"enabled": False, "flavor": "dualsense"},
         mouse_emulation={"enabled": True},
@@ -215,22 +152,13 @@ def test_o_desktop_com_o_mouse_ligado_cala() -> None:
 
 
 def test_fora_do_desktop_ninguem_avisa_sobre_o_mouse() -> None:
-    """Em "Jogar pelo Hefesto" o mouse está desligado pela exclusão mútua do
-    daemon — o desenho normal, e nada de errado nele."""
+    """Em "Jogar pelo Hefesto" o mouse está desligado pela exclusão mútua do"""
     state = _mesa(mouse_emulation={"enabled": False}, keyboard_emulation={"enabled": False})
     assert home_actions.TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO not in _textos(state)
 
 
-# ---------------------------------------------------------------------------
-# 2. LINHA 17 — o grab dobrado
-# ---------------------------------------------------------------------------
 def test_o_grab_dobrado_diz_a_linha_e_o_porque() -> None:
-    """As DUAS metades viajam, porque a coluna não tem `hover` por linha.
-
-    `aviso_de_grab` devolve ``(linha, porquê)``: na janela antiga o segundo era
-    o `tooltip`. Cortá-lo aqui deixaria o alarme mais confuso desta aba sem o
-    que fazer a respeito.
-    """
+    """As DUAS metades viajam, porque a coluna não tem `hover` por linha."""
     state = _mesa(primary_grab_state="failed")
     frase = next(t for t in _textos(state) if home_actions.AVISO_DE_GRAB_LINHA in t)
     assert home_actions.AVISO_DE_GRAB_PORQUE in frase, (
@@ -260,9 +188,6 @@ def test_o_grab_dobrado_cala_quando_um_termo_muda(extra: dict[str, Any], porque:
     assert not any(home_actions.AVISO_DE_GRAB_LINHA in t for t in _textos(state)), porque
 
 
-# ---------------------------------------------------------------------------
-# 3. LINHA 26 — a dica do "Reconectar Controles" com jogo aberto
-# ---------------------------------------------------------------------------
 def test_com_jogo_em_cena_a_dica_do_reconectar_aparece() -> None:
     """`jogo_com_autoridade` é a fonte ÚNICA, e é a mesma do gate R-04."""
     state = _mesa(game_signal={"authority": "game"})
@@ -279,9 +204,6 @@ def test_sem_jogo_em_cena_a_dica_cala(sinal: Any) -> None:
     assert home_actions.RECONCILIAR_JOGO_ABERTO_TEXT not in _textos(state)
 
 
-# ---------------------------------------------------------------------------
-# 4. LINHA 28 — a divergência de máscara que o daemon já publicava
-# ---------------------------------------------------------------------------
 def _com_divergencia(**extra: Any) -> dict[str, Any]:
     alarme = {
         "appid": "424242",
@@ -297,11 +219,7 @@ def _com_divergencia(**extra: Any) -> dict[str, Any]:
 
 
 def test_a_divergencia_de_mascara_chega_a_coluna() -> None:
-    """A chave que o daemon publica desde a MASCARA-01, lida pela primeira vez.
-
-    A frase é a do dono e nomeia o PERFIL, nunca um gesto dela — quem pediu
-    aquela máscara foi o perfil, que entra sozinho pelo autoswitch (I3).
-    """
+    """A chave que o daemon publica desde a MASCARA-01, lida pela primeira vez."""
     state = _com_divergencia()
     frase = next(
         (t for t in _textos(state)
@@ -314,10 +232,7 @@ def test_a_divergencia_de_mascara_chega_a_coluna() -> None:
 
 
 def test_o_markup_do_pango_nao_chega_a_tela() -> None:
-    """`texto_da_divergencia` devolve markup; o piloto escreve `textContent`.
-
-    Sem `sem_markup`, o ``<span foreground="…">`` iria LITERAL para a tela.
-    """
+    """`texto_da_divergencia` devolve markup; o piloto escreve `textContent`."""
     for texto in _textos(_com_divergencia()):
         assert "<span" not in texto and "</span>" not in texto
 
@@ -347,11 +262,7 @@ def test_sem_alarme_do_daemon_a_coluna_cala() -> None:
 
 
 def test_a_lista_irma_nao_acende_nada() -> None:
-    """`mascara_divergencias` é antecipação de jogo FECHADO, e fica de fora.
-
-    Mostrar divergência de jogo que não está em cena seria aviso sobre coisa
-    que não está em uso — está escrito no dono, e esta régua o guarda.
-    """
+    """`mascara_divergencias` é antecipação de jogo FECHADO, e fica de fora."""
     state = _mesa(gamepad_emulation={
         "enabled": True, "flavor": "dualsense", "mascara_divergente": None,
         "mascara_divergencias": [{"appid": "1", "profile": "P", "mascara_perfil": "xbox",
@@ -361,9 +272,6 @@ def test_a_lista_irma_nao_acende_nada() -> None:
         t.startswith(home_actions.DIVERGENCIA_DO_PERFIL_PREFIXO) for t in _textos(state))
 
 
-# ---------------------------------------------------------------------------
-# 5. LINHA 35 — a linha de origem
-# ---------------------------------------------------------------------------
 def test_o_nativo_ligado_pelo_perfil_se_declara() -> None:
     state = _mesa(native_mode=True, native_mode_origin="profile",
                   gamepad_emulation={"enabled": False, "flavor": "dualsense"})
@@ -404,9 +312,6 @@ def test_a_origem_cala_quando_o_perfil_nao_ligou(extra: dict[str, Any], porque: 
     assert not any(t.startswith("Quem ligou") for t in _textos(state)), porque
 
 
-# ---------------------------------------------------------------------------
-# 6. LINHA 25 — o RECIBO do "Reconectar Controles"
-# ---------------------------------------------------------------------------
 class _PonteQueResponde:
     """Um dublê que sabe RESPONDER e sabe RECUSAR — as duas, ou não é régua."""
 
@@ -427,15 +332,7 @@ def _ctx() -> Contexto:
 
 
 def test_os_dois_passos_vao_na_ordem_e_o_numero_novo_nao_vira_recado() -> None:
-    """Os dois passos respondem, na ordem — e a numeração que mudou cala.
-
-    **A FRASE SAIU — 24/09/2026, A-FRASE-DO-RECONECTAR-SAI-01.** Até aqui esta
-    régua exigia a frase que a JOGAR-02 propôs (09/09) para quando um número
-    mudasse, nomeando os assentos. Ela respondeu *«Nada: o número novo aparece
-    no próprio cartão»* (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`), e a frase entrou
-    na lista das banidas. A régua inteira da decisão, com as falhas e o rádio
-    que ficam, é `test_o_reconectar_nao_diz_nada.py`.
-    """
+    """Os dois passos respondem, na ordem — e a numeração que mudou cala."""
     p = _PonteQueResponde({
         "coop.sync": {"status": "ok", "players": 3, "active": True},
         "identity.renumber": {"ok": True, "renumbered": {UNIQ: 1, "bb": 2}},
@@ -450,16 +347,7 @@ def test_os_dois_passos_vao_na_ordem_e_o_numero_novo_nao_vira_recado() -> None:
 
 
 def test_a_recusa_por_jogo_aberto_nao_e_falha_nem_recado() -> None:
-    """Com os jogadores já de pé, um recado de erro seria a interface mentindo.
-
-    **E DEIXOU DE SER RECADO NENHUM — JOGAR-02, 09/09/2026.** A recusa do
-    passo 2 com o jogo aberto não é falha E não é notícia: o passo 1 fez o que
-    o botão promete. O gesto sai sem `recado`, e a tela responde com a piscada
-    verde no botão — que é como esta casa diz "deu certo" desde a 03-Q4.
-
-    **A MORDIDA:** tire `sessao_de_jogo_aberta` de `painel._sem_noticia` e o
-    gesto volta com um recado de falha sobre um passo que não falhou.
-    """
+    """Com os jogadores já de pé, um recado de erro seria a interface mentindo."""
     p = _PonteQueResponde({
         "coop.sync": {"players": 2},
         "identity.renumber": {"ok": False, "reason": "sessao_de_jogo_aberta"},
@@ -468,16 +356,7 @@ def test_a_recusa_por_jogo_aberto_nao_e_falha_nem_recado() -> None:
 
 
 def test_a_numeracao_ja_compacta_nao_vira_recado() -> None:
-    """"Já estava compacta" é a AUSÊNCIA de notícia — o caso do print dela.
-
-    A frase que ela mandou remover era exatamente esta::
-
-        Jogadores reconciliados — 2 jogador(es). A numeração já estava compacta.
-
-    **A MORDIDA:** faça `_sem_noticia` devolver `False` para o `renumbered`
-    vazio e o gesto volta com um recado — de falha, desde 24/09/2026, porque o
-    sucesso não tem mais frase nenhuma.
-    """
+    """"Já estava compacta" é a AUSÊNCIA de notícia — o caso do print dela."""
     p = _PonteQueResponde({
         "coop.sync": {"players": 2},
         "identity.renumber": {"ok": True, "renumbered": {}},
@@ -492,18 +371,11 @@ def test_o_acabamento_mudo_nao_derruba_o_gesto() -> None:
         "identity.renumber": RuntimeError("o daemon não respondeu"),
     })
     fora = aba.reconectar(_ctx(), {}, p)
-    #: **CONTINUA SENDO NOTÍCIA:** "não consegui conferir" é o produto dizendo
-    #: que não fez, e silêncio sobre isso é a mentira que esta casa persegue.
     assert fora is not None and fora["recado"] == painel._NAO_CONFERIU
 
 
 def test_sem_o_primeiro_passo_o_botao_recusa_dizendo() -> None:
-    """A MORDIDA do recibo, e é o defeito inteiro: o botão que respondia calado.
-
-    Clicar com o serviço fora do ar e clicar com ele vivo produziam exatamente
-    a mesma tela. Agora o primeiro levanta `RuntimeError`, que é o canal da
-    recusa laranja no cartão.
-    """
+    """A MORDIDA do recibo, e é o defeito inteiro: o botão que respondia calado."""
     p = _PonteQueResponde({"coop.sync": RuntimeError("o daemon não respondeu")})
     with pytest.raises(RuntimeError) as erro:
         aba.reconectar(_ctx(), {}, p)
@@ -514,11 +386,7 @@ def test_sem_o_primeiro_passo_o_botao_recusa_dizendo() -> None:
 
 
 def test_a_recusa_nao_afirma_que_nada_aconteceu() -> None:
-    """Um teto de tempo estourado é trabalho POSSIVELMENTE feito sem resposta.
-
-    É a cicatriz que a `a09_sistema.SEM_RESPOSTA_DO_SERVICO` escreve por
-    extenso, e a frase daqui não pode desfazê-la afirmando o contrário.
-    """
+    """Um teto de tempo estourado é trabalho POSSIVELMENTE feito sem resposta."""
     frase = painel.RECONECTAR_SEM_SERVICO
     assert "não reconectei" not in frase.lower()
     assert "nada" not in frase.lower(), (
@@ -526,11 +394,7 @@ def test_a_recusa_nao_afirma_que_nada_aconteceu() -> None:
 
 
 def test_a_prova_declarada_pede_o_corpo_e_nao_o_bool() -> None:
-    """`PROVAS` é o contrato do clique, e ele mudou junto com o gesto.
-
-    Se alguém devolver `chamar` para o "Reconectar Controles", o recibo volta a
-    ser impossível — `chamar` devolve `bool` e joga o corpo fora.
-    """
+    """`PROVAS` é o contrato do clique, e ele mudou junto com o gesto."""
     prova = next(p for p in aba.PROVAS if p["gesto"] == "reconectar")
     assert [c[0] for c in prova["chama"]] == ["resultado", "resultado"]
     assert "resultado" in aba.PONTE

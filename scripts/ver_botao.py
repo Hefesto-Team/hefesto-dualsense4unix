@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-"""Mostra, na hora, qual evento cada botão do controle emite.
-
-Nasceu em 11/08/2026 de três tentativas falhas de capturar dois botões do
-8BitDo SN30 Pro. O defeito não era técnico: quem operava o terminal não via a
-janela de captura abrir — a mensagem "aperte agora" só aparecia depois que o
-comando terminava. Três minutos de leitor no ar, zero eventos, e nenhuma
-conclusão possível.
-
-A cura é inverter quem dá a partida. Este script é para ELA rodar, com o
-retorno na própria tela, no instante do aperto:
-
-    python3 scripts/ver_botao.py
-
-Não escreve nada, não pede sudo, não toca em configuração. Sai com Ctrl+C.
-"""
+"""Mostra, na hora, qual evento cada botão do controle emite."""
 from __future__ import annotations
 
 import selectors
@@ -30,16 +16,7 @@ except ImportError as _falta:
 
 
 def rotulo(dev: evdev.InputDevice) -> str:
-    """Nome curto e humano, para não confundir dois controles iguais.
-
-    O 8BitDo se apresenta com o VID/PID da Nintendo, então nome não distingue:
-    o que separa é a OUI do endereço, e a pergunta vai por NEGATIVA — a faixa
-    do clone é uma só e é conhecida; a da Nintendo são 82.
-
-    Antes de 22/08/2026 esta função comparava com UMA faixa e chamava de
-    "8BitDo SN30 Pro" todo Pro genuíno de outra safra, na cara de quem estava
-    operando o script (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A1).
-    """
+    """Nome curto e humano, para não confundir dois controles iguais."""
     uniq = dev.uniq or ""
     nome = dev.name
     if "dualsense" in nome.lower():
@@ -47,8 +24,6 @@ def rotulo(dev: evdev.InputDevice) -> str:
     if "pro controller" in nome.lower():
         if e_clone_conhecido(uniq):
             return "8BitDo (clone)"
-        # Sem endereço legível não dá para descartar o clone — e dizer
-        # "Pro (Nintendo)" seria afirmar o que não se sabe.
         return "Pro (Nintendo)" if uniq else "Pro (indistinguível)"
     return nome[:24]
 
@@ -60,7 +35,6 @@ def main() -> int:
             dev = evdev.InputDevice(caminho)
         except OSError:
             continue
-        # Só o que tem botão: os nós de IMU e touchpad não interessam aqui.
         if evdev.ecodes.EV_KEY not in dev.capabilities():
             continue
         nome = dev.name.lower()

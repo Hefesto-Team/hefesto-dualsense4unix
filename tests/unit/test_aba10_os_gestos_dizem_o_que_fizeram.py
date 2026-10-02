@@ -4,7 +4,7 @@ DOIS DEFEITOS, medidos em 03/09/2026 contra a interface nova. Os dois são de
 PARIDADE: a janela estável faz as duas coisas há meses.
 
 1. **O SUCESSO ERA SILÊNCIO.** Lá, todo gesto desta aba termina num
-   ``_toast_profile`` no rodapé (``profiles_actions.py:4579``) — "Perfil
+   ``_toast_profile`` no rodapé (``profiles_actions.py:2839``) — "Perfil
    removido: X", "Lista recarregada", ``mensagem_de_ativacao``. Aqui só a
    RECUSA falava: ``RuntimeError`` vira tarja (``hefesto_vivo._recusou_dizendo``)
    e o sucesso não escrevia uma letra — o piloto anota ``("aplicou", "")``.
@@ -39,16 +39,12 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
 
-#: A MESA — endereço MASCARADO (octetos 4 e 5 zerados).
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
      "mascara": "DualSense"},
 ]
 
-#: O endereço da tira, e ele é UM só nos dois lados: o pacote emite este nome e
-#: o gerador o escreve na tira (`aba10.py`). Digitá-lo aqui e mudá-lo lá é a
-#: divergência que a régua de endereços cobra.
 DESFECHO = "perfis.desfecho"
 
 
@@ -95,11 +91,7 @@ def _perfis(*nomes: str) -> list[Any]:
 
 
 def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> list[Any]:
-    """A pasta de perfis, sem escrever no disco.
-
-    SEM ISTO A PASTA É VAZIA: a ``conftest.py`` põe
-    ``HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`` em TODO teste.
-    """
+    """A pasta de perfis, sem escrever no disco."""
     todos = _perfis(*nomes)
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: todos)
     monkeypatch.setattr(
@@ -119,9 +111,6 @@ def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
     monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: nome)
 
 
-# --------------------------------------------------------------------------
-# 1. O EMBRULHO — sem ele nada disto chega à tela
-# --------------------------------------------------------------------------
 def test_a_tira_recebe_vazio_e_a_frase_vai_no_relato() -> None:
     """A TIRA NÃO FALA MAIS — 13/09/2026, pedido dela.
 
@@ -140,11 +129,7 @@ def test_a_tira_recebe_vazio_e_a_frase_vai_no_relato() -> None:
 
 
 def test_a_tira_nao_guarda_frase_para_o_tique_seguinte() -> None:
-    """Sem guardado, nenhum tique acende a tira depois do gesto.
-
-    MORDIDA: volte o ``_anotar`` a guardar ``(frase, time.monotonic())`` e o
-    tique seguinte pintaria a frase por trinta segundos — este teste reprova.
-    """
+    """Sem guardado, nenhum tique acende a tira depois do gesto."""
     a10_perfis._dizer("Perfil removido: Sackboy")
     assert a10_perfis._desfecho_para_a_tela() == ""
 
@@ -170,9 +155,6 @@ def test_o_pacote_emite_a_tira_vazia(
     assert fora[DESFECHO] == ""
 
 
-# --------------------------------------------------------------------------
-# 2. O "ATIVAR" LÊ O CORPO — e diz o que NÃO entrou
-# --------------------------------------------------------------------------
 def test_o_ativar_diz_o_que_o_lock_manual_comeu(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -252,15 +234,8 @@ def test_o_ativar_ainda_recusa_dizendo_quando_o_daemon_nao_atende(
         f"a recusa saiu {str(erro.value)!r} e não nomeia o perfil")
 
 
-# --------------------------------------------------------------------------
-# 3. O "RECARREGAR" TEM DONO
-# --------------------------------------------------------------------------
 def test_o_recarregar_tem_dono() -> None:
-    """Um clique sem dono não chega nem à tarja: vai para o stdout.
-
-    MORDIDA: tire o ``@gesto("10-perfis.html", "recarregar")`` e este teste
-    reprova — é exatamente o estado em que o botão ficou de 31/08 a 03/09.
-    """
+    """Um clique sem dono não chega nem à tarja: vai para o stdout."""
     from hefesto_dualsense4unix.interface import pacotes
 
     assert pacotes.gesto_da_pagina("10-perfis.html", "recarregar") is not None, (
@@ -271,12 +246,7 @@ def test_o_recarregar_tem_dono() -> None:
 def test_o_recarregar_devolve_a_lista_relida(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ele é o ``_reload_profiles_store`` desta tela: relê e REPINTA na hora.
-
-    A carga tem de trazer o ``blocos`` da lista — é ele que troca o ``<tbody>``
-    inteiro. Sem ele o clique não mudaria um pixel até o tique seguinte, e um
-    botão que parece não ter pego é o defeito que ele existe para curar.
-    """
+    """Ele é o ``_reload_profiles_store`` desta tela: relê e REPINTA na hora."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy", "Elden Ring")
     _o_marcador_diz(monkeypatch, None)
 
@@ -293,11 +263,7 @@ def test_o_recarregar_devolve_a_lista_relida(
 def test_o_recarregar_nao_fala_com_o_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A fonte da lista é o DISCO — o daemon só sabe qual está ativo.
-
-    Um ``load_all`` extra pelo IPC seria o botão fingindo trabalho que já está
-    feito, que é a metade CERTA do motivo antigo de ele não ter dono.
-    """
+    """A fonte da lista é o DISCO — o daemon só sabe qual está ativo."""
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, None)
     ponte = PonteDeMentira()
@@ -311,13 +277,7 @@ def test_o_recarregar_nao_fala_com_o_daemon(
 def test_o_recarregar_traz_o_desfecho_novo_e_nao_o_do_gesto_anterior(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A ordem dentro do gesto importa, e é fácil de errar.
-
-    ``pacote()`` LÊ o desfecho para pintá-lo, então a carga que ele acabou de
-    montar carrega o desfecho ANTERIOR. Sem sobrescrever a chave depois, o
-    clique em "Recarregar" mostraria "Perfil removido: X" — o desfecho de outro
-    gesto, ao lado de uma lista que acabou de ser relida.
-    """
+    """A ordem dentro do gesto importa, e é fácil de errar."""
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, None)
     a10_perfis._dizer("Perfil removido: Sackboy")
@@ -329,17 +289,10 @@ def test_o_recarregar_traz_o_desfecho_novo_e_nao_o_do_gesto_anterior(
         f"anterior.")
 
 
-# --------------------------------------------------------------------------
-# 4. O "REMOVER" DIZ QUE REMOVEU
-# --------------------------------------------------------------------------
 def test_o_remover_anota_a_frase_da_janela_estavel(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """"Perfil removido: X" — a MESMA frase, não uma parecida.
-
-    ``profiles_actions.py:3197`` é o dono. Escrever outra aqui seria a segunda
-    verdade sobre o mesmo ato.
-    """
+    """"Perfil removido: X" — a MESMA frase, não uma parecida."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, None)
     apagados: list[str] = []
@@ -348,7 +301,6 @@ def test_o_remover_anota_a_frase_da_janela_estavel(
     a10_perfis._ESCOLHIDO = "Sackboy"
     ponte = PonteDeMentira()
 
-    # O primeiro clique ARMA e levanta — a pergunta mora no rótulo do botão.
     with pytest.raises(RuntimeError):
         a10_perfis.remover(_ctx(), {}, ponte)
     resposta = a10_perfis.remover(_ctx(), {}, ponte)

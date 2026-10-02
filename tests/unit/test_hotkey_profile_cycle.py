@@ -21,8 +21,6 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_COMBO_PREV,
 )
 
-# --- fakes -----------------------------------------------------------------
-
 
 class _FakeProfile:
     def __init__(self, name: str) -> None:
@@ -54,13 +52,7 @@ class _FakeController:
 
 
 class _FakeManager:
-    """Substitui ProfileManager: 3 perfis a/b/c, registra activate.
-
-    REGISTRA os appliers recebidos (keyboard_device_provider, mouse_applier,
-    suppression_applier — FEAT-POINT-AND-CLICK-01 / BUG-PROFILE-MOUSE-KILLS-
-    GAMEPAD-01) para que o wiring do callsite de hotkey seja PROVADO, não apenas
-    tolerado — senão renomear/remover os appliers passaria despercebido.
-    """
+    """Substitui ProfileManager: 3 perfis a/b/c, registra activate."""
 
     profiles = ("a", "b", "c")
     instances: ClassVar[list[_FakeManager]] = []
@@ -84,8 +76,6 @@ class _FakeManager:
         return [_FakeProfile(n) for n in self.profiles]
 
     def activate(self, name: str, *, origin: str = "manual") -> _FakeProfile:
-        # PERFIL-03: o call site de hotkey passa origin="manual" (gesto
-        # físico). Registrado para o teste de fiação dos origins.
         self.activated.append(name)
         self.origins.append(origin)
         if self.store is not None:
@@ -121,9 +111,6 @@ def _patch_manager(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-# --- lógica de ciclo -------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_cycle_next_avanca(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_manager(monkeypatch)
@@ -136,10 +123,7 @@ async def test_cycle_next_avanca(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_cycle_injeta_appliers_do_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: o callsite de hotkey injeta os appliers
-    GUARDADOS do daemon (apply_profile_mouse/apply_profile_suppression), não os
-    setters crus — senão o ciclo PS+combo mataria o gamepad ao passar por um perfil
-    com seção mouse. Prova o wiring chamando os appliers capturados pelo manager."""
+    """BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: o callsite de hotkey injeta os appliers"""
     _patch_manager(monkeypatch)
     d = _FakeDaemon(active="a")
     await build_profile_cycle_callback(d, +1)()
@@ -148,7 +132,6 @@ async def test_cycle_injeta_appliers_do_daemon(
     assert mgr.mouse_applier is not None
     assert mgr.suppression_applier is not None
     assert callable(mgr.keyboard_device_provider)
-    # Os appliers roteiam para o daemon (são os métodos guardados, não None/setter cru).
     mgr.mouse_applier(True, 8, 1)
     mgr.suppression_applier(True)
     assert d.mouse_applied == [(True, 8, 1)]
@@ -158,7 +141,7 @@ async def test_cycle_injeta_appliers_do_daemon(
 @pytest.mark.asyncio
 async def test_cycle_next_da_wrap_around(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_manager(monkeypatch)
-    d = _FakeDaemon(active="c")  # último → volta pro primeiro
+    d = _FakeDaemon(active="c")
     await build_profile_cycle_callback(d, +1)()
     assert d.store.active_profile == "a"
 
@@ -173,16 +156,7 @@ async def test_cycle_prev_retrocede(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_cycle_arma_lock_e_flasha(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Gesto explícito: arma o lock manual + flasha o lightbar (senão o
-    autoswitch desfaz a troca no tick seguinte).
-
-    ELE TAMBÉM COBRAVA `d.store.cleared is True` — o gesto soltando a trava
-    manual por categoria antes de ativar. A trava saiu em 14/09/2026 por decisão
-    dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`), e sem ela não há o
-    que soltar. O LOCK continua com as duas metades — é ele que impede o
-    autoswitch de desfazer a troca no tique seguinte, e é ele que este teste
-    guarda.
-    """
+    """Gesto explícito: arma o lock manual + flasha o lightbar (senão o"""
     _patch_manager(monkeypatch)
     d = _FakeDaemon(active="a")
     await build_profile_cycle_callback(d, +1)()
@@ -198,8 +172,8 @@ async def test_cycle_skip_com_menos_de_dois_perfis(
     monkeypatch.setattr(_FakeManager, "profiles", ("solo",))
     d = _FakeDaemon(active="solo")
     await build_profile_cycle_callback(d, +1)()
-    assert d.store.active_profile == "solo"  # inalterado
-    assert not d.controller.leds  # nem flasha
+    assert d.store.active_profile == "solo"
+    assert not d.controller.leds
 
 
 @pytest.mark.asyncio
@@ -207,12 +181,9 @@ async def test_cycle_ativo_desconhecido_comeca_do_zero(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_manager(monkeypatch)
-    d = _FakeDaemon(active=None)  # nenhum ativo → idx 0, next = índice 1
+    d = _FakeDaemon(active=None)
     await build_profile_cycle_callback(d, +1)()
     assert d.store.active_profile == "b"
-
-
-# --- wiring no subsystem ---------------------------------------------------
 
 
 class _Cfg:

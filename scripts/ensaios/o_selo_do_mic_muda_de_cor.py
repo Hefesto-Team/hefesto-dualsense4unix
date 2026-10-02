@@ -36,9 +36,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -58,16 +55,11 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
 
 ABA = "02-controles.html"
 
-#: OS TRÊS ESTADOS, PERGUNTADOS AO DONO — `mesa_viva.selo_do_mic`, o mesmo que
-#: o pacote emite a cada tique e o mesmo que o gerador crava em
-#: `data-hef-quando`. Digitar "MUDO" aqui faria a régua reprovar a MELHORA no
-#: dia em que a palavra mudar — é a lição que esta casa pagou seis vezes.
 SELO_MUDO = mesa_viva.selo_do_mic(True, True)
 SELO_ATIVO = mesa_viva.selo_do_mic(False, True)
 SELO_SEM_LEITURA = mesa_viva.selo_do_mic(False, False)
 ESTADOS = (SELO_MUDO, SELO_ATIVO, SELO_SEM_LEITURA)
 
-#: PINTA E LÊ NUMA AVALIAÇÃO SÓ. O `%s` recebe o selo a pintar.
 PINTA_E_LE = r"""
 (function(){
   const selo = %s;
@@ -145,15 +137,6 @@ def main() -> int:
     medidas: dict[str, dict] = {}
     fila = list(ESTADOS)
 
-    # A NAVEGAÇÃO É DO `main()` DO PILOTO, não do `__init__` — quem constrói o
-    # `Piloto` à mão nasce na `01-jogar` e mediria a aba errada. Foi o que a
-    # primeira execução deste ensaio fez: zero `mic-selo` no DOM, com os quatro
-    # endereços vivos na página publicada.
-    #
-    # E A URI É MONTADA AQUI, não pelo `_ir`, que é fixo em `publicado=True`. É
-    # o que permite medir a BANCADA com o mesmo motor e o mesmo daemon: o
-    # `_carregou` do piloto reinstala a ponte por NOME DE ARQUIVO, e os dois
-    # arquivos se chamam `02-controles.html`.
     def ir() -> bool:
         if not piloto.pronto:
             return True
@@ -181,16 +164,8 @@ def main() -> int:
         return False
 
     def retratar() -> bool:
-        """A foto, DEPOIS da medição — e com o selo no estado pedido.
-
-        O TIQUE DE 500 ms REPINTA POR CIMA, e a primeira versão desta função
-        pagou por isso: ela injetava e fotografava na MESMA passagem, com
-        `run_javascript` sendo assíncrono — o obturador batia antes de o JS
-        correr, e a foto saía no estado que o daemon diz agora. Aqui a foto é
-        agendada pelo RETORNO da injeção, e o piloto é parado antes, para que
-        o tique seguinte não desfaça o que se quer mostrar a ela.
-        """
-        piloto.pronto = False          # cala o tique: ele repintaria por cima
+        """A foto, DEPOIS da medição — e com o selo no estado pedido."""
+        piloto.pronto = False
         if not dela.selo:
             return bater()
 
@@ -218,9 +193,6 @@ def main() -> int:
         print("REPROVA: não achei um só `mic-selo` no DOM vivo.")
         return 1
 
-    # O CONTRATO, e ele é o da decisão dela: VERDE quer dizer uma coisa só —
-    # ATIVO. Tudo o que não é ATIVO fica apagado, e o RISCO separa o MUDO do
-    # travessão. Ver a tabela em `aba02.selo_do_microfone`.
     mau: list[str] = []
     for estado in ESTADOS:
         for s in medidas.get(estado, {}).get("selos", []):

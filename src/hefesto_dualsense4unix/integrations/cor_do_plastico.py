@@ -103,47 +103,22 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O comando de fábrica (escrita) e a resposta (leitura).
 FEATURE_COMANDO = 0x80
 FEATURE_RESPOSTA = 0x81
 
-#: O par que pede o serial de fábrica — o ÚNICO par que este arquivo conhece.
 BASE_DO_SERIAL = 1
 NUM_DO_SERIAL = 19
 
-#: 17 caracteres ASCII, o mesmo serial impresso na traseira do controle.
 TAMANHO_DO_SERIAL = 17
 
-#: Onde a cor mora dentro dele: caracteres 5 e 6 (base zero, 4 e 5).
 FATIA_DA_COR = slice(4, 6)
 
-#: O byte que o firmware devolve em ``buf[3]`` quando a resposta é boa.
 MARCA_DE_RESPOSTA_BOA = 2
 
-#: Quantos bytes do FIM do pedido são assinatura, e não comando, no rádio.
 TAMANHO_DO_CRC = 4
 
-#: A semente do CRC-32 no sentido de ESCRITA de feature por Bluetooth.
-#:
-#: As sementes deste CRC são o **byte de cabeçalho da transação HIDP**, e há uma
-#: por sentido::
-#:
-#:     0xA1 = HIDP_TRANS_DATA       (0xA0) | RTYPE_INPUT   (0x01)
-#:     0xA2 = HIDP_TRANS_DATA       (0xA0) | RTYPE_OUTPUT  (0x02)
-#:     0xA3 = HIDP_TRANS_DATA       (0xA0) | RTYPE_FEATURE (0x03)
-#:     0x53 = HIDP_TRANS_SET_REPORT (0x50) | RTYPE_FEATURE (0x03)   <-- esta
-#:
-#: As TRÊS primeiras têm dono em ``core/ds_output_report.py``
-#: (``BT_CRC_SEED``, ``BT_INPUT_CRC_SEED``, ``BT_FEATURE_CRC_SEED``) e a conta é
-#: reusada dali (``bt_crc32``). A quarta mora aqui porque este é o ÚNICO lugar
-#: do produto que ESCREVE feature report — e o lugar certo dela é ao lado das
-#: outras três, o que é mudança em arquivo de outra frente.
 SEMENTE_SET_FEATURE_BT = 0x53
 
-#: Tamanho do buffer do feature ``0x80`` nos quatro controles desta casa,
-#: conferido pelo parser de descritor de ``scripts/ensaios/comum.py`` em
-#: 15/08/2026. Report de feature tem comprimento fixo no HID: um ``SET_FEATURE``
-#: curto pode voltar em stall, e o caminho provado envia o report inteiro.
 TAMANHO_DO_FEATURE = 64
 
 #: Os pares da MESMA família ``0x80`` que destroem o controle. Não estão aqui
@@ -155,97 +130,46 @@ PARES_QUE_DESTROEM: dict[tuple[int, int], str] = {
     (12, 1): "GRAVA calibração de stick na memória não-volátil",
 }
 
-#: A família por onde o FIRMWARE é atualizado. Decisão dela (D-32): ler tudo,
-#: nunca escrever. Aqui ela nem chega perto de uma escrita — há trava.
 FAMILIA_DO_FIRMWARE = range(0xF0, 0xF8)
 
-#: A raiz da árvore, a partir DESTE arquivo — o mesmo cálculo de
-#: ``interface/mesa_viva.RAIZ`` e ``integrations/canal_sem_imu._RAIZ``, e pela
-#: mesma razão medida em 30/08/2026: um literal apontaria para a árvore DELA, e
-#: um agente leria o mapa dela em vez do seu.
 _RAIZ = pathlib.Path(__file__).resolve().parents[3]
 
-#: O DONO DA TRADUÇÃO: o mapa dela das cores, 28 modelos e 10 zonas. Ver o
 #: cabeçalho, «UMA TABELA SÓ».
 TABELA_DAS_CORES = _RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 
-#: As zonas cujo hexa vira o ``tom`` do modelo, na ordem: a casca é o plástico
-#: que a pessoa vê de longe. Modelo com a casca ``SEM-HEX`` (camuflado,
-#: iridescente, arte) fica sem tom — e sem tom a borda é a neutra, nunca uma
-#: cor inventada.
 _ZONAS_DO_TOM = ("casca_esq", "casca_dir")
 
-#: Os modelos que o produto adota, pelo PID — e o nome GENÉRICO de cada um.
-#:
-#: É o nome que a tela escreve quando o código de fábrica não está no mapa (uma
-#: edição que a Sony lançar amanhã), quando o aparelho ainda não respondeu, ou
-#: quando não pode responder. A cena dela de 25/09/2026 é o aceite:
 #: *«aí ele pluga o controle dele e o app não funciona pq ele tá todo setado  (noqa-acento): dela
 #: pra funcionar só no meu pc»*.  (noqa-acento): citação literal dela
-#: «Não sei» não é nome de um controle que funciona.
-#:
-#: Os dois PIDs são os mesmos de ``core/evdev_reader.DUALSENSE_PIDS`` e do
-#: ``broker/hidraw_broker.PHYS_PRODUCTS``; a régua
-#: ``tests/unit/test_o_controle_nunca_visto_tem_nome_e_cor.py`` reprova quem
-#: divergir.
 MODELOS: dict[int, str] = {
     0x0CE6: "DualSense",
     0x0DF2: "DualSense Edge",
 }
 
-#: O nome de quem ainda não se sabe o PID: todo controle adotado pela mesa é da
 #: família DualSense (``core/evdev_reader.DUALSENSE_PIDS``).
 MODELO_GENERICO = MODELOS[0x0CE6]
 
-#: As GRAFIAS DE ANTES de 25/09/2026, quando a tabela era digitada. Elas só
-#: servem para achar a cor de uma DECLARAÇÃO gravada naquela época
-#: (``ControleDeclarado.cor`` é texto livre) — o nome que se escreve é o do
-#: mapa. A ``Z1`` não precisa estar aqui: :func:`cor_do_nome` compara sem
-#: acento.
 _GRAFIAS_DE_ANTES: dict[str, str] = {
     "spider-man 2": "Z2",
     "icon blue limited edition": "ZB",
 }
 
-#: O fundo sobre o qual a borda do card é vista: ``@bg`` do tema
-#: (``gui/theme.css:21``), o nível que FLUTUA sobre a janela.
 FUNDO_DO_CARD = (0x28, 0x2A, 0x36)
 
-#: Contraste mínimo da borda contra o fundo do card. Menor que o ``RATIO_MINIMO``
-#: de 3:1 dos traços e que os 4,5:1 de texto, e a diferença é de propósito: uma
-#: borda de 2px não é uma frase para ler, é uma marca de identidade. Exigir 3:1
-#: aqui empurraria todo plástico escuro para um pastel que não parece mais com o
-#: aparelho.
 RAZAO_DA_BORDA = 2.2
 
-#: Em quantos degraus a mistura com branco é tentada. Vinte dá passos de 5 %, que
-#: é abaixo do que o olho separa numa borda fina.
 PASSOS_DA_MISTURA = 20
 
-#: ``HID_ID`` é ``BARRAMENTO:VENDOR:PRODUCT`` em hexa; ``0003`` é USB e ``0005``
-#: é Bluetooth. Topologia de sysfs NÃO serve para decidir transporte — com BlueZ
-#: >= 5.73 os controles de rádio moram sob ``/devices/virtual/misc/uhid/``, junto
-#: do nosso vpad, e essa armadilha já foi paga em 11/08/2026.
 _BUS_USB = 0x0003
 _BUS_BLUETOOTH = 0x0005
 
-#: As duas palavras de transporte deste módulo, iguais às de
-#: ``scripts/ensaios/comum.py``. Não são as da mesa (``usb``/``bt``): aqui o
-#: transporte sai do ``HID_ID`` do ``uevent``, não do daemon.
 CABO = "cabo"
 RADIO = "rádio"
 
 #: O VID do DualSense. Os PIDs são as chaves de :data:`MODELOS`. Um par errado
-#: aqui faria o módulo mandar o comando de fábrica da Sony para o aparelho de
-#: outro fabricante.
 _VID_SONY = 0x054C
 
-# O NOSSO VPAD NÃO SE RECUSA MAIS AQUI POR UMA CÓPIA DA REGRA. Ele forja
 # VID/PID/bus de DualSense Edge no cabo (``0003:054C:0DF2``) — o mesmo par do
-# Edge físico, que entrou em 25/09/2026 —, e quem sabe separar os dois é o
-# broker, pela topologia e pelas marcas do vpad
-# (``broker/hidraw_broker._e_o_nosso_vpad``). Esta é a mesma pergunta, e ela
-# tem um dono só: ver :func:`_e_o_nosso_vpad`.
 
 
 class PedidoRecusadoError(Exception):
@@ -254,13 +178,7 @@ class PedidoRecusadoError(Exception):
 
 @dataclass(frozen=True)
 class CorDoPlastico:
-    """O que o aparelho respondeu, já traduzido. ``tom`` vazio = sem hexa.
-
-    ``id`` é o ``id`` da linha do mapa (``white``, ``ghost-of-yotei``) — o
-    ``data-colorway`` com que o desenho se pinta. Vazio num dublê antigo, que
-    constrói só os três primeiros campos: quem pinta cai para a tradução por
-    código (``interface/mesa_viva.CORES``), que lê esta mesma tabela.
-    """
+    """O que o aparelho respondeu, já traduzido. ``tom`` vazio = sem hexa."""
 
     codigo: str
     nome: str
@@ -319,14 +237,7 @@ class IdentidadeDeFabrica:
 
 @dataclass(frozen=True)
 class AlvoDoControle:
-    """O nó a que perguntar, por qual transporte a pergunta sai, e qual modelo.
-
-    Os dois viajam juntos porque o ENVELOPE do pedido depende do transporte: no
-    cabo o ``ioctl`` não leva assinatura, no rádio leva CRC-32. Devolver só o
-    caminho obrigava quem manda a redescobrir o transporte lendo o ``uevent``
-    outra vez — duas leituras da mesma verdade é como elas se afastam. O
-    ``modelo`` vem do MESMO ``HID_ID``, pela mesma razão.
-    """
+    """O nó a que perguntar, por qual transporte a pergunta sai, e qual modelo."""
 
     caminho: str
     transporte: str = CABO
@@ -337,11 +248,6 @@ class _Pedidor(Protocol):
     """Assinatura do transporte: ``(caminho, pedido) -> resposta | None``."""
 
     def __call__(self, caminho: str, pedido: bytes) -> bytes | None: ...
-
-
-# ---------------------------------------------------------------------------
-# A tabela — o mapa dela, lido
-# ---------------------------------------------------------------------------
 
 
 def ler_a_tabela(caminho: str | os.PathLike[str] | None = None) -> dict[str, CorDoPlastico]:
@@ -388,21 +294,13 @@ def ler_a_tabela(caminho: str | os.PathLike[str] | None = None) -> dict[str, Cor
     return tabela
 
 
-#: A tabela lida UMA vez, na importação. O arquivo é versionado e só muda com o
-#: produto; relê-lo a cada controle seria disco a cada tique sem ganho nenhum.
 TABELA: dict[str, CorDoPlastico] = ler_a_tabela()
 
-#: Código → nome de fábrica, LIDO do mapa. O nome e a ordem ficam — quem lista
-#: as cores (``app/actions/external_controllers.cores_para_busca``) e o ensaio
-#: continuam lendo daqui.
 NOMES_DE_FABRICA: dict[str, str] = {codigo: cor.nome for codigo, cor in TABELA.items()}
 
-#: Código → hexa da casca, LIDO do mapa. Só entra quem tem hexa: modelo de casca
-#: ``SEM-HEX`` não tem tom, e a borda dele é a neutra.
 TONS: dict[str, str] = {codigo: cor.tom for codigo, cor in TABELA.items() if cor.tom}
 
 
-# ---------------------------------------------------------------------------
 # Tradução — pura, sem aparelho nenhum
 # ---------------------------------------------------------------------------
 
@@ -465,31 +363,15 @@ def cor_do_serial(serial: str) -> CorDoPlastico | None:
     return cor_do_codigo(serial[FATIA_DA_COR])
 
 
-#: O TOM DA LUZ DE CADA PLÁSTICO — D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO,
-#: 29/09/2026 (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01). A cor automática de cada
-#: controle vem da casca, por uma REGRA e não por coluna nova no mapa: o matiz
-#: da casca com saturação e valor cheios. Casca neutra (branco, preto, cinzas)
-#: não tem matiz: a clara acende branco, e a escura não tem tom e cai no
-#: número. Os dois limiares abaixo foram escolhidos por quem coordenou, pelo
 #: padrão dela, sem a sessão com a luz na mão (ela dormia): a saturação de 15%
-#: separa as cascas neutras do mapa (White 5%, Sterling Silver 3%, Midnight
-#: Black 7%) das coloridas (a menor é a do Starlight Blue, 41%), e o valor de
-#: 50% separa o preto (12%) dos cinzas claros (30th Anniversary, 69%).
 SATURACAO_NEUTRA = 0.15
 VALOR_CLARO = 0.5
 
-#: O branco que a casca neutra e clara acende.
 LUZ_BRANCA = (255, 255, 255)
 
 
 def tom_da_luz(cor: CorDoPlastico | None) -> tuple[int, int, int] | None:
-    """O tom de luz do plástico `cor` — ou `None` quando o plástico não tem tom.
-
-    Um dono só (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO): o provider do daemon
-    e a aba Iluminação perguntam aqui. `None` em três casos, e os três caem na
-    cor do número: o plástico não foi lido, a casca não tem hexa (camuflado,
-    iridescente, arte), ou a casca é neutra e escura (Midnight Black).
-    """
+    """O tom de luz do plástico `cor` — ou `None` quando o plástico não tem tom."""
     if cor is None or not cor.tom:
         return None
     hexa = cor.tom.strip().lstrip("#")
@@ -521,31 +403,7 @@ def cor_do_codigo_por_id(ident: str) -> CorDoPlastico | None:
 
 
 def tom_para_a_borda(tom: str, *, minimo: float = RAZAO_DA_BORDA) -> str:
-    """O hexa que a borda do card pode usar de verdade.
-
-    Midnight Black é ``#00040d`` — mais escuro que o fundo do card (``@bg``,
-    ``#282a36``). Pintado cru, ele não é uma borda preta: é a AUSÊNCIA de borda,
-    e o card perde a única marca que diz de quem ele é. O desenho já previa isto
-    e a dica está escrita nele: *"Preto puro sumiria no fundo escuro da janela,
-    então a borda usa um tom clareado do mesmo plástico."*
-
-    **A clareada é uma MISTURA COM BRANCO, e não a subida de luminosidade em HLS
-    do `ensure_min_contrast` da casa.** Medido em 22/08/2026, e é por isso que
-    esta função existe em vez de uma chamada àquela: o ``#00040d`` tem saturação
-    HLS de 100 % (o canal vermelho é zero), então subir só a luminosidade
-    preservando matiz e saturação devolve ``#0a56ff`` — um AZUL ELÉTRICO no lugar
-    do preto do plástico. O desenho aprovado pinta aquele card de ``#5a5c6b``, um
-    cinza-azulado; misturar com branco a 30 % dá ``#4d4f56``, que é o mesmo
-    lugar. Misturar não pode aumentar saturação; subir luminosidade pode, e
-    justamente nas cores quase pretas, que são as que precisam da correção.
-
-    O piso é 2,2:1 contra o fundo do card, e não os 3:1 de traço nem os 4,5:1 de
-    texto: isto é uma borda de 2px, não uma frase para ler. Acima dele a cor
-    passa INTACTA — Starlight Blue e White não são mexidos.
-
-    Tom vazio ou malformado devolve ``""`` — a seção então usa a borda neutra do
-    tema, que é o "não sei" desta linha.
-    """
+    """O hexa que a borda do card pode usar de verdade."""
     from hefesto_dualsense4unix.utils.color_contrast import razao_contraste, rgb_para_hex
 
     bruto = (tom or "").strip().lstrip("#")
@@ -588,26 +446,14 @@ def montar_pedido(tamanho: int = TAMANHO_DO_FEATURE) -> bytes:
 
 
 def crc_do_pedido(comando: bytes) -> int:
-    """A assinatura do rádio para ``comando``, no sentido de ESCRITA.
-
-    A conta é a do ``hid-playstation`` e o dono dela é ``core/ds_output_report``
-    (``bt_crc32``): uma casa, uma conta. O que muda aqui é só a semente —
-    :data:`SEMENTE_SET_FEATURE_BT`, e não a ``BT_FEATURE_CRC_SEED``, que é a do
-    feature que CHEGA.
-    """
+    """A assinatura do rádio para ``comando``, no sentido de ESCRITA."""
     from hefesto_dualsense4unix.core.ds_output_report import bt_crc32
 
     return bt_crc32(comando, seed=SEMENTE_SET_FEATURE_BT)
 
 
 def envelope_de_radio(pedido: bytes) -> bytes:
-    """O MESMO pedido, assinado para sair pelo rádio.
-
-    Não toca no comando: escreve o CRC-32 nos quatro últimos bytes, que
-    :func:`montar_pedido` já deixou zerados. Sem parâmetro de conteúdo pela
-    mesma razão do :func:`montar_pedido` — o que se escolhe aqui é o envelope,
-    nunca o que vai dentro dele.
-    """
+    """O MESMO pedido, assinado para sair pelo rádio."""
     if len(pedido) < 3 + TAMANHO_DO_CRC:
         raise PedidoRecusadoError(
             f"pedido curto demais para levar assinatura: {len(pedido)} bytes"
@@ -619,28 +465,7 @@ def envelope_de_radio(pedido: bytes) -> bytes:
 
 
 def conferir_pedido(buffer: bytes) -> None:
-    """Confere byte a byte e levanta se qualquer um estiver fora do lugar.
-
-    Chamada imediatamente antes do ``ioctl``, nunca antes disso.
-
-    **DUAS FORMAS SÃO AUTORIZADAS, e nenhuma delas afrouxa a trava** — o comando
-    é conferido byte a byte nas duas, e o que muda é o que se exige do RABO:
-
-    * o pedido nu (cabo): tudo depois do byte 2 tem de estar ZERADO;
-    * o pedido assinado (rádio): tudo depois do byte 2 zerado **exceto** os
-      quatro últimos, que têm de ser exatamente o CRC recalculado aqui.
-
-    A segunda forma é mais APERTADA que a primeira, não menos: o rabo deixou de
-    ser "quatro bytes que ninguém olha" e passou a ter um único valor admitido —
-    a assinatura de um comando todo zerado, que não carrega parâmetro nenhum.
-    Cada tamanho de buffer tem, portanto, exatamente DOIS pedidos aceitáveis.
-
-    A trava mordeu o próprio envelope antes disto existir (15/08/2026, no
-    ensaio): os quatro bytes de assinatura caíram no teste de "tem de estar
-    zerado" e a escrita foi recusada — corretamente, porque a trava não sabia
-    deles. **Nenhum byte chegou ao aparelho**, que é o que se quer de uma trava
-    que erra.
-    """
+    """Confere byte a byte e levanta se qualquer um estiver fora do lugar."""
     if buffer and buffer[0] in FAMILIA_DO_FIRMWARE:
         raise PedidoRecusadoError(
             f"0x{buffer[0]:02x} está na família do FIRMWARE (0xf0-0xf7): ler, nunca escrever"
@@ -679,18 +504,7 @@ def conferir_pedido(buffer: bytes) -> None:
 
 
 def serial_de(dados: bytes) -> str | None:
-    """``buf[1]=1, buf[2]=19, buf[3]=2`` e então 17 caracteres ASCII.
-
-    Os três primeiros bytes são o ECO do que se pediu, e qualquer divergência é
-    erro — não é "veio outra coisa, vamos ler assim mesmo". Sem o eco certo, o
-    que vem depois não é o serial, e decodificá-lo produziria uma cor inventada.
-
-    ELA SAIU DE DENTRO DO :func:`decodificar` em 02/09/2026 (ROTA-A) e não é
-    função nova: são as MESMAS quatro conferências, com o serial devolvido em
-    vez de descartado. O ``decodificar`` passou a chamá-la, para que a régua do
-    eco tenha um dono só — duas cópias dela se afastariam na primeira mudança de
-    firmware.
-    """
+    """``buf[1]=1, buf[2]=19, buf[3]=2`` e então 17 caracteres ASCII."""
     if len(dados) < 4 + TAMANHO_DO_SERIAL:
         return None
     if dados[1] != BASE_DO_SERIAL or dados[2] != NUM_DO_SERIAL:
@@ -706,11 +520,6 @@ def decodificar(dados: bytes) -> CorDoPlastico | None:
     if serial is None:
         return None
     return cor_do_serial(serial)
-
-
-# ---------------------------------------------------------------------------
-# A conversa com o aparelho
-# ---------------------------------------------------------------------------
 
 
 def _campos_do_uevent(texto: str) -> dict[str, str]:
@@ -762,16 +571,7 @@ def _transporte_do_dualsense(hid_id: str) -> str | None:
 
 
 def _e_o_nosso_vpad(campos: dict[str, str], pai: str, barramento: int) -> bool:
-    """O nó é o NOSSO vpad? A pergunta é do broker, e ele é o dono dela.
-
-    Até 25/09/2026 este módulo tinha uma CÓPIA da metade D2 (o ``phys`` exato e
-    o prefixo do ``uniq``) e recusava o Edge pelo PID, que é o que o tornava
-    seguro. Com o Edge aceito, o ``0003:054C:0DF2`` do vpad e o do Edge físico
-    no cabo são o MESMO par, e quem os separa é a regra inteira do broker: a
-    topologia (USB sob ``/misc/uhid/`` é forjado — D1) e as marcas do vpad (D2).
-    ``broker/hidraw_broker.py`` é stdlib pura e o pacote já o importa
-    (``profiles/manager.py``), então importar a regra custa nada e mata a cópia.
-    """
+    """O nó é o NOSSO vpad? A pergunta é do broker, e ele é o dono dela."""
     from hefesto_dualsense4unix.broker.hidraw_broker import (
         _e_o_nosso_vpad as regra_do_broker,
     )
@@ -856,14 +656,6 @@ def alvo_do_controle(
     return None
 
 
-# `no_do_controle` MORREU em 02/09/2026, e quem a matou foi o portão
-# `casa-sabe`. Ela sobreviveu meia hora como embrulho de `alvo_do_controle` que
-# devolvia só o caminho — e o portão a acusou de promessa pública sem chamador
-# em produção, que é exatamente o que ela era: todo caminho do produto passou a
-# precisar do TRANSPORTE junto, porque é ele que decide o envelope. Dois nomes
-# para a mesma pergunta é como eles se afastam.
-
-
 def _ler_texto(caminho: str) -> str:
     try:
         with open(caminho, encoding="utf-8", errors="replace") as arquivo:
@@ -919,7 +711,7 @@ def _perguntar_ao_hidraw(
 
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import abrir_hidraw
 
-    conferir_pedido(pedido)  # A TRAVA, ANTES DE QUALQUER PORTA SE ABRIR.
+    conferir_pedido(pedido)
     tamanho = len(pedido)
     porta = abrir if abrir is not None else abrir_hidraw
     disparar = ioctl if ioctl is not None else fcntl.ioctl
@@ -952,9 +744,6 @@ def _perguntar_ao_hidraw(
     return resposta
 
 
-#: ``HIDIOCGFEATURE`` / ``HIDIOCSFEATURE``: ``_IOC(WRITE|READ, 'H', 0x07/0x06,
-#: tamanho)``, montados à mão como em ``scripts/ensaios/`` — nenhuma dependência
-#: nova, e o número mágico visível em vez de escondido atrás de uma biblioteca.
 _IOC_ESCRITA_E_LEITURA = 3
 _IOC_TIPO_HID = ord("H")
 _IOC_NR_GETFEATURE = 0x07
@@ -988,52 +777,17 @@ def ler_identidade_pelo_cabo(
     perguntar: _Pedidor | None = None,
     resolver: Any = None,
 ) -> IdentidadeDeFabrica:
-    """Serial E cor do controle ``uniq``, lidos dele. Campos ``None`` = não sei.
-
-    **Nunca levanta.** Sem aparelho, sem permissão, com firmware que não responde
-    ou com código fora do mapa, os dois campos saem ``None`` — e a tela escreve o
-    nome do MODELO no lugar (:func:`nome_do_aparelho`), que o ``modelo`` desta
-    resposta carrega sempre que o nó foi achado, até quando a pergunta falhou.
-    Se perguntar de novo adianta, quem diz é ``definitiva`` (ver
-    :class:`IdentidadeDeFabrica`).
-
-    **É O MESMO CAMINHO DE SEMPRE, com o serial deixando de ser descartado.** O
-    :func:`ler_pelo_cabo` passou a delegar aqui: um transporte só, uma trava só,
-    um lugar só onde o ``ioctl`` acontece. Duas rotas para o mesmo report seriam
-    duas chances de uma delas passar sem a trava.
-
-    ``perguntar`` é o ponto único de injeção do transporte. Sem ele a função fala
-    com o ``hidraw`` de verdade; com ele, o teste exercita a decodificação inteira
-    sem encostar em aparelho nenhum — e sem que uma suíte distraída mande comando
-    de fábrica para os controles dela.
-
-    **O serial vem CRU, e é de propósito**: quem o publica decide se ele cabe na
-    tela. Ele identifica o aparelho de forma única, como um MAC — a régua de
-    anonimato desta casa vale para ele do mesmo jeito.
-
-    **O NOME DIZ "PELO CABO" E ELA LÊ PELOS DOIS** desde 02/09/2026
-    (``ONDA-CONEXOES-11``): o comando é o mesmo, só o envelope muda. Renomeá-la
-    mexeria em ``interface/mesa_viva.py``, ``daemon/ipc_handlers.py`` e
-    ``app/actions/config/secao_controles.py``, que são de outras frentes.
-    """
+    """Serial E cor do controle ``uniq``, lidos dele. Campos ``None`` = não sei."""
     alvo = alvo_do_controle(uniq, raiz=raiz, listar=listar, ler=ler, resolver=resolver)
     if alvo is None:
-        # FALHA, e não «não pode», de propósito: o nó que ainda não nasceu e o
-        # aparelho de outro fabricante chegam aqui iguais. Nenhum byte sai sem
-        # alvo, e a agenda desiste sozinha depois do último degrau do recuo.
         return IdentidadeDeFabrica(motivo="nenhum DualSense físico com este endereço")
     pedido = montar_pedido()
     if alvo.transporte == RADIO:
-        # Pelo rádio o feature report vai assinado, e o CRC NÃO É OPCIONAL:
-        # medido em 02/09/2026, sem assinatura o firmware devolve `errno 5`, o
-        # mesmo que a semente errada de 23/08 devolvia.
         pedido = envelope_de_radio(pedido)
     conversa = perguntar if perguntar is not None else _perguntar_ao_hidraw
     try:
         resposta = conversa(alvo.caminho, pedido)
     except PedidoRecusadoError:
-        # A trava mordeu. Isso é sucesso da trava, não da leitura: NENHUM byte
-        # chegou ao aparelho, e é exatamente o que se quer de uma trava que erra.
         logger.warning(
             "cor_do_plastico_pedido_recusado",
             caminho=alvo.caminho,
@@ -1042,7 +796,7 @@ def ler_identidade_pelo_cabo(
         return IdentidadeDeFabrica(
             nao_pode=True, motivo="a trava recusou o pedido", modelo=alvo.modelo
         )
-    except Exception as erro:  # defensivo — a leitura jamais derruba a janela
+    except Exception as erro:
         logger.debug(
             "cor_do_plastico_falhou",
             caminho=alvo.caminho,
@@ -1053,18 +807,12 @@ def ler_identidade_pelo_cabo(
             motivo=f"a conversa levantou {type(erro).__name__}", modelo=alvo.modelo
         )
     if not resposta:
-        # A porta que não abriu e o `ioctl` que estourou chegam aqui iguais; o
-        # log de `_perguntar_ao_hidraw` diz qual dos dois.
         return IdentidadeDeFabrica(motivo="o aparelho não respondeu", modelo=alvo.modelo)
     serial = serial_de(resposta)
     if serial is None:
         return IdentidadeDeFabrica(
             motivo="a resposta veio sem o eco do pedido", modelo=alvo.modelo
         )
-    # A COR PODE SER `None` COM O SERIAL PRESENTE, e isso não é defeito: o
-    # mapa tem 28 modelos e a Sony fabrica edições novas sem avisar. Um serial
-    # legível com código fora do mapa é "sei qual aparelho é, não sei a cor
-    # dele" — e a tela escreve o nome do modelo, nunca «Não sei».
     return IdentidadeDeFabrica(serial=serial, cor=cor_do_serial(serial), modelo=alvo.modelo)
 
 
@@ -1077,24 +825,12 @@ def ler_pelo_cabo(
     perguntar: _Pedidor | None = None,
     resolver: Any = None,
 ) -> CorDoPlastico | None:
-    """A cor do plástico do controle ``uniq``, lida dele. ``None`` = não sei.
-
-    Embrulho de :func:`ler_identidade_pelo_cabo` — mesmo contrato de sempre, e
-    é por isso que ele fica: a aba Configurações e o `mesa_viva.LeitorDeCor`
-    pedem a COR, não o serial, e obrigá-los a desembrulhar seria espalhar a
-    estrutura nova por quem não precisa dela.
-    """
+    """A cor do plástico do controle ``uniq``, lida dele. ``None`` = não sei."""
     return ler_identidade_pelo_cabo(
         uniq, raiz=raiz, listar=listar, ler=ler, perguntar=perguntar, resolver=resolver
     ).cor
 
 
-# ---------------------------------------------------------------------------
-# A nova tentativa — UM dono, chamado pela janela e pelo daemon
-# ---------------------------------------------------------------------------
-
-#: O recuo entre uma leitura que FALHOU e a seguinte: três novas tentativas, e
-#: depois desiste até o controle sair da mesa e voltar.
 RECUO_DA_NOVA_TENTATIVA: tuple[float, ...] = (5.0, 30.0, 120.0)
 
 

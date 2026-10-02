@@ -18,7 +18,6 @@ from hefesto_dualsense4unix.integrations.uinput_keyboard import (
 def _fake_uinput_module() -> MagicMock:
     """Fabrica módulo uinput fake cobrindo todas as `SUPPORTED_KEYS`."""
     mod = MagicMock()
-    # Cada KEY_* ganha código fictício único e estável por nome.
     for name in SUPPORTED_KEYS:
         setattr(mod, name, (1, hash(name) & 0xFFFF))
     return mod
@@ -43,15 +42,8 @@ def _emits_for(fake_device: MagicMock, code: Any) -> list:
     ]
 
 
-# --- start / stop ------------------------------------------------------------
-
 def test_device_name_identifica_hefesto() -> None:
-    # A GRAFIA AQUI É A VELHA DE PROPÓSITO — `F6-O-NOME-TEM-UM-DONO`, 11/09/2026.
     # O nome do produto em TEXTO virou `DualSense4Unix`, com o `S` do DualSense;
-    # o nome deste nó NÃO, porque o kernel o publica e alguém de fora casa por
-    # ele: jogos sob Proton por substring, e o compositor guarda configuração por
-    # nome de dispositivo. Trocar a caixa não dá erro — apaga a amarração que a
-    # pessoa já salvou, calado. `scripts/check_a_grafia_do_nome.py` isenta a forma.
     assert DEVICE_NAME == "Hefesto - Dualsense4Unix Virtual Keyboard"
     assert "Keyboard" in DEVICE_NAME
 
@@ -59,9 +51,7 @@ def test_device_name_identifica_hefesto() -> None:
 def test_start_e_stop_idempotentes(monkeypatch: pytest.MonkeyPatch) -> None:
     dev, _, fake_device = _started_device(monkeypatch)
     assert dev.is_active() is True
-    # Segundo start é no-op.
     assert dev.start() is True
-    # Stop libera e segundo stop não explode.
     dev.stop()
     assert dev.is_active() is False
     dev.stop()
@@ -72,17 +62,12 @@ def test_start_sem_modulo_uinput_retorna_false(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Módulo uinput ausente → device não sobe, sem exceção."""
-    # Remove da lista de módulos e invalida import — simula "não instalado".
     monkeypatch.setitem(sys.modules, "uinput", None)
     dev = UinputKeyboardDevice()
-    # `import uinput` vai retornar None/ImportError: a camada usa try/except.
-    # Como `sys.modules["uinput"] = None` provoca ImportError, o path é coberto.
     result = dev.start()
     assert result is False
     assert dev.is_active() is False
 
-
-# --- dispatch edge-triggered -------------------------------------------------
 
 def test_dispatch_options_emite_leftmeta(
     monkeypatch: pytest.MonkeyPatch,
@@ -93,7 +78,7 @@ def test_dispatch_options_emite_leftmeta(
 
     emits = _emits_for(fake_device, fake_mod.KEY_LEFTMETA)
     assert len(emits) == 1
-    assert emits[0][1][1] == 1  # press
+    assert emits[0][1][1] == 1
     assert fake_device.syn.called
 
 
@@ -103,11 +88,11 @@ def test_dispatch_options_release_emite_value_0(
     dev, fake_mod, fake_device = _started_device(monkeypatch)
     dev.dispatch(frozenset({"options"}))
     fake_device.reset_mock()
-    dev.dispatch(frozenset())  # solta
+    dev.dispatch(frozenset())
 
     emits = _emits_for(fake_device, fake_mod.KEY_LEFTMETA)
     assert len(emits) == 1
-    assert emits[0][1][1] == 0  # release
+    assert emits[0][1][1] == 0
 
 
 def test_dispatch_r1_emite_combo_alt_tab(
@@ -132,9 +117,7 @@ def test_dispatch_r1_release_inverte_ordem(
     fake_device.reset_mock()
     dev.dispatch(frozenset())
 
-    # A ordem de chamada na mock guarda sequência global de método.
     emit_calls = [c for c in fake_device.method_calls if c[0] == "emit"]
-    # Espera: primeiro KEY_TAB,0 depois KEY_LEFTALT,0.
     assert emit_calls[0][1] == (fake_mod.KEY_TAB, 0)
     assert emit_calls[0][2].get("syn") is False
     assert emit_calls[1][1] == (fake_mod.KEY_LEFTALT, 0)
@@ -168,7 +151,6 @@ def test_dispatch_botao_nao_mapeado_e_ignorado(
     dev, _fake_mod, fake_device = _started_device(monkeypatch)
     dev.dispatch(frozenset({"cross", "triangle", "r3", "dpad_up"}))
 
-    # Nenhum emit deve ter acontecido.
     assert not any(c[0] == "emit" for c in fake_device.method_calls)
 
 
@@ -182,7 +164,6 @@ def test_dispatch_hold_nao_repete(
     dev.dispatch(frozenset({"options"}))
     dev.dispatch(frozenset({"options"}))
 
-    # Segundo/terceiro tick não devem gerar novo emit.
     assert not any(c[0] == "emit" for c in fake_device.method_calls)
 
 
@@ -194,16 +175,13 @@ def test_dispatch_multiplos_botoes_edge_independentes(
     dev.dispatch(frozenset({"options", "create"}))
     fake_device.reset_mock()
 
-    # Solta só options
     dev.dispatch(frozenset({"create"}))
 
     leftmeta = _emits_for(fake_device, fake_mod.KEY_LEFTMETA)
     sysrq = _emits_for(fake_device, fake_mod.KEY_SYSRQ)
-    assert len(leftmeta) == 1 and leftmeta[0][1][1] == 0  # release options
-    assert not sysrq  # create continua pressionado — nada novo emitido
+    assert len(leftmeta) == 1 and leftmeta[0][1][1] == 0
+    assert not sysrq
 
-
-# --- set_bindings dinâmico ---------------------------------------------------
 
 def test_set_bindings_troca_mapping(monkeypatch: pytest.MonkeyPatch) -> None:
     """Troca runtime de bindings permite sub-sprint de persistência."""
@@ -220,42 +198,29 @@ def test_set_bindings_libera_teclas_pressionadas(
 ) -> None:
     """Se troca acontece com botão pressionado, solta as teclas antes de trocar."""
     dev, fake_mod, fake_device = _started_device(monkeypatch)
-    dev.dispatch(frozenset({"options"}))  # KEY_LEFTMETA pressionado
+    dev.dispatch(frozenset({"options"}))
     fake_device.reset_mock()
 
     dev.set_bindings({"options": ("KEY_ESC",)})
 
-    # KEY_LEFTMETA foi liberada antes da troca
     releases = _emits_for(fake_device, fake_mod.KEY_LEFTMETA)
     assert any(e[1][1] == 0 for e in releases)
 
 
-# --- dispatch sem start ------------------------------------------------------
-
 def test_dispatch_sem_start_e_noop() -> None:
     """Device não inicializado ignora dispatch em silêncio."""
     dev = UinputKeyboardDevice()
-    # Não levanta, não loga exceção.
     dev.dispatch(frozenset({"options"}))
     assert dev.is_active() is False
 
-
-# --- defaults propagam ao construtor ----------------------------------------
 
 def test_construtor_usa_default_bindings() -> None:
     dev = UinputKeyboardDevice()
     assert dev.bindings == dict(DEFAULT_BUTTON_BINDINGS)
 
 
-# --- cobertura de SUPPORTED_KEYS ---------------------------------------------
-
 def test_supported_keys_cobre_todas_as_defaults() -> None:
-    """Todas as teclas KEY_* usadas pelos defaults devem estar em SUPPORTED_KEYS.
-
-    Tokens virtuais `__*__` (FEAT-KEYBOARD-UI-01, ex: __OPEN_OSK__) são
-    delegados ao `virtual_token_callback` e não precisam estar em
-    SUPPORTED_KEYS — filtramos antes de comparar.
-    """
+    """Todas as teclas KEY_* usadas pelos defaults devem estar em SUPPORTED_KEYS."""
     from hefesto_dualsense4unix.core.keyboard_mappings import is_virtual_token
 
     default_keys = {
@@ -267,4 +232,3 @@ def test_supported_keys_cobre_todas_as_defaults() -> None:
     faltantes = default_keys - set(SUPPORTED_KEYS)
     assert not faltantes, f"faltam em SUPPORTED_KEYS: {faltantes}"
 
-# "O todo é maior que a soma das partes." — Aristóteles

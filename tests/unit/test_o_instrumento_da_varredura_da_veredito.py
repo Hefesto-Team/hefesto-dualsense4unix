@@ -1,15 +1,4 @@
-"""BUSCA-DO-RADIO-02 — o instrumento que mede a varredura e DIZ o que ela quer dizer.
-
-Uma régua que despeja tabela e deixa a interpretação para quem leu é uma régua
-que não mediu nada: esta casa já pagou por isso mais de uma vez. Por isso o
-`scripts/medir_a_varredura.sh` termina com o veredito escrito, e por isso estas
-réguas exercitam os QUATRO ramos dele.
-
-O ramo do adaptador único nasceu de uma mordida: com um adaptador só, «varreu
-um» é 100% dos adaptadores, e o script dizia «a reserva resolve» — quando não
-há para onde reservar. É a mesma presunção que `mesa_de_radio.py:44-52` existe
-para recusar.
-"""
+"""BUSCA-DO-RADIO-02 — o instrumento que mede a varredura e DIZ o que ela quer dizer."""
 
 from __future__ import annotations
 
@@ -42,16 +31,12 @@ def _veredito(linha_medida: str, adaptadores: list[str], tmp_path: Path) -> str:
 def test_o_script_existe_e_nao_pede_sudo(tmp_path: Path) -> None:
     corpo = SCRIPT.read_text(encoding="utf-8")
     assert SCRIPT.is_file()
-    # A medição roda com a máquina dela em uso. Um instrumento que pede root
-    # para responder «um ou todos» não seria rodado, e o que não se roda não
-    # mede.
     executa = [
         linha
         for linha in corpo.splitlines()
         if "sudo" in linha and not linha.lstrip().startswith("#")
     ]
     assert not executa, f"o instrumento pede sudo:\n{executa}"
-    # E não pode LIGAR busca: ele responde sobre o COSMIC, não sobre si.
     liga = [
         linha
         for linha in corpo.splitlines()
@@ -90,8 +75,6 @@ def test_dois_de_tres_nomeia_a_regra(tmp_path: Path) -> None:
 
 
 def test_maquina_de_um_adaptador_nao_ganha_conselho_de_reserva(tmp_path: Path) -> None:
-    # O defeito que a mordida achou: «varreu um» com UM adaptador é 100%, e
-    # não há para onde reservar.
     saida = _veredito("hci0=true", ["hci0"], tmp_path)
     assert "UM ADAPTADOR SÓ" in saida, (
         "numa máquina de um adaptador o instrumento aconselhou reservar — não "

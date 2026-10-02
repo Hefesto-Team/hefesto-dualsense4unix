@@ -75,9 +75,7 @@ _MAPA = _RAIZ / "docs" / "data" / "mapa-controles.csv"
 
 _ABA = "Emulação"
 
-#: Rótulo citado entre aspas retas ou tipográficas dentro de uma frase de tela.
 _ROTULO_CITADO = re.compile(r'["“]([^"”]{3,60})["”]')
-#: "na aba Perfis" / "aba **Sistema**" — o nome da aba que a frase promete.
 _ABA_CITADA = re.compile(r"aba \*{0,2}([A-ZÁÉÍÓÚÃÕÂÊÔÇ][a-záéíóúãõâêôç]+)")
 
 
@@ -118,17 +116,8 @@ def _fatos_do_mapa() -> dict[str, dict[str, dict[str, str]]]:
     return saida
 
 
-# ---------------------------------------------------------------------------
-# A régua — pura, para poder ser exercida com um mapa sintético
-# ---------------------------------------------------------------------------
 def tem_lastro_nos_dois(celula: dict[str, dict[str, str]]) -> bool:
-    """A afirmação forte é permitida? Só com `medido` + `aciona=sim` nos DOIS.
-
-    Pura de propósito: é o miolo do veredito, e o caso
-    `test_a_regua_le_o_mapa_e_nao_um_veredito_cravado` a exerce com um mapa
-    sintético. Sem isso o portão poderia estar acertando por ter a resposta
-    escrita, e não por ler o CSV.
-    """
+    """A afirmação forte é permitida? Só com `medido` + `aciona=sim` nos DOIS."""
     return all(
         celula.get(lado, {}).get("de_onde_sei") == "medido"
         and celula.get(lado, {}).get("aciona") == "sim"
@@ -148,25 +137,7 @@ def test_a_regua_le_o_mapa_e_nao_um_veredito_cravado() -> None:
 
 
 def test_a_celula_da_vibracao_ganhou_lastro_e_a_ressalva_saiu_junto() -> None:
-    """INVERTIDO EM 05/09/2026, e a régua velha mandou inverter.
-
-    Ela dizia, com todas as letras: *"Se um dia a medição de rádio chegar, este
-    caso reprova, e é para reprovar: a ressalva da tela tem de sair junto com a
-    dívida."* A medição chegou, ela reprovou, e este é o outro lado.
-
-    O QUE ACONTECEU, e é a forma de defeito que ELA nomeou: a prova morava no
-    repositório desde sempre — `integrations/uinput_gamepad.py:130` registra
-    *"a vibração funciona — provado com SDL2 e validado em gameplay"* — e a
-    célula do mapa continuava `inferido-do-codigo`. A régua, lendo o mapa,
-    OBRIGAVA a tela a dizer que a vibração não fora conferida. A tela estava
-    honesta perante o mapa; **o mapa é que estava atrás do código**.
-
-    Palavra dela: *"isso já tá medido no projeto e implementado. talvez versão
-    errada ou não documentada"*.
-
-    A MORDIDA: devolva `inferido-do-codigo` a um dos lados da célula e este
-    caso reprova, cobrando a ressalva de volta.
-    """
+    """INVERTIDO EM 05/09/2026, e a régua velha mandou inverter."""
     celula = _fatos_do_mapa()["vibracao.rumble.passthrough@dualsense"]
     assert tem_lastro_nos_dois(celula), (
         "a vibração perdeu o lastro no mapa — se isso for verdade, a ressalva "
@@ -180,12 +151,7 @@ def test_a_celula_da_vibracao_ganhou_lastro_e_a_ressalva_saiu_junto() -> None:
 
 
 def test_o_giroscopio_e_a_lightbar_seguem_com_lastro_para_serem_afirmados() -> None:
-    """O outro lado da mesma régua: o que a tela PODE dizer.
-
-    Sem este caso, apagar as duas afirmações da tela por excesso de zelo
-    passaria calado — e tirar da tela uma medição que existe é a mesma família
-    de defeito, na direção contrária.
-    """
+    """O outro lado da mesma régua: o que a tela PODE dizer."""
     fatos = _fatos_do_mapa()
     for chave in (
         "movimento.giroscopio.jogo@dualsense",
@@ -197,36 +163,10 @@ def test_o_giroscopio_e_a_lightbar_seguem_com_lastro_para_serem_afirmados() -> N
         )
 
 
-#: A instrução que a tela dava até 28/08/2026 e que o produto tinha curado em
-#: 09/08: mandar marcar a exceção por jogo para acabar com o controle dobrado.
-#: São as formas de ORDEM ("marque", "marcar", "marcando"), não o substantivo
-#: "a marca" — trocar o verbo não pode desligar a régua, e falar da caixinha
-#: sem mandar usá-la continua permitido (a aba Perfis precisa disso).
 _MANDA_MARCAR = re.compile(r"\bmarqu(?:e|em)\b|\bmarcar\b|\bmarcando\b", re.IGNORECASE)
 _A_MARCA_POR_JOGO = "Esconder os controles físicos"
 
 
-# ---------------------------------------------------------------------------
-# BG-TOAST-01 — o recibo carrega a mesma ressalva do rótulo
-# ---------------------------------------------------------------------------
-# 26/08/2026. O tooltip de "Xbox 360" foi corrigido ONTEM pela E8 e passou a
-# dizer *"A vibração ainda não foi conferida no aparelho — nem no cabo, nem no
-# rádio"*. O recibo do MESMO botão continuou dizendo *"Gamepad Xbox 360 ligado
-# (vibra no jogo)"* — e quem clica lê o toast, não o tooltip que precisa de
-# meio segundo parado em cima do botão para aparecer.
-#
-# R1 (acima) não alcançava isso: ela lê o `gui/main.glade`, e o toast é montado
-# em Python. Régua que não alcança o defeito não é redundância a remover; é o
-# motivo de haver a segunda — a mesma razão escrita no topo deste arquivo sobre
-# a `validar-fala-de-tela.py`.
-#
-# Como acima, `emulation_actions.py` é lido por AST e nunca importado: ele puxa
-# GTK, e um runner sem GTK transformaria `ImportError` em "zero toasts
-# encontrados" — o jeito silencioso de este portão se desligar.
-
-#: Os escoadouros de RECIBO desta aba, e quais posições carregam o texto.
-#: `_apply_mode(mode_id, flavor, msg)` tem a frase na posição 2;
-#: `_toast_emulation(msg)`, na 0.
 _ESCOADOUROS_DE_RECIBO: dict[str, tuple[int, ...]] = {
     "_toast_emulation": (0,),
     "_apply_mode": (2,),
@@ -236,14 +176,7 @@ _BURACO = "{}"
 
 
 def _texto_do_no(no: ast.expr, ressalvas: dict[str, str]) -> str | None:
-    """A expressão remontada como a pessoa a LÊ, ou None se não for texto.
-
-    `RESSALVA_DE_TRANSPORTE["…"]` é resolvido para o valor real, de propósito:
-    o produto deve citar a constante em vez de duplicar a frase (uma cópia só,
-    que é a regra desta casa sobre fato errado), e a régua tem de enxergar o
-    texto FINAL mesmo assim. Um pedaço calculado em tempo de execução vira
-    `{}` — visível, para não inventar uma frase que ninguém escreveu.
-    """
+    """A expressão remontada como a pessoa a LÊ, ou None se não for texto."""
     if isinstance(no, ast.Constant):
         return no.value if isinstance(no.value, str) else None
     if isinstance(no, ast.Subscript):

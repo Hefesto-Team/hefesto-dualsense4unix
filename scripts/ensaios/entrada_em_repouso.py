@@ -107,11 +107,6 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    # No TOPO, e não dentro das funções: a regra da casa é que a PROCEDÊNCIA de
-    # cada biblioteca saia impressa antes da primeira medição, e um import
-    # preguiçoso faz o cabeçalho mentir "NÃO IMPORTADO" sobre a régua que ele
-    # vai usar. "Medir contra a biblioteca errada produz alarme convincente e
-    # falso" — e não saber QUAL biblioteca é o mesmo defeito, um passo antes.
     import evdev
 except ImportError:  # pragma: no cover - fora do venv do projeto
     evdev = None  # type: ignore[assignment]
@@ -130,9 +125,6 @@ from comum import (
 )
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
-# ---------------------------------------------------------------------------
-# O corpo do report de entrada — driver-hid-playstation.md §1.1
-# ---------------------------------------------------------------------------
 
 ID_CABO = 0x01
 TAM_CABO = 64
@@ -142,11 +134,8 @@ ID_RADIO = 0x31
 TAM_RADIO = 78
 CORPO_RADIO = 2
 
-#: Tamanho do `struct dualsense_input_report`, amarrado por `static_assert` em
-#: `hid-playstation.c:317` a `DS_INPUT_REPORT_USB_SIZE - 1`.
 TAM_CORPO = 63
 
-#: Os seis eixos analógicos, no offset do CORPO (não do quadro).
 EIXOS: tuple[tuple[str, int], ...] = (
     ("LX", 0),
     ("LY", 1),
@@ -155,27 +144,17 @@ EIXOS: tuple[tuple[str, int], ...] = (
     ("L2", 4),
     ("R2", 5),
 )
-#: Só os quatro dos sticks — os gatilhos em repouso são 0 e não têm centro.
 STICKS = EIXOS[:4]
 
-SEQ = 6                    #: `seq_number`; o driver não o lê
-BOTOES = (7, 8, 9, 10)     #: `buttons[4]`
-TIMESTAMP = (27, 28, 29, 30)  #: `sensor_timestamp`, `__le32`, unidade 0,33 us
-STATUS = (52, 53, 54)      #: `status[3]` — bateria e jack
+SEQ = 6
+BOTOES = (7, 8, 9, 10)
+TIMESTAMP = (27, 28, 29, 30)
+STATUS = (52, 53, 54)
 
-#: O valor de `buttons[0]` com nada apertado: nibble baixo = 8 = hat NEUTRO
-#: (`DS_BUTTONS0_HAT_SWITCH`), nibble alto = 0 = quadrado/xis/bola/triângulo
-#: soltos. Os outros três bytes de botão em zero.
 BOTOES_EM_REPOUSO = (0x08, 0x00, 0x00, 0x00)
 
 
-#: O corpo inteiro, dividido pelos campos do `struct dualsense_input_report`.
-#: Ler offset solto engana: o offset 22 se mexer no cabo e não no rádio parece
-#: assimetria de transporte e é só o acelerômetro de uma unidade estar mais
-#: quieto que o da outra. Nomeando as zonas, a pergunta certa aparece — "o
-#: campo X vive nos dois braços?" — e o ruído de silício fica onde deve.
 ZONAS: tuple[tuple[str, int, int, bool], ...] = (
-    # (nome, primeiro, último, é ruído esperado de silício?)
     ("sticks/gatilhos", 0, 5, True),
     ("seq_number", 6, 6, False),
     ("buttons[4]", 7, 10, False),
@@ -196,14 +175,7 @@ class QuadroDesconhecidoError(ValueError):
 
 
 def corpo_do_quadro(quadro: bytes) -> tuple[bytes, int]:
-    """O `struct dualsense_input_report` e o offset em que ele começa.
-
-    **A cura que este instrumento não pode perder.** O corpo é o MESMO nos dois
-    transportes; o que muda é onde ele é ancorado — `data[1]` no cabo e
-    `data[2]` no rádio. Fixar o offset em 1 produz, no rádio, sticks plausíveis
-    e errados: o `LX` vira o byte de sequência do envelope, e o resto anda um
-    byte. O offset sai do ID do report, que é o próprio protocolo.
-    """
+    """O `struct dualsense_input_report` e o offset em que ele começa."""
     if not quadro:
         raise QuadroDesconhecidoError("quadro vazio")
     if quadro[0] == ID_CABO and len(quadro) >= CORPO_CABO + TAM_CORPO:
@@ -218,13 +190,7 @@ def corpo_do_quadro(quadro: bytes) -> tuple[bytes, int]:
 
 
 def contador_do_quadro(quadro: bytes) -> int:
-    """O carimbo que TEM de andar de um quadro para o próximo, por transporte.
-
-    No cabo é o `seq_number` do corpo. No rádio o `seq_number` do corpo fica
-    congelado e quem anda é o nibble ALTO do `data[1]` — o byte que o driver
-    pula sem nome. São dois lugares diferentes para a mesma função, e é por isso
-    que este instrumento não pergunta "o corpo mexeu?" e sim "o carimbo andou?".
-    """
+    """O carimbo que TEM de andar de um quadro para o próximo, por transporte."""
     if quadro[0] == ID_RADIO:
         return (quadro[1] >> 4) & 0x0F
     return quadro[CORPO_CABO + SEQ]
@@ -239,7 +205,6 @@ def le32(corpo: bytes, offset: int) -> int:
     return int.from_bytes(corpo[offset : offset + 4], "little")
 
 
-#: Os cinco estados de carga do `DS_STATUS0_CHARGING`, `hid-playstation.c:1724`.
 CARGA = {
     0x0: "Discharging",
     0x1: "Charging",
@@ -251,12 +216,7 @@ CARGA = {
 
 
 def bateria_do_status(status0: int) -> tuple[int | None, str]:
-    """(capacidade em %, estado) a partir de `status[0]`, pela conta do driver.
-
-    `nibble * 10 + 5` limitado a 100 para descarregando/carregando; `Full` é
-    100 por definição; os estados de erro não publicam capacidade nenhuma, e
-    devolver 0 ali seria inventar um número.
-    """
+    """(capacidade em %, estado) a partir de `status[0]`, pela conta do driver."""
     nibble = status0 & 0x0F
     estado = CARGA.get((status0 & 0xF0) >> 4, f"desconhecido 0x{status0 >> 4:x}")
     if estado == "Full":
@@ -264,11 +224,6 @@ def bateria_do_status(status0: int) -> tuple[int | None, str]:
     if estado in ("Discharging", "Charging"):
         return min(nibble * 10 + 5, 100), estado
     return None, estado
-
-
-# ---------------------------------------------------------------------------
-# O que se acumula por nó durante a janela
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -326,7 +281,6 @@ class Coleta:
                 self.timestamp_andou += 1
         self._ultimo_ts = ts
 
-    # -- as leituras que o relatório usa ------------------------------------
 
     @property
     def transporte(self) -> str:
@@ -349,12 +303,7 @@ class Coleta:
 
     @property
     def assinatura(self) -> tuple[int | None, ...]:
-        """O centro dos quatro sticks. É o que casa físico com vpad.
-
-        Nada de MAC, nada de ordem de conexão, nada de número de jogador: só o
-        que o silício daquela unidade entrega parado. É uma propriedade do
-        APARELHO, e por isso vale em qualquer PC.
-        """
+        """O centro dos quatro sticks. É o que casa físico com vpad."""
         return tuple(self.centro(nome) for nome, _ in STICKS)
 
     @property
@@ -380,11 +329,6 @@ class Coleta:
         return bateria_do_status(next(iter(vs)))
 
 
-# ---------------------------------------------------------------------------
-# O casamento físico <-> vpad, sem MAC e sem ordem
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Casamento:
     vpad: str
@@ -397,18 +341,7 @@ def casar_por_assinatura(
     fisicos: dict[str, tuple[int | None, ...]],
     vpads: dict[str, tuple[int | None, ...]],
 ) -> tuple[list[Casamento], str]:
-    """Casa cada vpad ao físico que o alimenta pelo CENTRO DOS STICKS.
-
-    O método é uma atribuição ótima sobre todas as permutações (são no máximo
-    4! = 24): o custo de um par é quantos dos quatro eixos discordam. Ele NÃO
-    olha MAC, nome, número de jogador nem ordem de enumeração — dois nós com a
-    mesma assinatura são indistinguíveis para ele, e é assim que tem de ser.
-
-    **Só devolve casamento se o ótimo for ÚNICO.** Empate vira `ambíguo`, não um
-    palpite: num mapa que a casa usa para decidir cura, um par errado é pior que
-    um par ausente. Ambiguidade é o preço honesto de duas unidades com o mesmo
-    centro, e o relatório diz qual eixo faltou para desempatar.
-    """
+    """Casa cada vpad ao físico que o alimenta pelo CENTRO DOS STICKS."""
     nomes_v = sorted(vpads)
     nomes_f = sorted(fisicos)
     if not nomes_v or not nomes_f or len(nomes_v) > len(nomes_f):
@@ -449,37 +382,18 @@ def casar_por_bateria(
     fisicos: dict[str, tuple[int | None, str]],
     vpads: dict[str, tuple[int | None, str]],
 ) -> dict[str, str]:
-    """O MESMO casamento, por um canal que não tem nada a ver com stick.
-
-    Por que existe: um casamento feito com uma régua sozinha é indistinguível
-    de uma coincidência dela. A bateria é observação de outro campo do report
-    (`status[0]`), de outra grandeza física e de outro subsistema — e o kernel
-    ainda a publica em `/sys` por conta própria. Quando as duas réguas
-    concordam, o par é dado; quando discordam, alguma das duas mente e o
-    relatório diz isso em vez de escolher a que agrada.
-
-    Só casa quem tem capacidade ÚNICA na mesa: dois controles a 100% não se
-    separam por aqui, e inventar um desempate seria transformar a régua de
-    confirmação em palpite. Quem empata sai de fora, declaradamente.
-    """
+    """O MESMO casamento, por um canal que não tem nada a ver com stick."""
     por_cap: dict[tuple[int | None, str], list[str]] = {}
     for h, chave in fisicos.items():
         por_cap.setdefault(chave, []).append(h)
     fora: dict[str, str] = {}
     for v, chave in vpads.items():
-        # O vpad republica `Full` como `Charging` (medido em 15/08/2026), então
-        # a capacidade é o que compara; o estado entra só como contexto.
         candidatos = [
             h for (cap, _est), hs in por_cap.items() if cap == chave[0] for h in hs
         ]
         if len(candidatos) == 1:
             fora[v] = candidatos[0]
     return fora
-
-
-# ---------------------------------------------------------------------------
-# Leitura
-# ---------------------------------------------------------------------------
 
 
 def bateria_do_sysfs() -> dict[str, tuple[str, str]]:
@@ -513,17 +427,7 @@ def capacidades_do_evdev(caminho: str) -> tuple[tuple[int, ...], tuple[int, ...]
 
 
 def evdev_absinfo(caminho: str) -> dict[str, int]:
-    """O valor ATUAL de cada eixo, direto do kernel — a SEGUNDA régua.
-
-    Não é enfeite: é o controle positivo do meu offset. O `EVIOCGABS` devolve o
-    que o `hid_playstation` decodificou por conta própria, sem passar por
-    nenhuma conta minha. Se o centro que eu tiro de `corpo[0..3]` bater com o
-    que o kernel publica, meu offset está certo por um observador independente;
-    se não bater, o réu sou eu, e o número da tabela de deriva não vale nada.
-
-    O grab do co-op **não atrapalha**: `EVIOCGABS` lê estado, não consome
-    evento, e nós de físico grabado respondem normalmente.
-    """
+    """O valor ATUAL de cada eixo, direto do kernel — a SEGUNDA régua."""
     if evdev is None:
         return {}
     try:
@@ -577,11 +481,6 @@ def coletar(aparelhos: list[Aparelho], segundos: float) -> dict[str, Coleta]:
     return coletas
 
 
-# ---------------------------------------------------------------------------
-# Relatório
-# ---------------------------------------------------------------------------
-
-
 def bloco_controles(
     coletas: dict[str, Coleta],
     sysfs: dict[str, tuple[str, str]],
@@ -599,8 +498,6 @@ def bloco_controles(
                 discordam.append(
                     f"{c.aparelho.apelido}: o byte diz {cap}% e o sysfs diz {sys_diz[0]}%"
                 )
-        # A segunda régua do OFFSET: o centro que eu tirei do corpo contra o que
-        # o kernel decodificou sozinho.
         meu = {n: c.centro(n) for n, _ in STICKS}
         dele = do_kernel_abs.get(h, {})
         if dele:
@@ -675,17 +572,7 @@ def bloco_deriva(coletas: dict[str, Coleta]) -> str:
 def bloco_fidelidade(
     coletas: dict[str, Coleta], pares: list[Casamento]
 ) -> tuple[str, list[str]]:
-    """O produto repete o byte do aparelho, ou muda?
-
-    O veredito é do CENTRO, e não do conjunto de valores vistos — de propósito.
-    O vpad emite a ~160 Hz e o físico do cabo a 250 Hz: um valor raro que
-    aparece 4 vezes em 5000 quadros do físico pode simplesmente não cair na
-    amostra menor do vpad. Julgar por conjunto chamaria isso de infidelidade, e
-    seria alarme convincente e falso — o mesmo modo de falha que já custou três
-    medições nesta casa. O conjunto continua impresso, como contexto, com a
-    diferença marcada como `só amostragem` quando o do vpad cabe dentro do do
-    físico.
-    """
+    """O produto repete o byte do aparelho, ou muda?"""
     linhas = []
     notas = []
     for par in pares:
@@ -739,18 +626,7 @@ def bloco_fidelidade(
 
 
 def bloco_envelope(coletas: dict[str, Coleta]) -> tuple[str, list[str]]:
-    """O corpo do cabo e o corpo do rádio são o mesmo corpo?
-
-    A conta que decide é por ZONA e por BRAÇO INTEIRO: um campo só conta como
-    assimetria de transporte se ele se mexe em TODAS as unidades de um braço e
-    em NENHUMA do outro. Um offset que se mexe em uma unidade e não na irmã do
-    mesmo braço é ruído daquele silício, e chamá-lo de assimetria seria
-    exatamente o confundimento braço/unidade que a Lei 4 existe para matar.
-
-    As zonas de sensor e de stick saem marcadas como ruído esperado: giro,
-    acelerômetro e analógico VÃO variar por unidade, e a variação deles não
-    fala do transporte.
-    """
+    """O corpo do cabo e o corpo do rádio são o mesmo corpo?"""
     fisicos = [c for c in coletas.values() if not c.aparelho.e_vpad and c.quadros]
     dos_vpads = [c for c in coletas.values() if c.aparelho.e_vpad and c.quadros]
     do_cabo = [c for c in fisicos if c.transporte == CABO]
@@ -803,7 +679,6 @@ def bloco_envelope(coletas: dict[str, Coleta]) -> tuple[str, list[str]]:
             "coisa alguma, e nenhum veredito de assimetria de envelope sai desta corrida"
         )
 
-    # A outra pergunta da mesma tabela: o vpad é uma cópia fiel do envelope?
     for nome, primeiro, ultimo, ruido in ZONAS:
         if ruido or not fisicos or not dos_vpads:
             continue
@@ -880,10 +755,6 @@ def evdev_principal(dir_device: str) -> str:
     return ""
 
 
-# ---------------------------------------------------------------------------
-# O BLOCO DELA — o único degrau que precisa de dedo
-# ---------------------------------------------------------------------------
-
 TEXTO_APERTAR = """
 O BLOCO DELA — e é o único pedaço deste ensaio que precisa de dedo (Lei 2)
 ==========================================================================
@@ -907,11 +778,6 @@ mudou. No fim ele compara as duas listas. Se forem iguais, está MEDIDO que o
 cabo e o rádio carregam os mesmos botões nos mesmos bits — e todo código que
 trate os dois transportes de forma diferente na entrada é podável.
 """
-
-
-# ---------------------------------------------------------------------------
-# Principal
-# ---------------------------------------------------------------------------
 
 
 def monta_relatorio(coletas: dict[str, Coleta], segundos: float) -> tuple[str, str]:
@@ -1061,13 +927,7 @@ def monta_relatorio(coletas: dict[str, Coleta], segundos: float) -> tuple[str, s
 
 
 def resultado_json(coletas: dict[str, Coleta], segundos: float, conhecidos: list[str]) -> dict[str, object]:
-    """A forma que o ``o_basico.py entrada`` lê — sem endereço cru.
-
-    ``vpad`` é o número que o produto carimba no pad (``P1``…); ``controle`` é
-    o endereço mascarado do físico casado. ``muda`` são os eixos cujo CENTRO o pad publica
-    diferente do físico; ``inventa`` são os que ganharam valor que o físico
-    não mandou. ``mao_na_janela`` suspende o veredito de repouso.
-    """
+    """A forma que o ``o_basico.py entrada`` lê — sem endereço cru."""
     fisicos_c = {h: c for h, c in coletas.items() if not c.aparelho.e_vpad and c.quadros}
     dos_vpads = {h: c for h, c in coletas.items() if c.aparelho.e_vpad and c.quadros}
     pares, nota = casar_por_assinatura(
@@ -1094,9 +954,6 @@ def resultado_json(coletas: dict[str, Coleta], segundos: float, conhecidos: list
             "bateria_confirma": (por_bat[par.vpad] == par.fisico) if par.vpad in por_bat else None,
             "muda": muda,
             "inventa": inventa,
-            # Os carimbos andam nos DOIS lados (o contador e o sensor_timestamp):
-            # um pad que repete o último quadro para sempre casa pelo repouso
-            # e não entrega nada.
             "fluxo_vivo": v.fluxo_vivo and f.fluxo_vivo,
         })
     return {

@@ -36,26 +36,19 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 DROPIN = RAIZ / "assets" / "wireplumber" / "51-hefesto-dualsense-no-default-source.conf"
 
-#: MEDIDO em 08/08/2026 na máquina dela. O monitor mais alto que existe lá — e o
-#: piso que a entrada do controle precisa vencer.
 MONITOR_MAIS_ALTO_MEDIDO = 1109
 
-#: MEDIDO no mesmo instante: a captura REAL da placa do PC. É o teto — acima
-#: disto o controle voltaria a roubar o posto de um microfone de verdade, que é a
-#: queixa que criou este arquivo.
 CAPTURA_REAL_MEDIDA = 2009
 
 
 def _prioridades_da_entrada() -> list[int]:
     """As `priority.session` dos blocos que casam `alsa_input.*DualSense`."""
     texto = DROPIN.read_text(encoding="utf-8")
-    # cada bloco começa em `matches = [` e vai até o fim do `update-props`
     blocos = re.split(r"\n\s*\{\s*\n", texto)
     saida: list[int] = []
     for bloco in blocos:
         if "alsa_input" not in bloco:
             continue
-        # ignora o comentário: só conta linha de regra de verdade
         linhas_de_regra = [ln for ln in bloco.splitlines() if not ln.lstrip().startswith("#")]
         corpo = "\n".join(linhas_de_regra)
         if "alsa_input" not in corpo:
@@ -67,12 +60,7 @@ def _prioridades_da_entrada() -> list[int]:
 
 
 def test_a_entrada_do_controle_vence_qualquer_monitor() -> None:
-    """A voz dela nunca pode perder para o laço de retorno do que sai.
-
-    ARRANQUE A CURA (volte a entrada para 50) e este teste REPROVA. É o defeito
-    que o `install.sh` instalava por default: o monitor a 1109 vencia o microfone
-    a 50, e o que qualquer aplicativo gravasse era o áudio de saída.
-    """
+    """A voz dela nunca pode perder para o laço de retorno do que sai."""
     prioridades = _prioridades_da_entrada()
     assert prioridades, (
         "nenhuma regra casa `alsa_input.*DualSense` com `priority.session` — o "
@@ -89,12 +77,7 @@ def test_a_entrada_do_controle_vence_qualquer_monitor() -> None:
 
 
 def test_a_entrada_do_controle_nao_rouba_de_um_microfone_de_verdade() -> None:
-    """O contrapeso: o objetivo original do arquivo continua cumprido.
-
-    Sem esta asserção, "curar" o defeito viraria pôr o controle no topo — e a
-    queixa que criou este drop-in ("o controle fica mexendo no microfone") voltaria
-    inteira, agora com o produto tendo escolhido isso de propósito.
-    """
+    """O contrapeso: o objetivo original do arquivo continua cumprido."""
     for valor in _prioridades_da_entrada():
         assert valor < CAPTURA_REAL_MEDIDA, (
             f"a entrada do controle está em {valor}, acima da captura real medida "
@@ -117,11 +100,7 @@ def test_a_placa_e_o_monitor_continuam_rebaixados() -> None:
 
 
 def test_o_porque_esta_no_arquivo() -> None:
-    """Os números medidos moram junto da regra que eles justificam.
-
-    Sem eles, `1500` é número mágico — e número mágico é o primeiro a ser
-    "simplificado" de volta para 50 por quem leu só o título do arquivo.
-    """
+    """Os números medidos moram junto da regra que eles justificam."""
     texto = DROPIN.read_text(encoding="utf-8")
     assert "MONITOR-QUE-VENCE-01" in texto, "o registro da medição saiu do arquivo"
     for numero in (str(MONITOR_MAIS_ALTO_MEDIDO), str(CAPTURA_REAL_MEDIDA)):

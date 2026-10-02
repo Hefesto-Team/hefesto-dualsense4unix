@@ -1,33 +1,4 @@
-"""JANELA-FIEL-01/E1 — o reload que não volta não pode calar a reconciliação.
-
-R-08 curou o caso feliz: o perfil ativo muda por fora (autoswitch ao abrir o
-jogo, botão Ativar, bandeja, hotkey PS+D-pad) e o tick de 2 Hz recarrega o
-rascunho. O buraco estava no caminho ruim.
-
-`_draft_reload_for` é marcado ANTES de disparar o worker (o tick roda a 2 Hz e o
-carregamento é assíncrono), e nenhum dos dois retornos o limpava. Se a leitura de
-estado falhasse no instante do worker — o daemon cai ou reinicia, e o timeout é
-de 0,25 s — o latch ficava marcado para o perfil novo e a janela **nunca mais
-tentava**: as abas seguiam editando, o rodapé seguia pré-preenchido e o "Aplicar"
-seguia empurrando as seções do perfil ANTERIOR por cima do perfil do jogo. Sem
-toast, sem log, sem nada na tela. E só se soltava se o perfil ativo virasse um
-TERCEIRO nome.
-
-O que estes testes trancam, e o que os faz MORDER:
-
-1. leitura de estado que não voltou é falha TRANSITÓRIA — solta o latch, e o
-   tick seguinte tenta de novo. Com o latch de antes (marcado e nunca limpo), o
-   segundo tick não dispara nada e `_active_profile_name` fica no perfil velho
-   para sempre: os dois asserts do primeiro teste reprovam;
-2. perfil ativo que não existe em disco é falha PERMANENTE — tenta UMA vez e
-   para. Essa é a decisão escrita em `app.py` (`__init__`), e é o que a cura
-   ingênua ("zerar o latch em toda falha") reabriria: viraria IPC + I/O de disco
-   a 2 Hz para sempre. Zerando o latch sem distinguir, o segundo teste reprova.
-
-Exercita o código de PRODUÇÃO de ponta a ponta — reconciliação, worker e
-aplicação — sobre um dublê com a superfície mínima, com `run_in_thread` rodando
-na mesma thread (não há loop GTK aqui).
-"""
+"""JANELA-FIEL-01/E1 — o reload que não volta não pode calar a reconciliação."""
 
 from __future__ import annotations
 
@@ -37,13 +8,7 @@ import pytest
 
 
 def _app_class() -> Any:
-    """`HefestoApp` — ou pula quando o GTK real falta (CI headless).
-
-    Padrão do repo (test_gui_draft_reconcilia_perfil_ativo): `app.app` importa
-    `from gi.repository import GdkPixbuf, Gtk` no TOPO, e o CI headless tem `gi`
-    mas não os typelibs. Importar aqui, dentro de um helper com try/except,
-    evita quebrar a COLETA.
-    """
+    """`HefestoApp` — ou pula quando o GTK real falta (CI headless)."""
     try:
         from hefesto_dualsense4unix.app.app import HefestoApp
     except (ImportError, ValueError) as exc:  # pragma: no cover - ambiente
@@ -91,11 +56,7 @@ class _Relogio:
 
 
 class _AppFalsa:
-    """Dublê que roda os métodos REAIS de `HefestoApp`.
-
-    Os quatro métodos do caminho de reconciliação vêm da classe de produção,
-    ligados tarde (o import só acontece quando um teste roda, nunca na coleta).
-    """
+    """Dublê que roda os métodos REAIS de `HefestoApp`."""
 
     def __init__(self, ativo: str = "FPS") -> None:
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -122,7 +83,7 @@ class _AppFalsa:
 
 @pytest.fixture
 def relogio(monkeypatch: pytest.MonkeyPatch) -> _Relogio:
-    _app_class()  # pula quando o GTK real falta, antes de importar o módulo
+    _app_class()
     from hefesto_dualsense4unix.app import app as app_mod
 
     falso = _Relogio()
@@ -132,11 +93,7 @@ def relogio(monkeypatch: pytest.MonkeyPatch) -> _Relogio:
 
 @pytest.fixture
 def disparos(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Roda o worker na mesma thread e conta cada disparo.
-
-    `run_in_thread` real usa `GLib.idle_add` para voltar à thread GTK; sem loop
-    GTK nos testes os callbacks nunca rodariam.
-    """
+    """Roda o worker na mesma thread e conta cada disparo."""
     _app_class()
     from hefesto_dualsense4unix.app import ipc_bridge
 
@@ -146,7 +103,7 @@ def disparos(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         contagem.append(getattr(fn, "__name__", "?"))
         try:
             resultado = fn()
-        except Exception as exc:  # espelha o run_in_thread real
+        except Exception as exc:
             if on_failure is not None:
                 on_failure(exc)
             return
@@ -159,12 +116,7 @@ def disparos(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 def test_leitura_que_nao_voltou_solta_o_latch_e_a_janela_tenta_de_novo(
     monkeypatch: pytest.MonkeyPatch, relogio: _Relogio, disparos: list[str]
 ) -> None:
-    """O caso da sprint: o daemon cai no instante do worker e volta em seguida.
-
-    MORDIDA: com o `_draft_reload_for` de antes — marcado antes do disparo e
-    nunca limpo — o segundo tick não dispara nada e a janela fica no "FPS" pelo
-    resto da sessão. Os dois asserts finais reprovam.
-    """
+    """O caso da sprint: o daemon cai no instante do worker e volta em seguida."""
     from hefesto_dualsense4unix.app import ipc_bridge
     from hefesto_dualsense4unix.profiles import loader
 
@@ -177,12 +129,10 @@ def test_leitura_que_nao_voltou_solta_o_latch_e_a_janela_tenta_de_novo(
     assert len(disparos) == 1
     assert app._active_profile_name == "FPS", "nada carregou — o draft segue o antigo"
 
-    # Tick seguinte, ainda com o daemon mudo: tem de tentar de novo.
     relogio.avancar(0.5)
     app._reconciliar_draft_com_perfil_ativo({"active_profile": "Pragmata"})
     assert len(disparos) == 2, "o latch ficou preso e a janela parou de reconciliar"
 
-    # O daemon voltou: o tick seguinte carrega o perfil do jogo.
     monkeypatch.setattr(
         ipc_bridge, "daemon_state_full", lambda: {"active_profile": "Pragmata"}
     )
@@ -197,13 +147,7 @@ def test_leitura_que_nao_voltou_solta_o_latch_e_a_janela_tenta_de_novo(
 def test_perfil_ativo_ausente_do_disco_tenta_uma_vez_e_para(
     monkeypatch: pytest.MonkeyPatch, relogio: _Relogio, disparos: list[str]
 ) -> None:
-    """A decisão que a cura NÃO pode reabrir (`app.py`, `__init__`).
-
-    MORDIDA: soltar o latch em toda falha — a cura ingênua — faria a janela
-    redisparar IPC + leitura de disco a 2 Hz para sempre, com um perfil ativo
-    que não existe em disco. O relógio avança além do prazo do latch em voo de
-    propósito: nem ele pode transformar isto em loop.
-    """
+    """A decisão que a cura NÃO pode reabrir (`app.py`, `__init__`)."""
     from hefesto_dualsense4unix.app import ipc_bridge
     from hefesto_dualsense4unix.profiles import loader
 
@@ -224,12 +168,7 @@ def test_perfil_ativo_ausente_do_disco_tenta_uma_vez_e_para(
 def test_worker_que_nunca_volta_e_dado_por_perdido_no_prazo(
     monkeypatch: pytest.MonkeyPatch, relogio: _Relogio
 ) -> None:
-    """A rede de segurança: `run_in_thread` que não chama callback nenhum.
-
-    MORDIDA: sem prazo no `_draft_reload_inflight`, o latch fica ligado para
-    sempre e a reconciliação morre em silêncio — o assert final reprova. É a
-    mesma lição já paga uma vez no `_home_inflight` da aba Início.
-    """
+    """A rede de segurança: `run_in_thread` que não chama callback nenhum."""
     from hefesto_dualsense4unix.app import app as app_mod
     from hefesto_dualsense4unix.app import ipc_bridge
 
@@ -245,7 +184,6 @@ def test_worker_que_nunca_volta_e_dado_por_perdido_no_prazo(
     assert len(disparos) == 1
     assert app._draft_reload_inflight is True
 
-    # Antes do prazo, ninguém insiste.
     relogio.avancar(app_mod.DRAFT_RELOAD_INFLIGHT_TIMEOUT_S - 0.1)
     app._reconciliar_draft_com_perfil_ativo({"active_profile": "Pragmata"})
     assert len(disparos) == 1

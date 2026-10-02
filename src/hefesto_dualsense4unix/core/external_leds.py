@@ -34,7 +34,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Raiz da classe LED (monkeypatchável nos testes via env, como em sysfs_leds).
 LEDS_ROOT: str = os.environ.get(
     "HEFESTO_DUALSENSE4UNIX_LEDS_ROOT", "/sys/class/leds"
 )
@@ -55,15 +54,11 @@ _MAX_PLAYER_LEDS = 4
 #: 1..4 = N verdes à esquerda (padrão Nintendo, INTOCADO — é o que a usuária
 #: já reconhece); 5 = só o azul; 6..9 = azul + 1..4 verdes.
 _BLUE_PLAYER_LED = 5
-_MAX_SLOT_WITH_BLUE = _MAX_PLAYER_LEDS + _BLUE_PLAYER_LED  # 9
+_MAX_SLOT_WITH_BLUE = _MAX_PLAYER_LEDS + _BLUE_PLAYER_LED
 
 
 def hid_instance_for_hidraw(hidraw_dev: str | None) -> str | None:
-    """``/dev/hidraw2`` -> a instância HID (``0003:057E:2009.000E``) via sysfs.
-
-    É o prefixo dos nós LED do controle. ``None`` quando não resolve (device
-    sumiu, sem sysfs) — o chamador trata como "sem LED gravável".
-    """
+    """``/dev/hidraw2`` -> a instância HID (``0003:057E:2009.000E``) via sysfs."""
     if not hidraw_dev:
         return None
     name = os.path.basename(str(hidraw_dev))
@@ -78,8 +73,7 @@ def hid_instance_for_hidraw(hidraw_dev: str | None) -> str | None:
 
 
 def _set_brightness(path: str, value: int) -> bool:
-    """Escreve ``value`` no ``brightness`` do nó LED. Best-effort (False sem
-    nó/permissão, nunca levanta)."""
+    """Escreve ``value`` no ``brightness`` do nó LED. Best-effort (False sem"""
     if not os.path.exists(path):
         return False
     try:
@@ -142,12 +136,10 @@ def write_player_number(
 #: + dados do subcomando``. ``packet_num`` é um contador 0..0xF que o firmware
 #: só usa p/ deduplicar; 0x00 é aceito num envio isolado (não há sequência
 #: anterior a continuar). ``rumble_data`` NEUTRO é o valor "sem vibração" que
-#: o próprio driver manda quando não há rumble em curso.
 _JC_OUTPUT_RUMBLE_AND_SUBCMD = 0x01
 _JC_RUMBLE_NEUTRAL = bytes((0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40))
 
 #: Subcomando Enable-IMU + argumento "ligar" (GYRO-02 — Nintendo Pro REAL tem
-#: a IMU em STANDBY; ver docs/process/estudos/2026-07-19-estudo-gyro-universal-vpad.md).
 _JC_SUBCMD_ENABLE_IMU = 0x40
 _JC_ENABLE_IMU_ARG_ON = 0x01
 
@@ -270,7 +262,7 @@ def read_player_pattern(
             return None
     acesos = bits.count(True)
     if bits != [i < acesos for i in range(_MAX_PLAYER_LEDS)]:
-        return -1  # buracos: alguém escreveu um padrão que não é nosso
+        return -1
     azul = False
     try:
         with open(_blue_node(root, hid_instance), encoding="ascii") as fh:
@@ -367,7 +359,6 @@ def write_lightbar_slot(
     escreveu = _set_brightness(f"{root}/{prefix}:red/brightness", r)
     escreveu = _set_brightness(f"{root}/{prefix}:green/brightness", g) or escreveu
     escreveu = _set_brightness(f"{root}/{prefix}:blue/brightness", b) or escreveu
-    # ``global`` é o mestre 0/1 da lightbar DS4 — liga p/ a cor valer.
     _set_brightness(f"{root}/{prefix}:global/brightness", 1)
     return escreveu
 
@@ -375,12 +366,7 @@ def write_lightbar_slot(
 def apply_player_number(
     hidraw_dev: str | None, slot: int, leds_root: str | None = None
 ) -> bool:
-    """Acende o indicador de posição do controle externo NO MODO que ele estiver.
-
-    Switch/8BitDo-cabo (barra verde) -> :func:`write_player_number`; 8BitDo por
-    Bluetooth (modo DS4, lightbar RGB) -> :func:`write_lightbar_slot` com a cor
-    do slot. Assim a numeração vale por CABO e por BLUETOOTH. Best-effort.
-    """
+    """Acende o indicador de posição do controle externo NO MODO que ele estiver."""
     kind, ident = resolve_external_leds(hidraw_dev, leds_root)
     if kind == "nintendo" and ident:
         return write_player_number(ident, slot, leds_root)

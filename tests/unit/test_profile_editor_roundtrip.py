@@ -66,12 +66,7 @@ class TestRoundtripSimplePresets:
         assert reloaded.match.process_name == ["eldenring"]
 
     def test_game_nome_maiusculo_sobrevive_ao_roundtrip(self, tmp_dir: Path) -> None:
-        """CONTRATO MUDADO de propósito (R-12 item 3, auditoria 23/07).
-
-        O teste antigo congelava a normalização para minúsculas, que era o
-        defeito: o matcher compara com o basename CRU de `/proc/PID/exe`
-        (`EldenRing.exe`), então o `.lower()` do helper garantia o não-casamento.
-        """
+        """CONTRATO MUDADO de propósito (R-12 item 3, auditoria 23/07)."""
         profile = _build_simple_profile("jogo_caps", 5, "game", custom_name="EldenRing")
         reloaded = _save_and_reload(profile, tmp_dir)
         assert isinstance(reloaded.match, MatchCriteria)

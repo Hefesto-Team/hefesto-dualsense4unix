@@ -45,16 +45,8 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture
 def mesa(tmp_path: Path) -> _Mesa:
     m = _Mesa(tmp_path)
-    # A armadilha do §2.1(c): sem isto, `is_native_mode()` do MagicMock
-    # devolve um mock verdadeiro e as rotas SEM `uniq` saem antes de chegar
-    # ao código que este arquivo mede.
     m.daemon.is_native_mode.return_value = False
     return m
-
-
-# --------------------------------------------------------------------------
-# Z3-3 — `_registrar_em_todos` (led.set / player_leds.set SEM uniq)
-# --------------------------------------------------------------------------
 
 
 class TestLedSetRespeitaOSeletor:
@@ -73,9 +65,7 @@ class TestLedSetRespeitaOSeletor:
         assert pintados == {}, f"a barra dos outros mudou de cor: {pintados}"
 
     async def test_alvo_presente_uma_escrita_so_e_so_nele(self, mesa: _Mesa) -> None:
-        """A variante PIOR do §2.1(b): não precisa de ninguém sair da mesa —
-        o alvo presente recebia DUAS escritas (`set_led` + `_registrar_em_
-        todos`) e os outros três recebiam uma que não era deles."""
+        """A variante PIOR do §2.1(b): não precisa de ninguém sair da mesa —"""
         dois = mesa.uniqs[1]
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
         mesa.limpar()
@@ -90,13 +80,7 @@ class TestLedSetRespeitaOSeletor:
             assert mesa.cores_de(outro) == [], f"{outro} foi pintado sem ser o alvo"
 
     async def test_todos_continua_byte_identico(self, mesa: _Mesa) -> None:
-        """Contra-classe: sem alvo no seletor, os quatro continuam recebendo
-        — é o caso para que `_registrar_em_todos` nasceu (BROADCAST-QUE-NAO-
-        MENTE-01), e esta frente não o desfaz. Duas escritas por controle são
-        o comportamento PRÉ-EXISTENTE e documentado (a clássica pinta AGORA
-        via `_desired_default`, a registração garante a cor sobrevivendo ao
-        reassert via `_desired_by_uniq`) — não é o defeito desta frente, que é
-        o vazamento para quem NÃO é o alvo."""
+        """Contra-classe: sem alvo no seletor, os quatro continuam recebendo"""
         await mesa.server._handle_controller_target_set({"index": None})
         mesa.limpar()
 
@@ -111,8 +95,7 @@ class TestLedSetRespeitaOSeletor:
 
 
 class TestPlayerLedsSetRespeitaOSeletor:
-    """NÃO VERIFICADO do §2.4: 'se player_leds.set tem o mesmo furo de
-    led.set'. O sítio é o MESMO (`_registrar_em_todos`) — medido agora."""
+    """NÃO VERIFICADO do §2.4: 'se player_leds.set tem o mesmo furo de"""
 
     async def test_alvo_ausente_zero_player_led_nos_outros(self, mesa: _Mesa) -> None:
         dois = mesa.uniqs[1]
@@ -136,14 +119,11 @@ class TestPlayerLedsSetRespeitaOSeletor:
         assert resposta["aplicado_em"] == [tres], resposta
 
 
-# --------------------------------------------------------------------------
 # Z3-4 — `_destinos_do_broadcast` (trigger.set / trigger.reset SEM uniq)
-# --------------------------------------------------------------------------
 
 
 class TestTriggerSetParaDeNomearQuemNaoRecebeu:
-    """Reproduz o §2.1(c): a resposta honesta estava no log e era
-    descartada na volta."""
+    """Reproduz o §2.1(c): a resposta honesta estava no log e era"""
 
     async def test_alvo_ausente_aplicado_vazio_guardado_no_alvo(self, mesa: _Mesa) -> None:
         dois = mesa.uniqs[1]
@@ -179,8 +159,7 @@ class TestTriggerSetParaDeNomearQuemNaoRecebeu:
         assert resposta["guardado_em"] == [], resposta
 
     async def test_modo_nativo_nao_afirma_nada(self, mesa: _Mesa) -> None:
-        """Contra-classe: a ressalva de Modo Nativo do método (§ docstring)
-        não pode ser derrubada pela consulta nova ao alvo ausente."""
+        """Contra-classe: a ressalva de Modo Nativo do método (§ docstring)"""
         dois = mesa.uniqs[1]
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
         mesa.desligar(dois)
@@ -192,11 +171,6 @@ class TestTriggerSetParaDeNomearQuemNaoRecebeu:
 
         assert resposta["aplicado_em"] == [], resposta
         assert resposta["guardado_em"] == [], resposta
-
-
-# --------------------------------------------------------------------------
-# Z3-5 — rumble.set recusa antes de escrever, com alvo ausente
-# --------------------------------------------------------------------------
 
 
 class TestRumbleSetRecusaComAlvoAusente:
@@ -213,9 +187,6 @@ class TestRumbleSetRecusaComAlvoAusente:
         assert isinstance(resposta.get("motivo"), str) and resposta["motivo"], resposta
         recebeu = mesa.quem_recebeu_motor()
         assert recebeu == {}, f"recusou e mesmo assim escreveu: {recebeu}"
-        # A recusa não pode armar o par no daemon.config — senão o poll loop
-        # de 5 Hz reafirma um pedido que foi recusado (mesma disciplina do
-        # NATIVO-RUMBLE-01).
         assert mesa.config.rumble_active is None, (
             "rumble_active foi armado apesar da recusa"
         )

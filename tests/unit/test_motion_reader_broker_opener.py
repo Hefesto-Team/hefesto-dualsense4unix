@@ -1,18 +1,4 @@
-"""Opener injetável do `PhysicalReportReader` (BROKER-01 §6.2) — sem hardware.
-
-O que estes testes travam:
-
-1. **Todos os gatilhos de reopen passam pelo opener**: start inicial,
-   silêncio ≥ limiar, `request_reopen` (retarget de primário) e ENODEV/EOF
-   (wake BT / hotplug-out) — o único `open` do loop é o `self._opener(path)`.
-2. **OSError do opener cai no backoff existente** (o loop não morre e a
-   próxima tentativa recupera o fluxo).
-3. **Default = comportamento de hoje**: sem opener injetado, o reader abre
-   por caminho com `os.open(path, O_RDONLY)`.
-4. **`make_broker_opener`**: broker responde ⇒ o fd do broker é usado e
-   NENHUM open por caminho acontece (grep-prova em runtime); broker
-   ausente/recusa/dublê sem `open_fd` ⇒ fallback `os.open` — nunca exceção.
-"""
+"""Opener injetável do `PhysicalReportReader` (BROKER-01 §6.2) — sem hardware."""
 from __future__ import annotations
 
 import contextlib
@@ -106,12 +92,7 @@ class TestOpenerNosGatilhosDeReopen:
             opener.fechar()
 
     def test_silencio_reabre_pelo_opener(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Sem nenhum byte no fd, o limiar de silêncio derruba e reabre — e o
-        # reopen TAMBÉM passa pelo opener (o caminho que dava EACCES na v1).
         monkeypatch.setattr(prr, "_SELECT_TIMEOUT_S", 0.05)
-        # GYRO-BT-SILENCIO-01: o teto passou a vir do transporte do nó. Aqui o
-        # path é sintético (não existe no sysfs), então o orçamento é fixado
-        # direto — o que este teste cobre é o REOPEN passar pelo opener.
         monkeypatch.setattr(prr, "silence_budget_for", lambda _path: 0.1)
         opener = _PipeOpener()
         vpad = _FakeVpad()
@@ -141,8 +122,6 @@ class TestOpenerNosGatilhosDeReopen:
             opener.fechar()
 
     def test_eof_do_fd_reabre_pelo_opener(self) -> None:
-        # Wake BT/hotplug-out: o fd morre (EOF/ENODEV) e o loop re-resolve o
-        # path e REABRE pelo opener — o fluxo volta no fd novo.
         opener = _PipeOpener()
         vpad = _FakeVpad()
         reader = PhysicalReportReader(
@@ -151,7 +130,7 @@ class TestOpenerNosGatilhosDeReopen:
         try:
             reader.start()
             assert _esperar(lambda: len(opener.escritas) >= 1)
-            os.close(opener.escritas[0])  # EOF: "o nó sumiu"
+            os.close(opener.escritas[0])
             assert _esperar(lambda: len(opener.escritas) >= 2)
             os.write(opener.escritas[1], _usb_report())
             assert _esperar(lambda: vpad.windows)
@@ -173,7 +152,7 @@ class TestOpenerNosGatilhosDeReopen:
         try:
             reader.start()
             assert _esperar(lambda: len(opener.escritas) >= 1)
-            assert len(opener.calls) >= 2  # a 1ª foi a OSError
+            assert len(opener.calls) >= 2
             os.write(opener.escritas[0], _usb_report())
             assert _esperar(lambda: vpad.windows)
         finally:
@@ -267,8 +246,6 @@ class TestMakeBrokerOpener:
     def test_duble_sem_open_fd_cai_no_os_open(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Dublê antigo (só hide/restore) não pode explodir o opener — o
-        # suppress interno degrada para o open por caminho.
         class _SemOpenFd:
             pass
 
@@ -287,8 +264,6 @@ class TestMakeBrokerOpener:
     def test_fallback_com_no_escondido_propaga_oserror(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Janela broker-morto com nó 0600: o os.open dá EACCES e o contrato
-        # do opener é PROPAGAR OSError (o backoff do reader cobre).
         broker = _FakeBrokerOpen(None)
         opener = hbc.make_broker_opener(_DaemonComBroker(broker))
 
@@ -304,9 +279,7 @@ class TestGrepProvaPontaAPonta:
     def test_reader_broker_ativo_nunca_abre_por_caminho(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Grep-prova em runtime: com o broker servindo fd, NENHUM open por
-        caminho do hidraw acontece — nem no reader, nem no fallback do
-        opener (os.open é vigiado e o path do físico é proibido)."""
+        """Grep-prova em runtime: com o broker servindo fd, NENHUM open por"""
         lido, escrita = os.pipe()
         broker = _FakeBrokerOpen(lambda: os.dup(lido))
         daemon = _DaemonComBroker(broker)
@@ -330,9 +303,7 @@ class TestGrepProvaPontaAPonta:
             reader.start()
             os.write(escrita, _usb_report())
             assert _esperar(lambda: vpad.windows)
-            # O fd veio do broker (dublê chamado com o path do físico)...
             assert broker.calls and broker.calls[0] == "/dev/hidraw-fisico"
-            # ...e NINGUÉM abriu o físico por caminho.
             assert proibidos == []
         finally:
             reader.stop()
@@ -387,8 +358,6 @@ class TestOrcamentoDeSilencioPorTransporte:
         assert prr.silence_budget_for("/dev/hidraw6") == prr._SILENCE_REOPEN_BT_S
 
     def test_no_desconhecido_erra_para_o_lado_do_radio(self) -> None:
-        # Sem sysfs legível o teto é o GENEROSO: errar para o lado do cabo
-        # devolveria o laço a 1 Hz — o bug que esta mudança fecha.
         assert prr.silence_budget_for(None) == prr._SILENCE_REOPEN_BT_S
         assert prr.silence_budget_for("") == prr._SILENCE_REOPEN_BT_S
         assert (

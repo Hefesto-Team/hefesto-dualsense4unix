@@ -1,41 +1,5 @@
 #!/usr/bin/env python3
-"""O arranjo do computador de QUEM ABRE, na forma que o `mapa-das-portas` desenha.
-
-POR QUE ELE EXISTE — ordem dela, 11/09/2026
---------------------------------------------
-
-    "a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento)
-     mim mas pra qualquer outro user"   — citação literal dela, 11/09/2026
-
-O `mapa-das-portas.html` desenhava um gabinete digitado dentro do próprio HTML
-— oito aparelhos de UMA máquina, lidos em 24/08/2026 — e chamava aquilo de "o
-arranjo de agora". Este módulo é a outra metade da cura: ele monta o arranjo da
-máquina de quem abriu, e o piloto o entrega à página por
-``window.hefestoArranjo`` (:data:`~hefesto_dualsense4unix.interface.pagina_do_mapa.ABRE_A_PORTA`).
-
-O QUE ELE NÃO FAZ
-------------------
-
-**Não inventa o que ninguém declarou.** O número da entrada no metal
-(``9``, ``15a``) não existe em leitura nenhuma — é declaração de quem olhou o
-gabinete, e está medido no ``integrations/mapa_das_portas``: duas entradas da
-frente respondem ``panel``, ``horizontal_position`` e ``vertical_position``
-IDÊNTICOS. Sem faces declaradas não há mapa a desenhar, e a resposta é
-:data:`None` — a página fica com o exemplo, que se declara exemplo. Devolver um
-gabinete inventado seria pior do que devolver o de outra pessoa.
-
-**Não decide nada sobre o arranjo.** Quem julga entrada é
-``integrations/arranjo_da_mesa``, e quem junta o mapa dela com o censo do
-kernel é ``integrations/mapa_das_portas.mesa_do_motor``. Aqui só se TRADUZ o
-que eles produzem para os nomes que o JavaScript da página lê — que é o único
-trabalho que sobra, e é por isso que este arquivo é curto.
-
-**Não repete a paleta.** As cores saem de
-``pagina_do_mapa.CORES_POR_CLASSE``, derivadas do próprio censo de exemplo. Uma
-segunda tabela de cor divergiria da primeira no dia em que alguém trocasse o
-roxo do Bluetooth — é a classe de defeito que esta casa chama de segunda
-verdade.
-"""
+"""O arranjo do computador de QUEM ABRE, na forma que o `mapa-das-portas` desenha."""
 
 from __future__ import annotations
 
@@ -50,87 +14,35 @@ from typing import Any
 
 from hefesto_dualsense4unix.interface import pagina_do_mapa
 
-#: A página que recebe o que este módulo produz. O piloto compara com o nome do
-#: arquivo à vista, e o nome mora aqui para não ser digitado nos dois lados.
 PAGINA = "mapa-das-portas.html"
 
-#: O rótulo do cabeçalho quando a leitura é desta máquina. O do exemplo é
-#: :data:`pagina_do_mapa.QUANDO_DO_EXEMPLO`, e os dois moram um ao lado do
-#: outro de propósito: a frase que distingue "é seu" de "é exemplo" é a defesa
-#: inteira da página contra ser lida como verdade de qualquer computador.
 QUANDO_DE_AGORA = "leitura deste computador · {quando}"
 
-#: O rótulo das duas leituras. Na primeira abertura só existe UMA, e dizer que
-#: a anterior é igual é o que é verdade — inventar um "antes" diferente faria a
-#: tela mostrar movimentos que ninguém fez.
 ROTULO_DE_AGORA = "lido agora"
 ROTULO_DE_ANTES = "a leitura anterior — ainda é esta"
-#: O rótulo do «antes» de um reexame: a leitura que a página tinha na tela
-#: quando ela clicou em «Examinar».
 ROTULO_DA_ANTERIOR = "a leitura anterior"
 
-#: A CHAVE COM QUE UM GESTO DEVOLVE UM ARRANJO À PÁGINA — O-MAPA-DAS-CONEXOES-
-#: NO-PRODUTO-02, 26/09/2026. O retorno de um gesto só pintava `data-campo`, e
-#: o arranjo não é um valor num campo: é o gabinete inteiro. O piloto tira esta
-#: chave da resposta e a entrega por :func:`js_da_entrega`
-#: (`hefesto_vivo.Piloto._o_arranjo_relido`), o mesmo caminho da abertura.
 CHAVE_DA_ENTREGA = "arranjo"
 
-#: A CHAVE DO ARRANJO QUE VOLTA DE UMA GRAVAÇÃO — O-MAPA-QUE-ELA-CORRIGE-01,
-#: 26/09/2026 (D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO). O editor da entrada
-#: apertava o botão na hora, antes do disco: uma recusa ficava invisível, e a
-#: piscada procurava um botão que a repintura já tinha trocado. Agora o gesto
-#: grava e devolve o arranjo RELIDO nesta chave, e a página repinta pela
-#: verdade do disco, com o editor ainda aberto (:func:`js_da_entrega` com
-#: ``como="gravou"``). Uma chave própria, e não a do «Examinar»: o reexame
-#: muda o modo da página, e a gravação não muda.
 CHAVE_DEPOIS_DE_GRAVAR = "arranjoGravado"
 
-#: Os três jeitos de a página receber um arranjo: a abertura, o «Examinar» e a
-#: volta de uma gravação. É o segundo argumento de ``window.hefestoArranjo``.
 COMO_ABRE = ""
 COMO_REEXAME = "releitura"
 COMO_GRAVOU = "gravou"
 
-#: A IDENTIDADE DE UM APARELHO NA PÁGINA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
-#: O `id` era o caminho de barramento, e o caminho é justamente o que muda
-#: quando ela move o aparelho: o reexame não tinha como dizer «estava em», e
-#: dizia `undefined`. O `id` passa a ser um resumo com SAL do que o aparelho é
-#: (o serial, ou o modelo quando ele é o único daquele modelo). O sal nasce
-#: com o processo e nunca sai da memória: o serial de um dongle Bluetooth é o
-#: endereço do rádio, e ele não vai à tela nem ao disco, nem por resumo que se
-#: possa refazer noutro dia.
 _SAL = secrets.token_bytes(16)
 _PREFIXO_DO_ID = "ap-"
 
-#: UMA LEITURA, COMO O REEXAME SEGUINTE A CONFERE: ``id -> (caminho, modelo)``.
-#: O modelo (``vid:pid``) não vai à página; ele fica na memória para dizer se
-#: quem está hoje num caminho é do mesmo modelo de quem estava ali antes.
 Lida = dict[str, tuple[str, str]]
 
-#: A forma do desenho de cada face, e ela não é declarada por ninguém: o
-#: ``MapaDaMesa`` guarda quantas entradas a face tem e onde ela fica, não como
-#: desenhá-la. A escolha é de tela e mora aqui, com o critério à vista.
 _FILEIRA_DO_HUB = "fileira"
 _COLUNA_CURTA = "coluna"
 _GRADE = "grade-tras"
 
-#: Até quantas entradas uma face do gabinete vira coluna em vez de grade.
 _TETO_DA_COLUNA = 2
 
-#: O QUE O DESENHO ESCREVE NO CABO DA ENTRADA-FILHA. O exemplo diz "extensor de
-#: 1 m" porque alguém mediu aquele cabo; aqui o comprimento não se sabe, e a
-#: frase diz só o que é verdade. Sem ela o desenho escreveria `undefined` ao
-#: lado da entrada — o `porta.filho.cabo` é lido sem defesa no JavaScript.
-#: FATO SUBSTITUÍDO em 26/09/2026: dizia «extensão declarada por você»; o
-#: editor da entrada (`pagina_do_mapa`) escreve «Extensor», e a mesma ponta de
-#: cabo não pode ter dois nomes antes e depois de a página ser relida.
 CABO_DECLARADO = "Extensor, declarado por você"
 
-#: QUANTAS ENTRADAS O HUB DECLARADO DESENHA — 26/09/2026, o desenho aprovado do
-#: editor da entrada. O número de buracos do hub dela não se lê de lugar
-#: nenhum que este módulo leia, e quatro é o que o desenho mostra; a entrada
-#: que ela mapear nele pelo Mapear vira face de verdade e toma o lugar destas.
 ENTRADAS_DO_HUB_DECLARADO = 4
 
 
@@ -142,29 +54,7 @@ def arranjo(
     antes: Mapping[str, tuple[str, str]] | None = None,
     ler_o_serial: Callable[[str], str] | None = None,
 ) -> dict[str, Any] | None:
-    """O arranjo desta máquina, ou ``None`` quando não há o que desenhar.
-
-    As fontes são injetáveis para que a régua meça esta tradução sem tocar
-    no ``/sys`` da máquina de ninguém — e sem um ``monkeypatch`` que alcança
-    só quem importar pelo mesmo caminho.
-
-    ``antes`` é a leitura que a página já tem (:data:`Lida`), e só o
-    «Examinar» a passa (:func:`reexaminar`): sem ela, as duas leituras nascem
-    iguais, que é o que é verdade na primeira abertura.
-
-    LÊ O ``/sys`` USB, e por isso NUNCA roda no fio da janela: ``product``,
-    ``bMaxPower`` e ``serial`` esperam o lock do aparelho enquanto o kernel
-    enumera o que acabou de chegar (a O-MAPEAR-NAO-CONGELA-A-JANELA-01 mediu
-    15 s). Quem chama é um fio próprio do piloto ou o fio do gesto.
-
-    ``None`` acontece em três casos, e os três são honestos:
-
-    * o ``maquina.json`` não tem face declarada — não há gabinete a desenhar;
-    * a leitura do barramento falhou — e censo vazio faria toda entrada parecer
-      livre, que é o vazio mais convincente que existe;
-    * o import falhou (árvore sem ``src``), que é o caso de quem roda a página
-      solta no navegador.
-    """
+    """O arranjo desta máquina, ou ``None`` quando não há o que desenhar."""
     lido = _ler_a_maquina(agora, carregar, ler_o_barramento,
                           antes=antes, ler_o_serial=ler_o_serial)
     return None if lido is None else lido[0]
@@ -212,9 +102,6 @@ def _ler_a_maquina(
         return None
 
     quando = (agora or _dt.datetime.now()).strftime("%d/%m/%Y %Hh%M")
-    # O CAMINHO É O DA LEITURA DO MOTOR, e não o nome do kernel: o Wi-Fi que
-    # enumera no lado 3.0 do buraco (`4-1.1.4`) é lido no caminho da entrada
-    # (`3-1.1.4`), que é o que a página compara com o mapa.
     caminhos = {ids.get(a.id, a.id): mesa.leitura.get(a.id, a.id) for a in mesa.aparelhos}
     faces = _faces(mesa.faces)
     hub_lido = _o_que_ela_declarou_nas_entradas(
@@ -243,24 +130,12 @@ def _ler_a_maquina(
         ),
         "rotulos": rotulos_das_entradas(documento),
         "hubLido": hub_lido,
-        # DE ONDE VEIO A VELOCIDADE de cada entrada (D-2609-A-VELOCIDADE-DELA-
-        # VENCE-A-PLACA): o editor diz «É o que você disse.», «É o que a
-        # placa-mãe diz.»… Da mesma chamada que deu a `usb` das faces.
         "usbDe": dict(bancada.usb_de),
     }, lida
 
 
-# ── O «Examinar» relê: a leitura anterior mora aqui, na memória ─────────────
-
-
 class _ALeituraNaTela:
-    """A :data:`Lida` da última leitura entregue à página.
-
-    É o «antes» do próximo «Examinar». Mora na memória do processo, junto com
-    o sal das identidades, e nunca vai a disco: fora deste processo os ``id``
-    não querem dizer nada. A trava guarda só a troca: a leitura do ``/sys``
-    acontece fora dela.
-    """
+    """A :data:`Lida` da última leitura entregue à página."""
 
     def __init__(self) -> None:
         self._trava = threading.Lock()
@@ -285,22 +160,12 @@ def para_a_pagina(**fontes: Any) -> dict[str, Any] | None:
 
 
 def reexaminar(**fontes: Any) -> dict[str, Any] | None:
-    """O «Examinar»: relê a máquina, e o «antes» é a leitura que a página tem.
-
-    Sem leitura anterior (a página ainda não recebeu nenhuma), as duas nascem
-    iguais — a mesma verdade da abertura.
-    """
+    """O «Examinar»: relê a máquina, e o «antes» é a leitura que a página tem."""
     return _guardar_e_entregar(_ler_a_maquina(antes=_NA_TELA.ler(), **fontes))
 
 
 def depois_de_gravar(**fontes: Any) -> dict[str, Any] | None:
-    """O arranjo relido depois de uma gravação do editor — ver
-    :data:`CHAVE_DEPOIS_DE_GRAVAR`.
-
-    É a leitura do «Examinar» (o «antes» é a que a página tem, e quem ficou
-    parado continua com o mesmo ``id``), entregue sem mudar o modo da página.
-    Lê o ``/sys``: roda no fio do gesto, nunca no da janela.
-    """
+    """O arranjo relido depois de uma gravação do editor — ver"""
     return _guardar_e_entregar(_ler_a_maquina(antes=_NA_TELA.ler(), **fontes))
 
 
@@ -316,13 +181,7 @@ def _guardar_e_entregar(lido: tuple[dict[str, Any], Lida] | None) -> dict[str, A
 def js_da_entrega(
     dado: Mapping[str, Any], *, reexame: bool = False, como: str = COMO_ABRE
 ) -> str:
-    """O JavaScript que entrega um arranjo à página — a abertura, o reexame e a
-    volta de uma gravação (``como``: :data:`COMO_ABRE`, :data:`COMO_REEXAME`,
-    :data:`COMO_GRAVOU`; ``reexame=True`` é o mesmo que ``como=COMO_REEXAME``).
-
-    UM dono para as três entregas: o piloto monta as três por aqui, e a régua
-    que abre a página no WebKit também.
-    """
+    """O JavaScript que entrega um arranjo à página — a abertura, o reexame e a"""
     corpo = json.dumps(dado, ensure_ascii=False)
     if reexame:
         como = COMO_REEXAME
@@ -340,35 +199,7 @@ def identidades(
     *,
     lido_em: Mapping[str, str] | None = None,
 ) -> dict[str, str]:
-    """``caminho -> id`` de cada aparelho, o mesmo enquanto ele for o mesmo.
-
-    A SEMENTE, na ordem da certeza:
-
-    1. o serial do descritor, com o modelo (``vid:pid``);
-    2. o modelo sozinho, quando só há UM aparelho dele — o receptor do teclado
-       que muda de entrada continua sendo o único receptor daquele modelo;
-    3. o caminho, quando nada separa dois aparelhos (dois do mesmo modelo sem
-       serial, ou com o MESMO serial de fábrica, como o ``123456`` que um
-       adaptador Wi-Fi desta casa responde). Aí mover um deles não se
-       reconhece, e a página o mostra como quem chegou — nunca como o outro.
-       O caminho vai COM o modelo: outro modelo que chega no mesmo caminho é
-       outro aparelho, e não herda o ``id`` de quem saiu dali.
-
-    QUEM FICOU PARADO CONTINUA SENDO ELE (a conferência da 02, 26/09/2026). Com
-    ``antes`` (a :data:`Lida` que a página tem), o aparelho sem serial só dele
-    que está no MESMO caminho, com o MESMO modelo, de um aparelho da leitura
-    anterior é aquele aparelho. Sem isto, o gêmeo que chega (ou sai) trocava a
-    semente de quem não se mexeu — o modelo deixava de ser único, ou voltava a
-    ser — e o reexame dizia que ele «mudou de lugar». O serial só dele vence
-    sempre: com ele, dois aparelhos que trocam de caminho se separam.
-
-    A semente passa por um resumo com :data:`_SAL`: o ``id`` não refaz o
-    serial, e o sal morre com o processo.
-
-    ``lido_em`` é o caminho em que o motor LÊ cada aparelho
-    (``mapa_das_portas.mesa_do_motor``), e é nele que a :data:`Lida` guarda:
-    o parado se confere pelo mesmo caminho em que foi guardado.
-    """
+    """``caminho -> id`` de cada aparelho, o mesmo enquanto ele for o mesmo."""
     modelos = _modelos(aparelhos)
     sementes: dict[str, str] = {}
     for aparelho in aparelhos:
@@ -415,20 +246,7 @@ def _resumo(semente: str) -> str:
 def _declarado(
     mapa: Any, numeros: Any, nome_de: Callable[[str], str | None] | None = None
 ) -> dict[str, dict[str, Any]]:
-    """O que ela disse de cada entrada DO MAPA DELA, para o editor da página.
-
-    ``nome`` é o nome que ela deu à entrada (O-MAPA-QUE-ELA-CORRIGE-01), pelo
-    dono da leitura (``entrada_a_entrada.nome_da_entrada``): é o que o campo
-    «Nome» do editor mostra. O rótulo que a tela escreve vai em ``rotulos``.
-
-    TODA entrada do mapa vem, com ``{}`` quando ela não disse nada: a lista de
-    chaves é a lista das entradas que o editor GRAVA. A ponta de um extensor
-    declarado grava também desde a O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, e quem
-    diz isso à página é o ``podeGravar`` dela (o extensor vem aqui, na mãe);
-    depois do primeiro gesto a ponta está no disco e vem como as outras. As do
-    hub desenhado (``5.1``…) não vêm: o número delas não cabe no disco, e ali
-    o editor da página só mostra quem está nelas.
-    """
+    """O que ela disse de cada entrada DO MAPA DELA, para o editor da página."""
     saida: dict[str, dict[str, Any]] = {}
     for numero in sorted(numeros):
         porta = mapa.portas.get(numero)
@@ -449,24 +267,7 @@ def _o_que_ela_declarou_nas_entradas(
     mapa: Any,
     nome_de: Callable[[str], str | None] = lambda _n: None,
 ) -> dict[str, bool]:
-    """Cada face diz de qual entrada pende; o hub sem face ganha a dele; o
-    extensor declarado vira entrada-filha. Devolve ``hubLido``: as entradas
-    em que o barramento lê um hub.
-
-    D-2609-O-HUB-PENDE-DA-ENTRADA (O-MAPA-QUE-ELA-CORRIGE-01). A ligação é do
-    dono (``entrada_a_entrada.de_quem_pende``): a face ligada ganha
-    ``daEntrada``, o ``titulo`` («Hub na Entrada 3», composto pelo dono da
-    grafia) e, quando a entrada dela e a lida divergem, o ``diverge`` — a
-    frase inteira. A DEDUPLICAÇÃO É PELA LIGAÇÃO, e não pelo nome: o hub que
-    ela declarou numa entrada que já tem face ligada não cria outra (antes
-    nascia uma segunda face, com quatro buracos inventados, e o painel dizia
-    «15 de 19»). A face de quatro buracos (``fantasma``) só nasce para o hub
-    declarado sem face ligada — o desplugado, ou o que o Mapear não viu.
-
-    É a MESMA forma que o editor da página monta quando ela declara na tela
-    (a `declarar` do `pagina_do_mapa`). Reler a página tem de mostrar o que ela
-    viu ao clicar.
-    """
+    """Cada face diz de qual entrada pende; o hub sem face ganha a dele; o"""
     from hefesto_dualsense4unix.integrations.entrada_a_entrada import (
         de_quem_pende,
         faces_dos_hubs,
@@ -481,9 +282,6 @@ def _o_que_ela_declarou_nas_entradas(
     for face in faces:
         for entrada in face["portas"]:
             por_numero.setdefault(entrada["n"], entrada)
-            # A PONTA DO EXTENSOR que já está no disco é entrada como as outras
-            # (O-MAPA-DAS-CONEXOES-NO-PRODUTO-02): o hub que ela declarar ali
-            # vira face, igual ao de uma entrada da chapa.
             if "filho" in entrada:
                 por_numero.setdefault(entrada["filho"]["n"], entrada["filho"])
     hub_lido: dict[str, bool] = {}
@@ -495,8 +293,6 @@ def _o_que_ela_declarou_nas_entradas(
         face["titulo"] = titulo_do_hub(dela.entrada, nome_de(dela.entrada))
         if dela.lida is not None:
             face["diverge"] = frase_do_hub_lido(dela.lida, nome_de(dela.lida))
-        # o computador lê o hub na entrada de que a face DESCE, mesmo quando a
-        # ligação que vale é a que ela declarou
         if dela.barramento is not None:
             hub_lido[dela.barramento] = True
     ligadas = {dela.entrada for dela in pendencias.values()}
@@ -531,16 +327,7 @@ def _o_que_ela_declarou_nas_entradas(
 
 
 def _aparelho(aparelho: Any, identidade: str) -> dict[str, Any]:
-    """Um aparelho do motor nos cinco campos que a página LÊ.
-
-    São cinco e não oito porque a página lê cinco: ``sementeDoCaminho``,
-    ``usb`` e ``mA`` estão no censo de exemplo e nenhuma linha do JavaScript os
-    consulta. Copiá-los aqui seria mobília — e mobília que alguém depois
-    acreditaria estar sendo usada.
-
-    O ``id`` é a :func:`identidades`, e não o caminho: o caminho vai nas
-    leituras, que é onde a página o procura.
-    """
+    """Um aparelho do motor nos cinco campos que a página LÊ."""
     return {
         "id": identidade,
         "tipo": aparelho.tipo,
@@ -552,13 +339,7 @@ def _aparelho(aparelho: Any, identidade: str) -> dict[str, Any]:
 
 
 def _faces(faces: Any) -> list[dict[str, Any]]:
-    """As faces do motor mais a FORMA do desenho, que não vem de fonte nenhuma.
-
-    ``donaDaFaixaPc`` é a face que recebe os aparelhos que estão numa entrada
-    direta do PC sem lugar declarado. Ela tem de ser UMA: duas mostrariam a
-    mesma bandeja duas vezes, e zero esconderia os aparelhos sem lugar — que
-    são exatamente os que precisam de um clique dela.
-    """
+    """As faces do motor mais a FORMA do desenho, que não vem de fonte nenhuma."""
     saida = []
     dona = _dona_da_faixa(faces)
     for face in faces:
@@ -591,13 +372,7 @@ def _forma(face: Any) -> str:
 
 
 def _entrada(entrada: Any) -> dict[str, Any]:
-    """Uma entrada do motor, sem os campos que ela não tem.
-
-    Os opcionais saem quando são vazios em vez de irem como ``null``: o
-    JavaScript da página testa `!!p.esticada` e `p.filho`, e um `null` explícito
-    diria a mesma coisa com mais bytes — mas `par: null` chegaria ao
-    `porNum(p.par)` como uma entrada que não existe.
-    """
+    """Uma entrada do motor, sem os campos que ela não tem."""
     corpo: dict[str, Any] = {"n": entrada.n, "usb": entrada.usb, "onde": entrada.onde}
     if entrada.par:
         corpo["par"] = entrada.par

@@ -1,29 +1,4 @@
-"""SENTINELA-WRAPPER-01: a Steam guarda UMA linha por jogo, e comeu a nossa.
-
-16/08/2026, defeito pego ao vivo. Ela jogou Pragmata no cabo e funcionou;
-passou para o Bluetooth e o jogo parou de reconhecer o controle — *"mas o
-perfil de pragmata segue ativo no controle com tudo funcionando só não sendo
-reconhecido"*. O daemon estava saudável, o `launch_env` materializado, o grab
-retido. O que faltava era UMA linha na Steam::
-
-    VKD3D_CONFIG=no_upload_hvv %command%       <- Pragmata (1 jogo)
-    sh -c '…' hefesto-launch %command%          <- os outros 60
-
-O `VKD3D_CONFIG` (posto para curar o crash de 14/08) SUBSTITUIU o wrapper,
-porque o campo é um só e a Steam não avisa. Sem o wrapper, o jogo herda a
-lista de IGNORE da própria Steam — que inclui `0x054c/0x0df2`, o PID do nosso
-vpad — e fica sem controle nenhum.
-
-Estes testes travam as três camadas da cura, e cada asserção morde:
-
-1. DETECTAR — o censo separa "perdeu" (regressão) de "nunca teve" (novo), e é
-   read-only, portanto seguro com a Steam aberta;
-2. AVISAR — a frase nomeia o JOGO;
-3. REPARAR — repõe o wrapper **preservando o `VKD3D_CONFIG`**, é idempotente,
-   faz backup, e ADIA com a Steam ou um jogo aberto.
-
-Tudo com fixtures em `tmp_path`. **Nenhum localconfig.vdf real é tocado.**
-"""
+"""SENTINELA-WRAPPER-01: a Steam guarda UMA linha por jogo, e comeu a nossa."""
 from __future__ import annotations
 
 import json
@@ -36,21 +11,13 @@ from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 _TAB = "\t"
 
-#: A linha literal do Pragmata, verbatim do `localconfig.vdf` dela (conferida
-#: em 16/08 em seis backups datados de 14/07 a 20/07).
 PRAGMATA = "3357650"
 LINHA_PRAGMATA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
-#: A lista de IGNORE ESTENDIDA à mão. Ela era INTOCÁVEL até 06/09/2026, e desde
-#: a ONDA5-07-01 o censo a manda para o REPARO: `subtrair_nosso_ignore` tira o
-#: nosso par de dentro da lista dela sem nunca deixar fragmento pendurado.
 LINHA_ESTENDIDA = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x057e/0x2009 %command%"
 )
 
-#: O QUE O CENSO AINDA CHAMA DE INTOCÁVEL — a lista entre aspas, que a
-#: subtração não sabe desmontar. É a linha para a qual `frase_do_aviso` guarda
-#: o terceiro ramo, o que termina em *"Reparo manual."*
 LINHA_FORA_DO_ALCANCE = (
     'SDL_GAMECONTROLLER_IGNORE_DEVICES="0x054c/0x0ce6,0x057e/0x2009" %command%'
 )
@@ -89,8 +56,7 @@ def _escrever(tmp_path: Path, apps: dict[str, str | None]) -> Path:
 
 
 def _registro(tmp_path: Path, appids: list[str]) -> Path:
-    """Registro de 'já foi visto com o wrapper' — a memória que separa
-    regressão de jogo novo."""
+    """Registro de 'já foi visto com o wrapper' — a memória que separa"""
     alvo = tmp_path / "wrapper-visto.json"
     alvo.write_text(
         json.dumps({"schema": 1, "appids": {a: "1786000000" for a in appids}}),
@@ -124,33 +90,19 @@ def optout_isolado(monkeypatch, tmp_path):
 
 @pytest.fixture(autouse=True)
 def sem_nome_de_jogo(monkeypatch):
-    """Sem `appmanifest` de mentira, o rótulo é o appid cru — e é honesto.
-
-    Fixar isto impede que o teste fique dependendo da biblioteca instalada na
-    máquina de quem roda a suíte.
-    """
+    """Sem `appmanifest` de mentira, o rótulo é o appid cru — e é honesto."""
     monkeypatch.setattr(sw, "rotulo_do_jogo", lambda a, home=None: f"appid {a}")
 
 
-# --------------------------------------------------------------------------
-# 1. DETECTAR
-# --------------------------------------------------------------------------
-
-
 def test_censo_separa_o_que_perdeu_do_que_nunca_teve(tmp_path: Path, steam_fechada):
-    """Os quatro casos do defeito, no mesmo vdf.
-
-    A distinção regressão/novo é o coração do desenho: só a regressão explica
-    "funcionava e parou", que é a frase dela. Um censo que chamasse tudo de
-    "faltando" avisaria certo e explicaria errado.
-    """
+    """Os quatro casos do defeito, no mesmo vdf."""
     vdf = _escrever(
         tmp_path,
         {
-            "111": slo.WRAPPER_LAUNCH,                        # com wrapper
-            "222": f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%",  # wrapper + var
-            PRAGMATA: LINHA_PRAGMATA,                         # o caso literal
-            "444": None,                                      # jogo novo, sem linha
+            "111": slo.WRAPPER_LAUNCH,
+            "222": f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%",
+            PRAGMATA: LINHA_PRAGMATA,
+            "444": None,
         },
     )
     censo = sw.censo_do_wrapper(
@@ -160,16 +112,11 @@ def test_censo_separa_o_que_perdeu_do_que_nunca_teve(tmp_path: Path, steam_fecha
     assert sorted(censo.com_wrapper) == ["111", "222"]
     assert [j.appid for j in censo.regressoes] == [PRAGMATA]
     assert [j.appid for j in censo.novos] == ["444"]
-    # A linha dela é reportada CRUA — é o que permite a tela dizer o que havia.
     assert censo.regressoes[0].opcoes == LINHA_PRAGMATA
 
 
 def test_censo_nao_escreve_no_vdf_nem_com_a_steam_aberta(tmp_path: Path, monkeypatch):
-    """A detecção é a camada que vale COM a Steam viva — é quando ela joga.
-
-    Se o censo escrevesse, seria pior que inútil: a Steam regrava o arquivo ao
-    sair e a edição viraria corrupção silenciosa.
-    """
+    """A detecção é a camada que vale COM a Steam viva — é quando ela joga."""
     for mod in (sw, slo):
         monkeypatch.setattr(mod, "steam_running", lambda: True)
         monkeypatch.setattr(mod, "steam_game_running", lambda: True)
@@ -185,12 +132,7 @@ def test_censo_nao_escreve_no_vdf_nem_com_a_steam_aberta(tmp_path: Path, monkeyp
 
 
 def test_vdf_pego_no_meio_da_regravacao_nao_vira_alarme(tmp_path: Path, steam_fechada):
-    """Um vdf sem bloco `apps` legível é ERRO, nunca 'nenhum jogo tem wrapper'.
-
-    O instrumento mente mais que o produto: sem esta guarda, uma leitura
-    apanhada no instante em que a Steam regrava o arquivo produziria um aviso
-    convincente e falso — 'a sua biblioteca inteira perdeu o wrapper'.
-    """
+    """Um vdf sem bloco `apps` legível é ERRO, nunca 'nenhum jogo tem wrapper'."""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text('"UserLocalConfigStore"\n{\n}\n', encoding="utf-8")
 
@@ -202,14 +144,7 @@ def test_vdf_pego_no_meio_da_regravacao_nao_vira_alarme(tmp_path: Path, steam_fe
 
 
 def test_a_lista_estendida_a_mao_entra_no_reparo(tmp_path: Path, steam_fechada):
-    """ERA `test_linha_com_ignore_estendido_e_intocavel`, e o nome dele era a
-    promessa que caducou (07-Q1, 06/09/2026: *"Deve aplicar automaticamente
-    como era no gtk"*).
-
-    O que ele mede agora é o outro lado da MESMA linha: ela sai dos intocáveis,
-    entra nos reparáveis, e a frase que a tela mostra é a de jogo novo — não a
-    de reparo manual.
-    """
+    """ERA `test_linha_com_ignore_estendido_e_intocavel`, e o nome dele era a"""
     vdf = _escrever(tmp_path, {"999": LINHA_ESTENDIDA})
 
     censo = sw.censo_do_wrapper(vdfs=[vdf], registro=_registro(tmp_path, []))
@@ -224,11 +159,7 @@ def test_a_lista_estendida_a_mao_entra_no_reparo(tmp_path: Path, steam_fechada):
 def test_o_que_a_subtracao_nao_alcanca_continua_intocavel(
     tmp_path: Path, steam_fechada
 ):
-    """A frase de reparo manual NÃO morreu — ela deixou de ser o caso comum.
-
-    O dia em que uma linha destas aparecer é o dia em que aquela frase é a
-    única coisa honesta na tela.
-    """
+    """A frase de reparo manual NÃO morreu — ela deixou de ser o caso comum."""
     vdf = _escrever(tmp_path, {"999": LINHA_FORA_DO_ALCANCE})
 
     censo = sw.censo_do_wrapper(vdfs=[vdf], registro=_registro(tmp_path, []))
@@ -241,9 +172,7 @@ def test_o_que_a_subtracao_nao_alcanca_continua_intocavel(
 def test_o_reparo_da_lista_estendida_preserva_o_device_dela(
     tmp_path: Path, steam_fechada
 ):
-    """A prova NO ARQUIVO, que é onde a subtração é a diferença entre curar e
-    estragar: o atalho entra, o nosso par sai, e o device que ELA escondeu
-    continua escondido."""
+    """A prova NO ARQUIVO, que é onde a subtração é a diferença entre curar e"""
     vdf = _escrever(tmp_path, {"999": LINHA_ESTENDIDA})
 
     status, _censo, _res = sw.reparar_ou_adiar(vdfs=[vdf],
@@ -256,18 +185,8 @@ def test_o_reparo_da_lista_estendida_preserva_o_device_dela(
     assert "0x054c/0x0ce6" not in depois
 
 
-# --------------------------------------------------------------------------
-# 2. AVISAR
-# --------------------------------------------------------------------------
-
-
 def test_o_aviso_nomeia_o_jogo_e_o_sintoma(tmp_path: Path, steam_fechada):
-    """'1 jogo com problema' não ajuda ninguém a agir. O nome, sim.
-
-    E o aviso tem de descrever o sintoma CONFUSO — controle vivo, luz acesa,
-    perfil aplicado, jogo cego —, porque foi ele que fez ela procurar defeito
-    no lugar errado por uma noite inteira.
-    """
+    """'1 jogo com problema' não ajuda ninguém a agir. O nome, sim."""
     vdf = _escrever(tmp_path, {PRAGMATA: LINHA_PRAGMATA})
     censo = sw.censo_do_wrapper(vdfs=[vdf], registro=_registro(tmp_path, [PRAGMATA]))
 
@@ -301,18 +220,8 @@ def test_sem_faltante_nao_ha_frase(tmp_path: Path, steam_fechada):
     assert sw.frase_do_aviso(sw.censo_do_wrapper(vdfs=[vdf], registro=tmp_path / "r.json")) == ""
 
 
-# --------------------------------------------------------------------------
-# 3. REPARAR
-# --------------------------------------------------------------------------
-
-
 def test_o_reparo_repoe_o_wrapper_preservando_o_vkd3d(tmp_path: Path, steam_fechada):
-    """A asserção mais cara deste arquivo.
-
-    O Pragmata precisa do wrapper **e** do `VKD3D_CONFIG=no_upload_hvv`, que
-    cura o crash de 14/08. Repor o wrapper jogando a linha dela fora trocaria
-    'o jogo não vê o controle' por 'o jogo fecha sozinho' — não é conserto.
-    """
+    """A asserção mais cara deste arquivo."""
     vdf = _escrever(tmp_path, {PRAGMATA: LINHA_PRAGMATA, "111": slo.WRAPPER_LAUNCH})
     registro = _registro(tmp_path, [PRAGMATA, "111"])
 
@@ -323,7 +232,6 @@ def test_o_reparo_repoe_o_wrapper_preservando_o_vkd3d(tmp_path: Path, steam_fech
     assert slo.WRAPPER_PREFIX in nova
     assert "VKD3D_CONFIG=no_upload_hvv" in nova
     assert nova.endswith("%command%")
-    # E o jogo que já estava certo não foi mexido.
     assert (
         slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))["111"]
         == slo.WRAPPER_LAUNCH
@@ -331,8 +239,7 @@ def test_o_reparo_repoe_o_wrapper_preservando_o_vkd3d(tmp_path: Path, steam_fech
 
 
 def test_o_reparo_e_idempotente(tmp_path: Path, steam_fechada):
-    """Rodar duas vezes não pode duplicar o wrapper — nem no `sh -c`, nem no
-    `VKD3D_CONFIG`."""
+    """Rodar duas vezes não pode duplicar o wrapper — nem no `sh -c`, nem no"""
     vdf = _escrever(tmp_path, {PRAGMATA: LINHA_PRAGMATA})
     registro = _registro(tmp_path, [PRAGMATA])
 
@@ -342,7 +249,7 @@ def test_o_reparo_e_idempotente(tmp_path: Path, steam_fechada):
 
     assert status == sw.REPARO_NADA
     assert vdf.read_text(encoding="utf-8") == depois_de_um
-    assert depois_de_um.count("hefesto-launch") == 2  # `W=…` + o `$0` do sh -c
+    assert depois_de_um.count("hefesto-launch") == 2
     assert depois_de_um.count("VKD3D_CONFIG") == 1
 
 
@@ -359,8 +266,7 @@ def test_ha_backup_antes_de_escrever(tmp_path: Path, steam_fechada):
 
 
 def test_com_jogo_aberto_adia_antes_de_olhar_a_steam(tmp_path: Path, monkeypatch):
-    """A ordem dos portões não é negociável: fechar a Steam com um jogo aberto
-    mata o jogo e o progresso não salvo."""
+    """A ordem dos portões não é negociável: fechar a Steam com um jogo aberto"""
     monkeypatch.setattr(sw, "steam_running", lambda: True)
     monkeypatch.setattr(sw, "steam_game_running", lambda: True)
     vdf = _escrever(tmp_path, {PRAGMATA: LINHA_PRAGMATA})
@@ -393,11 +299,7 @@ def test_com_a_steam_aberta_adia_sem_tocar_no_vdf(tmp_path: Path, monkeypatch):
 
 
 def test_adiado_hoje_reparado_quando_ela_fechar(tmp_path: Path, monkeypatch):
-    """Não há marcador de pendência: o censo é uma leitura de arquivo, então o
-    reparo simplesmente ACONTECE na próxima passada com a Steam fechada.
-
-    Estado guardado sobre um vdf que muda sozinho envelheceria errado.
-    """
+    """Não há marcador de pendência: o censo é uma leitura de arquivo, então o"""
     aberta = {"steam": True}
     for mod in (sw, slo):
         monkeypatch.setattr(mod, "steam_running", lambda: aberta["steam"])
@@ -409,11 +311,6 @@ def test_adiado_hoje_reparado_quando_ela_fechar(tmp_path: Path, monkeypatch):
     aberta["steam"] = False
     assert sw.reparar_ou_adiar(vdfs=[vdf], registro=registro)[0] == sw.REPARO_FEITO
     assert "VKD3D_CONFIG=no_upload_hvv" in vdf.read_text(encoding="utf-8")
-
-
-# --------------------------------------------------------------------------
-# A vontade dela vence
-# --------------------------------------------------------------------------
 
 
 def test_jogo_recusado_por_ela_nao_avisa_nem_repara(tmp_path: Path, steam_fechada):
@@ -439,20 +336,14 @@ def test_jogo_recusado_por_ela_nao_avisa_nem_repara(tmp_path: Path, steam_fechad
     assert censo.faltantes == []
     assert censo.recusados == [PRAGMATA]
     assert sw.frase_do_aviso(censo) == ""
-    # E o reparo, que lê a lista sozinho, também não escreve nada.
     assert status in (sw.REPARO_NADA, sw.REPARO_FEITO)
     assert vdf.read_bytes() == antes
-    # A recusa é REVERSÍVEL sem editor de texto.
     assert slo.desmarcar_jogo_sem_wrapper(PRAGMATA, path=lista) == "removido"
     assert slo.ler_jogos_sem_wrapper(lista) == []
 
 
 def test_a_recusa_dela_sobrevive_ao_install(tmp_path: Path, steam_fechada, capsys):
-    """O passo sem flag do install roda `--apply` em TODOS os jogos.
-
-    Sem esta linha, o próximo `./install.sh` desfaria a escolha dela em
-    silêncio — e "não quero" que dura até o próximo reinstall não é escolha.
-    """
+    """O passo sem flag do install roda `--apply` em TODOS os jogos."""
     lista = tmp_path / "jogos_sem_wrapper.txt"
     slo.marcar_jogo_sem_wrapper(PRAGMATA, path=lista)
     vdf = _escrever(tmp_path, {PRAGMATA: LINHA_PRAGMATA, "111": None})
@@ -461,34 +352,26 @@ def test_a_recusa_dela_sobrevive_ao_install(tmp_path: Path, steam_fechada, capsy
 
     assert rc == 0
     opcoes = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
-    assert opcoes[PRAGMATA] == LINHA_PRAGMATA          # intacto: ela não quer
-    assert slo.WRAPPER_PREFIX in (opcoes["111"] or "")  # o resto recebeu
+    assert opcoes[PRAGMATA] == LINHA_PRAGMATA
+    assert slo.WRAPPER_PREFIX in (opcoes["111"] or "")
     assert "escolha dela" in capsys.readouterr().out
 
 
-# --------------------------------------------------------------------------
-# O registro (a memória que separa 'perdeu' de 'nunca teve')
-# --------------------------------------------------------------------------
-
-
 def test_o_censo_anota_quem_tem_o_wrapper_hoje(tmp_path: Path, steam_fechada):
-    """É assim que a regressão de amanhã fica detectável: sem a passada de
-    hoje, a linha comida amanhã pareceria 'jogo novo'."""
+    """É assim que a regressão de amanhã fica detectável: sem a passada de"""
     registro = tmp_path / "wrapper-visto.json"
     vdf = _escrever(tmp_path, {"111": slo.WRAPPER_LAUNCH})
 
     sw.censo_do_wrapper(vdfs=[vdf], registro=registro)
 
     assert "111" in sw.ler_registro(registro)
-    # ...e amanhã, com a linha comida, isso é REGRESSÃO, não jogo novo.
     _escrever(tmp_path, {"111": "VKD3D_CONFIG=no_upload_hvv %command%"})
     censo = sw.censo_do_wrapper(vdfs=[vdf], registro=registro)
     assert [j.motivo for j in censo.faltantes] == [sw.MOTIVO_REGRESSAO]
 
 
 def test_registro_corrompido_nao_inventa_regressao(tmp_path: Path, steam_fechada):
-    """Sem memória, toda ausência é 'novo'. O produto ainda repara; só não
-    afirma que aquilo funcionava antes — alegar sem base é pior que calar."""
+    """Sem memória, toda ausência é 'novo'. O produto ainda repara; só não"""
     registro = tmp_path / "wrapper-visto.json"
     registro.write_text("{ não é json", encoding="utf-8")
     vdf = _escrever(tmp_path, {PRAGMATA: LINHA_PRAGMATA})
@@ -498,21 +381,8 @@ def test_registro_corrompido_nao_inventa_regressao(tmp_path: Path, steam_fechada
     assert [j.motivo for j in censo.faltantes] == [sw.MOTIVO_NOVO]
 
 
-# --------------------------------------------------------------------------
-# A leitura estrutural que a detecção exige
-# --------------------------------------------------------------------------
-
-
 def test_roda_avulso_com_o_python3_do_sistema(tmp_path: Path):
-    """O install e o doctor rodam este módulo como SCRIPT, sem o `.venv`.
-
-    Defeito real encontrado ao ligar o passo do install em 16/08: o
-    `pastas_steamapps` (que traduz appid em nome de jogo) tinha um
-    `from hefesto_dualsense4unix…` cru, e o script solto morria com
-    `ModuleNotFoundError` na primeira vez que houvesse um jogo a nomear — ou
-    seja, exatamente quando o aviso importa. Estava latente porque nada avulso
-    chamava aquele caminho.
-    """
+    """O install e o doctor rodam este módulo como SCRIPT, sem o `.venv`."""
     import subprocess
     import sys
 
@@ -532,7 +402,7 @@ def test_roda_avulso_com_o_python3_do_sistema(tmp_path: Path):
         capture_output=True,
         text=True,
         env=ambiente,
-        cwd=str(tmp_path),  # nada de achar o pacote pelo diretório de trabalho
+        cwd=str(tmp_path),
         timeout=60,
     )
 
@@ -542,8 +412,7 @@ def test_roda_avulso_com_o_python3_do_sistema(tmp_path: Path):
 
 
 def test_read_apps_enxerga_o_app_sem_a_linha(tmp_path: Path):
-    """A `read_launch_options_by_appid` só devolve quem TEM a linha — logo não
-    distingue 'jogo inexistente' de 'linha APAGADA'. A segunda é regressão."""
+    """A `read_launch_options_by_appid` só devolve quem TEM a linha — logo não"""
     texto = _vdf({"111": slo.WRAPPER_LAUNCH, "222": None})
 
     assert slo.read_apps_by_appid(texto) == {"111": slo.WRAPPER_LAUNCH, "222": None}

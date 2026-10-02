@@ -68,11 +68,11 @@ Arranquei a cura em três lugares, um de cada natureza, e o portão reprovou nos
 três, apontando arquivo e linha:
 
 - ``"o Hefesto já sai da frente dele"`` de volta ao toast de
-  `format_game_broken_result` -> `daemon_actions.py:558`;
+  `format_game_broken_result` -> `daemon_actions.py:398`;
 - ``"o Hefesto saiu da frente dele"`` de volta ao tooltip do badge de co-op ->
-  `status_actions.py:254`;
+  `status_actions.py:202`;
 - ``"os jogos em que o Hefesto sai da frente"`` de volta ao `--help` do
-  `gamepad steam-input` -> `cmd_steam.py:67`.
+  `gamepad steam-input` -> `cmd_steam.py:10`.
 
 **A quarta arrancada é a que valeu mais**, e ela reprovou o portão antes de
 reprovar o código: arranquei a **escapatória** (apaguei a citação da sprint da
@@ -80,7 +80,7 @@ NOTA DATADA de `daemon_actions.py`) e o portão **passou** — porque a marca
 ``"A INVERSÃO"``, comparada sem caixa, casava com o ``"da inversão"`` que a
 paráfrase deixou para trás. A marca frouxa saiu da lista, a arrancada foi
 refeita e aí sim o portão reprovou a nota que explica o defeito
-(`daemon_actions.py:509`). É a metade condicional funcionando: a nota datada só
+(`daemon_actions.py:368`). É a metade condicional funcionando: a nota datada só
 vale enquanto **citar** a medição, e não enquanto apenas falar dela.
 """
 from __future__ import annotations
@@ -92,9 +92,6 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Onde a frase faz estrago: o produto e as páginas que ENSINAM. `docs/process/`
-#: e o `CHANGELOG` ficam de fora por escrito — são registro, e registrar uma
-#: frase derrubada exige transcrevê-la.
 ALVOS_COBRADOS = (
     "src",
     "scripts",
@@ -106,21 +103,13 @@ ALVOS_COBRADOS = (
     "docs/protocol",
 )
 
-#: Arquivos de texto que uma pessoa lê (ou que viram tela). Binário e imagem
-#: ficam de fora sozinhos.
 SUFIXOS = (".py", ".md", ".sh", ".glade", ".txt", ".desktop", ".in")
 
-#: Marca 1 — o sujeito. É o produto inteiro que a frase afasta, e é aí que ela
-#: mente: quem sai é o dispositivo de ENTRADA.
 _SUJEITO = r"(?:Hefesto|emula[çc][ãa]o)"
 
-#: Marca 2 — o afastamento, em todas as formas que a casa já escreveu.
 _AFASTAMENTO = (
     r"(?:sai|sair|saiu|saem|sa[íi]ram|sair[áa]|sairia|saindo)\s+"
     r"d[aeo]s?\s+(?:frente|cena|caminho)"
-    # "fora do caminho" sozinho é ambíguo: o repositório o usa para caminho
-    # QUENTE, de criação e de execução — assunto que nada tem a ver com a
-    # allowlist. Estes três ficam de fora por nome, e só eles.
     r"|fora\s+d[ao]\s+(?:frente|cena)\b"
     r"|fora\s+d[ao]\s+caminho"
     r"(?!\s+(?:quente|cr[íi]tico|de\s+cria|de\s+execu|de\s+leitura))"
@@ -129,31 +118,16 @@ _AFASTAMENTO = (
     r"|n[ãa]o\s+atua\b"
 )
 
-#: A regra: sujeito e afastamento na MESMA vizinhança. 80 caracteres é o que
-#: cabe entre "o Hefesto" e o verbo numa frase de tela ou num comentário
-#: quebrado em duas linhas.
 _REGRA = re.compile(
     rf"{_SUJEITO}\b.{{0,80}}?(?:{_AFASTAMENTO})",
     re.IGNORECASE | re.DOTALL,
 )
 
-#: O TEXTO QUE AFIRMA A FRASE REFUTADA, escrito aqui em vez de lido de um
-#: documento. Até 15/09/2026 o reconhecedor era provado contra a sprint que
-#: mede (`CONTROLE-SONY-MEDIDO-01`, 06/08/2026); ela morava em `docs/process/`,
-#: que saiu do repositório por ordem dela. Uma régua que depende de documento
-#: viajar é uma régua que se desliga sozinha na primeira mudança de casa: o
-#: fato passa a morar na régua.
 _TEXTO_QUE_REFUTA = (
     "Com a allowlist ligada, o Hefesto sai de cena e deixa de atuar sobre o\n"
     "controle enquanto o jogo estiver aberto."
 )
 
-#: A escapatória: a frase só pode aparecer ao lado da medição que a derruba.
-#:
-#: *"A INVERSÃO"* — o nome da seção — foi tentado aqui e **reprovado na
-#: mordida**: comparado sem caixa, ele casa com qualquer *"da inversão"*, e uma
-#: das arrancadas passou por isso. Ficaram só marcas que ninguém escreve por
-#: acidente ao afirmar a frase.
 _MARCAS_DE_REFUTACAO = (
     "controle-sony-medido-01",
     "refut",
@@ -161,7 +135,6 @@ _MARCAS_DE_REFUTACAO = (
     "caduc",
 )
 
-#: Quantas linhas de contexto valem como "ao lado".
 _RAIO_DA_MARCA = 8
 
 
@@ -190,12 +163,7 @@ def _tem_marca_de_refutacao(linhas: list[str], indice: int) -> bool:
 
 
 def frases_refutadas_em(texto: str) -> list[tuple[int, str]]:
-    """As linhas que afirmam a frase refutada, com o trecho de cada uma.
-
-    A janela é de duas linhas porque o produto quebra frase em duas: o sujeito
-    fica no fim de uma e o verbo no começo da seguinte, e um portão de uma
-    linha só passaria por cima da metade dos casos que ele existe para pegar.
-    """
+    """As linhas que afirmam a frase refutada, com o trecho de cada uma."""
     linhas = texto.splitlines()
     achados: list[tuple[int, str]] = []
     for indice in range(len(linhas)):
@@ -210,9 +178,6 @@ def frases_refutadas_em(texto: str) -> list[tuple[int, str]]:
     return achados
 
 
-# ---------------------------------------------------------------------------
-# O portão
-# ---------------------------------------------------------------------------
 def test_nenhum_arquivo_do_produto_afirma_que_o_hefesto_sai_da_frente() -> None:
     """A varredura inteira, num teste só — o relatório aponta arquivo e linha."""
     culpados: list[str] = []
@@ -233,9 +198,6 @@ def test_nenhum_arquivo_do_produto_afirma_que_o_hefesto_sai_da_frente() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O critério, provado nos dois sentidos — sem isto o portão acima é uma crença
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     "frase",
     [
@@ -262,16 +224,13 @@ def test_o_portao_pega_a_frase_em_todas_as_formas_que_a_casa_escreveu(
 @pytest.mark.parametrize(
     "frase",
     [
-        # Outro sujeito — e todos MEDIDOS como verdadeiros.
         "O co-op sai de cena sozinho nos jogos com Steam Input, e volta depois",
         "o gamepad virtual sai de cena enquanto o jogo da allowlist rodar",
         "o sinal tem de apagar assim que o jogo sai da frente, não 30 s depois",
         "as edições acontecem no intervalo em que a Steam está fora do caminho",
         "o revert restauraria o número e o co-op nunca mais sairia de cena",
-        # Assunto completamente diferente.
         "chamado uma vez na fiação do daemon, fora do caminho quente",
         "Fora do caminho de criação desde VPAD-03: o vpad usa o blueprint",
-        # O que o produto passou a dizer em 07/08 — a frase certa.
         "Marquei o jogo: ele passa a ver o controle de verdade, sem o dobrado, "
         "e a sua cor e os seus gatilhos continuam valendo",
         "Neste jogo quem entrega o controle é a Steam: os controles virtuais "
@@ -284,11 +243,7 @@ def test_o_portao_nao_reclama_do_que_esta_certo(frase: str) -> None:
 
 
 def test_a_escapatoria_existe_e_e_a_citacao_da_medicao() -> None:
-    """Citar a frase para contá-la é permitido; afirmá-la, não.
-
-    É a metade condicional do portão. Sem ela, esta casa não conseguiria
-    escrever a nota datada que a regra "não se apaga decisão medida" exige.
-    """
+    """Citar a frase para contá-la é permitido; afirmá-la, não."""
     afirmacao = ["    O jogo assumiu o controle: o Hefesto saiu da frente dele."]
     assert frases_refutadas_em("\n".join(afirmacao))
 
@@ -301,11 +256,7 @@ def test_a_escapatoria_existe_e_e_a_citacao_da_medicao() -> None:
 
 
 def test_a_escapatoria_nao_alcanca_o_documento_inteiro() -> None:
-    """A marca vale por vizinhança, não por arquivo — senão vira anistia.
-
-    Uma citação da sprint no topo de um módulo de mil linhas não pode
-    autorizar a frase na linha 900.
-    """
+    """A marca vale por vizinhança, não por arquivo — senão vira anistia."""
     texto = "\n".join(
         ["ver CONTROLE-SONY-MEDIDO-01, seção A INVERSÃO"]
         + ["conteúdo qualquer"] * (_RAIO_DA_MARCA + 4)
@@ -315,22 +266,13 @@ def test_a_escapatoria_nao_alcanca_o_documento_inteiro() -> None:
 
 
 def test_o_escopo_cobra_o_produto_e_poupa_o_registro() -> None:
-    """`docs/process/` fora, `src/` dentro — a decisão de escopo é medida.
-
-    A sprint que refuta a frase a cita **doze** vezes; se o portão a cobrasse,
-    o primeiro documento honesto o desligaria.
-    """
+    """`docs/process/` fora, `src/` dentro — a decisão de escopo é medida."""
     cobrados = {p.relative_to(RAIZ).as_posix() for p in _arquivos_cobrados()}
     assert any(c.startswith("src/") for c in cobrados)
     assert any(c.startswith("docs/usage/") for c in cobrados)
     assert not any(c.startswith("docs/process/") for c in cobrados)
     assert "CHANGELOG.md" not in cobrados
 
-    # A METADE QUE LIA A SPRINT NO DISCO SAIU EM 15/09/2026, com `docs/process/`
-    # — a pasta deixou de ser versionada por ordem dela. O que ela conferia era
-    # que o RECONHECEDOR ainda reconhece a frase refutada; isso passa a ser
-    # medido contra um texto escrito aqui, que não depende de arquivo nenhum
-    # viajar. A frase é a de 06/08/2026 (CONTROLE-SONY-MEDIDO-01).
     assert frases_refutadas_em(_TEXTO_QUE_REFUTA), (
         "o reconhecedor parou de achar a frase que a medição derruba — e nesse "
         "caso ele não está cobrando nada"

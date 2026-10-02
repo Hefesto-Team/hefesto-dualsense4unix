@@ -1,9 +1,4 @@
 """Testes para src/hefesto_dualsense4unix/gui/theme.css e src/hefesto_dualsense4unix/app/theme.py.
-
-Checks:
-  (a) arquivo theme.css existe no path esperado;
-  (b) Gtk.CssProvider carrega sem levantar exceção (ambiente headless);
-  (c) seletores esperados estão presentes no conteúdo do CSS.
 """
 from __future__ import annotations
 
@@ -35,15 +30,7 @@ def _tokens_definidos(conteúdo: str) -> dict[str, str]:
 
 
 def _cor_de_fundo_sólida(corpo: str, conteúdo: str) -> str | None:
-    """Hex do `background-color` de um corpo de regra, resolvendo token.
-
-    As cores da interface passaram a ser declaradas por `@define-color` (para
-    cada uma ter UM papel documentado), então a regra escreve `@elevated` em vez
-    do hex. O que os testes garantem continua sendo o mesmo: a cor é SÓLIDA —
-    `transparent` deixa o tema claro do COSMIC vazar por baixo
-    (BUG-GUI-COSMIC-WIDGET-CONTRAST-01). Um token só conta se estiver de fato
-    definido; token inexistente no GTK3 vira cor indefinida, não um fallback.
-    """
+    """Hex do `background-color` de um corpo de regra, resolvendo token."""
     m = re.search(r"background-color:\s*(#[0-9a-fA-F]{3,8}|@\w+)\s*;", corpo)
     if m is None:
         return None
@@ -60,11 +47,7 @@ def test_theme_css_existe() -> None:
 
 
 def test_theme_css_carrega_sem_erro() -> None:
-    """Gtk.CssProvider deve carregar o theme.css sem GLib.Error.
-
-    Pula se GTK não está disponível ou se o módulo foi mockado pela suite
-    (AttributeError indica mock parcial instalado por outro teste).
-    """
+    """Gtk.CssProvider deve carregar o theme.css sem GLib.Error."""
     try:
         import gi
 
@@ -75,7 +58,6 @@ def test_theme_css_carrega_sem_erro() -> None:
             pytest.skip("Gtk.CssProvider indisponível neste ambiente (mock parcial)")
 
         provider = Gtk.CssProvider()
-        # load_from_path levanta GLib.Error em CSS inválido
         provider.load_from_path(str(CSS_PATH))
     except (ImportError, ValueError, AttributeError):
         pytest.skip("GTK não disponível neste ambiente")
@@ -95,19 +77,8 @@ def test_theme_css_cor_roxa_presente() -> None:
     assert len(matches) >= 1, "Cor #bd93f9 (roxo Drácula) não encontrada no CSS"
 
 
-# ---------------------------------------------------------------------------
-# BUG-GUI-COSMIC-WIDGET-CONTRAST-01: botões/toggles/dropdowns legíveis no COSMIC
-# (tema claro do sistema). Regex confirma a entrega: fundo sólido (não
-# `transparent`), estado :checked p/ toggle, combobox display coberto.
-# ---------------------------------------------------------------------------
-
-
 def test_botao_tem_fundo_solido_nao_transparente() -> None:
-    """A regra base de `button` deve usar fundo sólido escuro, NÃO transparent.
-
-    Causa-raiz do branco-sobre-branco no COSMIC: `background-color: transparent`
-    fazia o botão exibir o container claro do tema do sistema atrás dele.
-    """
+    """A regra base de `button` deve usar fundo sólido escuro, NÃO transparent."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     m = re.search(
         r"\.hefesto-dualsense4unix-window\s+button\s*\{([^}]*)\}",
@@ -142,11 +113,7 @@ def test_combobox_display_coberto() -> None:
 
 
 def test_footer_btn_sobre_fundo_escuro() -> None:
-    """Os .btn-* do footer devem reafirmar fundo escuro sólido sob o gradiente.
-
-    Antes o gradiente alpha-baixo era pintado sobre transparent => sumia no
-    claro do COSMIC.
-    """
+    """Os .btn-* do footer devem reafirmar fundo escuro sólido sob o gradiente."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     for cls in ("btn-apply", "btn-save", "btn-import", "btn-restore"):
         m = re.search(
@@ -162,26 +129,12 @@ def test_footer_btn_sobre_fundo_escuro() -> None:
 
 
 def test_containers_internos_cobertos() -> None:
-    """Containers genéricos devem ser cobertos sem quebrar o card.
-
-    O valor esperado do card MUDOU no redesign 1.1: era `#21222c` e passou a ser
-    `@bg` (#282a36). A hierarquia estava INVERTIDA — a janela era #282a36 e o
-    card #21222c, ou seja, o card ficava mais ESCURO que o fundo e lia como um
-    buraco em vez de uma superfície flutuando. Agora a janela é @app_bg
-    (#21222c) e o card @bg (#282a36), como no mockup.
-
-    O que o teste continua garantindo é o mesmo de antes: o card tem cor de
-    fundo SÓLIDA própria e não foi engolido pela regra genérica que torna
-    containers transparentes (BUG-GUI-COSMIC-WIDGET-CONTRAST-01) — `transparent`
-    deixa o tema claro do COSMIC vazar por baixo.
-    """
+    """Containers genéricos devem ser cobertos sem quebrar o card."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
-    # box/frame/grid devem aparecer escopados na window com :not(card)
     assert re.search(
         r"\.hefesto-dualsense4unix-window\s+box:not\(\.hefesto-dualsense4unix-card\)",
         conteúdo,
     ), "Regra de containers (box:not(.card)) ausente"
-    # o card NÃO pode ter sido transformado em transparente
     m = re.search(r"\.hefesto-dualsense4unix-card\s*\{([^}]*)\}", conteúdo)
     assert m is not None, "Regra .hefesto-dualsense4unix-card ausente"
     assert _cor_de_fundo_sólida(m.group(1), conteúdo) == "#282a36", (
@@ -191,13 +144,7 @@ def test_containers_internos_cobertos() -> None:
 
 
 def test_card_declarado_uma_vez_so() -> None:
-    """`.hefesto-dualsense4unix-card` tinha DUAS declarações.
-
-    A segunda (FEAT-GUI-HOME-TAB-01, no fim do arquivo) só queria apertar o
-    padding e acabava sobrescrevendo padding e raio da primeira — quem editasse
-    a declaração "de verdade" não via efeito nenhum na tela e ia caçar
-    especificidade que não era o problema. Uma só.
-    """
+    """`.hefesto-dualsense4unix-card` tinha DUAS declarações."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     sem_comentarios = re.sub(r"/\*.*?\*/", "", conteúdo, flags=re.DOTALL)
     declarações = re.findall(
@@ -210,13 +157,7 @@ def test_card_declarado_uma_vez_so() -> None:
 
 
 def test_hierarquia_de_profundidade() -> None:
-    """Quatro níveis de superfície, do fundo para a frente.
-
-    A queixa de origem era "as cores do background": a tela tinha DOIS tons
-    chapados (e trocados entre si). O design pede quatro degraus — janela
-    @app_bg, cromo @chrome, card @bg, elevado @elevated — e cada um precisa
-    existir como token E estar aplicado em algum lugar.
-    """
+    """Quatro níveis de superfície, do fundo para a frente."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     tokens = _tokens_definidos(conteúdo)
     esperado = {
@@ -231,28 +172,19 @@ def test_hierarquia_de_profundidade() -> None:
             f"token @{nome} deveria valer {hexa}, veio {tokens.get(nome)!r}"
         )
 
-    # A janela é o nível MAIS FUNDO (era @bg, o mesmo tom do card).
     m = re.search(r"\.hefesto-dualsense4unix-window\s*\{([^}]*)\}", conteúdo)
     assert m is not None, "Regra .hefesto-dualsense4unix-window ausente"
     assert _cor_de_fundo_sólida(m.group(1), conteúdo) == "#21222c", (
         "o fundo da janela é @app_bg (#21222c) — mais fundo que o card"
     )
 
-    # O cromo (barra de título, tira de abas, rodapé) precisa estar aplicado.
     assert "@chrome" in re.sub(r"/\*.*?\*/", "", conteúdo, flags=re.DOTALL), (
         "token @chrome definido mas nunca aplicado — o cromo continua chapado"
     )
 
 
 def test_log_textview_nao_herda_o_branco_do_sistema() -> None:
-    """BUG-GUI-LOG-TEXTVIEW-BRANCO-01.
-
-    A classe `.hefesto-dualsense4unix-log` está no PRÓPRIO GtkTextView (glade),
-    então o seletor DESCENDENTE `.hefesto-dualsense4unix-log textview` nunca
-    casava: a caixa de log da aba Sistema saía BRANCA no meio do tema escuro.
-    Tem de existir a forma `textview.hefesto-dualsense4unix-log` e a do nó
-    filho `text`, que é onde o GTK3 pinta o fundo de verdade.
-    """
+    """BUG-GUI-LOG-TEXTVIEW-BRANCO-01."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     sem_comentarios = re.sub(r"/\*.*?\*/", "", conteúdo, flags=re.DOTALL)
     assert "textview.hefesto-dualsense4unix-log" in sem_comentarios, (
@@ -265,14 +197,7 @@ def test_log_textview_nao_herda_o_branco_do_sistema() -> None:
 
 
 def test_dim_label_definida() -> None:
-    """`.dim-label` é usada em ~20 lugares e não existia no theme.css.
-
-    Sem definição nossa ela caía no `.dim-label { opacity: 0.55 }` do tema do
-    sistema: o rótulo virava o foreground branco a 55%, um cinza que não é
-    nenhum dos tokens de texto do design (@text_soft/@text_muted/@comment).
-    Precisa fixar cor E `opacity: 1` — sem o opacity o tema do sistema continua
-    apagando por cima da cor certa.
-    """
+    """`.dim-label` é usada em ~20 lugares e não existia no theme.css."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     m = re.search(r"^\.dim-label\s*\{([^}]*)\}", conteúdo, re.MULTILINE)
     assert m is not None, "`.dim-label` não definida no theme.css"
@@ -286,27 +211,8 @@ def test_dim_label_definida() -> None:
 
 
 def test_escala_tipografica_existe() -> None:
-    """C2: os tamanhos de fonte são NOMEADOS e absolutos.
-
-    Antes não havia escala nenhuma — quatro tamanhos RELATIVOS de Pango
-    (`size="small"`, `xx-large`, `92%`) espalhados pelo código, cada um
-    dependendo da fonte que a distribuição tivesse configurado. Os px são os do
-    mockup (`novo-layout/Telas Hefesto.dc.html`).
-    """
+    """C2: os tamanhos de fonte são NOMEADOS e absolutos."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
-    #: LEGIBILIDADE-01: os degraus deixaram de ser travados no valor EXATO do
-    #: mockup. O que este teste guarda agora é a ORDEM (nenhum degrau menor
-    #: passa na frente de um maior) e o PISO — que é o contrato que a mantenedora
-    #: cobrou: "fontes minúsculas e em cores que não permitem leitura".
-    #:
-    #: Os números do mockup vieram de uma tela de projeto, não de leitura em uso.
-    #: Travá-los tornou o teste guardião do defeito: `.hefesto-micro` a 10px e
-    #: `.hefesto-selo` a 9px eram, medidos, o menor texto da janela — e o selo
-    #: MUDO/ATIVO do microfone é justamente informação de estado que ela olha o
-    #: tempo todo. Um teste que reprova quando o texto fica legível está do lado
-    #: errado. Ele foi REESCRITO, não removido: o que protegia de útil (todo
-    #: degrau existe, é absoluto em px, e a hierarquia entre eles é estável)
-    #: continua aqui.
     ordem_decrescente = [
         ".hefesto-titulo",
         ".hefesto-titulo-painel",
@@ -317,11 +223,6 @@ def test_escala_tipografica_existe() -> None:
         ".hefesto-dica",
         ".hefesto-selo",
     ]
-    #: Piso em PIXEL DE ARQUIVO. O tamanho final na tela é este valor mais a
-    #: escala global de `app/theme.py` (padrão +3), então 11px aqui chegam a
-    #: 14px em uso. O piso do arquivo é deliberadamente menor que o piso de
-    #: leitura: quem garante o segundo é a escala, e travar os dois no mesmo
-    #: número faria o arquivo mentir sobre o que é entregue.
     piso_px = 11.0
 
     def _tamanho_do_degrau(classe: str) -> float:
@@ -337,8 +238,6 @@ def test_escala_tipografica_existe() -> None:
         )
         return float(tam.group(1))
 
-    #: Os degraus que não entram na cadeia de ordem (monoespaçados e o subtítulo
-    #: têm família própria e vivem em outra régua), mas respondem pelo piso.
     fora_da_cadeia = [
         ".hefesto-rotulo-secao",
         ".hefesto-subtitulo",
@@ -368,13 +267,7 @@ def test_escala_tipografica_existe() -> None:
 
 
 def test_subpainel_disponivel_para_os_blocos_do_card() -> None:
-    """C4: a classe que dá corpo aos blocos de dentro do card de Status.
-
-    Contrato com quem monta os widgets (giroscópio, microfone, touchpad,
-    lightbar, alto-falante, analógicos, painel de botões): `.hefesto-subpainel`
-    = borda @border_soft + raio 10px + fundo @app_bg + padding 8px 12px.
-    Renomear aqui quebra a GUI em silêncio — o CSS não erra, só não pinta.
-    """
+    """C4: a classe que dá corpo aos blocos de dentro do card de Status."""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     m = re.search(r"^\.hefesto-subpainel[^{]*\{([^}]*)\}", conteúdo, re.MULTILINE)
     assert m is not None, "`.hefesto-subpainel` ausente do theme.css"
@@ -385,13 +278,6 @@ def test_subpainel_disponivel_para_os_blocos_do_card() -> None:
     assert "border-radius: 10px" in corpo, "sub-painel usa raio 10px (mockup)"
     assert "padding: 8px 12px" in corpo, "sub-painel usa padding 8px 12px (mockup)"
     assert "@border_soft" in corpo, "a borda do sub-painel é @border_soft"
-
-
-# ---------------------------------------------------------------------------
-# GUI-05/P5: diálogos temados no top-level (padrão dos menus) — o nó
-# `messagedialog` é toplevel próprio e não herda o escopo da window; sem o
-# bloco, um diálogo futuro sem a classe herdaria o Adwaita claro do XWayland.
-# ---------------------------------------------------------------------------
 
 
 def test_messagedialog_top_level_coberto() -> None:
@@ -405,8 +291,7 @@ def test_messagedialog_top_level_coberto() -> None:
 
 
 def test_messagedialog_botoes_cobertos() -> None:
-    """Os botões do diálogo também precisam de regra própria (não herdam da
-    window) — sem ela, 'Cancelar/Aplicar' vinham no claro do sistema."""
+    """Os botões do diálogo também precisam de regra própria (não herdam da"""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     m = re.search(r"messagedialog\s+button\s*\{([^}]*)\}", conteúdo)
     assert m is not None, "Regra 'messagedialog button' ausente"
@@ -416,9 +301,7 @@ def test_messagedialog_botoes_cobertos() -> None:
 
 
 def test_segmentado_read_only_mantem_o_destaque() -> None:
-    """GUI-05/P4: o modo detectado (botão :checked) do segmentado READ-ONLY
-    (ficha do externo, insensitive) continua destacado — sem a regra
-    :checked:disabled, o :disabled apagava o roxo e nada parecia marcado."""
+    """GUI-05/P4: o modo detectado (botão :checked) do segmentado READ-ONLY"""
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     m = re.search(
         r"\.hefesto-dualsense4unix-window\s+button:checked:disabled\s*\{([^}]*)\}",
@@ -433,12 +316,8 @@ def test_segmentado_read_only_mantem_o_destaque() -> None:
 
 
 def test_theme_css_sem_regra_at_rule_proibida() -> None:
-    """GTK3 falha a carga inteira com a at-rule de query proibida.
-
-    O arquivo pode documentar em comentários POR QUE não a usa; este teste
-    ignora comentários (/* ... */) e procura a at-rule real fora deles.
-    """
-    at_rule = "@" + "med" + "ia"  # monta a at-rule proibida por partes
+    """GTK3 falha a carga inteira com a at-rule de query proibida."""
+    at_rule = "@" + "med" + "ia"
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     css_sem_blocos = re.sub(r"/\*.*?\*/", "", conteúdo, flags=re.DOTALL)
     assert at_rule not in css_sem_blocos, (

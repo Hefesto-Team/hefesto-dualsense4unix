@@ -1,71 +1,4 @@
-"""O-ASSENTO-GUARDADO-NAO-ANDA-03 — passado o prazo, o jogo fecha o buraco junto com a tela.
-
-**A decisão já era dela** (23/09/2026, 22h, ``D-2309-FORA-DE-ORDEM-SE-RECRIA-
-NA-HORA``): *a carta renumerada, a menor que chega depois da maior e o buraco
-de quem saiu se recriam na hora*. O número que a lâmpada mostra é o boneco que
-o jogo mexe. **O limite continua sendo a R-04:** com o jogo na autoridade, o
-vpad do P1 não se recria.
-
-**O QUE FOI MEDIDO, antes da cura** (a bancada de queda da O-ASSENTO-02, com a
-classe real): passado o prazo do lugar guardado, com o jogo aberto, o P3 e o
-P4 seguiam nos bonecos 3 e 4 com a tela e a lâmpada dizendo 2 e 3. Em 18 de 30
-casos — dois, três e quatro controles; USB, BT e mista; cada lugar saindo — e
-nos três do «Renumerar agora», o jogo discordava da tela. A causa: o
-``planejar_a_ordem`` só exigia cartas em ORDEM, e o buraco continua em ordem.
-
-**A cura mora no dono** (``coop.planejar_a_ordem``): entre os planos em ordem,
-o que deixa menos gente fora do boneco da própria carta, e no empate o que
-recria menos. Só quem ficou atrás do buraco renasce, uma vez cada. **E quem já
-está no boneco certo não sai para fechar o buraco de ninguém** — o item 3 da
-sprint: a varredura de todas as mesas de até quatro lugares achou 60 em que o
-plano de sufixo tiraria do jogo quem não precisava sair (um lugar ainda
-guardado atrás do buraco que venceu). Desde a O-ASSENTO-GUARDADO-NAO-ANDA-04
-esses fecham pela faixa de cartas (``test_os_buracos_em_faixa.py``).
-
-**O dublê do vpad tira o MAC como o produto PEDE** (``vpad_mac``, pela
-identidade do aparelho — ``MesaDoJogo._nascer_vpad``). O da bancada de queda o
-tira do NÚMERO, e é mais frouxo que o real justamente na volta tardia do P1. A
-conferência passou o dublê honesto para a bancada da O-ASSENTO-02, e as réguas
-dela também medem com ele. **A volta tardia mede com a** :class:`MesaHonesta`
-(O-VPAD-DO-P1-NAO-REPETE-O-MAC-01): cada vpad nasce pela fábrica e pela classe
-REAIS contra um kernel de mentira que recusa MAC repetido com ``-EEXIST``, e o
-MAC é o que o dono dos vivos VESTE — ver :class:`TestAVoltaTardiaDoP1`.
-
-**E o JOGO é visto de fora** (``JogoPorFora``, na bancada da O-ASSENTO-02): o
-lugar de cada vpad sai da ordem em que ele nasce e morre, e não da mesa que o
-co-op guarda, que é a saída do próprio produto. Medido na conferência: com o
-co-op só reescrevendo a própria anotação, sem recriar vpad nenhum, as 56
-réguas da O-ASSENTO-02 passavam todas.
-
-AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
-
-- ``_fora_do_boneco`` devolvendo sempre 0 (a regra de antes, só a ordem)
-  reprova :class:`TestPassadoOPrazoOJogoFechaOBuraco`,
-  :class:`TestORenumerarAgoraFechaNaHora` e as linhas do plano;
-- sem a guarda de quem já está no boneco certo, reprovavam
-  ``test_quem_esta_no_boneco_certo_nao_sai_para_fechar_o_buraco_de_ninguem`` e
-  a varredura; com a faixa da O-ASSENTO-GUARDADO-NAO-ANDA-04 o plano sai o
-  mesmo sem ela em toda mesa de até quatro, e a mordida mora numa mesa de
-  cinco, em ``test_os_buracos_em_faixa.py``;
-- a carta do co-op lida da TELA (``numeros_da_mesa``) em vez da lâmpada
-  reprova ``test_o_jogo_muda_junto_com_a_lampada_e_nao_antes`` nos seis casos
-  com alguém atrás do buraco: o jogo correria na frente da lâmpada;
-- (conferência) ``CoopManager._posto_vago`` devolvendo sempre False reprova
-  :class:`TestOPrazoDeOutroVenceComOPostoVago` nos 18 casos com alguém atrás
-  de quem saiu; a vaga mexendo no aviso do P1 reprova os nove de
-  ``test_a_vaga_nao_diz_que_o_p1_voltou_ao_boneco_dele``; e a carta
-  emprestada ao P1 ausente no diário reprova a primeira classe inteira. A
-  carta emprestada trocada por 99 passa tudo: com o jogo na autoridade ela
-  não escolhe plano nenhum, que é o que a cura afirma;
-- (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01) ``_MacsDosVpadsVivos.vestir`` vestindo o
-  MAC pedido sem olhar quem já o veste reprova as 24 da volta tardia pela
-  :class:`MesaHonesta` (as 18 da matriz e as seis da volta pelo outro
-  transporte, da conferência), cada uma com o kernel recusando o MAC de quem
-  o posto carrega (``Duplicate device found for MAC address``); ``despir``
-  que não devolve reprova as seis na segunda volta, com o MAC do lugar andando.
-
-Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
-"""
+"""O-ASSENTO-GUARDADO-NAO-ANDA-03 — passado o prazo, o jogo fecha o buraco junto com a tela."""
 from __future__ import annotations
 
 import itertools
@@ -102,11 +35,8 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
     montar,
 )
 
-#: A fábrica REAL dos vpads, guardada antes de qualquer bancada trocá-la pelo
-#: dublê (a bancada da O-ASSENTO-02 põe o ``_nascer_vpad`` dela no lugar).
 _FABRICA_REAL = virtual_pad.make_virtual_pad
 
-#: O gesto da linha 17: fora vinte segundos — ainda dentro do prazo.
 VINTE_SEGUNDOS = 20.0
 
 QUEM_SAI = [
@@ -132,11 +62,7 @@ def _ticks_ate_o_fim_do_prazo(ja_passou: float) -> int:
 
 
 def _atras_e_na_frente(quantos: int, quem: int) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Quem fica atrás do buraco (renasce) e quem fica na frente (não se mexe).
-
-    Com o P1 fora, o P2 assume o vpad do posto (a NUM-01) e o buraco que se
-    fecha é o do vpad dele: atrás ficam o P3 e o P4.
-    """
+    """Quem fica atrás do buraco (renasce) e quem fica na frente (não se mexe)."""
     if quem == 0:
         return UNIQS[2:quantos], ()
     return UNIQS[quem + 1 : quantos], UNIQS[1:quem]
@@ -168,9 +94,6 @@ class MesaHonesta(MesaDoJogo):
     ) -> None:
         self.kernel = kernel
         super().__init__(monkeypatch, **kw)
-        # O vpad do P1 da bancada nasceu de mentira: ele sai e o do BOOT nasce
-        # pela fábrica — sem identidade, porque o daemon ainda não conhece o
-        # primário (a invariante VPAD-03/BT-01).
         self.vpad_do_p1.stop()
         self.vpads = []
         posto = self._nascer_vpad("dualsense", player=1, identity=None, allow_uhid=True)
@@ -183,7 +106,7 @@ class MesaHonesta(MesaDoJogo):
         if pad is None:
             return None
         if getattr(pad, "backend", None) != "uhid":
-            pad.player = player  # o uinput não carrega número no nome
+            pad.player = player
         pad.identidade = identity
         pad.vivo = True
         self.jogo.nasceu(pad)
@@ -231,11 +154,7 @@ def montar_honesto(
 
 
 def _sai_e_volta_tarde(bancada: MesaDoJogo, uniq: str, *, para: str | None = None) -> None:
-    """``uniq`` sai, o prazo do lugar guardado vence, e ele volta com o jogo aberto.
-
-    ``para`` é o transporte da volta (a linha 3: sai do cabo, volta pelo rádio);
-    sem ele, volta pelo mesmo em que caiu.
-    """
+    """``uniq`` sai, o prazo do lugar guardado vence, e ele volta com o jogo aberto."""
     via = para if para is not None else bancada.mesa.transporte_de(uniq)
     bancada.mesa.levantar(uniq)
     for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
@@ -246,12 +165,7 @@ def _sai_e_volta_tarde(bancada: MesaDoJogo, uniq: str, *, para: str | None = Non
 
 
 def _volta_movendo_um_boneco_de_verdade(bancada: MesaHonesta, uniq: str) -> None:
-    """Quem voltou dirige um boneco pelo vpad ``uhid`` que o kernel ACEITOU.
-
-    Boneco só não basta: recusado, o produto cai no ``uinput``, e o jogo ainda
-    vê um controle — sem vibração, giroscópio, gatilho nem luz. O vpad dele
-    está de pé no driver, com um MAC que só ele veste, e o posto segue vivo.
-    """
+    """Quem voltou dirige um boneco pelo vpad ``uhid`` que o kernel ACEITOU."""
     vpad = bancada.vpad_de(uniq)
     assert vpad is not None and getattr(vpad, "backend", None) == "uhid", (
         f"{uniq} voltou num vpad degradado: {vpad!r}"
@@ -268,15 +182,7 @@ def _volta_movendo_um_boneco_de_verdade(bancada: MesaHonesta, uniq: str) -> None
 
 
 def trocar_a_mascara_do_p1(bancada: MesaHonesta) -> None:
-    """O vpad do posto renasce com a identidade do primário DE AGORA.
-
-    É o que ``gamepad.start_gamepad_emulation_desfecho`` faz numa troca de
-    máscara ou de caminho (e o ``_reerguer_o_p1`` do co-op): para o vpad velho
-    e chama a fábrica com ``primary_identity`` e ``numero_do_nome_do_primario``
-    — as mesmas duas perguntas, aos mesmos donos. Com o jogo aberto só o gesto
-    dela chega aqui (a R-04 barra o automático), e ela pode trocar a máscara
-    no meio da partida.
-    """
+    """O vpad do posto renasce com a identidade do primário DE AGORA."""
     from hefesto_dualsense4unix.daemon.subsystems.coop import numero_do_nome_do_primario
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
         controller_allows_uhid,
@@ -311,13 +217,11 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
         bancada.mesa.levantar(UNIQS[quem])
         antes = len(bancada.vpads)
 
-        # Antes do prazo: o lugar fica vazio, ninguém anda, ninguém renasce.
         for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
             bancada.tique()
             bancada.o_jogo_segue_a_tela()
         assert len(bancada.vpads) == antes, "alguém renasceu dentro do prazo"
 
-        # O fim do prazo: a fila se fecha na tela e o buraco se fecha no jogo.
         for _ in range(_ticks_ate_o_fim_do_prazo(VINTE_SEGUNDOS)):
             bancada.tique()
         tela = bancada.a_tela()
@@ -333,14 +237,12 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
                 f"{uniq} renasceu {len(nascidos)} vezes — é uma recriação por controle"
             )
             assert bancada.vpad_de(uniq) is nascidos[0] and nascidos[0].vivo
-            # A-MESMA-LINGUA-01: o nome do vpad que renasce já diz o número novo.
             assert nascidos[0].player == tela[uniq]
         for uniq in na_frente:
             assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], (
                 f"{uniq} estava na frente do buraco e foi recriado"
             )
 
-        # Depois: a mesa assentada não renasce de novo.
         assentada = len(bancada.vpads)
         for _ in range(3):
             bancada.tique()
@@ -351,14 +253,7 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
     def test_o_jogo_muda_junto_com_a_lampada_e_nao_antes(
         self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
     ) -> None:
-        """A carta do co-op é o número da LÂMPADA, que só anda no gatilho da cor.
-
-        A bancada deixa a tabela das lâmpadas vazia (a resposta é a mesa de
-        agora); aqui ela é congelada como no produto, e só o
-        ``liberar_as_lampadas`` — o gatilho que o ``reconnect_loop`` arma
-        quando a numeração muda — a solta. A tela muda na hora; o jogo espera
-        a lâmpada.
-        """
+        """A carta do co-op é o número da LÂMPADA, que só anda no gatilho da cor."""
         bancada = montar(monkeypatch, quantos, transporte)
         bancada.reg.liberar_as_lampadas()
         vpads_de_antes = {u: bancada.vpad_de(u) for u in UNIQS[1:quantos]}
@@ -373,7 +268,7 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
                 f"{uniq} renasceu antes de a lâmpada mudar"
             )
 
-        bancada.reg.liberar_as_lampadas()  # o gatilho da cor dispara
+        bancada.reg.liberar_as_lampadas()
         bancada.tique()
 
         bancada.o_jogo_segue_a_tela()
@@ -413,7 +308,6 @@ class TestORenumerarAgoraFechaNaHora:
         bancada.tique()
         antes = len(bancada.vpads)
 
-        # O `identity.renumber` do IPC: o mapa dos lugares gravados.
         bancada.reg.compact(bancada.reg.snapshot())
         bancada.tique()
         bancada.tique()
@@ -425,12 +319,7 @@ class TestORenumerarAgoraFechaNaHora:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestAVoltaTardiaDoP1:
-    """O P1 que volta depois do prazo: o número na tela, o boneco que o jogo deu.
-
-    O limite é a R-04 e não muda: o vpad do posto segue com o P2 até o jogo
-    devolver a autoridade, e o diário diz ``coop_ordem_do_p1_espera_o_jogo``.
-    Os secundários seguem a tela entre si.
-    """
+    """O P1 que volta depois do prazo: o número na tela, o boneco que o jogo deu."""
 
     @staticmethod
     def _p1_sai_e_volta_tarde(bancada: MesaDoJogo) -> list[dict[str, Any]]:
@@ -473,23 +362,12 @@ class TestAVoltaTardiaDoP1:
         quantos: int,
         transporte: str,
     ) -> None:
-        """O xfail estrito da O-ASSENTO-03, virado régua (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01).
-
-        A bancada honesta: a fábrica e a classe REAIS contra o kernel que
-        recusa. A troca de máscara com o jogo aberto (o gesto dela, que a R-04
-        nunca barra) faz o vpad do posto renascer com a identidade do P1; o P1
-        sai, o prazo vence, o P2 assume o posto, e o P1 volta com o jogo
-        aberto. Medido antes da cura: o kernel recusava o MAC do P1 com
-        ``-EEXIST`` e ele voltava num vpad ``uinput`` degradado.
-
-        A MORDIDA: ``_MacsDosVpadsVivos.vestir`` devolvendo sempre o
-        ``vpad_mac`` pedido reprova os nove — ``Duplicate device found``.
-        """
+        """O xfail estrito da O-ASSENTO-03, virado régua (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01)."""
         bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
         trocar_a_mascara_do_p1(bancada)
         assert bancada.vpad_do_p1.mac == vpad_mac(P1, 1), "o posto nasceu com o MAC do P1"
 
-        _sai_e_volta_tarde(bancada, P1)  # cada tique confere o kernel
+        _sai_e_volta_tarde(bancada, P1)
 
         _volta_movendo_um_boneco_de_verdade(bancada, P1)
         assert bancada.inst.primary_uniq == P2, "controle que volta nunca rouba o posto"
@@ -512,13 +390,7 @@ class TestAVoltaTardiaDoP1:
         transporte: str,
         quem: int,
     ) -> None:
-        """Não é só o P1: o posto carrega a identidade de quem era o primário quando nasceu.
-
-        Os que vêm antes de ``quem`` saem e o prazo de cada um vence (a NUM-01
-        passa o posto adiante); a troca de máscara faz o posto renascer com a
-        identidade de ``quem``, que sai, deixa o prazo vencer e volta. É a mesma
-        colisão com outro dono — a do P1 é só a primeira da fila.
-        """
+        """Não é só o P1: o posto carrega a identidade de quem era o primário quando nasceu."""
         bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
         for antes in UNIQS[:quem]:
             bancada.mesa.levantar(antes)
@@ -546,19 +418,7 @@ class TestAVoltaTardiaDoP1:
         de: str,
         para: str,
     ) -> None:
-        """A linha 3 como ela a faz: o P1 sai do cabo e volta pelo rádio (e o inverso).
-
-        Conferência da O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 (24/09/2026): as duas
-        réguas de cima devolvem quem saiu pelo MESMO transporte, e o gesto da
-        linha 3 é a troca. O MAC pedido sai da identidade do aparelho, a mesma
-        nos dois transportes: com o posto carregando o P1, a volta tardia pelo
-        outro transporte pede o MAC do posto, e o dono veste o seguinte. E o MAC
-        de um lugar não anda: o P1 sai de novo, volta, e veste o mesmo de antes
-        — o Steam Input e o jogo lembram dele.
-
-        MORDIDA: ``vestir`` sem olhar quem veste reprova as seis pelo
-        ``-EEXIST``; ``despir`` que não devolve reprova a segunda volta.
-        """
+        """A linha 3 como ela a faz: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
         bancada = montar_honesto(monkeypatch, kernel, quantos, de)
         trocar_a_mascara_do_p1(bancada)
         assert bancada.vpad_do_p1.mac == vpad_mac(P1, 1), "o posto nasceu com o MAC do P1"
@@ -580,8 +440,6 @@ class TestAVoltaTardiaDoP1:
         assert bancada.vpad_de(P1).mac == mac_da_volta, "o MAC do lugar andou na reconexão"
 
 
-#: Quanto o OUTRO já está fora quando o P1 sai: o prazo dele vence com o do P1
-#: ainda correndo.
 OUTRO_JA_FORA = 26.0
 
 DOIS_FORA = [
@@ -601,19 +459,7 @@ DOIS_FORA = [
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOPrazoDeOutroVenceComOPostoVago:
-    """Dois fora: o prazo de um vence enquanto o posto do P1 espera por ele.
-
-    A conferência de 24/09/2026. Com o P1 fora dentro do prazo e o jogo
-    aberto, o vpad dele fica parado à espera (a O-ASSENTO-02), e o primário
-    ausente não tem carta. O ``_ordenar`` desistia da mesa inteira por isso
-    («sem carta não há ordem a obedecer»): o P4 ficava no boneco 4 com a tela
-    e a lâmpada dizendo 3 até o P1 voltar ou o prazo DELE vencer — 24 s
-    medidos na bancada. A cura: o vpad do P1 é fixo com o jogo na autoridade,
-    então a carta dele não escolhe plano; ele leva a do lugar em que espera.
-
-    A MORDIDA: ``_posto_vago`` devolvendo sempre False reprova os casos com
-    alguém atrás de quem saiu.
-    """
+    """Dois fora: o prazo de um vence enquanto o posto do P1 espera por ele."""
 
     @pytest.mark.parametrize(("quantos", "transporte", "outro", "volta"), DOIS_FORA)
     def test_quem_ficou_atras_desce_com_o_posto_vago(
@@ -640,11 +486,9 @@ class TestOPrazoDeOutroVenceComOPostoVago:
             for _ in range(_ticks_ate_o_fim_do_prazo(OUTRO_JA_FORA)):
                 bancada.tique()
 
-        # O posto segue vago: o prazo do P1 ainda corre.
         assert bancada.inst.primary_uniq == P1
         assert bancada.dono_do_vpad_do_p1() is None
         assert bancada.daemon._gamepad_device is vpad_do_posto and vpad_do_posto.vivo
-        # A fila do outro se fechou na tela, com o lugar do P1 ainda contando.
         assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(ficaram)}
         bancada.o_jogo_segue_a_tela()
         for uniq in atras:
@@ -655,7 +499,6 @@ class TestOPrazoDeOutroVenceComOPostoVago:
             assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], f"{uniq} estava na frente"
         recriadas = [r for r in registros if r["event"] == "coop_ordem_recriada"]
         assert [r["recriar"] for r in recriadas] == ([list(atras)] if atras else [])
-        # O diário não inventa carta para o P1 ausente, nem diz que ele espera o jogo.
         assert all("p1" not in r["cartas"] for r in recriadas)
         assert not [r for r in registros if r["event"] == "coop_ordem_do_p1_espera_o_jogo"]
 
@@ -679,13 +522,7 @@ class TestOPrazoDeOutroVenceComOPostoVago:
     def test_a_vaga_nao_diz_que_o_p1_voltou_ao_boneco_dele(
         self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
     ) -> None:
-        """Com o P1 no boneco 2 (a volta tardia), o posto vago do P2 não apaga o aviso.
-
-        O P2 dirige o vpad do P1 depois da volta tardia; se ELE cai dentro do
-        prazo, o posto fica vago à espera dele, e a carta que a vaga empresta
-        ao vpad do P1 não é a de ninguém: ela não pode escrever no diário que
-        o P1 voltou ao boneco dele — ele segue no 2 até o jogo fechar.
-        """
+        """Com o P1 no boneco 2 (a volta tardia), o posto vago do P2 não apaga o aviso."""
         bancada = montar(monkeypatch, quantos, transporte)
         TestAVoltaTardiaDoP1._p1_sai_e_volta_tarde(bancada)
         assert bancada.coop._p1_espera_o_jogo is True
@@ -704,11 +541,7 @@ class TestOPlano:
     FIXO = frozenset({"p1"})
 
     def test_passado_o_prazo_quem_ficou_atras_desce(self) -> None:
-        """O P2 saiu: o vpad dele liberou o lugar 1 do jogo, e as cartas andaram.
-
-        É a mesma mesa com o P1 fora: o vpad do posto (fixo, a R-04) leva a
-        carta 1 do P2, e o vpad do P2, cedido, liberou o lugar 1.
-        """
+        """O P2 saiu: o vpad dele liberou o lugar 1 do jogo, e as cartas andaram."""
         mesa = {0: "p1", 2: "p3", 3: "p4"}
         assert planejar_a_ordem(mesa, {"p1": 1, "p3": 2, "p4": 3}, fixos=self.FIXO) == (
             ["p3", "p4"],
@@ -731,13 +564,7 @@ class TestOPlano:
         )
 
     def test_quem_esta_no_boneco_certo_nao_sai_para_fechar_o_buraco_de_ninguem(self) -> None:
-        """O item 3 da sprint, achado pela varredura: o 4 ainda guardado.
-
-        Recriar a partir da carta 2 fecharia o buraco do ``b`` e do ``c`` e
-        poria o ``d`` (carta 5, no boneco 5) no lugar 3 do jogo — o do 4 que
-        ainda pode voltar. O ``d`` fica, e o buraco fecha pela faixa: só o
-        ``b`` e o ``c`` renascem (O-ASSENTO-GUARDADO-NAO-ANDA-04).
-        """
+        """O item 3 da sprint, achado pela varredura: o 4 ainda guardado."""
         mesa = {0: "p1", 2: "b", 3: "c", 4: "d"}
         assert planejar_a_ordem(
             mesa, {"p1": 1, "b": 2, "c": 3, "d": 5}, fixos=self.FIXO
@@ -781,11 +608,7 @@ def _o_plano_de_antes(
 
 
 def _as_mesas_do_produto() -> Any:
-    """Toda mesa de até quatro lugares que o produto monta.
-
-    Com jogo, o vpad do P1 sentado é sempre fixo (a R-04); sem jogo, a mesa
-    chega compactada (o ``_ordenar`` roda o ``_compactar`` antes) e nada é fixo.
-    """
+    """Toda mesa de até quatro lugares que o produto monta."""
     chaves = ["p1", "b", "c", "d"]
     for n in range(1, 5):
         for sentados_n in range(1, n + 1):
@@ -802,13 +625,7 @@ def _as_mesas_do_produto() -> Any:
 
 
 def test_a_varredura_das_mesas_do_produto() -> None:
-    """Contra a regra de antes, em todas as mesas: a cura só melhora, e só quem precisa sai.
-
-    - sem jogo, nada muda;
-    - o fixo (o vpad do P1 com o jogo aberto) nunca é recriado;
-    - quando o plano muda, menos gente fica fora do boneco da própria carta;
-    - quem renasce além do plano de antes estava fora do boneco dele.
-    """
+    """Contra a regra de antes, em todas as mesas: a cura só melhora, e só quem precisa sai."""
     casos = mudaram = 0
     for mesa, cartas, nascer, fixos, compacta in _as_mesas_do_produto():
         casos += 1

@@ -50,23 +50,15 @@ from typing import Any
 
 import pytest
 
-#: O IMPORT É O DO VIZINHO, e não o de pacote instalado — o aviso está escrito
-#: em `interface/aba02.py`: os dois caminhos carregam o MESMO arquivo em DOIS
-#: módulos diferentes, com duas cópias de cada estado. Um dublê posto no módulo
-#: errado não alcança o produto, e a régua daria verde sobre o defeito vivo.
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: As abas cujo GESTO recusava com perfil no disco e daemon calado, e o nome do
-#: gesto que ela clica. A aba 05 é a que ela reportou; as outras seis têm a
-#: MESMA guarda, e entram porque a cura cobre todos os chamadores.
 ABAS = [
     ("05-vibracao.html", "forca"),
     ("04-iluminacao.html", "brilho"),
     ("06-navegacao.html", "trocar"),
 ]
 
-#: O estado que o daemon dela publica de verdade: sem perfil.
 DAEMON_CALADO: dict[str, Any] = {"active_profile": None}
 
 PERFIL = "Régua Do Gesto"
@@ -92,10 +84,7 @@ def perfil_so_no_disco(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_o_dono_responde_o_que_o_daemon_calou(perfil_so_no_disco: str) -> None:
-    """O piso: com o daemon calado, quem responde é o marcador em disco.
-
-    Sem isto o resto da régua mediria o próprio dublê.
-    """
+    """O piso: com o daemon calado, quem responde é o marcador em disco."""
     import pacotes.perfil as _perfil
 
     assert _perfil.nome_do_ativo(DAEMON_CALADO) == PERFIL
@@ -109,19 +98,13 @@ def test_o_dono_responde_o_que_o_daemon_calou(perfil_so_no_disco: str) -> None:
 def test_a_guarda_nao_recusa_com_o_perfil_no_disco(
         pacote: str, guarda: str, perfil_so_no_disco: str,
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Nenhuma guarda de gesto diz "não há perfil ativo" com um perfil valendo.
-
-    Mede o ATO e não o texto do código: chama a guarda com o estado que o daemon
-    dela publica e exige que a frase de recusa NÃO saia.
-    """
+    """Nenhuma guarda de gesto diz "não há perfil ativo" com um perfil valendo."""
     import importlib
 
     import pacotes
     import pacotes.perfil as _perfil
 
     mod = importlib.import_module(f"pacotes.{pacote}")
-    # O módulo pode ter importado `perfil` por outro nome; o dublê é o do módulo
-    # `pacotes.perfil`, que é o mesmo objeto nos dois casos.
     assert getattr(mod, "perfil", _perfil) is _perfil or \
         getattr(mod, "_perfil", _perfil) is _perfil
 
@@ -143,23 +126,13 @@ def test_a_guarda_nao_recusa_com_o_perfil_no_disco(
             f"`active_profile` CRU do daemon, e o daemon o publica como None em "
             f"toda sessão com perfil de janela. Erro: {erro}")
     except Exception:
-        # Qualquer outra recusa é de OUTRA regra (endereço do controle, valor
-        # fora de faixa, disco). Esta régua mede UMA coisa só.
         pass
 
 
 def test_nenhuma_guarda_de_gesto_le_o_cru() -> None:
-    """A varredura que impede a volta por um caminho novo.
-
-    É régua de FONTE de propósito, e ela é a SEGUNDA: a de cima mede o ato. Esta
-    existe porque o defeito voltou três vezes por chamadores NOVOS, que a de
-    cima não conhece.
-    """
+    """A varredura que impede a volta por um caminho novo."""
     raiz = pathlib.Path(__file__).resolve().parents[2]
     pasta = raiz / "src" / "hefesto_dualsense4unix" / "interface" / "pacotes"
-    #: O PADRÃO DO DEFEITO: o cru dentro de um `.strip()`, que é a assinatura da
-    #: guarda de gesto. As leituras de PINTURA passam por `perfil.ativo()`, que
-    #: já pergunta ao dono quando o nome não vem — essas podem ficar.
     presos: list[str] = []
     for arq in sorted(pasta.glob("a*.py")):
         for n, linha in enumerate(arq.read_text(encoding="utf-8").splitlines(), 1):

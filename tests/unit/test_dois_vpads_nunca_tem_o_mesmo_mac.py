@@ -1,46 +1,4 @@
-"""O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 — dois vpads vivos nunca vestem o mesmo MAC.
-
-**O defeito, medido na conferência da O-ASSENTO-GUARDADO-NAO-ANDA-03 (24/09):**
-o vpad do posto que renasce com a identidade do P1 (troca de máscara, de
-caminho, ``_reerguer_o_p1``) e o vpad secundário do P1 que volta DEPOIS do
-prazo, com o jogo aberto, saíam com o MESMO MAC — os dois pediam
-``vpad_mac(P1)``. O ``hid_playstation`` recusa o segundo com ``-EEXIST``
-(``ps_devices_list_add``, ``assets/dkms/hid-playstation/hid-playstation.c``), e
-o P1 caía no vpad ``uinput`` degradado: sem vibração, sem giroscópio, sem
-gatilho, sem luz.
-
-**A régua é a classe REAL contra um kernel de mentira que recusa como o de
-verdade.** :class:`KernelDoHidPlaystation` é o ``/dev/uhid`` com o probe do
-``hid_playstation`` na ordem que o fonte faz — ``START``, ``OPEN``, o
-``GET_REPORT`` do 0x09 (o MAC), o do 0x20, o ``ps_devices_list_add`` e, se o
-MAC já está na lista, ``CLOSE`` e ``STOP`` com ``Duplicate device found for MAC
-address``. Ele entra no lugar do ``os`` do ``uhid_gamepad`` SÓ para aquele
-módulo: nenhum nó ``/dev/uhid`` ou ``/dev/uinput`` de verdade nasce aqui, e o
-resto do processo segue com o ``os`` de sempre.
-
-**O caso geral é a régua**, e não só o posto contra o P1 que volta: todo par
-de nascimentos que o produto faz (o mesmo aparelho duas vezes, as duas grafias
-do mesmo plástico, os sem endereço no mesmo número), a mesa cheia, a
-reconexão de cada lugar (o MAC volta o mesmo), as faixas dos MACs seguintes e
-as três saídas do dono (o ``start`` que falha, a ordem do ``stop``, dois fios
-ao mesmo tempo). A matriz de transportes (USB, BT e a mesa mista) e os lugares
-que o posto carrega estão na bancada honesta da volta tardia
-(``test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py``).
-
-AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
-
-- no dublê: sem a checagem da lista do driver reprovam 2; sem o ``ps_remove``, 8
-  (os dois do dublê, a mesa cheia e as cinco reconexões: o driver seguiria
-  guardando o MAC de quem já saiu);
-- ``vestir`` vestindo o pedido sem olhar quem veste: 20;
-- a propriedade ``mac`` ignorando o vestido (o 0x09 leva o pedido): 19;
-- ``despir`` que não devolve: 7;
-- o ``start`` que falha sem ``despir``: 1; o ``stop`` que devolve antes do
-  ``UHID_DESTROY``: 1; o ``vestir`` sem o lock: 1.
-
-Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados;
-os ``02:fe:`` são os que o produto forja.
-"""
+"""O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 — dois vpads vivos nunca vestem o mesmo MAC."""
 from __future__ import annotations
 
 import errno
@@ -75,19 +33,15 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
 )
 
 #: Os ids de produto em que o ``hid_playstation`` faz bind no DualSense — o
-#: físico (0x0CE6) e o Edge (0x0DF2, o que o vpad apresenta).
 _PIDS_DUALSENSE = (0x0CE6, 0x0DF2)
 
 #: Os três feature reports do probe do DualSense e o tamanho que o
-#: ``__ps_get_report`` exige (``DS_FEATURE_REPORT_*_SIZE`` no fonte).
 _PAREAMENTO, _PAREAMENTO_TAMANHO = 0x09, 20
 _FIRMWARE, _FIRMWARE_TAMANHO = 0x20, 64
 _CALIBRACAO, _CALIBRACAO_TAMANHO = 0x05, 41
 
-#: ``UHID_FEATURE_REPORT`` do ``linux/uhid.h``.
 _UHID_FEATURE_REPORT = 0
 
-#: Onde começam os fds de mentira — longe de qualquer fd real do processo.
 _PRIMEIRO_FD = 40_000
 
 
@@ -140,19 +94,13 @@ class KernelDoHidPlaystation:
 
     def __init__(self, fisicos: tuple[str, ...] = ()) -> None:
         self.devices: dict[int, _Device] = {}
-        #: A ``ps_devices_list``: MAC na ordem do report → fd do dono (None = físico).
         self.lista: dict[bytes, int | None] = {mac_no_report(f): None for f in fisicos}
-        #: Cada recusa por MAC repetido, com a frase do ``hid_err`` do driver.
         self.recusas: list[str] = []
-        #: Toda linha que o driver escreveria no diário do kernel.
         self.diario: list[str] = []
-        #: Quantas aberturas de ``/dev/uhid`` recusar com ``EACCES`` (a ACL que o
-        #: logind ainda não aplicou no primeiro boot depois do install).
         self.recusar_aberturas = 0
         self._proximo_fd = _PRIMEIRO_FD
         self._proximo_pedido = 1
 
-    # -- o que o userspace chama -------------------------------------------
 
     def abrir(self, caminho: str) -> int:
         if caminho != UHID_NODE:
@@ -193,7 +141,6 @@ class KernelDoHidPlaystation:
         if device is not None:
             self._destruir(fd, device)
 
-    # -- o probe --------------------------------------------------------------
 
     def _device(self, fd: int) -> _Device:
         device = self.devices.get(fd)
@@ -207,7 +154,7 @@ class KernelDoHidPlaystation:
         device.uniq = dados[196:260].split(b"\0", 1)[0].decode("ascii", "replace")
         vendor, product = struct.unpack("<II", dados[264:272])
         if vendor != DUALSENSE_VENDOR or product not in _PIDS_DUALSENSE:
-            return  # sem driver: nenhum probe, nenhum START
+            return
         device.fila.append(struct.pack("<IQ", UHID_START, 0))
         device.fila.append(struct.pack("<I", UHID_OPEN))
         self._pedir(device, _PAREAMENTO)
@@ -231,7 +178,7 @@ class KernelDoHidPlaystation:
         pedido, err, tamanho = struct.unpack("<IHH", dados[4:12])
         report = device.pedidos.pop(pedido, None)
         if report is None:
-            return  # resposta atrasada de pedido que o kernel já largou
+            return
         corpo = dados[12 : 12 + tamanho]
         esperado = {
             _PAREAMENTO: _PAREAMENTO_TAMANHO,
@@ -276,24 +223,13 @@ class KernelDoHidPlaystation:
         device.criado = False
         device.fila.clear()
 
-    # -- a leitura da régua ---------------------------------------------------
 
     def macs_na_lista(self) -> list[str]:
         """Os MACs dos vpads vivos que o driver registrou (sem os físicos)."""
         return sorted(mac_impresso(m) for m, dono in self.lista.items() if dono is not None)
 
     def instalar(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Põe este kernel no lugar do ``os`` do ``uhid_gamepad`` — e só dele.
-
-        E o vpad ``uinput`` do recuo nasce sobre um device de mentira: o
-        ``UinputGamepad.start`` roda inteiro, mas o ``UInput`` do python-evdev
-        (o ``/dev/uinput`` de verdade) nunca é chamado.
-
-        Um kernel novo é uma máquina nova: o dono dos MACs vestidos também
-        nasce vazio. Sem isto, os vpads das bancadas de testes anteriores (que
-        ninguém para, e que os ciclos de referência mantêm vivos até o coletor
-        passar) seguiriam vestindo os MACs deste teste.
-        """
+        """Põe este kernel no lugar do ``os`` do ``uhid_gamepad`` — e só dele."""
         monkeypatch.setattr(
             uhid_gamepad, "_MACS_DOS_VPADS_VIVOS", uhid_gamepad._MacsDosVpadsVivos()
         )
@@ -306,12 +242,7 @@ class KernelDoHidPlaystation:
 
 
 class _OsDoKernel:
-    """O ``os`` que o ``uhid_gamepad`` enxerga: ``/dev/uhid`` é o kernel de mentira.
-
-    Tudo o que não é ``/dev/uhid`` segue para o ``os`` de verdade, menos o que
-    escreveria num fd: um fd que não é do kernel de mentira é recusado em voz
-    alta, em vez de chegar a um fd real do processo.
-    """
+    """O ``os`` que o ``uhid_gamepad`` enxerga: ``/dev/uhid`` é o kernel de mentira."""
 
     def __init__(self, kernel: KernelDoHidPlaystation) -> None:
         self._kernel = kernel
@@ -354,20 +285,13 @@ class _UinputDeMentira:
         return None
 
 
-#: Os cinco controles FÍSICOS das bancadas desta casa (faixa forjada): o kernel
-#: de mentira nasce com eles na lista do driver, como o de verdade nasce com os
 #: DualSense que estão na mesa.
 FISICOS_DAS_BANCADAS = tuple(f"aa:bb:cc:00:00:0{n}" for n in range(1, 6))
 
 
 @contextmanager
 def kernel_de_mentira(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
-    """O kernel de mentira no lugar do ``/dev/uhid``, com o registro de máscaras zerado.
-
-    Um gerenciador de contexto, e não só a fixture: a régua da volta tardia
-    (``test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py``) monta a fixture dela
-    com ele, sem importar o nome ``kernel`` (que ela sombrearia).
-    """
+    """O kernel de mentira no lugar do ``/dev/uhid``, com o registro de máscaras zerado."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         _zerar_registro_de_mascaras,
     )
@@ -387,11 +311,6 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
         yield k
 
 
-# ---------------------------------------------------------------------------
-# O dublê recusa como o real — senão a régua mede um kernel mais frouxo
-# ---------------------------------------------------------------------------
-
-#: Os três controles de mentira da mesa (octetos 4 e 5 zerados).
 _FISICOS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03")
 
 
@@ -496,15 +415,8 @@ class TestODubleDoKernel:
             KernelDoHidPlaystation().abrir("/dev/uinput")
 
 
-# ---------------------------------------------------------------------------
-# A régua do caso geral: dois vpads vivos QUAISQUER
-# ---------------------------------------------------------------------------
-
-#: Os quatro plásticos da mesa, na grafia colada que o co-op e o backend usam.
 P1, P2, P3, P4 = (f"aabbcc00000{n}" for n in range(1, 5))
 
-#: Os nascimentos que o produto faz, com a identidade e o número que a fábrica
-#: recebe. O do posto e o do P1 que volta são IGUAIS de propósito: é o defeito.
 NASCIMENTOS = {
     "posto-com-o-p1": (P1, 1),
     "o-p1-que-volta": (P1, 1),
@@ -548,12 +460,7 @@ class TestDoisVpadsVivosQuaisquer:
     def test_nenhum_par_repete_o_mac(
         self, kernel: KernelDoHidPlaystation, primeiro: str, segundo: str
     ) -> None:
-        """Todo par de nascimentos, inclusive dois com a MESMA identidade e o mesmo número.
-
-        MORDIDA: ``vestir`` vestindo o pedido sem olhar quem veste reprova todo
-        par que pede o mesmo MAC — o do posto com o P1 que volta, as duas
-        grafias do mesmo plástico, e os três sem endereço no número 1.
-        """
+        """Todo par de nascimentos, inclusive dois com a MESMA identidade e o mesmo número."""
         a = nascer(*NASCIMENTOS[primeiro])
         b = nascer(*NASCIMENTOS[segundo])
         de_pe_no_driver(kernel, a, b)
@@ -563,7 +470,7 @@ class TestDoisVpadsVivosQuaisquer:
     ) -> None:
         """O dia inteiro de uma mesa: o boot, a troca de máscara, os quatro, a volta tardia."""
         boot = nascer(None, 1)
-        boot.stop()  # a troca de máscara: o posto renasce com o primário
+        boot.stop()
         posto = nascer(P1, 1)
         secundarios = [nascer(P2, 2), nascer(P3, 3), nascer(P4, 4)]
         volta = nascer(P1, 1)
@@ -577,12 +484,7 @@ class TestOMacDeCadaLugarEEstavel:
     def test_sem_colisao_cada_um_veste_o_mac_do_aparelho(
         self, kernel: KernelDoHidPlaystation
     ) -> None:
-        """O caso de sempre não muda um byte: o MAC do aparelho.
-
-        É o que a E3 prometeu: o jogo e o Steam Input reconhecem cada controle
-        pelo MAC dele. (Quem VIBRA não sai daqui: o co-op diz quem alimenta
-        cada vpad — A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01.)
-        """
+        """O caso de sempre não muda um byte: o MAC do aparelho."""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
 
         mesa = {P1: 1, P2: 2, P3: 3, P4: 4}
@@ -598,12 +500,7 @@ class TestOMacDeCadaLugarEEstavel:
     def test_a_reconexao_de_cada_lugar_volta_ao_mesmo_mac(
         self, kernel: KernelDoHidPlaystation, quem: str
     ) -> None:
-        """Os quatro lugares e o P1 que voltou tarde: sai, volta, e veste o mesmo.
-
-        Inclusive quem veste o MAC SEGUINTE — a mesma mesa o devolve do mesmo
-        jeito. MORDIDA: ``despir`` que não devolve faz quem volta vestir o
-        seguinte do seguinte.
-        """
+        """Os quatro lugares e o P1 que voltou tarde: sai, volta, e veste o mesmo."""
         entradas = {
             "posto-com-o-p1": (P1, 1),
             "o-p2": (P2, 2),
@@ -622,11 +519,7 @@ class TestOMacDeCadaLugarEEstavel:
         assert {nome: v.mac for nome, v in vpads.items()} == antes
 
     def test_a_mesma_mesa_noutro_boot_veste_os_mesmos_macs(self) -> None:
-        """O seguinte do mesmo aparelho não depende do processo — ``blake2b``, não ``hash()``.
-
-        Dois interpretadores com sementes de hash diferentes, a mesma mesa (o
-        posto com o P1 e o P1 que volta): os mesmos dois MACs.
-        """
+        """O seguinte do mesmo aparelho não depende do processo — ``blake2b``, não ``hash()``."""
         codigo = (
             "import itertools;"
             "from hefesto_dualsense4unix.integrations.uhid_gamepad import "
@@ -698,16 +591,7 @@ class TestODonoDevolve:
     def test_o_start_que_falha_nao_segura_o_mac(
         self, kernel: KernelDoHidPlaystation, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem ACL no ``/dev/uhid``, o vpad cai no uinput — e o MAC não fica preso.
-
-        O vpad que não nasceu fica VIVO de propósito (a régua guarda cada um que
-        a fábrica cria): solto, a referência fraca do dono morreria com ele e
-        esconderia a falta do ``despir``. No daemon, quem o segura é qualquer
-        ciclo de referência até o coletor passar.
-
-        MORDIDA: tirar o ``despir`` do caminho de falha do ``start`` faz o
-        próximo vpad do mesmo aparelho vestir o seguinte.
-        """
+        """Sem ACL no ``/dev/uhid``, o vpad cai no uinput — e o MAC não fica preso."""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense, vpad_mac
 
         criados: list[UhidDualSense] = []
@@ -733,12 +617,7 @@ class TestODonoDevolve:
     def test_o_stop_devolve_so_depois_do_destroy(
         self, kernel: KernelDoHidPlaystation, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A ordem do ``ps_remove``: no ``UHID_DESTROY`` o MAC ainda é deste vpad.
-
-        MORDIDA: devolver antes de destruir (``despir`` antes do
-        ``_destruir_o_device``) deixaria um vpad de outro fio vestir o MAC que
-        o driver ainda guarda — e esta régua vê o MAC já solto no DESTROY.
-        """
+        """A ordem do ``ps_remove``: no ``UHID_DESTROY`` o MAC ainda é deste vpad."""
         vpad = nascer(P1, 1)
         vestidos_no_destroy: list[str | None] = []
         destruir = kernel._destruir
@@ -750,21 +629,13 @@ class TestODonoDevolve:
         monkeypatch.setattr(kernel, "_destruir", _espiar)
         mac = vpad.mac
         vpad.stop()
-        # Duas passagens: o `UHID_DESTROY` e o `close` do fd, e nas duas o MAC
-        # ainda é dele.
         assert vestidos_no_destroy and set(vestidos_no_destroy) == {mac}, vestidos_no_destroy
         assert uhid_gamepad._MACS_DOS_VPADS_VIVOS.vestido_por(vpad) is None
 
     def test_dois_fios_nunca_vestem_o_mesmo(
         self, kernel: KernelDoHidPlaystation, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O posto renasce pelo fio do IPC e o co-op nasce pelo do laço — ao mesmo tempo.
-
-        A pergunta «quem veste este MAC?» demora de propósito, e responde o que
-        viu ANTES de demorar: sem o lock do dono, os dois fios ouvem «ninguém»
-        juntos e vestem o mesmo. MORDIDA: tirar o ``with self._lock`` do
-        ``vestir``.
-        """
+        """O posto renasce pelo fio do IPC e o co-op nasce pelo do laço — ao mesmo tempo."""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
         class _PerguntaQueDemora(dict):  # type: ignore[type-arg]

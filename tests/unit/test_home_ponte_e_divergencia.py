@@ -20,10 +20,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_ponte_e_divergencia: importa código da janela GTK")
 
 import sys
@@ -35,10 +31,6 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions import home_actions
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
-
-# --------------------------------------------------------------------------
-# Dublês (mesmo desenho do test_home_render_state — widget burro, sem GTK)
-# --------------------------------------------------------------------------
 
 
 class _StyleCtx:
@@ -120,15 +112,8 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    # COOP-SEM-INTERRUPTOR-01 (06/08/2026): o `_render_coop_prep` e o botão
-    # "Preparar co-op" NÃO existem mais — cada controle conectado já é um
-    # jogador, sempre. `test_home_render_state.py` tem portão que exige a
-    # ausência dos dois. Não reponha.
     _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
     _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
-    # I3 (25/08/2026): o render passou a perguntar TAMBÉM de onde a máscara
-    # veio (gesto dela x perfil). O dublê empresta o método do mixin, como
-    # empresta os outros — reimplementá-lo aqui mediria o dublê.
     _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
 
     def __init__(self) -> None:
@@ -147,12 +132,8 @@ class _HomeStub:
         self._home_wrapper_banner = _FakeWidget()
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
-        # O par foi RENOMEADO: era `_home_renumber_*`, virou `_home_reconciliar_*`
-        # (o dublê desta frente nasceu de uma base anterior à renomeação). O
-        # `test_home_render_state.py:151-153` registra a mesma história.
         self._home_reconciliar_btn = _FakeWidget()
         self._home_reconciliar_hint = _FakeWidget()
-        # PONTE-NA-TELA-01
         self._home_ponte_label = _FakeWidget()
         self._home_divergencia_banner = _FakeWidget()
         self._home_flavor_pedido: str | None = None
@@ -169,13 +150,6 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
 
 
-#: Um controle de verdade na mesa. NOTA DATADA — 25/08/2026 (I6 da INÍCIO NÃO
-#: MENTE-01): até aqui o `_estado` deste arquivo nascia com `controllers: []`,
-#: e os testes da ponte afirmavam "pelo Hefesto" sobre uma mesa VAZIA. Eles
-#: estavam medindo o defeito e chamando-o de contrato: com zero controle na
-#: casa, a linha dizia em VERDE que o jogo estava recebendo o controle — foi
-#: exatamente o que a bancada de 23/08 mediu. Agora a mesa é explícita, e há
-#: teste próprio para a mesa vazia.
 _UM_CONTROLE: dict[str, Any] = {
     "index": 0,
     "connected": True,
@@ -203,19 +177,9 @@ def _estado(
     return estado
 
 
-# --------------------------------------------------------------------------
-# Defeito 1 — o desfecho: "aplicado" NUNCA sobre uma recusa
-# --------------------------------------------------------------------------
-
-
 class TestDesfechoDaTroca:
     def test_payload_legado_com_a_mascara_antiga_e_recusa(self) -> None:
-        """A cura que vale HOJE, sem daemon novo.
-
-        O handler já devolve ``flavor: config.gamepad_flavor``, e o daemon só
-        grava esse campo DEPOIS de o vpad novo nascer — logo uma troca recusada
-        pelo gate volta com a máscara ANTIGA junto de ``status: "ok"``.
-        """
+        """A cura que vale HOJE, sem daemon novo."""
         recusa = {"status": "ok", "enabled": True, "flavor": "dualsense"}
 
         assert (
@@ -241,11 +205,7 @@ class TestDesfechoDaTroca:
         ],
     )
     def test_campo_explicito_vence(self, bruto: str, esperado: str) -> None:
-        """O contrato distinguível da lane do daemon, consumido defensivamente.
-
-        Vence até quando a máscara devolvida diria outra coisa: quem sabe o
-        desfecho é quem o produziu.
-        """
+        """O contrato distinguível da lane do daemon, consumido defensivamente."""
         payload = {"status": "ok", "flavor": "xbox", "desfecho": bruto}
 
         assert home_actions.desfecho_da_troca(payload, pedida="xbox") == esperado
@@ -290,23 +250,6 @@ class TestToastDaTroca:
         assert "Pedi a troca" in frase
 
 
-# AGORA-E-DEPOIS-01 (08/08/2026) — a classe `TestHandlerDaMascara` foi REMOVIDA
-# em 19/08. NÃO a reponha.
-#
-# Ela exercitava `_on_home_flavor_changed` esperando que o seletor da aba Início
-# DISPARASSE um `gamepad.emulation.set` e anunciasse "O jogo agora vê: …". Esse
-# caminho não existe mais: o commit `1c75a1a` o tirou por decisão dela —
-# *"Nenhum IPC sai de um seletor da aba Início"* —, e o seletor hoje só anota a
-# escolha ("Anotado. Clique em Aplicar para valer"). Um teste que exija o IPC de
-# volta reprova a decisão, não o código.
-#
-# O QUE A FRENTE QUERIA — que uma RECUSA do gate não vire toast de sucesso —
-# não se perdeu: virou as funções puras `desfecho_da_troca` e
-# `toast_da_troca_de_mascara`, e a mordida delas vive em `TestDesfechoDaTroca` e
-# `TestToastDaTroca`, logo acima. Quem HOJE tem a resposta do daemon na mão é o
-# "Aplicar" do rodapé, e é lá que a frase é escolhida.
-
-
 class TestTextoDaDivergencia:
     def test_com_jogo_aberto_diz_as_duas_mascaras_e_o_caminho(self) -> None:
         frase = home_actions.texto_da_divergencia(
@@ -327,15 +270,7 @@ class TestTextoDaDivergencia:
         assert "não chegou ao aparelho" in frase
 
     def test_a_cor_vem_por_markup_e_nao_por_classe_de_css(self) -> None:
-        """A armadilha que a foto offscreen pegou nesta leva.
-
-        `.hefesto-dualsense4unix-window label { color: #f8f8f2 }`
-        (`theme.css:470`, 0,1,1) vence `.hefesto-dualsense4unix-status-warn`
-        (0,1,0) — a mesma armadilha que a própria theme.css documenta no
-        BUG-GUI-FOOTER-LABEL-BRANCO-01. Com a classe, o aviso saía branco:
-        um alerta indistinguível do texto ao lado é um alerta escondido, que é
-        exatamente o defeito que esta leva existe para curar.
-        """
+        """A armadilha que a foto offscreen pegou nesta leva."""
         frase = home_actions.texto_da_divergencia(
             "xbox", "dualsense", jogo_aberto=True
         )
@@ -400,7 +335,6 @@ class TestRenderDaDivergencia:
         assert banner.visible is True
         assert "Xbox 360" in banner.get_text()
         assert "DualSense (botões PlayStation)" in banner.get_text()
-        # Por MARKUP, senão o aviso sai branco (ver a nota de especificidade).
         assert banner.markup is not None
         assert '<span foreground="#ffb86c">' in banner.markup
 
@@ -444,37 +378,9 @@ class TestRenderDaDivergencia:
         assert host._home_divergencia_banner.visible is False
 
 
-# --------------------------------------------------------------------------
-# Defeito 2 — qual ponte está de pé
-# --------------------------------------------------------------------------
-
-
 class TestTextoDaPonte:
     def test_a_excecao_de_steam_input_nao_produz_frase_propria(self) -> None:
-        """NOTA DATADA — 25/08/2026 (INÍCIO NÃO MENTE-01, I6, ramo 2).
-
-        Este teste exigia o contrário: *"Steam Input in frase"*. Ele nasceu na
-        PONTE-NA-TELA-01 para o mundo de então, em que a exceção SUSPENDIA o
-        vpad e `gamepad_emulation.enabled` caía para False — daí "Controlar o
-        PC" com o jogo jogando pelo espelho da Steam.
-
-        **Esse mundo acabou em 09/08/2026**, por decisão dela
-        (ESCONDER-EM-VEZ-DE-SAIR-01: *a allowlist do Steam Input NÃO tira o
-        Hefesto da frente*): a exceção passou a ESCONDER O FÍSICO e a MANTER O
-        VPAD DE PÉ. A VPAD-SUSPENSO-MORTO-01/E1 mediu em 25/08 que
-        `vpad_suspenso` só anda para `False` desde então, e a medição EM JOGO de
-        11/08 (pilha-steam-input-xpad-sdl.md, §2.4-bis, appid da allowlist dela
-        em sessão) achou ZERO espelhos da Steam, com os vpads do Hefesto
-        alimentando quatro controles.
-
-        O que ficou: com a exceção ativa quem entrega o controle continua sendo
-        o Hefesto, então a linha da Ponte responde pelas outras perguntas. Aqui
-        `enabled=False` é o caso de ela ter DESLIGADO o gamepad — e nesse caso
-        "nenhuma" é a verdade, porque o Hefesto não está entregando nada.
-
-        As réguas da frase nova estão em
-        `test_home_para_de_afirmar_o_que_nao_sabe.py::TestAExcecaoDeSteamInputNaoInventaUmaPonte`.
-        """
+        """NOTA DATADA — 25/08/2026 (INÍCIO NÃO MENTE-01, I6, ramo 2)."""
         estado = _estado(
             enabled=False,
             steam_input={"excecao_ativa": True, "vpad_suspenso": True},

@@ -43,9 +43,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -65,11 +62,6 @@ from hefesto_dualsense4unix.interface import hefesto_vivo
 
 ABA = "04-iluminacao.html"
 
-#: O QUE SE LÊ NO DOM, e por que é a cor COMPUTADA e não o atributo: a luz pode
-#: chegar por três caminhos — o `style` cravado no `<g>`, uma regra da folha viva
-#: e o `fill` de apresentação do próprio `<path>`. Ler qualquer um deles isolado
-#: mediria um caminho e chamaria de resultado; `getComputedStyle` responde o que
-#: a TELA mostra, que é a pergunta.
 LER = r"""
 (function(){
   const fora = {};
@@ -127,18 +119,7 @@ def _do_hex(h: str) -> tuple[int, int, int] | None:
 
 
 def _acesas(lampadas: list) -> list[int]:
-    """Quais das cinco lâmpadas estão ACESAS, pela cor computada de cada uma.
-
-    NÃO SE PERGUNTA À CLASSE `led-on`: ela é o que o gerador crava a partir do
-    MOCKUP, e lê-la seria perguntar ao desenho se o desenho está certo — é
-    exatamente o defeito que este ensaio nasceu para achar.
-
-    NÃO SE DIGITA UM LIMIAR TAMBÉM. A primeira escrita comparava a soma dos
-    canais com `3 × 120`, um número inventado aqui: o dia em que o par de tons
-    do `CSS_LUZINHAS` mudasse, esta régua reprovaria a mudança em vez do
-    defeito. O par tem dono (`a04_iluminacao.token_das_luzinhas`) e é a ele que
-    se pergunta — a lâmpada acesa é a que está na cor do ACESO.
-    """
+    """Quais das cinco lâmpadas estão ACESAS, pela cor computada de cada uma."""
     from pacotes import a04_iluminacao
 
     alvo = _do_hex(a04_iluminacao.token_das_luzinhas("--led-aceso"))
@@ -192,13 +173,6 @@ def main() -> int:
     lido: dict = {}
     dono: dict = {}
 
-    #: O `_ir` É OBRIGATÓRIO, e a lição custou uma medição inteira em
-    #: 03/09/2026: com `abre=` e sem ele, o piloto respondeu a pergunta na
-    #: **01-jogar** — os `data-controle` são `p1`…`p4` nas duas abas e há
-    #: lightbar nas duas, então a leitura voltou plausível e ERRADA. O que a
-    #: denunciou foi o prefixo dos `id` do SVG: `jg-p1-…` em vez de `il-p1-…`.
-    #: É a armadilha que esta casa nomeia — *medir contra a coisa errada produz
-    #: alarme convincente*. Ver `os_quatro_lugares_no_dom.py`, que sempre o fez.
     def abrir() -> bool:
         if not piloto.pronto:
             return True
@@ -228,11 +202,7 @@ def main() -> int:
 
     from pacotes import a04_iluminacao
 
-    #: O PREFIXO QUE ESTA ABA DÁ AOS `id` DO DESENHO. Ele não é enfeite: é o
-    #: único fato do DOM que separa esta aba da 01-jogar, que tem os mesmos
-    #: `data-controle` e o mesmo grupo de lightbar.
     PREFIXO = "il-"
-    #: O CINZA DE UMA BARRA SEM LUZ, perguntado ao dono — nunca digitado aqui.
     APAGADA = a04_iluminacao.LUZ_APAGADA
 
     print(f"{'lugar':6s} {'estado':12s} {'aparelho':>16s} {'desenho':>16s} "

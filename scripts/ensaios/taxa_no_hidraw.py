@@ -134,37 +134,20 @@ except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
     BT_REPORT_ID = 0x31
     _CRC_IMPORTAVEL = str(_erro)
 
-#: Maior relatório de entrada que este aparelho emite é o `0x31` do rádio, com
-#: 78 bytes. O buffer é folgado de propósito: `read()` em hidraw devolve UM
-#: relatório inteiro por chamada, e um buffer curto truncaria o quadro sem
-#: avisar — o que estragaria justamente a conferência de CRC.
 TAMANHO_DO_BUFFER = 1024
 
-#: As frases da coluna de CRC nos braços em que ele NÃO existe. Escritas assim,
-#: e nunca como `0 falhas`: no cabo os quatro últimos bytes são payload comum, e
-#: dizer "zero falhas" ali seria afirmar que se conferiu algo que não há. É a
-#: mesma lição que o `censo_features.py` já pagou.
 SEM_TRAILER_CABO = "sem trailer (no cabo os 4 últimos bytes são payload)"
 SEM_TRAILER_VPAD = "sem trailer (o vpad não é transporte)"
 
 
-#: O vão que o `o_basico.py` chama de buraco: dois quadros de 60 Hz perdidos.
 LIMITE_DO_VAO_MS = 33.0
 
-#: Onde o `struct dualsense_input_report` começa em cada relatório de entrada:
-#: `data[1]` no cabo (e no pad `uhid`, que fala como cabo), `data[2]` no rádio.
 _CORPO_POR_ID = {0x01: 1, BT_REPORT_ID: 2}
-#: `sensor_timestamp`, `__le32`, no offset 27 do corpo.
 _CARIMBO_NO_CORPO = 27
 
 
 def mascarar_mac(mac: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados (`OUI:00:00:NN`), pelo dono.
-
-    O OUI fica porque é público e é ele que explica o achado; o que identifica
-    o aparelho dela é o sufixo, e esse sai. Quem mascara é o dono
-    (`core/formas_do_endereco.mascarar`), com o próprio endereço como conhecido.
-    """
+    """A máscara da casa: octetos 4 e 5 zerados (`OUI:00:00:NN`), pelo dono."""
     return mascarar(mac, (mac,)) if mac else mac
 
 
@@ -189,13 +172,7 @@ def apelido_mascarado(aparelho: Aparelho) -> str:
 
 
 def evdev_principal(aparelho: Aparelho) -> str:
-    """O `/dev/input/eventN` principal deste hidraw, resolvido por sysfs AGORA.
-
-    Serve só ao cabeçalho, para declarar o estado do `EVIOCGRAB`. Resolve a
-    cada chamada porque os números não são estáveis: em 15/08/2026, entre duas
-    leituras com segundos de diferença, um controle reapareceu com outro
-    `eventN`.
-    """
+    """O `/dev/input/eventN` principal deste hidraw, resolvido por sysfs AGORA."""
     raiz = os.path.join(aparelho.dir_device, "input")
     if not os.path.isdir(raiz):
         return ""
@@ -229,7 +206,6 @@ class Medida:
         self.crc_difere = 0
         self.crc_sem_trailer = 0
         self.segundos = 0.0
-        #: (hora de chegada em ns monotônicos, sensor_timestamp) de cada quadro.
         self.chegadas: list[tuple[int, int | None]] = []
 
     @property
@@ -256,14 +232,7 @@ class Medida:
             self._conferir_crc(dados)
 
     def _conferir_crc(self, dados: bytes) -> None:
-        """O CRC-32 de entrada do rádio, semente `0xA1`, conforme o driver.
-
-        A conta é a do `hid-playstation`: CRC-32 padrão sobre o byte de semente
-        seguido do relatório inteiro menos os quatro últimos bytes, comparado
-        com esses quatro bytes lidos em little-endian. Só o `0x31` carrega o
-        trailer; o `0x01` curto que o rádio às vezes emite não carrega, e
-        contá-lo como falha seria inventar corrupção.
-        """
+        """O CRC-32 de entrada do rádio, semente `0xA1`, conforme o driver."""
         if len(dados) < 5 or dados[0] != BT_REPORT_ID:
             self.crc_sem_trailer += 1
             return
@@ -305,13 +274,7 @@ def vaos(chegadas: list[tuple[int, int | None]], limite_ms: float) -> list[tuple
 def casar_pelo_carimbo(
     pads: list[Medida], fisicos: list[Medida], *, piso: int = 10
 ) -> dict[int, tuple[int, int]]:
-    """Cada pad ao físico com quem ele divide mais carimbos do sensor.
-
-    Devolve ``{índice do pad: (índice do físico, carimbos em comum)}``. Um pad
-    cujo melhor e segundo melhor empatam, ou que divide menos de ``piso``
-    carimbos com todos, fica FORA: casar no chute é o defeito que a régua
-    existe para não cometer.
-    """
+    """Cada pad ao físico com quem ele divide mais carimbos do sensor."""
     carimbos_f = [{c for _, c in f.chegadas if c} for f in fisicos]
     pares: dict[int, tuple[int, int]] = {}
     for i, pad in enumerate(pads):
@@ -330,12 +293,7 @@ def casar_pelo_carimbo(
 def vaos_novos(
     pad: Medida, fisico: Medida, limite_ms: float = LIMITE_DO_VAO_MS
 ) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
-    """Os vãos do pad separados em (NOVOS, HERDADOS do físico).
-
-    Um vão do pad é herdado quando algum vão do físico, no mesmo relógio, se
-    sobrepõe a ele: o físico não mandou, e o pad só repetiu o silêncio. Os
-    outros o produto criou.
-    """
+    """Os vãos do pad separados em (NOVOS, HERDADOS do físico)."""
     do_fisico = vaos(fisico.chegadas, limite_ms)
     novos, herdados = [], []
     for a, b in vaos(pad.chegadas, limite_ms):
@@ -403,13 +361,7 @@ def escolher_nos(argumentos: argparse.Namespace) -> tuple[list[Aparelho], list[s
 
 
 def abrir(medidas: list[Medida]) -> None:
-    """Abre cada nó pela porta que servir, e guarda QUAL serviu.
-
-    `escrita=False` de propósito: este instrumento não escreve no aparelho, e
-    pedir `O_RDWR` seria pedir mais poder do que a medição precisa. Pelo broker
-    o fd vem `O_RDWR` de qualquer jeito (é o contrato dele), e por isso a porta
-    fica registrada em vez de inferida.
-    """
+    """Abre cada nó pela porta que servir, e guarda QUAL serviu."""
     for medida in medidas:
         try:
             no = abrir_no_hidraw(medida.aparelho.caminho_hidraw, escrita=False)
@@ -426,13 +378,7 @@ def abrir(medidas: list[Medida]) -> None:
 def _drenar(
     seletor: selectors.BaseSelector, medida: Medida, *, contar: bool, conferir_crc: bool
 ) -> None:
-    """Lê tudo o que está na fila deste fd, até `EAGAIN`.
-
-    Drenar até o fim importa: a fila de hidraw do kernel guarda um número
-    limitado de relatórios por `open()`, e um leitor que tirasse um por vez
-    perderia quadros a 250-400 Hz e reportaria uma taxa menor que a real —
-    exatamente o alarme falso que este ensaio existe para não produzir.
-    """
+    """Lê tudo o que está na fila deste fd, até `EAGAIN`."""
     while True:
         try:
             dados = os.read(medida.fd, TAMANHO_DO_BUFFER)
@@ -452,24 +398,14 @@ def _drenar(
 def medir(
     medidas: list[Medida], segundos: float, *, conferir_crc: bool
 ) -> tuple[str, str, float]:
-    """Conta relatórios dos nós abertos numa janela só. Devolve T0, T1 e o vão.
-
-    Um laço, um `select`, todos os nós. Duas janelas em fila não são um ensaio
-    de coexistência — é a exigência 4 do I-1 no plano da mesa 2+2.
-    """
+    """Conta relatórios dos nós abertos numa janela só. Devolve T0, T1 e o vão."""
     seletor = selectors.DefaultSelector()
     abertos = [m for m in medidas if m.fd >= 0]
     for medida in abertos:
-        # O fd é EXCLUSIVAMENTE nosso (o broker fecha a cópia dele logo após o
-        # `sendmsg`), então mexer no `O_NONBLOCK` não altera o estado de
-        # ninguém. Sem ele, drenar a fila travaria o laço no primeiro nó
-        # silencioso e as oito medidas deixariam de ser da mesma janela.
         flags = fcntl.fcntl(medida.fd, fcntl.F_GETFL)
         fcntl.fcntl(medida.fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         seletor.register(medida.fd, selectors.EVENT_READ, medida)
 
-    # O que se acumulou entre o `open` e o relógio não é desta janela: sai
-    # fora, sem ser contado. Sem isso o primeiro nó aberto largaria na frente.
     for medida in abertos:
         _drenar(seletor, medida, contar=False, conferir_crc=False)
 
@@ -525,10 +461,6 @@ def escrever_csv(
 ) -> None:
     """Ensaio que não vira linha de tabela vira lembrança (exigência 8 do I-1)."""
     with open(caminho, "w", encoding="utf-8", newline="") as arquivo:
-        # `lineterminator="\n"`: o padrão do módulo é `\r\n`, e um CSV com CRLF
-        # entra no repositório brigando com o `core.autocrlf` do git — que o
-        # normaliza na próxima vez que tocar no arquivo, fazendo a saída bruta
-        # deixar de ser byte a byte o que o instrumento escreveu.
         escritor = csv.writer(arquivo, lineterminator="\n")
         escritor.writerow(
             [
@@ -578,20 +510,7 @@ def escrever_csv(
 
 
 def _avisar_taxa_identica(medidas: list[Medida]) -> list[str]:
-    """O controle negativo embutido do E-2, e ele é de graça.
-
-    Se dois nós contarem EXATAMENTE o mesmo número de relatórios, desconfie do
-    instrumento antes de comemorar: pode estar lendo o mesmo nó duas vezes. O
-    plano pede isto para o par vpad-x-físico; aqui vale para QUALQUER par,
-    porque a pergunta ("é o mesmo nó?") é a mesma e o par vpad-x-vpad é tão
-    capaz de denunciar o defeito quanto o outro.
-
-    Contagem igual **não é prova de defeito** — dois vpads alimentados pelo
-    mesmo laço do daemon empatam de verdade. O aviso pede conferência: se os
-    apelidos e os MACs são distintos, o empate é do produto, não do
-    instrumento. É a armadilha `A-10`: controle negativo não prova obediência
-    por si só.
-    """
+    """O controle negativo embutido do E-2, e ele é de graça."""
     avisos = []
     vivas = [m for m in medidas if m.relatorios]
     for i, uma in enumerate(vivas):
@@ -735,8 +654,6 @@ def main() -> int:
     for aviso in _avisar_taxa_identica(medidas):
         print(f"\n  ATENÇÃO (controle negativo): {aviso}")
 
-    # A identidade é RESOLVIDA DE NOVO no fim: se um nó trocou de dono no meio
-    # da janela, a linha acima fala de um aparelho que já não estava lá.
     depois = {a.hidraw: a.mac for a in descobrir_aparelhos()}
     mudou = [
         m.aparelho.hidraw

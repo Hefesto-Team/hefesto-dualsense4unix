@@ -1,24 +1,10 @@
-"""Testes opt-in com Gtk REAL (AUDIT-FINDING-COVERAGE-ACTIONS-ZERO-01).
-
-Complementam `test_input_actions.py` (que usa `_FakeListStore` para rodar
-sem PyGObject) exercitando o `InputActionsMixin` contra `Gtk.ListStore`
-real. Skipados quando PyGObject está indisponível ou
-`Gtk.require_version('3.0')` falha (armadilha A-12).
-
-Razão: `_FakeListStore` pode mascarar bugs onde o mixin assume detalhes
-do `Gtk.ListStore` real (ex.: tipo de coluna, iteração, get_iter por path).
-Estes testes validam a integração no ambiente que tem PyGObject habilitado
-(dev local com `--with-tray`, CI com `python3-gi` no runner).
-"""
+"""Testes opt-in com Gtk REAL (AUDIT-FINDING-COVERAGE-ACTIONS-ZERO-01)."""
 from __future__ import annotations
 
 from typing import Any
 
 import pytest
 
-# Probe não-fatal: se `gi`/Gtk indisponíveis, pytest skipa o módulo inteiro.
-# Também detecta stubs ModuleType (outros testes desta suite injetam stubs
-# em sys.modules["gi.repository.Gtk"] — são `ModuleType`, não o pacote real).
 GTK_AVAILABLE = False
 try:
     import types as _types_probe
@@ -28,8 +14,6 @@ try:
     _gi_probe.require_version("Gtk", "3.0")
     from gi.repository import Gtk as _GtkReal
 
-    # Stubs dos demais testes são `types.ModuleType` puros sem `ListStore`.
-    # O PyGObject real expõe `Gtk.ListStore`, `Gtk.TreeView`, `Gtk.Template`.
     if (
         not isinstance(_GtkReal, _types_probe.ModuleType)
         or hasattr(_GtkReal, "ListStore")
@@ -38,13 +22,6 @@ try:
 except Exception:  # pragma: no cover — sem PyGObject
     GTK_AVAILABLE = False
 
-# CI-GTK-REAL-SEM-DISPLAY-01: ter o PyGObject não basta — Gtk REAL sem
-# servidor gráfico é comportamento indefinido. No runner do GitHub estes três
-# testes não pulavam (o `gi` está lá e expõe `ListStore`), rodavam, e o job
-# MORRIA em seguida sem sequer imprimir o sumário do pytest. Quem depende de
-# Gtk de verdade depende do ambiente de verdade: sem `DISPLAY` nem
-# `WAYLAND_DISPLAY`, o honesto é pular — e aparecer como `skipped`, não como
-# um job abortado sem explicação.
 import os as _os_probe
 
 if GTK_AVAILABLE and not (
@@ -82,10 +59,6 @@ def _build_mixin_with_real_store() -> Any:
     for name in (
         "_resolve_effective_bindings",
         "_refresh_key_bindings_from_draft",
-        # TECLADO-QUE-NAO-DIGITA-01: o refresh passou a repintar a
-        # legenda (a frase que nomeia os botões sem tecla). A composição
-        # deste arquivo liga método por método — sem esta linha o refresh
-        # morre de AttributeError e o teste acusa a cura, não o defeito.
         "_atualizar_legenda",
         "on_key_binding_add",
         "on_key_binding_remove",

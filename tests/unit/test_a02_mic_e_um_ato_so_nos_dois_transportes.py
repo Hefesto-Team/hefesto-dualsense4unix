@@ -75,12 +75,8 @@ from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     tem_canal_de_captura,
 )
 
-#: MAC da faixa sintética desta casa — há DOIS portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 
-#: O CSV é o dono do que cada transporte aciona, e ele é lido, nunca digitado:
-#: cravar "sim"/"parcial" aqui faria esta régua envelhecer calada no dia em que
-#: alguém remedisse o aparelho.
 CSV = RAIZ / "docs/data/mapa-controles.csv"
 
 
@@ -99,11 +95,6 @@ def _linha_do_csv(chave: str) -> dict[str, str]:
     raise AssertionError(f"{chave!r} sumiu do mapa-controles.csv")
 
 
-# ===========================================================================
-# 1. O CSV é a testemunha — e ele diz o contrário do que a frase dizia
-# ===========================================================================
-
-
 def test_o_csv_diz_que_quem_e_parcial_no_microfone_e_o_radio() -> None:
     """A medição que derruba a frase. Se ela mudar, esta régua muda junto."""
     for chave in ("audio.microfone", "audio.microfone.mudo"):
@@ -118,25 +109,7 @@ def test_o_csv_diz_que_quem_e_parcial_no_microfone_e_o_radio() -> None:
 
 
 def test_o_alto_falante_age_pelo_radio_e_o_canal_continua_declarado() -> None:
-    """No rádio o alto-falante AGE — e a diferença de canal continua declarada.
-
-    Toda frase que condiciona o microfone ao transporte caiu nesta leva. O
-    alto-falante era a exceção: até 18/09/2026 esta régua se chamava
-    `test_a_unica_assimetria_real_do_bloco_de_som_e_o_alto_falante` e exigia
-    `radio_aciona == "não"`. **O fato caiu:** o som saiu do plástico pelo rádio
-    em 10/09 (report `0x35`, 70 s com a orelha dela), a háptica passou pelo
-    mesmo fio em 18/09, e o commit `9f1920152` virou a célula com a régua que
-    morde.
-
-    O QUE CONTINUA VERDADEIRO é a declaração do CSV (*"o descritor de cabo não
-    tem report de saída de áudio"*, medido no aparelho dela em 11/08/2026): o
-    MECANISMO difere — no cabo o som vai pelo ALSA/PipeWire, no rádio pelo HID
-    `0x35` —, e é essa declaração que explica ao portão de paridade por que os
-    dois canais não são o mesmo. A régua cobra as duas metades: o rádio
-    aciona, e a diferença de canal continua declarada. O CABO fica de fora de
-    propósito: ele é `parcial` por uma ressalva medida (a rota "Sons do jogo"
-    não foi medida lá), e esta régua não afirma mais do que o mapa sabe.
-    """
+    """No rádio o alto-falante AGE — e a diferença de canal continua declarada."""
     linha = _linha_do_csv("audio.alto_falante")
     assert linha["radio_aciona"] == "sim", (
         "o alto-falante voltou a não acionar no rádio — o `0x35` e a háptica "
@@ -146,11 +119,6 @@ def test_o_alto_falante_age_pelo_radio_e_o_canal_continua_declarado() -> None:
         "a assimetria de CANAL do alto-falante perdeu a declaração — sem ela o "
         "portão de paridade não sabe por que cabo e rádio usam canais diferentes"
     )
-
-
-# ===========================================================================
-# 2. A regra do produto: o transporte SAIU dela
-# ===========================================================================
 
 
 class TestARegraDoProduto:
@@ -167,7 +135,6 @@ class TestARegraDoProduto:
         assert tem_canal_de_captura(_dados()) is True
         assert tem_canal_de_captura(_dados(adotado=False)) is False
         assert tem_canal_de_captura(_dados(uniq="")) is False
-        # O endereço não é sobre o canal: é sobre onde a escolha é GRAVADA.
         assert tem_canal_de_captura(_dados(endereco="")) is True
         assert pode_ligar_o_mic(_dados(endereco="")) is False
 
@@ -179,13 +146,7 @@ class TestARegraDoProduto:
         assert dica_do_microfone(_dados(no_cabo=False)) == DICA_MIC_NO_RADIO
 
     def test_a_dica_do_cabo_e_informacao_e_nao_recusa(self) -> None:
-        """MORDIDA 3: devolva "Só vale no rádio" e isto reprova.
-
-        As três afirmações da frase antiga, e as três estavam erradas: a ordem
-        dos transportes, o nome da capacidade (era a ponte) e o *"já funciona
-        sem ela"* — pelo cabo o canal existe e nasce `SUSPENDED`, e existir não
-        é ser ouvido.
-        """
+        """MORDIDA 3: devolva "Só vale no rádio" e isto reprova."""
         baixa = DICA_MIC_NO_CABO.lower()
         for proibida in ("só vale", "não passa", "sem ela"):
             assert proibida not in baixa, (
@@ -193,11 +154,6 @@ class TestARegraDoProduto:
                 f"por onde o canal vem, nunca recusa"
             )
         assert "já existe" in baixa
-
-
-# ===========================================================================
-# 3. O gesto da aba 02 — o botão que ela clicou
-# ===========================================================================
 
 
 class PonteDeMentira:
@@ -230,13 +186,7 @@ def _gesto(nome: str):
 
 
 def test_o_virtual_grava_no_cabo(no_cabo, monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA 1, do lado do botão: o "Virtual" GRAVA com o controle no cabo.
-
-    Era exatamente aqui que a frase dela aparecia. A declaração é DURÁVEL e não
-    acende nada no cabo — `bt_mic.alvos()` só enxerga nós de Bluetooth —, então
-    gravá-la não mente sobre som nenhum: ela vale quando o controle voltar ao
-    rádio, que é a mesma natureza que o "Nativo" sempre teve.
-    """
+    """MORDIDA 1, do lado do botão: o "Virtual" GRAVA com o controle no cabo."""
     import pacotes.a02_controles as a02
 
     monkeypatch.setattr(a02, "_controles_declarados", lambda **_: {})
@@ -250,18 +200,7 @@ def test_o_virtual_grava_no_cabo(no_cabo, monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_o_gesto_pergunta_ao_produto(monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA 2, e ela existe porque a primeira redação desta cura CAIU nela.
-
-    O gesto tinha COPIADO as duas perguntas de `pode_ligar_o_mic` em vez de
-    chamá-lo. Com a cópia, devolver o `not no_cabo` ao produto deixaria a janela
-    ANTIGA recusando no cabo e esta ACEITANDO — duas verdades sobre o mesmo
-    botão, e nenhuma régua desta casa veria. Medido: com a cópia, a mordida (1)
-    passou verde.
-
-    A régua não lê o texto do arquivo: ela troca a função do produto por uma que
-    RECUSA e cobra que o gesto obedeça. Ler o fonte mediria a PALAVRA; isto mede
-    o ATO.
-    """
+    """MORDIDA 2, e ela existe porque a primeira redação desta cura CAIU nela."""
     import pacotes
     import pacotes.a02_controles as a02
 
@@ -277,19 +216,7 @@ def test_o_gesto_pergunta_ao_produto(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_nativo_tambem_pergunta_ao_produto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A guarda vale para os DOIS botões, e antes valia só para o "Virtual".
-
-    Declarar "Nativo" sem endereço também não tem onde pousar — a chave do
-    `maquina.json` são doze hexa, e sem eles a gravação iria para um controle
-    que não existe.
-
-    O `uniq` sem um dígito hex é o caso em que `norm_mac` devolve `None`, e é o
-    único em que a recusa é DAQUI. Um `uniq` com hex a menos (medido:
-    `norm_mac("sem-mac")` = `"eac"`) passa por esta guarda e quem recusa é o
-    DONO da chave — o validador do `maquina.py`, que exige doze hex minúsculos e
-    ainda barra o endereço SINTETIZADO. Repetir aquelas duas regras aqui seria a
-    segunda declaração do mesmo formato, e a que envelheceria calada.
-    """
+    """A guarda vale para os DOIS botões, e antes valia só para o "Virtual"."""
     import pacotes
     import pacotes.a02_controles as a02
 
@@ -330,13 +257,7 @@ def test_no_radio_o_virtual_continua_gravando(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_a_aba_02_nao_condiciona_mais_o_microfone_ao_transporte() -> None:
-    """A varredura: nenhuma frase da aba recusa o microfone por transporte.
-
-    Ela é sobre as CONSTANTES de texto do gerador e do pacote, que são o que vai
-    para o `title` da tela. As frases que descrevem o que o transporte MUDA (a
-    taxa do giroscópio) continuam — o que não pode voltar é a que diz que o
-    microfone não vale num deles.
-    """
+    """A varredura: nenhuma frase da aba recusa o microfone por transporte."""
     import aba02
 
     import pacotes.a02_controles as a02

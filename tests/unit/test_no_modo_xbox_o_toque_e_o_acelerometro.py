@@ -1,25 +1,4 @@
-"""NO-MODO-XBOX-TUDO-FUNCIONA-01 — no modo Xbox, o toque e a inclinação chegam.
-
-A ordem dela, 27/09 à noite: *«se tiver no modo xbox é pra literalmente tudo
-isso funcionar.»* E a resposta dela às perguntas 1 a 3 da sprint, 28/09 por volta
-das 16h50, em escolhas: **os dois** arranjos — (a) o touchpad move o cursor e o
-acelerômetro vira analógico, um chip por controle como a Mira Virtual; (b) o
-touchpad em zonas vira botões (direcional, L1, L2), para quem não os alcança —,
-**por perfil de jogo**, e quem valida é ela.
-
-O pad do modo Xbox é o Xbox 360, e ele não tem touchpad nem sensor: o jogo nunca
-veria o dedo nem a inclinação. A cura é TRADUÇÃO, como a da Mira: o toque vira
-botão do Xbox 360 ou cursor do computador, e a inclinação vira analógico. A
-regra pura é `core/roteador_de_movimento.py`; o motor, `daemon/subsystems/
-gamepad.py` (`aplicar_o_toque`, e a inclinação dentro de `aplicar_o_movimento`),
-chamado pelos dois laços do tique, P1 a P4. O nó do touchpad da peça fica
-grabado pelo hub enquanto a rota anda (`SensorHub.toque_da_peca`), para o dedo
-não mover também o ponteiro do computador.
-
-Os MACs são da faixa forjada (`aa:bb:cc`, octetos 4 e 5 zerados). Nenhum nó de
-kernel nasce: o `evdev` e o `uinput` são de mentira, e gravam o que o kernel
-receberia. Cada seção diz a sua MORDIDA.
-"""
+"""NO-MODO-XBOX-TUDO-FUNCIONA-01 — no modo Xbox, o toque e a inclinação chegam."""
 
 from __future__ import annotations
 
@@ -72,13 +51,9 @@ _P1, _P2, _P3, _P4 = (
 
 #: O touchpad do DualSense, nas unidades do kernel (`TouchpadReader`).
 _LARGURA, _ALTURA = 1920, 1080
-#: Um dedo no meio do alto da parte do direcional (o terço de cima do
-#: retângulo dos dois terços da esquerda): o direcional para cima.
 _DEDO_NO_CIMA = (640, 60)
-#: No terço da direita: em cima é o L1, embaixo é o L2.
 _DEDO_NO_L1 = (1700, 200)
 _DEDO_NO_L2 = (1700, 900)
-#: A gravidade de um controle na mesa, em g (y sai da face, SDL/`hid-playstation`).
 _DEITADO = (0.0, 1.0, 0.0)
 
 
@@ -115,18 +90,8 @@ def _toque(*dedos: tuple[int, int]) -> TouchState:
     )
 
 
-# ===========================================================================
-# 1 — o perfil: dois campos novos DENTRO de `movimento`
-# ===========================================================================
-
-
 class TestOPerfil:
-    """A resposta dela é por perfil de jogo, e a seção é a da Mira.
-
-    MORDIDA: dê a `toque` ou a `acelerometro` um padrão ligado e
-    `test_nascem_sem_opiniao` reprova; tire o serializador e
-    `test_o_perfil_de_ontem_sai_igual` reprova.
-    """
+    """A resposta dela é por perfil de jogo, e a seção é a da Mira."""
 
     def test_nascem_sem_opiniao(self) -> None:
         secao = ProfileMovimentoConfig()
@@ -165,18 +130,8 @@ class TestOPerfil:
         assert arranjo.destino == "analogico_direito" and arranjo.sensibilidade == 8
 
 
-# ===========================================================================
-# 2 — a regra pura
-# ===========================================================================
-
-
 class TestAsZonas:
-    """O direcional nos dois terços da esquerda; L1 e L2 no terço da direita.
-
-    MORDIDA: troque, em `botoes_das_zonas`, o `BOTAO_DA_ZONA_DE_BAIXO` pelo
-    nome da tela (`"l2"`) e `test_o_l2_fala_a_lingua_do_leitor` reprova — o L2
-    da zona nunca ligaria o gatilho do jogo nem o «Só enquanto eu segurar».
-    """
+    """O direcional nos dois terços da esquerda; L1 e L2 no terço da direita."""
 
     def _z(self, *dedos: tuple[int, int]) -> frozenset[str]:
         return rot.botoes_das_zonas(dedos, _LARGURA, _ALTURA)
@@ -206,11 +161,7 @@ class TestAsZonas:
 
 
 class TestAInclinacao:
-    """O acelerômetro vira analógico: zona morta, teto, sentido e sensibilidade.
-
-    MORDIDA: tire a zona morta de `deflexao_da_inclinacao` e
-    `test_a_mao_que_respira_nao_anda` reprova.
-    """
+    """O acelerômetro vira analógico: zona morta, teto, sentido e sensibilidade."""
 
     def _a(self, **kw: Any) -> rot.ArranjoDeMovimento:
         return rot.ArranjoDeMovimento(acelerometro=rot.DESTINO_ANALOGICO_ESQUERDO, **kw)
@@ -258,11 +209,7 @@ class TestAInclinacao:
 
 
 class TestONeutroEODedo:
-    """As duas memórias por peça, no `store`, e o silêncio que recomeça.
-
-    MORDIDA: faça `neutro_da_inclinacao` guardar para sempre o primeiro
-    retrato (sem o silêncio) e `test_o_silencio_recentra` reprova.
-    """
+    """As duas memórias por peça, no `store`, e o silêncio que recomeça."""
 
     def test_o_silencio_recentra(self) -> None:
         store = SimpleNamespace()
@@ -309,11 +256,7 @@ class TestONeutroEODedo:
 
 
 class TestORoteador:
-    """A peça que só toca ou só inclina entra no tique; a Mira segue sendo o giro.
-
-    MORDIDA: devolva o `ativo()` ao `valor.ligado` e `test_so_o_toque_entra_no_tique`
-    reprova — a peça do toque ficaria fora dos dois laços.
-    """
+    """A peça que só toca ou só inclina entra no tique; a Mira segue sendo o giro."""
 
     def test_so_o_toque_entra_no_tique(self) -> None:
         store = SimpleNamespace()
@@ -349,7 +292,7 @@ class TestOReportDoUhid:
     def _janela(self) -> bytes:
         janela = bytearray(range(1, TAMANHO_DA_JANELA + 1))
         for contato in CONTATOS_DO_TOQUE:
-            janela[contato] = 0x05  # dedo 5, APOIADO (bit 7 apagado)
+            janela[contato] = 0x05
         return bytes(janela)
 
     def test_o_dedo_roteado_sai(self) -> None:
@@ -372,11 +315,6 @@ class TestOReportDoUhid:
         rot.sincronizar_o_filtro(store)
         janela = self._janela()
         assert REGISTRO.filtrar(_P2, janela) is janela
-
-
-# ===========================================================================
-# 3 — o hub: o acelerômetro, o dedo e o nó grabado
-# ===========================================================================
 
 
 class _Relogio:
@@ -456,9 +394,7 @@ def _hub(
 
 
 class TestOHub:
-    """MORDIDA: tire a chamada de `_reconciliar_grabs_do_toque` do `reconciliar`
-    e `test_o_no_do_toque_fica_com_o_hefesto_enquanto_a_rota_anda` reprova — o dedo
-    que aperta a zona moveria também o ponteiro do computador."""
+    """MORDIDA: tire a chamada de `_reconciliar_grabs_do_toque` do `reconciliar`"""
 
     def test_o_no_do_toque_fica_com_o_hefesto_enquanto_a_rota_anda(self) -> None:
         relogio = _Relogio()
@@ -491,11 +427,6 @@ class TestOHub:
         hub.reconciliar()
         acel = hub.aceleracao_do_movimento(_P3)
         assert acel is not None and acel[2] > 0.3
-
-
-# ===========================================================================
-# 4 — o P1 no modo Xbox, no daemon de verdade, com o Xbox 360 da fábrica
-# ===========================================================================
 
 
 class _AbsInfo(NamedTuple):
@@ -613,12 +544,7 @@ class _CursorDeMentira:
 
 
 class TestOP1NoModoXbox:
-    """O P1 no modo Xbox: o pad é o Xbox 360 da fábrica, e o jogo recebe as rotas.
-
-    MORDIDA: tire a chamada de `aplicar_o_toque` do `dispatch_gamepad` e
-    `test_a_zona_chega_ao_xbox_360` reprova; tire o `_a_inclinacao` de
-    `aplicar_o_movimento` e `test_a_inclinacao_chega_ao_xbox_360` reprova.
-    """
+    """O P1 no modo Xbox: o pad é o Xbox 360 da fábrica, e o jogo recebe as rotas."""
 
     def _tiques(
         self, monkeypatch: pytest.MonkeyPatch, daemon: Daemon, hub: SensorHub
@@ -681,11 +607,7 @@ class TestOP1NoModoXbox:
     def test_a_inclinacao_no_analogico_direito(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
     ) -> None:
-        """O chip embaixo do analógico DIREITO move o direito, e só ele.
-
-        MORDIDA: faça `_a_inclinacao` somar sempre ao esquerdo e este teste
-        reprova (conferência de 28/09: o destino direito não tinha régua).
-        """
+        """O chip embaixo do analógico DIREITO move o direito, e só ele."""
         movimento = _LeitorDeMovimento(_DEITADO)
         hub = _hub({_P1: movimento}, {})
         perfil = Profile(
@@ -707,11 +629,7 @@ class TestOP1NoModoXbox:
     def test_o_cursor_do_toque_nasce_e_sai_com_o_controle_virtual(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
     ) -> None:
-        """O `Daemon` real cria o cursor na primeira vez; ele sai com o pad.
-
-        MORDIDA: tire o `soltar_o_cursor_do_toque` do `stop_gamepad_emulation`
-        e o nó do cursor fica de pé sem controle virtual.
-        """
+        """O `Daemon` real cria o cursor na primeira vez; ele sai com o pad."""
         criados: list[_CursorDeMentira] = []
 
         def _fabrica() -> _CursorDeMentira:
@@ -744,11 +662,6 @@ class TestOP1NoModoXbox:
         gp.stop_gamepad_emulation(daemon, persist=False)
         assert cursor.parado, "o cursor do toque ficou de pé sem o controle virtual"
         assert getattr(daemon, "_cursor_do_toque", None) is None
-
-
-# ===========================================================================
-# 5 — os jogadores 2 a 4
-# ===========================================================================
 
 
 class _VpadDoJogador:
@@ -806,11 +719,7 @@ def _mesa_dos_secundarios(
 
 
 class TestOsJogadores2a4:
-    """*«cara nenhuma solução pode ser feita só pro p1»* — vale aqui também.
-
-    MORDIDA: tire a chamada de `aplicar_o_toque` do `coop.forward_all` e
-    `test_cada_jogador_aperta_a_propria_zona` reprova.
-    """
+    """*«cara nenhuma solução pode ser feita só pro p1»* — vale aqui também."""
 
     def test_cada_jogador_aperta_a_propria_zona(self, monkeypatch: pytest.MonkeyPatch) -> None:
         dedos = {_P2: _toque(_DEDO_NO_CIMA), _P3: _toque(), _P4: _toque(_DEDO_NO_L1)}
@@ -840,7 +749,6 @@ class TestOsJogadores2a4:
                 return acel[uniq]
 
         arranjo = rot.montar(ProfileMovimentoConfig(acelerometro="analogico_esquerdo"))
-        # O neutro de partida é a mesa: cada peça começa deitada.
         store_de_partida: dict[str, Any] = {}
         monkeypatch.setattr(
             rot, "neutro_da_inclinacao",
@@ -853,20 +761,10 @@ class TestOsJogadores2a4:
         assert vpads[_P4].analog[0]["lx"] == 128, "o P4 estava na mesa e andou"
 
 
-# ===========================================================================
-# 6 — o L2 da zona liga o «Só enquanto eu segurar» da Mira
-# ===========================================================================
-
-
 def test_o_l2_da_zona_liga_a_mira_de_quem_nao_alcanca_o_l2(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O toque entra na MÃO antes da Mira: a zona do L2 é o L2 do gatilho dela.
-
-    MORDIDA: passe ao `aplicar_o_movimento` do `dispatch_gamepad` o
-    `buttons_pressed` original, em vez dos botões com as zonas, e este teste
-    reprova — quem não alcança o L2 não teria como mirar «só enquanto segura».
-    """
+    """O toque entra na MÃO antes da Mira: a zona do L2 é o L2 do gatilho dela."""
 
     class _Hub:
         def velocidade_do_movimento(self, uniq: str) -> Any:
@@ -900,19 +798,8 @@ def test_o_l2_da_zona_liga_a_mira_de_quem_nao_alcanca_o_l2(
     assert vpad.analog[0]["rx"] != 128, "a zona do L2 não ligou a Mira do gatilho L2"
 
 
-# ===========================================================================
-# 7 — a Navegação fica com o computador
-# ===========================================================================
-
-
 def test_na_navegacao_o_toque_e_o_do_computador(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem controle virtual, o dedo segue sendo o ponteiro e a inclinação não move nada.
-
-    Decidido pelo padrão dela (o que custa menos a quem joga): o arranjo é do
-    JOGO. MORDIDA: tire o `not na_navegacao` da inclinação em
-    `aplicar_o_movimento` e este teste reprova — o controle torto na mão
-    moveria o cursor do computador.
-    """
+    """Sem controle virtual, o dedo segue sendo o ponteiro e a inclinação não move nada."""
     from hefesto_dualsense4unix.daemon.subsystems import mouse as mo
 
     perguntas: list[str] = []
@@ -947,11 +834,6 @@ def test_na_navegacao_o_toque_e_o_do_computador(monkeypatch: pytest.MonkeyPatch)
     assert perguntas == [], f"a Navegação perguntou pelo {perguntas}"
 
 
-# ===========================================================================
-# 8 — o IPC: o `mira.set` só ganha campos
-# ===========================================================================
-
-
 @pytest.fixture
 def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     from hefesto_dualsense4unix.profiles import loader as loader_module
@@ -983,8 +865,7 @@ def _mira_set(servidor: IpcServer, **params: Any) -> dict[str, Any]:
 
 
 class TestOIpc:
-    """MORDIDA: tire o `"toque"` de `_CAMPOS_DA_MIRA` e `test_os_dois_chips_gravam_na_peca`
-    reprova com a recusa do campo desconhecido."""
+    """MORDIDA: tire o `"toque"` de `_CAMPOS_DA_MIRA` e `test_os_dois_chips_gravam_na_peca`"""
 
     def test_os_dois_chips_gravam_na_peca(self, perfis: Path, tmp_path: Path) -> None:
         from hefesto_dualsense4unix.profiles.loader import load_profile
@@ -1059,11 +940,7 @@ class TestOIpc:
 
 
 def test_um_perfil_com_o_toque_por_peca_chega_ao_tique() -> None:
-    """O perfil do jogo diz o toque de UMA peça, e só ela o leva.
-
-    É a resposta 2 dela: por perfil de jogo. O depósito é o do gerente, como
-    está (`ProfileManager.apply_movimento`).
-    """
+    """O perfil do jogo diz o toque de UMA peça, e só ela o leva."""
     store = SimpleNamespace()
     gerente = ProfileManager.__new__(ProfileManager)
     gerente.store = store  # type: ignore[attr-defined]
@@ -1079,11 +956,6 @@ def test_um_perfil_com_o_toque_por_peca_chega_ao_tique() -> None:
     assert rot.da_peca(store, _P2, mesa).toque == "zonas"  # type: ignore[union-attr]
     assert rot.da_peca(store, _P3, mesa) is None
     assert REGISTRO.toque_roteado(_P2) and not REGISTRO.toque_roteado(_P3)
-
-
-# ===========================================================================
-# 9 — o nó do cursor: o resto sub-pixel e o clique da mesa
-# ===========================================================================
 
 
 class _DispositivoDeMentira:
@@ -1115,9 +987,7 @@ def _uinput_que_grava(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
 
 
 class TestOCursorDoToque:
-    """MORDIDA: tire o resto sub-pixel de `CursorDoToque.mover` (trunque cada
-    passo) e `test_o_dedo_devagar_ainda_anda` reprova — o dedo lento nunca
-    moveria o cursor."""
+    """MORDIDA: tire o resto sub-pixel de `CursorDoToque.mover` (trunque cada"""
 
     def test_o_dedo_devagar_ainda_anda(self, _uinput_que_grava: types.ModuleType) -> None:
         from hefesto_dualsense4unix.integrations.uinput_mouse import CursorDoToque
@@ -1144,17 +1014,6 @@ class TestOCursorDoToque:
         assert no.destruido, "o nó do cursor ficou de pé depois do stop"
 
 
-# ===========================================================================
-# 10 — o clique do cursor não prende (conferência de 28/09)
-# ===========================================================================
-#
-# O nó do cursor é um ponteiro do COMPUTADOR: um botão esquerdo que fica
-# apertado arrasta tudo o que ela tocar depois, com o mouse de verdade também.
-# O clique só soltava quando a MESMA peça dizia «soltei»; a peça que saía do
-# cursor, cujo leitor sumia ou que deixava o laço (o controle que desligou no
-# meio de um arrasto) deixava o botão preso até o controle virtual cair.
-
-
 def _daemon_do_cursor(
     store: Any, hub: Any, cursor: Any, gamepad_device: Any = None
 ) -> SimpleNamespace:
@@ -1168,10 +1027,7 @@ def _daemon_do_cursor(
 
 
 class TestOCliqueNaoPrende:
-    """MORDIDA: tire o `_largar_o_clique` de `aplicar_o_toque` e as duas
-    primeiras reprovam; tire a validade do clique de `CursorDoToque.conferir`
-    e a do jogador que sumiu reprova; devolva ao `dispatch_gamepad` o «só solta
-    sem arranjo nenhum» e a do nó sem dono reprova."""
+    """MORDIDA: tire o `_largar_o_clique` de `aplicar_o_toque` e as duas"""
 
     def _cursor(self) -> Any:
         from hefesto_dualsense4unix.integrations.uinput_mouse import CursorDoToque

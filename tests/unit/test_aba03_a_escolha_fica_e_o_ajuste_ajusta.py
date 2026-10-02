@@ -45,47 +45,22 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "03-gatilhos.html"
 
-#: O MAC é da faixa sintética da casa (`aa:bb:cc`): há dois portões de anonimato
-#: nesta árvore e eles não perdoam.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "transport": "usb", "is_primary": True,
          "inputs": {"l2_raw": 0, "r2_raw": 0}}
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: O QUE O DAEMON RESPONDE QUANDO O BYTE SAIU. É a forma medida em 23/08 e o
 #: contrato de `ipc_bridge.trigger_set_detalhado`.
 APLICOU = {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []}
 
 
-#: A CENA DO PERFIL, e ela é DADO — não um símbolo trocado. `_ctx()` escreve
-#: aqui e o dublê da fixture lê daqui; assim a troca de `perfil.ativo` acontece
-#: UMA vez por teste, na fixture que a desfaz, em vez de a cada chamada de
-#: `_ctx()`, num lugar que não desfazia nada.
 _PERFIL_DA_CENA: dict = {}
 
 
 @pytest.fixture(autouse=True)
 def _o_perfil_de_mentira_nao_vaza():
-    """O dublê de `perfil.ativo` VOLTA — e sem isto ele envenenava a suíte.
-
-    **MEDIDO EM 05/09/2026, por bisseção.** `_ctx()` fazia
-    ``perfil.ativo = lambda _nome: {...}`` — atribuição CRUA, sem desfazer. O
-    dublê ficava no módulo `pacotes.perfil` para todo teste que rodasse depois,
-    e ele devolve `triggers` sem parâmetros e `controllers` vazio.
-
-    O ESTRAGO ERA INVISÍVEL AQUI E APARECIA LÁ: rodando sozinho, este arquivo
-    passa; rodado antes do `test_o_casamento_das_dez`, a aba 03 casava 15
-    endereços em vez de 19 e a régua acusava uma REGRESSÃO QUE NÃO EXISTIA. O
-    próprio `PISO` daquele arquivo prevê a forma do defeito por escrito — *"sem
-    perfil, o pacote da Gatilhos emite `Desligado` nos dois lados e o piso
-    cairia por falta de DADO, não por regressão"*.
-
-    É A MESMA FAMÍLIA DO DUBLÊ DO CO-OP, curada em 04/09: um teste que troca um
-    símbolo de módulo por atribuição em vez de `monkeypatch` deixa o produto
-    inteiro medido contra a mentira dele. `autouse` porque a troca não acontece
-    numa fixture — acontece dentro de `_ctx()`, que qualquer teste chama.
-    """
+    """O dublê de `perfil.ativo` VOLTA — e sem isto ele envenenava a suíte."""
     from pacotes import perfil
 
     original = perfil.ativo
@@ -97,11 +72,7 @@ def _o_perfil_de_mentira_nao_vaza():
 
 @pytest.fixture
 def a03():
-    """O pacote, com o rascunho LIMPO — ele é estado de módulo.
-
-    Sem esta limpeza um teste herdaria o que o anterior aplicou, e a régua
-    passaria a medir a ordem em que os testes rodam.
-    """
+    """O pacote, com o rascunho LIMPO — ele é estado de módulo."""
     import pacotes  # noqa: F401  (registra os dez)
     from pacotes import a03_gatilhos
 
@@ -129,13 +100,7 @@ class _Ponte:
 
 
 def _ctx(perfil_ativo: str = "régua", modo_no_disco: str = "Off"):
-    """O contexto da mesa de um controle, com o perfil injetado pela porta de cima.
-
-    O PERFIL NÃO VAI PARA O DISCO, e é a mesma escolha do
-    `test_a_aba_gatilhos_nao_deixa_o_mockup_na_tela`: o que se mede aqui é a
-    ordem entre rascunho e perfil, não o leitor de perfis — que tem régua
-    própria.
-    """
+    """O contexto da mesa de um controle, com o perfil injetado pela porta de cima."""
     from pacotes import Contexto
 
     _PERFIL_DA_CENA.clear()
@@ -156,9 +121,6 @@ def _clicar(gesto_: str, o: dict, p) -> None:
     acao(_clicar.ctx, {"uniq": UNIQ, **o}, p)  # type: ignore[attr-defined]
 
 
-# ---------------------------------------------------------------------------
-# 1. A ESCOLHA FICA NA TELA
-# ---------------------------------------------------------------------------
 def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
     """Clicar `Rígido` e ver o campo voltar para o disco é a queixa dela.
 
@@ -181,12 +143,7 @@ def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
 
 
 def test_os_ajustes_aplicados_tambem_ficam(a03):
-    """Não é só o modo: a caixa tem de mostrar os números que foram ao aparelho.
-
-    Sem isto o modo ficaria certo e as barras mostrariam os ajustes do DISCO —
-    a tela meio verdadeira, que é pior que a falsa inteira porque parece
-    conferida.
-    """
+    """Não é só o modo: a caixa tem de mostrar os números que foram ao aparelho."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("ajuste", {"lado": "e", "i": "1", "valor": "240",
@@ -225,7 +182,6 @@ def test_o_controle_que_sai_da_mesa_leva_o_rascunho(a03):
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte())
 
-    # A MESA ESVAZIA — e o pacote é chamado, que é quando a poda roda.
     a03.pacote(Contexto(state={"active_profile": "régua"}, mesa=MESA,
                         conectados=[], estados={}))
     assert a03.pacote(ctx)["colunas"][UNIQ]["modo-chave-e"] == "Off", (
@@ -234,10 +190,7 @@ def test_o_controle_que_sai_da_mesa_leva_o_rascunho(a03):
 
 
 def test_o_rascunho_so_recebe_o_que_o_daemon_aceitou(a03):
-    """Guardar antes da resposta trocaria uma mentira por outra, pior.
-
-    Hoje a escolha SOME; sem esta guarda ela FICARIA — e seria falsa.
-    """
+    """Guardar antes da resposta trocaria uma mentira por outra, pior."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     guardado = {"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ]}
@@ -247,15 +200,8 @@ def test_o_rascunho_so_recebe_o_que_o_daemon_aceitou(a03):
         "o rascunho ficou com um efeito que o daemon GUARDOU sem mandar ao fio")
 
 
-# ---------------------------------------------------------------------------
-# 2. OS 73 AJUSTES VIRARAM AJUSTÁVEIS
-# ---------------------------------------------------------------------------
 def test_a_barra_do_produto_tem_alavanca_e_a_do_desenho_nao(a03):
-    """A alavanca é invisível e é do PRODUTO; o desenho é dela.
-
-    A MORDIDA: troque o `editavel=True` do `_blocos_da_coluna` por `False` e a
-    caixa volta a ser somente-leitura, com os 73 parâmetros fora do alcance.
-    """
+    """A alavanca é invisível e é do PRODUTO; o desenho é dela."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Machine"}, _Ponte())
@@ -278,11 +224,7 @@ def test_a_barra_do_produto_tem_alavanca_e_a_do_desenho_nao(a03):
 
 
 def test_a_faixa_da_alavanca_sai_do_produto(a03):
-    """`0..9` para uma posição do curso, `0..255` para uma força. Nunca digitado.
-
-    Uma faixa cravada poria a posição do curso numa régua trinta vezes maior, e
-    arrastar até o fim mandaria 255 num campo que aceita 9.
-    """
+    """`0..9` para uma posição do curso, `0..255` para uma força. Nunca digitado."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Machine"}, _Ponte())
@@ -295,11 +237,7 @@ def test_a_faixa_da_alavanca_sai_do_produto(a03):
 
 
 def test_o_lugar_sem_aparelho_nao_ganha_alavanca(a03):
-    """Arrastar onde não há controle só pode terminar em recusa.
-
-    É a mesma regra que o `pointer-events:none` do CSS já aplica aos `<select>`
-    das colunas vazias.
-    """
+    """Arrastar onde não há controle só pode terminar em recusa."""
     ctx = _ctx(modo_no_disco="Rigid")
     caixa = a03.pacote(ctx)["blocos"]['[data-controle="p3"] .ajustes.e']
     assert 'type="range"' not in caixa, (
@@ -307,12 +245,7 @@ def test_o_lugar_sem_aparelho_nao_ganha_alavanca(a03):
 
 
 def test_o_ajuste_manda_a_lista_inteira_com_um_numero_trocado(a03):
-    """O daemon lê a lista posicional INTEIRA — mandar só o número mexido apaga
-    o que ela não tocou.
-
-    A MORDIDA: troque `params[i] = ...` por `params = [valor]` no gesto e esta
-    régua reprova, dizendo qual lista chegou.
-    """
+    """O daemon lê a lista posicional INTEIRA — mandar só o número mexido apaga"""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     p = _Ponte()
@@ -325,17 +258,7 @@ def test_o_ajuste_manda_a_lista_inteira_com_um_numero_trocado(a03):
 
 
 def test_o_click_nao_repete_o_change_da_alavanca(a03):
-    """Uma alavanca dispara `change` E `click` no mesmo gesto, com o mesmo valor.
-
-    Sem guarda, cada arrasto vira DOIS pedidos idênticos ao daemon. É o que o
-    debounce de 300 ms da GTK resolve do outro lado.
-
-    A GUARDA É A IGUALDADE, e não o nome do evento — as DUAS metades estão
-    medidas aqui: o segundo pedido idêntico é calado, e um pedido DIFERENTE
-    passa mesmo vindo de um `click`. Recusar todo `click` calaria também o
-    clique sintético da régua desta casa (`--prova-clique` faz `el.click()`),
-    e a tela ganharia verde sobre uma alavanca nunca tocada.
-    """
+    """Uma alavanca dispara `change` E `click` no mesmo gesto, com o mesmo valor."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     forma = {"modo-chave-e": "Rigid", "aj-val-e-0": "0", "aj-val-e-1": "180"}
@@ -355,12 +278,7 @@ def test_o_click_nao_repete_o_change_da_alavanca(a03):
 
 
 def test_montar_do_zero_deixa_de_ser_um_item_de_menu_que_nao_faz_nada(a03):
-    """`Custom` = byte de modo + 7 forças, e os oito padrões são ZERO.
-
-    Sem alavanca, escolher "Montar do zero" mandava `[0]*8` — modo 0 com sete
-    forças zeradas — e a tela dizia "aplicado" com o gatilho intacto. É a
-    `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` num item de menu.
-    """
+    """`Custom` = byte de modo + 7 forças, e os oito padrões são ZERO."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "d", "valor": "Custom"}, _Ponte())
@@ -372,16 +290,8 @@ def test_montar_do_zero_deixa_de_ser_um_item_de_menu_que_nao_faz_nada(a03):
         f"os oito ajustes do `Custom` não são alcançáveis:\n{caixa}")
 
 
-# ---------------------------------------------------------------------------
-# 3. AS SEIS CURVAS QUE A TELA NÃO ALCANÇAVA
-# ---------------------------------------------------------------------------
 def test_a_sexta_curva_de_feedback_entrou(a03):
-    """`linear_medio` existe no produto desde antes desta aba, e a lista digitada
-    à mão no gerador a esqueceu.
-
-    O gerador reprova um rótulo que o produto NÃO tem, e nunca um que o produto
-    tem e a tela esqueceu — esta régua é a que faltava, do outro lado.
-    """
+    """`linear_medio` existe no produto desde antes desta aba, e a lista digitada"""
     tp = a03._prontos()
     opcoes = a03.html_das_opcoes_de_pronto()
     for chave, rotulo in tp.FEEDBACK_POSITION_LABELS.items():
@@ -392,14 +302,7 @@ def test_a_sexta_curva_de_feedback_entrou(a03):
 
 
 def test_as_cinco_curvas_de_vibracao_existem_no_modo_delas(a03):
-    """Com o gatilho em `MultiPositionVibration` o campo mostra as CINCO.
-
-    É a regra da GTK (`_populate_preset_combo`), e sem ela as curvas de vibração
-    do produto não tinham como chegar ao aparelho por esta tela.
-
-    A MORDIDA: faça `html_das_opcoes_de_pronto` ignorar o argumento e as cinco
-    somem — e o gesto passa a receber uma chave que a lista não oferece.
-    """
+    """Com o gatilho em `MultiPositionVibration` o campo mostra as CINCO."""
     tp = a03._prontos()
     opcoes = a03.html_das_opcoes_de_pronto(a03.MODO_DA_VIBRACAO)
     for chave, rotulo in tp.VIBRATION_POSITION_LABELS.items():
@@ -417,12 +320,7 @@ def test_as_cinco_curvas_de_vibracao_existem_no_modo_delas(a03):
 
 
 def test_a_curva_de_vibracao_vai_no_modo_dela_e_nas_posicoes(a03):
-    """Dez posições nos `pos_*`, a frequência no padrão do modo.
-
-    Alinhar por índice poria a posição 0 debaixo do rótulo "Frequência" — um
-    número certo com o nome errado, e o efeito errado no fio. É a mesma cura que
-    `_on_preset_changed` da GTK escreve pulando o slider de frequência.
-    """
+    """Dez posições nos `pos_*`, a frequência no padrão do modo."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     p = _Ponte()
@@ -441,9 +339,6 @@ def test_a_curva_de_vibracao_vai_no_modo_dela_e_nas_posicoes(a03):
         f"a curva de vibração não chegou como vibração: {p.chamadas}")
 
 
-# ---------------------------------------------------------------------------
-# 4. O DESFECHO CHEGA À TELA
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("corpo", "pedaco"),
     [
@@ -481,23 +376,14 @@ def test_o_que_nao_chegou_ao_gatilho_e_dito(a03, corpo, pedaco):
 
 
 def test_o_que_chegou_ao_gatilho_nao_vira_recusa(a03):
-    """A mordida gêmea: a cura não pode avançar longe demais.
-
-    Um `aplicado_em` com alguém dentro é sucesso, e sucesso não levanta — senão
-    todo clique certo viraria um recado vermelho no cartão dela.
-    """
+    """A mordida gêmea: a cura não pode avançar longe demais."""
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Ponte())
 
 
 def test_a_ponte_sem_corpo_continua_calada(a03):
-    """A ponte antiga e o dublê da régua não dizem ONDE a escrita parou.
-
-    Concluir "nenhum controle recebeu" de um corpo que não fala de destino seria
-    inventar o diagnóstico — e foi assim que uma régua desta casa já reprovou a
-    cura em vez do defeito.
-    """
+    """A ponte antiga e o dublê da régua não dizem ONDE a escrita parou."""
     class _Muda:
         def trigger_set_detalhado(self, *a, **k):
             return (True, "", {})
@@ -510,21 +396,8 @@ def test_a_ponte_sem_corpo_continua_calada(a03):
     _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Muda())
 
 
-# ---------------------------------------------------------------------------
-# A RÉGUA DA PRÓPRIA RÉGUA — 05/09/2026
-# ---------------------------------------------------------------------------
 def test_o_ctx_nao_troca_simbolo_de_modulo() -> None:
-    """`_ctx()` escreve a CENA e não troca `perfil.ativo` — é o que cura o vazamento.
-
-    MORDIDA: devolva o `perfil.ativo = lambda ...` para dentro de `_ctx()` e
-    este caso reprova na hora.
-
-    POR QUE ELE MEDE A IDENTIDADE E NÃO O `__module__`: dentro deste arquivo o
-    dublê ESTÁ instalado de propósito, pela fixture que o desfaz. A pergunta
-    não é *"quem é `perfil.ativo` agora"* — é *"`_ctx()` o mudou?"*. Uma régua
-    que perguntasse a origem daria vermelho sobre o dublê legítimo e ensinaria
-    a próxima pessoa a desligá-la.
-    """
+    """`_ctx()` escreve a CENA e não troca `perfil.ativo` — é o que cura o vazamento."""
     from pacotes import perfil
 
     antes = perfil.ativo

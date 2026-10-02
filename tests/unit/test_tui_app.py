@@ -100,20 +100,16 @@ async def test_app_mounta_main_screen(isolated_profiles_dir: Path):
         await pilot.pause()
         app = pilot.app
         assert isinstance(app.screen, MainScreen)
-        # Header existe
         assert any(
             type(w).__name__ == "Header" for w in app.screen.walk_children()
         )
-        # Footer existe
         assert any(
             type(w).__name__ == "Footer" for w in app.screen.walk_children()
         )
-        # DataTable com os perfis
         from textual.widgets import DataTable
 
         tables = [w for w in app.screen.walk_children() if isinstance(w, DataTable)]
         assert len(tables) == 1
-        # Aguarda refresh assincrono carregar
         await pilot.pause()
         await pilot.pause()
 
@@ -126,5 +122,4 @@ async def test_app_quit_com_q(isolated_profiles_dir: Path):
         await pilot.pause()
         await pilot.press("q")
         await pilot.pause()
-        # Após q, app deve estar saindo
         assert pilot.app._exit is not False or not pilot.app.is_running

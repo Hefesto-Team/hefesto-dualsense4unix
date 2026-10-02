@@ -1,29 +1,4 @@
-"""O CONTROLE NO USB DIZ «USB» NA LINHA DO RÁDIO — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01.
-
-O item novo da sprint (26/09/2026): a linha de um controle que tem chave BT
-num adaptador e está no USB agora diz «USB», não «Desligado» — as palavras do
-transporte da tela são USB e BT (decisão dela de 21/09). O «Esquecer» continua:
-a chave BT daquele adaptador existe, e esquecê-la é dela.
-
-A conferência achou o item entregue sem régua. Esta é a régua, com o rádio de
-mentira de três adaptadores e o roxo com chave em dois deles:
-
-* com o roxo no cabo, as DUAS linhas dele dizem «USB», com o «⋮» de cada
-  adaptador, e nenhuma diz «Desligado» — em qualquer grafia do ``uniq`` que o
-  daemon publique;
-
-MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01 (D-3009-O-ESQUECER-TEM-NOME): o X
-que esquecia virou o «⋮» (``aparelho-menu``), com o «Esquecer» no menu dele. O
-par ``(linha, adaptador)`` é o mesmo.
-* com o roxo em lugar nenhum, as duas voltam a dizer «Desligado»;
-* um OUTRO controle no cabo não muda a linha do roxo.
-
-MORDIDA: tire o ``no_usb`` da chamada de ``_os_desligados`` em
-``cena_do_radio`` — as linhas voltam a dizer «Desligado» com o roxo no cabo, e
-a primeira régua reprova.
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""O CONTROLE NO USB DIZ «USB» NA LINHA DO RÁDIO — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01."""
 
 from __future__ import annotations
 

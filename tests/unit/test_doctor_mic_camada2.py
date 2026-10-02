@@ -1,20 +1,4 @@
-"""O decisor da camada 2 do `doctor.sh` — o que ele escolhe, e o que ele recusa.
-
-Por que este arquivo existe: até 26/07/2026 o `--fix-mic` trocava o perfil da
-placa sempre que a entrada ativa fosse `iec958`, mirando `input:analog-stereo`,
-porque a sprint MIC-USB-01 afirmava que o microfone "vive" na entrada analógica.
-
-Medido no hardware, com o controle no cabo, na madrugada de 26/07: o perfil
-analógico estava marcado ``available: no`` pelo próprio ALSA, e forçá-lo produzia
-uma source **sem nenhuma porta de captura**, que entrega 327.680 bytes de
-silêncio digital. O `iec958-stereo` — o perfil que a sprint mandava evitar —
-gravou pico 4606 e RMS 374. A "cura" silenciava o microfone de quem a rodasse.
-
-Os testes abaixo travam a regra nova contra os dados REAIS daquela medição: só
-entram na disputa perfis que oferecem fonte de captura (``sources: >= 1``) **e**
-que o ALSA declara ``available: yes``; e nada é trocado quando o perfil ativo já
-satisfaz os dois.
-"""
+"""O decisor da camada 2 do `doctor.sh` — o que ele escolhe, e o que ele recusa."""
 
 from __future__ import annotations
 
@@ -31,12 +15,7 @@ BASH = shutil.which("bash") or "/bin/bash"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = REPO_ROOT / "scripts" / "doctor.sh"
 
-#: Recorte de `LC_ALL=C pactl list cards` com o estado MEDIDO em 26/07: a placa
 #: do DualSense com o analógico indisponível e o digital disponível.
-#:
-#: Montado por concatenação porque as linhas de perfil do `pactl` são longas e
-#: quebrá-las corromperia o dado que o `awk` lê — o fonte fica curto, o dado
-#: fica literal.
 _P_ANALOG = (
     "\t\toutput:analog-surround-40+input:analog-stereo: Surround + Analog In"
     " (sinks: 1, sources: 1, priority: 1265, available: no)\n"
@@ -96,12 +75,7 @@ def _decide(ativo: str) -> tuple[str, str, str]:
 @pytest.mark.skipif(not DOCTOR.exists(), reason="scripts/doctor.sh ausente")
 class TestOQueODoctorEscolhe:
     def test_nao_troca_quando_o_perfil_ativo_ja_serve(self) -> None:
-        """O caso que estragava a máquina dela.
-
-        Ativo = digital, disponível e com fonte. A versão anterior trocava para
-        o analógico só porque o nome tinha `iec958`, e o analógico está
-        `available: no` — a source nascia sem porta e o microfone emudecia.
-        """
+        """O caso que estragava a máquina dela."""
         _card, ativo, alvo = _decide(
             "output:analog-surround-40+input:iec958-stereo"
         )
@@ -124,13 +98,7 @@ class TestOQueODoctorEscolhe:
         )
 
     def test_ativo_que_serve_nao_e_trocado_por_prioridade_maior(self) -> None:
-        """Servir basta — não é para perseguir prioridade.
-
-        `input:iec958-stereo` (prioridade 55) oferece fonte e está disponível,
-        mas existe um combinado de prioridade 1255 igualmente disponível. Trocar
-        aqui seria derrubar uma captura que funciona por outra que talvez
-        funcione — a mesma classe de defeito que esta reescrita conserta.
-        """
+        """Servir basta — não é para perseguir prioridade."""
         _card, ativo, alvo = _decide("input:iec958-stereo")
         assert ativo == "input:iec958-stereo"
         assert alvo == "", (
@@ -204,30 +172,10 @@ class TestAPortaEOCriterio:
 
 @pytest.mark.skipif(not DOCTOR.exists(), reason="scripts/doctor.sh ausente")
 class TestACuraNaoEncostaNoQueJaFunciona:
-    """O ramo da CURA, e não só o do decisor.
-
-    A primeira versão destes testes cobria `_dualsense_perfil_status` e
-    `_dualsense_source_tem_porta` isoladamente — e uma mutação que fazia a cura
-    IGNORAR a porta passou verde. Testava as peças, não a fiação. Este teste
-    entra por `fix_mic_dualsense` e olha o que ela de fato manda o `pactl`
-    fazer.
-    """
+    """O ramo da CURA, e não só o do decisor."""
 
     def _chamadas_de_pactl(self, ativo: str, curta: str, verbosa: str) -> str:
-        """Roda `fix_mic_dualsense` com `pactl` dublado e devolve as chamadas.
-
-        O dublê distingue `list sources short` de `list sources` — a primeira
-        versão não distinguia, o nome da source saía vazio e a cura nem chegava
-        ao ramo que o teste queria vigiar. Passava verde por não exercitar nada.
-
-        BERCO-DE-TMP-01, 07/08/2026: o registro era o caminho FIXO
-        ``/tmp/hefesto_teste_pactl_chamadas.txt``, e o retrato do disco o pegou
-        vivo em `/tmp` depois da suíte. Caminho fixo tem dois defeitos, não um:
-        fica para trás, e **colide entre sessões** — nesta máquina rodam várias
-        execuções de `pytest` ao mesmo tempo, e duas delas escreviam no mesmo
-        arquivo. Agora o nome vem do `tempfile` (que nasce dentro do berço da
-        sessão) e o teste o remove ele mesmo.
-        """
+        """Roda `fix_mic_dualsense` com `pactl` dublado e devolve as chamadas."""
         descritor, registro = tempfile.mkstemp(
             prefix="hefesto-pactl-", suffix=".txt"
         )
@@ -277,19 +225,13 @@ cat {registro}
         )
         return proc.stdout
 
-    #: Nome real da source medida em 26/07 (curto e verboso batem).
     _SRC = (
         "alsa_input.usb-Sony_Interactive_Entertainment_"
         "DualSense_Wireless_Controller-00.iec958-stereo"
     )
 
     def test_com_porta_de_captura_a_cura_nao_troca_o_perfil(self) -> None:
-        """O cenário que só o ramo da cura protege.
-
-        O perfil ativo NÃO oferece fonte (logo o decisor tem alvo — há para
-        onde trocar), mas a source existente TEM porta e está captando. Sem a
-        checagem de porta, a cura trocaria o perfil e emudeceria o microfone.
-        """
+        """O cenário que só o ramo da cura protege."""
         saida = self._chamadas_de_pactl(
             ativo="output:analog-surround-40",
             curta=f"1\t{self._SRC}\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED\n",
@@ -319,11 +261,6 @@ cat {registro}
         )
 
 
-#: As fixtures GRAVADAS da máquina, com o controle no cabo, em 20/09/2026.
-#: **A régua LÊ, nunca digita.** Havia prova viva de que isso importa: a linha
-#: `iec958-stereo-input: Digital Input (S/PDIF) (…, availability unknown)` que
-#: `test_o_microfone_padrao_no_cabo.py` digitava à mão já divergia do vivo — e
-#: divergia calada. Fixture digitada envelhece sem avisar ninguém.
 FIXTURES_MIC_CABO = REPO_ROOT / "tests" / "fixtures" / "mic-cabo"
 
 
@@ -356,15 +293,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         scontents: str | Path,
         porta: str | Path,
     ) -> tuple[str, str, str]:
-        """Roda o decisor puro do doctor com três ARQUIVOS.
-
-        Um `str` é nome dentro de `tests/fixtures/mic-cabo/` — as gravações. Um
-        `Path` ABSOLUTO passa direto, e é assim que os casos DERIVADOS entram:
-        eles nascem no `tmp_path` do pytest, nunca dentro da pasta de fixtures.
-        (`Path("/a") / Path("/b")` devolve `/b`, então a barra abaixo já faz as
-        duas coisas — e esta linha existe para que isso seja escolha, e não
-        acidente que a próxima pessoa desfaça.)
-        """
+        """Roda o decisor puro do doctor com três ARQUIVOS."""
         script = (
             f'source "{DOCTOR}" >/dev/null 2>&1 || true\n'
             f"_dualsense_porta_de_captura_status"
@@ -406,13 +335,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         )
 
     def test_a_porta_de_17_09_reprovava_pelo_mesmo_motivo(self) -> None:
-        """Dois donos diferentes, o mesmo estado — e o decisor não olha o nome.
-
-        Em 17/09 a porta era a `iec958-stereo-input` do alsa-card-profile da
-        distro; em 20/09 é a `[In] Mic` do UCM desta casa. O `.conf` daquela
-        tem um `[Element PCM Capture Source]` e nenhum `volume = merge`, então
-        ela também não liga ganho nenhum.
-        """
+        """Dois donos diferentes, o mesmo estado — e o decisor não olha o nome."""
         _, elemento, fora = self._decide(
             "sources-cabo-2026-09-20.txt",
             "scontents-dualsense-2026-09-20.txt",
@@ -420,19 +343,9 @@ class TestAPortaDeCapturaAlcancaOGanho:
         )
         assert (elemento, fora) == ("Headset", "sim")
 
-    # --- AS TRÊS MORDIDAS -------------------------------------------------
 
     def test_mordida_2_placa_sem_elemento_de_captura_da_verde(self) -> None:
-        """A mordida que mais importa das três.
-
-        Se a régua reprovasse por achar o nome da porta na string, ela
-        reprovaria também aqui — numa placa que não tem NADA a ligar. Reprovar
-        aí é inventar defeito, e foi por essa porta que voltaria a «cura» de
-        26/07 que emudeceu o microfone de quem a rodou (source sem porta de
-        captura, 327.680 bytes de silêncio digital).
-
-        A fixture é GRAVADA: a placa 0 desta máquina é HDMI e não tem captura.
-        """
+        """A mordida que mais importa das três."""
         _, elemento, fora = self._decide(
             "sources-cabo-2026-09-20.txt",
             "scontents-sem-captura-2026-09-20.txt",
@@ -447,12 +360,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         )
 
     def test_mordida_3_porta_que_liga_o_ganho_da_verde(self) -> None:
-        """Mesma placa, porta diferente: o veredito tem de virar.
-
-        A `analog-input-headset-mic.conf` traz `[Element Headset]` com
-        `volume = merge` — ela LIGA o elemento. Se aqui desse vermelho, o
-        decisor estaria preso ao texto do nome e não ao que o nome liga.
-        """
+        """Mesma placa, porta diferente: o veredito tem de virar."""
         _, elemento, fora = self._decide(
             "sources-cabo-2026-09-20.txt",
             "scontents-dualsense-2026-09-20.txt",
@@ -465,19 +373,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         )
 
     def test_desligar_elemento_nao_conta_como_ligar(self, tmp_path: Path) -> None:
-        """Desligar um elemento não é ligá-lo, e confundir os dois daria verde sobre o defeito.
-
-        A `analog-input-headset-mic.conf` traz oito `[Element …]` cujo volume é
-        declarado DESLIGADO (Front Mic, Internal Mic, Rear Mic…). Uma régua que
-        casasse a chave `volume` sem olhar o valor daria verde para QUALQUER
-        porta que apenas desligue elementos — inclusive uma que não ligue
-        nenhum.
-
-        O derivado nasce no `tmp_path`: escrever dentro de `tests/fixtures/`
-        com nome fixo faz duas corridas colidirem, e um `kill` duro deixa o
-        arquivo para trás — foi a cicatriz BERCO-DE-TMP-01, e ela vale aqui
-        igual.
-        """
+        """Desligar um elemento não é ligá-lo, e confundir os dois daria verde sobre o defeito."""
         conf = FIXTURES_MIC_CABO / "porta-acp-analog-input-headset-mic.conf"
         texto = conf.read_text(encoding="utf-8")
         desligado = "volume = " + "off"
@@ -501,20 +397,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         )
 
     def test_valor_fixo_nao_e_o_deslizante(self, tmp_path: Path) -> None:
-        """Prender o elemento num valor não é entregá-lo a quem mexe no volume.
-
-        A tabela é da distro, e está no disco desta máquina:
-        `/usr/share/alsa-card-profile/mixer/paths/analog-output.conf.common`
-        linhas 103-107 listam os cinco valores que a chave aceita e dizem o que
-        cada um faz. **Só o `merge` junta o elemento ao deslizante do
-        dispositivo**; os outros dois que trazem número — o que crava 0 dB e o
-        que crava um passo — PRENDEM o elemento onde o arquivo mandou, que é
-        palavra por palavra o defeito que este decisor existe para acusar.
-
-        Esta régua nasceu de um defeito vivo: o decisor contava os dois como
-        «a porta liga o ganho», e com isso daria verde sobre o estado que a
-        sprint mediu.
-        """
+        """Prender o elemento num valor não é entregá-lo a quem mexe no volume."""
         for valor in ("zero", "12"):
             alvo = tmp_path / f"porta-presa-em-{valor}.conf"
             alvo.write_text(
@@ -534,13 +417,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
     def test_merge_de_outro_elemento_nao_alcanca_o_ganho(
         self, tmp_path: Path
     ) -> None:
-        """O `merge` tem de ser DO elemento achado, não de um qualquer.
-
-        Uma porta que liga o alto-falante e não menciona o elemento de captura
-        em lugar nenhum deixa o ganho de captura exatamente onde estava. Se o
-        decisor varrer o arquivo inteiro atrás da palavra, ele declara «alcança
-        o ganho» sobre uma porta que não o alcança — verde sobre o defeito.
-        """
+        """O `merge` tem de ser DO elemento achado, não de um qualquer."""
         alvo = tmp_path / "porta-que-liga-outro-elemento.conf"
         alvo.write_text(
             "[Element Speaker]\nswitch = mute\nvolume = merge\n",
@@ -559,12 +436,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
     def test_o_elemento_com_indice_ainda_e_o_mesmo_elemento(
         self, tmp_path: Path
     ) -> None:
-        """`[Element Headset,1]` é o `Headset` — amarrar não pode virar cegueira.
-
-        O `analog-output.conf.common:90` diz que o nome da seção é «o nome do
-        elemento, ou nome e índice separados por vírgula». Recusar a forma com
-        índice trocaria um verde falso por um vermelho falso.
-        """
+        """`[Element Headset,1]` é o `Headset` — amarrar não pode virar cegueira."""
         alvo = tmp_path / "porta-com-indice.conf"
         alvo.write_text(
             "[Element Headset,1]\nswitch = mute\nvolume = merge\n",
@@ -578,12 +450,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         assert (elemento, fora) == ("Headset", "não")
 
     def test_o_ucm_que_liga_outro_elemento_nao_conta(self, tmp_path: Path) -> None:
-        """O mesmo defeito no outro dialeto, e o UCM é quem manda HOJE.
-
-        Um `SectionDevice` que declare `CaptureVolume` sobre outro elemento da
-        placa põe ESSE no deslizante e deixa o de captura fora. A régua tem de
-        ver o nome, não a palavra-chave.
-        """
+        """O mesmo defeito no outro dialeto, e o UCM é quem manda HOJE."""
         alvo = tmp_path / "porta-ucm-de-outro-elemento.txt"
         alvo.write_text(
             'SectionDevice."Mic" {\n'
@@ -663,12 +530,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         )
 
     def test_o_ganho_ganha_do_elemento_so_de_chave(self, tmp_path: Path) -> None:
-        """E quando a placa tem os dois, quem responde é o que tem VOLUME.
-
-        Ordem importa: o elemento só de chave vem PRIMEIRO no arquivo. Uma
-        régua que parasse no primeiro elemento de captura devolveria o nome
-        errado, e o veredito passaria a ser sobre outro elemento.
-        """
+        """E quando a placa tem os dois, quem responde é o que tem VOLUME."""
         gravada = FIXTURES_MIC_CABO / "scontents-dualsense-2026-09-20.txt"
         texto = gravada.read_text(encoding="utf-8")
         mudo = (
@@ -695,17 +557,12 @@ class TestAPortaDeCapturaAlcancaOGanho:
         tudo bem», e por isso a saída é VAZIA, não uma linha com `não`.
         """
         assert self._decide(
-            "porta-ucm-mic-2026-09-20.txt",  # um arquivo sem nenhuma source
+            "porta-ucm-mic-2026-09-20.txt",
             "scontents-dualsense-2026-09-20.txt",
             "porta-ucm-mic-2026-09-20.txt",
         ) == ("", "", "")
 
 
-#: Recorte GRAVADO de `/proc/asound/cards` desta bancada, 20/09/2026, com o
-#: controle no cabo. O `check_mic_ganho_de_captura` lê daqui UMA coisa — o
-#: índice da placa que casa a marca —, e é por isso que o gancho
-#: `HEFESTO_PROC_CARDS` existe: sem ele, nenhum teste alcança a metade que fala
-#: com a máquina, e ela ficou sem régua até 20/09.
 CARDS_COM_DUALSENSE = (
     " 0 [NVidia         ]: HDA-Intel - HDA NVidia\n"
     "                      HDA NVidia at 0xfc080000 irq 83\n"
@@ -724,20 +581,7 @@ CARDS_SEM_DUALSENSE = (
     not FIXTURES_MIC_CABO.is_dir(), reason="tests/fixtures/mic-cabo ausente"
 )
 class TestOChamadorDoDoctorFalaComAMaquina:
-    """A METADE QUE FALA COM A MÁQUINA, que não tinha régua nenhuma.
-
-    O decisor puro acima era medido de sete jeitos; `check_mic_ganho_de_captura`
-    e `_definicao_da_porta_de_captura` — os dois que juntam as leituras, acham a
-    definição da porta no disco e escolhem a FRASE que sai no `doctor` — não
-    eram medidos de nenhum. Dava para arrancar a busca da definição, inverter o
-    veredito ou trocar a ordem dos dois arquivos que o chamador passa, e os
-    testes ficavam todos verdes: a cura tinha um buraco do tamanho dela mesma.
-
-    Ela roda sem aparelho e sem servidor de som: `pactl` e `amixer` são funções
-    de shell que imprimem as gravações, e os três ganchos do próprio produto
-    (`HEFESTO_PROC_CARDS`, `HEFESTO_RAIZ_UCM`, `HEFESTO_RAIZ_ACP`) apontam para
-    o `tmp_path`. Nada daqui toca o som da máquina de quem roda.
-    """
+    """A METADE QUE FALA COM A MÁQUINA, que não tinha régua nenhuma."""
 
     _RECEITA = """
 set -uo pipefail
@@ -793,14 +637,7 @@ check_mic_ganho_de_captura
         return proc.stdout
 
     def test_a_definicao_da_porta_do_ucm_sai_do_disco(self, tmp_path: Path) -> None:
-        """M3 pela frente: sem a definição da porta não há veredito honesto.
-
-        `_definicao_da_porta_de_captura` é a única parte IMPURA da dupla. Se ela
-        voltar de mãos vazias — por retornar cedo, por procurar o arquivo
-        errado, por qualquer motivo — o decisor recebe um arquivo vazio, não
-        acha ligação nenhuma e REPROVA TUDO, inclusive o que está certo. Um
-        instrumento que reprova sempre não é rigor: é ruído.
-        """
+        """M3 pela frente: sem a definição da porta não há veredito honesto."""
         raiz_ucm = tmp_path / "ucm2" / "USB-Audio" / "Hefesto"
         raiz_ucm.mkdir(parents=True)
         alvo = raiz_ucm / "DualSense-HiFi.conf"
@@ -877,11 +714,6 @@ check_mic_ganho_de_captura
         assert "[In] Mic" in saida, "a frase nomeia a porta ativa"
         assert "'Headset'" in saida, "e nomeia o elemento que passou a alcançar"
         assert "FAIL" not in saida, "nunca FAIL: a cura é decisão dela"
-        # A RESSALVA É A MESMA NAS DUAS LINHAS, e só o texto ao redor muda: o
-        # WARN diz *"não sobre a qualidade do áudio"* e o PASS diz *"NÃO é um
-        # veredito sobre a qualidade do áudio"*. O que se cobra é o FATO —
-        # digitar uma das duas frases inteiras faria esta régua reprovar no dia
-        # em que a outra fosse reescrita, sem nada ter piorado.
         assert "qualidade do áudio" in saida, (
             "a ressalva mora na própria linha, senão o verde é lido como "
             f"«o microfone está bom». Veio {saida!r}"
@@ -890,23 +722,7 @@ check_mic_ganho_de_captura
     def test_sem_as_duas_linhas_no_ucm_o_aviso_volta(
         self, tmp_path: Path
     ) -> None:
-        """A MORDIDA do teste acima, versionada em vez de contada.
-
-        Instala um `SectionDevice."Mic"` sem `CaptureVolume`/`CaptureMixerElem`
-        — o de 20/09, letra por letra — e cobra o WARN de volta, com a porta e
-        o elemento nomeados.
-
-        **O QUE ELA ARRANCA:** as duas linhas do UCM. Sem este teste, o dia em
-        que alguém as apagasse deixaria só um `PASS` que passou a mentir, e o
-        verde do irmão acima seria verde sobre nada.
-
-        **E ELA CARREGA O CONTROLE POSITIVO, porque sem ele não prova nada:**
-        o WARN também volta quando o doctor não acha arquivo NENHUM — foi por
-        essa porta que a primeira redação ficou verde sem conseguir distinguir
-        *"li o arquivo mordido"* de *"não li arquivo algum"*. As duas chamadas
-        abaixo instalam pelo MESMO caminho e diferem só nas duas linhas: o
-        PASS de uma é o que prova que a outra leu o que foi escrito.
-        """
+        """A MORDIDA do teste acima, versionada em vez de contada."""
         original = (REPO_ROOT / "assets" / "ucm" / "DualSense-HiFi.conf").read_text(
             encoding="utf-8")
         sem_ganho = "\n".join(
@@ -917,12 +733,7 @@ check_mic_ganho_de_captura
         )
 
         def diz(corpo: str, casa: str) -> str:
-            """Instala `corpo` como o UCM desta casa e devolve o que o doctor diz.
-
-            O `_doctor_diz` instalaria o `.conf` da RAIZ DO REPOSITÓRIO; o
-            `ucm=None` o faz não sobrescrever, e a escrita à mão vai no MESMO
-            lugar que ele lê (`<raiz>/ucm2/USB-Audio/Hefesto/`).
-            """
+            """Instala `corpo` como o UCM desta casa e devolve o que o doctor diz."""
             raiz = tmp_path / casa / "ucm2" / "USB-Audio" / "Hefesto"
             raiz.mkdir(parents=True, exist_ok=True)
             (raiz / "DualSense-HiFi.conf").write_text(corpo, encoding="utf-8")
@@ -944,13 +755,7 @@ check_mic_ganho_de_captura
     def test_uma_porta_que_liga_o_ganho_chega_como_verde(
         self, tmp_path: Path
     ) -> None:
-        """O outro lado, e é ele que mata as três mutações de uma vez.
-
-        A porta ativa passa a ser uma do alsa-card-profile que declara
-        `volume = merge` sobre o `Headset`. Com a busca da definição arrancada
-        (M3), com o veredito invertido (M6) ou com os dois arquivos trocados de
-        ordem no chamador (M7), esta linha deixa de sair verde.
-        """
+        """O outro lado, e é ele que mata as três mutações de uma vez."""
         conf = (
             FIXTURES_MIC_CABO / "porta-acp-analog-input-headset-mic.conf"
         ).read_text(encoding="utf-8")
@@ -999,11 +804,7 @@ check_mic_ganho_de_captura
     def test_sem_placa_do_dualsense_o_check_diz_que_nao_conferiu(
         self, tmp_path: Path
     ) -> None:
-        """Sem controle no cabo não há veredito — e não há verde.
-
-        Calar e passar são coisas diferentes: «não conferi» tem de chegar à
-        tela como informação, nunca como aprovação.
-        """
+        """Sem controle no cabo não há veredito — e não há verde."""
         saida = self._doctor_diz(tmp_path, cards=CARDS_SEM_DUALSENSE)
         assert "PASS" not in saida and "WARN" not in saida, (
             f"sem placa não se decide nada; veio {saida!r}"

@@ -1,16 +1,4 @@
-"""Toda exceção tem dona (VERDE-NAO-E-PROVA-01, passo 2).
-
-As réguas desta casa guardam listas de defeito aceito, e em 26/09/2026 nenhuma
-dizia qual sprint tira a entrada, nem reprovava quando a sprint fechava e a
-entrada ficava. O censo acha as listas pelo NOME (`RAIZES`), em `tests/` e
-`scripts/` versionados, e cada lista achada mora numa das três tabelas abaixo.
-Numa lista de `DIVIDAS`, cada entrada leva um comentário `sai com: <SPRINT>`
-(ou `fica: <razão>`, quando a entrada não é defeito): na própria entrada, numa
-linha própria acima de um grupo de entradas, ou no bloco `#:` acima da lista.
-
-AS MORDIDAS moram aqui, contra módulos de mentira num `tmp_path`: entrada sem
-dona, sprint fechada, lista nova fora das tabelas e catraca que cresce.
-"""
+"""Toda exceção tem dona (VERDE-NAO-E-PROVA-01, passo 2)."""
 from __future__ import annotations
 
 import ast
@@ -27,9 +15,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 SPRINTS = RAIZ / "docs" / "process" / "sprints"
 ESTE = "tests/unit/test_toda_excecao_tem_sprint_que_a_tira.py"
 
-#: As raízes de nome que fazem de uma constante uma lista de exceção. O censo
-#: só vê o que se declara pelo nome; uma lista de isenção com outro nome fica
-#: fora dele (medido em 28/09: `LEITORES_DE_PROCESSO`, `SEM_LETRA`).
 RAIZES = re.compile(
     r"ISENT|ISENC|EXCEC|ACEIT|PODEM|TOLERAD|DIVIDA|PENDENT|(?<!DES)CONHECID"
     r"|PERMITID|SEM_DONO|SEM_MAO|SEM_CAMINHO|APOSENTAD|FORA_DO|_HOJE\b|^HOJE"
@@ -39,7 +24,6 @@ _ATRIBUICAO = re.compile(r"^(_?[A-Z][A-Z0-9_]*)\s*(?::[^=\n]*)?=", re.M)
 _MARCA = re.compile(r"#:?\s*(sai com|fica):\s*(\S.*)$")
 _ID = re.compile(r"[A-Z0-9][A-Z0-9-]*[A-Z0-9]")
 _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
-#: Os estados em que a sprint ainda tem trabalho (ver `check_colisao_de_sprints.py`).
 ESTADOS_VIVOS = frozenset({"aberta", "espera-ela"})
 _RECIPIENTES = frozenset({"frozenset", "set", "tuple", "list", "dict"})
 _NAO_E_RECIPIENTE = object()
@@ -52,11 +36,8 @@ class Lista:
     arquivo: str
     nome: str
     linha: int
-    #: `(primeira, última)` linha de cada entrada; `None` na lista derivada.
     entradas: tuple[tuple[int, int], ...] | None
-    #: As marcas `sai com:`/`fica:` do arquivo, por linha.
     marcas: tuple[tuple[int, str, str], ...]
-    #: As linhas do bloco de comentários logo acima da lista.
     acima: frozenset[int]
 
     @property
@@ -216,18 +197,10 @@ def catraca(achadas: dict[str, Lista], dividas: dict[str, int]) -> list[str]:
     return faltas
 
 
-# ---------------------------------------------------------------------------
-# AS TRÊS TABELAS. Uma lista achada mora em uma, e só uma.
-# ---------------------------------------------------------------------------
-#: As listas de defeito aceito. O número é a catraca: a lista não cresce nem
-#: encolhe sem passar por aqui. As vazias continuam aqui: o mecanismo vale, e a
-#: primeira entrada nova chega com a dona.
 DIVIDAS: dict[str, int] = {
     "scripts/check_a_cor_vem_do_aparelho.py::ISENCOES": 0,
     "scripts/check_a_maiuscula_decorativa.py::DIVIDA": 34,
     "scripts/check_a_tela_nao_confessa.py::A_DIVIDA": 4,
-    # 29/09/2026: a `haptica` entrou com a costura da O-GANHO-DA-HAPTICA-TEM-DONO-01 (o grau
-    # do aparelho espera o passo 0 e a mão dela), e sai com ela.
     "scripts/check_cabo_bt_perfil_controle.py::A_DIVIDA_CONHECIDA": 1,
     "scripts/check_identidade_vem_de_cima.py::ISENCOES": 0,
     "scripts/validar-citacoes-de-linha.py::CSV_FORA_DO_PORTAO": 0,
@@ -257,7 +230,6 @@ _A_PROPRIA_REGUA = "o próprio arquivo da régua, a cura ou a mordida: eles escr
 _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira), não isenção"
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
-#: As listas em que nenhuma entrada é defeito aceito, com a razão.
 NAO_SAO_DIVIDA: dict[str, str] = {
     "scripts/ensaios/quem_e_quem.py::CONHECIDOS": (
         "os endereços da mesa, lidos quando o ensaio roda, para o dono da máscara "
@@ -338,23 +310,14 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "gestos idempotentes, medidos por nome em 03/09/2026"),
 }
 
-#: As listas de dívida em arquivo que outra sprint tem na mão nesta onda:
-#: `(a sprint que as anota, por quê)`. Sai daqui quando as entradas ganham dona.
 PENDENTES: dict[str, tuple[str, str]] = {
     # 02/10/2026: o espelho dos `SEM_GESTO` da 06 e da 08 (a régua dos sem dono
-    # só diminuírem). O `navegacao-interna` sai com a sprint abaixo; os outros
-    # cinco (`modo-steam` da 06, `custo-*` e `novo-hub` da 08) não têm sprint
-    # (§11 da O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01), e a lista passa a
-    # `DIVIDAS` quando quem coordena escrever a da onda da 08.
     "tests/unit/test_cada_gesto_diz_de_quem_e.py::SEM_DONO_PERMITIDOS": (
         "A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01",
         "cinco das seis entradas esperam a sprint da onda da 08 para ganhar dona"),
 }
 
 
-# ---------------------------------------------------------------------------
-# As réguas
-# ---------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def achadas() -> dict[str, Lista]:
     return censo()
@@ -399,9 +362,6 @@ def test_a_sprint_que_tira_a_entrada_tem_trabalho(achadas: dict[str, Lista]) -> 
     assert not faltas, "\n".join(faltas)
 
 
-# ---------------------------------------------------------------------------
-# AS MORDIDAS, contra módulos de mentira
-# ---------------------------------------------------------------------------
 _MODULO = '''\
 #: sai com: A-SPRINT-DA-LISTA-01
 DIVIDA_DE_MENTIRA = {

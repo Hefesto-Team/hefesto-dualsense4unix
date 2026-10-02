@@ -1,68 +1,5 @@
 #!/usr/bin/env python3
-"""check_o_projeto_e_traduzivel.py — as três medidas da catraca da tradução.
-
-A ORDEM DELA, e é o desenho inteiro (TRADUZIR-O-PROJETO-01)::
-
-    "minha ideia é depois que arrumarmos e validarmos todas as features isso   (noqa-acento: citação literal dela)
-     precisa ser feito em larga escala pros demais. Tanto pra traduzirmos
-     documentação quanto traduzirmos o projeto pra outras linguagens e afins.
-     Um Hook que vá facilitando isso seria maravilhoso. Pois organicamente
-     deixaríamos fácil pra gente e pro outro e deixaríamos o projeto menos
-     verboso e bonito e agradável de ler"
-
-Este portão **não traduz uma linha** e não pede mutirão. Ele impede três
-números de SUBIREM, e cobra só de quem está escrevendo a linha nova. O motor é
-`scripts/catraca.py`, um só; aqui moram as medidas.
-
-AS TRÊS MEDIDAS
----------------
-1. ``fronteira-de-lingua`` — arquivos que nenhuma regra de
-   `docs/data/zonas-de-lingua.toml` alcança. Piso: ZERO. Arquivo novo fora de
-   zona reprova pedindo uma REGRA, nunca uma exceção por nome: lista de arquivo
-   envelhece a cada arquivo novo, e esta casa já tem uma congelada num mundo
-   que acabou.
-
-2. ``tela-sem-endereco`` — unidades de texto de tela sem endereço de tradução.
-   **Hoje ela está PENDENTE, e é o estado honesto.** Não existe forma de
-   endereço neste projeto (medido: zero `gettext` em oito dos dez geradores),
-   e um contador de "frases sem endereço" sem saber o que é TER endereço
-   devolveria zero — e zero se lê como verde. A forma do endereço é decisão da
-   I18N-DA-TELA-NOVA-01; a medida a LÊ de um lugar só, e acorda sozinha no dia
-   em que ela for escrita.
-
-3. ``prosa-publicada`` — bytes de comentário dentro das dez páginas que o
-   WebKit baixa. É a medida que responde ao *"menos verboso e bonito e
-   agradável de ler"*: a razão de um CSS pertence ao GERADOR, que é onde a
-   próxima pessoa procura, e não ao byte que o navegador consome e descarta.
-
-E UMA CONFERÊNCIA QUE NÃO É CATRACA
-------------------------------------
-``--contagem`` refaz, do AST, a contagem que o `.github/CONTRIBUTING.md`
-publica na seção *"A língua do produto"*, e reprova se o documento divergir.
-Aquele número foi recontado à mão seis vezes conforme a pasta crescia
-(18 -> 19 -> 20 -> 29 -> 31 -> 34). **Um número que já saiu de seis jeitos não
-é fato, é opinião com cara de dado** — a frase é desta casa, e está no
-cabeçalho de `scripts/gerar-contrato-ipc.py`. A partir daqui ele é GERADO.
-
-O QUE ESTE PORTÃO NÃO FAZ
---------------------------
-Não traduz, não cria idioma, não toca `po/`, `locale/` nem os `.mo`, não
-escolhe a forma do endereço, não decide a fronteira entre "só a tela" e "a tela
-mais o que ensina" — essa é dela —, não abre janela e não fala com o daemon.
-
-OS FUROS, DECLARADOS
----------------------
-* A zona responde sobre ONDE O ARQUIVO MORA, não sobre com quem ele fala. O
-  `install.sh` fala português com quem instala e cai em CODIGO.
-* O censo de frases de tela lê o HTML publicado com um parser que **não executa
-  JavaScript**. Os pacotes escrevem texto em tempo de execução: o número é
-  PISO, não total. O número honesto sai do piloto montado, com `--oculta`.
-* A medida 3 conta comentário de HTML e de CSS com parser (não com regex, que
-  casaria `/* */` dentro de string). **Comentário dentro de `<script>` NÃO é
-  contado**: separar comentário de literal de expressão regular em JavaScript
-  pede um analisador que eu escreveria no escuro, e contar errado aqui seria
-  repetir o defeito que a medida existe para curar.
-"""
+"""check_o_projeto_e_traduzivel.py — as três medidas da catraca da tradução."""
 
 from __future__ import annotations
 
@@ -74,13 +11,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 try:
-    import tomllib  # stdlib do Python 3.11+
+    import tomllib
 except ImportError:  # pragma: no cover — 3.10, que o pyproject ainda declara
-    # `requires-python = ">=3.10"`, e o `lint-test` do CI roda `pytest
-    # tests/unit` nas TRÊS versões. Um `import tomllib` pelado morre na
-    # COLETA do arquivo de mordidas na perna 3.10 — não como teste vermelho,
-    # como módulo que some. O irmão `check_version_consistency.py:58-61` já
-    # tinha esta cura, e cobrir um chamador deixa o próximo remedindo.
     import tomli as tomllib  # type: ignore[no-redef]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -110,16 +42,8 @@ _ACENTO = re.compile(r"[áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃ
 _LETRA = re.compile(r"[A-Za-zÀ-ÿ]")
 
 
-# ---------------------------------------------------------------------------
-# As zonas, lidas por REGRA
-# ---------------------------------------------------------------------------
 def _glob_para_regex(caminho: str) -> re.Pattern[str]:
-    """Traduz o glob de caminho da tabela para expressão regular.
-
-    `*` não atravessa `/`; `**` atravessa. Escrito à mão porque
-    `fnmatch` não distingue os dois, e a distinção é o que separa
-    "um arquivo na raiz de docs/" de "qualquer arquivo sob docs/".
-    """
+    """Traduz o glob de caminho da tabela para expressão regular."""
     saida = ["^"]
     i = 0
     while i < len(caminho):
@@ -187,9 +111,6 @@ def zona_de(caminho: str, regras: list[Regra]) -> Regra | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# O universo de arquivos
-# ---------------------------------------------------------------------------
 _BINARIO = {
     ".png", ".jpg", ".jpeg", ".gif", ".ico", ".mo", ".bin", ".gz", ".zip",
     ".woff", ".woff2", ".ttf", ".otf", ".pdf", ".webp", ".so", ".pyc",
@@ -197,16 +118,7 @@ _BINARIO = {
 
 
 def arquivos_da_arvore(raiz: Path) -> list[str]:
-    """Os caminhos que o git rastreia MAIS os novos que ele ainda não viu.
-
-    `--others --exclude-standard` é de propósito: esta casa tem a regra "os
-    portões são cegos a arquivo novo, rode-os depois do `git add`", e uma
-    catraca que só visse o índice deixaria o arquivo novo fora de zona passar
-    até alguém lembrar de adicioná-lo. Aqui ele reprova na hora.
-
-    Fora de uma árvore de git — que é como a mordida do vazio aponta o script
-    para uma pasta vazia — cai para a varredura do disco.
-    """
+    """Os caminhos que o git rastreia MAIS os novos que ele ainda não viu."""
     try:
         saida = subprocess.run(
             ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
@@ -224,9 +136,6 @@ def arquivos_da_arvore(raiz: Path) -> list[str]:
         return sorted(achados)
 
 
-# ---------------------------------------------------------------------------
-# MEDIDA 1 — a fronteira
-# ---------------------------------------------------------------------------
 def censo_da_fronteira(raiz: Path) -> Censo:
     regras, _ = carregar_zonas(raiz)
     arquivos = arquivos_da_arvore(raiz)
@@ -257,9 +166,6 @@ def censo_da_fronteira(raiz: Path) -> Censo:
     )
 
 
-# ---------------------------------------------------------------------------
-# MEDIDA 2 — a tela sem endereço
-# ---------------------------------------------------------------------------
 _ATRIBUTOS_DE_TELA = ("title", "placeholder", "alt", "aria-label", "aria-description")
 _MUDOS = {"script", "style", "template"}
 
@@ -276,7 +182,6 @@ class _LeitorDeTela(HTMLParser):
         self.atributos_sem: set[str] = set()
         self.atributos_com: set[str] = set()
 
-    # -- a pilha -----------------------------------------------------------
     def _tem_endereco(self, attrs: list[tuple[str, str | None]]) -> bool:
         if not self.atributo:
             return False
@@ -302,7 +207,6 @@ class _LeitorDeTela(HTMLParser):
                 del self.pilha[i:]
                 return
 
-    # -- o que se colhe ----------------------------------------------------
     def _colher_atributos(self, tag, attrs, marcado):  # type: ignore[no-untyped-def]
         for nome, valor in attrs:
             if valor is None or not _LETRA.search(valor):
@@ -338,12 +242,7 @@ def _geradores(raiz: Path) -> list[Path]:
 
 
 def conferir_as_dez_abas(raiz: Path, censo: Censo) -> str:
-    """A segunda peneira do vazio: PERGUNTA AO DONO quantas páginas há.
-
-    O dono de "quantas abas existem" é a pasta dos geradores, não um número
-    digitado aqui. Uma página que sumir — ou a pasta inteira renomeada — faz o
-    censo achar menos do que há gerador, e isso é VERMELHO, não um total menor.
-    """
+    """A segunda peneira do vazio: PERGUNTA AO DONO quantas páginas há."""
     geradores = len(_geradores(raiz))
     if geradores == 0:
         return (
@@ -418,13 +317,7 @@ def censo_da_tela(raiz: Path) -> Censo:
 
 
 def _bruto_da_tela(paginas: list[Path]) -> dict[str, int]:
-    """O censo cru — quantas unidades existem —, para ficar ao lado do PENDENTE.
-
-    Ele NÃO é o número da medida: enquanto não houver forma de endereço, todas
-    as unidades estão sem endereço, e esse total é o retrato do custo, não uma
-    catraca. Gravá-lo como piso faria a régua dar verde sobre uma medida que
-    não mede.
-    """
+    """O censo cru — quantas unidades existem —, para ficar ao lado do PENDENTE."""
     frases: set[str] = set()
     atributos: set[str] = set()
     for pagina in paginas:
@@ -439,17 +332,8 @@ def _bruto_da_tela(paginas: list[Path]) -> dict[str, int]:
     }
 
 
-# ---------------------------------------------------------------------------
-# MEDIDA 3 — a prosa publicada
-# ---------------------------------------------------------------------------
 def comentarios_css(css: str) -> list[str]:
-    """Os comentários de uma folha de estilo, com as aspas respeitadas.
-
-    Um `re.findall(r"/\\*.*?\\*/")` casa `/*` dentro de `"url(/*)"` e dentro de
-    qualquer literal que contenha a sequência. É por isto que os 33,1% da
-    sprint eram ordem de grandeza, e por isto que aqui se varre caractere a
-    caractere.
-    """
+    """Os comentários de uma folha de estilo, com as aspas respeitadas."""
     achados: list[str] = []
     i = 0
     n = len(css)
@@ -544,21 +428,11 @@ def censo_da_prosa(raiz: Path) -> Censo:
     )
 
 
-# ---------------------------------------------------------------------------
-# A CONFERÊNCIA — a contagem do CONTRIBUTING, gerada em vez de digitada
-# ---------------------------------------------------------------------------
 def censo_das_acoes(raiz: Path) -> dict[str, int]:
-    """Quem de `app/actions/` escreve prosa fora da função de tradução.
-
-    Por AST, e não por grep: `_("texto")` dentro de um comentário não importa,
-    e um literal acentuado dentro de uma docstring não é prosa de tela.
-    """
+    """Quem de `app/actions/` escreve prosa fora da função de tradução."""
     pasta = raiz / ACOES
     if not pasta.is_dir():
         return {"arquivos": 0, "com_traducao": 0, "escrevem_prosa": 0}
-    # Os `__init__.py` CONTAM: os três desta pasta têm código, e o denominador
-    # publicado no CONTRIBUTING sempre os contou. Mudar o critério junto com a
-    # automação faria o número novo parecer a sétima recontagem à mão.
     modulos = sorted(pasta.rglob("*.py"))
     com_traducao = 0
     escrevem_prosa = 0
@@ -651,7 +525,6 @@ def conferir_contribuindo(raiz: Path, publicar: bool) -> int:
     return 0
 
 
-# ---------------------------------------------------------------------------
 MEDIDAS = (
     Medida(
         nome="fronteira-de-lingua",

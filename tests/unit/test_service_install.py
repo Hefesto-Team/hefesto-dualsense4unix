@@ -1,7 +1,4 @@
-"""Testes do instalador da unit systemd --user `hefesto-dualsense4unix.service`.
-
-SIMPLIFY-UNIT-01: unit única. Não há mais variante headless.
-"""
+"""Testes do instalador da unit systemd --user `hefesto-dualsense4unix.service`."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -36,9 +33,6 @@ def dummy_systemctl(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     calls: list[list[str]] = []
 
     def fake_run(cmd, check=True, capture_output=True, text=True, **kwargs):
-        # **kwargs: T-13 (ONDA0-Z7) acrescentou `timeout=` na sonda de
-        # `_systemctl_de_usuario_disponivel` — este dublê aceita qualquer
-        # kwarg extra em vez de travar toda chamada por causa de UMA nova.
         calls.append(list(cmd))
         return DummyResult(stdout="active (running)\n")
 
@@ -99,9 +93,6 @@ def test_start_stop_restart_status(isolated_systemd_user: Path, dummy_systemctl:
     installer.start()
     installer.stop()
     installer.restart()
-    # status_text agora checa se a unit existe via detect_installed_unit().
-    # Em ambiente isolado sem install(), o status retornaria mensagem
-    # "não instalada". Tocar o arquivo simula install minimal.
     isolated_systemd_user.mkdir(parents=True, exist_ok=True)
     (isolated_systemd_user / SERVICE_NORMAL).write_text("dummy")
     text = installer.status_text()
@@ -116,8 +107,7 @@ def test_start_stop_restart_status(isolated_systemd_user: Path, dummy_systemctl:
 def test_status_text_unit_nao_instalada_retorna_mensagem_clara(
     isolated_systemd_user: Path, dummy_systemctl: list
 ):
-    """Sem unit em user_unit_dir nem SYSTEM_UNIT_DIRS, status_text retorna
-    mensagem orientadora em vez de string vazia (achado de validação 103)."""
+    """Sem unit em user_unit_dir nem SYSTEM_UNIT_DIRS, status_text retorna"""
     installer = ServiceInstaller()
     text = installer.status_text()
     assert "não instalada" in text
@@ -155,9 +145,6 @@ def test_detect_installed_unit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ):
-    # Detect agora checa também SYSTEM_UNIT_DIRS (/usr/lib/systemd/user etc)
-    # para suporte a .deb. Para isolar do ambiente real do CI/dev, monkeypatch
-    # SYSTEM_UNIT_DIRS para paths inexistentes em tmp.
     from hefesto_dualsense4unix.daemon import service_install as si_mod
     fake_dirs = [tmp_path / "fake-usr-lib", tmp_path / "fake-etc"]
     monkeypatch.setattr(si_mod, "SYSTEM_UNIT_DIRS", fake_dirs)
@@ -173,7 +160,6 @@ def test_detect_installed_unit(
 def test_dry_run_nao_copia(isolated_systemd_user: Path, dummy_systemctl: list):
     installer = ServiceInstaller(dry_run=True)
     installer.install()
-    # Arquivo não copiado; systemctl não chamado (retornou None).
     assert not (isolated_systemd_user / SERVICE_NORMAL).exists()
 
 

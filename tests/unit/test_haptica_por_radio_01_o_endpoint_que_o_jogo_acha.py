@@ -24,7 +24,6 @@ import pytest
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
 _UNIQ = "aa:bb:cc:00:00:03"
-#: Quatro aparelhos da faixa sintética: a mesa cheia.
 _QUATRO = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
 
@@ -71,9 +70,6 @@ def sysfs(tmp_path: Path) -> Path:
     return raiz
 
 
-# -- o nome --------------------------------------------------------------------
-
-
 def test_o_nome_tem_as_tres_agulhas_que_o_ge_procura() -> None:
     nome = eh.nome_do_endpoint(_UNIQ)
     for agulha in eh.AGULHAS:
@@ -96,9 +92,6 @@ def test_o_que_nao_da_identidade_nao_vira_no_anonimo() -> None:
         assert eh.nome_do_endpoint(fora) == "", fora  # type: ignore[arg-type]
     for fora in (1, "LUGAR1", "000003", eh.marca_do_controle(_UNIQ)):
         assert eh.nome_da_marca(fora) == "", fora  # type: ignore[arg-type]
-
-
-# -- as propriedades -----------------------------------------------------------
 
 
 def test_as_propriedades_sao_as_que_o_ge_le(ancora: eh.Ancora) -> None:
@@ -124,28 +117,14 @@ def test_o_no_nao_vira_a_saida_padrao_da_maquina(ancora: eh.Ancora) -> None:
 
 
 def test_o_sysfs_path_declarado_e_o_filho_nao_a_ancora(ancora: eh.Ancora) -> None:
-    """O Wine sobe ao PAI do caminho: declarar a âncora nua dá o hub raiz.
-
-    Medido no PRAGMATA em 18/09/2026 às 03h40 — o jogo gravou
-    `ContainerId={00021d6b-0003-0001-…}`, o 1d6b:0002, e nunca casou.
-    """
+    """O Wine sobe ao PAI do caminho: declarar a âncora nua dá o hub raiz."""
     props = eh.propriedades_do_endpoint(_UNIQ, ancora)
     assert f"sysfs.path={ancora.syspath}\"" not in props
     assert ancora.declarado.startswith(ancora.syspath + "/")
 
 
-# -- o nó ----------------------------------------------------------------------
-
-
 def _o_load(chamadas: list[list[str]]) -> list[str]:
-    """O `load-module` entre as chamadas — a consulta ao servidor vem antes.
-
-    Desde 18/09/2026 o `iniciar()` pergunta ao servidor quem já está de pé
-    (`endpoints_de_pe`) antes de carregar: a idempotência deixou de ser da
-    memória do processo, porque o servidor de som sobrevive ao restart do
-    daemon e a mesa dela acumulou VINTE E DOIS módulos onde cabiam quatro.
-    Estas réguas medem o que o nó VIRA, não em que posição o comando saiu.
-    """
+    """O `load-module` entre as chamadas — a consulta ao servidor vem antes."""
     return next(a for a in chamadas if a[:2] == ["pactl", "load-module"])
 
 
@@ -187,9 +166,6 @@ def test_servidor_que_nao_responde_nao_vira_no_de_mentira(ancora: eh.Ancora) -> 
 def test_o_monitor_e_de_onde_a_ponte_le(ancora: eh.Ancora) -> None:
     no = eh.EndpointDeHaptica(uniq=_UNIQ, ancora=ancora, runner=lambda _a: "1\n")
     assert no.monitor == no.nome + ".monitor"
-
-
-# -- as âncoras ----------------------------------------------------------------
 
 
 def test_ancora_precisa_de_interface_para_declarar(sysfs: Path) -> None:

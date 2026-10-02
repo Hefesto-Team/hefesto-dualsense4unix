@@ -1,41 +1,9 @@
-"""A folha do microfone: o nó pelo ENDEREÇO, o byte em `common[6]`, e o pico sem disco.
-
-A folha (`scripts/ensaios/a_folha_do_microfone_por_controle.py`) decide três
-perguntas na bancada dela — MIC-OS-QUATRO-01 (o nó sobe e capta?),
-MIC-VOLUME-02 (o byte do aparelho muda a captura?) e a TARJA que diz *"O
-sistema não publica um microfone para este controle"* sobre um controle que tem
-o nó publicado. O aparelho é dela, na mesa. O que se prova aqui é a parte que
-já enganou esta casa, e as quatro famílias são estas:
-
-1. **O NÓ CASADO PELO NÚMERO.** Medido na mesa em 09/09/2026, quando o
-   `os_nos_de_som_por_controle` procurava a descrição «Microfone do Controle N»:
-   o mesmo `hefesto_mic_<hex6>` foi dado ao controle do CABO numa corrida e ao
-   do RÁDIO na seguinte, sem nada ter mudado no áudio — o N anda com a mesa. **O
-   censo foi curado em 12/09/2026** (TRES-CONTAS-PARA-UM-NUMERO-01 §6): os dois
-   casam pelo NOME de dentro. A folha já casava por ENDEREÇO, pelo dono da
-   pergunta no produto (`canal_do_microfone.nome_do_canal`).
-2. **O BYTE NA POSIÇÃO ERRADA, ou o bit esquecido.** `common[6]` com o flag0
-   `0x40`; um `[5]` mediria o alto-falante achando que mede o microfone.
-3. **A FRASE QUE AFIRMA SOBRE O QUE NÃO MEDIU.** A linha 6 dizia *"o daemon
-   não respondeu"* antes de alguém perguntar — pego ao dirigir a folha, com o
-   daemon de pé.
-4. **O PICO INDO PARA DISCO.** Ela está com o microfone aberto na sala: o
-   pedaço vira um `float` e morre.
-
-MORDE (provado antes de entregar, arrancando cada cura):
-* `COMMON_MIC_VOLUME` -> `5` em `common_do_byte`;
-* apagar o `c[0] |= VALID_FLAG0_MIC_VOLUME`;
-* casar o nó pela descrição («Microfone do Controle N») em vez do endereço;
-* devolver `perguntou=True` sempre em `veredito_da_tarja`;
-* trocar o `32768` do pico por `32767`, ou tirar o corte do quadro ímpar.
-"""
+"""A folha do microfone: o nó pelo ENDEREÇO, o byte em `common[6]`, e o pico sem disco."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`. A folha monta
-# `Gtk.Window`, então o módulo inteiro depende do PyGObject de verdade.
 exigir_gi_real("a folha do microfone por controle")
 
 import csv
@@ -50,9 +18,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 ENSAIOS = RAIZ / "scripts" / "ensaios"
 
-#: ENDEREÇOS SINTÉTICOS, na máscara da casa (octetos 4 e 5 zerados). Nenhum MAC
-#: real entra em arquivo versionado, e os dois portões de anonimato reprovam —
-#: um deles pega por FORMA, sem consultar OUI nenhum.
 MAC_DO_CABO = "aa:bb:cc:00:00:11"
 MAC_DO_RADIO = "aa:bb:cc:00:00:22"
 
@@ -81,9 +46,6 @@ class AlvoDeMentira:
     caminho_hidraw: str = "/dev/hidraw9"
 
 
-# ---------------------------------------------------------------------------
-# 1 · O byte, e o bit que o autoriza
-# ---------------------------------------------------------------------------
 def test_o_byte_vai_no_common6_com_o_flag0_0x40_e_mais_nada(folha):
     """MORDE: `COMMON_MIC_VOLUME` -> 5 mede o alto-falante; sem o bit, nada sai."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
@@ -93,8 +55,6 @@ def test_o_byte_vai_no_common6_com_o_flag0_0x40_e_mais_nada(folha):
     assert c[rep.COMMON_MIC_VOLUME] == 0x20
     assert rep.COMMON_MIC_VOLUME == 6, "o byte do microfone é o common[6]"
     assert c[0] & rep.VALID_FLAG0_MIC_VOLUME == rep.VALID_FLAG0_MIC_VOLUME == 0x40
-    # E MAIS NADA: um common cheio de estado faria de cada passo uma medição
-    # diferente — a lição do `corpo_do_degrau.py`.
     resto = [i for i, v in enumerate(c) if v and i not in (0, rep.COMMON_MIC_VOLUME)]
     assert resto == [], f"a folha escreveu bytes que não são do ensaio: {resto}"
 
@@ -153,12 +113,6 @@ def test_o_martelo_so_bate_o_que_ela_assumiu_e_a_porta_so_abre_ai(folha, monkeyp
     assert controle.escritor.escritos[-1] == bytes(47), "devolver não zerou o common"
 
 
-# ---------------------------------------------------------------------------
-# 2 · O nó pelo ENDEREÇO — a família que já atribuiu o nó ao controle errado
-# ---------------------------------------------------------------------------
-#: A lista viva como o `pactl` a devolve, com UMA armadilha: o nó pertence ao
-#: controle do CABO (o sufixo do endereço dele) e a DESCRIÇÃO carrega o número
-#: do assento do OUTRO. Foi assim que o censo irmão trocou os dois.
 _SOURCES_COM_A_ARMADILHA = """Source #1
 \tState: SUSPENDED
 \tName: hefesto_mic_000011
@@ -180,13 +134,7 @@ def _pactl_de_mentira(*argv: str) -> str:
 def test_o_no_e_do_controle_cujo_endereco_ele_carrega_nao_do_numero_da_descricao(
     folha, monkeypatch
 ):
-    """A MORDIDA DESTE ARQUIVO.
-
-    O nó `hefesto_mic_000011` é do controle `…:11` — os seis hex do fim do
-    endereço dele. A descrição diz «Controle 2», que é o assento do OUTRO.
-    Casar pela descrição dá o microfone do cabo à coluna do rádio, e foi o que
-    aconteceu na mesa em 09/09.
-    """
+    """A MORDIDA DESTE ARQUIVO."""
     monkeypatch.setattr(folha, "pactl", _pactl_de_mentira)
     monkeypatch.setattr(folha, "placas_de_dualsense", lambda _alvos: [])
     monkeypatch.setattr(folha, "fonte_de_captura_do_uniq", lambda _uniq: None)
@@ -216,9 +164,6 @@ def test_o_nome_do_no_vem_do_dono_da_pergunta_no_produto(folha):
     )
 
 
-# ---------------------------------------------------------------------------
-# 3 · A tarja: o sistema de um lado, o daemon do outro
-# ---------------------------------------------------------------------------
 def test_a_tarja_que_mente_sai_nomeada_quando_os_dois_discordam(folha):
     """Sistema publica + daemon diz `sem_fonte` = a frase da aba Controles."""
     leitura = folha.LeituraDoSistema(canal="hefesto_mic_000011", placa_usb="alsa_input.x")
@@ -244,45 +189,30 @@ def test_o_daemon_atendendo_no_no_de_outro_controle_sai_acusado(folha):
 
 
 def test_antes_da_pergunta_a_folha_nao_acusa_o_daemon_de_silencio(folha):
-    """MORDE: devolver `perguntou=True` sempre põe de volta o defeito medido.
-
-    Dirigindo a folha em 09/09, com o daemon de pé e ninguém tendo perguntado
-    nada, a linha 6 dizia *"o daemon não respondeu"* nos primeiros dois
-    segundos. `None` de resposta antes da pergunta é «não perguntei».
-    """
+    """MORDE: devolver `perguntou=True` sempre põe de volta o defeito medido."""
     frase = folha.veredito_da_tarja(folha.LeituraDoSistema(), None, perguntou=False)
     assert "ninguém perguntou ainda" in frase
     assert "não respondeu" not in frase
-    # E com a pergunta feita, o silêncio volta a ser silêncio.
     calado = folha.veredito_da_tarja(folha.LeituraDoSistema(), None, perguntou=True)
     assert "não respondeu" in calado
 
 
 def test_a_linha_seis_carrega_o_corpo_cru_e_nao_so_o_veredito(folha):
-    """MORDE: resumir a resposta apaga o `por_uniq` e o `fonte`.
-
-    São eles que dizem em QUAL microfone o daemon mexeu — e o `por_uniq` é a
-    única confissão que existe de *"atendi, mas no controle de outra pessoa"*.
-    """
+    """MORDE: resumir a resposta apaga o `por_uniq` e o `fonte`."""
     leitura = folha.LeituraDoSistema(canal="hefesto_mic_000011")
     corpo = {"status": "sem_fonte", "fonte": None, "volume": None, "por_uniq": True}
     frase = folha.frase_da_resposta_do_daemon(leitura, corpo, perguntou=True)
     assert "CRU:" in frase
     assert "por_uniq" in frase and "sem_fonte" in frase
     assert "DISCORDAM" in frase, "o veredito tem de vir junto do corpo cru"
-    # Antes da pergunta não há corpo nenhum a mostrar, e nem se inventa um.
     assert "CRU:" not in folha.frase_da_resposta_do_daemon(leitura, None, perguntou=False)
 
 
-# ---------------------------------------------------------------------------
-# 4 · O pico — o número, e nada em disco
-# ---------------------------------------------------------------------------
 def test_o_pico_de_um_pedaco_e_o_maior_modulo_sobre_32768(folha):
     """MORDE: 32767 no lugar de 32768 põe um «aaaa» saturado acima de 1,0."""
     assert folha.pico_do_pedaco(b"") == 0.0
     assert folha.pico_do_pedaco(struct.pack("<4h", 0, 0, 0, 0)) == 0.0
     assert folha.pico_do_pedaco(struct.pack("<2h", 16384, -8192)) == pytest.approx(0.5)
-    # O mínimo de um s16 é -32768: por 32767 isto sairia 1.00003.
     assert folha.pico_do_pedaco(struct.pack("<1h", -32768)) == pytest.approx(1.0)
 
 
@@ -293,12 +223,7 @@ def test_o_quadro_impar_do_corte_do_pedaco_e_descartado(folha):
 
 
 def test_o_ouvido_le_do_stdout_conta_o_pico_e_nao_cria_arquivo(folha, monkeypatch, tmp_path):
-    """O caminho INTEIRO do pico, com um sinal conhecido e nenhum disco tocado.
-
-    O leitor é trocado por um que emite s16 de pico conhecido: o que se prova é
-    o cano (processo -> `stdout` -> thread -> número), sem abrir o microfone
-    dela para isso.
-    """
+    """O caminho INTEIRO do pico, com um sinal conhecido e nenhum disco tocado."""
     programa = (
         "import sys,struct;"
         "sys.stdout.buffer.write(struct.pack('<2048h', *([16384]*2048)));"
@@ -313,7 +238,7 @@ def test_o_ouvido_le_do_stdout_conta_o_pico_e_nao_cria_arquivo(folha, monkeypatc
 
     ouvido = folha.OuvidoDoPico("uma_fonte_qualquer")
     assert ouvido.abrir() is None
-    for _ in range(200):  # até 2 s; o EOF do emissor é o sinal de "acabou"
+    for _ in range(200):
         if ouvido.pedacos >= 1 and ouvido._proc is not None and ouvido._proc.poll() is not None:
             break
         import time
@@ -335,19 +260,7 @@ def test_o_ouvido_recusa_dizendo_quando_nao_ha_fonte_nem_leitor(folha, monkeypat
 
 
 def test_o_codigo_do_ouvido_nao_sabe_escrever_arquivo(folha):
-    """A régua LÊ o código: nenhuma porta de disco dentro do medidor de pico.
-
-    Ela está com o microfone aberto na própria sala, e o cabeçalho da folha
-    promete que nenhuma amostra sobrevive ao pedaço que a produziu.
-
-    **ESTA RÉGUA LÊ O CÓDIGO, NUNCA O TEXTO — e a primeira versão dela não
-    lia.** Ela terminava com um `"wave" not in fonte`, e reprovou na primeira
-    corrida contra a DOCSTRING que avisa que não pode haver `wave` ali. *Um
-    comentário que descreve o padrão proibido vira a primeira ocorrência dele*
-    — é a armadilha de PROSA desta casa, e ela pegou o instrumento escrito
-    para não cair nela. As chamadas de verdade vivem na árvore; as palavras da
-    docstring, não.
-    """
+    """A régua LÊ o código: nenhuma porta de disco dentro do medidor de pico."""
     import ast
     import inspect
 
@@ -366,9 +279,6 @@ def test_o_codigo_do_ouvido_nao_sabe_escrever_arquivo(folha):
     assert achadas == [], f"o medidor de pico ganhou porta de disco: {achadas}"
 
 
-# ---------------------------------------------------------------------------
-# 5 · A mesa, e a tabela que sustenta a folha
-# ---------------------------------------------------------------------------
 def test_a_folha_diz_com_todas_as_letras_quando_falta_o_par(folha):
     """*"preciso de um no cabo e um no rádio; achei dois no cabo"* — dela, verbatim."""
     dois_cabos = [

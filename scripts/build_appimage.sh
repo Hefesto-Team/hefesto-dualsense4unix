@@ -59,7 +59,7 @@ chmod +x "$WORK_DIR/entrypoint.sh"
 # OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Até aqui só o
 # .deb os levava (build_deb.sh:234): quem instalava por AppImage rodava
 # `doctor --fix` e recebia "não encontrado — pulado" nas três curas que ele
-# delega a script (cli/cmd_doctor.py:182-186), com um único conselho de tela —
+# delega a script (cli/cmd_doctor.py:141-145), com um único conselho de tela —
 # rodar um ./install.sh que não existe na máquina de quem não clonou o
 # repositório. Quem consome cada um está escrito no manifesto do Flatpak, dono
 # único dessa lista.

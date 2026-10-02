@@ -1,21 +1,4 @@
-"""Débitos R-12: comparação sem caixa no matcher + sentinel `{"type": "manual"}`.
-
-Dois débitos anotados em `docs/process/2026-07-24-RETOMADA-por-onde-comecar.md`
-(§ "Débitos técnicos pequenos"), aqui fechados:
-
-1. **Caixa.** O agente do R-12 tirou o `.lower()` que o editor simples aplicava
-   no que a usuária digitava — o dado gravado passou a ser o que ela escreveu.
-   Só que o outro lado (`MatchCriteria.matches`) comparava por igualdade EXATA
-   com o dado cru do sistema, então `Cyberpunk2077.exe` no perfil contra o basename
-   `cyberpunk2077.exe` de `/proc/PID/exe` continuava não casando. A cura
-   completa é comparar sem diferenciar maiúsculas **sem** voltar a corromper o
-   que está guardado — os dois lados são testados aqui.
-
-2. **Sentinel manual.** "Este perfil só entra quando eu mandar" era escrito
-   como um `MatchCriteria` de campos vazios — forma INDISTINGUÍVEL do acidente
-   que deixou o preset `coop_local` de fábrica inalcançável por meses. Com
-   `MatchManual`, intenção e acidente param de ter a mesma forma.
-"""
+"""Débitos R-12: comparação sem caixa no matcher + sentinel `{"type": "manual"}`."""
 from __future__ import annotations
 
 import json
@@ -37,11 +20,6 @@ from hefesto_dualsense4unix.profiles.simple_match import (
 )
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets" / "profiles_default"
-
-
-# ---------------------------------------------------------------------------
-# 1. Comparação sem caixa
-# ---------------------------------------------------------------------------
 
 
 class TestComparacaoSemCaixa:
@@ -71,12 +49,7 @@ class TestComparacaoSemCaixa:
         assert m.matches({"wm_name": "Doom Eternal"}) is False
 
     def test_titulo_permite_exigir_caixa_exata(self) -> None:
-        """Saída para quem PRECISA de caixa: o grupo local `(?-i:...)`.
-
-        Sem esta saída, `re.IGNORECASE` no matcher seria uma decisão sem
-        recurso; com ela, o default é o que serve a 99% e o caso raro
-        continua expressável no próprio campo.
-        """
+        """Saída para quem PRECISA de caixa: o grupo local `(?-i:...)`."""
         m = MatchCriteria(window_title_regex="(?-i:Sackboy)")
         assert m.matches({"wm_name": "Sackboy"}) is True
         assert m.matches({"wm_name": "SACKBOY"}) is False
@@ -102,11 +75,7 @@ class TestComparacaoSemCaixa:
         assert MatchCriteria(process_name=[""]).matches({}) is False
 
     def test_dado_guardado_nao_e_corrompido(self) -> None:
-        """A metade que o R-12 já tinha entregue não pode voltar atrás.
-
-        A cura é comparar sem caixa, NÃO normalizar o que está no disco: o
-        campo tem de continuar mostrando na GUI o que a usuária escreveu.
-        """
+        """A metade que o R-12 já tinha entregue não pode voltar atrás."""
         m = MatchCriteria(
             window_class=["Steam"],
             process_name=["Cyberpunk2077.exe"],
@@ -120,12 +89,7 @@ class TestComparacaoSemCaixa:
         ]
 
     def test_regra_de_jogo_usa_a_mesma_comparacao(self) -> None:
-        """`perfil_e_regra_de_jogo` não pode divergir do matcher.
-
-        Se o perfil casa pelo matcher mas não é reconhecido como regra do
-        jogo, volta o buraco do R-01 por outra porta (o catch-all vence a
-        regra própria do jogo).
-        """
+        """`perfil_e_regra_de_jogo` não pode divergir do matcher."""
         profile = Profile(
             name="madjack",
             match=MatchCriteria(window_class=["Steam_App_2111190"]),
@@ -135,20 +99,7 @@ class TestComparacaoSemCaixa:
         assert perfil_e_regra_de_jogo(profile, info) is True
 
     def test_regra_de_jogo_com_a_janela_em_caixa_alta(self) -> None:
-        """O caso SIMÉTRICO — o que a suíte nunca cobria (UNIFICA-PREDICADO-01).
-
-        O teste acima varia a caixa do PERFIL (o que a usuária digitou). Este
-        varia a caixa da JANELA, que é o lado que ninguém controla: a
-        ``wm_class`` chega do X/XWayland com a grafia que o toolkit escolheu e
-        MUDA ENTRE BACKENDS de detecção — é o que `_casa_sem_caixa` documenta.
-
-        E era exatamente aqui que `perfil_e_regra_de_jogo` se contradizia: o
-        prefixo era testado com `startswith("steam_app_")` (SENSÍVEL) e a linha
-        seguinte comparava sem caixa. Com a janela se anunciando
-        ``STEAM_APP_2111190``, o perfil do jogo CASAVA pelo matcher e não era
-        reconhecido como regra do jogo — o buraco do R-01 por outra porta, com
-        o catch-all voltando a mandar na janela do jogo.
-        """
+        """O caso SIMÉTRICO — o que a suíte nunca cobria (UNIFICA-PREDICADO-01)."""
         profile = Profile(
             name="madjack",
             match=MatchCriteria(window_class=["steam_app_2111190"]),
@@ -159,24 +110,11 @@ class TestComparacaoSemCaixa:
             assert perfil_e_regra_de_jogo(profile, info) is True
 
     def test_editor_simples_reconhece_o_jogo_em_qualquer_caixa(self) -> None:
-        """O terceiro lugar onde a mesma divergência aparecia (UNIFICA-PREDICADO-01).
-
-        Um perfil salvo com ``Steam_App_2111190`` CASA com o jogo — o matcher
-        compara sem caixa desde o R-12. Só que o editor simples reconhecia o
-        preset "steam_game" com um predicado SENSÍVEL: o perfil de jogo abria
-        no editor AVANÇADO, como se não fosse perfil de jogo da Steam, e o
-        campo que pede o número da loja vinha vazio. A GUI mentia sobre um
-        perfil que funciona.
-        """
+        """O terceiro lugar onde a mesma divergência aparecia (UNIFICA-PREDICADO-01)."""
         for wc in ("Steam_App_2111190", "STEAM_APP_2111190", " steam_app_2111190 "):
             m = MatchCriteria(window_class=[wc])
             assert detect_simple_preset(m) == "steam_game"
             assert simple_extra(m) == "2111190"
-
-
-# ---------------------------------------------------------------------------
-# 2. Sentinel manual
-# ---------------------------------------------------------------------------
 
 
 class TestSentinelManual:
@@ -213,12 +151,7 @@ class TestSentinelManual:
             )
 
     def test_nao_e_catch_all(self) -> None:
-        """Manual é o OPOSTO de catch-all, e o predicado tem de dizer isso.
-
-        `e_catch_all` responde "o perfil chegou por acidente?" — é o que
-        segura a reversão de modo em `lifecycle._perfil_tem_opiniao`. Um
-        perfil escolhido na mão tem autoridade; o catch-all não.
-        """
+        """Manual é o OPOSTO de catch-all, e o predicado tem de dizer isso."""
         manual = Profile(name="coop", match=MatchManual())
         assert manual.e_catch_all is False
         assert Profile(name="fallback", match=MatchAny()).e_catch_all is True
@@ -259,21 +192,7 @@ class TestRetrocompatibilidade:
             assert profile.match.type in ("any", "criteria")
 
     def test_nenhum_preset_de_fabrica_ficou_inalcancavel(self) -> None:
-        """O defeito do R-12 era um preset que NUNCA casava — e ele volta calado.
-
-        NOTA DATADA — 26/08/2026. Aqui estava
-        `test_coop_local_de_fabrica_segue_alcancavel`, que abria
-        `coop_local.json` e afirmava que o preset migrado no R-12 casava por
-        título. O preset foi PODADO da fábrica nesta data (a pedido dela, e
-        nenhum dos podados estava ativo no disco dela), então o alvo do teste
-        não existe mais.
-
-        O que a régua guardava, porém, não era o `coop_local`: era a família
-        de defeito *"preset de fábrica que o autoswitch nunca escolhe"* — a
-        que passou meses no disco sem ninguém notar. Por isso ela não some
-        junto com o arquivo; ela passa a valer para a fábrica INTEIRA, que é
-        mais do que ela media antes.  # verbo medir, sem acento (noqa-acento)
-        """
+        """O defeito do R-12 era um preset que NUNCA casava — e ele volta calado."""
         arquivos = sorted(ASSETS_DIR.glob("*.json"))
         assert arquivos, "presets de fábrica sumiram do repositório"
         for path in arquivos:
@@ -282,7 +201,7 @@ class TestRetrocompatibilidade:
             )
             match = profile.match
             if isinstance(match, MatchAny):
-                continue  # catch-all casa com tudo, por definição
+                continue
             assert isinstance(match, MatchCriteria)
             assert (
                 match.window_class

@@ -1,40 +1,4 @@
-"""O padrão do computador: o que não muda com o jogo, e o perfil que só sobrepõe.
-
-O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026). Ela, depois de uma
-noite com visitas: *«algumas features precisam ser por computador e permanecerem
-salvas»*. O som, os sensores, a luz, a vibração, o mouse e o teclado passam a ter
-um valor do computador, guardado no ``maquina.json`` (``computador``), um por
-controle e um para todo controle. O perfil do jogo só guarda o que for diferente
-(`D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE`, por delegação).
-
-UM DONO PARA QUATRO PERGUNTAS:
-
-- :data:`SECOES`: o que é do computador, cartão a cartão, e :data:`DO_JOGO`, o
-  que fica no jogo e por quê;
-- :func:`perfil_que_vale`: a vista que todo leitor aplica, no molde da
-  economia (``manager._perfil_na_economia``): memória, nunca disco;
-- :func:`gravar` e :func:`gravar_pelo_gesto`: o único escritor de um cartão do
-  computador. Grava no perfil quando ele já sobrepõe o cartão, ou quando o
-  gesto é «Só neste jogo»; nos outros casos, no computador;
-- :func:`migrar_uma_vez`: o computador nasce do Freestyle, e o perfil perde só
-  o que já vale igual.
-
-A PRECEDÊNCIA, campo a campo::
-
-    o jogo, neste controle  >  o jogo, global  >  o computador, neste controle
-      >  o computador, todo controle  >  o de fábrica
-
-O QUE CONTA COMO ESCOLHA DO JOGO. Um campo que o perfil escreveu
-(``model_fields_set``) e que não é ``None`` (``None`` é «sem opinião» no esquema
-inteiro). As três seções globais que o ``save_profile`` grava sempre inteiras
-(``leds``, ``rumble`` e as velocidades do ``mouse``) têm uma regra a mais: o
-valor de fábrica não conta como escolha. Qualquer gravação de perfil escreve
-essas seções por extenso, e o valor de fábrica ali não diz se alguém o
-escolheu. É a resposta 4 dela de 01/10 («os campos de luz e vibração que
-guardam o valor de fábrica passam a seguir o computador»), estendida às duas
-velocidades pela mesma razão. As entradas de cada controle são gravadas só com
-o que foi escrito (``exclude_unset``), e ali a presença basta.
-"""
+"""O padrão do computador: o que não muda com o jogo, e o perfil que só sobrepõe."""
 from __future__ import annotations
 
 import contextlib
@@ -57,12 +21,7 @@ logger = get_logger(__name__)
 
 
 class Secao(NamedTuple):
-    """Um cartão da tela cujo valor é do computador.
-
-    ``globais`` são as seções de topo do perfil que o cartão mostra;
-    ``no_computador`` é o subconjunto que o computador guarda no ``global``;
-    ``por_controle`` são as seções de ``controllers[<identidade>]``.
-    """
+    """Um cartão da tela cujo valor é do computador."""
 
     cartao: str
     pagina: str
@@ -72,8 +31,6 @@ class Secao(NamedTuple):
     por_controle: tuple[str, ...]
 
 
-#: O QUE É DO COMPUTADOR, cartão a cartão. A única declaração: a vista, o
-#: escritor, a migração e a marca da tela leem daqui.
 SECOES: dict[str, Secao] = {
     "som": Secao("som", "02-controles.html", "Som",
                  ("speaker", "mic"), ("speaker",), ("speaker", "mic")),
@@ -90,9 +47,6 @@ SECOES: dict[str, Secao] = {
                      ("teclado_emulado", "key_bindings"), ()),
 }
 
-#: O QUE FICA NO JOGO, e por quê. É o «desenho do jogo»: nenhum jogo precisa
-#: dele no computador. Se um dia ela quiser um destes no computador, é uma linha
-#: a menos aqui e uma a mais em :data:`SECOES`.
 DO_JOGO: dict[str, str] = {
     "mode": "o modo (Sony, Xbox, Navegação, Nativo) é de cada jogo",
     "mascara": "como o controle aparece no jogo",
@@ -103,19 +57,15 @@ DO_JOGO: dict[str, str] = {
     "suppress_desktop_emulation": "o modo-jogo é de cada jogo",
 }
 
-#: O que já era do computador antes desta sprint, com o dono de antes.
 JA_DO_COMPUTADOR: dict[str, str] = {
     "mic.button_toggles_system": "D-O-MICROFONE-A-MAQUINA-DA-O-PADRAO-O-PERFIL-SOBREPOE",
 }
 
-#: As seções que só fazem sentido juntas: quem escolhe uma escolhe o par.
 PARES: dict[str, tuple[tuple[str, ...], ...]] = {
     "rumble": (("policy", "custom_mult"),),
     "leds": (("lightbar", "lightbar_para_o_numero"),),
 }
 
-#: As seções globais que o ``save_profile`` grava inteiras, com o valor de
-#: fábrica de cada campo (ver o cabeçalho).
 _DENSAS: dict[str, dict[str, Any]] = {
     "leds": LedsConfig().model_dump(mode="json"),
     "rumble": RumbleConfig().model_dump(mode="json"),
@@ -125,12 +75,10 @@ _DENSAS: dict[str, dict[str, Any]] = {
     },
 }
 
-#: As seções que são modelo (dicionário de campos). As outras são valor inteiro.
 _MODELOS: frozenset[str] = frozenset(
     {"leds", "rumble", "speaker", "mic", "sensores", "mouse"}
 )
 
-#: Os campos de cada seção de controle (os modelos do perfil, nunca digitados).
 _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
     "leds": tuple(LedsConfig.model_fields),
     "speaker": tuple(ProfileSpeakerConfig.model_fields),
@@ -148,16 +96,9 @@ class OFreestyleNaoSobrepoeError(RuntimeError):
 
 
 class OJogoNaoTeriaOQueGuardarError(RuntimeError):
-    """«Só neste jogo» que não daria ao jogo escolha nenhuma naquele cartão.
-
-    A marca não oferece o botão nesse caso (:func:`pode_so_neste_jogo`); a
-    recusa é para o clique que chega de um tique velho, e nunca grava.
-    """
+    """«Só neste jogo» que não daria ao jogo escolha nenhuma naquele cartão."""
 
 
-# ---------------------------------------------------------------------------
-# A identidade do controle
-# ---------------------------------------------------------------------------
 def chave(endereco: object) -> str | None:
     """A identidade de um controle (doze hex minúsculos), ou ``None``."""
     from hefesto_dualsense4unix.utils.maquina import chave_do_controle
@@ -176,26 +117,14 @@ def _entradas_por_chave(controles: Mapping[str, Any] | None) -> dict[str, str]:
 
 
 def chave_no_perfil(perfil: Profile, uniq: object) -> str:
-    """A chave da entrada deste controle como o perfil a escreveu.
-
-    O perfil pode guardar o controle com dois-pontos ou colado, maiúsculo ou
-    minúsculo; quem grava a entrada mexe na que existe, e não cria uma segunda
-    para o mesmo controle. Sem entrada, a identidade (ou o próprio ``uniq``).
-    """
+    """A chave da entrada deste controle como o perfil a escreveu."""
     identidade = chave(uniq)
     original = _entradas_por_chave(perfil.controllers).get(identidade or "")
     return original or identidade or str(uniq)
 
 
-# ---------------------------------------------------------------------------
-# O que é escolha do jogo
-# ---------------------------------------------------------------------------
 def e_o_freestyle(nome: object) -> bool:
-    """O Freestyle é o perfil de fora do jogo: ele não sobrepõe nada.
-
-    A mesma pergunta de ``manager.e_o_freestyle`` (o slug do arquivo), sem
-    importar o gerente.
-    """
+    """O Freestyle é o perfil de fora do jogo: ele não sobrepõe nada."""
     from hefesto_dualsense4unix.profiles.loader import SLUG_DO_PADRAO
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
@@ -234,7 +163,6 @@ def escolhas_globais_do_jogo(perfil: Profile, secao: str) -> dict[str, Any]:
     if secao == "mouse":
         escolhidos &= {"speed", "scroll_speed"}
     if secao == "mic":
-        # O modo do microfone tem dono próprio (`JA_DO_COMPUTADOR`).
         escolhidos -= {"button_toggles_system"}
     return {campo: dados.get(campo) for campo in _expandir_pares(secao, escolhidos)}
 
@@ -272,9 +200,6 @@ def sobrepoe(perfil: Profile | None, cartao: str, uniq: object = None) -> bool:
     return any(escolhas_do_controle_do_jogo(perfil, uniq, s) for s in secao.por_controle)
 
 
-# ---------------------------------------------------------------------------
-# A vista
-# ---------------------------------------------------------------------------
 def computador_vazio(computador: Any) -> bool:
     """O computador não declarou nada (a vista devolve o próprio perfil)."""
     if computador is None:
@@ -284,11 +209,7 @@ def computador_vazio(computador: Any) -> bool:
 
 
 def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
-    """O perfil com o computador por baixo, na precedência do cabeçalho.
-
-    Perfil e computador sem nada devolvem o MESMO objeto: quem nunca declarou
-    nada aplica byte a byte o que aplicava. É memória: o disco não muda.
-    """
+    """O perfil com o computador por baixo, na precedência do cabeçalho."""
     if computador_vazio(computador):
         return perfil
     cru: dict[str, Any] = perfil.model_dump(mode="json", exclude_unset=True)
@@ -301,8 +222,6 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
         if not do_computador:
             continue
         if secao == "mouse" and perfil.mouse is None:
-            # O liga e desliga é do jogo: sem a seção, as velocidades chegam
-            # pelo recuo da Navegação (`daemon.lifecycle._velocidades_ou_as_da_sessao`).
             continue
         escolhas = escolhas_globais_do_jogo(perfil, secao)
         atual = dict(cru.get(secao) or {})
@@ -310,11 +229,6 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
             if campo not in escolhas:
                 atual[campo] = valor
         cru[secao] = atual
-    # O FREESTYLE NÃO SOBREPÕE NADA, também na vista: o que o arquivo dele
-    # ainda guarda de um cartão do computador (o «Status do Modo» e o «Salvar»
-    # do rodapé o reescrevem) fica POR BAIXO do computador. Sem isto a marca
-    # dizia «PC», o clique gravava no computador, e o aparelho recebia o
-    # valor velho do Freestyle (medido na conferência de 02/10/2026).
     freestyle = e_o_freestyle(perfil.name)
     if do_global.button_actions is not None:
         acoes_do_jogo = perfil.button_actions or {}
@@ -351,7 +265,6 @@ def _controles_que_valem(
             if secao not in _CAMPOS_DO_CONTROLE or not isinstance(campos, Mapping):
                 continue
             do_controle = dict(entrada.get(secao) or {})
-            # O Freestyle não protege as próprias entradas: o computador vence.
             escritos = set() if freestyle else {
                 c for c, v in do_controle.items() if v is not None}
             escolhidos = _expandir_pares(secao, escritos | globais.get(secao, set()))
@@ -366,11 +279,7 @@ def _controles_que_valem(
 
 
 def carregar_o_que_vale(nome: str) -> Profile:
-    """``load_profile`` com o computador por baixo. É a leitura de quem APLICA.
-
-    Quem grava continua lendo cru (``loader.load_profile``): o computador não
-    pode ir parar no perfil.
-    """
+    """``load_profile`` com o computador por baixo. É a leitura de quem APLICA."""
     from hefesto_dualsense4unix.profiles import loader
 
     return o_que_vale(loader.load_profile(nome))
@@ -381,10 +290,6 @@ def o_que_vale(perfil: Profile) -> Profile:
     return perfil_que_vale(perfil, o_computador())
 
 
-#: ``(selo do maquina.json, ComputadorDeclarado)``: a leitura de cada volta é um
-#: ``stat``, e o JSON só se lê quando o arquivo muda. Os leitores do daemon
-#: perguntam por aqui, e não ao ``Daemon._maquina``: a janela grava o arquivo
-#: direto, e a memória do daemon só se refaz pelo ``machine.declare``.
 _O_COMPUTADOR_LIDO: tuple[Any, Any] = (None, None)
 
 
@@ -421,9 +326,6 @@ def velocidades_do_computador() -> tuple[int | None, int | None]:
     return None, None
 
 
-# ---------------------------------------------------------------------------
-# O escritor
-# ---------------------------------------------------------------------------
 def _remendar(destino: dict[str, Any], campos: Mapping[str, Any]) -> None:
     """``campos`` por cima de ``destino``; ``None`` tira o campo (ou a seção)."""
     for secao, valor in campos.items():
@@ -491,8 +393,6 @@ def _no_computador(campos: Mapping[str, Any], uniq: object) -> dict[str, Any]:
     return documento
 
 
-#: As seções globais em que o computador guarda MENOS que o perfil: do mouse,
-#: só as velocidades (o liga e desliga é do jogo).
 _CAMPOS_DO_GLOBAL: dict[str, tuple[str, ...]] = {"mouse": ("speed", "scroll_speed")}
 
 
@@ -540,10 +440,7 @@ def _carregar_cru(nome: str | None) -> Profile | None:
 
 def onde_grava(cartao: str, perfil: Profile | None, uniq: object = None, *,
                so_neste_jogo: bool = False) -> str:
-    """``"jogo"`` ou ``"computador"``: onde um clique neste cartão grava.
-
-    O clique grava onde a marca do cartão diz, e não onde o chip do topo aponta.
-    """
+    """``"jogo"`` ou ``"computador"``: onde um clique neste cartão grava."""
     if cartao not in SECOES:
         raise KeyError(f"{cartao!r} não é um cartão do computador")
     if so_neste_jogo:
@@ -564,13 +461,7 @@ def gravar(
     so_neste_jogo: bool = False,
     origem: str | None = None,
 ) -> str:
-    """O único escritor de um cartão do computador. Devolve onde gravou.
-
-    ``campos`` é ``{seção: {campo: valor}}`` (``None`` tira o campo), ou
-    ``{seção: valor}`` para as seções que são valor inteiro. Com ``uniq``, as
-    seções são as do controle; sem, as globais. Quem chama reaplica como já
-    fazia.
-    """
+    """O único escritor de um cartão do computador. Devolve onde gravou."""
     perfil = _carregar_cru(perfil_ativo)
     onde = onde_grava(cartao, perfil, uniq, so_neste_jogo=so_neste_jogo)
     campos = _com_os_pares(campos)
@@ -598,11 +489,7 @@ def _diferenca_de_secao(secao: str, antes: Any, depois: Any) -> Any:
 def o_que_mudou(
     cartao: str, antes: Profile, depois: Profile, uniq: object = None
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    """``(globais, {identidade: seções})`` do que mudou de ``antes`` para ``depois``.
-
-    Com ``uniq``, só a entrada daquele controle: o gesto de UM controle não leva
-    ao computador a forma que a gravação deu às entradas dos outros.
-    """
+    """``(globais, {identidade: seções})`` do que mudou de ``antes`` para ``depois``."""
     secao_do_cartao = SECOES[cartao]
     globais: dict[str, Any] = {}
     if uniq is None:
@@ -645,20 +532,7 @@ def gravar_pelo_gesto(
     so_neste_jogo: bool = False,
     origem: str | None = None,
 ) -> tuple[str, Profile | None]:
-    """O gesto de um cartão, gravado onde a marca do cartão diz.
-
-    ``muda`` é o que o gesto sempre fez: recebe um perfil e devolve o perfil
-    com a mudança (ou ``None``, quando não há o que gravar). Se o perfil
-    ``nome`` sobrepõe o cartão, ``muda`` roda sobre ele e o resultado vai ao
-    disco inteiro, como antes. Se não, ``muda`` roda sobre a VISTA (o que vale
-    agora) e só a diferença do cartão vai ao computador; o perfil não muda.
-
-    Sem perfil ativo (``nome`` vazio), o gesto roda sobre o computador sozinho
-    e grava nele: o que é do computador não precisa de perfil.
-
-    Levanta o que ``loader.load_profile`` e ``muda`` levantarem. Devolve
-    ``(onde, perfil mudado)``.
-    """
+    """O gesto de um cartão, gravado onde a marca do cartão diz."""
     from hefesto_dualsense4unix.profiles import loader
 
     cru = loader.load_profile(nome) if nome else None
@@ -681,15 +555,8 @@ def gravar_pelo_gesto(
     return onde, novo
 
 
-# ---------------------------------------------------------------------------
-# A migração, uma vez
-# ---------------------------------------------------------------------------
-#: O sufixo da cópia de cada perfil que a migração reescreve, ao lado do
-#: original (a forma dos ``maquina.json.antes-de-*``).
 SUFIXO_DA_COPIA = ".antes-do-computador"
 
-#: Os atos do PS solo que a linha das Definições guardava e que são do ⑥ da
-#: tabela dos gestos desde a OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01.
 _PS_QUE_E_DA_TABELA: frozenset[str] = frozenset({"__NADA__", "__STEAM__"})
 
 
@@ -700,13 +567,7 @@ def _sem_o_ps_da_tabela(acoes: Mapping[str, Any] | None) -> dict[str, Any] | Non
 
 
 def efetivo(perfil: Profile, computador: Any) -> dict[tuple[str, ...], Any]:
-    """O valor que cada campo do :data:`SECOES` TEM para o aparelho. Para comparar.
-
-    A vista põe o computador por baixo; o campo de um controle sem escolha
-    própria herda a seção global do mesmo nome (é o que o aplicador faz), e
-    os que não têm global (as barras dos motores, os sensores) ficam ``None``,
-    que é o de fábrica deles.
-    """
+    """O valor que cada campo do :data:`SECOES` TEM para o aparelho. Para comparar."""
     vista = perfil_que_vale(perfil, computador)
     saida: dict[tuple[str, ...], Any] = {}
     for secao in ("leds", "rumble", "speaker", "mic", "mouse"):
@@ -816,15 +677,7 @@ def _sem(perfil: Profile, grupo: Iterable[tuple[str, ...]]) -> Profile:
 
 
 def ceder_ao_computador(perfil: Profile, computador: Any) -> tuple[Profile, int]:
-    """O perfil sem o que já vale igual pelo computador. Devolve ``(perfil, saíram)``.
-
-    Um grupo (o campo, ou o par) só sai se, sem ele, NENHUM valor efetivo
-    deste perfil muda com este computador (:func:`efetivo`, campo a campo, em
-    todo controle): a régua é o valor que o aparelho recebe, e não o campo que
-    sai. O Freestyle não sobrepõe nada, e perde o que o computador guarda
-    (o computador nasceu dele); o microfone global fica, porque o computador
-    não guarda microfone global.
-    """
+    """O perfil sem o que já vale igual pelo computador. Devolve ``(perfil, saíram)``."""
     if e_o_freestyle(perfil.name):
         cru = perfil.model_dump(mode="json", exclude_unset=True)
         saiu = 0
@@ -856,10 +709,7 @@ def ceder_ao_computador(perfil: Profile, computador: Any) -> tuple[Profile, int]
 
 
 def semente_do_freestyle(freestyle: Profile | None) -> dict[str, Any]:
-    """O documento do computador que nasce do Freestyle (o que ele escreveu).
-
-    Sem Freestyle, só as velocidades do ``mouse_emulation.flag``.
-    """
+    """O documento do computador que nasce do Freestyle (o que ele escreveu)."""
     do_global: dict[str, Any] = {}
     controles: dict[str, Any] = {}
     if freestyle is not None:
@@ -899,7 +749,6 @@ def semente_do_freestyle(freestyle: Profile | None) -> dict[str, Any]:
             if dados_entrada:
                 controles[identidade] = dados_entrada
     if "mouse" not in do_global:
-        # Sem Freestyle (ou sem a seção dele), as velocidades de agora.
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.utils.session import load_mouse_preference
 
@@ -938,16 +787,7 @@ def _contar(semente: Mapping[str, Any]) -> int:
 
 
 def _o_ps_do_freestyle_vai_ao_sexto(freestyle: Profile | None) -> None:
-    """O que o PS sozinho fazia fora do jogo muda de dono sem se perder.
-
-    O ``__NADA__`` e o ``__STEAM__`` da linha do PS do Freestyle eram a escolha
-    dela para o PS fora do jogo, e o dono disso passou a ser o ⑥ da tabela dos
-    gestos (``D-0110-A-LINHA-DO-PS-SO-DIGITA``). A migração tira o token do
-    perfil; sem esta volta, um PS calado fora do jogo voltaria a abrir a
-    Steam. Só quando a tabela ainda não declara o ⑥: um gesto já escolhido
-    vence. O dos perfis de jogo não vem: com um jogo aberto, o PS sozinho é do
-    jogo (``D-0110-NO-JOGO-O-PS-SOZINHO-E-DO-JOGO``).
-    """
+    """O que o PS sozinho fazia fora do jogo muda de dono sem se perder."""
     if freestyle is None:
         return
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
@@ -962,15 +802,7 @@ def _o_ps_do_freestyle_vai_ao_sexto(freestyle: Profile | None) -> None:
 
 
 def migrar_uma_vez() -> dict[str, int] | None:
-    """O computador nasce do Freestyle, e cada perfil perde o que já vale igual.
-
-    Uma vez: a marca é ``computador.migrado`` no ``maquina.json``. Cada perfil
-    reescrito ganha antes a cópia ``<perfil>.json.antes-do-computador`` ao
-    lado (e a versão do ``.historico``, que o ``save_profile`` guarda). Perfil
-    que é cópia intocada de fábrica não é reescrito: a atualização da fábrica
-    continua o alcançando. Devolve ``{perfil: campos que saíram}``, ou ``None``
-    quando não rodou.
-    """
+    """O computador nasce do Freestyle, e cada perfil perde o que já vale igual."""
     from pathlib import Path
 
     from hefesto_dualsense4unix.profiles import loader
@@ -1018,7 +850,6 @@ def migrar_uma_vez() -> dict[str, int] | None:
         if not saiu:
             continue
         if loader._profile_path(novo) != caminho:
-            # O nome não dá este arquivo: gravar criaria um segundo perfil.
             logger.warning("perfil_nao_cedeu_ao_computador", perfil=perfil.name,
                            err="o nome do perfil não é o do arquivo")
             continue
@@ -1040,9 +871,6 @@ def migrar_uma_vez() -> dict[str, int] | None:
     return saidas
 
 
-# ---------------------------------------------------------------------------
-# Os três gestos do cartão
-# ---------------------------------------------------------------------------
 def _identidades(perfil: Profile, uniq: object) -> list[str]:
     if uniq is not None:
         identidade = chave(uniq)
@@ -1050,25 +878,13 @@ def _identidades(perfil: Profile, uniq: object) -> list[str]:
     return sorted(_entradas_por_chave(perfil.controllers))
 
 
-#: O que vale num controle sem entrada própria, quando a vista também não tem a
-#: seção global: os sensores nascem ligados (a regra do interruptor da aba
-#: Controles), e o ``None`` do perfil é «não mexer», não «ligado».
 _DE_FABRICA_NO_CONTROLE: dict[str, dict[str, Any]] = {
     "sensores": {"giroscopio": True, "acelerometro": True},
 }
 
 
 def _o_que_vale_no_controle_sem_entrada(vista: Profile, nome: str) -> dict[str, Any]:
-    """A seção ``nome`` de um controle sem entrada própria, na forma da seção por controle.
-
-    Sem entrada, o controle vale a seção GLOBAL da vista (a luz, o som, a
-    força da vibração), e o que ela não tem vale o de fábrica (os sensores). O
-    «Só neste jogo» de UM controle copia esse valor para a entrada dele, com os
-    campos escritos: uma entrada vazia não é escolha, e o clique não faria
-    nada. Só entram os campos que a seção por controle conhece (a da vibração
-    é um pedaço da global). O microfone não se copia: o mudo é do controle
-    (O-MUDO-E-DO-CONTROLE-01), e o volume sem opinião é silêncio.
-    """
+    """A seção ``nome`` de um controle sem entrada própria, na forma da seção por controle."""
     from pydantic import BaseModel
 
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
@@ -1093,19 +909,7 @@ def perfil_so_neste_jogo(
     computador: Any,
     vivos: Mapping[str, Any] | None = None,
 ) -> Profile:
-    """O perfil depois do «Só neste jogo», em memória: o disco não muda.
-
-    Copia o que vale agora no cartão. Com ``uniq``, só aquele controle; sem, as
-    seções globais e todo controle que o computador ou o perfil conhecem.
-
-    ``vivos`` é ``{seção: valor}`` do que o aparelho tem AGORA, lido pela tela
-    (o volume do alto-falante daquele controle, a força da mesa, as
-    velocidades do mouse e o teclado ligado). É o último degrau de «o que vale
-    agora»: quando nem o jogo nem o computador declaram a seção, o que vale é
-    o que está no aparelho. Sem ele, o «Só neste jogo» do som, da vibração, do
-    mouse e do teclado não copiava nada num computador ainda sem padrão, e o
-    clique passava sem efeito (medido na conferência de 02/10/2026).
-    """
+    """O perfil depois do «Só neste jogo», em memória: o disco não muda."""
     vista = perfil_que_vale(cru_perfil, computador)
     secao = SECOES[cartao]
     vivos = vivos or {}
@@ -1150,15 +954,7 @@ def pode_so_neste_jogo(
     computador: Any = None,
     vivos: Mapping[str, Any] | None = None,
 ) -> bool:
-    """O «Só neste jogo» daria ao jogo escolha própria neste cartão?
-
-    É a pergunta da marca antes de oferecer o botão: um botão que aceita o
-    clique e não muda nada é o defeito que *«tudo na interface deveria
-    funcionar»* proíbe. Não é o caso quando o que vale agora é o de fábrica de
-    uma seção densa (as velocidades do mouse em 6 e 1, por exemplo): o
-    esquema não distingue «o jogo escolheu o de fábrica» de «ninguém
-    escolheu». Nunca levanta: é pintura de tique.
-    """
+    """O «Só neste jogo» daria ao jogo escolha própria neste cartão?"""
     if cru_perfil is None or e_o_freestyle(cru_perfil.name):
         return False
     try:
@@ -1173,11 +969,7 @@ def pode_so_neste_jogo(
 def so_neste_jogo(
     cartao: str, uniq: object, perfil: str, vivos: Mapping[str, Any] | None = None
 ) -> Profile:
-    """Copia para o perfil o que vale agora no cartão. Daí em diante, o jogo manda.
-
-    Grava só quando a cópia dá ao jogo escolha própria no cartão; se não daria,
-    recusa sem gravar (:class:`OJogoNaoTeriaOQueGuardarError`).
-    """
+    """Copia para o perfil o que vale agora no cartão. Daí em diante, o jogo manda."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
     if e_o_freestyle(perfil):
@@ -1195,12 +987,7 @@ def so_neste_jogo(
 
 
 def voltar_ao_do_computador(cartao: str, uniq: object, perfil: str) -> Profile:
-    """Tira do perfil o que ele escolheu neste cartão: volta a valer o computador.
-
-    Com ``uniq``, a seção daquele controle e as globais do cartão (a escolha
-    global do jogo também vence o computador naquele controle); sem, o cartão
-    inteiro, em todo controle.
-    """
+    """Tira do perfil o que ele escolheu neste cartão: volta a valer o computador."""
     from hefesto_dualsense4unix.profiles import loader
 
     cru_perfil = loader.load_profile(perfil)
@@ -1213,7 +1000,6 @@ def voltar_ao_do_computador(cartao: str, uniq: object, perfil: str) -> Profile:
             if cru.get("mouse"):
                 cru["mouse"] = {**cru["mouse"], **_DENSAS["mouse"]}
         elif nome == "mic" and cru.get("mic"):
-            # O modo do microfone fica: tem dono próprio (`JA_DO_COMPUTADOR`).
             cru["mic"] = {"button_toggles_system": cru["mic"].get("button_toggles_system")}
         else:
             cru.pop(nome, None)

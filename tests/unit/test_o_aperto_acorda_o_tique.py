@@ -1,23 +1,4 @@
-"""O aperto acorda o tique (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01, entrada -NA-HORA).
-
-Todo aperto esperava o tique: o laço do daemon lê os botões uma vez por período
-(16,7 ms a 60 Hz), e o aperto que chega logo depois de um tique espera o
-período inteiro, 8,3 ms em média. O leitor de cada controle chama um
-despertador quando o conjunto de botões muda
-(`evdev_reader.definir_o_despertador`), e as três esperas do `_poll_loop`
-acordam com a parada OU com o aperto (`lifecycle._esperar_o_tique`). A volta
-acordada é só do jogo (`lifecycle._volta_do_aperto`): o P1 e os jogadores 2 a
-4; o `poll.tick`, a bateria, os atalhos e o mouse emulado ficam no relógio.
-
-As réguas rodam o `_poll_loop` de PRODUÇÃO com dublês do daemon (o fora da mesa
-e o na mesa), os leitores de verdade alimentados pelo `_handle_event` numa
-thread, como a do leitor, e os pads de mentira que anotam a hora de cada
-conjunto de botões. O P1 com o vpad de pé passa pela espera direto, com o
-`dispatch_gamepad` de verdade.
-
-AS MORDIDAS, provadas em 02/10/2026 (aplicadas, rodadas, devolvidas, md5
-conferido): ver a docstring de cada régua.
-"""
+"""O aperto acorda o tique (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01, entrada -NA-HORA)."""
 
 from __future__ import annotations
 
@@ -95,10 +76,7 @@ def _gerente(leitores: dict[int, EvdevReader], pads: dict[int, _Pad]) -> co.Coop
 
 @pytest.fixture(autouse=True)
 def _o_laco_sem_a_maquina(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """O que o laço faz e toca a máquina, ou não é o caminho do botão: a
-    varredura do co-op (`sync` lê `/dev/input` e agarra nó), o juiz das
-    máscaras, a mesa do co-op, o aviso de modo e a reconciliação do
-    lançamento. E o despertador volta a ninguém no fim: ele é do processo."""
+    """O que o laço faz e toca a máquina, ou não é o caminho do botão: a"""
     monkeypatch.setattr(co.CoopManager, "sync", lambda self: None)
     monkeypatch.setattr(co.CoopManager, "_recolher_os_cedidos", lambda self: None)
     monkeypatch.setattr(co.CoopManager, "_promote_pending", lambda self: None)
@@ -107,11 +85,6 @@ def _o_laco_sem_a_maquina(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
     yield
     er.definir_o_despertador(None)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Os dublês do daemon: o `_poll_loop` de PRODUÇÃO
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 class _LacoForaDaMesa:
@@ -153,8 +126,7 @@ class _LacoForaDaMesa:
 
 
 class _LacoNaMesa(_LacoForaDaMesa):
-    """O mesmo laço com o primário na mesa, o analógico esquerdo parado no
-    fundo e o mouse emulado ligado (a Navegação: sem vpad do jogo)."""
+    """O mesmo laço com o primário na mesa, o analógico esquerdo parado no"""
 
     def __init__(
         self, gerente: co.CoopManager, poll_hz: int, leitor: EvdevReader, mouse: Any
@@ -202,17 +174,8 @@ def _numa_thread(alvo: Callable[[], None]) -> threading.Thread:
     return fio
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Régua 6: o aperto não espera a volta do relógio
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 def test_regua_6_os_jogadores_2_a_4_pelo_laco_de_producao() -> None:
-    """Com o período em 1 s, o X do P3 chega ao pad dele em menos de 50 ms.
-
-    Mordidas: a espera do controle fora da mesa de volta ao
-    `asyncio.wait_for(stop_event.wait(), ...)` reprova (o X espera o período);
-    tirar a chamada do despertador do `_handle_event` também reprova."""
+    """Com o período em 1 s, o X do P3 chega ao pad dele em menos de 50 ms."""
     leitores = {n: _leitor(n) for n in (2, 3, 4)}
     pads = {n: _Pad() for n in (2, 3, 4)}
     daemon = _LacoForaDaMesa(_gerente(leitores, pads), poll_hz=1)
@@ -223,7 +186,7 @@ def test_regua_6_os_jogadores_2_a_4_pelo_laco_de_producao() -> None:
         _apertar(leitores[3], ecodes.BTN_SOUTH, 1)
 
     async def cenario() -> None:
-        await asyncio.sleep(0.2)  # o primeiro tique rodou; o próximo é em 1 s
+        await asyncio.sleep(0.2)
         _numa_thread(apertar).join()
         await asyncio.sleep(0.15)
 
@@ -235,8 +198,7 @@ def test_regua_6_os_jogadores_2_a_4_pelo_laco_de_producao() -> None:
 
 
 def test_regua_6_o_p1_pela_espera_com_o_vpad_de_pe() -> None:
-    """O P1 na mesa, com o vpad de pé: o X chega pelo `dispatch_gamepad` de
-    verdade, lido do retrato do leitor, em menos de 50 ms de um período de 1 s."""
+    """O P1 na mesa, com o vpad de pé: o X chega pelo `dispatch_gamepad` de"""
     leitor = _leitor(1)
     pad = _Pad()
     daemon = SimpleNamespace(
@@ -274,8 +236,7 @@ def test_regua_6_o_p1_pela_espera_com_o_vpad_de_pe() -> None:
 
 
 def test_regua_6_no_assentamento_o_aperto_nao_vai_ao_jogo() -> None:
-    """Dentro do grace (`_input_ready_at` no futuro), a volta acordada não
-    entrega nada: o mesmo portão do tique."""
+    """Dentro do grace (`_input_ready_at` no futuro), a volta acordada não"""
     leitores = {2: _leitor(2)}
     pads = {2: _Pad()}
     daemon = _LacoForaDaMesa(_gerente(leitores, pads), poll_hz=1)
@@ -291,8 +252,7 @@ def test_regua_6_no_assentamento_o_aperto_nao_vai_ao_jogo() -> None:
 
 
 def test_a_espera_tem_o_contrato_da_que_ela_substitui() -> None:
-    """Sem aperto, o prazo acaba em `asyncio.TimeoutError`; com a parada, ela
-    volta; e o prazo não estica."""
+    """Sem aperto, o prazo acaba em `asyncio.TimeoutError`; com a parada, ela"""
 
     async def cenario() -> None:
         daemon = SimpleNamespace()
@@ -333,24 +293,14 @@ def _esperas_do_poll_loop() -> tuple[int, int]:
 
 
 def test_regua_6_as_tres_esperas_do_laco_acordam_com_o_aperto() -> None:
-    """As três esperas do `_poll_loop` (fora da mesa, assentamento, fim do
-    tique) passam pela espera que acorda; nenhuma espera direta na parada
-    sobra. Mordida: qualquer uma de volta ao `asyncio.wait_for` reprova."""
+    """As três esperas do `_poll_loop` (fora da mesa, assentamento, fim do"""
     assert _esperas_do_poll_loop() == (3, 0)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Régua 7: o teto
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def test_regua_7_quatro_leitores_a_100_apertos_nao_passam_de_250_voltas(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quatro leitores (o do P1 fora da mesa também acorda) a 100 apertos por
-    segundo cada, durante 1 s: as voltas acordadas nunca ficam a menos de 4 ms
-    uma da outra, e não passam de 250 por segundo. Mordida: tirar o teto
-    reprova."""
+    """Quatro leitores (o do P1 fora da mesa também acorda) a 100 apertos por"""
     leitores = {n: _leitor(n) for n in (2, 3, 4)}
     pads = {n: _Pad() for n in (2, 3, 4)}
     todos = [_leitor(1), *leitores.values()]
@@ -385,11 +335,6 @@ def test_regua_7_quatro_leitores_a_100_apertos_nao_passam_de_250_voltas(
     menor = min(b - a for a, b in itertools.pairwise(voltas))
     assert menor >= lc.INTERVALO_MINIMO_DA_VOLTA_S, f"{menor * 1000:.2f} ms"
     assert len(voltas) <= 250 * (duracao + 0.2)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Régua 9: a volta acordada não mexe no relógio do resto
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def _corrida_da_navegacao(
@@ -428,11 +373,7 @@ def _corrida_da_navegacao(
 def test_regua_9_a_volta_acordada_nao_mexe_no_relogio_do_resto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Mouse emulado ligado e o analógico parado no fundo: 100 apertos por
-    segundo durante 1 s não mudam o `poll.tick` nem o REL_X somado contra a
-    mesma corrida sem apertos (a folga é a do relógio da máquina, um décimo).
-    Mordida: rodar a volta inteira na volta acordada reprova (o cursor anda
-    mais)."""
+    """Mouse emulado ligado e o analógico parado no fundo: 100 apertos por"""
     tiques_sem, rel_x_sem, voltas_sem = _corrida_da_navegacao(monkeypatch, com_apertos=False)
     tiques_com, rel_x_com, voltas_com = _corrida_da_navegacao(monkeypatch, com_apertos=True)
     assert tiques_sem >= 30 and rel_x_sem > 0

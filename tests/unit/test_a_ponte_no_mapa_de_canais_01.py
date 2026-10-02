@@ -55,13 +55,8 @@ from check_paridade_transporte import pares_de_transporte
 from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA
 
 #: A ponte do PRIMEIRO degrau — a nossa máscara DualSense. Vem da `ESCADA`
-#: porque a lista tem um dono só: redigitar `"gamepad/dualsense"` aqui criaria a
-#: segunda cópia que a `ESCADA-COM-UM-DONO-SO` existe para impedir.
 PONTE_DA_DUALSENSE = ESCADA[0].ponte.chave
 
-#: `plataforma.vpad` é `uhid` e fica de fora: é o MECANISMO (o gamepad virtual
-#: em si), não uma feature que o jogo perca ao trocar de máscara. A mesma
-#: exclusão, com a mesma justificativa, está em `test_ponte_escada.py`.
 NAO_E_FEATURE = {"plataforma.vpad"}
 
 

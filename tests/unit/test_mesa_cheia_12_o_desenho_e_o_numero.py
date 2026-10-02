@@ -67,41 +67,22 @@ from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _Secondar
 from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
 from hefesto_dualsense4unix.testing import FakeController
 
-# --- a mesa dela, mascarada -------------------------------------------------
-#
-# O sufixo de cada constante é o LUGAR NA FILA (o `rank` do `controllers.json`
-# dela), e o nome diz quem era: `PRIMARIO` é o que o backend elegeu.
-#: rank 1 — o primário (o único cujo número já batia antes da cura).
 FILA1_PRIMARIO = "aa:bb:cc:00:00:01"
-#: rank 2 — o co-op o promoveu em TERCEIRO (publicava 3, acendia 2).
 FILA2 = "aa:bb:cc:00:00:02"
-#: rank 3 — o co-op o promoveu em QUARTO (publicava 4, acendia 3).
 FILA3 = "aa:bb:cc:00:00:03"
-#: rank 4 — o co-op o promoveu em PRIMEIRO (publicava 2, acendia 4).
 FILA4 = "aa:bb:cc:00:00:04"
 
-#: MAC -> lugar na fila de chegada. É a resposta certa para TODAS as
 #: superfícies: a lâmpada, o rótulo e o `state_full`.
 FILA = {FILA1_PRIMARIO: 1, FILA2: 2, FILA3: 3, FILA4: 4}
 
-#: A ordem em que o co-op promoveu os secundários naquela sessão — a ordem que
-#: gerava o `player_index` 2/3/4 e, com ele, o número errado.
 ORDEM_DE_PROMOCAO = (FILA4, FILA2, FILA3)
 
-#: Um quinto controle que NUNCA ganhou lugar na fila — o caso do número
-#: duplicado (ver `TestNumeroRepetidoEProibido`). Fica fora de `FILA` de
-#: propósito: é isso que ele é.
 SEM_FILA = "aa:bb:cc:00:00:09"
 
-#: Prefixo do nó de LED de cada controle no sysfs falso (a forma que o
-#: `sysfs_leds.discover()` espera: `<bus>:<vid>:<pid>.<n>`).
 PREFIXO = {
     mac: f"0005:054C:0CE6.000{n}"
     for n, mac in enumerate([*FILA, SEM_FILA], start=1)
 }
-
-
-# --- o /sys/class/leds falso, com o escritor/leitor de PRODUÇÃO -------------
 
 
 @pytest.fixture
@@ -111,9 +92,6 @@ def raiz_leds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     leds.mkdir()
     monkeypatch.setattr(sysfs_leds, "LEDS_ROOT", str(leds))
     for mac, prefixo in PREFIXO.items():
-        # `discover()` resolve o dono por realpath do `:rgb:indicator` ->
-        # .../<HID>/leds/<prefixo>:rgb:indicator, e lê o MAC do `uevent` do
-        # <HID>. O sysfs falso tem de ter essa forma exata.
         hid = tmp_path / "devices" / prefixo
         (hid / "leds" / f"{prefixo}:rgb:indicator").mkdir(parents=True)
         (hid / "uevent").write_text(f"HID_UNIQ={mac}\n", encoding="utf-8")
@@ -145,9 +123,6 @@ def numero_aceso(mac: str) -> int | None:
     return None
 
 
-# --- a fiação: registros de produção, dublê só de APARELHO ------------------
-
-
 class _ControllerFalso:
     """Só o que o co-op lê do backend: quem é o primário."""
 
@@ -164,7 +139,7 @@ class _DaemonFalso:
 def montar_a_mesa_de_15_08() -> CoopManager:
     """A mesa exata das 01h00: fila 1..4, co-op promovendo em 4/2/3."""
     registro = ControllerIdentityRegistry()
-    for mac in FILA:  # a fila nasce na ordem de PRIMEIRA aparição
+    for mac in FILA:
         registro.slot_for(mac)
     registro.sync_connected(list(FILA))
     coop = CoopManager.__new__(CoopManager)
@@ -174,7 +149,6 @@ def montar_a_mesa_de_15_08() -> CoopManager:
             identity=mac,
             evdev_path=f"/dev/input/event{200 + i}",
             reader=None,  # type: ignore[arg-type]
-            # o `player_index` histórico: menor livre ≥2 na ordem de promoção
             player_index=i + 2,
             vpad=object(),  # type: ignore[arg-type]
         )
@@ -183,19 +157,11 @@ def montar_a_mesa_de_15_08() -> CoopManager:
     return coop
 
 
-# --- a mordida --------------------------------------------------------------
-
-
 class TestODesenhoEONumeroSaoOMesmo:
     """O invariante inteiro, varrendo os QUATRO jogadores — não só um."""
 
     def test_o_retrato_de_01h00_esta_montado(self) -> None:
-        """Ancoragem: se a mesa não for a dela, o resto não prova nada.
-
-        O `player_index` reproduzido aqui é o que o journal registrou
-        (`coop_player_added player=2` no 4º da fila, `3` no 2º e `4` no 3º)
-        — a fresta só existe porque ele discorda da fila.
-        """
+        """Ancoragem: se a mesa não for a dela, o resto não prova nada."""
         coop = montar_a_mesa_de_15_08()
         assert {
             mac: p.player_index for mac, p in coop._players.items()
@@ -214,12 +180,7 @@ class TestODesenhoEONumeroSaoOMesmo:
     def test_a_barra_acende_o_numero_que_o_daemon_publica(
         self, raiz_leds: Path
     ) -> None:
-        """A mordida: escreve as quatro barras e lê as quatro de volta.
-
-        Um por um, nos QUATRO — o defeito de 15/08 acertava o primário e
-        errava os outros três, então um teste de um jogador só passaria com a
-        cura arrancada.
-        """
+        """A mordida: escreve as quatro barras e lê as quatro de volta."""
         coop = montar_a_mesa_de_15_08()
         publicado = coop.player_indexes()
         for mac, numero in coop.numeros_de_jogador().items():
@@ -229,19 +190,12 @@ class TestODesenhoEONumeroSaoOMesmo:
             f"o desenho aceso discorda do número publicado: "
             f"aceso={aceso} publicado={publicado}"
         )
-        # E os dois são a fila de chegada, não outra ordem qualquer.
         assert aceso == FILA
 
     def test_nenhum_par_de_controles_acende_o_mesmo_desenho(
         self, raiz_leds: Path
     ) -> None:
-        """O caso do número DUPLICADO, proibido explicitamente.
-
-        Dois controles com o mesmo desenho é o defeito que a pessoa lê como
-        "não sei qual é qual" — pior que um número trocado, porque nem
-        contando dá para desempatar. `None` (padrão de ninguém) entra na
-        conta: dois controles apagados também são dois iguais.
-        """
+        """O caso do número DUPLICADO, proibido explicitamente."""
         coop = montar_a_mesa_de_15_08()
         for mac, numero in coop.numeros_de_jogador().items():
             acender(mac, numero)
@@ -255,13 +209,7 @@ class TestODesenhoEONumeroSaoOMesmo:
     def test_o_desenho_de_cada_numero_e_o_canonico_da_sony(
         self, raiz_leds: Path
     ) -> None:
-        """Os quatro desenhos oficiais, conferidos no nó do sysfs.
-
-        1=`[3]`, 2=`[2,4]`, 3=`[1,3,5]`, 4=`[1,2,4,5]` — a tabela contra a
-        qual a medição de 01h00 foi decodificada. Sem isto, um erro no
-        `player_led_pattern` faria os testes acima concordarem entre si e
-        divergirem do aparelho.
-        """
+        """Os quatro desenhos oficiais, conferidos no nó do sysfs."""
         coop = montar_a_mesa_de_15_08()
         for mac, numero in coop.numeros_de_jogador().items():
             acender(mac, numero)
@@ -283,18 +231,7 @@ class TestODesenhoEONumeroSaoOMesmo:
 
 
 class TestNumeroRepetidoEProibido:
-    """Dois controles com o MESMO desenho — o estado que não pode existir.
-
-    O caso que a mesa de 15/08 quase produziu e que a memória desta casa já
-    viu ("os dois controles aparecem como player 1"): número repetido não vem
-    de dois números trocados, vem de um controle SEM LUGAR NA FILA caindo no
-    `fallback` — e o `fallback` é o `player_index` do co-op, que vive no outro
-    espaço de numeração e colide sem avisar.
-
-    A mesa aqui é a mínima que produz a colisão: o backend elegeu como
-    primário o SEGUNDO da fila (colocação 2) e o co-op promoveu primeiro um
-    controle que nunca foi registrado — cujo `player_index` é, justamente, 2.
-    """
+    """Dois controles com o MESMO desenho — o estado que não pode existir."""
 
     def montar(self) -> CoopManager:
         registro = ControllerIdentityRegistry()
@@ -302,7 +239,6 @@ class TestNumeroRepetidoEProibido:
             registro.slot_for(mac)
         registro.sync_connected([FILA1_PRIMARIO, FILA2, FILA3])
         coop = CoopManager.__new__(CoopManager)
-        # primário = o SEGUNDO da fila (ordem de enumeração do hidapi)
         coop._daemon = _DaemonFalso(registro, FILA2)  # type: ignore[assignment]
         coop._players = {
             mac: _SecondaryPlayer(
@@ -312,8 +248,6 @@ class TestNumeroRepetidoEProibido:
                 player_index=indice,
                 vpad=object(),  # type: ignore[arg-type]
             )
-            # ordem de promoção: o sem-fila primeiro, e por isso ele fica com
-            # o menor `player_index` livre — 2, o mesmo número do primário.
             for i, (mac, indice) in enumerate(
                 ((SEM_FILA, 2), (FILA1_PRIMARIO, 3), (FILA3, 4))
             )
@@ -321,11 +255,7 @@ class TestNumeroRepetidoEProibido:
         return coop
 
     def test_o_sem_fila_colide_com_o_primario_no_papel(self) -> None:
-        """Ancoragem: sem a guarda, os dois pediriam o número 2.
-
-        O primário está em 2 pela fila; o sem-fila cai no `fallback`, que é
-        `player_index=2`. É a colisão inteira, em dois inteiros.
-        """
+        """Ancoragem: sem a guarda, os dois pediriam o número 2."""
         coop = self.montar()
         registro = coop._daemon.identity_registry  # type: ignore[attr-defined]
         assert registro.slot_for(FILA2, assign=False) == 2
@@ -356,13 +286,7 @@ class TestNumeroRepetidoEProibido:
 
 
 class TestQuandoNaoHaFilaNadaMuda:
-    """Sem `identity_registry` o comportamento histórico fica de pé.
-
-    FakeController, backend legado e dublê de teste não têm fila; a cura não
-    pode inventar número para eles. É o mesmo `fallback` que `_numero_exibido`
-    já usava — e a garantia de que a mordida acima é sobre a FILA, não sobre
-    ter trocado uma constante por outra.
-    """
+    """Sem `identity_registry` o comportamento histórico fica de pé."""
 
     def test_o_fallback_e_o_player_index_do_coop(self) -> None:
         coop = CoopManager.__new__(CoopManager)
@@ -389,16 +313,6 @@ class TestQuandoNaoHaFilaNadaMuda:
         }
 
 
-# --- o casamento card <-> vpad, que a mudança de fonte podia cruzar ---------
-#
-# `controller_card._bloco_do_vpad` (dono ÚNICO do casamento) acha o vpad de um
-# controle comparando `controllers[].player` com `rumble_ff.per_vpad[].player`.
-# Enquanto o número publicado ERA o `player_index`, os dois lados coincidiam
-# por construção. Com a fila de chegada como fonte, o `per_vpad` tem de mudar
-# de fonte JUNTO — senão o card de um controle passa a mostrar a telemetria do
-# vpad de OUTRO, que é pior que não mostrar nada.
-
-
 class _ControllerDeQuatro(FakeController):
     """FakeController que ainda anuncia os quatro físicos e o primário."""
 
@@ -415,8 +329,6 @@ class _ControllerDeQuatro(FakeController):
                 "is_primary": mac == FILA1_PRIMARIO,
                 "uniq": mac,
             }
-            # a ordem da lista é a de ENUMERAÇÃO do backend, de propósito
-            # diferente da fila: é ela que enganava a GUI antes do LEIGO-01b.
             for i, mac in enumerate([FILA1_PRIMARIO, *ORDEM_DE_PROMOCAO])
         ]
 
@@ -484,7 +396,7 @@ async def servidor_da_mesa_cheia(tmp_path: Path, perfis_isolados: Path) -> Any:
     daemon._gamepad_device = _vpad_ns(1)
     daemon._motion_reader = None
     daemon._coop_manager = coop
-    coop._daemon = daemon  # o co-op passa a ler o daemon de verdade
+    coop._daemon = daemon
 
     socket_path = tmp_path / "hefesto-dualsense4unix.sock"
     server = IpcServer(
@@ -505,12 +417,7 @@ async def servidor_da_mesa_cheia(tmp_path: Path, perfis_isolados: Path) -> Any:
 async def test_o_card_acha_o_vpad_do_proprio_controle(
     servidor_da_mesa_cheia: Any,
 ) -> None:
-    """Os dois lados do casamento saem da mesma fonte — e o card não cruza.
-
-    Morde de duas formas: o conjunto de números publicados tem de ser o mesmo
-    dos vpads (senão algum card fica órfão), e o casamento tem de ser uma
-    BIJEÇÃO (senão dois cards leem o mesmo bloco).
-    """
+    """Os dois lados do casamento saem da mesma fonte — e o card não cruza."""
     from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 
     async with IpcClient.connect(servidor_da_mesa_cheia) as client:

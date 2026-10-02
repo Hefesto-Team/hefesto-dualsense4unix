@@ -1,50 +1,4 @@
-"""MASCARA-NO-PERFIL-01 (08/09/2026) — a máscara por controle entra no perfil.
-
-A PERGUNTA E A RESPOSTA DELA
------------------------------
-*"A máscara por controle deve entrar no perfil, junto com luz, gatilho,
-vibração, som, mic e sensores — ou fica da máquina?"* — **"pode entrar sim"**.
-
-O QUE ELA SENTIU, e é o que abriu a sprint: trocar de perfil trocava o modo e
-**não trocava a máscara** de ninguém. A máscara era da SESSÃO
-(``controller_masks.json``) e sobrevivia ao perfil, então um perfil de jogo que
-precisa do P2 em Xbox não tinha como dizer isso.
-
-O QUE ESTE ARQUIVO MEDE, e cada bloco é uma das três mordidas da sprint:
-
-1. **gravar ``mascara=xbox`` no P2 e ativar** → o vpad do P2 nasce ``045e:028e``
-   e o do P1 continua ``054c:0df2``; trocar de perfil → os quatro seguem o
-   perfil novo;
-2. **arrancar o campo do esquema** → a régua reprova nomeando o assento cuja
-   máscara ficou da sessão — é o teste ``..._deixa_o_assento_na_sessao`` abaixo,
-   que faz a arrancada por dentro em vez de pedir que alguém a faça;
-3. **``controller_masks.json`` não decide mais nada** → apagá-lo não muda vpad
-   nenhum de quem o perfil declara.
-
-E DESDE 09/09/2026, A DECISÃO QUE FECHOU A PERGUNTA QUE SOBRAVA
-----------------------------------------------------------------
-*"Um perfil que não fala de máscara devolve todo mundo ao padrão, ou deixa cada
-um como está?"* — **"Default é Hefesto dualsense padrão"**. A entrega de 08/09
-tinha escrito a segunda leitura, marcada como PROVISÓRIA; ela escolheu a
-primeira, e três réguas deste arquivo mediam o contrário. O custo do que ela
-escolheu está medido em ``test_o_que_a_devolucao_custa_...``: caem só os vpads
-de quem estava FORA do padrão, e **zero** quando a mesa já o seguia.
-
-**E UMA RÉGUA DAQUI ERA FALSA.** A da ordem de decisão olhava a DOCSTRING de
-``mascara_efetiva`` com três ``in`` — reprovava quem editasse o texto e passava
-com a ordem trocada no código (medido: com os degraus 1 e 2 invertidos, ela
-dizia "passou"). Foi reescrita para medir os três degraus pelo que cada um
-vence.
-
-O QUE NÃO ESTÁ AQUI, E POR QUÊ: nenhum gamepad virtual é CRIADO. Criar um vpad
-abre ``uinput`` de verdade, e a suíte inteira já derrubou a sessão gráfica dela
-uma vez por isso. O par VID/PID é lido do catálogo que o vpad usa
-(``uinput_gamepad.FLAVORS``) sobre a máscara que ``mascara_efetiva`` devolve —
-o degrau MONTOU fica para a bancada, com os quatro na mesa.
-
-Endereços de rádio: faixa SINTÉTICA da casa (``aabbcc…``, octetos 4 e 5
-zerados), nunca o OUI de um aparelho real.
-"""
+"""MASCARA-NO-PERFIL-01 (08/09/2026) — a máscara por controle entra no perfil."""
 from __future__ import annotations
 
 import asyncio
@@ -72,7 +26,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from tests.unit.test_por_unidade_01_todas_as_abas import _StoreSemTrava
 
-#: Os quatro assentos da mesa dela, na faixa sintética da casa.
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
@@ -80,23 +33,14 @@ P4 = "aabbcc000004"
 
 
 def _par(mascara: str) -> tuple[int, int]:
-    """``(vendor, product)`` que o vpad usaria para esta máscara.
-
-    Lido do catálogo do próprio vpad, e não digitado: uma máscara nova não pode
-    exigir que esta régua seja reescrita para continuar medindo.
-    """
+    """``(vendor, product)`` que o vpad usaria para esta máscara."""
     entrada = FLAVORS[mascara]
     return int(entrada["vendor"]), int(entrada["product"])
 
 
 @pytest.fixture
 def registro_limpo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Um ``controller_masks.json`` só deste teste, e um registro zerado.
-
-    O registro é um SINGLETON de processo que lê o disco uma vez por instância
-    — sem zerar antes e depois, a máscara de um teste responderia pelo vizinho,
-    que é exatamente o modo de falhar que ele existe para impedir no daemon.
-    """
+    """Um ``controller_masks.json`` só deste teste, e um registro zerado."""
     lar = tmp_path / "config"
     lar.mkdir()
 
@@ -151,53 +95,27 @@ def _perfil(nome: str, **mascaras: str | None) -> Profile:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O CAMPO — e o que ele recusa
-# ---------------------------------------------------------------------------
-
-
 def test_o_campo_existe_e_none_e_sem_opiniao() -> None:
-    """``mascara`` está ao lado das seis irmãs, e ``None`` é o default.
-
-    Perfil antigo carrega igual: é o que faz esta entrega não mexer em nenhum
-    arquivo dela que não peça para ser mexido.
-    """
+    """``mascara`` está ao lado das seis irmãs, e ``None`` é o default."""
     assert "mascara" in ControllerOverrides.model_fields
     assert ControllerOverrides().mascara is None
     assert ControllerOverrides(mascara="xbox").mascara == "xbox"
 
 
 def test_o_disco_nao_aceita_mascara_que_o_vpad_nao_sabe_criar() -> None:
-    """O catálogo é o do vpad, e a recusa é em voz alta.
-
-    ``"xbox 360"`` é o erro de digitação clássico desta casa — o normalizador
-    TOLERANTE o transformaria em ``xbox``, e a fronteira estrita existe para que
-    um engano não vire uma troca silenciosa de máscara.
-    """
+    """O catálogo é o do vpad, e a recusa é em voz alta."""
     with pytest.raises(ValidationError):
         ControllerOverrides(mascara="xbox 360")  # type: ignore[arg-type]
     with pytest.raises(ValidationError):
         ControllerOverrides(mascara="banana")  # type: ignore[arg-type]
-    # E o que o esquema aceita é exatamente o que o vpad sabe criar.
     for mascara in mask_mod.mascaras_validas():
         assert ControllerOverrides(mascara=mascara).mascara == mascara  # type: ignore[arg-type]
-
-
-# ---------------------------------------------------------------------------
-# 2. A PRIMEIRA MORDIDA — o P2 em Xbox, o P1 intacto
-# ---------------------------------------------------------------------------
 
 
 def test_a_mascara_do_perfil_vale_naquele_assento_e_so_nele(
     registro_limpo: Path,
 ) -> None:
-    """``mascara=xbox`` no P2 → ``045e:028e``; o P1 continua ``054c:0df2``.
-
-    MORDIDA: tire a chamada de ``apply_controller_mascaras`` do
-    ``apply_profile`` (ou o ``set_mask`` de dentro dela) e os dois assentos
-    voltam a responder a máscara do jogo — o P2 sai ``054c:0df2``, que é o
-    defeito inteiro em um par de números.
-    """
+    """``mascara=xbox`` no P2 → ``045e:028e``; o P1 continua ``054c:0df2``."""
     _gerente().apply_controller_mascaras(_perfil("Jogo", **{P2: "xbox"}))
 
     assert mask_mod.mascara_efetiva(P2, "dualsense") == "xbox"
@@ -207,12 +125,7 @@ def test_a_mascara_do_perfil_vale_naquele_assento_e_so_nele(
 
 
 def test_trocar_de_perfil_troca_as_quatro_mascaras(registro_limpo: Path) -> None:
-    """Os quatro seguem o perfil novo — que é o que ela não tinha.
-
-    É a metade da queixa: antes desta sprint a máscara era da sessão e
-    ATRAVESSAVA a troca de perfil, então o segundo `assert` deste teste falharia
-    com os quatro valores do perfil velho.
-    """
+    """Os quatro seguem o perfil novo — que é o que ela não tinha."""
     gerente = _gerente()
     gerente.apply_controller_mascaras(
         _perfil("Antes", **{P1: "xbox", P2: "xbox", P3: "xbox", P4: "xbox"})
@@ -236,17 +149,11 @@ def test_trocar_de_perfil_troca_as_quatro_mascaras(registro_limpo: Path) -> None
 
 
 def test_so_quem_mudou_e_repintado(registro_limpo: Path) -> None:
-    """NUMA-03: o controle em uso no meio da partida não some e volta.
-
-    ``vpad_ficou_para_tras`` é a função que o laço do co-op consulta antes de
-    derrubar um vpad. Depois de ativar um perfil que repete a máscara de três
-    assentos e muda a do quarto, ela tem de dizer "para trás" **uma vez só**.
-    """
+    """NUMA-03: o controle em uso no meio da partida não some e volta."""
     gerente = _gerente()
     gerente.apply_controller_mascaras(
         _perfil("Antes", **{P1: "xbox", P2: "xbox", P3: "xbox", P4: "xbox"})
     )
-    # Os quatro vpads nasceram na máscara do perfil velho.
     vivos = {u: mask_mod.mascara_efetiva(u, "dualsense") for u in (P1, P2, P3, P4)}
 
     gerente.apply_controller_mascaras(
@@ -267,19 +174,7 @@ def test_so_quem_mudou_e_repintado(registro_limpo: Path) -> None:
 def test_o_perfil_calado_devolve_todo_mundo_ao_padrao(
     registro_limpo: Path,
 ) -> None:
-    """DECISÃO DELA, 09/09/2026: *"Default é Hefesto dualsense padrão"*.
-
-    **ESTA RÉGUA MEDIA O CONTRÁRIO ATÉ HOJE.** Ela se chamava
-    ``test_o_perfil_sem_opiniao_nao_mexe_na_mascara_de_ninguem`` e cobrava que o
-    P2 continuasse em Xbox depois de um perfil calado — a leitura PROVISÓRIA que
-    a entrega de 08/09 escreveu, e que ela recusou. A pergunta era *"um perfil
-    que não fala de máscara devolve todo mundo ao padrão, ou deixa cada um como
-    está?"*, e a resposta foi a primeira.
-
-    MORDIDA: tire a chamada de ``registro.manter_somente(declaradas)`` do fim de
-    ``apply_controller_mascaras`` e o P2 fica em Xbox — a decisão dela deixa de
-    valer, e é este `assert` que reprova.
-    """
+    """DECISÃO DELA, 09/09/2026: *"Default é Hefesto dualsense padrão"*."""
     gerente = _gerente()
     gerente.apply_controller_mascaras(_perfil("Antes", **{P2: "xbox"}))
     assert mask_mod.mascara_efetiva(P2, "dualsense") == "xbox"
@@ -307,13 +202,7 @@ def test_o_perfil_calado_devolve_todo_mundo_ao_padrao(
 def test_o_perfil_calado_devolve_ate_quem_ele_nunca_viu(
     registro_limpo: Path,
 ) -> None:
-    """A devolução alcança QUEM O PERFIL NÃO MENCIONA — inclusive um externo.
-
-    É a diferença entre *"o perfil manda no que declara"* e *"o perfil manda"*.
-    Um 8BitDo que ganhou máscara pela tela, numa sessão sem perfil, perde-a na
-    próxima ativação: o dono passou a ser o perfil, e um cache que sobrevive ao
-    dono é a escolha do perfil ANTERIOR se passando por escolha dela.
-    """
+    """A devolução alcança QUEM O PERFIL NÃO MENCIONA — inclusive um externo."""
     externo = "aabbcc0000ff"
     mask_mod.registro_de_mascaras().set_mask(externo, "nintendo")
     assert mask_mod.mascara_efetiva(externo, "dualsense") == "nintendo"
@@ -327,17 +216,7 @@ def test_o_perfil_calado_devolve_ate_quem_ele_nunca_viu(
 def test_o_que_a_devolucao_custa_e_so_o_vpad_de_quem_estava_fora(
     registro_limpo: Path,
 ) -> None:
-    """O CUSTO DA DECISÃO DELA, medido — e ele é o que a torna barata.
-
-    O medo escrito na entrega de 08/09 era *"derrubar e recriar os quatro vpads
-    dela ao ativar um perfil calado"*. Quem derruba vpad é o laço do co-op, por
-    ``vpad_ficou_para_tras``, e ele compara a máscara EFETIVA: apagar a entrada
-    de quem já estava no padrão não muda a efetiva, e o vpad **não cai**.
-
-    As quatro linhas desta régua são as quatro medidas que estão escritas em
-    ``manter_somente`` e em ``apply_controller_mascaras``. A que decide é a
-    última: quatro entradas apagadas, ZERO controles saindo da partida.
-    """
+    """O CUSTO DA DECISÃO DELA, medido — e ele é o que a torna barata."""
     calado = Profile(
         name="Calado",
         match=MatchAny(),
@@ -369,39 +248,19 @@ def test_o_que_a_devolucao_custa_e_so_o_vpad_de_quem_estava_fora(
 
 
 def test_o_relatorio_diz_a_peca_e_a_mascara(registro_limpo: Path) -> None:
-    """``mascara:<uniq>`` — o mesmo formato-por-peça do ``mic`` e do ``sensores``.
-
-    É por ele que a janela consegue dizer QUAL peça foi atendida, em vez de
-    fundir a mesa inteira num rótulo só.
-    """
+    """``mascara:<uniq>`` — o mesmo formato-por-peça do ``mic`` e do ``sensores``."""
     relatorio = _gerente().apply_controller_mascaras(
         _perfil("Jogo", **{P1: "dualsense", P2: "xbox"})
     )
     assert relatorio == {f"mascara:{P1}": "dualsense", f"mascara:{P2}": "xbox"}
 
 
-# ---------------------------------------------------------------------------
-# 3. A SEGUNDA MORDIDA — arrancar o campo deixa o assento na sessão
-# ---------------------------------------------------------------------------
-
-
 def test_arrancar_o_campo_deixa_o_assento_na_sessao(registro_limpo: Path) -> None:
-    """A mordida da sprint, feita por dentro: um override SEM o campo.
-
-    ``ControllerOverrides()`` sem ``mascara`` é exatamente o que o esquema
-    ANTIGO produzia para o mesmo JSON dela — o campo não existia, e o valor
-    caía no ``extra="forbid"`` ou era ignorado. Com ele arrancado, o assento
-    fica com a máscara da SESSÃO (aqui: nenhuma, logo a do jogo), e é isso que
-    esta régua nomeia.
-
-    Se um dia alguém tirar ``mascara`` de ``ControllerOverrides``, o
-    ``_perfil()`` acima levanta ``ValidationError`` e a suíte inteira desta
-    frente cai — que é o barulho certo.
-    """
+    """A mordida da sprint, feita por dentro: um override SEM o campo."""
     perfil_sem_o_campo = Profile(
         name="Velho",
         match=MatchAny(),
-        controllers={P2: ControllerOverrides()},  # o campo arrancado
+        controllers={P2: ControllerOverrides()},
     )
     relatorio = _gerente().apply_controller_mascaras(perfil_sem_o_campo)
 
@@ -414,20 +273,10 @@ def test_arrancar_o_campo_deixa_o_assento_na_sessao(registro_limpo: Path) -> Non
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. A TERCEIRA MORDIDA — o arquivo de sessão não decide mais nada
-# ---------------------------------------------------------------------------
-
-
 def test_apagar_o_arquivo_de_mascaras_nao_muda_vpad_de_quem_o_perfil_declara(
     registro_limpo: Path,
 ) -> None:
-    """``controller_masks.json`` virou cache: apagá-lo custa uma reativação.
-
-    O arquivo continua existindo porque ``mascara_efetiva`` é consultada no
-    tique do co-op — ler o perfil do disco ali seria a tempestade de syscalls
-    que o mapa de motores já pagou uma vez. O que ele deixou de ser é DONO.
-    """
+    """``controller_masks.json`` virou cache: apagá-lo custa uma reativação."""
     gerente = _gerente()
     perfil = _perfil("Jogo", **{P1: "xbox", P2: "nintendo"})
     gerente.apply_controller_mascaras(perfil)
@@ -437,22 +286,15 @@ def test_apagar_o_arquivo_de_mascaras_nao_muda_vpad_de_quem_o_perfil_declara(
         e["identity"]: e["flavor"] for e in json.loads(arquivo.read_text())["masks"]
     } == {P1: "xbox", P2: "nintendo"}
 
-    # A mesa dela: o arquivo some (limpeza, migração, um `rm` curioso).
     arquivo.unlink()
     mask_mod._zerar_registro_de_mascaras()
     assert mask_mod.mascara_efetiva(P1, "dualsense") == "dualsense", (
         "sem o cache e sem reativar, quem responde é a máscara do jogo"
     )
 
-    # E a reativação o traz de volta inteiro, sem ela escolher nada de novo.
     gerente.apply_controller_mascaras(perfil)
     assert mask_mod.mascara_efetiva(P1, "dualsense") == "xbox"
     assert mask_mod.mascara_efetiva(P2, "dualsense") == "nintendo"
-
-
-# ---------------------------------------------------------------------------
-# 5. O GESTO DA TELA — mesma forma, e agora ele grava no perfil
-# ---------------------------------------------------------------------------
 
 
 class _Store:
@@ -498,18 +340,13 @@ def test_o_gesto_do_chip_grava_no_perfil_ativo(
     assert corpo["perfil"] == "Bancada" and corpo["gravado"] is True
     dele = (loader_module.load_profile("Bancada").controllers or {})[P2]
     assert dele.mascara == "xbox"
-    # E vale AGORA, sem esperar a próxima ativação de perfil.
     assert mask_mod.mascara_efetiva(P2, "dualsense") == "xbox"
 
 
 def test_o_gesto_vazio_limpa_dos_dois_lados(
     registro_limpo: Path, perfis: Path
 ) -> None:
-    """``flavor`` vazio = *"volta a herdar a do perfil"*, no disco e na sessão.
-
-    E a entrada que esvaziou SOME do mapa: um ``uniq`` apontando para ``{}``
-    faria a coluna "Ajuste próprio" da aba Perfis acender sobre nada.
-    """
+    """``flavor`` vazio = *"volta a herdar a do perfil"*, no disco e na sessão."""
     loader_module.save_profile(Profile(name="Bancada", match=MatchAny()))
     h = _Handlers(ativo="Bancada")
     _gesto(h, uniq=P2, flavor="xbox")
@@ -524,11 +361,7 @@ def test_o_gesto_vazio_limpa_dos_dois_lados(
 def test_sem_perfil_ativo_o_gesto_ainda_vale_na_sessao(
     registro_limpo: Path, perfis: Path
 ) -> None:
-    """Sem perfil não há onde guardar — e recusar seria pior que a sessão.
-
-    A tela recebe ``gravado: false`` com o ``motivo``, em vez de um "aplicado"
-    sobre nada; a máscara vale enquanto o daemon viver.
-    """
+    """Sem perfil não há onde guardar — e recusar seria pior que a sessão."""
     corpo = _gesto(_Handlers(ativo=None), uniq=P2, flavor="xbox")
 
     assert corpo["status"] == "ok" and corpo["gravado"] is False
@@ -539,13 +372,7 @@ def test_sem_perfil_ativo_o_gesto_ainda_vale_na_sessao(
 def test_o_gesto_nao_grava_sob_uma_chave_que_ninguem_casa(
     registro_limpo: Path, perfis: Path
 ) -> None:
-    """``path:/dev/input/event9`` não é peça de plástico — e não vira chave.
-
-    ``norm_mac`` devolveria ``"adeee9"`` para esse caminho: uma chave que parece
-    boa e que peça nenhuma casa. Para LER é inofensivo; para GRAVAR é a escolha
-    dela sumindo calada, e é a medição de 04/09/2026 que o
-    ``_chave_de_peca_que_grava`` guarda.
-    """
+    """``path:/dev/input/event9`` não é peça de plástico — e não vira chave."""
     loader_module.save_profile(Profile(name="Bancada", match=MatchAny()))
 
     corpo = _gesto(_Handlers(ativo="Bancada"), uniq="path:/dev/input/event9",
@@ -558,12 +385,7 @@ def test_o_gesto_nao_grava_sob_uma_chave_que_ninguem_casa(
 def test_o_gesto_repetido_nao_regrava_o_perfil(
     registro_limpo: Path, perfis: Path
 ) -> None:
-    """NADA MUDOU = NÃO REGRAVA — e aqui isso vale mais que no motor.
-
-    Um ``save_profile`` faz o daemon reaplicar o perfil inteiro, e a reaplicação
-    passa por ``apply_controller_mascaras`` — que é justamente quem pode
-    derrubar vpad.
-    """
+    """NADA MUDOU = NÃO REGRAVA — e aqui isso vale mais que no motor."""
     loader_module.save_profile(Profile(name="Bancada", match=MatchAny()))
     h = _Handlers(ativo="Bancada")
     _gesto(h, uniq=P2, flavor="xbox")
@@ -573,34 +395,9 @@ def test_o_gesto_repetido_nao_regrava_o_perfil(
     assert corpo["gravado"] is False and corpo["motivo"] == "sem_mudanca"
 
 
-# ---------------------------------------------------------------------------
-# 6. A ORDEM DE DECISÃO MORA NUM LUGAR SÓ
-# ---------------------------------------------------------------------------
-
-
 def test_a_ordem_de_decisao_vale_degrau_a_degrau(registro_limpo: Path) -> None:
-    """Os três degraus, medidos no COMPORTAMENTO — não na prosa que os descreve.
-
-    **ESTA RÉGUA ERA FALSA, e a assinatura é a que a casa nomeia.** Ela se
-    chamava ``test_a_ordem_de_decisao_esta_escrita_onde_ela_e_executada`` e fazia
-    três ``assert <substring> in mascara_efetiva.__doc__``. Ou seja: reprovava
-    quem editasse a docstring e **passava se alguém trocasse a ordem no código**
-    — mede o texto, não o ato. Foi apontada pelo conferente em 09/09/2026.
-
-    Os três degraus, cada um provado pelo que ele VENCE:
-
-    1. ``controllers[uniq].mascara`` vence o ``mode.gamepad_flavor``;
-    2. ``mode.gamepad_flavor`` vence o padrão, para quem o perfil não declara;
-    3. o padrão responde quando nem um nem outro disse nada — e o valor não é
-       digitado aqui: sai do ``normalize_flavor``, que é o dono dele.
-
-    MORDIDA: inverta os dois primeiros `if` de ``mascara_efetiva`` (devolver
-    ``flavor_do_jogo`` antes de olhar o registro) e o degrau 1 reprova. Com a
-    régua velha, essa mesma troca passava verde.
-    """
+    """Os três degraus, medidos no COMPORTAMENTO — não na prosa que os descreve."""
     gerente = _gerente()
-    # O perfil declara SÓ o P2; o eixo do perfil é "nintendo" para que os três
-    # degraus tenham três valores diferentes e nenhum `assert` case por acaso.
     gerente.apply_controller_mascaras(
         Profile(
             name="Ordem",
@@ -610,11 +407,8 @@ def test_a_ordem_de_decisao_vale_degrau_a_degrau(registro_limpo: Path) -> None:
         )
     )
 
-    # 1. o campo do controle vence o eixo do perfil.
     assert mask_mod.mascara_efetiva(P2, "nintendo") == "xbox"
-    # 2. quem o perfil não declara cai no eixo do perfil, e não no padrão.
     assert mask_mod.mascara_efetiva(P1, "nintendo") == "nintendo"
-    # 3. sem os dois primeiros, o padrão — lido de quem o define.
     assert mask_mod.mascara_efetiva(P1, None) == normalize_flavor(None)
     assert mask_mod.mascara_efetiva(None, None) == normalize_flavor(None)
 
@@ -622,20 +416,9 @@ def test_a_ordem_de_decisao_vale_degrau_a_degrau(registro_limpo: Path) -> None:
 def test_quem_executa_o_primeiro_degrau_nao_e_a_mascara_efetiva(
     registro_limpo: Path,
 ) -> None:
-    """O degrau 1 é EXECUTADO por quem escreve o cache, não por quem o lê.
-
-    **CORREÇÃO DE FATO — 09/09/2026.** A entrega de 08/09 afirmava que *"a ordem
-    de decisão está escrita onde é executada (``external_mask.mascara_efetiva``)"*.
-    É falso na metade que importa: ``mascara_efetiva`` **lê** o registro. Quem
-    executa o degrau 1 é ``apply_controller_mascaras``, escrevendo no cache — e,
-    desde a decisão dela, apagando dele quem o perfil não declara.
-
-    A prova é a diferença entre carregar o perfil e ATIVÁ-LO: com o perfil na
-    mão e o applier não chamado, ``mascara_efetiva`` não sabe de nada.
-    """
+    """O degrau 1 é EXECUTADO por quem escreve o cache, não por quem o lê."""
     perfil = _perfil("Jogo", **{P2: "xbox"})
 
-    # O perfil existe, o campo está preenchido — e ninguém aplicou nada.
     assert perfil.controllers is not None
     assert perfil.controllers[P2].mascara == "xbox"
     assert mask_mod.mascara_efetiva(P2, "dualsense") == "dualsense", (

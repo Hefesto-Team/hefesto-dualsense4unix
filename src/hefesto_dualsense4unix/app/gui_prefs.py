@@ -1,8 +1,4 @@
-"""Utilitários para ler e escrever preferências da GUI em JSON.
-
-Arquivo de estado: ~/.config/hefesto-dualsense4unix/gui_preferences.json
-Tolerante a ausência do arquivo (retorna defaults).
-"""
+"""Utilitários para ler e escrever preferências da GUI em JSON."""
 from __future__ import annotations
 
 import json
@@ -14,10 +10,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: usa o caminho XDG canônico
-# (`~/.config/hefesto-dualsense4unix`) via `xdg_paths` — antes era hardcoded no
-# caminho curto legado `~/.config/hefesto`, divergindo de perfis/sessão e
-# deixando as preferências órfãs após reinstalar. A migração curto→longo
 # (`utils.migrate_legacy_paths`) traz preferências antigas para cá.
 _PREFS_NOME = "gui_preferences.json"
 
@@ -44,37 +36,19 @@ def _prefs_file() -> Path:
 
 _DEFAULTS: dict[str, Any] = {
     "advanced_editor": False,
-    # `None` = ninguém corrigiu, e a detecção da sessão vale. Esta chave é o
-    # que a aba Configurações grava quando a leitura de `XDG_CURRENT_DESKTOP`
-    # erra — ver `app/ambiente.py`, que é o dono do valor e o único que o
-    # valida. Ela mora AQUI e não em `maquina.json`: é preferência de janela,
-    # e nada fora da janela a lê.
     "ambiente_corrigido": None,
-    # AS TABELAS QUE ELA ARRASTA — ver o bloco `_TABELAS` no fim deste arquivo.
-    # Vazio é o estado de quem nunca arrastou nem escolheu ordem nenhuma.
     "tabelas": {},
 }
 
 
 def _defaults() -> dict[str, Any]:
-    """Uma cópia NOVA dos padrões, a cada chamada.
-
-    `dict(_DEFAULTS)` era cópia RASA, e desde que `tabelas` virou um dicionário
-    aninhado (11/09/2026) isso é uma armadilha: quem recebesse os padrões e
-    mexesse no dicionário de dentro estaria mexendo na constante do módulo, e o
-    estrago valeria para o processo inteiro. Nenhum chamador de hoje faz isso —
-    e é exatamente por isso que a hora de fechar é agora, antes de o primeiro
-    aparecer.
-    """
+    """Uma cópia NOVA dos padrões, a cada chamada."""
     return {k: (dict(v) if isinstance(v, dict) else list(v) if isinstance(v, list) else v)
             for k, v in _DEFAULTS.items()}
 
 
 def load_gui_prefs() -> dict[str, Any]:
-    """Carrega preferências da GUI.
-
-    Retorna dict com defaults se o arquivo não existir ou estiver corrompido.
-    """
+    """Carrega preferências da GUI."""
     prefs_file = _prefs_file()
     if not prefs_file.exists():
         return _defaults()
@@ -90,10 +64,7 @@ def load_gui_prefs() -> dict[str, Any]:
 
 
 def save_gui_prefs(prefs: dict[str, Any]) -> None:
-    """Persiste preferências da GUI em disco.
-
-    Cria o diretório pai se necessário. Falha silenciosa com log de aviso.
-    """
+    """Persiste preferências da GUI em disco."""
     try:
         prefs_file = _prefs_file()
         prefs_file.parent.mkdir(parents=True, exist_ok=True)
@@ -112,36 +83,11 @@ def set_pref(key: str, value: Any) -> None:
     save_gui_prefs(prefs)
 
 
-# ---------------------------------------------------------------------------
-# AS TABELAS QUE ELA ARRASTA — PERFIS-LIMPA-01, 11/09/2026.
-#
-# Ordem dela: *"essa tabela abaixo dele tem a largura configurável pelo user
-# (quando o cursor muda e permite alterar a largura da coluna) e isso passa a
-# ser lembrado no futuro."*
-#
-# POR QUE AQUI E NÃO NO `maquina.json`, e a resposta já estava escrita por quem
-# separou os dois: *"o arquivo da janela é da JANELA"* (`utils/maquina.py`, a
 # nota de `ordens_dispensadas`). Largura de coluna e ordem de listagem não
-# afirmam nada sobre a mesa, o rádio ou o aparelho — elas são a janela dela,
-# como o `ambiente_corrigido` que já mora aqui.
-#
-# UMA CHAVE, UM DICIONÁRIO: `tabelas` → tabela → `{larguras, ordem}`. Duas
-# chaves de topo dariam dois lugares para o mesmo assunto, e é o que faz a
-# próxima pessoa gravar num e ler do outro.
-#
-# A ORDEM VIAJA JUNTO DA LARGURA, e o preço está declarado na sprint: ela pediu
-# memória para a largura, não para a ordem. É a mesma gravação e o mesmo gesto,
-# e uma tabela que lembra a largura e esquece a ordem lembra pela metade. Se ela
-# recusar, some a chave `ordem` daqui e nada mais.
 _TABELAS = "tabelas"
 
-#: O PISO DA COLUNA, em pixels. **Não é gosto: uma coluna arrastada a 3px some
-#: e ela não tem onde pegar de novo para desfazer.** 48px é o que ainda mostra
-#: a alça de arraste (24px de alvo, §3) mais folga para o cursor achar a divisa.
 PISO_DA_COLUNA = 48
 
-#: O TETO, pelo mesmo motivo pelo avesso: uma coluna arrastada além da largura
-#: da janela empurra as irmãs para fora e a tabela deixa de caber.
 TETO_DA_COLUNA = 900
 
 
@@ -151,11 +97,7 @@ def _tabelas() -> dict[str, Any]:
 
 
 def larguras_da_tabela(tabela: str) -> dict[str, int]:
-    """As larguras que ela deixou naquela tabela — `{coluna: px}`.
-
-    Vazio é o estado honesto de quem nunca arrastou: a tabela abre com o que o
-    CSS diz, e não com um número inventado aqui.
-    """
+    """As larguras que ela deixou naquela tabela — `{coluna: px}`."""
     bruto = _tabelas().get(tabela) or {}
     larguras = bruto.get("larguras") if isinstance(bruto, dict) else None
     if not isinstance(larguras, dict):
@@ -171,12 +113,7 @@ def larguras_da_tabela(tabela: str) -> dict[str, int]:
 
 
 def guardar_largura_de_coluna(tabela: str, coluna: str, px: int) -> int:
-    """Grava a largura de UMA coluna e devolve o que foi realmente gravado.
-
-    O RETORNO É O VALOR APARADO, e não o pedido: quem chama precisa dizer à tela
-    o número que ficou, senão a coluna volta sozinha ao piso no próximo pintar e
-    a tela mostra um número que o disco não tem.
-    """
+    """Grava a largura de UMA coluna e devolve o que foi realmente gravado."""
     valor = max(PISO_DA_COLUNA, min(TETO_DA_COLUNA, int(px)))
     prefs = load_gui_prefs()
     tabelas = dict(prefs.get(_TABELAS) or {})
@@ -191,12 +128,7 @@ def guardar_largura_de_coluna(tabela: str, coluna: str, px: int) -> int:
 
 
 def ordem_da_tabela(tabela: str) -> tuple[str, str]:
-    """Por qual coluna aquela tabela está ordenada, e para onde.
-
-    `("", "")` é *"ninguém escolheu"* — e é diferente de escolher a primeira
-    coluna: sem escolha, a ordem é a que o produto monta (o ativo primeiro), e é
-    ela que a tela mostrava antes de esta memória existir.
-    """
+    """Por qual coluna aquela tabela está ordenada, e para onde."""
     bruto = _tabelas().get(tabela) or {}
     ordem = bruto.get("ordem") if isinstance(bruto, dict) else None
     if not isinstance(ordem, dict):
@@ -221,22 +153,11 @@ def guardar_ordem_da_tabela(tabela: str, coluna: str, sentido: str) -> None:
     save_gui_prefs(prefs)
 
 
-# ---------------------------------------------------------------------------
-# A ORDEM DOS ADAPTADORES DE ANTES — A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026.
-#
-# A ordem das caixas dos adaptadores que ela arrasta na aba Conexões (25/09/2026,
-# A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01) morou aqui, pela chave do LUGAR (a
-# D3, revogada em 26/09): um terceiro registro do mesmo adaptador, e uma chave
-# que mudava quando ele mudava de porta. Desde 28/09 ela mora no adaptador,
-# pelo endereço (`utils/maquina.AdaptadorDeclarado.ordem`), ao lado do nome
-# dele. O que sobra aqui é a lista de antes: a tela a leva ao dono uma vez
-# (`a08_conexoes._na_ordem_dela`) e depois a esquece.
 _ADAPTADORES_DE_ANTES = "adaptadores"
 
 
 def a_ordem_dos_adaptadores_de_antes() -> list[str]:
-    """A lista que ela deixou aqui antes de 28/09 — chaves de lugar (ou o
-    endereço do adaptador sem porta), sem repetidas. Vazio = nada a levar."""
+    """A lista que ela deixou aqui antes de 28/09 — chaves de lugar (ou o"""
     bruto = load_gui_prefs().get(_ADAPTADORES_DE_ANTES)
     if not isinstance(bruto, list):
         return []

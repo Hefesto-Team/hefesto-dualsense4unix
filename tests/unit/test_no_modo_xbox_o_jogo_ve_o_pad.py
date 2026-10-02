@@ -66,7 +66,6 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
 from hefesto_dualsense4unix.utils import session as session_mod
 
-#: A mesa forjada da casa: quatro controles, octetos 4 e 5 zerados.
 MACS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
 MASCARAS = ("dualsense", "xbox", "nintendo")
 SONY_VENDOR = 0x054C
@@ -100,8 +99,6 @@ class _EC:
         0x50, 0x51, 0x58, 0x59, 0x5A, 0x60)
 
 
-#: As onze teclas e os oito eixos do Xbox 360 (`_capacidades_padrao`), que é o
-#: conjunto em que a libSDL2 casa o mapeamento do `xpad`.
 TECLAS_DO_XBOX = frozenset({
     _EC.BTN_A, _EC.BTN_B, _EC.BTN_X, _EC.BTN_Y, _EC.BTN_TL, _EC.BTN_TR,
     _EC.BTN_SELECT, _EC.BTN_START, _EC.BTN_MODE, _EC.BTN_THUMBL, _EC.BTN_THUMBR,
@@ -120,7 +117,7 @@ class _NoGravado:
     def __init__(self, events: dict[int, list[Any]], **kwargs: Any) -> None:
         self.events = events
         self.kwargs = kwargs
-        self.fd = -1  # sem fd de verdade: o fio da vibração não sobe
+        self.fd = -1
         self.escritas: list[tuple[int, int, int]] = []
         type(self).criados.append(self)
 
@@ -192,11 +189,6 @@ def _pad(mascara: str | None, caminho: str | None, **kw: Any) -> Any:
     return pad
 
 
-# ===========================================================================
-# 1 — a fábrica: no modo Xbox, o aparelho é o Xbox 360
-# ===========================================================================
-
-
 class TestNoModoXboxOAparelhoEOXbox360:
     """MORDIDA: tire a chamada de `_vestir_o_aparelho` de `make_virtual_pad` e
     as máscaras DualSense e Nintendo voltam a registrar `054c:0df2` e
@@ -241,10 +233,7 @@ class TestNoModoXboxOAparelhoEOXbox360:
 
 
 class TestForaDoModoXboxNadaMuda:
-    """MORDIDA: troque `normalizar_caminho` por `caminho_resolvido` em
-    `mascara_no_jogo` e a máscara Nintendo sem modo escolhido (que resolve para
-    o caminho Xbox, o produto de antes de 13/09) vira Xbox 360 — a máscara que
-    ela pediu em 07/09 some sem ninguém escolher o modo Xbox."""
+    """MORDIDA: troque `normalizar_caminho` por `caminho_resolvido` em"""
 
     @pytest.mark.parametrize("caminho", [None, CAMINHO_DUALSENSE])
     @pytest.mark.parametrize(
@@ -269,8 +258,7 @@ class TestForaDoModoXboxNadaMuda:
 
 
 def test_a_combinacao_invisivel_nao_nasce_em_par_nenhum() -> None:
-    """A régua da sprint numa linha: nenhum par com o modo Xbox registra pad
-    Sony ou Nintendo no `uinput`. Mordida: a mesma da classe 1."""
+    """A régua da sprint numa linha: nenhum par com o modo Xbox registra pad"""
     invisiveis = []
     for caminho in (None, CAMINHO_DUALSENSE, CAMINHO_XBOX):
         for mascara in MASCARAS:
@@ -284,15 +272,8 @@ def test_a_combinacao_invisivel_nao_nasce_em_par_nenhum() -> None:
     assert invisiveis == []
 
 
-# ===========================================================================
-# 2 — o pad vestido fala a língua do Xbox
-# ===========================================================================
-
-
 class TestOPadVestidoFalaXbox:
-    """MORDIDA: devolva `self.flavor` ao `_resolve_evdev` e ao `forward_analog`
-    do `UinputGamepad`: o cartão Nintendo no modo Xbox manda o quadrado como
-    `BTN_WEST` (o Y do Xbox) e o L2 como botão, que o nó nem declara."""
+    """MORDIDA: devolva `self.flavor` ao `_resolve_evdev` e ao `forward_analog`"""
 
     @pytest.mark.parametrize(
         ("botao", "tecla"),
@@ -300,8 +281,7 @@ class TestOPadVestidoFalaXbox:
          ("triangle", _EC.BTN_Y)],
     )
     def test_os_botoes_saem_na_tabela_do_xbox(self, botao: str, tecla: int) -> None:
-        """Um botão por vez: o quadrado é o X do Xbox (`0x133`) e o triângulo
-        o Y (`0x134`) — a tabela do Pro os troca de lugar."""
+        """Um botão por vez: o quadrado é o X do Xbox (`0x133`) e o triângulo"""
         pad = _pad("nintendo", CAMINHO_XBOX)
         try:
             no = _no_de(pad)
@@ -323,8 +303,7 @@ class TestOPadVestidoFalaXbox:
             pad.stop()
 
     def test_a_vibracao_do_jogo_tem_por_onde_chegar(self) -> None:
-        """O Xbox 360 declara `FF_RUMBLE`, e o rumble do jogo segue para o
-        físico daquele jogador pelo `rumble_sink` (a prova com a mão é dela)."""
+        """O Xbox 360 declara `FF_RUMBLE`, e o rumble do jogo segue para o"""
 
         def _sink(_fraco: int, _forte: int) -> None:
             return
@@ -344,11 +323,6 @@ class TestOPadVestidoFalaXbox:
                 pad.vestir("xbox")
         finally:
             pad.stop()
-
-
-# ===========================================================================
-# 3 — nenhum juiz recria o pad vestido em laço (P1 e P2 a P4)
-# ===========================================================================
 
 
 def _daemon_do_p1(monkeypatch: pytest.MonkeyPatch) -> Any:
@@ -372,9 +346,7 @@ def _daemon_do_p1(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 class TestNenhumJuizRecriaEmLaco:
-    """O aparelho é função do par (caminho, máscara), e os juízes comparam os
-    dois. MORDIDA: faça a fábrica pendurar no `flavor` o aparelho vestido
-    (`xbox`) e o juiz do P1 recria o pad a cada compasso do co-op."""
+    """O aparelho é função do par (caminho, máscara), e os juízes comparam os"""
 
     @pytest.mark.parametrize("cartao", ["dualsense", "nintendo"])
     def test_o_p1_do_modo_xbox_fica_de_pe(
@@ -461,11 +433,6 @@ class TestNenhumJuizRecriaEmLaco:
             pad.stop()
 
 
-# ===========================================================================
-# 3b — a troca de modo com o pad de pé (o PS + R3, o lançamento que arma o modo)
-# ===========================================================================
-
-
 def _vidpid_do_p1(d: Any) -> tuple[int, int]:
     return _no_de(d._gamepad_device).vidpid
 
@@ -509,15 +476,7 @@ class TestATrocaDeModoComOPadDePe:
     def test_o_cartao_nintendo_vira_xbox_360_quando_o_modo_muda(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O juiz pelo aparelho, no P1 — e sem laço depois dele.
-
-        Era `xfail(strict=True)` até a onda 3 (28/09). A segunda metade é a que
-        prova os dois juízes JUNTOS: dez compassos do `reconciliar_as_mascaras`
-        e um apply idêntico não recriam o Xbox 360 recém-vestido. MORDIDA: tire
-        o `o_aparelho_mudou` do `ja_estava` do P1 e ele passa a discordar do
-        juiz do compasso (o Pro fica; o compasso pede o start e ouve «já
-        estava»); tirado do `vpad_ficou_para_tras`, reprova a régua do co-op.
-        """
+        """O juiz pelo aparelho, no P1 — e sem laço depois dele."""
         registro_de_mascaras().set_mask(MACS[0], "nintendo")
         d = _daemon_do_p1(monkeypatch)
         try:
@@ -553,15 +512,7 @@ class TestATrocaDeModoComOPadDePe:
     def test_o_pro_sem_modo_escolhido_fica_pro_e_nao_entra_em_laco(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem modo escolhido o Pro segue Pro, e o juiz não o recria em laço.
-
-        A armadilha que a pergunta AO PAD evita: a fábrica pendura o caminho
-        RESOLVIDO, e o Pro sem escolha nasce com o caminho Xbox pendurado. Um
-        juiz que fizesse a conta pelo caminho pendurado veria «Xbox 360» onde
-        há um Pro, e o recriaria a cada compasso. MORDIDA: troque, em
-        `o_aparelho_mudou`, a pergunta ao pad por
-        `mascara_no_jogo(caminho_do_vpad(vpad), vpad.flavor)`.
-        """
+        """Sem modo escolhido o Pro segue Pro, e o juiz não o recria em laço."""
         registro_de_mascaras().set_mask(MACS[0], "nintendo")
         d = _daemon_do_p1(monkeypatch)
         try:
@@ -591,20 +542,8 @@ class TestATrocaDeModoComOPadDePe:
             pad.stop()
 
 
-# ===========================================================================
-# 4 — a Mira Virtual vale no modo Xbox
-# ===========================================================================
-
-
 def test_a_mira_virtual_chega_ao_xbox_360(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O giroscópio do físico vira analógico direito no pad que o jogo usa.
-
-    A `A-MIRA-POR-MOVIMENTO-NA-TELA-01` já traduz em qualquer máscara; aqui se
-    confere o que faltava: o pad do modo Xbox recebe a mira e a escreve no eixo
-    `ABS_RX` que o nó declara. MORDIDA: a da classe 1 (o pad nasce Edge, que o
-    jogo não abre, e a mira escreve num nó que ninguém lê) — e, no motor, tire
-    a chamada de `aplicar_o_movimento` do `dispatch_gamepad`.
-    """
+    """O giroscópio do físico vira analógico direito no pad que o jogo usa."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
     from tests.unit.test_o_movimento_vale_em_qualquer_mascara import (

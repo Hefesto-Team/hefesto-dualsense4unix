@@ -26,11 +26,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES do import de
-# `home_actions`/`profiles_actions`, que fazem `import gi` incondicional
-# (`home_actions.py:34` via `base.py:9`; `profiles_actions.py:16`). Sem ela,
-# este arquivo estourava ERRO DE COLETA no CI sem PyGObject (medido: simulação
-# do job `lint-test` com `gi`/`cairo` bloqueados via `sys.meta_path`).
 exigir_gi_real("o preço da máscara dos dois lados")
 
 from typing import Any
@@ -85,20 +80,8 @@ def _editor(flavor: str | None) -> Any:
     return _Editor()
 
 
-# ---------------------------------------------------------------------------
-# A frase de cada lado
-# ---------------------------------------------------------------------------
-
-
 def test_o_xbox_diz_os_tres_campos_que_o_descritor_nao_tem() -> None:
-    """O preço do Xbox é REUSADO da frase-dona, e nomeia os três.
-
-    Um teste que só exigisse `texto != ""` passaria com qualquer frase. As três
-    palavras são exigidas pelo nome porque é por elas que se decide: quem joga
-    com mira por movimento, quem usa o touchpad como botão.
-
-    Mordida: escrever um texto NOVO aqui em vez de reusar a frase-dona.
-    """
+    """O preço do Xbox é REUSADO da frase-dona, e nomeia os três."""
     texto = texto_do_preco_da_mascara("xbox")
 
     assert texto == TEXTO_CUSTO_MASCARA_XBOX, (
@@ -143,12 +126,10 @@ def test_o_dualsense_diz_o_que_ganha_e_que_foi_validado_em_jogo() -> None:
         "a linha do DualSense deixou de dizer que a máscara foi validada — sem "
         "isso ela lê como escolha sem respaldo, e empurra para a Xbox"
     )
-    # Os três jogos são o ENDEREÇO da medição: sem eles é afirmação sem prova.
     for jogo in ("Sackboy", "Mad King", "Pragmata"):
         assert jogo in texto, (
             f"a validação perdeu o endereço: {jogo} saiu da frase"
         )
-    # E o que se GANHA também é dito: é a metade que faz a escolha ser escolha.
     for campo in ("giroscópio", "acelerômetro", "touchpad"):
         assert campo in texto, (
             f"o {campo} é o que o DualSense preserva, e a tela não disse"
@@ -156,14 +137,7 @@ def test_o_dualsense_diz_o_que_ganha_e_que_foi_validado_em_jogo() -> None:
 
 
 def test_sem_escolha_a_tela_explica_o_vazio_em_vez_de_parecer_defeito() -> None:
-    """Dois botões apagados são o estado NORMAL, e leem como tela quebrada.
-
-    É o que os presets de gênero shipam desde 22/08 e o que um perfil novo
-    nasce sendo. A frase existe para o vazio ter nome.
-
-    Mordida: devolver `""` para `None` — a linha some e o vazio volta a parecer
-    erro de carregamento.
-    """
+    """Dois botões apagados são o estado NORMAL, e leem como tela quebrada."""
     assert texto_do_preco_da_mascara(None) == TEXTO_MASCARA_SEM_ESCOLHA
     assert texto_do_preco_da_mascara(None), "o vazio ficou sem explicação"
     assert "mantém" in texto_do_preco_da_mascara(None), (
@@ -172,19 +146,7 @@ def test_sem_escolha_a_tela_explica_o_vazio_em_vez_de_parecer_defeito() -> None:
 
 
 def test_payload_desconhecido_nao_vira_afirmacao_sobre_giroscopio() -> None:
-    """Máscara que ninguém reconhece cai no "sem escolha", nunca num preço.
-
-    Mesma família do `or "xbox"` que esta aba já teve: um valor estranho
-    virando afirmação sobre o que o jogo recebe.
-
-    A RÉGUA DIGITAVA O QUE DEVIA LER — corrigido em 07/09/2026. Esta lista
-    tinha `"nintendo"` escrito à mão entre `0`, `[]` e `{}`, de quando não
-    havia máscara de Switch no catálogo. A máscara nasceu nesta leva, e a lista
-    não foi junto: o teste passou a EXIGIR que uma máscara legítima fosse
-    tratada como lixo, e com isso guardou um defeito vivo — com Nintendo Pro
-    marcada a tela negava a escolha dela em voz alta (*"Sem marcar nenhuma
-    delas…"*). Agora o lixo é só lixo, e quem diz o que é máscara é o catálogo.
-    """
+    """Máscara que ninguém reconhece cai no "sem escolha", nunca num preço."""
     for estranho in ("", "desconhecido", 0, [], {}, "switch-pro", None):
         assert texto_do_preco_da_mascara(estranho) == TEXTO_MASCARA_SEM_ESCOLHA, (
             f"{estranho!r} virou preço: a janela afirmou o que não sabe"
@@ -192,21 +154,7 @@ def test_payload_desconhecido_nao_vira_afirmacao_sobre_giroscopio() -> None:
 
 
 def test_nenhuma_mascara_do_catalogo_cai_no_sem_escolha() -> None:
-    """Toda máscara que o produto aceita tem uma linha própria embaixo dos botões.
-
-    O DEFEITO QUE ESTE PORTÃO EXISTE PARA IMPEDIR, medido em 07/09/2026 e VIVO
-    na tela até então: `texto_do_preco_da_mascara` tinha `xbox` e `dualsense`
-    digitados, e a Nintendo Pro — recém-entrada no catálogo — caía no ramo do
-    desconhecido. A linha não ficava vazia, que já seria ruim; ela AFIRMAVA o
-    contrário do que estava marcado, e escondia as cinco perdas da máscara nova.
-
-    A régua pergunta ao catálogo (`mascaras_validas`) em vez de listar nomes,
-    porque foi listar nomes que criou o defeito. Uma quarta máscara reprova
-    aqui no dia em que entrar sem linha.
-
-    Mordida: devolver `if flavor == "xbox"` ao lugar do
-    `texto_do_custo_da_mascara(flavor)` reprova este teste em `nintendo`.
-    """
+    """Toda máscara que o produto aceita tem uma linha própria embaixo dos botões."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         mascaras_validas,
     )
@@ -223,17 +171,8 @@ def test_nenhuma_mascara_do_catalogo_cai_no_sem_escolha() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# A etiqueta acompanha o gesto dela
-# ---------------------------------------------------------------------------
-
-
 def test_o_gesto_na_mascara_troca_a_etiqueta() -> None:
-    """Clicar em Xbox troca a linha, e a marca de gesto continua subindo.
-
-    Mordida: tirar o `_atualizar_preco_da_mascara` do handler — a etiqueta
-    congela no preço da máscara ANTERIOR, que é pior que não haver etiqueta.
-    """
+    """Clicar em Xbox troca a linha, e a marca de gesto continua subindo."""
     editor = _editor(None)
     editor._mode_flavor_selector.set_active_id("xbox")
     editor._on_mode_flavor_changed(editor._mode_flavor_selector)
@@ -249,14 +188,7 @@ def test_o_gesto_na_mascara_troca_a_etiqueta() -> None:
 
 
 def test_abrir_outro_perfil_troca_a_etiqueta_sem_gesto_nenhum() -> None:
-    """O populate atualiza a etiqueta — e `limpar_ativo` NÃO emite "changed".
-
-    Este é o caminho que morde de verdade: abrir um perfil em Xbox e depois um
-    sem opinião deixaria, sem esta linha, o preço do Xbox na tela sobre um
-    perfil que não escolhe máscara nenhuma.
-
-    Mordida: tirar o `_atualizar_preco_da_mascara` do `_set_mode_editor`.
-    """
+    """O populate atualiza a etiqueta — e `limpar_ativo` NÃO emite "changed"."""
     from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
     editor = _editor("xbox")
@@ -270,13 +202,7 @@ def test_abrir_outro_perfil_troca_a_etiqueta_sem_gesto_nenhum() -> None:
 
 
 def test_a_etiqueta_e_montada_na_secao_do_modo_e_e_visivel() -> None:
-    """A frase tem de estar num `Gtk.Label` da seção, não só em tooltip.
-
-    O pedido de 01/08 era a etiqueta; o que se entregou naquele dia foi o
-    tooltip, e ela continuou trocando a máscara perfil a perfil.
-
-    Mordida: apagar o `pack_start` da etiqueta e deixar só o `set_tooltips`.
-    """
+    """A frase tem de estar num `Gtk.Label` da seção, não só em tooltip."""
     import inspect
 
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
@@ -289,19 +215,11 @@ def test_a_etiqueta_e_montada_na_secao_do_modo_e_e_visivel() -> None:
         "a etiqueta de preço não é empacotada na seção do modo — sem isso ela "
         "existe no código e não na tela"
     )
-    # E o tooltip continua: ele serve ao botão que NÃO está marcado.
     assert "flavor_sel.set_tooltips(" in fonte
 
 
 def test_a_montagem_nao_nasce_com_xbox_marcado() -> None:
-    """Nenhum botão marcado antes de alguém escolher.
-
-    A montagem fazia `flavor_sel.set_active_id("xbox")`. Se algum caminho
-    mostrar o editor sem passar por `_set_mode_editor`, o Salvar gravaria
-    `xbox` no arquivo dela — e desde `2b11172` isso gruda.
-
-    Mordida: devolver o `set_active_id("xbox")` à montagem.
-    """
+    """Nenhum botão marcado antes de alguém escolher."""
     import inspect
 
     from hefesto_dualsense4unix.app.actions.profiles_actions import (

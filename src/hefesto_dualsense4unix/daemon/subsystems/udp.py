@@ -1,12 +1,4 @@
-"""Subsystem UDP — wrapper do UdpServer para o orquestrador.
-
-Expõe start_udp() como função utilitária e implementa o protocolo
-Subsystem para integração com o registry.
-
-O DESLIGAR TEM UM DONO SÓ, e é o `shutdown` de `daemon/connection.py`: ele
-derruba o servidor UDP em linha, com teto de 2 s. A utilitária `stop_udp`,
-que fazia o mesmo sem o teto e só a suíte chamava, saiu em 28/09/2026.
-"""
+"""Subsystem UDP — wrapper do UdpServer para o orquestrador."""
 from __future__ import annotations
 
 import contextlib

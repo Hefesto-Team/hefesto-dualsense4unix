@@ -1,30 +1,4 @@
-"""O-MOUSE-SEGUE-A-NAVEGACAO-01 — o liga/desliga do mouse é do modo, e o modo tem uma porta.
-
-A bancada da demo de 29/09 (achado 13, o passo 7): ela tocou o chip
-«Navegação», e o cursor não andou com o analógico. O arranjo obedecia ao
-`mouse.enabled: false` do Freestyle — um `{false, 6, 1}` com a forma do estado
-vivo copiado, e não de uma escolha dela —, o PS + R3 pela mesma porta ligava (o
-`forcar_mouse`), e a ativação de perfil ligava e desligava o mouse em qualquer
-modo. Três donos, e cada porta perguntava a um.
-
-As duas perguntas da sprint foram decididas em 29/09 por quem coordena, pelo
-padrão dela e com ela dormindo, e ela pode desfazer:
-D-2909-A-NAVEGACAO-LIGA-O-MOUSE (entrar na Navegação liga o mouse, pelas duas
-portas) e D-2909-A-NAVEGACAO-NAO-RELIGA-O-TECLADO (a entrada deixa o teclado com
-a lista «Função do teclado»).
-
-A BANCADA é um lar de mentira: o `Daemon` é SUBCLASSE do real (herda as
-assinaturas), o `ProfileManager` é o real, os perfis e as flags de sessão moram
-no `XDG_CONFIG_HOME` do teste, e só a borda é dublada — o device uinput do
-mouse (a fábrica real do subsistema roda, e só o `UinputMouseDevice` é de
-mentira), o teclado virtual, a fábrica do pad, o grab, o co-op, o launch env e
-a notificação da supressão. Toda régua lê o que o daemon RECEBEU e o disco
-relido pelo `loader`, nunca o relatório que a função devolve. Os números são
-`speed 11`/`scroll 4` no perfil e `3` na flag de sessão, para o recuo não passar
-pelo mesmo valor.
-
-A MORDIDA de cada régua está no docstring dela.
-"""
+"""O-MOUSE-SEGUE-A-NAVEGACAO-01 — o liga/desliga do mouse é do modo, e o modo tem uma porta."""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -56,9 +30,6 @@ FREESTYLE = loader.NOME_DO_PADRAO
 PERFIL = "Perfil da Régua"
 
 
-# ---------------------------------------------------------------------------
-# A borda dublada
-# ---------------------------------------------------------------------------
 class _Bancada:
     """O que a borda anotou, e as duas chaves que fazem a fábrica recusar."""
 
@@ -97,12 +68,7 @@ class _Vpad:
 
 
 class _DaemonDaNavegacao(Daemon):
-    """SUBCLASSE do daemon real. Os setters do mouse e do teclado rodam os REAIS.
-
-    Eles só anotam o que receberam e seguem para o produto: a exclusão mútua do
-    pad, a fábrica do mouse e a flag de sessão são as de verdade. O teclado
-    virtual e a notificação da supressão são a borda.
-    """
+    """SUBCLASSE do daemon real. Os setters do mouse e do teclado rodam os REAIS."""
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -150,7 +116,6 @@ class _DaemonDaNavegacao(Daemon):
         self.recebeu.append(("_stop_gamepad_emulation", ()))
         super()._stop_gamepad_emulation()
 
-    # --- as perguntas que a régua faz ao que foi recebido -------------------
     def chamadas(self, metodo: str) -> list[tuple[Any, ...]]:
         return [args for nome, args in self.recebeu if nome == metodo]
 
@@ -248,19 +213,8 @@ def _mouse_de_pe(d: _DaemonDaNavegacao) -> None:
     d.recebeu.clear()
 
 
-# ---------------------------------------------------------------------------
-# 5. A ativação fora da Navegação não mexe no liga/desliga
-# ---------------------------------------------------------------------------
 def test_a_ativacao_de_um_perfil_de_pad_nao_liga_o_mouse(bancada: _Bancada) -> None:
-    """O Freestyle com `mouse.enabled: true` e `kind: gamepad`, o pad de pé.
-
-    O «Ativar» à mão aplica as velocidades e não liga o mouse: ligar derrubaria
-    o pad pela exclusão mútua, e o `mode_applier` logo depois o levantaria de
-    novo, com o co-op recriando os secundários (~2,9 s com quatro controles).
-
-    MORDIDA: tire a pergunta pelo `kind` de `Daemon.apply_profile_mouse` e o
-    pad para.
-    """
+    """O Freestyle com `mouse.enabled: true` e `kind: gamepad`, o pad de pé."""
     d = _daemon()
     _perfil(FREESTYLE, mode={"kind": "gamepad", "caminho": "dualsense"},
             mouse={"enabled": True, "speed": 11, "scroll_speed": 4})
@@ -277,14 +231,7 @@ def test_a_ativacao_de_um_perfil_de_pad_nao_liga_o_mouse(bancada: _Bancada) -> N
 
 
 def test_o_perfil_sem_modo_nao_desliga_a_navegacao(bancada: _Bancada) -> None:
-    """O mouse ligado na Navegação; entra um perfil sem `mode` com `enabled: false`.
-
-    É a forma do perfil de um jogo que o autoswitch ativa: sem opinião de modo,
-    ele não tem autoridade para desligar o mouse, e o chip «Navegação» seguiria
-    aceso sobre um cursor morto.
-
-    MORDIDA: a mesma da régua 5 — o mouse desliga.
-    """
+    """O mouse ligado na Navegação; entra um perfil sem `mode` com `enabled: false`."""
     d = _daemon()
     _perfil(PERFIL, mode=None, mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
     _mouse_de_pe(d)
@@ -296,13 +243,7 @@ def test_o_perfil_sem_modo_nao_desliga_a_navegacao(bancada: _Bancada) -> None:
 
 
 def test_o_perfil_de_navegacao_obedece_ao_que_ela_gravou(bancada: _Bancada) -> None:
-    """Um perfil com `kind: desktop` e `enabled: false`, com o mouse ligado: desliga.
-
-    É a suspensão do «Status do Modo» sobrevivendo a uma ativação.
-
-    MORDIDA: ignore o `enabled` sempre (a Navegação que só liga) e o mouse fica
-    ligado.
-    """
+    """Um perfil com `kind: desktop` e `enabled: false`, com o mouse ligado: desliga."""
     d = _daemon()
     _perfil(PERFIL, mode={"kind": "desktop"},
             mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
@@ -314,9 +255,6 @@ def test_o_perfil_de_navegacao_obedece_ao_que_ela_gravou(bancada: _Bancada) -> N
         "o perfil de Navegação que diz mouse desligado não o desligou")
 
 
-# ---------------------------------------------------------------------------
-# 11. A tela da ativação não muda
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("modo", [{"kind": "gamepad", "caminho": "dualsense"}, {"kind": "desktop"}],
                          ids=["fora-da-navegacao", "na-navegacao"])
 def test_o_rodape_da_ativacao_le_o_mouse_como_aplicado(
@@ -358,9 +296,6 @@ def test_o_rodape_da_ativacao_le_o_mouse_como_aplicado(
     assert "mouse" not in " ".join(relato["failed"]).lower(), relato
 
 
-# ---------------------------------------------------------------------------
-# O commit 2: a entrada na Navegação é uma só, e liga o mouse
-# ---------------------------------------------------------------------------
 FLAG_DA_SESSAO = {"enabled": False, "speed": 3, "scroll_speed": 1}
 
 
@@ -398,16 +333,8 @@ def _o_chip(d: _DaemonDaNavegacao) -> dict[str, Any]:
     return asyncio.run(_Handlers(d)._handle_desktop_arranjo_apply({"origin": "manual"}))
 
 
-# ---------------------------------------------------------------------------
-# 1. O chip liga o mouse com o perfil que diz desligado
-# ---------------------------------------------------------------------------
 def test_o_chip_liga_o_mouse_com_o_perfil_que_diz_desligado(bancada: _Bancada) -> None:
-    """O perfil com `{enabled: false, 11, 4}` e o mouse desligado: o chip liga.
-
-    MORDIDA: devolva ao arranjo o ramo que obedece ao `enabled` do perfil (pelo
-    `apply_profile_mouse`); o ramo idempotente devolve antes do setter, e o
-    `_mouse_device` segue `None`.
-    """
+    """O perfil com `{enabled: false, 11, 4}` e o mouse desligado: o chip liga."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
     _perfil(PERFIL, mode=None, mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
@@ -421,14 +348,7 @@ def test_o_chip_liga_o_mouse_com_o_perfil_que_diz_desligado(bancada: _Bancada) -
 
 
 def test_o_chip_sem_a_secao_liga_com_as_velocidades_da_sessao(bancada: _Bancada) -> None:
-    """O perfil sem a seção `mouse`, e a flag de sessão dizendo desligado com `speed 3`.
-
-    O recuo de antes (`restore_mouse_preference`) obedecia à flag e deixava o
-    mouse desligado. Agora a entrada liga, e as velocidades saem da flag.
-
-    MORDIDA: devolva o recuo à preferência da flag e a régua reprova com o
-    mouse desligado.
-    """
+    """O perfil sem a seção `mouse`, e a flag de sessão dizendo desligado com `speed 3`."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
     _perfil(PERFIL, mode=None, mouse=None)
@@ -440,9 +360,6 @@ def test_o_chip_sem_a_secao_liga_com_as_velocidades_da_sessao(bancada: _Bancada)
     assert d.mouse_de_pe()
 
 
-# ---------------------------------------------------------------------------
-# 2. As duas portas dão o mesmo
-# ---------------------------------------------------------------------------
 def test_o_chip_e_o_ps_r3_dao_o_mesmo(bancada: _Bancada) -> None:
     """Dois daemons iguais, o mesmo perfil: o chip num, o PS + R3 no outro.
 
@@ -482,19 +399,8 @@ def test_o_chip_e_o_ps_r3_dao_o_mesmo(bancada: _Bancada) -> None:
     assert ("set_mouse_emulation", (True, 11, 4)) in chip
 
 
-# ---------------------------------------------------------------------------
-# 3. A entrada grava o que ligou
-# ---------------------------------------------------------------------------
 def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(bancada: _Bancada) -> None:
-    """O Freestyle ligado com `{false, 11, 4}` e `kind: gamepad`; o chip pela porta.
-
-    O `freestyle.json` relido diz `mouse.enabled: true` e `mode.kind: desktop`,
-    com UMA versão nova no `.historico`: o disco, o chip e o «Status do Modo»
-    dizem a mesma coisa depois da entrada.
-
-    MORDIDA: tire a escrita da seção `mouse` (o `mouse_ligado` que o arranjo
-    passa ao escritor) e o disco segue `false`.
-    """
+    """O Freestyle ligado com `{false, 11, 4}` e `kind: gamepad`; o chip pela porta."""
     from hefesto_dualsense4unix.profiles.manager import ligar_o_freestyle
 
     d = _daemon()
@@ -518,16 +424,7 @@ def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(bancada: _Bancada) -> N
 
 
 def test_a_segunda_entrada_nao_grava_de_novo(bancada: _Bancada) -> None:
-    """Entrar na Navegação já estando nela: nada mudou, nada se grava.
-
-    A regra do modo (`manager.secao_do_modo_com_o_caminho`) vale para a seção
-    do mouse que a entrada grava junto (`manager.secao_do_mouse_da_navegacao`):
-    o `.json` dela não ganha uma versão idêntica a cada toque no chip aceso.
-
-    MORDIDA: grave a seção `mouse` sempre, sem compará-la com a do disco (em
-    `manager.gravar_o_modo_no_perfil_ativo`), e a segunda entrada deixa uma
-    versão a mais no `.historico`.
-    """
+    """Entrar na Navegação já estando nela: nada mudou, nada se grava."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
     _perfil(PERFIL, mode={"kind": "gamepad", "caminho": "dualsense"},
@@ -546,15 +443,8 @@ def test_a_segunda_entrada_nao_grava_de_novo(bancada: _Bancada) -> None:
         "a segunda entrada na Navegação regravou o perfil sem nada ter mudado")
 
 
-# ---------------------------------------------------------------------------
-# 4. O arranjo chamado direto não grava
-# ---------------------------------------------------------------------------
 def test_o_arranjo_chamado_direto_liga_e_nao_grava(bancada: _Bancada) -> None:
-    """Sem a porta, o arranjo liga o mouse e não muda o `sha256` do perfil.
-
-    MORDIDA: grave por `origin == "manual"` em vez do `grava_o_modo`, e o
-    `sha256` muda.
-    """
+    """Sem a porta, o arranjo liga o mouse e não muda o `sha256` do perfil."""
     import hashlib
 
     d = _daemon()
@@ -571,18 +461,8 @@ def test_o_arranjo_chamado_direto_liga_e_nao_grava(bancada: _Bancada) -> None:
         "o arranjo chamado direto escreveu no perfil")
 
 
-# ---------------------------------------------------------------------------
-# 9. O socorro não volta
-# ---------------------------------------------------------------------------
 def test_o_socorro_forcar_mouse_nao_volta() -> None:
-    """Nenhum nome, argumento, atributo ou chave `forcar_mouse` em `src/`.
-
-    Lido pela árvore: a prosa que conta a história (docstring, comentário) não
-    conta.
-
-    MORDIDA: devolva o parâmetro ao `hotkey.py` (`arranjo(..., forcar_mouse=True)`)
-    e a régua nomeia a linha.
-    """
+    """Nenhum nome, argumento, atributo ou chave `forcar_mouse` em `src/`."""
     import ast
     from pathlib import Path
 
@@ -603,17 +483,10 @@ def test_o_socorro_forcar_mouse_nao_volta() -> None:
     assert not achados, f"o socorro do PS + R3 voltou: {achados}"
 
 
-# ---------------------------------------------------------------------------
-# 10. O diário diz o estado
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("sobe", "esperado"), [(True, "ligado"), (False, "desligado")],
                          ids=["o-device-subiu", "a-fabrica-recusou"])
 def test_o_diario_diz_o_mouse_vivo(bancada: _Bancada, sobe: bool, esperado: str) -> None:
-    """`arranjo_do_desktop_aplicado` diz `mouse_vivo`, lido do device.
-
-    MORDIDA: escreva `mouse_vivo` a partir do pedido (o `True` que foi ao
-    setter) em vez do device; com a fábrica recusando, a régua reprova.
-    """
+    """`arranjo_do_desktop_aplicado` diz `mouse_vivo`, lido do device."""
     import structlog
 
     d = _daemon()
@@ -632,18 +505,8 @@ def test_o_diario_diz_o_mouse_vivo(bancada: _Bancada, sobe: bool, esperado: str)
         "a chave `mouse` saiu do vocabulário do applier")
 
 
-# ---------------------------------------------------------------------------
-# 12. O perfil de Navegação sem a seção liga na ativação
-# ---------------------------------------------------------------------------
 def test_o_perfil_de_navegacao_sem_secao_liga_o_mouse_na_ativacao(bancada: _Bancada) -> None:
-    """O pad de pé, um perfil com `kind: desktop` e sem `mouse`, a flag com `speed 3`.
-
-    A ativação à mão liga o mouse com as velocidades da flag, e o pad cai.
-
-    MORDIDA: tire a chamada do `mouse_applier` sem a seção
-    (`ProfileManager.apply_emulation`); o setter não é chamado e o
-    `_mouse_device` segue `None`.
-    """
+    """O pad de pé, um perfil com `kind: desktop` e sem `mouse`, a flag com `speed 3`."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
     _perfil(PERFIL, mode={"kind": "desktop"}, mouse=None)
@@ -656,9 +519,6 @@ def test_o_perfil_de_navegacao_sem_secao_liga_o_mouse_na_ativacao(bancada: _Banc
     assert d._gamepad_device is None, "o pad ficou de pé na Navegação"
 
 
-# ---------------------------------------------------------------------------
-# 8. O «Status do Modo» escreve pelo dono
-# ---------------------------------------------------------------------------
 def _o_status(d: _DaemonDaNavegacao, **params: Any) -> dict[str, Any]:
     import asyncio
 
@@ -708,12 +568,7 @@ def test_o_status_do_modo_desliga_os_dois_e_grava_pelo_dono(bancada: _Bancada) -
 
 
 def test_o_status_pedido_para_o_lado_do_disco_nao_grava(bancada: _Bancada) -> None:
-    """O perfil já diz desligado, e o «Status do Modo» pede desligado: nada se grava.
-
-    MORDIDA: tire o «nada mudou, nada se grava» de
-    `manager.gravar_a_navegacao_no_perfil_ativo` e o disco ganha uma versão
-    idêntica à de antes.
-    """
+    """O perfil já diz desligado, e o «Status do Modo» pede desligado: nada se grava."""
     d = _daemon()
     _perfil(PERFIL, mode={"kind": "desktop"},
             mouse={"enabled": False, "speed": 11, "scroll_speed": 4}, teclado=False)
@@ -728,13 +583,7 @@ def test_o_status_pedido_para_o_lado_do_disco_nao_grava(bancada: _Bancada) -> No
 
 
 def test_o_teclado_recusado_nao_deixa_meio_passo_no_perfil(bancada: _Bancada) -> None:
-    """O mouse ligou e o teclado não subiu: o perfil fica como estava.
-
-    A resposta diz qual lado falhou, para a janela dizer por quê.
-
-    MORDIDA: grave com o mouse só (tire o teclado da condição da gravação) e
-    o disco ganha `mouse.enabled: true` com o teclado ainda desligado.
-    """
+    """O mouse ligou e o teclado não subiu: o perfil fica como estava."""
     import hashlib
 
     d = _daemon()
@@ -756,16 +605,7 @@ def test_o_teclado_recusado_nao_deixa_meio_passo_no_perfil(bancada: _Bancada) ->
 
 
 def test_o_mouse_recusado_nao_liga_o_teclado_sozinho(bancada: _Bancada) -> None:
-    """A fábrica do mouse recusa: o teclado não é tocado, e a resposta diz o motivo.
-
-    O teclado ligado sozinho num modo que não é dele é o estado que o
-    `keyboard.emulation.set` nasceu para curar. A recusa volta no bloco
-    `mouse_emulation`, com o `bloqueio` que a janela traduz.
-
-    MORDIDA: chame o teclado mesmo com o mouse recusado (tire o
-    `if desfecho["mouse"]` de `Daemon.definir_o_status_da_navegacao`) e o
-    teclado liga.
-    """
+    """A fábrica do mouse recusa: o teclado não é tocado, e a resposta diz o motivo."""
     d = _daemon()
     _perfil(PERFIL, mode={"kind": "desktop"},
             mouse={"enabled": False, "speed": 11, "scroll_speed": 4}, teclado=False)
@@ -782,10 +622,7 @@ def test_o_mouse_recusado_nao_liga_o_teclado_sozinho(bancada: _Bancada) -> None:
 
 
 def test_o_status_sem_a_mao_dela_nao_grava(bancada: _Bancada) -> None:
-    """O pedido sem `origin` é reconciliação (ORIGEM-QUE-MENTE-01): aplica e não grava.
-
-    MORDIDA: passe a porta sempre (`grava="ipc"` no handler) e o `sha256` muda.
-    """
+    """O pedido sem `origin` é reconciliação (ORIGEM-QUE-MENTE-01): aplica e não grava."""
     import hashlib
 
     d = _daemon()

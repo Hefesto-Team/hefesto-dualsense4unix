@@ -1,8 +1,4 @@
-"""Cobertura do WIP de modo-jogo / combo (estava sem teste no caminho-estrela).
-
-FEAT-EMULATION-GAMEMODE-COMBO-01, FEAT-HOTKEY-COMBO-NO-LEAK-01/02 (latch),
-FEAT-EMULATION-GAMEMODE-FLUSH-01 e ps_long_press_ms=0.
-"""
+"""Cobertura do WIP de modo-jogo / combo (estava sem teste no caminho-estrela)."""
 
 from __future__ import annotations
 
@@ -16,21 +12,13 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     HotkeyManager,
 )
 
-# ---------------------------------------------------------------------------
-# Latch do combo (no-leak-02): membros bloqueados até serem soltos.
-# ---------------------------------------------------------------------------
-
 
 def test_latch_forma_e_segura_ate_soltar() -> None:
-    """PS+Options forma o combo; soltar o PS antes do Options NÃO libera o
-    'options' (latch) — fecha o leak de Meta na ordem de release."""
-    hm = HotkeyManager()  # gamemode default = (ps, options)
+    """PS+Options forma o combo; soltar o PS antes do Options NÃO libera o"""
+    hm = HotkeyManager()
     assert hm.combo_buttons_active({"ps", "options"}) == frozenset({"ps", "options"})
-    # solta o PS, mantém Options: options continua latchado (bloqueado)
     assert hm.combo_buttons_active({"options"}) == frozenset({"options"})
-    # solta Options: latch limpo
     assert hm.combo_buttons_active(set()) == frozenset()
-    # agora 'options' sozinho volta a ser emulável (não bloqueado)
     assert hm.combo_buttons_active({"options"}) == frozenset()
 
 
@@ -44,16 +32,11 @@ def test_sem_ps_nao_bloqueia_nada() -> None:
     assert hm.combo_buttons_active({"cross", "square"}) == frozenset()
 
 
-# ---------------------------------------------------------------------------
-# Disparo do combo gamemode (PS+Options) -> on_ps_long_press (toggle).
-# ---------------------------------------------------------------------------
-
-
 def test_combo_gamemode_dispara_on_ps_long_press() -> None:
     calls: list[str] = []
     hm = HotkeyManager(on_ps_long_press=lambda: calls.append("toggle"))
-    assert hm.observe({"ps", "options"}, now=0.0) is None  # buffer não passou
-    fired = hm.observe({"ps", "options"}, now=0.2)  # 200ms > buffer 150ms
+    assert hm.observe({"ps", "options"}, now=0.0) is None
+    fired = hm.observe({"ps", "options"}, now=0.2)
     assert fired == "gamemode"
     assert calls == ["toggle"]
 
@@ -75,11 +58,6 @@ def test_combo_gamemode_funciona_com_long_press_desligado() -> None:
     assert calls == ["toggle"]
 
 
-# ---------------------------------------------------------------------------
-# ps_long_press_ms=0: segurar o PS NÃO alterna; soltar abre Steam.
-# ---------------------------------------------------------------------------
-
-
 def test_ps_long_press_zero_nao_alterna_em_hold() -> None:
     calls: list[str] = []
     hm = HotkeyManager(
@@ -88,24 +66,14 @@ def test_ps_long_press_zero_nao_alterna_em_hold() -> None:
         config=HotkeyConfig(ps_long_press_ms=0),
     )
     hm.observe({"ps"}, now=0.0)
-    hm.observe({"ps"}, now=2.0)  # segurou 2s
+    hm.observe({"ps"}, now=2.0)
     assert "toggle" not in calls, "long-press desligado não deve alternar no hold"
-    hm.observe(set(), now=2.05)  # soltou sem combo
+    hm.observe(set(), now=2.05)
 
-    # CORRIGIDO em 26/08/2026, e o que mudou foi o PRODUTO, não o teste.
-    # Esta linha exigia `calls == ["steam"]` DEPOIS de um hold de 2,05 s, e com
-    # isso travava a AUSÊNCIA de teto no toque curto — que é o defeito que a
-    # PS-TOQUE-CURTO-01 mandou encarar: com o long-press em 0 (decisão certa,
-    # contra o modo-jogo acidental), nada limitava a duração, e segurar o PS por
-    # ~5 s para RELIGAR o controle abria a Steam na cara dela. O teto entrou em
-    # 700 ms. O que este teste existe para provar — "long-press desligado não
-    # alterna no hold" — continua provado na asserção acima e ficou intacto.
     assert calls == [], "hold de 2 s passa do teto de 700 ms: não é toque curto"
 
-    # E o toque curto continua abrindo a Steam — sem isto, a cura poderia ter
-    # sido "o botão PS parou de funcionar" e este arquivo aplaudiria.
     hm.observe({"ps"}, now=10.0)
-    hm.observe(set(), now=10.2)  # 200 ms: um toque humano
+    hm.observe(set(), now=10.2)
     assert calls == ["steam"], "PS solo deve abrir a Steam no release curto"
 
 
@@ -115,11 +83,6 @@ def test_ps_solo_toque_curto_abre_steam() -> None:
     hm.observe({"ps"}, now=0.0)
     hm.observe(set(), now=0.1)
     assert calls == ["steam"]
-
-
-# ---------------------------------------------------------------------------
-# FEAT-EMULATION-GAMEMODE-FLUSH-01: ao suprimir, solta tudo nos devices virtuais.
-# ---------------------------------------------------------------------------
 
 
 def test_suppress_faz_flush_dos_devices(monkeypatch: pytest.MonkeyPatch) -> None:

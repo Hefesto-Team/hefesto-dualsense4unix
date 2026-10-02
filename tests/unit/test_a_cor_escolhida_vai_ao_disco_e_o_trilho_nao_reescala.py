@@ -55,7 +55,6 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-#: MAC da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
@@ -67,10 +66,6 @@ ACESO = {"uniq": UNIQ, "index": 0, "transport": "usb", "connected": True,
          "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
          "lightbar_source": "sysfs"}
 
-#: A COR GLOBAL DELA, e ela é a peça que faz esta régua morder: `#2850B4` NÃO
-#: está nos catorze tons da guia, então `cor_escolhida` não sabe desfazer a
-#: escala dela. Um tom da guia daria verde sobre o defeito — foi assim que ele
-#: atravessou a bancada inteira sem ninguém ver.
 FORA_DA_GUIA = (40, 80, 180)
 
 
@@ -138,9 +133,6 @@ def _cor_no_disco(caminho) -> list | None:
     return ((dado.get("controllers") or {}).get(CHAVE, {}).get("leds") or {}).get("lightbar")
 
 
-# ---------------------------------------------------------------------------
-# 1. A ESCOLHA DELA CHEGA AO DISCO
-# ---------------------------------------------------------------------------
 def test_clicar_num_tom_grava_a_cor_no_override_dela(pac, a04):
     """O estado do disco dela em 09/09: brilho sim, cor não. Depois do clique, as duas.
 
@@ -176,11 +168,7 @@ def test_a_cor_gravada_leva_a_procedencia_do_numero_de_hoje(pac, a04):
 
 
 def test_gravar_a_cor_preserva_o_brilho_que_ja_estava(pac, a04):
-    """A fusão é POR CAMPO — o override dela tinha só o brilho, e ele fica.
-
-    **A MORDIDA:** troque o `model_copy(update=…)` de `_com_a_cor_gravada` por
-    um `LedsConfig(lightbar=rgb)` e o `0.49` dela some do arquivo.
-    """
+    """A fusão é POR CAMPO — o override dela tinha só o brilho, e ele fica."""
     caminho = _semear("regua", campos={"lightbar_brightness": 0.49})
     a04.cor(_ctx(pac), {"uniq": UNIQ, "hex": "FF8000",
                         "tipo": "button", "evento": "click"}, PonteDeMentira())
@@ -191,16 +179,7 @@ def test_gravar_a_cor_preserva_o_brilho_que_ja_estava(pac, a04):
 
 
 def test_desligar_a_barra_tambem_grava(pac, a04):
-    """"Desligar" é escolha dela, e sem gravar o perfil reaplicado a reacenderia.
-
-    NOTA DATADA — 25/09/2026 (A-04-PERGUNTA-AO-DAEMON-VIVO-01,
-    `D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`): o «Desligar» gravava o PRETO como
-    a cor, e desde 22/09 o preto é «não opinou» — o perfil reaplicado acendia a
-    barra, e o laranja dela se perdia. Ele grava o brilho em 0% e a cor fica.
-
-    **A MORDIDA:** tire o `elif apagando:` de `_escrever_a_cor`, ou devolva o
-    preto como cor gravada.
-    """
+    """"Desligar" é escolha dela, e sem gravar o perfil reaplicado a reacenderia."""
     caminho = _semear("regua", campos={"lightbar": [255, 128, 0]})
     a04.apagar(_ctx(pac), {"uniq": UNIQ}, PonteDeMentira())
 
@@ -210,11 +189,7 @@ def test_desligar_a_barra_tambem_grava(pac, a04):
 
 
 def test_o_trilho_de_brilho_nao_grava_cor(pac, a04):
-    """Ele não escolhe cor, e gravar ali congelaria uma cor que ela não pediu.
-
-    **A MORDIDA:** ligue a guarda para todos os caminhos (`if True:`) e o
-    arraste passa a escrever a cor lida do aparelho no perfil dela.
-    """
+    """Ele não escolhe cor, e gravar ali congelaria uma cor que ela não pediu."""
     caminho = _semear("regua", campos={"lightbar_brightness": 0.5})
     a04.brilho(_ctx(pac), {"uniq": UNIQ, "valor": "70",
                            "tipo": "input", "evento": "change"}, PonteDeMentira())
@@ -222,9 +197,6 @@ def test_o_trilho_de_brilho_nao_grava_cor(pac, a04):
     assert _cor_no_disco(caminho) is None
 
 
-# ---------------------------------------------------------------------------
-# 2. O TRILHO PARA DE REESCALAR A COR JÁ ESCALADA
-# ---------------------------------------------------------------------------
 def _rgb_que_saiu(ponte: PonteDeMentira) -> tuple:
     nome, args, _kwargs = ponte.chamadas[-1]
     assert nome == "led_set_detalhado", ponte.chamadas
@@ -232,18 +204,7 @@ def _rgb_que_saiu(ponte: PonteDeMentira) -> tuple:
 
 
 def test_o_trilho_manda_a_cor_do_disco_e_nao_a_luz_acesa(pac, a04):
-    """O caso medido no aparelho dela: `#2850B4` a 50%, arrastando para 70%.
-
-    A luz acesa é `(20,40,90)` — a cor já escalada. Sem a cor no disco o gesto
-    a tomava como pedido e mandava `(14,28,63)`: **subir o brilho escurecia**.
-    Com o disco, o alvo é `(40,80,180)` e o que sai é `(28,56,126)`.
-
-    **A MORDIDA:** troque o `alvo` do gesto `brilho` pela luz acesa
-    (`cor_do_swatch(dele)`) e o valor volta a ser a luz reescalada. Tirar só o
-    `_a_cor_guardada_que_vale` do começo do `alvo` não morde desde 24/09/2026:
-    o degrau 2 de `_a_cor_de_agora` também lê a cor do disco, pelo mesmo dono
-    (A-MARCA-DA-COR-NAO-SOME-01), e ela tem de sair dos dois lugares.
-    """
+    """O caso medido no aparelho dela: `#2850B4` a 50%, arrastando para 70%."""
     _semear("regua", campos={"lightbar": list(FORA_DA_GUIA),
                              "lightbar_brightness": 0.5})
     ponte = PonteDeMentira()
@@ -256,13 +217,7 @@ def test_o_trilho_manda_a_cor_do_disco_e_nao_a_luz_acesa(pac, a04):
 
 
 def test_arrastar_dez_vezes_nao_escurece_a_cor(pac, a04):
-    """A prova do acúmulo, e ela é o que ela viu: a barra morrendo no preto.
-
-    Dez arrastes seguidos, todos no MESMO brilho. Com o defeito, cada volta
-    multiplicava a cor por 0,5 de novo — `(40,80,180)` vira `(0,0,0)` na sexta.
-
-    **A MORDIDA:** a mesma do teste acima; aqui ela reprova por goleada.
-    """
+    """A prova do acúmulo, e ela é o que ela viu: a barra morrendo no preto."""
     _semear("regua", campos={"lightbar": list(FORA_DA_GUIA),
                              "lightbar_brightness": 0.5})
     aceso = [20, 40, 90]
@@ -272,7 +227,6 @@ def test_arrastar_dez_vezes_nao_escurece_a_cor(pac, a04):
                    {"uniq": UNIQ, "valor": "50", "tipo": "input",
                     "evento": "change"}, ponte)
         saiu = _rgb_que_saiu(ponte)
-        # o que o daemon acenderia com o que saiu — a realimentação da volta
         aceso = [max(0, min(255, int(c * 0.5))) for c in saiu]
 
     assert saiu == FORA_DA_GUIA
@@ -280,13 +234,7 @@ def test_arrastar_dez_vezes_nao_escurece_a_cor(pac, a04):
 
 
 def test_a_cor_guardada_le_o_cru_e_devolve_none_quando_nao_ha(a04):
-    """A leitura é do CRU (`perfil.ativo`), e a ausência tem de ser `None`.
-
-    Um `(0,0,0)` no lugar de `None` faria o degrau seguinte da escada nunca
-    ser alcançado — o trilho apagaria a barra de quem nunca escolheu cor.
-
-    **A MORDIDA:** devolva `(0, 0, 0)` no ramo vazio.
-    """
+    """A leitura é do CRU (`perfil.ativo`), e a ausência tem de ser `None`."""
     assert a04._a_cor_guardada({}, UNIQ) is None
     assert a04._a_cor_guardada({"controllers": {CHAVE: {"leds": {}}}}, UNIQ) is None
     assert a04._a_cor_guardada(

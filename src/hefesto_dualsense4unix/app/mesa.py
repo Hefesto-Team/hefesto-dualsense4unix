@@ -89,20 +89,7 @@ def contagem_de_controles(state: dict[str, Any], externos: int) -> ContagemDeCon
 
 
 def texto_de_contagem(contagem: ContagemDeControles) -> str:
-    """Frase NOMEADA da contagem, ou ``""`` quando não há plural a explicar.
-
-    CONTAGEM-E-COOP-01: quem lê a tela precisa saber de QUAL número se trata.
-    Três regimes:
-
-    - ``na_mesa <= 1``: string vazia — não há contagem a exibir e quem chama
-      segue pelo caminho single de sempre ("Conectado Via USB");
-    - sem externos: ``"3 controles"`` — o texto de sempre, e aqui ele não
-      mente: ``na_mesa == adotados``, nenhuma ambiguidade a desfazer (mantido
-      idêntico também para não crescer a largura do cabeçalho no caso comum,
-      lição dos 12px de folga da CI de 29/07);
-    - com externos: ``"2 do Hefesto + 2 externos"`` — o número do cabeçalho
-      passa a explicar por que a fita ao lado tem quatro chips.
-    """
+    """Frase NOMEADA da contagem, ou ``""`` quando não há plural a explicar."""
     adotados = contagem.adotados
     externos = contagem.externos
     if contagem.na_mesa <= 1:
@@ -114,7 +101,6 @@ def texto_de_contagem(contagem: ContagemDeControles) -> str:
     )
     if adotados == 0:
         # Defensivo: `state["connected"]` é do DualSense primário, então este
-        # regime não deveria alcançar a tela — mas "0 do Hefesto" seria pior.
         return _("{ext} (nenhum do Hefesto)").format(ext=parte_ext)
     return _("{n} do Hefesto + {ext}").format(n=adotados, ext=parte_ext)
 

@@ -42,10 +42,9 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: MACs forjados (faixa aa:bb:cc — teste-guarda de anonimato; NUNCA 14:3a).
-UNIQ_ROXO = "aabbcc000001"  # slot 1 (herdado)
-UNIQ_BRANCO = "aabbcc000004"  # slot 4 (herdado — o "sony 4" da triagem)
-MAC_EXTERNO = "aabbcc0000fe"  # slot 5 (externo)
+UNIQ_ROXO = "aabbcc000001"
+UNIQ_BRANCO = "aabbcc000004"
+MAC_EXTERNO = "aabbcc0000fe"
 
 BOOT = "boot-teste-renumber"
 
@@ -78,12 +77,7 @@ def _arquivo(tmp: Path) -> dict[str, Any]:
 
 
 def _fila_no_disco(tmp: Path, kind: str) -> dict[str, int]:
-    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3).
-
-    Os dois registros passaram a gravar UMA fila só (``order``), em vez dos
-    mapas ``slots``/``externals`` de número absoluto — ver a docstring de
-    ``identity.py``.
-    """
+    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3)."""
     return {
         str(e["addr"]): int(e["rank"])
         for e in _arquivo(tmp)[id_mod.ORDER_FIELD]
@@ -96,9 +90,7 @@ def _server_com_registros(
 ) -> tuple[IpcServer, ControllerIdentityRegistry, ExternalIdentityRegistry]:
     """Monta o cenário-mãe: DualSense em {1, 4} + externo em 5."""
     ds = ControllerIdentityRegistry()
-    ds.slot_for(UNIQ_ROXO)  # 1
-    # Força o slot 4 diretamente (simula a herança da tempestade — o slot_for
-    # lazy não pularia direto pro 4 sem reservas intermediárias).
+    ds.slot_for(UNIQ_ROXO)
     ds._ordem[UNIQ_BRANCO] = 4
 
     ext = ExternalIdentityRegistry()
@@ -132,7 +124,6 @@ class TestGateSessaoDeJogo:
         server, ds, ext = _server_com_registros(isolated_config, authority="game")
         resultado = await server._handle_identity_renumber({})
         assert resultado == {"ok": False, "reason": "sessao_de_jogo_aberta"}
-        # Nada foi tocado — os slots herdados permanecem intactos.
         assert ds.snapshot() == {UNIQ_ROXO: 1, UNIQ_BRANCO: 4}
         assert ext.snapshot() == {MAC_EXTERNO: 5}
 
@@ -158,23 +149,16 @@ class TestCompactacaoGlobal:
         resultado = await server._handle_identity_renumber({})
 
         assert resultado["ok"] is True
-        # R-15 (auditoria 23/07) — CONTRATO TROCADO DE PROPÓSITO: `renumbered`
-        # passa a trazer só as chaves que MUDARAM. O roxo já estava no 1 e
-        # continua no 1; contá-lo inflava o toast da GUI ("N controle(s)
-        # renumerado(s)" conta as chaves), que é justamente a mentira do
-        # achado `renumerar-inclui-desconectados`.
         assert resultado["renumbered"] == {
             UNIQ_BRANCO: 2,
             MAC_EXTERNO: 3,
         }
-        # Cada registro recebeu só a fatia que é dele.
         assert ds.snapshot() == {UNIQ_ROXO: 1, UNIQ_BRANCO: 2}
         assert ext.snapshot() == {MAC_EXTERNO: 3}
 
     @pytest.mark.asyncio
     async def test_controllers_json_regravado(self, isolated_config: Path) -> None:
         server, ds, ext = _server_com_registros(isolated_config)
-        # Save inicial (estado herdado) — simula o arquivo já existente.
         ds.sync_connected({UNIQ_ROXO, UNIQ_BRANCO})
         ext.sync_connected([MAC_EXTERNO])
 
@@ -199,13 +183,12 @@ class TestCompactacaoGlobal:
 
     @pytest.mark.asyncio
     async def test_sem_registros_fiados_e_noop(self, isolated_config: Path) -> None:
-        """Backend fake/daemon sem identity_registry/external_registry (None)
-        — a mesma hermeticidade do resto do módulo, nunca levanta."""
+        """Backend fake/daemon sem identity_registry/external_registry (None)"""
         fc = FakeController(transport="usb")
         fc.connect()
         store = StateStore()
         manager = ProfileManager(controller=fc, store=store)
-        daemon = _FakeDaemon()  # identity_registry/external_registry = None
+        daemon = _FakeDaemon()
         server = IpcServer(
             controller=fc,
             store=store,
@@ -220,14 +203,7 @@ class TestCompactacaoGlobal:
     async def test_ja_compacto_e_no_op_idempotente(
         self, isolated_config: Path
     ) -> None:
-        """Rodar duas vezes seguidas não muda nada na segunda (já é 1..N).
-
-        R-15 — CONTRATO TROCADO DE PROPÓSITO: antes as duas respostas eram
-        IGUAIS (o plano inteiro voltava sempre), e a GUI toastava "3
-        controle(s) renumerado(s)" numa passagem que não mexeu em nada. Agora
-        a segunda volta VAZIA, e é o que faz o rodapé dizer "Numeração já
-        estava compacta" (`home_actions._ok`, ramo `n == 0`).
-        """
+        """Rodar duas vezes seguidas não muda nada na segunda (já é 1..N)."""
         server, ds, ext = _server_com_registros(isolated_config)
         primeiro = await server._handle_identity_renumber({})
         segundo = await server._handle_identity_renumber({})
@@ -238,17 +214,7 @@ class TestCompactacaoGlobal:
 
 
 class TestConcorrenciaTOCTOU:
-    """Achado MEDIUM 2026-07-20 (corretora final): sem lock cobrindo o span
-    inteiro ``snapshot()``→plano→``compact()``, um ``slot_for(assign=True)``
-    concorrente (hotplug real sob o ``_io_lock`` do backend, ou o tick do
-    ``ExternalLedSync``) podia ler o estado AINDA não-compactado e roubar o
-    slot-alvo que o ``compact()`` estava prestes a devolver a outro
-    controle — dois "Controle 1" simultâneos. Falha-sem: antes do fix
-    (``lock_for_renumber`` + ``ExitStack`` em ``_handle_identity_renumber``),
-    o ``slot_for`` concorrente disparado de dentro do ``snapshot()`` não
-    tinha lock nenhum para esperar e terminava IMEDIATAMENTE (a `threading.
-    Event` abaixo era setada bem antes do handler terminar).
-    """
+    """Achado MEDIUM 2026-07-20 (corretora final): sem lock cobrindo o span"""
 
     @pytest.mark.asyncio
     async def test_slot_for_concorrente_bloqueia_ate_renumber_terminar(
@@ -256,9 +222,7 @@ class TestConcorrenciaTOCTOU:
     ) -> None:
         server, ds, ext = _server_com_registros(isolated_config)
         novo_uniq = "aabbcc009999"
-        # Mesma fiação de produção (`lifecycle._wire_external_registry`): o
         # DualSense une os slots dos externos ao `used` — sem isto o teste
-        # mediria uma colisão de wiring de fixture, não do TOCTOU.
         ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
 
         resultado_thread: dict[str, int | None] = {}
@@ -266,8 +230,6 @@ class TestConcorrenciaTOCTOU:
         original_snapshot = ds.snapshot
 
         def snapshot_com_hotplug_concorrente() -> dict[str, int]:
-            # Disparado DE DENTRO do span que o fix agora protege — simula o
-            # hotplug real acontecendo bem entre o snapshot() e o compact().
             copia = original_snapshot()
 
             def _hotplug() -> None:
@@ -281,24 +243,12 @@ class TestConcorrenciaTOCTOU:
 
         resultado = await server._handle_identity_renumber({})
 
-        # Com o fix: o handler já terminou (soltou o lock) e mesmo assim a
-        # thread do hotplug pode não ter rodado ainda (agendamento do SO) —
-        # o que a asserção abaixo GARANTE é que ela só girou DEPOIS da
-        # compactação, nunca no meio dela.
         assert thread_terminou.wait(timeout=1.0), "hotplug concorrente nunca rodou"
         assert resultado["ok"] is True
 
-        # NUM-01: o que a corrida disputa é o LUGAR NA FILA (o número exibido
-        # é derivado dele + de quem está na mesa), então é sobre lugares que a
-        # ausência de colisão se afirma. A asserção anterior comparava o
-        # RETORNO de `slot_for` — que virou número exibido — com os valores do
-        # plano, que são lugares: grandezas diferentes desde o schema 3.
         assert resultado_thread["slot"] is not None
         lugar_do_hotplug = ds.snapshot()[novo_uniq]
         lugares = list(ds.snapshot().values()) + list(ext.snapshot().values())
-        # O hotplug só pode ter recebido um lugar LIVRE em relação ao estado
-        # JÁ reordenado — nunca um dos lugares-alvo que o compact distribuiu
-        # (1, 2 ou 3 no cenário-mãe).
         assert lugar_do_hotplug not in set(resultado["renumbered"].values())
         assert len(lugares) == len(set(lugares)), "dois controles no mesmo lugar"
 
@@ -306,8 +256,7 @@ class TestConcorrenciaTOCTOU:
     async def test_lock_for_renumber_bloqueia_slot_for_de_outra_thread(
         self, isolated_config: Path
     ) -> None:
-        """Prova direta da trava: com `lock_for_renumber()` tomado, um
-        `slot_for` de OUTRA thread fica bloqueado até a liberação."""
+        """Prova direta da trava: com `lock_for_renumber()` tomado, um"""
         _server, ds, _ext = _server_com_registros(isolated_config)
         novo_uniq = "aabbcc008888"
 
@@ -322,11 +271,8 @@ class TestConcorrenciaTOCTOU:
 
         with ds.lock_for_renumber():
             threading.Thread(target=_concorrente, daemon=True).start()
-            # Enquanto o lock está tomado, a thread concorrente NÃO consegue
-            # terminar (fica esperando o `with self._lock:` de `slot_for`).
             assert not thread_pegou_o_lock.wait(timeout=0.2)
 
-        # Lock liberado: agora sim a thread concorrente conclui.
         assert thread_terminou.wait(timeout=1.0)
         assert resultado_thread["slot"] is not None
 

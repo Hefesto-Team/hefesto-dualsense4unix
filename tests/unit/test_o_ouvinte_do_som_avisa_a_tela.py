@@ -1,26 +1,4 @@
-"""O-SOM-DO-SISTEMA-E-O-DA-TELA-01 — o servidor de som avisa e alguém escuta.
-
-**Pedido dela, 21/09/2026**, com o painel de som do COSMIC aberto ao lado da
-janela do Hefesto:
-
-    *"outra coisa que precisamos ter é sincronia com os canais de saida de som
-    e entrada de som do sistema operacional. isso é importante."*
-    <!-- noqa-acento: citação literal dela -->
-
-**O QUE ESTAVA MEDIDO:** o produto só ESCREVIA. Zero `pactl subscribe` e zero
-`pw-mon` em `src/` — havia escrita (`set-default-sink`/`set-default-source`) e
-leitura sob demanda (`get-default-sink`), e nada que ficasse sabendo quando ela
-trocava a saída no painel do sistema.
-
-**NENHUM TESTE DESTE ARQUIVO TOCA O SERVIDOR DE SOM DELA.** As funções que
-decidem são puras (`tipo_do_evento`, `linha_do_som_do_sistema`), os nomes de
-gente saem do retrato do som alimentado com a saída MEDIDA, e o laço é medido
-com um `pactl` de mentira.
-
-Desde 28/09/2026 (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01) o filtro e os nomes
-são do retrato do som: as réguas das seções 1 e 2 medem o caminho que o
-produto usa, e não mais as duas funções que ficaram sem chamador.
-"""
+"""O-SOM-DO-SISTEMA-E-O-DA-TELA-01 — o servidor de som avisa e alguém escuta."""
 
 from __future__ import annotations
 
@@ -32,9 +10,6 @@ import pytest
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
-#: A SAÍDA REAL DE `pactl list sinks` NA MÁQUINA DELA, em 21/09/2026, cortada
-#: nos dois campos que importam. É o oráculo dos nomes de gente do retrato do
-#: som: uma régua escrita contra um formato inventado mede a invenção.
 LISTA_MEDIDA = """
 Sink #551
 \tName: alsa_output.usb-Sony_..._Controller-00.HiFi__Speaker__sink
@@ -48,9 +23,6 @@ Sink #56923
 """
 
 
-# ---------------------------------------------------------------------------
-# 1 — O FILTRO, e o `sink-input` que o derrubaria
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("linha", [
     "Event 'change' on server #0",
     "Event 'new' on sink #66580",
@@ -68,21 +40,11 @@ def test_o_que_importa_rele_o_padrao(linha: str) -> None:
     ("lixo", None),
 ])
 def test_o_que_nao_importa_nao_rele_o_padrao(linha: str, tipo: str | None) -> None:
-    """`sink-input` CONTÉM `sink`, e é o stream de qualquer app tocando som.
-
-    Ele relê os fluxos no retrato (é o tipo dele), e não o padrão.
-
-    MORDE: troque o `partes[3]` de `tipo_do_evento` por uma busca de
-    substring na linha e esta régua reprova — o laço passaria a reler o
-    padrão a cada frame de áudio de qualquer programa aberto.
-    """
+    """`sink-input` CONTÉM `sink`, e é o stream de qualquer app tocando som."""
     assert ods.tipo_do_evento(linha) == tipo
     assert ods.tipo_do_evento(linha) not in ods._TIPOS_DO_PADRAO
 
 
-# ---------------------------------------------------------------------------
-# 2 — OS NOMES SÃO OS DO PAINEL DELA
-# ---------------------------------------------------------------------------
 def _retrato_com(saidas: str, padrao_da_saida: str = "") -> Any:
     """O retrato do som, vivo, alimentado com a saída dada — sem servidor nenhum."""
     from hefesto_dualsense4unix.integrations import retrato_do_som as rs
@@ -119,16 +81,12 @@ def test_um_no_sem_descricao_nao_entra() -> None:
 
 
 def test_a_leitura_prende_o_idioma() -> None:
-    """O `pactl` desta casa responde em português; um leitor que dependa do
-    idioma da máquina já respondeu "não há" sobre aparelho de pé duas vezes."""
+    """O `pactl` desta casa responde em português; um leitor que dependa do"""
     ambiente = ods._ambiente()
     assert ambiente["LC_ALL"] == "C"
     assert ambiente["LANG"] == "C"
 
 
-# ---------------------------------------------------------------------------
-# 3 — O LAÇO: só publica o que MUDOU
-# ---------------------------------------------------------------------------
 class _BusDeMentira:
     def __init__(self) -> None:
         self.publicados: list[tuple[str, Any]] = []
@@ -183,12 +141,7 @@ def _correr(daemon: Any, linhas: list[str], padroes: list[ods.SomDoSistema],
 
 def test_a_primeira_leitura_vem_antes_do_subscribe(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem ela a tela ficaria sem resposta até a primeira mudança — que pode
-    ser nunca.
-
-    MORDE: tire a leitura de abertura de `_uma_volta` e a régua reprova com
-    zero publicações.
-    """
+    """Sem ela a tela ficaria sem resposta até a primeira mudança — que pode"""
     daemon = _DaemonDeMentira()
     inicial = ods.SomDoSistema(saida="hdmi", entrada="mic")
 
@@ -201,12 +154,7 @@ def test_a_primeira_leitura_vem_antes_do_subscribe(
 
 def test_o_evento_que_nao_muda_nada_nao_repinta(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Um nó que nasce emite evento e não troca padrão nenhum.
-
-    MORDE: tire o `if agora == anterior: continue` e a régua reprova com uma
-    publicação a mais — que na tela é uma repintura por nada, o defeito medido
-    em 05/09/2026 (80 repinturas em 80 tiques).
-    """
+    """Um nó que nasce emite evento e não troca padrão nenhum."""
     daemon = _DaemonDeMentira()
     mesmo = ods.SomDoSistema(saida="hdmi", entrada="mic")
 
@@ -230,27 +178,11 @@ def test_a_troca_de_padrao_chega_na_hora(
 
 
 def test_o_ouvinte_nao_escreve_no_servidor_de_som() -> None:
-    """CONTRATO: ele lê, compara e publica. Quem elege microfone é o dono.
-
-    **A RÉGUA LÊ A ÁRVORE, NÃO O TEXTO — e isso é medição desta casa, não
-    preciosismo.** A primeira versão procurava o verbo no TEXTO do arquivo e
-    reprovou na hora: o CABEÇALHO do módulo cita os dois verbos para explicar
-    o defeito que ele cura. *Um comentário que descreve o padrão proibido vira
-    a primeira ocorrência dele* — já aconteceu três vezes nesta casa, e uma
-    delas derrubou treze testes com `Unexpected token`.
-
-    Aqui só contam as strings que o INTERPRETADOR carrega: literais fora de
-    docstring. Prosa pode dizer o nome do veneno; código, não.
-
-    MORDE: chame um `set-default-source` daqui e a régua reprova.
-    """
+    """CONTRATO: ele lê, compara e publica. Quem elege microfone é o dono."""
     import ast
 
     with open(ods.__file__ or "", encoding="utf-8") as arquivo:
         arvore = ast.parse(arquivo.read())
-    # OS NÓS QUE SÃO DOCSTRING, por IDENTIDADE de nó: o primeiro `Expr` de um
-    # módulo, classe ou função cujo valor é uma string. Comparar pelo TEXTO
-    # tiraria também um literal de código que por acaso repetisse a frase.
     docs: set[int] = set()
     for n in ast.walk(arvore):
         if not isinstance(n, (ast.Module, ast.ClassDef,
@@ -272,9 +204,7 @@ def test_o_ouvinte_nao_escreve_no_servidor_de_som() -> None:
                 f"o ouvinte escreveu {proibido!r} em código — ele só observa")
 
 
-# ---------------------------------------------------------------------------
 # 4 — O `state_full` E A LINHA DO EXAME
-# ---------------------------------------------------------------------------
 def test_o_payload_sem_ouvinte_e_nao_sei_e_nao_nao_ha() -> None:
     """Dois campos vazios. Afirmar "não há" faria a pessoa parar de procurar."""
     assert ods.som_do_sistema_payload(object()) == {
@@ -300,12 +230,7 @@ def test_a_linha_do_exame_diz_os_nomes_do_painel_dela() -> None:
 
 
 def test_sem_o_bloco_a_linha_nao_aparece() -> None:
-    """Uma linha de exame que diz "não sei" sobre som ensina que há algo errado
-    com o som.
-
-    MORDE: devolva uma linha com travessão quando o bloco falta e a régua
-    reprova.
-    """
+    """Uma linha de exame que diz "não sei" sobre som ensina que há algo errado"""
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
     assert a09.linha_do_som_do_sistema(None) is None
@@ -325,17 +250,7 @@ def test_o_nome_cru_serve_de_reserva() -> None:
 
 def test_sem_pactl_o_ouvinte_espera_calado_e_volta_quando_ele_aparece(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem o `pactl` não há o que ouvir, e isso não é queda (30/09/2026).
-
-    O `runtime-smoke` do CI, numa máquina sem o programa, pegou o laço
-    soltando `FileNotFoundError` com a pilha inteira a cada volta. A cura: uma
-    linha só na transição, nenhum `subscribe` tentado, e a volta ao ouvir
-    quando o programa aparece.
-
-    MORDE: tire a pergunta ao `shutil.which` do laço e a régua reprova — o
-    `create_subprocess_exec` é chamado sem o programa e o `ouvinte_do_som_caiu`
-    sai com a pilha.
-    """
+    """Sem o `pactl` não há o que ouvir, e isso não é queda (30/09/2026)."""
     presente = iter([None, None, None, "/usr/bin/pactl"])
     tentativas: list[tuple[Any, ...]] = []
     linhas: list[str] = []

@@ -1,9 +1,4 @@
-"""Testes dos subcomandos `hefesto-dualsense4unix profile apply` e `profile save --from-active`
-(FEAT-CLI-PARITY-01).
-
-Mocka IPC e isola diretório de perfis via fixture semelhante ao
-`test_cli.py` original.
-"""
+"""Testes dos subcomandos `hefesto-dualsense4unix profile apply` e `profile save --from-active`"""
 from __future__ import annotations
 
 import json
@@ -88,7 +83,6 @@ def test_apply_valida_salva_e_ativa(
     result = runner.invoke(app, ["profile", "apply", "--file", str(draft)])
     assert result.exit_code == 0, result.output
 
-    # Perfil foi gravado
     saved = isolated_profiles_dir / "draft.json"
     assert saved.exists()
 
@@ -114,7 +108,6 @@ def test_apply_schema_invalido_exit_1(
     isolated_profiles_dir: Path,
 ) -> None:
     bad = _draft_json_valido()
-    # RGB fora de byte: valida contra LedsConfig.lightbar
     bad["leds"] = {"lightbar": [999, 0, 0]}
     path = tmp_path / "bad.json"
     path.write_text(json.dumps(bad), encoding="utf-8")
@@ -138,9 +131,6 @@ def test_apply_daemon_offline_grava_a_escolha(
     assert result.exit_code == 0, result.output
     assert "offline" in result.output
 
-    # A escolha foi gravada pelo dono (`utils.session.gravar_a_escolha`): o
-    # `session.json`, que o boot lê, e o marcador, que é espelho para a CLI.
-    # Até 01/10/2026 só o marcador era gravado, e o boot o lia por precedência.
     from hefesto_dualsense4unix.utils import session, xdg_paths
 
     assert session.load_last_profile() == "draft"
@@ -163,9 +153,6 @@ def test_apply_daemon_recusa_ipc_error(
     assert result.exit_code == 0
     assert "recusou" in result.output
 
-    # Fix do review (2026-07-16, MED): recusa ≠ ativação. A escolha tem
-    # autoridade de boot (resolve_boot_profile) — gravá-la aqui registrava um
-    # switch que NUNCA aconteceu e desviava o restore de todo boot seguinte.
     from hefesto_dualsense4unix.utils import session, xdg_paths
 
     assert session.load_last_profile() is None
@@ -192,7 +179,6 @@ def test_save_from_active_clona_perfil(
     isolated_profiles_dir: Path,
     mock_ipc: dict[str, Any],
 ) -> None:
-    # Cria perfil original e marca como ativo.
     original = _draft_json_valido()
     original["name"] = "shooter"
     (isolated_profiles_dir / "shooter.json").write_text(
@@ -213,7 +199,6 @@ def test_save_from_active_clona_perfil(
     assert clone_path.exists()
     clone_data = json.loads(clone_path.read_text(encoding="utf-8"))
     assert clone_data["name"] == "meu_backup"
-    # Demais campos preservados
     assert clone_data["priority"] == 5
     assert clone_data["leds"]["lightbar"] == [255, 128, 0]
 

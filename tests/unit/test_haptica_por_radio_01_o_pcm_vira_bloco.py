@@ -1,10 +1,4 @@
-"""HAPTICA-POR-RADIO-01 (P2) — o PCM de 48 kHz vira bloco de 64 B a 3 kHz.
-
-O formato do bloco foi MEDIDO em 18/09/2026 com a mão dela: o motor voice-coil
-vibra pelo rádio quando o report leva 64 bytes de PCM int8 estéreo a 3 kHz; com
-as amostras em zero, cala. Estas réguas travam a CONTA que produz esses 64
-bytes — nenhuma delas toca aparelho.
-"""
+"""HAPTICA-POR-RADIO-01 (P2) — o PCM de 48 kHz vira bloco de 64 B a 3 kHz."""
 
 from __future__ import annotations
 
@@ -74,13 +68,7 @@ def test_o_pico_nao_estoura_para_o_outro_lado() -> None:
 
 
 def test_o_filtro_derruba_o_que_dobraria_em_cima_do_sinal() -> None:
-    """3,3 kHz está acima do Nyquist de 1,5 kHz e volta como 300 Hz sem o filtro.
-
-    A FREQUÊNCIA É ESCOLHIDA, E ISSO É O PONTO: a primeira versão desta régua
-    usou 6 kHz, que cai num PONTO CEGO — a 6 kHz as amostras de 3 kHz caem todas
-    no zero da senoide, e a régua passava com o filtro ARRANCADO. Medido em
-    18/09/2026: a 3,3 kHz o pico é 11 com filtro e 121 sem ele.
-    """
+    """3,3 kHz está acima do Nyquist de 1,5 kHz e volta como 300 Hz sem o filtro."""
     c = hb.ConversorDeHaptica()
     blocos = c.alimentar(_pcm(512 * 4, canal=2, frequencia=3300.0))
     amostras = [v for bloco in blocos for v in _int8(bloco)]
@@ -93,7 +81,7 @@ def test_o_resto_fica_guardado_entre_as_entregas() -> None:
     inteiro = hb.ConversorDeHaptica().alimentar(pcm)
     aos_pedacos: list[bytes] = []
     c = hb.ConversorDeHaptica()
-    passo = 7 * 2 * 4  # sete quadros por vez: nunca cai no múltiplo
+    passo = 7 * 2 * 4
     for i in range(0, len(pcm), passo):
         aos_pedacos += c.alimentar(pcm[i : i + passo])
     assert aos_pedacos == inteiro
@@ -101,7 +89,7 @@ def test_o_resto_fica_guardado_entre_as_entregas() -> None:
 
 def test_limpar_esquece_o_resto() -> None:
     c = hb.ConversorDeHaptica()
-    c.alimentar(_pcm(500, canal=2))  # sobra meio bloco
+    c.alimentar(_pcm(500, canal=2))
     c.limpar()
     assert c.alimentar(bytes(512 * 2 * 4)) == [hb.bloco_de_silencio()]
 

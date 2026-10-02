@@ -1,16 +1,4 @@
-"""Reconciliação rápida de hotplug no reconnect_loop (FEAT-BACKEND-HOTPLUG-FAST-01).
-
-Cobre, com um fake do `InputDirWatch` (hermético — nada de /dev/input real):
-
-- mudança em /dev/input antecipa o `controller.connect()` de reconciliação
-  (em fatias de `RECONNECT_HOTPLUG_POLL_INTERVAL_SEC`) em vez de esperar o
-  fallback de 30s;
-- SEM mudança, nenhum connect() extra acontece dentro da janela online —
-  mas o watch É consultado (custo ~µs por fatia);
-- a primeira leitura do watch é baseline (o `poll()` inicial devolve True por
-  construção e NÃO deve disparar reconciliação);
-- o fallback periódico (`RECONNECT_ONLINE_CHECK_INTERVAL_SEC`) segue vivo.
-"""
+"""Reconciliação rápida de hotplug no reconnect_loop (FEAT-BACKEND-HOTPLUG-FAST-01)."""
 from __future__ import annotations
 
 import asyncio
@@ -42,11 +30,7 @@ class _CountingController:
 
 
 class _FakeWatch:
-    """Dublê do InputDirWatch: `trip()` simula uma mudança em /dev/input.
-
-    Como no real, `poll()` consome a mudança (duas leituras seguidas não
-    devolvem True para o mesmo evento).
-    """
+    """Dublê do InputDirWatch: `trip()` simula uma mudança em /dev/input."""
 
     def __init__(self) -> None:
         self._changed = False
@@ -104,8 +88,7 @@ def _fast_slices(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_mudanca_no_dir_antecipa_reconciliacao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Watch acusou mudança → connect() (reconciliação) roda em ~1 fatia,
-    sem esperar o fallback de 30s."""
+    """Watch acusou mudança → connect() (reconciliação) roda em ~1 fatia,"""
     _fast_slices(monkeypatch)
     ctrl = _CountingController()
     daemon = _StubDaemon(ctrl)
@@ -117,7 +100,6 @@ async def test_mudanca_no_dir_antecipa_reconciliacao(
         base = ctrl.connect_calls
         watch.trip()
         await _until(lambda: ctrl.connect_calls > base)
-        # UMA reconciliação por mudança — o evento foi consumido pelo poll().
         assert ctrl.connect_calls == base + 1
     finally:
         daemon.stop()
@@ -126,8 +108,7 @@ async def test_mudanca_no_dir_antecipa_reconciliacao(
 
 @pytest.mark.asyncio
 async def test_sem_mudanca_nao_reconcilia(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem mudança em /dev/input, nenhum connect() extra dentro da janela
-    online — mas o watch é consultado a cada fatia (sinal barato ativo)."""
+    """Sem mudança em /dev/input, nenhum connect() extra dentro da janela"""
     _fast_slices(monkeypatch)
     ctrl = _CountingController()
     daemon = _StubDaemon(ctrl)
@@ -136,8 +117,8 @@ async def test_sem_mudanca_nao_reconcilia(monkeypatch: pytest.MonkeyPatch) -> No
     task = asyncio.create_task(reconnect_loop(daemon, input_watch=watch))
     try:
         await asyncio.sleep(0.15)
-        assert ctrl.connect_calls == 1  # só o probe inicial da iteração 1
-        assert watch.polls >= 2  # baseline + fatias — o watch FOI sondado
+        assert ctrl.connect_calls == 1
+        assert watch.polls >= 2
     finally:
         daemon.stop()
         await asyncio.wait_for(task, timeout=1.0)
@@ -147,21 +128,17 @@ async def test_sem_mudanca_nao_reconcilia(monkeypatch: pytest.MonkeyPatch) -> No
 async def test_primeira_leitura_do_watch_e_baseline(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O InputDirWatch real devolve True no 1º poll() (sem snapshot anterior).
-
-    O reconnect_loop consome essa leitura como baseline — ela NÃO pode contar
-    como hotplug (o connect() do boot já cobriu o estado inicial).
-    """
+    """O InputDirWatch real devolve True no 1º poll() (sem snapshot anterior)."""
     _fast_slices(monkeypatch)
     ctrl = _CountingController()
     daemon = _StubDaemon(ctrl)
     watch = _FakeWatch()
-    watch.trip()  # 1ª leitura devolverá True, como no watch real recém-criado
+    watch.trip()
 
     task = asyncio.create_task(reconnect_loop(daemon, input_watch=watch))
     try:
         await asyncio.sleep(0.15)
-        assert ctrl.connect_calls == 1  # nenhuma reconciliação antecipada
+        assert ctrl.connect_calls == 1
     finally:
         daemon.stop()
         await asyncio.wait_for(task, timeout=1.0)
@@ -171,8 +148,7 @@ async def test_primeira_leitura_do_watch_e_baseline(
 async def test_fallback_periodico_segue_vivo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Mesmo sem NENHUMA mudança no watch, o check periódico online continua
-    reconciliando (fallback de RECONNECT_ONLINE_CHECK_INTERVAL_SEC)."""
+    """Mesmo sem NENHUMA mudança no watch, o check periódico online continua"""
     monkeypatch.setattr(conn_mod, "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC", 0.01)
     monkeypatch.setattr(conn_mod, "RECONNECT_ONLINE_CHECK_INTERVAL_SEC", 0.03)
     ctrl = _CountingController()

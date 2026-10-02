@@ -1,10 +1,4 @@
-"""Regressão BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02.
-
-Garante que `scripts/validar-acentuacao.py --fix` NUNCA remove glyphs
-Unicode permitidos por ADR-011 (Geometric Shapes / Block Elements /
-Arrows / Box Drawing) — mesmo que alguma regra errada em `_PARES`
-tente. Defense-in-depth contra a regressão reproduzida 2x.
-"""
+"""Regressão BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02."""
 from __future__ import annotations
 
 import importlib.util
@@ -63,28 +57,21 @@ class TestIsProtectedCodepoint:
         assert not validator.is_protected_codepoint(ord(char))
 
     def test_acentos_ptbr_nao_protegidos(self) -> None:
-        # Acentos PT-BR estão em Latin-1 Supplement (U+00C0..U+00FF),
-        # fora dos ranges ADR-011.
         for codepoint in (0x00E7, 0x00E1, 0x00F3):
             assert not validator.is_protected_codepoint(codepoint)
 
     def test_boundary_range_inicio(self) -> None:
-        # U+25A0 (início de Geometric Shapes) deve ser protegido
         assert validator.is_protected_codepoint(0x25A0)
 
     def test_boundary_range_fim(self) -> None:
-        # U+25FF (último de Geometric Shapes) deve ser protegido
         assert validator.is_protected_codepoint(0x25FF)
 
     def test_fora_do_range(self) -> None:
-        # U+2600 (Miscellaneous Symbols, Emoji_Presentation block) NAO é
-        # protegido — caracteres desse bloco são tratados pelo guardian.py.
         assert not validator.is_protected_codepoint(0x2600)
 
 
 class TestContemGlyphProtegido:
     def test_string_com_glyph(self) -> None:
-        # Montagem via chr() evita que o guardian hook leia o arquivo de teste.
         texto = chr(0x25CF) + " Online"
         assert validator._contem_glyph_protegido(texto) is True
 

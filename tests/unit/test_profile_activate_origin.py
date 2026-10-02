@@ -1,26 +1,4 @@
-"""PERFIL-03 — fiação do `origin` nos 5 call sites de `ProfileManager.activate`.
-
-A tabela do sprint doc (2026-07-16-sprint-perfis-por-controle.md) lista CINCO
-call sites — não três, como revisões antigas afirmavam. Estes testes travam a
-fiação de cada um: renomear/remover o parâmetro ou trocar o origin de um call
-site quebra aqui, não em silêncio no boot da usuária.
-
-  | Call site                                  | origin       | grava session? |
-  |--------------------------------------------|--------------|----------------|
-  | ipc_handlers._handle_profile_switch        | "manual"     | sim            |
-  | hotkey build_profile_cycle_callback        | "manual"     | sim            |
-  | autoswitch AutoSwitcher._activate          | "autoswitch" | não            |
-  | connection.restore_last_profile (boot)     | "system"     | não            |
-  | lifecycle._reapply_last_profile (nativo)   | "system"     | não            |
-
-O 5º call site também muda a FONTE do nome: sair do Modo Nativo re-aplica o
-perfil ATIVO (`store.active_profile` — pode ter vindo do autoswitch), não a
-última escolha manual do session.json (mudança não intencional que a nova
-semântica introduziria, prevista pela tabela).
-
-NÃO confundir este `origin` com o do latch de `start_gamepad_emulation`
-("manual"/"profile") — contratos distintos, por decisão do doc.
-"""
+"""PERFIL-03 — fiação do `origin` nos 5 call sites de `ProfileManager.activate`."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -28,10 +6,6 @@ from typing import Any, ClassVar
 from unittest.mock import ANY, MagicMock
 
 import pytest
-
-# ---------------------------------------------------------------------------
-# Dublês compartilhados
-# ---------------------------------------------------------------------------
 
 
 class _RecordingManager:
@@ -53,9 +27,6 @@ class _RecordingManager:
         origin: str = "manual",
         relatorio: dict[str, str] | None = None,
     ) -> SimpleNamespace:
-        # R-03 (auditoria 23/07): `relatorio` é out-param opcional preenchido
-        # com o estado de cada seção (aplicado/adiado/ignorado). O dublê o
-        # aceita e ignora — o que este arquivo testa é a fiação do `origin`.
         _RecordingManager.activations.append((name, origin))
         if self.store is not None:
             self.store.active_profile = name
@@ -64,9 +35,7 @@ class _RecordingManager:
 
 @pytest.fixture()
 def recording_manager(monkeypatch: pytest.MonkeyPatch) -> type[_RecordingManager]:
-    """Patch de ProfileManager NO MÓDULO DE ORIGEM — os call sites fazem
-    import lazy (`from ...profiles.manager import ProfileManager`) na hora da
-    chamada, então o patch pega todos."""
+    """Patch de ProfileManager NO MÓDULO DE ORIGEM — os call sites fazem"""
     _RecordingManager.activations = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.profiles.manager.ProfileManager",
@@ -75,9 +44,7 @@ def recording_manager(monkeypatch: pytest.MonkeyPatch) -> type[_RecordingManager
     return _RecordingManager
 
 
-# ---------------------------------------------------------------------------
 # 1) IPC profile.switch (GUI/CLI) → origin="manual"
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -93,7 +60,7 @@ async def test_ipc_profile_switch_ativa_com_origin_manual(
     host.profile_manager = MagicMock()
     host.profile_manager.activate.return_value = SimpleNamespace(name="vitoria")
     host.store = MagicMock()
-    host.daemon = None  # pula o materialize_launch_env
+    host.daemon = None
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_active_marker",
         lambda _n: None,
@@ -101,17 +68,9 @@ async def test_ipc_profile_switch_ativa_com_origin_manual(
 
     await host._handle_profile_switch({"name": "vitoria"})
 
-    # R-03: o handler passou a mandar também o `relatorio` (out-param) para
-    # responder a VERDADE sobre as seções. O contrato deste teste — origin
-    # "manual" no gesto da GUI/CLI — continua o mesmo.
     host.profile_manager.activate.assert_called_once_with(
         "vitoria", origin="manual", relatorio=ANY
     )
-
-
-# ---------------------------------------------------------------------------
-# 2) Hotkey PS+D-pad (botão físico) → origin="manual"
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -123,8 +82,6 @@ async def test_hotkey_cycle_ativa_com_origin_manual(
         build_profile_cycle_callback,
     )
 
-    # O ciclo grava o marker da CLI em paridade — anula a escrita REAL em
-    # ~/.config (hermeticidade).
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_active_marker",
         lambda _n: None,
@@ -153,11 +110,6 @@ async def test_hotkey_cycle_ativa_com_origin_manual(
     assert recording_manager.activations == [("b", "manual")]
 
 
-# ---------------------------------------------------------------------------
-# 3) Autoswitch (troca por janela) → origin="autoswitch"
-# ---------------------------------------------------------------------------
-
-
 def test_autoswitch_ativa_com_origin_autoswitch() -> None:
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 
@@ -166,24 +118,13 @@ def test_autoswitch_ativa_com_origin_autoswitch() -> None:
 
     sw._activate("navegacao", {"wm_class": "firefox"})
 
-    # R-03: idem — `relatorio` acompanha toda ativação; o origin é o contrato.
     mgr.activate.assert_called_once_with(
         "navegacao", origin="autoswitch", relatorio=ANY
     )
 
 
-# ---------------------------------------------------------------------------
-# 4) Restore de boot → origin="system" (e lê a intenção via resolve_boot_profile)
-# ---------------------------------------------------------------------------
-
-
 def _no_disco(*nomes: str) -> None:
-    """Os perfis no disco isolado: a escolha dela só vale se o perfil abre.
-
-    Desde 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 1) o dono
-    (`utils.session.a_escolha_dela`) confere que o nome abre um perfil; um nome
-    sem arquivo é «sem escolha».
-    """
+    """Os perfis no disco isolado: a escolha dela só vale se o perfil abre."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -229,14 +170,7 @@ async def test_restore_de_boot_le_a_sessao_e_o_marcador_e_so_espelho(
     monkeypatch: pytest.MonkeyPatch,
     recording_manager: type[_RecordingManager],
 ) -> None:
-    """O marcador divergente não desvia o boot: a escolha é a do `session.json`.
-
-    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 1):
-    esta régua era `test_restore_de_boot_prefere_o_marker_manual_divergente`,
-    o seed de julho (PERFIL-03) que dava ao marcador a vitória na divergência.
-    A convergência que ele esperava aconteceu, e o marcador virou espelho: o
-    único escritor dos dois é `utils.session.gravar_a_escolha`.
-    """
+    """O marcador divergente não desvia o boot: a escolha é a do `session.json`."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
 
     _no_disco("Navegação", "vitoria")
@@ -254,11 +188,6 @@ async def test_restore_de_boot_le_a_sessao_e_o_marcador_e_so_espelho(
     assert recording_manager.activations == [("Navegação", "system")]
 
 
-# ---------------------------------------------------------------------------
-# 5) Saída do Modo Nativo → origin="system" + prefere store.active_profile
-# ---------------------------------------------------------------------------
-
-
 def _reapply_stub(active: str | None) -> SimpleNamespace:
     return SimpleNamespace(
         store=SimpleNamespace(active_profile=active),
@@ -273,9 +202,7 @@ def test_saida_do_nativo_reaplica_o_perfil_ativo_com_origin_system(
     monkeypatch: pytest.MonkeyPatch,
     recording_manager: type[_RecordingManager],
 ) -> None:
-    """Com a semântica nova (session.json = última escolha MANUAL), sair do
-    nativo tem que re-aplicar o perfil ATIVO (ex.: o que o autoswitch escolheu
-    pela janela do jogo) — não a última manual por cima dele."""
+    """Com a semântica nova (session.json = última escolha MANUAL), sair do"""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
     monkeypatch.setattr(
@@ -292,8 +219,7 @@ def test_saida_do_nativo_sem_ativo_cai_no_session(
     monkeypatch: pytest.MonkeyPatch,
     recording_manager: type[_RecordingManager],
 ) -> None:
-    """Fallback preservado: sem perfil ativo em memória (boot direto em
-    nativo), o session.json ainda responde."""
+    """Fallback preservado: sem perfil ativo em memória (boot direto em"""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
     _no_disco("ultima_manual")

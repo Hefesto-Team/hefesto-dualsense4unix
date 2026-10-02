@@ -41,12 +41,7 @@ from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
 
 
 class _Ecodes:
-    """Só as constantes que o reader consulta (o módulo real é enorme).
-
-    `EV_SYN`/`SYN_REPORT` ENTRARAM EM 21/09/2026: o reader passou a integrar o
-    ângulo no SYN que fecha o pacote (MOVIMENTO-EM-QUALQUER-MASCARA-01, E3), e
-    um dublê sem eles levantava `AttributeError` antes de ler um eixo sequer.
-    """
+    """Só as constantes que o reader consulta (o módulo real é enorme)."""
 
     EV_SYN = 0
     SYN_REPORT = 0
@@ -65,28 +60,17 @@ def _evento(code: int, value: int, tipo: int = _Ecodes.EV_ABS) -> Any:
 
 
 def _reader() -> MotionSensorReader:
-    """Reader sem `/dev/input`, com as DUAS escalas já conhecidas.
-
-    As duas são diferentes de propósito (1024 contra 8192): é assim que um
-    eixo lido pela tabela errada aparece na asserção como número, e não como
-    coincidência.
-    """
+    """Reader sem `/dev/input`, com as DUAS escalas já conhecidas."""
     reader = MotionSensorReader(device_path=None)
     reader._resolucoes = {"x": 1024, "y": 1024, "z": 1024}
     reader._resolucoes_accel = {"x": 8192, "y": 8192, "z": 8192}
     return reader
 
 
-# ---------------------------------------------------------------------------
-# 1. O leitor
-# ---------------------------------------------------------------------------
-
-
 def test_g_por_unidade_usa_a_resolucao_do_node() -> None:
     """A escala sai do `absinfo`, não de constante — como a do giro."""
     assert g_por_unidade(8192, 8192) == pytest.approx(1.0)
     assert g_por_unidade(-4096, 8192) == pytest.approx(-0.5)
-    # Node com OUTRA escala: quem manda é o que ele declara.
     assert g_por_unidade(4096, 4096) == pytest.approx(1.0)
 
 
@@ -107,23 +91,12 @@ def test_o_leitor_traz_os_tres_eixos_do_acelerometro() -> None:
     assert (snap.x, snap.y, snap.z) == pytest.approx(
         (-409 / 8192, 8028 / 8192, 1409 / 8192)
     )
-    # A régua absoluta: parado, o módulo do vetor é a gravidade.
     modulo = (snap.x**2 + snap.y**2 + snap.z**2) ** 0.5
     assert modulo == pytest.approx(1.0, abs=0.02)
 
 
 def test_os_dois_sensores_nao_se_misturam_no_mesmo_node() -> None:
-    """MORDIDA. O erro que um teste ingênuo não pega: os eixos trocados.
-
-    Os seis códigos chegam pelo MESMO `eventN` e pelo MESMO laço. Só o giro
-    andou → o acelerômetro fica onde estava, e vice-versa. Escreva
-    `self._accel[eixo]` no laço do giro (ou o contrário) e as duas metades
-    deste teste reprovam.
-
-    A escala é a segunda trava: 8192 unidades são 1 g pela tabela do
-    acelerômetro e 8,0 pela do giro. Um eixo lido pela tabela errada não passa
-    despercebido — aparece com uma ordem de grandeza de diferença.
-    """
+    """MORDIDA. O erro que um teste ingênuo não pega: os eixos trocados."""
     reader = _reader()
     reader._handle_event(_evento(_Ecodes.ABS_RX, 2048), _Ecodes)
     reader._handle_event(_evento(_Ecodes.ABS_RY, -1024), _Ecodes)
@@ -170,11 +143,6 @@ def test_o_open_le_as_duas_escalas_do_absinfo() -> None:
 
     assert reader._resolucoes == {"x": 1024, "y": 1024, "z": 512}
     assert reader._resolucoes_accel == {"x": 8192, "y": 8192, "z": 4096}
-
-
-# ---------------------------------------------------------------------------
-# 2. O hub
-# ---------------------------------------------------------------------------
 
 
 class _MotionCompleto:
@@ -240,13 +208,7 @@ def test_o_hub_publica_accel_ao_lado_de_gyro() -> None:
 
 
 def test_reader_sem_acelerometro_publica_o_giro_e_mais_nada() -> None:
-    """Contrato do daemon ANTIGO: reader sem `accel_snapshot` continua servindo.
-
-    Isto NÃO é a mordida dos dois `suppress` — a primeira versão deste teste
-    dizia que era, e a medição derrubou: com um bloco só ele passa igual,
-    porque o `out["gyro"]` já foi atribuído quando o `AttributeError` sobe. A
-    mordida verdadeira está no teste seguinte, e é no sentido contrário.
-    """
+    """Contrato do daemon ANTIGO: reader sem `accel_snapshot` continua servindo."""
     leitura = _hub_com(_MotionSoGiro()).leitura("aabbcc000001")
 
     assert leitura["gyro"] == {"x": 1.5, "y": -2.5, "z": 0.25}
@@ -254,12 +216,7 @@ def test_reader_sem_acelerometro_publica_o_giro_e_mais_nada() -> None:
 
 
 def test_giro_quebrado_nao_leva_o_acelerometro_junto() -> None:
-    """MORDIDA. Junte os dois `suppress` do hub num só e isto reprova.
-
-    Com um bloco só, o `snapshot()` que levanta aborta o bloco ANTES de chegar
-    ao `accel_snapshot()`: o acelerômetro sumiria da tela por causa de um
-    defeito do giroscópio, e os dois são sensores independentes do mesmo node.
-    """
+    """MORDIDA. Junte os dois `suppress` do hub num só e isto reprova."""
     leitura = _hub_com(_MotionGiroQuebrado()).leitura("aabbcc000001")
 
     assert "gyro" not in leitura
@@ -278,11 +235,6 @@ def test_sem_reader_de_motion_nao_ha_nem_gyro_nem_accel() -> None:
     assert "accel" not in leitura
 
 
-# ---------------------------------------------------------------------------
-# 3. A tela
-# ---------------------------------------------------------------------------
-
-
 def test_accel_do_inputs_le_o_bloco() -> None:
     assert accel_do_inputs({"accel": {"x": -0.005, "y": 0.981, "z": 0.172}}) == (
         pytest.approx((-0.005, 0.981, 0.172))
@@ -297,18 +249,13 @@ def test_accel_do_inputs_le_o_bloco() -> None:
         {},
         {"accel": None},
         {"accel": "chegou como texto"},
-        {"accel": {"x": 0.1, "y": 0.2}},  # falta o z
+        {"accel": {"x": 0.1, "y": 0.2}},
         {"accel": {"x": 0.1, "y": 0.2, "z": "nada"}},
-        {"gyro": {"x": 1.0, "y": 2.0, "z": 3.0}},  # daemon antigo: só o giro
+        {"gyro": {"x": 1.0, "y": 2.0, "z": 3.0}},
     ],
 )
 def test_sem_bloco_utilizavel_o_modulo_some_em_vez_de_zerar(inputs: Any) -> None:
-    """MORDIDA. Troque o `return None` por `return (0.0, 0.0, 0.0)` e reprova.
-
-    E aqui o zero mente DUAS vezes: além de dizer "eu sei" quando não se sabe,
-    ele desenha um estado que o aparelho não produz parado. Um acelerômetro em
-    repouso marca ~1 g; três zeros são queda livre.
-    """
+    """MORDIDA. Troque o `return None` por `return (0.0, 0.0, 0.0)` e reprova."""
     assert accel_do_inputs(inputs) is None
 
 
@@ -323,18 +270,8 @@ def test_o_acelerometro_nao_rouba_o_bloco_do_giroscopio() -> None:
     assert accel_do_inputs(inputs) == pytest.approx((-0.005, 0.981, 0.172))
 
 
-# ---------------------------------------------------------------------------
-# 4. Desconectou
-# ---------------------------------------------------------------------------
-
-
 def test_desconectar_zera_os_seis_eixos() -> None:
-    """MORDIDA. Tire `self._accel` do `_reset_on_disconnect` e isto reprova.
-
-    O acelerômetro congelado é pior que o giro congelado: parado ele marca ~1 g,
-    então o último valor desenharia um controle de pé, para sempre, num controle
-    que não está mais na mesa.
-    """
+    """MORDIDA. Tire `self._accel` do `_reset_on_disconnect` e isto reprova."""
     reader = _reader()
     reader._handle_event(_evento(_Ecodes.ABS_RX, 2048), _Ecodes)
     reader._handle_event(_evento(_Ecodes.ABS_Y, 8192), _Ecodes)

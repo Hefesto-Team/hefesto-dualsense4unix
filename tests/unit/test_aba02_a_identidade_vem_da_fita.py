@@ -1,33 +1,5 @@
 #!/usr/bin/env python3
-"""A ABA 02 MOSTRA O CONTROLE DA MESA, NUNCA O DO MOCKUP — 03/09/2026.
-
-A LEI É DELA, e ela a escreveu olhando as duas coisas na mesma tela, com três
-centímetros entre uma e outra:
-
-    *"se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. (…) Por isso
-    temos o mapa pra servir como variável de identificação"*
-
-E, sobre a cor: *"se identificou o controle como modelo White a cor do card em
-volta tem que ser branco. Temos isso no mapa."*
-
-O QUE ESTAVA NA TELA, fotografado nesta árvore em 03/09/2026 com os dois
-controles dela ligados (um `White` no cabo, um por rádio):
-
-    a fita do topo (lê do aparelho)   P1 · White · USB        P2 · — · BT
-    o cabeçalho do card (do mockup)   Cosmic Red · USB        P2 · Starlight Blue · BT
-
-POR QUE UM TESTE ALÉM DA RÉGUA DA SPRINT. `scripts/check_identidade_vem_de_cima.py`
-mede o ARQUIVO: ela acha valor de identidade em elemento sem endereço. Isso é
-metade do trabalho — e a metade que não pega o defeito pior. **Medido aqui, na
-mordida de 03/09:** com os quatro endereços no HTML e o pacote NÃO os
-escrevendo, a régua da sprint dá **ZERO** e a tela volta inteira para
-`Cosmic Red` e `Starlight Blue`, com as bordas vermelha e azul do desenho.
-Trocar um congelado por um vazio zera a régua e deixa a tela mentindo igual.
-
-ENTÃO ESTE ARQUIVO MEDE O OUTRO LADO: que o PACOTE escreve, com o que leu, e que
-o que ele escreve não é o desenho.
-"""
+"""A ABA 02 MOSTRA O CONTROLE DA MESA, NUNCA O DO MOCKUP — 03/09/2026."""
 from __future__ import annotations
 
 import pathlib
@@ -41,10 +13,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 BANCADA = RAIZ / "mockup/02-controles.html"
 
-#: QUANTOS LUGARES A BANCADA DESENHA — e o número vem do DONO da mesa do
-#: desenho (`monta.MESA`), nunca digitado. O `MESA` deste arquivo é outra coisa:
-#: é a mesa VIVA dela, com dois controles. Confundir os dois é o que faria esta
-#: régua cobrar quatro chips de uma fita que só desenha os conectados.
 def _do_desenho() -> tuple[int, int]:
     import monta
 
@@ -54,15 +22,8 @@ def _do_desenho() -> tuple[int, int]:
 LUGARES, CHIPS = _do_desenho()
 
 
-#: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 def _palavra_do_transporte(chave: str) -> str:
-    """A palavra da TELA, LIDA do dono — nunca digitada aqui.
-
-    Em 06/09/2026 esta régua reprovou a melhora: ela digitava `USB` e `BT`, e o
-    cabeçalho do card passou a dizer **cabo** e **rádio** (o glossário desta
-    casa, `ONDA4-S10-O-TRANSPORTE-01`). A sigla continua certa num lugar só — a
-    contagem do topo —, e por isso `fita-via` abaixo segue com ela.
-    """
+    """A palavra da TELA, LIDA do dono — nunca digitada aqui."""
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte,
     )
@@ -73,14 +34,9 @@ def _palavra_do_transporte(chave: str) -> str:
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 UNIQ_RADIO = "aa:bb:cc:00:00:02"
 
-#: OS DOIS NOMES DO DESENHO. Eles são o que a tela dela mostrava, e por isso
-#: nenhum deles pode sair do pacote — o pacote só fala do aparelho.
 DO_MOCKUP = ("Cosmic Red", "Starlight Blue")
 
 #: A MESA DELA EM 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve.
-#: O segundo vem SEM COR de propósito: pelo rádio a cor do plástico não é lida —
-#: o mapa de canais diz `identidade.cor_do_aparelho`, `radio_aciona = não` — e é
-#: exatamente esse controle que fazia a fita inteira ficar no desenho.
 MESA = [
     {"pref": "p1", "uniq": UNIQ_CABO, "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb", "alvo": True,
@@ -107,15 +63,7 @@ def a02():
 
 @pytest.fixture()
 def ctx(a02):
-    """O `Contexto` da mesa acima, com a página da BANCADA como endereço válido.
-
-    POR QUE A BANCADA E NÃO O PUBLICADO: `_so_se_a_pagina_tiver` pergunta à
-    página PUBLICADA quais `data-campo` existem, e **publicar é ato dela** — a
-    `02-controles` só ganha estes quatro endereços no minuto em que ela mandar.
-    Um teste que perguntasse ao publicado hoje passaria por VACUIDADE: o pacote
-    não emitiria nada e nada seria conferido. Aqui a pergunta é feita ao arquivo
-    que o gerador acabou de escrever, que é o desenho de HOJE.
-    """
+    """O `Contexto` da mesa acima, com a página da BANCADA como endereço válido."""
     from pacotes import Contexto
 
     a02._ENDERECOS = frozenset(
@@ -124,9 +72,6 @@ def ctx(a02):
     a02._ENDERECOS = None
 
 
-# ---------------------------------------------------------------------------
-# 1. O DESENHO TEM ONDE O PRODUTO ESCREVER
-# ---------------------------------------------------------------------------
 def test_a_bancada_tem_os_quatro_enderecos_da_identidade():
     """Sem eles o pacote não tem onde pousar, e a pintura escreve zero, calada.
 
@@ -166,28 +111,12 @@ def test_a_bancada_nao_traz_cor_de_plastico_no_estilo_de_linha():
 
 
 def test_a_bancada_tem_a_folha_enderecada_do_plastico():
-    """E o produto a TROCA INTEIRA — por isso ela nasce com o desenho dentro.
-
-    FATO SUBSTITUÍDO, 03/09/2026. Esta linha exigia
-    `<style data-campo="plastico-css"></style>` — a folha VAZIA, com a do
-    desenho separada por cima. **Duas folhas só se sobrepõem no assento que a
-    segunda NOMEIA**, e o buraco está medido no WebKitGTK: com um controle só na
-    mesa (P1 White), o `p2` ficava `rgb(126, 184, 212)` — Starlight Blue, a cor
-    do desenho, num assento onde não há controle nenhum.
-
-    Agora é UMA folha, com `data-hef-alvo="html"`: ela nasce com o desenho (é o
-    que a bancada tem de mostrar) e o produto substitui o `innerHTML` inteiro.
-    O que a troca não escreve deixa de existir.
-    `test_aba02_a_cor_do_plastico_vem_do_aparelho.py` é quem guarda a cascata.
-    """
+    """E o produto a TROCA INTEIRA — por isso ela nasce com o desenho dentro."""
     doc = BANCADA.read_text(encoding="utf-8")
     assert '<style data-campo="plastico-css" data-hef-alvo="html">' in doc
     assert "plastico-do-desenho" not in doc
 
 
-# ---------------------------------------------------------------------------
-# 2. O PACOTE ESCREVE — e é aqui que a régua da sprint é cega
-# ---------------------------------------------------------------------------
 def test_o_pacote_escreve_o_nome_do_aparelho_no_cabecalho(a02, ctx):
     """`White`, que é o que a fita diz — nunca `Cosmic Red`, que é o desenho."""
     p = a02.pacote(ctx)
@@ -216,14 +145,7 @@ def test_o_pacote_escreve_a_cor_do_plastico_como_folha(a02, ctx):
 
 
 def test_o_pacote_escreve_os_chips_da_fita(a02, ctx):
-    """A fita se troca inteira — MENOS quando ela não pode se trocar.
-
-    `hefesto_vivo._fita` devolve `""` se UM controle da mesa vier sem cor, e o
-    da mesa dela vem: pelo rádio a cor não é lida. Nesse tique o bloco NÃO é
-    substituído e os chips continuam sendo os do arquivo — foi assim que a fita
-    ficou dizendo `Cosmic Red` e `Starlight Blue` com o topo já correto. Estes
-    dois endereços são o que salva a verdade quando a troca não acontece.
-    """
+    """A fita se troca inteira — MENOS quando ela não pode se trocar."""
     mesa = a02.pacote(ctx)["mesa"]
     assert mesa["fita-peca"] == ["White", ""]
     assert mesa["fita-via"] == ["USB", "BT"]
@@ -237,13 +159,7 @@ def test_nada_do_mockup_sai_deste_pacote(a02, ctx):
         assert nome not in texto, f"o pacote emitiu `{nome}`, que é do mockup"
 
 
-# ---------------------------------------------------------------------------
-# 3. O HEXA VEM DO MAPA, e o "não sei" não vira cor
-# ---------------------------------------------------------------------------
-#: A CHAVE É O SLUG — o `id` da linha dela em `docs/data/cores-do-dualsense.csv`,
 #: que é o que `mesa_viva.mesa_do_estado` põe no campo `cor` do item da mesa.
-#: Era o NOME DE TELA até 03/09/2026, e a troca é a cura: a grafia do CSV dela e
-#: a de `NOMES_DE_FABRICA` divergem em três modelos, e os três saíam sem borda.
 @pytest.mark.parametrize("slug", ["white", "galactic-purple", "midnight-black"])
 def test_a_cor_da_borda_sai_do_mapa(a02, slug):
     """Um hexa de verdade, e nunca o token neutro, para plástico conhecido."""
@@ -252,25 +168,11 @@ def test_a_cor_da_borda_sai_do_mapa(a02, slug):
 
 
 def test_o_midnight_black_nao_vira_ausencia_de_borda(a02):
-    """`#1C1C1E` cru sobre `#282a36` não é borda preta — é borda nenhuma.
-
-    Quem sabe disso é `cor_do_plastico.tom_para_a_borda`, com o piso de 2,2:1 e
-    a mistura com branco. Esta aba NÃO reescreve a conta: ela a chama — e o
-    gerador de cores já a aplicou sobre o mesmo dado (`legivel()`), o que faz a
-    borda do card e o casco do desenho subirem juntos.
-
-    O CRU É O DELA, e a comparação é com ELE: `#1C1C1E` é o `casca_esq` do
-    modelo `01` no mapa dela. Comparar com `TONS["05"]`, como esta linha fazia
-    até 03/09, era medir a tabela aproximada que saiu do caminho.
-    """
+    """`#1C1C1E` cru sobre `#282a36` não é borda preta — é borda nenhuma."""
     assert a02.cor_da_borda("midnight-black").lower() != "#1c1c1e"
 
 
 @pytest.mark.parametrize("slug", ["", "nao-sei", "verde-abacate", "White"])
 def test_sem_leitura_a_borda_e_o_neutro(a02, slug):
-    """E o neutro é o token que o lugar VAZIO desta aba já usa — não uma cor nova.
-
-    O `"White"` está aqui de propósito: é o NOME de tela, e nome não é chave
-    desde 03/09. Se alguém devolver a busca por nome, esta linha reprova.
-    """
+    """E o neutro é o token que o lugar VAZIO desta aba já usa — não uma cor nova."""
     assert a02.cor_da_borda(slug) == a02.BORDA_SEM_COR

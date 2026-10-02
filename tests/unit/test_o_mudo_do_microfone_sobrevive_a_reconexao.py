@@ -36,13 +36,10 @@ from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core import ds_output_report as rep
 
-#: Máscara da casa (octetos 4 e 5 zerados) — nada de MAC real em arquivo
-#: versionado.
 KEY_1 = "AA:BB:CC:00:00:01"
 UNIQ_1 = "aabbcc000001"
 KEY_2 = "AA:BB:CC:00:00:02"
 
-#: Os offsets do mapa, escritos uma vez só.
 FLAG1_NO_CABO, MUDO_NO_CABO = 2, 10
 FLAG1_NO_RADIO, MUDO_NO_RADIO = 4, 12
 
@@ -71,7 +68,6 @@ def _handle_recem_nascido(*, radio: bool = True) -> Any:
     handle._volumes_audio = [None, None, None, None]
     handle._preamp_audio = None
     handle._mic_led_desejado = None
-    #: o caso quebrado, e é o ponto inteiro da sprint.
     handle._mic_mute_desejado = None
     return handle
 
@@ -84,12 +80,7 @@ def _ctl_com(handle: Any, key: str = KEY_1) -> bp.PyDualSenseController:
 
 
 def _reconectar(ctl: bp.PyDualSenseController, *, radio: bool, key: str = KEY_1) -> Any:
-    """A queda e a volta: handle NOVO no lugar do velho, e o tique de hotplug.
-
-    É o mecanismo do defeito em duas linhas — `_open_one` devolve um objeto
-    novo, e `_reapply_desired` é o único lugar onde o estado de quem já estava
-    lá volta a ser pendurado.
-    """
+    """A queda e a volta: handle NOVO no lugar do velho, e o tique de hotplug."""
     novo = _handle_recem_nascido(radio=radio)
     ctl._handles = {key: novo}
     ctl._reapply_desired(key, novo)
@@ -98,12 +89,7 @@ def _reconectar(ctl: bp.PyDualSenseController, *, radio: bool, key: str = KEY_1)
 
 class TestOMudoSobreviveAoHandleNovo:
     def test_o_desmutar_dela_sobrevive_no_radio(self) -> None:
-        """O caso da queixa: ela desmuta, o rádio cai e volta, e o mic segue vivo.
-
-        Os DOIS asserts, e o primeiro é o que morde: sem o bit de autorização
-        o `common[9] == 0` é o report de quem NÃO é dono — indistinguível do
-        handle recém-nascido, que é o defeito.
-        """
+        """O caso da queixa: ela desmuta, o rádio cai e volta, e o mic segue vivo."""
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         assert ctl.set_microphone_mute(False, uniq=KEY_1) is True
 
@@ -126,8 +112,7 @@ class TestOMudoSobreviveAoHandleNovo:
         assert report[MUDO_NO_RADIO] == rep.POWER_SAVE_MIC_MUTE
 
     def test_no_cabo_o_mesmo_byte_sobrevive(self) -> None:
-        """`cabo E rádio` é o ponto 4 dela, então o cabo tem régua própria —
-        e o endereço é OUTRO (report[10], não report[12])."""
+        """`cabo E rádio` é o ponto 4 dela, então o cabo tem régua própria —"""
         ctl = _ctl_com(_handle_recem_nascido(radio=False))
         assert ctl.set_microphone_mute(False, uniq=KEY_1) is True
 
@@ -139,11 +124,7 @@ class TestOMudoSobreviveAoHandleNovo:
         assert report[MUDO_NO_CABO] == 0x00
 
     def test_sem_posse_o_handle_novo_devolve_o_campo_ao_kernel(self) -> None:
-        """O contrário, e ele é requisito: quem nunca pediu não vira dono.
-
-        Sem isto a cura seria o defeito do AUDIO-OWNER-01 de volta — mandar
-        `common[9]=0x00` autorizado por cima da decisão do kernel.
-        """
+        """O contrário, e ele é requisito: quem nunca pediu não vira dono."""
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
 
         novo = _reconectar(ctl, radio=True)
@@ -152,8 +133,7 @@ class TestOMudoSobreviveAoHandleNovo:
         assert not report[FLAG1_NO_RADIO] & rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
 
     def test_devolver_a_posse_nao_rependura_nada(self) -> None:
-        """`None` é a ORDEM *"devolvo ao kernel"* — e ela também tem de
-        sobreviver à reconexão, senão a devolução dura até o próximo drop."""
+        """`None` é a ORDEM *"devolvo ao kernel"* — e ela também tem de"""
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         ctl.set_microphone_mute(True, uniq=KEY_1)
         ctl.set_microphone_mute(None, uniq=KEY_1)
@@ -194,16 +174,13 @@ class TestAQuemPerguntar:
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         ctl.set_microphone_mute(False, uniq=KEY_1)
 
-        #: o hotplug trocou o handle e AINDA não reaplicou.
         ctl._handles = {KEY_1: _handle_recem_nascido(radio=True)}
 
         assert ctl.microphone_mute_for(KEY_1) is False
         assert ctl.microphone_mute_for(UNIQ_1) is False
 
     def test_a_escrita_que_falhou_nao_vira_posse(self) -> None:
-        """Contrato do MIC-USB-01, e ele continua valendo: handle que estourou
-        no meio da escrita não é posse — afirmar posse ali é o produto mentindo
-        sobre uma ordem que nunca saiu."""
+        """Contrato do MIC-USB-01, e ele continua valendo: handle que estourou"""
         handle = _handle_recem_nascido(radio=True)
 
         def _explode(_muted: bool | None) -> None:
@@ -219,13 +196,7 @@ class TestAQuemPerguntar:
 
 class TestOEnderecoDaPosse:
     def test_sem_doze_hex_nao_se_reivindica_nada(self) -> None:
-        """A armadilha do pseudo-MAC, nomeada na sprint: `norm_mac` recolhe os
-        dígitos hex de um CAMINHO (`/dev/hidraw4` → `deda4`), e sem a guarda de
-        12 a posse iria parar no controle errado na próxima reconexão.
-
-        O custo é honesto e está escrito: naquele controle o mudo continua
-        sendo do kernel.
-        """
+        """A armadilha do pseudo-MAC, nomeada na sprint: `norm_mac` recolhe os"""
         handle = _handle_recem_nascido(radio=True)
         ctl = _ctl_com(handle, key="/dev/hidraw4")
 

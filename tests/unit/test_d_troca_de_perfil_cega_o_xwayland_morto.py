@@ -1,41 +1,4 @@
-"""D-TROCA-DE-PERFIL-CEGA — o XWayland morto que prendia o detector.
-
-Medido na máquina dela em 23/08/2026 às 22h21: **60 `x11_connect_failed` em
-30 minutos** no journal, `err=Can't connect to display :1`, numa sessão
-COSMIC/Wayland. A troca de perfil ao abrir o jogo ficou cega a sessão inteira.
-
-O defeito NÃO era o backend `xlib` ser preferido — ele é o único que resolve
-`exe_basename` (PROCESSO-CEGO-01), e com o XWayland vivo a preferência está
-certa. O defeito era não haver **saída**: `detect_window_backend()` escolhia
-`xlib` sempre que `DISPLAY` existisse, `maybe_recover()` só resgatava o
-`NullBackend`, e a cascata Wayland ficava ao lado, nunca tentada.
-
-**DUAS COISAS DESTE ARQUIVO MUDARAM EM 02/09/2026, e as duas por medição.**
-
-1. A frase *"a cascata Wayland — que o COSMIC atende por `wlrctl`"* era FALSA:
-   o cosmic-comp não publica `zwlr_foreign_toplevel_manager_v1` (medido com
-   `wayland-info`: não está entre os 58 globais). Quem atende o COSMIC é o
-   `zcosmic_toplevel_info_v1`, e agora o produto o usa.
-2. Com `DISPLAY` **e** `WAYLAND_DISPLAY`, a factory devolve o
-   `_XlibComCosmicBackend`, que cai para a cascata a CADA leitura que o X
-   perder — inclusive quando ele a perde por estar morto. **O resgate deixou
-   de ser necessário nessa configuração** e deixou de disparar nela. O que
-   sobra para ele é o `xlib` PURO que ganha `WAYLAND_DISPLAY` depois de
-   nascer — o caso do `_ensure_display_env()` importando o ambiente do systemd
-   `--user` no meio da vida do daemon. É esse caso que os testes abaixo
-   passaram a montar.
-
-E havia uma segunda metade, mais barata e mais perigosa: a T-01 da ONDA0-Z7
-curou a semeadura de `window_detect_healthy` para exigir PROVA de conexão, e
-deixou intacta a **re-semeadura** do resgate (AUTOSWITCH-HEAL-01), 40 linhas
-abaixo no mesmo arquivo, que seguia fazendo `healthy=(nome == "xlib")`. Com
-isso a aba Sistema podia afirmar saúde sobre um detector cego — que é a
-mentira que a decisão de 25/08 mandou matar primeiro.
-
-Os dois consertos estão em
-`integrations/window_detect.py` (`precisa_de_resgate` / `maybe_recover`) e em
-`daemon/subsystems/autoswitch.py` (`_saude_com_prova`, e o gate do resgate).
-"""
+"""D-TROCA-DE-PERFIL-CEGA — o XWayland morto que prendia o detector."""
 from __future__ import annotations
 
 from typing import Any
@@ -45,28 +8,13 @@ import pytest
 from hefesto_dualsense4unix.integrations import window_detect
 from hefesto_dualsense4unix.integrations.window_backends.xlib import XlibBackend
 
-#: DISPLAY que não existe em bancada nenhuma: o connect falha com
-#: `[Errno 111] Connection refused`, que é a MESMA classe de falha do
-#: `Can't connect to display :1` medido na máquina dela.
 DISPLAY_MORTO = ":9"
 
 
 def _reader_xlib_com_conexao_provada_morta(
     monkeypatch: pytest.MonkeyPatch, *, wayland_depois: bool
 ) -> window_detect.WindowReaderDiag:
-    """Constrói o leitor no estado exato da máquina dela: xlib, X recusando.
-
-    O leitor nasce SEM `WAYLAND_DISPLAY` — é assim que ele fica com o `xlib`
-    puro dentro, que é a única configuração em que o resgate ainda tem
-    trabalho. Com `wayland_depois=True` a variável aparece DEPOIS do
-    nascimento, que é o que o `_ensure_display_env()` faz ao importar o
-    ambiente do systemd `--user` no meio da vida do daemon.
-
-    Uma leitura é feita de propósito — é ela que dispara `_ensure_connected()`
-    e transforma "ainda não tentei" (`conexao_provada() is None`) em PROVA de
-    recusa (`is False`). Sem essa leitura não há prova, e o resgate não deve
-    disparar: presunção é o que este arquivo inteiro existe para proibir.
-    """
+    """Constrói o leitor no estado exato da máquina dela: xlib, X recusando."""
     monkeypatch.setenv("DISPLAY", DISPLAY_MORTO)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     reader = window_detect.build_window_reader()
@@ -84,12 +32,7 @@ class TestOResgateSoDisparaComProva:
     def test_xlib_recem_nascido_nao_precisa_de_resgate(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem nenhuma tentativa, `conexao_provada()` é None — e None não é prova.
-
-        Este é o caso normal do arranque: o daemon sobe, escolhe `xlib`, e o
-        XWayland está perfeitamente vivo. Resgatar aqui trocaria um backend
-        bom por um cego ao nome do processo.
-        """
+        """Sem nenhuma tentativa, `conexao_provada()` é None — e None não é prova."""
         monkeypatch.setenv("DISPLAY", DISPLAY_MORTO)
         monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
         reader = window_detect.build_window_reader()
@@ -114,13 +57,7 @@ class TestOResgateSoDisparaComProva:
     def test_x11_puro_nao_tem_para_onde_ser_resgatado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem `WAYLAND_DISPLAY` não há cascata: insistir no xlib é o certo.
-
-        Numa sessão X11 de verdade, o servidor caído é episódio transitório e
-        o backoff do `XlibBackend` já cobre a volta. Trocar para uma cascata
-        que não tem compositor Wayland para conversar seria trocar cegueira
-        por cegueira, e ainda perder o `exe_basename` quando o X voltasse.
-        """
+        """Sem `WAYLAND_DISPLAY` não há cascata: insistir no xlib é o certo."""
         reader = _reader_xlib_com_conexao_provada_morta(monkeypatch, wayland_depois=False)
 
         assert reader._backend.conexao_provada() is False  # type: ignore[union-attr]
@@ -130,24 +67,17 @@ class TestOResgateSoDisparaComProva:
 
 
 class TestEmXWaylandOResgateNaoPrecisaExistir:
-    """JANELA-WAYLAND-CEGA-01: a queda virou de LEITURA, e por isso some daqui.
-
-    O resgate era de mão única dentro do episódio — trocava o backend e o
-    `exe_basename` só voltava no próximo start do daemon. Com o composto, o
-    X morto simplesmente perde cada leitura para a cascata, e volta a ganhar
-    no instante em que voltar a responder.
-    """
+    """JANELA-WAYLAND-CEGA-01: a queda virou de LEITURA, e por isso some daqui."""
 
     def test_a_factory_ja_devolve_o_composto_e_ele_nao_pede_resgate(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: devolver `XlibBackend()` puro no ramo XWayland da factory —
-        o `precisa_de_resgate()` volta a ser True e este teste reprova."""
+        """MORDIDA: devolver `XlibBackend()` puro no ramo XWayland da factory —"""
         monkeypatch.setenv("DISPLAY", DISPLAY_MORTO)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         reader = window_detect.build_window_reader()
         assert type(reader._backend).__name__ == "_XlibComCosmicBackend"
-        reader()  # a leitura que prova a recusa do X
+        reader()
 
         assert reader.conexao_provada() is False
         assert reader.precisa_de_resgate() is False
@@ -155,11 +85,7 @@ class TestEmXWaylandOResgateNaoPrecisaExistir:
     def test_o_composto_cai_para_o_wayland_quando_o_x_esta_morto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A saída que o resgate dava, agora sem trocar backend nenhum.
-
-        MORDIDA: no `_XlibComCosmicBackend.get_active_window_info`, devolver
-        `None` sem perguntar ao segundo backend.
-        """
+        """A saída que o resgate dava, agora sem trocar backend nenhum."""
         from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
 
         monkeypatch.setenv("DISPLAY", DISPLAY_MORTO)
@@ -192,15 +118,7 @@ class TestOResgateTrocaOBackendEmPlace:
     def test_maybe_recover_troca_xlib_morto_pelo_composto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O conserto em uma linha: o detector deixa de ficar preso no X morto.
-
-        Antes de 25/08 este `maybe_recover()` devolvia False sempre — o ramo
-        só conhecia o `NullBackend` —, e o autoswitch seguia sondando um
-        XWayland morto pelo resto da sessão.
-
-        Desde 02/09 ele monta o COMPOSTO, não a cascata pelada: assim o mesmo
-        `xlib` continua dentro e volta a ser o preferido se o X ressuscitar.
-        """
+        """O conserto em uma linha: o detector deixa de ficar preso no X morto."""
         reader = _reader_xlib_com_conexao_provada_morta(monkeypatch, wayland_depois=True)
         xlib_de_antes = reader._backend
 
@@ -221,14 +139,7 @@ class TestOResgateTrocaOBackendEmPlace:
     def test_o_resgate_guarda_o_mesmo_xlib_em_vez_de_criar_outro(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Por que o resgate NÃO chama a factory.
-
-        Com o `WAYLAND_DISPLAY` já no ambiente, `detect_window_backend()`
-        devolveria o composto — mas com um `XlibBackend` **novo em folha**,
-        jogando fora o backoff e a prova de recusa que o de dentro acabou de
-        acumular. O resgate reaproveita o que existe; a factory recomeça do
-        zero. Este teste existe para que ninguém "simplifique" de volta.
-        """
+        """Por que o resgate NÃO chama a factory."""
         reader = _reader_xlib_com_conexao_provada_morta(monkeypatch, wayland_depois=True)
         xlib_de_antes = reader._backend
         assert xlib_de_antes.conexao_provada() is False  # type: ignore[union-attr]
@@ -261,13 +172,7 @@ class TestASaudeNaoVoltaAMentirNoResgate:
     def test_resgate_para_xlib_morto_nao_semeia_saudavel(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida da correção pela metade.
-
-        O caminho: daemon nasce sem env (backend `null`), o env aparece com um
-        `DISPLAY` MORTO, o resgate re-detecta `xlib`. Antes de 25/08 o store
-        era semeado `healthy=True` por presunção — exatamente a mentira que a
-        T-01 tinha arrancado da semeadura inicial e esquecido aqui.
-        """
+        """A mordida da correção pela metade."""
         from hefesto_dualsense4unix.daemon.subsystems.autoswitch import (
             _build_diag_window_reader,
         )
@@ -290,12 +195,7 @@ class TestASaudeNaoVoltaAMentirNoResgate:
     def test_o_motivo_da_cegueira_chega_ao_store(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`sem_conexao_x` — o motivo que a aba Sistema pinta em laranja.
-
-        A frase da tela (`descrever_deteccao_de_janela`) já estava certa em
-        23/08 e continua sendo o modelo: quem mentia era o campo `healthy`,
-        não ela. Este teste trava o par motivo+leitura de que ela depende.
-        """
+        """`sem_conexao_x` — o motivo que a aba Sistema pinta em laranja."""
         from hefesto_dualsense4unix.daemon.subsystems.autoswitch import (
             _build_diag_window_reader,
         )

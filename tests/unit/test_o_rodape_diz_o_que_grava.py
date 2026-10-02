@@ -1,21 +1,4 @@
-"""O rodapé promete o que faz — T4, CONFIGURAÇÕES-FECHA-01.
-
-Três seções da aba Configurações (Os controles, A mesa, Orçamento) prometem
-`QUANDO_VALE` (`app/actions/config/moldura.py:65`): *"A escolha passa a valer
-quando você clicar em 'Aplicar', no rodapé."* O botão do rodapé
-(`btn_footer_apply`, `gui/main.glade`) é montado por outro território
-(`ConfigActionsMixin`/`footer_actions.py`) e a dica dele, até `22/08/2026`,
-falava só de gatilhos, LEDs, rumble e mouse — nunca do que esta aba grava.
-
-Este portão DERIVA a lista de seções que prometem o botão em vez de
-mantê-la à mão: uma seção nova que importe `QUANDO_VALE` entra na conta
-sozinha, sem editar este arquivo — o mesmo desenho de `secoes.SECOES`
-(`secoes.py:38`).
-
-A MORDIDA: arranque a palavra "Configurações" da dica do `btn_footer_apply`
-no `main.glade` e rode `test_a_dica_do_footer_apply_menciona_a_aba_configuracoes`
-— com pelo menos uma seção prometendo o botão, ele tem de reprovar.
-"""
+"""O rodapé promete o que faz — T4, CONFIGURAÇÕES-FECHA-01."""
 from __future__ import annotations
 
 import inspect
@@ -31,13 +14,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 
 def _secoes_que_prometem_o_footer() -> list[str]:
-    """As seções cujo módulo importa/usa `QUANDO_VALE` — a promessa do botão.
-
-    Lê o FONTE do módulo em vez de comparar `DICA` porque `QUANDO_VALE` é só
-    parte da frase da dica (junto do rótulo de apoio, montado em tempo de
-    execução): o que importa aqui é "esta seção CITA o Aplicar do rodapé",
-    não o texto renderizado.
-    """
+    """As seções cujo módulo importa/usa `QUANDO_VALE` — a promessa do botão."""
     prometem = []
     for secao in secoes.SECOES_DA_ABA:
         fonte = inspect.getsource(secao)

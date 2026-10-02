@@ -78,31 +78,19 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: Os três bits do byte 53, do `hid-playstation.c` (kernel 6.18).
 _HP_DETECT = 0x01
 _MIC_DETECT = 0x02
 _MIC_MUTE = 0x04
 
 
-# ---------------------------------------------------------------------------
-# Reports crus do físico e /dev/uhid falso (mesmo desenho do
-# `test_touchpad_click_no_jogo`, que é o irmão desta fiação)
-# ---------------------------------------------------------------------------
-
-
 def _usb_report(*, jack: int = 0, marca: int = 0) -> bytes:
-    """Report 0x01 (64 B) do físico com o byte 53 pedido.
-
-    `marca` entra no gyro para que reports consecutivos sejam DIFERENTES — sem
-    isso o dedup por valor do throttle engoliria o segundo e o teste mediria o
-    throttle, não a fiação.
-    """
+    """Report 0x01 (64 B) do físico com o byte 53 pedido."""
     raw = bytearray(64)
     raw[0] = 0x01
     raw[1:7] = bytes([0x80, 0x80, 0x80, 0x80, 0, 0])
     raw[1 + 15] = marca & 0xFF
-    raw[1 + 32] = 0x80  # sem dedo no ponto 1
-    raw[1 + 36] = 0x80  # sem dedo no ponto 2
+    raw[1 + 32] = 0x80
+    raw[1 + 36] = 0x80
     raw[1 + JACK_STATUS_OFFSET] = jack & 0xFF
     return bytes(raw)
 
@@ -116,7 +104,7 @@ def _bt_report(*, jack: int = 0, corrupt: bool = False) -> bytes:
     crc = bt_crc32(raw[:-4], seed=BT_INPUT_CRC_SEED)
     raw[-4:] = crc.to_bytes(4, "little")
     if corrupt:
-        raw[2 + JACK_STATUS_OFFSET] ^= 0xFF  # muda DEPOIS do CRC
+        raw[2 + JACK_STATUS_OFFSET] ^= 0xFF
     return bytes(raw)
 
 
@@ -154,9 +142,6 @@ class _FakeUhid:
         return saida
 
 
-#: fd sentinela do /dev/uhid falso. O fake é POR FD porque `uhid_gamepad.os` e
-#: `physical_report_reader.os` são O MESMO objeto módulo — um `os.read` cego
-#: cegaria também o reader, que lê o hidraw do físico por `os.read`.
 _FD_UHID = 4243
 
 
@@ -210,11 +195,6 @@ def _esperar(cond: Any, timeout_s: float = 3.0) -> bool:
     return cond()
 
 
-# ---------------------------------------------------------------------------
-# 1. O parser do byte 53 (mesma disciplina de transporte do clique)
-# ---------------------------------------------------------------------------
-
-
 class TestExtrairOJackDoReportCru:
     def test_usb_sem_nada_plugado(self) -> None:
         assert extract_jack_status(_usb_report()) == 0
@@ -227,12 +207,7 @@ class TestExtrairOJackDoReportCru:
         assert extract_jack_status(_bt_report(jack=_HP_DETECT)) == _HP_DETECT
 
     def test_bt_com_crc_corrompido_nao_diz_nada(self) -> None:
-        """``None`` e não ``0``: rádio corrompido não despluga o fone dela.
-
-        A distinção é a MESMA do clique do touchpad, e existe pelo mesmo
-        motivo: transformar "não sei" em "não há" faz um pacote ruim mudar o
-        estado que o jogo lê.
-        """
+        """``None`` e não ``0``: rádio corrompido não despluga o fone dela."""
         assert extract_jack_status(_bt_report(jack=_HP_DETECT, corrupt=True)) is None
 
     def test_report_de_outro_id_nao_diz_nada(self) -> None:
@@ -246,29 +221,13 @@ class TestExtrairOJackDoReportCru:
 
 
 def test_o_offset_do_jack_e_o_mesmo_nos_dois_lados() -> None:
-    """O reader e o vpad falam do MESMO byte, e é o teste que os prende.
-
-    Divergir aqui não quebra nada visível: o vpad escreveria um byte válido no
-    lugar errado do report, e o jogo leria fone plugado onde há bateria. Este
-    é o mesmo travamento que a janela de motion e o bit do clique já têm.
-    """
+    """O reader e o vpad falam do MESMO byte, e é o teste que os prende."""
     assert JACK_STATUS_OFFSET == uhid_gamepad._STATUS1_OFFSET
-
-
-# ---------------------------------------------------------------------------
-# 2. O vpad: o `forward_jack` passa a EMITIR (o segundo defeito de 02/08)
-# ---------------------------------------------------------------------------
 
 
 class TestOEncoderDoJack:
     def test_forward_jack_emite_o_report(self, fake_uhid: _FakeUhid) -> None:
-        """MORDIDA: apagar o `_emit_if_changed` de `forward_jack`.
-
-        Este é o defeito que a sprint de 03/08 nomeou e que sobreviveu seis
-        dias: o método escrevia o cache e parava ali. Com o controle parado na
-        mesa (BT em repouso, nenhuma janela de motion nova), o próximo report
-        pode nunca vir — plugar o fone e o jogo não saber.
-        """
+        """MORDIDA: apagar o `_emit_if_changed` de `forward_jack`."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         antes = len(fake_uhid.bodies())
@@ -299,12 +258,7 @@ class TestOEncoderDoJack:
     def test_emite_mesmo_com_o_reader_como_relogio(
         self, fake_uhid: _FakeUhid
     ) -> None:
-        """Com `motion_streaming` ligado, só o reader emite — e é ele que chama.
-
-        MORDIDA: trocar `from_reader=True` por `False`. O gate de
-        `_emit_if_changed` engole a emissão e o fone volta a não viajar
-        justamente quando há espelho de motion vivo, que é o caso normal.
-        """
+        """Com `motion_streaming` ligado, só o reader emite — e é ele que chama."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         pad.set_motion_streaming(True)
@@ -313,12 +267,7 @@ class TestOEncoderDoJack:
         assert len(fake_uhid.bodies()) > antes
 
     def test_perder_o_fisico_zera_o_fone(self, fake_uhid: _FakeUhid) -> None:
-        """Fail-safe: sem reader, o vpad para de anunciar um fone que não há.
-
-        MORDIDA: apagar `self._status1_byte = _STATUS1_NEUTRO` do
-        `set_motion_streaming`. O jogo continuaria roteando som para um fone
-        que saiu junto com o controle.
-        """
+        """Fail-safe: sem reader, o vpad para de anunciar um fone que não há."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         pad.set_motion_streaming(True)
@@ -329,11 +278,6 @@ class TestOEncoderDoJack:
 
         assert pad.jack == {"fone": False, "microfone": False, "mudo": False}
         assert fake_uhid.bodies()[-1][uhid_gamepad._STATUS1_OFFSET] == 0
-
-
-# ---------------------------------------------------------------------------
-# 3. O chamador que faltava — o fone atravessa até os bytes do jogo
-# ---------------------------------------------------------------------------
 
 
 class TestOJackChegaAoJogo:
@@ -353,8 +297,6 @@ class TestOJackChegaAoJogo:
             assert _esperar(lambda: pad.motion_streaming)
             for report in reports:
                 os.write(escrita, report)
-                # Um report por vez: o pipe é um stream e o reader lê 128 B de
-                # cada vez — escrever tudo junto colaria dois reports num read.
                 time.sleep(0.01)
             assert _esperar(lambda: reader.reports_seen >= len(reports))
             assert _esperar(lambda: reader.jack_forwards >= 1, timeout_s=1.0)
@@ -368,22 +310,11 @@ class TestOJackChegaAoJogo:
     def test_plugar_o_fone_atravessa_ate_o_report_do_jogo(
         self, fake_uhid: _FakeUhid
     ) -> None:
-        """O teste que MORDE, ponta a ponta.
-
-        Arrancar QUALQUER metade da fiação derruba a conta a zero:
-
-        * o `self._observe_jack(data)` do `_read_until_lost` (o chamador que
-          faltou por sete dias) — nenhum forward acontece;
-        * o `_emit_if_changed` do `forward_jack` (o segundo defeito de 02/08)
-          — o cache muda e o report não sai.
-
-        O que se conta é o que o JOGO lê: quantos payloads escritos no
-        /dev/uhid trazem o bit de fone aceso.
-        """
+        """O teste que MORDE, ponta a ponta."""
         fluxo = [
-            _usb_report(marca=1),                        # nada plugado
-            _usb_report(jack=_HP_DETECT, marca=2),       # ela pluga o fone
-            _usb_report(jack=_HP_DETECT, marca=3),       # segue plugado
+            _usb_report(marca=1),
+            _usb_report(jack=_HP_DETECT, marca=2),
+            _usb_report(jack=_HP_DETECT, marca=3),
         ]
         bodies = self._rodar_fluxo(fake_uhid, fluxo)
         com_fone = [
@@ -429,13 +360,7 @@ class TestOReaderNaoInventaJack:
         assert reader.jack_forwards == 0
 
     def test_reabrir_reentrega_o_fone(self) -> None:
-        """MORDIDA: apagar o `_reset_jack()` do fail-safe do `_run`.
-
-        O vpad zera o byte ao perder o fd. Sem o reset local, o reader
-        compararia o novo report com o cache antigo, veria "igual" e nunca
-        reentregaria — o jogo ficaria sem saber do fone até ela desplugar e
-        plugar de novo.
-        """
+        """MORDIDA: apagar o `_reset_jack()` do fail-safe do `_run`."""
         recebidos: list[int] = []
         vpad = SimpleNamespace(forward_jack=recebidos.append)
         reader = self._reader(vpad)
@@ -443,11 +368,6 @@ class TestOReaderNaoInventaJack:
         reader._reset_jack()
         reader._observe_jack(_usb_report(jack=_HP_DETECT))
         assert recebidos == [_HP_DETECT, _HP_DETECT]
-
-
-# ---------------------------------------------------------------------------
-# 4. A vibração que chega AOS MOTORES (o órfão que era uma classe morta)
-# ---------------------------------------------------------------------------
 
 
 def _daemon_de_rumble(*, policy: str = "max", mult: float = 1.0) -> Any:
@@ -468,14 +388,7 @@ def _daemon_de_rumble(*, policy: str = "max", mult: float = 1.0) -> Any:
 
 class TestARumbleQueChegaAosMotores:
     def test_apply_game_rumble_devolve_o_par_efetivo(self) -> None:
-        """O par que VOLTA é o que foi ao motor, já com a política aplicada.
-
-        11/08/2026: o assert era `== (100, 200)`, os mesmos números que
-        entraram — e passava porque o "Máximo" valia 1,0. Com um degrau neutro,
-        "devolve o par efetivo" e "devolve o par cru" são indistinguíveis, e o
-        teste não provava o próprio nome. Agora o Máximo amplifica (1,5) e o
-        200 satura em 255: os dois lados da conta ficam visíveis.
-        """
+        """O par que VOLTA é o que foi ao motor, já com a política aplicada."""
         from hefesto_dualsense4unix.daemon.subsystems.rumble import (
             RUMBLE_POLICY_MULT,
         )
@@ -488,21 +401,12 @@ class TestARumbleQueChegaAosMotores:
         )
 
     def test_a_politica_aparece_no_par_devolvido(self) -> None:
-        """É a multiplicação invisível: 20 pedido vira 6 no motor em economia.
-
-        Sem este número, a tela dizia "vibração chegando" tanto para o pedido
-        que sacode a mão quanto para o que a política zerou.
-        """
+        """É a multiplicação invisível: 20 pedido vira 6 no motor em economia."""
         daemon = _daemon_de_rumble(policy="economia")
         assert apply_game_rumble(daemon, 20, 100) == (6, 30)
 
     def test_rumble_fixado_pela_janela_nao_devolve_par(self) -> None:
-        """``None`` = nada foi escrito, e é diferente de ``(0, 0)``.
-
-        Com rumble FIXADO pela GUI, o FF do jogo é ignorado de propósito.
-        Registrar zero ali diria "os motores receberam uma parada", quando o
-        que houve foi ninguém ter escrito.
-        """
+        """``None`` = nada foi escrito, e é diferente de ``(0, 0)``."""
         daemon = _daemon_de_rumble()
         daemon.config.rumble_active = (10, 20)
         assert apply_game_rumble(daemon, 100, 200) is None
@@ -513,12 +417,7 @@ class TestARumbleQueChegaAosMotores:
         assert apply_game_rumble(daemon, 100, 200) is None
 
     def test_o_sink_do_p1_anota_no_vpad(self, fake_uhid: _FakeUhid) -> None:
-        """MORDIDA: apagar o `anotar_rumble_no_vpad` do sink.
-
-        O sink é criado ANTES do vpad (ele é argumento do construtor), então o
-        vpad é procurado na HORA do rumble. Apagar a anotação devolve o estado
-        de sempre: o daemon sabe o que o jogo pediu e ninguém sabe o que saiu.
-        """
+        """MORDIDA: apagar o `anotar_rumble_no_vpad` do sink."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         daemon = _daemon_de_rumble(policy="economia")
@@ -532,7 +431,7 @@ class TestARumbleQueChegaAosMotores:
 
     def test_anotar_ignora_none_e_vpad_sem_o_metodo(self) -> None:
         pad = SimpleNamespace()
-        anotar_rumble_no_vpad(pad, (1, 2))  # não explode: contrato duck-typed
+        anotar_rumble_no_vpad(pad, (1, 2))
         anotar_rumble_no_vpad(None, (1, 2))
         registros: list[tuple[int, int]] = []
         vpad = SimpleNamespace(
@@ -554,9 +453,7 @@ class TestARumbleQueChegaAosMotores:
         assert pad.rumble_no_fisico_ha_s is None
 
 
-# ---------------------------------------------------------------------------
 # 5. O `state_full` carrega os quatro
-# ---------------------------------------------------------------------------
 
 
 def _vpad_completo(**extra: Any) -> SimpleNamespace:
@@ -643,12 +540,7 @@ async def _item_do_p1(socket_path: Path) -> dict[str, Any]:
 
 @pytest.mark.asyncio
 async def test_state_full_publica_os_quatro_orfaos(servidor: Any) -> None:
-    """MORDIDA: apagar qualquer uma das quatro chaves do `per_vpad`.
-
-    É este payload que a janela lê. Sem ele os quatro continuam existindo no
-    daemon e invisíveis do outro lado do soquete — que é exatamente o estado
-    em que a auditoria os encontrou.
-    """
+    """MORDIDA: apagar qualquer uma das quatro chaves do `per_vpad`."""
     socket_path, daemon = servidor
     daemon._gamepad_device = _vpad_completo(
         motion_forward_count=812,
@@ -672,12 +564,7 @@ async def test_state_full_publica_os_quatro_orfaos(servidor: Any) -> None:
 async def test_state_full_nao_inventa_numero_quando_o_vpad_e_mock(
     servidor: Any,
 ) -> None:
-    """A blindagem de sempre deste payload: MagicMock não vira dado.
-
-    Um atributo de MagicMock é truthy e comparável com qualquer coisa — sem a
-    tipagem estrita, um dublê de teste (ou um vpad uinput, que não tem nada
-    disto) publicaria "o touchpad está apertado" e "812 janelas de motion".
-    """
+    """A blindagem de sempre deste payload: MagicMock não vira dado."""
     socket_path, daemon = servidor
     daemon._gamepad_device = _vpad_completo(
         motion_forward_count=MagicMock(),
@@ -693,11 +580,6 @@ async def test_state_full_nao_inventa_numero_quando_o_vpad_e_mock(
     assert item["jack"] is None
     assert item["rumble_no_fisico"] is None
     assert item["rumble_no_fisico_ha_s"] is None
-
-
-# ---------------------------------------------------------------------------
-# 6. A janela: a linha da verdade passa a dizer o que os órfãos sabiam
-# ---------------------------------------------------------------------------
 
 
 def _entry() -> dict[str, Any]:
@@ -719,12 +601,7 @@ class TestOGiroscopioSeparaPararDeNuncaTerComecado:
         assert estado.situacao == SITUACAO_NUNCA
 
     def test_sem_espelho_mas_com_historico_e_parado(self) -> None:
-        """MORDIDA: apagar a leitura de `motion_forwards`.
-
-        A tela volta a dizer "sem pedido ainda" para um giroscópio que fluiu
-        meia hora e cuja fonte acabou de cair — e as duas situações mandam
-        agir em lugares opostos.
-        """
+        """MORDIDA: apagar a leitura de `motion_forwards`."""
         estado = estado_do_recurso(
             "giroscopio", _entry(), _estado(motion_streaming=False, motion_forwards=812)
         )
@@ -753,12 +630,7 @@ class TestOCliqueSeguradoNaoViraParado:
         assert estado.situacao == SITUACAO_PARADO
 
     def test_clique_velho_mas_ainda_apertado_e_chegando(self) -> None:
-        """MORDIDA: apagar a leitura de `touchpad_pressionado`.
-
-        O carimbo marca a BORDA. Segurar o touchpad por mais de três segundos
-        fazia a tela dizer "parou" com o botão ainda apertado dentro do jogo —
-        o oposto do que estava acontecendo.
-        """
+        """MORDIDA: apagar a leitura de `touchpad_pressionado`."""
         estado = estado_do_recurso(
             "touchpad",
             _entry(),

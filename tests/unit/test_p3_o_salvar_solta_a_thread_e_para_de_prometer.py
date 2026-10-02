@@ -32,12 +32,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): a guarda vem ANTES de qualquer
-# import da janela. Este arquivo plantava um `gi` falso no topo com o marcador
-# `skip_sem_gi_real`, que pula o teste e não a importação: sem o GTK, a coleta
-# deixava 15 módulos da janela construídos sobre a mentira para o arquivo
-# seguinte. Agora ele pula inteiro onde não há GTK real, e com o GTK real não
-# havia o que plantar.
 exigir_gi_real("p3: o Salvar solta a thread")
 
 import time
@@ -49,20 +43,11 @@ from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
-#: O relatório que o daemon manda quando o gate R-04 recusa UMA seção e deixa
-#: outra passar — é o cenário do §2.2/2, e é a razão de o toast existir.
 RECUSA_DO_R04: dict[str, Any] = {
     "secoes": {"mode": "aplicado", "rumble_policy": "adiado_lock_manual"}
 }
-#: E quando o lock manual dela recusa TUDO: aí não sobra o que celebrar.
 RECUSA_TOTAL: dict[str, Any] = {"secoes": {"rumble_policy": "adiado_lock_manual"}}
-#: E o relatório de quando tudo entrou.
 TUDO_ENTROU: dict[str, Any] = {"secoes": {"rumble_policy": "aplicado"}}
-
-
-# ---------------------------------------------------------------------------
-# A frase — função PURA, lida sem GTK e sem daemon
-# ---------------------------------------------------------------------------
 
 
 class TestAFraseDoSalvar:
@@ -92,12 +77,7 @@ class TestAFraseDoSalvar:
         assert "vibração" in frase, "o toast não nomeia o que ficou de fora"
 
     def test_a_frase_do_que_ficou_de_fora_e_a_mesma_do_botao_ativar(self) -> None:
-        """Igualdade, não semelhança: dois donos da mesma frase derivam.
-
-        A ATIVAR-NAO-MENTE-01 já escolheu as palavras e ela já as viu. Se
-        alguém reescrever aqui, nasce o par F5 número nove — a mesma tela
-        dizendo o mesmo fato com duas redações.
-        """
+        """Igualdade, não semelhança: dois donos da mesma frase derivam."""
         do_salvar = pa.mensagem_do_salvar(
             "Sackboy", reaplicou=True, result=RECUSA_DO_R04
         )
@@ -126,11 +106,6 @@ class TestAFraseDoSalvar:
             "Sackboy", reaplicou=True, result=RECUSA_TOTAL
         )
         assert frase == "Perfil salvo: Sackboy — Nada foi aplicado ao controle."
-
-
-# ---------------------------------------------------------------------------
-# A fiação: o editor de verdade, com o disco e os diálogos interceptados
-# ---------------------------------------------------------------------------
 
 
 class _Entry:
@@ -231,11 +206,7 @@ class TestOSalvarNaoSeguraAJanela:
     def test_o_salvar_volta_em_menos_de_100_ms_com_o_daemon_lento(
         self, editor: _Editor, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDE o P3: com a chamada síncrona de volta, isto leva ~1,2 s.
-
-        O 1,2 s não é inventado — é o número medido no journal dela, o mesmo
-        que o comentário de `on_profile_activate` registra.
-        """
+        """MORDE o P3: com a chamada síncrona de volta, isto leva ~1,2 s."""
         def _daemon_lento(
             method: str, params: Any = None, timeout: Any = None
         ) -> Any:

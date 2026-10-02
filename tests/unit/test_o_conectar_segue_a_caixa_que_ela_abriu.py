@@ -1,38 +1,4 @@
-"""O «Conectar» segue a caixa que ela abriu — O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01.
-
-Nasceu da conferência da A-CAIXA-FICA-ONDE-ELA-ABRIU-01 (28/09/2026): a tela
-passou a pedir ao rádio que a busca vá junto com o chip, e a central respondia
-``ocupado``. A foto 34 dela, 26/09:
-
-    *«toda hora mesmo selecionando meio o negocio vai pra outra aba da direita
-    mesmo comigo tentando sincroniZar o controle.»* <!-- noqa-acento: citação literal dela -->
-
-MEDIDO antes da cura (28/09, com a ``CentralDoRadio`` real, o ``DonoVivo`` real
-por cima do rádio de mentira e o tratador real do daemon): com o «Conectar» no
-gesto num adaptador, o ``radio.mover`` do chip de outro voltava ``ocupado`` nos
-seis pares de três adaptadores, e também com um «Mover» esperando; o «não
-chegou» com a trava de outro motor, o ``_falhou`` depois do ``Pair`` e a vigia
-que levanta no prazo deixavam a meia chave no destino — e o «Conectar» seguinte
-ali nem via o controle (o destino já o «conhecia»).
-
-O que esta régua segura:
-
-1. **o destino muda no pedido do chip**: com o movimento ainda antes do
-   aparelho (preparando, desligando ou no gesto), o chip de outro adaptador
-   fecha a janela onde estava e a abre no novo, com a janela e o prazo
-   recomeçando; o último clique dela vence;
-2. **a meia chave sai em toda saída sem chegada**: sem a trava, ela fica devida
-   e sai na primeira vez em que a central segura a trava — a faxina, ou o
-   próximo movimento, antes de a janela dele abrir;
-3. **o pedido sem aparelho não vira um «Conectar» anônimo por cima de um
-   «Mover»**: o chip leva o «Mover» dela, com o mesmo controle.
-
-Um por vez continua: outro aparelho, ou o movimento que já passou do gesto,
-recebe ``ocupado``. Vale em qualquer adaptador e em qualquer ordem — a matriz
-cobre os seis pares de três.
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""O «Conectar» segue a caixa que ela abriu — O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01."""
 
 from __future__ import annotations
 
@@ -64,12 +30,8 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
 )
 
 TRES = (SALA, QUARTO, VARANDA)
-#: Todo par (onde a busca está, o chip que ela clica), nos três adaptadores.
 PARES = [(busca, chip) for busca in TRES for chip in TRES if busca != chip]
-#: O «Mover» do vermelho (que mora na sala) para cada destino, e o chip de
-#: cada um dos outros dois adaptadores — inclusive a sala, a casa de antes.
 MOVERES = [(destino, chip) for destino in (QUARTO, VARANDA) for chip in TRES if chip != destino]
-#: Um adaptador que não está na máquina.
 FORA_DA_MAQUINA = "aa:bb:cc:00:00:d4"
 
 
@@ -169,22 +131,11 @@ def _o_mover_no_gesto(mesa: Mesa, busca: BuscaDePe, destino: str) -> cr.Moviment
     return movimento
 
 
-# ---------------------------------------------------------------------------
-# 1. o destino muda no pedido do chip
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(("onde_busca", "chip"), PARES)
 def test_o_chip_leva_a_busca_do_conectar_para_o_adaptador_dele(
     diario: Path, fechar: list[Any], onde_busca: str, chip: str,
 ) -> None:
-    """A régua (1) da sprint: com a central no gesto num adaptador, o chip de
-    outro abre a janela nele e fecha a de onde estava; o controle que ela segura
-    depois pareia no do chip, e em nenhum outro.
-
-    MORDIDA: o ``ocupado`` de hoje — tire o :meth:`CentralDoRadio._mudar_o_destino`
-    do ``comecar_a_conectar`` e o chip volta recusado em todos os pares.
-    """
+    """A régua (1) da sprint: com a central no gesto num adaptador, o chip de"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -207,21 +158,12 @@ def test_o_chip_leva_a_busca_do_conectar_para_o_adaptador_dele(
 
 
 def test_a_janela_e_o_prazo_recomecam_no_destino_novo(diario: Path, fechar: list[Any]) -> None:
-    """Ela clica o chip aos 50 s de uma janela de 30 e de um prazo de 60. No
-    destino novo a janela é inteira (o gesto 25 s depois ainda pareia) e o
-    prazo também: o ``Pair`` que não confirma continua «esperando», em vez de
-    cair no prazo do começo. A tela conta o dela do ``quando`` publicado, que
-    recomeça junto.
-
-    MORDIDA: guarde o destino novo sem recomeçar o ``comecou`` — a conferência
-    corta no prazo do começo e o movimento vira «não chegou» (``prazo``).
-    """
+    """Ela clica o chip aos 50 s de uma janela de 30 e de um prazo de 60. No"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
     fechar.append(busca.soltar)
     fins: list[cr.Movimento] = []
-    # O corpo do fio, sem a vigia depois: a régua lê o que a conferência devolve.
     fio = threading.Thread(target=lambda: fins.append(mesa.central.conectar(SALA)),
                            name="hefesto-central-mover")
     fio.start()
@@ -248,9 +190,7 @@ def test_a_janela_e_o_prazo_recomecam_no_destino_novo(diario: Path, fechar: list
 def test_o_ultimo_clique_dela_vence(
     diario: Path, fechar: list[Any], onde_busca: str, chip: str,
 ) -> None:
-    """Dois chips antes de a busca andar: vale o último. Voltar ao adaptador da
-    busca desfaz o pedido (nenhuma janela nova); o terceiro vai direto para ele,
-    sem abrir no do meio."""
+    """Dois chips antes de a busca andar: vale o último. Voltar ao adaptador da"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -272,18 +212,7 @@ def test_o_ultimo_clique_dela_vence(
 def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """Ela clica o chip quando a janela do «Conectar» acaba: o pedido chegou
-    antes do fim, e o fim não vira «não chegou» — a busca vai para o chip,
-    inteira.
-
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01 (D-3009-O-TETO-DA-BUSCA): a janela
-    é do movimento, e a do «Conectar» vai até o teto da ponte
-    (``gp.SEGUNDOS_MAX``), não os 30 s do «Mover». O pedido é o mesmo: o
-    último instante dela.
-
-    MORDIDA: tire da saída do gesto (``_sair_do_gesto``) a pergunta pelo
-    pedido — a janela que acabou fecha «não chegou» no adaptador de antes.
-    """
+    """Ela clica o chip quando a janela do «Conectar» acaba: o pedido chegou"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -302,13 +231,7 @@ def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
 def test_o_controle_que_aparece_junto_com_o_chip_pareia_no_adaptador_do_chip(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """O verde aparece na janela da sala no mesmo instante em que ela clica o
-    chip do quarto. O último que ela escolheu vence: nenhum ``Pair`` na sala, e
-    o verde chega no quarto.
-
-    MORDIDA: tire da saída do gesto (``_sair_do_gesto``) a pergunta pelo
-    pedido — o verde pareia na sala, que ela acabou de deixar.
-    """
+    """O verde aparece na janela da sala no mesmo instante em que ela clica o"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -318,7 +241,6 @@ def test_o_controle_que_aparece_junto_com_o_chip_pareia_no_adaptador_do_chip(
     assert mesa.chip(QUARTO)["status"] == "ok"
     mesa.mundo.segurar_ps_create(VERDE)
     assert mesa.mundo.objeto(SALA, VERDE) is not None, "a janela da sala não o achou"
-    # O clique dela no «Parear» do verde, na lista do quarto, onde a busca está.
     mesa.relogio.agendar(1.0, rm.o_clique_no_parear(mesa.central, VERDE))
     busca.soltar()
     (fim,) = mesa.esperar()
@@ -327,8 +249,7 @@ def test_o_controle_que_aparece_junto_com_o_chip_pareia_no_adaptador_do_chip(
 
 
 class JanelaDePe:
-    """Uma janela que ainda está aberta — o que a espera do gesto deixa para trás
-    quando sai por um pedido, e não pelo fim."""
+    """Uma janela que ainda está aberta — o que a espera do gesto deixa para trás"""
 
     @property
     def aberta(self) -> bool:
@@ -350,18 +271,7 @@ class JanelaDePe:
 def test_a_janela_que_um_pedido_desfeito_interrompeu_recomeca(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """A espera do gesto sai porque ela pediu outro destino, e ela o desfaz no
-    mesmo instante (clicou de volta): a janela ainda estava de pé, e isso não é
-    «não chegou» — o movimento segue, e a janela recomeça onde estava. Acabada
-    a janela de verdade, aí sim.
-
-    MORDIDA: tire do ``_sem_gesto`` a pergunta pela janela — o clique de volta
-    fecha a busca «não chegou».
-
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01 (D-3009-O-TETO-DA-BUSCA): o
-    ``_sem_gesto`` recebe o tamanho da janela, que é do movimento; a do
-    «Conectar» é o teto da ponte (``gp.SEGUNDOS_MAX``). O pedido é o mesmo.
-    """
+    """A espera do gesto sai porque ela pediu outro destino, e ela o desfaz no"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     no_gesto = mesa.central._guardar(cr.Movimento(
@@ -394,14 +304,7 @@ def test_voltar_ao_chip_da_busca_desfaz_o_pedido(diario: Path, fechar: list[Any]
 def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """Ela clica o chip do quarto, e no mesmo instante o roxo volta sozinho pelo
-    pareamento antigo: o «Conectar» acaba «chegou» ali, sem andar. O pedido do
-    quarto era daquela busca; o «Conectar» seguinte, na varanda, busca na
-    varanda.
-
-    MORDIDA: tire a limpeza do pedido do começo do movimento (``_comecar``) — o
-    «Conectar» seguinte vai para o quarto que ninguém pediu para ele.
-    """
+    """Ela clica o chip do quarto, e no mesmo instante o roxo volta sozinho pelo"""
     mundo = mundo_da_madrugada()
     mundo.pareado(VARANDA, ROXO, conectado=False)
     mesa = Mesa(mundo)
@@ -427,14 +330,7 @@ def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
 def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
 ) -> None:
-    """O que ela vê, pela tela de verdade (o pacote da 08, o gesto do chip, o
-    tratador real e a central real): com a busca já no destino novo, o chip
-    aceso é o dela, o «Segure PS + Create» está no cartão daquele adaptador e
-    em nenhum outro, e os botões seguem apagados enquanto a busca espera.
-
-    MORDIDA: o ``ocupado`` de hoje (o ``_mudar_o_destino`` fora) — o gesto do
-    chip levanta, e o «Segure PS + Create» fica no cartão de antes.
-    """
+    """O que ela vê, pela tela de verdade (o pacote da 08, o gesto do chip, o"""
     mundo = mundo_da_madrugada()
     relogio = rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
@@ -443,15 +339,12 @@ def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
         bancada.cena()
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
         bancada.cena()
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         assert bancada.gesto("radio-procurar") == {"armou": True}
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
 
         bancada.cena()
         assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
         assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(chip)})
-        # A busca anda e a janela nova fica de pé, esperando o gesto dela.
         de_pe = BuscaDePe(relogio)
         busca.soltar()
         assert de_pe.dentro.wait(5.0), "a janela nova não abriu"
@@ -470,25 +363,11 @@ def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 3. o chip leva o «Mover» dela, com o mesmo controle
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(("destino", "chip"), MOVERES)
 def test_o_chip_leva_o_mover_do_mesmo_controle(
     diario: Path, fechar: list[Any], destino: str, chip: str,
 ) -> None:
-    """A régua (3) da sprint: um «Mover» de ``aa:bb:cc:00:00:01`` espera no
-    destino, e o chip de outro adaptador leva o MESMO «Mover» para lá. O verde,
-    novo, também está pareando — e antes do vermelho: um «Conectar» anônimo o
-    pegaria. Quem pareia é o vermelho, no adaptador do chip, com o nome dela.
-
-    MORDIDA: trate o pedido do chip como «Conectar» (o ``_mudar_o_destino``
-    devolvendo ``None`` quando o que espera tem aparelho, ou o movimento
-    trocando de chave para ``CONECTANDO``) — o chip treme, ou o verde chega no
-    lugar do vermelho.
-    """
+    """A régua (3) da sprint: um «Mover» de ``aa:bb:cc:00:00:01`` espera no"""
     mundo = mundo_da_madrugada()
     mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Vitória", espera=1.0)
     mesa = Mesa(mundo)
@@ -520,8 +399,7 @@ def test_o_chip_leva_o_mover_do_mesmo_controle(
 def test_o_mesmo_controle_pedido_de_novo_tambem_segue_a_caixa(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """Todo chamador que pede o MESMO movimento para outro lugar: o ``radio.mover``
-    com o aparelho do «Mover» que espera leva a busca junto, como o chip."""
+    """Todo chamador que pede o MESMO movimento para outro lugar: o ``radio.mover``"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -537,13 +415,7 @@ def test_o_mesmo_controle_pedido_de_novo_tambem_segue_a_caixa(
 
 
 def test_o_destino_novo_nao_vira_origem(diario: Path, fechar: list[Any]) -> None:
-    """O chip leva o «Mover» de volta à sala, a casa de antes. A sala deixa de
-    ser origem: com o vermelho no ar ali e o movimento dele ainda não medido, a
-    vigia NÃO o diz «voltou» — ele chegou onde ela pediu.
-
-    MORDIDA: deixe o destino novo nas ``origens`` — a vigia fecha «não chegou»
-    (``voltou``) com o controle no adaptador que ela escolheu.
-    """
+    """O chip leva o «Mover» de volta à sala, a casa de antes. A sala deixa de"""
     mundo = mundo_da_madrugada()
     mesa = Mesa(mundo)
     fechar.append(mesa.fechar)
@@ -572,17 +444,10 @@ def test_o_destino_novo_nao_vira_origem(diario: Path, fechar: list[Any]) -> None
     assert (fim.estado, fim.destino) == (cr.CHEGOU, SALA), fim
 
 
-# ---------------------------------------------------------------------------
-# o um por vez continua: só o destino do mesmo movimento muda, e só no gesto
-# ---------------------------------------------------------------------------
-
-
 def test_outro_aparelho_e_adaptador_fora_da_maquina_seguem_recusados(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """O chip só leva o movimento que espera. Outro controle, um aparelho
-    para o «Conectar» anônimo, ou um adaptador que não está na máquina: a
-    recusa de sempre, e a busca fica onde estava."""
+    """O chip só leva o movimento que espera. Outro controle, um aparelho"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -610,8 +475,7 @@ def test_outro_aparelho_e_adaptador_fora_da_maquina_seguem_recusados(
 
 @pytest.mark.parametrize("passo", [cr.PASSO_PAREANDO, cr.PASSO_CONFERINDO])
 def test_depois_do_gesto_o_destino_nao_muda(diario: Path, fechar: list[Any], passo: str) -> None:
-    """Achado o controle, o ``Pair`` e a conferência são do adaptador em que ele
-    apareceu: o chip recebe ``ocupado``, e o movimento fica como estava."""
+    """Achado o controle, o ``Pair`` e a conferência são do adaptador em que ele"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     em_voo = mesa.central._guardar(cr.Movimento(
@@ -619,11 +483,6 @@ def test_depois_do_gesto_o_destino_nao_muda(diario: Path, fechar: list[Any], pas
         comecou=mesa.relogio()))
     assert mesa.chip(VARANDA)["status"] == "ocupado"
     assert mesa.central.movimento_de(VERDE) == em_voo
-
-
-# ---------------------------------------------------------------------------
-# 2. a meia chave sai em toda saída sem chegada
-# ---------------------------------------------------------------------------
 
 
 def _o_verde_pareou_e_nao_conectou(mesa: Mesa, destino: str) -> cr.Movimento:
@@ -650,14 +509,7 @@ def _sem_a_trava(trabalho: Any) -> None:
 def test_o_nao_chegou_sem_a_trava_deve_a_meia_chave_e_ela_sai_na_faxina(
     diario: Path, fechar: list[Any], destino: str,
 ) -> None:
-    """O prazo vence com outro motor segurando a trava: o «não chegou» sai (a
-    central não fica ocupada por uma chave), e a chave, que não se escreve sem
-    a trava, fica DEVIDA. A primeira volta da faxina com a trava livre a tira —
-    só ali, com a lápide —, e os controles no ar na sala ficam.
-
-    MORDIDA: tire a dívida do ``_fechar_sem_chegar`` sem a trava — a faxina
-    não tem o que pagar e a meia chave fica no adaptador.
-    """
+    """O prazo vence com outro motor segurando a trava: o «não chegou» sai (a"""
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, destino)
@@ -678,8 +530,7 @@ def test_o_nao_chegou_sem_a_trava_deve_a_meia_chave_e_ela_sai_na_faxina(
 
 
 class NomesEmMemoria:
-    """O ``GuardaDosNomes`` sem disco: a faxina também cuida dos nomes, e esta
-    régua não é sobre eles."""
+    """O ``GuardaDosNomes`` sem disco: a faxina também cuida dos nomes, e esta"""
 
     def ler(self) -> dict[str, str]:
         return {}
@@ -691,12 +542,7 @@ class NomesEmMemoria:
 def test_o_fio_da_faxina_paga_a_meia_chave_devida_sozinho(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """No daemon ninguém chama a volta à mão: o fio da faxina tira a meia chave
-    devida no passo dele, sem esperar a faxina inteira nem um movimento novo.
-
-    MORDIDA: tire o ``tirar_as_meias_chaves`` do ``_faxinar_sempre`` — a chave
-    fica no adaptador até alguém mover um controle.
-    """
+    """No daemon ninguém chama a volta à mão: o fio da faxina tira a meia chave"""
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2, nomes=NomesEmMemoria())
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, VARANDA)
@@ -716,14 +562,7 @@ def test_o_fio_da_faxina_paga_a_meia_chave_devida_sozinho(
 def test_a_meia_chave_devida_sai_antes_do_conectar_seguinte_ali(
     diario: Path, fechar: list[Any], destino: str,
 ) -> None:
-    """O defeito que a meia chave faz, visto por ela: o «Conectar» seguinte no
-    mesmo adaptador. Com a chave devida, ele a tira ANTES de abrir a janela, e
-    o verde — agora segurando PS + Create de novo — chega.
-
-    MORDIDA: tire o pagamento do começo do movimento — o destino guarda a chave
-    velha do verde, o «Parear» dela volta «já pareado», o ``Connect`` não dá, e
-    ele não chega.
-    """
+    """O defeito que a meia chave faz, visto por ela: o «Conectar» seguinte no"""
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, destino)
@@ -744,13 +583,7 @@ def test_a_meia_chave_devida_sai_antes_do_conectar_seguinte_ali(
 def test_o_falhou_depois_do_pair_tira_a_meia_chave(
     diario: Path, fechar: list[Any], destino: str, quem: str,
 ) -> None:
-    """Um erro no meio, DEPOIS de o ``Pair`` dar (aqui, ao dar o nome): o
-    movimento acaba «não chegou» (``falhou``), e a chave que ele deixou no
-    destino sai antes do veredito — no «Conectar» e no «Mover».
-
-    MORDIDA: devolva o ``_falhou`` ao ``_acabou`` direto — a meia chave fica no
-    destino até alguém pegar a trava.
-    """
+    """Um erro no meio, DEPOIS de o ``Pair`` dar (aqui, ao dar o nome): o"""
     mundo = mundo_da_madrugada()
     mundo.pair_mente = True
     mesa = Mesa(mundo)
@@ -773,8 +606,7 @@ def test_o_falhou_depois_do_pair_tira_a_meia_chave(
 def test_a_vigia_que_levanta_no_prazo_deve_a_meia_chave(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """A vigia que levanta com o prazo vencido fecha «não chegou» sem conseguir
-    perguntar nada ao rádio: a chave fica devida, e sai na volta seguinte."""
+    """A vigia que levanta com o prazo vencido fecha «não chegou» sem conseguir"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
@@ -794,8 +626,7 @@ def test_a_vigia_que_levanta_no_prazo_deve_a_meia_chave(
 def test_a_chave_devida_de_quem_conectou_depois_nao_sai(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """A dívida pergunta ao rádio na hora de pagar: se o verde conectou naquele
-    adaptador depois (ela apertou PS), a chave é a dele, e fica."""
+    """A dívida pergunta ao rádio na hora de pagar: se o verde conectou naquele"""
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
@@ -809,23 +640,11 @@ def test_a_chave_devida_de_quem_conectou_depois_nao_sai(
     assert mesa.mundo.objeto(QUARTO, VERDE) is not None and mesa.mundo.lapides == []
 
 
-# ---------------------------------------------------------------------------
-# a conferência (28/09/2026): o que a cura dizia fazer e régua nenhuma segurava
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("quem", ["conectar", "mover"])
 def test_a_janela_de_antes_fecha_no_pedido_sem_esperar_o_gesto(
     diario: Path, fechar: list[Any], quem: str,
 ) -> None:
-    """O chip não espera a janela de antes acabar nem ela segurar PS + Create:
-    a espera do gesto sai no pedido, a janela de antes fecha, e a do adaptador
-    do chip já está aberta — no «Conectar» e no «Mover».
-
-    MORDIDA: tire da espera do gesto (``_esperar_o_gesto`` ou
-    ``_esperar_um_controle_novo``) a saída pelo pedido — a busca fica no
-    adaptador de antes até a janela dele acabar.
-    """
+    """O chip não espera a janela de antes acabar nem ela segurar PS + Create:"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -847,8 +666,7 @@ def test_a_janela_de_antes_fecha_no_pedido_sem_esperar_o_gesto(
 
 
 class PonteQueSegura:
-    """O verbo ``esquecer`` da ponte que SEGURA o fio do movimento quando esquece
-    em ``onde`` — o «Mover» parado no passo em que tira a chave dali."""
+    """O verbo ``esquecer`` da ponte que SEGURA o fio do movimento quando esquece"""
 
     def __init__(self, mundo: rm.RadioDeMentira, onde: str) -> None:
         self.mundo, self.onde = mundo, onde
@@ -865,20 +683,13 @@ class PonteQueSegura:
 
 
 @pytest.mark.parametrize(("passo", "segura_em"), [
-    (cr.PASSO_PREPARANDO, QUARTO),  # a R6: o bond velho dele no destino sai
-    (cr.PASSO_DESLIGANDO, SALA),  # a R1: a origem sai antes do gesto
+    (cr.PASSO_PREPARANDO, QUARTO),
+    (cr.PASSO_DESLIGANDO, SALA),
 ])
 def test_o_chip_antes_da_janela_leva_o_mover_sem_buscar_no_destino_de_antes(
     diario: Path, fechar: list[Any], passo: str, segura_em: str,
 ) -> None:
-    """O «Mover» muda de destino também ANTES da janela — preparando (a R6
-    tirando o bond velho dele do destino) e desligando (a R1 esquecendo a
-    origem): nada foi pareado ainda. A busca abre só no adaptador do chip, e
-    nunca no de antes.
-
-    MORDIDA: tire o passo de ``PASSOS_EM_QUE_O_DESTINO_MUDA`` — o chip treme
-    (``ocupado``) e a busca abre no destino de antes.
-    """
+    """O «Mover» muda de destino também ANTES da janela — preparando (a R6"""
     mundo = mundo_da_madrugada()
     mundo.pareado(QUARTO, VERMELHO, conectado=False, host=False)
     mesa = Mesa(mundo)
@@ -904,16 +715,8 @@ def test_o_chip_antes_da_janela_leva_o_mover_sem_buscar_no_destino_de_antes(
 def test_o_mover_que_muda_de_destino_tira_a_sobra_dele_no_destino_novo(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """A R6 vale no destino novo também: o objeto velho do vermelho na varanda
-    (a sobra de uma busca antiga, sem chave) sai antes de a janela de lá abrir
-    — senão a espera do gesto o leria como ela segurando PS + Create, e o
-    ``Pair`` iria a um controle que não está pareando.
-
-    MORDIDA: tire a R6 do ``_ir_para`` — o «Mover» acaba «não chegou»
-    (``nao_pareou``) antes de ela apertar.
-    """
+    """A R6 vale no destino novo também: o objeto velho do vermelho na varanda"""
     mundo = mundo_da_madrugada()
-    # A física do rádio de mentira: a varanda achou o vermelho numa busca antiga.
     mundo._achar(VARANDA, mundo.fisicos[VERMELHO])
     mesa = Mesa(mundo)
     fechar.append(mesa.fechar)
@@ -932,17 +735,9 @@ def test_o_mover_que_muda_de_destino_tira_a_sobra_dele_no_destino_novo(
 def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """O roxo que a varanda já tinha visto numa busca antiga (sem chave) está
-    na lista de lá, e não é quem ela está segurando: ela clica no verde, e só
-    ele pareia (O-PAREAR-ESPERA-O-CLIQUE-01).
-
-    MORDIDA: devolva à janela o primeiro controle que ela achar, sem a escolha
-    dela — a janela da varanda pega o roxo, e o ``Pair`` vai a um controle que
-    não está pareando.
-    """
+    """O roxo que a varanda já tinha visto numa busca antiga (sem chave) está"""
     mundo = mundo_da_madrugada()
     mundo.fisicos[ROXO] = rm.Fisico(ROXO, rm.CLASSE_DE_CONTROLE)
-    # A física do rádio de mentira: a varanda achou o roxo numa busca antiga.
     mundo._achar(VARANDA, mundo.fisicos[ROXO])
     mesa = Mesa(mundo)
     fechar.append(mesa.fechar)
@@ -962,17 +757,7 @@ def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
 def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
 ) -> None:
-    """O último clique dela vence também pela TELA. Entre o chip aceito e o fio
-    da busca levar o pedido (meio segundo no gesto; segundos no «Mover» que
-    ainda desliga), o tique da tela lê onde a busca está. Se o publicado
-    dissesse o destino de antes, o chip de volta seria só «abrir a caixa» (a
-    tela não pede ao rádio o adaptador em que a busca já está), e a busca iria
-    para o chip que ela desfez.
-
-    MORDIDA: publique o movimento sem o destino pedido (o ``publicar`` com o
-    ``movimentos()`` cru) — o clique de volta não chega ao rádio, e o verde
-    pareia no chip que ela deixou.
-    """
+    """O último clique dela vence também pela TELA. Entre o chip aceito e o fio"""
     mundo = mundo_da_madrugada()
     relogio = rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
@@ -981,15 +766,11 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
         bancada.cena()
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
         bancada.cena()
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         assert bancada.gesto("radio-procurar") == {"armou": True}
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
         bancada.cena()
         assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
 
-        # O fio ainda não levou o pedido (a espera está presa): o tique da tela
-        # já diz a busca indo para o chip, e só nele.
         campos = bancada.tique()
         _a_busca_acende_so_no(campos, a08, chip)
 
@@ -1009,9 +790,7 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
 
 
 def _a_busca_acende_so_no(campos: dict[str, Any], a08: Any, adaptador: str) -> None:
-    """A pílula «Segure PS + Create» mora em toda caixa, escondida, e acende só
-    na que busca: pela lista `radio-conectando` e pela classe `buscando` com que
-    a caixa nasce (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2)."""
+    """A pílula «Segure PS + Create» mora em toda caixa, escondida, e acende só"""
     ids = [lug["id"] for lug in a08._CENA_NA_TELA["lugares"]]
     assert campos["radio-conectando"] == [
         "sim" if lid == id_da_tela(adaptador) else "" for lid in ids]
@@ -1039,15 +818,7 @@ def _o_bluetoothd_volta(mesa: Mesa) -> None:
 def test_nao_sei_do_radio_nao_paga_a_meia_chave(
     diario: Path, fechar: list[Any], quando_cala: str,
 ) -> None:
-    """«Não sei» não é «não é mais meia chave». Com o ``bluetoothd`` fora do
-    barramento, a pergunta «ainda é meia chave?» não tem resposta: no veredito
-    do «não chegou» (com a trava na mão) a chave fica DEVIDA, e no pagamento a
-    dívida fica na fila. Quando o rádio volta, ela sai.
-
-    MORDIDA: responda «não sei» como «não é» no ``_esquecer_se_meia_chave`` — a
-    dívida some com o rádio mudo, e a meia chave fica no adaptador para sempre
-    (o «Conectar» seguinte ali não vê o controle).
-    """
+    """«Não sei» não é «não é mais meia chave». Com o ``bluetoothd`` fora do"""
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
@@ -1072,13 +843,7 @@ def test_nao_sei_do_radio_nao_paga_a_meia_chave(
 def test_a_chave_que_nao_sumiu_nao_conta_como_paga(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """A dívida só sai quando a chave sumiu do rádio. Um esquecer que não
-    tirou nada (o ``RemoveDevice`` e a ponte recusados) deixa a dívida para a
-    volta seguinte — e o diário não diz «esqueceu».
-
-    MORDIDA: dê a dívida por paga sem conferir que a chave sumiu — a primeira
-    volta a devolve como paga, e a chave fica.
-    """
+    """A dívida só sai quando a chave sumiu do rádio. Um esquecer que não"""
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)

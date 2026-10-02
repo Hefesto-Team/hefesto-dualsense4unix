@@ -43,19 +43,9 @@ from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDe
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import Profile
 
-# ===========================================================================
-# O aparato — um teclado virtual que emite de verdade, e um daemon de mentira
-# ===========================================================================
-
 
 class _UinputDeMentira:
-    """O módulo `uinput` visto pelo device: cada `KEY_*` é um evento próprio.
-
-    O device faz `getattr(u, key_name, None)` e desiste do que não achar
-    (`keyboard_key_unknown`), então um objeto que devolve qualquer nome
-    imitaria um teclado que sabe tudo. Este só conhece o que um teclado conhece:
-    nomes que começam com `KEY_`.
-    """
+    """O módulo `uinput` visto pelo device: cada `KEY_*` é um evento próprio."""
 
     def __getattr__(self, nome: str) -> Any:
         if not nome.startswith("KEY_"):
@@ -109,11 +99,7 @@ def _daemon(
 
 @pytest.fixture
 def steam(monkeypatch) -> list[str]:
-    """A Steam de mentira — e ela anota NA MESMA LISTA que as teclas.
-
-    Uma lista só é o que torna a ORDEM mensurável (§5). Duas listas paralelas
-    diriam que as duas coisas aconteceram e nunca qual veio primeiro.
-    """
+    """A Steam de mentira — e ela anota NA MESMA LISTA que as teclas."""
     abriu: list[str] = []
     monkeypatch.setattr(
         steam_launcher, "open_or_focus_steam", lambda: abriu.append("steam") or True
@@ -132,11 +118,6 @@ class _Gerente(ProfileManager):
 
 def _gerente(**campos: Any) -> ProfileManager:
     return _Gerente(controller=None, **campos)  # type: ignore[arg-type]
-
-
-# ===========================================================================
-# §1 — O PS É BOTÃO DO PRODUTO
-# ===========================================================================
 
 
 def test_o_ps_entrou_na_lista_do_produto_no_lugar_do_aparelho():
@@ -172,7 +153,6 @@ def test_o_perfil_aceita_o_ps_sem_ninguem_editar_o_validador():
     perfil = _perfil(button_actions={"ps": "KEY_F11"})
     assert perfil.button_actions == {"ps": "KEY_F11"}
 
-    # E a régua sabe RECUSAR: as duas metades do validador continuam de pé.
     with pytest.raises(ValueError, match="não é uma ação conhecida"):
         _perfil(button_actions={"ps": "__NAO_EXISTE__"})
     with pytest.raises(ValueError, match="não é um dos botões da tela"):
@@ -194,11 +174,6 @@ def test_o_de_fabrica_da_linha_do_ps_e_nenhuma_tecla():
     assert acoes.padrao()["ps"] == acoes.TOKEN_SEM_TECLA, (
         f"o de fábrica da linha do PS saiu {acoes.rotulo(acoes.padrao()['ps'])!r}")
     assert acoes.rotulo(acoes.padrao()["ps"]) == "— Sem tecla —"
-
-
-# ===========================================================================
-# §2 — E ELE NÃO É ÓRFÃO
-# ===========================================================================
 
 
 def test_o_ps_nao_cai_na_terceira_sacola():
@@ -225,16 +200,11 @@ def test_o_ps_nao_cai_na_terceira_sacola():
 
 
 def test_as_outras_vinte_e_uma_linhas_continuam_como_eram():
-    """`SEM_ATENDENTE` continua valendo para todo mundo menos o PS.
-
-    O PS é uma sacola nova, não uma regra nova sobre as antigas — mudar isso
-    seria a segunda cura escondida dentro da primeira.
-    """
+    """`SEM_ATENDENTE` continua valendo para todo mundo menos o PS."""
     _m, _t, sem_dono = acoes.resolver({"cross": acoes.TOKEN_STEAM})
     assert "cross" in sem_dono, (
         "o `__STEAM__` escolhido para o X deixou de ir para a terceira sacola: "
         "a saída do PS vazou para os outros vinte e um.")
-    # E os dois eixos e os dois gatilhos seguem com o tratamento de sempre.
     _m, _t, gatilho = acoes.resolver({"l2": "KEY_ESC"})
     assert "l2" in gatilho
 
@@ -246,11 +216,6 @@ def test_a_porta_do_ps_distingue_o_calado_do_nada():
     assert acoes.acao_do_ps({"cross": "KEY_ESC"}) is None
     assert acoes.acao_do_ps({"ps": acoes.TOKEN_NADA}) == acoes.TOKEN_NADA
     assert acoes.acao_do_ps({"ps": "KEY_F11"}) == "KEY_F11"
-
-
-# ===========================================================================
-# §3 — A ESCOLHA CHEGA A QUEM A ATENDE
-# ===========================================================================
 
 
 def test_o_perfil_empurra_a_escolha_do_ps():
@@ -307,11 +272,7 @@ def test_o_empurrao_do_ps_nao_espera_device_de_mouse():
 
 
 def test_o_canal_quebrado_nao_derruba_a_ativacao():
-    """O PS é um botão entre vinte e dois; uma exceção aqui levaria o perfil todo.
-
-    A MORDIDA: tire o `try/except` de `_empurrar_o_ps` — este caso reprova com
-    a exceção subindo.
-    """
+    """O PS é um botão entre vinte e dois; uma exceção aqui levaria o perfil todo."""
     def _explode(_token: str | None) -> None:
         raise RuntimeError("o canal caiu")
 
@@ -320,14 +281,7 @@ def test_o_canal_quebrado_nao_derruba_a_ativacao():
 
 
 def test_o_canal_do_ps_chega_pela_fabrica_do_gerente():
-    """`gerente_do_daemon` injeta o canal — sem ele nada disto liga.
-
-    É a lição do `mouse_device_provider`: o campo existir e a fábrica não o
-    preencher é "a cura escrita e nunca ligada", o defeito mais caro desta casa.
-
-    A MORDIDA: apague a linha `"ps_action_sink": _canal_do_ps(daemon)` da
-    fábrica — este caso reprova, e o PS volta a não digitar nunca.
-    """
+    """`gerente_do_daemon` injeta o canal — sem ele nada disto liga."""
     from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
     daemon = _daemon()
@@ -337,11 +291,6 @@ def test_o_canal_do_ps_chega_pela_fabrica_do_gerente():
     gerente.ps_action_sink("KEY_F11")
     assert hotkey.acao_do_ps_do_perfil(daemon) == "KEY_F11", (
         "a fábrica entregou um canal que não chega ao subsistema de hotkey.")
-
-
-# ===========================================================================
-# §4 — O TOQUE FAZ AS DUAS COISAS
-# ===========================================================================
 
 
 def test_o_ps_digita_de_verdade_pelo_teclado_virtual(steam):
@@ -369,15 +318,7 @@ def test_o_ps_digita_combo(steam):
 
 
 def test_o_perfil_vence_a_maquina_calada(steam):
-    """A ARMADILHA QUE A SPRINT NOMEIA, e ela é a razão da ordem do código.
-
-    Com `ps_button_action = "none"` como PRIMEIRA porta, um perfil que escolheu
-    uma tecla para o PS ficaria mudo por causa de uma config de máquina que ela
-    nunca viu.
-
-    A MORDIDA: ponha `if cfg.ps_button_action == "none": return` de volta como
-    primeira linha de `_on_ps_solo` — este caso reprova com o device vazio.
-    """
+    """A ARMADILHA QUE A SPRINT NOMEIA, e ela é a razão da ordem do código."""
     teclado, dev = _teclado()
     daemon = _daemon(
         acao_da_maquina="none", teclado=teclado, escolha_do_perfil="KEY_F11")
@@ -402,16 +343,7 @@ def test_a_maquina_calada_continua_calando_o_ps_sem_perfil(steam):
 
 
 def test_o_nada_antigo_do_perfil_nao_cala_o_sexto(steam):
-    """O `— Nada —` que um perfil antigo guarde na linha do PS não cala mais nada.
-
-    Desde 01/10/2026 (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01) a linha do
-    PS só digita, e o que o toque faz no computador é o ⑥ da tabela: um dono
-    só. O token antigo vira escolha sem atendente, e o ⑥ de fábrica (abrir a
-    Steam) acontece. A migração tira o token dos perfis.
-
-    A MORDIDA: devolva `if escolha == "__NADA__": return ag.NADA` ao
-    `hotkey._a_metade_da_maquina` e este caso reprova com a Steam fechada.
-    """
+    """O `— Nada —` que um perfil antigo guarde na linha do PS não cala mais nada."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil=acoes.TOKEN_NADA)
     gesto = hotkey.build_ps_solo_callback(daemon)
@@ -431,13 +363,7 @@ def test_o_steam_antigo_do_perfil_nao_vence_o_sexto(steam):
 
 
 def test_a_escolha_sem_atendente_nao_digita_e_nao_cala_a_maquina(steam):
-    """`Escolher um programa…` no PS: dívida declarada, não silêncio.
-
-    O caminho do programa EXISTE (`DaemonConfig.ps_button_command`), mas mora na
-    máquina e não no perfil. Enquanto o perfil não tiver campo de caminho, a
-    escolha não dispara — e o degrau da máquina segue valendo, em vez de o
-    botão morrer.
-    """
+    """`Escolher um programa…` no PS: dívida declarada, não silêncio."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil=acoes.TOKEN_PROGRAMA)
     gesto = hotkey.build_ps_solo_callback(daemon)
@@ -448,11 +374,7 @@ def test_a_escolha_sem_atendente_nao_digita_e_nao_cala_a_maquina(steam):
 
 
 def test_o_modo_jogo_pula_as_duas_metades(steam):
-    """Com o controle dedicado a um jogo, digitar é pior que abrir a Steam.
-
-    A MORDIDA: apague a guarda do `_emulation_suppressed` — este caso reprova
-    com a tecla emitida dentro da partida dela.
-    """
+    """Com o controle dedicado a um jogo, digitar é pior que abrir a Steam."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11", suprimido=True)
     gesto = hotkey.build_ps_solo_callback(daemon)
@@ -474,12 +396,7 @@ def test_o_modo_nativo_pula_as_duas_metades(steam):
 
 
 def test_o_combo_continua_ganhando_do_solo(steam):
-    """PS+↑ troca de perfil e NÃO digita — o latch do combo fica inteiro.
-
-    Aqui não há dublê de `HotkeyManager`: é o detector de verdade, com o combo
-    de fábrica (`DEFAULT_COMBO_NEXT`), porque quem suprime o solo é ele
-    (o `ps_combo_fired` do aperto do controle) e não o callback.
-    """
+    """PS+↑ troca de perfil e NÃO digita — o latch do combo fica inteiro."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
     trocou: list[str] = []
@@ -500,11 +417,7 @@ def test_o_combo_continua_ganhando_do_solo(steam):
 
 
 def test_segurar_para_religar_continua_nao_digitando(steam):
-    """PS-TOQUE-CURTO-01: acima do teto o release não é toque, e não digita.
-
-    O gesto de religar o controle no rádio (segurar ~5 s) atravessa este mesmo
-    caminho, e o teto é anterior a tudo.
-    """
+    """PS-TOQUE-CURTO-01: acima do teto o release não é toque, e não digita."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
     gesto = hotkey.build_ps_solo_callback(daemon)
@@ -538,20 +451,10 @@ def test_o_teclado_parado_nao_conta_como_digitado(steam):
     assert dev.emitidos == []
 
 
-# ===========================================================================
-# §5 — A ORDEM, E O QUE O TOQUE NÃO PODE ESTRAGAR
-# ===========================================================================
-
-
 def test_a_tecla_sai_antes_da_steam(steam, monkeypatch):
-    """`open_or_focus_steam()` muda o foco: o que vier depois chega à Steam.
-
-    A MORDIDA: inverta as duas metades em `_on_ps_solo` — este caso reprova
-    imprimindo a ordem medida. Um teste que passasse nas duas ordens não mediria
-    a decisão.
-    """
+    """`open_or_focus_steam()` muda o foco: o que vier depois chega à Steam."""
     teclado, _dev = _teclado()
-    ordem = steam  # a MESMA lista: é o que torna a ordem mensurável
+    ordem = steam
 
     def _anota_press(botao: str) -> None:
         ordem.append("tecla")
@@ -572,16 +475,7 @@ def test_a_tecla_sai_antes_da_steam(steam, monkeypatch):
 
 
 def test_o_toque_nao_solta_o_que_estava_segurado(steam):
-    """O toque no PS não pode mexer no rastreador de bordas do `dispatch`.
-
-    `dispatch()` é SNAPSHOT: chamá-lo com `{"ps"}` faria
-    `newly_released = _pressed_buttons - {"ps"}` soltar toda tecla segurada, e
-    o tique seguinte a pressionaria de novo — um caractere dobrado no meio do
-    que ela estivesse digitando.
-
-    A MORDIDA: troque o par `_emit_sequence_press`/`_release` de `_digitar_o_ps`
-    por dois `dispatch()` — este caso reprova mostrando o `circle` solto.
-    """
+    """O toque no PS não pode mexer no rastreador de bordas do `dispatch`."""
     teclado, dev = _teclado()
     teclado.bindings = {"circle": ("KEY_ENTER",)}
     teclado.dispatch(frozenset({"circle"}))
@@ -600,15 +494,7 @@ def test_o_toque_nao_solta_o_que_estava_segurado(steam):
 
 
 def test_o_binding_do_ps_nao_fica_no_device(steam):
-    """Depois do toque, o mapa do device volta ao que era.
-
-    Deixar `"ps"` no mapa faria o `dispatch()` do poll loop emitir a tecla uma
-    SEGUNDA vez no dia em que o latch do combo deixasse o PS passar para
-    `emu_buttons` — e o produto não pode depender do latch para não digitar
-    duas vezes.
-
-    A MORDIDA: apague o `finally: teclado.bindings = antes` — este caso reprova.
-    """
+    """Depois do toque, o mapa do device volta ao que era."""
     teclado, _dev = _teclado()
     antes = dict(teclado.bindings)
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")

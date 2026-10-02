@@ -1,16 +1,4 @@
-"""ONDA0-Z5/T14 — o consumidor que não existe mais sai do cabeçalho.
-
-Fato substituído, e substituído em TODOS os lugares onde aparecia
-(`utils/session.py`, duas ocorrências; `daemon/ipc_handlers.py`, uma):
-`active_profile.txt` NÃO é lido por um subcomando `profile current` da CLI —
-medido (ONDA0-Z5 §2.8): esse verbo não existe (`typer` sugere `create` no
-lugar). O consumidor real é `cli/cmd_profile.py:402`
-(`profile save --from-active`).
-
-A régua é a mesma que a sprint mandou rodar ANTES de acreditar nela — contra
-`utils/session.py`, que se sabe que continha pelo menos uma ocorrência antes
-da leva de 24/08.
-"""
+"""ONDA0-Z5/T14 — o consumidor que não existe mais sai do cabeçalho."""
 from __future__ import annotations
 
 import subprocess
@@ -38,8 +26,7 @@ def test_a_regua_volta_vazia_hoje() -> None:
 
 
 def test_a_regua_sabe_acusar_quando_o_fato_errado_volta() -> None:
-    """A mordida: sem esta régua saber ACUSAR, ela não prova nada — só que
-    nunca encontra nada (§4 do COMO-EXECUTAR-UMA-SPRINT.md)."""
+    """A mordida: sem esta régua saber ACUSAR, ela não prova nada — só que"""
     caminho = REPO_ROOT / "src" / "hefesto_dualsense4unix" / "utils" / "session.py"
     original = caminho.read_text(encoding="utf-8")
     contaminado = original + "\n# profile current — reintroduzido para a mordida\n"
@@ -53,5 +40,4 @@ def test_a_regua_sabe_acusar_quando_o_fato_errado_volta() -> None:
     finally:
         caminho.write_text(original, encoding="utf-8")
 
-    # Devolvido: a régua volta a ficar limpa.
     assert _grep_profile_current() == ""

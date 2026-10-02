@@ -1,22 +1,4 @@
-"""Cliente-lease do broker (BROKER-01, Onda S) — ponta a ponta em socket real.
-
-O servidor é o Broker de verdade (thread própria) com fs FAKE e validador
-injetado — nenhum /dev real é tocado; e um servidor ROTEIRIZADO cobre as
-anomalias que o broker são nunca produziria. Prova:
-- hide/restore/restore_all/status/ping viajam pelo protocolo JSON-por-linha;
-- a conexão é UMA e longeva (a lease): fechar o cliente restaura no servidor;
-- broker AUSENTE = best-effort silencioso (False/None, nunca exceção) — a
-  regra sagrada "duplicado > zero controles";
-- `open_fd` (§1.3 do desenho 2026-07-20): exatamente 1 fd por resposta ok,
-  CLOEXEC já na recepção, mesmo inode do alvo; 2+ fds ⇒ fecha TUDO e devolve
-  None; MSG_CTRUNC ⇒ conexão abortada; fd junto de ok:false ⇒ fechado;
-  broker velho sem o cmd (`reject_unknown_cmd`) ⇒ None; timeout ⇒ None.
-  O vazamento é detectado por EOF de pipe: se o cliente NÃO fechar as cópias
-  recebidas, o read-end nunca vê EOF e o teste falha;
-- `broker_client_for` respeita o dublê injetado, cacheia o real e cria o
-  singleton sob lock (lição 3: corrida de criação nunca gera duas leases);
-  `HidrawBrokerClient` NÃO tem `__del__` (GC de duplicata nunca fecha lease).
-"""
+"""Cliente-lease do broker (BROKER-01, Onda S) — ponta a ponta em socket real."""
 from __future__ import annotations
 
 import contextlib
@@ -67,12 +49,7 @@ def _validator(node: str) -> str | None:
 
 
 def _short_socket_dir(tmp_path: Path) -> str:
-    """Diretório curto para o socket: sun_path tem limite de ~108 bytes.
-
-    O tmp_path do pytest pode morar num TMPDIR profundo (o scratchpad desta
-    máquina passa de 100 chars) — nesse caso caímos num mkdtemp direto em
-    /tmp, limpo pelo próprio teste.
-    """
+    """Diretório curto para o socket: sun_path tem limite de ~108 bytes."""
     candidato = tmp_path / "bk"
     if len(str(candidato / "broker.sock")) <= 90:
         candidato.mkdir(exist_ok=True)
@@ -97,12 +74,7 @@ def _espera(cond: Callable[[], bool], timeout: float = 2.0) -> bool:
 
 
 def _eof_no_pipe(read_fd: int, timeout: float = 2.0) -> bool:
-    """True quando TODAS as cópias do write-end fecharam (EOF no read-end).
-
-    É o detector de vazamento de fd dos testes de `open_fd`: o servidor envia
-    cópias do write-end e fecha as locais — se o CLIENTE não fechar as que
-    recebeu, o EOF nunca chega e isto devolve False.
-    """
+    """True quando TODAS as cópias do write-end fecharam (EOF no read-end)."""
 
     def _ver() -> bool:
         pronto, _, _ = select.select([read_fd], [], [], 0)
@@ -134,7 +106,6 @@ def live_broker(tmp_path: Path) -> Any:
         yield path, state, ops, str(target)
     finally:
         broker.stopping = True
-        # Acorda o selector (senão o run espera o timeout de 1s inteiro).
         with (
             socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as poke,
             contextlib.suppress(OSError),
@@ -162,7 +133,7 @@ class TestClienteVivo:
         path, _state, ops, _target = live_broker
         cliente = hbc.HidrawBrokerClient(path)
         try:
-            assert cliente.hide("/dev/hidraw6") is False  # "vpad" do validador
+            assert cliente.hide("/dev/hidraw6") is False
             assert ops.calls == []
         finally:
             cliente.close()
@@ -181,8 +152,6 @@ class TestClienteVivo:
             cliente.close()
 
     def test_close_da_lease_restaura_no_servidor(self, live_broker: Any) -> None:
-        # O fail-safe visto do lado do cliente: fechar a lease (= daemon
-        # morrendo) restaura tudo sem nenhum comando extra.
         path, state, ops, _target = live_broker
         cliente = hbc.HidrawBrokerClient(path)
         cliente.hide("/dev/hidraw3")
@@ -198,8 +167,7 @@ class TestClienteVivo:
             cliente.ping()
             cliente.hide("/dev/hidraw3")
             cliente.status()
-            cliente.open_fd("/dev/hidraw6")  # recusado — mas na MESMA lease
-            # UMA lease só: o estado por-conexão do servidor tem 1 entrada.
+            cliente.open_fd("/dev/hidraw6")
             assert _espera(lambda: len(state.by_conn) == 1)
         finally:
             cliente.close()
@@ -214,7 +182,6 @@ class TestOpenFdContraOBrokerReal:
             assert fd is not None
             try:
                 assert os.fstat(fd).st_ino == os.stat(target).st_ino
-                # CLOEXEC instalado JÁ na recepção (MSG_CMSG_CLOEXEC).
                 assert fcntl.fcntl(fd, fcntl.F_GETFD) & fcntl.FD_CLOEXEC
             finally:
                 os.close(fd)
@@ -223,7 +190,6 @@ class TestOpenFdContraOBrokerReal:
             cliente.close()
 
     def test_open_funciona_com_o_no_escondido(self, live_broker: Any) -> None:
-        # A razão da onda: hide NÃO bloqueia o caminho de fd do reader.
         path, state, _ops, target = live_broker
         cliente = hbc.HidrawBrokerClient(path)
         try:
@@ -247,12 +213,7 @@ class TestOpenFdContraOBrokerReal:
 
 
 class _ServidorRoteirizado:
-    """Servidor unix mínimo: responde cada linha pelo roteiro por cmd.
-
-    roteiro[cmd] = callable(conn, request) que envia a resposta (com ou sem
-    fds); roteiro[cmd] = None simula broker TRAVADO (nunca responde); cmd
-    fora do roteiro recebe `reject_unknown_cmd` (como o broker real faz).
-    """
+    """Servidor unix mínimo: responde cada linha pelo roteiro por cmd."""
 
     def __init__(self, path: str, roteiro: dict[str, Any]) -> None:
         self.path = path
@@ -292,7 +253,7 @@ class _ServidorRoteirizado:
                         continue
                     handler = self.roteiro[cmd]
                     if handler is None:
-                        continue  # broker "travado": nunca responde
+                        continue
                     handler(conn, request)
         except OSError:
             return
@@ -313,9 +274,7 @@ def _responde_ping(conn: socket.socket, _req: dict[str, Any]) -> None:
 
 
 def _handler_fds(payload: dict[str, Any], write_fd: int, copias: int) -> Any:
-    """Handler que envia `copias` duplicatas de `write_fd` junto da resposta
-    e fecha a cópia local NA HORA — a partir daí, só o cliente segura o pipe
-    aberto (o EOF do read-end denuncia vazamento)."""
+    """Handler que envia `copias` duplicatas de `write_fd` junto da resposta"""
 
     def _h(conn: socket.socket, _req: dict[str, Any]) -> None:
         line = json.dumps(payload).encode("utf-8") + b"\n"
@@ -336,7 +295,6 @@ def sock_path(tmp_path: Path) -> Any:
 
 class TestOpenFdAnomalias:
     def test_dois_fds_fecha_tudo_e_devolve_none(self, sock_path: str) -> None:
-        # Contrato §1.3: MAIS de um fd = protocolo violado ⇒ fecha todos.
         lido, escrita = os.pipe()
         servidor = _ServidorRoteirizado(
             sock_path,
@@ -351,7 +309,6 @@ class TestOpenFdAnomalias:
         try:
             assert cliente.ping() is True
             assert cliente.open_fd("/dev/hidraw3") is None
-            # As DUAS cópias recebidas foram fechadas: EOF no read-end.
             assert _eof_no_pipe(lido)
         finally:
             cliente.close()
@@ -360,8 +317,6 @@ class TestOpenFdAnomalias:
                 os.close(lido)
 
     def test_msg_ctrunc_aborta_a_conexao_sem_vazar(self, sock_path: str) -> None:
-        # 3 fds não cabem no CMSG_SPACE de 2 do cliente ⇒ MSG_CTRUNC: o que
-        # foi entregue é fechado, o resto o kernel descarta, e a LEASE cai.
         lido, escrita = os.pipe()
         servidor = _ServidorRoteirizado(
             sock_path,
@@ -377,7 +332,7 @@ class TestOpenFdAnomalias:
             assert cliente.ping() is True
             assert cliente.open_fd("/dev/hidraw3") is None
             assert _eof_no_pipe(lido)
-            assert cliente._sock is None  # conexão inteira abortada
+            assert cliente._sock is None
         finally:
             cliente.close()
             servidor.close()
@@ -405,13 +360,11 @@ class TestOpenFdAnomalias:
                 os.close(lido)
 
     def test_broker_velho_sem_cmd_open_vira_none(self, sock_path: str) -> None:
-        # §1.4: reject_unknown_cmd ⇒ None ⇒ o opener cai no os.open — nunca
-        # há janela de versão que quebre o gyro.
         servidor = _ServidorRoteirizado(sock_path, {"ping": _responde_ping})
         cliente = hbc.HidrawBrokerClient(sock_path)
         try:
             assert cliente.open_fd("/dev/hidraw3") is None
-            assert cliente.ping() is True  # a lease sobreviveu à recusa limpa
+            assert cliente.ping() is True
         finally:
             cliente.close()
             servidor.close()
@@ -434,11 +387,6 @@ class TestOpenFdAnomalias:
     def test_logger_quebrado_nao_vaza_o_fd(
         self, sock_path: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Achado Onda S #4: com o fd JÁ recebido, um `logger.info` que
-        # levanta (stderr fechado num shutdown malcronometrado, disco cheio)
-        # não pode custar o fd — antes a exceção escapava entre a recepção e
-        # o `return`, o chamador (`make_broker_opener`) a engolia com
-        # suppress(Exception) e o fd ficava órfão para sempre.
         lido, escrita = os.pipe()
         servidor = _ServidorRoteirizado(
             sock_path,
@@ -450,8 +398,6 @@ class TestOpenFdAnomalias:
             },
         )
         cliente = hbc.HidrawBrokerClient(sock_path)
-        # A lease abre ANTES do logger quebrar (o cenário do achado: o stderr
-        # morre no meio da vida do daemon, com a conexão já de pé).
         assert cliente.ping() is True
 
         class _LoggerQuebrado:
@@ -465,7 +411,6 @@ class TestOpenFdAnomalias:
         monkeypatch.setattr(hbc, "logger", _LoggerQuebrado())
         try:
             fd = cliente.open_fd("/dev/hidraw3")
-            # O fd chega MESMO com o logger explodindo — e é do chamador.
             assert fd is not None
             os.close(fd)
             assert _eof_no_pipe(lido)
@@ -508,11 +453,9 @@ class TestClienteSemBroker:
         assert cliente.ping() is False
         assert cliente.status() is None
         assert cliente.open_fd("/dev/hidraw3") is None
-        cliente.close()  # idempotente
+        cliente.close()
 
     def test_default_honra_env_de_isolamento(self, tmp_path: Path) -> None:
-        # O conftest aponta HEFESTO_BROKER_SOCKET para um caminho inexistente:
-        # o cliente DEFAULT nunca alcança o broker real da máquina.
         cliente = hbc.HidrawBrokerClient()
         assert cliente._path == os.environ["HEFESTO_BROKER_SOCKET"]
         assert cliente.is_available() is False
@@ -536,8 +479,6 @@ class TestBrokerClientFor:
         assert hbc.broker_client_for(daemon) is cliente
 
     def test_criacao_concorrente_produz_um_singleton(self) -> None:
-        # Lição 3 (§4.4a): a corrida de criação não pode gerar duas leases —
-        # a perdedora seria GC'd e (sem a regra do no-__del__) desfaria hides.
         class Daemon:
             _hidraw_broker_client: Any = None
 
@@ -559,6 +500,4 @@ class TestBrokerClientFor:
         assert daemon._hidraw_broker_client is resultados[0]
 
     def test_cliente_nao_tem_del(self) -> None:
-        # Lição 3 (§4.4b): GC de um cliente duplicado acidental NUNCA pode
-        # fechar conexão (só close() explícito) — logo, nada de __del__.
         assert "__del__" not in hbc.HidrawBrokerClient.__dict__

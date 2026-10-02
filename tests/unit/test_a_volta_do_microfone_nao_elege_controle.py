@@ -55,12 +55,9 @@ AZUL = "aa:bb:cc:00:00:d8"
 ROXO = "aa:bb:cc:00:00:f0"
 OS_QUATRO = (VERMELHO, BRANCO, AZUL, ROXO)
 
-#: A entrada analógica da placa, com a porta ativa `not available` (nada no
-#: jack): é o único microfone de placa da máquina dela, e ele não se sustenta.
 PLACA = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 MONITOR_SPDIF = "alsa_output.pci-0000_0c_00.4.iec958-stereo.monitor"
 MONITOR_HDMI = "alsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor"
-#: Um headset de outra pessoa: porta usável, e não é controle nenhum.
 HEADSET = "alsa_input.usb-Fabricante_Headset_USB-00.mono-fallback"
 #: A fonte que o KERNEL publica para o DualSense no cabo.
 NO_DO_KERNEL = (
@@ -78,27 +75,15 @@ def _canal(uniq: str) -> str:
     return f"hefesto_mic_{_n(uniq)[-6:]}"
 
 
-# ---------------------------------------------------------------------------
-# A lista de fontes, e o que o script responde sobre ela
-# ---------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class _Fonte:
     indice: int
     nome: str
-    #: `None` = o nó não tem porta (monitor, canal virtual); `True` = porta
-    #: ativa usável; `False` = porta ativa `not available`.
     porta: bool | None = None
 
 
 def _mesa_de(canais: tuple[str, ...], *extra: _Fonte) -> list[_Fonte]:
-    """A lista de 29/09 (mascarada), com os canais NA ORDEM dada.
-
-    A ordem é a do índice do PipeWire, que é o que o `_melhor_source_de_captura`
-    lê. A entrada da placa tem índice MENOR que o de todos os canais, como na
-    bancada, e sai pelo filtro de porta.
-    """
+    """A lista de 29/09 (mascarada), com os canais NA ORDEM dada."""
     fontes = [
         _Fonte(67, MONITOR_SPDIF),
         _Fonte(68, PLACA, porta=False),
@@ -110,8 +95,6 @@ def _mesa_de(canais: tuple[str, ...], *extra: _Fonte) -> list[_Fonte]:
     return sorted(fontes, key=lambda f: f.indice)
 
 
-#: A mesa de 29/09: o vermelho nasceu primeiro (280), depois o azul, o roxo e
-#: o branco (405, 412, 421 na bancada).
 MESA_DE_29 = (VERMELHO, AZUL, ROXO, BRANCO)
 
 
@@ -164,15 +147,9 @@ def responde_sustenta(fontes: list[_Fonte], nome: str) -> str:
     return nome if any(f.nome == nome and f.porta is not False for f in fontes) else ""
 
 
-# ---------------------------------------------------------------------------
-# O PipeWire e o WirePlumber de mentira — as bordas do eleitor, e só elas
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class _PipeWire:
     fontes: list[_Fonte]
-    #: A fonte padrão CRUA — o que `pactl get-default-source` imprime.
     ativo: str = ""
     escritas: list[str] = field(default_factory=list)
     perguntas: list[str] = field(default_factory=list)
@@ -268,8 +245,6 @@ def _montar(
     """A mesa: o PipeWire de mentira por baixo, o produto inteiro por cima."""
     pw = _PipeWire(fontes=fontes)
     monkeypatch.setattr(elm, "_rodar", pw.rodar)
-    # O script é o DE VERDADE para o `_script_conhece`: é o arquivo do disco
-    # que diz se conhece a pergunta. Quem responde é o dublê, acima.
     monkeypatch.setattr(elm, "_script_do_wireplumber", lambda: SCRIPT)
     monkeypatch.setattr(elm, "casamento_usb_agora", lambda _uniqs: None)
     monkeypatch.setattr(elm, "SETTLE_PASSOS", 2)
@@ -324,11 +299,6 @@ def _no_ar(m: SimpleNamespace) -> list[str]:
     return hotkey._no_ar_da_sessao(m.daemon).todos()
 
 
-# ---------------------------------------------------------------------------
-# 1. A pergunta, no script de verdade
-# ---------------------------------------------------------------------------
-
-
 def _script_de_verdade(tmp_path: Path, fontes: list[_Fonte], flag: str) -> str:
     """O `fix_wireplumber_default_source.sh` e o `doctor.sh` DE VERDADE.
 
@@ -374,7 +344,6 @@ def _script_de_verdade(tmp_path: Path, fontes: list[_Fonte], flag: str) -> str:
     return r.stdout.strip()
 
 
-#: As listas em que o dublê e o script têm de concordar.
 LISTAS = {
     "a-mesa-de-29-09": _mesa_de(MESA_DE_29),
     "a-mesa-de-28-09": _mesa_de((BRANCO, VERMELHO, AZUL, ROXO)),
@@ -388,12 +357,7 @@ LISTAS = {
 
 
 def test_na_mesa_dela_so_a_pergunta_do_install_responde_um_canal(tmp_path: Path) -> None:
-    """O script e o doctor de verdade, sobre a lista de 29/09.
-
-    A entrada da placa tem índice menor que o de todos os canais, e o filtro de
-    porta a tira. Sobra a ordem dos canais: a pergunta do install responde o
-    primeiro (o vermelho), e a da volta responde vazio.
-    """
+    """O script e o doctor de verdade, sobre a lista de 29/09."""
     fontes = LISTAS["a-mesa-de-29-09"]
     assert _script_de_verdade(tmp_path, fontes, "--melhor-fonte-elegivel") == _canal(VERMELHO)
     assert _script_de_verdade(tmp_path, fontes, "--outra-captura-elegivel") == ""
@@ -401,12 +365,7 @@ def test_na_mesa_dela_so_a_pergunta_do_install_responde_um_canal(tmp_path: Path)
 
 @pytest.mark.parametrize("rotulo", sorted(LISTAS))
 def test_o_duble_responde_o_que_o_script_responde(tmp_path: Path, rotulo: str) -> None:
-    """O dublê das réguas 2 a 4 não pode ser mais frouxo que o script.
-
-    Foi assim que o defeito atravessou: `test_os_quatro_microfones_ficam_no_ar`
-    dublava a volta com um microfone de placa que a máquina dela não tem, e
-    nenhum dublê respondia o que o script responde na mesa dela.
-    """
+    """O dublê das réguas 2 a 4 não pode ser mais frouxo que o script."""
     fontes = LISTAS[rotulo]
     for flag, duble in (
         ("--melhor-fonte-elegivel", responde_melhor),
@@ -418,12 +377,7 @@ def test_o_duble_responde_o_que_o_script_responde(tmp_path: Path, rotulo: str) -
 def test_a_volta_do_eleitor_nao_escreve_canal_nenhum(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O eleitor, com o roxo eleito e ninguém no ar: nenhum `set-default-source`.
-
-    MORDIDA: devolva a pergunta do install à volta (`--melhor-fonte-elegivel`
-    em `EleitorDeMicrofone.devolver_o_microfone`), e sai
-    `set-default-source hefesto_mic_000003` — o vermelho, que ninguém ligou.
-    """
+    """O eleitor, com o roxo eleito e ninguém no ar: nenhum `set-default-source`."""
     m = mesa(_mesa_de(MESA_DE_29))
     eleitor = elm.EleitorDeMicrofone()
     m.pw.ativo = _canal(ROXO)
@@ -438,11 +392,6 @@ def test_a_volta_do_eleitor_nao_escreve_canal_nenhum(
     assert resultado.ok is True and resultado.motivo == ""
     assert resultado.ativo == _canal(ROXO)
     assert eleitor.eleito is None
-
-
-# ---------------------------------------------------------------------------
-# 2. A mesa dela, cada um dos quatro
-# ---------------------------------------------------------------------------
 
 
 def _ordem(quem: str, o_primeiro: str) -> tuple[str, ...]:
@@ -498,18 +447,9 @@ async def test_calar_o_unico_no_ar_nao_escreve_padrao_nenhum(
     assert recado_do_microfone.publicar(m.daemon)["eleito"] is None
 
 
-# ---------------------------------------------------------------------------
-# 3. Qualquer usuário
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_o_headset_plugado_depois_herda_o_padrao(mesa: Any) -> None:
-    """Um headset de índice maior que os canais, como quem pluga depois do daemon.
-
-    MORDIDA: com a pergunta velha, o padrão vai ao primeiro canal de controle
-    (o vermelho), e não ao headset.
-    """
+    """Um headset de índice maior que os canais, como quem pluga depois do daemon."""
     m = mesa(_mesa_de(MESA_DE_29, _Fonte(500, HEADSET, porta=True)))
     assert (await _apertar(m, ROXO, ligado=True)).feito
     m.pw.escritas.clear()
@@ -528,12 +468,7 @@ async def test_o_headset_plugado_depois_herda_o_padrao(mesa: Any) -> None:
 async def test_sem_poder_perguntar_nada_se_escreve_e_o_ato_de_calar_se_completa(
     mesa: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, como: str
 ) -> None:
-    """O «não sei» nunca escreve, e o silêncio que ela pediu não depende dele.
-
-    MORDIDA: deixe a `ConsultaIndisponivelError` subir de
-    `devolver_o_microfone` e o ato morre no meio (no laço do botão, em
-    `mic_hotkey_falhou`), sem a metade do firmware e sem o disco.
-    """
+    """O «não sei» nunca escreve, e o silêncio que ela pediu não depende dele."""
     m = mesa(_mesa_de(MESA_DE_29))
     assert (await _apertar(m, ROXO, ligado=True)).feito
     m.pw.escritas.clear()
@@ -560,11 +495,6 @@ async def test_sem_poder_perguntar_nada_se_escreve_e_o_ato_de_calar_se_completa(
     assert ato.firmware.feita and ato.canal_no_sistema.feita
     assert gravados == [(_n(ROXO), True)], gravados
     assert m.backend.leds[_n(ROXO)] is False
-
-
-# ---------------------------------------------------------------------------
-# 4. O nó que morre
-# ---------------------------------------------------------------------------
 
 
 async def _uma_volta_da_porta_do_no(m: SimpleNamespace) -> Any:
@@ -622,25 +552,9 @@ def _o_roxo_morre(cena: _CenaDoNo, herdeiro: str) -> None:
 async def test_o_no_que_morre_passa_o_padrao_a_quem_esta_no_ar(
     mesa: Any, monkeypatch: pytest.MonkeyPatch, herdeiro: str
 ) -> None:
-    """O roxo é o padrão e está no ar; o azul está no ar; o vermelho, calado.
-
-    O DUBLÊ RESPONDE O QUE O WIREPLUMBER FAZ: depois da morte, o padrão vai
-    ao canal do vermelho, calado e de prioridade igual à dos outros (o
-    desempate do WirePlumber não foi medido), e não a um monitor. Um dublê que
-    devolvesse só monitor abriria a porta que o aparelho não abre.
-
-    MORDIDAS:
-    - a porta do nó chamando a volta direto (`devolver_o_microfone` no lugar de
-      `passar_o_padrao` em `hotkey.passar_o_padrao_do_no_morto`): o azul não
-      herda;
-    - sem o desfecho novo (`_e_canal_de_controle` em `a_heranca_do_no_morto`):
-      o veredicto sai «nenhum», e o vermelho calado fica com o padrão;
-    - sem o filtro da mesa em `hotkey._quem_herda_o_padrao`: o roxo, que saiu,
-      é o primeiro da ordem, e a porta pede o canal dele.
-    """
+    """O roxo é o padrão e está no ar; o azul está no ar; o vermelho, calado."""
     cena = await _cena_do_no(mesa, monkeypatch, no_ar=(AZUL, ROXO))
     assert _eleitor(cena.m).eleito == ROXO
-    # O pedidor espião: a fixture devolve o de antes da régua na saída.
     pedidos: list[str] = []
     elm.registrar_pedidor_de_canal(
         lambda uniq: pedidos.append(_n(uniq)) or cena.m.sub.pedir_canal(uniq)
@@ -669,10 +583,7 @@ async def test_o_no_que_morre_passa_o_padrao_a_quem_esta_no_ar(
 async def test_so_com_o_roxo_no_ar_nenhum_canal_de_controle_e_escrito(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O roxo era o único no ar: o buraco continua, e o diário nomeia o nó.
-
-    MORDIDA: com a pergunta velha, o vermelho calado herda.
-    """
+    """O roxo era o único no ar: o buraco continua, e o diário nomeia o nó."""
     cena = await _cena_do_no(mesa, monkeypatch, no_ar=(ROXO,))
     _o_roxo_morre(cena, _canal(VERMELHO))
 
@@ -690,12 +601,7 @@ async def test_so_com_o_roxo_no_ar_nenhum_canal_de_controle_e_escrito(
 async def test_o_herdeiro_que_esta_no_ar_fica_como_esta(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O WirePlumber deu o padrão ao azul, que está no ar: foi ela quem o ligou.
-
-    MORDIDA: tire a conferência do herdeiro de
-    `hotkey.passar_o_padrao_do_no_morto` e o padrão sai do azul para o
-    vermelho, que ela ligou por último.
-    """
+    """O WirePlumber deu o padrão ao azul, que está no ar: foi ela quem o ligou."""
     cena = await _cena_do_no(mesa, monkeypatch, no_ar=(AZUL, VERMELHO, ROXO))
     _o_roxo_morre(cena, _canal(AZUL))
 
@@ -707,14 +613,7 @@ async def test_o_herdeiro_que_esta_no_ar_fica_como_esta(
 
 
 def test_o_fio_nunca_le_o_no_ar(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem laço (o subsystem que não passou pelo `start`), a porta não pergunta.
-
-    O `MicrofonesNoAr` é do laço e não tem lock: o fio do `bt_mic` classifica a
-    herança e entrega o resto. Sem a quem entregar, nada se elege.
-
-    MORDIDA: chame `hotkey.passar_o_padrao_do_no_morto` direto do fio, e o
-    eleitor é chamado sem o laço.
-    """
+    """Sem laço (o subsystem que não passou pelo `start`), a porta não pergunta."""
     chamadas: list[Any] = []
 
     class _Eleitor:
@@ -753,22 +652,11 @@ class _GerenciadorQuieto:
 async def test_o_start_de_producao_entrega_a_heranca_ao_laco(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O laço que a porta do nó usa é o que o `start()` DE PRODUÇÃO guarda.
-
-    As outras réguas do nó penduram o laço à mão (`sub._laco = …`), e com isso
-    nenhuma via o fio da produção: sem a linha do `start`, a porta do nó só
-    anota `bt_mic_heranca_sem_laco` no daemon de verdade, e o azul nunca herda.
-    Aqui o laço é o do `start`, o nó do roxo morre, e o azul herda; depois do
-    `stop`, a porta volta a não ter a quem entregar.
-
-    MORDIDA: tire o `self._laco = asyncio.get_running_loop()` do `start`, e o
-    azul não herda.
-    """
+    """O laço que a porta do nó usa é o que o `start()` DE PRODUÇÃO guarda."""
     cena = await _cena_do_no(mesa, monkeypatch, no_ar=(AZUL, ROXO))
     sub = cena.m.sub
     sub._laco = None
     sub._gerenciador_injetado = _GerenciadorQuieto()
-    # O fio do supervisor não roda: esta régua dirige a porta do nó à mão.
     monkeypatch.setattr(sub, "_loop", lambda: None)
     contexto = SimpleNamespace(config=None, controller=cena.m.backend)
     await sub.start(contexto)  # type: ignore[arg-type]

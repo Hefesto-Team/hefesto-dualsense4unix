@@ -180,70 +180,31 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Desliga a carona quando o valor está em :data:`VALORES_DESLIGADOS`.
-#: Ausente = LIGADA. Ver "O DESLIGADOR" na docstring do módulo: é isolamento
-#: de suíte, não flag de produto.
 CARONA_ENV = "HEFESTO_CARONA_WRAPPER"
 
-#: O que conta como "desligado" numa variável de ambiente. A forma SEM acento
-#: está aqui de propósito: ninguém digita til numa linha de `env`, e recusar
-#: a forma crua deixaria a pessoa achando que desligou sem ter desligado.
 VALORES_DESLIGADOS = frozenset(
     {"0", "off", "false", "no", "não", "nao"}  # (noqa-acento): valor de ambiente
 )
 
-#: De quanto em quanto tempo a vigia repergunta "a Steam já fechou?".
-#: 45 s é o compromisso: curto o bastante para o reparo parecer imediato depois
-#: de ela sair da Steam, longo o bastante para o tique custar menos que o
-#: poller de 2 Hz que a janela já tem. O tique NÃO lê o vdf.
 INTERVALO_DA_VIGIA_S = 45
 
-#: Contexto da statusbar quando a janela não tem nenhum `_toast_*` montado.
 CONTEXTO_DA_BARRA = "carona_wrapper"
 
-#: Rótulos de gesto — só entram no log, para o journal dizer QUEM pegou carona.
 GESTO_SALVAR = "salvar_perfil"
 GESTO_APLICAR = "aplicar_perfil"
 GESTO_VIGIA = "vigia_da_steam"
 
-#: Status extra desta camada: a vigia perguntou pela Steam e nem abriu o vdf.
-#: Nome próprio (em vez de reusar ``adiado_steam_aberta``) porque as duas
-#: coisas são diferentes: uma viu o censo, a outra não olhou.
 ADIADO_SEM_OLHAR = "adiado_sem_olhar"
 
 
 @dataclass(frozen=True)
 class ResultadoDaCarona:
-    """O que a passada apurou — já pronto para a tela, montado no worker.
-
-    ``frase`` vazia significa **não diga nada**. É o caso comum, e é de
-    propósito: a carona só fala quando tem notícia.
-    """
+    """O que a passada apurou — já pronto para a tela, montado no worker."""
 
     status: str
     frase: str
-    #: AppIDs que continuam sem o wrapper. É a identidade do "episódio": só um
-    #: conjunto DIFERENTE volta a falar na tela.
     faltantes: frozenset[str]
-    #: True quando ficou trabalho pendente — é o que arma (e mantém) a vigia.
     adiado: bool
-    #: A MESMA NOTÍCIA, SEM O AVISO — decisão 10-Q5 dela, 06/09/2026:
-    #: *"A tira passa a dizer só a metade curta e o aviso sai do texto."*
-    #:
-    #: ELA É SEGUNDA FORMA, E NÃO TROCA. ``frase`` continua sendo o que a janela
-    #: GTK mostra no toast (`_carona_toast`) e o que a aba Lançadores põe no
-    #: CORPO do cartão da Steam (`a07_lancadores.py`, `noticia()`): um cartão tem
-    #: corpo, e cabe o aviso inteiro. Quem tem duas linhas é a TIRA da aba
-    #: Perfis, e é só ela que lê este campo.
-    #:
-    #: O DONO DO TEXTO É QUEM ESCREVE AS DUAS. Cortar a frase longa no primeiro
-    #: ponto seria um segundo dono do texto — e a tira passaria a depender da
-    #: pontuação de uma frase que outra pessoa escreve.
-    #:
-    #: `""` QUER DIZER "não tenho versão curta", e não "não diga nada": quem lê
-    #: cai na ``frase``. Os status sem frase longa (``REPARO_NADA``,
-    #: ``ADIADO_SEM_OLHAR``) continuam com as duas vazias, e aí o contrato de
-    #: ``frase`` vazia — *"não diga nada"* — é quem decide.
     frase_curta: str = ""
 
 
@@ -257,18 +218,12 @@ def despachar(
     trabalho: Callable[[], ResultadoDaCarona],
     ao_terminar: Callable[[ResultadoDaCarona], bool],
 ) -> None:
-    """Roda ``trabalho()`` fora da thread do GTK e devolve na thread do GTK.
-
-    Ponto único de troca de thread da carona — os testes o substituem por uma
-    versão síncrona, do mesmo jeito que a suíte já faz com
-    ``ipc_bridge.run_in_thread``. Uma thread própria (e não o executor de um
-    worker do `ipc_bridge`): ver "THREAD" na docstring do módulo.
-    """
+    """Roda ``trabalho()`` fora da thread do GTK e devolve na thread do GTK."""
 
     def _corpo() -> None:
         try:
             resultado = trabalho()
-        except Exception as exc:  # nunca deixa a thread morrer calada
+        except Exception as exc:
             logger.warning("carona_do_wrapper_passada_falhou", erro=str(exc))
             return
         _de_volta_para_o_gtk(ao_terminar, resultado)
@@ -291,15 +246,7 @@ def _de_volta_para_o_gtk(
 
 
 def passada(*, completa: bool = True) -> ResultadoDaCarona:
-    """Uma passada da carona. **Só em thread worker** — lê disco e o `/proc`.
-
-    ``completa=False`` é o tique da vigia: pergunta só pelo estado da Steam e
-    desiste barato quando ela ainda está viva, sem abrir o `localconfig.vdf`.
-    Com a Steam fechada as duas formas fazem a mesma coisa.
-
-    Nunca levanta pelo caminho normal; erro de leitura vira ``erro`` no censo,
-    que a sentinela já sabe reportar sem concluir nada.
-    """
+    """Uma passada da carona. **Só em thread worker** — lê disco e o `/proc`."""
     from hefesto_dualsense4unix.integrations import (
         sentinela_do_wrapper as sw,
     )
@@ -307,12 +254,7 @@ def passada(*, completa: bool = True) -> ResultadoDaCarona:
         steam_launch_options as slo,
     )
 
-    # A pergunta vai ao `steam_launch_options`, que é onde as duas funções
-    # NASCEM — a sentinela apenas as reexporta. Mesma função, e o gate fica na
-    # ordem canônica: JOGO antes de Steam (fechar a Steam com um jogo aberto
-    # mataria o jogo).
     if not completa and (slo.steam_game_running() or slo.steam_running()):
-        # Nada a dizer: quem armou a vigia já falou uma vez.
         return ResultadoDaCarona(ADIADO_SEM_OLHAR, "", frozenset(), True)
 
     status, censo, resultado = sw.reparar_ou_adiar()
@@ -323,12 +265,6 @@ def passada(*, completa: bool = True) -> ResultadoDaCarona:
         if not appids:
             return ResultadoDaCarona(status, "", frozenset(), False)
         plural = "jogos" if len(appids) > 1 else "jogo"
-        # A METADE QUE É FATO, e ela é o começo da longa — decisão 10-Q5. O que
-        # sai são as DUAS frases de aviso ("Sem ela, no Bluetooth…" e "As opções
-        # que você já tinha…"): a primeira explica um sintoma que já não existe
-        # (a reposição ACABOU de acontecer), e a segunda tranquiliza sobre um
-        # estrago que não houve. Numa tira de duas linhas, as duas empurram para
-        # fora o NOME DO JOGO, que é a única coisa que ela não sabe.
         curta = (
             f"Reposta a Opção de Inicialização do Hefesto em {len(appids)} "
             f"{plural} da Steam: {slo.lista_de_jogos(appids)}."
@@ -341,10 +277,6 @@ def passada(*, completa: bool = True) -> ResultadoDaCarona:
         return ResultadoDaCarona(status, frase, frozenset(), False, curta)
 
     if status in (sw.REPARO_ADIADO_JOGO, sw.REPARO_ADIADO_STEAM):
-        # A frase da sentinela já nomeia o jogo E já diz o que vai acontecer
-        # ("vou repor assim que…") — que é exatamente o contrato da vigia.
-        # A CURTA É IRMÃ DELA, e mora no MESMO módulo: a frase é da sentinela,
-        # e as duas formas saem de quem a escreve (10-Q5).
         return ResultadoDaCarona(status, sw.frase_do_aviso(censo), faltantes,
                                  True, sw.frase_do_aviso_curta(censo))
 
@@ -363,29 +295,12 @@ def passada(*, completa: bool = True) -> ResultadoDaCarona:
 
 
 class CaronaDoWrapperMixin(WidgetAccessMixin):
-    """Dá a qualquer mixin da janela o gesto que repõe o wrapper de carona.
+    """Dá a qualquer mixin da janela o gesto que repõe o wrapper de carona."""
 
-    Base de ``ProfileWriterMixin`` (e portanto do rodapé inteiro) e de
-    ``ProfilesActionsMixin`` (a aba Perfis). Quem grava ou aplica perfil chama
-    :meth:`pegar_carona_no_gesto` e mais nada.
-
-    **Este caminho nunca pode derrubar o gesto dela.** Salvar um perfil tem de
-    salvar o perfil mesmo que a Steam esteja num estado que ninguém previu —
-    por isso cada degrau daqui engole as próprias exceções e as manda para o
-    journal, em vez de deixá-las subir para o handler do botão.
-    """
-
-    #: Uma passada por vez: duas escritas concorrentes no mesmo vdf seriam a
-    #: única forma de esta cura estragar a biblioteca dela.
     _carona_em_curso: bool = False
-    #: `source id` da vigia do GLib; ``None`` = desarmada.
     _carona_vigia_id: int | None = None
-    #: Episódio já anunciado — o que impede o aviso de repetir a cada Salvar.
     _carona_ja_avisado: frozenset[str] = frozenset()
 
-    # ------------------------------------------------------------------
-    # A carona
-    # ------------------------------------------------------------------
 
     def pegar_carona_no_gesto(self, gesto: str = GESTO_SALVAR) -> None:
         """Chamada pelos gestos de SALVAR e APLICAR perfil. Nunca levanta."""
@@ -402,7 +317,7 @@ class CaronaDoWrapperMixin(WidgetAccessMixin):
             despachar(
                 lambda: passada(completa=completa), self._carona_ao_terminar
             )
-        except Exception as exc:  # não existe gesto que valha uma exceção aqui
+        except Exception as exc:
             self._carona_em_curso = False
             logger.warning("carona_do_wrapper_despacho_falhou", erro=str(exc))
 
@@ -420,19 +335,12 @@ class CaronaDoWrapperMixin(WidgetAccessMixin):
         if resultado.adiado:
             self._carona_armar_vigia()
         else:
-            # Nada pendente: o episódio ACABOU, e a memória do aviso vai junto.
-            # Zerar aqui (e não lá embaixo, junto do toast) é o que impede um
-            # episódio NOVO com os mesmos jogos de nascer calado — o caso é
-            # real: ela conserta a linha na mão, o próximo Salvar diz
-            # "nada a fazer" (frase vazia, o `return` de baixo), e a Steam come
-            # o wrapper de novo na semana seguinte. Com a memória velha ainda
-            # de pé, esse segundo episódio seria silencioso.
             self._carona_desarmar_vigia()
             self._carona_ja_avisado = frozenset()
         if not resultado.frase:
             return
         if resultado.adiado and resultado.faltantes == self._carona_ja_avisado:
-            return  # mesmo episódio: repetir a cada Salvar viraria ruído
+            return
         if resultado.adiado:
             self._carona_ja_avisado = resultado.faltantes
         logger.info(
@@ -440,9 +348,6 @@ class CaronaDoWrapperMixin(WidgetAccessMixin):
         )
         self._carona_toast(resultado.frase)
 
-    # ------------------------------------------------------------------
-    # A vigia — "ela não precisa lembrar de nada"
-    # ------------------------------------------------------------------
 
     def _carona_armar_vigia(self) -> None:
         """Passa a reperguntar "a Steam já fechou?" até o reparo caber."""
@@ -472,15 +377,9 @@ class CaronaDoWrapperMixin(WidgetAccessMixin):
 
             GLib.source_remove(vigia)
 
-    # ------------------------------------------------------------------
 
     def _carona_toast(self, msg: str) -> None:
-        """A linha no rodapé, pelo caminho que o mixin dono já usa.
-
-        Mesma escada do ``_toast_de_gravacao`` do funil: o helper do rodapé
-        quando existe (é o que os dublês de teste substituem), o da aba Perfis
-        depois, e a statusbar crua como último degrau.
-        """
+        """A linha no rodapé, pelo caminho que o mixin dono já usa."""
         for nome in ("_footer_toast", "_toast_profile"):
             toast = getattr(self, nome, None)
             if callable(toast):

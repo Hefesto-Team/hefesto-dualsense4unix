@@ -1,34 +1,4 @@
-"""O «Mapear Entrada a Entrada» grava de verdade — ENTRADA-A-ENTRADA-01 (23/09/2026).
-
-A R9 das doze decisões dela do rádio: *ligar de verdade*. Até aqui a cerimônia
-da aba 08 era eco — três telas por âncora, zero gesto, e um «Gravado na hora»
-que não gravava nada.
-
-O QUE ESTA RÉGUA COBRA:
-
-1. **o laço:** a pergunta dá o LUGAR certo; responder grava na hora. As duas
-   fases e o contador das telas aprovadas são da ENTRADA-A-ENTRADA-02, e a
-   régua delas é ``test_entrada_a_entrada_02_as_telas_aprovadas.py``;
-2. **a chave é o lugar:** gravar num boot e reler noutro, com os barramentos
-   trocados e as portas visitadas em outra ordem, dá o MESMO nome. É a mordida
-   da sprint: chavear pelo caminho de barramento, pelo ``hciN`` ou pela ordem
-   de chegada reprova aqui;
-3. **interligado com o resto:** o ``mapa-das-portas`` e os leitores de hoje
-   leem o que a cerimônia gravou; o conselho de porta do vigia diz o nome
-   dela; o adaptador herda o nome da porta — e o ``Alias`` tem UM escritor, o
-   ``bt_active_mode.sh`` (ENTRADA-A-ENTRADA-02);
-4. **um dono:** a grafia do lugar mora em ``utils/lugar.py`` (reexportada pelo
-   ``utils/maquina.py``), e os dois módulos que o doctor carrega continuam
-   stdlib no import — e, desde a ENTRADA-A-ENTRADA-02, também na chamada.
-
-O «udev falso» é uma árvore ``/sys`` de mentira no ``tmp_path``, lida pelo
-``censo_do_barramento.ler_o_barramento`` DE VERDADE: um dublê que devolvesse o
-censo pronto seria mais frouxo que o leitor real, e não pegaria o dia em que o
-leitor deixasse de publicar o controlador PCI.
-
-Faixa sintética da casa: controladores ``0000:0a:00.0`` e ``0000:0b:00.0``,
-endereços ``aa:bb:cc`` com os octetos 4 e 5 zerados.
-"""
+"""O «Mapear Entrada a Entrada» grava de verdade — ENTRADA-A-ENTRADA-01 (23/09/2026)."""
 
 from __future__ import annotations
 
@@ -66,11 +36,8 @@ SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 PCI_A = "0000:0a:00.0"
 PCI_B = "0000:0b:00.0"
 
-#: O primeiro boot: ``usb1``/``usb2`` no A, ``usb3``/``usb4`` no B.
 BOOT_1 = {1: PCI_A, 2: PCI_A, 3: PCI_B, 4: PCI_B}
-#: O segundo boot: os dois controladores subiram na ordem inversa.
 BOOT_2 = {1: PCI_B, 2: PCI_B, 3: PCI_A, 4: PCI_A}
-#: Os barramentos 3.x — os pares; os ímpares são o lado 2.0.
 RAPIDOS = frozenset({2, 4})
 
 DUALSENSE = ("054c", "0ce6", ("03", "00", "00"))
@@ -80,18 +47,8 @@ DONGLE_BT = ("2357", "0604", ("e0", "01", "01"))
 HUB = ("05e3", "0610", ("09", "00", "00"))
 
 
-# ---------------------------------------------------------------------------
-# O /sys de mentira — lido pelo leitor de verdade
-# ---------------------------------------------------------------------------
-
-
 class SysfsDeMentira:
-    """Uma árvore ``/sys/bus/usb/devices`` com dois controladores xHCI.
-
-    Cada controlador publica DOIS barramentos (o 2.0 e o 3.x), como os desta
-    bancada, e o número de cada barramento é a ordem do boot — por isso o
-    segundo boot da régua troca os números sem mexer em porta nenhuma.
-    """
+    """Uma árvore ``/sys/bus/usb/devices`` com dois controladores xHCI."""
 
     def __init__(self, raiz: Path, barramentos: Mapping[int, str]) -> None:
         self.raiz = raiz
@@ -100,8 +57,6 @@ class SysfsDeMentira:
         self.barramentos = dict(barramentos)
         self._dirs: dict[str, Path] = {}
         for bus, pci in sorted(barramentos.items()):
-            # ``platform/…`` é o controlador que não é PCI (o ``vhci_hcd`` do
-            # usbip): o censo não acha controlador na cadeia, e não há lugar.
             pai = raiz / "devices" / pci if pci.startswith("platform/") else (
                 raiz / "devices" / "pci0000:00" / pci
             )
@@ -194,11 +149,7 @@ class SysfsDeMentira:
 
 
 def _laco(sysfs: SysfsDeMentira, **extra: Any) -> ee.LacoDaEntrada:
-    """O laço com o /sys de mentira e o DISCO DE PRODUÇÃO (o do tmp_path).
-
-    Esta bancada não publica os nós de entrada (a da 02 publica): os ``nos``
-    gravados saem vazios, e nenhum ``/sys`` dela é lido.
-    """
+    """O laço com o /sys de mentira e o DISCO DE PRODUÇÃO (o do tmp_path)."""
     extra.setdefault("entradas", tuple)
     return ee.LacoDaEntrada(ler=sysfs.ler, **extra)
 
@@ -214,13 +165,8 @@ def disco(tmp_path: Path) -> Path:
 @pytest.fixture()
 def boot_1(tmp_path: Path) -> SysfsDeMentira:
     sysfs = SysfsDeMentira(tmp_path / "boot1", BOOT_1)
-    sysfs.plugar(3, "4", HUB)  # o hub da mesa, na porta 4 do controlador B
+    sysfs.plugar(3, "4", HUB)
     return sysfs
-
-
-# ---------------------------------------------------------------------------
-# 1. o laço
-# ---------------------------------------------------------------------------
 
 
 def test_a_pergunta_da_o_lugar_certo(boot_1: SysfsDeMentira, disco: Path) -> None:
@@ -274,8 +220,7 @@ def test_parado_e_no_fim_o_laco_nao_le_o_barramento(boot_1: SysfsDeMentira) -> N
 
 
 def test_a_face_fora_das_quatro_e_recusada(boot_1: SysfsDeMentira, disco: Path) -> None:
-    """«Traseira» é do mockup, não do produto: uma quinta resposta abriria
-    uma segunda língua para a mesma pergunta."""
+    """«Traseira» é do mockup, não do produto: uma quinta resposta abriria"""
     laco = _laco(boot_1)
     laco.comecar()
     with pytest.raises(ValueError):
@@ -284,9 +229,7 @@ def test_a_face_fora_das_quatro_e_recusada(boot_1: SysfsDeMentira, disco: Path) 
 
 
 def test_as_quatro_respostas_sao_as_da_janela_de_hoje() -> None:
-    """As quatro moram também em ``calibrar_entradas`` (o gerador da aba 08 as
-    lê de lá por AST). Esta régua trava as duas juntas, e a regra do perto e do
-    alto junto com elas."""
+    """As quatro moram também em ``calibrar_entradas`` (o gerador da aba 08 as"""
     from hefesto_dualsense4unix.app.widgets import calibrar_entradas as janela
 
     assert janela.FACES == ee.FACES
@@ -308,11 +251,6 @@ def test_o_hub_usb3_chega_pelos_dois_lados_e_e_uma_pergunta_so(
     assert porta["caminho"] == "3-2", "o lado 2.0 é onde o DualSense enumera"
 
 
-# ---------------------------------------------------------------------------
-# 2. a chave é o lugar — a mordida da sprint
-# ---------------------------------------------------------------------------
-
-
 def _mapear(sysfs: SysfsDeMentira, bus: int, devpath: str, face: str) -> ee.Gravacao:
     """Ela pluga, abre a cerimônia, responde e tira o cabo."""
     nome = sysfs.plugar(bus, devpath, DUALSENSE)
@@ -326,31 +264,21 @@ def _mapear(sysfs: SysfsDeMentira, bus: int, devpath: str, face: str) -> ee.Grav
 
 
 def test_gravar_e_reler_noutro_boot_da_o_mesmo_nome(tmp_path: Path, disco: Path) -> None:
-    """A MORDIDA DA SPRINT. No primeiro boot, a porta 4 do controlador B é
-    ``3-4`` e a porta 4 do controlador A é ``1-4``. No segundo, os
-    controladores sobem na ordem inversa: a porta B vira ``1-4`` e a A vira
-    ``3-4`` — o caminho de barramento de uma é o da outra.
-
-    Chaveado pelo caminho de barramento, o motor diria que a porta A é a
-    «Entrada 1» — o nome da outra metade da mesa, calado, que é o que a D3
-    proíbe. Pelo lugar, cada porta continua sendo a dela.
-    """
+    """A MORDIDA DA SPRINT. No primeiro boot, a porta 4 do controlador B é"""
     boot = SysfsDeMentira(tmp_path / "boot1", BOOT_1)
-    assert _mapear(boot, 3, "4", ee.FACE_FRENTE).entrada == "1"  # porta B
-    assert _mapear(boot, 1, "4", ee.FACE_ATRAS).entrada == "2"  # porta A
+    assert _mapear(boot, 3, "4", ee.FACE_FRENTE).entrada == "1"
+    assert _mapear(boot, 1, "4", ee.FACE_ATRAS).entrada == "2"
 
     depois = SysfsDeMentira(tmp_path / "boot2", BOOT_2)
-    depois.plugar(3, "4", DUALSENSE)  # a porta A, agora com o caminho da B
-    depois.plugar(1, "4", DUALSENSE)  # a porta B
+    depois.plugar(3, "4", DUALSENSE)
+    depois.plugar(1, "4", DUALSENSE)
     assert _laco(depois).comecar()["estado"] == ee.FIM, "porta mapeada voltou a ser pergunta"
     assert ee.nome_da_porta("3-4", controladores=depois.controladores()) == "Entrada 2"
     assert ee.nome_da_porta("1-4", controladores=depois.controladores()) == "Entrada 1"
 
 
 def test_o_nome_do_adaptador_vai_pelo_endereco_e_nao_pelo_hci() -> None:
-    """Os dois adaptadores trocam de ``hciN`` e de porta entre boots; o nome vai
-    com o ENDERECO (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO, que revoga a D3: o
-    nome da porta não é mais o do adaptador)."""
+    """Os dois adaptadores trocam de ``hciN`` e de porta entre boots; o nome vai"""
     l1 = f"pci-{PCI_A}-usb-0:3"
     l2 = f"pci-{PCI_B}-usb-0:4.1.4"
     documento = MaquinaConfig.model_validate(
@@ -378,11 +306,6 @@ def test_o_nome_do_adaptador_vai_pelo_endereco_e_nao_pelo_hci() -> None:
     assert nomes_depois == nomes_antes, "o nome ficou na porta em vez de ir com o adaptador"
 
 
-# ---------------------------------------------------------------------------
-# 3. interligado com o resto
-# ---------------------------------------------------------------------------
-
-
 def test_os_leitores_de_hoje_e_o_mapa_das_portas_leem_o_que_ela_gravou(
     boot_1: SysfsDeMentira, disco: Path
 ) -> None:
@@ -404,8 +327,7 @@ def test_os_leitores_de_hoje_e_o_mapa_das_portas_leem_o_que_ela_gravou(
 def test_a_entrada_numerada_na_outra_janela_nao_vira_pergunta(
     boot_1: SysfsDeMentira, disco: Path
 ) -> None:
-    """O desenho de hoje (``mapa``, pelo caminho) é a ponte com o que ela já
-    numerou: o aparelho na entrada 7 não é pergunta, e a porta se chama 7."""
+    """O desenho de hoje (``mapa``, pelo caminho) é a ponte com o que ela já"""
     maquina.gravar_maquina(
         {
             "mapa": {
@@ -420,8 +342,7 @@ def test_a_entrada_numerada_na_outra_janela_nao_vira_pergunta(
 
 
 def test_o_adaptador_na_entrada_numerada_nao_herda_o_numero() -> None:
-    """A entrada 9 que ela numerou não dá nome ao adaptador plugado nela: era a
-    D3, e foi assim que a tela dela mostrou adaptadores «15» e «13»."""
+    """A entrada 9 que ela numerou não dá nome ao adaptador plugado nela: era a"""
     lugar = f"pci-{PCI_B}-usb-0:4.1.4"
     adaptador = bd.AdaptadorDoBluez("/org/bluez/hci0", "hci0", "aa:bb:cc:00:00:01", lugar=lugar)
     documento = MaquinaConfig.model_validate(
@@ -432,24 +353,17 @@ def test_o_adaptador_na_entrada_numerada_nao_herda_o_numero() -> None:
             },
         }
     )
-    # O «9» gravado como nome não é nome (D-2609-O-NOME-E-DA-POSICAO): a porta
-    # se chama «Entrada 9», e não «9».
     assert (
         ee.nome_da_porta("3-4.1.4", maquina=documento, controladores=BOOT_1) == "Entrada 9"
     )
     assert not maquina.nome_dado_ao_adaptador(documento, adaptador.endereco)
 
 
-#: As frases que a ponte root escreve no diário com a porta dentro — LIDAS do
-#: script, nunca digitadas aqui: digitada, a régua continuaria verde no dia em
-#: que o escritor mudasse a redação e a troca deixasse de casar.
 _FRASES_DA_PONTE_ROOT = re.compile(r'"(O adaptador da porta \$\{porta\}[^"]*)"')
 
 
 def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
-    """A ponte root escreve o caminho do sistema no diário; quem lê o diário
-    troca pelo nome dela. As frases são as de ``bt_ponte_privilegiada.sh``,
-    todas elas, lidas do script."""
+    """A ponte root escreve o caminho do sistema no diário; quem lê o diário"""
     documento = MaquinaConfig.model_validate(
         {
             "mapa": {
@@ -478,9 +392,6 @@ def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
                "frase": "Este adaptador mudou de porta."}
     assert ee.com_o_nome_dela(do_dono, maquina=documento)["porta_nome"] == "Entrada 3"
 
-    # SEM NOME E SEM NÚMERO, a porta se chama como o desenho aprovado mostra —
-    # «Entrada 4.1.4» (TRANSPLANTE-DA-SECAO-01, item 4). Antes a linha voltava
-    # como veio, e o caminho do sistema chegava cru ao sino.
     sem_mapa = ee.com_o_nome_dela(linha, maquina=MaquinaConfig(), controladores=BOOT_1)
     assert sem_mapa["porta_nome"] == "Entrada 4.1.4"
     assert "3-4.1.4" not in sem_mapa["frase"], "o caminho do sistema chegou cru à frase"
@@ -492,8 +403,7 @@ def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
 
 
 def test_dar_nome_ao_adaptador_grava_e_apaga_o_nome(disco: Path) -> None:
-    """O nome é NOSSO e mora no ``maquina.json``; o ``Alias`` é do script
-    (ENTRADA-A-ENTRADA-02). Nome vazio apaga o nome do adaptador."""
+    """O nome é NOSSO e mora no ``maquina.json``; o ``Alias`` é do script"""
     feito = ee.dar_nome_ao_adaptador("AA:BB:CC:00:00:01", "  Extensor à esquerda ")
     assert feito.gravou and feito.nome == "Extensor à esquerda"
     assert carregar_maquina().adaptadores["aabbcc000001"].nome == "Extensor à esquerda"
@@ -513,26 +423,14 @@ def test_o_estado_do_laco_e_o_que_o_piloto_pinta(boot_1: SysfsDeMentira, disco: 
     assert foto["estado"] == ee.FIM and foto["gravou"] is True
     ultima = foto["ultima"]  # (noqa-acento) chave de máquina, ASCII por contrato
     assert ultima["entrada"] == "1" and ultima["face"] == ee.FACE_ATRAS
-    json.dumps(foto)  # vai pela ponte do piloto: tem de ser JSON
+    json.dumps(foto)
     laco.parar()
     assert laco.estado()["estado"] == ee.PARADO
     assert ee.o_laco() is ee.o_laco(), "dois laços no mesmo processo"
 
 
-# ---------------------------------------------------------------------------
-# 4. a amarra, o esquema e o dono da grafia
-# ---------------------------------------------------------------------------
-
-
 def test_a_entrada_e_do_lugar_e_o_caminho_e_do_boot() -> None:
-    """A entrada guarda o lugar, e o caminho de cada boot sai dele.
-
-    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): aqui morava a
-    régua das três conferências da amarra em ``lugares`` (a entrada fora do
-    desenho, dois lugares para a mesma entrada, e o desenho que pôs outro
-    buraco na entrada). Com o lugar dentro da entrada não há dois registros
-    para discordar: sobra a entrada fora do desenho e o lugar em duas entradas.
-    """
+    """A entrada guarda o lugar, e o caminho de cada boot sai dele."""
     lugar = f"pci-{PCI_B}-usb-0:4.2"
     base = {
         "mapa": {
@@ -608,12 +506,7 @@ def _literais(fonte: str) -> list[tuple[int, str]]:
 
 
 def test_a_grafia_do_lugar_tem_um_dono_so() -> None:
-    """Quem monta ``…-usb-0:…`` é ``utils/lugar.py``, e ninguém mais.
-
-    MORDIDA: devolva ao ``bluez_dbus.lugar_de`` a montagem própria dele — ele
-    volta a aparecer aqui, e a segunda grafia diverge da primeira no dia em que
-    uma delas mudar.
-    """
+    """Quem monta ``…-usb-0:…`` é ``utils/lugar.py``, e ninguém mais."""
     dono = SRC / "utils" / "lugar.py"
     fora: list[str] = []
     for arquivo in sorted(SRC.rglob("*.py")):
@@ -627,8 +520,6 @@ def test_a_grafia_do_lugar_tem_um_dono_so() -> None:
 
 def test_os_leitores_perguntam_ao_dono(monkeypatch: pytest.MonkeyPatch) -> None:
     assert maquina.lugar_de is grafia.lugar_de, "o maquina.py deixou de reexportar o dono"
-    # O ``bluez_dbus`` IMPORTA o dono desde a A-ENTRADA-TEM-UM-REGISTRO-SO-01
-    # (28/09/2026), em vez de repassar a chamada por um ``def`` próprio.
     assert bd.lugar_de is grafia.lugar_de, "o bluez_dbus tem um lugar_de que não é o do dono"
     monkeypatch.setattr(grafia, "lugar_de", lambda pci, devpath: f"DONO:{pci}:{devpath}")
     adaptador = mesa_de_radio.Adaptador("hci9", no="x", busnum=3, devpath="1",
@@ -637,13 +528,7 @@ def test_os_leitores_perguntam_ao_dono(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_os_dois_do_doctor_continuam_stdlib_no_import() -> None:
-    """O doctor carrega o ``exame_da_mesa`` — e por ele o ``bluez_dbus`` e o
-    ``mesa_de_radio`` — pelo ``python3`` do sistema. Pedir a grafia ao
-    ``utils/maquina`` (pydantic) no TOPO quebraria a conferência dela.
-
-    MORDIDA: suba o ``from …utils.maquina import lugar_de`` para o topo de um
-    dos dois — o import reprova aqui.
-    """
+    """O doctor carrega o ``exame_da_mesa`` — e por ele o ``bluez_dbus`` e o"""
     codigo = (
         "import sys\n"
         "sys.modules['pydantic'] = None\n"
@@ -665,20 +550,6 @@ def test_os_dois_do_doctor_continuam_stdlib_no_import() -> None:
     assert feito.returncode == 0 and feito.stdout.strip() == "ok", feito.stderr[-800:]
 
 
-# ---------------------------------------------------------------------------
-# 5. as regras do laço que não tinham dente (conferência, 23/09/2026)
-# ---------------------------------------------------------------------------
-#
-# Cada teste abaixo nasceu de uma cura que passava com a régua inteira verde
-# quando arrancada. O nome diz a regra; a mordida está no docstring.
-#
-# Desde a ENTRADA-A-ENTRADA-02 a fase sentada só pergunta o que NÃO tem lugar,
-# então quatro destas regras (a fileira, o caminho repetido, a amarra velha e a
-# extensão) não se alcançam mais pelo laço: elas continuam no GRAVADOR, que é
-# quem as cumpre se o desenho mudar entre o tique e o toque — e a régua fala
-# com ele direto.
-
-
 def _gravar_direto(lugar: str, caminho: str, face: str) -> ee.Gravacao:
     porta = ee.PortaVista(lugar=lugar, caminho=caminho)
     return ee._gravar_as_portas(
@@ -687,12 +558,7 @@ def _gravar_direto(lugar: str, caminho: str, face: str) -> ee.Gravacao:
 
 
 def test_responder_de_novo_a_mesma_face_nao_embaralha_a_fileira(disco: Path) -> None:
-    """A ordem da fileira é o desenho dela: confirmar a face de uma porta já
-    mapeada não pode mandar o número para o fim.
-
-    MORDIDA: tirar o número de TODAS as faces (inclusive a escolhida) e
-    acrescentá-lo de novo — a fileira ``1, 2, 3`` vira ``2, 3, 1``.
-    """
+    """A ordem da fileira é o desenho dela: confirmar a face de uma porta já"""
     for degrau in ("1", "2", "3"):
         lugar = f"pci-{PCI_B}-usb-0:4.{degrau}"
         assert _gravar_direto(lugar, f"3-4.{degrau}", ee.FACE_FRENTE).gravou
@@ -723,25 +589,14 @@ def test_o_hub_que_chega_com_o_dualsense_dentro_e_a_porta_do_hub(
 
 
 def test_o_aparelho_sem_controlador_pci_nao_e_pergunta(tmp_path: Path, disco: Path) -> None:
-    """Sem controlador PCI não há lugar (o ``vhci_hcd`` do usbip, por exemplo),
-    e sem lugar não há o que gravar: não pode virar pergunta.
-
-    MORDIDA: aceitar o aparelho sem ``controlador_pci`` — a pergunta nasce com
-    lugar vazio, e a resposta dela vira ``sem_lugar``.
-    """
+    """Sem controlador PCI não há lugar (o ``vhci_hcd`` do usbip, por exemplo),"""
     sysfs = SysfsDeMentira(tmp_path / "sys", {**BOOT_1, 9: "platform/vhci_hcd.0"})
     sysfs.plugar(9, "1", DUALSENSE)
     assert _laco(sysfs).comecar()["estado"] == ee.FIM, "aparelho sem lugar virou pergunta"
 
 
 def test_o_caminho_repetido_noutra_entrada_fica_vazio(disco: Path) -> None:
-    """Um aparelho está em UMA entrada. Se o desenho ainda dava o mesmo caminho
-    a outra entrada (a outra janela, ou um boot que trocou os barramentos), ela
-    perde o caminho — senão os leitores de hoje respondem pela entrada errada.
-
-    MORDIDA: não esvaziar a outra — ``porta_de`` (o leitor de hoje) responde
-    ``3``, que é o número que ela deu a OUTRO buraco.
-    """
+    """Um aparelho está em UMA entrada. Se o desenho ainda dava o mesmo caminho"""
     from hefesto_dualsense4unix.integrations.mapa_das_portas import porta_de
 
     lugar = f"pci-{PCI_B}-usb-0:4.2"
@@ -765,14 +620,7 @@ def test_o_caminho_repetido_noutra_entrada_fica_vazio(disco: Path) -> None:
 
 
 def test_o_lugar_em_duas_entradas_fica_numa_so_depois_do_mapear(disco: Path) -> None:
-    """Duas entradas guardando o mesmo lugar (o arquivo editado à mão) é «não
-    sei» — e o Mapear que passa por aquele buraco deixa UMA: as que o guardavam
-    ficam vazias, mesmo com nós de outro boot que não batem com os de agora.
-
-    MORDIDA: tire de ``_gravar_as_portas`` o esvaziar da entrada que guardava o
-    mesmo lugar — o lugar fica em três entradas, e ``entrada_do_lugar`` segue
-    «não sei» depois do Mapear.
-    """
+    """Duas entradas guardando o mesmo lugar (o arquivo editado à mão) é «não"""
     lugar = f"pci-{PCI_B}-usb-0:4.2"
     maquina.gravar_maquina(
         {
@@ -789,7 +637,6 @@ def test_o_lugar_em_duas_entradas_fica_numa_so_depois_do_mapear(disco: Path) -> 
     documento = carregar_maquina()
     assert maquina.entrada_do_lugar(documento, lugar) == feita.entrada, "o lugar ficou em duas"
     for numero in {"3", "7"} - {feita.entrada}:
-        # vazia, a entrada sai do arquivo (``_podar``); o número fica na face
         outra = documento.mapa.portas.get(numero)
         assert outra is None or (outra.lugar is None and outra.nos == []), (
             f"a {numero} ficou com o buraco: {outra}")
@@ -798,19 +645,7 @@ def test_o_lugar_em_duas_entradas_fica_numa_so_depois_do_mapear(disco: Path) -> 
 def test_o_lugar_que_dizia_ser_esta_entrada_perde_a_amarra_e_guarda_o_nome(
     tmp_path: Path, disco: Path
 ) -> None:
-    """Um número é de UM lugar. A amarra velha de outro lugar (que já não vale:
-    o desenho pôs esta entrada noutro buraco) não migra, e o Mapear amarra o
-    lugar novo à entrada.
-
-    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o nome do lugar
-    velho «ficava» nele, e a tela não o mostrava na entrada 7 (a amarra não
-    valia). Com um registro só, o nome de um lugar sem entrada que valha sai na
-    migração, como o do adaptador (a D3, revogada em 26/09), e o log o diz.
-
-    MORDIDA: faça a migração aceitar a amarra sem testemunha pela cadeia de
-    portas sozinha, ou pelo número — a 7 guarda o lugar velho, e o Mapear dá
-    ao lugar novo outro número.
-    """
+    """Um número é de UM lugar. A amarra velha de outro lugar (que já não vale:"""
     from tests.unit.test_o_nome_da_entrada_e_da_posicao import gravar_o_arquivo_de_antes
 
     novo = f"pci-{PCI_B}-usb-0:4.2"
@@ -835,13 +670,7 @@ def test_o_lugar_que_dizia_ser_esta_entrada_perde_a_amarra_e_guarda_o_nome(
 
 
 def test_dois_numeros_para_o_mesmo_lugar_e_nao_sei() -> None:
-    """Sem amarra, o desenho de hoje dá nome pelos caminhos deste lugar — e os
-    dois lados do mesmo buraco (``3-4`` e ``4-4``) com números diferentes é
-    "não sei", nunca o primeiro da lista.
-
-    MORDIDA: escolher um dos dois — sai «Entrada 1» para um buraco que o
-    desenho diz ser também a 2.
-    """
+    """Sem amarra, o desenho de hoje dá nome pelos caminhos deste lugar — e os"""
     documento = MaquinaConfig.model_validate(
         {
             "mapa": {
@@ -855,12 +684,7 @@ def test_dois_numeros_para_o_mesmo_lugar_e_nao_sei() -> None:
 
 
 def test_a_extensao_fica_no_quadrado_de_quem_a_hospeda(disco: Path) -> None:
-    """A entrada que nasce de uma extensão desenha dentro do quadrado da que a
-    hospeda e não entra em fileira nenhuma (``FaceDeclarada``).
-
-    MORDIDA: pôr a extensão na face respondida — o ``15a`` aparece numa
-    fileira «Na escrivaninha» que o desenho dela não tem.
-    """
+    """A entrada que nasce de uma extensão desenha dentro do quadrado da que a"""
     maquina.gravar_maquina(
         {
             "mapa": {
@@ -878,15 +702,7 @@ def test_a_extensao_fica_no_quadrado_de_quem_a_hospeda(disco: Path) -> None:
 
 
 def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
-    """O rótulo de um campo vai para a barra de status dela quando o campo é
-    descartado, e a tela diz «entrada», nunca «porta»
-    (``D-A-PALAVRA-ENTRADA``: «porta» colide com porta de rede). O campo
-    ``lugares``, que nasceu com esta régua, saiu do esquema em 28/09/2026
-    (A-ENTRADA-TEM-UM-REGISTRO-SO-01).
-
-    MORDIDA: devolva o rótulo «Qual entrada é cada porta» — reprova nomeando o
-    campo.
-    """
+    """O rótulo de um campo vai para a barra de status dela quando o campo é"""
     from hefesto_dualsense4unix.app import ipc_bridge
 
     com_porta = {

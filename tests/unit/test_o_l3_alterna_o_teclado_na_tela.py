@@ -38,12 +38,7 @@ from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDe
 
 
 class _ProcessoDeMentira:
-    """O que o `Popen` devolveria — vivo até alguém o terminar.
-
-    `morrer_por_fora()` é o caso que separa um alternador honesto de um que
-    conta apertos: a janela do wvkbd fechada pela pessoa, ou derrubada pelo
-    compositor, sem o daemon saber.
-    """
+    """O que o `Popen` devolveria — vivo até alguém o terminar."""
 
     def __init__(self, pid: int) -> None:
         self.pid = pid
@@ -63,12 +58,7 @@ class _ProcessoDeMentira:
 
 @pytest.fixture
 def mesa(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Um teclado na tela instalado, um `Popen` de mentira, e o L3 no fio.
-
-    Devolve o controlador, a lista de argv abertos, os processos criados e a
-    função que aperta o L3 uma vez (press seguido de release, que é como o
-    tique do daemon entrega um clique de botão).
-    """
+    """Um teclado na tela instalado, um `Popen` de mentira, e o L3 no fio."""
     monkeypatch.setattr(
         subsistema.shutil, "which",
         lambda nome: f"/usr/bin/{nome}" if nome == "wvkbd-mobintl" else None)
@@ -83,8 +73,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         return proc
 
     monkeypatch.setattr(subsistema.subprocess, "Popen", _popen)
-    # A sonda de módulo tem cache com prazo, e ele atravessa testes: zerá-la
-    # aqui evita que a resposta de um caso decida o seguinte.
     monkeypatch.setattr(subsistema, "_OSK_SONDA", [(float("-inf"), False)])
 
     ctrl = _OSKController()
@@ -92,16 +80,12 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         bindings=dict(DEFAULT_BUTTON_BINDINGS),
         virtual_token_callback=ctrl.dispatch_token,
     )
-    # Sem device real: o token virtual nunca chega ao uinput, mas o `dispatch`
-    # exige os dois atributos para não sair pela porta do "device parado".
     dev._device = object()
     dev._uinput_mod = object()
 
     def apertar_l3() -> None:
         dev.dispatch(frozenset({"l3"}))
         dev.dispatch(frozenset())
-        # O toque sai do laço para o fio do teclado (o `systemd-run` não
-        # segura a leitura dos quatro controles): a régua espera o fio.
         assert ctrl.esperar_os_toques(5.0)
 
     return {"ctrl": ctrl, "dev": dev, "abertos": abertos,
@@ -116,12 +100,7 @@ def test_o_preset_de_fabrica_do_l3_e_o_alternador() -> None:
 
 
 def test_o_segundo_toque_fecha(mesa: dict[str, Any]) -> None:
-    """A RÉGUA. Aperta, abre; aperta de novo, FECHA.
-
-    A MORDIDA: troque `self.toggle()` por `self.open()` no `dispatch_token`, ou
-    faça `toggle()` chamar `open()` sempre — este caso reprova dizendo que o
-    processo continua vivo depois do segundo aperto.
-    """
+    """A RÉGUA. Aperta, abre; aperta de novo, FECHA."""
     mesa["apertar_l3"]()
     assert mesa["abertos"] == [["wvkbd-mobintl"]], (
         f"o primeiro aperto não abriu nada: {mesa['abertos']!r}")
@@ -137,11 +116,7 @@ def test_o_segundo_toque_fecha(mesa: dict[str, Any]) -> None:
 
 
 def test_o_terceiro_toque_reabre(mesa: dict[str, Any]) -> None:
-    """Alternar é ida E volta, e a volta tem de voltar.
-
-    Um `close()` que esquecesse de zerar o processo deixaria o terceiro aperto
-    achando que ainda há janela aberta — e o L3 morreria no primeiro ciclo.
-    """
+    """Alternar é ida E volta, e a volta tem de voltar."""
     for _ in range(3):
         mesa["apertar_l3"]()
     assert len(mesa["abertos"]) == 2, (
@@ -154,11 +129,7 @@ def test_o_terceiro_toque_reabre(mesa: dict[str, Any]) -> None:
 def test_o_release_nao_fecha_o_que_o_press_acabou_de_abrir(
     mesa: dict[str, Any],
 ) -> None:
-    """Um aperto é press + release, e o release NÃO pode contar como segundo.
-
-    Sem este caso, um alternador que agisse nas duas fases abriria e fecharia
-    dentro do mesmo aperto — e a janela piscaria sem nunca ficar na tela.
-    """
+    """Um aperto é press + release, e o release NÃO pode contar como segundo."""
     mesa["dev"].dispatch(frozenset({"l3"}))
     mesa["dev"].dispatch(frozenset())
     assert mesa["ctrl"].esperar_os_toques(5.0)
@@ -171,14 +142,7 @@ def test_o_release_nao_fecha_o_que_o_press_acabou_de_abrir(
 def test_a_janela_morta_por_fora_faz_o_toque_seguinte_abrir(
     mesa: dict[str, Any],
 ) -> None:
-    """Ela fechou o wvkbd no X — o L3 tem de ABRIR, não fechar o que já morreu.
-
-    ESTE É O CASO QUE UM ALTERNADOR INGÊNUO ERRA: guardar `_process is not
-    None` como "está aberto" faz o toque seguinte mandar fechar um processo
-    morto e só o toque DEPOIS dele abrir. O sintoma para quem está com o
-    controle na mão é o pior possível — às vezes o L3 precisa de dois apertos, e
-    ninguém consegue reproduzir.
-    """
+    """Ela fechou o wvkbd no X — o L3 tem de ABRIR, não fechar o que já morreu."""
     mesa["apertar_l3"]()
     mesa["processos"][0].morrer_por_fora()
 
@@ -192,13 +156,7 @@ def test_a_janela_morta_por_fora_faz_o_toque_seguinte_abrir(
 def test_sem_teclado_instalado_o_segundo_toque_continua_tentando(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem wvkbd/onboard, nenhum aperto pode deixar o estado preso em "aberto".
-
-    O `open()` avisa e não cria processo. Se o alternador contasse APERTOS em
-    vez de perguntar ao processo, o segundo aperto viraria "fechar" — e o L3
-    passaria a funcionar só de dois em dois, para sempre, na máquina de quem
-    ainda não instalou o pacote.
-    """
+    """Sem wvkbd/onboard, nenhum aperto pode deixar o estado preso em "aberto"."""
     monkeypatch.setattr(subsistema.shutil, "which", lambda _nome: None)
     monkeypatch.setattr(subsistema, "_OSK_SONDA", [(float("-inf"), False)])
     avisos: list[list[str]] = []
@@ -221,12 +179,7 @@ def test_sem_teclado_instalado_o_segundo_toque_continua_tentando(
 def test_o_token_do_alternador_e_virtual_e_nao_vira_tecla(
     mesa: dict[str, Any],
 ) -> None:
-    """`__TOGGLE_OSK__` sai pelo callback, nunca pelo uinput.
-
-    Se ele deixasse de casar com `is_virtual_token`, o device tentaria emitir
-    uma tecla chamada `__TOGGLE_OSK__` — o L3 pararia de abrir qualquer coisa e
-    o journal ganharia um erro por aperto.
-    """
+    """`__TOGGLE_OSK__` sai pelo callback, nunca pelo uinput."""
     from hefesto_dualsense4unix.core.keyboard_mappings import is_virtual_token
 
     assert is_virtual_token(TOKEN_TOGGLE_OSK)
@@ -234,4 +187,3 @@ def test_o_token_do_alternador_e_virtual_e_nao_vira_tecla(
     assert mesa["abertos"] == [["wvkbd-mobintl"]]
 
 
-# "Nada é permanente, exceto a mudança." — Heráclito

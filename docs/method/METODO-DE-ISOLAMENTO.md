@@ -30,7 +30,7 @@ por isso não se renumeram. Pergunta nova entra pelas pontas — foi assim que a
 
 - **Acrescentada em:** 13/08/2026, por `VPAD-NO-ESPELHO-01`.
 - **Por que ela é ZERO e não SEIS:** as outras cinco são citadas por número de
-  fora deste arquivo — `scripts/ensaio_rumble_um_bit_por_vez.py:391` diz
+  fora deste arquivo — `scripts/ensaio_rumble_um_bit_por_vez.py:278` diz
   *"Pergunta 2 do método"*. Renumerar invalidaria a citação em silêncio, que é o
   defeito da armadilha `A-12`. A pergunta nova entra **antes** sem empurrar as
   outras.
@@ -38,7 +38,7 @@ por isso não se renumeram. Pergunta nova entra pelas pontas — foi assim que a
 O `scripts/ensaio_rumble_em_par.py` prometia por escrito recusar gamepads
 virtuais **e não recusava**: a régua era VID + PID + barramento, e o vpad do
 próprio Hefesto forja os três de propósito — ele existe para se passar por um
-DualSense Edge (`integrations/uhid_gamepad.py:575` carimba
+DualSense Edge (`integrations/uhid_gamepad.py:301` carimba
 `02:fe:00:00:00:0N`; a linha `:1478` carimba `hefesto-vpad`). Com quatro
 controles na mesa, o `--listar` marcava `mirar? SIM` nos QUATRO vpads.
 
@@ -68,7 +68,7 @@ done
 | você lê | é |
 |---|---|
 | `HID_PHYS=hefesto-vpad` | **vpad NOSSO** — não é alvo de ensaio nenhum |
-| `HID_UNIQ=02:fe:…` | **vpad NOSSO** — o **bit 1** do primeiro octeto (`0x02`) é o de *localmente administrado*, que por definição não colide com endereço de fábrica (`integrations/uhid_gamepad.py:572-573`) |
+| `HID_UNIQ=02:fe:…` | **vpad NOSSO** — o **bit 1** do primeiro octeto (`0x02`) é o de *localmente administrado*, que por definição não colide com endereço de fábrica (`integrations/uhid_gamepad.py:299-300`) |
 | `HID_PHYS=<MAC do adaptador>` | DualSense de verdade, no rádio |
 | `HID_PHYS=<caminho USB>` | DualSense de verdade, no cabo |
 
@@ -104,11 +104,11 @@ forma é para copiar.
 systemctl --user is-active --quiet hefesto-dualsense4unix.service && echo VIVO
 ```
 
-- `scripts/ensaio_o_keepalive_mata_o_rumble.py:281-287` — imprime
+- `scripts/ensaio_o_keepalive_mata_o_rumble.py:212-218` — imprime
   `RECUSO rodar com o daemon vivo` e sai, a menos que se passe
   `--confirmo-parar-o-daemon` (ele mesmo para e religa) ou `--com-o-daemon-vivo`
   (só a fase `gatilho`, cujo objeto **é** a disputa);
-- `scripts/ensaio_rumble_um_bit_por_vez.py:783-792` — mesma guarda, e com uma
+- `scripts/ensaio_rumble_um_bit_por_vez.py:589-598` — mesma guarda, e com uma
   segunda trava: em **783-792** o `modo_ensaio` recusa e manda *"Rode de novo
   com --confirmo-parar-o-daemon"*, e em **799-801** ele aborta se o daemon
   **não parou de verdade** (*"escrever agora seria medir a briga"*). O detector
@@ -442,7 +442,7 @@ prognostico_uhid = uhid_available() and permite_uhid
 Passar `permite_uhid=True` é **metade** da condição. `uhid_available()` pergunta
 se `/dev/uhid` existe — na máquina dela existe, no runner não. O teste
 `test_o_prognostico_de_outra_mascara_segue_intacto`
-(`tests/unit/test_ignore_no_fim_da_sequencia_cobertura.py:169`) achava que
+(`tests/unit/test_ignore_no_fim_da_sequencia_cobertura.py:160`) achava que
 bastava a metade dele.
 
 **O que isto decide:** se o verde do teste fala da sua lógica ou do hardware de
@@ -535,7 +535,7 @@ python3 scripts/gerar-mapa.py --check   # a página publicada é a que as fontes
 ```
 
 **E o `--fix` da acentuação reescreve o ARQUIVO INTEIRO** (`A-15`).
-`scripts/validar-acentuacao.py:1097`, no fim de `corrigir_arquivo`, faz
+`scripts/validar-acentuacao.py:871`, no fim de `corrigir_arquivo`, faz
 `path.write_text(...)` com o conteúdo todo; e como a leitura é `read_text`
 (linha 969, na mesma função), que traduz `\r\n` em `\n` por
 newline universal, **um arquivo CRLF volta LF depois de uma única substituição**,
@@ -594,9 +594,9 @@ não-contaminação; **não** prova que o R2 obedece. São dois ensaios.
 ### 2. Isolar por MAC — mirar um, deixar os outros de testemunha
 
 Ideia dela, 12/08. O daemon sabe fazer: `_apply_por_uniq`
-(`src/hefesto_dualsense4unix/daemon/ipc_handlers.py:821`) aplica **só** no
+(`src/hefesto_dualsense4unix/daemon/ipc_handlers.py:639`) aplica **só** no
 controle do MAC pedido, e a GUI usa isso. **O CLI não expõe** — o
-`cmd_trigger` (`src/hefesto_dualsense4unix/cli/cmd_test.py:76-83`) só aceita
+`cmd_trigger` (`src/hefesto_dualsense4unix/cli/cmd_test.py:55-62`) só aceita
 `--side`, `--mode`, `--params` e `--raw`, e despacha em broadcast. Enquanto não
 expuser, fale com o socket.
 
@@ -638,7 +638,7 @@ PY
 ```
 
 (O MAC aí é de exemplo, na máscara da casa `OUI:00:00:NN` — octetos 4 e 5
-zerados, que é o que `tests/unit/test_docs_mac_anonimato.py:145` impõe. Nunca
+zerados, que é o que `tests/unit/test_docs_mac_anonimato.py:33` impõe. Nunca
 cole um MAC real num arquivo versionado.)
 
 **O que OLHAR:** confira os **quatro** controles, não só o alvo. Os três
@@ -646,10 +646,10 @@ intocados são o controle negativo — e cobrem o risco real: **se o `uniq` foss
 ignorado, viraria broadcast e o isolamento seria ilusão.**
 
 **Cuidado medido — o modo de falha mais provável é MAC errado, e ele é MUDO.**
-`_apply_por_uniq` (`daemon/ipc_handlers.py:821-840`) devolve `True` assim que
+`_apply_por_uniq` (`daemon/ipc_handlers.py:639-658`) devolve `True` assim que
 chama `apply_output_for`, **sem conferir se aquele MAC está na mesa**. E do
 outro lado, `apply_output_for`
-(`core/backend_pydualsense.py:3460-3502`) trata controle desconectado por
+(`core/backend_pydualsense.py:2277-2319`) trata controle desconectado por
 desenho: registra o override no mapa em memória e, quando não há handle
 (linha **3417**), loga `apply_output_for_desconectado_registrado` e **retorna
 sem escrever no hardware** (linha **3423**). MAC que nem parece MAC cai antes,
@@ -661,8 +661,8 @@ produto.** Um dígito trocado produz exatamente a tela de "o produto não
 obedeceu".
 
 E a resposta **não** é a confirmação que parece ser. O `trigger.set` devolve só
-`{"status": "ok"}` (`ipc_handlers.py:958`). O `led.set` devolve
-`aplicado_em` (`ipc_handlers.py:1061`) — mas, no caminho por-MAC, `aplicado_em`
+`{"status": "ok"}` (`ipc_handlers.py:708`). O `led.set` devolve
+`aplicado_em` (`ipc_handlers.py:776`) — mas, no caminho por-MAC, `aplicado_em`
 é `[str(params["uniq"])]` (linha **1027**): **o eco do que você pediu**, não uma
 leitura do que ficou. Ele prova que a rota por-uniq foi tomada, não que o
 aparelho obedeceu. Quem confirma o alvo é a mão dela nos outros três.
@@ -731,7 +731,7 @@ python3 -c "import csv;print({r['linha_id'] for r in csv.DictReader(open('docs/d
 
 **O que OLHAR:** o conjunto tem de sair **vazio**. O casamento é por
 `(linha_id, transporte)` contra a coluna `id` do mapa
-(`eliminacao.py:147`; `check_paridade_transporte.py:602`), e o `id` do mapa é
+(`eliminacao.py:108`; `check_paridade_transporte.py:467`), e o `id` do mapa é
 `chave@controle` — `gatilho.esquerdo.adaptativo@dualsense`, não
 `gatilho.esquerdo.adaptativo`. **Não há portão que acuse o órfão**: ele
 simplesmente não aparece para o julgador, e você fica com um ensaio caro que não

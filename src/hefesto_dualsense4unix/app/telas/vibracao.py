@@ -42,37 +42,10 @@ from __future__ import annotations
 
 from typing import Any
 
-#: A tradução do lado da tela para o motor do código, e ela tem UM dono: este.
-#:
-#: ``e``/``d`` é a língua dela (esquerdo/direito) e é o que viaja no ``data-lado``
-#: do HTML; ``weak``/``strong`` é contrato de código e nunca entra na página.
-#:
-#: **O par é medido, e é o contrário do que o nome sugere:** ``strong`` é o
-#: motor ESQUERDO (``common[3]``) e ``weak`` é o DIREITO (``common[2]``) —
-#: ``docs/protocol/dualsense-referencia-canonica.md:303-315``, com a medição em
-#: que um ``EV_FF`` no esquerdo saiu no direito. Escrever isto em dois lugares é
-#: como a inversão entra: aqui é um só.
 LADO_PARA_MOTOR: dict[str, str] = {"e": "strong", "d": "weak"}
 
-#: O MOTOR → O CAMPO DA BARRA DELE, no esquema e no IPC (VIBRACAO-POR-MOTOR-01).
-#:
-#: ``strong`` é o motor **forte** (o pesado, o da ESQUERDA) e ``weak`` é o
-#: **fraco** (o pequeno, o da direita) — e a inversão é a armadilha deste
-#: assunto, porque ``weak`` fica à direita. O esquema já diz isso por escrito
-#: (``ControllerRumbleOverride.motor_forte_pct``: *"a barra do motor FORTE
-#: (strong)"*), e ``rumble.motores.set`` recebe ``forte_pct``/``fraco_pct``.
-#:
-#: **ELE EXISTE PARA NÃO SER DIGITADO NA ABA.** Composto com
-#: :data:`LADO_PARA_MOTOR`, o lado da tela (``e``/``d``) chega ao nome do campo
-#: sem que a interface precise saber que o motor da direita é o "fraco" — e sem
-#: que a tradução exista em dois arquivos, que é como ela se inverte calada.
 MOTOR_PARA_BARRA: dict[str, str] = {"strong": "forte_pct", "weak": "fraco_pct"}
 
-#: O degrau que NÃO tem multiplicador MEDIDO, e por quê.
-#:
-#: Ele escala pela BATERIA em ``core.rumble._effective_mult`` (>50% → 1,0 ·
-#: 20-50% → 0,7 · <20% → 0,3) e **nunca amplifica**. O 1,0 que ele tem em
-#: :func:`_escada` não é um degrau medido: é o TETO dele, onde o deslizador
 #: para — a palavra é do comentário de ``rumble_actions._POLICY_MULT:67-69``.
 #:
 #: FICA ESCRITO porque ele é o degrau da escada que NÃO é botão da tela: o
@@ -94,7 +67,7 @@ def _escada() -> dict[str, float]:
     divergência em dez combinações de degrau e orçamento.
 
     ``rumble_actions._POLICY_MULT`` é ``{**RUMBLE_POLICY_MULT, "auto": 1.0}`` e
-    o comentário de ``rumble_actions.py:402`` o chama, por escrito, de *"a única
+    o comentário de ``rumble_actions.py:315`` o chama, por escrito, de *"a única
     cópia autorizada em ``app/``"*. Há portão que vigia isso por varredura —
     ``test_orcamento_dono_unico_do_valor_efetivo.
     test_nenhum_modulo_de_app_recalcula_a_escada`` reprova a escada do daemon
@@ -111,33 +84,12 @@ def _escada() -> dict[str, float]:
 
 
 def teto_da_barra() -> int:
-    """O 100% da barra "Personalizado", em pontos percentuais (hoje: 150).
-
-    Ela para no Máximo, e o Máximo é do produto. Decisão dela, 27/08 — *"não
-    passa dele"*.
-
-    Era o literal ``150`` no gerador. Derivá-lo da :func:`_escada` é o que
-    impede a barra de prometer um teto que o daemon já não
-    pratica  (noqa-acento: verbo praticar, correto sem acento). Este número
-    **já esteve errado pelo dobro** na dica desta aba (dizia 60% para o
-    Economia) e nenhuma régua o via, porque estava digitado dos dois lados.
-    """
+    """O 100% da barra "Personalizado", em pontos percentuais (hoje: 150)."""
     return round(_escada()["max"] * 100)
 
 
 def degraus_da_forca() -> tuple[str, ...]:
-    """As chaves dos degraus que a tela oferece, na ordem dela — do produto.
-
-    A ordem é a do desenho: do mais fraco ao mais forte, pelo multiplicador da
-    :func:`_escada`. O :data:`FORCA_SEM_MULTIPLICADOR` fica de fora: ele saiu
-    da tela em 05/09/2026, e o 1,0 dele empataria com o ``balanceado``.
-
-    FATO SUBSTITUÍDO — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): esta função
-    devolvia QUATRO degraus, com o ``auto`` no fim, e ninguém a perguntava. O
-    pacote da aba (``a05_vibracao._degraus_que_a_tela_oferece``) lia a escada
-    do daemon por conta própria para escrever a recusa do clique sem degrau.
-    Agora ele pergunta aqui, e a conta dos botões da tela tem um dono só.
-    """
+    """As chaves dos degraus que a tela oferece, na ordem dela — do produto."""
     escada = _escada()
     return tuple(sorted(
         (k for k in escada if k != FORCA_SEM_MULTIPLICADOR),
@@ -145,53 +97,20 @@ def degraus_da_forca() -> tuple[str, ...]:
     ))
 
 
-# ---------------------------------------------------------------------------
-# AS DUAS FRASES DE TELA QUE A ABA 05 REPETE DA JANELA ESTÁVEL — e o dono
-# delas é ESTE módulo desde 06/09/2026 (GTK-2, `D-0609-GTK-LEVA-INTEIRA`).
-#
-# ELAS MORAVAM NO XML DA JANELA GTK e a aba nova as LIA de lá, por
-# ``interface/aba05._do_glade`` (03/09/2026). A razão daquele dia continua
-# valendo palavra por palavra — *"o que tem dono não se digita; uma segunda
-# cópia de um texto de tela diverge na primeira edição"*, e a conta dela é o
 # botão "Devolver ao jogo" que não existia (``rumble_actions.
 # BTN_GIVE_BACK_TO_GAME``, RUM-01). **O que muda é só o DONO**, e a razão é
-# medida: a janela GTK está sendo aposentada por decisão dela, e um arquivo
-# que vai ser apagado não é dono de texto nenhum. Este módulo já é a fonte da
-# linha de estado desta mesma aba; passa a ser também a das duas frases.
-#
-# ERAM TRÊS ATÉ 05/09/2026, e a terceira nunca precisou mudar de casa: era
-# *"Espera 5 segundos antes de trocar de faixa"*, que explicava o Modo Auto —
-# o Auto saiu desta tela por decisão dela (*"segue os três modos sempre"*), e
-# ``test_a_frase_do_auto_nao_volta_a_aba`` existe para ela NÃO voltar.
-#
-# ENQUANTO O GLADE EXISTIR as duas telas têm de dizer o MESMO, e quem garante
-# é ``tests/unit/test_os_leitores_do_glade_tem_dono.py``, que compara estas
-# constantes com as âncoras do XML. No dia em que a `GTK-3` apagar o arquivo
-# aquele caso se cala sozinho (e diz que se calou), e estas constantes ficam
-# sendo a única fonte — que é o estado pretendido, não um acidente.
-# ---------------------------------------------------------------------------
 
-#: O TETO DA MESA — a oração que os QUATRO tooltips de degrau repetem na janela
-#: estável (RUM-7, 25/08/2026). A linha que avisa quando o teto MORDE já existe
-#: nas duas telas: é a mesma função, :func:`texto_do_teto_do_orcamento`. O que
-#: esta frase faz e aquela não é o ENSINO PREVENTIVO — a outra só aparece
 #: quando o teto já cortou, e por isso nunca ensinou que o teto existe.
 DICA_DO_TETO_DA_MESA = (
     "O Perfil de Bateria pode impor um teto: a escolha continua valendo, "
     "só não passa dele."
 )
 
-#: A ÚNICA FRASE QUE LIGA OS DOIS CARDS: explica por que um "Testar" com 220
-#: pode sair fraco (o degrau em Economia corta para 30%). Na aba nova os dois
-#: blocos estão na MESMA tabela, mais perto ainda, e a relação entre eles não
-#: estava dita em lugar nenhum antes de 03/09/2026.
 DICA_DOS_VALORES_QUE_PASSAM = (
     "Esses valores ainda passam pelo degrau da coluna."
 )
 
 
-#: O QUE A TELA MOSTRA E O PRODUTO NÃO SABE RESPONDER. Cada linha diz onde o
-#: caminho se perde e o que o fecha — é dívida com endereço, não lápide calada.
 SEM_FONTE: dict[str, str] = {
     "forca:por-controle": "O degrau é da MESA. `daemon.config.rumble_policy` é um "
     "campo só, lido por três rotas (`ipc_rumble_policy.apply_rumble_policy`, "
@@ -199,7 +118,7 @@ SEM_FONTE: dict[str, str] = {
     "As quatro colunas mostram o MESMO valor porque é o que existe. "
     "Fecha: MIGRA-VIBRACAO-04.",
     "trava:por-controle": "A trava é UMA para a mesa — `daemon_cfg.rumble_active` "
-    "mais `rumble_active_uniq` (`daemon/ipc_handlers.py:5106-5112`). Quatro "
+    "mais `rumble_active_uniq` (`daemon/ipc_handlers.py:3709-3715`). Quatro "
     "'Parar' sobre uma trava só: parar o P2 apaga a vibração do P1. "
     "Fecha: MIGRA-VIBRACAO-05.",
     "estado:da-vibracao": "O produto de hoje tem uma LINHA DE ESTADO da vibração e "
@@ -208,19 +127,10 @@ SEM_FONTE: dict[str, str] = {
     "Fecha: MIGRA-VIBRACAO-08.",
 }
 
-# A TABELA DOS DONOS DOS GESTOS E O `SEM_DONO` SAÍRAM — 28/09/2026
-# (A-TELA-PERGUNTA-AO-DONO-01), com `gesto_do_clique`, a única que os lia.
-# Eles descreviam a aba em AVALIAÇÃO, quando o clique chegava, era registrado e
-# ECOAVA sem aplicar nada. Os seis gestos têm dono desde 03/09 no pacote da aba
-# (`interface/pacotes/a05_vibracao`, um `@gesto` por gesto, e cada um diz a
 # própria recusa), e a tabela ficou descrevendo um estado que a cura desfez.
 
-#: O traço do valor que não se sabe. Nunca um zero: zero é um valor que ela pode
-#: ter escolhido, e confundir os dois é o defeito que a `MIGRA-VIBRACAO-01`
-#: nomeia (`_read_scales` devolvendo `else 0` e o "Aplicar" mandando (0, 0)).
 NAO_SEI = "—"
 
-#: O fundo do trilho quando o lado está desligado ou o valor é desconhecido.
 _ZERO = "0%"
 
 
@@ -232,32 +142,7 @@ def _inteiro(valor: Any) -> int | None:
 
 
 def motores_do_controle(entrada: dict[str, Any], state: dict[str, Any]) -> dict[str, int | None]:
-    """``{"e": esquerdo, "d": direito}`` do que chegou aos motores AGORA.
-
-    ``None`` num lado é *"nada a dizer"*, e são três respostas diferentes com a
-    mesma cara — daemon antigo, nunca escreveu, ou escreveu há mais de
-    ``ATIVIDADE_FRESCA_S``. Quem decide isso é o
-    ``controller_card.motores_no_fisico``, e ele é o dono: um segundo juiz de
-    "este número ainda vale" divergiria na primeira mudança do teto.
-
-    O casamento controle → vpad também não se refaz aqui — ``_item_do_vpad``
-    diz de si mesmo, por escrito, que é *"o dono único do casamento"*.
-
-    **E O ``pedido_de_vibracao_fresco`` NÃO ENTRA AQUI — a razão certa, 02/09.**
-    A razão que circulou era falsa: *"ele é consultado por dentro do
-    ``motores_no_fisico``"*. Não é — li o corpo (``controller_card.py:1589-1648``):
-    o freio dele é próprio (``rumble_no_fisico_ha_s > ATIVIDADE_FRESCA_S``), e
-    quem põe os dois em série é o CHAMADOR, ``estado_do_recurso`` (``:1719``
-    pergunta *"o jogo PEDIU?"*, e só então ``:1721`` pergunta *"chegou aos
-    motores?"*).
-
-    A razão que sobra é de assunto, e é esta: lá a pergunta é uma SITUAÇÃO
-    ("chegando" contra "parou") e o pedido do jogo é o que a separa; aqui a pergunta
-    é um NÚMERO — *"quanto foi ao motor agora?"* —, e a fonte dele é o par
-    físico. Um controle em que o jogo parou de pedir já responde ``None`` pelo
-    freio de ``motores_no_fisico``; acrescentar o segundo juiz não mudaria uma
-    coluna e criaria duas verdades sobre o mesmo pixel.
-    """
+    """``{"e": esquerdo, "d": direito}`` do que chegou aos motores AGORA."""
     from hefesto_dualsense4unix.app.widgets.controller_card import (
         _item_do_vpad,
         motores_no_fisico,
@@ -301,9 +186,6 @@ def pacote_da_coluna(
     pct = None if not isinstance(aplicado, (int, float)) else round(float(aplicado) * 100)
     motores = motores_do_controle(entrada, state)
     return {
-        # A identidade é a MESMA gramática das dez abas (26/08): P# • plástico •
-        # transporte. Ela é assada no HTML pela remontagem e repintada aqui
-        # porque a cor chega DEPOIS — é uma pergunta ao aparelho, em thread.
         "identidade": (
             f'P{controle["jogador"]} <span class="pt">•</span> {controle["nome"]}'
             f' <span class="pt">•</span> {controle["via"]}'
@@ -312,9 +194,6 @@ def pacote_da_coluna(
         "forca": politica,
         "pct": _barra(pct, teto_da_barra(), sufixo="%"),
         "motores": {lado: _barra(motores[lado], 255) for lado in LADO_PARA_MOTOR},
-        # O DESENHO TREME POR LADO: um lado acende quando o motor daquele punho
-        # recebeu força AGORA. `None` (nada a dizer) apaga — nunca acende, que
-        # seria a tela afirmando um tremor que ninguém mediu.
         "treme": {lado: bool(motores[lado]) for lado in LADO_PARA_MOTOR},
     }
 
@@ -326,11 +205,7 @@ def pacote_da_mesa(
     *,
     contagem: tuple[str, str] = ("", ""),
 ) -> dict[str, Any]:
-    """UMA chamada por tique, com tudo o que mudou. Nunca uma por valor.
-
-    Com 14 valores por coluna e quatro colunas na mesa, uma chamada por valor
-    seriam 560 travessias de fronteira por segundo.
-    """
+    """UMA chamada por tique, com tudo o que mudou. Nunca uma por valor."""
     por_uniq = {str(e.get("uniq") or ""): e for e in conectados}
     colunas = {
         c["uniq"]: pacote_da_coluna(c, por_uniq.get(c["uniq"], {}), state)
@@ -348,69 +223,12 @@ def pacote_da_mesa(
     }
 
 
-#: OS DOIS TONS DA LINHA DE ESTADO, um por token de cor da janela estável.
-#:
-#: ==========  ===========================  ==================================
-#: tom         cor na estável               qual frase
-#: ==========  ===========================  ==================================
-#: ``alerta``  ``#ffb86c`` (:1259, :545)    ``…do_alcance_da_intensidade`` e
-#:                                          ``…do_teto_do_orcamento``
-#: ``info``    ``#8be9fd`` (:608)           ``texto_de_onde_grava_e_onde_manda``
-#: ==========  ===========================  ==================================
-#:
-#: Viaja o NOME, e a cor mora no CSS da aba — a mesma disciplina do
-#: ``conta_cor``, que manda ``var(--green)`` em vez de um hexadecimal. Os dois
-#: tokens já existem no mockup (``--orange``, ``--cyan``).
-#:
-#: **O TERCEIRO TOM (``diz``, cinza) MORREU EM 07/09/2026** com a única frase
-#: que o usava — ver :data:`SEM_A_CONTAGEM_DE_PEDIDOS`. Ele sai daqui e a regra
-#: ``.vib-estado .est.diz`` sai do ``interface/aba05.py`` no mesmo passo: uma
-#: constante que ninguém emite e uma cor que nada veste são as duas metades da
 #: mesma promessa sem caminho, e o ``portao_a_casa_sabe_e_o_produto_nao_faz``
-#: cobra exatamente isso — foi o que aconteceu com as cinco peças da trava em
-#: 05/09, no dia em que a faixa de estado saiu.
 ALERTA = "alerta"
 INFO = "info"
 
-#: A CONTAGEM DE PEDIDOS DO JOGO SAIU DA ABA — decisão dela, 07/09/2026, com o
 #: quadro dos quatro DualSense na mesa: *"Vibração remove essa última frase
-#: também."* A frase era a última linha do pé do quadro, e dizia, por jogador,
-#: quantas vezes o jogo pediu vibração e com que força::
-#:
-#:     o jogo pediu vibração — Jogador 1: 2x, todas com força zero · Jogador 2:
-#:     2x, todas com força zero · Jogador 3: nenhuma · Jogador 4: 2x, todas com
-#:     força zero
-#:
-#: **O QUE MORREU E O QUE FICOU DE PÉ.** Só a CHAMADA morreu. A frase continua
 #: tendo dono vivo em ``rumble_actions`` — a função da contagem e a irmã que a
-#: desdobra por jogador —, e por isso ela NÃO sai do produto como saíram as
-#: cinco peças da trava em 05/09: aquelas eram desta aba e de mais nenhuma. O
-#: que esta aba deixou de fazer é PERGUNTAR.
-#:
-#: **O NOME DAS DUAS NÃO SE ESCREVE AQUI**, e é a mesma disciplina da linha 170
-#: do ``docs/data/paridade-gtk-html.csv``: escrevê-lo neste arquivo fecharia no
-#: papel a dívida que a linha 169 declara. Quem guarda o endereço exato é o
-#: CSV, e a régua 8 do ``interface/aba05._conferir`` é quem morde se a chamada
-#: voltar.
-#:
-#: **A FAIXA ``#vib-estado`` FICA**, e não é resto: ela continua sendo o pouso
-#: do recibo do clique (``data-hef-recados="sucesso"``, a 05-Q4 dela) e das duas
-#: linhas de alerta que sobram. O que muda é que, com a mesa quieta, ela nasce
-#: VAZIA e o ``.vib-estado:empty{display:none}`` a esconde — nenhuma linha de
-#: texto permanente sob a grade.
-#:
-#: **O QUE ISTO CUSTA, MEDIDO, e a decisão que sobra para ela.** Esta era a
-#: única coisa na tela que dizia que o JOGO pediu vibração e com que força — o
-#: instrumento que separa *"o motor não tremeu"* de *"o jogo não pediu nada"*.
-#: Nove testes da bancada de 07/09 a citam — o gesto dos nove está em
-#: ``docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md``;
-#: seis deles a usam como confirmação ao lado das mãos e do
-#: desenho que acende em laranja, e TRÊS ficam sem instrumento:
-#: ``vibracao.rumble.ff @ cabo`` e ``@ rádio`` (o passo *"confira que ela NÃO
-#: diz que falta gamepad virtual"*) e ``vibracao.rumble.habilitar @ cabo`` (o
-#: passo *"confira que ela diz que o jogo ainda não pediu vibração nenhuma"*).
-#: O lugar proposto está escrito no relatório da frente; nada foi inventado
-#: aqui, porque onde a informação reaparece é decisão dela.
 SEM_A_CONTAGEM_DE_PEDIDOS = True
 
 
@@ -495,7 +313,7 @@ def textos_do_estado(
     edição — esta casa já pagou por isso.
 
     **``None`` DE CADA UMA É "NÃO APARECE", nunca travessão.** O pintor troca
-    vazio por ``—`` (``hefesto_vivo.py:118``), e um travessão numa linha de
+    vazio por ``—`` (``hefesto_vivo.py:61``), e um travessão numa linha de
     alerta afirmaria "não sei" onde a resposta é "não há o que avisar". Por isso
     esta função devolve uma LISTA do que existe, e não um dicionário de campos
     fixos: a linha que não se aplica não é apagada — ela **não é montada**.
@@ -523,9 +341,6 @@ def textos_do_estado(
     from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, EstadoDoAlvo
 
     linhas: list[tuple[str, str]] = []
-    # A CONTAGEM DE PEDIDOS DO JOGO SAIU DAQUI — decisão dela, 07/09/2026:
-    # *"Vibração remove essa última frase também."* Ver :data:`SEM_A_CONTAGEM_
-    # DE_PEDIDOS`, que guarda o que ela custou e onde a informação ficou.
     alcance = _ra.texto_do_alcance_da_intensidade(state)
     if alcance:
         linhas.append((ALERTA, alcance))
@@ -542,24 +357,9 @@ def textos_do_estado(
     return linhas
 
 
-# A LINHA DE ESTADO DA VIBRAÇÃO SAIU DA ABA — decisão dela, 05/09/2026:
-# *"pq temos uma linha de estado se o estado em vibração sempre vai ser o
-#  jogo mandando os input pro controle e a gnt aumentando eles ou
-#  diminuindo? remove ela não faz sentido"*.
-#
-# COM ELA MORRERAM `TRAVA_JOGO_CONTROLA`, `TRAVA_EM_SILENCIO`,
-# `estado_da_trava`, `SOLTAR_A_TRAVA` e `html_da_trava`, nascidas em
-# 04/09/2026 para a D-14. Não é resto a preservar: elas eram a camada de
-# produto DESTA aba e de mais nenhuma — a janela estável tem a sua própria
-# linha (`app/actions/rumble_actions.py:1274`), com as suas próprias
-# palavras, e o `SOLTAR_A_TRAVA` mandava clicar no *"Parar nesta coluna"*,
-# que só existe no HTML. Sem chamador, as cinco eram
+# linha (`app/actions/rumble_actions.py:1021`), com as suas próprias
 # promessa pública sem caminho — é o que o `portao_a_casa_sabe_e_o_produto_
-# nao_faz` cobra, e ele reprovou por elas nesta mesma leva.
-#
-# A MEDIÇÃO QUE DÁ RAZÃO A ELA está em `interface/aba05.SEM_A_FAIXA_DE_
 # ESTADO`: os dois gestos da aba terminam em `rumble_passthrough(True)`, de
-# modo que nesta tela a linha dizia sempre "o jogo controla a vibração".
 
 
 def html_do_estado(linhas: list[tuple[str, str]]) -> str:
@@ -610,7 +410,7 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
             devolvido: <span>clique "Testar"</span>
 
     O guarda do pintor é ``if (alvo && alvo.innerHTML !== html)``
-    (``hefesto_vivo.py:967``). Com ``&quot;`` no conteúdo a comparação seria
+    (``hefesto_vivo.py:789``). Com ``&quot;`` no conteúdo a comparação seria
     VERDADEIRA sempre: o bloco repintaria e contaria ``+1`` a cada tique, a
     2 Hz, para sempre — o defeito que o ramo ``SELECT`` do ``escrever()`` foi
     escrito para impedir, e o mesmo instrumento com que esta casa prova que um
@@ -627,11 +427,4 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     )
 
 
-# A REMONTAGEM DA COLUNA E A TRADUÇÃO DO CLIQUE SAÍRAM — 28/09/2026
-# (A-TELA-PERGUNTA-AO-DONO-01). `estado_da_coluna` traduzia o estado para o
-# gerador remontar a coluna inteira, e a aba viva nunca remonta: ela pinta
-# campo a campo, e o lugar vazio tem o molde próprio
-# (`interface/pacotes.LUGAR_SEM_DONO`). Ela ainda dizia que os interruptores
-# de lado nasciam ligados porque o produto não os desligava, e isso caiu em
-# 14/09. `gesto_do_clique` devolvia a frase da tabela dos donos, que saiu
 # junto (ver a nota acima de `NAO_SEI`).

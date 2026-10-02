@@ -1,31 +1,9 @@
-"""STATUS-DIZ-O-QUE-VÊ-01/T4 — o card ordenado tem de receber o registro dele.
-
-**O defeito que este arquivo mede nasceu da CURA de T4, e por isso ele existe.**
-
-A Z2-7 (24/08/2026, `b036dca`) pôs `_status_card_keys_for` a percorrer
-`_por_numero_de_identidade` — a mesma ordem da fita —, e o teste daquela leva
-(`test_z2_ordem_dos_cards.py`) mediu só a função de chaves, isolada. As duas
-grades que CONSOMEM as chaves continuaram casando ``keys`` com ``conectados``
-por posição, na ordem crua do daemon — um ``zip`` das chaves com a lista que
-o daemon devolveu.
-
-Com a mesa fora de ordem — o caso normal, e o da fixture versionada — o card
-do Controle 1 passou a ser alimentado com o registro do Controle 4: bateria,
-analógicos, luz e microfone do vizinho, debaixo do título certo.
-
-É a família do defeito que a própria `_por_numero_de_identidade` documenta
-("clicar no chip do 1 editaria outro controle"), agravada: lá a pessoa clicava
-errado, aqui ela **lê** errado, e nada na tela denuncia.
-
-O portão do fim do arquivo é o que impede a volta: **nenhum `zip` desta aba
-pode casar as chaves com a lista crua.**
-"""
+"""STATUS-DIZ-O-QUE-VÊ-01/T4 — o card ordenado tem de receber o registro dele."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("status: cada card recebe o seu")
 
 import json
@@ -34,8 +12,6 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin as S
 
-#: A mesa cheia versionada — a mesma que o `--mesa-cheia` fotografa, e a
-#: única prova possível de quatro controles sem quatro controles na bancada.
 _FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "state_full_quatro_controles.json"
 
 
@@ -57,13 +33,7 @@ def _nome(no: Any) -> str:
 
 
 class _AbaDeMentira(S):  # type: ignore[misc]
-    """A aba Status reduzida ao que este teste afere: quem recebe o quê.
-
-    Sem GTK e sem IPC de propósito. O que está em julgamento é o PAREAMENTO
-    entre a chave de um card e o registro que o alimenta — pôr uma janela no
-    caminho só acrescentaria lugar para o teste errar, e a armadilha do 1x1
-    não protege de nada aqui.
-    """
+    """A aba Status reduzida ao que este teste afere: quem recebe o quê."""
 
     def __init__(self) -> None:
         self._status_cards: dict[Any, Any] = {}
@@ -107,20 +77,13 @@ def test_cada_card_recebe_o_registro_do_proprio_controle() -> None:
 
 
 def test_a_ordem_dos_cards_e_a_ordem_da_fita() -> None:
-    """A metade que a Z2-7 já entregou, agora medida sobre a mesa cheia.
-
-    Com o código de 23/08 ela reprovava com ``[4, 1, 3, 2]`` contra
-    ``[1, 2, 3, 4]``; hoje passa, e fica aqui como rede — arranque a
-    ordenação de `_conectados_na_ordem_dos_cards` e os dois vetores voltam a
-    divergir.
-    """
+    """A metade que a Z2-7 já entregou, agora medida sobre a mesa cheia."""
     state = _mesa_cheia()
     conectados = S._connected_controllers(state)
 
     slots_dos_cards = [
         c.get("player_slot") for c in S._conectados_na_ordem_dos_cards(conectados)
     ]
-    # A fita, sem a linha "Todos os controles" da posição 0.
     rotulos_da_fita = [rotulo for rotulo, _idx in S._controller_target_rows(conectados)][1:]
     slots_da_fita = [
         int("".join(ch for ch in rotulo.split("—")[0] if ch.isdigit()))
@@ -180,10 +143,6 @@ def test_nenhuma_grade_da_aba_casa_as_chaves_com_a_lista_crua() -> None:
     )
     arvore = ast.parse(fonte.read_text(encoding="utf-8"))
 
-    # AST, e não `grep`: um `grep` acharia também as citações desta mesma
-    # forma dentro de comentário e docstring — e um portão que obriga a
-    # documentação a evitar a palavra que ele proíbe vira ruído, não régua.
-    # Aqui só existe CÓDIGO.
     suspeitos = [
         f"status_actions.py:{no.lineno}: zip({', '.join(_nome(a) for a in no.args)})"
         for no in ast.walk(arvore)

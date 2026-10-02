@@ -5,11 +5,6 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("hefesto-dualsense4unix")
 except PackageNotFoundError:
-    # Fallback para instalações sem metadata registrada
-    # (.deb via build_deb.sh faz cp -r, não pip install — METADATA ausente).
-    # Mantenha sincronizado com pyproject.toml [project].version a cada bump.
-    # Regressão coberta pelo gate version-sync em .github/workflows/ci.yml
-    # (CHORE-VERSION-SYNC-GATE-01, MERGED).
     __version__ = "0.9.4.5"
 
 

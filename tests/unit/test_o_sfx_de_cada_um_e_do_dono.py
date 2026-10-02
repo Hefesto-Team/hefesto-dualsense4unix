@@ -1,45 +1,4 @@
-"""O efeito sonoro chega ao controle CERTO — SFX-POR-CONTROLE-01 (10/09/2026).
-
-A CENA, com as palavras dela
------------------------------
-    *"o canal de som sfx (a cada tiro dado o som do tiro efeito sonoro sai pra
-    cada controle) … De forma que cada user de dualsense tenha a mesma
-    experiência ao mesmo tempo."*
-
-E a régua de aceitação, também dela: *"se cada user escolher desativar uma
-delas, vai conseguir sem impactar os demais."*
-
-O DEFEITO, e é a MESMA FAMÍLIA que a A1 fechou de manhã
---------------------------------------------------------
-`GerenciadorDeNosDeSom` aceita `fonte_por_controle` desde que nasceu, e
-**ninguém o injetava**. O campo `speaker.fonte` existe no perfil, a aba o
-grava, e todo nó nascia com `FONTE_PADRAO`: a escolha dela morria no disco.
-
-As duas fontes não são detalhe:
-
-* `sfx` — o nó fica livre para a corrente que o jogo mandar (o tiro daquele
-  jogador). É o padrão;
-* `mix` — o monitor da SAÍDA PADRÃO cai também neste nó. É o «HDMI completo»
-  dela: o que a TV recebe, o controle recebe junto.
-
-Numa mesa de quatro, um nó que ignora a escolha entrega a mesma coisa aos
-quatro — e o `mix` publicado em quem não pediu põe o áudio do sistema inteiro
-no ouvido daquele jogador.
-
-O QUE ESTE ARQUIVO TRAVA
--------------------------
-1. a fonte de CADA controle vem do override DAQUELE controle;
-2. quem não declarou fica com o padrão — `None` é *"sem opinião"*, não `sfx`;
-3. a grafia do `uniq` casa: o sysfs dá `aa:bb:…` e o perfil guarda `aabb…`;
-4. o `mix` de um NÃO vira `mix` do vizinho — é o «sem impactar os demais»;
-5. o perfil não é relido a cada varredura, e a escolha dela vale — **no NÓ
-   VIVO** — na varredura seguinte ao "Salvar" (cache por `(nome, mtime)`);
-6. e o `start()` de produção injeta o callable — sem isso nada acima existe.
-
-A MORDIDA: tire `fonte_por_controle=` do `start()` e o teste 6 reprova; troque
-o `_uniq_de_perfil` por `uniq` cru e o 3 reprova; devolva `FONTE_SFX` no lugar
-do `None` em `_fontes_por_controle` e o 2 reprova.
-"""
+"""O efeito sonoro chega ao controle CERTO — SFX-POR-CONTROLE-01 (10/09/2026)."""
 from __future__ import annotations
 
 import asyncio
@@ -58,7 +17,6 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
 )
 from tests.unit import bancada_do_som_junto as bancada
 
-#: MACs FORJADOS, da faixa sintética que o portão de fixtures permite.
 _P1 = "aa:bb:cc:00:00:b1"
 _P2 = "aa:bb:cc:00:00:b2"
 
@@ -71,11 +29,6 @@ def _perfil_com_fontes(tmp_path: Path, fontes: dict[str, str]) -> str:
     nome = "mesa-de-teste"
     corpo: dict[str, Any] = {
         "name": nome,
-        # `match` é OBRIGATÓRIO no schema, e omiti-lo aqui fazia o perfil ser
-        # recusado pelo pydantic — `_fontes_por_controle` devolvia `{}` pelo
-        # `except` (que é o comportamento CERTO do produto) e a régua média o
-        # dublê inválido em vez da fiação. `{"type": "any"}` é o que o
-        # `assets/profiles_default/personalizado.json` usa.
         "match": {"type": "any"},
         "controllers": {
             mod._uniq_de_perfil(uniq): {"speaker": {"volume": 180, "fonte": fonte}}
@@ -110,19 +63,10 @@ def test_cada_controle_recebe_a_fonte_do_override_dele(tmp_path: Path) -> None:
 
 
 def test_quem_nao_declarou_fica_com_o_padrao(tmp_path: Path) -> None:
-    """Item 2: `None` é *sem opinião*, e não `sfx` escrito por nós.
-
-    A diferença importa: enquanto ninguém declara, o padrão pode mudar sem
-    reescrever perfil nenhum. Se gravássemos `sfx` na ausência, a escolha
-    passada de quem nunca escolheu ficaria congelada no disco.
-    """
+    """Item 2: `None` é *sem opinião*, e não `sfx` escrito por nós."""
     from hefesto_dualsense4unix.profiles.loader import profiles_dir
 
     nome = _perfil_com_fontes(tmp_path, {_P1: FONTE_MIX})
-    # O P2 ganha override de alto-falante **sem** `fonte`: é o caso que a
-    # mordida precisa para existir. Com só o P1 no perfil, trocar o `if fonte:`
-    # por `if True:` não muda resultado nenhum — a mordida passava, e uma
-    # mordida que passa não mede nada.
     alvo = Path(profiles_dir(ensure=True)) / f"{nome}.json"
     corpo = json.loads(alvo.read_text(encoding="utf-8"))
     corpo["controllers"][mod._uniq_de_perfil(_P2)] = {"speaker": {"volume": 120}}
@@ -138,12 +82,7 @@ def test_quem_nao_declarou_fica_com_o_padrao(tmp_path: Path) -> None:
 
 
 def test_a_grafia_do_uniq_casa_entre_o_sysfs_e_o_perfil(tmp_path: Path) -> None:
-    """Item 3, e é o elo que some em silêncio quando erra.
-
-    O sysfs entrega `aa:bb:cc:…` e o `Profile.controllers` é chaveado por
-    `aabbcc…` — o schema recusa a outra forma. Chave que não bate devolve
-    `None` sem erro nenhum, e a escolha dela desaparece sem sintoma.
-    """
+    """Item 3, e é o elo que some em silêncio quando erra."""
     assert mod._uniq_de_perfil("AA:BB:CC:00:00:B1") == "aabbcc0000b1"
     assert mod._uniq_de_perfil("aabbcc0000b1") == "aabbcc0000b1"
 
@@ -162,11 +101,7 @@ def test_sem_perfil_ativo_a_resposta_e_o_padrao(tmp_path: Path) -> None:
 def test_o_perfil_nao_e_relido_a_cada_varredura(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Item 5: a varredura roda a cada 2 s e não pode ir ao disco toda vez.
-
-    É a tempestade de syscalls que o mapa de motores do `gamepad.py` já pagou
-    uma vez — e aqui ela seria por CONTROLE, não por varredura.
-    """
+    """Item 5: a varredura roda a cada 2 s e não pode ir ao disco toda vez."""
     nome = _perfil_com_fontes(tmp_path, {_P1: FONTE_MIX})
     sub = _subsystem(nome)
     leituras = {"n": 0}
@@ -191,29 +126,7 @@ def test_o_perfil_nao_e_relido_a_cada_varredura(
 def test_a_escolha_dela_vale_na_varredura_seguinte(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O outro lado do cache: gravar o perfil TEM de chegar ao NÓ VIVO.
-
-    Um cache que nunca invalida é pior que ler sempre — a escolha dela ficaria
-    presa até o daemon reiniciar, que é o defeito-mãe desta casa (*a escolha
-    gravada no disco e nenhum efeito na mesa*).
-
-    **ESTA RÉGUA ERA FALSA, E FOI CORRIGIDA NA SOM-JUNTO-01 (17/09/2026).**
-    Ela prometia no docstring exatamente o que está escrito acima e olhava o
-    CACHE — a única asserção era
-    ``sub._fonte_do_controle(_P1) == FONTE_MIX``. O cache invalidava certinho,
-    o nó continuava com a fonte de antes, e ela passava: a escolha dela morria
-    entre o cache e o `pactl`, no `if uniq in self._nos: continue` da
-    varredura. Medido: com a cura arrancada, a versão antiga desta régua fica
-    VERDE. *Uma régua que ocupa o lugar da que faltava é pior que régua
-    nenhuma.*
-
-    Agora ela mede o ``module-loopback`` que ficou CARREGADO. A bateria inteira
-    do nó vivo — o nó que não renasce, a estabilidade da comparação, as duas
-    recusas — está em ``test_som_junto_01_a_fonte_chega_ao_no_vivo.py``.
-
-    MORDIDA: troque `self._reafinar(...)` por um `continue` seco em
-    `GerenciadorDeNosDeSom.reconciliar` e esta régua reprova.
-    """
+    """O outro lado do cache: gravar o perfil TEM de chegar ao NÓ VIVO."""
     pactl = bancada.Pactl()
     monkeypatch.setattr(som, "_rodar", pactl)
 
@@ -236,11 +149,7 @@ def test_a_escolha_dela_vale_na_varredura_seguinte(
 
 
 def test_o_gerenciador_de_producao_recebe_a_fonte_por_controle() -> None:
-    """Item 6 — sem esta linha, tudo acima é peça que ninguém liga.
-
-    É a mesma prova que a A1 escreveu para a ponte, e pela mesma razão: o
-    `fonte_por_controle` passou meses como parâmetro sem chamador.
-    """
+    """Item 6 — sem esta linha, tudo acima é peça que ninguém liga."""
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
 
     class _Ctx:

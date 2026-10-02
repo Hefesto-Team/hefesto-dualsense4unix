@@ -1,32 +1,17 @@
-"""Testes unitários de InputActionsMixin (FEAT-KEYBOARD-UI-01, sprint 59.3).
-
-Cobrem a lógica PURA de CRUD de key_bindings: resolução de bindings efetivos
-(defaults vs override), conversão schemastore, e as regras de adicionar/
-remover/restaurar. Não exercitam GTK real — usam stubs de ListStore e
-widgets que imitam a API mínima requerida.
-"""
+"""Testes unitários de InputActionsMixin (FEAT-KEYBOARD-UI-01, sprint 59.3)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("input actions")
 
 from typing import Any
 
 import pytest
 
-# Pula o arquivo inteiro se PyGObject não estiver disponível — o mixin vive
-# na camada de UI e importa `gi`, que em ambientes CI/Noble puro-venv pode
-# não estar presente. A lógica pura (resolve/persist/CRUD) é a mesma que
-# seria exercitada; os 10 testes aqui são opt-in para dev com GUI instalada.
 pytest.importorskip("gi")
 
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
-
 
 
 class _FakeListStore:
@@ -55,12 +40,7 @@ class _FakeListStore:
 
 
 class _FakeMixin:
-    """Aproveita apenas a parte testável de `InputActionsMixin` sem GTK.
-
-    Importamos os métodos como funções descobrindo via dict de classe, o que
-    evita depender da cadeia de herança com MouseActionsMixin (que importa
-    ipc_bridge → schema → pydantic).
-    """
+    """Aproveita apenas a parte testável de `InputActionsMixin` sem GTK."""
 
     def __init__(self) -> None:
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -70,7 +50,7 @@ class _FakeMixin:
         self._toasts: list[str] = []
 
     def _get(self, _key: str) -> Any:
-        return None  # TreeView/widgets indisponíveis nos testes unit
+        return None
 
     def _toast_input(self, msg: str) -> None:
         self._toasts.append(msg)
@@ -81,14 +61,9 @@ def _build_mixin() -> Any:
     from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
 
     instance = _FakeMixin()
-    # Liga os métodos do mixin como bound methods do fake.
     for name in (
         "_resolve_effective_bindings",
         "_refresh_key_bindings_from_draft",
-        # TECLADO-QUE-NAO-DIGITA-01: o refresh passou a repintar a
-        # legenda (a frase que nomeia os botões sem tecla). A composição
-        # deste arquivo liga método por método — sem esta linha o refresh
-        # morre de AttributeError e o teste acusa a cura, não o defeito.
         "_atualizar_legenda",
         "on_key_binding_add",
         "on_key_binding_remove",
@@ -104,12 +79,8 @@ def _build_mixin() -> Any:
     return instance
 
 
-# --- _resolve_effective_bindings ---------------------------------------
-
-
 def test_resolve_effective_bindings_none_usa_defaults() -> None:
     mixin = _build_mixin()
-    # draft.key_bindings default é None.
     resolved = mixin._resolve_effective_bindings()
     assert resolved == dict(DEFAULT_BUTTON_BINDINGS)
 
@@ -130,12 +101,8 @@ def test_resolve_effective_bindings_override() -> None:
     assert resolved == {"triangle": ("KEY_C",)}
 
 
-# --- CRUD --------------------------------------------------------------
-
-
 def test_on_key_binding_add_adiciona_primeiro_botao_disponivel() -> None:
     mixin = _build_mixin()
-    # Simular store vazia — add deve pegar primeiro botão canônico ("cross").
     mixin.on_key_binding_add(None)
     rows = mixin._key_bindings_store.rows
     assert len(rows) == 1
@@ -148,7 +115,6 @@ def test_on_key_binding_add_pula_existentes() -> None:
     mixin._key_bindings_store.rows = [["cross", "KEY_A"], ["circle", "KEY_B"]]
     mixin.on_key_binding_add(None)
     rows = mixin._key_bindings_store.rows
-    # Deve adicionar "triangle" (próximo canônico após cross/circle).
     assert any(r[0] == "triangle" for r in rows)
 
 
@@ -219,9 +185,7 @@ def test_on_key_binding_cell_edited_binding_invalido_gera_toast() -> None:
     mixin = _build_mixin()
     mixin._key_bindings_store.rows = [["triangle", "KEY_A"]]
     mixin._on_key_binding_cell_edited(None, "0", "not_valid")
-    # Valor NÃO mudou.
     assert mixin._key_bindings_store.rows[0][1] == "KEY_A"
-    # Toast foi emitido (mensagem amigável do KBD-01).
     assert any("reconheci" in t for t in mixin._toasts)
 
 
@@ -242,7 +206,6 @@ class TestHumanizacaoTeclado:
         assert humanize_button("l1") == "L1"
         assert humanize_button("create") == "Share / Create"
         assert humanize_button("touchpad_left_press") == "Touchpad — lado esquerdo"
-        # Fallback: id desconhecido volta como está.
         assert humanize_button("xpto") == "xpto"
 
     def test_humanize_binding(self) -> None:
@@ -259,7 +222,6 @@ class TestHumanizacaoTeclado:
         assert dehumanize_binding("Alt + Tab") == "KEY_LEFTALT+KEY_TAB"
         assert dehumanize_binding("PrintScreen") == "KEY_SYSRQ"
         assert dehumanize_binding("Abrir teclado na tela") == "__OPEN_OSK__"
-        # Idempotente sobre tokens já crus.
         assert dehumanize_binding("KEY_LEFTALT+KEY_TAB") == "KEY_LEFTALT+KEY_TAB"
 
     def test_round_trip_dos_defaults(self) -> None:

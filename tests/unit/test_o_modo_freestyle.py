@@ -1,26 +1,4 @@
-"""O-MODO-FREESTYLE-01 — o cadeado vira «Modo Freestyle».
-
-A palavra dela, 23/09/2026, com a foto da aba Jogar dizendo «Perfil ativo
-Personalizado» no topo:
-
-    *"Personalizado sai e o botão Trava o perfil Ativo na aba jogar. Vira Modo
-    Freestyle o botão. E a fonte dele aumenta e a altura do botão aumenta também
-    na hoje. O trava perfil ativo já faz isso."*  (noqa-acento: citação dela)
-
-Este arquivo guarda a metade da TELA e a matriz do botão: ele diz «Modo
-Freestyle», maior que hoje, no desenho — e a página publicada continua com a
-palavra de ontem até o `--publicar 01`.
-
-NOTA DATADA — 24/09/2026, O-MODO-FREESTYLE-02. Aqui morava também o MOTOR da
-01, que tirava o «Personalizado» do disco (`aposentar_o_personalizado`) e
-esperava a sessão dela (`O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`), com a medição
-que o segurava: sem ele, do boot ao primeiro jogo nenhum perfil vale e as abas
-recusam o ajuste. A decisão por delegação dela
-(`D-2409-O-PERFIL-DE-FORA-DO-JOGO-VIRA-FREESTYLE`) trocou a saída pela
-renomeação: o perfil de fora do jogo fica e se chama «Freestyle». O motor e a
-espera saíram; as réguas deles passaram a medir o Freestyle, e moram em
-`tests/unit/test_o_perfil_freestyle.py`.
-"""
+"""O-MODO-FREESTYLE-01 — o cadeado vira «Modo Freestyle»."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -36,16 +14,11 @@ from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
 RAIZ = Path(__file__).resolve().parents[2]
-JOGO = "steam_app_2111190"  # Mullet Mad Jack — o jogo sem perfil de 24/07
+JOGO = "steam_app_2111190"
 
-# =============================================================================
-# 1. A MATRIZ — o Modo Freestyle é um só, para os quatro, nos dois transportes
-# =============================================================================
 
 class _Ponte:
-    """Responde ao `freestyle_set` como `ipc_bridge` responde: o estado
-    que ficou valendo. Nada mais frouxo que o real — um `True` para tudo
-    mentiria sobre um pedido de desligar."""
+    """Responde ao `freestyle_set` como `ipc_bridge` responde: o estado"""
 
     def __init__(self) -> None:
         self.chamadas: list[dict[str, Any]] = []
@@ -64,12 +37,7 @@ def _mesa_de_quatro() -> list[dict[str, Any]]:
 @pytest.mark.parametrize("caminho", ["dualsense", "xbox", "steam_input"])
 @pytest.mark.parametrize("travado", [False, True], ids=["liga", "desliga"])
 def test_o_freestyle_e_um_so_para_a_mesa_inteira(caminho: str, travado: bool) -> None:
-    """Um clique, UMA chamada, com o valor absoluto — em qualquer caminho.
-
-    O Modo Freestyle manda na máquina inteira: o gesto
-    não lê o controle escolhido na fita, nem o transporte, nem o caminho. Se um
-    dia ele virar por controle, esta régua reprova e a decisão volta a ela.
-    """
+    """Um clique, UMA chamada, com o valor absoluto — em qualquer caminho."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
     from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
 
@@ -88,18 +56,7 @@ def test_o_freestyle_e_um_so_para_a_mesa_inteira(caminho: str, travado: bool) ->
 def test_com_o_freestyle_ligado_a_janela_de_jogo_nao_troca_o_perfil(
     transporte: str,
 ) -> None:
-    """A prova da sprint, no motor: liga o modo e abre uma janela de jogo.
-
-    Nos dois transportes, com o controle de mentira no cabo e no rádio: o modo
-    é da máquina, e o transporte não pode decidir o resultado.
-
-    NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Até aqui o jogo
-    COM perfil próprio entrava por cima (LOCK-CEDE-01, 24/07), e esta régua só
-    cobria o jogo sem perfil. A decisão dela
-    (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) revogou a exceção: ligado, o
-    Freestyle vale também no jogo que tem perfil, e o Mullet Mad Jack ganha um
-    aqui para provar.
-    """
+    """A prova da sprint, no motor: liga o modo e abre uma janela de jogo."""
     loader.save_profile(Profile(name="Navegação",
                                 match=MatchCriteria(window_class=["steam"]),
                                 priority=50))
@@ -123,10 +80,6 @@ def test_com_o_freestyle_ligado_a_janela_de_jogo_nao_troca_o_perfil(
 
     assert store.active_profile == loader.NOME_DO_PADRAO
 
-
-# =============================================================================
-# 2. A TELA — o desenho diz «Modo Freestyle», e a publicada muda no `--publicar 01`
-# =============================================================================
 
 def _rotulo_do_botao(html: str) -> str:
     import re
@@ -174,9 +127,6 @@ def as_duas_paginas() -> dict[str, dict[str, Any]]:
     from hefesto_dualsense4unix.interface import onde
     from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
 
-    # O QUE O PRODUTO ESCONDE, perguntado ao dono: a legenda do desenho (`.nota`)
-    # mora fora da janela e faria o DOCUMENTO rolar numa página que o produto
-    # nunca mostra assim.
     esconde = "".join(f"{s}{{display:none}}" for s in seletores_escondidos())
     saida: dict[str, dict[str, Any]] = {}
     with sync_playwright() as pw:
@@ -198,20 +148,11 @@ def as_duas_paginas() -> dict[str, dict[str, Any]]:
 def test_o_botao_do_desenho_tem_letra_e_altura_maiores(
     as_duas_paginas: dict[str, dict[str, Any]],
 ) -> None:
-    """O pedido dela, em pixels: maior que hoje, e ainda um botão de canto.
-
-    MORDE: devolva o `height:17px`/`font-size:10.5px` ao `.cadeado` do
-    `aba01.py`, regere o desenho, e esta régua reprova.
-
-    Desde o `--publicar 01` de 24/09/2026 as duas são a mesma página, e a
-    régua confere que o desenho CHEGOU inteiro ao produto.
-    """
+    """O pedido dela, em pixels: maior que hoje, e ainda um botão de canto."""
     desenho, hoje = as_duas_paginas["desenho"], as_duas_paginas["publicada"]
     assert (desenho["fonte"], desenho["altura"]) == (hoje["fonte"], hoje["altura"]), (
         f"a publicada diz {hoje['rotulo']!r} e não tem a letra e a altura do "
         f"desenho: {hoje} contra {desenho}")
-    # Menor que um botão de escolha: da altura dos chips de modo ele voltaria
-    # a ler como um quinto modo (o motivo de ter subido ao canto em 08/09).
     assert desenho["altura"] < desenho["escolha"], desenho
     assert desenho["linhas"] == 1, desenho
     assert desenho["no_topo"] and desenho["a_direita"] < 20, desenho

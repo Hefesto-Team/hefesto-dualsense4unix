@@ -33,7 +33,6 @@ import pytest
 
 from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
-#: Os `pacotes` e o `mesa_viva` moram na pasta da interface, como no piloto.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]
                        / "src" / "hefesto_dualsense4unix" / "interface"))
 
@@ -47,8 +46,6 @@ _TODOS = (_P1, _P2, _P3, _P4)
 
 _PAGINA = "02-controles.html"
 
-#: Os dois chips: o gesto, o atributo do botão na página, o campo do `mira.set`
-#: e da leitura, o endereço da pintura, e os destinos que a tela oferece.
 _CHIPS = (
     ("inclinacao", "destino", "inclinacao", "inclinacao-destino",
      (rot.DESTINO_ANALOGICO_ESQUERDO, rot.DESTINO_ANALOGICO_DIREITO)),
@@ -58,11 +55,7 @@ _CHIPS = (
 
 
 class _Ponte:
-    """O dublê ESTRITO da ponte: amarra o pedido à assinatura da função real.
-
-    Com `**kw` solto, um gesto que mandasse um nome que a ponte não conhece
-    passaria aqui e levantaria `TypeError` no produto.
-    """
+    """O dublê ESTRITO da ponte: amarra o pedido à assinatura da função real."""
 
     def __init__(self, corpo: dict[str, Any] | None) -> None:
         self.corpo = corpo
@@ -104,21 +97,12 @@ def _o_gesto(nome: str) -> Any:
     return fn
 
 
-# ---------------------------------------------------------------------------
-# 1. O GESTO
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("gesto, atributo, campo, _pintura, oferece", _CHIPS)
 def test_o_chip_alterna_pelo_que_o_daemon_diz(
     gesto: str, atributo: str, campo: str, _pintura: str,
     oferece: tuple[str, str],
 ) -> None:
-    """Apagado acende, aceso apaga, e o outro do grupo troca — um campo só.
-
-    MORDIDA: mande o `pedido` sempre (sem o `nenhum` do chip aceso) e o
-    segundo caso reprova.
-    """
+    """Apagado acende, aceso apaga, e o outro do grupo troca — um campo só."""
     um, outro = oferece
     for agora, esperado in ((rot.DESTINO_NENHUM, um), (um, rot.DESTINO_NENHUM),
                             (outro, um)):
@@ -134,12 +118,7 @@ def test_cada_controle_le_o_seu_e_grava_o_seu(
     gesto: str, atributo: str, campo: str, _pintura: str,
     oferece: tuple[str, str], transporte: str,
 ) -> None:
-    """P1 a P4, no cabo e no rádio: o clique no cartão de um não lê o de outro.
-
-    O P3 tem o chip aceso e os outros não: o clique no P3 apaga, e o clique
-    em cada um dos outros acende — o `uniq` do cartão é o endereço dos dois
-    lados.
-    """
+    """P1 a P4, no cabo e no rádio: o clique no cartão de um não lê o de outro."""
     um = oferece[0]
     controles = [
         _controle(u, transporte, **{campo: um if u == _P3 else rot.DESTINO_NENHUM})
@@ -157,12 +136,7 @@ def test_no_nativo_o_chip_recusa_sem_pedir(
     gesto: str, atributo: str, campo: str, _pintura: str,
     oferece: tuple[str, str],
 ) -> None:
-    """No Nativo o chip é cinza e o clique não chega à ponte.
-
-    MORDIDA: tire o `if _nativo(ctx)` de um dos dois gestos (`inclinacao`,
-    `toque`) e a ponte é chamada; tire a leitura do `status: nativo` depois
-    da ponte e a segunda metade reprova.
-    """
+    """No Nativo o chip é cinza e o clique não chega à ponte."""
     import pacotes.a02_controles as a02
 
     cinza = {"inclinacao": a02.INCLINACAO_CINZA_NO_NATIVO,
@@ -174,7 +148,6 @@ def test_no_nativo_o_chip_recusa_sem_pedir(
             {"uniq": _P2, atributo: oferece[0]}, p)
     assert str(erro.value) == cinza
     assert p.chamadas == []
-    # e o daemon que recusa pelo Nativo (o tique de antes) diz a mesma frase
     with pytest.raises(RuntimeError) as erro:
         _o_gesto(gesto)(_ctx(_controle(_P2, "bt", **{campo: rot.DESTINO_NENHUM})),
                         {"uniq": _P2, atributo: oferece[0]},
@@ -224,11 +197,6 @@ def test_o_clique_sem_destino_ou_sem_controle_recusa(
         _o_gesto(gesto)(ctx, {atributo: oferece[0]}, _Ponte(_OK))
 
 
-# ---------------------------------------------------------------------------
-# 2. A PONTE
-# ---------------------------------------------------------------------------
-
-
 def _ponte_que_anota(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, Any]]:
     from hefesto_dualsense4unix.app import ipc_bridge
 
@@ -276,11 +244,6 @@ def test_os_chamadores_de_hoje_mandam_o_mesmo_corpo(
     assert padrao["toque"].default is None
 
 
-# ---------------------------------------------------------------------------
-# 3. A PINTURA
-# ---------------------------------------------------------------------------
-
-
 def _cards(*controles: dict[str, Any], nativo: bool = False) -> dict[str, Any]:
     import pacotes.a02_controles as a02
 
@@ -290,13 +253,7 @@ def _cards(*controles: dict[str, Any], nativo: bool = False) -> dict[str, Any]:
 
 
 def test_a_pintura_e_o_destino_do_daemon_por_controle() -> None:
-    """Cada cartão pinta o SEU destino; sem leitura, o travessão.
-
-    Usa o `_so_se_a_pagina_tiver` de verdade: a página publicada tem os dois
-    endereços, e é nela que o piloto pinta.
-
-    MORDIDA: pinte o `campo` do P1 em todos e o P3 reprova.
-    """
+    """Cada cartão pinta o SEU destino; sem leitura, o travessão."""
     import mesa_viva
 
     controles = [
@@ -330,11 +287,6 @@ def test_no_nativo_o_cinza_vem_junto_e_o_aceso_fica() -> None:
     assert card["toque-modo"] == rot.TOQUE_ZONAS
 
 
-# ---------------------------------------------------------------------------
-# 4. A PÁGINA PUBLICADA E O PACOTE FALAM A MESMA LÍNGUA
-# ---------------------------------------------------------------------------
-
-
 def _publicada() -> str:
     from hefesto_dualsense4unix.interface import onde
 
@@ -346,8 +298,7 @@ def test_todo_chip_da_pagina_tem_o_destino_que_o_gesto_aceita(
     gesto: str, atributo: str, _campo: str, pintura: str,
     oferece: tuple[str, str],
 ) -> None:
-    """Quatro cartões, cada um com os dois do grupo; o `data-hef-quando` do
-    invólucro é o valor que o botão pede, e o botão tem o cinza da Mira."""
+    """Quatro cartões, cada um com os dois do grupo; o `data-hef-quando` do"""
     doc = _publicada()
     botoes = re.findall(
         r'<span[^>]*data-campo="' + re.escape(pintura) + r'"[^>]*'
@@ -361,9 +312,7 @@ def test_todo_chip_da_pagina_tem_o_destino_que_o_gesto_aceita(
     assert sorted({q for q, _ in botoes}) == sorted(oferece)
 
 
-# ---------------------------------------------------------------------------
 # 5. A VOLTA INTEIRA — o clique, o `mira.set` de verdade e o `state_full`
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -432,11 +381,7 @@ def test_o_clique_chega_ao_disco_e_a_tela_le_de_volta(
     gesto: str, atributo: str, campo: str, pintura: str,
     oferece: tuple[str, str], transporte: str,
 ) -> None:
-    """Acende no P3, só no P3; o segundo clique no mesmo chip apaga.
-
-    A ponte é a de verdade (`pacotes.ponte` → `ipc_bridge`), e só o soquete é
-    trocado pela chamada direta ao handler do `IpcServer` do produto.
-    """
+    """Acende no P3, só no P3; o segundo clique no mesmo chip apaga."""
     from pacotes import ponte
 
     from hefesto_dualsense4unix.profiles.loader import load_profile

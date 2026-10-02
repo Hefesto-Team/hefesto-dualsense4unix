@@ -50,19 +50,6 @@ from __future__ import annotations
 
 from typing import Any, Final, NamedTuple
 
-# NOTA DATADA — 25/08/2026 (I12 da INÍCIO NÃO MENTE-01). Até aqui estes três
-# nomes vinham PRIVADOS da aba Início (`_MODE_ITEMS`, `_FLAVOR_ITEMS`,
-# `RECONCILIAR_LABEL`), e o comentário que ocupava este lugar defendia a
-# travessia: copiar as listas criaria um SEGUNDO dono do vocabulário, e no dia
-# em que um rótulo mudasse na Início esta aba continuaria dizendo o nome velho.
-#
-# O argumento continua inteiro; o que mudou é que ele não precisa mais furar o
-# `_` de ninguém. O `contrato_da_mascara` declara o dono e reexporta os MESMOS
-# objetos (alias, nunca cópia) com nome público — então a lista-dona segue
-# sendo a da Início e a fronteira de módulo deixa de ser furada por convenção.
-#
-# `_NOME_NA_FRASE`, do card, continua privado e continua deliberado, pela mesma
-# razão de sempre: é a lista-dona dos recursos e da ORDEM deles.
 from hefesto_dualsense4unix.app.actions.contrato_da_mascara import (
     ITENS_DE_MASCARA as _FLAVOR_ITEMS,
 )
@@ -93,131 +80,51 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
 )
 from hefesto_dualsense4unix.utils.markup import escapar_markup
 
-#: Os recursos, na ordem em que a aba os lista. Vem da lista-dona do card.
 RECURSOS: Final[tuple[str, ...]] = tuple(nome for nome, _rot in _NOME_NA_FRASE)
 
-#: Recurso -> o nome dele na tela. Mesma fonte, mesmo texto que a linha do card.
 NOME_DO_RECURSO: Final[dict[str, str]] = dict(_NOME_NA_FRASE)
 
-#: Teto de largura de um painel, em px.
-#:
-#: Ele existe porque o conteúdo é uma tabela de duas colunas curtas: com a
-#: janela maximizada dela (1920) e o teto elástico da página em 1400px, um
-#: painel esticado desenharia uma moldura de 1400px em volta de ~430px de
-#: tinta — a mesma "sobra que vira buraco" que a SOM-01 tirou do card.
-#:
-#: `width-request` é MÍNIMO no GTK3, nunca máximo; sozinho ele não segura nada.
-#: Quem o transforma em teto de fato é o `halign=START` que vai junto — é o
-#: idioma que esta casa já usa nas barras de gatilho e no giroscópio do card.
-#: 700px é o número medido: a linha mais larga da tabela ("clique do touchpad"
-#: + "no jogo agora (motores: 30/120)") pede ~430px, e o recado sem vpad — que
-#: é a linha longa desta tela — quebra em duas antes disso.
 LARGURA_PAINEL: Final[int] = 700
 
-#: Situação -> a palavra que a coluna da direita usa.
-#:
-#: As três derivam do que a linha do card já escreve, no singular: ela agrupa
-#: ("No jogo agora: ...", "pararam: ...", "sem pedido ainda: ...") porque diz
-#: vários recursos de uma vez; aqui cada linha fala de um só. Nenhuma palavra
-#: nova entrou — a regra da casa é que nome que não deriva do que já está na
-#: tela é sinal de conceito errado.
 PALAVRA_DA_SITUACAO: Final[dict[str, str]] = {
     SITUACAO_CHEGANDO: "no jogo agora",
     SITUACAO_PARADO: "parou",
     SITUACAO_NUNCA: "sem pedido ainda",
 }
 
-#: Situação -> cor do texto. Só DUAS situações ganham cor, e a escolha é de
-#: significado, não de gosto:
-#:
-#: * **chegando** é a única que afirma alguma coisa boa -> verde;
-#: * **parou** pede atenção (era para estar chegando e não está) -> amarelo;
 #: * o resto é EXPLICAÇÃO, não defeito, e fica apagado: "sem pedido ainda" é o
-#:   jogo não ter pedido, e "a máscara Xbox 360 não tem giroscópio" é a API do
-#:   controle de Xbox, não avaria nossa. Pintar qualquer um dos dois de
-#:   vermelho ensinaria ela a ver problema onde não há.
-#:
-#: **Por que markup e não classe de CSS**, que seria o desenho preferido desta
-#: casa: medido nesta leva, a regra `.hefesto-dualsense4unix-window label` do
-#: `theme.css` tem especificidade MAIOR que a de
-#: `.hefesto-dualsense4unix-status-ok` — a classe existe, é aplicada e não pinta
-#: nada (a primeira foto saiu com "no jogo agora" em branco). O `set_markup` com
-#: `foreground` é o mesmo caminho que o `header_connection` já usa para o verde,
-#: o laranja e o vermelho do estado do daemon. Os dois hex são os do `theme.css`
-#: (`@green` e `@yellow`); mudou lá, muda aqui.
 COR_DA_SITUACAO: Final[dict[str, str]] = {
     SITUACAO_CHEGANDO: "#50fa7b",
     SITUACAO_PARADO: "#f1fa8c",
 }
 
-#: PERFIL-MUDO-01: a cor do aviso do perfil que não entrou. É o MESMO amarelo do
-#: "parou", e pela mesma razão: era para estar valendo e não está. Vermelho seria
-#: exagero — o Hefesto continua funcionando, com o perfil errado.
 COR_DO_AVISO_DE_PERFIL: Final[str] = "#f1fa8c"
 
-#: As situações que ficam apagadas — as três que EXPLICAM em vez de acusar.
 SITUACOES_APAGADAS: Final[frozenset[str]] = frozenset(
     {SITUACAO_NUNCA, SITUACAO_IMPOSSIVEL, SITUACAO_NATIVO}
 )
 
-#: As situações que só existem quando há um controle virtual DESTE controle
-#: para medir. `IMPOSSIVEL` e `NATIVO` ficam de fora de propósito: as duas são
-#: respostas que a função dá ANTES de olhar o vpad (a máscara Xbox apaga o
-#: recurso; o Modo Nativo dispensa o vpad inteiro), e tomá-las como prova de
-#: que há vpad faria a aba mostrar seis linhas medidas num controle que o jogo
-#: não vê.
 _SITUACOES_MEDIDAS: Final[frozenset[str]] = frozenset(
     {SITUACAO_CHEGANDO, SITUACAO_PARADO, SITUACAO_NUNCA}
 )
 
-#: O que a aba diz quando o Hefesto está desligado. Texto da aba Início
-#: (`_render_home`, o caminho offline), pelo mesmo motivo dos rótulos: a mesma
-#: situação não pode ter duas frases em duas abas.
 TEXTO_OFFLINE: Final[str] = "O Hefesto está desligado."
 
-#: E quando ele está ligado e não há controle nenhum na mesa. Idem — é a frase
-#: que a aba Início já usa em `_render_home_controllers`.
 TEXTO_SEM_CONTROLE: Final[str] = "Nenhum controle conectado."
 
-#: Conexão Nativa (Sony): não há gamepad virtual, e a tela tem de DIZER isso.
-#:
-#: Ficar vazia seria pior que mentir — ela olharia uma aba morta e concluiria
-#: que quebrou. E dizer "não chega nada" seria falso: no Nativo chega TUDO,
-#: justamente porque não há intermediário. O que esta frase afirma é o único
-#: fato que o daemon conhece com certeza: não existe controle virtual para
-#: medir, porque o jogo abriu o aparelho de verdade.
-#:
-#: **A primeira redação desta frase foi reprovada por um portão desta casa**, e
-#: a lição vale registrar: ela começava com "O Hefesto saiu da frente", que é a
-#: construção que a medição DELA derrubou em 06/08/2026
-#: (`test_a_frase_refutada_da_allowlist`). O portão está certo mesmo aqui, onde
-#: o assunto é outro: a frase ensina que o produto inteiro se afasta, e quem lê
-#: conclui que perde cor e gatilho. O que se diz agora é o mecanismo — não há
-#: controle virtual —, que é verificável e não ensina nada errado.
 TEXTO_NATIVO: Final[str] = (
     "Não há controle virtual nenhum neste modo: o jogo abre o controle físico "
     "e fala direto com ele. Movimento, toque, vibração e som saem do próprio "
     "DualSense, e por isso não há aqui o que medir."
 )
 
-#: "Controlar o PC": também não há gamepad virtual, e por outro motivo.
-#:
-#: A frase afirma o que sabemos (o que NÓS entregamos) e não o que não sabemos
-#: (o que o jogo faz). "Nenhum jogo recebe nada" seria uma afirmação sobre o
-#: mundo inteiro a partir de um campo do nosso payload.
 TEXTO_DESKTOP: Final[str] = (
     "O controle está movendo o mouse e o teclado. Enquanto estiver assim, o "
     'Hefesto não entrega controle nenhum ao jogo — troque para "Jogar pelo '
     'Hefesto" na aba Início.'
 )
 
-#: E o terceiro caso sem vpad: o modo é "Jogar pelo Hefesto", mas ESTE controle
 #: não tem um gamepad virtual casado com ele no `state_full`.
-#:
-#: Repare no que a frase NÃO diz: ela não culpa o co-op, não afirma que houve
-#: erro e não promete que vai entrar. Diz o que se observa (o jogo não vê este
-#: controle), diz o que costuma resolver sozinho (acabou de conectar) e aponta
-#: o gesto que já existe na aba Início para o caso de não resolver.
 TEXTO_SEM_VPAD: Final[str] = (
     "O jogo ainda não vê este controle. Se você acabou de conectá-lo, ele entra "
     f'sozinho em alguns segundos; se demorar, use "{RECONCILIAR_LABEL}" na aba '
@@ -226,14 +133,7 @@ TEXTO_SEM_VPAD: Final[str] = (
 
 
 class LinhaDoJogo(NamedTuple):
-    """Uma linha da tabela: o recurso, o que dizer dele e como pintar.
-
-    ``detalhe`` é o que a função-dona acrescentou ao nome do recurso — o
-    ``(~158 Hz)`` do giroscópio e o ``(motores: 30/120)`` da vibração. Ele
-    viaja separado do nome porque a coluna da esquerda é FIXA (é o que permite
-    comparar antes e depois de trocar a máscara olhando o mesmo lugar) e o
-    número é o que muda.
-    """
+    """Uma linha da tabela: o recurso, o que dizer dele e como pintar."""
 
     recurso: str
     nome: str
@@ -242,16 +142,7 @@ class LinhaDoJogo(NamedTuple):
 
 
 def _detalhe(frase: str, nome: str) -> str:
-    """O que sobra da frase da função-dona depois do nome do recurso.
-
-    ``estado_do_recurso`` devolve ``"giroscópio (~158 Hz)"`` e
-    ``"vibração (motores: 30/120)"`` — o nome mais um parêntese com o número
-    medido. A coluna da esquerda mostra o nome; este resto vai para a direita.
-
-    Se a frase deixar de começar pelo nome (mudança futura da função-dona),
-    ela vai INTEIRA para a direita em vez de sumir: uma tela que perde
-    informação em silêncio é o defeito que este projeto mais paga.
-    """
+    """O que sobra da frase da função-dona depois do nome do recurso."""
     if frase == nome:
         return ""
     if frase.startswith(nome):
@@ -262,14 +153,7 @@ def _detalhe(frase: str, nome: str) -> str:
 def linhas_do_controle(
     entry: dict[str, Any], state_global: dict[str, Any]
 ) -> list[LinhaDoJogo]:
-    """As linhas de UM controle; ``[]`` = não há o que afirmar sobre ele.
-
-    Uma linha por recurso, na ordem de :data:`RECURSOS`, e nenhuma regra nova:
-    quem decide entre chegando/parou/sem pedido/impossível/nativo é
-    ``estado_do_recurso``, que é a dona única dessa decisão desde a
-    PAINEL-DA-VERDADE-01. Recurso que devolve ``None`` (não há o que afirmar)
-    não vira linha — a tela cala em vez de escrever zero.
-    """
+    """As linhas de UM controle; ``[]`` = não há o que afirmar sobre ele."""
     linhas: list[LinhaDoJogo] = []
     for recurso in RECURSOS:
         estado = estado_do_recurso(recurso, entry, state_global)
@@ -278,8 +162,6 @@ def linhas_do_controle(
         nome = NOME_DO_RECURSO[recurso]
         palavra = PALAVRA_DA_SITUACAO.get(estado.situacao)
         if palavra is None:
-            # IMPOSSIVEL e NATIVO: a `frase` já É a explicação inteira ("a
-            # máscara Xbox 360 não tem giroscópio"), e não o nome do recurso.
             texto = estado.frase
         else:
             detalhe = _detalhe(estado.frase, nome)
@@ -309,17 +191,7 @@ def tem_controle_no_jogo(
 def recado_do_controle(
     entry: dict[str, Any], state_global: dict[str, Any]
 ) -> str | None:
-    """A frase que substitui as linhas; ``None`` = há linhas a mostrar.
-
-    Os três casos sem gamepad virtual, e cada um com a sua frase — porque as
-    três situações mandam agir em lugares diferentes:
-
-    * **Conexão Nativa (Sony)** — não há nada nosso no meio, e está tudo certo;
-    * **Controlar o PC** — o controle é mouse e teclado, e o gesto que muda
-      isso está na aba Início;
-    * **"Jogar pelo Hefesto" e mesmo assim sem vpad** — o único dos três que
-      pode ser transitório.
-    """
+    """A frase que substitui as linhas; ``None`` = há linhas a mostrar."""
     if tem_controle_no_jogo(entry, state_global):
         return None
     modo = mode_of_state(state_global)
@@ -331,26 +203,7 @@ def recado_do_controle(
 
 
 def recado_global(state_global: dict[str, Any] | None) -> str | None:
-    """A frase que responde pela JANELA inteira; ``None`` = é por controle.
-
-    Dois dos três casos sem gamepad virtual não são fatos DE UM CONTROLE: na
-    Conexão Nativa e no "Controlar o PC" não existe controle virtual para
-    ninguém — o modo vale para a mesa inteira, e a explicação é uma só. Não
-    confundir com a allowlist do Steam Input, em que a medição dela derrubou
-    essa leitura pela metade (`test_a_frase_refutada_da_allowlist`): lá o
-    produto entrega a entrada e MANTÉM a saída, e aqui o assunto é outro.
-    Repetir a mesma explicação dentro de um painel por controle
-    (medido na foto de 10/08: a frase do Nativo saiu duas vezes, palavra por
-    palavra, com dois controles na mesa) não acrescenta informação nenhuma —
-    acrescenta leitura.
-
-    O terceiro caso — modo "Jogar pelo Hefesto" e mesmo assim sem vpad — fica
-    de fora daqui de propósito: ele é fato de UM controle, e pode valer para um
-    e não para o outro na mesma mesa.
-
-    Sem daemon devolve ``None``: quem diz "O Hefesto está desligado." é a linha
-    de contexto, e repetir a frase logo abaixo dela seria eco.
-    """
+    """A frase que responde pela JANELA inteira; ``None`` = é por controle."""
     if not isinstance(state_global, dict):
         return None
     modo = mode_of_state(state_global)
@@ -362,25 +215,7 @@ def recado_global(state_global: dict[str, Any] | None) -> str | None:
 
 
 def aviso_do_perfil(state_global: dict[str, Any] | None) -> str | None:
-    """O perfil que ela escreveu PARA este jogo e que não entrou. ``None`` = nada a dizer.
-
-    PERFIL-MUDO-01 (10/08/2026). O daemon manda as frases prontas (ele é quem
-    tem os perfis do disco e a janela em foco); aqui só se decide se há o que
-    mostrar e como juntar mais de uma. As frases vêm de
-    `profiles.porque_nao_entrou`, e são factuais de propósito — dizem o que o
-    perfil exigiu e o que o Hefesto viu, sem mandar apagar nada: quem escreveu o
-    critério foi ela.
-
-    O fecho ("Enquanto isso, vale o perfil ...") é o que transforma o aviso em
-    resposta completa: sem ele a aba diria que um perfil não entrou e deixaria a
-    pergunta óbvia — *então qual entrou?* — sem resposta na mesma tela. E o
-    ``active_profile`` já viajava no estado desde sempre.
-
-    Duas regras para o mesmo jogo são raras e possíveis (ela teve ``Pragmata`` e
-    ``Pragmata2`` no disco em 01/08). Aparecem as duas, uma por linha: escolher
-    uma para mostrar seria o produto decidindo qual das configurações dela
-    importa.
-    """
+    """O perfil que ela escreveu PARA este jogo e que não entrou. ``None`` = nada a dizer."""
     if not isinstance(state_global, dict):
         return None
     achados = state_global.get("perfil_do_jogo_que_nao_entrou")
@@ -400,36 +235,7 @@ def aviso_do_perfil(state_global: dict[str, Any] | None) -> str | None:
 
 
 def jogo_steam_aberto(state_global: dict[str, Any] | None) -> bool | None:
-    """Há jogo da Steam aberto AGORA? ``None`` = **não dá para saber**.
-
-    ABA-DO-JOGO-01 (10/08/2026), o pedido dela, literal: *"essa aba no jogo só
-    deveria aparecer quando efetivamente eu tivesse com um jogo steam aberto"*.
-
-    Três respostas, e o ``None`` é tão resposta quanto as outras duas:
-
-    * ``True``  — o daemon sondou e há jogo (o ``appid`` veio junto);
-    * ``False`` — o daemon sondou e **não** há jogo;
-    * ``None``  — ninguém sondou ainda (``lido`` falso), o daemon está desligado
-      (``state`` ``None``), ou o daemon vivo é anterior a esta versão e sequer
-      conhece a chave. Os três dizem a mesma coisa a quem consome: **não mexa**.
-
-    O terceiro caso é o que o `lido` do daemon existe para carregar até aqui, e
-    é também a razão de a ausência da chave devolver ``None`` em vez de
-    ``False``: nesta casa "o daemon vivo é mais velho que o código" é rotina
-    (install editable — a cura do daemon só vale no próximo start), e um
-    ``False`` inventado a partir do silêncio faria a aba sumir por causa da
-    IDADE do daemon, não do estado do jogo.
-
-    O preço desse ``None``, dito na mesa: com um daemon anterior a esta versão a
-    aba **não volta** — ela nasce fora da tira e nada a traz, porque ninguém
-    responde. É o desfecho seguro dos dois possíveis (o defeito relatado é a aba
-    aparecer sem jogo), dura até o daemon reiniciar, e o `install.sh` reinicia o
-    daemon. Quem estiver mexendo no código com o daemon antigo de pé vê a aba
-    sumida — e a cura é o restart, nunca um `False` de mentira aqui.
-
-    Não lê ``appid`` sem ``lido``: o par viaja junto exatamente para o ``null``
-    não ter dois significados (ver `StateStore.set_steam_jogo_appid`).
-    """
+    """Há jogo da Steam aberto AGORA? ``None`` = **não dá para saber**."""
     if not isinstance(state_global, dict):
         return None
     bloco = state_global.get("jogo_steam")
@@ -474,7 +280,6 @@ def texto_do_contexto(state_global: dict[str, Any] | None) -> str:
     flavor = gamepad.get("flavor") if isinstance(gamepad, dict) else None
     rotulo_da_mascara = dict(_FLAVOR_ITEMS).get(str(flavor), "")
     if not rotulo_da_mascara:
-        # Máscara ausente ou desconhecida: diz o modo e cala sobre o resto.
         return rotulo_do_modo
     linha = f"{rotulo_do_modo} · O jogo vê o controle como: {rotulo_da_mascara}"
     pedida = mascara_pedida_pelo_jogo_em_cena(state_global)
@@ -486,18 +291,7 @@ def texto_do_contexto(state_global: dict[str, Any] | None) -> str:
 def mascara_pedida_pelo_jogo_em_cena(
     state_global: dict[str, Any] | None,
 ) -> str | None:
-    """O rótulo da máscara que o perfil do jogo EM CENA pedia. ``None`` = sem
-    divergência, ou sem como nomeá-la.
-
-    Lê só ``gamepad_emulation.mascara_divergente`` — o alarme —, nunca a lista
-    ``mascara_divergencias``.
-
-    ``None`` também quando o rótulo não é nomeável: a máscara do perfil vem do
-    disco e um valor fora de :data:`_FLAVOR_ITEMS` é payload de um Hefesto mais
-    novo (ou mais velho) que esta janela. Escrever o identificador cru no topo
-    da aba seria pior que calar — a regra desta casa é que onde não há dado
-    nomeável, a tela cala.
-    """
+    """O rótulo da máscara que o perfil do jogo EM CENA pedia. ``None`` = sem"""
     if not isinstance(state_global, dict):
         return None
     gamepad = state_global.get("gamepad_emulation")
@@ -510,18 +304,9 @@ def mascara_pedida_pelo_jogo_em_cena(
 
 
 def titulo_do_painel(entry: dict[str, Any]) -> str:
-    """O título de um painel — o MESMO do card do controle na aba Status.
-
-    "Controle 1 — USB · Jogador 1". Reusar o título é o que faz as duas abas
-    lerem como o mesmo aparelho: ela olha a aba Status, olha esta, e o nome
-    bate sem ela ter de traduzir nada.
-    """
+    """O título de um painel — o MESMO do card do controle na aba Status."""
     return titulo_do_card(entry)
 
-
-# ---------------------------------------------------------------------------
-# Resolução condicional de GTK (padrão da casa: real + stub)
-# ---------------------------------------------------------------------------
 
 try:
     import gi
@@ -560,18 +345,6 @@ if _GTK_DISPONIVEL:
             self._ultimo: tuple[Any, ...] | None = None
             self._linhas: dict[str, Any] = {}
 
-            # MESA-CHEIA-07/E2 -> T5: o quadradinho da cor DESTE controle, ao
-            # lado de um título que já era o mesmo do card. Sem ele, quatro
-            # painéis idênticos ficam na frente de quatro barras acesas em
-            # quatro cores, e a pessoa tem de contar molduras para saber de
-            # quem é cada uma.
-            #
-            # Mesmo cabeçalho do card, e de propósito: `Gtk.Box` no
-            # `label_widget` do frame, swatch de `LADO_DO_SWATCH` px à
-            # esquerda do rótulo. A cor e o desenho vêm de
-            # `cor_do_swatch`/`desenhar_swatch` — este módulo CHAMA aquelas
-            # funções e não reimplementa nem uma linha delas, que é a promessa
-            # do cabeçalho deste arquivo e a mordida 1 da MESA-CHEIA-07 §3.
             cabecalho = Gtk.Box(
                 orientation=Gtk.Orientation.HORIZONTAL, spacing=6
             )
@@ -586,8 +359,6 @@ if _GTK_DISPONIVEL:
             cabecalho.pack_start(self._titulo_label, False, False, 0)
             cabecalho.show_all()
             self.set_label_widget(cabecalho)
-            # O par que vira teto de largura: pedido MÍNIMO + `halign=START`.
-            # Ver :data:`LARGURA_PAINEL` para o porquê de não ser só o pedido.
             self.set_size_request(LARGURA_PAINEL, -1)
             self.set_halign(Gtk.Align.START)
 
@@ -603,35 +374,19 @@ if _GTK_DISPONIVEL:
             self._grade.set_row_spacing(4)
             corpo.pack_start(self._grade, False, False, 0)
 
-            # O recado ocupa o LUGAR das linhas (nunca os dois ao mesmo tempo):
-            # sem gamepad virtual não há o que tabelar, e uma tabela de seis
-            # traços ao lado de uma explicação seria ruído em cima de ruído.
             self._recado = Gtk.Label()
             self._recado.set_xalign(0.0)
             self._recado.set_line_wrap(True)
-            # `max_width_chars` NÃO basta sozinho — ele limita a largura NATURAL
-            # e o pai continua livre para alocar mais (medido em 01/08: um
-            # parágrafo de 1869px ficou intacto). Precisa de `halign=start`.
             self._recado.set_max_width_chars(72)
             self._recado.set_halign(Gtk.Align.START)
             self._recado.get_style_context().add_class("dim-label")
-            # `no_show_all` porque quem manda na visibilidade deste rótulo é o
-            # `atualizar`, e um `show_all()` de fora (a janela inteira nasce com
-            # um, e o retrato das abas roda outro) o traria de volta VAZIO —
-            # medido: um label vazio e visível some da tela mas cobra a altura
-            # de uma linha, e o painel ganhava um vão sem causa aparente.
             self._recado.set_no_show_all(True)
             corpo.pack_start(self._recado, False, False, 0)
 
             self._montar_linhas()
 
         def _montar_linhas(self) -> None:
-            """Cria as seis linhas UMA vez; o tique só troca texto e classe.
-
-            As linhas são fixas de propósito — é o que permite comparar a tela
-            antes e depois de trocar a máscara olhando o mesmo lugar. Recriar
-            widget a cada tique também faria a aba piscar a 2 Hz.
-            """
+            """Cria as seis linhas UMA vez; o tique só troca texto e classe."""
             for indice, recurso in enumerate(RECURSOS):
                 nome = Gtk.Label(label=NOME_DO_RECURSO[recurso])
                 nome.set_xalign(0.0)
@@ -641,9 +396,6 @@ if _GTK_DISPONIVEL:
                 valor.set_line_wrap(True)
                 valor.set_max_width_chars(56)
                 valor.set_halign(Gtk.Align.START)
-                # Mesma razão do recado: a linha de um recurso que não tem o
-                # que afirmar fica ESCONDIDA, e um `show_all()` de fora a
-                # traria de volta com o texto do ciclo anterior.
                 nome.set_no_show_all(True)
                 valor.set_no_show_all(True)
                 self._grade.attach(nome, 0, indice, 1, 1)
@@ -662,11 +414,6 @@ if _GTK_DISPONIVEL:
             titulo = titulo_do_painel(entry)
             recado = recado_do_controle(entry, state_global)
             linhas = [] if recado else linhas_do_controle(entry, state_global)
-            # A cor entra na ASSINATURA, e essa metade é a que se esquece: o
-            # diff existe para não tocar em widget à toa, e uma cor fora dele
-            # ficaria congelada na primeira pintura — ela troca a lightbar na
-            # aba Início e este painel continuaria com o quadradinho velho até
-            # que uma LINHA mudasse por outro motivo.
             cor_do_controle = cor_do_swatch(entry)
             assinatura = (titulo, cor_do_controle, recado, tuple(linhas))
             if assinatura == self._ultimo:
@@ -717,12 +464,7 @@ if _GTK_DISPONIVEL:
 else:
 
     class PainelNoJogo:  # type: ignore[no-redef]
-        """Stub sem GTK3 — guarda o resultado das funções puras.
-
-        Mesmo desenho do stub do `ControllerCard`: o suficiente para asserção
-        de contrato num ambiente sem toolkit (o job `lint-test` do CI roda sem
-        PyGObject por decisão registrada no `ci.yml`).
-        """
+        """Stub sem GTK3 — guarda o resultado das funções puras."""
 
         def __init__(self) -> None:
             self.titulo: str | None = None

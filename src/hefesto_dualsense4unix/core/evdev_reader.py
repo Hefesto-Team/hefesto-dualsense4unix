@@ -29,23 +29,13 @@ logger = get_logger(__name__)
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PIDS = {0x0CE6, 0x0DF2}  # DualSense + DualSense Edge
 
-#: Unidades evdev por grau/s do giroscópio (`DS_GYRO_RES_PER_DEG_S` do
-#: `hid-playstation.c`). É só o FALLBACK: a escala real vem do `absinfo` do
-#: node aberto — ver `MotionSensorReader._on_device_opened`.
 DUALSENSE_GYRO_RES_PER_DEG_S = 1024
 
-#: Unidades evdev por **g** do acelerômetro (`DS_ACC_RES_PER_G` do
-#: `hid-playstation.c:226`, com `input_abs_set_res(sensors, ABS_X…, accel_res)`
-#: em `:1053-1055`). Como o do gyro, é só o FALLBACK: a escala real vem do
-#: `absinfo` do node aberto. Medido nesta bancada em 29/08/2026 com dois
 #: DualSense no cabo — `EVIOCGABS` devolveu `res=8192` nos três eixos dos dois.
 DUALSENSE_ACC_RES_PER_G = 8192
 
 
-#: Teto da faixa canônica do domínio Hefesto para eixos e gatilhos (0..255) —
 #: é o que o DualSense já entrega CRU, e é a escala em que todo o resto do
-#: projeto fala (perfis, curvas, vpad, repasse ao jogo). O normalizador existe
-#: para que um aparelho com OUTRA faixa chegue aqui sem que nada abaixo saiba.
 EIXO_MAX_HEFESTO = 255
 
 
@@ -60,9 +50,6 @@ class EvdevSnapshot:
     rx: int = 128
     ry: int = 128
     buttons_pressed: frozenset[str] = field(default_factory=frozenset)
-    #: O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01: quantas vezes cada nome passou de
-    #: solto a apertado, contado na BORDA (o contador de bordas é UM só). Só
-    #: cresce; quem entrega ao jogo compara com a contagem que já viu.
     apertos: dict[str, int] = field(default_factory=dict)
 
 
@@ -126,24 +113,7 @@ def normalizar_eixo(valor: int, faixa: EixoAbsoluto | None) -> int:
 
 
 def faixas_de_eixo(caps: Any, ev_abs: int) -> dict[int, EixoAbsoluto]:
-    """Mapa `código evdev -> faixa declarada` a partir do `capabilities()`.
-
-    Uma leitura só: o `capabilities()` do python-evdev já traz o `absinfo`
-    junto (default `absinfo=True`), então não custa um ioctl por eixo. Ler isto
-    DENTRO do `_handle_event` custaria um ioctl por evento, a 250 Hz no cabo e
-    a até ~797 Hz no pico da rajada de BT (medido 11/08/2026,
-    `docs/protocol/driver-hid-playstation.md:757-758`) — é o mesmo motivo pelo
-    qual o `MotionSensorReader` lê a resolução no open.
-
-    Tolerante por contrato: `capabilities()` ilegível, entrada em formato
-    inesperado ou valor não-inteiro deixa o eixo FORA do mapa, e quem consome
-    cai no comportamento histórico (`& 0xFF`). Num caminho quente de input, o
-    único modo de falha aceitável é **degradar para o que já rodava**.
-
-    Um eixo PRESENTE mas sem faixa utilizável (dublê que lista só o código)
-    entra no mapa mesmo assim: a presença é o que decide se o gatilho digital
-    precisa ser sintetizado, e ela é verdadeira mesmo sem o `absinfo`.
-    """
+    """Mapa `código evdev -> faixa declarada` a partir do `capabilities()`."""
     faixas: dict[int, EixoAbsoluto] = {}
     try:
         entradas = caps.get(ev_abs, ())
@@ -205,7 +175,7 @@ def posicoes_de_eixo(caps: Any, ev_abs: int) -> dict[int, int]:
         return posicoes
     for entrada in entradas:
         if not (isinstance(entrada, tuple) and len(entrada) == 2):
-            continue  # eixo listado sem absinfo: não há posição a ler
+            continue
         code, info = entrada
         valor = getattr(info, "value", None)
         if valor is None or isinstance(valor, bool):
@@ -267,21 +237,21 @@ def _is_virtual_evdev(event_path: str) -> bool:
     rádio chegasse com `uniq` ilegível, não há segunda perna — o produto
     classificaria um aparelho de VERDADE como virtual. Restaurá-la é trivial e
     já tem molde nesta casa: ler `HID_PHYS` do `uevent` do HID **pai**, que vem
-    preenchido, como `core/backend_pydualsense.py:223` e
-    `broker/hidraw_broker.py:306` já fazem. Não foi feito aqui porque mudaria
+    preenchido, como `core/backend_pydualsense.py:171` e
+    `broker/hidraw_broker.py:236` já fazem. Não foi feito aqui porque mudaria
     comportamento sem que ninguém tenha pedido.
     """
     import os
 
     try:
-        name = os.path.basename(event_path)  # ex.: "event12"
+        name = os.path.basename(event_path)
         link = os.path.realpath(f"/sys/class/input/{name}/device")
     except Exception:
         return False
     if "/devices/virtual/" not in link:
         return False
     if "/misc/uhid/" not in link:
-        return True  # uinput puro (Steam Input, teclado do daemon)
+        return True
     phys = _read_input_attr(link, "phys")
     uniq = _read_input_attr(link, "uniq").lower().replace(":", "")
     if not phys and not uniq:
@@ -289,12 +259,6 @@ def _is_virtual_evdev(event_path: str) -> bool:
     return phys.startswith("hefesto-vpad") or uniq.startswith("02fe")
 
 
-#: Base do udev: um arquivo por device, nomeado `<tipo><major>:<minor>` ("c" de
-#: char device, que é o que todo `/dev/input/event*` é). As linhas `E:` são as
-#: PROPRIEDADES do nó — exatamente as que `udevadm info -q property` imprime.
-#: Lemos o arquivo em vez de chamar o `udevadm` porque isto roda no open de um
-#: reader, dentro do daemon: um fork por (re)conexão de controle seria caro e
-#: acrescentaria uma dependência de binário externo onde basta um `open()`.
 UDEV_DB_DIR = Path("/run/udev/data")
 
 
@@ -326,41 +290,18 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
                 if not linha.startswith("E:LIBINPUT_IGNORE_DEVICE="):
                     continue
                 valor = linha.split("=", 1)[1].strip()
-                # O udev grava "1"; qualquer valor não-vazio e não-"0" vale
-                # como marcado (é como o próprio libinput lê a propriedade).
                 return valor not in ("", "0")
     except OSError:
         return False
     return False
 
 
-# ---------------------------------------------------------------------------
-# HIDE-SO-O-HIDRAW-02 (24/09/2026) — o nó de entrada do físico abre pelo broker
-# ---------------------------------------------------------------------------
-#
 # A palavra dela de 23/09, «Esconder tudo»: os nós de entrada do DualSense
-# físico nascem `0600 root` (`assets/72-hefesto-touchpad-motion-uaccess.rules`)
-# e somem para todos menos para o Hefesto, como o hidraw já sumia. O daemon lê
-# o gamepad, o touchpad e os sensores de movimento por estes nós — sem outra
-# porta, os três cartões ficariam cegos. A porta é a mesma do hidraw: o `open`
-# do broker, que devolve o fd por SCM_RIGHTS.
-#
-# A ordem não muda: primeiro o caminho, como sempre (numa máquina sem a cura,
-# ou no Modo Nativo, o nó está aberto e o broker nem é consultado); o broker
-# só quando o caminho responde «sem permissão» E o sysfs diz que o nó é de
 # DualSense. Nó de teclado, de mouse, de outro controle, nunca vai ao broker.
 
-#: Quem pede o fd ao broker: `(caminho) -> fd | None`. None aqui = o cliente
-#: padrão (`HidrawBrokerClient`, conexão própria, criada na primeira vez). Os
-#: testes trocam este atributo; o daemon não precisa trocar nada — o `open` do
-#: broker não mexe em lease, e uma conexão só para ele é inofensiva.
 _ABRIDOR_DO_BROKER: Any = None
 _ABRIDOR_LOCK = threading.Lock()
 _CLIENTE_DO_BROKER: Any = None
-#: Raiz do sysfs dos nós de entrada que os três filtros abaixo leem, sempre
-#: pelo nome do módulo, na chamada (nunca num default de parâmetro, que
-#: congelaria no import). Só a suíte a desvia: o `tests/conftest.py` a aponta
-#: para uma pasta vazia em todo teste, e quem precisa de árvore monta a sua.
 SYS_CLASS_INPUT = "/sys/class/input"
 
 
@@ -400,17 +341,11 @@ def _no_de_dualsense_no_sysfs(caminho: str) -> bool:
     return vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS
 
 
-#: Onde moram os `eventN` que a descoberta percorre. Só a suíte a desvia.
 DEV_INPUT_DIR = "/dev/input"
 
 
 def _ha_broker_para_pedir() -> bool:
-    """O socket do broker existe? É a mesma resolução do `HidrawBrokerClient`.
-
-    A suíte aponta `HEFESTO_BROKER_SOCKET` para um caminho inexistente em todo
-    teste (conftest, BROKER-01), e é isso que impede a descoberta de enumerar
-    o `/dev/input` real dela sob teste.
-    """
+    """O socket do broker existe? É a mesma resolução do `HidrawBrokerClient`."""
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
         DEFAULT_SOCKET_PATH,
         SOCKET_PATH_ENV,
@@ -451,17 +386,11 @@ def _nos_de_evento(list_devices: Any) -> list[str]:
     return abertos + fechados
 
 
-#: BTN_GAMEPAD == BTN_SOUTH == 0x130, o botão que separa o nó do gamepad dos
-#: nós auxiliares (touchpad, movimento, fone) na descoberta.
 _BTN_GAMEPAD = 0x130
 
 
 def _tecla_no_sysfs(caminho: str, tecla: int) -> bool | None:
-    """O bitmap `capabilities/key` do sysfs tem o bit `tecla`? None = ilegível.
-
-    O kernel imprime o bitmap como palavras `unsigned long` em hexadecimal, da
-    mais alta para a mais baixa, sem zeros à esquerda.
-    """
+    """O bitmap `capabilities/key` do sysfs tem o bit `tecla`? None = ilegível."""
     import struct
 
     base = os.path.basename(caminho)
@@ -484,8 +413,7 @@ def _tecla_no_sysfs(caminho: str, tecla: int) -> bool | None:
 
 
 def _sysfs_tem_tecla(caminho: str, tecla: int) -> bool:
-    """O bitmap do sysfs tem o bit `tecla`? Ilegível é True: na dúvida, quem
-    decide é a leitura das capacidades pelo fd, como sempre."""
+    """O bitmap do sysfs tem o bit `tecla`? Ilegível é True: na dúvida, quem"""
     return _tecla_no_sysfs(caminho, tecla) is not False
 
 
@@ -526,15 +454,7 @@ def _gamepad_do_dualsense_no_sysfs(
 
 
 def _input_device_do_fd(fd: int, caminho: str) -> Any:
-    """Um `evdev.InputDevice` em volta de um fd que o broker serviu.
-
-    O `InputDevice(caminho)` reabre o nó, e por `/proc/self/fd/N` refaz a
-    checagem de permissão no inode — com o nó `0600 root`, o mesmo `EACCES`.
-    O objeto nasce aqui com os campos que o `__init__` da biblioteca preenche,
-    na mesma ordem e pelas mesmas chamadas; a régua
-    `test_o_input_device_do_fd_espelha_o_da_biblioteca` reprova na versão que mudar. O
-    `_input` é C sem stub: vem como submódulo, que o mypy lê como `Any` na 1.7 e na 2.0.
-    """
+    """Um `evdev.InputDevice` em volta de um fd que o broker serviu."""
     import evdev._input as _input
     from evdev import InputDevice
     from evdev.device import DeviceInfo
@@ -562,18 +482,7 @@ def _input_device_do_fd(fd: int, caminho: str) -> Any:
 def abrir_input_device(
     path: Path | str, *, pede_ao_broker: Any = None
 ) -> Any:
-    """Abre um nó evdev pelo caminho e, se ele estiver FECHADO, pelo broker.
-
-    HIDE-SO-O-HIDRAW-02. `pede_ao_broker` é um filtro opcional sobre o
-    caminho, avaliado só depois do `PermissionError`: a descoberta o usa para
-    ir ao broker só pelo nó de gamepad que o sysfs não classificou, em vez de
-    pedir o fd de todo nó do controle a cada hotplug — cada pedido é uma
-    linha no diário do broker. Quem pede o fd, no mais, é o leitor que vai
-    LER o nó.
-
-    O broker ausente, ou que recusa, devolve o `PermissionError` original:
-    o chamador trata como sempre tratou.
-    """
+    """Abre um nó evdev pelo caminho e, se ele estiver FECHADO, pelo broker."""
     from evdev import InputDevice
 
     caminho = str(path)
@@ -603,26 +512,7 @@ def _event_num(path: Path) -> int:
 
 
 class InputDirWatch:
-    """Detector barato de mudança em /dev/input (PERF-MULTI-CONTROLLER-01).
-
-    A enumeração dos gamepads (`discover_dualsense_evdevs`) lê o sysfs de cada
-    nó e abre o de gamepad que o sysfs não classifica — caro demais para rodar
-    em timer de 2s no event loop (era o hitch rítmico do co-op). O
-    conjunto de nodes só muda em hotplug/re-enumeração, e isso é observável
-    por um `os.listdir` (~µs). Cada consumidor tem a SUA instância (o "mudou?"
-    é relativo ao último `poll()` DESTE watch).
-
-    `nasceu` diz se a última mudança TROUXE algum nó (e não só levou): quem
-    espera um controle voltar não tem o que procurar numa pasta que só
-    perdeu entradas (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01).
-
-    O-REPOUSO-ESPERA-O-EVENTO-01 (29/09/2026): com o dono do evento armado e
-    olhando esta raiz (`core/o_dono_do_evento.py`), o `poll()` deixa de listar
-    a pasta e passa a ser «a geração de NOMES desta raiz mudou desde o meu
-    último poll?», e o `nasceu` diz se veio uma criação. Nenhum consumidor muda
-    de contrato: acordam pelo mesmo conjunto de nomes de antes. Sem o dono, o
-    `listdir` de sempre. `dono` é costura de teste; None = o do processo.
-    """
+    """Detector barato de mudança em /dev/input (PERF-MULTI-CONTROLLER-01)."""
 
     def __init__(self, root: str = "/dev/input", *, dono: Any = None) -> None:
         self._root = root
@@ -643,8 +533,6 @@ class InputDirWatch:
         )
         if ficha is not None:
             anterior = self._ficha
-            # A época vem junto: a primeira pergunta sob um dono (ou sob um dono
-            # re-armado) é «mudou», como a primeira listagem sempre foi.
             changed = ficha != anterior
             self.nasceu = changed and (
                 anterior is None or anterior[0] != ficha[0] or anterior[2] != ficha[2]
@@ -716,16 +604,9 @@ def find_dualsense_evdev() -> Path | None:
     return paths[0] if paths else None
 
 
-# --- 8BIT-01: inventário READ-ONLY de gamepads externos -----------------
-
 #: Nomes de barramento (linux/input.h). Hardcoded de propósito: python-evdev
-#: nem sempre reexporta as constantes `BUS_*`; os dois valores são ABI estável
-#: do kernel. Barramentos fora do mapa saem como hex ("0x06" etc.) — o
-#: contrato é `usb | bluetooth | outro`, nunca um chute de nome.
 _BUS_NAMES: dict[int, str] = {0x03: "usb", 0x05: "bluetooth"}
 
-#: Teto da subida no sysfs ao procurar driver/hidraw a partir do input device.
-#: A hierarquia real é rasa (input/inputN -> HID -> interface -> ...); 10
 #: níveis cobrem USB e Bluetooth com folga sem risco de varrer /sys inteiro.
 _SYSFS_WALK_MAX_LEVELS = 10
 
@@ -736,20 +617,7 @@ def _bus_name(bustype: int) -> str:
 
 
 def _sysfs_driver_hidraw(device_dir: str) -> tuple[str | None, str | None]:
-    """(driver, hidraw) subindo o sysfs a partir do dir do input device.
-
-    O evdev de um gamepad vive em `.../<pai>/input/inputN`; o driver do kernel
-    e o nó hidraw irmão ficam em um ANCESTRAL (o HID device para hid-nintendo/
-    hid-playstation, a interface USB para o xpad — que é USB-only e nem tem
-    hidraw). Sobe até `_SYSFS_WALK_MAX_LEVELS` níveis colhendo:
-
-    - ``driver``: basename do realpath do primeiro symlink `driver` encontrado
-      (o driver MAIS PRÓXIMO do device — "nintendo", "xpad", ...).
-    - ``hidraw``: primeiro nó de um subdir `hidraw/` (ex.: "/dev/hidraw6").
-
-    Tolerante a ausência por contrato (8BIT-01): qualquer campo irresolvível
-    sai None — inventário read-only nunca falha por sysfs incompleto.
-    """
+    """(driver, hidraw) subindo o sysfs a partir do dir do input device."""
     import os
 
     driver: str | None = None
@@ -781,12 +649,7 @@ def _sysfs_driver_hidraw(device_dir: str) -> tuple[str | None, str | None]:
 
 
 def _external_device_sysfs(event_path: str) -> tuple[str | None, str | None]:
-    """Resolve (driver, hidraw) de um node evdev via /sys/class/input.
-
-    Mesmo ponto de partida do `_is_virtual_evdev`: o realpath de
-    `/sys/class/input/<eventN>/device` cai no dir do input device físico;
-    a subida fica com `_sysfs_driver_hidraw`. Falha qualquer -> (None, None).
-    """
+    """Resolve (driver, hidraw) de um node evdev via /sys/class/input."""
     import os
 
     try:
@@ -901,9 +764,6 @@ def _external_dedup_key(
     return f"dev:{dono}" if dono else f"path:{event_path}"
 
 
-#: As duas espécies que a descoberta única distingue. Não é taxonomia de
-#: marca: é DE QUEM É O CAMINHO. `dualsense` é o domínio do caminho existente
-#: (co-op, vpad, hidraw broker); `external` é todo o resto do plástico da mesa.
 ESPECIE_DUALSENSE = "dualsense"
 ESPECIE_EXTERNAL = "external"
 
@@ -928,20 +788,12 @@ class GamepadDescoberto:
     uniq: str | None
     driver: str | None
     hidraw: str | None
-    #: `código evdev -> faixa declarada` (ver `EixoAbsoluto`), do nó aberto.
     #: Vazio no DualSense classificado pelo sysfs, que não publica o `absinfo`:
     #: nenhum código do produto o lê da descoberta, e o leitor lê a faixa do nó
-    #: que abre (`EvdevReader._on_device_opened`). Vazio também quando o nó
-    #: não declara `absinfo` legível.
     eixos: dict[int, EixoAbsoluto] = field(default_factory=dict)
 
     def como_entrada_de_inventario(self) -> dict[str, Any]:
-        """O dict do inventário 8BIT-01, com as MESMAS oito chaves de sempre.
-
-        O `eixos` fica DE FORA de propósito: este dict viaja no JSON-RPC e é
-        mutado pelos consumidores (`holders`, identidade carimbada). Chave nova
-        num payload que a GUI já lê é mudança que ninguém pediu.
-        """
+        """O dict do inventário 8BIT-01, com as MESMAS oito chaves de sempre."""
         return {
             "name": self.name,
             "vid": self.vid,
@@ -962,16 +814,6 @@ def _int_ou(valor: Any, reserva: int) -> int:
         return reserva
 
 
-#: O-REPOUSO-ESPERA-O-EVENTO-01, família 3 (29/09/2026): o inventário de cada
-#: `(com_sysfs, especie)`, preso às gerações de `/dev/input` (nomes e
-#: permissões) do dono do evento — e, com `com_sysfs`, à de nomes dos `hidraw*`
-#: de `/dev`, porque o hidraw irmão pode nascer depois do nó de entrada. Medido
-#: na sonda S.4 (60 s, os quatro no rádio, parados): ~109 descobertas por
-#: minuto, 1.305 leituras de `id/vendor` e outras tantas de `id/product`, sem
-#: nenhum nó ter nascido ou sumido. `chave -> (ficha, inventário)`; a chave
-#: leva também se há broker a quem pedir, porque é isso que põe os nós do
-#: físico fechado na volta (`_nos_de_evento`), e o socket que volta não é
-#: evento de `/dev/input`.
 _INVENTARIO_PELA_GERACAO: dict[
     tuple[bool, str | None, bool], tuple[tuple[int, ...], tuple[GamepadDescoberto, ...]]
 ] = {}
@@ -988,12 +830,7 @@ _ode.ao_desarmar(_esquecer_o_inventario)
 
 
 def _ficha_da_descoberta(com_sysfs: bool) -> tuple[int, ...] | None:
-    """A ficha do dono que prende o inventário; None = não se guarda nada.
-
-    Só com o dono armado olhando a MESMA pasta que a descoberta percorre
-    (`DEV_INPUT_DIR`): a suíte desvia a pasta, e um inventário preso à pasta
-    real não responde por ela.
-    """
+    """A ficha do dono que prende o inventário; None = não se guarda nada."""
     dono = _ode.dono_armado()
     if dono is None or os.path.normpath(DEV_INPUT_DIR) != dono.raiz_das_entradas:
         return None
@@ -1089,9 +926,6 @@ def discover_gamepads(
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     # O-REPOUSO-ESPERA-O-EVENTO-01, família 3: com o dono do evento armado, a
-    # volta só roda quando `/dev/input` mudou (um nó nasceu, sumiu ou ganhou
-    # permissão). A ficha é anotada ANTES da volta: o evento que chega durante
-    # ela muda a ficha, e a pergunta seguinte refaz. Sem o dono, como sempre.
     ficha = _ficha_da_descoberta(com_sysfs)
     chave = (com_sysfs, especie, ficha is not None and _ha_broker_para_pedir())
     if ficha is not None:
@@ -1099,38 +933,20 @@ def discover_gamepads(
             guardado = _INVENTARIO_PELA_GERACAO.get(chave)
         if guardado is not None and guardado[0] == ficha:
             return [_copia_do_descoberto(gp) for gp in guardado[1]]
-    # Um nó que falhou ao abrir some da volta em silêncio (o `except` do fim do
-    # laço). Um inventário assim não se guarda: o externo que falhou uma vez
-    # não pode sumir até o próximo evento, e o `VOLATILE_ABSENCE_LIMIT` do
-    # tique dos externos conta com a volta seguinte.
     houve_falha = False
 
     encontrados: dict[tuple[str, str], GamepadDescoberto] = {}
-    # HIDE-SO-O-HIDRAW-02: `_nos_de_evento`, e não o `list_devices()` cru — a
-    # biblioteca deixa de fora o nó que o processo não abre, que é o físico.
     for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
-        # O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01: quem pede os
         # externos não abre o nó do DualSense. O sysfs responde sem abrir; o
-        # ilegível segue para a abertura e a classificação abaixo o descarta.
         if especie == ESPECIE_EXTERNAL and _no_de_dualsense_no_sysfs(path):
             continue
-        # A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01: o nó sem botão de
-        # gamepad no sysfs (touchpad, movimento, teclado, mouse, energia) sai
-        # da volta ANTES de abrir — o filtro de caps abaixo o descartaria de
-        # qualquer jeito. O ilegível segue para a abertura, como antes.
         if not _sysfs_tem_tecla(path, _BTN_GAMEPAD):
             continue
-        # O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01: o nó de gamepad do
         # DualSense se classifica pelo sysfs, sem abrir e sem pedido ao
-        # broker (quem pede os externos já saiu acima, pelo mesmo sysfs). O
-        # ilegível segue para a abertura, como antes.
         lido = _gamepad_do_dualsense_no_sysfs(path)
         if lido is not None:
-            # A espécie pedida vale aqui como vale no ramo do fd: o pulo de
-            # cima lê o sysfs numa volta e esta noutra, e no meio de um
-            # hotplug as duas podem discordar.
             if especie is not None and especie != ESPECIE_DUALSENSE:
                 continue
             vendor, product, bustype, nome, uniq_raw = lido
@@ -1155,8 +971,6 @@ def discover_gamepads(
             )
             continue
         try:
-            # HIDE-SO-O-HIDRAW-02: o nó do físico está FECHADO; ao broker vai
-            # só o do gamepad (cada pedido é uma linha no diário do broker).
             dev = abrir_input_device(
                 path,
                 pede_ao_broker=lambda c: _sysfs_tem_tecla(c, _BTN_GAMEPAD),
@@ -1182,14 +996,8 @@ def discover_gamepads(
                 driver, hidraw = (
                     _external_device_sysfs(path) if com_sysfs else (None, None)
                 )
-                # `name`/`bustype` são lidos com tolerância porque as duas
                 # portas antigas divergiam: a do DualSense nunca os tocava, a
-                # dos externos morria no `int(...)` e o node sumia do
-                # inventário SEM UMA LINHA DE LOG. Unificar com a leitura
                 # estrita reprovaria os nodes que a porta do DualSense sempre
-                # aceitou; unificar com a tolerante só troca o sumiço silencioso
-                # por uma entrada com o campo em branco. Kernel real sempre
-                # publica os dois.
                 encontrados.setdefault(
                     (especie_do_no, identidade),
                     GamepadDescoberto(
@@ -1293,25 +1101,16 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
 
 
 class _EvdevReconnectLoop:
-    """Loop base de leitura evdev com auto-reconnect e backoff exponencial.
-
-    Encapsula o padrão duplicado entre `EvdevReader` e `TouchpadReader`.
-    Subclasses implementam hooks: `_find_device`, `_handle_event`,
-    `_reset_on_disconnect`, `_log_prefix` (prefixo para log events).
-    """
+    """Loop base de leitura evdev com auto-reconnect e backoff exponencial."""
 
     _device_path: Path | None
     _stop_flag: threading.Event
     _thread: threading.Thread | None
-    # HANG-01: self-pipe de wake + flag de reopen — ver `__init__` abaixo.
     _reopen_flag: threading.Event
     _wake_lock: threading.Lock
     _wake_r: int
     _wake_w: int
-    # InputDevice atualmente aberto pelo loop (ou None). Permite grab/ungrab
-    # em runtime de fora da thread (FEAT-DSX-GAMEPAD-FLAVOR-01).
     _active_dev: Any = None
-    # Watch barato de /dev/input para o is_stale (lazy; PERF-MULTI-CONTROLLER-01).
     _stale_watch: Any = None
     # A espera sem nó (`_esperar_o_no`, no fim do módulo); nasce na 1ª procura.
     _espera_sem_no: Any = None
@@ -1338,61 +1137,20 @@ class _EvdevReconnectLoop:
     #: nada acontece; leitor mudo, o kernel andou e nós não.
     _CONFERIR_MUDO_S: ClassVar[float] = 2.0
 
-    #: Conferências consecutivas em desacordo antes de largar o fd. Uma só
-    #: pode ser corrida benigna — o evento estava a caminho entre o `absinfo`
-    #: e a comparação. Duas, separadas por `_CONFERIR_MUDO_S` de silêncio,
-    #: não são: nesse intervalo qualquer evento vivo já teria chegado.
     _CONFIRMAR_MUDO: ClassVar[int] = 2
 
-    #: Folga na escala canônica (0..255) para não chamar de mudo o ruído de
-    #: 1 LSB que todo stick tem em repouso — as quatro unidades da mesa de
-    #: 15/08 chiam nessa ordem de grandeza.
     _TOLERANCIA_MUDO: ClassVar[int] = 2
 
-    #: A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01: sem nó, o leitor dorme até
-    #: nascer um nó em `/dev/input` (`_esperar_o_no`). Este é o teto de SEGURANÇA dessa
-    #: espera, não o ritmo dela: um aviso perdido custa no máximo isto.
     _TETO_SEM_AVISO_S: ClassVar[float] = 60.0
 
-    #: Buscas no relógio (0,5 → 1 → 2 s) depois de cada aviso que não achou o
-    #: nó. O nó nasce no `/dev/input` antes de o udev lhe dar dono e permissão,
-    #: e essa troca não muda a lista da pasta — sem estas buscas, o controle
-    #: que volta numa máquina sem broker esperaria o teto.
     _BUSCAS_DEPOIS_DO_AVISO: ClassVar[int] = 3
 
     def __init__(self) -> None:
-        """Self-pipe de wake (HANG-01, padrão GYRO-FD-01/PhysicalReportReader).
-
-        Chamado pelas subclasses via `super().__init__()` antes dos campos
-        próprios. `request_reopen()`/`stop()` NUNCA fecham o `InputDevice` de
-        fora — fechar de outra thread enquanto a THREAD DONA está em
-        select/read no mesmo fd libera o número com ela ainda presa nele; um
-        open concorrente (retarget, novo device, watchdog) recicla o número e
-        o loop passaria a ler um fd ALHEIO (o wedge de GIL do incidente de
-        16:08 nasceu de um close cross-thread num cenário correlato). Aqui os
-        dois só SINALIZAM (flag + 1 byte no self-pipe); quem fecha é sempre a
-        própria thread, no `finally` do `_run`.
-        """
+        """Self-pipe de wake (HANG-01, padrão GYRO-FD-01/PhysicalReportReader)."""
         self._reopen_flag = threading.Event()
         self._wake_lock = threading.Lock()
         self._wake_r, self._wake_w = self._novo_wake_pipe()
-        # FEAT-DSX-GAMEPAD-FLAVOR-01: quando True, o loop faz EVIOCGRAB no
-        # device — quem graba vira leitor EXCLUSIVO do nó, e quem mais o abrir
-        # deixa de receber evento. Aplicado/removido por `set_grab`.
-        #
-        # MORA NA BASE DESDE A SENSOR-DE-VERDADE-01 (04/09/2026), e a razão é
-        # medida: o interruptor de giroscópio precisa do mesmo EVIOCGRAB, mas
-        # no nó "Motion Sensors" (`MotionSensorReader`), que é OUTRA subclasse.
-        # Duas grafias do mesmo grab divergiriam na primeira correção — e este
-        # aqui já carrega duas cicatrizes (o EBUSY duplo e o "pending" da
-        # reconexão) que ninguém quer reescrever de memória.
         self._grab: bool = False
-        # BUG-COOP-GRAB-SILENT-FAIL-01: estado observável do grab. "off" (não
-        # pedido), "pending" (pedido, device ainda não aberto), "held" (ativo),
-        # "failed" (EVIOCGRAB recusado — ex.: EBUSY, outro leitor já graba).
-        # Falha de grab NÃO pode ser silenciosa: com gamepad virtual ligado,
-        # físico sem grab = input DOBRADO no jogo; e num nó de movimento,
-        # grab que falhou = o sensor que ela desligou continuando a chegar.
         self._grab_state: str = "off"
 
     @staticmethod
@@ -1425,12 +1183,7 @@ class _EvdevReconnectLoop:
                     setattr(self, attr, -1)
 
     def _wait_ready(self, dev: Any) -> list[Any]:
-        """Espera o fd do `dev` OU o self-pipe de wake ficarem prontos.
-
-        Extraído em método próprio (em vez da espera inline) para os
-        testes conseguirem simular prontidão/timeout sem precisar de fds
-        reais — só esta chamada toca o `select` de verdade.
-        """
+        """Espera o fd do `dev` OU o self-pipe de wake ficarem prontos."""
         return prontos_para_ler([dev.fd, self._wake_r], self._SELECT_TIMEOUT_S)
 
     def _find_device(self) -> Path | None:  # pragma: no cover - abstract
@@ -1448,31 +1201,12 @@ class _EvdevReconnectLoop:
         return self._grab_state
 
     def set_grab(self, grab: bool) -> bool:
-        """Liga/desliga o EVIOCGRAB neste nó (thread-safe-ish).
-
-        Registra a intenção em `self._grab` (reaplicada a cada (re)conexão pelo
-        loop) e tenta aplicar imediatamente no device aberto. Retorna True se o
-        estado desejado foi APLICADO agora (ou é pending com device fechado —
-        o loop aplica ao abrir); False se o EVIOCGRAB falhou (`grab_state` vira
-        "failed" e o chamador NÃO deve assumir exclusividade do device).
-        """
+        """Liga/desliga o EVIOCGRAB neste nó (thread-safe-ish)."""
         self._grab = grab
         dev = self._active_dev
         if dev is None:
             self._grab_state = "pending" if grab else "off"
             return True
-        # BUG-GRAB-DOUBLE-EBUSY-01: re-grabar um fd que ESTE reader já graba
-        # levanta EBUSY (errno 16) no kernel — e o `except` abaixo marcava
-        # `grab_state="failed"` MESMO com o device fisicamente exclusivo. Era o
-        # card "grab falhou — input pode dobrar no jogo" mentindo depois de uma
-        # troca de máscara/flavor (que re-chama `set_grab(True)` sem soltar antes,
-        # `gamepad.py`: stop(release_grab=False) → re-grab) ou do upgrade
-        # uinput→uhid. `grab_state == "held"` já significa "este fd é exclusivo":
-        # nada a (re)fazer. Idempotente nos dois sentidos — ungrab de um device
-        # que este reader NÃO graba ("off"/"pending"/"failed") também é no-op (o
-        # `ungrab()` de um fd solto levantaria EINVAL espúrio). Um EBUSY EXTERNO
-        # real (outro leitor exclusivo) nunca chega a "held" primeiro → continua
-        # virando "failed" e o card segue honesto quando há duplicação de verdade.
         if grab and self._grab_state == "held":
             return True
         if not grab and self._grab_state != "held":
@@ -1496,7 +1230,6 @@ class _EvdevReconnectLoop:
                     hint="outro leitor exclusivo? físico ficaria DOBRADO no jogo",
                 )
                 return False
-            # ungrab falhou (device já fechado/sumiu): estado efetivo é solto.
             self._grab_state = "off"
             return True
 
@@ -1517,39 +1250,18 @@ class _EvdevReconnectLoop:
             )
 
     def _grab_volta_a_pendente(self) -> None:
-        """Grab pedido volta a "pending" quando o device cai.
-
-        BUG-COOP-GRAB-SILENT-FAIL-01: sem isto, um reader que perdeu o nó
-        continuaria anunciando "held" sobre um fd morto — e quem lê o estado
-        (o card, e desde a SENSOR-DE-VERDADE-01 a resposta do `sensor.set`)
-        diria "exclusivo" sobre um nó que voltou a ser de todo mundo.
-        """
+        """Grab pedido volta a "pending" quando o device cai."""
         if self._grab:
             self._grab_state = "pending"
 
     def _o_kernel_discorda(
         self, dev: Any, ecodes: Any
     ) -> dict[str, tuple[int, int]]:
-        """Hook "o kernel ainda concorda comigo?". No-op na base (VIGIA-DO-MUDO-01).
-
-        Devolve `{campo: (o_que_publico, o_que_o_kernel_diz)}` para cada campo
-        em desacordo, ou `{}` — que é tanto "concordamos" quanto "não sei
-        conferir". Os dois casos têm de sair iguais: uma subclasse que não
-        saiba se conferir não pode derrubar o próprio fd por não saber.
-        """
+        """Hook "o kernel ainda concorda comigo?". No-op na base (VIGIA-DO-MUDO-01)."""
         return {}
 
     def _on_device_opened(self, dev: Any) -> None:
-        """Hook genérico "o device acabou de abrir". No-op na base.
-
-        Existe separado do `_reapply_grab` porque nem toda subclasse quer
-        grab, mas várias precisam ler METADADOS do node recém-aberto — o
-        `MotionSensorReader` lê aqui a `resolution` do absinfo (é ela que
-        converte o valor cru em graus/s, e ela muda quando o kernel recria
-        o node). Ler isso de dentro de `_handle_event` custaria um ioctl
-        por evento a 250 Hz no cabo e a até ~797 Hz no pico da rajada de BT
-        (medido 11/08/2026); ler no open custa um por conexão.
-        """
+        """Hook genérico "o device acabou de abrir". No-op na base."""
 
     def _log_prefix(self) -> str:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -1558,38 +1270,16 @@ class _EvdevReconnectLoop:
         return self._device_path is not None
 
     def refresh_device(self) -> bool:
-        """Re-procura o device de input quando ainda não há um path.
-
-        Hotplug-safe: o `__init__` chama `_find_device()` uma única vez. Se o
-        daemon subiu sem o controle (offline), o path nasce `None` e jamais
-        seria reavaliado — o evdev criado pelo kernel hid_playstation ao plugar
-        o controle nunca era localizado. `connect()` chama isto a cada
-        (re)conexão para fechar essa janela (BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01).
-        """
+        """Re-procura o device de input quando ainda não há um path."""
         if self._device_path is None:
             self._device_path = _o_no_que_voltou(self, self._find_device())
         return self._device_path is not None
 
     def is_stale(self) -> bool:
-        """True se o reader está preso num node de evdev OBSOLETO.
-
-        Caso-alvo (FEAT-DSX-EVDEV-WATCHDOG-01): após uma re-enumeração do
-        controle (storm -71, replug rápido) o kernel cria um novo
-        /dev/input/eventN, mas o read_loop pode seguir bloqueado no fd antigo SEM
-        receber ENODEV — leitura zumbi, controle "morto" sem erro. Detectamos
-        comparando o path aberto com o canônico atual do finder: se ele aponta
-        agora para um node DIFERENTE (e não-None), o nosso está obsoleto.
-
-        IDLE-SAFE: ficar parado não muda o node canônico, então isto NUNCA dispara
-        por ociosidade — só por troca real de node. (O daemon ainda cruza com o
-        HID: só chama o watchdog quando o controller reporta conectado.)
-        """
+        """True se o reader está preso num node de evdev OBSOLETO."""
         held = self._device_path
         if held is None:
-            return False  # sem device aberto: o loop de reconexão já cobre
-        # PERF-MULTI-CONTROLLER-01: o node canônico só muda se /dev/input mudou
-        # — checagem por listdir (~µs) evita a enumeração completa (~10-40ms)
-        # a cada tick do watchdog. 1ª chamada estabelece baseline e verifica.
+            return False
         watch = getattr(self, "_stale_watch", None)
         if watch is None:
             watch = InputDirWatch()
@@ -1599,7 +1289,7 @@ class _EvdevReconnectLoop:
             return False
         current = self._find_device()
         if current is None:
-            return False  # finder transitório/sem node: conservador, não reabre
+            return False
         return current != held
 
     def request_reopen(self, reason: str = "watchdog") -> None:
@@ -1626,23 +1316,13 @@ class _EvdevReconnectLoop:
         self._stop_flag.clear()
         self._reopen_flag.clear()
         if self._wake_r < 0 or self._wake_w < 0:
-            # Um stop() anterior fechou o self-pipe — recria para esta vida.
             self._wake_r, self._wake_w = self._novo_wake_pipe()
         self._thread = threading.Thread(target=self._run, name=self._THREAD_NAME, daemon=True)
         self._thread.start()
         return True
 
     def stop(self) -> None:
-        """Para a thread; idempotente.
-
-        HANG-01: não fecha mais o fd ativo de fora (M4 fazia isto para
-        desbloquear o `read_loop` de um controle OCIOSO — daí o teardown do
-        co-op via IPC congelar o input do P1 por 2-6s). Agora só sinaliza
-        (`_stop_flag` + wake do self-pipe), que acorda o select da PRÓPRIA
-        thread na hora — o mesmo ganho de latência do M4, sem o risco do
-        close cross-thread (padrão GYRO-FD-01). Quem fecha o `InputDevice`
-        continua sendo só a thread dona, no `finally` do `_run`.
-        """
+        """Para a thread; idempotente."""
         self._stop_flag.set()
         self._wake()
         thread = self._thread
@@ -1650,27 +1330,12 @@ class _EvdevReconnectLoop:
             thread.join(timeout=2.0)
             self._thread = None
             if not thread.is_alive():
-                # Thread morta de verdade: o self-pipe pode ir sem risco de
-                # reciclagem (start() recria se este reader voltar a subir).
                 self._close_wake_pipe()
         else:
             self._close_wake_pipe()
 
     def _read_until_signaled(self, dev: Any, ecodes: Any) -> str:
-        """Lê eventos do `dev` até stop/reopen pedido; devolve o motivo.
-
-        HANG-01: substitui o `dev.read_loop()` da lib evdev (select interno
-        SEM timeout nem self-pipe — só sai por leitura real ou por um close()
-        de fora) por um select PRÓPRIO que vigia TAMBÉM o wake do self-pipe.
-        `stop()`/`request_reopen()` acordam esta leitura na hora sem nunca
-        tocar o fd (GYRO-FD-01/PhysicalReportReader) — quem fecha o device é
-        sempre o `finally` de `_run`, na mesma thread deste método. Um ENODEV
-        real (unplug) propaga a OSError normalmente; o chamador trata.
-
-        VIGIA-DO-MUDO-01: o quarto motivo de saída é `"mudo"` — o fd está vivo,
-        o select nunca acusa nada, e o kernel discorda do que publicamos. Ver
-        `_CONFERIR_MUDO_S`.
-        """
+        """Lê eventos do `dev` até stop/reopen pedido; devolve o motivo."""
         silencio = 0.0
         discordancias = 0
         while True:
@@ -1682,10 +1347,8 @@ class _EvdevReconnectLoop:
             ready = self._wait_ready(dev)
             if self._wake_r in ready:
                 self._drain_wake()
-                continue  # byte de wake atendido — reavalia as flags no topo
+                continue
             if not ready:
-                # Timeout do select. Silêncio no evdev é o estado NORMAL de um
-                # controle em repouso, então ele sozinho não decide nada: só
                 # abre a janela para perguntar ao kernel.
                 silencio += self._SELECT_TIMEOUT_S
                 if silencio < self._CONFERIR_MUDO_S:
@@ -1725,11 +1388,6 @@ class _EvdevReconnectLoop:
         prefix = self._log_prefix()
         backoff = 0.5
         while not self._stop_flag.is_set():
-            # HANG-01: um reopen pedido ANTES desta iteração já está atendido
-            # por ela (o finder resolve o node canônico agora); um pedido que
-            # chegar DEPOIS deste clear é novo e derruba o fd já na 1ª volta
-            # do select em `_read_until_signaled` (mesmo padrão do
-            # `PhysicalReportReader._run`).
             self._reopen_flag.clear()
             path = self._device_path or _procurar_o_no(self)
             if path is None:
@@ -1739,8 +1397,6 @@ class _EvdevReconnectLoop:
                     break
                 continue
             try:
-                # HIDE-SO-O-HIDRAW-02: o nó do físico nasce fechado, e a porta
-                # dele é o broker, como a do hidraw.
                 dev = abrir_input_device(path)
             except Exception as exc:
                 logger.warning(f"{prefix}_open_failed", err=str(exc), path=str(path))
@@ -1754,10 +1410,6 @@ class _EvdevReconnectLoop:
             backoff = 0.5
             self._device_path = path
             self._active_dev = dev
-            # Reaplica o grab se foi pedido enquanto o device estava fechado
-            # (ex.: gamepad já estava ligado antes desta (re)conexão). Falha
-            # NÃO é silenciosa: `_reapply_grab` registra estado + warning
-            # (BUG-COOP-GRAB-SILENT-FAIL-01).
             self._reapply_grab(dev)
             self._on_device_opened(dev)
             try:
@@ -1771,17 +1423,8 @@ class _EvdevReconnectLoop:
                 self._reset_on_disconnect()
             else:
                 if reason == "stop":
-                    # HANG-01: teardown INTENCIONAL (sem exceção nenhuma —
-                    # antes era um EBADF do close cross-thread, MISC-08 item
-                    # 4) — nunca alarma como perda de device.
                     logger.debug(f"{prefix}_read_stopped", path=str(path))
-                else:  # "reopen" ou "mudo" (VIGIA-DO-MUDO-01)
-                    # Os dois querem a MESMA coisa — largar este fd e deixar o
-                    # `_find_device()` re-resolver o nó canônico — e por isso
-                    # dividem o ramo. O que muda é só o log: "reopen" foi
-                    # pedido de fora, "mudo" foi o vigia que decidiu sozinho, e
-                    # confundir os dois no journal esconderia justamente o
-                    # defeito que ele existe para deixar visível.
+                else:
                     logger.debug(f"{prefix}_{reason}_applied", path=str(path))
                     self._reset_on_disconnect()
                     self._device_path = None
@@ -1790,7 +1433,7 @@ class _EvdevReconnectLoop:
                 with contextlib.suppress(Exception):
                     dev.close()
             if not self._stop_flag.is_set():
-                time.sleep(0.1)  # grace period antes de tentar reabrir
+                time.sleep(0.1)
 
 
 class EvdevReader(_EvdevReconnectLoop):
@@ -1801,17 +1444,7 @@ class EvdevReader(_EvdevReconnectLoop):
     """
 
     # Mapeamento de evdev keycode -> nome canônico no domínio Hefesto - DualSense4Unix.
-    #
-    # Botões com keycode evdev estável no kernel hid_playstation:
-    # cross, circle, triangle, square, l1, r1, l2_btn, r2_btn,
-    # create, options, ps, l3, r3.
-    #
-    # Botões sem keycode evdev estável no device principal (injetados por outros caminhos):
-    # - "mic_btn": vem por HID-raw via `ds.state.micBtn` (byte misc2, bit 0x04).
     #   Injetado em `PyDualSenseController.read_state()`. Ver INFRA-MIC-HID-01.
-    # - dpad (up/down/left/right): vem via `_refresh_dpad_buttons` (ABS_HAT0X/Y).
-    # - touchpad_*_press: device separado (name contém "Touchpad"); lido por
-    #   `TouchpadReader` abaixo (INFRA-EVDEV-TOUCHPAD-01).
     BUTTON_MAP: ClassVar[dict[str, str]] = {
         "BTN_SOUTH": "cross",
         "BTN_EAST": "circle",
@@ -1831,11 +1464,7 @@ class EvdevReader(_EvdevReconnectLoop):
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev"
 
     def __init__(self, device_path: Path | None = None, target_uniq: str | None = None) -> None:
-        super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
-        # FEAT-DSX-CONTROLLER-IDENTITY-01: quando `_target_uniq` está setado, o
-        # finder resolve o node PELO MAC (identidade estável) em vez de "menor
-        # node" — com 2+ controles, "menor node" e "primário do backend" podem
-        # divergir após re-enumeração e o reader passaria a ler OUTRO controle.
+        super().__init__()
         self._target_uniq = target_uniq
         self._device_path = device_path or self._locate()
         self._lock = threading.RLock()
@@ -1847,27 +1476,14 @@ class EvdevReader(_EvdevReconnectLoop):
         self._pressed: set[str] = set()
         self._apertos: dict[str, int] = {}
         self._active_dev: Any = None
-        # `_grab`/`_grab_state` nascem no `super().__init__()` — a máquina de
-        # EVIOCGRAB subiu para `_EvdevReconnectLoop` na SENSOR-DE-VERDADE-01,
-        # porque o nó "Motion Sensors" precisa do MESMO grab (ver a base).
-        # LUGAR-À-MESA-01/E2 — a forma dos eixos DESTE aparelho, lida do
-        # `absinfo` no open (`_on_device_opened`). Vazio = faixa desconhecida,
         # e aí o `_handle_abs` cai no `& 0xFF` histórico: o DualSense continua
-        # bit a bit igual mesmo se a leitura do node falhar.
         self._eixos: dict[int, EixoAbsoluto] = {}
-        # Gatilho ANALÓGICO ausente no aparelho (o Nintendo Pro não publica
-        # `ABS_Z`/`ABS_RZ`, medido em 06/08/2026): sem síntese, o gatilho fica
-        # 0 para sempre e o botão físico não chega ao jogo. Nunca liga num
         # DualSense — lá o eixo existe, e sobrescrevê-lo mataria o analógico.
         self._sintetizar_l2: bool = False
         self._sintetizar_r2: bool = False
 
     def retarget(self, uniq: str | None) -> None:
-        """Re-aponta o reader para o controle de MAC `uniq` (normalizado).
-
-        Se o node atualmente aberto não pertence ao novo alvo, força reabrir
-        (fecha o fd; o loop re-localiza pelo finder, agora filtrado por MAC).
-        """
+        """Re-aponta o reader para o controle de MAC `uniq` (normalizado)."""
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
         norm = norm_mac(uniq)
@@ -1892,7 +1508,6 @@ class EvdevReader(_EvdevReconnectLoop):
                 apertos=self._snapshot.apertos,
             )
 
-    # Hooks do loop base ------------------------------------------------
 
     def _locate(self) -> Path | None:
         """Resolve o node do controle-alvo (por identidade) ou o 1º DualSense.
@@ -1912,19 +1527,7 @@ class EvdevReader(_EvdevReconnectLoop):
         return self._locate()
 
     def _on_device_opened(self, dev: Any) -> None:
-        """Monta o normalizador DESTE aparelho e SEMEIA a posição de repouso.
-
-        Um ioctl por conexão, nunca por evento (mesmo motivo do
-        `MotionSensorReader._on_device_opened`). Falha aqui não é fatal: o mapa
-        fica vazio, o `_handle_abs` volta ao `& 0xFF` de sempre e nada é
-        semeado — degradar para o que já rodava é o único modo de falha
-        aceitável aqui.
-
-        SEMENTE-DO-REPOUSO-01: as duas coisas saem da MESMA leitura. O
-        `capabilities()` do python-evdev devolve o `_rawcapabilities` colhido no
-        `InputDevice.__init__` — ou seja, o `absinfo` do INSTANTE DO OPEN, que é
-        exatamente o instante que interessa semear.
-        """
+        """Monta o normalizador DESTE aparelho e SEMEIA a posição de repouso."""
         try:
             from evdev import ecodes
         except ImportError:  # pragma: no cover - sem evdev não há loop
@@ -1939,24 +1542,15 @@ class EvdevReader(_EvdevReconnectLoop):
         rz = getattr(ecodes, "ABS_RZ", None)
         with self._lock:
             self._eixos = eixos
-            # Só sintetiza quando a leitura FOI POSSÍVEL e o eixo não estava
-            # lá. Mapa vazio (node ilegível) é "não sei", não "não tem" — e
             # chutar "não tem" num DualSense mataria o gatilho analógico dele.
             self._sintetizar_l2 = bool(eixos) and z is not None and z not in eixos
             self._sintetizar_r2 = bool(eixos) and rz is not None and rz not in eixos
             self._semear_posicao_de_repouso(posicoes, ecodes)
 
-    #: Os quatro eixos de STICK, e só eles, entram na recusa do "valor igual ao
-    #: mínimo" abaixo. A diferença com os gatilhos não é de estilo: num stick o
-    #: mínimo é um EXTREMO (talo à esquerda/para cima), num gatilho é o REPOUSO.
     _CAMPOS_DE_STICK: ClassVar[frozenset[str]] = frozenset(
         {"lx", "ly", "rx", "ry"}
     )
 
-    #: Os eixos que o `absinfo` sabe responder, e o campo do snapshot de cada
-    #: um. Uma lista só, usada pela SEMEADURA (no open) e pelo VIGIA-DO-MUDO
-    #: (durante o silêncio): as duas perguntam o mesmo ao kernel, e mantê-las
-    #: em listas separadas garantiria que um dia divergissem em silêncio.
     _CAMPOS_DE_EIXO: ClassVar[tuple[tuple[str, str], ...]] = (
         ("ABS_X", "lx"),
         ("ABS_Y", "ly"),
@@ -2063,13 +1657,8 @@ class EvdevReader(_EvdevReconnectLoop):
             try:
                 cru = int(dev.absinfo(int(code)).value)
             except Exception:
-                continue  # eixo sem absinfo legível: "não sei", não "discorda"
+                continue
             faixa = eixos.get(int(code))
-            # Mesma recusa do talo fantasma da semeadura, pelo mesmo motivo:
-            # num stick, o valor igual ao mínimo declarado é indistinguível de
-            # `input_dev` recém-criado com memória zerada. Tratar isso como
-            # discordância faria o vigia reabrir o fd em laço num nó que
-            # acabou de nascer.
             if (
                 campo in self._CAMPOS_DE_STICK
                 and faixa is not None
@@ -2094,23 +1683,16 @@ class EvdevReader(_EvdevReconnectLoop):
             self._dpad_x = 0
             self._dpad_y = 0
             mudancas: dict[str, Any] = {"buttons_pressed": frozenset()}
-            # E2: gatilho SINTETIZADO vem do botão, e o botão acabou de ser
-            # solto à força — deixá-lo em 255 seria um gatilho travado no
-            # fundo. O gatilho ANALÓGICO não é tocado: ali o valor congelado é
-            # o comportamento de sempre, e mudá-lo não foi pedido.
             if self._sintetizar_l2:
                 mudancas["l2_raw"] = 0
             if self._sintetizar_r2:
                 mudancas["r2_raw"] = 0
             self._snapshot = self._with(**mudancas)
-            # A forma dos eixos é do NODE, e o node morreu: o próximo open
-            # relê. Enquanto isso, "não sei" — que é o `& 0xFF` histórico.
             self._eixos = {}
             self._sintetizar_l2 = False
             self._sintetizar_r2 = False
         self._grab_volta_a_pendente()
 
-    # Alias retrocompatível para testes legados (HOTFIX-3).
     _reset_buttons_on_disconnect = _reset_on_disconnect
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
@@ -2119,15 +1701,12 @@ class EvdevReader(_EvdevReconnectLoop):
             self._handle_abs(event.code, event.value, ecodes)
         elif event.type == ecodes.EV_KEY:
             self._handle_key(event.code, event.value, ecodes)
-        depois = self._snapshot.buttons_pressed  # fora da trava: o despertador
+        depois = self._snapshot.buttons_pressed
         if depois is not antes and depois != antes:
             _acordar_quem_entrega_ao_jogo()
 
     def _handle_abs(self, code: int, value: int, ecodes: Any) -> None:
         with self._lock:
-            # E2: a faixa é DO APARELHO (`absinfo` lido no open). Sem faixa
-            # conhecida, `normalizar_eixo` devolve o mesmo `value & 0xFF` que
-            # esta função fazia seis vezes seguidas até 07/08/2026.
             if code == ecodes.ABS_X:
                 self._snapshot = self._with(lx=self._normalizado(code, value))
             elif code == ecodes.ABS_Y:
@@ -2152,7 +1731,6 @@ class EvdevReader(_EvdevReconnectLoop):
         return normalizar_eixo(int(value), self._eixos.get(code))
 
     def _handle_key(self, code: int, value: int, ecodes: Any) -> None:
-        # evdev retorna keycode numerico; converte pra nome canonico
         name = self._keycode_name(code, ecodes)
         if name is None:
             return
@@ -2180,7 +1758,7 @@ class EvdevReader(_EvdevReconnectLoop):
         que é metade do produto.
         """
         if value not in (0, 1):
-            return  # autorepeat (value == 2) não muda estado de gatilho
+            return
         nivel = EIXO_MAX_HEFESTO if value == 1 else 0
         if name == "l2_btn" and self._sintetizar_l2:
             self._snapshot = self._with(l2_raw=nivel)
@@ -2211,13 +1789,7 @@ class EvdevReader(_EvdevReconnectLoop):
         self._sync_buttons_to_snapshot()
 
     def _contar_o_aperto(self, nome: str) -> None:
-        """Uma borda de solto a apertado (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01).
-
-        Chamado sob a trava, na BORDA do evento, e não na leitura do retrato: o
-        aperto de 10 ms que começa e acaba entre dois tiques não chega a
-        nenhuma leitura, mas passa por aqui. O dicionário é trocado, nunca
-        mudado no lugar: quem já leu um retrato segura uma contagem acabada.
-        """
+        """Uma borda de solto a apertado (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01)."""
         self._apertos = {**self._apertos, nome: self._apertos.get(nome, 0) + 1}
 
     def _sync_buttons_to_snapshot(self) -> None:
@@ -2281,9 +1853,6 @@ def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     found: dict[str, Path] = {}
-    # HIDE-SO-O-HIDRAW-02: `_nos_de_evento`, pelo mesmo motivo da descoberta
-    # do gamepad — o touchpad e os sensores do físico nascem fechados, e a
-    # lista só traz o nó fechado quando há broker para abri-lo depois.
     for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
@@ -2382,9 +1951,6 @@ class TouchState:
     y: int = 0
     largura: int = 1920
     altura: int = 1080
-    #: Os dedos apoiados AGORA, em ordem de slot. Vazio sem toque. Nunca
-    #: cai para `[(x, y)]` quando não há leitura MT: inventar um ponto a
-    #: partir do resumo desenharia um dedo que o kernel não confirmou.
     pontos: tuple[PontoDeToque, ...] = ()
 
 
@@ -2428,12 +1994,9 @@ class TouchpadReader(_EvdevReconnectLoop):
     Threadsafe via RLock.
     """
 
-    # Largura do touchpad em unidades absolutas do kernel hid_playstation
     # (empírico, DualSense USB 054c:0ce6 com kernel 6.x):
     _TOUCHPAD_WIDTH: ClassVar[int] = 1920
     _TOUCHPAD_HEIGHT: ClassVar[int] = 1080
-    # Limites de região (terços): [0, 640) esquerda; [640, 1280) meio;
-    # [1280, 1920) direita.
     _REGION_LEFT_LIMIT: ClassVar[int] = 640
     _REGION_RIGHT_LIMIT: ClassVar[int] = 1280
     _THREAD_NAME: ClassVar[str] = "hefesto-touchpad"
@@ -2445,63 +2008,29 @@ class TouchpadReader(_EvdevReconnectLoop):
         *,
         acumular_movimento: bool = True,
     ) -> None:
-        """Reader do touchpad de UM controle.
-
-        `target_uniq` (MAC normalizado) fixa DE QUEM é este touchpad; sem
-        ele vale o primeiro node por número (o caminho histórico de
-        cursor/teclado, que só conhece o primário).
-
-        `acumular_movimento=False` desliga o acúmulo de delta do
-        `consume_motion`. É OBRIGATÓRIO para qualquer leitor que só OBSERVE
-        o touchpad (o painel da aba Status): o mesmo node aceita vários fds
-        e o kernel replica os eventos para todos, então um segundo reader
-        acumulando delta que ninguém drena faria `_accum_dx/dy` crescer a
-        sessão inteira — exatamente o salto de cursor que o poll loop já
-        aprendeu a evitar drenando o reader do mouse a cada tick. Sem
-        acúmulo, este reader é puro observador e não tem como roubar (nem
-        inflar) o movimento do cursor.
-        """
-        super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
+        """Reader do touchpad de UM controle."""
+        super().__init__()
         self._target_uniq = target_uniq
         self._acumular_movimento = acumular_movimento
         self._device_path = device_path or find_dualsense_touchpad_evdev(target_uniq)
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
         self._stop_flag = threading.Event()
-        self._last_abs_x: int = self._TOUCHPAD_WIDTH // 2  # centro por default
+        self._last_abs_x: int = self._TOUCHPAD_WIDTH // 2
         self._last_abs_y: int = self._TOUCHPAD_HEIGHT // 2
         self._regions: frozenset[str] = frozenset()
-        # Movimento do cursor (B4): dedo presente + posição de referência por
-        # eixo (None = ainda sem âncora; o primeiro frame só seeda, não move) +
-        # delta acumulado entre drenagens (`consume_motion`).
         self._touching: bool = False
         self._motion_last_x: int | None = None
         self._motion_last_y: int | None = None
         self._accum_dx: int = 0
         self._accum_dy: int = 0
-        # MULTITOQUE-01: os slots do kernel, por índice. `identidade` -1 é o
-        # slot VAZIO (o `ABS_MT_TRACKING_ID` que o kernel manda ao levantar o
-        # dedo), e é por isso que o dicionário não é limpo: o slot continua
-        # existindo, sem dedo. O tamanho não é fixado em 2 de propósito — quem
-        # declara quantos slots há é o nó, e um modelo com três não ficaria
-        # com o terceiro mudo por causa de um número escrito aqui.
         self._mt_slot: int = 0
         self._mt_slots: dict[int, dict[str, int | None]] = {}
-        # TOUCHPAD-DO-SISTEMA-01: quem move o cursor com este nó. Nasce False
-        # (o hefesto é o dono) e é decidido de verdade no `_on_device_opened`,
-        # que o loop base SEMPRE chama antes do primeiro evento — nenhum evento
-        # é consumido com o valor de nascença.
         self._ponteiro_do_sistema: bool = False
 
     @property
     def ponteiro_do_sistema(self) -> bool:
-        """True se o libinput é quem move o cursor com ESTE nó de touchpad.
-
-        Observável de fora porque o consumidor do CLIQUE também precisa dela:
-        `daemon/subsystems/keyboard._combine_with_touchpad` não pode transformar
-        a região em tecla enquanto o sistema já está transformando o mesmo
-        clique em botão do mouse.
-        """
+        """True se o libinput é quem move o cursor com ESTE nó de touchpad."""
         with self._lock:
             return self._ponteiro_do_sistema
 
@@ -2510,14 +2039,7 @@ class TouchpadReader(_EvdevReconnectLoop):
             return self._regions
 
     def touch_state(self) -> TouchState:
-        """Dedo presente + última posição, SEM consumir nada (STATUS-S2).
-
-        Deliberadamente separado do `consume_motion()`: aquele DRENA o delta
-        acumulado para o cursor do mouse, então chamá-lo aqui roubaria o
-        movimento de quem é dono dele (o poll loop). Este devolve uma cópia
-        imutável do estado sob lock — pode ser chamado a 10 Hz pelo painel da
-        aba Status sem interferir em nada.
-        """
+        """Dedo presente + última posição, SEM consumir nada (STATUS-S2)."""
         with self._lock:
             return TouchState(
                 touching=self._touching,
@@ -2529,13 +2051,7 @@ class TouchpadReader(_EvdevReconnectLoop):
             )
 
     def consume_motion(self) -> tuple[int, int]:
-        """Retorna e zera o delta acumulado do dedo (unidades do touchpad).
-
-        Chamado pelo poll loop a cada tick. Drena-e-reseta para que o consumo
-        seja sempre o movimento desde a última chamada — o escalonamento para
-        pixels (com `mouse_speed` e carry sub-pixel) é responsabilidade do
-        `UinputMouseDevice.emit_touchpad_move`.
-        """
+        """Retorna e zera o delta acumulado do dedo (unidades do touchpad)."""
         with self._lock:
             dx, dy = self._accum_dx, self._accum_dy
             self._accum_dx = 0
@@ -2550,7 +2066,6 @@ class TouchpadReader(_EvdevReconnectLoop):
             return "touchpad_right_press"
         return "touchpad_middle_press"
 
-    # Hooks do loop base ------------------------------------------------
 
     def _find_device(self) -> Path | None:
         return find_dualsense_touchpad_evdev(self._target_uniq)
@@ -2559,21 +2074,13 @@ class TouchpadReader(_EvdevReconnectLoop):
         return "touchpad_reader"
 
     def _on_device_opened(self, dev: Any) -> None:
-        """Decide de quem é o cursor deste nó (TOUCHPAD-DO-SISTEMA-01).
-
-        Uma leitura por (re)conexão, no mesmo lugar em que o `MotionSensorReader`
-        lê a `resolution` — e pelo mesmo motivo: a resposta muda quando o kernel
-        recria o nó (replug, storm, troca USB↔BT), e perguntar por evento
-        custaria um `open()` a cada frame do dedo.
-        """
+        """Decide de quem é o cursor deste nó (TOUCHPAD-DO-SISTEMA-01)."""
         caminho = getattr(dev, "path", None) or self._device_path
         do_sistema = libinput_ignora_device(caminho) is False
         with self._lock:
             mudou = do_sistema != self._ponteiro_do_sistema
             self._ponteiro_do_sistema = do_sistema
             if mudou:
-                # Trocou de dono: o que estava acumulado é do dono ANTERIOR e
-                # viraria um salto de cursor na primeira drenagem do novo.
                 self._accum_dx = 0
                 self._accum_dy = 0
         logger.info(
@@ -2586,7 +2093,6 @@ class TouchpadReader(_EvdevReconnectLoop):
         if event.type == ecodes.EV_ABS:
             if event.code == ecodes.ABS_X:
                 with self._lock:
-                    # Snapshot de X para a região do próximo BTN_LEFT.
                     self._last_abs_x = int(event.value)
                     self._accumulate_axis_x(int(event.value))
             elif event.code == ecodes.ABS_Y:
@@ -2606,26 +2112,12 @@ class TouchpadReader(_EvdevReconnectLoop):
                         self._regions = frozenset()
             elif event.code == ecodes.BTN_TOUCH:
                 with self._lock:
-                    # Dedo apoiado/levantado: zera a âncora dos dois eixos para
-                    # que reapoiar em outro ponto não gere um salto do cursor.
                     self._touching = event.value == 1
                     self._motion_last_x = None
                     self._motion_last_y = None
 
     def _handle_multitoque(self, event: Any, ecodes: Any) -> None:
-        """Os slots MT do kernel — o SEGUNDO dedo (MULTITOQUE-01).
-
-        Deliberadamente separado do `ABS_X`/`ABS_Y` acima, e a razão é o
-        cursor: aqueles dois alimentam `_accumulate_axis_*`, que é o
-        movimento do mouse. Somar o segundo dedo ali faria o cursor pular
-        para o meio do caminho entre os dedos a cada rolagem. Aqui só se
-        OBSERVA — nenhum byte deste método chega ao `consume_motion`.
-
-        `getattr` e não `ecodes.ABS_MT_SLOT` direto: o `ecodes` chega como
-        PARÂMETRO e as réguas passam dublês. Um dublê sem os códigos MT
-        continua exercitando o caminho de um dedo em vez de levantar
-        `AttributeError` no meio do laço de eventos do produto.
-        """
+        """Os slots MT do kernel — o SEGUNDO dedo (MULTITOQUE-01)."""
         cod_slot = getattr(ecodes, "ABS_MT_SLOT", None)
         cod_id = getattr(ecodes, "ABS_MT_TRACKING_ID", None)
         cod_x = getattr(ecodes, "ABS_MT_POSITION_X", None)
@@ -2635,8 +2127,6 @@ class TouchpadReader(_EvdevReconnectLoop):
             return
         with self._lock:
             if codigo == cod_slot:
-                # O kernel só reanuncia o slot quando ELE muda: fora deste
-                # evento, todo ABS_MT_* que chega é do slot corrente.
                 self._mt_slot = int(event.value)
                 return
             slot = self._mt_slots.setdefault(
@@ -2645,9 +2135,6 @@ class TouchpadReader(_EvdevReconnectLoop):
             if codigo == cod_id:
                 slot["identidade"] = int(event.value)
                 if int(event.value) == -1:
-                    # Dedo levantado: a posição sai junto. Guardá-la faria o
-                    # slot ressuscitar com a coordenada velha no próximo
-                    # toque, antes de o kernel dizer onde o dedo está agora.
                     slot["x"] = None
                     slot["y"] = None
             elif codigo == cod_x:
@@ -2672,13 +2159,7 @@ class TouchpadReader(_EvdevReconnectLoop):
         return tuple(saida)
 
     def _acumula_agora(self) -> bool:
-        """Se este reader pode acumular movimento para o cursor do hefesto.
-
-        Duas condições, e as duas negam por razões diferentes:
-        `_acumular_movimento=False` é o OBSERVADOR (o painel de Status abre o
-        mesmo nó e não pode roubar delta); `_ponteiro_do_sistema` é o dedo já
-        estar movendo o cursor pelo libinput (TOUCHPAD-DO-SISTEMA-01).
-        """
+        """Se este reader pode acumular movimento para o cursor do hefesto."""
         return self._acumular_movimento and not self._ponteiro_do_sistema
 
     def _accumulate_axis_x(self, value: int) -> None:
@@ -2696,8 +2177,6 @@ class TouchpadReader(_EvdevReconnectLoop):
         with self._lock:
             self._regions = frozenset()
             self._touching = False
-            # Os slots vão junto: um dedo "apoiado" que sobrevivesse à queda
-            # do controle desenharia toque num aparelho que saiu da mesa.
             self._mt_slots.clear()
             self._mt_slot = 0
             self._motion_last_x = None
@@ -2716,18 +2195,7 @@ class GyroSnapshot:
 
 
 def graus_por_segundo(valor: int, resolucao: int) -> float:
-    """Converte o valor CRU de um eixo de giroscópio evdev em graus/s.
-
-    O `hid_playstation` publica a escala do sensor no próprio node, em
-    `absinfo.resolution` — "unidades por grau/s" (`DS_GYRO_RES_PER_DEG_S`,
-    1024 no kernel atual). Dividir pelo que o node declara é o único jeito
-    que sobrevive a uma mudança de escala do kernel; hardcodar 1024 daria
-    um número silenciosamente errado no dia em que ela mudasse.
-
-    Resolução ausente/zero/negativa (node atípico, dublê de teste) cai no
-    default do kernel — é melhor que devolver o valor cru, que a interface
-    leria como dezenas de milhares de graus/s.
-    """
+    """Converte o valor CRU de um eixo de giroscópio evdev em graus/s."""
     escala = resolucao if resolucao > 0 else DUALSENSE_GYRO_RES_PER_DEG_S
     return valor / escala
 
@@ -2793,38 +2261,17 @@ class MotionSensorReader(_EvdevReconnectLoop):
 
     _THREAD_NAME: ClassVar[str] = "hefesto-motion-sensors"
 
-    #: Teto do acumulador de ângulo, em graus por eixo. Cem voltas.
-    #:
-    #: O ACUMULADOR PRECISA DE TETO PORQUE NEM TODO MUNDO DRENA. O irmão deste
-    #: campo é o `_accum_dx` do `TouchpadReader`, e ele já custou um defeito:
-    #: com o input congelado (Modo Nativo, pausa, grace) ninguém drenava, o
-    #: acumulado crescia a sessão inteira e virava um SALTO de cursor quando a
-    #: emulação voltava — a cura foi `lifecycle` drenar a cada tique
-    #: (`discard_touchpad_motion`). Aqui o teto resolve o mesmo problema sem
-    #: exigir que todo consumidor saiba que existe um acumulador: quem nunca
-    #: chama `consume_angulo` paga no máximo este valor de memória e nada mais.
     _TETO_DO_ANGULO_GRAUS: ClassVar[float] = 36000.0
 
-    #: Maior intervalo entre dois pacotes que ainda se integra, em segundos.
-    #: Acima disto houve reabertura do nó, suspensão da máquina ou o controle
-    #: sumiu — e integrar um buraco de tempo inteiro produziria um salto de
-    #: câmera. 50 ms é ~34x o intervalo real do nó (medido: 8.124 pacotes em
-    #: 12,02 s = 675,8 Hz).
     _MAIOR_DT_INTEGRAVEL_S: ClassVar[float] = 0.050
 
-    #: A janela dos Hz do nó — AR-MEDIDO-01 (23/09/2026), decisão R10 dela:
-    #: cada controle mostra os Hz de movimento que recebe AGORA. Um segundo.
     _JANELA_DA_TAXA_S: ClassVar[float] = 1.0
 
     def __init__(
         self, device_path: Path | None = None, target_uniq: str | None = None
     ) -> None:
-        super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
+        super().__init__()
         self._target_uniq = target_uniq
-        # AR-MEDIDO-01: os intervalos entre pacotes, no carimbo do KERNEL —
-        # ver `hz_do_movimento`. `(fim, dt)` de cada intervalo contíguo. O
-        # import é local: uma linha nova no topo deslocaria as âncoras que a
-        # casa cita por número neste arquivo.
         from collections import deque
 
         self._taxa_intervalos: deque[tuple[float, float]] = deque()
@@ -2833,8 +2280,6 @@ class MotionSensorReader(_EvdevReconnectLoop):
         self._taxa_ultimo_mono: float | None = None
         self._taxa_aberto_em: float | None = None
         self._taxa_perdeu = False
-        #: O relógio do PROCESSO, para o silêncio e a abertura — injetável na
-        #: régua. O ritmo dos pacotes vem do carimbo do kernel, não daqui.
         self._relogio_da_taxa: Any = time.monotonic
         self._device_path = device_path or self._locate()
         self._lock = threading.RLock()
@@ -2842,34 +2287,13 @@ class MotionSensorReader(_EvdevReconnectLoop):
         self._stop_flag = threading.Event()
         self._eixos: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
         self._accel: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
-        #: Nome do eixo -> resolução declarada pelo node (preenchido no open).
         self._resolucoes: dict[str, int] = {}
-        #: O mesmo, para os eixos do acelerômetro. Dicionário SEPARADO porque
-        #: as duas escalas são independentes (1024 contra 8192) e a chave é a
-        #: mesma letra: um dicionário só faria o giro dividir por 8192.
         self._resolucoes_accel: dict[str, int] = {}
-        #: Ângulo percorrido por eixo desde a última drenagem, em GRAUS.
-        #: Integrado na thread do reader, no ritmo do nó — não no do tique.
         self._angulo: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
-        #: Timestamp do último `SYN_REPORT` visto, na escala do próprio evento
-        #: (`event.sec`/`event.usec`) e não do relógio do processo: é o carimbo
-        #: que o kernel pôs quando o pacote chegou, e ele não anda para trás
-        #: com NTP nem espera a nossa thread ser escalonada.
         self._ultimo_syn: float | None = None
 
     def consume_angulo(self) -> tuple[float, float, float]:
-        """Ângulo percorrido em cada eixo desde a última chamada — e ZERA.
-
-        DRENA, ao contrário de `snapshot()`, e a separação é a mesma do
-        touchpad (`consume_motion` x `touch_state`): quem consome ângulo é o
-        DONO do movimento (o tique do jogo, pelo roteador); quem só quer ver o
-        número chama `snapshot()` e não rouba nada de ninguém. Duas chamadas
-        deste método no mesmo tique dividiriam o movimento entre dois
-        consumidores, e a mira andaria pela metade.
-
-        Unidade: graus. Ordem: `(x, y, z)`, a mesma do `snapshot()` — ABS_RX,
-        ABS_RY, ABS_RZ.
-        """
+        """Ângulo percorrido em cada eixo desde a última chamada — e ZERA."""
         with self._lock:
             valores = (self._angulo["x"], self._angulo["y"], self._angulo["z"])
             self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
@@ -2923,9 +2347,6 @@ class MotionSensorReader(_EvdevReconnectLoop):
             perdeu, self._taxa_perdeu = self._taxa_perdeu, False
             if anterior is not None and not perdeu:
                 dt = carimbo - anterior
-                # Carimbo que anda para trás ou salta mais que duas janelas é
-                # o relógio de parede mudando (o evdev carimba em REALTIME),
-                # não o rádio: o intervalo não entra.
                 if 0.0 < dt <= 2 * janela:
                     self._taxa_intervalos.append((carimbo, dt))
                     self._taxa_soma += dt
@@ -2952,18 +2373,12 @@ class MotionSensorReader(_EvdevReconnectLoop):
             )
 
     def accel_snapshot(self) -> AccelSnapshot:
-        """Última aceleração conhecida, em g (cópia sob lock).
-
-        Método SEPARADO de `snapshot()` de propósito: quem já consome o giro
-        (o `sensor_hub`, os testes de status) continua chamando o de sempre e
-        recebendo o de sempre. Nada do que existia mudou de forma.
-        """
+        """Última aceleração conhecida, em g (cópia sob lock)."""
         with self._lock:
             return AccelSnapshot(
                 x=self._accel["x"], y=self._accel["y"], z=self._accel["z"]
             )
 
-    # Hooks do loop base ------------------------------------------------
 
     def _locate(self) -> Path | None:
         mapa = discover_dualsense_motion_evdevs()
@@ -2979,12 +2394,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
         return "motion_sensors"
 
     def _on_device_opened(self, dev: Any) -> None:
-        """Lê a escala de cada eixo do `absinfo` do node recém-aberto.
-
-        Falha aqui NÃO é fatal: sem resolução, `graus_por_segundo` cai no
-        default do kernel e o painel segue mostrando um número plausível em
-        vez de sumir (degradação silenciosa, como o tema sem CSS).
-        """
+        """Lê a escala de cada eixo do `absinfo` do node recém-aberto."""
         self._zerar_a_taxa(aberto=True)
         resolucoes: dict[str, int] = {}
         resolucoes_accel: dict[str, int] = {}
@@ -3008,40 +2418,18 @@ class MotionSensorReader(_EvdevReconnectLoop):
             self._resolucoes_accel = resolucoes_accel
 
     def _reset_on_disconnect(self) -> None:
-        """Controle sumiu: zera os SEIS eixos — valor congelado mente movimento.
-
-        O acelerômetro entra aqui pelo mesmo motivo do giro, e com uma agravante:
-        parado ele NÃO marca zero, marca ~1 g da gravidade. Deixar o último
-        valor congelado depois da desconexão desenharia um controle de pé, para
-        sempre, num controle que não está mais na mesa.
-        """
+        """Controle sumiu: zera os SEIS eixos — valor congelado mente movimento."""
         with self._lock:
             self._eixos = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._accel = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._resolucoes = {}
             self._resolucoes_accel = {}
-            # MOVIMENTO-EM-QUALQUER-MASCARA-01: o ângulo some pela mesma razão
-            # pela qual os seis eixos somem. Guardar o ângulo de antes faria a
-            # mira dar um salto no primeiro tique depois do replug — o
-            # movimento de pôr o controle de volta na mesa viraria uma virada
-            # de câmera.
             self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._ultimo_syn = None
         self._zerar_a_taxa(aberto=False)
-        # SENSOR-DE-VERDADE-01: o grab do nó de movimento é o que esconde o
-        # giro de quem lê evdev. Perdido o nó, ele não está mais "held" — e
-        # dizer que está faria a resposta do `sensor.set` afirmar exclusividade
-        # sobre um nó que voltou a ser de todo mundo. O loop o reaplica ao
-        # reabrir (`_reapply_grab`), que é o que faz o interruptor sobreviver
-        # ao replug — e a máscara, que derruba e recria o vpad.
         self._grab_volta_a_pendente()
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
-        # O SYN FECHA O PACOTE, e é nele que se integra. O nó publica os seis
-        # eixos e só então o SYN_REPORT; integrar a cada eixo contaria o mesmo
-        # intervalo seis vezes. O dt sai do carimbo do PRÓPRIO evento, que é o
-        # instante em que o kernel recebeu o pacote — o relógio do processo
-        # mediria também o tempo que a nossa thread levou para ser escalonada.
         if event.type == ecodes.EV_SYN:
             if event.code == ecodes.SYN_REPORT:
                 carimbo = float(event.sec) + float(event.usec) / 1e6
@@ -3052,10 +2440,6 @@ class MotionSensorReader(_EvdevReconnectLoop):
             return
         if event.type != ecodes.EV_ABS:
             return
-        # O GIRO É PROCURADO PRIMEIRO, e a ordem é deliberada: ele é o que já
-        # tinha consumidor, e assim o custo por evento de giro fica EXATAMENTE
-        # o de antes (no máximo três comparações e `return`). Quem paga as três
-        # a mais é o acelerômetro, que é quem está chegando.
         for eixo, nome in (("x", "ABS_RX"), ("y", "ABS_RY"), ("z", "ABS_RZ")):
             code = getattr(ecodes, nome, None)
             if code is not None and code == event.code:
@@ -3074,17 +2458,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
                 return
 
     def _integrar_o_angulo(self, agora: float) -> None:
-        """Soma `velocidade x dt` ao ângulo de cada eixo. Nunca levanta.
-
-        O PRIMEIRO PACOTE NÃO INTEGRA: sem um SYN anterior não há intervalo, e
-        inventar um produziria um salto no instante em que o controle conecta —
-        exatamente quando a mão dela está no aparelho.
-
-        O `dt` GRANDE TAMBÉM NÃO INTEGRA (`_MAIOR_DT_INTEGRAVEL_S`): ele quer
-        dizer reabertura do nó, máquina suspensa ou controle que sumiu e
-        voltou. Integrar o buraco inteiro pela última velocidade conhecida
-        viraria uma virada de câmera de vários segundos num quadro só.
-        """
+        """Soma `velocidade x dt` ao ângulo de cada eixo. Nunca levanta."""
         anterior = self._ultimo_syn
         self._ultimo_syn = agora
         if anterior is None:
@@ -3099,30 +2473,8 @@ class MotionSensorReader(_EvdevReconnectLoop):
                 self._angulo[eixo] = max(-teto, min(teto, valor))
 
 
-
-# O-ASSENTO-GUARDADO-NAO-ANDA-02, conferência de 24/09/2026 — a espera do
-# backoff SEM NÓ acorda quando o nó volta. As duas funções moram aqui, no fim
-# do módulo, porque o mapa de canais cita este arquivo por linha; lá em cima
-# são duas trocas de uma linha cada (o `_run` e o `refresh_device`).
-#
-# O defeito, medido com o `EvdevReader` de verdade e o open dublê: a espera do
-# backoff (0,5 → 1 → 2 → 4 → 5 s) era um `Event.wait` que só o `stop()`
-# acordava. O `retarget`, o `request_reopen` e o `refresh_device` não
-# alcançavam o leitor ali — o self-pipe só acordava o `select` do nó aberto.
-# Com o posto de P1 vago, o leitor do P1 fica sem nó e entra no backoff, e o P1
-# que voltava dentro do prazo ficava até 4,7 s sem mover o boneco 1 (antes da
-# vaga, o leitor seguia o P2 e voltava ao P1 em 0,1 s). Uma mesa de UM
-# controle só já pagava o mesmo preço a cada volta.
-
-
 def _esperar_o_backoff(leitor: _EvdevReconnectLoop, segundos: float) -> bool:
-    """Espera o backoff sem nó, acordando no wake. Devolve se é para PARAR.
-
-    O `select` no self-pipe é o mesmo mecanismo do `_read_until_signaled`
-    (HANG-01): o `stop()` e o `request_reopen()` já escrevem nele, e o
-    :func:`_o_no_que_voltou` também. Sem pipe (fechado na corrida de um
-    `stop()`, ou um dublê montado por `__new__`), volta a espera de antes.
-    """
+    """Espera o backoff sem nó, acordando no wake. Devolve se é para PARAR."""
     try:
         pronto = prontos_para_ler([getattr(leitor, "_wake_r", -1)], segundos)
     except (OSError, ValueError):
@@ -3135,21 +2487,9 @@ def _esperar_o_backoff(leitor: _EvdevReconnectLoop, segundos: float) -> bool:
 def _o_no_que_voltou(leitor: _EvdevReconnectLoop, caminho: Path | None) -> Path | None:
     """O nó que o `refresh_device` achou — e o leitor em backoff acorda para abri-lo."""
     if caminho is not None:
-        with contextlib.suppress(AttributeError):  # dublê sem self-pipe
+        with contextlib.suppress(AttributeError):
             leitor._wake()
     return caminho
-
-
-# A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01 (28/09/2026) — o leitor de um
-# controle AUSENTE espera o aviso de `/dev/input`, e não o relógio.
-#
-# O defeito, medido no diário de 26/09: com o controle fora da mesa, o leitor
-# dele procurava o nó a cada volta do recuo (0,5 → 1 → 2 → 4 → 5 s, e depois
-# 5 s para sempre), e cada procura era a descoberta inteira. O nó só volta
-# quando o kernel o recria, e isso muda a lista de `/dev/input` — que o
-# `InputDirWatch` enxerga com um `listdir`. Sem nó, o leitor procura UMA vez e
-# dorme até nascer um nó nessa lista (ou até o `_wake` do `refresh_device`, do
-# `retarget` e do `stop`), com o `_TETO_SEM_AVISO_S` só de segurança.
 
 
 def _novo_aviso_de_entrada() -> InputDirWatch:
@@ -3162,7 +2502,6 @@ class _EsperaSemNo:
     """O estado da espera de UM leitor sem nó. Nasce na primeira procura."""
 
     aviso: Any
-    #: Buscas no relógio que ainda restam depois do último aviso.
     acomodacao: int = 0
     backoff: float = 0.5
 
@@ -3176,12 +2515,7 @@ def _a_espera_de(leitor: _EvdevReconnectLoop) -> _EsperaSemNo:
 
 
 def _procurar_o_no(leitor: _EvdevReconnectLoop) -> Path | None:
-    """Procura o nó do leitor, com a linha de base do aviso tirada ANTES.
-
-    A ordem é o que impede o aviso de se perder: o nó que nascer durante a
-    procura muda a pasta depois da linha de base, e a primeira volta da
-    espera o enxerga.
-    """
+    """Procura o nó do leitor, com a linha de base do aviso tirada ANTES."""
     espera = _a_espera_de(leitor)
     espera.aviso.poll()
     caminho = leitor._find_device()
@@ -3206,12 +2540,7 @@ def _esperar_o_no(leitor: _EvdevReconnectLoop) -> bool:
 
 
 def _esperar_o_aviso(leitor: _EvdevReconnectLoop, aviso: Any) -> bool:
-    """Dorme até nascer um nó em `/dev/input`, até o `_wake`, ou até o teto.
-
-    Um passo é o `select` no self-pipe com o `_SELECT_TIMEOUT_S` do leitor, e
-    entre dois passos um `listdir` — microssegundos, contra a descoberta
-    inteira que o recuo repetia. Devolve se é para PARAR.
-    """
+    """Dorme até nascer um nó em `/dev/input`, até o `_wake`, ou até o teto."""
     passo = leitor._SELECT_TIMEOUT_S
     esperado = 0.0
     while esperado < leitor._TETO_SEM_AVISO_S:
@@ -3226,38 +2555,19 @@ def _esperar_o_aviso(leitor: _EvdevReconnectLoop, aviso: Any) -> bool:
             return leitor._stop_flag.is_set()
         if leitor._stop_flag.is_set():
             return True
-        # A pasta que só PERDEU entradas (o próprio controle saindo, outro
-        # controle saindo) não traz o nó de volta: a espera segue.
         if aviso.poll() and getattr(aviso, "nasceu", True):
             return False
         esperado += passo
     return leitor._stop_flag.is_set()
 
 
-# ---------------------------------------------------------------------------
-# O APERTO ACORDA O TIQUE — O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01-NA-HORA (02/10)
-# ---------------------------------------------------------------------------
-#
-# O caminho do botão até o jogo esperava o tique: um aperto que chega logo
-# depois de um tique espera o período inteiro (16,7 ms a 60 Hz, 8,3 ms em
-# média). O leitor de cada controle chama o despertador, FORA da trava, sempre
-# que o conjunto de botões muda (`EvdevReader._handle_event`), e o daemon o
-# liga ao evento que acorda as esperas do laço (`lifecycle._esperar_o_tique`).
-# No fim do módulo para as citações de cima não andarem (e o import também).
-
 from collections.abc import Callable  # noqa: E402
 
-#: O chamável que o leitor acorda, do processo inteiro (um daemon por processo).
 _despertador: Callable[[], None] | None = None
 
 
 def definir_o_despertador(acordar: Callable[[], None] | None) -> None:
-    """Liga (ou desliga, com ``None``) quem o leitor acorda num aperto.
-
-    Chamado pelo laço do daemon (`lifecycle._o_aperto_do_laco`). O chamável
-    roda na thread do leitor e tem de voltar na hora: o do daemon só agenda
-    um `Event.set` no laço (`call_soon_threadsafe`).
-    """
+    """Liga (ou desliga, com ``None``) quem o leitor acorda num aperto."""
     global _despertador
     _despertador = acordar
 
@@ -3269,7 +2579,7 @@ def _acordar_quem_entrega_ao_jogo() -> None:
         return
     try:
         acordar()
-    except Exception as exc:  # o leitor nunca cai pelo despertador
+    except Exception as exc:
         logger.debug("despertador_falhou", err=str(exc))
 
 

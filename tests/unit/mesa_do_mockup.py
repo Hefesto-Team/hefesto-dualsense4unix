@@ -73,19 +73,16 @@ FACES: tuple[Face, ...] = (
     ),
 )
 
-#: ela declarou 8 das 16 entradas — só as que tinham algo no dia
 MAPA: Mapa = {
     "1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4",
     "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4",
 }
 
-#: 20h15 de 24/08/2026 — antes de ela mexer nos cabos
 LEITURA_ANTES: Leitura = {
     "mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4",
     "bt-a": "3-1.2", "wifi": "4-1.1.2", "teclado": "3-1.4", "bt-b": "3-1.1.4",
 }
 
-#: 22h50 de 24/08/2026 — depois dos movimentos dela
 LEITURA_AGORA: Leitura = {
     "teclado": "1-3", "webcam": "1-4", "mouse": "1-6", "hub": "3-1",
     "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2",
@@ -98,12 +95,7 @@ CONTROLES: tuple[Controle, ...] = (
     Controle("Jogador 4", mic=True, onde="bt-b"),
 )
 
-# ── A MESA DELA ÀS 02h36 DE 25/08/2026 ──────────────────────────────────
-#
-# O hub saiu do barramento e levou os três adaptadores Bluetooth com ele. Sobrou
 # teclado em `1-3`, DualSense por cabo em `1-4`, mouse em `1-6` e Wi-Fi em `4-4`.
-# É estado de primeira classe do motor, não borda: sem hub não há topologia de
-# hub para deduzir, e sem adaptador não cabe controle nenhum.
 
 SEM_HUB_APARELHOS: tuple[Aparelho, ...] = (
     Aparelho("wifi", "Wi-Fi", "Archer T3U", "wifi"),

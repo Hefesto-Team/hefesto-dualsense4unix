@@ -1,32 +1,4 @@
-"""A régua da palavra passou a ver O PRODUTO — e a bancada continua vendo tudo.
-
-O DEFEITO, medido em 06/09/2026 e curado no mesmo dia:
-
-    interface/olhar.py --palavra mesa --publicado
-    →  'mesa': 34 ocorrência(s) visível(eis) em o produto
-
-E o produto não mostrava NENHUMA das 34. Elas moram dentro de `.nota` — o
-bilhete de projeto que o mockup carrega —, e o piloto injeta
-`.nota{display:none !important}` na página antes de ela aparecer
-(`interface/folha_da_casa.FOLHA_DA_CASA`). Medido num Chrome de verdade, `file://`
-sobre `interface/paginas/`, viewport 1180x777, com a folha posta: **zero** nas
-dez páginas. O instrumento respondia sobre o ARQUIVO e dizia "o produto".
-
-É a assinatura que esta casa persegue desde 04/09 — *o instrumento respondia
-sobre outra coisa que não o produto* —, e a cura tem a forma que a casa já
-escreveu: **o que tem dono, a régua PERGUNTA ao dono**. `.nota` não se digita
-uma segunda vez; ele vem de `seletores_escondidos()`, que lê o `display:none`
-da folha do piloto.
-
-AS DUAS LEITURAS SÃO DIFERENTES DE PROPÓSITO, e é o ponto inteiro:
-
-* `texto_visivel` — a BANCADA (`mockup/`), que ela abre no navegador CRUA. Ali
-  o bilhete é texto de verdade e tem de contar.
-* `texto_visivel_no_produto` — a JANELA, com a folha do piloto aplicada.
-
-Uma cura que apagasse a `.nota` nas duas deixaria o desenho sem régua nenhuma,
-e a palavra voltaria pela bancada sem nada reprovar.
-"""
+"""A régua da palavra passou a ver O PRODUTO — e a bancada continua vendo tudo."""
 
 from __future__ import annotations
 
@@ -51,9 +23,6 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 BANCADA = RAIZ / "mockup"
 PRODUTO = INTERFACE / "paginas"  # (noqa-acento) nome de pasta
 
-#: Uma página de mentira com as três armadilhas juntas: o comentário de CSS que
-#: CITA a marcação escondida, o `<div>` dentro do `<div>` escondido, e o texto
-#: que fica ao lado e não pode sumir junto.
 PAGINA = (
     '<style>/* <div class="nota">isto é comentário</div> a mesa */</style>\n'
     '<div class="rodape">\n'
@@ -74,17 +43,8 @@ def _paginas(pasta: Path) -> list[Path]:
     return achadas
 
 
-# ---------------------------------------------------------------------------
-# 1. O DONO DA FOLHA — e a régua perguntando a ele
-# ---------------------------------------------------------------------------
 def _regras_da_folha(folha: str) -> list[tuple[str, str]]:
-    """A folha partida em `(seletor, declarações)`, por uma leitura PRÓPRIA.
-
-    ELA É DE PROPÓSITO OUTRA que a do produto. Reusar o `_REGRA` de
-    `folha_da_casa` mediria a função contra ela mesma — *a trava que se mede
-    contra a própria saída*, que esta casa já pagou uma vez, com uma régua que
-    passava enquanto o CSV perdia 50 colunas.
-    """
+    """A folha partida em `(seletor, declarações)`, por uma leitura PRÓPRIA."""
     fora: list[tuple[str, str]] = []
     for pedaco in folha.split("}"):
         if "{" not in pedaco:
@@ -94,59 +54,28 @@ def _regras_da_folha(folha: str) -> list[tuple[str, str]]:
     return fora
 
 
-#: `display:none`, com ou sem `!important`, com ou sem espaço em volta do `:`.
-#: A PROPRIEDADE É LIDA, nunca procurada por substring — ver a armadilha do
-#: `appearance:none` no docstring abaixo.
 _ESCONDE = re.compile(
     r"(?:^|;)\s*display\s*:\s*none\s*(?:!important)?\s*(?:;|$)", re.IGNORECASE
 )
 
 
 def test_a_folha_diz_o_que_esconde_e_a_regua_le_dela() -> None:
-    """`.nota` não se digita na régua: ele sai da folha do produto.
-
-    E A ARMADILHA ESTÁ NA PRÓPRIA FOLHA DE HOJE: `select{appearance:none}` tem
-    a palavra `none` e não esconde nada. Um `"none" in regra` — ou um
-    `"display:none" in folha`, que erra no outro sentido com um espaço no meio
-    — daria a lista errada, e a régua apagaria os 117 `<select>` das dez abas.
-
-    A LISTA DEIXOU DE SER DIGITADA AQUI — 20/09/2026. Estas duas linhas
-    cravavam `== (".nota",)`, e em 19/09 a folha ganhou uma segunda regra de
-    esconder: `.hef-sem-item{display:none !important}`, o bloco do desenho que
-    hoje não tem item (a peça do MOLDE, `hefesto_vivo.BOOTSTRAP`). A régua
-    reprovou a DECISÃO em vez do defeito — e o próprio módulo já avisava, no
-    docstring, que ia acontecer: *"quem acrescentar uma regra aqui acrescenta
-    junto o que ela esconde (…) uma segunda regra de esconder passa a valer
-    para a régua sozinha"*. O aviso estava escrito e a régua não o honrava.
-
-    O QUE ELA COBRA AGORA É O CONTRATO, não o conteúdo — as três coisas que a
-    cura de 06/09 prometeu, e nenhuma delas envelhece quando a folha cresce:
-
-    * `.nota` está na lista (é a regra que a sprint inteira nasceu para ver);
-    * `select` NÃO está (a armadilha do `appearance:none`);
-    * a lista é EXATAMENTE o que a folha esconde — medido por uma segunda
-      leitura, independente da do produto.
-    """
+    """`.nota` não se digita na régua: ele sai da folha do produto."""
     escondidos = seletores_escondidos()
     assert escondidos == seletores_escondidos(FOLHA_DA_CASA), (
         "a folha padrão e a mesma folha passada à mão deram listas diferentes "
         "— o valor que a régua lê não é o que o piloto põe na tela."
     )
 
-    # O ÂNCORA. Sem ele as duas leituras podem quebrar juntas e a igualdade
-    # abaixo daria verde sobre uma lista vazia — que é o defeito de origem, de
-    # volta: o `--palavra mesa --publicado` contando as 34 que o produto esconde.
     assert ".nota" in escondidos, (
         "`.nota` saiu da lista de esconder — a leitura do PRODUTO volta a "
         f"contar o bilhete de projeto. A folha diz: {escondidos}"
     )
-    # A ARMADILHA, pelo nome. `select{appearance:none}` não esconde nada.
     assert "select" not in escondidos, (
         "a régua caiu no `appearance:none` e vai apagar os 117 `<select>` das "
         "dez abas da leitura do produto."
     )
 
-    # E A LISTA INTEIRA, perguntada à folha em vez de digitada.
     esconde_de_verdade = tuple(
         seletor
         for seletor, declaracoes in _regras_da_folha(FOLHA_DA_CASA)
@@ -165,18 +94,7 @@ def test_a_folha_diz_o_que_esconde_e_a_regua_le_dela() -> None:
 
 
 def test_a_folha_tem_um_dono_so_em_src_inteiro() -> None:
-    """Uma folha só. Duas divergiriam, e a régua leria a que não está na tela.
-
-    A régua ANDA PELA ÁRVORE de todo módulo de `src/` e conta as ATRIBUIÇÕES do
-    nome: quem reexporta (`from … import FOLHA_DA_CASA`) não atribui, e quem
-    escreve uma segunda folha atribui. Um `grep` daria o mesmo número por
-    motivos errados — as menções em prosa passam de uma dúzia.
-
-    ELA NÃO IMPORTA A JANELA de propósito. `gui.ponte_da_tela` puxa `gi`, `Gtk`
-    e `WebKit2` na primeira linha, e está de saída de `gui/`
-    (`D-0609-GTK-LEVA-INTEIRA`): uma régua que a importasse quebraria na
-    máquina sem PyGObject e de novo no dia da mudança.
-    """
+    """Uma folha só. Duas divergiriam, e a régua leria a que não está na tela."""
     src = RAIZ / "src" / "hefesto_dualsense4unix"
     donos = []
     for modulo in sorted(src.rglob("*.py")):
@@ -206,11 +124,7 @@ def test_a_folha_tem_um_dono_so_em_src_inteiro() -> None:
 
 
 def test_uma_segunda_regra_de_esconder_vale_para_a_regua_sozinha() -> None:
-    """O que a cura promete ao futuro: a régua acompanha a folha sem tocar nela.
-
-    As três escritas que o CSS aceita para a mesma coisa estão aqui de
-    propósito — com `!important`, com espaço em volta do `:` e em maiúscula.
-    """
+    """O que a cura promete ao futuro: a régua acompanha a folha sem tocar nela."""
     folha = (
         ".nota{display:none !important}"
         "#rodape{display : NONE}"
@@ -221,29 +135,15 @@ def test_uma_segunda_regra_de_esconder_vale_para_a_regua_sozinha() -> None:
 
 
 def test_o_seletor_que_a_regua_nao_sabe_honrar_e_recusado_em_voz_alta() -> None:
-    """Ignorar em silêncio é voltar ao defeito de origem, e é pior.
-
-    Uma régua que desse de ombros para um `.nota > p` novo continuaria verde
-    contando o que o produto esconde — que foi exatamente o estado do mundo até
-    hoje. A recusa NOMEIA o seletor.
-    """
+    """Ignorar em silêncio é voltar ao defeito de origem, e é pior."""
     for seletor in (".nota > p", ".rodape .nota", "div.nota", "*", "[hidden]"):
         with pytest.raises(ValueError, match="ENSINE A RÉGUA"):
             seletores_escondidos(seletor + "{display:none}")
-    # A VÍRGULA SOBRANDO NÃO É SELETOR NOVO — `.nota,{…}` é a mesma regra com
-    # um vazio ao lado, e recusá-la seria a régua reprovando digitação.
     assert seletores_escondidos(".nota,{display:none}") == (".nota",)
 
 
-# ---------------------------------------------------------------------------
-# 2. AS DUAS LEITURAS — e a diferença entre elas
-# ---------------------------------------------------------------------------
 def test_o_produto_esconde_o_bilhete_e_a_bancada_o_conta() -> None:
-    """A mesma página, duas respostas — e as duas certas.
-
-    O `<div>` dentro do `<div class="nota">` está aqui porque parar no primeiro
-    `</div>` deixaria de fora justamente o miolo, que é onde o texto mora.
-    """
+    """A mesma página, duas respostas — e as duas certas."""
     bancada = texto_visivel(PAGINA)
     produto = texto_visivel_no_produto(PAGINA)
 
@@ -271,26 +171,13 @@ def test_as_duas_leituras_devolvem_o_tamanho_da_pagina() -> None:
 
 
 def test_o_bilhete_nao_fecha_e_a_regua_diz_em_vez_de_chutar() -> None:
-    """`<div class="nota">` sem `</div>` apagaria o resto do arquivo.
-
-    Um apagão silencioso numa régua é o mesmo defeito que ela veio curar, só
-    que ao contrário: ela passaria a dar verde sobre a página inteira.
-    """
+    """`<div class="nota">` sem `</div>` apagaria o resto do arquivo."""
     with pytest.raises(ValueError, match="nunca fechado"):
         texto_visivel_no_produto('<div class="nota"><p>a mesa</p>\n')
 
 
-# ---------------------------------------------------------------------------
-# 3. SOBRE AS PÁGINAS DE VERDADE — as dez de cada lado
-# ---------------------------------------------------------------------------
 def test_a_leitura_do_produto_nao_apaga_a_tela() -> None:
-    """A régua que zera por apagar tudo passa em qualquer proibição.
-
-    Esta é a guarda contra a cura preguiçosa: se `texto_visivel_no_produto`
-    devolvesse espaço, o portão da palavra ficaria verde para sempre e sobre
-    nada. Medido em 06/09/2026 nas dez publicadas: a leitura do produto tem
-    entre 2.500 e 9.400 letras.
-    """
+    """A régua que zera por apagar tudo passa em qualquer proibição."""
     magros: list[str] = []
     for pagina in _paginas(PRODUTO):
         lida = texto_visivel_no_produto(pagina.read_text(encoding="utf-8"))
@@ -304,12 +191,7 @@ def test_a_leitura_do_produto_nao_apaga_a_tela() -> None:
 
 
 def test_a_bancada_continua_lendo_o_que_o_produto_esconde() -> None:
-    """O bilhete é a maior parte do texto do desenho, e ele tem de contar.
-
-    Medido em 06/09/2026: nas dez páginas da bancada a `.nota` responde por
-    milhares de letras cada. Se as duas leituras devolvessem o mesmo, a
-    separação teria sido escrita e não feita.
-    """
+    """O bilhete é a maior parte do texto do desenho, e ele tem de contar."""
     iguais: list[str] = []
     for pagina in _paginas(BANCADA):
         cru = pagina.read_text(encoding="utf-8")

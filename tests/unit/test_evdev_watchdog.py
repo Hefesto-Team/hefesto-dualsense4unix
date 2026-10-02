@@ -18,21 +18,17 @@ import pytest
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
-# --- is_stale --------------------------------------------------------------
-
 
 def test_is_stale_false_sem_path_aberto(monkeypatch: pytest.MonkeyPatch) -> None:
-    # device_path explícito evita o scan de /dev/input no __init__ (hermético).
     r = EvdevReader(device_path=Path("/dev/input/event20"))
     r._device_path = None
-    # mesmo com finder achando algo: sem device aberto, o reconnect loop cobre.
     monkeypatch.setattr(r, "_find_device", lambda: Path("/dev/input/event21"))
     assert r.is_stale() is False
 
 
 def test_is_stale_false_quando_finder_none(monkeypatch: pytest.MonkeyPatch) -> None:
     r = EvdevReader(device_path=Path("/dev/input/event20"))
-    monkeypatch.setattr(r, "_find_device", lambda: None)  # transitório/sem node
+    monkeypatch.setattr(r, "_find_device", lambda: None)
     assert r.is_stale() is False
 
 
@@ -49,15 +45,8 @@ def test_is_stale_true_quando_node_mudou(monkeypatch: pytest.MonkeyPatch) -> Non
     assert r.is_stale() is True
 
 
-# --- request_reopen --------------------------------------------------------
-
-
 def test_request_reopen_zera_path_e_sinaliza_sem_fechar_dev() -> None:
-    """HANG-01 (2026-07-19): `request_reopen()` NÃO fecha mais o `InputDevice`
-    de fora (era o `dev.close()` cross-thread do HEAD 27b51d5, o mesmo padrão
-    de risco do `stop()`/M4) — zera o path em cache e só SINALIZA (flag de
-    reopen + wake do self-pipe); quem larga o device é sempre a THREAD DONA,
-    no `finally` do `_run` (padrão GYRO-FD-01/PhysicalReportReader)."""
+    """HANG-01 (2026-07-19): `request_reopen()` NÃO fecha mais o `InputDevice`"""
     r = EvdevReader(device_path=Path("/dev/input/event20"))
     closed: list[bool] = []
 
@@ -67,19 +56,16 @@ def test_request_reopen_zera_path_e_sinaliza_sem_fechar_dev() -> None:
 
     r._active_dev = _Dev()
     r.request_reopen("test")
-    assert r._device_path is None  # próximo ciclo re-localiza o node certo
-    assert closed == []  # HANG-01: fd NÃO fechado daqui — só sinalizado
-    assert r._reopen_flag.is_set()  # é a thread dona quem atende o sinal
+    assert r._device_path is None
+    assert closed == []
+    assert r._reopen_flag.is_set()
 
 
 def test_request_reopen_sem_dev_ativo_nao_quebra() -> None:
     r = EvdevReader(device_path=Path("/dev/input/event20"))
     r._active_dev = None
-    r.request_reopen("test")  # não levanta
+    r.request_reopen("test")
     assert r._device_path is None
-
-
-# --- heal_evdev_if_stale (backend, com cross-check) ------------------------
 
 
 class _FakeReader:
@@ -117,6 +103,6 @@ def test_heal_noop_quando_node_ok() -> None:
 
 
 def test_heal_noop_quando_reader_indisponivel() -> None:
-    reader = _FakeReader(available=False, stale=True)  # stale ignorado se off
+    reader = _FakeReader(available=False, stale=True)
     assert _backend_with(reader).heal_evdev_if_stale() is False
     assert reader.reopened == []

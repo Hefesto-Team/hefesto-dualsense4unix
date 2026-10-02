@@ -1,31 +1,4 @@
 """O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01 — o Hefesto abre na escolha dela.
-
-A decisão é a `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA` (a fala dela de 29/09, e
-as duas respostas do chat da mesma noite: a máquina nova nasce com o botão
-aceso, e o botão apagado sem escolha fica sem perfil). O dono da pergunta é
-`utils.session.a_escolha_dela`: o Freestyle com o botão aceso, ou o último
-perfil que ela ativou à mão, ou «sem escolha».
-
-AS DUAS CAUSAS, medidas no diário dela de 28 e 29/09:
-
-- **o boot pulava a escolha**: seis boots com a sessão num perfil de jogo, e
-  nenhum abriu nele. A RESTORE-ESCOPO-01 (22/07) pulava todo perfil com regra
-  de janela, e o Freestyle entrava no lugar;
-- **a troca à mão caía calada**: às 17h30min25 de 29/09 ela ativou o Avatar
-  Legends na aba Perfis, e às 17h31min19 o autoswitch o trocou pelo Freestyle,
-  com o terminal em foco. O que segurava a escolha era uma trava de 30 s que
-  expirava sozinha e sem linha no diário, e o Freestyle (`match any`) casava
-  toda janela.
-
-Estas são as réguas 1, 3, 4, 6 e 7 da sprint, e a medida (a) do tema
-«Freestyle definitivo» (a troca à mão fica até um evento, e todo evento diz no
-diário). As réguas 2 e 5 (o Freestyle desligado nunca é o perfil ativo, e o
-chip e o botão leem o mesmo dono) moram em
-`test_o_freestyle_desligado_nunca_e_o_perfil_ativo.py`. A mordida de cada uma
-está no docstring dela.
-
-Os quatro controles são da faixa forjada da casa (dois no cabo, dois no rádio:
-o gerente publica por `uniq`, e o transporte não entra na conta).
 """
 from __future__ import annotations
 
@@ -56,19 +29,14 @@ from hefesto_dualsense4unix.utils import session
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
 FREESTYLE = loader.NOME_DO_PADRAO
-#: A escolha dela: um perfil de jogo, com regra de janela (o caso do diário).
 AVATAR = "Avatar Legends"
 JANELA_DO_AVATAR = "steam_app_2424420"
-#: O outro jogo, que entra por cima pela janela ou pelo lançamento.
 APPID_DO_JOGO = 3357650
 JOGO = "PRAGMATA"
 JANELA_DO_JOGO = f"steam_app_{APPID_DO_JOGO}"
-#: Um perfil de janela que NÃO é jogo: casa o navegador.
 NAVEGADOR = "Navegador"
-#: O terminal do COSMIC, a janela em foco às 17h31 de 29/09. Regra nenhuma o casa.
 TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "~"}
 
-#: Os quatro controles: dois no cabo, dois no rádio.
 UNIQS = ("aabbcc000001", "aabbcc000002", "02fe00000003", "02fe00000004")
 
 
@@ -137,10 +105,6 @@ def _cli_sem_daemon(nome: str, monkeypatch: pytest.MonkeyPatch) -> None:
     assert resultado.exit_code == 0, resultado.output
 
 
-# =============================================================================
-# RÉGUA 1 — o boot abre na escolha
-# =============================================================================
-
 CASOS_DO_BOOT = ("escolha-de-jogo", "modo-ligado", "escolha-apagada", "cli-sem-daemon")
 
 
@@ -149,21 +113,7 @@ CASOS_DO_BOOT = ("escolha-de-jogo", "modo-ligado", "escolha-apagada", "cli-sem-d
 def test_o_boot_abre_na_escolha_dela(
     caso: str, transporte: str, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O boot restaura a escolha, com regra de janela ou sem, nos quatro controles.
-
-    - `escolha-de-jogo`: a sessão no Avatar (regra `steam_app_<N>`), o botão
-      apagado → o Avatar, e cada controle recebe a seção dele;
-    - `modo-ligado`: o botão aceso → o Freestyle;
-    - `escolha-apagada`: ela apagou o Avatar → nenhum perfil, e nunca o Freestyle;
-    - `cli-sem-daemon`: `profile activate` com o daemon fora → o boot abre nele.
-
-    O `perfil_que_o_boot_restaura` (o modo do primeiro pad) responde o mesmo.
-
-    MORDIDA: devolva ao `connection._o_nome_que_o_boot_restaura` o pulo da
-    RESTORE-ESCOPO-01 (`if not isinstance(load_profile(nome).match, MatchAny):
-    return None`) e as células `escolha-de-jogo` e `cli-sem-daemon` reprovam
-    com o nome do perfil que o boot pulou.
-    """
+    """O boot restaura a escolha, com regra de janela ou sem, nos quatro controles."""
     _o_disco()
     esperado: str | None
     if caso == "escolha-de-jogo":
@@ -197,10 +147,6 @@ def test_o_boot_abre_na_escolha_dela(
         f"a seção de cada controle não chegou aos quatro: {sorted(controle.camada)}")
 
 
-# =============================================================================
-# RÉGUA 3 — sair do jogo volta à escolha
-# =============================================================================
-
 def _gerente_que_anota(store: StateStore) -> tuple[ProfileManager, list[str]]:
     """O gerente de verdade, com cada nome pedido ao `activate` anotado."""
     controle = FakeController()
@@ -232,20 +178,7 @@ def _ticar(vigia: AutoSwitcher, info: dict[str, str], de: float, ate: float) -> 
 
 
 def test_sair_do_jogo_volta_a_escolha_dela() -> None:
-    """A escolha A, o jogo B pela janela, e o terminal: a volta é a A, no debounce lento.
-
-    A régua afirma o CANDIDATO, e não só o perfil ativo: com a guarda do item 6
-    o Freestyle seria recusado, e A ficaria no lugar escondendo o seletor errado.
-
-    MORDIDAS (as três reprovam):
-
-    - o `match any` de volta à seleção (tire o filtro `e_catch_all` do
-      `select_for_window_ex`): o candidato do terminal vira o Freestyle;
-    - a pergunta antiga do `_saida_para_a_escolha` (`e_catch_all` do
-      candidato): a volta sai em ~1 s, e aos 2 s já vale A;
-    - candidato vazio na janela que não é jogo (tire a `_perfil_da_escolha`
-      do tique): fica B.
-    """
+    """A escolha A, o jogo B pela janela, e o terminal: a volta é a A, no debounce lento."""
     _o_disco()
     session.save_freestyle_ligado(False)
     store = StateStore()
@@ -267,10 +200,6 @@ def test_sair_do_jogo_volta_a_escolha_dela() -> None:
     assert FREESTYLE not in pedidos, "o autoswitch pediu o Freestyle desligado"
 
 
-# =============================================================================
-# MEDIDA (a) — a troca à mão fica até um evento, e todo evento diz no diário
-# =============================================================================
-
 def _soltas(linhas: list[dict[str, Any]]) -> list[str]:
     return [str(x.get("motivo")) for x in linhas
             if x.get("event") == "trava_da_troca_a_mao_solta"]
@@ -279,18 +208,7 @@ def _soltas(linhas: list[dict[str, Any]]) -> list[str]:
 def test_a_troca_a_mao_nao_cai_por_janela_nem_por_tempo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caso das 17h31: a escolha à mão fica, com outra janela em foco, por uma hora.
-
-    O navegador tem regra própria (não é jogo), e por uma hora ele não tira o
-    Avatar que ela ativou: nem a janela, nem o relógio. Só o EVENTO solta — o
-    jogo com perfil em foco —, e a soltura diz no diário o motivo.
-
-    O relógio do processo é o da régua (`time.monotonic`), para o tempo passar
-    de verdade para a trava.
-
-    MORDIDA: arme a trava com prazo (`marcar(time.monotonic() + 30)` em
-    `armar_a_trava_da_mao`) e o navegador entra antes de um minuto, sem linha.
-    """
+    """O caso das 17h31: a escolha à mão fica, com outra janela em foco, por uma hora."""
     import time
 
     relogio = [1000.0]
@@ -319,13 +237,7 @@ def test_a_troca_a_mao_nao_cai_por_janela_nem_por_tempo(
 
 
 def test_o_jogo_dela_fechando_solta_a_trava_e_diz(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com o jogo em cena, ela escolhe A à mão; o jogo fecha, e a trava solta com a linha.
-
-    Depois do evento, a troca automática volta: o navegador entra pela regra dele.
-
-    MORDIDA: tire o ramo `o_jogo_em_cena_fechou` de `_a_trava_da_mao_segura` e
-    a trava segura A para sempre — o navegador não entra, e a linha não sai.
-    """
+    """Com o jogo em cena, ela escolhe A à mão; o jogo fecha, e a trava solta com a linha."""
     import time
 
     relogio = [1000.0]
@@ -357,11 +269,7 @@ def test_o_jogo_dela_fechando_solta_a_trava_e_diz(monkeypatch: pytest.MonkeyPatc
 
 
 def test_o_lancamento_de_jogo_com_perfil_solta_a_trava_e_diz() -> None:
-    """O lançamento entra por cima da escolha à mão, e diz que soltou a trava.
-
-    MORDIDA: tire o ramo `origin == "launch"` do fim de `ProfileManager._ativar`
-    e a linha não sai (a trava fica armada com o jogo valendo).
-    """
+    """O lançamento entra por cima da escolha à mão, e diz que soltou a trava."""
     import time
 
     _o_disco()
@@ -382,17 +290,7 @@ def test_o_lancamento_de_jogo_com_perfil_solta_a_trava_e_diz() -> None:
 def test_o_jogo_que_fecha_solta_a_trava_no_tique_e_reabrir_volta_ao_perfil_dele(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O jogo em cena fecha com o terminal em foco, e reabre: o perfil dele volta.
-
-    Conferência de 02/10/2026. O fechamento só soltava a trava quando uma troca
-    era TENTADA, e no terminal o candidato é a escolha dela, que já vale: a
-    trava ficava armada, e o mesmo jogo reaberto era segurado para sempre (o
-    «nome do jogo que a mão tirou» o isentava). Medido nesta régua: o PRAGMATA
-    reaberto ficava no Avatar, sem linha no diário.
-
-    MORDIDA: tire a soltura por tique de `_acompanhar_a_trava_da_mao` e o jogo
-    reaberto fica no Avatar, sem a linha `o_jogo_em_cena_fechou`.
-    """
+    """O jogo em cena fecha com o terminal em foco, e reabre: o perfil dele volta."""
     import time
 
     relogio = [1000.0]
@@ -429,21 +327,7 @@ def test_o_jogo_que_fecha_solta_a_trava_no_tique_e_reabrir_volta_ao_perfil_dele(
 def test_o_perfil_de_jogo_que_a_mao_tirou_sem_o_jogo_aberto_nao_segura_nada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A escolha era um perfil de jogo (o Avatar) sem o jogo aberto, e ela ativa outro.
-
-    Conferência de 02/10/2026. O perfil que a mão tirou só é «o jogo em cena»
-    quando o jogo está aberto. Antes, todo perfil com regra `steam_app_<N>` que
-    a mão tirava virava «o jogo dela», e daí saíam dois defeitos:
-
-    - a janela do navegador (regra própria, não é jogo) soltava a trava com o
-      motivo `o_jogo_em_cena_fechou` — a troca à mão caía por TROCA DE JANELA,
-      com um motivo falso no diário;
-    - abrir o próprio Avatar não trocava para o perfil dele: a trava o isentava
-      como «o jogo que a mão tirou».
-
-    MORDIDA: grave o `_jogo_da_trava` sem perguntar se o jogo está em cena e as
-    duas metades reprovam.
-    """
+    """A escolha era um perfil de jogo (o Avatar) sem o jogo aberto, e ela ativa outro."""
     import time
 
     relogio = [1000.0]
@@ -452,7 +336,7 @@ def test_o_perfil_de_jogo_que_a_mao_tirou_sem_o_jogo_aberto_nao_segura_nada(
     session.save_freestyle_ligado(False)
     store = StateStore()
     gerente, _pedidos = _gerente_que_anota(store)
-    gerente.activate(AVATAR, origin="system")  # o boot restaurando a escolha
+    gerente.activate(AVATAR, origin="system")
     vivo: list[int | None] = [None]
     vigia = _vigia(gerente, store, vivo)
     _ticar(vigia, TERMINAL, 0.0, 1.0)
@@ -475,17 +359,9 @@ def test_o_perfil_de_jogo_que_a_mao_tirou_sem_o_jogo_aberto_nao_segura_nada(
     assert store.active_profile == AVATAR, "o jogo aberto não trocou para o perfil dele"
 
 
-# =============================================================================
-# RÉGUA 4 — só a mão escreve a escolha
-# =============================================================================
-
 @pytest.mark.parametrize("origem", ["autoswitch", "launch", "system"])
 def test_a_origem_automatica_nao_escreve_a_escolha(origem: str) -> None:
-    """O autoswitch, o lançamento e o sistema põem o perfil, e a escolha fica.
-
-    MORDIDA: chame o `gravar_a_escolha` do `_ativar` para toda origem (fora do
-    `if e_a_escolha`) e as três células reprovam com o PRAGMATA na sessão.
-    """
+    """O autoswitch, o lançamento e o sistema põem o perfil, e a escolha fica."""
     _o_disco()
     session.gravar_a_escolha(AVATAR)
     store = StateStore()
@@ -511,11 +387,7 @@ def test_a_mao_em_outro_perfil_escreve_a_escolha_e_apaga_o_botao() -> None:
 
 
 def test_a_mao_no_freestyle_acende_o_botao_e_guarda_o_ultimo_perfil() -> None:
-    """O «Ativar» do Freestyle liga o modo; o `last_profile` fica, para a volta.
-
-    O espelho diz a escolha de agora (o Freestyle), e o `session.json` diz o
-    perfil a que o botão apagado devolve.
-    """
+    """O «Ativar» do Freestyle liga o modo; o `last_profile` fica, para a volta."""
     _o_disco()
     session.gravar_a_escolha(AVATAR)
     store = StateStore()
@@ -542,11 +414,7 @@ def test_o_reaplicar_nao_escreve_nada() -> None:
 
 
 def test_a_cli_sem_daemon_escreve_pelo_mesmo_escritor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem daemon, a CLI grava a escolha e o espelho, e apaga o botão (outro perfil).
-
-    MORDIDA: volte o `_gravar_a_escolha_sem_o_daemon` a gravar só o marcador
-    (`save_active_marker`) e o `session.json` não diz o Avatar.
-    """
+    """Sem daemon, a CLI grava a escolha e o espelho, e apaga o botão (outro perfil)."""
     _o_disco()
     session.save_freestyle_ligado(True)
 
@@ -555,10 +423,6 @@ def test_a_cli_sem_daemon_escreve_pelo_mesmo_escritor(monkeypatch: pytest.Monkey
     assert (session.load_last_profile(), session.read_active_marker()) == (AVATAR, AVATAR)
     assert session.load_freestyle_ligado() is False
 
-
-# =============================================================================
-# RÉGUA 6 — desligar o botão devolve a escolha na hora, sem leitor de janela
-# =============================================================================
 
 class _Handlers(IpcHandlersMixin):
     """O mixin de verdade, com o gerente de verdade e sem daemon (nem autoswitch)."""
@@ -580,14 +444,7 @@ def _o_botao_aceso_sobre_a_escolha() -> tuple[StateStore, _Handlers]:
 
 
 def test_desligar_o_botao_devolve_a_escolha_na_hora() -> None:
-    """Escolha A, botão aceso: o `freestyle.set` desligado responde A, sem tique nenhum.
-
-    MORDIDA (duas): tire o `apagar_o_freestyle` do `_o_que_volta_sem_o_freestyle`
-    (deixe só o `ligar_o_freestyle(self.store, False)`) e fica o Freestyle; ou
-    pergunte a escolha sem o botão de agora (`a_escolha_dela()`, sem o
-    `freestyle_ligado=False`): o flag do disco ainda diz «aceso» naquele
-    instante, e a escolha volta o próprio Freestyle.
-    """
+    """Escolha A, botão aceso: o `freestyle.set` desligado responde A, sem tique nenhum."""
     store, h = _o_botao_aceso_sobre_a_escolha()
 
     resposta = asyncio.run(h._handle_freestyle_set({"ligado": False}))
@@ -613,16 +470,8 @@ def test_desligar_com_o_jogo_vivo_devolve_o_jogo_e_a_escolha_fica(
     assert session.load_last_profile() == AVATAR, "o jogo vivo virou a escolha dela"
 
 
-# =============================================================================
-# RÉGUA 7 — as duas migrações rodam uma vez
-# =============================================================================
-
 def test_a_maquina_nova_nasce_acesa_uma_vez_so() -> None:
-    """Sem sessão e sem flag: o botão nasce aceso; apagado por ela, fica apagado.
-
-    MORDIDA: tire a marca (`marca.write_text`) da `migrar_a_escolha_dela` e a
-    segunda corrida religa o botão que ela apagou no meio.
-    """
+    """Sem sessão e sem flag: o botão nasce aceso; apagado por ela, fica apagado."""
     assert session.migrar_a_escolha_dela() == "maquina_nova_nasce_acesa"
     assert session.load_freestyle_ligado() is True
 
@@ -633,15 +482,7 @@ def test_a_maquina_nova_nasce_acesa_uma_vez_so() -> None:
 
 
 def test_sem_sessao_com_perfil_de_jogo_na_pasta_o_botao_nao_acende() -> None:
-    """Quem atualiza sem nunca ter ativado à mão: o jogo dele continua entrando.
-
-    A máquina nova é a que só tem o Freestyle na pasta (item 7). Sem
-    `session.json`, mas com um perfil de jogo, o botão aceso calaria esse jogo
-    (o Freestyle ligado manda em tudo), e o autoswitch dele parava no update.
-
-    MORDIDA: tire `_so_o_freestyle_na_pasta()` da condição da máquina nova e o
-    desfecho vira `maquina_nova_nasce_acesa`, com o botão aceso.
-    """
+    """Quem atualiza sem nunca ter ativado à mão: o jogo dele continua entrando."""
     _perfil(JOGO, JANELA_DO_JOGO)
 
     assert session.migrar_a_escolha_dela() == "nada_a_mudar"

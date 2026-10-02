@@ -72,32 +72,14 @@ from hefesto_dualsense4unix.core.ds_output_report import (
 )
 from hefesto_dualsense4unix.core.led_control import player_bitmask
 
-#: Offsets dentro do payload ``common`` de 47 bytes (espelho do
-#: ``dualsense_output_report_common`` do ``hid-playstation``): o padrão de LED
-#: de jogador e os três bytes de cor da lightbar.
 COMMON_PLAYER_LEDS = 43
 COMMON_LIGHTBAR_R = 44
 COMMON_LIGHTBAR_G = 45
 COMMON_LIGHTBAR_B = 46
-#: O brilho das luzes de número (`led_brightness`, 0 alto · 1 médio · 2 baixo),
-#: que só vale com o `flag2` bit0 (`SET_PLAYER_LED_BRIGHTNESS`) ligado. Medido
-#: pelo olho dela nos dois transportes (BRILHO-DE-HARDWARE-01, 09/09/2026).
 COMMON_PLAYER_LED_BRIGHTNESS = 42
 
-#: Quanto se espera DEPOIS DA ÚLTIMA conexão nova antes de repintar.
-#:
-#: **1,5 s é número medido, não estimativa.** Foi ela quem o fixou em 12/08
-#: (*"muito tempo. desce pra um segundo e meio"*), e o ensaio
-#: ``gatilho-1500ms-por-controle`` mostrou que 1,5 s bastam: o controle que
-#: ninguém seguiu ficou magenta e ficou. Os dois que falharam naquele ensaio
-#: não falharam pelo número — falharam porque o relógio era por controle, e uma
-#: conexão posterior trouxe uma rajada nova por cima deles.
 ATRASO_APOS_A_ULTIMA_CONEXAO_S: float = 1.5
 
-#: Nome deste gatilho no `RegistroDeGatilhos` do daemon. Existe para que quem
-#: arma (o tick de hotplug, a transição do sinal de jogo) e quem registra a
-#: ação não precisem repetir a string — e para que um nome errado dê no
-#: silêncio de um só gatilho, nunca em dois disparos concorrentes.
 NOME_DO_GATILHO = "lightbar"
 
 
@@ -127,21 +109,7 @@ def common_das_luzes(
     *,
     brilho_das_luzes: int | None = None,
 ) -> bytearray:
-    """O `common` MÍNIMO das luzes: a barra, o número e o brilho do número.
-
-    UM DONO PARA OS DOIS ENVELOPES — o `0x31` do rádio
-    (`build_bt_lightbar_report`) e o `0x02` do cabo
-    (`build_usb_lightbar_report`). Cada eixo entra SÓ quando há valor, pela
-    disciplina que a docstring do `build_bt_lightbar_report` explica.
-
-    O BRILHO DAS LUZES DE NÚMERO É O TERCEIRO EIXO — 24/09/2026, decisão dela
-    (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). Ele liga o bit0 do `flag2`
-    e SÓ ele: o bit 0x02 (`LIGHTBAR_SETUP_CONTROL`) continua zerado, porque é
-    ele o que o `LIGHTBAR-BT-KEEPALIVE-01` (22/07) mediu travando a exibição. O
-    bit0 não trava — a bancada de 09/09/2026 o martelou a 10 Hz no rádio com a
-    barra acesa e ela julgou a barra a olho nos três degraus (ensaio
-    `painel-do-brilho-a-barra-nao-atenua-radio-0909`).
-    """
+    """O `common` MÍNIMO das luzes: a barra, o número e o brilho do número."""
     common = bytearray(COMMON_LEN)
     flag1 = 0
     if rgb is not None:
@@ -155,7 +123,7 @@ def common_das_luzes(
     if brilho_das_luzes is not None:
         common[COMMON_VALID_FLAG2] |= VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
         common[COMMON_PLAYER_LED_BRIGHTNESS] = int(brilho_das_luzes) & 0xFF
-    common[1] = flag1  # common[1] é o valid_flag1 ([0] é o flag0)
+    common[1] = flag1
     return common
 
 
@@ -165,15 +133,7 @@ def build_usb_lightbar_report(
     *,
     brilho_das_luzes: int | None = None,
 ) -> bytes:
-    """O mesmo `common` mínimo no envelope `0x02` do CABO.
-
-    Nasceu para o brilho das luzes de número (24/09/2026): pelo cabo o número
-    vai pela classe LED do kernel, e o `hid_playstation` NUNCA liga o `flag2`
-    bit0 nem escreve o `led_brightness` (`assets/dkms/hid-playstation/
-    hid-playstation.c`, o `valid_flag2` só recebe `COMPATIBLE_VIBRATION2` e o
-    `LIGHTBAR_SETUP` do reset). O nó de LED é 0/1 por lâmpada: brilho de três
-    degraus não passa por ele. Quem o escolhe é este report, escrito ao lado.
-    """
+    """O mesmo `common` mínimo no envelope `0x02` do CABO."""
     return bytes(build_usb_report(
         common_das_luzes(rgb, player_leds, brilho_das_luzes=brilho_das_luzes)))
 

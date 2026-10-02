@@ -1,25 +1,4 @@
-"""SINAL-DE-JOGO-01 — a evidência nº 2 do sinal de jogo volta a existir.
-
-A sprint
-`docs/process/sprints/arquivados/2026-07-31-SINAL-DE-JOGO-01-o-daemon-desiste-do-jogo-antes-do-jogo-acabar.md`
-mediu que, na máquina dela, a autoridade de exibição fica pendurada numa
-evidência só — a janela. A evidência nº 3 (marcador do wrapper) está
-ESTRUTURALMENTE ausente, porque o jogo dela não passa pelo wrapper; e a
-evidência nº 2 (regra de perfil) era letra morta por um motivo diferente e
-silencioso: o probe recebia `wm_class` e mais nada, enquanto o matcher
-(`MatchCriteria.matches`) é um E entre os campos preenchidos e reprova alvo
-ausente por decisão escrita. Resultado: todo perfil que casa por título ou por
-processo — cinco dos seis perfis de jogo dela — devolvia False SEMPRE.
-
-Estes testes montam o cenário dela: perfil no formato do `coop_local` (só
-`window_title_regex`, `mode: gamepad`), janela do jogo em foco, marcador do
-wrapper AUSENTE. Falha-sem: passando de volta só o `wm_class`, o veredito cai
-para `daemon` e os dois primeiros testes reprovam.
-
-O segundo teste é o que uma cura pela metade não passa: perfil no formato do
-`fps.json` dela (título E `process_name`) tem de continuar falso com só o
-título, e só virar verdadeiro com o `exe_basename` junto.
-"""
+"""SINAL-DE-JOGO-01 — a evidência nº 2 do sinal de jogo volta a existir."""
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
@@ -33,8 +12,6 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.game_signal import classify
 from hefesto_dualsense4unix.testing import FakeController
 
-# Título e executável reais dos presets dela, copiados do disco em 31/07 para
-# o teste falar a mesma língua do arquivo que ele protege.
 TITULO_COOP = "Sackboy: A Big Adventure"
 TITULO_FPS = "Cyberpunk 2077 (c) CD PROJEKT RED"
 EXE_FPS = "Cyberpunk2077.exe"
@@ -48,12 +25,7 @@ def _daemon() -> Daemon:
 
 
 def _sem_marcador(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Aponta o diretório do wrapper para um tmp VAZIO.
-
-    Sem isto o teste leria `~/.local/state/hefesto-dualsense4unix/launch_env`
-    da máquina real e a evidência nº 3 poderia salvar o veredito sozinha —
-    o teste passaria sem provar nada.
-    """
+    """Aponta o diretório do wrapper para um tmp VAZIO."""
     import hefesto_dualsense4unix.daemon.launch_env as le_mod
 
     monkeypatch.setattr(
@@ -104,20 +76,10 @@ def _perfil_fps() -> Any:
     )
 
 
-# --- o cenário dela, de ponta a ponta -----------------------------------------
-
-
 def test_perfil_so_por_titulo_segura_a_autoridade_em_game(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O cenário medido: janela do jogo em foco, marcador ausente, e a única
-    coisa que pode dizer "é jogo" é o perfil que casa por TÍTULO.
-
-    A `wm_class` é "unknown" de propósito — é o que o detector devolve para a
-    janela de um jogo que não é `steam_app_*` (GOG/Heroic/nativo) e é o que
-    apaga a evidência nº 1. Com a cura arrancada (probe recebendo só o
-    `wm_class`), `classify` responde `daemon` e este teste reprova.
-    """
+    """O cenário medido: janela do jogo em foco, marcador ausente, e a única"""
     _sem_marcador(monkeypatch, tmp_path)
     _perfis(monkeypatch, [_perfil_coop_local()])
 
@@ -139,12 +101,7 @@ def test_perfil_so_por_titulo_segura_a_autoridade_em_game(
 def test_perfil_com_titulo_e_processo_exige_os_dois_campos(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A cura pela metade — passar só o título — não pode passar aqui.
-
-    Cinco dos seis perfis de jogo dela declaram `process_name` JUNTO com o
-    título, e `MatchCriteria` é um E: sem `exe_basename` o perfil continua
-    falso. É a armadilha que quase entrou como conserto de uma linha.
-    """
+    """A cura pela metade — passar só o título — não pode passar aqui."""
     _sem_marcador(monkeypatch, tmp_path)
     _perfis(monkeypatch, [_perfil_fps()])
 
@@ -164,8 +121,7 @@ def test_perfil_com_titulo_e_processo_exige_os_dois_campos(
 def test_janela_com_titulo_de_outro_app_nao_vira_jogo(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O contrapeso: sem este teste, uma cura que sempre devolvesse True
-    passaria nos dois anteriores e a autoridade nunca mais cairia."""
+    """O contrapeso: sem este teste, uma cura que sempre devolvesse True"""
     _sem_marcador(monkeypatch, tmp_path)
     _perfis(monkeypatch, [_perfil_coop_local(), _perfil_fps()])
 
@@ -184,11 +140,7 @@ def test_janela_com_titulo_de_outro_app_nao_vira_jogo(
 def test_catch_all_com_modo_gamepad_continua_vetado_com_a_janela_inteira(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O veto do `MatchAny` não pode afrouxar por causa dos campos novos.
-
-    O `vitoria` dela é exatamente isto: `match: any`, `mode: gamepad`. Se ele
-    contasse como evidência, QUALQUER janela viraria "game" para sempre.
-    """
+    """O veto do `MatchAny` não pode afrouxar por causa dos campos novos."""
     from hefesto_dualsense4unix.profiles.schema import (
         MatchAny,
         Profile,
@@ -218,8 +170,7 @@ def test_catch_all_com_modo_gamepad_continua_vetado_com_a_janela_inteira(
 def test_janela_sem_nenhum_dos_tres_campos_nao_consulta_perfil(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem classe, sem título e sem processo não há pergunta a fazer — e o
-    catch-all casaria com o dicionário vazio se a pergunta fosse feita."""
+    """Sem classe, sem título e sem processo não há pergunta a fazer — e o"""
     _perfis(monkeypatch, [_perfil_coop_local()])
 
     daemon = _daemon()
@@ -228,9 +179,6 @@ def test_janela_sem_nenhum_dos_tres_campos_nao_consulta_perfil(
     assert daemon._profile_rule_matches_game("") is False
     assert daemon._profile_rule_matches_game(None, None, None) is False
     assert daemon._profile_rule_matches_game("", "", "") is False
-
-
-# --- o preço da cura, medido e fixado -----------------------------------------
 
 
 class _ControladorComReplay(FakeController):
@@ -254,21 +202,7 @@ class _ControladorComReplay(FakeController):
 async def test_aba_de_navegador_com_titulo_de_jogo_sobe_a_autoridade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O PREÇO desta cura, medido no disco dela e fixado aqui de propósito.
-
-    Com o título valendo, um regex solto passa a poder declarar "é jogo" a
-    partir de uma janela que não é jogo: o `coop_local` dela (prioridade 75,
-    `mode: gamepad`, só título) casa uma aba de navegador chamada "Portal 2" e
-    vence o `Navegação` (prioridade 50) na eleição. E sob `game` o gate da
-    camada GAME abre: a luz que o cliente Steam escrever no vpad dali em diante
-    vira camada do jogo e vence o perfil (o retido, desde 13/09, é descartado)
-    — ou seja, o preço aparece na mão dela, não só no journal.
-
-    Este teste NÃO diz que isso é desejável. Ele existe para que a decisão seja
-    explícita: quem for estreitar o critério (exigir que a janela não tenha
-    classe própria, exigir `process_name`, ou levar o assunto para a
-    AUTOMATISMO-MORTO-01) vai ter de vir aqui e mudar esta asserção na mão.
-    """
+    """O PREÇO desta cura, medido no disco dela e fixado aqui de propósito."""
     _sem_marcador(monkeypatch, tmp_path)
     _perfis(monkeypatch, [_perfil_coop_local()])
 
@@ -295,9 +229,6 @@ async def test_aba_de_navegador_com_titulo_de_jogo_sobe_a_autoridade(
     assert ctrl.replay_calls == 1
 
 
-# --- o store, que é quem carrega os dois campos novos -------------------------
-
-
 def test_store_guarda_titulo_e_executavel_da_leitura() -> None:
     store = StateStore()
     store.set_window_detect_backend("xlib", healthy=True)
@@ -311,12 +242,7 @@ def test_store_guarda_titulo_e_executavel_da_leitura() -> None:
 
 
 def test_titulo_e_executavel_decaem_como_a_classe_crua() -> None:
-    """Os campos novos NÃO podem virar sticky.
-
-    O `window_detect_last_class` é vetado como evidência de jogo justamente
-    porque nunca decai; título e executável entraram pela mesma porta e valem
-    a mesma regra — a leitura seguinte os apaga.
-    """
+    """Os campos novos NÃO podem virar sticky."""
     store = StateStore()
     store.set_window_detect_backend("xlib", healthy=True)
     store.record_window_detect_read(
@@ -327,7 +253,6 @@ def test_titulo_e_executavel_decaem_como_a_classe_crua() -> None:
 
     assert store.window_detect_current_name is None
     assert store.window_detect_current_exe is None
-    # A classe ÚTIL sticky continua lá — o contrato dela não mudou.
     assert store.window_detect_last_class == "steam_app_1599660"
 
 
@@ -344,12 +269,7 @@ def test_novo_episodio_do_detector_zera_titulo_e_executavel() -> None:
 
 
 def test_campos_vazios_do_backend_wayland_viram_none() -> None:
-    """Os backends Wayland preenchem `exe_basename=""` (não têm `/proc/PID`).
-
-    String vazia tem de virar None e não um alvo vazio: alvo vazio nunca casa,
-    mas guardá-lo faria o dicionário do probe carregar um campo que mente sobre
-    ter sido medido.
-    """
+    """Os backends Wayland preenchem `exe_basename=""` (não têm `/proc/PID`)."""
     store = StateStore()
 
     store.record_window_detect_read("portal", "org.gnome.Nautilus", wm_name="", exe_basename="")

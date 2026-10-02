@@ -66,13 +66,7 @@ def a08():
 
 @pytest.fixture(autouse=True)
 def rascunho_limpo(a08, monkeypatch):
-    """Um rascunho novo por caso, e NUNCA o disco dela.
-
-    O `_logica_do_mapa` guarda o rascunho num global de propósito (é ele que
-    segura o aparelho na mão entre os dois tempos do gesto). Sem esta limpeza um
-    caso herdaria o do anterior — e, pior, o primeiro leria o `maquina.json` da
-    máquina de quem roda.
-    """
+    """Um rascunho novo por caso, e NUNCA o disco dela."""
     from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
@@ -90,15 +84,8 @@ def _ctx(pac):
     return pac.Contexto(state={}, mesa=[], conectados=[], estados={})
 
 
-# --------------------------------------------------------------------------
-# 1. o desenho é um só, e o mockup prova a fidelidade
-# --------------------------------------------------------------------------
 def test_o_gerador_do_mockup_usa_o_desenho_do_produto() -> None:
-    """Se o gerador voltar a desenhar sozinho, as duas telas divergem calado.
-
-    É o que já tinha acontecido: o desenho do gerador julgava por uma tabela de
-    vizinhos do mockup, e o produto julga pela mesa real.
-    """
+    """Se o gerador voltar a desenhar sozinho, as duas telas divergem calado."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py").read_text(
         encoding="utf-8")
     assert "_aba_conexoes.html_do_mapa(" in fonte, (
@@ -138,9 +125,6 @@ def test_cada_quadrado_leva_o_endereco_da_entrada() -> None:
     assert "3-1.1.1" in saiu, "a dica não diz como o sistema enumera o aparelho"
 
 
-# --------------------------------------------------------------------------
-# 2. os seis gestos
-# --------------------------------------------------------------------------
 def test_o_gesto_de_dois_tempos(pac, a08) -> None:
     """Escolher não grava; pôr grava. E sem escolher antes, RECUSA dizendo."""
     p = PonteDeMentira()
@@ -162,12 +146,7 @@ def test_o_gesto_de_dois_tempos(pac, a08) -> None:
 
 
 def test_grava_o_mapa_inteiro_e_nao_um_pedaco(pac, a08) -> None:
-    """As faces são uma LISTA, e `fundir_declaracao` troca lista inteira.
-
-    Mandar meia lista apagaria as faces que ela já tinha — e era uma das razões
-    escritas para `nova-face` não ser ligada. Mandar o rascunho inteiro é o que
-    torna a troca de lista o comportamento CERTO.
-    """
+    """As faces são uma LISTA, e `fundir_declaracao` troca lista inteira."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Frente")
     _gesto(pac, "nova-face")(_ctx(pac), {"valor": "Traseira"}, p)
@@ -232,11 +211,7 @@ def test_extensao_vira_filha_com_letra(pac, a08) -> None:
 
 
 def test_um_aparelho_esta_em_um_lugar_so(pac, a08) -> None:
-    """Pôr onde ele não estava o tira de onde estava, no mesmo gesto.
-
-    A razão é do produto: *"sem isso o mesmo dongle apareceria em duas entradas
-    e o mapa passaria a mentir de um jeito novo"*.
-    """
+    """Pôr onde ele não estava o tira de onde estava, no mesmo gesto."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Traseira")
     for _ in range(2):

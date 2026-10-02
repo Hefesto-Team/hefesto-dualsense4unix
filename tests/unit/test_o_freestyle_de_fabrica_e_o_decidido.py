@@ -68,7 +68,6 @@ def _o_que_falta(perfil: Profile) -> list[str]:
             falta.append(f"microfone mudo={mic.muted!r}, e não aberto")
         if mic.gain != GANHO_PADRAO_PCT:
             falta.append(f"ganho {mic.gain!r}, e não {GANHO_PADRAO_PCT}")
-        # O volume da fonte é por cento (0-100), e o teto é o fim da faixa.
         if mic.volume != 100:
             falta.append(f"volume do microfone {mic.volume!r}, e não 100")
     fala = perfil.speaker
@@ -112,11 +111,7 @@ def test_o_freestyle_de_um_lar_vazio_nasce_no_ultra(monkeypatch: pytest.MonkeyPa
 
 @pytest.mark.parametrize("n", range(6))
 def test_nenhuma_fabrica_de_antes_era_o_decidido(n: int) -> None:
-    """A mordida sem mexer no disco: a régua reprova cada fábrica de antes.
-
-    Se uma delas passasse, a régua acima não distinguiria o asset de hoje da
-    versão que ele substitui — mediria o arranjo fácil.
-    """
+    """A mordida sem mexer no disco: a régua reprova cada fábrica de antes."""
     antiga: dict[str, Any] = loader._FABRICAS_ANTERIORES_DO_FREESTYLE[n]
 
     assert _o_que_falta(Profile.model_validate(antiga)) != []
@@ -125,18 +120,7 @@ def test_nenhuma_fabrica_de_antes_era_o_decidido(n: int) -> None:
 def test_a_maquina_que_ja_levou_a_fabrica_de_24_09_recebe_o_decidido_uma_vez(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O disco de quem já atualizou: a cópia de fábrica de 24/09 e a marca `done`.
-
-    É o caminho de toda máquina que já rodou a O-MODO-FREESTYLE-03: a marca
-    dizia só `done`, e com ela a migração não rodava mais — a cópia de 24/09
-    ficaria para sempre, e quem nunca mexeu no Freestyle não receberia o
-    decidido. A marca passou a guardar a impressão do asset que levou; a de
-    antes não é impressão nenhuma, e a migração roda UMA vez para o asset novo.
-
-    MORDIDA: troque, em `o_freestyle_de_fabrica_nasce_ligado`, as duas
-    perguntas `_a_marca_ja_levou(...)` por `marker.exists()` e o
-    arquivo de 24/09 fica no disco.
-    """
+    """O disco de quem já atualizou: a cópia de fábrica de 24/09 e a marca `done`."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     monkeypatch.delenv(loader.SEED_SKIP_ENV_VAR, raising=False)

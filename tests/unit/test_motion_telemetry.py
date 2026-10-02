@@ -118,17 +118,14 @@ class TestEmitHz:
             reader._maybe_emit(_janela(i))
             relogio.avancar(0.01)
         relogio.avancar(5.0)
-        reader._maybe_emit(_janela(200))  # 1ª entrega pós-buraco: reseta
+        reader._maybe_emit(_janela(200))
         assert reader.emit_hz == 0.0
-        # Duas entregas a 50 Hz já medem a taxa NOVA, sem herança dos 100 Hz.
         relogio.avancar(0.02)
         reader._maybe_emit(_janela(201))
         assert reader.emit_hz == pytest.approx(50.0, rel=0.05)
 
 
-# ---------------------------------------------------------------------------
 # state_full → rumble_ff.per_vpad[*].motion_streaming/motion_hz
-# ---------------------------------------------------------------------------
 
 
 def _vpad_ns(
@@ -218,8 +215,7 @@ async def _per_vpad(socket_path: Path) -> list[dict[str, Any]]:
 
 @pytest.mark.asyncio
 async def test_state_full_publica_motion_por_vpad(servidor_com_motion: Any) -> None:
-    """P1 com espelho ATIVO carrega streaming=True e a taxa do reader dele;
-    o jogador 2 (sem reader) carrega False/0.0 — nunca herda a taxa do P1."""
+    """P1 com espelho ATIVO carrega streaming=True e a taxa do reader dele;"""
     socket_path, _daemon = servidor_com_motion
     per_vpad = await _per_vpad(socket_path)
     por_jogador = {item["player"]: item for item in per_vpad}
@@ -233,8 +229,7 @@ async def test_state_full_publica_motion_por_vpad(servidor_com_motion: Any) -> N
 async def test_state_full_motion_defensivo_contra_mock(
     servidor_com_motion: Any,
 ) -> None:
-    """Vpad/reader dublados com MagicMock (atributo vira mock truthy) NÃO
-    podem virar streaming=True nem taxa fantasma — tipagem estrita."""
+    """Vpad/reader dublados com MagicMock (atributo vira mock truthy) NÃO"""
     socket_path, daemon = servidor_com_motion
     daemon._gamepad_device = _vpad_ns(streaming=MagicMock())
     daemon._motion_reader = SimpleNamespace(emit_hz=MagicMock())
@@ -248,12 +243,8 @@ async def test_state_full_motion_defensivo_contra_mock(
 async def test_state_full_ff_play_count_e_motion_hz_sao_por_vpad(
     servidor_com_motion: Any,
 ) -> None:
-    """G3: `ff_play_count`/`motion_hz` são campos OPCIONAIS por-item de
-    `per_vpad` — cada vpad carrega o SEU próprio contador/taxa, nunca o
-    agregado (que segue existindo em `rumble_ff.plays`, para compat)."""
+    """G3: `ff_play_count`/`motion_hz` são campos OPCIONAIS por-item de"""
     socket_path, daemon = servidor_com_motion
-    # P1 e o jogador 2 do co-op com contadores DIFERENTES — se algum dia a
-    # leitura voltasse a agregar, os dois ficariam iguais (ao agregado).
     daemon._gamepad_device = _vpad_ns(streaming=True, ff_play_count=7)
     daemon._motion_reader = SimpleNamespace(emit_hz=248.3)
     daemon._coop_manager = SimpleNamespace(
@@ -269,24 +260,18 @@ async def test_state_full_ff_play_count_e_motion_hz_sao_por_vpad(
     per_vpad = await _per_vpad(socket_path)
     por_jogador = {item["player"]: item for item in per_vpad}
     for item in per_vpad:
-        # Shape: os dois campos sempre presentes (opcionais só no SENTIDO de
-        # nunca quebrarem consumidor antigo que os ignora — nunca ausentes).
         assert "ff_play_count" in item
         assert "motion_hz" in item
     assert por_jogador[1]["ff_play_count"] == 7
     assert por_jogador[1]["motion_hz"] == pytest.approx(248.3)
     assert por_jogador[2]["ff_play_count"] == 3
     assert por_jogador[2]["motion_hz"] == pytest.approx(120.0)
-    # Agregado de compat segue somando os dois (não é o que este teste cobre,
-    # só confirma que a introdução do per-vpad não o quebrou).
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("daemon.state_full")
     assert result["rumble_ff"]["plays"] == 10
 
 
-# ---------------------------------------------------------------------------
 # texto_motion — a linha discreta do card (função pura, sem GTK)
-# ---------------------------------------------------------------------------
 
 
 def _state(per_vpad: list[dict[str, Any]]) -> dict[str, Any]:
@@ -313,8 +298,7 @@ class TestTextoMotion:
         )
 
     def test_streaming_ativo_sem_taxa_ainda_mostra_sem_hz(self) -> None:
-        """Logo após abrir o device a EMA ainda é 0 — a linha aparece sem
-        número (mentir uma taxa seria pior que omiti-la)."""
+        """Logo após abrir o device a EMA ainda é 0 — a linha aparece sem"""
         texto = texto_motion(
             {"is_primary": True},
             _state([{"player": 1, "motion_streaming": True, "motion_hz": 0.0}]),
@@ -322,8 +306,7 @@ class TestTextoMotion:
         assert texto == "Giroscópio: fluindo para o jogo"
 
     def test_sem_streaming_a_linha_some(self) -> None:
-        """Ausência NUNCA vira alarme no card (uinput/xbox/Nativo não têm
-        espelho por design) — quem acusa silêncio anômalo é o doctor."""
+        """Ausência NUNCA vira alarme no card (uinput/xbox/Nativo não têm"""
         texto = texto_motion(
             {"is_primary": True},
             _state([{"player": 1, "motion_streaming": False, "motion_hz": 0.0}]),
@@ -386,8 +369,7 @@ class TestTextoMotion:
 
 
 class TestFiacaoNoCard:
-    """Contrato de fonte (padrão do repo): o widget REAL e o stub consomem a
-    MESMA função pura — sem GTK no processo de teste."""
+    """Contrato de fonte (padrão do repo): o widget REAL e o stub consomem a"""
 
     def _fonte(self) -> str:
         from hefesto_dualsense4unix.app.widgets import controller_card

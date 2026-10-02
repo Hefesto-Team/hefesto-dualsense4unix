@@ -1,19 +1,4 @@
-"""A seção «Desinstalar» do `instalacao.md` diz o que o uninstall deixa, e como tirar.
-
-OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01 (25/09/2026), item 5, achado da
-conferência da O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01: todo uninstall sem
-`--purge-config` guarda as chaves de pareamento numa pasta carimbada de root,
-e o `--purge-config` as leva, inclusive as de uninstalls anteriores. A página
-não dizia nenhuma das duas coisas, e ainda dava ao `--keep-bluez` um trabalho
-que ele deixou de ter em 02/08 (preservar o BlueZ virou o padrão).
-
-A régua não digita o que confere: o prefixo da pasta sai do `uninstall.sh`,
-que é quem a escreve, e cada flag que a seção cita tem de existir no laço de
-argumentos dele — uma flag inventada ou renomeada na página reprova aqui.
-
-A MORDIDA, medida: com a seção de antes (sem o parágrafo das cópias e com a
-frase do `--keep-bluez`), as três reprovam; md5 conferido na devolução.
-"""
+"""A seção «Desinstalar» do `instalacao.md` diz o que o uninstall deixa, e como tirar."""
 
 from __future__ import annotations
 
@@ -66,22 +51,10 @@ def test_toda_flag_que_a_secao_cita_existe_e_faz_o_que_ela_diz() -> None:
     citadas = set(re.findall(r"`(--[a-z-]+)`", secao))
     assert citadas, secao
     assert citadas <= vivas, f"a seção cita flag que o uninstall não tem: {citadas - vivas}"
-    # O no-op não pode aparecer como se preservasse algo: preservar é o padrão.
     assert "--keep-bluez" not in citadas, (
         "o `--keep-bluez` é no-op desde 02/08 (preservar o BlueZ é o padrão); "
         "quem muda algo é o `--restore-bluez`"
     )
-
-
-# ---------------------------------------------------------------------------
-# O mesmo fato errado do `--keep-bluez` morava em mais dois lugares
-# ---------------------------------------------------------------------------
-# Achado da conferência: a retomada tirou a frase da seção «Desinstalar», e ela
-# seguia na seção do backport do BlueZ, na mesma página («`uninstall.sh
-# --keep-bluez` preserva a versão instalada»), e na FALA do próprio uninstall,
-# que creditava o padrão ao no-op em todo uninstall sem flag nenhuma. Fato
-# errado sai de todos os lugares. A MORDIDA, medida: devolver qualquer uma das
-# duas frases reprova a régua dela.
 
 
 def test_a_pagina_inteira_nao_da_ao_keep_bluez_um_trabalho_que_ele_nao_tem() -> None:

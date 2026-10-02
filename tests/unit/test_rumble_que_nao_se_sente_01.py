@@ -31,10 +31,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_rumble_que_nao_se_sente_01: importa código da janela GTK")
 
 import contextlib
@@ -59,12 +55,7 @@ class _RelogioFalso:
 
 
 class _VpadDeBancada(uhid.UhidDualSense):
-    """Vpad com o fd desligado — exercita só o caminho de output/rumble.
-
-    Mesma bancada do `test_rumble_preso_no_vpad`, pelo mesmo motivo: o que
-    precisa ser travado é a FIAÇÃO (`_handle_output` de verdade), não uma
-    função isolada.
-    """
+    """Vpad com o fd desligado — exercita só o caminho de output/rumble."""
 
     def __init__(self, relogio: _RelogioFalso) -> None:
         self.recebido: list[tuple[int, int]] = []
@@ -83,9 +74,6 @@ class _VpadDeBancada(uhid.UhidDualSense):
         self._rumble_descartado_count = 0
         self._rumble_descartado_amostra = None
         self._rumble_v2_count = 0
-        # QUEM ESCREVEU-01: os três campos que o `_handle_output` passou a
-        # escrever. A bancada monta o vpad sem `__init__` (o fd é um pipe),
-        # então ela é quem tem de acompanhar os campos novos.
         self._rumble_parada_sdl_count = 0
         self._output_id_estranho_count = 0
         self._output_id_estranho_amostra = None
@@ -107,11 +95,7 @@ class _VpadDeBancada(uhid.UhidDualSense):
 def _evento_de_output(
     *, flag0: int = 0, flag1: int = 0, flag2: int = 0, weak: int = 0, strong: int = 0
 ) -> bytes:
-    """Monta um UHID_OUTPUT real: 4B de tipo + data[4096] + size + rtype.
-
-    O corpo tem os 47 bytes do `common` inteiros — sem isso o `valid_flag2`
-    (offset 38) não caberia, e é justamente ele que estes testes exercitam.
-    """
+    """Monta um UHID_OUTPUT real: 4B de tipo + data[4096] + size + rtype."""
     corpo = bytearray(rep.COMMON_LEN)
     corpo[uhid._VALID_FLAG0_OFFSET] = flag0
     corpo[uhid._VALID_FLAG1_OFFSET] = flag1
@@ -127,9 +111,7 @@ def _evento_de_output(
 
 _V1 = uhid._VIBRATION_FLAGS
 _V2 = rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
-#: Um report de GATILHO (flag0 & 0x0C) — o que o gate existe para descartar.
 _SO_GATILHO = 0x0C
-#: Um report de LUZ (flag1 & 0x04).
 _SO_LIGHTBAR = 0x04
 
 
@@ -142,15 +124,8 @@ def vpad():
         v.fechar()
 
 
-# --- a régua: "mencionou" nunca mais é lido como "pediu" ------------------
-
-
 def test_parada_conta_como_play_mas_nao_como_pedido(vpad):
-    """O caso EXATO da mesa dela: `plays` sobe, e o motor nunca mexeria.
-
-    Sem a separação, este cenário devolve `plays=3` — o mesmo número que um
-    jogo vibrando de verdade produz — e manda caçar no lado errado.
-    """
+    """O caso EXATO da mesa dela: `plays` sobe, e o motor nunca mexeria."""
     for _ in range(3):
         vpad._handle_output(_evento_de_output(flag0=_V1, weak=0, strong=0))
 
@@ -169,16 +144,8 @@ def test_pedido_com_forca_conta_nos_dois_e_guarda_o_maior(vpad):
     assert vpad.ff_maior_pedido == (200, 30), "o maior é o que diz se dava para sentir"
 
 
-# --- o buraco: a segunda codificação de vibração --------------------------
-
-
 def test_vibracao_v2_chega_ao_controle(vpad):
-    """O bit `COMPATIBLE_VIBRATION2` sozinho é pedido de vibração legítimo.
-
-    ESTE é o teste que morde a cura: com o gate voltando a olhar só o
-    `valid_flag0`, `recebido` fica vazio e a vibração some sem deixar rastro —
-    que é exatamente o defeito silencioso que se estava caçando.
-    """
+    """O bit `COMPATIBLE_VIBRATION2` sozinho é pedido de vibração legítimo."""
     vpad._handle_output(_evento_de_output(flag2=_V2, weak=120, strong=90))
 
     assert vpad.recebido == [(120, 90)], "vibração v2 tem de chegar ao físico"
@@ -195,15 +162,8 @@ def test_v2_nao_infla_quando_o_jogo_manda_as_duas_codificacoes(vpad):
     assert vpad.ff_v2_count == 0, "o flag0 já bastava: o ramo v2 não salvou nada"
 
 
-# --- o silêncio que não pode voltar: descarte contado ---------------------
-
-
 def test_pedido_em_codificacao_desconhecida_e_contado_com_amostra(vpad):
-    """Motor não-nulo sem nenhum bit conhecido: descartar sim, calar não.
-
-    Sem o contador, a tela afirmaria "o jogo não pediu vibração" com o pedido
-    na mão — a mentira mais cara que a aba poderia contar.
-    """
+    """Motor não-nulo sem nenhum bit conhecido: descartar sim, calar não."""
     vpad._handle_output(_evento_de_output(flag1=0x20, weak=77, strong=88))
 
     assert vpad.recebido == [], "sem bit conhecido, encaminhar seria chutar"
@@ -212,12 +172,7 @@ def test_pedido_em_codificacao_desconhecida_e_contado_com_amostra(vpad):
 
 
 def test_gatilho_e_luz_nao_inflam_o_descarte(vpad):
-    """RUMBLE-PRESO-01 continua de pé: report sem vibração traz motor zerado.
-
-    Se o descarte contasse reports de motor zerado, ele subiria a 60 Hz em
-    qualquer jogo com gatilhos adaptativos e a tela acusaria defeito nosso o
-    tempo todo — um alarme convincente e falso.
-    """
+    """RUMBLE-PRESO-01 continua de pé: report sem vibração traz motor zerado."""
     for _ in range(20):
         vpad._handle_output(_evento_de_output(flag0=_SO_GATILHO))
         vpad._handle_output(_evento_de_output(flag1=_SO_LIGHTBAR))
@@ -237,9 +192,6 @@ def test_report_curto_nao_derruba_o_pump(vpad):
     vpad._handle_output(bytes(curto))
 
     assert vpad.recebido == [(44, 55)]
-
-
-# --- a janela: qual das duas causas ela lê --------------------------------
 
 
 def _estado(**ff):
@@ -266,11 +218,7 @@ def test_janela_denuncia_o_formato_que_nao_reconhecemos():
 
 
 def test_janela_com_daemon_velho_nao_inventa_causa():
-    """Sem `nao_nulos` no payload, a linha volta ao texto antigo — e só a ele.
-
-    Um daemon mais velho não manda o campo. Afirmar qualquer uma das duas
-    causas aí seria repetir, com outro texto, o defeito que esta leva cura.
-    """
+    """Sem `nao_nulos` no payload, a linha volta ao texto antigo — e só a ele."""
     txt = texto_dos_pedidos_de_vibracao(_estado(plays=117))
 
     assert txt == "o jogo pediu vibração 117x"

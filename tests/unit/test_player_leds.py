@@ -1,11 +1,4 @@
-"""Testes unitários de Player LEDs — FEAT-PLAYER-LEDS-APPLY-01.
-
-Cobre:
-  - FakeController.set_player_leds grava last_player_leds corretamente.
-  - IpcServer.led.player_set encaminha bitmask ao controller.
-  - Validações de parâmetros no handler IPC.
-  - Bitmasks canônicos (Player 1, Player 2) e arbitrários funcionam no FakeController.
-"""
+"""Testes unitários de Player LEDs — FEAT-PLAYER-LEDS-APPLY-01."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,10 +14,6 @@ from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
-
-# ---------------------------------------------------------------------------
-# Fixtures auxiliares
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -66,11 +55,6 @@ async def running_server(tmp_path: Path, isolated_profiles_dir: Path):
         yield server, socket_path, fc
     finally:
         await server.stop()
-
-
-# ---------------------------------------------------------------------------
-# Testes — FakeController direto (sem IPC)
-# ---------------------------------------------------------------------------
 
 
 def test_fake_controller_last_player_leds_inicial_none() -> None:
@@ -131,11 +115,6 @@ def test_fake_controller_bitmask_player2_canonico() -> None:
     bits: tuple[bool, bool, bool, bool, bool] = (False, True, False, True, False)
     fc.set_player_leds(bits)
     assert fc.last_player_leds == bits
-
-
-# ---------------------------------------------------------------------------
-# Testes — IpcServer led.player_set
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

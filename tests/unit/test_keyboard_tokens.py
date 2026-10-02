@@ -1,14 +1,4 @@
-"""Testes dos tokens virtuais de OSK no UinputKeyboardDevice.
-
-São três desde 02/09/2026: `__TOGGLE_OSK__` (o preset do L3), `__OPEN_OSK__` e
-`__CLOSE_OSK__` (o preset do R3). O que o L3 FAZ com o segundo aperto é medido
-em `test_o_l3_alterna_o_teclado_na_tela.py`; aqui o que se cobra é que o token
-saia pelo callback e nunca pelo uinput.
-
-Cobre FEAT-KEYBOARD-UI-01 (59.3) — tokens não devem emitir via uinput; são
-delegados ao `virtual_token_callback` do subsystem. Teste monkeypatch do
-`_uinput_mod` para não depender de /dev/uinput real.
-"""
+"""Testes dos tokens virtuais de OSK no UinputKeyboardDevice."""
 from __future__ import annotations
 
 from typing import Any
@@ -80,11 +70,9 @@ def test_is_virtual_token_detecta_corretamente() -> None:
 
 def test_token_virtual_delega_ao_callback_e_nao_emite() -> None:
     dev, fake_device, calls = _make_device_preset()
-    # L3 default = __TOGGLE_OSK__ desde 02/09/2026; press então release
     dev.dispatch(frozenset({"l3"}))
     dev.dispatch(frozenset())
     assert calls == [(TOKEN_TOGGLE_OSK, "press"), (TOKEN_TOGGLE_OSK, "release")]
-    # Nada emitido via uinput.
     assert fake_device.emitted == []
 
 
@@ -102,15 +90,12 @@ def test_sem_callback_nao_emite_nem_quebra() -> None:
     dev._device = fake
     dev._uinput_mod = _FakeUinput()
 
-    # 2 ciclos press/release sem callback registrado — nenhuma emissão.
     dev.dispatch(frozenset({"l3"}))
     dev.dispatch(frozenset())
     dev.dispatch(frozenset({"l3"}))
     dev.dispatch(frozenset())
 
     assert fake.emitted == []
-    # Flag sinaliza que o warning foi observado internamente; o sistema
-    # não duplica warning em loops futuros mesmo com milhares de eventos.
     assert dev._virtual_token_warned is True
 
 
@@ -119,8 +104,7 @@ def test_key_real_continua_emitindo() -> None:
     dev, fake_device, calls = _make_device_preset(bindings={"r1": ("KEY_LEFTALT", "KEY_TAB")})
     dev.dispatch(frozenset({"r1"}))
     dev.dispatch(frozenset())
-    assert calls == []  # callback não chamado — binding é real
-    # press: LEFTALT, TAB ; release ordem reversa: TAB, LEFTALT
+    assert calls == []
     emitted_names = [ev_name for ev_name, _v in fake_device.emitted]
     assert emitted_names == ["KEY_LEFTALT", "KEY_TAB", "KEY_TAB", "KEY_LEFTALT"]
 

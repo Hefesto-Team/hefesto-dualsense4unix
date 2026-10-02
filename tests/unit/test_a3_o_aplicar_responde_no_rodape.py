@@ -68,9 +68,6 @@ def _rodar(
     rodape = _Rodape()
     monkeypatch.setattr(
         footer_actions.ipc_bridge,
-        # CONFIG-06 (23/08/2026): o rodapé passou a pedir a resposta INTEIRA
-        # (`(ok, motivo, descartados)`), porque o aviso de campo descartado só
-        # existe nela. O nome antigo continua vivo como embrulho de duas pontas.
         "machine_declare_detalhado",
         lambda _payload: (*declarou, descartados),
     )

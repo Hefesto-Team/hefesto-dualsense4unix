@@ -1,8 +1,4 @@
-"""Funções de conexão, reconexão e shutdown do daemon.
-
-Extrai lógica de ciclo de vida de conexão do IController para funções
-puras que recebem o daemon como argumento, mantendo Daemon.run() slim.
-"""
+"""Funções de conexão, reconexão e shutdown do daemon."""
 from __future__ import annotations
 
 import asyncio
@@ -50,71 +46,25 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-#: Teto do backoff exponencial em segundos. Evita espera unbounded entre tentativas.
 BACKOFF_MAX_SEC: float = 30.0
 
 #: Intervalo entre probes de hot-reconnect quando o controle está desconectado
-#: (BUG-DAEMON-NO-DEVICE-FATAL-01). 5s é compromisso entre latência percebida
-#: pelo usuário ao plugar o controle e custo (varredura libusb + log).
 RECONNECT_PROBE_INTERVAL_SEC: float = 5.0
 
-#: Intervalo entre probes de "ainda conectado?" quando o controle está online.
-#: Múltiplo do probe offline para evitar overhead — o poll_loop já detecta
-#: desconexão via exceção em read_state e dispara reconnect a parte.
 RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
 
-#: O-REPOUSO-ESPERA-O-EVENTO-01, família 5 (29/09/2026): o teto da volta online
-#: com o dono do evento armado. A volta de 30 s refazia, por relógio, o que os
-#: eventos já dizem: o `connect()` (a rajada da libudev), a sonda forçada de
-#: `/proc/*/fd` e o rehide (as duas rajadas por minuto do broker na sonda S.4).
-#: Com o dono, a volta acorda por evento — a geração de nomes de `/dev/input`
-#: ou dos `hidraw*` de `/dev`, a firma de um nó do físico, as permissões de
-#: `/dev/input`, o barramento HID — e este teto fica como rede. Sem o dono, os
-#: 30 s de sempre.
 TETO_DA_VOLTA_PELO_EVENTO_SEC: float = 300.0
 
-#: Fatia curta do sleep ONLINE do reconnect_loop (FEAT-BACKEND-HOTPLUG-FAST-01).
-#: A cada fatia consultamos o `InputDirWatch` (um `os.listdir` de /dev/input,
-#: ~µs — custo zero quando nada muda) e SÓ quando o conjunto de nodes mudou
-#: antecipamos a reconciliação (`controller.connect()` via executor — o
-#: hid_enumerate custa dezenas de ms e NUNCA roda por fatia). Plugar um
 #: DualSense novo passa de "até 30s" para ~2s até o backend abrir o handle
-#: (describe_controllers/LED/rumble/trigger + throttle adaptativo recalculado).
 RECONNECT_HOTPLUG_POLL_INTERVAL_SEC: float = 2.0
 
-#: GATILHO-DA-COR-01: fatia curta usada SÓ enquanto o gatilho da cor está
-#: armado — ou seja, na janela de ~1,5 s que se abre depois de uma conexão nova
-#: pelo rádio, e em mais nenhum outro instante.
-#:
-#: Ela existe porque a espera normal deste laço é de até 30 s: sem a fatia
-#: curta, uma conexão que não mudasse mais nada em `/dev/input` só seria
-#: repintada meia dessas 30 s depois — atrasada demais para o gesto dela ter
-#: resposta. Com ela, o disparo cai a até 0,25 s do 1,5 s medido. Isto NÃO é
-#: laço apertado: fora da janela armada nada muda, e dentro dela são ~6 fatias
-#: de `asyncio.sleep` antes de UMA escrita.
 PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC: float = 0.25
 
-#: O-CABO-ASSUME-DO-RADIO-01: a espera do laço com a mesa vazia enquanto o
-#: único controle troca de transporte. A regra udev religa o cabo no instante
-#: em que o rádio sai e a probe no cabo leva menos de um segundo; meio segundo
-#: por volta é o que separa "voltou" de "o jogador ficou parado cinco segundos".
-#: Só vale enquanto a marca de troca vale (o prazo do posto, 30 s).
 PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC: float = 0.5
 
 
 async def connect_with_retry(daemon: DaemonProtocol) -> None:
-    """Tenta conectar o controller com backoff exponencial. Publica CONTROLLER_CONNECTED.
-
-    AUDIT-FINDING-LOG-EXC-INFO-01:
-      - `logger.warning("controller_connect_failed", ..., exc_info=True)` preserva
-        traceback completo no log para debug. Só executa no ramo de falha.
-      - Backoff dobra após cada falha (`backoff = min(backoff * 2, BACKOFF_MAX_SEC)`).
-        Evita hot-loop consumindo CPU se hardware indisponível por período longo.
-      - Sleep interrompível via `asyncio.wait_for(stop_event.wait(), ...)`: shutdown
-        não precisa esperar o backoff atual terminar. Só ativa se há stop_event
-        configurado (via Daemon.run) e no ramo de falha — caminho feliz preserva
-        exato comportamento anterior para testes com FakeController.
-    """
+    """Tenta conectar o controller com backoff exponencial. Publica CONTROLLER_CONNECTED."""
     backoff = daemon.config.reconnect_backoff_sec
     while True:
         try:
@@ -122,14 +72,6 @@ async def connect_with_retry(daemon: DaemonProtocol) -> None:
             transport = daemon.controller.get_transport()
             daemon.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport})
             logger.info("controller_connected", transport=transport)
-            # SOM-02/E4 (armadilha 4): handle novo = posse do áudio zerada. Este
-            # é o caminho do `reconnect()` (o poll loop reabrindo o controle
-            # depois de um erro de leitura — a troca de cabo dela), e sem a
-            # reaplicação aqui o volume do perfil ativo volta ao do firmware sem
-            # dizer nada. Best-effort: nunca derruba a conexão.
-            #
-            # BORDA-DE-QUEDA-01: e vai em TODOS os controles da mesa, não
-            # só no primário — ver `reaplicar_som_em_todos_os_alvos`.
             await reaplicar_som_em_todos_os_alvos(daemon)
             return
         except Exception as exc:
@@ -140,41 +82,18 @@ async def connect_with_retry(daemon: DaemonProtocol) -> None:
             if stop_event is not None:
                 try:
                     await asyncio.wait_for(stop_event.wait(), timeout=backoff)
-                    return  # stop_event sinalizou durante o backoff — aborta.
+                    return
                 except asyncio.TimeoutError:
                     pass
             else:
                 await asyncio.sleep(backoff)
-            # Backoff exponencial com teto.
             backoff = min(backoff * 2, BACKOFF_MAX_SEC)
 
 
 async def reapply_speaker_after_connect(
     daemon: DaemonProtocol, *, uniq: str | None = None
 ) -> None:
-    """Reaplica o volume do perfil ATIVO no (re)connect (SOM-02/E4, armadilha 4).
-
-    A posse dos bytes de áudio morre com o cabo: `_volumes_audio` nasce vazio em
-    cada handle e CADA conexão cria um handle novo. Sem este gancho, persistir o
-    volume por perfil resolveria só a primeira vez — trocar o cabo (ou o daemon
-    reabrir o handle depois de um EIO) devolveria o volume ao do firmware **em
-    silêncio**, com a janela voltando a dizer "não ajustado".
-
-    Toda a política mora em `ProfileManager.reapply_speaker_on_connect`, e por
-    isso ela vale aqui sem repetição: só escreve quando o perfil ativo TEM a
-    seção `speaker` (perfil sem opinião não retoma a posse a cada replug), e a
-    trava manual de áudio vence — se ela mexeu no volume na mão, a reconexão não
-    é ocasião para o perfil retomar o campo.
-
-    O applier vai DIRETO ao backend (`Daemon.apply_profile_speaker`), nunca pelo
-    `speaker.set` do IPC: aquele caminho arma a categoria manual `audio`, e uma
-    reconexão que armasse a trava faria a PRÓXIMA ativação de perfil ser
-    descartada por ela.
-
-    Best-effort de ponta a ponta: um daemon enxuto (testes, CLI) sem `store`/
-    `_run_blocking` simplesmente não reaplica, e falha nenhuma derruba o
-    caminho de conexão.
-    """
+    """Reaplica o volume do perfil ATIVO no (re)connect (SOM-02/E4, armadilha 4)."""
     from functools import partial
 
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -198,26 +117,7 @@ async def reapply_speaker_after_connect(
 async def reapply_mic_after_connect(
     daemon: DaemonProtocol, *, uniq: str | None = None
 ) -> None:
-    """Devolve o MUDO do microfone daquela peça no (re)connect.
-
-    SOM-MIC-REPLUG-01, 16/09/2026. Irmã exata da função acima, e ela existe
-    pela mesma razão: o estado do aparelho morre com o cabo. A diferença é o
-    que se perde quando ninguém repõe — no alto-falante, um volume; no
-    microfone, **o silêncio que ela pediu**.
-
-    Sem este gancho, quem deixou o microfone mudo e trocou o cabo volta a ser
-    ouvida sem saber. O firmware nasce com o mic ABERTO, então não escrever não
-    é neutro: é abrir.
-
-    Toda a política mora em `ProfileManager.reapply_mic_on_connect`, que lê o
-    mudo do DONO (o `maquina.json`, O-MUDO-E-DO-CONTROLE-01) e não o do perfil,
-    e a assimetria que protege o LED vermelho (só o calar atravessa o replug)
-    está em `apply_mic`, em cópia única — aqui não há regra nenhuma a repetir.
-
-    Best-effort de ponta a ponta, como a irmã: daemon enxuto sem
-    `store`/`_run_blocking` simplesmente não reaplica, e falha nenhuma derruba
-    o caminho de conexão.
-    """
+    """Devolve o MUDO do microfone daquela peça no (re)connect."""
     from functools import partial
 
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -241,35 +141,7 @@ async def reapply_mic_after_connect(
 def nascer_o_microfone_ao_conectar(
     daemon: DaemonProtocol, *, uniq: str | None = None
 ) -> asyncio.Task[bool] | None:
-    """O microfone daquela peça NASCE NO AR no (re)connect (NASCE-LIGADO-MIC-01).
-
-    A terceira irmã das duas acima, e ela fecha o outro lado do mesmo estado.
-    A de cima devolve o SILÊNCIO que ela pediu; esta devolve o microfone que
-    ela nunca deveria ter precisado pedir:
-
-        *"segue por default mudo. eu preciso lembrar de clicar no icon do mic
-        pra ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
-        ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
-
-    **AQUI, PELA MESMA RAZÃO DAS OUTRAS DUAS:** este é o ponto UNIVERSAL. Os
-    três caminhos de conexão do daemon passam por `reaplicar_som_em_todos_os_alvos`
-    ou por `anunciar_bordas_por_alvo` — o primeiro connect, o hotplug e o alvo
-    que nasce —, então a regra da casa de que a cura cobre TODOS os chamadores
-    sai de graça, sem um `if` de transporte e sem um ramo por jogo.
-
-    **NÃO ESPERA**, e isso é medição: eleger custa `pactl` mais até três
-    segundos de espera pela source da ponte, e esse orçamento dentro de
-    `connect_with_retry` seria a partida do daemon parada atrás do microfone.
-    `hotkey.agendar_o_nascimento_do_microfone` põe o ato num fio próprio e
-    devolve a tarefa — que este caminho não espera, e os testes esperam.
-
-    Toda a política mora em `hotkey.nascer_no_ar`: as três escritas do sistema,
-    a eleição só com a mesa sem dono, e as duas perguntas que fazem o silêncio
-    dela vencer. Aqui não há regra nenhuma a repetir.
-
-    O import é PREGUIÇOSO de propósito: `daemon/subsystems/hotkey` é a camada
-    de cima e importar daqui no topo faria a conexão depender dela para subir.
-    """
+    """O microfone daquela peça NASCE NO AR no (re)connect (NASCE-LIGADO-MIC-01)."""
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
         agendar_o_nascimento_do_microfone,
     )
@@ -278,28 +150,13 @@ def nascer_o_microfone_ao_conectar(
 
 
 def alvos_conectados_de(daemon: DaemonProtocol) -> dict[str, str | None] | None:
-    """`{key: uniq}` dos controles conectados AGORA, ou None se ninguém sabe.
-
-    BORDA-DE-QUEDA-01 — a ponte entre este laço e o `alvos_conectados()` do
-    backend, que é a única fonte por ALVO que existe. O `is_connected()` que
-    este laço sempre consultou é um `any(...)` sobre os handles: com dois ou
-    mais na mesa, a queda de um não muda a resposta, a transição não acontece,
-    e o controle que caiu some sem uma linha sequer.
-
-    **None não é mesa vazia.** Backend enxuto (o `FakeController` dos testes,
-    um dublê, o backend legado) simplesmente não tem o método, e a resposta
-    honesta para ele é "não pergunte por alvo" — que é None. Um dicionário
-    vazio significaria "olhei e não há ninguém", e confundir os dois publicaria
-    uma queda falsa a cada tique em toda instalação com backend enxuto.
-    """
+    """`{key: uniq}` dos controles conectados AGORA, ou None se ninguém sabe."""
     metodo = getattr(getattr(daemon, "controller", None), "alvos_conectados", None)
     if not callable(metodo):
         return None
     try:
         alvos = metodo()
     except Exception as exc:
-        # Best-effort como todo o resto deste laço: a observação por alvo é um
-        # acréscimo, e nunca pode derrubar o probe que reconecta o controle.
         logger.debug("alvos_conectados_falhou", err=str(exc), exc_info=True)
         return None
     if not isinstance(alvos, dict):
@@ -308,24 +165,7 @@ def alvos_conectados_de(daemon: DaemonProtocol) -> dict[str, str | None] | None:
 
 
 async def reaplicar_som_em_todos_os_alvos(daemon: DaemonProtocol) -> None:
-    """Reaplica o volume/rota do perfil ativo em CADA controle da mesa.
-
-    BORDA-DE-QUEDA-01. `reapply_speaker_after_connect(daemon)` sem `uniq` cai
-    no `_handle_for(None)` do backend, que é **o primário e mais ninguém**:
-    quando o Controle 3 caía no rádio e voltava, quem recebia o volume dela era
-    o Controle 1 — que nem tinha perdido a posse dos bytes. O volume do que
-    voltou ficava o do firmware, calado, que é exatamente o sintoma "a config
-    que eu deixo nunca é respeitada" do lado do som.
-
-    Sem enumeração por alvo (backend enxuto) ou com a mesa vazia, mantém o
-    comportamento de antes desta linha — uma chamada com `uniq=None`. Chaves
-    de fallback por path não têm MAC e também viram `None`; o `dict.fromkeys`
-    faz a deduplicação para que duas delas não escrevam duas vezes no mesmo
-    primário.
-
-    Best-effort por alvo, e de propósito: um controle que falhe a escrita não
-    pode impedir os outros de receberem o volume.
-    """
+    """Reaplica o volume/rota do perfil ativo em CADA controle da mesa."""
     alvos = alvos_conectados_de(daemon)
     uniqs: list[str | None] = (
         [None] if not alvos else list(dict.fromkeys(alvos.values()))
@@ -333,11 +173,8 @@ async def reaplicar_som_em_todos_os_alvos(daemon: DaemonProtocol) -> None:
     for uniq in uniqs:
         with contextlib.suppress(Exception):
             await reapply_speaker_after_connect(daemon, uniq=uniq)
-        # SOM-MIC-REPLUG-01: o `suppress` é SEPARADO de propósito — o
-        # alto-falante falhar não pode custar o mudo do microfone dela.
         with contextlib.suppress(Exception):
             await reapply_mic_after_connect(daemon, uniq=uniq)
-        # NASCE-LIGADO-MIC-01: e o terceiro `suppress`, pela mesma razão.
         with contextlib.suppress(Exception):
             nascer_o_microfone_ao_conectar(daemon, uniq=uniq)
 
@@ -347,33 +184,7 @@ async def anunciar_bordas_por_alvo(
     antes: dict[str, str | None],
     agora: dict[str, str | None],
 ) -> None:
-    """As bordas que o agregado esconde: quem saiu da mesa e quem voltou a ela.
-
-    BORDA-DE-QUEDA-01 — chamado SÓ quando o agregado não se mexeu (a mesa não
-    esvaziou nem nasceu). O ramo agregado continua dono das bordas dele: a
-    primeira conexão e a mesa que fica vazia publicam o que sempre publicaram,
-    com o mesmo motivo, e este aqui não duplica nada.
-
-    A queda vira `controller_disconnected` com o motivo `alvo_sumiu` e o `uniq`
-    de quem caiu — a chave que casa a linha com o card da GUI, com o perfil e
-    com o diário da bateria. **Não chama `registrar_queda_da_bateria`**: aquela
-    é agregada (escreve a última carga de TODOS) e o `DiarioDaBateria` já
-    escreve a queda deste controle sozinho, pelo caminho `sumiu_do_backend`;
-    chamar as duas daria duas linhas contando a mesma coisa.
-
-    **Não notifica o desktop**, e isto é decisão de forma: "controle
-    desconectado" numa mesa em que três seguem de pé leria como a mesa inteira
-    ter caído. Quem quiser a notícia por controle precisa de uma frase nova, e
-    frase nova de tela é decisão dela.
-
-    A volta reaplica o som DAQUELE controle, pelo `uniq` dele — é a metade da
-    entrega que o `reaplicar_som_em_todos_os_alvos` cobre no outro caminho.
-
-    O-CABO-ASSUME-DO-RADIO-01: quem saiu TROCANDO de transporte não caiu — o
-    rádio saiu para o cabo entrar (ou o contrário), e o lugar dele espera. A
-    borda de queda dele não é publicada; a volta, sim, porque o handle novo
-    nasce sem a posse dos bytes de áudio.
-    """
+    """As bordas que o agregado esconde: quem saiu da mesa e quem voltou a ela."""
     trocando = trocas_de_transporte_pendentes(daemon)
     for key in [k for k in antes if k not in agora]:
         uniq = antes[key]
@@ -397,11 +208,7 @@ async def anunciar_bordas_por_alvo(
 
 
 def trocas_de_transporte_pendentes(daemon: DaemonProtocol) -> frozenset[str]:
-    """Os MACs fora da mesa por estarem trocando de transporte (O-CABO-ASSUME-DO-RADIO-01).
-
-    Pergunta ao backend, que é quem marca a troca. Backend enxuto (dublê,
-    legado) não troca nada: vazio.
-    """
+    """Os MACs fora da mesa por estarem trocando de transporte (O-CABO-ASSUME-DO-RADIO-01)."""
     pergunta = getattr(getattr(daemon, "controller", None), "trocas_de_transporte_pendentes", None)
     if not callable(pergunta):
         return frozenset()
@@ -432,19 +239,7 @@ async def reaplicar_som_de_quem_trocou_de_transporte(
     transportes_antes: dict[str, str],
     transportes_agora: dict[str, str],
 ) -> int:
-    """O controle que trocou de transporte ENTRE dois tiques ganha o som de volta.
-
-    O-CABO-ASSUME-DO-RADIO-01. Quando o rádio sai e o cabo entra dentro de um
-    tique só, o backend troca o handle no mesmo lugar e o controle nunca some
-    de `alvos_conectados()` — nenhuma borda de `anunciar_bordas_por_alvo`. Mas
-    o handle é novo, e a posse dos bytes de áudio morre com o velho: sem isto o
-    volume e o mudo do perfil voltavam aos do firmware em silêncio, que é a
-    armadilha 4 da SOM-02/E4. Devolve quantos controles foram reaplicados.
-
-    Para o som, quem trocou de transporte É quem chegou — e por isso a volta
-    passa pela MESMA borda de chegada de `anunciar_bordas_por_alvo`, sem uma
-    terceira cópia das três reaplicações.
-    """
+    """O controle que trocou de transporte ENTRE dois tiques ganha o som de volta."""
     trocaram = {
         key: uniq
         for key, uniq in alvos_agora.items()
@@ -466,12 +261,7 @@ async def reaplicar_som_de_quem_trocou_de_transporte(
 
 
 def vigia_do_cabo_de(daemon: DaemonProtocol) -> Any:
-    """A `VigiaDoCabo` DESTE daemon, criada na primeira consulta (O-CABO-ASSUME-DO-RADIO-01).
-
-    Única por daemon pela razão das irmãs de cima: a borda da carga e o
-    instante em que cada cabo foi visto são memória, e duas memórias dariam
-    duas verdades sobre o mesmo cabo.
-    """
+    """A `VigiaDoCabo` DESTE daemon, criada na primeira consulta (O-CABO-ASSUME-DO-RADIO-01)."""
     from hefesto_dualsense4unix.integrations.o_cabo_em_espera import VigiaDoCabo
 
     vigia = getattr(daemon, "_vigia_do_cabo_em_espera", None)
@@ -484,14 +274,7 @@ def vigia_do_cabo_de(daemon: DaemonProtocol) -> Any:
 
 
 def _o_barramento_hid_mudou(daemon: DaemonProtocol) -> bool:
-    """O barramento HID mudou, ou um cabo que espera ficou maduro? (O-CABO-ASSUME-DO-RADIO-01)
-
-    O cabo que o kernel recusa NÃO muda `/dev/input` — a probe falha antes de
-    nascer nó de entrada —, e o `InputDirWatch` do laço não o vê. Sem este
-    olhar, o cabo só seria notado no fallback de 30 s. Custo: um `listdir` de
-    `/sys/bus/hid/devices` por fatia. Só olha num backend que troca de
-    transporte; os dublês da suíte seguem o laço de antes.
-    """
+    """O barramento HID mudou, ou um cabo que espera ficou maduro? (O-CABO-ASSUME-DO-RADIO-01)"""
     ctrl = getattr(daemon, "controller", None)
     if not callable(getattr(ctrl, "iniciar_troca_de_transporte", None)):
         return False
@@ -500,7 +283,7 @@ def _o_barramento_hid_mudou(daemon: DaemonProtocol) -> bool:
     watch = getattr(daemon, "_watch_do_barramento_hid", None)
     if not isinstance(watch, InputDirWatch):
         watch = InputDirWatch(root=o_cabo_em_espera.RAIZ_DO_BARRAMENTO_HID)
-        watch.poll()  # a linha de base: só mudança de verdade conta
+        watch.poll()
         with contextlib.suppress(Exception):
             setattr(daemon, "_watch_do_barramento_hid", watch)  # noqa: B010
         return False
@@ -517,32 +300,7 @@ async def vigiar_o_cabo_em_espera(
     leitor_do_bluez: Any = None,
     ler_o_diario: Any = None,
 ) -> int:
-    """O controle do rádio que ganhou cabo passa para o cabo. Devolve quantos passaram.
-
-    O-CABO-ASSUME-DO-RADIO-01, a decisão dela de 25/09/2026: *passa para o
-    cabo* — no cabo há a vibração por áudio, o som e menos atraso —, com o
-    mesmo número e sem o jogo perder o controle.
-
-    O MEDIDO (19:42 de 25/09, na mesa dela): o kernel recusa o HID do cabo com
-    ``-EEXIST`` enquanto o rádio segura o endereço, e o cabo fica esperando sem
-    driver — o rádio precisa sair para o cabo existir. Então, para cada cabo
-    que espera (`integrations/o_cabo_em_espera.py`):
-
-    1. acha o par no rádio (a linha do kernel; sem ela, a borda da carga);
-    2. marca a troca no backend (`iniciar_troca_de_transporte`) — o posto, o
-       vpad do co-op e as bordas de queda passam a esperar pelo controle;
-    3. derruba o RÁDIO dele (`Disconnect`; o pareamento fica, e é ele que traz
-       o controle de volta quando o cabo sair);
-    4. a regra udev religa o cabo no instante em que o rádio sai, e o
-       `connect()` o abre no mesmo lugar da mesa.
-
-    **NO MODO NATIVO O CABO ESPERA.** Ali o jogo segura o físico, e trocar o nó
-    debaixo dele seria o jogo perdendo o controle — o contrário da decisão. A
-    troca acontece quando o Nativo acaba, no tique seguinte.
-
-    Best-effort de ponta a ponta: nada aqui derruba o laço de reconexão, e a
-    dúvida sempre vale "fica no rádio", que é o comportamento de antes.
-    """
+    """O controle do rádio que ganhou cabo passa para o cabo. Devolve quantos passaram."""
     ctrl = getattr(daemon, "controller", None)
     iniciar = getattr(ctrl, "iniciar_troca_de_transporte", None)
     descrever = getattr(ctrl, "describe_controllers", None)
@@ -615,8 +373,6 @@ async def vigiar_o_cabo_em_espera(
             if callable(cancelar):
                 with contextlib.suppress(Exception):
                     cancelar(par, motivo="o_radio_nao_caiu")
-            # Conferência de 25/09: a recusa do BlueZ é passageira (a trava do
-            # rádio, o barramento) e não resolve o cabo para sempre.
             tenta_de_novo = vigia.recusado(cabo.instancia, agora)
             logger.warning(
                 "o_cabo_nao_assumiu",
@@ -683,8 +439,6 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
             return str(do_jogo.name)
     nome = resolve_boot_profile()
     if e_o_freestyle(nome):
-        # O disco diz o botão aceso e a memória diz apagado: vale a memória,
-        # que é quem a ativação obedece.
         nome = a_escolha_dela(freestyle_ligado=False)
     if not nome or e_o_freestyle(nome):
         return None
@@ -722,28 +476,7 @@ def perfil_que_o_boot_restaura(
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
-    """Reativa a escolha dela no boot e na reconexão (FEAT-PERSIST-SESSION-01).
-
-    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4: o nome é o da escolha
-    dela (:func:`_o_nome_que_o_boot_restaura`), com regra de janela ou sem. A
-    ativação vai com `origin="system"`: restaurar não é gesto novo dela e NÃO
-    regrava a escolha.
-
-    A ÚNICA GUARDA QUE FICA é a de não entrar por cima do perfil que já vale:
-    com o daemon reiniciado no meio da partida, ou o controle reconectando pelo
-    rádio no meio do jogo, o perfil do jogo (posto pelo lançamento ou pelo
-    autoswitch) já é o ativo, e a escolha por cima dele seria uma troca no meio
-    do jogo. O mesmo perfil que já vale é reaplicado, para o controle que
-    reconectou receber a seção dele.
-
-    «Sem escolha» (item 10) não ativa nada: o `active_profile` fica `None`, o
-    chip diz «—», e o controle fica com o que já tinha.
-
-    Com um jogo aberto na hora do boot, o perfil do jogo vem antes da escolha
-    (A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01): o appid é o do sinal de jogo
-    (`Daemon.appid_em_cena`), lido antes do primeiro pad. Também com
-    `origin="system"`: o jogo em cena não vira a escolha dela.
-    """
+    """Reativa a escolha dela no boot e na reconexão (FEAT-PERSIST-SESSION-01)."""
     from functools import partial
 
     from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
@@ -756,9 +489,6 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
     store = getattr(daemon, "store", None)
-    # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): ligado e sem o arquivo,
-    # seguraria o boot sem perfil nenhum, para sempre. Desliga, diz, e o
-    # restore pergunta a escolha de novo.
     if o_freestyle_manda(store) and not o_perfil_de_fora_do_jogo():
         logger.warning("freestyle_ligado_sem_o_perfil", acao="desligado")
         ligar_o_freestyle(store, False)
@@ -771,8 +501,6 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         return
     if appid_em_cena is not None:
         logger.info("boot_com_o_jogo_em_cena", appid=appid_em_cena, perfil=name)
-    # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
-    # re-aplica o perfil (que re-escreveria gatilhos/emulação por cima).
     if getattr(daemon, "_native_mode", False):
         logger.info("last_profile_restore_skipped_native_mode", name=name)
         return
@@ -780,92 +508,39 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     if isinstance(ja_vale, str) and ja_vale and not mesmo_slug(ja_vale, name):
         logger.info("a_escolha_nao_entra_por_cima", name=name, ja_vale=ja_vale)
         return
-    # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
-    # restore pode rodar antes/depois do keyboard subir e após reconexão
-    # (device recriado); resolver na ativação cobre todos os casos.
-    #
-    # BUG-BOOT-RESTORE-FLIPS-EMULATION-01: mouse_applier=None no restore de propósito. O estado
-    # de emulação (mouse/gamepad) no boot é governado pelos FLAGS persistidos (lifecycle.py
-    # restaura antes desta chamada), não pela seção mouse do perfil. Com o applier injetado, um
-    # last_profile com mouse.enabled (ex.: point_and_click, que vira last_profile por mero
-    # autoswitch) rodava set_mouse_emulation(True) DEPOIS do gamepad já restaurado — matava o
-    # gamepad, apagava gamepad_emulation.flag e invertia a escolha persistida da usuária a cada
-    # boot. O perfil ainda aplica triggers/LEDs/teclado; só a emulação fica com os flags.
     manager = ProfileManager(
         controller=daemon.controller,
         store=daemon.store,
         keyboard_device_provider=lambda: getattr(
             daemon, "_keyboard_device", None
         ),
-        # FEAT-ACOES-DE-BOTAO-01: o que cada botão faz VAI no restore, ao
-        # contrário do `mouse_applier` logo abaixo. A razão é a mesma que o
-        # comentário do `rumble_policy_applier` dá quinze linhas adiante: o
         # `button_actions` não tem flag persistido próprio, então o perfil é a
-        # única fonte — e ele não cria nem destrói device, só troca o mapa de um
-        # que já existe. Sem o risco do BUG-BOOT-RESTORE-FLIPS-EMULATION-01.
         mouse_device_provider=lambda: getattr(daemon, "_mouse_device", None),
         mouse_applier=None,
         suppression_applier=getattr(daemon, "apply_profile_suppression", None),
-        # FEAT-PROFILE-MODE-01: mode_applier=None no restore pela MESMA
-        # razão do mouse — gamepad/nativo/co-op no boot vêm dos flags
-        # persistidos (utils.session), não do perfil.
         mode_applier=None,
-        # FEAT-RUMBLE-POLICY-PROFILE-01: aqui o applier VAI injetado — diferente de mouse/mode,
-        # a política de rumble NÃO tem flag persistido próprio (reseta a "balanceado" a cada
-        # boot), então o perfil é a única fonte para restaurá-la; aplicá-la só ajusta a config
-        # (não cria/destrói devices — sem o risco do BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
         rumble_policy_applier=getattr(
             daemon, "apply_profile_rumble_policy", None
         ),
         rumble_passthrough_applier=getattr(
             daemon, "apply_profile_rumble_passthrough", None
         ),
-        # SOM-02/E4: o alto-falante vai injetado aqui pela MESMA razão da
-        # política de rumble (e ao contrário de mouse/mode): o volume não tem
         # flag persistido próprio — o DualSense não devolve o valor que o
-        # firmware tem —, então o perfil é a única fonte para restaurá-lo no
-        # boot. Perfil sem a seção continua não escrevendo NADA (o manager nem
-        # chama o applier), então nenhum boot passa a tomar a posse do áudio
-        # por causa desta linha.
         speaker_applier=getattr(daemon, "apply_profile_speaker", None),
-        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o volume do microfone no restauro de boot, pela
-        # MESMA razão do alto-falante — ele não tem flag persistido próprio e o
-        # perfil é a única fonte para restaurá-lo. O mudo NÃO entra por aqui:
-        # ele é do controle e mora no `maquina.json` (O-MUDO-E-DO-CONTROLE-01),
-        # nenhuma ativação de perfil o escreve, e quem o devolve ao aparelho é
-        # o replug (`reapply_mic_after_connect`).
         mic_applier=getattr(daemon, "apply_profile_mic", None),
-        # F1-REMAPEAR-02 (13/09/2026): o canal do PS vai no boot, o MESMO `_canal_do_ps` que
-        # `gerente_do_daemon` passa às outras rotas. Sem ele a escolha do perfil para o PS só
-        # chegava ao `ps_solo` na primeira troca de perfil. Memória no hotkey, sem device.
         ps_action_sink=_canal_do_ps(daemon),
     )
 
     try:
         await daemon._run_blocking(partial(manager.activate, name, origin="system"))
     except Exception as exc:
-        # Sem `exc_info=True`: este warning dispara normalmente quando o perfil
-        # da escolha foi apagado ou renomeado por fora — err=str(exc) já dá o
-        # diagnóstico; traceback completo seria ruído e atrasaria o boot.
         logger.warning("last_profile_restore_failed", name=name, err=str(exc))
         return
     logger.info("last_profile_restored", name=name)
 
 
 def _broker_restore_for_recovery(daemon: DaemonProtocol) -> list[str]:
-    """Restaura hidraws escondidos pelo broker cujo nó AINDA EXISTE no disco.
-
-    S-2 (auditoria 21/07, viola "duplicado > zero controles"): o backend
-    pydualsense reabre por CAMINHO (hidapi não abre por fd) — se um handle
-    morreu sem re-enumeração do nó (EIO transitório, hiccup USB), o reopen
-    encontra o nó ainda 0600 do hide e leva PermissionError para TODOS os
-    controles, em backoff eterno (a lease está viva, o rehide só re-esconde e
-    ninguém restaurava). Este helper roda SÓ no caminho de recuperação: expõe
-    o físico pelo tempo de um reconnect (o rehide da reconciliação online
-    re-esconde) — duplicado transitório > zero controles, que é lei. Nó
-    escondido que NÃO existe mais (unplug real) é pulado: restaurar seria
-    no-op barulhento a cada probe de 5s. Best-effort como todo o cliente.
-    """
+    """Restaura hidraws escondidos pelo broker cujo nó AINDA EXISTE no disco."""
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
         broker_client_for,
     )
@@ -883,12 +558,7 @@ def _broker_restore_for_recovery(daemon: DaemonProtocol) -> list[str]:
 
 
 async def _restore_hidden_before_reopen(daemon: DaemonProtocol) -> None:
-    """Agenda o `_broker_restore_for_recovery` no executor DEDICADO do broker.
-
-    Mesma disciplina do rehide (HANG-01): I/O de socket com timeout de 2s por
-    chamada nunca roda no event loop nem no pool compartilhado 'hefesto-hid'.
-    Falha nunca derruba o caminho de reconexão (best-effort).
-    """
+    """Agenda o `_broker_restore_for_recovery` no executor DEDICADO do broker."""
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
             broker_executor_for,
@@ -906,16 +576,8 @@ async def reconnect(daemon: DaemonProtocol) -> None:
     with contextlib.suppress(Exception):
         await daemon._run_blocking(daemon.controller.disconnect)
     await asyncio.sleep(daemon.config.reconnect_backoff_sec)
-    # S-2: handles fechados; se algum nó físico segue escondido pelo broker,
-    # o reopen por caminho falharia com PermissionError para TODOS — restaura
-    # antes (o rehide pós-reconexão re-esconde).
     await _restore_hidden_before_reopen(daemon)
     await connect_with_retry(daemon)
-    # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rearma o settling assim que
-    # reconectamos. Cobre a janela em que o poll loop chama reconnect()
-    # diretamente (read_state levantou) e volta a ler estado no próximo tick
-    # — o estado inicial pós-replug (HID-raw cru + snapshot evdev populando)
-    # não deve gerar mute/teclas fantasma.
     daemon._arm_input_grace()
 
 
@@ -955,11 +617,6 @@ async def reconnect_loop(
         restore_last_profile as _restore_last_profile,
     )
 
-    # O-REPOUSO-ESPERA-O-EVENTO-01: o caminho de produção (sem watch injetado)
-    # ARMA o dono do evento do processo (`core/o_dono_do_evento.py`), e só ele
-    # arma. Armado, o watch olha a raiz do dono e deixa de listar a pasta; o
-    # desarme no `finally` zera os caches presos a ele. Sem `inotify`, o
-    # `armar` devolve False e tudo segue como antes.
     armou = input_watch is None and _ode.armar()
     try:
         dono = _ode.dono_armado()
@@ -969,114 +626,45 @@ async def reconnect_loop(
             watch = InputDirWatch(root=dono.raiz_das_entradas)
         else:
             watch = InputDirWatch()
-        # Família 5: com o dono, o nome de um `hidraw*` que nasce ou some em
-        # `/dev` também acorda a volta (o nó do rádio que o wake BT recria).
-        # Sem o dono não há este olhar: listar `/dev` a cada fatia seria caro.
-        # Mora no daemon, como o watch do barramento HID: a espera o lê de lá.
         nos = InputDirWatch(root=dono.raiz_dos_nos) if dono is not None else None
         with contextlib.suppress(Exception):
             setattr(daemon, "_watch_dos_hidraw", nos)  # noqa: B010 — fora do protocolo
         registrar_gatilho_da_lightbar(daemon)
-        # Baseline do watch: a 1ª chamada de poll() devolve True por construção
-        # (não havia snapshot anterior). Consumimos aqui para que só mudança REAL
-        # de /dev/input dispare reconciliação antecipada — o connect() do boot já
-        # cobriu o estado inicial.
         watch.poll()
         if nos is not None:
             nos.poll()
 
-        # Se o boot já conectou e restaurou o perfil, não re-publica
-        # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transições.
         initial_connected = bool(daemon.controller.is_connected())
         restored = initial_connected
         was_connected = initial_connected
-        # BORDA-DE-QUEDA-01: a memória POR ALVO, ao lado da agregada. Ela nasce com
-        # a foto de agora, e não vazia: com um controle já de pé no boot, uma
-        # memória vazia leria a primeira volta do laço como "chegou alguém" e
-        # reaplicaria o som sem que nada tivesse acontecido.
         alvos_antes = alvos_conectados_de(daemon) or {}
-        # O-CABO-ASSUME-DO-RADIO-01: e POR ONDE cada um está — a troca que cabe
-        # num tique só não é borda de ninguém, e só a foto do transporte a vê.
         transportes_antes = transportes_dos_alvos_de(daemon) or {}
         while not daemon._is_stopping():
             try:
                 await daemon._run_blocking(daemon.controller.connect)
             except Exception as exc:
-                # Backend real só levanta para erros não-"No device detected"
-                # (permissão hidraw, USB transitório). Loga em DEBUG para não
-                # poluir; próxima iteração tenta de novo.
                 logger.debug("reconnect_probe_failed", err=str(exc), exc_info=True)
-                # S-2: a classe "permissão hidraw" inclui o nó AINDA ESCONDIDO
-                # pelo broker após um handle morrer sem re-enumeração — sem o
-                # restore aqui o probe falharia para sempre (zero controles).
                 await _restore_hidden_before_reopen(daemon)
                 await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
                 continue
 
-            # GATILHO-DA-COR-01: logo depois do tick de hotplug, e ANTES de
-            # qualquer transição — as conexões que o `connect()` acabou de abrir
-            # são o sinal, e cada uma re-adia o disparo. Fica fora do ramo
-            # `offline→online` de propósito: a rajada da Steam que apaga as barras
-            # acontece justamente quando um SEGUNDO controle chega com o primeiro
-            # já online, e ali não há transição nenhuma para pendurar o gancho.
             armar_gatilho_da_cor(daemon)
-            # E O NÚMERO, que é o sinal mais tardio e o mais certo: a conexão diz
-            # que a mesa vai mudar, a numeração diz que ela MUDOU. Ver
-            # `armar_gatilho_da_cor_por_numeracao`.
             armar_gatilho_da_cor_por_numeracao(daemon)
-            # ESCRITOR-CRU-01: e no mesmo tique, a pergunta que a classe LED não
-            # sabe responder — "quem mais segura estes controles?". `forcar=True`
-            # porque este é o único ponto do produto com orçamento para o `pgrep`
-            # (uma vez por volta: a cada 30 s sem o dono do evento; com ele, a
-            # cada evento ou no teto de `TETO_DA_VOLTA_PELO_EVENTO_SEC`), e é ele
-            # que enxerga a Steam SUBINDO sem que ninguém tenha mexido em nada.
-            # Com o dono, a Steam que abre um nó alcançável é da
-            # `VigiaDoSequestro`, que o olha a cada meio segundo.
             await vigiar_escritor_cru(daemon, forcar=True)
-            # SINAL-NO-NASCIMENTO-01: e no mesmo tique, o CARIMBO — "como esta
-            # conexão NASCEU?". Vem DEPOIS do vigia de propósito e por duas razões:
-            # a linha `lightbar_escritor_cru_detectado` que o diário vai casar é
-            # escrita ali em cima, e a foto do sentinela (a régua de primeira mão
-            # que agrava um carimbo) acabou de ser tirada. Custo zero em mesa
-            # parada: sem instância nova, nem `journalctl` roda.
             await carimbar_o_nascimento(daemon)
-            # O-CABO-ASSUME-DO-RADIO-01: e o controle do rádio que ganhou cabo
-            # passa para o cabo. Depois do `connect()` de propósito: a mesa que ele
-            # consulta (quem está no rádio, com que carga) é a deste tique.
             await vigiar_o_cabo_em_espera(daemon)
 
             is_connected = bool(daemon.controller.is_connected())
-            # BORDA-DE-QUEDA-01: a foto por alvo do MESMO tique do agregado — as
-            # duas têm de vir do mesmo instante, senão a comparação atribui a um
-            # tique uma borda que aconteceu no outro.
             alvos_agora = alvos_conectados_de(daemon)
             transportes_agora = transportes_dos_alvos_de(daemon)
             trocando = trocas_de_transporte_pendentes(daemon)
             if is_connected and not was_connected:
-                # BUG-DAEMON-CONNECT-GHOST-INPUT-01: transição offline→online
-                # detectada pelo probe. Rearma o settling antes de qualquer outra
-                # coisa para que o poll loop suprima o input emulado do estado
-                # inicial cru (mute fantasma + teclas aleatórias). O poll loop
-                # também arma o grace na própria borda; aqui cobrimos o caso em
-                # que o probe chega primeiro / reconecta sem o loop ver offline.
                 daemon._arm_input_grace()
                 transport = daemon.controller.get_transport()
                 daemon.bus.publish(
                     EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
                 )
                 logger.info("controller_connected", transport=transport)
-                # VPAD-01: hotplug tardio promove o vpad degradado — espelha o
-                # gancho do boot (`lifecycle.run`). Antes, o único caller era o
-                # connect inicial: quem ligasse o controle DEPOIS do boot ficava
-                # com o vpad uinput até reiniciar o daemon. Roda no executor
-                # (`_run_blocking`): este loop divide o event loop com o poll
-                # loop e a promoção é síncrona (pior caso ~0,5 s no
-                # `UHID_BIND_TIMEOUT_S`) — bloquear aqui congelaria o input. O
-                # `_emu_lock` (RLock) serializa com set_gamepad_emulation/
-                # set_mouse_emulation das outras superfícies (IPC/GUI/hotkey);
-                # os gates internos do upgrade (já-uhid, precheck
-                # `uhid_available()`, cooldown compartilhado com o VPAD-02)
-                # garantem zero churn nas reconexões normais.
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                         upgrade_primary_vpad_to_uhid,
@@ -1087,7 +675,6 @@ async def reconnect_loop(
                             return upgrade_primary_vpad_to_uhid(daemon)
 
                     await daemon._run_blocking(_promover_vpad)
-                # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var.
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.integrations.desktop_notifications import (
                         notify_controller_connected,
@@ -1097,37 +684,11 @@ async def reconnect_loop(
                     with contextlib.suppress(Exception):
                         await _restore_last_profile(daemon)
                     restored = True
-                # SOM-02/E4 (armadilha 4): a posse dos bytes de áudio morre com o
-                # cabo — `_volumes_audio` nasce vazio em cada handle. Roda em TODA
-                # transição offline→online, inclusive na primeira (em que o restore
-                # acima já pode ter aplicado o volume): a reescrita é idempotente
-                # (os mesmos bytes) e o restore tem vários caminhos de desistência
-                # (Modo Nativo, perfil de janela, marker órfão) em que o volume do
-                # perfil ativo se perderia em silêncio. Preferimos a escrita repetida
-                # à perda calada.
-                #
-                # BORDA-DE-QUEDA-01: e num controle POR CONTROLE, não só no
-                # primário — `reapply_speaker_after_connect` sem `uniq` escreve no
-                # primário e em mais ninguém.
                 await reaplicar_som_em_todos_os_alvos(daemon)
                 was_connected = True
             elif not is_connected and was_connected and trocando:
-                # O-CABO-ASSUME-DO-RADIO-01: a mesa ficou vazia porque o controle
-                # está TROCANDO de transporte — o rádio saiu e o cabo ainda não
-                # entrou. Não é queda: sem `probe_offline`, sem aviso no desktop, e
-                # a memória agregada fica "online" para a volta não virar conexão
-                # nova. As bordas por alvo dizem o que houver a dizer.
                 await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora or {})
             elif not is_connected and was_connected:
-                # Transição online→offline detectada pelo probe (poll_loop também
-                # pode detectar via exceção em read_state e disparar reconnect()
-                # legado; logamos aqui só se chegamos primeiro).
-                # PROTOCOLO-QUEDA-01 (07/08): ANTES de publicar, deixa no journal a
-                # última capacidade conhecida. O `probe_offline` é o daemon
-                # PERCEBENDO, não causando — e sem a carga ao lado dele a linha não
-                # distingue "acabou a bateria" de "o link caiu". A leitura mais
-                # fresca vem do nó do kernel, que costuma sobreviver alguns
-                # instantes ao handle; o `idade_s` da linha diz qual das duas é.
                 registrar_queda_da_bateria(
                     daemon, "probe_offline", asyncio.get_running_loop().time()
                 )
@@ -1142,41 +703,18 @@ async def reconnect_loop(
                     notify_controller_disconnected("probe offline")
                 was_connected = False
             elif alvos_agora is not None:
-                # BORDA-DE-QUEDA-01: o agregado não se mexeu — e é justamente aqui
-                # que mora a queda que ninguém via. Com dois ou mais na mesa,
-                # `is_connected()` é `any(...)` e continua dizendo "sim" depois de
-                # um cair: nenhum dos dois ramos acima dispara, e o Controle 2 some
-                # sem evento, sem linha e sem o som de volta quando retorna.
                 await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)
                 if transportes_agora is not None:
                     await reaplicar_som_de_quem_trocou_de_transporte(
                         daemon, alvos_antes, alvos_agora, transportes_antes, transportes_agora
                     )
 
-            # A memória por alvo avança em TODOS os caminhos (inclusive nos dois
-            # ramos agregados, que são donos das bordas deles): deixá-la para trás
-            # faria o tique seguinte reanunciar a mesma borda.
             if alvos_agora is not None:
                 alvos_antes = alvos_agora
             if transportes_agora is not None:
                 transportes_antes = transportes_agora
 
             if is_connected:
-                # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
-                # nó recriado pelo replug/wake BT nasce VISÍVEL (rule 70/uaccess do
-                # udev) e é re-escondido aqui (o broker confere o fs e escreve o que
-                # difere mesmo para nó já rastreado, lição 2; com os nós parados,
-                # nada). Corretor final (interação S x HANG-01,
-                # achado #6): no executor DEDICADO do broker ('hefesto-broker',
-                # 1 worker FIFO), NUNCA no pool compartilhado 'hefesto-hid' de
-                # `_run_blocking` — o cliente do broker faz I/O de socket com
-                # timeout de 2 s por chamada (até ~8s com 4 nós de co-op e broker
-                # degradado), e ocupar 1 dos 2 workers de 'hefesto-hid' enfileira
-                # read_state/_gather_game_signal_inputs/heal atrás dele (o padrão
-                # que o HANG-01 baniu ao isolar `_sync_external_leds`). O await
-                # preserva o backpressure: um broker travado atrasa só ESTE loop,
-                # sem acumular rehides na fila. Best-effort: falha nunca derruba
-                # o probe.
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                         rehide_physical_hidraw,
@@ -1188,31 +726,16 @@ async def reconnect_loop(
                     await asyncio.get_running_loop().run_in_executor(
                         broker_executor_for(daemon), rehide_physical_hidraw, daemon
                     )
-                # FEAT-BACKEND-HOTPLUG-FAST-01: online, espera em fatias curtas
-                # observando /dev/input — hotplug antecipa a reconciliação (o
-                # connect() da próxima iteração) sem esperar o fallback de 30s.
                 if await _wait_online_or_hotplug(daemon, watch):
                     logger.info(
                         "backend_hotplug_reconcile", trigger="input_dir_change"
                     )
             else:
-                # Offline o probe já é curto (5s) e cada iteração reconcilia —
-                # o watch não acrescentaria nada aqui.
-                # GATILHO-DA-COR-01: offline não há barra para pintar; uma sequência
-                # que ficasse armada dispararia numa mesa vazia (no-op caro) ou, pior,
-                # no primeiro controle da PRÓXIMA rajada, adiantada.
-                # Desarma SÓ o gatilho da lightbar, e por nome: "não há controle" é
-                # um motivo DELE, não do mecanismo. Quem registrar outro gatilho
-                # decide se a mesa vazia invalida a sequência dele — presumir que
-                # sim seria uma regra escondida no laço de outra pessoa.
                 gatilho_lightbar = registro_de_gatilhos_de(daemon).obter(
                     NOME_DO_GATILHO_DA_LIGHTBAR
                 )
                 if gatilho_lightbar is not None:
                     gatilho_lightbar.desarmar()
-                # O-CABO-ASSUME-DO-RADIO-01: com o controle trocando de transporte
-                # o cabo entra em menos de um segundo, e esperar os 5 s do probe
-                # seria deixar o jogador parado à toa.
                 await _wait_or_stop(
                     daemon,
                     PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC
@@ -1225,17 +748,7 @@ async def reconnect_loop(
 
 
 def registro_de_gatilhos_de(daemon: DaemonProtocol) -> RegistroDeGatilhos:
-    """O `RegistroDeGatilhos` DESTE daemon, criado na primeira consulta.
-
-    Ele é ÚNICO por daemon porque o mecanismo tem MUITOS armadores e UM SÓ
-    relógio: quem arma o gatilho da lightbar é o tick de hotplug daqui **e** a
-    transição do sinal de jogo (`lifecycle._sync_game_signal`); quem conta o
-    tempo e chama as ações é a espera deste laço. Dois registros dariam duas
-    sequências para o mesmo silêncio.
-
-    É também a porta pela qual o SEGUNDO e o TERCEIRO usuários do mecanismo
-    entram sem copiar nada — ver `core/gatilho_fim_de_sequencia.py`.
-    """
+    """O `RegistroDeGatilhos` DESTE daemon, criado na primeira consulta."""
     registro = getattr(daemon, "_registro_de_gatilhos", None)
     if isinstance(registro, RegistroDeGatilhos):
         return registro
@@ -1252,35 +765,13 @@ def registrar_gatilho(
     *,
     atraso_s: float | None = None,
 ) -> None:
-    """Registra (ou re-registra) a ``tarefa`` nomeada a reafirmar no silêncio.
-
-    É a API pública do mecanismo para outros subsistemas — o caso do `IGNORE`
-    do co-op (ensaio `coop-ignore-avaliado-cedo`) entra por aqui. Tolerante a
-    ordem: pode ser chamada a qualquer momento, e re-registrar não perde a
-    sequência já armada.
-
-    ``atraso_s`` é **obrigatório na primeira vez** e é o SEU número medido: o
-    1,5 s da rajada da Steam não tem nada a ver com os 11 s que a subida dos
-    quatro vpads levou.
-
-    Best-effort: falha de registro nunca derruba quem chamou — o pior que
-    acontece é aquele nome não reafirmar nada.
-    """
+    """Registra (ou re-registra) a ``tarefa`` nomeada a reafirmar no silêncio."""
     with contextlib.suppress(Exception):
         registro_de_gatilhos_de(daemon).registrar(nome, tarefa, atraso_s=atraso_s)
 
 
 def armar_gatilho(daemon: DaemonProtocol, nome: str, *, evento: str, quantos: int = 1) -> bool:
-    """Arma o gatilho ``nome`` por um evento conhecido. RE-ADIA se já armado.
-
-    A outra metade da API pública do mecanismo. Chame a CADA evento que você já
-    detecta — a rajada é do evento, e é o re-adiamento que faz a reafirmação
-    cair no silêncio em vez de no meio dela.
-
-    Devolve ``False`` (sem levantar) quando ninguém registrou aquele nome
-    ainda: um subsistema que arma antes de registrar não pode derrubar o
-    caminho que o chamou.
-    """
+    """Arma o gatilho ``nome`` por um evento conhecido. RE-ADIA se já armado."""
     registro = registro_de_gatilhos_de(daemon)
     if not registro.armar(nome, time.monotonic(), quantos=quantos):
         logger.debug("gatilho_armar_sem_registro", nome=nome, evento=evento)
@@ -1298,39 +789,15 @@ def armar_gatilho(daemon: DaemonProtocol, nome: str, *, evento: str, quantos: in
 
 
 def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
-    """Fia o caso da LIGHTBAR no mecanismo genérico (GATILHO-DA-COR-01).
-
-    A tarefa resolve o conteúdo NA HORA DE AGIR, e isso é requisito medido: o
-    autoswitch troca de perfil quando o jogo abre (12/08 — o perfil `Sackboy`
-    tem cor própria `[80,60,220]` e foi aplicado no meio do ensaio), então
-    guardar a cor no momento de armar reafirmaria o que o produto queria ANTES
-    e brigaria com o próprio produto. Por isso a tarefa é um `getattr` no
-    controller, resolvido a cada disparo, e a cor sai do merge de cinco camadas
-    lá dentro.
-    """
+    """Fia o caso da LIGHTBAR no mecanismo genérico (GATILHO-DA-COR-01)."""
 
     def _reafirmar() -> object:
-        # AS LÂMPADAS JÁ FORAM SOLTAS, no PREPARO deste gatilho
-        # (`_preparar_a_lightbar`, logo abaixo), na thread do laço e antes de
-        # esta tarefa ir ao executor — e a camada do co-op já foi republicada
-        # com o número novo. O merge de cinco camadas resolve cor e número já
-        # novos, juntos (APARELHO-NAO-SE-CONTRADIZ-01, A-NUMERACAO-BATE-A-LUZ-
-        # COM-O-JOGO-01).
-        #
-        # OS DOIS TRANSPORTES, e são DOIS escritores por necessidade: o rádio
-        # só aceita o report cru do 0x31, o cabo é pintado pela classe LED do
-        # kernel. Até 07/09/2026 o gatilho chamava só o primeiro, e o do cabo
-        # ficava com a cor que ganhou na adoção — ela viu dois azuis na mesa,
-        # o P1 e o P2. Ver `repintar_o_cabo_por_sysfs`.
         fora: dict[str, object] = {}
         escrever = getattr(daemon.controller, "reescrever_lightbar_por_hidraw", None)
         if callable(escrever):
             fora["radio"] = escrever()
         cabo = getattr(daemon.controller, "repintar_o_cabo_por_sysfs", None)
         if callable(cabo):
-            # Best-effort e SEPARADO: o rádio falhar não pode calar o cabo, e
-            # vice-versa. Um controller enxuto (dublês da suíte) sem um dos
-            # dois simplesmente não repinta aquele lado.
             with contextlib.suppress(Exception):
                 fora["cabo"] = cabo()
         return fora or None
@@ -1344,28 +811,7 @@ def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
 
 
 def _preparar_a_lightbar(daemon: DaemonProtocol) -> None:
-    """O PREPARO do gatilho da lightbar: solta as lâmpadas e republica o co-op.
-
-    A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 1 (02/10/2026). Roda na thread do
-    LAÇO, chamado pelo `disparar_gatilhos_devidos` antes de a tarefa ir ao
-    executor — o co-op só se mexe no fio dele, e o `_reafirmar` roda no
-    executor.
-
-    AS LÂMPADAS ESPERAM A COR, E É AQUI QUE ELAS SÃO SOLTAS —
-    APARELHO-NAO-SE-CONTRADIZ-01, decisão dela de 20/09/2026, verbatim:
-    *"As lâmpadas esperam a cor"*, porque **o aparelho nunca se contradiz
-    consigo mesmo**. No DISPARO, e não ao ARMAR: liberar no armar devolveria o
-    1,5 s de contradição do silêncio da rajada.
-
-    E A CAMADA DO CO-OP VAI JUNTO, SEM ESCRITA. Ela é uma cópia do número, fica
-    acima da automática no merge, e só se atualizava no tique do co-op, DEPOIS
-    da liberação: em 30/09, às 03:07:55, o registro soltou 1, 2 e 3 e o mesmo
-    disparo escreveu 1, 3 e 4 no aparelho, três milissegundos depois. Vinte e
-    oito das 133 liberações de 24/09 a 30/09 feitas só pelo rádio escreveram um
-    desenho diferente do número solto. Republicada aqui, sem escrever, a
-    escrita do gatilho (uma por controle, nos dois transportes) já resolve o
-    número novo; o cabo sem nó de LED, que ele não alcança, sai na publicação.
-    """
+    """O PREPARO do gatilho da lightbar: solta as lâmpadas e republica o co-op."""
     with contextlib.suppress(Exception):
         soltar = getattr(
             getattr(daemon, "identity_registry", None), "liberar_as_lampadas", None
@@ -1380,43 +826,19 @@ def _preparar_a_lightbar(daemon: DaemonProtocol) -> None:
             logger.warning("gatilho_da_cor_preparo_falhou", err=str(exc))
 
 
-#: O preparo de cada gatilho, por nome: o que roda na thread do laço antes de a
-#: tarefa ir ao executor. O registro genérico (`core/gatilho_fim_de_sequencia`)
-#: não muda; quem precisa de preparo se declara aqui.
 _PREPAROS: dict[str, Callable[[DaemonProtocol], None]] = {
     NOME_DO_GATILHO_DA_LIGHTBAR: _preparar_a_lightbar,
 }
 
 
 def armar_gatilho_da_cor_por_evento(daemon: DaemonProtocol, evento: str) -> None:
-    """Arma o gatilho da lightbar por um evento que NÃO é conexão nova.
-
-    GATILHO-DA-COR-01, escolha dela de 12/08. A rajada de repintura da Steam é
-    disparada por EVENTO, e a conexão é só o evento mais visível: abrir e
-    fechar jogo também a provoca, e o produto já detecta isso (a transição de
-    autoridade do `game_signal`, que é o mesmo sinal que governa o
-    `launch_env`).
-
-    O debounce é o MESMO — este evento entra na mesma sequência que as
-    conexões. Se um jogo fecha no meio de uma rajada de conexões, há UMA
-    repintura no fim, não duas.
-    """
+    """Arma o gatilho da lightbar por um evento que NÃO é conexão nova."""
     registrar_gatilho_da_lightbar(daemon)
     armar_gatilho(daemon, NOME_DO_GATILHO_DA_LIGHTBAR, evento=evento)
 
 
 def armar_gatilho_da_cor(daemon: DaemonProtocol) -> int:
-    """Arma o gatilho da lightbar com as conexões novas que o backend contou.
-
-    GATILHO-DA-COR-01. O sinal vem do hotplug que JÁ existe — o
-    `controller.connect()` deste laço (o `backend_hotplug_reconcile`) conta as
-    conexões novas pelo rádio e as guarda; aqui só se consome o número. Nenhum
-    vigia próprio: um segundo observador de `/sys` ou de `/dev` seria uma
-    segunda verdade sobre quem está na mesa.
-
-    Best-effort: um controller enxuto (FakeController, dublês da suíte) sem o
-    contador simplesmente nunca arma, e o laço segue idêntico ao de antes.
-    """
+    """Arma o gatilho da lightbar com as conexões novas que o backend contou."""
     consumir = getattr(daemon.controller, "consumir_conexoes_bt_novas", None)
     if not callable(consumir):
         return 0
@@ -1433,28 +855,11 @@ def armar_gatilho_da_cor(daemon: DaemonProtocol) -> int:
     return novas
 
 
-#: Onde a última numeração vista fica guardada, no próprio daemon.
 _ATRIBUTO_DA_NUMERACAO = "_ultima_numeracao_da_mesa"
 
 
 def armar_gatilho_da_cor_por_numeracao(daemon: DaemonProtocol) -> bool:
-    """Arma o gatilho quando o NÚMERO de alguém muda. Devolve se armou.
-
-    LIGHTBAR-O-CABO-FICOU-DE-FORA-01, a metade que o `armar_gatilho_da_cor`
-    não cobre. Aquele arma por CONEXÃO NOVA, e a conexão é cedo demais: o
-    controle que chega entra numa mesa que ainda está se montando, e a cor é
-    resolvida com uma numeração que muda um segundo depois. Medido na bancada
-    dela em 07/09/2026 — a pintura saiu com o Starlight Blue no lugar 2 (o
-    vermelho), e quando a mesa assentou ele era o lugar 4 (o rosa).
-
-    O SINAL CERTO É O RESULTADO, não a causa: não "alguém chegou", e sim "o
-    número de alguém é outro". Chegada que não muda número (um controle que
-    cai e volta no mesmo lugar) não repinta nada, e mudança sem chegada — o
-    `renumber` pela interface — repinta.
-
-    Best-effort: daemon sem registro de identidade nunca arma, e o laço segue
-    idêntico ao de antes.
-    """
+    """Arma o gatilho quando o NÚMERO de alguém muda. Devolve se armou."""
     registro = getattr(daemon, "identity_registry", None)
     ler = getattr(registro, "numeros_da_mesa", None)
     if not callable(ler):
@@ -1467,9 +872,6 @@ def armar_gatilho_da_cor_por_numeracao(daemon: DaemonProtocol) -> bool:
     antes = getattr(daemon, _ATRIBUTO_DA_NUMERACAO, None)
     with contextlib.suppress(Exception):
         setattr(daemon, _ATRIBUTO_DA_NUMERACAO, agora)
-    # A PRIMEIRA VOLTA NÃO ARMA. Sem numeração anterior não há mudança a
-    # afirmar, e armar aqui faria toda partida do daemon repintar por nada —
-    # a adoção já pinta.
     if antes is None or antes == agora:
         return False
     registrar_gatilho_da_lightbar(daemon)
@@ -1484,14 +886,7 @@ def armar_gatilho_da_cor_por_numeracao(daemon: DaemonProtocol) -> bool:
 
 
 def sentinela_de_escritor_cru_de(daemon: DaemonProtocol) -> SentinelaDeEscritorCru:
-    """O `SentinelaDeEscritorCru` DESTE daemon, criado na primeira consulta.
-
-    ESCRITOR-CRU-01. Único por daemon pela mesma razão do `RegistroDeGatilhos`:
-    o veredito é uma FOTO com validade, e duas fotos dariam duas verdades
-    sobre a mesma mesa — a do vigia (que arma o gatilho) e a da aba Status
-    (que conta à usuária o que está acontecendo). É ele que o
-    `_enrich_controllers_per_controller` lê, sem tocar em `/proc`.
-    """
+    """O `SentinelaDeEscritorCru` DESTE daemon, criado na primeira consulta."""
     sentinela = getattr(daemon, "_sentinela_de_escritor_cru", None)
     if isinstance(sentinela, SentinelaDeEscritorCru):
         return sentinela
@@ -1601,12 +996,7 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
 
 
 def vigia_do_sequestro_de(daemon: DaemonProtocol) -> VigiaDoSequestro:
-    """A `VigiaDoSequestro` DESTE daemon, criada na primeira consulta.
-
-    STEAM-NO-FISICO-01. Única por daemon: duas vigias reescreveriam a barra em
-    dobro. O campo é declarado no `Daemon` e no `DaemonProtocol`, como o do
-    cartório abaixo; a consulta é defensiva porque os dublês da suíte não o têm.
-    """
+    """A `VigiaDoSequestro` DESTE daemon, criada na primeira consulta."""
     vigia = getattr(daemon, "_vigia_do_sequestro", None)
     if isinstance(vigia, VigiaDoSequestro):
         return vigia
@@ -1616,25 +1006,11 @@ def vigia_do_sequestro_de(daemon: DaemonProtocol) -> VigiaDoSequestro:
     return vigia
 
 
-#: O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 (25/09/2026): os marcos em
-#: que a vigia diz no diário que CONTINUA reescrevendo um sequestro. A
-#: reescrita de cada segundo é `debug`, e a conta só saía no
-#: `sequestro_encerrado` — que não chega enquanto a Steam segura o nó. Em 25/09,
-#: com a Steam segurando três físicos desde 09:32, o diário não tinha uma linha
-#: que provasse a vigia viva, e ela perguntou se a cura valia para todos os
-#: jogadores. Em escala de dez: um sequestro de um dia inteiro custa cinco
-#: linhas, e não oitenta mil.
 MARCOS_DA_REESCRITA: tuple[int, ...] = (10, 100, 1_000, 10_000, 100_000)
 
 
 def _endereco_mascarado(valor: object) -> str:
-    """O endereço de rádio, em qualquer grafia (com `:` ou sem), com a máscara.
-
-    O `mascarar` só reconhece a grafia com dois-pontos; o backend chaveia sem
-    eles (`14:3a:…` e `143a…` são o mesmo controle). Os dois viravam o endereço
-    INTEIRO no diário — o `sequestro_corrigido` gravava as duas grafias sem
-    máscara, com o `nascimento_condenado` mascarado na linha de cima.
-    """
+    """O endereço de rádio, em qualquer grafia (com `:` ou sem), com a máscara."""
     hexa = endereco_normalizado(valor)
     if len(hexa) != 12:
         return str(valor)
@@ -1644,11 +1020,7 @@ def _endereco_mascarado(valor: object) -> str:
 def _nascimentos_condenados_entre(
     daemon: DaemonProtocol, uniqs: Sequence[str]
 ) -> list[str]:
-    """Os controles, entre estes, cujo nascimento o cartório carimbou condenado.
-
-    Só LÊ o cartório: um daemon que ainda não o tem não ganha um por causa
-    desta pergunta (o carimbo é de `carimbar_o_nascimento`).
-    """
+    """Os controles, entre estes, cujo nascimento o cartório carimbou condenado."""
     cartorio = getattr(daemon, "_cartorio_do_nascimento", None)
     if not isinstance(cartorio, CartorioDoNascimento):
         return []
@@ -1664,33 +1036,7 @@ def _nascimentos_condenados_entre(
 async def vigiar_o_sequestro(
     daemon: DaemonProtocol, *, agora: float | None = None
 ) -> int:
-    """Reescreve a barra e o número de quem outro processo sequestrou.
-
-    STEAM-NO-FISICO-01, a segunda obrigação da decisão dela de 23/09/2026:
-
-        *"Hefesto manda e controla sempre, steam sequestrou hefesto corrigiu ao
-        no segundo após e temos que fazer o jogo entender isso."*
-
-    Roda a cada fatia do laço de reconexão (`_wait_online_or_hotplug`), e a
-    fatia encolhe para `PASSO_DA_VIGIA_S` enquanto houver o que vigiar. O
-    `vigiar_escritor_cru` logo antes continua armando o gatilho do fim da
-    sequência (UMA reafirmação quando a rajada sossega); esta é a outra metade,
-    a que ela pediu: *"quantas vezes for preciso"*.
-
-    **VALE NO MODO NATIVO**, ao contrário do vigia irmão: a regra dela de
-    23/09 (A MATRIZ) diz que no Nativo o jogo recebe o físico e mesmo assim o
-    número e a barra são do Hefesto. O que sai é o report mínimo — a vibração,
-    os gatilhos e o áudio continuam do jogo.
-
-    **CUSTO EM REPOUSO: um `stat` e um `access(2)` por nó**, e UMA varredura
-    de `/proc` (de 16 a 21 ms na máquina dela, medido em 25/09) a cada mudança
-    real de permissão do nó — o fd aberto numa janela de exposição é visto
-    depois de ela fechar (`firma_do_no`) — e uma por morte de dono conhecido.
-    Com os nós parados, zero: o `rehide` só escreve o nó que mudou.
-
-    Devolve quantos controles tiveram a barra reescrita. Best-effort: nada
-    aqui pode derrubar o laço de reconexão.
-    """
+    """Reescreve a barra e o número de quem outro processo sequestrou."""
     vigia = vigia_do_sequestro_de(daemon)
     nos_por_uniq: dict[str, str] = {}
     mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
@@ -1703,8 +1049,6 @@ async def vigiar_o_sequestro(
     try:
         sondar = vigia.quer_sondar(nos, agora)
         if sondar:
-            # SÓ a varredura vai ao executor (ela lê `/proc`, de 16 a 21 ms); o resto
-            # do passo é memória, e um `access(2)` por nó.
             def _passo() -> PassoDaVigia:
                 return vigia.passo(nos, agora, sondar=True)
 
@@ -1746,18 +1090,6 @@ async def vigiar_o_sequestro(
         return 0
     vigia.reafirmado(passo.a_reafirmar, agora)
     if passo.novos:
-        # A PRIMEIRA reescrita de cada sequestro vai ao diário, com o que
-        # saiu; as seguintes (uma por segundo) só contam, e a conta sai nos
-        # marcos (`sequestro_segue`) e no `sequestro_encerrado`.
-        #
-        # CORREÇÃO DE FATO (O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01,
-        # 25/09/2026): o evento se chamava `sequestro_corrigido`, com
-        # `resultado={…: True}`, e o `True` diz só que o write(2) do report
-        # voltou inteiro — pelo rádio, que o BlueZ o pôs na fila. A lâmpada não
-        # se lê. Em 25/09 ele disse «corrigido» para P2, P3 e P4 com as barras
-        # do P3 e do P4 apagadas. O nome passa a dizer o que se mede, e o
-        # nascimento condenado vai junto: nessa condição a barra pode não
-        # obedecer (a do P2, condenado também, obedeceu).
         campos: dict[str, object] = {
             "uniqs": [_endereco_mascarado(u) for u in uniqs],
             "escrita_aceita": (
@@ -1783,26 +1115,14 @@ async def vigiar_o_sequestro(
 
 
 def _modo_nativo(daemon: DaemonProtocol) -> bool:
-    """O daemon está em Modo Nativo? Para o diário, e para o cabo que espera o jogo soltar.
-
-    O-CABO-ASSUME-DO-RADIO-01: `vigiar_o_cabo_em_espera` não derruba o rádio
-    no Nativo, em que o jogo segura o físico. Na dúvida (daemon sem a
-    pergunta), não é Nativo.
-    """
+    """O daemon está em Modo Nativo? Para o diário, e para o cabo que espera o jogo soltar."""
     with contextlib.suppress(Exception):
         return bool(daemon.is_native_mode())
     return False
 
 
 def cartorio_do_nascimento_de(daemon: DaemonProtocol) -> CartorioDoNascimento:
-    """O `CartorioDoNascimento` DESTE daemon, criado na primeira consulta.
-
-    SINAL-NO-NASCIMENTO-01. Único por daemon pela mesma razão do
-    `SentinelaDeEscritorCru` logo acima, e por uma a mais: o veredito é POR
-    INSTÂNCIA, e a BARRA-MUDA-01 mediu instâncias travadas e sãs convivendo na
-    mesma máquina, no mesmo adaptador, no mesmo minuto. Uma variável global
-    ("a mesa está suja") apagaria exatamente a distinção que a medição produziu.
-    """
+    """O `CartorioDoNascimento` DESTE daemon, criado na primeira consulta."""
     cartorio = getattr(daemon, "_cartorio_do_nascimento", None)
     if isinstance(cartorio, CartorioDoNascimento):
         return cartorio
@@ -1813,20 +1133,7 @@ def cartorio_do_nascimento_de(daemon: DaemonProtocol) -> CartorioDoNascimento:
 
 
 def _nos_segurados_agora(daemon: DaemonProtocol) -> frozenset[str]:
-    """Os nós que a sonda do PRÓPRIO daemon vê segurados na foto mais recente.
-
-    É a segunda régua do carimbo, e ela é de primeira mão: o
-    `vigiar_escritor_cru` roda no mesmo tique, logo antes, e deixa a foto no
-    sentinela. Sem ela o carimbo dependeria de o daemon conseguir ler o próprio
-    diário — o que não acontece quando ele roda em primeiro plano, fora da unit
-    (`daemon start --foreground`), e ali um "não achei a linha" viraria "nasceu
-    limpa".
-
-    **ESCRITOR-CRU-03 (19/09/2026): `de_fato`, porque o nome diz AGORA.** A
-    foto podia ser de trinta segundos atrás e um PID morto nela carimbava o
-    nascimento como `suspeita` — uma acusação sobre processo que não existe
-    mais. Conferir os PIDs custa um `stat` cada e só pode retirar acusação.
-    """
+    """Os nós que a sonda do PRÓPRIO daemon vê segurados na foto mais recente."""
     with contextlib.suppress(Exception):
         veredito = sentinela_de_escritor_cru_de(daemon).veredito
         if veredito.sondado:
@@ -1862,15 +1169,7 @@ def _uniqs_que_o_backend_segura(daemon: DaemonProtocol) -> frozenset[str]:
 
 
 def _sem_sonda_no_modo_nativo(alvos: Sequence[Instancia]) -> list[Leitura]:
-    """O veredito honesto do Modo Nativo: `nao_sei`, e nunca `limpa`.
-
-    No Modo Nativo o `vigiar_escritor_cru` é no-op TOTAL — nem sonda —, por
-    regra dela (*"no modo nativo devolvemos o controle pra steam"*). Logo o
-    diário NÃO ganha a linha `lightbar_escritor_cru_detectado`, e uma leitura do
-    diário ali devolveria "nasceu com o nó livre" para uma conexão que pode ter
-    nascido com a Steam segurando tudo. Carimbar isso seria fabricar o falso
-    "limpa" que este módulo inteiro existe para não cometer.
-    """
+    """O veredito honesto do Modo Nativo: `nao_sei`, e nunca `limpa`."""
     return [
         Leitura(
             alvo=alvo,
@@ -1887,50 +1186,17 @@ def _sem_sonda_no_modo_nativo(alvos: Sequence[Instancia]) -> list[Leitura]:
 async def carimbar_o_nascimento(
     daemon: DaemonProtocol, *, agora: float | None = None
 ) -> int:
-    """Carimba, no tique de hotplug, como cada conexão VIVA nasceu.
-
-    SINAL-NO-NASCIMENTO-01. O produto já sabia dar o veredito
-    (`sinal_da_barra.veredito_do_nascimento`) e nunca o perguntava na hora em que a conexão
-    nasce — então ele só existia enquanto o diário ainda tivesse a linha, e o
-    diário rotaciona. Aqui ele passa a ser carimbado e guardado.
-
-    O CUSTO, e por que ele é quase sempre zero — três portões, do mais barato
-    ao mais caro:
-
-    1. nenhum handle aberto (`nos_hidraw_por_uniq` vazio) → sai na hora;
-    2. a enumeração é `os.listdir` de sysfs (µs, nada abre `/dev/hidraw`), e só
-       ficam as instâncias que o backend de fato segura;
-    3. o `journalctl` só roda quando sobrou instância SEM carimbo firme. Mesa
-       parada = nenhum subprocesso, tique após tique.
-
-    Uma conexão nova custa UMA leitura do diário — 0,12 s, e não os 5,21 s de
-    antes do recorte de `JANELA_DO_DIARIO_S` (MEDIDO 22/08/2026 no diário de
-    quinze dias dela) — e no máximo mais uma no tique seguinte: a janela de
-    nascimento é de 5 s e o tique online é de 30 s, então o segundo carimbo já
-    sai firme.
-
-    Devolve quantos carimbos foram gravados. Best-effort de ponta a ponta: nada
-    aqui pode derrubar o laço de reconexão.
-
-    ``agora`` entra por argumento (default = o relógio de verdade) pela mesma
-    razão do `SentinelaDeEscritorCru`: é o que permite exercitar a janela de
-    cinco segundos em microssegundos de teste.
-    """
+    """Carimba, no tique de hotplug, como cada conexão VIVA nasceu."""
     cartorio = cartorio_do_nascimento_de(daemon)
     nossos = _uniqs_que_o_backend_segura(daemon)
     if not nossos:
-        # Nenhum handle aberto: não há controle NOSSO para carimbar. Sai antes
-        # do `listdir` e muito antes do `journalctl`.
         return 0
     try:
         vivas = await daemon._run_blocking(instancias_dualsense)
     except Exception as exc:
         logger.debug("carimbo_do_nascimento_sysfs_falhou", err=str(exc))
         return 0
-    # Só as instâncias que o backend de fato abriu. O sysfs enumera TODO
     # DualSense da máquina, e carimbar um que o produto não segura seria falar
-    # de um controle que a tela nem lista — além de fazer a suíte de testes,
-    # que roda na mesa dela com quatro controles ligados, pagar `journalctl`.
     vivas = [alvo for alvo in vivas if endereco_normalizado(alvo.uniq) in nossos]
     agora = time.monotonic() if agora is None else float(agora)
     try:
@@ -1956,9 +1222,6 @@ async def carimbar_o_nascimento(
             logger.debug("carimbo_do_nascimento_diario_falhou", err=str(exc))
             return 0
 
-    # No Modo Nativo a foto do sentinela é VELHA — o vigia nem sonda ali —, e
-    # agravar um carimbo com foto velha é a mesma desonestidade de absolver com
-    # diário incompleto. Sem sonda, sem segunda régua.
     nos = frozenset() if nativo else _nos_segurados_agora(daemon)
     try:
         gravados = cartorio.carimbar(leituras, agora, nos_segurados=nos)
@@ -1987,18 +1250,10 @@ async def carimbar_o_nascimento(
 
 
 async def disparar_gatilhos_devidos(daemon: DaemonProtocol) -> int:
-    """Chama a tarefa de todo gatilho cuja sequência sossegou. Devolve quantos.
-
-    O RELÓGIO ÚNICO do mecanismo. `devidos` já consome — nenhuma sequência
-    dispara duas vezes. Cada tarefa vai pelo executor (`_run_blocking`), porque
-    elas fazem I/O (hidraw, arquivo de ambiente), e falha de uma nunca impede
-    a outra: são subsistemas diferentes reafirmando coisas diferentes.
-    """
+    """Chama a tarefa de todo gatilho cuja sequência sossegou. Devolve quantos."""
     registro = registro_de_gatilhos_de(daemon)
     prontos = registro.devidos(time.monotonic())
     for gatilho, eventos in prontos:
-        # A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01: o preparo roda AQUI, no fio do
-        # laço, e só depois a tarefa vai ao executor (`_PREPAROS`).
         preparo = _PREPAROS.get(gatilho.nome)
         if preparo is not None:
             preparo(daemon)
@@ -2017,14 +1272,7 @@ async def disparar_gatilhos_devidos(daemon: DaemonProtocol) -> int:
 
 
 def _firmas_dos_nos(daemon: DaemonProtocol) -> dict[str, tuple[int, int] | None]:
-    """`{nó: firma}` dos `hidraw` dos controles abertos — um `stat` por nó.
-
-    O-REPOUSO-ESPERA-O-EVENTO-01, família 5. A firma (`firma_do_no`: inode e
-    `ctime`) muda quando o nó é recriado, quando o broker o esconde ou expõe
-    (`chmod` e `setxattr`) e quando o udev devolve a ACL ao físico: é o evento
-    que o rehide de 30 s refazia por relógio. Os nós são os do backend
-    (`nos_hidraw_por_uniq`), só memória; sem o método, nenhum.
-    """
+    """`{nó: firma}` dos `hidraw` dos controles abertos — um `stat` por nó."""
     nos: dict[str, str] = {}
     mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
     if callable(mapear):
@@ -2034,16 +1282,7 @@ def _firmas_dos_nos(daemon: DaemonProtocol) -> dict[str, tuple[int, int] | None]
 
 
 def _permissoes_das_entradas() -> tuple[int, ...] | None:
-    """A geração de PERMISSÕES de `/dev/input` no dono do evento; None sem ele.
-
-    O-REPOUSO-ESPERA-O-EVENTO-01, família 5 (conferência). O rehide esconde o
-    `hidraw` do físico E os nós de entrada dele (o `fechar_entradas` do
-    broker); a firma cobre só o `hidraw`. A ACL que o udev devolve só aos nós
-    de entrada (um `udevadm trigger` do subsistema `input`) chega como
-    `IN_ATTRIB` em `/dev/input`, e sem este olhar esperaria o teto de 300 s,
-    onde o relógio de 30 s a pegava. Anotada depois da rodada, como a firma:
-    o próprio rehide faz `chmod` nesses nós.
-    """
+    """A geração de PERMISSÕES de `/dev/input` no dono do evento; None sem ele."""
     dono = _ode.dono_armado()
     if dono is None:
         return None
@@ -2053,41 +1292,7 @@ def _permissoes_das_entradas() -> tuple[int, ...] | None:
 async def _wait_online_or_hotplug(
     daemon: DaemonProtocol, watch: InputDirWatch
 ) -> bool:
-    """Espera o intervalo online em fatias, sondando o watch de /dev/input.
-
-    FEAT-BACKEND-HOTPLUG-FAST-01: dorme `RECONNECT_HOTPLUG_POLL_INTERVAL_SEC`
-    por fatia (respeitando `_stop_event`) e consulta `watch.poll()` entre elas
-    (listdir ~µs — custo zero quando nada muda). Retorna:
-      - True  → /dev/input mudou (controle plugado/removido); o chamador deve
-                reconciliar imediatamente;
-      - False → o fallback `RECONNECT_ONLINE_CHECK_INTERVAL_SEC` expirou sem
-                mudança (reconciliação periódica normal) ou o daemon está
-                parando.
-
-    GATILHO-DA-COR-01: com ALGUM gatilho armado a fatia encurta para
-    `PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC` e os disparos devidos são
-    avaliados entre as fatias. A espera não termina por causa de um disparo —
-    reafirmar uma cor não é motivo para reconciliar hotplug, e devolver True
-    aqui faria o chamador logar uma mudança de `/dev/input` que não houve.
-
-    O-REPOUSO-ESPERA-O-EVENTO-01, família 5 (29/09/2026): com o dono do evento
-    armado, o teto é `TETO_DA_VOLTA_PELO_EVENTO_SEC` e a espera acorda também
-    quando o nome de um `hidraw*` nasce ou some em `/dev` (o watch que o laço
-    guarda no daemon, `_watch_dos_hidraw`), quando a firma de um nó dos
-    controles muda ou quando um nó de `/dev/input` muda de permissão (a ACL
-    que volta ao nó de entrada do físico). **As firmas e as permissões se
-    anotam aqui, DEPOIS da
-    própria rodada**: o `connect()` e o rehide mexem nos nós (o broker faz
-    `chmod` ao esconder e ao expor para o `hidapi`), e a volta que acordasse com
-    o próprio rastro rodaria de novo a cada fatia. Os NOMES seguem anotados
-    antes da rodada, como sempre foram (o watch não é consumido depois dela):
-    um nó que nasce no meio da rodada acorda a volta seguinte, e os nomes que a
-    própria rodada cria (o vpad) convergem numa volta a mais, como hoje.
-    """
-    # STEAM-NO-FISICO-01: a vigia olha UMA vez antes de dormir. Se o rehide
-    # acabou de fechar um nó que estava aberto (a firma mudou), o fd que entrou
-    # pela janela de exposição é visto agora — não depois da primeira fatia de
-    # 2 s. Com os nós parados, o rehide não escreve e o passo não varre.
+    """Espera o intervalo online em fatias, sondando o watch de /dev/input."""
     await vigiar_o_sequestro(daemon)
     pelo_evento = _ode.dono_armado() is not None
     teto = (
@@ -2104,55 +1309,34 @@ async def _wait_online_or_hotplug(
         )
         if registro_de_gatilhos_de(daemon).algum_armado():
             step = min(step, PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC)
-        # E a fatia encolhe para meio segundo com nó sequestrado ou alcançável.
         if vigia_do_sequestro_de(daemon).vigilante:
             step = min(step, PASSO_DA_VIGIA_S)
         await _wait_or_stop(daemon, step)
         if daemon._is_stopping():
             return False
         elapsed += step
-        # ESCRITOR-CRU-01: `forcar=False` — a fatia NÃO sonda por si. Ela só
-        # olha o contador de pinturas do backend (uma leitura de inteiro sob
-        # lock) e, se o produto acabou de pintar, reaproveita a foto de até
-        # 5 s. Sem isto a reafirmação de um comando dela esperaria o tique de
-        # 30 s, que é tarde demais para um gesto ter resposta.
         await vigiar_escritor_cru(daemon, forcar=False)
         await vigiar_o_sequestro(daemon)
         await disparar_gatilhos_devidos(daemon)
-        # O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01: o número
-        # muda sem evento nenhum quando o prazo do lugar guardado vence, e a
-        # volta pelo evento dorme até o teto — o P4 dela ficou 4 por 271 s
-        # depois do prazo. A conferência é a leitura que a tela faz (memória,
-        # sob o lock), e só arma quando a tabela MUDA; armado, a fatia encolhe
-        # e o disparo cai `ATRASO_APOS_A_ULTIMA_CONEXAO_S` depois.
         armar_gatilho_da_cor_por_numeracao(daemon)
         if watch.poll():
             return True
-        # Família 5: o nome de um `hidraw*` e a firma de um nó, só com o dono.
         if isinstance(nos, InputDirWatch) and _ode.armado() and nos.poll():
             logger.debug("volta_acordada", pelo="hidraw_novo")
             return True
         if firmas is not None and _firmas_dos_nos(daemon) != firmas:
             logger.debug("volta_acordada", pelo="firma_do_no")
             return True
-        # A ACL que volta a um nó de ENTRADA do físico (um `udevadm trigger` de
-        # `input`) não muda a firma do `hidraw`, e o rehide fecha os dois.
         if permissoes is not None and _permissoes_das_entradas() != permissoes:
             logger.debug("volta_acordada", pelo="permissao_de_entrada")
             return True
-        # O-CABO-ASSUME-DO-RADIO-01: o cabo que o kernel recusa não muda
-        # `/dev/input`; ele aparece no barramento HID.
         if _o_barramento_hid_mudou(daemon):
             return True
     return False
 
 
 async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> None:
-    """Dorme `timeout` segundos respeitando `_stop_event`.
-
-    Retorna logo se o stop_event for sinalizado durante a espera. Não levanta
-    em timeout — só interrompe o sleep.
-    """
+    """Dorme `timeout` segundos respeitando `_stop_event`."""
     stop_event = getattr(daemon, "_stop_event", None)
     if stop_event is None:
         await asyncio.sleep(timeout)
@@ -2161,19 +1345,11 @@ async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> None:
         await asyncio.wait_for(stop_event.wait(), timeout=timeout)
 
 
-#: Quanto o ``shutdown`` espera cada tarefa do daemon antes de seguir sem ela.
 _TETO_DA_TAREFA_S = 5.0
 
 
 async def _esperar_a_tarefa_cair(task: asyncio.Future[Any]) -> None:
-    """Espera a tarefa cancelada terminar, cancelando de novo a cada 0,5 s.
-
-    O-CI-DA-DEV-VOLTA-A-VERDE-01 (28/09/2026): cancelar uma vez e esperar sem
-    teto prendia o ``shutdown`` para sempre quando uma tarefa engolia o
-    cancelamento — o ouvinte do som fazia isso, e o CI ficou seis horas parado.
-    A cura é aqui, e não em cada tarefa, porque cobre toda tarefa que engolir o
-    cancelamento. Depois do teto o ``shutdown`` segue e o diário diz qual ficou.
-    """
+    """Espera a tarefa cancelada terminar, cancelando de novo a cada 0,5 s."""
     relogio = asyncio.get_running_loop()
     prazo = relogio.time() + _TETO_DA_TAREFA_S
     while not task.done():
@@ -2192,64 +1368,36 @@ async def _esperar_a_tarefa_cair(task: asyncio.Future[Any]) -> None:
 async def shutdown(daemon: DaemonProtocol) -> None:
     """Encerra todos os recursos do daemon de forma limpa."""
     logger.info("daemon_shutting_down")
-    # BT-MIC-REGISTRY-01: a ponte de microfone é a PRIMEIRA a cair — parar as
-    # pontes é o que manda o report 0x32 de "desliga o mic" para cada
-    # controle. Deixar isso para o fim do shutdown (ou perder para uma exceção
-    # de outro subsystem) deixaria o microfone LIGADO no firmware depois que o
-    # daemon já morreu, e ninguém o desligaria até o controle desligar.
     parar_bt_mic = getattr(daemon, "_stop_bt_mic", None)
     if getattr(daemon, "_bt_mic_subsystem", None) is not None and callable(parar_bt_mic):
         with contextlib.suppress(Exception):
             await parar_bt_mic()
-    # SOM-FIADO-01: o som cai junto com o microfone, e pela mesma razão que
-    # o `__init__.py` dos subsystems avisa — quem seguir a receita de DUAS
-    # metades sobe o subsystem e nunca o para, e no caso do som o nó fica na
-    # lista de saída dela depois de o daemon morrer. São TRÊS lugares.
     parar_som = getattr(daemon, "_stop_alto_falante", None)
     if getattr(daemon, "_alto_falante_subsystem", None) is not None and callable(
         parar_som
     ):
         with contextlib.suppress(Exception):
             await parar_som()
-    # A-COSTURA-DA-ONDA-2-01: a central do rádio fecha antes do vigia das
-    # conexões — a ordem inversa do arranque. Sem isto, o daemon que para no
-    # meio de uma janela de pareamento deixa o `Pairable` do destino `true`: o
-    # fio da central só o devolve quando vê o `fechar()`.
     central = getattr(daemon, "_central_do_radio", None)
     if central is not None:
         with contextlib.suppress(Exception):
             await asyncio.to_thread(central.fechar)
-    # CONEXAO-ZUMBI-01: o vigia das conexões cai junto, e é a TERCEIRA ponta da
-    # receita que o `subsystems/__init__.py` descreve. Sem esta linha a thread
-    # continuaria olhando a mesa — e chamando `sudo` — com o daemon já morto.
     parar_conexoes = getattr(daemon, "_stop_conexoes", None)
     if getattr(daemon, "_conexoes_subsystem", None) is not None and callable(
         parar_conexoes
     ):
         with contextlib.suppress(Exception):
             await parar_conexoes()
-    # Plugins: stop antes dos outros subsystems (on_unload pode usar controller).
     if daemon._plugins_subsystem is not None:
         with contextlib.suppress(Exception):
             await daemon._plugins_subsystem.stop()
         daemon._plugins_subsystem = None
-    # A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01: o `_stop_metrics` existia, tinha teste
-    # e NENHUM chamador em produção — o servidor HTTP do Prometheus só morria
-    # porque a thread é daemon, isto é, por acidente do interpretador e não por
-    # decisão do produto. Morrer por acidente basta no `SIGTERM` e não basta em
-    # nada mais: um `shutdown()` sem `exit` (recarga, teste de integração, o
-    # daemon que se desmonta para remontar) deixava a porta ATENDENDO estado de
-    # um daemon já desmontado. Cai logo depois dos plugins e antes dos
-    # dispositivos, pela mesma razão que os plugins caem cedo: o que EXPÕE
-    # estado morre antes do que produz estado.
     parar_metrics = getattr(daemon, "_stop_metrics", None)
     if getattr(daemon, "_metrics_subsystem", None) is not None and callable(parar_metrics):
         with contextlib.suppress(Exception):
             await parar_metrics()
     daemon._hotkey_manager = None
     daemon._audio = None
-    # FEAT-DSX-COOP-LOCAL-01: desmonta os jogadores secundários (solta o grab e
-    # fecha os uinput) — senão os controles secundários ficariam "sequestrados".
     if getattr(daemon, "_coop_manager", None) is not None:
         with contextlib.suppress(Exception):
             daemon._coop_manager.stop_all()
@@ -2258,8 +1406,6 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             daemon._mouse_device.stop()
         daemon._mouse_device = None
-    # FEAT-DSX-GAMEPAD-FLAVOR-01: para o gamepad virtual e LIBERA o grab do
-    # controle físico (senão o controle ficaria "sequestrado" após o shutdown).
     if getattr(daemon, "_gamepad_device", None) is not None:
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
@@ -2267,20 +1413,11 @@ async def shutdown(daemon: DaemonProtocol) -> None:
             )
 
             stop_gamepad_emulation(daemon, persist=False)
-    # Achados Onda S #5/#6/#10: desliga o executor dedicado do broker ANTES do
-    # close da lease — operações ainda na fila (o restore_all que o stop acima
-    # agendou, hides atrasados) são canceladas: o EOF do close abaixo restaura
-    # TUDO de uma vez, e um hide tardio pós-close reabriria uma lease órfã.
     broker_executor = getattr(daemon, "_hidraw_broker_executor", None)
     if broker_executor is not None:
         with contextlib.suppress(Exception):
             broker_executor.shutdown(wait=False, cancel_futures=True)
         daemon._hidraw_broker_executor = None
-    # BROKER-01: fecha a lease do broker explicitamente (belt) — o
-    # `stop_gamepad_emulation` acima já pediu restore_all; o close derruba a
-    # conexão AGORA (EOF imediato ⇒ o broker restaura o que restou) sem
-    # esperar o kernel varrer os fds do processo. Morte suja (SIGKILL/OOM)
-    # segue coberta pelo EOF automático.
     client = getattr(daemon, "_hidraw_broker_client", None)
     if client is not None:
         with contextlib.suppress(Exception):
@@ -2290,30 +1427,14 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             daemon._keyboard_device.stop()
         daemon._keyboard_device = None
-    # O-TECLADO-QUE-SOBREVIVE-AO-DAEMON-01: quem fecha o que o daemon abriu.
-    # Esta função fechava o `_keyboard_device` e passava DIRETO pelo
-    # `_osk_controller` — o teclado na tela que o L3 dela abriu ficava vivo
-    # depois do `shutdown`, na tela dela, sem ninguém para fechá-lo. Na
-    # instalação com systemd o `KillMode=control-group` cobria o caso por
-    # acidente (o wvkbd nasce no cgroup do serviço); quem roda o daemon à mão
-    # com `--foreground` — que é como esta casa trabalha o dia inteiro — ficava
-    # descoberto, e a rede acidental sumiria sem aviso no dia em que a unidade
-    # ganhasse `KillMode=process` ou o produto virasse Flatpak.
-    #
     # `osk.close()` DIRETO, e não `stop_keyboard_emulation`: aquele derruba
-    # também o `TouchpadReader` e o device virtual, que esta função já trata do
-    # seu jeito, logo acima. `suppress` porque a regra desta função é que
     # limpeza quebrada nunca derruba a parada. Vem DEPOIS do device: o
     # `virtual_token_callback` do device aponta para `osk.dispatch_token`, e
-    # parar o device primeiro fecha a porta por onde um token atrasado
-    # reabriria o teclado que acabamos de fechar.
     osk = getattr(daemon, "_osk_controller", None)
     if osk is not None:
         with contextlib.suppress(Exception):
             osk.close()
         daemon._osk_controller = None
-    # FEAT-DAEMON-GRACEFUL-SHUTDOWN-01: fecha IPC/UDP com timeout — um stop() que
-    # trave (ex.: cliente em voo) não pode pendurar o shutdown indefinidamente.
     if daemon._ipc_server is not None:
         with contextlib.suppress(Exception):
             await asyncio.wait_for(daemon._ipc_server.stop(), timeout=2.0)
@@ -2326,14 +1447,11 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             daemon._autoswitch.stop()
         daemon._autoswitch = None
-    # CLUSTER-IPC-STATE-PROFILE-01 (Bug A): limpa cache de último state.
     daemon._last_state = None
     for task in daemon._tasks:
         task.cancel()
     for task in daemon._tasks:
         await _esperar_a_tarefa_cair(task)
-    # BUG-DAEMON-NO-DEVICE-FATAL-01: reconnect_task é parte de `_tasks`,
-    # já cancelada acima — só zera a referência nomeada.
     daemon._reconnect_task = None
     try:
         await daemon._run_blocking(daemon.controller.disconnect)
@@ -2342,9 +1460,6 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     if daemon._executor is not None:
         daemon._executor.shutdown(wait=False, cancel_futures=True)
         daemon._executor = None
-    # HANG-01: pool DEDICADO do tick de externos (isolado de `_executor`
-    # desde a correção pós-auditoria 20/07) — mesmo trade-off de shutdown
-    # não-bloqueante (uma thread wedged não impede o processo de encerrar).
     if daemon._external_executor is not None:
         daemon._external_executor.shutdown(wait=False, cancel_futures=True)
         daemon._external_executor = None

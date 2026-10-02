@@ -1,31 +1,4 @@
-"""SOM-NA-TELA-01 (A3) — a `fonte` de cada controle ganhou gesto e leitura.
-
-**O DEFEITO, medido em 10/09/2026 e escrito na própria sprint:** a
-SFX-POR-CONTROLE-01 fiou o produto para OBEDECER a `speaker.fonte` — `mix` põe
-o monitor da saída padrão TAMBÉM no nó daquele controle (o som do PC chega ao
-plástico **sem sair da televisão**), `sfx` deixa o nó só para o que o jogo
-mandar. E **nenhuma aba gravava aquele campo**:
-
-    grep -rn '"fonte"' interface/ app/   →  zero escritor de speaker.fonte
-
-*O efeito pronto e sem escolha* — o defeito-mãe desta casa virado do avesso.
-
-## O QUE ESTA RÉGUA TRAVA
-
-1. o daemon PUBLICA a fonte, pelo dono que já a conhece (gancho), e `""`
-   quando ninguém sabe — nunca o padrão disfarçado de escolha;
-2. a aba LÊ do estado, e não abre perfil por conta própria;
-3. o gesto GRAVA, pelo escritor único do som, e o de um controle não encosta
-   no vizinho;
-4. «Ouvir junto» DESLIGA a camada 1, porque «Todo o som do PC» tira o som da
-   televisão e ele não tira;
-5. sair do «junto» apaga o `mix` — os três botões são um estado só;
-6. **e o pacote se limita ao que a página PUBLICADA tem**, que é a régua do
-   `check_o_desenho_aprovado` virada em código: emitir `"junto"` para uma
-   página de dois botões apagaria a fileira inteira, sem uma palavra.
-
-**A MORDIDA de cada teste está na sua docstring.**
-"""
+"""SOM-NA-TELA-01 (A3) — a `fonte` de cada controle ganhou gesto e leitura."""
 
 from __future__ import annotations
 
@@ -79,29 +52,7 @@ def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Pat
 
 @pytest.fixture(autouse=True)
 def _o_cache_da_camada_1_comeca_vazio() -> Any:
-    """Esta régua mede o MÓDULO, então ela garante o estado do módulo.
-
-    **A MESMA CURA, PELO MESMO ENVENENADOR** — a irmã
-    `test_a02_os_botoes_do_som_fazem_o_que_dizem.py` já a tinha desde a costura
-    de 11/09/2026, e o par é literalmente o mesmo:
-
-        pytest test_a02_o_botao_do_mic_tem_tres_estados.py <este arquivo>
-            -> 2 failed, `assert '' == 'jogo'`
-        pytest <este arquivo>
-            -> 12 passed
-
-    `a02.pacote(ctx)` do vizinho preenche o cache de módulo `_CAMADA_1` com a
-    leitura DAQUELE contexto; quem roda depois no mesmo processo acha
-    `_CAMADA_1[P1]` e `aceso_da_rota` devolve o `botao_aceso` de lá (`""`) em
-    vez de ler o byte do `entry` que ESTA régua monta.
-
-    MEDIDO EM 20/09/2026, e o achado é de varredura, não desta leva: nenhum dos
-    dois arquivos mudou — só a vizinhança em que eles correm. **Estado de
-    módulo tem um dono, e quem mede o módulo o zera.**
-
-    E DEVOLVE O QUE ACHOU: um teste que limpa a casa do vizinho e não a devolve
-    troca um defeito de ordem por outro, na direção contrária.
-    """
+    """Esta régua mede o MÓDULO, então ela garante o estado do módulo."""
     from pacotes import a02_controles as a02
 
     antes = dict(a02._CAMADA_1)
@@ -118,11 +69,7 @@ def _o_cache_da_camada_1_comeca_vazio() -> Any:
 
 @pytest.fixture
 def fileira_de_tres(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A página publicada COM o terceiro botão — o mundo depois do `--publicar`.
-
-    Sem esta fixture as réguas de leitura mediriam o mundo de hoje (a página de
-    dois), e passariam por acidente no dia em que a aba for publicada.
-    """
+    """A página publicada COM o terceiro botão — o mundo depois do `--publicar`."""
     from pacotes import a02_controles as a02
 
     monkeypatch.setattr(a02, "A_FILEIRA_TEM_TRES", True)
@@ -145,7 +92,7 @@ def _ctx(*entradas: dict[str, Any]) -> Any:
 
 def _gesto(nome: str) -> Any:
     import pacotes
-    import pacotes.a02_controles  # importar é registrar
+    import pacotes.a02_controles
 
     fn = pacotes.gesto_da_pagina("02-controles.html", nome)
     assert fn is not None, f"02-controles.html:{nome} não tem dono"
@@ -153,13 +100,7 @@ def _gesto(nome: str) -> Any:
 
 
 def _do_controle(chave: str) -> dict[str, Any]:
-    """O bloco que VALE daquele controle: o do perfil por cima do do computador.
-
-    Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o som é do
-    computador: o clique grava no `maquina.json`, e no perfil só quando ele já
-    sobrepõe o cartão. A régua lê o que vale, que é o que o aparelho recebe na
-    ativação, e não um dos dois arquivos.
-    """
+    """O bloco que VALE daquele controle: o do perfil por cima do do computador."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
         carregar_o_que_vale,
     )
@@ -171,18 +112,10 @@ def _do_controle(chave: str) -> dict[str, Any]:
     bloco = (vista.controllers or {}).get(chave)
     return bloco.model_dump(mode="json", exclude_unset=True) if bloco is not None else {}
 
-# ===========================================================================
-# 1. O daemon publica — e `""` não é `sfx`
-# ===========================================================================
-
 
 class TestOQueODaemonPublica:
     def test_o_gancho_responde_e_o_padrao_e_nao_sei(self) -> None:
-        """MORDIDA: faça `fonte_publicada` devolver `FONTE_PADRAO` sem dizedor.
-
-        Aí a tela acenderia «Sons do jogo» para todo mundo como se ela tivesse
-        escolhido — uma escolha inventada é pior que nenhuma.
-        """
+        """MORDIDA: faça `fonte_publicada` devolver `FONTE_PADRAO` sem dizedor."""
         from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
         anterior = af.registrar_dizedor_da_fonte(None)
@@ -195,11 +128,7 @@ class TestOQueODaemonPublica:
             af.registrar_dizedor_da_fonte(anterior)
 
     def test_valor_estranho_vale_como_nao_sei(self) -> None:
-        """MORDIDA: devolva o que o dizedor disser, sem conferir.
-
-        Um `None`, um `""` ou um `"MIX"` do perfil viraria um campo que a tela
-        não sabe pintar — e a fileira apagaria inteira.
-        """
+        """MORDIDA: devolva o que o dizedor disser, sem conferir."""
         from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
         anterior = af.registrar_dizedor_da_fonte(lambda _u: "MIX")
@@ -222,18 +151,9 @@ class TestOQueODaemonPublica:
             af.registrar_dizedor_da_fonte(anterior)
 
 
-# ===========================================================================
-# 2. A aba lê o que o daemon publicou
-# ===========================================================================
-
-
 class TestOQueATelaLe:
     def test_a_fonte_sai_do_estado_e_nao_do_disco(self) -> None:
-        """MORDIDA: faça `fonte_do_controle` abrir o perfil ativo.
-
-        Seriam dois leitores da mesma escolha dela, e o da aba rodaria a cada
-        tique — a tempestade de syscalls que o mapa de motores já pagou.
-        """
+        """MORDIDA: faça `fonte_do_controle` abrir o perfil ativo."""
         from pacotes import a02_controles as a02
 
         assert a02.fonte_do_controle(_dele(P1, "mix")) == "mix"
@@ -243,12 +163,7 @@ class TestOQueATelaLe:
     def test_todo_o_som_do_pc_vence_o_mix(
         self, fileira_de_tres: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: perguntar pelo `mix` ANTES de olhar a camada 1.
-
-        «Todo o som do PC» é o único estado em que a saída padrão do sistema
-        mudou de lugar — um fato que ela OUVE. Contradizê-lo na tela é o
-        defeito de 03/09, com o botão aceso e o som saindo na televisão.
-        """
+        """MORDIDA: perguntar pelo `mix` ANTES de olhar a camada 1."""
         from pacotes import a02_controles as a02
 
         monkeypatch.setattr(a02, "aceso_da_rota", lambda _u, _e: "pc")
@@ -264,22 +179,11 @@ class TestOQueATelaLe:
     def test_a_pagina_de_dois_botoes_nunca_ouve_junto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: tire o `A_FILEIRA_TEM_TRES` de `aceso_da_fileira`.
-
-        Enquanto ela não aprova a aba, a página publicada tem DOIS botões.
-        Emitir `"junto"` ali não acende nenhum: a fileira apaga inteira, sem
-        uma palavra — pior que o estado anterior, e invisível para quem
-        escreveu o pacote.
-        """
+        """MORDIDA: tire o `A_FILEIRA_TEM_TRES` de `aceso_da_fileira`."""
         from pacotes import a02_controles as a02
 
         monkeypatch.setattr(a02, "A_FILEIRA_TEM_TRES", False)
         assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "jogo"
-
-
-# ===========================================================================
-# 3. O gesto grava — e não encosta no vizinho
-# ===========================================================================
 
 
 class TestOGesto:
@@ -301,12 +205,7 @@ class TestOGesto:
     def test_ouvir_junto_devolve_a_saida_padrao(
         self, casa: pathlib.Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: apague o `devolver_o_som_do_pc()` do ramo do «junto».
-
-        «Todo o som do PC» TIRA o som da televisão; «Ouvir junto» o deixa lá.
-        Sem devolver a saída padrão, a televisão fica muda com a tela dizendo
-        "junto" — o desacordo de 03/09 pela outra porta.
-        """
+        """MORDIDA: apague o `devolver_o_som_do_pc()` do ramo do «junto»."""
         from hefesto_dualsense4unix.app import audio_saida
         from pacotes import a02_controles as a02
 
@@ -319,12 +218,7 @@ class TestOGesto:
         assert devolveu, "o «Ouvir junto» não devolveu a saída padrão do sistema"
 
     def test_sair_do_junto_apaga_o_mix(self, casa: pathlib.Path) -> None:
-        """MORDIDA: apague o ramo que grava `fonte: sfx` ao sair do «junto».
-
-        Os três botões são UM estado. Um `mix` esquecido embaixo de «Sons do
-        jogo» faz o controle continuar ouvindo o PC com a tela dizendo que
-        não — e ela não teria botão nenhum que o desligasse.
-        """
+        """MORDIDA: apague o ramo que grava `fonte: sfx` ao sair do «junto»."""
         p = Ponte()
         _gesto("rota")(_ctx(), {"uniq": P1, "rota": "junto"}, p)
         assert (_do_controle(CHAVE_P1).get("speaker") or {}).get("fonte") == "mix"
@@ -335,20 +229,7 @@ class TestOGesto:
     def test_o_junto_nao_manda_byte_de_rota_ao_daemon(
         self, casa: pathlib.Path
     ) -> None:
-        """MORDIDA: deixe o «junto» cair no `speaker_set(rota=…)` dos outros dois.
-
-        A `fonte` é do NÓ (camada 1, PipeWire); a rota é do FIRMWARE (camada
-        2). Mandar um byte de rota aqui escreveria no aparelho uma escolha que
-        ela não fez — e apagaria a que estava valendo.
-
-        **A RÉGUA PASSOU A OLHAR O CAMPO, E NÃO O MÉTODO — 20/09/2026.** Ela
-        dizia `"speaker_set" not in p.nomes`, e aquilo era mais do que o
-        parágrafo acima pede: desde a `O-BOTAO-ENTREGA-O-QUE-PROMETE-01` este
-        ramo fala `speaker.set` de propósito, para mandar a `fonte` ao daemon —
-        sem isso a escolha dela só chegava ao nó pelo perfil ATIVO, e sem
-        perfil ativo não chegava nunca. O que continua proibido, e é o que o
-        defeito era, é o BYTE: nenhuma chamada deste ramo pode levar `rota`.
-        """
+        """MORDIDA: deixe o «junto» cair no `speaker_set(rota=…)` dos outros dois."""
         p = Ponte()
         _gesto("rota")(_ctx(), {"uniq": P1, "rota": "junto"}, p)
         com_rota = [c for c in p.chamadas if c[0] == "speaker_set" and "rota" in c[1]]
@@ -358,11 +239,6 @@ class TestOGesto:
     def test_uma_rota_que_a_pagina_nao_manda_e_recusada(
         self, casa: pathlib.Path
     ) -> None:
-        """MORDIDA: aceite qualquer string em `rota`.
-
-        O gesto é a fronteira entre a página e o perfil dela: um valor que
-        ninguém reconhece tem de parar aqui, com nome, e não virar um campo
-        estranho no disco.
-        """
+        """MORDIDA: aceite qualquer string em `rota`."""
         with pytest.raises(ValueError, match="não conheço a rota"):
             _gesto("rota")(_ctx(), {"uniq": P1, "rota": "tudo"}, Ponte())

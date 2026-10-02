@@ -50,81 +50,39 @@ from pydantic import (
     model_validator,
 )
 
-#: Comprimento da curva, em bytes. **Fato do protocolo, medido** (fronteira R4):
-#: o ``TriggerEffect.forces`` do ``core.trigger_effects`` é uma tupla de sete
-#: posições para todos os 19 presets. Não é preferência nossa — é a largura do
 #: campo no report de saída do DualSense.
 CURVA_BYTES = 7
 
-#: Primeiro dia em que uma medição pode ter acontecido sob este processo: a data
-#: de vigência do ``CLEAN-ROOM.md``. Uma curva que se declara medida antes disso
-#: não nasceu sob o processo, e o registro dela não sustenta o que precisa
-#: sustentar.
-#:
-#: O limite é uma data FIXA de propósito. Comparar com o relógio de hoje
-#: (recusar data no futuro) faria o mesmo trabalho e traria de volta a
-#: armadilha desta casa: portão que depende do relógio reprova sozinho, em
-#: máquina com fuso ou data diferente, sem que nada tenha mudado.
 DATA_MINIMA_DE_MEDICAO = date(2026, 7, 25)
 
-#: Piso de tamanho da nota de proveniência. A R3 pede *"o que a pessoa sentiu e
-#: por que parou nesses valores"* — e um campo obrigatório preenchido com "ok"
-#: satisfaz "não vazio" sem satisfazer a regra. O número é uma escolha de
-#: julgamento, não uma medição: é curto o bastante para não atrapalhar quem
-#: está medindo e longo o bastante para recusar preenchimento cerimonial.
 NOTA_MINIMA_DE_CARACTERES = 20
 
-#: Campos cuja ausência é, sozinha, motivo de recusa. Ficam numa lista só para
-#: que a mensagem de erro e o teste falem da mesma fonte.
 CAMPOS_DE_PROVENIENCIA = ("medido_por", "medido_em", "controle", "nota")
 
 
 def _nomes_recusados_do_dsx() -> frozenset[str]:
-    """Os doze nomes de modo "pronto" do DSX, dobrados para comparação.
-
-    Import tardio de propósito: ``daemon.udp_server`` abre socket e puxa o
-    daemon inteiro, e ``profiles`` não deve depender disso só para ler uma
-    constante. É o mesmo motivo do import tardio em ``schema.TriggerConfig``.
-
-    A fonte única é o ``DSX_CANNED_TRIGGER_MODES`` — a lista de recusa não é
-    transcrita aqui, para não existirem duas listas que possam divergir.
-    """
+    """Os doze nomes de modo "pronto" do DSX, dobrados para comparação."""
     from hefesto_dualsense4unix.daemon.udp_server import DSX_CANNED_TRIGGER_MODES
 
     return frozenset(nome.casefold() for nome in DSX_CANNED_TRIGGER_MODES.values())
 
 
 class CurvaPropria(BaseModel):
-    """Um efeito de gatilho da casa, com a proveniência grudada nele.
-
-    Todo campo é obrigatório. Não há default para nenhum dos quatro campos de
-    proveniência, e isso é o ponto: um default transformaria "não informado" em
-    "informado como vazio", que é o buraco que a R3 fecha.
-    """
+    """Um efeito de gatilho da casa, com a proveniência grudada nele."""
 
     model_config = ConfigDict(extra="forbid")
 
-    #: Nome do efeito, em português (regra R2). Nunca um dos doze nomes do DSX.
     nome: str
-    #: Os sete bytes efetivamente enviados ao controle.
     curva: list[int]
-    #: Quem sentou com o controle e sentiu o gatilho.
     medido_por: str
-    #: Quando, em ISO ``AAAA-MM-DD``.
     medido_em: str
-    #: Modelo e transporte — a resposta do gatilho varia entre aparelhos.
     controle: str
-    #: O que a pessoa sentiu e por que parou nesses valores.
     nota: str
 
     @field_validator("nome", "medido_por", "medido_em", "controle", "nota", mode="before")
     @classmethod
     def _recusa_nao_texto(cls, value: object) -> object:
-        """Recusa ``None`` e números onde se espera texto, com a razão certa.
-
-        Sem isto, ``medido_por=None`` levanta o erro genérico de tipo do
-        pydantic, que não explica nada a quem está tentando gravar uma curva.
-        """
+        """Recusa ``None`` e números onde se espera texto, com a razão certa."""
         if value is None:
             raise ValueError(
                 "campo de proveniência ausente (None). A regra R3 desta "
@@ -211,14 +169,7 @@ class CurvaPropria(BaseModel):
     @field_validator("curva", mode="before")
     @classmethod
     def _byte_nao_e_booleano(cls, value: object) -> object:
-        """Recusa ``True``/``False`` ANTES de o pydantic virá-los 1 e 0.
-
-        Restrição que o código não mostra: em ``list[int]`` o pydantic converte
-        booleano para inteiro em modo permissivo, então um validador que rode
-        depois já recebe ``1`` e não tem como saber que veio um ``True``. Num
-        campo de byte de report HID, booleano é sinal de dado corrompido, não
-        de valor.
-        """
+        """Recusa ``True``/``False`` ANTES de o pydantic virá-los 1 e 0."""
         if isinstance(value, list):
             for idx, byte in enumerate(value):
                 if isinstance(byte, bool):
@@ -266,12 +217,7 @@ class CatalogoCurvasProprias(BaseModel):
 
     @model_validator(mode="after")
     def _sem_nome_repetido(self) -> CatalogoCurvasProprias:
-        """Recusa o mesmo nome duas vezes, ignorando a caixa.
-
-        É o defeito que a CR-02 nomeia como razão de existir do catálogo: dois
-        registros do mesmo nome com proveniências diferentes deixam quem lê sem
-        saber qual das duas defende o valor que está no hardware.
-        """
+        """Recusa o mesmo nome duas vezes, ignorando a caixa."""
         vistos: dict[str, int] = {}
         for idx, curva in enumerate(self.curvas):
             chave = curva.nome.casefold()
@@ -287,15 +233,7 @@ class CatalogoCurvasProprias(BaseModel):
 
 
 def gerar_tabela_markdown(catalogo: CatalogoCurvasProprias) -> str:
-    """Devolve a tabela de ``docs/protocol/curvas-proprias.md``, gerada do dado.
-
-    A CR-02 é explícita sobre isto: a tabela é **gerada a partir dos perfis, não
-    escrita à mão**. Registro mantido à mão desatualiza, e registro desatualizado
-    não defende ninguém.
-
-    Catálogo vazio devolve a linha que o documento já tem hoje, para que o
-    arquivo continue legível antes de a CR-04 medir o primeiro efeito.
-    """
+    """Devolve a tabela de ``docs/protocol/curvas-proprias.md``, gerada do dado."""
     if not catalogo.curvas:
         return "_(nenhum ainda — ver CR-04)_"
 

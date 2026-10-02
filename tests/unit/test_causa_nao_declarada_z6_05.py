@@ -1,13 +1,4 @@
-"""Z6-05 — a regra 16 (`causa-nao-declarada`) e o domínio novo de
-`*_por_que_nao_aciona`.
-
-A mordida 1 da sprint: "Esvaziar uma célula `*_por_que_nao_aciona` numa linha
-com `aciona=não` e `de_onde_sei=medido` → reprova."
-
-Segue o molde de `test_check_paridade_transporte.py`: CSV de mentira, CLI de
-verdade, subprocesso — nunca importa o script (a razão está no cabeçalho
-daquele arquivo).
-"""
+"""Z6-05 — a regra 16 (`causa-nao-declarada`) e o domínio novo de"""
 from __future__ import annotations
 
 import csv
@@ -15,7 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-# O caminho do `specs.html` tem um dono só; esta folha o pede ao irmão.
 from tests.unit.test_check_paridade_transporte import _specs_de
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]
@@ -118,28 +108,7 @@ def test_causa_vazia_com_aciona_nao_medido_reprova(tmp_path: Path) -> None:
 
 
 def test_a_causa_nao_depende_do_de_onde_sei(tmp_path: Path) -> None:
-    """Todo `aciona = não` diz por quê — inclusive o que ninguém mediu.
-
-    **O PORTÃO VENCEU ESTE TESTE, e a data está no dono.** Ele dizia *"só
-    `de_onde_sei = medido` cobra causa — inferência ainda é dívida geral"*, e
-    em 06/09/2026 a regra 16 perdeu essa metade de propósito:
-    `check_paridade_transporte` declara, no comentário do próprio `if`, que
-    *"ELA VALIA SÓ PARA O `medido` ATÉ 06/09/2026, e era essa metade que
-    faltava"*. A razão medida está lá: um `não` de célula NÃO medida era o
-    mais ambíguo de todos — podia querer dizer *"o aparelho recusa"* ou
-    *"ninguém olhou"* —, e **foi lendo um desses que o coordenador mandou um
-    agente PARAR um passo que funciona.**
-
-    **O QUE SOBROU DA PERGUNTA ANTIGA, e é o que se mede aqui:** o
-    `de_onde_sei` responde OUTRA coisa — *como se soube* —, e por isso ele saiu
-    da condição em vez de ganhar um segundo valor. Então a régua cobra os DOIS
-    sentidos sobre o MESMO `inferido-do-codigo`: com a causa preenchida passa,
-    com a causa vazia reprova. Um lado só continuaria a medir um portão que
-    não existe mais.
-
-    Para o caso de ninguém ter olhado existe a palavra que o diz —
-    `nao-medido` —, e ela não autoriza afirmar que o aparelho não faz.
-    """
+    """Todo `aciona = não` diz por quê — inclusive o que ninguém mediu."""
     inferido = {"radio_de_onde_sei": "inferido-do-codigo"}
 
     com_causa = monta_arvore(

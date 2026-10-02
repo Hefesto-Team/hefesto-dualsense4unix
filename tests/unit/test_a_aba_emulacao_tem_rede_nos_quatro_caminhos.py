@@ -1,35 +1,4 @@
-"""EMULACAO-UM-DONO-SO-01/E13 — os buracos de rede da aba Emulação.
-
-O DEFEITO
-==========
-Dois defeitos com nome próprio que esta aba JÁ PAGOU podiam voltar sem uma linha
-vermelha. Medido em 24/08/2026: ``grep -rl`` em ``tests/`` devolvia **zero
-arquivos** para ``_sync_hotkey_card``, ``_sync_uinput_card``,
-``on_emulation_test_device`` e ``on_emulation_refresh``.
-
-- ``BUG-EMULATION-HOTKEY-CARD-FIXO-01`` — as duas linhas do cartão de atalhos
-  escreviam a CONSTANTE de compilação uma vez e ninguém mais as tocava: a tela
-  afirmava "buffer 150" e "Passthrough: Não" como se fossem estado LIDO do
-  daemon, com o daemon offline.
-- ``BUG-EMULATION-UINPUT-CARD-STALE-01/02`` — o cartão UINPUT ficava com o
-  VID:PID de Xbox na tela depois de a máscara mudar, ou com o gamepad virtual
-  desligado.
-
-E O ``grep`` VAZIO NÃO PROVA QUE A MUTAÇÃO PASSARIA
-====================================================
-Ele prova ausência de NOME, não ausência de rede — um teste de outro arquivo
-podia estar cobrindo o caminho por acaso. A sprint exige as mutações
-EXECUTADAS, e elas foram: ver o relatório do agente E1.
-
-O QUE ESTE ARQUIVO **NÃO** TRAZ, E POR QUE
-===========================================
-O quarto caso da sprint — *"entrar em `emulation_box` chama o refresher da
-aba"* — **já tem rede**, e é rede que morde. Medido em 25/08/2026 apagando a
-linha ``"emulation_box": ("_refresh_emulation_tab",)`` de ``app/app.py:1114``:
-``test_notebook_switch_page.py`` reprova em DOIS casos, e um deles nomeia a aba.
-Escrever um terceiro seria a terceira régua da mesma pergunta, que é
-verbosidade — e verbosidade tem custo medido nesta casa.
-"""
+"""EMULACAO-UM-DONO-SO-01/E13 — os buracos de rede da aba Emulação."""
 from __future__ import annotations
 
 import sys
@@ -57,12 +26,7 @@ class _RotuloFalso:
 
 
 class _Aba(Mixin):
-    """A aba com um dicionário de rótulos no lugar do `Gtk.Builder`.
-
-    `Gtk.OffscreenWindow` não entra aqui de propósito: nenhum destes caminhos
-    desenha — todos escrevem em rótulo. Montar janela custaria segundos por caso
-    e não mediria nada a mais.
-    """
+    """A aba com um dicionário de rótulos no lugar do `Gtk.Builder`."""
 
     def __init__(self) -> None:
         self.rotulos: dict[str, _RotuloFalso] = {}
@@ -75,16 +39,8 @@ class _Aba(Mixin):
         self.toasts.append(msg)
 
 
-# ---------------------------------------------------------------------------
-# BUG-EMULATION-HOTKEY-CARD-FIXO-01
-# ---------------------------------------------------------------------------
 def test_sem_bloco_hotkey_o_cartao_diz_padrao_em_vez_de_afirmar_numero() -> None:
-    """Sem estado, a tela não finge conhecer o estado.
-
-    ARRANQUE A CURA: tire o sufixo `(padrão)` dos dois ramos de `else` em
-    `_sync_hotkey_card` e este caso REPROVA — a tela volta a afirmar a
-    constante de compilação como se fosse leitura do daemon.
-    """
+    """Sem estado, a tela não finge conhecer o estado."""
     aba = _Aba()
     aba._sync_hotkey_card(None)
     assert aba.rotulos["emulation_combo_buffer_label"].texto == (
@@ -116,9 +72,6 @@ def test_o_buffer_booleano_nao_passa_por_numero() -> None:
     assert "(padrão)" in aba.rotulos["emulation_combo_buffer_label"].texto
 
 
-# ---------------------------------------------------------------------------
-# BUG-EMULATION-UINPUT-CARD-STALE-01/02
-# ---------------------------------------------------------------------------
 def test_o_cartao_uinput_mostra_o_vidpid_da_mascara_viva() -> None:
     """ARRANQUE A CURA: devolva a constante de Xbox cravada e este caso REPROVA."""
     aba = _Aba()
@@ -149,30 +102,14 @@ def test_com_o_gamepad_virtual_desligado_nao_sobra_vidpid_de_ninguem(
     assert "desligado" in aba.rotulos["emulation_device_name_label"].texto
 
 
-# ---------------------------------------------------------------------------
-# "Testar o controle virtual" sem uinput
-# ---------------------------------------------------------------------------
 def test_testar_o_controle_virtual_sem_uinput_avisa_e_nao_cria_no(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem o módulo, o botão avisa — e NÃO chega a instanciar nada.
-
-    `sys.modules["uinput"] = None` é a forma documentada de fazer `import
-    uinput` levantar `ImportError` sem mexer no disco. E a segunda asserção é a
-    que importa: um aviso na tela com um nó de uinput criado atrás dele seria o
-    pior dos dois mundos — a suíte desta casa já derrubou a sessão gráfica dela
-    criando nós de verdade (TEMPESTADE-DE-TECLADOS-01).
-    """
+    """Sem o módulo, o botão avisa — e NÃO chega a instanciar nada."""
     criados: list[str] = []
 
     class _Espia:
-        """Dublê COMPLETO de propósito.
-
-        Um dublê incompleto faz a mutação reprovar por `AttributeError`, e
-        `AttributeError` não prova nada — prova que o dublê é pobre. Com
-        `start`/`stop` no lugar, o caminho roda inteiro e quem reprova é a
-        asserção que mede o defeito: criou nó sem uinput.
-        """
+        """Dublê COMPLETO de propósito."""
 
         def __init__(self, *a: object, **k: object) -> None:
             criados.append("instanciou")

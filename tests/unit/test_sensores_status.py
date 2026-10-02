@@ -32,12 +32,7 @@ from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
 
 
 class _Ecodes:
-    """Só as constantes que os readers consultam (o módulo real é enorme).
-
-    `EV_SYN`/`SYN_REPORT` ENTRARAM EM 21/09/2026: o reader de movimento passou
-    a integrar o ângulo no SYN que fecha o pacote (MOVIMENTO-EM-QUALQUER-
-    MASCARA-01, E3), e sem eles o dublê levantava antes de ler um eixo.
-    """
+    """Só as constantes que os readers consultam (o módulo real é enorme)."""
 
     EV_SYN = 0
     SYN_REPORT = 0
@@ -56,17 +51,12 @@ def _evento(tipo: int, code: int, value: int) -> Any:
     return SimpleNamespace(type=tipo, code=code, value=value)
 
 
-# ---------------------------------------------------------------------------
-# Giroscópio: decodificação
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("valor", "resolucao", "esperado"),
     [
         (1024, 1024, 1.0),
         (-2048, 1024, -2.0),
-        (512, 512, 1.0),  # escala diferente: o node manda, não a constante
+        (512, 512, 1.0),
         (0, 1024, 0.0),
     ],
 )
@@ -77,11 +67,7 @@ def test_graus_por_segundo_usa_a_resolucao_do_node(
 
 
 def test_graus_por_segundo_sem_resolucao_cai_no_default_do_kernel() -> None:
-    """Resolução ausente/zero não pode virar valor cru na tela.
-
-    Sem o fallback, um node que não publica `resolution` faria a interface
-    exibir dezenas de milhares de "graus/s".
-    """
+    """Resolução ausente/zero não pode virar valor cru na tela."""
     assert graus_por_segundo(DUALSENSE_GYRO_RES_PER_DEG_S, 0) == pytest.approx(1.0)
     assert graus_por_segundo(DUALSENSE_GYRO_RES_PER_DEG_S, -5) == pytest.approx(1.0)
 
@@ -104,22 +90,7 @@ def test_motion_reader_mapeia_abs_r_para_os_tres_eixos() -> None:
 
 
 def test_motion_reader_nao_deixa_o_acelerometro_entrar_no_giroscopio() -> None:
-    """ABS_X/Y/Z no node de motion são ACELERÔMETRO, não giroscópio.
-
-    Os dois sensores dividem o mesmo `eventN`; ler os dois como um só faria
-    as barras de giroscópio pularem com a gravidade, sem ninguém girar nada.
-
-    **Este teste NÃO foi apagado, e a razão é uma medição** (ONDA-CONTROLES-04,
-    29/08/2026). O plano da sprint o dava como régua velha, que sairia junto com
-    a cura — porque o acelerômetro deixou de ser ignorado: agora ele é LIDO, no
-    mesmo laço, para um snapshot separado. Mas o que este teste afere nunca foi
-    a ausência: é a SEPARAÇÃO. Arrancada a separação (o laço do acelerômetro
-    escrevendo em `self._eixos`), ele reprova — foi conferido. Uma régua que
-    morde não sai; o que estava errado era o nome, e é só o nome que mudou.
-
-    O gêmeo dele, do lado do acelerômetro, está em
-    `test_controles_o_acelerometro_chega.py`.
-    """
+    """ABS_X/Y/Z no node de motion são ACELERÔMETRO, não giroscópio."""
     reader = _reader_motion()
     reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_X, 8192), _Ecodes)
     reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_Y, 8192), _Ecodes)
@@ -166,11 +137,6 @@ def test_motion_reader_zera_os_eixos_quando_o_controle_cai() -> None:
     assert reader.snapshot().x == 0.0
 
 
-# ---------------------------------------------------------------------------
-# Touchpad: estado observável sem roubar o movimento do cursor
-# ---------------------------------------------------------------------------
-
-
 def _tocar(reader: TouchpadReader, x: int, y: int, *, dedo: bool = True) -> None:
     reader._handle_event(
         _evento(_Ecodes.EV_KEY, _Ecodes.BTN_TOUCH, 1 if dedo else 0), _Ecodes
@@ -203,13 +169,8 @@ def test_touch_state_solta_o_dedo_mas_guarda_a_ultima_posicao() -> None:
 
 
 def test_touch_state_nao_consome_o_delta_do_cursor() -> None:
-    """A leitura da interface é NÃO-destrutiva.
-
-    Se `touch_state()` drenasse (como `consume_motion`), o poll loop do mouse
-    receberia zero e o cursor pararia sempre que a aba Status estivesse
-    aberta.
-    """
-    reader = TouchpadReader(device_path=None)  # acumulando, como o do cursor
+    """A leitura da interface é NÃO-destrutiva."""
+    reader = TouchpadReader(device_path=None)
     _tocar(reader, 500, 500)
     reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_X, 560), _Ecodes)
 
@@ -220,19 +181,14 @@ def test_touch_state_nao_consome_o_delta_do_cursor() -> None:
 
 
 def test_observador_nao_acumula_delta_nenhum() -> None:
-    """O leitor da aba Status abre o MESMO node do cursor.
-
-    O kernel replica os eventos para os dois fds; com acúmulo ligado, o
-    `_accum_dx/dy` deste reader cresceria a sessão inteira sem ninguém
-    drenar — o salto de cursor que o poll loop já aprendeu a evitar.
-    """
+    """O leitor da aba Status abre o MESMO node do cursor."""
     observador = TouchpadReader(device_path=None, acumular_movimento=False)
     _tocar(observador, 500, 500)
     for x in range(510, 700, 10):
         observador._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_X, x), _Ecodes)
 
     assert observador.consume_motion() == (0, 0)
-    assert observador.touch_state().x == 690  # mas a POSIÇÃO segue viva
+    assert observador.touch_state().x == 690
 
 
 def test_reset_do_touchpad_solta_o_dedo() -> None:
@@ -242,11 +198,6 @@ def test_reset_do_touchpad_solta_o_dedo() -> None:
     reader._reset_on_disconnect()
 
     assert reader.touch_state().touching is False
-
-
-# ---------------------------------------------------------------------------
-# SensorHub: demanda liga, silêncio desliga
-# ---------------------------------------------------------------------------
 
 
 class _ReaderFalso:
@@ -286,8 +237,6 @@ def _hub(nodes: dict[str, str] | None = None) -> tuple[SensorHub, dict[str, Any]
 
     def fabrica(tipo: str) -> Any:
         def _cria(uniq: str, node: Any) -> Any:
-            # O node já descoberto chega pronto: o hub não deixa o reader
-            # re-varrer /dev/input só para achar o que ele acabou de achar.
             assert node, "a fábrica tem de receber o node já resolvido"
             reader = _ReaderFalso(uniq)
             criados[f"{uniq}:{tipo}"] = reader
@@ -317,7 +266,7 @@ def test_hub_nao_abre_nada_antes_de_alguem_pedir() -> None:
 def test_hub_abre_sob_demanda_e_entrega_os_dois_sensores() -> None:
     hub, criados = _hub()
 
-    assert hub.leitura("aa") == {}  # 1ª volta: pediu, ainda não abriu
+    assert hub.leitura("aa") == {}
     hub.reconciliar()
     leitura = hub.leitura("aa")
 
@@ -329,18 +278,13 @@ def test_hub_abre_sob_demanda_e_entrega_os_dois_sensores() -> None:
         "y": 540,
         "width": 1920,
         "height": 1080,
-        # `pontos` ENTROU EM 18/09/2026 (MULTITOQUE-01), e a lista vazia aqui
-        # é o dublê falando a verdade: o `_TouchFalso` desta régua não tem o
-        # atributo, e o hub lê `getattr(estado, "pontos", ())` — um reader
-        # que não sabe ler dedo por slot não afirma dedo nenhum. Com o reader
         # de verdade, os dois dedos do DualSense saem aqui.
         "pontos": [],
     }
 
 
 def test_hub_desliga_o_reader_quando_a_demanda_expira() -> None:
-    """Fechar a GUI apaga as threads sozinho — sem isso o daemon acumularia
-    um reader por controle que já passou pela máquina."""
+    """Fechar a GUI apaga as threads sozinho — sem isso o daemon acumularia"""
     hub, criados = _hub()
     relogio = hub._relogio
     hub.leitura("aa")
@@ -356,8 +300,7 @@ def test_hub_desliga_o_reader_quando_a_demanda_expira() -> None:
 
 
 def test_hub_nao_reprocura_node_inexistente_a_cada_volta() -> None:
-    """Controle sem node não pode custar uma varredura de /dev/input por
-    segundo (a lição PERF-MULTI-CONTROLLER-01)."""
+    """Controle sem node não pode custar uma varredura de /dev/input por"""
     varreduras = {"n": 0}
 
     def descobrir() -> dict[str, Any]:
@@ -372,7 +315,7 @@ def test_hub_nao_reprocura_node_inexistente_a_cada_volta() -> None:
         relogio=_Relogio(),
         auto_manutencao=False,
     )
-    hub._watch = SimpleNamespace(poll=lambda: False)  # /dev/input parado
+    hub._watch = SimpleNamespace(poll=lambda: False)
 
     hub.leitura("zz")
     for _ in range(5):
@@ -392,7 +335,7 @@ def test_hub_reprocura_quando_dev_input_muda() -> None:
     hub.reconciliar()
     assert criados == {}
 
-    mapa["aa"] = "/dev/input/event9"  # controle plugou
+    mapa["aa"] = "/dev/input/event9"
     mudou["v"] = True
     hub.leitura("aa")
     hub.reconciliar()
@@ -435,18 +378,13 @@ def test_hub_stop_all_derruba_tudo() -> None:
     assert criados["aa:touchpad"].parado is True
 
 
-# ---------------------------------------------------------------------------
-# IPC: os campos novos são OPCIONAIS
-# ---------------------------------------------------------------------------
-
-
 class _HandlerFalso:
     """Só o suficiente para exercitar `_merge_sensores` fora do IpcServer."""
 
     def __init__(self, hub: Any) -> None:
         self._sensor_hub = hub
 
-    _merge_sensores = None  # substituído abaixo pelo método real
+    _merge_sensores = None
 
 
 def _handler_com_hub(hub: Any) -> Any:
@@ -466,14 +404,13 @@ def test_merge_sensores_acrescenta_gyro_e_touchpad_ao_inputs() -> None:
 
     handler._merge_sensores(entry, "aa")
 
-    assert entry["inputs"]["lx"] == 128  # nada do payload antigo se perde
+    assert entry["inputs"]["lx"] == 128
     assert entry["inputs"]["gyro"]["x"] == 1.5
     assert entry["inputs"]["touchpad"]["touching"] is True
 
 
 def test_merge_sensores_nao_inventa_inputs_para_controle_sem_leitor() -> None:
-    """`inputs is None` já significa "sem leitor" — pendurar sensor ali seria
-    a mesma mentira com outro nome."""
+    """`inputs is None` já significa "sem leitor" — pendurar sensor ali seria"""
     hub, _criados = _hub()
     handler = _handler_com_hub(hub)
     entry: dict[str, Any] = {"inputs": None}
@@ -495,8 +432,7 @@ def test_merge_sensores_ignora_controle_sem_mac() -> None:
 
 
 def test_merge_sensores_sem_node_deixa_o_inputs_intacto() -> None:
-    """Sem node de sensor, o payload sai IGUAL ao de antes do S2 — é o que
-    permite daemon novo + GUI antiga e daemon antigo + GUI nova."""
+    """Sem node de sensor, o payload sai IGUAL ao de antes do S2 — é o que"""
     hub, _criados = _hub(nodes={})
     hub._watch = SimpleNamespace(poll=lambda: False)
     handler = _handler_com_hub(hub)

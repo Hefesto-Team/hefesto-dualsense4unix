@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""A coluna Atenção saiu da Jogar — e as onze fontes NÃO saíram com ela.
-
-ORDEM DELA, 07/09/2026: *"em jogar remover essa seção do atenção, nenhum aviso
-esse — deixar só o reconectar controles."*
-
-**ESTA RÉGUA TEM DUAS METADES, e a segunda é a que importa.** Uma régua que só
-cobrasse a ausência da faixa ficaria verde no dia em que alguém apagasse
-`_avisos` inteiro — e aí a tela do produto deixaria de ter, em qualquer aba,
-onde dizer que o serviço não responde, que o detector de janela está cego, que a
-ponte com o jogo caiu ou que a cura do travamento do USB não está de pé.
-
-**O NÚMERO QUE DECIDIU ISSO, medido antes de apagar:** das onze fontes de
-`a01_jogar._avisos`, **só uma** tem segunda casa publicada — o exame da mesa, que
-vem da aba Conexões e continua lá. As outras dez chegavam à tela SÓ pela coluna
-que saiu. A proposta de destino está escrita no docstring de `_avisos`, e é a
-aba **Sistema**: é o que a própria frase viva já manda, com estas palavras — *A
-aba Sistema diz por quê*.
-
-AS MORDIDAS, uma por régua, escritas no docstring de cada uma.
-"""
+"""A coluna Atenção saiu da Jogar — e as onze fontes NÃO saíram com ela."""
 from __future__ import annotations
 
 import pathlib
@@ -40,7 +21,6 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: O daemon em **Navegação** — o mesmo payload das réguas irmãs desta aba.
 VIVO: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
@@ -50,8 +30,6 @@ VIVO: dict[str, Any] = {
                      "player_slot": 1}],
 }
 
-#: OS ENDEREÇOS QUE A COLUNA TINHA. A lista não se digita duas vezes: ela é o
-#: que saiu de `DA_PAGINA`, e é o que as duas metades desta régua cobram.
 DA_COLUNA = ("atencao-conta", "aviso-selo", "aviso-texto", "aviso-vivo")
 
 
@@ -60,26 +38,12 @@ def _ctx(state: dict[str, Any] | None = None) -> Contexto:
                     mesa=[], conectados=[], estados={})
 
 
-# ---------------------------------------------------------------------------
-# 1. A METADE QUE ELA PEDIU — a faixa sai, o botão fica
-# ---------------------------------------------------------------------------
 def test_a_faixa_da_atencao_saiu_das_duas_paginas() -> None:
-    """Nem na bancada nem no publicado — e o publicado é o que ela abre.
-
-    Uma régua que olhasse só o `mockup/` daria verde com o produto dela ainda
-    mostrando a faixa: publicar é ato à parte nesta casa, e é justamente o passo
-    que se esquece.
-
-    A MORDIDA: devolva o bloco `<div class="col-atencao">` ao `MIOLO` de
-    `aba01.py`, rode o gerador e publique — as dez asserções reprovam.
-    """
+    """Nem na bancada nem no publicado — e o publicado é o que ela abre."""
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
             encoding="utf-8")
         onde_ = "publicado" if publicado else "bancada"
-        # `class="…"` E NÃO A PALAVRA SOLTA: `.aviso-item` é regra do ESQUELETO
-        # (`monta.py`), das dez abas — cobrar a palavra crua acusaria a folha
-        # compartilhada, mandando consertar o que esta aba não pode.
         assert 'class="col-atencao"' not in corpo, f"{onde_}: a faixa voltou"
         assert 'class="aviso-item' not in corpo, f"{onde_}: as linhas voltaram"
         assert 'data-lista="avisos"' not in corpo, f"{onde_}: a lista voltou"
@@ -89,15 +53,7 @@ def test_a_faixa_da_atencao_saiu_das_duas_paginas() -> None:
 
 
 def test_o_botao_que_ela_mandou_deixar_ficou() -> None:
-    """*"deixar só o reconectar controles"* — e "só" não quer dizer "nenhum".
-
-    Sem esta régua a de cima passa com a seção INTEIRA apagada, botão incluído:
-    uma régua que só proíbe fica mais verde quanto mais se apaga. É o mesmo
-    par de sinais que esta casa exige desde a fileira de modos.
-
-    A MORDIDA: apague a `.faixa-final` do `MIOLO` — esta reprova e a de cima
-    continua verde.
-    """
+    """*"deixar só o reconectar controles"* — e "só" não quer dizer "nenhum"."""
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
             encoding="utf-8")
@@ -108,15 +64,7 @@ def test_o_botao_que_ela_mandou_deixar_ficou() -> None:
 
 
 def test_o_pacote_parou_de_emitir_os_quatro_enderecos() -> None:
-    """Endereço emitido sem elemento onde pousar é ÓRFÃO, e tem quem o acuse.
-
-    O `casamento.py` é a régua que o vê — foi assim que o `recado` da aba 04 foi
-    pego em 02/09, depois de a régua do mockup passar por cima dele (ela varre
-    os endereços do ARQUIVO, e um campo sem lugar não sai em arquivo nenhum).
-
-    A MORDIDA: devolva `"atencao-conta"` a `DA_PAGINA` e emita-o de volta em
-    `pacote()` — esta régua reprova nas duas metades.
-    """
+    """Endereço emitido sem elemento onde pousar é ÓRFÃO, e tem quem o acuse."""
     fora = aba.pacote(_ctx())
     for campo in DA_COLUNA:
         assert campo not in fora, (
@@ -146,28 +94,14 @@ def test_o_travessao_solto_dos_externos_morreu() -> None:
     assert aba.pacote(_ctx())["externos"] == monta.NADA_A_DIZER, (
         "sem externo o campo voltou a ser `''`, e o piloto escreve `—` nele")
     corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
-    # ENTRE OS CARTÕES E O BOTÃO NÃO SOBROU ELEMENTO NENHUM: com a faixa fora, o
-    # que houvesse aqui apareceria solto, sem cabeçalho que o explicasse.
     meio = corpo.split('data-lista="cartoes"', 1)[-1].split(
         '<div class="faixa-final', 1)[0]
     assert "ext-vaga" in meio, "o bloco dos externos saiu da grade dos assentos"
     assert 'data-campo="aviso' not in meio, "sobrou endereço de aviso no meio"
 
 
-# ---------------------------------------------------------------------------
-# 2. A METADE QUE NINGUÉM PEDIU — o canal não morre com a tela
-# ---------------------------------------------------------------------------
 def test_as_onze_fontes_continuam_de_pe_e_com_porta_propria() -> None:
-    """`coluna_de_atencao` responde a lista que a aba Sistema recebe.
-
-    FATO SUBSTITUÍDO — 28/09/2026, A-TELA-PERGUNTA-AO-DONO-01: ela devolvia os
-    quatro endereços da coluna (a conta, os selos, os textos e o acendedor),
-    cortados em três com o `+N`. A coluna saiu da tela em 07/09 e o canal achou
-    casa no exame da 09, que recebe cada aviso com a frase do dono.
-
-    A MORDIDA: apague `coluna_de_atencao` (ou `_avisos_sem_outra_casa`) e esta
-    régua reprova.
-    """
+    """`coluna_de_atencao` responde a lista que a aba Sistema recebe."""
     fora = aba.coluna_de_atencao(_ctx())
     assert isinstance(fora, list)
     for aviso in fora:
@@ -176,17 +110,7 @@ def test_as_onze_fontes_continuam_de_pe_e_com_porta_propria() -> None:
 
 
 def test_o_servico_calado_ainda_encontra_o_canal() -> None:
-    """A fonte que fala quando TODAS as outras calam continua no canal.
-
-    Ela é a única que responde sobre a AUSÊNCIA de estado, e por isso é a que
-    mede se o canal sobreviveu à saída da tela: com `state={}` nenhuma outra
-    tem o que dizer. Ela NÃO vai à lista da 09 — o Status da 09 diz o estado do
-    serviço —, e é o canal inteiro (`_avisos`) que a colhe.
-
-    A MORDIDA: troque `_aviso_do_servico_calado` por `return None` — esta régua
-    reprova, e a da faixa lá em cima continua verde. É por isso que as duas
-    existem.
-    """
+    """A fonte que fala quando TODAS as outras calam continua no canal."""
     selos = [a["selo"] for a in aba._avisos(_ctx({}))]
     assert aba.SELO_DO_SERVICO in selos, (
         "o canal perdeu a fonte do serviço calado quando a tela saiu")
@@ -219,8 +143,6 @@ def test_a_unica_fonte_com_segunda_casa_e_o_exame() -> None:
         casas = sorted(
             p.name for p in pacotes.glob("a??_*.py")
             if fonte in p.read_text(encoding="utf-8"))
-        # A `a07_lancadores` CITA `AVISOS_DA_TELA` NUM COMENTÁRIO e não a
-        # consome — por isso a régua olha quem CHAMA, e não quem escreve o nome.
         chamam = [c for c in casas
                   if f"{fonte}(" in (pacotes / c).read_text(encoding="utf-8")
                   or f"{fonte}:" in (pacotes / c).read_text(encoding="utf-8")]

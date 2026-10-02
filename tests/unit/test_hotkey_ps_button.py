@@ -1,16 +1,4 @@
-"""Testes do PS solo (FEAT-HOTKEY-STEAM-01).
-
-Cobre:
-  - `HotkeyManager` dispara callback `on_ps_solo` no release sem combo.
-  - PS + D-pad (combo) suprime PS solo.
-  - `steam_launcher.open_or_focus_steam` usa spawn quando pgrep falha — aqui
-    no `Popen` de sempre, o caminho de quem chama já sendo da pessoa; o de
-    dentro do serviço do daemon (STEAM-FORA-DO-SERVICO-01) está em
-    `test_steam_fora_do_servico_01.py`.
-  - Usa wmctrl quando pgrep acha processo.
-  - Binário ausente loga warning uma vez e retorna False.
-  - Nunca chama `shell=True`.
-"""
+"""Testes do PS solo (FEAT-HOTKEY-STEAM-01)."""
 from __future__ import annotations
 
 import subprocess
@@ -21,16 +9,11 @@ import pytest
 from hefesto_dualsense4unix.integrations import fora_do_servico, steam_launcher
 from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyConfig, HotkeyManager
 
-# ---------------------------------------------------------------------------
-# HotkeyManager.on_ps_solo
-# ---------------------------------------------------------------------------
-
 
 def test_ps_solo_dispara_no_release_sem_combo():
     fired: list[str] = []
     mgr = HotkeyManager(on_ps_solo=lambda: fired.append("solo"))
 
-    # Press curto: PS entra e sai sem combo.
     assert mgr.observe(["ps"], now=0.0) is None
     assert fired == []
     result = mgr.observe([], now=0.05)
@@ -39,11 +22,7 @@ def test_ps_solo_dispara_no_release_sem_combo():
 
 
 def test_ps_solo_dispara_mesmo_apos_hold_longo():
-    """PS segurado sozinho por muito tempo e entao solto ainda conta como solo.
-
-    Semantica: o usuário não combinou com D-pad; pressionar PS e soltar sempre
-    vale como solo. O buffer de 150ms governa apenas o combo — não filtra solo.
-    """
+    """PS segurado sozinho por muito tempo e entao solto ainda conta como solo."""
     fired: list[str] = []
     mgr = HotkeyManager(on_ps_solo=lambda: fired.append("solo"))
     for t in (0.0, 0.2, 0.4, 0.6):
@@ -60,12 +39,9 @@ def test_ps_solo_suprimido_quando_combo_dispara():
         on_next=lambda: fired_next.append("n"),
         on_ps_solo=lambda: fired_solo.append("solo"),
     )
-    # PS + D-pad ↑ segurado alem do buffer -> combo dispara.
     mgr.observe(["ps", "dpad_up"], now=0.0)
     mgr.observe(["ps", "dpad_up"], now=0.2)
-    # Solta D-pad, PS ainda segurado.
     mgr.observe(["ps"], now=0.25)
-    # Release do PS: não deve disparar solo porque combo ja disparou.
     mgr.observe([], now=0.3)
     assert fired_next == ["n"]
     assert fired_solo == []
@@ -74,7 +50,6 @@ def test_ps_solo_suprimido_quando_combo_dispara():
 def test_ps_solo_nao_dispara_sem_callback():
     mgr = HotkeyManager()
     mgr.observe(["ps"], now=0.0)
-    # Não explode e retorna nome do evento.
     assert mgr.observe([], now=0.05) == "ps_solo"
 
 
@@ -97,35 +72,27 @@ def test_ps_solo_readiepara_em_novo_press():
     assert fired == ["solo", "solo"]
 
 
-# ---------------------------------------------------------------------------
-# HotkeyManager.on_ps_long_press (FEAT-EMULATION-GAMEMODE-LONGPRESS-01)
-# ---------------------------------------------------------------------------
-
-
 def test_long_press_desligado_por_default():
-    """Default novo (FEAT-EMULATION-GAMEMODE-COMBO-01): ps_long_press_ms=0 →
-    segurar o PS NÃO dispara long-press (modo jogo é só pelo combo PS+Options)."""
+    """Default novo (FEAT-EMULATION-GAMEMODE-COMBO-01): ps_long_press_ms=0 →"""
     fired: list[str] = []
     mgr = HotkeyManager(on_ps_long_press=lambda: fired.append("long"))
     assert mgr.observe(["ps"], now=0.0) is None
-    assert mgr.observe(["ps"], now=2.0) is None  # 2s segurando, mas long-press off
+    assert mgr.observe(["ps"], now=2.0) is None
     assert fired == []
 
 
 def test_long_press_dispara_apos_threshold():
-    """Com ps_long_press_ms>0 (gesto reativado), segurar o PS >= threshold dispara
-    uma vez. O gesto não é mais default — precisa ser ligado explicitamente."""
+    """Com ps_long_press_ms>0 (gesto reativado), segurar o PS >= threshold dispara"""
     fired: list[str] = []
     mgr = HotkeyManager(
         on_ps_long_press=lambda: fired.append("long"),
         config=HotkeyConfig(ps_long_press_ms=1000),
     )
-    assert mgr.observe(["ps"], now=0.0) is None  # press inicial
-    assert mgr.observe(["ps"], now=0.5) is None  # 500ms < 1000ms
+    assert mgr.observe(["ps"], now=0.0) is None
+    assert mgr.observe(["ps"], now=0.5) is None
     assert fired == []
-    assert mgr.observe(["ps"], now=1.0) == "ps_long_press"  # atinge o threshold
+    assert mgr.observe(["ps"], now=1.0) == "ps_long_press"
     assert fired == ["long"]
-    # Ticks seguintes do mesmo hold não repetem.
     assert mgr.observe(["ps"], now=1.2) is None
     assert fired == ["long"]
 
@@ -140,8 +107,8 @@ def test_long_press_suprime_ps_solo_no_release():
         config=HotkeyConfig(ps_long_press_ms=1000),
     )
     mgr.observe(["ps"], now=0.0)
-    mgr.observe(["ps"], now=1.0)  # long-press dispara
-    assert mgr.observe([], now=1.1) is None  # release não é ps_solo
+    mgr.observe(["ps"], now=1.0)
+    assert mgr.observe([], now=1.1) is None
     assert longp == ["long"]
     assert solo == []
 
@@ -155,7 +122,7 @@ def test_toque_curto_no_ps_ainda_abre_steam():
         on_ps_long_press=lambda: longp.append("long"),
     )
     mgr.observe(["ps"], now=0.0)
-    assert mgr.observe([], now=0.1) == "ps_solo"  # 100ms < 1000ms
+    assert mgr.observe([], now=0.1) == "ps_solo"
     assert solo == ["solo"]
     assert longp == []
 
@@ -169,8 +136,8 @@ def test_long_press_suprimido_por_combo():
         on_ps_long_press=lambda: longp.append("long"),
     )
     mgr.observe(["ps", "dpad_up"], now=0.0)
-    mgr.observe(["ps", "dpad_up"], now=0.2)  # combo dispara
-    mgr.observe(["ps", "dpad_up"], now=1.5)  # segurado > 1s, mas combo ja disparou
+    mgr.observe(["ps", "dpad_up"], now=0.2)
+    mgr.observe(["ps", "dpad_up"], now=1.5)
     assert longp == []
     assert nextp == ["n"]
 
@@ -185,13 +152,8 @@ def test_long_press_threshold_configuravel():
         config=HotkeyConfig(ps_long_press_ms=300),
     )
     mgr.observe(["ps"], now=0.0)
-    assert mgr.observe(["ps"], now=0.35) == "ps_long_press"  # 350ms >= 300ms
+    assert mgr.observe(["ps"], now=0.35) == "ps_long_press"
     assert fired == ["long"]
-
-
-# ---------------------------------------------------------------------------
-# steam_launcher.open_or_focus_steam
-# ---------------------------------------------------------------------------
 
 
 def _make_completed(rc: int, stdout: str = "") -> subprocess.CompletedProcess[str]:
@@ -205,7 +167,6 @@ def _reset_missing_warning():
     steam_launcher._reset_missing_warning_for_tests()
 
 
-#: Quem chama já é da pessoa (a janela aberta pelo painel): o `Popen` de sempre.
 _DA_PESSOA = fora_do_servico.Contexto(gerenciador=True, herdaria=None, oom_do_gerenciador=100)
 
 
@@ -217,7 +178,6 @@ def test_open_or_focus_steam_spawn_quando_nao_roda():
         return object()
 
     def fake_pgrep(_cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        # Não achou processo
         return _make_completed(rc=1, stdout="")
 
     ok = steam_launcher.open_or_focus_steam(
@@ -234,7 +194,6 @@ def test_open_or_focus_steam_spawn_quando_nao_roda():
     assert kwargs["stdout"] is subprocess.DEVNULL
     assert kwargs["stderr"] is subprocess.DEVNULL
     assert kwargs["start_new_session"] is True
-    # Nunca passa shell=True.
     assert "shell" not in kwargs or kwargs["shell"] is False
 
 
@@ -262,7 +221,6 @@ def test_open_or_focus_steam_usa_wmctrl_quando_processo_existe(monkeypatch):
         popen_called = True
         return object()
 
-    # shutil.which retorna tanto steam quanto wmctrl
     monkeypatch.setattr(steam_launcher.shutil, "which", lambda name: f"/usr/bin/{name}")
 
     ok = steam_launcher.open_or_focus_steam(
@@ -274,7 +232,6 @@ def test_open_or_focus_steam_usa_wmctrl_quando_processo_existe(monkeypatch):
     assert ok is True
     assert popen_called is False
     assert wmctrl_calls[0] == ["wmctrl", "-lx"]
-    # Segunda chamada foca a janela steam.Steam (0x01400007).
     assert wmctrl_calls[1] == ["wmctrl", "-ia", "0x01400007"]
 
 
@@ -282,12 +239,10 @@ def test_open_or_focus_steam_fallback_spawn_quando_janela_nao_existe(monkeypatch
     popen_calls: list[list[str]] = []
 
     def fake_pgrep(_cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        # Processo rodando.
         return _make_completed(rc=0, stdout="99999\n")
 
     def fake_wmctrl(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd[:2] == ["wmctrl", "-lx"]:
-            # Nenhuma janela Steam.
             return _make_completed(rc=0, stdout="0x01400009  0 Firefox.firefox  host foo\n")
         return _make_completed(rc=0)
 
@@ -325,7 +280,6 @@ def test_open_or_focus_steam_binario_ausente_loga_uma_vez(caplog):
     )
     assert ok1 is False
     assert ok2 is False
-    # Não tenta Popen quando binário não existe.
     assert fake_popen_called is False
 
 
@@ -342,7 +296,6 @@ def test_open_or_focus_steam_nunca_levanta():
         pgrep_runner=bomba_pgrep,
         popen_runner=fake_popen,
     )
-    # pgrep falhou -> tratou como "não rodando" -> spawn -> True.
     assert ok is True
 
 
@@ -372,9 +325,6 @@ def test_start_hotkey_manager_instancia_e_chama_steam(monkeypatch):
 
     assert daemon._hotkey_manager is not None
     daemon._hotkey_manager.on_ps_solo()
-    # A Steam abre no FIO do gesto (TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01),
-    # e o fio pergunta antes se há jogo aberto (OS-GESTOS-DO-CONTROLE-01, §14):
-    # sem esperar, a régua lia a lista antes de o fio correr.
     assert daemon._hotkey_manager.on_ps_solo.esperar(5.0)
     assert called == ["steam"]
 
@@ -400,18 +350,11 @@ def test_start_hotkey_manager_none_nao_chama_steam(monkeypatch):
     assert called == []
 
 
-# ---------------------------------------------------------------------------
-# Modo jogo: long-press -> toggle da supressao de emulacao
-# (FEAT-EMULATION-GAMEMODE-LONGPRESS-01)
-# ---------------------------------------------------------------------------
-
-
 def test_set_emulation_suppressed_toggle_e_set(monkeypatch):
     """set_emulation_suppressed faz toggle (None) e set explicito (bool)."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.testing import FakeController
 
-    # Evita disparar notificação D-Bus real durante o teste.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.desktop_notifications.notify_emulation_suppressed",
         lambda _s: True,
@@ -419,11 +362,11 @@ def test_set_emulation_suppressed_toggle_e_set(monkeypatch):
     daemon = Daemon(controller=FakeController(transport="usb", states=[]), config=DaemonConfig())
 
     assert daemon._emulation_suppressed is False
-    assert daemon.set_emulation_suppressed() is True  # toggle -> suprimido
+    assert daemon.set_emulation_suppressed() is True
     assert daemon._emulation_suppressed is True
-    assert daemon.set_emulation_suppressed() is False  # toggle -> volta
-    assert daemon.set_emulation_suppressed(True) is True  # set explicito
-    assert daemon.set_emulation_suppressed(True) is True  # idempotente
+    assert daemon.set_emulation_suppressed() is False
+    assert daemon.set_emulation_suppressed(True) is True
+    assert daemon.set_emulation_suppressed(True) is True
     assert daemon.set_emulation_suppressed(False) is False
 
 
@@ -441,7 +384,7 @@ def test_start_hotkey_manager_long_press_toggla_modo_jogo(monkeypatch):
 
     assert daemon._hotkey_manager.on_ps_long_press is not None
     assert daemon._emulation_suppressed is False
-    daemon._hotkey_manager.on_ps_long_press()  # simula o gesto
+    daemon._hotkey_manager.on_ps_long_press()
     assert daemon._emulation_suppressed is True
     daemon._hotkey_manager.on_ps_long_press()
     assert daemon._emulation_suppressed is False

@@ -31,9 +31,6 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import onde, pacotes
 
-#: O CHIP E O ENDEREÇO DELE. Sem o endereço o pintor não tem onde escrever, e
-#: a página nascer neutra deixaria de ser a metade de uma cura para ser a cura
-#: inteira de um chip que nunca muda.
 CHIP = re.compile(r'<span class="pa-nome"([^>]*)>([^<]*)</span>')
 
 ABAS = tuple(f"{n:02d}-" for n in range(1, 11))
@@ -53,11 +50,7 @@ def _sem_perfil() -> str:
 
 
 def _paginas() -> list[Any]:
-    """As vinte páginas: o publicado e a bancada, cada um com as dez abas.
-
-    **RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE**: uma aba que falte em qualquer das
-    duas pastas reprova na coleta, em vez de sair da conta calada.
-    """
+    """As vinte páginas: o publicado e a bancada, cada um com as dez abas."""
     fora = []
     for pasta, rotulo in ((onde.PUBLICADO, "publicado"), (onde.BANCADA, "bancada")):
         for prefixo in ABAS:

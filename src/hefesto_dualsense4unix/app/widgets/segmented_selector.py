@@ -1,29 +1,4 @@
-"""segmented_selector.py — botões segmentados sempre visíveis (sem popup).
-
-FEAT-DSX-COMBO-TO-SEGMENTED-01: substitui ``GtkComboBox``/``GtkComboBoxText`` na
-COSMIC, onde o cosmic-comp rouba o foco no clique e FECHA o popup do combo na
-hora (bug do compositor — cosmic-epoch#2497 / pop#3660). Botões sempre visíveis
-(sem popup/grab GTK) são imunes: a usuária consegue escolher.
-
-O widget espelha o subconjunto da API por-ID do ``GtkComboBoxText`` usado pelo
-app, para os call sites trocarem o combo por ele sem mudar a lógica:
-
-  - ``set_items(items)``    — lista de ``(id, label)``; reconstrói os botões,
-    preservando o id ativo se ele ainda existir. Idempotente: não reconstrói se
-    os itens forem idênticos aos atuais.
-  - ``get_active_id() -> str | None``
-  - ``set_active_id(id)``   — ativa o botão do id e EMITE ``"changed"`` (igual ao
-    ``GtkComboBox.set_active_id``); só emite quando o id realmente muda. Um guard
-    interno evita loop ao marcar/desmarcar os outros botões do grupo.
-  - ``connect("changed", cb)`` — sinal GObject nativo; ``cb`` recebe o widget
-    como 1º argumento (como o handler de ``GtkComboBox::changed``).
-
-A lógica por-ID vive em ``_SegmentedLogic`` (puro Python, sem GTK — testável sem
-display). A classe concreta apenas implementa os 3 hooks que tocam o toolkit
-(criar botões, ativar um botão, emitir o sinal). Como ``button_glyph`` e
-``stick_preview_gtk``, há uma variante real (subclasse de ``Gtk.Box``) quando o
-GTK está disponível e um stub puro caso contrário (testes/CI sem PyGObject).
-"""
+"""segmented_selector.py — botões segmentados sempre visíveis (sem popup)."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -31,19 +6,11 @@ from typing import Any, ClassVar
 
 #: Colunas da grade no modo ``wrap`` (19 modos de gatilho → 7 linhas).
 _WRAP_COLUNAS = 3
-#: Largura de referência do rótulo antes de quebrar linha, em caracteres. Com 3
-#: colunas em ~480px, cada botão tem ~150px — cerca de 16 caracteres.
 _WRAP_MAX_CHARS = 16
 
 
 class _SegmentedLogic:
-    """Lógica por-ID compartilhada (sem GTK).
-
-    Mantém ``_items`` e ``_active_id`` e implementa a semântica do combo
-    (set_items idempotente + preserva ativo; set_active_id só emite na mudança).
-    Subclasses fornecem os hooks ``_create_buttons``/``_activate_button``/
-    ``_emit_changed`` que tocam o toolkit.
-    """
+    """Lógica por-ID compartilhada (sem GTK)."""
 
     _wrap: bool
     _items: list[tuple[str, str]]
@@ -54,37 +21,18 @@ class _SegmentedLogic:
         self._wrap = wrap
         self._items = []
         self._active_id = None
-        #: ESCOLHA-DELA-VENCE-01/E4: dica POR BOTÃO, `{id: texto}`.
-        #:
-        #: Ela mora aqui e NÃO dentro da tupla de `set_items`, e a decisão é
-        #: de risco: a forma `(id, label)` é load-bearing — o comparador de
-        #: idempotência (`if items == self._items`) e o `_index_of` desempacotam
-        #: dois elementos, e três arquivos de teste travam a tupla. Um método
-        #: separado entrega o mesmo e não encosta em nada disso.
         self._dicas: dict[str, str] = {}
-        # Guard: True enquanto marcamos botões programaticamente, para o handler
-        # "toggled" não reemitir "changed" nem entrar em loop.
         self._updating = False
 
-    # ---- API por-ID (espelha o GtkComboBoxText) ----
 
     def set_items(self, items: list[tuple[str, str]]) -> None:
-        """Reconstrói os botões a partir de ``[(id, label), ...]``.
-
-        Idempotente: se ``items`` for igual aos itens atuais, não faz nada. O id
-        ativo é preservado se ainda existir na nova lista; caso contrário fica
-        ``None``. NÃO emite "changed" (espelha o append/remove do combo, que só
-        emite no ``set_active_id``).
-        """
+        """Reconstrói os botões a partir de ``[(id, label), ...]``."""
         items = list(items)
         if items == self._items:
             return
         prev_active = self._active_id
         self._items = items
         self._create_buttons(items)
-        # Os botões acabaram de ser recriados: as dicas guardadas voltam para
-        # eles. Sem isto, um `set_tooltips` ANTES do `set_items` seria perdido —
-        # e a ordem de montagem varia de tela para tela.
         self._aplicar_dicas()
         keep = prev_active if self._index_of(items, prev_active) is not None else None
         self._active_id = None
@@ -95,17 +43,7 @@ class _SegmentedLogic:
                 self._active_id = keep
 
     def set_tooltips(self, dicas: dict[str, str]) -> None:
-        """Dica por BOTÃO — `{id: texto}`. Id ausente fica sem dica.
-
-        ESCOLHA-DELA-VENCE-01/E4, pedido dela: *"ao deixar o mouse sobre a
-        opção Xbox, ele falaria que o Xbox não tem tais features"*. Até aqui o
-        seletor só tinha UM tooltip, no widget inteiro — e no editor de perfis
-        ele dizia "Quais desenhos de botão o jogo mostra na tela", que não é o
-        preço de nada.
-
-        Pode ser chamada antes ou depois de `set_items`: a aplicação acontece
-        nas duas pontas, porque a ordem de montagem varia entre as telas.
-        """
+        """Dica por BOTÃO — `{id: texto}`. Id ausente fica sem dica."""
         self._dicas = dict(dicas)
         self._aplicar_dicas()
 
@@ -113,17 +51,7 @@ class _SegmentedLogic:
         """Hook: escreve as dicas nos botões (no-op sem toolkit)."""
 
     def limpar_ativo(self) -> None:
-        """Deixa o seletor SEM nenhum botão marcado, sem emitir "changed".
-
-        ESCOLHA-DELA-VENCE-01/E1. É o estado que corresponde a "sem opinião" —
-        um perfil com `gamepad_flavor: null` diz ao applier "mantém a máscara
-        atual", e mostrar um dos dois botões marcado seria a tela afirmando
-        uma escolha que ninguém fez.
-
-        Não emite: é POPULATE, não gesto dela. O `_modo_tocado` do editor
-        existe justamente para separar as duas coisas, e um "changed" aqui o
-        levantaria como se ela tivesse clicado.
-        """
+        """Deixa o seletor SEM nenhum botão marcado, sem emitir "changed"."""
         if self._active_id is None:
             return
         self._active_id = None
@@ -137,11 +65,7 @@ class _SegmentedLogic:
         return self._active_id
 
     def set_active_id(self, the_id: str) -> None:
-        """Ativa o botão do id e EMITE "changed" (igual ao ``GtkComboBox``).
-
-        Só emite quando o id efetivamente muda — ids inexistentes ou iguais ao
-        ativo são no-op (mesma semântica do combo).
-        """
+        """Ativa o botão do id e EMITE "changed" (igual ao ``GtkComboBox``)."""
         idx = self._index_of(self._items, the_id)
         if idx is None:
             return
@@ -161,7 +85,6 @@ class _SegmentedLogic:
                 return i
         return None
 
-    # ---- hooks (implementados pela classe concreta) ----
 
     def _create_buttons(self, items: list[tuple[str, str]]) -> None:
         raise NotImplementedError
@@ -189,14 +112,11 @@ except (ImportError, ValueError):
 
 
 if _GTK_DISPONIVEL:
-    # RUN_FIRST tem valor 1; o getattr tolera um GObject stubado sem SignalFlags.
     _RUN_FIRST = getattr(getattr(GObject, "SignalFlags", None), "RUN_FIRST", 1)
 
     class SegmentedSelector(_SegmentedLogic, Gtk.Box):  # type: ignore[misc]
         """Grupo de ``GtkRadioButton`` em modo toggle, com a API por-ID do combo."""
 
-        # Espelha GtkComboBox::changed: sem argumentos; o handler lê
-        # get_active_id() para descobrir o novo valor.
         __gsignals__: ClassVar[dict[str, tuple[Any, ...]]] = {
             "changed": (_RUN_FIRST, None, ()),
         }
@@ -207,9 +127,6 @@ if _GTK_DISPONIVEL:
             )
             self._init_logic(wrap)
             self._buttons: list[Gtk.RadioButton] = []
-            # Founder OCULTO do grupo de rádio (ver _create_buttons): permite que
-            # TODOS os botões visíveis fiquem inativos ao mesmo tempo (estado
-            # _active_id=None visualmente fiel ao GtkComboBox com active=-1).
             self._group_founder: Gtk.RadioButton | None = None
             self.set_valign(Gtk.Align.CENTER)
             if wrap:
@@ -239,18 +156,9 @@ if _GTK_DISPONIVEL:
                 self.get_style_context().add_class("linked")
                 self._container = self
 
-        # ---- hooks GTK ----
 
         def _create_buttons(self, items: list[tuple[str, str]]) -> None:
-            """Destrói os botões atuais e cria um GtkRadioButton por item.
-
-            Usa um founder OCULTO do grupo (nunca empacotado no container): sem
-            ele, ``new_with_label_from_widget`` faria o PRIMEIRO botão visível
-            nascer ATIVO, divergindo de ``_active_id=None`` e tornando o item
-            default inalcançável por clique (clicar um rádio já-ativo não dispara
-            "toggled"). Com o founder oculto segurando o estado ativo inicial,
-            TODOS os botões visíveis começam inativos — visual fiel ao combo.
-            """
+            """Destrói os botões atuais e cria um GtkRadioButton por item."""
             for child in list(self._container.get_children()):
                 self._container.remove(child)
                 child.destroy()
@@ -258,18 +166,14 @@ if _GTK_DISPONIVEL:
             if old_founder is not None:
                 old_founder.destroy()
             self._buttons = []
-            # group=None → este botão funda o grupo; não é empacotado → invisível.
             self._group_founder = Gtk.RadioButton()
             for indice, (the_id, label) in enumerate(items):
                 btn = Gtk.RadioButton.new_with_label_from_widget(
                     self._group_founder, label
                 )
-                btn.set_mode(False)  # toggle button (sem a bolinha de radio)
+                btn.set_mode(False)
                 btn.connect("toggled", self._on_button_toggled, the_id)
                 if self._wrap:
-                    # Rótulo quebra dentro do botão em vez de alargá-lo: com 3
-                    # colunas fixas, "Feedback em rampa" precisa caber em duas
-                    # linhas curtas, senão empurra a largura de toda a coluna.
                     filho = btn.get_child()
                     if isinstance(filho, Gtk.Label):
                         filho.set_line_wrap(True)
@@ -285,12 +189,7 @@ if _GTK_DISPONIVEL:
             self._container.show_all()
 
         def _desmarcar_todos(self) -> None:
-            """Devolve o estado ativo ao founder OCULTO do grupo.
-
-            Num grupo de rádios do GTK sempre há um marcado. O founder existe
-            justamente para ser esse alguém quando nenhum botão VISÍVEL deve
-            estar — é o mesmo mecanismo que faz o seletor nascer sem seleção.
-            """
+            """Devolve o estado ativo ao founder OCULTO do grupo."""
             if self._group_founder is None:
                 return
             self._updating = True
@@ -326,7 +225,7 @@ if _GTK_DISPONIVEL:
             if self._updating:
                 return
             if not button.get_active():
-                return  # ignora o botão do grupo que foi desmarcado
+                return
             if the_id == self._active_id:
                 return
             self._active_id = the_id
@@ -335,12 +234,7 @@ if _GTK_DISPONIVEL:
 else:
 
     class SegmentedSelector(_SegmentedLogic):  # type: ignore[no-redef]
-        """Stub puro para ambientes sem GTK3 (testes, CI sem PyGObject).
-
-        Implementa a MESMA API por-ID (a lógica vive em ``_SegmentedLogic``);
-        os hooks de toolkit viram no-ops e o "changed" chama os callbacks
-        registrados via ``connect``.
-        """
+        """Stub puro para ambientes sem GTK3 (testes, CI sem PyGObject)."""
 
         def __init__(self, wrap: bool = False) -> None:
             self._init_logic(wrap)
@@ -359,7 +253,6 @@ else:
         def set_tooltip_text(self, _text: str) -> None:
             pass
 
-        # ---- hooks (no-ops; o estado é só self._active_id) ----
 
         def _create_buttons(self, items: list[tuple[str, str]]) -> None:
             pass

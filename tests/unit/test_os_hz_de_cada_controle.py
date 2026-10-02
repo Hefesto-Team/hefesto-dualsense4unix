@@ -1,15 +1,4 @@
-"""Os Hz de verdade de cada controle — AR-MEDIDO-01 (23/09/2026), R10 dela.
-
-Quem conta é o leitor do nó de MOVIMENTO (``MotionSensorReader``), que já lia
-o nó para o giroscópio: um pacote por relatório de estado, carimbado pelo
-kernel. Nada aqui abre ``/dev/input``: os eventos são dublês com o carimbo
-escrito à mão.
-
-A MORDIDA, feita em 23/09/2026: tirar a exclusão do intervalo que atravessa um
-``SYN_DROPPED`` faz ``test_o_pacote_que_o_nosso_buffer_perdeu_nao_derruba_os_hz``
-reprovar — o número cai de 800 para 520,7, e a tela diria que o RÁDIO
-entregou menos quando quem perdeu foi a nossa thread. Devolvida, md5 conferido.
-"""
+"""Os Hz de verdade de cada controle — AR-MEDIDO-01 (23/09/2026), R10 dela."""
 
 from __future__ import annotations
 
@@ -43,12 +32,7 @@ class _NoDeMovimento:
 
 
 def _leitor(relogio: Relogio) -> MotionSensorReader:
-    """O leitor ABERTO pelo mesmo gancho que o laço de reconexão chama.
-
-    CONFERÊNCIA DE 23/09/2026: este dublê chamava ``_zerar_a_taxa`` sozinho, e
-    arrancar a abertura da taxa de ``_on_device_opened`` — o que deixaria os Hz
-    em «não sei» para sempre no produto — passava com as 60 réguas verdes.
-    """
+    """O leitor ABERTO pelo mesmo gancho que o laço de reconexão chama."""
     leitor = MotionSensorReader(device_path=Path("/nao/existe"), target_uniq="aabbcc000011")
     leitor._relogio_da_taxa = relogio
     no = _NoDeMovimento()
@@ -88,8 +72,6 @@ def test_o_pacote_que_o_nosso_buffer_perdeu_nao_derruba_os_hz() -> None:
     leitor = _leitor(relogio)
     fim = _pacotes(leitor, 1_000.0, 800.0, 400)
     _syn(leitor, fim + 0.0001, codigo=3)
-    # 350 ms de pacotes que a thread não leu: o próximo chega com o carimbo
-    # de depois do buraco.
     relogio.agora += 0.350
     _pacotes(leitor, fim + 0.350, 800.0, 400)
     hz = leitor.hz_do_movimento()
@@ -135,9 +117,6 @@ def test_o_carimbo_que_salta_para_tras_nao_vira_intervalo() -> None:
     _pacotes(leitor, fim - 3_600.0, 250.0, 250)
     hz = leitor.hz_do_movimento()
     assert hz is not None and 240.0 <= hz <= 260.0
-
-
-# ---------------------------------------------------------------- o hub
 
 
 class _Leitor:
@@ -226,7 +205,6 @@ def _handlers(monkeypatch: object) -> tuple[object, object]:
     handlers = _Handlers(daemon)
     handlers._sensor_hub = _Hub({UNIQ_1: 402.3, UNIQ_2: 395.0, UNIQ_CABO: 250.0})
     # A identidade de fábrica já «respondida»: sem isto o `state_full` sai
-    # perguntando ao hidraw da máquina por estes endereços de mentira.
     handlers._identidade_de_fabrica_cache = {
         u: {"serial": None, "modelo": None} for u in (UNIQ_1, UNIQ_2, UNIQ_CABO)
     }
@@ -361,9 +339,6 @@ def test_o_afh_e_perguntado_numa_thread_e_so_de_tempos_em_tempos(
     assert perguntas == [(2, 12)], "o AFH foi perguntado de novo antes do período"
 
 
-# ---------------------------------------------------------------- a voz
-
-
 class _Stats:
     def __init__(self, audio: int, invalidos: int = 0) -> None:
         self.quadros_audio = audio
@@ -396,7 +371,7 @@ def test_a_voz_e_a_taxa_de_quadros_de_audio_da_ponte_do_microfone() -> None:
     ponte.audio = 500
     assert sub.hz_de_voz(UNIQ_1) == 106.0, "entre janelas repete a última"
     relogio.agora += 0.6
-    ponte.audio, ponte.invalidos = 100, 6  # ninguém ouvindo: o contador parou
+    ponte.audio, ponte.invalidos = 100, 6
     assert sub.hz_de_voz(UNIQ_1) == 0.0, "ponte de pé e ninguém ouvindo é zero"
 
 
@@ -413,7 +388,7 @@ def test_a_ponte_do_microfone_que_recomecou_e_nao_sei_e_nunca_taxa_negativa() ->
     ponte.audio = 100
     assert sub.hz_de_voz(UNIQ_1) == 100.0
     relogio.agora += 1.0
-    ponte.audio = 5  # a ponte caiu e subiu de novo: o contador recomeçou
+    ponte.audio = 5
     assert sub.hz_de_voz(UNIQ_1) is None
 
 

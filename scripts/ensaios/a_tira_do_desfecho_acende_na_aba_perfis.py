@@ -65,25 +65,15 @@ import tempfile
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-# ---------------------------------------------------------------------------
-# O DESVIO VEM ANTES DE TUDO. `utils/xdg_paths` calcula `_DIRS` no import, e
-# `platformdirs` lê `XDG_CONFIG_HOME` naquele instante — mexer depois não
-# adianta, e o ensaio escreveria na pasta de perfis DELA.
-# ---------------------------------------------------------------------------
 CASA = pathlib.Path(tempfile.mkdtemp(prefix="hef-ensaio-desfecho-"))
 os.environ["XDG_CONFIG_HOME"] = str(CASA / "config")
 os.environ["XDG_DATA_HOME"] = str(CASA / "share")
 os.environ["XDG_CACHE_HOME"] = str(CASA / "cache")
-#: A semeadura de fábrica encheria a pasta de nove perfis e a lista rolaria; o
-#: ensaio quer duas linhas para saber em qual clicou.
 os.environ["HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED"] = "1"
 
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -105,17 +95,9 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
 ABA = "10-perfis.html"
 
-#: Os dois perfis do ensaio. Nomes que NÃO são os dela, para que um erro de
-#: desvio apareça como colisão em vez de sobrescrever algo real.
 ALVO = "Ensaio Do Desfecho"
 VIZINHO = "Ensaio Vizinho"
 
-#: O ROTEIRO, num JS só. Ele faz o caminho DELA em quatro tempos e devolve a
-#: tira depois de cada um — o que se mede é o texto que fica na tela, não o
-#: retorno do handler (esse já tem régua de unidade).
-#:
-#: O `change` É DISPARADO À MÃO porque o `el.value = …` do JS não o dispara
-#: sozinho — é a mesma razão pela qual o piloto escuta `change` e não `input`.
 ROTEIRO = r"""
 (function(){
   function tira(){
@@ -140,26 +122,14 @@ ROTEIRO = r"""
 })()
 """
 
-#: O que perguntar depois de cada gesto — o mesmo leitor, uma linha.
 LER_A_TIRA = "JSON.stringify(window.__ensaio.tira())"
 
-#: MS até a primeira leitura. ABAIXO do tique de 500 ms de propósito: é o que
-#: separa `_dizer` (devolve, e o piloto pinta no ato) de `_anotar` (guarda, e a
-#: tela espera o tique).
 NO_ATO_MS = 250
-#: MS até a segunda. Acima do tique: aqui os dois caminhos já pintaram.
 ASSENTADO_MS = 1400
 
 
 def _mudo(tira: dict[str, object] | None) -> bool:
-    """A tira está apagada?
-
-    O `'—'` CONTA COMO MUDO, e essa linha é a régua inteira: o `escrever()` do
-    piloto troca valor vazio por travessão antes de escrever
-    (`hefesto_vivo.py`), então "tem texto" é verdade sobre uma tira apagada. A
-    primeira versão deste ensaio perguntava só isso e passou contra o código de
-    ANTES da cura — verde sobre nada, no mesmo dia em que ele foi escrito.
-    """
+    """A tira está apagada?"""
     if not tira:
         return True
     texto = str(tira.get("texto") or "").strip()
@@ -193,7 +163,6 @@ def main() -> int:
     piloto = hefesto_vivo.Piloto(args)
     lido: list[dict[str, object]] = []
     passos = [
-        # (rótulo, gesto, valor · `None` = clique sem valor)
         ("selecionar o alvo", "selecionar", None),
         ("editor.jogo ← 1599660", "editor.jogo", "1599660"),
         ("editor.nome ← Ensaio Renomeado", "editor.nome", "Ensaio Renomeado"),
@@ -230,11 +199,6 @@ def main() -> int:
             lido.append(medida)
             GLib.timeout_add(600, proximo)
 
-        # A SELEÇÃO DA LINHA é pelo nome que a linha carrega: o `[data-hef-gesto]`
-        # genérico pegaria a primeira linha da lista, que pode ser a outra. Desde
-        # 02/10/2026 o `selecionar` mora na `<tr>` (A-LINHA-INTEIRA-ABRE-O-PERFIL-01),
-        # e o texto dela é o das três células coladas; o nome vem do
-        # `data-hef-perfil`, o mesmo que o gesto lê.
         alvo = (f"(function(){{const c=[...document.querySelectorAll("
                 f"'[data-hef-gesto=\"selecionar\"]')].find(x=>"
                 f"x.dataset.hefPerfil==={ALVO!r});"
@@ -263,8 +227,6 @@ def main() -> int:
 
     print(f"a pasta de perfis do ensaio: {CASA}/config/hefesto-dualsense4unix")
     print(f"{'passo':34s} {'no ato':7s} {'assent':7s} tira (assentada)")
-    #: OS QUE DEVEM NOTÍCIA. `selecionar` não grava nada e o `remover` de ARMAR
-    #: termina em recusa — a fala dele é a TARJA, não a tira.
     cobrados = {"editor.jogo ← 1599660", "editor.nome ← Ensaio Renomeado",
                 "remover (2º clique: apaga)"}
     mudos: list[str] = []

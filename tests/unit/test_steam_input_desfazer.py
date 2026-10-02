@@ -1,23 +1,4 @@
-"""O desfazer do Steam Input existe — e passa por uma porta de verdade.
-
-BOTAO-QUE-NAO-MENTE-01 (entrega 2) e STEAM-INPUT-01 (entrega 3).
-
-O defeito medido em 26/07: `remove_appid_from_steam_input_allowlist` estava
-escrita, testada com nove casos em `test_steam_launch_options_vdf.py` — e com
-ZERO chamadores em `src/`. Função órfã não é feature: pôr um jogo na exceção do
-Steam Input era um clique, tirar exigia editor de texto. E o preço de um jogo
-marcado por engano é alto (perde cor, gatilhos e co-op do Hefesto).
-
-Estes testes cobrem os dois lados do buraco:
-
-1. a porta funciona — a remoção pela CLI tira o appid do ARQUIVO (não basta
-   imprimir uma mensagem bonita);
-2. a função não voltou a ser órfã — um grep em `src/` tem de achar chamador.
-
-O teste 2 é o que impede a regressão silenciosa: alguém pode apagar a chamada e
-todos os testes de unidade da função continuariam verdes, porque eles chamam a
-função direto.
-"""
+"""O desfazer do Steam Input existe — e passa por uma porta de verdade."""
 from __future__ import annotations
 
 import ast
@@ -32,7 +13,6 @@ runner = CliRunner()
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src"
-#: Onde a função é DEFINIDA — a definição não conta como chamador.
 DEFINICAO = SRC / "hefesto_dualsense4unix" / "integrations" / "steam_launch_options.py"
 ALVO = "remove_appid_from_steam_input_allowlist"
 
@@ -49,22 +29,15 @@ CABECALHO = (
     "3357650\n"
 )
 
-#: appid: nome, como a Steam escreve no appmanifest da máquina dela.
 JOGOS = {"2111190": "Mullet Mad Jack", "3357650": "PRAGMATA"}
 
 
 @pytest.fixture
 def steam_falsa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """HOME hermético: allowlist em XDG + appmanifests de uma Steam nativa.
-
-    `steam_input_allowlist_path` resolve `XDG_CONFIG_HOME` e `default_steam_root`
-    resolve `Path.home()` (que honra `HOME`) — então o teste não encosta na
-    configuração real da mantenedora.
-    """
+    """HOME hermético: allowlist em XDG + appmanifests de uma Steam nativa."""
     config = tmp_path / "config"
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
-    # Largura fixa: sem isso o rich quebra a linha do jogo no meio do nome.
     monkeypatch.setenv("COLUMNS", "200")
 
     allowlist = config / "hefesto-dualsense4unix" / "steam_input_apps.txt"
@@ -168,14 +141,7 @@ def test_lista_vazia_nao_mente(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 
 
 def chamadores_em_src() -> list[str]:
-    """Arquivos de `src/` que CHAMAM a remoção (a definição não conta).
-
-    Por AST, não por grep de texto: o docstring deste módulo e o do próprio
-    `cmd_steam.py` citam o nome da função ao explicar o defeito, e um grep
-    ingênuo daria o teste por satisfeito com uma MENÇÃO. Só contam referências
-    reais no código — `from ... import`, nome usado, ou atributo (`slo.f(...)`,
-    que é como `daemon_actions.py` chama a irmã `add_...`).
-    """
+    """Arquivos de `src/` que CHAMAM a remoção (a definição não conta)."""
     achados: list[str] = []
     for arquivo in sorted(SRC.rglob("*.py")):
         if arquivo == DEFINICAO:
@@ -200,12 +166,7 @@ def chamadores_em_src() -> list[str]:
 
 
 def test_a_remocao_nao_voltou_a_ser_orfa() -> None:
-    """A regressão que os nove testes de unidade da função NÃO pegariam.
-
-    Eles chamam a função direto; se a única chamada de produção sumir, todos
-    seguem verdes e o desfazer some da mão da mantenedora sem ninguém notar.
-    Em 26/07 este grep devolvia lista vazia.
-    """
+    """A regressão que os nove testes de unidade da função NÃO pegariam."""
     chamadores = chamadores_em_src()
 
     assert chamadores, (
@@ -222,12 +183,7 @@ def test_a_definicao_sozinha_nao_conta_como_chamador() -> None:
 
 
 def test_mencao_em_docstring_nao_conta_como_chamador(tmp_path: Path) -> None:
-    """A segunda mordida: citar o nome numa prosa não religa o desfazer.
-
-    `cmd_steam.py` explica o defeito no próprio docstring — e cita o nome da
-    função ali. Se a contagem fosse por grep de texto, apagar a chamada real
-    deixaria o teste verde por causa da explicação de que ela existe.
-    """
+    """A segunda mordida: citar o nome numa prosa não religa o desfazer."""
     so_prosa = tmp_path / "so_prosa.py"
     so_prosa.write_text(f'"""Fala de {ALVO} sem chamar."""\n# {ALVO}\n', encoding="utf-8")
 

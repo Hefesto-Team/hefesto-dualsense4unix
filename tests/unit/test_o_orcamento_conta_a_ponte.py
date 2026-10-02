@@ -1,19 +1,4 @@
-"""O orçamento de ar conta PONTES, não soma entrada — AR-MEDIDO-01, R10 dela.
-
-A entrada do controle é elástica; o que transborda um adaptador são as saídas
-de ritmo fixo (a ponte de som 0x35 e a de vibração 0x32). As três palavras de
-sempre passam a ler as pontes contra ``N_MAX_PONTES``, e os Hz que viajam são
-os MEDIDOS. Nada aqui lê ``/sys`` de verdade: o ``HID_PHYS`` é dublê.
-
-AS MORDIDAS, feitas em 23/09/2026 e devolvidas com md5 conferido:
-
-* ``palavra_das_pontes`` com ``<=`` no lugar de ``<`` faz o adaptador com
-  duas pontes dizer «Folgada» — ``test_as_tres_palavras_leem_as_pontes``
-  reprova;
-* ``HZ_DA_PONTE`` trocado sem tocar o CSV faz
-  ``test_o_csv_e_as_constantes_sao_o_mesmo_numero`` reprovar nas duas
-  linhas de ponte.
-"""
+"""O orçamento de ar conta PONTES, não soma entrada — AR-MEDIDO-01, R10 dela."""
 
 from __future__ import annotations
 
@@ -45,9 +30,6 @@ def _controle(n: int, **extra: object) -> dict[str, object]:
 
 def _sem_sysfs(_raiz: str) -> list[str]:
     raise AssertionError("o orçamento leu o sysfs com o adaptador já publicado")
-
-
-# ---------------------------------------------------------------- pontes
 
 
 def test_quatro_controles_com_ponte_num_adaptador_sao_4_de_2() -> None:
@@ -102,9 +84,6 @@ def test_modo_de_ponte_desconhecido_nao_e_ponte() -> None:
     assert a.controles[0].ponte is None
 
 
-# ---------------------------------------------------------------- quem é de quem
-
-
 def test_o_adaptador_ausente_sai_do_hid_phys() -> None:
     uevents = {
         "/sys/class/hidraw/hidraw3/device/uevent":
@@ -139,9 +118,6 @@ def test_os_hz_viajam_como_vieram_e_o_torto_vira_nao_sei() -> None:
         ADAPTADOR_A].controles
     assert (um.hz_movimento, um.hz_voz) == (412.5, 0.0)
     assert (dois.hz_movimento, dois.hz_voz) == (None, None)
-
-
-# ---------------------------------------------------------------- o medidor
 
 
 def test_o_adaptador_vazio_do_medidor_aparece_com_zero_pontes() -> None:
@@ -189,9 +165,6 @@ def test_nada_publicado_carrega_palavra_de_culpa() -> None:
     assert not [p for p in rm.PALAVRAS_DE_CULPA if p in texto]
 
 
-# ---------------------------------------------------------------- o CSV
-
-
 def _linhas() -> list[dict[str, str]]:
     with CSV.open(encoding="utf-8", newline="") as arquivo:
         return list(csv.DictReader(arquivo))
@@ -211,12 +184,7 @@ def test_o_csv_tem_uma_linha_por_consumidor_com_a_procedencia() -> None:
 
 
 def test_o_ritmo_da_ponte_e_o_que_a_bomba_manda() -> None:
-    """``HZ_DA_PONTE`` pergunta ao DONO do ritmo, a bomba do rádio.
-
-    A régua do CSV compara o CSV com a constante, que nasceram juntos: se a
-    bomba passasse a mandar dois quadros por report (a camada do firmware do
-    estudo de 23/09), as duas continuariam iguais entre si e erradas.
-    """
+    """``HZ_DA_PONTE`` pergunta ao DONO do ritmo, a bomba do rádio."""
     from hefesto_dualsense4unix.integrations import alto_falante_bt as bomba
 
     for arranjo in (bomba.ARRANJO_PADRAO, bomba.ARRANJO_HAPTICA_032):
@@ -239,9 +207,6 @@ def test_o_csv_e_as_constantes_sao_o_mesmo_numero() -> None:
             f"{linha['consumidor']}: o CSV diz {linha['numero']} e {dono} diz {valor}")
         conferidas += 1
     assert conferidas >= 8
-
-
-# ---------------------------------------------------------------- quem sabe das pontes
 
 
 class _PonteDoSom:

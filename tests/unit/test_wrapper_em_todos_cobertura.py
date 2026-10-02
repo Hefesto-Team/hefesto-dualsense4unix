@@ -65,27 +65,11 @@ class TestCoberturaDecideOIgnore:
     def test_sem_cobertura_o_ignore_nao_sai(
         self, backends: list[str], fisicos: int, caso: str
     ) -> None:
-        """Mordida: devolver a decisão a `all(b == "uhid")` faz reprovar.
-
-        Este é o teste que a sprint existe para escrever. Sem ele, a próxima
-        pessoa que "simplificar" o `compose_env` reintroduz o defeito, e o
-        sintoma só aparece com dois controles e um jogo aberto.
-        """
+        """Mordida: devolver a decisão a `all(b == "uhid")` faz reprovar."""
         assert IGNORE not in _env(backends, fisicos), caso
 
     def test_sem_saber_quantos_fisicos_o_comportamento_nao_muda(self) -> None:
-        """`fisicos=0` é "NÃO SEI", e aí o comportamento HISTÓRICO prevalece.
-
-        Esta decisão foi corrigida em 03/08 **por reprovação de teste**: a
-        primeira versão tratava "não sei" como "sem cobertura" e removia o
-        IGNORE — o que derrubou 7 testes existentes e teria removido o dedup de
-        todo backend que não expõe `describe_controllers` (`FakeController`,
-        dublê, backend legado) e de todos os prognósticos de perfil, que montam
-        env ANTES de haver controle na mão.
-
-        **Apertar sem informação é regressão, não cura.** Só se exige cobertura
-        quando se sabe quantos físicos há.
-        """
+        """`fisicos=0` é "NÃO SEI", e aí o comportamento HISTÓRICO prevalece."""
         assert IGNORE in _env(["uhid"], 0)
 
 
@@ -94,34 +78,17 @@ class TestOQueNaoMuda:
 
     @pytest.mark.parametrize("fisicos", [0, 1, 2, 5])
     def test_o_disable_hidraw_sai_sempre(self, fisicos: int) -> None:
-        """Ele impede o winebus de entregar o hidraw do físico e NÃO esconde
-        nada do SDL — tirá-lo junto seria reabrir a guerra de escritores
-        (GUERRA-01), que é defeito diferente e já pago."""
+        """Ele impede o winebus de entregar o hidraw do físico e NÃO esconde"""
         assert DISABLE in _env(["uhid"], fisicos)
 
     def test_a_mascara_xbox_segue_a_mesma_regra(self) -> None:
-        """Xbox tem caminho próprio no `compose_env`, e a cobertura vale nele
-        também — senão a cura protegeria metade das máscaras."""
+        """Xbox tem caminho próprio no `compose_env`, e a cobertura vale nele"""
         assert IGNORE in _env(["uinput"], 1, flavor="xbox")
-        assert IGNORE in _env(["uinput"], 0, flavor="xbox")  # "não sei"
-        assert IGNORE not in _env(["uinput"], 2, flavor="xbox")  # 2 físicos, 1 vpad
+        assert IGNORE in _env(["uinput"], 0, flavor="xbox")
+        assert IGNORE not in _env(["uinput"], 2, flavor="xbox")
 
     def test_vpad_degradado_continua_sem_ignore(self) -> None:
-        """Um vpad em uinput com máscara dualsense nunca teve IGNORE — a SDL
-        pode mapeá-lo errado, e esconder o físico deixaria um controle de
-        botões trocados como único.
-
-        NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026, CORRIGIDA em 14/09 pela
-        conferência da TROCA-DENTRO-DO-JOGO-01: a nota dizia "o mesmo mapa do
-        uhid", e a medição não sustenta isso. Na libSDL2 2.30 com o daemon vivo,
-        os dois chegam como `ps5` e com os quatro botões de rosto iguais
-        (`a:b0,b:b1,x:b3,y:b2`), mas o resto sai em índices diferentes: o uhid dá
-        `back:b8,guide:b10,start:b9,leftstick:b11` e o uinput dá
-        `back:b6,guide:b8,start:b7,leftstick:b9` — o Edge em uinput não tem o
-        touchpad nem os botões extras. O que sustenta o IGNORE não é a parecença
-        dos mapas: é o VID/PID. O IGNORE esconde `054c:0ce6`, e os dois vpads são
-        `054c:0df2`, que ele não alcança. Com cobertura, o uinput passou a ter
-        IGNORE; o que continua sem é a mesa sem um vpad por físico."""
+        """Um vpad em uinput com máscara dualsense nunca teve IGNORE — a SDL"""
         assert IGNORE in _env(["uinput"], 1)
         assert IGNORE in _env(["uhid", "uinput"], 2)
         assert IGNORE not in _env(["uinput"], 2)

@@ -1,34 +1,9 @@
-"""MASCARA-CUSTO-01 — a máscara Xbox apaga giroscópio e touchpad, e a tela diz.
-
-A pergunta dela, literal, em 01/08/2026: *"não sei se agora o alto-falante,
-giroscópio, microfone e touchpad — todas as features — na hora de jogar um jogo
-na Steam se elas vão estar funcionando. Elas precisam funcionar."*
-
-A auditoria daquele dia respondeu com número, e a resposta tinha duas metades:
-
-* **microfone e alto-falante** não passam pelo gamepad virtual — são PipeWire,
-  e valem em qualquer máscara. Nada a avisar;
-* **giroscópio e touchpad** só chegam ao jogo pelo espelho do gamepad virtual,
-  e o espelho só existe no backend `uhid`. `integrations/virtual_pad.py` recusa
-  o uhid para todo sabor que não seja `dualsense`, e o vpad `uinput` — que é o
-  que sobra na máscara Xbox — declara 8 eixos e 11 botões: **não há onde pôr
-  IMU nem dedo**. Não é defeito, é a API do controle de Xbox.
-
-O que faltava não era código de sensor: era ETIQUETA DE PREÇO. Seis dos oito
-perfis de jogo desta casa pediam máscara Xbox, e nada na tela dizia o que se
-perdia com isso — nem no momento do gesto, nem depois.
-
-Este arquivo trava a frase e trava o que ela NÃO pode dizer.
-"""
+"""MASCARA-CUSTO-01 — a máscara Xbox apaga giroscópio e touchpad, e a tela diz."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_mascara_diz_o_que_custa: importa código da janela GTK")
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -38,12 +13,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
 
 
 def test_a_mascara_xbox_diz_o_que_o_jogo_perde() -> None:
-    """A mordida: sem a frase, a escolha volta a ser cega.
-
-    Um teste que só afirmasse `texto != ""` passaria com qualquer frase,
-    inclusive uma que não nomeasse o que se perde. Por isso as duas palavras
-    são exigidas pelo nome.
-    """
+    """A mordida: sem a frase, a escolha volta a ser cega."""
     texto = texto_do_custo_da_mascara("xbox")
 
     assert texto, "a máscara Xbox tem preço e a tela não o disse"
@@ -83,17 +53,7 @@ def test_payload_incompleto_nao_vira_aviso() -> None:
 
 
 def test_a_frase_nao_promete_perda_que_nao_existe() -> None:
-    """Microfone e alto-falante NÃO passam pelo gamepad — não podem entrar.
-
-    Medido na auditoria de 01/08: nenhuma linha de `virtual_pad.py`,
-    `subsystems/gamepad.py`, `launch_env.py` ou `steam_launcher.py` toca
-    PipeWire, e o `EVIOCGRAB` age no nó evdev, não na placa de som USB. Os dois
-    valem igual nas duas máscaras.
-
-    Listá-los como perda seria assustar sem motivo e mandar caçar problema no
-    lugar errado — que é o defeito que a APLICAR-VERDADE-01 existiu para
-    eliminar, na mesma janela.
-    """
+    """Microfone e alto-falante NÃO passam pelo gamepad — não podem entrar."""
     texto = TEXTO_CUSTO_MASCARA_XBOX.lower()
 
     assert "vibra" in texto, (

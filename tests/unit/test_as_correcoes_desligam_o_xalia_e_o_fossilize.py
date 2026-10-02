@@ -1,20 +1,4 @@
-"""O xalia fica fora de todo jogo — AS-CORRECOES-AUTOMATICAS-DESLIGAM-O-XALIA-E-O-FOSSILIZE-01.
-
-Ela, 01/10: *«Fossilize e xalia entram no botão de aplicar correções
-automáticas de qualquer forma.»* <!-- noqa-acento: citação literal dela -->
-
-O `proton` liga o xalia quando `PROTON_USE_XALIA` não está no ambiente. Medido
-no Pro Jank Footy: 135 quadros acima de 20 ms com ele, 28 sem. A régua roda o
-lançador DE VERDADE num lar de mentira, com o `env` no lugar do jogo.
-
-A MORDIDA: troque o `xf_envs="PROTON_USE_XALIA=0"` de `xalia_fora` em
-`assets/hefesto-launch.sh` por `xf_envs=""` e
-`test_todo_jogo_nasce_sem_o_xalia` reprova.
-
-A SEGUNDA METADE (02/10) é a dos outros lançadores: a carona leva a mesma
-correção ao Heroic, ao Lutris e às caixas dos emuladores, com a mesma regra (o
-que ela pôs manda, o excluído não recebe, o desfazer tira só o nosso).
-"""
+"""O xalia fica fora de todo jogo — AS-CORRECOES-AUTOMATICAS-DESLIGAM-O-XALIA-E-O-FOSSILIZE-01."""
 from __future__ import annotations
 
 import configparser
@@ -104,21 +88,6 @@ def test_o_jogo_da_lista_de_exclusao_abre_como_sem_o_hefesto(lar: Path) -> None:
     assert status == "adicionado", status
     assert "PROTON_USE_XALIA" not in _lancar(lar, SteamAppId="3621330")
 
-
-# ---------------------------------------------------------------------------
-# 02/10: o xalia também nos outros lançadores (a emenda na carona)
-# ---------------------------------------------------------------------------
-#
-# Medido em 02/10, só lendo o disco dela e o fonte: a carona
-# (`cura_por_estrada.curar_todas_as_estradas`) copiava só o `default.env`
-# filtrado pela `ENV_ALLOWLIST`, e o `PROTON_USE_XALIA` não está nela: o jogo do
-# Heroic e o do Lutris abriam com o xalia ligado pelo Proton. As réguas abaixo
-# rodam a carona, a exclusão e o desfazer de verdade num lar de mentira e leem
-# os arquivos dos lançadores pelo disco.
-#
-# A MORDIDA: troque o valor de `CORRECOES_DA_CARONA` em `cura_por_estrada.py`
-# por uma tupla vazia, e `test_a_carona_desliga_o_xalia_em_toda_estrada`
-# reprova pelo nome do arquivo do Heroic.
 
 _XALIA = "PROTON_USE_XALIA"
 _RETROARCH = "org.libretro.RetroArch"
@@ -290,19 +259,7 @@ def test_o_jogo_excluido_do_heroic_nao_recebe(casa: Path) -> None:
 
 
 def test_o_jogo_excluido_do_lutris_pelo_wine_herda_a_caixa(casa: Path) -> None:
-    """O excluído pelo Wine sem Proton fica com o `0` da caixa, que é o padrão ali.
-
-    Lido em 02/10 no GE-Proton 11-7 e no 10-34 instalados nela (só leitura): o
-    script do Proton decide o xalia por presença (`proton:2527-2533` no 11-7) e,
-    sem a variável, põe o par `PROTON_USE_XALIA=1` + `XALIA_SUPPORTED_ONLY=1`;
-    o Wine sem o script não põe nada, e o `explorer.exe` sem a variável não sobe
-    o xalia. O excluído pelo Proton recebe o par
-    (O-JOGO-EXCLUIDO-DO-LUTRIS-VOLTA-AO-XALIA-DO-PROTON-01, as réguas em
-    `test_a_exclusao_mora_na_camada_do_jogo.py`); este, pelo Wine, nada.
-
-    MORDIDA: tire o `PROTON_USE_XALIA` de `_NAO_VEIO_POR_JOGO`, e o `''` do
-    prefixo `PROTON_` entra no `.yml`.
-    """
+    """O excluído pelo Wine sem Proton fica com o `0` da caixa, que é o padrão ali."""
     lx = lista_de_exclusao
     yml = _lutris_flatpak_pelo_wine(casa)
     _carona(casa)
@@ -346,13 +303,7 @@ def _global_dela(heroic: Path, valor: str) -> None:
 
 
 def test_com_a_global_dela_o_nosso_da_copia_sai_no_desfazer(casa: Path) -> None:
-    """O `1` dela na global, e a cópia de A sem a chave: a carona põe o `0` na cópia.
-
-    O registro da global é o das cópias. Sem a marca nossa ali, o `0` da cópia
-    ficava depois do uninstall e passava a ser lido como dela pela carona
-    seguinte. MORDIDA: em `_tomar`, devolva o `_devolver_chaves` às chaves
-    que ela pôs (o arranjo de antes), e este reprova pela cópia de A.
-    """
+    """O `1` dela na global, e a cópia de A sem a chave: a carona põe o `0` na cópia."""
     heroic = _heroic(casa, {"A": {"enviromentOptions": [{"key": "MANGOHUD", "value": "1"}]}})
     _global_dela(heroic, "1")
     for _ in range(2):
@@ -425,14 +376,7 @@ def test_o_um_que_ela_tirou_nao_volta_no_desfazer(casa: Path) -> None:
 
 
 def test_o_zero_dela_copiado_para_o_jogo_fica_no_uninstall(casa: Path) -> None:
-    """O `0` dela na global antes do Hefesto, e o Heroic o copiou para o jogo A.
-
-    Medido em 02/10 no lar de mentira: o `0` da cópia de A era lido como nosso
-    (o registro da global anota o `0` como valor nosso), e o uninstall o
-    tirava; A voltava a abrir com o xalia ligado, e a global dela seguia com o
-    `0`. MORDIDA: em `_entrada_da_copia`, devolva a marca da cópia com todos os
-    `valores` da global (sem tirar o «antes» dela), e esta reprova pela cópia de A.
-    """
+    """O `0` dela na global antes do Hefesto, e o Heroic o copiou para o jogo A."""
     heroic = _heroic(casa, {"A": {"enviromentOptions": [
         {"key": "MANGOHUD", "value": "1"}, {"key": _XALIA, "value": "0"}]}})
     _global_dela(heroic, "0")
@@ -449,13 +393,7 @@ def test_o_zero_dela_copiado_para_o_jogo_fica_no_uninstall(casa: Path) -> None:
 
 
 def test_o_excluido_que_segue_a_global_dela_fica_com_o_zero_dela(casa: Path) -> None:
-    """O `0` dela na global antes do Hefesto, e o jogo A excluído segue a global.
-
-    Sem o Hefesto, A abriria com o `0` dela. Medido em 02/10 no lar de mentira:
-    a exclusão dava a A uma lista própria sem o `0`, e a carona seguinte a
-    mantinha assim: o jogo excluído abria com o xalia ligado. MORDIDA: a mesma
-    de `test_o_zero_dela_copiado_para_o_jogo_fica_no_uninstall`.
-    """
+    """O `0` dela na global antes do Hefesto, e o jogo A excluído segue a global."""
     heroic = _heroic(casa, {"A": {}, "B": {}})
     _global_dela(heroic, "0")
     _carona(casa)
@@ -470,13 +408,7 @@ def test_o_excluido_que_segue_a_global_dela_fica_com_o_zero_dela(casa: Path) -> 
 
 
 def test_o_recibo_do_uninstall_nao_diz_que_ela_mudou_o_que_ja_era_dela(casa: Path) -> None:
-    """O `1` dela na global antes do Hefesto fica, e o recibo não diz «mudou depois».
-
-    O Hefesto nunca escreveu por cima dele (o dela manda), então a frase
-    «ficaram as que você mudou depois do Hefesto» era falsa. Quando ela troca o
-    nosso `0` depois, a frase continua. MORDIDA: em `_devolver_chaves`, conte em
-    `ficaram` toda chave presente, e esta reprova pela global com o `1` de antes.
-    """
+    """O `1` dela na global antes do Hefesto fica, e o recibo não diz «mudou depois»."""
     heroic = _heroic(casa, {})
     _global_dela(heroic, "1")
     _carona(casa)

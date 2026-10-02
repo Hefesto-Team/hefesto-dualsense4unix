@@ -75,7 +75,6 @@ from hefesto_dualsense4unix.app.constants import (
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
 
 # GRID_BOTOES/ALL_BUTTONS/L2_R2_THRESHOLD moraram aqui até o STATUS-02;
-# re-exportados (ver __all__) para os consumidores históricos da mixin.
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
     GRID_BOTOES,
@@ -98,72 +97,26 @@ from hefesto_dualsense4unix.utils.markup import escapar_markup
 
 logger = get_logger(__name__)
 
-#: Id do Glade da aba Status. Fonte única: `HefestoApp._ABA_STATUS` lê daqui, e
-#: é por ele que o tick de 10 Hz pergunta se a aba está à vista — nunca pelo
-#: número da página (EST-10).
 ABA_STATUS = "tab_status_box"
 
-#: Id do Glade da aba "No jogo" (ESCONDER-EM-VEZ-DE-SAIR, 09/08/2026).
-#:
-#: Mesma disciplina do `ABA_STATUS` logo acima, e pelo mesmo motivo medido: o
-#: tique pergunta se ESTA aba está à vista pelo id do Glade, nunca pelo número
-#: da página — inserir uma aba renumera todas, e um gate por índice passaria a
-#: pintar a aba errada em silêncio (EST-10 / JANELA-FIEL-01).
 ABA_NO_JOGO = "tab_no_jogo_box"
 
-#: Quantas falhas SEGUIDAS do tique lento até a aba "No jogo" esvaziar.
-#:
-#: NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026). Não é 1 e não é 10, e os dois
-#: extremos têm preço medido:
-#:
 #: * **1** faria a aba piscar — o tique é de 2 Hz e um `daemon.state_full` que
-#:   estoura o tempo uma vez sozinho é rotina nesta casa (o executor tem UM
-#:   worker para os três pollers, e o guard de inflight existe por isso);
-#: * **muitas** deixaria a mentira confortável de pé pelo tempo todo, que é
-#:   exatamente o que a docstring de `_sync_paineis_no_jogo` promete não fazer.
-#:
-#: Três a 2 Hz é 1,5 s — mais que o suficiente para atravessar um poll perdido,
-#: e menos que o `ATIVIDADE_FRESCA_S` (3,0 s) que decide se a linha diz "no jogo
-#: agora". O teto do painel nunca sobrevive à régua que o pinta.
 FALHAS_ATE_ESVAZIAR_NO_JOGO = 3
 
-#: A coluna e a altura do botão da rota de som NO BERÇO (o `status_grid` do
-#: frame Estado). Elas repetem o empacotamento do Glade porque a devolução
-#: acontece em código — o botão sai do berço para o card e pode voltar, e
-#: voltar para uma linha própria faria o grid ganhar altura que ele não tem
-#: (é o que `test_o_botao_ocupa_o_vao_horizontal_que_ja_existia` reprova).
 COLUNA_BERCO_DA_ROTA = 4
 ALTURA_BERCO_DA_ROTA = 2
 
 
-#: Número de exibição de um controle. A regra vive em `base.numero_do_controle`
-#: para as telas não divergirem; o nome antigo segue como alias do módulo.
 _display_slot = numero_do_controle
 
 
-# ONDA0-Z5/T5: `ContagemDeControles` e `texto_de_contagem` migraram para
-# `app/mesa.py` — o dono único do fato "quem está na mesa" para as onze
-# abas, não só para esta. Os nomes seguem exportados DAQUI (espelho, no
-# molde de `app/alvo_de_edicao.py`) para os leitores que ainda não migraram;
-# quem escreve código novo importa de `app.mesa` diretamente.
 ContagemDeControles = mesa.ContagemDeControles
 texto_de_contagem = mesa.texto_de_contagem
 
 
-#: CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): de quantos em quantos minutos o
-#: produto TENTA sozinho trazer de volta o controle que o sistema não adotou.
-#: Não é número escolhido aqui: é o `OnUnitActiveSec` de
-#: `assets/systemd/hefesto-bt-health-watchdog.timer`, a vigia que chama o
-#: `bt_rebind_orphans.sh`. O texto da tela promete ESTE número, então ele tem
-#: de sair do mesmo lugar que o cumpre — há teste que confere os dois.
 MINUTOS_ENTRE_TENTATIVAS = 2
 
-#: Posição do banner na caixa da aba Status: logo abaixo dos dois banners do
-#: glade (`status_vpad_banner` = 0, `status_wrapper_banner` = 1) e acima do
-#: frame "Estado". Ele não pôde nascer no glade como os outros dois — este
-#: widget é montado em código —, e sem a reordenação `pack_start` o jogaria
-#: para o fim da aba, abaixo dos cards, que é onde ninguém procura o motivo de
-#: um controle estar faltando.
 POSICAO_DO_BANNER_NAO_ADOTADO = 2
 
 
@@ -224,12 +177,7 @@ def texto_de_controle_nao_adotado(state: dict[str, Any] | None) -> str:
 
 
 def _lista_de_jogadores(quantos: int) -> str:
-    """``"P2, P3 e P4"`` — quem saiu, por nome, a partir de P2.
-
-    O P1 NUNCA entra: ele não é jogador do co-op (o vpad dele tem observável
-    próprio, `steam_input.vpad_suspenso`), e o contador do daemon já conta só
-    os SECUNDÁRIOS (`gamepad.steam_input_coop_derrubados`).
-    """
+    """``"P2, P3 e P4"`` — quem saiu, por nome, a partir de P2."""
     nomes = [f"P{n}" for n in range(2, 2 + max(0, quantos))]
     if len(nomes) <= 1:
         return "".join(nomes)
@@ -240,7 +188,7 @@ def texto_do_coop_derrubado(bloco_coop: object) -> str:
     """Frase do banner quando o jogo derruba o co-op — ``""`` quando não há.
 
     CONTAGEM-E-COOP-01 (E1a). O daemon publica o fato desde 29/07
-    (`ipc_handlers.py:2774-2775`: `coop.derrubado_por_steam_input` e
+    (`ipc_handlers.py:2094-2095`: `coop.derrubado_por_steam_input` e
     `coop.secundarios_derrubados`) e NENHUMA linha da janela o lia. Pior que
     calada, a janela ficava enganosa: `CoopManager.disable()` não zera
     `coop_enabled`, então o `state_full` segue publicando `coop.enabled=True`
@@ -253,12 +201,12 @@ def texto_do_coop_derrubado(bloco_coop: object) -> str:
       (que já voltou a 1 no tique seguinte — é o defeito original);
     - a NEGAÇÃO ("não foi você") desfaz a ambiguidade do `enabled=True`;
     - a PROMESSA de volta é verdadeira: `resume_vpads_after_steam_input`
-      chama `coop.sync(force=True)` (`gamepad.py:1026`), e mesmo pelo
+      chama `coop.sync(force=True)` (`gamepad.py:593`), e mesmo pelo
       caminho manual o ciclo normal recria os secundários porque `disable()`
       não desligou `coop_enabled`.
 
     Devolve ``""`` também quando o gatilho está aceso mas o número é zero: as
-    duas mortes do contador (`gamepad.py:985` e `:1987`) existem para
+    duas mortes do contador (`gamepad.py:552` e `:1987`) existem para
     o aviso não sobreviver ao retorno do co-op, e aviso pendurado sem número
     seria a mentira nova que elas evitam.
 
@@ -287,20 +235,7 @@ def texto_do_coop_derrubado(bloco_coop: object) -> str:
 
 
 def tooltip_do_coop_derrubado(bloco_coop: object) -> str:
-    """O preço por extenso, para o tooltip do badge — ``""`` sem queda.
-
-    NOTA DATADA — 07/08/2026. Este tooltip abria com *"O jogo assumiu o
-    controle: o Hefesto saiu da frente dele"*, e a segunda metade da frase
-    está **refutada** pela medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`,
-    seção *A INVERSÃO*, grau MEDIDO): num jogo desta lista o Hefesto entrega
-    a **entrada** e **mantém a saída** — os gatilhos dela seguraram e a cor
-    dela ficou. Pior: quem lia "o jogo assumiu o controle" concluía que a luz
-    e os gatilhos tinham virado do jogo, que é exatamente o que acontece
-    **fora** da lista, não dentro. O que de fato cai aqui é o co-op, e cai
-    porque os gamepads virtuais dos secundários são recolhidos
-    (`gamepad.suspend_vpads_for_steam_input`) — a queda é da ENTRADA, e o
-    texto agora nomeia isso.
-    """
+    """O preço por extenso, para o tooltip do badge — ``""`` sem queda."""
     if not isinstance(bloco_coop, dict) or not texto_do_coop_derrubado(bloco_coop):
         return ""
     quantos = int(bloco_coop["secundarios_derrubados"])
@@ -323,55 +258,18 @@ def tooltip_do_coop_derrubado(bloco_coop: object) -> str:
 
 
 class StatusActionsMixin(WidgetAccessMixin):
-    """Atualiza a aba Status em tempo real.
-
-    Assume que `self.builder` contém os widgets do `main.glade`:
-        status_connection, status_transport, status_battery_bar,
-        status_battery_caption, status_active_profile, status_daemon,
-        status_players_slot (box dos cards por controle — STATUS-02),
-        header_connection.
-
-    Estados do reconnect (`_reconnect_state`):
-        - ``"online"``: último poll retornou dict; header mostra glyph
-          U+25CF (black circle) verde + "Conectado Via <USB|BT>".
-        - ``"reconnecting"``: IPC falhou 1..N-1 vezes consecutivas; header
-          mostra glyph U+25D0 (left half black circle) laranja com texto
-          "Tentando Reconectar...".
-        - ``"offline"``: N falhas consecutivas (N=RECONNECT_FAIL_THRESHOLD);
-          header mostra glyph U+25CB (white circle) vermelho + "Daemon
-          Offline". Glyphs emitidos como NCR no markup Pango (ADR-011) para
-          escapar do sanitizer global de geometric shapes.
-    """
+    """Atualiza a aba Status em tempo real."""
 
     _reconnect_state: str = "online"
     _consecutive_failures: int = 0
-    # UI-STATUS-OFFLINE-FALLBACK-01: marca True na primeira resposta IPC
-    # bem-sucedida (qualquer tick). Permite que o fallback dedicado pinte
-    # uma mensagem clara em até 5 s caso o daemon nunca responda.
     _first_poll_succeeded: bool = False
-    # BUG-LIVE-TICK-NO-INFLIGHT-GUARD-01: coalesce do tick rápido (10 Hz). Sem
-    # isso, com o executor de 1 worker e o daemon lento, os call_async se
-    # acumulavam numa fila ilimitada. Setado antes do call_async, limpo nos
-    # callbacks (sucesso e falha).
     _live_inflight: bool = False
-    # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R4: mesmo coalesce para os ticks
-    # lento (2 Hz) e de reconnect (0.5 Hz), reduzindo a contenção no executor de
     # 1 worker que os 3 pollers de `daemon.state_full` compartilham.
     _profile_inflight: bool = False
     _reconnect_inflight: bool = False
-    #: NO-JOGO-SEM-FALSO-VERDE-01 T4: falhas SEGUIDAS do tique lento (2 Hz).
-    #: Zerado em toda resposta boa; ao bater
-    #: :data:`FALHAS_ATE_ESVAZIAR_NO_JOGO` a aba "No jogo" esvazia, em vez de
-    #: manter "no jogo agora" ao lado de um número que ninguém mediu desde
-    #: então. Antes desta leva o caminho de falha só soltava o guard de
-    #: inflight e não fazia mais nada.
     _profile_falhas_seguidas: int = 0
-    # STATUS-02: cards por controle, keyed por `(index, uniq)` (com sufixo
-    # posicional defensivo em duplicata). Os caches de diff dos widgets de
-    # live-state (R3) migraram para DENTRO de cada ControllerCard.
     _status_cards: dict[tuple[Any, ...], Any]
     _status_card_keys: list[tuple[Any, ...]]
-    # FEAT-DSX-CONTROLLER-SELECTOR-01: seletor de controle-alvo no banner.
     _target_combo: Any
     _target_combo_rows: list[tuple[str, int | None]]
     _target_combo_updating: bool
@@ -379,45 +277,17 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_combo_active: int
     _target_buttons: list[Any]
     # 8BIT-02: controles externos (não-DualSense) no seletor do topo + a ficha
-    # secreta que abre ao clicar. Cache do inventário (fetch com throttle) +
     # botões próprios (fora do grupo de rádio dos DualSense).
     _external_buttons: list[Any]
     _externals: list[dict[str, Any]]
     _externals_fetch_ts: float = 0.0
     _externals_inflight: bool = False
     _externals_sig: tuple[str, ...] | None = None
-    # PERFIL-04 (sprint perfis-por-controle): alvo de EDIÇÃO derivado do
-    # seletor — o MAC normalizado (uniq) do controle selecionado, ou None em
-    # "Todos"/alvo sem MAC (aí a edição segue GLOBAL, como sempre). Fica em
     # sync com o `output_target_index` do daemon a 2 Hz e é atualizado NA
-    # HORA no clique do seletor (a próxima mexida já cai no override certo).
-    #
-    # P3 (23/08/2026) — o alvo morava em dois atributos legados (o endereço e
-    # o rótulo) com DEFAULT DE CLASSE, ambos `= None`, e `None` quer dizer
-    # "escreva em TODOS". Um `getattr` defensivo nesses dois atributos NUNCA
-    # caía no default do próprio getattr: encontrava o atributo da classe, e
-    # a janela que não sabia qual era o alvo respondia "global" com toda a
-    # confiança.
-    #
-    # Z2 (24/08/2026) — os sete leitores por `getattr` migraram para
-    # `app/alvo_de_edicao.py`, o dono único, e os dois atributos legados
-    # SAÍRAM desta classe (nada mais os lê nem os escreve direto em `src/`;
-    # o portão `scripts/portao_alvo_tem_dono.py` reprova a volta deles). O
-    # que existe agora é só o canônico:
     _alvo_de_edicao: AlvoDeEdicao
     _target_uniq_by_index: dict[int, str | None]
     _target_label_by_index: dict[int, str]
     _edit_badge: Any = None
-    # PLAYER-01 (25/07): o seletor "Número deste controle" — a ENTREGA
-    # PRINCIPAL da sprint. A fita de chips do cabeçalho MOSTRA o número de
-    # identidade mas nunca teve como MUDÁ-LO: não existia, em lugar nenhum do
-    # projeto, comando que atribuísse um número a um controle (só o
-    # `identity.renumber`, que compacta todos e mora na aba Início). Estes
-    # botões falam com o `identity.number.set`, criado nesta mesma sprint.
-    # `_edit_target_slot` é o número de identidade do alvo, mantido em sync
-    # pelo tick lento — separado do endereço (o `.uniq` de
-    # `app/alvo_de_edicao.py`) e do índice de enumeração, que são as outras
-    # duas coisas que o chip carrega.
     _target_strip: Any = None
     _numero_faixa: Any = None
     _numero_box: Any = None
@@ -427,27 +297,12 @@ class StatusActionsMixin(WidgetAccessMixin):
     _numero_visivel: bool = False
     _edit_target_slot: int | None = None
     _target_slot_by_index: dict[int, int | None]
-    #: PLAYER-01: co-op ligado = a camada de co-op manda no desenho das 5
     #: luzes, ACIMA da escolha manual. Lido do `state_full` aqui e consumido
-    #: pela aba Lightbar (que não tem poller próprio).
     _coop_ligado: bool = False
-    #: MESA-CHEIA-09 (conserto 1.3): Modo Nativo ligado = o JOGO é dono do
-    #: `hidraw` e o backend muta TODA escrita de output — o que a aba manda
     #: fica guardado até o modo sair. Lido do `state_full` aqui (mesmo tique do
-    #: co-op) e consumido pelos toasts das abas Gatilhos e Lightbar, que não
-    #: têm poller próprio.
     _modo_nativo_ligado: bool = False
-    #: Badge do banner que denuncia rumble travado em silêncio.
     _rumble_badge: Any = None
-    # S2: monitor do microfone (nível + mute). Lazy e DESLIGADO por padrão —
-    # quem o liga é o gancho de troca de aba (`set_status_tab_visivel`). Ele
-    # é o único sensor do card que não vem pelo IPC: capturar áudio é da
-    # sessão gráfica, não do daemon.
     _mic_monitor: Any = None
-    # CONTROLE-QUE-NAO-ENTROU-01: o banner do controle que está ligado e que o
-    # sistema não conseguiu entregar ao Hefesto. Montado em CÓDIGO (ver
-    # `_montar_banner_nao_adotado`), e não no glade como os dois banners
-    # vizinhos — o `main.glade` é de outra frente nesta leva.
     _banner_nao_adotado: Any = None
 
     def install_status_polling(self) -> None:
@@ -474,12 +329,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._status_card_keys = []
         self._init_controller_target_combo()
         self._montar_banner_nao_adotado()
-        # SOM-04: o botão da rota de som. Ligado por CÓDIGO e não por `signal`
-        # do Glade, no molde do seletor de número: assim um Glade antigo (ou o
-        # builder dublado de um teste de outra área) não derruba a montagem da
-        # aba inteira por causa de um handler que não existe. Ele nasce
-        # insensível no Glade e só ganha rótulo e sentido depois da primeira
-        # leitura do `pactl`, que acontece fora da thread do GTK.
         botao_rota = self._get("btn_som_no_controle")
         if botao_rota is not None and hasattr(botao_rota, "connect"):
             botao_rota.connect("clicked", self._on_rota_de_som_clicada)
@@ -488,35 +337,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         GLib.timeout_add_seconds(
             RECONNECT_POLL_INTERVAL_S, self._tick_reconnect_state
         )
-        # Primeira leitura imediata — resolve a janela de 100-500 ms em que
-        # o default do Glade ("Consultando...") ficava visível sem motivo.
-        # BUG-GUI-IDLE-ADD-BUSY-LOOP-01: `_tick_live_state`/`_tick_profile_state`
-        # retornam True (mantém o timeout_add vivo). Passar essas funções direto
-        # ao `idle_add` virava um busy-loop a 100% CPU (idle_add reagenda
-        # enquanto o callback retorna True), acumulando call_async no executor.
-        # Wrappers one-shot disparam o tick uma vez e retornam False.
         GLib.idle_add(lambda: self._tick_live_state() and False)
         GLib.idle_add(lambda: self._tick_profile_state() and False)
-        # UI-STATUS-OFFLINE-FALLBACK-01: se 5 s passarem sem nenhum poll
-        # bem-sucedido, pinta header com mensagem acionável em vez de manter
-        # "Consultando..." indefinidamente (acontece quando o daemon nunca
-        # subiu no boot — usuário precisa do passo de Daemon > Start).
         self._first_poll_succeeded = False
         GLib.timeout_add_seconds(5, self._check_initial_poll_fallback)
-        # ESCONDER-EM-VEZ-DE-SAIR: a aba "No jogo" nasce aqui, junto com os
         # timers que ela usa. Ela NÃO ganha timer próprio — ver
-        # `_sync_paineis_no_jogo`.
         self.install_no_jogo_tab()
 
-    # ------------------------------------------------------------------
-    # Aba "No jogo": o que atravessa para o jogo (ESCONDER-EM-VEZ-DE-SAIR)
-    # ------------------------------------------------------------------
 
-    #: Painéis da aba "No jogo", por chave de controle. `None` = a aba nunca
-    #: foi montada (glade antigo, ou builder dublado de outra área de teste).
     _no_jogo_paineis: Any = None
-    #: O conjunto de chaves com que os painéis de hoje foram construídos —
-    #: mesmo mecanismo do `_status_card_keys`, e a MESMA função que o produz.
     _no_jogo_keys: Any = None
     _no_jogo_slot: Any = None
     _no_jogo_contexto: Any = None
@@ -554,19 +383,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         """
         pagina = self._get(ABA_NO_JOGO)
         if pagina is None or not hasattr(pagina, "pack_start"):
-            # Glade antigo, ou builder dublado de teste de outra área: a aba
-            # simplesmente não existe, e a janela abre igual. Mesma linha do
-            # `_sync_status_cards` quando o slot não está lá.
             return
         self._no_jogo_paineis = {}
         self._no_jogo_keys = []
 
         miolo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
 
-        # A linha de contexto: em que modo e com que máscara a janela está
-        # AGORA. Ela existe porque a pergunta que a aba fecha é sobre os três
-        # modos — sem o modo escrito ao lado da resposta, a foto da tela não
-        # diz de qual dos três ela é.
         self._no_jogo_contexto = Gtk.Label(label="")
         self._no_jogo_contexto.set_xalign(0.0)
         self._no_jogo_contexto.set_line_wrap(True)
@@ -577,11 +399,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         )
         miolo.pack_start(self._no_jogo_contexto, False, False, 0)
 
-        # O recado que vale para a JANELA inteira. A Conexão Nativa e o
-        # "Controlar o PC" tiram o Hefesto da frente de TODOS os controles ao
-        # mesmo tempo, e a explicação é uma só — repetida dentro de um painel
-        # por controle ela saía duas vezes, palavra por palavra (medido na foto
-        # de 10/08 com dois controles na mesa). Ele SUBSTITUI os painéis.
         self._no_jogo_recado = Gtk.Label(label="")
         self._no_jogo_recado.set_xalign(0.0)
         self._no_jogo_recado.set_line_wrap(True)
@@ -591,18 +408,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._no_jogo_recado.set_no_show_all(True)
         miolo.pack_start(self._no_jogo_recado, False, False, 0)
 
-        # PERFIL-MUDO-01 (10/08/2026): o perfil que ela escreveu PARA este jogo
-        # e que o jogo abriu sem. Fica ACIMA dos painéis e não os substitui: os
-        # recursos continuam sendo a resposta da aba, e este é o aviso de que
-        # eles estão respondendo com a configuração ERRADA. Sem ele, a aba
-        # dizia "vibração: no jogo agora" com toda a razão — e com a vibração
-        # do `fallback`, não a do perfil dela.
-        #
-        # Não é `dim-label`: o resto desta aba é observação, e isto é a única
-        # linha que pede uma decisão dela. A cor sai por `set_markup` e não por
-        # classe de CSS pela razão já MEDIDA nesta aba (ver `COR_DA_SITUACAO`):
-        # a regra `.hefesto-dualsense4unix-window label` do tema tem
-        # especificidade maior, e a classe é aplicada sem pintar nada.
         self._no_jogo_perfil = Gtk.Label(label="")
         self._no_jogo_perfil.set_xalign(0.0)
         self._no_jogo_perfil.set_line_wrap(True)
@@ -615,15 +420,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._no_jogo_vazio.set_xalign(0.0)
         self._no_jogo_vazio.set_halign(Gtk.Align.START)
         self._no_jogo_vazio.get_style_context().add_class("dim-label")
-        # `no_show_all`: quem decide se esta frase aparece é o tique, e um
-        # `show_all()` de fora (a janela nasce com um) a traria de volta em
-        # cima dos painéis — que foi exatamente o que a primeira foto mostrou.
         self._no_jogo_vazio.set_no_show_all(True)
         miolo.pack_start(self._no_jogo_vazio, False, False, 0)
 
-        # EMPILHA-01 vale aqui também, e por antecipação: os painéis são baixos
-        # (seis linhas) e empilhados eles leem como uma lista de controles. A
-        # rolagem vertical desta página já existe (`_wrap_notebook_pages_in_scroll`).
         self._no_jogo_slot = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=12
         )
@@ -633,23 +432,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         pagina.show_all()
         self._nascer_aba_no_jogo_escondida()
 
-    # ------------------------------------------------------------------
-    # ABA-DO-JOGO-01: a aba EXISTE só enquanto há jogo da Steam aberto
-    # ------------------------------------------------------------------
 
     def _pagina_do_notebook(self, page_id: str) -> Any:
-        """O filho DIRETO do notebook cuja página é ``page_id``. ``None`` = não há.
-
-        Não é o mesmo widget que ``self._get(page_id)`` devolve, e a diferença é
-        a que faz a aba aparecer ou não: `_wrap_notebook_pages_in_scroll` (em
-        `app.py`, no `__init__`) embrulha oito das nove páginas num
-        `GtkScrolledWindow`, e é o EMBRULHO que o notebook conhece. Esconder a
-        caixa de dentro deixaria a aba na tira, clicável, abrindo uma página em
-        branco — pior que o defeito.
-
-        O desembrulho é o `id_da_pagina` de sempre (dono único, EST-10), então
-        isto continua valendo se um dia o embrulho mudar de forma.
-        """
+        """O filho DIRETO do notebook cuja página é ``page_id``. ``None`` = não há."""
         notebook = self._get("main_notebook")
         if notebook is None or not hasattr(notebook, "get_children"):
             return None
@@ -659,26 +444,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         return None
 
     def _nascer_aba_no_jogo_escondida(self) -> None:
-        """A aba "No jogo" nasce FORA da tira, e é o tique que a traz.
-
-        ABA-DO-JOGO-01, o pedido dela: *"essa aba no jogo só deveria aparecer
-        quando efetivamente eu tivesse com um jogo steam aberto"*.
-
-        A ordem das três chamadas é a cura, e cada uma tem um porquê:
-
-        1. ``show_all()`` no embrulho — marca os filhos como visíveis AGORA,
-           enquanto ainda dá; sem isto, o ``show()`` do dia em que o jogo abrir
-           revelaria uma página com o miolo ainda escondido;
-        2. ``set_no_show_all(True)`` — o ``window.show_all()`` de `app.show()`
-           roda DEPOIS de toda montagem e traria a aba de volta, todo boot. É o
-           mesmo trinco que o `_no_jogo_vazio` já usa três telas acima, e pela
-           mesma razão medida;
-        3. ``hide()`` — e só então ela some da tira.
-
-        Nasce escondida, e não visível-até-a-primeira-resposta, porque o
-        contrário é a aba PISCANDO em todo boot sem jogo: a tira abriria com ela
-        e a perderia meio segundo depois, na primeira leitura de estado.
-        """
+        """A aba "No jogo" nasce FORA da tira, e é o tique que a traz."""
         alvo = self._pagina_do_notebook(ABA_NO_JOGO)
         if alvo is None or not hasattr(alvo, "hide"):
             return
@@ -688,40 +454,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             alvo.hide()
 
     def _sync_visibilidade_no_jogo(self, state: dict[str, Any] | None) -> None:
-        """Põe/tira a aba "No jogo" da tira conforme haja jogo da Steam aberto.
-
-        ABA-DO-JOGO-01. Este é o gate de EXISTÊNCIA da aba, e ele não é o gate
-        que já morava aqui: o de `_sync_paineis_no_jogo` decide se REPINTA (e só
-        trabalha com a aba à vista, BUG-STATUS-TICK-HIDDEN-TAB-01). Confundir os
-        dois foi exatamente o que deixou a aba na tira desde 09/08 — uma página
-        fixa do Glade, montada sem condição nenhuma, com um gate de pintura que
-        parecia responder por ela. Por isso este roda ANTES daquele, e nunca
-        atrás dele: uma aba escondida jamais é a aba à vista, e o gate de pintura
-        engoliria a chamada para sempre.
-
-        ``None`` de `jogo_steam_aberto` não mexe em nada — nem mostra nem
-        esconde. São os três casos em que ninguém sabe a resposta (daemon
-        desligado, sonda ainda não feita, daemon mais velho que este código), e
-        em todos eles a única coisa honesta é deixar a tela como está.
-
-        **Quando ela está NA aba e o jogo fecha**, o foco vai para a Status antes
-        de a página sumir. Não é zelo: medido no GTK3 desta casa, esconder a
-        página corrente faz o notebook cair sozinho na página SEGUINTE — com o
-        layout de hoje, "Gatilhos". Ela estaria lendo o que atravessa para o jogo
-        e acordaria editando a curva do L2. A Status é o destino porque é a
-        vizinha e a outra metade da mesma pergunta: aquela responde pelo controle
-        FÍSICO, esta respondia pelo que atravessa para o JOGO.
-
-        **E o "Controlar o PC"?** O recado dele (`TEXTO_DESKTOP`, via
-        `recado_global`) continua nesta aba e continua alcançável — porque o
-        único instante em que ele acrescenta alguma coisa é justamente com um
-        jogo aberto: aí "o Hefesto não entrega controle nenhum ao jogo" explica
-        um jogo que não responde ao controle, e a frase termina apontando o
-        gesto que resolve. Com o jogo fechado a mesma frase é só a descrição de
-        um modo que ela escolheu de propósito — e a tela que fala desse modo, com
-        o comutador para sair dele, é a aba Início, que nunca esteve escondida.
-        Nenhum conteúdo ficou sem casa.
-        """
+        """Põe/tira a aba "No jogo" da tira conforme haja jogo da Steam aberto."""
         aberto = jogo_steam_aberto(state)
         if aberto is None:
             return
@@ -771,16 +504,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         slot = self._no_jogo_slot
         if slot is None:
             return
-        # ABA-DO-JOGO-01: a EXISTÊNCIA da aba se decide aqui, uma linha ACIMA do
-        # gate de pintura, e a ordem é a cura inteira — atrás dele esta chamada
-        # nunca aconteceria com a aba escondida, e a aba escondida nunca voltaria.
-        #
-        # T4 (25/08/2026): o `_render_slow_state` chama o MESMO gate antes do
-        # gate de popup, e esta linha continua aqui — não é redundância. Este é
-        # o ponto de entrada que o `_render_offline` e a bancada de teste usam,
-        # e um gate que só existisse no chamador de cima deixaria os dois sem
-        # ele. A chamada é idempotente: mostrar o que já está na tira e esconder
-        # o que já saiu dela não fazem nada.
         self._sync_visibilidade_no_jogo(state)
         notebook = self._get("main_notebook")
         if (
@@ -792,11 +515,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         recado = recado_global(state)
         self._no_jogo_recado.set_text(recado or "")
         self._no_jogo_recado.set_visible(recado is not None)
-        # PERFIL-MUDO-01: aparece nos TRÊS modos, inclusive junto do recado
-        # global. O perfil que não entrou é fato do disco e da janela em foco —
-        # não depende de haver gamepad virtual —, e calar sobre ele na Conexão
-        # Nativa esconderia justamente o caso em que o perfil dela era quem
-        # ligaria o modo certo.
         aviso = aviso_do_perfil(state)
         if aviso is not None:
             self._no_jogo_perfil.set_markup(
@@ -814,21 +532,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         keys = self._status_card_keys_for(conectados)
         if keys != self._no_jogo_keys:
             self._rebuild_paineis_no_jogo(slot, keys)
-        # A frase "Nenhum controle conectado." só faz sentido quando a resposta
-        # SERIA por controle: no Nativo e no "Controlar o PC" o recado global já
-        # explicou tudo, e dizer que não há controle ao lado dele seria falso —
-        # há controle, ele é que não passa por aqui.
         self._no_jogo_vazio.set_visible(
             recado is None and isinstance(state, dict) and not conectados
         )
-        # Mesma correção de T4 aplicada aos cards (25/08/2026): a chave sai da
-        # lista ORDENADA e o registro tem de sair da mesma — casá-los por
-        # posição na lista crua alimentava o painel do jogador errado.
-        # Pela CLASSE e não por `self`: hosts parciais de teste montam a
-        # mixin método a método (o `_Janela` do `no_jogo` é um), e um `self._`
-        # novo aqui quebraria a bancada de quem não sabia que ele nasceu — a
-        # mesma razão pela qual `_status_card_keys_for` já chamava
-        # `StatusActionsMixin._por_numero_de_identidade` assim.
         for key, entry in zip(
             keys,
             StatusActionsMixin._conectados_na_ordem_dos_cards(conectados),
@@ -839,56 +545,21 @@ class StatusActionsMixin(WidgetAccessMixin):
                 painel.atualizar(entry, state)
 
     def _rebuild_paineis_no_jogo(self, slot: Any, keys: list[Any]) -> None:
-        """Recria os painéis — o conjunto de controles mudou.
-
-        Mesma regra dos cards da aba Status: reconstrução SÓ quando o conjunto
-        de chaves ``(index, uniq)`` muda, e a chave sai da MESMA função
-        (`_status_card_keys_for`). Duas regras de identidade de controle na
-        mesma janela divergiriam na primeira mudança do co-op.
-        """
+        """Recria os painéis — o conjunto de controles mudou."""
         for filho in list(slot.get_children()):
             slot.remove(filho)
             filho.destroy()
         self._no_jogo_paineis = {}
         self._no_jogo_keys = list(keys)
         for key in keys:
-            # Sem `hexpand` e sem `halign` daqui: o teto de largura do painel é
-            # dele (`LARGURA_PAINEL` + `halign=START`, no próprio widget), e
-            # mandar `FILL` daqui o desfazia — a primeira foto saiu com uma
-            # moldura de 1400px em volta de 430px de tinta.
             painel = PainelNoJogo()
             slot.pack_start(painel, False, False, 0)
             self._no_jogo_paineis[key] = painel
         slot.show_all()
 
-    # ------------------------------------------------------------------
-    # Microfone: a captura só existe com a aba Status à vista (S2)
-    # ------------------------------------------------------------------
 
     def set_status_tab_visivel(self, visivel: bool) -> None:
-        """Liga/desliga a captura de áudio do microfone dos controles.
-
-        Sair da aba MATA o `parec` de cada controle: manter um processo
-        capturando o microfone da usuária sem ninguém olhando o medidor seria
-        custo e intromissão.
-
-        **Os TRÊS gatilhos, e por que são três** (o terceiro é de
-        25/08/2026, STATUS-DIZ-O-QUE-VÊ-01/T8):
-
-        * `switch-page` do notebook — trocar de aba. Identifica a aba pelo id
-          do Glade, nunca pela posição;
-        * `delete-event` — a janela indo para a bandeja;
-        * `window-state-event` com o bit `ICONIFIED` — minimizar. Ele faltava,
-          e a palavra "minimizada" estava nesta docstring desde o primeiro
-          dia: com a aba Status à vista e a janela minimizada, a captura
-          continuava viva. Restaurar devolve a captura se a aba à vista for a
-          Status (`HefestoApp._on_window_state_event`).
-
-        O monitor nasce na primeira vez que a aba é aberta; antes disso não
-        existe thread nenhuma. Falha de import/inicialização é silenciosa
-        (mesma linha do tema sem CSS): a aba abre, os outros dois sensores
-        continuam, e o módulo de microfone simplesmente não aparece.
-        """
+        """Liga/desliga a captura de áudio do microfone dos controles."""
         monitor = self._mic_monitor
         if monitor is None:
             if not visivel:
@@ -911,45 +582,13 @@ class StatusActionsMixin(WidgetAccessMixin):
             with contextlib.suppress(Exception):
                 monitor.stop()
 
-    # ------------------------------------------------------------------
-    # SOM-04, entrega 2: mandar o som do sistema para o controle (e desfazer)
-    # ------------------------------------------------------------------
 
-    #: Objeto da rota, criado na primeira leitura. Ele não guarda estado de
-    #: tela: o estado é lido do `pactl` a cada ciclo, e o único dado que
-    #: sobrevive é o sink anterior, que mora no `gui_preferences.json`.
     _rota_de_som: Any = None
-    #: Guarda de reentrância, no molde do `_reconnect_inflight`: as leituras
-    #: são subprocessos e um ciclo não pode empilhar em cima do outro.
     _rota_inflight: bool = False
-    #: Sink do controle resolvido pelo `mic_monitor` no último tique rápido.
-    #: "" = não dá para saber, e é o que deixa o botão parado.
     _rota_sink: str = ""
-    #: SOM-ACORDADO-01 — ``{nome do sink: acordado|dormindo}``, da última
-    #: leitura da rota (0,5 Hz, thread worker). Vem de carona porque a leitura
-    #: é a MESMA (`pactl list sinks short`): um leitor, um subprocesso, e o
-    #: estado de todos os canais para todos os cards. É o que torna isto
-    #: universal — 1 ou 7 controles custam a mesma leitura, e nada aqui depende
-    #: de MAC, de ordem de conexão nem de número mágico.
-    #:
     #: Dicionário VAZIO é "ainda não li", e é o que mantém os cards calados
-    #: nos primeiros dois segundos em vez de afirmarem "acordado" por omissão.
     _canais_de_som: Mapping[str, str] = {}
-    #: A regra do WirePlumber que impede o sono está instalada? Lida uma vez
-    #: por ciclo, junto da rota, porque é um `os.path.isfile` — barato, mas
-    #: ainda assim disco, e disco não vai na thread do GTK a 10 Hz.
-    #: ``None`` = ninguém perguntou ainda.
     _regra_do_sono: bool | None = None
-    #: CARD-ÚNICO-01 — o último "Perfil ativo"/"Hefesto" escrito, por id de
-    #: widget. Ele existe para o card que NASCE depois da escrita receber o
-    #: valor certo já na primeira pintura (ver
-    #: `_espelhar_estado_global_nos_cards`).
-    #:
-    #: Ele é REATRIBUÍDO, nunca mutado no lugar: `self._d[k] = v` num
-    #: atributo de CLASSE escreve no dicionário da classe, que é o mesmo
-    #: objeto para toda instância — duas janelas (ou dois testes na mesma
-    #: sessão) veriam o estado uma da outra. A reatribuição cria o de
-    #: instância na primeira escrita, que é o comportamento pretendido.
     _ultimo_estado_global: dict[str, str] = {}  # noqa: RUF012
 
     @staticmethod
@@ -993,19 +632,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         return (bruto / 100, f"{bruto} %")
 
     def _set_battery_text(self, texto: str) -> None:
-        """Escreve o número da bateria na barra E no rótulo ao lado dela.
-
-        ESTADO-TRES-LINHAS-01. A barra deixou de desenhar o próprio texto
-        (`show-text=False` no glade) quando passou a ocupar a largura toda:
-        o GtkProgressBar centra o texto, e centrado numa barra de 1244px o
-        "75 %" ficava a 609px de cada borda — o defeito que ela apontou nas
-        barras de L2/R2, na mesma tela.
-
-        O `set_text` da barra CONTINUA sendo chamado de propósito: ele é o que
-        os testes e o `get_text()` leem, e é o dono do valor. Este método é o
-        único lugar que espelha esse valor no rótulo visível — dois escritores
-        derivariam, e esta casa já pagou por isso.
-        """
+        """Escreve o número da bateria na barra E no rótulo ao lado dela."""
         barra = self._get("status_battery_bar")
         if barra is not None:
             with contextlib.suppress(Exception):
@@ -1016,27 +643,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 rotulo.set_text(texto)
 
     def _sink_do_controle_para_a_rota(self, monitor: Any, uniqs: tuple[str, ...]) -> str:
-        """Sink que o botão da rota tem como alvo; "" quando não há certeza.
-
-        Quem resolve "qual sink é de qual controle" é o ``mic_monitor``, que já
-        é o leitor de PipeWire da janela — este método só ESCOLHE entre o que
-        ele resolveu, e nunca vai ao sistema por conta própria.
-
-        A conferência de que os nomes resolvidos são UM só é o coração do
-        método, e desde 15/08/2026 ela é a única coisa que segura o botão:
-        antes o ``escolher_sink`` devolvia "" para todo mundo assim que havia
-        dois controles, e o botão morria por falta de resposta; agora ele
-        responde certo por controle (casamento pelo dispositivo USB), e o que
-        sobra é a pergunta que a janela não pode responder sozinha — **em qual
-        dos controles ela quer ouvir**.
-
-        Este botão é UM, no cabeçalho da aba, e o alvo dele é global. Com dois
-        sinks distintos, escolher um seria a janela decidindo por ela; a
-        resposta honesta continua sendo não escolher, e a dica do botão
-        (``DICA_ROTA_SEM_SINK``) diz isso com todas as letras. Quem escolhe por
-        controle é o seletor "Todo o som do PC" DENTRO do card, que já recebe
-        o sink certo por :meth:`definir_sink_de_saida`.
-        """
+        """Sink que o botão da rota tem como alvo; "" quando não há certeza."""
         if monitor is None:
             return ""
         nomes = set()
@@ -1048,17 +655,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         return nomes.pop() if len(nomes) == 1 else ""
 
     def _refresh_rota_de_som(self) -> None:
-        """Relê a rota e repinta o botão — leitura FORA da thread do GTK.
-
-        Roda a 0,5 Hz, de carona no tique de reconexão, e a carona é a
-        entrega: o gate de timers desta mixin trava o número de
-        ``GLib.timeout_add`` e o tique rápido é de 10 Hz — três `pactl` por
-        ciclo a 10 Hz seriam trinta subprocessos por segundo para responder a
-        uma pergunta que muda por gesto humano.
-        """
+        """Relê a rota e repinta o botão — leitura FORA da thread do GTK."""
         botao = self._get("btn_som_no_controle")
         if botao is None or not hasattr(botao, "set_sensitive"):
-            return  # Glade antigo ou builder dublado: a aba segue sem o botão
+            return
         if self._rota_inflight:
             return
         self._rota_inflight = True
@@ -1075,10 +675,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         sink = self._rota_sink
 
         def _ler() -> Any:
-            # SOM-ACORDADO-01: a regra do WirePlumber vai JUNTO, na mesma
-            # worker. É um `os.path.isfile`, mas disco na thread do GTK a 10 Hz
-            # é a mesma classe de defeito do subprocess — e aqui ele sai de
-            # graça, de carona numa leitura que já existe.
             from hefesto_dualsense4unix.app.audio_saida import (
                 regra_nunca_dorme_instalada,
             )
@@ -1095,11 +691,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         from hefesto_dualsense4unix.app.audio_saida import acao_da_rota
 
         estado, regra = leitura
-        # SOM-ACORDADO-01: guardado aqui e ENTREGUE aos cards pelo tique de
-        # 10 Hz (`_sync_status_cards`), que é o dono da fiação deles. Escrever
-        # nos cards daqui seria um segundo caminho até o mesmo widget, e o
-        # card pode nem existir quando esta leitura chega (a aba recria os
-        # cards a cada troca do conjunto de controles).
         self._canais_de_som = dict(getattr(estado, "canais", {}) or {})
         self._regra_do_sono = bool(regra)
         acao = acao_da_rota(estado)
@@ -1109,24 +700,14 @@ class StatusActionsMixin(WidgetAccessMixin):
             botao.set_sensitive(acao.sensivel)
             botao.set_tooltip_text(acao.dica)
         self._rota_acao = acao
-        return False  # contrato do GLib.idle_add
+        return False
 
     def _on_rota_falhou(self, _exc: Exception) -> bool:
         self._rota_inflight = False
         return False
 
     def _aplicar_rota_do_sistema(self, para_o_controle: bool) -> None:
-        """Manda (ou devolve) o som do SISTEMA, a pedido do seletor do card.
-
-        SOM-CANAL-01/E3. É a lógica que era do botão "Ouvir no controle",
-        agora chamada pelo estado "Todo o som do PC" do seletor.
-
-        **O caso sem desfazer honesto continua tratado**, e é o que a sprint
-        manda preservar: se o som já está no controle e não fomos NÓS que o
-        pusemos lá, não há sink anterior guardado — e `voltar_ao_anterior`
-        devolve False em vez de chutar um destino. O `acao_da_rota` continua
-        sendo o dono dessa decisão.
-        """
+        """Manda (ou devolve) o som do SISTEMA, a pedido do seletor do card."""
         rota = self._rota_de_som
         if rota is None:
             return
@@ -1141,24 +722,12 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     @staticmethod
     def _run_blocking_seguro(fn: Any) -> None:
-        """Roda o `pactl` fora da thread do GTK, engolindo o que falhar.
-
-        O chamador já está numa thread de trabalho (`run_in_thread` do card),
-        então aqui é só a guarda: um `pactl` que falhe não pode derrubar o
-        clique dela.
-        """
+        """Roda o `pactl` fora da thread do GTK, engolindo o que falhar."""
         with contextlib.suppress(Exception):
             fn()
 
     def _on_rota_de_som_clicada(self, _botao: Any = None) -> None:
-        """O clique: troca a saída padrão do sistema, fora da thread do GTK.
-
-        Nunca decide o alvo aqui — quem decide é ``acao_da_rota``, e um alvo
-        vazio quer dizer que não há clique honesto a dar (mais de um controle,
-        ou som já no controle sem memória de quem o pôs lá). O botão já está
-        insensível nesses casos; esta guarda é a segunda tranca, para o dia em
-        que alguém dispare o `clicked` por teclado ou por teste.
-        """
+        """O clique: troca a saída padrão do sistema, fora da thread do GTK."""
         acao = getattr(self, "_rota_acao", None)
         if acao is None or not acao.sensivel or not acao.alvo:
             return
@@ -1174,72 +743,24 @@ class StatusActionsMixin(WidgetAccessMixin):
             return bool(rota.mandar_para_o_controle(alvo))
 
         def _fim(_ok: Any) -> bool:
-            # Repinta na hora, sem esperar o tique de 2 s: o botão que acabou
-            # de ser clicado tem de dizer o que faz AGORA.
             self._refresh_rota_de_som()
             return False
 
         ipc_bridge.run_in_thread(_trocar, _fim)
 
-    # ------------------------------------------------------------------
-    # Cards por controle (STATUS-02)
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _conectados_na_ordem_dos_cards(
         conectados: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        """A mesa na ordem em que os cards nascem — a MESMA ordem da fita.
-
-        Existe por um defeito medido em 25/08/2026
-        (STATUS-DIZ-O-QUE-VÊ-01/T4). A Z2-7 pôs `_status_card_keys_for` a
-        percorrer `_por_numero_de_identidade`, e as duas grades que consomem
-        as chaves continuaram casando ``keys`` com ``conectados`` na ordem
-        CRUA do daemon, posição a posição — ``zip(keys, conectados)``. Com a
-        mesa fora de ordem (o caso normal), o card do Controle 1 passou a
-        receber o registro do Controle 2: bateria, analógicos, luz e
-        microfone do vizinho, sob o título certo. Trocar a ordem de nascimento
-        sem trocar a ordem de alimentação é pior que o defeito original — lá a
-        pessoa clicava no chip errado, aqui ela lê o controle errado.
-
-        Uma função só, chamada pelas TRÊS pontas (a que faz as chaves, a que
-        alimenta os cards e a que alimenta os painéis do "No jogo"), é o que
-        impede a divergência de voltar: enquanto houver dois lugares
-        ordenando, o defeito é questão de tempo.
-        """
+        """A mesa na ordem em que os cards nascem — a MESMA ordem da fita."""
         return StatusActionsMixin._por_numero_de_identidade(conectados)
 
     @staticmethod
     def _status_card_keys_for(
         conectados: list[dict[str, Any]],
     ) -> list[tuple[Any, ...]]:
-        """Chaves estáveis dos cards: ``(index, uniq)`` por controle CONECTADO.
-
-        O filtro de ``connected`` já aconteceu (`_connected_controllers`) —
-        é ele que impede o card fantasma da entrada-placeholder offline
-        (HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada
-        com connected=False quando não há controle nenhum). ``uniq`` None
-        (handle keyed por path, sem MAC) é chave VÁLIDA: o índice
-        desambigua. Duplicata exata (defensivo — não deveria existir) ganha
-        um sufixo posicional para nunca colidir no dict de cards.
-
-        CONTAGEM-E-COOP-01: ``len(keys)`` é, por construção, o
-        ``ContagemDeControles.adotados`` — a mesma lista filtrada. Card de
-        externo NÃO existe (EXT-COUNT-01: read-only por decisão de produto), e é
-        por isso que os cards contam ``adotados`` e nunca ``na_mesa``.
-
-        **Z2-7 (24/08/2026): percorre `_por_numero_de_identidade`, não mais a
-        ordem de enumeração.** M2 mediu a grade e a fita em ordens
-        DIFERENTES — a fita já ordenava pelo número exibido
-        (`_por_numero_de_identidade`, PLAYER-01) e a grade percorria
-        ``conectados`` na ordem em que o daemon os devolve. Com os dois
-        ligados fora de ordem — o caso normal — o primeiro card era o
-        Controle 2 e o primeiro chip era o Controle 1. O ``index`` de
-        enumeração de CADA controle continua vindo do próprio registro
-        (``c.get("index")``) e viaja intacto dentro da chave — só a ORDEM em
-        que os cards nascem muda; reordenar o índice junto seria o defeito
-        que a docstring de `_por_numero_de_identidade` já evita no seletor.
-        """
+        """Chaves estáveis dos cards: ``(index, uniq)`` por controle CONECTADO."""
         keys: list[tuple[Any, ...]] = []
         vistos: dict[tuple[Any, Any], int] = {}
         for pos, c in enumerate(
@@ -1267,8 +788,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         """
         slot = self._get("status_players_slot")
         if slot is None or not hasattr(slot, "attach"):
-            # Builder fake de testes de outras áreas (ou Glade antigo em
-            # upgrade parcial): sem slot real, a aba segue sem cards.
             return
         if getattr(self, "_status_cards", None) is None:
             self._status_cards = {}
@@ -1285,19 +804,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         )
         if monitor is not None:
             monitor.set_controles(uniqs)
-        # SOM-04: o alvo do botão de rota sai daqui, e é só uma consulta a
-        # dicionário — nada de subprocess a 10 Hz. Quem foi ao PipeWire foi o
-        # `mic_monitor`, na cadência de 3 s dele.
         self._rota_sink = self._sink_do_controle_para_a_rota(monitor, uniqs)
-        # T4 (25/08/2026): `keys` nasce ORDENADA (Z2-7) e `conectados` chega
-        # na ordem crua do daemon. Casar as duas por posição alimentava cada
-        # card com o registro do vizinho — ver
-        # `_conectados_na_ordem_dos_cards`.
-        # Pela CLASSE e não por `self`: hosts parciais de teste montam a
-        # mixin método a método (o `_Janela` do `no_jogo` é um), e um `self._`
-        # novo aqui quebraria a bancada de quem não sabia que ele nasceu — a
-        # mesma razão pela qual `_status_card_keys_for` já chamava
-        # `StatusActionsMixin._por_numero_de_identidade` assim.
         for key, entry in zip(
             keys,
             StatusActionsMixin._conectados_na_ordem_dos_cards(conectados),
@@ -1310,22 +817,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             tem_uniq = monitor is not None and isinstance(uniq, str) and bool(uniq)
             leitura = monitor.leitura(uniq) if tem_uniq else None
             card.update(entry, state, leitura)
-            # SOM-04, entrega 1: o sink de saída DESTE controle, para o som de
-            # confirmação do bloco "Alto-falante" sair no alto-falante certo e
-            # nunca no sink padrão (medido: `paplay --device=<inexistente>` sai
-            # com zero e toca no PADRÃO — com o dela no HDMI, a confirmação
-            # sairia pela televisão).
-            #
-            # Vai por método próprio, com guarda de existência, e não dentro da
             # `LeituraMic`: o nome do sink é fato da SAÍDA e sobrevive à
-            # ausência de microfone — sem `parec` na máquina, ou por Bluetooth
-            # sem a ponte de mic, não há captura nenhuma e o alto-falante
-            # continua lá. A guarda existe porque a fiação do card é de outra
-            # leva: enquanto ela não entrar isto é inerte, e no dia em que
-            # entrar não é preciso tocar aqui.
-            # SOM-CANAL-01: quem executa a camada 1 (o default sink) quando
-            # ela troca o canal no seletor do card. O card pede; a aba faz —
-            # a rota do sistema é um fato GLOBAL, e há um default sink só.
             pedir = getattr(card, "definir_pedido_de_rota", None)
             if pedir is not None:
                 pedir(self._aplicar_rota_do_sistema)
@@ -1333,11 +825,6 @@ class StatusActionsMixin(WidgetAccessMixin):
             definir_sink = getattr(card, "definir_sink_de_saida", None)
             if definir_sink is not None:
                 definir_sink(sink_do_card)
-            # SOM-ACORDADO-01, a metade "ligar isso a interface" da decisão
-            # dela. Consulta a DICIONÁRIO, como o alvo da rota logo acima:
-            # quem foi ao PipeWire foi a leitura de 0,5 Hz, e a este tique de
-            # 10 Hz só chega o resultado. Sem sink do card não há canal a
-            # descrever, e "" é o que mantém o rótulo da moldura calado — é o
             # caso do rádio, em que o DualSense não publica placa de som.
             definir_canal = getattr(card, "definir_estado_do_canal", None)
             if definir_canal is not None:
@@ -1347,10 +834,6 @@ class StatusActionsMixin(WidgetAccessMixin):
                     else "",
                     regra_instalada=self._regra_do_sono,
                 )
-            # SOM-02/E4: quem GUARDA o rascunho do perfil em edição. O bloco
-            # "Alto-falante" registra nele o que ficou de pé DEPOIS de o daemon
-            # confirmar — é isso que faz o "Salvar Perfil" persistir o volume
-            # dela em vez do número velho.
             dono = getattr(card, "definir_dono_do_rascunho", None)
             if dono is not None:
                 dono(self)
@@ -1358,113 +841,32 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _rebuild_status_cards(
         self, slot: Any, keys: list[tuple[Any, ...]]
     ) -> None:
-        """Recria os cards — o conjunto de controles mudou.
-
-        STATUS-GRID-2COL-01: os cards vão para um GtkGrid em DUAS colunas, não
-        mais empilhados. Empilhado, cada controle somava a própria altura e
-        dois já estouravam a janela — a aba só respondia com rolagem. Lado a
-        lado, dois controles ocupam a MESMA faixa vertical de um (e quatro
-        viram 2x2, que é o teto real: 4 jogadores no co-op).
-        """
+        """Recria os cards — o conjunto de controles mudou."""
         for child in list(slot.get_children()):
             slot.remove(child)
             child.destroy()
         self._status_cards = {}
         self._status_card_keys = list(keys)
-        # 2+ cards → sticks de 90px (compact); card único mantém o layout
-        # equivalente ao da aba antiga (sticks 120px).
         compact = len(keys) >= 2
-        # EMPILHA-01 (02/08/2026) — decisão DELA, olhando a tela com dois
-        # controles: *"os dois blocos não deveriam estar lado a lado mas um em
-        # cima do outro de forma que o scroll surgisse pra comportar os
-        # diferentes controles"*.
-        #
-        # Isto REVISA a STATUS-GRID-2COL-01, e a decisão antiga não é apagada:
-        # ela dizia que "empilhado, cada card somava a própria altura e dois já
-        # estouravam a janela — a aba só respondia com rolagem, justamente o
-        # que as sprints S3/S5 tiraram das outras abas". A observação
-        # continua correta; o que mudou foi o julgamento sobre ela, e é dela: a
-        # rolagem vertical aqui é ACEITÁVEL, e ler dois controles lado a lado
-        # não é. Um card por linha também é o que escala para os quatro
-        # jogadores do co-op sem espremer nada.
         colunas = 1
         for pos, key in enumerate(keys):
-            # EMPILHA-02: com UMA coluna, todo card recebe a largura inteira
-            # — então nenhum deles desenha no tamanho compacto. O que continua
-            # dependendo da quantidade é o par GLOBAL: com 2+ controles quem
-            # responde por perfil e daemon é o frame "Estado", que volta à
-            # tela, e repeti-lo em cada card seria a duplicação que a
-            # STATUS-SIMETRIA-02 curou na bateria.
             card = ControllerCard(
                 compact=False, mostrar_estado_global=not compact
             )
             self._status_cards[key] = card
-            # `hexpand` + column-homogeneous do Glade: as colunas dividem a
-            # largura em partes iguais em vez de a 1ª tomar tudo e a 2ª ficar
-            # espremida (o card tem conteúdo de largura natural bem diferente
-            # conforme os sensores presentes).
             card.set_hexpand(True)
             card.set_valign(Gtk.Align.START)
             slot.attach(card, pos % colunas, pos // colunas, 1, 1)
             card.show_all()
         self._alojar_botao_da_rota()
-        # CARD-ÚNICO-01: quem manda no frame "Estado" é a existência de um
-        # card ÚNICO. Com um controle só ele some inteiro (o card diz tudo o
-        # que ele dizia); com nenhum, ou com 2+, ele volta — no primeiro caso
-        # porque é a única voz da aba, no segundo porque perfil e daemon são
-        # fatos globais e não cabem repetidos num card por controle.
         self._set_frame_estado_visivel(compact or not keys)
         self._espelhar_estado_global_nos_cards()
 
     def _alojar_botao_da_rota(self) -> None:
-        """Garante que o botão da rota de som tem pai — hoje, sempre o berço.
-
-        CORREÇÃO DE FATO (25/08/2026, STATUS-DIZ-O-QUE-VÊ-01). Esta docstring
-        afirmava entregar a SOM-ROTA-NO-CARD-01 — o botão migrando para o
-        bloco "Alto-falante" do primeiro card. **Ficou falsa em 02/08/2026**,
-        e por decisão dela: a SOM-CANAL-01/E3 aposentou o botão isolado —
-        *"ele deixa de existir como botão isolado. Vira o estado 'Todo o som
-        do PC' do seletor"*. O comando nasce dentro do card, no seletor de
-        canal, e o `_speaker_rota_slot` do `ControllerCard` passou a ser
-        `None` justamente para dizer "não reparente".
-
-        O que este método FAZ hoje: lê o slot do card primário e, como ele é
-        `None`, devolve o botão do Glade ao berço. O caminho de reparentar
-        continua escrito, e é o caminho de volta caso ela decida trazer o
-        botão para o card — mas ele não corre, e afirmar o contrário aqui
-        custou uma sprint inteira lendo o código como um contrato quebrado.
-
-        **A trava, que é o motivo de o método existir mesmo assim:** a
-        ROTA-ÓRFÃ-01, paga em 01/08/2026 nesta árvore com GTK 3.24 e o Glade
-        real. Sem alguém garantindo um pai, plugar um segundo controle
-        recriava os cards e o `child.destroy()` deixava o botão ÓRFÃO — vivo,
-        porque o Builder guarda a referência, mas fora da tela e sem casa. Ela
-        perdia o desfazer da rota exatamente no co-op.
-
-        Idempotente: sai cedo se o botão já está onde deve. O
-        `Gtk.Container.remove` do pai antigo é obrigatório — um widget com
-        dois pais é erro de GTK, não de desenho.
-        """
+        """Garante que o botão da rota de som tem pai — hoje, sempre o berço."""
         botao = self._get("btn_som_no_controle")
         if botao is None or not hasattr(botao, "get_parent"):
-            return  # Glade antigo ou builder dublado: a aba segue sem o botão
-        # EMPILHA-02 — a pergunta dela, olhando a tela com dois controles:
-        # *"o botão ouvir no controle faz sentido ali?"*.
-        #
-        # **Com 2+ controles, sim: o lugar dele é o frame "Estado".** A razão
-        # é a mesma da SOM-04 e não mudou: a saída padrão do sistema é um fato
-        # do SISTEMA, não daquele controle. Pôr o botão no card do Controle 1
-        # sugere que ele manda o som para AQUELE controle — e o interruptor é
-        # um só, global. O frame Estado é o lugar dos fatos globais da aba, e
-        # é onde ele já estava no print dela.
-        #
-        # Com UM controle é o contrário, e é o que ela pediu na
-        # SOM-ROTA-NO-CARD-01: não há ambiguidade possível, e o botão fica
-        # onde a ação acontece.
-        #
-        # Antes da EMPILHA-02 isto funcionava por ACIDENTE — o card compacto
-        # não tinha bloco de som, então o `destino` saía `None` com 2+
-        # controles. Agora todo card tem o bloco, e a regra precisa ser dita.
+            return
         primeiro = (
             next(iter(self._status_cards.values()), None)
             if len(self._status_cards) == 1
@@ -1472,14 +874,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         )
         destino = getattr(primeiro, "_speaker_rota_slot", None)
         if destino is None:
-            # ROTA-ORFA-01 — sem destino, o botão VOLTA para o berço, e isto
-            # não é zelo: medido em 01/08/2026 nesta árvore, com GTK 3.24 e o
-            # glade real. Plugar um segundo controle recria os cards, e o
-            # `child.destroy()` do card antigo deixava o botão ÓRFÃO
-            # (`get_parent() is None`) — vivo, porque o Builder o referência,
-            # mas fora da tela e sem casa. Ela perdia o "desfazer" da rota de
-            # som exatamente no co-op, e só o recuperava despligando um
-            # controle. O berço tem lugar para ele: é de onde ele saiu.
             self._devolver_botao_da_rota_ao_berco(botao)
             return
         pai = botao.get_parent()
@@ -1492,12 +886,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             destino.show_all()
 
     def _devolver_botao_da_rota_ao_berco(self, botao: Any) -> None:
-        """Recoloca o botão da rota no grid do frame Estado, se ele saiu.
-
-        O berço é o `status_grid`, coluna 4 — o lugar que o glade lhe dá e o
-        vão horizontal que ele já pagava. Idempotente: sai cedo se ele já
-        está lá, e não faz nada se o grid não existe (builder dublado).
-        """
+        """Recoloca o botão da rota no grid do frame Estado, se ele saiu."""
         berco = self._get("status_grid")
         if berco is None or not hasattr(berco, "attach"):
             return
@@ -1521,15 +910,8 @@ class StatusActionsMixin(WidgetAccessMixin):
                 child.destroy()
         self._status_cards = {}
         self._status_card_keys = []
-        # Sem card nenhum, o frame Estado é a ÚNICA voz da aba — é ele que diz
-        # que o daemon não responde, e é onde o botão da rota de som volta a
-        # morar. Esconder aqui deixaria a aba Status em branco no exato
-        # momento em que ela mais precisa explicar o que houve.
         self._set_frame_estado_visivel(True)
 
-    # ------------------------------------------------------------------
-    # Seletor de controle-alvo (FEAT-DSX-CONTROLLER-SELECTOR-01)
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _por_numero_de_identidade(
@@ -1603,40 +985,23 @@ class StatusActionsMixin(WidgetAccessMixin):
         return 0
 
     def _init_controller_target_combo(self) -> None:
-        """Cria o seletor de controle-alvo como BOTÕES segmentados no banner.
-
-        NÃO é dropdown: popups de combo são fechados pelo cosmic-comp (bug de foco
-        do COSMIC — cosmic-epoch#2497 / [[gui-combo-flicker-jitter-relayout]]) em
-        ~40-95% dos cliques, faça o que fizermos. Botões sempre visíveis (sem
-        popup/grab) são imunes. Cada alvo vira um GtkRadioButton em modo toggle
-        (visual de 'segmented control' via classe 'linked'). Oculto por padrão; só
-        aparece com 2+ controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
-        """
+        """Cria o seletor de controle-alvo como BOTÕES segmentados no banner."""
         self._target_combo_rows = []
         self._target_combo_updating = False
         self._target_combo_visible = False
         self._target_combo_active = -1
         self._target_buttons = []
         # 8BIT-02: controles externos (não-DualSense) no seletor do topo + a
-        # "ficha secreta" que abre ao clicar num deles. Cache do inventário
-        # (fetch opt-in, caro — throttle no tick lento) + botões próprios.
         self._external_buttons = []
         self._externals = []
         self._externals_fetch_ts = 0.0
         self._externals_inflight = False
         self._externals_sig = None
-        # PERFIL-04: estado do alvo de edição por-controle.
-        # P3: montar a aba não é escolher "Todos" — é ainda não saber. Antes
-        # aqui se escrevia `None` nos dois campos, que os leitores traduzem
-        # para "escreva em todos os controles"; agora o estado nasce
         # DESCONHECIDO e só vira alvo quando o `state_full` ou o clique dela
-        # disserem qual é.
         esquecer_alvo(self, MOTIVO_SEM_ESTADO)
         self._target_uniq_by_index = {}
         self._target_label_by_index = {}
         self._edit_badge = None
-        # PLAYER-01: estado do seletor "Número deste controle" (ver
-        # `_refresh_numero_selector`).
         self._numero_faixa = None
         self._numero_box = None
         self._numero_botoes = []
@@ -1658,22 +1023,6 @@ class StatusActionsMixin(WidgetAccessMixin):
             "'Todos' aplica a todos os controles."
         )
         self._target_combo = box
-        # PLAYER-01 entrega 3: o chip carregava TRÊS papéis e só um estava
-        # dito — ele MOSTRA o número de identidade, ENVIA o índice de
-        # enumeração e SIGNIFICA "alvo das edições". O terceiro, que é o único
-        # que muda o que os botões das outras abas fazem, vivia num tooltip
-        # (invisível até alguém parar o ponteiro em cima). Vira legenda fixa
-        # ao lado da fita, e a fita ganha faixa própria com ela.
-        #
-        # NOTA DE 24/08/2026, e ela NÃO derruba a decisão acima: o PORQUÊ de a
-        # fita estar apagada numa aba passou a viver, sim, num tooltip (ver
-        # `config/mixin.set_alvo_inativo`). Não é volta atrás — é outra
-        # pergunta. Aqui o escondido era a FUNÇÃO do chip, e escondê-la custava
-        # a função; lá é o motivo de um estado secundário, e a alternativa fixa
-        # foi medida e reprovada por ela em 23/08 por deformar o cabeçalho.
-        # A régua que separa as duas: quando o escondido é o que a pessoa
-        # PRECISA para agir, legenda fixa; quando é o porquê do que ela já está
-        # vendo, hover.
         faixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         faixa.set_valign(Gtk.Align.CENTER)
         legenda = Gtk.Label(label=_("Ajustes vão para:"))
@@ -1685,15 +1034,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         box.show()
         faixa.set_no_show_all(True)
         faixa.hide()
-        # Z2-8 + decisão dela de 24/08: a fita ESMAECIDA explica-se por tooltip,
-        # e tooltip não dispara sobre conteúdo insensível — um widget com
-        # `set_sensitive(False)` não recebe evento de mouse no GTK3, então a
-        # propriedade ficaria posta e a frase nunca apareceria (medido antes de
-        # escrever: `has-tooltip` volta `True` e `is_sensitive()` volta `False`).
-        # O `EventBox` é a saída: ele fica SENSÍVEL e recebe o ponteiro, a faixa
-        # dentro dele continua insensível. `set_visible_window(False)` o mantém
-        # sem pintura própria — ele não muda um pixel do cabeçalho, que é a
-        # condição que ela pôs em 23/08 e repetiu hoje.
         moldura_do_hover = Gtk.EventBox()
         with contextlib.suppress(Exception):
             moldura_do_hover.set_visible_window(False)
@@ -1701,14 +1041,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         moldura_do_hover.show()
         header_bar.pack_end(moldura_do_hover, False, False, 0)
         self._target_strip = faixa
-        #: Quem carrega o tooltip do "por que esta fita está apagada". Nunca a
-        #: própria fita — ver o comentário acima.
         self._target_strip_hover = moldura_do_hover
         self._montar_numero_selector(header_bar)
-        # PERFIL-04: badge "Editando: Controle N (BT)" — rótulo inline no
-        # banner (nunca popup — cosmic-epoch#2497), visível só quando um
-        # controle com MAC está selecionado. Deixa explícito que as abas
-        # Lightbar/Gatilhos estão editando UM controle dentro do perfil.
         badge = Gtk.Label()
         with contextlib.suppress(Exception):
             badge.get_style_context().add_class("dim-label")
@@ -1716,21 +1050,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         badge.hide()
         header_bar.pack_end(badge, False, False, 6)
         self._edit_badge = badge
-        # A vibração pode ficar TRAVADA em silêncio (botão "Parar"): o estado
-        # sobrevive a troca de perfil, reconexão e abertura de jogo, e só sai
-        # pelo "Devolver ao jogo". O aviso existia apenas na aba Rumble — quem
-        # está jogando não tem essa aba aberta e conclui que a vibração quebrou.
-        # Aqui ele fica no banner, visível de qualquer aba.
         rumble_badge = Gtk.Label()
         rumble_badge.set_use_markup(True)
         rumble_badge.set_no_show_all(True)
         rumble_badge.hide()
         header_bar.pack_end(rumble_badge, False, False, 6)
         self._rumble_badge = rumble_badge
-        # CONTAGEM-E-COOP-01 (E1a): o aviso de que o JOGO derrubou o co-op.
-        # Mora no banner pela MESMA razão escrita acima para o badge de
-        # vibração: quem está jogando não tem a aba Status aberta, e o co-op
-        # some sem uma palavra. Aqui ele é visível de qualquer aba.
         coop_badge = Gtk.Label()
         coop_badge.set_use_markup(True)
         coop_badge.set_no_show_all(True)
@@ -1767,20 +1092,15 @@ class StatusActionsMixin(WidgetAccessMixin):
             )
             if group is None:
                 group = btn
-            btn.set_mode(False)  # toggle button (sem a bolinha de radio)
+            btn.set_mode(False)
             btn.set_tooltip_text(label)
             btn.connect("toggled", self._on_target_button_toggled, index)
             btn.show()
             box.pack_start(btn, False, False, 0)
             self._target_buttons.append(btn)
-        # 8BIT-02: os externos NÃO entram no grupo de rádio (não são alvo de
-        # edição do output). São GtkButton comuns; clicar abre a ficha secreta
-        # só daquele controle (janela read-only), sem trocar o alvo de edição.
         self._external_buttons = []
         externals = getattr(self, "_externals", [])
         # Slot GLOBAL: continua a numeração dos DualSense. SELETOR-UNO-01: a
-        # contagem vem do refresh (len(conectados)) — derivar de len(botões)-1
-        # assumia a linha "Todos", que deixou de ser incondicional.
         dualsense_count = getattr(
             self, "_dualsense_count", max(0, len(self._target_buttons) - 1)
         )
@@ -1806,15 +1126,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             self._external_buttons.append(eb)
 
     def _maybe_fetch_externals(self) -> None:
-        """Atualiza o inventário de externos (8BIT-01) com throttle (~4 s).
-
-        Caro (enumera evdev + sonda de holders — 10-40 ms + subprocess), então
-        NUNCA no caminho quente: só no tick lento, e no máximo a cada 4 s. O
-        resultado alimenta os botões de externos no próximo refresh do seletor.
-
-        No-op sem o seletor inicializado (`_init_controller_target_combo` não
-        rodou): cobre os testes de widget parciais e evita IPC fora da GUI real.
-        """
+        """Atualiza o inventário de externos (8BIT-01) com throttle (~4 s)."""
         if getattr(self, "_target_combo", None) is None:
             return
         now = GLib.get_monotonic_time() / 1_000_000.0
@@ -1827,9 +1139,6 @@ class StatusActionsMixin(WidgetAccessMixin):
             {"external": True},
             on_success=self._on_externals_result,
             on_failure=lambda _e: self._on_externals_done(),
-            # O inventário externo enumera TODOS os /dev/input + sonda de
-            # holders (subprocess) — 10-40 ms + ~até 1 s. O default de 0.25 s
-            # do call_async estouraria; damos folga (é opt-in, tick lento).
             timeout_s=3.0,
         )
 
@@ -1870,22 +1179,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             self._target_buttons[pos].set_active(True)
 
     def _set_target_strip_visible(self, visivel: bool) -> None:
-        """Mostra/esconde a fita de chips (legenda inclusa) — PLAYER-01.
-
-        A visibilidade migrou do ``box`` dos chips para a FAIXA que o embrulha
-        junto com a legenda "Ajustes vão para:" — esconder só o box deixaria a
-        legenda órfã no cabeçalho. Fallback para o próprio box quando não há
-        faixa: hosts parciais de teste montam o seletor injetando
-        ``_target_combo`` direto, sem passar por
-        ``_init_controller_target_combo``.
-
-        **Não confundir com `ConfigActionsMixin.set_alvo_inativo` (Z2-8).**
-        Este método some/aparece com a MESA (zero controles ligados —
-        `:2238`/`:2321` — ou popup aberto — `:2649`); o outro ESMAECE por
-        ABA (`app/app.py:_ALVO_POR_ABA`), com a fita continuando visível e
-        sensível=False. Uma janela pode estar nos dois estados ao mesmo
-        tempo — mesa vazia numa aba que também não lê o alvo.
-        """
+        """Mostra/esconde a fita de chips (legenda inclusa) — PLAYER-01."""
         alvo = getattr(self, "_target_strip", None) or getattr(
             self, "_target_combo", None
         )
@@ -1896,9 +1190,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         else:
             alvo.hide()
 
-    # ------------------------------------------------------------------
-    # "Número deste controle" (PLAYER-01) — a entrega principal da sprint
-    # ------------------------------------------------------------------
 
     def _montar_numero_selector(self, header_bar: Any) -> None:
         """Cria a faixa "Número deste controle: [1][2][3][4]" no cabeçalho.
@@ -1948,13 +1239,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             btn = Gtk.RadioButton.new_with_label_from_widget(grupo, str(numero))
             if grupo is None:
                 grupo = btn
-            btn.set_mode(False)  # toggle (visual de segmented control)
-            # FATO ERRADO, SUBSTITUÍDO (29/08/2026, TROCA-DE-PLAYER-01): esta
-            # dica dizia "Os outros deslizam para abrir lugar", que é um
-            # RODÍZIO. O daemon passou a fazer TROCA — palavra dela de 28/08,
-            # e o que o mockup aprovado promete em dezessete lugares. Com três
-            # ou mais na mesa as duas dão resultados diferentes, então a dica
-            # velha descrevia o produto ao contrário.
+            btn.set_mode(False)
             btn.set_tooltip_text(
                 f"Faz deste o controle número {numero}. "
                 "Quem tem esse número hoje fica com o deste — "
@@ -2023,10 +1308,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         if not button.get_active():
             return
         alvo = alvo_de_edicao(self)
-        # P3: o único leitor honesto dos nove agora separa os dois motivos de
-        # não ter endereço. "Todos" é escolha dela e a instrução cabe; alvo
-        # DESCONHECIDO não é escolha de ninguém, e mandar escolher no cabeçalho
-        # com a mesa vazia seria pedir o impossível.
         if alvo.desconhecido:
             self._status_toast("numero", alvo.recusa() or "")
             return
@@ -2057,22 +1338,10 @@ class StatusActionsMixin(WidgetAccessMixin):
             lambda: ipc_bridge.identity_number_set(uniq, numero), on_success=_fim
         )
 
-    # ------------------------------------------------------------------
-    # Alvo de edição por-controle (PERFIL-04)
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _edit_badge_text(label: str | None, *, com_endereco: bool = True) -> str:
-        """Texto do badge de edição por-controle; vazio = badge escondido.
-
-        PLAYER-01 entrega 3: o selo "Editando: Controle 3" já dizia METADE do
-        que o chip significa (que ele é um seletor de ALVO, não só um mostrador
-        de número) — mas só aparecia quando havia endereço estável, que é
-        justamente o caso em que a informação é menos surpreendente. Com
-        ``com_endereco=False`` (controle sem MAC, handle por path) ele passa a
-        aparecer TAMBÉM, dizendo a verdade incômoda: a edição daquele alvo cai
-        na rota global e vale para todos.
-        """
+        """Texto do badge de edição por-controle; vazio = badge escondido."""
         if not label:
             return ""
         if com_endereco:
@@ -2120,21 +1389,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._target_slot_by_index = slot_by_index
 
     def _sync_edit_target(self, target_index: int | None) -> None:
-        """Deriva o alvo de EDIÇÃO (uniq) do índice do seletor.
-
-        Idempotente: só atualiza badge e re-popula as abas por-controle
-        (lightbar/gatilhos) quando o alvo efetivamente muda. ``None`` =
-        "Todos" (edição global, badge some) — e, desde o P3, **só** isso:
-        para "não sei qual é o alvo" existe ``_esquecer_edit_target``.
-
-        PLAYER-01: o NÚMERO do alvo (``_edit_target_slot``) é atualizado
-        ANTES do curto-circuito de idempotência. Hoje o rótulo carrega o
-        número dentro dele ("Controle 2 (BT)"), então na prática os dois
-        mudam juntos — mas amarrar a leitura do número à igualdade do TEXTO
-        do rótulo é exatamente o tipo de acoplamento que esta sprint está
-        desfazendo. Atualizar antes custa uma atribuição e não tem como
-        divergir.
-        """
+        """Deriva o alvo de EDIÇÃO (uniq) do índice do seletor."""
         uniq: str | None = None
         label: str | None = None
         slot: int | None = None
@@ -2145,11 +1400,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         if target_index is not None:
             uniq = getattr(self, "_target_uniq_by_index", {}).get(target_index)
             label = getattr(self, "_target_label_by_index", {}).get(target_index)
-            # R-16: o controle escolhido caiu, mas o índice ainda é o alvo dela.
-            # Zerar aqui trocaria o destino da PRÓXIMA escrita em silêncio: o
-            # badge sumia e o "Aplicar no controle" seguinte ia pela rota
-            # global, apagando o override por-MAC dos outros. Mantemos o alvo e
-            # deixamos o rótulo dizer a verdade.
             if uniq is None and label is None and atual.uniq is not None:
                 logger.debug(
                     "edit_target_alvo_sumiu_do_estado_mantendo",
@@ -2157,15 +1407,9 @@ class StatusActionsMixin(WidgetAccessMixin):
                 )
                 return
             if uniq is None and label is not None:
-                # Alvo sem MAC estável (regra do sprint): edita o global,
-                # com trilha em vez de silêncio.
                 logger.debug(
                     "edit_target_sem_mac_edita_global", indice=target_index
                 )
-        # P3: a comparação é com o ESTADO, não com os dois campos. Vindo de
-        # DESCONHECIDO, `uniq`/`label` valem `None` nos dois lados e o
-        # curto-circuito antigo devolvia sem gravar nada — a escolha "Todos"
-        # dela morria no caminho e o alvo continuava desconhecido.
         novo = definir_alvo(self, uniq, label)
         if novo == atual:
             return
@@ -2173,14 +1417,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._refresh_target_tabs()
 
     def _esquecer_edit_target(self, motivo: str) -> None:
-        """Declara que a janela NÃO sabe qual é o alvo — e por quê (P3).
-
-        Os dois caminhos que chegam aqui (a mesa esvaziou; o daemon caiu)
-        chamavam ``_sync_edit_target(None)``, que é o MESMO valor do clique em
-        "Todos". A janela passava então a editar a mesa inteira sem ninguém ter
-        pedido: com os dois controles desligados, um pixel de arrasto no brilho
-        apagava os overrides por controle do perfil inteiro, em silêncio.
-        """
+        """Declara que a janela NÃO sabe qual é o alvo — e por quê (P3)."""
         if alvo_de_edicao(self).desconhecido:
             return
         esquecer_alvo(self, motivo)
@@ -2189,12 +1426,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._refresh_target_tabs()
 
     def _update_edit_badge(self) -> None:
-        """Mostra/esconde o badge conforme o alvo de edição atual.
-
-        PLAYER-01: o selo aparece SEMPRE que há um alvo escolhido — antes ele
-        exigia endereço estável, e o caso sem endereço (a edição vai pela rota
-        global e vale para todos) era justamente o que mais merecia ser dito.
-        """
+        """Mostra/esconde o badge conforme o alvo de edição atual."""
         badge = getattr(self, "_edit_badge", None)
         if badge is None:
             return
@@ -2230,16 +1462,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 refresh()
 
     def _sync_modo_nativo_manda_no_output(self, state: dict[str, Any]) -> None:
-        """Publica ``_modo_nativo_ligado`` para as abas Gatilhos e Lightbar.
-
-        MESA-CHEIA-09 (conserto 1.3). Em Modo Nativo o `report_thread` não
-        escreve nada (`_output_mute`): gatilho, vibração e LED do mic ficam
-        GUARDADOS e valem no desmute, e é isso que os toasts deles dizem. A luz
-        e o número saem na hora desde 23/09/2026 (`nativo_aplica=False`).
-
-        Só guarda o flag: ao contrário do co-op, nenhuma moldura muda de
-        desenho por causa dele, e repintar a aba a 0,5 Hz custaria sem motivo.
-        """
+        """Publica ``_modo_nativo_ligado`` para as abas Gatilhos e Lightbar."""
         self._modo_nativo_ligado = bool(state.get("native_mode"))
 
     def _update_rumble_badge(self, state: dict[str, Any]) -> None:
@@ -2285,13 +1508,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         badge.show()
 
     def _update_coop_badge(self, state: dict[str, Any]) -> None:
-        """Avisa no banner que o JOGO derrubou o co-op — e some quando ele volta.
-
-        CONTAGEM-E-COOP-01 (E1a). O ramo que ESCONDE é tão obrigatório quanto o
-        que mostra: as duas mortes do contador no daemon (`gamepad.py:985`
-        e `:1987`) existem para o aviso não sobreviver ao retorno dos
-        jogadores, e um badge pendurado seria a mentira nova que elas evitam.
-        """
+        """Avisa no banner que o JOGO derrubou o co-op — e some quando ele volta."""
         badge = getattr(self, "_coop_badge", None)
         if badge is None:
             return
@@ -2304,14 +1521,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         badge.show()
 
     def _refresh_target_tabs(self) -> None:
-        """Re-popula as abas por-controle para exibir os valores do alvo novo.
-
-        POR-UNIDADE-01 (10/08/2026): a aba Rumble entra na lista. Ela passou a
-        exibir a INTENSIDADE efetiva do alvo (``effective_rumble_for``), e sem
-        este refresh a troca de peça no seletor deixaria a tela mostrando a
-        intensidade da peça ANTERIOR — o mesmo defeito que a lista existe para
-        evitar na Lightbar e nos Gatilhos.
-        """
+        """Re-popula as abas por-controle para exibir os valores do alvo novo."""
         for nome in (
             "_refresh_lightbar_from_draft",
             "_refresh_triggers_from_draft",
@@ -2337,72 +1547,30 @@ class StatusActionsMixin(WidgetAccessMixin):
         if box is None:
             return
         conectados = self._connected_controllers(state)
-        # PERFIL-04: mantém os mapas index→uniq/rótulo e o alvo de edição em
-        # sync com o daemon (cobre alvo trocado por CLI/applet e o boot).
         self._update_target_maps(conectados)
         target_index = state.get("output_target_index")
         if not isinstance(target_index, int) or isinstance(target_index, bool):
             target_index = None
-        # getattr defensivo: Hosts de teste montam o seletor sem passar pelo
-        # `_init_controller_target_combo` (que semeia `_externals`).
         externals = getattr(self, "_externals", [])
-        # CONTAGEM-E-COOP-01: a conta vem da função única (era `len(conectados) +
-        # len(externals)` inline aqui — o denominador que divergia do cabeçalho).
         contagem = self._contagem_de_controles(state)
-        # SELETOR-UNO-01 (22/07, pedido da mantenedora): o seletor aparece com
-        # 1+ controle NO TOTAL — mesmo sozinho, o controle ganha o botão com
-        # número e via ("Sony 1 · BT"), no mesmo formato dos externos.
         total = contagem.na_mesa
         # PERFIL-05: numeração dos externos usa a contagem REAL de DualSense
-        # (antes derivava de len(botões)-1, que assumia a linha "Todos").
         self._dualsense_count = contagem.adotados
         if total < 1:
-            # P3: mesa vazia é DESCONHECIDO, não "Todos". Era daqui que saía o
-            # pior caso medido — os dois controles desligados e um gesto de
-            # brilho apagando os overrides por controle do perfil inteiro.
             self._esquecer_edit_target(MOTIVO_MESA_VAZIA)
-            # PLAYER-01: sem controle nenhum não há número para escolher.
             self._refresh_numero_selector(0)
-            if self._target_combo_visible:  # só esconde na TRANSIÇÃO
+            if self._target_combo_visible:
                 self._set_target_strip_visible(False)
                 self._target_combo_visible = False
             return
-        # R-16 (auditoria 23/07): o alvo de edição segue o GESTO dela, não a
-        # CONTAGEM de controles.
-        #
-        # Antes: `editavel = len(conectados) >= 2` e, abaixo do limiar,
-        # `_sync_edit_target(None)` FORÇAVA a escrita global — e este método
-        # roda no tick de 2 Hz, sem guarda de aba visível. Dois estragos:
-        #
         #   1. com um único DualSense com nó no kernel (o estado medido em
-        #      23/07: o roxo estava sem uhid), o alvo de edição ficava
-        #      permanentemente vazio e a edição "controle a controle" estava
-        #      literalmente DESLIGADA — sem nenhuma mensagem dizendo isso;
-        #   2. um controle caindo no meio da edição zerava o alvo por baixo das
-        #      abas: o badge sumia e o "Aplicar no controle" seguinte ia pela
-        #      rota global, apagando o override dos outros.
-        #
-        # Override por-MAC é o valor CERTO mesmo com um controle só (ele
-        # sobrevive ao replug e ao perfil). `None` passa a significar
-        # exclusivamente "ela clicou em Todos".
         editavel = contagem.adotados >= 1
         if editavel:
-            # Só sincroniza quando há um alvo derivado do estado; a ausência de
-            # `target_index` não é ordem de ir para global.
             if target_index is not None:
                 self._sync_edit_target(target_index)
             if contagem.adotados == 1:
-                # SELETOR-UNO-01 (decisão da mantenedora, 22/07): com UM
                 # DualSense o seletor mostra só o botão do próprio controle,
-                # sem a linha "Todos". A UI segue igual.
-                #
-                # O que muda com o R-16 é o ÍNDICE que essa linha carrega: era
-                # `None` (= broadcast global), sob a premissa de que "com um
-                # controle só, Todos e ele são a mesma coisa". Não são: o
-                # override por-MAC sobrevive ao replug e à troca de perfil; a
-                # escrita global, não. Era essa premissa que deixava a edição
                 # por-controle desligada quando só um DualSense tinha nó no
-                # kernel — o estado medido em 23/07.
                 c = conectados[0]
                 transporte = (c.get("transport") or "?").upper()
                 rows: list[tuple[str, int | None]] = [
@@ -2416,14 +1584,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             else:
                 rows = self._controller_target_rows(conectados)
         else:
-            # Só externos conectados: nenhum radio (não há alvo de edição);
-            # os botões de externos entram no _rebuild normalmente.
             rows = []
-        # PLAYER-01: o seletor de NÚMERO sincroniza ANTES do curto-circuito de
-        # idempotência abaixo. Ele depende do alvo e da contagem da mesa, não
-        # dos rótulos dos chips: com os mesmos chips e a mesma posição ativa (o
-        # caso comum, que é onde o early-return dispara), um controle entrando
-        # ou saindo mudaria a faixa de números e nada a atualizaria.
         self._refresh_numero_selector(total)
         ext_sig = tuple(external_key(e) for e in externals)
         labels = [label for label, _ in rows]
@@ -2458,10 +1619,6 @@ class StatusActionsMixin(WidgetAccessMixin):
             return
         if not button.get_active():
             return
-        # PERFIL-04: o alvo de edição muda NA HORA (não espera o tick de 2 Hz)
-        # — a usuária clica "1 · BT" e a próxima mexida na lightbar já cai no
-        # override certo do draft. Se o IPC falhar, o sync de 2 Hz reconverge
-        # com o estado real do daemon.
         self._sync_edit_target(index)
         call_async(
             "controller.target.set",
@@ -2470,21 +1627,13 @@ class StatusActionsMixin(WidgetAccessMixin):
             on_failure=lambda _e: False,
         )
 
-    # ------------------------------------------------------------------
-    # Timers
-    # ------------------------------------------------------------------
 
     def _tick_live_state(self) -> bool:
         """Roda a 10 Hz: dispara RPC em thread worker; nunca bloqueia GTK."""
-        # BUG-STATUS-TICK-HIDDEN-TAB-01: sticks/glyphs/gatilhos só existem na
         # aba Status — com outra aba à vista, 10 Hz de state_full só saturam o
-        # worker compartilhado. O poller lento (2 Hz) segue vivo para
-        # header/reconnect.
         notebook = self._get("main_notebook")
         if notebook is not None and id_da_pagina_corrente(notebook) != ABA_STATUS:
             return True
-        # BUG-LIVE-TICK-NO-INFLIGHT-GUARD-01: pula este tick se o anterior ainda
-        # não retornou — evita acúmulo ilimitado no executor de 1 worker.
         if self._live_inflight:
             return True
         self._live_inflight = True
@@ -2494,33 +1643,26 @@ class StatusActionsMixin(WidgetAccessMixin):
             on_success=self._on_live_state_result,
             on_failure=self._on_live_state_failure,
         )
-        return True  # mantém o timer vivo
+        return True
 
     def _on_live_state_result(self, state: Any) -> bool:
         """Callback de sucesso — executa na thread principal via GLib.idle_add."""
         self._live_inflight = False
         if isinstance(state, dict):
-            # UI-STATUS-OFFLINE-FALLBACK-01: marca pelo menos um poll OK.
             self._first_poll_succeeded = True
             self._render_live_state(state)
         else:
-            # BUG-FAST-TICK-CLOBBERS-RECONNECT-01: o tick rápido NÃO pinta o
-            # header de offline (isso é da máquina de reconnect, a 2s); só zera
-            # os widgets de live-state para não exibir dados stale.
             self._reset_live_widgets()
-        return False  # não repetir via GLib
+        return False
 
     def _on_live_state_failure(self, _exc: Exception) -> bool:
         """Callback de falha — executa na thread principal via GLib.idle_add."""
         self._live_inflight = False
-        # Ver BUG-FAST-TICK-CLOBBERS-RECONNECT-01: só reseta widgets, não o header.
         self._reset_live_widgets()
-        return False  # não repetir via GLib
+        return False
 
     def _tick_profile_state(self) -> bool:
         """Roda a 2 Hz: perfil ativo + metadata que muda devagar."""
-        # R4: pula este tick se o anterior ainda não retornou — evita acúmulo
-        # no executor de 1 worker compartilhado pelos 3 pollers.
         if self._profile_inflight:
             return True
         self._profile_inflight = True
@@ -2530,60 +1672,28 @@ class StatusActionsMixin(WidgetAccessMixin):
             on_success=self._on_profile_state_result,
             on_failure=self._on_profile_state_failure,
         )
-        return True  # mantém o timer vivo
+        return True
 
     def _on_profile_state_result(self, state: Any) -> bool:
         """Callback de sucesso para o tick lento — executa na thread GTK."""
         self._profile_inflight = False
         if isinstance(state, dict):
             self._first_poll_succeeded = True
-            # T4: a contagem só zera com resposta APROVEITADA. Um `state` que
-            # não é dict é uma resposta que não deu para usar, e tratá-la como
-            # sucesso manteria o painel congelado para sempre.
             self._profile_falhas_seguidas = 0
             self._render_slow_state(state)
-        return False  # não repetir via GLib
+        return False
 
     def _on_profile_state_failure(self, _exc: Exception) -> bool:
-        """Callback de falha do tick lento — libera o guard e conta a falha.
-
-        NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026). Até esta leva ele soltava o
-        guard de inflight e **não fazia mais nada** — um poll que falha não
-        esvaziava painel nenhum, e a aba "No jogo" ficava com o último estado
-        bom na tela, com "no jogo agora" ao lado de um número que já era de
-        minutos atrás. É a mesma "mentira confortável" que a docstring de
-        `_sync_paineis_no_jogo` diz que esta aba existe para não contar, pela
-        outra porta.
-
-        Ao bater :data:`FALHAS_ATE_ESVAZIAR_NO_JOGO` faz o mesmo que o
-        `_render_offline` já fazia com o daemon declarado morto:
-        `_sync_paineis_no_jogo(None)`, que troca os painéis pela frase de
-        desligado. Continua chamando a cada falha depois disso — é idempotente,
-        e parar de chamar deixaria a aba muda se ela trocasse de aba no meio da
-        pane.
-
-        **A tira não se mexe**, e é de propósito: `jogo_steam_aberto(None)`
-        devolve `None`, o tri-estado de "ninguém sabe", e o gate de existência
-        não toca em nada. Sumir com a aba porque o IPC falhou seria afirmar que
-        o jogo dela fechou a partir de um silêncio nosso.
-        """
+        """Callback de falha do tick lento — libera o guard e conta a falha."""
         self._profile_inflight = False
         self._profile_falhas_seguidas += 1
         if self._profile_falhas_seguidas >= FALHAS_ATE_ESVAZIAR_NO_JOGO:
             with contextlib.suppress(Exception):
                 self._sync_paineis_no_jogo(None)
-        return False  # não repetir via GLib
+        return False
 
     def _tick_reconnect_state(self) -> bool:
         """Roda a 0.5 Hz: coordena a máquina de estado do header via thread worker."""
-        # R4: pula este tick se o anterior ainda não retornou (mesmo motivo do
-        # guard de inflight dos ticks rápido e lento).
-        # SOM-04 pega CARONA neste tique, e a carona é decisão registrada: o
-        # gate de timers desta mixin (test_status_cards) trava o número de
-        # `GLib.timeout_add`, e a rota de som muda por gesto humano — 0,5 Hz é
-        # imperceptível e evita três `pactl` por ciclo a 10 Hz. Vem antes do
-        # guard de inflight do reconnect de propósito: são leituras
-        # independentes, e um IPC pendurado não pode congelar o botão de som.
         with contextlib.suppress(Exception):
             self._refresh_rota_de_som()
         if self._reconnect_inflight:
@@ -2602,36 +1712,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         if isinstance(state, dict):
             self._first_poll_succeeded = True
         self._update_reconnect_state(state if isinstance(state, dict) else None)
-        return False  # não repetir via GLib
+        return False
 
     def _check_initial_poll_fallback(self) -> bool:
-        """Pinta fallback acionável se 5 s passaram sem nenhum poll OK.
-
-        UI-STATUS-OFFLINE-FALLBACK-01: o default do Glade é "Consultando..."
-        em todos os labels. Se o daemon nunca subiu, os 3 timers continuam
-        rodando mas o usuário fica olhando "Consultando..." sem entender que
-        precisa abrir a aba Sistema e pôr o serviço de pé.
-
-        **O BOTÃO NOMEADO MUDOU EM 06/09/2026, e pelo mesmo defeito do badge
-        de vibração logo acima:** a frase mandava clicar em *"Ligar o
-        Hefesto"*, que não é botão de tela nenhuma. Medido varrendo o texto de
-        todo `<button>` das dez páginas publicadas: a aba Sistema oferece
-        "Reiniciar o serviço", "Parar o serviço" e "Retomar"; *"Ligar o
-        Hefesto"* não aparece em nenhuma. "Reiniciar o serviço" é o que
-        responde ao caso desta função — o serviço não respondeu — e é o botão
-        que a pessoa acha quando abre a aba.
-
-        E ELE VIROU «Reiniciar» EM 25/09/2026: a aba Sistema em três seções
-        (A-09-SISTEMA-EM-TRES-SECOES-01) põe o botão na coluna «Serviço», e o
-        rótulo não repete a palavra da coluna.
-        """
+        """Pinta fallback acionável se 5 s passaram sem nenhum poll OK."""
         if self._first_poll_succeeded:
-            return False  # one-shot, não reagendar
+            return False
         header = self._get("header_connection")
         if header is not None:
-            # ADR-011: glyphs Geometric Shape (U+25CB ) via NCR — hooks
-            # globais de sanitização strippam o literal, mas Pango respeita
-            # a entidade `&#9675;`.
             header.set_markup(
                 '<span foreground="#ff5555">'
                 "&#9675; Desconectado — abra a aba Sistema e clique em "
@@ -2646,21 +1734,17 @@ class StatusActionsMixin(WidgetAccessMixin):
         if battery is not None:
             battery.set_fraction(0.0)
         self._set_battery_text("— %")
-        # Mantém máquina de reconnect coerente.
         self._reconnect_state = "offline"
         self._consecutive_failures = max(
             self._consecutive_failures, RECONNECT_FAIL_THRESHOLD
         )
-        return False  # one-shot
+        return False
 
     def _on_reconnect_state_failure(self, _exc: Exception) -> bool:
         self._reconnect_inflight = False
         self._update_reconnect_state(None)
         return False
 
-    # ------------------------------------------------------------------
-    # Máquina de estado do reconnect
-    # ------------------------------------------------------------------
 
     def _update_reconnect_state(self, state_full: dict[str, Any] | None) -> None:
         """Avança a máquina de estado de reconnect e repinta o header.
@@ -2687,9 +1771,6 @@ class StatusActionsMixin(WidgetAccessMixin):
                 self._reconnect_state = "reconnecting"
             self._render_reconnecting()
 
-    # ------------------------------------------------------------------
-    # Renderers de estado
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _connected_controllers(state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -2722,38 +1803,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         )
 
     def _render_online(self, state: dict[str, Any]) -> None:
-        """Header canônico de estado ONLINE —  verde + transport.
-
-        Delega o pinta-completo-da-aba a `_render_live_state` e
-        `_render_slow_state` (já chamados pelos ticks rápidos). Aqui só
-        firma o header de forma idempotente.
-        """
+        """Header canônico de estado ONLINE —  verde + transport."""
         header = self._get("header_connection")
         conectados = self._connected_controllers(state)
-        # CONTAGEM-E-COOP-01: a contagem do cabeçalho vem da MESMA função da
-        # fita de chips e da faixa de números. Antes era `len(conectados)` —
-        # que ignorava os externos e dizia "2 controles" com quatro chips ao
         # lado. O gate também passou a ser `na_mesa`: com 1 DualSense + 1
-        # externo, o cabeçalho antigo caía no caminho single e não dizia uma
-        # palavra sobre o segundo controle da mesa.
         contagem = self._contagem_de_controles(state)
         texto_contagem = texto_de_contagem(contagem)
-        # ONDA0-Z5/T6 [ESTRUTURAL — muda o que se vê ao abrir a aba com a mesa
-        # vazia; a foto e a palavra final são dela, R4/PROVA-DE-TELA-01].
-        #
-        # O PORTÃO agora é a MESA (`conectados`, a lista viva de
-        # `state["controllers"]`), não `state["connected"]` (o topo — a
-        # leitura do PRIMÁRIO no último tick do poll, que CONSERTO-1.7 mede
-        # que pode DIVERGIR da lista DE PROPÓSITO). Medido em 23/08 (ONDA0-Z5
-        # §2.2/§2.4): com o topo ainda dizendo `true`/`bt`/75% e a mesa
-        # vazia, o header antigo (gate = topo) abria o ramo "conectado" para
-        # uma mesa sem ninguém.
-        #
-        # `conhece_a_mesa`: só quando o daemon publica o bloco `controllers`
-        # (lista, mesmo vazia) é que ele é a fonte confiável — daemon velho
-        # sem o bloco (`controllers` ausente) cai na regra antiga, único
-        # sinal que existe. Nenhuma palavra NOVA nasce aqui: os três textos
-        # já existiam nos três ramos de sempre.
         controllers_bloco = state.get("controllers")
         conhece_a_mesa = isinstance(controllers_bloco, list)
         if conhece_a_mesa:
@@ -2766,9 +1821,6 @@ class StatusActionsMixin(WidgetAccessMixin):
             transport_do_primario = state.get("transport") or "—"
         if header is not None:
             if ha_alguem and texto_contagem:
-                # FEAT-DSX-MULTI-CONTROLLER-01: N controles — primário em negrito.
-                # Os transportes são dos ADOTADOS (só deles o daemon sabe a via);
-                # sem nenhum adotado, o corpo é só a contagem nomeada.
                 partes = " + ".join(
                     f"<b>{(c.get('transport') or '?').upper()}</b>"
                     if c.get("is_primary")
@@ -2791,11 +1843,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_estado_global("status_daemon", "Ligado")
 
     def _render_reconnecting(self) -> None:
-        """Header intermediário — U+25D0 laranja + "tentando reconectar...".
-
-        ADR-011: U+25D0 CIRCLE WITH LEFT HALF BLACK é Geometric Shape, não
-        emoji. Emitido como NCR `&#9680;` para escapar do sanitizer global.
-        """
+        """Header intermediário — U+25D0 laranja + "tentando reconectar..."."""
         header = self._get("header_connection")
         if header is not None:
             header.set_markup(
@@ -2804,14 +1852,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_estado_global("status_daemon", "Reconectando")
 
     def _render_offline(self) -> None:
-        """O banner do serviço fora do ar.
-
-        **O BOTÃO NOMEADO MUDOU EM 06/09/2026** — mesma cura, mesma medição e
-        mesma frase do `_check_initial_poll_fallback`: *"Ligar o Hefesto"* não
-        é rótulo de botão de tela nenhuma. Os dois pontos foram trocados
-        juntos de propósito: curar um só deixaria as duas versões vivas, que é
-        o defeito que a regra do fato-errado existe para matar.
-        """
+        """O banner do serviço fora do ar."""
         header = self._get("header_connection")
         if header is not None:
             header.set_markup(
@@ -2824,91 +1865,41 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
         self._set_estado_global("status_active_profile", "—")
-        # STATUS-02: offline volta ao layout single — a linha de bateria do
-        # frame Estado reaparece (os cards vão embora junto com o daemon).
         self._set_battery_row_visible(True)
         bar = self._get("status_battery_bar")
         if bar is not None:
             bar.set_fraction(0.0)
         self._set_battery_text("— %")
-        # STATUS-02: sem daemon não há controle conhecido — nenhum card
-        # (o fallback offline da aba é o frame Estado + header, como sempre).
         self._clear_status_cards()
-        # FEAT-DSX-CONTROLLER-SELECTOR-01: sem daemon, esconde o seletor.
-        # Reseta _target_combo_visible junto (espelha o caminho <2 controles em
-        # _refresh_controller_target_combo): sem isso o flag fica stale=True e,
-        # ao reconectar com os MESMOS 2+ controles, o early-return idempotente
-        # não chega ao box.show() e o seletor some pra sempre.
         combo = getattr(self, "_target_combo", None)
         if combo is not None:
             self._set_target_strip_visible(False)
             self._target_combo_visible = False
-        # PLAYER-01: sem daemon não há número para trocar — a faixa some junto.
         self._refresh_numero_selector(0)
-        # PERFIL-04: sem daemon não há alvo de edição por-controle — o badge
-        # some. P3: e o alvo fica DESCONHECIDO, não "Todos": "o Hefesto está
-        # desligado" nunca foi ordem de escrever na mesa inteira.
         self._esquecer_edit_target(MOTIVO_DAEMON_DESLIGADO)
-        # UX-03: daemon offline não é degradação do vpad — o banner some junto.
         self._refresh_vpad_banner(None)
-        # GUI-05: idem para o aviso "jogo sem wrapper".
         self._refresh_wrapper_banner(None)
-        # CONTROLE-QUE-NAO-ENTROU-01: sem daemon não há varredura do sistema —
-        # o aviso apaga em vez de sobreviver a um estado morto.
         self._refresh_banner_nao_adotado(None)
-        # ESCONDER-EM-VEZ-DE-SAIR: sem daemon não há o que atravessar para o
-        # jogo, e o último estado bom não pode ficar na tela como se fosse de
-        # agora — o `None` faz a aba dizer "O Hefesto está desligado." e
-        # esvaziar os painéis.
         self._sync_paineis_no_jogo(None)
         self._reset_live_widgets()
 
     @staticmethod
     def _popup_is_open() -> bool:
-        """True se um popup (combo/menu) detém um grab GTK neste instante.
-
-        Usado para pausar os renders periódicos e não fechar o popup via
-        re-layout (BUG-COMBO-POPUP-FLICKER-02). Robusto a um ``Gtk`` stubado nos
-        testes (sem ``grab_get_current``) — nesse caso retorna ``False``.
-        """
+        """True se um popup (combo/menu) detém um grab GTK neste instante."""
         grab = getattr(Gtk, "grab_get_current", None)
         return grab is not None and grab() is not None
 
     def _render_live_state(self, state: dict[str, Any]) -> None:
-        # BUG-COMBO-POPUP-FLICKER-02: enquanto um popup (combo/menu) está aberto,
         # ele detém um grab GTK. As atualizações a 10 Hz (os sticks do DualSense
-        # TREMEM em repouso → re-layout da janela) fechavam o popup na hora — em
-        # XWayland E em Wayland nativo. Pausa o render vivo enquanto houver grab
-        # ativo; retoma sozinho quando o popup fecha. Sem isso, NENHUM combo da
-        # GUI consegue ficar aberto para a usuária escolher.
         if self._popup_is_open():
             return
-        # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R3: o header NÃO é reescrito
-        # aqui a 10 Hz (é da máquina de reconnect, a 0.5 Hz). STATUS-02: o tick
         # rápido só distribui `controllers[i]` do state_full para o card de
-        # cada controle — o diff por widget vive DENTRO do ControllerCard.
         self._sync_status_cards(state)
 
     def _render_slow_state(self, state: dict[str, Any]) -> None:
-        # ABA-DO-JOGO-01 / NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026): o gate de
-        # EXISTÊNCIA da aba "No jogo" roda ANTES do gate de popup, e a ordem é a
-        # cura. Ele já rodava antes do gate de PINTURA (dentro de
-        # `_sync_paineis_no_jogo`), mas o caminho inteiro morria aqui em cima
-        # quando havia um combo aberto em QUALQUER aba — e com o jogo fechado a
-        # aba ficava na tira, com os painéis congelados no último estado bom.
-        #
-        # Pôr esta chamada acima do `return` não reabre o
-        # BUG-COMBO-POPUP-FLICKER-02: aquele defeito é RE-LAYOUT da janela
-        # fechando o popup, e mostrar/esconder uma página do notebook não toca a
-        # árvore de widgets do popup — o grab é de outra hierarquia. O que
-        # continua atrás do gate é tudo o que escreve em widget da aba.
         self._sync_visibilidade_no_jogo(state)
-        # Mesma proteção do render vivo (BUG-COMBO-POPUP-FLICKER-02): não mexe nos
-        # widgets enquanto um popup está aberto, para não fechá-lo via re-layout.
         if self._popup_is_open():
             return
-        # 8BIT-02: inventário de externos (opt-in, caro) atualizado no tick lento
-        # com throttle próprio — alimenta os botões de externos do seletor.
         self._maybe_fetch_externals()
         self._update_rumble_badge(state)
         self._update_coop_badge(state)
@@ -2917,13 +1908,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         active_profile = state.get("active_profile") or "Nenhum"
 
         conectados = self._connected_controllers(state)
-        # CONTAGEM-E-COOP-01: mesma função, mesmo texto NOMEADO do cabeçalho —
-        # as duas linhas da mesma tela não podem mais divergir.
         contagem = self._contagem_de_controles(state)
         texto_contagem = texto_de_contagem(contagem)
-        # ONDA0-Z5/T6 [ESTRUTURAL — mesma nota de `_render_online`]: `connected`
-        # vem da MESA quando o daemon a publica (o mesmo `conhece_a_mesa` de
-        # `_render_online`), nunca do topo estagnado/divergente sozinho.
         controllers_bloco = state.get("controllers")
         conhece_a_mesa = isinstance(controllers_bloco, list)
         if conhece_a_mesa:
@@ -2935,8 +1921,6 @@ class StatusActionsMixin(WidgetAccessMixin):
             connected = bool(state.get("connected"))
             transport = state.get("transport") or "—"
         # `connected and` de propósito: sem DualSense conectado, `adotados` é 0 e
-        # o texto só existiria por causa dos externos — dizer "Conectado" ali
-        # seria mentira (a linha é do controle do Hefesto).
         if connected and texto_contagem:
             self._set_label("status_connection", f"Conectado ({texto_contagem})")
             self._set_label("status_transport", self._controllers_transports(conectados))
@@ -2950,69 +1934,28 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_estado_global("status_active_profile", active_profile)
         self._set_estado_global("status_daemon", "Ligado")
 
-        # STATUS-02: com 2+ controles cada card tem a PRÓPRIA bateria — a
-        # linha do frame Estado (que só sabia falar do primário, com o
-        # sufixo ambíguo "(Controle 1)" do UX-BATTERY-LABEL-01) some em vez
-        # de duplicar/ambiguar a leitura.
-        # CONTAGEM-E-COOP-01: `adotados`, NÃO `na_mesa` — externo não tem card
-        # nem bateria lida pelo Hefesto (EXT-COUNT-01), então um externo na mesa
-        # não pode fazer a linha de bateria do primário desaparecer.
         self._set_battery_row_visible(contagem.adotados <= 1)
         battery_bar = self._get("status_battery_bar")
         if battery_bar is not None and contagem.adotados <= 1:
-            # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL. Desde a
-            # ESTADO-TRES-LINHAS-01 quem o mostra é o rótulo ao lado da barra,
-            # e não a barra — ver `_set_battery_text`.
-            # T12: a decisão de mostrar ou calar o número mora em
-            # `_bateria_da_mesa`, e não aqui. Ela é pura e mede o payload
-            # inteiro — o topo E a lista —, porque foi a divergência entre os
-            # dois que fez esta barra afirmar 75 % de ninguém.
             fracao, texto = self._bateria_da_mesa(state)
             battery_bar.set_fraction(fracao)
             self._set_battery_text(texto)
 
-        # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
-        # (aparece só com 2+ controles).
         self._refresh_controller_target_combo(state)
 
         # UX-03: banner de degradação do vpad (máscara DualSense em uinput).
         self._refresh_vpad_banner(state)
 
-        # GUI-05 item 3: banner "jogo sem wrapper" (honestidade do dedup).
         self._refresh_wrapper_banner(state)
 
-        # CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que o sistema não
-        # conseguiu entregar ao Hefesto. Vai no tique LENTO de propósito: o
-        # dado é uma varredura do sistema com TTL no daemon, e ele muda por
-        # gesto humano (ligar/desligar controle), nunca a 10 Hz.
         self._refresh_banner_nao_adotado(state)
 
-        # STATUS-02: o tick lento também mantém o CONJUNTO de cards em dia —
-        # com a aba Status fora de foco o tick rápido pausa, e sem isto a
-        # troca de aba mostraria cards do conjunto antigo por até 100 ms.
         self._sync_status_cards(state)
 
-        # ESCONDER-EM-VEZ-DE-SAIR: a aba "No jogo" pega carona neste tique, e a
-        # carona é a decisão — um timer próprio quebraria o gate de timers
-        # desta mixin sem entregar nada, porque o dado que ela mostra muda em
-        # segundos. Quem decide se há trabalho a fazer é o gate de aba à vista,
-        # lá dentro.
         self._sync_paineis_no_jogo(state)
 
     def _set_estado_global(self, widget_id: str, texto: str) -> None:
-        """Escreve "Perfil ativo"/"Hefesto" nos DOIS lugares que os mostram.
-
-        CARD-ÚNICO-01. Desde esta leva o par tem duas casas, e elas nunca
-        aparecem juntas: o card do controle único (onde ela pediu que ficasse)
-        e o frame "Estado" do glade, que responde quando não há card único —
-        com nenhum controle, e com 2+, em que perfil e daemon são fatos
-        GLOBAIS e apareceriam repetidos num card por controle.
-
-        O ponto de escrita é UM só de propósito. A alternativa — cada caminho
-        (offline, reconectando, desligado, ligado) lembrar de escrever nos dois
-        — é exatamente a forma como esta casa já produziu o defeito de *"a
-        config que eu deixo nunca é respeitada"*: escritores sem dono.
-        """
+        """Escreve "Perfil ativo"/"Hefesto" nos DOIS lugares que os mostram."""
         self._set_label(widget_id, texto)
         self._ultimo_estado_global = {
             **self._ultimo_estado_global,
@@ -3021,20 +1964,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._espelhar_estado_global_nos_cards()
 
     def _espelhar_estado_global_nos_cards(self) -> None:
-        """Repassa o último par conhecido aos cards que existem AGORA.
-
-        Chamado também logo depois de os cards nascerem, e é o que evita o
-        card aparecer com "Nenhum / Consultando..." por um tique: o
-        `_render_state` escreve o par ANTES de sincronizar os cards, então o
-        card recém-criado perderia essa escrita e só a receberia no ciclo
-        seguinte — 100 ms de texto errado a cada troca de controle.
-        """
+        """Repassa o último par conhecido aos cards que existem AGORA."""
         perfil = self._ultimo_estado_global.get("status_active_profile", "")
         daemon = self._ultimo_estado_global.get("status_daemon", "")
-        # `getattr` e não `self._status_cards`: os cards nascem no primeiro
-        # `_sync_status_cards`, e há caminhos que escrevem o par ANTES disso —
-        # o de reconexão é o principal, e ele roda em janelas dubladas que
-        # nunca montam card nenhum.
         for card in getattr(self, "_status_cards", {}).values():
             definir = getattr(card, "definir_estado_global", None)
             if definir is not None:
@@ -3042,18 +1974,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                     definir(perfil, daemon)
 
     def _set_frame_estado_visivel(self, visivel: bool) -> None:
-        """Mostra/esconde o frame "Estado" inteiro.
-
-        CARD-ÚNICO-01, pedido dela: *"apaga estado"*. Ele não foi apagado do
-        glade, e a razão é medida: sem controle nenhum não existe card, e a
-        aba Status ficaria MUDA — sem dizer que o daemon está parado nem
-        oferecer o botão da rota de som. O frame virou o que ele sempre foi na
-        prática, e agora só isso: o fallback.
-
-        Quem some junto é a `CaixaDeTetoElastico` que o `app.py` põe em volta
-        dele na montagem — esconder só o frame deixaria a caixa ocupando a
-        altura do espaçamento da aba, e ela veria o vão sem enxergar a causa.
-        """
+        """Mostra/esconde o frame "Estado" inteiro."""
         frame = self._get("frame_status_estado")
         if frame is None or not hasattr(frame, "set_visible"):
             return
@@ -3064,13 +1985,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 pai.set_visible(visivel)
 
     def _set_battery_row_visible(self, visible: bool) -> None:
-        """Mostra/esconde a linha de bateria do frame Estado.
-
-        São TRÊS widgets desde a ESTADO-TRES-LINHAS-01 — o rótulo "Bateria:",
-        a barra e o número ao lado dela. Esquecer o terceiro deixaria um
-        "75 %" órfão na tela com dois controles, que é justamente o caso em
-        que a linha some (cada card tem a própria bateria).
-        """
+        """Mostra/esconde a linha de bateria do frame Estado."""
         for widget_id in (
             "status_battery_caption",
             "status_battery_bar",
@@ -3109,42 +2024,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         banner = self._get("status_wrapper_banner")
         if banner is None:
             return
-        # `aviso_do_wrapper` cala o jogo que ela já dispensou — 05/09/2026.
         aviso = aviso_do_wrapper(state)
         if aviso:
             banner.set_text(aviso)
         banner.set_visible(bool(aviso))
 
-    # ------------------------------------------------------------------
-    # CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que não chegou até aqui
-    # ------------------------------------------------------------------
 
     def _montar_banner_nao_adotado(self) -> None:
-        """Cria o banner do controle que o sistema não entregou ao Hefesto.
-
-        Nasce em CÓDIGO, e não no `main.glade` como os dois banners vizinhos.
-        Isso muda uma coisa e só uma: ele precisa ser REORDENADO depois do
-        `pack_start`, porque a caixa da aba é vertical e o padrão empurraria o
-        aviso para o fim — abaixo dos cards, que é o lugar em que ninguém
-        procura o motivo de um controle estar faltando.
-
-        Nasce escondido e com `no_show_all`, igual aos vizinhos: sem isso, um
-        `show_all` da aba acenderia o aviso com a tela em ordem, que é
-        exatamente a mentira nova que este banner existe para não criar.
-
-        MEDIDO nesta bancada em 09/08, com a janela em 1920 e os dois banners
-        acesos lado a lado: este e o `status_vpad_banner` do glade saem em
-        ``x=13`` e ``width=1894``, com a mesma classe de estilo e a mesma cor
-        resolvida. É de propósito que não se corrige a largura aqui: os três
-        banners da aba são um padrão só, e um deles estreito (com a
-        `CaixaDeTetoElastico` do card, por exemplo) daria à aba duas larguras
-        de aviso em vez de uma. Se um dia esse teto valer, vale para os três,
-        e o lugar é o glade — que não é desta leva.
-
-        No-op silencioso quando não há caixa (builder dublado de teste de
-        outra área, ou glade antigo): a aba abre sem o banner, como abria
-        ontem.
-        """
+        """Cria o banner do controle que o sistema não entregou ao Hefesto."""
         caixa = self._get(ABA_STATUS)
         if caixa is None or not hasattr(caixa, "pack_start"):
             return
@@ -3180,13 +2067,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         banner.set_visible(bool(aviso))
 
     def _reset_live_widgets(self) -> None:
-        """IPC sem resposta neste tick: os cards mostram "—".
-
-        Contrato do STATUS-02: NUNCA exibir o último valor de inputs como se
-        estivesse vivo — cada card troca a área de inputs pelo "—" (sem
-        leitor) e invalida os caches de diff, para o próximo tick bom
-        repintar tudo.
-        """
+        """IPC sem resposta neste tick: os cards mostram "—"."""
         for card in getattr(self, "_status_cards", {}).values():
             card.reset_inputs()
 

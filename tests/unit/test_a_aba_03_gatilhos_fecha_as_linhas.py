@@ -1,25 +1,4 @@
-"""A aba Gatilhos e as quatro decisões de 04/09/2026 — a régua de cada uma.
-
-As quatro estão em `docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`
-§2 `03-gatilhos`, e nascem da sprint `ONDA2-03-GATILHOS-01`:
-
-1. **[01] a descrição do modo escolhido** — a dica do campo deixa de ser fixa e
-   passa a ser a explicação do modo ESCOLHIDO, reescrita a cada tique, com o
-   texto DESTA tela (a concreta: fala de freio de carro e de espingarda).
-2. **[02] a curva pronta que troca o modo** — fica como está, e a dica avisa
-   ANTES do clique.
-3. **[03] o reenvio** — um botão na faixa que já existe, mandando os DOIS
-   gatilhos daquela coluna.
-4. **[04] a tela avisa quando o efeito chega** — no cartão, pela peça da D-01.
-   **Conflito C-3:** a lista da aba propunha *o campo que pisca*; ela escolheu o
-   cartão, e um segundo canal quebraria a peça que fecha CINCO abas de uma vez.
-
-**A REGRA QUE ATRAVESSA ESTE ARQUIVO:** a régua LÊ, não digita. Onde uma frase
-de tela é medida, o que se compara é o dado do PRODUTO dentro dela — o rótulo
-que `app/actions/trigger_specs.PRESETS` publica — e nunca a frase inteira
-copiada para cá. Esta casa pagou onze vezes em 26/08 por réguas que digitavam o
-que deviam ler: elas reprovavam a MELHORA em vez do defeito.
-"""
+"""A aba Gatilhos e as quatro decisões de 04/09/2026 — a régua de cada uma."""
 
 from __future__ import annotations
 
@@ -38,41 +17,24 @@ BANCADA = RAIZ / "mockup" / PAGINA
 
 
 def _publicada() -> str:
-    """O HTML que o PRODUTO renderiza — o mesmo que o piloto abre.
-
-    O CAMINHO TEM DONO E NÃO SE DIGITA: `interface/onde.py` é o único módulo que
-    sabe onde moram a bancada e o publicado, e montar a pasta à mão aqui seria a
-    segunda cópia — a que envelhece calada no dia em que a pasta mudar de nome.
-    Já aconteceu nesta casa: três réguas deram verde sobre nada porque *as
-    pastas mudaram de nome e as réguas não foram junto*.
-    """
+    """O HTML que o PRODUTO renderiza — o mesmo que o piloto abre."""
     from hefesto_dualsense4unix.interface import onde
 
     return onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
 
-#: O MAC é da faixa sintética da casa (`aa:bb:cc`): há DOIS portões de anonimato
-#: nesta árvore, e o segundo pega por FORMA, sem consultar OUI nenhum.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "transport": "usb", "is_primary": True,
          "inputs": {"l2_raw": 0, "r2_raw": 0}}
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: O QUE O DAEMON RESPONDE QUANDO O BYTE SAIU — a forma medida em 23/08 e o
 #: contrato de `ipc_bridge.trigger_set_detalhado`.
 APLICOU = {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []}
 
 
-# ---------------------------------------------------------------------------
-# a bancada
-# ---------------------------------------------------------------------------
 @pytest.fixture
 def a03():
-    """O pacote, com o rascunho LIMPO nas duas pontas.
-
-    Ele é estado de MÓDULO: sem esta limpeza um teste herdaria o que o anterior
-    aplicou, e a régua passaria a medir a ordem em que os testes rodam.
-    """
+    """O pacote, com o rascunho LIMPO nas duas pontas."""
     import pacotes  # noqa: F401  (registra os dez)
     from pacotes import a03_gatilhos
 
@@ -82,11 +44,7 @@ def a03():
 
 
 class _Ponte:
-    """A ponte que ACEITA e diz onde aplicou. Guarda o que foi chamado.
-
-    `recusa` é a lista de LADOS que devem falhar — é o que permite provar que um
-    gatilho recusado não cala o outro, que é o caso do reenvio.
-    """
+    """A ponte que ACEITA e diz onde aplicou. Guarda o que foi chamado."""
 
     def __init__(self, corpo: dict | None = None,
                  recusa: tuple[str, ...] = ()) -> None:
@@ -119,22 +77,14 @@ class _Ponte:
         falha que ela mesma fabricou. Três dos vermelhos de 05/09 foram dublê
         mais frouxo que o real.
         """
-        # LISTA SEPARADA, E NÃO A `chamadas`: as réguas do reenvio comparam
-        # `[c[0] for c in p.chamadas]` com a lista EXATA dos envios ao gatilho.
         # Somar o `launch_env.refresh` ali faria a régua da R-19 reprovar por
-        # um método que não é envio nenhum.
         self.avulsas.append(metodo)
         return True
 
 
 @pytest.fixture
 def ctx(monkeypatch):
-    """A mesa de um controle, com o perfil injetado pela porta de cima.
-
-    `monkeypatch` E NÃO ATRIBUIÇÃO CRUA: `pacotes.perfil` é um módulo, e uma
-    troca sem desfazer vazaria para todo teste que rodasse depois neste mesmo
-    processo — a suíte roda em oito lotes, e um lote é um processo só.
-    """
+    """A mesa de um controle, com o perfil injetado pela porta de cima."""
     from pacotes import Contexto, perfil
 
     def _fabricar(esquerdo: str = "Rigid", direito: str = "Bow"):
@@ -207,23 +157,8 @@ def _clicar(a03, gesto_: str, ctx_, o: dict, p):
     return acao(ctx_, {"controle": "p1", "uniq": UNIQ, **o}, p)
 
 
-# ---------------------------------------------------------------------------
-# [01] A DESCRIÇÃO DO MODO ESCOLHIDO
-# ---------------------------------------------------------------------------
 def test_a_dica_do_modo_e_a_do_modo_que_esta_escolhido(a03, ctx):
-    """A dica sai do modo DAQUELE lado, e os dois lados não dizem a mesma coisa.
-
-    O DEFEITO: a página não tinha elemento de descrição. Depois de escolher, a
-    coluna deixava de dizer o que aquele modo faz — o `<select>` fechado mostra
-    só o rótulo, e o `title` da opção escolhida **não é** o `title` do
-    `<select>`. Na GTK a explicação do modo em uso está SEMPRE na tela
-    (`GtkLabel` em itálico debaixo da grade, `main.glade:874`).
-
-    MORDIDA: cravar a dica (devolver a mesma frase para os dois lados, ou a
-    frase fixa de antes) reprova nas duas asserções — a de igualdade com a
-    descrição do modo EMITIDO e a de que L2 e R2 divergem quando os modos
-    divergem.
-    """
+    """A dica sai do modo DAQUELE lado, e os dois lados não dizem a mesma coisa."""
     col = a03.pacote(ctx("Rigid", "Vibration"))["colunas"][UNIQ]
 
     for sigla in ("e", "d"):
@@ -242,15 +177,7 @@ def test_a_dica_do_modo_e_a_do_modo_que_esta_escolhido(a03, ctx):
 
 
 def test_a_dica_do_modo_muda_quando_o_modo_muda(a03, ctx):
-    """*"reescrita a cada tique"* — e é o tique que prova, não a função pura.
-
-    UMA DICA QUE SÓ ESTÁ CERTA NO PRIMEIRO TIQUE é o defeito de forma que esta
-    casa já nomeou: a tela afirmando o estado de ontem. A régua roda o pacote
-    DUAS VEZES, com o perfil trocado entre as duas.
-
-    MORDIDA: guardar a dica num cache de módulo, ou lê-la da CENA em vez do
-    dado, e as duas cargas passam a devolver a mesma frase.
-    """
+    """*"reescrita a cada tique"* — e é o tique que prova, não a função pura."""
     antes = a03.pacote(ctx("Rigid", "Rigid"))["colunas"][UNIQ]["dica-modo-e"]
     depois = a03.pacote(ctx("Machine", "Rigid"))["colunas"][UNIQ]["dica-modo-e"]
 
@@ -261,17 +188,7 @@ def test_a_dica_do_modo_muda_quando_o_modo_muda(a03, ctx):
 
 
 def test_o_lugar_vazio_nao_explica_modo_nenhum(a03, ctx):
-    """Num lugar sem aparelho a dica diz o que o CHIP daquela coluna já diz.
-
-    São a mesma frase e uma constante só (`SEM_APARELHO_AQUI`): duas cópias
-    divergiriam no primeiro dia em que alguém mexesse numa, e a coluna vazia
-    passaria a dizer duas coisas diferentes sobre o mesmo nada. Deixar ali a
-    explicação do `Desligado` seria a tela explicando o efeito de um aparelho
-    que não está aqui.
-
-    MORDIDA: emitir a descrição do modo (ou `""`) para o lugar vazio reprova —
-    a primeira por conteúdo, a segunda porque o piloto pinta vazio como `—`.
-    """
+    """Num lugar sem aparelho a dica diz o que o CHIP daquela coluna já diz."""
     fora = a03.pacote(ctx())["colunas"]
     vazias = [pref for pref in fora if pref != UNIQ]
     assert vazias, "o pacote deixou de escrever os lugares vazios"
@@ -282,18 +199,8 @@ def test_o_lugar_vazio_nao_explica_modo_nenhum(a03, ctx):
             assert fora[pref][f"dica-pronto-{sigla}"] == a03.SEM_APARELHO_AQUI
 
 
-# ---------------------------------------------------------------------------
-# [02] A CURVA PRONTA QUE TROCA O MODO — o aviso ANTES do clique
-# ---------------------------------------------------------------------------
 def _destinos_da_lista(a03, modo: str) -> set[str]:
-    """Para que modos as curvas que o campo OFERECE naquele modo levam.
-
-    A RÉGUA NÃO PERGUNTA AO PACOTE O QUE O PACOTE RESPONDE: ela monta a lista
-    do jeito que a TELA a monta (`html_das_opcoes_de_pronto`, o mesmo HTML que
-    o piloto troca a cada tique), lê os `value` das opções e resolve cada um
-    pela tabela do produto. É o caminho de quem clica, e não uma segunda cópia
-    da conta que está sendo medida.
-    """
+    """Para que modos as curvas que o campo OFERECE naquele modo levam."""
     html = a03.html_das_opcoes_de_pronto(modo)
     fora: set[str] = set()
     for chave in re.findall(r'<option value="([^"]*)"', html):
@@ -311,24 +218,7 @@ def _destinos_da_lista(a03, modo: str) -> set[str]:
                                   "MultiPositionFeedback",
                                   "MultiPositionVibration"])
 def test_a_dica_do_pronto_nomeia_exatamente_os_destinos_que_a_lista_abre(a03, modo):
-    """A dica nomeia os modos que um clique PODE produzir — nem mais, nem menos.
-
-    **ESTA RÉGUA JÁ DERRUBOU A PRIMEIRA VERSÃO DA CURA, e é por isso que ela
-    está escrita assim.** A frase dizia, nos dezessete modos comuns, que *"as
-    curvas de força vão para «Curva de força» e as de vibração para «Vibração
-    por posição»"* — e é FALSO: com o gatilho em `Rigid` o campo oferece só as
-    seis curvas de FEEDBACK, então `Vibração por posição` não é alcançável dali.
-    A tela descreveria um caminho que a lista não abre. **Nenhum alarme sem
-    medição.**
-
-    A régua monta a lista como a tela a monta e resolve cada curva pela tabela
-    em que ela mora. Nada aqui é digitado: os rótulos saem do `PRESETS`.
-
-    MORDIDA (as duas, e as duas reprovam):
-    * anunciar um destino a mais (a frase de antes) → o `<=` da igualdade cai;
-    * calar o destino, ou trocar o ramo dos modos por posição pelo dos outros
-      dezessete, → o `>=` cai, ou a última asserção cai.
-    """
+    """A dica nomeia os modos que um clique PODE produzir — nem mais, nem menos."""
     dica = a03.dica_do_pronto(modo)
     abre = _destinos_da_lista(a03, modo)
 
@@ -338,8 +228,6 @@ def test_a_dica_do_pronto_nomeia_exatamente_os_destinos_que_a_lista_abre(a03, mo
 
     nomeados = {d for d in a03.MODOS_COM_CURVA if _rotulo(d) in dica}
     if abre == {modo}:
-        # O gatilho JÁ está no modo da lista: nenhum clique troca coisa
-        # nenhuma, e o único nome que aparece é o dele mesmo.
         assert nomeados == {modo}, (
             f"{modo!r} não troca de modo por esta lista, e a dica nomeia "
             f"{sorted(nomeados)} — avisar de uma troca que não acontece ensina "
@@ -351,13 +239,7 @@ def test_a_dica_do_pronto_nomeia_exatamente_os_destinos_que_a_lista_abre(a03, mo
 
 
 def _esqueleto(a03, modo: str) -> str:
-    """A dica com TODOS os rótulos de modo apagados — o que sobra é a promessa.
-
-    É o instrumento que separa *"a frase mudou porque o modo mudou"* de *"a
-    frase mudou porque o que ela promete mudou"*. Sem ele a régua compara nomes
-    e dá verde sobre uma dica que anuncia troca onde não há nenhuma — medido na
-    mordida desta frente, e é por isso que este teste existe.
-    """
+    """A dica com TODOS os rótulos de modo apagados — o que sobra é a promessa."""
     from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 
     fora = a03.dica_do_pronto(modo)
@@ -388,28 +270,14 @@ def test_onde_a_curva_nao_troca_o_modo_a_dica_nao_anuncia_troca(a03):
 
 
 def test_a_dica_do_pronto_acompanha_o_modo_no_tique(a03, ctx):
-    """E ela chega à tela pelo tique, com o modo daquele lado — não uma por aba.
-
-    MORDIDA: emitir uma dica só para a coluna (em vez de uma por LADO) e os dois
-    lados passam a dizer o mesmo com modos diferentes.
-    """
+    """E ela chega à tela pelo tique, com o modo daquele lado — não uma por aba."""
     col = a03.pacote(ctx("Rigid", "MultiPositionFeedback"))["colunas"][UNIQ]
     assert col["dica-pronto-e"] == a03.dica_do_pronto(col["modo-chave-e"])
     assert col["dica-pronto-d"] == a03.dica_do_pronto(col["modo-chave-d"])
     assert col["dica-pronto-e"] != col["dica-pronto-d"]
 
 
-# ---------------------------------------------------------------------------
-# [03] O REENVIO — as cinco réguas do GESTO saíram em 08/09/2026, com ele.
-#
 # Elas exercitavam `a03_gatilhos.reenviar`, que foi apagado no dia em que a
-# publicação de `44c2327e` tirou o `↻` da página que o produto renderiza. Ver a
-# lápide em `a03_gatilhos.py`, que diz o que o botão pagava e continua aberto.
-#
-# AS DUAS QUE FICAM são as que guardam a DECISÃO DELA, e nenhuma das duas toca
-# o gesto: uma cobra que o botão não volte ao desenho, a outra que o botão e o
-# dono nunca voltem em separado.
-# ---------------------------------------------------------------------------
 
 def test_o_reenvio_saiu_do_desenho():
     """O `↻` SAIU da bancada — 06/09/2026, decisão dela.
@@ -479,11 +347,6 @@ def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
         "Ver a docstring desta régua para o que apagar.")
 
 
-# ---------------------------------------------------------------------------
-# [04] A TELA AVISA QUANDO O EFEITO CHEGA — a D-01, e o conflito C-3
-# ---------------------------------------------------------------------------
-#: OS QUATRO GESTOS QUE CHEGAM AO APARELHO. O `guardar` fica de fora porque ele
-#: nunca devolveu `recado` — ver `test_o_guardar_nao_ganhou_recibo`.
 _OS_QUE_APLICAM = [
     ("modo", {"lado": "e", "valor": "Rigid"}),
     ("pronto", {"lado": "d", "v": "stop_hard"}),
@@ -608,18 +471,7 @@ def test_o_guardar_nao_ganhou_recibo(a03, ctx, disco_que_guarda):
 
 
 def test_o_piloto_le_a_chave_recado_e_a_tira_da_pintura():
-    """O contrato dos dois lados: o pacote ESCREVE `recado`, o piloto o LÊ.
-
-    Esta régua existe porque as duas metades vivem em arquivos diferentes e uma
-    troca de nome numa delas some em silêncio.
-
-    O DESTINO MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): o `recado` não pousa mais
-    no cartão. O piloto o lê e o escreve no diário da janela (`[relato]`), e a
-    chave segue fora da pintura por estar em `CHAVES_QUE_O_VIVO_RECUSA`. A régua
-    procurava a grafia antiga do corte, que saiu com o canal de tela.
-
-    MORDIDA: renomear a chave num dos dois lados reprova aqui.
-    """
+    """O contrato dos dois lados: o pacote ESCREVE `recado`, o piloto o LÊ."""
     fonte = (INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8")
     assert 'resposta.get("recado")' in fonte, (
         "o piloto deixou de ler a chave `recado` que os gestos desta aba "
@@ -652,8 +504,6 @@ def test_o_recibo_nao_afirma_o_que_o_daemon_nao_disse(a03, ctx):
     """
     from hefesto_dualsense4unix.app.textos_de_aplicacao import NADA_ACONTECEU
 
-    # `None` é a ponte ANTIGA (`_desfecho` traduz um `bool` em `(ok, "", None)`)
-    # e `{}` é o dublê da régua: nenhum dos dois fala de destino.
     for corpo in ({}, None):
         recibo = a03._recibo("left", "Rigid", corpo, ctx(), UNIQ)
         assert recibo, "o recibo ficou vazio — ele é a frase, e some se calar"
@@ -683,24 +533,8 @@ def test_o_recibo_conta_quando_o_daemon_diz_dois_destinos(a03, ctx):
         f"o daemon disse DOIS destinos e o recibo diz {recibo!r}")
 
 
-# ---------------------------------------------------------------------------
-# O DESENHO — o que a página tem de oferecer para as quatro caberem nela
-# ---------------------------------------------------------------------------
 def test_o_embrulho_de_cada_campo_e_pintavel_e_o_select_nao_tem_title():
-    """As duas metades da mesma cura, e uma sem a outra é pior que nenhuma.
-
-    O navegador mostra o `title` do ancestral mais próximo quando o elemento sob
-    o rato não tem o seu. Um `title` no `<select>` VENCE o do embrulho — e o
-    embrulho é o único que pode ser pintado, porque o campo de escolha já gasta
-    o seu `data-hef-alvo` com `valor` (sem ele a primeira pintura faria
-    `select.textContent = "Rígido"` e apagaria as 19 opções).
-
-    Devolver o `title` ao `<select>` não deixaria a tela vazia: deixaria a
-    explicação CONGELADA na frase da cena — a tela afirmando o modo de ontem.
-
-    MORDIDA: pôr um `title` de volta no `<select>`, ou tirar o `data-hef-alvo`
-    de um embrulho, reprova aqui e no `_conferir` do gerador.
-    """
+    """As duas metades da mesma cura, e uma sem a outra é pior que nenhuma."""
     html = BANCADA.read_text(encoding="utf-8")
     colunas = html.count('<div class="ctrl"')
 
@@ -720,13 +554,7 @@ def test_o_embrulho_de_cada_campo_e_pintavel_e_o_select_nao_tem_title():
 
 
 def test_o_title_do_alvo_atributo_e_escrevivel_pelo_piloto():
-    """`title` é a exceção NOMEADA da guarda de atributos do piloto.
-
-    Ela é curta de propósito (`data-*`/`aria-*`, menos os cinco de endereço e
-    todo `data-hef`), e o `title` entrou por nome em 03/09. Se alguém a fechar,
-    os embrulhos desta aba passam a pedir um atributo que nunca pinta — e o
-    único barulho viria de um portão, nunca da tela.
-    """
+    """`title` é a exceção NOMEADA da guarda de atributos do piloto."""
     fonte = (INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8")
     assert "ATRIBUTO_A_MAIS = ['title']" in fonte, (
         "a guarda do piloto deixou de permitir `title` — as dicas desta aba "

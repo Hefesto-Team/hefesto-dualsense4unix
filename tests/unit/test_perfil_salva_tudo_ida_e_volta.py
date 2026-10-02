@@ -52,8 +52,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer `import gi`, e no lugar do
-# `pytest.importorskip("gi")` — que ACEITA o stub plantado por outro arquivo.
 exigir_gi_real("PERFIL-SALVA-TUDO — ida e volta por seção")
 
 from collections.abc import Callable
@@ -83,19 +81,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     TriggersConfig,
 )
 
-# ---------------------------------------------------------------------------
-# A PONTE COM O PORTÃO DE COBERTURA — dicionário LITERAL, lido por AST
-# ---------------------------------------------------------------------------
 
-#: ``campo de Profile`` -> ``a superfície da janela que o escreve``.
-#:
-#: Este dicionário é lido por ``ast.literal_eval`` pelo portão de cobertura
-#: (``test_perfil_salva_tudo_cobertura_das_secoes.py``). Ele NÃO pode virar
-#: uma compreensão, uma chamada ou um ``dict()`` — tem de continuar sendo um
-#: literal, senão o portão perde a única fonte que não exige GTK para ser lida.
-#:
-#: Quem acrescentar um campo a ``Profile`` acrescenta a entrada aqui E o caso
-#: em ``_GESTOS`` abaixo. O portão reprova sozinho quem esquecer.
 SECOES_COBERTAS: dict[str, str] = {
     "name": "rodapé — o nome digitado no diálogo do Salvar Perfil",
     "match": "rodapé — _regra_do_save (disco > origem do rascunho > MatchManual)",
@@ -114,29 +100,17 @@ SECOES_COBERTAS: dict[str, str] = {
     "controllers": "aba Lightbar com um controle no seletor — _persist_leds_update",
 }
 
-#: MAC de teste — máscara da casa (octetos 4 e 5 zerados), como o portão de
-#: anonimato exige. Não é o controle dela.
 UNIQ_DE_TESTE = "aabbcc000002"
-
-
-# ---------------------------------------------------------------------------
-# Aparelhagem
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture(autouse=True)
 def _sync_run_in_thread(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``ipc_bridge.run_in_thread`` síncrono — sem loop GTK não há callback.
-
-    Mesma aparelhagem de ``test_gravacao_de_perfil_passa_pelo_funil.py``:
-    worker e callback na mesma thread preservam a semântica observável do
-    ``PERF-FOOTER-ASYNC-IO-01``.
-    """
+    """``ipc_bridge.run_in_thread`` síncrono — sem loop GTK não há callback."""
 
     def _sync(fn: Any, on_success: Any, on_failure: Any = None) -> None:
         try:
             resultado = fn()
-        except Exception as exc:  # espelha o run_in_thread real
+        except Exception as exc:
             if on_failure is not None:
                 on_failure(exc)
             return
@@ -147,16 +121,7 @@ def _sync_run_in_thread(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def disco(tmp_path: Path) -> Path:
-    """O diretório de perfis DE VERDADE — provado dentro do ``tmp_path``.
-
-    Não monkeypatcha nada: o ``_hefesto_fake_env`` do conftest já aponta o
-    ``XDG_CONFIG_HOME`` para dentro do ``tmp_path`` deste teste, e
-    ``xdg_paths.profiles_dir`` resolve por ele a cada chamada. O ``assert``
-    aqui é o instrumento conferindo a própria régua: se um dia essa fixture
-    parar de isolar, o teste REPROVA antes de escrever um byte no
-    ``~/.config`` dela, em vez de deixar o canário do conftest descobrir
-    depois de o estrago estar feito.
-    """
+    """O diretório de perfis DE VERDADE — provado dentro do ``tmp_path``."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     destino = profiles_dir(ensure=True)
@@ -207,16 +172,13 @@ def _janela(
             self._profiles_cache: list[Profile] = list(load_all_profiles())
             self.builder = MagicMock()
             self.toasts: list[str] = []
-            # Guardas de refresh — todas BAIXAS: o gesto é dela, não eco.
             self._refresh_guard = False
             self._rumble_guard_refresh = False
             self._mouse_guard_refresh = False
             self._triggers_guard_refresh = False
             self._trigger_preset_applying = False
-            # Seletor de alvo do banner (PERFIL-04) e mapa de conectados (R-14).
             self._edit_target_uniq = alvo
             self._target_uniq_by_index = dict(conectados or {})
-            # Widgets que os handlers de gatilho leem.
             self._trigger_mode: dict[str, Any] = {}
             self._trigger_param_widgets: dict[str, dict[str, Any]] = {}
             self._trigger_live_preview_timer: dict[str, int] = {"left": 0, "right": 0}
@@ -224,11 +186,9 @@ def _janela(
             self._escolha_pendente: Any = None
             self._rumble_policy: str | None = None
 
-        # --- widgets: não há glade neste dublê ---
         def _get(self, widget_id: str) -> Any:
             return None
 
-        # --- toasts: as quatro abas usam nomes diferentes ---
         def _status_toast(self, contexto: str, msg: str) -> None:
             self.toasts.append(msg)
 
@@ -250,7 +210,6 @@ def _janela(
         def _toast_input(self, msg: str) -> None:
             self.toasts.append(msg)
 
-        # --- efeitos colaterais que exigiriam daemon/glade ---
         def _reload_profiles_store(
             self, select_name: str | None = None, on_done: Any | None = None
         ) -> None:
@@ -304,20 +263,7 @@ class _Caixa:
 
 
 def _perfil_de_partida(nome: str = "Pragmata") -> Profile:
-    """O perfil que ela tem em disco quando abre a janela.
-
-    Tudo aqui é ESCOLHA, e cada uma tem um porquê:
-
-    - ``match`` com regra de verdade e prioridade alta: é o perfil de um jogo,
-      não um catch-all — é nele que ela reclama de perder configuração;
-    - ``auto_player_colors=False``: o D4 da aba Lightbar (COR-04) desliga o
-      automático quando a cor é editada em "Todos" sem alvo conhecido, e um
-      teste de ida-e-volta de COR não pode medir o D4 de carona. O toggle tem
-      caso próprio (``_gesto_leds_auto``);
-    - as seções opcionais VAZIAS (``mouse``/``mic``/``speaker``/``mode``): a
-      pergunta desta suíte é se o gesto da aba as CRIA, e um perfil que já as
-      trouxesse responderia por herança em vez de pelo gesto.
-    """
+    """O perfil que ela tem em disco quando abre a janela."""
     return Profile(
         name=nome,
         match=MatchCriteria(window_class=["steam_app_3357650"]),
@@ -350,13 +296,7 @@ def _salvar_pelo_rodape(janela: Any, nome: str) -> None:
 
 
 def _aplicar_pelo_rodape(janela: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O gesto dela: botão VERDE "Aplicar", com o daemon respondendo tudo ok.
-
-    O daemon não está no laço: o que se mede aqui é o efeito do "Aplicar"
-    sobre o RASCUNHO — o HARM-05 mostrou que ele mexe (baixa o ``dirty`` do
-    mouse), e mexer no rascunho é mexer no que o "Salvar Perfil" seguinte vai
-    gravar.
-    """
+    """O gesto dela: botão VERDE "Aplicar", com o daemon respondendo tudo ok."""
     secoes = ["triggers", "leds", "rumble", "mouse", "mic", "keyboard", "controllers"]
 
     def _call_async(
@@ -379,14 +319,7 @@ def _relido(nome: str) -> Profile:
 
 
 class _LinhaDoPendente:
-    """Dublê do rótulo "vai mudar para:" da aba Início — só o que ele expõe.
-
-    O-SALVAR-TAMBEM-APLICA-01 (11/08/2026). Sem ele, "a pendência foi limpa" só
-    se mede no MODELO (``_escolha_pendente``), e o pedido dela é sobre a TELA:
-    *"a linha vai mudar para: tem de apagar"*. As duas coisas podem divergir —
-    ``render_pendente`` sai cedo quando não há rótulo montado —, e um teste que
-    olhasse só o modelo passaria com a linha acesa na cara dela.
-    """
+    """Dublê do rótulo "vai mudar para:" da aba Início — só o que ele expõe."""
 
     def __init__(self) -> None:
         self.texto = ""
@@ -403,14 +336,7 @@ class _LinhaDoPendente:
 
 
 def _sem_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Nenhum IPC de leitura sai desta bancada — nem para o daemon dela.
-
-    ``_ha_jogo_aberto_agora`` lê o estado vivo e ENGOLE o erro, mantendo
-    "nenhum jogo aberto" — o caminho sem diálogo de relançamento, que é o que
-    estes casos medem. A armadilha existe para o teste não depender do que está
-    ligado na máquina de quem o roda (o socket já é isolado pelo modo fake do
-    conftest; isto é a segunda rede, e é a que documenta a intenção).
-    """
+    """Nenhum IPC de leitura sai desta bancada — nem para o daemon dela."""
 
     def _explode(*_a: Any, **_kw: Any) -> Any:
         raise RuntimeError("daemon ausente nesta bancada")
@@ -421,12 +347,7 @@ def _sem_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
 def _armadilha_de_apply_mode(
     monkeypatch: pytest.MonkeyPatch, *, desfecho: str = "sucesso"
 ) -> list[tuple[str, str | None]]:
-    """Registra CADA ``apply_mode`` e devolve a lista — a régua da transição.
-
-    ``desfecho`` escolhe o que o daemon responde: ``"sucesso"`` chama o
-    ``on_done``, ``"falha"`` chama o ``on_fail``, e ``"mudo"`` não chama nada
-    (o caso em que o IPC ainda está em voo).
-    """
+    """Registra CADA ``apply_mode`` e devolve a lista — a régua da transição."""
     from hefesto_dualsense4unix.app.actions import mode_transition
 
     chamadas: list[tuple[str, str | None]] = []
@@ -446,16 +367,6 @@ def _armadilha_de_apply_mode(
 
     monkeypatch.setattr(mode_transition, "apply_mode", _apply_mode_falso)
     return chamadas
-
-
-# ---------------------------------------------------------------------------
-# OS GESTOS — um por seção do perfil, no ponto mais próximo do dedo dela
-# ---------------------------------------------------------------------------
-#
-# Cada gesto abaixo entra pelo MESMO ponto que o handler da aba usa. Onde o
-# handler lê widget demais para caber num dublê honesto, entra-se pela função
-# que ele chama na linha seguinte — e o nome dela está no `SECOES_COBERTAS`
-# acima, para quem for conferir saber exatamente onde olhar.
 
 
 def _gesto_triggers(janela: Any) -> None:
@@ -499,12 +410,7 @@ def _confere_leds(perfil: Profile) -> None:
 
 
 def _gesto_rumble(janela: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Aba Rumble: clicar em "Economia" (a política persiste no perfil).
-
-    O IPC vivo é dublado: ``_set_policy`` fala com o daemon na mesma função em
-    que escreve o rascunho, e o que se mede aqui é o disco. O dublê responde
-    ACEITO — recusa do daemon é outra história, com testemunha própria.
-    """
+    """Aba Rumble: clicar em "Economia" (a política persiste no perfil)."""
     from hefesto_dualsense4unix.app.actions import rumble_actions
 
     monkeypatch.setattr(
@@ -527,29 +433,7 @@ def _gesto_key_bindings(janela: Any) -> None:
 
 
 def _confere_key_bindings(perfil: Profile) -> None:
-    """O gesto da aba CHEGOU, e o que a aba não mostra CONTINUA lá.
-
-    NOTA DATADA, 25/08/2026 (NAVEGACAO-UM-CONTROLE-SO-01/N1, `ba94ff1`): esta
-    asserção era `== {"triangle": ["KEY_C"]}` — igualdade exata —, e por isso
-    ela FOSSILIZAVA UM DEFEITO. O `_persist_key_bindings_to_draft`
-    SUBSTITUÍA o rascunho pela lista da tela, e a aba Teclado nunca mostrou os
-    três atalhos de toque do touchpad: um gesto qualquer na aba **apagava do
-    perfil dela** o que ela nunca tinha visto. O commit da cura diz isso no
-    título: *"um gesto na aba apagava três atalhos do perfil dela, e a lista
-    nunca os mostrou"*.
-
-    Hoje a escrita FUNDE. A régua acompanha, e passa a medir as duas metades —
-    que é o que ela sempre quis dizer: o gesto chega ao disco, **e** o que a
-    aba não mostra sobrevive. Medir só a primeira metade com `==` deixava a
-    segunda livre para regredir em silêncio.
-
-    Isto é a `O-PERFIL-TEM-DE-GUARDAR-TUDO` (decisão dela, 18/08) aplicada à
-    própria régua.
-    """
-    # `key_bindings` é `None` quando o perfil não tem opinião nenhuma — e o
-    # teste que mede ESTA régua (`test_sem_o_gesto_a_conferencia_reprova`)
-    # chega exatamente assim. `or {}` mantém a reprovação sendo a MENSAGEM
-    # honesta abaixo, em vez de um `AttributeError` que não diz nada.
+    """O gesto da aba CHEGOU, e o que a aba não mostra CONTINUA lá."""
     bindings = perfil.key_bindings or {}
     assert bindings.get("triangle") == ["KEY_C"], (
         f"os bindings no arquivo são {perfil.key_bindings!r} — o teclado que "
@@ -584,31 +468,7 @@ def _confere_mouse(perfil: Profile) -> None:
 
 
 def _gesto_mic(janela: Any) -> None:
-    """Card do controle: o VOLUME da captura e o MUDO do firmware.
-
-    PERFIL-GUARDA-O-MIC-01 (18/08/2026). Pedido dela depois de o microfone
-    ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de microfone e
-    som, touch, acelerômetro, giroscópio e afins. cara, temos que salvar isso
-    no perfil sempre."*
-
-    **NOTA DATADA — 18/08/2026.** Este gesto era SIMULADO: até aqui não havia
-    superfície que escrevesse a seção ``mic``, e o caso cobria só a metade de
-    baixo do caminho (rascunho -> disco). Isso caducou — o gesto agora entra
-    pelo escritor ÚNICO da casa, ``registrar_microfone_no_rascunho``, o mesmo
-    que o card chama no callback de sucesso do daemon. A lacuna que justificava
-    a simulação estava marcada em ``_SEM_ESCRITOR_HOJE`` do portão ao lado, e
-    saiu de lá junto com esta mudança.
-
-    ``button_toggles_system`` continua ENTRANDO PELO RASCUNHO, e a ressalva é
-    honesta: ele é o único dos três campos que ainda não tem superfície onde
-    ela possa tocá-lo. O que este caso mede é que os TRÊS chegam ao arquivo
-    juntos — quem lhe der superfície troca só estas duas linhas.
-
-    **NOTA DATADA — 29/09/2026 (O-MUDO-E-DO-CONTROLE-01).** O mudo saiu do
-    perfil: é do controle, mora no ``maquina.json`` e vale em todo jogo
-    (resposta 9 dela). O gesto continua clicando em Silenciar, e o que se mede
-    é que ele NÃO chega ao arquivo — o volume e o botão chegam.
-    """
+    """Card do controle: o VOLUME da captura e o MUDO do firmware."""
     from hefesto_dualsense4unix.app.draft_config import (
         MicDraft,
         registrar_microfone_no_rascunho,
@@ -660,12 +520,7 @@ def _confere_speaker(perfil: Profile) -> None:
 
 
 def _gesto_mode(janela: Any) -> None:
-    """Abas Início/Emulação: "Jogar pelo Hefesto" com a máscara Xbox.
-
-    Entra pelo escritor ÚNICO da casa (``registrar_modo_no_rascunho``), que é
-    o que o "Aplicar" chama no callback de sucesso da transição de modo — o
-    clique no seletor só MARCA a escolha desde a AGORA-E-DEPOIS-01.
-    """
+    """Abas Início/Emulação: "Jogar pelo Hefesto" com a máscara Xbox."""
     from hefesto_dualsense4unix.app.actions.home_actions import registrar_modo_no_rascunho
 
     registrar_modo_no_rascunho(janela, "gamepad", "xbox")
@@ -702,12 +557,7 @@ def _confere_suppress(perfil: Profile) -> None:
 
 
 def _gesto_controllers(janela: Any) -> None:
-    """Aba Lightbar COM um controle selecionado no seletor do banner.
-
-    É o "configurei pro 1-BT, fica salvo pra ele dentro do meu perfil" da
-    PERFIL-04 — e é o caso do BLUETOOTH que ela nomeou no pedido: o override
-    é chaveado pelo MAC, o mesmo entre USB e BT.
-    """
+    """Aba Lightbar COM um controle selecionado no seletor do banner."""
     janela._edit_target_uniq = UNIQ_DE_TESTE
     janela._persist_leds_update({"lightbar_rgb": (200, 10, 10)})
 
@@ -768,9 +618,6 @@ def _confere_priority(perfil: Profile) -> None:
     )
 
 
-#: ``campo`` -> ``(gesto, conferência)``. As chaves TÊM de bater com
-#: ``SECOES_COBERTAS`` — há teste logo abaixo que cobra isso, para o portão de
-#: cobertura não poder ser enganado por um literal desatualizado.
 _GESTOS: dict[str, tuple[Callable[..., Any], Callable[[Profile], None]]] = {
     "name": (_gesto_nome, _confere_nome),
     "match": (_gesto_match, _confere_match),
@@ -787,18 +634,6 @@ _GESTOS: dict[str, tuple[Callable[..., Any], Callable[[Profile], None]]] = {
     "controllers": (_gesto_controllers, _confere_controllers),
 }
 
-#: Seções cujo ida-e-volta está QUEBRADO hoje, com o motivo por extenso e o
-#: endereço de onde o dado se perde. ``xfail(strict=True)``: no dia em que a
-#: cura entrar, o caso passa e o pytest REPROVA o xfail que sobrou — a lápide
-#: não pode envelhecer calada, e quem entrega a cura apaga a entrada daqui.
-#:
-#: ESTÁ VAZIO, e isso é MEDIÇÃO de 09/08/2026, não descuido: nas TREZE seções, a
-#: metade de baixo do caminho (rascunho -> arquivo) está inteira hoje. O que
-#: falta é a metade de CIMA numa delas — ``mic`` não tem superfície que a
-#: escreva —, e essa lacuna é medida e marcada no portão ao lado
-#: (``test_perfil_salva_tudo_cobertura_das_secoes.py``, ``_SEM_ESCRITOR_HOJE``).
-#: Separar as duas metades é o que permite dizer, de uma seção quebrada, se
-#: falta a superfície ou se falta a persistência.
 _QUEBRADAS_HOJE: dict[str, str] = {}
 
 
@@ -823,11 +658,6 @@ def _casos() -> list[Any]:
     return saida
 
 
-# ---------------------------------------------------------------------------
-# A ida e volta
-# ---------------------------------------------------------------------------
-
-
 class TestIdaEVolta:
     """Uma seção do perfil por caso, e o caminho REAL entre a aba e o arquivo."""
 
@@ -835,21 +665,7 @@ class TestIdaEVolta:
     def test_o_gesto_da_aba_chega_ao_arquivo(
         self, campo: str, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Gesto na aba -> "Salvar Perfil" -> disco -> releitura.
-
-        MORDIDA (onde arrancar para ver reprovar): tire do
-        ``DraftConfig.to_profile`` (``app/draft_config.py``) a linha que emite
-        a seção deste caso — por exemplo trocar ``mode=self.source_mode if ...``
-        por ``mode=None`` — e o caso correspondente fica vermelho com a frase
-        que descreve a perda pelos olhos dela. Medido: com ``mode=None``
-        forçado, só o caso ``mode`` reprova; os demais seguem verdes, que é o
-        que prova que os casos medem coisas DIFERENTES.
-
-        A releitura é de DISCO (``load_profile``), nunca do objeto em memória:
-        o ``save_profile`` omite seções ``None`` do JSON de propósito
-        (compatibilidade de downgrade), e um teste que olhasse o objeto não
-        veria uma seção perdida na serialização.
-        """
+        """Gesto na aba -> "Salvar Perfil" -> disco -> releitura."""
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
 
@@ -862,21 +678,7 @@ class TestIdaEVolta:
     def test_o_gesto_sobrevive_ao_aplicar_antes_de_salvar(
         self, campo: str, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A ordem que ela usa: mexe, clica no VERDE, e SÓ ENTÃO salva.
-
-        É a frase dela ao pé da letra — *"ao clicarmos em salvar perfil e
-        aplicar (botão verde) tudo fique salvo no perfil ativo"*. O "Aplicar"
-        NÃO grava disco, mas mexe no rascunho (o HARM-05 é exatamente isso: o
-        rodapé baixa o ``dirty`` do mouse no callback de sucesso), e mexer no
-        rascunho é mexer no que o "Salvar Perfil" seguinte grava.
-
-        MORDIDA: troque, em ``footer_actions._clear_mouse_dirty``, o
-        ``{"dirty": False, "in_profile": True}`` por ``{"dirty": False}`` — o
-        caso ``mouse`` deste teste fica vermelho ("a seção `mouse` NÃO existe
-        no arquivo") e o do teste irmão acima continua verde, porque lá não
-        houve Aplicar. É a diferença entre os dois testes, escrita como
-        medição.
-        """
+        """A ordem que ela usa: mexe, clica no VERDE, e SÓ ENTÃO salva."""
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
 
@@ -888,31 +690,15 @@ class TestIdaEVolta:
 
 
 class TestTudoDeUmaVezSo:
-    """Todas as abas mexidas na MESMA sessão, e um "Salvar Perfil" só.
-
-    É o cenário LITERAL da queixa — *"em todas as abas fiz alterações e salvei
-    o perfil, e essas configurações de outras abas não ficam salvas"*. Vale
-    além da soma dos casos acima: os defeitos desta família são de FRONTEIRA
-    (uma aba reemite a fotografia velha por cima do que a outra escreveu), e
-    nenhum caso isolado os enxerga.
-    """
+    """Todas as abas mexidas na MESMA sessão, e um "Salvar Perfil" só."""
 
     def test_uma_sessao_inteira_de_ajustes_sobrevive_a_um_unico_salvar(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sete abas, um clique em Salvar, e o arquivo tem as sete coisas.
-
-        MORDIDA: qualquer regressão que faça UMA seção ser reemitida do
-        snapshot do boot (o defeito do ``BUG-FOOTER-SAVE-DROPS-SECTIONS-01``)
-        derruba este teste com o nome da seção perdida na mensagem.
-        """
+        """Sete abas, um clique em Salvar, e o arquivo tem as sete coisas."""
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
 
-        # `controllers` por último, e a ordem é medição, não estética: o gesto
-        # dele DEIXA um controle selecionado no seletor do banner, e toda edição
-        # de LED posterior cairia no override em vez do global — que é o
-        # comportamento certo do produto e o errado para esta bancada.
         ordem = [c for c in SECOES_COBERTAS if c != "controllers"] + ["controllers"]
         for campo in ordem:
             if campo in _QUEBRADAS_HOJE:
@@ -937,52 +723,23 @@ class TestTudoDeUmaVezSo:
     def test_a_inicio_entra_no_cenario_pelo_dedo_dela_com_um_salvar_so(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O mesmo cenário, mas a aba Início entra pelo GESTO — não pelo escritor.
-
-        O PEDIDO DELA, 10/08/2026, literal:
-
-            *"eu ir de uma aba pra outra depois de alterar todas as anteriores
-            mas eu clicar em salvar somente na última. ele vai salvar na última
-            aba todas as informações passadas."*
-
-        O teste acima faz a Início entrar por ``registrar_modo_no_rascunho``,
-        que é o escritor — e por isso ele nunca viu o buraco. O dedo dela não
-        chama o escritor: clicar no seletor de modo só MARCA a escolha em
-        ``_escolha_pendente`` (AGORA-E-DEPOIS-01), e até 10/08/2026 quem levava
-        a marca ao rascunho era **só** o callback do botão VERDE. Sem o verde,
-        este Salvar gravava ``mode: null`` em cima do que ela acabara de
-        escolher — a Início era a ÚNICA das oito abas que não contribuía.
-
-        MORDIDA: apague a chamada a ``recolher_escolha_pendente_no_rascunho``
-        da primeira linha de ``footer_actions._persist_profile_async`` e este
-        teste reprova com ``mode:`` na lista de seções perdidas, enquanto o
-        teste acima — que entra pelo escritor — continua VERDE.
-        """
+        """O mesmo cenário, mas a aba Início entra pelo GESTO — não pelo escritor."""
         from hefesto_dualsense4unix.app.actions import home_actions
 
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
-        # O-SALVAR-TAMBEM-APLICA-01 (11/08/2026): este Salvar passou a disparar
-        # a transição de modo, e uma bancada de DISCO não pode falar com daemon
-        # nenhum. As duas armadilhas mantêm o teste hermético e medindo o que
-        # ele sempre mediu — o arquivo. Quem mede a transição são os casos
-        # próprios, em `TestOSalvarSozinho...`.
         _sem_daemon(monkeypatch)
         _armadilha_de_apply_mode(monkeypatch)
 
-        # Mesma ordem e mesma razão do teste acima; `mode` sai da lista porque
-        # aqui ele entra pela porta dela, logo abaixo.
         ordem = [c for c in SECOES_COBERTAS if c not in ("controllers", "mode")]
         for campo in [*ordem, "controllers"]:
             if campo in _QUEBRADAS_HOJE:
                 continue
             _gesto_de(campo, janela, monkeypatch)
 
-        # A aba Início, pelo dedo dela: dois cliques em seletor, nada mais.
         home_actions.marcar_escolha(janela, "modo", "gamepad")
         home_actions.marcar_escolha(janela, "mascara", "xbox")
 
-        # E o único clique em "Salvar Perfil", na ÚLTIMA aba.
         _salvar_pelo_rodape(janela, perfil.name)
 
         relido = _relido(perfil.name)
@@ -1029,9 +786,6 @@ class TestOBotaoVerdeLevaAEscolhaDaAbaInicioAoArquivo:
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
 
-        # O daemon não entra no laço: `_ha_jogo_aberto_agora` lê o estado vivo
-        # por IPC e engole o erro — sem daemon ele mantém "nenhum jogo aberto",
-        # que é o caminho sem diálogo de relançamento.
         def _sem_daemon(*_a: Any, **_kw: Any) -> Any:
             raise RuntimeError("daemon ausente nesta bancada")
 
@@ -1051,12 +805,10 @@ class TestOBotaoVerdeLevaAEscolhaDaAbaInicioAoArquivo:
 
         monkeypatch.setattr(mode_transition, "apply_mode", _apply_mode_falso)
 
-        # O gesto dela na aba Início: escolher o modo e a máscara.
         home_actions.marcar_escolha(janela, "modo", "gamepad")
         home_actions.marcar_escolha(janela, "mascara", "xbox")
         assert janela._escolha_pendente, "a escolha dela não ficou marcada"
 
-        # O botão VERDE do rodapé.
         _aplicar_pelo_rodape(janela, monkeypatch)
         assert aplicados == [("gamepad", "xbox")], (
             f"o botão verde não pediu a transição de modo: {aplicados!r}"
@@ -1097,28 +849,7 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
     def test_marcar_na_inicio_e_salvar_sem_o_verde_grava_e_aplica_o_modo(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ela marca o modo na Início e salva **SEM** tocar no botão verde.
-
-        (O ``sem`` do nome é minúsculo porque o ``N802`` do ruff reprova nome de
-        função com maiúscula — a ênfase mora aqui.)
-
-        Mede as QUATRO metades do pedido dela, e cada uma tem uma mordida
-        própria, medidas em 11/08/2026 uma a uma:
-
-        1. o arquivo tem o modo — MORDIDA: apague a chamada a
-           ``recolher_escolha_pendente_no_rascunho`` da primeira linha de
-           ``footer_actions._persist_profile_async``;
-        2. o daemon recebeu o ``apply_mode`` — MORDIDA: apague o
-           ``depois_na_janela=depois`` do ``_gravar_perfil_async`` no mesmo
-           método, e o arquivo continua certo enquanto a máquina fica para trás
-           (que é o defeito exato que ela mandou consertar);
-        3. a linha "vai mudar para:" apagou — MORDIDA: troque o
-           ``_esquecer_a_pendencia(self)`` do ``_aplicou`` por um
-           ``self._escolha_pendente = None`` cru, e o modelo fica limpo com a
-           linha ACESA na tela;
-        4. o toast diz a verdade nova — MORDIDA: devolva o texto antigo
-           ("próxima abertura") ao ``_texto_do_perfil_salvo``.
-        """
+        """Ela marca o modo na Início e salva **SEM** tocar no botão verde."""
         from hefesto_dualsense4unix.app.actions import home_actions
 
         perfil = _semear(_perfil_de_partida())
@@ -1127,7 +858,6 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
         _sem_daemon(monkeypatch)
         aplicados = _armadilha_de_apply_mode(monkeypatch)
 
-        # O gesto dela na aba Início — e SÓ ele. Nenhum clique no verde.
         home_actions.marcar_escolha(janela, "modo", "gamepad")
         home_actions.marcar_escolha(janela, "mascara", "xbox")
         assert janela._home_pendente_label.visivel, (
@@ -1137,17 +867,13 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
 
         _salvar_pelo_rodape(janela, perfil.name)
 
-        # 1. o ARQUIVO.
         _confere_mode(_relido(perfil.name))
 
-        # 2. o DAEMON. A escolha dela viaja inteira: modo E máscara, porque a
-        # máscara foi escolha explícita dela (o clique no seletor).
         assert aplicados == [("gamepad", "xbox")], (
             "o Salvar não pediu a transição de modo ao daemon — o arquivo "
             f"mudou e a máquina ficou para trás: {aplicados!r}"
         )
 
-        # 3. a TELA. As duas metades: o modelo e o rótulo.
         assert janela._escolha_pendente is None, (
             "a pendência sobreviveu a um Salvar que APLICOU: "
             f"{janela._escolha_pendente!r} — a janela promete uma mudança que "
@@ -1158,17 +884,10 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
             f"confirmar a mudança (texto: {janela._home_pendente_label.texto!r})"
         )
 
-        # 4. o TOAST. A última palavra é a que ela lê, e ela não pode mandar
-        # clicar em nada nem falar de "próxima abertura": já está valendo.
         ultimo = janela.toasts[-1]
         assert "Jogar pelo Hefesto" in ultimo and "já está valendo" in ultimo, (
             f"o último toast do Salvar não diz que o modo já vale: {ultimo!r}"
         )
-        # E NENHUM dos toasts da sequência pode ter sobrado do desenho antigo.
-        # A varredura é sobre todos, e não só sobre o último, porque o texto
-        # velho morava no PRIMEIRO (`_texto_do_perfil_salvo`, dito no instante
-        # em que o arquivo fica pronto) — uma asserção só sobre a última frase
-        # deixaria a mentira passar no meio do caminho.
         mentiras = [
             t
             for t in janela.toasts
@@ -1212,10 +931,7 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
         assert aplicados == [("gamepad", "xbox")], (
             f"o Salvar nem tentou a transição: {aplicados!r}"
         )
-        # O arquivo NÃO se desfaz: desfazer seria apagar a escolha dela por
-        # causa de um engasgo de IPC.
         _confere_mode(_relido(perfil.name))
-        # E a tela continua dizendo o que é verdade: o daemon não chegou lá.
         assert janela._escolha_pendente == {"modo": "gamepad", "mascara": "xbox"}, (
             "a escolha dela evaporou numa transição que FALHOU: "
             f"{janela._escolha_pendente!r}"
@@ -1235,36 +951,16 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
     def test_o_salvar_nao_impoe_a_mascara_que_ela_nao_escolheu(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """AUTO-01.3 no caminho novo: quem não escolheu não manda.
-
-        Trocar só o modo não é escolher máscara. O passo tem de sair SEM o
-        campo, e o daemon preserva a que já está configurada — o MESMO contrato
-        que ``test_a_inicio_sem_mascara_escolhida_nao_impoe_mascara_nenhuma``
-        tranca para o botão verde.
-
-        Aqui a tentação é maior que lá, e é por isso que este caso existe: o
-        recolhimento devolve ``{"modo": "gamepad", "mascara": "dualsense"}`` —
-        com a máscara VINDA DO DAEMON, porque o esquema não aceita ``kind``
-        gamepad sem ela —, e reaproveitar esse dicionário inteiro no IPC parece
-        a coisa óbvia a fazer. Seria a GUI decidindo máscara por causa de um
-        payload que ela apenas leu: o "segundo dono do valor" da AUTO-01.3,
-        entrando pela porta nova.
-
-        MORDIDA: em ``_persist_profile_async``, troque a máscara explícita
-        (``escolhida``) por ``recolhido.get("mascara")`` e este teste reprova
-        com ``flavor='dualsense'`` na chamada.
-        """
+        """AUTO-01.3 no caminho novo: quem não escolheu não manda."""
         from hefesto_dualsense4unix.app.actions import home_actions
 
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
-        # O que a aba Início leu do daemon no último tique.
         janela._modo_vigente_do_daemon = "desktop"
         janela._mascara_vigente_do_daemon = "dualsense"
         _sem_daemon(monkeypatch)
         aplicados = _armadilha_de_apply_mode(monkeypatch)
 
-        # Ela escolhe o MODO, e só ele.
         home_actions.marcar_escolha(janela, "modo", "gamepad")
 
         _salvar_pelo_rodape(janela, perfil.name)
@@ -1273,8 +969,6 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
             "o Salvar impôs uma máscara que ela não escolheu — ecoar o vigente "
             f"do daemon é o segundo dono do valor: {aplicados!r}"
         )
-        # E o ARQUIVO continua guardando a máscara vigente, que é outra
-        # pergunta: o esquema exige uma, e o recolhimento a herda do daemon.
         relido = _relido(perfil.name)
         assert relido.mode is not None and relido.mode.kind == "gamepad", (
             f"o modo não chegou ao arquivo: {relido.mode!r}"
@@ -1305,7 +999,6 @@ class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
 
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
-        # Daemon offline: a aba Início nunca renderizou, logo não há vigente.
         assert getattr(janela, "_modo_vigente_do_daemon", None) is None
         _sem_daemon(monkeypatch)
         aplicados = _armadilha_de_apply_mode(monkeypatch)
@@ -1331,13 +1024,7 @@ class TestARegistroEACoberturaNaoPodemDivergir:
     """O literal que o portão lê tem de descrever os casos que existem aqui."""
 
     def test_o_literal_e_os_gestos_tem_as_mesmas_chaves(self) -> None:
-        """``SECOES_COBERTAS`` é lido por AST — ele não pode mentir.
-
-        MORDIDA: acrescente uma chave a ``SECOES_COBERTAS`` sem o caso
-        correspondente em ``_GESTOS`` e este teste reprova. Sem ele, o portão
-        de cobertura ao lado poderia ser satisfeito com um literal decorativo,
-        e a regressão passaria.
-        """
+        """``SECOES_COBERTAS`` é lido por AST — ele não pode mentir."""
         assert set(SECOES_COBERTAS) == set(_GESTOS), (
             "SECOES_COBERTAS (que o portão lê) e _GESTOS (o que roda de fato) "
             f"divergiram: só no literal {set(SECOES_COBERTAS) - set(_GESTOS)}, "
@@ -1357,14 +1044,7 @@ class TestARegistroEACoberturaNaoPodemDivergir:
 
 
 class TestOInstrumentoNaoMente:
-    """A régua é conferida antes de qualquer veredito dela ser citado.
-
-    "O instrumento mente mais que o produto" é a lição mais cara desta casa
-    (três medições falsas num dia, 07/08). Estes dois casos são a contagem
-    independente: se a aparelhagem deixasse de escrever no disco, ou passasse
-    a ler o objeto em memória em vez do arquivo, TODOS os casos acima ficariam
-    verdes sem medir nada.
-    """
+    """A régua é conferida antes de qualquer veredito dela ser citado."""
 
     def test_a_aparelhagem_escreve_no_disco_de_verdade(self, disco: Path) -> None:
         """O arquivo existe, com o slug do nome — e o conteúdo é JSON."""
@@ -1384,24 +1064,7 @@ class TestOInstrumentoNaoMente:
     def test_sem_o_gesto_a_conferencia_reprova(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A prova de que nenhuma conferência passa de graça.
-
-        Salva-se o perfil SEM fazer gesto nenhum e cobra-se que cada
-        conferência reprove. É a mordida de todos os casos de uma vez, feita
-        dentro da suíte: se uma conferência passasse aqui, ela estaria medindo
-        o valor que o perfil já tinha — cobertura falsa, que é pior que
-        cobertura ausente.
-
-        TRÊS EXCEÇÕES, e elas são o contrato, não folga:
-
-        - ``name``, ``match`` e ``priority`` **não têm gesto de aba**. Eles vêm
-          do DISCO, e o que os testes deles medem é o contrário: que salvar
-          NÃO os mexa (SALVAR-NAO-REBAIXA-01/02, REGRA-NAO-SE-PERDE-01/02).
-          Passar sem gesto é exatamente o que se quer deles.
-
-        MEDIDO em 09/08/2026: 10 conferências reprovam sem o gesto, 3 passam —
-        as três de cima, e só elas.
-        """
+        """A prova de que nenhuma conferência passa de graça."""
         sem_gesto_e_esperado = {"name", "match", "priority"}
         passaram_de_graca: list[str] = []
         for campo in SECOES_COBERTAS:
@@ -1423,13 +1086,7 @@ class TestOInstrumentoNaoMente:
     def test_uma_perda_deliberada_e_vista(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida provada DENTRO da suíte, sem arrancar produção à mão.
-
-        Aqui a cura é arrancada em memória: ``to_profile`` passa a devolver um
-        perfil SEM a seção ``mode``, exatamente como fazia antes da
-        PERFIL-SALVA-TUDO-01. A conferência de ``mode`` tem de reprovar — e se
-        não reprovar, é a régua que está quebrada, não o produto que está bom.
-        """
+        """A mordida provada DENTRO da suíte, sem arrancar produção à mão."""
         perfil = _semear(_perfil_de_partida())
         janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
         _gesto_de("mode", janela, monkeypatch)
@@ -1447,18 +1104,7 @@ class TestOInstrumentoNaoMente:
 
 
 class TestOQueOEsquemaNaoTem:
-    """Touch e giroscópio: a lacuna é de PRODUTO, e fica escrita aqui.
-
-    Ela citou os dois no pedido (*"todas as features em cada aba, touch,
-    giroscopio, speaker, mic, gatilho, lightbar"*). Speaker, mic, gatilho e
-    lightbar têm campo no esquema e caso acima. Touch e giroscópio NÃO TÊM
-    CAMPO NENHUM — não há o que salvar, e por isso não há ida-e-volta possível.
-
-    Este teste não pede que passem a existir: ele impede que a AUSÊNCIA seja
-    esquecida. No dia em que alguém acrescentar ``touchpad`` ou ``gyro`` ao
-    ``Profile``, ele reprova pedindo o caso de ida-e-volta — junto com o
-    portão de cobertura ao lado.
-    """
+    """Touch e giroscópio: a lacuna é de PRODUTO, e fica escrita aqui."""
 
     def test_touch_e_giroscopio_ainda_nao_sao_campos_do_perfil(self) -> None:
         """MORDIDA: acrescente ``gyro`` ao ``Profile`` e este teste reprova."""
@@ -1479,11 +1125,7 @@ class TestOQueOEsquemaNaoTem:
 
 
 class TestOsTiposDoEsquemaContinuamOsMesmos:
-    """As seções opcionais continuam sendo as classes que os casos conferem.
-
-    Sem isto, uma troca de tipo (``ProfileSpeakerConfig`` virando dict cru, por
-    exemplo) passaria despercebida porque as conferências usam ``getattr``.
-    """
+    """As seções opcionais continuam sendo as classes que os casos conferem."""
 
     def test_as_secoes_opcionais_tem_os_tipos_esperados(self, disco: Path) -> None:
         perfil = Profile(

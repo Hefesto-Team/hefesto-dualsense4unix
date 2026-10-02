@@ -1,60 +1,4 @@
-"""Todo passo de todo workflow tem `run` ou `uses`, e nenhuma chave se repete.
-
-YAML-DUPLO-01 (13/08/2026). Este arquivo existe por causa de um defeito que
-custou um run inteiro do CI — e que NENHUM teste desta casa era capaz de ver.
-
-O DEFEITO, medido no próprio histórico. O commit `edc4dce` inseriu o passo
-"Instalar rsvg-convert" no meio do passo "Instalar pre-commit e o ruff pinado",
-e o `ci.yml` ficou assim (`git show edc4dce:.github/workflows/ci.yml`, linhas
-508 a 523)::
-
-    - name: Instalar pre-commit e o ruff pinado
-      # (só comentário: o `run:` foi embora)
-    - name: Instalar rsvg-convert (o hook de ícones precisa dele)
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y librsvg2-bin
-      run: pip install pre-commit "ruff==0.15.20"
-
-São DUAS formas do mesmo estrago, no mesmo lugar:
-
-1. um passo com `name` e comentário e **nenhum** `run` nem `uses` — o GitHub
-   recusa o workflow inteiro e o run morre em segundos, antes de qualquer job;
-2. a chave `run` **duas vezes** no mesmo mapeamento — o `yaml.safe_load` aceita
-   calado e fica com a última, então até uma leitura por programa via
-   `safe_load` via um workflow plausível onde o GitHub via um arquivo inválido.
-
-A cura veio em `93485de`, e a mensagem daquele commit diz como ela foi
-conferida: **"Conferido por leitura do YAML"**. À mão. Nada na suíte reprovava
-o arquivo quebrado, e nada impedia a repetição — sete arquivos de `tests/` já
-carregavam workflows em 13/08/2026 e nenhum olhava a FORMA de um passo.
-
-POR QUE A REGRA 2 PRECISA DE LEITOR PRÓPRIO. `yaml.safe_load` implementa a
-especificação de forma permissiva: mapeamento com chave repetida não é erro, é
-sobrescrita silenciosa. Um teste escrito com `safe_load` puro é, portanto,
-estruturalmente incapaz de ver a duplicata — ele recebe o dicionário já
-achatado. Daí o `_LeitorQueDelataDuplicata` abaixo: mesma gramática, mesma
-segurança (deriva de `SafeLoader`, não constrói objeto arbitrário), e reprova
-onde a permissividade escondia.
-
-O ALCANCE. Todos os workflows de `.github/workflows/`, e não só o `ci.yml`: o
-`release.yml` já perdeu uma leva por um gatilho mal escrito (`43ce755`), e é
-justamente o arquivo que ninguém exercita antes da tag. A guarda é de FORMA, e
-forma custa milissegundos — não há razão para cobrir um arquivo e deixar três.
-
-O QUE ESTA GUARDA NÃO É. Ela não valida o esquema do GitHub Actions (isso
-exigiria acompanhar um esquema de terceiro que muda sem aviso). Ela cobre as
-duas formas que ESTA casa já pagou. Regra da casa: portão nasce de defeito
-real.
-
-PROVA DE QUE MORDE (13/08/2026): as duas rodadas estão no relatório da leva 4.
-Arrancado do `ci.yml` o `run: pip install pre-commit "ruff==0.15.20"` do passo
-"Instalar pre-commit e o ruff pinado" — que é literalmente o defeito de
-`edc4dce` — `test_todo_passo_de_todo_workflow_tem_run_ou_uses` reprovou
-nomeando o passo e o job. Devolvido, verde. A segunda mordida foi o arquivo
-histórico inteiro (`git show edc4dce:.github/workflows/ci.yml`), que reprova
-pelas duas regras de uma vez.
-"""
+"""Todo passo de todo workflow tem `run` ou `uses`, e nenhuma chave se repete."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -65,11 +9,6 @@ import yaml
 RAIZ = Path(__file__).resolve().parents[2]
 WORKFLOWS = RAIZ / ".github" / "workflows"
 
-#: Quantos workflows havia quando esta guarda nasceu (13/08/2026): `ci.yml`,
-#: `release.yml`, `flatpak.yml` e `anonymity-check.yml`. É trava de
-#: encolhimento, não meta: se a pasta esvaziar por um erro de caminho, os
-#: testes daqui passariam por vacuidade — que é o modo de falha preferido de
-#: toda guarda derivada. Sobe quando alguém acrescentar workflow.
 PISO_DE_WORKFLOWS = 4
 
 
@@ -78,12 +17,7 @@ class ChaveRepetidaError(Exception):
 
 
 class _LeitorQueDelataDuplicata(yaml.SafeLoader):
-    """`SafeLoader` que reprova chave repetida em vez de ficar com a última.
-
-    A permissividade do `safe_load` é a razão de existir desta classe: sem ela,
-    um teste que lê o workflow por programa NUNCA vê a duplicata, porque recebe
-    o dicionário depois de a última chave ter vencido a primeira.
-    """
+    """`SafeLoader` que reprova chave repetida em vez de ficar com a última."""
 
     def construct_mapping(self, no, deep=False):  # type: ignore[no-untyped-def]
         vistas: set[object] = set()
@@ -91,7 +25,7 @@ class _LeitorQueDelataDuplicata(yaml.SafeLoader):
             chave = self.construct_object(chave_no, deep=deep)
             try:
                 repetida = chave in vistas
-            except TypeError:  # chave não hasheável: fora do alcance desta guarda
+            except TypeError:
                 continue
             if repetida:
                 raise ChaveRepetidaError(
@@ -117,12 +51,7 @@ def carregar(caminho: Path) -> dict:
 
 
 def passos(dados: dict) -> list[tuple[str, int, dict]]:
-    """Todo passo de todo job, com o nome do job e a posição dentro dele.
-
-    A posição vem junto porque um passo sem `run` costuma também estar sem
-    `name` — e "o terceiro passo do job `pre-commit`" é endereço, enquanto
-    "algum passo" é adivinhação.
-    """
+    """Todo passo de todo job, com o nome do job e a posição dentro dele."""
     achados: list[tuple[str, int, dict]] = []
     for nome_do_job, job in (dados.get("jobs") or {}).items():
         if not isinstance(job, dict):
@@ -200,13 +129,7 @@ def test_nenhum_job_nasce_sem_passo_e_sem_workflow_chamado(caminho: Path) -> Non
 
 
 def test_a_regua_ve_as_duas_formas_do_defeito_de_edc4dce(tmp_path: Path) -> None:
-    """A régua não pode nascer cega — ela é conferida contra o defeito real.
-
-    Este teste não olha a árvore: ele exercita `carregar` e `passos` contra o
-    formato exato que `edc4dce` produziu. Sem ele, um refactor poderia
-    silenciar as duas regras acima e todos os testes deste arquivo continuariam
-    verdes, porque hoje a árvore está limpa.
-    """
+    """A régua não pode nascer cega — ela é conferida contra o defeito real."""
     duplicata = tmp_path / "duplicata.yml"
     duplicata.write_text(
         "jobs:\n"

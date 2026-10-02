@@ -1,25 +1,4 @@
-"""STEAM-NO-FISICO-01 — no Modo Nativo, a barra e o número são do Hefesto.
-
-A RESPOSTA DELA, 23/09/2026, em escolhas (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-
-SAO-DO-HEFESTO`): *"No Modo Nativo, o Hefesto escreve a barra e o número
-SEMPRE, com ou sem jogo segurando o controle."* Revoga o «zero escrita» do
-Nativo (FEAT-PARITY-REVIEW-01) SÓ para a luz e o número; vibração, gatilhos e
-áudio continuam do jogo.
-
-O QUE HAVIA: a vigia do sequestro já reescrevia a barra no Nativo quando OUTRO
-processo segurava o nó. Mas as mudanças do PRÓPRIO Hefesto — o gesto na aba, o
-perfil, o controle que conecta no meio do jogo, a renumeração da mesa — ficavam
-caladas atrás do `_output_mute` até ela sair do Nativo (defeito 6 da
-conferência de 23/09).
-
-A MATRIZ (regra dela, 23/09): cada régua roda com o P1 no RÁDIO e o P2 no
-CABO, e os dois recebem — nunca só um transporte, nunca só o jogador 1.
-
-AS MORDIDAS, exercidas e devolvidas com md5 (o relatório da sprint as lista):
-devolva o portão do `_output_mute` em `_for_each_led`, `_write_partial_output`,
-`reassert_resolved_outputs`, `defend_display`, `reescrever_lightbar_por_hidraw`
-ou no reassert do hotplug, e a régua correspondente reprova.
-"""
+"""STEAM-NO-FISICO-01 — no Modo Nativo, a barra e o número são do Hefesto."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -158,13 +137,7 @@ class TestOGestoDelaSaiNoNativo:
 
     @pytest.mark.parametrize("uniq", [UNIQ_RADIO, UNIQ_CABO])
     def test_o_brilho_das_luzes_de_um_controle_sai_no_nativo(self, uniq: str) -> None:
-        """O brilho das luzes de número é do NÚMERO — 25/09/2026.
-
-        O-BRILHO-DAS-LUZES-DE-NUMERO-01: no Modo Nativo ele sai por fora do
-        fluxo mudo, como o desenho — no rádio num `0x31` mínimo, no cabo num
-        `0x02` mínimo ao lado do nó —, com o `flag2` bit0 e o degrau no
-        `common[42]`. Perguntado ao report que saiu, não à constante.
-        """
+        """O brilho das luzes de número é do NÚMERO — 25/09/2026."""
         ctl, radio, _no = _mesa_no_nativo()
 
         palavra = ctl.apply_output_for(uniq, OutputSpec(player_led_brightness=0))
@@ -179,18 +152,7 @@ class TestOGestoDelaSaiNoNativo:
 
 
 class TestOCaboSemNoNaoDizEscreveu:
-    """No Nativo, «escreveu» só quando a luz saiu por FORA do fluxo mudo.
-
-    A conferência de 24/09/2026. A luz e o número saem no Nativo por duas rotas
-    que o mute não alcança: a classe LED do kernel (o nó da regra 77) e o
-    `0x31` mínimo do rádio. Um controle no CABO sem nó gravável (sem a regra 77
-    — a máquina em que o install não pôs as regras) cai no `handle.light`, que
-    só sai pelo `report_thread` — e ele está MUDO no Nativo. A resposta era
-    «escreveu» com zero byte no fio, a mentira que a MESA-CHEIA-09 matou.
-
-    A MORDIDA: conte a luz como escrita sem olhar a rota, e o cabo sem nó volta
-    a dizer «escreveu».
-    """
+    """No Nativo, «escreveu» só quando a luz saiu por FORA do fluxo mudo."""
 
     def test_o_cabo_sem_no_guarda_e_diz_registrado(self) -> None:
         ctl, _radio, no = _mesa_no_nativo()
@@ -212,16 +174,7 @@ class TestOCaboSemNoNaoDizEscreveu:
         assert [_cor_do_report(r) for r in radio.escritos] == [(7, 7, 7)]
 
     def test_o_brilho_das_luzes_no_cabo_sem_no_sai_e_diz_escreveu(self) -> None:
-        """O brilho das luzes de número não espera o fluxo — conferência de 25/09/2026.
-
-        Ele sai SEMPRE por fora do `report_thread`: o `0x02` mínimo no cabo, com
-        ou sem nó (`_levar_o_brilho_das_luzes`). No cabo sem nó o byte sai no
-        Nativo, e a resposta era «registrado» — a promessa de um byte que já
-        tinha saído.
-
-        MORDIDA: tire o `player_led_brightness` do que sai por fora no cabo sem
-        nó (`apply_output_for`) e a resposta volta a «registrado».
-        """
+        """O brilho das luzes de número não espera o fluxo — conferência de 25/09/2026."""
         ctl, _radio, _no = _mesa_no_nativo()
         ctl._sysfs = {}
         cabo = ctl._handles[MAC_CABO]
@@ -291,8 +244,6 @@ class TestOResto:
 
         assert all(h._output_muted for h in ctl._handles.values())
         ctl.set_led((1, 2, 3))
-        # O que saiu pelo rádio é o report MÍNIMO: sem vibração, sem gatilho,
-        # sem áudio (valid_flag0 e valid_flag2 zerados).
         common = radio.escritos[-1][3:50]
         assert common[0] == 0
         assert common[38] == 0
@@ -317,9 +268,6 @@ class TestOResto:
 
 def test_a_decisao_esta_no_dono_das_constantes() -> None:
     """Uma constante, com a decisão escrita: é a que o `apply_output_for` lê."""
-    # O terceiro é o brilho das luzes de número (24/09/2026): ele é do NÚMERO,
-    # e sai por fora do fluxo mudo pelos mesmos caminhos — o comportamento é
-    # medido em `test_o_brilho_das_luzes_de_um_controle_sai_no_nativo`.
     assert (
         frozenset({"led", "player_leds", "player_led_brightness"})
         == bp._CAMPOS_QUE_O_NATIVO_ESCREVE

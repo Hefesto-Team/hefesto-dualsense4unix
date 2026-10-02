@@ -1,33 +1,4 @@
-"""Onda W — assets DKMS do rtw88_usb patchado (fantasma USB do dongle WiFi).
-
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md.
-Premissas: docs/process/estudos/2026-07-20-estudo-premissas-onda-w-rtw88.md.
-
-Contrato dos assets (falha-sem/passa-com; SEM root, SEM kernel vivo — só
-arquivos e ferramentas de usuário):
-
-- dkms.conf com os campos exatos + o pino de ABI nos BUILDS validados
-  (os headers privados do rtw88 empacotados congelam o layout de
-  `struct rtw_dev` — kernel fora da lista compilaria limpo e CORROMPERIA
-  memória; com o pino o dkms PULA o build e o in-tree volta, fail-safe);
-- DOIS kernels validados desde 01/09/2026, e o `main.h` de cada um viaja em
-  `main-por-kernel/`, posto no lugar pelo `escolher-o-main.sh` (PRE_BUILD);
-- Makefile kbuild mínimo de 2 linhas (obj-m + usb.o);
-- usb.c/usb.h com a lógica device-gone + usb_queue_reset_device e a DECISÃO
-  -EPROTO do §1.2 do desenho: -ENODEV/-ESHUTDOWN armam imediato (sinal
-  definitivo do USB core); -EPROTO NUNCA arma direto — só via >4 erros
-  CONSECUTIVOS sem um único sucesso no meio (rajada de EMI não derruba o
-  WiFi; qualquer transferência boa zera o contador); o reset é gateado pelo
-  module param hang_reset (bool 0644, default Y);
-- backport 0001 do memleak upstream (6b964941bbfe/CVE-2026-63821) presente —
-  PRÉ-REQUISITO do 0002 (o early-return -ENODEV no TX depende de o chamador
-  liberar skb/txcb);
-- strings de log do vanilla preservadas byte a byte (kernel-watch/doctor
-  atuais continuam casando);
-- BASELINE verificável por sha256 RECALCULADO aqui: shipping == PATCHED;
-  `patch -R` de 0002+0001 reproduz o VANILLA; os 10 headers intocados batem
-  o SHA256_HEADERS_BUNDLE.
-"""
+"""Onda W — assets DKMS do rtw88_usb patchado (fantasma USB do dongle WiFi)."""
 
 from __future__ import annotations
 
@@ -56,14 +27,6 @@ SOB_ANONIMO = (
     "<hefesto-dualsense4unix@users.noreply.github.com>"
 )
 
-# Fecho transitivo de includes do usb.c (provado no build do desenho §8): 10
-# headers vanilla INTOCADOS — o linux-headers não os traz (conferido: só
-# `Kconfig` e `Makefile`).
-#
-# O `main.h` SAIU DESTA LISTA em 01/09/2026: ele é o único que muda de kernel
-# para kernel, e por isso passou a ser derivado (`main-por-kernel/`). Os NOVE
-# que sobram são idênticos nos dois kernels validados — e é o que o
-# `SHA256_HEADERS_BUNDLE` mede agora.
 HEADERS_VANILLA = (
     "debug.h",
     "mac.h",
@@ -106,9 +69,7 @@ def _baseline() -> dict[str, str]:
 
 
 def _funcao_c(assinatura: str) -> str:
-    """Fatia do usb.c da assinatura dada até o início da próxima função
-    top-level (`\\nstatic `) — pulando forward declarations (linha que
-    termina em `;`), suficiente para asserções de ordem."""
+    """Fatia do usb.c da assinatura dada até o início da próxima função"""
     ini = C.index(assinatura)
     while C[ini : C.index("\n", ini)].rstrip().endswith(";"):
         ini = C.index(assinatura, ini + 1)
@@ -117,9 +78,7 @@ def _funcao_c(assinatura: str) -> str:
 
 
 def _aplica_patch(cwd: Path, patch_path: Path, reverso: bool) -> None:
-    """Aplica o patch (-p6, caminhos a/drivers/net/wireless/realtek/rtw88/*)
-    em cwd, com `patch` se existir, senão `git apply` — sem skip: sem
-    nenhuma das duas ferramentas o teste FALHA (baseline de CI/dev)."""
+    """Aplica o patch (-p6, caminhos a/drivers/net/wireless/realtek/rtw88/*)"""
     if shutil.which("patch"):
         cmd = ["patch", "-p6", "-s", "-i", str(patch_path)]
         if reverso:
@@ -144,8 +103,6 @@ def _monta_arvore(tmp_path: Path) -> Path:
 
 
 def _reverte_para_vanilla(trabalho: Path) -> None:
-    # Ordem inversa da aplicação: -R 0002 primeiro, depois -R 0001
-    # (0001 toca só o usb.c; 0002 toca usb.c e usb.h).
     _aplica_patch(trabalho, PATCH2_PATH, reverso=True)
     _aplica_patch(trabalho, PATCH1_PATH, reverso=True)
 
@@ -171,8 +128,6 @@ class TestDkmsConf:
         )
 
     def test_built_module_name_e_o_mesmo_do_in_tree(self) -> None:
-        # O nome do módulo NÃO muda (rtw88_usb): é isso que faz o
-        # updates/dkms vencer o in-tree por precedência do depmod.
         assert 'BUILT_MODULE_NAME[0]="rtw88_usb"' in DKMS_CONF
 
     def test_dest_module_location_updates_dkms(self) -> None:
@@ -182,19 +137,8 @@ class TestDkmsConf:
         assert 'AUTOINSTALL="yes"' in DKMS_CONF
 
     def test_pino_de_abi_build_exclusive_kernel(self) -> None:
-        # O risco que o hid-nintendo NÃO tinha: os headers privados do rtw88
-        # empacotados congelam o layout de struct rtw_dev do v7.0.11 — num
-        # kernel novo o AUTOINSTALL linkaria LIMPO e corromperia memória em
-        # runtime. O pino tem de ser no BUILD EXATO validado (76070011), não só
-        # na versão nominal 7.0.11: um respin da MESMA 7.0.11 com struct
-        # diferente casaria "^7\.0\.11-" e corromperia memória. Com o build
-        # exato, qualquer outro kernel (respin ou série nova) ⇒ dkms PULA o
-        # build (in-tree volta, nunca sem WiFi) até o rebase do BASELINE.
         pino = re.search(r'^BUILD_EXCLUSIVE_KERNEL="(.+)"$', DKMS_CONF, re.MULTILINE)
         assert pino is not None, "BUILD_EXCLUSIVE_KERNEL ausente"
-        # CADA build validado tem de estar no pino, e o pino não pode aceitar
-        # nada além deles. `76070011` e não só `7.0.11`: um respin da MESMA
-        # versão nominal com struct diferente casaria e corromperia memória.
         for build in _baseline()["KERNELS_VALIDADOS"].split():
             assert build.replace(".", "\\.") in pino.group(1), (
                 f"o build validado {build} não está no BUILD_EXCLUSIVE_KERNEL — "
@@ -206,13 +150,7 @@ class TestDkmsConf:
         )
 
     def test_o_pre_build_escolhe_o_main_do_kernel_alvo(self) -> None:
-        """Sem ele, o `main.h` do build ANTERIOR fica — e é a corrupção.
-
-        MEDIDO em 01/09/2026: compilar com o `main.h` errado contra os headers
-        do 7.1.5 não dá um erro, e os CRCs dos exports saem IDÊNTICOS
-        (`0x2a20bc53` / `0x2f18c1ed`), de modo que o modversions não pega. O
-        único sinal é o `.ko` ter 16 bytes a menos. Nada avisa.
-        """
+        """Sem ele, o `main.h` do build ANTERIOR fica — e é a corrupção."""
         assert 'PRE_BUILD="./escolher-o-main.sh $kernelver"' in DKMS_CONF, (
             "o PRE_BUILD sumiu — o build vai usar o `main.h` que estiver na "
             "pasta, e um `main.h` de outro kernel corrompe memória sem avisar"
@@ -266,8 +204,6 @@ class TestDeviceGoneEDecisaoEproto:
     """§1.1/§1.2 do desenho: os hunks-chave do 0002 no .c shipping."""
 
     def test_hang_reset_param_bool_0644_default_y(self) -> None:
-        # Gate de campo da parte agressiva: desliga SÓ o reset; a detecção/
-        # silenciamento fica (== rtw89 vanilla, troca consciente documentada).
         assert "static bool rtw_usb_hang_reset = true;" in C, "default TEM de ser Y"
         assert "module_param_named(hang_reset, rtw_usb_hang_reset, bool, 0644);" in C, (
             "0644: precisa ser ajustável AO VIVO (uninstall devolve a 0 via /sys)"
@@ -290,19 +226,12 @@ class TestDeviceGoneEDecisaoEproto:
         )
 
     def test_enodev_eshutdown_armam_imediato(self) -> None:
-        # Sinal DEFINITIVO: o USB core já sabe que o device sumiu — zero
-        # risco de falso-positivo, arma sem passar pelo contador.
         corpo = _funcao_c("static void rtw_usb_io_error(struct rtw_usb *rtwusb, int error)")
         imediato = corpo.index("error == -ENODEV || error == -ESHUTDOWN")
         contador = corpo.index("atomic_inc_return(&rtwusb->continual_io_error)")
         assert imediato < contador, "o ramo definitivo vem ANTES do contador"
 
     def test_eproto_nunca_arma_direto_so_via_contador(self) -> None:
-        # A decisão do risco de design crítico (§1.2): -EPROTO em rajada pode
-        # ser EMI transitória — só arma após >4 falhas CONSECUTIVAS sem um
-        # único sucesso no meio. No fantasma real o core NUNCA devolveu
-        # -ENODEV (o disconnect se perdeu) — o -EPROTO persistente É o único
-        # sinal do fantasma, por isso o reset não pode ser só-em-ENODEV.
         corpo = _funcao_c("static void rtw_usb_io_error(struct rtw_usb *rtwusb, int error)")
         assert "EPROTO" not in re.sub(r"/\*.*?\*/", "", corpo, flags=re.DOTALL), (
             "-EPROTO não pode armar device_gone por match de errno — só o contador"
@@ -346,8 +275,6 @@ class TestDeviceGoneEDecisaoEproto:
         )
 
     def test_leitura_devolve_zero_deterministico_nunca_lixo(self) -> None:
-        # Bug lateral §2a do estudo: rtw_usb_read devolvia lixo do ring
-        # buffer compartilhado ao polling de power-off contra hardware morto.
         corpo = _funcao_c("static u32 rtw_usb_read(")
         assert "*data = 0;" in corpo, "falha de leitura = valor determinístico 0"
         assert "rtw_usb_io_error(rtwusb, ret);" in corpo
@@ -367,8 +294,7 @@ class TestDeviceGoneEDecisaoEproto:
 
 
 class TestBackportMemleak0001:
-    """0001 é PRÉ-REQUISITO do 0002: sem ele o early-return -ENODEV no TX
-    criaria vazamentos novos (skb/txcb órfãos)."""
+    """0001 é PRÉ-REQUISITO do 0002: sem ele o early-return -ENODEV no TX"""
 
     def test_tx_agg_skb_libera_txcb_quando_submit_falha(self) -> None:
         corpo = _funcao_c("static bool rtw_usb_tx_agg_skb(")
@@ -399,8 +325,6 @@ class TestStringsDeLogPreservadas:
         assert '"%s: reg 0x%x, usb write %u fail, status: %d\\n"' in C
 
     def test_patch_0002_readiciona_toda_string_que_toca(self) -> None:
-        # O 0002 reescreve os blocos de erro (early-return/contador) — pode
-        # remover a LINHA, mas a STRING tem de voltar idêntica num "+".
         removidas = [
             linha[1:]
             for linha in PATCH2.splitlines()
@@ -426,9 +350,6 @@ class TestStringsDeLogPreservadas:
 
 class TestUsbH:
     def test_estado_novo_local_ao_modulo(self) -> None:
-        # Obrigatório no DKMS: o rtw88_core in-tree continua com o layout
-        # dele — o estado novo vive em struct rtw_usb (usb.h), NUNCA em
-        # main.h/struct rtw_dev (p/ upstream é rebase trivial p/ rtwdev->flags).
         assert "RTW_USB_FLAG_DEVICE_GONE," in H
         assert "NUM_OF_RTW_USB_FLAGS," in H
         assert "DECLARE_BITMAP(flags, NUM_OF_RTW_USB_FLAGS);" in H
@@ -480,8 +401,6 @@ class TestBaselineEParidadeDosPatches:
         assert _sha256(H_PATH) == dados["SHA256_PATCHED_H"], "usb.h divergiu do BASELINE"
 
     def test_bundle_dos_headers_vanilla_intocados(self) -> None:
-        # Mesma receita gravada no BASELINE: sha256 da SAÍDA do sha256sum
-        # (ordem fixa) — pega qualquer edição num dos 10 headers empacotados.
         resultado = subprocess.run(
             ["bash", "-c", f"sha256sum {' '.join(HEADERS_VANILLA)} | sha256sum"],
             cwd=ASSET_DIR,
@@ -496,11 +415,7 @@ class TestBaselineEParidadeDosPatches:
         )
 
     def test_o_main_h_nao_e_versionado(self) -> None:
-        """Uma cópia versionada é uma SEGUNDA verdade sobre qual ABI é a nossa.
-
-        E é a que corrompe memória sem avisar: quem compilar sem passar pelo
-        PRE_BUILD pegaria essa cópia, que pode ser de outro kernel.
-        """
+        """Uma cópia versionada é uma SEGUNDA verdade sobre qual ABI é a nossa."""
         resultado = subprocess.run(
             ["git", "ls-files", "--error-unmatch", "assets/dkms/rtw88-usb/main.h"],
             cwd=ASSET_DIR.parents[2], capture_output=True, text=True, check=False,
@@ -524,8 +439,6 @@ class TestBaselineEParidadeDosPatches:
         )
 
     def test_patches_reaplicados_devolvem_o_shipping_exato(self, tmp_path: Path) -> None:
-        # Os dois sentidos: vanilla + 0001 + 0002 == shipping (rebase e
-        # upstream partem daqui).
         trabalho = _monta_arvore(tmp_path)
         _reverte_para_vanilla(trabalho)
         _aplica_patch(trabalho, PATCH1_PATH, reverso=False)
@@ -549,8 +462,6 @@ class TestFormatoDoPatch0002Upstream:
         assert "+++ b/drivers/net/wireless/realtek/rtw88/usb.h" in PATCH2
 
     def test_signed_off_by_placeholder_anonimo(self) -> None:
-        # Gate check_anonymity: o repo fica anônimo; a submissão real troca o
-        # SoB (DCO exige pessoa) — decisão da mantenedora, fora do repo.
         assert SOB_ANONIMO in PATCH2
 
     def test_patch_adiciona_o_gate_e_o_reset(self) -> None:

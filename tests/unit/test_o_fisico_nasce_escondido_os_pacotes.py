@@ -99,11 +99,6 @@ def _etc(tmp: Path) -> Path:
     return etc
 
 
-# ---------------------------------------------------------------------------
-# A atualização: a 70 de /etc vira a 73, com a escolha de quem instalou
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("pacote", sorted(POS_INSTALACAO))
 def test_a_70_de_etc_vira_a_73_com_o_mesmo_conteudo(tmp_path: Path, pacote: str) -> None:
     """A fechada do helper segue fechada, agora com o nome que sombreia a do pacote."""
@@ -137,11 +132,6 @@ def test_o_mv_vem_antes_do_reload(pacote: str) -> None:
     """Depois do reload, o udev já estaria lendo a cadeia com a sombra quebrada."""
     texto = POS_INSTALACAO[pacote].read_text(encoding="utf-8")
     assert texto.index(f"if [ -e {ETC}/{VELHA} ]") < texto.index("udevadm control --reload-rules")
-
-
-# ---------------------------------------------------------------------------
-# A remoção: a regra do nó sai junto com o broker
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("pacote", sorted(REMOCAO))

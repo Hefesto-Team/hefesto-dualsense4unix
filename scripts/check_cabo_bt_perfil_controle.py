@@ -1,51 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DE PRONTO de toda feature da tela — CABO-BT-PERFIL-CONTROLE-01.
-
-**A palavra dela, 08/09/2026, à noite:**
-
-    "Quero que vc modifique elas [as sprints] pra que tudo na interface seja
-     possível os canais de audio as duas saidas as entradas, tudo funcionando
-     por cabo ou bt ou tudo funcionando via perfil e dentro de cada um um
-     setting pra cada controle é assim que eu queria que sua revisao nos  (noqa-acento: citação literal dela, palavra por palavra)
-     auxiliasse."
-    (noqa-acento: citação literal dela, palavra por palavra)
-
-É a definição de pronto dita como RÉGUA. **Toda feature que a tela oferece
-responde QUATRO perguntas:**
-
-1. funciona pelo **cabo**?
-2. funciona pelo **rádio**?
-3. fica **no perfil**?
-4. e, dentro do perfil, é **por controle**?
-
-Uma feature que não responde as quatro não está pronta.
-
-O QUE ESTE PORTÃO LÊ, E O QUE ELE NÃO DIGITA
----------------------------------------------
-
-**A LISTA DE FEATURES É LIDA DA TELA** — os `data-gesto` das dez páginas
-publicadas. Digitá-la aqui faria a tabela envelhecer no dia em que nascer a
-próxima feature, que é o defeito que esta casa nomeia dezenas de vezes.
-
-O que se DECLARA (e não se adivinha) é a **classificação** de cada gesto: qual
-linha do mapa responde por ele, ou por que ele não é feature de aparelho. É o
-mesmo desenho do `_NAO_E_PROMESSA` do `casa-sabe`: *a lista se lê, a razão se
-escreve*.
-
-As três fontes das respostas:
-
-===============  ===================================================
-cabo / rádio     `docs/data/mapa-controles.csv` (`cabo_aciona`,
-                 `radio_aciona`, e a ressalva de cada transporte)
-no perfil        `profiles/schema.py` — o campo existe em `Profile`?
-                 (ou «no controle»: mora no `maquina.json`, por decisão
-                 dela — ver `NO_CONTROLE`)
-por controle     `profiles/schema.py` — existe em `ControllerOverrides`?
-===============  ===================================================
-
-    scripts/check_cabo_bt_perfil_controle.py            # reprova o que falta
-    scripts/check_cabo_bt_perfil_controle.py --tabela   # imprime a tabela
-"""
+"""A RÉGUA DE PRONTO de toda feature da tela — CABO-BT-PERFIL-CONTROLE-01."""
 from __future__ import annotations
 
 import csv
@@ -61,16 +15,8 @@ MAQUINA = RAIZ / "src/hefesto_dualsense4unix/utils/maquina.py"
 
 _SIM = {"sim", "1", "true"}
 
-#: OS GESTOS QUE NÃO SÃO FEATURE DE APARELHO, com a razão de cada um. Nenhum
 #: deles toca o DualSense: são gestos de TELA (abrir, fechar, voltar ao
-#: padrão), de MÁQUINA (o serviço, o hub, o Proton) ou de PERFIL (salvar).
-#:
-#: **A RAZÃO SE ESCREVE, e "confie em mim" não é razão** — é a mesma
-#: disciplina do `_NAO_E_PROMESSA`. Um gesto novo que não estiver aqui nem no
-#: mapa REPROVA, e é essa a mordida que importa: a próxima feature nasce com a
-#: régua em cima dela.
 NAO_E_DO_APARELHO: dict[str, str] = {
-    # ---- tela: navegar, abrir, fechar, voltar ao padrão ----
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",
     "fechar-definicoes": "fecha um painel da própria tela",
     "fechar-ponto": "fecha um painel da própria tela",
@@ -89,12 +35,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                           "controle",
     "copiar-registro": "copia o registro técnico para a área de transferência "
                        "— é leitura (o «Ver detalhes» saiu em 25/09/2026)",
-    # ---- o «Criar perfil para um jogo» (21/09/2026) ----
-    # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01. Ele só abre a escolha do
-    # jogo; quem cria o perfil é o gravador da aba Perfis. Os quatro da lista
-    # de exclusão NÃO entram aqui, e não por esquecimento: eles chegam pela
-    # pintura do cartão, e esta régua lê a página estática — declará-los seria
-    # razão sem dono, que a régua acusa.
     "criar-perfil-para-um-jogo": "abre a escolha do jogo para um perfil novo — "
                                  "é da tela",
     "mic-retorno": "liga e desliga o RETORNO do microfone — um `pw-loopback` "
@@ -107,7 +47,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                    "volume e o ganho que ele reflete são dos deslizantes ao "
                    "lado, que têm as quatro respostas por conta deles "
                    "(TESTAR-O-MICROFONE-01, 20/09/2026)",
-    # ---- máquina e serviço: nada disso passa pelo controle ----
     "hefesto": "liga e desliga o MODO do produto — é do serviço",
     "parar-ou-retomar": "para, retoma ou ativa o serviço — é systemd (o "
                         "«Parar» e o «Retomar» viraram um botão só em 25/09/2026)",
@@ -134,13 +73,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "ignorar": "ignora um aparelho — é da máquina",
     "alvo": "escolhe o alvo do exame — é da tela",
     "luz-nao-acende": "declara que a luz não acende — é da máquina",
-    # A LINHA DA GESTÃO VIROU O CARTÃO — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01,
-    # 26/09/2026. Saíram da tela o `mic-existe` e o `teto-da-vibracao` (pedido
-    # dela: repetiam as abas Controles e Vibração) e o `todos` do acordeão;
-    # entraram os seis abaixo.
-    # A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01, 26/09/2026: o botão da economia
-    # virou os três do Perfil de Desempenho, e o «Atualizar» entrou no
-    # «Examinar Entradas» (`D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`).
     "perfil-do-controle": "declara o Perfil de Desempenho deste controle no "
                           "`maquina.json` (`controles[uniq].economia`) — é da "
                           "máquina; o que ele faz no aparelho responde pelas "
@@ -151,7 +83,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "mapear-gravar": "grava o nome e o lugar da porta da vez no mapa das portas do "
                      "`maquina.json` — é da máquina",
     "mapear-parar": "o Mapear Entradas para de olhar as portas — é da máquina",
-    # ---- perfil e modo: decididos por ela como GLOBAIS ----
     "modo": "o efeito do gatilho (03) e o modo de navegação (06) — o gesto tem "
             "dois donos, e os dois caem em linhas do mapa por outro gesto",
     "modo-dualsense": "o modo é UM para todos — decisão dela de 08/09 "
@@ -164,12 +95,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "guardar": "guarda o efeito no perfil — o ATO já é medido pelo gesto do efeito",
     "em-todos": "espalha o efeito — o ATO é o mesmo do gesto do efeito",
     "guardar-definicoes": "grava no perfil — é do perfil",
-    # FATO SUBSTITUÍDO (11/09/2026, F2-POINT-AND-CLICK): esta linha dizia
-    # *"grava um ponto de mira"*. Ponto de mira não existe em lugar nenhum
-    # deste produto — o gesto é o "Guardar" do *Estilo Point-and-click*, e o
-    # que ele grava é o que cada peça do controle faz naquele estilo, em
     # `Profile.button_actions`. A classificação estava certa (é do perfil, não
-    # do aparelho); a descrição é que apontava para outra coisa.
     "guardar-ponto": "grava o que cada peça faz no Estilo Point-and-click — é "
                      "do perfil",
     "guardar-remapeamento": "grava o remapeamento — é do perfil",
@@ -184,11 +110,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
     "vel-rolagem": "idem",
     "pronto": "aplica o efeito já escolhido — o ATO é o do gesto `modo` da 03",
-    # ---- a seção «Rádio e Adaptadores» (TRANSPLANTE-DA-SECAO-01, 23/09/2026) ----
     # O desenho aprovado dela virou a cx8-3. Nenhum destes muda o DualSense:
-    # ou abrem e fecham o que a tela já pintou, ou mexem no RÁDIO DA MÁQUINA
-    # (qual adaptador, qual pareamento, o nome do lugar) — que é do BlueZ e do
-    # `maquina.json`, não do perfil nem do controle.
     "abrir-adaptador": "abre um adaptador no acordeão — é da tela",
     "adaptador-reordenar": "grava a ordem em que ela arrastou as caixas dos adaptadores, "
                            "no `gui_prefs` — é da tela",
@@ -205,8 +127,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "conectar-aparelho": "abre o painel do «Conectar» (sem alvo, nada vai ao rádio); "
                          "com alvo, conecta um aparelho conhecido — é o rádio da máquina",
     "parear-aparelho": "pareia um aparelho achado num adaptador — é o rádio da máquina",
-    # Os três da onda 2 do rádio, publicados pela A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01
-    # (26/09/2026): a linha «Não Conectou», o «Tentar de Novo» e o X.
     "tentar-de-novo": "liga a busca no mesmo adaptador da linha que não chegou "
                       "(`radio.busca.set`), ou refaz o mover do aparelho que não é "
                       "controle — é o rádio da máquina",
@@ -215,8 +135,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "confirmar-esquecer": "esquece o pareamento deste aparelho NESTE adaptador "
                           "(`esquecer_o_pareamento`) — é o rádio da máquina: os "
                           "outros adaptadores não se tocam",
-    # Os três do tema Conexões (02/10/2026): o interruptor da busca, o «⋮» de
-    # todo pareado e o X que a central lembra.
     "radio-procurar": "liga e desliga a busca do rádio (`radio.busca.set`) — é o "
                       "rádio da máquina: o controle que já está no ar não muda",
     "aparelho-menu": "abre o «⋮» de um pareado — é da tela; quem esquece é o "
@@ -244,28 +162,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "entrada-parar": "fecha a cerimônia — é da tela",
 }
 
-#: OS GESTOS QUE SÃO FEATURE DE APARELHO, e as linhas do mapa que respondem
-#: por eles. A CHAVE do mapa não se adivinha do nome do gesto: `cor` responde
-#: por `luz.lightbar.cor`, e nenhuma regra de string liga os dois.
-#:
-#: **SÃO VÁRIAS CHAVES POR GESTO, e a resposta é a PIOR delas.** Um gesto com
-#: dois atos no aparelho só está pronto quando os dois chegam: o `volume` da 02
-#: mexe no microfone OU no alto-falante conforme o `data-qual`, e o `auto-cores`
-#: da 04 governa a paleta E a numeração. Responder pela melhor metade é a
-#: família do número que envelhece calado.
-#:
-#: **O `brilho` NÃO É `luz.lightbar.brilho`** — e a distinção custou uma
-#: reprovação falsa em 09/09/2026. O trilho da tela termina em
-#: `_escrever_a_cor` (`a04_iluminacao.py:2909`): ele manda RGB JÁ ESCALADO,
-#: logo o que viaja no fio é `luz.lightbar.cor`.
-#:
-#: `luz.lightbar.brilho` é o byte de brilho do firmware, e a BRILHO-DE-HARDWARE-01
-#: FECHOU na bancada dela em 09/09 derrubando a própria premissa: o `common[42]`
-#: obedece nos dois transportes, mas o que ele atenua **são as lâmpadas de
-#: numeração**, não a barra — palavra dela, com os quatro na mão. O mapa ganhou
-#: `luz.led_jogador.brilho` por causa disso, e `luz.lightbar.brilho` continua
-#: `aciona = não` agora por MEDIÇÃO, não por falta de olhar. A tela não oferece
-#: nenhuma das duas.
 DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mascara": ("plataforma.vpad",),
     "ganho-mic": ("audio.microfone.ganho",),
@@ -281,76 +177,16 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "player": ("luz.led_jogador.escrita_hefesto",),
     "brilho-luzes": ("luz.led_jogador.brilho",),
     "auto-cores": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
-    # O INTERRUPTOR DE PUNHO da aba Vibração — 14/09/2026, quando ele deixou de
-    # ser desenho (ordem dela: *"ele deveria ligar se > 0 no slicer dele"*).
-    #
-    # SÃO AS DUAS CHAVES, e não uma: o gesto é POR LADO, e cada punho tem a sua
-    # linha no mapa. Declarar só uma faria o portão responder pela metade que
-    # der melhor — a família do número que envelhece calado, que a nota do
-    # `brilho` acima descreve.
-    #
-    # `vibracao.rumble.habilitar` NÃO é a chave deste gesto, e a distinção
-    # importa: ela é o bit de habilitar do report (`parcial` nos dois
-    # transportes). O que este interruptor mexe é a INTENSIDADE daquele motor —
-    # 0 desliga, 100 devolve —, que é o mesmo trilho do `barra:motor` ao lado.
     "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
-    # O 🎙 DA LINHA DO CONTROLE na seção do rádio (TRANSPLANTE-DA-SECAO-01) é o
-    # MESMO ato do `mudo` da 02 — o gesto dela, chamado (`a08_conexoes.custo_mic`).
     "custo-mic": ("audio.microfone.mudo",),
-    # A MIRA VIRTUAL (A-MIRA-POR-MOVIMENTO-NA-TELA-01/02, publicada em 24/09):
-    # é ARRANJO, não peça do plástico — o que ela lê do aparelho é o giro, e é
-    # a linha dele que responde cabo e rádio. A matriz das duas sprints provou
-    # os dois transportes, do P1 ao P4.
     "mira": ("movimento.giroscopio",),
-    # A INCLINAÇÃO E O TOQUE (NO-MODO-XBOX-TUDO-FUNCIONA-01, os dois arranjos da
-    # resposta dela de 28/09, publicados na 02 em 29/09): arranjo, como a Mira. A
-    # inclinação lê o acelerômetro; o «Cursor» lê o dedo pelo nó do touchpad, e os
-    # «Botões» leem a posição dos dedos. As linhas deles respondem cabo e rádio.
     "inclinacao": ("movimento.acelerometro",),
     "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
-    # A HÁPTICA POR ÁUDIO (O-GANHO-DA-HAPTICA-TEM-DONO-01 e A-LINHA-DA-HAPTICA-POR-
-    # AUDIO-NA-VIBRACAO-01, publicadas na 05 em 29/09): o ganho dos atuadores de
-    # voice-coil, nos traseiros da placa no cabo e no conversor da ponte no rádio.
     "haptica": ("vibracao.haptics_vcm",),
 }
 
-#: A DÍVIDA CONHECIDA — o gesto que HOJE não responde as quatro, com a sprint
-#: que é dona dela. Ela não deixa o portão vermelho para sempre, e **morde nos
-#: DOIS sentidos**:
-#:
-#: * dívida NOVA (gesto que falta e não está aqui) reprova;
-#: * dívida que FECHOU (está aqui e já responde as quatro) reprova TAMBÉM,
-#:   pedindo que a linha saia. Sem isso a lista vira propaganda no dia seguinte
-#:   à primeira cura — é a mesma régua do `divida-fechada` do
-#:   `check_paridade_gtk_html.py`.
-#: **A LISTA ESTÁ VAZIA DESDE 09/09/2026, e a linha que saiu é o registro.** Ela
-#: tinha UMA entrada, o `volume`, com esta razão: *"o trilho MEXE hoje, mas na
-#: fonte do PipeWire — o byte do aparelho (`audio.microfone.volume`, output 0x02
-#: common[6]) não é escrito por decisão tomada, e ninguém mediu se ele faz
-#: algo"*. A bancada dela mediu (*"Deu certo. funciona"*, `docs/data/ensaios.csv`,
-#: `folha-mic-volume-o-byte-age-cabo-0909`), ela mandou ligar o byte
-#: (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`) e a MIC-VOLUME-02 ligou:
-#: o gesto e o perfil escrevem o `common[6]` por `uniq`. **A linha sai porque
-#: esta régua manda ela sair** — foi a metade "dívida que FECHOU" desta mordida
-#: que reprovou a leva e cobrou o fecho, exatamente como desenhada.
-#:
-#: **E ELA REABRIU EM 20/09/2026, com UMA entrada e a sprint dona escrita.** O
-#: **A DÍVIDA DO GANHO MORREU EM 21/09/2026, e quem a matou foi ela:** *"OS
-#: DOIS SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."*
-#:
-#: O que esta seção dizia — *"pede um leitor de placa que hoje só a interface
-#: tem, e que o daemon precisaria para aplicar"* — era verdade e virou a cura:
-#: o leitor saiu da aba e virou `integrations/ganho_do_microfone.py`, e quem
 #: aplica na troca de perfil é `ProfileManager._aplicar_ganho_do_mic`. O campo
-#: é `mic.gain`, nos dois níveis, e o gesto grava no `controllers[uniq]`.
-#:
-#: **A LIÇÃO FICA, porque ela é da casa:** a dívida estava escrita de forma
-#: honesta e por isso não virou defeito — mas passou UM DIA declarada, e ela a
-#: leu na tela antes de qualquer um de nós reler este arquivo. Dívida declarada
-#: é melhor que dívida escondida; melhor ainda é a que não dura um dia.
 A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
-    # A O-GANHO-DA-HAPTICA-TEM-DONO-01 fechou o código em 02/10/2026 (ela era a
-    # dona até ali); o grau do aparelho é medida, e quem a tem é o banco de prova.
     "haptica": (  # sai com: O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01
         "2026-10-01-O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01.md",
         "a linha `vibracao.haptics_vcm@dualsense` do mapa segue em dívida nos dois "
@@ -360,18 +196,6 @@ A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
     ),
 }
 
-#: ONDE CADA FEATURE MORA NO PERFIL — `(campo do Profile, campo do
-#: ControllerOverrides)`.
-#:
-#: `None` NA SEGUNDA POSIÇÃO é *"decidido como global"*, e a razão fica no
-#: `NAO_E_DO_APARELHO` ou na sprint.
-#:
-#: `None` NA PRIMEIRA é **"só por controle, sem default global"**, e é uma
-#: resposta legítima: `ControllerOverrides.sensores` existe desde 04/09
-#: (SENSOR-DE-VERDADE-01) e `Profile` NÃO tem `sensores` — o giroscópio é do
-#: aparelho, e não faz sentido um default para a mesa toda. Medido no fonte em
-#: 09/09/2026; sem esta distinção a régua reprovava o sensor por "não está no
-#: perfil", quando ele está — no lugar certo.
 NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mascara": ("mode", None),
     "mic-modo": ("mic", "mic"),
@@ -386,44 +210,19 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "player": ("leds", "leds"),
     "brilho-luzes": ("leds", "leds"),
     "auto-cores": ("leds", "leds"),
-    # O punho grava em `rumble` e é POR CONTROLE: `rumble.motores.set` leva o
-    # `uniq`, e o valor mora em `controllers[<uniq>].rumble` — o mesmo lugar do
-    # arraste da barra, porque é o mesmo número.
     "lado": ("rumble", "rumble"),
-    # A Mira grava em `movimento`, nos dois níveis: o default do perfil e o
-    # `controllers[<uniq>].movimento` que o chip de cada cartão escreve.
     "mira": ("movimento", "movimento"),
-    # Os dois moram no mesmo `movimento` da Mira (`ProfileMovimentoConfig.acelerometro`
-    # e `.toque`), nos dois níveis; o chip de cada cartão escreve o do controle.
     "inclinacao": ("movimento", "movimento"),
     "toque": ("movimento", "movimento"),
-    # O ganho da háptica só existe POR CONTROLE (`controllers[<uniq>].rumble.haptica_pct`,
-    # 0 a 200): o perfil não tem um ganho de todos, e o ausente vale o padrão do dono.
     "haptica": (None, "rumble"),
 }
 
 
-#: O QUE MORA NO CONTROLE, e não no perfil — `{gesto: campo de
-#: ControleDeclarado}` do `maquina.json`.
-#:
-#: **É A TERCEIRA RESPOSTA DITA DE OUTRO JEITO, e quem a deu foi ela.** O mudo
-#: do microfone é do controle e vale em todo jogo (resposta 9 da noite de
-#: 27/09, O-MUDO-E-DO-CONTROLE-01, 28/09/2026): ele saiu do perfil e mora em
-#: `controles[<uniq>].microfone_mudo`. A pergunta «fica no perfil?» responde
-#: «no controle» — guardado, e por controle, fora do perfil de propósito. O
-#: campo é LIDO do fonte do `utils/maquina.py`: um campo que sair de lá volta a
-#: reprovar o gesto.
-#:
-#: O 🎙 da linha do controle na seção do rádio (`a08_conexoes.custo_mic`) é o
-#: MESMO ato do `mudo` da 02, chamado — e grava no mesmo lugar. A metade do
-#: alto-falante do gesto `mudo` segue no perfil (`controllers[<uniq>].speaker`),
-#: e não é ela que a chave do mapa declarada acima responde.
 NO_CONTROLE: dict[str, str] = {
     "mudo": "microfone_mudo",
     "custo-mic": "microfone_mudo",
 }
 
-#: A resposta «no controle» da terceira pergunta (ver `NO_CONTROLE`).
 _NO_CONTROLE = "no controle"
 
 
@@ -432,7 +231,7 @@ def gestos_da_tela() -> dict[str, list[str]]:
     fora: dict[str, list[str]] = {}
     for pagina in sorted(PAGINAS.glob("*.html")):
         if not re.match(r"^\d\d-", pagina.name):
-            continue  # os desenhos auxiliares não são aba
+            continue
         texto = pagina.read_text(encoding="utf-8")
         for gesto in sorted(set(re.findall(r'data-gesto="([a-z0-9_@:.-]+)"', texto))):
             fora.setdefault(gesto, []).append(pagina.stem[:2])
@@ -449,63 +248,27 @@ def _linhas_do_mapa() -> dict[str, list[dict[str, str]]]:
 
 
 def _campos_do_esquema(classe: str, fonte: pathlib.Path = ESQUEMA) -> set[str]:
-    """Os campos declarados numa classe do `schema.py` (ou de `fonte`), lidos do fonte.
-
-    LÊ O FONTE E NÃO IMPORTA O MÓDULO: o `pydantic` do produto puxa metade do
-    motor, e este portão roda na camada rápida.
-    """
+    """Os campos declarados numa classe do `schema.py` (ou de `fonte`), lidos do fonte."""
     texto = fonte.read_text(encoding="utf-8")
     corpo = texto.split(f"class {classe}(", 1)[-1].split("\nclass ", 1)[0]
     return set(re.findall(r"^    ([a-z_]+):\s", corpo, re.M))
 
 
-#: AS QUATRO RESPOSTAS DE TRANSPORTE, e elas têm UM DONO — 09/09/2026.
-#:
-#: A palavra sem acento é VALOR CRU, não prosa: ela sai impressa na tabela e é
-#: comparada contra o mapa. O portão de acentuação a reprova, e com razão — ele
-#: não sabe distinguir dado de texto. A isenção é declarada AQUI, uma vez, em
 #: vez de doze `noqa-acento` espalhados: dois agentes independentes chegaram a
-#: este arquivo em 09/09 e escreveram doze marcadores CADA UM, com redações
-#: diferentes — que é a assinatura do valor sem dono.
 NAO = "nao"  # noqa-acento: valor cru do mapa (`*_aciona`), não prosa
 _SEM_LINHA = "sem linha"
 _RESSALVA = "com ressalva"
 _SIM_ = "sim"
-#: **«O APARELHO NÃO TEM ISSO NESTE TRANSPORTE» É RESPOSTA, NÃO DÍVIDA** —
-#: 21/09/2026. O mapa já marcava esse fato em 163 linhas, no campo
-#: `*_por_que_nao_aciona`, com o valor `nada-a-acionar`; esta régua não o
-#: conhecia e lia todas como :data:`NAO`. O efeito era declarar dívida sobre o
-#: transporte: o ganho do microfone não existe pelo rádio porque **não há placa
-#: ALSA onde o elemento exista** (medido em 15/08: a placa segue o transporte),
-#: e nenhuma sprint desta casa vai mudar isso.
-#:
-#: Ela fica ACIMA do :data:`NAO` na escada, e abaixo do `com ressalva`, porque é
-#: resposta melhor do que *"não aciona e não sei dizer por quê"* e pior do que
-#: *"aciona, com a dívida escrita"*. O que ela NÃO é: motivo de reprovação —
-#: o filtro de falta cobra :data:`NAO` e `sem linha`, e esta não é nenhum dos
-#: dois.
 
-#: A ORDEM DAS RESPOSTAS, da pior para a melhor. Um gesto com duas chaves
-#: responde pela PIOR: `min` sobre este índice.
 _NAO_EXISTE = "nao existe no aparelho"  # noqa-acento: valor cru do mapa
 _ESCADA = (_SEM_LINHA, NAO, _NAO_EXISTE, _RESSALVA, _SIM_)
 
-#: O CONTROLE DESTA CASA. O mapa tem uma linha por (chave, controle) e as do
-#: `pro` e do `sn30` dizem `não` em quase tudo — varrer todas e ficar com a
-#: primeira que diz `sim` responderia pelo aparelho errado nos dois sentidos.
 #: A tela é dos quatro DualSense (decisão dela de 06/09).
 _O_APARELHO_DELA = "dualsense"
 
 
 def _resposta_de_transporte(linhas: list[dict[str, str]], lado: str) -> str:
-    """A resposta de um transporte: uma das quatro de `_ESCADA`.
-
-    **`parcial` NÃO É `não`** — é o terceiro valor de `*_aciona` no mapa (24
-    linhas por rádio, 22 por cabo, `docs/data/LEIA-PRIMEIRO.md`), e quer dizer
-    *aciona, com a dívida escrita na ressalva*. Ler `parcial` como `não`
-    reprovava em 09/09/2026 quatro features que funcionam na mesa dela — o
-    microfone, o mudo e as cinco lâmpadas de jogador pelo rádio.
-    """
+    """A resposta de um transporte: uma das quatro de `_ESCADA`."""
     minhas = [l for l in linhas if l.get("controle") == _O_APARELHO_DELA]
     if not minhas:
         return _SEM_LINHA
@@ -574,13 +337,7 @@ def tabela() -> list[tuple[str, str, str, str, str, str, str]]:
 
 
 def classificacao_morta() -> list[str]:
-    """Gestos DECLARADOS aqui que a tela já não oferece.
-
-    A terceira mordida, e ela fecha o ciclo: a lista de features se LÊ da tela,
-    mas a classificação se ESCREVE — e escrita envelhece. Um gesto que saiu da
-    tela e ficou aqui é uma razão a explicar coisa nenhuma, que a próxima
-    pessoa lê como se ainda valesse.
-    """
+    """Gestos DECLARADOS aqui que a tela já não oferece."""
     na_tela = set(gestos_da_tela())
     return sorted((set(NAO_E_DO_APARELHO) | set(DO_APARELHO)) - na_tela)
 

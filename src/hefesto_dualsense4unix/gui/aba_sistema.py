@@ -37,28 +37,7 @@ import html
 import re
 from typing import Any, NamedTuple
 
-# ---------------------------------------------------------------------------
-# O CONTRATO: os endereços e os gestos, num lugar só
-# ---------------------------------------------------------------------------
-#: O ENDEREÇO DE CADA VALOR DA TELA, e quem é a fonte dele no produto.
-#:
-#: Esta tabela é a fonte única: o gerador do desenho
-#: (``src/hefesto_dualsense4unix/interface/aba09.py``) a lê por AST para emitir os
-#: ``data-id``, a pintura a lê para saber o que escrever, e a régua a lê para
-#: exigir que a página tenha exatamente estes endereços. **Nenhum dos três a
-#: digita** — foi assim que onze réguas desta casa reprovaram a melhora em vez
-#: do defeito, em 26/08: digitavam o que deviam LER.
-#:
-#: São DOZE endereços para DEZENOVE valores, e a diferença é de propósito: a
-#: lista de achados do exame é **um** endereço, não oito. O exame varia de 6 a 8
-#: linhas hoje (``storm_report`` devolve seis, e as duas condicionais devolvem
-#: ``None`` quando não há o que dizer); ``achado-1``..``8`` congelaria em oito o
-#: que o produto não congela.
 ENDERECOS: dict[str, str] = {
-    # A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026: as quatro linhas do Status
-    # viram UM endereço, como a lista do exame — a pílula muda de COR com o
-    # estado, e o alvo `classe` do piloto acende uma classe só (ver
-    # `a09_sistema.SEM_ALVO_NA_PAGINA`, que perdeu o objeto com isto).
     "status-lista": "`linhas_do_status` deste módulo — serviço, troca de perfil, "
     "ambiente gráfico e Bluetooth",
     "hefesto-autostart": "`systemctl --user is-enabled` da unidade normal",
@@ -72,15 +51,10 @@ ENDERECOS: dict[str, str] = {
     "da unit (`journalctl --user`), com o endereço dos controles mascarado",
 }
 
-#: O DONO REAL DE CADA GESTO, DECLARADO NUM LUGAR SÓ. É a mesma disciplina do
-#: ``DONOS_DOS_GESTOS`` do piloto da aba Controles: o gesto chega ao Python, e
 #: quem o aplica está escrito aqui — inclusive quando a resposta é "ninguém".
 GESTOS: dict[str, str] = {
-    # O «Retomar» e o «Parar o serviço» viraram UM botão — A-09-SISTEMA-EM-
-    # TRES-SECOES-01, 25/09/2026, pedido dela. O dono dos dois atos continua o
-    # mesmo; o que mudou é que um clique só decide qual.
     "parar-ou-retomar": "`a09_sistema.desligar` — com a pausa ativa, IPC "
-    "`daemon.resume` (daemon/ipc_server.py:129); com o serviço de pé, "
+    "`daemon.resume` (daemon/ipc_server.py:125); com o serviço de pé, "
     "`systemctl --user stop` em dois cliques e `_user_stopped_daemon` armado "
     "(o mesmo de `daemon_actions.on_daemon_stop:2234`); com ele parado, "
     "`a09_sistema.ativar_o_servico`.",
@@ -91,7 +65,6 @@ GESTOS: dict[str, str] = {
     "refazer-consertos": "`daemon_actions.on_storm_fix_safe:1218`",
     # OS DOIS LIGÁVEIS QUE ERAM BOTÕES DE UM ATO SÓ — 25/09/2026. Ligar faz o
     # que o «Refazer a fixação do Proton» e o «Tirar a sobreposição Vulkan»
-    # faziam; desligar desfaz pela cópia que os dois já guardavam.
     "fixar-proton": "`integrations.proton_pin.lock_proton_for_all_games` para "
     "ligar e `unlock_games_from_pinned_proton` para desligar — o registro da "
     "trava é a cópia que o destravar lê.",
@@ -102,11 +75,6 @@ GESTOS: dict[str, str] = {
     "restaurar-de-fabrica": "`app/actions/footer_actions.on_restore_default:1477`, "
     "hoje no RODAPÉ (`main.glade:4272`, botão `btn_footer_restore_default`), "
     "com confirmação em `app/gui_dialogs.confirm_restore_default:696`.",
-    # OS DOIS QUE ENTRARAM EM 06/09/2026 — SISTEMA-OS-QUATRO-QUE-FALTAM-01, as
-    # linhas L315 e L340 do CSV da paridade. Este dicionário é o contrato de
-    # DONO que o gerador (`interface/aba09.py`, `_gesto()`) cobra antes de
-    # escrever um `data-gesto` na página: um botão cujo gesto não tem dono
-    # declarado aqui é um botão que mente, e o gerador recusa gravar a página.
     "corrigir-modo": "`daemon_actions.on_daemon_migrate_to_systemd` — o botão "
     "que a janela antiga mostrava SÓ no estado `online_avulso`. Lê o pid do "
     "Hefesto improvisado, pede que ele saia, sobe a unit pelo systemd. As duas "
@@ -116,16 +84,11 @@ GESTOS: dict[str, str] = {
     "a Steam (`integrations.steam_launch_options.apply_wrapper_to_all_games` numa "
     "janela de `with_steam_closed`); a pergunta é `daemon_actions._STEAM_APPLY_CORPO`. "
     "Na tela, «Aplicar soluções nos lançadores».",
-    # «Ver detalhes» SAIU — A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026: o
-    # registro passou a estar sempre à vista, e o gesto que sobra é o de copiar.
     "copiar-registro": "`a09_sistema.copiar_registro` — o texto inteiro do "
     "painel na área de transferência (`Gtk.Clipboard`, o mesmo caminho de "
     "`daemon_actions.on_storm_copy_launch`).",
 }
 
-#: O QUE A TELA DESENHOU E O PRODUTO NÃO TEM COMO PREENCHER. Fica declarado, com
-#: o endereço e o porquê, e a pintura escreve :data:`NAO_DEU` no lugar — nunca o
-#: literal bonito do mockup.
 SEM_FONTE: dict[str, str] = {
     "registro-texto": "O desenho pediu as últimas linhas do registro técnico "
     "('Joga as últimas 80 linhas do registro técnico no painel ao lado'). NÃO "
@@ -135,36 +98,19 @@ SEM_FONTE: dict[str, str] = {
     "(MIGRA-SISTEMA-10).",
 }
 
-#: O que se diz de um gesto SEM linha em :data:`GESTOS`. Era um ``KeyError`` cru
-#: no piloto da aba Controles, e derrubar a tela dela para relatar um dono
-#: desconhecido é o pior dos dois males. O gerador só emite chaves conhecidas —
-#: mas quem lê não é só o gerador: é qualquer DOM, inclusive um adulterado por
-#: régua.
 SEM_DONO = (
     "SEM LINHA na tabela de donos — este gesto chegou de um endereço que o "
     "gerador não escreve. Nada foi aplicado."
 )
 
-#: A resposta honesta no lugar do valor. Um traço, e o motivo na dica.
 NAO_DEU = "—"
 
-#: Os três tons de uma linha de estado, e mais nada: verde, laranja e neutro.
-#: Desde 25/09/2026 a linha veste a pílula do exame (:data:`PILULA_OK`,
-#: :data:`PILULA_AVISO`, :data:`PILULA_NOTA`, as regras ``.selo.*`` do
-#: gerador); a `.est` de antes saiu com a tabela da bateria. **NÃO HÁ tom
-#: vermelho para linha de estado** — o desenho não o tem, e inventá-lo mudaria
-#: o que ela aprovou. Por isso o "PARADO" sai em laranja, declarado.
 OK, AVISO, INFO, NEUTRO = "ok", "warn", "info", ""
 GLIFO_OK, GLIFO_AVISO, GLIFO_INFO, GLIFO_NENHUM = "✓", "!", "◆", ""
 
 
 class Linha(NamedTuple):
-    """Uma linha de estado pronta para a tela: o valor, o selo e a dica.
-
-    ``cls`` e ``g`` andam JUNTOS de propósito — o selo carrega símbolo e cor ao
-    mesmo tempo, para quem não distingue verde de laranja ler o estado pelo
-    desenho (é a regra que a própria aba explica no "?" do exame).
-    """
+    """Uma linha de estado pronta para a tela: o valor, o selo e a dica."""
 
     txt: str
     cls: str = NEUTRO
@@ -206,32 +152,16 @@ class Leitura(NamedTuple):
 
 
 # ---------------------------------------------------------------------------
-# Utilidades
-# ---------------------------------------------------------------------------
 _MARCACAO = re.compile(r"<[^>]+>")
 
 
 def sem_markup(frase: str) -> str:
-    """O texto de uma frase do produto, sem o markup do Pango.
-
-    As frases de ``descrever_deteccao_de_janela`` e companhia nascem para um
-    ``Gtk.Label``: elas trazem ``<b>`` e ``<span foreground="#ffb86c">``. Numa
-    página isso ou apareceria cru ou injetaria marcação de outro dono no HTML
-    dela. **Nós tiramos a marcação e ficamos com o texto** — a frase continua
-    tendo UM dono, que é a função do produto.
-    """
+    """O texto de uma frase do produto, sem o markup do Pango."""
     return html.unescape(_MARCACAO.sub("", frase)).strip()
 
 
 def _campos_de_janela(state: object) -> dict[str, Any] | None:
-    """Os três campos que decidem a linha da troca de perfil, ou ``None``.
-
-    São os mesmos que ``descrever_deteccao_de_janela`` lê
-    (``window_detect_backend``/``_seeing``/``_reason``), e ler os mesmos campos
-    é de propósito: a frase LONGA continua sendo daquela função, que vai para a
-    dica; o que sai daqui é só o valor CURTO da coluna, que aquela função não
-    tem como dar (ela devolve uma sentença inteira, com prefixo).
-    """
+    """Os três campos que decidem a linha da troca de perfil, ou ``None``."""
     if not isinstance(state, dict) or "window_detect_backend" not in state:
         return None
     return {
@@ -241,40 +171,7 @@ def _campos_de_janela(state: object) -> dict[str, Any] | None:
     }
 
 
-# ---------------------------------------------------------------------------
-# As linhas, uma função por linha
-# ---------------------------------------------------------------------------
-# A PALAVRA "HEFESTO" SAIU DAS DICAS DE ESTADO — 31/08/2026, DECISÃO DELA.
-#
-# Duas abas diziam "Hefesto ligado/desligado" e significavam coisas DIFERENTES:
-# na Jogar é o MODO (o Hefesto no meio do jogo, ou o aparelho puro), e aqui é o
-# PROCESSO (`systemctl --user stop`). Quem desligava lá continuava com o serviço
-# rodando; quem desligava aqui matava tudo. **A palavra "Hefesto" ficou com a
-# aba Jogar**, e esta aba passou a nomear o SERVIÇO — o desenho já mudou
-# (`src/hefesto_dualsense4unix/interface/aba09.py`: a faixa "O serviço", a linha "O serviço
-# está", os botões "Reiniciar o serviço" e "Parar o serviço").
-#
-# A TELA NOVA LÊ ESTAS DICAS. Enquanto elas diziam "Hefesto", o rótulo dizia "O
-# serviço está" e a dica dele dizia "O Hefesto está rodando…" — a tela se
-# contradizia dentro de si mesma, e nenhuma régua de caixa podia ver isso.
-#
-# O QUE NÃO MUDOU, E NÃO É ESQUECIMENTO. Onde "Hefesto" é o PROGRAMA — quem
-# enxerga a janela, quem escreve nos controles, de quem é a saída crua — a
-# palavra fica. Trocar essas seria o defeito ao contrário: a tela passaria a
-# dizer que quem enxerga janela é uma unidade do systemd. É o mesmo censo que o
-# gerador do desenho fez, e o portão que o guarda é
 # `tests/unit/test_a_aba_sistema_nomeia_o_servico.py`, que olha SÓ a dica das
-# linhas de estado — o `title` de um botão PRECISA dizer "Hefesto" para
-# explicar a diferença.
-#
-# E os endereços NÃO se tocam: `hefesto-estado`, `hefesto-pausa`,
-# `_ESTADO_DO_HEFESTO`, `linha_do_hefesto` são o contrato do DADO, lido por AST
-# pelo gerador. O vocabulário da TELA e o endereço do DADO são coisas separadas.
-#: O que cada estado da matriz de três fontes diz NESTA tela. O produto de hoje
-#: tem as suas próprias palavras em ``_set_daemon_status_markup`` (" Funcionando
-#: (liga sozinho com o computador)"), e elas são de OUTRA tela — a do Glade. O
-#: desenho que ela aprovou diz "Ligado", numa coluna de respostas curtas. As
-#: duas viram uma no dia em que a aba velha morrer.
 _ESTADO_DO_HEFESTO: dict[str, Linha] = {
     "online_systemd": Linha(
         "Ligado", OK, GLIFO_OK,
@@ -312,8 +209,6 @@ def linha_do_hefesto(status: str | None) -> Linha:
         )
     linha = _ESTADO_DO_HEFESTO.get(status)
     if linha is None:
-        # Estado novo, vindo de um produto mais novo que esta tela: dizer o
-        # código cru é feio e honesto; inventar leitura é o defeito antigo.
         return Linha(status, INFO, GLIFO_INFO, "Estado que esta tela ainda não sabe nomear.")
     return linha
 
@@ -322,7 +217,7 @@ def linha_da_pausa(state: object) -> Linha:
     """A pausa, que CHEGA À TELA PELA PRIMEIRA VEZ.
 
     ``state_full["paused"]`` é publicado desde sempre
-    (``daemon/ipc_handlers.py:2140``) e os dois únicos leitores em ``app/`` são
+    (``daemon/ipc_handlers.py:1614``) e os dois únicos leitores em ``app/`` são
     a aba inicial e a Emulação — **esta aba nunca o leu**.
 
     E O VALOR DIZ **O QUE A PAUSA É** — 11/09/2026, A1-007/008. Sem isso,
@@ -380,11 +275,7 @@ def linha_do_ambiente(frase: str | None) -> Linha:
 
 
 def autostart_ligado(autostart: str | None) -> bool | None:
-    """O ligável «Iniciar com o sistema». ``None`` = não deu para ler.
-
-    ``None`` **não é** ``False``: a chave desenhada tem dois estados e nenhum
-    deles quer dizer "não sei". Quem pinta trata os três.
-    """
+    """O ligável «Iniciar com o sistema». ``None`` = não deu para ler."""
     if autostart is None:
         return None
     return autostart.strip() == "enabled"
@@ -401,12 +292,7 @@ def quantos_controles(state: object) -> int | None:
 
 
 def linha_do_vale_para(state: object) -> Linha:
-    """"Os N controles" — e ZERO é estado legítimo, não erro.
-
-    A página nasce da mesa REAL. O desenho tem quatro; a mesa dela tem dois; e
-    uma mesa vazia tem de dizer que está vazia, em vez de mostrar o número do
-    desenho.
-    """
+    """"Os N controles" — e ZERO é estado legítimo, não erro."""
     quantos = quantos_controles(state)
     if quantos is None:
         return Linha(
@@ -432,14 +318,7 @@ def linha_do_vale_para(state: object) -> Linha:
 
 
 def forca_do_perfil(perfil: str | None) -> str | None:
-    """"30% da força", ou ``None`` quando o perfil não põe teto nenhum.
-
-    **O 0,3 não se escreve aqui**, nem a tradução perfil→disco: as duas pontas
-    vêm do produto (``secao_orcamento.TETO_POR_PERFIL`` e
-    ``core.rumble.teto_do_orcamento``, que por sua vez lê o
-    ``RUMBLE_POLICY_MULT`` do daemon). Um número digitado nesta tela divergiria
-    do que o daemon entrega no primeiro degrau que mudasse.
-    """
+    """"30% da força", ou ``None`` quando o perfil não põe teto nenhum."""
     from hefesto_dualsense4unix.app.actions.config.secao_orcamento import TETO_POR_PERFIL
     from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
 
@@ -474,24 +353,8 @@ def rotulo_do_perfil(perfil: str | None) -> str | None:
     return None if perfil is None else ROTULOS_DOS_PERFIS.get(perfil)
 
 
-# `perfil_do_rotulo` SAIU — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01). Ela
-# traduzia o RÓTULO do botão ("Bateria longa") de volta para a chave do
-# produto, e nenhum gesto precisou dela: os três botões do Perfil de Bateria
-# mandam a CHAVE no `data-v` (`a09_sistema.perfil_da_mesa`), e a tradução que
-# o gesto faz é outra, chave → teto em disco (`secao_orcamento.TETO_POR_PERFIL`).
-
-
 def frase_do_teto() -> str:
-    """A frase de duas linhas do Perfil de Bateria, derivada de ``LINHAS_DO_TETO``.
-
-    No dia em que a barra de luz ganhar ponto de aplicação, ela sai da frase
-    sozinha — porque a lista tem um dono só, no produto.
-
-    **A frase tem duas linhas de orçamento, e o número é medido**
-    (``aba09.py``): com TRÊS linhas o bloco vai a 159,4 px, o irmão estica junto
-    e o miolo passa a rolar 3 px por dentro. Encurtar o texto é a cura; esconder
-    o que sobra não.
-    """
+    """A frase de duas linhas do Perfil de Bateria, derivada de ``LINHAS_DO_TETO``."""
     from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
         LINHAS_DO_TETO,
         PERFIS,
@@ -502,9 +365,6 @@ def frase_do_teto() -> str:
     alcanca = [linha.nome for linha in LINHAS_DO_TETO if linha.ponto_de_aplicacao]
     pendentes = [linha.nome for linha in LINHAS_DO_TETO if not linha.ponto_de_aplicacao]
     if len(com_teto) != 1:
-        # A frase está escrita no singular ("é o único que põe teto"). Ela tem
-        # de reprovar EM VOZ ALTA no dia em que isso deixar de valer, em vez de
-        # a tela afirmar sozinha uma coisa que o produto desmentiu.
         return (
             f"{len(com_teto)} perfis põem teto hoje — esta frase foi escrita "
             "para um só e precisa ser reescrita."
@@ -527,21 +387,6 @@ def _lista(nomes: list[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# O Status — as quatro linhas, na forma do exame
-# ---------------------------------------------------------------------------
-# A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026, pedido dela: *«As quatro linhas
-# do Status ficam, no MESMO estilo das linhas do O exame de hoje (a pílula à
-# esquerda e o texto curto)»*, e *«simplificar cada texto, seja tooltip ou seja
-# do doctor»*. A pílula diz o ESTADO numa palavra; o texto diz DE QUÊ; a `dica`
-# diz o resto em uma frase, no `title` da linha (o `?` saiu às 22h13 de 25/09,
-# pedido dela: *«remove a tooltip»*).
-#
-# AS LINHAS DE ONTEM CONTINUAM SENDO A LEITURA: `linha_do_hefesto`,
-# `linha_da_pausa`, `linha_da_troca_de_perfil` e `linha_do_ambiente` decidem o
-# estado; aqui só se escolhe a palavra da pílula. Duas leituras do mesmo estado
-# seriam duas respostas possíveis para a mesma linha.
-#: A pílula de cada estado: (palavra, classe do selo, glifo). As três classes
-#: são as do exame (`.selo.ok`, `.selo.aviso`, `.selo.nt`) e mais nada.
 PILULA_OK, PILULA_AVISO, PILULA_NOTA = "ok", "aviso", "nt"
 
 
@@ -619,19 +464,11 @@ def controles_no_radio(state: object) -> int | None:
                and str(c.get("transport") or "").lower() == "bt")
 
 
-#: A LINHA DO BLUETOOTH LEVA À SEÇÃO DO RÁDIO NA ABA 08 — é o «interativa de
-#: verdade» dela: o clique vai para onde o rádio se mexe, e nenhuma linha vira
-#: botão sem dono.
 ENDERECO_DO_RADIO = "08-conexoes.html#rd-secao"
 
 
 def status_do_bluetooth(adaptadores: int | None, state: object) -> dict[str, str]:
-    """Quantos adaptadores e quantos controles no rádio — a linha que ela sentiu falta.
-
-    ZERO ADAPTADOR NÃO É DEFEITO: é o PC de mesa sem dongle, e a
-    `mesa_de_radio.adaptadores_bluetooth` já diz que lista vazia é a resposta
-    mais comum. Sai NOTA, não AVISO.
-    """
+    """Quantos adaptadores e quantos controles no rádio — a linha que ela sentiu falta."""
     no_radio = controles_no_radio(state)
     if adaptadores is None:
         return _linha_de_status("status-bluetooth", NAO_DEU, PILULA_NOTA, "i",
@@ -661,23 +498,6 @@ def linhas_do_status(leitura: Leitura) -> list[dict[str, str]]:
     ]
 
 
-# ---------------------------------------------------------------------------
-# O exame
-# ---------------------------------------------------------------------------
-#: Como o veredito de ``storm_doctor`` vira selo na tela. Os três selos são os
-#: do desenho (``.selo.ok``, ``.selo.aviso``, ``.selo.nt``) e mais nada.
-#:
-#: **As chaves são normalizadas, e isso foi medido:** o produto devolve
-#: ``"[ OK ]"``, ``"[WARN]"`` e ``"[INFO]"`` — com colchetes, e o OK com espaços
-#: dentro, porque a origem é a coluna alinhada do ``doctor`` no terminal. Uma
-#: tabela com a chave ``"OK"`` casaria com NADA e a tela inteira sairia como
-#: NOTA, calada.
-#:
-#: **O `[FAIL]` CAI EM AVISO — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01).** A
-#: conferência dos perfis (`profiles/sanidade.linhas_de_relatorio`) escreve
-#: `[FAIL]` para o achado grave, e o exame desta aba passou a mostrá-la. Sem a
-#: chave ele sairia como NOTA, o selo mais brando para o achado mais grave; o
-#: selo vermelho não existe no desenho, e AVISO é o mais forte que há.
 _SELO_DO_VEREDITO: dict[str, tuple[str, str, str]] = {
     "OK": ("OK", "ok", "✓"),
     "WARN": ("AVISO", "aviso", "!"),
@@ -688,22 +508,13 @@ _SELO_DO_VEREDITO: dict[str, tuple[str, str, str]] = {
 
 
 def _selo(veredito: object) -> tuple[str, str, str]:
-    """O selo de um veredito do ``storm_doctor``, com os colchetes tirados.
-
-    Um veredito NOVO, de um produto mais novo que esta tela, cai em NOTA — e
-    não some: dizer "NOTA" sobre uma linha que existe é honesto; engoli-la não.
-    """
+    """O selo de um veredito do ``storm_doctor``, com os colchetes tirados."""
     chave = str(veredito).strip().strip("[]").strip().upper()
     return _SELO_DO_VEREDITO.get(chave, ("NOTA", "nt", "i"))
 
 
 def exame(achados: list[tuple[str, str]] | None) -> dict[str, Any]:
-    """A lista de achados, uma linha por veredito do ``storm_report``.
-
-    A CONTAGEM SAIU — 25/09/2026, pedido dela às 22h13: *«Remove esse 8 linhas
-    deixa o espaço vazio»*. Ela era derivada daqui e só a tela a lia; sem o
-    lugar na página, uma chave a mais seria um escritor sem lugar.
-    """
+    """A lista de achados, uma linha por veredito do ``storm_report``."""
     if achados is None:
         return {
             "linhas": [],
@@ -719,36 +530,13 @@ def exame(achados: list[tuple[str, str]] | None) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# As travas
-# ---------------------------------------------------------------------------
 def _de_pe_do_dono() -> tuple[str, ...]:
-    """Os estados em que o serviço está DE PÉ — LIDOS do dono, não digitados.
-
-    Até 05/09/2026 esta lista era digitada aqui como
-    ``("online_systemd", "online_avulso")`` e o comentário AFIRMAVA ser "a mesma
-    matriz de ``daemon_actions._ESTADOS_COM_DAEMON_DE_PE``". Não era: faltava
-    ``iniciando``, e o dono guarda a razão de ele estar lá — *"a unidade já está
-    `active` e um 'Ligar' ali é o clique que não faz nada"*.
-
-    O que a falta produzia na tela dela, medido: com a unit subindo, a linha
-    dizia **"Ligando…"** enquanto o botão trocava para **"Ativar o serviço"**, a
-    dica do Reiniciar dizia *"O serviço está desligado — não há o que
-    reiniciar"*, e o clique caía em ``ativar_o_servico``, que via
-    ``_is_service_active() == "active"`` e levantava *"o systemd nem chegou a
-    ser chamado"* — três frases falsas sobre o mesmo instante.
-
-    Ler resolve a classe inteira: um quarto estado que o dono venha a
-    considerar de pé chega aqui sozinho.
-    """
+    """Os estados em que o serviço está DE PÉ — LIDOS do dono, não digitados."""
     from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
     return tuple(sorted(DaemonActionsMixin._ESTADOS_COM_DAEMON_DE_PE))
 
 
-#: Os estados em que o serviço está DE PÉ. A razão de existir aqui é que o botão
-#: cinza precisa dela ANTES de haver widget: a tela nova não tem
-#: `set_sensitive`, tem `disabled` na página.
 DE_PE = _de_pe_do_dono()
 
 
@@ -775,25 +563,13 @@ def travas(leitura: Leitura) -> dict[str, str]:
             else "Não deu para saber se o serviço está pausado."
         )
     if not de_pe:
-        # A chave é o gesto do botão do serviço desde 25/09/2026, quando o
-        # «Parar» e o «Retomar» viraram um botão só (`parar-ou-retomar`).
         presas["parar-ou-retomar"] = "O serviço já está desligado."
         presas["reiniciar"] = "O serviço está desligado — não há o que reiniciar."
-    # O `ver-plugins` saiu desta conta com o botão (SISTEMA-BOTOES-01, 13/09),
-    # e o `ver-detalhes` com o dele (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09).
     return presas
 
 
-# ---------------------------------------------------------------------------
-# O pacote — UMA chamada por tique, não uma por valor
-# ---------------------------------------------------------------------------
 def pacote(leitura: Leitura) -> dict[str, Any]:
-    """Tudo o que a tela precisa, numa estrutura só.
-
-    **UMA chamada por TIQUE, não por valor.** Com doze endereços e dez tiques
-    por segundo, uma chamada por valor seriam 120 travessias de fronteira por
-    segundo para escrever o que cabe em dez.
-    """
+    """Tudo o que a tela precisa, numa estrutura só."""
     linhas: dict[str, Linha] = {
         "hefesto-estado": linha_do_hefesto(leitura.status),
         "hefesto-pausa": linha_da_pausa(leitura.state),

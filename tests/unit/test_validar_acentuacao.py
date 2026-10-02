@@ -1,8 +1,4 @@
-"""Testes do validador estrito de acentuação PT-BR.
-
-Cobre gate (detecção de violações), whitelist de paths, skip de
-UPPERCASE_SNAKE e fenced-code em markdown, e o modo --fix.
-"""
+"""Testes do validador estrito de acentuação PT-BR."""
 from __future__ import annotations
 
 import subprocess
@@ -28,7 +24,6 @@ def _roda(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
 def sandbox(tmp_path: Path) -> Path:
     """Cria sandbox com git init para que descobrir_raiz aponte para tmp_path."""
     subprocess.run(["git", "init", "-q"], cwd=str(tmp_path), check=True)
-    # copia o script para a sandbox para que rode na raiz correta
     destino = tmp_path / "scripts"
     destino.mkdir()
     (destino / "validar-acentuacao.py").write_bytes(SCRIPT.read_bytes())
@@ -44,7 +39,7 @@ def test_arquivo_com_palavra_sem_acento_falha(sandbox: Path) -> None:
     res = _roda(["--check-file", str(alvo)], sandbox)
     assert res.returncode == 1
     assert "nao" in res.stdout
-    assert "não" in res.stdout  # sugestão contém "não"
+    assert "não" in res.stdout
 
 
 def test_arquivo_com_acento_correto_passa(sandbox: Path) -> None:
@@ -90,9 +85,6 @@ def test_fenced_code_block_ignorado(sandbox: Path) -> None:
         encoding="utf-8",
     )
 
-    # "funcao" dentro do fence não deve ser sinalizado.
-    # "Titulo" sem acento seria sinalizado se estivesse no dicionário;
-    # o teste só valida fenced.
     res = _roda(["--check-file", str(alvo)], sandbox)
     assert "funcao" not in res.stdout, res.stdout
 
@@ -137,9 +129,7 @@ def test_fix_preserva_fenced_code_block(sandbox: Path) -> None:
     assert res.returncode == 0
 
     novo = alvo.read_text(encoding="utf-8")
-    # Fora do fence foi corrigido.
     assert "não corrigir" in novo
-    # Dentro do fence foi preservado.
     assert "def funcao():" in novo
     assert "\"acao bruta\"" in novo
 
@@ -156,8 +146,8 @@ def test_fix_preserva_uppercase_snake(sandbox: Path) -> None:
     assert res.returncode == 0
 
     novo = alvo.read_text(encoding="utf-8")
-    assert "CHORE-ACAO-01" in novo  # ID preservado
-    assert "ação legado" in novo  # palavra corrigida
+    assert "CHORE-ACAO-01" in novo
+    assert "ação legado" in novo
 
 
 def test_show_whitelist_lista_padroes(sandbox: Path) -> None:

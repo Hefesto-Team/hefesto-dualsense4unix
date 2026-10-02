@@ -1,24 +1,4 @@
-"""O backup do `main.conf` do BlueZ não se repete — B7 da O-PRODUTO.
-
-``O-PRODUTO-EM-QUALQUER-MAQUINA-01`` (28/09/2026). MEDIDO na máquina dela: o
-``/etc/bluetooth`` tinha 51 backups do ``main.conf`` (``main.conf.bak.hefesto-*``
-e ``main.conf.bak.hefesto-uninstall-*``), um por ``aplicar`` ou ``remover`` que
-mudou o arquivo — cada par uninstall + install deixava dois, quase sempre dos
-mesmos dois estados. Ela, ao ver: *«Importante apagarmos»*.
-
-A cura é na origem, no ``_copia_de_seguranca`` do ``scripts/bluez_config.sh``:
-se um backup nosso ao lado já tem os mesmos bytes, ele NÃO cria outro, diz qual
-é e o devolve. A poda continua manual e continua guardando um arquivo por
-estado (a nota «A PODA NÃO É AUTOMÁTICA», de 06/08).
-
-A régua roda o script REAL contra um ``/etc`` de mentira (``HEFESTO_BT_ETC``),
-sem sudo. Nada em ``/etc`` é lido nem escrito.
-
-A MORDIDA, feita em 28/09/2026: tirar o laço do ``cmp`` do
-``_copia_de_seguranca`` faz ``test_dois_ciclos_deixam_um_backup_por_estado``
-(quatro em vez de dois) e ``test_o_backup_que_ja_existe_e_dito_e_devolvido``
-reprovarem. Devolvido, md5 conferido.
-"""
+"""O backup do `main.conf` do BlueZ não se repete — B7 da O-PRODUTO."""
 
 from __future__ import annotations
 

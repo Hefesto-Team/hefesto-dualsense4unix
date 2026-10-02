@@ -9,7 +9,7 @@ mudanças novas:
 
 - o job **lint-test** roda sem PyGObject, e o teste que cai pela falta do GTK
   **pula** com o motivo (a regra é `pytest_runtest_makereport` com
-  `_falta_o_gtk`, em `tests/conftest.py:435` e `:455`);
+  `_falta_o_gtk`, em `tests/conftest.py:243` e `:455`);
 - o job **gtk-real** roda a suíte inteira com o GTK real sob Xvfb, em 24 partes,
   com `HEFESTO_EXIGE_GTK_REAL=1`, e ali o pulo por falta de GTK reprova.
 
@@ -70,7 +70,7 @@ scripts ignorados antes de medir.
 reprovava nas três pernas do lint-test e passava no gtk-real.
 
 **Cura:** a chave passa a ser `ast.get_source_segment`, o texto como está no
-fonte (`scripts/check_a_tela_nao_confessa.py:469`). Quatro chaves mudaram de
+fonte (`scripts/check_a_tela_nao_confessa.py:196`). Quatro chaves mudaram de
 aspas, e a régua nova
 `test_a_chave_sem_letra_e_o_trecho_do_fonte_em_qualquer_python` morde em
 qualquer versão.
@@ -92,7 +92,7 @@ cache `_BARATO`.
   5.86 da máquina de desenvolvimento. **Cura:** a cópia byte a byte da unit em
   `tests/fixtures/systemd/de-terceiros/` (com `LEIA.md`) vira a hospedeira
   declarada, a tabela digitada sai, e `_sandbox_vivo` pergunta o `LoadState`
-  (`tests/unit/test_bt_sandbox_cobre_o_que_os_ganchos_escrevem.py:158`). O
+  (`tests/unit/test_bt_sandbox_cobre_o_que_os_ganchos_escrevem.py:94`). O
   confronto vivo com o systemd pula no runner, com o motivo escrito.
 - **O `btmgmt info` classificado como escrita.** A escada dos adaptadores do
   `uninstall.sh` desce do sysfs para o `busctl tree org.bluez`, daí para o
@@ -110,7 +110,7 @@ cache `_BARATO`.
   `platformdirs` ≥ 4.12 e o daemon de pé, `test_acquire_retorna_pid_atual`
   leria o `daemon.pid` real e mandaria `SIGTERM` ao daemon (o mecanismo foi
   reproduzido só na bancada isolada). **Cura:** o diretório nasce 0700
-  (`tests/unit/test_single_instance.py:90`) e a fixture exige que o runtime
+  (`tests/unit/test_single_instance.py:59`) e a fixture exige que o runtime
   resolvido fique dentro dele.
 
 ### 5. O GTK que falta fora do alcance da regra do conftest
@@ -125,9 +125,9 @@ Seis testes caíam no lint-test por quatro caminhos que
 | stub no lugar da classe | `test_status_o_modo_compacto_tem_dono.py` | lia a docstring do stub sem GTK do `controller_card.py` |
 | fallback de propósito | `test_a_06_nao_manda_para_o_vazio.py` | `_nome_do_botao` cai no id cru; só rodava por causa da poluição da coleta |
 
-**Curas:** `repassar_a_falta_do_gtk` (`tests/conftest.py:2461`) transforma a
+**Curas:** `repassar_a_falta_do_gtk` (`tests/conftest.py:1422`) transforma a
 última linha do traceback do filho na mesma exceção no pai, e o próprio
-`_falta_o_gtk` decide; `pytest_itemcollected` (`tests/conftest.py:2498`) faz
+`_falta_o_gtk` decide; `pytest_itemcollected` (`tests/conftest.py:1432`) faz
 quem pede fixture a um plugin que pulou pular com o motivo do plugin; a
 docstring do card passa a ser lida do fonte por AST (ganhou cobertura no
 lint-test em vez de pular); e o teste da aba 06 importa o dono do nome
@@ -147,7 +147,7 @@ Resultado do grupo: de 14 failed + 6 errors na coleta inteira para 0.
   store nem o `_last_state`: o daemon seguia dizendo controle conectado, por BT,
   com 80%, numa mesa vazia. **Cura:** um dono só para as duas portas da queda,
   `esquecer_a_leitura_publicada`
-  (`src/hefesto_dualsense4unix/daemon/lifecycle.py:5822`, chamado em `:5942` e
+  (`src/hefesto_dualsense4unix/daemon/lifecycle.py:3828`, chamado em `:5942` e
   `:5968`). O dublê também era frouxo: o `FakeController` voltava no primeiro
   `connect()`, e a primeira sonda do `reconnect_loop` o religava durante o boot.
   Só com a cura do produto, a régua ainda reprovava 7/10 (lint) e 5/10 (gtk)
@@ -178,7 +178,7 @@ o `tokenize` parte a f-string em `FSTRING_START/MIDDLE/END`, e a régua deixava
 de ver o texto dela: o 3.12 lia 648 citações, o 3.10 e o 3.11 liam 667. Duas das
 19 invisíveis tinham envelhecido, em `aba06.py` e `aba10.py`. **Cura:** a régua
 conta o `FSTRING_MIDDLE` como prosa
-(`tests/unit/test_portao_o_par_com_metade_ligada.py:1044`), as quatro versões
+(`tests/unit/test_portao_o_par_com_metade_ligada.py:691`), as quatro versões
 leem as mesmas 667, nas mesmas linhas, e as duas citações foram reapontadas à
 mão, com uma régua nova que morde no 3.12. A cura regera
 `mockup/06-navegacao.html` e `mockup/10-perfis.html` e publica as páginas 06 e

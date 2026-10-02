@@ -61,29 +61,17 @@ _ACTION_FLAG = {
     "on": "--enable-mic",
     "off": "--disable-source",
     "status": "--status",
-    # MIC-USB-01 (entrega 3): promoção EXPLÍCITA do mic do controle a entrada
-    # padrão do sistema, e a volta. O drop-in 51 rebaixa a prioridade da fonte
     # para o DualSense não ser eleito sozinho — o que é correto e nunca foi o
-    # culpado do mute —, mas rebaixar também tirava dela o direito de ESCOLHER:
-    # o `set-default-source` era sobrescrito de volta para o monitor da saída.
     "promote": "--promote-source",
     "demote": "--install",
 }
 
-#: Ações que mexem no mudo do FIRMWARE do controle (camada 3), pelo `mic.set`
-#: do IPC. Os três estados são pedidos DIFERENTES e explícitos: `unmute` não é
-#: `release`. Ver `_mic_firmware`.
 _ACOES_FIRMWARE: dict[str, bool | None] = {
     "mute": True,
     "unmute": False,
     "release": None,
 }
 
-#: MIC-DA-MESA-ELEICAO-01: o LED do botão de mudo, que é campo SEPARADO do
-#: mudo (`common[8]` e `common[9]`, bits de autorização diferentes). Acender
-#: NÃO muta. `led-release` é a devolução de posse ao kernel — a porta de
-#: emergência da inversão, e até 01/09/2026 ela não tinha chamador nenhum.
-#: Nesta casa, ACESO = o microfone deste controle está VIVO.
 _ACOES_LED: dict[str, bool | None] = {
     "led-on": True,
     "led-off": False,
@@ -93,20 +81,11 @@ _ACOES_LED: dict[str, bool | None] = {
 #: Ações que NÃO passam pelo script do WirePlumber (são a ponte por BT).
 _ACOES_BT = ("bt", "bt-status")
 
-#: Cadência da reconciliação de hotplug do `mic bt`. Não é polling de dados —
-#: o áudio flui numa thread bloqueada no hidraw; isto só pergunta ao sysfs se
-#: apareceu/sumiu controle, e o laço DORME num Event entre uma e outra.
 _RECONCILIA_S = 5.0
 
 
 def _find_script() -> Path | None:
-    """Localiza o script do WirePlumber.
-
-    BG-BASES-01 (26/08/2026): esta lista tinha TRÊS bases e nenhuma delas era
-    `/app/share` nem `sys.prefix/share` — quem instalou por Flatpak, AppImage,
-    venv ou Nix recebia "script não encontrado" com o arquivo na máquina. A
-    resposta é uma só, e é de `utils/repo_files`.
-    """
+    """Localiza o script do WirePlumber."""
     return encontrar_arquivo_do_repo(f"scripts/{_SCRIPT_NAME}")
 
 
@@ -152,30 +131,8 @@ def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
     raise typer.Exit(code=rc)
 
 
-# ---------------------------------------------------------------------------
-# Mudo no FIRMWARE do controle (MIC-USB-01, camada 3)
-# ---------------------------------------------------------------------------
-
-
 def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:
-    """Manda `mic.led.set` ao daemon (MIC-DA-MESA-ELEICAO-01).
-
-    Os três pedidos são diferentes, e `led-off` NÃO é `led-release`:
-
-    - ``True``  — acende, e a posse do `common[8]` passa a ser nossa;
-    - ``False`` — apaga; é uma ORDEM, e o kernel deixa de mandar na luz;
-    - ``None``  — devolve a posse ao `hid-playstation`, que volta a escrever
-      `mute_button_led = ds->mic_muted` a cada borda do botão físico. Desde a
-      LUZ-DO-MIC-01 §2 o daemon REPINTA a luz com o mudo de fato antes de
-      soltar: o kernel só escreve na borda do botão, então largar o byte
-      deixava o último valor nosso preso no plástico até ela apertar o mudo.
-
-    Não existe leitura deste registrador no firmware — por isso a linha
-    impressa diz o que PEDIMOS, e nunca finge ser leitura. Pela mesma razão a
-    linha do `led-release` descreve o CAMINHO (o daemon repinta antes de
-    soltar) e não afirma em que estado a luz ficou: quem sabe isso é o log do
-    daemon (`microphone_led_repintado`), não este processo.
-    """
+    """Manda `mic.led.set` ao daemon (MIC-DA-MESA-ELEICAO-01)."""
     import asyncio
 
     from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
@@ -215,24 +172,7 @@ def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:
 
 
 def _mic_firmware(muted: bool | None, *, uniq: str | None = None) -> int:
-    """Manda `mic.set` ao daemon e imprime o que o controle passou a declarar.
-
-    MIC-USB-01. Este é o PRIMEIRO chamador do `mic.set` — o método nasceu nesta
-    sprint porque o backend tinha `set_microphone_mute` desde o AUDIO-OWNER-01 e
-    ele não estava exposto em superfície nenhuma: para desmutar o microfone só
-    existia o botão físico do controle.
-
-    Os três pedidos são diferentes e nenhum é "não mexer":
-
-    - ``True``  — muta, e a partir daí NÓS somos os donos do registrador;
-    - ``False`` — desmuta, e o botão físico deixa de valer enquanto durar;
-    - ``None``  — devolve a posse ao `hid-playstation`, que volta a alternar o
-      mudo na borda do botão físico. É o único que "solta" o controle.
-
-    O que sai impresso é a LEITURA do byte de estado do report de INPUT, que
-    pode vir um report atrás da escrita — por isso a linha diz o que o firmware
-    DECLARA agora, e não o eco do que acabamos de mandar.
-    """
+    """Manda `mic.set` ao daemon e imprime o que o controle passou a declarar."""
     import asyncio
 
     from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
@@ -285,59 +225,17 @@ def _mic_firmware(muted: bool | None, *, uniq: str | None = None) -> int:
     return 0
 
 
-# ---------------------------------------------------------------------------
-# Microfone por Bluetooth (BT-MIC-01)
-# ---------------------------------------------------------------------------
-#
-# A ARBITRAGEM DA PORTA — QUATRO-MICROFONES-01/E3, 25/08/2026
-# ------------------------------------------------------------
 # O estudo `docs/process/estudos/2026-08-16-O-PS-PRESO-*.md` mediu um DualSense
-# travado com a ponte de pé e nomeou a causa provável: **dois donos do report
-# `0x32`**. Dali saiu a regra 5.c, que é desta casa e vale para este arquivo:
-#
-#   *Instrumento que ESCREVE ou que toma posse de um recurso não é instrumento
-#   — é mudança de estado.*
-#
-# `mic bt` é exatamente esse instrumento: ele abre o hidraw em RDWR e escreve
-# `0x32`. E até 25/08 ele o fazia **sem perguntar se alguém já estava lá** — o
-# subsystem `bt_mic` do daemon sobe a MESMA ponte, no MESMO nó, com um contador
-# de sequência PRÓPRIO, porque é outro processo. Dois donos do `0x32` feitos
-# pelo próprio produto, sem kernel nenhum no meio.
-#
-# A cura é a arbitragem NA PORTA, e ela usa um fato que o produto já publica
 # desde 23/08: `daemon.state_full` → `bt_mic.uniqs`, os `uniq` cuja ponte SUBIU.
-# `mic bt` lê essa lista e **não sobe ponte em cima de quem já tem uma**.
-#
-# O LIMITE, DECLARADO: isto fecha o sentido CLI → daemon, e só ele. O daemon
-# não sabe que este processo existe, então uma ponte que ELE suba depois ainda
-# passa por cima da nossa. Fechar os dois sentidos é a arbitragem do nó no
-# broker — o portão 5.a de `2026-08-16-O-QUE-FICOU-ABERTO-01`, que **não
-# existe** (`broker/hidraw_broker.py::_cmd_open`: *"`open` NÃO altera
-# lease/refcount"*). O portão que vigia essa dívida é
-# `tests/unit/test_portao_a_ponte_do_mic_espera_a_arbitragem.py`.
 
 
-#: Situações que a régua abaixo sabe distinguir. `"velho"` é a que importa:
-#: o daemon diz que há ponte de pé e NÃO diz de quem.
 _SEM_DAEMON = "sem-daemon"
 _DAEMON_VELHO = "velho"
 _DAEMON_RESPONDE = "ok"
 
 
 def _pontes_ja_de_pe() -> tuple[frozenset[str], str]:
-    """Quem JÁ tem ponte de microfone de pé, pela régua do daemon.
-
-    Devolve `(uniqs normalizados, situação)`.
-
-    **Ausência de notícia não é notícia boa** — é a lição do
-    `O-PRODUTO-RESPONDE-PELO-TRANSPORTE`. Um daemon que não publica `bt_mic`,
-    ou que publica `running: true` sem a chave `uniqs` (o daemon vivo é mais
-    velho que o código — a chave nasceu em 23/08), cai em `_DAEMON_VELHO`, e
-    quem chama RECUSA em vez de assumir que o caminho está livre.
-
-    Daemon offline é diferente e é sabível: sem daemon não há subsystem, logo
-    não há ponte do produto de pé, e o caminho à mão é legítimo.
-    """
+    """Quem JÁ tem ponte de microfone de pé, pela régua do daemon."""
     import asyncio
 
     from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
@@ -368,8 +266,6 @@ def _ler_bloco_bt_mic(estado: dict[str, object]) -> tuple[frozenset[str], str]:
         return frozenset(
             n for n in (norm_mac(str(u)) or "" for u in uniqs) if n
         ), _DAEMON_RESPONDE
-    # Sem a chave `uniqs`: só é seguro concluir "ninguém" quando o daemon diz,
-    # ele mesmo, que o subsystem NÃO está de pé.
     if not bloco.get("running"):
         return frozenset(), _DAEMON_RESPONDE
     return frozenset(), _DAEMON_VELHO
@@ -388,12 +284,7 @@ def _livres(nos: list[Any], ja_de_pe: frozenset[str]) -> tuple[list[Any], list[A
 
 
 def _mic_bt(*, status_apenas: bool) -> int:
-    """Diagnostica (e opcionalmente sobe) a ponte do mic por BT. Devolve o rc.
-
-    Import tardio de propósito: `mic on/off/status` não pode passar a depender
-    de nada que a ponte carrega (ctypes/libopus), e o CLI inteiro não pode
-    ficar mais lento por causa de um subcomando.
-    """
+    """Diagnostica (e opcionalmente sobe) a ponte do mic por BT. Devolve o rc."""
     from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
         GerenciadorMicBluetooth,
         diagnosticar,
@@ -428,16 +319,11 @@ def _mic_bt(*, status_apenas: bool) -> int:
     if not diag.pronto:
         for falta in diag.impedimentos:
             console.print(f"  [yellow]![/yellow] {falta}")
-        # Falta de controle em BT não é erro do programa: é o estado normal de
-        # quem está no cabo. Só o que a usuária pode CONSERTAR vira rc != 0.
         return 0 if not diag.controles and diag.libopus and diag.pactl else 1
     if status_apenas:
         console.print("\n  pronto — `hefesto-dualsense4unix mic bt` sobe a ponte.")
         return 0
 
-    # A ARBITRAGEM DA PORTA (ver o cabeçalho da seção). Duas recusas, e cada
-    # frase diz O QUÊ, POR QUÊ e O QUE FAZER — é a regra desta casa para
-    # diagnóstico.
     if situacao == _DAEMON_VELHO:
         console.print(
             "\n[red]não subo a ponte[/red] — o daemon está de pé e não diz de "
@@ -473,31 +359,17 @@ def _mic_bt(*, status_apenas: bool) -> int:
         parar.set()
         gerenciador.parar()
 
-    # SIGINT/SIGTERM param a ponte pelo MESMO caminho do Ctrl-C: o `parar()`
-    # manda o 0x32 de desligar em cada controle. Sair sem isso deixaria o
-    # microfone de alguém ligado — o pior fim possível para este comando.
     for sig in (signal.SIGINT, signal.SIGTERM):
-        # `signal.signal` levanta ValueError fora da thread principal.
         with contextlib.suppress(ValueError):
             signal.signal(sig, _sinal)
 
     console.print("\n  subindo a ponte… (Ctrl-C encerra e desliga o mic)\n")
-    # Legenda do "sem-ouvinte": enquanto NENHUM app estiver gravando, o
-    # PipeWire deixa a source suspensa e não drena o fifo — a ponte descarta os
-    # quadros em vez de bloquear (é a invariante do módulo). Ver ~100% de
-    # descarte com o medidor parado é o comportamento CERTO, não uma falha; o
-    # número cai para perto de zero assim que alguém abre o microfone.
     console.print(
         "  [dim]sem-ouvinte = quadros descartados porque nenhum app está "
         "gravando (esperado)[/dim]\n"
     )
     try:
         while not parar.is_set():
-            # A LISTA vai explícita a cada volta, e é a arbitragem da porta
-            # acontecendo ao VIVO: se o daemon subir a ponte de um controle no
-            # meio da sessão, ele sai da lista e a NOSSA ponte cai na mesma
-            # volta — em vez de dois donos do 0x32 convivendo. Sem daemon, o
-            # conjunto é vazio e nada é filtrado.
             de_pe, agora = _pontes_ja_de_pe()
             if agora == _DAEMON_VELHO:
                 console.print(

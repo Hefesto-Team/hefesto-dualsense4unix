@@ -1,22 +1,4 @@
-"""A-MIRA-NA-NAVEGACAO-01 — na Navegação, o giro move o cursor.
-
-A decisão (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`) é a leitura literal da
-frase dela:
-*"A exceção do nativo todo o resto deve ter mira Virtual"*.  <!-- noqa-acento: dela -->
-Na Navegação não há controle virtual, e o chip da Mira acendia sem mover nada.
-
-A PRIMEIRA SEÇÃO NÃO DUBLA O DAEMON, pela lição da A-MIRA-01 (o dublê tinha o
-que o real não tinha, e a mira ficou verde sem mover um eixo): o `Daemon`, o
-`IpcServer`, o `SensorHub` e o `UinputMouseDevice` são os do produto. Só o leitor
-do nó de movimento e o nó `uinput` são de mentira — NENHUM nó de verdade nasce
-aqui (a suíte já derrubou a sessão gráfica dela com nós `uinput`).
-
-AS CHAVES SÃO AS DO PRODUTO: o hub conhece cada controle pelo MAC normalizado
-(`discover_dualsense_motion_evdevs`, doze hex) e o `primary_uniq` do backend
-também é normalizado. Endereços da faixa SINTÉTICA da casa (``aa:bb:cc``).
-
-Cada régua diz a MORDIDA: o que arrancar para vê-la reprovar.
-"""
+"""A-MIRA-NA-NAVEGACAO-01 — na Navegação, o giro move o cursor."""
 
 from __future__ import annotations
 
@@ -51,26 +33,15 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-#: A RAIZ DA ÁRVORE, e a pasta da interface no caminho de import: os pacotes das
-#: abas (`pacotes.a02_controles`, `pacotes.a04_iluminacao`) se importam pelo
-#: nome curto, como o piloto os importa.
 _RAIZ = Path(__file__).resolve().parents[2]
 _INTERFACE = str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface")
 if _INTERFACE not in sys.path:
     sys.path.insert(0, _INTERFACE)
 
-#: Os quatro controles, na grafia do backend e do hub (doze hex).
 _P = {n: f"aabbcc00000{n}" for n in (1, 2, 3, 4)}
 
-#: Um giro de pulso no `yaw` (graus/s): acima da zona morta, abaixo do teto.
 _GIRO_S = 128.0
-#: Um tique de ~60 Hz, em segundos — o relógio de mentira anda isto por tique.
-#: 1/64 e não 1/60 porque o binário o escreve EXATO: com 1/60 o relógio soma
-#: resto de ponto flutuante, e o carry sub-pixel do device dá 29 onde a conta dá
-#: 30 — a régua mediria o arredondamento, não a mira.
 _TIQUE_S = 1.0 / 64.0
-#: O deslocamento de UM controle por tique, na conta do motor: 128 °/s vezes 1/64 s
-#: = 2 graus; vezes 12 px por grau, vezes 6/6 da sensibilidade padrão = 24 px.
 _PX_POR_TIQUE = round(_GIRO_S * _TIQUE_S * rot.PIXELS_POR_GRAU_PADRAO)
 
 
@@ -113,15 +84,7 @@ class _Relogio:
 
 
 class _LeitorQueGira:
-    """O leitor do nó «Motion Sensors» — a única peça de mentira da torneira.
-
-    Do tamanho do `MotionSensorReader` para o que o hub pergunta: `start()`
-    afirma que abriu, `snapshot()` devolve a velocidade e `consume_angulo()`
-    DRENA o ângulo percorrido desde a última drenagem — integrado pelo relógio,
-    como o real integra o carimbo do kernel. Um controle girando parado a
-    128 °/s acumula 2 graus por tique e 76.800 graus em dez minutos: o
-    mesmo acumulador sem dono que o real tem.
-    """
+    """O leitor do nó «Motion Sensors» — a única peça de mentira da torneira."""
 
     def __init__(self, relogio: _Relogio, giro: tuple[float, float, float]) -> None:
         self._relogio = relogio
@@ -147,9 +110,7 @@ class _LeitorQueGira:
 
 
 class _LeitorDeEntradas:
-    """O leitor de gamepad SEM grab que o hub abre para o «Só enquanto eu
-    segurar» de quem não é o primário — do tamanho do `EvdevReader` para o
-    `hub.entradas`: `start`, `stop` e o `snapshot` com os botões."""
+    """O leitor de gamepad SEM grab que o hub abre para o «Só enquanto eu"""
 
     def __init__(self) -> None:
         self.botoes: frozenset[str] = frozenset()
@@ -191,9 +152,7 @@ class _Mesa:
 
 
 class _NoUinput:
-    """O nó `uinput` de mentira: do tamanho do `uinput.Device` para o que o
-    `UinputMouseDevice` usa — `emit(código, valor, syn=)` e `syn()` —, e nada a
-    mais. Guarda cada evento, na ordem."""
+    """O nó `uinput` de mentira: do tamanho do `uinput.Device` para o que o"""
 
     def __init__(self) -> None:
         self.eventos: list[tuple[Any, int]] = []
@@ -206,8 +165,7 @@ class _NoUinput:
 
 
 def _modulo_uinput() -> Any:
-    """As constantes do `python-uinput` que o device lê: os eixos relativos e as
-    teclas dos três mapas, cada uma com um código só dela."""
+    """As constantes do `python-uinput` que o device lê: os eixos relativos e as"""
     nomes = ["REL_X", "REL_Y", "REL_WHEEL", "REL_HWHEEL",
              *BUTTON_TO_UINPUT.values(), *DPAD_TO_KEY.values(), *EDGE_KEY_MAP.values()]
     return SimpleNamespace(**{n: (2, i) for i, n in enumerate(dict.fromkeys(nomes))})
@@ -230,8 +188,7 @@ def _andou(mouse: UinputMouseDevice, no: _NoUinput) -> tuple[int, int]:
 
 
 class _RegistroDeIdentidade:
-    """O registro de identidade, do tamanho do real para o que o tique pergunta:
-    `snapshot_connected()` devolve as chaves CONECTADAS (doze hex)."""
+    """O registro de identidade, do tamanho do real para o que o tique pergunta:"""
 
     def __init__(self, conectados: set[str]) -> None:
         self._conectados = set(conectados)
@@ -244,9 +201,7 @@ def _navegacao(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str,
     *, perfil: Profile | None = None, giro: tuple[float, float, float] = (0.0, _GIRO_S, 0.0),
 ) -> SimpleNamespace:
-    """O `Daemon` e o `IpcServer` do produto, na Navegação: sem controle
-    virtual e com o mouse emulado de pé. O perfil ATIVO não tem mira — quem a
-    acende é o chip (`mira.set`), salvo quando a régua passa outro."""
+    """O `Daemon` e o `IpcServer` do produto, na Navegação: sem controle"""
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
     relogio = _Relogio()
@@ -285,13 +240,7 @@ def _tique(nav: SimpleNamespace, botoes: frozenset[str] = frozenset()) -> None:
 
 
 def _ate_andar(nav: SimpleNamespace, botoes: frozenset[str] = frozenset()) -> tuple[int, int]:
-    """Os três primeiros tiques, no ritmo do produto, e quanto o cursor andou no
-    TERCEIRO.
-
-    O primeiro registra a demanda (o hub abre o leitor na volta de manutenção,
-    aqui a `reconciliar()`); o segundo drena pela primeira vez — e a primeira
-    drenagem é o acumulado de antes, que sai como nada; o terceiro move.
-    """
+    """Os três primeiros tiques, no ritmo do produto, e quanto o cursor andou no"""
     _tique(nav, botoes)
     nav.mesa.hub.reconciliar()
     _tique(nav, botoes)
@@ -301,23 +250,13 @@ def _ate_andar(nav: SimpleNamespace, botoes: frozenset[str] = frozenset()) -> tu
     return depois[0] - antes[0], depois[1] - antes[1]
 
 
-# ---------------------------------------------------------------------------
-# 1. A MATRIZ — o cursor anda com o giro, do P1 ao P4, no USB e no BT
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("jogador", [1, 2, 3, 4])
 def test_na_navegacao_o_chip_de_cada_um_move_o_cursor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     jogador: int, transporte: str,
 ) -> None:
-    """Os quatro controles girando igual; só o chip do jogador N aceso. O cursor
-    anda EXATAMENTE o giro de um controle: o dele, e o de ninguém mais.
-
-    MORDIDA: arranque a chamada de `mover_o_cursor_pelo_giro` do
-    `dispatch_mouse` e os oito casos reprovam com o cursor parado.
-    """
+    """Os quatro controles girando igual; só o chip do jogador N aceso. O cursor"""
     nav = _navegacao(tmp_path, monkeypatch, transporte)
     corpo = _mira_set(nav.servidor, uniq=_P[jogador], ligada=True)
     assert corpo["status"] == "ok" and corpo["alcance"] == {"tique": "aplicado"}, corpo
@@ -330,13 +269,7 @@ def test_na_navegacao_o_chip_de_cada_um_move_o_cursor(
 def test_dois_controles_com_a_mira_somam_no_mesmo_cursor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O mouse é um só: o P2 e o P3 com a Mira movem o MESMO cursor, e os dois
-    giros se somam — como duas mãos no mesmo mouse. Cada peça drena o próprio
-    leitor, e nenhum giro conta duas vezes.
-
-    MORDIDA: faça `_pecas_da_navegacao` devolver só a primeira peça e o cursor
-    anda metade.
-    """
+    """O mouse é um só: o P2 e o P3 com a Mira movem o MESMO cursor, e os dois"""
     nav = _navegacao(tmp_path, monkeypatch, "bt")
     for n in (2, 3):
         _mira_set(nav.servidor, uniq=_P[n], ligada=True)
@@ -346,12 +279,7 @@ def test_dois_controles_com_a_mira_somam_no_mesmo_cursor(
 def test_a_mira_do_perfil_inteiro_move_com_os_quatro_conectados(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A mira no PERFIL (a mesa inteira), com o registro de identidade dizendo
-    quem está na mesa: os quatro somam. O P4 fora da mesa não pede leitor.
-
-    MORDIDA: tire o ramo `arranjo.ligado` de `_pecas_da_navegacao` e só o
-    primário move.
-    """
+    """A mira no PERFIL (a mesa inteira), com o registro de identidade dizendo"""
     perfil = Profile(name="Mesa", match=MatchAny(type="any"),
                      movimento=ProfileMovimentoConfig(destino="analogico_direito"))
     nav = _navegacao(tmp_path, monkeypatch, "usb", perfil=perfil)
@@ -363,16 +291,7 @@ def test_a_mira_do_perfil_inteiro_move_com_os_quatro_conectados(
 def test_o_chip_aceso_de_quem_saiu_da_mesa_nao_pede_leitor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O chip é opinião GRAVADA no perfil e sobrevive à saída do controle: o P4
-    acendeu a Mira e saiu da mesa. O tique segue movendo o cursor pelo P2, e
-    não pede ao hub, sessenta vezes por segundo, o leitor de quem não está lá.
-
-    Conferência de 24/09/2026: a régua de cima só pergunta pela mira do PERFIL,
-    e o filtro dos conectados passava sem mordida pelo caminho do CHIP.
-
-    MORDIDA: tire o `chave not in conectados` de `_pecas_da_navegacao` e o P4
-    ganha leitor.
-    """
+    """O chip é opinião GRAVADA no perfil e sobrevive à saída do controle: o P4"""
     nav = _navegacao(tmp_path, monkeypatch, "bt")
     for n in (2, 4):
         _mira_set(nav.servidor, uniq=_P[n], ligada=True)
@@ -384,12 +303,7 @@ def test_o_chip_aceso_de_quem_saiu_da_mesa_nao_pede_leitor(
 def test_na_navegacao_o_destino_e_o_cursor_nunca_o_analogico(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O chip grava o analógico direito, que na Navegação é a RODA do mouse: o
-    giro não pode virar rolagem. Nenhum `REL_WHEEL`, nenhum `REL_HWHEEL`.
-
-    MORDIDA: tire o `para_o_cursor` do `aplicar_o_movimento` e o cursor fica
-    parado (o motor devolve os eixos a um `dispatch_mouse` que já passou).
-    """
+    """O chip grava o analógico direito, que na Navegação é a RODA do mouse: o"""
     nav = _navegacao(tmp_path, monkeypatch, "usb")
     _mira_set(nav.servidor, uniq=_P[1], ligada=True)
     assert _ate_andar(nav)[0] == _PX_POR_TIQUE
@@ -397,20 +311,10 @@ def test_na_navegacao_o_destino_e_o_cursor_nunca_o_analogico(
     assert not [e for e in nav.no.eventos if e[0] in (u.REL_WHEEL, u.REL_HWHEEL)]
 
 
-# ---------------------------------------------------------------------------
-# 2. OS AJUSTES DA CALIBRAR VALEM IGUAL
-# ---------------------------------------------------------------------------
-
-
 def test_a_sensibilidade_e_o_inverter_valem_no_cursor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sensibilidade 12 dobra o passo; «Inverter esquerda e direita» troca o
-    lado. É o arranjo da peça, inteiro, que vai ao cursor.
-
-    MORDIDA: faça o `para_o_cursor` devolver `ArranjoDeMovimento(destino="mouse")`
-    em vez de `replace(...)` e os ajustes dela somem.
-    """
+    """Sensibilidade 12 dobra o passo; «Inverter esquerda e direita» troca o"""
     nav = _navegacao(tmp_path, monkeypatch, "bt")
     _mira_set(nav.servidor, uniq=_P[2], ligada=True, sensibilidade=12,
               inverter_horizontal=True)
@@ -420,11 +324,7 @@ def test_a_sensibilidade_e_o_inverter_valem_no_cursor(
 def test_o_ignorar_tremor_corta_o_giro_lento(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Um tremor de 20 °/s abaixo de um «Ignorar tremor até» de 24: nada anda.
-
-    MORDIDA: tire a pergunta `deflexao(velocidade) == (0, 0)` do ramo do cursor
-    e o tremor move o cursor.
-    """
+    """Um tremor de 20 °/s abaixo de um «Ignorar tremor até» de 24: nada anda."""
     nav = _navegacao(tmp_path, monkeypatch, "usb", giro=(0.0, 20.0, 0.0))
     _mira_set(nav.servidor, uniq=_P[3], ligada=True, zona_morta_graus_s=24.0)
     assert _ate_andar(nav) == (0, 0)
@@ -434,20 +334,7 @@ def test_o_ignorar_tremor_corta_o_giro_lento(
 def test_so_enquanto_eu_segurar_vale_no_primario_e_nos_outros(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, jogador: int,
 ) -> None:
-    """«Só enquanto eu segurar» com L2: solto, o cursor fica; apertado, anda.
-    O primário pergunta aos botões do tique; o P3 pergunta ao leitor de
-    entradas do hub, sem grab.
-
-    CADA UM SÓ NA SUA FONTE (conferência de 24/09/2026): o L2 do P1 aperta SÓ
-    no tique, e o leitor passivo do hub segue solto para ele — o primário não
-    é pergunta do hub (a recusa A-09 do `ipc_handlers._inputs_passivos`: dois
-    números para o mesmo controle no mesmo tique). A primeira redação apertava
-    os dois, e o P1 passava igual lendo o hub.
-
-    MORDIDA: devolva sempre o vazio em `_botoes_da_peca` e o P3 nunca anda;
-    faça o primário perguntar ao hub (`_botoes_da_peca` para todos) e o P1
-    nunca anda.
-    """
+    """«Só enquanto eu segurar» com L2: solto, o cursor fica; apertado, anda."""
     nav = _navegacao(tmp_path, monkeypatch, "bt")
     _mira_set(nav.servidor, uniq=_P[jogador], ligada=True, gatilho="l2")
     assert _ate_andar(nav) == (0, 0), "a mira andou com o botão solto"
@@ -464,32 +351,17 @@ def test_so_enquanto_eu_segurar_vale_no_primario_e_nos_outros(
 def test_o_giroscopio_desligado_nao_move_o_cursor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O interruptor do Giroscópio dela vale na Navegação: desligado, nada anda.
-
-    MORDIDA: tire o portão `REGISTRO.estado(uniq).giroscopio` do motor.
-    """
+    """O interruptor do Giroscópio dela vale na Navegação: desligado, nada anda."""
     nav = _navegacao(tmp_path, monkeypatch, "usb")
     _mira_set(nav.servidor, uniq=_P[2], ligada=True)
     REGISTRO.definir(_P[2], giroscopio=False)
     assert _ate_andar(nav) == (0, 0)
 
 
-# ---------------------------------------------------------------------------
-# 3. O ÂNGULO DE UM SILÊNCIO NÃO É MOVIMENTO
-# ---------------------------------------------------------------------------
-
-
 def test_a_volta_de_um_silencio_nao_salta_o_cursor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dez minutos sem o tique da Navegação (a emulação calada por um jogo, a
-    pausa, o modo com controle virtual) com o controle girando: o leitor
-    acumulou 76.800 graus. A volta não pode despejá-los: o primeiro tique
-    descarta, e o seguinte anda um passo normal.
-
-    MORDIDA: faça `roteador.angulo_do_tique` devolver sempre o ângulo e o
-    primeiro tique salta mais de um milhão de pixels.
-    """
+    """Dez minutos sem o tique da Navegação (a emulação calada por um jogo, a"""
     nav = _navegacao(tmp_path, monkeypatch, "bt")
     _mira_set(nav.servidor, uniq=_P[4], ligada=True)
     assert _ate_andar(nav) == (_PX_POR_TIQUE, 0)
@@ -505,13 +377,9 @@ def test_a_volta_de_um_silencio_nao_salta_o_cursor(
 def test_o_chip_que_acende_depois_nao_despeja_o_acumulado(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O leitor fica aberto com o chip apagado (o cartão da tela lê o giro), e
-    ninguém drena. Quando ela acende o chip, o primeiro tique não salta.
-
-    MORDIDA: a mesma do silêncio.
-    """
+    """O leitor fica aberto com o chip apagado (o cartão da tela lê o giro), e"""
     nav = _navegacao(tmp_path, monkeypatch, "usb")
-    nav.mesa.hub.velocidade_do_movimento(_P[2])  # o cartão pediu o giro
+    nav.mesa.hub.velocidade_do_movimento(_P[2])
     nav.mesa.hub.reconciliar()
     nav.relogio.andar(120.0)
     _mira_set(nav.servidor, uniq=_P[2], ligada=True)
@@ -522,16 +390,13 @@ def test_o_chip_que_acende_depois_nao_despeja_o_acumulado(
 
 
 @pytest.mark.parametrize(("anterior", "agora", "passa"), [
-    (None, 10.0, False),              # nunca drenou: o que veio é acumulado
-    (10.0, 10.0 + _TIQUE_S, True),    # o tique seguinte
-    (10.0, 10.0 + rot.SILENCIO_DA_DRENAGEM_S, True),  # a borda ainda é tique
+    (None, 10.0, False),
+    (10.0, 10.0 + _TIQUE_S, True),
+    (10.0, 10.0 + rot.SILENCIO_DA_DRENAGEM_S, True),
     (10.0, 10.0 + rot.SILENCIO_DA_DRENAGEM_S + 0.01, False),
 ])
 def test_o_relogio_da_drenagem(anterior: float | None, agora: float, passa: bool) -> None:
-    """A regra pura: passa o ângulo de quem drenou há até meio segundo.
-
-    MORDIDA: troque o `>` por `>=` e a borda reprova.
-    """
+    """A regra pura: passa o ângulo de quem drenou há até meio segundo."""
     dono = SimpleNamespace()
     if anterior is not None:
         assert rot.angulo_do_tique(dono, _P[1], (0.0, 1.0, 0.0), anterior) is None
@@ -539,24 +404,10 @@ def test_o_relogio_da_drenagem(anterior: float | None, agora: float, passa: bool
     assert (volta is not None) is passa, (anterior, agora, volta)
 
 
-# ---------------------------------------------------------------------------
-# 4. O QUE NÃO MUDA
-# ---------------------------------------------------------------------------
-
-
 def test_sem_mira_nenhuma_nada_drena_e_o_cursor_fica(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem chip aceso e sem mira no perfil, o tique da Navegação paga o
-    `roteador.ativo` e mais nada: o motor nem é chamado, nenhum leitor é
-    pedido, nenhum pixel anda.
-
-    MORDIDA: tire o `if arranjo is None: return` de `mover_o_cursor_pelo_giro`
-    e o motor passa a ser chamado a cada tique. (O comportamento sozinho não
-    morde, e isso foi medido: sem o atalho o tique leva o `SO_NAS_PECAS`, que é
-    desligado, e o motor volta no portão da peça sem drenar — o atalho é de
-    CUSTO, e é o custo que esta régua conta.)
-    """
+    """Sem chip aceso e sem mira no perfil, o tique da Navegação paga o"""
     nav = _navegacao(tmp_path, monkeypatch, "usb")
     chamadas: list[str | None] = []
     motor = gp.aplicar_o_movimento
@@ -574,12 +425,7 @@ def test_sem_mira_nenhuma_nada_drena_e_o_cursor_fica(
 def test_a_chave_do_hub_e_a_do_backend(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """As peças que não são o primário vão ao hub pela chave de doze hex — a
-    grafia de `discover_dualsense_motion_evdevs`. Uma peça pedida com outra
-    grafia abriria um leitor que ninguém tem e o cursor ficaria parado.
-
-    MORDIDA: faça `_pecas_da_navegacao` devolver `aa:bb:cc:…` e o P2 para.
-    """
+    """As peças que não são o primário vão ao hub pela chave de doze hex — a"""
     nav = _navegacao(tmp_path, monkeypatch, "bt")
     _mira_set(nav.servidor, uniq="AA:BB:CC:00:00:02", ligada=True)
     assert _ate_andar(nav) == (_PX_POR_TIQUE, 0)
@@ -589,11 +435,7 @@ def test_a_chave_do_hub_e_a_do_backend(
 def test_sem_o_mouse_emulado_o_tique_da_navegacao_nao_drena(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O mouse emulado desligado: o `dispatch_mouse` volta cedo e ninguém
-    drena — a volta dele é a do silêncio, que a régua da seção 3 cobre.
-
-    MORDIDA: chame a mira antes do `device is None` e esta régua reprova.
-    """
+    """O mouse emulado desligado: o `dispatch_mouse` volta cedo e ninguém"""
     nav = _navegacao(tmp_path, monkeypatch, "usb")
     _mira_set(nav.servidor, uniq=_P[1], ligada=True)
     nav.daemon._mouse_device = None
@@ -603,10 +445,7 @@ def test_sem_o_mouse_emulado_o_tique_da_navegacao_nao_drena(
     assert all(leitor.drenagens == 0 for leitor in nav.mesa.movimento.values())
 
 
-
-# ---------------------------------------------------------------------------
 # 5. O «FLUINDO» COM O GIROSCÓPIO DESLIGADO — `controller_card.texto_motion`
-# ---------------------------------------------------------------------------
 
 
 def _com_espelho(jogador: int) -> dict[str, Any]:
@@ -615,8 +454,8 @@ def _com_espelho(jogador: int) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize(("entrada", "jogador"), [
-    ({"is_primary": True}, 1),       # o primário, fora do co-op
-    ({"player": 3}, 3),              # um secundário do co-op
+    ({"is_primary": True}, 1),
+    ({"player": 3}, 3),
 ])
 def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogador: int) -> None:
     """Com o chip Giroscópio desligado, o filtro tira o giro da janela do
@@ -638,17 +477,7 @@ def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogado
 
 
 def test_na_mascara_xbox_o_giroscopio_desligado_nao_diz_que_segue_ativo() -> None:
-    """A frase da máscara Xbox termina em «no Hefesto ele segue ativo», e ao
-    lado do chip Giroscópio DESLIGADO ela contradiz o que ela acabou de
-    desligar. Com o Giroscópio ligado a frase fica — com a Mira acesa também,
-    porque aí o giro é do Hefesto de verdade.
-
-    Conferência de 24/09/2026: a Xbox vinha antes do interruptor, e a
-    docstring afirmava que a frase seguia verdadeira com ele desligado.
-
-    MORDIDA: devolva o ramo `_mascara_e_xbox` para antes da guarda
-    `giroscopio_ligado is False` e o caso desligado reprova.
-    """
+    """A frase da máscara Xbox termina em «no Hefesto ele segue ativo», e ao"""
     from hefesto_dualsense4unix.app.widgets.controller_card import (
         _FRASE_MASCARA_XBOX,
         texto_motion,
@@ -675,12 +504,6 @@ def test_o_giroscopio_desligado_apaga_a_linha_do_cartao() -> None:
     assert [c["giro-no-jogo"] for c in cards.values()] == [""], cards
 
 
-# ---------------------------------------------------------------------------
-# 6. NO MODO NATIVO A TELA MOSTRA A COR — `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`
-# ---------------------------------------------------------------------------
-#: A barra acesa numa cor que o Hefesto escreveu (fonte NOSSA), nos dois
-#: transportes. É o estado do Nativo depois da `D-2309-NO-NATIVO-A-LUZ-E-O-
-#: NUMERO-SAO-DO-HEFESTO`: a vigia do sequestro a reafirma em até 1 s.
 _ACESA = {"lightbar_rgb": [0, 0, 255], "lightbar_on": True, "lightbar_source": "sysfs"}
 
 
@@ -706,11 +529,7 @@ def test_no_nativo_a_aba_02_mostra_a_cor_e_nao_jogo(transporte: str) -> None:
 
 
 def test_no_nativo_a_aba_04_desenha_a_tira_na_cor() -> None:
-    """A aba 04 desenhava a tira tracejada do «não sei» no Nativo. Com a barra
-    do Hefesto, a tira é a da cor, como em todo modo.
-
-    MORDIDA: a mesma — o ramo `native_mode` de volta ao motor.
-    """
+    """A aba 04 desenhava a tira tracejada do «não sei» no Nativo. Com a barra"""
     from pacotes import a04_iluminacao as a04
 
     from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
@@ -720,11 +539,6 @@ def test_no_nativo_a_aba_04_desenha_a_tira_na_cor() -> None:
     assert a04.estado_da_tira(recado) == a04.ACESA
 
 
-# ---------------------------------------------------------------------------
-# 7. A DICA DO GIROSCÓPIO DIZ O QUE ACONTECE — na Navegação e pelo destino
-# ---------------------------------------------------------------------------
-#: AS FRASES, escritas POR EXTENSO e não lidas do pacote: a régua confere o
-#: pacote contra o que o produto faz, não contra ele mesmo.
 _DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
 _DICA_NO_DIREITO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
                     "pelo analógico direito.")
@@ -740,8 +554,7 @@ _NATIVO = {"native_mode": True, "gamepad_emulation": {"enabled": False}}
 
 def _dicas(monkeypatch: pytest.MonkeyPatch, estado: dict[str, Any],
            miras: dict[int, dict[str, Any] | None]) -> dict[int, str]:
-    """A dica do Giroscópio de cada controle, pelo pacote da aba 02 — um
-    controle por jogador, no USB e no BT alternados."""
+    """A dica do Giroscópio de cada controle, pelo pacote da aba 02 — um"""
     import pacotes
     import pacotes.a02_controles as a02
 
@@ -762,13 +575,7 @@ def _dicas(monkeypatch: pytest.MonkeyPatch, estado: dict[str, Any],
 def test_na_navegacao_a_dica_diz_que_o_giro_move_o_cursor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Na Navegação o giro de quem está com a Mira acesa move o cursor, e a
-    dica diz isso — por controle: o P1 e o P3 acesos, o P2 apagado, o P4 sem
-    leitura.
-
-    MORDIDA: passe `navegacao=False` na chamada do `pacote` e o P1 e o P3
-    voltam a dizer «pelo analógico direito», que na Navegação é a roda.
-    """
+    """Na Navegação o giro de quem está com a Mira acesa move o cursor, e a"""
     acesa = {"ligada": True, "destino": "analogico_direito"}
     dicas = _dicas(monkeypatch, _NAVEGACAO,
                    {1: acesa, 2: {"ligada": False, "destino": "nenhum"}, 3: acesa, 4: None})
@@ -777,9 +584,9 @@ def test_na_navegacao_a_dica_diz_que_o_giro_move_o_cursor(
 
 
 @pytest.mark.parametrize(("estado", "esperada"), [
-    (_VIRTUAL, _DICA_NO_DIREITO),     # o modo com controle virtual: o analógico
-    (_NATIVO, _DICA_DE_HOJE),         # o Nativo: a de hoje, como antes
-    ({}, _DICA_NO_DIREITO),           # sem estado não se afirma a Navegação
+    (_VIRTUAL, _DICA_NO_DIREITO),
+    (_NATIVO, _DICA_DE_HOJE),
+    ({}, _DICA_NO_DIREITO),
 ])
 def test_fora_da_navegacao_a_dica_nao_fala_do_cursor(
     monkeypatch: pytest.MonkeyPatch, estado: dict[str, Any], esperada: str,
@@ -801,19 +608,11 @@ def test_fora_da_navegacao_a_dica_nao_fala_do_cursor(
 def test_a_dica_segue_o_destino_que_o_daemon_publica(
     monkeypatch: pytest.MonkeyPatch, destino: str, esperada: str,
 ) -> None:
-    """O destino fora do padrão (só no perfil escrito à mão) não pode acender
-    «pelo analógico direito»: a dica diz o que o destino dele faz.
-
-    MORDIDA: devolva sempre `DICA_DO_GIRO_COM_A_MIRA` com a Mira acesa e o
-    esquerdo e o cursor reprovam.
-    """
+    """O destino fora do padrão (só no perfil escrito à mão) não pode acender"""
     dicas = _dicas(monkeypatch, _VIRTUAL, {3: {"ligada": True, "destino": destino}})
     assert dicas == {3: esperada}
 
 
-# ---------------------------------------------------------------------------
-# 8. A DICA DO JOGADOR PROMETE O QUE A VIGIA CUMPRE — aba 04
-# ---------------------------------------------------------------------------
 def _dica_do_jogador() -> str:
     """O texto da dica do rótulo «Jogador» na bancada da 04, sem comentário."""
     import re
@@ -826,26 +625,14 @@ def _dica_do_jogador() -> str:
 
 
 def test_a_dica_do_jogador_nao_diz_que_o_jogo_manda_no_numero() -> None:
-    """MORDIDA: devolva «Um jogo em co-op pode mandar o próprio número por
-    cima.» ao `aba04.py`, regere a bancada, e reprova.
-
-    A STEAM-NO-FISICO-01 recusa o número que o jogo manda ao controle virtual
-    (`numeracao_do_jogo`) e reescreve em até um segundo o que chega por fora
-    (`VigiaDoSequestro`). A dica que dizia o contrário ensinava a pessoa a não
-    confiar no número que o Hefesto dá.
-    """
+    """MORDIDA: devolva «Um jogo em co-op pode mandar o próprio número por"""
     texto = _dica_do_jogador()
     assert "por cima" not in texto, texto
     assert "volta em até um segundo" in texto, texto
 
 
 def test_o_segundo_da_dica_e_a_conta_da_vigia() -> None:
-    """A dica promete UM segundo, e a promessa é a conta do dono.
-
-    MORDIDA: suba o `INTERVALO_DA_REAFIRMACAO_S` para 1,2 s e reprova — a dica
-    passaria a prometer o que a vigia não cumpre. E o número do jogo tem de
-    continuar recusado no controle virtual, que é a outra metade da frase.
-    """
+    """A dica promete UM segundo, e a promessa é a conta do dono."""
     import math
 
     from hefesto_dualsense4unix.core import escritor_cru

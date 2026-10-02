@@ -1,23 +1,4 @@
-"""O doctor resume as famílias do rádio perguntando ao dono do classificador.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-4 da O-DIARIO-DO-RADIO-01:
-o kernel-watch ganhou tags próprias para o rádio ([BT-SOCKET], [FILA-CHEIA],
-[ENLACE-PARADO], [BT-TRAVADO], [CRC]) e o doctor não dizia nenhuma. O
-classificador já existe — `storm_doctor.classificar_o_historico`, que também relê
-o log de antes das famílias pelo conteúdo do [BT-HCI] —, e o doctor pergunta a
-ele em vez de redigitar o padrão.
-
-As três respostas que se trancam aqui:
-
-1. o que caiu dentro da janela é aviso, com a data; o que caiu fora é histórico;
-2. o log velho (antes de 23/09) se lê pelo conteúdo: o laço do Realtek no
-   [BT-HCI] é «adaptador travado»;
-3. família que nenhuma volta da vigia procurou é «não olhei», e não zero.
-
-A MORDIDA, medida: fazer o trecho Python do doctor contar as rajadas do log
-inteiro no lugar das da janela reprova o teste 1 (o CRC de 30 dias vira aviso);
-tirar a linha do «não olhei», o 3.
-"""
+"""O doctor resume as famílias do rádio perguntando ao dono do classificador."""
 
 from __future__ import annotations
 
@@ -36,8 +17,6 @@ def _doctor(casa: Path, linhas: list[str]) -> str:
     estado = casa / ".local" / "state" / "hefesto-dualsense4unix"
     estado.mkdir(parents=True)
     (estado / "kernel.log").write_text("\n".join(linhas) + "\n", encoding="utf-8")
-    # O localizador do python é o único dublê: o que se mede é o classificador
-    # de verdade, importado do src desta árvore pelo trecho do próprio doctor.
     roteiro = (
         f'source "{DOCTOR}"\n'
         f'_python_do_produto() {{ printf "%s\\n" "{sys.executable}"; }}\n'

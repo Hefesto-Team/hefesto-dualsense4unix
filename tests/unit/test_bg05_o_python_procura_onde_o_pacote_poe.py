@@ -1,26 +1,4 @@
-"""BG-05 — o Python procura onde o pacote põe.
-
-O `doctor` roda `scripts/doctor.sh` e mais três scripts do repo. Para achá-los
-ele perguntava *"em que diretório esta instalação pôs o share do Hefesto?"* com
-uma lista LOCAL de três layouts — checkout, `/usr/share` e `/usr/local/share`.
-O Flatpak instala em `/app/share/…` e não estava na lista, então o `doctor`
-dizia "não encontrado" dentro de uma sandbox onde o arquivo existe.
-
-Pior: a mesma pergunta tinha uma SEGUNDA resposta no código
-(`app/actions/daemon_actions.py:495`, `BASES_DE_INSTALACAO`), e as duas já
-haviam divergido — a segunda ganhou `/app/share` na T-02(b) de 25/08/2026 e a
-do `cmd_doctor` ficou para trás. É a correção pela metade, que esta casa proíbe.
-
-As mordidas deste arquivo:
-
-- um **Flatpak de mentira** (`sys.prefix` apontando para um `/app` de brinquedo)
-  em que a busca ACHA o script — arranque `/app/share` ou a linha de
-  `sys.prefix` de `bases_de_instalacao()` e ele reprova;
-- a **guarda do outro lado**: um diretório onde o script não está devolve
-  ``None``, nunca um caminho inventado — régua que só sabe achar não é régua;
-- e o portão contra a REINCIDÊNCIA: `cmd_doctor.py` não pode voltar a carregar
-  uma lista de bases própria.
-"""
+"""BG-05 — o Python procura onde o pacote põe."""
 from __future__ import annotations
 
 import sys
@@ -45,9 +23,6 @@ def _plantar(base: Path, relpath: str) -> Path:
 class TestOFlatpakDeMentira:
     """A sandbox do Flatpak: `sys.prefix == /app`, os arquivos em `/app/share`."""
 
-    # Um nome que NÃO existe no checkout, de propósito: se a régua usasse o
-    # nome de um script real, a primeira base (a raiz do repo) responderia e o
-    # teste passaria com a cura arrancada.
     SCRIPT = "scripts/so-existe-dentro-do-flatpak.sh"
 
     def test_acha_o_script_dentro_da_sandbox(
@@ -69,13 +44,7 @@ class TestOFlatpakDeMentira:
     def test_o_doctor_sh_da_sandbox_tambem_e_achado(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """O caminho que o `doctor` realmente percorre, não só o helper.
-
-        `_find_doctor_sh` é quem decide entre rodar o exame de verdade e cair
-        no ramo "só os checks do daemon". Aqui a raiz do checkout é apagada da
-        lista (num Flatpak ela não existe) para que a única resposta possível
-        seja a da sandbox.
-        """
+        """O caminho que o `doctor` realmente percorre, não só o helper."""
         app = tmp_path / "app"
         esperado = _plantar(app / "share" / "hefesto-dualsense4unix", "scripts/doctor.sh")
         monkeypatch.setattr(sys, "prefix", str(app))
@@ -112,12 +81,7 @@ class TestAGuardaDoOutroLado:
     def test_nao_devolve_diretorio_como_se_fosse_script(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """Um DIRETÓRIO com o nome procurado não conta como achado.
-
-        `Path.exists()` diria que sim; a régua usa `is_file()` justamente por
-        isso — `bash <um diretório>` falha com uma mensagem que não ajuda
-        ninguém.
-        """
+        """Um DIRETÓRIO com o nome procurado não conta como achado."""
         app = tmp_path / "app"
         (app / "share" / "hefesto-dualsense4unix" / "scripts" / "doctor.sh").mkdir(
             parents=True
@@ -176,8 +140,7 @@ class TestAListaDeBases:
         assert str(tmp_path / "dados" / "hefesto-dualsense4unix") in caminhos
 
     def test_sem_base_repetida(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Com `sys.prefix == /usr` (o `.deb` no Python do sistema) as bases 2 e 5
-        são o MESMO diretório; olhar duas vezes não acrescenta nada."""
+        """Com `sys.prefix == /usr` (o `.deb` no Python do sistema) as bases 2 e 5"""
         monkeypatch.setattr(sys, "prefix", "/usr")
         caminhos = [str(b) for b in repo_files.bases_de_instalacao()]
 

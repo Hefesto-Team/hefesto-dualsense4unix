@@ -1,36 +1,4 @@
-"""O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 — a regra do Hefesto fala por último.
-
-A QUEIXA DELA, 25/09/2026, 09h40: *«4 controles conectados, lightbar do player
-3 apagado e do player 4 também. nossas soluções estão ocorrendo para todos os
-players, certo?»*
-
-O QUE FOI MEDIDO NA MESA DELA, só lendo: a Steam segurava o hidraw FÍSICO do
-P2, do P3 e do P4, e o banco do udev desses três nós tinha a tag corrente
-`uaccess` (`Q:uaccess`) sem a `seat` — a impressão digital de uma regra que
-devolve o `uaccess` DEPOIS da `71-seat.rules`. É a
-`/usr/lib/udev/rules.d/71-sony-controllers.rules`, do pacote
-`game-devices-udev`, que todo Pop!_OS de desktop traz. A regra do Hefesto se
-chamava `70-ps5-controller.rules`, fechava o nó, e a 71 o reabria: o nó nascia
-`0660` com a ACL da sessão, e a Steam o abria no instante do nascimento.
-
-A RÉGUA ANTIGA ERA CEGA POR CONSTRUÇÃO: o udev de bolso de
-`test_o_no_nasce_fechado.py` rodava SÓ o asset, começando do estado «como o
-steam-devices o deixa», e nunca o que vem depois dele. Esta roda a CADEIA:
-as regras de `/etc`, `/run`, `/usr/local/lib` e `/usr/lib` ordenadas juntas
-pelo nome do arquivo (o de `/etc` sombreia o de mesmo nome), com as regras de
-terceiros DE VERDADE copiadas como dublê em `tests/fixtures/udev/de-terceiros/`
-(o LEIA de lá diz de onde vêm), e o `73-seat-late.rules` do systemd decidindo,
-como decide no aparelho, se o `RUN{builtin}+="uaccess"` entra na fila.
-
-AS MORDIDAS, medidas em 25/09/2026:
-  - o asset de volta ao nome `70-ps5-controller.rules` → as seis linhas do
-    físico com a `71-sony` reprovam (a 71 reabre);
-  - o `MODE:=` de volta a `MODE=` → a régua da regra posterior com `0666`
-    reprova;
-  - o `DEVPATH` tirado da linha do vpad → o Edge físico pelo cabo sai aberto.
-
-Nada aqui toca `/dev`, `/sys`, `/run/udev` nem o udev vivo: é tudo texto.
-"""
+"""O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 — a regra do Hefesto fala por último."""
 
 from __future__ import annotations
 
@@ -46,12 +14,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 ASSETS = RAIZ / "assets"
 TERCEIROS = RAIZ / "tests" / "fixtures" / "udev" / "de-terceiros"
 
-#: O nome de antes (até 25/09/2026) — o da mordida.
 NOME_DE_ANTES = "70-ps5-controller.rules"
 
-#: Os diretórios do udev, na ordem de PRIORIDADE para o mesmo nome de arquivo
-#: (man 7 udev, «RULES FILES»): /etc sombreia /run, que sombreia /usr/local/lib
-#: e /usr/lib. A ORDEM DE EXECUÇÃO é outra coisa: todos juntos, pelo nome.
 DIRETORIOS = ("etc", "run", "usr/local/lib", "usr/lib")
 
 
@@ -72,18 +36,11 @@ def a_regra_do_no() -> Path:
     return achados[0]
 
 
-# ---------------------------------------------------------------------------
-# O udev de bolso
-# ---------------------------------------------------------------------------
-
 _TERMO = re.compile(
     r'([A-Z_]+(?:\{[^}]*\})?)\s*(==|!=|\+=|-=|:=|=)\s*"((?:[^"\\]|\\.)*)"'
 )
 
-#: As chaves que casam no PRÓPRIO aparelho.
 _DO_APARELHO = ("ACTION", "KERNEL", "SUBSYSTEM", "DEVPATH", "DRIVER", "TAG", "TEST")
-#: As chaves de PAI: numa linha, todas têm de casar no MESMO elo da corrente
-#: (o próprio aparelho conta como o primeiro elo) — é a regra do udev.
 _DE_PAI = ("KERNELS", "SUBSYSTEMS", "DRIVERS")
 
 
@@ -149,7 +106,7 @@ def _casa_o_elo(elo: Elo, chave: str, op: str, valor: str) -> bool:
         ok = _casa(valor, elo.subsystem)
     elif chave == "DRIVERS":
         ok = _casa(valor, elo.driver)
-    else:  # ATTRS{x}
+    else:
         nome = chave[6:-1]
         if nome not in elo.attrs:
             return False
@@ -161,9 +118,6 @@ def _a_linha_casa(ap: Aparelho, termos: list[tuple[str, str, str]], existentes: 
     de_pai: list[tuple[str, str, str]] = []
     for chave, op, valor in termos:
         if op not in ("==", "!="):
-            # IMPORT é chave de CASAMENTO no udev: falhar o import é não casar.
-            # Só o `cmdline` falha aqui (nenhum `nomodeset`); os outros
-            # (`parent`, `builtin`) não mudam nada do que se mede.
             if chave == "IMPORT{cmdline}":
                 return False
             continue
@@ -187,7 +141,7 @@ def _a_linha_casa(ap: Aparelho, termos: list[tuple[str, str, str]], existentes: 
         elif chave.startswith("ENV{"):
             ok = _casa(valor, ap.env.get(chave[4:-1], ""))
         elif chave.startswith("ATTR{"):
-            ok = False  # o hidraw não tem os sysattrs que estas regras pedem
+            ok = False
         else:  # pragma: no cover — chave nova numa regra: tem de ser ensinada
             raise AssertionError(f"o udev de bolso não conhece a chave {chave}{op}")
         falhou = (not ok) if op == "==" else ok
@@ -227,17 +181,11 @@ def _aplicar(ap: Aparelho, termos: list[tuple[str, str, str]]) -> str | None:
             ap.run.append((tipo, valor))
         elif chave == "GOTO":
             goto = valor
-        # LABEL, OPTIONS, SYMLINK, IMPORT, ATTR{}=: nada que se meça aqui.
     return goto
 
 
 def cadeia(raiz: Path) -> list[Path]:
-    """Os arquivos que o udev leria nesta raiz, na ORDEM em que ele os roda.
-
-    O nome decide as duas coisas, e são duas: a SOMBRA (mesmo nome: vence o
-    diretório de maior prioridade) e a ORDEM (todos juntos, pelo nome,
-    comparado byte a byte — `strcmp`).
-    """
+    """Os arquivos que o udev leria nesta raiz, na ORDEM em que ele os roda."""
     por_nome: dict[str, Path] = {}
     for d in DIRETORIOS:
         pasta = raiz / d / "udev" / "rules.d"
@@ -265,9 +213,6 @@ def rodar(ap: Aparelho, raiz: Path, *, existentes: set[str] | None = None) -> Ap
             if _a_linha_casa(ap, termos, existentes):
                 pulando_ate = _aplicar(ap, termos)
     return ap
-
-
-# --- os aparelhos da matriz dela -------------------------------------------
 
 
 def pelo_cabo(pid: str, instancia: str = "0005") -> Aparelho:
@@ -308,12 +253,6 @@ FISICOS = {
     "edge-radio": lambda: pelo_radio("0df2"),
 }
 
-#: As combinações de terceiros: a máquina dela (as duas), a do Fedora/Debian só
-#: com o `steam-devices`, uma só com o `game-devices-udev`, uma sem nenhuma, e
-#: as duas do Arch — onde o pacote `steam` grava a MESMA regra da Valve com o
-#: nome `70-steam-input.rules` (conferência de 25/09/2026; o nome vem da
-#: memória do PKGBUILD, não de uma máquina Arch medida). Nelas a regra de antes
-#: perdia até SEM o `game-devices-udev`: `70-p` < `70-s`.
 TERCEIROS_POR_MAQUINA = {
     "as-duas": ("60-steam-input.rules", "71-sony-controllers.rules"),
     "so-steam-devices": ("60-steam-input.rules",),
@@ -323,7 +262,6 @@ TERCEIROS_POR_MAQUINA = {
     "arch-com-game-devices-udev": ("70-steam-input.rules", "71-sony-controllers.rules"),
 }
 
-#: O nome que a regra tem na máquina -> a cópia de verdade que lhe dá o conteúdo.
 CONTEUDO_DE = {"70-steam-input.rules": "60-steam-input.rules"}
 
 
@@ -336,11 +274,7 @@ def montar(
     extra_etc: dict[str, str] | None = None,
     extra_usr: dict[str, str] | None = None,
 ) -> Path:
-    """Uma máquina de mentira: o systemd e os terceiros em /usr/lib, o Hefesto em /etc.
-
-    Como o `install_udev.sh` deixa: TODOS os assets do Hefesto em /etc (a
-    regra do nó com o nome e o conteúdo que o teste pedir).
-    """
+    """Uma máquina de mentira: o systemd e os terceiros em /usr/lib, o Hefesto em /etc."""
     etc = tmp / "etc" / "udev" / "rules.d"
     usr = tmp / "usr/lib" / "udev" / "rules.d"
     etc.mkdir(parents=True)
@@ -385,18 +319,8 @@ def _fechado(ap: Aparelho) -> tuple[bool, str]:
     )
 
 
-# ---------------------------------------------------------------------------
-# 0. O udev de bolso reproduz o defeito medido — o controle positivo
-# ---------------------------------------------------------------------------
-
-
 class TestOUdevDeBolsoReproduzAMesaDela:
-    """Uma régua que não reproduz o defeito não prova a cura.
-
-    Com o nome de antes e as duas regras de terceiros que a máquina dela tem,
-    o físico TEM de sair aberto: é o que o banco do udev dela mostrou em
-    25/09 (`Q:uaccess` nos três nós que a Steam segurava).
-    """
+    """Uma régua que não reproduz o defeito não prova a cura."""
 
     @pytest.mark.parametrize("aparelho", sorted(FISICOS))
     def test_a_regra_de_antes_nasce_aberta_como_na_mesa_dela(
@@ -414,12 +338,7 @@ class TestOUdevDeBolsoReproduzAMesaDela:
     def test_so_o_nome_de_antes_ja_basta_para_a_acl_voltar(
         self, tmp_path: Path, aparelho: str
     ) -> None:
-        """O `MODE:=` sozinho não cura: 0600 com a ACL da sessão abre igual.
-
-        É a mordida escrita: o conteúdo de hoje com o nome de ontem. O modo
-        fica travado em 0600, e mesmo assim a `71-sony` repõe a TAG e o
-        `73-seat-late` escreve a ACL — quem cura é o LUGAR do arquivo.
-        """
+        """O `MODE:=` sozinho não cura: 0600 com a ACL da sessão abre igual."""
         raiz = montar(tmp_path, nome_da_regra=NOME_DE_ANTES)
         ap = rodar(FISICOS[aparelho](), raiz)
         assert ap.acl_da_sessao
@@ -429,11 +348,7 @@ class TestOUdevDeBolsoReproduzAMesaDela:
     def test_no_arch_a_regra_de_antes_perde_sem_o_game_devices_udev(
         self, tmp_path: Path, aparelho: str
     ) -> None:
-        """A `70-steam-input.rules` do Arch corre DEPOIS da `70-ps5` e reabre o 0ce6.
-
-        É o «qualquer máquina» da sprint: o defeito não era da 71-sony do Pop.
-        Sem ela, só com a regra da Valve no nome do Arch, o nó nascia aberto.
-        """
+        """A `70-steam-input.rules` do Arch corre DEPOIS da `70-ps5` e reabre o 0ce6."""
         raiz = montar(
             tmp_path,
             terceiros=TERCEIROS_POR_MAQUINA["arch-so-steam"],
@@ -443,21 +358,11 @@ class TestOUdevDeBolsoReproduzAMesaDela:
         assert rodar(FISICOS[aparelho](), raiz).acl_da_sessao
 
     def test_a_assinatura_do_banco_dela_e_uaccess_sem_seat(self, tmp_path: Path) -> None:
-        """A impressão digital medida: `Q:uaccess` sem `Q:seat` no físico do rádio.
-
-        O `71-seat.rules` só põe `seat` em quem já tem `uaccess` na hora dele.
-        Pelo rádio o `60-steam-input` dá o `uaccess`, a 70 o tira ANTES da
-        71-seat, e a 71-sony o devolve DEPOIS: sobra `uaccess` sem `seat`.
-        """
+        """A impressão digital medida: `Q:uaccess` sem `Q:seat` no físico do rádio."""
         raiz = montar(tmp_path, nome_da_regra=NOME_DE_ANTES)
         ap = rodar(pelo_radio("0ce6"), raiz)
         assert "uaccess" in ap.tags
         assert "seat" not in ap.tags
-
-
-# ---------------------------------------------------------------------------
-# 1. A cura: o físico nasce fechado em qualquer máquina, e o vpad não
-# ---------------------------------------------------------------------------
 
 
 class TestOFisicoNasceFechadoEmQualquerMaquina:
@@ -467,14 +372,7 @@ class TestOFisicoNasceFechadoEmQualquerMaquina:
     def test_o_fisico_termina_0600_de_root_sem_acl(
         self, tmp_path: Path, aparelho: str, maquina: str, evento: str
     ) -> None:
-        """A MORDIDA: o asset de volta ao nome 70 reprova as linhas com a 71-sony.
-
-        O `change` (o trigger do install) roda de dois jeitos. O do udev de
-        verdade (systemd ≥ 247): as tags CORRENTES começam vazias a cada
-        evento, e as do evento anterior só voltam como pegajosas (`G:`), que o
-        `TAG==` não lê. E o pessimista, em que o nó chega com o `uaccess` e o
-        `seat` do nascimento anterior como correntes.
-        """
+        """A MORDIDA: o asset de volta ao nome 70 reprova as linhas com a 71-sony."""
         raiz = montar(tmp_path, terceiros=TERCEIROS_POR_MAQUINA[maquina])
         ap = FISICOS[aparelho]()
         ap.acao = evento.removesuffix("-pessimista")
@@ -488,12 +386,7 @@ class TestOFisicoNasceFechadoEmQualquerMaquina:
     def test_o_vpad_continua_com_a_acl_da_sessao(
         self, tmp_path: Path, maquina: str, evento: str
     ) -> None:
-        """O vpad é o controle que o Hefesto ENTREGA ao jogo: tem de ficar aberto.
-
-        Também no `change` (o trigger do install), que começa sem tag corrente
-        nenhuma: é a regra do nó que tem de devolvê-la, e não a lembrança do
-        nascimento.
-        """
+        """O vpad é o controle que o Hefesto ENTREGA ao jogo: tem de ficar aberto."""
         raiz = montar(tmp_path, terceiros=TERCEIROS_POR_MAQUINA[maquina])
         ap = o_vpad()
         ap.acao = evento
@@ -502,10 +395,7 @@ class TestOFisicoNasceFechadoEmQualquerMaquina:
         assert ap.modo == "0660"
 
     def test_uma_regra_posterior_com_0666_nao_reabre_o_fisico(self, tmp_path: Path) -> None:
-        """O `MODE:=` é final: a receita da internet não vence.
-
-        A MORDIDA: troque `MODE:=` por `MODE=` no asset e o físico sai 0666.
-        """
+        """O `MODE:=` é final: a receita da internet não vence."""
         raiz = montar(
             tmp_path,
             extra_etc={"99-hidraw-permissions.rules": 'KERNEL=="hidraw*", MODE="0666"\n'},
@@ -517,14 +407,7 @@ class TestOFisicoNasceFechadoEmQualquerMaquina:
     def test_uma_regra_de_terceiro_entre_nos_e_o_73_seat_late_ainda_reabre(
         self, tmp_path: Path
     ) -> None:
-        """O LIMITE da ordem, declarado: o `TAG` não tem atribuição final.
-
-        Um arquivo que ordene entre a nossa e a `73-seat-late.rules` devolve o
-        `uaccess` e o nó nasce aberto. Nenhuma máquina medida tem um; quem
-        vigia é o doctor (`check_o_no_fisico_nasce_sem_acl`), que lê a tag
-        corrente no banco do udev e nomeia a regra. Se este teste passar a
-        falhar, a cura ficou MAIS forte — e a nota do asset tem de mudar junto.
-        """
+        """O LIMITE da ordem, declarado: o `TAG` não tem atribuição final."""
         regra = a_regra_do_no().name
         intruso = "73-i-intruso.rules"
         assert regra.encode() < intruso.encode() < b"73-seat-late.rules"
@@ -535,18 +418,9 @@ class TestOFisicoNasceFechadoEmQualquerMaquina:
         assert rodar(pelo_radio("0ce6"), raiz).acl_da_sessao
 
 
-# ---------------------------------------------------------------------------
-# 2. O lugar do arquivo: depois de todo 70/71/72, antes da 73-seat-late
-# ---------------------------------------------------------------------------
-
-
 class TestOLugarDoArquivo:
     def test_ordena_depois_de_todo_70_71_72_e_antes_da_73_seat_late(self) -> None:
-        """A posição é LEXICAL (`strcmp`), não o número — `int(prefixo) < 73` mentia.
-
-        A régua antiga (`test_o_no_nasce_fechado.py`) reprovaria o nome certo:
-        73 não é menor que 73, e mesmo assim `73-h` corre antes de `73-s`.
-        """
+        """A posição é LEXICAL (`strcmp`), não o número — `int(prefixo) < 73` mentia."""
         nome = a_regra_do_no().name.encode()
         assert nome > b"72-\xff", "a regra do nó corre antes de algum 72-* de terceiro"
         assert nome < b"73-seat-late.rules", "a regra do nó corre depois da 73-seat-late"
@@ -563,11 +437,6 @@ class TestOLugarDoArquivo:
             "73-ps5-controller-hotplug.rules",
             "74-ps5-controller-hotplug-bt.rules",
         )
-
-
-# ---------------------------------------------------------------------------
-# 3. As combinações que os pacotes deixam — a sombra pelo nome
-# ---------------------------------------------------------------------------
 
 
 def _aberta() -> str:
@@ -593,10 +462,7 @@ def _aberta() -> str:
 
 class TestAsCombinacoesDosPacotes:
     def test_a_fechada_em_etc_sombreia_a_aberta_do_pacote(self, tmp_path: Path) -> None:
-        """O `.deb`/`.rpm` grava a ABERTA em /usr/lib; o helper, com o broker, a FECHADA em /etc.
-
-        Só funciona com o MESMO nome nos dois lugares.
-        """
+        """O `.deb`/`.rpm` grava a ABERTA em /usr/lib; o helper, com o broker, a FECHADA em /etc."""
         regra = a_regra_do_no().name
         raiz = montar(tmp_path, extra_usr={regra: _aberta()})
         for aparelho in FISICOS.values():

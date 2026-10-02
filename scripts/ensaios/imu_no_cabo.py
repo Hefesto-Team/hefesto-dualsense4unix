@@ -109,75 +109,26 @@ from comum import (
     tabela,
 )
 
-#: `DS_ACC_RES_PER_G`, de `hid-playstation.c` (faixa +-4 g). É a régua, e ela é
-#: DECLARADA, não escolhida: a conta inteira deste instrumento é dividir por
-#: este número. A conferência contra o `EVIOCGABS` do kernel desta máquina está
-#: em `_resolucao_do_kernel`.
 DS_ACC_RES_PER_G = 8192
 
-#: `DS_GYRO_RES_PER_DEG_S`, do `hid-playstation.c`.
-#:
-#: FATO ERRADO SUBSTITUÍDO em 15/08/2026 (E-8). Estava escrito aqui que o
-#: giroscópio "parado na mesa tem de dar perto de ZERO graus/s" dividindo o
-#: valor CRU por este número, e a coluna `giro_*_dps` do bruto
-#: `2026-08-15-E4-imu_no_cabo.csv` saiu assim. **Está errada por ~62x.**
-#:
-#: 1024 é a resolução DE SAÍDA — a escala do `ABS_RX/RY/RZ` que o kernel
-#: publica DEPOIS de calibrar. O número cru do fio está noutra escala: o driver
-#: converte por `cru * speed_2x / sens_denom`, com os dois lidos do feature
-#: report 0x05 de cada unidade (`hid-playstation.c:1196-1213`). Medido nos
-#: quatro aparelhos da mesa: `speed_2x = 1080`, `sens_denom ~ 17700`, ou seja
-#: **~16,4 LSB por grau/s no fio**, não 1024.
-#:
-#: Por que isso é grave e não é imprecisão: a régua errada **torna o controle
-#: negativo impossível de reprovar**. Com ela, um controle girando a 60 graus/s
-#: leria "0,96" e passaria por parado — o instrumento não conseguiria falhar.
-#:
-#: A régua certa, derivada do próprio aparelho, está em
-#: `scripts/ensaios/giro_e_buraco.py`, que é quem mede o giroscópio agora. Este
-#: número fica aqui porque é a constante do driver e o `giro_e_buraco.py` o
-#: importa daqui para IMPRIMIR o tamanho do erro ao lado da medida boa; o que
-#: saiu foi o uso dele como divisor do valor cru.
 DS_GYRO_RES_PER_DEG_S = 1024
 
-#: Report ID de entrada e o deslocamento do corpo, POR TRANSPORTE.
-#: `hid-playstation.c:140-154` e `:1580-1595`. O `corpo` é onde começa o
-#: `struct dualsense_input_report` dentro do buffer lido do hidraw (que já vem
-#: com o byte do report id em `data[0]`).
 PERFIL_DO_TRANSPORTE = {
     CABO: {"report_id": 0x01, "corpo": 1, "tamanho": 64},
     RADIO: {"report_id": 0x31, "corpo": 2, "tamanho": 78},
 }
 
-#: Offsets DENTRO do corpo (`struct dualsense_input_report`), do fonte do
-#: driver: `gyro[3]` em 15-20 e `accel[3]` em 21-26, ambos `__le16` com sinal.
 OFFSET_GIRO_NO_CORPO = 15
 OFFSET_ACEL_NO_CORPO = 21
 
-#: `EVIOCGABS(ABS_X)` = `_IOR('E', 0x40 + ABS_X, struct input_absinfo)`.
-#: `struct input_absinfo` são seis `__s32`: value, minimum, maximum, fuzz,
-#: flat, resolution. É a única conferência independente da régua que não custa
-#: uma biblioteca a mais.
 _TAMANHO_ABSINFO = 24
 _EVIOCGABS_ABS_X = (2 << 30) | (_TAMANHO_ABSINFO << 16) | (0x45 << 8) | 0x40
 
-#: Quanto se lê de uma vez. O maior report de entrada tem 78 B (rádio); 256 é
-#: folga barata e garante que nenhum report chegue truncado.
 _BYTES_POR_LEITURA = 256
 
 
 def mascarar(mac: str) -> str:
-    """`aa:bb:cc:dd:ee:ff` -> `aa:bb:cc:00:00:ff` — a máscara da casa.
-
-    Octetos 4 e 5 zerados: preserva o fabricante (que é informação técnica útil)
-    e apaga o aparelho dela. Há portão que reprova MAC real em arquivo
-    versionado, e a saída bruta deste ensaio É versionada.
-
-    O exemplo acima é forjado de propósito. Ele já foi escrito com o endereço
-    REAL de um dos controles da bancada — a docstring da função que mascara era,
-    ela mesma, o vazamento, e passou verde porque o portão não conhecia aquele
-    OUI (15/08/2026; ver a nota datada em `tests/unit/test_docs_mac_anonimato.py`).
-    """
+    """`aa:bb:cc:dd:ee:ff` -> `aa:bb:cc:00:00:ff` — a máscara da casa."""
     partes = mac.split(":")
     if len(partes) != 6:
         return mac
@@ -215,12 +166,7 @@ class Medida:
 
     @property
     def desvio(self) -> float:
-        """Desvio-padrão do módulo. Um controle parado tem de ter desvio ~0.
-
-        Serve de detector de mentira do próprio instrumento: se os offsets
-        estiverem errados, o "módulo" vira ruído e o desvio explode junto com
-        a média — os dois sintomas aparecem na mesma linha da tabela.
-        """
+        """Desvio-padrão do módulo. Um controle parado tem de ter desvio ~0."""
         if len(self.modulos) < 2:
             return 0.0
         media = sum(self.modulos) / len(self.modulos)
@@ -235,15 +181,7 @@ class Medida:
 
     @property
     def giro_cru_medio_lsb(self) -> list[float]:
-        """A média por eixo do giroscópio, em LSB CRUS — sem converter nada.
-
-        Antes isto dividia por `DS_GYRO_RES_PER_DEG_S` e se chamava
-        `giro_em_graus_por_s`, o que errava por ~62x (ver a nota datada na
-        constante). Publicar o CRU é o que sobra de honesto num instrumento
-        que não lê a calibração da unidade: quem quer graus por segundo usa o
-        `giro_e_buraco.py`, que lê o feature 0x05 e deriva a régua de cada
-        aparelho.
-        """
+        """A média por eixo do giroscópio, em LSB CRUS — sem converter nada."""
         if not self.aproveitados:
             return [0.0, 0.0, 0.0]
         return [s / self.aproveitados for s in self.somas_giro]
@@ -254,23 +192,12 @@ class Medida:
 
     @property
     def apelido_mascarado(self) -> str:
-        """Como este controle aparece na tabela — com o MAC já mascarado.
-
-        A máscara é aplicada AQUI, na fonte, e não no ponto de impressão: a
-        saída bruta deste ensaio é versionada, e a regra da casa é que MAC real
-        não entra em arquivo do repositório. Quem quiser o MAC inteiro na tela
-        pede `--sem-mascara`, e ainda assim o CSV sai mascarado.
-        """
+        """Como este controle aparece na tabela — com o MAC já mascarado."""
         return mascarar(self.aparelho.mac) or self.aparelho.hidraw
 
 
 def _no_de_movimento(aparelho: Aparelho) -> str:
-    """O `/dev/input/eventN` do nó *Motion Sensors* deste controle, ou "".
-
-    Resolvido a cada chamada pelo sysfs do próprio aparelho: os números de nó
-    NÃO são estáveis, e em 15/08/2026 um controle reapareceu com outro `eventN`
-    entre duas leituras com segundos de diferença.
-    """
+    """O `/dev/input/eventN` do nó *Motion Sensors* deste controle, ou ""."""
     raiz = os.path.join(aparelho.dir_device, "input")
     if not os.path.isdir(raiz):
         return ""
@@ -288,20 +215,11 @@ def _no_de_movimento(aparelho: Aparelho) -> str:
 
 
 def _resolucao_do_kernel(aparelho: Aparelho) -> tuple[int | None, str]:
-    """A `resolution` que o kernel publica para `ABS_X` — a régua, conferida.
-
-    Isto NÃO participa da conta. Existe porque "8192" copiado de documentação é
-    exatamente a `A-3` que esta casa paga desde sempre: medir contra a régua
-    errada produz alarme convincente e falso. Se o kernel desta máquina disser
-    outro número, ele aparece ao lado do nosso, e quem lê decide.
-
-    `EVIOCGABS` é ioctl de LEITURA de propriedade: não pega o nó, não compete
-    com o `EVIOCGRAB` do co-op e não lê evento nenhum.
-    """
+    """A `resolution` que o kernel publica para `ABS_X` — a régua, conferida."""
     caminho = _no_de_movimento(aparelho)
     if not caminho:
         return None, "não achei o nó Motion Sensors deste controle"
-    import fcntl  # local: só esta função precisa, e ela é opcional por desenho
+    import fcntl
 
     try:
         fd = os.open(caminho, os.O_RDONLY | os.O_CLOEXEC)
@@ -318,12 +236,7 @@ def _resolucao_do_kernel(aparelho: Aparelho) -> tuple[int | None, str]:
 
 
 def _consumir(medida: Medida, bruto: bytes) -> None:
-    """Um report cru -> as três acelerações e os três giros, ou nada.
-
-    O report é DESCARTADO em silêncio (contado, não usado) quando o id não é o
-    do transporte ou quando ele veio curto. Descartar sem contar seria a mesma
-    coisa que mentir devagar: o rodapé imprime `ids_vistos` e `curtos`.
-    """
+    """Um report cru -> as três acelerações e os três giros, ou nada."""
     medida.lidos += 1
     if not bruto:
         return
@@ -352,12 +265,7 @@ def _consumir(medida: Medida, bruto: bytes) -> None:
 
 
 def medir(medidas: list[Medida], segundos: float) -> None:
-    """Lê os quatro físicos na MESMA janela, por `select`, e conta.
-
-    A mesma janela importa: o pedido dela é o par cabo/rádio fechado *no mesmo
-    minuto*, e duas janelas em fila não são coexistência — são dois ensaios
-    diferentes com o mesmo nome.
-    """
+    """Lê os quatro físicos na MESMA janela, por `select`, e conta."""
     seletor = selectors.DefaultSelector()
     abertos: dict[int, Medida] = {}
     fechar: list[NoAberto] = []
@@ -451,9 +359,6 @@ def _nome(medida: Medida, *, sem_mascara: bool) -> str:
 
 def _escrever_csv(caminho: str, medidas: list[Medida], quando: str) -> None:
     """Ensaio que não vira linha de tabela vira lembrança. MAC mascarado."""
-    # `lineterminator="\n"` porque o padrão do módulo `csv` é CRLF, e o
-    # `.gitattributes` desta casa é `eol=lf` em tudo: sem isto o arquivo entra
-    # com fim de linha que o git reescreve na primeira vez que tocar nele.
     with open(caminho, "w", encoding="utf-8", newline="") as arquivo:
         escritor = csv.writer(arquivo, lineterminator="\n")
         escritor.writerow(

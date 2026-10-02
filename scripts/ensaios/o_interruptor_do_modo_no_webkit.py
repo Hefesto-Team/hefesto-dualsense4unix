@@ -10,7 +10,7 @@ estado do daemon dela sendo lido de verdade.
 
 **A PONTE É INTERCEPTADA, E ISSO NÃO É COMODIDADE — É REGRA DA CASA.** O par
 ``("06-navegacao.html", "modo")`` está na lista de PERIGOSOS do piloto
-(``hefesto_vivo.py:1056``), com a razão escrita: *"O CURSOR É DELA. Ligar a
+(``hefesto_vivo.py:878``), com a razão escrita: *"O CURSOR É DELA. Ligar a
 emulação de mouse move o ponteiro na tela em que ela está trabalhando"*. E há um
 segundo custo, medido aqui: o interruptor é dos DOIS (decisão dela, 27/08), então
 dois cliques a partir de *mouse desligado · teclado ligado* deixariam o **teclado
@@ -23,7 +23,7 @@ o clique, o ouvinte, a thread, o gesto, e o ``ctx`` lido do daemon dela.
 **O PORTÃO DE MODO É NEUTRALIZADO, E ISSO VAI ESCRITO NA SAÍDA.** O daemon dela
 publica ``mode: None`` (medido em 03/09/2026), e o gesto recusa TODO clique nesse
 estado — com razão, e nos dois lados: a GTK faz ``blocked = mode != MODE_DESKTOP``
-(``mouse_actions.py:299``) e desliga o interruptor igual. Esse portão funciona e
+(``mouse_actions.py:205``) e desliga o interruptor igual. Esse portão funciona e
 **não é o que este ensaio mede**; ele fica no caminho do que é. Então
 ``mode_of_state`` é trocado por um que devolve ``desktop``, o modo REAL é impresso
 antes, e a troca é dita na saída — uma neutralização calada seria o instrumento
@@ -52,9 +52,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -70,12 +67,6 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import GLib, Gtk
 
-# PELO NOME DO PACOTE, e não pelo nome curto. Custou uma medição falsa em
-# 03/09/2026: `from pacotes import ponte` cria um módulo DIFERENTE de
-# `hefesto_dualsense4unix.interface.pacotes.ponte`, que é o que o piloto importa
-# (`hefesto_vivo.py:69`). O `ponte.resultado` trocado ficava num objeto que o
-# produto nunca olha — o instrumento medindo contra a biblioteca errada, que é a
-# primeira das armadilhas de `COMO-OLHAR-A-TELA.md`.
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
 from hefesto_dualsense4unix.interface.pacotes import (
     a06_navegacao as aba,
@@ -84,10 +75,6 @@ from hefesto_dualsense4unix.interface.pacotes import ponte
 
 ABA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: OS DOIS CLIQUES, NUM JS SÓ — para que nenhum tique caia entre eles. É a
-#: condição do defeito: o `ctx` do segundo clique tem de ser o MESMO do primeiro.
-#: O `setTimeout` de 60 ms é folga para o ouvinte despachar o primeiro, e cabe
-#: com sobra dentro do tique de 500 ms.
 DOIS_CLIQUES = r"""
 (function(){
   const el = document.querySelector('[data-gesto="modo"]');
@@ -165,9 +152,6 @@ def main() -> int:
 
     GLib.timeout_add(400, lambda: piloto._ir(ABA))
     GLib.timeout_add(3000, clicar)
-    # DEPOIS DOS DOIS CLIQUES E DE PELO MENOS UM TIQUE: o segundo clique sai aos
-    # 60 ms, a thread do gesto leva o que a ponte de mentira levar (nada), e a
-    # pintura do interruptor só acontece no tique seguinte.
     GLib.timeout_add(5000, medir)
     GLib.timeout_add(30000, Gtk.main_quit)
     Gtk.main()
@@ -202,9 +186,6 @@ def main() -> int:
         print(f"\nREPROVA: os dois cliques mandaram {mouse}.")
         return 1
 
-    # A GUARDA QUE IMPEDE ESTE ENSAIO DE MENTIR: se a palavra da tela não vier
-    # do daemon, o `antes` seria o `—` do desenho para sempre, e o ensaio daria
-    # verde sobre um interruptor que ninguém pinta.
     palavra = (antes or {}).get("palavra")
     if palavra in (None, "", "—"):
         print(f"\nREPROVA: o 'Status do Modo' mostrava {palavra!r} — o daemon "

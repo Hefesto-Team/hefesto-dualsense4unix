@@ -35,11 +35,7 @@ from hefesto_dualsense4unix.core.keyboard_mappings import parse_binding
 
 
 def _teclas_que_a_tela_pode_mostrar() -> list[str]:
-    """Todo `KEY_*` que o teclado virtual declara — perguntado ao dono.
-
-    É a lista de capacidades que o device anuncia ao `uinput`, e por isso é a
-    lista do que a coluna "Tecla do teclado" pode chegar a mostrar.
-    """
+    """Todo `KEY_*` que o teclado virtual declara — perguntado ao dono."""
     from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
 
     return sorted(k for k in SUPPORTED_KEYS if k.startswith("KEY_"))
@@ -75,23 +71,14 @@ def test_o_combo_tambem_fecha() -> None:
 
 
 def test_o_que_o_evdev_nao_conhece_nao_vira_tecla() -> None:
-    """Um nome inventado segue CRU, e a recusa continua dizendo o nome dela.
-
-    Sem esta guarda, `banana` viraria `KEY_BANANA`: o `parse_binding` deixaria
-    passar (ele só exige o prefixo), e a recusa cairia lá adiante, com outro
-    nome e em outra tela.
-    """
+    """Um nome inventado segue CRU, e a recusa continua dizendo o nome dela."""
     assert input_actions.dehumanize_binding("banana") == "banana"
     with pytest.raises(ValueError, match="BANANA"):
         parse_binding(input_actions.dehumanize_binding("banana"))
 
 
 def test_a_aba_pergunta_ao_dono_em_vez_de_traduzir_de_novo() -> None:
-    """O contorno da aba 06 virou delegação — uma tradução, um dono.
-
-    MORDIDA: devolva à `_desfazer_o_humanize` uma tabela própria e esta régua
-    reprova, porque as duas respostas passam a poder divergir sem ninguém ver.
-    """
+    """O contorno da aba 06 virou delegação — uma tradução, um dono."""
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao
 
     for cru in _teclas_que_a_tela_pode_mostrar():

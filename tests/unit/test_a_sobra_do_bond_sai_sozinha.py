@@ -1,32 +1,4 @@
-"""A sobra do bond sai sozinha — A-SOBRA-DO-BOND-SAI-SOZINHA-01 (25/09/2026).
-
-O defeito, medido na mesa dela: o P2 com chave de pareamento em dois
-adaptadores desde 19/09, sobra de um mover feito pela metade. O ``doctor``
-acusava todo dia (e acusava onze vizinhos de busca junto, a outra metade desta
-sprint, em ``test_o_doctor_ve_o_bond_dobrado.py``), a memória dizia «a limpeza
-é dela», e ninguém limpava. A pergunta dela: *«A interface do app não deveria
-corrigir isso automaticamente?»*
-
-A decisão (de quem coordena, que ela delega): o controle guarda UM host, e
-quando o kernel o diz conectado pelo rádio num adaptador (``HID_PHYS``), ele
-mesmo respondeu qual chave vale. A outra é sobra, e a central do rádio a
-esquece como esquece a origem de um mover — ``RemoveDevice`` mais o verbo
-``esquecer`` da ponte, com lápide —, UMA por volta, dentro da trava.
-
-O mundo é o ``radio_de_mentira`` (controles que guardam UM host, com o
-``DonoVivo`` de verdade por cima), e o ``HID_PHYS`` da matriz passa pelo leitor
-de verdade (``radio_da_mesa.adaptador_por_uniq``) sobre um ``/sys`` de mentira,
-com o vpad de cada máscara no meio.
-
-O QUE ESTA RÉGUA COBRA:
-
-1. conectado num adaptador, a chave do outro sai, com lápide e linha no diário;
-2. desligado ou no cabo, nada sai — ele ainda não disse qual chave vale;
-3. objeto de busca não é chave, e aparelho que não é controle não se toca;
-4. uma por volta, idempotente, e nunca com um movimento «esperando»;
-5. a mesa inteira: de 1 a 4 jogadores, no rádio, no cabo e misto, nas três máscaras;
-6. o daemon liga a faxina, e o ``fechar()`` a para.
-"""
+"""A sobra do bond sai sozinha — A-SOBRA-DO-BOND-SAI-SOZINHA-01 (25/09/2026)."""
 
 from __future__ import annotations
 
@@ -48,8 +20,6 @@ from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE
 
 CONTROLES = (VERMELHO, AZUL, VERDE, ROXO)
 ADAPTADORES = (SALA, QUARTO, VARANDA)
-#: A classe de um teclado (periférico, menor «teclado»): tem ``HID_PHYS``
-#: como o controle, e pode guardar mais de um host.
 CLASSE_DE_TECLADO = 0x002540
 
 
@@ -69,9 +39,7 @@ def mundo() -> rm.RadioDeMentira:
 
 @pytest.fixture()
 def ligar(mundo: rm.RadioDeMentira) -> Iterator[Callable[[], bd.DonoVivo]]:
-    """O dono do BlueZ, aberto DEPOIS de a mesa estar montada: o ``DonoVivo``
-    tira a foto no ``ligar()`` e depois só segue os sinais, e o ``pareado`` do
-    rádio de mentira escreve na mesa sem sinal."""
+    """O dono do BlueZ, aberto DEPOIS de a mesa estar montada: o ``DonoVivo``"""
     abertos: list[bd.DonoVivo] = []
 
     def abrir() -> bd.DonoVivo:
@@ -113,20 +81,10 @@ def _dobrado(
     mundo.pareado(velha, controle, host=False)
 
 
-# ---------------------------------------------------------------------------
-# 1. conectado num adaptador, a chave do outro sai
-# ---------------------------------------------------------------------------
-
-
 def test_conectado_na_sala_a_chave_do_quarto_sai(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """O caso da mesa dela, com as três metades: o esquecer, a lápide, o diário.
-
-    MORDIDA: tire o ``central.comecar_a_faxina()`` do arranque — a régua do
-    daemon (§6) reprova; troque o ``sai != agora`` por ``sai == agora`` no
-    ``sobras`` — a chave que o controle USA sai, e esta régua reprova.
-    """
+    """O caso da mesa dela, com as três metades: o esquecer, a lápide, o diário."""
     _dobrado(mundo, VERMELHO, SALA, QUARTO)
     dono = ligar()
     central = _central(dono, mundo)
@@ -136,11 +94,9 @@ def test_conectado_na_sala_a_chave_do_quarto_sai(
 
     assert mundo.objeto(QUARTO, VERMELHO) is None
     assert mundo.lapides == [(QUARTO, VERMELHO)]
-    # A casa dele fica intacta, e ele segue conectado nela.
     casa = mundo.objeto(SALA, VERMELHO)
     assert casa is not None and casa["Paired"] is True
     assert mundo.onde_esta(rm.uniq(VERMELHO)) == SALA
-    # Nada de janela, nada de parear: a faxina só esquece.
     assert mundo.metodos("StartDiscovery") == []
     assert mundo.metodos("Pair") == []
     linhas = [
@@ -149,9 +105,7 @@ def test_conectado_na_sala_a_chave_do_quarto_sai(
     assert len(linhas) == 1
     assert (linhas[0]["controle"], linhas[0]["adaptador"]) == (VERMELHO, QUARTO)
     assert linhas[0]["depois"]["adaptador"] == SALA
-    # Sem recado (R8): a linha não leva a frase que o sino da aba mostraria.
     assert "frase" not in linhas[0]
-    # Nenhum movimento publicado: a tela não ganha um «chegou» que ela não pediu.
     assert central.movimentos() == ()
 
 
@@ -169,16 +123,10 @@ def test_a_segunda_volta_nao_escreve_nada(
     assert len(mundo.metodos("RemoveDevice")) == removidos
 
 
-# ---------------------------------------------------------------------------
-# 2. desligado ou no cabo, nada sai
-# ---------------------------------------------------------------------------
-
-
 def test_desligado_ele_ainda_nao_disse_qual_chave_vale(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """MORDIDA: trate o ``HID_PHYS`` vazio como «pode apagar qualquer uma» — as
-    duas chaves de um controle desligado somem, e esta régua reprova."""
+    """MORDIDA: trate o ``HID_PHYS`` vazio como «pode apagar qualquer uma» — as"""
     _dobrado(mundo, VERMELHO, SALA, QUARTO, conectado=False)
     dono = ligar()
     central = _central(dono, mundo)
@@ -192,8 +140,7 @@ def test_desligado_ele_ainda_nao_disse_qual_chave_vale(
 def test_conectado_onde_o_bluez_nao_mostra_chave_nao_se_mexe(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """O kernel o diz na varanda, e as chaves estão na sala e no quarto: é estado
-    que a central não entende, e ela não apaga nenhuma das duas."""
+    """O kernel o diz na varanda, e as chaves estão na sala e no quarto: é estado"""
     _dobrado(mundo, VERMELHO, SALA, QUARTO, conectado=False)
     dono = ligar()
     central = _central(dono, mundo, onde_esta=lambda u: VARANDA if u == rm.uniq(VERMELHO) else "")
@@ -202,20 +149,10 @@ def test_conectado_onde_o_bluez_nao_mostra_chave_nao_se_mexe(
     assert mundo.lapides == []
 
 
-# ---------------------------------------------------------------------------
-# 3. objeto de busca não é chave; o que não é controle não se toca
-# ---------------------------------------------------------------------------
-
-
 def test_o_objeto_de_busca_nao_e_chave(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """O defeito do doctor, do lado do produto: o BlueZ guarda um objeto para todo
-    aparelho que uma busca achou.
-
-    MORDIDA: tire o ``objeto.pareado is not True`` do ``sobras`` — o objeto de
-    busca do quarto sai pela ponte, com lápide, e esta régua reprova.
-    """
+    """O defeito do doctor, do lado do produto: o BlueZ guarda um objeto para todo"""
     mundo.pareado(SALA, VERMELHO)
     mundo.mesa[rm.no_de(QUARTO, VERMELHO)] = {
         bd.APARELHO: {
@@ -239,11 +176,7 @@ def test_o_objeto_de_busca_nao_e_chave(
 def test_o_teclado_de_varios_hosts_nao_se_toca(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """Teclado tem ``HID_PHYS`` como o controle, e pode querer as duas chaves.
-
-    MORDIDA: tire o ``e_controle`` do ``sobras`` — a chave do teclado no quarto
-    sai, e esta régua reprova.
-    """
+    """Teclado tem ``HID_PHYS`` como o controle, e pode querer as duas chaves."""
     mundo.pareado(SALA, ROXO, classe=CLASSE_DE_TECLADO)
     mundo.pareado(QUARTO, ROXO, classe=CLASSE_DE_TECLADO, host=False)
     dono = ligar()
@@ -253,16 +186,10 @@ def test_o_teclado_de_varios_hosts_nao_se_toca(
     assert mundo.lapides == []
 
 
-# ---------------------------------------------------------------------------
-# 4. uma por volta, e nunca com um movimento «esperando»
-# ---------------------------------------------------------------------------
-
-
 def test_uma_por_volta(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """MORDIDA: faça o ``esquecer_as_sobras`` esquecer a lista inteira — a
-    primeira volta escreve duas lápides, e esta régua reprova."""
+    """MORDIDA: faça o ``esquecer_as_sobras`` esquecer a lista inteira — a"""
     _dobrado(mundo, VERMELHO, SALA, QUARTO)
     _dobrado(mundo, AZUL, QUARTO, VARANDA)
     dono = ligar()
@@ -279,11 +206,7 @@ def test_uma_por_volta(
 def test_com_um_movimento_esperando_a_faxina_espera(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """O mover esquece a própria origem; dois motores na mesma chave, não.
-
-    MORDIDA: tire o ``_ocupada()`` do começo e o de dentro da trava — a faxina
-    apaga no meio do mover, e esta régua reprova.
-    """
+    """O mover esquece a própria origem; dois motores na mesma chave, não."""
     _dobrado(mundo, VERMELHO, SALA, QUARTO)
     dono = ligar()
     central = _central(dono, mundo)
@@ -317,11 +240,6 @@ def test_com_a_trava_na_mao_de_outro_tenta_na_proxima(
         soltar.set()
         fio.join(5.0)
     assert central.esquecer_as_sobras() == (QUARTO, VERMELHO)
-
-
-# ---------------------------------------------------------------------------
-# 5. a mesa inteira: de 1 a 4 jogadores, rádio, cabo e misto, as três máscaras
-# ---------------------------------------------------------------------------
 
 
 def _no_do_sys(mac: str, phys: str) -> str:
@@ -411,11 +329,6 @@ def test_a_mesa_inteira(
         )
 
 
-# ---------------------------------------------------------------------------
-# 6. o daemon liga a faxina, e o fechar() a para
-# ---------------------------------------------------------------------------
-
-
 def test_a_faxina_roda_sozinha_e_para_no_fechar(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
@@ -424,7 +337,7 @@ def test_a_faxina_roda_sozinha_e_para_no_fechar(
     central = _central(dono, mundo)
 
     central.comecar_a_faxina(intervalo_s=0.01)
-    central.comecar_a_faxina(intervalo_s=0.01)  # idempotente: um fio só
+    central.comecar_a_faxina(intervalo_s=0.01)
     fim = time.monotonic() + 5.0
     while not mundo.lapides and time.monotonic() < fim:
         time.sleep(0.01)
@@ -437,8 +350,7 @@ def test_a_faxina_roda_sozinha_e_para_no_fechar(
 
 
 def test_o_daemon_liga_a_faxina(monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA: tire o ``central.comecar_a_faxina()`` do ``_start_central_do_radio``
-    — a central sobe sem faxina, a sobra fica para sempre, e esta régua reprova."""
+    """MORDIDA: tire o ``central.comecar_a_faxina()`` do ``_start_central_do_radio``"""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.testing.fake_controller import FakeController
 

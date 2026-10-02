@@ -46,8 +46,8 @@ QUEM O CHAMA, E O QUE ELE ESCREVE
 100% stdlib, para rodar no `python3` do sistema sem venv. Mas ele é módulo de
 BANCADA: medido em 21/08/2026, NENHUM chamador em produção o invoca — nem o
 `doctor.sh`, nem a janela. `grep -rn prontuario_dos_jogos src scripts
-install.sh uninstall.sh assets` devolve só menções em prosa (`schema.py:1041`,
-`ponte_escada.py:125`, `steam_input_ponte.py:5`, `hotkey.py:815`). Quem o roda
+install.sh uninstall.sh assets` devolve só menções em prosa (`schema.py:646`,
+`ponte_escada.py:125`, `steam_input_ponte.py:5`, `hotkey.py:481`). Quem o roda
 é gente, por `python -m
 hefesto_dualsense4unix.integrations.prontuario_dos_jogos`, e a suíte — e a
 suíte verde não é chamador: é capacidade sem quem a use.
@@ -69,7 +69,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-try:  # importado como módulo do pacote (GUI/daemon/testes)
+try:
     from .api_de_entrada import Evidencia, Veredito, examinar_pasta
     from .steam_input_ponte import (
         PONTE_LIGADA,
@@ -114,35 +114,18 @@ except ImportError:  # pragma: no cover - executado como script avulso
         steam_input_allowlist_path,
     )
 
-#: Os vereditos. Ver o cabeçalho: nenhum deles é "funciona".
 IMPEDIDO = "impedido"
 SEM_IMPEDIMENTO = "sem_impedimento_conhecido"
 NAO_SEI = "nao_sei"
 
-#: O QUARTO veredito (PONTE-CONFIRMADA-01, 19/08/2026), e o único que se apoia
-#: em algo que NÃO foi lido do disco: alguém confirmou, com o jogo aberto, que
-#: esta combinação de ponte pegou aqui — o gesto dela no controle, ou a escolha
-#: direta na aba de perfil.
-#:
-#: **Ele não é "funciona", e a diferença não é retórica.** Vale para UMA
-#: combinação, a carimbada; trocar a máscara ou mexer na lista de exceções
-#: devolve o jogo ao `IMPEDIDO` por `PONTE_DIVERGENTE`, e qualquer estorvo
-#: vence o carimbo (um jogo carimbado e sem wrapper continua impedido, porque a
-#: ponte que funcionou não está de pé). O `SEM_IMPEDIMENTO` segue intacto e
-#: segue não prometendo nada — este veredito não o afrouxa, ele tira do balde
-#: da ausência-de-motivo os poucos jogos sobre os quais existe evidência
-#: POSITIVA, que é justamente a evidência que o disco nunca teve como dar.
 PONTE_CONFIRMADA = "ponte_confirmada"
 
-#: Os estorvos que o disco consegue NOMEAR. Cada um traz a cura junto — um
-#: diagnóstico sem cura ao lado só transfere o trabalho para ela.
 SEM_WRAPPER = "sem_wrapper"
 LINHA_INTOCAVEL = "linha_intocavel"
 SEM_EXECUTAVEL = "sem_executavel"
 EXCECAO_INERTE = "excecao_inerte"
 PONTE_DIVERGENTE = "ponte_divergente"
 
-#: Texto de cada estorvo: (o que é, a cura, a cura é automática?).
 _ESTORVOS: dict[str, tuple[str, str, bool]] = {
     SEM_WRAPPER: (
         "A linha de Opções de Inicialização não chama o hefesto-launch, "
@@ -156,14 +139,6 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
     LINHA_INTOCAVEL: (
         "A linha tem uma lista de dispositivos ignorados numa forma que eu não "
         "sei desmontar sem risco de quebrar o que está lá.",
-        # A CURA VIROU AUTOMÁTICA PARA O CASO COMUM — ONDA5-07-01, 06/09/2026,
-        # decisão dela (07-Q1): *"Deve aplicar automaticamente como era no
-        # gtk"*. A lista estendida à mão deixou de cair aqui: o
-        # `steam_launch_options.subtrair_nosso_ignore` tira o NOSSO par de
-        # dentro da lista DELA, a atribuição sai inteira e volta inteira, e o
-        # jogo entra no reparo como qualquer outro. O que ainda cai neste
-        # estorvo é o que a subtração não alcança — e para esse a cura é a
-        # mesma do `SEM_WRAPPER`, porque o reparo TENTA e diz o que conseguiu.
         "O Hefesto repõe sozinho: ao salvar ou aplicar um perfil, e também "
         "assim que a Steam fechar (é o único instante em que a reposição "
         "sobrevive — com ela viva, regrava o arquivo ao sair e engole).",
@@ -197,55 +172,24 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
 }
 
 #: `UseSteamControllerConfig` mora no bloco do jogo, dentro da árvore `apps`
-#: VIVA — e quem sabe qual delas é ela mora no `steam_input_ponte`. Aqui não
-#: há mais cópia do nome da chave: duas cópias do mesmo nome é como se cria uma
-#: discordância que ninguém vê.
-#: A chave global equivalente, em `system`.
 _PS_SUPPORT_GLOBAL = "steamcontroller_pssupport"
 
 _SO_CHAVE_RE = re.compile(r'^\s*"([^"]+)"\s*$')
 
-#: Ferramentas que a Steam instala como se fossem jogos.
 _INFRAESTRUTURA_RE = re.compile(
     r"^(proton\b|steam linux runtime|steamworks common|steam controller configs)",
     re.IGNORECASE,
 )
 
 
-#: PONTE-CONFIRMADA-01 (19/08/2026) — onde o carimbo mora, lido com stdlib.
-#:
-#: A pasta de perfis, resolvida como `steam_input_allowlist_path` resolve a
-#: allowlist (o mesmo `XDG_CONFIG_HOME` que a GUI, o daemon e o shell usam),
-#: pela mesma razão dela: assim as três leituras apontam para o MESMO arquivo e
-#: os testes ficam herméticos.
 _PERFIS_RELPATH = "hefesto-dualsense4unix/profiles"
 
-#: `steam_app_<appid>` — a wm_class que o perfil de jogo declara.
-#:
-#: CÓPIA DELIBERADA de `profiles/steam_app.py`, pela MESMA razão escrita no
-#: `e_infraestrutura` logo abaixo: aquele módulo é do pacote e este arquivo tem
-#: de rodar como script solto no `python3` do sistema, sem venv e sem pydantic
-#: (é assim que a bancada o chama). O que impede as duas de divergirem não é a
-#: disciplina de quem edita: é o portão `test_ponte_confirmada_01`, que compara
-#: as DUAS leituras sobre a mesma pasta de perfis e reprova se discordarem.
 _STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
 class Ponte:
-    """A ponte CONFIRMADA de um jogo, como o disco a guarda.
-
-    Gêmea de `profiles.schema.PonteConfirmada` — mesmos campos, mesmos nomes —
-    e a semelhança é o contrato: quem escreve é o esquema (pydantic, com
-    validação na borda); quem lê aqui é stdlib puro. A tupla é a mesma de
-    sempre: `(kind, gamepad_flavor, steam_input)`, mais o carimbo de quando e
-    de como foi confirmada.
-
-    Este módulo NÃO valida o que lê. Um perfil escrito à mão com lixo no campo
-    é problema do load do daemon, que o recusa com mensagem; aqui, um prontuário
-    que levantasse exceção por causa de um perfil torto deixaria a usuária sem
-    censo NENHUM — e o censo dos outros 17 jogos continua verdadeiro.
-    """
+    """A ponte CONFIRMADA de um jogo, como o disco a guarda."""
 
     kind: str
     gamepad_flavor: str | None = None
@@ -274,19 +218,7 @@ def pasta_de_perfis(config_home: Path | None = None) -> Path:
 
 
 def pontes_confirmadas(config_home: Path | None = None) -> dict[str, Ponte]:
-    """`{appid: Ponte}` de tudo que já foi confirmado nos perfis do disco.
-
-    Só entram os perfis COM carimbo: perfil sem `ponte` é "ainda não sei", e
-    "ainda não sei" é a ausência da chave — nunca uma ponte vazia.
-
-    Empate (dois perfis nomeando o mesmo appid, que é real no disco dela:
-    `pragmata.json` e `pragmata2.json`) segue a MESMA regra do
-    `profiles.manager.perfil_do_appid`, e é o portão que segura as duas juntas:
-    vence quem tem carimbo; entre carimbados, a maior `priority`; e o `name`
-    do perfil desempata — o MESMO terceiro termo do gêmeo, e não o nome do
-    arquivo, que ordenaria diferente (o slug do arquivo é minúsculo e sem
-    acento) e faria as duas leituras discordarem em empate.
-    """
+    """`{appid: Ponte}` de tudo que já foi confirmado nos perfis do disco."""
     pasta = pasta_de_perfis(config_home)
     try:
         arquivos = sorted(pasta.glob("*.json"))
@@ -297,7 +229,6 @@ def pontes_confirmadas(config_home: Path | None = None) -> dict[str, Ponte]:
         try:
             dados = json.loads(arquivo.read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            # Perfil ilegível não pode derrubar o censo dos outros.
             continue
         if not isinstance(dados, dict):
             continue
@@ -338,17 +269,7 @@ def pontes_confirmadas(config_home: Path | None = None) -> dict[str, Ponte]:
 
 
 def classes_com_ponte(config_home: Path | None = None) -> set[str]:
-    """As classes de janela (em `casefold`) dos perfis COM ponte confirmada.
-
-    É a pergunta de :func:`pontes_confirmadas` sem o recorte da Steam: ali só
-    entra `steam_app_<appid>`; aqui entra toda classe que o `match` do perfil
-    declara — a de um jogo do Heroic, do Lutris ou de um emulador também. Quem
-    pergunta é o contador dos cartões da aba Lançadores (21/09/2026, *"todos
-    tem que serem iguais"*), que conta os jogos DAQUELE lançador.
-
-    Perfil ilegível ou sem carimbo não entra, pela mesma regra de lá: *"ainda
-    não sei"* é ausência, nunca uma ponte vazia.
-    """
+    """As classes de janela (em `casefold`) dos perfis COM ponte confirmada."""
     pasta = pasta_de_perfis(config_home)
     try:
         arquivos = sorted(pasta.glob("*.json"))
@@ -419,24 +340,15 @@ class Prontuario:
 
     appid: str
     nome: str
-    #: Pasta de instalação. `None` = o manifesto não diz, ou sumiu do disco.
     raiz: Path | None = None
-    #: A `LaunchOptions` crua. `None` = o jogo nem tem a linha.
     linha: str | None = None
-    #: O que o executável revelou. `None` = não foi examinado (pasta ausente).
     evidencia: Evidencia | None = None
     #: `UseSteamControllerConfig` do bloco do jogo. `None` = herda o global.
     steam_input: str | None = None
-    #: O global `SteamController_PSSupport`, para quando o jogo não tem o seu.
     steam_input_global: str | None = None
-    #: Está no `steam_input_apps.txt` (o opt-in dela)?
     na_allowlist: bool = False
-    #: PONTE-CONFIRMADA-01: a ponte já confirmada NESTE jogo, do perfil dele.
-    #: `None` = **ainda não sei** — nunca "não funciona". É a distinção entre
-    #: "nunca tentei" e "tentei e funciona", e é o que faz a escada parar.
     ponte: Ponte | None = None
 
-    # -- os fatos derivados, cada um com um nome que diz o que ele é --------
 
     @property
     def tem_wrapper(self) -> bool:
@@ -444,13 +356,7 @@ class Prontuario:
 
     @property
     def linha_intocavel(self) -> bool:
-        """A linha carrega o nosso par numa forma que o reparo não desmonta.
-
-        O DONO DA PERGUNTA É O `has_extended_ignore`, e ele mudou de sentido em
-        06/09/2026: a lista estendida à mão saiu daqui e entrou no reparo. Esta
-        propriedade não mudou uma letra — ela pergunta ao dono, e é por isso que
-        a mudança chegou até aqui sozinha.
-        """
+        """A linha carrega o nosso par numa forma que o reparo não desmonta."""
         return has_extended_ignore(self.linha or "")
 
     @property
@@ -467,38 +373,17 @@ class Prontuario:
 
     @property
     def depende_de_espelho(self) -> bool:
-        """O vpad só chega a este jogo por um espelho XInput?
-
-        Verdadeiro para o balde `indeciso`: XInput no binário e nenhum sinal de
-        SDL nem do plugin DualShock. **Não é sentença de que vai falhar** — o
-        `xinput1_4` do Wine espelha o que o DInput enxerga, e DON'T SCREAM cai
-        aqui e funciona. É o aviso de que este jogo depende de uma ponte que o
-        Hefesto não controla sozinho.
-        """
+        """O vpad só chega a este jogo por um espelho XInput?"""
         return self.api is Veredito.INDECISO
 
     @property
     def ponte_confirmada(self) -> bool:
-        """Alguém já confirmou uma ponte NESTE jogo?
-
-        É a única pergunta que este módulo responde com um booleano, e ela NÃO
-        é "funciona": é "existe carimbo". O carimbo diz que a combinação já
-        pegou uma vez, na máquina dela, com o jogo aberto — que é evidência de
-        outra natureza que tudo o mais aqui, todo lido do disco.
-        """
+        """Alguém já confirmou uma ponte NESTE jogo?"""
         return self.ponte is not None
 
     @property
     def ponte_divergente(self) -> bool:
-        """A ponte de hoje contradiz a que foi confirmada?
-
-        O prontuário só enxerga UM dos três termos da ponte — o Steam Input,
-        que mora no disco (a allowlist). Os outros dois (`kind` e
-        `gamepad_flavor`) são do daemon VIVO e mudam sem tocar em arquivo
-        nenhum; afirmar sobre eles a partir daqui seria inventar, que é
-        exatamente o que este módulo existe para não fazer. Então a divergência
-        que ele NOMEIA é a que ele MEDE, e só ela.
-        """
+        """A ponte de hoje contradiz a que foi confirmada?"""
         return self.ponte is not None and bool(self.ponte.steam_input) != self.na_allowlist
 
     @property
@@ -508,21 +393,6 @@ class Prontuario:
         if not self.tem_wrapper:
             achados.append(Estorvo(LINHA_INTOCAVEL if self.linha_intocavel else SEM_WRAPPER))
         if self.na_allowlist and self.steam_input_ligado is False:
-            # Ela pôs o jogo na lista de exceções — o gesto diz "quero Steam
-            # Input aqui". Achado em 16/08/2026: o Sackboy estava assim, e a
-            # exceção não fazia nada.
-            #
-            # SUBSTITUÍDO em 19/08/2026 (PONTE-STEAM-INPUT-01). O que estava
-            # escrito aqui era: *"Nomear é o mínimo; DECIDIR é dela, porque
-            # daqui não dá para distinguir 'a lista entrou tarde' de 'eu
-            # desliguei depois e mudei de ideia'"*. A distinção não é
-            # necessária: a lista é o gesto MAIS RECENTE que o produto conhece,
-            # e ela quer dizer uma coisa só — *"a entrada deste jogo vem da
-            # Steam"*. Deixar a decisão pendurada custou DON'T SCREAM, que é da
-            # classe "só aceita Steam Input" e ficou sem controle nenhum
-            # enquanto o guarda desligava a única ponte que o fazia funcionar.
-            # Tirar da lista continua sendo um clique dela; o produto obedece
-            # à lista, não a adivinha.
             achados.append(Estorvo(EXCECAO_INERTE))
         if self.raiz is not None and (self.evidencia is None or not self.evidencia.executavel):
             achados.append(Estorvo(SEM_EXECUTAVEL))
@@ -581,17 +451,9 @@ class Prontuario:
             "depende_de_espelho": self.depende_de_espelho,
             "steam_input_ligado": self.steam_input_ligado,
             "na_allowlist": self.na_allowlist,
-            # PONTE-CONFIRMADA-01, item 4: a ponte sai PUBLICADA aqui. Quem
-            # consumir este dicionário pergunta "qual a ponte confirmada deste
-            # appid?" sem abrir perfil nenhum e sem reimplementar o casamento
-            # por `steam_app_<id>`.
             "ponte": self.ponte.como_dicionario() if self.ponte else None,
             "ponte_divergente": self.ponte_divergente,
             "estorvos": [
-                # A chave abaixo é JSON, não prosa: é para ser lida com `jq`
-                # num terminal, e chave acentuada em shell é o tipo de detalhe
-                # que quebra num terminal e não no outro. O texto que ELA lê está
-                # em `_ESTORVOS`, acentuado.
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
                  "automatica": e.automatica}  # (noqa-acento): chave de JSON
                 for e in self.estorvos
@@ -631,19 +493,9 @@ class Censo:
         return saida
 
     def frase(self) -> str:
-        """Uma linha para a tela. Nomeia, nunca só conta.
-
-        A regra do `WRAPPER-EM-TODOS-01` aplicada à frase: se há jogo impedido,
-        o nome dele aparece — "3 jogos com pendência" é exatamente o texto que
-        deixou o Pragmata quebrado a noite inteira.
-        """
+        """Uma linha para a tela. Nomeia, nunca só conta."""
         if not self.jogos:
             return "Nenhum jogo da Steam instalado por aqui."
-        # PONTE-CONFIRMADA-01: o carimbo entra na frase como CAUDA, e não como
-        # manchete. Quem abre esta tela está atrás do que falta; o que já foi
-        # confirmado é a boa notícia que não pode empurrar a pendência para
-        # baixo — foi contando em vez de nomear que o Pragmata passou a noite
-        # quebrado com o portão verde.
         confirmadas = len(self.com_ponte_confirmada)
         pontes = (
             f" {confirmadas} com ponte já confirmada." if confirmadas else ""
@@ -681,13 +533,7 @@ class Censo:
 
 
 def e_infraestrutura(nome: str) -> bool:
-    """O `.acf` é ferramenta da Steam (Proton, runtime, redistribuíveis)?
-
-    Gêmeo do `jogos_locais.e_ferramenta_da_steam`, repetido aqui porque aquele
-    módulo importa `dataclasses` e `unicodedata` de que este não precisa, e a
-    promessa de rodar como script solto no `python3` do sistema vale mais que
-    poupar oito linhas.
-    """
+    """O `.acf` é ferramenta da Steam (Proton, runtime, redistribuíveis)?"""
     return _INFRAESTRUTURA_RE.match(nome.strip()) is not None
 
 
@@ -704,12 +550,7 @@ def _campos_do_manifesto(texto: str) -> dict[str, str]:
 
 
 def jogos_instalados(home: Path | None = None) -> list[tuple[str, str, Path | None]]:
-    """`[(appid, nome, raiz)]` dos jogos com `appmanifest` em disco.
-
-    Infraestrutura fora. `raiz` é `None` quando o manifesto existe mas a pasta
-    não — a Steam deixa manifesto para trás em desinstalação interrompida, e um
-    prontuário que sumisse com o jogo esconderia justamente esse estado.
-    """
+    """`[(appid, nome, raiz)]` dos jogos com `appmanifest` em disco."""
     achados: dict[str, tuple[str, str, Path | None]] = {}
     for pasta in pastas_steamapps(home):
         try:
@@ -791,17 +632,7 @@ def levantar_censo(
     examinar: bool = True,
     pontes: dict[str, Ponte] | None = None,
 ) -> Censo:
-    """A fotografia read-only de toda a biblioteca instalada.
-
-    `examinar=False` pula a varredura dos executáveis — que é a parte cara
-    (segundos, num jogo grande). O censo de bancada a quer; um portão que só
-    confere o wrapper, não.
-
-    `pontes` segue o MESMO contrato do `allowlist` logo acima: `None` = leia do
-    disco (a pasta de perfis, por `XDG_CONFIG_HOME`), dicionário = use este e
-    não toque em disco nenhum. É o que deixa o teste hermético sem monkeypatch
-    de `Path.home`.
-    """
+    """A fotografia read-only de toda a biblioteca instalada."""
     linhas: dict[str, str | None] = {}
     steam_input: dict[str, str] = {}
     global_ps: str | None = None
@@ -856,7 +687,6 @@ def levantar_censo(
     return Censo(jogos=fichas, erros=erros)
 
 
-#: Status de `curar_o_que_e_automatico`.
 CURA_NADA = "nada_a_curar"
 CURA_FEITA = "curado"
 CURA_ADIADA = "adiado"
@@ -868,14 +698,9 @@ class Cura:
     """O que o produto consertou sozinho, e o que ele NÃO consertou."""
 
     status: str
-    #: chave do estorvo -> desfecho de quem cuida dele.
     desfechos: dict[str, str] = field(default_factory=dict)
-    #: appids efetivamente tocados, por estorvo.
     tocados: dict[str, list[str]] = field(default_factory=dict)
-    #: estorvos presentes cuja cura NÃO é automática (ficam para ela).
     manuais: list[str] = field(default_factory=list)
-    #: `--dry-run`: nada foi escrito. A frase TEM de dizer isso — anunciar
-    #: sucesso sobre um no-op é o defeito que a HONESTIDADE-STEAM-01 curou.
     simulacao: bool = False
 
     def frase(self) -> str:
@@ -915,7 +740,7 @@ def _curar_sem_wrapper(home: Path | None, *, dry_run: bool) -> tuple[str, list[s
     sozinho, e não uma amostra. Rodar duas vezes no mesmo ciclo é inócuo: o
     reparo delega ao `apply_wrapper_to_all_games`, que pula quem já tem.
     """
-    try:  # importado como módulo do pacote
+    try:
         from .sentinela_do_wrapper import reparar_ou_adiar
     except ImportError:  # pragma: no cover - executado como script avulso
         from sentinela_do_wrapper import reparar_ou_adiar  # type: ignore[no-redef]
@@ -926,17 +751,9 @@ def _curar_sem_wrapper(home: Path | None, *, dry_run: bool) -> tuple[str, list[s
     return status, tocados
 
 
-#: Quem cuida de cada estorvo automático. É esta tabela que torna o
-#: `Estorvo.automatica` uma AFIRMAÇÃO em vez de uma promessa: um estorvo com
-#: `automatica=True` e sem entrada aqui reprova no portão do
-#: `test_ponte_steam_input_01`, que compara as duas listas.
 _CURAS: dict[str, Callable[..., tuple[str, list[str]]]] = {
     EXCECAO_INERTE: _curar_excecao_inerte,
     SEM_WRAPPER: _curar_sem_wrapper,
-    # A MESMA CURA, e é o ponto da ONDA5-07-01: o reparo passou a ALCANÇAR a
-    # linha com a lista de IGNORE estendida, então quem cuida dela é quem já
-    # cuidava da linha sem o atalho. Duas chaves com a mesma função não é
-    # duplicação — é o modelo dizendo que os dois estorvos têm o mesmo dono.
     LINHA_INTOCAVEL: _curar_sem_wrapper,
 }
 
@@ -944,22 +761,7 @@ _CURAS: dict[str, Callable[..., tuple[str, list[str]]]] = {
 def curar_o_que_e_automatico(
     home: Path | None = None, *, dry_run: bool = False, censo: Censo | None = None
 ) -> Cura:
-    """Conserta os estorvos que o prontuário declara automáticos. Sem clique.
-
-    PONTE-STEAM-INPUT-01, 19/08/2026. Este módulo nasceu em 16/08 modelando
-    estorvo, cura e `Estorvo.automatica` — *"O produto conserta sozinho, sem ela
-    clicar em nada?"* — e **nada no produto o importava**: só o teste dele.
-    Modelo que ninguém consulta é o defeito mais caro desta casa, o da cura
-    escrita e nunca ligada. Esta função é o fio.
-
-    Só entram estorvos com `automatica=True`. Os outros voltam em `manuais`,
-    nomeados — porque a alternativa (silêncio) é a que faz a pessoa pensar que
-    está tudo resolvido.
-
-    O gate de Steam/jogo aberto NÃO mora aqui: cada cura tem o seu, e cada uma
-    sabe qual é o seu instante. A ponte, por exemplo, só sobrevive com a Steam
-    fechada — e diz `adiado_steam_aberta` quando não é a hora.
-    """
+    """Conserta os estorvos que o prontuário declara automáticos. Sem clique."""
     ficha = censo if censo is not None else levantar_censo(home, examinar=False)
     presentes: set[str] = set()
     manuais: set[str] = set()
@@ -979,9 +781,6 @@ def curar_o_que_e_automatico(
     for chave in sorted(presentes):
         cura = _CURAS.get(chave)
         if cura is None:
-            # Estorvo automático sem quem o cure: exatamente a mentira que este
-            # módulo existe para não contar. O portão reprova antes de chegar
-            # aqui; em produção, o honesto é dizer que ficou para ela.
             manuais.add(chave)
             continue
         status, alvos = cura(home, dry_run=dry_run)
@@ -1008,13 +807,7 @@ def curar_o_que_e_automatico(
 
 
 def _texto_da_ponte(ponte: Ponte | None) -> str:
-    """A ponte carimbada em uma coluna de terminal, ou o travessão do "não sei".
-
-    Vocabulário de `daemon.subsystems.hotkey` — as pontes que o gesto PS + R3
-    percorre são `dualsense`, `xbox` e `mouse_teclado`, e a máscara é a mesma
-    palavra nos dois lados. O que se acrescenta aqui é o terceiro termo, o
-    `+steam_input`, que o ciclo do gesto não percorre e o disco conhece.
-    """
+    """A ponte carimbada em uma coluna de terminal, ou o travessão do "não sei"."""
     if ponte is None:
         return "-"
     if ponte.kind == "gamepad":

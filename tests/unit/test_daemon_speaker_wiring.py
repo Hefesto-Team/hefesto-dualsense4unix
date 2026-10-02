@@ -1,31 +1,4 @@
-"""SOM-02/E4 — a FIAÇÃO do `speaker_applier` no daemon.
-
-A seção `speaker` do perfil já carregava, salvava e fazia round-trip antes
-desta entrega — e não escrevia NADA, porque ninguém injetava o applier. Aqui
-ficam as mordidas do lado do daemon:
-
-  1. **o applier** (`Daemon.apply_profile_speaker`) escreve o par completo no
-     backend e NUNCA um `set_speaker_volume` sem volume (armadilha 1, medida:
-     chamada sem volume toma a posse e manda ZERO, publicando
-     `{'volume': 0, 'muted': True}`);
-  2. **a armadilha desta entrega** — o applier NÃO pode armar a categoria
-     manual `audio`. O `speaker.set` do IPC a arma (decisão da E3), e é ela
-     que `ProfileManager.apply_speaker` consulta para desistir de escrever: um
-     applier que passasse por aquele caminho armaria a trava na primeira
-     ativação e todas as seguintes seriam descartadas EM SILÊNCIO. O teste da
-     SEGUNDA ativação é o mais importante do arquivo;
-  3. **os pontos de injeção** — IPC (duas rotas), autoswitch (duas rotas),
-     ciclo por hotkey e restore de boot. Cada um prova o wiring ATIVANDO um
-     perfil com o manager que o próprio callsite construiu e contando as
-     escritas no backend: arrancar a linha `speaker_applier=` derruba o teste;
-  4. **a reaplicação no connect** — a posse dos bytes de áudio morre com o
-     cabo (`_volumes_audio` nasce vazio em cada handle, e cada conexão cria um
-     handle novo). Sem o gancho, trocar o cabo devolve o volume ao do firmware
-     em silêncio.
-
-Perfil SEM a seção continua sem produzir escrita nenhuma em todos os caminhos
-— sem opinião é silêncio, não ordem.
-"""
+"""SOM-02/E4 — a FIAÇÃO do `speaker_applier` no daemon."""
 from __future__ import annotations
 
 import asyncio
@@ -62,21 +35,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
-# 4 TESTES DESTE ARQUIVO SAÍRAM — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
-# `test_a_reaplicacao_nao_arma_a_trava_manual`,
-# `test_a_trava_armada_na_mao_bloqueia_a_ativacao_seguinte`,
-# `test_applier_nao_arma_a_categoria_audio`,
-# `test_connect_respeita_a_trava_manual_de_audio`.
-#
-# Os 4 mediam a trava manual por categoria, que ela revogou para todo jogo.
-# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
-# ---------------------------------------------------------------------------
-# Infra
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -92,14 +50,7 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
 
 class _BackendComAudio(FakeController):
-    """Backend que CONTA as escritas de áudio, no molde do real.
-
-    Espelha `core/backend_pydualsense.py`: `speaker_state_for` devolve **None**
-    enquanto ninguém escreveu (é o que faz a chave `speaker` nem entrar no
-    estado e a janela dizer "não ajustado") e, depois da escrita, devolve o par
-    preferido/efetivo. `sem_handle=True` encena o controle ausente — o backend
-    real devolve False quando não há handle para o `uniq`.
-    """
+    """Backend que CONTA as escritas de áudio, no molde do real."""
 
     def __init__(self, *, sem_handle: bool = False, explode: bool = False) -> None:
         super().__init__()
@@ -128,8 +79,6 @@ class _BackendComAudio(FakeController):
         if volume is not None:
             pref = max(0, min(255, int(volume)))
         if pref is None:
-            # A armadilha 1, reproduzida: sem volume e sem preferência o real
-            # cai em ZERO e toma a posse assim mesmo.
             pref = 0
         self._pref = pref
         self._efetivo = 0 if muted else pref
@@ -170,12 +119,7 @@ def _sem_executor(daemon: Any, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class _ManagerEspiao(ProfileManager):
-    """`ProfileManager` REAL que registra as instâncias criadas.
-
-    Real de propósito: o teste de wiring precisa ATIVAR um perfil pelo manager
-    que o callsite construiu e contar a escrita no backend. Um dublê provaria
-    apenas que a palavra `speaker_applier` foi digitada.
-    """
+    """`ProfileManager` REAL que registra as instâncias criadas."""
 
     instancias: ClassVar[list[ProfileManager]] = []
 
@@ -187,11 +131,6 @@ class _ManagerEspiao(ProfileManager):
 def _espionar_manager(monkeypatch: pytest.MonkeyPatch) -> None:
     _ManagerEspiao.instancias = []
     monkeypatch.setattr(manager_module, "ProfileManager", _ManagerEspiao)
-
-
-# ---------------------------------------------------------------------------
-# 1) O applier do daemon
-# ---------------------------------------------------------------------------
 
 
 class TestApplierDoDaemon:
@@ -218,9 +157,7 @@ class TestApplierDoDaemon:
         assert backend.speaker_state_for() == {"volume": 180, "muted": True}
 
     def test_recusa_a_chamada_sem_volume_sem_escrever_nada(self) -> None:
-        """MORDIDA: sem esta guarda o backend recebe `volume=None`, toma a posse
-        dos bytes de áudio e manda ZERO — `{'volume': 0, 'muted': True}`, de
-        onde nem o desmudo sai (a preferência guardada passa a valer 0)."""
+        """MORDIDA: sem esta guarda o backend recebe `volume=None`, toma a posse"""
         backend = _BackendComAudio()
         backend.connect()
         estado = _daemon(backend).apply_profile_speaker(None)  # type: ignore[arg-type]
@@ -230,17 +167,7 @@ class TestApplierDoDaemon:
         assert backend.speaker_state_for() is None
 
     def test_repassa_o_canal_ao_backend(self) -> None:
-        """SOM-ROTA-01/perfil: o applier do daemon carrega o canal até o byte.
-
-        MORDIDA: apagar o ``rota=rota`` do ``setter(...)`` em
-        ``Daemon.apply_profile_speaker``. O perfil continua guardando o canal,
-        a ativação continua dizendo "aplicado", e o controle nunca muda de
-        canal — a mentira mais barata de todas.
-
-        O canal desta régua é o 0 («Tudo na TV e Nada no Controle»): o 3 tem
-        linha própria logo abaixo, e medir a passagem com ele confundiria as
-        duas perguntas.
-        """
+        """SOM-ROTA-01/perfil: o applier do daemon carrega o canal até o byte."""
         backend = _BackendComAudio()
         backend.connect()
         estado = _daemon(backend).apply_profile_speaker(180, False, rota=0)
@@ -251,18 +178,7 @@ class TestApplierDoDaemon:
         ]
 
     def test_a_rota_sem_botao_chega_ao_aparelho_como_sons_do_jogo(self) -> None:
-        """A rota 3 da peça vira 2 — 22/09/2026, pedido dela.
-
-        *"ligar o mic e o autofalante dos demais controles pra refletirem de
-        fato as escolhas do user na interface"*. O «Só no controle» perdeu o
-        botão em 21/09 e o perfil só carrega a camada 2: aplicá-lo deixava o
-        firmware esperando todo o som do PC com o PC tocando em outro lugar, e
-        a fileira do cartão sem um botão aceso. Medido na mesa dela, com o P2
-        na peça de 21/09.
-
-        MORDIDA: tire o ramo `if rota == SAIDA_SO_NO_ALTO_FALANTE` de
-        `Daemon.apply_profile_speaker` — o backend recebe 3 de novo.
-        """
+        """A rota 3 da peça vira 2 — 22/09/2026, pedido dela."""
         backend = _BackendComAudio()
         backend.connect()
         estado = _daemon(backend).apply_profile_speaker(
@@ -274,13 +190,7 @@ class TestApplierDoDaemon:
         ]
 
     def test_sem_canal_o_byte_do_microfone_fica_intocado(self) -> None:
-        """O default é a AUSÊNCIA, e ela tem de atravessar até o backend.
-
-        O ``common[7]`` carrega a rota E o caminho do microfone. Um default
-        numérico no applier faria todo perfil sem opinião de canal reescrever
-        aquele byte na ativação — apagando o caminho do mic sem ninguém notar,
-        que é a família da SEM-MICROFONE-NENHUM-01.
-        """
+        """O default é a AUSÊNCIA, e ela tem de atravessar até o backend."""
         backend = _BackendComAudio()
         backend.connect()
         _daemon(backend).apply_profile_speaker(180, False)
@@ -322,23 +232,12 @@ class TestApplierDoDaemon:
         assert daemon.apply_profile_speaker(180, False) == "ignorado_sem_controle"
 
 
-# ---------------------------------------------------------------------------
-# 2) A ARMADILHA: o applier não pode armar a trava manual
-# ---------------------------------------------------------------------------
-
-
 class TestNaoArmaATravaManual:
 
     def test_segunda_ativacao_do_perfil_ainda_escreve(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """O teste mais importante da entrega.
-
-        Se a primeira ativação armasse a trava de áudio, `apply_speaker`
-        consultaria a trava na segunda e desistiria — o perfil pararia de
-        funcionar depois do primeiro uso, em silêncio, e o relatório diria
-        `ignorado_trava_manual` para um gesto que ela nunca fez.
-        """
+        """O teste mais importante da entrega."""
         save_profile(_perfil("som", speaker={"volume": 180}))
         backend = _BackendComAudio()
         backend.connect()
@@ -357,12 +256,6 @@ class TestNaoArmaATravaManual:
 
         assert relatorios == ["aplicado", "aplicado", "aplicado"]
         assert [e["volume"] for e in backend.escritas_de_audio] == [180, 180, 180]
-
-
-
-# ---------------------------------------------------------------------------
-# 3) Pontos de injeção
-# ---------------------------------------------------------------------------
 
 
 def _ativar_pelo_manager_do_callsite(nome: str) -> ProfileManager:
@@ -402,11 +295,7 @@ class _AutoSwitcherFalso:
 
 
 class _DaemonEnxuto:
-    """Daemon mínimo que EMPRESTA o applier real de um `Daemon` de verdade.
-
-    Os callsites fazem `getattr(daemon, "apply_profile_speaker", None)` — o que
-    se prova aqui é que o nome está fiado e que a ponta escreve no backend.
-    """
+    """Daemon mínimo que EMPRESTA o applier real de um `Daemon` de verdade."""
 
     def __init__(self, backend: _BackendComAudio) -> None:
         self.controller = backend
@@ -415,9 +304,6 @@ class _DaemonEnxuto:
         self._keyboard_device = None
 
     def __getattr__(self, nome: str) -> Any:
-        # Os appliers (`apply_profile_*`) e o resto da superfície vêm do Daemon
-        # REAL — o que este dublê encena é só a forma do objeto que os callsites
-        # recebem, não o comportamento dos appliers.
         return getattr(self.real, nome)
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
@@ -519,12 +405,7 @@ class TestPontosDeInjecao:
     async def test_ciclo_por_hotkey_aplica_o_volume_do_perfil(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """PS+D-pad é gesto dela: o perfil que entra leva o volume junto.
-
-        Aqui a ativação é REAL (o callback cicla e chama `activate`), então
-        arrancar o `speaker_applier=` de `subsystems/hotkey.py` zera as
-        escritas e o teste reprova.
-        """
+        """PS+D-pad é gesto dela: o perfil que entra leva o volume junto."""
         save_profile(_perfil("baixo", speaker={"volume": 60}))
         save_profile(_perfil("alto", speaker={"volume": 220}))
         monkeypatch.setattr(
@@ -583,19 +464,12 @@ class TestPontosDeInjecao:
         assert backend.speaker_state_for() is None
 
 
-# ---------------------------------------------------------------------------
-# 4) Reaplicação no connect (armadilha 4: a posse morre com o cabo)
-# ---------------------------------------------------------------------------
-
-
 class TestReaplicacaoNoConnect:
     @pytest.mark.asyncio
     async def test_connect_reaplica_o_volume_do_perfil_ativo(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: arrancar a chamada de `connect_with_retry` faz o replug
-        perder o volume do perfil ativo — o handle novo nasce sem posse e o
-        firmware volta a mandar no bloco, sem uma linha de aviso."""
+        """MORDIDA: arrancar a chamada de `connect_with_retry` faz o replug"""
         save_profile(_perfil("som", speaker={"volume": 180}))
         backend = _BackendComAudio()
         daemon = Daemon(controller=backend, config=DaemonConfig())
@@ -666,21 +540,11 @@ class TestReaplicacaoNoConnect:
         await reapply_speaker_after_connect(_Cru())  # type: ignore[arg-type]
 
 
-
-# ---------------------------------------------------------------------------
-# 5) Conexão de ponta a ponta (o ciclo que ela vive: perfil, replug, perfil)
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_ciclo_perfil_replug_perfil_nunca_perde_o_volume(
     isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ativa, reconecta duas vezes, troca de perfil — sempre com escrita.
-
-    É o encadeamento inteiro num teste só: se qualquer elo (applier, trava,
-    gancho do connect) se soltar, o volume some de um dos passos.
-    """
+    """Ativa, reconecta duas vezes, troca de perfil — sempre com escrita."""
     save_profile(_perfil("baixo", speaker={"volume": 60}))
     save_profile(_perfil("alto", speaker={"volume": 220}))
     backend = _BackendComAudio()

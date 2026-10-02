@@ -61,12 +61,8 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as som
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
 
-#: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
-#: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
-#: régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
 _SONY = " (DualSense Wireless Controller)"
 
-#: Faixas sintéticas da casa. NENHUM destes é um controle desta bancada — uma
 #: régua que só passa com os quatro DualSense dela mede a bancada, não a cura.
 _UNIQ_P1 = "02fe0011a1b2"
 _UNIQ_P2 = "02fe0011a1b3"
@@ -83,12 +79,7 @@ _HDMI = "alsa_output.pci-0000_0a_00.1.hdmi-stereo"
 
 
 class _Gravador:
-    """Um `runner` de `pactl` que ACEITA e guarda — e sabe RECUSAR.
-
-    Devolve um id de módulo crescente para todo `load-module`, `""` para o que
-    ele não conhece, e `None` quando `recusa=True` — que é o mundo do PipeWire
-    parado. Um dublê que só sabe aceitar nunca exercita o caminho de erro.
-    """
+    """Um `runner` de `pactl` que ACEITA e guarda — e sabe RECUSAR."""
 
     def __init__(self, *, recusa: bool = False) -> None:
         self.argvs: list[list[str]] = []
@@ -143,12 +134,7 @@ def usb_da_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
 def _no_de_pe(
     uniq: str, fonte: str = som.FONTE_PADRAO, mesa: tuple[str, ...] = (_UNIQ_P1, _UNIQ_P2)
 ) -> _Gravador:
-    """Sobe o nó DESTE controle no cabo pelo DONO, e devolve o que chegou ao `pactl`.
-
-    A rota sai de `rota_do_no` (a leitura da bancada de mentira) e o nó a sobe
-    por `SinkVirtualPipeWire.iniciar` — o mesmo caminho do
-    `GerenciadorDeNosDeSom._construir`, sem o daemon.
-    """
+    """Sobe o nó DESTE controle no cabo pelo DONO, e devolve o que chegou ao `pactl`."""
     rota = som.rota_do_no(uniq, "usb", mesa, fonte=fonte, runner=_runner_de_leitura())
     gravador = _Gravador()
     no = som.SinkVirtualPipeWire(uniq=uniq, rota=rota, runner=gravador)
@@ -156,32 +142,15 @@ def _no_de_pe(
     return gravador
 
 
-# ---------------------------------------------------------------------------
-# 1. O NOME É O DELA, e o par com o microfone é a MESMA gramática
-# ---------------------------------------------------------------------------
-
-
 def test_o_no_se_chama_alto_falante_do_controle_n() -> None:
-    """Decisão dela, 09/09/2026 (*"4a"*). Era «Alto-falante · P1» até 08/09.
-
-    MORDIDA: volte `rotulo_do_alto_falante` para `f"Alto-falante · P{n}"` e as
-    comparações caem — e com elas cai o instrumento de bancada, que procura
-    exatamente esta palavra na lista viva.
-    """
+    """Decisão dela, 09/09/2026 (*"4a"*). Era «Alto-falante · P1» até 08/09."""
     assert som.rotulo_do_alto_falante(1) == "Alto-falante do Controle 1" + _SONY
     assert som.rotulo_do_alto_falante(4) == "Alto-falante do Controle 4" + _SONY
     assert som.NOME_DO_ALTO_FALANTE_DO_CONTROLE == "Alto-falante do Controle"
 
 
 def test_o_par_com_o_microfone_e_a_mesma_gramatica() -> None:
-    """«Alto-falante do Controle 2» e «Microfone do Controle 2», lado a lado.
-
-    Os dois rótulos vivem na MESMA lista de som dela. Divergir em uma palavra
-    — «Controle» contra «controle», o número num e não no outro — é a lista
-    dizendo duas coisas sobre o mesmo aparelho.
-
-    MORDIDA: troque o sufixo de um dos dois e a comparação de forma reprova.
-    """
+    """«Alto-falante do Controle 2» e «Microfone do Controle 2», lado a lado."""
     anterior = mic.registrar_numerador_de_assento(lambda _u: 2)
     try:
         assert som.descricao_do_alto_falante(_UNIQ_P1) == "Alto-falante do Controle 2" + _SONY
@@ -191,11 +160,7 @@ def test_o_par_com_o_microfone_e_a_mesma_gramatica() -> None:
 
 
 def test_sem_assento_sabido_nao_se_inventa_numero() -> None:
-    """Dois «Alto-falante do Controle 1» mentem sobre qual é qual.
-
-    MORDIDA: devolva `1` quando o numerador diz `None` e a lista dela ganha
-    quatro rótulos idênticos com número — pior que quatro sem número.
-    """
+    """Dois «Alto-falante do Controle 1» mentem sobre qual é qual."""
     anterior = mic.registrar_numerador_de_assento(None)
     try:
         assert som.descricao_do_alto_falante(_UNIQ_P1) == "Alto-falante do Controle" + _SONY
@@ -204,12 +169,7 @@ def test_sem_assento_sabido_nao_se_inventa_numero() -> None:
 
 
 def test_o_endereco_dela_nunca_entra_no_rotulo() -> None:
-    """O MAC do controle na lista de áudio da máquina é o defeito que a metade
-    de entrada pagou em 09/09. Esta metade não o repete.
-
-    MORDIDA: monte o rótulo com `f"… ({uniq})"`, como a ponte de rádio fazia, e
-    as duas asserções caem.
-    """
+    """O MAC do controle na lista de áudio da máquina é o defeito que a metade"""
     anterior = mic.registrar_numerador_de_assento(lambda _u: 1)
     try:
         rotulo = som.descricao_do_alto_falante(_UNIQ_P1)
@@ -219,18 +179,8 @@ def test_o_endereco_dela_nunca_entra_no_rotulo() -> None:
     assert "11a1b2" not in rotulo
 
 
-# ---------------------------------------------------------------------------
-# 2. UM `sink_name` SÓ, e ele é o do APARELHO
-# ---------------------------------------------------------------------------
-
-
 def test_o_sink_name_e_o_do_aparelho_e_nao_o_do_assento() -> None:
-    """O jogo escolhe uma saída; trocar o controle de assento não pode trocá-la.
-
-    MORDIDA: faça `SinkVirtualPipeWire` montar o nome pelo rótulo (o assento)
-    em vez de `nome_do_sink(uniq)` e o mesmo aparelho passa a ter dois
-    `sink_name` conforme o assento em que ela o pôs.
-    """
+    """O jogo escolhe uma saída; trocar o controle de assento não pode trocá-la."""
     nos = []
     for assento in (1, 3):
         anterior = mic.registrar_numerador_de_assento(lambda _u, n=assento: n)
@@ -245,18 +195,8 @@ def test_o_sink_name_e_o_do_aparelho_e_nao_o_do_assento() -> None:
     assert som.SinkVirtualPipeWire(uniq="", runner=_Gravador()).nome == ""
 
 
-# ---------------------------------------------------------------------------
-# 3. A FONTE — «mix» é o HDMI completo, «sfx» deixa o nó livre
-# ---------------------------------------------------------------------------
-
-
 def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_da_bancada: None) -> None:
-    """O *«HDMI completo»* dela: o que a TV recebe, o controle recebe junto.
-
-    MORDIDA: apague o ramo `FONTE_MIX` de `argv_das_rotas` e o nó volta a
-    subir só com a saída — o nó do controle nunca recebe o som do sistema, que
-    é metade do pedido dela.
-    """
+    """O *«HDMI completo»* dela: o que a TV recebe, o controle recebe junto."""
     linhas = _no_de_pe(_UNIQ_P1, fonte=som.FONTE_MIX).linhas
 
     assert len(linhas) == 3, linhas
@@ -267,14 +207,7 @@ def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_da_bancada: None) -> None:
 
 
 def test_sfx_deixa_o_no_livre_para_o_jogo(usb_da_bancada: None) -> None:
-    """Sem `mix`, nenhum loopback ENTRA no nó — ele espera a corrente do jogo.
-
-    É o padrão dela (`D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX`): com `mix` de
-    fábrica o controle viraria a saída de todo o som do PC sozinho.
-
-    MORDIDA: faça `FONTE_PADRAO = FONTE_MIX` e este teste reprova — e o produto
-    passa a tomar uma decisão que ela recusou por escrito.
-    """
+    """Sem `mix`, nenhum loopback ENTRA no nó — ele espera a corrente do jogo."""
     assert som.FONTE_PADRAO == "sfx"
     linhas = _no_de_pe(_UNIQ_P1).linhas
 
@@ -284,14 +217,7 @@ def test_sfx_deixa_o_no_livre_para_o_jogo(usb_da_bancada: None) -> None:
 
 
 def test_um_em_mix_e_outro_em_sfx_ao_mesmo_tempo(usb_da_bancada: None) -> None:
-    """O critério de pronto da sprint: P1 em `mix` e P2 em `sfx`, juntos.
-
-    E cada um entrega no SEU sink — quem separa os dois é o dispositivo USB,
-    nunca o texto do nome, que é a invariante 2 desta seção.
-
-    MORDIDA: leia a fonte de um lugar global (uma constante de módulo, o último
-    valor visto) em vez do nó, e os dois passam a ter a mesma.
-    """
+    """O critério de pronto da sprint: P1 em `mix` e P2 em `sfx`, juntos."""
     p1 = _no_de_pe(_UNIQ_P1, fonte=som.FONTE_MIX).linhas
     p2 = _no_de_pe(_UNIQ_P2, fonte=som.FONTE_SFX).linhas
 
@@ -302,25 +228,14 @@ def test_um_em_mix_e_outro_em_sfx_ao_mesmo_tempo(usb_da_bancada: None) -> None:
 
 
 def test_o_mix_nao_troca_a_origem_pelo_destino() -> None:
-    """Trocar as duas pontas manda o som do controle para a televisão dela.
-
-    MORDIDA: inverta `source=` e `sink=` em `argv_para_ligar_o_mix` e as duas
-    asserções caem — e nenhuma outra régua deste arquivo notaria.
-    """
+    """Trocar as duas pontas manda o som do controle para a televisão dela."""
     argv = " ".join(som.argv_para_ligar_o_mix("hefesto_som_0000b2", f"{_HDMI}.monitor"))
     assert f"source={_HDMI}.monitor" in argv
     assert "sink=hefesto_som_0000b2" in argv
 
 
 def test_sem_saida_padrao_legivel_o_mix_nao_se_inventa() -> None:
-    """`pactl` mudo é "não sei", e um `source=` vazio toca no sink PADRÃO.
-
-    É a cicatriz do `paplay --device=` que este módulo já registra: o comando é
-    ACEITO, sai com zero, e o som vai para outro lugar — a TV dela.
-
-    MORDIDA: devolva `".monitor"` quando o `pactl` não responde e o produto
-    carrega um loopback com origem vazia.
-    """
+    """`pactl` mudo é "não sei", e um `source=` vazio toca no sink PADRÃO."""
 
     def mudo(argv: list[str]) -> str | None:
         return None
@@ -330,22 +245,8 @@ def test_sem_saida_padrao_legivel_o_mix_nao_se_inventa() -> None:
     assert len(som.argv_das_rotas("hefesto_som_0000b2", rota)) == 1
 
 
-# ---------------------------------------------------------------------------
-# 4. O NÓ VIVE SEMPRE — e sem rota ele DIZ (decisão dela, 08/09/2026)
-# ---------------------------------------------------------------------------
-
-
 def test_sem_rota_a_frase_mora_na_rota_e_nenhum_laco_sobe() -> None:
-    """Um nó sem rota tem de DIZER que não tem para onde ir.
-
-    A frase mora em `RotaDoNo.motivo`; e um `SinkVirtualPipeWire` com essa rota
-    não sobe laço nenhum. (Quem decide se o nó sem rota entra no servidor é o
-    `GerenciadorDeNosDeSom`, e a trava disso é
-    `test_o_no_de_som_nao_nasce_sumidouro.py`.)
-
-    MORDIDA: faça `_ligar_a_rota` ignorar o `tem_rota` e um `module-loopback`
-    com `sink=` vazio sobe — o som vai para a saída padrão dela.
-    """
+    """Um nó sem rota tem de DIZER que não tem para onde ir."""
     rota = som.rota_do_no(_UNIQ_P2, "bt")
     assert rota.tem_rota is False
     assert rota.motivo == som.MOTIVO_NO_SEM_PONTE_NO_RADIO
@@ -355,11 +256,7 @@ def test_sem_rota_a_frase_mora_na_rota_e_nenhum_laco_sobe() -> None:
 
 
 def test_ter_rota_e_saber_por_onde_sao_a_mesma_pergunta(usb_da_bancada: None) -> None:
-    """`tem_rota` é `por_onde` cheio — e a rota recusada carrega a frase.
-
-    MORDIDA: faça `RotaDoNo.tem_rota` devolver `True` sempre e a rota do rádio
-    sem ponte passa a entregar em lugar nenhum dizendo que entrega.
-    """
+    """`tem_rota` é `por_onde` cheio — e a rota recusada carrega a frase."""
     com = som.rota_do_no(_UNIQ_P1, "usb", (_UNIQ_P1,), runner=_runner_de_leitura())
     sem = som.rota_do_no(_UNIQ_P2, "bt")
 
@@ -368,17 +265,8 @@ def test_ter_rota_e_saber_por_onde_sao_a_mesma_pergunta(usb_da_bancada: None) ->
     assert sem.motivo
 
 
-# ---------------------------------------------------------------------------
-# 5. O NÓ VIVO — o `SinkVirtualPipeWire` sobe a rota junto, e a derruba antes
-# ---------------------------------------------------------------------------
-
-
 def test_o_no_sobe_o_loopback_junto_com_o_sink() -> None:
-    """A causa 1 da medição: era ESTA falta que fazia a fiação ser regressão.
-
-    MORDIDA: apague a chamada a `_ligar_a_rota` em `iniciar` e o nó volta a ser
-    um `module-null-sink` sozinho — o sink que aceita o áudio e o joga fora.
-    """
+    """A causa 1 da medição: era ESTA falta que fazia a fiação ser regressão."""
     gravador = _Gravador()
     no = som.SinkVirtualPipeWire(
         uniq=_UNIQ_P1,
@@ -394,12 +282,7 @@ def test_o_no_sobe_o_loopback_junto_com_o_sink() -> None:
 
 
 def test_a_rota_cai_antes_do_no_e_so_a_que_ele_subiu() -> None:
-    """Um loopback cuja ponta some é módulo órfão no PipeWire dela.
-
-    MORDIDA: descarregue o `module-null-sink` primeiro (ou esqueça
-    `self._rotas`) e a ordem das duas últimas asserções inverte — que é como os
-    52 sinks fantasma de 07/09 entraram.
-    """
+    """Um loopback cuja ponta some é módulo órfão no PipeWire dela."""
     gravador = _Gravador()
     no = som.SinkVirtualPipeWire(
         uniq=_UNIQ_P1,
@@ -414,16 +297,12 @@ def test_a_rota_cai_antes_do_no_e_so_a_que_ele_subiu() -> None:
     descarregados = [a[-1] for a in gravador.argvs if "unload-module" in a]
     assert len(descarregados) == 2, gravador.linhas
     assert descarregados[-1] == id_do_sink
-    no.parar()  # idempotente: nada de novo
+    no.parar()
     assert len([a for a in gravador.argvs if "unload-module" in a]) == 2
 
 
 def test_sem_rota_o_no_sobe_sozinho_e_nao_liga_nada() -> None:
-    """A outra metade do par: o nó existe, e nenhum loopback é carregado.
-
-    MORDIDA: carregue o loopback mesmo com `rota=None` e o produto liga o som a
-    um sink que ninguém resolveu.
-    """
+    """A outra metade do par: o nó existe, e nenhum loopback é carregado."""
     gravador = _Gravador()
     no = som.SinkVirtualPipeWire(uniq=_UNIQ_P1, runner=gravador, rota=None)
 
@@ -432,11 +311,7 @@ def test_sem_rota_o_no_sobe_sozinho_e_nao_liga_nada() -> None:
 
 
 def test_o_loopback_que_nao_sobe_nao_derruba_o_no() -> None:
-    """O dublê tem de saber RECUSAR, e a recusa não pode custar o nó.
-
-    Um `module-loopback` que falha deixa o controle mudo; derrubar o nó por
-    causa dele tira do jogo a saída que ele escolheu — o defeito inteiro.
-    """
+    """O dublê tem de saber RECUSAR, e a recusa não pode custar o nó."""
     gravador = _Gravador()
 
     def meio_recusa(argv: list[str]) -> str | None:
@@ -455,19 +330,8 @@ def test_o_loopback_que_nao_sobe_nao_derruba_o_no() -> None:
     assert no.module_id == "777"
 
 
-# ---------------------------------------------------------------------------
-# 6. O GERENCIADOR — cada controle com o SEU nó, e a mesa inteira na conta
-# ---------------------------------------------------------------------------
-
-
 def test_o_gerenciador_batiza_e_roteia_cada_um(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Quatro na mesa, quatro nós, cada um com o seu rótulo e a sua rota.
-
-    MORDIDA: volte `_construir` a `SinkVirtualPipeWire(uniq=uniq)`, sem o
-    rótulo e sem a rota, e os quatro nascem com o MESMO nome e sem destino —
-    que é exatamente o que o `test_o_no_de_som_nao_nasce_sumidouro` nomeia
-    como regressão.
-    """
+    """Quatro na mesa, quatro nós, cada um com o seu rótulo e a sua rota."""
     construidos: list[dict[str, Any]] = []
 
     class _NoFalso:
@@ -544,11 +408,7 @@ def test_a_mesa_inteira_vai_para_quem_resolve_o_sink(
 
 
 def test_a_fonte_de_cada_controle_chega_ao_no(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A escolha dela, por controle, atravessa o gerenciador até a rota.
-
-    MORDIDA: ignore `fonte_por_controle` em `_fonte_do_no` e os dois nós
-    recebem o padrão — a escolha `mix` que ela gravou no perfil evapora.
-    """
+    """A escolha dela, por controle, atravessa o gerenciador até a rota."""
     fontes: list[str] = []
 
     class _NoFalso:
@@ -584,14 +444,6 @@ def test_a_fonte_de_cada_controle_chega_ao_no(monkeypatch: pytest.MonkeyPatch) -
     assert fontes == ["mix", "sfx"]
 
 
-# ---------------------------------------------------------------------------
-# 7. O «CONTROLE N» DO NÓ — e as TRÊS contas que viraram UMA (12/09/2026)
-# ---------------------------------------------------------------------------
-
-#: Quatro endereços SEM o prefixo de vpad, porque o registro de identidade
-#: recusa `02:fe:…` por decisão (D9: o vpad jamais é "Controle N") — e é o
-#: registro de VERDADE que responde daqui para baixo. Máscara da casa nos
-#: octetos 4 e 5.
 _OS_QUATRO = ("aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014")
 
 
@@ -607,17 +459,7 @@ def _backend(mesa: list[dict[str, Any]]) -> Any:
 
 
 def _registro_com_a_fila(chegada: tuple[str, ...]) -> Any:
-    """O `identity_registry` DE VERDADE, com a fila de chegada dada.
-
-    **Não é dublê, e é de propósito.** Um dublê de registro seria mais frouxo
-    que o produto em três pontos que importam aqui: ele recusa `uniq` vazio,
-    recusa MAC de vpad (D9) e devolve a COLOCAÇÃO entre os PRESENTES, não o
-    lugar cru na fila. O de verdade não faz I/O de disco enquanto ninguém chama
-    `load()`, então a régua continua hermética.
-
-    `slot_for(uniq)` com `assign=True` é o que DÁ o lugar na fila — é assim que
-    o tique do daemon o dá. A ordem das chamadas é a ordem de chegada.
-    """
+    """O `identity_registry` DE VERDADE, com a fila de chegada dada."""
     from hefesto_dualsense4unix.daemon.subsystems.identity import (
         ControllerIdentityRegistry,
     )
@@ -662,19 +504,7 @@ def _payload_do_ipc(mesa: list[dict[str, Any]], daemon: Any) -> list[dict[str, A
     ],
 )
 def test_o_assento_do_alto_falante_e_o_mesmo_do_microfone(mesa: Any) -> None:
-    """Os dois rótulos aparecem na MESMA lista de som dela — e dizem o mesmo N.
-
-    «Alto-falante do Controle N» e «Microfone do Controle N», lado a lado: um
-    dizer 2 enquanto o outro diz 3 sobre o mesmo aparelho é a lista mentindo.
-
-    **ISTO JÁ FOI DUAS IMPLEMENTAÇÕES DA MESMA REGRA**, uma em cada subsystem, e
-    esta régua era o que as segurava. Desde 12/09/2026 as duas chamam
-    `subsystems/base.numero_do_assento_na_mesa` — a régua fica porque o par tem
-    de continuar amarrado se alguém reescrever um dos dois lados.
-
-    MORDIDA: faça `AltoFalanteSubsystem.numero_do_assento` voltar a contar
-    (`enumerate` dos conectados) e o segundo caso reprova.
-    """
+    """Os dois rótulos aparecem na MESMA lista de som dela — e dizem o mesmo N."""
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
     backend = _backend(mesa)
@@ -688,11 +518,7 @@ def test_o_assento_do_alto_falante_e_o_mesmo_do_microfone(mesa: Any) -> None:
 
 
 def test_um_uniq_que_nao_e_endereco_nao_ganha_assento() -> None:
-    """`norm_mac` só FILTRA hex: sem a trava dos doze, `"a"` casaria com tudo.
-
-    MORDIDA: tire o `len(chave) != _UNIQ_HEX` e um `uniq` de um caractere passa
-    a receber assento.
-    """
+    """`norm_mac` só FILTRA hex: sem a trava dos doze, `"a"` casaria com tudo."""
     saida = AltoFalanteSubsystem()
     saida._backend = type(
         "B", (), {"describe_controllers": staticmethod(lambda: _mesa((_UNIQ_P1, True)))}
@@ -704,14 +530,7 @@ def test_um_uniq_que_nao_e_endereco_nao_ganha_assento() -> None:
 
 
 def test_o_gancho_do_assento_nao_derruba_quem_ja_atende() -> None:
-    """Um registro, dois candidatos: quem chega primeiro atende.
-
-    Se este subsystem trocasse o numerador do `BtMicSubsystem` no meio da
-    sessão, a troca seria sem efeito e com risco — os dois respondem o mesmo.
-
-    MORDIDA: instale sempre (sem olhar o valor devolvido pelo registro) e a
-    primeira asserção cai.
-    """
+    """Um registro, dois candidatos: quem chega primeiro atende."""
     dono = mic.registrar_numerador_de_assento(lambda _u: 4)
     try:
         sub = AltoFalanteSubsystem()
@@ -738,17 +557,8 @@ def test_o_gancho_do_assento_nao_derruba_quem_ja_atende() -> None:
         mic.registrar_numerador_de_assento(anterior)
 
 
-# ---------------------------------------------------------------------------
-# 8. O PERFIL — a fonte por controle, e o perfil velho que não muda de byte
-# ---------------------------------------------------------------------------
-
-
 def test_a_fonte_entra_no_perfil_por_controle() -> None:
-    """`ControllerOverrides.speaker.fonte`, o campo novo desta sprint.
-
-    MORDIDA: tire o campo do `ProfileSpeakerConfig` e o `extra="forbid"` recusa
-    o perfil inteiro — a escolha dela não tem onde morar.
-    """
+    """`ControllerOverrides.speaker.fonte`, o campo novo desta sprint."""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
     over = ControllerOverrides(speaker=ProfileSpeakerConfig(volume=180, fonte="mix"))
@@ -757,14 +567,7 @@ def test_a_fonte_entra_no_perfil_por_controle() -> None:
 
 
 def test_perfil_velho_sem_fonte_carrega_e_nao_muda_de_byte() -> None:
-    """Sem opinião a chave nem aparece no arquivo — é a regra da `rota`.
-
-    `extra="forbid"` faz um hefesto ANTIGO recusar o perfil inteiro ao ver uma
-    chave que ele não conhece; gravar `"fonte": null` em todo perfil salvo
-    transformaria "voltar uma versão" em "todos os perfis com som quebrados".
-
-    MORDIDA: tire `"fonte"` do laço do serializer e a segunda asserção cai.
-    """
+    """Sem opinião a chave nem aparece no arquivo — é a regra da `rota`."""
     velho = ProfileSpeakerConfig(volume=180)
     assert velho.fonte is None
     assert "fonte" not in velho.model_dump()
@@ -772,12 +575,7 @@ def test_perfil_velho_sem_fonte_carrega_e_nao_muda_de_byte() -> None:
 
 
 def test_a_fonte_do_perfil_e_a_do_codigo_sao_a_mesma_lista() -> None:
-    """Duas listas de valores é como esta casa fabrica divergência silenciosa.
-
-    MORDIDA: acrescente um `"hdmi"` ao `Literal` do schema e a comparação de
-    conjunto reprova — um valor que `rota_do_no` não sabe tratar chegaria ao
-    disco.
-    """
+    """Duas listas de valores é como esta casa fabrica divergência silenciosa."""
     import typing
 
     campo = ProfileSpeakerConfig.model_fields["fonte"].annotation
@@ -792,18 +590,9 @@ def test_a_fonte_do_perfil_e_a_do_codigo_sao_a_mesma_lista() -> None:
 
 
 def test_uma_fonte_que_o_codigo_nao_conhece_cai_no_padrao() -> None:
-    """Nada que venha de fora vira comportamento novo por acidente.
-
-    MORDIDA: passe o valor adiante sem a peneira e `argv_das_rotas` decide por
-    um `elif` que não existe — silêncio, que é o pior desfecho.
-    """
+    """Nada que venha de fora vira comportamento novo por acidente."""
     rota = som.rota_do_no(_UNIQ_P1, "bt", (), fonte="hdmi-completo")
     assert rota.fonte == som.FONTE_PADRAO
-
-
-# ---------------------------------------------------------------------------
-# 9. A PALAVRA DO TRANSPORTE — quatro grafias, uma pergunta
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("palavra", ["bt", "radio", "rádio", "BLUETOOTH"])
@@ -826,11 +615,7 @@ def test_a_palavra_do_transporte_nao_troca_a_frase(palavra: str) -> None:
 
 
 def test_o_cabo_continua_sendo_cabo_nas_duas_grafias() -> None:
-    """A peneira do rádio não pode engolir o cabo — o dublê sabe recusar.
-
-    MORDIDA: ponha `"usb"` ou `"cabo"` em `_PALAVRAS_DE_RADIO` e o controle do
-    fio passa a receber a frase do rádio, que é o defeito espelhado.
-    """
+    """A peneira do rádio não pode engolir o cabo — o dublê sabe recusar."""
     for palavra in ("usb", "cabo", ""):
         assert som.e_radio(palavra) is False
     rota = som.rota_do_no(_UNIQ_P1, "cabo", (_UNIQ_P1,), runner=lambda a: "")
@@ -873,7 +658,6 @@ def test_as_tres_contas_do_mesmo_rotulo_viraram_uma() -> None:
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
     p1, p2, p3, p4 = _OS_QUATRO
-    # a fila de chegada NÃO é a ordem dos handles: é ela que dá o `[4,1,3,2]`.
     registro = _registro_com_a_fila((p2, p4, p3, p1))
     daemon = type("D", (), {"identity_registry": registro})()
 
@@ -933,18 +717,7 @@ def test_a_entrada_que_ja_traz_o_slot_nao_e_perguntada_de_novo() -> None:
 
 
 def test_o_controle_desligado_nao_ganha_nome_mesmo_com_lugar_na_fila() -> None:
-    """A INVARIANTE que a cura não podia perder: número só para quem está na mesa.
-
-    `slot_for(uniq, assign=False)` responde a COLOCAÇÃO que um AUSENTE teria se
-    voltasse — é a promessa dele, e é o que faz o cartão nascer certo no tique de
-    hotplug. Um nó de som publicado por essa resposta poria na lista dela um
-    «Microfone do Controle N» de um controle que não está lá, e que ninguém
-    consegue desligar.
-
-    MORDIDA: faça `base.numero_do_assento_na_mesa` varrer `_controles_da_mesa()`
-    em vez dos conectados (ou peça o slot antes de achar o item) e o P1 desligado
-    ganha nome.
-    """
+    """A INVARIANTE que a cura não podia perder: número só para quem está na mesa."""
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
     p1, p2, p3, p4 = _OS_QUATRO

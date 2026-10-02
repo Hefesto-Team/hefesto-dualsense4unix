@@ -1,44 +1,4 @@
-"""A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 — o que os programas mandam aos virtuais.
-
-**O item 2, medido em 27/09/2026.** O kernel mostrou `playstation
-0003:054C:0DF2.*: Output queue is full` 47.020 vezes às 00h e 39.552 à 01h,
-com o PRAGMATA aberto, e 2.013 numa partida de Pro Jank Footy. É a fila de 32
-eventos do `uhid.c` de cada controle virtual nosso: o que não cabe, o kernel
-descarta (vibração, gatilho e luz que o jogo pediu). O daemon só lia o fd do
-uhid no `pump_ff`, chamado no tique do repasse da entrada (~60 Hz), e o
-`cosmic-osk` de toda sessão do COSMIC manda um efeito a cada 50 ms a cada
-virtual.
-
-**O kernel de mentira é o `uhid.c` naquilo que mede:** uma fila de 32 lugares
-(`UHID_BUFSIZE`, e cabem 31: o `uhid_queue` recusa quando a cabeça alcançaria o
-rabo), um evento por `read`, e o descarte com a conta do «Output queue is
-full». O fd que o produto recebe é um socket `SOCK_SEQPACKET` (a fronteira de
-cada evento se preserva, e o `poll` funciona como no nó de verdade), e o
-kernel conta o que está na fila pelo `FIONREAD`, que num `SEQPACKET` soma os
-eventos que o produto ainda não leu. O produto chega a ele pelo caminho de
-sempre (`start()` → `os.open("/dev/uhid")`).
-
-**As réguas, e as mordidas (28/09/2026, cada uma devolvida com o md5):**
-
-- 200 eventos de saída em ~100 ms sem nenhum tique: nenhum cai. Devolva o
-  dreno ao tique (o `_criar_o_device` sem `_iniciar_o_fio_do_uhid`) e a fila
-  enche: 169 descartados, e o produto não viu nenhum;
-- o pedido de feature do jogo (`UHID_GET_REPORT`, em que quem pede fica
-  parado até a resposta) é respondido sem tique;
-- a entrega ao controle físico segue no tique: nenhum sink roda no fio do
-  virtual, e o último pedido de vibração chega;
-- o `stop` encerra o fio antes de fechar o fd.
-
-**E as que a conferência de 28/09 acrescentou** (cada uma com a mordida na
-docstring): o CLOSE que o fio atende devolve o perfil e para o motor no
-tique, e o `stop` antes do tique entrega o que ficou anotado; o `stop` não
-espera o prazo do `poll`; os quatro virtuais atendem juntos, não só o do P2;
-o virtual nasce sem pipe e sem fio novo; dois `stop` juntos fecham o
-despertador uma vez; e o pad Xbox responde o envio de efeito antes de 5 ms,
-o número da sprint (a régua irmã da O-PAD mede 0,5 s).
-
-Nenhum endereço real: o MAC do virtual sai do número (o piso `02:fe`).
-"""
+"""A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 — o que os programas mandam aos virtuais."""
 from __future__ import annotations
 
 import array
@@ -87,34 +47,21 @@ from tests.unit.test_o_pad_virtual_atende_a_vibracao_desde_que_nasce import (
 )
 from tests.unit.test_vpad_ff_passthrough import _rumble_effect
 
-#: `UHID_BUFSIZE` do `drivers/hid/uhid.c`. O `uhid_queue` recusa quando a
-#: cabeça nova alcançaria o rabo: cabem 31.
 UHID_BUFSIZE = 32
 
-#: Quantos eventos o jogo manda, e em quanto tempo (a régua da sprint).
 EVENTOS = 200
 JANELA_S = 0.100
 
-#: O prazo de quem espera o fio responder. A resposta leva microssegundos; o
-#: prazo largo é para a máquina carregada, e o sem-fio nunca responde.
 PRAZO_S = 0.25
 
 
 class KernelDoUhid:
-    """O lado do kernel do `/dev/uhid`: a fila de 32 lugares, e só.
-
-    ``cheia`` conta o «Output queue is full» — o que o kernel descartou. O fio
-    do kernel lê o que o produto escreve: responde o `UHID_CREATE2` como o
-    probe do `hid_playstation` (`START`, e o `OPEN` do `hid_hw_open` do probe)
-    e anota as respostas de feature.
-    """
+    """O lado do kernel do `/dev/uhid`: a fila de 32 lugares, e só."""
 
     def __init__(self) -> None:
         self.lado_do_kernel, self.lado_do_produto = socket.socketpair(
             socket.AF_UNIX, socket.SOCK_SEQPACKET
         )
-        # A fila de 31 eventos de 4 KB tem de caber no buffer do socket: quem
-        # limita é a conta do `uhid_queue`, e nunca o socket.
         with contextlib.suppress(OSError):
             self.lado_do_kernel.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1 << 22)
         self.lado_do_kernel.setblocking(False)
@@ -127,7 +74,6 @@ class KernelDoUhid:
         self._fio = threading.Thread(target=self._ler_o_produto, daemon=True)
         self._fio.start()
 
-    # -- o que o produto escreve ------------------------------------------
 
     def _ler_o_produto(self) -> None:
         while not self._pare.is_set():
@@ -142,7 +88,6 @@ class KernelDoUhid:
                 continue
             tipo = struct.unpack("<I", dado[:4])[0]
             if tipo == UHID_CREATE2:
-                # O probe do `hid_playstation`: o START e o OPEN do `hid_hw_open`.
                 self.enfileirar(struct.pack("<I", UHID_START))
                 self.enfileirar(struct.pack("<I", UHID_OPEN))
             elif tipo == UHID_DESTROY:
@@ -151,7 +96,6 @@ class KernelDoUhid:
                 pedido = struct.unpack("<I", dado[4:8])[0]
                 self.respostas_de_feature.setdefault(pedido, time.monotonic())
 
-    # -- a fila do `uhid.c` -----------------------------------------------
 
     def pendentes(self) -> int:
         """Quantos eventos o produto ainda não leu (o `FIONREAD` soma o SEQPACKET)."""
@@ -208,7 +152,7 @@ def _evento_de_saida(report: bytes) -> bytes:
 def _vibracao(fraco: int, forte: int) -> bytes:
     """O report 0x02 de vibração que o `hid_playstation` monta (firmware v2)."""
     corpo = bytearray(47)
-    corpo[0] = 0x02  # HAPTICS_SELECT, o que o hardware real manda sozinho
+    corpo[0] = 0x02
     corpo[2] = fraco
     corpo[3] = forte
     return bytes([0x02]) + bytes(corpo)
@@ -281,12 +225,10 @@ def _virtual(relogio: Relogio, fisico: Fisico | None = None) -> UhidDualSense:
     assert pad.start() is True
     inicio = time.monotonic()
     while not pad.is_bound and time.monotonic() - inicio < 1.0:
-        # O tique de antes da cura é quem bombeia o bind; com a cura, o fio.
-        # A régua não depende disso: ela só começa com o virtual de pé.
         pad.pump_ff()
         time.sleep(0.002)
     assert pad.is_bound, "o virtual não fez bind no kernel de mentira"
-    relogio.avancar(1.0)  # a graça pós-bind da réplica (`_GAME_REPLICA_GRACE_S`)
+    relogio.avancar(1.0)
     return pad
 
 
@@ -298,18 +240,12 @@ def _esperar(condicao: Any, prazo_s: float) -> float:
 
 
 def test_duzentos_eventos_sem_tique_nenhum_cai(kernel: KernelDoUhid) -> None:
-    """A régua da sprint: 200 eventos de saída em ~100 ms sem tique de entrada.
-
-    MORDE: devolva o dreno ao tique (tire o `_iniciar_o_fio_do_uhid` do
-    `_criar_o_device`) — a fila de 31 enche, o kernel descarta 169, e o
-    produto não viu nenhum.
-    """
+    """A régua da sprint: 200 eventos de saída em ~100 ms sem tique de entrada."""
     pad = _virtual(Relogio())
     try:
         inicio = time.monotonic()
         for n in range(EVENTOS):
             kernel.enfileirar(_evento_de_saida(_vibracao(n % 256, 0)))
-            # O jogo (ou o `cosmic-osk`) escrevendo sem parar, ~2.000 por segundo.
             time.sleep(JANELA_S / EVENTOS)
         durou = time.monotonic() - inicio
         _esperar(lambda: pad.output_count >= EVENTOS, 1.0)
@@ -326,13 +262,7 @@ def test_duzentos_eventos_sem_tique_nenhum_cai(kernel: KernelDoUhid) -> None:
 
 
 def test_o_pedido_de_feature_e_respondido_sem_tique(kernel: KernelDoUhid) -> None:
-    """O jogo pede um feature report (0x09) e fica parado até a resposta.
-
-    No `uhid.c`, o `uhid_hid_get_report` espera a resposta por até 5 s com o
-    jogo parado na chamada. Sem o fio, ela só saía no tique seguinte.
-
-    MORDE: sem o `_iniciar_o_fio_do_uhid`, ninguém responde dentro do prazo.
-    """
+    """O jogo pede um feature report (0x09) e fica parado até a resposta."""
     pad = _virtual(Relogio())
     try:
         pedido = 77
@@ -348,11 +278,7 @@ def test_o_pedido_de_feature_e_respondido_sem_tique(kernel: KernelDoUhid) -> Non
 
 
 def test_a_entrega_ao_fisico_segue_no_tique(kernel: KernelDoUhid) -> None:
-    """O fio atende; quem fala com o controle físico é o tique, com o dedup de sempre.
-
-    MORDE: chame os sinks no fio do virtual (o `_emit_rumble` sem o
-    `_no_fio_do_uhid`) — a vibração chega antes do tique, e de outra thread.
-    """
+    """O fio atende; quem fala com o controle físico é o tique, com o dedup de sempre."""
     fisico = Fisico()
     relogio = Relogio()
     pad = _virtual(relogio, fisico)
@@ -365,7 +291,7 @@ def test_a_entrega_ao_fisico_segue_no_tique(kernel: KernelDoUhid) -> None:
         assert fisico.vibracao == [], "o fio do virtual falou com o controle físico"
         assert fisico.luz == []
 
-        pad.pump_ff()  # o tique
+        pad.pump_ff()
 
         assert fisico.vibracao == [(30, 5)], (
             f"o tique não entregou o último pedido: {fisico.vibracao}"
@@ -374,7 +300,7 @@ def test_a_entrega_ao_fisico_segue_no_tique(kernel: KernelDoUhid) -> None:
         assert fisico.fios == {threading.get_ident()}, (
             "o controle físico ouviu de outra thread que não a do tique"
         )
-        pad.pump_ff()  # nada de novo: o dedup não reenvia
+        pad.pump_ff()
         assert fisico.vibracao == [(30, 5)]
     finally:
         pad.stop()
@@ -424,17 +350,7 @@ def _o_jogo_fecha(kernel: KernelDoUhid, pad: UhidDualSense) -> None:
 
 
 def test_o_fim_da_sessao_e_a_parada_vao_ao_fisico_no_tique(kernel: KernelDoUhid) -> None:
-    """O jogo fecha com o motor girando: a parada e o perfil voltam ao físico no tique.
-
-    O fio atende o CLOSE e só anota. O tique entrega as duas coisas, uma vez,
-    da thread do laço.
-
-    MORDE: tire o `_rumble_a_entregar = (0, 0)` do ramo do fio no
-    `_silence_rumble` (o motor segue girando depois de o jogo fechar); chame o
-    `session_end_sink` no fio, no `_end_game_session` (o perfil volta de outra
-    thread, antes do tique); ou tire o fim da sessão do `_entregar_o_pendente`
-    (o perfil não volta nunca).
-    """
+    """O jogo fecha com o motor girando: a parada e o perfil voltam ao físico no tique."""
     fisico = Fisico()
     pad = _virtual(Relogio(), fisico)
     try:
@@ -449,7 +365,7 @@ def test_o_fim_da_sessao_e_a_parada_vao_ao_fisico_no_tique(kernel: KernelDoUhid)
         assert fisico.vibracao == [(200, 100)], "o fio parou o motor sem o tique"
         assert fisico.fins_de_sessao == 0, "o fio devolveu o perfil sem o tique"
 
-        pad.pump_ff()  # o tique
+        pad.pump_ff()
         assert fisico.vibracao[-1] == (0, 0), (
             f"o jogo fechou com o motor girando e o tique não o parou: {fisico.vibracao}"
         )
@@ -462,12 +378,7 @@ def test_o_fim_da_sessao_e_a_parada_vao_ao_fisico_no_tique(kernel: KernelDoUhid)
 
 
 def test_o_stop_entrega_o_que_o_fio_atendeu(kernel: KernelDoUhid) -> None:
-    """O jogo fecha e o virtual morre antes do tique: o perfil volta e o motor para.
-
-    MORDE: tire o `_entregar_o_pendente()` do `_destruir_o_device` — o fim da
-    sessão que o fio anotou morre com o virtual, e a camada do jogo fica
-    grudada no controle físico.
-    """
+    """O jogo fecha e o virtual morre antes do tique: o perfil volta e o motor para."""
     fisico = Fisico()
     pad = _virtual(Relogio(), fisico)
     try:
@@ -479,18 +390,14 @@ def test_o_stop_entrega_o_que_o_fio_atendeu(kernel: KernelDoUhid) -> None:
         _esperar(lambda: pad.output_count >= 2, 1.0)
         _o_jogo_fecha(kernel, pad)
     finally:
-        pad.stop()  # sem tique nenhum depois do CLOSE
+        pad.stop()
     assert fisico.fins_de_sessao == 1, "o fim da sessão morreu com o virtual"
     assert fisico.vibracao[-1:] == [(0, 0)], f"o motor ficou girando: {fisico.vibracao}"
     assert fisico.fios == {threading.get_ident()}
 
 
 def test_o_stop_nao_espera_o_prazo_do_fio(kernel: KernelDoUhid) -> None:
-    """O `stop` acorda o fio na hora: o laço não para esperando o prazo do `poll`.
-
-    MORDE: tire o `os.write` do despertador no `_parar_o_fio_do_uhid` — o fio
-    acabou de voltar ao `poll` e só acorda no prazo (1 s).
-    """
+    """O `stop` acorda o fio na hora: o laço não para esperando o prazo do `poll`."""
     pad = _virtual(Relogio())
     kernel.enfileirar(_evento_de_saida(_luz(7, 8, 9)))
     _esperar(lambda: pad.output_count >= 1, 1.0)
@@ -522,14 +429,7 @@ def quatro_kernels(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[KernelDoUhi
 
 
 def test_os_quatro_virtuais_atendem_ao_mesmo_tempo(quatro_kernels: list[KernelDoUhid]) -> None:
-    """Os quatro jogadores, cada um com o seu virtual: 200 eventos a cada um, sem tique.
-
-    Nenhum fica de fora: o fio é de cada virtual, e o do P1 não atende pelos
-    outros.
-
-    MORDE: devolva o dreno ao tique (tire o `_iniciar_o_fio_do_uhid` do
-    `_criar_o_device`) — as quatro filas enchem.
-    """
+    """Os quatro jogadores, cada um com o seu virtual: 200 eventos a cada um, sem tique."""
     pads: list[UhidDualSense] = []
     try:
         for jogador in (1, 2, 3, 4):
@@ -561,17 +461,13 @@ def test_os_quatro_virtuais_atendem_ao_mesmo_tempo(quatro_kernels: list[KernelDo
 def test_sem_descritor_para_o_despertador_o_tique_drena(
     kernel: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O processo sem descritor livre: o virtual nasce mesmo assim, e o tique atende.
-
-    MORDE: tire o `try` do `os.pipe()` no `_iniciar_o_fio_do_uhid` — o `start`
-    levanta com o device já criado no kernel.
-    """
+    """O processo sem descritor livre: o virtual nasce mesmo assim, e o tique atende."""
 
     def _sem_descritor() -> tuple[int, int]:
         raise OSError(errno.EMFILE, "Too many open files")
 
     monkeypatch.setattr(os, "pipe", _sem_descritor)
-    pad = _virtual(Relogio())  # o bind sai pelo tique, que o `_virtual` bombeia
+    pad = _virtual(Relogio())
     try:
         assert pad._fio_do_uhid is None
         pedido = 91
@@ -587,11 +483,7 @@ def test_sem_descritor_para_o_despertador_o_tique_drena(
 def test_sem_fio_novo_o_virtual_nasce_e_nao_vaza_o_despertador(
     kernel: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O processo no teto de fios: o virtual nasce, o tique atende e o pipe fecha.
-
-    MORDE: tire o `try` do `fio.start()` no `_iniciar_o_fio_do_uhid` — o
-    `start` levanta com o device criado no kernel, e ninguém o destrói.
-    """
+    """O processo no teto de fios: o virtual nasce, o tique atende e o pipe fecha."""
     iniciar = threading.Thread.start
     pipes: list[tuple[int, int]] = []
     criar_pipe = os.pipe
@@ -622,14 +514,7 @@ def test_sem_fio_novo_o_virtual_nasce_e_nao_vaza_o_despertador(
 def test_dois_stops_ao_mesmo_tempo_fecham_o_despertador_uma_vez(
     kernel: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A interface e o laço derrubam o mesmo virtual juntos: cada ponta fecha uma vez.
-
-    Um segundo `close` do mesmo número cai no descritor que outra thread já
-    reaproveitou (um hidraw, o uhid de outro jogador).
-
-    MORDE: leia o despertador com `self._despertador` em vez de tirá-lo com o
-    `pop` no `_parar_o_fio_do_uhid` — as duas threads fecham as duas pontas.
-    """
+    """A interface e o laço derrubam o mesmo virtual juntos: cada ponta fecha uma vez."""
     fechar = os.close
     fechados: list[int] = []
 
@@ -662,15 +547,7 @@ def test_dois_stops_ao_mesmo_tempo_fecham_o_despertador_uma_vez(
 
 @pytest.mark.usefixtures("evdev_de_mentira")
 def test_o_pad_xbox_responde_o_efeito_antes_de_5_ms() -> None:
-    """A régua da sprint para o pad Xbox: o envio de efeito, sem tique, antes de 5 ms.
-
-    A irmã da O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 prova que a
-    resposta vem sem tique, com um prazo de 0,5 s. Aqui é o número da sprint:
-    a mediana de 21 envios, para a máquina carregada não decidir.
-
-    MORDE: devolva a resposta ao tique (o pad sem o fio que a atende) —
-    nenhum envio é respondido.
-    """
+    """A régua da sprint para o pad Xbox: o envio de efeito, sem tique, antes de 5 ms."""
     pad = UinputGamepad.for_flavor("xbox", rumble_sink=lambda _w, _s: None)
     assert pad.start() is True
     aparelho = _UInputComoOPythonEvdev.instancias[0]
@@ -693,25 +570,11 @@ def test_o_pad_xbox_responde_o_efeito_antes_de_5_ms() -> None:
     assert mediana < 0.005, f"o pad Xbox respondeu em {mediana * 1000:.1f} ms (mediana)"
 
 
-# ---------------------------------------------------------------------------
-# O item 3: o nome que o jogo vê é o número do jogador.
-#
-# A bancada é a de queda (backend, co-op e registro de identidade REAIS), com a
-# fila gravada da mesa dela (branco 1, vermelho 2, roxo 3, azul 4) e o jogo
-# visto de fora (`JogoPorFora`). O vpad da bancada carrega o número no nome
-# como o uhid carrega (`player`, que o `identidade_do_vpad` lê como
 # `vpad_indice`). O alarme que a régua lê é o do PRODUTO: o `nome_divergente`
 # da `CoopManager.mesa()`, o mesmo que o `state_full` publica.
-#
-# MEDIDO ANTES DA CURA (28/09/2026), nas 24 ordens de chegada dos quatro: sem
-# jogo, a carta 1 que sai além do prazo deixava o roxo e o azul com «P3» e
-# «P4» e a carta dizendo 2 e 3, em 24 de 24; com o jogo, a ordem já os recria.
-# ---------------------------------------------------------------------------
 
-#: Tiques até o lugar guardado vencer (o prazo é do produto), com folga.
 _PASSA_O_PRAZO = 3 + int(prazo_do_lugar_guardado() // TIQUE)
 
-#: Todas as ordens de chegada de dois, três e quatro controles da fila dela.
 _ORDENS = [
     ordem for quantos in (2, 3, 4) for ordem in itertools.permutations(FILA_DELA[:quantos])
 ]
@@ -734,14 +597,7 @@ def _vivos(bancada: Any) -> set[int]:
 def test_com_o_jogo_solto_o_nome_e_o_numero(
     monkeypatch: pytest.MonkeyPatch, chegada: tuple[str, ...], transporte: str
 ) -> None:
-    """Sem jogo, em toda ordem de chegada: o nome de cada vpad é o número dele.
-
-    A carta 1 sai além do prazo (a NUM-01 renumera) e volta.
-
-    MORDE: tire a linha `recriar = self._com_os_nomes_velhos(recriar, cartas)`
-    do `_ordenar` — com três ou quatro na mesa, quem ficou segue com o nome
-    velho depois da saída.
-    """
+    """Sem jogo, em toda ordem de chegada: o nome de cada vpad é o número dele."""
     bancada = _a_mesa_do_boot(monkeypatch, chegada, jogo=False, transporte=transporte)
     for _ in range(6):
         bancada.tique()
@@ -762,18 +618,7 @@ def test_com_o_jogo_solto_o_nome_e_o_numero(
 
 @pytest.mark.usefixtures("config_isolado")
 def test_o_nome_espera_a_mesa_assentar(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Quem ficou renasce UMA vez pelo nome, e só com a mesa assentada.
-
-    Medido na bancada (28/09/2026), a mesa dela na ordem, sem jogo: a carta 1
-    sai além do prazo e dois renascem (o roxo e o azul, com o número novo); na
-    volta dela, a ordem recria os dois de novo para o vermelho nascer antes, e
-    o nome não recria mais ninguém.
-
-    MORDE: tire o `_a_mesa_esta_assentada()` do `_com_os_nomes_velhos` — dentro
-    do prazo o posto do P1 renasce pelo nome e veste o endereço do vermelho,
-    que o vpad dele pede na volta (a bancada reprova o MAC repetido); e na
-    volta os dois renascem pelo nome e de novo pela ordem.
-    """
+    """Quem ficou renasce UMA vez pelo nome, e só com a mesa assentada."""
     bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False)
     for _ in range(6):
         bancada.tique()
@@ -799,20 +644,13 @@ def test_o_nome_espera_a_mesa_assentar(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
     monkeypatch: pytest.MonkeyPatch, quem: str
 ) -> None:
-    """Com o jogo na autoridade, o nome velho espera; o jogo solta, e ele renasce.
-
-    O nome velho é o estado que a fila deixa quando anda depois de o vpad
-    nascer: o número dentro do nome é o de antes.
-
-    MORDE: tire o `if not autoridade:` do `_ordenar` (os nomes valendo com o
-    jogo aberto) — o vpad é arrancado da partida.
-    """
+    """Com o jogo na autoridade, o nome velho espera; o jogo solta, e ele renasce."""
     bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=True)
     for _ in range(6):
         bancada.tique()
     assert _nomes_errados(bancada) == []
     alvo = bancada.daemon._gamepad_device if quem == "posto" else bancada.vpad_de(FILA_DELA[2])
-    alvo.player = 4 if quem == "posto" else 2  # nasceu com o número de antes
+    alvo.player = 4 if quem == "posto" else 2
     assert _nomes_errados(bancada), "premissa: o nome velho aparece no alarme"
     vivos = _vivos(bancada)
 
@@ -821,7 +659,7 @@ def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
     assert _vivos(bancada) == vivos, "um vpad renasceu com o jogo segurando"
     assert alvo.vivo
 
-    bancada.daemon.display_authority = "daemon"  # o jogo soltou
+    bancada.daemon.display_authority = "daemon"
     for _ in range(3):
         bancada.tique()
     assert not alvo.vivo, "o jogo soltou e o vpad seguiu com o nome velho"
@@ -834,14 +672,7 @@ def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
 def test_qualquer_carta_que_sai_deixa_os_nomes_certos(
     monkeypatch: pytest.MonkeyPatch, quem_sai: int, transporte: str
 ) -> None:
-    """Sem jogo, a mesa dela inteira, e sai qualquer um dos quatro (não só a carta 1).
-
-    Quem ficou atrás de quem saiu anda um número na fila, e o nome anda junto;
-    quem volta volta com o dele.
-
-    MORDE: tire a linha `recriar = self._com_os_nomes_velhos(recriar, cartas)`
-    do `_ordenar` — quem saiu do meio deixa os de trás com o número velho.
-    """
+    """Sem jogo, a mesa dela inteira, e sai qualquer um dos quatro (não só a carta 1)."""
     bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False, transporte=transporte)
     for _ in range(6):
         bancada.tique()
@@ -863,15 +694,7 @@ def test_qualquer_carta_que_sai_deixa_os_nomes_certos(
 
 @pytest.mark.usefixtures("config_isolado")
 def test_cada_episodio_do_nome_velho_vai_ao_diario(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A carta 1 sai duas vezes na mesma vida do daemon: o diário diz as duas.
-
-    A prova no aparelho conta as linhas `coop_nome_do_virtual_renasce` do
-    diário; uma segunda saída calada leria «nada renasceu» sobre dois
-    virtuais que renasceram.
-
-    MORDE: tire o `self._nomes_velhos_ditos = None` do `_com_os_nomes_velhos`
-    — a segunda saída, com os mesmos números, não vai ao diário.
-    """
+    """A carta 1 sai duas vezes na mesma vida do daemon: o diário diz as duas."""
     bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False)
     for _ in range(6):
         bancada.tique()

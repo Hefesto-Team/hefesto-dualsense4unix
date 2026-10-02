@@ -1,47 +1,4 @@
-"""RC=0 NÃO É «MEDIU» — a régua do terceiro estado do `portoes.sh`.
-
-O DEFEITO, medido em 20/09/2026 e não suposto. O portão `sprints-fechadas`
-nasceu naquele dia lendo `docs/process/sprints/`, que é `.gitignore:178` e
-**não viaja pelo git** — então todo worktree de agente nasce sem ela, e um
-clone limpo também. Para não mentir, o portão passou a imprimir *"NÃO MEDIDO:
-não há docs/process/sprints/ nesta árvore"* e devolver 0.
-
-Só que o `portoes.sh` **engolia a saída de quem devolve 0**. Rodado numa
-árvore sem a pasta, o relatório inteiro dizia::
-
-    sprints-fechadas       ok          39 ms
-    ...
-    TODOS VERDES — 44 portões.
-
-A frase honesta existia no script e **não chegava a ninguém** — verde sobre 46
-sprints que o portão não abriu. É a cicatriz que o próprio `portoes.sh` já
-carrega escrita duas vezes (o interpretador e o `PYTHONPATH`): *aviso no
-cabeçalho de um comando que termina verde ninguém lê; instrumento que sabe do
-próprio risco RESOLVE, não avisa.*
-
-O CONTRATO QUE ESTA RÉGUA COBRA, e ele vale para QUALQUER portão, não só para
-o `sprints-fechadas` — trava-se a classe, nunca a instância:
-
-  1. portão que não pôde medir imprime `NÃO MEDIDO` na PRIMEIRA linha e
-     devolve 0;
-  2. o `portoes.sh` o nomeia com o rótulo `NÃO MEDIDO`, **mostra a saída dele**
-     (a razão é metade da resposta) e o conta à parte no fim;
-  3. ele NÃO reprova — faltou o dado, não o conserto — e a corrida ainda sai
-     `rc=0`;
-  4. e ele **não entra na conta dos verdes**: o fecho deixa de ser «TODOS
-     VERDES — N portões» e passa a dizer quantos ficaram sem medição.
-
-COMO ELA MEDE, e é de propósito o `portoes.sh` DE VERDADE: a régua copia o
-script real para uma árvore de mentira e troca **só os dados** — o corpo da
-tabela `_LISTA` — por dois portões de brinquedo. Toda a lógica de corrida e de
-relatório exercitada é a de produção, byte por byte. Um dublê do relatório
-provaria apenas que o dublê funciona.
-
-A MORDIDA ARRANCA o ramo `NÃO MEDIDO` do `portoes.sh` (deixe o `if
-[ "$rc" -eq 0 ]` sozinho, como era até 20/09/2026) e as quatro réguas abaixo
-reprovam: o portão de brinquedo volta a sair `ok`, a razão dele some do
-relatório e o fecho volta a chamá-lo de verde.
-"""
+"""RC=0 NÃO É «MEDIU» — a régua do terceiro estado do `portoes.sh`."""
 
 from __future__ import annotations
 
@@ -55,18 +12,11 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 PORTOES = RAIZ / "scripts" / "portoes.sh"
 
-#: O rótulo é o contrato. Ele mora aqui numa constante só para que a régua
-#: fale dele uma vez; quem o mudar no `portoes.sh` sem mudar aqui vê as quatro
-#: reprovarem, que é o ponto.
 ROTULO = "NÃO MEDIDO"
 
 
 def _arvore_de_mentira(tmp_path: Path) -> Path:
-    """Uma árvore git com o `portoes.sh` REAL e uma tabela de dois portões.
-
-    Só a TABELA é de mentira. O `_LISTA` do script real é um heredoc de dados;
-    trocar os dados e manter o código é o que faz esta régua medir produção.
-    """
+    """Uma árvore git com o `portoes.sh` REAL e uma tabela de dois portões."""
     texto = PORTOES.read_text(encoding="utf-8")
     abre = texto.index("_LISTA() {")
     corpo = texto.index("TABELA\n}", abre)
@@ -139,11 +89,7 @@ def test_quem_nao_mediu_sai_rotulado_e_nao_como_ok(relatorio):
 
 
 def test_a_razao_de_nao_ter_medido_chega_junto(relatorio):
-    """A saída dele é mostrada. Sem a razão, o rótulo é só outro silêncio.
-
-    E a de quem mediu continua engolida — o relatório de 61 portões só é
-    legível porque o verde não fala.
-    """
+    """A saída dele é mostrada. Sem a razão, o rótulo é só outro silêncio."""
     assert "o dado deste portão de brinquedo não está no disco" in relatorio.stdout
     assert "e esta segunda linha é a razão" in relatorio.stdout, (
         "só a primeira linha chegou; a razão vem depois dela e é o que "
@@ -153,21 +99,13 @@ def test_a_razao_de_nao_ter_medido_chega_junto(relatorio):
 
 
 def test_nao_medido_nao_reprova_a_corrida(relatorio):
-    """`rc=0`: faltou o DADO, não o conserto.
-
-    Se isto reprovasse, o portão ficaria vermelho em toda árvore de agente —
-    vermelho sem conserto, que é portão que alguém desliga na semana seguinte.
-    """
+    """`rc=0`: faltou o DADO, não o conserto."""
     assert relatorio.returncode == 0, relatorio.stdout + relatorio.stderr
     assert "REPROVOU" not in relatorio.stdout, relatorio.stdout
 
 
 def test_o_fecho_nao_chama_de_verde_quem_nao_mediu(relatorio):
-    """O total de verdes desconta quem não mediu, e o fecho os nomeia.
-
-    Era aqui que a conta mentia: `TODOS VERDES — 44 portões` incluía o que
-    não tinha aberto um arquivo sequer.
-    """
+    """O total de verdes desconta quem não mediu, e o fecho os nomeia."""
     saida = relatorio.stdout
     assert "TODOS VERDES" not in saida, (
         "o fecho chamou de verde uma corrida com portão não medido:\n" + saida)

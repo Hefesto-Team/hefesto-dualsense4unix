@@ -46,9 +46,6 @@ from typing import Any, Literal
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-#: O `pacotes/` mora dentro de `interface/` e não é pacote instalável — é o
-#: mesmo empurrão de `sys.path` que `test_a_aba01_le_o_estado_em_vez_de_cravar`
-#: faz, e ele existe porque o `ponte.TETOS` é o dono do teto de tempo.
 for _caminho in (
     str(RAIZ / "src"),
     str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface"),
@@ -64,7 +61,6 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils.session import config_dir
 
-#: O QUE O PERFIL DIZ. Diferente da flag de sessão em TODOS os campos.
 PERFIL_DA_NAVEGACAO: dict[str, Any] = {
     "name": "A Navegação Dela",
     "match": {"type": "any"},
@@ -73,7 +69,6 @@ PERFIL_DA_NAVEGACAO: dict[str, Any] = {
     "teclado_emulado": True,
 }
 
-#: O QUE A FLAG DE SESSÃO DIZ — o que o produto lia ANTES da cura.
 FLAG_DA_SESSAO: dict[str, Any] = {"enabled": True, "speed": 3, "scroll_speed": 1}
 
 
@@ -88,12 +83,7 @@ class _TecladoDeMentira:
 
 
 class _DaemonQueAnota(Daemon):
-    """SUBCLASSE do daemon real — herda as assinaturas, anota o que recebeu.
-
-    Só os três setters que tocam aparelho são interceptados. Tudo o que decide
-    (`apply_profile_mouse`, o recuo, `resolver_teclado_emulado`) é o código do
-    produto rodando.
-    """
+    """SUBCLASSE do daemon real — herda as assinaturas, anota o que recebeu."""
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -108,11 +98,6 @@ class _DaemonQueAnota(Daemon):
         *,
         origin: Literal["manual", "profile"],
     ) -> bool:
-        # SEM DEFAULT em `origin`, porque o produto também não tem. Medido em
-        # 17/09/2026 com `inspect.signature`: o dublê nascera com
-        # `origin: str = "manual"`, e um chamador que ESQUECESSE a origem
-        # estouraria no daemon real e passaria aqui. *Dublê mais frouxo que o
-        # produto é como a máscara nunca gravou um byte.*
         self.recebeu.append(
             ("set_mouse_emulation", (enabled, speed, scroll_speed), {"origin": origin})
         )
@@ -142,7 +127,6 @@ class _DaemonQueAnota(Daemon):
         )
         return bool(value)
 
-    # --- as perguntas que a régua faz ao que foi recebido -------------------
     def chamada(self, metodo: str) -> tuple[Any, ...] | None:
         for nome, args, _kwargs in self.recebeu:
             if nome == metodo:
@@ -182,16 +166,8 @@ def _daemon_com(perfil: dict[str, Any] | None) -> _DaemonQueAnota:
     return d
 
 
-# ---------------------------------------------------------------------------
-# 1. O PLANO — a fonte trocou, e a ordem NÃO
-# ---------------------------------------------------------------------------
 def test_o_terceiro_passo_do_modo_le_o_perfil_e_nao_a_sessao() -> None:
-    """O plano do `MODE_DESKTOP` termina em `desktop.arranjo.apply`.
-
-    Ele vem POR ÚLTIMO pelo mesmo motivo de sempre (HARM-06): ligar o mouse
-    antes de o gamepad sair faria a exclusão mútua do daemon derrubar o mouse
-    recém-ligado.
-    """
+    """O plano do `MODE_DESKTOP` termina em `desktop.arranjo.apply`."""
     passos = plan_mode_transition(MODE_DESKTOP)
     metodos = [m for m, _p in passos]
     assert metodos == [
@@ -210,9 +186,6 @@ def test_o_terceiro_passo_do_modo_le_o_perfil_e_nao_a_sessao() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. O MOUSE — o perfil manda, e o número prova de onde ele veio
-# ---------------------------------------------------------------------------
 def test_o_arranjo_liga_o_mouse_com_as_velocidades_do_perfil() -> None:
     """11 e 4 saem do PERFIL. 3 seria a flag de sessão; 6, o default."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
@@ -237,18 +210,7 @@ def test_o_arranjo_liga_o_mouse_com_as_velocidades_do_perfil() -> None:
 
 
 def test_o_recuo_e_a_flag_de_sessao_e_nunca_um_segundo_default() -> None:
-    """Perfil SEM a seção `mouse` recua para a flag — 3, e não 6.
-
-    Quem não opina usa as VELOCIDADES da preferência da máquina. Se aqui saísse
-    6, o recuo teria virado um segundo default digitado no meio do caminho — o
-    defeito com outra roupa.
-
-    FATO SUBSTITUÍDO — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01,
-    D-2909-A-NAVEGACAO-LIGA-O-MOUSE): até ali o recuo era
-    `restore_mouse_preference`, e a flag decidia também o liga/desliga. Agora a
-    entrada liga o mouse sempre, e da flag saem só as velocidades
-    (`lifecycle._velocidades_ou_as_da_sessao`).
-    """
+    """Perfil SEM a seção `mouse` recua para a flag — 3, e não 6."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     sem_mouse = {k: v for k, v in PERFIL_DA_NAVEGACAO.items() if k != "mouse"}
     d = _daemon_com(sem_mouse)
@@ -266,20 +228,7 @@ def test_o_recuo_e_a_flag_de_sessao_e_nunca_um_segundo_default() -> None:
 
 @pytest.mark.parametrize("porta", ["chip", "ps_r3"])
 def test_as_duas_portas_ligam_o_mouse_com_as_velocidades_do_perfil(porta: str) -> None:
-    """Entrar na Navegação LIGA o mouse, mesmo com o perfil dizendo desligado.
-
-    D-2909-A-NAVEGACAO-LIGA-O-MOUSE (O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026).
-    Aqui moravam duas réguas: o SOCORRO (o PS + R3 com `forcar_mouse=True`
-    ligava o mouse com o perfil dizendo desligado) e o CONTRAPESO (o clique no
-    chip obedecia ao perfil e o deixava desligado). As duas portas faziam o
-    contrário uma da outra, e a bancada de 29/09 (achado 13) mediu o preço:
-    ela tocou o chip, e o cursor não andou, porque o Freestyle dizia o
-    `{false, 6, 1}` que a janela copiara do estado vivo. As velocidades
-    continuam saindo do perfil.
-
-    MORDIDA: devolva ao arranjo o ramo que obedece ao `enabled` do perfil, e a
-    célula reprova com o mouse desligado.
-    """
+    """Entrar na Navegação LIGA o mouse, mesmo com o perfil dizendo desligado."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     desligado = dict(PERFIL_DA_NAVEGACAO)
     desligado["mouse"] = {"enabled": False, "speed": 11, "scroll_speed": 4}
@@ -303,16 +252,8 @@ def test_as_duas_portas_ligam_o_mouse_com_as_velocidades_do_perfil(porta: str) -
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. O TECLADO — o fio que a T14 entregou e ninguém tinha ligado
-# ---------------------------------------------------------------------------
 def test_o_arranjo_liga_o_teclado_emulado_do_perfil() -> None:
-    """`resolver_teclado_emulado` ganhou o primeiro chamador de ativação real.
-
-    Até 17/09/2026 os únicos chamadores daquela função eram duas réguas e uma
-    isenção declarada: a "Função do teclado" que ela escolhe na aba Navegação ia
-    ao disco e **nunca voltava**.
-    """
+    """`resolver_teclado_emulado` ganhou o primeiro chamador de ativação real."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     d = _daemon_com(PERFIL_DA_NAVEGACAO)
 
@@ -350,11 +291,7 @@ def test_o_teclado_do_perfil_nao_vira_a_preferencia_global() -> None:
 
 
 def test_o_perfil_sem_opiniao_deixa_a_flag_global_mandar() -> None:
-    """`teclado_emulado: null` = sem opinião, e a flag continua mandando.
-
-    A proteção do `mic.muted`, aplicada ao teclado: perfil SEM opinião nunca
-    pode apagar o que a flag diz.
-    """
+    """`teclado_emulado: null` = sem opinião, e a flag continua mandando."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     (Path(config_dir()) / "keyboard_emulation.flag").write_text(
         json.dumps({"enabled": False}), encoding="utf-8"
@@ -373,9 +310,6 @@ def test_o_perfil_sem_opiniao_deixa_a_flag_global_mandar() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. AS TECLAS E A SUPRESSÃO
-# ---------------------------------------------------------------------------
 def test_as_teclas_do_perfil_chegam_ao_device_virtual() -> None:
     """Os `key_bindings` que ela escreveu na aba Navegação sobem no device."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
@@ -395,11 +329,7 @@ def test_as_teclas_do_perfil_chegam_ao_device_virtual() -> None:
 
 
 def test_o_arranjo_derruba_a_supressao_senao_a_ponte_sobe_muda() -> None:
-    """É a supressão que gateia o dispatch de mouse/teclado no laço do poll.
-
-    Sem derrubá-la, o modo entra, o device sobe e NADA anda — que é a forma
-    mais cara do "cliquei em aplicar e nada".
-    """
+    """É a supressão que gateia o dispatch de mouse/teclado no laço do poll."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     d = _daemon_com(PERFIL_DA_NAVEGACAO)
 
@@ -413,11 +343,7 @@ def test_o_arranjo_derruba_a_supressao_senao_a_ponte_sobe_muda() -> None:
 
 
 def test_o_relatorio_distingue_nao_havia_o_que_aplicar_de_nao_deu() -> None:
-    """O arranjo devolve `seção → estado`, e não um `bool` calado.
-
-    Um botão que responde `True`/`False` não diz se a seção estava ausente ou
-    se falhou, e a casa já pagou por isso.
-    """
+    """O arranjo devolve `seção → estado`, e não um `bool` calado."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     d = _daemon_com(PERFIL_DA_NAVEGACAO)
 
@@ -436,9 +362,6 @@ def test_o_relatorio_distingue_nao_havia_o_que_aplicar_de_nao_deu() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 5. O TETO DE TEMPO — medido, não cravado
-# ---------------------------------------------------------------------------
 def test_o_teto_do_arranjo_cabe_no_que_o_produto_declara() -> None:
     """A sprint manda MEDIR antes de cravar o número, e é o que esta faz.
 

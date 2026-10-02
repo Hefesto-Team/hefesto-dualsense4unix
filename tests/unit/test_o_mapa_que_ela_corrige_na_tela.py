@@ -1,29 +1,4 @@
-"""O mapa que ela corrige, NA TELA — o WebKit fora da tela, com o gesto de verdade.
-
-O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026. O pedido dela, com o mapa aberto:
-
-*«me referi as portas renomear, trocar elas de lugar no meapemento identificar
-onde fica o hub e afins. corrigir quando for 2.0 e tal.»*
-<!-- noqa-acento: citação literal dela -->
-
-Esta régua abre a página PUBLICADA num ``WebKit2.WebView`` dentro de um
-``Gtk.OffscreenWindow`` (nunca na tela dela), instala o BOOTSTRAP do piloto e
-faz o papel do piloto na volta do clique: acha a mensagem que a página mandou,
-roda o gesto de verdade (``pacotes.gesto_da_pagina``) contra um
-``maquina.json`` no ``tmp_path`` e um barramento de mentira, entrega o arranjo
-que ele devolveu e pousa o botão (``window.__hef.voltouDoVoo``) — na ordem do
-piloto: primeiro o arranjo, depois o pouso.
-
-TUDO AQUI É DE MENTIRA E DE NINGUÉM: barramento ``usb9``, caminhos ``9-*``,
-seriais que não são endereço de nada.
-
-AS MORDIDAS:
-
-* passo 0 — devolva a pintura local do clique do editor (tire o
-  ``if (ub && ub.hasAttribute("data-gesto")) return;``): o botão da recusa
-  nasce apertado e a piscada não acha ninguém
-  (``test_a_recusa_nao_aperta_o_botao_e_pisca_nele``).
-"""
+"""O mapa que ela corrige, NA TELA — o WebKit fora da tela, com o gesto de verdade."""
 
 from __future__ import annotations
 
@@ -53,7 +28,6 @@ from hefesto_dualsense4unix.utils.maquina import (
     gravar_maquina,
 )
 
-# ── o barramento de mentira ──────────────────────────────────────────────
 
 _TRIPLA_TECLADO = ("03", "01", "01")
 _TRIPLA_MOUSE = ("03", "01", "02")
@@ -99,17 +73,12 @@ def _mapa() -> MapaDaMesa:
     )
 
 
-#: O que está plugado em cada régua desta página (o teclado na 1, o mouse na 5).
 _PLUGADOS = (_teclado("9-1"), _mouse("9-5"))
 
 
 @pytest.fixture()
 def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """O ``maquina.json`` no ``tmp_path`` (conferido) e o barramento de mentira.
-
-    O gesto relê a máquina pelas portas de sempre: o barramento é trocado no
-    módulo que o arranjo importa na hora, e nenhum ``/sys`` de verdade é lido.
-    """
+    """O ``maquina.json`` no ``tmp_path`` (conferido) e o barramento de mentira."""
     from hefesto_dualsense4unix.integrations import censo_do_barramento
 
     alvo = caminho_da_maquina()
@@ -127,8 +96,6 @@ def _aberta() -> dict[str, Any]:
     assert dado is not None
     return dado
 
-
-# ── a página no WebKit, com o piloto de mentira na volta do clique ──────
 
 Passo = str | Callable[[list[dict[str, Any]]], str | None]
 
@@ -150,8 +117,7 @@ def _na_pagina(
 def _na_pagina_sem_recolher(
     passos: list[Passo], tamanho: tuple[int, int] = (1400, 1000)
 ) -> tuple[list[Any], list[dict[str, Any]]]:
-    """Cada passo é um JavaScript, ou uma função das mensagens que devolve um
-    (``None`` = ainda não: tenta de novo em 50 ms, até 3 s)."""
+    """Cada passo é um JavaScript, ou uma função das mensagens que devolve um"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre a página num WebKit")
@@ -200,7 +166,7 @@ def _na_pagina_sem_recolher(
         def respondeu(v: Any, res: Any, _u: Any = None) -> None:
             try:
                 respostas.append(v.evaluate_javascript_finish(res).to_string())
-            except Exception as erro:  # a exceção É a resposta do passo
+            except Exception as erro:
                 respostas.append(f"ERRO {erro}")
             GLib.timeout_add(30, seguinte)
 
@@ -246,8 +212,7 @@ def _mudar(seletor: str, valor: str) -> str:
 def _o_piloto_responde(
     gesto: str, *, evento: str = ""
 ) -> Callable[[list[dict[str, Any]]], str | None]:
-    """O papel do piloto na volta do clique: o gesto de verdade, o arranjo que
-    ele devolveu pela porta da página e o pouso do botão (``hefesto_vivo._gesto``)."""
+    """O papel do piloto na volta do clique: o gesto de verdade, o arranjo que"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -306,18 +271,10 @@ _O_EDITOR = r"""
 """
 
 
-# ── passo 0: a tela espera o disco ───────────────────────────────────────
-
-
 def test_a_recusa_nao_aperta_o_botao_e_pisca_nele(
     disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Um gravador que recusa: o «USB 3.0» NÃO fica apertado, e pisca a recusa.
-
-    Antes da cura a página apertava o botão na hora (a pintura local), e a
-    piscada procurava um botão que a repintura já tinha trocado: a recusa era
-    invisível, e a tela afirmava o que o disco não tinha.
-    """
+    """Um gravador que recusa: o «USB 3.0» NÃO fica apertado, e pisca a recusa."""
     monkeypatch.setattr(ee, "declarar_a_velocidade",
                         lambda numero, usb, **_k: Recibo(False, "disco"))
     antes = disco.read_bytes()
@@ -344,8 +301,7 @@ def test_a_recusa_nao_aperta_o_botao_e_pisca_nele(
 
 
 def test_o_que_grava_aparece_apertado_depois_da_entrega(disco: Path) -> None:
-    """O gravador de verdade: o «USB 3.0» aparece apertado quando o disco
-    responde, com o editor aberto na MESMA entrada, e o plugue azul."""
+    """O gravador de verdade: o «USB 3.0» aparece apertado quando o disco"""
     lidas, _ = _na_pagina([
         _js(_aberta()),
         _clicar('.plug[data-porta="2"]'),
@@ -399,8 +355,7 @@ class _PontePronta:
 
 
 def test_o_piloto_entrega_a_volta_da_gravacao_sem_mudar_o_modo() -> None:
-    """A resposta do editor traz o arranjo relido: ele sai da carga e vai à
-    página como «gravou», e nunca como o reexame."""
+    """A resposta do editor traz o arranjo relido: ele sai da carga e vai à"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa o piloto, que carrega o GTK")
@@ -426,13 +381,7 @@ def test_o_piloto_entrega_a_volta_da_gravacao_sem_mudar_o_modo() -> None:
 
 
 def test_o_mapa_recarregado_reinstala_a_ponte_e_recebe_o_arranjo() -> None:
-    """O «Recarregar» do menu do WebKit carrega a MESMA página: sem a ponte no
-    documento novo, o piloto instala de novo (e o arranjo vem com a instalação).
-
-    MEDIDO no lar de mentira em 26/09/2026, antes da cura: 24 olhadas em 7 s,
-    e o cabeçalho continuava «Leitura de Exemplo». A MORDIDA: tire a chamada
-    ``self._a_mesma_recarregou(nova)`` do ``_carregou`` — nada é reinstalado.
-    """
+    """O «Recarregar» do menu do WebKit carrega a MESMA página: sem a ponte no"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa o piloto, que carrega o GTK")
@@ -474,8 +423,6 @@ def test_o_mapa_recarregado_reinstala_a_ponte_e_recebe_o_arranjo() -> None:
         "a primeira carga que confirma depois da instalação instalou duas vezes")
 
 
-# ── passo 2: o nome da entrada ───────────────────────────────────────────
-
 _O_CAMPO = '#edita input.campo-nome[data-gesto="entrada-nome"]'
 
 
@@ -489,11 +436,7 @@ def _o_campo() -> str:
 
 
 def test_o_nome_da_entrada_grava_e_o_cabecalho_diz_ele(disco: Path) -> None:
-    """O campo «Nome» do editor: o clique arma, o ``change`` grava na POSIÇÃO,
-    e o cabeçalho do editor passa a dizer o nome — pelo que o disco devolveu.
-
-    E a recusa: 25 caracteres não gravam, o disco fica, e o campo pisca.
-    """
+    """O campo «Nome» do editor: o clique arma, o ``change`` grava na POSIÇÃO,"""
     lidas, _ = _na_pagina([
         _js(_aberta()),
         _clicar('.plug[data-porta="2"]'),
@@ -520,8 +463,6 @@ def test_o_nome_da_entrada_grava_e_o_cabecalho_diz_ele(disco: Path) -> None:
     assert carregar_maquina().mapa.portas["2"].nome == "Canto", "a recusa gravou"
 
 
-# ── passo 3: o nome aparece onde a entrada aparece ───────────────────────
-
 _O_PLUGUE_1 = r"""
 (function(){
   const s = document.querySelector('.plug[data-porta="1"]').closest('.soquete');
@@ -539,13 +480,7 @@ _O_PLUGUE_1 = r"""
 
 
 def test_o_nome_aparece_no_plugue_e_no_cabecalho(disco: Path) -> None:
-    """Com «Canto da mesa» na 1: o plugue diz o nome (com reticências, e o nome
-    inteiro na dica), o selo continua o número do metal, e o cabeçalho do
-    editor diz o nome. A 2, sem nome, é «Entrada 2» na dica do plugue vazio.
-
-    O «Canto da Mesa» com maiúscula é o ``emTitulo`` da página (pedido dela:
-    toda palavra com maiúscula); a dica guarda o nome como ela escreveu.
-    """
+    """Com «Canto da mesa» na 1: o plugue diz o nome (com reticências, e o nome"""
     assert ee.dar_nome_a_entrada("1", "Canto da mesa").gravou
     lidas, _ = _na_pagina([
         _js(_aberta()),
@@ -561,8 +496,6 @@ def test_o_nome_aparece_no_plugue_e_no_cabecalho(disco: Path) -> None:
     assert editor["cabecalho"].startswith("Canto da Mesa"), editor
 
 
-# ── passo 4: «Trocar com…» ───────────────────────────────────────────────
-
 _A_TROCA = '#edita select.troca[data-gesto="entrada-trocar"]'
 
 
@@ -577,9 +510,7 @@ def _a_lista_da_troca() -> str:
 
 
 def test_trocar_com_grava_e_o_editor_fica_aberto(disco: Path) -> None:
-    """A 2 (vazia) trocada com a 5 (o mouse): o buraco do mouse passa a ser a 2,
-    o editor da 2 continua aberto e diz que o mouse está nela. «Mudar de
-    Entrada» não existe mais, e a lista não nasce cinza."""
+    """A 2 (vazia) trocada com a 5 (o mouse): o buraco do mouse passa a ser a 2,"""
     lidas, _ = _na_pagina([
         _js(_aberta()),
         _clicar('.plug[data-porta="2"]'),
@@ -620,8 +551,6 @@ def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) 
     assert lidas[3] == "false", "o chip pôs o aparelho na mão"
 
 
-# ── a conferência: o editor a 1212 px, com o nome mais comprido ──────────
-
 _A_GEOMETRIA_DO_EDITOR = r"""
 (function(){
   const ed = document.getElementById('edita');
@@ -650,17 +579,7 @@ _A_GEOMETRIA_DO_EDITOR = r"""
 
 
 def test_o_editor_cabe_a_1212_e_a_face_desce_com_o_nome_comprido(disco: Path) -> None:
-    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01, no WebKit à largura do
-    desenho (1212 por 809): o editor tem 300 px e cabe na janela, a página não
-    rola de lado, nenhum botão, lista ou campo nasce cinza (rgb 192), e com um
-    nome de 24 letras a face desce INTEIRA para a linha de baixo (a sprint:
-    «se a face não couber no cabeçalho, ela desce para uma linha própria»); com
-    o nome curto ela fica ao lado. O «Fechar» fica no canto, sem cobrir o nome.
-
-    A MORDIDA: tire a edição «O NOME COMPRIDO NO CABEÇALHO» do
-    ``pagina_do_mapa`` e publique — o nome e a face quebram cada um em duas
-    linhas, lado a lado, e ``faceNumaLinha`` reprova (MEDIDO).
-    """
+    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01, no WebKit à largura do"""
     mapa = _mapa()
     mapa.faces[0].nome = ee.FACE_FRENTE
     mapa.faces[1].nome = ee.FACE_ATRAS

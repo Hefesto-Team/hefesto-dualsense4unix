@@ -54,14 +54,7 @@ SCRIPT = ROOT / "scripts" / "fix_wireplumber_default_source.sh"
 
 @pytest.fixture
 def home(tmp_path: Path) -> Path:
-    """HOME de mentira.
-
-    O script roda com `set -u` e monta `STATE_FILE` a partir do HOME já no
-    carregamento. Apontá-lo para o HOME de verdade seria pedir para um teste
-    olhar o state de áudio de quem roda a suíte — e o canário de FS desta casa
-    existe exatamente para isso não acontecer. Nada é escrito aqui: só o
-    `source` precisa da variável existir.
-    """
+    """HOME de mentira."""
     h = tmp_path / "home"
     h.mkdir()
     return h
@@ -115,10 +108,6 @@ def _fontes(saida: str) -> list[str]:
     return lidas
 
 
-#: O state REAL desta máquina em 06/08/2026 (`~/.local/state/wireplumber/
-#: default-nodes`), copiado sem alteração. A `.1` é a assinatura de "um monitor
-#: já foi fonte padrão aqui": a camada pulse resolve `<sink>.monitor` para o nó
-#: SINK, e o WirePlumber grava o nome do nó.
 STATE_REAL = f"""\
 [default-nodes]
 default.configured.audio.sink=alsa_output.pci-0000_0a_00.1.hdmi-stereo
@@ -188,11 +177,7 @@ class TestOHistoricoSobrevive:
 
 class TestOCasamentoPegaAPilhaInteira:
     def test_o_grep_da_funcao_ve_as_chaves_indexadas(self) -> None:
-        """O `grep` guarda o portão: se ele não casar `.0`, nada roda.
-
-        Era o buraco literal do padrão antigo — `source=` não casa `source.0=`,
-        e a função saía sem fazer nada com o defeito na tela.
-        """
+        """O `grep` guarda o portão: se ele não casar `.0`, nada roda."""
         texto = SCRIPT.read_text(encoding="utf-8")
         i = texto.index("remove_configured_dualsense() {")
         corpo = texto[i : texto.index("\n}\n", i)]

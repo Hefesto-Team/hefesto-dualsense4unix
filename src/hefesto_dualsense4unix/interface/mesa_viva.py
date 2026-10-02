@@ -48,58 +48,14 @@ from hefesto_dualsense4unix.integrations.cor_do_plastico import (
 )
 from hefesto_dualsense4unix.utils import xdg_paths
 
-#: A raiz do repositório é a DESTE arquivo — nunca um caminho escrito à mão.
-#:
-#: FATO ERRADO, SUBSTITUÍDO (30/08/2026): era o literal
-#: ``"/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"``, a árvore DELA. Quem
-#: rodasse uma aba viva de uma árvore de agente lia o
-#: ``docs/data/mapa-controles.csv`` **dela**, e o mapa de canais é portão — uma
-#: linha corrigida na árvore do agente não valia nada, sem erro nenhum.
 RAIZ = str(pathlib.Path(__file__).resolve().parents[3])
-
-# ---------------------------------------------------------------------------
-# O IPC, por leitura e só por leitura
-# ---------------------------------------------------------------------------
 
 
 def socket_do_daemon() -> str:
-    """O socket do daemon, perguntado a quem já é dono dele.
-
-    É FUNÇÃO e não constante DE PROPÓSITO: uma constante calculada no import
-    congela o nome de quem importou primeiro, e cega qualquer régua que queira
-    medir o caminho num processo que já importou o módulo.
-
-    FATO ERRADO, SUBSTITUÍDO (30/08/2026). Aqui havia um caminho montado à mão::
-
-        SOCKET = os.path.join(XDG_RUNTIME_DIR, "hefesto-dualsense4unix",
-                              "hefesto-dualsense4unix.sock")
-
-    com o nome do app ESCRITO COMO LITERAL. Era o mesmo valor com dois donos, e
-    o segundo dono estava errado em dois pontos de uma vez:
-
-    1. **O nome.** ``xdg_paths`` deriva o diretório de
-       ``identidade.atual().slug``; o literal ignorava isso e passava a apontar
-       para o lugar errado assim que o nome mudasse. MEDIDO em 30/08 às 00:26,
-       com o daemon no ar e vendo um controle: as cinco abas vivas diziam
-       ``[Errno 111] Conexão recusada`` e pintavam **5 valores** — a tela de
-       "Hefesto desligado" — enquanto o daemon respondia normalmente no
-       diretório ao lado.
-    2. **O modo fake.** ``ipc_socket_name()`` isola o socket quando
-       ``HEFESTO_DUALSENSE4UNIX_FAKE=1`` e respeita o override explícito de
-       nome. O literal atravessava os dois e falava com o socket de produção —
-       que é o footgun que o ``BUG-FAKE-SOCKET-SYNC-01`` já tinha pago no
-       produto e que esta cópia reintroduziu.
-
-    Este é o ÚNICO ponto de resolução de socket das abas vivas: as cinco
-    (Controles, Jogar, Perfis, Conexões, Sistema) chegam ao daemon por
-    :func:`estado_do_daemon`, logo por aqui.
-    """
+    """O socket do daemon, perguntado a quem já é dono dele."""
     return str(xdg_paths.ipc_socket_path())
 
 
-#: O ÚNICO método que este módulo sabe pronunciar. Escrito como constante para
-#: que uma leitura de `grep` responda a pergunta "esta leva escreve?" com um
-#: nome só — e para que acrescentar um segundo seja uma mudança visível.
 METODO = "daemon.state_full"
 
 
@@ -143,9 +99,6 @@ def estado_do_daemon(*, timeout: float = 2.0) -> dict[str, Any]:
     return resultado
 
 
-# ---------------------------------------------------------------------------
-# O MAPA DE CANAIS — portão, lido, nunca decorado
-# ---------------------------------------------------------------------------
 def _carregar_mapa() -> dict[str, tuple[str, str]]:
     """`{chave: (cabo_aciona, radio_aciona)}` do DualSense."""
     fora: dict[str, tuple[str, str]] = {}
@@ -176,33 +129,7 @@ def aciona(chave: str, transporte: str) -> str:
 
 
 def _via_do_transporte(transporte: object) -> str:
-    """A PALAVRA DA TELA para o transporte — da dona da frase, nunca redigitada.
-
-    **ELA PASSOU A SER A PALAVRA — costura da ONDA B, 06/09/2026, e é o degrau
-    que a ONDA4-S10 desenhou e não pôde executar.** A decisão dela (D-05) é
-    *"cabo / rádio, pela função que já existe"*, e a dona da frase mora em
-    `app/actions/home_actions.py:1483`.
-
-    **FATO SUBSTITUÍDO.** Aqui estava escrito que esta função devolvia a SIGLA
-    DE MÁQUINA, porque a chave `via` que ela alimenta era COMPARADA em cinco
-    pontos — `interface/monta.py`, quatro linhas de
-    `interface/pacotes/a08_conexoes.py`. Os cinco passaram a ler o `transporte`
-    cru (`_e_radio` na 08, a contagem do topo em `monta`), e a chave ficou livre
-    para dizer o que a tela lê. Nenhum ponto compara `via` hoje; quem comparar
-    de novo quebra a decisão dela, e o `_e_radio` é o caminho.
-
-    O NOME DA DONA NÃO SE SOLETRA NESTE ARQUIVO, e não é preciosismo: o portão
-    da paridade (`docs/data/paridade-gtk-html.csv:18`) vigia a AUSÊNCIA desse
-    símbolo aqui, e em 05/09/2026 um comentário que o soletrou já foi lido como
-    uso. A forma desta casa é citar o ENDEREÇO.
-
-    A AUSÊNCIA CONTINUA DEVOLVENDO "" — a tela mostra travessão —, e um
-    transporte desconhecido volta **cru**, com a razão da dona: *"um transporte
-    novo tem de aparecer na tela para alguém o ver, em vez de ser escondido
-    atrás de uma frase genérica"*.
-    """
-    # IMPORT TARDIO de propósito: `home_actions` puxa o motor inteiro, e
-    # `mesa_viva` é importado pelo piloto no arranque da janela.
+    """A PALAVRA DA TELA para o transporte — da dona da frase, nunca redigitada."""
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte,
     )
@@ -210,20 +137,8 @@ def _via_do_transporte(transporte: object) -> str:
     return palavra_do_transporte(transporte)
 
 
-# ---------------------------------------------------------------------------
-# A COR DO PLÁSTICO — o código de fábrica vira o `colorway` do desenho
-# ---------------------------------------------------------------------------
 def _codigo_para_colorway() -> dict[str, tuple[str, str]]:
-    """`{código de fábrica: (slug do desenho, nome)}` do mapa das cores.
-
-    **UM LEITOR SÓ DO CSV** — O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01,
-    25/09/2026. Esta função lia o `docs/data/cores-do-dualsense.csv` sozinha,
-    com um `split(",")` próprio, enquanto o produto traduzia o código por uma
-    tabela DIGITADA de 21: a tela sabia 28 modelos e o leitor do aparelho, 21.
-    Os sete do meio saíam «Não sei». Hoje quem lê o CSV é
-    `integrations/cor_do_plastico.ler_a_tabela`, e esta função só dá à tela a
-    forma que ela sempre teve.
-    """
+    """`{código de fábrica: (slug do desenho, nome)}` do mapa das cores."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import TABELA
 
     return {codigo: (cor.id, cor.nome) for codigo, cor in TABELA.items()}
@@ -231,16 +146,7 @@ def _codigo_para_colorway() -> dict[str, tuple[str, str]]:
 
 CORES = _codigo_para_colorway()
 
-#: A PALAVRA «NÃO SEI» DA TELA, e ela deixou de ser o nome de um controle.
-#:
-#: O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026. Era o que
 #: `mesa_do_estado` escrevia no lugar do nome quando a cor não era legível —
-#: e a cena dela é a de uma pessoa que pluga uma edição limitada e vê o produto
-#: dizer que não sabe que controle é aquele. O nome agora é o do MODELO
-#: (`cor_do_plastico.nome_do_aparelho`). A palavra continua aqui porque ela tem
-#: outro dono vivo: a luz de cor desconhecida da aba 02
-#: (`pacotes.NOME_SEM_LEITURA`, que a régua confere igual a esta), e quem ainda
-#: compara o nome com ela deixa de casar — que é o comportamento certo.
 COR_DESCONHECIDA = "Não sei"
 
 
@@ -304,11 +210,7 @@ class LeitorDeCor:
         return fora
 
     def pendentes(self, entradas: list[dict[str, Any]]) -> list[str]:
-        """Quem perguntar AGORA — e cada um devolvido fica em voo até `perguntar`.
-
-        Quem recebe a lista TEM de chamar `perguntar` para cada `uniq` dela:
-        é a volta da pergunta que solta o voo. `disparar` faz as duas coisas.
-        """
+        """Quem perguntar AGORA — e cada um devolvido fica em voo até `perguntar`."""
         fora = []
         for entrada in entradas:
             uniq = str(entrada.get("uniq") or "")
@@ -316,8 +218,6 @@ class LeitorDeCor:
                 continue
             transporte = str(entrada.get("transport") or "")
             if aciona("identidade.cor_do_aparelho", transporte) != "sim":
-                # O mapa respondeu que aquele transporte não entrega: uma
-                # pergunta nenhuma, e a agenda fecha o endereço.
                 self._cache.setdefault(uniq, None)
                 self._agenda.fechar(uniq)
                 continue
@@ -335,8 +235,6 @@ class LeitorDeCor:
     def perguntar(self, uniq: str) -> Any:
         """Bloqueia. Quem chama põe numa thread — nunca na do GTK."""
         if not self.ligado:
-            # `registrar`, e não `fechar`: quem chega aqui foi reservado por
-            # `pendentes`, e só `registrar` solta o voo.
             self._cache[uniq] = None
             self._agenda.registrar(
                 uniq, IdentidadeDeFabrica(nao_pode=True, motivo="a leitura está desligada")
@@ -356,11 +254,9 @@ class LeitorDeCor:
             achado = IdentidadeDeFabrica(motivo=f"o leitor levantou {type(erro).__name__}")
         finally:
             if achado.definitiva:
-                # A falha não escreve: ela não apaga o que já se sabia.
                 self._cache[uniq] = achado.cor
             modelo = getattr(achado, "modelo", None)
             if isinstance(modelo, str) and modelo:
-                # O modelo sai do sysfs, e chega até na falha: ele fica.
                 self._modelos[uniq] = modelo
             self._agenda.registrar(uniq, achado)
         return achado.cor
@@ -375,15 +271,7 @@ class LeitorDeCor:
         self._agenda.esquecer_ausentes(vivos)
 
 
-# ---------------------------------------------------------------------------
-# A MESA
-# ---------------------------------------------------------------------------
-#: flavor -> o rótulo que a tela mostra. NOTA DATADA — 07/09/2026: estas duas
 #: linhas diziam *"o catálogo do produto tem DUAS máscaras, não três"* e
-#: *"'Nintendo Pro' não existe"*. **Existe desde 07/09/2026**, por ordem dela, e
-#: as duas frases mediam o mundo de ontem. O `uinput_gamepad.FLAVORS` tem TRÊS,
-#: e a `gui/aba_conexoes.NOME_DA_MASCARA` já nomeava as três antes de haver a
-#: terceira — era esta tabela que estava atrás, não aquela.
 NOME_DA_MASCARA = {
     "dualsense": "DualSense",
     "xbox": "Xbox 360",
@@ -392,12 +280,7 @@ NOME_DA_MASCARA = {
 
 
 def _por_numero_de_identidade(conectados: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """A MESMA regra do produto (`status_actions._por_numero_de_identidade`).
-
-    Copiada de propósito em vez de importada: `status_actions` é um mixin que
-    puxa GTK e a janela inteira no import. A regra é três linhas e o teste
-    abaixo a confere contra a do produto.
-    """
+    """A MESMA regra do produto (`status_actions._por_numero_de_identidade`)."""
 
     def chave(entrada: dict[str, Any]) -> tuple[int, int]:
         slot = entrada.get("player_slot")
@@ -409,15 +292,7 @@ def _por_numero_de_identidade(conectados: list[dict[str, Any]]) -> list[dict[str
 
 
 def _quantos_lugares() -> int:
-    """Quantos cartões o desenho tem. O dono é `pacotes.TODOS_OS_LUGARES`.
-
-    Import LAZY, e não por preguiça: `pacotes/__init__` importa as dez abas no
-    fim do arquivo, e várias delas leem ESTE módulo. Ao nível de módulo o
-    import fecharia um ciclo; aqui ele roda quando a mesa já existe.
-
-    Digitar `4` seria a segunda verdade sobre quantos lugares a tela tem — e o
-    dia em que ela pedir um quinto cartão, a régua daqui mentiria calada.
-    """
+    """Quantos cartões o desenho tem. O dono é `pacotes.TODOS_OS_LUGARES`."""
     from hefesto_dualsense4unix.interface.pacotes import TODOS_OS_LUGARES
 
     return len(TODOS_OS_LUGARES)
@@ -476,33 +351,11 @@ def mesa_do_estado(
     *,
     alvo: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Os itens de mesa que `monta`/`aba02` sabem desenhar, na ordem da tela.
-
-    O item ganha DOIS campos que a `monta.MESA` fixa não tem: `uniq` (a chave
-    estável do card, que vira `data-controle`) e `transporte` (o cru do IPC, que
-    o mapa de canais consome).
-
-    **O `pref` SEGUE O NÚMERO desde 20/09/2026** — APARELHO-NAO-SE-CONTRADIZ-01,
-    PARTE 2, decisão dela: *«Curar — renomear junto com mover»*. Ele era a
-    POSIÇÃO na lista, e era essa a contradição: a posição compactava na hora e o
-    número esperava o daemon, então o cartão `p3` dizia «Player 4» por 1,6 s. A
-    regra e os dois casos em que ela cede estão em :func:`_lugares_da_mesa`.
-
-    `jogador` continua sendo a IDENTIDADE, e continua vindo do daemon — é a
-    fonte única (`actions/base.numero_do_controle`), e nada aqui a substitui.
-    """
+    """Os itens de mesa que `monta`/`aba02` sabem desenhar, na ordem da tela."""
     conectados = _por_numero_de_identidade(controles_conectados(state))
     emulacao = state.get("gamepad_emulation") or {}
     sabor = str(emulacao.get("flavor") or "")
     mascara = NOME_DA_MASCARA.get(sabor, sabor or "—")
-    # A MÁSCARA É DE CADA APARELHO — MASCARA-NA-TELA-01, 03/09/2026, e o pedido
-    # é dela: *"é uma máscara por controle. Mesmo caso do anterior."*
-    #
-    # Esta linha escrevia a máscara da SESSÃO nos quatro cartões. O registro por
-    # aparelho existe desde 15/08 (`external_mask`, decisão dela) e o daemon já
-    # o consulta ao criar cada vpad — a tela era o único lugar que não sabia.
-    # `por_aparelho` traz `{uniq: máscara efetiva}`, e o `sabor` da sessão fica
-    # como o que vale para quem não escolheu, que é a herança do registro.
     por_aparelho = emulacao.get("por_aparelho") or {}
 
     numeros = [numero_do_controle(entrada) for entrada in conectados]
@@ -511,10 +364,7 @@ def mesa_do_estado(
     for posicao, entrada in enumerate(conectados, start=1):
         uniq = str(entrada.get("uniq") or "")
         transporte = str(entrada.get("transport") or "").lower()
-        # O NOME NUNCA É «NÃO SEI» — O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01,
-        # 25/09/2026. Sem cor lida, o nome é o do MODELO (o que `conhecidos`
         # guardou do sysfs) ou o da família, e o desenho fica no neutro: um
-        # controle que funciona tem nome, e a edição que não se sabe não o tira.
         cor = cores.get(uniq)
         slug, nome = "", MODELO_GENERICO
         if cor is not None:
@@ -536,7 +386,7 @@ def mesa_do_estado(
                 # respondia certo na aba 02 — e o comentário DELE já afirmava
                 # (errado) que as duas traduções eram a mesma. Agora são.
                 # A razão está escrita no dono da frase longa
-                # (`app/actions/home_actions.py:1548`): *"'?' não é resposta —
+                # (`app/actions/home_actions.py:971`): *"'?' não é resposta —
                 # é a tela encolhendo os ombros"*.
                 "via": _via_do_transporte(transporte),
                 "transporte": transporte,
@@ -572,11 +422,6 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
     é o que faz a palavra poder mudar sem que uma única conta se mexa.
     """
     n = len(mesa)
-    # `.get` E NÃO `[...]`: uma mesa pode chegar sem a chave — a de uma régua,
-    # ou a de um controle que o daemon publicou antes de resolver o transporte.
-    # Derrubar a contagem por isso derruba a aba INTEIRA, e o que se perde é uma
-    # palavra. Medido em 01/09/2026: `KeyError: 'via'` na suíte completa, vindo
-    # do pacote da Vibração, que passou a chamar esta função.
     usb = sum(1 for c in mesa if str(c.get("transporte") or "").strip().lower() == "usb")
     bt = n - usb
     palavra = "controle" if n == 1 else "controles"
@@ -584,30 +429,7 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
 
 
 def frase_dos_transportes(usb: int, bt: int) -> str:
-    """`1 BT` · `2 USB` · `2 USB · 1 BT` — o transporte VAZIO não aparece.
-
-    DECISÃO DELA, 17/09/2026, com um controle só no rádio na mesa: *"só tem 1
-    controle conectado ainda assim aparece no canto superior direito 0 usb 1 bt
-    deveria mostrar só o que tá conectado que é 1 bt nesse caso"*.
-
-    Ela REFINA a decisão de 06/09 e não a contradiz: aquela escolheu a PALAVRA
-    (`USB`/`BT` em vez de `cabo`/`rádio`, porque *"2 cabo · 0 rádio"* não é
-    português, e é a única exceção declarada da língua desta casa). Esta
-    escolhe o que se OMITE. A palavra continua a mesma.
-
-    O `0 USB ·` custava uma leitura a cada olhada — a pessoa tinha de somar
-    para descobrir que o zero não queria dizer nada. O produto é de
-    acessibilidade: o que não está lá não se escreve.
-
-    A FUNÇÃO É PÚBLICA porque a frase tem DOIS escritores — esta, viva, e o
-    `interface/monta.py`, que a grava no esqueleto das dez páginas. Enquanto
-    cada um formatava por conta própria, uma mudança aqui deixava o esqueleto
-    dizendo outra coisa até o piloto repintar.
-
-    Com os dois zerados devolve string vazia: o `● 0 controles:` ao lado já diz
-    tudo, e `0 USB · 0 BT` era a frase que a tela mostrava quando o daemon nem
-    tinha respondido.
-    """
+    """`1 BT` · `2 USB` · `2 USB · 1 BT` — o transporte VAZIO não aparece."""
     pedacos = []
     if usb:
         pedacos.append(f"{usb} USB")
@@ -616,32 +438,18 @@ def frase_dos_transportes(usb: int, bt: int) -> str:
     return " · ".join(pedacos)
 
 
-# ---------------------------------------------------------------------------
-# O ESTADO DE CADA CARD — o que muda de segundo a segundo
-# ---------------------------------------------------------------------------
-#: A escala do desenho para a barra bipolar do giroscópio. É a mesma do produto
 #: (`app/widgets/sensor_widgets.ESCALA_GYRO_GRAUS_S`), lida de lá.
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (  # noqa: E402
     ESCALA_GYRO_GRAUS_S,
 )
 
-#: O piso da onda, que é o do desenho (`aba02.onda`): com o microfone mudo os
-#: valores caem a 4-6 % e as barras somem — silêncio é uma linha baixa e
-#: visível, não a ausência do desenho.
 PISO_DA_ONDA = 16
 QUADROS_DA_ONDA = 14
 
-#: O limiar em que L2/R2 acendem o glifo. É o do produto
-#: (`controller_card.L2_R2_THRESHOLD`), não `> 0`.
 LIMIAR_L2_R2 = 30
 
-#: O daemon emite `create` (BTN_SELECT); o glifo e o arquivo chamam-se `share`.
-#: A tradução carrega número de defeito no produto
-#: (BUG-GLYPH-SHARE-NAME-MISMATCH-01); sem ela o glifo fica morto e ninguém vê.
 TRADUZ_GLIFO = {"create": "share"}
 
-#: O texto do eixo sem leitor. É o "—" do produto (`controller_card.reset_inputs`):
-#: nunca o último valor como se fosse vivo, nunca zero fingindo repouso.
 SEM_LEITOR = "—"
 
 
@@ -719,163 +527,30 @@ def selo_do_mic(mudo: bool, sabemos: bool) -> str:
     return DESLIGADO if mudo else ATIVO
 
 
-#: A LÍNGUA DOS DOIS SELOS DO SOM, e ela é uma só por ordem dela — 19/09/2026.
-#: A pergunta dela, sobre o par que o alto-falante usava (`acordado`/`dormindo`):
-#: *"Ativo e Desligado pros dois não seria melhor que dormindo?"*
 #: <!-- noqa-acento: citação literal dela -->
-#:
-#: O QUE ISSO SUBSTITUIU, e por que é melhor: o microfone dizia `MUDO` e o
-#: alto-falante dizia `dormindo` — duas palavras, duas grafias e dois conceitos
-#: para a mesma pergunta de quem olha (*"sai som por aqui agora?"*). `dormindo`
-#: ainda era pior: descreve o SERVIDOR DE SOM suspender um nó, que é vocabulário
-#: de dentro, e ela já baniu esse tipo de palavra da tela.
-#:
-#: **E A PALAVRA SAIU DA TELA INTEIRA EM 23/09/2026** — O-ALTO-FALANTE-DIZ-ATIVO-01.
-#: Ela tinha ido para a dica (`Canal de áudio dormindo`) e para um alarme
-#: laranja (`Canal dormindo`), e a foto dela mostrou o que isso fazia: duas
-#: pílulas num alto-falante que ninguém calou. Canal parado não é defeito — ver
-#: :func:`selo_do_alto_falante`.
 ATIVO = "ATIVO"
 DESLIGADO = "DESLIGADO"
 
 
 def selo_do_alto_falante(mudo: bool, sabemos: bool) -> str:
-    """O selo do alto-falante: `ATIVO`, `DESLIGADO`, ou `—` quando não se leu.
-
-    **É A MESMA PERGUNTA QUE O SELO DO MICROFONE RESPONDE**, e por isso fala a
-    mesma língua: *sai som por aqui agora?* Ele nasceu em 19/09/2026 da ordem
-    dela — *"esse auto falante que tá com o acordado ali (…) consegue colocar o
-    mesmo ativado lá de cima? vai ter o mesmo efeito"*
-    <!-- noqa-acento: citação literal dela --> — e substituiu o chip cinza que
-    dizia `acordado`.
-
-    **`DESLIGADO` É SÓ QUANDO ELA CALOU** — o mudo que o `♪` lê. A queixa dela de
-    23/09/2026, com a foto: *"pq o autofalante do controle iniciou como canal
-    dormindo ao invés de ativo (esse dormindo deveria ser Desativado) tipo o
-    termo do botão"* <!-- noqa-acento: citação literal dela -->.
-
-    FATO ERRADO, SUBSTITUÍDO: esta função recebia também o sono do canal e
-    dizia `DESLIGADO` para um canal PARADO. Canal parado toca quando o som chega
-    — o dono do canal diz, em `audio_saida.acordar_sink`, que *"a suspensão não
-    é opinião sobre esse pedido, é ociosidade"*. Pelo rádio, medido na mesa dela
-    em 23/09: o nó do controle é um `null-sink` que dorme sempre que ninguém toca
-    (a ponte sob demanda da RADIO-AFOGADO-01 não o lê parado), então todo
-    controle no rádio nascia `DESLIGADO` com o alto-falante ligado.
-
-    `sabemos` É O TERCEIRO ESTADO, pela mesma razão do microfone: sem leitura do
-    canal, pintar `ATIVO` é o controle que acabou de cair anunciando que está
-    tocando.
-    """
+    """O selo do alto-falante: `ATIVO`, `DESLIGADO`, ou `—` quando não se leu."""
     if not sabemos:
         return SEM_LEITOR
     return DESLIGADO if mudo else ATIVO
 
 
-#: As palavras dos TRÊS estados do botão 🎙 — MIC-NA-TELA-01, 10/09/2026.
-#: Pedido dela: *"ele aceso (vai indicar que agora tá gravando audio), ele
-#: captando audio vai ficar no estado de piscando (guia visual pro leigo que
 #: pegar o controle de primeira)"*.  <!-- noqa-acento: citação literal dela -->
-#:
-#: São palavras e não números porque quem as lê é um SELETOR DE CSS, e um
-#: seletor com o número do protocolo dentro (`[data-mic-luz="2"]`) não diz nada
-#: a quem abre a folha. O número fica do lado de quem fala com o aparelho.
-#: **`BOTAO_MIC_GRAVANDO` E `BOTAO_MIC_CAPTANDO` SAÍRAM — 21/09/2026.**
-#:
-#: Eram as palavras dos três estados da LUZ DO PLÁSTICO no 🎙, pedido dela de
-#: 10/09. Em 21/09 ela trocou o ATO do mesmo botão — *"SE EU ATIVAR COM UM
-#: CLICK E ELE FICAR VERDE (…) POR DEFAULT SEGUE DESLIGADO"* —, o 🎙 passou a
-#: vestir o RETORNO, e as duas palavras ficaram sem elemento que as usasse.
-#:
-#: **O QUE NÃO SE PERDEU, e é por isso que isto é resto e não decisão:** o byte
-#: continua sendo o mesmo que acende o LED vermelho do plástico, e o LED
-#: continua acendendo — é hardware. `luz_do_mic.decidir`, no daemon, continua
-#: sendo o dono dos quatro estados. O selo ao lado do botão continua dizendo
-#: ATIVO/MUDO, e a frase de quem está gravando continua onde estava. O que saiu
-#: foi a SEGUNDA cópia disso, num botão que passou a significar outra coisa.
 
-#: **O RETORNO LIGADO** — 21/09/2026, ordem dela sobre o 🎙:
-#:
-#:     "SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE ELE TÁ ATIVADO E SEGUE
-#:      ASSIM ATÉ EU DESATIVAR CLICANDO NOVAMENTE E ELE FICANDO CINZA. POR
-#:      DEFAULT SEGUE DESLIGADO"
-#:
-#: **ELE NÃO É A LUZ DO PLÁSTICO, e essa distinção é o desenho inteiro.** A
-#: luz (`BOTAO_MIC_GRAVANDO`/`BOTAO_MIC_CAPTANDO`) tem dono no daemon —
-#: `luz_do_mic.decidir`, o mesmo byte que acende o LED vermelho do controle —,
-#: e o que a mostra é o SELO ao lado, mais a frase de quem está gravando.
-#: Fazer o botão publicar aquele estado poria a tela e o controle na mão dela
-#: discordando no primeiro dia em que um dos dois fosse corrigido.
-#:
-#: **O BOTÃO MOSTRA O QUE O BOTÃO CAUSA**, que é a regra desta casa e a mesma
-#: do ♪: ele liga o retorno, e acende enquanto o retorno está de pé.
 BOTAO_MIC_RETORNO = "retorno"
 
-#: A FRASE DE QUEM TE OUVE — 19/09/2026, a outra metade da decisão dela na
-#: `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`. A luz do plástico passou a espelhar o
-#: BOTÃO (mudo apaga, ligado acende), e com isso ela deixou de distinguir
-#: sozinha *"ligado"* de *"ligado e alguém te ouvindo"*. A aba Controle é quem
-#: passa a dizer QUEM, por escrito, e esta é a única cópia dessas palavras.
-#: **A FRASE SAIU DA TELA EM 21/09/2026, POR ORDEM DELA**, e a constante fica
-#: vazia em vez de sumir: quem a lia é a régua, e apagar o nome deixaria a
-#: decisão sem sujeito.
-#:
-#:     "Ninguém está te ouvindo ainda. na real essa frase não faz sentido
 #:      tambem.  <!-- noqa-acento: a digitação dela não se limpa -->
-#:      pq sinceramente se o mic tá ativo tá subentendido que ele tá
-#:      funcionando sempre. pode remover ela."
-#:
-#: **A DECISÃO DE 19/09 NÃO SE APAGA — ela CADUCOU, e a razão é medida.** A
-#: frase nasceu porque o microfone LIGADO com nenhum app gravando apagava a luz
-#: do controle, e ela desligou o próprio microfone achando que o ligava; a
-#: linha existia para explicar que *acesa* não quer dizer *alguém te escuta*.
-#: **A luz passou a acender em 19/09**, e com ela a premissa da frase caiu: o
-#: selo «ATIVO» do cartão já diz o que ela precisa saber.
-#:
-#: E AS OUTRAS FRASES FICAM. *"Discord está te ouvindo."* é informação que
-#: nada mais na tela dá, e ela não pediu para tirar — o que saiu é o estado
-#: VAZIO, que é o normal e não merece uma linha.
 NINGUEM_TE_OUVE = ""
 
-#: Quantos caracteres cabem em UMA linha da `.ressalva` do bloco do microfone,
-#: e o número é MEDIDO — Chrome headless sobre `mockup/02-controles.html` na
-#: janela do produto (1180px), 19/09/2026:
-#:
-#:     coluna do som            281,0 px de largura
-#:     uma linha da .ressalva    17,3 px (11,5px x 1,5 + 5 de margem)
-#:     card aberto              329,6 -> 351,9 px com a linha escrita
-#:     .quadro-corpo            sem rolagem (scrollHeight == clientHeight)
-#:
-#: **A SEGUNDA LINHA É QUE NÃO CABE.** A coluna do som é uma das duas que
-#: MANDAM na altura do card, e um bloco que dobra de linha já tirou o P4 da
-#: tela dela em 30/08. Acima deste limite a frase troca os NOMES pela
-#: CONTAGEM, que cabe sempre — e a contagem continua verdadeira.
 LIMITE_DA_LINHA_DE_QUEM_OUVE = 46
 
 
 def frase_de_quem_te_ouve(ouvintes: object) -> str:
-    """Quem está com o microfone deste controle aberto, em uma linha.
-
-    `""` quando não se sabe (ninguém perguntou, ou o daemon é velho e não
-    publica a chave) — e `""` faz a `.ressalva` sumir sem cobrar um pixel, que
-    é o contrato da D-02 dela: *"linha fixa só quando HÁ ressalva"*.
-
-    **A LISTA VAZIA NÃO É AUSÊNCIA**, e é justamente ela que vira a frase mais
-    importante: *"medi, e ninguém te ouve"*. Foi esse estado — o microfone
-    LIGADO com nenhum app gravando — que apagava a luz do controle até 19/09 e
-    fez ela desligar o próprio microfone achando que o ligava. A luz agora
-    acende; esta linha é quem explica que acesa não quer dizer *"alguém te
-    escuta"*.
-
-    **QUEM CONTA SÃO OS APPS DE FORA.** O daemon já entrega a lista sem os
-    gravadores do próprio Hefesto (`integrations.quem_ouve_o_microfone.
-    e_stream_do_hefesto`, regra 3) — o medidor de nível desta mesma aba grava
-    o canal o tempo todo, e contá-lo faria a tela dizer que alguém te ouve
-    porque a tela está aberta.
-
-    **ACIMA DE `LIMITE_DA_LINHA_DE_QUEM_OUVE` A FRASE CONTA em vez de nomear.**
-    Um nome de app longo (ou três nomes) quebraria a `.ressalva` em duas
-    linhas, e a segunda linha não cabe no card — ver a constante.
-    """
+    """Quem está com o microfone deste controle aberto, em uma linha."""
     if not isinstance(ouvintes, (list, tuple)):
         return ""
     nomes = [t for t in (str(x).strip() for x in ouvintes) if t]
@@ -897,31 +572,10 @@ def estado_do_card(
     *,
     mic: Any = None,
     mic_vol: int | None = None,
-    # O `canal` SAIU EM 23/09/2026 (O-ALTO-FALANTE-DIZ-ATIVO-01), e com ele o
-    # `estado_alto` que ele alimentava: a palavra do sono do canal não vai mais
-    # à tela, e o `aba02.bloco` não desenhava aquele valor desde 04/09.
-    #
-    # **`rota_pc` VIROU `rota_nada` EM 21/09/2026**, e a troca não é de nome:
-    # é de PERGUNTA. O `rota_pc` respondia *"a saída padrão do sistema é este
-    # controle?"* — a camada 1 —, e acendia o botão «Só no controle». Aquele
-    # botão saiu da fileira em 20/09, quando ela trocou o ato do terceiro
-    # (*"O nome está certo, mude o ato."*), e o que existe hoje é «Tudo na TV e
-    # Nada no Controle», que é o BYTE 0 do firmware.
-    #
-    # `aba02.bloco` foi renomeado naquele dia e esta ponta ficou para trás:
-    # `estado_do_card` continuou entregando `rota_pc`, e o `bloco()` passou a
-    # levantar `TypeError: missing keyword-only argument 'rota_nada'` — onze
-    # erros na suíte, e a bancada de tela morta. *A renomeação que alcança um
-    # lado só é a mesma família do `mic-botao-estado` órfão.*
     rota_nada: bool | None = None,
     onda_mic: list[int] | None = None,
 ) -> dict[str, Any]:
-    """Os kwargs que `aba02.bloco()` pede, a partir de UM `entry` do IPC.
-
-    É a mesma função que alimenta a primeira montagem e o tique: o desenho e a
-    repintura leem a MESMA conta, e por isso não há como o card nascer diferente
-    do que ele vira meio segundo depois.
-    """
+    """Os kwargs que `aba02.bloco()` pede, a partir de UM `entry` do IPC."""
     inputs = entrada.get("inputs") or {}
     transporte = str(entrada.get("transport") or "").lower()
 
@@ -945,10 +599,6 @@ def estado_do_card(
         round(float(toque.get("x") or 0) / largura * 100, 1),
         round(float(toque.get("y") or 0) / altura * 100, 1),
     )
-    # O DEDO ESTÁ LÁ OU NÃO — e sem isto a superfície do touchpad nunca dizia
-    # nada. Medido em 29/08: 238 leituras dos dois controles dela com
-    # `touching` FALSO em todas as 238; o ponto ficava invisível e o retângulo
-    # de 148x83 não mostrava coisa alguma, o tempo inteiro.
     tocando = bool(toque.get("touching"))
 
     giro = inputs.get("gyro") or {}
@@ -961,62 +611,24 @@ def estado_do_card(
             (eixo.upper(), _texto_do_eixo(valor), ";".join(f"{k}:{v}" for k, v in estilo.items()))
         )
 
-    # O ACELERÔMETRO NÃO TEM MAIS LINHA NA TELA, e a medição que o tirou fica
     # aqui porque é ela que impede alguém de o desenhar de novo: o `state_full`
-    # não publica chave nenhuma de acelerômetro (medido nos dois controles da
-    # mesa dela em 29/08 — `inputs` traz buttons, gyro, l2_raw, lx, ly, r2_raw,
-    # rx, ry, speaker, touchpad), e `docs/data/mapa-controles.csv` dá
-    # `movimento.acelerometro` como não/não nos DOIS transportes, os dois
-    # medidos. Estas três linhas escreviam "—" três vezes: honesto, e ainda
-    # assim 81px de tela para dizer "não sei". O registro completo da mudança de
-    # especificação está no cabeçalho de `aba02.py`
-    # (D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA).
 
-    # A AUSÊNCIA DE LEITURA DEIXOU DE VIRAR MENTIRA (MIC-DA-MESA-ELEICAO-01).
-    #
-    # Aqui se lia `bool(audio.get("mic_mudo"))`, e `bool(None)` é `False`, que a
-    # tela pinta como **ATIVO**. Só que `None` ali não quer dizer "não está
-    # mudo": quer dizer que NINGUÉM LEU. O byte de estado de áudio é atributo
-    # de INSTÂNCIA do handle; o handle morre no hotplug-out, o novo nasce sem
-    # leitura, `audio_status_for` devolve `None` e a chave `audio` some inteira
     # do `state_full`.
-    #
-    # Num contrato em que ACESO = "este microfone está no ar", isso faz o
-    # controle que acabou de cair anunciar que está no ar — o pior default
-    # possível numa mesa de quatro. `mic_sabemos=False` é o terceiro estado, e
-    # a tela pinta DESCONHECIDO em vez de escolher um dos dois.
     audio = entrada.get("audio") or {}
     mic_sabemos = isinstance(audio.get("mic_mudo"), bool)
     mic_mudo = bool(audio.get("mic_mudo"))
-    # QUEM MANDA NO MUDO DO MICROFONE — e é o que diz se há o que "Liberar".
-    # `mic_mudo_desejado` é `None` enquanto a posse for do kernel
-    # (`hid_playstation`), e booleano depois que o Hefesto assumiu o registrador.
-    # Medido na mesa dela em 29/08: `null` nos DOIS controles — logo o "Liberar"
-    # nasce apagado, que é a resposta honesta: não há o que devolver.
     mic_posse = audio.get("mic_mudo_desejado") is not None
     onda = list(onda_mic or [])
     if len(onda) < QUADROS_DA_ONDA:
         onda = [PISO_DA_ONDA] * (QUADROS_DA_ONDA - len(onda)) + onda
 
-    # O ALTO-FALANTE PASSA PELO PORTÃO DO MAPA. `audio.alto_falante` tem
-    # `radio_aciona = não` (medido), e a ressalva do CSV diz por quê: o Hefesto
-    # NÃO envia PCM, ele mexe no volume e na rota de algo que outra pessoa toca,
     # e pelo rádio o DualSense não publica placa de som nenhuma. Um número de
-    # volume desenhado ali seria a tela afirmando o que aquele transporte não
-    # entrega — e é exatamente o que o mapa existe para impedir.
     alto = entrada.get("speaker") or {}
     volume_cru = alto.get("volume")
     alto_pct = percentual_do_volume(int(volume_cru)) if isinstance(volume_cru, int) else None
     if aciona("audio.alto_falante", transporte) == "não":
         alto_pct = None
-    # O MUDO DO ALTO-FALANTE, QUE O DAEMON PUBLICA E ESTA TELA IGNORAVA. Medido
-    # na mesa dela: `speaker = {"volume": 101, "muted": false, …}` — a chave
-    # sempre esteve lá, e o ♪ não tinha como acender nem com o alto-falante mudo.
     alto_mudo = bool(alto.get("muted"))
-    # E `speaker.set {muted}` é RECUSADO sem volume conhecido (`ipc_handlers.py`):
-    # sem posse o par mudo/desmudo trancaria o alto-falante em zero. Então o ♪
-    # só é clicável quando há volume — a mesma pré-condição que o botão do
-    # produto já respeita nascendo insensível.
     alto_pode = alto_pct is not None
 
     return {
@@ -1043,8 +655,5 @@ def estado_do_card(
         "alto_v": [alto_pct if alto_pct is not None else 0] + [PISO_DA_ONDA] * (QUADROS_DA_ONDA - 1),
         "rota_nada": bool(rota_nada),
         # `None` = NÃO SEI, e é diferente de zero. O DualSense não devolve o
-        # volume que tem — a chave `speaker` só aparece depois de um
-        # `speaker.set` NOSSO —, então antes disso o produto escreve
-        # "Não ajustado" (controller_card.py:631) em vez de inventar um número.
         "alto_pct": alto_pct,
     }

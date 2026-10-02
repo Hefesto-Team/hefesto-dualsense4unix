@@ -1,22 +1,4 @@
-"""O parear espera o clique dela — O-PAREAR-ESPERA-O-CLIQUE-01.
-
-A queixa dela, de 30/09/2026: *«eu não consigo escolher qual o controle vou
-conectar e nem clicar nele. ele já vai automaticamente não espera eu clicar no
-parear»*. Medido no código e no diário da madrugada: a janela do «Conectar»
-pareava o PRIMEIRO controle que a busca achasse, em meio segundo, e a tela o
-via em três; e o controle com a chave só do lado dele (o 01:23:40) era pareado
-de novo sem modo de parear. <!-- noqa-acento: citação literal dela -->
-
-A decisão (D-3009-O-PAREAR-E-O-CLIQUE-DELA, quem coordena, 30/09/2026, a
-validar por ela): nada pareia sem o clique dela no «Parear» da linha.
-
-Todas no rádio de mentira (``radio_de_mentira``), com o ``DonoVivo`` de
-verdade por cima. **Nenhuma lê a própria saída:** a central é medida pelos
-métodos que chegam ao BlueZ de mentira, e a tela pelo pedido que chega ao
-daemon de mentira.
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""O parear espera o clique dela — O-PAREAR-ESPERA-O-CLIQUE-01."""
 
 from __future__ import annotations
 
@@ -83,19 +65,8 @@ def _onde_pareou(mundo: rm.RadioDeMentira) -> list[str]:
     return [c for c, _a in mundo.metodos("Pair")]
 
 
-# ---------------------------------------------------------------------------
-# 1. sem clique, nada pareia
-# ---------------------------------------------------------------------------
-
-
 def test_sem_clique_nada_pareia(mesa: Any, relogio: rm.Relogio) -> None:
-    """O verde em PS + Create desde o segundo 2, e a janela inteira passa sem
-    o clique dela: nenhum ``Pair``, o ``Pairable`` volta a ``False``, a busca
-    acaba «não chegou» sem gesto, e o verde continua em modo de parear.
-
-    MORDIDA: devolva à janela o primeiro controle que ela achar (o
-    ``return str(endereco), False`` de 23/09) — o ``Pair`` aparece.
-    """
+    """O verde em PS + Create desde o segundo 2, e a janela inteira passa sem"""
     mundo = _mundo(VERDE)
     _dono, central = mesa(mundo)
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
@@ -109,18 +80,8 @@ def test_sem_clique_nada_pareia(mesa: Any, relogio: rm.Relogio) -> None:
     assert mundo.fisicos[VERDE].pareando is True
 
 
-# ---------------------------------------------------------------------------
-# 2. ela escolhe entre dois
-# ---------------------------------------------------------------------------
-
-
 def test_ela_escolhe_entre_dois(mesa: Any, relogio: rm.Relogio) -> None:
-    """O verde aos 2 s e o roxo aos 3 s, os dois em PS + Create; o clique dela
-    no roxo aos 5 s. Um ``Pair`` só, no roxo; o verde fica sem chave.
-
-    MORDIDA: devolva à janela o primeiro controle que ela achar — o ``Pair``
-    vai para o verde.
-    """
+    """O verde aos 2 s e o roxo aos 3 s, os dois em PS + Create; o clique dela"""
     mundo = _mundo(VERDE, ROXO)
     _dono, central = mesa(mundo)
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
@@ -135,19 +96,8 @@ def test_ela_escolhe_entre_dois(mesa: Any, relogio: rm.Relogio) -> None:
     assert verde is None or verde.get("Paired") is False
 
 
-# ---------------------------------------------------------------------------
-# 3. o clique durante a busca não é «ocupado»
-# ---------------------------------------------------------------------------
-
-
 def test_o_clique_durante_a_busca_nao_e_ocupado(mesa: Any, relogio: rm.Relogio) -> None:
-    """Com o «Conectar» no passo do gesto e o roxo já visto pela janela, o
-    ``comecar_a_mover`` do roxo volta o movimento em curso: nem a recusa do um
-    por vez, nem uma segunda busca.
-
-    MORDIDA: tire a escolha (``_a_escolha_dela``) de antes do ``_ocupada`` no
-    ``comecar_a_mover`` — a recusa volta.
-    """
+    """Com o «Conectar» no passo do gesto e o roxo já visto pela janela, o"""
     mundo = _mundo(ROXO)
     _dono, central = mesa(mundo)
     respostas: list[cr.Movimento] = []
@@ -163,18 +113,8 @@ def test_o_clique_durante_a_busca_nao_e_ocupado(mesa: Any, relogio: rm.Relogio) 
     assert (feito.estado, feito.aparelho) == (cr.CHEGOU, ROXO)
 
 
-# ---------------------------------------------------------------------------
-# 4. a escolha é de qualquer aparelho, e o destino é o da busca
-# ---------------------------------------------------------------------------
-
-
 def test_a_escolha_e_de_qualquer_aparelho(mesa: Any, relogio: rm.Relogio) -> None:
-    """Ela escolhe o fone na janela da sala: um ``Pair`` nele, e o CONFERIR
-    pelo ``Connected`` do BlueZ — fone não tem ``HID_PHYS``.
-
-    MORDIDA: o ``e_controle=True`` fixo no ``_quem_chegou`` — o CONFERIR
-    espera um movimento que fone não tem, e ele não chega.
-    """
+    """Ela escolhe o fone na janela da sala: um ``Pair`` nele, e o CONFERIR"""
     mundo = _mundo()
     mundo.fisicos[FONE] = rm.Fisico(FONE, rm.CLASSE_DE_FONE)
     _dono, central = mesa(mundo)
@@ -190,12 +130,7 @@ def test_a_escolha_e_de_qualquer_aparelho(mesa: Any, relogio: rm.Relogio) -> Non
 
 def test_o_clique_noutro_destino_que_nao_o_da_busca_recusa(
         mesa: Any, relogio: rm.Relogio) -> None:
-    """A busca na sala, e o clique pede o fone no quarto: não é escolha — é a
-    recusa do um por vez, e nada pareia.
-
-    MORDIDA: tire da escolha a comparação do destino — o clique do quarto é
-    aceito, e o ``Pair`` sai na sala.
-    """
+    """A busca na sala, e o clique pede o fone no quarto: não é escolha — é a"""
     mundo = _mundo()
     mundo.fisicos[FONE] = rm.Fisico(FONE, rm.CLASSE_DE_FONE)
     _dono, central = mesa(mundo)
@@ -210,12 +145,7 @@ def test_o_clique_noutro_destino_que_nao_o_da_busca_recusa(
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO)
 
 
-# ---------------------------------------------------------------------------
-# 5. a tela manda a escolha e acha a linha
-# ---------------------------------------------------------------------------
-
 PCI = "0000:00:14.0"
-#: Esquerda (hci0), Direita (hci1) e Meio (hci2).
 ADAPTADORES = ("aa:bb:cc:00:00:09", "aa:bb:cc:00:00:15", "aa:bb:cc:00:00:21")
 NOMES = ("Esquerda", "Direita", "Meio")
 NOVO = "aa:bb:cc:00:00:3d"
@@ -268,12 +198,7 @@ def tela(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def _campos_com_a_busca_na_direita(a08: Any) -> dict[str, Any]:
-    """A busca de pé na Direita, e a caixa Meio aberta por ela.
-
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca é a que a central
-    PUBLICA (``busca``), ao lado do movimento sem aparelho; a tela lê dali
-    onde ela está. O pedido é o mesmo.
-    """
+    """A busca de pé na Direita, e a caixa Meio aberta por ela."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     a08._ABERTO["lugar"] = _id(ADAPTADORES[2])
@@ -328,20 +253,9 @@ def test_a_tela_mostra_o_dualsense_novo_e_manda_a_escolha(tela: Any, nome: str) 
                                               "aparelho": _id(NOVO)})]
 
 
-# ---------------------------------------------------------------------------
-# 6. o «Mover» de quem a janela não viu continua recusado
-# ---------------------------------------------------------------------------
-
-
 def test_o_mover_de_quem_a_janela_nao_viu_continua_recusado(
         mesa: Any, relogio: rm.Relogio) -> None:
-    """Com o «Conectar» no gesto no quarto, um «Mover» do azul (no ar na sala,
-    fora da janela) que chega entre dois tiques volta «ocupado»: nada desliga
-    o azul, e o verde que entra em PS + Create depois continua sem ``Pair``.
-
-    MORDIDA: tire da escolha o filtro dos VISTOS — o pedido vira escolha (sem
-    recusa), e a janela espera um azul que nunca aparece.
-    """
+    """Com o «Conectar» no gesto no quarto, um «Mover» do azul (no ar na sala,"""
     mundo = _mundo(VERDE)
     _dono, central = mesa(mundo)
     respostas: list[cr.Movimento] = []
@@ -359,21 +273,9 @@ def test_o_mover_de_quem_a_janela_nao_viu_continua_recusado(
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO)
 
 
-# ---------------------------------------------------------------------------
-# 7. o que o adaptador já conhece também se escolhe
-# ---------------------------------------------------------------------------
-
-
 def test_o_que_o_adaptador_ja_conhece_tambem_se_escolhe(
         mesa: Any, relogio: rm.Relogio) -> None:
-    """O roxo tem chave no quarto (no ``antes`` da janela, e ``ja_pareado``) e
-    ela o liga em PS + Create; o clique dela («Conectar», na linha de quem o
-    adaptador conhece) chega ao ``Connect`` no quarto, e ele chega.
-
-    MORDIDA: deixe o filtro do já pareado valer também para o escolhido — ele
-    não entra nos VISTOS, o clique é recusado, e ele acaba «não chegou» sem
-    ``Connect``.
-    """
+    """O roxo tem chave no quarto (no ``antes`` da janela, e ``ja_pareado``) e"""
     mundo = _mundo()
     mundo.pareado(QUARTO, ROXO, conectado=False)
     _dono, central = mesa(mundo)
@@ -386,14 +288,8 @@ def test_o_que_o_adaptador_ja_conhece_tambem_se_escolhe(
     assert (feito.estado, feito.aparelho, feito.destino) == (cr.CHEGOU, ROXO, QUARTO)
 
 
-# ---------------------------------------------------------------------------
-# 8. o controle com a chave só do lado dele espera o clique
-# ---------------------------------------------------------------------------
-
-
 def _o_roxo_com_a_chave_so_do_lado_dele() -> rm.RadioDeMentira:
-    """O roxo pareado no quarto; o quarto esqueceu a chave (a ponte), o roxo
-    não — e ele está desligado."""
+    """O roxo pareado no quarto; o quarto esqueceu a chave (a ponte), o roxo"""
     mundo = _mundo()
     mundo.pareado(QUARTO, ROXO)
     mundo.desligar(ROXO)
@@ -404,13 +300,7 @@ def _o_roxo_com_a_chave_so_do_lado_dele() -> rm.RadioDeMentira:
 
 def test_o_controle_que_chama_o_host_sem_clique_nao_pareia(
         mesa: Any, relogio: rm.Relogio) -> None:
-    """O 01:23:40 da madrugada dela: ligado só com o PS, ele chama o quarto, que
-    não tem mais a chave dele. Com a busca de pé ali e sem o clique dela,
-    nenhum ``Pair``.
-
-    MORDIDA: devolva à janela o primeiro controle que ela achar — o ``Pair``
-    sai no primeiro passo, sem clique, como às 01:23:40.
-    """
+    """O 01:23:40 da madrugada dela: ligado só com o PS, ele chama o quarto, que"""
     mundo = _o_roxo_com_a_chave_so_do_lado_dele()
     _dono, central = mesa(mundo)
     relogio.agendar(2.0, lambda: mundo.chamar_o_host(ROXO))

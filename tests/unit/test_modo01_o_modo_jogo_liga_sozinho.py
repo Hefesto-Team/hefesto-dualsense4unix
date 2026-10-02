@@ -1,52 +1,8 @@
-"""MODO-01 (sprint 25/07) — o modo jogo liga sozinho.
-
-O relato dela: *"modo jogo por exemplo não liga automaticamente."*
-
-A cadeia medida com o Mullet Mad Jack (`steam_app_2111190`) aberto: nenhum dos
-13 perfis do disco casa aquele jogo, os três candidatos são catch-all, a regra
-R-21 recusa dar autoridade a catch-all sobre janela de jogo e devolve `None` —
-e aí para. A R-21 tinha razão própria (um genérico de DESKTOP entrando num jogo
-era o ping-pong `vitoria``Navegação` a cada 18-28 s), mas trocou *"o catch-all
-entra num jogo"* por *"NINGUÉM entra num jogo"* e não pôs nada no lugar. O
-daemon SABIA que havia jogo (`game_signal_transition de=daemon para=game`) e não
-fazia nada com isso.
-
-O que este arquivo trava, por entrega da sprint:
-
-  - **B3** — motivo do veto (`select_for_window_ex`) + o MODO JOGO PADRÃO que o
-    daemon liga quando é um jogo e nenhum perfil específico opina, **sem trocar
-    de perfil** e **sem o cadeado bloquear** (o cadeado congela perfil, não modo);
-  - **B2** — o cadeado cede também ao perfil que DECLARA ser de jogo (não
-    catch-all, `mode.kind` em {gamepad, native}): era o `coop_local`, que casa
-    por título, e todo jogo fora da Steam. (O preset `coop_local` foi podado da
-    fábrica em 26/08/2026; a entrega B2 não depende dele — o teste que a trava
-    escreve o perfil no berço de teste, não lê a fábrica.);
-  - **B1** — perfil novo de jogo nasce com o modo jogo pré-selecionado;
-  - **B5** — o `ProfileManager` de leitura do daemon é cacheado (a dedup do veto
-    é campo de instância e a instância nova a cada tique a zerava);
-  - os presets de jogo nascem com seção `mode`.
-
-Invariante que NÃO pode cair junto: gesto manual dela cria trava de 30 s e
-nada — nem o modo jogo padrão — mexe no modo nesse período.
-
-NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. O cadeado virou o
-Modo Freestyle, e a decisão dela (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`)
-revogou as duas metades que o B3 e o B2 davam a ele: ligado, o Freestyle manda
-também no modo quando TEM a seção `mode` (o modo jogo padrão não entra por cima
-dele) e nenhum perfil de jogo entra — nem o que se declara de jogo. Sem a seção
-(o Freestyle de fábrica), o modo jogo padrão segue entrando no jogo: é o B3 com
-o Freestyle ligado. As réguas daqui passaram a medir isso; com o Freestyle
-desligado, o B3 e o B2 valem como antes.
-"""
+"""MODO-01 (sprint 25/07) — o modo jogo liga sozinho."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("modo01: o modo jogo liga sozinho (a parte da janela)")
 
 import json
@@ -88,12 +44,8 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID_MMJ = 2111190  # Mullet Mad Jack — o jogo do relato
+APPID_MMJ = 2111190
 WM_MMJ = f"steam_app_{APPID_MMJ}"
-#: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica mora em DUAS casas —
-#: `profiles_default/` (o que a semeadura copia) e `estilos_de_jogo/` (os oito
-#: gêneros, que por decisão dela não são perfil e não são mais semeados). O
-#: conteúdo é o mesmo; mudou o endereço.
 _RAIZ_DOS_ASSETS = Path(__file__).resolve().parents[2] / "assets"
 CASAS_DE_FABRICA = (
     _RAIZ_DOS_ASSETS / "profiles_default",
@@ -108,11 +60,6 @@ def asset_de_fabrica(nome: str) -> Path:
         if candidato.exists():
             return candidato
     return CASAS_DE_FABRICA[0] / f"{nome}.json"
-
-
-# ---------------------------------------------------------------------------
-# Infra
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -207,8 +154,6 @@ class _Setters:
 @pytest.fixture
 def daemon() -> Daemon:
     d = Daemon(controller=FakeController(), config=DaemonConfig())
-    # NUMA-01: a autoridade de exibição vem do `GameSignal`; aqui só o valor
-    # importa (o sinal real é fiado em `run()`).
     d._game_signal = SimpleNamespace(authority="game")
     return d
 
@@ -221,13 +166,8 @@ def _perfil_do_jogo(nome: str = "madjack") -> Profile:
     return Profile(
         name=nome,
         match=MatchCriteria(window_class=[WM_MMJ]),
-        priority=0,  # perfil de jogo nasce com prioridade 0 (R-01)
+        priority=0,
     )
-
-
-# ---------------------------------------------------------------------------
-# B3 — o veto deixou de ser mudo
-# ---------------------------------------------------------------------------
 
 
 class TestMotivoDoVeto:
@@ -279,12 +219,7 @@ class TestMotivoDoVeto:
         assert motivo == MOTIVO_SELECIONADO
 
     def test_assinatura_antiga_preservada(self, isolated_profiles_dir: Path) -> None:
-        """Quem só quer o perfil (CLI, lifecycle, dublês) não muda de chamada.
-
-        NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item
-        5): o `match any` saiu da seleção automática, e o desktop também
-        responde `None`; a regra de janela continua respondendo o perfil dela.
-        """
+        """Quem só quer o perfil (CLI, lifecycle, dublês) não muda de chamada."""
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
         save_profile(Profile(
             name="leitura", match=MatchCriteria(window_class=["zathura"]), priority=5))
@@ -293,11 +228,6 @@ class TestMotivoDoVeto:
         assert manager.select_for_window({"wm_class": "zathura"}).name == "leitura"
         assert manager.select_for_window({"wm_class": "firefox"}) is None
         assert manager.select_for_window({"wm_class": WM_MMJ}) is None
-
-
-# ---------------------------------------------------------------------------
-# B3 — o modo jogo padrão no daemon
-# ---------------------------------------------------------------------------
 
 
 class TestModoJogoPadrao:
@@ -332,9 +262,7 @@ class TestModoJogoPadrao:
     def test_modo_nativo_manual_vence_o_default(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Conexão Nativa (Sony)" já É a resposta dela para "como quero jogar" —
-        o controle está SOLTO para o jogo, de propósito. Um default não troca uma
-        escolha explícita quando o lock de 30 s vence."""
+        """"Conexão Nativa (Sony)" já É a resposta dela para "como quero jogar" —"""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         daemon.store.set_native_mode_active(True, origin="manual")
@@ -398,9 +326,7 @@ class TestModoJogoPadrao:
     def test_nao_usa_a_pendencia_de_perfil(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`ModoAdiado` é o canal do modo de um PERFIL — e morre quando o perfil
-        ativo muda. O modo jogo padrão não tem perfil: usar aquele canal o faria
-        ser descartado por um motivo que não se aplica a ele."""
+        """`ModoAdiado` é o canal do modo de um PERFIL — e morre quando o perfil"""
         _Setters(daemon).bind(monkeypatch)
         daemon._emu_manual_ts = relogio.agora
 
@@ -428,8 +354,7 @@ class TestModoJogoPadrao:
     def test_loga_a_aplicacao_com_origem_game_signal(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """É por este evento que se distingue, meses depois, "o perfil do jogo
-        ligou o modo" de "ninguém tinha perfil e o daemon ligou o padrão"."""
+        """É por este evento que se distingue, meses depois, "o perfil do jogo"""
         _Setters(daemon).bind(monkeypatch)
         spy = MagicMock()
         monkeypatch.setattr(lifecycle_mod, "logger", spy)
@@ -477,9 +402,7 @@ class TestSoltarOModoJogoPadrao:
     def test_devolve_o_eixo_de_modo_a_quem_era_dono(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem isto, o `"gamepad"` que o applier carimba daria a um perfil de
-        desktop qualquer autoridade para reverter um modo que nenhum perfil
-        ligou."""
+        """Sem isto, o `"gamepad"` que o applier carimba daria a um perfil de"""
         _Setters(daemon).bind(monkeypatch)
         daemon.aplicar_modo_jogo_padrao(wm_class=WM_MMJ)
         assert daemon._mode_from_profile == "gamepad"
@@ -518,8 +441,7 @@ class TestSoltarOModoJogoPadrao:
     def test_perfil_com_opiniao_toma_a_posse(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ela cria o perfil do jogo no meio da sessão: dali em diante quem manda
-        no modo é o perfil, e o padrão não tem mais o que soltar."""
+        """Ela cria o perfil do jogo no meio da sessão: dali em diante quem manda"""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         daemon.aplicar_modo_jogo_padrao(wm_class=WM_MMJ)
@@ -537,11 +459,6 @@ class TestSoltarOModoJogoPadrao:
         setters.gamepad.clear()
         daemon.reverter_modo_jogo_padrao(wm_class="firefox")
         assert setters.gamepad == []
-
-
-# ---------------------------------------------------------------------------
-# B3 — integração pelo AutoSwitcher (é ele que roda na máquina dela)
-# ---------------------------------------------------------------------------
 
 
 class _DaemonEspiao:
@@ -576,8 +493,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
     def test_nenhum_perfil_para_o_jogo_o_modo_liga_e_o_perfil_nao_troca(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """O cenário da validação: nenhum perfil para o jogo. O modo jogo liga;
-        o perfil (um catch-all) NÃO troca."""
+        """O cenário da validação: nenhum perfil para o jogo. O modo jogo liga;"""
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
         store = StateStore()
         espiao = _DaemonEspiao()
@@ -593,13 +509,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
     def test_com_o_freestyle_ligado_e_dizendo_o_modo_o_padrao_nao_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Ligado e COM a seção `mode`, o Freestyle manda no modo (28/09/2026).
-
-        Era o avesso: *"o cadeado congela perfil, não modo"*, e o modo jogo
-        padrão ligava por cima do perfil que ela deixou. MORDIDA: devolva ao
-        `_tick` a sincronização do modo jogo padrão ANTES da parada pelo
-        Freestyle e o espião registra o jogo três vezes.
-        """
+        """Ligado e COM a seção `mode`, o Freestyle manda no modo (28/09/2026)."""
         save_profile(Profile(name="Freestyle", match=MatchAny(), priority=1,
                              mode=ProfileModeConfig(kind="gamepad", caminho="xbox")))
         store = StateStore()
@@ -616,15 +526,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
     def test_com_o_freestyle_ligado_sem_dizer_o_modo_o_padrao_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Ligado e SEM a seção `mode` (o de fábrica), o jogo liga o modo sozinho.
-
-        Conferência de 28/09/2026: sem opinião do Freestyle o modo é o da
-        máquina, e o da máquina num jogo é o padrão — é o sintoma que criou esta
-        régua, com a flag do botão ligada desde 24/07. O perfil não troca.
-
-        MORDIDA: tire a chamada `_modo_jogo_padrao_sob_o_freestyle` da parada
-        pelo Freestyle no `_tick` e o espião fica vazio.
-        """
+        """Ligado e SEM a seção `mode` (o de fábrica), o jogo liga o modo sozinho."""
         save_profile(Profile(name="Freestyle", match=MatchAny(), priority=1))
         store = StateStore()
         store.set_freestyle_ligado(True)
@@ -677,8 +579,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
     def test_tick_sem_informacao_nao_solta_o_modo(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """A histerese UX-01 pula o tick INTEIRO: leitura cega não é evidência de
-        que ela saiu do jogo (o EIO de BT já mediu 5,1 s; loading dura minutos)."""
+        """A histerese UX-01 pula o tick INTEIRO: leitura cega não é evidência de"""
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
         store = StateStore()
         espiao = _DaemonEspiao()
@@ -702,8 +603,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
         assert sw._current_profile is None
 
     def test_manager_sem_o_metodo_novo_nao_derruba_o_tick(self) -> None:
-        """Dublê de teste/integração antiga: o motivo é informação EXTRA e sua
-        ausência tem de deixar o autoswitch byte-idêntico ao de antes."""
+        """Dublê de teste/integração antiga: o motivo é informação EXTRA e sua"""
         store = StateStore()
         manager = MagicMock(spec=ProfileManager)
         manager.select_for_window_ex.return_value = MagicMock()
@@ -740,27 +640,14 @@ class TestAutoswitchPedeOModoJogoPadrao:
             modo_jogo_padrao_applier=_explode,
         )
 
-        sw._tick({"wm_class": WM_MMJ}, 0.0)  # não levanta
-
-
-# ---------------------------------------------------------------------------
-# B2 — o cadeado congelava mais do que prometia
-#
-# NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. O B2 fazia o
-# cadeado CEDER ao perfil que se declara de jogo. A decisão dela
-# (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) revogou a cessão: com o Modo
-# Freestyle ligado, nenhum perfil de jogo entra. As duas primeiras réguas
-# passaram a medir que eles NÃO entram; o predicado `perfil_declara_modo_de_jogo`
-# ficou, e hoje responde à guarda do jogo vivo (`_recusa_a_troca_com_o_jogo_vivo`).
-# ---------------------------------------------------------------------------
+        sw._tick({"wm_class": WM_MMJ}, 0.0)
 
 
 class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
     def test_coop_local_casa_por_titulo_e_nao_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """O preset TEM `mode: gamepad` e casa por TÍTULO (Sackboy, Overcooked,
-        It Takes Two, Cuphead) — com o Freestyle ligado, ele não entra."""
+        """O preset TEM `mode: gamepad` e casa por TÍTULO (Sackboy, Overcooked,"""
         save_profile(
             Profile.model_validate(
                 {
@@ -828,8 +715,7 @@ class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
         assert sw._current_profile is None
 
     def test_catch_all_com_mode_gamepad_nao_cede(self) -> None:
-        """Um catch-all chegou por acidente (nenhuma regra casou) — declarar
-        `mode` não lhe dá a autoridade que a R-01/R-21 lhe negaram."""
+        """Um catch-all chegou por acidente (nenhuma regra casou) — declarar"""
         catch_all = Profile.model_validate(
             {
                 "name": "vitoria",
@@ -840,9 +726,7 @@ class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
         assert perfil_declara_modo_de_jogo(catch_all) is False
 
     def test_predicado_estrito_nao_foi_afrouxado(self) -> None:
-        """`perfil_e_regra_de_jogo` também gateia o furo da trava manual
-        (F2/R-01) — afrouxá-lo reabriria por outra porta o buraco em que um
-        regex de título solto apagava a configuração recém-feita à mão."""
+        """`perfil_e_regra_de_jogo` também gateia o furo da trava manual"""
         por_titulo = Profile.model_validate(
             {
                 "name": "fps",
@@ -871,15 +755,9 @@ class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
         assert perfil_declara_modo_de_jogo(desktop) is False
 
 
-# ---------------------------------------------------------------------------
-# B5 — a enxurrada de log
-# ---------------------------------------------------------------------------
-
-
 class TestManagerDeSelecaoCacheado:
     def test_mesma_instancia_entre_tiques(self, daemon: Daemon) -> None:
-        """A dedup do veto R-21 é campo de INSTÂNCIA: instância nova a cada tique
-        a zerava e o journal levava 1 linha a cada 2,00 s (12 medidas)."""
+        """A dedup do veto R-21 é campo de INSTÂNCIA: instância nova a cada tique"""
         primeiro = daemon._manager_de_selecao()
         assert daemon._manager_de_selecao() is primeiro
 
@@ -895,7 +773,7 @@ class TestManagerDeSelecaoCacheado:
         monkeypatch.setattr(manager_mod, "logger", spy)
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
 
-        for _ in range(12):  # 12 tiques = os 24 s medidos no journal
+        for _ in range(12):
             daemon._profile_rule_matches_game(WM_MMJ)
 
         eventos = [
@@ -906,18 +784,8 @@ class TestManagerDeSelecaoCacheado:
         assert len(eventos) == 1
 
 
-# ---------------------------------------------------------------------------
-# B1 — perfil de jogo nasce com modo
-# ---------------------------------------------------------------------------
-
-
 def _install_gi_stubs() -> None:
-    """Stubs mínimos de ``gi.repository`` quando o PyGObject real falta.
-
-    Réplica do helper de ``test_profiles_editor_mode.py`` (armadilha A-12: o
-    ``.venv`` de CI pode não ter PyGObject).
-    """
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs.
+    """Stubs mínimos de ``gi.repository`` quando o PyGObject real falta."""
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -998,8 +866,6 @@ class _FakeBox:
         self.visible = True
 
     def show_all(self) -> None:
-        # CAMPO-QUE-NAO-NASCIA-01: doutrina do GTK — com o `no_show_all` armado
-        # o `show_all()` IGNORA o widget (e, por não descer nele, os filhos).
         if self.no_show_all:
             return
         self.visible = True
@@ -1079,8 +945,7 @@ class TestPerfilDeJogoNasceComModo:
     def test_jogo_da_steam_pre_seleciona_o_modo_jogo(
         self, sem_ipc: list[str]
     ) -> None:
-        """O caminho que a interface oferecia como solução não solucionava: o
-        perfil nascia com `"none"` — "Não mexer no modo"."""
+        """O caminho que a interface oferecia como solução não solucionava: o"""
         editor = _editor_novo("steam_game")
 
         editor._on_aplica_a_changed(editor._aplica_a)
@@ -1097,9 +962,7 @@ class TestPerfilDeJogoNasceComModo:
     def test_preserva_a_mascara_corrente_do_seletor(
         self, sem_ipc: list[str]
     ) -> None:
-        """Pré-selecionar uma máscara diferente da que está de pé faria o perfil
-        RECRIAR o vpad ao entrar — e recriar vpad com o jogo aberto invalida os
-        handles que ele já abriu (medido ao vivo)."""
+        """Pré-selecionar uma máscara diferente da que está de pé faria o perfil"""
         editor = _editor_novo("steam_game")
         editor._mode_flavor_selector.set_active_id("dualsense")
 
@@ -1119,8 +982,7 @@ class TestPerfilDeJogoNasceComModo:
     def test_perfil_ja_salvo_nao_tem_o_modo_reescrito(
         self, sem_ipc: list[str]
     ) -> None:
-        """Trocar o "Aplica a" de um perfil existente não pode apagar a escolha
-        de modo que ela fez antes."""
+        """Trocar o "Aplica a" de um perfil existente não pode apagar a escolha"""
         editor = _editor_novo("steam_game")
         editor._new_profile = False
 
@@ -1140,28 +1002,14 @@ class TestPerfilDeJogoNasceComModo:
         assert editor._mode_kind_selector.get_active_id() == "native"
 
 
-# ---------------------------------------------------------------------------
-# Presets de fábrica
-# ---------------------------------------------------------------------------
-
-
 class TestPresetsDeJogoNascemComModo:
-    """Dos 12 presets, 10 não tinham seção `mode` — inclusive o `fps`, que
-    estava persistido como ATIVO no disco dela. Sem a seção, ativar o perfil do
-    jogo não liga modo nenhum.
-
-    NOTA DATADA — 26/08/2026: a fábrica encolheu de 12 para 9 (`bow`,
-    `coop_local` e `sackboy_nativo` podados a pedido dela). Os cinco presets
-    de gênero abaixo são o que restou com `mode: gamepad`, e o que a sprint
-    MODO-01 entregou neles continua travado aqui.
-    """
+    """Dos 12 presets, 10 não tinham seção `mode` — inclusive o `fps`, que"""
 
     @staticmethod
     def _preset(nome: str) -> dict[str, Any]:
         return json.loads(asset_de_fabrica(nome).read_text(encoding="utf-8"))
 
     @pytest.mark.parametrize(
-        # Slugs dos arquivos em assets/profiles_default/.
         "nome",
         [
             "fps",
@@ -1182,22 +1030,7 @@ class TestPresetsDeJogoNascemComModo:
         assert self._preset(nome).get("mode") is None
 
     def test_o_jogo_vence_a_navegacao(self) -> None:
-        """A ordem que o MODO-01 fixou, medida no que a fábrica embarca HOJE.
-
-        NOTA DATADA — 26/08/2026. Aqui estava `test_coop_local_vence_a_
-        navegacao`, que comparava três prioridades: `coop_local` (75) contra
-        `navegacao` (50) e contra `sackboy_nativo` (80). Dois dos três
-        arquivos foram podados nesta data, e o teste passou a abrir arquivo
-        que não existe.
-
-        O que ele guardava NÃO era o co-op: era a ordem — o perfil que declara
-        ser de jogo tem de vencer o genérico de desktop, senão abrir um jogo
-        entrega o perfil do navegador. Essa ordem continua medível com o que
-        sobrou, e é o que este teste faz agora. O terceiro degrau (o perfil do
-        PRÓPRIO jogo, prioridade 80) não vem mais de um asset: vem de
-        `PRIORIDADE_DO_PERFIL_DE_JOGO`, no `loader`, que é quem semeia os
-        perfis por jogo desde 22/08.
-        """
+        """A ordem que o MODO-01 fixou, medida no que a fábrica embarca HOJE."""
         from hefesto_dualsense4unix.profiles.loader import (
             PRIORIDADE_DO_PERFIL_DE_JOGO,
         )

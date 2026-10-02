@@ -76,13 +76,6 @@ def mapa() -> dict[str, dict[str, str]]:
     return _linhas()
 
 
-# --------------------------------------------------------------------------
-# 1. O caminho comum NÃO ramifica por transporte
-# --------------------------------------------------------------------------
-
-#: As palavras que só aparecem em quem PERGUNTA o transporte. `bt`/`usb` entram
-#: com fronteira de palavra: `_bt_seq` (o contador de sequência do envelope) não
-#: é pergunta de transporte, e cair nele seria falso positivo.
 _PERGUNTAS_DE_TRANSPORTE = (
     r"\bconType\b",
     r"\bConnectionType\b",
@@ -94,9 +87,6 @@ _PERGUNTAS_DE_TRANSPORTE = (
     r"[\"']usb[\"']",
 )
 
-#: As funções do caminho de VIBRAÇÃO e GATILHO no backend. Nenhuma delas pode
-#: perguntar o transporte: o payload é idêntico nos dois, e quem escolhe o
-#: envelope é `prepareReport`, que fica de fora desta lista de propósito.
 _FUNCOES_SEM_TRANSPORTE = (
     "_build_common",
     "set_rumble",
@@ -118,17 +108,7 @@ def _fonte_das_funcoes(caminho: Path, nomes: tuple[str, ...]) -> dict[str, str]:
 
 
 def test_o_payload_de_vibracao_e_gatilho_nao_pergunta_o_transporte() -> None:
-    """Nenhuma função do caminho comum ramifica por cabo/rádio.
-
-    O `common` de 47 bytes é IDÊNTICO nos dois transportes — motores em
-    `common[2]`/`common[3]`, os dois blocos de gatilho em `common[10..20]` e
-    `common[21..31]` — e só o envelope muda. Uma pergunta de transporte dentro
-    destas funções é, por construção, um filtro nosso: a diferença que ela
-    introduziria não existe no aparelho.
-
-    Mordida: pôr `if self.conType == ConnectionType.BT:` dentro de
-    `_build_common` — esta régua reprova, e nomeia a função.
-    """
+    """Nenhuma função do caminho comum ramifica por cabo/rádio."""
     fontes = _fonte_das_funcoes(BACKEND, _FUNCOES_SEM_TRANSPORTE)
     faltando = set(_FUNCOES_SEM_TRANSPORTE) - set(fontes)
     assert not faltando, (
@@ -149,16 +129,7 @@ def test_o_payload_de_vibracao_e_gatilho_nao_pergunta_o_transporte() -> None:
 
 @pytest.mark.parametrize("fonte_py", [RUMBLE_SUB, RUMBLE_CORE])
 def test_os_dois_arquivos_de_rumble_nao_sabem_o_que_e_transporte(fonte_py: Path) -> None:
-    """`daemon/subsystems/rumble.py` e `core/rumble.py` são cegos ao transporte.
-
-    Medido em 03/09/2026: ZERO ocorrências de qualquer pergunta de transporte
-    nos dois módulos inteiros. Não é acidente — é o que faz a política de
-    intensidade, o dono do rumble e o resgate do abandonado valerem igual no
-    cabo e no rádio.
-
-    Mordida: escrever `if daemon.controller.get_transport() == "bt": return`
-    em `reassert_rumble` — esta régua reprova.
-    """
+    """`daemon/subsystems/rumble.py` e `core/rumble.py` são cegos ao transporte."""
     fonte = fonte_py.read_text(encoding="utf-8")
     achados = [p for p in _PERGUNTAS_DE_TRANSPORTE if re.search(p, fonte)]
     assert not achados, (
@@ -167,25 +138,12 @@ def test_os_dois_arquivos_de_rumble_nao_sabem_o_que_e_transporte(fonte_py: Path)
     )
 
 
-# --------------------------------------------------------------------------
-# 2. O rumble por motor do Pro/SN30: o driver decide, o mapa copia
-# --------------------------------------------------------------------------
-
 def _fonte_do_driver() -> str:
     return NINTENDO.read_text(encoding="utf-8", errors="replace")
 
 
 def test_o_driver_ainda_poe_o_direito_em_data_mais_quatro() -> None:
-    """`joycon_set_rumble` escreve o DIREITO em `data+4` e o ESQUERDO em `data`.
-
-    É a âncora de que as quatro células de offset do mapa dependem. O
-    `rumble_data[8]` viaja em `report[2..9]` (`struct joycon_rumble_output`),
-    logo direito = report[6..9] e esquerdo = report[2..5].
-
-    Mordida: trocar os dois `joycon_encode_rumble` de lugar no fonte do driver
-    — esta régua reprova, e o mapa fica sabendo antes de publicar o endereço
-    errado.
-    """
+    """`joycon_set_rumble` escreve o DIREITO em `data+4` e o ESQUERDO em `data`."""
     fonte = _fonte_do_driver()
     assert re.search(
         r"/\* right joy-con \*/\s*\n\s*amp = amp_r[^\n]*\n"
@@ -217,15 +175,7 @@ _FAIXA_POR_LADO = {"direito": "report[6..9]", "esquerdo": "report[2..5]"}
 def test_o_mapa_poe_cada_motor_do_nintendo_na_faixa_certa(
     mapa: dict[str, dict[str, str]], controle: str, lado: str
 ) -> None:
-    """Cada linha de motor cita a SUA faixa, nos dois transportes, e não a outra.
-
-    As quatro linhas estavam MUDAS até 03/09/2026 — `existe = tem` e todas as
-    colunas de caminho vazias. Um par trocado aqui é invisível a olho nu e o
-    `specs.html` o publica como fato.
-
-    Mordida: trocar `report[6..9]` por `report[2..5]` numa das células — esta
-    régua reprova a linha, o lado e o transporte.
-    """
+    """Cada linha de motor cita a SUA faixa, nos dois transportes, e não a outra."""
     linha = mapa[f"vibracao.rumble.{lado}@{controle}"]
     minha = _FAIXA_POR_LADO[lado]
     outra = _FAIXA_POR_LADO["esquerdo" if lado == "direito" else "direito"]
@@ -247,22 +197,8 @@ def test_o_mapa_poe_cada_motor_do_nintendo_na_faixa_certa(
     )
 
 
-# --------------------------------------------------------------------------
-# 3. O custo do rádio no Nintendo: do driver E da nossa declaração
-# --------------------------------------------------------------------------
-
 def test_o_limitador_por_barramento_e_a_nossa_declaracao_continuam_de_pe() -> None:
-    """20 ms por cabo, 60 ms por rádio — e o `skip_tx_on_rate_exceeded=1` é nosso.
-
-    A assimetria de RITMO é do driver e é LIMITAÇÃO REAL (o limitador escolhe
-    por `hdev->bus`). O DESCARTE do pacote sem janela segura é DECLARAÇÃO
-    NOSSA, no `modprobe.d` que o `install.sh` instala, com o default do módulo
-    em 0 (== vanilla, transmite). Ela fica, e a razão é do próprio driver:
-    transmitir fora de ritmo derruba o link Bluetooth.
-
-    Mordida: apagar o `skip_tx_on_rate_exceeded=1` da conf, ou mudar 60 para 20
-    no driver — esta régua reprova.
-    """
+    """20 ms por cabo, 60 ms por rádio — e o `skip_tx_on_rate_exceeded=1` é nosso."""
     fonte = _fonte_do_driver()
     assert re.search(r"#define\s+JC_SUBCMD_RATE_LIMITER_USB_MS\s+20\b", fonte)
     assert re.search(r"#define\s+JC_SUBCMD_RATE_LIMITER_BT_MS\s+60\b", fonte)
@@ -289,16 +225,7 @@ def test_o_limitador_por_barramento_e_a_nossa_declaracao_continuam_de_pe() -> No
 def test_a_razao_do_custo_do_radio_esta_escrita_na_linha(
     mapa: dict[str, dict[str, str]], alvo: str
 ) -> None:
-    """A assimetria do Nintendo é declarada onde ela existe, com os dois números.
-
-    `vibracao.rumble.ff@sn30` já a declarava; `vibracao.rumble.ff@pro` estava
-    com a célula VAZIA para o mesmo driver e a mesma conf, e as quatro linhas
-    de motor nasceram em 03/09/2026 com ela.
-
-    Mordida: esvaziar a `assimetria_declarada` de qualquer uma das cinco — esta
-    régua reprova, e o portão `paridade-transporte` volta a acusar assimetria
-    não declarada quando alguém encostar nas colunas de `aciona`.
-    """
+    """A assimetria do Nintendo é declarada onde ela existe, com os dois números."""
     texto = mapa[alvo]["assimetria_declarada"]
     for exigido in ("20 ms", "60 ms", "skip_tx_on_rate_exceeded"):
         assert exigido in texto, (
@@ -306,21 +233,8 @@ def test_a_razao_do_custo_do_radio_esta_escrita_na_linha(
         )
 
 
-# --------------------------------------------------------------------------
-# 4. O háptico por rádio: o place holder e os dois candidatos
-# --------------------------------------------------------------------------
-
 def test_o_place_holder_do_haptico_continua_declarado() -> None:
-    """`BLOCO_HAPTICS = 0x12` existe, e é o que o mapa manda usar.
-
-    É o mecanismo que ela descreveu: *"quando colocarmos o caminho certo no
-    specs o script original vai fazer uso desse place holder setado"*. A
-    constante está declarada desde 25/07/2026 e sem uso; a linha
-    `vibracao.haptics_vcm@dualsense` passou a citá-la em 03/09/2026.
-
-    Mordida: apagar a constante — esta régua reprova, e o mapa deixa de apontar
-    para o vazio antes de alguém segui-lo.
-    """
+    """`BLOCO_HAPTICS = 0x12` existe, e é o que o mapa manda usar."""
     arvore = ast.parse(BT_AUDIO.read_text(encoding="utf-8"))
     valores = {
         alvo.id: no.value.value
@@ -338,21 +252,9 @@ def test_o_place_holder_do_haptico_continua_declarado() -> None:
 def test_o_mapa_do_haptico_traz_os_dois_candidatos_e_o_place_holder(
     mapa: dict[str, dict[str, str]],
 ) -> None:
-    """O `radio_offset` do háptico não é mais «não localizado», e diz o que sabe.
-
-    Duas fontes externas descrevem o bloco háptico dentro do degrau 0x39 e
-    DIVERGEM na posição dele — as duas ficam registradas, sem escolher, que é a
-    regra desta casa para fonte que se contradiz.
-
-    Mordida: apagar um dos dois arranjos (ou a citação do place holder) — esta
-    régua reprova; devolver a célula para «não localizado» também.
-    """
+    """O `radio_offset` do háptico não é mais «não localizado», e diz o que sabe."""
     linha = mapa["vibracao.haptics_vcm@dualsense"]
     offset = linha["radio_offset"]
-    # A célula CITA o «não localizado» que ela substituiu (é a lei do fato
-    # errado: o que caducou fica dito, com data). O que a régua proíbe é a
-    # célula VOLTAR a ser aquilo — daí a comparação com o valor inteiro, e não
-    # a busca por substring.
     assert offset.strip() != "não localizado", (
         "o `radio_offset` do háptico voltou a «não localizado» — o arranjo está "
         "levantado em duas fontes, com commit e arquivo:linha"
@@ -363,9 +265,6 @@ def test_o_mapa_do_haptico_traz_os_dois_candidatos_e_o_place_holder(
             "viajam juntos, senão a divergência some e sobra uma falsa certeza"
         )
     ref = linha["radio_codigo_ref"]
-    # A linha é LIDA do fonte, não digitada: a CITACOES-DAS-PLANILHAS-01
-    # (13/09/2026) reapontou a citação para onde a constante mora hoje, e o
-    # número escrito aqui era o de 03/09.
     onde = next(
         no.lineno
         for no in ast.walk(ast.parse(BT_AUDIO.read_text(encoding="utf-8")))
@@ -428,20 +327,8 @@ def test_o_haptico_por_radio_nao_promete_obediencia(
     )
 
 
-# --------------------------------------------------------------------------
-# 5. A leitura do gatilho: as duas bases, e o canal que já está aberto
-# --------------------------------------------------------------------------
-
 def test_o_leitor_ainda_resolve_as_duas_bases_do_report_de_entrada() -> None:
-    """`_struct_base` continua sendo quem separa base 1 (cabo) de base 2 (rádio).
-
-    É a âncora do `cabo_offset` e do `radio_canal` da linha
-    `gatilho.leitura@dualsense`: os dois bytes de status de gatilho moram no
-    MESMO report de entrada que este produto já abre e decodifica por
-    `/dev/hidrawN` nos dois transportes.
-
-    Mordida: apagar `_struct_base` ou o ramo do 0x31 — esta régua reprova.
-    """
+    """`_struct_base` continua sendo quem separa base 1 (cabo) de base 2 (rádio)."""
     texto = LEITOR.read_text(encoding="utf-8")
     assert "def _struct_base(" in texto
     assert "INPUT_REPORT_BT = 0x31" in texto
@@ -451,17 +338,7 @@ def test_o_leitor_ainda_resolve_as_duas_bases_do_report_de_entrada() -> None:
 def test_a_leitura_do_gatilho_tem_endereco_nos_dois_lados(
     mapa: dict[str, dict[str, str]],
 ) -> None:
-    """Os dois lados dizem ONDE o byte está, e o canal é o mesmo dos dois.
-
-    O `cabo_offset` dizia «não localizado» enquanto a célula irmã da mesma
-    linha já respondia («No cabo (0x01, base 1) os mesmos campos caem em
-    report[42] e report[43]»). O `radio_canal` dizia `outro` para o report que
-    o leitor de motion decodifica todo quadro.
-
-    Mordida: devolver o `cabo_offset` para «não localizado», ou o `radio_canal`
-    para `outro` — esta régua reprova. E ela NÃO deixa promover `aciona`: o
-    consumidor continua não existindo.
-    """
+    """Os dois lados dizem ONDE o byte está, e o canal é o mesmo dos dois."""
     linha = mapa["gatilho.leitura@dualsense"]
     cabo = linha["cabo_offset"]
     assert "report[42]" in cabo and "report[43]" in cabo, (

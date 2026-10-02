@@ -85,17 +85,8 @@ _FONTE_DO_GERENTE = Path(
 class SecaoPorApplier:
     """Um campo do perfil que só chega ao controle por applier INJETADO."""
 
-    #: o nome da seção como ela aparece no aviso e no relatório — o caminho no
-    #: arquivo de perfil, que é o vocabulário de quem lê o defeito, e não o
-    #: nome do parâmetro do construtor.
     secao: str
-    #: o parâmetro de `ProfileManager` que a aplica.
     applier: str
-    #: o método do daemon de onde a fábrica o tira. Escrito à MÃO aqui de
-    #: propósito: se viesse de `APPLIERS_DO_DAEMON`, arrancar um par de lá
-    #: arrancaria junto o método do daemon-dublê, e o teste da fábrica passaria
-    #: com a seção órfã. Foi assim que a primeira versão daquele portão vizinho
-    #: (`62d092a`) conferia a tupla contra ela mesma.
     atributo_do_daemon: str
 
 
@@ -106,13 +97,6 @@ class SecaoDireta:
     razao: str
 
 
-#: A CLASSIFICAÇÃO EXAUSTIVA dos campos de `Profile`. Campo novo que não esteja
-#: aqui reprova por estar SEM CLASSIFICAÇÃO — nunca por estar numa denylist.
-#:
-#: `rumble` aparece DUAS vezes, e não é engano: um campo do esquema, duas
-#: seções, dois appliers, dois contratos (`policy` reverte o que outro perfil
-#: ligou; `passthrough` só solta o que a GUI fixou). Classificar por campo em
-#: vez de por seção esconderia exatamente o par que faltava.
 _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
     "mouse": SecaoPorApplier(
         secao="mouse",
@@ -260,11 +244,7 @@ def _por_applier() -> dict[str, SecaoPorApplier]:
 
 
 def _campos_do_esquema() -> set[str]:
-    """Os campos de `Profile`, com `rumble` expandido nas suas duas seções.
-
-    A expansão é escrita aqui e não derivada porque é uma decisão: `rumble` é
-    um campo com DOIS appliers, e é justamente o par que faltava.
-    """
+    """Os campos de `Profile`, com `rumble` expandido nas suas duas seções."""
     campos = set(Profile.model_fields)
     if "rumble" in campos:
         campos.discard("rumble")
@@ -273,11 +253,7 @@ def _campos_do_esquema() -> set[str]:
 
 
 def _daemon_completo() -> Any:
-    """Um daemon-dublê com TODOS os métodos que a classificação exige.
-
-    Os nomes vêm da CLASSIFICAÇÃO, nunca de `APPLIERS_DO_DAEMON` — é esse
-    detalhe que faz o teste da fábrica morder quando um par sai da lista.
-    """
+    """Um daemon-dublê com TODOS os métodos que a classificação exige."""
     daemon = SimpleNamespace(
         controller=SimpleNamespace(),
         store=StateStore(),
@@ -298,12 +274,7 @@ def _secoes_orfas(gerente: ProfileManager) -> list[str]:
 
 
 def _appliers_lidos_pelo_gerente() -> set[str]:
-    """Todo `self.<nome>_applier` LIDO dentro do corpo de `ProfileManager`.
-
-    Contagem independente da classificação e do contrato: é o que o código de
-    ativação de fato consulta. Applier novo em `apply_emulation` sem entrada na
-    classificação reprova aqui.
-    """
+    """Todo `self.<nome>_applier` LIDO dentro do corpo de `ProfileManager`."""
     arvore = ast.parse(_FONTE_DO_GERENTE.read_text(encoding="utf-8"))
     lidos: set[str] = set()
     for no in ast.walk(arvore):
@@ -321,16 +292,8 @@ def _appliers_lidos_pelo_gerente() -> set[str]:
     return lidos
 
 
-# ===========================================================================
-# 1 — a classificação é exaustiva, nos DOIS sentidos
-# ===========================================================================
-
-
 def test_todo_campo_do_perfil_esta_classificado() -> None:
-    """Seção nova no perfil dela não entra sem dizer QUEM a aplica.
-
-    Mordida: acrescentar um campo a `Profile` — ou apagar uma entrada daqui.
-    """
+    """Seção nova no perfil dela não entra sem dizer QUEM a aplica."""
     do_esquema = _campos_do_esquema()
     classificados = set(_CLASSIFICACAO)
     sem_classificacao = sorted(do_esquema - classificados)
@@ -348,10 +311,7 @@ def test_todo_campo_do_perfil_esta_classificado() -> None:
 
 
 def test_toda_razao_de_secao_direta_e_razao() -> None:
-    """Isenção fingindo ser decisão reprova: razão vazia não é razão.
-
-    Mordida: trocar uma `razao` por `""` ou por "não precisa".
-    """
+    """Isenção fingindo ser decisão reprova: razão vazia não é razão."""
     curtas = sorted(
         chave
         for chave, valor in _CLASSIFICACAO.items()
@@ -361,11 +321,6 @@ def test_toda_razao_de_secao_direta_e_razao() -> None:
         f"estas seções foram declaradas SEM applier sem dizer por quê: {curtas}. "
         "Escreva por onde a seção chega ao controle (ou por que ela não chega)."
     )
-
-
-# ===========================================================================
-# 2 e 3 — o applier existe, e o mapa de seções não envelhece calado
-# ===========================================================================
 
 
 def test_toda_secao_por_applier_tem_applier_no_construtor() -> None:
@@ -386,14 +341,7 @@ def test_toda_secao_por_applier_tem_applier_no_construtor() -> None:
 
 
 def test_o_mapa_de_secoes_cobre_a_fabrica_nos_dois_sentidos() -> None:
-    """`SECAO_DO_APPLIER` e `APPLIERS_DO_DAEMON` falam do MESMO conjunto.
-
-    Sem isto, o aviso de ausência da fábrica cairia no fallback e diria o nome
-    do parâmetro — e o nome do parâmetro não é o nome do que ela deixa de
-    sentir.
-
-    Mordida: apagar uma linha de `SECAO_DO_APPLIER`.
-    """
+    """`SECAO_DO_APPLIER` e `APPLIERS_DO_DAEMON` falam do MESMO conjunto."""
     da_fabrica = {parametro for parametro, _ in APPLIERS_DO_DAEMON}
     do_mapa = set(SECAO_DO_APPLIER)
     assert da_fabrica == do_mapa, (
@@ -410,11 +358,6 @@ def test_o_mapa_de_secoes_cobre_a_fabrica_nos_dois_sentidos() -> None:
         "o mapa de seções do produto e a classificação deste portão dão nomes "
         f"diferentes à mesma seção: {divergentes}."
     )
-
-
-# ===========================================================================
-# 4 — A MORDIDA: a fábrica entrega um applier para CADA seção
-# ===========================================================================
 
 
 def test_a_fabrica_entrega_dono_para_toda_secao_do_perfil() -> None:
@@ -442,12 +385,7 @@ def test_a_fabrica_entrega_dono_para_toda_secao_do_perfil() -> None:
 
 
 def test_a_regua_sabe_recusar_um_daemon_pela_metade() -> None:
-    """Dublê que só sabe passar não é dublê: daemon incompleto é APONTADO.
-
-    Sem este caso, o de cima poderia estar medindo o dublê em vez do produto —
-    a armadilha 1 da casa (medir contra a régua errada produz verde
-    convincente e falso).
-    """
+    """Dublê que só sabe passar não é dublê: daemon incompleto é APONTADO."""
     daemon = _daemon_completo()
     delattr(daemon, "apply_profile_rumble_passthrough")
     gerente = gerente_do_daemon(daemon)
@@ -458,12 +396,7 @@ def test_a_regua_sabe_recusar_um_daemon_pela_metade() -> None:
 
 
 def test_o_desvio_declarado_nao_conta_como_ausencia() -> None:
-    """`mode_applier=None` é escolha medida, não descuido — e não vira alarme.
-
-    A fábrica aceita o desvio nomeado (allowlist do Steam Input, saída do Modo
-    Nativo). Contá-lo como ausência transformaria uma decisão escrita em
-    vermelho — o defeito `O-PORTAO-QUE-NAO-MEDE-O-QUE-PROMETE`.
-    """
+    """`mode_applier=None` é escolha medida, não descuido — e não vira alarme."""
     from hefesto_dualsense4unix.profiles.manager import _avisa_secoes_sem_applier
 
     argumentos = {
@@ -475,30 +408,15 @@ def test_o_desvio_declarado_nao_conta_como_ausencia() -> None:
 
 
 def test_daemon_nenhum_segue_calado() -> None:
-    """Zero applier é CONTRATO (CLI e dublês), não defeito — e não faz barulho.
-
-    Mordida: trocar a guarda `len(ausentes) < len(considerados)` por um `if
-    ausentes` — este caso passa a acusar toda rota de CLI.
-    """
+    """Zero applier é CONTRATO (CLI e dublês), não defeito — e não faz barulho."""
     from hefesto_dualsense4unix.profiles.manager import _avisa_secoes_sem_applier
 
     vazio = {parametro: None for parametro, _ in APPLIERS_DO_DAEMON}
     assert _avisa_secoes_sem_applier(vazio) == sorted(SECAO_DO_APPLIER.values())
 
 
-# ===========================================================================
-# 6 — o gerente consome exatamente o que foi classificado
-# ===========================================================================
-
-
 def test_o_gerente_consome_exatamente_os_appliers_classificados() -> None:
-    """Applier novo no `apply_emulation` sem entrada na classificação reprova.
-
-    Contagem independente por AST sobre o corpo da classe: é o que o código de
-    ativação de fato consulta, e não o que alguma lista diz que ele consulta.
-
-    Mordida: acrescentar um `self.xpto_applier` ao `apply_emulation`.
-    """
+    """Applier novo no `apply_emulation` sem entrada na classificação reprova."""
     lidos = _appliers_lidos_pelo_gerente()
     classificados = {entrada.applier for entrada in _por_applier().values()}
     sem_classificacao = sorted(lidos - classificados)

@@ -52,31 +52,18 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
     MatchManual,
 
-# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
-# `test_trava_manual_vence_o_veredito_do_controller`.
-#
-# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
-# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
     Profile,
     TriggerConfig,
     TriggersConfig,
 )
 
-#: O método de PRODUÇÃO, tomado da classe. É ele que roda nos testes.
 APLICAR_PADROES = PyDualSenseController.apply_output_defaults
 
-#: MAC de teste — faixa sintética da casa, não é controle dela.
 UNIQ_DE_TESTE = "aabbcc000001"
 
 
 class _MesaDeControles:
-    """O mínimo que `apply_output_defaults` toca, e um contador de escritas.
-
-    `_for_each`/`_for_each_led` reproduzem a ÚNICA decisão do original que
-    importa aqui: sem handle não sai byte (`output_offline_noop`).
-    """
+    """O mínimo que `apply_output_defaults` toca, e um contador de escritas."""
 
     def __init__(self, handles: dict[str, Any] | None = None) -> None:
         self._io_lock = threading.RLock()
@@ -106,10 +93,6 @@ class _MesaDeControles:
     def _pode_escrever_player_leds(self) -> bool:
         return True
 
-    # O BRILHO DAS LUZES DE NÚMERO (O-BRILHO-DAS-LUZES-DE-NUMERO-01, 25/09/2026):
-    # o original leva a cada handle o degrau GLOBAL do perfil. A mesma decisão
-    # que importa aqui — sem handle não sai byte — vale para ele: uma escrita
-    # por handle, e nenhuma com a mesa vazia (o laço é sobre `_handles`).
     def _levar_o_brilho_das_luzes(
         self, key: str | None, handle: Any, degrau: int | None, *, what: str,
         o_radio_ja_leva: bool = False,
@@ -119,7 +102,6 @@ class _MesaDeControles:
         self.escritas.append(what)
         return True
 
-    # --- o que o ProfileManager.apply chama além do broadcast ---
     def apply_output_defaults(self, spec: OutputSpec) -> Any:
         return APLICAR_PADROES(self, spec)  # type: ignore[arg-type]
 
@@ -163,11 +145,6 @@ def _spec_do_perfil(perfil: Profile) -> OutputSpec:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. o backend responde o que fez
-# ---------------------------------------------------------------------------
-
-
 def test_mesa_vazia_devolve_registrado_e_nao_escreve_nada() -> None:
     mesa = _MesaDeControles(handles={})
     veredito = APLICAR_PADROES(mesa, _spec_do_perfil(_perfil_com_gatilho()))  # type: ignore[arg-type]
@@ -190,11 +167,6 @@ def test_spec_sem_pedido_nenhum_devolve_nada_a_fazer() -> None:
     veredito = APLICAR_PADROES(mesa, OutputSpec())  # type: ignore[arg-type]
     assert mesa.escritas == []
     assert veredito == "nada_a_fazer"
-
-
-# ---------------------------------------------------------------------------
-# 2. o relatório de ativação não promete o que não saiu
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("secao", ["trigger", "led"])
@@ -226,23 +198,13 @@ def test_relatorio_com_controle_na_mesa_diz_aplicado(secao: str) -> None:
 
 @pytest.mark.parametrize("secao", ["trigger", "led"])
 def test_backend_que_nao_relata_continua_valendo_aplicado(secao: str) -> None:
-    """`None` é "não sei dizer", nunca "nada aconteceu".
-
-    Sem esta linha, todo dublê da suíte e todo backend de um controle só
-    passariam a reportar um adiamento que ninguém mediu — a mentira ao
-    contrário.
-    """
+    """`None` é "não sei dizer", nunca "nada aconteceu"."""
     mesa = _ControllerQueNaoSabeDizer()
     relatorio: dict[str, str] = {}
     ProfileManager(controller=mesa).apply(  # type: ignore[arg-type]
         _perfil_com_gatilho(), origin="launch", relatorio=relatorio
     )
     assert relatorio[secao] == "aplicado"
-
-
-# ---------------------------------------------------------------------------
-# 3. a trava manual continua vencendo
-# ---------------------------------------------------------------------------
 
 
 class _StoreComTravaDeGatilho:

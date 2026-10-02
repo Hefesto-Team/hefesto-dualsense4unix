@@ -1,37 +1,4 @@
-"""UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 — o Pro dela parou de ser a definição de Pro.
-
-Sprint: ``docs/process/sprints/2026-08-22-UMA-FAIXA-NAO-E-UM-FABRICANTE-01-
-o-pro-dela-virou-a-definicao-de-pro.md``
-
-A pergunta de cada teste aqui é a da auditoria inteira: **o que acontece na
-máquina de quem não tem este aparelho?** Por isso quase todo caso usa uma faixa
-OUI que ESTA bancada nunca viu — se o teste só exercitasse o hardware da casa,
-ele passaria verde exatamente no defeito que a sprint mediu.
-
-A RÉGUA, E POR QUE ELA É INDEPENDENTE
---------------------------------------
-
-Três armadilhas de instrumento foram evitadas de propósito, e vale nomeá-las
-porque esta casa já pagou pelas três:
-
-1. **Nada de monkeypatch na lista.** Os testes antigos de ``ExternalImuEnabler``
-   apontavam ``NINTENDO_REAL_OUI`` para a mesma faixa forjada que usavam como
-   entrada — mediam a comparação consigo mesma. Aqui o predicado de produção
-   decide, sempre.
-2. **A faixa do clone é LITERAL neste arquivo.** Se ela viesse importada de
-   ``OUIS_CLONE``, o teste iteraria a mesma lista que deveria conferir.
-   ``e4:17:d8`` está escrito à mão abaixo, com os octetos 4 e 5 zerados pela
-   máscara da casa, justamente para ser uma segunda régua.
-3. **O portão do ``src/`` lê o registro de OUIs de OUTRO arquivo**
-   (``scripts/check_anonymity.sh``), em outra linguagem, escrito para outro
-   fim. Um portão cuja lista mora no arquivo que ele vigia não vigia nada.
-
-O QUE NÃO ESTÁ AQUI, e é honesto dizer: os quatro caminhos de execução em
-``scripts/`` e ``assets/82-*`` continuam decidindo por UMA faixa. A cura deles
-é decisão dela (82 linhas de udev contra tirar o filtro da regra) e território
-de outra frente. O que este arquivo garante é que nenhuma faixa NOVA entre
-naqueles caminhos sem passar pela casa única.
-"""
+"""UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 — o Pro dela parou de ser a definição de Pro."""
 from __future__ import annotations
 
 import ast
@@ -55,37 +22,20 @@ from hefesto_dualsense4unix.daemon.subsystems.external_identity import ExternalI
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: A faixa do clone, ESCRITA À MÃO. Ver a armadilha 2 no cabeçalho.
 OUI_CLONE_LITERAL = "e4:17:d8"
 
-#: Um Pro numa das 81 faixas Nintendo que esta bancada nunca viu. Faixa
-#: sintética da casa — o que importa é que ela NÃO é a do Pro daqui.
 MAC_PRO_DE_OUTRA_SAFRA = "aa:bb:cc:00:00:11"
 
-#: O clone, com a máscara da casa (octetos 4 e 5 zerados).
 MAC_CLONE = f"{OUI_CLONE_LITERAL}:00:00:22"
 
-#: Segunda faixa sintética, para provar que não há nada de especial na primeira.
 MAC_PRO_DE_OUTRA_SAFRA_2 = "3c:9d:07:00:00:33"
 
 _NOME_PRO = "Nintendo Co., Ltd. Pro Controller"
 
 
-# ---------------------------------------------------------------------------
-# O predicado — a casa única da pergunta "quem é um Pro?"
-# ---------------------------------------------------------------------------
-
-
 class TestPredicadoDaLinhagem:
     def test_a_lista_do_clone_continua_sendo_a_lista_completa(self) -> None:
-        """A regra por negativa só se sustenta enquanto a 8BitDo tiver UMA faixa.
-
-        MEDIDO em 22/08/2026 contra ``/usr/share/ieee-data/oui.csv``: a
-        "8BITDO TECHNOLOGY HK LIMITED" tem exatamente uma MA-L. Se um dia
-        aparecer a segunda, este teste reprova e obriga quem descobrir a
-        registrá-la em ``OUIS_CLONE`` — que é o único lugar onde ela precisa
-        entrar.
-        """
+        """A regra por negativa só se sustenta enquanto a 8BitDo tiver UMA faixa."""
         assert {o.replace(":", "") for o in (OUI_CLONE_LITERAL,)} == set(OUIS_CLONE)
 
     def test_a_forma_com_dois_pontos_e_derivada_nunca_redigitada(self) -> None:
@@ -147,17 +97,10 @@ class TestPredicadoDaLinhagem:
         """Pergunta DIFERENTE: os dois leem o nome do host, então os dois contam."""
         assert _e_da_linhagem_nintendo(nome=_NOME_PRO, uniq=MAC_CLONE)
         assert _e_da_linhagem_nintendo(nome=_NOME_PRO, uniq=MAC_PRO_DE_OUTRA_SAFRA)
-        # …e o nome sozinho basta, que é o que faz um aparelho novo entrar sem
-        # ninguém precisar descobrir a faixa dele antes.
         assert _e_da_linhagem_nintendo(nome="Pro Controller", uniq=None)
         assert not _e_da_linhagem_nintendo(
             nome="DualSense Wireless Controller", uniq="aa:bb:cc:00:00:66"
         )
-
-
-# ---------------------------------------------------------------------------
-# O caminho de execução: o enable-IMU do daemon
-# ---------------------------------------------------------------------------
 
 
 def _entrada(uniq: str, *, bus: str = "usb") -> dict[str, Any]:
@@ -187,12 +130,7 @@ def escritas(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 class TestEnableImuNaMaquinaDeOutraPessoa:
     def test_pro_de_outra_safra_recebe_o_enable(self, escritas: list[str]) -> None:
-        """O giroscópio de quem não tem o Pro DESTA bancada deixa de ficar mudo.
-
-        Sem a cura (gatilho = igualdade com uma faixa) esta lista vem vazia, e
-        o sintoma lá fora é accel/gyro travados em 0 para sempre, sem log e sem
-        aviso — o silêncio que a sprint mediu.
-        """
+        """O giroscópio de quem não tem o Pro DESTA bancada deixa de ficar mudo."""
         ExternalImuEnabler().tick([_entrada(MAC_PRO_DE_OUTRA_SAFRA)], now=0.0)
         assert escritas == ["/dev/hidraw5"]
 
@@ -236,24 +174,13 @@ class TestEnableImuNaMaquinaDeOutraPessoa:
         assert escritas == []
 
 
-# ---------------------------------------------------------------------------
-# O PORTÃO: uma faixa OUI só pode existir numa casa
-# ---------------------------------------------------------------------------
-
-#: Onde uma faixa OUI PODE ser escrita à mão dentro do `src/`. Uma só.
 _CASA_UNICA = "src/hefesto_dualsense4unix/core/linhagem_nintendo.py"
 
 _TRIPLA = re.compile(r"(?<![0-9a-fA-F:])([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){2})(?![0-9a-fA-F:])")
 
 
 def _registro_de_ouis_reais() -> frozenset[str]:
-    """As OUIs de hardware REAL que a casa vigia — lidas de OUTRO arquivo.
-
-    A lista mora em ``scripts/check_anonymity.sh``, um portão de shell escrito
-    para outro fim. Ler dali é o que torna este portão uma régua independente:
-    ele não pode ficar verde por concordar consigo mesmo, e quando alguém
-    registrar uma OUI nova lá, este teste passa a vigiá-la sem edição.
-    """
+    """As OUIs de hardware REAL que a casa vigia — lidas de OUTRO arquivo."""
     texto = (RAIZ / "scripts/check_anonymity.sh").read_text(encoding="utf-8")
     bloco = re.search(r"^OUIS = \((.*?)\)$", texto, re.S | re.M)
     assert bloco is not None, "o registro de OUIs sumiu do check_anonymity.sh"
@@ -263,13 +190,7 @@ def _registro_de_ouis_reais() -> frozenset[str]:
 
 
 def _literais_executaveis(caminho: Path) -> list[tuple[int, str]]:
-    """Strings de um `.py` que CHEGAM À EXECUÇÃO — docstrings de fora.
-
-    Comentário e docstring não decidem nada: a sprint já tratou o
-    ``2357:0604`` dentro de um comentário da regra 81 como o exemplo CERTO —
-    a medição fica registrada e o casamento fica universal. O que este portão
-    persegue é a faixa que um `if` consulta.
-    """
+    """Strings de um `.py` que CHEGAM À EXECUÇÃO — docstrings de fora."""
     arvore = ast.parse(caminho.read_text(encoding="utf-8"))
     docs = set()
     for no in ast.walk(arvore):
@@ -292,25 +213,10 @@ def _literais_executaveis(caminho: Path) -> list[tuple[int, str]]:
 
 
 class TestPortaoDaFaixaUnica:
-    """O portão que vale mais que a cura: impede o PRÓXIMO.
-
-    Não persegue vocabulário de protocolo — ``054c:0ce6``, ``057e:2009``,
-    report IDs e offsets são a definição do aparelho, não a do aparelho dela, e
-    a sprint descartou todos eles sem hesitar. O que ele persegue é a **faixa
-    de MAC**, que é identidade de UNIDADE promovida a identidade de MODELO.
-    """
+    """O portão que vale mais que a cura: impede o PRÓXIMO."""
 
     def test_nenhuma_faixa_oui_escrita_a_mao_fora_da_casa_unica(self) -> None:
-        """Toda faixa em `src/` vem de `core/linhagem_nintendo`, ou reprova.
-
-        Duas formas são pegas: a triple com ``:`` (``e0:f6:b5``) e o 6-hex cru
-        (``e0f6b5``) quando ele está no registro de OUIs reais da casa.
-
-        LIMITE HONESTO da régua: uma triple só de dígitos (``00:11:22``) escapa
-        da primeira forma, porque ``20:15:40`` de um journal casaria igual e um
-        portão que grita por horário é um portão que a próxima pessoa desliga.
-        A segunda forma cobre justamente as faixas que a casa conhece.
-        """
+        """Toda faixa em `src/` vem de `core/linhagem_nintendo`, ou reprova."""
         registro = _registro_de_ouis_reais()
         culpados: list[str] = []
         for arquivo in sorted((RAIZ / "src").rglob("*.py")):
@@ -334,18 +240,7 @@ class TestPortaoDaFaixaUnica:
         )
 
     def test_nenhuma_oui_real_nova_entra_em_script_ou_regra(self) -> None:
-        """`scripts/` e `assets/` só podem citar faixas que o produto declara.
-
-        Os quatro caminhos que ainda decidem por UMA faixa (``bt_active_mode``,
-        ``bt_nosniff_now``, a regra 82 e o ``doctor``) continuam de pé — a cura
-        deles é decisão dela. Este portão não os desbloqueia: ele impede que uma
-        faixa NOVA, de um aparelho novo, entre por ali sem passar pela casa
-        única, que é como a família inteira nasceu.
-
-        Só olha linha executável (comentário fora) e só reprova OUI de hardware
-        REAL — faixa sintética (``aa:bb:cc``), o vpad da casa (``02:fe:00``) e
-        o endereço sintetizado (``02:05:4c``) não são identidade de ninguém.
-        """
+        """`scripts/` e `assets/` só podem citar faixas que o produto declara."""
         declaradas = set(OUIS_CLONE) | set(OUIS_NINTENDO_VISTAS)
         registro = _registro_de_ouis_reais()
         culpados: list[str] = []
@@ -357,7 +252,6 @@ class TestPortaoDaFaixaUnica:
                 if not arquivo.is_file() or arquivo.suffix not in sufixos:
                     continue
                 relativo = arquivo.relative_to(RAIZ).as_posix()
-                # O próprio registro, e o vendor de DKMS que não é nosso.
                 if relativo.endswith("check_anonymity.sh") or "/dkms/" in relativo:
                     continue
                 if arquivo.suffix == ".py":
@@ -382,23 +276,12 @@ class TestPortaoDaFaixaUnica:
         )
 
 
-# ---------------------------------------------------------------------------
-# E2 — a regra 84 aprende a dizer "não sei"
-# ---------------------------------------------------------------------------
-
 _REGRA_84 = "assets/84-nintendo-pro-variant.rules"
 _CHAVE = re.compile(r'(\w+)(?:\{(\w+)\})?\s*(==|!=|\+=|=)\s*"([^"]*)"')
 
 
 def _regras_da_84() -> list[list[tuple[str, str, str]]]:
-    """Cada linha de regra como lista de ``(chave, operador, valor)``.
-
-    Avaliador PRÓPRIO, escrito à mão a partir do texto do arquivo — não é o
-    udev. Ele mede COBERTURA DE VALOR (que ``bcdDevice`` casa o quê); a
-    sintaxe quem mede é ``udevadm verify``, e a semântica de subida de pais
-    (``ATTRS{}``) está fora do alcance dos dois. Chamar isto de "o udev disse"
-    seria o instrumento mentindo, então está dito aqui que não é.
-    """
+    """Cada linha de regra como lista de ``(chave, operador, valor)``."""
     saida = []
     for linha in (RAIZ / _REGRA_84).read_text(encoding="utf-8").splitlines():
         if not linha.strip() or linha.lstrip().startswith("#"):
@@ -463,14 +346,7 @@ class TestRegra84SabeDizerNaoSei:
     def test_toda_revisao_recebe_exatamente_uma_variante(
         self, subsistema: str, bcd: str, esperado: str
     ) -> None:
-        """Nenhuma revisão de firmware fica sem resposta — nem com duas.
-
-        Sem a linha do "desconhecido", `0211` sai com ZERO variantes: é aí que
-        a ausência de `HEFESTO_CONTROLLER_VARIANT` era lida como "o patch do
-        DKMS não pegou", quando o que houve foi "a regra não conheceu o seu
-        aparelho". Duas variantes seria pior ainda — o udev aplica TODAS as
-        regras que casam.
-        """
+        """Nenhuma revisão de firmware fica sem resposta — nem com duas."""
         atribuidas = _variante_atribuida(_regras_da_84(), _device(bcd, subsistema))
         assert atribuidas == [esperado], (
             f"{subsistema} / bcdDevice={bcd}: esperava exatamente "
@@ -485,35 +361,9 @@ class TestRegra84SabeDizerNaoSei:
                 assert "SYMLINK" not in linha, linha
 
 
-# ---------------------------------------------------------------------------
-# A4 — o caminho do disco dela
-# ---------------------------------------------------------------------------
-
-
 class TestNenhumCaminhoDeCasaNaArvore:
     def test_o_retrato_deduz_a_raiz_do_proprio_arquivo(self) -> None:
-        """Quem clonar o repo tem de conseguir rodar.
-
-        Antes de 22/08/2026 o default era o `$HOME` da mantenedora, e só
-        resolvia aqui por causa de um symlink; fora desta máquina o script
-        morria no `add_from_file` do `main.glade`.
-
-        **O ALVO MUDOU EM 08/09/2026, e a pergunta não.** Ele era
-        `scripts/gui-captura/retrato_offscreen.py`, o retratista OFFSCREEN da
-        JANELA GTK — apagado com ela em 06/09 (`D-0609-GTK-LEVA-INTEIRA`,
-        Passo 2 da `GTK-3`). O `read_text` passou a morrer em
-        `FileNotFoundError`, e o teste ficou vermelho medindo um caminho que
-        não existe.
-
-        Quem retrata as dez abas hoje é `interface/olhar.py`, e ele **não deduz
-        a raiz sozinho** — pede a `interface/onde.py`, que é o dono único das
-        duas pastas (a bancada e o publicado). Então o alvo são os dois: o
-        retratista não pode trazer `$HOME`, e o dono da raiz tem de deduzi-la
-        do próprio arquivo. O `onde.py` mora três níveis abaixo da raiz
-        (`src/hefesto_dualsense4unix/interface/`), e por isso a dedução é
-        `parents[3]` — era `parents[2]` no retratista velho, que morava em
-        `scripts/gui-captura/`.
-        """
+        """Quem clonar o repo tem de conseguir rodar."""
         retratista = RAIZ / "src/hefesto_dualsense4unix/interface/olhar.py"
         dono_da_raiz = RAIZ / "src/hefesto_dualsense4unix/interface/onde.py"
 
@@ -535,13 +385,7 @@ class TestNenhumCaminhoDeCasaNaArvore:
             "aqui reescreveria o mockup DELA a partir de qualquer cópia — foi o "
             "que se mediu em 28/08/2026, em oito arquivos."
         )
-        # E a dedução tem de dar na raiz DE VERDADE, não só num caminho bonito.
         assert dono_da_raiz.resolve().parents[3] == RAIZ.resolve()
-        # A ÂNCORA MUDOU EM 06/09/2026 (`GTK-3`, primeira volta): era o
-        # `gui/main.glade`, e a janela GTK saiu inteira
-        # (`D-0609-GTK-LEVA-INTEIRA`). A pergunta é a mesma — a raiz deduzida
-        # é a raiz DE VERDADE —, e o `pyproject.toml` é o arquivo que existe
-        # em toda árvore deste repositório e em nenhuma outra pasta.
         assert (RAIZ / "pyproject.toml").exists()
 
     def test_nenhum_script_traz_o_home_dela_como_padrao(self) -> None:
@@ -611,16 +455,8 @@ class TestNenhumCaminhoDeCasaNaArvore:
         )
 
 
-# ---------------------------------------------------------------------------
-# A1, última linha — o rótulo que chamava o genuíno de clone
-# ---------------------------------------------------------------------------
-
-
 class TestRotuloDoVerBotao:
-    """`scripts/ver_botao.py` roda na frente dela, e mentia o nome do aparelho.
-
-    Sem GTK, sem evdev real: a função é pura sobre um dublê com `.name`/`.uniq`.
-    """
+    """`scripts/ver_botao.py` roda na frente dela, e mentia o nome do aparelho."""
 
     @staticmethod
     def _rotulo(nome: str, uniq: str | None) -> str:

@@ -1,22 +1,4 @@
-"""Como o `busctl` de verdade imprime uma string — para os dublês dele.
-
-Conferência da INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026). Os dublês do
-`busctl` desta casa devolviam o texto CRU (`printf 's "%s"'`), e o `busctl`
-do systemd escapa em C todo byte fora do ASCII (o `cescape` do
-`format_cmdline`): «Nintendo Sofá» sai `s "Nintendo Sof\\303\\241"`. Medido
-num barramento privado (`dbus-run-session`) com o systemd 255 dela. Só o
-`--json=short` entrega o texto como ele é: `{"type":"s","data":"Nintendo Sofá"}`.
-
-Com o dublê cru, duas réguas que puseram acento DE PROPÓSITO nos nomes dela
-passavam sobre dois defeitos vivos: o `bt_active_mode.sh` reescrevia um nome
-com acento a cada tique do watchdog (comparava o escapado com o de verdade) e
-costurava «Nintendo Sof\\303\\241» no adaptador; e o `uninstall.sh` não
-devolvia o lugar com acento e gravava de volta o texto escapado.
-
-**Este módulo não é um arquivo de teste** — é o impressor que os dublês usam.
-Escrevê-lo em cada arquivo deixaria uma verdade por dublê sobre o mesmo
-`busctl`.
-"""
+"""Como o `busctl` de verdade imprime uma string — para os dublês dele."""
 
 from __future__ import annotations
 
@@ -43,11 +25,7 @@ def impressao_do_busctl(texto: str, json_curto: bool) -> str:
 
 
 def escrever_impressor(pasta: Path) -> Path:
-    """Grava `pasta/impressao_do_busctl.py` para os dublês em shell.
-
-    Uso no dublê: `python3 <impressor> "<texto>" "$@"` — o `--json=short`
-    em qualquer posição dos argumentos troca a forma, como no real.
-    """
+    """Grava `pasta/impressao_do_busctl.py` para os dublês em shell."""
     pasta.mkdir(parents=True, exist_ok=True)
     alvo = pasta / "impressao_do_busctl.py"
     alvo.write_text(

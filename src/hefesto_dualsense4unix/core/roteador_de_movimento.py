@@ -40,8 +40,6 @@ from typing import Final
 
 from hefesto_dualsense4unix.core.virtual_motion import REGISTRO, chave_de_sensor
 
-#: Os destinos que o roteador conhece. `nenhum` existe para o perfil poder
-#: dizer "desligado" sem apagar o resto do arranjo dela.
 DESTINO_NENHUM: Final = "nenhum"
 DESTINO_ANALOGICO_DIREITO: Final = "analogico_direito"
 DESTINO_ANALOGICO_ESQUERDO: Final = "analogico_esquerdo"
@@ -52,8 +50,6 @@ DESTINOS: Final[tuple[str, ...]] = (
     DESTINO_ANALOGICO_ESQUERDO,
     DESTINO_MOUSE,
 )
-#: O TOQUE E A INCLINAÇÃO COMO FONTE — NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09).
-#: Os destinos de cada um; o resto da conta mora no fim do módulo.
 TOQUE_CURSOR: Final = "cursor"
 TOQUE_ZONAS: Final = "zonas"
 TOQUES: Final[tuple[str, ...]] = (DESTINO_NENHUM, TOQUE_CURSOR, TOQUE_ZONAS)
@@ -63,75 +59,28 @@ DESTINOS_DA_INCLINACAO: Final[tuple[str, ...]] = (
     DESTINO_ANALOGICO_DIREITO,
 )
 
-#: QUAL EIXO DO GIRO VIRA O HORIZONTAL. Os nomes são a convenção do kernel
-#: (`hid-playstation.c`: ABS_RX/RY/RZ = gyro x/y/z), e a escolha é de quem usa:
-#: girar o controle como um volante (`roll`) e girar como uma cabeça (`yaw`)
-#: são gestos diferentes, e pessoas diferentes alcançam um ou o outro. O caso do
-#: amigo dela — mobilidade só na mão direita — é exatamente por isso que esta
-#: constante existe em vez de um eixo fixo no código.
-EIXO_YAW: Final = "yaw"      # GyroSnapshot.y — ABS_RY
-EIXO_ROLL: Final = "roll"    # GyroSnapshot.z — ABS_RZ
+EIXO_YAW: Final = "yaw"
+EIXO_ROLL: Final = "roll"
 EIXOS_HORIZONTAIS: Final[tuple[str, ...]] = (EIXO_YAW, EIXO_ROLL)
 
-#: A faixa do eixo do gamepad virtual, na língua dos dois backends: 0-255 com
-#: 128 no centro (`uinput_gamepad._capacidades_padrao`, e o mesmo no vpad uhid).
 CENTRO_DO_EIXO: Final = 128
 EIXO_MIN: Final = 0
 EIXO_MAX: Final = 255
-#: Deflexão máxima que o giro pode SOMAR a um eixo. 127 é o fundo do curso —
-#: com o analógico físico parado no centro, sensibilidade cheia e o teto de
-#: graus/s atingido, o jogo vê o stick no batente.
 DEFLEXAO_MAXIMA: Final = 127
 
 #: A ZONA MORTA, em graus/s. Um DualSense parado numa mesa não marca zero: o
-#: giroscópio tem deriva, e sem corte a câmera do jogo passeia sozinha.
-#:
-#: **MEDIDO NO DUALSENSE DELA, 21/09/2026** — 60 amostras a 20 Hz, controle
-#: parado na mesa: pior eixo (y) com média 0,72 e **máximo 0,85 graus/s**. Os
-#: 3,0 cobrem a deriva com 3,5x de margem.
-#:
-#: **E A MORDIDA REVELOU O QUE ESTE NÚMERO FAZ DE VERDADE:** no padrão, NADA.
-#: A curva (`EXPO_DO_GIRO`) mais o arredondamento do eixo já zeram tudo abaixo
-#: de ~7 graus/s sozinhos — com 3,0 ou com 0,0 a saída é byte a byte a mesma. A
-#: zona morta é a SEGUNDA linha de defesa contra a deriva, não a primeira.
-#:
-#: **ONDE ELA É A FEATURE INTEIRA: o tremor.** Este app é de acessibilidade, e
-#: um tremor essencial mora na faixa de 15 a 30 graus/s — bem acima do que a
-#: curva corta. Para essa pessoa, subir este dial (1 a 60 na tela) é o que
-#: separa uma mira usável de uma câmera que treme junto com a mão. É por isso
-#: que ele é CAMPO do arranjo, e não constante escondida.
-#:
-#: A régua que prova as duas metades é
-#: `test_a_zona_morta_alta_e_o_dial_de_quem_tem_tremor`.
 ZONA_MORTA_PADRAO_GRAUS_S: Final = 3.0
-#: O TETO, em graus/s: a velocidade angular que já produz deflexão cheia. 220°/s
-#: é um giro de pulso rápido; acima disso o eixo satura e a mira não acelera
-#: mais. Também é campo.
 TETO_PADRAO_GRAUS_S: Final = 220.0
 
 SENSIBILIDADE_MIN: Final = 1
 SENSIBILIDADE_MAX: Final = 12
 SENSIBILIDADE_PADRAO: Final = 6
 
-#: A CURVA. Achata a região logo acima da zona morta (ajuste fino) e preserva o
-#: teto em velocidade cheia.
-#:
-#: NÃO É O `MOUSE_EXPO`, e a distinção importa: aquele molda a DEFLEXÃO de um
-#: analógico em px/s; este molda VELOCIDADE ANGULAR em deflexão. Domínios
-#: diferentes, número igual por enquanto — e importá-lo de
-#: `integrations/uinput_mouse` arrastaria o módulo de uinput para o caminho
-#: quente do jogo, que é a mesma razão pela qual `core/remapeamento_de_botao`
 #: não importa `core/acoes_de_botao`.
 EXPO_DO_GIRO: Final = 1.6
 
-#: PIXELS POR GRAU do destino «mouse», na sensibilidade padrão. 12 px/grau põe
-#: um giro de 90° em ~1080 px — uma tela 1080p inteira. O número CERTO é por
-#: jogo (a sensibilidade interna do jogo entra na conta) e é da bancada dela;
-#: por isso, de novo, é campo do arranjo.
 PIXELS_POR_GRAU_PADRAO: Final = 12.0
 
-#: Nome do atributo em que o arranjo ativo se pendura no `StateStore`. Literal
-#: em um lugar só, como o `_ATRIBUTO_DO_ATIVO` do remapeamento.
 _ATRIBUTO_DO_ATIVO: Final = "_roteador_de_movimento_ativo"
 
 
@@ -141,14 +90,7 @@ class ArranjoRecusadoError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class ArranjoDeMovimento:
-    """UM arranjo de mira por movimento — imutável, e é o que viaja pelo store.
-
-    `frozen=True` não é estilo: o poll loop lê este objeto noutra thread a cada
-    tique enquanto o event loop do IPC pode estar trocando o arranjo inteiro
-    por causa de uma troca de perfil. Congelado, a troca é só a troca de uma
-    referência, que é atômica — ninguém muda um campo por baixo de um tique em
-    curso. É a mesma razão pela qual o remapeamento viaja em `MappingProxyType`.
-    """
+    """UM arranjo de mira por movimento — imutável, e é o que viaja pelo store."""
 
     destino: str = DESTINO_NENHUM
     sensibilidade: int = SENSIBILIDADE_PADRAO
@@ -158,25 +100,13 @@ class ArranjoDeMovimento:
     zona_morta_graus_s: float = ZONA_MORTA_PADRAO_GRAUS_S
     teto_graus_s: float = TETO_PADRAO_GRAUS_S
     pixels_por_grau: float = PIXELS_POR_GRAU_PADRAO
-    #: O BOTÃO QUE LIGA. `None` = sempre ligado. Um id do vocabulário do jogo
-    #: (`core/remapeamento_de_botao.REMAPEAVEIS`) = a mira só anda enquanto ele
-    #: estiver apertado, que é como quem joga com giro de verdade usa (o
-    #: "ativar ao mirar"). O PS não entra: ele é a saída de emergência dela.
     gatilho: str | None = None
-    #: O que o touchpad faz (`TOQUES`) e para onde a inclinação vai
-    #: (`DESTINOS_DA_INCLINACAO`) — os dois arranjos da resposta dela de 28/09.
     toque: str = DESTINO_NENHUM
     acelerometro: str = DESTINO_NENHUM
 
     @property
     def ligado(self) -> bool:
-        """A MIRA (o giro) anda? `nenhum` é arranjo guardado e desligado.
-
-        Continua sendo a pergunta do GIROSCÓPIO, e só dele: o chip «Mira
-        Virtual», o filtro do report e a Navegação a fazem. Se o arranjo tem
-        QUALQUER rota ligada — o giro, o toque ou a inclinação —, quem responde
-        é :attr:`roteia`.
-        """
+        """A MIRA (o giro) anda? `nenhum` é arranjo guardado e desligado."""
         return self.destino != DESTINO_NENHUM and self.destino in DESTINOS
 
     @property
@@ -191,43 +121,19 @@ class ArranjoDeMovimento:
 
     @property
     def roteia(self) -> bool:
-        """Alguma rota anda: o giro, o toque ou a inclinação.
-
-        É a pergunta dos laços do tique (`ativo`, `da_peca`): sem ela, a peça
-        que só pediu o toque em zonas ficaria fora do motor, porque o destino
-        do giro dela é `nenhum`.
-        """
+        """Alguma rota anda: o giro, o toque ou a inclinação."""
         return self.ligado or self.toca or self.inclina
 
     @property
     def quer_angulo(self) -> bool:
-        """Este destino consome ÂNGULO percorrido (mouse) em vez de velocidade.
-
-        A distinção não é detalhe de implementação, é física: um analógico é
-        uma POSIÇÃO — a deflexão tem de ser proporcional à velocidade angular,
-        senão a câmera continuaria virando com o controle parado. O cursor é um
-        DESLOCAMENTO — ele quer o ângulo percorrido desde o último tique, e é
-        por isso que o `MotionSensorReader` precisa integrar (E3) em vez de
-        multiplicar a velocidade pelo período do tique: um giro rápido entre
-        dois tiques de 60 Hz seria cortado pela metade.
-        """
+        """Este destino consome ÂNGULO percorrido (mouse) em vez de velocidade."""
         return self.destino == DESTINO_MOUSE
 
 
 def _componentes(
     giro: tuple[float, float, float], arranjo: ArranjoDeMovimento
 ) -> tuple[float, float]:
-    """Os três eixos do sensor viram (horizontal, vertical), já com o sinal.
-
-    `giro` é `(x, y, z)` como o `GyroSnapshot` entrega — ABS_RX/RY/RZ do nó
-    «Motion Sensors», em graus/s. O vertical é sempre o `x` (o pitch: levantar
-    e baixar o nariz do controle); o horizontal é escolha do arranjo.
-
-    O SINAL É DA BANCADA, NÃO DAQUI. Qual lado do giro é "para a direita"
-    depende de como a pessoa segura o controle, e é a primeira coisa que ela
-    corrige em dez segundos com `inverter_horizontal`. Fixar um sinal aqui e
-    chamá-lo de certo seria afirmar sobre a mão dela.
-    """
+    """Os três eixos do sensor viram (horizontal, vertical), já com o sinal."""
     gx, gy, gz = giro
     horizontal = gz if arranjo.eixo_horizontal == EIXO_ROLL else gy
     vertical = gx
@@ -241,22 +147,13 @@ def _componentes(
 def _fator_radial(
     horizontal: float, vertical: float, arranjo: ArranjoDeMovimento
 ) -> float:
-    """0.0 a 1.0: quanto do curso do eixo este movimento merece.
-
-    Normalização RADIAL, e não eixo a eixo, pela mesma razão que o cursor do
-    stick usa (`uinput_mouse._compute_move_px_per_sec`): com deadzone por eixo
-    um movimento diagonal lento atravessa a zona morta em um eixo e não no
-    outro, e a mira "engancha" nas diagonais. Medido em outro lugar da casa,
-    herdado aqui de propósito.
-    """
+    """0.0 a 1.0: quanto do curso do eixo este movimento merece."""
     magnitude = math.hypot(horizontal, vertical)
     zona = max(0.0, arranjo.zona_morta_graus_s)
     if magnitude <= zona:
         return 0.0
     faixa = arranjo.teto_graus_s - zona
     if faixa <= 0.0:
-        # Teto abaixo da zona morta: arranjo torto que o esquema já recusa.
-        # Aqui, em vez de dividir por zero no caminho do jogo, vale tudo.
         return 1.0
     return float(min(1.0, (magnitude - zona) / faixa) ** EXPO_DO_GIRO)
 
@@ -264,20 +161,7 @@ def _fator_radial(
 def deflexao(
     giro: tuple[float, float, float], arranjo: ArranjoDeMovimento
 ) -> tuple[int, int]:
-    """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico.
-
-    Devolve `(dh, dv)` em unidades de eixo (-127..127), já com a curva, a zona
-    morta, o teto e a sensibilidade aplicados. `(0, 0)` é resposta legítima e
-    frequente: é o controle parado na mesa.
-
-    O ARRANJO DESLIGADO NÃO MOVE NADA — A-MIRA-POR-MOVIMENTO-NA-TELA-01. Até
-    23/09 o destino não entrava na conta, e um arranjo `nenhum` que chegasse
-    aqui movia o analógico direito como se fosse ele. Não chegava, porque o
-    `ativo()` o barrava; desde que a mira passou a ser POR PEÇA, o `ativo()`
-    devolve :data:`SO_NAS_PECAS` (que é `nenhum`) para a mesa em que só alguns
-    controles miram, e é esta linha que o torna inerte em qualquer motor que
-    ainda não pergunte pela peça.
-    """
+    """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico."""
     if not arranjo.ligado:
         return 0, 0
     horizontal, vertical = _componentes(giro, arranjo)
@@ -298,30 +182,14 @@ def _saturar(valor: int) -> int:
 
 
 def misturar(eixo_h: int, eixo_v: int, dh: int, dv: int) -> tuple[int, int]:
-    """Soma o giro ao analógico FÍSICO, com saturação.
-
-    SOMA, NÃO SUBSTITUI, e é decisão de desenho com razão: quem usa as duas
-    mãos quer mirar com o stick E corrigir com o giro (é como o Steam Input e o
-    JoyShockMapper fazem); quem usa uma mão só tem o stick parado e a soma é
-    idêntica a substituir. Substituir tiraria o stick de quem o tem.
-
-    O centro FÍSICO daquela peça é preservado de graça: somamos ao valor cru,
-    que já vem com a posição de repouso real do analógico dela — um controle
-    que descansa em 130 continua descansando em 130.
-    """
+    """Soma o giro ao analógico FÍSICO, com saturação."""
     return _saturar(eixo_h + dh), _saturar(eixo_v + dv)
 
 
 def pixels(
     angulo: tuple[float, float, float], arranjo: ArranjoDeMovimento
 ) -> tuple[float, float]:
-    """Ângulo percorrido (graus) → deslocamento de cursor, em pixels FLOAT.
-
-    Float de propósito: quem trunca é quem emite, guardando o resto sub-pixel
-    (`UinputMouseDevice.emit_gyro_move`, E6). Truncar aqui faria todo movimento
-    lento virar zero para sempre — o defeito que o carry do cursor do stick já
-    curou uma vez nesta casa.
-    """
+    """Ângulo percorrido (graus) → deslocamento de cursor, em pixels FLOAT."""
     if not arranjo.ligado:
         return 0.0, 0.0
     horizontal, vertical = _componentes(angulo, arranjo)
@@ -330,23 +198,7 @@ def pixels(
 
 
 def montar(secao: object) -> ArranjoDeMovimento:
-    """A seção do perfil vira arranjo SEMPRE — inclusive com o destino `nenhum`.
-
-    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): substituiu o `resolver`, que
-    devolvia `None` para o desligado. Os deslizantes da Calibrar mostram a
-    sensibilidade e o «Ignorar tremor até» de um controle cuja mira está
-    DESLIGADA, e o número que ela ajustou não pode sumir só porque a mira não
-    está andando. O arranjo `nenhum` guarda os parâmetros e não move nada:
-    `ligado` é falso, `ativo()` não o entrega ao tique, e `deflexao`/`pixels`
-    devolvem zero.
-
-    LEVANTA `ArranjoRecusadoError` no que o esquema deixaria passar mas o motor
-    não sabe fazer — destino desconhecido, eixo desconhecido, teto abaixo da
-    zona morta. Quem chama (`ProfileManager.apply_movimento` e
-    `arranjo_da_peca`) trata a recusa desligando só aquela seção: as luzes e os
-    gatilhos dela não pagam por uma linha torta, que é o contrato do
-    `apply_remapeamento`.
-    """
+    """A seção do perfil vira arranjo SEMPRE — inclusive com o destino `nenhum`."""
     destino = str(getattr(secao, "destino", DESTINO_NENHUM) or DESTINO_NENHUM)
     if destino not in DESTINOS:
         raise ArranjoRecusadoError(
@@ -365,8 +217,6 @@ def montar(secao: object) -> ArranjoDeMovimento:
             f"teto ({teto}°/s) tem de ser maior que a zona morta ({zona}°/s)"
         )
     sens = int(getattr(secao, "sensibilidade", SENSIBILIDADE_PADRAO))
-    # O TOQUE E A INCLINAÇÃO (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09): a mesma
-    # recusa do destino, para o que o esquema deixaria passar por `model_copy`.
     toque = str(getattr(secao, "toque", DESTINO_NENHUM) or DESTINO_NENHUM)
     if toque not in TOQUES:
         raise ArranjoRecusadoError(
@@ -396,72 +246,28 @@ def montar(secao: object) -> ArranjoDeMovimento:
 
 
 def definir_ativo(dono: object, arranjo: ArranjoDeMovimento | None) -> None:
-    """Guarda o arranjo ATIVO no dono (o `StateStore`). `None` = sem mira.
-
-    `None` É METADE DO CONTRATO, e é a metade que se esquece: o perfil sem
-    arranjo APAGA o do perfil anterior. Sem isto, a mira que ela montou para um
-    jogo continuaria valendo no jogo seguinte — que é exatamente a forma do
-    CAMINHO-CONTAGIO-01, o defeito que fez o PRAGMATA perder a IMU por herança.
-    """
+    """Guarda o arranjo ATIVO no dono (o `StateStore`). `None` = sem mira."""
     if dono is None:
         return
     setattr(dono, _ATRIBUTO_DO_ATIVO, arranjo if arranjo is not None else None)
 
 
 def ativo(dono: object) -> ArranjoDeMovimento | None:
-    """O arranjo ativo, ou `None`. Custo de dois `getattr` no caminho do jogo.
-
-    SÓ UM `ArranjoDeMovimento` DE VERDADE VALE: um dublê feito de `MagicMock`
-    responde qualquer atributo com outro mock, e um mock no caminho do jogo
-    somaria um `Mock` a um inteiro e derrubaria o tique inteiro do controle. A
-    checagem de tipo é a mesma trava do `remapeamento_de_botao.ativo`, e pelo
-    mesmo susto.
-    """
+    """O arranjo ativo, ou `None`. Custo de dois `getattr` no caminho do jogo."""
     valor = getattr(dono, _ATRIBUTO_DO_ATIVO, None)
     if _roteia(valor):
         return valor
-    # A MESA EM QUE SÓ ALGUNS CONTROLES MIRAM — A-MIRA-POR-MOVIMENTO-NA-TELA-01.
-    # Os dois laços do tique (`gamepad.dispatch_gamepad` e
-    # `coop.CoopManager.forward_all`) só chamam o motor quando esta função
-    # devolve alguma coisa. Sem mira no perfil e com o chip «Mira Virtual»
-    # aceso no P3, um `None` aqui calaria o P3 junto com a mesa. Quem decide
-    # QUAL peça mira é o `da_peca`, chamado pelo motor com o `uniq` na mão.
     if any(_roteia(v) for v in por_peca(dono).values()):
         return SO_NAS_PECAS
     return None
 
 
-# ---------------------------------------------------------------------------
-# A MIRA POR PEÇA — A-MIRA-POR-MOVIMENTO-NA-TELA-01, 23/09/2026
-# ---------------------------------------------------------------------------
-#
-# A palavra dela, a segunda do dia: *"Cria um botão virtual ao lado de
-# giroscopio e acelerometro chamado Mira Virtual"* — no cartão de CADA
-# controle. A primeira entrega deste módulo guardava UM arranjo por perfil
-# (`D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL`), e a própria sprint-mãe deixou a
-# porta escrita: *"o override por controle entra em `ControllerOverrides` sem
 # migração: os campos são os mesmos"*. Entrou.  <!-- noqa-acento: citação literal dela -->
-#
-# A ORDEM DE DECISÃO É UMA SÓ: a peça que tem opinião usa a dela, campo a
-# campo por cima da do perfil; a peça calada segue a do perfil. É a mesma
-# regra do `leds` e do `rumble` por controle (PERFIL-01, merge POR CAMPO).
-#
-# O MAPA MORA NO `StateStore`, ao lado do arranjo da mesa, pelo mesmo motivo
-# medido do `_ATRIBUTO_DO_ATIVO`: todas as rotas de ativação passam `store`.
-# Ele viaja em `MappingProxyType` e é TROCADO inteiro, nunca editado: o tique
-# o lê noutra thread, e a troca de uma referência é atômica.
 
-#: Nome do atributo do mapa por peça no `StateStore`.
 _ATRIBUTO_POR_PECA: Final = "_roteador_de_movimento_por_peca"
 
-#: A mesa sem mira no perfil e com mira em alguma peça — ver `ativo()`. É um
-#: arranjo `nenhum`: se um motor que ainda não pergunta pela peça o receber,
-#: ele não move nada (`deflexao` e `pixels` devolvem zero para o desligado).
 SO_NAS_PECAS: Final = ArranjoDeMovimento()
 
-#: Os nove campos do arranjo, na língua do esquema — são os mesmos nomes em
-#: `ProfileMovimentoConfig`, e é isso que deixa a peça sobrepor a mesa campo a
-#: campo sem tradução nenhuma.
 CAMPOS: Final[tuple[str, ...]] = tuple(f.name for f in fields(ArranjoDeMovimento))
 
 _VAZIO: Final[Mapping[str, ArranjoDeMovimento | None]] = MappingProxyType({})
@@ -483,13 +289,7 @@ def _roteia(valor: object) -> bool:
 
 
 def _campos_escritos(secao: object) -> dict[str, object]:
-    """Os campos que a seção DIZ — só os escritos, quando ela sabe distinguir.
-
-    Um modelo do pydantic sabe (`model_fields_set`): o override da peça que só
-    escreveu a sensibilidade não pode apagar o destino do perfil com o default
-    `nenhum`. Qualquer outra coisa (o arranjo da mesa, um `SimpleNamespace`)
-    responde por todos os campos que tiver.
-    """
+    """Os campos que a seção DIZ — só os escritos, quando ela sabe distinguir."""
     if secao is None:
         return {}
     escritos = getattr(secao, "model_fields_set", None)
@@ -505,12 +305,7 @@ class _Secao:
 
 
 def arranjo_da_peca(secao_da_mesa: object, secao_da_peca: object) -> ArranjoDeMovimento:
-    """O arranjo de UMA peça: a seção dela campo a campo por cima da do perfil.
-
-    Devolve SEMPRE um arranjo (o `montar`), inclusive desligado: é o que guarda
-    a sensibilidade e o tremor que ela ajustou num controle cuja mira está
-    apagada. Levanta `ArranjoRecusadoError` como o `montar`.
-    """
+    """O arranjo de UMA peça: a seção dela campo a campo por cima da do perfil."""
     campos = _campos_escritos(secao_da_mesa)
     campos.update(_campos_escritos(secao_da_peca))
     return montar(_Secao(campos))
@@ -525,15 +320,7 @@ def por_peca(dono: object) -> Mapping[str, ArranjoDeMovimento | None]:
 def definir_por_peca(
     dono: object, mapa: Mapping[str, ArranjoDeMovimento | None] | None
 ) -> None:
-    """TROCA o mapa inteiro. `None` ou vazio = nenhuma peça tem opinião.
-
-    Vazio É METADE DO CONTRATO, como o `None` do `definir_ativo`: o perfil sem
-    mira por peça APAGA a do perfil anterior. Sem isso o P3 do jogo de ontem
-    continuaria mirando no jogo de hoje — a forma do CAMINHO-CONTAGIO-01.
-
-    `None` como VALOR é legítimo e quer dizer *"esta peça tem opinião e ela é
-    desligada"* — o arranjo que o motor recusou, por exemplo.
-    """
+    """TROCA o mapa inteiro. `None` ou vazio = nenhuma peça tem opinião."""
     if dono is None:
         return
     limpo = {chave_de_sensor(k): v for k, v in (mapa or {}).items() if chave_de_sensor(k)}
@@ -543,10 +330,7 @@ def definir_por_peca(
 def definir_da_peca(
     dono: object, uniq: str, arranjo: ArranjoDeMovimento | None, *, tem_opiniao: bool = True
 ) -> None:
-    """Troca a opinião de UMA peça, e só dela — o gesto do chip, ao vivo.
-
-    `tem_opiniao=False` tira a peça do mapa: ela volta a seguir o perfil.
-    """
+    """Troca a opinião de UMA peça, e só dela — o gesto do chip, ao vivo."""
     chave = chave_de_sensor(uniq)
     if dono is None or not chave:
         return
@@ -561,18 +345,7 @@ def definir_da_peca(
 def da_peca(
     dono: object, uniq: str | None, arranjo_da_mesa: object
 ) -> ArranjoDeMovimento | None:
-    """O arranjo que vale para a peça `uniq` AGORA, ou `None` (nenhuma rota).
-
-    Desde 28/09 (NO-MODO-XBOX-TUDO-FUNCIONA-01) a peça que só toca ou só
-    inclina também volta daqui: quem pergunta pela MIRA confere `ligado`.
-
-    É a pergunta que o motor faz com o `uniq` na mão, uma vez por tique e por
-    controle: a opinião da peça, se ela tem; senão, o arranjo da mesa que o
-    laço do tique já leu (`arranjo_da_mesa`, o que o `ativo()` devolveu). Com a
-    mesa em :data:`SO_NAS_PECAS`, a peça calada não mira.
-
-    Custo no caso comum (ninguém com opinião): um `getattr` e um `len`.
-    """
+    """O arranjo que vale para a peça `uniq` AGORA, ou `None` (nenhuma rota)."""
     mapa = por_peca(dono)
     if mapa and uniq:
         chave = chave_de_sensor(uniq)
@@ -583,12 +356,7 @@ def da_peca(
 
 
 def parametros_da_peca(dono: object, uniq: str | None) -> ArranjoDeMovimento:
-    """O arranjo desta peça MESMO DESLIGADO — o que os deslizantes mostram.
-
-    A peça com opinião mostra a dela; a calada mostra a do perfil (o arranjo da
-    mesa, guardado inteiro pelo `ProfileManager.apply_movimento`, ligado ou
-    não); sem nenhum dos dois, os padrões deste módulo.
-    """
+    """O arranjo desta peça MESMO DESLIGADO — o que os deslizantes mostram."""
     mapa = por_peca(dono)
     if uniq:
         valor = mapa.get(chave_de_sensor(uniq))
@@ -601,21 +369,7 @@ def parametros_da_peca(dono: object, uniq: str | None) -> ArranjoDeMovimento:
 
 
 def sincronizar_o_filtro(dono: object) -> None:
-    """Diz ao braço do REPORT quais peças estão mirando — o giro nativo sai delas.
-
-    **A CÂMERA NÃO ANDA EM DOBRO** — ordem dela, 23/09/2026. No caminho `uhid`
-    o jogo recebe o giro nativo pela janela de motion do vpad, e o jogo que o
-    lê (o PRAGMATA) veria o mesmo gesto DUAS vezes: pelo giroscópio e pelo
-    analógico direito. A decisão, medida pela régua que monta a janela: a peça
-    que mira deixa de mandar o GIROSCÓPIO ao jogo como giroscópio — ele passa a
-    chegar como analógico. O acelerômetro e o touchpad seguem intocados.
-
-    O filtro roda na thread do report (~250 Hz) e não enxerga o `store`; por
-    isso a conta é feita AQUI, de onde o arranjo mora, e o resultado desce ao
-    `virtual_motion.REGISTRO`, que é o dono do filtro. Quem chama esta função
-    é quem acabou de mexer no arranjo: o `apply_movimento` do gerente e o
-    `mira.set` do IPC — nunca o tique.
-    """
+    """Diz ao braço do REPORT quais peças estão mirando — o giro nativo sai delas."""
     if dono is None:
         return
     mesa = getattr(dono, _ATRIBUTO_DO_ATIVO, None)
@@ -623,74 +377,25 @@ def sincronizar_o_filtro(dono: object) -> None:
     REGISTRO.definir_roteados(
         sem_chip=_ligado(mesa),
         por_peca={chave: _ligado(v) for chave, v in pecas.items()},
-        # O TOQUE TAMBÉM (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09): a peça cujo
-        # touchpad vai ao cursor ou às zonas deixa de mandar o dedo ao jogo
-        # pela janela do `uhid` — o mesmo toque não chega duas vezes.
         toque_sem_chip=_toca(mesa),
         toque_por_peca={chave: _toca(v) for chave, v in pecas.items()},
     )
 
 
-# ---------------------------------------------------------------------------
-# A MIRA NA NAVEGAÇÃO — A-MIRA-NA-NAVEGACAO-01, 24/09/2026
-# ---------------------------------------------------------------------------
-#
-# A frase dela é *"A exceção do nativo todo o resto deve ter mira Virtual"*, e
-# a decisão (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`) é a leitura literal: na
-# Navegação não há controle virtual, e o giro de quem está com a Mira acesa
-# move o cursor do computador. O motor já sabia o destino «mouse»; o que falta
-# é dizer que, na Navegação, TODO destino ligado é o cursor — porque o
-# analógico que ele escolheria é, ali, a roda e o cursor do próprio mouse.
-
-
 def para_o_cursor(arranjo: ArranjoDeMovimento) -> ArranjoDeMovimento:
-    """O mesmo arranjo, com o cursor por destino — o que a Navegação faz com ele.
-
-    A sensibilidade, o «Ignorar tremor até», o «Só enquanto eu segurar» e os
-    dois «Inverter» ficam como ela os deixou: só o destino muda. O arranjo
-    desligado continua desligado — a peça de chip apagado não passa a mirar
-    por estar na Navegação.
-    """
+    """O mesmo arranjo, com o cursor por destino — o que a Navegação faz com ele."""
     if not arranjo.ligado or arranjo.destino == DESTINO_MOUSE:
         return arranjo
     return replace(arranjo, destino=DESTINO_MOUSE)
 
 
 def pecas_que_miram(dono: object) -> tuple[str, ...]:
-    """As chaves das peças cuja OPINIÃO acende a mira — o chip de cada controle.
-
-    Na Navegação não há laço de secundários (o co-op só existe com o controle
-    virtual de pé), e quem pergunta pelo giro dos P2 a P4 precisa saber quais
-    peças pedir. As peças sem opinião seguem a mira do perfil, e essas vêm da
-    lista de conectados — não daqui.
-    """
+    """As chaves das peças cuja OPINIÃO acende a mira — o chip de cada controle."""
     return tuple(chave for chave, valor in por_peca(dono).items() if _ligado(valor))
 
 
-#: A DRENAGEM QUE VEM DEPOIS DE UM SILÊNCIO NÃO É MOVIMENTO, em segundos.
-#:
-#: O acumulador de ângulo do leitor (`MotionSensorReader`) integra o giro a
-#: cada pacote, e só zera quando alguém drena. Com o giro no cursor, o dono da
-#: drenagem é o tique — e o tique para de drenar em três casos reais: a Mira
-#: apagada (a peça não pede ângulo), o modo com controle virtual (o destino é o
-#: analógico, que não pede ângulo) e a pausa ou o grace do laço. O leitor segue
-#: aberto em todos, porque o cartão da tela lê o giro a 10 Hz.
-#:
-#: A PRIMEIRA DRENAGEM DEPOIS DISSO é o percurso inteiro do intervalo — com a
-#: deriva de 0,72 graus/s medida no controle dela parado, dez minutos são
-#: 430 graus, e a 12 px por grau o cursor saltaria cinco mil pixels no primeiro
-#: gesto. É o defeito que o touchpad já pagou (`discard_touchpad_motion`, o
-#: SALTO de cursor quando a emulação voltava) e que o teto do leitor
-#: (`_TETO_DO_ANGULO_GRAUS`, cem voltas) não evita.
-#:
-#: MEIO SEGUNDO é trinta tiques de 60 Hz: um tique atrasado pelo laço não perde
-#: movimento, e o que se descarta na volta de um silêncio é no máximo o giro de
-#: meio segundo — sob a deriva, 0,4 grau.
 SILENCIO_DA_DRENAGEM_S: Final = 0.5
 
-#: O mapa `{chave da peça: instante da última drenagem}`, no `StateStore`. Só o
-#: tique o toca (o `dispatch_gamepad`, o `forward_all` e o `dispatch_mouse`
-#: rodam todos no laço do daemon), e por isso é um `dict` comum.
 _ATRIBUTO_DA_DRENAGEM: Final = "_roteador_de_movimento_ultima_drenagem"
 
 
@@ -700,17 +405,7 @@ def angulo_do_tique(
     angulo: tuple[float, float, float],
     agora: float,
 ) -> tuple[float, float, float] | None:
-    """O ângulo que a peça acabou de drenar, ou `None` se ele é um acumulado.
-
-    `None` quando a drenagem anterior desta peça foi há mais de
-    :data:`SILENCIO_DA_DRENAGEM_S` (ou nunca houve): o ângulo drenado é o que
-    se juntou enquanto ninguém drenava, e vira nada em vez de um salto. A
-    drenagem em si já aconteceu — quem chama drena ANTES de perguntar —, então
-    o tique seguinte começa do zero.
-
-    Sem dono (o `store` que não há) a resposta é o próprio ângulo: sem onde
-    guardar o relógio não há como saber, e é o comportamento de antes.
-    """
+    """O ângulo que a peça acabou de drenar, ou `None` se ele é um acumulado."""
     if dono is None:
         return angulo
     chave = chave_de_sensor(uniq)
@@ -725,48 +420,17 @@ def angulo_do_tique(
     return angulo
 
 
-# ---------------------------------------------------------------------------
-# O TOQUE E A INCLINAÇÃO — NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026
-# ---------------------------------------------------------------------------
-#
-# A resposta dela às perguntas 1 a 3 da sprint, ~16h50, em escolhas: **os
-# dois** arranjos, por perfil de jogo, e quem valida é ela. (a) o touchpad move
-# o cursor e o acelerômetro vira analógico, um chip por controle como a Mira
-# Virtual; (b) o touchpad em zonas vira botões (direcional, L1, L2), para quem
-# não os alcança. Este bloco é a regra pura dos dois; o motor que a chama é
-# `daemon/subsystems/gamepad.py` (`aplicar_o_toque` e `aplicar_o_movimento`).
-#
-# ONDE ELES VALEM, decidido pelo padrão dela (o que custa menos a quem joga): onde
 # há controle virtual — o modo DualSense e o modo Xbox, do P1 ao P4, no cabo e no
-# rádio. Na Navegação o touchpad continua sendo o do computador
-# (TOUCHPAD-DO-SISTEMA-01) e a inclinação não move nada: lá não há analógico de
-# jogo, e o dedo já é o ponteiro. No Nativo, como a Mira, não há onde escrever.
 
-#: A INCLINAÇÃO que não move nada, em graus. Um controle na mão nunca fica no
-#: mesmo ângulo: seis graus deixam a mão respirar sem o personagem andar.
 ZONA_MORTA_DA_INCLINACAO_GRAUS: Final = 6.0
-#: A inclinação que já vale o analógico no batente, na sensibilidade padrão. A
-#: sensibilidade encurta ou alonga este teto (12 = metade, 1 = seis vezes).
 TETO_DA_INCLINACAO_GRAUS: Final = 30.0
-#: O módulo mínimo, em g, para a leitura valer: abaixo disso o controle está
-#: caindo ou o leitor ainda não leu, e não há gravidade de onde tirar ângulo.
 GRAVIDADE_MINIMA_G: Final = 0.2
 
-#: PIXELS POR UNIDADE DO TOUCHPAD na sensibilidade padrão. É o número do cursor
-#: da Navegação (`uinput_mouse.TOUCHPAD_SENSITIVITY`), repetido aqui porque este
-#: módulo é puro e o `uinput_mouse` arrastaria o uinput para o caminho do jogo —
-#: a régua confere que os dois são o mesmo.
 PIXELS_POR_UNIDADE_DO_TOQUE: Final = 0.45
 
-#: AS ZONAS. Os dois terços da esquerda são o direcional; o terço da direita,
-#: em cima o L1 e embaixo o L2 — a ordem dos dois no plástico. No direcional, o
-#: miolo não aperta nada, e a direção é por setor de 45 graus: os quatro do
-#: meio de cada lado são uma direção, os quatro dos cantos são duas.
 FRACAO_DO_DIRECIONAL: Final = 2.0 / 3.0
 MIOLO_DO_DIRECIONAL: Final = 0.12
 BOTAO_DA_ZONA_DE_CIMA: Final = "l1"
-#: O L2 na língua do LEITOR (`remapeamento_de_botao.GATILHOS`): é o nome que
-#: o laço do tique, a Mira e a troca de botões leem.
 BOTAO_DA_ZONA_DE_BAIXO: Final = "l2_btn"
 _SETORES_DO_DIRECIONAL: Final[tuple[frozenset[str], ...]] = (
     frozenset({"dpad_right"}),
@@ -794,18 +458,7 @@ def _unitario(vetor: tuple[float, float, float]) -> tuple[float, float, float] |
 def inclinacao(
     acel: tuple[float, float, float], neutro: tuple[float, float, float]
 ) -> tuple[float, float] | None:
-    """Quanto o controle inclinou desde o neutro, em graus: (direita, para trás).
-
-    Pela GRAVIDADE que o acelerômetro lê (em g, `AccelSnapshot`). O horizontal
-    é o volante: a elevação da gravidade no eixo `x` (o de lado a lado do
-    controle) contra a do neutro. O vertical é a rotação em volta desse eixo,
-    medida no plano `y`-`z` — sem supor qual dos dois aponta para cima, porque
-    isso depende de como a pessoa segura. `None` sem gravidade legível.
-
-    O SINAL É DA BANCADA, como o do giro (`_componentes`): a convenção de eixos
-    é a da `hid-playstation` e da SDL (x para a direita, y saindo da face, z
-    para quem segura), e quem corrige em dez segundos é o «Inverter».
-    """
+    """Quanto o controle inclinou desde o neutro, em graus: (direita, para trás)."""
     a = _unitario(acel)
     n = _unitario(neutro)
     if a is None or n is None:
@@ -822,14 +475,7 @@ def deflexao_da_inclinacao(
     neutro: tuple[float, float, float],
     arranjo: ArranjoDeMovimento,
 ) -> tuple[int, int]:
-    """A inclinação desde o neutro vira deslocamento a SOMAR num analógico.
-
-    `(dh, dv)` em unidades de eixo (-127..127), com a zona morta, o teto e a
-    sensibilidade. Inclinar é POSIÇÃO, como o próprio analógico: a resposta é
-    linear depois da zona morta (a curva do giro achata o começo, e aqui o
-    começo é o que faz o personagem sair do lugar). O arranjo que não inclina
-    devolve zero.
-    """
+    """A inclinação desde o neutro vira deslocamento a SOMAR num analógico."""
     if not arranjo.inclina:
         return 0, 0
     angulos = inclinacao(acel, neutro)
@@ -861,22 +507,7 @@ def neutro_da_inclinacao(
     acel: tuple[float, float, float],
     agora: float,
 ) -> tuple[float, float, float]:
-    """O NEUTRO desta peça: como ela estava na primeira leitura depois de um silêncio.
-
-    Quem segura não segura na horizontal, e cada pessoa segura de um jeito: o
-    neutro é o ângulo em que o controle estava quando a inclinação começou a
-    valer — a rota ligada, o controle que voltou, o jogo que abriu. Um silêncio
-    de :data:`SILENCIO_DA_DRENAGEM_S` sem leitura recomeça o neutro; e com o
-    «Só enquanto eu segurar», o botão solto é silêncio, então cada aperto
-    recentra. Sem `dono` (o `store` que não há) o neutro é a própria leitura, e
-    a inclinação não move nada.
-
-    O LIMITE, escrito (conferência de 28/09): o tique lê a peça a cada volta, e
-    o controle parado na mesa não é silêncio. Se a rota ligou com ele deitado,
-    a mesa é o neutro, e pegá-lo na mão anda até o próximo silêncio — o
-    «Só enquanto eu segurar», o controle que volta, o chip apagado e aceso. É a
-    prova da mão dela que decide se falta um gesto de recentrar.
-    """
+    """O NEUTRO desta peça: como ela estava na primeira leitura depois de um silêncio."""
     if dono is None:
         return acel
     mapa = getattr(dono, _ATRIBUTO_DO_NEUTRO, None)
@@ -896,14 +527,7 @@ def neutro_da_inclinacao(
 def botoes_das_zonas(
     dedos: Iterable[tuple[float, float]], largura: int, altura: int
 ) -> frozenset[str]:
-    """Os botões que os dedos apoiados apertam agora, na língua do leitor.
-
-    `dedos` é uma sequência de `(x, y)` nas unidades do touchpad (o
-    `TouchState.pontos`, até dois). Cada dedo aperta a zona em que está: dois
-    dedos, duas zonas — o direcional e o L2 juntos, por exemplo. Sem dedo,
-    nenhum botão: é o toque que aperta, e não o clique, porque apoiar o dedo
-    custa menos que afundar a superfície (o clique pede força).
-    """
+    """Os botões que os dedos apoiados apertam agora, na língua do leitor."""
     if largura <= 0 or altura <= 0:
         return frozenset()
     saida: set[str] = set()
@@ -928,14 +552,7 @@ def delta_do_toque(
     dedos: Iterable[tuple[int, int, int]],
     agora: float,
 ) -> tuple[int, int]:
-    """Quanto o dedo andou desde o tique anterior, nas unidades do touchpad.
-
-    `dedos` é uma sequência de `(identidade, x, y)`. O cursor segue UM dedo — o
-    mesmo do tique anterior, pela identidade do kernel —, e o dedo que chega,
-    troca ou volta de um silêncio só ANCORA: levantar e reapoiar em outro ponto
-    não salta o cursor, que é a regra do `TouchpadReader` do cursor da
-    Navegação. Sem `dono`, nada anda.
-    """
+    """Quanto o dedo andou desde o tique anterior, nas unidades do touchpad."""
     if dono is None:
         return 0, 0
     mapa = getattr(dono, _ATRIBUTO_DO_DEDO, None)
@@ -963,13 +580,7 @@ def delta_do_toque(
 
 
 def pixels_do_toque(dx: int, dy: int, arranjo: ArranjoDeMovimento) -> tuple[float, float]:
-    """O dedo que andou vira pixels de cursor, pela `sensibilidade` do arranjo.
-
-    Float de propósito, pela mesma razão de :func:`pixels`: quem trunca é quem
-    emite, guardando o resto. Sem os «Inverter», que são do giro: o cursor
-    segue o dedo, e um dedo que anda para a direita e leva o cursor para a
-    esquerda não é ajuste, é defeito.
-    """
+    """O dedo que andou vira pixels de cursor, pela `sensibilidade` do arranjo."""
     fator = PIXELS_POR_UNIDADE_DO_TOQUE * (arranjo.sensibilidade / SENSIBILIDADE_PADRAO)
     return dx * fator, dy * fator
 

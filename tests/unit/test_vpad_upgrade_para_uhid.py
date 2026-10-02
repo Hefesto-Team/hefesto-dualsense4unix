@@ -1,22 +1,4 @@
-"""Recuperação do vpad do P1 que degradou para uinput (rede de segurança).
-
-Antes de VPAD-03/BT-01 esta promoção era o CONSERTO do boot: o `lifecycle` cria
-o gamepad antes do `controller.connect()`, então o vpad nascia sem hidraw de
-onde copiar o blueprint e caía no uinput para sempre. Com o blueprint canônico
-embutido o vpad já NASCE uhid (sem depender de físico) e a promoção virou rede
-de segurança: recupera o vpad que caiu no uinput por razão transitória (ex.:
-/dev/uhid ainda sem ACL na primeira sessão pós-install), chamada quando o
-controle conecta.
-
-O que trava aqui (ressalvas dos sprints):
-- precheck `uhid_available()` (VPAD-01): com o uhid persistentemente quebrado,
-  destruir e recriar o vpad uinput que FUNCIONA a cada conexão seria input drop
-  em loop no meio do jogo;
-- cooldown compartilhado com a re-seleção da GUI (VPAD-01/VPAD-02): o precheck
-  não pega o uhid que aceita o CREATE2 mas nunca faz bind — sem a trava, cada
-  reconexão BT derrubaria o vpad uinput dentro da mesma janela de falha;
-- backend fake nunca promove (VPAD-08): o smoke não registra um Edge real.
-"""
+"""Recuperação do vpad do P1 que degradou para uinput (rede de segurança)."""
 from __future__ import annotations
 
 import time
@@ -62,8 +44,7 @@ class _FakeDaemon:
 
 @pytest.fixture()
 def sem_efeitos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Neutraliza o start/stop reais; registra o que foi chamado. O uhid nasce
-    DISPONÍVEL — cada teste de indisponibilidade sobrescreve."""
+    """Neutraliza o start/stop reais; registra o que foi chamado. O uhid nasce"""
     chamadas: dict[str, Any] = {"stop": 0, "start": []}
 
     def _stop(_daemon: Any, **kwargs: Any) -> None:
@@ -110,29 +91,12 @@ class TestPromocao:
             "a promoção de BACKEND não pode carimbar máscara: o que ela recebe "
             "vai parar em `config.gamepad_flavor`"
         )
-        # Não persiste (a preferência não mudou) nem solta o grab (o controle
-        # físico voltaria para o jogo no meio da troca).
         assert sem_efeitos["stop_kwargs"] == {"persist": False, "release_grab": False}
 
     def test_a_promocao_de_backend_nao_muda_a_mascara_da_sessao(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A régua do DESFECHO, não do argumento — MÁSCARA-POR-JOGADOR-01.
-
-        A promoção de um vpad degradado numa sessão `xbox` (o P1 está em
-        dualsense porque ESCOLHEU) tem de deixar `config.gamepad_flavor` como
-        estava. É a mesma verdade do teste acima, medida onde o dano seria
-        permanente: este campo é o que a GUI mostra, o que o co-op herda no
-        `_flavor()` e o que vai ao disco no gesto manual.
-
-        **NÃO usa a fixture `sem_efeitos`, e isso é o teste.** Escrito primeiro
-        com ela, este teste era um INSTRUMENTO FALSO: aquela fixture dubla o
-        `start_gamepad_emulation`, e um dublê nunca escreve em
-        `config.gamepad_flavor` — a asserção passava com a cura arrancada
-        (medido em 29/08/2026: devolvi o `flavor="dualsense"` ao produto e o
-        teste seguiu VERDE). Aqui o `start` é o de verdade; o que vira dublê é
-        só a criação do vpad, que é o único ponto que tocaria o kernel.
-        """
+        """A régua do DESFECHO, não do argumento — MÁSCARA-POR-JOGADOR-01."""
         from hefesto_dualsense4unix.daemon.subsystems import external_mask
 
         monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
@@ -146,11 +110,7 @@ class TestPromocao:
         daemon = _FakeDaemon(_FakeUinputPad())
         daemon.config.gamepad_flavor = "xbox"
         daemon._mouse_device = None
-        # HARM-16: o `stop` real zera os motores na troca. `(0, 0)` = ninguém
-        # fixou rumble pela aba — o caminho quieto, fora do assunto daqui.
         daemon.config.rumble_active = (0, 0)
-        # O P1 escolheu dualsense — é por isso que o vpad dele está em
-        # dualsense numa sessão xbox, e é o caso que não existia antes de hoje.
         monkeypatch.setattr(
             external_mask, "mascara_efetiva", lambda identity, jogo: "dualsense"
         )
@@ -164,9 +124,7 @@ class TestPromocao:
     def test_uhid_indisponivel_nao_derruba_o_vpad_que_funciona(
         self, monkeypatch: pytest.MonkeyPatch, sem_efeitos: dict[str, Any]
     ) -> None:
-        """Ressalva do VPAD-01: sem o precheck, cada conexão do controle (BT
-        reconecta MUITO nesta máquina) destruiria e recriaria o vpad uinput em
-        loop — input drop no meio do jogo, sem nunca conseguir o uhid."""
+        """Ressalva do VPAD-01: sem o precheck, cada conexão do controle (BT"""
         monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: False)
         daemon = _FakeDaemon(_FakeUinputPad())
 
@@ -202,8 +160,7 @@ class TestPromocao:
     def test_vpad_que_ja_e_uhid_nao_e_recriado(
         self, sem_efeitos: dict[str, Any]
     ) -> None:
-        """Idempotente: com VPAD-03 o vpad já nasce uhid — recriar no replug
-        faria o jogo perder o device à toa. É o caso comum agora."""
+        """Idempotente: com VPAD-03 o vpad já nasce uhid — recriar no replug"""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
         daemon = _FakeDaemon(UhidDualSense(player=1, blueprint=None))
@@ -214,24 +171,19 @@ class TestPromocao:
     def test_cooldown_compartilhado_suprime_a_segunda_tentativa(
         self, sem_efeitos: dict[str, Any]
     ) -> None:
-        """Ressalva do VPAD-01: o uhid que aceita o CREATE2 mas nunca faz bind
-        passa pelo precheck `uhid_available()` — a 1ª tentativa recria o vpad
-        (e volta ao uinput quando o bind falha); a borda seguinte dentro do
-        cooldown NÃO pode derrubar o device que funciona outra vez."""
+        """Ressalva do VPAD-01: o uhid que aceita o CREATE2 mas nunca faz bind"""
         daemon = _FakeDaemon(_FakeUinputPad())
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
-        # O bind falhou de novo: a factory devolveu outro uinput.
         daemon._gamepad_device = _FakeUinputPad()
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is False
-        assert sem_efeitos["stop"] == 1  # só a 1ª tentativa mexeu no device
+        assert sem_efeitos["stop"] == 1
 
     def test_cooldown_expirado_permite_nova_tentativa(
         self, sem_efeitos: dict[str, Any]
     ) -> None:
-        """O cooldown é janela, não veto permanente: passada a janela, a
-        próxima borda de conexão volta a tentar a promoção."""
+        """O cooldown é janela, não veto permanente: passada a janela, a"""
         daemon = _FakeDaemon(_FakeUinputPad())
         daemon._last_rebackend_ts = time.monotonic() - (gp.REBACKEND_COOLDOWN_SEC + 1.0)
 
@@ -240,9 +192,7 @@ class TestPromocao:
 
 
 class TestReviveFalhaTotal:
-    """VPAD-09: `_gamepad_device is None` com emulação desejada = o start do
-    boot falhou INTEIRO (nem uhid nem uinput — ex.: a ACL uaccess chegou depois
-    do daemon no login). A borda de conexão revive pela factory completa."""
+    """VPAD-09: `_gamepad_device is None` com emulação desejada = o start do"""
 
     def test_revive_quando_emulacao_desejada_e_sem_device(
         self, sem_efeitos: dict[str, Any]
@@ -250,16 +200,13 @@ class TestReviveFalhaTotal:
         daemon = _FakeDaemon(None)
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
-        # Factory completa com o flavor da config (start sem flavor explícito);
-        # não há device para parar.
         assert sem_efeitos["start"] == [None]
         assert sem_efeitos["stop"] == 0
 
     def test_revive_nao_exige_uhid_disponivel(
         self, monkeypatch: pytest.MonkeyPatch, sem_efeitos: dict[str, Any]
     ) -> None:
-        """Sem device funcionando não há o que proteger: se só o uinput voltou
-        (uhid segue sem ACL), um vpad uinput é melhor que nenhum."""
+        """Sem device funcionando não há o que proteger: se só o uinput voltou"""
         monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: False)
         daemon = _FakeDaemon(None)
 
@@ -271,10 +218,10 @@ class TestReviveFalhaTotal:
         daemon = _FakeDaemon(None)
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
-        daemon._gamepad_device = None  # o start seguiu falhando
+        daemon._gamepad_device = None
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is False
-        assert sem_efeitos["start"] == [None]  # só a 1ª borda tentou
+        assert sem_efeitos["start"] == [None]
 
     def test_backend_fake_nao_revive(self, sem_efeitos: dict[str, Any]) -> None:
         """VPAD-08 vale também para o revive: o smoke não planta device real."""

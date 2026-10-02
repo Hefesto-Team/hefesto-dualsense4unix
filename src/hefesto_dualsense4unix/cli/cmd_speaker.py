@@ -45,10 +45,8 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 
 console = Console()
 
-#: Verbos aceitos. `volume` é o único que pede um número.
 _ACOES = ("status", "volume", "mute", "unmute", "release")
 
-#: Fim da linha de ajuda, repetido nas recusas — o texto que diz o CAMINHO.
 _DICA_VOLUME = "ajuste um volume primeiro (ex.: `speaker volume 60`)"
 
 
@@ -78,12 +76,7 @@ def _bruto_para_pct(volume: int) -> int:
 
 
 def _chamar(metodo: str, params: dict[str, Any]) -> tuple[str, Any]:
-    """Fala com o daemon. Devolve ("ok", resultado) | ("offline", None) | ("erro", msg).
-
-    Três desfechos e não dois: "o daemon não está de pé" e "o daemon recusou o
-    pedido" pedem mensagens diferentes de quem está no terminal — a primeira se
-    resolve subindo o daemon, a segunda lendo o motivo.
-    """
+    """Fala com o daemon. Devolve ("ok", resultado) | ("offline", None) | ("erro", msg)."""
     import asyncio
 
     from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
@@ -190,11 +183,6 @@ def speaker_cmd(
             )
         raise typer.Exit(code=codigo)
 
-    # mute / unmute — a MESMA guarda da interface (armadilha 2, medida): sem
-    # volume conhecido, o mudo é a primeira escrita, tranca o alto-falante em
-    # zero e o próprio comando não o solta. Recusar ANTES de mandar é a entrega:
-    # o daemon também recusa, mas quem está no terminal precisa do caminho, não
-    # de um código de erro.
     estado, payload = _chamar("daemon.state_full", {})
     if estado != "ok":
         raise typer.Exit(code=_reclamar_do_daemon(estado, payload))

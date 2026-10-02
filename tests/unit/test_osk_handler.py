@@ -1,9 +1,4 @@
-"""Testes do `_OSKController` — abrir/fechar onboard/wvkbd-mobintl.
-
-O TERCEIRO VERBO, `toggle()`, tem régua própria em
-`test_o_l3_alterna_o_teclado_na_tela.py`: ele é o preset do L3 desde 02/09/2026
-e o caso que decide é o SEGUNDO aperto, que não se mede aqui.
-"""
+"""Testes do `_OSKController` — abrir/fechar onboard/wvkbd-mobintl."""
 from __future__ import annotations
 
 from typing import Any
@@ -14,9 +9,6 @@ from hefesto_dualsense4unix.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN
 from hefesto_dualsense4unix.daemon.subsystems.keyboard import _OSKController
 from hefesto_dualsense4unix.integrations import desktop_notifications
 
-#: Referência à implementação REAL, capturada antes de qualquer fixture trocar o
-#: atributo do módulo. É por ela que o teste da frase entra — pelo nome, ele
-#: pegaria o dublê autouse abaixo e não testaria nada.
 _NOTIFICA_DE_VERDADE = desktop_notifications.notify_teclado_na_tela_ausente
 
 
@@ -24,14 +16,7 @@ _NOTIFICA_DE_VERDADE = desktop_notifications.notify_teclado_na_tela_ausente
 def _sem_notificacao_de_verdade(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[list[str]]:
-    """Intercepta o aviso do teclado na tela ausente (TECLADO-QUE-NAO-DIGITA-01).
-
-    `_avisar_ausencia` passou a NOTIFICAR o desktop, e sem esta trava a suíte
-    faria uma chamada D-Bus de verdade — uma notificação real na tela de quem
-    está rodando os testes. Autouse porque o ramo "sem binário" é exercitado por
-    mais de um teste deste arquivo; devolve a lista de chamadas para quem quiser
-    afirmar sobre elas.
-    """
+    """Intercepta o aviso do teclado na tela ausente (TECLADO-QUE-NAO-DIGITA-01)."""
     chamadas: list[list[str]] = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.desktop_notifications."
@@ -94,13 +79,11 @@ def test_onboard_spawn_e_fechamento(monkeypatch: pytest.MonkeyPatch) -> None:
     ctrl = _OSKController()
     ctrl.open()
     assert spawned == [["onboard"]]
-    # Segunda chamada open() é no-op (processo já vivo).
     ctrl.open()
     assert len(spawned) == 1
 
     ctrl.close()
     assert fake_proc.terminated is True
-    # close() com processo morto é no-op seguro.
     ctrl.close()
 
 
@@ -150,40 +133,17 @@ def test_dispatch_token_open_close(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_dispatch_token_release_e_noop() -> None:
     """Release não deve abrir/fechar — evita fechar logo após open em L3."""
     ctrl = _OSKController()
-    # Sem mockar Popen: se release fosse abrir, subprocess real rodaria.
     ctrl.dispatch_token(TOKEN_OPEN_OSK, "release")
     ctrl.dispatch_token(TOKEN_CLOSE_OSK, "release")
     assert ctrl.esperar_os_toques(5.0)
     assert ctrl._process is None
 
 
-# --- TECLADO-QUE-NAO-DIGITA-01: L3 sem teclado na tela para de ser silêncio ---
-#
-# Medido na máquina dela em 09/08/2026: `which onboard wvkbd-mobintl` não acha
-# nenhum dos dois, e nenhum instalador, empacotamento ou doctor desta casa os
-# instala, declara ou confere. Como `l3` é o ÚNICO caminho de fábrica para
-# ESCREVER texto com o controle (todo o resto do mapa é atalho), apertar L3
-# sumia inteiro: um `warning` no journal e mais nada.
-
-
 def test_sem_binario_notifica_a_usuaria(
     monkeypatch: pytest.MonkeyPatch,
     _sem_notificacao_de_verdade: list[list[str]],
 ) -> None:
-    """Apertar L3 sem teclado na tela instalado vira aviso na tela dela.
-
-    A ORDEM dos nomes deixou de ser fixa em 10/08/2026 e passou a seguir a
-    sessão: a frase é "instale X ou Y", e qual vem primeiro é a diferença entre
-    um conselho que resolve e um que faz ela instalar o programa que abre sem
-    digitar. Aqui a sessão é forçada para Wayland — o caso da máquina dela.
-
-    A afirmação era sobre a lista LITERAL (`["wvkbd-mobintl", "onboard"]`) até
-    24/08/2026, quando T-11 da ONDA0-Z7 acrescentou `squeekboard` e
-    `maliit-keyboard` aos candidatos. Travar a lista inteira cobrava este teste
-    por candidato novo sem medir nada a mais: quem manda é a ORDEM, e é ela que
-    ficou. A composição da lista tem mordida própria em
-    `test_ambiente_presumido_01_o_que_a_maquina_nao_tem.py`.
-    """
+    """Apertar L3 sem teclado na tela instalado vira aviso na tela dela."""
     monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-1")
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.subsystems.keyboard.shutil.which",
@@ -256,5 +216,4 @@ def test_a_notificacao_nomeia_os_dois_programas(
     assert "onboard" in capturado["body"]
     assert "wvkbd-mobintl" in capturado["body"]
     assert "L3" in capturado["body"]
-    # `once_key` é o que impede rajada: L3 é botão, e ela aperta várias vezes.
     assert capturado["once_key"] == "osk_binary_missing"

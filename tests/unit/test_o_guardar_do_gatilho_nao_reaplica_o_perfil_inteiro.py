@@ -42,7 +42,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 
 
@@ -77,12 +76,7 @@ def gesto(pac):
 
 @pytest.fixture
 def disco(monkeypatch):
-    """Um disco de mentira com um `Profile` DE VERDADE dentro.
-
-    O esquema é o de produção de propósito: um dublê aceitaria um
-    `ControllerOverrides` malformado e a régua ficaria verde sobre um perfil que
-    o disco recusaria.
-    """
+    """Um disco de mentira com um `Profile` DE VERDADE dentro."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -115,11 +109,7 @@ def test_o_guardar_grava_no_disco(pac, gesto, disco) -> None:
 
 
 def test_o_guardar_nao_manda_reaplicar_o_perfil_inteiro(pac, gesto, disco) -> None:
-    """Caso 2, A CURA: `profile_switch` reaplica a barra de luz por cima dela.
-
-    Medido no produto instalado: a barra saía de `[0,0,0]` apagada para
-    `[0,0,255]` acesa num clique deste botão, na aba dos GATILHOS.
-    """
+    """Caso 2, A CURA: `profile_switch` reaplica a barra de luz por cima dela."""
     p = PonteDeMentira()
     gesto(_ctx(pac), {"uniq": UNIQ, "forma": _forma()}, p)
     assert "profile_switch" not in p.chamadas, (

@@ -59,18 +59,13 @@ import re
 import tokenize
 from pathlib import Path
 
-#: O comentário do HTML e do Glade, que é onde a prosa desses dois mora.
 _COMENTARIO_HTML = re.compile(r"<!--.*?-->", re.S)
 
 _CACHE: dict[Path, str] = {}
 
 
 def _inicio_das_linhas(fonte: str) -> list[int]:
-    """O deslocamento em que cada linha começa.
-
-    Serve para converter o ``(lineno, col_offset)`` do ``ast`` e do ``tokenize``
-    em índice do texto, sem reconstruir o arquivo linha a linha.
-    """
+    """O deslocamento em que cada linha começa."""
     inicio = [0]
     for linha in fonte.splitlines(keepends=True):
         inicio.append(inicio[-1] + len(linha))
@@ -78,13 +73,7 @@ def _inicio_das_linhas(fonte: str) -> list[int]:
 
 
 def _docstrings(arvore: ast.AST) -> list[ast.Constant]:
-    """As docstrings — e só elas, nunca toda cadeia de texto.
-
-    Docstring, pela gramática do Python, é a primeira instrução de módulo,
-    classe ou função quando ela é uma cadeia solta. É assim que se a reconhece
-    aqui, e não por aspas triplas: ``\"\"\"`` também abre cadeia comum, e
-    ``'x'`` também abre docstring.
-    """
+    """As docstrings — e só elas, nunca toda cadeia de texto."""
     fora: list[ast.Constant] = []
     for no in ast.walk(arvore):
         if not isinstance(no, (ast.Module, ast.ClassDef,
@@ -102,12 +91,7 @@ def _docstrings(arvore: ast.AST) -> list[ast.Constant]:
 
 
 def _apagar(letras: list[str], a: int, b: int) -> None:
-    """Espaço no lugar do trecho, preservando as quebras de linha.
-
-    O tamanho tem de ficar igual: é o que deixa quem chama dizer *arquivo,
-    linha e frase* em vez de "há uma em algum lugar" — e a entrega de uma régua
-    é o endereço do defeito, não o número dele.
-    """
+    """Espaço no lugar do trecho, preservando as quebras de linha."""
     for i in range(a, min(b, len(letras))):
         if letras[i] != "\n":
             letras[i] = " "
@@ -175,13 +159,7 @@ def usa(caminho: Path, simbolo: str) -> bool:
 
 
 def cita(caminho: Path, simbolo: str) -> bool:
-    """O símbolo APARECE no arquivo, prosa incluída.
-
-    Existe porque em vários lugares a citação é o que se quer medir: o CSV da
-    paridade vigia nomes de arquivo de teste e caminhos de módulo, que só podem
-    viver num comentário. Quem pergunta *"isto ainda está aqui?"* usa esta;
-    quem afirma *"este lado NÃO faz isto"* usa :func:`usa`.
-    """
+    """O símbolo APARECE no arquivo, prosa incluída."""
     try:
         return agulha(simbolo).search(
             caminho.read_text(encoding="utf-8", errors="replace")) is not None

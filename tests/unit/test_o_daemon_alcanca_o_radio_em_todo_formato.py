@@ -1,20 +1,4 @@
-"""O daemon alcança o socket de Bluetooth em todo formato — o medidor do ar depende disso.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-3 da AR-MEDIDO-01. O
-medidor do rádio (os Hz de cada controle e os canais do AFH, que a seção
-aprovada por ela mostra) abre um socket HCI cru e faz ioctls de leitura. Duas
-condições o install tem de CONTINUAR cumprindo, e uma que faltava:
-
-1. a unit do daemon sem `PrivateNetwork=yes` (fora do netns inicial o kernel
-   devolve EAFNOSUPPORT ao socket de Bluetooth) e, se um dia ganhar
-   `RestrictAddressFamilies`, com o AF_BLUETOOTH na lista — o bloco do broker
-   (`PrivateNetwork=yes` com AF_UNIX) NÃO pode ser copiado para cá;
-2. o Flatpak, onde o daemon roda dentro do sandbox, com `--allow=bluetooth`
-   (o seccomp) e `--share=network` (o netns) — decisão de quem coordena.
-
-A MORDIDA, medida: tirar o `--allow=bluetooth` do manifesto reprova o teste 2;
-pôr `PrivateNetwork=yes` na unit do daemon, o 1.
-"""
+"""O daemon alcança o socket de Bluetooth em todo formato — o medidor do ar depende disso."""
 
 from __future__ import annotations
 

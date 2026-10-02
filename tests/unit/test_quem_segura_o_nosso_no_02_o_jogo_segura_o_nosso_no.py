@@ -70,12 +70,7 @@ _INSTRUMENTO = _RAIZ / "scripts" / "ensaios" / "o_jogo_segura_o_nosso_no.py"
 
 
 def _carregar_o_instrumento() -> Any:
-    """Carrega o instrumento pelo caminho — `scripts/ensaios/` não é pacote.
-
-    Mesmo precedente do `test_giro_e_buraco_a_regua_sai_do_aparelho`: o nome
-    sob o qual ele entra em `sys.modules` é OUTRO, para que este arquivo nunca
-    roube o módulo de quem o importe pelo nome real.
-    """
+    """Carrega o instrumento pelo caminho — `scripts/ensaios/` não é pacote."""
     pasta = str(_INSTRUMENTO.parent)
     if pasta not in sys.path:
         sys.path.insert(0, pasta)
@@ -92,18 +87,9 @@ def _carregar_o_instrumento() -> Any:
 
 INS = _carregar_o_instrumento()
 
-#: O `uniq` que o produto forja por jogador. Faixa localmente administrada:
-#: por definição não colide com endereço de fábrica, e é faixa permitida em
-#: `tests/` (ver `test_anonimato_de_fixtures`).
 UNIQ_DO_VPAD = "02:fe:00:00:00:01"
 
-#: O placeholder canônico de fixture desta casa para um controle FÍSICO.
 UNIQ_FORJADO_DE_FISICO = "aa:bb:cc:00:00:11"
-
-
-# ---------------------------------------------------------------------------
-# Forja de árvores — nada aqui existe fora do `tmp_path`
-# ---------------------------------------------------------------------------
 
 
 def _escrever(caminho: Path, texto: str) -> None:
@@ -122,12 +108,7 @@ def _forjar_no_hid(
     hidraw: str | None = None,
     marca_do_dir: str = "0003:054C:0DF2.0001",
 ) -> Path:
-    """Um nó de entrada pendurado num device HID, como o sysfs o publica.
-
-    `/sys/class/input/eventN` é diretório; `eventN/device` é link para
-    `<device HID>/input/inputM`. É essa forma — e não o caminho absoluto — que
-    o instrumento navega.
-    """
+    """Um nó de entrada pendurado num device HID, como o sysfs o publica."""
     dir_hid = raiz / "devices" / marca_do_dir
     dir_input = dir_hid / "input" / f"input{evento[len('event'):]}"
     _escrever(dir_hid / "uevent", uevent)
@@ -146,12 +127,7 @@ def _forjar_no_hid(
 def _forjar_no_de_uinput(
     raiz: Path, *, evento: str, nome: str, uevent_do_avo: str = ""
 ) -> Path:
-    """O vpad de uinput: `/sys/devices/virtual/input/inputN`, sem device HID.
-
-    O pai dele TAMBÉM se chama `input` — é essa a armadilha que a exigência de
-    `HID_ID` desarma. `uevent_do_avo` existe para o teste poder pôr conteúdo
-    em `/sys/devices/virtual/uevent` e provar que ele não é aceito.
-    """
+    """O vpad de uinput: `/sys/devices/virtual/input/inputN`, sem device HID."""
     dir_input = raiz / "devices" / "virtual" / "input" / f"input{evento[5:]}"
     _escrever(dir_input / "name", nome + "\n")
     _escrever(dir_input / "id" / "bustype", "0003\n")
@@ -219,18 +195,8 @@ def _alvo_do_arquivo(arquivo: Path, *, classe: str = "nosso", papel: str = "game
     )
 
 
-# ---------------------------------------------------------------------------
-# A identidade: o carimbo, e nunca o vid/pid
-# ---------------------------------------------------------------------------
-
-
 def test_o_vpad_e_o_carimbo_e_nunca_o_vidpid(tmp_path: Path) -> None:
-    """O vpad entra pelo `HID_PHYS`; um Edge de verdade, com o MESMO par
-    `054c:0df2`, fica de fora.
-
-    MORDIDA 1: casar por vid/pid faz o Edge entrar, e o instrumento passa a
-    medir o controle de outra pessoa achando que mediu o nosso.
-    """
+    """O vpad entra pelo `HID_PHYS`; um Edge de verdade, com o MESMO par"""
     _forjar_no_hid(
         tmp_path,
         evento="event22",
@@ -257,14 +223,7 @@ def test_o_vpad_e_o_carimbo_e_nunca_o_vidpid(tmp_path: Path) -> None:
 
 
 def test_o_espelho_xbox_do_steam_nao_e_o_nosso_vpad(tmp_path: Path) -> None:
-    """O casamento do nome do uinput é EXATO, e é por causa do Steam Input.
-
-    O Steam publica um espelho Xbox de CADA controle que enxerga — o nosso
-    vpad inclusive —, e esses espelhos se chamam `Microsoft X-Box 360 pad 0`.
-
-    MORDIDA 2: trocar o `==` por `startswith("Microsoft X-Box 360 pad")` faz o
-    espelho entrar como se fosse nosso, e o instrumento mede o reflexo.
-    """
+    """O casamento do nome do uinput é EXATO, e é por causa do Steam Input."""
     _forjar_no_de_uinput(tmp_path, evento="event10", nome=INS.XBOX360_NAME)
     _forjar_no_de_uinput(tmp_path, evento="event21", nome="Microsoft X-Box 360 pad 0")
     _forjar_no_de_uinput(tmp_path, evento="event23", nome="Microsoft X-Box 360 pad 1")
@@ -276,13 +235,7 @@ def test_o_espelho_xbox_do_steam_nao_e_o_nosso_vpad(tmp_path: Path) -> None:
 
 
 def test_o_no_de_uinput_nao_inventa_um_device_hid_pai(tmp_path: Path) -> None:
-    """`/sys/devices/virtual/input/inputN` tem um pai chamado `input` — e ali
-    não há device HID nenhum.
-
-    MORDIDA 3: sem a exigência de `HID_ID` no `uevent` do candidato, a subida
-    de dois níveis devolve `/sys/devices/virtual`, e o instrumento passa a
-    acreditar no `uevent` de um diretório que não descreve aparelho algum.
-    """
+    """`/sys/devices/virtual/input/inputN` tem um pai chamado `input` — e ali"""
     _forjar_no_de_uinput(
         tmp_path,
         evento="event10",
@@ -321,11 +274,6 @@ def test_os_tres_nos_do_mesmo_vpad_entram_todos(tmp_path: Path) -> None:
     achados = INS.vpads_do_sysfs(raiz=str(tmp_path / "class" / "input"))
 
     assert sorted(n.papel for n in achados) == ["gamepad", "movimento", "touchpad"]
-
-
-# ---------------------------------------------------------------------------
-# As duas réguas do alvo
-# ---------------------------------------------------------------------------
 
 
 def _vpad_do_produto(**campos: Any) -> Any:
@@ -375,13 +323,7 @@ def test_as_duas_reguas_concordando_ficam_registradas(tmp_path: Path) -> None:
 
 
 def test_ino_diferente_do_publicado_vira_nao_sondado(tmp_path: Path) -> None:
-    """O produto publicou um inode e o `stat` de agora lê outro: o nó foi
-    renumerado entre uma leitura e a outra.
-
-    MORDIDA: acreditar no bloco publicado sem reconferir faz este alvo sair
-    `sondado`, e o instrumento passa a procurar em `/proc` por um inode que
-    já é de outro aparelho — a renumeração é exatamente o que o degrau proíbe.
-    """
+    """O produto publicou um inode e o `stat` de agora lê outro: o nó foi"""
     no = tmp_path / "event22"
     no.write_text("", encoding="utf-8")
     vpad = _vpad_do_produto(evdev=str(no), ino=no.stat().st_ino + 4096)
@@ -394,9 +336,7 @@ def test_ino_diferente_do_publicado_vira_nao_sondado(tmp_path: Path) -> None:
 
 
 def test_no_que_so_a_regua_do_produto_enxerga_nao_e_afirmado(tmp_path: Path) -> None:
-    """O produto publica um caminho que a varredura de `/sys` não reconhece
-    como nosso. Duas réguas discordando sobre a EXISTÊNCIA do nó não viram
-    veredito — viram aviso e um alvo marcado `NÃO SONDADO`."""
+    """O produto publica um caminho que a varredura de `/sys` não reconhece"""
     no = tmp_path / "event42"
     no.write_text("", encoding="utf-8")
     vpad = _vpad_do_produto(evdev=str(no), ino=no.stat().st_ino)
@@ -408,17 +348,7 @@ def test_no_que_so_a_regua_do_produto_enxerga_nao_e_afirmado(tmp_path: Path) -> 
 
 
 def test_campo_ausente_e_campo_none_nao_sao_a_mesma_coisa() -> None:
-    """Daemon VELHO e daemon que não resolveu o nó chegam diferentes.
-
-    O `install` editable desta casa faz o daemon vivo ser mais velho que o
-    código o tempo todo — a cura só vale no próximo start. Se "o campo não
-    existe" e "o campo é None" saíssem iguais, o instrumento diria "o produto
-    não sabe onde está o nó" sobre um produto que sabe e ainda não foi
-    reiniciado.
-
-    MORDIDA: trocar `c not in bloco` por `bloco.get(c) is None` funde os dois
-    silêncios e este teste reprova nas duas metades.
-    """
+    """Daemon VELHO e daemon que não resolveu o nó chegam diferentes."""
     velho = {"player": 1, "vpad_uniq": UNIQ_DO_VPAD, "vpad_nome": "x"}
     novo_sem_resolver = {
         "player": 2,
@@ -442,10 +372,7 @@ def test_campo_ausente_e_campo_none_nao_sao_a_mesma_coisa() -> None:
 
 
 def test_game_open_viaja_e_nao_e_evidencia_de_jogo() -> None:
-    """`game_open` sai do payload como está — e o veto da NUMA-02 continua
-    valendo: sessão uhid aberta é `alguém segura este nó`, nunca `o jogo
-    recebeu`. Quem responde pelo degrau é o censo de `/proc`, não este campo.
-    """
+    """`game_open` sai do payload como está — e o veto da NUMA-02 continua"""
     lidos = INS.vpads_do_produto(
         {"rumble_ff": {"per_vpad": [
             {"player": 1, "evdev": None, "hidraw": None, "ino": None,
@@ -454,11 +381,6 @@ def test_game_open_viaja_e_nao_e_evidencia_de_jogo() -> None:
     )
     assert lidos[0].game_open is True
     assert lidos[0].declara_o_no is False
-
-
-# ---------------------------------------------------------------------------
-# O transporte: duas rotas, e discordância vira NÃO SONDADO
-# ---------------------------------------------------------------------------
 
 
 def _aparelho(transporte: str) -> Any:
@@ -486,16 +408,7 @@ def _aparelho(transporte: str) -> Any:
 def test_transporte_sai_das_duas_rotas(
     tmp_path: Path, bustype: str, rota1: str, esperado: str
 ) -> None:
-    """`HID_ID` (rota 1) e `id/bustype` do nó (rota 2) têm de concordar.
-
-    O `ps_allocate_input_dev` copia o `bustype` do `hdev` para o `input_dev`,
-    então elas concordam sempre — a não ser que uma delas esteja olhando para
-    outro aparelho, que é justamente o que se quer saber ANTES de escrever
-    `cabo` ou `rádio` numa célula do mapa.
-
-    MORDIDA: devolver `rota1` sem conferir a rota 2 faz os dois casos de
-    discordância virarem afirmação, e as duas últimas linhas reprovam.
-    """
+    """`HID_ID` (rota 1) e `id/bustype` do nó (rota 2) têm de concordar."""
     raiz = tmp_path / "class" / "input"
     _escrever(raiz / "event2" / "device" / "id" / "bustype", bustype + "\n")
 
@@ -532,11 +445,6 @@ def test_topologia_de_sysfs_nao_transforma_radio_em_cabo(tmp_path: Path) -> None
     assert veredito == INS.RADIO
 
 
-# ---------------------------------------------------------------------------
-# O censo: por inode, sem abrir nada
-# ---------------------------------------------------------------------------
-
-
 def test_o_censo_casa_por_inode_e_nao_por_caminho(tmp_path: Path) -> None:
     """O fd aponta para UM caminho e o alvo é OUTRO — o mesmo inode.
 
@@ -562,11 +470,7 @@ def test_o_censo_casa_por_inode_e_nao_por_caminho(tmp_path: Path) -> None:
 
 
 def test_inode_igual_em_outro_sistema_de_arquivos_nao_casa(tmp_path: Path) -> None:
-    """Número de inode só é único DENTRO de um sistema de arquivos.
-
-    MORDIDA 5: casar só por `st_ino` faz este alvo — mesmo inode, `st_dev`
-    diferente — ser dado como aberto, e o falso positivo sai convincente.
-    """
+    """Número de inode só é único DENTRO de um sistema de arquivos."""
     no = tmp_path / "event22"
     no.write_text("", encoding="utf-8")
     st = no.stat()
@@ -587,17 +491,7 @@ def test_inode_igual_em_outro_sistema_de_arquivos_nao_casa(tmp_path: Path) -> No
 
 
 def test_o_censo_nao_abre_o_no(tmp_path: Path) -> None:
-    """`_chave` faz `os.stat`, e `os.stat` NÃO abre o arquivo.
-
-    Não é preciosismo: abrir o `/dev/hidraw` do vpad dispara `UHID_OPEN` e
-    arma o modo jogo, e fechá-lo por último deixa o controle vibrando, porque
-    o `_silence_rumble()` não roda. Um instrumento que abrisse para medir
-    estragaria a medição que está tentando fazer.
-
-    MORDIDA 6: trocar `os.stat` por `open()` prende a thread para sempre num
-    FIFO sem escritor — ela não termina, e o `assert` reprova. A thread é
-    `daemon` de propósito: mesmo presa, ela não segura o fim do processo.
-    """
+    """`_chave` faz `os.stat`, e `os.stat` NÃO abre o arquivo."""
     fifo = tmp_path / "cano"
     os.mkfifo(fifo)
     resultado: list[Any] = []
@@ -648,24 +542,10 @@ def test_processo_que_nao_se_deixa_ler_entra_na_lista_de_cegos(
     assert censo.fechou_sobre([1234]) is True
 
 
-# ---------------------------------------------------------------------------
-# A âncora do jogo
-# ---------------------------------------------------------------------------
-
-
 def test_processo_que_so_menciona_exe_nao_entra_na_arvore(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O caso REAL, medido em 20/08/2026 sem nenhum jogo aberto.
-
-    `arvore_do_jogo(r"\\.exe|Shipping")` devolveu o `earlyoom` — a palavra
-    `.exe` mora na lista de `--avoid` dele — e o binário de outro programa
-    desta máquina, cujo nome termina em `.exe`. Sem a âncora, o instrumento
-    afirmaria "a árvore do jogo existe e não segura nada" sobre um jogo que
-    não estava aberto.
-
-    MORDIDA 7: arrancar a peneira do `SteamAppId` faz os dois entrarem.
-    """
+    """O caso REAL, medido em 20/08/2026 sem nenhum jogo aberto."""
     proc = tmp_path / "proc"
     _forjar_processo(proc, 1017, cmdline="/usr/bin/earlyoom --avoid jogo.exe")
     _forjar_processo(proc, 3087833, cmdline="/opt/coisa/ferramenta.exe")
@@ -683,13 +563,7 @@ def test_processo_que_so_menciona_exe_nao_entra_na_arvore(
 def test_sem_ancora_o_falso_positivo_volta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A escape hatch existe e não esconde o que faz.
-
-    Um jogo que não veio da Steam não carrega `SteamAppId`, e para ele
-    `--sem-ancora` é a única saída. O preço é este: tudo o que casar pelo
-    cmdline volta a entrar — e o relatório avisa em voz alta quando a bandeira
-    está ligada.
-    """
+    """A escape hatch existe e não esconde o que faz."""
     proc = tmp_path / "proc"
     _forjar_processo(proc, 1017, cmdline="/usr/bin/earlyoom --avoid jogo.exe")
     monkeypatch.setattr(INS, "arvore_do_jogo", lambda _p: [1017])
@@ -698,11 +572,6 @@ def test_sem_ancora_o_falso_positivo_volta(
 
     assert dentro == [1017]
     assert fora == []
-
-
-# ---------------------------------------------------------------------------
-# A decisão: os cinco vereditos
-# ---------------------------------------------------------------------------
 
 
 def _alvo(classe: str, chave: tuple[int, int] = (1, 1)) -> Any:
@@ -732,12 +601,7 @@ def test_sem_alvo_nao_ha_o_que_procurar() -> None:
 
 
 def test_arvore_so_de_recusados_diz_nao_sondado() -> None:
-    """Recusados pela âncora não são `NENHUM` — são a ausência de sujeito.
-
-    MORDIDA 7 (outro lado): sem a âncora, `recusados` chega vazio e `arvore`
-    chega com os dois falsos positivos; o veredito vira `NENHUM`, que é uma
-    afirmação sobre um jogo que não está aberto.
-    """
+    """Recusados pela âncora não são `NENHUM` — são a ausência de sujeito."""
     veredito, motivo = INS.decidir([_alvo("nosso")], _censo([]), [], [1017, 3087833])
     assert veredito == INS.V_NAO_SONDADO
     assert "SteamAppId" in motivo
@@ -750,12 +614,7 @@ def test_sem_jogo_nenhum_o_veredito_e_nao_sondado() -> None:
 
 
 def test_nenhum_exige_o_censo_da_arvore_fechado() -> None:
-    """`NENHUM` é afirmação positiva, e só sai com o censo da árvore fechado.
-
-    MORDIDA 8: fazer `fechou_sobre` devolver `True` sempre faz o primeiro caso
-    virar `NENHUM` — o instrumento afirmando sobre um processo cujo `fd/` ele
-    não conseguiu ler.
-    """
+    """`NENHUM` é afirmação positiva, e só sai com o censo da árvore fechado."""
     cego = INS.decidir([_alvo("nosso")], _censo([], ilegiveis={5000}), [5000], [])
     assert cego[0] == INS.V_NAO_SONDADO
     assert "ÁRVORE DO JOGO" in cego[1]
@@ -765,12 +624,7 @@ def test_nenhum_exige_o_censo_da_arvore_fechado() -> None:
 
 
 def test_ilegivel_fora_da_arvore_nao_impede_o_nenhum() -> None:
-    """A nona mordida, invertida: exigir o censo do MUNDO nunca fecharia.
-
-    `(sd-pam)` e `ssh-agent` zeram o `PR_SET_DUMPABLE` e não se deixam ler em
-    máquina nenhuma. Se `NENHUM` dependesse deles, ele jamais sairia — e um
-    veredito que nunca sai é pior que não existir, porque parece prudência.
-    """
+    """A nona mordida, invertida: exigir o censo do MUNDO nunca fecharia."""
     veredito, _motivo = INS.decidir(
         [_alvo("nosso")], _censo([], ilegiveis={1480, 3692}), [5000], []
     )
@@ -778,11 +632,7 @@ def test_ilegivel_fora_da_arvore_nao_impede_o_nenhum() -> None:
 
 
 def test_achar_vale_mesmo_com_o_censo_aberto() -> None:
-    """Achar é observação positiva; não achar, com processo cego, não é.
-
-    MORDIDA: conferir o censo ANTES dos ramos de "achou" transforma uma posse
-    observada em `NÃO SONDADO`, e o instrumento passa a esconder o que viu.
-    """
+    """Achar é observação positiva; não achar, com processo cego, não é."""
     veredito, _motivo = INS.decidir(
         [_alvo("nosso")],
         _censo([(5000, "nosso")], ilegiveis={5001}),
@@ -793,11 +643,7 @@ def test_achar_vale_mesmo_com_o_censo_aberto() -> None:
 
 
 def test_segura_o_fisico_e_segura_os_dois_sao_vereditos_diferentes() -> None:
-    """Os dois casos que o `quem_o_jogo_abre.py` não separava.
-
-    `SEGURA O FÍSICO` quer dizer que o jogo passou por fora do produto;
-    `SEGURA OS DOIS` é o sintoma do controle em dobro, que tem outra cura.
-    """
+    """Os dois casos que o `quem_o_jogo_abre.py` não separava."""
     so_fisico = INS.decidir(
         [_alvo("nosso"), _alvo("físico", (1, 2))],
         _censo([(5000, "físico")]),
@@ -816,35 +662,20 @@ def test_segura_o_fisico_e_segura_os_dois_sao_vereditos_diferentes() -> None:
 
 
 def test_posse_de_quem_nao_e_o_jogo_nao_fecha_o_degrau() -> None:
-    """O veto da NUMA-02, em forma de teste.
-
-    O cliente Steam abre o nó do vpad, e sessão aberta NÃO é evidência de
-    jogo — foi o mecanismo do incidente das 14:42. Uma posse fora da árvore do
-    jogo aparece na tabela e não muda o veredito.
-    """
+    """O veto da NUMA-02, em forma de teste."""
     veredito, _motivo = INS.decidir(
         [_alvo("nosso")], _censo([(2113, "nosso")]), [5000], []
     )
     assert veredito == INS.V_NENHUM
 
 
-# ---------------------------------------------------------------------------
-# As duas cópias do carimbo
-# ---------------------------------------------------------------------------
-
-
 def test_a_copia_do_carimbo_em_scripts_e_a_do_produto_sao_a_mesma_palavra() -> None:
-    """`src/` não pode importar de `scripts/`, então a palavra está escrita em
-    dois lugares. Duas cópias da mesma régua é como uma delas envelhece
-    calada; este teste é o alarme, e o instrumento imprime o mesmo aviso em
-    tempo de execução.
-    """
+    """`src/` não pode importar de `scripts/`, então a palavra está escrita em"""
     assert INS.VPAD_HID_PHYS == INS.PHYS_DO_PRODUTO
 
 
 def test_os_cinco_vereditos_sao_cinco_e_distintos() -> None:
-    """Um veredito que colidisse com outro apagaria a diferença entre `o jogo
-    não abriu nada` e `eu não consegui olhar` — que é a distinção inteira."""
+    """Um veredito que colidisse com outro apagaria a diferença entre `o jogo"""
     vereditos = {
         INS.V_NOSSO,
         INS.V_FISICO,

@@ -43,7 +43,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: A faixa sintética da casa — há dois portões de anonimato nesta árvore.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 PCI = "0000:00:14.0"
@@ -57,12 +56,7 @@ def _pacote() -> Any:
 
 @pytest.fixture
 def bancada(monkeypatch: Any) -> Any:
-    """A mesa de rádio DECLARADA — nunca a da máquina que roda o teste.
-
-    Devolve um `def declarar(nomes)`: `None` é o BlueZ que NÃO RESPONDEU (e ele
-    é diferente de uma lista vazia); uma lista de nomes vira um adaptador por
-    nome, cada um numa porta e com o nome que ela deu a ele.
-    """
+    """A mesa de rádio DECLARADA — nunca a da máquina que roda o teste."""
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -85,7 +79,6 @@ def bancada(monkeypatch: Any) -> Any:
                              lugar=lugar)
             for i, lugar in enumerate(lugares))
         monkeypatch.setattr(p, "_ler_o_bluez", lambda: (adaptadores, ()))
-        # O NOME É DO ADAPTADOR, pelo endereço (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO).
         maquina = MaquinaConfig(
             adaptadores={f"aabbcc0000{i + 10:02d}": {"nome": nome} for i, nome in enumerate(nomes)})
         monkeypatch.setattr(p, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
@@ -120,9 +113,6 @@ def _secao(*, com_radio: bool) -> dict[str, Any]:
     return _pacote().campos_do_radio(_ctx(com_radio=com_radio))
 
 
-# ---------------------------------------------------------------------------
-# NINGUÉM RESPONDEU — a sala não afirma nada
-# ---------------------------------------------------------------------------
 def test_sem_resposta_a_sala_nao_diz_que_nao_ha(bancada: Any) -> None:
     """O BlueZ mudo e o daemon sem `radio_ar` não são «nenhum adaptador»."""
     bancada(None)
@@ -137,9 +127,6 @@ def test_sem_resposta_a_sala_nao_diz_que_nao_ha(bancada: Any) -> None:
         f"{campos['conta-de-adaptadores']!r}")
 
 
-# ---------------------------------------------------------------------------
-# O BLUEZ RESPONDEU — zero é zero, e três são três
-# ---------------------------------------------------------------------------
 def test_o_bluez_que_respondeu_zero_diz_que_nao_ha(bancada: Any) -> None:
     bancada([])
     campos = _secao(com_radio=False)
@@ -148,11 +135,7 @@ def test_o_bluez_que_respondeu_zero_diz_que_nao_ha(bancada: Any) -> None:
 
 
 def test_um_cartao_por_adaptador_mesmo_com_a_mesa_no_cabo(bancada: Any) -> None:
-    """TRÊS adaptadores e ninguém no rádio ainda são TRÊS cartões, nomeados.
-
-    É a pergunta que a seção existe para responder — *"onde cabe mais um?"* —,
-    e com um cartão só sobre três adaptadores ela responde por um terço da mesa.
-    """
+    """TRÊS adaptadores e ninguém no rádio ainda são TRÊS cartões, nomeados."""
     bancada(["Sala", "Extra", "Terceiro"])
     sala = _secao(com_radio=False)["radio-sala"]
     assert len(re.findall(r'<div class="lugar[ "]', sala)) == 3, sala[:600]

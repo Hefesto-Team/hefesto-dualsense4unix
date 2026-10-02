@@ -1,8 +1,4 @@
-"""Schema de perfil v1 com pydantic.
-
-Ver `docs/adr/005-profile-schema-v1.md` para a justificativa semântica
-(AND entre campos, OR dentro de listas, `MatchAny` sentinel V2-8).
-"""
+"""Schema de perfil v1 com pydantic."""
 from __future__ import annotations
 
 import os
@@ -21,96 +17,14 @@ from pydantic import (
 
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
-#: A máscara do gamepad virtual, na forma FECHADA que o esquema de perfil
-#: aceita. É a única lista de máscaras digitada nesta casa, e ela é digitada
-#: porque tem de ser: `Literal` é resolvido pelo verificador de tipos, e um
-#: `frozenset` calculado do `uinput_gamepad.FLAVORS` não vira anotação.
-#:
-#: Por ser digitada, ela DIVERGE calada — e já divergiu: de 07/09/2026 até
-#: esta linha o esquema só conhecia `dualsense` e `xbox`, e um perfil que
-#: pedisse a máscara nova era recusado pelo pydantic com a máscara já viva no
-#: catálogo. Quem acrescentar um sabor ao `FLAVORS` acrescenta AQUI, e o portão
-#: `tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py` compara os
-#: `get_args` deste alias com o `external_mask.mascaras_validas()` — nos DOIS
-#: sentidos, para que sobrar aqui também reprove.
 MascaraDeGamepad = Literal["dualsense", "xbox", "nintendo"]
 
-#: Teto do multiplicador de rumble da política "custom". Acima de 1.0 AMPLIFICA o
-#: que o jogo pediu — é a razão de existir da faixa (BUG-RUMBLE-CUSTOM-MULT-CAP-01).
-#:
-#: HARM-19: mora aqui, num dono só, porque a faixa já valeu 2.0 no esquema, 1.0 no
-#: handler `rumble.policy_custom` e 200% no slider da GUI ao mesmo tempo — de 101%
-#: em diante a usuária levava um erro de validação que a aba reportava como
-#: "daemon offline?". Quem mudar o teto muda AQUI e os três seguem juntos.
-#:
-#: NOTA DATADA — 11/08/2026: o teto foi a 1.0 de manhã (nota SATURA-01) e
-#: DECISÃO DELA o devolveu a 2.0 no mesmo dia, com o preço na mesa. As duas
-#: metades ficam registradas porque a medição de baixo continua verdadeira; o
-#: que mudou foi o que se aceita pagar por ela.
-#:
-#: **O que ela decidiu:** o deslizador "Intensidade global" vai até 200, e este
 #: teto o acompanha. O tooltip do deslizador já prometia *"acima de 100 sai mais
-#: forte"* desde sempre, contra um teto de 100 que impedia a usuária de chegar
-#: lá. A amplificação está MEDIDA no aparelho (11/08): um report com
-#: ``common[2]=200``, daemon parado, fez o motor obedecer, e ela confirmou de
-#: olho.
-#:
-#: **ESTE TETO NÃO É O DO BOTÃO "Máximo", e a diferença é deliberada.** O botão
-#: vale **1,5** (`daemon.subsystems.rumble.RUMBLE_POLICY_MULT`, que é o dono da
-#: escada); este 2.0 é o fim do curso do deslizador. A divisão de papéis:
-#:
-#: * os quatro botões são **presets seguros** — quem só quer clicar não pode
-#:   cair numa armadilha;
-#: * o deslizador é o **ajuste livre** de quem quer ir além e aceita o preço,
-#:   que está escrito no tooltip.
-#:
-#: **O preço, medido** (é a nota SATURA-01, de 11/08/2026, e ela continua
-#: valendo — foi por causa dela que o BOTÃO parou em 1,5). Rodando a conta exata
-#: do produto — `max(0, min(255, round(bruto * mult)))` — sobre os 256 valores
-#: que o jogo pode pedir:
-#:
-#:     mult 1.0 → nenhum valor satura
-#:     mult 1.5 → satura a partir de 170: 33% da faixa vira 255
-#:     mult 2.0 → satura a partir de 128: METADE da faixa vira 255
-#:
-#: A 2.0 o jogo manda 128, 180 e 255 e o controle recebe 255 nas três — naquela
-#: metade a variação da vibração some, e o que se sente é força CONSTANTE, não
-#: força maior. Foi o que ela relatou em 10/08: *"vibra muito mais do que o
-#: normal a ponto de não parar"*. Amplificar sem nuance não é amplificar: é
-#: achatar.
-#:
-#: **O que continua por fazer:** amplificar SEM achatar exige comprimir (uma
-#: curva) em vez de cortar. Quem for fazer isso mexe AQUI e na tabela da escada,
-#: com a medição na mão.
-#:
-#: HARM-19 continua valendo: o teto tem um dono só. O handler
-#: `rumble.policy_custom`, o `RumbleDraft.custom_mult` da GUI e o slider do
-#: glade derivam deste número — e há portão (`test_rumble_mult_um_dono.py`) que
-#: reprova quem escrever o número à mão de novo.
 RUMBLE_CUSTOM_MULT_MAX = 2.0
 
 
 def _casa_sem_caixa(valor: object, aceitos: list[str]) -> bool:
-    """Pertence-à-lista SEM diferenciar maiúsculas de minúsculas.
-
-    R-12 (auditoria 23/07), a metade que faltava. O editor simples aplicava um
-    ``.lower()`` no que a usuária digitava, e o matcher comparava com o dado
-    CRU do sistema — ``Cyberpunk2077.exe`` (basename de ``/proc/PID/exe``)
-    nunca casava com o ``cyberpunk2077.exe`` gravado. O agente do R-12 tirou o
-    ``.lower()`` (parar de corromper o dado guardado é o dano garantido); a
-    cura completa é esta: **guardar como veio, comparar sem caixa**.
-
-    Vale para os dois lados porque nenhum dos dois é confiável:
-
-    - ``wm_class`` chega do X/XWayland com a caixa que o toolkit escolheu
-      (``Steam`` vs. ``steam``, ``Firefox`` vs. ``firefox``), e a mesma janela
-      muda de grafia entre backends de detecção;
-    - o basename do executável é o que o jogo enviou (``Sackboy.exe``), e
-      ninguém digita isso à mão com a caixa certa.
-
-    Alvo vazio nunca casa: janela sem ``wm_class``/sem ``exe_basename`` é
-    ausência de evidência, não igualdade com uma entrada vazia do perfil.
-    """
+    """Pertence-à-lista SEM diferenciar maiúsculas de minúsculas."""
     alvo = str(valor or "").casefold()
     if not alvo:
         return False
@@ -145,14 +59,6 @@ class MatchCriteria(BaseModel):
         if self.window_title_regex:
             pattern = self.window_title_regex
             title = window_info.get("wm_name", "") or ""
-            # R-12: `re.IGNORECASE` pela MESMA razão das listas — título de
-            # janela é texto de marketing ("Sackboy: A Big Adventure",
-            # "SACKBOY"), e um regex que só casa com a grafia exata é uma
-            # armadilha silenciosa (o perfil simplesmente nunca ativa, sem erro
-            # nenhum). Deixar só as listas tolerantes seria pior que os dois
-            # extremos: a mesma tela do editor teria dois campos com regras de
-            # caixa diferentes. Quem PRECISA de caixa exata continua tendo
-            # saída, com o grupo local `(?-i:...)` do próprio `re`.
             conditions.append(bool(re.search(pattern, title, re.IGNORECASE)))
         if self.process_name:
             conditions.append(
@@ -175,28 +81,7 @@ class MatchAny(BaseModel):
 
 
 class MatchManual(BaseModel):
-    """Sentinel explícito de perfil SÓ-MANUAL: nunca casa com janela nenhuma.
-
-    R-12 item 3 (débito da auditoria 23/07). Existia um jeito de escrever "este
-    perfil só entra quando eu mandar": um ``MatchCriteria`` com os três campos
-    vazios, que ``matches()`` reprova por falta de condição. O problema é que
-    esse estado é INDISTINGUÍVEL do acidente — foi exatamente assim que o
-    preset ``coop_local`` de fábrica saiu inalcançável e ninguém percebeu, e é
-    o que a GUI teve de adivinhar para escrever "Só manual (nunca ativa
-    sozinho)" na coluna "Quando usar".
-
-    Com o sentinel, intenção e acidente param de ter a mesma forma: quem
-    declara ``{"type": "manual"}`` está dizendo isso, e o
-    ``check_perfis_inalcancaveis`` do ``doctor.sh`` deixa de reclamar dele (e
-    continua reclamando do criteria vazio, que agora é só o acidente).
-
-    Retrocompatível: o tipo é ADITIVO na união discriminada — perfis já
-    gravados com ``any``/``criteria`` validam sem migração, e nada no código
-    escreve ``manual`` sozinho (só o editor avançado com os três campos
-    vazios e o ``profile create --manual``). ATENÇÃO downgrade, mesma nota do
-    ``auto_player_colors``: um perfil salvo com este tipo é rejeitado por
-    binário antigo, que não conhece o discriminador.
-    """
+    """Sentinel explícito de perfil SÓ-MANUAL: nunca casa com janela nenhuma."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -242,14 +127,7 @@ class TriggerConfig(BaseModel):
     def _validate_params(
         cls, value: list[int] | list[list[int]]
     ) -> list[int] | list[list[int]]:
-        """Aceita dois formatos canônicos, rejeita mistura.
-
-        - Simples: `list[int]` — todos os elementos inteiros.
-        - Aninhado: `list[list[int]]` — todos os elementos são sublistas de int.
-
-        Mistura (`[[1, 2], 3]`) é erro semântico: sinaliza JSON corrompido
-        ou migração pela metade. Schema rejeita cedo, com mensagem clara.
-        """
+        """Aceita dois formatos canônicos, rejeita mistura."""
         if not value:
             return value
         first = value[0]
@@ -281,42 +159,7 @@ class TriggerConfig(BaseModel):
         return bool(self.params) and isinstance(self.params[0], list)
 
 
-#: O modo com que os DOIS gatilhos NASCEM, e os parâmetros dele — NASCE-LIGADO-01
-#: (20/09/2026). Decisão dela, 16/09/2026: *"os gatilhos deveriam vir como
 #: rigidos e os controles com tudo ativado por default"*  # (noqa-acento) dela
-#: Reforçada em 17/09: *"os jogos e perfis tem que iniciar com todas as
-#: features ativadas por default."*
-#:
-#: **POR QUE AQUI, E NÃO NUMA DAS OUTRAS DUAS CAMADAS.** Um valor pode nascer no
-#: default do esquema, na ADOÇÃO do controle (o aparelho recebe o byte na
-#: chegada) ou na TELA (o botão acende o herdado). Medido em 20/09/2026, para
-#: este campo só a primeira funciona:
-#:
-#: * na ADOÇÃO não sobrevive — ``manager.apply_profile`` manda
-#:   ``build_from_name(profile.triggers.left.mode, …)`` em TODA ativação, e com o
-#:   nascimento em ``Off`` a primeira troca de janela desfaz o que a adoção
-#:   escreveu. É a diferença para a rota do som, cujo campo de perfil nasce
-#:   ``None`` e por isso não pisa em nada;
-#: * na TELA não muda o aparelho: o gatilho continuaria solto na mão dela.
-#:
-#: **O QUE MUDA NO DISCO, e é o alcance inteiro.** ``save_profile`` grava a seção
-#: ``triggers`` DENSA em todo perfil salvo, então perfil que ela configurou
-#: carrega a escolha dela no arquivo e **não muda**. Quem herda este nascimento é
-#: exatamente o perfil *"sem config alterada"* da frase dela: os perfis de jogo
-#: enxutos (``loader.CHAVES_DO_PERFIL_DE_JOGO`` — nome, ``match`` e prioridade) e
-#: todo perfil novo.
-#:
-#: **OS PARÂMETROS SÃO DIGITADOS, e o portão é que os mantém honestos.** O dono
-#: dos valores de fábrica do ``Rigid`` é a tela — ``app/actions/trigger_specs``,
-#: ``_pos(5)`` e ``_force(0, 255, 200)`` —, e ``profiles/`` não importa ``app/``
-#: (nenhum módulo de ``profiles/`` ou ``core/`` o faz, e este é o mais baixo da
-#: pilha). Mesma saída do ``MascaraDeGamepad`` logo acima: digita-se aqui e
-#: ``tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py`` compara com
-#: o dono NOS DOIS SENTIDOS, para que divergir de lá também reprove.
-#:
-#: NÃO dá para deixar ``params`` vazio: ``core.trigger_effects.rigid`` exige
-#: ``position`` e ``force`` sem default, e ``TriggerConfig(mode="Rigid")`` só
-#: estouraria mais tarde, no ``apply()``, longe daqui.
 MODO_DE_NASCIMENTO_DO_GATILHO = "Rigid"
 PARAMS_DE_NASCIMENTO_DO_GATILHO: list[int] = [5, 200]
 
@@ -342,60 +185,12 @@ class LedsConfig(BaseModel):
     lightbar: tuple[int, int, int] = (0, 0, 0)
     player_leds: list[bool] = Field(default_factory=lambda: [False] * 5)
     lightbar_brightness: float = Field(default=1.0, ge=0.0, le=1.0)
-    # COR-03 (sprint cores-e-led-automaticos): cores automáticas por controle
     # — cada DualSense acende a cor do SEU slot (paleta PS5) + o LED do número
-    # do controle (D7). Default True = o comportamento pedido pela mantenedora
-    # nasce ligado; False = comportamento broadcast histórico intacto (D5).
-    # Perfil antigo sem o campo valida com o default (aditivo, sem migração).
-    # SÓ tem efeito na seção GLOBAL `profile.leds`: dentro de um override
-    # por-controle (`ControllerOverrides.leds`) o campo é aceito pelo schema
-    # (reuso do modelo) mas ignorado — o toggle é do perfil, não do controle
-    # (`_controllers_to_specs` não o lê, então ele nunca densifica um
-    # override parcial). ATENÇÃO downgrade: perfil salvo com este campo fica
-    # inválido em binário antigo (`extra="forbid"`) — coberto nas notas de
-    # release (COR-08).
     auto_player_colors: bool = True
-    # A PROCEDÊNCIA DA COR — decisão de produto de 08/09/2026: *"o override de
-    # cor por MAC ganha PROCEDÊNCIA: para qual número ele foi escolhido. Quando
-    # o número daquele aparelho muda, a cor gravada é FÓSSIL e sai sozinha,
-    # caindo de volta na paleta automática."*
-    #
-    # O DEFEITO QUE ELE FECHA, medido na mesa dela: o override é por MAC e
-    # CONGELADO; o número do jogador é de SESSÃO e muda com a ordem de conexão.
-    # Os ranks 2 e 4 dela guardavam as cores dos slots 1 e 2 — o número de
     # outro dia fossilizado no arquivo — e dois DualSense acendiam o MESMO
     # `#0000FF`. Sem este campo o resolvedor tinha de ADIVINHAR qual repetição
-    # era fóssil e qual era o "pinta os quatro de verde" dela, e o palpite
-    # matou o broadcast (`core/led_control.py::cores_sem_colisao`).
-    #
-    # SÓ TEM SENTIDO DENTRO DE UM OVERRIDE POR CONTROLE (`ControllerOverrides.
-    # leds`): na seção GLOBAL do perfil não há "qual número", a cor é de todos.
-    # É aceito pelo schema nos dois lugares (reuso do modelo) e ignorado no
-    # global, exatamente como o `auto_player_colors` acima é ignorado aqui.
-    #
-    # `None` = sem procedência gravada. É o valor de TODO perfil escrito antes
-    # deste dia, e o resolvedor o trata como `LEGADO`: volta a provar fóssil
-    # pela forma (a cor é a do número de OUTRO da mesa), que é o melhor que se
-    # pode fazer sem o dado. Aditivo, sem migração; ATENÇÃO downgrade, mesma
-    # nota do `auto_player_colors` (`extra="forbid"`).
     lightbar_para_o_numero: int | None = None
-    # O BRILHO DAS CINCO LUZES DE NÚMERO — decisão dela de 24/09/2026
-    # (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco, Médio e Forte na
     # linha LEDs, nascendo no Fraco"*. Quem enxerga pouco não tinha como
-    # aumentar, e quem se incomoda com luz não tinha como escolher.
-    #
-    # VALE NOS DOIS LUGARES, ao contrário dos dois campos acima: na seção
-    # GLOBAL é o brilho de todos os controles («Todos»), e dentro de um
-    # override por controle (`ControllerOverrides.leds`) é o daquele controle,
-    # que é o que a linha LEDs da aba Iluminação grava. O override só vale
-    # quando foi ESCRITO (`model_fields_set`), como os outros campos dele.
-    #
-    # A PALAVRA, e não o degrau do firmware: o `common[42]` é invertido (0 é o
-    # forte), e o disco dela diz o que a tela diz. A tradução é de
-    # `core/led_control.degrau_do_brilho_das_luzes`. A palavra do meio vai sem
-    # acento porque é valor de máquina. Perfil antigo sem o campo valida com o Fraco, o
-    # brilho de antes da decisão — aditivo, sem migração; ATENÇÃO downgrade,
-    # mesma nota do `auto_player_colors` (`extra="forbid"`).
     player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # noqa-acento: chave ASCII
 
     @field_validator("lightbar")
@@ -417,19 +212,7 @@ class LedsConfig(BaseModel):
 
 
 def com_o_brilho_das_luzes_de(antes: LedsConfig | None, novos: LedsConfig) -> LedsConfig:
-    """`novos` com o brilho das luzes de número que o override `antes` guardava.
-
-    O-BRILHO-DAS-LUZES-DE-NUMERO-01, conferência de 25/09/2026. Quem escreve o
-    `player_led_brightness` de um controle é a pílula da linha LEDs; os outros
-    escritores da seção `leds` de um override — o «Salvar» do rodapé
-    (`DraftConfig.with_controller_leds`) e o Estilo de Jogo da aba Perfis —
-    trocam a seção INTEIRA, e o brilho que ela escolheu sumia em silêncio. Um
-    dono só para a regra, e cada escritor que troca a seção passa por aqui.
-
-    Só o que `antes` ESCREVEU volta (`model_fields_set`): um override que nunca
-    falou do brilho continua sem opinião, herdando o global. E o que `novos` já
-    escreveu vence — quem escreve o brilho de propósito não é desfeito.
-    """
+    """`novos` com o brilho das luzes de número que o override `antes` guardava."""
     campo = "player_led_brightness"
     if antes is None or campo not in antes.model_fields_set:
         return novos
@@ -439,22 +222,7 @@ def com_o_brilho_das_luzes_de(antes: LedsConfig | None, novos: LedsConfig) -> Le
 
 
 class RumbleConfig(BaseModel):
-    """Seção de rumble do perfil.
-
-    FEAT-RUMBLE-POLICY-PROFILE-01: além do ``passthrough`` (v1), o perfil pode
-    declarar a POLÍTICA de intensidade de rumble, aplicada na ativação em
-    paridade com a seção ``mode``:
-
-    - ``policy=None`` (default) — perfil SEM opinião: ativar não mexe na
-      política global do daemon; apenas reverte política que OUTRO perfil
-      tenha aplicado (ver ``Daemon.apply_profile_rumble_policy``).
-    - ``policy`` preenchida — aplicada via ``rumble_policy_applier`` injetado
-      no ``ProfileManager``, respeitando o lock manual de 30s.
-    - ``custom_mult`` — multiplicador 0.0-2.0; só faz sentido com
-      ``policy="custom"`` (validado abaixo).
-
-    Aditivo/retrocompatível: perfis v1 sem os campos continuam válidos.
-    """
+    """Seção de rumble do perfil."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -509,33 +277,17 @@ class ProfileMovimentoConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: Para onde o giroscópio vai. `nenhum` guarda o arranjo e desliga a mira —
-    #: é o que permite ela experimentar sem perder a calibração que ajustou.
-    #: O `mouse` ENTRA e vira o analógico direito — ver
-    #: `_o_cursor_fora_da_navegacao_e_o_analogico_direito`.
     destino: Literal["nenhum", "analogico_direito", "analogico_esquerdo", "mouse"] = (
         "nenhum"
     )
-    #: 1 a 12, a mesma faixa do cursor (`uinput_mouse.MOUSE_SPEED_MIN/MAX`) —
-    #: a faixa é a mesma NOÇÃO (o quanto um gesto anda), e uma segunda escala
-    #: faria a tela ter de explicar duas.
     sensibilidade: int = Field(default=6, ge=1, le=12)
     eixo_horizontal: Literal["yaw", "roll"] = "yaw"
     inverter_horizontal: bool = False
     inverter_vertical: bool = False
-    #: Graus/s. A deriva do giroscópio parado morre aqui; abaixo deste valor o
-    #: roteador não move nada.
     zona_morta_graus_s: float = Field(default=3.0, ge=0.0, le=60.0)
-    #: Graus/s que já valem deflexão cheia.
     teto_graus_s: float = Field(default=220.0, gt=0.0, le=2000.0)
-    #: Só para o cursor (a Navegação): pixels por grau girado.
     pixels_por_grau: float = Field(default=12.0, gt=0.0, le=200.0)
-    #: O botão que LIGA a mira enquanto está apertado. `None` = sempre ligada.
     gatilho: str | None = None
-    #: O TOQUE — NO-MODO-XBOX-TUDO-FUNCIONA-01, resposta dela de 28/09 (~16h50):
-    #: *os dois* arranjos, por perfil de jogo. `cursor` = o dedo move o cursor
-    #: (pelo Hefesto, com a `sensibilidade`); `zonas` = o toque aperta o
-    #: direcional, o L1 e o L2 (`roteador_de_movimento.botoes_das_zonas`), para
     #: quem não os alcança. `nenhum` = sem opinião: o touchpad é o do computador
     #: (TOUCHPAD-DO-SISTEMA-01). Vale onde há controle virtual, P1 a P4.
     toque: Literal["nenhum", "cursor", "zonas"] = "nenhum"
@@ -550,14 +302,7 @@ class ProfileMovimentoConfig(BaseModel):
     def _o_toque_e_a_inclinacao_sem_opiniao_nao_vao_ao_disco(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """Os dois campos de 28/09 só vão ao arquivo quando alguém os escreveu.
-
-        A mesma cura do ``rota``/``caminho``/``ponte``: com ``extra="forbid"`` um
-        hefesto ANTIGO recusa o perfil INTEIRO ao ver chave que não conhece, e o
-        ``load → save`` de uma mira de ontem não pode ganhar as duas chaves.
-        Pelo ``model_fields_set``, e não pelo valor: a peça que APAGOU o toque
-        (``nenhum`` por cima do ``zonas`` do perfil) tem opinião, e ela vai.
-        """
+        """Os dois campos de 28/09 só vão ao arquivo quando alguém os escreveu."""
         dados = handler(self)
         if isinstance(dados, dict):
             for novo in ("toque", "acelerometro"):
@@ -568,35 +313,12 @@ class ProfileMovimentoConfig(BaseModel):
     @field_validator("destino", mode="after")
     @classmethod
     def _o_cursor_fora_da_navegacao_e_o_analogico_direito(cls, value: str) -> str:
-        """O destino «mouse» é o analógico direito — A-MIRA-NA-NAVEGACAO-02.
-
-        Decisão por delegação dela, 24/09/2026: *a tela nunca afirma o que não
-        acontece*. O «mouse» só chega por JSON escrito à mão, e fora da
-        Navegação ele não movia nada: o mouse emulado e o controle virtual se
-        excluem (`gamepad.start_gamepad_emulation_desfecho` desliga o mouse ao
-        erguer o controle virtual), e o giro caía num `_mouse_device` que não
-        existe — com a dica do Giroscópio afirmando «move o cursor».
-
-        A LEITURA É EXATA NOS QUATRO MODOS, e é por isso que ela mora aqui e não
-        no motor. No Virtual e no Xbox o giro vai ao analógico direito, que é o
-        destino padrão do chip e o que a Mira faz em todo modo. Na Navegação
-        TODO destino ligado já é o cursor (`roteador.para_o_cursor`): o direito
-        e o «mouse» dão o mesmo arranjo. No Nativo a Mira não anda.
-
-        O `Literal` continua aceitando «mouse»: recusá-lo derrubaria o perfil
-        inteiro de quem o escreveu. Voltar atrás é apagar este validador — o
-        motor (`roteador.DESTINO_MOUSE`) e a dica (`dica_do_giro`) ainda sabem
-        o destino.
-        """
+        """O destino «mouse» é o analógico direito — A-MIRA-NA-NAVEGACAO-02."""
         return "analogico_direito" if value == "mouse" else value
 
     @model_validator(mode="after")
     def _o_teto_fica_acima_da_zona_morta(self) -> ProfileMovimentoConfig:
-        """Teto abaixo da zona morta é arranjo que nunca move nada.
-
-        Recusado no LOAD e não no tique: um arranjo impossível que só se revela
-        no meio do jogo é a forma de defeito que esta casa persegue.
-        """
+        """Teto abaixo da zona morta é arranjo que nunca move nada."""
         if self.teto_graus_s <= self.zona_morta_graus_s:
             raise ValueError(
                 f"teto_graus_s ({self.teto_graus_s}) tem de ser maior que "
@@ -607,14 +329,7 @@ class ProfileMovimentoConfig(BaseModel):
     @field_validator("gatilho")
     @classmethod
     def _o_gatilho_e_um_botao_que_o_jogo_conhece(cls, value: str | None) -> str | None:
-        """O gatilho sai do vocabulário do JOGO, e o PS não entra.
-
-        A lista é DERIVADA (`core/remapeamento_de_botao.REMAPEAVEIS`) e não
-        digitada — uma lista escrita aqui seria a segunda cópia do mesmo fato, e
-        a que ninguém lembraria de atualizar. O PS fica fora porque ele é a
-        saída de emergência dela: os cinco gestos da aba Navegação começam nele,
-        e é a mesma trava que o remapeamento já tem nos dois lados.
-        """
+        """O gatilho sai do vocabulário do JOGO, e o PS não entra."""
         if value is None:
             return None
         from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
@@ -628,13 +343,7 @@ class ProfileMovimentoConfig(BaseModel):
 
 
 class ProfileMouseConfig(BaseModel):
-    """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01).
-
-    Aditiva ao schema v1 (sem bump de versão): perfis sem a seção continuam
-    válidos e NÃO tocam no estado de emulação ao serem ativados. Ranges de
-    `speed`/`scroll_speed` espelham o contrato do daemon
-    (`Daemon.set_mouse_emulation`: 1-12 / 1-5).
-    """
+    """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -733,29 +442,9 @@ class ProfileMicConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     button_toggles_system: bool
-    #: Volume da captura, em por cento. `None` = o perfil não tem opinião e
-    #: ativá-lo não toca no volume do microfone; com número, ativar APLICA.
     volume: int | None = Field(default=None, ge=0, le=100)
-    #: Mudo do microfone, que NÃO é do perfil: ver o bloco acima. O mudo mora
-    #: no `maquina.json` (O-MUDO-E-DO-CONTROLE-01); o campo só deixa carregar o
-    #: arquivo que ainda o traga, e ativação nenhuma o aplica.
     muted: bool | None = None
-    #: **O GANHO DE ENTRADA, EM POR CENTO — 21/09/2026, ordem dela.** *"OS DOIS
-    #: SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."* Os dois
-    #: deslizantes da coluna do microfone são o `volume` (o ganho da FONTE no
-    #: PipeWire) e este, que é o ganho de captura da PLACA ALSA daquele
     #: controle — o `Headset Capture Volume` do DualSense. São eixos diferentes
-    #: do mesmo som, e confundi-los faria o produto escrever num e mostrar o
-    #: outro.
-    #:
-    #: `None` = o perfil não tem opinião e ativá-lo não toca no ganho. Com
-    #: número, ativar APLICA — pelo mesmo caminho e com a mesma trava manual do
-    #: `volume`, porque errar aqui também custa só um número que ela vê na tela.
-    #:
-    #: **NÃO HÁ PLACA NO RÁDIO** (medido em 15/08: a placa segue o transporte),
-    #: e o escritor devolve `None` nesse caso. Guardar o número mesmo assim é
-    #: deliberado: ela pode gravar o perfil com o controle no cabo e abri-lo com
-    #: ele no rádio, e o dia em que voltar ao cabo o ganho dela tem de estar lá.
     gain: int | None = Field(default=None, ge=0, le=100)
 
 
@@ -859,21 +548,6 @@ class ProfileSpeakerConfig(BaseModel):
     #: **ADITIVO e sem bump de versão**, como a ``rota``: perfil antigo carrega
     #: com ``None``, que é **não mexer** — o nó daquele controle segue o padrão
     #: da casa, que é ``sfx`` por decisão dela
-    #: (``D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX``, *"concordo com as 5"*). Com
-    #: ``mix`` por padrão o controle viraria a saída de todo o som do PC
-    #: sozinho, que é a regra que esta casa já recusou.
-    #:
-    #: É CAMADA 1 (o PipeWire), e a ``rota`` é a CAMADA 2 (o byte do firmware).
-    #: São campos diferentes de propósito: a fonte diz **o que entra no nó**, a
-    #: rota diz **por onde o plástico toca o que saiu dele** — o fone, o
-    #: alto-falante, ou os dois. Fundir os dois num só tiraria dela a escolha
-    #: do fone, que ela nomeou com todas as letras.
-    #:
-    #: TIPO FECHADO: um valor que ``rota_do_no`` não saiba tratar não chega ao
-    #: disco. Os dois nomes têm UM dono
-    #: (``integrations.alto_falante_bt.FONTE_MIX`` / ``FONTE_SFX``), e o
-    #: ``Literal`` daqui é conferido contra ele por
-    #: ``tests/unit/test_o_som_por_controle_cai_em_cada_um.py``.
     fonte: Literal["mix", "sfx"] | None = None
 
     @model_validator(mode="before")
@@ -906,10 +580,6 @@ class ProfileSpeakerConfig(BaseModel):
         dados = handler(self)
         if not isinstance(dados, dict):
             return dados
-        # A `fonte` entra na MESMA regra, e pela mesma razão: um hefesto de
-        # antes de 09/09/2026 tem `extra="forbid"` e RECUSA o perfil inteiro ao
-        # ver a chave nova. Gravá-la como `null` em todo perfil salvo faria
-        # "voltar uma versão" virar "todos os perfis com som quebrados".
         for sem_opiniao in ("rota", "fonte"):
             if dados.get(sem_opiniao) is None:
                 dados.pop(sem_opiniao, None)
@@ -917,98 +587,33 @@ class ProfileSpeakerConfig(BaseModel):
 
 
 class ProfileModeConfig(BaseModel):
-    """Seção opcional de MODO do sistema por perfil (FEAT-PROFILE-MODE-01).
-
-    O perfil do JOGO declara como o controle deve se comportar quando ele está
-    em foco — as features passam a COEXISTIR porque o contexto decide, sem
-    toggles globais brigando entre si:
-
-    - ``kind="native"`` — release total: o jogo usa os gatilhos adaptativos
-      NATIVOS da Sony (Sackboy & cia); o hefesto solta o controle.
-    - ``kind="gamepad"`` — gamepad virtual com a máscara `gamepad_flavor`
-      (prompts PlayStation ou Xbox). **Cada controle físico é um jogador**, e
-      isso não é ajustável: quem liga dois controles quer dois jogadores, não
-      dois comandos para o mesmo personagem.
-    - ``kind="desktop"`` — declaração explícita de app de desktop: desliga
-      gamepad/nativo/co-op vindos de perfil (e também os expirados do lock).
-
-    Perfis SEM a seção não têm opinião: liberam apenas o modo que outro PERFIL
-    tinha ligado (gesto manual da usuária é respeitado — mesma semântica do
-    `suppress_desktop_emulation`). Toggles manuais recentes vencem por
-    ``MANUAL_PROFILE_LOCK_SEC`` (30s), como no `mouse`.
-    """
+    """Seção opcional de MODO do sistema por perfil (FEAT-PROFILE-MODE-01)."""
 
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["desktop", "gamepad", "native"]
-    #: A MÁSCARA PADRÃO do perfil — como o jogo vê o controle de quem não
-    #: escolheu máscara no cartão (degrau 2 de `external_mask.mascara_efetiva`).
-    #: NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026: até aqui o chip de modo da
-    #: aba Jogar e o PS + R3 escreviam neste campo, e era esse o defeito — o
-    #: modo trocava a máscara. Ele continua LIDO; quem o escreve é a máscara.
     gamepad_flavor: MascaraDeGamepad | None = None
-    #: O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026. É o MODO de conexão que ela
-    #: escolhe pelo chip da aba Jogar ou pelo PS + R3: ``"dualsense"`` (o canal
     #: próprio do DualSense, o vpad `uhid`) ou ``"xbox"`` (o canal comum, o vpad
-    #: `uinput`). ``None`` = ninguém escolheu, e o caminho sai da máscara, como
-    #: saía antes (`virtual_pad.caminho_resolvido`) — nenhum perfil existente
-    #: muda de aparelho no dia da cura. Campo NOVO de propósito, e não o
-    #: `gamepad_flavor` reaproveitado: reaproveitá-lo mudaria em silêncio a
-    #: máscara dos jogos que ela já alinhou (§D.1 da sprint).
     caminho: Literal["dualsense", "xbox"] | None = None
 
     @model_serializer(mode="wrap")
     def _sem_caminho_a_chave_nem_aparece(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """Perfil sem caminho escolhido sai do dump IDÊNTICO ao que era.
-
-        A mesma cura do ``rota``/``fonte`` e do ``ponte``, pela mesma razão: com
-        ``extra="forbid"`` um hefesto ANTIGO recusa o perfil inteiro ao ver uma
-        chave que não conhece, e ``"caminho": null`` em todo save transformaria
-        "voltar uma versão" em "todos os perfis quebrados".
-        """
+        """Perfil sem caminho escolhido sai do dump IDÊNTICO ao que era."""
         dados = handler(self)
         if isinstance(dados, dict) and dados.get("caminho") is None:
             dados.pop("caminho", None)
         return dados
 
 
-#: PONTE-CONFIRMADA-01 (19/08/2026) — COMO a ponte foi confirmada.
-#:
-#: São os caminhos que ela fixou em 19/08/2026: o produto tenta em ordem e ela
-#: confirma UMA vez, com um gesto no controle, qual pegou (``gesto``); ou ela já
-#: sabe e escolhe direto na aba de perfil (``escolha_dela``). O automático é o
-#: caminho; a escolha dela é o atalho — e os dois carimbam o MESMO campo, porque
-#: a pergunta que o carimbo responde é a mesma ("esta ponte foi confirmada?").
-#:
-#: Guardar QUAL deles é o que separa "o produto adivinhou e ela confirmou" de
-#: "ela mandou" no dia em que a escada errar — sem isso, o journal é o único
-#: lugar onde essa diferença existe, e o journal roda.
-#:
-#: OS TRÊS NOMES SÃO OS DE ``integrations/ponte_escada.py`` (``POR_GESTO``,
-#: ``POR_SILENCIO``, ``POR_ESCOLHA_DELA``), e a coincidência é o ponto: quem
-#: DECIDE que a ponte pegou é a escada, quem GUARDA é este campo, e um esquema
-#: que não soubesse representar uma das confirmações que o produto já produz
-#: seria um esquema obrigando a uma segunda gaveta para o mesmo fato. O
-#: ``silencio`` é a confirmação mais barata que existe — ela jogou e não
-#: reclamou — e é justamente a que não pode ficar de fora.
-#:
-#: Anotados como `Literal` (e não `str`) de propósito: é o que permite usá-los
-#: como default do campo sem que o verificador de tipos perca a faixa fechada.
 CONFIRMADA_POR_GESTO: Literal["gesto"] = "gesto"
 CONFIRMADA_POR_SILENCIO: Literal["silencio"] = "silencio"
 CONFIRMADA_POR_ESCOLHA: Literal["escolha_dela"] = "escolha_dela"
 
 
 def _agora_em_iso() -> str:
-    """Instante atual em ISO-8601, segundo a segundo, com fuso.
-
-    Local e com offset (`astimezone()`), não UTC cru: quem lê o carimbo é ela,
-    olhando para *"quando foi que eu confirmei isto?"*, e um `Z` obriga a
-    pessoa a fazer a conta de cabeça. O offset preserva a ordenação e o
-    `fromisoformat` de volta.
-    """
+    """Instante atual em ISO-8601, segundo a segundo, com fuso."""
     from datetime import datetime
 
     return datetime.now().astimezone().isoformat(timespec="seconds")
@@ -1057,16 +662,8 @@ class PonteConfirmada(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: Os três termos da ponte, com os MESMOS nomes de ``ProfileModeConfig`` e
-    #: da allowlist — quem lê os dois lado a lado compara campo com campo. É o
-    #: mesmo trio do ``ponte_escada.Ponte``, que chama a máscara de ``mascara``;
-    #: aqui ela se chama ``gamepad_flavor`` porque o vizinho de comparação é o
-    #: ``mode`` do próprio perfil, e nome igual é o que torna a comparação
-    #: campo a campo (``mesma_ponte``) legível em vez de uma tradução.
     kind: Literal["desktop", "gamepad", "native"]
     gamepad_flavor: MascaraDeGamepad | None = None
-    #: O terceiro termo: o jogo estava na allowlist do Steam Input
-    #: (``steam_input_apps.txt``) quando a ponte foi confirmada.
     steam_input: bool = False
     confirmada_em: str = Field(default_factory=_agora_em_iso)
     confirmada_por: Literal["gesto", "silencio", "escolha_dela"] = (
@@ -1076,12 +673,7 @@ class PonteConfirmada(BaseModel):
     @field_validator("confirmada_em")
     @classmethod
     def _e_uma_data_de_verdade(cls, value: str) -> str:
-        """Data ilegível é pior que data ausente: ela PARECE conhecimento.
-
-        A borda recusa, como o ``custom_mult`` e o ``volume`` do alto-falante:
-        o arquivo inválido morre no load, com mensagem que explica, em vez de
-        virar uma tela mostrando "confirmada em nunca".
-        """
+        """Data ilegível é pior que data ausente: ela PARECE conhecimento."""
         from datetime import datetime
 
         try:
@@ -1095,14 +687,7 @@ class PonteConfirmada(BaseModel):
 
     @model_validator(mode="after")
     def _mascara_so_existe_com_gamepad(self) -> PonteConfirmada:
-        """Máscara sem gamepad virtual é uma ponte que não existe.
-
-        ``ProfileModeConfig`` aceita o par incoerente por história (perfis já
-        gravados o trazem, e rejeitá-los agora fecharia arquivo dela que abre
-        hoje). Aqui não há história a preservar — o campo nasce neste commit e
-        só o produto o escreve —, então a incoerência morre na borda em vez de
-        virar uma escada perguntando "a máscara do modo nativo é dualsense?".
-        """
+        """Máscara sem gamepad virtual é uma ponte que não existe."""
         if self.gamepad_flavor is not None and self.kind != "gamepad":
             raise ValueError(
                 "ponte.gamepad_flavor só vale com kind='gamepad' "
@@ -1117,12 +702,7 @@ class PonteConfirmada(BaseModel):
         *,
         na_allowlist: bool,
     ) -> bool:
-        """A ponte de HOJE é a que foi confirmada?
-
-        Os três termos comparados de uma vez, que é a única comparação honesta:
-        ``mode`` ausente é "sem opinião", e sem opinião nunca é igual a uma
-        ponte confirmada.
-        """
+        """A ponte de HOJE é a que foi confirmada?"""
         if mode is None:
             return False
         return (
@@ -1132,28 +712,14 @@ class PonteConfirmada(BaseModel):
         )
 
 
-#: O QUE UMA BARRA DE MOTOR VALE QUANDO NINGUÉM A ARRASTOU — 100 %, ou seja,
-#: fator 1,0: o degrau da coluna chega ao motor inteiro. É a conta de hoje, e o
-#: número mora aqui num dono só para que "sem opinião" e "escolheu 100" sejam
-#: byte-idênticos no aparelho (só o disco os distingue: um grava, o outro não).
 MOTOR_PCT_PADRAO = 100
 
 #: Teto da barra de motor. **Não é o ``RUMBLE_CUSTOM_MULT_MAX``, e a diferença
-#: é o ponto inteiro da decisão dela de 04/09/2026:** a barra é o SEGUNDO fator,
-#: e quem amplifica é o degrau (``Máximo`` = 150 %, ``custom`` até 200 %). Uma
-#: barra acima de 100 amplificaria de novo, e a mesma peça teria duas portas
-#: para o mesmo estouro — que é o defeito HARM-19 pela outra porta.
 MOTOR_PCT_MAX = 100
 
 
 def pcts_dos_motores(rumble: ControllerRumbleOverride | None) -> tuple[int, int]:
-    """``(forte_pct, fraco_pct)`` desta peça — ``(100, 100)`` sem opinião.
-
-    O ÚNICO lugar que resolve o "campo não escrito = sem opinião" das duas
-    barras. Quem multiplicar (``daemon.subsystems.gamepad``) lê daqui em vez de
-    repetir o ``or 100``: dois defaults digitados divergem no primeiro dia em
-    que um deles mudar, e a casa já pagou por isso (HARM-19).
-    """
+    """``(forte_pct, fraco_pct)`` desta peça — ``(100, 100)`` sem opinião."""
     if rumble is None:
         return (MOTOR_PCT_PADRAO, MOTOR_PCT_PADRAO)
     forte = rumble.motor_forte_pct
@@ -1167,19 +733,7 @@ def pcts_dos_motores(rumble: ControllerRumbleOverride | None) -> tuple[int, int]
 def motores_dos_controles(
     controllers: dict[str, ControllerOverrides] | None,
 ) -> dict[str, tuple[int, int]]:
-    """``{uniq: (forte_pct, fraco_pct)}`` do perfil — só quem TEM opinião.
-
-    Espelho de ``manager._controllers_to_rumble_scales``, campo por campo, e
-    pela mesma razão de desenho: a peça sem opinião **não entra no mapa**, para
-    que o consumidor não precise distinguir "escreveu 100" de "não escreveu".
-
-    A diferença de fundo, e ela é a decisão dela de 04/09/2026: a escala do
-    irmão é RELATIVA ao degrau global (``mult_da_unidade / mult_global``, e por
-    isso ela pula sob um global em ``auto``); esta é um SEGUNDO FATOR que
-    *compõe* com o degrau — ``efetivo(motor) = degrau x barra(motor)`` —, então
-    não há denominador para se mover, e ela vale com o global em ``auto``
-    também.
-    """
+    """``{uniq: (forte_pct, fraco_pct)}`` do perfil — só quem TEM opinião."""
     fora: dict[str, tuple[int, int]] = {}
     for uniq, cfg in (controllers or {}).items():
         rumble = getattr(cfg, "rumble", None)
@@ -1190,93 +744,31 @@ def motores_dos_controles(
             continue
         par = pcts_dos_motores(rumble)
         if par == (MOTOR_PCT_PADRAO, MOTOR_PCT_PADRAO):
-            continue  # 100/100 é "sem opinião" no aparelho — não ocupa o mapa
+            continue
         fora[uniq] = par
     return fora
 
 
 class ControllerRumbleOverride(BaseModel):
-    """A INTENSIDADE da vibração de UMA unidade física (POR-UNIDADE-01, 10/08).
-
-    Subconjunto DELIBERADO de ``RumbleConfig``: ``policy`` e ``custom_mult``,
-    os dois campos que descrevem *o quanto* aquela peça de plástico vibra. É o
-    que ela pediu em 10/08/2026 — "uma guia específica do perfil X pro controle
-    branco e outra pro mesmo perfil pro controle preto".
-
-    **E, desde 04/09/2026, as DUAS BARRAS DE MOTOR** — ``motor_forte_pct`` e
-    ``motor_fraco_pct``. A decisão é dela, e veio FORA das três opções que eu
-    ofereci (eu perguntei se a barra mandava o par ``rumble.set`` agora ou
-    virava leitura; as duas perguntas estavam erradas):
-
-        *"os slcers do botão esquerdo e direito (forte e fraco) se multiplicam*
-        *(interagem com os botões economia, moderado, máximo, se eu tiver 150%*
-        *do perfil de vibração e as duas linhas estiverem 100 entao a vibração*
-        *dos 2 será 150%, mas se so a do motor fraco tiver 100 e a outrqa 50%*
-        *então será 150 em um e 75% no outro entende?"*
-        <!-- noqa-acento: citação literal dela -->
-
-    A barra **não é um comando: é POLÍTICA**, e por isso mora no perfil ao lado
-    do degrau, e não no ``DaemonConfig``. ``efetivo(motor) = degrau x barra``,
-    e quem faz a conta é ``daemon.subsystems.gamepad``, num lugar só.
-
-    ``rumble.set {weak, strong}`` continua sendo o comando de tremer AGORA, e a
-    barra não o chama — são camadas diferentes, pela mesma razão que separa
-    ``mic.set`` de ``mic.volume.set``.
-
-    ``passthrough`` FICA DE FORA, e a ausência é a entrega. Ele não descreve a
-    peça: descreve *quem manda na vibração agora* — soltar o rumble que a GUI
-    TRAVOU (``DaemonConfig.rumble_active``, um valor só para o daemon inteiro)
-    de volta para o jogo. Duas unidades pedindo passthrough diferente no mesmo
-    perfil não têm resposta honesta enquanto a trava for uma só, e a casa já
-    recusa campo aceito-e-ignorado na BORDA do esquema em vez de deixá-lo
-    virar comportamento errado silencioso meses depois (ver ``custom_mult``
-    fora de ``policy='custom'``, logo abaixo). ``extra="forbid"`` faz a recusa:
-    um override com ``passthrough`` é rejeitado no load, com mensagem.
-
-    ``auto`` também fica de fora, e pela mesma disciplina — mas por uma
-    MEDIÇÃO, não por uma opinião. O ``auto`` resolve o multiplicador pela
-    BATERIA, e quem a lê é ``core.rumble._effective_mult``, a partir do
-    ``store.snapshot().controller`` — o controle PRIMÁRIO, um só. Aceitar
-    ``auto`` por unidade guardaria no perfil dela uma promessa que o caminho
-    do rumble não sabe cumprir: as duas peças escalariam pela bateria da
-    mesma. Quando o dia do ``auto`` por peça chegar, o que falta é a bateria
-    POR UNIQ chegando ao ponto de escala — não este campo.
-
-    Campo não escrito = sem opinião: o merge POR CAMPO herda o global do
-    perfil, exatamente como em ``leds``/``triggers``.
-    """
+    """A INTENSIDADE da vibração de UMA unidade física (POR-UNIDADE-01, 10/08)."""
 
     model_config = ConfigDict(extra="forbid")
 
     policy: Literal["economia", "balanceado", "max", "custom"] | None = None
     custom_mult: float | None = None
 
-    #: A BARRA DO MOTOR FORTE (``strong``, o grande) desta peça, 0-100.
-    #: ``None`` = sem opinião, que vale ``MOTOR_PCT_PADRAO``. Segundo fator: ele
-    #: MULTIPLICA o degrau da coluna, nunca o substitui.
     motor_forte_pct: int | None = None
 
-    #: A BARRA DO MOTOR FRACO (``weak``, o pequeno) desta peça, 0-100. Mesmo
-    #: contrato do irmão acima. Os dois são independentes de propósito — é
-    #: exatamente o caso dela: *"se so a do motor fraco tiver 100 e a outrqa
     #: 50% então será 150 em um e 75% no outro"*. <!-- noqa-acento: citação literal dela -->
     motor_fraco_pct: int | None = None
 
-    #: O GANHO DA HÁPTICA POR ÁUDIO desta peça, 0-200 (O-GANHO-DA-HAPTICA-TEM-
-    #: DONO-01, 29/09). ``None`` = sem opinião, que vale ``HAPTICA_PCT_PADRAO``
-    #: pelo leitor ``pct_da_haptica``. ``0`` desliga a háptica desta peça.
     haptica_pct: int | None = None
 
     @model_serializer(mode="wrap")
     def _o_ganho_da_haptica_sem_opiniao_nao_vai_ao_disco(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """O ``haptica_pct`` só vai ao arquivo quando alguém o escreveu.
-
-        A mesma cura do ``toque``/``acelerometro``: com ``extra="forbid"`` um
-        Hefesto antigo recusa o perfil inteiro ao ver chave que não conhece, e
-        o ``load → save`` de um perfil de ontem não pode ganhar a chave.
-        """
+        """O ``haptica_pct`` só vai ao arquivo quando alguém o escreveu."""
         dados = handler(self)
         if isinstance(dados, dict) and "haptica_pct" not in self.model_fields_set:
             dados.pop("haptica_pct", None)
@@ -1315,14 +807,7 @@ class ControllerRumbleOverride(BaseModel):
 
     @model_validator(mode="after")
     def _validate_barras_de_motor(self) -> ControllerRumbleOverride:
-        """A faixa das barras é 0-100, e a recusa EXPLICA por que não passa de 100.
-
-        Na BORDA, e não no consumidor, pela mesma disciplina do ``custom_mult``:
-        o arquivo inválido morre no load com mensagem, em vez de virar
-        comportamento errado silencioso meses depois. ``0`` é aceito de
-        propósito — "este motor não treme neste perfil" é uma escolha, e é a
-        mesma que o irmão ``set_rumble_scales`` já aceita com fator ``0``.
-        """
+        """A faixa das barras é 0-100, e a recusa EXPLICA por que não passa de 100."""
         for nome, valor in (
             ("motor_forte_pct", self.motor_forte_pct),
             ("motor_fraco_pct", self.motor_fraco_pct),
@@ -1378,7 +863,7 @@ class ControllerMicOverride(BaseModel):
     ``lifecycle.apply_profile_mic(uniq=…)`` →
     ``set_microphone_mute(muted, uniq=…)`` → ``_handle_for(uniq)``, que casa o
     MAC normalizado com o handle daquela peça
-    (``core/backend_pydualsense.py:6739``). O alvo está no parâmetro em todo
+    (``core/backend_pydualsense.py:4510``). O alvo está no parâmetro em todo
     degrau, e é o que separa *"guardei"* de *"chegou ao aparelho"*.
 
     **DESDE A O-MUDO-E-DO-CONTROLE-01 O PERFIL NÃO LEVA O MUDO**, nem o da
@@ -1414,7 +899,7 @@ class ControllerMicOverride(BaseModel):
     ----------------------------------------------
     - ``button_toggles_system``. O interruptor é UM por máquina:
       ``hotkey.mic_button_loop`` lê ``daemon.config.mic_button_toggles_system``
-      (``daemon/subsystems/hotkey.py:1380``) e não consulta ``uniq`` nenhum.
+      (``daemon/subsystems/hotkey.py:906``) e não consulta ``uniq`` nenhum.
       Guardá-lo por peça faria quatro controles gravarem quatro opiniões sobre
       um interruptor só.
 
@@ -1432,50 +917,12 @@ class ControllerMicOverride(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: Mudo do microfone DESTA peça, que NÃO é do perfil: mora no
-    #: `maquina.json` (O-MUDO-E-DO-CONTROLE-01). O campo só deixa carregar o
-    #: arquivo que ainda o traga; ativação nenhuma o aplica, e a guarda mora em
-    #: `ProfileManager.apply_mic`.
     muted: bool | None = None
 
-    #: GANHO DE CAPTURA DESTA PEÇA, 0..100. `None` = sem opinião.
-    #:
-    #: ABERTO EM 03/09/2026, E A PALAVRA É DELA. O campo esteve travado o dia
-    #: inteiro por uma razão que NÃO era técnica: a costura por unidade ficou
-    #: pronta pela manhã (`apply_profile_mic` resolve a fonte com
-    #: `fonte_de_captura_do_uniq(uniq)` e NÃO cai para a global quando o uniq
-    #: não resolve — cair seria escrever no microfone do vizinho). O que
-    #: faltava era a decisão de mudar o que o perfil dela aceita no disco.
-    #:
-    #: ELA MANDOU, com estas palavras: *"manda a ver em tudo que falta por
-    #: favor"* — depois de ter dito, no mesmo dia, o que o produto tem de
-    #: entregar: *"4 controles funcionarem no mesmo modo com configs
     #: diferentes"*. Com dois DualSense no cabo há DUAS placas de som
-    #: (MIC-DA-MESA-CHEIA-01, 20/08/2026), e o ganho de cada uma é justamente
-    #: uma config que difere por peça.
-    #:
-    #: A FAIXA É A DA SEÇÃO GLOBAL, e é lida dela, não digitada aqui: uma
-    #: segunda definição de 0..100 envelheceria no dia em que a primeira
-    #: mudasse.
-    #:
-    #: DOIS DEGRAUS DESDE 09/09/2026 (MIC-VOLUME-02): a fonte de captura no
-    #: PipeWire **e** o `common[6]` do aparelho, este último pela régua única
-    #: `core/backend_pydualsense.byte_do_volume_do_microfone` (teto `0x40`). O
-    #: que o disco guarda continua sendo a PORCENTAGEM — o byte é derivado, e
-    #: persistir byte faria o perfil dela envelhecer junto com o protocolo.
     volume: int | None = Field(default=None, ge=0, le=100)
 
-    #: **O GANHO DE ENTRADA DESTA PEÇA, 0..100 — 21/09/2026.** Irmão exato do
-    #: campo global, e a razão de ele ser POR PEÇA é a mesma do `volume` logo
     #: acima, só que mais forte: o ganho é da PLACA ALSA, e com dois DualSense
-    #: no cabo há DUAS placas (MIC-DA-MESA-CHEIA-01). Um número só para a mesa
-    #: inteira escreveria o ganho de um controle na placa de outro.
-    #:
-    #: **O CAMINHO POR UNIDADE NASCEU ANTES DO CAMPO**, que é a ordem que esta
-    #: classe cobra de si mesma: `integrations.ganho_do_microfone.definir` já
-    #: recebe o `uniq` e resolve a placa por ele
-    #: (`placa_do_controle` → `eleicao_de_microfone.fonte_nativa_do_controle`),
-    #: e devolve `None` — nunca a placa do vizinho — quando não resolve.
     gain: int | None = Field(default=None, ge=0, le=100)
 
     @model_validator(mode="before")
@@ -1484,9 +931,6 @@ class ControllerMicOverride(BaseModel):
         """Mensagem que EXPLICA a recusa em vez do ``extra_forbidden`` cru."""
         if not isinstance(data, dict):
             return data
-        # O `volume` SAIU DAQUI EM 03/09/2026 — ela mandou abrir. A recusa que
-        # morava nesta linha dizia, com todas as letras, que *"o que falta
-        # agora é a PALAVRA DELA, não o caminho"*. A palavra veio.
         if "button_toggles_system" in data:
             raise ValueError(
                 "controllers[...].mic: 'button_toggles_system' é UM por "
@@ -1541,11 +985,8 @@ class ControllerSensoresOverride(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: ``False`` desliga o giroscópio desta peça. ``None`` = sem opinião (ligado).
     giroscopio: bool | None = None
 
-    #: ``False`` desliga o acelerômetro desta peça. Independente do irmão acima
-    #: de propósito — é o *"ambos"* dela, cada um por si.
     acelerometro: bool | None = None
 
 
@@ -1760,70 +1201,18 @@ class ControllerOverrides(BaseModel):
     #: *"Default é Hefesto dualsense padrão"*. O controle que o perfil não
     #: declara perde a máscara própria e passa a seguir o
     #: ``mode.gamepad_flavor`` do perfil e, sem ele, o
-    #: ``DaemonConfig.gamepad_flavor`` — de fábrica ``dualsense``. Um perfil
-    #: antigo (que nunca falou de máscara) carrega igual e devolve a mesa ao
-    #: padrão; **quem já estava no padrão não tem vpad derrubado**, porque a
-    #: máscara efetiva dele não muda (medido em
-    #: ``manager.apply_controller_mascaras``: 0 de 4).
-    #:
-    #: A ORDEM DE DECISÃO, e ela é UMA só desde esta sprint:
-    #: ``controllers[uniq].mascara`` > ``mode.gamepad_flavor`` > o padrão. Os
-    #: degraus 2 e 3 são resolvidos por ``external_mask.mascara_efetiva``; o
-    #: degrau 1 é EXECUTADO por ``manager.apply_controller_mascaras``, que
-    #: escreve no cache que aquela função consulta — e o apaga de quem o perfil
     #: não declara. A régua da ordem mede o comportamento dos três degraus, não
-    #: o texto: ``tests/unit/test_a_mascara_mora_no_perfil.py``.
-    #:
-    #: TIPO FECHADO, e é o mesmo do ``mode.gamepad_flavor``: um valor que o
-    #: vpad não saiba criar não pode chegar ao disco. O ``MascaraDeGamepad`` é
-    #: comparado com ``external_mask.mascaras_validas()`` nos dois sentidos por
-    #: ``tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py``, então
-    #: uma máscara nova não precisa ser declarada aqui de novo.
     mascara: MascaraDeGamepad | None = None
-    #: A MIRA POR MOVIMENTO desta peça — A-MIRA-POR-MOVIMENTO-NA-TELA-01
-    #: (24/09/2026), o chip «Mira Virtual» do cartão dela e os dois deslizantes
-    #: da Calibrar. A classe é a do perfil (`ProfileMovimentoConfig`), e só os
-    #: campos ESCRITOS valem: a peça que só escreveu o destino herda do perfil
-    #: a sensibilidade e o tremor. ``None`` = sem opinião — a peça segue a mira
-    #: do perfil, que por padrão não existe.
-    #:
-    #: Quem lê por peça é ``manager._controllers_to_miras``, e o caminho até o
-    #: jogo é ``roteador_de_movimento.da_peca``, perguntado pelo motor do tique
-    #: com o ``uniq`` de cada jogador.
     movimento: ProfileMovimentoConfig | None = None
 
 
-# Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
-# - `KEY_*` é validado contra `evdev.ecodes` (via lookup lazy em `_validate_key_bindings`).
-# - `__*__` são tokens virtuais reservados para a sub-sprint UI (59.3): o dispatcher
-#   delega ao subsystem de OSK em vez de emitir evento de tecla. Aqui aceitamos
-#   pelo regex mas não validamos contra ecodes — o schema não conhece a lista fechada.
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
 
 
-#: Faixa de `Profile.priority` que a JANELA oferece — o piso e o teto do
-#: `profile_priority_adj` do glade, e a faixa que o verificador semântico usa
-#: para dizer "este número NÃO veio do controle de prioridade".
-#:
-#: UNIFICA-CONSTANTE-01 (decisão dela, 05/08/2026: *"preciso que as constantes
-#: apontem pros arquivos reais do import"*). O 200 morava em três lugares —
-#: `app/actions/profiles_actions.py`, `profiles/sanidade.py` e o `upper` do
-#: glade — e só UM par tinha portão. Mora AQUI, na camada mais baixa, por dois
-#: motivos: é de onde `app/draft_config.py` já lê o DEFAULT de `priority`
-#: (`Profile.model_fields["priority"].default`), então quem manda na faixa e
 #: quem manda no default passam a morar juntos; e este módulo importa só
 #: stdlib + pydantic, o que permite `profiles/`, `app/` e o CLI lerem a faixa
 #: sem nenhum deles puxar GTK.
-#:
 #: Quem mudar o teto muda AQUI. O glade tem de acompanhar na mão (XML não
-#: importa nada), e há portão que reprova a divergência:
-#: `tests/unit/test_teto_da_prioridade_tem_uma_fonte_so.py`.
-#:
-#: Histórico do número: era 100 até PERFIL-NASCE-CERTO-01 (entrega 2, item 1),
-#: e o catch-all do disco dela estava EXATAMENTE em 100 — não existia número
-#: escolhível pela janela que fizesse o perfil de um jogo vencer o dela. O
-#: conserto de 26/07 exigiu escrever 110 direto no JSON, um valor que a janela
-#: não aceitava digitar. Subir o teto não mexe em perfil nenhum já salvo: é só
 #: a faixa que a escala oferece.
 PRIORIDADE_MINIMA = 0
 PRIORIDADE_MAXIMA = 200
@@ -1841,137 +1230,34 @@ class Profile(BaseModel):
     triggers: TriggersConfig = Field(default_factory=TriggersConfig)
     leds: LedsConfig = Field(default_factory=LedsConfig)
     rumble: RumbleConfig = Field(default_factory=RumbleConfig)
-    # FEAT-KEYBOARD-PERSISTENCE-01: override de bindings por perfil.
     # - None = herda DEFAULT_BUTTON_BINDINGS do core.
-    # - {} = desativa todos os bindings do perfil (teclado silencioso).
-    # - {"triangle": ["KEY_C"]} = override apenas desse botão; demais seguem default.
     key_bindings: dict[str, list[str]] | None = None
-    # FEAT-ACOES-DE-BOTAO-01 (01/09/2026): o que cada um dos 21 botões da tela
-    # faz, num campo só. Decisão dela, ao ler que doze das vinte e uma linhas
-    # aceitavam escolha e não tinham onde ser guardadas: *"ganha campo. essa é a
-    # parte das features que precisam ou serem ajustadas ou desenvolvidas."*
-    #
     # - None = herda o de fábrica INTEIRO (`core/acoes_de_botao.padrao()`, que
-    #   por sua vez é derivado dos mapas do produto — não há terceira cópia).
-    # - {"cross": "KEY_ENTER"} = troca só esse botão; os outros seguem o padrão.
-    #
-    # POR QUE ELE NÃO SUBSTITUI O `key_bindings` ACIMA: aquele é o contrato do
-    # TECLADO virtual e tem chamador vivo desde a FEAT-KEYBOARD-PERSISTENCE-01.
-    # Este é o da TELA, que fala dos dois devices de uma vez — o `resolver()` do
     # `acoes_de_botao` é quem os separa. Aposentar um em favor do outro é
-    # trabalho com dono e não se faz junto com o nascimento do campo.
     button_actions: dict[str, str] | None = None
-    # F1-REMAPEAR (13/09/2026): a troca botão a botão — *"L1 passa a ser R1"* —,
-    # o que o JOGO vê de cada botão. Decisão dela, 29/08/2026
-    # (D-O-REMAPEAMENTO-BOTAO-A-BOTAO-ENTRA): *"ENTRA, E VIRA SPRINT PRÓPRIA."*
     # GLOBAL no perfil, não por controle (D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL):
-    # vale nos quatro controles.
-    #
-    # - None = sem troca nenhuma. `{}` vira None na validação, e o save OMITE a
-    #   chave quando None (`_sem_ponte_a_chave_nem_aparece`, logo abaixo): um binário anterior a
-    #   esta sprint tem `extra="forbid"` e recusaria o perfil INTEIRO.
-    # - {"cross": "circle"} = apertar o ✕ o jogo vê o ○; os outros passam intactos.
-    #
     # POR QUE NÃO É O `button_actions` ACIMA: aquele fala a língua de TECLA e
-    # MOUSE (o desktop); este fala botão → BOTÃO, e mora antes do gamepad
-    # virtual. A regra inteira — PS travado, colisão, o que a troca alcança — é
-    # de `core/remapeamento_de_botao.resolver`, e o validador abaixo só a chama.
     remapeamento: dict[str, str] | None = None
-    # MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026): a mira por movimento deste
-    # jogo. None = sem opinião — ativar o perfil não liga mira nenhuma.
-    # A serialização OMITE a chave quando None, pelo mesmo requisito de
-    # compatibilidade do `ponte` e do `remapeamento`: com `extra="forbid"` um
-    # Hefesto antigo recusaria TODOS os perfis dela ao ver a chave, não só os
-    # que usam a seção.
     movimento: ProfileMovimentoConfig | None = None
-    # FEAT-POINT-AND-CLICK-01: seção opcional de emulação de mouse.
-    # - None = ativar o perfil não toca no estado da emulação (comportamento v1).
-    # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
-    #   dadas (via `mouse_applier` injetado no ProfileManager).
     mouse: ProfileMouseConfig | None = None
-    # Z4/T14 (24/08/2026), PROVISÓRIO — decisão dela em aberto (D-A do
-    # 2026-08-24-ONDA0-Z4). Hoje o liga/desliga do TECLADO emulado mora só na
-    # flag global `keyboard_emulation.flag` (utils/session.py:416), enquanto o
-    # `mouse` logo acima — o interruptor VIZINHO na mesma aba — é por perfil
-    # desde a FEAT-POINT-AND-CLICK-01. Mesmo contrato dos outros opcionais
-    # desta classe: None = sem opinião (a ativação NÃO mexe na flag; ela
-    # continua mandando). Preenchido = a ativação IMPÕE este valor, e vence a
-    # flag (a precedência mora em
-    # ``hefesto_dualsense4unix.profiles.schema.resolver_teclado_emulado``).
-    #
-    # O FIO FOI LIGADO EM 17/09/2026 — POINT-AND-CLICK-01, e a frase caduca
-    # saiu: aqui se dizia que a precedência era *"pura, testada, e ainda NÃO
+    # flag global `keyboard_emulation.flag` (utils/session.py:306), enquanto o
     # chamada por nenhum caminho de ativação real"*. Por 24 dias foi verdade —
-    # a T14 entregou o campo e a régua, não o fio. Quem a chama é
-    # ``Daemon.aplicar_o_arranjo_do_desktop``, o terceiro passo da entrada no
-    # modo Navegação, e é o lugar certo: é o único ponto do produto em que o
-    # teclado emulado tem contexto. Ele NÃO persiste o valor resolvido
-    # (``persist=False``) — gravá-lo faria a opinião do PERFIL virar a
     # preferência GLOBAL, e esta precedência deixaria de existir na ativação
-    # seguinte.
     teclado_emulado: bool | None = None
-    # MIC-EXPOSE-01: comportamento do botão de mic por perfil. None = sem
-    # opinião (ativar o perfil não mexe no `mic_button_toggles_system`).
     mic: ProfileMicConfig | None = None
-    # SOM-02/E4: volume do ALTO-FALANTE por perfil. None = sem opinião — a
-    # ativação não escreve áudio nenhum e NÃO toma a posse dos bytes de
-    # volume (armadilha 1 da sprint). Preenchida = a ativação manda
-    # `{volume, muted}` pelo `speaker_applier` injetado no ProfileManager.
-    # A serialização em `save_profile` OMITE a chave quando None, pelo mesmo
-    # requisito de compatibilidade do `controllers` (extra="forbid" acima
-    # rejeitaria TODO perfil num binário antigo, não só os que usam a seção).
     speaker: ProfileSpeakerConfig | None = None
-    # FEAT-PROFILE-MODE-01: modo do sistema por perfil (nativo/gamepad/desktop
-    # + co-op). None = sem opinião (libera só modo vindo de outro perfil).
     mode: ProfileModeConfig | None = None
-    # FEAT-POINT-AND-CLICK-01: modo-jogo por perfil. True = ativar o perfil
-    # suprime a emulação de mouse/teclado no desktop (jogos de GAMEPAD que
-    # leem o controle cru); False (default) = ativar o perfil LIBERA a
-    # supressão apenas se ela veio de outro perfil (toggle manual da usuária
-    # é respeitado — ver `Daemon.apply_profile_suppression`).
     suppress_desktop_emulation: bool = False
-    # PERFIL-02 (sprint 2026-07-16-perfis-por-controle): mapa ADITIVO de
-    # overrides por controle físico, keyed pelo MAC normalizado (12 hex
-    # minúsculos — o mesmo `norm_mac` do backend; PROVADO ao vivo estável
     # entre USB e BT no DualSense). None = perfil v1 puro, sem opinião
-    # por-controle. A serialização em `save_profile` OMITE o campo quando
-    # None/vazio — requisito de compatibilidade: sem a omissão, todo save
-    # gravaria `"controllers": null` e binário antigo (extra="forbid")
-    # rejeitaria TODO perfil no downgrade, não só os que usam o mapa.
     controllers: dict[str, ControllerOverrides] | None = None
-    # PONTE-CONFIRMADA-01 (19/08/2026): a ponte que já foi CONFIRMADA neste
-    # jogo — ver `PonteConfirmada`. None = **ainda não sei**, que é o que todo
-    # perfil existente diz (nenhuma migração escreve este campo). É a distinção
-    # entre "nunca tentei" e "tentei e funciona", e é ela que faz a escada de
-    # pontes parar em vez de recomeçar a cada abertura do jogo.
     ponte: PonteConfirmada | None = None
 
     @model_serializer(mode="wrap")
     def _sem_ponte_a_chave_nem_aparece(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """Perfil sem ponte confirmada sai do dump IDÊNTICO ao que era.
-
-        Mesma cura medida do ``rota`` em ``ProfileSpeakerConfig`` e das seções
-        opcionais em ``loader.save_profile``, e pelo mesmo motivo: com
-        ``extra="forbid"``, um hefesto ANTIGO recusa o perfil INTEIRO ao ver uma
-        chave que não conhece. Gravar ``"ponte": null`` em todo save faria um
-        downgrade quebrar os 18 perfis dela de uma vez — inclusive os que nunca
-        ouviram falar de ponte. Aqui, só quem de fato confirmou uma carrega a
-        chave nova, e o round-trip ``load → save`` de um perfil antigo não
-        acrescenta nada ao arquivo.
-
-        Mora no ESQUEMA, e não na lista de omissões do ``loader``, porque o
-        dump também sai por outros caminhos (o estado do IPC, a exportação da
-        GUI) — e a omissão que só vale num deles é a que se descobre no
-        downgrade.
-        """
+        """Perfil sem ponte confirmada sai do dump IDÊNTICO ao que era."""
         dados = handler(self)
-        # `remapeamento` ENTRA NA MESMA OMISSÃO — F1-REMAPEAR, 13/09/2026, e
-        # pela mesma razão: o campo nasceu hoje, e um hefesto de ontem recusaria
-        # o perfil inteiro ao ver a chave, mesmo `null`. Aqui no esquema, e não
-        # só no save, porque o dump sai também pelo estado do IPC e pela
-        # exportação.
         if isinstance(dados, dict):
             for opcional in ("ponte", "remapeamento", "movimento"):
                 if dados.get(opcional) is None:
@@ -1985,8 +1271,6 @@ class Profile(BaseModel):
             raise ValueError("name não pode ser vazio")
         if "/" in value or ".." in value or os.sep in value:
             raise ValueError(f"name contém caractere inválido: {value!r}")
-        # Garante que slugify() produz slug válido — rejeita nomes exóticos
-        # (só símbolos, só emoji, etc.) que virariam filename vazio.
         from hefesto_dualsense4unix.profiles.slug import slugify
         try:
             slugify(value)
@@ -2033,13 +1317,7 @@ class Profile(BaseModel):
     def _validate_remapeamento(
         cls, value: dict[str, str] | None
     ) -> dict[str, str] | None:
-        """A troca que o produto sabe fazer, limpa — ou a recusa nomeando.
-
-        A REGRA É DO MOTOR (`core/remapeamento_de_botao.resolver`) e não se
-        repete aqui: o PS travado, a linha fora do alcance e dois botões para o
-        mesmo destino são recusa, e a troca de um botão por ele mesmo some.
-        Vazio vira `None`, que é o que faz o save omitir a chave.
-        """
+        """A troca que o produto sabe fazer, limpa — ou a recusa nomeando."""
         if value is None:
             return None
         from hefesto_dualsense4unix.core.remapeamento_de_botao import resolver
@@ -2051,15 +1329,7 @@ class Profile(BaseModel):
     def _validate_key_bindings(
         cls, value: dict[str, list[str]] | None
     ) -> dict[str, list[str]] | None:
-        """Rejeita tokens fora do padrão ou KEY_* inexistentes em evdev.ecodes.
-
-        - `None` passa direto (default = herdar).
-        - Values são listas de tokens; cada token casa
-          `^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$`.
-        - Tokens `KEY_*` são verificados contra `evdev.ecodes` via lookup lazy;
-          se evdev não estiver disponível no ambiente (fallback CLI sem deps),
-          aceita qualquer KEY_* bem-formado (validação completa fica para runtime).
-        """
+        """Rejeita tokens fora do padrão ou KEY_* inexistentes em evdev.ecodes."""
         if value is None:
             return value
         ecodes_ns: Any | None = None
@@ -2101,40 +1371,7 @@ class Profile(BaseModel):
     def _validate_controllers_keys(
         cls, value: dict[str, ControllerOverrides] | None
     ) -> dict[str, ControllerOverrides] | None:
-        """Chave do mapa = MAC normalizado (12 hex); rejeita degenerados.
-
-        Usa o MESMO ``norm_mac`` do backend (import lazy, padrão do módulo):
-        ``"AA:BB:CC:00:00:02"`` é aceito e canonizado para ``"aabbcc000002"``
-        — JSON editado à mão continua casando com a key que o backend
-        enumera. Rejeições, com mensagem clara:
-
-        - o que não vira 12 dígitos hex (ex.: key de fallback ``path:...``);
-        - uniq DEGENERADO, que não identifica UMA unidade — OUI ``00:00:00``
-          (medido ao vivo no Pro Controller, ``000000000001``, idêntico
-          entre unidades) e broadcast ``ff:ff:ff:ff:ff:ff``;
-        - duas chaves que canonizam para o mesmo MAC (colisão silenciosa:
-          um dos overrides venceria por ordem de inserção, sem aviso).
-
-        A FORMA DA CHAVE É UMA SÓ, e isso passou a ser MEDIDO em 06/09/2026
-        (QUEM-E-QUEM-04, depois da O-CONTROLE-SEM-MAC-01). O plano era este
-        validador aprender uma SEGUNDA gramática, "com prefixo explícito",
-        para o controle cujo firmware não expõe serial. Ela não existe: dos
-        cinco crachás candidatos sobrou o feature ``0x09``, e o que ele
-        devolve é **o endereço de rádio** — é de onde o próprio
-        ``hid_playstation`` tira o ``HID_UNIQ``. O crachá é *outra estrada
-        para o mesmo valor*, e ``identity.resolver_crachas`` só o aceita
-        depois das MESMAS guardas do serial (12 hex canônicos, não-vpad).
-
-        **Consequência para quem vier alargar isto:** a porta já está aberta,
-        e uma segunda forma seria uma segunda identidade para a mesma peça de
-        plástico. Se um dia ela precisar existir, as três rejeições acima têm
-        de vir junto — alargar a chave sem preservá-las troca "não lembra, em
-        silêncio" por dois controles dividindo a MESMA memória, que é pior.
-        A régua nomeada é
-        ``tests/unit/test_quem_e_quem_04_a_chave_atravessa_o_transporte.py``,
-        e ela morde nas duas pontas (este validador e o
-        ``describe_controllers`` do backend).
-        """
+        """Chave do mapa = MAC normalizado (12 hex); rejeita degenerados."""
         if value is None:
             return value
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -2166,25 +1403,7 @@ class Profile(BaseModel):
 
     @property
     def e_catch_all(self) -> bool:
-        """True quando o perfil casa com QUALQUER janela.
-
-        R-01 (auditoria 23/07): há duas formas de catch-all, e as duas
-        precisam ser tratadas igual na hora de decidir especificidade —
-        ``MatchAny`` explícito (``vitoria``, ``fallback``, ``meu_perfil``) e
-        um ``MatchCriteria`` com todos os campos vazios (o preset
-        ``coop_local`` de fábrica). O segundo na prática nunca casa
-        (``MatchCriteria.matches`` devolve ``False`` sem condição alguma),
-        mas ele TAMBÉM não é uma regra específica — então some dos dois
-        lados da comparação pelo mesmo predicado.
-
-        ``MatchManual`` NÃO entra aqui, e a diferença é de propósito. Este
-        predicado responde "o perfil chegou por acidente?" — é o que segura a
-        reversão de modo/supressão em `lifecycle._perfil_tem_opiniao`. Um
-        catch-all chega quando nenhuma regra casou; um perfil manual só entra
-        porque a usuária o escolheu na mão, então ele tem a autoridade que o
-        catch-all não tem. Na seleção do autoswitch a distinção é inócua: o
-        manual nunca vira candidato (``matches`` é sempre False).
-        """
+        """True quando o perfil casa com QUALQUER janela."""
         if isinstance(self.match, MatchAny):
             return True
         if isinstance(self.match, MatchManual):
@@ -2197,41 +1416,13 @@ class Profile(BaseModel):
         )
 
 
-#: AS `wm_class` QUE ESTE PRODUTO SABE SEREM DE JOGO E NÃO SÃO DA STEAM —
-#: PERFIL-DOS-LANCADORES-E1, 11/09/2026. Já em minúsculas (`casefold`), porque
-#: toda comparação de janela desta casa é sem caixa (`_casa_sem_caixa`).
-#:
-#: **POR QUE UM CADASTRO, E NÃO UM PREDICADO:** *"esta janela é de um jogo?"*
-#: não se responde olhando a janela. Para a Steam há um CARIMBO — a `wm_class`
-#: é `steam_app_<id>` e ninguém mais a usa. Para um jogo do Heroic a janela
-#: anuncia `gotg.exe`, que é indistinguível de qualquer outro programa. Quem
-#: sabe a resposta é o censo dos lançadores, que lê a biblioteca no disco; e
-#: `perfil_e_regra_de_jogo` roda a 2 Hz, dentro do tique do autoswitch, onde
-#: não cabe leitura de disco. Então o dono RESPONDE UMA VEZ por varredura e o
-#: predicado consulta o que ele respondeu.
-#:
-#: **VAZIO = O COMPORTAMENTO HISTÓRICO**, e isso é fail-safe deliberado: sem
-#: ninguém ter registrado nada (o processo que não semeia, o opt-out da suíte,
-#: a máquina sem lançador), `e_endereco_de_jogo` volta a ser exatamente o
-#: `steam_appid_from_wm_class(...) is not None` de antes.
 _CLASSES_DE_JOGO_CONHECIDAS: frozenset[str] = frozenset()
 
 
 def registrar_classes_de_jogo(classes: object) -> None:
-    """Declara QUAIS `wm_class` de fora da Steam são de jogo. Um dono só.
-
-    O dono é `profiles.loader.semear_perfis_dos_jogos`, que já lê a biblioteca
-    dos lançadores e a marca de semeadura a cada varredura — é a única peça
-    desta casa que sabe a resposta inteira e a recalcula sozinha.
-
-    **SUBSTITUI, não soma**: a varredura conhece o conjunto COMPLETO, e somar
-    faria uma classe sobreviver ao jogo desinstalado para sempre. Entrada
-    inválida vira conjunto vazio, que é o fail-safe (ver o cadastro acima).
-    """
+    """Declara QUAIS `wm_class` de fora da Steam são de jogo. Um dono só."""
     global _CLASSES_DE_JOGO_CONHECIDAS
     if not isinstance(classes, (list, tuple, set, frozenset)):
-        # Algo que não é coleção não pode deixar o cadastro pela metade: ele
-        # fica VAZIO, que é o fail-safe declarado acima.
         _CLASSES_DE_JOGO_CONHECIDAS = frozenset()
         return
     _CLASSES_DE_JOGO_CONHECIDAS = frozenset(
@@ -2240,117 +1431,32 @@ def registrar_classes_de_jogo(classes: object) -> None:
 
 
 def classes_de_jogo_conhecidas() -> frozenset[str]:
-    """O cadastro de agora — o ÚNICO leitor do módulo, e o de fora também.
-
-    `e_endereco_de_jogo` lê por aqui de propósito: um `global` com dois leitores
-    é duas verdades esperando divergir, e esta é a função que a régua e a tela
-    perguntam quando querem saber o que foi declarado.
-    """
+    """O cadastro de agora — o ÚNICO leitor do módulo, e o de fora também."""
     return _CLASSES_DE_JOGO_CONHECIDAS
 
 
 def e_endereco_de_jogo(wm_class: object) -> bool:
-    """Esta `wm_class` endereça um JOGO?
-
-    Duas respostas verdadeiras, e a segunda é a que a E1 acrescentou:
-
-    1. ``steam_app_<id>`` — o carimbo da Steam, que nunca é outra coisa;
-    2. uma classe que o censo dos lançadores declarou
-       (`registrar_classes_de_jogo`) — ``gotg.exe``, do Heroic.
-
-    **O QUE ISTO NÃO PODE VIRAR, e foi medido no disco dela em 11/09/2026:**
-    *"qualquer `window_class` que case"*. O perfil `personalizado.json` dela
-    mira ``Hefesto-Dualsense4Unix`` — a janela DO PRODUTO, gravada ali pelo
-    «Detectar» — com prioridade 1. Solto o critério, focar a janela do Hefesto
-    passaria a valer como "a regra própria do jogo": o cadeado cederia e o
-    `manual_trigger_active` seria LIMPO em `AutoSwitcher._activate`, ou seja, o
-    perfil pisaria no gatilho que ela acabou de aplicar na aba — no momento em
-    que ela está justamente olhando para a janela. É o buraco da R-01 pela
-    porta dos fundos, e é a única coisa que a linha antiga protegia.
-    """
+    """Esta `wm_class` endereça um JOGO?"""
     if not isinstance(wm_class, str):
         return False
-    # `is not None` e nunca a verdade do valor: `steam_app_0` devolve o int 0,
-    # que é FALSO — o mesmo engano que `if appid:` já produziu nesta casa.
     if steam_appid_from_wm_class(wm_class) is not None:
         return True
     return wm_class.strip().casefold() in classes_de_jogo_conhecidas()
 
 
 def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any]) -> bool:
-    """True quando o perfil é a regra PRÓPRIA do jogo em foco.
-
-    R-01 (auditoria 23/07). Antes, o autoswitch tratava como "perfil do jogo"
-    qualquer candidato que aparecesse enquanto uma janela ``steam_app_*``
-    estivesse em foco — sem checar se o perfil casou POR CAUSA dela. Com três
-    perfis catch-all no disco e nenhum perfil para o Mullet Mad Jack, o
-    vencedor era o ``vitoria`` (genérico de desktop): a trava manual das três
-    categorias era apagada e o genérico entrava por cima da configuração que a
-    usuária tinha acabado de fazer.
-
-    Ser regra de jogo exige as duas coisas:
-
-    1. ``match.type == "criteria"`` com critério de verdade (catch-all não é
-       regra de jogo, nem o ``MatchAny`` nem o criteria vazio);
-    2. a ``wm_class`` em foco ser ENDEREÇO DE JOGO (`e_endereco_de_jogo`: o
-       carimbo ``steam_app_<id>``, ou uma classe que o censo dos lançadores
-       declarou) e estar listada em ``match.window_class``.
-
-    Regex de título **não** conta: o ``fps.json`` da usuária tem ``|Control)``
-    e ``|Metro)`` sem âncora — deixá-lo valer como regra de jogo reabriria o
-    mesmo buraco por outra porta. (Hoje o ``fps.json`` também preenche
-    ``process_name``, e o ``matches`` é AND, então na prática ele não dispara
-    em "Painel de Controle"; mas a regra aqui não pode depender disso.)
-
-    A checagem é por ESTRUTURA, não pelo rótulo ``match.type``: um
-    ``MatchCriteria`` com ``window_class`` preenchido já é, por definição, não
-    catch-all. Isso também mantém o predicado tolerante a dublês de teste
-    (``getattr`` defensivo), no mesmo idioma de
-    ``lifecycle._profile_rule_matches_game``.
-    """
+    """True quando o perfil é a regra PRÓPRIA do jogo em foco."""
     match = getattr(profile, "match", None)
     if not isinstance(match, MatchCriteria) or not match.window_class:
         return False
     wm_class = str(window_info.get("wm_class") or "")
-    # UNIFICA-PREDICADO-01 (05/08/2026): era `wm_class.startswith("steam_app_")`
-    # — SENSÍVEL a caixa, uma linha acima de uma comparação INSENSÍVEL. A
-    # incoerência estava denunciada no próprio comentário abaixo e mesmo assim
-    # valia: com a janela se anunciando `STEAM_APP_2111190` (a `wm_class` chega
-    # com a grafia do toolkit e muda entre backends, ver `_casa_sem_caixa`), o
-    # perfil do jogo casava pelo matcher e saía daqui como "não é regra de
-    # jogo". Agora as duas linhas usam a MESMA noção de caixa. Portão:
-    # `tests/unit/test_match_sem_caixa_e_sentinel_manual.py::
-    # TestComparacaoSemCaixa::test_regra_de_jogo_com_a_janela_em_caixa_alta`.
-    # PERFIL-DOS-LANCADORES-E1 (11/09/2026): era
-    # `if steam_appid_from_wm_class(wm_class) is None: return False` — de
-    # quando «perfil de jogo» e «perfil da Steam» eram sinônimos. Com o perfil
-    # do Heroic nascendo sozinho, ele nascia e NÃO ENTRAVA: a linha aparecia na
-    # lista e não fazia nada. O que a linha protegia continua protegido, e está
-    # medido na docstring de `e_endereco_de_jogo` — o critério não afrouxou
-    # para "qualquer window_class", ele passou a perguntar ao DONO da resposta.
     if not e_endereco_de_jogo(wm_class):
         return False
-    # Mesma comparação de `MatchCriteria.matches` (R-12): sem ela, um
-    # `steam_app_` digitado com maiúscula faria o perfil CASAR pelo matcher e
-    # não ser reconhecido como regra do jogo aqui — a divergência entre os dois
-    # predicados é justamente o buraco que este módulo existe para fechar.
     return _casa_sem_caixa(wm_class, match.window_class)
 
 
 def normalizar_gamepad_flavor(valor: object) -> MascaraDeGamepad | None:
-    """Converte uma máscara CRUA na forma fechada que `ProfileModeConfig` aceita.
-
-    MODO-01. A máscara viaja como `str` solto por todo o daemon
-    (`DaemonConfig.gamepad_flavor` nasce de um flag em disco) e como `Literal`
-    fechado no schema de perfil. Quem constrói um `ProfileModeConfig` a partir do
-    estado vivo — o modo jogo padrão do daemon e o editor de perfis da GUI —
-    precisa atravessar essa fronteira; um `cast` em cada callsite mentiria para o
-    verificador de tipos sobre um valor que vem de arquivo.
-
-    Desconhecido vira `None`, que no applier significa "mantém a máscara atual"
-    — o fail-safe certo: um flag corrompido não pode recriar o vpad no meio do
-    jogo, que invalida os handles que o jogo já abriu.
-    """
+    """Converte uma máscara CRUA na forma fechada que `ProfileModeConfig` aceita."""
     if valor == "dualsense":
         return "dualsense"
     if valor == "xbox":
@@ -2361,36 +1467,7 @@ def normalizar_gamepad_flavor(valor: object) -> MascaraDeGamepad | None:
 
 
 def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
-    """True quando o perfil DIZ, no próprio arquivo, que serve para jogar.
-
-    MODO-01/B2 (sprint 25/07). O cadeado de autoswitch prometia uma coisa só —
-    *"não trocar de perfil sozinho ao abrir um jogo"* — e congelava muito mais
-    do que isso, porque o único jeito de ceder a ele era o
-    `perfil_e_regra_de_jogo`, que exige critério por ``window_class`` COM uma
-    ``steam_app_<id>`` em foco. Duas vítimas medidas:
-
-    - o preset ``coop_local``, que **tem** ``mode: gamepad`` mas casa por TÍTULO
-      de janela (Sackboy, Overcooked, It Takes Two, Cuphead) — ficava congelado;
-    - todo jogo fora da Steam (GOG, Heroic, itch, nativo) com perfil próprio,
-      pelo mesmo motivo.
-
-    O predicado aqui é o complemento honesto: o perfil **não é catch-all** (não
-    chegou por acidente — casou por regra de verdade) e **declara** ``mode.kind``
-    em ``{gamepad, native}``. Isso é o perfil dizendo "eu sou de jogo" sem
-    depender da Steam ter carimbado a janela.
-
-    Por que é uma função NOVA em vez de afrouxar `perfil_e_regra_de_jogo`: o
-    predicado estrito tem um segundo consumidor, o furo da trava manual em
-    `AutoSwitcher._activate` (F2/R-01), onde afrouxar reabriria por outra porta
-    o buraco que a R-01 fechou — ali um regex de título solto (``|Control)``,
-    ``|Metro)`` do ``fps.json``) passaria a apagar a configuração que ela acabou
-    de fazer na mão. O cadeado e a trava manual protegem coisas diferentes e
-    agora podem ceder por critérios diferentes.
-
-    `getattr` defensivo (mesmo idioma do resto do módulo): dublê de teste sem
-    `mode`/`e_catch_all` responde False — na dúvida o cadeado continua segurando,
-    que é o comportamento histórico.
-    """
+    """True quando o perfil DIZ, no próprio arquivo, que serve para jogar."""
     if profile is None:
         return False
     if bool(getattr(profile, "e_catch_all", True)):
@@ -2400,134 +1477,29 @@ def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
 
 
 def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool:
-    """A precedência da T14 (Z4, 24/08/2026), PURA: perfil com opinião VENCE.
-
-    ``Profile.teclado_emulado`` é ``None`` por padrão — "sem opinião", e nesse
-    caso a flag global (``utils.session.load_keyboard_preference`` hoje) segue
-    mandando, o comportamento de sempre. Quando o perfil TEM opinião
-    (``True``/``False``), ele vence — mesma regra do ``mouse``/``mic``/
-    ``speaker`` desta classe (contrato ``None`` = sem opinião): perfil SEM
-    opinião nunca pode apagar o que a flag diz.
-
-    NÃO É CHAMADA por nenhum caminho de ativação real ainda — ver a nota
-    datada no campo ``Profile.teclado_emulado``. É a metade "régua" da T14; a
-    metade "fio" (o widget e a chamada em ``daemon/lifecycle.py`` na
-    ativação) é de outra frente.
-    """
+    """A precedência da T14 (Z4, 24/08/2026), PURA: perfil com opinião VENCE."""
     if profile is None or profile.teclado_emulado is None:
         return flag_global
     return profile.teclado_emulado
 
 
-# ---------------------------------------------------------------------------
-# O MODO ECONOMIA — O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026)
-# ---------------------------------------------------------------------------
-#
-# Pedido dela: *«Modo Economia de Bateria (se clica tá setado na economia Low
-# Iluminação Fraca, Vibraçao Economia, Gatilho (algum de economia pra mantermos
-# as features funcionando mas gastando menos, entende?)»*
 # <!-- noqa-acento: citação literal dela -->
-#
-# ESTE BLOCO É O DONO DO «QUANTO GASTA», e ele responde três perguntas num
-# lugar só: o que a economia faz em cada peça (:data:`A_ECONOMIA_EM_CADA_PECA`
-# e as três funções ``*_na_economia``), quem vence entre o global e o do
-# controle (:func:`economia_vale`) e onde a escolha é gravada
-# (:func:`declaracao_da_economia`). A tela lê e escreve por aqui; quem leva ao
-# aparelho é ``manager._controllers_na_economia``, na ativação do perfil.
-#
-# ONDE A ESCOLHA MORA: NA DECLARAÇÃO DA MESA, AO LADO DO GLOBAL
-# --------------------------------------------------------------
-# ``maquina.json`` → ``controles[<uniq>].economia`` (``utils.maquina.
-# ControleDeclarado``), vizinho do ``orcamento.teto`` que é o Perfil Global de
-# Bateria. NÃO no perfil, e a sprint pedia o perfil; a troca é decisão pelo
-# padrão dela, medida em 25/09/2026:
-#
-# * custa menos a quem joga: a bateria é do CONTROLE, não do jogo. No perfil,
-#   a economia que ela ligou no P2 sumiria na primeira troca automática para o
-#   perfil de um jogo, e ela teria de ligar de novo em cada jogo — é a mesma
-#   surpresa que fez o ``microfone`` por controle morar ali
-#   (``ControleDeclarado``, *"um microfone que liga ao trocar de jogo"*);
-# * um dono só: o global e o do controle ficam no MESMO documento, com o MESMO
-#   gesto (``machine.declare``) e a MESMA leitura (a declaração que o daemon
-#   rebinda no clique);
-# * a tela: um campo novo no PERFIL exigiria uma coluna nova na aba Perfis
-#   (medido: oito réguas da coluna «Ajuste próprio» reprovam), tela fora das
-#   duas abas desta leva.
-#
-# O PREÇO DO DOWNGRADE, medido e não escondido: o disco só guarda
-# ``"economia": true`` de quem ligou (``utils.maquina._podar`` tira o ``null``
-# de quem desligou). Com algum ``true`` lá, um Hefesto de ANTES desta sprint
-# recusa a seção ``controles`` inteira na leitura (``extra="forbid"`` no
-# ``ControleDeclarado``) e a resgata sem ela — o mesmo preço que todo campo
-# novo daquela classe pagou (o ``microfone``, em 22/08). No perfil o preço
-# seria maior: o perfil inteiro recusado.
-#
-# NENHUMA FEATURE DESLIGA, e é a régua: a luz fica mais fraca e não apaga, a
-# vibração ganha teto e não some, o gatilho gasta menos motor e continua com o
-# mesmo efeito. Todas as três são TETO (``min``), nunca troca: quem já escolheu
-# gastar menos do que a economia não é puxado para cima.
-#
-# A REGRA ENTRE O GLOBAL E O DO CONTROLE — decidida pelo padrão dela
-# ------------------------------------------------------------------
-# A economia vale na peça quando a MESA está em «Bateria longa» (o Perfil
-# Global de Bateria da aba Sistema, ``maquina.json`` → ``orcamento.teto``) OU
-# quando o controle a ligou. O global é o piso da mesa inteira; o botão do
-# controle liga a economia de um só quando a mesa está em «Tudo ligado» ou em
-# «Eu escolho». Por que não o contrário (o controle desligar a economia que a
-# mesa ligou):
-#
-# * a «Bateria longa» é uma promessa à mesa INTEIRA — a dica dela diz *"o que
-#   fica ligado em todos os controles"* —, e o teto de vibração dela já é
-#   aplicado no funil de todos (``core.rumble._effective_mult``). Um controle
-#   escapando dele pediria um segundo caminho de vibração, que é dono dobrado;
-# * o mais reversível: um clique no global desfaz tudo, e o do controle nunca
-#   deixa um estado que o global não saiba desfazer;
-# * quem precisa de vibração inteira num controle só (a pessoa que joga pelo
-#   tato) escolhe «Eu escolho» na mesa e liga a economia nos outros — o
-#   caminho existe, e cada aba continua mandando no que faz.
-#
-# Por isso ``False`` no disco vale o mesmo que ``None``: o controle não liga
-# por si. O escritor grava ``true`` ou ``null``.
 
 
-#: O teto do brilho da BARRA DE LUZ na economia — 30 % do trilho, o mesmo
-#: degrau que a vibração «Economia» entrega (``RUMBLE_POLICY_MULT``). É TETO:
-#: quem escolheu 10 % continua em 10 %, e zero continua zero (apagar a barra é
-#: escolha dela, nunca efeito da economia).
 BRILHO_DA_BARRA_NA_ECONOMIA = 0.3
 
-#: As LUZES DE NÚMERO na economia: o degrau mais baixo dos três
-#: (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). Continuam acesas — o número
-#: do jogador não some, só gasta menos.
 BRILHO_DAS_LUZES_NA_ECONOMIA: Literal["fraco"] = "fraco"
 
-#: A política de VIBRAÇÃO da peça na economia — o degrau «Economia» que a aba
-#: Vibração já oferece. O número mora num lugar só
-#: (``daemon.subsystems.rumble.RUMBLE_POLICY_MULT``), e é lido lá.
 POLITICA_DA_VIBRACAO_NA_ECONOMIA: Literal["economia"] = "economia"
 
-#: A FORÇA DO GATILHO na economia: metade, com piso 1. Metade e não o 0,3 da
-#: vibração porque a escala do gatilho tem só oito níveis (1..8), e um terço
-#: juntaria os três de baixo no mesmo 1 — o efeito deixaria de ser o efeito.
-#: O piso é o que garante que a zona que resistia continua resistindo.
 FATOR_DO_GATILHO_NA_ECONOMIA = 0.5
 
-#: Em cada modo de gatilho, QUAIS parâmetros posicionais são força (ou
-#: amplitude) — os únicos que a economia toca. Posição, começo, fim e
-#: frequência ficam como estão, e é isso que mantém o efeito: o gatilho resiste
-#: no mesmo ponto, com menos motor. Os nomes vêm das fábricas de
-#: ``core.trigger_effects`` (a ordem posicional delas é o contrato do disco).
-#:
-#: FORA POR DECISÃO, e cada um com a razão: ``Off`` e ``Pulse`` não têm força;
-#: ``Galloping`` só tem tempo (pé, pé, frequência); ``Custom`` é o escape de
-#: bytes crus, e reescalar um byte cujo sentido ninguém declarou seria mudar o
-#: efeito sem saber qual — na dúvida, não se mexe.
 FORCAS_DO_GATILHO: dict[str, tuple[int, ...]] = {
-    "Rigid": (1,),  # (position, force 0-255)
-    "SimpleRigid": (0,),  # (strength 0-8)
-    "PulseA": (2,),  # (start, end, force 0-255)
-    "PulseB": (2,),  # (start, end, force 0-255)
-    "Resistance": (1,),  # (start, force 0-8)
+    "Rigid": (1,),
+    "SimpleRigid": (0,),
+    "PulseA": (2,),
+    "PulseB": (2,),
+    "Resistance": (1,),
     "Bow": (2, 3),  # (start, end, force, snap)
     "SemiAutoGun": (2,),  # (start, end, force)
     "AutoGun": (1,),  # (start, strength, frequency)
@@ -2536,30 +1508,23 @@ FORCAS_DO_GATILHO: dict[str, tuple[int, ...]] = {
     "Weapon": (2,),  # (start, end, force)
     "Vibration": (1,),  # (position, amplitude, frequency)
     "SlopeFeedback": (2, 3),  # (start, end, start_strength, end_strength)
-    "MultiPositionFeedback": tuple(range(10)),  # (strengths x10)
-    "MultiPositionVibration": tuple(range(1, 11)),  # (frequency, strengths x10)
+    "MultiPositionFeedback": tuple(range(10)),
+    "MultiPositionVibration": tuple(range(1, 11)),
 }
 
-#: Os modos que a economia deixa como estão, com a razão acima.
 MODOS_DE_GATILHO_SEM_FORCA: frozenset[str] = frozenset(
     {"Off", "Pulse", "Galloping", "Custom"}
 )
 
 
 class PecaDaEconomia(NamedTuple):
-    """Uma coisa que gasta bateria, e o que a economia faz com ela.
-
-    ``ponto_de_aplicacao`` é ``"módulo:atributo"`` — a função que a economia
-    usa para pôr o teto — ou ``None`` quando a peça fica de fora, e aí
-    ``o_que_faz`` diz por quê. A régua importa cada ponto declarado.
-    """
+    """Uma coisa que gasta bateria, e o que a economia faz com ela."""
 
     nome: str
     o_que_faz: str
     ponto_de_aplicacao: str | None
 
 
-#: O QUE A ECONOMIA FAZ EM CADA PEÇA — a tabela é o dono, e a tela a lê.
 A_ECONOMIA_EM_CADA_PECA: tuple[PecaDaEconomia, ...] = (
     PecaDaEconomia(
         "Barra de luz",
@@ -2602,23 +1567,14 @@ A_ECONOMIA_EM_CADA_PECA: tuple[PecaDaEconomia, ...] = (
 
 
 def economia_vale(escolha_do_controle: bool | None, mesa_em_economia: bool) -> bool:
-    """A economia vale nesta peça? A regra entre o global e o do controle.
-
-    Vale quando a mesa está em «Bateria longa» OU quando o controle a ligou —
-    ver a regra escrita no topo deste bloco. ``False`` do controle vale o mesmo
-    que ``None``: o controle não desliga a economia que a mesa ligou.
-    """
+    """A economia vale nesta peça? A regra entre o global e o do controle."""
     return bool(mesa_em_economia) or escolha_do_controle is True
 
 
 def origem_da_economia(
     escolha_do_controle: bool | None, mesa_em_economia: bool
 ) -> Literal["mesa", "controle"] | None:
-    """QUEM ligou a economia nesta peça: a mesa, o controle, ou ninguém.
-
-    A tela precisa da diferença para o botão da linha: sob a mesa em «Bateria
-    longa», o botão aceso é da mesa, e desligá-lo é na aba Sistema.
-    """
+    """QUEM ligou a economia nesta peça: a mesa, o controle, ou ninguém."""
     if mesa_em_economia:
         return "mesa"
     if escolha_do_controle is True:
@@ -2627,43 +1583,23 @@ def origem_da_economia(
 
 
 def mesa_em_economia(teto_da_mesa: str | None) -> bool:
-    """A chave do Perfil Global de Bateria liga a economia na mesa inteira?
-
-    O dono de "este orçamento impõe teto" é ``core.rumble.teto_do_orcamento``
-    — hoje só a ``economia`` («Bateria longa») —, e esta função pergunta a ele
-    em vez de repetir a chave. Import tardio: ``profiles/`` é o mais baixo da
-    pilha, e ``core.rumble`` puxa o ``daemon`` pela tabela dos degraus.
-    """
+    """A chave do Perfil Global de Bateria liga a economia na mesa inteira?"""
     from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
 
     return teto_do_orcamento(teto_da_mesa) is not None
 
 
-#: A FONTE da declaração da mesa, registrada pelo daemon no boot: um chamável
-#: que devolve o ``MaquinaConfig`` vivo (``Daemon._maquina``). É FONTE e não
-#: valor pela razão do ``DaemonConfig.orcamento_da_mesa``: o
-#: ``machine.declare`` rebinda a declaração, e uma cópia feita no boot ficaria
-#: velha no instante do clique. ``None`` (ninguém registrou: a CLI, a suíte, o
-#: dublê) é a mesa sem economia nenhuma, o comportamento de antes desta sprint.
 _FONTE_DA_DECLARACAO: Any = None
 
 
 def registrar_declaracao_da_mesa(fonte: Any) -> None:
-    """O daemon diz de onde ler a declaração da mesa (o ``maquina.json`` vivo).
-
-    ``None`` desfaz o registro (a suíte o usa para voltar ao padrão).
-    """
+    """O daemon diz de onde ler a declaração da mesa (o ``maquina.json`` vivo)."""
     global _FONTE_DA_DECLARACAO
     _FONTE_DA_DECLARACAO = fonte if callable(fonte) else None
 
 
 def _declaracao_viva() -> Any:
-    """A declaração de agora, ou ``None``. Fonte que levanta é ``None``.
-
-    ``None`` e não "levanta" porque quem pergunta é a ativação do perfil, e uma
-    declaração ilegível não pode derrubar a luz e o gatilho de todo mundo; o
-    teto que ninguém consegue ler é o de antes desta sprint — nenhum.
-    """
+    """A declaração de agora, ou ``None``. Fonte que levanta é ``None``."""
     fonte = _FONTE_DA_DECLARACAO
     if fonte is None:
         return None
@@ -2674,24 +1610,13 @@ def _declaracao_viva() -> Any:
 
 
 def economia_da_declaracao(declaracao: Any) -> tuple[bool, frozenset[str]]:
-    """``(a mesa em «Bateria longa», os uniq que ligaram a sua)`` de UMA declaração.
-
-    Função pura sobre o ``MaquinaConfig`` (ou ``None``): é a mesma resposta que
-    a ativação do perfil lê da declaração viva, e é com ela que o daemon
-    compara o antes e o depois de um ``machine.declare``
-    (``Daemon.reaplicar_se_a_economia_mudou``).
-    """
+    """``(a mesa em «Bateria longa», os uniq que ligaram a sua)`` de UMA declaração."""
     orcamento = getattr(declaracao, "orcamento", None)
     teto = getattr(orcamento, "teto", None)
     mesa = mesa_em_economia(teto if isinstance(teto, str) else None)
     controles = getattr(declaracao, "controles", None)
     if not isinstance(controles, dict):
         return mesa, frozenset()
-    # A chave JÁ é a canônica: o ``MaquinaConfig`` recusa na leitura toda
-    # chave de ``controles`` que não seja doze hexa minúsculos
-    # (``utils.maquina._chave_de_controle_e_mac_de_hardware``), então não há
-    # o que normalizar aqui — e uma segunda normalização seria a terceira
-    # grafia da chave de peça, que a casa já juntou em ``norm_mac``.
     ligados = frozenset(
         uniq
         for uniq, declarado in controles.items()
@@ -2706,32 +1631,12 @@ def economia_da_mesa() -> bool:
 
 
 def controles_em_economia() -> frozenset[str]:
-    """Os ``uniq`` (doze hexa) cujo controle LIGOU a sua economia, AGORA.
-
-    Só ``True`` conta: ``False`` e a ausência são o mesmo aqui (ver
-    :func:`economia_vale`).
-    """
+    """Os ``uniq`` (doze hexa) cujo controle LIGOU a sua economia, AGORA."""
     return economia_da_declaracao(_declaracao_viva())[1]
 
 
 def declaracao_da_economia(uniq: str, ligada: bool) -> dict[str, Any]:
-    """A declaração PARCIAL que liga ou desliga a economia de um controle.
-
-    É o corpo do ``machine.declare`` que a tela manda no clique do botão da
-    linha: ``{"controles": {"<uniq>": {"economia": true}}}``. Desligar manda
-    ``null``, que SOBRESCREVE (``utils.maquina.fundir_declaracao``: *"None
-    presente na declaração é uma escolha"*); omitir a chave deixaria a
-    economia ligada no disco com o botão apagado na tela. O resto do controle
-    (``cor``, ``microfone``…) não é tocado — a fusão desce no dicionário.
-
-    ``ValueError`` num ``uniq`` em que não é seguro gravar: gravar a economia
-    sob uma chave que nenhum controle casa seria a escolha dela sumindo calada.
-    As duas perguntas vão aos DONOS, e nenhuma é escrita de novo aqui: a chave
-    de peça que grava é a de ``manager.chave_de_peca_que_grava`` (doze hexa,
-    e o gamepad virtual não é peça de plástico), e o que o disco aceita é o
-    que o ``MaquinaConfig`` valida (o endereço forjado pelo DKMS é recusado
-    lá, e o ``machine.declare`` devolveria ``declaracao_invalida``).
-    """
+    """A declaração PARCIAL que liga ou desliga a economia de um controle."""
     from pydantic import ValidationError
 
     from hefesto_dualsense4unix.profiles.manager import chave_de_peca_que_grava
@@ -2748,20 +1653,12 @@ def declaracao_da_economia(uniq: str, ligada: bool) -> dict[str, Any]:
 
 
 def _escritos(modelo: BaseModel) -> dict[str, Any]:
-    """Só os campos que o modelo ESCREVEU — o vocabulário parcial do override.
-
-    ``exclude_unset`` e não ``include=model_fields_set``: o segundo despeja a
-    seção aninhada INTEIRA, e revalidá-la marcaria como escritos os campos que
-    a peça herdava do global (o player-LED apagado pisando o do perfil).
-    """
+    """Só os campos que o modelo ESCREVEU — o vocabulário parcial do override."""
     return modelo.model_dump(exclude_unset=True)
 
 
 def _forca_na_economia(valor: int) -> int:
     """Metade da força, com piso 1. Zero continua zero: é zona inativa."""
-    # `import math` aqui e não no topo: uma linha a mais no cabeçalho empurra
-    # toda citação `profiles/schema.py:N` da casa, e quatro delas moram em
-    # arquivos de outras frentes em voo.
     import math
 
     if valor <= 0:
@@ -2770,11 +1667,7 @@ def _forca_na_economia(valor: int) -> int:
 
 
 def gatilho_na_economia(gatilho: TriggerConfig) -> TriggerConfig:
-    """O mesmo gatilho, no mesmo modo e no mesmo ponto, com a força no teto.
-
-    Só os parâmetros de :data:`FORCAS_DO_GATILHO` mudam. O formato aninhado
-    (``MultiPosition*``) é todo força — a frequência dele é implícita.
-    """
+    """O mesmo gatilho, no mesmo modo e no mesmo ponto, com a força no teto."""
     indices = FORCAS_DO_GATILHO.get(gatilho.mode)
     if not indices or not gatilho.params:
         return gatilho.model_copy()
@@ -2794,13 +1687,7 @@ def gatilho_na_economia(gatilho: TriggerConfig) -> TriggerConfig:
 def gatilhos_na_economia(
     dele: TriggersConfig | None, do_perfil: TriggersConfig | None
 ) -> TriggersConfig | None:
-    """Os gatilhos de UMA peça na economia, lado a lado.
-
-    ``do_perfil`` preenchido: o lado que a peça não escreveu é herdado do
-    perfil e posto no teto (é o controle ligando a economia sozinho). ``None``:
-    só o que a peça escreveu muda, porque o global já saiu em economia (é a
-    mesa em «Bateria longa»).
-    """
+    """Os gatilhos de UMA peça na economia, lado a lado."""
     lados: dict[str, Any] = {}
     for lado in ("left", "right"):
         escrito = dele is not None and lado in dele.model_fields_set
@@ -2819,13 +1706,7 @@ def gatilhos_na_economia(
 def leds_na_economia(
     dele: LedsConfig | None, do_perfil: LedsConfig | None
 ) -> LedsConfig | None:
-    """A luz de UMA peça na economia — o brilho no teto, a cor de sempre.
-
-    Mesmo contrato de :func:`gatilhos_na_economia` para ``do_perfil``. A cor
-    nunca é escrita aqui: o override que só fala do brilho vira FATOR sobre a
-    base (``manager._controllers_to_led_scales``), e a cor do número do
-    jogador continua sendo a do número.
-    """
+    """A luz de UMA peça na economia — o brilho no teto, a cor de sempre."""
     campos = _escritos(dele) if dele is not None else {}
     if "lightbar_brightness" in campos:
         brilho: float | None = float(campos["lightbar_brightness"])
@@ -2880,22 +1761,7 @@ def vibracao_na_economia(
     *,
     mesa: bool = False,
 ) -> ControllerRumbleOverride | None:
-    """A vibração de UMA peça sob o teto da economia.
-
-    O fator por peça é RELATIVO à política do perfil (``mult_da_peca /
-    mult_do_perfil``, ``manager.fator_da_unidade``), e o teto sai daí:
-
-    * a mesa em «Bateria longa» já corta o funil de TODOS no degrau Economia
-      (``core.rumble._effective_mult``). A peça só não pode passar do global —
-      um fator acima de 1 furaria o teto da mesa —, então a política própria
-      que amplifica sai, e a que é mais fraca fica;
-    * o controle sozinho: a peça vai ao degrau Economia, a menos que ela já
-      esteja abaixo dele.
-
-    As barras de motor (``motor_*_pct``) ficam sempre: elas só reduzem.
-    Política do perfil em ``auto`` (base móvel) devolve a peça como estava — o
-    consumidor já pula a peça nesse caso, e o ``auto`` segue a bateria.
-    """
+    """A vibração de UMA peça sob o teto da economia."""
     base = _mult_da_vibracao(politica_do_perfil or "balanceado", custom_do_perfil)
     if base is None or base <= 0.0:
         return dela
@@ -2920,81 +1786,29 @@ def vibracao_na_economia(
     return ControllerRumbleOverride.model_validate(campos)
 
 
-# ---------------------------------------------------------------------------
-# NASCE-LIGADO-01 — de onde vem o valor de cada campo quando o perfil CALA
-# ---------------------------------------------------------------------------
-#
-# Ordem dela, 17/09/2026: *"os jogos e perfis tem que iniciar com todas as
-# features ativadas por default."* A sprint que esta tabela atende pedia a
-# triagem antes de qualquer cura, e a razão é estrutural: "ligar tudo" aplicado
-# sem triagem QUEBRA o contrato do override por controle, onde `None` quer dizer
-# *"usa o global"* e não *"desligado"*.
-#
-# A TRIAGEM DESMENTIU O PRÓPRIO ENUNCIADO DA SPRINT, e é o achado do dia. Ela
-# listava 13 de 14 features nascendo mudas, lendo só o `default` do pydantic. O
-# canal certo é o LEITOR, e perguntando a ele:
-#
-#     vibração     `DaemonConfig.rumble_policy` já nasce "balanceado"
-#     giro/accel   `virtual_motion.EstadoDosSensores` nasce (True, True)
-#     microfone    `plano_de_radio.microfone_nasce_ligado()` devolve True
 #     teclado      `DaemonConfig.keyboard_emulation_enabled` nasce True
-#     LED          `auto_player_colors=True` acende cor e número por slot
-#     máscara      `DaemonConfig.gamepad_flavor` nasce "dualsense"
-#
-# Dessas, só uma nasce muda DE VERDADE (os gatilhos), e ela é a única que esta
-# leva mexeu. `None` no esquema não é evidência de feature desligada: é evidência
-# de que a pergunta foi feita ao arquivo errado.
-#
-# COMO SE USA: todo campo de todo modelo deste arquivo tem uma linha aqui, e o
-# portão `tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` percorre
-# os modelos por INTROSPECÇÃO — campo sem linha reprova nomeando o campo. É o que
-# impede a tabela de proteger só os de hoje e não o próximo.
 
-#: Pilha (a): o vazio é contrato — herança, critério ignorado, sentinela de
-#: união, procedência gravada, ou parâmetro cujo piso já garante que ele nunca
-#: nasça mudo. Não é feature da tela, e a ordem dela não o alcança.
 E_CONTRATO = "contrato"
 
-#: Pilha (a) por construção: o campo não tem default. Quem constrói o objeto é
-#: obrigado a dizer, e o nascimento é decidido por quem o constrói.
 E_OBRIGATORIO = "obrigatório"
 
-#: Pilha (a) por construção: o campo é uma SEÇÃO que nasce inteira. O conteúdo
-#: tem linhas próprias nesta tabela, no modelo dele.
 E_SECAO = "seção"
 
-#: Pilha (b): o default DESTE arquivo é a opinião. O portão exige que o valor de
-#: nascimento não seja o mudo daquele campo.
 NASCE_NO_ESQUEMA = "no-esquema"
 
-#: Pilha (b): o `None` daqui já significa LIGADO para quem lê. O `dono` é o
-#: endereço de quem garante isso, e o portão o resolve.
 NASCE_NO_LEITOR = "no-leitor"
 
-#: Pilha (b): o aparelho recebe o valor na CHEGADA do controle, e o perfil
-#: calado herda esse nascimento em vez do default do firmware.
 NASCE_NA_ADOCAO = "na-adoção"
 
-#: Pilha (b): feature muda, e o valor é DELA. `falta` diz o que falta decidir.
-#: A sprint é explícita: *"Os demais — LED, sensores, mouse, teclado — não têm
-#: valor decidido e não se inventa aqui."*
 AGUARDA_A_PALAVRA_DELA = "aguarda-a-palavra-dela"
 
-#: As quatro formas da pilha (b) — as que a ordem dela alcança.
 PILHA_DAS_FEATURES = frozenset(
     {NASCE_NO_ESQUEMA, NASCE_NO_LEITOR, NASCE_NA_ADOCAO, AGUARDA_A_PALAVRA_DELA}
 )
 
 
 class Nascimento(NamedTuple):
-    """De onde vem o valor de um campo quando ninguém opinou.
-
-    `razao` é obrigatória e o portão a exige: a sprint pede *"a razão escrita em
-    cada um"*, e um campo classificado sem razão é a classificação sem a
-    triagem. `dono` é o endereço `módulo:símbolo` de quem garante o nascimento
-    — obrigatório em `NASCE_NO_LEITOR` e `NASCE_NA_ADOCAO`, e o portão o
-    resolve por import, porque endereço que ninguém abre envelhece calado.
-    """
+    """De onde vem o valor de um campo quando ninguém opinou."""
 
     onde: str
     razao: str
@@ -3003,7 +1817,6 @@ class Nascimento(NamedTuple):
 
 
 NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
-    # -- o casamento: vazio é critério IGNORADO, nunca feature ------------
     "MatchAny.type": Nascimento(
         E_CONTRATO, "Discriminador da união; é o NOME do sentinel, não um valor."
     ),
@@ -3026,7 +1839,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "MatchCriteria.process_name": Nascimento(
         E_CONTRATO, "Mesma regra do `window_class`: lista vazia não é condição."
     ),
-    # -- os gatilhos: a ÚNICA feature que nascia muda de verdade -----------
     "TriggerConfig.mode": Nascimento(
         E_OBRIGATORIO,
         "Quem constrói um gatilho diz qual é o modo. O nascimento é decidido "
@@ -3047,7 +1859,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "TriggersConfig.right": Nascimento(
         NASCE_NO_ESQUEMA, "Ver `TriggersConfig.left`; os dois lados, sempre juntos."
     ),
-    # -- as luzes ---------------------------------------------------------
     "LedsConfig.lightbar": Nascimento(
         NASCE_NO_LEITOR,
         "`(0, 0, 0)` é a cor do BROADCAST, e ela só vale com "
@@ -3082,7 +1893,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "escolhida), não uma feature. `None` = sem procedência, tratado como "
         "LEGADO pelo resolvedor.",
     ),
-    # -- a vibração: já nasce balanceada, e é no LEITOR --------------------
     "RumbleConfig.passthrough": Nascimento(
         NASCE_NO_ESQUEMA, "`True`: a vibração que o jogo manda passa para o motor."
     ),
@@ -3103,7 +1913,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "Só vale com `policy='custom'`; o validador do modelo recusa fora "
         "disso. Não é feature, é coerência de um par.",
     ),
-    # -- mouse e teclado: a assimetria medida ------------------------------
     "ProfileMouseConfig.enabled": Nascimento(
         E_OBRIGATORIO, "Não existe seção de mouse sem opinião: quem a escreve diz."
     ),
@@ -3116,7 +1925,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "ProfileMouseConfig.scroll_speed": Nascimento(
         E_CONTRATO, "Ver `ProfileMouseConfig.speed`; faixa 1-5, mesmo piso."
     ),
-    # -- o microfone: a inversão de 18/09 já está de pé --------------------
     "ProfileMicConfig.button_toggles_system": Nascimento(
         E_OBRIGATORIO, "Quem escreve a seção diz. O global nasce `True` no daemon."
     ),
@@ -3144,7 +1952,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "controle nasce com tudo, e o silêncio dela vence porque é explícito.",
         dono="hefesto_dualsense4unix.integrations.plano_de_radio:microfone_nasce_ligado",
     ),
-    # -- o alto-falante: o modelo que a sprint mandou copiar ---------------
     "ProfileSpeakerConfig.volume": Nascimento(
         E_OBRIGATORIO,
         "Obrigatório por medição (SOM-02, armadilhas 1 e 2): seção sem volume "
@@ -3168,7 +1975,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "sozinho — a justificativa está escrita ao lado do campo.",
         dono="hefesto_dualsense4unix.integrations.alto_falante_bt:FONTE_SFX",
     ),
-    # -- o modo e o caminho ------------------------------------------------
     "ProfileModeConfig.kind": Nascimento(
         E_OBRIGATORIO, "Não existe seção de modo sem dizer qual modo."
     ),
@@ -3186,7 +1992,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "o do jogo anterior) e o dono é o resolvedor, não este campo.",
         dono="hefesto_dualsense4unix.integrations.virtual_pad:caminho_resolvido",
     ),
-    # -- a ponte: registro do que foi medido, não pedido --------------------
     "PonteConfirmada.kind": Nascimento(
         E_OBRIGATORIO, "Registro de uma confirmação; sem o modo não há o que registrar."
     ),
@@ -3202,7 +2007,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "PonteConfirmada.confirmada_por": Nascimento(
         E_CONTRATO, "Procedência da confirmação (gesto, silêncio, escolha dela)."
     ),
-    # -- os overrides por controle: `None` = usa o global -------------------
     "ControllerRumbleOverride.policy": Nascimento(
         E_CONTRATO, "Override por peça: `None` = esta peça usa a seção global do perfil."
     ),
@@ -3275,7 +2079,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "gesto dela no chip «Mira Virtual», a câmera andaria com o controle na "
         "mesa.",
     ),
-    # -- o perfil --------------------------------------------------------
     "Profile.name": Nascimento(E_OBRIGATORIO, "Não há perfil sem nome."),
     "Profile.version": Nascimento(
         E_CONTRATO, "`1` é o único valor que o `Literal` aceita."
@@ -3361,12 +2164,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = **ainda não sei**, e é a distinção entre 'nunca tentei' e "
         "'tentei e funciona' que faz a escada de pontes parar.",
     ),
-    # -- a mira por movimento: ARRANJO, não feature do plástico -------------
-    # MOVIMENTO-EM-QUALQUER-MASCARA-01, 21/09/2026. As linhas faltaram no dia
-    # em que a seção nasceu, e a régua desta tabela as acusou na suíte. O giro
-    # e o acelerômetro — a feature do aparelho — nascem de pé por conta deles
-    # (`test_os_dois_sensores_nascem_de_pe`); o que se classifica aqui é a
-    # TRADUÇÃO, e a razão de ela não nascer ligada está no docstring do modelo.
     "Profile.movimento": Nascimento(
         E_CONTRATO,
         "`None` = nenhuma tradução do giro. É ARRANJO, não feature: ligada sem "
@@ -3417,9 +2214,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "o vazio aqui é LIGADO. Um botão escolhido a restringe ao aperto.",
         dono="hefesto_dualsense4unix.daemon.subsystems.gamepad:aplicar_o_movimento",
     ),
-    # NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026: o toque e a inclinação como
-    # fonte. São ARRANJO, como o destino do giro: o touchpad e o acelerômetro do
-    # plástico nascem de pé por conta deles, e o que se classifica é a tradução.
     "ProfileMovimentoConfig.toque": Nascimento(
         E_CONTRATO,
         "`nenhum` = o touchpad é o do computador, como sempre foi "
@@ -3502,32 +2296,13 @@ __all__ = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# O GANHO DA HÁPTICA POR ÁUDIO — O-GANHO-DA-HAPTICA-TEM-DONO-01, 29/09/2026.
-# No fim do arquivo de propósito: um bloco no meio empurraria toda citação
-# `profiles/schema.py:N` que a casa faz das barras dos motores.
-# ---------------------------------------------------------------------------
-
-#: O GANHO DA HÁPTICA POR ÁUDIO quando ninguém o arrastou. 150 % (+3,5 dB),
-#: por delegação, a validar por ela (O-GANHO-DA-HAPTICA-TEM-DONO-01, 29/09): a
-#: medida diz que do jogo à placa tudo já está em 0 dB e ela sentiu fraco, então
-#: nascer em 100 não mudaria nada do que ela sentiu.
 HAPTICA_PCT_PADRAO = 150
 
-#: Teto da barra da háptica. Passa de 100, ao contrário das barras dos motores,
-#: porque no PCM do jogo a Força não alcança: esta barra é o PRIMEIRO e único
-#: fator. 200 % é +6 dB, o que leva a textura mais fraca medida (0,45) a 0,9
-#: sem cortar; acima disso é só corte. É o mesmo teto do ``custom_mult``.
 HAPTICA_PCT_MAX = 200
 
 
 def pct_da_haptica(rumble: ControllerRumbleOverride | None) -> int:
-    """O ganho da háptica por áudio desta peça, em % — o padrão sem opinião.
-
-    O ÚNICO lugar que resolve o «não escrito» da barra da háptica, irmão de
-    ``pcts_dos_motores``: quem escala (o dono do ganho, no subsystem do som) lê
-    daqui e nunca repete o padrão.
-    """
+    """O ganho da háptica por áudio desta peça, em % — o padrão sem opinião."""
     if rumble is None or rumble.haptica_pct is None:
         return HAPTICA_PCT_PADRAO
     return int(rumble.haptica_pct)

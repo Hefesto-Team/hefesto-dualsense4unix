@@ -1,23 +1,4 @@
-"""PRONTUARIO-01 (16/08/2026) — o disco não sabe dizer que um jogo funciona.
-
-O alvo dela, ao sair em 15/08: *"espero de fato que tenhamos tudo resolvido e
-cada um dos jogos locais jogável via cabo ou bt"*. O prontuário é a régua desse
-alvo, e a primeira coisa que ele precisa fazer é **recusar o número fácil**.
-
-**A prova de que "funciona" não se lê no disco.** `Duskfade` e `DON'T SCREAM`
-têm a MESMA assinatura: mesmo motor, mesmas famílias de API (`rawinput` e
-`xinput` por `LoadLibrary`), mesmo wrapper na linha, mesmo Steam Input
-desligado. Um funciona e o outro não — medido, com o jogo aberto, em
-16/08/2026. Qualquer prontuário que pintasse os dois de verde estaria certo
-sobre um e errado sobre o outro, sem meio de saber qual.
-
-Por isso o veredito é **impedimento**, e o balde bom se chama
-``sem_impedimento_conhecido`` — que é uma frase mais longa e mais honesta que
-"pronto".
-
-Este arquivo trava as duas metades: que o prontuário NOMEIA o que sabe (com a
-cura junto), e que ele não promete o que não sabe.
-"""
+"""PRONTUARIO-01 (16/08/2026) — o disco não sabe dizer que um jogo funciona."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,7 +26,6 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
 )
 
 _PRAGMATA, _DUSKFADE, _SACKBOY = "3357650", "2542020", "1599660"
-#: A linha real do Pragmata quando a variável de crash dela comeu o wrapper.
 _COMIDA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 
@@ -53,9 +33,6 @@ def _com_wrapper(extra: str = "") -> str:
     return f"{WRAPPER_LAUNCH}" if not extra else f"{WRAPPER_LAUNCH} {extra}"
 
 
-# ---------------------------------------------------------------------------
-# O que o prontuário NUNCA diz
-# ---------------------------------------------------------------------------
 class TestNaoPrometeOQueNaoSabe:
     def test_o_balde_bom_nao_se_chama_pronto(self) -> None:
         """O nome é a promessa. "sem impedimento conhecido" não é "funciona"."""
@@ -64,11 +41,7 @@ class TestNaoPrometeOQueNaoSabe:
         assert "pronto" not in SEM_IMPEDIMENTO
 
     def test_duskfade_e_dont_scream_saem_iguais(self) -> None:
-        """A MORDIDA conceitual: o disco não separa os dois, e o veredito diz isso.
-
-        Um prontuário que os separasse estaria inventando — e é justamente o
-        tipo de invenção convincente que já custou horas nesta casa.
-        """
+        """A MORDIDA conceitual: o disco não separa os dois, e o veredito diz isso."""
         from hefesto_dualsense4unix.integrations.api_de_entrada import Evidencia
 
         assinatura = Evidencia(
@@ -93,9 +66,6 @@ class TestNaoPrometeOQueNaoSabe:
         assert ficha.veredito == NAO_SEI
 
 
-# ---------------------------------------------------------------------------
-# O que ele diz, com a cura ao lado
-# ---------------------------------------------------------------------------
 class TestNomeiaOQueSabe:
     def test_sem_wrapper_e_impedido_e_a_cura_e_automatica(self) -> None:
         ficha = Prontuario(
@@ -105,18 +75,10 @@ class TestNomeiaOQueSabe:
         (estorvo,) = [e for e in ficha.estorvos if e.chave == SEM_WRAPPER]
         assert estorvo.automatica
         assert "hefesto-launch" in estorvo.o_que
-        assert estorvo.a_cura  # nunca um diagnóstico sem saída
+        assert estorvo.a_cura
 
     def test_a_lista_estendida_a_mao_e_estorvo_com_cura_automatica(self) -> None:
-        """ERA `test_linha_intocavel_nao_promete_conserto_automatico`, e o nome
-        dele era a frase que caducou em 06/09/2026 (07-Q1).
-
-        A razão escrita — *"quem editou a linha à mão fica com um
-        fragmento-comando pendurado se o produto reescrever por cima"* — valia
-        para reescrever por cima. `subtrair_nosso_ignore` não reescreve: ela
-        tira o nosso par de dentro da lista dela, e a atribuição sai inteira e
-        volta inteira.
-        """
+        """ERA `test_linha_intocavel_nao_promete_conserto_automatico`, e o nome"""
         ficha = Prontuario(
             appid="1",
             nome="Com IGNORE à mão",
@@ -130,13 +92,7 @@ class TestNomeiaOQueSabe:
         assert estorvo.automatica
 
     def test_o_que_o_reparo_nao_alcanca_continua_nomeado_e_com_dono(self) -> None:
-        """O estorvo NÃO morreu — ele deixou de ser o caso comum.
-
-        E ele ganhou cura automática junto: o reparo TENTA e diz o que
-        conseguiu, que é melhor que mandá-la revisar a linha na Steam à mão.
-        Quem tranca a promessa é o portão do `test_ponte_steam_input_01`, que
-        compara `_ESTORVOS` com `_CURAS`.
-        """
+        """O estorvo NÃO morreu — ele deixou de ser o caso comum."""
         ficha = Prontuario(
             appid="1",
             nome="Com IGNORE entre aspas",
@@ -263,7 +219,6 @@ class TestOCensoDeVerdade:
             f'\t\t\t\t\t"{_PRAGMATA}"\n\t\t\t\t\t{{\n'
             f'\t\t\t\t\t\t"LaunchOptions"\t\t"{_COMIDA}"\n'
             "\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n"
-            # a árvore que a Steam NÃO lê para LaunchOptions, com o wrapper nela
             '\t"apps"\n\t{\n'
             f'\t\t"{_PRAGMATA}"\n\t\t{{\n'
             f'\t\t\t"LaunchOptions"\t\t"{_vdf_escape(WRAPPER_LAUNCH)}"\n'
@@ -278,11 +233,7 @@ class TestOCensoDeVerdade:
         assert [j.nome for j in censo.jogos] == ["PRAGMATA"]
 
     def test_a_arvore_errada_nao_esconde_a_pendencia(self, casa: Path) -> None:
-        """A MORDIDA que junta as duas curas de hoje.
-
-        Sem a âncora de caminho do ARVORE-ERRADA-01, o wrapper da árvore errada
-        vence e o Pragmata sai verde — exatamente o que aconteceu às 05h.
-        """
+        """A MORDIDA que junta as duas curas de hoje."""
         censo = levantar_censo(casa, allowlist=[], examinar=False)
         (ficha,) = censo.jogos
         assert not ficha.tem_wrapper

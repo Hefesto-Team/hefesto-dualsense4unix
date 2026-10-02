@@ -1,63 +1,8 @@
-"""QUATRO-MICROFONES-01 (E1) — o interruptor de microfone existe, num card só.
-
-A regra dela, textual em 22/08/2026: *"por controle"*. Um interruptor por card
-da seção "Os controles", e quatro independentes na mesma mesa. Antes disto, a
-ponte de microfone por Bluetooth só subia por `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`
-no ambiente do daemon — **nenhuma superfície do produto a ligava**.
-
-AS TRÊS REGRAS QUE ESTE ARQUIVO GUARDA
----------------------------------------
-
-1. **Sempre visível, e ACIONÁVEL NOS DOIS TRANSPORTES.** A regra era *"sempre
-   visível mas só acionável quando tiver no rádio"*, herdada do botão da luz do
-   mesmo card, e ela **CAIU EM 04/09/2026** com a queixa 15 dela: *"esse aviso
-   nao devia aparecer pq era pra funcionar em ambos ne"*. <!-- noqa-acento: citação literal dela -->
-   O `docs/data/mapa-controles.csv` já dizia o contrário da tela —
-   `audio.microfone` é `cabo_aciona=sim` e `radio_aciona=parcial` —, e o que
-   "não vale no cabo" nunca foi a feature: era a `PonteMicBluetooth`, uma
-   IMPLEMENTAÇÃO dela. Botão que SOME ensina que a tela é instável; botão que
-   RECUSA no transporte em que a feature é mais forte ensina pior.
-   O paralelo com o botão da luz não valia: aquele gesto é mesmo do rádio (é um
-   repareamento), e este é uma DECLARAÇÃO durável — pelo cabo ela não sobe
-   ponte nenhuma (`bt_mic.alvos()` só enxerga nós de Bluetooth) e fica escrita
-   para quando o controle voltar ao rádio.
-2. **Diferido, como o resto da aba.** O clique acumula em
-   `host._maquina_pendente`; quem grava é o "Aplicar" do rodapé. É o que a
-   frase `QUANDO_VALE`, no pé da seção, promete — e o
-   `test_a_aba_diz_quando_a_escolha_fica_guardada` é o portão que exige a tela
-   dizer qual das duas semânticas é.
-3. **Capacidade, não advertência.** A frase de preço que existia foi derrubada
-   por ela no mesmo dia: comparava 170 Hz de rádio com um espelho de 250 Hz que
-   é a taxa NATIVA DO CABO. O que sobra ao lado do interruptor é quanto do rádio
-   aquele microfone ocupa — e os números são DERIVADOS das constantes do
-   medidor, nunca digitados.
-
-AS MORDIDAS, EXERCIDAS EM 23/08/2026 — a saída real está no relatório da leva
-------------------------------------------------------------------------------
-
-1. **`_ao_alternar_o_microfone` chamando `_ao_declarar(chave, "microfone",
-   ligado)`** (gravando `False` no lugar de `None`). Reprovou
-   `test_desligar_volta_para_nao_sei_e_nao_grava_um_false`: um `false` em disco
-   é um valor de catálogo para o silêncio, e é por essa porta que o default
-   entra disfarçado de escolha dela.
-2. **`self.botao.set_sensitive(True)`** no lugar do `pode_ligar_o_mic(dados)`.
-   Reprovava `test_no_cabo_o_interruptor_aparece_apagado`, que MORREU em
-   04/09/2026 junto com a regra que ele guardava. A mordida equivalente hoje é
-   devolver o `not no_cabo` a `pode_ligar_o_mic`, e quem reprova é
-   `test_no_cabo_o_interruptor_esta_aceso_e_a_dica_so_informa`.
-3. **Números digitados na frase de capacidade** (`"260,4"` literal no lugar de
-   `_numero(HZ_INPUT_SEM_MIC)`). Reprovou
-   `test_a_frase_de_capacidade_e_derivada_do_medidor`, que é o portão contra a
-   segunda verdade: no dia em que alguém remedir o A/B, a tela e a barra
-   passariam a dizer coisas diferentes sobre o mesmo fato.
-"""
+"""QUATRO-MICROFONES-01 (E1) — o interruptor de microfone existe, num card só."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`. `pytest.importorskip`
-# ACEITA um stub plantado por outro arquivo, e um stub responde "sim, tenho GTK"
-# e mede zero.
 exigir_gi_real("o interruptor de microfone da seção Os controles")
 
 import ast
@@ -97,7 +42,6 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     SLOTS_POR_SEGUNDO,
 )
 
-#: Faixa sintética que o portão de anonimato reconhece em `tests/`.
 UM = "aabbcc000001"
 DOIS = "aabbcc000002"
 OITO_BITDO = "e8473a000007"
@@ -128,11 +72,7 @@ def _assentar() -> None:
 def _card_com_o_bloco(dados: DadosDoControle, *, ligado: bool = False) -> tuple[
     Any, _BlocoDoMicrofone, list[tuple[str, bool]]
 ]:
-    """Um card de produção com o bloco encaixado, numa janela offscreen.
-
-    `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
-    janelas, e uma `Gtk.Window` fica 1x1 para sempre.
-    """
+    """Um card de produção com o bloco encaixado, numa janela offscreen."""
     cliques: list[tuple[str, bool]] = []
     card = ExternalCard(dados)
     bloco = _BlocoDoMicrofone(
@@ -163,11 +103,6 @@ def _rotulos(widget: Any, achados: list[str] | None = None) -> list[str]:
     return achados
 
 
-# ===========================================================================
-# 1. O interruptor está na tela, e é um por card
-# ===========================================================================
-
-
 class TestOInterruptorEstaNaTela:
     def test_o_dualsense_no_radio_ganha_o_interruptor_e_ele_e_clicavel(self) -> None:
         card, bloco, _ = _card_com_o_bloco(_dados())
@@ -179,20 +114,7 @@ class TestOInterruptorEstaNaTela:
         assert bloco.botao.get_sensitive() is True
 
     def test_no_cabo_o_interruptor_esta_aceso_e_a_dica_so_informa(self) -> None:
-        """A queixa 15 dela, em forma de régua — 04/09/2026.
-
-        <!-- noqa-acento: citação literal dela -->
-        *"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  # (dela) noqa-acento
-
-        O interruptor continua sempre visível; o que mudou é que ele **acende
-        nos dois transportes**. E a dica do cabo deixa de RECUSAR: ela diz por
-        onde o canal vem, e não que ele não vem.
-
-        ARRANQUE A CURA: devolva `and not bool(getattr(dados, "no_cabo",
-        False))` a `pode_ligar_o_mic` e este caso reprova nas duas asserções —
-        o botão volta a nascer insensível e a dica volta a ser a do endereço,
-        que é a frase errada para um controle que tem endereço.
-        """
+        """A queixa 15 dela, em forma de régua — 04/09/2026."""
         card, bloco, _ = _card_com_o_bloco(_dados(no_cabo=True))
 
         assert TEXTO_DO_MIC in _rotulos(card), "o interruptor SUMIU no cabo"
@@ -204,13 +126,7 @@ class TestOInterruptorEstaNaTela:
         assert bloco.botao.get_tooltip_text() == DICA_MIC_NO_CABO
 
     def test_a_dica_do_cabo_informa_e_nao_recusa(self) -> None:
-        """A frase do cabo é CAPACIDADE, não advertência — e ela dizia o inverso.
-
-        O que ela dizia, e o que a medição derrubou palavra por palavra: *"Só
-        vale no rádio (…) ele já funciona sem ela."* Quem é `parcial` no
-        `mapa-controles.csv` é o RÁDIO; e "já funciona" é falso sob o conceito
-        dela — pelo cabo o canal existe e nasce `SUSPENDED`.
-        """
+        """A frase do cabo é CAPACIDADE, não advertência — e ela dizia o inverso."""
         for proibida in ("só vale", "não passa", "sem ela"):
             assert proibida not in DICA_MIC_NO_CABO.lower(), (
                 f"{proibida!r} voltou à dica do cabo: ela é informação sobre "
@@ -219,12 +135,7 @@ class TestOInterruptorEstaNaTela:
         assert "já existe" in DICA_MIC_NO_CABO
 
     def test_sem_endereco_a_dica_diz_o_outro_motivo(self) -> None:
-        """Os dois motivos de estar apagado pedem frases diferentes.
-
-        **O PAR MUDOU EM 04/09/2026.** Era *"no cabo não FAZ FALTA, sem endereço
-        não TEM ONDE ser guardada"*; o do cabo caiu com a D-12. O par que sobrou
-        é **sem canal** vs. **sem endereço**, e cada um continua com a frase dele.
-        """
+        """Os dois motivos de estar apagado pedem frases diferentes."""
         dados = _dados(endereco="")
         assert pode_ligar_o_mic(dados) is False
         assert dica_do_microfone(dados) == DICA_MIC_SEM_ENDERECO
@@ -246,19 +157,13 @@ class TestOInterruptorEstaNaTela:
         assert "desligado" in DICA_MIC_NO_RADIO
 
     def test_o_valor_inicial_nao_declara_nada_sozinho(self) -> None:
-        """`set_active` EMITE "toggled". Com o handler já ligado, abrir a janela
-        declararia sozinha o que ninguém escolheu — e o "Aplicar" gravaria."""
+        """`set_active` EMITE "toggled". Com o handler já ligado, abrir a janela"""
         _card, _bloco, cliques = _card_com_o_bloco(_dados(), ligado=True)
         assert cliques == []
 
     def test_um_card_ligado_nasce_marcado(self) -> None:
         _card, bloco, _ = _card_com_o_bloco(_dados(), ligado=True)
         assert bloco.botao.get_active() is True
-
-
-# ===========================================================================
-# 2. O gesto: diferido, e desligar volta para "não sei"
-# ===========================================================================
 
 
 class _HostFalso:
@@ -276,13 +181,7 @@ def _painel_montado(
     monkeypatch: pytest.MonkeyPatch, controles: list[dict[str, Any]],
     declarado: dict[str, Any] | None = None,
 ) -> tuple[_PainelDosControles, _HostFalso, Any]:
-    """A seção montada pelo MÉTODO DE PRODUÇÃO, com o disco fora do caminho.
-
-    `carregar_maquina` é trocado porque a bateria não pode ler — nem escrever —
-    o `maquina.json` de quem roda os testes; `run_in_thread` porque as duas
-    perguntas que ele dispara (cor do plástico e mesa suja) chegam por callback
-    depois do teste e mexeriam em widget morto.
-    """
+    """A seção montada pelo MÉTODO DE PRODUÇÃO, com o disco fora do caminho."""
     from hefesto_dualsense4unix.utils.maquina import ControleDeclarado, MaquinaConfig
 
     monkeypatch.setattr(
@@ -324,11 +223,7 @@ class TestOGesto:
     def test_ligar_escreve_no_rascunho_e_nao_no_disco(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O clique acumula; quem grava é o "Aplicar" do rodapé (`D-A4`).
-
-        E o valor gravado é `True` — a chave do `maquina.json` que o
-        `uniqs_declarados` do daemon lê.
-        """
+        """O clique acumula; quem grava é o "Aplicar" do rodapé (`D-A4`)."""
         painel, host, _caixa = _painel_montado(monkeypatch, [_entrada(UM)])
         bloco = painel._microfones[UM]
 
@@ -339,12 +234,7 @@ class TestOGesto:
     def test_desligar_volta_para_nao_sei_e_nao_grava_um_false(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida que mais importa deste arquivo.
-
-        "Nunca pedi" e "não quero" deixam a ponte no chão do mesmo jeito. Gravar
-        um `false` cria um valor de catálogo para o silêncio — a porta pela qual
-        o default entra disfarçado de escolha dela.
-        """
+        """A mordida que mais importa deste arquivo."""
         painel, host, _caixa = _painel_montado(
             monkeypatch, [_entrada(UM)], declarado={UM: {"microfone": True}}
         )
@@ -370,12 +260,7 @@ class TestOGesto:
         assert painel._microfones[UM].botao.get_active() is False
 
     def test_a_secao_nao_manda_ipc_nenhum_no_clique(self) -> None:
-        """Nenhum `machine.declare` e nenhuma chamada a `dualsense_bt_audio`.
-
-        Dois donos do gesto de gravar é a classe de defeito que a `ABAS-01`
-        curou. E a janela NÃO pode subir a ponte por conta própria: o processo
-        dela não tem o hidraw arbitrado, e o susto de 16/08/2026 saiu daí.
-        """
+        """Nenhum `machine.declare` e nenhuma chamada a `dualsense_bt_audio`."""
         fonte = Path(inspect.getfile(secao_controles)).read_text(encoding="utf-8")
         arvore = ast.parse(fonte)
         chamadas = {
@@ -384,9 +269,6 @@ class TestOGesto:
             if isinstance(no, ast.Call) and isinstance(no.func, ast.Attribute)
         }
         assert "machine_declare" not in chamadas
-        # Por AST e não por texto: o docstring do gesto CITA o módulo da ponte
-        # justamente para explicar por que a janela não fala com ele, e uma
-        # varredura de texto puniria a explicação em vez do import.
         importados = {
             alvo
             for no in ast.walk(arvore)
@@ -407,11 +289,7 @@ class TestOGesto:
     def test_o_interruptor_so_aparece_em_dualsense_adotado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A ponte é Opus tunelado num report HID da Sony (`0x31`/`0x32`).
-
-        O 8BitDo, o Pro e o Xbox não têm isso. Um interruptor num card onde ele
-        não pode ligar nada é promessa que o produto não cumpre.
-        """
+        """A ponte é Opus tunelado num report HID da Sony (`0x31`/`0x32`)."""
         painel, _host, _caixa = _painel_montado(monkeypatch, [_entrada(UM)])
         painel._aplicar(
             {
@@ -432,19 +310,9 @@ class TestOGesto:
         assert painel._microfones == {}
 
 
-# ===========================================================================
-# 3. Capacidade, não advertência
-# ===========================================================================
-
-
 class TestAFraseDeCapacidade:
     def test_a_frase_de_capacidade_e_derivada_do_medidor(self) -> None:
-        """Nenhum número digitado: os quatro saem das constantes de `radio_da_mesa`.
-
-        Digitá-los aqui criaria a segunda verdade — e a primeira vez que alguém
-        remedisse o A/B, a tela e a barra passariam a dizer coisas diferentes
-        sobre o mesmo fato.
-        """
+        """Nenhum número digitado: os quatro saem das constantes de `radio_da_mesa`."""
         frase = frase_da_capacidade_do_mic()
 
         for valor in (HZ_INPUT_SEM_MIC, HZ_INPUT_COM_MIC, HZ_AUDIO_COM_MIC):
@@ -462,12 +330,7 @@ class TestAFraseDeCapacidade:
             )
 
     def test_a_frase_nao_culpa_o_controle(self) -> None:
-        """A mesma lista que o medidor de rádio varre, pela mesma razão.
-
-        A desigualdade de quase o dobro entre dois controles do mesmo adaptador
-        é ABERTA. Uma tela que ligasse ocupação a qualidade afirmaria uma causa
-        que a bancada não sustenta.
-        """
+        """A mesma lista que o medidor de rádio varre, pela mesma razão."""
         minuscula = frase_da_capacidade_do_mic().lower()
         for palavra in PALAVRAS_DE_CULPA:
             assert palavra not in minuscula, (
@@ -476,13 +339,7 @@ class TestAFraseDeCapacidade:
             )
 
     def test_a_frase_nao_ressuscita_o_preco_contra_o_giroscopio(self) -> None:
-        """O trade-off contra giroscópio foi DERRUBADO em 22/08/2026.
-
-        A frase antiga comparava 170 Hz de rádio com um espelho de 250 Hz que é
-        a taxa NATIVA DO CABO; no rádio o físico entrega em rajada, entre ~55 e
-        ~392 Hz com o mic DESLIGADO. A premissa não existia — e o fato errado
-        não volta por descuido de redação.
-        """
+        """O trade-off contra giroscópio foi DERRUBADO em 22/08/2026."""
         textos = " ".join(
             (frase_da_capacidade_do_mic(), DICA_MIC_NO_RADIO, DICA_MIC_NO_CABO)
         ).lower()

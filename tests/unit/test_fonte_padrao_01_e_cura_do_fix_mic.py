@@ -42,8 +42,6 @@ diretório temporário, e o PATH do subprocesso não alcança o de verdade.
 """
 # ruff: noqa: E501 — as amostras de `pactl` são cópias FIÉIS da saída desta
 # máquina, e o nome do card do DualSense sozinho já passa de 100 colunas.
-# Quebrar as linhas inventaria uma entrada que o parser jamais receberia, e é
-# justamente o parser que está sendo testado.
 from __future__ import annotations
 
 import subprocess
@@ -76,11 +74,6 @@ CARD_DS = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Amostras — cópias de `LC_ALL=C pactl ...` desta máquina em 29/07/2026
-# ---------------------------------------------------------------------------
-
-#: `pactl list sources short`. A fonte padrão de verdade é a 3a linha (monitor).
 SOURCES_SHORT = f"""\
 61\talsa_output.pci-0000_0c_00.4.iec958-stereo.monitor\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED
 62\t{SRC_ONBOARD}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED
@@ -89,9 +82,7 @@ SOURCES_SHORT = f"""\
 7745\talsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED
 """
 
-#: `pactl list sources` (recorte). A onboard tem porta ativa `not available`
 #: (nada plugado no jack); a do DualSense tem `availability unknown` — e é ela
-#: que gravou pico 4606 na medição de 26/07.
 SOURCES_LONGO = f"""\
 Source #62
 \tState: SUSPENDED
@@ -122,9 +113,6 @@ Source #2490
 \tActive Port: iec958-stereo-input
 """
 
-#: `pactl list cards` (recorte fiel). O perfil ATIVO é o `iec958-stereo`, que a
-#: sprint MIC-USB-01 mandava evitar — e é o único com fonte de captura E
-#: `available: yes`. O analógico, que a cura antiga mirava, é `available: no`.
 CARDS_MEDIDO = f"""\
 Card #51
 \tName: alsa_card.pci-0000_0c_00.4
@@ -159,17 +147,10 @@ Card #91
 \t\t\tPart of profile(s): output:analog-surround-40, output:analog-surround-40+input:analog-stereo, output:analog-surround-40+input:iec958-stereo
 """
 
-#: A mesma placa, com o perfil ativo SEM fonte de captura (`sources: 0`) — é o
-#: caso em que a cura de fato tem de trocar de perfil.
 CARDS_SEM_FONTE = CARDS_MEDIDO.replace(
     "\tActive Profile: output:analog-surround-40+input:iec958-stereo",
     "\tActive Profile: output:analog-surround-40",
 )
-
-
-# ---------------------------------------------------------------------------
-# Execução das funções shell REAIS do doctor.sh
-# ---------------------------------------------------------------------------
 
 
 def _rodar(func: str, *args: str, entrada: str | None = None) -> str:
@@ -209,16 +190,7 @@ def cenario(tmp_path: Path) -> Cenario:
 
 
 class Cenario:
-    """Máquina de mentira: HOME em tmp + `pactl` dublê no PATH.
-
-    O dublê distingue `list sources short` de `list sources` — sem isso o nome
-    da source sai vazio e a cura nem chega ao ramo que o teste diz vigiar
-    (verde por não exercitar nada). Foi esse exatamente o segundo defeito
-    confessado no commit `84d9f4e`, e ele fica registrado aqui.
-
-    O PATH do subprocesso NÃO inclui o diretório do `pactl` de verdade: nenhum
-    teste deste arquivo pode mexer no áudio de quem roda a suíte.
-    """
+    """Máquina de mentira: HOME em tmp + `pactl` dublê no PATH."""
 
     def __init__(self, tmp_path: Path) -> None:
         self.tmp = tmp_path
@@ -282,21 +254,11 @@ class Cenario:
         return self.log.read_text(encoding="utf-8").splitlines()
 
 
-# ---------------------------------------------------------------------------
-# TAREFA 1 — a cura de `84d9f4e`, portada
-# ---------------------------------------------------------------------------
-
-
 class TestCuraPortadaDoFixMic:
     """A regra que a medição de 26/07 impôs: porta e `available`, não nome."""
 
     def test_o_iec958_ativo_e_medido_nao_pede_troca(self) -> None:
-        """O estado REAL desta máquina agora: `iec958-stereo` ativo.
-
-        A regra antiga trocaria para `input:analog-stereo` só porque o nome do
-        ativo tem "iec958" — e a source nasceria sem porta de captura, com
-        327.680 bytes de silêncio digital. Alvo vazio é a cura.
-        """
+        """O estado REAL desta máquina agora: `iec958-stereo` ativo."""
         card, ativo, alvo = _rodar(
             "_dualsense_perfil_status", entrada=CARDS_MEDIDO
         ).split("\t")
@@ -308,14 +270,7 @@ class TestCuraPortadaDoFixMic:
         )
 
     def test_o_alvo_e_filtrado_por_available(self) -> None:
-        """O CONTRÁRIO exato do teste que a regra antiga tinha.
-
-        Existiu aqui um `test_o_alvo_nao_e_filtrado_por_available`, com o
-        argumento de que filtrar "deixaria o microfone embutido inalcançável
-        para sempre". Quando o ALSA diz `available: no`, ele já é: forçá-lo
-        entrega uma source sem porta. O analógico (prioridade 1265) perde para o
-        `iec958` (1255) porque prioridade só desempata entre os DISPONÍVEIS.
-        """
+        """O CONTRÁRIO exato do teste que a regra antiga tinha."""
         assert "priority: 1265, available: no" in CARDS_SEM_FONTE, (
             "a amostra precisa manter o analógico indisponível — é o caso"
         )
@@ -325,21 +280,12 @@ class TestCuraPortadaDoFixMic:
         )
 
     def test_o_alvo_preserva_a_saida_do_controle(self) -> None:
-        """Contrato antigo que CONTINUA valendo, agora pela prioridade.
-
-        Trocar para um perfil só-de-entrada emudeceria o alto-falante/fone do
-        controle e derrubaria o canal de haptic-de-áudio junto.
-        """
+        """Contrato antigo que CONTINUA valendo, agora pela prioridade."""
         alvo = _rodar("_dualsense_perfil_status", entrada=CARDS_SEM_FONTE).split("\t")[2]
         assert alvo.startswith("output:"), f"o alvo tem de manter a saída; veio {alvo!r}"
 
     def test_active_profile_e_lido_apesar_de_vir_depois_da_lista(self) -> None:
-        """O primeiro defeito confessado em `84d9f4e`.
-
-        No `pactl` a linha `Active Profile:` vem DEPOIS da lista inteira de
-        perfis. Comparar com o ativo dentro do laço fazia a guarda nunca ligar.
-        Aqui a prova é indireta e suficiente: o campo `ativo` chega preenchido.
-        """
+        """O primeiro defeito confessado em `84d9f4e`."""
         _card, ativo, _alvo = _rodar(
             "_dualsense_perfil_status", entrada=CARDS_MEDIDO
         ).split("\t")
@@ -382,11 +328,7 @@ class TestCuraPortadaDoFixMic:
     def test_o_check_da_camada_2_aprova_pela_porta_e_nao_pelo_nome(
         self, cenario: Cenario
     ) -> None:
-        """No estado REAL desta máquina o veredito tem de ser [OK].
-
-        Antes da cura o mesmo estado dava [FAIL] ("está no S/PDIF, que NÃO
-        carrega sinal") e mandava rodar o `--fix`, que silenciava o microfone.
-        """
+        """No estado REAL desta máquina o veredito tem de ser [OK]."""
         cenario.com_dropin(DROPIN_51)
         res = cenario.roda("check_mic_perfil_sem_sinal")
         assert res.returncode == 0, res.stderr
@@ -415,16 +357,10 @@ class TestFiacaoDaCuraDaCamada2:
         assert "available: yes" in corpo, "o filtro por disponibilidade sumiu"
 
     def test_a_nota_do_incidente_continua_no_codigo(self) -> None:
-        """A guarda desta casa vem com o porquê datado. Sem a nota, o próximo
-        a passar por aqui refaz a cura que silenciou o microfone."""
+        """A guarda desta casa vem com o porquê datado. Sem a nota, o próximo"""
         assert "327.680" in TEXTO_DOCTOR, (
             "a medição que refutou a cura antiga saiu do comentário"
         )
-
-
-# ---------------------------------------------------------------------------
-# TAREFA 2 — monitor como fonte padrão é DEFEITO, não [OK]
-# ---------------------------------------------------------------------------
 
 
 class TestClassificacaoDaFontePadrao:
@@ -439,8 +375,7 @@ class TestClassificacaoDaFontePadrao:
         assert _rodar("_default_source_classe", "") == "vazio"
 
     def test_monitor_no_meio_do_nome_nao_engana(self) -> None:
-        """O sufixo `.monitor` é do nó, não uma busca por substring: uma placa
-        chamada "MonitorAudio" não é um loopback de saída."""
+        """O sufixo `.monitor` é do nó, não uma busca por substring: uma placa"""
         assert _rodar("_default_source_classe", "alsa_input.usb-MonitorAudio-00") == (
             "captura"
         )
@@ -466,8 +401,7 @@ class TestEscolhaDaFonteDeCaptura:
         assert _rodar("_melhor_source_de_captura", "1", entrada=SOURCES_SHORT) == SRC_DS
 
     def test_o_controle_e_ultimo_recurso_mas_nunca_descartado(self) -> None:
-        """Escassez: um mic de verdade, mesmo o do controle, é melhor que
-        gravar o próprio alto-falante."""
+        """Escassez: um mic de verdade, mesmo o do controle, é melhor que"""
         so_ds = "\n".join(
             linha
             for linha in SOURCES_SHORT.splitlines()
@@ -509,17 +443,7 @@ class TestQuemPodeSerPromovido:
         )
 
     def test_sem_o_dropin_51_e_sem_marca_ninguem_sabe(self, cenario: Cenario) -> None:
-        """CORRIGIDO em 26/08/2026 — DROPIN-AMBIGUO-01, e o produto é que mudou.
-
-        Este teste afirmava `rc == 0` para a ausência do 51 SOZINHA, isto é,
-        que sumir o drop-in já era prova de que ela pediu o controle como
-        microfone. **A ausência tem duas origens** — ela promoveu de propósito,
-        ou um `uninstall` desarmou a cura — e tratá-las como uma só é o que
-        fazia o exame responder `[OK]` no meio do defeito que produziu a queixa
-        dela: *"não funciona nem mic, nem os botões de sons do jogo"*.
-
-        Agora a prova é a MARCA DO GESTO, e a ausência das duas é "não sei".
-        """
+        """CORRIGIDO em 26/08/2026 — DROPIN-AMBIGUO-01, e o produto é que mudou."""
         assert self._rc_prefere(cenario) == 1, (
             "sem o 51 e sem a marca do gesto, ninguém sabe se ela promoveu o "
             "controle ou se um uninstall desarmou a cura — e adivinhar aqui é "
@@ -545,8 +469,7 @@ class TestQuemPodeSerPromovido:
         assert self._rc_prefere(cenario, env) == 0
 
     def test_quem_desligou_de_proposito_vence_tudo(self, cenario: Cenario) -> None:
-        """Precedente do próprio doctor (`check_dualsense_sink_disabled`) e do
-        passo 10 do install: o drop-in 52 é "o controle é só-HID"."""
+        """Precedente do próprio doctor (`check_dualsense_sink_disabled`) e do"""
         cenario.com_dropin(DROPIN_52)
         env = {"HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": "1"}
         assert self._rc_prefere(cenario, env) == 1, (
@@ -629,8 +552,6 @@ class TestPortaoParaDeAprovarOSintoma:
         res = cenario.roda("check_default_source_monitor")
 
         assert "[FAIL]" in res.stdout, "o defeito deixou de reprovar:\n" + res.stdout
-        # A RECEITA — o imperativo. Citar o `--fix-mic` para dizer que ele NÃO
-        # serve é honestidade; mandar rodá-lo é que era o defeito.
         assert "rode: scripts/doctor.sh --fix-mic" not in res.stdout, (
             "o check ainda manda rodar o --fix-mic num caso em que ele é "
             "impotente:\n" + res.stdout
@@ -643,12 +564,7 @@ class TestPortaoParaDeAprovarOSintoma:
     def test_sem_fonte_alguma_a_cura_diz_a_consequencia_de_privacidade(
         self, cenario: Cenario
     ) -> None:
-        """O estado em que ela fica NÃO parece defeito.
-
-        O medidor de nível mostra sinal — é o áudio de saída da máquina. Sair
-        com um "não consegui" seco deixa de pé, calada, a parte que importa:
-        tudo o que qualquer aplicativo gravar é o som que SAI do computador.
-        """
+        """O estado em que ela fica NÃO parece defeito."""
         cenario.sources_short = "\n".join(
             linha for linha in SOURCES_SHORT.splitlines() if ".monitor" in linha
         ) + "\n"
@@ -666,13 +582,7 @@ class TestPortaoParaDeAprovarOSintoma:
         assert "[FAIL]" not in res.stdout, res.stdout
 
     def test_o_check_conta_a_metade_que_faltava(self, cenario: Cenario) -> None:
-        """Fonte legítima que grava SILÊNCIO não pode sair só como [OK].
-
-        Medido em 29/07: eleita a entrada da onboard, as portas de captura dela
-        estavam todas `not available` (nada plugado), e o único mic que captava
-        era o do controle. Aprovar sem dizer isso seria o mesmo pecado do
-        `pass` que aprovava o monitor.
-        """
+        """Fonte legítima que grava SILÊNCIO não pode sair só como [OK]."""
         cenario.default_source = SRC_ONBOARD
         cenario.com_dropin(DROPIN_51)
         res = cenario.roda("check_default_source_monitor")
@@ -682,12 +592,7 @@ class TestPortaoParaDeAprovarOSintoma:
     def test_o_check_wireplumber_source_nao_aprova_mais_monitor(
         self, cenario: Cenario
     ) -> None:
-        """A guarda antiga (monitor não é o mic do controle) fica; o [OK] sai.
-
-        Ela existe para este check não reprovar por causa do loopback da saída —
-        isso continua verdade e continua não sendo [FAIL] aqui. O que mudou é
-        não encerrar o assunto com um selo de aprovação.
-        """
+        """A guarda antiga (monitor não é o mic do controle) fica; o [OK] sai."""
         cenario.com_dropin(DROPIN_51)
         res = cenario.roda("check_wireplumber_source")
         assert "[ OK ]" not in res.stdout and "[OK]" not in res.stdout, (
@@ -781,8 +686,7 @@ class TestCuraDaFontePadrao:
     def test_a_cura_nao_toca_em_fonte_de_captura_escolhida(
         self, cenario: Cenario
     ) -> None:
-        """Fonte de captura de verdade — QUALQUER uma — é escolha de quem usa a
-        máquina. Mesmo que não seja a que elegeríamos."""
+        """Fonte de captura de verdade — QUALQUER uma — é escolha de quem usa a"""
         cenario.default_source = SRC_ONBOARD
         res = cenario.roda("fix_default_source_monitor")
         assert res.returncode == 0, res.stderr
@@ -823,8 +727,7 @@ class TestFiacaoDaFontePadrao:
         )
 
     def test_a_cura_vem_depois_da_camada_2(self) -> None:
-        """É a troca de perfil que decide qual `alsa_input` existe; eleger antes
-        elegeria um nó que vai desaparecer."""
+        """É a troca de perfil que decide qual `alsa_input` existe; eleger antes"""
         inicio = TEXTO_DOCTOR.index("fix_mic_dualsense() {")
         corpo = TEXTO_DOCTOR[inicio : TEXTO_DOCTOR.index("\n}", inicio)]
         assert corpo.index("set-card-profile") < corpo.index(
@@ -838,24 +741,12 @@ class TestFiacaoDaFontePadrao:
         )
 
 
-# ---------------------------------------------------------------------------
-# TAREFA 3 — o install.sh chama o scripts/install_fonts.sh
-# ---------------------------------------------------------------------------
-
-
 class TestInstallChamaAsFontes:
     def test_o_script_de_fontes_existe(self) -> None:
         assert FONTS.is_file()
 
     def _invocacoes(self) -> list[str]:
-        """Linhas que de fato EXECUTAM o script — não as que só o citam.
-
-        Este detalhe é a diferença entre um teste que morde e um que não morde:
-        a primeira versão daqui procurava a string `scripts/install_fonts.sh` no
-        arquivo inteiro, e continuou VERDE com a chamada arrancada — o nome
-        sobrevivia no comentário do passo e na mensagem de "ausente". Medido
-        arrancando: 9 testes passaram com o install sem instalar fonte nenhuma.
-        """
+        """Linhas que de fato EXECUTAM o script — não as que só o citam."""
         return [
             linha.strip()
             for linha in TEXTO_INSTALL.splitlines()
@@ -868,18 +759,14 @@ class TestInstallChamaAsFontes:
         ]
 
     def test_o_install_chama_o_script(self) -> None:
-        """Medido em 29/07: `grep -c fonts install.sh` = 0. O script existia,
-        com download pinado e SHA-256, e NINGUÉM o chamava — o `gui/theme.css`
-        pedia duas famílias que numa máquina limpa não existem, e o fontconfig
-        substituía em silêncio."""
+        """Medido em 29/07: `grep -c fonts install.sh` = 0. O script existia,"""
         assert self._invocacoes(), (
             "o install voltou a não EXECUTAR o scripts/install_fonts.sh — citar "
             "o nome em comentário não instala fonte nenhuma"
         )
 
     def test_a_chamada_e_best_effort(self) -> None:
-        """Fonte é acabamento, não requisito: derrubar a instalação inteira por
-        causa disso trocaria um problema cosmético por um problema real."""
+        """Fonte é acabamento, não requisito: derrubar a instalação inteira por"""
         invocacoes = self._invocacoes()
         assert invocacoes
         bloco = TEXTO_INSTALL[
@@ -890,7 +777,6 @@ class TestInstallChamaAsFontes:
             assert linha in bloco.replace("\n", " ").replace("  ", " ") or linha in bloco, (
                 f"chamada ao install_fonts.sh fora do passo 4e: {linha!r}"
             )
-        # Sob `set -e` uma chamada nua abortaria a instalação inteira.
         assert "||" in bloco, (
             "a chamada não está protegida do `set -e` (falta o `|| printf`):\n" + bloco
         )
@@ -905,8 +791,7 @@ class TestInstallChamaAsFontes:
         assert 'NO_FONTS' in bloco, "o gate não é consultado no passo:\n" + bloco
 
     def test_a_flag_esta_documentada_no_cabecalho(self) -> None:
-        """Regra desta casa (BUG-INSTALL-HELP-TRUNCADO-01): flag real que não
-        está no cabeçalho não aparece no `--help` e vira flag invisível."""
+        """Regra desta casa (BUG-INSTALL-HELP-TRUNCADO-01): flag real que não"""
         cabecalho = TEXTO_INSTALL[: TEXTO_INSTALL.index("\nset -euo pipefail")]
         assert "--no-fonts" in cabecalho
 
@@ -922,23 +807,20 @@ class TestInstallChamaAsFontes:
         assert "--no-fonts" in res.stdout, res.stdout
 
     def test_o_parser_conhece_a_flag(self) -> None:
-        """O install não pode aceitar em silêncio uma flag que ele rejeita —
-        nem rejeitar uma que ele documenta (BUG-INSTALL-ARG-DESCONHECIDO-...)."""
+        """O install não pode aceitar em silêncio uma flag que ele rejeita —"""
         assert "desconhecid" in TEXTO_INSTALL.lower()
         inicio = TEXTO_INSTALL.index('for arg in "$@"; do')
         corpo = TEXTO_INSTALL[inicio : TEXTO_INSTALL.index("\ndone", inicio)]
         assert "--no-fonts)" in corpo
 
     def test_o_passo_fica_junto_do_resto_da_gui(self) -> None:
-        """Mesma natureza dos passos 4b/4c/4d: acabamento da GUI, no HOME dela,
-        sem sudo obrigatório — e antes do passo 5."""
+        """Mesma natureza dos passos 4b/4c/4d: acabamento da GUI, no HOME dela,"""
         assert TEXTO_INSTALL.index("# 4d. Catalogos i18n") < TEXTO_INSTALL.index(
             "# 4e. Fontes da identidade visual"
         ) < TEXTO_INSTALL.index("# 5. Symlink")
 
     def test_o_theme_css_ainda_pede_as_duas_familias(self) -> None:
-        """Se um dia o CSS parar de pedir, este passo perde o motivo — e o
-        teste tem de contar isso em vez de continuar verde por inércia."""
+        """Se um dia o CSS parar de pedir, este passo perde o motivo — e o"""
         css = (
             RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "theme.css"
         ).read_text(encoding="utf-8")

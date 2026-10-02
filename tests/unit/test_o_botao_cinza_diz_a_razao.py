@@ -1,35 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA D-03: o botão que vai recusar já nasce CINZA, e diz por quê.
-
-Decisão dela, 04/09/2026: *"Cinza antes, com a razão na dica."*
-
-O QUE ESTAVA EM JOGO, e está medido nas dezesseis decisões: a janela antiga
-apaga o botão e diz o motivo ANTES; a interface nova deixa clicar e responde
-DEPOIS. Em repouso, a tela não distingue o botão que funciona do que vai
-recusar — mudo sem endereço, microfone no cabo, "a luz não acende" com o
-controle no cabo.
-
-E A DECISÃO DO PO POR CIMA, sobre a aba 09: *"Apagado e ainda assim
-responde."* Logo o apagado é **visual**, e nunca `disabled`: `disabled` mata o
-clique, e o clique é o único caminho de quem navega pelo controle até a razão.
-Por isso esta régua cobra as duas metades ao mesmo tempo — **cinza** e
-**clicável** —, que é o par que nenhuma das duas sozinha prova.
-
-**ELA LÊ, NÃO DIGITA.** Nenhuma cor está escrita aqui. A régua monta uma página
-pelo `monta.monta()` — a mesma função que faz as dez —, abre no Chrome, e
-pergunta ao motor o que ele DESENHA. A comparação que importa é entre dois
-elementos da MESMA página: o `.btn.apagado` e o `.seg button:disabled` que a
-folha já tinha desde 31/08. Se a gramática do apagado mudar, as duas mudam
-juntas e a régua continua certa; se alguém inventar uma segunda cara de
-apagado, ela reprova. Uma cor digitada aqui mediria este arquivo, não a tela —
-é a família de defeito que esta casa pagou onze vezes em 26/08.
-
-A MORDIDA: comente o bloco `.btn.apagado{…}` do `monta.CSS_FOLHA` e rode. Caem
-três casos, e o primeiro diz tudo — *"o botão apagado tem a MESMA cor de texto
-do clicável (rgb(200, 204, 218))"*: a régua vê o botão travado com a mesma cara
-do clicável, que é o defeito que a D-03 existe para curar. Comente as três
-regras do `?` e cai o quarto.
-"""
+"""A RÉGUA DA D-03: o botão que vai recusar já nasce CINZA, e diz por quê."""
 from __future__ import annotations
 
 import re
@@ -47,24 +17,13 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 import monta
 from hefesto_dualsense4unix.interface import onde
 
-#: O MESMO MOTOR DAS OUTRAS RÉGUAS DE TELA desta casa
-#: (`test_a_aba_controles_reusa_o_motor.py`), e ele roda headless: nenhuma
-#: janela nasce na tela dela.
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-#: A razão de prova. Ela NÃO é texto de tela — texto de tela é dela, e o que
-#: cada aba vai dizer sai do produto, nunca daqui. Este é só um valor com forma
-#: reconhecível, para a régua provar que ele ATRAVESSA da chamada até a dica.
 RAZAO = "razão de prova: este botão vai recusar"
 
 
 def _pagina_de_prova(destino: pathlib.Path) -> pathlib.Path:
-    """Uma página montada pelo `monta()`, com as peças da folha em uso.
-
-    ELA NASCE NUM DIRETÓRIO TEMPORÁRIO, pelo `HEFESTO_BANCADA` — o desvio que
-    o `onde.py` documenta. A régua não toca a bancada dela: uma régua que muda
-    o que mede não é régua.
-    """
+    """Uma página montada pelo `monta()`, com as peças da folha em uso."""
     import os
 
     anterior = os.environ.get("HEFESTO_BANCADA")
@@ -153,24 +112,8 @@ def medido(tmp_path_factory: pytest.TempPathFactory) -> dict:
     return dict(saida)
 
 
-# ---------------------------------------------------------------------------
-# 1. A PEÇA CHEGA — sem isto, tudo abaixo passaria por ausência
-# ---------------------------------------------------------------------------
 def test_a_folha_entra_nas_dez_paginas_da_bancada() -> None:
-    """As dez páginas carregam a folha — e é `monta()` quem a põe lá.
-
-    ELE É O DEGRAU QUE PEGA O GERADOR NUNCA RODADO: mudar o `CSS_FOLHA` sem
-    regerar deixa a bancada para trás, e a peça só existe no Python. É a mesma
-    família do `test_os_dez_geradores_rodam`, apontada para esta peça.
-
-    SÓ AS ABAS, e o filtro é o número no nome — o mesmo que aquele teste e o
-    `test_nenhuma_pagina_publicada_carrega_marcador_de_lint` já usam. A bancada
-    guarda TRÊS páginas avulsas (`mapa-do-controle`, `mapa-das-portas`,
-    `calibrar-sensores`) que não passam por `monta()`: elas abrem por fora da
-    janela e não têm esqueleto de aba. `onde.paginas()` devolve as treze, e a
-    primeira redação desta régua reprovou sobre as três — corretamente, do
-    ponto de vista dela, e sobre um alvo que não é o desta peça.
-    """
+    """As dez páginas carregam a folha — e é `monta()` quem a põe lá."""
     paginas = sorted(onde.BANCADA.glob("[0-9][0-9]-*.html"))
     assert len(paginas) >= 10, (
         f"achei {len(paginas)} aba(s) em {onde.BANCADA} — as dez abas têm "
@@ -184,23 +127,11 @@ def test_a_folha_entra_nas_dez_paginas_da_bancada() -> None:
           "trás.")
 
 
-#: A REGRA DO ATRIBUTO BOOLEANO, e ela existe porque a primeira redação deste
-#: caso perguntava `"disabled" not in marcado` — uma SUBSTRING. Em 04/09/2026 a
-#: integração fez a peça emitir `aria-disabled` (o alvo `classe` do piloto
-#: passou a vesti-lo, então ele deixou de congelar), e a régua reprovou a
-#: MELHORA: `aria-disabled` contém `disabled`. É a família de defeito que esta
-#: casa nomeou onze vezes em 26/08 — a régua que reprova quem faz a coisa certa.
-#: A cura é AFIAR, nunca afrouxar: o que mata o clique é o atributo booleano
-#: `disabled`, e ele só aparece como palavra solta ou como `disabled=`.
 _DISABLED_BOOLEANO = re.compile(r'(?<![-\w])disabled(?=[\s=>])')
 
 
 def test_o_botao_cinza_nao_emite_disabled_no_html() -> None:
-    """A leitura do texto emitido, antes de qualquer navegador.
-
-    `disabled` no HTML é o defeito de uma palavra: ele apaga o botão E mata o
-    clique, e o recado da D-03 morre junto. Este caso o pega sem motor nenhum.
-    """
+    """A leitura do texto emitido, antes de qualquer navegador."""
     marcado = monta.botao_cinza("Travado", "x", razao=RAZAO)
     assert not _DISABLED_BOOLEANO.search(marcado), (
         f"`botao_cinza` emitiu o atributo booleano `disabled` — o botão "
@@ -219,13 +150,7 @@ def test_o_botao_cinza_nao_emite_disabled_no_html() -> None:
 
 
 def test_sem_razao_o_botao_nao_fica_cinza() -> None:
-    """Cinza sem razão é o defeito que a D-03 nasceu para curar.
-
-    A LEITURA É DO ATRIBUTO `class`, e não da palavra solta no HTML: o
-    `data-hef-classe="apagado"` está em TODO botão emitido — é o alvo que o
-    piloto usa para acender a classe. Procurar `"apagado"` no texto inteiro dá
-    verde sobre os dois, que foi como esta régua nasceu errada.
-    """
+    """Cinza sem razão é o defeito que a D-03 nasceu para curar."""
     livre = monta.botao_cinza("Livre", "x")
     travado = monta.botao_cinza("Travado", "x", razao=RAZAO)
     assert 'class="btn"' in livre, (
@@ -242,9 +167,6 @@ def test_o_botao_sem_endereco_para_a_geracao() -> None:
         monta.botao_cinza("Travado", "", razao=RAZAO)
 
 
-# ---------------------------------------------------------------------------
-# 2. O QUE O MOTOR DESENHA
-# ---------------------------------------------------------------------------
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_o_cinza_difere_do_clicavel_na_tela(medido: dict) -> None:
@@ -262,13 +184,7 @@ def test_o_cinza_difere_do_clicavel_na_tela(medido: dict) -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_o_cinza_e_a_mesma_gramatica_do_seletor(medido: dict) -> None:
-    """A cara do apagado é a que a página JÁ TINHA — não uma segunda.
-
-    A `.seg button:disabled` existe desde 31/08 e foi ela que curou o "travado
-    com cara de clicável" nos seletores. Reusá-la é a instrução da sprint, e
-    esta é a única forma de provar o reuso sem digitar uma cor: perguntar ao
-    motor a cor dos DOIS e exigir que sejam a mesma.
-    """
+    """A cara do apagado é a que a página JÁ TINHA — não uma segunda."""
     assert medido["apagado"]["cor"] == medido["seg_disabled"]["cor"], (
         f"o `.btn.apagado` pinta {medido['apagado']['cor']} e o "
         f"`.seg button:disabled` pinta {medido['seg_disabled']['cor']} — são "
@@ -277,13 +193,6 @@ def test_o_cinza_e_a_mesma_gramatica_do_seletor(medido: dict) -> None:
     assert medido["apagado"]["borda"] == medido["seg_disabled"]["borda"], (
         f"borda: {medido['apagado']['borda']} contra "
         f"{medido['seg_disabled']['borda']}")
-    # A CONFERÊNCIA DA REFERÊNCIA, e ela é pela BORDA. Medido nesta bancada:
-    # `.seg button` já nasce em `--texto-mudo`, e o `:disabled` de 31/08 muda
-    # a BORDA e o cursor, não a cor do texto — os dois pintam
-    # `rgb(154, 158, 184)`. A primeira redação deste caso comparava a cor e
-    # reprovava sobre a folha CERTA. Quem separa o livre do travado no seletor
-    # é a borda; é ela que tem de diferir para a igualdade acima valer alguma
-    # coisa.
     assert medido["seg_livre"]["borda"] != medido["seg_disabled"]["borda"], (
         "o seletor livre e o travado desenham a MESMA borda — a gramática de "
         "referência caiu, e a comparação acima passou a medir dois iguais por "
@@ -293,13 +202,7 @@ def test_o_cinza_e_a_mesma_gramatica_do_seletor(medido: dict) -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_o_tom_do_botao_nao_vence_o_cinza(medido: dict) -> None:
-    """`.btn.vermelho.apagado` fica CINZA, e não vermelho.
-
-    As duas classes têm a mesma especificidade; quem decide é a ordem de fonte,
-    e a folha entra depois do esqueleto. Um dia em que a injeção mudar de lugar
-    isto reprova — e reprova ANTES de a tela mostrar um "Parar o serviço"
-    vermelho vivo que não faz nada.
-    """
+    """`.btn.vermelho.apagado` fica CINZA, e não vermelho."""
     assert medido["apagado_com_tom"]["cor"] == medido["apagado"]["cor"], (
         f"o `.btn.vermelho.apagado` pinta {medido['apagado_com_tom']['cor']} e "
         f"o apagado puro pinta {medido['apagado']['cor']} — o tom venceu o "
@@ -309,12 +212,7 @@ def test_o_tom_do_botao_nao_vence_o_cinza(medido: dict) -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_apagado_e_ainda_assim_responde(medido: dict) -> None:
-    """PO, 04/09, aba 09: *"Apagado e ainda assim responde."*
-
-    `HTMLElement.click()` num botão `disabled` não dispara ouvinte nenhum. O
-    contador vindo em 1 é a prova de que o cinza é TINTA, e de que quem chega
-    pelo controle ainda alcança a razão.
-    """
+    """PO, 04/09, aba 09: *"Apagado e ainda assim responde."*"""
     assert medido["travado_tem_a_classe"] is True
     assert medido["livre_tem_a_classe"] is False
     assert medido["tem_atributo_disabled"] is False
@@ -328,12 +226,7 @@ def test_apagado_e_ainda_assim_responde(medido: dict) -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_o_ponto_de_interrogacao_so_aparece_quando_ha_razao(medido: dict) -> None:
-    """O `?` acompanha o cinza, e a razão dentro dele veio de quem chamou.
-
-    Na aba 08 o motivo é do PRODUTO, nunca do desenho — a frase congelada já
-    mentiu ali ("está no cabo" com o controle no rádio). Por isso a dica leva
-    `data-campo` e o alvo `html`: quem a preenche no produto é o pacote.
-    """
+    """O `?` acompanha o cinza, e a razão dentro dele veio de quem chamou."""
     assert medido["porque_do_livre"]["display"] == "none", (
         f"o `?` apareceu ao lado de um botão que NÃO está cinza "
         f"({medido['porque_do_livre']}) — um `?` sem nada a explicar é ruído "

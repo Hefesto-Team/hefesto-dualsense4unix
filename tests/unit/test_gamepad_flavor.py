@@ -1,8 +1,4 @@
-"""Flavors do gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01).
-
-Prova a "máscara": `for_flavor` configura VID/PID/nome certos, `normalize_flavor`
-resolve sinônimos e cai no default, e a persistência roundtrip (liga+flavor).
-"""
+"""Flavors do gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,7 +22,6 @@ class TestNormalizeFlavor:
             ("xbox360", "xbox"),
             ("x360", "xbox"),
             ("xinput", "xbox"),
-            # SPRINT-GAME-RUMBLE-01: default é xbox (a máscara que vibra em jogo).
             (None, "xbox"),
             ("lixo-desconhecido", "xbox"),
             ("  XBOX  ", "xbox"),
@@ -38,13 +33,11 @@ class TestNormalizeFlavor:
 
 class TestForFlavor:
     def test_dualsense_usa_o_edge_e_nunca_o_pid_do_fisico(self) -> None:
-        """VPAD-04: a máscara dualsense é o Edge 0x0df2 MESMO no uinput. O PID
-        do físico (0ce6) no vpad era a mina da launch option persistida
-        (`IGNORE_DEVICES=0x054c/0x0ce6` escondia físico E vpad = zero controles)."""
+        """VPAD-04: a máscara dualsense é o Edge 0x0df2 MESMO no uinput. O PID"""
         gp = ug.UinputGamepad.for_flavor("dualsense")
         assert gp.vendor == ug.DUALSENSE_VENDOR == 0x054C
         assert gp.product == ug.DUALSENSE_EDGE_PRODUCT == 0x0DF2
-        assert gp.product != ug.DUALSENSE_PRODUCT  # 0ce6 identifica só o FÍSICO
+        assert gp.product != ug.DUALSENSE_PRODUCT
         assert gp.flavor == "dualsense"
         assert "DualSense Edge" in gp.name
 
@@ -56,7 +49,6 @@ class TestForFlavor:
 
     def test_default_e_xbox(self) -> None:
         # SPRINT-GAME-RUMBLE-01: o default é xbox — a máscara DualSense faz o jogo
-        # ignorar o vpad (rumble morto) e duplicar o controle. Decisão de produto.
         assert ug.DEFAULT_FLAVOR == "xbox"
         gp = ug.UinputGamepad.for_flavor()
         assert gp.flavor == "xbox"
@@ -66,7 +58,6 @@ class TestForFlavor:
         assert gp.flavor == "xbox"
 
     def test_bustype_usb_para_match_sdl(self) -> None:
-        # BUS_USB ajuda o GUID da SDL a casar no gamecontrollerdb.
         assert ug.BUS_USB == 0x03
         assert ug.UinputGamepad.for_flavor("dualsense").bustype == 0x03
 
@@ -87,7 +78,6 @@ class TestGamepadPersist:
         assert session.load_gamepad_emulation() == (False, None)
 
     def test_default_flavor_quando_ligado_sem_texto(self, tmp_config: Path) -> None:
-        # Flag presente mas vazia → ligado, flavor None (caller normaliza).
         (tmp_config / "gamepad_emulation.flag").write_text("\n", encoding="utf-8")
         enabled, flavor = session.load_gamepad_emulation()
         assert enabled is True
@@ -98,5 +88,5 @@ class TestGamepadPersist:
             raise OSError("indisponível")
 
         monkeypatch.setattr(session, "config_dir", _boom)
-        session.save_gamepad_emulation(True, "dualsense")  # não deve lançar
+        session.save_gamepad_emulation(True, "dualsense")
         assert session.load_gamepad_emulation() == (False, None)

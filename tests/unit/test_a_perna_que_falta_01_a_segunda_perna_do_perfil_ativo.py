@@ -84,42 +84,15 @@ from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
 from hefesto_dualsense4unix.utils import session as sessao
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
-#: O assento, na faixa sintética da casa (octetos 4 e 5 zerados).
 P1 = "aa:bb:cc:00:00:01"
 P1_CHAVE = "aabbcc000001"
 
-#: O NOME DO PERFIL QUE ESTÁ NO DISCO DELA, nesta régua.
 NO_DISCO = "bancada"
 
 
 @pytest.fixture
 def lar_de_mentira() -> pathlib.Path:
-    """O lar isolado do ``conftest``, CONFERIDO — e a conferência é a régua.
-
-    O ``conftest`` já desvia ``HOME`` e os cinco ``XDG_*`` para um lar de
-    mentira (autouse). Esta fixture não o refaz; ela **confirma**, e aborta se o
-    desvio não pegou.
-
-    POR QUE A CONFERÊNCIA EXISTE: este arquivo escreve ``session.json``,
-    ``active_profile.txt`` e um perfil. Se o desvio falhar, ele escreve no
-    ``~/.config`` REAL dela — no perfil que o daemon vivo está usando neste
-    instante. Uma régua que pode estragar a mesa de quem a roda não é régua.
-
-    **A ÂNCORA É O LAR DO SISTEMA, lido do ``passwd`` e NÃO do ``$HOME``** —
-    e as duas tentativas anteriores caíram, o que vale escrever:
-
-    * *"está sob o ``$HOME``?"* reprova o lar de mentira CERTO: o ``conftest``
-      põe ``HOME`` em ``…/.xdg/home`` e ``XDG_CONFIG_HOME`` em ``…/.xdg/config``
-      — irmãos, não aninhados;
-    * *"está sob o diretório temporário?"* também: ``TMPDIR`` aponta para o
-      berço da suíte (``/tmp/hefesto-berco-…``) e o ``tmp_path`` do pytest mora
-      noutro galho de ``/tmp``.
-
-    O que decide é UMA coisa só, e é a que importa: **este caminho não pode ser
-    o do daemon vivo dela**. O ``$HOME`` é justamente o que o desvio mexe, então
-    perguntá-lo seria medir o desvio com o próprio desvio — a armadilha de
-    07/09, *a trava que se mede contra a própria saída*. O ``passwd`` não mente.
-    """
+    """O lar isolado do ``conftest``, CONFERIDO — e a conferência é a régua."""
     lar_real = pathlib.Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
     alvo = profiles_dir(ensure=True).resolve()
     assert not alvo.is_relative_to(lar_real), (
@@ -135,15 +108,7 @@ def lar_de_mentira() -> pathlib.Path:
 
 @pytest.fixture
 def a_maquina_dela(lar_de_mentira: pathlib.Path) -> pathlib.Path:
-    """A COMBINAÇÃO DA MÁQUINA DELA — a quarta mordida, e ela é a fixture.
-
-    Um perfil no disco, os DOIS marcadores da sessão apontando para ele, e o
-    daemon que **não sabe de nada**. Medido em 06/09/2026 e descrito em
-    ``profiles_actions.perfil_que_esta_valendo``: o daemon responde
-    ``active_profile: null`` com um perfil valendo.
-
-    Devolve o caminho do ``.json`` do perfil — é nele que o byte se mede.
-    """
+    """A COMBINAÇÃO DA MÁQUINA DELA — a quarta mordida, e ela é a fixture."""
     save_profile(Profile(name=NO_DISCO, match=MatchManual()), origem="regua")
     sessao.save_last_profile(NO_DISCO)
     sessao.save_active_marker(NO_DISCO)
@@ -156,17 +121,8 @@ def a_maquina_dela(lar_de_mentira: pathlib.Path) -> pathlib.Path:
 
 
 def _no_disco(arquivo: pathlib.Path) -> dict[str, Any]:
-    """O JSON COMO ELE ESTÁ NO DISCO — nenhuma camada do produto no meio.
-
-    `load_profile` passaria pelo pydantic e normalizaria campo; o que esta
-    sprint decide é o BYTE, então a leitura é crua.
-    """
+    """O JSON COMO ELE ESTÁ NO DISCO — nenhuma camada do produto no meio."""
     return json.loads(arquivo.read_text(encoding="utf-8"))
-
-
-# ---------------------------------------------------------------------------
-# 1. O DONO DA PERGUNTA, do lado do daemon — `_perfil_que_grava`
-# ---------------------------------------------------------------------------
 
 
 class _Store:
@@ -190,38 +146,18 @@ class _Handlers(IpcHandlersMixin):
 def test_o_daemon_calado_cai_no_marcador_do_proprio_boot(
     a_maquina_dela: pathlib.Path,
 ) -> None:
-    """Store em ``None`` + marcadores valendo → o nome do disco.
-
-    E ELE NÃO É UMA LEITURA NOVA: `utils.session.resolve_boot_profile` é o mesmo
-    resolvedor que `daemon/connection.py` usa para restaurar o perfil ao ligar.
-    Curar aqui devolve a simetria que o boot já tinha.
-    """
+    """Store em ``None`` + marcadores valendo → o nome do disco."""
     assert _Handlers(ativo=None)._perfil_que_grava() == NO_DISCO
-    # E o daemon que SABE continua mandando — a primeira perna vence.
     assert _Handlers(ativo="outro")._perfil_que_grava() == "outro"
 
 
 def test_o_marcador_orfao_nao_vira_excecao_na_mao_dela(
     a_maquina_dela: pathlib.Path,
 ) -> None:
-    """Marcador apontando para perfil apagado → ``None``, e nada estoura.
-
-    A DOCSTRING DO RESOLVEDOR AVISA: *"esta função só resolve NOMES — não valida
-    se o perfil carrega"*. Sem a confirmação que `_perfil_que_grava` faz, um
-    marcador órfão trocaria o silêncio de hoje por um ``FileNotFoundError`` no
-    meio de um gesto dela — piorar, não curar.
-
-    MORDIDA: tire o ``load_profile`` de confirmação de `_perfil_que_grava` e
-    esta régua passa a ver a exceção subir.
-    """
+    """Marcador apontando para perfil apagado → ``None``, e nada estoura."""
     sessao.save_last_profile("um-perfil-que-ela-apagou")
     sessao.save_active_marker("um-perfil-que-ela-apagou")
     assert _Handlers(ativo=None)._perfil_que_grava() is None
-
-
-# ---------------------------------------------------------------------------
-# 2. A SEGUNDA MORDIDA — a máscara, e o BYTE no arquivo
-# ---------------------------------------------------------------------------
 
 
 def _mask_set(h: _Handlers, **params: Any) -> dict[str, Any]:
@@ -231,11 +167,7 @@ def _mask_set(h: _Handlers, **params: Any) -> dict[str, Any]:
 def test_a_mascara_entra_no_perfil_com_o_daemon_calado(
     a_maquina_dela: pathlib.Path,
 ) -> None:
-    """O QUARTO CHAMADOR, medido no disco: antes e depois.
-
-    É a régua que a sprint chama de *"o único degrau que decide"*. Ela não olha
-    o ``gravado`` da resposta — olha o ``.json``.
-    """
+    """O QUARTO CHAMADOR, medido no disco: antes e depois."""
     antes = _no_disco(a_maquina_dela)
     assert not antes.get("controllers"), (
         "o perfil já nasceu com opinião sobre alguma peça; a régua mediria o "
@@ -252,23 +184,7 @@ def test_a_mascara_entra_no_perfil_com_o_daemon_calado(
 def test_com_a_cura_arrancada_o_json_fica_byte_identico(
     a_maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA 2, feita por dentro: sem a segunda perna, nada é escrito.
-
-    A arrancada é literal — a resolução do perfil volta a ser o
-    ``getattr(self.store, "active_profile", None)`` de antes da sprint.
-
-    E O QUE ELA PROVA É A FORMA DO DEFEITO: a resposta do daemon não muda de
-    ``status``, o registro de sessão guarda a máscara, a tela acende o chip — e
-    o arquivo do perfil fica **byte a byte o mesmo**. Calado.
-
-    NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: a mordida era feita em
-    ``IpcHandlersMixin._perfil_que_grava``. As duas pernas mudaram de casa em
-    13/09 (`profiles/manager.nome_do_perfil_que_grava`, porque o PS + R3 grava
-    sem passar pelo socket), e em 14/09 a máscara seguiu o mesmo caminho — o
-    PS + L3 também grava sem socket. A mordida agora é na função que as duas
-    rotas leem, e por isso vale para as DUAS: o mixin a chama, e o ato da
-    máscara também.
-    """
+    """A MORDIDA 2, feita por dentro: sem a segunda perna, nada é escrito."""
     monkeypatch.setattr(
         manager_module,
         "nome_do_perfil_que_grava",
@@ -289,20 +205,7 @@ def test_com_a_cura_arrancada_o_json_fica_byte_identico(
 def test_a_barra_de_motor_tambem_esperava_a_segunda_perna(
     a_maquina_dela: pathlib.Path,
 ) -> None:
-    """O levantamento da §3: `rumble.motores.set` GRAVA, logo tinha o mesmo defeito.
-
-    A REGRA QUE MANDA CURÁ-LO JUNTO é a de 05/09: *quando a cura conhece a
-    causa, ela cobre TODOS os chamadores*. Cobrir só a máscara deixaria a
-    próxima pessoa remedindo isto na barra de motor.
-
-    MORDIDA: devolva o ``getattr(self.store, …)`` em `_handle_rumble_motores_set`
-    e a barra vai ao computador, com o ``.json`` intacto.
-
-    O PERFIL DO DISCO SOBREPÕE A VIBRAÇÃO DO P1 desde 01/10/2026
-    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): a barra é do computador, e
-    só vai ao perfil quando ele já tem a vibração daquele controle. É assim que
-    a segunda perna continua sendo o que decide o perfil que grava.
-    """
+    """O levantamento da §3: `rumble.motores.set` GRAVA, logo tinha o mesmo defeito."""
     save_profile(Profile.model_validate({
         "name": NO_DISCO, "match": {"type": "manual"},
         "controllers": {P1_CHAVE: {"rumble": {"motor_fraco_pct": 70}}},
@@ -319,41 +222,20 @@ def test_a_barra_de_motor_tambem_esperava_a_segunda_perna(
 
 
 def test_o_censo_dos_leitores_do_store_no_ipc_handlers() -> None:
-    """§3 — TODO leitor de ``store.active_profile``, separado em GRAVA e SÓ LÊ.
-
-    **NÃO SE CURA POR SIMETRIA**, e é isto que esta régua tranca: um método que
-    só RELATA o ativo pode responder ``null`` quando o daemon não sabe — é a
-    resposta certa, porque quem pergunta ao daemon quer saber o que o DAEMON
-    sabe. Quem tem de cair no disco é quem GRAVA, porque aí o ``null`` custa
-    dado dela.
-
-    O QUE ELA REPROVA: um leitor NOVO do store que ninguém classificou. Ela é um
-    censo, e censo que não reprova o item novo envelhece calado — que é como as
-    quatro pernas chegaram a quatro.
-    """
+    """§3 — TODO leitor de ``store.active_profile``, separado em GRAVA e SÓ LÊ."""
     import ast
 
     fonte = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_handlers.py"
     ).read_text(encoding="utf-8")
 
-    #: A CLASSIFICAÇÃO, e ela é o produto da §3 desta sprint.
     declarados = {
-        # GRAVA no perfil → as duas pernas. É o dono, e os três gravadores
         # (`gamepad.mask.set`, `rumble.motores.set`, `sensor.set`) passam por
-        # ele — por isso eles não aparecem neste censo com leitura própria.
         "_perfil_que_grava": "grava",
-        # SÓ RELATA o que o daemon sabe — `null` é resposta, não defeito.
         "_handle_profile_switch": "so-le",
-        # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar»
-        # relata o perfil que reaplicou, e não grava a escolha.
         "_handle_profile_reaplicar": "so-le",
         "_handle_daemon_status": "so-le",
         "_handle_daemon_state_full": "so-le",
-        # O-FREESTYLE-E-UMA-CAMADA-SO-01, 28/09/2026. O chip «Jogar pelo
-        # Hefesto» pergunta o modo ao perfil ativo, e o `freestyle.set`
-        # desligado relata o perfil que ficou. Nenhum dos dois grava: com o
-        # daemon sem saber, o chip cai no padrão da máquina, que é o de sempre.
         "_caminho_do_perfil_ativo": "so-le",
         "_o_que_volta_sem_o_freestyle": "so-le",
     }
@@ -398,8 +280,6 @@ def test_o_censo_dos_leitores_do_store_no_ipc_handlers() -> None:
         f"o censo declara leitores que não existem mais: {sumiram} — um censo "
         "com item morto manda a próxima pessoa procurar o que já saiu")
 
-    # E A METADE QUE DECIDE: quem GRAVA não lê o store por conta própria. Se
-    # voltar a ler, ele voltou a ter uma perna só.
     fora_do_dono = [
         nome for nome in achados
         if declarados.get(nome) == "grava" and nome != "_perfil_que_grava"
@@ -407,11 +287,6 @@ def test_o_censo_dos_leitores_do_store_no_ipc_handlers() -> None:
     assert not fora_do_dono, (
         f"{fora_do_dono} grava no perfil e lê o store por conta própria — "
         "a pergunta tem dono, e ele é `_perfil_que_grava`")
-
-
-# ---------------------------------------------------------------------------
-# 3. A PRIMEIRA MORDIDA — o rodapé, e o Salvar que escreve no disco
-# ---------------------------------------------------------------------------
 
 
 class _PonteDoRodape:
@@ -426,10 +301,8 @@ class _PonteDoRodape:
 
     def salvar_arquivo(self, titulo: str, sugestao: str = "") -> str | None:
         self.chamadas.append(("salvar_arquivo", (titulo,), {"sugestao": sugestao}))
-        return None  # ela cancelou — o gesto só tinha de CHEGAR aqui
+        return None
 
-    # A VOLTA DO RODAPÉ (02/10/2026, O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): o
-    # funil do Salvar avisa o lançamento, e a volta reconcilia e renumera.
     def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
         self.chamadas.append(("chamar", (metodo,), params))
         return True
@@ -445,29 +318,21 @@ def _ctx_do_daemon_calado() -> Contexto:
 
 
 def test_o_salvar_grava_com_o_daemon_calado(a_maquina_dela: pathlib.Path) -> None:
-    """O gesto que ESCREVE NO DISCO DELA, medido no disco.
-
-    Antes desta sprint ele levantava *"salvar: não há perfil ativo. Escolha um
-    na aba Perfis."* — em cima de um perfil que ESTAVA escolhido, e que o
-    próprio daemon restauraria no próximo boot pelo mesmo marcador.
-    """
+    """O gesto que ESCREVE NO DISCO DELA, medido no disco."""
     antes = _no_disco(a_maquina_dela)
     rodape.salvar(_ctx_do_daemon_calado(), {}, _PonteDoRodape())
     depois = _no_disco(a_maquina_dela)
 
     assert depois["name"] == NO_DISCO, (
         f"o Salvar mirou outro perfil: {depois['name']!r}")
-    assert antes["name"] == NO_DISCO  # e era o mesmo alvo antes do clique
+    assert antes["name"] == NO_DISCO
     assert load_profile(NO_DISCO).name == NO_DISCO
 
 
 def test_com_a_cura_arrancada_os_tres_do_rodape_recusam(
     a_maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA 1, e ela vale para os TRÊS — porque a cura foi a mesma.
-
-    A arrancada devolve a leitura CRUA do estado, que é o que os três faziam.
-    """
+    """A MORDIDA 1, e ela vale para os TRÊS — porque a cura foi a mesma."""
     monkeypatch.setattr(
         pac_perfil,
         "nome_do_ativo",
@@ -489,16 +354,9 @@ def test_com_a_cura_arrancada_os_tres_do_rodape_recusam(
 def test_o_aplicar_e_o_exportar_atravessam_com_o_daemon_calado(
     a_maquina_dela: pathlib.Path,
 ) -> None:
-    """Os outros dois chegam ao fim do caminho em vez de recusar.
-
-    O `exportar` para no seletor do sistema — ela cancela — e isso basta: o que
-    se mede é que ele ACHOU o perfil e o arquivo dele.
-    """
+    """Os outros dois chegam ao fim do caminho em vez de recusar."""
     p = _PonteDoRodape()
     rodape.aplicar(_ctx_do_daemon_calado(), {}, p)
-    # Depois do `profile_reaplicar`, a volta do rodapé (02/10/2026,
-    # O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): o aviso ao lançamento, a
-    # reconciliação e a numeração.
     assert [(c[0], *c[1][:1]) for c in p.chamadas[1:]] == [
         ("chamar", "launch_env.refresh"), ("resultado", "coop.sync"),
         ("resultado", "identity.renumber")]
@@ -513,17 +371,8 @@ def test_o_aplicar_e_o_exportar_atravessam_com_o_daemon_calado(
         f"o exportar sugeriu outro arquivo: {q.chamadas[0][2]['sugestao']!r}")
 
 
-# ---------------------------------------------------------------------------
-# 4. A TERCEIRA MORDIDA — a ressalva na tela, e o motivo que morria na ponte
-# ---------------------------------------------------------------------------
-
-
 class _PonteQueRecusaNoCorpo:
-    """A ponte com as DUAS funções, para a régua trocar uma pela outra.
-
-    `chamar` devolve ``bool`` — é a que descartava o motivo.
-    `chamar_detalhado` devolve ``(ok, motivo)`` — é a que o gesto usa hoje.
-    """
+    """A ponte com as DUAS funções, para a régua trocar uma pela outra."""
 
     def __init__(self, motivo: str | None) -> None:
         self.motivo = motivo
@@ -547,25 +396,17 @@ def _clique_na_mascara(p: Any) -> Any:
 
 
 def test_a_recusa_do_corpo_vira_frase_no_cartao() -> None:
-    """``sem_perfil`` vira o que ELA faz a seguir — nunca o nome do estado.
-
-    Ordem dela, 07/09: *"o layout não informa os nossos defeitos"*.
-    """
+    """``sem_perfil`` vira o que ELA faz a seguir — nunca o nome do estado."""
     resposta = _clique_na_mascara(_PonteQueRecusaNoCorpo("sem_perfil"))
     assert resposta == {"recado": aba.MASCARA_VALE_SEM_PERFIL}
     frase = aba.MASCARA_VALE_SEM_PERFIL
     assert "sem_perfil" not in frase and "active_profile" not in frase
     assert "mesa" not in frase.lower(), "a palavra banida entrou na tela"
-    # AS DUAS METADES (`AS-DUAS-ABAS-FALAM-01`): o que deu e o que não deu.
     assert "vale agora" in frase and "Perfis" in frase
 
 
 def test_o_sem_mudanca_nao_vira_aviso() -> None:
-    """O perfil JÁ guardava essa máscara — a piscada verde responde sozinha.
-
-    Falar aqui seria transformar um clique sem efeito nenhum num aviso de 6 s, e
-    quem recebe a mesma frase em todo clique para de ler os recados.
-    """
+    """O perfil JÁ guardava essa máscara — a piscada verde responde sozinha."""
     assert _clique_na_mascara(_PonteQueRecusaNoCorpo("sem_mudanca")) is None
     assert _clique_na_mascara(_PonteQueRecusaNoCorpo(None)) is None
 
@@ -577,12 +418,7 @@ def test_um_motivo_desconhecido_nao_chega_cru_ao_cartao() -> None:
 
 
 def test_com_o_chamar_de_volta_a_ressalva_some(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A MORDIDA 3, literal: devolva `chamar` e a tela volta a ficar calada.
-
-    A arrancada troca a função que o gesto pede à ponte. O `chamar` devolve
-    ``bool``: o `motivo` que o daemon acabou de mandar não tem por onde chegar,
-    e o cartão pisca verde sobre um perfil que não mudou.
-    """
+    """A MORDIDA 3, literal: devolva `chamar` e a tela volta a ficar calada."""
     ponte_velha = _PonteQueRecusaNoCorpo("sem_perfil")
     ponte_velha.chamar_detalhado = (  # type: ignore[assignment]
         lambda metodo, **p: (ponte_velha.chamar(metodo, **p), None)
@@ -595,12 +431,7 @@ def test_com_o_chamar_de_volta_a_ressalva_some(monkeypatch: pytest.MonkeyPatch) 
 def test_a_ponte_junta_as_duas_formas_de_o_daemon_dizer_nao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`ponte.chamar_detalhado` lê a recusa NO CORPO — e `chamar` não.
-
-    É a diferença medida, e não a docstring: com o daemon respondendo
-    ``{"status": "ok", "gravado": false, "motivo": "sem_perfil"}``, o RPC deu
-    certo. `_call_checked` sozinho responderia ``(True, None)``.
-    """
+    """`ponte.chamar_detalhado` lê a recusa NO CORPO — e `chamar` não."""
     corpo = {"status": "ok", "gravado": False, "motivo": "sem_perfil"}
     monkeypatch.setattr(
         pac_ponte._b, "_run_call", lambda metodo, params, timeout=None: corpo
@@ -609,6 +440,4 @@ def test_a_ponte_junta_as_duas_formas_de_o_daemon_dizer_nao(
         True,
         "sem_perfil",
     )
-    # E o `chamar` continua sendo o que joga fora — é por isso que ele não serve
-    # a um botão que precisa DIZER.
     assert pac_ponte.chamar("gamepad.mask.set", uniq=P1, flavor="xbox") is True

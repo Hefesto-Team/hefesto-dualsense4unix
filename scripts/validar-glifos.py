@@ -41,128 +41,91 @@ import sys
 import unicodedata
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Tabela GERADA, não chutada.
-#
-# Procedência: propriedade ``Emoji_Presentation`` de
-# https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
-# (UTS #51, Version 17.0, arquivo datado de 2025-07-25). São 1219 codepoints
-# compactados em 81 faixas contíguas.
-#
-# Para regerar depois de uma revisão do Unicode:
-#
-#     curl -sS -o emoji-data.txt \
-#       https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
-#     python3 - <<'EOF'
-#     cps = set()
 #     for ln in open("emoji-data.txt", encoding="utf-8"):
-#         ln = ln.split("#", 1)[0].strip()
-#         if not ln:
-#             continue
-#         campo, prop = [x.strip() for x in ln.split(";")]
-#         if prop != "Emoji_Presentation":
-#             continue
-#         if ".." in campo:
-#             a, b = campo.split("..")
-#             cps.update(range(int(a, 16), int(b, 16) + 1))
-#         else:
-#             cps.add(int(campo, 16))
-#     # compacta em faixas e imprime como tuplas (0xINI, 0xFIM)
-#     EOF
-#
-# Os nomes nos comentários saem de ``unicodedata.name``; onde aparece
-# "não nomeado" o codepoint ainda não existia na tabela Unicode embutida no
-# Python desta máquina (15.0) -- a faixa continua válida, só não tem nome local.
-# ---------------------------------------------------------------------------
 FAIXAS_EMOJI_PRESENTATION: tuple[tuple[int, int], ...] = (
-    (0x231A, 0x231B),  # WATCH .. HOURGLASS
-    (0x23E9, 0x23EC),  # BLACK RIGHT-POINTING DOUBLE TRIANGLE .. (idem, para baixo)
-    (0x23F0, 0x23F0),  # ALARM CLOCK
-    (0x23F3, 0x23F3),  # HOURGLASS WITH FLOWING SAND
-    (0x25FD, 0x25FE),  # WHITE/BLACK MEDIUM SMALL SQUARE -- cruzam Geometric Shapes
-    (0x2614, 0x2615),  # UMBRELLA WITH RAIN DROPS .. HOT BEVERAGE
-    (0x2648, 0x2653),  # ARIES .. PISCES
-    (0x267F, 0x267F),  # WHEELCHAIR SYMBOL
-    (0x2693, 0x2693),  # ANCHOR
-    (0x26A1, 0x26A1),  # HIGH VOLTAGE SIGN
-    (0x26AA, 0x26AB),  # MEDIUM WHITE CIRCLE .. MEDIUM BLACK CIRCLE
-    (0x26BD, 0x26BE),  # SOCCER BALL .. BASEBALL
-    (0x26C4, 0x26C5),  # SNOWMAN WITHOUT SNOW .. SUN BEHIND CLOUD
-    (0x26CE, 0x26CE),  # OPHIUCHUS
-    (0x26D4, 0x26D4),  # NO ENTRY
-    (0x26EA, 0x26EA),  # CHURCH
-    (0x26F2, 0x26F3),  # FOUNTAIN .. FLAG IN HOLE
-    (0x26F5, 0x26F5),  # SAILBOAT
-    (0x26FA, 0x26FA),  # TENT
-    (0x26FD, 0x26FD),  # FUEL PUMP
-    (0x2705, 0x2705),  # WHITE HEAVY CHECK MARK -- citado no ADR-011 como proibido
-    (0x270A, 0x270B),  # RAISED FIST .. RAISED HAND
-    (0x2728, 0x2728),  # SPARKLES
-    (0x274C, 0x274C),  # CROSS MARK -- citado no ADR-011 como proibido
-    (0x274E, 0x274E),  # NEGATIVE SQUARED CROSS MARK
-    (0x2753, 0x2755),  # BLACK QUESTION MARK ORNAMENT .. WHITE EXCLAMATION ORNAMENT
-    (0x2757, 0x2757),  # HEAVY EXCLAMATION MARK SYMBOL
-    (0x2795, 0x2797),  # HEAVY PLUS SIGN .. HEAVY DIVISION SIGN
-    (0x27B0, 0x27B0),  # CURLY LOOP
-    (0x27BF, 0x27BF),  # DOUBLE CURLY LOOP
-    (0x2B1B, 0x2B1C),  # BLACK LARGE SQUARE .. WHITE LARGE SQUARE
-    (0x2B50, 0x2B50),  # WHITE MEDIUM STAR -- o que está vivo no repositório hoje
-    (0x2B55, 0x2B55),  # HEAVY LARGE CIRCLE
-    (0x1F004, 0x1F004),  # MAHJONG TILE RED DRAGON
-    (0x1F0CF, 0x1F0CF),  # PLAYING CARD BLACK JOKER
-    (0x1F18E, 0x1F18E),  # NEGATIVE SQUARED AB
-    (0x1F191, 0x1F19A),  # SQUARED CL .. SQUARED VS
-    (0x1F1E6, 0x1F1FF),  # REGIONAL INDICATOR SYMBOL LETTER A .. LETTER Z
-    (0x1F201, 0x1F201),  # SQUARED KATAKANA KOKO
-    (0x1F21A, 0x1F21A),  # SQUARED CJK UNIFIED IDEOGRAPH-7121
-    (0x1F22F, 0x1F22F),  # SQUARED CJK UNIFIED IDEOGRAPH-6307
-    (0x1F232, 0x1F236),  # SQUARED CJK UNIFIED IDEOGRAPH-7981 .. -6709
-    (0x1F238, 0x1F23A),  # SQUARED CJK UNIFIED IDEOGRAPH-7533 .. -55B6
-    (0x1F250, 0x1F251),  # CIRCLED IDEOGRAPH ADVANTAGE .. ACCEPT
-    (0x1F300, 0x1F320),  # CYCLONE .. SHOOTING STAR
-    (0x1F32D, 0x1F335),  # HOT DOG .. CACTUS
-    (0x1F337, 0x1F37C),  # TULIP .. BABY BOTTLE
-    (0x1F37E, 0x1F393),  # BOTTLE WITH POPPING CORK .. GRADUATION CAP
-    (0x1F3A0, 0x1F3CA),  # CAROUSEL HORSE .. SWIMMER
-    (0x1F3CF, 0x1F3D3),  # CRICKET BAT AND BALL .. TABLE TENNIS PADDLE AND BALL
-    (0x1F3E0, 0x1F3F0),  # HOUSE BUILDING .. EUROPEAN CASTLE
-    (0x1F3F4, 0x1F3F4),  # WAVING BLACK FLAG
-    (0x1F3F8, 0x1F43E),  # BADMINTON RACQUET AND SHUTTLECOCK .. PAW PRINTS
-    (0x1F440, 0x1F440),  # EYES
-    (0x1F442, 0x1F4FC),  # EAR .. VIDEOCASSETTE
-    (0x1F4FF, 0x1F53D),  # PRAYER BEADS .. DOWN-POINTING SMALL RED TRIANGLE
-    (0x1F54B, 0x1F54E),  # KAABA .. MENORAH WITH NINE BRANCHES
-    (0x1F550, 0x1F567),  # CLOCK FACE ONE OCLOCK .. CLOCK FACE TWELVE-THIRTY
-    (0x1F57A, 0x1F57A),  # MAN DANCING
-    (0x1F595, 0x1F596),  # dois gestos de mão
-    (0x1F5A4, 0x1F5A4),  # BLACK HEART
-    (0x1F5FB, 0x1F64F),  # MOUNT FUJI .. PERSON WITH FOLDED HANDS
-    (0x1F680, 0x1F6C5),  # ROCKET .. LEFT LUGGAGE
-    (0x1F6CC, 0x1F6CC),  # SLEEPING ACCOMMODATION
-    (0x1F6D0, 0x1F6D2),  # PLACE OF WORSHIP .. SHOPPING TROLLEY
-    (0x1F6D5, 0x1F6D8),  # HINDU TEMPLE .. (parte não nomeada no Unicode 15.0)
-    (0x1F6DC, 0x1F6DF),  # WIRELESS .. RING BUOY
-    (0x1F6EB, 0x1F6EC),  # AIRPLANE DEPARTURE .. AIRPLANE ARRIVING
-    (0x1F6F4, 0x1F6FC),  # SCOOTER .. ROLLER SKATE
-    (0x1F7E0, 0x1F7EB),  # LARGE ORANGE CIRCLE .. LARGE BROWN SQUARE
-    (0x1F7F0, 0x1F7F0),  # HEAVY EQUALS SIGN
-    (0x1F90C, 0x1F93A),  # PINCHED FINGERS .. FENCER
-    (0x1F93C, 0x1F945),  # WRESTLERS .. GOAL NET
-    (0x1F947, 0x1F9FF),  # FIRST PLACE MEDAL .. NAZAR AMULET
-    (0x1FA70, 0x1FA7C),  # BALLET SHOES .. CRUTCH
-    (0x1FA80, 0x1FA8A),  # YO-YO .. (parte não nomeada no Unicode 15.0)
-    (0x1FA8E, 0x1FAC6),  # (não nomeados no Unicode 15.0)
-    (0x1FAC8, 0x1FAC8),  # (não nomeado no Unicode 15.0)
-    (0x1FACD, 0x1FADC),  # (não nomeados no Unicode 15.0)
-    (0x1FADF, 0x1FAEA),  # (não nomeados no Unicode 15.0)
-    (0x1FAEF, 0x1FAF8),  # (parte não nomeada) .. RIGHTWARDS PUSHING HAND
+    (0x231A, 0x231B),
+    (0x23E9, 0x23EC),
+    (0x23F0, 0x23F0),
+    (0x23F3, 0x23F3),
+    (0x25FD, 0x25FE),
+    (0x2614, 0x2615),
+    (0x2648, 0x2653),
+    (0x267F, 0x267F),
+    (0x2693, 0x2693),
+    (0x26A1, 0x26A1),
+    (0x26AA, 0x26AB),
+    (0x26BD, 0x26BE),
+    (0x26C4, 0x26C5),
+    (0x26CE, 0x26CE),
+    (0x26D4, 0x26D4),
+    (0x26EA, 0x26EA),
+    (0x26F2, 0x26F3),
+    (0x26F5, 0x26F5),
+    (0x26FA, 0x26FA),
+    (0x26FD, 0x26FD),
+    (0x2705, 0x2705),
+    (0x270A, 0x270B),
+    (0x2728, 0x2728),
+    (0x274C, 0x274C),
+    (0x274E, 0x274E),
+    (0x2753, 0x2755),
+    (0x2757, 0x2757),
+    (0x2795, 0x2797),
+    (0x27B0, 0x27B0),
+    (0x27BF, 0x27BF),
+    (0x2B1B, 0x2B1C),
+    (0x2B50, 0x2B50),
+    (0x2B55, 0x2B55),
+    (0x1F004, 0x1F004),
+    (0x1F0CF, 0x1F0CF),
+    (0x1F18E, 0x1F18E),
+    (0x1F191, 0x1F19A),
+    (0x1F1E6, 0x1F1FF),
+    (0x1F201, 0x1F201),
+    (0x1F21A, 0x1F21A),
+    (0x1F22F, 0x1F22F),
+    (0x1F232, 0x1F236),
+    (0x1F238, 0x1F23A),
+    (0x1F250, 0x1F251),
+    (0x1F300, 0x1F320),
+    (0x1F32D, 0x1F335),
+    (0x1F337, 0x1F37C),
+    (0x1F37E, 0x1F393),
+    (0x1F3A0, 0x1F3CA),
+    (0x1F3CF, 0x1F3D3),
+    (0x1F3E0, 0x1F3F0),
+    (0x1F3F4, 0x1F3F4),
+    (0x1F3F8, 0x1F43E),
+    (0x1F440, 0x1F440),
+    (0x1F442, 0x1F4FC),
+    (0x1F4FF, 0x1F53D),
+    (0x1F54B, 0x1F54E),
+    (0x1F550, 0x1F567),
+    (0x1F57A, 0x1F57A),
+    (0x1F595, 0x1F596),
+    (0x1F5A4, 0x1F5A4),
+    (0x1F5FB, 0x1F64F),
+    (0x1F680, 0x1F6C5),
+    (0x1F6CC, 0x1F6CC),
+    (0x1F6D0, 0x1F6D2),
+    (0x1F6D5, 0x1F6D8),
+    (0x1F6DC, 0x1F6DF),
+    (0x1F6EB, 0x1F6EC),
+    (0x1F6F4, 0x1F6FC),
+    (0x1F7E0, 0x1F7EB),
+    (0x1F7F0, 0x1F7F0),
+    (0x1F90C, 0x1F93A),
+    (0x1F93C, 0x1F945),
+    (0x1F947, 0x1F9FF),
+    (0x1FA70, 0x1FA7C),
+    (0x1FA80, 0x1FA8A),
+    (0x1FA8E, 0x1FAC6),
+    (0x1FAC8, 0x1FAC8),
+    (0x1FACD, 0x1FADC),
+    (0x1FADF, 0x1FAEA),
+    (0x1FAEF, 0x1FAF8),
 )
 
-# ---------------------------------------------------------------------------
-# ADR-011, seção "Decisão", item "Permitidos". São os quatro blocos de UI
-# textual funcional. Apagá-los já quebrou a GUI em 21/04/2026 (indicadores de
-# estado Pango) e o BatteryMeter da TUI.
-# ---------------------------------------------------------------------------
 BLOCOS_PRESERVADOS_ADR_011: tuple[tuple[int, int, str], ...] = (
     (0x2190, 0x21FF, "Arrows"),
     (0x2500, 0x257F, "Box Drawing"),
@@ -170,22 +133,6 @@ BLOCOS_PRESERVADOS_ADR_011: tuple[tuple[int, int, str], ...] = (
     (0x25A0, 0x25FF, "Geometric Shapes"),
 )
 
-#: AS EXCEÇÕES DELA — 20/09/2026, e o desenho é o que as torna seguras.
-#:
-#: Ela mandou abrir o portão para os glifos que a fileira de saída de som
-#: precisa: *"altera o hook do sistema para adicionar essas exceções que vc
-#: sugerir"*.
-#:
-#: **É uma LISTA NOMEADA, nunca uma faixa**, e a razão é o próprio ADR-011:
-#: abrir a faixa `U+1F300–U+1FAFF` devolveria o buraco que ele fechou, e o
-#: portão voltaria a ser uma opinião. Aqui cada codepoint entra sozinho, com o
-#: papel que ela lhe deu escrito ao lado — o que também responde à próxima
-#: pessoa que perguntar *"posso usar mais um?"*: pode, se ela nomear.
-#:
-#: **O que NÃO muda:** todo o resto de `Emoji_Presentation` continua reprovado,
-#: e o VARIATION SELECTOR-16 continua reprovado mesmo SOBRE um destes — porque
-#: quem escreve `U+FE0F` está forçando a forma colorida num caractere que já
-#: tem a sua, e isso é a decoração que o ADR-011 recusa.
 EXCECOES_DELA: dict[int, str] = {
     0x1F3AE: "o som do JOGO, na fileira de saída do cartão do controle",
     0x1F4FA: "a TV, na fileira de saída do cartão do controle",
@@ -200,10 +147,6 @@ def excecao_dela(cp: int) -> tuple[bool, str]:
     return (papel is not None), (papel or "")
 
 
-# VARIATION SELECTOR-16: não desenha nada sozinho, só força a forma emoji do
-# caractere anterior. Quem escreve isso quer emoji, então o portão reprova o
-# próprio seletor -- e ele não mora em nenhum dos quatro blocos preservados,
-# logo a cláusula de preservação não conflita com esta regra.
 VARIATION_SELECTOR_16 = 0xFE0F
 
 _INICIOS = [ini for ini, _fim in FAIXAS_EMOJI_PRESENTATION]
@@ -225,28 +168,11 @@ def preservado_pelo_adr_011(cp: int) -> tuple[bool, str]:
 
 
 def e_proibido(cp: int) -> bool:
-    """Critério do portão para um único codepoint.
-
-    A ordem importa e é a do ADR-011: a preservação é consultada **antes** da
-    proibição, porque os dois conjuntos se cruzam em U+25FD e U+25FE.
-    """
-    # CLAUSULA-ADR-011-PRESERVA: bloco permitido vence a proibição. Arrancar
-    # estas duas linhas faz o portão reprovar U+25FD e U+25FE, que são
-    # Geometric Shapes e o ADR-011 manda preservar. O teste
-    # tests/unit/test_validar_glifos.py arranca esta cláusula de propósito para
-    # provar que ela morde.
+    """Critério do portão para um único codepoint."""
     if preservado_pelo_adr_011(cp)[0]:
         return False
-    # O SELETOR VEM ANTES DA EXCEÇÃO DELA, e a ordem é a regra: `🎮` passa,
-    # `🎮\ufe0f` não. Quem escreve o seletor está forçando a forma colorida
-    # sobre um caractere que já tem a sua — é a decoração que o ADR-011 recusa,
-    # e a exceção dela é para o SÍMBOLO, não para o realce dele.
     if cp == VARIATION_SELECTOR_16:
         return True
-    # CLAUSULA-EXCECAO-DELA: só os codepoints que ela nomeou, um a um. Arrancar
-    # esta linha faz o portão reprovar a fileira de saída de som que ela pediu
-    # em 20/09; trocá-la por uma FAIXA devolve o buraco que o ADR-011 fechou.
-    # `tests/unit/test_validar_glifos.py` arranca as duas de propósito.
     if excecao_dela(cp)[0]:
         return False
     return tem_apresentacao_emoji(cp)
@@ -260,12 +186,6 @@ def nome_do_codepoint(cp: int) -> str:
     return unicodedata.name(chr(cp), sem_nome)
 
 
-# ---------------------------------------------------------------------------
-# Paths ignorados. Mesma família de exclusões dos outros portões da casa
-# (ver scripts/validar-acentuacao.py), menos as isenções de conteúdo: emoji é
-# proibido em qualquer arquivo de texto, inclusive fixture, CHANGELOG e
-# registro histórico. Aqui só saem diretórios de máquina e binários.
-# ---------------------------------------------------------------------------
 PADROES_IGNORADOS: list[str] = [
     r"^\.git/",
     r"^\.venv/",
@@ -300,8 +220,6 @@ PADROES_IGNORADOS: list[str] = [
 ]
 _IGNORADOS_RE = [re.compile(p) for p in PADROES_IGNORADOS]
 
-# Arquivo de texto acima disto é quase certamente dado, não prosa. Evita ler
-# captura HID gigante para dentro da memória.
 LIMITE_BYTES = 8 * 1024 * 1024
 
 
@@ -328,8 +246,6 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, int, int]]:
         dados = path.read_bytes()
     except OSError:
         return []
-    # Binário: NUL byte ou não decodifica como UTF-8. Nos dois casos não é
-    # texto do projeto e não faz sentido cobrar glifo dele.
     if b"\x00" in dados:
         return []
     try:
@@ -338,10 +254,6 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, int, int]]:
         return []
 
     achados: list[tuple[int, int, int]] = []
-    # ``split`` e não ``splitlines``: splitlines também quebra em U+000B,
-    # U+000C, U+0085, U+2028 e U+2029, o que desloca a numeração das linhas em
-    # relação ao que o editor e o git mostram. O mesmo defeito está registrado
-    # na sprint GATE-EMOJI-01 sobre o higienizador do ambiente.
     for n, linha in enumerate(conteudo.split("\n"), start=1):
         for col, ch in enumerate(linha, start=1):
             cp = ord(ch)
@@ -353,13 +265,7 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, int, int]]:
 
 
 def listar_arquivos_git(raiz: Path) -> list[Path]:
-    """Lista os arquivos versionados **e** os novos ainda não adicionados.
-
-    ``git ls-files -z`` puro é cego a arquivo novo: o portão passaria verde
-    justamente no arquivo que a pessoa acabou de escrever, que é quando o erro
-    entra. ``--cached --others --exclude-standard`` cobre rastreado e não
-    rastreado, respeitando o ``.gitignore``.
-    """
+    """Lista os arquivos versionados **e** os novos ainda não adicionados."""
     try:
         out = subprocess.check_output(
             ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],

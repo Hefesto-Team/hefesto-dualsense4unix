@@ -1,21 +1,4 @@
-"""O medidor de ar — AR-MEDIDO-01 (23/09/2026).
-
-O contrato é o do ``varredura_do_radio.py``: «não sei» é diferente de «zero».
-Todo ioctl aqui é um DUBLÊ que empacota nos deslocamentos do kernel escritos à
-mão (nunca pelo formato do módulo, que seria a régua medida contra ela mesma).
-Nada nesta suíte abre socket de Bluetooth.
-
-A MORDIDA, feita em 23/09/2026: arrancar de ``ar_do_adaptador.conferir`` a
-guarda do contador parado com enlace vivo faz
-``test_contador_congelado_com_conexao_viva_responde_nao_sei`` reprovar com
-``entrada_por_s == 0.0`` — o medidor dizendo «ninguém no rádio» sobre um
-controle conectado. Devolvida a guarda, md5 conferido.
-
-E DUAS DA CONFERÊNCIA, no mesmo dia: medir o contador de BYTES com o teto de
-pacotes faz ``test_o_contador_de_bytes_que_da_a_volta_…`` reprovar com «o
-contador recomeçou»; tirar a guarda da lista de conexões ilegível faz
-``test_sem_a_lista_de_conexoes_…`` reprovar com ``0.0``.
-"""
+"""O medidor de ar — AR-MEDIDO-01 (23/09/2026)."""
 
 from __future__ import annotations
 
@@ -104,9 +87,6 @@ def _medidor(kernel: KernelDeMentira, relogio: Relogio, **kw: float) -> ar.Medid
     return ar.MedidorDeAr(ar.LeitorDoKernel(ioctl=kernel.ioctl, relogio=relogio), **kw)
 
 
-# ---------------------------------------------------------------- o layout
-
-
 def test_o_layout_do_kernel_tem_92_bytes_e_cada_campo_no_lugar() -> None:
     assert struct.calcsize(ar.FORMATO_DEV_INFO) == 92
     kernel = KernelDeMentira()
@@ -134,9 +114,6 @@ def test_a_lista_de_conexoes_traz_handle_endereco_papel_e_saida() -> None:
 def test_o_endereco_sai_na_forma_do_hid_phys() -> None:
     """Minúsculo com dois-pontos — senão não casa com ``adaptador_por_uniq``."""
     assert ar.endereco_do_kernel(_bdaddr("AA:BB:CC:00:00:0F")) == "aa:bb:cc:00:00:0f"
-
-
-# ---------------------------------------------------------------- as taxas
 
 
 def test_a_taxa_e_o_delta_do_contador_na_janela() -> None:
@@ -169,11 +146,7 @@ def test_o_contador_de_32_bits_que_da_a_volta_continua_sendo_taxa() -> None:
 
 
 def test_o_contador_de_bytes_que_da_a_volta_nao_vira_adaptador_reiniciado() -> None:
-    """O de BYTES dá a volta a cada ~17 h com um controle no rádio (~70 kB/s).
-
-    Medido contra o teto de PACOTES, a volta dele virava «o adaptador
-    reiniciou» e apagava a janela inteira — conferência de 23/09/2026.
-    """
+    """O de BYTES dá a volta a cada ~17 h com um controle no rádio (~70 kB/s)."""
     kernel, relogio = KernelDeMentira(), Relogio()
     dado = kernel.por(0, ADAPTADOR_A)
     dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
@@ -324,10 +297,6 @@ def test_a_janela_do_governador_e_um_parametro() -> None:
     assert medidor.amostrar()[ADAPTADOR_A].entrada_por_s == 800.0
 
 
-# ---------------------------------------------------------------- o AFH
-
-#: O que o rádio da máquina dela respondeu em 23/09/2026 a um handle que não
-#: existe (0x0EFE): ``Command Complete`` com status 0x02, conexão desconhecida.
 RESPOSTA_MEDIDA_DE_HANDLE_INEXISTENTE = bytes.fromhex("040e0602061402fe0e")
 
 

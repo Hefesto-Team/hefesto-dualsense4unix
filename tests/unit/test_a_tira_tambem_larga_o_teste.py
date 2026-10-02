@@ -1,17 +1,4 @@
-"""O clique na tira também larga o teste da aba Vibração.
-
-MEDIDO no lar de mentira em 02/10/2026, com o piloto de verdade e o daemon de
-mentira: com o «Háptica» do P2 ligado, o clique no link da aba Gatilhos (a
-tira, como ela clica) trocou a página e o coração seguiu batendo
-`haptica.testar` ligado a cada segundo na aba nova; o mesmo com o «Vibração»
-e o `rumble.set`. O teste só se calava na volta pelo `_ir` do piloto, que é o
-caminho do passeio, e não o do clique dela.
-
-A largada mora no `_ir` desde 15/09 (A-TELA-QUE-TRAVA-02), mas o link da tira
-carrega a página sem passar por ele: quem vê toda troca de página é o
-`_carregou`. A MORDIDA: tire a chamada a `largar_o_que_as_abas_seguram` do
-`_carregou` e os dois primeiros testes reprovam.
-"""
+"""O clique na tira também larga o teste da aba Vibração."""
 from __future__ import annotations
 
 import pathlib
@@ -129,9 +116,7 @@ def test_o_clique_na_tira_devolve_os_motores_do_teste_da_vibracao(
 
 def test_a_mesma_pagina_e_a_primeira_carga_nao_largam(ponte: _PonteQueAnota) -> None:
     a05._EM_TESTE_DA_HAPTICA[0] = UNIQ
-    # a 05 que recarrega (o «Recarregar» do menu) não é trocar de página
     _carregar(_Piloto("05-vibracao.html", "05-vibracao.html", pronto=True))
-    # a primeira carga da janela confirma a página em que ela nasceu
     _carregar(_Piloto("05-vibracao.html", "05-vibracao.html", pronto=False))
     assert ponte.chamadas == []
     assert a05.em_teste_da_haptica() == UNIQ

@@ -64,8 +64,6 @@ from hefesto_dualsense4unix.integrations.conexao_zumbi import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Faixa sintética da casa. NUNCA a máscara de um endereço real — a máscara
-#: preserva o OUI, e `tests/unit/test_anonimato_de_fixtures.py` reprova.
 DONGLE_A = "aa:bb:cc:00:00:11"
 DONGLE_B = "aa:bb:cc:00:00:33"
 SAO = "aa:bb:cc:00:00:22"
@@ -74,7 +72,6 @@ ZUMBI = "aa:bb:cc:00:00:44"
 LINK_SAO = LinkDeRadio(hci="hci0", adaptador=DONGLE_A, controle=SAO)
 LINK_ZUMBI = LinkDeRadio(hci="hci1", adaptador=DONGLE_B, controle=ZUMBI)
 
-#: O BlueZ conhece o são naquele adaptador, e ninguém mais.
 CONHECIDOS = {("hci0", SAO)}
 
 
@@ -98,9 +95,6 @@ def _vigia(ponte: Any, **kwargs: Any) -> VigiaDeZumbis:
     return VigiaDeZumbis(ponte=ponte, **kwargs)
 
 
-# --- a regra pura: as três condições -----------------------------------------
-
-
 def test_o_link_sem_hid_e_sem_bluez_e_zumbi() -> None:
     """As três condições juntas — o caso que ela viu."""
     achados = zumbis([LINK_SAO, LINK_ZUMBI], {SAO}, CONHECIDOS)
@@ -114,44 +108,26 @@ def test_o_link_com_hidraw_nunca_e_zumbi() -> None:
     derrubar os quatro DualSense da mesa dela.
     """
     assert zumbis([LINK_SAO], {SAO}, CONHECIDOS) == []
-    #: E o zumbi ganhando um `hidraw` deixa de ser zumbi na mesma volta.
     assert zumbis([LINK_ZUMBI], {SAO, ZUMBI}, CONHECIDOS | {("hci1", ZUMBI)}) == []
 
 
 def test_o_conectado_que_o_bluez_conhece_e_outro_defeito() -> None:
-    """Sem `hidraw` mas COM objeto no BlueZ não é este defeito — é o cache SDP.
-
-    O `doctor.sh:check_bt_connected_sem_hidraw` já pega esse, e a cura dele não
-    é derrubar link nenhum (SDP-CACHE-01). Confundir os dois faria o produto
-    derrubar um controle cuja causa a derrubada não resolve, em laço.
-    """
+    """Sem `hidraw` mas COM objeto no BlueZ não é este defeito — é o cache SDP."""
     conhecidos = CONHECIDOS | {("hci1", ZUMBI)}
     assert zumbis([LINK_ZUMBI], {SAO}, conhecidos) == []
 
 
 def test_sem_a_leitura_do_bluez_ninguem_e_acusado() -> None:
-    """Ausência de leitura é *"não sei"*, e "não sei" nunca autoriza agir.
-
-    É a trava que impede o produto de derrubar o fone, o mouse e o teclado dela
-    no dia em que o `busctl` não responder.
-    """
+    """Ausência de leitura é *"não sei"*, e "não sei" nunca autoriza agir."""
     assert zumbis([LINK_SAO, LINK_ZUMBI], set(), set()) == []
 
 
 def test_o_adaptador_viaja_junto_com_o_endereco() -> None:
-    """O rádio é POR ADAPTADOR, e a cura precisa saber em qual dongle agir.
-
-    `hcitool dc` sem `-i` cai no primeiro adaptador que o kernel rotear — numa
-    malha de três dongles isso derruba o link de OUTRO adaptador, de quem
-    estava jogando.
-    """
+    """O rádio é POR ADAPTADOR, e a cura precisa saber em qual dongle agir."""
     ponte = PonteDeMentira()
     vigia = _vigia(ponte, segundos_para_zumbi=0.0)
     vigia.observar(100.0, [LINK_ZUMBI], {SAO}, CONHECIDOS)
     assert ponte.pedidos == [("hci1", DONGLE_B, ZUMBI)]
-
-
-# --- o tempo -----------------------------------------------------------------
 
 
 def test_o_suspeito_novo_ainda_nao_e_zumbi() -> None:
@@ -164,40 +140,24 @@ def test_o_suspeito_novo_ainda_nao_e_zumbi() -> None:
 
 
 def test_o_relogio_do_vigia_atravessa_minutos() -> None:
-    """Quatro minutos de relógio, sem dormir — e o que oscila NÃO soma.
-
-    Um link que entra e sai da suspeita tem o relógio ZERADO a cada saída. Sem
-    isso, um controle que pisca durante a tarde viraria zumbi por acumulação, e
-    a cura cairia em cima de quem está só com o rádio ruim.
-    """
+    """Quatro minutos de relógio, sem dormir — e o que oscila NÃO soma."""
     ponte = PonteDeMentira()
     vigia = _vigia(ponte, segundos_para_zumbi=20.0)
     momento = 0.0
     for _ in range(12):
-        # 10 s suspeito, 10 s de volta à mesa — 20 s de ciclo, 12 ciclos = 4 min.
         vigia.observar(momento, [LINK_ZUMBI], {SAO}, CONHECIDOS)
         momento += 10.0
         vigia.observar(momento, [], {SAO, ZUMBI}, CONHECIDOS)
         momento += 10.0
     assert ponte.pedidos == [], "oscilar por quatro minutos virou zumbi por acumulação"
 
-    #: E agora, PARADO no defeito, ele vira zumbi — senão o teste acima passaria
-    #: com o vigia trocado por "nunca cura".
     vigia.observar(momento, [LINK_ZUMBI], {SAO}, CONHECIDOS)
     veredito = vigia.observar(momento + 21.0, [LINK_ZUMBI], {SAO}, CONHECIDOS)
     assert veredito.derrubados and ponte.pedidos
 
 
-# --- o teto ------------------------------------------------------------------
-
-
 def test_a_cura_tem_teto_por_controle() -> None:
-    """Uma derrubada por controle por janela — e o que sobra é um GESTO.
-
-    Sem teto, um controle que não consegue parear em adaptador nenhum entra em
-    laço de reconexão com o produto empurrando. Um laço que o produto alimenta
-    é pior que o zumbi parado.
-    """
+    """Uma derrubada por controle por janela — e o que sobra é um GESTO."""
     ponte = PonteDeMentira()
     vigia = _vigia(ponte, segundos_para_zumbi=0.0, janela_do_teto_s=600.0)
     primeiro = vigia.observar(100.0, [LINK_ZUMBI], {SAO}, CONHECIDOS)
@@ -212,13 +172,9 @@ def test_a_cura_tem_teto_por_controle() -> None:
         "é exatamente o que a sprint proíbe"
     )
 
-    #: Passada a janela, ele pode tentar de novo.
     terceiro = vigia.observar(100.0 + 601.0, [LINK_ZUMBI], {SAO}, CONHECIDOS)
     assert terceiro.derrubados
     assert len(ponte.pedidos) == 2
-
-
-# --- ausência é resposta ------------------------------------------------------
 
 
 def test_sem_a_ponte_o_produto_nao_age_e_diz_por_que() -> None:
@@ -238,13 +194,8 @@ def test_a_ponte_que_falha_vira_recado_e_nao_silencio() -> None:
     veredito = vigia.observar(10.0, [LINK_ZUMBI], {SAO}, CONHECIDOS)
     assert not veredito.derrubados
     assert any("falhou" in linha for linha in veredito.diario)
-    #: E o teto NÃO conta uma tentativa que falhou: senão um erro transitório
-    #: da ponte compraria dez minutos de silêncio.
     outro = vigia.observar(11.0, [LINK_ZUMBI], {SAO}, CONHECIDOS)
     assert len(ponte.pedidos) == 2, outro
-
-
-# --- os leitores: eles LEEM, não digitam --------------------------------------
 
 
 def _executor(saidas: dict[tuple[str, ...], str]) -> Any:
@@ -255,8 +206,7 @@ def _executor(saidas: dict[tuple[str, ...], str]) -> Any:
 
 
 def test_o_leitor_de_links_le_a_saida_do_hcitool_por_adaptador() -> None:
-    """O formato é o REAL, medido em 20/09/2026 (endereços trocados pela faixa
-    sintética da casa). Uma régua que digita o que devia ler não mede nada."""
+    """O formato é o REAL, medido em 20/09/2026 (endereços trocados pela faixa"""
     saidas = {
         ("hcitool", "-i", "hci0", "con"): (
             "Connections:\n"
@@ -275,7 +225,6 @@ def test_o_leitor_de_links_le_a_saida_do_hcitool_por_adaptador() -> None:
         ("hci0", SAO),
         ("hci1", ZUMBI),
     }
-    #: E o adaptador de cada link é o do dongle certo, não o primeiro da lista.
     assert {link.adaptador for link in achados} == {DONGLE_A, DONGLE_B}
 
 
@@ -294,12 +243,7 @@ def test_o_leitor_do_bluez_le_a_arvore_do_busctl() -> None:
 def test_o_leitor_de_adaptadores_desce_para_o_hcitool_quando_o_sysfs_cala(
     tmp_path: Path,
 ) -> None:
-    """O degrau de cima NÃO EXISTE nesta máquina — medido, kernel 7.1.5.
-
-    `/sys/class/bluetooth/hci0/` não tem `address`. Quem só lê o sysfs devolve
-    ZERO adaptadores com três dongles de pé, e "nenhum adaptador" se lê como
-    "nenhum zumbi".
-    """
+    """O degrau de cima NÃO EXISTE nesta máquina — medido, kernel 7.1.5."""
     mudo = tmp_path / "bluetooth"
     (mudo / "hci0").mkdir(parents=True)
     (mudo / "hci0:5").mkdir()
@@ -307,7 +251,6 @@ def test_o_leitor_de_adaptadores_desce_para_o_hcitool_quando_o_sysfs_cala(
     achados = adaptadores_na_mesa(mudo, executor=_executor({("hcitool", "dev"): saida}))
     assert achados == {"hci0": DONGLE_A, "hci1": DONGLE_B}
 
-    #: E quando o sysfs RESPONDE, ele ganha — nenhum processo é chamado.
     falante = tmp_path / "bluetooth-falante"
     (falante / "hci0").mkdir(parents=True)
     (falante / "hci0" / "address").write_text(DONGLE_A.upper() + "\n", encoding="utf-8")
@@ -321,8 +264,7 @@ def test_o_leitor_de_adaptadores_desce_para_o_hcitool_quando_o_sysfs_cala(
 
 
 def test_o_no_de_link_nao_e_confundido_com_adaptador(tmp_path: Path) -> None:
-    """`hci0:5` é uma CONEXÃO, não um dongle — e o `uevent` dele não tem
-    endereço (medido: só `DEVTYPE=link`)."""
+    """`hci0:5` é uma CONEXÃO, não um dongle — e o `uevent` dele não tem"""
     raiz = tmp_path / "bluetooth"
     (raiz / "hci0:5").mkdir(parents=True)
     (raiz / "hci0:5" / "address").write_text(SAO.upper(), encoding="utf-8")
@@ -344,26 +286,12 @@ def test_uniqs_com_hid_le_o_uevent(tmp_path: Path) -> None:
     ["", "path:/dev/input/event9", "/dev/hidraw4", "aa:bb:cc:00:00", "xyz", None],
 )
 def test_mac_limpo_recusa_o_que_nao_e_endereco(sujo: str | None) -> None:
-    """Estrita de propósito: o valor vira argumento de comando privilegiado.
-
-    `core.sysfs_leds.norm_mac` recolhe dígitos hex de qualquer texto
-    (`norm_mac("/dev/hidraw4")` devolve `'deda4'`, medido em 04/09/2026). Aqui
-    um endereço aproximado é pior que nenhum.
-    """
+    """Estrita de propósito: o valor vira argumento de comando privilegiado."""
     assert mac_limpo(sujo) is None
 
 
-# --- a ponte de verdade, sem tocar no rádio -----------------------------------
-
-
 def test_a_ponte_monta_o_comando_com_o_adaptador_e_o_controle() -> None:
-    """O que vai ao `sudo` é só o verbo; os dois MACs vão pelo stdin.
-
-    O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026): o argv do sudo é
-    registro (o journal, a unidade do daemon, o ``/proc``), e o endereço saiu
-    dele. Nada é executado: o executor injetado recebe o pedido. Um teste que
-    rodasse isto de verdade cortaria o rádio dela.
-    """
+    """O que vai ao `sudo` é só o verbo; os dois MACs vão pelo stdin."""
     capturado: list[PedidoAPonte] = []
 
     def espia(pedido: PedidoAPonte) -> tuple[bool, str]:
@@ -386,26 +314,14 @@ def test_a_ponte_nao_instalada_e_impedimento_declarado() -> None:
 
 
 def test_o_verbo_desconectar_existe_no_script_e_na_regra_do_sudoers() -> None:
-    """A ponte é o único caminho de root desta cura — e ele tem de existir.
-
-    O portão de paridade entre o `case` e a regra do sudoers vive em
-    `test_a_ponte_privilegiada_entra_e_sai_do_install.py`; aqui só se trava que
-    o módulo Python e o script falam do MESMO verbo.
-    """
+    """A ponte é o único caminho de root desta cura — e ele tem de existir."""
     texto = (RAIZ / "scripts" / "bt_ponte_privilegiada.sh").read_text(encoding="utf-8")
     assert "verbo_desconectar" in texto
     assert "desconectar)" in texto
 
 
-# --- o subsystem: as três pontas da receita -----------------------------------
-
-
 def test_o_subsystem_esta_nas_tres_pontas() -> None:
-    """Lista + `_safe_start` no `run()` + `_stop_*` no `shutdown()`.
-
-    A receita de DUAS metades sobe o subsystem e nunca o para — e aqui isso
-    seria uma thread chamando `sudo` com o daemon já morto.
-    """
+    """Lista + `_safe_start` no `run()` + `_stop_*` no `shutdown()`."""
     assert ConexoesSubsystem in SUBSYSTEM_REGISTRY
     ciclo = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon"
     vida = (ciclo / "lifecycle.py").read_text(encoding="utf-8")
@@ -426,11 +342,7 @@ def test_o_vigia_nasce_ligado_e_a_chave_desliga(monkeypatch: Any) -> None:
 
 
 def test_o_diario_chega_ao_disco_com_o_recado(tmp_path: Any) -> None:
-    """*"A recusa com motivo não é resposta"* — a aba precisa do que aconteceu.
-
-    O `conftest` desvia `HOME` e os quatro `XDG_*`, então isto grava num lar de
-    mentira, nunca no dela.
-    """
+    """*"A recusa com motivo não é resposta"* — a aba precisa do que aconteceu."""
     ponte = PonteDeMentira()
     subsystem = ConexoesSubsystem(
         vigia=_vigia(ponte, segundos_para_zumbi=0.0),
@@ -446,12 +358,7 @@ def test_o_diario_chega_ao_disco_com_o_recado(tmp_path: Any) -> None:
 
 @pytest.mark.asyncio
 async def test_o_laco_do_subsystem_mede_o_tempo_de_verdade() -> None:
-    """O laço REAL, com relógio real e thread real.
-
-    Uma régua que chama `uma_volta` uma vez mede um INSTANTE. Esta sobe o laço,
-    espera a janela passar no relógio de parede e exige que a cura tenha
-    acontecido DEPOIS — e não na primeira volta.
-    """
+    """O laço REAL, com relógio real e thread real."""
     ponte = PonteDeMentira()
     subsystem = ConexoesSubsystem(
         vigia=_vigia(ponte, segundos_para_zumbi=0.6),
@@ -468,26 +375,13 @@ async def test_o_laco_do_subsystem_mede_o_tempo_de_verdade() -> None:
         assert ponte.pedidos == [("hci1", DONGLE_B, ZUMBI)]
     finally:
         await subsystem.stop()
-    #: E o `stop` para DE VERDADE: nenhuma volta nova depois dele.
     quantos = len(ponte.pedidos)
     time.sleep(0.3)
     assert len(ponte.pedidos) == quantos
 
 
-# --- a aba Conexões diz o que o vigia não curou --------------------------------
-# 28/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01. O vigia escrevia a
-# volta dele no disco para «a aba Conexões ler», e a aba não lia: quando a cura
-# não bastava (a ponte que corta o link fora do ar, o teto, a derrubada que
-# falhou), o gesto que resta — parear de novo naquele adaptador — só existia no
-# arquivo. A linha é a «Não Conectou» do desenho aprovado, na caixa do
-# adaptador: nada de recado, nada de botão novo.
-
-
 class _PonteDoServico:
-    """A ponte do pedido ao rádio: anota o pedido e a central aceita.
-
-    O ``radio.busca.set`` (O-CONECTAR-E-UM-INTERRUPTOR-01) responde como o
-    tratador real: a ``busca`` que ficou valendo, no destino pedido."""
+    """A ponte do pedido ao rádio: anota o pedido e a central aceita."""
 
     def __init__(self) -> None:
         self.pedidos: list[tuple[str, dict[str, Any]]] = []
@@ -530,7 +424,7 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
 def _cena_da_aba(a08: Any) -> dict[str, Any]:
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    a08._FUNDO.clear()  # cada tique desta régua lê o diário de agora
+    a08._FUNDO.clear()
     estado = {"controllers": [], "radio_central": {"movimentos": [], "proposta": None}}
     a08.campos_do_radio(Contexto(state=estado, conectados=[], mesa=[]))
     return dict(a08._CENA_NA_TELA)
@@ -557,13 +451,7 @@ def _volta(ponte: Any, links: list[LinkDeRadio], *, quando: float | None = None,
 
 
 def test_o_zumbi_que_o_vigia_nao_cura_vira_nao_conectou_na_caixa_dele(a08: Any) -> None:
-    """Sem a ponte que corta o link, a linha «Não Conectou» nasce na caixa do
-    adaptador em que o controle está preso — e só nela —, com o «Tentar de
-    Novo» que abre o «Conectar» ali e o X que só tira a linha.
-
-    MORDIDA: tire de `cena_do_radio` a soma do `_os_que_nao_viraram_controle`
-    — esta régua reprova sem linha nenhuma.
-    """
+    """Sem a ponte que corta o link, a linha «Não Conectou» nasce na caixa do"""
     _volta(PonteDeMentira(impede=["a ponte privilegiada não está instalada"]), [LINK_ZUMBI])
     cena = _cena_da_aba(a08)
     presos = _presos(cena)
@@ -577,14 +465,12 @@ def test_o_zumbi_que_o_vigia_nao_cura_vira_nao_conectou_na_caixa_dele(a08: Any) 
     html = a08.html_da_linha(linha, cena)
     assert a08.NAO_CONECTOU in html and 'data-gesto="tentar-de-novo"' in html
     assert 'data-abre="conectar"' in html and "Tirar esta linha" in html
-    # O endereço do controle preso não vai para o texto da linha.
     texto = re.sub(r"<[^>]+>", " ", html)
     assert ZUMBI.upper() not in texto.upper() and ZUMBI.replace(":", "") not in texto
 
 
 def test_o_teto_e_a_derrubada_que_falha_tambem_deixam_a_linha(a08: Any) -> None:
-    """Os três jeitos de a cura não bastar dão a mesma linha: o impedimento
-    (acima), o teto e a derrubada que falhou."""
+    """Os três jeitos de a cura não bastar dão a mesma linha: o impedimento"""
     _volta(PonteDeMentira(funciona=False), [LINK_ZUMBI])
     assert len(_presos(_cena_da_aba(a08))) == 1, "a derrubada falhou e a tela calou"
 
@@ -605,8 +491,7 @@ def test_o_zumbi_derrubado_nao_ganha_linha(a08: Any) -> None:
 
 
 def test_a_volta_velha_do_vigia_nao_vale(a08: Any) -> None:
-    """Um minuto sem volta nova é o daemon parado: o arquivo é passado. E um
-    carimbo do FUTURO (o de antes de um reinício da máquina) também não vale."""
+    """Um minuto sem volta nova é o daemon parado: o arquivo é passado. E um"""
     ponte = PonteDeMentira(impede=["a ponte privilegiada não está instalada"])
     _volta(ponte, [LINK_ZUMBI], quando=time.monotonic() - 60.0)
     assert _presos(_cena_da_aba(a08)) == []
@@ -621,14 +506,7 @@ def test_o_zumbi_de_adaptador_fora_da_tela_nao_aparece(a08: Any) -> None:
 
 
 def test_o_x_tira_a_linha_ate_o_episodio_acabar(a08: Any) -> None:
-    """O X (`dispensar-linha`) tira a linha sem esquecer nada, e ela não volta
-    no tique seguinte; quando uma volta fresca já não traz o controle, o
-    próximo episódio aparece de novo.
-
-    MUDOU NA ESQUECER-E-LIMPAR-AS-CONEXOES-01: o X da linha «Não Conectou» é o
-    ``dispensar-linha`` (o ``esquecer-aparelho`` mora no «⋮» de quem tem
-    pareamento ali). A linha do controle preso não é movimento da central, e
-    sai pelo episódio, como saía."""
+    """O X (`dispensar-linha`) tira a linha sem esquecer nada, e ela não volta"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     ponte = PonteDeMentira(impede=["a ponte privilegiada não está instalada"])
@@ -638,20 +516,14 @@ def test_o_x_tira_a_linha_ate_o_episodio_acabar(a08: Any) -> None:
     assert a08.dispensar_linha(ctx, {"alvo": linha["id"], "lugar": linha["lugar"]},
                                None) == {"armou": True}
     assert _presos(_cena_da_aba(a08)) == [], "o X não tirou a linha"
-    _volta(ponte, [])  # o controle saiu da lista do vigia
+    _volta(ponte, [])
     assert _presos(_cena_da_aba(a08)) == []
-    _volta(ponte, [LINK_ZUMBI])  # e voltou a ficar preso
+    _volta(ponte, [LINK_ZUMBI])
     assert len(_presos(_cena_da_aba(a08))) == 1, "o episódio novo ficou dispensado"
 
 
 def test_tentar_de_novo_abre_o_conectar_no_adaptador_do_preso(a08: Any) -> None:
-    """«Tentar de Novo» é o «Conectar» naquele adaptador: a busca ligada com o
-    destino da caixa — o repareio que o diário do vigia pede.
-
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo
-    ``radio.busca.set`` (o «Procurar»), e não pelo ``radio.mover`` sem
-    aparelho. O pedido é o mesmo: a busca no adaptador do preso.
-    """
+    """«Tentar de Novo» é o «Conectar» naquele adaptador: a busca ligada com o"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     _volta(PonteDeMentira(impede=["a ponte privilegiada não está instalada"]), [LINK_ZUMBI])

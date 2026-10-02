@@ -77,8 +77,6 @@ from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
 PAGINA = "09-sistema.html"
 
-#: O DESENHO DE HOJE, e não o publicado — publicar é ato dela, e os dois botões
-#: desta frente só existem na bancada até ela aprovar.
 BANCADA = _onde.pagina(PAGINA)
 
 
@@ -92,12 +90,7 @@ def _ctx(**estado: object) -> Contexto:
 
 
 class PonteDeMentira:
-    """A ponte que RECUSA e RESPONDE, e guarda o que lhe pediram.
-
-    Todo dublê desta casa tem de saber recusar — um que só sabe passar não é
-    régua. `chamar` devolve o que `resposta` disser, e o gesto que ler o retorno
-    (nenhum destes três lê, hoje) passa a ser exercitado nas duas respostas.
-    """
+    """A ponte que RECUSA e RESPONDE, e guarda o que lhe pediram."""
 
     def __init__(self, resposta: bool = True) -> None:
         self.chamadas: list[tuple[str, tuple, dict]] = []
@@ -115,7 +108,6 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,), {}))
         return self.resposta
 
-    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
     def profile_reaplicar(self, nome: str) -> bool:
         self.chamadas.append(("profile_reaplicar", (nome,), {}))
         return self.resposta
@@ -142,17 +134,8 @@ def _confirma(gesto: str) -> dict[str, object]:
     return {"gesto": gesto, "texto": a09.CONFIRMA}
 
 
-# ---------------------------------------------------------------------------
-# CAMADA 0 — A DECLARAÇÃO: nenhum dos três pode nascer sem a rede de segurança
-# ---------------------------------------------------------------------------
 def test_os_tres_gestos_novos_declaram_o_que_mexem() -> None:
-    """Sem isto, a prova botão a botão clica os três na máquina dela.
-
-    Ela roda com o daemon vivo e o perfil dela em disco: um clique de régua no
-    `corrigir-modo` mata o serviço, um no `aplicar-aos-jogos` FECHA a Steam e
-    reescreve a linha de lançamento de todos os jogos, e um no
-    `restaurar-de-fabrica` apaga o perfil dela — para provar que sabe clicar.
-    """
+    """Sem isto, a prova botão a botão clica os três na máquina dela."""
     from hefesto_dualsense4unix.interface import pacotes
 
     perigosos = {g for (pg, g) in pacotes.perigosos() if pg == PAGINA}
@@ -164,12 +147,7 @@ def test_os_tres_gestos_novos_declaram_o_que_mexem() -> None:
 
 
 def test_a_lista_dos_sem_motor_ficou_vazia() -> None:
-    """`SEM_MOTOR` era cinco, virou um, e agora é zero.
-
-    A lista FICA (vazia) porque as duas réguas que a cobram nos dois sentidos
-    continuam valendo — quem está nela não pode ter dono, e todo `DESTRUTIVOS`
-    fora dela TEM de ter.
-    """
+    """`SEM_MOTOR` era cinco, virou um, e agora é zero."""
     assert a09.SEM_MOTOR == {}, (
         "há gesto declarado sem motor nesta aba, e os cinco fecharam: "
         f"{sorted(a09.SEM_MOTOR)}")
@@ -179,42 +157,24 @@ def test_a_lista_dos_sem_motor_ficou_vazia() -> None:
         "lista o `blocos:` nunca repõe o rótulo do consentimento.")
 
 
-# ---------------------------------------------------------------------------
-# CAMADA 1 — L315: o botão do modo improvisado
-# ---------------------------------------------------------------------------
 def test_o_corrigir_modo_recusa_fora_do_modo_improvisado(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Em `online_systemd` não há modo a corrigir; em `offline` o trabalho é do
-    botão ao lado. Um botão que faz o trabalho do vizinho é o segundo dono de
-    um ato."""
+    """Em `online_systemd` não há modo a corrigir; em `offline` o trabalho é do"""
     for estado in ("online_systemd", "offline", "iniciando"):
         monkeypatch.setattr(a09, "_status_do_daemon", lambda _s, e=estado: e)
         with pytest.raises(RuntimeError) as erro:
             a09.corrigir_modo(_ctx(), {"gesto": "corrigir-modo"}, PonteDeMentira())
-        # A RÉGUA LÊ A FRASE, NÃO A DIGITA — 11/09/2026, A1-036. Ela cobrava a
-        # palavra "modo improvisado", que é vocabulário desta casa e saiu da
-        # tela por decisão dela; a régua que digita o texto reprova a melhora
-        # em vez do defeito. O dono da frase é `a09.NADA_A_CORRIGIR`, e o que
-        # se mede aqui é o ATO: fora do modo avulso, o gesto RECUSA.
         assert str(erro.value) == a09.NADA_A_CORRIGIR, (estado, erro.value)
 
 
 def test_o_corrigir_modo_pede_ao_avulso_que_saia_e_sobe_a_unit(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Os três tempos da janela antiga, na ordem dela — e NADA é reescrito aqui.
-
-    O `systemctl` é dublado no ponto em que ele sairia do processo
-    (`_invoke_systemctl`, da janela antiga): o que se confere é o comando que
-    TERIA ido ao systemd, e nenhum byte vai ao daemon de quem roda a suíte.
-    """
+    """Os três tempos da janela antiga, na ordem dela — e NADA é reescrito aqui."""
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: "online_avulso")
     monkeypatch.setattr(a09._matriz(), "_read_daemon_pid", lambda: 4242)
     saiu: list[int] = []
     monkeypatch.setattr(a09, "_o_avulso_saiu", lambda pid: (saiu.append(pid), True)[1])
 
-    # OS TRÊS PORTÕES DO PRODUTO respondem "pode subir": unit instalada, serviço
-    # inativo, nenhum avulso vivo. Quem os consulta é `ativar_o_servico`, e é
-    # ele que continua decidindo — o dublê só lhe dá as entradas.
     from hefesto_dualsense4unix.daemon import service_install
 
     monkeypatch.setattr(service_install.ServiceInstaller, "detect_installed_unit",
@@ -243,11 +203,7 @@ def test_o_corrigir_modo_pede_ao_avulso_que_saia_e_sobe_a_unit(
 
 def test_o_corrigir_modo_recusa_quando_o_avulso_nao_sai(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A metade que o dublê frouxo esconderia: o caminho de erro é um caminho.
-
-    Sem esta linha, subir a unit com o avulso vivo criaria um SEGUNDO Hefesto
-    disputando o mesmo `hidraw` — a BUG-MULTI-INSTANCE-01.
-    """
+    """A metade que o dublê frouxo esconderia: o caminho de erro é um caminho."""
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: "online_avulso")
     monkeypatch.setattr(a09._matriz(), "_read_daemon_pid", lambda: 4242)
     monkeypatch.setattr(a09, "_o_avulso_saiu", lambda _pid: False)
@@ -269,12 +225,7 @@ def test_o_corrigir_modo_recusa_quando_o_avulso_nao_sai(
                           ("offline", "")])
 def test_o_campo_do_modo_improvisado_sai_em_todo_tique(
         monkeypatch: pytest.MonkeyPatch, estado: str, esperado: str) -> None:
-    """INCLUSIVE VAZIO, e é isso que faz o botão SUMIR de volta.
-
-    Emitir só quando há modo a corrigir deixaria o botão na tela para sempre
-    depois do primeiro modo improvisado: o serviço volta ao systemd e o desenho
-    continuaria oferecendo um conserto que já aconteceu.
-    """
+    """INCLUSIVE VAZIO, e é isso que faz o botão SUMIR de volta."""
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: estado)
     a09._LENTO.clear()
     saiu = normalizar(dict(a09.pacote(_ctx())))["mesa"]
@@ -286,13 +237,7 @@ def test_o_campo_do_modo_improvisado_sai_em_todo_tique(
 
 def test_o_campo_do_modo_improvisado_sai_ate_quando_a_camada_levanta(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O caminho de ERRO diz o mesmo que o de sucesso — a lição do `blocos:`.
-
-    Com o serviço parado a camada do produto levanta e este ramo responde. Ele
-    já carregava os rótulos dos botões e as razões do cinza pela mesma razão:
-    a tela não pode apagar a metade que explica no minuto em que ela é a única
-    coisa que importa.
-    """
+    """O caminho de ERRO diz o mesmo que o de sucesso — a lição do `blocos:`."""
     monkeypatch.setattr(a09._tela, "pacote",
                         lambda _l: (_ for _ in ()).throw(RuntimeError("caiu")))
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: "online_avulso")
@@ -302,9 +247,6 @@ def test_o_campo_do_modo_improvisado_sai_ate_quando_a_camada_levanta(
     assert bruto[a09.CAMPO_DO_MODO_AVULSO] == a09.MODO_A_CORRIGIR
 
 
-# ---------------------------------------------------------------------------
-# CAMADA 1 — L340: "Aplicar aos jogos da Steam"
-# ---------------------------------------------------------------------------
 def _com_a_steam(monkeypatch: pytest.MonkeyPatch, *, janela: str = "ok",
                  resultado: object = None) -> dict[str, list]:
     """Dubla o motor da Steam no ponto em que ele MEXERIA na máquina dela."""
@@ -338,13 +280,6 @@ def test_o_aplicar_aos_jogos_nao_fecha_a_steam_no_primeiro_clique(
     assert visto["fechou"] == [] and visto["aplicou"] == [], (
         "a Steam dela foi fechada no PRIMEIRO clique — o consentimento sumiu.")
     assert a09.CONFIRMA in str(fora["blocos"]), fora["blocos"]
-    # A FRASE DA PERGUNTA É A DO DONO, palavra por palavra. Uma segunda cópia
-    # aqui se afastaria dela no primeiro dia em que alguém mexesse numa das duas.
-    #
-    # O LUGAR MUDOU EM 13/09/2026 (TELA-CALADA-03): ela ia por `recado`, e a
-    # aba 09 não tem onde um recado pouse — medido no piloto, o primeiro clique
-    # não mostrava nada. Agora vai ao painel de registro, requebrada na largura
-    # dele; por isso o que se compara é a sequência de palavras.
     esperada = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
     assert "recado" not in fora, fora
     assert esperada in " ".join(fora["mesa"][a09.REGISTRO].split())
@@ -352,13 +287,7 @@ def test_o_aplicar_aos_jogos_nao_fecha_a_steam_no_primeiro_clique(
 
 def test_o_segundo_clique_aplica_o_atalho_a_todos_os_jogos(
         monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
-    """E o recibo é o do produto, com o número que ele contou.
-
-    O RECIBO SAIU DA TELA EM 13/09/2026 (TELA-CALADA-03), pela palavra dela:
-    *"essas frases de status (…) não deveria estar aparecendo"*. Ele continua
-    sendo o do produto e continua escrito — no diário da janela. O segundo
-    clique devolve só os rótulos dos botões.
-    """
+    """E o recibo é o do produto, com o número que ele contou."""
     visto = _com_a_steam(monkeypatch)
     a09.aplicar_aos_jogos(
         _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "Aplicar aos jogos da Steam"},
@@ -375,11 +304,7 @@ def test_o_segundo_clique_aplica_o_atalho_a_todos_os_jogos(
 
 def test_o_jogo_aberto_recusa_com_a_frase_do_dono(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O dublê tem de saber RECUSAR, e a recusa não é uma frase minha.
-
-    `format_steam_janela_recusa` cobre os três desfechos do motor; escrever a
-    frase aqui seria o segundo dono de um texto de tela.
-    """
+    """O dublê tem de saber RECUSAR, e a recusa não é uma frase minha."""
     _com_a_steam(monkeypatch, janela="jogo_aberto")
     a09.aplicar_aos_jogos(
         _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "x"}, PonteDeMentira())
@@ -402,23 +327,11 @@ def test_a_instalacao_sem_aplicacao_em_massa_recusa_dizendo_como_atualizar(
     assert str(erro.value) == _daemon.frase_sem_aplicacao_em_massa()
 
 
-# ---------------------------------------------------------------------------
-# CAMADA 1 — L343: "Restaurar de fábrica"
-# ---------------------------------------------------------------------------
 @pytest.fixture()
 def _preset(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     """Um preset de mentira no lugar do asset — e o disco dela fica intacto."""
     from hefesto_dualsense4unix.profiles import loader
 
-    # O PRESET É O DE VERDADE, copiado para um `tmp_path` — o disco dela fica
-    # intacto e a régua mede o arquivo que o produto realmente instala. Um JSON
-    # montado à mão aqui seria um segundo esqueleto de `Profile`, e o primeiro
-    # que o `schema` mudasse deixaria a régua verde sobre um formato morto.
-    #
-    # O NOME É TROCADO DE PROPÓSITO: é assim que se prova a
-    # PERFIL-PADRAO-PERSONALIZADO-01 — o asset pode ser o de uma versão
-    # anterior, e o gesto tem de gravar a identidade de HOJE, venha ele de onde
-    # vier.
     de_verdade = json.loads(
         _rodape._meu_perfil_asset().read_text(encoding="utf-8"))
     de_verdade["name"] = "nome-velho-do-asset"
@@ -472,9 +385,7 @@ def test_o_restaurar_de_fabrica_adota_o_perfil_como_ativo(
 
 def test_a_identidade_e_decidida_aqui_e_nao_pelo_arquivo_achado(
         _preset, monkeypatch: pytest.MonkeyPatch) -> None:
-    """PERFIL-PADRAO-PERSONALIZADO-01: o asset pode ser o de uma versão
-    anterior, e gravar o nome que veio dele criaria de volta o catch-all que ela
-    mandou aposentar."""
+    """PERFIL-PADRAO-PERSONALIZADO-01: o asset pode ser o de uma versão"""
     from hefesto_dualsense4unix.app.actions import profiles_actions
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
@@ -491,10 +402,7 @@ def test_a_identidade_e_decidida_aqui_e_nao_pelo_arquivo_achado(
 
 def test_o_preset_ausente_recusa_na_lingua_dela(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """A frase era dev-fala num toast desde 23/08 (*"Asset 'personalizado.json'
-    não encontrado — Restaurar Default indisponível"*), e a régua da palavra a
-    carregava como dívida declarada. Trocá-la no DONO pagou os dois chamadores
-    de uma vez."""
+    """A frase era dev-fala num toast desde 23/08 (*"Asset 'personalizado.json'"""
     monkeypatch.setattr(_rodape, "_meu_perfil_asset", lambda: None)
     with pytest.raises(RuntimeError) as erro:
         a09.restaurar_de_fabrica(_ctx(), _confirma("restaurar-de-fabrica"),
@@ -504,9 +412,6 @@ def test_o_preset_ausente_recusa_na_lingua_dela(
         assert jargao not in str(erro.value), (jargao, erro.value)
 
 
-# ---------------------------------------------------------------------------
-# CAMADA 2 — O DESENHO
-# ---------------------------------------------------------------------------
 def test_o_desenho_tem_os_dois_botoes_novos() -> None:
     pagina = _html()
     for gesto in ("corrigir-modo", "aplicar-aos-jogos"):
@@ -516,8 +421,7 @@ def test_o_desenho_tem_os_dois_botoes_novos() -> None:
 
 
 def test_o_botao_do_modo_improvisado_nasce_escondido() -> None:
-    """A cena que ela aprovou não muda um pixel: no desenho o serviço está de pé
-    pelo systemd, e a regra tira o botão do FLUXO — não só da vista."""
+    """A cena que ela aprovou não muda um pixel: no desenho o serviço está de pé"""
     import re
 
     pagina = _html()
@@ -533,9 +437,7 @@ def test_o_botao_do_modo_improvisado_nasce_escondido() -> None:
 
 
 def test_o_endereco_do_botao_escondido_tem_um_dono_so() -> None:
-    """O gerador LÊ o nome do pacote por AST. Escrito duas vezes, os dois se
-    afastam no dia em que alguém mudar um — foi assim que a fita viva morreu em
-    silêncio em 27/08."""
+    """O gerador LÊ o nome do pacote por AST. Escrito duas vezes, os dois se"""
     import aba09
 
     assert aba09.CAMPO_DO_MODO_AVULSO == a09.CAMPO_DO_MODO_AVULSO
@@ -571,12 +473,6 @@ def test_a_declaracao_do_que_espera_a_publicacao_bate_com_a_pagina() -> None:
         f"declaração é que envelheceu — TIRE a linha de cada um.")
 
 
-# ---------------------------------------------------------------------------
-# CAMADA 3 — A TELA VIVA, num WebKit de verdade
-# ---------------------------------------------------------------------------
-#: O QUE A RÉGUA LÊ DA PÁGINA. Ela pergunta pelo que se VÊ (`display` vem do
-#: CSSOM), e não pela classe: a classe é o mecanismo, e a pergunta é se a pessoa
-#: enxerga o botão.
 LER_A_TELA = r"""
 (function(){
   const b = document.querySelector('[data-gesto="corrigir-modo"]');
@@ -617,16 +513,7 @@ CLICAR = r"""
 
 @pytest.fixture(scope="module")
 def na_tela() -> dict:
-    """Abre o DESENHO DE HOJE no motor do produto, oculto, e mede.
-
-    A JANELA NASCE NO `Xvfb` da guarda TELA-DELA-01 — ela tem UMA tela, e uma
-    janela que nasce na frente dela quebra o que ela está fazendo.
-
-    OS GESTOS SÃO DUBLÊS REGISTRADOS NO `pacotes.GESTOS`, que é o mesmo lugar de
-    onde o piloto lê: o caminho INTEIRO do clique é exercitado — ouvinte, voo,
-    thread, pouso — e **nada vai ao daemon dela**. Sem isso, clicar `reiniciar`
-    aqui reiniciaria o serviço de quem roda a suíte.
-    """
+    """Abre o DESENHO DE HOJE no motor do produto, oculto, e mede."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -646,9 +533,6 @@ def na_tela() -> dict:
                     dirs_exist_ok=True)
     shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento) PASTA
 
-    # O `retomar` SAIU EM 25/09/2026: a aba em três seções o juntou ao
-    # «Parar o serviço» num botão só (`parar-ou-retomar`), que pede
-    # confirmação e não é um sucesso calado de um clique.
     chaves = [(PAGINA, g) for g in ("reiniciar", "autostart", "atualizar")]
     guardado = (hv.onde.PUBLICADO, hv.mesa_viva.estado_do_daemon,
                 hv.pacotes.PACOTES.get(PAGINA),
@@ -656,9 +540,6 @@ def na_tela() -> dict:
     hv.onde.PUBLICADO = berco / "paginas"  # type: ignore[assignment]  # (noqa-acento) PASTA
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: {"active_profile": "regua"}  # type: ignore[assignment]
 
-    # OS DUBLÊS: três voltam sem levantar (o sucesso calado) e um RECUSA. Um
-    # dublê que só sabe passar não é régua — e é a recusa que prova que a
-    # piscada verde não é um carimbo automático do pouso.
     for pagina, nome in chaves[:2]:
         hv.pacotes.GESTOS[(pagina, nome)] = (  # type: ignore[assignment]
             lambda ctx, o, p: None)
@@ -755,26 +636,11 @@ class TestNaTelaViva:
         visto = na_tela["com-o-modo"]["corrigir"]
         assert visto is not None, "o botão sumiu da página"
         assert visto["visivel"] is True, visto
-        # O RÓTULO MUDOU POR DECISÃO DELA — 11/09/2026, A1-012: *"modo de
-        # execução"* é vocabulário de quem construiu, e o que acontece no
-        # clique é o serviço sair e subir do jeito certo. O `data-gesto`
-        # (`corrigir-modo`) NÃO mudou: é endereço de contrato, e é por ele que
-        # o roteiro acha o botão — este `assert` confere que achou o certo.
         assert visto["rotulo"] == "Corrigir o serviço", visto
 
     def test_ele_entra_no_lugar_do_reiniciar_e_nao_ao_lado(
             self, na_tela: dict) -> None:
-        """A troca, medida no CSSOM — e ela é de altura e de verdade.
-
-        DE ALTURA: com cinco botões a coluna do serviço mede 194px contra 156
-        do Perfil de Bateria, e a aba passa a rolar 38px por dentro (medido
-        aqui, antes da troca). Esta faixa promete que as colunas irmãs acabam
-        no mesmo y.
-
-        DE VERDADE: no modo improvisado o «Reiniciar o serviço» é justamente o
-        clique que NÃO funciona — `systemctl restart` sobe a unit, e a unit
-        encontra o Hefesto avulso segurando a instância única.
-        """
+        """A troca, medida no CSSOM — e ela é de altura e de verdade."""
         com = na_tela["com-o-modo"]
         sem = na_tela["sem-o-modo"]
         assert com["reiniciar"]["visivel"] is False, (
@@ -784,11 +650,7 @@ class TestNaTelaViva:
             f"o «Reiniciar o serviço» não voltou quando o modo passou: {sem}")
 
     def test_e_some_de_volta_quando_o_modo_passa(self, na_tela: dict) -> None:
-        """A metade que faz a peça ser um ESTADO e não um carimbo.
-
-        Sem ela, o botão ficaria na tela para sempre depois do primeiro modo
-        improvisado — oferecendo um conserto que já aconteceu.
-        """
+        """A metade que faz a peça ser um ESTADO e não um carimbo."""
         assert na_tela["sem-o-modo"]["corrigir"]["visivel"] is False, (
             na_tela["sem-o-modo"]["corrigir"])
 
@@ -802,14 +664,7 @@ class TestNaTelaViva:
 
     def test_o_recibo_do_gesto_pisca_nos_tres_que_eram_mudos(
             self, na_tela: dict) -> None:
-        """A **L323**, medida nos que ninguém tinha clicado.
-
-        `retomar`, `reiniciar` e `autostart` agiam e o SUCESSO era mudo. Quem
-        responde é a piscada verde da `03-Q4` (`hef-deu-certo`), e ela alcança
-        os três — inclusive o `autostart`, que **não é um `<button>`**: é a
-        `.chave` do interruptor, e a folha da casa pinta `outline`, que qualquer
-        elemento aceita.
-        """
+        """A **L323**, medida nos que ninguém tinha clicado."""
         assert na_tela["cliques"] == "3", na_tela["cliques"]
         for nome in ("reiniciar", "autostart"):
             visto = na_tela["depois-do-pouso"]["alvos"][nome]
@@ -821,17 +676,7 @@ class TestNaTelaViva:
                 f"`{nome}` ficou 'trabalhando' depois de pousar: {visto}")
 
     def test_e_nao_pisca_no_que_recusou(self, na_tela: dict) -> None:
-        """A MORDIDA da piscada: um carimbo automático do pouso passaria nas
-        três linhas acima e mentiria aqui.
-
-        `certo` chega do `finally` do piloto, que é quem sabe qual dos três
-        desfechos aconteceu — e o default é `False` de propósito.
-
-        O BOTÃO É O «Atualizar», e ele é o mesmo que a régua irmã
-        (`test_a_aba_09_sistema_fecha_as_linhas`) usa para provar a piscada NO
-        SUCESSO. Os dois lados do mesmo botão, em duas réguas: lá o dublê volta
-        sem levantar e ele pisca; aqui o dublê RECUSA e ele não pode piscar.
-        """
+        """A MORDIDA da piscada: um carimbo automático do pouso passaria nas"""
         visto = na_tela["depois-do-pouso"]["alvos"]["atualizar"]
         assert visto is not None, (
             "o botão da recusa não existe na página — sem ele esta régua não "

@@ -1,43 +1,4 @@
-"""ONDA-MUDAS-NINTENDO-PRO — as 13 células de `mapa-controles.csv@pro` que esta
-fatia respondeu (entrada, luz, movimento, energia, gatilho, áudio), e a
-mordida que protege cada uma.
-
-O QUE ESTE ARQUIVO GUARDA
---------------------------
-Sem um Nintendo Pro Controller na mesa desta máquina (medido: `lsusb` e
-`/sys/class/hidraw/*/device/uevent` não mostram vendor `057e`), as 13 células
-que esta fatia respondeu vieram de LEITURA DE FONTE — o driver oficial
-vendorizado (`assets/dkms/hid-nintendo/hid-nintendo.c`) e o código deste
-produto (`daemon/subsystems/external_identity.py`) — nunca de bancada. Este
-arquivo é a rede: se algum dos fatos que sustentam aquelas 13 células mudar
-silenciosamente (o driver for atualizado, alguém reescrever um gate), a
-próxima pessoa que ler `de_onde_sei = inferido-do-codigo` naquelas linhas
-precisa de um jeito de saber que a inferência morreu.
-
-TRÊS PARTES:
-
-A. Fatos estruturais do driver oficial — protegem as sete células cujo valor
-   nasce de "o driver não tem X" (áudio, bateria-percentual, gatilho
-   adaptativo, calibração sem porteiro de bus, LED sem blink, ausência de
-   turbo).
-B. `ExternalImuEnabler` — protege a assimetria REAL e deliberada de
-   `movimento.imu.ligar@pro` (cabo=parcial, rádio=não): o gate `bus == "usb"`
-   é do PRODUTO, testável sem hardware nenhum.
-C. As 13 células do CSV — protege contra a MESMA armadilha que o cabeçalho
-   desta casa descreve: uma fusão de merge anexando texto numa coluna de
-   domínio fechado, ou uma célula respondida voltando a muda sem ninguém
-   notar.
-
-MORDE? Arranque qualquer um dos fatos de A ou B (comente uma linha do driver,
-afrouxe um gate) e o teste correspondente nomeia o que sumiu. Arranque uma
-célula de C (esvazie ou troque o valor) e o teste de C nomeia a chave e o
-valor esperado.
-
-MORDIDA PROVADA: ver `mordida_provada` e `mordida_saidas` na saída estruturada
-desta leva (o `StructuredOutput` do agente que escreveu este arquivo) — os
-testes de A, B e C foram rodados com a linha-alvo comentada/trocada e
-reprovaram, um a um, antes de a cura ser devolvida.
-"""
+"""ONDA-MUDAS-NINTENDO-PRO — as 13 células de `mapa-controles.csv@pro` que esta"""
 
 from __future__ import annotations
 
@@ -66,18 +27,8 @@ def _linha_pro(chave: str) -> dict[str, str]:
     raise AssertionError(f"linha {chave}@pro sumiu do CSV")
 
 
-# ---------------------------------------------------------------------------
-# A — fatos estruturais do driver oficial
-# ---------------------------------------------------------------------------
-
-
 class TestDriverSemAudio:
-    """`audio.jack.deteccao@pro`, `audio.jack.volume@pro`,
-    `audio.leitura_de_volta@pro` — o driver não tem UMA linha de áudio.
-
-    MORDE: escreva `jack` ou `headphone` em qualquer comentário do driver e
-    este teste reprova, nomeando o achado.
-    """
+    """`audio.jack.deteccao@pro`, `audio.jack.volume@pro`,"""
 
     def test_driver_nao_menciona_audio_jack_ou_headphone(self) -> None:
         achados = [
@@ -93,11 +44,7 @@ class TestDriverSemAudio:
 
 
 class TestDriverBateriaSoTemDegraus:
-    """`energia.bateria.percentual@pro` — só `CAPACITY_LEVEL`, nunca `CAPACITY`.
-
-    MORDE: adicione `POWER_SUPPLY_PROP_CAPACITY,` (sem `_LEVEL`) à lista de
-    `joycon_battery_props` e este teste reprova.
-    """
+    """`energia.bateria.percentual@pro` — só `CAPACITY_LEVEL`, nunca `CAPACITY`."""
 
     def test_joycon_battery_props_nao_tem_capacity_lisa(self) -> None:
         bloco = re.search(
@@ -111,9 +58,6 @@ class TestDriverBateriaSoTemDegraus:
         )
         corpo = bloco.group(1)
         assert "POWER_SUPPLY_PROP_CAPACITY_LEVEL" in corpo
-        # "CAPACITY," sem o sufixo "_LEVEL" é o percentual 0-100 que NÃO
-        # existe — a vírgula/quebra depois do nome evita casar o prefixo de
-        # CAPACITY_LEVEL por engano.
         assert not re.search(r"POWER_SUPPLY_PROP_CAPACITY\s*,", corpo), (
             "joycon_battery_props ganhou POWER_SUPPLY_PROP_CAPACITY — o "
             "Pro passaria a ter percentual, e "
@@ -123,19 +67,7 @@ class TestDriverBateriaSoTemDegraus:
 
 
 class TestDriverGatilhoAdaptativoNaoExiste:
-    """`gatilho.leitura@pro`, `gatilho.modos_firmware@pro` — nenhum
-    subcomando de FORÇA/RESISTÊNCIA adaptativa existe no driver do Pro.
-
-    ACHADO NESTA LEVA (o teste abaixo é o que achou): o driver DEFINE
-    `JC_SUBCMD_TRIGGERS_ELAPSED` (0x04) — mas é outra pergunta de protocolo
-    ("há quanto tempo o botão está segurado", não força adaptativa) e tem
-    ZERO chamadores: 1 ocorrência no arquivo inteiro, o próprio `#define`.
-    Código morto, nunca enviado, nunca com resposta parseada.
-
-    MORDE: adicione um CHAMADOR de `JC_SUBCMD_TRIGGERS_ELAPSED` (o subcomando
-    passaria a ser real) e o primeiro teste reprova; adicione uma constante
-    `JC_SUBCMD_*TRIGGER*` NOVA e o segundo reprova.
-    """
+    """`gatilho.leitura@pro`, `gatilho.modos_firmware@pro` — nenhum"""
 
     def test_triggers_elapsed_e_definido_mas_nunca_chamado(self) -> None:
         ocorrencias = DRIVER_SRC.count("JC_SUBCMD_TRIGGERS_ELAPSED")
@@ -157,12 +89,7 @@ class TestDriverGatilhoAdaptativoNaoExiste:
 
 
 class TestDriverCalibracaoSemPorteiroDeBus:
-    """`entrada.stick.calibracao@pro` — quem lê a calibração é o DRIVER, no
-    probe, sem checar `hdev->bus`.
-
-    MORDE: envolva a chamada de `joycon_request_calibration` num
-    `if (ctlr->hdev->bus == BUS_USB)` e este teste reprova.
-    """
+    """`entrada.stick.calibracao@pro` — quem lê a calibração é o DRIVER, no"""
 
     def test_joycon_request_calibration_chamada_sem_ramo_de_bus(self) -> None:
         chamada = re.search(
@@ -176,20 +103,12 @@ class TestDriverCalibracaoSemPorteiroDeBus:
             "entrada.stick.calibracao@pro cita este trecho exato "
             "(hid-nintendo.c, dentro de joycon_probe)"
         )
-        # Nenhuma das duas macros de bus aparece entre a checagem de tipo e a
-        # chamada — a única condição é joycon_has_joysticks (tipo do
-        # controle), nunca hdev->bus.
         assert "BUS_USB" not in chamada.group(0)
         assert "BUS_BLUETOOTH" not in chamada.group(0)
 
 
 class TestDriverLedDeJogadorNuncaPisca:
-    """`luz.led_jogador.pisca@pro` — o firmware aceita `flash`, o driver
-    manda sempre `0`.
-
-    MORDE: troque `joycon_set_player_leds(ctlr, 0, val)` por uma chamada com
-    `flash` não-zero e este teste reprova.
-    """
+    """`luz.led_jogador.pisca@pro` — o firmware aceita `flash`, o driver"""
 
     def test_joycon_set_player_leds_e_chamado_sempre_com_flash_zero(self) -> None:
         chamadas = re.findall(r"joycon_set_player_leds\(ctlr,\s*([^,]+),", DRIVER_SRC)
@@ -205,42 +124,19 @@ class TestDriverLedDeJogadorNuncaPisca:
             )
 
     def test_led_classdev_do_player_nao_registra_blink_set(self) -> None:
-        # O led_classdev do kernel só ganha capacidade de pisca-agendado com
-        # um `blink_set` — o driver não registra um para os LEDs de jogador.
         assert "blink_set" not in DRIVER_SRC
 
 
 class TestDriverSemTurbo:
-    """`luz.recursos_proprios@pro` — sem turbo/LED de modo no driver oficial.
-
-    MORDE: escreva `turbo` em qualquer lugar do driver e este teste reprova.
-    """
+    """`luz.recursos_proprios@pro` — sem turbo/LED de modo no driver oficial."""
 
     def test_driver_nao_menciona_turbo(self) -> None:
         assert not re.search(r"turbo", DRIVER_SRC, re.IGNORECASE)
 
 
-# ---------------------------------------------------------------------------
-# B — ExternalImuEnabler: a assimetria cabo/rádio de movimento.imu.ligar@pro
-# ---------------------------------------------------------------------------
-
-
 class TestExternalImuEnablerAssimetriaCaboRadio:
-    """`movimento.imu.ligar@pro` — cabo tenta ligar a IMU (parcial), rádio
-    NUNCA tenta (não). O gate é do PRODUTO (`_IMU_ENABLE_ALLOWED_BUS`), e é
-    testável sem nenhum Pro Controller na mesa: só precisa que `enable_imu`
-    seja chamado (ou não) conforme o `bus` do inventário.
+    """`movimento.imu.ligar@pro` — cabo tenta ligar a IMU (parcial), rádio"""
 
-    MORDE: apague o `if bus != _IMU_ENABLE_ALLOWED_BUS: continue` de
-    `ExternalImuEnabler.tick` e o teste do rádio reprova (o mock passa a ser
-    chamado); troque `_IMU_ENABLE_ALLOWED_BUS` para algo diferente de `"usb"`
-    e o teste do cabo reprova.
-    """
-
-    #: OUI de teste, fora da faixa do clone conhecido (`e417d8`) e sem o
-    #: prefixo sintetizado (`02`) — não é MAC real de aparelho nenhum, é
-    #: fixture (mesmo espírito da máscara da casa: nada real em teste
-    #: versionado).
     _UNIQ_USB = "aa:bb:cc:00:00:01"
     _UNIQ_BT = "aa:bb:cc:00:00:02"
     _UNIQ_CLONE_USB = "e4:17:d8:00:00:03"
@@ -342,15 +238,6 @@ class TestExternalImuEnablerAssimetriaCaboRadio:
         )
 
 
-# ---------------------------------------------------------------------------
-# C — as 13 células que esta fatia respondeu no CSV
-# ---------------------------------------------------------------------------
-
-#: (chave, cabo_aciona esperado, radio_aciona esperado) — as 13 células que
-#: esta fatia (entrada, luz, movimento, energia, gatilho, áudio) respondeu
-#: para controle=pro. `entrada.combo.ponte` e `movimento.giroscopio.taxa`
-#: ficaram DE PROPÓSITO fora desta lista — nenhum código lido nesta leva
-#: sustenta uma resposta para as duas (ver o relatório desta leva).
 CELULAS_RESPONDIDAS: tuple[tuple[str, str, str], ...] = (
     ("audio.jack.deteccao", "não", "não"),
     ("audio.jack.volume", "não", "não"),
@@ -369,14 +256,7 @@ CELULAS_RESPONDIDAS: tuple[tuple[str, str, str], ...] = (
 
 
 class TestCelulasDoMapaNaoRegridemNemDivergem:
-    """Protege as 13 células contra a MESMA armadilha do cabeçalho desta
-    casa: fusão de merge anexando texto numa coluna de domínio fechado, ou
-    célula voltando a muda sem ninguém perceber.
-
-    MORDE: esvazie `cabo_aciona`/`radio_aciona` de qualquer uma das 13
-    linhas, ou troque o valor, e o teste parametrizado daquela chave reprova
-    nomeando a chave e o valor achado.
-    """
+    """Protege as 13 células contra a MESMA armadilha do cabeçalho desta"""
 
     @pytest.mark.parametrize(
         ("chave", "cabo_esperado", "radio_esperado"), CELULAS_RESPONDIDAS
@@ -420,11 +300,7 @@ class TestCelulasDoMapaNaoRegridemNemDivergem:
     def test_as_quinze_mudas_originais_da_fatia_tem_treze_respondidas_e_duas_declaradas(
         self,
     ) -> None:
-        """As 15 células mudas que a orquestração mediu antes de despachar
-        esta fatia (7 famílias: entrada, luz, movimento, energia, gatilho,
-        áudio, vibração) — 13 respondidas aqui, 2 deixadas explicitamente
-        (`entrada.combo.ponte`, `movimento.giroscopio.taxa`: sem Pro na mesa
-        e sem código que resolva a pergunta sem medição nova)."""
+        """As 15 células mudas que a orquestração mediu antes de despachar"""
         mudas_originais = {
             "audio.jack.deteccao",
             "audio.jack.volume",
@@ -448,20 +324,6 @@ class TestCelulasDoMapaNaoRegridemNemDivergem:
         assert len(respondidas) == 13
         assert len(deixadas_de_proposito) == 2
 
-        # AS DUAS FORAM RESPONDIDAS DEPOIS — 07/09/2026, e este teste pedia
-        # com todas as letras que a lista fosse atualizada em vez de reprovar
-        # às cegas. A premissa de 05/09 era *"sem código que resolva a pergunta
-        # sem medição nova"*, e a varredura do passado (`126e9603`) a
-        # FALSIFICOU citando linha: `movimento.giroscopio.taxa` fecha a metade
-        # declarada em `hid-nintendo.c:1651` (15 ms por USB), e
-        # `entrada.combo.ponte` em `joycon_set_report_mode`
-        # (`hid-nintendo.c:1543-1554`). Achar o código que resolve é
-        # exatamente o que derruba um "deixada muda por falta de fonte".
-        #
-        # O QUE ESTA RÉGUA PASSA A COBRAR — e continua mordendo, porque o
-        # perigo nunca foi a célula ser respondida, foi ela ser respondida
-        # FORTE DEMAIS: a resposta tem de vir com procedência declarada, e não
-        # pode ter subido para `medido` sem bancada. Nenhum Pro esteve na mesa.
         for chave in deixadas_de_proposito:
             row = _linha_pro(chave)
             for lado in ("cabo", "radio"):

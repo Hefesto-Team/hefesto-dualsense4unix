@@ -71,7 +71,6 @@ for _p in (str(RAIZ / "src"), str(INTERFACE)):
 
 PAGINA = "04-iluminacao.html"
 
-#: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UM = "aa:bb:cc:00:00:01"
 DOIS = "aa:bb:cc:00:00:02"
 CHAVE_UM, CHAVE_DOIS = "aabbcc000001", "aabbcc000002"
@@ -83,8 +82,6 @@ MESA = [
      "nome": "Galactic Purple", "via": "BT"},
 ]
 
-#: AS DUAS COLUNAS COMO O DAEMON AS PUBLICA. `lightbar_rgb` é PÓS-escala de
-#: brilho por contrato (D8) — aqui, os dois a 100%: o azul do P1 e o vermelho do
 #: P2, que são `player_slot_color(1)` e `(2)`.
 P1 = {"uniq": UM, "index": 0, "transport": "usb", "connected": True,
       "player": 1, "player_slot": 1, "is_primary": True,
@@ -118,12 +115,7 @@ def _ctx(pac, *, perfil="regua", conectados=None, state=None):
 
 
 class PonteDeMentira:
-    """Um dublê da ponte que guarda o que foi chamado e devolve o caminho feliz.
-
-    **ELE SABE RECUSAR**, e é o que o `COMO-EXECUTAR-UMA-SPRINT` exige de todo
-    dublê desta casa: com `corpo=None` o `led.set` volta sem corpo e os gestos de
-    cor levantam a frase do produto. Um dublê que só sabe passar não é dublê.
-    """
+    """Um dublê da ponte que guarda o que foi chamado e devolve o caminho feliz."""
 
     def __init__(self, corpo: object = ...):
         self.corpo = ({"aplicado_em": [UM, DOIS], "guardado_em": []}
@@ -143,13 +135,7 @@ class PonteDeMentira:
 
 def _semear(nome: str = "regua", *, automatico: bool = True,
             overrides: dict | None = None, brilho: float = 1.0):
-    """Escreve um perfil no lar de mentira e devolve o caminho do arquivo.
-
-    ELE PASSA PELO `save_profile` DO PRODUTO, e não por um `json.dump` à mão: o
-    que este arquivo mede é um round-trip disco→gesto→disco, e semear por fora
-    do dono deixaria a régua concordando com uma forma de arquivo que o produto
-    não escreve.
-    """
+    """Escreve um perfil no lar de mentira e devolve o caminho do arquivo."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
@@ -186,29 +172,9 @@ def _mudanca(**extra) -> dict:
             "evento": "change", "valor": "on", "texto": "", **extra}
 
 
-# ---------------------------------------------------------------------------
-# [02] O INTERRUPTOR DO AUTOMÁTICO — a D-13, e ela é a decisão de peso da aba
-# ---------------------------------------------------------------------------
 def test_o_interruptor_tem_dono(pac, a04):
-    """Um `data-gesto` sem função é uma chave que engole o clique.
-
-    A MORDIDA: apague o `@gesto("04-iluminacao.html", "auto-cores")` e esta
-    linha reprova — que é o estado da aba até hoje, com a diferença de que lá
-    nem o interruptor existia.
-    """
+    """Um `data-gesto` sem função é uma chave que engole o clique."""
     assert pac.gesto_da_pagina(PAGINA, "auto-cores") is not None
-    # O PISO NÃO É MAIS UM `>=`, E A MUDANÇA É DE 07/09/2026. Ele foi de 11 a 8
-    # e de 8 a 6 no mesmo dia, nas duas ordens dela — a botoeira das lâmpadas de
-    # manhã, os dois botões do automático à tarde. Um `>=` escrito contra o
-    # mundo de ontem vira, numa aba que a dona está podando, uma régua que
-    # reprova a ordem dela em vez do defeito: foi exatamente o que esta linha
-    # fez ao ler 6 onde exigia 7.
-    #
-    # O QUE ELA MEDE AGORA é o que ela sempre quis medir e dizia mal: que os
-    # gestos que a tela oferece HOJE estão todos ligados, seja lá quantos forem.
-    # O número tem dono (`PISO_DA_ABA`) e a nota datada dele é quem guarda a
-    # razão de cada degrau; repetir um limiar aqui era a segunda declaração do
-    # mesmo valor, e a que envelhecia calada.
     vivos = {nome for (pagina, nome) in pac.GESTOS if pagina == PAGINA}
     assert len(vivos) == a04.PISO_DA_ABA, (
         f"o pacote registra {len(vivos)} gestos e o piso declarado é "
@@ -220,16 +186,7 @@ def test_o_interruptor_tem_dono(pac, a04):
 
 
 def test_a_pagina_oferece_o_interruptor_no_topo_da_aba():
-    """*"Um interruptor no topo da aba Iluminação."* — e o topo é a faixa do título.
-
-    AS TRÊS METADES, e a segunda é a que morde: sem
-    `data-hef-alvo="marcado"` a chave fica congelada no `checked` que o gerador
-    escreveu e passa a afirmar o estado do MOCKUP sobre o perfil dela.
-
-    A MORDIDA: tire o `data-hef-alvo="marcado"` do gerador, rode
-    `python3 aba04.py` — o próprio `_conferir` reprova antes desta linha. São
-    duas réguas independentes sobre o mesmo defeito, e é regra desta casa.
-    """
+    """*"Um interruptor no topo da aba Iluminação."* — e o topo é a faixa do título."""
     from hefesto_dualsense4unix.interface import onde
     from pacotes import a04_iluminacao as a04
 
@@ -245,14 +202,7 @@ def test_a_pagina_oferece_o_interruptor_no_topo_da_aba():
 
 
 def test_o_pacote_diz_o_estado_do_automatico(a04, pac):
-    """A tela lê o PERFIL, e as duas respostas são exercitadas.
-
-    A LÍNGUA É `sim`/`""` — a do alvo `marcado` do piloto. `str(True)` seria
-    `"True"`, o JS escreveria `"true"` e a chave nunca marcaria.
-
-    A MORDIDA: troque o `"sim"` por `True` no `pacote()` e a primeira linha
-    reprova; troque a leitura por uma constante e a segunda.
-    """
+    """A tela lê o PERFIL, e as duas respostas são exercitadas."""
     _semear(automatico=True)
     assert a04.pacote(_ctx(pac))[a04.ENDERECO_DO_AUTOMATICO] == "sim"
     _semear(automatico=False)
@@ -260,13 +210,7 @@ def test_o_pacote_diz_o_estado_do_automatico(a04, pac):
 
 
 def test_o_estado_do_automatico_chega_a_tela(a04, pac):
-    """E ele atravessa o `normalizar`, que é o que a tela consome.
-
-    NÃO É ZELO: o `normalizar` DESCARTA `dict` e lista de `dict`, e um campo que
-    ele comesse sairia do pacote sem uma linha de erro — foi assim que o
-    `blocos:` ficou dois dias fora da tela, calado. O interruptor é da MESA (um
-    valor para o perfil inteiro), então ele tem de aparecer em `mesa`.
-    """
+    """E ele atravessa o `normalizar`, que é o que a tela consome."""
     _semear(automatico=True)
     fora = pac.normalizar(a04.pacote(_ctx(pac)))
     assert fora["mesa"].get(a04.ENDERECO_DO_AUTOMATICO) == "sim", (
@@ -275,21 +219,7 @@ def test_o_estado_do_automatico_chega_a_tela(a04, pac):
 
 
 def test_desligar_grava_a_cor_de_cada_controle(pac, a04):
-    """**A D-13 INTEIRA, e é o caso que ela aceitou por escrito.**
-
-    *"ok aceito o caminho"* — desligar o automático grava a cor de cada
-    controle no ato. Sem isso, o controle que chega depois cai na cor GLOBAL do
-    perfil, o seguinte também, e dois ficam iguais: a regra dela de 03/09
-    (*"nenhuma cor dos controles nunca pode ser a mesma"*) quebraria pelo
-    caminho que o próprio interruptor abre.
-
-    AS TRÊS ASSERÇÕES SÃO UMA SÓ DECISÃO: o campo global vai a `false`, os DOIS
-    conectados ganham override de cor, e as duas cores são DIFERENTES.
-
-    A MORDIDA: apague o laço `for c in ctx.conectados` do gesto e o
-    `auto_player_colors: false` continua indo ao disco — o interruptor passa a
-    funcionar e a regra dela cai calada. As duas últimas asserções reprovam.
-    """
+    """**A D-13 INTEIRA, e é o caso que ela aceitou por escrito.**"""
     caminho = _semear(automatico=True)
     p = PonteDeMentira()
     a04.auto_cores(_ctx(pac), _mudanca(), p)
@@ -310,27 +240,10 @@ def test_desligar_grava_a_cor_de_cada_controle(pac, a04):
 
 
 def test_a_cor_gravada_e_a_que_estava_acesa(pac, a04):
-    """E ela é a PEDIDA, não a publicada — a diferença é o brilho.
-
-    `lightbar_rgb` vem PÓS-escala por contrato do daemon (D8). Gravar esse valor
-    faria a cor do perfil escurecer a cada volta: a 50%, o verde `#00FF00`
-    acende `#007F00`, e guardar `#007F00` deixaria o brilho escalá-lo DE NOVO
-    na aplicação seguinte.
-
-    O VERDE, E NÃO O AZUL DO P1 — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01.
-    Quando a luz não diz o tom, a escada de `_a_cor_de_agora` desce até a cor
-    do número, e a do P1 é o próprio azul: com ele, uma inversão quebrada
-    gravava o azul certo por acaso, e a régua passava.
-
-    A MORDIDA: troque o `_o_tom_que_acende(...)` de `_a_cor_de_agora` pela luz
-    crua (`cor_do_swatch(c)`) e esta linha reprova com `(0, 127, 0)`; faça a
-    inversão usar o brilho de 100% e ela reprova com o azul do número.
-    """
+    """E ela é a PEDIDA, não a publicada — a diferença é o brilho."""
     from hefesto_dualsense4unix.core.led_control import LedSettings
 
     caminho = _semear(automatico=True, brilho=0.5)
-    # O verde a 50% que o daemon publica, perguntado ao dono da escala: era
-    # `(0, 127, 0)` antes do piso do brilho (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
     meio = dict(P1, lightbar_rgb=list(
         LedSettings(lightbar=(0, 255, 0)).apply_brightness(0.5).lightbar))
     a04.auto_cores(_ctx(pac, conectados=[meio]), _mudanca(), PonteDeMentira())
@@ -364,14 +277,7 @@ def test_sem_cor_conhecida_grava_a_do_numero(pac, a04):
 
 
 def test_ligar_de_volta_nao_apaga_cor_nenhuma(pac, a04):
-    """O caminho de volta, e ele não tem consequência a confessar.
-
-    As cores gravadas continuam no perfil; a camada automática passa a vencer no
-    merge por campo do backend. Apagá-las aqui perderia a escolha dela sem uma
-    palavra na tela.
-
-    A MORDIDA: faça o gesto limpar `controllers` ao ligar e esta linha reprova.
-    """
+    """O caminho de volta, e ele não tem consequência a confessar."""
     caminho = _semear(automatico=False,
                       overrides={CHAVE_UM: {"lightbar": (7, 8, 9)}})
     a04.auto_cores(_ctx(pac), _mudanca(), PonteDeMentira())
@@ -384,16 +290,7 @@ def test_ligar_de_volta_nao_apaga_cor_nenhuma(pac, a04):
 
 
 def test_o_interruptor_reaplica_o_perfil(pac, a04):
-    """Metade do gesto, e sem ela ele é o botão que aceita o toque e não age.
-
-    `auto_player_colors` só entra em vigor na ATIVAÇÃO do perfil
-    (`ProfileManager._configure_auto_player_colors`, chamado por
-    `apply_profile`). Gravar sem reaplicar deixaria a tela dizendo uma coisa e o
-    aparelho fazendo outra até a próxima troca de perfil.
-
-    A MORDIDA: troque `gravar_e_reaplicar` por `save_profile` puro e esta linha
-    reprova nomeando o que faltou.
-    """
+    """Metade do gesto, e sem ela ele é o botão que aceita o toque e não age."""
     _semear(automatico=True)
     p = PonteDeMentira()
     a04.auto_cores(_ctx(pac), _mudanca(), p)
@@ -424,14 +321,7 @@ def test_o_click_que_vem_junto_do_change_nao_inverte_duas_vezes(pac, a04):
 
 
 def test_sem_perfil_ativo_o_interruptor_grava_no_computador(pac, a04):
-    """As cores automáticas são do COMPUTADOR desde 01/10/2026.
-
-    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01: a luz é do computador, e sem
-    perfil ativo o interruptor grava lá em vez de recusar. Até ali esta régua
-    exigia a recusa («as cores automáticas são do PERFIL»).
-
-    MORDIDA: devolver a recusa sem perfil ao `auto_cores` reprova aqui.
-    """
+    """As cores automáticas são do COMPUTADOR desde 01/10/2026."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
     a04.auto_cores(_ctx(pac, perfil=""), _mudanca(), PonteDeMentira())
@@ -440,12 +330,7 @@ def test_sem_perfil_ativo_o_interruptor_grava_no_computador(pac, a04):
 
 
 def test_o_recado_do_interruptor_conta_a_consequencia(pac, a04):
-    """O cartão diz as DUAS metades do que aconteceu ao desligar.
-
-    A segunda é a que ela aceitou por escrito, e é a que ninguém adivinha: o
-    clique gravou a cor de cada controle. Um recado que só dissesse "desligado"
-    esconderia uma escrita no perfil dela.
-    """
+    """O cartão diz as DUAS metades do que aconteceu ao desligar."""
     _semear(automatico=True)
     saiu = a04.auto_cores(_ctx(pac), _mudanca(), PonteDeMentira())
     assert isinstance(saiu, dict) and "recado" in saiu, (
@@ -455,15 +340,8 @@ def test_o_recado_do_interruptor_conta_a_consequencia(pac, a04):
         f"o recado não conta a gravação da cor: {saiu['recado']!r}")
 
 
-# ---------------------------------------------------------------------------
-# [03] A CAIXA DO HEXADECIMAL VIRA O BOTÃO
-# ---------------------------------------------------------------------------
 def test_o_reenvio_manda_a_cor_escrita_na_caixa(pac, a04):
-    """O gesto existe, e o que ele manda é o texto que está na tela.
-
-    A MORDIDA: troque `o.get("texto")` por `o.get("hex")` no gesto e o caso
-    seguinte reprova — este continuaria verde, e é por isso que são dois.
-    """
+    """O gesto existe, e o que ele manda é o texto que está na tela."""
     assert pac.gesto_da_pagina(PAGINA, "reenviar") is not None
     p = PonteDeMentira()
     a04.reenviar(_ctx(pac), {"controle": "p1", "uniq": UM, "texto": "#12AB34"}, p)
@@ -473,16 +351,7 @@ def test_o_reenvio_manda_a_cor_escrita_na_caixa(pac, a04):
 
 
 def test_o_reenvio_ignora_o_data_hex(pac, a04):
-    """**A metade que morde**, e ela é a razão inteira de o gesto ser novo.
-
-    `data-hex` é escrito pelo GERADOR e fica congelado no que o mockup sabia. Um
-    reenvio por ele mandaria ao plástico dela a cor do DESENHO — que é o defeito
-    que a prova botão a botão pegou em 01/09, quando o `data-hex` levava o tom
-    da CASA ao aparelho.
-
-    Aqui o clique traz os dois campos, com valores diferentes de propósito: o
-    `hex` do mockup e o `texto` que o produto pintou. Passa quem lê o segundo.
-    """
+    """**A metade que morde**, e ela é a razão inteira de o gesto ser novo."""
     p = PonteDeMentira()
     a04.reenviar(_ctx(pac),
                  {"controle": "p1", "uniq": UM,
@@ -492,12 +361,7 @@ def test_o_reenvio_ignora_o_data_hex(pac, a04):
 
 
 def test_a_caixa_do_hexadecimal_nao_leva_data_hex():
-    """E a página não oferece a porta errada — a régua olha o ARQUIVO.
-
-    A MORDIDA: acrescente `data-hex="{cor}"` à caixa no `aba04.py` e o próprio
-    `_conferir` reprova ao gerar; esta linha é a segunda régua sobre o mesmo
-    defeito, do lado do arquivo publicado na bancada.
-    """
+    """E a página não oferece a porta errada — a régua olha o ARQUIVO."""
     from hefesto_dualsense4unix.interface import onde
 
     texto = onde.pagina(PAGINA).read_text(encoding="utf-8")
@@ -511,14 +375,7 @@ def test_a_caixa_do_hexadecimal_nao_leva_data_hex():
 
 
 def test_o_travessao_de_um_lugar_vazio_nao_reenvia(pac, a04):
-    """Numa coluna que esvaziou, a caixa mostra `—`, e `—` não é cor.
-
-    A folha desta aba já tira o clique dali (`pointer-events:none`); esta é a
-    segunda trava — a que vale se alguém alcançar o gesto por outro caminho.
-
-    A MORDIDA: apague a guarda e o gesto passa a levantar a frase de formato do
-    `hex_to_rgb`, que fala com quem programa em vez de dizer o que aconteceu.
-    """
+    """Numa coluna que esvaziou, a caixa mostra `—`, e `—` não é cor."""
     from pacotes import TRAVESSAO
 
     p = PonteDeMentira()
@@ -528,20 +385,12 @@ def test_o_travessao_de_um_lugar_vazio_nao_reenvia(pac, a04):
     assert p.chamadas == [], "a recusa ainda assim falou com o daemon"
 
 
-# ---------------------------------------------------------------------------
-# A LINHA NA TELA — lida no Chrome, porque pixel não se deduz
-# ---------------------------------------------------------------------------
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 
 @pytest.fixture(scope="module")
 def pagina_no_chrome():
-    """A aba aberta num Chrome de verdade, com a `.nota` escondida.
-
-    `headless` E NADA DE JANELA: ela tem UMA tela e está trabalhando nela. É a
-    mesma escolha de `interface/olhar.py`, e a razão está no topo do
-    `COMO-OLHAR-A-TELA.md`.
-    """
+    """A aba aberta num Chrome de verdade, com a `.nota` escondida."""
     if not CHROME.exists():
         pytest.skip("Chrome do sistema ausente — esta régua mede pixel de verdade")
     playwright = pytest.importorskip("playwright.sync_api")
@@ -561,32 +410,7 @@ def pagina_no_chrome():
 
 
 def _medida(pg) -> dict:
-    """O que a tela mostra — e o VÃO DO PAI, que é onde o pixel se paga.
-
-    **O QUE ELE MEDE CONTINUA VALENDO DEPOIS DE 07/09/2026**, e por isso a
-    função fica: o VÃO ACIMA e o VÃO ABAIXO da tira dentro da `.cel-leds`. Com a
-    tira centrada na faixa os dois são iguais; qualquer coisa posta na célula
-    que entre no fluxo desequilibra o par, e é isso que a asserção pega.
-
-    **A HISTÓRIA, porque ela explica a forma:** entre 04/09 e 07/09 esta célula
-    teve uma linha de ressalva debaixo da tira, e a pergunta era se a linha
-    VAZIA cobrava pixel. A altura dela não respondia — medido nesta bancada em
-    04/09/2026, com as duas metades do `.ressalva` arrancadas de
-    `monta.CSS_FOLHA` o Chrome devolvia **0 px** para a linha vazia, porque um
-    bloco cujo único filho é um inline vazio não gera caixa de linha. Uma régua
-    que olhasse a altura daria VERDE com a cura fora. Quem pagava o pixel era o
-    PAI: dentro de um flex o `margin-top:5px` da linha **não colapsa**.
-
-    A LINHA SAIU, e a lição não: medir o VÃO em vez da ALTURA é o que faz esta
-    régua continuar respondendo sobre a faixa, e não sobre a peça que já não
-    está lá.
-
-    O CONJUNTO GANHOU UM ANDAR EM 24/09/2026, por decisão dela
-    (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): as três pílulas do brilho
-    das luzes moram debaixo da tira, na caixa `.brilhos`. O vão passa a ser o
-    do PAR — acima da tira e abaixo da caixa das pílulas —, e continua
-    reprovando qualquer terceira coisa posta no fluxo da célula.
-    """
+    """O que a tela mostra — e o VÃO DO PAI, que é onde o pixel se paga."""
     return pg.evaluate("""() => {
       const m = document.querySelector('.miolo');
       const q = document.querySelector('.quadro.luzes');
@@ -608,25 +432,7 @@ def _medida(pg) -> dict:
 
 
 def test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola(pagina_no_chrome):
-    """A régua da D-02, aplicada a esta aba: zero no repouso.
-
-    DUAS COISAS DE UMA VEZ, e as duas são pixel medido:
-
-    * **a linha vazia não empurra a tira** — a folha das dez a tira do fluxo por
-      `:has(.nada)`, e sem isso o `margin-top:5px` dela desequilibra a célula.
-      Ver `_medida`: a altura da linha NÃO serve para medir isto;
-    * o quadro CABE. O teto desta aba é medido: passar dele faz o miolo rolar
-      por dentro, e quadro que rola por dentro é conteúdo que ninguém sabe que
-      existe.
-
-    AS DUAS MORDIDAS, e as duas foram feitas:
-
-    * ponha qualquer coisa no fluxo da `.cel-leds` debaixo da tira — um
-      `<div>` de 10px basta — e os vãos deixam de bater: a primeira asserção
-      reprova. Foi assim que a linha de ressalva era medida até 07/09/2026;
-    * suba `--r-leds` sem tirar de outra linha (80px) — a segunda reprova, e o
-      quadro vai a 550 contra os 530 que a caixa do miolo oferece.
-    """
+    """A régua da D-02, aplicada a esta aba: zero no repouso."""
     m = pagina_no_chrome and _medida(pagina_no_chrome)
     assert m["vaos"], "nenhuma `.cel-leds` na página — a tira perdeu a célula"
     for acima, abaixo in m["vaos"]:
@@ -634,10 +440,6 @@ def test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola(pagina_no_chrome):
             f"a tira ficou descentrada na faixa dos LEDs ({acima} acima, "
             f"{abaixo} abaixo) — alguma coisa entrou no fluxo da célula "
             f"debaixo da tira e cobra pixel em toda tela")
-        # E O PAR CABE NA FAIXA (24/09/2026): a tira e as pílulas enchem os
-        # 64px, e uma terceira coisa no MEIO do par transbordaria por igual
-        # dos dois lados — o vão negativo simétrico passaria pela asserção de
-        # cima. Esta é a que o pega.
         assert acima >= -0.6 and abaixo >= -0.6, (
             f"a faixa dos LEDs transbordou ({acima} acima, {abaixo} abaixo) — "
             f"alguma coisa entrou no fluxo da célula além da tira e das pílulas")
@@ -645,38 +447,8 @@ def test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola(pagina_no_chrome):
         f"a aba passou a rolar por dentro — o quadro mede {m['quadro']}px")
 
 
-# ---------------------------------------------------------------------------
-# [04] A FRASE DO BRILHO GUARDADO — curta, e não é uma recusa
-# ---------------------------------------------------------------------------
 def test_o_brilho_guardado_diz_uma_frase_curta_e_nao_recusa(pac, a04):
-    """Decisão [04] dela, entre a frase inteira, a curta e o silêncio.
-
-    **E O DESFECHO DEIXOU DE MENTIR SOBRE SI MESMO.** A frase saía por
-    `RuntimeError`, que no piloto é o canal da RECUSA — cartão laranja, 30 s. E
-    o produto FEZ: o brilho está no disco dela, que é a promessa inteira do
-    gesto. Com a D-01 entregue, ele volta pelo canal de SUCESSO.
-
-    AS TRÊS ASSERÇÕES: não levanta, o disco recebeu, e a frase é UMA — sem a
-    explicação do *"porque não há cor a reacender"*, que é o que ela mandou
-    cortar (*"a versão longa repete com palavras o que a tira tracejada já diz
-    com desenho"*).
-
-    A QUARTA ASSERÇÃO FOI INVERTIDA EM 05/09/2026, e a razão é decisão dela na
-    04-Q4:
-
-        *"1, mas com o botão realmente fazendo o que se pressupõe a fazer"*
-
-    Ela dizia `p.chamadas == []` — *sem cor conhecida, o gesto NÃO escreve no
-    aparelho*. Era o defeito, não o contrato: o trilho gravava 60% no disco e a
-    barra continuava no brilho de antes, e o produto ficava com a promessa
-    escrita e nada aceso. Agora o gesto escreve a cor de agora no brilho
-    escolhido, e a ressalva sobre a disputa continua vindo na frase — que é o
-    que ela pediu: o disco E o aparelho, com o aviso.
-
-    A MORDIDA: devolva o `raise RuntimeError(...)` e a primeira asserção
-    reprova; devolva a frase longa e a terceira; tire o `_escrever_a_cor` do
-    ramo sem cor pedida e a quarta.
-    """
+    """Decisão [04] dela, entre a frase inteira, a curta e o silêncio."""
     caminho = _semear()
     disputado = dict(P1, lightbar_disputada=True)
     ctx = _ctx(pac, conectados=[disputado])
@@ -702,11 +474,7 @@ def test_o_brilho_guardado_diz_uma_frase_curta_e_nao_recusa(pac, a04):
 
 
 def test_a_frase_curta_carrega_a_causa_do_motor(pac, a04):
-    """Encolher não é perder o porquê: a causa continua vindo do dono.
-
-    A MORDIDA: escreva a causa à mão no gesto e esta linha reprova, porque o
-    motor diz outra coisa.
-    """
+    """Encolher não é perder o porquê: a causa continua vindo do dono."""
     from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
 
     _semear()
@@ -720,29 +488,8 @@ def test_a_frase_curta_carrega_a_causa_do_motor(pac, a04):
         f"a frase não traz a causa do motor ({causa!r}): {saiu['recado']!r}")
 
 
-# ---------------------------------------------------------------------------
-# A GUARDA DO LAR DE MENTIRA — sem ela, tudo acima poderia escrever no dela
-# ---------------------------------------------------------------------------
 def test_a_pasta_de_perfis_desta_regua_e_de_mentira():
-    """A guarda de vacuidade, e ela é a mais importante deste arquivo.
-
-    Sete casos aqui chamam `save_profile`. Se o desvio do `conftest` cair, eles
-    gravariam nos 33 perfis DELA — e o sintoma seria um teste VERDE. Uma régua
-    que pode estragar a máquina de quem a roda tem de provar, ANTES, que está no
-    lugar certo.
-
-    A COMPARAÇÃO É CONTRA O `$HOME` REAL, e é o `conftest` quem o guarda
-    (`lar_real`, fixado antes do desvio). Comparar contra `Path.home()` não
-    mediria nada: dentro da suíte ele JÁ é o lar de mentira, e a asserção seria
-    verdadeira nos dois mundos.
-
-    A MORDIDA: rode um caso deste arquivo com a escotilha do `conftest` ligada
-    (ela desarma o desvio) e esta linha reprova.
-
-    O `lar_real` VEM DO MÓDULO CARREGADO PELO PYTEST, e não de um `import
-    conftest`: o `tests/conftest.py` é carregado como plugin, com nome próprio,
-    e não está em `sys.path` para um import comum.
-    """
+    """A guarda de vacuidade, e ela é a mais importante deste arquivo."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     conftest = next(m for nome, m in sys.modules.items()

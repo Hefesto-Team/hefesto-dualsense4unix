@@ -1,26 +1,8 @@
-"""Testes de `ensure_daemon_running` (BUG-DAEMON-AUTOSTART-01).
-
-Cobre:
-  - No-op quando `detect_installed_unit()` retorna None.
-  - No-op quando o service já está `active`.
-  - Dispara `systemctl --user start hefesto-dualsense4unix.service` quando inativo.
-  - Respeita limite anti-loop de 2 tentativas por sessão.
-  - Submete trabalho ao executor (não bloqueia a thread chamadora).
-
-CORREÇÃO DATADA (13/08/2026, TESTE-HONESTO-01/E1, lote A): a linha antiga
-dizia *"usa stubs `gi` para rodar em CI sem display GTK"*. Era falsa como
-promessa de cobertura — sem PyGObject o módulo passava verde contra
-``Gtk.Box = object``. Hoje ele EXIGE o PyGObject real e pula honestamente onde
-ele não existe.
-"""
+"""Testes de `ensure_daemon_running` (BUG-DAEMON-AUTOSTART-01)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01 (TESTE-HONESTO-01/E1, lote A): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` — e nunca entrava no job `gtk-real`, que seleciona
-# por `grep exigir_gi_real|skip_sem_gi_real`. Agora ele pula honestamente.
 exigir_gi_real("autostart do daemon na janela")
 
 import subprocess
@@ -30,10 +12,6 @@ from typing import Any, ClassVar
 
 
 def _install_gi_stubs() -> None:
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
-    # "ambiente sem GTK" mesmo com o GTK real presente. Stub só entra quando
-    # o import real falha de verdade (CI sem PyGObject).
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -91,10 +69,7 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
 
 class _SyncExecutor:
-    """Executor fake que roda o worker inline — sem threads de fato.
-
-    Permite asserts síncronos depois de `ensure_daemon_running()`.
-    """
+    """Executor fake que roda o worker inline — sem threads de fato."""
 
     def __init__(self) -> None:
         self.submitted: list[Any] = []
@@ -112,26 +87,12 @@ class _Host(DaemonActionsMixin):
         self._daemon_autostart_attempts = 0
 
     def _daemon_pid_alive(self) -> bool:
-        """Isola o teste do pid file do sistema host (BUG-MULTI-INSTANCE-01).
-
-        Teste só exercita o fluxo systemd; cenário do pid file tem sua
-        própria suíte. Default False garante que os testes antigos continuem
-        cobrindo o caso 'systemd inactive + nenhum processo avulso'.
-        """
+        """Isola o teste do pid file do sistema host (BUG-MULTI-INSTANCE-01)."""
         return False
 
 
 class _FakePopen:
-    """Substituto hermético de `subprocess.Popen` para este arquivo.
-
-    HERMETICIDADE (achado da onda SPRINT-UX-AUTOSWITCH-01): os testes daqui
-    mockavam só `subprocess.run`; quando o systemctl fake "falhava"
-    (`raise_on_start`/`start_rc!=0`), o `_start_service_blocking` caía no
-    fallback de Popen REAL e spawnava um daemon `--foreground` DE VERDADE na
-    máquina (órfão, `start_new_session=True`) a cada rodada da suíte — mesmo
-    perigo do `test_quit_app` que já matou o daemon da usuária. O fake
-    preserva o caminho de código (poll() vivo → rc 0) sem processo real.
-    """
+    """Substituto hermético de `subprocess.Popen` para este arquivo."""
 
     spawned: ClassVar[list[list[str]]] = []
 
@@ -224,9 +185,7 @@ def test_noop_quando_daemon_ja_ativo(
 
     host.ensure_daemon_running()
 
-    # Apenas a chamada is-active deve ter ocorrido — nenhuma start.
     assert any("is-active" in " ".join(c) for c in calls)
-    # Nenhum cmd contém o argumento literal "start" (exceto dentro de "is-active" — filtrado).
     started = [c for c in calls if "start" in c and "is-active" not in c]
     assert started == []
     assert host._daemon_autostart_attempts == 0
@@ -268,7 +227,6 @@ def test_limite_anti_loop_duas_tentativas(
     )
     monkeypatch.setattr(da.subprocess, "run", fake_run)
 
-    # Três chamadas consecutivas — só duas devem executar start.
     host.ensure_daemon_running()
     host.ensure_daemon_running()
     host.ensure_daemon_running()
@@ -294,12 +252,9 @@ def test_falha_silenciosa_em_timeout(
     )
     monkeypatch.setattr(da.subprocess, "run", fake_run)
 
-    # Não deve levantar
     host.ensure_daemon_running()
 
     assert host._daemon_autostart_attempts == 1
-    # O timeout do systemctl cai no fallback de Popen — que TEM de ser o fake
-    # (1 spawn registrado, nenhum processo real na máquina).
     assert len(_popen_hermetico.spawned) == 1
 
 

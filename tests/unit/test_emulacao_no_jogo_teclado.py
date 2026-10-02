@@ -42,9 +42,6 @@ from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 
 
-#: Tiques de poll que o cenário precisa completar para que o gate de despacho
-#: tenha sido exercitado de verdade. Baixo de propósito: o que importa é que o
-#: laço RODOU, não que rodou rápido.
 TIQUES_MINIMOS = 3
 
 
@@ -53,11 +50,6 @@ def tmp_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redireciona `config_dir` do session para tmp_path (molde do mouse)."""
     monkeypatch.setattr(session, "config_dir", lambda ensure=False: tmp_path)
     return tmp_path
-
-
-# ---------------------------------------------------------------------------
-# E1 (b) — a flag que o teclado nunca teve
-# ---------------------------------------------------------------------------
 
 
 def test_flag_roundtrip_liga_desliga(tmp_config: Path) -> None:
@@ -73,18 +65,9 @@ def test_flag_roundtrip_liga_desliga(tmp_config: Path) -> None:
 
 
 def test_flag_ausente_e_nunca_configurada(tmp_config: Path) -> None:
-    """Sem arquivo = "nunca decidiu": o default histórico (LIGADO) vale.
-
-    Espelho da assimetria deliberada com o mouse (que devolve False nesse caso):
-    desligar o teclado num upgrade silencioso tiraria o teclado virtual do
-    sistema (L3/R3) e as três regiões do touchpad de quem já os usava.
-    """
+    """Sem arquivo = "nunca decidiu": o default histórico (LIGADO) vale."""
     assert session.load_keyboard_preference() is None
-    # PODA de 26/08/2026: quem aplicava o default aqui era o invólucro
     # `load_keyboard_emulation_enabled`, que ninguém em produção chamava. O
-    # default vive onde sempre valeu — no piso da config — e é ELE que a
-    # assimetria descrita acima descreve. `None` = "nunca decidiu" = o piso
-    # manda, e o piso do teclado é `True`.
     assert DaemonConfig().keyboard_emulation_enabled is True
 
 
@@ -105,13 +88,8 @@ def test_save_e_load_sao_best_effort(monkeypatch: pytest.MonkeyPatch) -> None:
         raise OSError("config dir indisponível")
 
     monkeypatch.setattr(session, "config_dir", _boom)
-    session.save_keyboard_emulation(False)  # não levanta
+    session.save_keyboard_emulation(False)
     assert session.load_keyboard_preference() is None
-
-
-# ---------------------------------------------------------------------------
-# E1 (a) — o interruptor passa a ter dentes: o device não nasce desligado
-# ---------------------------------------------------------------------------
 
 
 class _DaemonStub:
@@ -126,12 +104,7 @@ class _DaemonStub:
 
 @pytest.fixture()
 def uinput_de_mentira(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    """`UinputKeyboardDevice` que sempre sobe — senão o gate seria invisível.
-
-    Sem isto o teste passaria por ausência de `/dev/uinput` no runner (o start
-    real falharia e o device ficaria None de qualquer jeito), e arrancar a cura
-    NÃO reprovaria — teste que não morde.
-    """
+    """`UinputKeyboardDevice` que sempre sobe — senão o gate seria invisível."""
     fabrica = MagicMock()
     device = MagicMock()
     device.start.return_value = True
@@ -190,14 +163,7 @@ def test_setter_desliga_destroi_o_device_e_persiste(
     assert daemon._keyboard_device is None
     assert daemon.config.keyboard_emulation_enabled is False
     assert paradas == [True]
-    # É o par save/load que faz a escolha atravessar o restart — sem ele o
-    # default True voltava a valer a cada boot.
     assert session.load_keyboard_preference() is False
-
-
-# ---------------------------------------------------------------------------
-# E1 (b) — o boot obedece à flag
-# ---------------------------------------------------------------------------
 
 
 def _mk_states(n: int) -> list[Any]:
@@ -267,11 +233,6 @@ async def test_boot_sem_flag_mantem_o_teclado_ligado(
     assert len(starts) == 1
 
 
-# ---------------------------------------------------------------------------
-# E1 (c)/(d) — IPC e estado publicado
-# ---------------------------------------------------------------------------
-
-
 class _FakeDaemonIpc:
     def __init__(self, enabled: bool = True, ok: bool = True) -> None:
         self.config = DaemonConfig(keyboard_emulation_enabled=enabled)
@@ -329,11 +290,7 @@ async def test_ipc_exige_enabled_boolean() -> None:
 
 @pytest.mark.asyncio
 async def test_metodo_registrado_no_ipc_server() -> None:
-    """O handler existe E está no dicionário do dispatcher.
-
-    Sem o registro em `ipc_server.py` o método responde "método desconhecido" e
-    a janela não tem como falar com ele.
-    """
+    """O handler existe E está no dicionário do dispatcher."""
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 
     srv = IpcServer.__new__(IpcServer)
@@ -356,7 +313,7 @@ def test_payload_diz_o_motivo_do_silencio() -> None:
     payload = h._keyboard_emulation_payload()
     assert payload["bloqueio"] == CALADA_VPAD_SUSPENSO
     assert payload["despachando"] is False
-    assert payload["enabled"] is True  # o interruptor dela continua LIGADO
+    assert payload["enabled"] is True
     d._steam_input_vpad_suspenso = False
 
     d._keyboard_device = None
@@ -380,11 +337,6 @@ async def test_status_publica_o_bloco_do_teclado() -> None:
     daemon._keyboard_device = MagicMock()
     h = _HandlersStatus(daemon, daemon.store, daemon.controller)
     res = await h._handle_daemon_status({})
-    # `osk_disponivel` entrou em 10/08/2026 (TECLADO-QUE-NAO-DIGITA-01): é a
-    # resposta do DAEMON sobre a máquina — a janela não pode perguntar sozinha,
-    # porque num Flatpak ela olharia dentro do sandbox. O valor aqui depende de
-    # haver wvkbd/onboard instalado em quem roda a suíte, então o teste cobra a
-    # PRESENÇA e o TIPO da chave, e a igualdade exata só nas outras quatro.
     bloco = dict(res["keyboard_emulation"])
     assert isinstance(bloco.pop("osk_disponivel"), bool), (
         "o status parou de dizer se existe teclado na tela — a janela volta a "
@@ -396,8 +348,6 @@ async def test_status_publica_o_bloco_do_teclado() -> None:
         "despachando": True,
         "bloqueio": None,
     }
-    # E o par da queixa dela: com o vpad suspenso pelo Steam Input, o mesmo
-    # status passa a dizer POR QUE o teclado está calado.
     daemon._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
     res = await h._handle_daemon_status({})
     assert res["keyboard_emulation"]["bloqueio"] == CALADA_VPAD_SUSPENSO
@@ -417,20 +367,12 @@ async def test_state_full_publica_o_mesmo_bloco() -> None:
     status = await h._handle_daemon_status({})
     assert cheio["keyboard_emulation"] == status["keyboard_emulation"]
     assert cheio["keyboard_emulation"]["bloqueio"] is None
-    # JOGO-01/Entrega 2: o PAR que explica "a emulação parece desligada com o
-    # jogo aberto" — é o dado de que a aba Emulação precisa para não chamar a
-    # partida de "Controlar o PC" (e não deixar cinza o botão que a cura).
     assert cheio["steam_input"] == {"excecao_ativa": False, "vpad_suspenso": False}
     daemon._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
     daemon._steam_input_excecao = True  # type: ignore[attr-defined]
     cheio = await h._handle_daemon_state_full({})
     assert cheio["steam_input"] == {"excecao_ativa": True, "vpad_suspenso": True}
     assert cheio["keyboard_emulation"]["bloqueio"] == CALADA_VPAD_SUSPENSO
-
-
-# ---------------------------------------------------------------------------
-# E2 — a exclusão mútua para de ler "vpad ausente" como permissão
-# ---------------------------------------------------------------------------
 
 
 class _SnapR1:
@@ -440,11 +382,7 @@ class _SnapR1:
 async def _um_tique_com_r1(
     monkeypatch: pytest.MonkeyPatch, *, vpad_suspenso: bool
 ) -> list[frozenset[str]]:
-    """Roda o poll loop com R1 pressionado e devolve o que o teclado recebeu.
-
-    Cenário exato do journal dela: `_gamepad_device` None (a exceção do Steam
-    Input derrubou o vpad), modo jogo DESLIGADO, teclado de desktop vivo.
-    """
+    """Roda o poll loop com R1 pressionado e devolve o que o teclado recebeu."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
@@ -463,7 +401,7 @@ async def _um_tique_com_r1(
             udp_enabled=False,
             autoswitch_enabled=False,
             mouse_emulation_enabled=False,
-            keyboard_emulation_enabled=False,  # device injetado abaixo
+            keyboard_emulation_enabled=False,
         ),
     )
     despachos: list[frozenset[str]] = []
@@ -475,12 +413,6 @@ async def _um_tique_com_r1(
     daemon._steam_input_vpad_suspenso = vpad_suspenso  # type: ignore[attr-defined]
 
     task = asyncio.create_task(daemon.run())
-    # ESPERA POR CONDIÇÃO, não por relógio. A primeira versão dormia 0,06 s fixo
-    # e conferia `poll.tick >= 3` depois — com 200 Hz isso "deveria" dar doze
-    # tiques. Passou aqui, passou no CI em 3.11 e 3.12, e REPROVOU em 3.10 no
-    # mesmo run da tag v0.4.0: runner carregado não garante fatia de CPU, e o
-    # agendamento de tasks do asyncio mudou entre as versões. Teste de gate de
-    # despacho não pode depender de quanto o runner estava ocupado.
     limite = time.monotonic() + 5.0
     while daemon.store.counter("poll.tick") < TIQUES_MINIMOS:
         if time.monotonic() > limite:
@@ -499,16 +431,9 @@ async def _um_tique_com_r1(
 async def test_teclado_nao_emite_com_o_vpad_suspenso_pelo_steam_input(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O R1 NÃO chega ao teclado virtual dentro do jogo da allowlist.
-
-    MORDE: sem o termo novo do predicado (`if not gamepad_dispatched:` sozinho),
-    o teclado recebe `{"r1"}` a cada tique — que no mapa default é
-    `KEY_LEFTALT`+`KEY_TAB`, o Alt+Tab que arrancava o foco da partida dela.
-    """
+    """O R1 NÃO chega ao teclado virtual dentro do jogo da allowlist."""
     despachos = await _um_tique_com_r1(monkeypatch, vpad_suspenso=True)
     assert all("r1" not in bp for bp in despachos), despachos
-    # O flush da borda (solta o que estiver preso) é um dispatch VAZIO, e é ele
-    # que impede o `KEY_LEFTALT` de ficar segurado 18 s como no journal dela.
     assert frozenset() in despachos
 
 
@@ -516,12 +441,7 @@ async def test_teclado_nao_emite_com_o_vpad_suspenso_pelo_steam_input(
 async def test_teclado_emite_no_desktop_no_mesmo_tique(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Espelho legítimo: sem jogo com autoridade, o R1 continua chegando.
-
-    É o assert que impede a cura de virar "desligar o teclado para sempre" — um
-    teste que só olhasse o caso suspenso passaria com o gate quebrado ao
-    contrário.
-    """
+    """Espelho legítimo: sem jogo com autoridade, o R1 continua chegando."""
     despachos = await _um_tique_com_r1(monkeypatch, vpad_suspenso=False)
     assert any("r1" in bp for bp in despachos), despachos
 
@@ -534,15 +454,7 @@ def test_predicado_nomeia_o_motivo() -> None:
 
 
 def test_autoridade_sticky_sozinha_nao_cala_o_desktop() -> None:
-    """`display_authority == "game"` NÃO é o sinal deste gate — de propósito.
-
-    Ele é sticky e tem defeito conhecido e não corrigido: cai de `game` para
-    `daemon` ~30 s depois COM O JOGO ABERTO (ver `reverter_modo_jogo_padrao`),
-    e os R1 dela saíram 4,5 min depois da suspensão — a cura falharia no caso
-    que a motivou. E, na saída do jogo, a stickiness deixaria mouse/teclado
-    mudos por até 30 s ("o controle morreu"). Este teste é o cadeado contra a
-    troca silenciosa de sinal.
-    """
+    """`display_authority == "game"` NÃO é o sinal deste gate — de propósito."""
     daemon = Daemon(controller=FakeController(transport="usb"))
 
     class _Sinal:
@@ -568,11 +480,8 @@ def test_flush_e_log_uma_vez_por_episodio() -> None:
         daemon._calar_emulacao_de_desktop(CALADA_VPAD_SUSPENSO, frozenset({"r1"}))
     assert kbd.dispatch.call_count == chamadas_apos_borda
 
-    # Saída do episódio: semeia o baseline sem emitir (prime), senão um botão
-    # ainda segurado viraria press NOVO — Alt+Tab fantasma ao fechar o jogo.
     daemon._liberar_emulacao_de_desktop(frozenset({"r1"}))
     assert daemon._emu_calada_motivo == ""
     kbd.prime.assert_called_once_with(frozenset({"r1"}))
 
 
-# "Nada em excesso." — Sólon de Atenas

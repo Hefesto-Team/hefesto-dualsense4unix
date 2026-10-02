@@ -31,11 +31,7 @@ def _descritor(alvo: Any) -> int:
 
 
 def prontos_para_ler(alvos: Sequence[Any], prazo_s: float | None) -> list[Any]:
-    """Os `alvos` prontos para leitura em até `prazo_s` segundos.
-
-    `alvos` são descritores (`int`) ou objetos com `fileno()`, e a resposta
-    devolve os próprios objetos recebidos. `prazo_s=None` espera sem prazo.
-    """
+    """Os `alvos` prontos para leitura em até `prazo_s` segundos."""
     espera = select.poll()
     por_descritor: dict[int, Any] = {}
     for alvo in alvos:

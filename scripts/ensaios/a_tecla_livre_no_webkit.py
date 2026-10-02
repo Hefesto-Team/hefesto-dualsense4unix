@@ -1,39 +1,5 @@
 #!/usr/bin/env python3
-"""A tecla escrita À MÃO, digitada DENTRO do WebKit dela.
-
-POR QUE ELE EXISTE, e é a regra da casa: *"Botão que você acrescentou e nunca
-clicou não está entregue."* As réguas de unidade provam que o gerador emite os
-oito campos e que o pacote os lê. O que prova o PRODUTO é ela DIGITAR uma
-combinação que a lista de 26 não oferece, o texto chegar ao Python pelo ouvinte
-do piloto, o "Guardar" gravar `Profile.key_bindings` no disco — e o ↺ da linha
-AO LADO não levar o dela junto.
-
-**A PÁGINA VEM DA BANCADA, e o desvio está declarado.** O piloto renderiza
-`interface/paginas/` e esta frente **não publica** (a `06-navegacao.html`
-publicada está no `nao_toca:` da sprint; a leva publica de uma vez no fecho, com
-a palavra dela). Para que a prova exista, o ensaio monta um PUBLICADO de mentira
-num diretório temporário — cópia de todas as páginas do produto, com a `06`
-trocada pela da bancada — e aponta `onde.PUBLICADO` para lá. O que corre no
-WebKit é, byte a byte, o HTML que o `--publicar 06` entregaria.
-
-O HOME É DE MENTIRA, e isto não é zelo: `hefesto_vivo` dispara migrações
-one-shot no `~/.config` REAL, e o "Guardar" desta aba grava no perfil ativo.
-Rode sempre assim::
-
-    LAR=$(mktemp -d)
-    mkdir -p "$LAR/.config" "$LAR/.local/share" "$LAR/.cache" "$LAR/.local/state"
-    cp -r ~/.config/hefesto-dualsense4unix "$LAR/.config/"   # cópia, nunca o dela
-    env HOME=$LAR XDG_CONFIG_HOME=$LAR/.config \\
-        XDG_DATA_HOME=$LAR/.local/share XDG_CACHE_HOME=$LAR/.cache \\
-        XDG_STATE_HOME=$LAR/.local/state \\
-        scripts/ensaios/a_tecla_livre_no_webkit.py --fotos /tmp/tecla
-
-A janela nasce OCULTA (`Gtk.OffscreenWindow`) — ela tem UMA tela.
-
-`--mutacoes N` roda o contador de mutações de DOM da `A-TELA-SAMBA-01` sobre a
-MESMA página da bancada. A medição herdada é **zero em 100 tiques**, e sair de
-zero é regressão.
-"""
+"""A tecla escrita À MÃO, digitada DENTRO do WebKit dela."""
 from __future__ import annotations
 
 import argparse
@@ -64,16 +30,8 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, onde
 
 ABA = "06-navegacao.html"
 
-#: O QUE ELA DIGITA, e o ponto inteiro é que NÃO ESTÁ NA LISTA. A régua confere
-#: isso antes de sair do lugar: se um dia virar opção, esta prova passaria a
-#: medir o caminho velho com nome novo.
 ESCREVE = "Ctrl + W"
-#: O que ela escreve na linha AO LADO — outra combinação livre, para o ↺ ter o
-#: que desfazer.
 NA_VIZINHA = "Ctrl + Shift + F"
-#: E uma que o teclado virtual NÃO SABE DIGITAR. O dono é
-#: `uinput_keyboard.SUPPORTED_KEYS`; `parse_binding` deixaria passar, porque ele
-#: só confere o prefixo.
 INVALIDA = "KEY_KP0"
 
 BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
@@ -84,13 +42,7 @@ BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
 
 
 def _publicado_de_mentira() -> pathlib.Path:
-    """Um `interface/paginas/` temporário com a `06` da BANCADA dentro.
-
-    TODAS as páginas são copiadas, e não só a `06`: o piloto lista o publicado
-    (`onde.paginas(publicado=True)`) para resolver o `--abre` e para a fita, e
-    um diretório com um arquivo só o faria falhar por outra razão que não a
-    medição.
-    """
+    """Um `interface/paginas/` temporário com a `06` da BANCADA dentro."""
     destino = pathlib.Path(tempfile.mkdtemp(prefix="hef-publicado-"))
     for pagina in onde.PUBLICADO.glob("*"):
         if pagina.is_file():
@@ -120,10 +72,6 @@ LER = r"""
 })()
 """
 
-#: ELA DIGITA. `input` primeiro (o que o dedo faz, tecla a tecla) e `change`
-#: depois (o que o campo dispara ao perder o foco) — os dois eventos que
-#: existem de verdade. O ouvinte do piloto ouve `click` e `change`; o `input`
-#: está aqui para provar que a trava aguenta a digitação, e não só o fim dela.
 DIGITAR = r"""
 (function(){
   const el = document.querySelector('#teclas-do-teclado [data-campo="tecla-%s"]');
@@ -187,10 +135,6 @@ def main() -> int:
     print(f"o publicado de mentira: {de_mentira}\n")
 
     if escolha.mutacoes:
-        # O `main()` DO PILOTO, e não um laço próprio: o contador de mutações é
-        # dele (`--conta-mutacoes`), e reescrever o laço aqui seria a segunda
-        # medição do mesmo fato. O que este ensaio acrescenta é UMA coisa — a
-        # página que o WebView carrega vem da bancada.
         sys.argv = [sys.argv[0], "--oculta", "--abre", ABA,
                     "--conta-mutacoes", str(escolha.mutacoes)]
         hefesto_vivo.main()
@@ -232,18 +176,11 @@ def main() -> int:
     def passo2() -> bool:
         foto("teclas")
         js(DIGITAR % (minha, json.dumps(ESCREVE)), f"ela digita em {minha}")
-        # E NA VIZINHA TAMBÉM, e isto é medida: na primeira redação o ↺ caía
-        # sobre uma linha que já estava no de fábrica e RECUSAVA dizendo *"não
-        # havia o que voltar"* — o veredito passava sem o gesto ter desfeito
-        # coisa alguma. Um ↺ que não desfaz nada não prova que ele não leva a
-        # linha ao lado junto.
         js(DIGITAR % (vizinha, json.dumps(NA_VIZINHA)), f"ela digita em {vizinha}")
         GLib.timeout_add(1500, passo3)
         return False
 
     def passo3() -> bool:
-        # 1,5 s DEPOIS: quinze tiques de 100 ms. É a janela em que a pintura
-        # desfazia a escolha antes da trava existir.
         js(LER, "a tela 1,5 s depois (o tique não apagou?)")
         js(GUARDAR, "clica no Guardar")
         GLib.timeout_add(1800, passo4)

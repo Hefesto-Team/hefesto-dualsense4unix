@@ -1,41 +1,10 @@
-"""A coluna "O que é" nasce preenchida pelo kernel, e ela só corrige.
-
-O DEFEITO, medido em 22/08/2026: `integrations/censo_do_barramento.py` nasceu
-naquele dia, lê `bInterfaceClass/SubClass/Protocol` da interface 0 e distingue
-mouse (`03/01/02`) de teclado (`03/01/01`) sem perguntar nada a ninguém — e
-tinha **zero consumidores em `app/`**. A tela ao lado, na mesma sessão, oferecia
-SETE botões por linha perguntando à mão o que o kernel já respondia.
-
-É a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` acontecendo dentro da sessão que a
-documentou, pela segunda vez no mesmo dia (a primeira foi o `TODO(CONFIG-03)`
-que sobreviveu à camada que esperava).
-
-A decisão dela: *"classifica sozinho, você só corrige"*.
-
-O QUE ESTE PORTÃO COBRA — os três degraus da precedência, e um quarto item que
-é sobre a régua:
-
-1. **o kernel vence o botão vazio.** Linha que o barramento classificou nasce
-   com a palavra e o selo `(lido)`, e sem seletor nenhum;
-2. **a correção dela vence o kernel.** `RadioDeclarado.tipo` gravado manda,
-   mesmo quando o barramento respondeu outra coisa;
-3. **onde ninguém sabe, o seletor abre sozinho** — a classe `ff`, em que o
-   fabricante declinou de classificar. E "Corrigir" reabre o seletor numa linha
-   já respondida, que é o outro meio-caminho do desenho dela;
-4. **a junção é pelo `no`,** o caminho no sysfs, e nunca pelo `vid:pid`: duas
-   unidades do mesmo aparelho têm o mesmo `vid:pid` e classes que podem
-   divergir (um dongle de teclado e um de mouse do mesmo fabricante).
-
-E o quinto, que é de privacidade: durante uma captura a seção **não varre o
-barramento desta máquina**.
-"""
+"""A coluna "O que é" nasce preenchida pelo kernel, e ela só corrige."""
 from __future__ import annotations
 
 from typing import Any
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("a coluna 'O que é' da seção A mesa")
 
 import pytest
@@ -55,8 +24,6 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa, RadioUsb
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-#: Os dois nós da bancada. Aparelhos inventados: um teclado que o kernel sabe
-#: nomear e um rádio de classe `ff`, que é o caso do Wi-Fi Realtek dela.
 _NO_TECLADO = "/bancada/usb1/1-3"
 _NO_MUDO = "/bancada/usb1/1-4"
 
@@ -128,13 +95,7 @@ def _montar(
 
 
 def _textos(raiz: Any) -> list[str]:
-    """Todo texto da seção FORA dos botões segmentados.
-
-    O seletor tem um botão escrito "Teclado" e outro "Mouse" — as mesmas
-    palavras que a coluna usa para AFIRMAR. Sem esta exclusão, "a tela mostra
-    Teclado" passaria com a tela só perguntando, que é exatamente o estado que
-    esta leva veio tirar do produto.
-    """
+    """Todo texto da seção FORA dos botões segmentados."""
     achados: list[str] = []
 
     def _andar(widget: Any) -> None:
@@ -166,15 +127,8 @@ def _seletores(raiz: Any) -> list[Any]:
     return achados
 
 
-# --- 1. O kernel vence o botão vazio ---------------------------------------
-
-
 def test_a_linha_que_o_barramento_classificou_nasce_com_a_palavra() -> None:
-    """"Teclado" e o selo `(lido)` na tela, sem ninguém ter respondido nada.
-
-    Mordida: fazer `_celula_do_que_e` devolver sempre `_seletor_do_tipo` — a
-    palavra some da tela e este teste reprova.
-    """
+    """"Teclado" e o selo `(lido)` na tela, sem ninguém ter respondido nada."""
     caixa, _ = _montar(_Hospedeiro())
     textos = _textos(caixa)
 
@@ -230,10 +184,7 @@ def test_a_linha_lida_nao_gasta_seletor_e_a_muda_gasta() -> None:
 
 
 def test_a_linha_muda_diz_que_ninguem_sabe() -> None:
-    """O `▲` mora na linha de classe `ff`, e só nela.
-
-    Mordida: tirar o `pack_start` do aviso em `_celula_do_que_e`.
-    """
+    """O `▲` mora na linha de classe `ff`, e só nela."""
     caixa, _ = _montar(_Hospedeiro())
     textos = _textos(caixa)
 
@@ -247,14 +198,8 @@ def test_a_linha_muda_diz_que_ninguem_sabe() -> None:
     )
 
 
-# --- 2. A correção dela vence o kernel -------------------------------------
-
-
 def test_o_que_ela_declarou_vence_o_que_o_barramento_leu() -> None:
-    """Ela disse "Caixa de som"; o kernel tinha dito "Teclado". Vale o dela.
-
-    Mordida: consultar o censo ANTES do gravado em `_celula_do_que_e`.
-    """
+    """Ela disse "Caixa de som"; o kernel tinha dito "Teclado". Vale o dela."""
     caixa, _ = _montar(
         _Hospedeiro(),
         gravado={"mesa": {"radios": {"1d57:fa20": {"tipo": "caixa_de_som"}}}},
@@ -276,15 +221,7 @@ def test_o_que_ela_declarou_vence_o_que_o_barramento_leu() -> None:
 
 
 def test_o_espelho_de_leitura_guarda_o_tipo_da_linha_sem_seletor() -> None:
-    """`radios_declarados` não pode depender de QUAL widget foi desenhado.
-
-    Este é o defeito que a leva de 22/08 criou e curou no mesmo passo: o
-    espelho era preenchido dentro de `_seletor_do_tipo`, e a linha classificada
-    pelo barramento não desenha seletor nenhum — o tipo gravado sumia.
-
-    Mordida: devolver a linha `self.radios_declarados[...] = ...` para dentro
-    de `_seletor_do_tipo`.
-    """
+    """`radios_declarados` não pode depender de QUAL widget foi desenhado."""
     _, painel = _montar(
         _Hospedeiro(),
         gravado={"mesa": {"radios": {"1d57:fa20": {"tipo": "caixa_de_som"}}}},
@@ -296,14 +233,8 @@ def test_o_espelho_de_leitura_guarda_o_tipo_da_linha_sem_seletor() -> None:
     )
 
 
-# --- 3. "Corrigir" reabre a pergunta ---------------------------------------
-
-
 def test_corrigir_abre_o_seletor_na_linha_ja_respondida() -> None:
-    """O outro meio do desenho: *"o seletor só aparece quando ela clicar".*
-
-    Mordida: fazer `_ao_corrigir` não redesenhar (ou não guardar a chave).
-    """
+    """O outro meio do desenho: *"o seletor só aparece quando ela clicar".*"""
     host = _Hospedeiro()
     caixa, painel = _montar(host)
     antes = len(_seletores(caixa))
@@ -322,10 +253,7 @@ def test_corrigir_abre_o_seletor_na_linha_ja_respondida() -> None:
 
 
 def test_corrigir_nao_grava_nada_por_si() -> None:
-    """Abrir a pergunta não é responder.
-
-    Mordida: chamar `_acumular` de dentro de `_ao_corrigir`.
-    """
+    """Abrir a pergunta não é responder."""
     host = _Hospedeiro()
     _, painel = _montar(host)
 
@@ -337,20 +265,8 @@ def test_corrigir_nao_grava_nada_por_si() -> None:
     )
 
 
-# --- 4. A junção é pelo nó, nunca pelo `vid:pid` ---------------------------
-
-
 def test_duas_unidades_do_mesmo_vid_pid_nao_herdam_a_classe_uma_da_outra() -> None:
-    """Mesmo `vid:pid`, nós diferentes, classes diferentes.
-
-    É o caso real de qualquer casa com dois receptores do mesmo fabricante — e
-    é o que separa uma junção certa de uma que "funciona na bancada". O
-    `vid:pid` é a chave do que ELA declara (a resposta não muda com a porta);
-    o `no` é a chave do que o kernel leu.
-
-    Mordida: trocar `self._censo.aparelho(radio.no)` por uma busca por
-    `vid`/`pid` — as duas linhas passam a dizer "Teclado".
-    """
+    """Mesmo `vid:pid`, nós diferentes, classes diferentes."""
     outro = "/bancada/usb1/1-5"
     mesa = Mesa(
         radios=(
@@ -387,23 +303,10 @@ def test_duas_unidades_do_mesmo_vid_pid_nao_herdam_a_classe_uma_da_outra() -> No
     )
 
 
-# --- 5. A foto não varre o barramento dela ---------------------------------
-
-
 def test_durante_a_captura_a_secao_nao_le_o_barramento_desta_maquina(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem o dublê do censo, uma captura tem de sair com censo VAZIO.
-
-    A foto entra em `docs/usage/assets/` sem revisão humana e nenhum portão
-    desta casa varre imagem (F5). A espécie de cada aparelho dela é dado da
-    máquina dela.
-
-    A régua registra EFEITO, não construção: o espião substitui
-    `ler_o_barramento` e conta chamadas.
-
-    Mordida: apagar a guarda do `_mesa_leitor` em `_ler_o_censo`.
-    """
+    """Sem o dublê do censo, uma captura tem de sair com censo VAZIO."""
     chamadas: list[int] = []
     monkeypatch.setattr(
         secao_mesa,
@@ -427,14 +330,7 @@ def test_durante_a_captura_a_secao_nao_le_o_barramento_desta_maquina(
 def test_fora_da_captura_a_secao_le_o_barramento_de_verdade(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A contraparte, e sem ela a guarda acima passaria com a leitura MORTA.
-
-    Um portão que só prova a ausência da leitura aprova o módulo que nunca lê
-    nada — e a coluna inteira cairia em "não sei" na máquina dela sem ninguém
-    perceber.
-
-    Mordida: fazer `_ler_o_censo` devolver `Censo()` sempre.
-    """
+    """A contraparte, e sem ela a guarda acima passaria com a leitura MORTA."""
     chamadas: list[int] = []
     monkeypatch.setattr(
         secao_mesa,

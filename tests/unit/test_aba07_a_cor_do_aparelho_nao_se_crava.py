@@ -65,18 +65,11 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 GERADOR = INTERFACE / "aba07.py"
 PAGINA = "07-lancadores.html"
 
-#: A ÂNCORA DO VENENO: o chip `Todos`, que é ESTRUTURA da fita (não nomeia
-#: aparelho nenhum) e existe em toda página desta aba. Envenenar em cima dele
-#: põe cada forma no lugar em que ela apareceria de verdade — dentro da fita.
 ANCORA = '<label class="chip on">Todos</label>'
 
 
 def _bancada() -> pathlib.Path:
-    """A página da BANCADA — o desenho de HOJE, não o publicado.
-
-    Apontar para o publicado daria verde sobre a página congelada, que é a
-    armadilha mais cara do `COMO-OLHAR-A-TELA.md`: publicar é ato dela.
-    """
+    """A página da BANCADA — o desenho de HOJE, não o publicado."""
     sys.path.insert(0, str(INTERFACE))
     from hefesto_dualsense4unix.interface import onde
 
@@ -87,11 +80,7 @@ def _bancada() -> pathlib.Path:
 
 
 def _mapa() -> list[dict[str, str]]:
-    """As linhas do `docs/data/cores-do-dualsense.csv`, que é o dono dos modelos.
-
-    Digitar aqui um nome, um apelido ou um hexadecimal criaria a segunda lista
-    que o CSV existe para não ter.
-    """
+    """As linhas do `docs/data/cores-do-dualsense.csv`, que é o dono dos modelos."""
     bruto = (RAIZ / "docs/data/cores-do-dualsense.csv").read_text(encoding="utf-8")
     linhas = [ln for ln in bruto.splitlines()
               if ln.strip() and not ln.lstrip().startswith("#")]
@@ -99,12 +88,7 @@ def _mapa() -> list[dict[str, str]]:
 
 
 def _conferir(caminho: pathlib.Path) -> subprocess.CompletedProcess[str]:
-    """Roda a régua do gerador sobre um HTML, sem gerar nada.
-
-    `cwd` é a pasta da interface porque o gerador faz
-    `sys.path.insert(0, Path(__file__).parent)` e importa `onde` e `monta` como
-    módulos de topo — é como o `regerar.py` o chama.
-    """
+    """Roda a régua do gerador sobre um HTML, sem gerar nada."""
     return subprocess.run(
         [sys.executable, str(GERADOR), "--conferir", str(caminho)],
         capture_output=True, text=True, cwd=str(INTERFACE), check=False)
@@ -127,9 +111,6 @@ def envenenar(tmp_path):
     return _por
 
 
-# ---------------------------------------------------------------------------
-# 1. A PÁGINA DE HOJE — o piso é ZERO, e ele é medido, não prometido
-# ---------------------------------------------------------------------------
 def test_a_pagina_de_hoje_esta_limpa() -> None:
     """A `07-lancadores` não tem UMA cor de aparelho cravada, por nenhuma forma.
 
@@ -143,20 +124,12 @@ def test_a_pagina_de_hoje_esta_limpa() -> None:
 
 
 def test_a_pagina_publicada_tambem_esta_limpa() -> None:
-    """O que ela VÊ hoje, e não só o que está na bancada.
-
-    As duas páginas são a mesma até ela mandar publicar de novo; medir só a
-    bancada deixaria de fora exatamente a tela dela.
-    """
-    # O nome abaixo é o da pasta em disco, não prosa.
+    """O que ela VÊ hoje, e não só o que está na bancada."""
     r = _conferir(INTERFACE / "paginas" / PAGINA)  # (noqa-acento): nome de pasta
     assert r.returncode == 0, (
         f"a página PUBLICADA tem cor de aparelho cravada:\n{r.stderr}")
 
 
-# ---------------------------------------------------------------------------
-# 2. AS CINCO MORDIDAS — uma por forma
-# ---------------------------------------------------------------------------
 def test_a_regua_morde_o_nome_do_modelo(envenenar) -> None:
     """`Cosmic Red` escrito na tela. A forma que as duas réguas velhas já pegam."""
     alvo = envenenar(f"{ANCORA}<span>Cosmic Red</span>", "nome")
@@ -175,12 +148,7 @@ def test_a_regua_morde_o_plastico_cravado(envenenar) -> None:
 
 
 def test_a_regua_morde_o_apelido_do_modelo(envenenar) -> None:
-    """`data-colorway="cosmic-red"` — CEGA nas duas réguas velhas.
-
-    É a forma de *"os svgs não são os que o meu mapa cataloga"*: o SVG do
-    desenho nasce com o colorway do mockup, e não há um "Cosmic Red" na página
-    para a régua por nome encontrar.
-    """
+    """`data-colorway="cosmic-red"` — CEGA nas duas réguas velhas."""
     alvo = envenenar('<svg class="ds-svg" data-colorway="cosmic-red"></svg>',
                      "apelido")
     r = _conferir(alvo)
@@ -202,12 +170,7 @@ def test_a_regua_morde_o_hexadecimal_do_mapa(envenenar) -> None:
 
 
 def test_a_regua_morde_a_paleta_de_cinco_do_esqueleto(envenenar) -> None:
-    """`var(--cosmic-red)` — a mais silenciosa das três cegueiras.
-
-    O `topo.html` declara cinco plásticos no `:root` das dez páginas. Eles
-    respondem por 5 dos 28 modelos do mapa; usá-los é escolher a cor de um
-    aparelho que pode não ser o dela, sem escrever nome, apelido nem hexa.
-    """
+    """`var(--cosmic-red)` — a mais silenciosa das três cegueiras."""
     alvo = envenenar(
         '<label class="chip on" style="border-color:var(--cosmic-red)">Todos</label>',
         "var")
@@ -217,13 +180,7 @@ def test_a_regua_morde_a_paleta_de_cinco_do_esqueleto(envenenar) -> None:
 
 
 def test_a_regua_morde_o_plastico_do_esqueleto_que_diverge_do_mapa(tmp_path) -> None:
-    """A ISENÇÃO DAS CINCO É MEDIDA, e não decretada.
-
-    `monta.monta()` reescreve o valor das cinco variáveis com `cor_da_zona`,
-    que lê o CSV. A régua confere cada uma contra o mapa em vez de acreditar:
-    um sexto plástico digitado à mão no esqueleto, ou um dos cinco divergindo,
-    é acusado. **Isenção sem razão é ponto cego com nome bonito.**
-    """
+    """A ISENÇÃO DAS CINCO É MEDIDA, e não decretada."""
     limpa = _bancada().read_text(encoding="utf-8")
     do_mapa = [ln for ln in _mapa() if (ln.get("id") or "").strip() == "nova-pink"]
     assert do_mapa, "o `nova-pink` sumiu do mapa — o caso mediria o vazio"
@@ -243,22 +200,8 @@ def test_a_regua_morde_o_plastico_do_esqueleto_que_diverge_do_mapa(tmp_path) -> 
     assert "nova-pink" in r.stderr and "#ff0000" in r.stderr, r.stderr
 
 
-# ---------------------------------------------------------------------------
-# 3. A CONTRAPROVA — a régua não acusa quem já está curado
-# ---------------------------------------------------------------------------
 def test_a_regua_nao_acusa_o_svg_ja_enderecado(envenenar) -> None:
-    """Um `data-colorway` COM o endereço do contrato passa, e tem de passar.
-
-    O CONTRATO vem da frente base desta leva (03/09/2026):
-    `data-hef-alvo="atributo"` mais `data-hef-atributo="data-colorway"` no MESMO
-    elemento — o par em atributos separados, como o alvo `classe` já faz com
-    `data-hef-classe`/`data-hef-quando`. Com ele o produto reescreve o colorway
-    a cada tique, e o desenho deixa de mandar.
-
-    ESTA ABA NÃO TEM SVG DE CONTROLE HOJE (medido: o único `<svg>` da página é
-    a logo do Hefesto). O caso existe para o dia em que ela ganhar um: sem ele,
-    a régua nova estaria pronta para acusar o conserto.
-    """
+    """Um `data-colorway` COM o endereço do contrato passa, e tem de passar."""
     alvo = envenenar(
         '<svg data-campo="desenho" data-hef-alvo="atributo"'
         ' data-hef-atributo="data-colorway" data-colorway=""></svg>',
@@ -269,18 +212,8 @@ def test_a_regua_nao_acusa_o_svg_ja_enderecado(envenenar) -> None:
         f"desfazer o conserto:\n{r.stderr}")
 
 
-# ---------------------------------------------------------------------------
-# 4. OS VINTE E OITO — o chip não conhece uma tabela de quatro
-# ---------------------------------------------------------------------------
 def test_o_chip_da_fita_nomeia_os_vinte_e_oito_modelos() -> None:
-    """Ela mapeou 28; o desenho usa 4. O chip tem de servir aos 28.
-
-    *"imagina que cada pessoa tenha um dualsense diferente… nada hardcoded"* —
-    e a forma de provar que não há tabela nenhuma é passar o mapa inteiro pelo
-    chip e cobrar o nome de volta, um por um. Quem escrever aqui um
-    `if nome in (…os quatro do desenho…)` reprova neste caso, e não em nenhum
-    outro desta casa.
-    """
+    """Ela mapeou 28; o desenho usa 4. O chip tem de servir aos 28."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     nomes = sorted({(ln.get("nome") or "").strip() for ln in _mapa()} - {""})
@@ -294,8 +227,6 @@ def test_o_chip_da_fita_nomeia_os_vinte_e_oito_modelos() -> None:
     for nome in nomes:
         mesa = [{"pref": "p1", "jogador": 1, "cor": ids[nome], "nome": nome,
                  "via": "USB", "transporte": "usb", "alvo": True}]
-        # A FITA QUE O PRODUTO PINTA NA 07 desde 22/09/2026 — a própria da aba
-        # (`a07_lancadores.fita_html`) saiu, e a lei dos 28 vale para esta.
         fita = hefesto_vivo._fita(mesa, "07-lancadores.html")
         if nome not in fita:
             faltaram.append(nome)
@@ -305,13 +236,7 @@ def test_o_chip_da_fita_nomeia_os_vinte_e_oito_modelos() -> None:
 
 
 def test_o_chip_nao_nomeia_modelo_nenhum_com_a_mesa_vazia() -> None:
-    """SEM COR LIDA, SEM COR NA TELA — e sem mesa, sem chip.
-
-    Pelo rádio a leitura de cor às vezes não chega, e a regra dela é que campo
-    sem informação não mostra nada. Cair de volta nos `CONECTADOS` do desenho é
-    exatamente o defeito que esta leva existe para matar: era assim que a fita
-    dizia `P1 · Cosmic Red · USB` com um White na mesa dela.
-    """
+    """SEM COR LIDA, SEM COR NA TELA — e sem mesa, sem chip."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     fita = hefesto_vivo._fita([], "07-lancadores.html")
@@ -320,9 +245,6 @@ def test_o_chip_nao_nomeia_modelo_nenhum_com_a_mesa_vazia() -> None:
     assert not achados, (
         f"a fita de uma mesa VAZIA nomeia {achados} — o desenho voltou a mandar "
         f"na tela do produto.")
-    # A ESTRUTURA TAMBÉM SAI desde 22/09/2026, pedido dela: *"quando não tiver
-    # controle Não Aparece o selecionar:"*. A fita é emitida (o piloto não se
-    # cala), mas vazia: sem rótulo e sem `Todos` sobre controle nenhum.
     assert 'class="fita' in fita, "o piloto se calou com a mesa vazia"
     assert "Selecionar" not in fita and "Todos" not in fita, (
         f"a fita da mesa vazia voltou a oferecer escolha sobre nada:\n{fita}")

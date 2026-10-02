@@ -1,37 +1,4 @@
-"""O sudo não grava o endereço — O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026).
-
-A bancada de 29/09 achou, no diário da unidade do daemon, 15 linhas
-``COMMAND=…bt_ponte_privilegiada.sh esquecer <adaptador> <controle>`` com os
-dois endereços inteiros: o endereço ia no argv da ponte, e o argv de um ``sudo``
-é registro por desenho (o journal, a unidade de quem chamou, o ``/proc``). A
-cura é da ponte e de quem a chama: o argv leva o verbo, os endereços vão pelo
-stdin, e UM dono monta o pedido (``conexao_zumbi.pedido_a_ponte``) para os cinco
-chamadores.
-
-AS CINCO RÉGUAS:
-
-1. o sudo só vê o verbo, nos cinco chamadores — com os executores do PRÓPRIO
-   produto e um ``sudo`` de mentira no começo do ``PATH``, que aceita só o que a
-   regra de verdade aceita e roda a ponte da árvore numa árvore do BlueZ de
-   mentira;
-2. ninguém mais monta o sudo da ponte (a AST do ``src/`` e dos ``scripts/`` em
-   Python, e o texto de ``scripts/``);
-3. a regra não tem argumento livre, e a sonda pergunta à regra a linha que o
-   pedido usa (a regra nova passa; a meia-instalação, a ponte nova com a regra
-   velha, não);
-4. o registro da ponte não leva endereço, e o diário do root guarda o dado;
-5. a régua da máquina não lê o UUID como endereço, e a varredura segue lendo;
-6. o doctor, que lê o BlueZ em disco como root, também não põe o endereço no
-   argv do sudo (o caminho de um bond É o endereço), e segue achando o cache
-   sem ``[ServiceRecords]`` de cada controle.
-
-O ENDEREÇO DE MENTIRA é da faixa forjada ``e8:47:3a`` com os octetos 4 e 5 não
-nulos: é o que deixa a régua achar os PEDAÇOS pelo dono
-(``core.formas_do_endereco``), e não por uma regex própria. Ele é montado por
-octeto, e nunca escrito inteiro aqui: a régua de forma da árvore
-(``check_endereco_de_radio.py``) só conhece como sintéticos o ``02`` e o
-``aa:bb``.
-"""
+"""O sudo não grava o endereço — O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026)."""
 
 from __future__ import annotations
 
@@ -79,9 +46,7 @@ def _endereco(*baixos: str) -> str:
 
 ADAPTADOR_A = _endereco("5a", "6b", "01")
 ADAPTADOR_B = _endereco("5c", "6d", "02")
-#: O ``hciN`` de cada um no ``busctl`` de mentira: fora do hci0..hci2 da mesa dela.
 HCI = {ADAPTADOR_A: "hci5", ADAPTADOR_B: "hci6"}
-#: Os quatro controles, cada um no seu adaptador.
 CONTROLES = {
     _endereco("1a", "2b", "0a"): ADAPTADOR_A,
     _endereco("1c", "2d", "0b"): ADAPTADOR_A,
@@ -90,9 +55,6 @@ CONTROLES = {
 }
 ENDERECOS = (ADAPTADOR_A, ADAPTADOR_B, *CONTROLES)
 
-#: A regra de antes de 29/09 (o endereço no argv), escrita aqui como a
-#: meia-instalação a deixa: o ``install-host-udev.sh`` troca a ponte e não a
-#: regra. É ela que a sonda do ``adaptadores`` não enxergava.
 _M = r"\:".join([r"[0-9A-Fa-f][0-9A-Fa-f]"] * 6)
 REGRA_VELHA = (
     "adaptadores",
@@ -108,11 +70,6 @@ REGRA_VELHA = (
     f"descobrir {_M} [0-9][0-9][0-9]",
 )
 
-#: O SUDO DE MENTIRA. Anota o argv, sai com 97 fora da árvore de mentira (a
-#: guarda que sai, o molde de ``test_o_cabo_que_cai_volta_com_o_numero.py``),
-#: aceita o argv só se ele casar uma linha da regra, argumento por argumento e
-#: com o ``fnmatchcase`` (o sudoers casa argumento por glob, e o ``\\`` escapa o
-#: ``:``), e roda ``bash <ponte>`` com o stdin que recebeu.
 SUDO_DE_MENTIRA = '''#!{python}
 import fnmatch, json, os, re, subprocess, sys
 
@@ -162,9 +119,6 @@ anotar(rodou=resto, rc=feito.returncode, saida=feito.stdout, erro=feito.stderr)
 sys.exit(feito.returncode)
 '''
 
-#: Os programas de rádio que a ponte chama, de mentira: anotam e saem. Com eles
-#: no ``PATH``, nenhum ``hcitool``, ``btmgmt`` nem ``bluetoothctl`` de verdade
-#: é alcançado por verbo nenhum (o ``busctl`` é o do barramento de mentira).
 PROGRAMA_DE_MENTIRA = """#!/usr/bin/env bash
 printf '%s %s\\n' "${0##*/}" "$*" >>"${HEFESTO_TESTE_RAIZ:?}/programas"
 exit 0
@@ -235,8 +189,7 @@ def _gravar_bond(mesa: Mesa, adaptador: str, controle: str) -> None:
 
 @pytest.fixture()
 def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Mesa]:
-    """O mundo inteiro de mentira, no ``os.environ``: os executores do produto
-    não recebem ambiente, e a ponte herda o de quem a abre."""
+    """O mundo inteiro de mentira, no ``os.environ``: os executores do produto"""
     raiz = tmp_path / "mesa"
     bin_ = raiz / "bin"
     bin_.mkdir(parents=True)
@@ -305,19 +258,8 @@ def _cada_controle() -> Iterator[tuple[str, str]]:
     yield from ((controle, adaptador) for controle, adaptador in CONTROLES.items())
 
 
-# ---------------------------------------------------------------------------
-# 1. o sudo só vê o verbo, nos cinco chamadores
-# ---------------------------------------------------------------------------
-
-
 def test_o_esquecer_da_central_so_manda_o_verbo(mesa: Mesa) -> None:
-    """O ``esquecer_pela_ponte`` com o executor do produto: o bond daquele
-    controle naquele adaptador sai, e os outros ficam.
-
-    MORDIDA: o endereço de volta ao ``argv`` do ``pedido_a_ponte`` reprova (a) e
-    (b); o ``input=`` tirado do ``_correr_a_ponte`` reprova (c) — a ponte recusa
-    a linha que não veio.
-    """
+    """O ``esquecer_pela_ponte`` com o executor do produto: o bond daquele"""
     for controle in CONTROLES:
         for adaptador in (ADAPTADOR_A, ADAPTADOR_B):
             _gravar_bond(mesa, adaptador, controle)
@@ -337,9 +279,7 @@ def test_o_esquecer_da_central_so_manda_o_verbo(mesa: Mesa) -> None:
 def test_o_esquecer_da_aba_so_manda_o_verbo(
     mesa: Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O X da aba Conexões (``gesto_de_pareamento._esquecer_pela_ponte``) chega
-    ao mesmo pedido. O caminho é o da árvore (o instalado, se o sudo de verdade
-    fosse alcançado, pediria senha), e o executor é o do produto."""
+    """O X da aba Conexões (``gesto_de_pareamento._esquecer_pela_ponte``) chega"""
     original = cr.esquecer_pela_ponte
     monkeypatch.setattr(
         cr,
@@ -356,12 +296,7 @@ def test_o_esquecer_da_aba_so_manda_o_verbo(
 def test_a_busca_so_manda_o_verbo_e_os_segundos(
     mesa: Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A janela de busca da ponte, sem dono, com o ``_abrir_de_verdade``: a
-    ponte recebe o adaptador certo pelo stdin (o «faria» o nomeia).
-
-    MORDIDA: o ``stdin=PIPE`` tirado do ``_abrir_de_verdade`` reprova — a ponte
-    recusa a linha que não veio (código 2), e o «faria» não sai.
-    """
+    """A janela de busca da ponte, sem dono, com o ``_abrir_de_verdade``: a"""
     monkeypatch.setenv("HEFESTO_PONTE_DRY_RUN", "1")
     for adaptador in (ADAPTADOR_A, ADAPTADOR_B):
         janela = gp.JanelaDeBusca(
@@ -404,9 +339,7 @@ class _ProcessoVivo:
 
 
 def test_o_parear_so_manda_o_verbo(mesa: Mesa, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O ``parear`` da ponte, com o ``_correr_de_verdade``: o «faria» diz o
-    ``Pair`` no objeto daquele controle, sob o ``hciN`` daquele adaptador. A
-    janela é um processo parado (a busca é a régua de cima)."""
+    """O ``parear`` da ponte, com o ``_correr_de_verdade``: o «faria» diz o"""
     monkeypatch.setenv("HEFESTO_PONTE_DRY_RUN", "1")
     for controle, adaptador in _cada_controle():
         janela = gp.JanelaDeBusca(
@@ -430,8 +363,7 @@ def test_o_parear_so_manda_o_verbo(mesa: Mesa, monkeypatch: pytest.MonkeyPatch) 
 def test_o_desconectar_do_zumbi_so_manda_o_verbo(
     mesa: Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A ``PontePrivilegiada`` sem executor: o «faria» derruba o link daquele
-    controle no ``hciN`` daquele adaptador."""
+    """A ``PontePrivilegiada`` sem executor: o «faria» derruba o link daquele"""
     monkeypatch.setenv("HEFESTO_PONTE_DRY_RUN", "1")
     ponte = PontePrivilegiada(caminho=str(PONTE))
     for controle, adaptador in _cada_controle():
@@ -455,8 +387,7 @@ class _NomesEmMemoria:
 
 
 def test_a_faxina_da_central_esquece_as_quatro_sobras(mesa: Mesa) -> None:
-    """A faxina (``esquecer_as_sobras``), com o dono de mentira e quatro sobras:
-    quatro pedidos à ponte, os quatro limpos, e a casa de cada um fica."""
+    """A faxina (``esquecer_as_sobras``), com o dono de mentira e quatro sobras:"""
     mundo = rm.RadioDeMentira()
     for controle in CONTROLES:
         mundo.pareado(rm.SALA, controle, conectado=True)
@@ -491,13 +422,6 @@ def test_a_faxina_da_central_esquece_as_quatro_sobras(mesa: Mesa) -> None:
     _o_sudo_so_viu_o_verbo(mesa, 4)
 
 
-# ---------------------------------------------------------------------------
-# 2. ninguém mais monta o sudo da ponte
-# ---------------------------------------------------------------------------
-
-#: Onde uma lista literal que começa com ``"sudo"`` pode morar no ``src/``, e
-#: quantas: o ``argv`` e a ``sonda`` do dono, e a parte do root do «esquecer os
-#: controles», que é outro script e não leva endereço.
 SUDO_PERMITIDO = Counter(
     {
         ("integrations/conexao_zumbi.py", "pedido_a_ponte"): 2,
@@ -543,8 +467,7 @@ def _listas_de_sudo(arvore: ast.AST) -> list[str]:
 
 
 def test_ninguem_mais_monta_o_sudo_da_ponte_no_src() -> None:
-    """MORDIDA: um ``["sudo", "-n", "--", self.caminho, "parear", …]`` de volta
-    ao ``gesto_de_pareamento.py`` reprova."""
+    """MORDIDA: um ``["sudo", "-n", "--", self.caminho, "parear", …]`` de volta"""
     pacote = RAIZ / "src" / "hefesto_dualsense4unix"
     achados: Counter[tuple[str, str]] = Counter()
     for arquivo in sorted(pacote.rglob("*.py")):
@@ -560,16 +483,13 @@ def test_a_regua_da_ast_ve_a_lista_montada_a_mao() -> None:
     assert _listas_de_sudo(ast.parse(velho)) == ["parear"]
 
 
-#: Os verbos da ponte que leem endereço: numa lista literal que começa com
-#: ``"sudo"``, um deles é a ponte montada à mão, com o endereço ao lado.
 _VERBOS_COM_ENDERECO = frozenset(
     {"bonds", "renomear", "esquecer", "parear", "desconectar", "descobrir"}
 )
 
 
 def _sudo_da_ponte_montado_a_mao(arvore: ast.AST) -> list[int]:
-    """A linha de cada lista/tupla literal que começa com ``"sudo"`` e nomeia
-    um verbo da ponte que lê endereço."""
+    """A linha de cada lista/tupla literal que começa com ``"sudo"`` e nomeia"""
     linhas = []
     for no in ast.walk(arvore):
         if not isinstance(no, (ast.List, ast.Tuple)) or not no.elts:
@@ -585,13 +505,7 @@ def _sudo_da_ponte_montado_a_mao(arvore: ast.AST) -> list[int]:
 
 
 def test_nenhum_script_python_monta_o_sudo_da_ponte() -> None:
-    """Os ``scripts/`` em Python passam pelo dono (``pedido_a_ponte``), como a
-    etapa ``limpar`` da bancada do rádio: a varredura de texto abaixo lê o
-    gesto escrito para gente, e não vê uma lista do ``subprocess``.
-
-    MORDIDA: o ``["sudo", "-n", ponte, "esquecer", endereco, mac]`` de volta à
-    etapa ``limpar`` do ``scripts/bancada_do_radio.py`` reprova.
-    """
+    """Os ``scripts/`` em Python passam pelo dono (``pedido_a_ponte``), como a"""
     achados = []
     for arquivo in sorted((RAIZ / "scripts").rglob("*.py")):
         try:
@@ -604,17 +518,13 @@ def test_nenhum_script_python_monta_o_sudo_da_ponte() -> None:
 
 
 def test_a_regua_dos_scripts_python_ve_a_lista_da_ponte() -> None:
-    """A régua acima não mede o vazio: a forma velha da bancada é achada, e o
-    ``sudo`` de outro programa não."""
+    """A régua acima não mede o vazio: a forma velha da bancada é achada, e o"""
     velho = 'subprocess.run(["sudo", "-n", ponte, "esquecer", endereco, mac])\n'
     outro = 'subprocess.run(["sudo", "-n", "hcitool", "con"])\n'
     assert _sudo_da_ponte_montado_a_mao(ast.parse(velho)) == [1]
     assert _sudo_da_ponte_montado_a_mao(ast.parse(outro)) == []
 
 
-#: A ponte (pelo nome ou por uma variável dela) seguida de um verbo que lê
-#: endereço e de um argumento. O ``<...>`` vem antes da palavra solta, senão o
-#: vazio casaria primeiro.
 _PONTE_E_ARGUMENTO = re.compile(
     r"(?:bt_ponte_privilegiada\.sh|\$\{?(?:PONTE|ALVO_INSTALADO)\}?|\{ponte\})[\"']?"
     r"\s+(?:--dry-run\s+)?(bonds|renomear|esquecer|parear|desconectar|descobrir)\b"
@@ -638,12 +548,7 @@ def ponte_com_endereco_no_argv(texto: str) -> list[str]:
 
 
 def test_nenhum_gesto_escrito_manda_o_endereco_no_argv() -> None:
-    """``scripts/``, o install, o uninstall e as páginas de uso: nenhum gesto
-    escrito para gente chama a ponte com o endereço no argv.
-
-    MORDIDA: o recado velho do ``check_bond_dobrado`` do ``doctor.sh``
-    (``… esquecer <adaptador-que-sai> ${mac}``) reprova.
-    """
+    """``scripts/``, o install, o uninstall e as páginas de uso: nenhum gesto"""
     alvos = [RAIZ / "install.sh", RAIZ / "uninstall.sh"]
     for pasta in ("scripts", "docs/usage"):
         alvos += [
@@ -662,8 +567,7 @@ def test_nenhum_gesto_escrito_manda_o_endereco_no_argv() -> None:
 
 
 def test_a_varredura_de_scripts_ve_a_forma_velha() -> None:
-    """A régua acima não mede o vazio: as três formas velhas são achadas, e as
-    novas não."""
+    """A régua acima não mede o vazio: as três formas velhas são achadas, e as"""
     velhas = (
         'warn "… sudo /x/bt_ponte_privilegiada.sh esquecer <adaptador-que-sai> ${mac}"',
         'print(f"    sudo {ponte} esquecer {end} {mac}")',
@@ -679,17 +583,8 @@ def test_a_varredura_de_scripts_ve_a_forma_velha() -> None:
     assert not any(ponte_com_endereco_no_argv(linha) for linha in novas)
 
 
-# ---------------------------------------------------------------------------
-# 3. a regra não tem argumento livre, e a sonda pergunta o que a regra tem
-# ---------------------------------------------------------------------------
-
-
 def test_a_regra_nao_tem_argumento_livre() -> None:
-    """Toda linha é ``<ponte> <verbo>`` ou ``<ponte> descobrir <largura>``, e
-    nenhuma tem classe de endereço.
-
-    MORDIDA: o ``${m}`` de volta a uma linha do ``regra-sudo`` reprova.
-    """
+    """Toda linha é ``<ponte> <verbo>`` ou ``<ponte> descobrir <largura>``, e"""
     for linha in _regra_de_verdade():
         partes = linha.split()
         assert "A-F" not in linha and "\\:" not in linha, linha
@@ -719,15 +614,13 @@ def _sonda(pedido: PedidoAPonte) -> int:
 
 
 def test_a_sonda_de_cada_pedido_e_o_argv_com_l(mesa: Mesa) -> None:
-    """A sonda é a MESMA linha do pedido, com ``-l``: casa a regra nova, e NÃO
-    casa a regra velha (a meia-instalação)."""
+    """A sonda é a MESMA linha do pedido, com ``-l``: casa a regra nova, e NÃO"""
     for pedido in _pedidos_de_cada_verbo():
         assert pedido.sonda == (*pedido.argv[:2], "-l", *pedido.argv[2:])
         assert _sonda(pedido) == 0, pedido.argv
     mesa.usar_regra(REGRA_VELHA)
     for pedido in _pedidos_de_cada_verbo():
         assert _sonda(pedido) == 1, pedido.argv
-    # O sudo de mentira não recusa tudo: a forma velha casa a regra velha.
     controle, adaptador = next(_cada_controle())
     velho = ("sudo", "-n", "--", str(PONTE), "esquecer", adaptador.upper(), controle.upper())
     assert subprocess.run(
@@ -736,13 +629,7 @@ def test_a_sonda_de_cada_pedido_e_o_argv_com_l(mesa: Mesa) -> None:
 
 
 def test_a_porta_pergunta_a_linha_do_pedido(mesa: Mesa) -> None:
-    """Os ``impedimentos`` do zumbi e do pareamento, perguntados ao sudo de
-    mentira: vazios com a regra nova, e com o motivo da regra com a velha.
-
-    MORDIDA: a sonda com ``--dry-run adaptadores`` reprova a primeira metade (não
-    casa a regra nova); a sonda com ``adaptadores`` reprova a segunda (casa a
-    regra velha, e a meia-instalação passaria).
-    """
+    """Os ``impedimentos`` do zumbi e do pareamento, perguntados ao sudo de"""
     ponte = PontePrivilegiada(caminho=str(PONTE))
     assert ponte.impedimentos() == []
     assert gp.impedimentos(str(PONTE)) == []
@@ -751,11 +638,6 @@ def test_a_porta_pergunta_a_linha_do_pedido(mesa: Mesa) -> None:
         assert len(motivos) == 1 and "sudo sem senha" in motivos[0], motivos
     listas = [p for p in mesa.pedidos() if p.get("lista")]
     assert listas and all(p["argv"][:3] == ["-n", "-l", "--"] for p in listas)
-
-
-# ---------------------------------------------------------------------------
-# 4. o registro da ponte não leva endereço, e o dado fica
-# ---------------------------------------------------------------------------
 
 
 def _ponte(mesa: Mesa, *argv: str, entrada: str) -> subprocess.CompletedProcess[str]:
@@ -772,11 +654,7 @@ def _ponte(mesa: Mesa, *argv: str, entrada: str) -> subprocess.CompletedProcess[
 
 
 def test_o_registro_da_ponte_diz_o_verbo_e_o_hci(mesa: Mesa) -> None:
-    """Cada verbo, de verdade, na árvore de mentira: a linha do registro existe,
-    diz o ``hciN``, e não tem pedaço de endereço nenhum.
-
-    MORDIDA: a linha do ``esquecer`` de volta com ``${controle}`` reprova.
-    """
+    """Cada verbo, de verdade, na árvore de mentira: a linha do registro existe,"""
     controle, adaptador = next(_cada_controle())
     _gravar_bond(mesa, adaptador, controle)
     hci = HCI[adaptador]
@@ -796,13 +674,7 @@ def test_o_registro_da_ponte_diz_o_verbo_e_o_hci(mesa: Mesa) -> None:
 
 
 def test_o_adaptador_fora_da_mesa_sai_sem_endereco(mesa: Mesa) -> None:
-    """O ``esquecer`` age no disco com o adaptador fora da mesa: a linha diz
-    «um adaptador fora da mesa», e o diário do root guarda os dois endereços
-    INTEIROS, porque é dado — o leitor junta os dois diários por ele.
-
-    MORDIDA: o ``_diario`` sem o ``controle`` reprova a segunda metade (uma cura
-    que apagasse o dado passaria sem ela).
-    """
+    """O ``esquecer`` age no disco com o adaptador fora da mesa: a linha diz"""
     fora = _endereco("7e", "8f", "03")
     controle = next(iter(CONTROLES))
     _gravar_bond(mesa, fora, controle)
@@ -815,11 +687,6 @@ def test_o_adaptador_fora_da_mesa_sai_sem_endereco(mesa: Mesa) -> None:
     [linha] = diario_do_radio.ler(caminhos=[mesa.diario_root])
     assert linha["o_que"] == "esqueceu o controle"
     assert (linha["adaptador"], linha["controle"]) == (fora.upper(), controle.upper())
-
-
-# ---------------------------------------------------------------------------
-# 5. a régua da máquina não lê UUID como endereço, e a varredura segue lendo
-# ---------------------------------------------------------------------------
 
 
 def _carregar_a_regua_da_maquina() -> ModuleType:
@@ -840,8 +707,7 @@ def _uuid(ultimo_grupo: str, *, versao: str) -> str:
 
 @pytest.fixture()
 def lar(tmp_path: Path) -> Path:
-    """Um lar com dois controles da faixa forjada e o ``boot_id`` de um UUID v4
-    cujo último grupo é da faixa forjada e não é endereço do lar."""
+    """Um lar com dois controles da faixa forjada e o ``boot_id`` de um UUID v4"""
     config = tmp_path / "lar" / ".config" / "hefesto-dualsense4unix"
     config.mkdir(parents=True)
     dois = list(CONTROLES)[:2]
@@ -875,10 +741,7 @@ def test_a_regua_da_maquina_le_o_lar_sem_o_uuid(lar: Path) -> None:
 
 
 def test_a_linha_do_outro_boot_nao_acusa(lar: Path, tmp_path: Path) -> None:
-    """O falso positivo do achado: ``arquivo_boot=<o mesmo UUID>`` dá rc=0.
-
-    MORDIDA: tirar o apagar do UUID da leitura reprova.
-    """
+    """O falso positivo do achado: ``arquivo_boot=<o mesmo UUID>`` dá rc=0."""
     boot = _uuid("e8473a9c7b21", versao="4")
     linha = f"identity_slots_restaurados_de_outro_boot arquivo_boot={boot}"
     codigo, saida = _medir(lar, linha, tmp_path)
@@ -892,24 +755,13 @@ def test_o_endereco_do_lar_acusa(lar: Path, tmp_path: Path) -> None:
 
 
 def test_o_uuid_v1_com_o_endereco_do_lar_acusa(lar: Path, tmp_path: Path) -> None:
-    """Um UUID de versão 1 carrega um endereço no último grupo: na varredura, o
-    trecho com forma de UUID não é esconderijo.
-
-    MORDIDA: pôr o apagar do UUID também na varredura reprova.
-    """
+    """Um UUID de versão 1 carrega um endereço no último grupo: na varredura, o"""
     controle = next(iter(CONTROLES))
     linha = f"sessao={_uuid(controle.replace(':', ''), versao='1')}"
     codigo, saida = _medir(lar, linha, tmp_path)
     assert codigo == 1, saida
 
 
-# ---------------------------------------------------------------------------
-# 6. o doctor lê o BlueZ em disco sem pôr o endereço no argv do sudo
-# ---------------------------------------------------------------------------
-
-#: O sudo de mentira do doctor: anota o argv, tira o ``-n``, troca o
-#: ``/var/lib/bluetooth`` pela árvore de mentira e roda. Sai com 97 sem a árvore
-#: (a guarda que sai: sem ela, o curinga do doctor leria a raiz).
 SUDO_QUE_ANOTA = """#!/usr/bin/env bash
 [[ -d "${HEFESTO_TESTE_BLUEZ:-}" ]] || exit 97
 printf '%s\\n' "$*" >> "${HEFESTO_TESTE_SUDO_ANOTADO}"
@@ -928,17 +780,7 @@ _INFO_HID = (
 
 
 def test_o_doctor_le_o_cache_sdp_sem_endereco_no_argv(tmp_path: Path) -> None:
-    """Os quatro controles nos dois adaptadores: dois com o cache sem
-    ``[ServiceRecords]``, um são e um sem cache. O doctor acusa os dois, e nenhum
-    argv que o sudo anotou tem pedaço de endereço.
-
-    Medido em 02/10 no diário da máquina: desde 17/09, 181 rodadas do doctor
-    deixaram ``COMMAND=/usr/bin/test -f /var/lib/bluetooth/<adaptador>/cache/<controle>``
-    na etiqueta ``sudo``, depois de a ponte já mandar o endereço pelo stdin.
-
-    MORDIDA: o laço de antes (um ``sudo -n grep``/``test`` por arquivo) reprova o
-    argv; um texto fixo que não devolve o controle reprova a acusação.
-    """
+    """Os quatro controles nos dois adaptadores: dois com o cache sem"""
     bluez = tmp_path / "bluetooth"
     controles = list(CONTROLES.items())
     estado_do_cache = ("envenenado", "envenenado", "sao", "sem")

@@ -1,16 +1,4 @@
-"""Testes de persistência de sessão (FEAT-PERSIST-SESSION-01 + PERFIL-03).
-
-Cobre:
-  - save_last_profile / load_last_profile round-trip.
-  - load retorna None quando arquivo ausente.
-  - load retorna None quando JSON inválido.
-  - ProfileManager.activate() persiste o perfil via save_last_profile SÓ no
-    gesto manual (PERFIL-03): origin="autoswitch"/"system" não gravam.
-  - resolve_boot_profile: seed de migração do marker `active_profile.txt`
-    quando ele diverge do session.json herdado (o autoswitch clobberava).
-  - Aceite 1 do PERFIL-03 fim a fim: escolha manual sobrevive a N ativações
-    do autoswitch e o restore de boot re-ativa a escolha MANUAL sem regravar.
-"""
+"""Testes de persistência de sessão (FEAT-PERSIST-SESSION-01 + PERFIL-03)."""
 from __future__ import annotations
 
 import json
@@ -27,10 +15,6 @@ from hefesto_dualsense4unix.utils.session import (
     save_last_profile,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 
 @pytest.fixture()
 def tmp_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -40,11 +24,6 @@ def tmp_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         lambda: tmp_path / "session.json",
     )
     return tmp_path / "session.json"
-
-
-# ---------------------------------------------------------------------------
-# Testes de save + load
-# ---------------------------------------------------------------------------
 
 
 def test_save_e_load_round_trip(tmp_session: Path) -> None:
@@ -78,14 +57,7 @@ def test_save_nao_explode_em_diretorio_inexistente(
 ) -> None:
     path = tmp_path / "subdir" / "session.json"
     monkeypatch.setattr("hefesto_dualsense4unix.utils.session._session_path", lambda: path)
-    # Diretório pai não existe — save deve falhar silenciosamente.
     save_last_profile("shooter")
-    # Sem exception: teste passou.
-
-
-# ---------------------------------------------------------------------------
-# Integração com ProfileManager
-# ---------------------------------------------------------------------------
 
 
 def _mgr_and_saved() -> tuple[object, list[str], object]:
@@ -118,12 +90,7 @@ def _mgr_and_saved() -> tuple[object, list[str], object]:
 
 
 def test_activate_manual_chama_save_last_profile() -> None:
-    """Gesto manual (default) persiste o perfil via save_last_profile.
-
-    PERFIL-03: era `test_activate_chama_save_last_profile`, que asseverava
-    gravação em TODA ativação — quebra prevista pelo sprint doc. Agora só o
-    origin="manual" (o default, deliberado) grava a intenção da usuária.
-    """
+    """Gesto manual (default) persiste o perfil via save_last_profile."""
     mgr, saved, fake_profile = _mgr_and_saved()
     with (
         patch("hefesto_dualsense4unix.profiles.manager.load_profile", return_value=fake_profile),
@@ -137,10 +104,7 @@ def test_activate_manual_chama_save_last_profile() -> None:
 
 @pytest.mark.parametrize("origin", ["autoswitch", "system"])
 def test_activate_nao_manual_nao_grava_session(origin: str) -> None:
-    """PERFIL-03: autoswitch e restores de sistema NÃO reescrevem a intenção
-    manual — era o bug provado (session.json dizia "Navegação" porque o
-    autoswitch gravava a cada troca de janela). O perfil ainda é aplicado e
-    marcado como ativo no store."""
+    """PERFIL-03: autoswitch e restores de sistema NÃO reescrevem a intenção"""
     mgr, saved, fake_profile = _mgr_and_saved()
     with (
         patch("hefesto_dualsense4unix.profiles.manager.load_profile", return_value=fake_profile),
@@ -152,25 +116,9 @@ def test_activate_nao_manual_nao_grava_session(origin: str) -> None:
     assert mgr.store.active_profile == "shooter"  # type: ignore[attr-defined]
 
 
-# ---------------------------------------------------------------------------
-# A escolha dela tem um dono (D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA, 01/10/2026)
-# ---------------------------------------------------------------------------
-# NOTA DATADA — 01/10/2026: estas réguas fixavam o seed do PERFIL-03, em que o
-# `active_profile.txt` vencia o `session.json` na divergência. A convergência
-# que ele esperava aconteceu, o marcador virou espelho, e `resolve_boot_profile`
-# pergunta a `a_escolha_dela`: o `session.json`, se o perfil carrega e não é o
-# Freestyle; o Freestyle, com o botão aceso; senão, nenhum.
-
-
 @pytest.fixture()
 def isolated_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Isola config_dir (session.json + active_profile.txt) em tmp_path.
-
-    Dois patches porque o módulo usa os dois caminhos: `_session_path` chama o
-    `config_dir` importado no topo de utils.session; as funções do marker
-    fazem import lazy de `xdg_paths.config_dir` (ponto de monkeypatch
-    documentado no próprio módulo).
-    """
+    """Isola config_dir (session.json + active_profile.txt) em tmp_path."""
     config = tmp_path / "config"
     config.mkdir()
 
@@ -245,11 +193,6 @@ def test_so_o_marcador_e_sem_escolha(
     assert resolve_boot_profile() is None
 
 
-# ---------------------------------------------------------------------------
-# PERFIL-03 — aceite 1 fim a fim: manual sobrevive ao autoswitch + boot
-# ---------------------------------------------------------------------------
-
-
 class _BootDaemon:
     """Daemon mínimo para `restore_last_profile` (executor inline)."""
 
@@ -267,12 +210,7 @@ class _BootDaemon:
 async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """Aceite 1 do PERFIL-03, fim a fim com manager e sessão REAIS:
-
-    ativar 'vitoria' manualmente → 3 ativações do autoswitch (outros perfis)
-    → session.json ainda aponta 'vitoria' → "restart" do daemon
-    (`restore_last_profile`) re-ativa 'vitoria' com origin="system" (que NÃO
-    regrava a sessão)."""
+    """Aceite 1 do PERFIL-03, fim a fim com manager e sessão REAIS:"""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -288,25 +226,20 @@ async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
     store = StateStore()
     mgr = ProfileManager(controller=fc, store=store)
 
-    # Gesto manual (paridade do marker é feita pelos call sites — IPC/hotkey).
     mgr.activate("vitoria")
     save_active_marker("vitoria")
-    # 3 trocas de janela: o autoswitch ativa outros perfis...
     mgr.activate("navegacao", origin="autoswitch")
     mgr.activate("steamjogo", origin="autoswitch")
     mgr.activate("navegacao", origin="autoswitch")
 
-    # ...e a intenção manual continua intacta nos DOIS arquivos.
     assert load_last_profile() == "vitoria"
     assert read_active_marker() == "vitoria"
-    assert store.active_profile == "navegacao"  # o ativo em memória segue a janela
+    assert store.active_profile == "navegacao"
 
-    # "Restart": um daemon novo restaura a escolha MANUAL dela...
     store2 = StateStore()
     daemon = _BootDaemon(controller=fc, store=store2)
     await restore_last_profile(daemon)  # type: ignore[arg-type]
     assert store2.active_profile == "vitoria"
-    # ...sem regravar a sessão (origin="system" não é gesto novo).
     assert load_last_profile() == "vitoria"
 
 
@@ -314,15 +247,7 @@ async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
 async def test_boot_restaura_a_escolha_com_regra_de_janela(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """A escolha dela volta no boot, com regra de janela ou sem.
-
-    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4):
-    a RESTORE-ESCOPO-01 (22/07) pulava todo perfil com match por janela,
-    título ou processo, e era o contrário que esta régua cobrava. No disco
-    dela isso é todo perfil que não é o Freestyle, e nenhum dos seis boots de
-    28 e 29/09 abriu no perfil que ela tinha ativado. A fala dela de 29/09
-    revogou a regra para a escolha dela.
-    """
+    """A escolha dela volta no boot, com regra de janela ou sem."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -372,14 +297,7 @@ async def test_boot_restaura_perfil_match_any_normalmente(
 async def test_o_marcador_divergente_nao_desvia_o_boot(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """O marcador diz outro perfil, ou um que sumiu: o boot abre no `session.json`.
-
-    NOTA DATADA — 01/10/2026: no lugar do aceite 3 do PERFIL-03 (o marcador
-    vencia o `session.json` herdado do autoswitch antigo) e do fix do review de
-    16/07 (o marcador órfão caía no `session.json`, com o log
-    `last_profile_seed_marker_invalido`). O marcador virou espelho, e as duas
-    réguas viraram esta.
-    """
+    """O marcador diz outro perfil, ou um que sumiu: o boot abre no `session.json`."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing import FakeController
@@ -399,8 +317,7 @@ async def test_o_marcador_divergente_nao_desvia_o_boot(
 async def test_boot_marker_e_session_orfaos_nao_explode(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """Marker E session apontando perfis inexistentes: o boot segue sem
-    perfil (dois warnings), sem propagar exceção."""
+    """Marker E session apontando perfis inexistentes: o boot segue sem"""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing import FakeController
@@ -421,9 +338,7 @@ async def test_boot_marker_e_session_orfaos_nao_explode(
 async def test_aceite_hotkey_cycle_grava_session_json(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """Aceite 2 do PERFIL-03 (metade que GRAVA): o ciclo por hotkey (PS+dpad)
-    é botão físico = gesto MANUAL — persiste session.json E o marker em
-    paridade, fim a fim com manager e sessão reais."""
+    """Aceite 2 do PERFIL-03 (metade que GRAVA): o ciclo por hotkey (PS+dpad)"""
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
         build_profile_cycle_callback,
@@ -449,7 +364,6 @@ async def test_aceite_hotkey_cycle_grava_session_json(
     daemon = _CycleDaemon()
     await build_profile_cycle_callback(daemon, +1)()  # type: ignore[arg-type]
 
-    # Saiu de 'alfa' para o outro perfil e persistiu a intenção manual.
     assert daemon.store.active_profile == "beta"
     assert load_last_profile() == "beta"
     assert read_active_marker() == "beta"

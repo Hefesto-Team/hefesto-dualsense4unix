@@ -1,37 +1,4 @@
-"""A fase em pé visita SÓ as entradas vazias — e o veredito sai do ``sysfs``.
-
-``CALIBRAR-AS-ENTRADAS-01``, tarefa ``CAL-4`` (26/08/2026). Dois furos fatais da
-refutação moram aqui.
-
-F-2 — A CAMINHADA NUNCA VISITA BURACO OCUPADO
-----------------------------------------------
-
-Mandar a pessoa ao fundo do gabinete para ensinar uma entrada que o computador
-já sabe é caminhada por dado que a máquina tem: entrada OCUPADA não precisa de
-caminhada, porque o aparelho que está nela já diz qual entrada é (§2.3).
-
-E o buraco é a unidade, nunca o nó: um buraco USB 3.x tem **dois** nós, e o lado
-3.x do buraco onde o mouse dela está responde ``not attached`` do mesmo jeito.
-Perguntar por nó mandaria ela se ajoelhar para encaixar um cabo onde já tem
-aparelho.
-
-F-1 — O VEREDITO NÃO PODE VIR DA MÃO
--------------------------------------
-
-*"o controle vibrou, logo a entrada é boa"* é falso sempre que o mesmo controle
-também está pareado por Bluetooth — o caso normal dela. Com dois nós do mesmo
-aparelho, o pulso sai pelo **rádio** e chega à mão mesmo que o cabo não tenha
-feito nada.
-
-A BANCADA DESTE ARQUIVO
-------------------------
-
-É a mesma bancada de mentira da ``CAL-1``
-(``tests/unit/test_entradas_do_gabinete.py``), importada e não copiada: duas
-cópias do mesmo ``/sys`` divergiriam na primeira vez que uma delas ganhasse um
-caso novo, e a régua da tela passaria a medir uma máquina que a régua do leitor
-não conhece.
-"""
+"""A fase em pé visita SÓ as entradas vazias — e o veredito sai do ``sysfs``."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.app.widgets.calibrar_entradas import (
@@ -45,12 +12,7 @@ from tests.unit.test_entradas_do_gabinete import _entradas
 
 
 def _logica(*, com_hub: bool = False) -> LogicaDaCalibracao:
-    """A cerimônia sobre a bancada de mentira, sem censo de aparelho nenhum.
-
-    O ``Censo`` vazio é de propósito: o que esta régua mede é a CAMINHADA, e
-    ela nasce das entradas, não dos aparelhos. Misturar as duas fontes aqui
-    esconderia qual das duas responde.
-    """
+    """A cerimônia sobre a bancada de mentira, sem censo de aparelho nenhum."""
     return LogicaDaCalibracao(
         MapaDaMesa(),
         Censo(),
@@ -59,18 +21,8 @@ def _logica(*, com_hub: bool = False) -> LogicaDaCalibracao:
     )
 
 
-# ---------------------------------------------------------------------------
-# A mordida do F-2
-# ---------------------------------------------------------------------------
-
-
 def test_entrada_ocupada_nao_entra_na_caminhada() -> None:
-    """15 buracos, 4 ocupados, 11 na caminhada — e nenhum deles com aparelho.
-
-    MORDIDA: trocar ``vazias(...)`` por ``furos(...)`` em
-    ``LogicaDaCalibracao.caminhada`` (listar todas). A lista vai a 15 e o teste
-    reprova **nomeando a primeira ocupada** que ela seria mandada a visitar.
-    """
+    """15 buracos, 4 ocupados, 11 na caminhada — e nenhum deles com aparelho."""
     logica = _logica()
     caminhada = logica.caminhada()
 
@@ -92,18 +44,9 @@ def test_entrada_ocupada_nao_entra_na_caminhada() -> None:
 
 
 def test_a_mesa_toda_ocupada_nao_tem_fase_em_pe() -> None:
-    """Sem entrada vazia, a fase em pé simplesmente não acontece.
-
-    Não é caso de borda: é o desenho. A caminhada existe para o que a máquina
-    não sabe, e uma mesa cheia não tem nada que ela não saiba.
-    """
+    """Sem entrada vazia, a fase em pé simplesmente não acontece."""
     logica = LogicaDaCalibracao(MapaDaMesa(), Censo(), (), gravar=GravadorDeMentira())
     assert logica.caminhada() == ()
-
-
-# ---------------------------------------------------------------------------
-# A mordida do F-1
-# ---------------------------------------------------------------------------
 
 
 def test_o_veredito_vem_do_sysfs_e_nao_da_mao() -> None:
@@ -120,7 +63,7 @@ def test_o_veredito_vem_do_sysfs_e_nao_da_mao() -> None:
     """
     logica = _logica()
     antes = _entradas()
-    agora = _entradas()  # nada mudou: o cabo não fez nada
+    agora = _entradas()
 
     assert logica.confirmar_entrada_nova(antes, agora) is None, (
         "a tela confirmou uma entrada sem que o barramento tivesse mudado — "
@@ -143,18 +86,8 @@ def test_o_no_que_encheu_confirma_e_e_o_buraco_certo() -> None:
     assert furo.aparelho, "confirmou um buraco que continua vazio"
 
 
-# ---------------------------------------------------------------------------
-# `[Não alcanço]` — saída de primeira classe (R22)
-# ---------------------------------------------------------------------------
-
-
 def test_nao_alcanco_tira_a_entrada_da_conta_em_vez_de_deixar_divida() -> None:
-    """A entrada SOME do total. Não vira pendência, não volta a perguntar.
-
-    MORDIDA: fazer ``nao_alcanco`` só registrar (sem o filtro em
-    ``caminhada``). O total continua 11, e o teste reprova — que é a cerimônia
-    passando a cobrar por um trabalho que ela já disse que não vai fazer.
-    """
+    """A entrada SOME do total. Não vira pendência, não volta a perguntar."""
     logica = _logica()
     antes = len(logica.caminhada())
     logica.nao_alcanco(logica.caminhada()[0])
@@ -165,17 +98,7 @@ def test_nao_alcanco_tira_a_entrada_da_conta_em_vez_de_deixar_divida() -> None:
 
 
 def test_a_entrada_aprendida_guarda_os_nos_do_buraco() -> None:
-    """O que alcança a entrada VAZIA é ``nos``, e ``caminho`` não alcança.
-
-    ``caminho`` nomeia o APARELHO e some do ``/sys`` quando ele sai; ``nos``
-    nomeia o BURACO. Sem a lista, "a entrada 7" só existiria enquanto houvesse
-    algo nela — que é o defeito que esta tela inteira existe para curar.
-
-    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o ``caminho``
-    deixou de ser guardado. Ele é do BURACO agora, calculado na leitura — o do
-    lado 2.0 dos nós, ou o do lugar com os controladores deste boot — e nunca
-    vai ao disco. Quem diz se há aparelho é o censo, não o caminho.
-    """
+    """O que alcança a entrada VAZIA é ``nos``, e ``caminho`` não alcança."""
     from hefesto_dualsense4unix.utils.lugar import caminho_do_lado_20
 
     logica = _logica()
@@ -191,16 +114,6 @@ def test_a_entrada_aprendida_guarda_os_nos_do_buraco() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# A fase em pé na JANELA de verdade
-# ---------------------------------------------------------------------------
-#
-# Sem `Gtk.Window` mostrada: sob Xvfb não há gerenciador de janelas e uma janela
-# mostrada fica 1x1 para sempre (`COMO-OLHAR-A-TELA.md`). A guarda `exigir_gi_
-# real` é chamada dentro do teste para que as réguas puras acima rodem mesmo
-# onde não há PyGObject.
-
-
 def _janela(entradas):
     from hefesto_dualsense4unix.app.widgets.calibrar_entradas import (
         JanelaDeCalibrarEntradas,
@@ -212,12 +125,7 @@ def _janela(entradas):
 
 
 def test_a_janela_so_confirma_quando_o_barramento_muda() -> None:
-    """O tique da fase em pé, no caminho real: cabo inerte não confirma.
-
-    MORDIDA: fazer ``tique`` aprender o primeiro furo vazio em vez de comparar
-    as duas leituras. A janela declara uma entrada que nunca enumerou nada, e
-    o teste reprova.
-    """
+    """O tique da fase em pé, no caminho real: cabo inerte não confirma."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("a janela de calibração")

@@ -1,49 +1,4 @@
-"""GUARDA-GI-FALSO-SEM-GUARDA-01 — portão contra o falso-verde de GTK de mentira.
-
-O defeito medido (onda 2, 30/07): dezessete arquivos de `tests/unit` plantam um
-`gi` FALSO direto em `sys.modules` e NÃO chamam `exigir_gi_real()`. A combinação
-é o pior dos mundos:
-
-- no job `lint-test` (sem PyGObject) eles NÃO pulam, porque o stub que eles
-  mesmos plantam faz o `import gi` responder que sim — então rodam verdes contra
-  widgets que são `object`;
-- no job `gtk-real` eles NÃO entram na seleção, porque o critério de "teste de
-  interface" do CI é justamente `grep -rlE 'exigir_gi_real|skip_sem_gi_real'`.
-
-Resultado: centenas de testes de interface que nunca, em lugar nenhum, tocam um
-GTK de verdade. Este arquivo não conserta os dezessete de uma vez (são de outros
-donos e valem centenas de testes) — ele CONGELA a dívida: o estado de hoje está
-na allowlist abaixo, nome por nome, e qualquer arquivo NOVO que entre nesse
-estado reprova aqui.
-
-AMORTIZAÇÃO — lote A pago em 13/08/2026 (TESTE-HONESTO-01/E1, `:227-232`). Seis
-arquivos ganharam ``exigir_gi_real()`` no topo e saíram da allowlist:
-``test_emulation_actions_modo_jogo``, ``test_daemon_status_initial``,
-``test_lightbar_persist``, ``test_daemon_autostart``, ``test_compact_window`` e
-``test_emulation_mic_quirk``. Restaram **onze**, pagos em 01/10/2026. A dívida tem
-``TETO_DA_DIVIDA``, e ele **só desce** — é o que impede que alguém devolva um
-nome à lista para calar o portão.
-
-A allowlist é DÍVIDA A PAGAR, não permissão. Cada nome ali é um arquivo de
-interface que precisa ganhar `exigir_gi_real()` no TOPO (antes do bloco de
-imports, GUARDA-GI-REAL-01) e sair desta lista. Nunca acrescente um nome novo
-para "fazer o portão passar": o portão está certo e o arquivo, errado.
-
-Por que AST e não `grep`: `tests/unit/test_input_actions_gtk.py` cita
-`sys.modules["gi.repository.Gtk"]` dentro de um COMENTÁRIO e não planta stub
-nenhum — um grep de texto o acusaria injustamente. O detector aqui só conta
-atribuição de verdade (`sys.modules[...] = ...`, `setdefault`), então comentário
-e docstring não contaminam a medição.
-
-A ORDEM (02/10/2026, O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01). O portão aceitava como
-guarda qualquer menção ao marcador `skip_sem_gi_real`, e o marcador pula o
-TESTE, não a importação: o p3 e o p10 plantavam o `gi` falso no topo com ele, e
-a coleta sem GTK deixava 16 módulos da janela no processo, construídos sobre a
-mentira, para o arquivo seguinte importar. Num arquivo que planta, a guarda que
-vale é a chamada de `exigir_gi_real(...)` no nível do módulo, ANTES da primeira
-instrução que planta ao importar (direto, ou chamando uma função do arquivo que
-planta).
-"""
+"""GUARDA-GI-FALSO-SEM-GUARDA-01 — portão contra o falso-verde de GTK de mentira."""
 
 from __future__ import annotations
 
@@ -61,36 +16,12 @@ import pytest
 TESTS_UNIT = Path(__file__).resolve().parent
 ESTE_ARQUIVO = Path(__file__).resolve().name
 
-# ---------------------------------------------------------------------------
-# DÍVIDA A PAGAR — NÃO É PERMISSÃO.
-#
-# Eram dezessete em 30/07/2026 (medido com o detector deste módulo, conferido
-# com o grep da sprint). O lote A saiu em 13/08/2026 e restaram onze.
-# Tirar um nome daqui = aquele arquivo ganhou `exigir_gi_real()` e passou a
-# rodar também contra o GTK real. Acrescentar um nome aqui = o portão foi
-# desligado; não faça — e o `TETO_DA_DIVIDA` abaixo reprova quem tentar.
-# ---------------------------------------------------------------------------
-# A dívida zerou em 01/10/2026 (AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01): os onze
-# ganharam `exigir_gi_real()` no topo. A lista fica, vazia, porque é ela que
-# o `TETO_DA_DIVIDA` vigia: um nome que volte a ela reprova pelo teto.
 DIVIDA_GI_FALSO: frozenset[str] = frozenset()
 
-#: TETO DA DÍVIDA — o número de nomes que a allowlist ainda pode ter. **Só
-#: desce.** Sem ele, a allowlist é uma lista que só cresce por descuido: bastava
-#: alguém acrescentar um nome para o portão calar, e a mensagem "NÃO acrescente"
-#: era só um pedido educado. Cada lote pago baixa este número junto.
-#:
-#: 17 em 30/07/2026 (medição original) → 11 em 13/08/2026 (lote A da E1)
-#: → 0 em 01/10/2026 (AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01).
 TETO_DA_DIVIDA = 0
 
-#: Nomes de guarda aceitos: a função do `tests/conftest.py` ou o marcador irmão.
-#: Os dois declaram o arquivo como de interface; num arquivo que PLANTA, só a
-#: função guarda (ver `GUARDA_DA_IMPORTACAO`).
 GUARDAS_ACEITAS = ("exigir_gi_real", "skip_sem_gi_real")
 
-#: A guarda que pula a IMPORTAÇÃO. O marcador age na hora de rodar o teste,
-#: depois de o arquivo inteiro ter sido importado, plantio incluído.
 GUARDA_DA_IMPORTACAO = "exigir_gi_real"
 
 
@@ -109,16 +40,7 @@ def _chave_de_gi(no: ast.expr) -> bool:
 
 
 def plantacoes_de_gi_falso(fonte: str) -> list[int]:
-    """Linhas onde a fonte GRAVA um `gi` (ou `gi.*`) cru em `sys.modules`.
-
-    Conta só escrita de verdade:
-      - `sys.modules["gi"] = ...` (e submódulos);
-      - `sys.modules.setdefault("gi", ...)`.
-
-    NÃO conta `monkeypatch.setitem(sys.modules, "gi", ...)` — esse é o caminho
-    sancionado pelo `tests/conftest.py` (`instalar_stubs_gi`), desfeito no
-    teardown, que não vaza o stub para o arquivo seguinte.
-    """
+    """Linhas onde a fonte GRAVA um `gi` (ou `gi.*`) cru em `sys.modules`."""
     arvore = _arvore(fonte)
     return _linhas_que_plantam(ast.walk(arvore)) if arvore is not None else []
 
@@ -155,11 +77,7 @@ def _linhas_que_plantam(nos: Iterable[ast.AST]) -> list[int]:
 
 
 def tem_guarda_de_gi_real(fonte: str) -> bool:
-    """A fonte CHAMA `exigir_gi_real(...)` ou usa o marcador `skip_sem_gi_real`.
-
-    Também por AST: menção em comentário ou docstring não vale como guarda
-    (era assim que o arquivo passava a valer como "de interface" sem ser).
-    """
+    """A fonte CHAMA `exigir_gi_real(...)` ou usa o marcador `skip_sem_gi_real`."""
     try:
         arvore = ast.parse(fonte)
     except SyntaxError:  # pragma: no cover
@@ -193,17 +111,11 @@ def _nome_da_chamada(chamada: ast.Call) -> str:
 
 
 def _roda_na_importacao(no: ast.AST) -> Iterator[ast.AST]:
-    """Os nós que rodam quando o módulo é importado.
-
-    O corpo de uma função (ou de um lambda) só roda quando alguém a chama, e
-    fica de fora; o de uma classe, o de um `if` e o de um `try` rodam ali. Os
-    decoradores e os valores padrão da função rodam na definição, e entram.
-    """
+    """Os nós que rodam quando o módulo é importado."""
     if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
         na_definicao: list[ast.expr] = [*no.args.defaults]
         na_definicao += [d for d in no.args.kw_defaults if d is not None]
         if not isinstance(no, ast.Lambda):
-            # `@nome` sem parênteses também é chamada: `nome(função)`.
             na_definicao += [
                 d if isinstance(d, ast.Call) else ast.Call(func=d, args=[], keywords=[])
                 for d in no.decorator_list
@@ -243,11 +155,7 @@ def _funcoes_que_plantam(arvore: ast.Module) -> set[str]:
 
 
 def plantio_na_importacao(fonte: str) -> int | None:
-    """A linha da primeira instrução de nível de módulo que planta `gi` ao importar.
-
-    Planta direto (fora de função) ou chama uma função do arquivo que planta.
-    `None` quando o plantio mora só em função que a importação não chama.
-    """
+    """A linha da primeira instrução de nível de módulo que planta `gi` ao importar."""
     arvore = _arvore(fonte)
     if arvore is None:
         return None
@@ -260,12 +168,7 @@ def plantio_na_importacao(fonte: str) -> int | None:
 
 
 def guarda_na_importacao(fonte: str) -> int | None:
-    """A linha da primeira chamada de `exigir_gi_real(...)` no nível do módulo.
-
-    Só a instrução solta conta (expressão ou atribuição): é ela que pula o
-    módulo antes da linha seguinte. Dentro de função, ela só roda se alguém
-    chamar; o marcador nem é chamada.
-    """
+    """A linha da primeira chamada de `exigir_gi_real(...)` no nível do módulo."""
     arvore = _arvore(fonte)
     if arvore is None:
         return None
@@ -281,14 +184,9 @@ def guarda_na_importacao(fonte: str) -> int | None:
 class Falta:
     """Um arquivo que planta `gi` falso sem a guarda antes."""
 
-    #: Toda linha que planta, dentro ou fora de função.
     plantio: tuple[int, ...]
-    #: A primeira instrução de nível de módulo que planta ao importar, se há.
     na_importacao: int | None
-    #: A linha do `exigir_gi_real(...)` de nível de módulo, se há.
     guarda: int | None
-    #: O arquivo se declara de interface só pelo marcador (ou pela chamada
-    #: dentro de função): a palavra está lá, o ato não.
     so_a_palavra: bool
 
     def descrever(self) -> str:
@@ -358,9 +256,6 @@ class TestPortaoDoGiFalso:
         )
 
     def test_a_divida_so_encolhe(self) -> None:
-        # A allowlist sozinha não é portão: ela cala qualquer arquivo cujo nome
-        # esteja nela. O teto é o que a torna dívida — quem quiser silenciar um
-        # arquivo novo acrescentando o nome tem de MEXER neste número, à vista.
         assert len(DIVIDA_GI_FALSO) <= TETO_DA_DIVIDA, (
             f"a dívida do GTK de mentira CRESCEU: {len(DIVIDA_GI_FALSO)} nomes "
             f"na DIVIDA_GI_FALSO, teto {TETO_DA_DIVIDA}.\n"
@@ -371,9 +266,6 @@ class TestPortaoDoGiFalso:
         )
 
     def test_allowlist_nao_guarda_arquivo_ja_pago(self) -> None:
-        # Nome que já ganhou a guarda e ficou na lista é permissão pendurada:
-        # se alguém arrancar o `exigir_gi_real()` daquele arquivo depois, ele
-        # volta a plantar `gi` falso em silêncio, coberto pela própria isenção.
         pagos = sorted(DIVIDA_GI_FALSO - set(arquivos_em_falta()))
         assert not pagos, (
             f"nomes na allowlist que JÁ têm a guarda: {pagos} — tire-os da "
@@ -382,8 +274,6 @@ class TestPortaoDoGiFalso:
         )
 
     def test_allowlist_nao_tem_nome_fantasma(self) -> None:
-        # Arquivo renomeado/apagado deixa a permissão pendurada em nome que não
-        # existe mais — e um dia um arquivo NOVO nasce com esse nome já isento.
         fantasmas = sorted(n for n in DIVIDA_GI_FALSO if not (TESTS_UNIT / n).exists())
         assert not fantasmas, (
             f"nomes na allowlist que não existem mais em tests/unit: {fantasmas} "
@@ -392,11 +282,7 @@ class TestPortaoDoGiFalso:
 
 
 class TestODetectorMorde:
-    """O portão acima só vale se o detector realmente detecta — a prova aqui.
-
-    Sem estes casos, um detector que devolvesse sempre `[]` passaria o portão
-    inteiro para sempre (o falso-verde do falso-verde).
-    """
+    """O portão acima só vale se o detector realmente detecta — a prova aqui."""
 
     @pytest.mark.parametrize(
         "fonte",
@@ -425,8 +311,6 @@ class TestODetectorMorde:
         assert not plantacoes_de_gi_falso(fonte)
 
     def test_arquivo_real_que_so_cita_em_comentario_nao_e_acusado(self) -> None:
-        # Regressão viva: test_input_actions_gtk.py cita a expressão num
-        # comentário e não tem guarda — o grep de texto da sprint o pegaria.
         alvo = TESTS_UNIT / "test_input_actions_gtk.py"
         if not alvo.exists():  # pragma: no cover — arquivo pode ser renomeado
             pytest.skip("test_input_actions_gtk.py não está mais aqui")
@@ -439,9 +323,6 @@ class TestODetectorMorde:
         assert not tem_guarda_de_gi_real('"""fala de exigir_gi_real na docstring."""\n')
 
 
-# ---------------------------------------------------------------------------
-# A ORDEM (02/10/2026, O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01)
-# ---------------------------------------------------------------------------
 _CABECA = '''import sys
 import types
 
@@ -453,7 +334,6 @@ def _plantar():
     sys.modules["gi.repository"] = types.ModuleType("gi.repository")
 
 '''
-#: O p3 e o p10 até 02/10: o marcador, e o plantio no topo.
 _O_MARCADOR_SOZINHO = _CABECA + "pytestmark = skip_sem_gi_real\n\n_plantar()\n"
 _A_GUARDA_DEPOIS = _CABECA + "_plantar()\n\nexigir_gi_real('depois')\n"
 _A_GUARDA_ANTES = _CABECA + "exigir_gi_real('antes')\n\n_plantar()\n"
@@ -470,16 +350,13 @@ _O_PLANTIO_NA_CLASSE = (
     'import sys\nimport types\nfrom tests.conftest import exigir_gi_real\n\n'
     'class _Gi:\n    sys.modules["gi"] = types.ModuleType("gi")\n\nexigir_gi_real()\n'
 )
-#: Uma função que chama outra que planta, chamada no topo antes da guarda.
 _POR_DUAS_FUNCOES = (
     _CABECA + "def _preparar():\n    _plantar()\n\n_preparar()\n\nexigir_gi_real()\n"
 )
-#: O decorador roda na definição da função, antes da guarda.
 _NO_DECORADOR = (
     _CABECA + "def _marcar(f):\n    _plantar()\n    return f\n\n"
     "@_marcar\ndef test_x():\n    pass\n\nexigir_gi_real()\n"
 )
-#: O `test_o_botao_que_tira_o_que_faz_engasgar.py`: define, guarda e não chama.
 _SO_DEFINE = _CABECA + "_GI_REAL = exigir_gi_real('so define')\n"
 
 
@@ -488,9 +365,7 @@ def _linha(fonte: str, texto: str) -> int:
 
 
 class TestAGuardaVemAntesDoPlantio:
-    """Mordidas: a regra de antes (o marcador como guarda) deixa o primeiro caso
-    limpo; contar a guarda em qualquer linha deixa o segundo; ignorar a chamada
-    de função que planta deixa o terceiro."""
+    """Mordidas: a regra de antes (o marcador como guarda) deixa o primeiro caso"""
 
     def test_o_marcador_sozinho_nao_guarda_o_plantio_do_topo(self, tmp_path: Path) -> None:
         nome = "test_o_marcador_sozinho.py"
@@ -544,12 +419,8 @@ class TestAGuardaVemAntesDoPlantio:
             assert alvo.name not in arquivos_em_falta()
 
 
-# ---------------------------------------------------------------------------
-# A COLETA SEM GTK (o `lint-test`) NÃO DEIXA A JANELA NO PROCESSO
-# ---------------------------------------------------------------------------
 RAIZ = TESTS_UNIT.parents[1]
 
-#: Os dois que plantavam com o marcador só, até 02/10.
 OS_DOIS_DO_MARCADOR = (
     "tests/unit/test_p10_os_quatro_caminhos_da_aba_perfis_sem_mordida.py",
     "tests/unit/test_p3_o_salvar_solta_a_thread_e_para_de_prometer.py",
@@ -582,11 +453,7 @@ def pytest_collection_finish(session):
 
 
 def test_a_coleta_sem_gtk_nao_deixa_a_janela_no_processo(tmp_path: Path) -> None:
-    """O p10 e o p3 coletados sem `gi`, num pytest filho: nenhum módulo da janela fica.
-
-    Mordida: tire o `exigir_gi_real()` do topo do p10 e devolva o marcador com
-    o plantio; a régua lista os 16 módulos da janela que a coleta deixou.
-    """
+    """O p10 e o p3 coletados sem `gi`, num pytest filho: nenhum módulo da janela fica."""
     lar = tmp_path / "sem_gi"
     lar.mkdir()
     (lar / "sitecustomize.py").write_text(_ESCONDE_O_GI, encoding="utf-8")

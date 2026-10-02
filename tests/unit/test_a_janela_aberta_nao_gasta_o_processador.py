@@ -1,34 +1,4 @@
-"""A JANELA ABERTA NÃO GASTA O PROCESSADOR — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01.
-
-O NÚMERO É DELA, do diário do usuário: a janela ficou aberta 10 h em 25/09/2026
-e gastou 3h29min de CPU, 35% de um núcleo, com ela só olhando ou nem isso. Na
-banca (o piloto oculto, o daemon de mentira, o `/proc` a cada segundo), a 02 à
-vista gastava 61% e escondida 47%. As causas, medidas:
-
-* a folha `posicao-css`, trocada INTEIRA a cada tique, refazia o estilo da
-  página e repintava a janela toda, dez vezes por segundo;
-* o tique mandava a carga inteira (15 KB na 02) a cada 100 ms, parada ou não;
-* o funil passava a carga inteira em 26 buscas de palavra banida por tique;
-* a renovação da camada 1 rodava 21 `pactl` a cada 2 s, e 29 com fonte nativa;
-* com a janela escondida, tudo isso seguia igual.
-
-AS RÉGUAS CONTAM, E NÃO MEDEM CPU: CPU na suíte seria vermelho de carga. O que
-elas contam é o que gera o CPU — pinturas, leituras, `pactl`, mutações de folha.
-A banca no tempo, com os números de processador, é de quem coordena
-(`docs/process/estudos/2026-09-25-a-janela-aberta-nao-gasta-o-processador/`).
-
-    R1  janela escondida não trabalha, no tempo (01, 02 e 08; 1, 2 e 4 controles)
-    R2  só vai o que mudou; e a forma (fita, bloco, molde) leva a carga inteira
-    R3  a verdade volta: a carga inteira de 1 em 1 s repõe o `<select>` recusado
-    R4  o funil lê cada texto uma vez, e o valor que é só a palavra é denunciado
-    R5  nenhuma folha endereçada muda no tique, e o pontinho anda pelo alvo
-    R6  a renovação da camada 1 roda cada `pactl` uma vez por dono
-    R7  a janela de 10 h não acumula custos
-
-A MORDIDA de cada uma está no docstring dela. A janela é OCULTA e nasce no Xvfb
-da suíte: ela tem UMA tela. Nenhuma régua daqui fala com o daemon, com o
-servidor de som ou com o broker: a ponte, o estado e os `pactl` são dublês.
-"""
+"""A JANELA ABERTA NÃO GASTA O PROCESSADOR — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01."""
 from __future__ import annotations
 
 import argparse
@@ -50,40 +20,20 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: A mesa de quatro da casa, com endereços da faixa sintética (`aa:bb:cc`).
 FIXTURE = RAIZ / "tests/fixtures/state_full_quatro_controles.json"
 
-#: Quais controles da fixture entram: 1 é o P1 no USB; 2 são o P1 no USB e o P3
-#: no BT; 4 são dois no USB e dois no BT — os mesmos da banca.
 MESAS = {1: (0,), 2: (0, 2), 4: (0, 1, 2, 3)}
 
-#: CADA FASE ACABA POR CONTAGEM, e o relógio só serve de teto
-#: (A-JANELA-ESCONDIDA-MEDE-SOB-CARGA-01, 28/09/2026). As réguas cobram tiques;
-#: um roteiro que avançasse pelo relógio juntaria menos tiques na mesma janela
-#: com a máquina ocupada, e a pré-condição cairia sem o produto mudar — foi a
-#: reprovação da suíte de 28/09 («poucos tiques escondidos para medir: 21»).
 TIQUES_POR_FASE = 40
 
-#: O TETO de uma fase é este tanto de vezes o tempo nominal dela, que sai do
 #: `TIQUE_MS` do produto (ver `_teto_da_fase_s`). Bater o teto não é pulo: a
-#: fase anota a fome em `fora.famintas`, e a régua que a lê reprova dizendo que
-#: foi a máquina.
 VEZES_O_NOMINAL = 5
 
-#: A folga para a janela assentar numa troca (a mensagem da página chega pelo
-#: laço do GTK, e uma leitura pode estar no meio quando o fio pausa).
 ASSENTAR_S = 0.6
 
-#: NA VOLTA, O DAEMON DEMORA um tique e pouco para responder. Com a leitura
-#: instantânea do dublê, o fio que acorda na volta responde antes do primeiro
-#: tique, e a régua não veria o tique que pintasse o estado de antes de
-#: esconder (a mordida do `_esperando_o_estado_novo` passava verde).
 ATRASO_NA_VOLTA_S = 0.12
 
 
-# ===========================================================================
-# A bancada: o piloto de verdade, oculto, com dublês nas quatro bordas
-# ===========================================================================
 def _estado_da_fixture(n: int) -> dict[str, Any]:
     d = json.loads(FIXTURE.read_text(encoding="utf-8"))
     d["controllers"] = [d["controllers"][i] for i in MESAS[n]]
@@ -104,8 +54,6 @@ class _Estado:
         self.leituras = 0
         self.passo = 0
         self.fixo: dict[str, Any] | None = None
-        #: Quanto cada leitura DEMORA, como o daemon de verdade. A leitura só
-        #: conta quando volta: é a resposta que o tique pode pintar.
         self.atraso_s = 0.0
         self._trava = threading.Lock()
 
@@ -170,12 +118,7 @@ def _args(**extra: Any) -> argparse.Namespace:
 
 @pytest.fixture(scope="module")
 def publicado_de_hoje(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
-    """As páginas publicadas, com a 02 da BANCADA — a que o gerador faz hoje.
-
-    A 02 publicada só recebe o alvo `posicao` quando quem coordena publica a
-    aba. Até lá, medir o produto contra ela seria medir a página velha. As
-    outras nove são as publicadas, copiadas como estão.
-    """
+    """As páginas publicadas, com a 02 da BANCADA — a que o gerador faz hoje."""
     from hefesto_dualsense4unix.interface import onde
 
     pasta = tmp_path_factory.mktemp("publicado-de-hoje")
@@ -204,11 +147,7 @@ def _nominal_s(quantos: int) -> float:
 
 
 def _teto_da_fase_s(fora: Any, quantos: int) -> float:
-    """O teto de uma fase de `quantos` tiques: `VEZES_O_NOMINAL` o nominal dela.
-
-    O cenário pode pedir um teto próprio (`fora.teto_da_fase_s`): é assim que a
-    régua do teto prova que a fome se anota e a mensagem diz que foi a máquina.
-    """
+    """O teto de uma fase de `quantos` tiques: `VEZES_O_NOMINAL` o nominal dela."""
     proprio = getattr(fora, "teto_da_fase_s", None)
     return float(proprio) if proprio else VEZES_O_NOMINAL * _nominal_s(quantos)
 
@@ -221,18 +160,7 @@ def _maior_buraco(de: float, tiques: list[float], agora: float) -> float:
 
 def _fase(fora: Any, nome: str, de: float, quantos: int, teto_s: float, *,
           ate: float = float("inf"), agora: float | None = None) -> bool:
-    """A fase `nome` acabou? Acaba quando junta `quantos` tiques em `[de, ate]`.
-
-    O relógio só serve de TETO: passados `teto_s` desde `de` sem juntar, a fase
-    acaba com fome, e anota `fora.famintas[nome] = (tiques, segundos,
-    maior_buraco)`. A régua que lê a fase reprova com a causa escrita
-    (`_sem_fome`), e não pula: pulo não é verde nesta casa.
-
-    O LAÇO TAMBÉM SE ANOTA, em `fora.lacos[nome]`: o maior intervalo sem
-    `passo` do roteiro na mesma fase. É ele que separa a máquina do produto
-    (ver `_sem_fome`); sem `fora.passos`, não se anota nada, e a causa não se
-    afirma.
-    """
+    """A fase `nome` acabou? Acaba quando junta `quantos` tiques em `[de, ate]`."""
     agora = time.monotonic() if agora is None else agora
     fora.fases[nome] = quantos
     tiques = [x.t for x in fora.ticks if de <= x.t <= ate]
@@ -252,24 +180,14 @@ def _virgula(x: float) -> str:
 
 
 def _o_tique_parou_com_o_laco_andando(buraco: float, laco: float | None) -> bool:
-    """A fome é do PRODUTO? O tique e o `passo` do roteiro rodam no mesmo laço
-    do GTK: com a máquina ocupada, os dois param juntos, e o maior buraco de um
-    fica perto do outro. Se o laço seguiu andando e só o tique sumiu (o `_tique`
-    que devolve `False` desliga o próprio relógio), o buraco dos tiques passa
-    de três vezes o do laço, e de três tiques nominais.
-    """
+    """A fome é do PRODUTO? O tique e o `passo` do roteiro rodam no mesmo laço"""
     if laco is None:
         return False
     return buraco > 3 * max(laco, _nominal_s(1))
 
 
 def _sem_fome(fora: Any, *nomes: str) -> None:
-    """Reprova, com a causa escrita, se alguma destas fases bateu o teto.
-
-    A causa é a que a medida sustenta: o laço do GTK devagar (a máquina), ou o
-    tique parado com o laço andando (o produto). Chamar de máquina o produto
-    que parou mandaria repetir a corrida em vez de olhar o `_tique`.
-    """
+    """Reprova, com a causa escrita, se alguma destas fases bateu o teto."""
     for nome in nomes:
         if nome in fora.famintas:
             tiques, segundos, buraco = fora.famintas[nome]
@@ -287,19 +205,7 @@ def _sem_fome(fora: Any, *nomes: str) -> None:
 def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             anda: str = "", teto_s: float | None = None,
             ajuste: Any = None, teto_da_fase_s: float | None = None) -> SimpleNamespace:
-    """Roda o piloto oculto na página pedida, com `n` controles, e segue o `roteiro`.
-
-    O roteiro recebe `(fora, piloto, agora)` a cada 50 ms depois de a página
-    estar de pé, e devolve `False` quando acabou. `fora` é o registro: cada
-    tique, cada pintura (com a carga), as leituras e os `pactl`; `fora.comeco`
-    é o instante em que a página ficou de pé, de onde a primeira fase conta.
-
-    O TETO DO CENÁRIO é maior que a soma dos tetos das fases e das esperas (o
-    roteiro de teto maior, o `esconde_e_volta`, soma três fases e duas esperas;
-    o dos pontinhos, cinco fases e uma espera): ele só pega o roteiro que nunca
-    acaba, e nunca corta uma fase que ainda pode juntar os tiques. Vale também
-    com o teto de fase do cenário, porque as esperas guardam o teto delas.
-    """
+    """Roda o piloto oculto na página pedida, com `n` controles, e segue o `roteiro`."""
     gtk = _gtk()
     from gi.repository import GLib
 
@@ -336,9 +242,6 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         mp.setattr(audio_saida, "rodar_leitura", pactl)
         mp.setattr(el, "_rodar", pactl_da_eleicao)
         mp.setattr(ondas_de_som, "_LIGADO", [False])
-        # O MICROFONE DE CADA CONTROLE TEM NÓ, para as ondas terem o que seguir
-        # e soltar: sem isto a régua da janela escondida mediria um conjunto
-        # que já nasceu vazio.
         mp.setattr(a02, "no_do_microfone",
                    lambda c: f"mic-{c.get('uniq')}" if isinstance(c, dict) else "")
         if ajuste is not None:
@@ -359,10 +262,6 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         tique_original = piloto._tique
 
         def tique() -> bool:
-            # O PILOTO DE UM CENÁRIO QUE ACABOU NÃO TIQUETAQUEIA NO SEGUINTE: o
-            # relógio dele é do laço do GTK, que é um só para o módulo inteiro.
-            # Vivo, ele rodaria o pacote da aba dele (e o `pactl` da 02) no
-            # meio da medição do cenário seguinte.
             if fora.acabou:
                 return False
             no_tique[0] = False
@@ -379,10 +278,6 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         mudou_original = piloto._a_janela_mudou
 
         def a_janela_mudou(escondida: bool) -> None:
-            # CADA TROCA, com as leituras no INSTANTE do aviso, e não no
-            # primeiro tique depois: o fio pode trazer a resposta nova antes
-            # de o tique rodar. O aviso que não muda nada (a página que nasce
-            # dizendo `vista`) não é troca.
             if escondida != piloto._escondida:
                 fora.avisos.append((time.monotonic(), escondida, estado.leituras))
             mudou_original(escondida)
@@ -401,7 +296,6 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 return True
             if not comeco[0]:
                 comeco[0] = fora.comeco = time.monotonic()
-                # O TESTE DE MOTOR EM CURSO — o coração que tem de seguir batendo.
                 a05._EM_TESTE[0] = str(estado.base["controllers"][0]["uniq"])
                 a05._BATEU_EM[0] = 0.0
             if roteiro(fora, piloto, time.monotonic() - comeco[0]):
@@ -436,22 +330,12 @@ def _inteira(carga: dict[str, Any]) -> bool:
 
 
 def _teto_da_espera_s() -> float:
-    """O teto de uma ESPERA pelo produto (o `escondeu`, o `voltou`, uma leitura).
-
-    Espera não junta tiques e não tem fome: se o teto passa, é o produto que não
-    respondeu, e a régua dele reprova no que faltou. Sem teto, a mordida do
-    `_a_janela_mudou` penduraria o roteiro em vez de reprovar.
-    """
+    """O teto de uma ESPERA pelo produto (o `escondeu`, o `voltou`, uma leitura)."""
     return VEZES_O_NOMINAL * _nominal_s(TIQUES_POR_FASE)
 
 
 def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
-    """40 tiques à vista, 40 escondida, 40 de volta — contados.
-
-    Cada fase acaba quando junta os tiques, e o relógio só serve de teto
-    (`_fase`). Entre as fases, a espera pelo aviso da página (`escondeu`,
-    `voltou`) tem o seu teto.
-    """
+    """40 tiques à vista, 40 escondida, 40 de volta — contados."""
     marcos = fora.marcos
     quantos = TIQUES_POR_FASE
     teto = _teto_da_fase_s(fora, quantos)
@@ -468,8 +352,6 @@ def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
             elif time.monotonic() - marcos["esconde"] < _teto_da_espera_s():
                 return True
             else:
-                # A PÁGINA NUNCA DISSE QUE SE ESCONDEU: volta sem a fase
-                # escondida, e a R1 reprova no marco que faltou.
                 return _mostrar(fora, piloto)
         de, ate = _janela_escondida(fora)
         if not _fase(fora, "escondida", de, quantos, teto, ate=ate):
@@ -477,8 +359,6 @@ def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
         return _mostrar(fora, piloto)
     if "voltou" not in marcos:
         if piloto._escondida or "escondeu" not in marcos:
-            # A janela nunca se escondeu (a mordida do `_a_janela_mudou`) ou
-            # nunca voltou: espera o teto e acaba. A régua reprova no marco.
             return bool(time.monotonic() - marcos["mostra"] < _teto_da_espera_s())
         marcos["voltou"] = time.monotonic()
     return not _fase(fora, "de volta", _janela_escondida(fora)[1], quantos, teto)
@@ -507,15 +387,7 @@ def esconde_e_volta(request: pytest.FixtureRequest,
 
 
 def _janela_escondida(fora: Any) -> tuple[float, float]:
-    """A fase escondida, com UM dono: `(de, ate)`, para o roteiro contar e as
-    réguas medirem a mesma janela.
-
-    Começa no `escondeu` mais o `ASSENTAR_S`. Acaba no INSTANTE em que a página
-    disse `vista` de novo, pelo aviso anotado: o roteiro vê a volta até 50 ms
-    depois, e o fio lê já na volta, então o tique que pinta o estado novo
-    cairia dentro da fase escondida se ela terminasse na marca do roteiro.
-    Antes da volta, a fase não tem fim.
-    """
+    """A fase escondida, com UM dono: `(de, ate)`, para o roteiro contar e as"""
     de = fora.marcos["escondeu"] + ASSENTAR_S
     ate = next((t for t, escondida, _ in fora.avisos
                 if not escondida and t >= fora.marcos["esconde"]),
@@ -532,9 +404,6 @@ def _os_primeiros(fora: Any, de: float, quantos: int) -> list[Any]:
     return [x for x in fora.ticks if x.t >= de][:quantos]
 
 
-# ===========================================================================
-# R1 — JANELA ESCONDIDA NÃO TRABALHA, NO TEMPO
-# ===========================================================================
 def _a_escondida_nao_trabalha(fora: Any) -> None:
     """As contas da R1 sobre a fase escondida de um cenário (ver a régua)."""
     assert "escondeu" in fora.marcos, (
@@ -548,10 +417,6 @@ def _a_escondida_nao_trabalha(fora: Any) -> None:
     assert not pinturas, (
         f"{len(pinturas)} pintura(s) com a janela escondida em "
         f"{fora.pagina} com {fora.n} controle(s)")
-    # ESCONDIDA, O FIO LÊ DE SEGUNDO EM SEGUNDO, e não dez vezes por segundo:
-    # é o que mantém o contexto do coração com a mesa de agora (ver
-    # `test_r1_o_coracao_nao_bate_por_quem_saiu_escondido`). O teto é de
-    # RELÓGIO porque o fio é de relógio: ele lê pelo tempo, não pelo tique.
     import hefesto_vivo as hv
 
     leituras = dentro[-1].leituras - dentro[0].leituras
@@ -567,22 +432,7 @@ def _a_escondida_nao_trabalha(fora: Any) -> None:
 
 
 def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> None:
-    """Escondida, zero pintura, zero `pactl` e uma leitura do estado por segundo.
-
-    A janela minimizada é o caso em que ela joga. O WebKit já parava de
-    desenhar, mas o tique seguia montando a carga e mandando-a, dez vezes por
-    segundo: 47% de um núcleo na banca, com a tela parada.
-
-    AS TRÊS MORDIDAS, cada uma numa conta diferente:
-
-    * faça `_a_janela_mudou` voltar logo na primeira linha: o `_escondida`
-      nunca vira `True`, o roteiro não marca o `escondeu`, e a régua reprova
-      na pré-condição (a página nunca disse que estava escondida);
-    * tire o `self._escondida or` do `if` do `_tique`: a página volta a pintar
-      escondida, e a régua reprova nas pinturas;
-    * deixe o `LeitorDoEstado.pausar` sem efeito: a leitura volta a ~10 por
-      segundo, e a régua reprova no teto de leituras.
-    """
+    """Escondida, zero pintura, zero `pactl` e uma leitura do estado por segundo."""
     _a_escondida_nao_trabalha(esconde_e_volta)
 
 
@@ -597,28 +447,12 @@ def _o_coracao_bate_escondido(fora: Any) -> None:
 
 
 def test_r1_o_coracao_segue_batendo_escondido(esconde_e_volta: Any) -> None:
-    """Esconder não é largar: o teste de motor em curso segue batendo.
-
-    O coração é de 1 em 1 s (`a05_vibracao.SEGUNDOS_ENTRE_BATIMENTOS`); em
-    40 tiques escondida são três ou quatro batidas. Sem elas o teto do
-    daemon soltaria o teste que ela deixou ligado.
-
-    MORDIDA: tire o `bater_os_coracoes` do ramo da janela escondida no
-    `_tique` e as batidas param de contar aqui.
-    """
+    """Esconder não é largar: o teste de motor em curso segue batendo."""
     _o_coracao_bate_escondido(esconde_e_volta)
 
 
-# ===========================================================================
-# R1 SOB CARGA — a máquina ocupada não derruba a pré-condição
-# ===========================================================================
 def _com_carga(roteiro: Any, *, buraco_s: float = 0.0, lento_s: float = 0.0) -> Any:
-    """O roteiro com a máquina ocupada, SEM carregar a máquina dela.
-
-    `buraco_s`: o laço do GTK para uma vez, logo depois do `hide()` — é o buraco
-    da suíte de 28/09 (uns 1,4 s sem tique e sem passo). `lento_s`: o laço anda
-    devagar, um `sleep` a cada passo, só com a janela escondida.
-    """
+    """O roteiro com a máquina ocupada, SEM carregar a máquina dela."""
     def com_carga(fora: Any, piloto: Any, t: float) -> bool:
         seguir = roteiro(fora, piloto, t)
         if buraco_s and "esconde" in fora.marcos and "buraco" not in fora.marcos:
@@ -645,17 +479,7 @@ def sob_carga(request: pytest.FixtureRequest,
 
 
 def test_r1_sob_carga_a_janela_escondida_mede_o_mesmo(sob_carga: Any) -> None:
-    """Com o laço do GTK parado ou lento, a R1 e o coração continuam verdes.
-
-    A PROVA DE QUE A CARGA PEGOU vem junto: a janela de relógio do roteiro de
-    28/09 (a fase escondida acabava 40 tiques NOMINAIS depois do `hide()`)
-    teria juntado menos de 25 tiques neste mesmo cenário. Sem isso, a régua
-    ficaria verde sobre uma carga que não atrasou nada.
-
-    MORDIDA: devolva o roteiro de relógio (a fase escondida acabando no
-    `hide()` mais `_nominal_s(TIQUES_POR_FASE)`) e esta régua reprova em
-    «poucos tiques escondidos para medir», que é a reprovação de 28/09.
-    """
+    """Com o laço do GTK parado ou lento, a R1 e o coração continuam verdes."""
     fora = sob_carga
     _a_escondida_nao_trabalha(fora)
     _o_coracao_bate_escondido(fora)
@@ -677,15 +501,7 @@ def sob_carga_com_teto_curto(publicado_de_hoje: pathlib.Path) -> SimpleNamespace
 
 
 def test_r1_o_teto_batido_diz_que_foi_a_maquina(sob_carga_com_teto_curto: Any) -> None:
-    """A fase que bate o teto anota a fome, e a R1 reprova dizendo a causa.
-
-    Vermelho, e não pulo: pulo não é verde nesta casa. E vermelho com a causa
-    escrita, para ninguém ler a máquina lenta como produto quebrado.
-
-    MORDIDA: faça o `_fase` acabar no teto sem anotar em `fora.famintas` e
-    esta régua reprova: a fome some, e a R1 cairia no piso de 25 sem dizer que
-    foi a máquina.
-    """
+    """A fase que bate o teto anota a fome, e a R1 reprova dizendo a causa."""
     fora = sob_carga_com_teto_curto
     tiques, segundos, _buraco = fora.famintas["escondida"]
     assert tiques < TIQUES_POR_FASE and segundos >= 1.0, fora.famintas
@@ -696,11 +512,7 @@ def test_r1_o_teto_batido_diz_que_foi_a_maquina(sob_carga_com_teto_curto: Any) -
 
 
 def test_a_fase_junta_os_tiques_e_anota_a_fome() -> None:
-    """O `_fase` sem GTK, com tiques sintéticos: junta, espera, e passa fome.
-
-    MORDIDA: faça o `_fase` contar pelo relógio (`agora - de >= teto_s` antes
-    de contar os tiques) e a fase cheia deixa de acabar ao juntar.
-    """
+    """O `_fase` sem GTK, com tiques sintéticos: junta, espera, e passa fome."""
     fora = SimpleNamespace(ticks=[SimpleNamespace(t=10.0 + 0.1 * i) for i in range(30)],
                            fases={}, famintas={})
     assert _fase(fora, "cheia", 10.0, 20, 5.0, agora=11.0), "juntou 20 e não acabou"
@@ -721,16 +533,7 @@ def test_a_fase_junta_os_tiques_e_anota_a_fome() -> None:
 
 
 def test_a_fome_do_produto_nao_se_le_como_maquina() -> None:
-    """O tique que PARA com o laço andando é o produto, e a régua diz isso.
-
-    O `_tique` que devolve `False` desliga o próprio relógio: a fase passa
-    fome com o laço do GTK folgado. Chamar isso de máquina lenta mandaria
-    repetir a corrida, que é o contrário da cura desta régua. E a máquina lenta
-    de verdade (o laço parado junto com o tique) continua dita como máquina.
-
-    MORDIDA: faça o `_o_tique_parou_com_o_laco_andando` devolver sempre `False`
-    e a fome do produto volta a se ler como máquina.
-    """
+    """O tique que PARA com o laço andando é o produto, e a régua diz isso."""
     passos = [10.0 + 0.2 * i for i in range(51)]
     parou = SimpleNamespace(ticks=[SimpleNamespace(t=10.0 + 0.1 * i) for i in range(3)],
                             fases={}, famintas={}, passos=passos, lacos={})
@@ -740,7 +543,6 @@ def test_a_fome_do_produto_nao_se_le_como_maquina() -> None:
             r"o laço do GTK andou \(maior buraco dele: 0,2 s\) e o tique parou: é o "
             r"produto, e não a máquina")):
         _sem_fome(parou, "escondida")
-    # A MÁQUINA LENTA: o laço para junto com o tique, de 1,4 s em 1,4 s.
     marcas = [10.0 + 1.4 * i for i in range(8)]
     lenta = SimpleNamespace(ticks=[SimpleNamespace(t=t) for t in marcas],
                             fases={}, famintas={}, passos=list(marcas), lacos={})
@@ -749,23 +551,18 @@ def test_a_fome_do_produto_nao_se_le_como_maquina() -> None:
         _sem_fome(lenta, "escondida")
 
 
-#: Quantos tiques a régua de quem saiu conta depois do `de` dela.
 TIQUES_DEPOIS_DE_SAIR = 20
 
 
 def _depois_de_sair(fora: Any) -> float:
-    """De onde a régua de quem saiu conta: uma leitura escondida e um batimento
-    de folga depois da saída. É de RELÓGIO porque o fio escondido é de relógio
-    (lê de `SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA` em
-    `SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA`)."""
+    """De onde a régua de quem saiu conta: uma leitura escondida e um batimento"""
     import hefesto_vivo as hv
 
     return float(fora.marcos["saiu"] + 2 * hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA)
 
 
 def _roteiro_o_controle_sai_escondido(fora: Any, piloto: Any, _t: float) -> bool:
-    """10 tiques à vista; a janela se esconde; escondida, o controle do teste
-    sai, e a fase junta 20 tiques depois do `_depois_de_sair`."""
+    """10 tiques à vista; a janela se esconde; escondida, o controle do teste"""
     marcos = fora.marcos
     if "esconde" not in marcos:
         if not _fase(fora, "antes de esconder", fora.comeco, 10, _teto_da_fase_s(fora, 10)):
@@ -776,7 +573,6 @@ def _roteiro_o_controle_sai_escondido(fora: Any, piloto: Any, _t: float) -> bool
     if "saiu" not in marcos:
         if not piloto._escondida:
             return bool(time.monotonic() - marcos["esconde"] < _teto_da_espera_s())
-        # O CONTROLE EM TESTE É O PRIMEIRO DA MESA (ver `_correr`), e o outro
         # fica: é nele que o par sem endereço cairia.
         st = copy.deepcopy(fora.estado.base)
         st["controllers"] = st["controllers"][1:]
@@ -796,19 +592,7 @@ def o_controle_sai_escondido(publicado_de_hoje: pathlib.Path) -> SimpleNamespace
 
 def test_r1_o_coracao_nao_bate_por_quem_saiu_escondido(
         o_controle_sai_escondido: Any) -> None:
-    """Escondida, o controle do teste de motor sai da mesa: o coração para.
-
-    O coração bate com o CONTEXTO do tique, e a guarda dele é o controle estar
-    na mesa (`a05_vibracao._bater_o_coracao_do_teste`): quem saiu tem o teste
-    parado. Com o fio do estado parado e o contexto de antes de esconder, o
-    teste de quem saiu seguia batendo — e o `rumble.set` não leva endereço: o
-    par cai no controle que ficou, que vibra até a janela voltar à vista.
-    Escondida, o fio lê de segundo em segundo, e o contexto anda com ele.
-
-    MORDIDA: faça o fio parar de ler com a janela escondida (o `_laco` esperar
-    o `retomar()` sem ler), ou tire `_o_contexto_anda_escondido` do ramo da
-    janela escondida no `_tique`, e as batidas seguem depois da saída.
-    """
+    """Escondida, o controle do teste de motor sai da mesa: o coração para."""
     fora = o_controle_sai_escondido
     assert "saiu" in fora.marcos, "a janela nunca se escondeu para o controle sair"
     _sem_fome(fora, "antes de esconder", "depois de sair")
@@ -820,9 +604,6 @@ def test_r1_o_coracao_nao_bate_por_quem_saiu_escondido(
     assert batidas == 0, (
         f"{batidas} batida(s) do coração por um controle que saiu da mesa com a "
         "janela escondida — o par cairia no controle que ficou")
-    # O CONTEXTO ANDA SEM AS PERGUNTAS DO TIQUE: com a janela escondida não se
-    # pede o inventário dos externos (`controller.list`, 10-40 ms e um
-    # subprocess no daemon). MORDIDA: `perguntar=True` no contexto escondido.
     escondida = [x for x in fora.ticks if x.t >= fora.marcos["saiu"]]
     externos = escondida[-1].externos - escondida[0].externos
     assert externos == 0, (
@@ -830,22 +611,10 @@ def test_r1_o_coracao_nao_bate_por_quem_saiu_escondido(
 
 
 def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any) -> None:
-    """Na volta, a primeira pintura é inteira, e sai em até 3 tiques, depois
-    de o leitor trazer uma resposta NOVA.
-
-    A conta das leituras é a do INSTANTE do aviso (o dublê do `_a_janela_mudou`
-    a anota), porque o fio pode trazer a resposta antes do primeiro tique.
-
-    MORDIDA: tire o `_esquecer_a_pintura(self)` de `_a_janela_mudou` e a primeira
-    pintura da volta passa a ser uma diferença (ou nenhuma, com a mesa parada).
-    Tire o `_esperando_o_estado_novo()` do `_tique` e ela sai com o estado de
-    antes de esconder.
-    """
+    """Na volta, a primeira pintura é inteira, e sai em até 3 tiques, depois"""
     fora = esconde_e_volta
     assert "voltou" in fora.marcos, "a página nunca disse que voltou à vista"
     _sem_fome(fora, "de volta")
-    # O INSTANTE DO AVISO, e não o do roteiro, que o vê até 50 ms depois: o
-    # tique que pintasse o estado velho cairia antes da marca e sairia da conta.
     voltou, _, leituras_na_volta = next(
         a for a in fora.avisos if not a[1] and a[0] >= fora.marcos["esconde"])
     depois = [x for x in fora.ticks if x.t >= voltou and not x.escondida]
@@ -860,16 +629,7 @@ def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any)
 
 
 def test_r1_trocar_de_aba_nao_e_esconder(esconde_e_volta: Any) -> None:
-    """A janela só se esconde quando a janela se esconde: a troca de aba não conta.
-
-    O documento que sai passa a `hidden` antes de morrer. Sem a marca do
-    `pagehide`, a ida da 01 para a 02 e para a 08 (o piloto abre na 01)
-    pausava o fio e escrevia no diário `[janela] escondida` — e a linha que
-    ela vai ler depois de minimizar, na máquina dela, não provaria nada.
-
-    MORDIDA: tire o `if(!window.__hefSaindo)` do ouvinte do BOOTSTRAP e a
-    troca de aba vira um par escondida/vista antes do `hide()`.
-    """
+    """A janela só se esconde quando a janela se esconde: a troca de aba não conta."""
     fora = esconde_e_volta
     antes = [a for a in fora.avisos if a[0] < fora.marcos["esconde"]]
     assert not antes, (
@@ -879,18 +639,8 @@ def test_r1_trocar_de_aba_nao_e_esconder(esconde_e_volta: Any) -> None:
     assert trocas == [True, False], f"as trocas da janela foram {trocas}"
 
 
-# ===========================================================================
-# R2 — SÓ VAI O QUE MUDOU
-# ===========================================================================
 def test_r2_parada_a_aba_pinta_so_as_cargas_inteiras(esconde_e_volta: Any) -> None:
-    """Com o estado imóvel, os 40 tiques à vista dão no máximo 5 pinturas.
-
-    São as cargas inteiras de 1 em 1 s. Antes desta cura eram 40, de 15 KB
-    cada na 02. A janela são os ÚLTIMOS 40 tiques da página antes do
-    `esconde`, contados: exatamente 40, e não os que couberam em 4 s.
-
-    MORDIDA: faça `_o_que_mandar` devolver sempre `carga` e são 40.
-    """
+    """Com o estado imóvel, os 40 tiques à vista dão no máximo 5 pinturas."""
     fora = esconde_e_volta
     _sem_fome(fora, "à vista")
     antes = [x for x in fora.ticks if fora.comeco <= x.t < fora.marcos["esconde"]]
@@ -906,14 +656,7 @@ def test_r2_parada_a_aba_pinta_so_as_cargas_inteiras(esconde_e_volta: Any) -> No
 
 
 def test_r2_a_aba_quieta_nao_e_aba_muda(esconde_e_volta: Any) -> None:
-    """O detector de aba muda do `_relatar` não acusa a aba parada.
-
-    O tique sem nada a mandar CONTA em `tiques`; a aba pintou na chegada.
-
-    MORDIDA: tire o `self.tiques[...] += 1` do ramo sem diferença e a aba
-    parada fica com poucos tiques; tire a pintura inteira da chegada e ela
-    vira muda.
-    """
+    """O detector de aba muda do `_relatar` não acusa a aba parada."""
     fora = esconde_e_volta
     _sem_fome(fora, "à vista", "de volta")
     assert not fora.mudas, f"o relato acusou {fora.pagina} de aba muda"
@@ -922,8 +665,7 @@ def test_r2_a_aba_quieta_nao_e_aba_muda(esconde_e_volta: Any) -> None:
 
 @pytest.fixture(scope="module")
 def so_o_giro(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    """A 02 com dois controles e só o giroscópio mexendo: 15 tiques para a
-    página assentar, e 40 medindo."""
+    """A 02 com dois controles e só o giroscópio mexendo: 15 tiques para a"""
     def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
         if "medindo" not in fora.marcos:
             if _fase(fora, "aquecendo", fora.comeco, 15, _teto_da_fase_s(fora, 15)):
@@ -936,11 +678,7 @@ def so_o_giro(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
 
 
 def test_r2_so_o_giro_mexe_e_so_o_giro_vai(so_o_giro: Any) -> None:
-    """Toda pintura que não é inteira leva só as chaves do giroscópio.
-
-    MORDIDA: faça `_o_que_mudou` devolver a carga inteira e as ~40 pinturas
-    passam a levar tudo.
-    """
+    """Toda pintura que não é inteira leva só as chaves do giroscópio."""
     _sem_fome(so_o_giro, "aquecendo", "giro")
     de = so_o_giro.marcos["medindo"]
     ate = _os_primeiros(so_o_giro, de, TIQUES_POR_FASE)[-1].t
@@ -960,13 +698,7 @@ def test_r2_so_o_giro_mexe_e_so_o_giro_vai(so_o_giro: Any) -> None:
 
 @pytest.fixture(scope="module")
 def um_controle_chega(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    """A 01 com um controle; depois de 20 tiques chega o segundo, e a fase
-    conta mais 20.
-
-    SEM A CARGA INTEIRA DE 1 s: ela cairia na mesma fase da chegada (a página
-    abre, e a cada 10 tiques vem uma) e a régua ficaria verde sem a cura da
-    forma. Aqui a única inteira depois da primeira é a que a forma pede.
-    """
+    """A 01 com um controle; depois de 20 tiques chega o segundo, e a fase"""
     def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
         if "chegou" not in fora.marcos:
             if _fase(fora, "antes de chegar", fora.comeco, 20, _teto_da_fase_s(fora, 20)):
@@ -984,15 +716,7 @@ def um_controle_chega(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
 
 
 def test_r2_o_controle_que_chega_leva_a_carga_inteira(um_controle_chega: Any) -> None:
-    """A forma mudou (a fita, os lugares): o tique que a vê manda tudo.
-
-    A fita troca o nó inteiro e o `pintar` escreve os campos, os lugares e as
-    marcas DEPOIS, no mesmo passe. Por diferença, o nó novo ficaria até 1 s
-    com o valor do desenho, e o lugar novo marcado como vazio.
-
-    MORDIDA: faça `_a_diferenca_muda_a_forma` devolver `False` e esta pintura
-    vira uma diferença (a fita e os lugares, sem os campos).
-    """
+    """A forma mudou (a fita, os lugares): o tique que a vê manda tudo."""
     fora = um_controle_chega
     _sem_fome(fora, "antes de chegar", "chegada")
     chegou = fora.marcos["chegou"]
@@ -1007,9 +731,6 @@ def test_r2_o_controle_que_chega_leva_a_carga_inteira(um_controle_chega: Any) ->
         "a carga do controle que chega não levou os campos da mesa")
 
 
-# ===========================================================================
-# As réguas de uma peça só: o `_o_que_mandar` do produto, o BOOTSTRAP no WebKit
-# ===========================================================================
 def _mandador(moldes: frozenset[str] = frozenset()) -> Any:
     """O `Piloto._o_que_mandar` DO PRODUTO, num objeto com só o que ele lê."""
     import hefesto_vivo as hv
@@ -1046,10 +767,7 @@ def test_r2_a_carga_inteira_sai_a_cada_dez_tiques() -> None:
 
 
 def test_r2_a_lista_do_molde_leva_a_carga_inteira() -> None:
-    """A lista que um molde conta mudou: carga inteira, no mesmo tique.
-
-    MORDIDA: tire o ramo dos moldes de `_a_diferenca_muda_a_forma`.
-    """
+    """A lista que um molde conta mudou: carga inteira, no mesmo tique."""
     _eu, mandar = _mandador(frozenset({"achado"}))
     um = {"mesa": {"achado": ["a"], "nome": "x"}, "fita": "", "alvo": ""}
     mandar(um)
@@ -1129,15 +847,7 @@ def _passos_no_webkit(montagem: str, passos: list[dict[str, Any]]) -> list[Any]:
 
 
 def test_r2_o_no_novo_do_bloco_sai_com_os_campos_no_mesmo_tique() -> None:
-    """O bloco troca o nó, e o campo de dentro dele sai com o valor vivo.
-
-    O campo não mudou de valor — quem mudou foi o bloco em volta. Por
-    diferença, ele não iria, e o nó novo mostraria o valor que o bloco trouxe
-    até a próxima carga inteira.
-
-    MORDIDA: tire o `"blocos" in dif` de `_a_diferenca_muda_a_forma` e o nó
-    novo termina o tique com `do desenho`.
-    """
+    """O bloco troca o nó, e o campo de dentro dele sai com o valor vivo."""
     _eu, mandar = _mandador()
     bloco1 = '<b data-campo="regua-vivo">do desenho</b>'
     bloco2 = '<b data-campo="regua-vivo">do desenho</b><i>mais um</i>'
@@ -1152,20 +862,8 @@ def test_r2_o_no_novo_do_bloco_sai_com_os_campos_no_mesmo_tique() -> None:
         f"o nó que o bloco trouxe terminou o tique com {lidos[-1]!r}")
 
 
-# ===========================================================================
-# R3 — A VERDADE VOLTA
-# ===========================================================================
 def test_r3_o_select_recusado_volta_ao_valor_do_daemon() -> None:
-    """Com o foco nele, o `<select>` não é pintado; quando o foco sai, a carga
-    inteira de 1 s devolve o valor do daemon em até 10 tiques.
-
-    APAGAR A MEMÓRIA NA MENSAGEM NÃO BASTA: quando a mensagem do clique chega,
-    o campo ainda está com o foco e o `pintar` o pula (`sob_o_dedo`). Depois
-    que o foco sai, nada mais muda — e só a carga inteira repõe a verdade.
-
-    MORDIDA: ponha `TIQUES_ENTRE_CARGAS_INTEIRAS` num número enorme e o valor
-    recusado fica na tela para sempre.
-    """
+    """Com o foco nele, o `<select>` não é pintado; quando o foco sai, a carga"""
     _eu, mandar = _mandador()
     carga = {"mesa": {"regua-escolha": "a"}, "fita": "", "alvo": ""}
     sel = '#regua-janela select'
@@ -1184,9 +882,6 @@ def test_r3_o_select_recusado_volta_ao_valor_do_daemon() -> None:
         f"o valor que o daemon recusou ficou na tela: {lidos}")
 
 
-# ===========================================================================
-# R4 — O FUNIL LÊ CADA TEXTO UMA VEZ
-# ===========================================================================
 @pytest.fixture
 def funil(monkeypatch: pytest.MonkeyPatch) -> Any:
     import hefesto_vivo as hv
@@ -1206,10 +901,7 @@ def funil(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def test_r4_a_mesma_carga_cem_vezes_le_cada_texto_uma_vez(funil: Any) -> None:
-    """Cem tiques com a mesma carga: uma leitura por texto distinto.
-
-    MORDIDA: tire a memória (`_TEXTOS_LIDOS_PELO_FUNIL`) e são 100 vezes os textos.
-    """
+    """Cem tiques com a mesma carga: uma leitura por texto distinto."""
     carga = {"mesa": {f"c{i}": f"valor {i % 30}" for i in range(120)},
              "colunas": {"p1": {"x": "valor 1", "n": 3, "b": True, "z": None}},
              "fita": "<div>fita</div>", "vazios": ["p2", "p3"]}
@@ -1223,10 +915,7 @@ def test_r4_a_mesma_carga_cem_vezes_le_cada_texto_uma_vez(funil: Any) -> None:
 
 def test_r4_a_palavra_num_campo_que_mudou_e_denunciada_uma_vez(
         funil: Any, capsys: pytest.CaptureFixture[str]) -> None:
-    """A frase com a palavra banida sai no diário UMA vez, e não por tique.
-
-    MORDIDA: tire o funil do `_json` e a palavra passa calada.
-    """
+    """A frase com a palavra banida sai no diário UMA vez, e não por tique."""
     for i in range(50):
         funil.hv._json({"mesa": {"a": f"tique {i}", "b": "a mesa do jogo"}})
     erro = capsys.readouterr().err
@@ -1235,14 +924,7 @@ def test_r4_a_palavra_num_campo_que_mudou_e_denunciada_uma_vez(
 
 def test_r4_o_valor_que_e_so_a_palavra_e_denunciado(
         funil: Any, capsys: pytest.CaptureFixture[str]) -> None:
-    """`"Mesa"` sozinho num campo: lido serializado, com as aspas, não passa.
-
-    Cru, ele cairia na exceção `texto.strip() == palavra` de
-    `palavra_banida_em` — que existe para a CHAVE do pacote.
-
-    MORDIDA: passe o valor cru (sem o `json.dumps`) ao funil e esta passa
-    calada.
-    """
+    """`"Mesa"` sozinho num campo: lido serializado, com as aspas, não passa."""
     funil.hv._json({"mesa": {"x": "Mesa"}})
     assert "[texto banido] 'mesa'" in capsys.readouterr().err
 
@@ -1253,9 +935,6 @@ def test_r4_o_funil_devolve_o_mesmo_json(funil: Any) -> None:
     assert funil.hv._json(carga) == json.dumps(carga, ensure_ascii=False, default=str)
 
 
-# ===========================================================================
-# R5 — NENHUMA FOLHA ENDEREÇADA MUDA NO TIQUE, E O PONTINHO ANDA PELO ALVO
-# ===========================================================================
 OBSERVAR_AS_FOLHAS = r"""
 (function(){
   window.__reguaFolhas = {folhas: 0, pontinhos: 0};
@@ -1275,12 +954,6 @@ OBSERVAR_AS_FOLHAS = r"""
 
 LER_AS_FOLHAS = "JSON.stringify(window.__reguaFolhas || {})"
 
-#: ONDE CADA PONTINHO ESTÁ, em por cento do quadro dele: o `left` e o `top`
-#: CALCULADOS pela folha, que é a regra `left:var(--hef-x,50.2%)`. Cada cartão
-#: sai do desenho por um instante (`display:none`) para a leitura: fora da
-#: tela o valor calculado volta em por cento, exato, e não em pixels
-#: arredondados pelo layout. A variável inválida (o `—` escrito cru) volta
-#: `auto`, e a régua a lê como `null`.
 ONDE_ESTAO = r"""
 (function(){
   function pct(el, eixo){
@@ -1339,16 +1012,13 @@ def _por_assento(estado: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {f"p{c['player_slot']}": c for c in estado["controllers"]}
 
 
-#: As fases do roteiro dos pontinhos, na ordem: as réguas R5 as leem.
 FASES_DOS_PONTINHOS = ("antes de observar", "andando", "até os extremos",
                        "até o vazio", "o vazio parado")
 
 
 @pytest.fixture(scope="module")
 def os_pontinhos(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    """A 02 com quatro controles: 10 tiques de chegada, 40 com os analógicos andando, depois
-    três estados fixos — os extremos, e o lugar do P4 que fica vazio —, de 20
-    tiques cada."""
+    """A 02 com quatro controles: 10 tiques de chegada, 40 com os analógicos andando, depois"""
     base = _estado_da_fixture(4)
     assento = _por_assento(base)
     extremos = copy.deepcopy(base)
@@ -1383,8 +1053,6 @@ def os_pontinhos(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
     def leu_o_vazio_depois(fora: Any, piloto: Any) -> None:
         _perguntar_e_guardar(piloto, LER_AS_FOLHAS, fora, "vazio-depois")
 
-    #: Cada etapa: o marco, a fase que o precede, quantos tiques ela junta, e o
-    #: que o roteiro faz ao fim dela. As fases são as `FASES_DOS_PONTINHOS`.
     etapas = [("observa", FASES_DOS_PONTINHOS[0], 10, observar),
               ("leu-andando", FASES_DOS_PONTINHOS[1], TIQUES_POR_FASE, leu_andando),
               ("extremos", FASES_DOS_PONTINHOS[2], 20, leu_os_extremos),
@@ -1401,7 +1069,6 @@ def os_pontinhos(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
                 fora.marcos[marco] = time.monotonic()
                 fazer(fora, piloto)
             return True
-        # A ÚLTIMA LEITURA É UMA ESPERA: acaba quando a resposta chega.
         return ("vazio-depois" not in fora.avaliados
                 and time.monotonic() - de < _teto_da_espera_s())
 
@@ -1409,12 +1076,7 @@ def os_pontinhos(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
 
 
 def test_r5_nenhuma_folha_enderecada_muda_no_tique(os_pontinhos: Any) -> None:
-    """40 tiques com os analógicos andando nos quatro assentos: zero mutação
-    em qualquer `<style data-campo>`, e os pontinhos mudando pelo alvo.
-
-    MORDIDA: a folha `posicao-css` de volta (o produto de `dca12170b`) dá uma
-    mutação de folha por tique.
-    """
+    """40 tiques com os analógicos andando nos quatro assentos: zero mutação"""
     _sem_fome(os_pontinhos, *FASES_DOS_PONTINHOS[:2])
     lido = os_pontinhos.avaliados.get("andando")
     assert isinstance(lido, dict), f"a régua não leu o observador: {lido}"
@@ -1430,12 +1092,7 @@ def _perto(lido: list[float | None] | None, x: float, y: float) -> bool:
 
 
 def test_r5_o_pontinho_vai_aos_extremos_e_volta_ao_repouso(os_pontinhos: Any) -> None:
-    """`lx=0` é 0%, `lx=255` é 100%, sem leitura é 50,2% — nos quatro assentos
-    e nos dois dedos do touchpad.
-
-    MORDIDA: tire o ramo `posicao` do `escrever` do BOOTSTRAP e os pontinhos
-    ficam onde o desenho os cravou (ou no repouso).
-    """
+    """`lx=0` é 0%, `lx=255` é 100%, sem leitura é 50,2% — nos quatro assentos"""
     _sem_fome(os_pontinhos, *FASES_DOS_PONTINHOS[:3])
     onde = os_pontinhos.avaliados.get("extremos")
     assert isinstance(onde, dict), f"a régua não leu os pontinhos: {onde}"
@@ -1453,11 +1110,7 @@ def test_r5_o_pontinho_vai_aos_extremos_e_volta_ao_repouso(os_pontinhos: Any) ->
 
 
 def test_r5_o_lugar_vazio_volta_ao_repouso_e_nao_soma_pintura(os_pontinhos: Any) -> None:
-    """O P4 sai da mesa: os pontinhos dele voltam a 50,2% e param de mudar.
-
-    MORDIDA: faça o ramo `posicao` escrever o travessão (`--hef-x:—`) em vez
-    de tirar as variáveis e a regra invalida: o `left` volta `auto`.
-    """
+    """O P4 sai da mesa: os pontinhos dele voltam a 50,2% e param de mudar."""
     _sem_fome(os_pontinhos, *FASES_DOS_PONTINHOS)
     onde = os_pontinhos.avaliados.get("vazio")
     assert isinstance(onde, dict), onde
@@ -1507,15 +1160,7 @@ def _pagina_virgem_e_lida(pagina: pathlib.Path) -> list[list[Any]]:
 
 
 def test_r5_a_prova_do_mockup_le_o_alvo_nos_dois_lados() -> None:
-    """O arquivo e a tela dizem o MESMO de cada pontinho, antes de pintar.
-
-    É o contrato da `--prova-de-mockup`: o `LER_CAMPOS` (a tela) e o
-    `regua_do_mockup._campo` (o arquivo) na mesma língua, `x,y` ou vazio.
-
-    MORDIDA: tire o ramo `posicao` do `LER_CAMPOS` (a tela lê o texto vazio do
-    `<span>`), ou o de `regua_do_mockup._campo` (o arquivo lê vazio): os dois
-    lados deixam de casar.
-    """
+    """O arquivo e a tela dizem o MESMO de cada pontinho, antes de pintar."""
     from hefesto_dualsense4unix.interface import onde, regua_do_mockup
 
     pagina = onde.pagina("02-controles.html")
@@ -1529,9 +1174,6 @@ def test_r5_a_prova_do_mockup_le_o_alvo_nos_dois_lados() -> None:
     assert ("pos-ana-e", "p1", "23.5,78.4") in tela
 
 
-# ===========================================================================
-# R6 — A CAMADA 1 RODA CADA `pactl` UMA VEZ POR RENOVAÇÃO
-# ===========================================================================
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03",
          "aa:bb:cc:00:00:04")
 SINKS_CURTOS = (
@@ -1541,7 +1183,6 @@ SINKS_CURTOS = (
 NO_NATIVO = ("alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
              "Controller-00.analog-stereo")
 FONTE_NATIVA = f"55\t{NO_NATIVO}\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED\n"
-#: A leitura LONGA da mesma fonte: o `sysfs.path` leva ao USB, o `alsa.card` à placa.
 FONTE_NATIVA_LONGA = (
     "Source #55\n"
     f"\tName: {NO_NATIVO}\n"
@@ -1552,22 +1193,7 @@ FONTE_NATIVA_LONGA = (
 
 @pytest.fixture
 def renovacao(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """UMA renovação da camada 1, pela thread do produto, com os dois donos dublados.
-
-    `subprocess.run` e `Popen` ficam armados para levantar: nenhum `pactl` real
-    roda. Os caches da 02 voltam como estavam no fim.
-
-    TRÊS MESAS DE SOM (`conta.nativa`):
-
-    * ``""`` — só as fontes da ponte, nenhuma nativa (o rádio);
-    * ``"sem-casamento"`` — há fonte nativa, e a leitura longa volta vazia: o
-      casamento por USB não se monta e ninguém é dono dela. É o dublê da
-      contestação, o dos 29;
-    * ``"casada"`` — a fonte nativa é do P1: a leitura longa traz o
-      `sysfs.path` e a placa, e o censo de USB (dublado, sem `/sys`) põe os
-      dois no mesmo dispositivo. É a que exercita o `list sources` e o
-      `amixer` do ganho.
-    """
+    """UMA renovação da camada 1, pela thread do produto, com os dois donos dublados."""
     import subprocess
 
     from hefesto_dualsense4unix.app import audio_saida
@@ -1637,17 +1263,7 @@ def renovacao(monkeypatch: pytest.MonkeyPatch) -> Any:
     (1, "", 4), (2, "", 4), (4, "", 4), (4, "sem-casamento", 5), (4, "casada", 7)])
 def test_r6_cada_pactl_uma_vez_por_dono(renovacao: Any, n: int, nativa: str,
                                          esperado: int) -> None:
-    """Uma chamada por `argv` e por dono em cada renovação.
-
-    Com quatro controles e sem fonte nativa são 4 (eram 21). Com a fonte
-    nativa da contestação, que ninguém casa, são 5 (eram 29: a sprint
-    escreveu 6, e o sexto seria o `list sources` do ganho, que só roda
-    quando a fonte tem dono). Com a fonte casada ao P1 são 7 (eram 31): o
-    `list sources` e o `amixer` do ganho entram, uma vez cada.
-
-    MORDIDA: tire o `with _uma_leitura_por_volta()` do `renovar` e voltam as
-    21, as 29 e as 31.
-    """
+    """Uma chamada por `argv` e por dono em cada renovação."""
     renovacao.conta.nativa = nativa
     conta = renovacao.renovar(n)
     total = len(conta.audio) + len(conta.eleicao)
@@ -1659,15 +1275,7 @@ def test_r6_cada_pactl_uma_vez_por_dono(renovacao: Any, n: int, nativa: str,
 
 
 def test_r6_a_eleicao_roda_pelo_dono_dela(renovacao: Any) -> None:
-    """A memória da eleição embrulha o `_rodar` DELA, e não o de `audio_saida`.
-
-    As réguas dublam os dois separadamente; uma memória que chamasse
-    `audio_saida` no lugar da eleição passaria por cima do dublê do `_rodar` e,
-    na suíte sem dublê, rodaria o `pactl` dela.
-
-    MORDIDA: faça o `_ler` da eleição chamar `audio_saida.rodar_leitura` e o
-    dublê do `_rodar` deixa de ser chamado.
-    """
+    """A memória da eleição embrulha o `_rodar` DELA, e não o de `audio_saida`."""
     renovacao.conta.nativa = "casada"
     conta = renovacao.renovar(4)
     assert "pactl list sources short" in conta.eleicao, conta.eleicao
@@ -1677,11 +1285,7 @@ def test_r6_a_eleicao_roda_pelo_dono_dela(renovacao: Any) -> None:
 
 
 def test_r6_fora_da_renovacao_nada_muda(renovacao: Any) -> None:
-    """Sem a renovação ligada, cada pergunta à eleição roda de novo.
-
-    O daemon e os gestos perguntam à eleição fora da 02, e para eles uma
-    resposta de dois segundos atrás seria estado velho.
-    """
+    """Sem a renovação ligada, cada pergunta à eleição roda de novo."""
     renovacao.conta.nativa = "casada"
     el = renovacao.el
     el.microfone_nativo_no_ar(UNIQS[0], list(UNIQS[:1]))
@@ -1691,11 +1295,7 @@ def test_r6_fora_da_renovacao_nada_muda(renovacao: Any) -> None:
 
 def test_r6_o_duble_da_funcao_publica_continua_alcancando(
         renovacao: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O dublê de `fonte_nativa_do_controle` (o das réguas do ganho) é lido.
-
-    As assinaturas públicas da eleição não mudaram, e a 02 continua chamando a
-    função pelo módulo, na hora.
-    """
+    """O dublê de `fonte_nativa_do_controle` (o das réguas do ganho) é lido."""
     el = renovacao.el
     monkeypatch.setattr(el, "fonte_nativa_do_controle",
                         lambda uniq, _mesa: "" if uniq == UNIQS[1] else None)
@@ -1703,17 +1303,8 @@ def test_r6_o_duble_da_funcao_publica_continua_alcancando(
     assert lido == {UNIQS[1]: None}, lido
 
 
-# ===========================================================================
-# R7 — A JANELA DE 10 H NÃO ACUMULA
-# ===========================================================================
 def test_r7_cem_mil_tiques_guardam_so_os_ultimos(publicado_de_hoje: pathlib.Path) -> None:
-    """100 mil custos de tique guardam no máximo 6.000 — 10 min de tique.
-
-    O tique acrescenta ao MESMO contêiner (conferido depois de tiques de
-    verdade), e ele tem teto.
-
-    MORDIDA: volte `custos` e `custo_do_ipc` a `list` e ficam 100 mil.
-    """
+    """100 mil custos de tique guardam no máximo 6.000 — 10 min de tique."""
     def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
         return not _fase(fora, "dos custos", fora.comeco, 10, _teto_da_fase_s(fora, 10))
 
@@ -1724,8 +1315,6 @@ def test_r7_cem_mil_tiques_guardam_so_os_ultimos(publicado_de_hoje: pathlib.Path
     for i in range(100_000):
         piloto.custos.append(float(i))
         piloto.custo_do_ipc.append(float(i))
-    # O TETO É LIDO DO PRODUTO, e não digitado: o que a régua cobra é que ele
-    # exista e fique abaixo dos tiques simulados, senão ela não morderia.
     teto = piloto.CUSTOS_GUARDADOS
     assert 0 < teto < 100_000, f"teto {teto}: a régua não morderia com ele"
     assert len(piloto.custos) <= teto and len(piloto.custo_do_ipc) <= teto, (

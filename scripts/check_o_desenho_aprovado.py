@@ -1,49 +1,5 @@
 #!/usr/bin/env python3
-"""O produto não anda na frente do desenho dela, e não fica atrás dele calado.
-
-DECISÃO DELA, 31/08/2026, com o diagnóstico dela:
-
-    "o problema original foi não ter separado a pasta do mockup e ter feito a
-    interface usando o HTML do mockup. **Se alteramos no layout final a
-    referência do mockup se perde.**"
-
-E a reorientação do mesmo dia, que é o que inverteu este arquivo:
-
-    "primeiro **nunca terminamos o mockup**, por isso não era pra ser feito no
-    layout final. **Vamos concluir lá e depois seguimos pra interface.**"
-
-O FLUXO, e a direção é `mockup/` → `layout/`:
-
-    src/hefesto_dualsense4unix/interface/abaNN.py   ← os geradores ficam aqui
-              │  python3 abaNN.py
-    mockup/NN-*.html               ← a BANCADA. O desenho sendo concluído.
-              │  --publicar NN, depois do OK dela na aba INTEIRA
-    layout/NN-*.html               ← o PUBLICADO. É o que o produto renderiza.
-
-ELE NASCEU INVERTIDO, e o ponto 0 do `mockup/TODO-DELA.md` era consertá-lo. Na
-primeira versão o `--aprovar` copiava `layout/` → `mockup/`, o que faz o desenho
-seguir o produto — o contrário do que ela decidiu. Enquanto isso valia, todo
-desenho novo caía direto no produto que ela usa: `monta()` gravava em `layout/`,
-e `src/hefesto_dualsense4unix/interface/paginas/02-controles.html` é a página que o piloto `controles_vivos.py` abre
-num `WebKit2.WebView`. Gerar uma aba **já trocava o produto**, sem passar pelo
-olho dela.
-
-QUANDO O PUBLICADO RECEBE, e é escolha dela em 31/08: **a cada aba fechada** —
-quando todos os pontos daquela aba do `mockup/TODO-DELA.md` tiverem o OK dela.
-Nem a cada ponto, nem só no fim da lista.
-
-O QUE ELE MEDE: sha256, arquivo a arquivo. Reprova quando o produto está **atrás
-do desenho** sem que a aba esteja declarada em trabalho em `mockup/DIVERGENCIAS.md`.
-
-O QUE ELE NÃO FAZ, e é decisão: não compara byte a byte dentro do arquivo. Um
-diff de HTML gerado seria ruído — a régua diz QUAL página se afastou, e o
-`git diff` diz o quê. Uma linha por arquivo é acionável; mil linhas de diff são
-desligadas na primeira semana.
-
-    check_o_desenho_aprovado.py            confere (rc=1 se o produto estiver atrás)
-    check_o_desenho_aprovado.py --publicar        ela aprovou tudo: publica as dez
-    check_o_desenho_aprovado.py --publicar 02 09  ela aprovou essas abas
-"""
+"""O produto não anda na frente do desenho dela, e não fica atrás dele calado."""
 from __future__ import annotations
 
 import hashlib
@@ -53,25 +9,17 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-#: A bancada — o desenho de hoje. É onde os geradores escrevem e é o que ela olha.
 sys.path.insert(0, str(RAIZ / "src"))
 from hefesto_dualsense4unix.interface import onde
 
 BANCADA = onde.BANCADA
-#: O publicado — o que o produto renderiza. Só muda pelo `--publicar`.
 
 PUBLICADO = onde.PUBLICADO
 DECLARACOES = BANCADA / "DIVERGENCIAS.md"
 
 
 def paginas() -> list[str]:
-    """As páginas que a régua cobre, enumeradas a partir da BANCADA.
-
-    A enumeração mudou de lado junto com o fluxo: página nova nasce no desenho,
-    não no produto. `.dc.html` fica de FORA — são canvas de ferramenta de desenho
-    (logo, paleta, telas), ferramenta de desenho, não página que ela abre.
-    Cobri-los faria o portão cobrar publicação de rascunho.
-    """
+    """As páginas que a régua cobre, enumeradas a partir da BANCADA."""
     return sorted(
         p.name
         for p in BANCADA.glob("*.html")
@@ -79,51 +27,14 @@ def paginas() -> list[str]:
     )
 
 
-#: O QUE NÃO MUDA UM PIXEL, e por isso não conta como divergência de DESENHO.
-#:
-#: Decisão dela, 01/09/2026, com a razão: *"a ideia do mockup é o desenho ser
-#: possível de ser comparado ao produto final. sempre a nossa referência."* —
-#: e, sobre este portão: *"ok, pode comparar então o que se vê."*
-#:
-#: POR QUE ELE PRECISOU EXISTIR: ligar a interface exige marcar cada valor da
-#: tela com um endereço (`data-campo`, `data-papel`, `data-gesto`) para a pintura
-#: saber onde escrever. São 100 marcações nas dez abas, e nenhuma move um pixel —
-#: mas todas mudam o sha256. Sem esta regra, o portão passaria a acusar
-#: divergência em toda aba que ganhasse vida, e a resposta natural seria
-#: desligá-lo. **Portão que grita falso é portão que se desliga.**
-#:
-#: A ALTERNATIVA ERA PIOR, e ela chegou a pedi-la: *"ajustar o portão pra ignorar
-#: o mockup"*. Ignorar mata a régua inteira; comparar o que se VÊ mantém-na
-#: medindo exatamente o que ela nasceu para medir.
-#:
-#: O QUE CONTINUA ACUSANDO: texto, classe, estilo, estrutura, ordem — tudo o que
-#: chega aos olhos. Trocar uma palavra, mover um bloco ou mudar uma cor reprova
-#: como sempre reprovou. A mordida abaixo prova as duas metades.
 INVISIVEIS = re.compile(
     r'\s(?:data-campo|data-papel|data-gesto|data-controle|data-uniq|data-id'
     r'|data-eixo|data-bloco|data-lado|data-sensor|data-mudo|data-rota'
     r'|data-mic-modo|data-forca|data-mascara|data-conectado|data-lista'
     r'|data-degrau|data-modo|data-gatilho|data-entrada|data-clique'
-    # `data-hef` e `data-hef-gesto` são o esquema que a aba Perfis usa — o
-    # outro agente marcou as 77 do arquivo dela com esse nome enquanto eu
-    # usava `data-campo` nas minhas. OS DOIS CONVIVEM de propósito: unificar
-    # agora custaria reescrever 77 marcações que já funcionam, e o nome do
-    # atributo não é o contrato — o contrato é o despachante, que aceita os
-    # dois. O que NÃO pode é um deles ficar de fora daqui e o portão acusar
-    # divergência de desenho onde só há endereço.
     r'|data-hef-gesto|data-hef|data-ajuste|data-player'
         r'|data-hex|data-v|data-hef-alvo|data-hef-rolar'
-    # `data-hef-quando` e `data-hef-classe` SÃO O RESTO DO ALVO `classe`, e a
-    # falta deles aqui era um buraco de ESTRUTURA — 03/09/2026. O alvo `classe`
-    # do piloto (`hefesto_vivo.escrever`) precisa de três atributos no mesmo
     # elemento: `data-campo` (o endereço), `data-hef-alvo="classe"` (o alvo) e
-    # `data-hef-quando` (qual valor acende) / `data-hef-classe` (que classe).
-    # Os dois primeiros estavam nesta lista e os dois últimos não — logo TODO
-    # endereço de estado por classe caía como "o DESENHO mudou" no
-    # `--publicar-enderecos`, e a única saída era o `--publicar`, que é ato
-    # dela. Nenhum dos dois chega aos olhos: medido por grep, não há uma regra
-    # de CSS `[data-hef-quando]` nem `[data-hef-classe]` em nenhuma das dez
-    # páginas — eles são endereço puro, como os trinta acima.
     r'|data-hef-quando|data-hef-classe'
     r'|data-linha|data-hef-forma|data-face'
     r')="[^"]*"'
@@ -131,13 +42,7 @@ INVISIVEIS = re.compile(
 
 
 def o_que_se_ve(caminho: Path) -> bytes:
-    """O HTML sem os endereços de pintura — o que chega aos olhos.
-
-    NÃO É "ignorar atributo": é ignorar ESTES, nomeados um a um. Uma regra
-    genérica (`data-*`) engoliria também o `data-colorway`, que PINTA o desenho
-    inteiro — e aí o portão deixaria passar a troca da cor do plástico, que é a
-    informação de qual controle é qual.
-    """
+    """O HTML sem os endereços de pintura — o que chega aos olhos."""
     return INVISIVEIS.sub("", caminho.read_text(encoding="utf-8")).encode("utf-8")
 
 
@@ -146,18 +51,10 @@ def soma(caminho: Path) -> str:
 
 
 def declaradas() -> set[str]:
-    """As páginas declaradas EM TRABALHO, lidas dos títulos `## nome.html`.
-
-    A razão fica no corpo da seção e é para gente ler; o portão só cobra que a
-    seção EXISTA. Cobrar o formato da razão faria a régua brigar com quem
-    escreve bem — é a lição do `SERVE_UM_LADO_SO`.
-    """
+    """As páginas declaradas EM TRABALHO, lidas dos títulos `## nome.html`."""
     if not DECLARACOES.exists():
         return set()
     texto = DECLARACOES.read_text(encoding="utf-8")
-    # SÓ DEPOIS DO `---`: o cabeçalho do arquivo mostra o FORMATO com um exemplo
-    # (`## 01-jogar.html`), e ler o exemplo como declaração faria o portão
-    # absolver de graça a primeira aba da lista. Pego na primeira execução.
     corpo = texto.split("\n---\n", 1)[-1]
     return {m.group(1).strip() for m in re.finditer(r"^##\s+(\S+\.html)\s*$", corpo, re.M)}
 
@@ -192,9 +89,6 @@ def _alvos(argv: list[str]) -> list[str]:
         else:
             desconhecidos.append(pedido)
     if desconhecidos:
-        # RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE. Um `--publicar 11` calado
-        # publicaria NADA e imprimiria sucesso — o silêncio que esta casa já
-        # pagou quatro vezes em 31/08. Aqui ele é erro, com a lista ao lado.
         raise SystemExit(
             f"ERRO: não achei página para {', '.join(desconhecidos)}.\n"
             f"  As que existem na bancada: {', '.join(paginas())}"
@@ -208,8 +102,6 @@ def publicar(argv: list[str]) -> int:
     atrasadas, _, _ = medir()
     for nome in alvos:
         shutil.copy2(BANCADA / nome, PUBLICADO / nome)
-    # A página que sumiu da bancada some do produto — mas SÓ numa publicação
-    # geral. Publicar uma aba não pode apagar outra.
     if len(alvos) == len(paginas()):
         for p in PUBLICADO.glob("*.html"):
             if not p.name.endswith(".dc.html") and not (BANCADA / p.name).exists():
@@ -224,15 +116,6 @@ def publicar(argv: list[str]) -> int:
     return 0
 
 
-#: A frase que toda declaração precisa ter: o que o produto FAZ enquanto espera.
-#:
-#: PEÇA 3 da cura de 02/09/2026, decidida por ela. Uma declaração que só diz
-#: "esta aba mudou" deixa a próxima pessoa adivinhar o custo da espera — e o
-#: custo foi medido três vezes num dia: clique morto, tela afirmando o contrário
-#: e conteúdo vazando por cima da linha de baixo.
-#:
-#: A declaração passa a ser CONTRATO: ela diz o que ela vê HOJE, com a página
-#: que o produto renderiza agora.
 DIZ_O_QUE_ESPERA = re.compile(
     r"enquanto|at[ée] (?:ela |voc[êe] )?publicar|hoje ela v[êe]|"
     r"o produto continua|na tela dela hoje|sem publicar|at[ée] l[áa]",
@@ -262,11 +145,7 @@ def declaracoes_sem_custo() -> list[str]:
 
 
 def so_mudou_endereco(nome: str) -> bool:
-    """A bancada e o produto MOSTRAM a mesma coisa, e só os endereços mudaram?
-
-    `o_que_se_ve` apaga os trinta atributos de endereçamento antes de comparar;
-    se as duas páginas batem depois disso, a diferença não move um pixel.
-    """
+    """A bancada e o produto MOSTRAM a mesma coisa, e só os endereços mudaram?"""
     no_produto = PUBLICADO / nome
     if not no_produto.exists():
         return False
@@ -274,50 +153,13 @@ def so_mudou_endereco(nome: str) -> bool:
 
 
 def publicar_enderecos(argv: list[str]) -> int:
-    """Leva ao produto SÓ o que não muda um pixel — e recusa o resto.
-
-    POR QUE ISTO EXISTE, e ela decidiu em 02/09/2026 depois de a armadilha
-    derrubar TRÊS frentes num dia:
-
-    O pacote (Python) e o desenho (HTML) mudam juntos e chegam ao produto em
-    tempos diferentes — o pacote entra no merge, o desenho espera o OK dela. No
-    intervalo, o produto roda com METADE NOVA E METADE VELHA, e é aí que o
-    clique morre calado (o gesto emite o rótulo novo, a página publicada só
-    oferece o antigo) e o conteúdo vaza (o pacote enche uma caixa que só cresce
-    na bancada).
-
-    **Mas metade do que esperava por ela NUNCA FOI DECISÃO DELA.** Um
-    `data-campo` novo num elemento que já existia não muda nada do que ela vê:
-    não há o que aprovar. O que ela decide é o DESENHO — rótulo, ordem, tamanho,
-    o que aparece.
-
-    Esta função separa os dois. Ela publica a página **só se** o desenho for
-    idêntico, e RECUSA dizendo quando um pixel mudou — nesse caso o `--publicar`
-    continua sendo o caminho, e continua sendo ato dela.
-
-    A distinção não é nova: o portão já a fazia em `o_que_se_ve`. O que faltava
-    era ela chegar à publicação.
-    """
+    """Leva ao produto SÓ o que não muda um pixel — e recusa o resto."""
     alvos = _alvos(argv)
     levadas, recusadas, ja_iguais = [], [], []
     for nome in alvos:
         if not (PUBLICADO / nome).exists():
             recusadas.append((nome, "a página não existe no produto — é desenho novo"))
-        # "JÁ IGUAL" É BYTE A BYTE, e não pelo que se VÊ — 03/09/2026.
-        #
-        # Estava `soma(BANCADA) == soma(PUBLICADO)`, e `soma` é o sha256 do
-        # `o_que_se_ve`, que APAGA os trinta atributos de endereço antes de
-        # comparar. Duas páginas que diferem SÓ num `data-hef-alvo` têm a mesma
-        # `soma` — então caíam aqui, em "já igual", e o `shutil.copy2` do ramo
-        # de baixo nunca rodava. Pior: o ramo era INALCANÇÁVEL por construção,
-        # porque `so_mudou_endereco` é exatamente `soma igual`, e o `elif`
-        # acima já tinha levado esse caso embora. **Esta função nunca carregou
-        # uma página**, e o que ela existe para carregar é precisamente o
-        # endereço que não muda um pixel.
-        #
         # Medido no `10-perfis.html` com o `data-hef-alvo="classe"` novo:
-        # bytes iguais = False, `soma()` igual = True, `so_mudou_endereco` =
-        # True — e a saída dizia "0 levada(s) · 1 já igual(is)".
         elif (BANCADA / nome).read_bytes() == (PUBLICADO / nome).read_bytes():
             ja_iguais.append(nome)
         elif so_mudou_endereco(nome):
@@ -336,17 +178,12 @@ def publicar_enderecos(argv: list[str]) -> int:
         print("\n  As recusadas esperam o OK dela:")
         for nome, _ in recusadas:
             print(f"      scripts/check_o_desenho_aprovado.py --publicar {nome[:2]}")
-    # As levadas deixam de estar em trabalho SÓ se nada mais as separa.
     _tirar_declaracoes([n for n in levadas if soma(BANCADA / n) == soma(PUBLICADO / n)])
     return 0
 
 
 def _tirar_declaracoes(alvos: list[str]) -> None:
-    """Apaga do DIVERGENCIAS.md a seção das páginas publicadas.
-
-    A aba deixou de estar em trabalho: a declaração sai junto. Declaração que
-    envelhece calada vira paisagem, e paisagem ninguém lê.
-    """
+    """Apaga do DIVERGENCIAS.md a seção das páginas publicadas."""
     if not DECLARACOES.exists():
         return
     texto = DECLARACOES.read_text(encoding="utf-8")
@@ -377,9 +214,6 @@ def main() -> int:
     if "--publicar" in sys.argv:
         return publicar(sys.argv[sys.argv.index("--publicar") + 1:])
     if "--aprovar" in sys.argv:
-        # O NOME ANTIGO NÃO FICA CALADO. Ele copiava `layout/` → `mockup/`, que
-        # é a direção errada; quem o digitar por hábito faria o desenho seguir o
-        # produto e apagaria em silêncio o que ela aprovou.
         print("ERRO: `--aprovar` copiava o PRODUTO para o DESENHO — a direção errada.")
         print("  O fluxo é `mockup/` → `layout/`. O comando de hoje é:")
         print("      scripts/check_o_desenho_aprovado.py --publicar [NN ...]")

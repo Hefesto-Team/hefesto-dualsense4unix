@@ -1,24 +1,4 @@
-"""Os cinco acertos que a conferência deixou — GOVERNADOR-DO-RADIO-02 (23/09/2026).
-
-A GOVERNADOR-DO-RADIO-01 foi aprovada com quatro decisões de produto e um
-resíduo da O-DIARIO. Uma régua por item, e cada uma MORDE:
-
-1. **«Ligar aqui» vale enquanto o controle ficar no adaptador** — REVISTO em
-   23/09 pela A-COSTURA-DA-ONDA-2-01; dizia «enquanto a ponte estiver de pé».
-   A ponte que desce e sobe não pergunta de novo, e a vaga que nunca subiu
-   também não gasta a resposta dela.
-2. **A marca «além do limite» sai quando o adaptador volta a caber** — a tela
-   não pode dizer «além do limite» com 2 de 2.
-3. **Num 2B longo, a religação espera cada vez mais** (5 → 10 → 20 → 40 → 60 s)
-   e volta a 5 s quando a fila anda; o diário diz a espera, não cada tentativa.
-4. **A frase da recusa diz o nome, nunca o endereço.**
-5. **Ponte fantasma não conta:** o daemon que morreu sem ``stop()`` não deixa
-   ponte de pé no fato da próxima queda.
-
-Nada aqui abre socket de Bluetooth, lê o sysfs dela ou escreve no diário dela:
-o medidor é um dublê, os donos do nome são trocados por ``monkeypatch``, e o
-diário mora em ``tmp_path``.
-"""
+"""Os cinco acertos que a conferência deixou — GOVERNADOR-DO-RADIO-02 (23/09/2026)."""
 
 from __future__ import annotations
 
@@ -48,7 +28,6 @@ CONTROLE_2 = "aa:bb:cc:00:00:02"
 CONTROLE_3 = "aa:bb:cc:00:00:03"
 CONTROLE_4 = "aa:bb:cc:00:00:04"
 
-#: Qualquer endereço de rádio, com dois-pontos, em qualquer caixa.
 ENDERECO = re.compile(r"(?i)[0-9a-f]{2}(?::[0-9a-f]{2}){5}")
 
 
@@ -63,8 +42,6 @@ class _Relogio:
 @dataclass
 class _Diario:
     entradas: list[dict[str, Any]] = field(default_factory=list)
-    #: Chamado ANTES de cada linha entrar — a régua da ordem do par o usa para
-    #: derrubar uma ponte, noutra thread, no meio de uma escrita do governador.
     ao_escrever: Any = None
 
     def __call__(self, quem: str, o_que: str, por_que: str, **campos: Any) -> None:
@@ -106,9 +83,6 @@ def _alem(governador: gov.GovernadorDoRadio, adaptador: str) -> dict[str, bool]:
     }
 
 
-# ---------------------------------------------------------------------------
-# 1. «Ligar aqui» vale enquanto o controle ficar no adaptador (revisto em 23/09)
-# ---------------------------------------------------------------------------
 def _a_terceira_no_a_com_vaga_no_b(
     relogio: _Relogio, registro: _Diario
 ) -> gov.GovernadorDoRadio:
@@ -124,19 +98,7 @@ def _a_terceira_no_a_com_vaga_no_b(
 
 
 def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptador() -> None:
-    """A resposta dela vale enquanto o CONTROLE ficar naquele adaptador.
-
-    REVISTA EM 23/09 PELA A-COSTURA-DA-ONDA-2-01 (item 4, decisão de quem
-    coordena). Esta régua cobrava o contrário — «a ponte desceu, a próxima
-    subida pergunta de novo» —, e o preço medido na conferência foi perguntar a
-    ela no meio da partida: a troca som → vibração derruba e sobe a ponte, e o
-    som sob demanda desce sempre que para. Quem gasta a resposta agora é o
-    controle SAIR do adaptador; essa metade está em
-    ``test_a_costura_da_onda_2.py::test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador``.
-
-    MORDIDA: volte a pôr no ``_soltar`` o descarte da autorização quando a
-    ponte desce — a segunda subida vira pergunta e esta régua reprova.
-    """
+    """A resposta dela vale enquanto o CONTROLE ficar naquele adaptador."""
     relogio, registro = _Relogio(), _Diario()
     governador = _a_terceira_no_a_com_vaga_no_b(relogio, registro)
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
@@ -144,7 +106,7 @@ def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptado
 
     vaga = _subir(governador, CONTROLE_3)
     assert vaga.alem_do_limite is True and vaga.por_escolha_dela is True
-    relogio.agora += 60.0  # o jogo tocou um minuto
+    relogio.agora += 60.0
     vaga.soltar("a fonte do som secou")
 
     relogio.agora += 1.0
@@ -157,15 +119,7 @@ def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptado
 
 
 def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_dela() -> None:
-    """Ela respondeu, e a ponte ainda não esteve no ar: não se pergunta de novo.
-
-    O subsystem pede a vaga ANTES do gravador. Se o gravador não sobe («o som
-    não teve fonte»), a vaga volta sem a ponte ter subido — e perguntar de novo
-    ali seria cobrar dela uma resposta que ela já deu.
-
-    MORDIDA: gaste a autorização em toda soltura (sem olhar ``subiu``) e a
-    segunda vaga vira recusa.
-    """
+    """Ela respondeu, e a ponte ainda não esteve no ar: não se pergunta de novo."""
     relogio, registro = _Relogio(), _Diario()
     governador = _a_terceira_no_a_com_vaga_no_b(relogio, registro)
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
@@ -180,19 +134,8 @@ def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_dela() -> None:
     assert vaga.alem_do_limite is True and vaga.por_escolha_dela is True
 
 
-# ---------------------------------------------------------------------------
-# 2. a marca «além do limite» sai quando o adaptador volta a caber
-# ---------------------------------------------------------------------------
 def test_a_marca_alem_do_limite_sai_de_quem_voltou_a_caber() -> None:
-    """Quatro pontes num adaptador só (R4: não há outro), e elas descem.
-
-    A cada descida, as duas primeiras que chegaram cabem; só o resto segue
-    marcado. Sem isto a tela mostraria «além do limite» com 2 de 2 — laranja
-    sobre um adaptador que está no limite, não além dele.
-
-    MORDIDA: tire do ``_soltar`` a chamada a ``_recalcular_o_limite`` e as
-    marcas ficam onde a admissão as pôs.
-    """
+    """Quatro pontes num adaptador só (R4: não há outro), e elas descem."""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(relogio, registro, {})
     vagas = {u: _subir(governador, u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3, CONTROLE_4)}
@@ -214,16 +157,11 @@ def test_a_marca_alem_do_limite_sai_de_quem_voltou_a_caber() -> None:
 
 
 def test_a_vaga_esquecida_tambem_devolve_a_marca() -> None:
-    """A vaga concedida que nunca subiu ocupa lugar na admissão, e sai pelo
-    prazo (``_recolher``), não pelo ``_soltar``. Quem ficou volta a caber.
-
-    MORDIDA: tire do ``_recolher`` o ``_recalcular_o_limite`` e a tela mostra
-    «além do limite» com 2 de 2.
-    """
+    """A vaga concedida que nunca subiu ocupa lugar na admissão, e sai pelo"""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(relogio, registro, {})
     esquecida = governador.pedir_vaga(CONTROLE_1, "som")
-    assert isinstance(esquecida, gov.Vaga)  # o gravador nunca subiu
+    assert isinstance(esquecida, gov.Vaga)
     _subir(governador, CONTROLE_2)
     _subir(governador, CONTROLE_3)
     assert _alem(governador, ADAPTADOR_A) == {CONTROLE_2: False, CONTROLE_3: True}
@@ -236,9 +174,6 @@ def test_a_vaga_esquecida_tambem_devolve_a_marca() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. num 2B longo, a religação espera cada vez mais
-# ---------------------------------------------------------------------------
 def _a_tentativa_que_cai(governador: gov.GovernadorDoRadio) -> gov.Vaga | None:
     """A ponte sob demanda: pede, sobe, e o uhid devolve EAGAIN até o teto."""
     vaga = governador.pedir_vaga(CONTROLE_1, "som")
@@ -246,25 +181,13 @@ def _a_tentativa_que_cai(governador: gov.GovernadorDoRadio) -> gov.Vaga | None:
         assert vaga.motivo == gov.MOTIVO_PARADO, vaga
         return None
     vaga.subiu("som")
-    vaga.fila_parada(af.TETO_DE_CEDER_S + 0.05)  # o teto, pelo kernel
+    vaga.fila_parada(af.TETO_DE_CEDER_S + 0.05)
     vaga.soltar(af.MOTIVO_FILA_PARADA)
     return vaga
 
 
 def test_um_2b_longo_espera_cada_vez_mais_e_o_diario_diz_a_espera() -> None:
-    """O ``bluetoothd`` não drena por dez minutos (o 22/09 teve 4.019 linhas).
-
-    Antes: uma tentativa a cada ~7 a 12 s, sem fim, com ~4 linhas de diário
-    por volta — o diário de meio mega girava e levava o resto. Agora a espera
-    dobra até o teto, o diário ganha uma linha por DEGRAU, e as tentativas do
-    meio são contadas, não escritas.
-
-    MORDIDAS:
-    * espera que não cresce (``episodio.espera_s = anterior``): as tentativas
-      voltam a cada 5 s;
-    * tentativa que não é calada (tire o ``return`` do ramo do episódio no
-      ``_subiu``): um SUBIU e um DESCEU por tentativa.
-    """
+    """O ``bluetoothd`` não drena por dez minutos (o 22/09 teve 4.019 linhas)."""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(relogio, registro, {})
     tentativas: list[float] = []
@@ -290,20 +213,11 @@ def test_um_2b_longo_espera_cada_vez_mais_e_o_diario_diz_a_espera() -> None:
 
 
 def test_quando_a_fila_anda_a_espera_volta_a_cinco_e_a_ponte_entra_no_diario() -> None:
-    """A prova pelo kernel: a tentativa passou das escritas que a fila do uhid
-    comporta — o ``bluetoothd`` voltou a ler.
-
-    A ponte que estava calada ganha AGORA o ``PONTE_SUBIU`` (o fato da próxima
-    queda tem de contá-la), o diário diz quantas tentativas ficaram no meio, e
-    a próxima queda volta a esperar 5 s.
-
-    MORDIDA: faça o ``_a_fila_andou`` não tirar o episódio e a próxima queda
-    espera 60 s — a espera de um 2B que já acabou.
-    """
+    """A prova pelo kernel: a tentativa passou das escritas que a fila do uhid"""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(relogio, registro, {})
     feitas = 0
-    while len(registro.de(gov.FILA_PARADA)) < 5:  # até o teto de 60 s
+    while len(registro.de(gov.FILA_PARADA)) < 5:
         feitas += _a_tentativa_que_cai(governador) is not None
         relogio.agora += 1.0
     relogio.agora += gov.TETO_DA_ESPERA_DA_FILA_S
@@ -316,8 +230,6 @@ def test_quando_a_fila_anda_a_espera_volta_a_cinco_e_a_ponte_entra_no_diario() -
 
     [andou] = registro.de(gov.FILA_ANDOU)
     assert andou["adaptador"] == ADAPTADOR_A
-    # As caladas: todas as que caíram menos a primeira (que abriu o episódio e
-    # entrou no diário), mais a que provou a fila.
     assert andou["depois"]["tentativas"] == (feitas - 1) + 1, (
         "tentativa calada que o diário não contou"
     )
@@ -332,13 +244,7 @@ def test_quando_a_fila_anda_a_espera_volta_a_cinco_e_a_ponte_entra_no_diario() -
 
 
 def test_as_escritas_que_provam_a_fila_perguntam_ao_uhid_do_dkms() -> None:
-    """O 64 é o DOBRO da fila do ``/dev/uhid`` — e o dono do tamanho da fila é
-    o ``uhid.c`` do DKMS, não este módulo. Se o DKMS crescer a fila, 64
-    escritas aceitas deixam de provar que o ``bluetoothd`` leu: caberiam na
-    fila parada. A régua lê o dono.
-
-    MORDIDA: troque o 64 por 32 (a fila inteira) e ela reprova.
-    """
+    """O 64 é o DOBRO da fila do ``/dev/uhid`` — e o dono do tamanho da fila é"""
     fonte = Path(__file__).resolve().parents[2] / "assets/dkms/uhid/uhid.c"
     achado = re.search(r"^#define\s+UHID_BUFSIZE\s+(\d+)", fonte.read_text(), re.M)
     assert achado, f"o UHID_BUFSIZE sumiu de {fonte}"
@@ -364,19 +270,12 @@ class _MedidorDoAdaptador:
 
 
 def test_a_janela_medida_que_poe_no_ar_acaba_a_espera() -> None:
-    """A prova pelo medidor: o adaptador pôs no ar o que a tentativa escreveu.
-
-    Chega antes das 64 escritas — uma janela de 250 ms basta —, e é a que vale
-    quando o uhid não tem voz (sem o DKMS, ele aceita e descarta calado).
-
-    MORDIDA: faça o ``_medir`` devolver ``False`` sempre e a espera nunca
-    acaba pela janela.
-    """
+    """A prova pelo medidor: o adaptador pôs no ar o que a tentativa escreveu."""
     relogio, registro = _Relogio(), _Diario()
     medidor = _MedidorDoAdaptador()
     governador = _governador(relogio, registro, {}, medidor=medidor)
     vaga = _subir(governador, CONTROLE_1)
-    for _ in range(20):  # até cinco segundos MEDIDOS sem nada no ar
+    for _ in range(20):
         for _ in range(23):
             if not vaga.cedendo:
                 vaga.contar_escrita()
@@ -385,15 +284,15 @@ def test_a_janela_medida_que_poe_no_ar_acaba_a_espera() -> None:
         if vaga.derrubar:
             break
     assert vaga.derrubar is True, "o adaptador parado pelo governador não caiu no teto"
-    vaga.soltar(af.MOTIVO_FILA_PARADA)  # a bomba devolve a vaga no mesmo quadro
+    vaga.soltar(af.MOTIVO_FILA_PARADA)
     [parada] = registro.de(gov.FILA_PARADA)
     assert parada["depois"]["espera_s"] == gov.ESPERA_DA_FILA_PARADA_S
 
     relogio.agora += gov.ESPERA_DA_FILA_PARADA_S
-    governador.tique()  # a espera tem tiques: sem ponte, o estado do adaptador sai
+    governador.tique()
     tentativa = _subir(governador, CONTROLE_1)
     assert tentativa._calada
-    for _ in range(23):  # uma janela, e o adaptador pôs tudo no ar
+    for _ in range(23):
         tentativa.contar_escrita()
     medidor.saida_por_janela = 23.0
     relogio.agora += gov.PERIODO_S
@@ -414,12 +313,7 @@ def _o_2b_pelo_governador(
     segundos: float,
     primeira_janela: int = 23,
 ) -> None:
-    """A ponte sob demanda num adaptador que não escoa, tique a tique.
-
-    A tentativa sobe no MEIO de uma janela — ``primeira_janela`` escritas antes
-    do primeiro tique — e depois escreve 23 por janela enquanto não cede. Cai
-    no teto, devolve a vaga no mesmo quadro, e a volta seguinte pede de novo.
-    """
+    """A ponte sob demanda num adaptador que não escoa, tique a tique."""
     fim = relogio.agora + segundos
     vaga: gov.Vaga | None = None
     while relogio.agora < fim:
@@ -443,21 +337,7 @@ def _o_2b_pelo_governador(
 
 @pytest.mark.parametrize("primeira_janela", [10, 20])
 def test_um_pacote_alheio_na_meia_janela_nao_prova_que_a_fila_anda(primeira_janela: int) -> None:
-    """O contador ``acl_tx`` é do ADAPTADOR inteiro: um pacote por janela pode
-    ser de qualquer aparelho, e a meia janela de uma tentativa escreve pouco.
-
-    CONFERÊNCIA DE 23/09/2026: a prova era «um pacote no ar e as pontes sem
-    ceder». A tentativa subia no meio da janela com dez escritas, a fila ficava
-    em nove, abaixo do limiar, e um pacote alheio bastava: 77 «fila voltou a
-    andar» em dez minutos, e a espera presa em 5 s — o 2B longo de antes.
-
-    Com vinte escritas na meia janela a fila fica em 19 — abaixo do limiar,
-    então ninguém cede —, e só a FOLGA separa «escoou» de «ainda não encheu».
-
-    MORDIDAS: devolva o ``return float(saida) * janela >= 1.0 and not
-    estado.cedendo`` do ``_medir`` e a espera nunca cresce (as duas); tire a
-    folga da prova e a de vinte passa.
-    """
+    """O contador ``acl_tx`` é do ADAPTADOR inteiro: um pacote por janela pode"""
     relogio, registro = _Relogio(), _Diario()
     medidor = _MedidorDoAdaptador(saida_por_janela=1.0)
     governador = _governador(relogio, registro, {}, medidor=medidor)
@@ -473,15 +353,7 @@ def test_um_pacote_alheio_na_meia_janela_nao_prova_que_a_fila_anda(primeira_jane
 
 
 def test_na_espera_crescente_o_ceder_de_cada_tentativa_nao_entra_no_diario() -> None:
-    """Pelo governador, cada tentativa cede antes de cair no teto. O CEDEU e o
-    VOLTOU dela são a TENTATIVA falhando de novo: contados, não escritos.
-
-    Com a espera no teto de 60 s, o intervalo das bordas (60 s) deixaria passar
-    um CEDEU por tentativa — uma linha por volta, que é o que o item 3 tira.
-
-    MORDIDA: tire do ``_as_bordas`` o ``endereco not in self._episodios`` e o
-    diário ganha um CEDEU por degrau.
-    """
+    """Pelo governador, cada tentativa cede antes de cair no teto. O CEDEU e o"""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(relogio, registro, {}, medidor=_MedidorDoAdaptador())
     _o_2b_pelo_governador(governador, relogio, segundos=900.0)
@@ -496,18 +368,10 @@ def test_na_espera_crescente_o_ceder_de_cada_tentativa_nao_entra_no_diario() -> 
 
 
 def test_a_subida_que_a_fila_andou_devolve_nao_cai_depois_da_descida() -> None:
-    """O ``_a_fila_andou`` roda no tique (ou na bomba de OUTRA ponte), e a
-    tentativa calada cai na thread dela. Se ela cai entre o ``_calada = False``
-    e o SUBIU escrito, o diário ganhava DESCEU e depois SUBIU — e o
-    ``pontes_de_pe`` passava a contar, até o próximo arranque, uma ponte
-    fantasma criada em vida: o defeito do item 5, por outra porta.
-
-    MORDIDA: tire a trava do par do ``_soltar`` (ou do ``_a_fila_andou``) e a
-    descida passa na frente.
-    """
+    """O ``_a_fila_andou`` roda no tique (ou na bomba de OUTRA ponte), e a"""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(relogio, registro, {})
-    _a_tentativa_que_cai(governador)  # abre o episódio pelo kernel
+    _a_tentativa_que_cai(governador)
     relogio.agora += gov.ESPERA_DA_FILA_PARADA_S
     tentativa = _subir(governador, CONTROLE_1)
     assert tentativa._calada
@@ -519,7 +383,7 @@ def test_a_subida_que_a_fila_andou_devolve_nao_cai_depois_da_descida() -> None:
             fio = threading.Thread(target=tentativa.soltar, args=("a fonte do som secou",))
             fios.append(fio)
             fio.start()
-            fio.join(timeout=0.3)  # com a trava do par, ela espera a subida
+            fio.join(timeout=0.3)
 
     registro.ao_escrever = a_ponte_cai_no_meio
     governador._a_fila_andou(ADAPTADOR_A)
@@ -534,21 +398,11 @@ def test_a_subida_que_a_fila_andou_devolve_nao_cai_depois_da_descida() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. a frase da recusa diz o nome, nunca o endereço
-# ---------------------------------------------------------------------------
 NOMES = {ADAPTADOR_A: "Entrada 4.1.4", ADAPTADOR_B: "Entrada 1.4"}
 
 
 def test_a_frase_da_recusa_diz_o_nome_e_nunca_o_endereco() -> None:
-    """O sino lê a frase do diário: endereço de rádio não vai para a tela.
-
-    As palavras são as da pergunta do desenho aprovado (R3), e o nome é o que o
-    dono diz — aqui um dublê dele.
-
-    MORDIDA: volte a frase para ``', '.join(self.vagas)`` e o endereço do B
-    aparece na tela.
-    """
+    """O sino lê a frase do diário: endereço de rádio não vai para a tela."""
     relogio, registro = _Relogio(), _Diario()
     onde = {
         CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
@@ -566,17 +420,11 @@ def test_a_frase_da_recusa_diz_o_nome_e_nunca_o_endereco() -> None:
     assert cheio["frase"] == recusa.frase
     for frase in (recusa.frase, cheio["frase"]):
         assert not ENDERECO.search(frase), f"endereço de rádio na frase de tela: {frase!r}"
-    # O endereço segue como DADO — é por ele que a tela endereça a pergunta.
     assert recusa.vagas == (ADAPTADOR_B,)
 
 
 def test_sem_nome_a_frase_diz_este_adaptador_e_nunca_o_endereco() -> None:
-    """Quem não sabe o nome diz «este adaptador» — e um nome que traga um
-    endereço é «não sei», venha de quem vier.
-
-    MORDIDA: tire do ``Recusa.nome_de`` a guarda do ``_ENDERECO_DE_RADIO`` e o
-    dono que devolve o endereço o leva à tela.
-    """
+    """Quem não sabe o nome diz «este adaptador» — e um nome que traga um"""
     base = gov.Recusa(CONTROLE_3, ADAPTADOR_A, "som", gov.MOTIVO_CHEIO, (ADAPTADOR_B,))
     esperada = "Este adaptador já tem 2 controles com som ou vibração. Há vaga em outro adaptador."
     for nomear in (None, lambda _e: "", lambda e: e, lambda e: f"Adaptador {e.upper()}"):
@@ -588,29 +436,15 @@ def test_sem_nome_a_frase_diz_este_adaptador_e_nunca_o_endereco() -> None:
         CONTROLE_3, ADAPTADOR_A, "som", gov.MOTIVO_CHEIO, (ADAPTADOR_B, "aa:bb:cc:00:00:c3"),
         nomear={ADAPTADOR_A: "Sala", "aa:bb:cc:00:00:c3": "Entrada 9"}.get,
     )
-    # O artigo concorda com «entrada», e não com o nome (O-MAPA-QUE-ELA-CORRIGE-01,
-    # D-2609-O-NOME-E-DA-POSICAO): «O Sala» e «O 13» adivinhavam o gênero.
     assert com_nome.frase == (
         "A entrada Sala já tem 2 controles com som ou vibração. Há vaga na Entrada 9."
     )
 
 
 def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``nome_da_porta``: o ``hciN`` do kernel (a amostra), o caminho do
-    ``mesa_de_radio`` e o NOME do dono do nome da porta (``entrada_a_entrada``).
-
-    REVISTA EM 23/09 PELA A-COSTURA-DA-ONDA-2-01 (item 6): o nome é do dono, e
-    o governador não compõe um segundo. E REVISTA DE NOVO NO MESMO DIA PELA
-    TRANSPLANTE-DA-SECAO-01 (item 4 de quem coordena): a porta sem nome e sem
-    número se chama como o desenho aprovado mostra, «Entrada 4.1.4» — e quem
-    compõe é o DONO (``entrada_a_entrada.nome_da_porta``). O embutido, que
-    não pendura em entrada nenhuma, continua ``""``: a frase diz «este
-    adaptador». Quem compõe o nome fora do dono é o que a régua
-    ``_OS_QUE_PODEM`` da ``test_a_costura_da_onda_2`` reprova.
-    """
+    """``nome_da_porta``: o ``hciN`` do kernel (a amostra), o caminho do"""
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 
-    # Sob a suíte, o dono não lê a mesa dela: «não sei».
     assert gov.nome_da_porta(ADAPTADOR_A) == ""
 
     pci = "0000:0c:00.3"
@@ -624,10 +458,9 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
                 interface="hci3", no="/x/3-4.1.4", busnum=3, devpath="4.1.4",
                 controlador_pci=pci,
             ),
-            mesa_de_radio.Adaptador(interface="hci5"),  # embutido: sem USB
+            mesa_de_radio.Adaptador(interface="hci5"),
         ],
     )
-    # Os barramentos DESTE boot, sem ler o /sys dela.
     monkeypatch.setattr(ee, "_controladores_do_sistema", lambda: {3: pci})
     monkeypatch.setattr(ee, "carregar_maquina", maquina.MaquinaConfig)
     amostra = {
@@ -649,9 +482,6 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
     )
     assert gov.nome_da_porta(ADAPTADOR_A.upper(), amostra=amostra) == "Entrada 9"
 
-    # O nome que ela deu à ENTRADA vence o número — é o dono quem diz
-    # (D-2609-O-NOME-E-DA-POSICAO; o nome do LUGAR, a D3, caiu em 26/09, e o
-    # `lugares` saiu do esquema em 28/09).
     com_nome = maquina.MaquinaConfig(
         mapa=maquina.MapaDaMesa(
             portas={"9": maquina.PortaDeclarada(caminho="3-4.1.4", nome="Sala")}
@@ -661,9 +491,6 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
     assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Sala"
 
 
-# ---------------------------------------------------------------------------
-# 5. a ponte fantasma não conta
-# ---------------------------------------------------------------------------
 def _queda_agora() -> storm_doctor.EventoDoRadio:
     return storm_doctor.EventoDoRadio(
         quando="agora", carimbo=time.time() + 1, tag="[BT-SOCKET]", familia="2A",
@@ -681,11 +508,7 @@ def _o_daemon_que_morreu(caminho: Path) -> None:
 
 
 def test_o_arranque_fecha_as_pontes_que_o_daemon_morto_deixou(tmp_path: Path) -> None:
-    """O fato de uma queda depois do reinício não conta ponte que não existe.
-
-    MORDIDA: faça ``fechar_as_pontes_fantasmas`` devolver ``0`` sem escrever e
-    o sino diz «2 controles com som (limite 2)» sobre um adaptador sem ponte.
-    """
+    """O fato de uma queda depois do reinício não conta ponte que não existe."""
     caminho = tmp_path / "diario.jsonl"
     _o_daemon_que_morreu(caminho)
     antes = storm_doctor.o_fato_da_queda(_queda_agora(), diario.ler(caminhos=[caminho]))
@@ -720,23 +543,14 @@ def test_o_arranque_nao_fecha_a_ponte_que_o_daemon_novo_tem(tmp_path: Path) -> N
         registrar=functools.partial(diario.registrar, caminho=caminho),
         ler_o_diario=functools.partial(diario.ler, caminhos=[caminho]),
     )
-    _subir(governador, CONTROLE_1)  # a mesma ponte, de pé no daemon novo
+    _subir(governador, CONTROLE_1)
     assert governador.fechar_as_pontes_fantasmas() == 1
     de_pe = diario.pontes_de_pe(diario.ler(caminhos=[caminho]), math.inf)
     assert de_pe == {ADAPTADOR_A: {(CONTROLE_1, "som")}}
 
 
 def test_quem_fecha_e_o_iniciar_do_governador_de_producao(tmp_path: Path) -> None:
-    """O ``iniciar()`` fecha — na thread dele, antes do primeiro tique, e só
-    com medidor.
-
-    Sem medidor é o modo falso: o smoke rodando ao lado do daemon dela veria as
-    pontes VIVAS dele como fantasmas e as desceria no diário.
-
-    MORDIDA: tire a chamada do ``_laco`` e o arranque deixa a fantasma; ou
-    ponha-a no ``iniciar()`` antes da guarda do medidor e o modo falso fecha
-    pontes vivas.
-    """
+    """O ``iniciar()`` fecha — na thread dele, antes do primeiro tique, e só"""
     caminho = tmp_path / "diario.jsonl"
     _o_daemon_que_morreu(caminho)
 
@@ -757,15 +571,14 @@ def test_quem_fecha_e_o_iniciar_do_governador_de_producao(tmp_path: Path) -> Non
 
     producao = novo(_MedidorDoAdaptador())
     producao.iniciar()
-    producao.parar(esperar_s=5.0)  # a thread fecha antes do primeiro tique, e sai
+    producao.parar(esperar_s=5.0)
     assert diario.pontes_de_pe(diario.ler(caminhos=[caminho]), math.inf) == {}
 
 
 def test_o_governador_de_regua_nao_le_o_diario_dela(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Com ``registrar`` injetado e sem leitor, não há diário para ler: um
-    governador de régua nunca desce, no diário de ninguém, ponte que viu lá."""
+    """Com ``registrar`` injetado e sem leitor, não há diário para ler: um"""
     caminho = tmp_path / "diario-padrao.jsonl"
     monkeypatch.setenv(diario.ENV_DIARIO, str(caminho))
     _o_daemon_que_morreu(caminho)

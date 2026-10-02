@@ -1,29 +1,4 @@
-"""A-MIRA-POR-MOVIMENTO-NA-TELA-01 — a mira que nunca andou, e o chip dela.
-
-A SEGUNDA PALAVRA DELA, 23/09/2026: um botão «Mira Virtual» ao lado de
-Giroscópio e Acelerômetro, POR CONTROLE, com a dica *«Usar os movimentos do
-controle como mira (analógico R), para pessoas com deficiência motora.»*
-
-O ACHADO QUE ABRE ESTE ARQUIVO, e ele é o defeito vivo
--------------------------------------------------------
-**A MIRA NUNCA ANDOU NO PRODUTO.** O motor (`gamepad.aplicar_o_movimento`)
-pergunta ``getattr(daemon, "_garantir_sensor_hub", None)`` e, sem resposta,
-devolve os quatro eixos intactos. O `Daemon` de verdade (`daemon/lifecycle.py`)
-não tinha o método — só o `IpcServer` tinha. As réguas da
-MOVIMENTO-EM-QUALQUER-MASCARA-01 davam verde porque os três dublês de daemon
-penduravam ``_garantir_sensor_hub=lambda: hub`` num `SimpleNamespace`: **o
-dublê tinha o que o real não tem**, e a mira ficou verde sem mover um eixo.
-
-Por isso a primeira seção daqui NÃO dubla o daemon: monta o `Daemon` real, o
-`IpcServer` real e o `SensorHub` real (só o leitor do nó é de mentira, porque
-não há aparelho), e roda o tique real — o `dispatch_gamepad` do P1 e o
-`CoopManager.forward_all` dos P2 a P4.
-
-MORDIDA: apague ``Daemon._garantir_sensor_hub`` de `daemon/lifecycle.py` e as
-réguas da seção 1 reprovam dizendo que o analógico direito saiu parado.
-
-Endereços de rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``), nunca um OUI real.
-"""
+"""A-MIRA-POR-MOVIMENTO-NA-TELA-01 — a mira que nunca andou, e o chip dela."""
 
 from __future__ import annotations
 
@@ -58,8 +33,6 @@ _P1, _P2, _P3, _P4 = (
     "aa:bb:cc:00:00:04",
 )
 
-#: Um giro de pulso de verdade, em graus/s no eixo `yaw` (y): bem acima da zona
-#: morta padrão e abaixo do teto, então a deflexão é franca e não satura.
 _GIRO = (0.0, 150.0, 0.0)
 
 
@@ -71,18 +44,8 @@ def _registro_limpo() -> Iterator[None]:
     REGISTRO.limpar()
 
 
-# ---------------------------------------------------------------------------
-# 1. O DAEMON DE VERDADE — a cura do achado
-# ---------------------------------------------------------------------------
-
-
 class _LeitorDoNo:
-    """O leitor do nó «Motion Sensors» — a única peça de mentira da torneira.
-
-    Do tamanho do `MotionSensorReader` para o que o hub pergunta: `start()`
-    afirma que abriu (o hub DESCARTA quem não afirma), `snapshot()` devolve os
-    três eixos e `consume_angulo()` drena.
-    """
+    """O leitor do nó «Motion Sensors» — a única peça de mentira da torneira."""
 
     def __init__(self, giro: tuple[float, float, float]) -> None:
         self._giro = giro
@@ -120,8 +83,6 @@ def _mesa_de_verdade(
 ) -> tuple[Daemon, IpcServer]:
     """O `Daemon` e o `IpcServer` do produto, ligados como o `start_ipc` liga."""
     controle = FakeController(transport=transporte)  # type: ignore[arg-type]
-    # A IDENTIDADE DO P1 como o backend real a publica (`primary_uniq`): é
-    # isto que o `primary_identity` do tique lê — nenhum monkeypatch nele.
     controle.primary_uniq = _P1  # type: ignore[attr-defined]
     daemon = Daemon(controller=controle)
     gerente = ProfileManager(controller=controle, store=daemon.store)
@@ -132,8 +93,6 @@ def _mesa_de_verdade(
         socket_path=tmp_path / "mira.sock",
         daemon=daemon,
     )
-    # O hub mora no SERVIDOR, como no produto (`_garantir_sensor_hub` do mixin
-    # o cria no primeiro uso); a régua só o injeta antes, com o leitor dublado.
     servidor._sensor_hub = hub
     daemon._ipc_server = servidor
     gerente.apply_movimento(
@@ -168,14 +127,7 @@ def _estado(transporte: str) -> ControllerState:
 def _tique_do_p1(
     monkeypatch: pytest.MonkeyPatch, daemon: Daemon, hub: SensorHub, transporte: str
 ) -> _Vpad:
-    """Dois tiques do `dispatch_gamepad`, com a reconciliação do hub no meio.
-
-    O primeiro tique REGISTRA A DEMANDA (é o que abre o leitor, na volta de
-    manutenção do hub); o segundo lê o giro. É o mesmo ritmo do produto, com a
-    volta de um segundo trocada por uma chamada.
-    """
-    # As duas extras do tique que não são da mira — o arming de launch e o aviso
-    # de troca de modo leem arquivos da Steam e o barramento; ficam de fora.
+    """Dois tiques do `dispatch_gamepad`, com a reconciliação do hub no meio."""
     monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: None)
     monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
     vpad = _Vpad()
@@ -190,11 +142,7 @@ def _tique_do_p1(
 def test_a_mira_anda_no_daemon_de_verdade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str
 ) -> None:
-    """O P1, no cabo e no rádio, com o `Daemon` que o produto sobe.
-
-    MORDIDA: apague ``Daemon._garantir_sensor_hub`` e este teste reprova — era
-    o estado do produto até 24/09/2026.
-    """
+    """O P1, no cabo e no rádio, com o `Daemon` que o produto sobe."""
     hub = _hub({_P1: _GIRO})
     daemon, _servidor = _mesa_de_verdade(tmp_path, transporte, hub)
     vpad = _tique_do_p1(monkeypatch, daemon, hub, transporte)
@@ -208,11 +156,7 @@ def test_a_mira_anda_no_daemon_de_verdade(
 def test_a_mira_anda_nos_jogadores_2_3_e_4_no_daemon_de_verdade(
     tmp_path: Path, transporte: str
 ) -> None:
-    """Os P2 a P4, pelo `CoopManager` real sobre o mesmo `Daemon` real.
-
-    *"cara nenhuma solução pode ser feita só pro p1"* — e o laço dos
-    secundários passa `self._daemon` ao motor, que é este objeto.
-    """
+    """Os P2 a P4, pelo `CoopManager` real sobre o mesmo `Daemon` real."""
     giros = {_P2: _GIRO, _P3: _GIRO, _P4: _GIRO}
     hub = _hub(giros)
     daemon, _servidor = _mesa_de_verdade(tmp_path, transporte, hub)
@@ -242,12 +186,7 @@ def test_a_mira_anda_nos_jogadores_2_3_e_4_no_daemon_de_verdade(
 
 
 def test_o_hub_da_mira_e_o_mesmo_do_ipc(tmp_path: Path) -> None:
-    """UM HUB SÓ POR SESSÃO. Dois hubs abririam dois leitores no mesmo nó e
-    duas máquinas de `EVIOCGRAB` brigando pelo interruptor de sensor dela.
-
-    MORDIDA: faça o `Daemon` criar o próprio `SensorHub` (copiar o método do
-    mixin, em vez de delegar) e este teste reprova.
-    """
+    """UM HUB SÓ POR SESSÃO. Dois hubs abririam dois leitores no mesmo nó e"""
     hub = _hub({_P1: _GIRO})
     daemon, servidor = _mesa_de_verdade(tmp_path, "usb", hub)
     assert daemon._garantir_sensor_hub() is servidor._garantir_sensor_hub() is hub
@@ -256,12 +195,7 @@ def test_o_hub_da_mira_e_o_mesmo_do_ipc(tmp_path: Path) -> None:
 def test_sem_servidor_os_eixos_saem_como_entraram(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O instante antes de o IPC subir (ou um IPC que caiu): sem hub, sem mira,
-    e SEM AVISO — o motor pediria o hub 60 vezes por segundo.
-
-    MORDIDA: devolva ``None`` em vez de ``HUB_AUSENTE`` e este teste reprova
-    pelo aviso `roteador_de_movimento_falhou` a cada tique.
-    """
+    """O instante antes de o IPC subir (ou um IPC que caiu): sem hub, sem mira,"""
     from structlog.testing import capture_logs
 
     hub = _hub({_P1: _GIRO})
@@ -274,16 +208,6 @@ def test_sem_servidor_os_eixos_saem_como_entraram(
     assert not avisos, f"o tique sem servidor registrou {len(avisos)} aviso(s): {avisos}"
 
 
-# ---------------------------------------------------------------------------
-# 2. O MOTOR POR PEÇA — `core/roteador_de_movimento.py` e o filtro do report
-# ---------------------------------------------------------------------------
-#
-# A mira era UM arranjo por perfil (`D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL`); o
-# chip «Mira Virtual» mora no cartão de CADA controle. A regra de decisão é uma
-# só, a do `leds` e do `rumble` por controle: a peça que tem opinião usa a dela,
-# campo a campo por cima da do perfil; a peça calada segue a do perfil.
-
-
 def _mira(**kw: Any) -> Any:
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
@@ -293,12 +217,7 @@ def _mira(**kw: Any) -> Any:
 
 
 def test_o_arranjo_desligado_nao_move_nada() -> None:
-    """O arranjo `nenhum` guarda os números dos deslizantes e não move o eixo.
-
-    MORDIDA: tire o ``if not arranjo.ligado`` de `deflexao` e este teste
-    reprova — o `SO_NAS_PECAS` que o tique recebe moveria o analógico direito
-    de TODA a mesa como se fosse uma mira ligada.
-    """
+    """O arranjo `nenhum` guarda os números dos deslizantes e não move o eixo."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     desligado = _mira(destino=rot.DESTINO_NENHUM, sensibilidade=12)
@@ -308,12 +227,7 @@ def test_o_arranjo_desligado_nao_move_nada() -> None:
 
 
 def test_o_arranjo_desligado_guarda_os_numeros_dela() -> None:
-    """`montar` devolve o arranjo mesmo com a mira apagada, e o `ativo()` não o
-    entrega ao tique.
-
-    O «Ignorar tremor até» que ela ajustou num controle de mira apagada não
-    pode sumir só porque a mira não está andando.
-    """
+    """`montar` devolve o arranjo mesmo com a mira apagada, e o `ativo()` não o"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     secao = ProfileMovimentoConfig(destino="nenhum", zona_morta_graus_s=25.0)
@@ -326,12 +240,7 @@ def test_o_arranjo_desligado_guarda_os_numeros_dela() -> None:
 
 
 def test_so_uma_peca_mira_e_o_tique_ainda_chama_o_motor() -> None:
-    """Sem mira no perfil e com o chip aceso no P3, o `ativo()` NÃO pode dizer
-    `None`: os dois laços do tique só chamam o motor quando ele responde.
-
-    MORDIDA: devolva `None` no lugar de `SO_NAS_PECAS` e este teste reprova —
-    o P3 ficaria calado junto com a mesa.
-    """
+    """Sem mira no perfil e com o chip aceso no P3, o `ativo()` NÃO pode dizer"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     store = SimpleNamespace()
@@ -344,11 +253,7 @@ def test_so_uma_peca_mira_e_o_tique_ainda_chama_o_motor() -> None:
 
 
 def test_a_peca_com_opiniao_manda_e_a_calada_segue_o_perfil() -> None:
-    """A ordem de decisão, nos dois sentidos.
-
-    MORDIDA: faça `da_peca` ignorar o mapa e este teste reprova pelo P3; faça-o
-    ignorar a mesa e ele reprova pelo P2.
-    """
+    """A ordem de decisão, nos dois sentidos."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     store = SimpleNamespace()
@@ -364,18 +269,11 @@ def test_a_peca_com_opiniao_manda_e_a_calada_segue_o_perfil() -> None:
         "o P3 tem a mira dele e recebeu a do perfil")
     assert rot.da_peca(store, _P4, ativo) is None, (
         "o P4 APAGOU o chip e mira assim mesmo, pela mira do perfil")
-    # As DUAS grafias da mesma peça (com e sem dois-pontos) são a mesma peça.
     assert rot.da_peca(store, "aabbcc000003", ativo).sensibilidade == 11
 
 
 def test_a_peca_sobrepoe_o_perfil_campo_a_campo() -> None:
-    """A peça que só escreveu o destino HERDA do perfil a sensibilidade e o
-    tremor — é o `model_fields_set` que separa escrito de padrão.
-
-    MORDIDA: troque `_campos_escritos` por todos os campos da seção e este
-    teste reprova: o destino da peça apagaria o tremor que ela ajustou no
-    perfil com o padrão 3,0.
-    """
+    """A peça que só escreveu o destino HERDA do perfil a sensibilidade e o"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     perfil = ProfileMovimentoConfig(destino="nenhum", zona_morta_graus_s=30.0,
@@ -406,16 +304,7 @@ def _janela_viva() -> bytes:
 
 
 def test_a_camera_nao_anda_em_dobro_no_caminho_virtual() -> None:
-    """A PEÇA QUE MIRA PERDE O GIROSCÓPIO da janela do vpad, e SÓ ele.
-
-    Ordem dela, 23/09/2026: *na mira, a câmera não pode andar em dobro*. No
-    caminho `uhid` o jogo recebe o giro nativo pela janela de motion; com a
-    mira ligada o mesmo gesto chegaria DUAS vezes — pelo giroscópio e pelo
-    analógico direito. O acelerômetro, o carimbo de tempo e o touchpad seguem.
-
-    MORDIDA: tire o ``and not self.roteado(uniq)`` do `filtrar` e este teste
-    reprova.
-    """
+    """A PEÇA QUE MIRA PERDE O GIROSCÓPIO da janela do vpad, e SÓ ele."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.core.virtual_motion import (
         FAIXA_ACELEROMETRO,
@@ -432,14 +321,11 @@ def test_a_camera_nao_anda_em_dobro_no_caminho_virtual() -> None:
     assert do_p3[FAIXA_ACELEROMETRO] == janela[FAIXA_ACELEROMETRO]
     assert do_p3[12:] == janela[12:], "a mira apagou o carimbo ou o touchpad"
     assert REGISTRO.filtrar(_P2, janela) is janela, "o P2 não mira e perdeu o giro"
-    # O INTERRUPTOR DELA CONTINUA DIZENDO O QUE ELA ESCOLHEU: o sensor segue
-    # LIGADO, porque é ele que move a mira.
     assert REGISTRO.estado(_P3).giroscopio is True
 
 
 def test_a_mira_do_perfil_tira_o_giro_de_quem_nao_tem_opiniao() -> None:
-    """Com a mira no PERFIL, toda peça calada mira — e perde o giro nativo; a
-    peça que APAGOU o chip continua mandando o giro ao jogo."""
+    """Com a mira no PERFIL, toda peça calada mira — e perde o giro nativo; a"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.core.virtual_motion import FAIXA_GIROSCOPIO
 
@@ -450,16 +336,10 @@ def test_a_mira_do_perfil_tira_o_giro_de_quem_nao_tem_opiniao() -> None:
     janela = _janela_viva()
     assert REGISTRO.filtrar(_P2, janela)[FAIXA_GIROSCOPIO] == bytes(6)
     assert REGISTRO.filtrar(_P4, janela) is janela
-    # E o perfil seguinte, sem mira, devolve o giro a todo mundo.
     rot.definir_ativo(store, None)
     rot.definir_por_peca(store, {})
     rot.sincronizar_o_filtro(store)
     assert REGISTRO.filtrar(_P2, janela) is janela
-
-
-# ---------------------------------------------------------------------------
-# 3. O PERFIL POR CONTROLE — `ControllerOverrides.movimento`
-# ---------------------------------------------------------------------------
 
 
 def _perfil_com_miras(**por_uniq: Any) -> Profile:
@@ -476,11 +356,7 @@ def _perfil_com_miras(**por_uniq: Any) -> Profile:
 
 
 def test_a_mira_nasce_desligada() -> None:
-    """O perfil novo, o controle novo e o perfil sem a seção: NINGUÉM mira.
-
-    MORDIDA: dê a `ControllerOverrides.movimento` um padrão ligado e este teste
-    reprova — abrir a aba moveria a câmera de todo jogo dela.
-    """
+    """O perfil novo, o controle novo e o perfil sem a seção: NINGUÉM mira."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.schema import (
         NASCIMENTO_DOS_CAMPOS,
@@ -501,11 +377,7 @@ def test_a_mira_nasce_desligada() -> None:
 
 
 def test_o_perfil_leva_a_mira_de_cada_peca_ao_tique() -> None:
-    """A ativação deposita o mapa por peça, e cada uma decide a sua.
-
-    MORDIDA: tire o `definir_por_peca` do `apply_movimento` e este teste
-    reprova — o chip gravaria no disco e o tique nunca saberia.
-    """
+    """A ativação deposita o mapa por peça, e cada uma decide a sua."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     store = SimpleNamespace()
@@ -520,9 +392,7 @@ def test_o_perfil_leva_a_mira_de_cada_peca_ao_tique() -> None:
     assert rot.da_peca(store, _P3, ativo).sensibilidade == 10
     assert rot.da_peca(store, _P4, ativo) is None
     assert rot.da_peca(store, _P2, ativo) is None
-    # O número que ela ajustou com a mira APAGADA continua guardado.
     assert rot.parametros_da_peca(store, _P4).zona_morta_graus_s == 25.0
-    # E a peça que mira perde o giro nativo; as outras não.
     assert REGISTRO.roteado(_P3) and not REGISTRO.roteado(_P4)
 
 
@@ -548,11 +418,7 @@ def test_uma_peca_torta_nao_derruba_as_outras() -> None:
 
 
 def test_o_rascunho_grava_a_mira_da_peca_sem_apagar_o_resto() -> None:
-    """`DraftConfig.with_controller_movimento`: o que ela mexeu, e só isso.
-
-    MORDIDA: troque a fusão com os campos já escritos por uma seção nova e este
-    teste reprova — mexer no deslizante apagaria o chip.
-    """
+    """`DraftConfig.with_controller_movimento`: o que ela mexeu, e só isso."""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
     d = DraftConfig.default().with_controller_movimento("aabbcc000003", ligada=True)
@@ -571,26 +437,11 @@ def test_o_rascunho_grava_a_mira_da_peca_sem_apagar_o_resto() -> None:
         "os três `None` não devolveram a peça ao perfil")
 
 
-# ---------------------------------------------------------------------------
-# 4. O GANCHO DO TIQUE — cada jogador pergunta pela PRÓPRIA peça
-# ---------------------------------------------------------------------------
-#
-# `gamepad.aplicar_o_movimento` recebe o arranjo que o laço leu UMA vez por
-# tique (`ativo()`) e troca-o pelo da peça (`da_peca`) com o `uniq` na mão. Sem
-# essa troca, a mesa em que só o P3 mira (`SO_NAS_PECAS`, desligado) não move
-# ninguém, e a peça que APAGOU o chip mira pela mira do perfil.
-
-
 def _mesa_de_quatro_de_verdade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str,
     perfil: Profile, *, antes: Profile | None = None, hub: SensorHub | None = None,
 ) -> dict[str, _Vpad]:
-    """O `Daemon` real, o P1 pelo `dispatch_gamepad` e os P2 a P4 pelo co-op,
-    todos girando o controle igual; o perfil decide quem mira.
-
-    `antes` é o perfil do jogo ANTERIOR, ativado primeiro pelo mesmo gerente —
-    é o que mede o contágio de um jogo para o outro pelo caminho do produto.
-    """
+    """O `Daemon` real, o P1 pelo `dispatch_gamepad` e os P2 a P4 pelo co-op,"""
     giros = {_P1: _GIRO, _P2: _GIRO, _P3: _GIRO, _P4: _GIRO}
     hub = hub or _hub(giros)
     daemon, servidor = _mesa_de_verdade(tmp_path, transporte, hub)
@@ -617,7 +468,7 @@ def _mesa_de_quatro_de_verdade(
     monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
     vpads[_P1] = _Vpad()
     daemon._gamepad_device = vpads[_P1]
-    for _ in range(2):  # a demanda abre o leitor; a segunda volta lê o giro
+    for _ in range(2):
         gp.dispatch_gamepad(daemon, _estado(transporte), frozenset())
         gerente.forward_all()
         hub.reconciliar()
@@ -632,12 +483,7 @@ def _quem_mirou(vpads: dict[str, _Vpad]) -> list[str]:
 def test_so_o_p3_acendeu_o_chip_e_so_o_p3_mira(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str
 ) -> None:
-    """O chip de UMA peça, num perfil sem mira: só ela mira, nos dois transportes.
-
-    MORDIDA: arranque as duas linhas do gancho em `aplicar_o_movimento` e este
-    teste reprova — a mesa recebe `SO_NAS_PECAS`, que é desligado, e o P3 fica
-    parado junto com todo mundo.
-    """
+    """O chip de UMA peça, num perfil sem mira: só ela mira, nos dois transportes."""
     perfil = _perfil_com_miras(aabbcc000003={"destino": "analogico_direito"})
     vpads = _mesa_de_quatro_de_verdade(monkeypatch, tmp_path, transporte, perfil)
     assert _quem_mirou(vpads) == [_P3], (
@@ -647,12 +493,7 @@ def test_so_o_p3_acendeu_o_chip_e_so_o_p3_mira(
 def test_a_peca_que_apagou_o_chip_nao_mira_pela_mira_do_perfil(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Mira no PERFIL, e o P1 (o primário) e o P4 apagaram o chip: miram o P2 e
-    o P3, e os dois que apagaram ficam como estavam.
-
-    MORDIDA: arranque o gancho e este teste reprova — o P1 e o P4 mirariam pela
-    mira do perfil, contra o que ela escolheu no cartão deles.
-    """
+    """Mira no PERFIL, e o P1 (o primário) e o P4 apagaram o chip: miram o P2 e"""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
     apagado = ControllerOverrides(movimento=ProfileMovimentoConfig(destino="nenhum"))
@@ -671,20 +512,7 @@ def test_a_peca_que_apagou_o_chip_nao_mira_pela_mira_do_perfil(
 def test_o_jogo_seguinte_nao_herda_a_mira_nem_o_giro_cortado(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str
 ) -> None:
-    """O CAMINHO-CONTAGIO-01 POR PEÇA, pela ATIVAÇÃO — e não pelo ajudante.
-
-    O jogo de ontem tinha o chip aceso no P3; o de hoje não tem mira nenhuma.
-    Nos quatro jogadores ninguém mira, e o giro do P3 VOLTA ao jogo pela janela
-    de motion: um filtro que guardasse a resposta de ontem deixaria o jogo de
-    hoje sem giroscópio naquele controle, calado e sem aviso.
-
-    A régua do motor (`test_o_perfil_sem_mira_por_peca_apaga_a_do_anterior`)
-    mede o `definir_por_peca` direto; esta mede o `apply_movimento`, que é quem
-    tem de chamá-lo no jogo sem mira.
-
-    MORDIDA: faça o `apply_movimento` só depositar o mapa, ou só sincronizar o
-    filtro, quando alguma peça mira — e este teste reprova.
-    """
+    """O CAMINHO-CONTAGIO-01 POR PEÇA, pela ATIVAÇÃO — e não pelo ajudante."""
     ontem = _perfil_com_miras(aabbcc000003={"destino": "analogico_direito"})
     hoje = Profile(name="sem mira", match=MatchAny(type="any"))
     vpads = _mesa_de_quatro_de_verdade(
@@ -713,30 +541,7 @@ class _LeitorQueConta(_LeitorDoNo):
 def test_a_peca_que_apagou_o_chip_ainda_drena_o_angulo(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A DRENAGEM VEM ANTES DE TODO PORTÃO — inclusive o da peça.
-
-    Perfil com a mira no CURSOR (o destino que consome ÂNGULO), e o P4 com o
-    chip apagado. O P4 não mira, e o ângulo dele tem de ser DESCARTADO a cada
-    tique, como o dos outros três é consumido: guardado atrás do portão da
-    peça, ele cresceria enquanto o chip estivesse apagado e viraria um salto de
-    cursor no dia em que a peça voltasse a seguir o perfil — a armadilha do
-    acumulador atrás de um `return` cedo, que o docstring do motor já nomeia.
-
-    Conta as drenagens, não o efeito.
-
-    O CURSOR ENTRA POR BAIXO DO ESQUEMA — A-MIRA-NA-NAVEGACAO-02 (25/09/2026).
-    O esquema passou a ler o «mouse» como o analógico direito
-    (`ProfileMovimentoConfig._o_cursor_fora_da_navegacao_e_o_analogico_direito`),
-    e no laço do co-op o destino que consome ângulo não chega mais por perfil.
-    O motor continua sabendo o destino (a Navegação o usa, e a volta da
-    decisão é uma linha do esquema), e é o MOTOR que esta régua mede: a seção
-    nasce por `model_construct`, sem o validador. A mesma drenagem, pelo
-    caminho que o produto alcança hoje, é a
-    `test_o_destino_da_mira_que_nao_anda.test_na_navegacao_a_peca_de_chip_apagado_drena`.
-
-    MORDIDA: ponha o `return` da peça que não mira ANTES da drenagem em
-    `gamepad.aplicar_o_movimento` e este teste reprova pelo P4.
-    """
+    """A DRENAGEM VEM ANTES DE TODO PORTÃO — inclusive o da peça."""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
     leitores: dict[str, _LeitorQueConta] = {}
@@ -770,9 +575,7 @@ def test_a_peca_que_apagou_o_chip_ainda_drena_o_angulo(
         f"a peça de chip apagado não descartou o ângulo: {drenagens}")
 
 
-# ---------------------------------------------------------------------------
 # 5. O IPC — `mira.set` e a leitura de volta no `state_full`
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -811,12 +614,7 @@ def _mira_set(servidor: IpcServer, **params: Any) -> dict[str, Any]:
 
 
 def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
-    """O chip grava NO PERFIL daquela peça, e só o que ela mexeu.
-
-    MORDIDA (§5 da sprint): arranque o `save_profile` do `mira.set` e este
-    teste reprova — é a queixa *"o perfil não carrega"* pela enésima vez, e ela
-    sempre foi um campo que não grava.
-    """
+    """O chip grava NO PERFIL daquela peça, e só o que ela mexeu."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
@@ -828,25 +626,16 @@ def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
     assert dele.model_fields_set == {"destino"}, (
         "o chip gravou campos que ela não mexeu — a peça deixaria de herdar do "
         "perfil")
-    # O deslizante NÃO apaga o chip: campo omitido não mexe no que já estava.
     corpo = _mira_set(servidor, uniq=_P3, zona_morta_graus_s=22.0)
     dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
     assert dele.destino == "analogico_direito" and dele.zona_morta_graus_s == 22.0
-    # E vale AGORA, sem esperar a próxima ativação: o tique e o filtro sabem.
     store = servidor.store
     assert rot.da_peca(store, _P3, rot.ativo(store)).zona_morta_graus_s == 22.0
     assert REGISTRO.roteado(_P3) and not REGISTRO.roteado(_P2)
 
 
 def test_a_tela_nao_liga_a_mira_sozinha(perfis: Path, tmp_path: Path) -> None:
-    """Mexer no deslizante de um controle de mira apagada NÃO a acende.
-
-    MORDIDA (§5 da sprint): troque o padrão `nenhum` do destino em
-    `roteador_de_movimento.montar` por `analogico_direito` e este teste reprova
-    — ajustar o tremor moveria a câmera de todo jogo dela. (É o padrão do
-    MOTOR que decide aqui, e não o do esquema: a peça só leva os campos que ela
-    escreveu. O do esquema é guardado por `test_a_mira_nasce_desligada`.)
-    """
+    """Mexer no deslizante de um controle de mira apagada NÃO a acende."""
     servidor = _servidor_com_perfil(tmp_path)
     corpo = _mira_set(servidor, uniq=_P2, sensibilidade=9)
     assert corpo["status"] == "ok" and corpo["ligada"] is False
@@ -859,17 +648,7 @@ def test_a_tela_nao_liga_a_mira_sozinha(perfis: Path, tmp_path: Path) -> None:
 
 
 def test_o_ps_nunca_vira_gatilho_pela_tela(perfis: Path, tmp_path: Path) -> None:
-    """O PS é a saída de emergência dela, e nenhum pedido da tela o torna
-    gatilho da mira.
-
-    FATO SUBSTITUÍDO EM 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): aqui o
-    `gatilho` inteiro era recusado, porque a tela não o tinha. Ela mandou o
-    «Só enquanto eu segurar» entrar (`D-2409-SEGURAR-E-INVERTER-ENTRAM-NA-TELA`),
-    o `mira.set` passou a aceitá-lo, e quem recusa o PS agora é o esquema.
-
-    MORDIDA: tire o validador de `ProfileMovimentoConfig.gatilho` e este teste
-    reprova.
-    """
+    """O PS é a saída de emergência dela, e nenhum pedido da tela o torna"""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     servidor = _servidor_com_perfil(tmp_path)
@@ -900,19 +679,7 @@ def test_o_chip_apagado_vence_a_mira_do_perfil_e_a_tela_ve(
 def test_o_deslizante_da_peca_calada_segue_a_mira_do_perfil(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """O perfil tem a mira na mesa, com a sensibilidade 9; ela mexe só no
-    «Ignorar tremor até» do P2, que nunca teve opinião. O P2 CONTINUA mirando,
-    com a sensibilidade do perfil — AGORA, e não só depois de o perfil
-    recarregar.
-
-    O VIVO E O DISCO DÃO A MESMA RESPOSTA: `mira.set` monta a peça por cima da
-    mira do perfil que grava, que é a mesma conta que o `_controllers_to_miras`
-    faz na próxima ativação. Duas contas diferentes seriam a mira apagando ao
-    mexer no deslizante e voltando sozinha na troca de perfil.
-
-    MORDIDA: monte o arranjo do `mira.set` sem a mesa
-    (`rot.arranjo_da_peca(None, secao)`) e este teste reprova.
-    """
+    """O perfil tem a mira na mesa, com a sensibilidade 9; ela mexe só no"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
@@ -936,16 +703,7 @@ def test_o_deslizante_da_peca_calada_segue_a_mira_do_perfil(
 def test_em_modo_nativo_a_resposta_diz_o_que_nao_alcanca(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """Sem gamepad virtual não há onde a mira escreva — a RESPOSTA diz. A tela
-    não confessa (ordem dela, 07/09).
-
-    FATO SUBSTITUÍDO EM 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): aqui o
-    CHIP gravava no Nativo e a resposta avisava. Ela escolheu o contrário —
-    *"fica cinza no Nativo, sem gravar"* (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`)
-    —, e a recusa do chip é medida em `test_a_mira_02_as_respostas_dela.py`. O
-    que continua gravando no Nativo é o ajuste da Calibrar, e é ele que esta
-    régua pede.
-    """
+    """Sem gamepad virtual não há onde a mira escreva — a RESPOSTA diz. A tela"""
     servidor = _servidor_com_perfil(tmp_path)
     servidor.daemon._native_mode = True
     corpo = _mira_set(servidor, uniq=_P3, sensibilidade=8)
@@ -955,8 +713,7 @@ def test_em_modo_nativo_a_resposta_diz_o_que_nao_alcanca(
 
 
 def test_o_metodo_esta_no_dispatcher() -> None:
-    """A tela chama pelo NOME; sem a linha no `_handlers`, o chip responde
-    `method not found`."""
+    """A tela chama pelo NOME; sem a linha no `_handlers`, o chip responde"""
     import inspect
 
     from hefesto_dualsense4unix.app import ipc_bridge
@@ -966,18 +723,9 @@ def test_o_metodo_esta_no_dispatcher() -> None:
     assert "mira_set_detalhado" in ipc_bridge.__all__
 
 
-
-# ---------------------------------------------------------------------------
-# 6. A TELA — o chip na aba Controles e os deslizantes na Calibrar
-# ---------------------------------------------------------------------------
-# O desenho mora na BANCADA (`mockup/`) e espera a sessão dela; o que já vai ao
-# produto é o gesto e a pintura, que só acendem no dia em que ela publicar.
-
 _RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 
-#: A DICA DELA, em português correto — escrita aqui POR EXTENSO, e não lida do
-#: gerador: a régua confere o gerador contra a palavra dela, não contra si mesmo.
 _DICA_DELA = ("Usar os movimentos do controle como mira (analógico R), para "
               "pessoas com deficiência motora.")
 
@@ -992,17 +740,7 @@ def _cartoes_da_bancada() -> list[tuple[str, str]]:
 
 
 def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
-    """MORDIDA: troque uma vírgula da dica no gerador, ou tire o `off`, e reprova.
-
-    Um chip por cartão, os quatro assentos, ao lado dos dois de sensor; o
-    conectado nasce APAGADO (o lugar vazio perde o `off` como todo alvo
-    `classe` — o travessão não é `DESLIGADO` — e fica cinza pela folha).
-
-    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): o aceso (`mira-ligada`,
-    com o `off`) desceu para o invólucro `chip-da-mira`, de `display:contents`,
-    e o botão ficou com o cinza do Nativo (`mira-fora`) e o `aria-disabled` —
-    um elemento aceita UM alvo. A régua lê os dois andares.
-    """
+    """MORDIDA: troque uma vírgula da dica no gerador, ou tire o `off`, e reprova."""
     for abertura, miolo in _cartoes_da_bancada():
         chips = re.findall(r'<span class="chip-da-mira([^"]*)"([^>]*)>'
                            r'<button class="sw" data-gesto="mira"([^>]*)>'
@@ -1018,24 +756,13 @@ def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
         if 'data-conectado="nao"' not in abertura:
             assert "off" in classe.split(), (
                 f"{abertura}: o chip da mira nasceu aceso — ela nasce desligada")
-        # O GRUPO GANHOU O ENDEREÇO DO CINZA NO NATIVO em 24/09/2026
-        # (A-MIRA-POR-MOVIMENTO-NA-TELA-02): a abertura da tag não termina
-        # mais no nome da classe.
         grupo = miolo.split('<span class="sensores-peca"', 1)[1].split("\n          </span>", 1)[0]
         assert grupo.index('data-sensor="acelerometro"') < grupo.index(
             'data-gesto="mira"'), "o chip não está ao lado dos dois de sensor"
 
 
 def test_o_chip_giroscopio_nao_mudou() -> None:
-    """A palavra dela: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro.
-
-    NOTA DATADA — 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): a DICA dele
-    passou a mudar com a Mira acesa (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-
-    MIRA`), e por isso saiu do botão para o invólucro que a pinta. O chip — o
-    rótulo, o gesto, o endereço — continua o mesmo, e a dica do desenho, com a
-    Mira apagada, continua a de sempre; o lugar vazio perde a dica, como perde
-    todo alvo `atributo`.
-    """
+    """A palavra dela: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro."""
     for abertura, miolo in _cartoes_da_bancada():
         giro = re.findall(r'<button class="sw[^"]*" data-gesto="sensor" '
                           r'data-sensor="giroscopio" data-campo="giro-ligado"[^>]*>'
@@ -1067,10 +794,7 @@ def _faixa_do_esquema(campo: str) -> tuple[float, float, float]:
 
 
 def test_os_numeros_dos_deslizantes_sao_os_do_esquema() -> None:
-    """O gerador roda sem o pacote e escreve os números; o dono é o esquema.
-
-    O mínimo do tremor é 1 e não o 0 do esquema, pela faixa da sprint (§3).
-    """
+    """O gerador roda sem o pacote e escreve os números; o dono é o esquema."""
     import calibrar
 
     escrito = calibrar.SENSIBILIDADE
@@ -1082,8 +806,7 @@ def test_os_numeros_dos_deslizantes_sao_os_do_esquema() -> None:
 
 
 def test_a_calibrar_tem_os_dois_deslizantes_de_cada_controle() -> None:
-    """Uma coluna por cartão, com o MESMO `data-controle` — é ele que leva o
-    arrasto ao controle certo."""
+    """Uma coluna por cartão, com o MESMO `data-controle` — é ele que leva o"""
     import calibrar
 
     doc = (_RAIZ / "mockup/calibrar-sensores.html").read_text(encoding="utf-8")
@@ -1099,15 +822,7 @@ def test_a_calibrar_tem_os_dois_deslizantes_de_cada_controle() -> None:
 
 
 class _PonteDaMira:
-    """O dublê ESTRITO da ponte: devolve o corpo do daemon, como a real.
-
-    ESTRITO DE VERDADE desde 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02, na
-    conferência): o pedido é amarrado à ASSINATURA da função real
-    (`ipc_bridge.mira_set_detalhado`) antes de ser anotado. Com `**kw` solto, um
-    gesto que mandasse um nome que a ponte não conhece (um `inverter_lado`)
-    passaria aqui e levantaria `TypeError` no produto — o dublê mais frouxo que
-    o real, que é o defeito que esta casa já pagou três vezes.
-    """
+    """O dublê ESTRITO da ponte: devolve o corpo do daemon, como a real."""
 
     def __init__(self, corpo: dict[str, Any] | None) -> None:
         self.corpo = corpo
@@ -1143,10 +858,7 @@ def _o_gesto(pagina: str, nome: str) -> Any:
 
 
 def test_o_chip_alterna_pelo_que_o_daemon_diz() -> None:
-    """MORDIDA: mande `ligada=True` fixo e o segundo caso reprova.
-
-    UM CAMPO SÓ: o clique no chip não reafirma a sensibilidade nem o tremor.
-    """
+    """MORDIDA: mande `ligada=True` fixo e o segundo caso reprova."""
     for agora in (False, True):
         p = _PonteDaMira(_OK)
         _o_gesto("02-controles.html", "mira")(
@@ -1167,14 +879,7 @@ def test_sem_leitura_o_chip_recusa_dizendo() -> None:
 
 
 def test_o_chip_recusa_o_que_o_daemon_nao_confirma() -> None:
-    """O daemon que responde sem `ok` não vira «aplicado»: a recusa sai com a
-    frase DESTA tela, e não com o `motivo` do outro lado do soquete.
-
-    FATO SUBSTITUÍDO EM 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): esta
-    régua se chamava `test_no_modo_nativo_o_chip_grava_e_avisa` e cobrava o
-    Nativo GRAVANDO com aviso. Ela escolheu *"fica cinza no Nativo, sem
-    gravar"*, e o Nativo é medido em `test_a_mira_02_as_respostas_dela.py`.
-    """
+    """O daemon que responde sem `ok` não vira «aplicado»: a recusa sai com a"""
     import pacotes.a02_controles as a02
 
     p = _PonteDaMira({"status": "sem_controle", "motivo": "texto do daemon"})
@@ -1185,10 +890,7 @@ def test_o_chip_recusa_o_que_o_daemon_nao_confirma() -> None:
 
 
 def test_o_chip_pinta_pelo_que_o_daemon_diz(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Três estados: aceso, apagado e o travessão de quem não leu.
-
-    MORDIDA: emita `bool(...)` no lugar do selo e o terceiro caso vira apagado.
-    """
+    """Três estados: aceso, apagado e o travessão de quem não leu."""
     import mesa_viva
 
     import pacotes.a02_controles as a02
@@ -1215,7 +917,6 @@ def test_os_deslizantes_mandam_um_campo_so() -> None:
         _o_gesto("calibrar-sensores.html", gesto)(
             _ctx_da_aba(), {"uniq": _P1, "valor": valor}, p)
         assert p.chamadas == [{"uniq": _P1, **esperado}], (gesto, p.chamadas)
-        # o `click` que vem depois do `change` não é um segundo pedido
         _o_gesto("calibrar-sensores.html", gesto)(
             _ctx_da_aba(), {"uniq": _P1, "valor": valor, "tipo": "input",
                             "evento": "click"}, p)
@@ -1228,11 +929,7 @@ def test_os_deslizantes_mandam_um_campo_so() -> None:
 def test_a_calibrar_so_pinta_a_mira_quando_a_pagina_publicada_tem(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Antes de ela publicar, o produto não remonta nem pinta o bloco novo.
-
-    MORDIDA: tire a guarda `tem_a_mira` do pacote e o primeiro caso reprova —
-    o desenho novo chegaria à janela dela sem o OK.
-    """
+    """Antes de ela publicar, o produto não remonta nem pinta o bloco novo."""
     import pacotes
     from pacotes import a11_calibrar_sensores as a11
 

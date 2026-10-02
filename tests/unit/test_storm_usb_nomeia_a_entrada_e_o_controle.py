@@ -1,45 +1,4 @@
-"""O -71 diz a ENTRADA, o CONTROLE e o que ficou PARADO — STORM-USB-01, 24/09/2026.
-
-A palavra dela de 23/09 é «nomear e religar»: *o doctor diz a entrada e o
-controle de cada -71 dos últimos 7 dias*, e *o nome da entrada é o da seção do
-rádio — não se inventa outro*. O laudo de 20/09 dizia o caminho do kernel
-(`3-4.1.3`); estas réguas medem o que a palavra dela acrescentou. A lógica de
-endereçamento (as formas da linha, o hub em comum, a janela) continua em
-`tests/unit/test_o_endereco_do_storm_usb.py`, e a costura com o terminal em
-`tests/unit/test_o_doctor_diz_a_porta_do_storm.py`.
-
-O ``/sys`` DE MENTIRA É UMA ÁRVORE DE VERDADE no ``tmp_path``, lida pelos
-leitores de verdade (``aparelho_da_porta``, ``mesa_de_radio.controladores_dos_
-barramentos``, ``entrada_a_entrada.nome_da_porta``): nenhum dublê responde por
-eles, e nada aqui olha o barramento de quem roda a suíte. Faixa sintética da
-casa: o controlador ``0000:0a:00.0``.
-
-AS MORDIDAS, uma por régua (arranque a cura, veja reprovar, devolva):
-
-* :func:`test_o_nome_da_entrada_vem_do_dono` — faça :func:`_nomeador` devolver
-  ``_sem_nome`` e a frase volta ao caminho cru: o nome que ela deu não chega.
-* :func:`test_o_retrato_de_outra_maquina_nao_usa_os_nomes_dela` — troque o
-  ``raiz_usb == RAIZ_USB`` por ``True`` e o nome desta máquina aparece no
-  retrato de outra.
-* :func:`test_o_adaptador_que_so_se_declara_na_interface` — tire o ramo da
-  interface 0 de ``_e_adaptador`` e o adaptador composto vira "nada".
-* :func:`test_o_controle_sem_hid_fica_parado` — tire o ``driver`` da conta em
-  ``_hid_sem_driver`` e o controle de pé passa a ser acusado.
-* :func:`test_a_interface_desligada_de_proposito_nao_e_o_71` — tire a guarda do
-  ``authorized`` e a interface que alguém desligou vira queda.
-* :func:`test_a_desistencia_no_mesmo_segundo_ganha` — troque o ``>=`` do
-  carimbo por ``>`` e a desistência escrita no mesmo segundo das tentativas se
-  perde.
-* :func:`test_o_log_fora_de_ordem_nao_engana_o_desfecho` — troque o carimbo por
-  "a última linha manda" e a tentativa antiga, escrita depois, apaga a
-  desistência.
-* :func:`test_o_controle_de_outro_fabricante_tambem_e_controle` (conferência de
-  24/09) — volte o ``e_controle`` a ler só o ``054c`` e ela reprova.
-* :func:`test_o_hub_em_comum_diz_as_entradas_pelo_dono` (conferência de 24/09)
-  — dê ao ``HubEmComum`` o caminho do kernel em vez do ``onde`` do hub, ou
-  deixe as ``entradas`` de baixo vazias, e ela reprova. As duas mordidas
-  passavam verdes antes dela.
-"""
+"""O -71 diz a ENTRADA, o CONTROLE e o que ficou PARADO — STORM-USB-01, 24/09/2026."""
 
 from __future__ import annotations
 
@@ -133,20 +92,13 @@ def _dualsense(raiz: Path, porta: str, *, hid: str) -> None:
 
 
 def _raiz_com_controlador(tmp_path: Path) -> Path:
-    """A lista ``bus/usb/devices`` com o hub-raiz ``usb3`` pendurado no ``PCI``.
-
-    É o que ``controladores_dos_barramentos`` lê: um ``realpath`` por ``usbN``.
-    Sem isso o caminho não vira lugar, e o nome dela não tem onde se prender.
-    """
+    """A lista ``bus/usb/devices`` com o hub-raiz ``usb3`` pendurado no ``PCI``."""
     raiz = tmp_path / "sys" / "bus" / "usb" / "devices"
     raiz.mkdir(parents=True)
     alvo = tmp_path / "sys" / "devices" / "pci0000:00" / PCI / "usb3"
     alvo.mkdir(parents=True)
     os.symlink(alvo, raiz / "usb3")
     return raiz
-
-
-# --- o nome da entrada: do dono, e só dele -----------------------------------
 
 
 def test_o_nome_da_entrada_vem_do_dono(tmp_path: Path) -> None:
@@ -165,7 +117,6 @@ def test_o_nome_da_entrada_vem_do_dono(tmp_path: Path) -> None:
     )
     porque = laudo.portas[0].porque
     assert porque.startswith("Frente, a de baixo (3-4.1.3) — 1 evento"), porque
-    # O hub do caminho não tem nome dela: sai com o que o desenho dá a qualquer um.
     assert "Entrada 4 (3-4)" in porque, porque
 
 
@@ -184,12 +135,7 @@ def test_sem_o_dono_a_frase_fica_com_o_caminho_do_kernel(tmp_path: Path) -> None
 
 
 def test_o_retrato_de_outra_maquina_nao_usa_os_nomes_dela(tmp_path: Path) -> None:
-    """Com a raiz de outro ``/sys``, o ``maquina.json`` DESTA máquina não vale.
-
-    O suporte lê o retrato de quem pediu ajuda; os nomes que ela deu são das
-    entradas DELA, e pôr «Frente, a de baixo» na entrada de outra pessoa seria
-    um endereço convincente e falso.
-    """
+    """Com a raiz de outro ``/sys``, o ``maquina.json`` DESTA máquina não vale."""
     from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, gravar_maquina
 
     assert str(caminho_da_maquina()).startswith(str(Path(os.environ["XDG_CONFIG_HOME"]))), (
@@ -211,9 +157,6 @@ def test_o_retrato_de_outra_maquina_nao_usa_os_nomes_dela(tmp_path: Path) -> Non
     assert porque.startswith("Entrada 4.1.3 (3-4.1.3)"), porque
 
 
-# --- o controle, e a matriz: o cabo e o adaptador -----------------------------
-
-
 def test_o_controle_no_cabo_se_diz_controle(tmp_path: Path) -> None:
     """Um aparelho da Sony na entrada é «um controle, pelo USB»."""
     raiz = tmp_path / "sys"
@@ -230,14 +173,7 @@ def test_o_controle_no_cabo_se_diz_controle(tmp_path: Path) -> None:
 
 
 def test_o_controle_de_outro_fabricante_tambem_e_controle(tmp_path: Path) -> None:
-    """O Pro Controller no cabo é «um controle», e a HID órfã dele não é acusada.
-
-    Conferência de 24/09: o papel lia só a Sony, e um Pro Controller, um 8BitDo
-    ou um Xbox no cabo saía sem papel — o produto é para qualquer controle. O
-    religar segue só Sony (o escopo do script de root), e por isso a HID sem
-    driver de outro fabricante não vira «parada»: o doctor não pode prometer o
-    religar que o script não faz.
-    """
+    """O Pro Controller no cabo é «um controle», e a HID órfã dele não é acusada."""
     raiz = tmp_path / "sys"
     _no(raiz, "3-4.2", vid="057e", pid="2009", nome="Pro Controller")
     _interface(raiz, "3-4.2:1.0", tripla=("03", "00", "00"))
@@ -299,13 +235,7 @@ def test_hub_de_uma_porta_nao_casa_as_interfaces_do_vizinho(tmp_path: Path) -> N
 
 
 def test_o_hub_em_comum_diz_as_entradas_pelo_dono(tmp_path: Path) -> None:
-    """O fator comum sai com o nome do hub e o das entradas de baixo, pelo dono.
-
-    A pergunta 1 da sprint é «é a porta, o cabo ou o hub?», e a resposta que a
-    topologia dá — o hub no caminho de duas entradas — tem de falar a mesma
-    língua das linhas de cima: quem leu «Frente (3-4.1.3)» numa linha não pode
-    ler só «3-4.1.3» na outra.
-    """
+    """O fator comum sai com o nome do hub e o das entradas de baixo, pelo dono."""
     nomes = {"3-4": "Entrada 4", "3-4.1.3": "Frente", "3-4.4": "Atrás"}
     laudo = storm_por_porta(
         linhas=[
@@ -322,9 +252,6 @@ def test_o_hub_em_comum_diz_as_entradas_pelo_dono(tmp_path: Path) -> None:
         "o hub em Entrada 4 (3-4) está no caminho de 2 entradas que deram -71 "
         "(Frente (3-4.1.3), Atrás (3-4.4))"
     ), porque
-
-
-# --- o que ficou parado --------------------------------------------------------
 
 
 def test_o_controle_sem_hid_fica_parado(tmp_path: Path) -> None:
@@ -393,10 +320,7 @@ def test_a_entrada_largada_que_voltou_a_ter_aparelho_nao_fica_parada(tmp_path: P
 
 
 def test_entrada_vazia_sem_a_desistencia_nao_e_parada(tmp_path: Path) -> None:
-    """Vazia depois de um -71 que o kernel seguiu tentando: pode ter sido a mão dela.
-
-    Dizer "parou" aqui seria inventar a queda.
-    """
+    """Vazia depois de um -71 que o kernel seguiu tentando: pode ter sido a mão dela."""
     laudo = storm_por_porta(
         linhas=[_linha("usb 3-4.4: device descriptor read/64, error -71")],
         hoje=HOJE,
@@ -408,11 +332,7 @@ def test_entrada_vazia_sem_a_desistencia_nao_e_parada(tmp_path: Path) -> None:
 
 
 def test_a_desistencia_no_mesmo_segundo_ganha(tmp_path: Path) -> None:
-    """A tentativa e a desistência no MESMO segundo: vale a ordem em que o kernel escreveu.
-
-    Medido na mesa dela em 24/09: `not accepting address 10` e `unable to
-    enumerate` saem no mesmo carimbo.
-    """
+    """A tentativa e a desistência no MESMO segundo: vale a ordem em que o kernel escreveu."""
     laudo = storm_por_porta(
         linhas=[
             _linha("usb 3-4.4: device not accepting address 9, error -71"),
@@ -426,11 +346,7 @@ def test_a_desistencia_no_mesmo_segundo_ganha(tmp_path: Path) -> None:
 
 
 def test_o_log_fora_de_ordem_nao_engana_o_desfecho(tmp_path: Path) -> None:
-    """A desistência mais NOVA vale, mesmo escrita antes de uma tentativa mais velha.
-
-    O `kernel.log` fica fora de ordem de verdade (dois escritores, a unit que
-    recomeça o journal) — ver `test_o_ultimo_e_o_mais_recente_e_nao_a_ultima_linha`.
-    """
+    """A desistência mais NOVA vale, mesmo escrita antes de uma tentativa mais velha."""
     laudo = storm_por_porta(
         linhas=[
             _linha("usb 3-4-port4: unable to enumerate USB device", quando="2026-09-24T12:55:51"),

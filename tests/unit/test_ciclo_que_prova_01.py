@@ -1,20 +1,4 @@
-"""O desinstalador não apaga os snapshots de pareamento sem ela pedir.
-
-CICLO-QUE-PROVA-01 (08/08/2026). MEDIDO no ciclo real, na máquina dela:
-
-    antes do ciclo:  12 snapshots em /var/lib/hefesto-dualsense4unix/bt-bonds/
-    depois:           1
-
-O `uninstall.sh` fazia `rm -rf` **por default, sem flag e sem confirmação**, e o
-`install.sh` recria só o diretório vazio. Os snapshots são a única rede entre um
-crash do `bluetoothd` e ela repareando quatro controles à mão — e o crash das
-00:27:35 da mesma noite mostrou exatamente para que servem: o salva-vidas gravou
-os quatro bonds dois segundos depois, sozinho.
-
-A doutrina da casa para dado dela já estava escrita e era outra: **preserva por
-default, apaga só com `--purge-config`**. É o que vale para a config e para os
-perfis. Os bonds passam a seguir a mesma regra.
-"""
+"""O desinstalador não apaga os snapshots de pareamento sem ela pedir."""
 
 from __future__ import annotations
 
@@ -33,11 +17,7 @@ def _bloco_dos_bonds() -> str:
 
 
 def test_o_default_preserva_os_snapshots() -> None:
-    """Sem `--purge-config`, os snapshots são MOVIDOS, não apagados.
-
-    ARRANQUE A CURA (volte o `rm -rf` incondicional) e este teste REPROVA. Ela
-    perde o histórico de pareamentos num comando de manutenção, em silêncio.
-    """
+    """Sem `--purge-config`, os snapshots são MOVIDOS, não apagados."""
     bloco = _bloco_dos_bonds()
     assert "KEEP_CONFIG" in bloco, (
         "o destino dos snapshots de bond não consulta mais o `KEEP_CONFIG` — "
@@ -55,12 +35,7 @@ def test_o_default_preserva_os_snapshots() -> None:
 
 
 def test_a_purga_explicita_continua_possivel() -> None:
-    """Com `--purge-config`, o wipe acontece — o contrapeso desta cura.
-
-    Preservar sempre seria trocar um defeito por outro: um desinstalador que
-    deixa LinkKey na máquina para sempre, sem caminho de limpeza. A flag existe
-    e tem de continuar funcionando.
-    """
+    """Com `--purge-config`, o wipe acontece — o contrapeso desta cura."""
     bloco = _bloco_dos_bonds()
     assert "sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds" in bloco, (
         "sumiu o caminho de wipe. Com `--purge-config` a pessoa PEDIU o apagar, e "
@@ -73,11 +48,7 @@ def test_a_purga_explicita_continua_possivel() -> None:
 
 
 def test_a_pessoa_e_avisada_de_onde_foi_parar() -> None:
-    """O log diz o destino e o caminho de volta.
-
-    Preservar em silêncio é quase tão ruim quanto apagar em silêncio: ela não
-    saberia que existe o que restaurar, nem como.
-    """
+    """O log diz o destino e o caminho de volta."""
     bloco = _bloco_dos_bonds()
     assert "para restaurar:" in bloco, (
         "o log não diz como restaurar os snapshots preservados."

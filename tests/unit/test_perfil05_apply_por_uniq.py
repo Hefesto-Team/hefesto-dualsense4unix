@@ -1,15 +1,4 @@
-"""PERFIL-05 — escrita viva por-controle alinhada com a persistência (por MAC).
-
-Achado do estudo 22/07: a GUI persistia edição por-controle por `uniq` (MAC),
-mas os botões "Aplicar" de Gatilho/Lightbar aplicavam AO VIVO pelo caminho de
-índice (`_output_target_key`), que cai em BROADCAST quando o alvo desalinha —
-"configurei o controle 2 e mudou todos". Agora `led.set`/`led.player_set`/
-`trigger.set` aceitam `uniq` opcional e o daemon aplica via
-`apply_output_for` (override por-MAC: registra + escreve SÓ naquele controle).
-
-Falha-sem: no HEAD anterior os handlers ignoravam `uniq` e escreviam pelo
-caminho clássico (broadcast/índice).
-"""
+"""PERFIL-05 — escrita viva por-controle alinhada com a persistência (por MAC)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,7 +14,7 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-UNIQ = "aabbcc000001"  # faixa forjada aa:bb:cc (gate de anonimato)
+UNIQ = "aabbcc000001"
 
 
 class _FakeComApplyFor(FakeController):
@@ -84,9 +73,7 @@ async def test_led_set_com_uniq_vai_por_apply_output_for(
     resultado = await server._handle_led_set({"rgb": [10, 20, 30], "uniq": UNIQ})
     assert resultado["status"] == "ok"
     assert fc.apply_for_calls == [(UNIQ, OutputSpec(led=(10, 20, 30)))]
-    assert fc.classic_led_calls == []  # NÃO caiu no broadcast/índice
-    # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
-    #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
+    assert fc.classic_led_calls == []
 
 
 @pytest.mark.asyncio
@@ -127,16 +114,13 @@ async def test_trigger_set_com_uniq_vai_por_apply_output_for(
     assert spec.trigger_left is not None
     assert spec.trigger_right is None
     assert fc.classic_trigger_calls == []
-    # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
-    #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
 
 @pytest.mark.asyncio
 async def test_uniq_sem_apply_output_for_no_backend_cai_no_classico(
     tmp_path: Path,
 ) -> None:
-    """FakeController PURO (sem apply_output_for): o `uniq` é ignorado com
-    segurança e o caminho clássico roda — nenhum backend antigo quebra."""
+    """FakeController PURO (sem apply_output_for): o `uniq` é ignorado com"""
     fc = FakeController(transport="usb")
     fc.connect()
     store = StateStore()
@@ -152,11 +136,6 @@ async def test_uniq_sem_apply_output_for_no_backend_cai_no_classico(
     )
     resultado = await server._handle_led_set({"rgb": [1, 2, 3], "uniq": UNIQ})
     assert resultado["status"] == "ok"
-
-
-# ---------------------------------------------------------------------------
-# ABAS-06 (sprint 2026-07-25) — o "Desligar" era o último comando sem alvo
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

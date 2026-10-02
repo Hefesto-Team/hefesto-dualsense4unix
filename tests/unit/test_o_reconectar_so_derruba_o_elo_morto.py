@@ -76,9 +76,6 @@ def _quedas(barramento: bm.BarramentoDeMentira) -> list[str]:
     ]
 
 
-# ---------------------------------------------------------------------------
-# 1. o vivo fica
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     "grafia", [bm.CONTROLE, bm.CONTROLE.upper()], ids=["caixa-baixa", "caixa-alta"]
 )
@@ -88,11 +85,7 @@ def test_o_vivo_fica(
     monkeypatch: pytest.MonkeyPatch,
     grafia: str,
 ) -> None:
-    """O BlueZ diz `Connected` e o kernel tem o HID: nem `Disconnect`, nem `Connect`.
-
-    MORDIDA: tire a conferência do kernel de `reconectar` — o `Disconnect`
-    sai, como saiu às 19h07.
-    """
+    """O BlueZ diz `Connected` e o kernel tem o HID: nem `Disconnect`, nem `Connect`."""
     _raiz(tmp_path, monkeypatch, bm.CONTROLE)
     with structlog.testing.capture_logs() as registros:
         desfecho = radio.reconectar(grafia)
@@ -129,16 +122,10 @@ def test_o_do_cabo_com_o_radio_fora_nao_e_chamado(
     assert desfecho.estado == radio.ESTADO_JA_NO_AR
 
 
-# ---------------------------------------------------------------------------
-# 2. o morto cai (o caso de 22/09)
-# ---------------------------------------------------------------------------
 def test_o_morto_cai_e_e_chamado_de_volta(
     barramento: bm.BarramentoDeMentira, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O BlueZ diz `Connected` e o kernel não tem o endereço: `Disconnect`, depois `Connect`.
-
-    MORDIDA: faça `reconectar` nunca derrubar — este caso reprova.
-    """
+    """O BlueZ diz `Connected` e o kernel não tem o endereço: `Disconnect`, depois `Connect`."""
     _raiz(tmp_path, monkeypatch, SEGUNDO)
     desfecho = radio.reconectar(bm.CONTROLE)
 
@@ -147,17 +134,10 @@ def test_o_morto_cai_e_e_chamado_de_volta(
     assert desfecho.estado == radio.ESTADO_VOLTOU
 
 
-# ---------------------------------------------------------------------------
-# 3. a dúvida não derruba
-# ---------------------------------------------------------------------------
 def test_a_duvida_nao_derruba(
     barramento: bm.BarramentoDeMentira, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A raiz que não abre é «não sei», e na dúvida o controle fica.
-
-    MORDIDA: leia a dúvida como conjunto vazio (o `uniqs_com_hid` de antes) —
-    o `Disconnect` sai.
-    """
+    """A raiz que não abre é «não sei», e na dúvida o controle fica."""
     monkeypatch.setattr(conexao_zumbi, "RAIZ_HIDRAW", str(tmp_path / "nao-abre"))
     desfecho = radio.reconectar(bm.CONTROLE)
 
@@ -189,10 +169,7 @@ def test_a_duvida_com_o_bluez_dizendo_fora_ainda_chama(
 def test_o_dono_do_hid_responde_em_tres_valores(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O conjunto, o vazio (ninguém tem) e o `None` (não deu para ler) são três respostas.
-
-    A cura do zumbi segue lendo o vazio, como antes (`uniqs_com_hid`).
-    """
+    """O conjunto, o vazio (ninguém tem) e o `None` (não deu para ler) são três respostas."""
     raiz = _raiz(tmp_path, monkeypatch, bm.CONTROLE.upper())
     assert conexao_zumbi.quem_tem_hid(raiz) == {bm.CONTROLE}
     vazia = tmp_path / "vazia"
@@ -203,9 +180,6 @@ def test_o_dono_do_hid_responde_em_tres_valores(
     assert conexao_zumbi.uniqs_com_hid(raiz) == {bm.CONTROLE}
 
 
-# ---------------------------------------------------------------------------
-# 4. o botão de 19h07
-# ---------------------------------------------------------------------------
 def _a01() -> Any:
     raiz = Path(__file__).resolve().parents[2]
     interface = raiz / "src" / "hefesto_dualsense4unix" / "interface"
@@ -219,11 +193,7 @@ def _a01() -> Any:
 def test_o_botao_com_o_servico_mudo_nao_derruba_quem_tem_hid(
     barramento: bm.BarramentoDeMentira, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O passo 0 com a lista de jogadores vazia (o `{}` do serviço mudo) e os dois com HID.
-
-    MORDIDA: tire a conferência do kernel — os dois caem e são chamados, como
-    às 19h07, e o recibo passa a contar dois que «voltaram».
-    """
+    """O passo 0 com a lista de jogadores vazia (o `{}` do serviço mudo) e os dois com HID."""
     a01 = _a01()
     from pacotes import Contexto
 

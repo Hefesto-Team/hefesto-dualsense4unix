@@ -50,27 +50,16 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from hefesto_dualsense4unix.interface import onde
 
-#: O bloco de um lugar, e o seletor é O MESMO que o piloto usa —
-#: `document.querySelectorAll('[data-controle="' + pref + '"]')`. Uma régua que
-#: não procura o que o produto procura reprova pelo motivo errado no dia em que
-#: morder de verdade.
 LUGAR = re.compile(r'data-controle="(p[1-4])"')
 CAMPO = re.compile(r'data-campo="([^"]+)"')
 ALVO_HTML = re.compile(r'data-campo="[^"]+"[^>]*data-hef-alvo="html"')
 CAIXA_DE_BLOCO = re.compile(r'<div[^>]*data-ajuste="[^"]*"')
 
-#: As páginas avulsas — a de calibração, os dois mapas, as folhas do Design.
-#: Elas não são aba, e a de calibração desenha só quem está na mesa AGORA.
 SO_AS_ABAS = re.compile(r"^\d\d-")
 
 
 def _miolo(html: str, i_abre: int, tag: str) -> tuple[int, int]:
-    """(início, fim) do miolo de uma tag aberta em `i_abre`, por contagem.
-
-    POR CONTAGEM E NÃO ATÉ O VIZINHO: recortar cada lugar até o começo do
-    seguinte faz o ÚLTIMO engolir o rodapé — foi assim que o P4 da aba Gatilhos
-    apareceu com doze endereços onde tem dez.
-    """
+    """(início, fim) do miolo de uma tag aberta em `i_abre`, por contagem."""
     fim_da_abertura = html.index(">", i_abre) + 1
     i, nivel = fim_da_abertura, 1
     passo = re.compile(r"</?%s\b" % tag)
@@ -135,7 +124,6 @@ def main() -> int:
     paginas = [p for p in onde.paginas(publicado=publicado)
                if SO_AS_ABAS.match(p.name)]
     if not paginas:
-        # RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE.
         print("check_os_quatro_lugares: não achei nenhuma aba para medir.")
         return 1
     onde_estou = "o publicado" if publicado else "a bancada"

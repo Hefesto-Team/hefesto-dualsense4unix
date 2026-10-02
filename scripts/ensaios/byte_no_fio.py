@@ -140,12 +140,7 @@ from o_formato_btsnoop import (
     reports_de_saida,
 )
 
-# O FORMATO DO ARQUIVO MORA NO ``o_formato_btsnoop.py`` desde 25/09/2026: a
-# lightbar o lê como root, e ele não pode puxar o ``comum``.
 
-#: As cores mágicas. Escolhidas para não colidir com nada que o produto use
-#: (o Hefesto trabalha com cores de jogador, e nenhuma delas é um degradê de
-#: nibble repetido) e para serem reconhecíveis a olho num despejo hexadecimal.
 MAGICA_A = (0x11, 0x22, 0x33)
 MAGICA_B = (0x44, 0x55, 0x66)
 MAGICA_C = (0x77, 0x88, 0x99)
@@ -164,43 +159,13 @@ def mascarar(texto: str) -> str:
     return _RE_MAC.sub(_troca, texto)
 
 
-# ---------------------------------------------------------------------------
-# A captura: nasce fechada, é lida e sai
-# ---------------------------------------------------------------------------
-
-#: O comando que o root roda. A umask vai DENTRO dele porque o `sudo` junta a
-#: nossa com a do sudoers, e um sudoers com `umask_override` impõe a dele (022):
-#: fora daqui, a captura nasceria 0644 em algumas máquinas.
 _BTMON_FECHADO = 'umask 077 && exec btmon -w "$1"'
 
-#: O que o root roda no fim: a captura passa a ser de quem mede, e continua 0600.
 _ENTREGAR_FECHADO = 'chown "$1" "$2" && chmod 0600 "$2"'
 
 
 class CapturaDoFio:
-    """Uma captura do ``btmon -w``, do nascimento à remoção. **Nasce fechada.**
-
-    Se um controle reconecta durante a captura, o ``btmon`` grava a chave de
-    pareamento em claro (o ``Link Key Request Reply``). Até 24/09/2026 a captura
-    nascia 0644, do root, no ``/tmp``, e ficava lá
-    (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01). Agora ela:
-
-    * nasce 0600 num diretório 0700 de quem mede — duas trancas, e nenhuma
-      depende do sudoers da máquina;
-    * no fim passa a ser de quem mede (``chown``), ainda 0600, e é lida sem root;
-    * sai logo depois de lida, e :meth:`apagar` devolve a linha com o caminho,
-      para a saída dizer onde ela esteve. Se o instrumento cair antes, o
-      ``atexit`` apaga — e um ``SIGTERM`` ou um ``SIGHUP`` (o terminal que
-      fecha) saem pelo mesmo caminho, em vez de matar o Python com o ``btmon``
-      do root ainda gravando.
-
-    O que deu errado no caminho (o ``sudo -n`` que não pôs o ``btmon`` de pé, a
-    entrega que falhou) fica em :attr:`queixas`, para o relatório dizer «não
-    medi» em vez de «não houve».
-
-    Os dois instrumentos que capturam o fio (este e a captura armada) passam
-    por aqui: duas cópias deste ciclo é como uma delas volta a nascer aberta.
-    """
+    """Uma captura do ``btmon -w``, do nascimento à remoção. **Nasce fechada.**"""
 
     def __init__(self, prefixo: str) -> None:
         self.diretorio = tempfile.mkdtemp(prefix=f"{prefixo}-")
@@ -221,11 +186,7 @@ class CapturaDoFio:
         )
 
     def _sair_pelo_atexit_nos_sinais(self) -> None:
-        """``SIGTERM``/``SIGHUP`` viram ``SystemExit`` enquanto a captura vive.
-
-        Só troca o sinal que está no padrão, e só no fio principal (o único
-        onde o Python deixa trocar); o :meth:`apagar` devolve o que havia.
-        """
+        """``SIGTERM``/``SIGHUP`` viram ``SystemExit`` enquanto a captura vive."""
         if threading.current_thread() is not threading.main_thread():
             return
         for sinal in (signal.SIGTERM, signal.SIGHUP):
@@ -293,41 +254,14 @@ class CapturaDoFio:
 
 
 def _sair_pelo_caminho_normal(numero: int, _quadro: Any) -> None:
-    """O sinal vira ``SystemExit``: os ``finally`` e o ``atexit`` rodam.
-
-    O segundo sinal não interrompe a limpeza que o primeiro disparou: os dois
-    passam a ser ignorados até o :meth:`CapturaDoFio.apagar` devolver os de antes.
-    """
+    """O sinal vira ``SystemExit``: os ``finally`` e o ``atexit`` rodam."""
     for sinal in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(sinal, signal.SIG_IGN)
     raise SystemExit(128 + numero)
 
 
-# ---------------------------------------------------------------------------
-# A mesa: quem é quem, e qual handle é de quem
-# ---------------------------------------------------------------------------
-
-
 def _handles_do_sysfs(raiz: str = "/sys/class/bluetooth") -> dict[str, int]:
-    """MAC -> handle ACL lido do sysfs: cada conexão vira `hciN:<handle>`.
-
-    MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026). O `hcitool` foi DEPRECIADO pela
-    upstream do BlueZ e cada família de distro o mudou de pacote
-    (`bluez-deprecated`, `bluez-deprecated-tools`). Onde ele não existe, este
-    instrumento voltava um mapa VAZIO e o relatório saía com "SEM HANDLE" em
-    todo mundo — sem dizer por quê.
-
-    A fonte viva é o próprio kernel: o `hci_conn` registra um device
-    `hciN:<handle>` (handle em decimal) sob /sys/class/bluetooth, com os
-    atributos `address` e `type`. Nada de root, nada de pacote.
-
-    NÃO CONFERIDO AO VIVO: em 19/08/2026 esta bancada não tinha adaptador BT
-    ligado (`/sys/class/bluetooth` vazio), então a forma exata dos nomes e
-    atributos veio do fonte do kernel, não de medição aqui. Por isso o
-    `hcitool` continua como plano B e o relatório DECLARA de qual régua o mapa
-    saiu — se a leitura do sysfs estiver errada, isso aparece impresso em vez
-    de contaminar o veredito em silêncio.
-    """
+    """MAC -> handle ACL lido do sysfs: cada conexão vira `hciN:<handle>`."""
     mapa: dict[str, int] = {}
     try:
         nomes = os.listdir(raiz)
@@ -367,13 +301,7 @@ def _handles_do_hcitool() -> dict[str, int]:
 
 
 def handles_por_mac() -> tuple[dict[str, int], str]:
-    """O mapa MAC -> handle ACL, e a RÉGUA de onde ele saiu.
-
-    Ferramenta viva primeiro (sysfs do kernel), depreciada como plano B. A régua
-    volta junto porque este instrumento declara a régua — regra desta casa
-    desde que uma medição contra a biblioteca errada produziu alarme
-    convincente e falso.
-    """
+    """O mapa MAC -> handle ACL, e a RÉGUA de onde ele saiu."""
     mapa = _handles_do_sysfs()
     if mapa:
         return mapa, "sysfs /sys/class/bluetooth"
@@ -384,12 +312,7 @@ def handles_por_mac() -> tuple[dict[str, int], str]:
 
 
 def led_do_aparelho(ap: Aparelho) -> str:
-    """O diretório `<inputN>:rgb:indicator` deste hidraw, ou "" se não houver.
-
-    Vai pelo `dir_device` do hid, que é o pai comum do `hidraw` e do `leds/` —
-    e não por adivinhação de número de input, que já trocou de controle nesta
-    casa quando um deles reconectou.
-    """
+    """O diretório `<inputN>:rgb:indicator` deste hidraw, ou "" se não houver."""
     dir_leds = os.path.join(ap.dir_device, "leds")
     if not os.path.isdir(dir_leds):
         return ""
@@ -404,12 +327,7 @@ def cor_atual(dir_led: str) -> str:
 
 
 def escrever_cor(dir_led: str, rgb: tuple[int, int, int]) -> str:
-    """Escreve no sysfs. Devolve "" se deu certo, ou a queixa do sistema.
-
-    Isto é uma escrita no SYSFS, não no aparelho: quem monta o `0x31` é o
-    kernel. É a única forma de provocar a escrita para observá-la, e é
-    literalmente o que o produto faz o tempo todo.
-    """
+    """Escreve no sysfs. Devolve "" se deu certo, ou a queixa do sistema."""
     alvo = os.path.join(dir_led, "multi_intensity")
     texto = f"{rgb[0]} {rgb[1]} {rgb[2]}"
     try:
@@ -419,10 +337,6 @@ def escrever_cor(dir_led: str, rgb: tuple[int, int, int]) -> str:
     except OSError as erro:
         return str(erro)
 
-
-# ---------------------------------------------------------------------------
-# O segundo observador: o kprobe
-# ---------------------------------------------------------------------------
 
 TRACEFS = "/sys/kernel/tracing"
 SIMBOLO_KPROBE = "dualsense_send_output_report.isra.0"
@@ -457,12 +371,7 @@ def ler_kallsyms() -> str:
 
 
 def kprobe_contador() -> int:
-    """Quantas linhas do kprobe estão no buffer AGORA.
-
-    É contagem de buffer, não contador de hardware: se o buffer der a volta, o
-    número mente para MENOS. Por isso ele é zerado a cada janela e as janelas
-    são curtas — e por isso ele é o SEGUNDO observador, não o primeiro.
-    """
+    """Quantas linhas do kprobe estão no buffer AGORA."""
     texto = _sudo_sh(f"grep -c hefesto_dsout {TRACEFS}/trace").stdout.strip()
     return int(texto) if texto.isdigit() else 0
 
@@ -477,11 +386,6 @@ def kprobe_desarmar() -> None:
         f"echo '-:hefesto_dsout' >> {TRACEFS}/kprobe_events; "
         f"echo > {TRACEFS}/trace"
     )
-
-
-# ---------------------------------------------------------------------------
-# O ensaio
-# ---------------------------------------------------------------------------
 
 
 class Alvo:
@@ -550,9 +454,6 @@ def main() -> int:
     if any(a.handle < 0 for a in alvos):
         print("\n  !! Sem handle não dá para atribuir quadro a controle. Veredito parcial.")
 
-    # ---- captura ----------------------------------------------------------
-    # Tem MAC real e pode ter a chave de pareamento: nasce 0600 e sai depois de
-    # lida (`CapturaDoFio`). NÃO se versiona.
     captura = CapturaDoFio("byte-no-fio")
     kprobe_erro = "não pedido"
     if args.kprobe:
@@ -561,7 +462,7 @@ def main() -> int:
             kprobe_zerar()
 
     captura.comecar()
-    time.sleep(1.0)  # o btmon precisa abrir o socket antes de a gente escrever
+    time.sleep(1.0)
 
     janelas: list[tuple[str, Alvo, tuple[int, int, int], float, float, int]] = []
     magicas = [MAGICA_A, MAGICA_B, MAGICA_C, MAGICA_D]
@@ -569,8 +470,6 @@ def main() -> int:
     for rodada in (0, 1):
         for i, alvo in enumerate(alvos):
             if args.mesma_cor:
-                # No teste gêmeo a cor varia por RODADA, nunca por controle: os
-                # dois recebem exatamente o mesmo valor na mesma janela.
                 cor = magicas[rodada % len(magicas)]
             else:
                 cor = magicas[(rodada * len(alvos) + i) % len(magicas)]
@@ -578,12 +477,6 @@ def main() -> int:
                 kprobe_zerar()
             k0 = 0
             t0 = time.time()
-            # A escrita INSISTE durante a janela inteira. Não é redundância: o
-            # daemon do Hefesto escreve cor nestes mesmos LEDs o tempo todo, e
-            # uma escrita única pode ser sobrescrita antes de o `output_worker`
-            # do driver rodar. Insistir garante que a cor mágica teve chance
-            # real de sair — e se mesmo assim não sair, o silêncio é do rádio,
-            # não da corrida com o daemon.
             erro = ""
             while time.time() - t0 < args.segundos:
                 erro = escrever_cor(alvo.dir_led, cor) or erro
@@ -600,7 +493,6 @@ def main() -> int:
     time.sleep(0.4)
     captura.encerrar()
 
-    # ---- devolver a cor de antes -----------------------------------------
     print("\nDEVOLVENDO a cor que cada um tinha antes")
     for alvo in alvos:
         partes = alvo.cor_antes.split()
@@ -611,7 +503,6 @@ def main() -> int:
     if args.kprobe and not kprobe_erro:
         kprobe_desarmar()
 
-    # ---- leitura ----------------------------------------------------------
     quadros, queixas = ler_btsnoop(captura.caminho)
     linha_da_captura = captura.apagar()
     queixas = [*captura.queixas, *queixas]
@@ -645,16 +536,12 @@ def main() -> int:
            if a.handle not in por_handle],
     ))
 
-    # ---- a mordida: reencontrar a cor mágica ------------------------------
     linhas_saida.append("\nA MORDIDA — a cor mágica que EU escrevi aparece no ar, "
                         "nos offsets 47/48/49?")
     achados: list[list[str]] = []
     mordeu: dict[str, bool] = {}
     exemplares: dict[str, bytes] = {}
     for rot, alvo, cor, _t0, _t1, dk in janelas:
-        # De propósito, a busca é na CAPTURA INTEIRA e não na janela de tempo:
-        # a cor mágica é única por janela, então ela mesma é o marcador. Assim
-        # o veredito não depende de eu ter acertado a época do btsnoop.
         na_janela = [q for q in saidas if q.handle == alvo.handle]
         casados = [q for q in na_janela
                    if len(q.corpo) > OFF_B + 1
@@ -675,7 +562,6 @@ def main() -> int:
         achados,
     ))
 
-    # ---- os bytes, lado a lado -------------------------------------------
     if exemplares:
         linhas_saida.append("\nOS BYTES — um exemplar do 0x31 de cada controle "
                             "que a cor mágica identificou")
@@ -689,7 +575,6 @@ def main() -> int:
             for i in range(0, len(rep), 16):
                 linhas_saida.append(f"    {i:3d}: " + " ".join(f"{c:02x}" for c in rep[i:i + 16]))
 
-    # ---- o diff byte a byte ----------------------------------------------
     if len(exemplares) == 2:
         (mac_a, rep_a), (mac_b, rep_b) = sorted(exemplares.items())
         difs = [i for i in range(min(len(rep_a), len(rep_b))) if rep_a[i] != rep_b[i]]
@@ -706,7 +591,6 @@ def main() -> int:
                   f"0x{rep_a[i]:02x}", f"0x{rep_b[i]:02x}"] for i in difs],
             ))
 
-    # ---- veredito ---------------------------------------------------------
     sao = [a for a in alvos if mordeu.get(a.ap.mac)]
     mudo = [a for a in alvos if not mordeu.get(a.ap.mac)]
     if not sao:

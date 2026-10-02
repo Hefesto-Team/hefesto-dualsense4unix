@@ -1,20 +1,4 @@
-"""**A háptica nativa não chegava a jogo nenhum de fora da Steam.**
-
-LANCADOR-AGNOSTICO-01, 21/09/2026. Ordem dela: *"O PROJETO E SUAS FEATURES DEVEM
-FUNCIONAR INDEPENDENTE DO LANÇADOR SER STEAM."*
-
-O device KS (a háptica que o jogo acha pelo `KSCATEGORY_AUDIO`) e a cura de
-camada Vulkan enumeravam **só** `steamapps/compatdata`. O prefixo do Heroic mora
-em `~/Games/Heroic/Prefixes/<Nome do Jogo>`, que nenhuma `steamapps` contém.
-
-**O NÚMERO É O LAUDO, medido no disco dela em 21/09:** três prefixos da Steam
-traziam a marca `HEFESTOKS` no `system.reg` — 24, 36 e 42 ocorrências — e o
-prefixo do Guardiões da Galáxia, aberto pelo Heroic, trazia **ZERO**.
-
-**A FORMA É A MESMA NOS DOIS** (`<raiz>/pfx/system.reg`), e é o que torna a cura
-barata. O que muda é só o nome da pasta: um appid numérico na Steam, o TÍTULO do
-jogo no Heroic — e era esse `isdigit()` que barrava.
-"""
+"""**A háptica nativa não chegava a jogo nenhum de fora da Steam.**"""
 
 from __future__ import annotations
 
@@ -47,42 +31,27 @@ def _heroic_com(lar: pathlib.Path, por_jogo: str = "", raiz_comum: str = ""):
 
 class TestOPrefixoDoHeroicEAchado:
     def test_o_prefixo_por_jogo_entra(self, tmp_path):
-        """O `GamesConfig/<app_name>.json` é o mais exato: ele alcança quem
-        mudou o prefixo daquele jogo à mão.
-
-        MORDIDA: leia só o `config.json`. Esta régua reprova.
-        """
+        """O `GamesConfig/<app_name>.json` é o mais exato: ele alcança quem"""
         alvo = _prefixo(tmp_path / "Games", "Marvels Guardians of the Galaxy")
         _heroic_com(tmp_path, por_jogo=str(alvo))
         assert cv.prefixos_dos_lancadores(tmp_path) == [alvo]
 
     def test_a_raiz_comum_alcanca_quem_nunca_abriu_o_gamesconfig(self, tmp_path):
-        """MORDIDA: leia só o `GamesConfig`. Um jogo cujo prefixo nasceu no
-        default some da lista — e some em SILÊNCIO.
-        """
+        """MORDIDA: leia só o `GamesConfig`. Um jogo cujo prefixo nasceu no"""
         raiz = tmp_path / "Games/Heroic/Prefixes"
         alvo = _prefixo(raiz, "Um Jogo")
         _heroic_com(tmp_path, raiz_comum=str(raiz))
         assert cv.prefixos_dos_lancadores(tmp_path) == [alvo]
 
     def test_o_mesmo_prefixo_nao_conta_duas_vezes(self, tmp_path):
-        """As duas fontes se sobrepõem no caso comum, e contar em dobro faria a
-        cura rodar duas vezes no mesmo `system.reg` — a BIBLIOTECA-DOBRADA-01
-        no outro eixo.
-
-        MORDIDA: tire o `vistos`.
-        """
+        """As duas fontes se sobrepõem no caso comum, e contar em dobro faria a"""
         raiz = tmp_path / "Games/Heroic/Prefixes"
         alvo = _prefixo(raiz, "Marvels Guardians of the Galaxy")
         _heroic_com(tmp_path, por_jogo=str(alvo), raiz_comum=str(raiz))
         assert cv.prefixos_dos_lancadores(tmp_path) == [alvo]
 
     def test_pasta_sem_system_reg_nao_e_prefixo(self, tmp_path):
-        """Uma pasta solta dentro de `Prefixes/` não é prefixo wine. Escrever
-        nela seria criar lixo no disco dela.
-
-        MORDIDA: tire a conferência do `system.reg`.
-        """
+        """Uma pasta solta dentro de `Prefixes/` não é prefixo wine. Escrever"""
         raiz = tmp_path / "Games/Heroic/Prefixes"
         (raiz / "vazia").mkdir(parents=True)
         _heroic_com(tmp_path, raiz_comum=str(raiz))
@@ -92,11 +61,7 @@ class TestOPrefixoDoHeroicEAchado:
         assert cv.prefixos_dos_lancadores(tmp_path) == []
 
     def test_json_torto_nao_derruba(self, tmp_path):
-        """Disco hostil devolve menos prefixos, nunca uma exceção — quem chama
-        é o gancho de lançamento.
-
-        MORDIDA: tire o `except (OSError, ValueError)`.
-        """
+        """Disco hostil devolve menos prefixos, nunca uma exceção — quem chama"""
         pasta = _heroic_com(tmp_path, raiz_comum="")
         (pasta / "config.json").write_text("{ isto não é json", encoding="utf-8")
         (pasta / "GamesConfig" / "x.json").write_text("[[[", encoding="utf-8")
@@ -105,12 +70,7 @@ class TestOPrefixoDoHeroicEAchado:
 
 class TestAHapticaPercorreTodosOsPrefixos:
     def test_a_haptica_usa_raizes_de_prefixo(self):
-        """**A CURA ESCRITA E NUNCA LIGADA.**
-
-        MORDIDA: devolva `pastas_compatdata` ao enumerador da háptica. O
-        prefixo do Heroic volta a ficar sem o device KS, e o jogo dela volta a
-        não vibrar.
-        """
+        """**A CURA ESCRITA E NUNCA LIGADA.**"""
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py"
         ).read_text(encoding="utf-8")
@@ -120,11 +80,7 @@ class TestAHapticaPercorreTodosOsPrefixos:
         assert "cv.pastas_compatdata()" not in corpo
 
     def test_o_censo_de_camadas_nao_filtra_por_appid_numerico(self):
-        """O `isdigit()` era a assinatura da Steam escrita no filtro: só
-        `compatdata` nomeia a pasta com um appid numérico.
-
-        MORDIDA: devolva `if not raiz.name.isdigit(): continue` ao censo.
-        """
+        """O `isdigit()` era a assinatura da Steam escrita no filtro: só"""
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
         ).read_text(encoding="utf-8")
@@ -134,12 +90,7 @@ class TestAHapticaPercorreTodosOsPrefixos:
         assert "raiz.name.isdigit()" not in corpo
 
     def test_a_ordenacao_nao_levanta_com_nome_de_pasta(self, monkeypatch, tmp_path):
-        """**UMA ORDENAÇÃO QUE LEVANTA DERRUBA A ABA INTEIRA** por causa de um
-        jogo. O `sort(key=lambda p: int(p.appid))` que morava ali explodia no
-        primeiro prefixo do Heroic.
-
-        MORDIDA: devolva o `int(p.appid)`.
-        """
+        """**UMA ORDENAÇÃO QUE LEVANTA DERRUBA A ABA INTEIRA** por causa de um"""
         alvo = _prefixo(tmp_path, "Um Jogo Do Heroic")
         (alvo / "pfx" / "system.reg").write_text(
             'implicit_layer_here\n"VK_LAYER_X"=dword:00000000\n', encoding="utf-8")

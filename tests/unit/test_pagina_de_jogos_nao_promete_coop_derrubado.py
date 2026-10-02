@@ -1,30 +1,4 @@
-"""A página que ela lê não pode dizer que a exceção de Steam Input mata o co-op.
-
-Defeito achado em 11/08/2026, na varredura das contradições entre a documentação
-e o produto — e foi a mais cara das quarenta e uma, porque não é de protocolo:
-é da página de uso, a que ela abre.
-
-`docs/usage/jogos-e-mascaras.md` afirmava que, com a exceção ativa, *"o gamepad
-virtual sai de cena: nesse jogo vale só o controle 1, sem co-op"*. Era verdade
-até 08/08. Em 09/08 a ESCONDER-EM-VEZ-DE-SAIR-01 inverteu o mecanismo por
-decisão dela: passou a esconder o FÍSICO e manter o virtual de pé, justamente
-porque derrubar o jogador 2 era o defeito
-(`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências num dia).
-
-A correção entrou no produto e nunca desceu para a página. Durante dois dias a
-documentação disse a ela que perderia o co-op num jogo onde não perde.
-
-Este teste amarra os dois: se alguém reescrever a página com a promessa antiga,
-reprova; se alguém desfizer a cura no código, o teste do co-op reprova antes.
-
-A MORDIDA, provada em 11/08/2026
-================================
-Devolvida a frase *"o gamepad virtual sai de cena: nesse jogo vale só o controle
-1, sem co-op"* ao parágrafo principal da página,
-`test_a_pagina_nao_promete_perda_de_coop` reprova nomeando a linha. Removida a
-menção ao co-op continuar funcionando, `test_a_pagina_diz_que_o_coop_continua`
-reprova. Desfeitas, verde.
-"""
+"""A página que ela lê não pode dizer que a exceção de Steam Input mata o co-op."""
 from __future__ import annotations
 
 import re
@@ -34,9 +8,6 @@ import pytest
 
 PAGINA = Path("docs/usage/jogos-e-mascaras.md")
 
-#: A promessa que caducou em 09/08. Procurada só FORA de bloco de citação: uma
-#: nota datada que cita a frase antiga para explicar o que mudou é exatamente o
-#: que a casa manda escrever, e reprová-la seria castigar a honestidade.
 _PROMESSA_ANTIGA = re.compile(
     r"(sem co-op|vale só o controle 1|virtual sai de cena)",
     re.IGNORECASE,
@@ -73,12 +44,7 @@ def test_a_pagina_nao_promete_perda_de_coop():
 
 
 def test_a_pagina_diz_que_o_coop_continua():
-    """E o oposto: ela tem de afirmar, sem rodeio, que o co-op sobrevive.
-
-    Não basta remover a frase errada. Quem lê a seção precisa da resposta, senão
-    a dúvida fica de pé e a página volta a ser reescrita errado por alguém
-    tentando preenchê-la.
-    """
+    """E o oposto: ela tem de afirmar, sem rodeio, que o co-op sobrevive."""
     texto = (_raiz() / PAGINA).read_text(encoding="utf-8")
     assert "co-op continua funcionando" in texto.lower(), (
         f"{PAGINA} não afirma que o co-op continua funcionando nos jogos com "
@@ -88,12 +54,7 @@ def test_a_pagina_diz_que_o_coop_continua():
 
 
 def test_o_codigo_ainda_esconde_o_fisico_e_mantem_o_virtual():
-    """A cura que a página descreve tem de continuar no produto.
-
-    Este caso é o outro lado do par: se alguém reverter a decisão de 09/08 no
-    código, a página passa a mentir de novo — e o teste acima continuaria verde,
-    porque ele só olha o texto. Aqui se olha o mecanismo.
-    """
+    """A cura que a página descreve tem de continuar no produto."""
     fonte = (
         _raiz() / "src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py"
     ).read_text(encoding="utf-8")
@@ -102,28 +63,18 @@ def test_o_codigo_ainda_esconde_o_fisico_e_mantem_o_virtual():
         "a função que esconde o físico sumiu; se a cura foi revertida, a página "
         "de uso precisa voltar a falar em perda de co-op — e esta é a hora de decidir"
     )
-    # O nome do defeito curado fica citado no fonte de propósito (a casa não
-    # apaga decisão medida). Se ele sumir, alguém reescreveu o bloco sem ler.
     assert "coop_derrubado_pela_excecao_steam_input" in fonte, (
         "o registro do defeito que a ESCONDER-EM-VEZ-DE-SAIR-01 curou saiu do "
         "fonte; sem ele, a próxima pessoa reintroduz o caminho que derrubava o jogador 2"
     )
 
 
-#: As duas metades do mecanismo, como a página as diz a quem usa.
 _O_MECANISMO = ("esconde o controle físico", "virtual continua de pé")
 
 
 @pytest.mark.parametrize("trecho", _O_MECANISMO)
 def test_a_pagina_diz_o_mecanismo(trecho):
-    """A página tem de dizer por que o co-op fica, e não só que ele fica.
-
-    Até 28/09/2026 este caso cobrava da página a data e o nome interno da
-    mudança de mecanismo, e a página de uso deixou de carregar data de decisão
-    e nome interno (o histórico mora no `git log`). O que a pessoa precisa é o
-    mecanismo de hoje: o físico escondido e o virtual de pé. Mordida: tirar a
-    frase do mecanismo da página reprova aqui.
-    """
+    """A página tem de dizer por que o co-op fica, e não só que ele fica."""
     texto = (_raiz() / PAGINA).read_text(encoding="utf-8")
     assert trecho in texto, (
         f"a página não diz {trecho!r}: sem o mecanismo, a frase do co-op fica "

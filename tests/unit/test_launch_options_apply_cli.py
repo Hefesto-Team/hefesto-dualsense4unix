@@ -25,7 +25,6 @@ from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 _TAB = "\t"
 
-#: A variante VELHA nossa persistida ao vivo (verbatim do sprint doc DEDUP-05).
 LINHA_914 = (
     "SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 "
     "__GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%"
@@ -33,11 +32,7 @@ LINHA_914 = (
 
 
 def _vdf(launch_options: dict[str, str], sem_launch_options: tuple[str, ...] = ()) -> str:
-    """localconfig.vdf mínimo: um app por appid, com ou sem LaunchOptions.
-
-    O caso "sem LaunchOptions" é o normal de quem nunca configurou nada — e é
-    exatamente onde o `--migrate` não põe uma linha sequer.
-    """
+    """localconfig.vdf mínimo: um app por appid, com ou sem LaunchOptions."""
     blocos = []
     for appid, valor in launch_options.items():
         blocos.append(
@@ -71,14 +66,10 @@ def steam_fechada(monkeypatch):
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
 
 
-# --- o que o --apply faz -----------------------------------------------------
-
-
 def test_apply_poe_o_wrapper_em_todo_jogo_inclusive_no_que_nunca_teve_opcoes(
     tmp_path: Path, steam_fechada, capsys
 ):
-    """O defeito da E4 em uma linha: com `--migrate`, o jogo 1599660 (sem
-    LaunchOptions nenhuma) continuava sem o wrapper para sempre."""
+    """O defeito da E4 em uma linha: com `--migrate`, o jogo 1599660 (sem"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
         _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",)),
@@ -89,9 +80,7 @@ def test_apply_poe_o_wrapper_em_todo_jogo_inclusive_no_que_nunca_teve_opcoes(
 
     assert rc == 0
     valores = slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))
-    # O jogo sem opções GANHOU a linha...
     assert valores["1599660"] == slo.WRAPPER_LAUNCH
-    # ...e o que tinha opções do usuário as manteve, agora embrulhadas.
     assert valores["620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
     out = capsys.readouterr().out
     assert "wrapper aplicado a 2 jogos" in out
@@ -101,8 +90,7 @@ def test_apply_poe_o_wrapper_em_todo_jogo_inclusive_no_que_nunca_teve_opcoes(
 def test_apply_e_idempotente_rodar_duas_vezes_nao_duplica(
     tmp_path: Path, steam_fechada, capsys
 ):
-    """Requisito dela, palavra por palavra: idempotente. O install roda sem
-    flag e vai rodar de novo — a segunda vez não pode duplicar nem reescrever."""
+    """Requisito dela, palavra por palavra: idempotente. O install roda sem"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
         _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",)),
@@ -116,10 +104,9 @@ def test_apply_e_idempotente_rodar_duas_vezes_nao_duplica(
     assert slo.main(["--apply", "--vdf", str(vdf)]) == 0
     depois_da_segunda = vdf.read_text(encoding="utf-8")
 
-    assert depois_da_segunda == depois_da_primeira  # byte a byte
+    assert depois_da_segunda == depois_da_primeira
     escapado = slo._vdf_escape(slo.WRAPPER_PREFIX)
-    assert depois_da_segunda.count(escapado) == 2  # uma chamada por jogo
-    # Nada a fazer => o vdf nem é reescrito: continua havendo UM backup só.
+    assert depois_da_segunda.count(escapado) == 2
     assert len(list(tmp_path.glob("localconfig.vdf.bak.hefesto-launch-*"))) == 1
     out = capsys.readouterr().out
     assert "nada a fazer" in out
@@ -127,8 +114,7 @@ def test_apply_e_idempotente_rodar_duas_vezes_nao_duplica(
 
 
 def test_apply_remove_o_veneno_legado_no_mesmo_passo(tmp_path: Path, steam_fechada):
-    """Quem tinha a linha 914 sai dela DIRETO para o wrapper (o `--apply` usa o
-    mesmo `migrate_value` por dentro) — nunca o veneno e o wrapper juntos."""
+    """Quem tinha a linha 914 sai dela DIRETO para o wrapper (o `--apply` usa o"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
 
@@ -137,9 +123,6 @@ def test_apply_remove_o_veneno_legado_no_mesmo_passo(tmp_path: Path, steam_fecha
     texto = vdf.read_text(encoding="utf-8")
     assert slo.IGNORE_SIGNATURE not in texto
     assert slo.read_launch_options_by_appid(texto)["1599660"] == slo.WRAPPER_LAUNCH
-
-
-# --- as recusas de porta (rc=3, NADA é tocado) -------------------------------
 
 
 def test_apply_recusa_com_a_steam_aberta(tmp_path: Path, monkeypatch, capsys):
@@ -162,8 +145,7 @@ def test_apply_recusa_com_a_steam_aberta(tmp_path: Path, monkeypatch, capsys):
 def test_apply_recusa_com_jogo_aberto_e_nao_derruba_a_steam(
     tmp_path: Path, monkeypatch, capsys
 ):
-    """`steam -shutdown` com jogo aberto MATA o jogo (progresso não salvo
-    perdido). Vale inclusive com `--stop-steam`, que é o caminho do install."""
+    """`steam -shutdown` com jogo aberto MATA o jogo (progresso não salvo"""
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf({"620": ""}, sem_launch_options=("1599660",))
     vdf.write_text(original, encoding="utf-8")
@@ -179,7 +161,7 @@ def test_apply_recusa_com_jogo_aberto_e_nao_derruba_a_steam(
         assert slo.main(args) == 3, args
         assert vdf.read_text(encoding="utf-8") == original
 
-    assert parou == []  # a Steam NUNCA foi derrubada com o jogo aberto
+    assert parou == []
     out = capsys.readouterr().out
     assert "JOGO" in out
     assert "MATARIA" in out
@@ -194,9 +176,9 @@ def test_apply_tem_segunda_muralha_quando_o_stop_steam_mente(
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf({"620": "MANGOHUD=1 %command%"})
     vdf.write_text(original, encoding="utf-8")
-    monkeypatch.setattr(slo, "steam_running", lambda: True)  # nunca fecha
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
-    monkeypatch.setattr(slo, "stop_steam", lambda: True)  # ...mas diz que sim
+    monkeypatch.setattr(slo, "stop_steam", lambda: True)
     monkeypatch.setattr(slo, "reopen_steam", lambda: None)
 
     rc = slo.main(["--apply", "--stop-steam", "--vdf", str(vdf)])
@@ -206,14 +188,10 @@ def test_apply_tem_segunda_muralha_quando_o_stop_steam_mente(
     assert "Steam está aberta" in capsys.readouterr().out
 
 
-# --- a janela do install: fecha, aplica, reabre -------------------------------
-
-
 def test_apply_com_stop_steam_fecha_aplica_e_reabre(
     tmp_path: Path, monkeypatch
 ):
-    """O caminho EXATO do install (`--apply --stop-steam`): quem fechou a
-    Steam a reabre — e só quem a encontrou viva."""
+    """O caminho EXATO do install (`--apply --stop-steam`): quem fechou a"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
     estado = {"viva": True}
@@ -247,17 +225,13 @@ def test_apply_nao_reabre_uma_steam_que_ja_estava_fechada(
 
     assert slo.main(["--apply", "--stop-steam", "--vdf", str(vdf)]) == 0
 
-    assert eventos == []  # não abrimos a Steam de quem não a tinha aberta
-
-
-# --- --dry-run e os pulos honestos -------------------------------------------
+    assert eventos == []
 
 
 def test_apply_dry_run_nao_escreve_nada(tmp_path: Path, monkeypatch, capsys):
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",))
     vdf.write_text(original, encoding="utf-8")
-    # `--dry-run` é preview: nem consulta a Steam (a de verdade explodiria aqui).
     monkeypatch.setattr(
         slo, "steam_running", lambda: (_ for _ in ()).throw(AssertionError)
     )
@@ -268,7 +242,7 @@ def test_apply_dry_run_nao_escreve_nada(tmp_path: Path, monkeypatch, capsys):
     rc = slo.main(["--apply", "--dry-run", "--vdf", str(vdf)])
 
     assert rc == 0
-    assert vdf.read_text(encoding="utf-8") == original  # byte a byte
+    assert vdf.read_text(encoding="utf-8") == original
     assert list(tmp_path.glob("*.bak.*")) == []
     out = capsys.readouterr().out
     assert "--dry-run: 2 jogos receberiam o wrapper" in out
@@ -276,8 +250,7 @@ def test_apply_dry_run_nao_escreve_nada(tmp_path: Path, monkeypatch, capsys):
 
 
 def test_apply_pula_o_vdf_de_sandbox_inteiro(tmp_path: Path, steam_fechada, capsys):
-    """Steam Flatpak/Snap: o wrapper do host é invisível lá dentro (DEDUP-04) —
-    escrever o caminho no vdf da sandbox quebraria o launch."""
+    """Steam Flatpak/Snap: o wrapper do host é invisível lá dentro (DEDUP-04) —"""
     sandbox = (
         tmp_path / ".var/app/com.valvesoftware.Steam/.steam/steam/userdata"
         / "12345678/config"
@@ -297,8 +270,7 @@ def test_apply_pula_o_vdf_de_sandbox_inteiro(tmp_path: Path, steam_fechada, caps
 
 
 def test_apply_erro_por_vdf_nao_aborta_os_demais(tmp_path: Path, steam_fechada, capsys):
-    """Um localconfig.vdf não-UTF-8 (multi-usuário, byte latin-1 legado) vira
-    erro POR-VDF com rc=1 — o vdf seguinte continua sendo aplicado."""
+    """Um localconfig.vdf não-UTF-8 (multi-usuário, byte latin-1 legado) vira"""
     ruim = tmp_path / "ruim" / "localconfig.vdf"
     ruim.parent.mkdir()
     ruim.write_bytes(b'"UserLocalConfigStore"\n{\n\xff byte invalido\n}\n')
@@ -315,8 +287,7 @@ def test_apply_erro_por_vdf_nao_aborta_os_demais(tmp_path: Path, steam_fechada, 
 
 
 def test_apply_e_mutuamente_exclusivo_com_migrate_e_strip(tmp_path: Path):
-    """Um modo por vez: `--apply --strip` na mesma linha seria ambíguo (põe ou
-    tira?) e o argparse tem de recusar, não escolher."""
+    """Um modo por vez: `--apply --strip` na mesma linha seria ambíguo (põe ou"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_vdf({"620": ""}), encoding="utf-8")
     for args in (
@@ -329,41 +300,27 @@ def test_apply_e_mutuamente_exclusivo_com_migrate_e_strip(tmp_path: Path):
         assert exc.value.code == 2, args
 
 
-# --- o install (sem flag) e a simetria com o uninstall ------------------------
-
-
 def _raiz() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
 def test_install_aplica_o_wrapper_sem_flag_e_depois_da_migracao():
-    """E4: o passo entra no install.sh SEM FLAG, depois da migração (11b) e
-    depois de o wrapper existir em disco. Sem ele, o install roda inteiro e
-    NENHUM jogo fica com a chamada — que é o defeito medido em 02/08."""
+    """E4: o passo entra no install.sh SEM FLAG, depois da migração (11b) e"""
     texto = (_raiz() / "install.sh").read_text(encoding="utf-8")
 
     assert 'step "11b-bis"' in texto
     pos_apply = texto.index("--apply --stop-steam")
-    # ...depois da migração do veneno legado (11b)...
     assert pos_apply > texto.index("--migrate --stop-steam")
-    # ...e depois de o wrapper ser instalado no $HOME (nada de vdf apontando
-    # para um caminho que ainda não existe).
     assert pos_apply > texto.index('install -Dm755 "${LAUNCH_WRAPPER_SRC}"')
 
-    # SEM FLAG: nenhum opt-out guarda o corpo do passo.
     corpo = texto[texto.index('step "11b-bis"'): texto.index('step "11c"')]
     for opt_out in ("KEEP_STEAM_INPUT", "NO_PROTON_PIN", "SKIP_UDEV", "NO_DKMS"):
         assert opt_out not in corpo, opt_out
-    # Falha é best-effort (warn), como nos vizinhos — o install SEGUE.
     assert "warn " in corpo
 
 
 def test_install_liga_o_broker_antes_mas_o_hide_e_em_tempo_de_jogo():
-    """Armadilha 1 da sprint ("não ligar o broker antes do wrapper"): o passo
-    3h vem MUITO antes, e é seguro porque ele só habilita o `.socket` — o
-    `.service` sobe na 1ª conexão do daemon e o hide do hidraw físico só
-    acontece em tempo de JOGO, com vpad vivo. O motivo tem de estar ESCRITO no
-    install, senão a próxima pessoa reordena os passos sem saber do risco."""
+    """Armadilha 1 da sprint ("não ligar o broker antes do wrapper"): o passo"""
     texto = (_raiz() / "install.sh").read_text(encoding="utf-8")
     corpo = texto[texto.index("# 11b-bis."): texto.index('step "11b-bis"')]
     assert "3h" in corpo
@@ -371,15 +328,7 @@ def test_install_liga_o_broker_antes_mas_o_hide_e_em_tempo_de_jogo():
 
 
 def test_uninstall_tira_exatamente_o_que_o_apply_pos(tmp_path: Path, steam_fechada):
-    """Simetria (regra da casa): tudo que o install põe, o uninstall tira. O
-    `--strip` que o uninstall.sh JÁ roda é o gêmeo do `--apply` — nenhum passo
-    novo foi acrescentado lá, e esta ida-e-volta é a prova.
-
-    O único resíduo aceito é a linha `"LaunchOptions" ""` no jogo que nasceu
-    sem nenhuma: valor vazio é o mesmo que não ter opção para a Steam, e
-    apagar a linha inteira sairia do contrato do `strip_value` (que preserva
-    byte a byte o que não é nosso).
-    """
+    """Simetria (regra da casa): tudo que o install põe, o uninstall tira. O"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
         _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",)),
@@ -395,9 +344,8 @@ def test_uninstall_tira_exatamente_o_que_o_apply_pos(tmp_path: Path, steam_fecha
     assert slo.WRAPPER_PREFIX not in texto
     assert slo._vdf_escape(slo.WRAPPER_PREFIX) not in texto
     valores = slo.read_launch_options_by_appid(texto)
-    assert valores["620"] == "MANGOHUD=1 %command%"  # o dela, byte a byte
+    assert valores["620"] == "MANGOHUD=1 %command%"
     assert valores["1599660"] == ""
 
-    # E o uninstall.sh de fato roda esse strip, sem flag.
     uninstall = (_raiz() / "uninstall.sh").read_text(encoding="utf-8")
     assert "--strip --stop-steam" in uninstall

@@ -1,25 +1,4 @@
-"""A varredura de bateria ignora o nosso próprio vpad — BATERIA-PARADA-01 (B2).
-
-O DEFEITO, medido em 26/08/2026 e reconferido na bancada em 06/09/2026: o
-sysfs tinha QUATRO nós de ``ps-controller-battery-*`` para DOIS controles, e
-**dois eram nossos** — os gamepads VIRTUAIS que o próprio Hefesto cria, cujo nó
-diz ``Charging`` com ``capacity=100`` para sempre, porque é valor de
-inicialização do uhid e não medição de aparelho nenhum.
-
-Quem casar pelo nó errado lê um número que **nunca muda** e conclui que a
-bateria congelou — que é literalmente o nome desta sprint.
-
-O mapa de canais já carregava a medição órfã e o ponteiro para cá
-(``docs/data/mapa-controles.csv``, ``energia.bateria.percentual`` @ dualsense:
-*"Nenhuma régua desta casa exclui a faixa sintética da varredura de bateria"*).
-Este arquivo é a régua que faltava.
-
-E TEM UM PORTÃO DENTRO: o prefixo ``02fe`` está espelhado em TRÊS módulos, por
-razões de peso de import que cada um documenta. :class:`TestOEspelhoNaoDiverge`
-confronta as três cópias com o ``player_mac()`` que as forja — no dia em que o
-prefixo mudar, ele NOMEIA em vez de a varredura voltar a ler o nó errado
-calada. É a diferença entre "sai" e "sai NOMEANDO" que o enunciado pede.
-"""
+"""A varredura de bateria ignora o nosso próprio vpad — BATERIA-PARADA-01 (B2)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -39,14 +18,9 @@ from hefesto_dualsense4unix.daemon.battery_journal import (
 )
 from hefesto_dualsense4unix.integrations.uhid_gamepad import player_mac
 
-#: Os DOIS controles de verdade da bancada, com o endereço na máscara da casa
-#: (octetos 4 e 5 zerados) — é a convenção que os dois portões de anonimato
-#: cobram de todo arquivo versionado.
 _REAL_1 = "aabbcc000003"
 _REAL_2 = "e8473a0000d8"
 
-#: Os DOIS gamepads virtuais, com o MAC que o ``player_mac()`` forja. Não são
-#: fixture inventada: é o endereço que o produto grava no uhid.
 _VPAD_1 = player_mac(1).replace(":", "")
 _VPAD_2 = player_mac(2).replace(":", "")
 
@@ -63,12 +37,7 @@ def _no(raiz: Path, uniq: str, capacity: str, status: str) -> Path:
 
 @pytest.fixture()
 def sysfs_com_quatro_nos(tmp_path: Path) -> Path:
-    """O sysfs medido na bancada: quatro nós, dois deles nossos.
-
-    Os dois vpads dizem ``Charging``/``100`` — a mentira que não muda. Os dois
-    controles de verdade dizem coisas DIFERENTES entre si, para que um teste
-    que devolvesse "quatro" não pudesse passar por acaso.
-    """
+    """O sysfs medido na bancada: quatro nós, dois deles nossos."""
     raiz = tmp_path / "power_supply"
     raiz.mkdir()
     _no(raiz, _VPAD_1, "100", "Charging")
@@ -145,8 +114,7 @@ class TestAVarreduraDevolveDoisENaoQuatro:
 
 
 class TestONoDoVpadNaoSeLe:
-    """Mordida: tire a guarda do ``ler_no_do_kernel`` e ele passa a devolver
-    ``(100, 'Charging')`` para um gamepad virtual — leitura de nada."""
+    """Mordida: tire a guarda do ``ler_no_do_kernel`` e ele passa a devolver"""
 
     def test_ler_o_vpad_e_nao_sei_mesmo_com_o_no_no_disco(
         self, sysfs_com_quatro_nos: Path
@@ -179,15 +147,12 @@ class TestONoDoVpadNaoSeLe:
         "valor", [None, "", "/dev/hidraw7", "deda4", _REAL_1, _REAL_2]
     )
     def test_na_duvida_e_controle_de_verdade(self, valor: str | None) -> None:
-        """Errar para "pode ser controle dela" custa dois ``read`` de sysfs;
-        errar para o outro lado apaga o controle dela da curva da bateria."""
+        """Errar para "pode ser controle dela" custa dois ``read`` de sysfs;"""
         assert not e_no_do_vpad(valor)
 
 
 class TestODiarioNaoAbreCurvaParaOVpad:
-    """Mordida: tire o ``continue`` do ``observar`` e o diário abre uma curva
-    para o gamepad virtual — uma reta em 100% que se lê como *"o instrumento
-    parou de olhar"*."""
+    """Mordida: tire o ``continue`` do ``observar`` e o diário abre uma curva"""
 
     def test_so_o_controle_de_verdade_vira_linha(
         self, sysfs_com_quatro_nos: Path
@@ -210,8 +175,7 @@ class TestODiarioNaoAbreCurvaParaOVpad:
     def test_o_estado_do_handle_vai_junto_com_o_do_kernel(
         self, sysfs_com_quatro_nos: Path
     ) -> None:
-        """As duas réguas do ESTADO na mesma linha, como já valia para o
-        percentual — se discordarem, o resultado é sobre o instrumento."""
+        """As duas réguas do ESTADO na mesma linha, como já valia para o"""
         diario = DiarioDaBateria(raiz=sysfs_com_quatro_nos, intervalo_sonda=30.0)
         with structlog.testing.capture_logs() as registros:
             diario.observar([_descreve(_REAL_1, 100, "cheio")], 0.0)
@@ -222,16 +186,7 @@ class TestODiarioNaoAbreCurvaParaOVpad:
 
 
 class TestOEspelhoNaoDiverge:
-    """O PORTÃO desta sprint — *sai NOMEANDO*.
-
-    O prefixo do vpad está escrito em três módulos, e cada um explica por que
-    não importa o do vizinho (peso de import, e o broker é stdlib autocontido).
-    Espelho sem régua diverge em silêncio; esta régua confronta as três cópias
-    com a ÚNICA função que forja o endereço de verdade.
-
-    Mordida: troque ``PREFIXO_DO_VPAD`` para ``"02ff"`` e este teste reprova
-    dizendo qual cópia saiu da linha.
-    """
+    """O PORTÃO desta sprint — *sai NOMEANDO*."""
 
     def test_as_tres_copias_dizem_o_que_o_player_mac_forja(self) -> None:
         forjado = player_mac(1).replace(":", "").lower()

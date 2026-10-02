@@ -1,9 +1,4 @@
-"""Subcomando `hefesto-dualsense4unix test ...`.
-
-Operação direta no controle (não pelo daemon). Útil para exercitar
-efeitos sem precisar do daemon rodando. Se quiser operar via daemon
-rodando, envie trigger.set/led.set pelo IPC.
-"""
+"""Subcomando `hefesto-dualsense4unix test ...`."""
 from __future__ import annotations
 
 import contextlib
@@ -31,12 +26,6 @@ def _parse_params(raw: str | None) -> list[int]:
         raise typer.BadParameter(f"params: inteiros separados por virgula. Erro: {exc}") from None
 
 
-#: Mensagem da recusa do `--raw` com o daemon vivo (TRIGGER-CANON-01/E4).
-#: Constante e não literal porque um teste a compara — o texto É a entrega.
-#: MSG-RAW-01 (13/08/2026): esse teste era imaginário — a linha acima o anunciava
-#: desde 01/08 e `grep -rn MSG_RAW_COM_DAEMON tests/` devolvia ZERO. Por isso o
-#: parágrafo do mecanismo pôde envelhecer sem ninguém ver. O teste existe agora,
-#: em `tests/unit/test_msg_raw_com_daemon_e_o_texto_certo.py`.
 MSG_RAW_COM_DAEMON = (
     "o daemon está no ar, e o --raw abriria um SEGUNDO controlador para "
     "disputar o mesmo /dev/hidraw com ele.\n\n"
@@ -59,17 +48,7 @@ MSG_RAW_COM_DAEMON = (
 
 
 def _recusar_raw_com_daemon_vivo() -> None:
-    """Recusa o `--raw` quando o daemon está no ar.
-
-    TRIGGER-CANON-01/E4. A alternativa era dar ao IPC um contrato para modo
-    cru, e a sprint a chamou de recomendada — mas o `--raw` é uma bancada de
-    depuração, e uma bancada que só funciona com o produto PARADO é honesta:
-    o que ela mede é o hardware sem intermediário. O que não podia continuar
-    é imprimir sucesso sem ter aplicado.
-
-    A checagem é a mesma que o resto da CLI já usa para decidir entre IPC e
-    hardware — nada de um segundo jeito de perguntar se o daemon está vivo.
-    """
+    """Recusa o `--raw` quando o daemon está no ar."""
     from hefesto_dualsense4unix.app.ipc_bridge import daemon_status_basic
 
     vivo = False
@@ -116,10 +95,7 @@ def cmd_trigger(
         )
     else:
         effect = build_from_name(mode, params_list)
-        # FEAT-CLI-IPC-FIRST-01: com o daemon vivo, despacha pelo IPC (igual ao
         # cmd_led) para NÃO abrir um 2º PyDualSenseController e brigar pelo hidraw
-        # com o daemon. O caminho --raw não tem contrato IPC (trigger.set exige
-        # nome de preset, não mode inteiro), então segue direto no hardware.
         from hefesto_dualsense4unix.app.ipc_bridge import trigger_set
 
         if trigger_set(side_literal, mode, params_list):
@@ -140,12 +116,7 @@ def cmd_led(
         help="Luminosidade 0-100%% (depende de FEAT-LED-BRIGHTNESS-01 no daemon).",
     ),
 ) -> None:
-    """Aplica cor (e luminosidade opcional) na lightbar.
-
-    FEAT-CLI-PARITY-01: tenta IPC `led.set` com brightness; fallback para
-    hardware direto aplicando escala linear no RGB (aproximação usada
-    enquanto FEAT-LED-BRIGHTNESS-01 não está mergeada).
-    """
+    """Aplica cor (e luminosidade opcional) na lightbar."""
     rgb = hex_to_rgb(color) if color.startswith("#") or len(color) == 6 else _parse_rgb_csv(color)
 
     if _apply_via_ipc(rgb, brightness):
@@ -153,7 +124,6 @@ def cmd_led(
         console.print(f"[green]lightbar (via daemon):[/green] rgb={rgb}{extra}")
         return
 
-    # Fallback: aplica direto no hardware, escalando RGB quando brightness!=None.
     final_rgb = _scale_rgb(rgb, brightness) if brightness is not None else rgb
     _apply_on_hardware(lambda c: c.set_led(final_rgb))
     if brightness is not None:
@@ -171,12 +141,12 @@ def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
     BUG-CLI-BRIGHTNESS-UNIDADE-01 (25/07): a CLI expõe `--brightness` em
     PORCENTAGEM (0-100, `min=0, max=100` no typer) e mandava o número cru; o
     handler `led.set` valida FRAÇÃO (`0.0 <= brightness <= 1.0`,
-    `ipc_handlers.py:1459`). O resultado eram dois erros silenciosos:
+    `ipc_handlers.py:1067`). O resultado eram dois erros silenciosos:
     `--brightness 50` fazia o IPC recusar e o comando caía no fallback de
     hardware sem dizer nada, e `--brightness 1` passava na validação como
     `1.0` — ou seja, era aplicado como **100%**, o oposto do pedido.
     A conversão mora aqui porque a unidade amigável é da CLI: a GUI já manda
-    fração (`app/ipc_bridge.py:555` `led_set`), que é o contrato do daemon.
+    fração (`app/ipc_bridge.py:414` `led_set`), que é o contrato do daemon.
     (O docstring antigo dizia que o daemon "ignora" o parâmetro; ele valida e
     aplica desde a FEAT-LED-BRIGHTNESS-01.)
     """
@@ -194,12 +164,7 @@ def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
 
 
 def _scale_rgb(rgb: tuple[int, int, int], brightness: int) -> tuple[int, int, int]:
-    """Escala linear do RGB pela luminosidade (0-100%%).
-
-    Aproximação usada quando o daemon não está rodando. Quando
-    FEAT-LED-BRIGHTNESS-01 estiver ativa, o caminho IPC cuida disso
-    sem distorcer a matiz.
-    """
+    """Escala linear do RGB pela luminosidade (0-100%%)."""
     factor = max(0, min(100, brightness)) / 100.0
     return (
         round(rgb[0] * factor),
@@ -213,8 +178,6 @@ def cmd_rumble(
     weak: int = typer.Option(0, min=0, max=255),
     strong: int = typer.Option(0, min=0, max=255),
 ) -> None:
-    # FEAT-CLI-IPC-FIRST-01: tenta o daemon primeiro (igual ao cmd_led) para não
-    # abrir um 2º controle e disputar o hidraw; cai no hardware se daemon offline.
     from hefesto_dualsense4unix.app.ipc_bridge import rumble_set
 
     if rumble_set(weak, strong):

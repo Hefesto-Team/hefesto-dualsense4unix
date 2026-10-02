@@ -68,23 +68,7 @@ def test_sem_dono_nao_disputa_o_mudo_com_o_kernel(handle: Any) -> None:
 
 
 def test_gatilhos_e_leds_seguem_autorizados(handle: Any) -> None:
-    """A poda é CIRÚRGICA: gatilhos e as luzes NOSSAS continuam autorizados.
-
-    NOTA DATADA — 12/08/2026. Até hoje esta função também exigia o
-    `MIC_MUTE_LED_CONTROL_ENABLE` (0x01), sob o rótulo "LEDs são nossos". **A
-    linha do LED do mudo estava errada e saiu**: `common[8]` é o
-    `mute_button_led`, e o dono dele no Linux é o KERNEL, que o escreve na
-    borda do botão de mudo junto com o mute real do firmware
-    (`assets/dkms/hid-playstation/hid-playstation.c:1538-1553`). Autorizá-lo em
-    todo report era mandar "apaga a luz do mudo" a cada ≤ 0,5 s por cima da
-    decisão dele — a MESMA classe de defeito que este arquivo trava para o
-    volume e para o mudo, e que passou batido em 25/07 porque a conta era
-    "áudio" e o LED foi contado como luz.
-
-    O contrato do 0x01 agora está em
-    `test_led_do_mudo_nao_apaga_o_que_o_kernel_acendeu.py`, com os dois lados:
-    sem dono não sai, com dono (`set_microphone_led`) sai.
-    """
+    """A poda é CIRÚRGICA: gatilhos e as luzes NOSSAS continuam autorizados."""
     common = handle._build_common(rumble_asserted=False)
     assert common[0] & rep.VALID_FLAG0_RIGHT_TRIGGER_FFB
     assert common[0] & rep.VALID_FLAG0_LEFT_TRIGGER_FFB
@@ -93,12 +77,7 @@ def test_gatilhos_e_leds_seguem_autorizados(handle: Any) -> None:
 
 
 def test_posse_do_volume_e_por_byte(handle: Any) -> None:
-    """Quem pede só o alto-falante autoriza SÓ o alto-falante.
-
-    O byte de roteamento (common[7]) fica de fora de propósito: não sabemos
-    ler o valor vigente nem qual é o neutro, e chutá-lo mudaria o caminho do
-    áudio do controle.
-    """
+    """Quem pede só o alto-falante autoriza SÓ o alto-falante."""
     handle.set_audio_volumes(speaker=0xC0)
     common = handle._build_common(rumble_asserted=False)
     assert common[0] & rep.VALID_FLAG0_SPEAKER_VOLUME
@@ -158,7 +137,7 @@ def test_captura_do_byte_de_status_le_o_report_cru(handle: Any) -> None:
     handle._mic_mudo_em = None
     cru = bytearray(64)
     cru[0] = prr.INPUT_REPORT_USB
-    cru[1 + prr.JACK_STATUS_OFFSET] = 0x05  # fone plugado + mic MUDO
+    cru[1 + prr.JACK_STATUS_OFFSET] = 0x05
     handle._captura_status_audio(bytes(cru))
     assert handle._audio_status == 0x05
 

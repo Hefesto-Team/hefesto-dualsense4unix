@@ -1,25 +1,4 @@
-"""O portão de caducos tem de alcançar a TELA — e não pode se desarmar sozinho.
-
-DOIS DEFEITOS MEDIDOS EM 26/08/2026 (LEVA-4-E), no mesmo arquivo:
-
-1. **A tela ficava de fora.** `RAIZES_VIVAS` já incluía `src`, mas
-   `EXTENSOES` era ``{".md", ".py", ".html", ".rst", ".txt"}`` — e o texto que
-   vira pixel ficava fora dela. O mesmo valia para `po/*.po`, que é essa frase
-   traduzida.
-
-   **A TELA MUDOU DE ARQUIVO EM 06/09/2026** (`GTK-3`, primeira volta). O alvo
-   de 26/08 era o `src/hefesto_dualsense4unix/gui/main.glade`, e a janela GTK
-   sai inteira (`D-0609-GTK-LEVA-INTEIRA`). A superfície MAIS viva desta casa
-   agora são as dez páginas de
-   `src/hefesto_dualsense4unix/interface/paginas/*.html` — um fato declarado
-   caduco escrito ali chega à tela dela do mesmo jeito. `.html` já estava em
-   `EXTENSOES` desde sempre; o que esta régua garante é que ele CONTINUE
-   alcançado, e ela deixou de depender do arquivo que está saindo.
-
-2. **O portão se desarmava sozinho.** `mv docs/data/caducos.csv /tmp/` fazia
-   ele imprimir ``OK`` e sair ``rc=0``. Fonte ausente virava selo verde — que
-   é o inverso do que o `scripts/portoes.sh` faz para portão ausente.
-"""
+"""O portão de caducos tem de alcançar a TELA — e não pode se desarmar sozinho."""
 from __future__ import annotations
 
 import subprocess
@@ -35,7 +14,6 @@ CADUCOS_CSV = (
     'instrumento quebrado",2026-08-07,,"docs/process/**"\n'
 )
 
-#: A PÁGINA PUBLICADA reduzida ao que importa: um texto que vira pixel.
 PAGINA_COM_O_LITERAL = """<!doctype html>
 <section class="card">
   <p data-campo="som.mic.estado">O mudo entrega literal-caduco-de-teste do sinal</p>
@@ -48,8 +26,6 @@ PAGINA_LIMPA = """<!doctype html>
 </section>
 """
 
-#: Onde a página de mentira nasce na árvore falsa. O nome da pasta entra CRU:
-#: caminho não leva acento.
 PAGINA_RELATIVA = (
     "src",
     "hefesto_dualsense4unix",
@@ -147,15 +123,7 @@ def test_ledger_vazio_diz_que_nao_mediu(tmp_path: Path) -> None:
 
 
 def test_as_dez_paginas_reais_estao_no_alcance() -> None:
-    """A régua tem de olhar para a tela DESTE repositório, não só para o dublê.
-
-    Sem esta linha, os testes acima provariam apenas que o mecanismo funciona
-    numa árvore de mentira — e foi assim que um portão desta casa passou uma
-    leva inteira olhando para a árvore errada.
-
-    **06/09/2026 (`GTK-3`):** o alvo era o `gui/main.glade`; agora são as dez
-    páginas publicadas, que é a tela que o lançador dela abre.
-    """
+    """A régua tem de olhar para a tela DESTE repositório, não só para o dublê."""
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("vc", SCRIPT)

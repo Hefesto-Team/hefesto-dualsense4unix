@@ -1,26 +1,4 @@
-"""A receita do backport do BlueZ tem de morar na ÁRVORE, não num ramo arquivado.
-
-Defeito medido em 11/08/2026, na auditoria de "o que só existe nesta máquina":
-
-O `install.sh` e o `doctor.sh` mandavam quem estivesse sem o backport rodar
-`docs/process/estudos/...` — um ramo que não
-aparece em `git branch -a`. Pior: `install.sh:1728` já citava o documento pelo
-caminho da árvore, **como se ele estivesse aqui**, e ele não estava.
-
-O efeito prático é o pior possível para o objetivo dela de levar o produto para
-outro PC: numa máquina limpa o `apt` só oferece o bluez 5.72, o `doctor` REPROVA
-(piso 5.79) e a mensagem de erro aponta para um lugar que a pessoa não tem como
-alcançar. O único FAIL que uma máquina limpa levaria no caminho `native`, e ele
-vinha com uma instrução impossível de seguir.
-
-A MORDIDA, provada em 11/08/2026
-================================
-Renomeado `docs/usage/receita-backport-bluez.md`,
-`test_a_receita_do_backport_existe_na_arvore` reprova. Trocada a mensagem do
-`install.sh` de volta para `git show arquivo/processo-pre-1.0:`,
-`test_o_install_nao_manda_para_ramo_arquivado` reprova. Idem no `doctor.sh` com
-o seu próprio caso. Desfeitas as três, verde.
-"""
+"""A receita do backport do BlueZ tem de morar na ÁRVORE, não num ramo arquivado."""
 from __future__ import annotations
 
 import re
@@ -30,17 +8,8 @@ import pytest
 
 from tests.conftest import arvore_congelada
 
-#: O documento que o `install.sh` e o `doctor.sh` mandam ler quando falta o
-#: backport. O nome é citado nos dois, então mudá-lo quebra os dois.
 RECEITA = Path("docs/usage/receita-backport-bluez.md")
 
-#: A forma que NÃO pode voltar: instrução que só funciona para quem tem o ramo
-#: arquivado no clone — ou seja, praticamente ninguém numa máquina nova.
-#:
-#: O casamento é feito só em linha EXECUTÁVEL. Um comentário que cita a forma
-#: antiga para explicar o que foi curado é exatamente o que a casa manda
-#: escrever (não se apaga decisão medida), e reprová-lo seria castigar a
-#: honestidade — o defeito que a PORTAO-VIVO-01 nomeia.
 PADRAO_DE_RAMO_ARQUIVADO = re.compile(r"git\s+show\s+arquivo/")
 
 
@@ -50,12 +19,7 @@ def _linhas_executaveis(texto: str) -> list[str]:
 
 
 def _raiz() -> Path:
-    """A raiz para ler os SCRIPTS: a cópia congelada da sessão.
-
-    `docs/` NÃO está em `_CONGELAR` (tests/conftest.py) — a foto cobre só o que
-    uma bancada de shell executa. Por isso o caso do documento lê da árvore de
-    trabalho, e só os scripts leem daqui.
-    """
+    """A raiz para ler os SCRIPTS: a cópia congelada da sessão."""
     return arvore_congelada()
 
 
@@ -72,9 +36,6 @@ def test_a_receita_do_backport_existe_na_arvore():
         "recebe uma instrução que não tem como seguir."
     )
     texto = caminho.read_text(encoding="utf-8")
-    # Não basta existir: tem de conter a receita de fato. Um arquivo vazio ou
-    # um resumo sem os comandos passaria num teste de existência e falharia na
-    # mão de quem precisa.
     assert "dpkg-buildpackage" in texto, (
         "a receita existe mas não traz o comando de build; quem seguir não chega aos .deb"
     )
@@ -83,11 +44,7 @@ def test_a_receita_do_backport_existe_na_arvore():
 
 @pytest.mark.parametrize("arquivo", ["install.sh", "scripts/doctor.sh"])
 def test_o_install_nao_manda_para_ramo_arquivado(arquivo):
-    """Nenhum dos dois pode instruir por `git show arquivo/...`.
-
-    Vale para os dois pelo mesmo motivo, e por isso são o mesmo caso: cada um
-    é a única mensagem que a pessoa vê no momento em que precisa da receita.
-    """
+    """Nenhum dos dois pode instruir por `git show arquivo/...`."""
     texto = (_raiz() / arquivo).read_text(encoding="utf-8")
     achados = [ln for ln in _linhas_executaveis(texto) if PADRAO_DE_RAMO_ARQUIVADO.search(ln)]
     assert not achados, (

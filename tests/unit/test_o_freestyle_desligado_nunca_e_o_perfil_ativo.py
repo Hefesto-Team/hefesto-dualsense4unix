@@ -41,7 +41,6 @@ FREESTYLE = loader.NOME_DO_PADRAO
 AVATAR = "Avatar Legends"
 JANELA_DO_AVATAR = "steam_app_2424420"
 TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "~"}
-#: Um segundo perfil a escolher, para a roda do PS + D-pad ter por onde andar.
 OUTRO = "Navegador"
 
 
@@ -78,10 +77,6 @@ def _boot(store: StateStore, controle: Any) -> None:
         controller=controle, store=store, _run_blocking=_bloqueante,
         _native_mode=False)))
 
-
-# =============================================================================
-# RÉGUA 2 — em todo caminho, o retrato obedece à invariante
-# =============================================================================
 
 def _boot_com_a_sessao_velha() -> IpcServer:
     _sessao_crua_no_freestyle()
@@ -185,12 +180,7 @@ def _a_invariante(server: IpcServer, caminho: str) -> None:
 
 @pytest.mark.parametrize("caminho", sorted(CAMINHOS))
 def test_o_freestyle_desligado_nunca_e_o_perfil_ativo(caminho: str) -> None:
-    """Depois de cada caminho, `active_profile == Freestyle ⇒ freestyle_ligado`.
-
-    MORDIDA: tire a guarda do item 6 de `ProfileManager._ativar` (o `raise
-    OFreestyleDesligadoError`) e reprovam o `profile-reaplicar` (o Freestyle
-    reaplicado com o botão apagado) e o `lancamento`.
-    """
+    """Depois de cada caminho, `active_profile == Freestyle ⇒ freestyle_ligado`."""
     _o_disco()
 
     server = CAMINHOS[caminho]()
@@ -199,10 +189,6 @@ def test_o_freestyle_desligado_nunca_e_o_perfil_ativo(caminho: str) -> None:
     if caminho == "boot":
         assert server.store.active_profile is None, "a sessão velha virou o Freestyle"
 
-
-# =============================================================================
-# RÉGUA 5 — o chip e o botão leem o mesmo dono
-# =============================================================================
 
 def _ctx(state: Any) -> Any:
     from hefesto_dualsense4unix.interface.pacotes import Contexto
@@ -231,16 +217,7 @@ def test_o_chip_diz_freestyle_se_e_so_se_o_botao_diz_ligado(ligado: bool) -> Non
 
 @pytest.mark.parametrize("caso", ["escolha-apagado", "escolha-aceso", "sem-escolha"])
 def test_com_o_daemon_calado_o_chip_e_o_rodape_dizem_a_escolha(caso: str) -> None:
-    """A perna do disco: a escolha A com o botão apagado, o Freestyle aceso, ou «—».
-
-    O marcador diz «Freestyle» nas três células: ele é espelho, e quem lê a
-    perna do disco é o dono da escolha.
-
-    MORDIDAS: a perna do disco lendo o marcador de novo (`perfil_que_ela_ativou`
-    devolvendo `read_active_marker()`) — a célula `escolha-apagado` reprova
-    com o Freestyle; o `perfil_do_rodape` caindo no Freestyle de novo
-    (`or loader.o_perfil_de_fora_do_jogo()`) — a `sem-escolha` reprova.
-    """
+    """A perna do disco: a escolha A com o botão apagado, o Freestyle aceso, ou «—»."""
     from hefesto_dualsense4unix.interface.pacotes import topo
     from hefesto_dualsense4unix.interface.pacotes.rodape import perfil_do_rodape
 
@@ -256,14 +233,7 @@ def test_com_o_daemon_calado_o_chip_e_o_rodape_dizem_a_escolha(caso: str) -> Non
     assert perfil_do_rodape(None) == esperado
 
 
-# =============================================================================
-# NENHUM SELETOR OFERECE O FREESTYLE — a ordem dela de 02/10/2026
-# =============================================================================
 # *«Lembrando que nao pode haver um perfil  <!-- noqa-acento: citação literal dela -->
-# na aba perfis chamado de frestyle»*
-# (02/10, registrada na sprint pela coordenação). Vale acima do desenho de
-# 27/09: ligado ou desligado, a lista publicada da aba Perfis e toda resposta
-# de «quais perfis existem» não contêm o nome. O Freestyle é o botão.
 
 ESTADOS_DO_BOTAO = ("apagado", "aceso", "daemon-calado")
 
@@ -310,11 +280,7 @@ def test_a_aba_perfis_nunca_mostra_o_freestyle(
 
 @pytest.mark.parametrize("aceso", [False, True], ids=["apagado", "aceso"])
 def test_o_profile_list_do_daemon_nao_responde_o_freestyle(aceso: bool) -> None:
-    """A pergunta «quais perfis existem» ao daemon (a bandeja, a TUI, o `doctor`).
-
-    MORDIDA: tire o `os_perfis_de_escolher` do `_handle_profile_list` e as
-    duas células reprovam.
-    """
+    """A pergunta «quais perfis existem» ao daemon (a bandeja, a TUI, o `doctor`)."""
     _o_disco()
     _store, gerente, server = _o_par()
     gerente.activate(AVATAR, origin="manual")
@@ -329,11 +295,7 @@ def test_o_profile_list_do_daemon_nao_responde_o_freestyle(aceso: bool) -> None:
 
 @pytest.mark.parametrize("aceso", [False, True], ids=["apagado", "aceso"])
 def test_o_profile_list_da_cli_nao_mostra_o_freestyle(aceso: bool) -> None:
-    """O `profile list` da CLI, que lê o disco: o Freestyle não é linha da tabela.
-
-    MORDIDA: tire o `os_perfis_de_escolher` do `cmd_list` e as duas células
-    reprovam.
-    """
+    """O `profile list` da CLI, que lê o disco: o Freestyle não é linha da tabela."""
     from typer.testing import CliRunner
 
     from hefesto_dualsense4unix.cli.app import app
@@ -351,16 +313,7 @@ def test_o_profile_list_da_cli_nao_mostra_o_freestyle(aceso: bool) -> None:
 @pytest.mark.parametrize("sentido", [+1, -1], ids=["PS-cima", "PS-baixo"])
 @pytest.mark.parametrize("aceso", [False, True], ids=["apagado", "aceso"])
 def test_a_roda_do_ps_e_d_pad_nao_passa_pelo_freestyle(aceso: bool, sentido: int) -> None:
-    """A roda de perfis do controle (PS + D-pad), com o botão apagado e aceso.
-
-    Conferência de 02/10/2026: a roda era o `manager.list_profiles()` inteiro,
-    e ativar o Freestyle à mão acende o botão — a cada volta da roda o Modo
-    Freestyle ligava sozinho no meio do jogo. Aceso, o primeiro passo ativa
-    outro perfil à mão e o apaga, como o «Ativar» da aba Perfis.
-
-    MORDIDA: tire o `os_perfis_de_escolher` do `build_profile_cycle_callback`
-    e as células reprovam com o Freestyle ativo.
-    """
+    """A roda de perfis do controle (PS + D-pad), com o botão apagado e aceso."""
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import build_profile_cycle_callback
 
     _o_disco()
@@ -443,14 +396,7 @@ def test_a_tui_sem_daemon_nao_lista_o_freestyle(monkeypatch: pytest.MonkeyPatch)
 def test_o_doctor_nao_acusa_a_maquina_nova(
     perfis: list[dict[str, str]], monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Na máquina nova o `profile.list` é vazio (só o Freestyle, que não é oferta).
-
-    Conferência de 02/10/2026: o `doctor` dizia «nenhum perfil listado pelo
-    daemon» como aviso, e na máquina nova isso passou a ser o estado certo.
-
-    MORDIDA: devolva o `[WARN]` para a lista vazia e a célula `maquina-nova`
-    reprova.
-    """
+    """Na máquina nova o `profile.list` é vazio (só o Freestyle, que não é oferta)."""
     from hefesto_dualsense4unix.cli import cmd_doctor
 
     class _Cliente:

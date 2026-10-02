@@ -1,38 +1,5 @@
 #!/usr/bin/env python3
-"""A TELA SUGERE O APARELHO, E ELA CONFIRMA — e nada é gravado sem o toque dela.
-
-**03/09/2026.** O kernel chama um aparelho de "Câmera" e a lista dela oferece
-"Webcam". Perguntada se são a mesma coisa, ela respondeu:
-
-    "Depende do aparelho. Nem toda 'Câmera' do kernel é a webcam que você quer
-     marcar. A tela pode SUGERIR e deixar você confirmar, em vez de decidir
-     sozinha."
-
-O QUE A ABA FAZIA ATÉ AQUI: perguntava `— O que é? —` para os QUATRO rádios
-vizinhos, inclusive para os TRÊS que o kernel já classificou. Medido nesta
-bancada, lendo `/sys` sem escrever nada —
-
-    3554:fa09  03/01/01  Teclado           grau=lido
-    25a7:fa07  03/01/02  Mouse             grau=lido
-    046d:08e5  0e/01/00  Câmera            grau=lido       ← o caso DELA
-    2357:012d  ff/ff/ff  Não identificado  grau=desconhecido
-
-A janela estável já lia isso desde 22/08 (`secao_mesa._celula_do_que_e`, com o
-selo `(lido)` e o botão "Corrigir"); a tela nova, não.
-
-**A REGRA QUE ESTA RÉGUA EXISTE PARA TRAVAR, e ela é sobre PERDA DE DADO:** a
-sugestão do kernel **nunca** pode virar resposta dela no `maquina.json`. Uma
-palavra em `MesaDeclarada.radios[…].tipo` é uma afirmação DELA sobre o hardware
-DELA — o produto decide com base nela *o que dá para desligar e o que não dá*.
-
-AS DUAS MORDIDAS, e cada uma derruba um caso diferente:
-
-1. em `vizinho_o_que_e`, tire o `or rotulo in _perguntas_sugeridas()` — o gesto
-   volta a levantar `ValueError` na sugestão, que nesta aba é recusa **calada**;
-2. em `_pergunta_sugerida`, devolva `palavra` cru em vez de moldurá-la — a
-   sugestão passa a ser indistinguível da resposta dela, e o gesto passa a
-   GRAVAR "Teclado" no disco dela sem que ela tenha dito nada.
-"""
+"""A TELA SUGERE O APARELHO, E ELA CONFIRMA — e nada é gravado sem o toque dela."""
 from __future__ import annotations
 
 import pathlib
@@ -83,12 +50,7 @@ class AparelhoDeMentira:
 
 
 class CensoDeMentira:
-    """O censo do barramento com os nós que a régua escolher — nunca o `/sys`.
-
-    Ler o `/sys` de quem roda faria esta régua passar nesta bancada e reprovar
-    em qualquer outra: é a mesma razão pela qual o gabinete dos outros testes
-    desta aba é de bancada.
-    """
+    """O censo do barramento com os nós que a régua escolher — nunca o `/sys`."""
 
     def __init__(self, por_no: dict[str, AparelhoDeMentira]) -> None:
         self._por_no = por_no
@@ -111,9 +73,6 @@ def _com_o_censo(a08, monkeypatch, por_no: dict[str, tuple[str, str]]) -> None:
     monkeypatch.setattr(a08, "_censo", lambda *_a, **_k: censo)
 
 
-# ---------------------------------------------------------------------------
-# 1. O KERNEL SUGERE — e a sugestão sai vestida de PERGUNTA
-# ---------------------------------------------------------------------------
 def test_a_palavra_do_kernel_que_ja_e_a_dela_vira_sugestao(a08, monkeypatch):
     """"Teclado" (kernel) e "Teclado" (lista dela) casam sem tabela nenhuma."""
     _com_o_censo(a08, monkeypatch, {"/sys/x": ("Teclado", "lido")})
@@ -138,36 +97,20 @@ def test_a_sugestao_nunca_sai_como_resposta(a08):
 
 
 def test_a_moldura_sai_da_pergunta_e_nao_e_digitada(a08):
-    """A régua PERGUNTA: troque a pergunta e a moldura vai junto.
-
-    Um `f"— {palavra}? —"` digitado passaria neste caso e envelheceria no dia em
-    que o texto da primeira opção mudasse — a sugestão ficaria com a moldura de
-    uma pergunta que a tela não faz mais.
-    """
+    """A régua PERGUNTA: troque a pergunta e a moldura vai junto."""
     assert a08._moldura_da_pergunta("— O que é? —") == ("— ", "? —")
     assert a08._pergunta_sugerida("Mouse", "«O que é isso?»") == "«Mouse?»"
     assert a08._pergunta_sugerida("Mouse", "O que e") == "Mouse"
 
 
-# ---------------------------------------------------------------------------
-# 2. O KERNEL CALA — e a pergunta continua sendo a única resposta honesta
-# ---------------------------------------------------------------------------
 def test_a_classe_ff_nao_sugere_nada(a08, monkeypatch):
-    """Grau `desconhecido` é o fabricante declinando de classificar.
-
-    É o `2357:012d` desta bancada. Chutar "Wi-Fi" aqui seria o número plausível
-    e falso que esta aba não escreve.
-    """
+    """Grau `desconhecido` é o fabricante declinando de classificar."""
     _com_o_censo(a08, monkeypatch, {"/sys/ff": ("Não identificado", "desconhecido")})
     assert a08._sugestao_do_vizinho("/sys/ff", _rotulos(a08)) == ""
 
 
 def test_a_palavra_sem_par_na_lista_dela_nao_vira_sugestao(a08, monkeypatch):
-    """"Impressora" o kernel diz; a lista dela não a tem. Então não há sugestão.
-
-    Uma sugestão fora da lista seria pior que nenhuma: o `<select>` só aceita o
-    que oferece, e o pintor a descartaria calado.
-    """
+    """"Impressora" o kernel diz; a lista dela não a tem. Então não há sugestão."""
     _com_o_censo(a08, monkeypatch, {"/sys/p": ("Impressora", "lido")})
     assert a08._sugestao_do_vizinho("/sys/p", _rotulos(a08)) == ""
 
@@ -180,52 +123,28 @@ def test_o_no_vazio_e_o_censo_ausente_nao_sugerem(a08, monkeypatch):
     assert a08._sugestao_do_vizinho("/sys/x", _rotulos(a08)) == ""
 
 
-# ---------------------------------------------------------------------------
-# 3. TODA SUGESTÃO POSSÍVEL É RECONHECIDA — conjunto, não contagem
-# ---------------------------------------------------------------------------
 def test_toda_sugestao_possivel_cabe_na_lista_dela(a08):
-    """O destino de cada equivalência EXISTE em `_TIPOS_DE_RADIO`.
-
-    Um destino digitado errado (`"Caixa de Som"`, com o `S` maiúsculo) não daria
-    erro em lugar nenhum: a sugestão simplesmente sumiria, calada, e a linha
-    voltaria a perguntar o que o kernel já respondeu.
-    """
+    """O destino de cada equivalência EXISTE em `_TIPOS_DE_RADIO`."""
     rotulos = _rotulos(a08)
     fora = sorted(d for d in a08._SUGESTAO_DO_KERNEL.values() if d not in rotulos)
     assert fora == [], f"destino que a lista dela não oferece: {fora}"
 
 
 def test_o_conjunto_das_perguntas_sugeridas_cobre_a_lista_inteira(a08):
-    """Toda resposta da lista dela tem a sua pergunta sugerida reconhecida.
-
-    É conjunto e não contagem de propósito: uma opção nova na lista entra aqui
-    sozinha, em vez de reprovar um `== 8` que ninguém lembraria de mexer.
-    """
+    """Toda resposta da lista dela tem a sua pergunta sugerida reconhecida."""
     pergunta = a08._a_pergunta()
     sugeridas = a08._perguntas_sugeridas()
     for rotulo in _rotulos(a08):
         assert a08._pergunta_sugerida(rotulo, pergunta) in sugeridas
 
 
-# ---------------------------------------------------------------------------
-# 4. O GESTO — a sugestão NÃO vira resposta dela no disco
-# ---------------------------------------------------------------------------
 def _declarou(ponte: PonteDeMentira) -> list[dict[str, Any]]:
     return [c[1][0] for c in ponte.chamadas if c[0] == "machine_declare"]
 
 
 @pytest.fixture
 def um_vizinho(a08, monkeypatch):
-    """UM rádio na tela, e o disco relido vira dublê.
-
-    DESDE 23/09/2026 (TRANSPLANTE-DA-SECAO-01) o vizinho não é mais uma posição
-    numa fileira (`_VIZINHOS[v]`): é um selo na régua do espectro com
-    `data-alvo` = `vid:pid`, e o gesto confere o alvo contra a cena que foi à
-    tela (`_CENA_NA_TELA["vizinhos"]`).
-
-    `_reler_a_declaracao` abre o `maquina.json` de quem roda; num teste
-    unitário isso é ler o arquivo DELA sem precisar.
-    """
+    """UM rádio na tela, e o disco relido vira dublê."""
     monkeypatch.setattr(a08, "_CENA_NA_TELA", {"vizinhos": [{"id": "3554:fa09"}]})
     monkeypatch.setattr(a08, "_reler_a_declaracao", lambda: None)
 
@@ -239,12 +158,7 @@ def _clicar(pac, a08, ponte, valor: str) -> None:
 
 
 def test_o_gesto_nao_grava_a_sugestao_como_resposta_dela(pac, a08, um_vizinho):
-    """A REGRA INTEIRA numa linha: sugestão escolhida grava `tipo: None`.
-
-    `None` é "ela ainda não respondeu" — a mesma coisa que "— O que é? —" e que
-    "Não sei" (docstring do gesto). Gravar `"teclado"` aqui poria na boca dela
-    uma resposta que ela não deu.
-    """
+    """A REGRA INTEIRA numa linha: sugestão escolhida grava `tipo: None`."""
     ponte = PonteDeMentira()
     sugerida = a08._pergunta_sugerida("Teclado", a08._a_pergunta())
     _clicar(pac, a08, ponte, sugerida)
@@ -271,21 +185,13 @@ def test_a_resposta_dela_continua_gravando(pac, a08, um_vizinho):
 
 
 def test_a_palavra_que_nao_e_da_lista_continua_recusando(pac, a08, um_vizinho):
-    """A trava do pydantic continua de pé: rótulo estranho não chega ao disco.
-
-    Sem ela, `"Fone"` iria cru para `RadioDeclarado.tipo`, que é `Literal[…]`, e
-    o pydantic recusaria o DOCUMENTO INTEIRO — a tela diria "não consegui
-    gravar" onde o defeito é "valor inválido".
-    """
+    """A trava do pydantic continua de pé: rótulo estranho não chega ao disco."""
     ponte = PonteDeMentira()
     with pytest.raises(ValueError):
         _clicar(pac, a08, ponte, "Fone sem fio da TV")
     assert _declarou(ponte) == []
 
 
-# ---------------------------------------------------------------------------
-# 5. A TELA TEM ONDE POUSAR — o endereço existe na página, e é UM por bloco
-# ---------------------------------------------------------------------------
 def test_o_toque_no_selo_so_abre_e_o_rotulo_de_fora_da_tela_recusa(pac, a08, um_vizinho):
     """O selo não carrega resposta; e um alvo que não foi à tela não grava.
 
@@ -309,19 +215,12 @@ def test_o_toque_no_selo_so_abre_e_o_rotulo_de_fora_da_tela_recusa(pac, a08, um_
 
 
 def test_a_pagina_tem_o_selo_e_o_painel_de_cada_vizinho():
-    """A tela tem onde pousar: um selo por vizinho e um molde de respostas.
-
-    Emitir um gesto que a página não tem é o defeito que esta aba já teve dez
-    vezes (medido em 03/09). A régua conta os selos CONTRA os moldes do painel:
-    cada vizinho que a tela mostra tem as respostas do produto.
-    """
+    """A tela tem onde pousar: um selo por vizinho e um molde de respostas."""
     import re
 
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    # O VIZINHO SEM NOME TAMBÉM É SELO (`sem-nome`, 26/09/2026): era ele o balão
-    # cinza que ela não sabia ler, e a régua só contava os que ela já nomeou.
     selos = set(re.findall(
         r'<button class="selo-fora vizinho(?: sem-nome)?"[^>]*data-gesto="vizinho-o-que-e" '
         r'data-alvo="([^"]+)"', html))

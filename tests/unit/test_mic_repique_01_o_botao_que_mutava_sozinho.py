@@ -20,7 +20,7 @@ ZERO sempre que o áudio demora. Rajada de bordas virava rajada de toggles.
 
 **(B) Um toque no botão move DOIS mudos, e ninguém os apresentava.** O
 ``hid-playstation`` alterna o mudo do FIRMWARE na borda do botão físico (está
-escrito em ``core/backend_pydualsense.py:421``, em ``set_microphone_mute`` e
+escrito em ``core/backend_pydualsense.py:233``, em ``set_microphone_mute`` e
 em ``docs/protocol/ipc-unix-socket.md``), e o ``mic_button_loop`` alterna o
 mudo do SISTEMA na MESMA borda. Dois mudos em série: o som só passa com os
 dois abertos. Um número ÍMPAR de bordas — três, como no journal — deixa os
@@ -44,10 +44,6 @@ import pytest
 
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import hotkey as mod
-
-# ---------------------------------------------------------------------------
-# Dublês mínimos — o alvo é o laço, não o daemon inteiro
-# ---------------------------------------------------------------------------
 
 
 class _Config:
@@ -132,23 +128,6 @@ async def _rodar_bordas(daemon: _Daemon, corpo: Any) -> None:
             await tarefa
 
 
-# ---------------------------------------------------------------------------
-# (A) A rajada — agora COM ENDEREÇO (MIC-DA-MESA-ELEICAO-01)
-# ---------------------------------------------------------------------------
-#
-# O SOSSEGO MUDOU DE CASA, e o motivo é o eixo do gesto. Ele vivia no
-# `mic_button_loop`, que consumia `BUTTON_DOWN` e alternava o mudo do sistema.
-# Desde 01/09/2026 o botão ELEGE em vez de mutar, e a borda com endereço nasce
-# em `daemon/subsystems/mic_da_mesa.py` — que é onde a guarda tem de estar,
-# porque é lá que a borda existe. Duas réguas sobre o mesmo estado é o defeito
-# que esta casa já pagou onze vezes.
-#
-# O QUE NÃO MUDOU: N bordas em rajada continuam tendo de virar UMA. O preço de
-# engolir um toque de verdade é um gesto refeito em um segundo; o preço de um
-# falso gesto era a usuária muda no jogo sem saber, e passa a ser o microfone
-# do sistema trocando sozinho.
-
-
 class _BackendComBordas:
     """Backend dublado: `bordas_do_mic()` com contador que o teste move."""
 
@@ -171,18 +150,13 @@ _P2 = "aabbcc000002"
 class TestARajadaDeBordas:
     @pytest.mark.asyncio
     async def test_cinco_bordas_seguidas_viram_uma_eleicao_so(self) -> None:
-        """O defeito de 01:52:27, no eixo novo: N bordas viravam N gestos.
-
-        ARRANQUE A CURA (a checagem de `MIC_SOSSEGO_S` em `mic_da_mesa_loop`) e
-        este teste reprova com cinco eventos — cinco eleições do microfone do
-        sistema numa rajada, sem ninguém para ver.
-        """
+        """O defeito de 01:52:27, no eixo novo: N bordas viravam N gestos."""
         backend = _BackendComBordas((_P1,))
         daemon = _Daemon(controller=backend, config=_Config())
         fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
 
         async def corpo(d: _Daemon) -> None:
-            await asyncio.sleep(0.4)  # passa a carência pós-conexão (0,3 s)
+            await asyncio.sleep(0.4)
             for _ in range(5):
                 backend.apertar(_P1)
                 await asyncio.sleep(0.06)
@@ -206,7 +180,7 @@ class TestARajadaDeBordas:
         fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
 
         async def corpo(d: _Daemon) -> None:
-            await asyncio.sleep(0.4)  # a carência pós-conexão (0,3 s)
+            await asyncio.sleep(0.4)
             backend.apertar(_P1)
             await asyncio.sleep(0.15)
             backend.apertar(_P1)
@@ -219,18 +193,13 @@ class TestARajadaDeBordas:
 
     @pytest.mark.asyncio
     async def test_o_sossego_e_por_controle_e_nao_da_mesa(self) -> None:
-        """Numa mesa de quatro, o Jogador 2 não engole o gesto do Jogador 1.
-
-        A guarda velha era um relógio SÓ, porque o gesto velho era um só (o mudo
-        do sistema). Com endereço, uma janela global faria dois jogadores que
-        apertam junto virarem um gesto — e o do segundo sumiria calado.
-        """
+        """Numa mesa de quatro, o Jogador 2 não engole o gesto do Jogador 1."""
         backend = _BackendComBordas((_P1, _P2))
         daemon = _Daemon(controller=backend, config=_Config())
         fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
 
         async def corpo(d: _Daemon) -> None:
-            await asyncio.sleep(0.4)  # a carência pós-conexão (0,3 s)
+            await asyncio.sleep(0.4)
             backend.apertar(_P1)
             backend.apertar(_P2)
             await asyncio.sleep(0.1)
@@ -243,26 +212,7 @@ class TestARajadaDeBordas:
 
     @pytest.mark.asyncio
     async def test_a_borda_dentro_da_carencia_nao_vira_gesto(self) -> None:
-        """A CARÊNCIA PÓS-CONEXÃO, medida — e ela não tinha régua nenhuma.
-
-        ACHADO DA AUDITORIA DE 02/09/2026. O laço novo aplica o mesmo
-        `INPUT_GRACE_SEC` que curou o micBtn fantasma do hotplug — o defeito que
-        fez um controle dela ser DESLIGADO —, e ninguém o guardava: arrancada a
-        linha inteira de `daemon/subsystems/mic_da_mesa.py`, 859 réguas de
-        mic/áudio/hotkey ficaram verdes.
-
-        E havia um PONTEIRO FALSO no repositório: o docstring de
-        `test_daemon_connect_grace.py` afirmava que "o teste da carência lá é
-        `TestARajadaDeBordas`". Os três testes desta classe começavam com
-        `await asyncio.sleep(0.4)`, que PASSA POR CIMA da carência de 0,3 s.
-        Nenhum apertava dentro dela. Este aperta.
-
-        As duas metades, porque uma cura que mata o botão não é cura: a borda
-        DENTRO da carência não vira gesto, e o mesmo botão volta a valer depois.
-
-        CURA A ARRANCAR: a checagem `(agora - nasceu_em) < INPUT_GRACE_SEC` do
-        `mic_da_mesa_loop` — esta régua reprova com o gesto fantasma.
-        """
+        """A CARÊNCIA PÓS-CONEXÃO, medida — e ela não tinha régua nenhuma."""
         backend = _BackendComBordas((_P1,))
         daemon = _Daemon(controller=backend, config=_Config())
         fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
@@ -270,14 +220,10 @@ class TestARajadaDeBordas:
         dentro: list[int] = []
 
         async def corpo(d: _Daemon) -> None:
-            # A carência é 0,3 s e o laço varre a cada 0,05 s: apertar aos
-            # 0,10 s dá ao laço duas varreduras — a que adota o contador e a
-            # que vê a borda — as duas dentro da janela.
             await asyncio.sleep(0.10)
             backend.apertar(_P1)
             await asyncio.sleep(0.15)
             dentro.append(fila.qsize())
-            # E agora, PASSADA a carência, o mesmo botão tem de valer.
             await asyncio.sleep(0.35)
             backend.apertar(_P1)
             await asyncio.sleep(0.15)
@@ -295,35 +241,3 @@ class TestARajadaDeBordas:
         )
 
 
-# ---------------------------------------------------------------------------
-# (B) Os dois donos do mudo
-# ---------------------------------------------------------------------------
-
-
-# MIC-DOIS-DONOS-01 — a classe `TestOsDoisDonosDoMudo` foi REMOVIDA em 19/08/2026,
-# junto com a cura que ela testava. NÃO a reponha.
-#
-# A LEITURA continua certa e vale registrar: um toque no botão de microfone move
-# DOIS mudos — o do FIRMWARE, que o `hid-playstation` alterna na borda do botão
-# físico, e o do SISTEMA, que este laço alterna na mesma borda. Em série, o
-# microfone só passa quando os dois estão abertos, e um número ímpar de bordas
-# que um vê e o outro não os deixa em fase oposta. Foi assim que, na noite de
-# 18->19/08, o `pactl` respondia `Mute: não`, o medidor da aba Status desenhava
-# nível, e o jogo não recebia nada.
-#
-# A CURA proposta — afirmar o mudo do firmware junto com o do sistema — está
-# RECUSADA por decisão medida, e a recusa é anterior:
-#
-#   * escrever no registrador do firmware TOMA A POSSE, e o botão físico dela
-#     para de valer — recusado por escrito na BT-E-VPAD-01 (medido 01/08),
-#     reafirmado na MIC-BT-DONO-01 (03/08), na linha `audio.microfone.mudo` do
-#     mapa de canais, e no `controller_card.py`, que chama isso de "sequestro
-#     silencioso que esta sprint foi fechar";
-#   * no rádio a posse EVAPORA (medido 03/08: mudo = 100% -> 46% -> 100%), porque
-#     `_mic_mute_desejado` é atributo de instância de um handle que morre a cada
-#     reconexão;
-#   * em co-op escreveria no controle ERRADO: o `BUTTON_DOWN` não carrega `uniq`,
-#     então o jogador 2 mutaria o firmware do jogador 1.
-#
-# O que sobrou de pé, e é o que este arquivo testa: a janela de sossego contra a
-# rajada de bordas (`TestARajadaDeBordas`).

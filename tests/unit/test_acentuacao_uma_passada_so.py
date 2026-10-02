@@ -1,26 +1,4 @@
-"""O portão de acentuação faz UMA passada por linha, não 314.
-
-**O DEFEITO, medido em 23/08/2026.** `varre_arquivo` compilava 314 regex — um
-por par de correção — e passava TODAS elas por CADA linha de 27,9 MB de árvore.
-Medição do dia: **157,5 s de um orçamento de 181 s**, ou 87% do custo de todos
-os portões não-pytest juntos. Nesta sessão o comando estourou o teto de 2 min
-várias vezes, e a versão antiga voltou a estourar quando foi cronometrada
-lado a lado — a nova, no mesmo instante, respondeu em **37,6 s**.
-
-**Por que isso é defeito e não lentidão.** Um portão que cobra dois minutos e
-meio é um portão que a pessoa aprende a pular, e portão pulado protege menos que
-portão nenhum. Ninguém põe isso num `git push`.
-
-**A cura é a lei do storm dela aplicada a um script:** *achar a causa raiz apaga
-N gambiarras*. A causa não era "o script é grande" — era **313 passadas
-desnecessárias sobre a mesma linha**. Uma alternância única faz o motor de regex
-percorrer a linha uma vez, e o ganho é de ordem, não de constante.
-
-**A PROVA QUE ESTE ARQUIVO GUARDA é a igualdade**, não a velocidade: as duas
-implementações têm de devolver **exatamente o mesmo conjunto** de achados. A
-ordem muda de propósito (a nova reporta na ordem em que a palavra aparece na
-linha, que é a ordem em que a pessoa lê), e por isso a comparação é de conjunto.
-"""
+"""O portão de acentuação faz UMA passada por linha, não 314."""
 from __future__ import annotations
 
 import ast
@@ -44,11 +22,7 @@ def _modulo():
 
 
 def _do_jeito_antigo(mod, texto: str, *, eh_python: bool = False) -> set[tuple]:
-    """A implementação de 314 passadas, preservada como REFERÊNCIA.
-
-    Ela é o padrão-ouro deste teste: se a alternância divergir dela, a
-    alternância está errada — não o contrário.
-    """
+    """A implementação de 314 passadas, preservada como REFERÊNCIA."""
     achados: set[tuple] = set()
     for idx, linha in enumerate(texto.splitlines()):
         for errada, correta in mod._CORRECOES.items():
@@ -80,8 +54,6 @@ def _do_jeito_novo(mod, texto: str) -> set[tuple]:
     return achados
 
 
-#: Casos que exercitam o que a alternância poderia quebrar: a ordem de
-#: first-match, as guardas de identificador, e o `IGNORECASE`.
 CASOS = [
     "Uma decisao mal escrita, uma acao sem acento, uma opcao.",
     "CHORE-ACAO-01 é identificador e nao deve acusar.",
@@ -97,12 +69,7 @@ CASOS = [
 
 @pytest.mark.parametrize("texto", CASOS)
 def test_a_alternancia_devolve_o_mesmo_que_as_314_passadas(texto: str) -> None:
-    """MORDE: qualquer divergência entre as duas implementações.
-
-    Em especial: se alguém tirar a ordenação por comprimento da alternância,
-    `acao` passa a casar antes de uma palavra mais longa que a contenha, e o
-    achado sai truncado — este teste reprova.
-    """
+    """MORDE: qualquer divergência entre as duas implementações."""
     mod = _modulo()
     assert _do_jeito_novo(mod, texto) == _do_jeito_antigo(mod, texto), (
         "a alternância divergiu das 314 passadas neste texto:\n  "
@@ -111,11 +78,7 @@ def test_a_alternancia_devolve_o_mesmo_que_as_314_passadas(texto: str) -> None:
 
 
 def test_a_arvore_inteira_da_o_mesmo_resultado() -> None:
-    """A igualdade sobre dado real, e não só sobre casos escolhidos por mim.
-
-    Amostra os arquivos versionados de `docs/` e `src/` — o teste inteiro leva
-    segundos porque a implementação nova é rápida, que é o ponto.
-    """
+    """A igualdade sobre dado real, e não só sobre casos escolhidos por mim."""
     mod = _modulo()
     amostra = sorted(RAIZ.glob("docs/**/*.md"))[:60] + sorted(RAIZ.glob("src/**/*.py"))[:40]
     assert amostra, "instrumento inválido: a amostra ficou vazia"
@@ -133,13 +96,7 @@ def test_a_arvore_inteira_da_o_mesmo_resultado() -> None:
 
 
 def test_a_ordenacao_por_comprimento_esta_la() -> None:
-    """A trava que impede o achado truncado.
-
-    A alternância do Python é *first-match*: sem ordenar da palavra mais longa
-    para a mais curta, um prefixo casa antes do termo inteiro.
-
-    MORDE: tirar o `sorted(..., key=len, reverse=True)`.
-    """
+    """A trava que impede o achado truncado."""
     mod = _modulo()
     fonte = inspect.getsource(mod)
     assert "key=len" in fonte and "reverse=True" in fonte, (
@@ -149,12 +106,7 @@ def test_a_ordenacao_por_comprimento_esta_la() -> None:
 
 
 def test_o_laco_de_314_passadas_nao_voltou() -> None:
-    """MORDE: reintroduzir o laço sobre `_CORRECOES` dentro do laço de linhas.
-
-    Confere pela ÁRVORE SINTÁTICA, não por texto: um comentário que mencione
-    `_CORRECOES.items()` não pode reprovar, e uma reintrodução disfarçada não
-    pode passar.
-    """
+    """MORDE: reintroduzir o laço sobre `_CORRECOES` dentro do laço de linhas."""
     arvore = ast.parse(SCRIPT.read_text(encoding="utf-8"))
 
     for no in ast.walk(arvore):
@@ -175,16 +127,7 @@ def test_o_laco_de_314_passadas_nao_voltou() -> None:
 
 
 def test_a_alternancia_enxerga_correcao_injetada() -> None:
-    """A cegueira que a primeira versão tinha, e que um teste alheio pegou.
-
-    A alternância era compilada UMA vez na importação e ficava cega a qualquer
-    mudança de `_CORRECOES`. A defesa de glifos ADR-011 injeta um par malicioso
-    em tempo de execução para provar que o post-pass reverte — e reprovou,
-    porque a alternância não via o par injetado. O teste estava certo e o
-    conserto estava errado.
-
-    MORDE: voltar a compilar a alternância uma vez só.
-    """
+    """A cegueira que a primeira versão tinha, e que um teste alheio pegou."""
     mod = _modulo()
     assert not mod._alternancia().search("zzpalavrainventadazz")
 

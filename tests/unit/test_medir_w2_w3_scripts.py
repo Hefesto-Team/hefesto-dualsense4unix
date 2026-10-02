@@ -1,20 +1,4 @@
-"""Onda W — scripts de medição W2 (LPS raso) e W3 (coexistência WiFi x BT).
-
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md (§4/§5).
-
-Contrato (falha-sem/passa-com, SEM root, SEM tocar WiFi/BT reais):
-- `bash -n` limpo e executáveis;
-- DRY-RUN POR DEFAULT: sem `--run` NENHUM nmcli modify/up, ping, curl ou
-  rfkill roda — provado FUNCIONALMENTE com stubs que registram cada
-  invocação (o W2 só faz descoberta read-only no dry-run);
-- W3 `--run` sem root morre ANTES de qualquer rfkill (gate de root);
-- traps de restauração presentes: W2 devolve o powersave ORIGINAL ganhe
-  quem ganhar; W3 nunca deixa o WiFi bloqueado (rfkill unblock no EXIT);
-- W2 NÃO persiste nada: nenhuma escrita em modprobe.d/NM conf (o
-  disable_lps_deep é NO-OP em USB — não existe conf dele em lugar nenhum);
-- o asset gateado assets/NetworkManager/hefesto-wifi-powersave.conf tem
-  EXATAMENTE a cura mínima (match wifi + powersave=2) e nada mais.
-"""
+"""Onda W — scripts de medição W2 (LPS raso) e W3 (coexistência WiFi x BT)."""
 
 from __future__ import annotations
 
@@ -68,8 +52,6 @@ def _stubs_w2(tmp_path: Path) -> tuple[Path, Path]:
     stubs.mkdir(exist_ok=True)
     log = tmp_path / "chamadas.log"
     log.write_text("", encoding="utf-8")
-    # Descoberta read-only do W2: device wifi, conexão ativa, powersave
-    # atual e gateway — respostas plausíveis e determinísticas.
     _stub_logando(
         stubs,
         "nmcli",
@@ -80,7 +62,6 @@ def _stubs_w2(tmp_path: Path) -> tuple[Path, Path]:
         "esac",
     )
     _stub_logando(stubs, "ip", 'echo "default via 192.168.1.1 proto dhcp metric 600"')
-    # Ferramentas do --run: se QUALQUER uma rodar no dry-run, o log entrega.
     for nome in ("ping", "curl", "journalctl", "rfkill"):
         _stub_logando(stubs, nome)
     return stubs, log
@@ -99,8 +80,6 @@ class TestLayoutESintaxe:
             assert resultado.returncode == 0, f"{caminho.name}: {resultado.stderr}"
 
     def test_scripts_executaveis(self) -> None:
-        # O uso documentado é `./medir_*.sh` — sem o bit de execução o
-        # gate humano tropeça no primeiro passo.
         for caminho in (W2_PATH, W3_PATH):
             assert os.access(caminho, os.X_OK), f"{caminho.name} sem chmod +x"
 
@@ -210,8 +189,6 @@ class TestNadaDestrutivoNemPersistente:
         assert not re.search(r"\b(modprobe|rmmod|insmod)\b", codigo)
 
     def test_w3_recomendacao_de_topologia_e_impressa_nao_executada(self) -> None:
-        # A recomendação (mover o dongle p/ o xHCI 02:00.0 com portas
-        # SuperSpeed livres) é MEDÍVEL e manual — nenhum script move nada.
         assert "02:00.0" in W3
         assert "re-rodar" in W3
 

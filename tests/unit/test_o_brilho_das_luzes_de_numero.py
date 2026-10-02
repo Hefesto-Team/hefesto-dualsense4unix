@@ -48,9 +48,6 @@ from typing import Any
 
 import pytest
 
-#: O PACOTE DA ABA MORA EM `interface/`, e é por lá que as réguas da 04 o
-#: importam (`from pacotes import …`). Um segundo caminho de import faria o
-#: `@gesto` registrar o mesmo botão duas vezes.
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface")):
     if _p not in sys.path:
@@ -67,11 +64,9 @@ from hefesto_dualsense4unix.core.led_control import (
     player_led_pattern,
 )
 
-#: O degrau do firmware, invertido — 0 é o forte.
 FORTE, MEDIO, FRACO = 0, 1, 2
 BIT = rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
 
-#: Quatro controles na mesa, P1 a P4 (endereços da faixa forjada da casa).
 MACS = [f"AA:BB:CC:00:00:0{n}" for n in (1, 2, 3, 4)]
 UNIQS = [m.replace(":", "").lower() for m in MACS]
 
@@ -109,7 +104,7 @@ def _controle(transporte: str) -> Any:
     h.audio, h.light = DSAudio(), DSLight()
     h.triggerL, h.triggerR = DSTrigger(), DSTrigger()
     h.conType = ConnectionType.BT if transporte == "bt" else ConnectionType.USB
-    h.connected = True  # o que o `describe_controllers` lê para o «Todos» do IPC
+    h.connected = True
     h.quadros = []
     h._escrever_conferindo = lambda quadro: h.quadros.append(bytes(quadro)) or len(quadro)
     return h
@@ -127,12 +122,7 @@ def _brilhos_no_fio(h: Any) -> list[int]:
 
 
 def _o_aparelho_fica_em(h: Any) -> int | None:
-    """O degrau em que o firmware fica: o último autorizado que chegou a ele.
-
-    Pelo fio avulso (o `0x02`/`0x31` que o Hefesto escreve) ou, no cabo sem nó
-    de LED, pelo fluxo do `report_thread`. O firmware guarda o último degrau
-    autorizado — um quadro sem o bit não o desfaz (medido em 09/09/2026).
-    """
+    """O degrau em que o firmware fica: o último autorizado que chegou a ele."""
     fio = _brilhos_no_fio(h)
     fluxo = h._build_common(rumble_asserted=False)
     if not getattr(h, "_suppress_leds", True) and fluxo[rep.COMMON_VALID_FLAG2] & BIT:
@@ -151,8 +141,6 @@ def _mesa(transporte: str, *, com_no: bool, quantos: int = 4) -> tuple[Any, list
     ctl._handles = dict(zip(MACS, controles, strict=False))
     if com_no:
         ctl._sysfs = {mac: _NoDeLed() for mac in MACS[:quantos]}
-    # A política de `_refresh_sysfs_leds`: o fluxo fica LED-neutro quando o
-    # kernel é dono do nó, e no rádio sempre.
     for h in controles:
         h._suppress_leds = com_no or transporte == "bt"
     ctl.set_auto_output_provider(_numero)
@@ -192,17 +180,8 @@ MATRIZ = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# 1. As três palavras têm UM dono
-# ---------------------------------------------------------------------------
 def test_as_tres_palavras_tem_um_dono_so() -> None:
-    """O esquema, o degrau do firmware e a tela falam as MESMAS três palavras.
-
-    O `Literal` do esquema e a tabela `BRILHOS_DAS_LUZES` são duas declarações
-    — a do disco e a do aparelho —, e esta régua as trava juntas: uma palavra
-    nova num lado só seria uma pílula que grava e não acende, ou que acende e
-    o disco recusa.
-    """
+    """O esquema, o degrau do firmware e a tela falam as MESMAS três palavras."""
     from pacotes import a04_iluminacao as a04
 
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
@@ -223,20 +202,13 @@ def test_as_tres_palavras_tem_um_dono_so() -> None:
 
 
 def test_o_controle_nasce_no_fraco_com_o_bit() -> None:
-    """Antes de qualquer perfil, o fluxo do cabo sem nó já leva o Fraco AUTORIZADO.
-
-    É o de antes da decisão (o degrau baixo que a pydualsense mandava), agora
-    com dono: o `_brilho_das_luzes` do handle, e não o `ledOption` herdado.
-    """
+    """Antes de qualquer perfil, o fluxo do cabo sem nó já leva o Fraco AUTORIZADO."""
     h = _controle("usb")
     h._suppress_leds = False
     c = h._build_common(rumble_asserted=False)
     assert c[rep.COMMON_VALID_FLAG2] & BIT and c[42] == FRACO
 
 
-# ---------------------------------------------------------------------------
-# 2. O report montado leva o bit e o degrau, nos quatro caminhos
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
 def test_o_todos_do_perfil_chega_ao_bit_de_p1_a_p4(transporte: str, com_no: bool) -> None:
     """«Todos»: a seção global do perfil acende o mesmo degrau nos quatro."""
@@ -270,12 +242,7 @@ def test_o_perfil_sem_o_campo_nasce_no_fraco(transporte: str, com_no: bool) -> N
 
 @pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
 def test_o_clique_no_p3_so_manda_no_p3(transporte: str, com_no: bool) -> None:
-    """A pílula «Forte» da coluna do P3: a porta da usuária, SÓ naquele MAC.
-
-    É a mesma porta do IPC `led.player_brightness_set` com `uniq`
-    (`_apply_por_uniq` → `apply_output_for`). Os outros três não recebem um
-    quadro sequer — um clique numa coluna não pode acender a de outro.
-    """
+    """A pílula «Forte» da coluna do P3: a porta da usuária, SÓ naquele MAC."""
     ctl, controles = _mesa(transporte, com_no=com_no)
     _aplicar(ctl, _perfil(None))
     antes = [len(h.quadros) for h in controles]
@@ -295,12 +262,7 @@ def test_o_clique_no_p3_so_manda_no_p3(transporte: str, com_no: bool) -> None:
 @pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
 def test_o_controle_que_chega_depois_recebe_o_brilho_dele(
         transporte: str, com_no: bool) -> None:
-    """O perfil foi aplicado com três na mesa; o P4 chega depois, pelo hotplug.
-
-    O override do P4 estava REGISTRADO no mapa em memória (o perfil publica os
-    desconectados também), e o `_reapply_desired` do hotplug o leva ao aparelho
-    — sem caminho próprio, porque o campo anda pelas camadas do número.
-    """
+    """O perfil foi aplicado com três na mesa; o P4 chega depois, pelo hotplug."""
     ctl, controles = _mesa(transporte, com_no=com_no, quantos=3)
     _aplicar(ctl, _perfil("medio", P4="forte"))  # noqa-acento: chave ASCII
     chegou = _controle(transporte)
@@ -319,18 +281,7 @@ def test_o_controle_que_chega_depois_recebe_o_brilho_dele(
 @pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
 def test_a_troca_de_perfil_solta_o_brilho_do_perfil_anterior(
         transporte: str, com_no: bool, origem: str) -> None:
-    """O perfil A dá Forte ao P2; o B não fala dele. Depois da troca, o P2 é Fraco.
-
-    Achado da conferência de 25/09/2026: o «Todos» do `apply_output_defaults`
-    mandava o RESOLVIDO de cada controle, e na ativação o manager o chama ANTES
-    de publicar a camada do perfil novo — o merge ainda levava o override do A.
-    No rádio e no cabo sem nó nada o repintava depois, e o P2 ficava no Forte
-    sob um perfil que diz Fraco. Vale para a troca manual e para a automática.
-
-    MORDIDA: volte o `apply_output_defaults` a mandar o
-    `_merged_desired_for_key(key).player_led_brightness` — reprova no rádio (com
-    e sem nó) e no cabo sem nó, nas duas origens.
-    """
+    """O perfil A dá Forte ao P2; o B não fala dele. Depois da troca, o P2 é Fraco."""
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
     ctl, controles = _mesa(transporte, com_no=com_no)
@@ -344,10 +295,6 @@ def test_a_troca_de_perfil_solta_o_brilho_do_perfil_anterior(
         f"quatro ficaram em {fica}: o P2 guardou o Forte do perfil anterior")
 
 
-
-# ---------------------------------------------------------------------------
-# 2b. Os caminhos que REPINTAM o número também levam o brilho
-# ---------------------------------------------------------------------------
 def _brilhos_novos(h: Any, desde: int) -> list[int]:
     """Os degraus autorizados pelo bit nos quadros que saíram depois de `desde`."""
     return [c[42] for c in map(_common, h.quadros[desde:])
@@ -357,17 +304,7 @@ def _brilhos_novos(h: Any, desde: int) -> list[int]:
 @pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
 def test_a_vigia_do_sequestro_devolve_o_brilho_so_de_quem_foi_sequestrado(
         transporte: str, com_no: bool) -> None:
-    """A vigia do sequestro repinta o número do P3 — e o brilho dele volta junto.
-
-    Achado da conferência de 25/09/2026: o relatório dizia que o brilho anda
-    pela vigia (`reafirmar_barra_e_numero`), e nenhuma régua a cobria —
-    arrancar o `_levar_o_brilho_das_luzes` dela passava verde. Quem sequestra o
-    hidraw pode escrever o próprio degrau; a vigia devolve o dela, e só ao
-    controle sequestrado.
-
-    MORDIDA: tire o `_levar_o_brilho_das_luzes` da vigia (o cabo) ou o
-    `brilho_das_luzes=brilho` do `_escrever_barra_e_numero_bt` (o rádio).
-    """
+    """A vigia do sequestro repinta o número do P3 — e o brilho dele volta junto."""
     ctl, controles = _mesa(transporte, com_no=com_no)
     _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
     antes = [len(h.quadros) for h in controles]
@@ -382,11 +319,7 @@ def test_a_vigia_do_sequestro_devolve_o_brilho_so_de_quem_foi_sequestrado(
 
 @pytest.mark.parametrize("com_no", [True, False])
 def test_o_gatilho_da_cor_pelo_radio_leva_o_brilho_de_cada_um(com_no: bool) -> None:
-    """O gatilho do fim da rajada repinta os quatro do rádio num quadro só cada.
-
-    MORDIDA: tire o `brilho_das_luzes=brilho` do `_escrever_barra_e_numero_bt`
-    e os quatro saem sem o bit.
-    """
+    """O gatilho do fim da rajada repinta os quatro do rádio num quadro só cada."""
     ctl, controles = _mesa("bt", com_no=com_no)
     _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
     antes = [len(h.quadros) for h in controles]
@@ -399,15 +332,7 @@ def test_o_gatilho_da_cor_pelo_radio_leva_o_brilho_de_cada_um(com_no: bool) -> N
 
 
 def test_o_reassert_leva_o_brilho_pelo_cabo_e_nao_gasta_quadro_no_radio() -> None:
-    """O reassert da ativação: pelo cabo, o `0x02` do brilho; pelo rádio, nada.
-
-    Pelo cabo a classe LED do kernel não carrega o degrau, e o reassert o manda
-    num `0x02` ao lado. Pelo rádio o degrau já foi no `0x31` de cada escrita do
-    número, e o reassert — que é só a classe LED — não gasta fatia.
-
-    MORDIDA: tire o laço `do_cabo` do `reassert_resolved_outputs` e o cabo
-    reprova.
-    """
+    """O reassert da ativação: pelo cabo, o `0x02` do brilho; pelo rádio, nada."""
     ctl, cabo = _mesa("usb", com_no=True)
     _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
     antes = [len(h.quadros) for h in cabo]
@@ -422,9 +347,6 @@ def test_o_reassert_leva_o_brilho_pelo_cabo_e_nao_gasta_quadro_no_radio() -> Non
     assert [len(h.quadros) for h in radio] == antes, (
         "o reassert gastou quadro no rádio — o brilho já foi com o número")
 
-# ---------------------------------------------------------------------------
-# 3. O IPC: com `uniq` só ele; sem, «Todos»
-# ---------------------------------------------------------------------------
 def _servidor(ctl: Any, tmp_path: pathlib.Path) -> Any:
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
     from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -456,10 +378,7 @@ async def test_o_ipc_com_uniq_manda_so_no_controle_dele(
 @pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
 async def test_o_ipc_sem_uniq_e_o_todos_e_vence_o_override(
         transporte: str, com_no: bool, tmp_path: pathlib.Path) -> None:
-    """«Todos» pelo IPC: os quatro, inclusive o que tinha override no perfil.
-
-    E o padrão fica para quem chegar depois (o `_desired_default`).
-    """
+    """«Todos» pelo IPC: os quatro, inclusive o que tinha override no perfil."""
     ctl, controles = _mesa(transporte, com_no=com_no)
     _aplicar(ctl, _perfil("fraco", P2="forte"))
     resposta = await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
@@ -479,17 +398,9 @@ async def test_o_ipc_recusa_a_palavra_que_nao_existe(tmp_path: pathlib.Path) -> 
     assert controles[0].quadros == []
 
 
-# ---------------------------------------------------------------------------
-# 4. O que o quadro NÃO pode levar
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_quadro_do_brilho_nao_reengata_a_barra(transporte: str) -> None:
-    """O bit0 sai; o 0x02 do `flag2` e o 0x08 do `flag1` não saem nunca.
-
-    `LIGHTBAR-BT-KEEPALIVE-01` (22/07) mediu que o SETUP da lightbar em regime
-    trava a exibição; `LIGHTBAR-BT-CULPADO-01` (03/08) pegou o `RELEASE_LEDS`.
-    O quadro do brilho não pede vibração, gatilho nem áudio.
-    """
+    """O bit0 sai; o 0x02 do `flag2` e o 0x08 do `flag1` não saem nunca."""
     ctl, controles = _mesa(transporte, com_no=True, quantos=1)
     _aplicar(ctl, _perfil("forte"))
     com_brilho = [c for c in map(_common, controles[0].quadros)
@@ -504,10 +415,7 @@ def test_o_quadro_do_brilho_nao_reengata_a_barra(transporte: str) -> None:
 
 
 def test_pelo_radio_o_brilho_vai_no_mesmo_quadro_do_numero() -> None:
-    """Cada report pelo rádio custa duas fatias: o brilho não ganha quadro próprio.
-
-    No hotplug o número e o brilho saem JUNTOS, num `0x31` só.
-    """
+    """Cada report pelo rádio custa duas fatias: o brilho não ganha quadro próprio."""
     ctl, controles = _mesa("bt", com_no=True, quantos=1)
     _aplicar(ctl, _perfil("forte"))
     h = controles[0]
@@ -520,9 +428,6 @@ def test_pelo_radio_o_brilho_vai_no_mesmo_quadro_do_numero() -> None:
     assert c[rep.COMMON_VALID_FLAG2] & BIT and c[42] == FORTE
 
 
-# ---------------------------------------------------------------------------
-# 5. A tela: o clique grava no perfil e manda só naquele controle
-# ---------------------------------------------------------------------------
 class _PonteDeMentira:
     """A ponte com os mesmos nomes da de verdade, que só anota."""
 
@@ -538,15 +443,7 @@ class _PonteDeMentira:
 
 
 def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
-    """A pílula «Forte» do P3: o disco dela recebe o Forte SÓ no P3.
-
-    E a ponte é chamada uma vez, com a palavra e o MAC do P3 — é o que o
-    daemon de mentira da prova de tela anota como `led.player_brightness_set`.
-
-    O DISCO É O DO COMPUTADOR desde 01/10/2026
-    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o perfil desta régua não
-    sobrepõe a luz, e o arquivo dele fica byte a byte.
-    """
+    """A pílula «Forte» do P3: o disco dela recebe o Forte SÓ no P3."""
     import json
 
     import pacotes
@@ -589,19 +486,7 @@ def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:
 
 
 def test_o_salvar_do_rodape_nao_apaga_o_brilho_das_luzes() -> None:
-    """O «Salvar» do rodapé regrava o brilho das luzes que a pílula gravou.
-
-    Achado da conferência de 25/09/2026, a família do item 13 de 05/09 (*"o
-    Salvar os DESTRUÍA"*): a pílula grava o brilho no override DAQUELE
-    controle, e o Salvar remontava a seção `leds` do override com a cor viva,
-    trocando-a inteira — o Médio do P3 voltava ao Fraco em silêncio. Desde
-    27/09 o Salvar lê o disco e só ele (`D-2709-O-SALVAR-LE-O-PERFIL`), com
-    o aparelho aceso noutra cor.
-
-    MORDIDA: tire o `player_led_brightness` do `_leds_draft_to_config` e o
-    global reprova; devolva ao Salvar a luz acesa no override e o P3 reprova
-    na cor.
-    """
+    """O «Salvar» do rodapé regrava o brilho das luzes que a pílula gravou."""
     from types import SimpleNamespace
 
     from pacotes import rodape
@@ -628,17 +513,7 @@ def test_o_salvar_do_rodape_nao_apaga_o_brilho_das_luzes() -> None:
 
 
 def test_o_estilo_de_jogo_nao_apaga_o_brilho_das_luzes() -> None:
-    """Aplicar um Estilo de Jogo na aba Perfis troca a cor, e não o brilho.
-
-    O mesmo achado do «Salvar», no outro escritor que troca a seção `leds`
-    inteira de um override: o estilo pinta cada unidade (`_com_o_estilo`), e o
-    Forte que a pílula tinha gravado no P3 sumia. Quem guarda a regra é
-    `schema.com_o_brilho_das_luzes_de`, e o P1 — sem opinião própria — continua
-    sem opinião, herdando o global.
-
-    MORDIDA: troque a chamada do dono em `_com_o_estilo` pelo `LedsConfig` cru e
-    o P3 reprova.
-    """
+    """Aplicar um Estilo de Jogo na aba Perfis troca a cor, e não o brilho."""
     from pacotes import a10_perfis as a10
 
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import ESTILOS
@@ -660,13 +535,7 @@ def test_o_estilo_de_jogo_nao_apaga_o_brilho_das_luzes() -> None:
 @pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
 def test_o_clique_atravessa_a_troca_automatica_e_sai_na_manual(
         transporte: str, com_no: bool) -> None:
-    """O clique entra na camada da usuária, como o `led.player_set` (R-20).
-
-    Medido na conferência de 25/09/2026 e escrito no contrato do IPC: a troca
-    AUTOMÁTICA de perfil (a janela do jogo) não solta o degrau que ela clicou,
-    e a troca MANUAL solta — aí vale o que o perfil novo diz. Esta régua prende
-    o comportamento para que ele mude por decisão, e não calado.
-    """
+    """O clique entra na camada da usuária, como o `led.player_set` (R-20)."""
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
     ctl, controles = _mesa(transporte, com_no=com_no)

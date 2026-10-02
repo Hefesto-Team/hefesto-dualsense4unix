@@ -31,7 +31,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("ATIVAR-NAO-MENTE-01 (o botão Ativar)")
 
 import re
@@ -95,8 +94,6 @@ from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 RAIZ = Path(__file__).resolve().parents[2]
 IPC_RS = RAIZ / "packaging" / "cosmic-applet" / "src" / "ipc.rs"
 
-#: O que o daemon respondeu no journal dela quando o lock manual estava armado:
-#: o perfil ENTROU, mas a seção que ela sente ficou de fora.
 RESPOSTA_COM_MODO_ADIADO: dict[str, Any] = {
     "active_profile": "vitoria",
     "mode_aplicado": False,
@@ -134,7 +131,6 @@ class _Janela(pa.ProfilesActionsMixin):
         self.resposta_descartar = True
         self.selecionado: str | None = "vitoria"
 
-    # --- ganchos do mixin ---
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
 
@@ -150,7 +146,6 @@ class _Janela(pa.ProfilesActionsMixin):
     def _sync_selection_with_active_profile(self) -> None:
         self.sincronizados += 1
 
-    # --- o que a janela de verdade traz (HefestoApp) ---
     def _tem_edicao_pendente(self) -> bool:
         return self._pendente
 
@@ -173,21 +168,11 @@ def _sem_dialogo(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O timeout
-# ---------------------------------------------------------------------------
-
-
 class TestOTimeoutDaAtivacao:
     def test_ativar_pede_a_folga_e_nao_o_timeout_de_leitura(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida direta: sem `timeout_s`, a chamada herda os 250 ms.
-
-        250 ms é o timeout de LEITURA da ponte, e o handler do daemon leva
-        ~1,2 s medidos — a ativação inteira estourava, e a janela acusava um
-        daemon vivo de estar morto.
-        """
+        """A mordida direta: sem `timeout_s`, a chamada herda os 250 ms."""
         chamadas: list[dict[str, Any]] = []
         monkeypatch.setattr(pa, "call_async", lambda **kw: chamadas.append(kw))
         janela = _Janela()
@@ -209,10 +194,7 @@ class TestOTimeoutDaAtivacao:
     def test_o_helper_sincrono_tambem_usa_a_folga(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`profile_switch` é o que a CLI e o Salvar da aba Perfis leem.
-
-        Com os 250 ms, os três anunciavam falha de uma troca que ACONTECEU.
-        """
+        """`profile_switch` é o que a CLI e o Salvar da aba Perfis leem."""
         vistos: list[Any] = []
 
         def _falso(method: str, params: Any = None, timeout: Any = None) -> Any:
@@ -248,19 +230,13 @@ class TestOAppletEspelhaAJanela:
         assert "SWITCH_IPC_TIMEOUT" in corpo
 
     def test_a_leitura_do_applet_continua_curta(self) -> None:
-        """O painel não pode pendurar 3 s num daemon morto — por isso a folga
-        é uma constante PRÓPRIA, e não o `IPC_TIMEOUT` esticado."""
+        """O painel não pode pendurar 3 s num daemon morto — por isso a folga"""
         fonte = IPC_RS.read_text(encoding="utf-8")
         achado = re.search(
             r"const IPC_TIMEOUT: Duration = Duration::from_millis\((\d+)\)", fonte
         )
         assert achado is not None
         assert int(achado.group(1)) <= 250
-
-
-# ---------------------------------------------------------------------------
-# 2. As abas passam a ser refeitas na hora
-# ---------------------------------------------------------------------------
 
 
 class TestAtivarRefazAsAbas:
@@ -281,11 +257,7 @@ class TestAtivarRefazAsAbas:
     def test_com_edicao_pendente_a_decisao_e_dela(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Recarregar por baixo de uma edição é perda de trabalho (R-08).
-
-        Ignorar em silêncio é o que o tique de 2 Hz faz — e é o que deixava as
-        abas mentindo. Então: pergunta.
-        """
+        """Recarregar por baixo de uma edição é perda de trabalho (R-08)."""
         janela = _Janela(pendente=True, editando="Pragmata")
         _sem_dialogo(janela, monkeypatch)
         janela.resposta_descartar = False
@@ -354,11 +326,6 @@ class TestAtivarRefazAsAbas:
         assert janela.sincronizados == 1
 
 
-# ---------------------------------------------------------------------------
-# 3. A janela LÊ o relatório do daemon
-# ---------------------------------------------------------------------------
-
-
 class TestAJanelaLeORelatorio:
     def test_tudo_aplicado_mantem_a_frase_de_sempre(self) -> None:
         assert pa.mensagem_de_ativacao("vitoria", RESPOSTA_INTEIRA) == (
@@ -388,11 +355,7 @@ class TestAJanelaLeORelatorio:
         assert fa._mensagem_de_aplicacao({"applied": []}) in msg
 
     def test_o_texto_do_que_nao_entrou_e_o_do_rodape(self) -> None:
-        """Vocabulário REUSADO, nunca reescrito: dois donos da frase derivam.
-
-        Se alguém escrever aqui uma segunda frase para a mesma ideia, este
-        teste reprova — que é exatamente o ponto.
-        """
+        """Vocabulário REUSADO, nunca reescrito: dois donos da frase derivam."""
         relato = pa.relato_da_ativacao(RESPOSTA_COM_MODO_ADIADO)
         assert relato is not None
         assert fa._mensagem_de_aplicacao(relato) in pa.mensagem_de_ativacao(
@@ -407,8 +370,7 @@ class TestAJanelaLeORelatorio:
         }
 
     def test_secao_desconhecida_aparece_com_o_nome_tecnico(self) -> None:
-        """Daemon mais novo que a janela: termo estranho > omitir que ficou de
-        fora (a mesma regra do `_lista_de_secoes` do rodapé)."""
+        """Daemon mais novo que a janela: termo estranho > omitir que ficou de"""
         relato = pa.relato_da_ativacao(
             {"secoes": {"telepatia": "falhou"}}
         )

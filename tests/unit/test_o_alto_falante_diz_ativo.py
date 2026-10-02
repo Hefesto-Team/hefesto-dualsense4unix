@@ -1,31 +1,4 @@
-"""O ALTO-FALANTE DIZ ATIVO — O-ALTO-FALANTE-DIZ-ATIVO-01 (23/09/2026).
-
-A queixa dela, com a foto da aba Controles:
-
-    *"E pq o autofalante do controle iniciou como canal dormindo ao invés de
-    ativo (esse dormindo deveria ser Desativado) tipo o termo do botão."*
-    <!-- noqa-acento: citação literal dela -->
-
-Esta régua cobra as duas metades da sprint:
-
-0. **DESLIGADO SÓ QUANDO ELA CALOU.** Canal PARADO é ATIVO, no cabo e no
-   rádio, em qualquer cartão que não seja o P1 (a MATRIZ da sprint), e a
-   palavra do sono do canal não chega a campo nenhum do cartão. **As
-   mordidas:** devolva o sono do canal à pílula (`or dormindo`) e a seção 0
-   reprova com DESLIGADO num canal parado; devolva o `Canal dormindo` ao
-   alarme e ela reprova com o alarme aceso.
-
-1. **O PEDIDO DE VAGA NÃO DERRUBA A PONTE.** O ``pedir_vaga`` do governador roda
-   o ``plano_de_radio`` sem ``try``, e o chamador em
-   ``daemon/subsystems/alto_falante.py`` não protegia: a exceção subia até
-   ``_reconciliar`` e nenhuma ponte da mesa subia naquela volta — nem o nó era
-   publicado. **A mordida:** tire o ``try`` em volta do ``pedir_vaga`` e os dois
-   testes da seção 1 reprovam com a exceção do governador.
-
-Nada aqui abre socket de Bluetooth, fala com o servidor de som dela nem escreve
-no diário dela: a ponte, a fonte e o servidor são dublês, e o governador que
-levanta é o de verdade com o ``plano_de_radio`` trocado.
-"""
+"""O ALTO-FALANTE DIZ ATIVO — O-ALTO-FALANTE-DIZ-ATIVO-01 (23/09/2026)."""
 
 from __future__ import annotations
 
@@ -53,10 +26,6 @@ CONTROLE_3 = "aa:bb:cc:00:00:03"
 CONTROLE_4 = "aa:bb:cc:00:00:04"
 
 
-# ---------------------------------------------------------------------------
-# 0. a tela: DESLIGADO só quando ela calou
-# ---------------------------------------------------------------------------
-#: A MATRIZ DA SPRINT: um controle no cabo e dois no rádio, e nenhum no P1.
 MESA_DA_MATRIZ = (
     (CONTROLE_2, 2, "usb"),
     (CONTROLE_3, 3, "bluetooth"),
@@ -78,12 +47,7 @@ def _entrada(uniq: str, slot: int, transporte: str, *, calado: bool) -> dict[str
 
 @pytest.fixture
 def canal(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Escreve o sono de cada canal direto no cache — sem thread e sem `pactl`.
-
-    É o mesmo ponto de injeção que a régua irmã usa
-    (`test_o_cartao_diz_se_o_som_tem_para_onde_ir.sono_lido`), e o cache é o
-    que a `_camada_1` enche em produção com o `estado_do_canal` do dono.
-    """
+    """Escreve o sono de cada canal direto no cache — sem thread e sem `pactl`."""
     monkeypatch.setattr(a02, "_SONO", {})
 
     def por(sono: dict[str, str]) -> None:
@@ -115,12 +79,7 @@ def test_a_mesa_da_matriz_nao_usa_o_p1() -> None:
 
 @pytest.mark.parametrize("sono", [audio_saida.CANAL_DORMINDO, audio_saida.CANAL_ACORDADO])
 def test_o_canal_parado_ou_tocando_e_ativo_nos_dois_transportes(canal: Any, sono: str) -> None:
-    """Uma pílula só, ATIVO, com o alto-falante ligado — parado OU tocando.
-
-    MORDIDA: devolva o `or dormindo` à pílula e o canal parado reprova com
-    DESLIGADO; devolva o `Canal dormindo` ao `selo_do_som` e ele reprova com o
-    alarme aceso.
-    """
+    """Uma pílula só, ATIVO, com o alto-falante ligado — parado OU tocando."""
     canal({uniq: sono for uniq, _, _ in MESA_DA_MATRIZ})
     for pref, cartao in _cartoes().items():
         assert cartao["alto-canal"] == mesa_viva.ATIVO, (
@@ -128,17 +87,11 @@ def test_o_canal_parado_ou_tocando_e_ativo_nos_dois_transportes(canal: Any, sono
             f"canal {sono}")
         assert cartao["alto-selo"] == a02.NADA_A_DIZER, (
             f"{pref}: o alarme acendeu {cartao['alto-selo']!r} sobre um canal {sono}")
-        # A DICA É ATRIBUTO: o vazio apaga, e o marcador viraria texto na dica
-        # da casa — `<i class="nada"></i>` cru, com a pílula à vista.
         assert cartao["alto-canal-porque"] == "", pref
 
 
 def test_calar_pelo_som_desliga_e_soltar_ativa(canal: Any) -> None:
-    """O `♪` é o único que desliga, e desliga SÓ o cartão que ela calou.
-
-    O cabo (P2) calado e os dois do rádio ligados, e depois o contrário: é a
-    matriz inteira, e a pílula segue o mudo em cada um.
-    """
+    """O `♪` é o único que desliga, e desliga SÓ o cartão que ela calou."""
     canal({uniq: audio_saida.CANAL_DORMINDO for uniq, _, _ in MESA_DA_MATRIZ})
     so_o_cabo = _cartoes(calados=frozenset({CONTROLE_2}))
     assert so_o_cabo["p2"]["alto-canal"] == mesa_viva.DESLIGADO
@@ -151,11 +104,7 @@ def test_calar_pelo_som_desliga_e_soltar_ativa(canal: Any) -> None:
 
 
 def test_sem_canal_a_pilula_some(canal: Any) -> None:
-    """Sem nó de som para o controle não há o que afirmar: o marcador de nada.
-
-    O «não sei» continua sendo o terceiro estado — a cura não fez o ATIVO nascer
-    da ausência.
-    """
+    """Sem nó de som para o controle não há o que afirmar: o marcador de nada."""
     canal({CONTROLE_2: audio_saida.CANAL_DORMINDO})
     cartoes = _cartoes()
     assert cartoes["p2"]["alto-canal"] == mesa_viva.ATIVO
@@ -164,11 +113,7 @@ def test_sem_canal_a_pilula_some(canal: Any) -> None:
 
 
 def test_a_palavra_do_sono_nao_chega_a_campo_nenhum_do_cartao(canal: Any) -> None:
-    """«dormindo» e «acordado» saem da tela INTEIRA, não só da pílula.
-
-    Varre TODO valor que o pacote manda para os três cartões, e não só os três
-    campos do alto-falante: o fato errado só sai se a lista for medida.
-    """
+    """«dormindo» e «acordado» saem da tela INTEIRA, não só da pílula."""
     for sono in (audio_saida.CANAL_DORMINDO, audio_saida.CANAL_ACORDADO):
         canal({uniq: sono for uniq, _, _ in MESA_DA_MATRIZ})
         for pref, cartao in _cartoes().items():
@@ -179,11 +124,7 @@ def test_a_palavra_do_sono_nao_chega_a_campo_nenhum_do_cartao(canal: Any) -> Non
 
 
 def test_o_dono_do_selo_nao_pergunta_pelo_sono() -> None:
-    """O dono responde com DOIS fatos: o mudo e se há canal. O sono não entra.
-
-    A assinatura é o contrato: um terceiro parâmetro de sono é o caminho por
-    onde o `or dormindo` voltaria.
-    """
+    """O dono responde com DOIS fatos: o mudo e se há canal. O sono não entra."""
     assert mesa_viva.selo_do_alto_falante(False, True) == mesa_viva.ATIVO
     assert mesa_viva.selo_do_alto_falante(True, True) == mesa_viva.DESLIGADO
     assert mesa_viva.selo_do_alto_falante(False, False) == mesa_viva.SEM_LEITOR
@@ -194,12 +135,7 @@ def test_o_dono_do_selo_nao_pergunta_pelo_sono() -> None:
 
 
 def test_a_bancada_viva_nao_carrega_a_palavra_do_sono() -> None:
-    """O «Dormindo» do `controles_vivos.py` saiu, e o kwarg que o carregava.
-
-    O `estado_do_card` não pede mais o canal e não devolve mais o
-    `estado_alto`; o `aba02.bloco` não o recebe. Os três lados juntos, para não
-    repetir o `rota_pc` de 21/09 (a renomeação que alcançou um lado só).
-    """
+    """O «Dormindo» do `controles_vivos.py` saiu, e o kwarg que o carregava."""
     import inspect
 
     from hefesto_dualsense4unix.interface import aba02, controles_vivos
@@ -213,18 +149,7 @@ def test_a_bancada_viva_nao_carrega_a_palavra_do_sono() -> None:
 
 
 def test_a_bancada_do_desenho_mostra_ativo_no_cabo_e_no_radio() -> None:
-    """O mockup acompanha pelo gerador: a pílula ATIVO nos dois transportes.
-
-    Lê a página da BANCADA (`mockup/`), que é o que ela aprova. A publicada só
-    muda quando ela mandar publicar a 02. O cartão é achado pela CASCA
-    (`class="ctl card…" data-controle=`), e não pelo primeiro `data-controle`
-    do arquivo: a folha de estilo cita os quatro antes do primeiro cartão, e uma
-    régua que achasse a folha mediria o P1 quatro vezes — foi o que a primeira
-    versão desta régua fez, e a mordida pegou.
-
-    MORDIDA: devolva a bancada de `ea4c9cd2d` (a cena de antes desta sprint) e o P2,
-    que é o do rádio, reprova sem a pílula.
-    """
+    """O mockup acompanha pelo gerador: a pílula ATIVO nos dois transportes."""
     import re
 
     from hefesto_dualsense4unix.interface.monta import MESA as MESA_DO_DESENHO
@@ -256,9 +181,6 @@ def test_a_bancada_do_desenho_mostra_ativo_no_cabo_e_no_radio() -> None:
     assert vistos == {"usb", "bt"}, "a cena perdeu um dos transportes"
 
 
-# ---------------------------------------------------------------------------
-# 1. o pedido de vaga que levanta não derruba a ponte
-# ---------------------------------------------------------------------------
 @dataclass
 class _Controle:
     uniq: str
@@ -297,11 +219,7 @@ class _PonteDeMentira:
 
 
 class _GovernadorQueLevanta:
-    """A régua que a sprint pede: todo pedido de vaga levanta.
-
-    Tem a mesma assinatura do ``GovernadorDoRadio.pedir_vaga`` — e só ela,
-    porque ``_casar_as_pontes`` só chama ela.
-    """
+    """A régua que a sprint pede: todo pedido de vaga levanta."""
 
     def __init__(self) -> None:
         self.pedidos: list[tuple[str, str]] = []
@@ -322,8 +240,6 @@ def som(monkeypatch: pytest.MonkeyPatch) -> Any:
     def _fonte(no: str, **_kw: Any) -> tuple[Any, str, str]:
         return (lambda _n: b""), f"gravador:{no}", ""
 
-    # ALGUÉM ESTÁ TOCANDO em todo controle: é o único caso em que a ponte do som
-    # sob demanda (RADIO-AFOGADO-01) chega a pedir vaga.
     monkeypatch.setattr(af, "sink_esta_tocando", lambda nome, *_a, **_k: True)
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte)
@@ -348,19 +264,7 @@ def som(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def test_o_governador_que_levanta_nao_derruba_a_ponte(som: Any) -> None:
-    """Todo pedido levanta, e as duas pontes sobem como antes do governador.
-
-    SEM VAGA, e é o «não sei»: a ponte que sobe aqui é a mesma que subia antes
-    de o governador existir — e a mesma do dublê montado por ``__new__``.
-
-    MORDIDA: tire o ``try`` em volta do ``pedir_vaga`` e a volta levanta
-    ``RuntimeError: o plano do rádio caiu``.
-
-    E O PEDIDO QUE FALHA DEIXA RASTRO — a sprint diz «registra e segue»: um
-    ``except`` que só engolisse a exceção faria o governador sumir calado da
-    mesa inteira. MORDIDA (conferência de 23/09/2026): tire o
-    ``logger.warning`` do ``except`` e a contagem de avisos reprova.
-    """
+    """Todo pedido levanta, e as duas pontes sobem como antes do governador."""
     import structlog
 
     governador = _GovernadorQueLevanta()
@@ -382,16 +286,7 @@ def test_o_governador_que_levanta_nao_derruba_a_ponte(som: Any) -> None:
 def test_o_plano_do_radio_que_levanta_no_governador_de_verdade(
     som: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O caminho REAL da exceção: o terceiro controle no mesmo adaptador.
-
-    As duas primeiras pontes cabem no adaptador e ganham vaga sem perguntar a
-    ninguém. A terceira chega ao adaptador cheio, e é aí — só aí — que o
-    governador pergunta ao ``plano_de_radio`` para onde mover. Se o plano cai,
-    a terceira sobe sem vaga e as duas primeiras ficam com as delas.
-
-    MORDIDA: tire o ``try`` em volta do ``pedir_vaga`` e a volta levanta
-    ``RuntimeError: o plano do rádio caiu`` no terceiro controle.
-    """
+    """O caminho REAL da exceção: o terceiro controle no mesmo adaptador."""
 
     def _plano_que_cai(*_a: Any, **_k: Any) -> Any:
         raise RuntimeError("o plano do rádio caiu")

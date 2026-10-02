@@ -43,7 +43,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-APPID = 2497900  # DON'T SCREAM — o jogo que motivou a escada existir
+APPID = 2497900
 EPOCH = 1000
 
 
@@ -107,20 +107,11 @@ def env_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-# ---------------------------------------------------------------------------
-# 1. NO LANÇAMENTO
-# ---------------------------------------------------------------------------
 class TestNoLancamento:
     def test_jogo_com_carimbo_nao_ve_escada_nenhuma(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A regressão que dói: a escada mexendo no que JÁ funcionava.
-
-        MORDE a primeira linha de `proximo_degrau` (a recusa por `confirmada`)
-        e a recusa espelhada em `ponte_tentativa.comecar`. Com qualquer uma
-        delas arrancada, nasce uma tentativa num jogo confirmado — e o
-        primeiro gesto dela ali passaria a mexer numa ponte que já pegava.
-        """
+        """A regressão que dói: a escada mexendo no que JÁ funcionava."""
         _marker(env_dir)
         perfil = _perfil(ponte=PonteConfirmada(kind="gamepad", gamepad_flavor="xbox"))
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, perfil)])
@@ -131,18 +122,12 @@ class TestNoLancamento:
         assert resultado is not None
         assert resultado["escada"] == pt.COMECO_PRODUTO_JA_SABE
         assert pt.em_curso(daemon) is None, "escada aberta em jogo confirmado"
-        # E o carimbo continua armando, como já armava.
         assert resultado["ponte_do_carimbo"] is True
 
     def test_jogo_sem_carimbo_e_sem_modo_comeca_no_primeiro_degrau(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O ramo que era "nada a armar" — o buraco que este laço fecha.
-
-        MORDE o bloco `veio_da_escada` de `arm_launch_profile`: sem ele o
-        lançamento volta a devolver `perfil_sem_modo` e ela fica com a máscara
-        que estivesse de pé por acaso.
-        """
+        """O ramo que era "nada a armar" — o buraco que este laço fecha."""
         _marker(env_dir)
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, _perfil())])
         daemon = _DaemonFalso(flavor="xbox")
@@ -160,12 +145,7 @@ class TestNoLancamento:
     def test_perfil_com_modo_manda_e_a_escada_abre_parada_nele(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A regra mais velha da casa: não trocar o modo de um jogo dela.
-
-        MORDE o ramo `ponte_do_perfil is not None` de `comecar`. Sem ele a
-        escada armaria o primeiro degrau POR CIMA do `mode` que ela escreveu —
-        e a tentativa abriria um degrau à frente, pulando o dela.
-        """
+        """A regra mais velha da casa: não trocar o modo de um jogo dela."""
         _marker(env_dir)
         perfil = _perfil(ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox"))
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, perfil)])
@@ -184,12 +164,7 @@ class TestNoLancamento:
     def test_com_jogo_vivo_o_lancamento_nao_arma_sozinho(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """R-04: recriar o vpad com jogo aberto arranca o controle da mão dela.
-
-        MORDE a chamada a `como_subir` em `comecar`. Sem ela o laço armaria a
-        máscara com um jogo na autoridade — o preço que só o gesto DELA
-        autoriza pagar.
-        """
+        """R-04: recriar o vpad com jogo aberto arranca o controle da mão dela."""
         _marker(env_dir)
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, _perfil())])
         daemon = _DaemonFalso(flavor="xbox", authority="game")
@@ -205,8 +180,7 @@ class TestNoLancamento:
     def test_o_lancamento_nao_carimba_nada(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Armar não é confirmar. Carimbar aqui seria gravar "funciona" sobre
-        uma ponte que ninguém ainda viu funcionar."""
+        """Armar não é confirmar. Carimbar aqui seria gravar "funciona" sobre"""
         _marker(env_dir)
         save_profile(_perfil(), origem="teste")
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, _perfil())])
@@ -216,9 +190,6 @@ class TestNoLancamento:
         assert ponte_confirmada_do_appid(APPID) is None
 
 
-# ---------------------------------------------------------------------------
-# 2. O GESTO — vontade explícita dela, e o sinal de que o degrau falhou
-# ---------------------------------------------------------------------------
 class _FakeDevice:
     def __init__(self, flavor: str) -> None:
         self.flavor = flavor
@@ -234,13 +205,7 @@ class _FakeStore:
 
 
 class _DaemonDoGesto:
-    """AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026.
-
-    O gesto pede o CAMINHO no campo dele (`caminho=`, com `flavor=None`), e a
-    ponte de pé é lida do `config.gamepad_caminho`. ANTES este dublê vestia no
-    vpad a máscara pedida em `flavor`; AGORA ele guarda o caminho e deixa a
-    máscara como estava. A trilha ganhou a quarta posição, o caminho.
-    """
+    """AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026."""
 
     def __init__(self, *, flavor: str = "dualsense", aplica: bool = True) -> None:
         self.controller = SimpleNamespace()
@@ -264,9 +229,6 @@ class _DaemonDoGesto:
         caminho: str | None = None,
         grava_o_modo: Any = False,
     ) -> bool:
-        # `grava_o_modo`: a porta que o gesto diz ao setter, e é o setter do
-        # daemon que grava o modo no perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-
-        # MUDA-01, 29/09/2026). Este dublê mede a escada, não o perfil.
         self.pedidos.append((enabled, flavor, origin, caminho))
         if not self._aplica:
             return False
@@ -302,12 +264,7 @@ def _abrir_tentativa(daemon: Any, degrau: pe.Degrau, *, agora: float = 0.0) -> N
 class TestOGesto:
     @pytest.mark.asyncio
     async def test_com_tentativa_o_gesto_segue_a_escada(self) -> None:
-        """O gesto passa a ter o dado por trás: a ordem justificada no mapa.
-
-        MORDE o bloco `passo` de `_ciclar_ponte`. Sem ele o alvo volta a sair
-        do `CICLO_DE_PONTES` — que aqui até coincide no primeiro salto, e por
-        isso o teste confere TAMBÉM que a tentativa avançou.
-        """
+        """O gesto passa a ter o dado por trás: a ordem justificada no mapa."""
         d = _DaemonDoGesto(flavor="dualsense")
         _abrir_tentativa(d, pe.ESCADA[0])
 
@@ -321,12 +278,7 @@ class TestOGesto:
 
     @pytest.mark.asyncio
     async def test_sem_tentativa_o_gesto_faz_o_de_sempre(self) -> None:
-        """Jogo COM ponte confirmada: o gesto TROCA do mesmo jeito.
-
-        Recusar seria o produto discutindo com a dona. Quem não roda em jogo
-        confirmado é a ESCADA, não o gesto — e é essa distinção que este teste
-        trava. MORDE qualquer tentativa de gatear o gesto pelo carimbo.
-        """
+        """Jogo COM ponte confirmada: o gesto TROCA do mesmo jeito."""
         d = _DaemonDoGesto(flavor="dualsense")
         assert pt.em_curso(d) is None
 
@@ -336,12 +288,7 @@ class TestOGesto:
 
     @pytest.mark.asyncio
     async def test_a_escada_nao_avanca_quando_a_mascara_nao_sobe(self) -> None:
-        """MASCARA-01: o retorno do applier não prova nada; o aparelho prova.
-
-        MORDE a guarda `efetiva == alvo` antes de `degrau_subiu`. Sem ela a
-        tentativa acreditaria estar num degrau que nunca subiu, e o gesto
-        seguinte pularia justamente o degrau que faltava tentar.
-        """
+        """MASCARA-01: o retorno do applier não prova nada; o aparelho prova."""
         d = _DaemonDoGesto(flavor="dualsense", aplica=False)
         _abrir_tentativa(d, pe.ESCADA[0])
 
@@ -355,38 +302,7 @@ class TestOGesto:
     async def test_degrau_caro_avisa_guarda_e_nao_cai_no_ciclo_no_mesmo_gesto(
         self,
     ) -> None:
-        """O terceiro degrau (`native`) não alcança um processo já rodando.
-
-        Subir ali ao vivo é o degrau que MENTE: a env congelou no `exec`, o
-        vpad some e o físico continua escondido — ZERO controles. O laço
-        **avisa, guarda e PULA**; o gesto NÃO entra em Modo Nativo, e o aperto
-        dela não é comido.
-
-        FATO CORRIGIDO DUAS VEZES, e as duas datas importam:
-
-        - **29/08/2026** — o teste exigia que o MESMO gesto caísse no
-          `CICLO_DE_PONTES` (depois de `xbox`, `mouse_teclado`) enquanto a
-          tentativa evaporava sem gravar nada. A régua cobrava o defeito: o
-          `xbox` a que ela chegou com dois gestos sumia. A cura guardou a ponte
-          de pé, e o teste passou a exigir `d.pedidos == []`;
-        - **30/08/2026** (`D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`)
-          — `d.pedidos == []` era o aperto COMIDO, e era ele que fazia o gesto
-          se comportar diferente num jogo sem carimbo. Medido com os quatro
-          jogos dela: 3 trocas em 4 apertos no Sackboy contra 4 em 4 nos três
-          carimbados. Agora o aperto troca, e o que não acontece mais é a
-          escada oferecer ao vivo um degrau que só o lançamento alcança.
-
-        **A metade de 29/08 que continua de pé é a que importa:** a ponte é
-        GUARDADA antes de a tentativa morrer. É ela que este teste protege nas
-        três últimas linhas.
-
-        MORDE três curas: o ramo `alcancavel` da caminhada de
-        `avancar_por_gesto` (sem ele o gesto entra em Modo Nativo e mata a
-        porta de volta pelo controle); a caminhada em si (com um `break` no
-        lugar do `continue`, o aperto volta a ser comido); e o
-        `_anotar_o_gesto` antes do `encerrar` (sem ele a ponte de pé some com a
-        tentativa).
-        """
+        """O terceiro degrau (`native`) não alcança um processo já rodando."""
         d = _DaemonDoGesto(flavor="xbox")
         _abrir_tentativa(d, pe.ESCADA[1])
 
@@ -396,7 +312,6 @@ class TestOGesto:
         assert hotkey_sub.proxima_ponte("xbox") == hotkey_sub.PONTE_MOUSE_TECLADO, (
             "premissa: depois de `xbox`, o ciclo livre é `mouse_teclado`"
         )
-        # O degrau caro foi PULADO, não subido: nenhuma linha pede `native`.
         assert d.pedidos == [(False, None, "manual", None)], (
             "o aperto dela foi comido, ou o gesto entrou em Modo Nativo"
         )
@@ -410,16 +325,7 @@ class TestOGesto:
     async def test_a_porta_de_volta_pelo_controle_nao_custa_aperto_nenhum(
         self,
     ) -> None:
-        """Do degrau caro em diante, cada aperto anda uma casa do ciclo livre.
-
-        FATO CORRIGIDO (30/08/2026): este teste chamava-se *"o aperto seguinte
-        ao degrau caro volta ao ciclo"*, e cobrava a porta de volta ao preço de UM
-        aperto. Ela custa ZERO — que é o mesmo que ela custa num jogo com
-        carimbo, e essa igualdade é a decisão dela.
-
-        MORDE uma caminhada que não encerrasse a tentativa: ela ficaria presa
-        no degrau caro e nenhum aperto sairia de lá.
-        """
+        """Do degrau caro em diante, cada aperto anda uma casa do ciclo livre."""
         d = _DaemonDoGesto(flavor="xbox")
         _abrir_tentativa(d, pe.ESCADA[1])
         gesto = hotkey_sub.build_next_bridge_callback(d)
@@ -428,19 +334,13 @@ class TestOGesto:
         await gesto()  # type: ignore[operator]
 
         assert d.pedidos == [
-            (False, None, "manual", None),  # xbox -> mouse_teclado, no MESMO aperto
-            (True, None, "manual", "dualsense"),  # mouse_teclado -> dualsense
+            (False, None, "manual", None),
+            (True, None, "manual", "dualsense"),
         ], "ficou presa no degrau caro, ou comeu um aperto"
 
     @pytest.mark.asyncio
     async def test_no_ultimo_degrau_a_escada_acaba_e_o_gesto_segue(self) -> None:
-        """Voltar ao primeiro degrau faria um laço eterno — e um laço de
-        escada é o destrói-e-recria com outro nome.
-
-        MORDE o ramo `degrau is None` de `avancar_por_gesto`: sem ele a
-        tentativa sobrevive ao fim da escada, e o silêncio dos três minutos
-        seguintes carimbaria a ponte que ela ACABOU de recusar.
-        """
+        """Voltar ao primeiro degrau faria um laço eterno — e um laço de"""
         assert pe.ESCADA[-1].ponte.steam_input is True, "premissa do teste"
         d = _DaemonDoGesto(flavor="dualsense")
         _abrir_tentativa(d, pe.ESCADA[-1])
@@ -463,7 +363,7 @@ class TestOGesto:
         a MODO-DE-CONEXAO-01, 13/09/2026: o gesto anda por caminhos.)
         """
         d = _DaemonDoGesto(flavor="dualsense")
-        _abrir_tentativa(d, pe.ESCADA[2])  # o degrau anterior ao Steam Input
+        _abrir_tentativa(d, pe.ESCADA[2])
 
         passo = pt.avancar_por_gesto(d, jogo_vivo=True, agora=1.0)
 
@@ -475,8 +375,7 @@ class TestOGesto:
         ], "o degrau do Steam Input não foi anunciado como pulado"
 
     def test_o_gesto_nunca_carimba(self) -> None:
-        """O gesto é o CONTRÁRIO de uma confirmação: é o sinal de que o degrau
-        de pé não funcionou. Quem carimba é o silêncio."""
+        """O gesto é o CONTRÁRIO de uma confirmação: é o sinal de que o degrau"""
         d = _DaemonDoGesto()
         _abrir_tentativa(d, pe.ESCADA[0])
 
@@ -485,9 +384,7 @@ class TestOGesto:
         assert ponte_confirmada_do_appid(APPID) is None
 
     def test_o_gesto_reinicia_o_relogio_do_silencio(self) -> None:
-        """Ela reclamou: os três minutos recomeçam. MORDE a linha
-        `ultimo_gesto = momento` — sem ela o degrau novo herdaria o silêncio
-        acumulado pelo degrau velho e seria confirmado quase na hora."""
+        """Ela reclamou: os três minutos recomeçam. MORDE a linha"""
         d = _DaemonDoGesto(flavor="dualsense")
         _abrir_tentativa(d, pe.ESCADA[0], agora=0.0)
 
@@ -504,25 +401,17 @@ class TestOGesto:
         )
 
 
-# ---------------------------------------------------------------------------
-# 3. O SILÊNCIO — a única porta que carimba
-# ---------------------------------------------------------------------------
 class TestOSilencio:
     def test_o_relogio_comeca_quando_o_jogo_aparece(self) -> None:
-        """Não no lançamento: launch→janela chega a 15 minutos (Proton na 1ª
-        execução, shaders, launcher de terceiro). MORDE `ver_o_jogo`: contando
-        do lançamento, o degrau seria confirmado enquanto ela ainda olha uma
-        tela preta."""
+        """Não no lançamento: launch→janela chega a 15 minutos (Proton na 1ª"""
         d = _DaemonDoGesto()
         d._ponte_tentativa = pt.Tentativa(
             appid=APPID, epoch=EPOCH, degrau=pe.ESCADA[0], ultimo_gesto=0.0
         )
-        # 10 minutos de tela preta: o jogo ainda não apareceu.
         assert pt.tique(d, jogo_vivo=False, agora=600.0).carimbar is None
         tentativa = pt.em_curso(d)
         assert tentativa is not None and tentativa.viu_o_jogo is False
 
-        # A janela sobe. O relógio nasce AGORA, e não há silêncio acumulado.
         pt.tique(d, jogo_vivo=True, agora=600.0)
         tentativa = pt.em_curso(d)
         assert tentativa is not None
@@ -537,23 +426,14 @@ class TestOSilencio:
     def test_jogo_fechado_no_meio_da_escada_nao_carimba_nada(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ninguém confirmou nada. Silêncio com o jogo fechado não é ela
-        aprovando a ponte — é ela tendo ido embora.
-
-        MORDE as duas metades, e as duas separadamente porque a primeira
-        esconde a segunda: a borda de `ver_o_jogo`, que encerra a tentativa, e
-        a condição `jogo_vivo` de `confirmacao_por_silencio`, conferida direto
-        logo abaixo. Com qualquer uma arrancada, fechar o jogo e ir dormir
-        carimbaria a última ponte tentada como se ela tivesse funcionado.
-        """
+        """Ninguém confirmou nada. Silêncio com o jogo fechado não é ela"""
         save_profile(_perfil(), origem="teste")
         d = _DaemonFalso()
         _abrir_tentativa(d, pe.ESCADA[1], agora=0.0)
 
-        # A segunda metade, medida antes que a primeira a esconda.
         assert pt.silencio_confirma(d, jogo_vivo=False, agora=10_000.0) is None
 
-        fim = le.tique_da_escada(d, agora=10_000.0)  # muito além do prazo
+        fim = le.tique_da_escada(d, agora=10_000.0)
 
         assert fim == pt.FIM_JOGO_FECHOU
         assert pt.em_curso(d) is None
@@ -562,12 +442,7 @@ class TestOSilencio:
     def test_passado_o_silencio_com_o_jogo_vivo_o_produto_carimba(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """*"Se ela para de apertar, a ponte atual é a que pegou."*
-
-        MORDE o bloco de carimbo de `tique_da_escada`. Sem ele a escada roda
-        de novo a cada abertura do jogo — que é o laço eterno que
-        PONTE-CONFIRMADA-01 existe para não deixar acontecer.
-        """
+        """*"Se ela para de apertar, a ponte atual é a que pegou."*"""
         save_profile(_perfil(), origem="teste")
         d = _DaemonFalso(authority="game")
         _abrir_tentativa(d, pe.ESCADA[1], agora=0.0)
@@ -583,9 +458,7 @@ class TestOSilencio:
     def test_carimba_uma_vez_so(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Recarimbar a cada volta do laço apagaria a data — a única
-        informação que o carimbo antigo carrega. MORDE o `encerrar` que segue
-        o carimbo em `ponte_tentativa.tique`."""
+        """Recarimbar a cada volta do laço apagaria a data — a única"""
         save_profile(_perfil(), origem="teste")
         d = _DaemonFalso(authority="game")
         _abrir_tentativa(d, pe.ESCADA[0], agora=0.0)
@@ -599,9 +472,7 @@ class TestOSilencio:
     def test_depois_de_confirmada_a_escada_nunca_mais_roda_naquele_jogo(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O fim da história dela: *"nunca mais precisa fazer isso NESSE
-        jogo"*. Vale o ciclo inteiro — carimbar, relançar, e não ver escada.
-        """
+        """O fim da história dela: *"nunca mais precisa fazer isso NESSE"""
         save_profile(_perfil(), origem="teste")
         d = _DaemonFalso(authority="game")
         _abrir_tentativa(d, pe.ESCADA[1], agora=0.0)
@@ -625,17 +496,11 @@ class TestOSilencio:
         assert resultado["ponte"] == "gamepad/xbox", "o carimbo é que arma"
 
 
-# ---------------------------------------------------------------------------
-# 4. AS FRONTEIRAS que o laço não atravessa
-# ---------------------------------------------------------------------------
 class TestAsFronteiras:
     def test_a_tentativa_e_estado_vivo_e_nao_toca_o_disco(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A tentativa mora num atributo do daemon, e o disco só recebe o
-        CARIMBO. MORDE qualquer tentação futura de persistir "estou tentando
-        esta": a distância entre isso e "esta funciona" é o defeito inteiro.
-        """
+        """A tentativa mora num atributo do daemon, e o disco só recebe o"""
         save_profile(_perfil(), origem="teste")
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, _perfil())])
         _marker(env_dir)
@@ -644,16 +509,11 @@ class TestAsFronteiras:
         le.arm_launch_profile(d, base_dir=env_dir, now=1001.0)
 
         assert isinstance(getattr(d, pt.ATRIBUTO_DA_TENTATIVA), pt.Tentativa)
-        # Um daemon novo (a sessão seguinte) não herda tentativa nenhuma.
         assert pt.em_curso(_DaemonFalso()) is None
         assert ponte_confirmada_do_appid(APPID) is None
 
     def test_nenhum_relogio_sobe_degrau_sozinho(self) -> None:
-        """O DESENHO, declarado: a escada avança em dois pontos só — o
-        lançamento (com o jogo fora) e o gesto DELA. MORDE a invenção de um
-        automatismo: se algum tique passar a subir degrau, a tentativa muda de
-        degrau aqui sem ninguém ter apertado nada.
-        """
+        """O DESENHO, declarado: a escada avança em dois pontos só — o"""
         d = _DaemonDoGesto()
         _abrir_tentativa(d, pe.ESCADA[0], agora=0.0)
 
@@ -668,9 +528,7 @@ class TestAsFronteiras:
     def test_sem_perfil_nao_carimba_e_nao_inventa_arquivo(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`confirmar_ponte` devolve None quando o jogo não tem perfil: criar
-        arquivo nas costas dela tem uma porta só, e é o editor. O laço tem de
-        dizer isso em vez de fingir que gravou."""
+        """`confirmar_ponte` devolve None quando o jogo não tem perfil: criar"""
         d = _DaemonFalso(authority="game")
         _abrir_tentativa(d, pe.ESCADA[0], agora=0.0)
 
@@ -681,19 +539,7 @@ class TestAsFronteiras:
     def test_o_tique_anda_no_relogio_do_arming_e_antes_de_todo_return(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A fiação, que é o defeito inteiro desta frente.
-
-        `gamepad._reconciliar_launch` chama `arm_launch_profile` a 1 Hz, e é a
-        PRIMEIRA linha dela que chama o tique — antes de qualquer `return`.
-        Pendurá-lo depois do gate do marker o faria parar de andar assim que a
-        janela do lançamento vencesse, ou seja, justo quando a partida dela
-        começa e o silêncio passa a contar.
-
-        MORDE a linha `tique_da_escada(daemon)` no topo de
-        `arm_launch_profile`, e morde também qualquer mudança que a empurre
-        para depois de um `return`: sem marker nenhum no disco, a função
-        devolve `None` na segunda linha e o tique tem de ter acontecido.
-        """
+        """A fiação, que é o defeito inteiro desta frente."""
         chamadas: list[Any] = []
         monkeypatch.setattr(
             le, "tique_da_escada", lambda d, **kw: chamadas.append(d) or None
@@ -703,7 +549,6 @@ class TestAsFronteiras:
         assert le.arm_launch_profile(d, base_dir=env_dir, now=1001.0) is None
         assert chamadas == [d], "o tique parou de andar fora do lançamento"
 
-        # E de novo com o lançamento em curso: um tique por passada, sempre.
         _marker(env_dir)
         monkeypatch.setattr(le, "_steam_profiles", lambda dd: [(APPID, _perfil())])
         le.arm_launch_profile(d, base_dir=env_dir, now=1001.0)
@@ -712,8 +557,7 @@ class TestAsFronteiras:
     def test_uma_tentativa_por_vez(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Outro lançamento mata a tentativa velha SEM carimbar. Duas escadas
-        ao mesmo tempo confirmariam uma na frente da outra."""
+        """Outro lançamento mata a tentativa velha SEM carimbar. Duas escadas"""
         _marker(env_dir)
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, _perfil())])
         d = _DaemonFalso()

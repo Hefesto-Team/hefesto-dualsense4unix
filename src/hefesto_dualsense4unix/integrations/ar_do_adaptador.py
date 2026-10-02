@@ -63,77 +63,36 @@ from dataclasses import dataclass
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
-#: ``_IOR('H', 210..212, int)`` de ``include/net/bluetooth/hci_sock.h``.
 HCIGETDEVLIST = 0x800448D2
 HCIGETDEVINFO = 0x800448D3
 HCIGETCONNLIST = 0x800448D4
 
-#: ``struct hci_dev_info``: dev_id, name[8], bdaddr[6], flags, type,
-#: features[8], (3 de alinhamento), pkt_type, link_policy, link_mode, acl_mtu,
-#: acl_pkts, sco_mtu, sco_pkts e os dez ``__u32`` de ``struct hci_dev_stats``.
-#: 92 bytes — medido na máquina dela com o ``calcsize`` e com os valores lidos
-#: batendo com o ``1021:6`` do estudo.
 FORMATO_DEV_INFO = "<H8s6sIB8s3xIIIHHHH10I"
-#: ``struct hci_conn_info``: handle, bdaddr[6], type, out, state, link_mode.
 FORMATO_CONN_INFO = "<H6sBBHI"
 TAMANHO_CONN_INFO = 16
 
-#: Quantos adaptadores e quantas conexões por adaptador se pedem ao kernel.
 MAX_ADAPTADORES = 16
 MAX_CONEXOES = 20
 
-#: ``HCI_UP`` é o bit 0 de ``hci_dev_info.flags``.
 FLAG_HCI_UP = 0x01
-#: ``HCI_LM_MASTER`` em ``link_mode``: o adaptador é o mestre do enlace.
 LINK_MODE_MESTRE = 0x0001
-#: ``ACL_LINK`` em ``hci_conn_info.type``.
 TIPO_ACL = 0x01
 
-#: O contador do kernel é ``__u32``.
 VOLTA_DO_CONTADOR = 1 << 32
-#: Acima disto um salto negativo NÃO é volta, é contador zerado. O teto físico
-#: do BR/EDR é 1.600 fatias por segundo; 20.000 pacotes/s deixa folga de sobra
-#: para qualquer rádio e ainda separa volta de reinício.
 TETO_DE_PACOTES_POR_S = 20_000.0
-#: O mesmo teto para os contadores de BYTES, que não contam pacote: o
-#: ``btusb`` soma ali cada URB (evento e ACL) de um barramento USB full-speed,
-#: 12 Mbit/s = 1,5 MB/s. É o contador que MAIS dá a volta — a ~70 kB/s de um
-#: controle no rádio, uma vez a cada ~17 h —, e medi-lo com o teto de pacotes
-#: fazia toda volta dele virar «o adaptador reiniciou» e apagar a janela
-#: inteira (conferência da AR-MEDIDO-01, 23/09/2026).
 TETO_DE_BYTES_POR_S = 2_000_000.0
-#: Os contadores de bytes, que leem o teto acima em vez do de pacotes.
 _CONTADORES_DE_BYTES = frozenset({"byte_rx", "byte_tx"})
 
-#: Janela padrão de uma taxa: um segundo. O governador pede 0,25 s.
 JANELA_S = 1.0
-#: Referência mais velha que isto não vira taxa: é média de um silêncio de
-#: quem perguntou (a janela fechada, o daemon ocupado), e seria número velho
-#: publicado como «agora».
 JANELA_MAXIMA_S = 5.0
 
-#: ``Read AFH Channel Map`` = OGF 0x05 (STATUS_PARAM), OCF 0x0006.
 OPCODE_LER_MAPA_AFH = (0x05 << 10) | 0x0006
-#: Os 79 canais do BR/EDR, de 2.402 a 2.480 MHz.
 CANAIS_DO_BT = 79
-#: O PISO DO SALTO DE FREQUÊNCIA: a especificação do BR/EDR (Core Spec, Vol 2,
-#: Part B, o AFH) manda o salto usar pelo menos 20 dos 79 canais (N_min). Com
-#: 59 evitados, o adaptador não tem mais canal limpo para onde fugir — os três
-#: colapsos de 29/09 caíram ali, e o piso também veio sem colapso.
 CANAIS_MINIMOS_DO_AFH = 20
-#: Daqui para cima o salto está calmo (evita até 19): quatro dos sete retratos
-#: sem colapso de 29/09 evitaram de 5 a 16. Corte de desenho, de uma noite
-#: (D-3009-OS-CANAIS-SE-PINTAM-PELO-PISO-DO-SALTO, quem coordena, 30/09/2026, a
-#: validar por ela).
 CANAIS_CALMOS = 60
-#: OS TRÊS NÍVEIS DA TELA, os mesmos do Hz (`radio_da_mesa.nivel_do_movimento`)
-#: e dos «N/79» (:func:`nivel_dos_canais`): o nome é de máquina, e a dica diz o
-#: fato de cada um. Moram aqui porque este módulo não importa nada da casa.
 NIVEL_LISO = "liso"
 NIVEL_MEDIO = "medio"  # (noqa-acento): nome de máquina, o valor do `data-nivel`
 NIVEL_ENGASGA = "engasga"
-#: Quanto se espera o ``Command Complete``. O controlador responde em
-#: milissegundos; meio segundo cobre o adaptador ocupado sem prender ninguém.
 PRAZO_DO_AFH_S = 0.5
 
 _HCI_COMMAND_PKT = 0x01
@@ -143,7 +102,6 @@ _EVT_CMD_STATUS = 0x0F
 _SOL_HCI = getattr(socket, "SOL_HCI", 0)
 _HCI_FILTER = getattr(socket, "HCI_FILTER", 2)
 
-#: As frases do «não sei». Curtas: elas podem chegar a uma dica da tela.
 SEM_BLUETOOTH = "o kernel não abriu o socket de Bluetooth"
 IOCTL_FALHOU = "o kernel não respondeu a leitura do adaptador"
 ADAPTADOR_SUMIU = "o adaptador sumiu do kernel"
@@ -243,11 +201,7 @@ class ArDoAdaptador:
 
 
 def endereco_do_kernel(bdaddr: bytes) -> str:
-    """``bdaddr_t`` (6 bytes, ordem invertida) → ``aa:bb:cc:dd:ee:ff``.
-
-    Minúsculo e com dois-pontos: é a forma do ``HID_PHYS`` que
-    ``radio_da_mesa.adaptador_por_uniq`` devolve, e as duas chaves têm de casar.
-    """
+    """``bdaddr_t`` (6 bytes, ordem invertida) → ``aa:bb:cc:dd:ee:ff``."""
     return ":".join(f"{b:02x}" for b in bytes(bdaddr)[::-1])
 
 
@@ -266,11 +220,7 @@ def _ioctl_do_kernel() -> Ioctl:
 
 
 class LeitorDoKernel:
-    """Os três ioctls de leitura. Todo erro vira ``None`` — «não sei».
-
-    ``ioctl`` é injetável: a suíte entrega um dublê que empacota o que o
-    kernel empacotaria, e nada aqui toca o rádio dela.
-    """
+    """Os três ioctls de leitura. Todo erro vira ``None`` — «não sei»."""
 
     def __init__(
         self, *, ioctl: Ioctl | None = None, relogio: Callable[[], float] = time.monotonic
@@ -354,11 +304,7 @@ def conferir(
     depois: LeituraDoAdaptador | None,
     conexoes: tuple[Enlace, ...] | None,
 ) -> ArDoAdaptador:
-    """O ar de uma janela entre duas fotos — o CONFERIR do medidor.
-
-    É aqui que mora o contrato inteiro de «não sei»; :class:`MedidorDeAr` só
-    guarda as fotos e chama isto.
-    """
+    """O ar de uma janela entre duas fotos — o CONFERIR do medidor."""
     if depois is None:
         base = antes
         return ArDoAdaptador(
@@ -398,8 +344,6 @@ def conferir(
     ha_enlace = any(c.tipo == TIPO_ACL for c in conexoes or ())
     if ha_enlace and deltas["acl_rx"] == 0:
         return feito(CONTADOR_PARADO, round(janela, 3))
-    # Sem a lista de conexões, contador parado não separa «ninguém no rádio»
-    # de «instrumento parado com enlace de pé» — e só o primeiro é zero.
     if conexoes is None and deltas["acl_rx"] == 0:
         return feito(CONEXOES_ILEGIVEIS, round(janela, 3))
     return feito(
@@ -436,12 +380,7 @@ class MedidorDeAr:
         self._ultimo: dict[str, ArDoAdaptador] = {}
 
     def amostrar(self) -> dict[str, ArDoAdaptador]:
-        """``{endereço do adaptador: ArDoAdaptador}`` de agora.
-
-        Chave ``""`` com :data:`SEM_BLUETOOTH` quando o kernel nem lista os
-        adaptadores. O adaptador que existia e sumiu sai UMA vez com
-        :data:`ADAPTADOR_SUMIU` — ausência dita, não apagada.
-        """
+        """``{endereço do adaptador: ArDoAdaptador}`` de agora."""
         hcis = self._leitor.adaptadores()
         if hcis is None:
             self._referencia.clear()
@@ -487,13 +426,7 @@ class MedidorDeAr:
 
 
 def mapa_afh_da_resposta(evento: bytes, handle: int) -> MapaAFH | None:
-    """O ``Command Complete`` do ``Read AFH Channel Map`` → :class:`MapaAFH`.
-
-    ``None`` para qualquer outra coisa: outro evento, outro opcode, outro
-    handle, status de erro (``0x02``, conexão desconhecida) ou pacote curto.
-    Os parâmetros de retorno são status, handle, modo e dez bytes de mapa; o
-    canal ``n`` é o bit ``n % 8`` do byte ``n // 8``.
-    """
+    """O ``Command Complete`` do ``Read AFH Channel Map`` → :class:`MapaAFH`."""
     if len(evento) < 20 or evento[0] != _HCI_EVENT_PKT or evento[1] != _EVT_CMD_COMPLETE:
         return None
     opcode = struct.unpack_from("<H", evento, 4)[0]
@@ -538,17 +471,7 @@ def ler_mapa_afh(
     abrir: Callable[[int], socket.socket] | None = None,
     relogio: Callable[[], float] = time.monotonic,
 ) -> MapaAFH | None:
-    """Pergunta ao rádio o mapa AFH de um enlace. ``None`` = não sei.
-
-    BLOQUEIA até ``prazo_s``: quem chama do laço do daemon chama numa thread.
-    O filtro do socket deixa passar só ``Command Complete``/``Status`` do
-    nosso opcode, então o que chega é a resposta — ou nada.
-
-    No MODO FALSO (a suíte, o smoke) o rádio de verdade não é perguntado: é
-    o único comando que este módulo manda ao controlador, e a trava mora
-    nele, não só em quem o chama (conferência da AR-MEDIDO-01, 23/09/2026).
-    Quem injeta ``abrir`` segue perguntando ao dublê.
-    """
+    """Pergunta ao rádio o mapa AFH de um enlace. ``None`` = não sei."""
     if abrir is None:
         from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
 
@@ -606,12 +529,7 @@ def mapas_afh_do_adaptador(
 def canais_evitados_pelo_adaptador(
     mapas: Mapping[str, MapaAFH | None],
 ) -> tuple[int, ...] | None:
-    """Os canais que o adaptador evita em TODOS os enlaces dele.
-
-    ``None`` = não sei: adaptador sem enlace (AFH só existe com conexão) ou
-    nenhum mapa lido. Com enlaces que discordam, conta só o canal evitado em
-    todos — «evita» é afirmação, e afirmação pede os dois lados.
-    """
+    """Os canais que o adaptador evita em TODOS os enlaces dele."""
     lidos = [m for m in mapas.values() if m is not None]
     if not lidos:
         return None
@@ -622,20 +540,12 @@ def canais_evitados_pelo_adaptador(
 
 
 def _mascarar(endereco: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados, na grafia que chegou.
-
-    Quem mascara é o dono, ``core/formas_do_endereco``: até 28/09/2026 esta
-    função só lia dois-pontos e devolvia cru todo o resto.
-    """
+    """A máscara da casa: octetos 4 e 5 zerados, na grafia que chegou."""
     return _formas.mascarar(endereco)
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Bancada, só leitura: ``python -m …ar_do_adaptador [segundos]``.
-
-    Imprime ``acl_rx/s`` por adaptador na janela pedida e o mapa AFH de cada
-    enlace. Endereços saem mascarados — a saída pode acabar num relatório.
-    """
+    """Bancada, só leitura: ``python -m …ar_do_adaptador [segundos]``."""
     import sys
 
     args = list(sys.argv[1:] if argv is None else argv)
@@ -672,14 +582,7 @@ if __name__ == "__main__":  # pragma: no cover - bancada
 
 
 def nivel_dos_canais(usados: object) -> str:
-    """O nível do «N/79» de um adaptador, pelo piso do salto
-    (O-HZ-TEM-A-COR-DA-DISTANCIA-01, parte B).
-
-    ``liso`` com o salto calmo (:data:`CANAIS_CALMOS` ou mais), ``engasga`` no
-    piso da especificação (:data:`CANAIS_MINIMOS_DO_AFH` ou menos) e o
-    :data:`NIVEL_MEDIO` entre os dois. O vermelho afirma o PISO, e não o engasgo: ele também veio
-    sem colapso. ``""`` quando não há contagem (o «não sei»).
-    """
+    """O nível do «N/79» de um adaptador, pelo piso do salto"""
     if isinstance(usados, bool) or not isinstance(usados, int):
         return ""
     if usados >= CANAIS_CALMOS:

@@ -31,7 +31,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("SALVAR-NAO-REBAIXA-02 (o Novo perfil)")
 
 import sys
@@ -94,14 +93,8 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: appid do Pragmata, o jogo em que a família toda de defeitos foi medida.
 APPID = "3357650"
 WM_JOGO = f"steam_app_{APPID}"
-
-
-# ---------------------------------------------------------------------------
-# Dublês de widget — a mesma API por-ID que a aba usa
-# ---------------------------------------------------------------------------
 
 
 class _FakeEntry:
@@ -138,9 +131,6 @@ class _FakeScale:
         return self._value
 
     def set_value(self, value: float) -> None:
-        # O GtkScale de verdade só emite quando o valor MUDA — e é justamente
-        # por isso que o `set_value(0)` do "Novo perfil" às vezes marcava gesto
-        # e às vezes não. O dublê tem de reproduzir a condição, não escondê-la.
         novo = max(0.0, min(self._teto, float(value)))
         mudou = novo != self._value
         self._value = novo
@@ -166,11 +156,7 @@ class _FakeSwitch:
 
 
 class _FakeBox:
-    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
-
-    CAMPO-QUE-NAO-NASCIA-01: nasce com ``no_show_all`` armado como no glade;
-    ``show()`` para na caixa e só ``show_all()`` desarmado desce nos filhos.
-    """
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK."""
 
     def __init__(self) -> None:
         self.visivel = False
@@ -242,7 +228,6 @@ class _Editor(pa.ProfilesActionsMixin):
         )
         self.selecionado: str | None = None
         self.toasts: list[str] = []
-        # Registro dos diálogos e do disco.
         self.salvos: list[Profile] = []
         self.overwrite_perguntado: list[str] = []
         self.downgrade_perguntado: list[tuple[str, str | None]] = []
@@ -318,25 +303,11 @@ def _perfil_dela() -> Profile:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. As guardas voltam a valer quando o alvo do Salvar EXISTE em disco
-# ---------------------------------------------------------------------------
-
-
 class TestNovoPerfilPorCimaDeUmQueExiste:
     def test_salvar_por_cima_preserva_regra_e_prioridade_do_disco(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O defeito medido em 05/08, clique a clique.
-
-        "Novo perfil" (que esquece a fotografia) → digitar o nome de um perfil
-        que EXISTE → Salvar. Sem a cura, o perfil do disco (`prio=200`, regra
-        do jogo) volta a ser `prio=0, any` — que é o valor que a janela mostra,
-        não o que ela pediu.
-
-        Com a cura arrancada (o `_perfil_que_o_salvar_sobrescreve` deixando de
-        ser consultado), este teste reprova nas duas asserções.
-        """
+        """O defeito medido em 05/08, clique a clique."""
         monkeypatch.setattr(pa, "call_async", lambda **_kw: None)
         editor = _Editor(cache=[_perfil_dela()])
         editor.on_profile_new(None)
@@ -357,18 +328,9 @@ class TestNovoPerfilPorCimaDeUmQueExiste:
     def test_o_nascer_do_novo_perfil_nao_conta_como_gesto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A metade da cura que mora em `on_profile_new`.
-
-        `_esquecer_a_fotografia_do_editor` vem POR ÚLTIMO, depois de posicionar
-        os widgets — a mesma ordem que `_populate_editor` sempre teve. Chamado
-        antes (como estava), o `set_value(0)`/`set_active_id("any")` de
-        nascimento levantava as marcas, e a guarda reabilitada acreditaria que
-        ela escolheu prioridade 0 e "Qualquer".
-        """
+        """A metade da cura que mora em `on_profile_new`."""
         monkeypatch.setattr(pa, "call_async", lambda **_kw: None)
         editor = _Editor(cache=[_perfil_dela()])
-        # Estado que faz o nascimento MEXER nos dois widgets (o perfil aberto
-        # antes tinha prioridade alta e regra própria).
         editor._populate_editor(_perfil_dela())
         editor._aplica_a.set_active_id("browser")
 
@@ -380,14 +342,7 @@ class TestNovoPerfilPorCimaDeUmQueExiste:
     def test_olhar_o_perfil_antes_de_clicar_novo_nao_o_rebaixa(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A sequência inteira, com o editor VINDO de um perfil aberto.
-
-        É a que morde as DUAS metades da cura ao mesmo tempo: ela estava
-        olhando o `Pragmata` (200, regra do jogo), clica "Novo perfil" — que
-        joga os widgets para 0/"Qualquer" — e salva com o mesmo nome. Se as
-        marcas de gesto sobrarem do nascimento, a guarda reabilitada acredita
-        nelas e o rebaixamento acontece com uma guarda ligada.
-        """
+        """A sequência inteira, com o editor VINDO de um perfil aberto."""
         monkeypatch.setattr(pa, "call_async", lambda **_kw: None)
         editor = _Editor(cache=[_perfil_dela()])
         editor._populate_editor(_perfil_dela())
@@ -453,12 +408,7 @@ class TestNovoPerfilPorCimaDeUmQueExiste:
     def test_nascer_com_o_jogo_em_foco_vence_o_que_esta_no_disco(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """PERFIL-NASCE-CERTO-01 continua de pé por cima da guarda nova.
-
-        O prefill do jogo em foco É uma escolha do editor (ela criou o perfil
-        COM o jogo aberto), então ele marca os gestos e manda — mesmo quando o
-        nome digitado colide com um perfil que já existe.
-        """
+        """PERFIL-NASCE-CERTO-01 continua de pé por cima da guarda nova."""
         monkeypatch.setattr(pa, "call_async", lambda **_kw: None)
         editor = _Editor(cache=[_perfil_dela()])
         editor.on_profile_new(None)
@@ -471,8 +421,6 @@ class TestNovoPerfilPorCimaDeUmQueExiste:
 
         assert isinstance(salvo.match, MatchCriteria)
         assert salvo.match.window_class == [WM_JOGO]
-        # 200 (o catch-all mais alto do cache é 0; o `Pragmata` não é catch-all)
-        # -> a folga sozinha. O que importa é ter vindo do PREFILL, não do disco.
         assert salvo.priority == pa._FOLGA_ACIMA_DO_CATCH_ALL
 
     def test_editar_um_perfil_da_lista_segue_pela_fotografia_de_abertura(
@@ -493,11 +441,6 @@ class TestNovoPerfilPorCimaDeUmQueExiste:
         salvo = editor._build_profile_from_editor()
 
         assert salvo.priority == acima, "a prioridade acima do teto sobreviveu"
-
-
-# ---------------------------------------------------------------------------
-# 2. Os dois avisos de rebaixamento
-# ---------------------------------------------------------------------------
 
 
 class TestQuedaDePrioridadePedeAviso:
@@ -533,16 +476,11 @@ class TestOsDoisAvisosNoSalvar:
     def test_baixar_a_prioridade_pergunta_e_cancelar_nao_toca_o_disco(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O caso dela: perfil já em `MatchAny`, prioridade caindo de 200.
-
-        Sem o diálogo novo, este Salvar grava em silêncio — o aviso da REGRA
-        não dispara (o match já é `MatchAny`, não há o que rebaixar), e a
-        prioridade some sem uma palavra.
-        """
+        """O caso dela: perfil já em `MatchAny`, prioridade caindo de 200."""
         perfil = Profile(name="vitoria", match=MatchAny(), priority=200)
         editor = self._editor_com(perfil)
         _ligar_o_save(editor, monkeypatch)
-        editor.resposta_prioridade = False  # ela cancela ao ver o aviso
+        editor.resposta_prioridade = False
 
         editor._get("profile_priority_scale").set_value(0)
         editor.on_profile_save(None)
@@ -581,20 +519,12 @@ class TestOsDoisAvisosNoSalvar:
     def test_so_manual_virando_vale_para_tudo_avisa_com_a_palavra_certa(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O furo do aviso da regra: só `MatchCriteria` disparava.
-
-        Um perfil "Só manual (nunca ativa sozinho)" virando "vale para TUDO" é
-        a mudança mais violenta que a aba sabe fazer, e passava calada. O
-        rótulo citado é o MESMO da coluna "Quando usar" — o diálogo não pode
-        chamar de "programas específicos" um perfil que a lista chama de outra
-        coisa.
-        """
+        """O furo do aviso da regra: só `MatchCriteria` disparava."""
         perfil = Profile(name="manual", match=MatchManual(), priority=10)
         editor = self._editor_com(perfil)
         _ligar_o_save(editor, monkeypatch)
         editor.resposta_downgrade = False
 
-        # Ela desliga o avançado: a página simples reaparece em "Qualquer".
         editor._mode_advanced = False
         editor._aplica_a.set_active_id("any")
         editor._regra_tocada = True
@@ -604,11 +534,7 @@ class TestOsDoisAvisosNoSalvar:
         assert editor.salvos == []
 
     def test_o_dialogo_novo_nasce_com_o_tema_do_app(self) -> None:
-        """GUI-05/P5: diálogo sem a classe abre CLARO no COSMIC (XWayland).
-
-        A varredura por ARQUIVO de `test_gui_dialogs_theme` já cobre o módulo;
-        esta é a granularidade por FUNÇÃO para o construtor novo.
-        """
+        """GUI-05/P5: diálogo sem a classe abre CLARO no COSMIC (XWayland)."""
         import inspect
 
         from hefesto_dualsense4unix.app import gui_dialogs

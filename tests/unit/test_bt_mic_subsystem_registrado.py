@@ -1,14 +1,4 @@
-"""BT-MIC-REGISTRY-01 — o BtMicSubsystem deixa de ser órfão.
-
-A classe existia (`daemon/subsystems/bt_mic.py`), o gate por env var estava
-documentado e a ponte de áudio estava validada ao vivo — mas NINGUÉM iniciava
-o subsystem: `SUBSYSTEM_REGISTRY` é declarativo e quem sobe as coisas é o
-`Daemon.run()`. Resultado: `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` não ligava nada
-no daemon.
-
-Estes testes travam as DUAS metades (a lista e o `run()`) — é a única forma de
-o defeito não voltar, já que acertar só uma delas parece certo e não faz nada.
-"""
+"""BT-MIC-REGISTRY-01 — o BtMicSubsystem deixa de ser órfão."""
 from __future__ import annotations
 
 import asyncio
@@ -58,11 +48,7 @@ def test_bt_mic_esta_no_registry() -> None:
 
 
 def test_bt_mic_sobe_antes_dos_plugins_no_registry() -> None:
-    """Ordem de start: bt_mic antes de plugins (código de usuário por último).
-
-    Como o stop é a ordem inversa, isso também garante que as pontes de áudio
-    — e portanto o MICROFONE de cada controle — sejam desligadas cedo.
-    """
+    """Ordem de start: bt_mic antes de plugins (código de usuário por último)."""
     from hefesto_dualsense4unix.daemon.subsystems import (
         MetricsSubsystem,
         PluginsSubsystem,
@@ -127,26 +113,18 @@ async def test_o_supervisor_sobe_sem_declaracao_e_o_boot_nao_falha(
 
 @pytest.mark.asyncio
 async def test_boot_sobe_bt_mic_com_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com um `uniq` na fonte, o `run()` de fato inicia o subsystem.
-
-    É ESTA a metade que faltava: sem a linha no `run()`, o teste do registry
-    passaria e o daemon continuaria sem ponte de microfone nenhuma.
-    """
+    """Com um `uniq` na fonte, o `run()` de fato inicia o subsystem."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
     )
     iniciados: list[str] = []
 
     class _GerenciadorFalso:
-        # QUATRO-MICROFONES-01 (22/08/2026): a lista de nós chega EXPLÍCITA, e é
-        # nela que mora o "por controle" — o subsystem filtra pelos `uniq` que
-        # ela ligou antes de entregar. Assinatura tolerante para o dublê não
-        # amarrar a forma da chamada.
         def reconciliar(self, nos: object = None) -> None:
             iniciados.append("reconciliar")
 
         def dormir(self, _s: float) -> bool:
-            return True  # uma volta e sai — nada de laço vivo em teste
+            return True
 
         def parar(self) -> None:
             iniciados.append("parar")
@@ -159,8 +137,6 @@ async def test_boot_sobe_bt_mic_com_opt_in(monkeypatch: pytest.MonkeyPatch) -> N
     daemon = Daemon(
         controller=FakeController(transport="usb", states=[_state()]),
         bus=EventBus(), store=store,
-        # O gate deixou de ser um `bool` e passou a ser um CONJUNTO de `uniq`:
-        # um `bool` não sabe dizer "o 2 sim, o 3 não", e a mesa dela tem quatro.
         config=_config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"})),
     )
     run_task = asyncio.create_task(daemon.run())
@@ -174,7 +150,6 @@ async def test_boot_sobe_bt_mic_com_opt_in(monkeypatch: pytest.MonkeyPatch) -> N
 
     assert subiu, "bt_mic não foi iniciado pelo run() com o opt-in ligado"
     assert "bt_mic" not in daemon._failed_subsystems
-    # O shutdown tem de DESLIGAR a ponte (é o que manda o 0x32 de mic off).
     assert daemon._bt_mic_subsystem is None
     assert "parar" in iniciados
 
@@ -232,8 +207,6 @@ def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
         RegistroDePedidosDeCanal,
     )
 
-    # Registro PRÓPRIO: o singleton do processo é compartilhado, e um pedido
-    # deixado por outro teste faria esta régua medir a sujeira dele.
     subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
     assert subsystem.is_enabled(_config()) is True
@@ -244,14 +217,10 @@ def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
         caminho = "/dev/hidraw9"
 
     subsystem._config = _config()
-    # A INVERSÃO, no ponto exato: isto era `== []` até 18/09/2026.
     assert [n.uniq for n in subsystem.alvos([_No()])] == ["aabbcc000001"]
-    # E A RECUSA CALA, que é o par que guarda a escolha dela.
     subsystem._config = _config(bt_mic_recusados=lambda: frozenset({"aabbcc000001"}))
     assert subsystem.alvos([_No()]) == []
     subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
     assert [no.uniq for no in subsystem.alvos([_No()])] == ["aabbcc000001"]
-    # A env continua sendo o caminho à mão e vale por TODOS os controles —
-    # inclusive por cima de uma RECUSA, que é o que "à mão" significa.
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
     assert len(subsystem.alvos([_No()])) == 1

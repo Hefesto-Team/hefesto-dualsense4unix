@@ -1,39 +1,8 @@
-"""AMBIENTE-PRESUMIDO-01 (23/08/2026) — a Steam mora em quatro lugares.
-
-A medição de 23/08 pegou o produto com DUAS réguas de Steam que discordavam na
-MESMA máquina: o `doctor` do CLI acusava *"Steam Input ligado para appid
-1599660"* e, no mesmo instante, o cartão da aba Emulação escrevia em cinza
-*"Steam não encontrado"*. O CLI usava `storm_doctor.find_localconfig_vdfs` (os
-quatro layouts); a janela globava `~/.steam/steam` cravado — o único layout que
-existe nesta bancada.
-
-Quem instala a Steam pela Flatpak, pela Snap ou pelo instalador que cai em
-`~/.local/share/Steam` via, por isso: a linha do Steam Input em cinza, o
-catálogo de jogos VAZIO (`pastas_steamapps` herdava de
-`proton_pin.default_steam_root`, que exclui sandbox DE PROPÓSITO — mas para
-extrair Proton, não para ler `appmanifest`), e nenhum aviso em lugar nenhum.
-Frase errada com cara de medição, que é o defeito que esta casa mais odeia.
-
-O que este arquivo trava:
-
-1. os quatro layouts são ACHADOS pelo cartão da aba (`_steam_input_is_on` e
-   `_steam_input_appids_ligados`) e pelo catálogo (`jogos_da_biblioteca_steam`);
-2. a lista de raízes é UMA (`steam_launch_options.RAIZES_STEAM_RELATIVAS`) — se
-   alguém acrescentar um quinto layout sem passar por aqui, o teste reprova;
-3. quando não há Steam nenhuma, a tela DIZ ONDE PROCUROU;
-4. o leitor da allowlist (`storm_doctor`) e o escritor (o botão "Este jogo não
-   funciona") resolvem o MESMO arquivo sob `XDG_CONFIG_HOME`;
-5. `reopen_steam` reabre a Steam de quem não tem o binário `steam` no PATH.
-"""
+"""AMBIENTE-PRESUMIDO-01 (23/08/2026) — a Steam mora em quatro lugares."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES do import de
-# `emulation_actions`, que faz `import gi` incondicional no próprio módulo
-# (`emulation_actions.py:15`). Sem ela, este arquivo estourava ERRO DE COLETA
-# no CI sem PyGObject (medido: simulação do job `lint-test` com `gi`/`cairo`
-# bloqueados via `sys.meta_path`).
 exigir_gi_real("a Steam nos quatro layouts")
 
 import shutil
@@ -54,14 +23,8 @@ from hefesto_dualsense4unix.integrations.jogos_locais import (
     jogos_da_biblioteca_steam,
 )
 
-#: Sackboy: o jogo REAL da medição — ligado no `localconfig.vdf` dela e fora da
-#: allowlist. Aqui é só bancada: nenhum arquivo dela é lido.
 _SACKBOY = "1599660"
 
-#: Os quatro layouts, com o nome pelo qual a pessoa os conhece. É a MESMA lista
-#: do produto — a igualdade é conferida em `test_a_lista_de_raizes_e_uma_so`,
-#: para que um quinto layout não entre no código sem entrar nesta prova (nem na
-#: frase de "não encontrada", que cita os quatro).
 _LAYOUTS = {
     "nativa": ".steam/steam",
     "nativa-antiga": ".local/share/Steam",
@@ -99,11 +62,7 @@ def _casa_com_steam(home: Path, relativo: str, appid: str = _SACKBOY) -> Path:
 
 @pytest.fixture()
 def home_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """HOME e XDG_CONFIG_HOME presos ao tmp.
-
-    CANARIO-FS-01: sem prender os dois, a allowlist REAL da mantenedora entraria
-    na conta — e o resultado passaria a depender do disco dela.
-    """
+    """HOME e XDG_CONFIG_HOME presos ao tmp."""
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
     return tmp_path
@@ -133,8 +92,7 @@ class TestOsQuatroLayouts:
     def test_o_catalogo_de_jogos_nao_sai_vazio(
         self, nome: str, home_isolado: Path
     ) -> None:
-        """Ler `appmanifest_*.acf` de dentro da sandbox é leitura PURA e sempre
-        funcionou — o vazio vinha de herdar a exclusão do Proton pin."""
+        """Ler `appmanifest_*.acf` de dentro da sandbox é leitura PURA e sempre"""
         _casa_com_steam(home_isolado, _LAYOUTS[nome])
         jogos = jogos_da_biblioteca_steam(home_isolado)
         assert [j.nome for j in jogos] == ["Sackboy: A Big Adventure"]
@@ -218,23 +176,12 @@ def test_o_shutil_e_o_subprocess_sao_os_do_modulo() -> None:
     assert slo.subprocess is subprocess
 
 
-# ---------------------------------------------------------------------------
-# O sandbox: permissão de VER a Steam (o defeito P0 da medição de 23/08)
-# ---------------------------------------------------------------------------
-#: Raiz do repositório (mesma convenção de `test_loader_svg_nos_empacotamentos`).
 _RAIZ = Path(__file__).resolve().parents[2]
 _MANIFESTO = _RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml"
 
 
 class TestOFlatpakEnxergaASteam:
-    """Nenhuma das buscas acima vale dentro do sandbox sem `--filesystem`.
-
-    O `finish-args` não tinha UMA linha para a Steam — nem `--filesystem=home`.
-    Dentro da Flatpak, portanto, os quatro layouts existiam e nenhum era
-    legível: a integração inteira morria em silêncio, com cara de "esta máquina
-    não tem Steam". Este teste é o portão dessa permissão, e cobra a LISTA do
-    produto — um quinto layout sem permissão reprova aqui.
-    """
+    """Nenhuma das buscas acima vale dentro do sandbox sem `--filesystem`."""
 
     @staticmethod
     def _permissoes() -> list[str]:
@@ -255,8 +202,7 @@ class TestOFlatpakEnxergaASteam:
         ), f"o layout {nome} ({alvo}) não é legível dentro da Flatpak: {permissoes}"
 
     def test_a_steam_nativa_tem_escrita(self) -> None:
-        """É no `localconfig.vdf` da nativa que o produto grava as LaunchOptions
-        do wrapper; `:ro` ali faria o botão falhar sem dizer por quê."""
+        """É no `localconfig.vdf` da nativa que o produto grava as LaunchOptions"""
         yaml = pytest.importorskip("yaml")
         dados = yaml.safe_load(_MANIFESTO.read_text(encoding="utf-8"))
         escritas = {
@@ -268,19 +214,8 @@ class TestOFlatpakEnxergaASteam:
         assert "~/.local/share/Steam" in escritas
 
 
-# ---------------------------------------------------------------------------
-# Os atalhos `.desktop`: a spec XDG, não dois caminhos cravados
-# ---------------------------------------------------------------------------
 class TestOsAtalhosSeguemOXdg:
-    """`PASTAS_DE_ATALHOS` eram dois caminhos fixos.
-
-    Medido nesta bancada em 23/08: `XDG_DATA_DIRS` lista QUATRO diretórios e o
-    produto olhava dois — e um deles (`/usr/share`) nem estava na lista da
-    sessão. Quem instala a Steam por Flatpak tem os atalhos dos jogos em
-    `~/.local/share/flatpak/exports/share/applications`, que o campo "Nome do
-    jogo" nunca ofereceu. Degradar calado aqui é requisito, o que torna o
-    silêncio deste defeito INVISÍVEL — daí o teste.
-    """
+    """`PASTAS_DE_ATALHOS` eram dois caminhos fixos."""
 
     @staticmethod
     def _atalho(pasta: Path, appid: str, nome: str) -> None:
@@ -300,16 +235,10 @@ class TestOsAtalhosSeguemOXdg:
 
         exports = tmp_path / "flatpak/exports/share"
         self._atalho(exports / "applications", "851100", "Jogo da Flatpak")
-        # HOME preso ao tmp: o PISO da lista (os dois caminhos históricos) lê o
-        # `~/.local/share/applications` REAL, e sem isto o resultado dependeria
-        # dos atalhos da mantenedora (CANARIO-FS-01).
         monkeypatch.setenv("HOME", str(tmp_path / "casa"))
         monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "vazio"))
         monkeypatch.setenv("XDG_DATA_DIRS", f"{exports}:{tmp_path / 'nao-existe'}")
         achados = [(j.appid, j.nome) for j in jogos_dos_atalhos_desktop()]
-        # `in` e não `==`: o piso inclui `/usr/share/applications`, que nesta
-        # máquina tem 123 `.desktop` e nenhum com `rungameid` — mas isso é
-        # medição desta casa, não invariante de máquina nenhuma.
         assert ("851100", "Jogo da Flatpak") in achados
 
     def test_o_xdg_data_home_manda_no_diretorio_da_pessoa(
@@ -341,18 +270,8 @@ class TestOsAtalhosSeguemOXdg:
         assert all(p.is_dir() for p in alvos)
 
 
-# ---------------------------------------------------------------------------
-# T-10 (ONDA0-Z7, 24/08/2026) — a lista de raízes é uma só, e o portão
-# alcança o scripts/doctor.sh (não só o lado Python).
-# ---------------------------------------------------------------------------
 class TestOPortaoAlcancaOScriptsDoctorSh:
-    """Antes deste teste, o `doctor.sh` podia divergir de
-    `RAIZES_STEAM_RELATIVAS` e nada acusava — é a família **F6** (duas réguas
-    discordando) na escala de UM arquivo: `check_vdf_poison` já cobria os
-    quatro layouts, `check_proton_pin` só dois e `_steam_input_do_appid`
-    cobria dois nativos mais um terceiro caminho não-canônico
-    ("debian-installation"). T-08 igualou as três; este teste é a rede.
-    """
+    """Antes deste teste, o `doctor.sh` podia divergir de"""
 
     _FUNCOES_COM_LISTA_DE_RAIZES = (
         "check_vdf_poison",
@@ -382,12 +301,10 @@ class TestOPortaoAlcancaOScriptsDoctorSh:
     def test_tirar_uma_raiz_de_uma_secao_reprova_nomeando_a_secao(
         self, repo_root: Path
     ) -> None:
-        """A MORDIDA de T-10: tirar o layout snap de UMA seção só (aqui,
-        `check_proton_pin`) faz o teste acima reprovar, nomeando exatamente
-        essa função — não as outras duas, que continuam com as quatro."""
+        """A MORDIDA de T-10: tirar o layout snap de UMA seção só (aqui,"""
         texto = (repo_root / "scripts" / "doctor.sh").read_text(encoding="utf-8")
         alvo = '"${HOME}/snap/steam/common/.steam/steam/config/config.vdf"'
-        assert alvo in texto  # a mutação abaixo precisa achar alguma coisa
+        assert alvo in texto
         mutilado = texto.replace(alvo, '"/dev/null/nao-existe-mais"')
 
         faltando: list[str] = []
@@ -400,16 +317,8 @@ class TestOPortaoAlcancaOScriptsDoctorSh:
         assert faltando == ["check_proton_pin() não cobre 'snap/steam/common/.steam/steam'"]
 
 
-# ---------------------------------------------------------------------------
-# T-09 (ONDA0-Z7, 24/08/2026) — "Travar Proton validado" diz por que não
-# pode, em vez de calar.
-# ---------------------------------------------------------------------------
 class TestSteamRootOuRecusa:
-    """`default_steam_root` CONTINUA excluindo Flatpak/Snap (decisão medida).
-
-    O que muda é a TELA saber dizer por quê — nunca ``(None, None)``, que
-    seria o F1 ("aplicado" sem prova) na forma negativa.
-    """
+    """`default_steam_root` CONTINUA excluindo Flatpak/Snap (decisão medida)."""
 
     def test_layout_nativo_devolve_raiz_sem_motivo(self, home_isolado: Path) -> None:
         raiz = _casa_com_steam(home_isolado, _LAYOUTS["nativa"])
@@ -424,7 +333,7 @@ class TestSteamRootOuRecusa:
         _casa_com_steam(home_isolado, _LAYOUTS["flatpak"])
         resultado = proton_pin.steam_root_ou_recusa(home_isolado)
         assert resultado.raiz is None
-        assert resultado.motivo  # não vazio, não None
+        assert resultado.motivo
         assert "Flatpak" in resultado.motivo
         assert "caixa" in resultado.motivo
 
@@ -454,8 +363,7 @@ class TestSteamRootOuRecusa:
     def test_arrancar_a_propagacao_do_motivo_reprova(
         self, home_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Arrancar a cura: uma versão que devolve `(None, None)` sempre que
-        não há raiz reproduz o F1 — o teste tem de reprovar contra ela."""
+        """Arrancar a cura: uma versão que devolve `(None, None)` sempre que"""
         _casa_com_steam(home_isolado, _LAYOUTS["flatpak"])
 
         def _versao_antiga_sem_motivo(
@@ -469,6 +377,6 @@ class TestSteamRootOuRecusa:
 
         monkeypatch.setattr(proton_pin, "steam_root_ou_recusa", _versao_antiga_sem_motivo)
         resultado = proton_pin.steam_root_ou_recusa(home_isolado)
-        assert resultado == (None, None)  # reproduz F1: nem raiz, nem motivo
+        assert resultado == (None, None)
         with pytest.raises(AssertionError):
-            assert resultado.motivo  # a régua boa reprovaria isto
+            assert resultado.motivo

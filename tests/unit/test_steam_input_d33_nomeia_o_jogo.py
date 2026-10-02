@@ -1,37 +1,8 @@
-"""D-33 (05/08/2026) — as três mensagens do Steam Input nomeiam o JOGO.
-
-A queixa dela, literal: *"não faço ideia de quando é pra ativar os controles
-Steam e quando não, nem se os botões lá prestam"*. A parte MEDIDA dessa queixa
-são três frases que falavam do estado do Steam Input sem nunca dizer de qual
-jogo falavam — e que chamavam de *conflito* uma escolha que ela tomou na janela
-da própria Steam:
-
-1. `integrations/storm_doctor.check_steam_input` — *"Steam Input LIGADO em 1
-   perfil(is) fora da allowlist — clique 'Aplicar correções'"*. O "1" contava
-   ARQUIVOS `localconfig.vdf`; dez jogos ligados no mesmo arquivo davam "1", e
-   um jogo ligado em duas contas de Steam dava "2". E o botão apontado é o que
-   APAGA a escolha dela.
-2. `app/actions/emulation_actions` (linha da aba Emulação) — *"Ligado —
-   conflita com o Hefesto"*.
-3. `app/actions/daemon_actions._frase_steam_input` — *"a Steam não sequestra
-   mais o seu controle"*.
-
-O que este arquivo trava, nas três: o appid aparece SEMPRE, o nome do jogo
-aparece quando a Steam tem o `appmanifest` em disco, nome nenhum é inventado
-quando não tem, e a palavra "conflito" não volta.
-
-**A MENSAGEM 2 CONTA EM VEZ DE NOMEAR desde 13/09/2026** (FRASES-E-DICAS-02):
-ela virou rótulo curto no cartão da Steam — ver `TestLinhaDaAbaEmulacao`. As
-mensagens 1 e 3 seguem nomeando.
-"""
+"""D-33 (05/08/2026) — as três mensagens do Steam Input nomeiam o JOGO."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_steam_input_d33_nomeia_o_jogo: importa código da janela GTK")
 
 from pathlib import Path
@@ -49,12 +20,8 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
     rotulo_do_jogo,
 )
 
-#: Sackboy (1599660) é o jogo REAL da D-31: ligado no `localconfig.vdf` dela e
-#: AUSENTE do `steam_input_apps.txt`. Aqui ele é só bancada — o arquivo dela
-#: não é lido nem tocado por teste nenhum deste módulo.
 _SACKBOY = "1599660"
 #: Mullet Mad Jack: o caso legítimo de allowlist (a via oficial de DualSense
-#: dele é o Steam Input).
 _MMJ = "2111190"
 
 
@@ -77,11 +44,7 @@ def _vdf(appids_ligados: list[str], *, global_ligado: bool = False) -> str:
 
 @pytest.fixture()
 def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """HOME de bancada com Steam nativa e a allowlist isolada.
-
-    CANARIO-FS-01: sem prender a allowlist aqui, o resultado do teste passaria
-    a depender do `steam_input_apps.txt` REAL da mantenedora.
-    """
+    """HOME de bancada com Steam nativa e a allowlist isolada."""
     (tmp_path / ".steam/steam/steamapps").mkdir(parents=True)
     (tmp_path / ".steam/steam/userdata/123/config").mkdir(parents=True)
     monkeypatch.setattr(sd, "_allowlist_path", lambda: tmp_path / "allowlist.txt")
@@ -105,9 +68,6 @@ def _localconfig(casa: Path, texto: str) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# A tradução appid -> nome (a peça que só a CLI tinha)
-# ---------------------------------------------------------------------------
 class TestTraducaoDoAppid:
     def test_nome_vem_do_appmanifest(self, casa: Path) -> None:
         _instalar(casa, _SACKBOY, "Sackboy: A Big Adventure")
@@ -121,15 +81,11 @@ class TestTraducaoDoAppid:
         assert rotulo_do_jogo(_SACKBOY, casa) == f"appid {_SACKBOY}"
 
     def test_o_appid_nunca_some_da_frase(self, casa: Path) -> None:
-        """É o número que ela confere na Steam, e o único identificador comum
-        aos três cadastros (vdf, allowlist, env materializado)."""
+        """É o número que ela confere na Steam, e o único identificador comum"""
         _instalar(casa, _SACKBOY, "Sackboy: A Big Adventure")
         assert rotulo_do_jogo(_SACKBOY, casa) == "Sackboy: A Big Adventure (appid 1599660)"
 
 
-# ---------------------------------------------------------------------------
-# O walker: quem é JOGO, quem é chave GLOBAL
-# ---------------------------------------------------------------------------
 class TestQuemEstaLigado:
     def test_devolve_appid_do_jogo_fora_da_allowlist(self) -> None:
         appids, glob_on = sd.steam_input_fora_da_allowlist(
@@ -150,9 +106,6 @@ class TestQuemEstaLigado:
         assert sd.steam_input_on_fora_da_allowlist(_vdf([_SACKBOY]), {_MMJ}) is True
 
 
-# ---------------------------------------------------------------------------
-# Mensagem 1 — o doctor (storm_doctor.check_steam_input)
-# ---------------------------------------------------------------------------
 class TestMensagemDoDoctor:
     def test_nomeia_o_jogo_e_nao_conta_arquivos(self, casa: Path) -> None:
         _instalar(casa, _SACKBOY, "Sackboy: A Big Adventure")
@@ -163,7 +116,6 @@ class TestMensagemDoDoctor:
         assert tag == sd.WARN
         assert "Sackboy: A Big Adventure" in msg
         assert _SACKBOY in msg
-        # O defeito literal: contava ARQUIVOS vdf e chamava de "perfil".
         assert "perfil" not in msg
         assert "conflit" not in msg.lower()
 
@@ -177,12 +129,7 @@ class TestMensagemDoDoctor:
         assert "lista de exceções" in msg
 
     def test_aponta_o_botao_que_preserva_a_escolha_dela(self, casa: Path) -> None:
-        """O ponteiro antigo mandava clicar no botão que APAGA a escolha dela.
-
-        Para um jogo, o gesto certo é o inverso: pôr o jogo na lista de
-        exceções ('Este jogo não funciona'), que é o que faz o Hefesto sair da
-        frente em vez de desfazer o que ela escolheu.
-        """
+        """O ponteiro antigo mandava clicar no botão que APAGA a escolha dela."""
         _localconfig(casa, _vdf([_SACKBOY]))
 
         _, msg = sd.check_steam_input(casa)
@@ -212,20 +159,12 @@ class TestMensagemDoDoctor:
     def test_chave_global_continua_apontando_o_aplicar_correcoes(
         self, casa: Path
     ) -> None:
-        """O ajuste GERAL da Steam não é escolha por jogo — desligá-lo não
-        apaga decisão nenhuma dela, e o botão certo continua sendo aquele."""
+        """O ajuste GERAL da Steam não é escolha por jogo — desligá-lo não"""
         _localconfig(casa, _vdf([], global_ligado=True))
 
         tag, msg = sd.check_steam_input(casa)
 
         assert tag == sd.WARN
-        # 26/08/2026: esta linha prendia o rótulo "Aplicar correções" letra por
-        # letra, e ficou vermelha quando a leva daquele dia renomeou o botão
-        # para o texto que diz o que ele FAZ. O renomeio estava certo; a régua é
-        # que digitava o que devia LER. Agora ela pergunta ao glade, que é o
-        # dono único do rótulo — e continua provando o que sempre provou: que a
-        # frase aponta ESTE botão, e não o "Este jogo não funciona", que apagaria
-        # a escolha dela.
         assert f"'{sd.rotulo_do_botao('btn_storm_fix_safe', '?')}'" in msg
         assert "aba Sistema" in msg
 
@@ -238,9 +177,6 @@ class TestMensagemDoDoctor:
         assert tag == sd.OK
 
 
-# ---------------------------------------------------------------------------
-# Mensagem 2 — a linha da aba Emulação
-# ---------------------------------------------------------------------------
 class TestLinhaDaAbaEmulacao:
     @staticmethod
     def _markup(**kwargs: object) -> str:
@@ -257,16 +193,7 @@ class TestLinhaDaAbaEmulacao:
         return markup_status_steam_input(**base)  # type: ignore[arg-type]
 
     def test_conta_os_jogos_e_larga_a_palavra_conflito(self) -> None:
-        """A LINHA CONTA OS JOGOS — FRASES-E-DICAS-02, 13/09/2026.
-
-        Até aqui ela nomeava cada jogo com o appid e seguia com a frase do
-        próximo ciclo. Esta função só alimenta o cartão da Steam na aba
-        Lançadores — a janela GTK saiu (`D-0609-GTK-LEVA-INTEIRA`) —, e a ordem
-        dela de 13/09 (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
-        quer ali rótulo curto de estado: a régua é
-        `test_o_cartao_da_steam_nao_narra._e_rotulo_de_estado`, e o nome com o
-        appid não cabe nela. A palavra "conflito" continua fora.
-        """
+        """A LINHA CONTA OS JOGOS — FRASES-E-DICAS-02, 13/09/2026."""
         markup = self._markup()
         assert "Ligado em 1 jogo" in markup
         assert "appid" not in markup
@@ -284,44 +211,21 @@ class TestLinhaDaAbaEmulacao:
         )
 
         assert "Desligado — tudo certo" in self._markup(on=False, jogos=[])
-        # AMBIENTE-PRESUMIDO-01 (23/08/2026): a frase deixou de ser o cinza
-        # seco "Steam não encontrado" e passou a dizer ONDE se procurou — a
-        # busca agora cobre os quatro layouts, e quem não tem Steam em nenhum
-        # deles precisa saber quais foram olhados. Prova em
-        # `test_ambiente_presumido_01_a_steam_dos_quatro_layouts.py`.
         assert STEAM_NAO_ENCONTRADA in self._markup(on=None, jogos=[])
 
     def test_nome_com_e_comercial_nao_quebra_o_markup(self) -> None:
         """Pango engasga com `&` cru — e um jogo chamado "Rick & Morty" existe."""
         markup = self._markup(jogos=["Sam & Max (appid 321)"])
-        # O NOME NÃO ENTRA MAIS NA LINHA desde 13/09/2026 (ver o teste acima): o
-        # `&` cru não tem por onde chegar ao Pango.
         assert "Sam" not in markup
         assert "&" not in markup
 
     def test_o_bloco_de_excecoes_do_r06_continua_no_lugar(self) -> None:
-        """A CONTAGEM FICA E A NARRAÇÃO SAI — FRASES-E-DICAS-03, 13/09/2026.
-
-        CONTRATO QUE MUDOU: até esta data o sufixo seguia com um travessão e o
-        estado da exceção narrado («controle liberado agora», «só valendo
-        durante o jogo», «sem controle físico visível»). A ordem dela de 13/09
-        (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
-        deixa na tela só estado. A contagem fica: a aba 07 não mostra a lista
-        das exceções em outro lugar.
-
-        NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01): os três valores de
-        `efetiva` davam a mesma linha, e era isso que provava que nenhum voltava
-        a narrar. O `efetiva` saiu da assinatura, porque nada vivo o lia: não há
-        mais valor a passar, e a linha termina na contagem.
-        """
+        """A CONTAGEM FICA E A NARRAÇÃO SAI — FRASES-E-DICAS-03, 13/09/2026."""
         markup = self._markup(on=False, jogos=[], excecoes=[2111190])
         assert markup.endswith("· Exceção por jogo: 1 jogo(s)</span>"), markup
         assert "—" not in markup.split("Exceção por jogo")[1], markup
 
 
-# ---------------------------------------------------------------------------
-# Mensagem 3 — o toast dos botões da aba Sistema
-# ---------------------------------------------------------------------------
 class TestToastDosBotoes:
     _ROTULO = "Sackboy: A Big Adventure (appid 1599660)"
 
@@ -342,8 +246,7 @@ class TestToastDosBotoes:
         assert "nenhum jogo da sua lista de exceções foi tocado" in frase
 
     def test_modo_simples_preservado_o_jargao_nao_volta(self) -> None:
-        """FEAT-STEAM-SIMPLES-01: o botão "Deixar tudo pronto" não pronuncia
-        "Steam Input" — nomear o jogo não podia trazer o jargão de volta."""
+        """FEAT-STEAM-SIMPLES-01: o botão "Deixar tudo pronto" não pronuncia"""
         for jogos in ([self._ROTULO], [], None):
             assert "Steam Input" not in _frase_steam_input(0, "aplicado", jogos)
 

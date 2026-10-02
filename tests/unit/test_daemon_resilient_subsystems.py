@@ -1,9 +1,4 @@
-"""Subsystems resilientes (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01).
-
-Um subsystem que falha ao iniciar (dep nativa ausente, porta em uso, permissão
-negada) é isolado em `_failed_subsystems` e o daemon segue rodando — poll/IPC/
-perfis sobrevivem a um subsystem quebrado, em vez de o boot inteiro morrer.
-"""
+"""Subsystems resilientes (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01)."""
 from __future__ import annotations
 
 import asyncio
@@ -52,8 +47,6 @@ async def test_failing_subsystem_does_not_kill_daemon(
     monkeypatch.setattr(daemon, "_start_ipc", _boom)
 
     run_task = asyncio.create_task(daemon.run())
-    # Espera deterministicamente o 1º tick do poll antes de parar — sob carga e
-    # com cobertura (--cov) no CI um sleep fixo de 0.1s pode não bastar (flaky).
     for _ in range(500):
         if store.counter("poll.tick") >= 1:
             break
@@ -61,7 +54,6 @@ async def test_failing_subsystem_does_not_kill_daemon(
     daemon.stop()
     await run_task
 
-    # O IPC falhou e foi isolado; o daemon NÃO morreu (poll seguiu rodando).
     assert "ipc" in daemon._failed_subsystems
     assert "explodiu" in daemon._failed_subsystems["ipc"]
     assert store.counter("poll.tick") >= 1

@@ -1,19 +1,4 @@
-"""tests/unit/test_color_contrast.py — fundação de contraste do STATUS-03.
-
-Valida ``utils.color_contrast`` com um ORÁCULO INDEPENDENTE (luminância,
-contraste e matiz reimplementados aqui via colorsys/aritmética própria —
-não os helpers do módulo) sobre >= 20 cores, incluindo as obrigatórias:
-``(16, 32, 72)`` (a cor real medida ao vivo na máquina de referência) e
-``(0, 0, 0)``.
-
-Critérios (item STATUS-03 do sprint):
-  * contraste(saída, pior_fundo) >= 3.0;
-  * Δmatiz <= 4° para cores cromáticas;
-  * idempotência: cores já legíveis passam INTACTAS e f(f(x)) == f(x).
-
-Sem skips: os critérios condicionais (matiz/intactas) usam subconjuntos
-paramétricos pré-computados, com meta-teste garantindo que não estão vazios.
-"""
+"""tests/unit/test_color_contrast.py — fundação de contraste do STATUS-03."""
 from __future__ import annotations
 
 import colorsys
@@ -34,10 +19,6 @@ from hefesto_dualsense4unix.utils.color_contrast import (
 )
 
 RGB = tuple[int, int, int]
-
-# ---------------------------------------------------------------------------
-# Oráculo independente (formulação WCAG 2.x reimplementada)
-# ---------------------------------------------------------------------------
 
 
 def _lum(rgb: RGB) -> float:
@@ -68,42 +49,37 @@ def _chroma(rgb: RGB) -> int:
     return max(rgb) - min(rgb)
 
 
-#: Cromática para fins do critério Δmatiz: chroma 8-bit >= 24 (abaixo disso o
-#: matiz é numericamente instável e a cor é tratada como quase-neutra).
 _CHROMA_MINIMO_CROMATICA = 24
 
-# ---------------------------------------------------------------------------
-# 27 cores: as 2 obrigatórias + paleta Drácula + CSS + bordas e acromáticas
-# ---------------------------------------------------------------------------
 
 CORES: list[RGB] = [
-    (16, 32, 72),  # OBRIGATÓRIA — cor real medida ao vivo (contraste cru 1.12:1)
-    (0, 0, 0),  # OBRIGATÓRIA — preto
-    (255, 255, 255),  # branco (já legível)
-    (189, 147, 249),  # #bd93f9 roxo Drácula (já legível)
-    (98, 114, 164),  # #6272a4 accent neutro (cru ~2.6:1 contra o envelope)
-    (80, 250, 123),  # #50fa7b verde Drácula (já legível)
-    (255, 0, 0),  # vermelho puro (borderline ~3.07:1 — deve passar intacto)
-    (0, 255, 0),  # verde puro
-    (0, 0, 255),  # azul puro (ilegível cru)
-    (0, 0, 128),  # navy
-    (128, 0, 128),  # roxo escuro
-    (0, 128, 128),  # teal
-    (139, 0, 0),  # darkred
-    (25, 25, 112),  # midnightblue
-    (0, 100, 0),  # darkgreen
-    (72, 61, 139),  # darkslateblue
-    (47, 79, 79),  # darkslategray
-    (34, 139, 34),  # forestgreen
-    (75, 0, 130),  # indigo
-    (128, 128, 0),  # olive (borderline ~2.9:1 — clareia um fio)
-    (255, 215, 0),  # gold (já legível)
-    (255, 105, 180),  # hotpink (já legível)
-    (105, 105, 105),  # dimgray (acromática)
-    (10, 10, 10),  # quase-preto (acromática)
-    (1, 2, 3),  # quase-preto com viés (chroma 2 — quase-neutra)
-    (40, 42, 54),  # #282a36 — o próprio fundo Drácula
-    (53, 53, 53),  # #353535 — o próprio envelope (contraste 1.0 cru)
+    (16, 32, 72),
+    (0, 0, 0),
+    (255, 255, 255),
+    (189, 147, 249),
+    (98, 114, 164),
+    (80, 250, 123),
+    (255, 0, 0),
+    (0, 255, 0),
+    (0, 0, 255),
+    (0, 0, 128),
+    (128, 0, 128),
+    (0, 128, 128),
+    (139, 0, 0),
+    (25, 25, 112),
+    (0, 100, 0),
+    (72, 61, 139),
+    (47, 79, 79),
+    (34, 139, 34),
+    (75, 0, 130),
+    (128, 128, 0),
+    (255, 215, 0),
+    (255, 105, 180),
+    (105, 105, 105),
+    (10, 10, 10),
+    (1, 2, 3),
+    (40, 42, 54),
+    (53, 53, 53),
 ]
 
 CORES_CROMATICAS: list[RGB] = [
@@ -157,18 +133,12 @@ def test_cores_ja_legiveis_passam_intactas(cor: RGB) -> None:
     assert ensure_min_contrast(cor) == cor
 
 
-# ---------------------------------------------------------------------------
-# Casos dirigidos
-# ---------------------------------------------------------------------------
-
-
 def test_cor_real_da_maquina_clareia_preservando_matiz_azul() -> None:
     """(16,32,72) — ilegível crua (1.12:1) — sobe SÓ a luminosidade."""
     saida = ensure_min_contrast((16, 32, 72))
     assert saida != (16, 32, 72)
     assert _lum(saida) > _lum((16, 32, 72))
     assert _contraste(saida, PIOR_FUNDO) >= 3.0
-    # Matiz azul-arroxeado (~222.9°) preservado
     assert _dif_angular(_matiz_graus(saida), 222.86) <= 4.0
 
 
@@ -184,7 +154,6 @@ def test_claridade_minima_nao_estoura_para_branco() -> None:
     """O ajuste para no MÍNIMO legível — não pula para branco."""
     saida = ensure_min_contrast((16, 32, 72))
     assert saida != (255, 255, 255)
-    # Minimalidade aproximada: escurecer a saída em ~4% já perde o ratio.
     mais_escura = (
         int(saida[0] * 0.96),
         int(saida[1] * 0.96),
@@ -224,11 +193,6 @@ def test_entrada_invalida_levanta_value_error() -> None:
         ensure_min_contrast((1, 2))
 
 
-# ---------------------------------------------------------------------------
-# Contratos exportados
-# ---------------------------------------------------------------------------
-
-
 def test_accent_neutro_e_o_6272a4_do_sprint() -> None:
     """#6272a4 — accent dos rótulos "apagada"/"desconhecida" (contrato do card)."""
     assert ACCENT_NEUTRO == (0x62, 0x72, 0xA4)
@@ -239,7 +203,6 @@ def test_pior_fundo_e_o_mais_desfavoravel_dos_fundos_reais() -> None:
     """PIOR_FUNDO domina em luminância o fundo do StickPreview e o envelope."""
     assert luminancia_relativa(PIOR_FUNDO) >= luminancia_relativa(FUNDO_STICK_PREVIEW)
     assert luminancia_relativa(PIOR_FUNDO) >= luminancia_relativa(FUNDO_TEMA_GTK_ESCURO)
-    # Garantir contra o pior fundo garante contra o fundo do StickPreview:
     saida = ensure_min_contrast((16, 32, 72))
     assert _contraste(saida, FUNDO_STICK_PREVIEW) >= 3.0
 

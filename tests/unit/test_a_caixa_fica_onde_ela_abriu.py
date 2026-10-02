@@ -1,38 +1,4 @@
-"""A caixa fica onde ela abriu — A-CAIXA-FICA-ONDE-ELA-ABRIU-01 (item 2 da auditoria de 26/09).
-
-A foto 34 dela, 26/09/2026:
-
-    *«toda hora mesmo selecionando meio o negocio vai pra outra aba da direita
-    mesmo comigo tentando sincroniZar o controle.»* <!-- noqa-acento: citação literal dela -->
-
-MEDIDO antes da cura (28/09, com o pacote e a central reais): com o «Conectar»
-esperando PS + Create na Direita e o clique dela no Meio, o ``_o_aberto``
-devolvia a Direita em 30 de 30 tiques; o chip do Meio recusava sem perguntar a
-ninguém; e o ``radio.mover`` para o Meio, pelo tratador real do daemon até a
-``CentralDoRadio`` real, respondia ``ocupado``: a central não mudava a busca
-de adaptador no meio. Essa metade fechou na
-O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01 (28/09/2026): a central aceita, e a
-busca vai para o adaptador do chip.
-
-O que esta régua segura, com o rádio de mentira, o ``DonoVivo`` real por cima
-dele, o tratador real do daemon e a central real, e a busca DE PÉ (a central
-segura a janela aberta, esperando o gesto):
-
-1. um dono para «qual caixa está aberta»: o clique dela, em 30 tiques, com a
-   busca em qualquer um dos outros adaptadores, em qualquer ordem da lista e
-   com qualquer número de jogador;
-2. sem escolha dela, a caixa da busca abre (a regra de 25/09 continua);
-3. ela fecha todas: nada abre sozinho, e o cabeçalho do adaptador da busca
-   mostra a espera;
-4. o chip de outro adaptador pede ao rádio (``radio.mover`` para ele) e não
-   recusa por conta própria; a central aceita, a busca vai para ele, e o chip
-   aceso diz onde a busca está.
-
-MORDIDA: devolva a espera para antes do ``_ABERTO`` no ``_o_aberto`` — o caso 1
-reprova em todos os pares.
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""A caixa fica onde ela abriu — A-CAIXA-FICA-ONDE-ELA-ABRIU-01 (item 2 da auditoria de 26/09)."""
 
 from __future__ import annotations
 
@@ -57,11 +23,9 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     preparar_o_diario,
 )
 
-#: O chip do «Procurando» no molde do painel: (aceso, adaptador).
 CHIP = re.compile(r'<button class="op" aria-pressed="(true|false)"[^>]*'
                   r'data-gesto="escolher-adaptador" data-alvo="([0-9A-F]{12})"')
 TRES = (SALA, QUARTO, VARANDA)
-#: Todo par (onde a busca está, a caixa que ela abre), nos três adaptadores.
 PARES = [(busca, dela) for busca in TRES for dela in TRES if busca != dela]
 TIQUES = 30
 
@@ -85,11 +49,7 @@ def mundo_com(adaptadores: tuple[str, ...]) -> rm.RadioDeMentira:
 
 
 def _a_busca_abre_em(bancada: Bancada, busca: BuscaDePe, destino: str) -> None:
-    """O caminho dela: o chip do destino, e o «Procurar» — a janela abre ali.
-
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo interruptor
-    «Procurar» (``radio.busca.set``); o «+ Conectar» só abre o painel.
-    """
+    """O caminho dela: o chip do destino, e o «Procurar» — a janela abre ali."""
     bancada.cena()
     bancada.gesto("escolher-adaptador", alvo=id_da_tela(destino))
     bancada.cena()
@@ -100,7 +60,6 @@ def _a_busca_abre_em(bancada: Bancada, busca: BuscaDePe, destino: str) -> None:
         cr.ESPERANDO, cr.PASSO_GESTO, destino)
 
 
-#: O começo de um cartão de adaptador (e não do `lugar-topo` de dentro dele).
 CARTAO = re.compile(r'<div class="lugar[" ]')
 
 
@@ -112,21 +71,13 @@ def _cartao(sala: str, lid: str) -> str:
     return sala[inicio:fim]
 
 
-# ---------------------------------------------------------------------------
-# 1. o clique dela é o dono da caixa aberta
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("jogadores", sorted(JOGADORES))
 @pytest.mark.parametrize(("onde_busca", "onde_ela_abre"), PARES)
 def test_a_caixa_que_ela_abriu_fica_com_a_busca_noutro_adaptador(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     onde_busca: str, onde_ela_abre: str, jogadores: str,
 ) -> None:
-    """A cena da foto 34: a busca de pé num adaptador, e o clique dela no ▶ de
-    outro. A caixa dela fica aberta nos 30 tiques seguintes (mais que o prazo de
-    60 s não cabe numa régua; 30 voltas cobrem a regra de nível que se
-    reavaliava a cada uma), e a busca continua onde estava."""
+    """A cena da foto 34: a busca de pé num adaptador, e o clique dela no ▶ de"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=TRES,
                       jogadores=JOGADORES[jogadores])
@@ -148,8 +99,7 @@ def test_a_caixa_que_ela_abriu_fica_com_a_busca_noutro_adaptador(
 def test_a_ordem_da_lista_nao_muda_o_dono(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, ordem: tuple[str, ...],
 ) -> None:
-    """O dono é o clique, e não a posição: a busca no primeiro da lista e o
-    clique no último, em três ordens."""
+    """O dono é o clique, e não a posição: a busca no primeiro da lista e o"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=ordem)
     busca = BuscaDePe(relogio)
@@ -163,18 +113,11 @@ def test_a_ordem_da_lista_nao_muda_o_dono(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 2. sem escolha dela, a caixa da busca abre (a regra de 25/09)
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("onde_busca", TRES)
 def test_sem_escolha_dela_a_caixa_da_busca_abre(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str,
 ) -> None:
-    """A busca que não nasceu de um clique na tela (o ``_ABERTO`` vazio): a
-    caixa dela abre sozinha, com o «Segure PS + Create» à vista — o que ela
-    precisa fazer não custa um clique."""
+    """A busca que não nasceu de um clique na tela (o ``_ABERTO`` vazio): a"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -192,18 +135,11 @@ def test_sem_escolha_dela_a_caixa_da_busca_abre(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 3. ela fecha todas: nada abre por cima da escolha dela
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("onde_busca", TRES)
 def test_ela_fecha_a_caixa_da_busca_e_a_espera_fica_no_cabecalho(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str,
 ) -> None:
-    """Fechar a caixa da busca é escolha dela («nenhuma aberta»): nenhuma abre
-    nos 30 tiques, e o cabeçalho daquele adaptador — que aparece fechado —
-    mostra a espera, piscando, como já mostra o «varrendo»."""
+    """Fechar a caixa da busca é escolha dela («nenhuma aberta»): nenhuma abre"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -215,9 +151,6 @@ def test_ela_fecha_a_caixa_da_busca_e_a_espera_fica_no_cabecalho(
         campos = bancada.tique()
         cartao = _cartao(campos["radio-sala"], id_da_tela(onde_busca))
         classes = cartao.split('"', 2)[1].split()
-        # A BUSCA É A CLASSE `buscando`, acesa pela lista `radio-conectando`
-        # (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2): a pílula mora sempre
-        # no cabeçalho, e a folha a mostra só na caixa que busca.
         assert "aberto" not in classes and "buscando" in classes
         topo = cartao[:cartao.index('<div class="aparelhos"')]
         assert '<span class="espera busca"' in topo and "Segure PS + Create" in topo
@@ -233,8 +166,7 @@ def test_ela_fecha_a_caixa_da_busca_e_a_espera_fica_no_cabecalho(
 def test_com_dois_ou_tres_adaptadores_o_clique_dela_fica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int,
 ) -> None:
-    """Com dois ou três adaptadores o dono é o mesmo; com UM, a caixa única fica
-    aberta com a busca dentro (a decisão dela de 25/09), e o ▶ não a fecha."""
+    """Com dois ou três adaptadores o dono é o mesmo; com UM, a caixa única fica"""
     adaptadores = TRES[:quantos]
     mundo, relogio = mundo_com(adaptadores), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=adaptadores)
@@ -265,24 +197,11 @@ def test_com_um_adaptador_so_a_caixa_da_busca_fica_aberta(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 4. o chip de outro adaptador pergunta ao rádio
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(("onde_busca", "chip"), PARES)
 def test_o_chip_de_outro_adaptador_pede_a_busca_ao_radio(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
 ) -> None:
-    """Com a busca de pé, o chip de outro adaptador manda o ``radio.mover`` para
-    ELE — o mesmo pedido do «Conectar» —, e quem responde é a central. Ela
-    aceita (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): a caixa aberta e o
-    destino vão para o chip, e a busca sai de onde estava e abre nele. O chip
-    do adaptador em que a busca está só abre a caixa, sem pedido nenhum.
-
-    FATO SUBSTITUÍDO (28/09/2026): até a O-CONECTAR esta régua conferia a central
-    respondendo ``ocupado`` — o chip tremia e a busca ficava onde estava.
-    """
+    """Com a busca de pé, o chip de outro adaptador manda o ``radio.mover`` para"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -294,8 +213,6 @@ def test_o_chip_de_outro_adaptador_pede_a_busca_ao_radio(
         assert len(bancada.ponte.chamadas) == 1, "o chip da busca pediu ao rádio"
 
         assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
-        # A primeira chamada é o «Procurar» (O-CONECTAR-E-UM-INTERRUPTOR-01);
-        # a do chip segue o ``radio.mover`` para ele, como era.
         assert bancada.ponte.chamadas == [
             ("radio.busca.set", {"ligada": True, "destino": id_da_tela(onde_busca)}),
             ("radio.mover", {"destino": id_da_tela(chip)}),
@@ -315,10 +232,7 @@ def test_o_chip_de_outro_adaptador_pede_a_busca_ao_radio(
 
 
 class PonteQueAceita:
-    """A resposta da central que MUDA a busca de adaptador — o ``ok`` do
-    tratador real, com o movimento esperando no destino pedido. Isola o lado da
-    tela; a central real que a dá é a régua acima e a
-    ``test_o_conectar_segue_a_caixa_que_ela_abriu.py``."""
+    """A resposta da central que MUDA a busca de adaptador — o ``ok`` do"""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
@@ -334,8 +248,7 @@ class PonteQueAceita:
 def test_aceito_pela_central_o_chip_leva_a_caixa_e_o_destino(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
 ) -> None:
-    """Quando a central aceita, o chip é um gesto só, sem recusa: a caixa e o
-    destino do «Conectar» vão para o adaptador do chip na hora."""
+    """Quando a central aceita, o chip é um gesto só, sem recusa: a caixa e o"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -358,9 +271,7 @@ def test_o_chip_aceso_diz_onde_a_busca_esta(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     onde_busca: str, onde_ela_abre: str,
 ) -> None:
-    """A caixa aberta é dela, e o chip aceso do «Procurando» é do rádio: com a
-    busca de pé na Direita e o Meio aberto, o chip aceso é o da Direita. Acabada
-    a busca, o chip volta ao destino do «Conectar», que é a caixa dela."""
+    """A caixa aberta é dela, e o chip aceso do «Procurando» é do rádio: com a"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -375,10 +286,6 @@ def test_o_chip_aceso_diz_onde_a_busca_esta(
         busca.soltar()
         bancada.fechar()
 
-
-# ---------------------------------------------------------------------------
-# 5. a meia chave tem um dono só: a central (achado 8 da auditoria de 26/09)
-# ---------------------------------------------------------------------------
 
 INTERFACE = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"
 
@@ -403,27 +310,11 @@ def _quem_chama(nome: str) -> set[tuple[str, str]]:
 
 
 def test_so_o_x_dela_esquece_um_pareamento_pela_tela() -> None:
-    """Na tela, o pareamento sai por UM caminho: o X dela («Esquecer» da
-    pergunta, ``confirmar_esquecer``). A meia chave do «Não Conectou» é da
-    central (``central_do_radio._esquecer_a_meia_chave``); o fio da tela que a
-    tirava de novo, a partir de um retrato do BlueZ de até 3 s, podia apagar o
-    objeto ``Paired`` do «Tentar de Novo» feito logo depois do veredito.
-
-    MORDIDA: devolva o ``_esquecer_as_meias_chaves`` (o fio que chama
-    ``_esquecer_o_pareamento`` a cada «não chegou») — um segundo chamador
-    aparece e esta régua reprova.
-    """
+    """Na tela, o pareamento sai por UM caminho: o X dela («Esquecer» da"""
     assert _quem_chama("_esquecer_o_pareamento") == {("a08_conexoes.py", "confirmar_esquecer")}
     assert _quem_chama("esquecer_o_pareamento") == {("a08_conexoes.py", "_esquecer_o_pareamento")}
 
 
-# ---------------------------------------------------------------------------
-# 6. no motor: com o piloto, o chip não acende no clique (o desenho, na bancada)
-# ---------------------------------------------------------------------------
-
-#: O roteiro no WebKit: abre o «Procurando» pelo molde (o mesmo que o
-#: `abrirPainel('conectar')` da página põe no painel) e clica um chip apagado —
-#: primeiro SEM piloto (o desenho aberto no navegador), depois COM ele.
 ROTEIRO_DO_CHIP = r"""
 (function(){
   function abrir(){
@@ -472,7 +363,6 @@ def chip_no_webkit() -> dict[str, Any]:
     if not Gtk.init_check(None)[0]:
         pytest.skip("sem sessão gráfica — o WebKit não abre")
     saiu: list[str] = []
-    # Offscreen: sob Xvfb não há gerenciador de janelas, e ela tem UMA tela.
     janela = Gtk.OffscreenWindow()
     view = WebKit2.WebView()
     janela.add(view)
@@ -503,27 +393,13 @@ def chip_no_webkit() -> dict[str, Any]:
 
 
 def test_no_motor_com_o_piloto_o_chip_nao_acende_no_clique(chip_no_webkit: dict[str, Any]) -> None:
-    """Com o piloto no ar, o chip clicado não acende na página: quem acende é o
-    molde, quando o rádio responde. Aceso no clique, o chip que a central
-    recusava ficava aceso sobre a busca de pé noutro adaptador (medido na prova
-    de tela, 28/09). Sem piloto — o desenho aberto no navegador —, ele acende
-    no clique, como no desenho aprovado.
-
-    MORDIDA: tire o ``if(comPiloto()) return;`` do clique do chip no ``aba08.py``
-    e regere a bancada — o chip acende com o piloto e esta régua reprova.
-    """
+    """Com o piloto no ar, o chip clicado não acende na página: quem acende é o"""
     fora = chip_no_webkit
     assert len(fora["no_molde"]) == 1
     assert fora["sem_piloto"] == [fora["clicado_sem_piloto"]], "o desenho perdeu o clique"
     assert fora["com_piloto"] == fora["no_molde"], "o chip acendeu antes do rádio responder"
 
 
-# ---------------------------------------------------------------------------
-# 7. o «Mover» também é o clique dela (a conferência, 28/09/2026)
-# ---------------------------------------------------------------------------
-
-#: O vermelho mora na Esquerda (``mundo_com``): o «Mover» dele vai para um dos
-#: outros dois, e a caixa que ela deixou aberta antes é qualquer outra.
 MOVER = [(destino, dela) for destino in (QUARTO, VARANDA) for dela in TRES if dela != destino]
 
 
@@ -531,19 +407,7 @@ MOVER = [(destino, dela) for destino in (QUARTO, VARANDA) for dela in TRES if de
 def test_o_mover_abre_a_caixa_do_destino_e_o_clique_seguinte_dela_fica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, dela: str,
 ) -> None:
-    """O «Mover» (a pergunta da mudança, ``confirmar-mudanca``) é um clique dela
-    num destino, como o «Conectar» e o «Tentar de Novo»: a caixa do destino
-    abre, com a linha que diz «Segure PS + Create» e o nome do controle movido
-    dentro. Até 28/09 quem a abria era a espera, a cada tique e por cima de
-    tudo; com o clique dela como dono, o «Mover» ficava com a caixa de antes
-    aberta e o controle movido escondido atrás de um clique.
-
-    E a busca de um aparelho conhecido (a linha ``esperando``, e não o
-    «Conectar» sem alvo) também não vence o ▶ que ela der depois.
-
-    MORDIDA: tire o ``_abrir_na_tela(destino)`` do ``confirmar_mudanca`` — a
-    caixa de antes fica aberta nos 30 tiques e esta régua reprova.
-    """
+    """O «Mover» (a pergunta da mudança, ``confirmar-mudanca``) é um clique dela"""
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -573,13 +437,7 @@ def test_o_mover_abre_a_caixa_do_destino_e_o_clique_seguinte_dela_fica(
 def test_a_escolha_de_um_adaptador_que_saiu_nao_segura_a_caixa(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A caixa que ela abriu era a de um adaptador que saiu da máquina: aquela
-    escolha não é sobre as caixas de agora, e a busca que começa abre a dela
-    (a regra de sem escolha). Quando ele volta, a escolha dela volta junto.
-
-    MORDIDA: faça o ``_o_aberto`` devolver o ``_ABERTO`` sem conferir que o
-    adaptador está na lista — nenhuma caixa abre, e esta régua reprova.
-    """
+    """A caixa que ela abriu era a de um adaptador que saiu da máquina: aquela"""
     mundo, relogio = mundo_com((SALA, QUARTO)), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=(SALA, QUARTO))
     busca = BuscaDePe(relogio)

@@ -70,11 +70,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Nó de caractere do uhid. Nasce root-only; o install.sh põe a regra udev
-#: (mesmo tratamento do /dev/uinput).
 UHID_NODE = "/dev/uhid"
 
-# --- linux/uhid.h ---------------------------------------------------------
 UHID_DESTROY = 1
 UHID_START = 2
 UHID_STOP = 3
@@ -88,261 +85,67 @@ UHID_INPUT2 = 12
 UHID_SET_REPORT = 13
 UHID_SET_REPORT_REPLY = 14
 
-#: HID_MAX_DESCRIPTOR_SIZE do kernel — o tamanho dos campos rd_data/data.
 HID_MAX_DESCRIPTOR_SIZE = 4096
 
-#: `struct uhid_event` é packed e tem o tamanho do maior membro da union
-#: (uhid_create2_req). Ler menos que isso trunca eventos.
 _CREATE2_HEAD = 128 + 64 + 64 + 2 + 2 + 4 + 4 + 4 + 4
 UHID_EVENT_SIZE = 4 + _CREATE2_HEAD + HID_MAX_DESCRIPTOR_SIZE
 
 BUS_USB = 0x03
 
 #: VID/PID do DualSense FÍSICO. É o que o `_is_dualsense` exige do controle de
-#: onde copiamos o blueprint, e o que o botão de Launch Options manda o SDL
-#: IGNORAR (IGNORE_DEVICES) para esconder o físico do jogo.
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PRODUCT = 0x0CE6
 
-#: PID que o VPAD apresenta — de propósito DIFERENTE do físico (0x0CE6). É a chave
-#: do fim do controle duplicado (UHID-04): com físico E vpad no MESMO 054c:0ce6,
-#: nenhuma Launch Option por VID/PID conseguia separá-los — `IGNORE_DEVICES` para
-#: 054c:0ce6 escondia os dois e o jogo ficava sem controle nenhum. Como o vpad é
 #: forjado, ele vira um DualSense **Edge** (0x0DF2): o `hid_playstation` o
 #: registra como DualSense COMPLETO (validado ao vivo — hidraw+lightbar+motion+
 #: touchpad+rumble; dmesg "Registered DualSense controller") e o SDL o reconhece
-#: como PS5 (prompts PlayStation). Assim
-#: `SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6` esconde SÓ o físico e o vpad
-#: (0x0DF2) sobrevive: layout PS, vibração e nada de duplicado.
-#:
-#: Invariante VPAD-06 (travado por teste dedicado): NENHUM caminho de criação de
-#: vpad com flavor dualsense produz 054c:0ce6 — o fallback uinput também nasce
-#: Edge 0x0DF2 (`uinput_gamepad.DUALSENSE_EDGE_PRODUCT` espelha esta constante),
-#: então a launch option persistida (`IGNORE_DEVICES=0x054c/0x0ce6`) nunca mais
-#: esconde o vpad junto do físico. Duas ressalvas honestas: (1) `DUALSENSE_PIDS`
 #: trata 0x0DF2 como PID de FÍSICO (o Edge real existe) — quem impede o daemon de
-#: adotar o próprio vpad é o filtro de ancestralidade (`_is_virtual_evdev` /
-#: `_is_virtual_hidraw`), nunca o VID/PID; (2) o dono de um Edge FÍSICO divide
 #: VID/PID com o vpad — só a dedup por ancestralidade na regra udev (Fase B do
-#: sprint) cobre esse caso.
 VPAD_PRODUCT = 0x0DF2
 
 #: Feature reports que o probe do hid_playstation lê, com os tamanhos que o
-#: driver espera: 0x05 calibração, 0x09 MAC/pairing, 0x20 firmware.
 _FEATURE_SIZES: tuple[tuple[int, int], ...] = ((0x05, 41), (0x09, 20), (0x20, 64))
 
 #: Report de output do DualSense em USB (rumble/lightbar/gatilhos do jogo).
 _OUTPUT_REPORT_USB = 0x02
 
-#: Offsets dentro do report 0x02 (payload após o report id):
-#: byte 0 = valid_flag0, 1 = valid_flag1, 2 = motor direito (weak),
-#: 3 = motor esquerdo (strong).
 _VALID_FLAG0_OFFSET = 0
 _RUMBLE_WEAK_OFFSET = 2
 _RUMBLE_STRONG_OFFSET = 3
 
-#: Bits de vibração do valid_flag0 (hid-playstation.c):
-#:   0x01 DS_OUTPUT_VALID_FLAG0_COMPATIBLE_VIBRATION — firmware antigo e SDL/HIDAPI
-#:   0x02 DS_OUTPUT_VALID_FLAG0_HAPTICS_SELECT       — presente nos dois caminhos
-#:
-#: Sem estes bits os bytes 2-3 do report NÃO são pedido de rumble: o jogo usa o
-#: MESMO report 0x02 para lightbar/gatilhos/mic, e lá os motores vêm zerados —
-#: forwardá-los MATAVA a vibração em curso (o update_rumble do driver é one-shot,
-#: então o controle ficava mudo até o jogo mudar o valor de FF).
-#:
-#: É MÁSCARA, não bit único: com firmware >= 0x0215 o driver liga `use_vibration_v2`
-#: e manda COMPATIBLE_VIBRATION2 no valid_flag2, deixando o valid_flag0 com
 #: 0x02 SOZINHO. Os dois DualSense da máquina de teste são 0x0630 — testar só o
-#: 0x01 descartava TODO o rumble justamente no hardware alvo.
-#:
-#: **Nota de 09/08/2026 — RUMBLE-QUE-NAO-SE-SENTE-01.** O parágrafo acima vale
-#: para o `hid-playstation`, que foi onde ele foi medido: o driver liga
-#: `HAPTICS_SELECT` no flag0 SEMPRE (`dualsense_output_worker`), e por isso a
-#: máscara 0x03 basta para ele. Mas o driver do kernel NÃO é o único escritor
-#: deste report — quem escreve no hidraw do vpad é o JOGO (ou a camada dele:
 #: SDL, winebus, a implementação DualSense do próprio título). Nada obriga
-#: esses escritores a repetir o `HAPTICS_SELECT`, e um deles mandando SÓ o bit
-#: v2 no flag2 tinha todo o rumble descartado aqui, em silêncio.
-#:
-#: Esta constante segue certa e segue em uso — ela é o ramo v1. Quem decide o
-#: gate agora é :func:`_fala_de_vibracao`, que aceita os DOIS ramos.
 _VIBRATION_FLAGS = 0x03
 
-#: RUMBLE-PRESO-01 — teto de silêncio do rumble do JOGO, em segundos.
-#:
-#: O gate de `_VIBRATION_FLAGS` acima está certo e cura um defeito real (report
-#: de lightbar/gatilho traz os motores zerados e forwardá-los matava a vibração
-#: em curso). Mas ele tem um custo que só aparece ao vivo: se o jogo liga o
-#: rumble e DEPOIS só manda report sem os bits de vibração, o pedido de parada
-#: nunca chega — e não é um pulso solto que fica pendurado. O report_thread do
-#: backend reafirma `rumble_asserted=self._rumble_active` em TODO report que
-#: monta (`core/backend_pydualsense.py`), então o motor não desacelera: ele gira
-#: para sempre, medido na máquina de desenvolvimento em 25/07 com o relato "fica
 #: tremendo sem parar, em todo jogo, em qualquer DualSense".
-#:
-#: O alvo mais provável é justamente o jogo bem-comportado: quem usa gatilhos
-#: adaptativos manda report de gatilho o tempo todo, e cada um deles é uma
-#: chance de o stop se perder.
-#:
-#: A rede de segurança é ASSIMÉTRICA de propósito. Cortar uma vibração longa e
-#: legítima é um aborrecimento; um motor girando até a bateria acabar desgasta o
-#: aparelho e obriga a desligar o controle no meio da partida.
-#:
-#: A condição de disparo exige que o jogo esteja VIVO e falando: só conta o
-#: silêncio de vibração enquanto OUTROS reports continuam chegando. Jogo parado
-#: (que não manda nada) não tem o rumble cortado por este caminho — quem cuida
-#: disso é o `_silence_rumble` do fim de sessão.
-#:
-#: O NÚMERO veio de medição, não de palpite. A primeira versão usou 6,0 s por
-#: prudência, e 90 minutos de jogo real (25/07, Stray) mostraram 17 disparos —
-#: prova de que a perda do stop é frequente, e não um caso de canto. Os valores
-#: presos desenham o mecanismo: (1,1) (3,3) (4,4) (10,10) (12,12) (14,14) ao
-#: lado de (127,127) e (0,255). A cauda de valores mínimos é a assinatura de um
-#: FADE-OUT cujo último passo — o zero — se perde; a de valores altos é o pulso
-#: que nunca recebeu parada. Sete dos dezessete passavam de 30 em algum motor,
-#: isto é, seriam SENTIDOS: um travamento perceptível a cada ~13 minutos,
-#: segurando o motor pelo teto inteiro.
-#:
-#: 3,0 s corta essa dor pela metade sem chegar perto da cadência real do jogo
-#: (que reafirma a vibração muitas vezes por segundo enquanto o efeito está
-#: vivo — é o que produz a escada de valores acima). Continua sendo uma rede,
-#: não um cronômetro de efeito: um silêncio de 3 s no meio de uma vibração ativa
-#: já é anomalia.
-#:
-#: **A CURA FOI ENCONTRADA em 01/08/2026 — BT-E-VPAD-01, furo 6.** O texto
-#: acima dizia "isto é MITIGAÇÃO, não a cura; a cura seria descobrir por que o
-#: stop se perde". Descobriu-se, e está no `SDL_hidapi_ps5.c`:
-#:
-#:     if (ctx->rumble_left || ctx->rumble_right) {
-#:         effects.ucEnableBits1 |= 0x02;   /* desliga haptics de áudio */
-#:     } else {
-#:         /* deixar os bits desligados restaura os haptics de áudio */
-#:     }
-#:
-#: Ou seja: **na PARADA, o SDL emite um report com `valid_flag0 == 0x00` e os
-#: motores zerados** — e o gate de `_VIBRATION_FLAGS` descarta exatamente esse
-#: report. É a receita do "tremendo sem parar".
-#:
-#: O gate continua CERTO pelo motivo certo (report de gatilho traz motores
-#: zerados). O que faltava era o discriminador, e ele é limpo:
-#:
-#:   - parada do SDL:      flag0 == 0 E flag1 == 0 E motores zerados;
-#:   - report de gatilho:  flag0 & 0x0C != 0;
-#:   - report de luz:      flag1 & 0x14 != 0.
-#:
-#: Ver `docs/protocol/dualsense-referencia-canonica.md` §8.
-#:
-#: **O teto de silêncio FICA**, e não é redundância: ele cobre o jogo que
-#: perde o stop por outro caminho que não o do SDL (o log de 25/07 registrou
-#: 17 disparos em 90 minutos, com valores presos que desenham um fade-out cujo
-#: último passo se perdeu). A cura tira a causa conhecida; a rede continua para
-#: as desconhecidas.
 _RUMBLE_STALE_SEC = 3.0
 
-#: Os bits que identificam um report de GATILHO no valid_flag0 (direito|esquerdo).
-#: Um report com eles ligados traz os motores zerados por construção, e é por
-#: isso que o gate de vibração existe.
 _TRIGGER_FLAGS = 0x0C
 
-#: E os que identificam um report de LUZ no valid_flag1 (lightbar|player LEDs).
 _LUZ_FLAGS = 0x14
 
-#: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
 
-#: A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: de quanto em quanto o fio do
-#: uhid acorda sem evento. O `stop()` o acorda pelo despertador na hora; o
-#: prazo é só a rede de quem ficou sem ser acordado.
 _UHID_FIO_ACORDA_S = 1.0
 
-#: QUEM ESCREVEU-01 — quantos reports de vibração o anel guarda. Oito bastam
-#: para ver o padrão (start/stop, escada de fade-out, o zero solto do
-#: `input_ff_flush` do kernel) e cabem numa tela sem virar histórico.
 _ANEL_DE_VIBRACAO_MAX = 8
 
-#: Rótulos do ramo pelo qual o report entrou — vocabulário do anel e contrato
-#: com a tela. Trocá-los sem trocar o consumidor deixa o painel mudo.
 RAMO_V1 = "v1"
 RAMO_V2 = "v2"
 RAMO_PARADA_SDL = "parada_sdl"
 RAMO_DESCARTADO = "descartado"
 
-# --- PAINEL-DA-VERDADE-01: recência, e não só contagem ---------------------
-#
-#: As categorias que o vpad carimba quando ALGO de fato passou por ele. Elas
-#: são as chaves de :attr:`visto_ha_s`, e o nome de cada uma é contrato com a
-#: aba Status — trocá-lo sem trocar o consumidor deixa a tela muda.
-#:
-#: **Por que carimbo, e não mais um contador.** Os contadores que já existem
-#: (`trigger_replicas`, `touchpad_clicks`, `lightbar_replicas`, ...) são
-#: CUMULATIVOS: zeram só no `start()`. Um painel construído sobre eles diria
-#: "já funcionou uma vez" e ficaria verde para sempre depois do primeiro
-#: acerto — que é a mentira mais confortável que uma tela de diagnóstico pode
-#: contar. O que ela perguntou foi outra coisa: *"na hora de jogar um jogo na
-#: Steam elas vão estar funcionando?"*, e isso é uma pergunta sobre AGORA.
-#:
-#: O molde é o `emit_hz` do `physical_report_reader`, que já resolve o mesmo
-#: problema para o giroscópio (média móvel com morte por inatividade). Aqui
-#: basta o carimbo: as categorias são eventos esparsos por natureza — um jogo
-#: manda um gatilho quando a arma muda, não 250 vezes por segundo —, e uma
-#: taxa sobre evento esparso mediria o silêncio entre dois acertos, não o
-#: acerto. Quem decide o que é "recente" é o consumidor.
 ATIVIDADE_TRIGGER = "trigger"
 ATIVIDADE_LIGHTBAR = "lightbar"
 ATIVIDADE_PLAYER_LEDS = "player_leds"
 ATIVIDADE_RUMBLE = "rumble"
 ATIVIDADE_TOUCHPAD_CLICK = "touchpad_click"
 ATIVIDADE_OUTPUT = "output"
-#: JACK-QUE-NAO-LIGOU-01 (09/08/2026) — o byte 53 (fone/microfone/mudo) do
-#: físico SAINDO no report do vpad. Categoria própria, e não um apêndice do
-#: `output`: o que ela pergunta é se o jogo enxerga o fone e o microfone do
-#: controle, e essa é a única linha do payload que responde.
 ATIVIDADE_JACK = "jack"
-#: PARIDADE-SONY-01/E1 — o INSTRUMENTO do portão de medição da sprint.
-#:
-#: A pergunta que ela abre é: *"algum jogo que ela joga escreve os bytes de
-#: áudio (`common[4..7]`) no gamepad virtual?"*. A sprint pedia um log
-#: temporário aqui dentro; ele virou um carimbo PERMANENTE, e é melhor por
-#: dois motivos:
-#:
-#: 1. um log temporário depende de alguém lembrar de ligá-lo antes de jogar, e
-#:    de ela jogar o jogo certo naquele dia. O carimbo já está lá quando ela
-#:    joga;
-#: 2. ele responde as TRÊS saídas que a sprint prevê, e não uma. A categoria
-#:    ausente no `visto_ha_s` significa "nenhum jogo pediu áudio nunca" — que
-#:    é a resposta que fecha a sprint como cicatriz.
-#:
-#: **O carimbo NÃO replica nada.** Ele mede. A replicação dos bytes de áudio
-#: continua não existindo, e é isso que a E2 da sprint decide, depois da
-#: medição — como está escrito lá: *"um código escrito contra uma premissa
-#: não medida é dívida"*.
-#:
-#: ---- A CORREÇÃO DE 02/08/2026, e ela veio da PRIMEIRA leitura ----
-#:
-#: A primeira versão deste carimbo saía em QUALQUER report com bits de áudio e
-#: byte não-nulo, e ele apareceu com **8 segundos de idade num daemon
-#: recém-reiniciado, sem jogo nenhum aberto**. A causa: o driver
-#: `hid-playstation` do kernel escreve os campos de áudio no PROBE do device —
-#: o kernel 6.18 manda rota, volume e pré-amp para fazer o alto-falante soar.
-#:
-#: Um instrumento que carimba na adoção pelo kernel responde "sim, alguém
-#: escreve áudio" TODA VEZ, e a pergunta da sprint é outra: *"algum JOGO
-#: escreve esses bytes?"*. Por isso o carimbo passou a exigir
-#: `_replicating()` — o MESMO gate que a REPLICA-03 usa para decidir se há
-#: sessão de jogo aberta (UHID_OPEN..UHID_CLOSE mais a graça pós-bind).
-#:
-#: Reusar aquele gate, em vez de escrever um segundo, é o que impede os dois
-#: de divergirem sobre o que é "durante um jogo".
 ATIVIDADE_AUDIO_DO_JOGO = "audio_do_jogo"
 
-#: Os quatro bits de `valid_flag0` que autorizam os bytes de áudio: fone
-#: (0x10), alto-falante (0x20), microfone (0x40) e roteamento (0x80). O jogo
-#: ligar qualquer um deles é a intenção que a E1 procura.
 _AUDIO_FLAGS_DO_JOGO = 0xF0
 
-#: Categoria de réplica (o vocabulário interno do `_forward_replica`, que
-#: separa gatilho esquerdo do direito) → categoria de ATIVIDADE (o vocabulário
-#: da tela, que não separa: para ela, "o gatilho adaptativo está chegando").
 _ATIVIDADE_POR_CATEGORIA: dict[str, str] = {
     "trigger_left": ATIVIDADE_TRIGGER,
     "trigger_right": ATIVIDADE_TRIGGER,
@@ -350,16 +153,6 @@ _ATIVIDADE_POR_CATEGORIA: dict[str, str] = {
     "player_leds": ATIVIDADE_PLAYER_LEDS,
 }
 
-# --- REPLICA-03: replicação do output do jogo (gatilhos/lightbar/player) ----
-#
-#: Offsets DENTRO do payload do report 0x02 (após o report id). Fontes, que
-#: descrevem o MESMO layout (o `struct dualsense_output_report_common` do
-#: kernel `drivers/hid/hid-playstation.c` e o `DS5EffectsState_t` do SDL
-#: `SDL_hidapi_ps5.c`) — e é o layout do nosso builder `core/ds_output_report`:
-#:   [10..20] rgucRightTriggerEffect (modo + 10 parâmetros)
-#:   [21..31] rgucLeftTriggerEffect  (modo + 10 parâmetros)
-#:   [43]     player_leds (ucPadLights)
-#:   [44..46] lightbar_red/green/blue
 _VALID_FLAG1_OFFSET = 1
 _TRIGGER_R_BLOCK_OFFSET = 10
 _TRIGGER_L_BLOCK_OFFSET = 21
@@ -367,61 +160,31 @@ _TRIGGER_BLOCK_LEN = 11
 _PLAYER_LEDS_OFFSET = 43
 _LIGHTBAR_RGB_OFFSET = 44
 
-#: Bits dos gatilhos no valid_flag0 (SDL_hidapi_ps5.c: "Enable right trigger
-#: effect" = 0x04, "Enable left trigger effect" = 0x08; o kernel não os nomeia
-#: — o hid-playstation nunca escreve trigger effect).
 _TRIGGER_R_EFFECT_ENABLE = 0x04
 _TRIGGER_L_EFFECT_ENABLE = 0x08
 
-#: Bits do valid_flag1 (hid-playstation.c: LIGHTBAR_CONTROL_ENABLE = BIT(2),
-#: PLAYER_INDICATOR_CONTROL_ENABLE = BIT(4)).
 _LIGHTBAR_CONTROL_ENABLE = 0x04
 _PLAYER_INDICATOR_CONTROL_ENABLE = 0x10
 
-#: Só os 5 bits baixos do byte de player são LEDs (o 0x20 é o "sem fade" do
-#: firmware — o kernel manda `player_leds & 0x1F` do lado de lá também).
 _PLAYER_LEDS_MASK = 0x1F
 
-#: Rate-limit da replicação: nunca repassar mais que ~250 Hz por categoria ao
-#: report_thread/rádio BT do físico (regra do REPLICA-03). O valor retido fica
-#: pendente e sai no próximo pump (o poll loop roda mais rápido que isso).
 _REPLICA_MIN_INTERVAL_S = 1.0 / 250.0
 
-#: Graça pós-bind antes de replicar: o PROBE do hid_playstation no PRÓPRIO
-#: vpad emite outputs (reset de LEDs e, via `dualsense_set_player_leds`, um
-#: player-LED com a numeração DO KERNEL — que conta os físicos junto).
-#: Replicá-los pintaria o físico com o número errado no nascimento de todo
-#: vpad — o exato P3 que o REPLICA-03 cura. O jogo escreve segundos depois.
 _GAME_REPLICA_GRACE_S = 0.5
 
 #: Report de input do DualSense em USB (sticks/gatilhos/botões → jogo).
 _INPUT_REPORT_USB = 0x01
 
-#: Tamanho do payload do report 0x01 — 64 bytes COM o report id, que é o
-#: `DS_INPUT_REPORT_USB_SIZE` do hid-playstation.c. O driver compara o tamanho
-#: (`size == DS_INPUT_REPORT_USB_SIZE`) e **descarta calado** o report que não
-#: bate: com 1 byte a menos o vpad nascia mudo — o kernel aceitava o INPUT2 sem
-#: erro e o evdev nunca saía do repouso.
-#:
-#: A conta pelo descriptor engana: os campos de bits (4 do d-pad + 15 + 13) somam
-#: 32 bits = 4 bytes, e arredondá-los para baixo um a um dá 3. Confira sempre
-#: contra um report cru do controle: `os.read(open('/dev/hidraw4'), 128)` -> 64 B.
 _INPUT_PAYLOAD_SIZE = 63
 
-#: Offsets dentro do payload do report 0x01 (depois do report id), medidos num
-#: report cru do controle físico: `01 7f 7f 7d 7c 00 00 97 08 00 ...`.
 _SEQ_OFFSET = 6
 _BUTTONS0_OFFSET = 7
 _BUTTONS1_OFFSET = 8
 _BUTTONS2_OFFSET = 9
 
-#: Sticks em repouso. Um payload zerado NÃO é neutro: 0 é o canto do stick, e um
-#: report emitido por `forward_buttons` antes do primeiro `forward_analog`
-#: mandaria o personagem correndo para a diagonal superior-esquerda.
 _STICK_CENTER = 0x80
 _AXES_NEUTRAL = (_STICK_CENTER, _STICK_CENTER, _STICK_CENTER, _STICK_CENTER, 0, 0)
 
-#: Nibble ALTO do buttons0 (o baixo é o d-pad).
 _BUTTONS0_BITS: dict[str, int] = {
     "square": 0x10,
     "cross": 0x20,
@@ -443,18 +206,7 @@ _BUTTONS2_BITS: dict[str, int] = {
     "mic_btn": 0x04,
 }
 
-#: Todos viram o MESMO bit de click do touchpad (0x02): a regionalização
 #: (esquerda/meio/direita) é invenção nossa para o modo mouse, o DualSense real
-#: só reporta "o touchpad foi clicado".
-#:
-#: TOUCH-CLICK-01: estes NOMES só chegam pelo caminho do TECLADO virtual — o
-#: `TouchpadReader` lê o nó separado do touchpad e o `_combine_with_touchpad`
-#: (`daemon/subsystems/keyboard.py`) os mescla ao conjunto de botões DE LÁ. O
-#: caminho do JOGO (`dispatch_gamepad` / `CoopManager.forward_all`) repassa o
-#: conjunto do nó PRINCIPAL, cujo `BUTTON_MAP` não tem entrada de touchpad —
-#: por isso o clique nunca acendia no report do vpad. O bit continua saindo
-#: daqui quando o nome aparece (remap/teste), mas a fonte do caminho do jogo é
-#: `forward_touchpad_click`, alimentada pelo report CRU do físico.
 _TOUCHPAD_BUTTONS = frozenset({
     "touchpad", "touchpad_press",
     "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
@@ -487,26 +239,14 @@ _MOTION_WINDOW_LEN = 25
 _MOTION_WINDOW = slice(_MOTION_WINDOW_START, _MOTION_WINDOW_START + _MOTION_WINDOW_LEN)
 
 #: Janela NEUTRA — byte a byte idêntica ao que o encoder sempre emitiu: IMU
-#: zerada + `_TOUCH_INACTIVE` nos bytes de contato (32/36 absolutos). É o
-#: default do campo e o estado ao qual `stop()`/streaming-off retornam
-#: (anti-regressão: sem reader, o report não muda NADA em relação a hoje).
 _MOTION_NEUTRAL = bytes(
     _TOUCH_INACTIVE if offset in _TOUCH_POINT_OFFSETS else 0
     for offset in range(_MOTION_WINDOW_START, _MOTION_WINDOW_START + _MOTION_WINDOW_LEN)
 )
 
-#: Tamanho do feature 0x05 (calibração da IMU) — `DS_FEATURE_REPORT_CALIBRATION_
-#: SIZE` do hid-playstation.c. Um `calibration_0x05` só é carimbado no blueprint
-#: quando tem exatamente este tamanho E o report id certo; qualquer outra coisa
-#: cai no canônico (o probe do driver usa os campos como divisores — lixo aqui
-#: quebraria o motion do vpad inteiro).
 _CALIBRATION_FEATURE_ID = 0x05
 _CALIBRATION_FEATURE_SIZE = 41
 
-#: Byte de `status` do report 0x01 (bateria + carga). O `dualsense_parse_report` lê
-#: ``battery_data = status & 0x0F`` e ``charging_status = (status & 0xF0) >> 4``;
-#: no caso 0x0 a capacidade vira ``min(battery_data * 10 + 5, 100)``.
-#:
 #: Zerado, o vpad anuncia **5% descarregando para sempre** — o jogo mostra alerta
 #: de bateria fraca num controle carregado. Medido: o físico manda 0x29 (= 95%).
 #: Espelhamos a bateria do controle físico daquele jogador; sem dado, "cheio e
@@ -537,23 +277,16 @@ _STATUS1_OFFSET = 53
 
 #: O valor neutro do byte 53: nada plugado, nada mudo. É o que o vpad manda
 #: enquanto o físico não disser o contrário — e é honesto, porque "não sei" e
-#: "não há" levam o jogo à mesma decisão (usar o alto-falante do controle).
 _STATUS1_NEUTRO = 0x00
 
-#: Os três bits do byte 53 que este projeto conhece e encaminha. O resto é do
-#: firmware — repassar bit desconhecido é a mesma classe de erro que autorizar
-#: um campo de áudio sem escrever valor nele.
 _STATUS1_BITS_CONHECIDOS = 0x07
 
-#: Os três bits, um a um — para a leitura (`jack`) e a escrita usarem os
-#: MESMOS números. Nomes do `hid-playstation.c` (kernel 6.18).
 _STATUS1_HP_DETECT = 0x01
 _STATUS1_MIC_DETECT = 0x02
 _STATUS1_MIC_MUTE = 0x04
 _CHARGING_SHIFT = 4
 _BATTERY_MAX_NIBBLE = 0x0A
 
-#: D-pad é HAT, não bitmask: 0=N, 1=NE, 2=E, 3=SE, 4=S, 5=SW, 6=W, 7=NW.
 _DPAD_NEUTRAL = 0x08
 _HAT_BY_VECTOR: dict[tuple[int, int], int] = {
     (0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3,
@@ -561,114 +294,28 @@ _HAT_BY_VECTOR: dict[tuple[int, int], int] = {
     (0, 0): _DPAD_NEUTRAL,
 }
 
-#: Intervalo entre bombeadas do `wait_for_bind`. O probe do hid_playstation faz
-#: várias idas e voltas (GET_REPORT 0x09/0x20/0x05) antes do UHID_START.
 _BIND_POLL_INTERVAL_S = 0.01
 
-#: Graça após o UHID_START para o probe do hid_playstation se decidir.
-#:
-#: O `wait_for_bind` roda DENTRO do poll loop (o co-op promove jogador em
-#: `sync`/`forward_all`), então cada milissegundo aqui é input congelado do P1.
 #: Medido ao vivo: o probe que recusa manda CLOSE+STOP em ~2 ms → 50 ms são 25x de
 #: folga, pagos uma vez por promoção de jogador. (Começou em 150 ms, que davam 75x
-#: sem necessidade: o poll loop travava 3x mais para nada.)
 _BIND_SETTLE_S = 0.05
 
-#: O `phys` que o `_create2_event` carimba no `UHID_CREATE2` e que o kernel
-#: republica como `HID_PHYS` no `uevent` do device HID. É a marca MAIS forte do
-#: vpad: não é endereço nem nome de aparelho, é uma palavra que só este produto
 #: escreve (num DualSense de verdade este campo é o MAC do adaptador, no rádio,
-#: ou o caminho USB, no cabo).
-#:
-#: Vive aqui, e não repetido em cada leitor, porque quem CARIMBA é quem tem de
-#: dizer o que carimbou: `integrations/no_do_vpad.py` casa por este mesmo
-#: objeto, e assim o dia em que a palavra mudar não deixa um leitor para trás.
 VPAD_HID_PHYS = "hefesto-vpad"
 
 
-#: Os dois octetos que marcam "este MAC é forjado por nós". Faixa
-#: **localmente administrada** (bit 1 do primeiro octeto), que por definição não
-#: colide com endereço de fábrica. Três módulos espelham este prefixo por peso
-#: de import (`broker/hidraw_broker`, `core/backend_pydualsense`,
-#: `daemon/battery_journal`) e o portão
-#: `tests/unit/test_a_bateria_nao_le_o_no_do_vpad.py` confronta as cópias com o
-#: que `player_mac()` forja — o prefixo NÃO muda sem passar por lá.
 VPAD_MAC_PREFIXO = "02:fe"
 
-#: Bit ligado no primeiro octeto DERIVADO (o terceiro do MAC) de todo endereço
-#: que sai de :func:`vpad_mac`. É o que mantém os dois espaços **disjuntos por
-#: construção**, e não por sorte:
-#:
-#:     derivado da identidade   02:fe:80..ff:xx:xx:xx
-#:     fallback por número      02:fe:00:00:00:0N   (`player_mac`)
-#:
-#: Sem ele, um hash que caísse em `00:00:00:0N` daria dois vpads com o MESMO
-#: MAC e o segundo probe morreria com -EEXIST — o defeito que a E3 existe para
-#: matar, ressuscitado pela própria cura.
 _VPAD_MAC_BIT_DERIVADO = 0x80
 
 
 def player_mac(player: int) -> str:
-    """MAC do vpad DERIVADO DO NÚMERO do jogador (1-based) — o **fallback**.
-
-    O probe do `hid_playstation` recusa MAC repetido (-EEXIST), então copiar o do
-    físico não serve. Usamos a faixa **localmente administrada** (bit 1 do
-    primeiro octeto), que por definição não colide com hardware real.
-
-    COOP-QUE-NÃO-DESMONTA-01/E3 (06/09/2026): esta função deixou de ser a
-    resposta e passou a ser o piso. Quem responde é :func:`vpad_mac`, que só cai
-    aqui quando não há identidade de aparelho em que se apoiar. **Ela continua
-    existindo e continua com esta forma exata** porque três módulos espelham o
-    prefixo e o portão da bateria os confronta com ela.
-    """
+    """MAC do vpad DERIVADO DO NÚMERO do jogador (1-based) — o **fallback**."""
     return f"{VPAD_MAC_PREFIXO}:00:00:00:{player:02x}"
 
 
 def vpad_mac(identity: str | None, player: int) -> str:
-    """MAC do vpad deste jogador, ancorado no APARELHO e não no número.
-
-    COOP-QUE-NÃO-DESMONTA-01/E3. O defeito que esta função mata, escrito por
-    extenso porque a correção intuitiva é a errada: o número do jogador é
-    REUSADO — `_next_player_index` devolve o menor índice livre >= 2 e o
-    teardown o devolve ao poço (`daemon/subsystems/coop.py`). Com o MAC do vpad
-    saindo desse número, **uma queda no meio da mesa fazia o MAC do Jogador 2
-    passar a pertencer a outra pessoa**, e um jogo que salve por slot de
-    dispositivo trocava os perfis de dono.
-
-    A cura NÃO é parar de reusar o índice: o jogo quer P1..PN **contíguos**. A
-    cura é desacoplar as duas coisas — o número continua contíguo e reusável, o
-    MAC passa a seguir o controle físico.
-
-    `identity` é o que o resto do produto chama de identidade de aparelho
-    (`core/evdev_reader.discover_dualsense_evdevs`, `backend.primary_uniq`,
-    `_external_dedup_key`). Aquele espaço tem TRÊS formas disjuntas por prefixo,
-    e só a primeira serve aqui:
-
-    - **MAC do aparelho** (12 dígitos hex, com ou sem `:`) — é o único que
-      sobrevive ao replug, que é a coisa inteira que esta sprint pede. Vira
-      quatro octetos de `blake2b`;
-    - `dev:<instância HID>` — a chave dos clones sem endereço próprio
-      (`_is_synthetic_uniq`). Ela muda a cada replug, então derivar dela seria
-      prometer estabilidade que não existe;
-    - `path:<node>` — o último recurso, e o menos estável de todos: o node é
-      **renumerado** pelo kernel a cada reconexão. Foi um `path:` no lugar de um
-      MAC que fez nascer a guarda `BUG-COOP-BOOT-PRIMARY-DUP-01`.
-
-    As duas últimas, e `None`, caem em :func:`player_mac` — o comportamento de
-    hoje, intacto. É recuo deliberado: com identidade instável, o número do
-    jogador é a MELHOR âncora disponível, não a pior.
-
-    **`hashlib`, nunca `hash()`.** O `hash()` de `str` é salgado por processo
-    (`PYTHONHASHSEED`): o MAC do vpad mudaria a cada reinício do daemon, e o
-    sintoma seria idêntico ao defeito que estamos curando — o jogo vendo um
-    controle novo onde está o mesmo plástico.
-
-    Este é o MAC que o vpad PEDE, não o que ele veste: o vpad do posto nasce
-    com a identidade do primário, o primário que sai e volta tarde pede o
-    MESMO, e o `-EEXIST` do driver o recusava. Quem veste é o dono dos vivos,
-    no fim do módulo — e o seguinte do mesmo aparelho quando este já está
-    vestido (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01, `vpad_macs_do_aparelho`).
-    """
+    """MAC do vpad deste jogador, ancorado no APARELHO e não no número."""
     digitos = _somente_hex(identity)
     if len(digitos) != 12:
         return player_mac(player)
@@ -680,21 +327,7 @@ def vpad_mac(identity: str | None, player: int) -> str:
 
 
 def _somente_hex(valor: str | None) -> str:
-    """Os dígitos hexadecimais de `valor`, minúsculos. `None` → string vazia.
-
-    Aceita as duas grafias que circulam no produto — a colada (`a0fa9c…`, como o
-    `controllers.json` e o journal escrevem) e a com separador — pela mesma
-    razão que `daemon/battery_journal.mascarar_endereco`: quem chama não sabe de
-    qual das duas pontas o endereço veio.
-
-    **Descartar, não peneirar.** Um caractere fora de `[0-9a-f:]` invalida o
-    valor INTEIRO em vez de ser jogado fora — e a diferença é a que separa esta
-    função de um defeito: `dev:` e `path:` carregam dígitos hexadecimais no
-    meio (`d`, `e`, `a`, `c`…), e uma peneira que só ficasse com eles poderia
-    devolver doze dígitos a partir de um caminho de sysfs — dando ao vpad um
-    MAC "estável" derivado de uma identidade que muda a cada replug, que é
-    exatamente o defeito com outra roupa.
-    """
+    """Os dígitos hexadecimais de `valor`, minúsculos. `None` → string vazia."""
     if not valor:
         return ""
     baixo = valor.lower()
@@ -752,7 +385,6 @@ def _is_dualsense(node: str) -> bool:
             uevent = handle.read()
     except OSError:
         return False
-    # HID_ID=0003:0000054C:00000CE6 (bus:vendor:product)
     match = re.search(r"^HID_ID=[0-9A-Fa-f]+:0*([0-9A-Fa-f]+):0*([0-9A-Fa-f]+)",
                       uevent, re.MULTILINE)
     if match is None:
@@ -793,25 +425,11 @@ def capture_dualsense_blueprint(hidraw_path: str) -> dict[str, Any] | None:
         logger.warning("uhid_descriptor_invalido", tamanho=len(descriptor))
         return None
 
-    # Diagnóstico: o descriptor de BT declara o report de INPUT 0x31 (item HID
-    # `85 31`), enquanto o USB usa 0x01. Como blueprint de vpad ele é impróprio
-    # por construção (o vpad é BUS_USB emitindo report 0x01 de 64 B) — e é por
-    # isso que o caminho de criação usa o descriptor USB canônico embutido, não
-    # esta captura. Aqui só se registra o fato, para quem estiver inspecionando.
     if b"\x85\x31" in descriptor:
         logger.info("uhid_descriptor_bt_diagnostico", path=hidraw_path,
                     tamanho=len(descriptor))
 
     features: dict[int, bytes] = {}
-    # A PORTA, e não é `os.open` (O-NO-NASCE-FECHADO-01, auditoria de
-    # 20/09/2026). Com a regra da cura instalada o `/dev/hidraw` do físico
-    # nasce `0600 root`, e um `os.open(path)` daqui colhe `EACCES` e devolve
-    # None — que se lê como «o controle não respondeu features», o sintoma
-    # errado, sobre o aparelho errado. O `abrir_hidraw` entra pelo `cmd open`
-    # do broker (fd O_RDWR por SCM_RIGHTS, servido por root), com queda
-    # DECLARADA para o `open()` direto de quem não tem broker. É a mesma porta
-    # que a irmã `scripts/capture_blueprint.py` já usava desde 15/08/2026 —
-    # esta ficou para trás e só apareceu quando o nó passou a nascer fechado.
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
         PortaFechadaError,
         abrir_hidraw,
@@ -834,9 +452,6 @@ def capture_dualsense_blueprint(hidraw_path: str) -> dict[str, Any] | None:
     finally:
         aberto.fechar()
 
-    # O probe do hid_playstation lê o 0x09 para o MAC — e nós sobrescrevemos os
-    # bytes 1..6 dele com o MAC do jogador. Um report vazio/truncado passava no
-    # `0x09 not in features` e só quebrava lá na frente, no start().
     mac_report = features.get(0x09, b"")
     if len(mac_report) < 7:
         logger.warning("uhid_blueprint_sem_mac", path=hidraw_path,
@@ -850,26 +465,7 @@ def uhid_available() -> bool:
     return os.access(UHID_NODE, os.R_OK | os.W_OK)
 
 def _e_a_parada_do_sdl(body: bytes) -> bool:
-    """True quando o report é a PARADA de vibração que o SDL emite.
-
-    BT-E-VPAD-01, furo 6 — a causa-raiz do "tremendo sem parar", medida e
-    documentada na referência canônica do protocolo, §8.
-
-    O `SDL_hidapi_ps5.c` liga `ucEnableBits1 |= 0x02` (que desliga os haptics
-    de áudio) **só quando há rumble**; ao parar, ele deixa os bits desligados
-    para restaurar os haptics — e o report de parada sai com `valid_flag0 == 0`,
-    `valid_flag1 == 0` e os motores em zero. O gate de `_VIBRATION_FLAGS`
-    descartava exatamente esse report, e o motor girava até alguém desligar o
-    controle.
-
-    O discriminador exige as TRÊS condições, e nenhuma sobra:
-
-    * um report de GATILHO tem `flag0 & 0x0C` ligado;
-    * um report de LUZ tem `flag1 & 0x14` ligado;
-    * um report de vibração tem motor não-nulo (ou os bits de vibração).
-
-    Um report que não é nada disso, com tudo zerado, só pode ser a parada.
-    """
+    """True quando o report é a PARADA de vibração que o SDL emite."""
     if len(body) <= _RUMBLE_STRONG_OFFSET:
         return False
     if body[_VALID_FLAG0_OFFSET] or body[_VALID_FLAG1_OFFSET]:
@@ -909,7 +505,6 @@ def _fala_de_vibracao(body: bytes) -> bool:
     )
 
 
-
 @dataclass
 class UhidDualSense:
     """DualSense virtual criado via /dev/uhid, com passthrough de rumble.
@@ -920,269 +515,86 @@ class UhidDualSense:
     eventos evdev — quem monta o report é `send_report()`.
     """
 
-    #: 1-based; define o NOME do device (`Hefesto PN`) e, quando não há
-    #: identidade de aparelho, também o MAC (`player_mac`, o fallback).
-    #: COOP-QUE-NÃO-DESMONTA-01/E3: ele deixou de definir o MAC sozinho — ver
-    #: :attr:`identity` e :func:`vpad_mac`.
     player: int = 1
-    #: Identidade do controle FÍSICO que este vpad representa (o `uniq`/MAC que
-    #: `discover_dualsense_evdevs` e `backend.primary_uniq` devolvem), ou None
-    #: quando o chamador não sabe de quem é o vpad.
-    #:
-    #: COOP-QUE-NÃO-DESMONTA-01/E3 (06/09/2026): é daqui que sai o MAC do vpad.
-    #: O dado já chegava até a porta — `for_flavor` o recebia desde a
-    #: MÁSCARA-POR-JOGADOR-01 (15/08) e o usava só para escolher a máscara, sem
-    #: guardá-lo. Agora ele entra no objeto, e o vpad de um controle deixa de
-    #: trocar de MAC quando o número do jogador é reciclado.
     identity: str | None = None
-    #: PID que o vpad apresenta ao kernel/jogo. Default Edge (`VPAD_PRODUCT`) —
-    #: distinto do físico para desduplicar; ver a constante para o porquê.
     product: int = VPAD_PRODUCT
-    #: Blueprint no shape de `uhid_blueprint.canonical_blueprint` — o que a
-    #: factory injeta (descriptor + features). `capture_dualsense_blueprint`
-    #: produz o mesmo shape (hoje só diagnóstico).
     blueprint: dict[str, Any] | None = None
-    #: GYRO-01 — feature 0x05 (calibração da IMU) lido do controle FÍSICO deste
-    #: jogador (`backend.read_calibration()`), ou None = canônico do blueprint.
-    #: O hid_playstation do vpad (e o SDL) calibram o motion com o 0x05 que o
-    #: vpad responde no probe; com a janela de motion espelhando os int16 CRUS
     #: do físico, o 0x05 precisa ser o DAQUELA unidade — o canônico veio de UMA
-    #: unidade (a P1 branca) e faz as outras drivarem (bias) e escalarem errado.
-    #: Fallback fail-safe: inválido/None mantém o canônico (vpad sempre nasce).
     calibration_0x05: bytes | None = None
-    #: Recebe (weak, strong) 0-255 pedidos pelo JOGO — igual ao vpad uinput.
     rumble_sink: Callable[[int, int], None] | None = None
-    #: REPLICA-03 — replicação do output do jogo ao físico DESTE jogador.
-    #: Recebe ("left"|"right", bloco de 11 bytes: modo + 10 parâmetros).
     trigger_sink: Callable[[str, bytes], None] | None = None
-    #: Recebe (r, g, b) 0-255 da lightbar que o jogo pintou no vpad.
     lightbar_sink: Callable[[int, int, int], None] | None = None
-    #: Recebe os 5 LEDs de player (bits[0] = LED 1) que o jogo acendeu.
     player_led_sink: Callable[[tuple[bool, bool, bool, bool, bool]], None] | None = None
-    #: Chamado no fim da sessão de jogo (UHID_CLOSE/STOP/stop()) SE algo foi
-    #: replicado — é o gancho "devolve perfil/paleta/co-op" da posse.
     session_end_sink: Callable[[], None] | None = None
-    #: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 — a luz (`common[8]`,
-    #: 0 a 3, ou None = o jogo soltou) e o mudo (`common[9]` 0x10) que o jogo
-    #: pediu, para o controle DESTE jogador. Devolvem se aplicaram (`True`),
-    #: retiveram (`False`, sem jogo) ou descartaram (`None`, sem endereço).
     mic_led_sink: Callable[[int | None], bool | None] | None = None
     mic_mute_sink: Callable[[bool], bool | None] | None = None
-    #: Relógio/sleep injetáveis (testes herméticos do `wait_for_bind`).
     time_fn: Callable[[], float] = time.monotonic
     sleep_fn: Callable[[float], None] = time.sleep
 
     _fd: int | None = None
     _features: dict[int, bytes] = field(default_factory=dict)
     _last_sent: tuple[int, int] = (0, 0)
-    #: RUMBLE-PRESO-01: instante do último report do jogo que CARREGAVA bits de
-    #: vibração. `None` = nada pedido desde a última parada. É o relógio do teto
-    #: de silêncio — ver :data:`_RUMBLE_STALE_SEC`.
     _rumble_visto_em: float | None = None
     _output_count: int = 0
     _rumble_count: int = 0
-    #: RUMBLE-QUE-NAO-SE-SENTE-01 — os pedidos que MEXERIAM o motor.
-    #:
-    #: `_rumble_count` conta report que FALA de vibração, e o `+= 1` acontece
-    #: antes de os bytes 2-3 serem lidos: a parada (motores 0) conta igual ao
-    #: pedido. Medido na mesa dela em 09/08 com `plays=117` e ela sem sentir
-    #: nada — 117 não distingue "pediu 117 vibrações que sumiram do nosso lado"
-    #: de "mencionou vibração 117 vezes para pedir ZERO", e as duas conclusões
-    #: mandam caçar em pontas opostas do código. Este conta só (weak|strong) > 0.
     _rumble_nao_nulo_count: int = 0
-    #: O MAIOR par pedido na sessão. Um jogo que só pede (3, 4) está vibrando
-    #: abaixo do que a mão sente, e isso não é defeito nosso — sem este número
-    #: "não senti" e "não chegou" seguem indistinguíveis.
     _rumble_maior_pedido: tuple[int, int] = (0, 0)
-    #: MOTOR-QUE-NAO-SE-VE-01 (09/08/2026) — o par que de fato foi ESCRITO no
-    #: controle físico, DEPOIS da política de intensidade, e o instante dele.
-    #: `None` = nada escrito nesta sessão.
-    #:
-    #: Todos os contadores acima medem o que o JOGO pediu ao vpad. Nenhum mede
-    #: o que saiu do nosso lado, e a diferença entre os dois é uma
-    #: multiplicação: com `rumble_policy=economia` (0,3), um pedido de 20
-    #: chega ao motor como 6, e um pedido de 1 chega como ZERO. A tela dizia
-    #: "vibração chegando" nos dois casos.
     _rumble_no_fisico: tuple[int, int] | None = None
     _rumble_no_fisico_em: float | None = None
-    #: Reports com motor NÃO-NULO que o gate de vibração DESCARTOU (nem
-    #: `_VIBRATION_FLAGS` no flag0, nem `COMPATIBLE_VIBRATION2` no flag2).
-    #: Enquanto ninguém contava isto, "o jogo não pediu" era afirmado sem que
-    #: nada no código soubesse distinguir disso de "pediu numa codificação que
-    #: não reconhecemos" — a família de erro que esta casa paga para não cometer.
     _rumble_descartado_count: int = 0
-    #: Amostra do último descarte: (flag0, flag1, flag2, weak, strong). É o que
-    #: transforma o contador acima em diagnóstico — diz QUAL codificação veio.
     _rumble_descartado_amostra: tuple[int, int, int, int, int] | None = None
-    #: Quantos pedidos entraram SÓ pelo bit v2 (`COMPATIBLE_VIBRATION2` no
-    #: valid_flag2). > 0 prova que o gate antigo, que só olhava o flag0, estava
-    #: jogando vibração fora.
     _rumble_v2_count: int = 0
-    # --- QUEM ESCREVEU-01 (09/08/2026): os três buracos do painel -----------
-    #
-    #: Nº de PARADAS do SDL honradas (`_e_a_parada_do_sdl`). Elas voltam do
-    #: `_handle_output` ANTES do `_rumble_count += 1`, de propósito e certo —
-    #: mas isso as tornava invisíveis, e a diferença entre "o jogo vibrou e
-    #: mandou parar" e "ninguém pediu nada" é justamente esta. Sem o número, o
-    #: painel lê os dois casos como o mesmo silêncio.
     _rumble_parada_sdl_count: int = 0
-    #: Reports de output que chegaram com um report id que NÃO é o 0x02.
-    #:
-    #: O `_handle_output` os descarta na primeira linha — antes até do
-    #: `_output_count`. Ou seja: um jogo (ou uma camada dele) escrevendo no
-    #: hidraw do vpad com outro envelope produzia EXATAMENTE o mesmo painel
-    #: que um jogo que nunca enxergou o controle: zero em tudo. A conclusão
-    #: que a tela tirava — "o jogo não viu o vpad" — mandava caçar dedup,
-    #: udev e máscara, quando o dado estava chegando.
     _output_id_estranho_count: int = 0
-    #: (report_id, tamanho) do último report de id estranho — o que transforma
-    #: o contador acima em diagnóstico.
     _output_id_estranho_amostra: tuple[int, int] | None = None
-    #: QUEM ESCREVEU-01 — os últimos reports que falaram de vibração, crus.
-    #:
-    #: **Por que um anel, e não mais um contador.** Os contadores respondem
-    #: "quantas vezes"; a pergunta que sobrou depois deles é *"quem escreveu, e
-    #: o quê"* — e ela só se responde com os BYTES. O caso medido na mesa dela
-    #: em 09/08 (`plays=4`, `nao_nulos=0`, `descartados=0`) tem pelo menos dois
-    #: autores possíveis, e eles mandam caçar em pontas opostas:
-    #:
-    #: * o **jogo** (SDL/winebus) escrevendo no hidraw: o pedido de vibração
-    #:   sai com `flag0 & 0x03` (v1) ou `flag2 & 0x04` (v2) e os motores no
-    #:   valor pedido;
-    #: * o **`hid_playstation` do kernel**, que também é escritor deste report:
-    #:   ele monta a saída quando ALGUÉM faz force-feedback no nó evdev do
-    #:   vpad, e o `input_ff_flush` do kernel emite um efeito ZERADO a cada
-    #:   `close()` do nó — um `plays` que sobe sozinho, com força zero, toda
-    #:   vez que a Steam abre e fecha o joystick.
-    #:
-    #: Cada entrada é `(instante, flag0, flag1, flag2, weak, strong, ramo)`.
-    #: `ramo` é o vocabulário do painel: "v1", "v2", "parada_sdl", "descartado".
-    #: Teto pequeno de propósito (:data:`_ANEL_DE_VIBRACAO_MAX`) — o anel é
-    #: prova, não histórico, e ele vive na thread do poll loop.
     _rumble_anel: list[tuple[float, int, int, int, int, int, str]] = field(
         default_factory=list
     )
     _started: bool = False
-    #: REPLICA-03: sessão de jogo (UHID_OPEN..UHID_CLOSE) + graça pós-bind.
     _game_open: bool = False
     _bound_at: float | None = None
-    #: True quando ALGO foi replicado nesta sessão (gate do session_end_sink).
     _game_dirty: bool = False
-    #: Dedup por valor + rate-limit por categoria (trigger_left/right,
-    #: lightbar, player_leds): último valor ENTREGUE, pendente retido pelo
-    #: rate-limit e timestamp da última entrega.
     _replica_last: dict[str, Any] = field(default_factory=dict)
     _replica_pending: dict[str, Any] = field(default_factory=dict)
     _replica_ts: dict[str, float] = field(default_factory=dict)
     _trigger_replicas: int = 0
     _lightbar_replicas: int = 0
     _player_led_replicas: int = 0
-    #: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 (29/09/2026, revoga a
-    #: recusa da O-BOTAO): a luz e o mudo que o jogo pede OBEDECEM, P1 a P4.
-    #: Os pedidos entregues aos ralos (aplicados), os retidos (sem jogo, sob a
-    #: autoridade `daemon`) e os ecos do driver deste pad, contados à parte:
-    #: a tela e a Forja separam "o jogo não viu o pad", "o jogo pediu e
-    #: chegou" e "quem escreveu foi o driver, a cada aperto".
     _mic_led_do_jogo: int = 0
     _mic_mudo_do_jogo: int = 0
     _mic_do_jogo_retido: int = 0
     _mic_eco_do_driver: int = 0
-    #: O `common[8]` e o mudo do último pedido do jogo; `None` = nenhum.
     _mic_led_do_jogo_amostra: int | None = None
     _mic_mudo_do_jogo_amostra: bool | None = None
-    #: A sessão entregou alguma luz: o fim dela solta (`mic_led_sink(None)`).
-    #: Marca PRÓPRIA, e não o `_game_dirty`: ligá-lo repintaria perfil e
-    #: paleta no fim de toda sessão que só falou do microfone.
     _mic_luz_entregue: bool = False
     _mic_solta_a_entregar: bool = False
-    #: As janelas do eco do driver: o instante de cada borda do botão que SAIU
-    #: no report ao jogo (ver `_abrir_a_janela_do_eco`). A thread do leitor só
-    #: ANEXA; quem vence e consome é só o lado da saída.
     _janelas_do_eco: collections.deque[float] = field(
         default_factory=lambda: collections.deque(maxlen=_JANELAS_DO_ECO_MAX)
-    )  # quem lê pergunta ao dono, `_as_janelas_do_eco`
-    #: O bit do botão no último report que SAIU (a borda do driver é a subida).
+    )
     _mic_bit_que_saiu: bool = False
-    #: PAINEL-DA-VERDADE-01: instante (relógio de `time_fn`) do último evento
-    #: de cada categoria. Categoria ausente = NUNCA aconteceu nesta sessão, e
-    #: isso é diferente de "aconteceu há muito tempo" — a tela diz coisas
-    #: diferentes nos dois casos.
     _visto_em: dict[str, float] = field(default_factory=dict)
-    #: PARIDADE-SONY-01, o que faltava para a E2 poder começar: os VALORES da
-    #: última escrita de áudio do jogo, não só o instante dela. Ver
-    #: :attr:`audio_do_jogo_amostra`. `None` = nenhuma escrita nesta sessão.
     _audio_do_jogo_amostra: tuple[int, int, int, int, int] | None = None
     _lock: threading.RLock = field(default_factory=threading.RLock)
-    #: Estado do controle físico que o encoder transforma em report 0x01.
     _axes: tuple[int, int, int, int, int, int] = _AXES_NEUTRAL
     _buttons: frozenset[str] = field(default_factory=frozenset)
     _status_byte: int = _STATUS_DESCONHECIDO
-    #: BT-E-VPAD-01, furo 2: espelho do byte 53 do físico (fone/mic/mudo).
     _status1_byte: int = _STATUS1_NEUTRO
-    #: Nº de vezes que o byte 53 espelhado SAIU no report do vpad
-    #: (JACK-QUE-NAO-LIGOU-01). Só sobe quando o report de fato foi escrito —
-    #: um contador que subisse na chamada mediria o chamador, não a entrega.
     _jack_forward_count: int = 0
-    #: Nº de vezes que o byte 52 (bateria) SAIU no report do vpad
-    #: (BATERIA-QUE-NAO-CHEGOU-01). Mesma disciplina do irmão acima, e pela
-    #: mesma razão: durante 25 dias existiu chamada nenhuma, e um contador que
-    #: subisse antes da emissão teria dito "entregue" no dia em que o gate do
-    #: `_motion_streaming` engolia tudo.
     _battery_forward_count: int = 0
-    #: GYRO-01: janela de motion (payload[15:40]) espelhada do físico pelo
-    #: `PhysicalReportReader`. Nasce NEUTRA (= report idêntico ao histórico).
     _motion_window: bytes = _MOTION_NEUTRAL
-    #: True enquanto um reader é o RELÓGIO da emissão: `forward_analog`/
-    #: `forward_buttons`/`forward_battery` só atualizam o cache e quem emite é
-    #: `forward_motion` (evita emissão dupla e destrava o ritmo dos 60 Hz do
-    #: poll loop — o físico entrega 250 Hz no USB e, no BT, RAJADAS com pico de
-    #: ~797 Hz e sustentado variável; medido 11/08/2026,
-    #: `docs/protocol/driver-hid-playstation.md:740-761`).
     _motion_streaming: bool = False
-    #: Nº de janelas de motion EMITIDAS (telemetria GYRO-03: "o gyro flui?").
     _motion_count: int = 0
-    #: TOUCH-CLICK-01 — clique do touchpad vindo do report CRU do físico
-    #: (`PhysicalReportReader`), fora da janela de motion: ele mora no byte de
-    #: botões (payload[9]), que a janela 15..39 não cobre. Campo PRÓPRIO, e não
-    #: um nome enfiado em `_buttons`: o dono de `_buttons` é o poll loop, e
-    #: cada `forward_buttons` dele apagaria o clique no tick seguinte.
     _touchpad_click: bool = False
-    #: Nº de PRESSIONADAS entregues ao jogo (telemetria/teste: "o clique flui?").
     _touchpad_click_count: int = 0
-    #: O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01 — o botão do microfone vindo do
-    #: report CRU do físico, pelo mesmo motivo do clique: o `hid-playstation`
-    #: o consome e o evdev não o traz, então o `forward_buttons` do tique
-    #: nunca tem `mic_btn`. Campo PRÓPRIO: gravado em `_buttons`, o tique
-    #: seguinte o apagaria.
     _mic_button: bool = False
-    #: Nº de APERTOS do botão do microfone que saíram no report ao jogo.
     _mic_button_count: int = 0
-    #: Anti-flood: janela de tamanho errado loga warning UMA vez por instância
-    #: (o reader roda a até ~797 Hz no pico da rajada de BT, medido
-    #: 11/08/2026 — um bug de chamador viraria flood).
     _motion_invalid_logged: bool = False
-    #: Último payload EMITIDO, com o seq zerado — é a chave do delta. Comparar o
-    #: payload (e não o (axes, buttons) cru) mata os falsos "mudou": trocar
-    #: touchpad_left_press por touchpad_middle_press dá o MESMO bit no report.
     _last_body: bytes | None = None
-    #: Contador de sequência do report (0-255, wrap). O hid_playstation o usa
-    #: para detectar perda de pacote, então só anda quando um report SAI.
     _seq: int = 0
-    # --- A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 (28/09/2026) -------------
-    #: O fio que lê o fd do uhid por prontidão, desde a linha seguinte à
-    #: criação (ver `_iniciar_o_fio_do_uhid`, no fim da classe). None = sem fd
-    #: de verdade (os dublês da suíte): o tique drena, como antes.
     _fio_do_uhid: threading.Thread | None = None
-    #: Pedido de saída do fio, e o pipe que o acorda na hora do `stop()`.
     _pare_o_fio: threading.Event | None = None
     _despertador: tuple[int, int] | None = None
-    #: Guarda o estado da saída entre o fio (que atende) e o tique (que
-    #: entrega ao físico). Outra trava que não a `_lock` da entrada: o report
-    #: do controle não espera a saída. Quem a usa pergunta ao dono,
-    #: `_a_trava_da_saida`, que a garante sozinho.
     _trava_da_saida: threading.RLock = field(default_factory=threading.RLock)
-    #: O que o fio atendeu e só o tique entrega: o último par de vibração e o
-    #: fim da sessão do jogo.
     _rumble_a_entregar: tuple[int, int] | None = None
     _fim_de_sessao_a_entregar: bool = False
 
@@ -1240,9 +652,6 @@ class UhidDualSense:
             return None
         return cls(
             player=player,
-            # E3: a identidade não serve só para escolher a máscara — ela é o
-            # que ancora o MAC do vpad no controle físico. Não repassá-la aqui
-            # deixava a cura sem chegar ao produto.
             identity=identity,
             blueprint=blueprint,
             calibration_0x05=calibration_0x05,
@@ -1277,13 +686,7 @@ class UhidDualSense:
 
     @property
     def flavor(self) -> str:
-        """Sempre "dualsense" — o único flavor que este backend faz (`for_flavor`).
-
-        Não é enfeite: o daemon compara `vpad.flavor` com a máscara desejada para
-        decidir se recria o vpad (`coop.sync`, `start_gamepad_emulation`). Sem esta
-        propriedade o getattr daria None, o mismatch seria eterno e cada tick de
-        sync derrubaria e recriaria os vpads do co-op.
-        """
+        """Sempre "dualsense" — o único flavor que este backend faz (`for_flavor`)."""
         return "dualsense"
 
     @property
@@ -1296,13 +699,7 @@ class UhidDualSense:
 
     @property
     def mac(self) -> str:
-        """O `uniq` que o vpad carimba no feature 0x09 e o kernel republica.
-
-        E3: o do APARELHO (`identity`), e sem identidade o do número
-        (`player_mac`). Vivo, é o que o `start` lhe VESTIU: o do aparelho, ou o
-        próximo dele quando outro vpad vivo já veste aquele — ver
-        `_MacsDosVpadsVivos`, no fim do módulo (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01).
-        """
+        """O `uniq` que o vpad carimba no feature 0x09 e o kernel republica."""
         return _MACS_DOS_VPADS_VIVOS.vestido_por(self) or vpad_mac(self.identity, self.player)
 
     @property
@@ -1312,27 +709,12 @@ class UhidDualSense:
 
     @property
     def ff_play_count(self) -> int:
-        """Nº de pedidos de RUMBLE do jogo (diagnóstico: "o jogo está vibrando?").
-
-        Conta só os reports com a flag de vibração — o jogo usa o mesmo report
-        0x02 para lightbar/gatilhos/mic, e contá-los aqui dava um diagnóstico
-        falso-positivo ("o jogo pediu rumble") para quem só acendeu um LED.
-
-        **Não confunda com "pediu para vibrar"**: a PARADA também fala de
-        vibração, e este contador sobe nela igual. Quem responde "o motor
-        mexeria?" é :attr:`ff_nao_nulo_count` — ver RUMBLE-QUE-NAO-SE-SENTE-01.
-        """
+        """Nº de pedidos de RUMBLE do jogo (diagnóstico: "o jogo está vibrando?")."""
         return self._rumble_count
 
     @property
     def ff_nao_nulo_count(self) -> int:
-        """Nº de pedidos do jogo com motor NÃO-NULO (`weak` ou `strong` > 0).
-
-        RUMBLE-QUE-NAO-SE-SENTE-01 — o número que separa as duas caças:
-        `ff_play_count` alto com este em ZERO é o jogo pedindo silêncio (a
-        caça é no jogo/máscara); este subindo com ela sem sentir nada é o
-        pedido morrendo do nosso lado (a caça é no sink/política/backend).
-        """
+        """Nº de pedidos do jogo com motor NÃO-NULO (`weak` ou `strong` > 0)."""
         return self._rumble_nao_nulo_count
 
     @property
@@ -1341,20 +723,7 @@ class UhidDualSense:
         return self._rumble_maior_pedido
 
     def registrar_rumble_no_fisico(self, weak: int, strong: int) -> None:
-        """Anota o par que FOI ESCRITO no controle físico (MOTOR-QUE-NAO-SE-VE-01).
-
-        Quem chama é o `rumble_sink` deste vpad, DEPOIS de `apply_game_rumble`
-        devolver o par efetivo — nunca antes. O contrato é o mesmo do rascunho
-        do perfil e pela mesma razão: isto descreve o que aconteceu, não o que
-        se pretendia. Um pedido que a política zerou, ou que o rumble FIXADO
-        pela GUI engoliu, não escreve nada aqui — e é justamente esse silêncio
-        que a tela precisa poder mostrar.
-
-        Sem esta anotação, o único número do lado de cá era o `ff_last_sent`,
-        que é o que o JOGO pediu. Entre um e outro há a multiplicação da
-        política de intensidade, e ela é invisível: `economia` (0,3) transforma
-        um pedido de 1 em zero e a tela seguia dizendo "vibração chegando".
-        """
+        """Anota o par que FOI ESCRITO no controle físico (MOTOR-QUE-NAO-SE-VE-01)."""
         self._rumble_no_fisico = (int(weak), int(strong))
         self._rumble_no_fisico_em = self.time_fn()
 
@@ -1365,11 +734,7 @@ class UhidDualSense:
 
     @property
     def rumble_no_fisico_ha_s(self) -> float | None:
-        """Há quantos segundos o último par foi escrito no físico; None = nunca.
-
-        Já resolvido em SEGUNDOS DE IDADE pela mesma razão do `visto_ha_s`:
-        quem lê é a janela, noutro processo, e ela não tem este relógio.
-        """
+        """Há quantos segundos o último par foi escrito no físico; None = nunca."""
         quando = self._rumble_no_fisico_em
         if quando is None:
             return None
@@ -1377,11 +742,7 @@ class UhidDualSense:
 
     @property
     def ff_descartado_count(self) -> int:
-        """Nº de reports com motor não-nulo que o gate de vibração DESCARTOU.
-
-        > 0 significa que o jogo pediu vibração numa codificação que não
-        reconhecemos — e :attr:`ff_descartado_amostra` diz qual.
-        """
+        """Nº de reports com motor não-nulo que o gate de vibração DESCARTOU."""
         return self._rumble_descartado_count
 
     @property
@@ -1391,31 +752,17 @@ class UhidDualSense:
 
     @property
     def ff_v2_count(self) -> int:
-        """Nº de pedidos aceitos SÓ pelo bit v2 (`COMPATIBLE_VIBRATION2`).
-
-        > 0 é a prova de que o gate antigo — que só olhava o `valid_flag0` —
-        estava jogando vibração do jogo fora.
-        """
+        """Nº de pedidos aceitos SÓ pelo bit v2 (`COMPATIBLE_VIBRATION2`)."""
         return self._rumble_v2_count
 
     @property
     def ff_parada_sdl_count(self) -> int:
-        """Nº de paradas de vibração do SDL honradas (QUEM ESCREVEU-01).
-
-        > 0 prova que houve vibração VIVA neste vpad — ninguém manda parar o
-        que nunca começou. Com este contador em zero e `plays` > 0, o que
-        subiu não foi o jogo pedindo e desistindo.
-        """
+        """Nº de paradas de vibração do SDL honradas (QUEM ESCREVEU-01)."""
         return self._rumble_parada_sdl_count
 
     @property
     def ff_report_estranho_count(self) -> int:
-        """Nº de reports de output com report id diferente de 0x02.
-
-        > 0 é dado CHEGANDO e sendo descartado na porta — o oposto da
-        conclusão "o jogo não enxergou o gamepad virtual", que é a que o
-        painel tirava do silêncio.
-        """
+        """Nº de reports de output com report id diferente de 0x02."""
         return self._output_id_estranho_count
 
     @property
@@ -1474,21 +821,7 @@ class UhidDualSense:
 
     @property
     def visto_ha_s(self) -> dict[str, float]:
-        """Há quantos segundos cada categoria aconteceu pela última vez.
-
-        PAINEL-DA-VERDADE-01 / E1 — o campo que faltava para a aba Status
-        responder *"está chegando ao jogo AGORA?"* em vez de *"já chegou
-        alguma vez desde que o vpad subiu?"*.
-
-        Categoria AUSENTE do dicionário = nunca aconteceu nesta sessão, e a
-        tela diz uma frase diferente para esse caso ("pronto — nenhum jogo
-        pediu ainda") e para "aconteceu e parou". Publicar 0.0, ou um número
-        gigante, apagaria essa diferença.
-
-        O relógio é o `time_fn` do próprio vpad (monotônico), e o valor sai
-        daqui já resolvido em SEGUNDOS DE IDADE justamente para não obrigar o
-        consumidor a ter o mesmo relógio: quem lê é a GUI, noutro processo.
-        """
+        """Há quantos segundos cada categoria aconteceu pela última vez."""
         agora = self.time_fn()
         return {
             categoria: round(max(0.0, agora - quando), 1)
@@ -1497,34 +830,7 @@ class UhidDualSense:
 
     @property
     def audio_do_jogo_amostra(self) -> dict[str, int] | None:
-        """Os VALORES da última escrita de áudio do jogo, ou ``None``.
-
-        PARIDADE-SONY-01. O carimbo `audio_do_jogo` responde *"algum software
-        escreveu os bytes de áudio durante uma sessão?"* — e o veredito do
-        portão, em 02/08, respondeu que **sim**. Mas a própria sprint trancou a
-        E2 na pergunta seguinte, e com razão:
-
-            *"Ainda não medido: o que exatamente foi escrito (quais dos quatro
-            bytes, com que valores). (...) A E2 não deve começar antes disso.
-            Replicar sem saber QUAL byte o jogo escreve é o mesmo erro de
-            sempre, com o carimbo dando falsa confiança."*
-
-        Esta property é essa medição. Guarda a ÚLTIMA amostra — não um
-        histórico: o que a E2 precisa saber é o formato do pedido (qual campo,
-        que ordem de grandeza), e para isso uma amostra viva basta. Guardar
-        série temporal seria construir um log de sessão de jogo dela dentro do
-        daemon, que é dado que este projeto deliberadamente não retém.
-
-        As chaves são os nomes de `core/ds_output_report.py`, e o `flag0` vem
-        junto porque é ele que diz **quais** dos quatro campos o escritor
-        declarou válidos — um byte não-nulo com o bit apagado é lixo de
-        struct, não intenção.
-
-        Vale a mesma disciplina do carimbo: só amostra o que passou pelo gate
-        de sessão (`_replicating()`) e pelo filtro de keepalive (armadilha 10
-        da sprint). O que o probe do kernel escreve no nascimento do vpad
-        **não** entra aqui.
-        """
+        """Os VALORES da última escrita de áudio do jogo, ou ``None``."""
         amostra = self._audio_do_jogo_amostra
         if amostra is None:
             return None
@@ -1544,21 +850,12 @@ class UhidDualSense:
 
     @property
     def game_open(self) -> bool:
-        """True enquanto há sessão uhid ABERTA neste vpad (UHID_OPEN..CLOSE).
-
-        NUMA-02 — leitura pura para o agregado do sinal de autoridade do
-        daemon. Veto permanente da síntese da Onda N: sessão aberta JAMAIS é
-        evidência de jogo (o CLIENTE Steam também abre — mecanismo do
-        incidente 14:42); serve só para modular a histerese da queda para
-        'daemon' (sem nenhuma sessão aberta não há escritor de réplica a
-        proteger) e para diagnóstico.
-        """
+        """True enquanto há sessão uhid ABERTA neste vpad (UHID_OPEN..CLOSE)."""
         return self._game_open
 
     def is_active(self) -> bool:
         return self._fd is not None
 
-    # --- ciclo de vida ---------------------------------------------------
 
     def _criar_o_device(self) -> bool:
         """O corpo do `start` (que mora no fim da classe): False = indisponível."""
@@ -1567,8 +864,6 @@ class UhidDualSense:
         if self.blueprint is None:
             logger.warning("uhid_sem_blueprint", player=self.player)
             return False
-        # Prepara TUDO antes de abrir o nó: qualquer falha aqui não pode deixar um
-        # fd de /dev/uhid pendurado (o processo é longo; fd vazado nunca volta).
         try:
             features = self._features_com_mac_proprio()
             create_event = self._create2_event(self.blueprint["descriptor"])
@@ -1599,33 +894,15 @@ class UhidDualSense:
         return True
 
     def _features_com_mac_proprio(self) -> dict[int, bytes]:
-        """Copia os features do blueprint carimbando o MAC do jogador no 0x09.
-
-        O template canônico vem com as áreas de MAC ZERADAS (identidade nunca é
-        fossilizada — regra de anonimato); é aqui que o vpad ganha o MAC forjado
-        que :attr:`mac` decide. O probe do hid_playstation recusa MAC repetido
-        (-EEXIST): sem MAC próprio por jogador, o co-op de 4 vira 1.
-
-        COOP-QUE-NÃO-DESMONTA-01/E3: o MAC continua vindo de `self.mac` — o que
-        mudou é de onde `self.mac` sai (do aparelho, não do número do jogador).
-        Nada aqui digitou a forma dele, e é por isso que este método não mudou
-        uma linha de código.
-        """
+        """Copia os features do blueprint carimbando o MAC do jogador no 0x09."""
         assert self.blueprint is not None
         features = dict(self.blueprint["features"])
         report09 = bytearray(features[0x09])
         if len(report09) < 7:
             raise ValueError(f"feature 0x09 curto demais: {len(report09)} bytes")
-        # Slice assign em bytearray REDIMENSIONA quando os tamanhos diferem — com
-        # um report curto isso mudaria o tamanho do report em vez de sobrescrever
-        # o MAC. O guard acima garante os 6 bytes; a asserção trava o contrato.
         report09[1:7] = _mac_to_report_bytes(self.mac)
         assert len(report09) == len(features[0x09])
         features[0x09] = bytes(report09)
-        # GYRO-01: calibração POR UNIDADE — o 0x05 do físico deste jogador
-        # substitui o canônico quando é um report íntegro (41 B, id 0x05).
-        # Sem isso, a janela de motion espelhada de outra unidade seria
-        # calibrada com o bias/sensibilidade da unidade errada (drift na mira).
         calib = self.calibration_0x05
         if calib is not None:
             if (
@@ -1643,24 +920,14 @@ class UhidDualSense:
         return features
 
     def _destruir_o_device(self) -> None:
-        # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o fio do uhid sai ANTES
-        # de o fd fechar (um poll num fd reaproveitado atenderia outro
-        # aparelho), e fora das travas: ele pode estar esperando a da saída.
         self._parar_o_fio_do_uhid()
-        # Sob o lock: o poll loop pode estar em send_report/pump_ff nesta hora, e
-        # fechar o fd por baixo dele faria o write cair num fd já RECICLADO por
-        # outra thread (escrita de 4 KB num destino aleatório).
         with self._a_trava_da_saida(), self._lock:
             fd = self._fd
             if fd is None:
                 return
             self._fd = None
-            # O que o fio atendeu e o tique ainda não entregou vai antes da
-            # parada: um «pare» pendente sem entrega deixaria o motor girando.
             self._entregar_o_pendente()
             self._silence_rumble()
-            # REPLICA-03: o vpad some — a posse do output volta ao perfil
-            # ANTES do device morrer (mesma razão do _silence_rumble).
             self._end_game_session()
             with contextlib.suppress(OSError):
                 os.write(fd, struct.pack("<I", UHID_DESTROY))
@@ -1672,17 +939,11 @@ class UhidDualSense:
             self._rumble_count = 0
             self._rumble_nao_nulo_count = 0
             self._rumble_maior_pedido = (0, 0)
-            # MOTOR-QUE-NAO-SE-VE-01: o que foi aos motores morre com a sessão,
-            # como todo o resto da contabilidade. Herdá-lo faria a próxima vida
-            # do vpad nascer dizendo que os motores acabaram de girar.
             self._rumble_no_fisico = None
             self._rumble_no_fisico_em = None
             self._rumble_descartado_count = 0
             self._rumble_descartado_amostra = None
             self._rumble_v2_count = 0
-            # QUEM ESCREVEU-01: a prova morre com a sessão, como o resto da
-            # contabilidade — um anel herdado descreveria um device que não
-            # existe mais.
             self._rumble_parada_sdl_count = 0
             self._output_id_estranho_count = 0
             self._output_id_estranho_amostra = None
@@ -1693,33 +954,18 @@ class UhidDualSense:
             self._trigger_replicas = 0
             self._lightbar_replicas = 0
             self._player_led_replicas = 0
-            # Os carimbos morrem com o device, junto com os contadores que eles
-            # acompanham: um "o gatilho chegou há 2 s" herdado da vida anterior
-            # do vpad seria telemetria de um device que não existe mais.
             self._visto_em = {}
-            # PARIDADE-SONY-01: a amostra de áudio segue o carimbo que a
-            # acompanha. Herdá-la da vida anterior do vpad faria a E2 ser
-            # decidida sobre bytes que outro device recebeu.
             self._audio_do_jogo_amostra = None
             self._axes = _AXES_NEUTRAL
             self._buttons = frozenset()
             self._pendentes = frozenset()
             self._last_body = None
             self._seq = 0
-            # GYRO-01: o espelho de motion morre junto com o device — a
-            # próxima vida do vpad nasce neutra (o reader religa o streaming).
             self._motion_window = _MOTION_NEUTRAL
             self._motion_streaming = False
             self._motion_count = 0
-            # BATERIA-QUE-NAO-CHEGOU-01: a carga espelhada morre com o device,
-            # como os carimbos acima. A próxima vida do vpad não pode nascer
-            # anunciando ao jogo a bateria do controle da vida anterior — e o
-            # `_STATUS_DESCONHECIDO` é o mesmo default do nascimento.
             self._status_byte = _STATUS_DESCONHECIDO
             self._battery_forward_count = 0
-            # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: a próxima vida do vpad
-            # não nasce com o botão do microfone apertado, nem com a conta
-            # da luz que outro jogo pediu.
             self._mic_button = False
             self._mic_button_count = 0
             self._esquecer_o_microfone_do_jogo()
@@ -1730,15 +976,10 @@ class UhidDualSense:
         O vpad some e ninguém mais mandaria o stop — sem isto o DualSense fica
         vibrando para sempre (mesma proteção do UinputGamepad.stop).
         """
-        # RUMBLE-PRESO-01: o relógio do teto de silêncio morre junto com a
-        # sessão — a próxima vida do vpad nasce sem rumble pendurado, senão o
-        # primeiro pump dela cobraria um silêncio que é de outro jogo.
         self._rumble_visto_em = None
         if self._last_sent == (0, 0) or self.rumble_sink is None:
             return
         if self._no_fio_do_uhid():
-            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o CLOSE chegou pelo
-            # fio; a parada vai ao físico no tique, como toda entrega.
             self._rumble_a_entregar = (0, 0)
         else:
             with contextlib.suppress(Exception):
@@ -1755,7 +996,6 @@ class UhidDualSense:
         event += descriptor.ljust(HID_MAX_DESCRIPTOR_SIZE, b"\0")[:HID_MAX_DESCRIPTOR_SIZE]
         return event
 
-    # --- input (nós → kernel) --------------------------------------------
 
     def forward_analog(
         self,
@@ -1767,12 +1007,7 @@ class UhidDualSense:
         l2: int,
         r2: int,
     ) -> None:
-        """Guarda os analógicos do controle físico e emite o report (se mudou).
-
-        Mesma assinatura do `UinputGamepad.forward_analog` — o call site troca de
-        backend sem cirurgia. A diferença é o destino: lá vira evento evdev, aqui
-        vira o report HID 0x01 inteiro (sticks, gatilhos, botões e d-pad juntos).
-        """
+        """Guarda os analógicos do controle físico e emite o report (se mudou)."""
         if self._fd is None:
             return
         self._axes = (lx & 0xFF, ly & 0xFF, rx & 0xFF, ry & 0xFF, l2 & 0xFF, r2 & 0xFF)
@@ -1787,25 +1022,13 @@ class UhidDualSense:
         if self._fd is None:
             return
         with self._lock:
-            # O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01: o nome que ENTRA fica pendente
-            # até sair num report. Com o espelho ligado quem emite é o leitor do
-            # report cru, e o aperto que já soltou (o tique entrega `apertados |
-            # soltos` e logo `apertados`) seria apagado antes de sair.
             novos = frozenset(pressed) - self._buttons
             self._pendentes = self._pendentes | novos
             self._buttons = frozenset(pressed)
             self._emit_if_changed()
 
     def forward_motion(self, window: bytes) -> None:
-        """Espelha a janela de MOTION do físico (25 B = payload[15:40]) e emite.
-
-        GYRO-01 — irmão de `forward_analog`, mas com o relógio invertido: quem
-        chama é o `PhysicalReportReader` (thread própria, no ritmo do report
-        cru do físico já com throttle), e cada janela nova SAI na hora — os
-        sticks/botões cacheados pelo poll loop pegam carona no mesmo report.
-        Janela de tamanho errado é descartada (report torto no vpad quebraria
-        o parse do hid_playstation inteiro, não só o motion).
-        """
+        """Espelha a janela de MOTION do físico (25 B = payload[15:40]) e emite."""
         if len(window) != _MOTION_WINDOW_LEN:
             if not self._motion_invalid_logged:
                 self._motion_invalid_logged = True
@@ -1823,24 +1046,7 @@ class UhidDualSense:
                 self._motion_count += 1
 
     def forward_touchpad_click(self, pressed: bool) -> None:
-        """Espelha o CLIQUE do touchpad do físico no report do vpad.
-
-        TOUCH-CLICK-01 — irmão de `forward_motion`, mesmo chamador (o
-        `PhysicalReportReader`, thread própria) e mesmo report cru; muda só a
-        fatia lida. O clique é `DS_BUTTONS2_TOUCHPAD` (bit 0x02 do payload[9]),
-        e a janela de motion do espelho começa no byte 15 — ele NUNCA viajava
-        junto. Sem isto, apertar o touchpad dentro do jogo não acende bit
-        nenhum: o conjunto de botões do caminho do jogo vem do nó evdev
-        PRINCIPAL, cujo `BUTTON_MAP` não tem touchpad (o nó do touchpad é
-        separado e só o teclado virtual o lê).
-
-        Entrega por BORDA e imediata: o clique não está na janela de motion,
-        então ele não pode depender de a janela mudar para sair — um controle
-        parado na mesa (BT em repouso, ou o teto de coalescência do throttle)
-        seguraria a pressionada. `from_reader=True` porque quem chama é o
-        mesmo relógio do motion: com `_motion_streaming` ligado, o gate de
-        `_emit_if_changed` só deixa o reader emitir.
-        """
+        """Espelha o CLIQUE do touchpad do físico no report do vpad."""
         if self._fd is None:
             return
         with self._lock:
@@ -1902,34 +1108,7 @@ class UhidDualSense:
         return self._touchpad_click_count
 
     def set_motion_streaming(self, on: bool) -> None:
-        """Liga/desliga o modo "o reader é o relógio" (GYRO-01).
-
-        Ligado: `forward_analog`/`forward_buttons`/`forward_battery` só
-        atualizam cache (quem emite é `forward_motion` — evita report em dobro
-        e o serrilhado de 60 Hz no gyro). Desligado (reader caiu/parou):
-        fail-safe — a janela volta ao NEUTRO e a emissão volta ao delta do
-        poll loop. Voltar neutro importa: um último sample de gyro congelado
-        no report viraria rotação fantasma infinita na mira do jogo.
-
-        TOUCH-CLICK-01: o clique do touchpad SOLTA no mesmo fail-safe, e pelo
-        mesmo motivo. Ele vem do mesmo reader e mora FORA da janela, então
-        zerar a janela não o alcança — sem esta linha, perder o físico com o
-        dedo apertado (hotplug, cabo puxado) deixaria o botão preso para
-        sempre no jogo, com o mapa/inventário abrindo e fechando sozinho.
-
-        JACK-QUE-NAO-LIGOU-01: o byte 53 volta ao NEUTRO pela terceira vez
-        pelo mesmo argumento. Sem reader não há quem espelhe o fone, e manter
-        "há fone plugado" de uma sessão morta faria o jogo rotear o som para
-        um fone que não está mais lá. `_STATUS1_NEUTRO` é o valor honesto: com
-        os bits em zero, nada é declarado.
-
-        BATERIA-QUE-NAO-CHEGOU-01: e o byte 52 pela quarta vez, com o custo
-        mais visível de todos. Sem reader não há quem espelhe a carga, e um
-        controle que caiu com 8% ficaria 8% no report do vpad para sempre — o
-        jogo passaria a partida inteira piscando alerta de bateria fraca por um
-        controle que já foi embora. `_STATUS_DESCONHECIDO` é o "não sei" que
-        esta casa já escolheu para este byte, e ele não dispara alerta nenhum.
-        """
+        """Liga/desliga o modo "o reader é o relógio" (GYRO-01)."""
         with self._lock:
             alvo = bool(on)
             if alvo == self._motion_streaming:
@@ -1983,18 +1162,7 @@ class UhidDualSense:
 
     @property
     def jack(self) -> dict[str, bool]:
-        """O que o vpad DIZ AO JOGO sobre fone/microfone do controle.
-
-        JACK-QUE-NAO-LIGOU-01. É o byte 53 do report de entrada, decodificado
-        nos três bits que este projeto conhece (`_STATUS1_BITS_CONHECIDOS`) —
-        os mesmos nomes do kernel 6.18: `HP_DETECT`, `MIC_DETECT`, `MIC_MUTE`.
-
-        Não é leitura do controle físico: é o que o gamepad VIRTUAL declara.
-        A diferença importa e é o motivo de a chave existir — a aba Status já
-        mostra o mudo do FÍSICO (`entry['audio']`), e a pergunta em aberto era
-        outra: *o jogo enxerga isso?*. Com o `forward_jack` órfão a resposta
-        era "não, nunca" — o campo saía fixo em 0x00 desde sempre.
-        """
+        """O que o vpad DIZ AO JOGO sobre fone/microfone do controle."""
         byte = self._status1_byte
         return {
             "fone": bool(byte & _STATUS1_HP_DETECT),
@@ -2003,20 +1171,7 @@ class UhidDualSense:
         }
 
     def _emit_if_changed(self, *, from_reader: bool = False) -> bool:
-        """Emite o report 0x01 só quando o payload mudou.
-
-        Espelha o delta do `UinputGamepad`: o forward roda a cada tick por vpad, e
-        sem isto seriam ~250 writes/s por controle no /dev/uhid com tudo parado.
-
-        GYRO-01: com `_motion_streaming` ligado, só o caminho do
-        `PhysicalReportReader` (`from_reader=True`) emite — os forwards do poll
-        loop viram só-cache. `from_reader` (e não "from_motion"): desde a
-        TOUCH-CLICK-01 o mesmo reader entrega DUAS coisas do report cru — a
-        janela de motion e o clique do touchpad — e as duas emitem no mesmo
-        relógio. Sob `_lock`: o reader e o poll loop emitem de threads
-        diferentes, e `_last_body`/`_seq` precisam de UM dono por vez (o RLock
-        deixa o `send_report` reentrar sem deadlock).
-        """
+        """Emite o report 0x01 só quando o payload mudou."""
         with self._lock:
             if self._motion_streaming and not from_reader:
                 return False
@@ -2025,95 +1180,34 @@ class UhidDualSense:
             if chave == self._last_body:
                 return False
             self._last_body = chave
-            # O seq só anda quando um report SAI: ele existe para o hid_playstation
-            # detectar perda de pacote, e furar a contagem em report suprimido pelo
-            # delta seria reportar perda que não houve.
             self._seq = (self._seq + 1) & 0xFF
             body[_SEQ_OFFSET] = self._seq
             if not self.send_report(bytes([_INPUT_REPORT_USB]) + bytes(body)):
                 return False
-            self._pendentes = frozenset()  # o aperto pendente saiu neste report
+            self._pendentes = frozenset()
             self._abrir_a_janela_do_eco(body)
             return True
 
     def _encode_body(self) -> bytearray:
-        """Payload do report 0x01 a partir do estado, com o seq ZERADO.
-
-        Zerado de propósito: é assim que o payload serve de chave do delta (ver
-        `_emit_if_changed`, que carimba o seq depois da comparação).
-        """
+        """Payload do report 0x01 a partir do estado, com o seq ZERADO."""
         body = bytearray(_INPUT_PAYLOAD_SIZE)
-        # GYRO-01: a janela 15..39 (gyro/accel/timestamp/touch) vem inteira do
-        # espelho do físico; o default `_MOTION_NEUTRAL` reproduz byte a byte o
-        # que sempre se emitiu (zeros + `_TOUCH_INACTIVE` em 32/36).
         body[_MOTION_WINDOW] = self._motion_window
         body[_STATUS_OFFSET] = self._status_byte
-        # BT-E-VPAD-01, furo 2: o byte 53 passa a acompanhar o físico em vez
-        # de sair fixo. Ver `_STATUS1_OFFSET`.
         body[_STATUS1_OFFSET] = self._status1_byte
         body[0:6] = bytes(self._axes)
         pressed = self._buttons | self._pendentes
         body[_BUTTONS0_OFFSET] = self._dpad_hat(pressed) | _bitmask(pressed, _BUTTONS0_BITS)
         body[_BUTTONS1_OFFSET] = _bitmask(pressed, _BUTTONS1_BITS)
         buttons2 = _bitmask(pressed, _BUTTONS2_BITS)
-        # TOUCH-CLICK-01: duas fontes, um bit. `_touchpad_click` é o espelho do
-        # report cru do físico (caminho do JOGO, o que faltava); os nomes em
-        # `_TOUCHPAD_BUTTONS` continuam valendo para quem os injeta pelo
-        # conjunto de botões (remap/teste). OU lógico, nunca substituição.
         if self._touchpad_click or (pressed & _TOUCHPAD_BUTTONS):
             buttons2 |= _TOUCHPAD_BIT
-        # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: o botão do microfone, pelo
-        # mesmo arranjo (OU com o `mic_btn` do conjunto, nunca substituição).
         if self._mic_button:
             buttons2 |= _BUTTONS2_BITS["mic_btn"]
         body[_BUTTONS2_OFFSET] = buttons2
         return body
 
     def forward_jack(self, status1: int) -> None:
-        """Espelha o byte 53 do físico (fone / microfone / mudo) no vpad.
-
-        BT-E-VPAD-01, furo 2. O vpad nunca escrevia este byte, e ele nunca
-        acompanhava o controle de verdade: um jogo que decida rotear som para
-        o alto-falante do controle **só quando não há fone plugado** estava
-        lendo um valor fixo.
-
-        Só os três bits documentados passam (`HP_DETECT`, `MIC_DETECT`,
-        `MIC_MUTE`). O resto do byte é do firmware e não é nosso para
-        encaminhar — mandar bits desconhecidos é a mesma classe de erro que
-        autorizar um campo de áudio sem escrever valor.
-
-        Sai cedo quando nada muda, para não sujar o caminho de emissão com
-        report idêntico.
-
-        ---- A CORREÇÃO DE 09/08/2026 (JACK-QUE-NAO-LIGOU-01) ----
-
-        Este método nasceu em 02/08 (`5801de9`) com DOIS defeitos, e a sprint
-        `2026-08-03-ENTREGA-QUE-NAO-LIGOU-01` já tinha nomeado os dois: *"não
-        tem chamador, e não emitiria se tivesse"*. Seis dias depois continuava
-        com zero referências em `src/`.
-
-        1. **Não emitia.** Ele escrevia `_status1_byte` e parava ali. O irmão
-           `forward_touchpad_click` chama `_emit_if_changed`; este não. Um
-           campo que só muda o cache espera o próximo report de OUTRA coisa
-           para viajar — e com o controle parado na mesa (BT em repouso, sem
-           janela de motion nova) esse próximo report pode nunca vir. Plugar o
-           fone e o jogo não saber é exatamente o sintoma.
-        2. **Não tinha chamador.** O chamador é o `PhysicalReportReader`, o
-           mesmo do motion e do clique: o byte 53 mora no report CRU, fora da
-           janela 15..39, e chega de graça no mesmo `read`.
-
-        `from_reader=True` pela mesma razão do clique: com `_motion_streaming`
-        ligado, o gate de `_emit_if_changed` só deixa emitir quem vem do
-        reader — e é o reader que chama. Sob `_lock` porque `_status1_byte`
-        entra no `_encode_body`, que o poll loop também executa.
-
-        Sem guarda de `_fd`, ao contrário do `forward_touchpad_click` e junto
-        com o `forward_battery`: quem já sabe recusar sem device é o
-        `send_report`, e o cache do byte tem de acompanhar o físico mesmo
-        antes de o /dev/uhid existir — é ele que o `_encode_body` lê no
-        primeiro report da vida do vpad. É também o contrato que a
-        BT-E-VPAD-01 já afere sem device nenhum.
-        """
+        """Espelha o byte 53 do físico (fone / microfone / mudo) no vpad."""
         with self._lock:
             novo = int(status1) & _STATUS1_BITS_CONHECIDOS
             if novo == self._status1_byte:
@@ -2130,39 +1224,7 @@ class UhidDualSense:
         charging: bool = False,
         from_reader: bool = False,
     ) -> None:
-        """Espelha a bateria do controle físico no vpad (opcional).
-
-        Sem isto o vpad anuncia 5% descarregando para sempre e o jogo mostra
-        alerta de bateria fraca num controle cheio. `percent=None` volta para
-        "cheio e carregando", que não dispara alerta nenhum.
-
-        ---- A CORREÇÃO DE 09/08/2026 (BATERIA-QUE-NAO-CHEGOU-01) ----
-
-        Este método nasceu em 15/07 (`69951a7`) e passou 25 dias com **zero
-        chamadores em `src/`** — a frase acima descrevia, o tempo todo, o que
-        de fato acontecia com o controle dela. É a mesma família do
-        `forward_jack`, curado horas antes, e tinha os mesmos dois defeitos:
-
-        1. **Não emitia**, e de um jeito mais sorrateiro que o do jack: ele
-           CHAMAVA `_emit_if_changed()`, só que sem `from_reader`. Com
-           `_motion_streaming` ligado — que é o estado normal, porque é o
-           reader quem liga — o gate devolve `False` na primeira linha e nada
-           sai. Fiar o chamador sem esta palavra-chave teria produzido uma
-           cura que passa em revisão e não entrega nada;
-        2. **não tinha chamador.** É o `PhysicalReportReader`, o mesmo do
-           motion, do clique e do jack: o byte 52 mora no report CRU e chega
-           de graça no mesmo `read`.
-
-        `from_reader` é PARÂMETRO, e não `True` fixo, por uma razão medida: o
-        contrato do `set_motion_streaming` promete que os forwards do POLL LOOP
-        viram só-cache enquanto o reader é o relógio, e `forward_battery` é
-        nominalmente um deles (a docstring de lá o cita). Quem vem do reader
-        diz que vem; quem vier do poll loop continua governado pelo gate, e o
-        report do reader carrega o cache junto no tick seguinte.
-
-        Sob `_lock` porque `_status_byte` entra no `_encode_body`, que o poll
-        loop executa noutra thread — a mesma correção que o jack recebeu.
-        """
+        """Espelha a bateria do controle físico no vpad (opcional)."""
         if percent is None:
             novo = _STATUS_DESCONHECIDO
         else:
@@ -2177,40 +1239,17 @@ class UhidDualSense:
 
     @staticmethod
     def _dpad_hat(pressed: frozenset[str]) -> int:
-        """D-pad → HAT (0-7, 8=neutro).
-
-        Em opostos simultâneos (cima+baixo), esquerda e cima vencem — MESMA
-        precedência do `UinputGamepad._dpad_vector`. O controle físico não
-        produz esse estado (o hat de origem já é exclusivo), mas remap/testes
-        produzem, e os dois backends têm de reagir igual à mesma tecla: divergir
-        aqui daria um bug que só aparece depois de trocar de backend.
-        """
+        """D-pad → HAT (0-7, 8=neutro)."""
         x = -1 if "dpad_left" in pressed else (1 if "dpad_right" in pressed else 0)
         y = -1 if "dpad_up" in pressed else (1 if "dpad_down" in pressed else 0)
         return _HAT_BY_VECTOR[(x, y)]
 
     def wait_for_bind(self, timeout_s: float = 2.0) -> bool:
-        """Bloqueia até o `hid_playstation` REGISTRAR o controle, ou estourar.
-
-        `start()` só diz que o CREATE2 foi aceito: o UHID_START chega depois, e
-        vem do probe do driver — que pode recusar (MAC duplicado, kernel sem
-        hid_playstation). Sem esta espera o fallback para o uinput seria
-        desonesto: "deu certo" com o jogo sem controle nenhum.
-
-        O UHID_START **não basta**: ele chega no começo do probe, não no fim.
-        Medido ao vivo com dois vpads de MAC igual — o segundo recebeu
-        ``START, OPEN, GET_REPORT, GET_REPORT, CLOSE, STOP`` em 2 ms enquanto o
-        kernel logava ``Failed to create dualsense / probe failed -17``; parar no
-        START devolvia True para um device natimorto. O probe que dá certo NUNCA
-        manda STOP, então a confirmação é: viu START, e o STOP não veio no
-        intervalo de graça.
-        """
+        """Bloqueia até o `hid_playstation` REGISTRAR o controle, ou estourar."""
         if self._fd is None:
             return False
         deadline = self.time_fn() + timeout_s
         while not self._started:
-            # Bombear aqui é obrigatório: quem consome os eventos é o pump_ff, e
-            # no start() o poll loop do daemon ainda não está de pé.
             self.pump_ff()
             if self._started:
                 break
@@ -2220,11 +1259,10 @@ class UhidDualSense:
                 return False
             self.sleep_fn(_BIND_POLL_INTERVAL_S)
 
-        # START visto: agora confirmar que o probe não desistiu logo em seguida.
         settle_deadline = self.time_fn() + _BIND_SETTLE_S
         while self.time_fn() < settle_deadline:
             self.pump_ff()
-            if not self._started:  # veio UHID_STOP: o probe recusou o device
+            if not self._started:
                 logger.warning("uhid_probe_recusou", player=self.player, mac=self.mac)
                 return False
             self.sleep_fn(_BIND_POLL_INTERVAL_S)
@@ -2240,12 +1278,8 @@ class UhidDualSense:
         if len(report) > HID_MAX_DESCRIPTOR_SIZE:
             logger.warning("uhid_input_grande_demais", tamanho=len(report))
             return False
-        # Sem padding até 4 KB: o uhid_char_write copia só min(count, sizeof(event))
         # e zera o resto, então mandar o report cru poupa ~4 KB de copy_from_user
-        # por evento — a 250 Hz x 4 controles isso era ~4 MB/s de cópia à toa.
         event = struct.pack("<IH", UHID_INPUT2, len(report)) + report
-        # O lock cobre write+close juntos: sem ele o stop() podia fechar o fd entre
-        # o teste e o write, e a escrita cairia num fd já reciclado.
         with self._lock:
             fd = self._fd
             if fd is None:
@@ -2257,35 +1291,15 @@ class UhidDualSense:
                 logger.warning("uhid_input_failed", err=str(exc), player=self.player)
                 return False
 
-    # --- output (kernel/jogo → nós) --------------------------------------
 
     def pump_ff(self) -> None:
-        """Drena os eventos do uhid; entrega o rumble do jogo ao `rumble_sink`.
-
-        Mesmo contrato do `UinputGamepad.pump_ff`: chamado a cada tick do poll
-        loop, nunca bloqueia, e responde os GET/SET_REPORT do probe (sem isso o
-        `hid_playstation` não registra o controle).
-
-        A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 (28/09/2026): com o fio do
-        uhid de pé, quem LÊ o fd é ele, na hora (`_atender_o_uhid`); o tique só
-        entrega ao controle físico o que o fio atendeu, com o rate-limit e o
-        dedup de sempre. Sem o fio (os dublês, ou o fio que caiu), o tique
-        drena como antes.
-        """
-        # Lê o fd UMA vez: `stop()` concorrente (o poll loop bombeia enquanto a GUI
-        # troca de modo) zerava self._fd no meio do laço e o os.read(None) levantava
-        # TypeError — que, ao contrário do OSError, ninguém pegava.
+        """Drena os eventos do uhid; entrega o rumble do jogo ao `rumble_sink`."""
         fd = self._fd
         if fd is None:
             return
         with self._a_trava_da_saida():
             self._entregar_o_pendente()
-            # REPLICA-03: entrega o que o rate-limit reteve no tick anterior —
-            # o pump roda a cada tick do poll loop, então a latência é ~1 tick.
             self._flush_replicas()
-            # RUMBLE-PRESO-01: antes de drenar, cobra o teto de silêncio do
-            # rumble que já está em vigor. Vem aqui (e não no fim) para que um
-            # motor preso pare mesmo num tique em que o jogo não mandou evento.
             self._expirar_rumble_preso()
             fio = self._fio_do_uhid
             if fio is not None and fio.is_alive():
@@ -2296,7 +1310,6 @@ class UhidDualSense:
                 except BlockingIOError:
                     return
                 except OSError as exc:
-                    # EBADF esperado quando o stop() fechou o fd entre o topo e aqui.
                     if exc.errno != errno.EBADF:
                         logger.warning("uhid_read_failed", err=str(exc), player=self.player)
                     return
@@ -2308,28 +1321,17 @@ class UhidDualSense:
         event_type = struct.unpack("<I", data[:4])[0]
         if event_type == UHID_START:
             self._started = True
-            # REPLICA-03: âncora da graça anti-ruído-de-probe (o probe do
-            # hid_playstation emite outputs PRÓPRIOS logo após o START).
             self._bound_at = self.time_fn()
-            # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: driver novo,
-            # `last_btn_mic_state` e `mic_muted` de novo `false`: o dedo que
-            # segue apertado é borda para ele no próximo report que sair.
             with self._lock:
                 self._mic_bit_que_saiu = False
                 self._as_janelas_do_eco().clear()
             logger.info("uhid_bind_ok", player=self.player, name=self.name)
         elif event_type == UHID_OPEN:
-            # Primeiro usuário abriu o device — começa a sessão de jogo
-            # (política de posse do REPLICA-03: o jogo vence até o CLOSE).
             self._game_open = True
         elif event_type in (UHID_STOP, UHID_CLOSE):
-            # O driver largou o device (rmmod, jogo fechou o hidraw, unbind). Se o
-            # jogo deixou motor ligado, ninguém mais mandaria o stop — o controle
-            # físico ficaria vibrando até alguém desligar o Hefesto.
             self._started = self._started and event_type == UHID_CLOSE
             self._game_open = False
             self._silence_rumble()
-            # REPLICA-03: fim da sessão devolve perfil/paleta/co-op ao físico.
             self._end_game_session()
         elif event_type == UHID_OUTPUT:
             self._handle_output(data)
@@ -2339,51 +1341,21 @@ class UhidDualSense:
             self._reply_set_report(data)
 
     def _handle_output(self, data: bytes) -> None:
-        """UHID_OUTPUT = o jogo escreveu no hidraw do vpad (rumble/LED/gatilhos).
-
-        struct uhid_output_req { __u8 data[4096]; __u16 size; __u8 rtype; }
-
-        REPLICA-03: além do rumble (histórico), o report 0x02 do jogo carrega
-        gatilhos adaptativos, lightbar e player-LEDs — cada categoria presente
-        (pelos bits de valid_flag0/1) é replicada ao controle físico deste
-        jogador via os sinks, com dedup por valor e rate-limit.
-        """
+        """UHID_OUTPUT = o jogo escreveu no hidraw do vpad (rumble/LED/gatilhos)."""
         payload_size = struct.unpack("<H", data[4 + HID_MAX_DESCRIPTOR_SIZE:
                                                 6 + HID_MAX_DESCRIPTOR_SIZE])[0]
         report = data[4:4 + min(payload_size, HID_MAX_DESCRIPTOR_SIZE)]
         if len(report) < 2 or report[0] != _OUTPUT_REPORT_USB:
-            # QUEM ESCREVEU-01: descartar é certo (só o 0x02 tem o layout que
-            # lemos), descartar EM SILÊNCIO era o buraco: sem contador, um
-            # escritor usando outro envelope produzia o MESMO painel zerado que
-            # "nenhum jogo enxergou o vpad" — e as duas conclusões mandam caçar
-            # em lugares opostos. O report vazio (len < 2) não conta: ele não
-            # tem id para reportar e não é escrita de ninguém.
             if len(report) >= 1:
                 self._output_id_estranho_count += 1
                 self._output_id_estranho_amostra = (report[0], len(report))
             return
-        # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: o 0x02 que o driver
-        # deste pad manda depois de uma borda do botão que NÓS emitimos não é
-        # escrita de ninguém; o puro nem conta como output.
         eco = self._e_eco_do_driver(report[1:])
         if eco and _e_eco_puro(report[1:]):
             return
         self._output_count += 1
-        # O carimbo do OUTPUT é o mais bruto e o mais valioso dos seis: ele diz
-        # que ALGUÉM está escrevendo no hidraw deste vpad agora — ou seja, que
-        # o jogo enxergou o gamepad virtual. Ele acontece mesmo quando nenhuma
-        # categoria é replicada (sink ausente, dedup, rate-limit), e é por isso
-        # que a tela pode distinguir "o jogo não viu o controle" de "o jogo viu
-        # e não pediu nada".
         self._carimbar(ATIVIDADE_OUTPUT)
         body = report[1:]
-        # PARIDADE-SONY-01/E1: o portão de medição, sem log temporário.
-        #
-        # O carimbo só sai quando o jogo liga um dos quatro bits de áudio E
-        # manda byte não-nulo. A distinção é a armadilha 10 da sprint: bits
-        # ligados com bytes zerados é KEEPALIVE, não intenção — replicar isso
-        # mandaria "volume zero" ao controle dela a 60 Hz, que é a mesma
-        # classe de defeito que o AUDIO-OWNER-01 curou noutro lugar.
         if (
             len(body) > rep.COMMON_AUDIO_PATH
             and body[_VALID_FLAG0_OFFSET] & _AUDIO_FLAGS_DO_JOGO
@@ -2391,9 +1363,6 @@ class UhidDualSense:
             and self._replicating()
         ):
             self._carimbar(ATIVIDADE_AUDIO_DO_JOGO)
-            # E o que a E2 exige saber ANTES de replicar: quais dos quatro
-            # bytes, com que valores. O carimbo diz que houve pedido; sem
-            # isto, a E2 escolheria o que replicar no escuro.
             self._audio_do_jogo_amostra = (
                 body[_VALID_FLAG0_OFFSET] & _AUDIO_FLAGS_DO_JOGO,
                 body[rep.COMMON_HEADPHONE_VOLUME],
@@ -2408,16 +1377,8 @@ class UhidDualSense:
         if len(body) <= _RUMBLE_STRONG_OFFSET:
             return
         if _e_a_parada_do_sdl(body):
-            # BT-E-VPAD-01, furo 6: a PARADA do SDL chega com todos os flags
-            # zerados e os motores em 0 — e o gate abaixo a descartava. Este
-            # ramo a deixa passar, e só ela: um report com flag de gatilho ou
-            # de luz não entra aqui, porque esses TÊM flags ligados.
             self._carimbar(ATIVIDADE_RUMBLE)
             self._rumble_visto_em = None
-            # QUEM ESCREVEU-01: a parada volta daqui ANTES do `_rumble_count`,
-            # e isso está certo (ela não é pedido). Mas sem contá-la, "o jogo
-            # vibrou e mandou parar" e "ninguém nunca pediu nada" ficavam com
-            # o mesmo painel — e uma parada é PROVA de vibração viva.
             self._rumble_parada_sdl_count += 1
             self._anotar_no_anel(body, 0, 0, RAMO_PARADA_SDL)
             if self._last_sent != (0, 0):
@@ -2428,19 +1389,6 @@ class UhidDualSense:
         weak = body[_RUMBLE_WEAK_OFFSET]
         strong = body[_RUMBLE_STRONG_OFFSET]
         if not _fala_de_vibracao(body):
-            # RUMBLE-PRESO-01: este report NÃO fala de vibração (é lightbar,
-            # gatilho ou mic) e os bytes 2-3 dele vêm zerados — encaminhá-los
-            # mataria a vibração em curso, que é o defeito que o gate cura.
-            # Mas o silêncio precisa ser CRONOMETRADO: enquanto o jogo segue
-            # falando de outras coisas com um rumble não-nulo pendurado, é o
-            # `_expirar_rumble_preso` (chamado do pump) que decide.
-            #
-            # RUMBLE-QUE-NAO-SE-SENTE-01: descartar é certo, descartar EM
-            # SILÊNCIO não é. Um report sem bit de vibração e com motor
-            # não-nulo é ou uma codificação que não conhecemos, ou lixo — e
-            # sem contá-lo a tela afirmaria "o jogo não pediu" sem ter como
-            # saber. Só o caso não-nulo entra: report de gatilho/luz traz os
-            # motores zerados e inflaria o contador a 60 Hz.
             if weak or strong:
                 self._rumble_descartado_count += 1
                 self._rumble_descartado_amostra = (
@@ -2465,20 +1413,11 @@ class UhidDualSense:
         self._anotar_no_anel(body, weak, strong, RAMO_V2 if e_v2 else RAMO_V1)
         if weak or strong:
             self._rumble_nao_nulo_count += 1
-            # MASCARA-XBOX-MUDA-01: por INTENSIDADE, nunca pela ordem de tupla
-            # do Python — `(1, 0) > (0, 255)` é True e apagaria a prova de que
-            # o jogo pediu uma vibração máxima. Ver `core.rumble.pedido_mais_forte`.
             self._rumble_maior_pedido = pedido_mais_forte(
                 self._rumble_maior_pedido, (weak, strong)
             )
-        # O carimbo vem ANTES do dedup: um jogo que reafirma o MESMO valor está
-        # dizendo "ainda quero vibrar", e isso tem de adiar o teto de silêncio
         # mesmo sem haver o que reenviar ao hardware.
         self._rumble_visto_em = self.time_fn() if (weak or strong) else None
-        # A vibração carimba inclusive na PARADA (weak == strong == 0): o jogo
-        # mandar "pare de vibrar" é prova de que a vibração está chegando nele.
-        # O `_rumble_visto_em` acima é outra coisa e não serve aqui — ele é o
-        # relógio do teto de silêncio e vira `None` justamente na parada.
         self._carimbar(ATIVIDADE_RUMBLE)
         if (weak, strong) == self._last_sent:
             return
@@ -2488,17 +1427,7 @@ class UhidDualSense:
     def _anotar_no_anel(
         self, body: bytes, weak: int, strong: int, ramo: str
     ) -> None:
-        """Guarda os BYTES do report de vibração no anel (QUEM ESCREVEU-01).
-
-        Chamado nos QUATRO ramos que decidem o destino de um report que fala
-        (ou parece falar) de vibração — v1, v2, parada do SDL e descarte —,
-        porque a pergunta que o anel responde é justamente *qual* deles o
-        report tomou, e um ramo de fora dele viraria o próximo ponto cego.
-
-        Barato de propósito: uma tupla de inteiros, teto de
-        :data:`_ANEL_DE_VIBRACAO_MAX`, sem formatação e sem log. Isto roda na
-        thread do poll loop, dentro do dreno do uhid.
-        """
+        """Guarda os BYTES do report de vibração no anel (QUEM ESCREVEU-01)."""
         flag2 = (
             body[rep.COMMON_VALID_FLAG2] if len(body) > rep.COMMON_VALID_FLAG2 else 0
         )
@@ -2517,19 +1446,7 @@ class UhidDualSense:
             del self._rumble_anel[:-_ANEL_DE_VIBRACAO_MAX]
 
     def _expirar_rumble_preso(self) -> None:
-        """Zera um rumble do jogo que ficou pendurado além do teto de silêncio.
-
-        RUMBLE-PRESO-01. Chamado a cada tique do pump. Só age quando há um
-        rumble NÃO-NULO em vigor e o último report que falou de vibração é mais
-        velho que :data:`_RUMBLE_STALE_SEC` — o caso medido em 25/07 em que o
-        pedido de parada do jogo se perde num report sem os bits de vibração e o
-        motor gira indefinidamente, porque o report_thread do backend reafirma o
-        rumble em vigor a cada report que monta.
-
-        Deliberadamente NÃO mexe em `_rumble_visto_em` além de limpá-lo: se o
-        jogo voltar a pedir vibração depois da expiração, o caminho normal
-        (`_handle_output`) reabre a janela e o motor volta a girar.
-        """
+        """Zera um rumble do jogo que ficou pendurado além do teto de silêncio."""
         if self._last_sent == (0, 0) or self._rumble_visto_em is None:
             return
         silencio = self.time_fn() - self._rumble_visto_em
@@ -2540,11 +1457,6 @@ class UhidDualSense:
             player=self.player,
             ultimo=self._last_sent,
             teto_s=_RUMBLE_STALE_SEC,
-            # O silêncio MEDIDO é o dado que falta para decidir o teto por
-            # evidência em vez de prudência: se ele se concentrar logo acima do
-            # teto, o stop está chegando atrasado e o número pode cair mais; se
-            # for sempre muito maior, o stop não chega nunca e o teto só decide
-            # quão cedo a rede age.
             silencio_s=round(silencio, 2),
         )
         self._rumble_visto_em = None
@@ -2553,8 +1465,6 @@ class UhidDualSense:
 
     def _emit_rumble(self, weak: int, strong: int) -> None:
         if self._no_fio_do_uhid():
-            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o fio atende e anota
-            # o último par; quem fala com o controle físico é o tique.
             self._rumble_a_entregar = (weak, strong)
             return
         if self.rumble_sink is None:
@@ -2564,16 +1474,9 @@ class UhidDualSense:
         except Exception as exc:
             logger.warning("uhid_rumble_sink_failed", err=str(exc), player=self.player)
 
-    # --- REPLICA-03: gatilhos/lightbar/player-LED do jogo → físico ---------
 
     def _replicating(self) -> bool:
-        """True quando a replicação está armada: sessão aberta + graça vencida.
-
-        A graça (`_GAME_REPLICA_GRACE_S` após o UHID_START) filtra os outputs
-        que o PRÓPRIO probe do hid_playstation emite no nascimento do vpad —
-        entre eles um player-LED com a numeração DO KERNEL (que conta os
-        físicos junto): replicá-lo renumeraria o controle errado a cada boot.
-        """
+        """True quando a replicação está armada: sessão aberta + graça vencida."""
         if not self._game_open:
             return False
         bound_at = self._bound_at
@@ -2612,7 +1515,6 @@ class UhidDualSense:
                 ),
             )
         if not self._no_fio_do_uhid():
-            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: no fio, o tique entrega.
             self._flush_replicas()
 
     def _queue_replica(self, categoria: str, valor: Any) -> None:
@@ -2631,12 +1533,11 @@ class UhidDualSense:
         for categoria in list(self._replica_pending):
             valor = self._replica_pending[categoria]
             if valor == self._replica_last.get(categoria):
-                # O jogo voltou ao valor já entregue antes do flush: nada a fazer.
                 del self._replica_pending[categoria]
                 continue
             ts = self._replica_ts.get(categoria)
             if ts is not None and (now - ts) < _REPLICA_MIN_INTERVAL_S:
-                continue  # retido; sai no próximo pump
+                continue
             del self._replica_pending[categoria]
             primeira = categoria not in self._replica_ts
             self._replica_ts[categoria] = now
@@ -2646,15 +1547,9 @@ class UhidDualSense:
     def _forward_replica(self, categoria: str, valor: Any, *, primeira: bool) -> None:
         """Entrega UMA réplica ao sink da categoria (contadores + telemetria)."""
         if primeira:
-            # 1x por categoria por sessão: prova no journal que o output do
-            # jogo está chegando ao físico, sem flood a cada report.
             logger.info(
                 "uhid_replica_ativa", categoria=categoria, player=self.player
             )
-        # O carimbo vem DEPOIS do sink responder, dentro de cada ramo, e não
-        # aqui em cima: uma categoria sem sink não foi replicada a lugar
-        # nenhum, e carimbá-la faria a tela dizer "chegando" para um caminho
-        # que termina em `return`.
         try:
             if categoria == "trigger_right":
                 if self.trigger_sink is None:
@@ -2695,19 +1590,10 @@ class UhidDualSense:
             )
 
     def _end_game_session(self) -> None:
-        """Fim da sessão (CLOSE/STOP/stop): devolve a posse do output ao perfil.
-
-        O estado de dedup/rate-limit zera SEMPRE (sessão nova recomeça limpa:
-        o primeiro valor do próximo jogo é entregue mesmo que repita o da
-        sessão anterior). O `session_end_sink` só dispara se ALGO foi
-        replicado — sem isso, todo teardown de vpad reescreveria perfil e
-        paleta em controles que o jogo nunca tocou.
-        """
+        """Fim da sessão (CLOSE/STOP/stop): devolve a posse do output ao perfil."""
         self._replica_pending.clear()
         self._replica_last.clear()
         self._replica_ts.clear()
-        # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: ANTES do portão do
-        # `_game_dirty`, que a entrega do microfone não liga.
         self._soltar_a_luz_do_microfone()
         if not self._game_dirty:
             return
@@ -2716,8 +1602,6 @@ class UhidDualSense:
         if self.session_end_sink is None:
             return
         if self._no_fio_do_uhid():
-            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o perfil volta ao
-            # físico no tique, antes das réplicas da sessão seguinte.
             self._fim_de_sessao_a_entregar = True
             return
         try:
@@ -2748,21 +1632,9 @@ class UhidDualSense:
             os.write(self._fd,
                      struct.pack("<IIH", UHID_SET_REPORT_REPLY, request_id, 0))
 
-    # -- o MAC vestido: O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 (24/09/2026) ---------
-    #
-    # O `start` e o `stop` moram no FIM da classe pela razão de sempre: os
-    # documentos e o mapa de canais citam este arquivo por número de linha. Os
-    # corpos de antes ficaram onde estavam, com nome novo (`_criar_o_device` e
-    # `_destruir_o_device`); o que estes dois acrescentam é o MAC.
 
     def start(self) -> bool:
-        """Cria o device HID vestindo um MAC que nenhum outro vpad vivo veste.
-
-        False = indisponível (o chamador cai no uinput). O MAC é vestido ANTES
-        do 0x09 e do `UHID_CREATE2`, que o carimbam, e fica com este vpad até o
-        :meth:`stop`. Um `start` que falha o devolve na hora: vpad que não
-        nasceu não segura MAC nenhum.
-        """
+        """Cria o device HID vestindo um MAC que nenhum outro vpad vivo veste."""
         if self._fd is not None:
             return True
         self._as_janelas_do_eco().clear()
@@ -2774,45 +1646,13 @@ class UhidDualSense:
         return False
 
     def stop(self) -> None:
-        """Destrói o device e só DEPOIS devolve o MAC.
-
-        A ordem é a do kernel: o `ps_remove` tira o MAC da lista do
-        `hid_playstation` no `UHID_DESTROY`. Devolver antes deixaria um vpad
-        novo vestir o MAC que o driver ainda guarda para este.
-        """
+        """Destrói o device e só DEPOIS devolve o MAC."""
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
 
-    # -- o fio do uhid: A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 (28/09/2026) --
-    #
-    # O DEFEITO, medido em 27/09: `Output queue is full` 47.020 vezes numa hora
-    # com o PRAGMATA aberto. É a fila de 32 eventos do `uhid.c` de cada virtual;
-    # o que não cabe, o kernel descarta (vibração, gatilho e luz que o jogo
-    # pediu). Quem lia o fd era só o `pump_ff`, no tique do repasse da entrada:
-    # um tique atrasado, ou um virtual cujo físico não está sendo lido (o
-    # `dispatch_gamepad` só roda com o primário conectado), e a fila enchia. O
-    # `cosmic-osk` de toda sessão do COSMIC manda um efeito a cada 50 ms a cada
-    # virtual; um jogo com gatilho adaptativo manda muito mais.
-    #
-    # A CURA, na origem e irmã da do pad `uinput`
-    # (O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01): um fio por virtual
-    # lê o fd por prontidão e atende cada evento na hora (o bind, o pedido de
-    # feature, que deixa o jogo parado até a resposta, e a saída). O que vai ao
-    # controle FÍSICO continua no tique, com o rate-limit e o dedup da
-    # REPLICA-03: os sinks seguem numa thread só, a do laço.
-    #
-    # No fim da classe pela razão do `start` e do `stop` acima.
 
     def _a_trava_da_saida(self) -> threading.RLock:
-        """A trava da saída, garantida pelo dono: nasce no `__init__` e, se não nasceu, aqui.
-
-        As bancadas da suíte que montam o virtual sem o `__init__` do
-        dataclass (para usar um pipe como fd) listam à mão o estado de que
-        precisam, e campo novo quebraria todas elas com um `AttributeError`
-        que não aponta a causa (memória `duble-por-new-fica-mais-pobre-que-o-
-        produto`). O `setdefault` é atômico sob o GIL: dois chamadores nunca
-        ficam com travas diferentes.
-        """
+        """A trava da saída, garantida pelo dono: nasce no `__init__` e, se não nasceu, aqui."""
         trava: threading.RLock | None = self.__dict__.get("_trava_da_saida")
         if trava is None:
             trava = self.__dict__.setdefault("_trava_da_saida", threading.RLock())
@@ -2825,11 +1665,7 @@ class UhidDualSense:
         return fio is not None and threading.current_thread() is fio
 
     def _iniciar_o_fio_do_uhid(self, fd: int) -> None:
-        """Sobe o fio que atende o fd do uhid por prontidão (só com fd de verdade).
-
-        Os dublês da suíte entregam um inteiro que não é descritor aberto
-        (`os.fstat` recusa): ali o tique drena, como sempre drenou.
-        """
+        """Sobe o fio que atende o fd do uhid por prontidão (só com fd de verdade)."""
         try:
             os.fstat(fd)
         except (OSError, TypeError, ValueError):
@@ -2837,8 +1673,6 @@ class UhidDualSense:
         try:
             leitura, escrita = os.pipe()
         except OSError as exc:
-            # Sem descritor livre para o despertador: o virtual nasce assim
-            # mesmo, e o tique drena como antes.
             logger.warning("uhid_fio_sem_despertador", err=str(exc), player=self.player)
             return
         os.set_blocking(leitura, False)
@@ -2852,16 +1686,10 @@ class UhidDualSense:
             name=f"hefesto-uhid-p{self.player}",
             daemon=True,
         )
-        # Antes do `start()`: o primeiro evento já chega com o fio no ar, e
-        # `_no_fio_do_uhid` tem de reconhecê-lo desde ele.
         self._fio_do_uhid = fio
         try:
             fio.start()
         except RuntimeError as exc:
-            # O processo no teto de fios: o virtual nasce assim mesmo e o
-            # tique drena. Sem isto o `start()` levantava com o device já
-            # criado no kernel, e ninguém o destruiria: um controle a mais
-            # que o jogo vê e ninguém alimenta.
             logger.warning("uhid_fio_nao_nasceu", err=str(exc), player=self.player)
             self._fio_do_uhid = None
             self.__dict__.pop("_despertador", None)
@@ -2870,17 +1698,12 @@ class UhidDualSense:
                     os.close(ponta)
 
     def _atender_o_uhid(self, fd: int, despertador: int, pare: threading.Event) -> None:
-        """O laço do fio: acorda quando o fd tem evento e o atende na hora.
-
-        Drena até a fila do kernel esvaziar, um evento por `read`, cada um sob
-        a trava da saída (o tique entrega sob a mesma). O despertador é o pipe
-        que o `stop()` escreve: o fio sai na hora, sem esperar prazo.
-        """
+        """O laço do fio: acorda quando o fd tem evento e o atende na hora."""
         while not pare.is_set():
             try:
                 prontos = prontos_para_ler([fd, despertador], _UHID_FIO_ACORDA_S)
             except (OSError, ValueError):
-                return  # fd fechado: o tique volta a drenar
+                return
             if pare.is_set():
                 return
             if fd not in prontos:
@@ -2895,23 +1718,16 @@ class UhidDualSense:
                         logger.warning("uhid_read_failed", err=str(exc), player=self.player)
                     return
                 if len(data) < 4:
-                    return  # fim de linha: o fd morreu, e o tique retoma
+                    return
                 with self._a_trava_da_saida():
                     try:
                         self._handle_event(data)
-                    except Exception as exc:  # o fio não cai por um evento
+                    except Exception as exc:
                         logger.warning("uhid_evento_falhou", err=str(exc),
                                        player=self.player)
 
     def _parar_o_fio_do_uhid(self) -> None:
-        """Acorda o fio, espera ele sair e fecha o despertador. Idempotente.
-
-        O despertador é de quem o tira primeiro (`dict.pop`, atômico sob o
-        GIL). Dois `stop()` ao mesmo tempo (a interface troca o modo enquanto o
-        laço derruba o vpad) liam o mesmo par antes do `join` e fechavam as
-        duas pontas duas vezes; o segundo `close` caía num descritor que outra
-        thread já tinha reaproveitado. Quem chega depois só espera o fio sair.
-        """
+        """Acorda o fio, espera ele sair e fecha o despertador. Idempotente."""
         fio = self._fio_do_uhid
         if fio is None:
             return
@@ -2933,12 +1749,7 @@ class UhidDualSense:
                     os.close(ponta)
 
     def _entregar_o_pendente(self) -> None:
-        """Entrega ao controle físico o que o fio atendeu: o fim da sessão e a vibração.
-
-        Chamado pelo tique (`pump_ff`) e pelo `stop()`, sob a trava da saída.
-        O fim da sessão vem antes: as réplicas pendentes já são da sessão
-        seguinte (o CLOSE as limpou no fio).
-        """
+        """Entrega ao controle físico o que o fio atendeu: o fim da sessão e a vibração."""
         if self._fim_de_sessao_a_entregar:
             self._fim_de_sessao_a_entregar = False
             if self.session_end_sink is not None:
@@ -2956,24 +1767,7 @@ class UhidDualSense:
             self._rumble_a_entregar = None
             self._emit_rumble(*par)
 
-    # -- o microfone obedece ao jogo: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01
-    #
-    # A luz (`common[8]`) e o mudo (`common[9]` 0x10) que o jogo pede ao pad
-    # virtual vão ao controle DESTE jogador, pelos donos de sempre (o
-    # `luz_do_mic` e o `hotkey`), com o dedup e o teto de 250 Hz da REPLICA-03.
-    #
-    # O ECO DO DRIVER. Desde a O-BOTAO o aperto do botão chega ao pad, e o
     # `hid-playstation` que o adotou faz o que faria num DualSense: na borda de
-    # subida inverte o próprio `mic_muted` e manda UM 0x02 com o 0x01 e o 0x02
-    # do `valid_flag1`, a luz em 0 ou 1 e o 0x10 concordando
-    # (`hid-playstation.c:1559-1577`, `:1686-1691`). É um toggle cego, na fase
-    # do driver: obedecê-lo inverteria o microfone dela a cada aperto. O que o
-    # separa do jogo não é o bit (um jogo na língua da Sony manda o 0x03
-    # inteiro), é a CAUSA: o driver só escreve depois de uma borda que este pad
-    # emitiu, e o pad sabe cada uma. A janela se abre onde o report SAI
-    # (`_emit_if_changed`), e o eco, que o driver agenda antes de o evento
-    # chegar ao evdev, consome a janela daquele aperto antes da resposta do
-    # jogo, que chega depois e conta como jogo.
 
     @property
     def mic_mudo_do_jogo(self) -> int:
@@ -3008,18 +1802,7 @@ class UhidDualSense:
         self._mic_bit_que_saiu = bit
 
     def _e_eco_do_driver(self, body: bytes) -> bool:
-        """O report tem a assinatura do eco e há uma janela aberta? Consome UMA.
-
-        Só o lado da saída chama: vence as janelas velhas (`ECO_DO_DRIVER_S`)
-        e consome a mais velha, uma por aperto. A resposta do jogo que vem
-        depois do eco, com a mesma assinatura, acha a janela consumida.
-
-        SOB O `_lock` DO EMISSOR: o kernel agenda o eco dentro do `write` do
-        report que trouxe a borda, e o `kworker` pode entregá-lo ao fio do uhid
-        antes de o `write` voltar e a janela ser anexada. O emissor segura o
-        `_lock` do `write` até a janela, então esperar por ele aqui é esperar
-        a janela. A ordem é a de sempre (a saída, e depois o `_lock`).
-        """
+        """O report tem a assinatura do eco e há uma janela aberta? Consome UMA."""
         if not _tem_a_assinatura_do_eco(body):
             return False
         with self._lock:
@@ -3048,10 +1831,7 @@ class UhidDualSense:
         return janelas
 
     def _o_jogo_pede_o_microfone(self, body: bytes) -> None:
-        """Fora do eco, a luz e o mudo do report vão à fila das réplicas.
-
-        Depois da carência, como as outras categorias; no fio, o tique entrega.
-        """
+        """Fora do eco, a luz e o mudo do report vão à fila das réplicas."""
         if not self._replicating():
             return
         self._pedido_do_microfone(body[_VALID_FLAG1_OFFSET], body)
@@ -3059,12 +1839,7 @@ class UhidDualSense:
             self._flush_replicas()
 
     def _pedido_do_microfone(self, flag1: int, body: bytes) -> None:
-        """Enfileira a luz e o mudo que o jogo pediu, com o dedup de sempre.
-
-        O dedup por valor fica de pé depois do aperto dela: um jogo que
-        reafirma o mesmo valor a cada quadro não desfaz o que ela pediu, e só
-        volta a mandar quando MUDA o pedido.
-        """
+        """Enfileira a luz e o mudo que o jogo pediu, com o dedup de sempre."""
         if flag1 & rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE and len(body) > _MIC_LED_OFFSET:
             luz = int(body[_MIC_LED_OFFSET])
             self._mic_led_do_jogo_amostra = luz
@@ -3075,15 +1850,7 @@ class UhidDualSense:
             self._queue_replica(_REPLICA_MIC_MUDO, mudo)
 
     def _entregar_o_microfone(self, categoria: str, valor: Any) -> None:
-        """Entrega UM pedido do microfone ao ralo do jogador e conta o desfecho.
-
-        O retido (sem jogo) esquece o último entregue daquela categoria: o
-        mesmo pedido, reafirmado quando houver jogo, tenta de novo. O
-        descartado (`None`: o jogador sem endereço de controle, ou o primário
-        que sumiu no meio) também tenta de novo, e não conta como retido: o
-        `mic_do_jogo_retido` é a pergunta «quem escreve sem jogo?», e um
-        jogador sem MAC não a responde.
-        """
+        """Entrega UM pedido do microfone ao ralo do jogador e conta o desfecho."""
         luz = categoria == _REPLICA_MIC_LED
         ralo = self.mic_led_sink if luz else self.mic_mute_sink
         if ralo is None:
@@ -3106,7 +1873,6 @@ class UhidDualSense:
             return
         self._mic_luz_entregue = False
         if self._no_fio_do_uhid():
-            # No fio, a entrega é do tique, como o fim da sessão.
             self._mic_solta_a_entregar = True
             return
         self._dizer_que_o_jogo_soltou_a_luz()
@@ -3132,45 +1898,14 @@ class UhidDualSense:
         self._as_janelas_do_eco().clear()
         self._mic_bit_que_saiu = False
 
-    #: O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01 (02/10/2026): os nomes que entraram
-    #: no `forward_buttons` e ainda não saíram num report — `_encode_body` usa
-    #: `_buttons | _pendentes`, e o envio que deu certo esvazia. Campo de
-    #: padrão imutável no fim da classe, para nenhuma linha acima andar e o
-    #: pad montado por `__new__` nascer sem pendência.
     _pendentes: frozenset[str] = frozenset()
 
 
-# ---------------------------------------------------------------------------
-# O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 (24/09/2026) — dois vpads vivos nunca vestem
-# o mesmo MAC. No fim do módulo pela mesma razão do `start` e do `stop` acima.
-# ---------------------------------------------------------------------------
-
-#: Quantos MACs o dono tenta por aparelho antes de desistir. Na mesa de quatro
-#: o segundo basta (o posto e o secundário do MESMO controle); o teto existe
-#: para o laço terminar, e não por uma mesa que o precise.
 _MACS_POR_APARELHO = 64
 
 
 def vpad_macs_do_aparelho(identity: str | None, player: int) -> Iterator[str]:
-    """Os MACs que o vpad deste aparelho pode vestir, na ordem em que o dono os tenta.
-
-    O primeiro é sempre o de :func:`vpad_mac` — o do aparelho (E3), o de
-    sempre, o que o jogo e o Steam Input reconhecem de uma reconexão para a
-    outra. Os seguintes só são vestidos
-    quando um vpad VIVO já veste o anterior, e saem do mesmo lugar que o
-    primeiro:
-
-    - com identidade de aparelho, do MESMO aparelho: quatro octetos de
-      `blake2b` de ``<dígitos>/<n>`` com o bit :data:`_VPAD_MAC_BIT_DERIVADO`
-      — o espaço derivado, disjunto do piso por construção;
-    - sem ela (``dev:``, ``path:``, None), do número: ``02:fe:00:00:<n>:<N>``,
-      fora do piso ``02:fe:00:00:00:0N`` (o quinto octeto nunca é zero) e fora
-      do derivado (o terceiro é zero).
-
-    Todos seguem no prefixo :data:`VPAD_MAC_PREFIXO`: os espelhos que
-    reconhecem um vpad pelo prefixo e a regra 76 do udev
-    (``ATTRS{uniq}=="02:fe:*"``) continuam vendo cada um deles.
-    """
+    """Os MACs que o vpad deste aparelho pode vestir, na ordem em que o dono os tenta."""
     import hashlib
 
     yield vpad_mac(identity, player)
@@ -3187,43 +1922,10 @@ def vpad_macs_do_aparelho(identity: str | None, player: int) -> Iterator[str]:
 
 
 class _MacsDosVpadsVivos:
-    """Quem veste cada MAC agora — o espelho, deste lado, da lista do `hid_playstation`.
-
-    **O DEFEITO (medido em 24/09/2026).** O vpad do posto nasce com a
-    identidade do primário DE QUANDO NASCEU (troca de máscara, de caminho, o
-    `_reerguer_o_p1` do co-op), e o primário muda embaixo dele sem ele
-    renascer: com o jogo aberto, a R-04 não deixa. O primário que sai e volta
-    depois do prazo ganha um vpad secundário que pede o MESMO :func:`vpad_mac`,
-    e o `ps_devices_list_add` do driver o recusa com `-EEXIST`. Na bancada
-    honesta (a classe real contra um kernel que recusa), o P1 voltava num vpad
-    `uinput` degradado (`uhid_bind_falhou`): boneco sem vibração, giroscópio,
-    gatilho e luz. Não só o P1: qualquer um que fosse o primário quando o
-    posto nasceu (medido com o P2 e o P3 também), e dois vpads sem identidade
-    de aparelho que peçam o mesmo número (o piso :func:`player_mac`).
-
-    **A CURA MORA NO DONO DO MAC.** A máscara (o que o jogo vê do aparelho) e
-    o MAC (o que o kernel usa para não duplicar) são perguntas diferentes, e só
-    este objeto vê todos os vpads vivos de uma vez. Cada vpad veste, no
-    `start`, o primeiro de :func:`vpad_macs_do_aparelho` que nenhum outro vivo
-    veste, e o devolve no `stop`. Sem colisão — o caso de sempre — é o MAC do
-    aparelho, byte a byte o de antes: o Steam Input e o jogo seguem
-    reconhecendo cada controle, e o MAC de cada lugar é o mesmo a cada
-    reconexão. Com colisão é o seguinte do MESMO aparelho, e a mesma mesa o
-    devolve do mesmo jeito.
-
-    **Por que não tirar a identidade do MAC do posto.** O posto passaria a
-    vestir o MAC do número, o mesmo para quem quer que sente nele: a E3
-    perderia o que tem de melhor (um controle, um MAC, no posto e fora dele).
-    Quem vibra NÃO sai do MAC: o co-op diz quem alimenta cada vpad (25/09).
-
-    **Referência FRACA ao vpad:** um vpad que some sem `stop` (fd vazado) não
-    segura o MAC para sempre deste lado. O kernel, esse sim, segura — e o
-    `-EEXIST` volta a ser o aviso, como era antes desta cura.
-    """
+    """Quem veste cada MAC agora — o espelho, deste lado, da lista do `hid_playstation`."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        #: MAC → referência fraca ao vpad que o veste.
         self._vestido_por: dict[str, Any] = {}
 
     def vestir(self, pad: UhidDualSense) -> str:
@@ -3245,8 +1947,6 @@ class _MacsDosVpadsVivos:
                                player=pad.player)
                 return pedido
         if mac != pedido:
-            # O journal diz a troca: sem esta linha, «o jogo viu um controle
-            # novo» não teria de onde sair quando ela perguntar.
             logger.info("uhid_mac_do_aparelho_ja_vestido", pedido=pedido, vestido=mac,
                         player=pad.player)
         return mac
@@ -3269,36 +1969,21 @@ class _MacsDosVpadsVivos:
         )
 
 
-#: O dono, um só por processo — como a lista do driver é uma só no kernel.
 _MACS_DOS_VPADS_VIVOS = _MacsDosVpadsVivos()
 
 
-#: O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01 — `mute_button_led` do
-#: `struct dualsense_output_report_common` (`common[8]`). Mora no fim do
 #: módulo para não deslocar as citações `arquivo:linha` do meio.
 _MIC_LED_OFFSET = 8
 
-#: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 — `power_save_control`
-#: (`common[9]`), onde mora o bit 0x10 do mudo do microfone.
 _MIC_MUDO_OFFSET = 9
 
-#: As duas categorias de réplica do microfone (o vocabulário do
-#: `_forward_replica`), com o dedup e o teto das outras.
 _REPLICA_MIC_LED = "mic_led"
 _REPLICA_MIC_MUDO = "mic_mudo"
 
-#: Quanto a janela de um aperto espera o eco do driver. TETO, NÃO MEDIDO: o
-#: driver agenda o trabalho do eco na hora do parse do report que trouxe a
-#: borda (`hid-playstation.c:1691`), e o jogo só responde depois de ler o
-#: evento. O diário da bancada diz a idade do eco, e ela fixa este número.
 ECO_DO_DRIVER_S = 1.0
 
-#: Quantas bordas o pad guarda à espera do eco. Oito apertos dentro de um
-#: segundo não são mão humana; o teto existe para o `deque` não crescer.
 _JANELAS_DO_ECO_MAX = 8
 
-#: Os bits do `valid_flag1` que um eco PURO pode trazer: a luz, o mudo e o
-#: `audio_control2` que o mesmo trabalho do driver pode juntar.
 _FLAG1_DO_ECO_PURO = (
     rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
     | rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
@@ -3307,12 +1992,7 @@ _FLAG1_DO_ECO_PURO = (
 
 
 def _tem_a_assinatura_do_eco(body: bytes) -> bool:
-    """A forma do 0x02 que o driver manda ao alternar o mudo dele.
-
-    Os dois bits juntos no `valid_flag1`, a luz em 0 ou 1 (é o `bool`
-    `mic_muted`) e o 0x10 do `common[9]` concordando com ela. O resto do
-    report não entra: o driver junta no mesmo report o que estiver pendente.
-    """
+    """A forma do 0x02 que o driver manda ao alternar o mudo dele."""
     if len(body) <= _MIC_MUDO_OFFSET:
         return False
     ambos = (
@@ -3328,12 +2008,7 @@ def _tem_a_assinatura_do_eco(body: bytes) -> bool:
 
 
 def _e_eco_puro(body: bytes) -> bool:
-    """O eco veio sozinho: sem vibração, sem gatilho, sem luz, sem som.
-
-    Um eco que veio junto com a vibração do FF do evdev (o
-    `dualsense_output_worker` junta tudo num report só) segue o caminho de
-    sempre; só os campos do microfone dele são ignorados.
-    """
+    """O eco veio sozinho: sem vibração, sem gatilho, sem luz, sem som."""
     if body[_VALID_FLAG0_OFFSET]:
         return False
     if len(body) > rep.COMMON_VALID_FLAG2 and body[rep.COMMON_VALID_FLAG2]:

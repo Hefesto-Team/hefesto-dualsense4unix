@@ -70,7 +70,6 @@ def test_slug_mistura_espaco_e_traco():
 
 
 def test_slug_emojis_produzem_vazio_falha():
-    # Emojis gráficos isolados não têm decomposição NFKD para ASCII.
     with pytest.raises(ValueError):
         slugify("\U0001F680\U0001F3AE")
 

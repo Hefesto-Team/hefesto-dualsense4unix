@@ -1,19 +1,4 @@
-"""As versões do Proton que sobram — O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01.
-
-Ela, 01/10: *«Nosso botao de fixar o proton deveria desinstalar as outras
-versoes nao usadas»*. <!-- noqa-acento: citação literal dela -->
-
-Ao abrir, a Steam roda o `d3ddriverquery64.exe` duas vezes por versão em
-`compatibilitytools.d`. Tudo aqui é Steam de mentira no `tmp_path`: nada toca
-a Steam real nem a lixeira dela.
-
-AS MORDIDAS:
-
-- troque `usadas = {nome_do_pino, *mapa.values()}` de `versoes_que_sobram`
-  por `usadas = {nome_do_pino}` e `test_a_versao_de_um_jogo_fica` reprova;
-- troque o `if em_uso(sobra.pasta)` de `desinstalar_as_que_sobram` por
-  `if False` e `test_a_pasta_em_uso_fica` reprova.
-"""
+"""As versões do Proton que sobram — O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01."""
 from __future__ import annotations
 
 import contextlib
@@ -177,11 +162,6 @@ def test_a_lixeira_de_verdade_nunca_apaga_sem_gio(
     pasta = steam / ".steam" / "steam" / "compatibilitytools.d" / "GE-Proton11-1"
     assert pp._para_a_lixeira(pasta) is not None
     assert pasta.is_dir()
-
-
-# ---------------------------------------------------------------------------
-# Os dois botões da aba Sistema
-# ---------------------------------------------------------------------------
 
 
 class _Janela:

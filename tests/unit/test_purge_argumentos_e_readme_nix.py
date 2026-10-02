@@ -1,20 +1,4 @@
-"""Duas bordas do que o projeto entrega a quem não é a mantenedora.
-
-1. O `scripts/purge.sh` é o script mais destrutivo da casa — ele chama o
-   `uninstall.sh --yes`. Até 31/07 ele não tinha `--help` e aceitava argumento
-   desconhecido com um aviso, seguindo em frente: é o mesmo acidente que o
-   `uninstall.sh` já pagou (`BUG-UNINSTALL-HELP-DESINSTALA-01`). O
-   `scripts/install_udev.sh` entra na mesma passada por política: dois padrões
-   de parser na mesma pasta é o que faz o próximo script nascer com o frouxo.
-2. O `packaging/nix/README.md` abre prometendo `nix run`, e o
-   `packaging/nix/package.nix` tem `lib.fakeSha256` — todo comando da página
-   falha por construção enquanto o hash for placeholder.
-
-Os testes que executam o `purge.sh` rodam com um `sudo` falso no PATH e com
-`HOME` num diretório temporário: mesmo que a cura seja arrancada e o parser
-volte a seguir em frente, nenhum passo com root e nenhum passo no HOME real
-pode acontecer.
-"""
+"""Duas bordas do que o projeto entrega a quem não é a mantenedora."""
 from __future__ import annotations
 
 import os
@@ -31,11 +15,7 @@ README_NIX = RAIZ / "packaging" / "nix" / "README.md"
 
 
 def _ambiente_de_sacrificio(tmp_path: Path) -> dict[str, str]:
-    """PATH com `sudo` inerte e HOME descartável.
-
-    A rede de proteção existe para o dia em que o teste ficar VERMELHO: é
-    justamente aí que o script voltaria a executar de verdade.
-    """
+    """PATH com `sudo` inerte e HOME descartável."""
     binario = tmp_path / "bin"
     binario.mkdir()
     falso = binario / "sudo"
@@ -64,12 +44,7 @@ def _rodar(script: Path, *args: str, tmp_path: Path) -> subprocess.CompletedProc
 
 class TestPurgeNaoAceitaOQueNaoEntende:
     def test_help_imprime_as_flags_e_sai_zero(self, tmp_path: Path) -> None:
-        """`--help` é o reflexo de quem vê um script novo pela primeira vez.
-
-        Mordida: sem o case `--help`, a flag cai no `*)`, o script segue para o
-        `main()` e a primeira coisa que a pessoa vê é a pergunta se quer
-        descontaminar tudo.
-        """
+        """`--help` é o reflexo de quem vê um script novo pela primeira vez."""
         r = _rodar(PURGE, "--help", tmp_path=tmp_path)
         assert r.returncode == 0, f"--help não saiu 0 (saiu {r.returncode}): {r.stderr}"
         for flag in ("--yes", "--dry-run", "--with-config", "--keep-steam-input"):
@@ -80,16 +55,7 @@ class TestPurgeNaoAceitaOQueNaoEntende:
         assert "[purge] início" not in r.stdout, "o --help entrou no main()"
 
     def test_argumento_desconhecido_aborta_sem_tocar_em_nada(self, tmp_path: Path) -> None:
-        """O dedo torto com `--yes` legítimo era o buraco de verdade.
-
-        `--dry-rum` em vez de `--dry-run` virava um aviso rolando para fora da
-        tela, e o `main()` seguia — com `--yes`, sem sequer perguntar.
-
-        Mordida: com o `*)` de volta ao aviso sem `exit`, o `--dry-run` liga o
-        modo simulado, o script percorre o `main()` inteiro e sai 0. O
-        `--dry-run` fica no comando de propósito: com a cura ou sem ela, este
-        teste nunca muta o sistema.
-        """
+        """O dedo torto com `--yes` legítimo era o buraco de verdade."""
         r = _rodar(PURGE, "--dry-rum", "--dry-run", tmp_path=tmp_path)
         assert r.returncode == 2, (
             f"argumento desconhecido não abortou com 2 (saiu {r.returncode})"
@@ -100,8 +66,7 @@ class TestPurgeNaoAceitaOQueNaoEntende:
         )
 
     def test_o_corpo_do_desconhecido_tem_exit_2(self) -> None:
-        """Complemento barato, no molde do teste do install: o ramo existe no
-        código, e não só no comportamento observado."""
+        """Complemento barato, no molde do teste do install: o ramo existe no"""
         texto = PURGE.read_text(encoding="utf-8")
         inicio = texto.index('for arg in "$@"; do')
         parser = texto[inicio : texto.index("\ndone\n", inicio)]
@@ -117,12 +82,7 @@ class TestInstallUdevSegueOMesmoPadrao:
         assert "[0/3]" not in r.stdout, "o --help chegou a executar o primeiro passo"
 
     def test_flag_com_erro_de_digitacao_aborta(self, tmp_path: Path) -> None:
-        """Aqui o pior caso é inócuo — o script só reaplica regras. Entra por
-        política: manter dois padrões de parser na mesma pasta é o que faz o
-        próximo script nascer com o frouxo.
-
-        Mordida: com o `*)` de volta ao aviso, o script segue e imprime `[0/3]`.
-        """
+        """Aqui o pior caso é inócuo — o script só reaplica regras. Entra por"""
         r = _rodar(INSTALL_UDEV, "--disable-usb-audi", tmp_path=tmp_path)
         assert r.returncode == 2, (
             f"install_udev.sh não abortou com 2 (saiu {r.returncode}): {r.stdout}"
@@ -131,12 +91,7 @@ class TestInstallUdevSegueOMesmoPadrao:
 
 
 def _placeholder_de_hash_ativo(texto_nix: str) -> bool:
-    """`lib.fakeSha256` numa linha que ATRIBUI o hash, não em comentário.
-
-    O `package.nix` cita o nome num comentário sobre outro assunto: procurar a
-    string no arquivo inteiro faria o teste continuar verde depois de alguém
-    gravar o hash real — e ele deixaria de cobrar a remoção do aviso.
-    """
+    """`lib.fakeSha256` numa linha que ATRIBUI o hash, não em comentário."""
     return any(
         "fakeSha256" in linha.strip()
         for linha in texto_nix.splitlines()
@@ -146,18 +101,7 @@ def _placeholder_de_hash_ativo(texto_nix: str) -> bool:
 
 class TestReadmeDoNixNaoPrometeOQueOHashImpede:
     def test_o_aviso_do_hash_vem_antes_do_primeiro_comando(self) -> None:
-        """A ressalva existia — 111 linhas ABAIXO da promessa.
-
-        Com `lib.fakeSha256`, todo `fetchPypi` falha em hash-mismatch por
-        desenho, então `nix run`/`nix build` são impossíveis por construção. E
-        no caminho `nix run github:...` não existe "substituir uma vez": não há
-        árvore local para editar.
-
-        Mordida nos dois sentidos: mover o aviso para baixo do "Uso rapido" →
-        vermelho; e, quando alguém gravar o hash real e esquecer de tirar o
-        aviso, o outro ramo cobra a remoção. Sem essa segunda metade o teste
-        viraria carimbo.
-        """
+        """A ressalva existia — 111 linhas ABAIXO da promessa."""
         pacote = PACKAGE_NIX.read_text(encoding="utf-8")
         readme = README_NIX.read_text(encoding="utf-8")
 

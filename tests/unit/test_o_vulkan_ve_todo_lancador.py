@@ -1,13 +1,4 @@
-"""O-VULKAN-VE-TODO-LANCADOR-E-DIZ-O-ESTADO-01 — as duas perguntas dela.
-
-> *"Tá mas o botão vulcan ele identifica todos os jogos que contenham isso? E
-> vamos ter o estado de ativado e desativado sobre o funcionamento dele? Pra
-> todos os jogos?"* — 21/09/2026
-
-A medição respondeu *quase* à primeira (Steam e Heroic sim, Lutris não) e *não*
-à segunda (o estado existia em disco e nunca chegava à tela). As duas entregas
-desta sprint são as duas metades dessa resposta.
-"""
+"""O-VULKAN-VE-TODO-LANCADOR-E-DIZ-O-ESTADO-01 — as duas perguntas dela."""
 
 from __future__ import annotations
 
@@ -26,10 +17,6 @@ from hefesto_dualsense4unix.interface.pacotes.a09_sistema import (
     linha_da_sobreposicao_vulkan,
 )
 
-# ---------------------------------------------------------------------------
-# E1 — a varredura por FORMA alcança o Lutris (e quem vier depois)
-# ---------------------------------------------------------------------------
-
 
 def _prefixo(raiz: Path, *partes: str) -> Path:
     alvo = raiz.joinpath(*partes)
@@ -39,13 +26,7 @@ def _prefixo(raiz: Path, *partes: str) -> Path:
 
 
 def test_o_prefixo_do_lutris_entra_na_varredura(tmp_path: Path) -> None:
-    """ARRANQUE a varredura por forma e este teste reprova.
-
-    Um jogo instalado pelo Lutris ficaria invisível para o botão, e o sintoma
-    seria o de sempre nesta casa: a AUSÊNCIA de dado, que se lê como
-    "funcionou". Medido em 21/09: ela tem o Lutris instalado e sem nenhum
-    prefixo — este teste é a trava para o primeiro que nascer.
-    """
+    """ARRANQUE a varredura por forma e este teste reprova."""
     nativo = _prefixo(tmp_path, ".local", "share", "lutris", "Um Jogo")
     flatpak = _prefixo(
         tmp_path, ".var", "app", "net.lutris.Lutris", "data", "lutris", "Outro")
@@ -57,17 +38,14 @@ def test_o_prefixo_do_lutris_entra_na_varredura(tmp_path: Path) -> None:
 
 
 def test_pasta_sem_pfx_nao_vira_prefixo(tmp_path: Path) -> None:
-    """ARRANQUE o `is_file()` do `system.reg` e este teste reprova: metade de
-    `~/Games` viraria prefixo, e o censo leria `system.reg` inexistente em cada
-    um."""
+    """ARRANQUE o `is_file()` do `system.reg` e este teste reprova: metade de"""
     (tmp_path / "Games" / "uma pasta qualquer").mkdir(parents=True)
     (tmp_path / "Games" / "um arquivo solto.txt").write_text("", encoding="utf-8")
     assert cv.prefixos_dos_lancadores(tmp_path) == []
 
 
 def test_o_mesmo_prefixo_nao_entra_duas_vezes(tmp_path: Path) -> None:
-    """O Heroic declara o prefixo na config E ele mora sob `~/Games`: as duas
-    rotas o alcançam. ARRANQUE o `vistos` e o censo o contaria em dobro."""
+    """O Heroic declara o prefixo na config E ele mora sob `~/Games`: as duas"""
     import json
 
     alvo = _prefixo(tmp_path, "Games", "Heroic", "Prefixes", "O Jogo")
@@ -86,25 +64,13 @@ def test_a_varredura_nao_levanta_em_disco_hostil(tmp_path: Path) -> None:
 
 
 def test_a_raiz_gigante_nao_custa_o_censo(tmp_path: Path) -> None:
-    """ARRANQUE o `_MAXIMO_DE_FILHOS_POR_RAIZ` e este teste reprova: uma pasta
-    `~/Games` usada como despejo custaria um `is_file()` por arquivo, a cada
-    censo — e o censo roda no clique do botão e na linha do exame."""
+    """ARRANQUE o `_MAXIMO_DE_FILHOS_POR_RAIZ` e este teste reprova: uma pasta"""
     raiz = tmp_path / "Games"
     raiz.mkdir(parents=True)
     for n in range(cv._MAXIMO_DE_FILHOS_POR_RAIZ + 50):
         (raiz / f"{n:05d}.txt").write_text("", encoding="utf-8")
     assert cv.prefixos_dos_lancadores(tmp_path) == []
     assert cv._MAXIMO_DE_FILHOS_POR_RAIZ < 10_000
-
-
-# ---------------------------------------------------------------------------
-# E2 — a linha permanente: o que chega ao jogo (28/09/2026)
-# ---------------------------------------------------------------------------
-# Os três números de 21/09 (tirada, posta, prefixos vistos) contavam o registro
-# do prefixo, que nenhum jogo desta máquina lê; com o botão ligado a linha dizia
-# «nenhuma tirada». Desde a O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01 ela diz
-# o que o lançador entrega a todo jogo — que é a resposta à segunda pergunta
-# dela, «pra todos os jogos?».
 
 
 def _a_steam_instalou(casa: Path) -> None:
@@ -144,13 +110,7 @@ def test_sem_as_camadas_da_steam_a_linha_nao_sai() -> None:
 
 
 def test_a_frase_da_linha_tem_um_dono_so(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `cv.frase_do_estado` da linha e este teste reprova.
-
-    O desenho da aba (`interface/aba09.py`) monta a cena com a mesma função.
-    Uma segunda montagem aqui deixaria o desenho e a tela viva dizendo coisas
-    diferentes — foi assim que o desenho mostrou, por um mês, uma linha que a
-    tela só mostrava antes da primeira pintura (26/09/2026).
-    """
+    """ARRANQUE o `cv.frase_do_estado` da linha e este teste reprova."""
     monkeypatch.setattr(cv, "a_steam_instalou_as_camadas", lambda home=None: True)
     monkeypatch.setattr(cv, "frase_do_estado", lambda fora: f"DONO {fora}")
     assert _texto() == "DONO False"
@@ -158,8 +118,7 @@ def test_a_frase_da_linha_tem_um_dono_so(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_o_exame_nao_cai_por_causa_de_um_vulkan(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `try/except` e este teste reprova: um disco hostil
-    apagaria as linhas do exame que já estavam prontas."""
+    """ARRANQUE o `try/except` e este teste reprova: um disco hostil"""
     def explode(*a: Any, **k: Any) -> Any:
         raise OSError("disco hostil")
 
@@ -168,8 +127,7 @@ def test_o_exame_nao_cai_por_causa_de_um_vulkan(
 
 
 def test_a_linha_entra_no_exame() -> None:
-    """A régua de LIGAÇÃO: uma linha que ninguém soma é trabalho que não chega
-    à tela dela. ARRANQUE a chamada em `_achados` e ela reprova."""
+    """A régua de LIGAÇÃO: uma linha que ninguém soma é trabalho que não chega"""
     import inspect
 
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema

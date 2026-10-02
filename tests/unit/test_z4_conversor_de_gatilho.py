@@ -4,7 +4,7 @@ Frente **Z4** da ONDA 0 (24/08/2026). Medido na sprint (§2.1): dois dos doze
 presets de fábrica (`aventura.json`, `corrida.json`) não abriam no editor
 porque `TriggerConfig.params` aceita `list[int] | list[list[int]]` (o disco) e
 `TriggerDraft.params` só aceitava plano (o rascunho) — e o comentário de
-`draft_config.py:316-318` afirmava o contrário do que o `cast` fazia.
+`draft_config.py:213-215` afirmava o contrário do que o `cast` fazia.
 
 A cura escolhida (medida contra a alternativa na seção 3 da sprint — "meça as
 duas antes de escolher"): **achatar na fronteira** (`_trigger_params_para_draft`),
@@ -54,11 +54,6 @@ def _perfil_com_trigger(left: TriggerConfig) -> Profile:
     )
 
 
-# ---------------------------------------------------------------------------
-# T4 — aventura e corrida abrem no editor, e o arquivo não muda de forma
-# ---------------------------------------------------------------------------
-
-
 class TestAventuraECorridaAbremNoEditor:
     """T4, aceite 1: a régua da §2.1 devolve lista vazia (hoje devolve dois)."""
 
@@ -66,7 +61,7 @@ class TestAventuraECorridaAbremNoEditor:
     def test_from_profile_nao_reprova(self, nome: str) -> None:
         original = json.loads((FIXTURES_FABRICA / nome).read_text())
         perfil = Profile.model_validate(original)
-        DraftConfig.from_profile(perfil)  # não lança
+        DraftConfig.from_profile(perfil)
 
     def test_os_doze_presets_de_fabrica_abrem_todos(self) -> None:
         mau = []
@@ -80,11 +75,7 @@ class TestAventuraECorridaAbremNoEditor:
 
 
 class TestSalvarSemTocarPreservaAFormaDoArquivo:
-    """A segunda metade da mordida da T4 — a que morde de verdade.
-
-    "Salve sem tocar em nada e compare o arquivo byte a byte com o original.
-    Se a forma dos params mudou, a cura está trocando um defeito por outro."
-    """
+    """A segunda metade da mordida da T4 — a que morde de verdade."""
 
     @pytest.mark.parametrize("nome", ["aventura.json", "corrida.json"])
     def test_triggers_idênticos_apos_ida_e_volta_sem_edicao(self, nome: str) -> None:
@@ -106,7 +97,6 @@ class TestSalvarSemTocarPreservaAFormaDoArquivo:
         perfil = Profile.model_validate(original)
         draft = DraftConfig.from_profile(perfil)
 
-        # a mesma construção que `triggers_actions._persist_params_to_draft`
         # usa de verdade: TriggerDraft novo, sem `model_copy`.
         editado = draft.model_copy(
             update={
@@ -120,11 +110,6 @@ class TestSalvarSemTocarPreservaAFormaDoArquivo:
         assert list(relido.triggers.left.params) == [5, 200]
 
 
-# ---------------------------------------------------------------------------
-# T5 — o comentário falso e os casts mortos saem
-# ---------------------------------------------------------------------------
-
-
 class TestOComentarioFalsoSaiu:
     def test_grep_do_comentario_falso_esta_vazio(self) -> None:
         alvo = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "draft_config.py"
@@ -136,17 +121,11 @@ class TestOComentarioFalsoSaiu:
         )
 
 
-# ---------------------------------------------------------------------------
-# T6 — os dezenove modos entram e voltam
-# ---------------------------------------------------------------------------
-
-
 def _params_para_disco(nome_preset: str, flat: list[int]) -> list[int] | list[list[int]]:
     """Simula a forma que ESTES dois modos assumem no disco dela (nested)."""
     if nome_preset == "MultiPositionFeedback":
         return [[v] for v in flat]
     if nome_preset == "MultiPositionVibration":
-        # corrida.json real: frequency fica de fora, só as 10 posições aninhadas.
         return [[v] for v in flat[1:]]
     return flat
 
@@ -166,9 +145,6 @@ class TestOsDezenoveModosEntramEVoltam:
         draft = DraftConfig.from_profile(perfil)
         relido = draft.to_profile(perfil.name, priority=perfil.priority)
 
-        # a régua não é bytes — é EFEITO: o `TriggerEffect` que o modo produz
-        # antes e depois do ciclo tem de ser o mesmo, senão o gatilho mudou de
-        # comportamento no controle sem ninguém editar nada.
         antes = build_from_name(spec.name, params_disco)
         depois = build_from_name(relido.triggers.left.mode, relido.triggers.left.params)
         assert antes == depois, (
@@ -177,8 +153,7 @@ class TestOsDezenoveModosEntramEVoltam:
         )
 
     def test_a_lista_tem_dezenove_hoje(self) -> None:
-        """Sentinela: se `trigger_specs.PRESETS` crescer, a régua acima já cobre —
-        este caso só documenta o número medido em 24/08/2026."""
+        """Sentinela: se `trigger_specs.PRESETS` crescer, a régua acima já cobre —"""
         assert len(PRESETS) == 19, (
             f"trigger_specs.PRESETS tem {len(PRESETS)} modos — a sprint mediu "
             "19 em 24/08/2026; se mudou, é bom, a régua acima já se adapta "

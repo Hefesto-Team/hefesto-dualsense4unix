@@ -1,20 +1,4 @@
-"""Motion no vpad uhid (GYRO-01) — forward_motion, streaming e calibração.
-
-O que se trava aqui:
-
-1. **Anti-regressão do report neutro**: sem reader, `_encode_body` produz um
-   payload BYTE A BYTE idêntico ao histórico (IMU zerada, 0x80 nos contatos do
-   touchpad em 32/36) — quem não tem gyro fluindo não muda NADA.
-2. **forward_motion** preenche a janela 15..39 verbatim, anda o seq e rejeita
-   janela de tamanho errado (report torto quebraria o parse do driver).
-3. **Gate de streaming**: ligado, os forwards do poll loop viram só-cache (quem
-   emite é o reader); desligado, volta o delta do poll com IMU NEUTRA (nunca um
-   gyro congelado).
-4. **Calibração por unidade**: `calibration_0x05` válido (41 B, id 0x05) entra
-   no lugar do canônico; inválido/None mantém o canônico (fail-safe).
-
-Mesmo fake de /dev/uhid dos testes irmãos (`test_uhid_gamepad.py`) — nada real.
-"""
+"""Motion no vpad uhid (GYRO-01) — forward_motion, streaming e calibração."""
 from __future__ import annotations
 
 import struct
@@ -93,8 +77,6 @@ _WINDOW = bytes(range(100, 100 + _MOTION_WINDOW_LEN))
 
 class TestEncodeNeutro:
     def test_report_neutro_e_identico_ao_historico(self, fake_uhid: _FakeFd) -> None:
-        # Reconstrói o payload como o encoder SEMPRE fez (pré-GYRO-01):
-        # zeros + 0x80 nos contatos + status + sticks neutros. Byte a byte.
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         pad.forward_buttons(frozenset())
@@ -103,15 +85,15 @@ class TestEncodeNeutro:
             esperado[offset] = 0x80
         esperado[52] = 0x1F
         esperado[0:6] = bytes([0x80, 0x80, 0x80, 0x80, 0, 0])
-        esperado[7] = 0x08  # d-pad neutro (HAT)
-        esperado[6] = 1  # seq do primeiro report emitido
+        esperado[7] = 0x08
+        esperado[6] = 1
         assert _input_bodies(fake_uhid)[-1] == bytes(esperado)
 
     def test_janela_neutra_tem_o_shape_do_kernel(self) -> None:
         assert len(_MOTION_NEUTRAL) == _MOTION_WINDOW_LEN
         assert _MOTION_NEUTRAL[32 - 15] == 0x80
         assert _MOTION_NEUTRAL[36 - 15] == 0x80
-        assert sum(_MOTION_NEUTRAL) == 0x80 * 2  # todo o resto zerado
+        assert sum(_MOTION_NEUTRAL) == 0x80 * 2
 
 
 class TestForwardMotion:
@@ -121,7 +103,6 @@ class TestForwardMotion:
         pad.forward_motion(_WINDOW)
         body = _input_bodies(fake_uhid)[-1]
         assert body[_MOTION_WINDOW] == _WINDOW
-        # Sticks/status não são tocados pelo motion.
         assert body[0:6] == bytes([0x80, 0x80, 0x80, 0x80, 0, 0])
         assert body[52] == 0x1F
 
@@ -153,14 +134,14 @@ class TestForwardMotion:
 
     def test_sem_device_e_no_op(self) -> None:
         pad = UhidDualSense(player=1, blueprint=_blueprint())
-        pad.forward_motion(_WINDOW)  # não explode
+        pad.forward_motion(_WINDOW)
         assert pad.motion_forward_count == 0
 
     def test_conta_janelas_emitidas(self, fake_uhid: _FakeFd) -> None:
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         pad.forward_motion(_WINDOW)
-        pad.forward_motion(_WINDOW)  # repetida: suprimida pelo delta
+        pad.forward_motion(_WINDOW)
         pad.forward_motion(bytes(reversed(_WINDOW)))
         assert pad.motion_forward_count == 2
 
@@ -173,13 +154,12 @@ class TestStreamingGate:
         pad.forward_analog(lx=10, ly=20, rx=30, ry=40, l2=50, r2=60)
         pad.forward_buttons(frozenset({"cross"}))
         pad.forward_battery(50)
-        assert _input_bodies(fake_uhid) == []  # ninguém emitiu: o reader é o relógio
+        assert _input_bodies(fake_uhid) == []
         pad.forward_motion(_WINDOW)
         bodies = _input_bodies(fake_uhid)
         assert len(bodies) == 1
-        # O report do reader carrega o CACHE do poll junto (sticks+botões+janela).
         assert bodies[0][0:6] == bytes([10, 20, 30, 40, 50, 60])
-        assert bodies[0][7] & 0x20  # cross
+        assert bodies[0][7] & 0x20
         assert bodies[0][_MOTION_WINDOW] == _WINDOW
 
     def test_desligar_streaming_volta_ao_neutro_e_ao_delta(
@@ -191,10 +171,7 @@ class TestStreamingGate:
         pad.forward_motion(_WINDOW)
         pad.set_motion_streaming(False)
         bodies = _input_bodies(fake_uhid)
-        # O OFF emite na hora o report com a janela NEUTRA (fail-safe: um gyro
-        # congelado no report seria rotação fantasma infinita na mira).
         assert bodies[-1][_MOTION_WINDOW] == _MOTION_NEUTRAL
-        # E o poll loop volta a emitir sozinho.
         pad.forward_analog(lx=1, ly=2, rx=3, ry=4, l2=5, r2=6)
         assert _input_bodies(fake_uhid)[-1][0:6] == bytes([1, 2, 3, 4, 5, 6])
 
@@ -206,7 +183,7 @@ class TestStreamingGate:
         assert pad.motion_streaming is True
         pad.set_motion_streaming(False)
         antes = len(_input_bodies(fake_uhid))
-        pad.set_motion_streaming(False)  # repetido: não reemite nada
+        pad.set_motion_streaming(False)
         assert len(_input_bodies(fake_uhid)) == antes
 
     def test_stop_zera_o_estado_de_motion(self, fake_uhid: _FakeFd) -> None:
@@ -238,9 +215,9 @@ class TestCalibracaoPorUnidade:
     @pytest.mark.parametrize(
         "torta",
         [
-            bytes([0x05]) + bytes(39),  # 40 B — curta
-            bytes([0x05]) + bytes(41),  # 42 B — longa
-            bytes([0x09]) + bytes(40),  # id errado
+            bytes([0x05]) + bytes(39),
+            bytes([0x05]) + bytes(41),
+            bytes([0x09]) + bytes(40),
             b"",
         ],
     )
@@ -250,7 +227,7 @@ class TestCalibracaoPorUnidade:
         pad = UhidDualSense(
             player=1, blueprint=_blueprint(), calibration_0x05=torta
         )
-        assert pad.start()  # o vpad NASCE mesmo assim (invariante)
+        assert pad.start()
         assert pad._features[0x05] == _CANONICAL_05
 
     def test_for_flavor_repassa_a_calibracao(self) -> None:

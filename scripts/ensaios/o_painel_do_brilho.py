@@ -1,42 +1,5 @@
 #!/usr/bin/env python3
-"""o_painel_do_brilho.py — o `common[42]` num controle deslizante, nos dois aparelhos.
-
-A ENCOMENDA É DELA, 09/09/2026: *"pode fazer um slicer pra eu controlar do
-controle branco e do controle bt?"*
-
-POR QUE ELE EXISTE, e a diferença para a escada
-------------------------------------------------
-O `o_brilho_de_hardware_da_barra.py` percorre 0 → 2 → 1 → 0 no relógio DELE, e
-ela tem de estar olhando na hora certa. Este painel inverte o dono do tempo:
-**ela mexe, ela compara, e os dois aparelhos ficam lado a lado** — que é a única
-forma de responder "escureceu" sem depender de memória de oito segundos atrás.
-
-A pergunta que os dois decidem é a mesma (BRILHO-DE-HARDWARE-01, decisão dela
-*"2b"*): o `common[42]` (`led_brightness`, 0 alto · 1 médio · 2 baixo) escurece
-a barra, e ele precisa do `flag2` bit0 que o kernel desta máquina não define?
-
-O MARTELO, e por que ele é obrigatório no cabo
------------------------------------------------
-Quando o daemon é dono das luzes, cada report dele leva `common[42] = 0`: uma
-escrita minha é desfeita antes de ela olhar. Cada aparelho tem aqui um martelo
-a 10 Hz enquanto o painel vive. Se a barra PISCAR entre dois brilhos, isso é um
-**sim** do firmware — é o daemon e eu disputando, e disputa só existe se o byte
-age.
-
-A TELA É DELA, DE PROPÓSITO
-----------------------------
-A guarda `tela_de_mentira` (TELA-DELA-02) desvia toda janela de `scripts/` para
-um `Xvfb`. Aqui o escape é declarado, como no `scripts/mesa-de-medicao.sh`: este
-painel só serve se ela o vir. `--oculta` devolve o comportamento de
-instrumento, para régua automática.
-
-Porta: o broker (`escrita_pelo_broker.Escritor`), com o daemon VIVO.
-Escreve no aparelho? SIM — cor, `common[42]` e `flag2` bit0.
-
-USO
-    o_painel_do_brilho.py                 # na tela dela, os controles que houver
-    o_painel_do_brilho.py --oculta        # sem tela, para régua
-"""
+"""o_painel_do_brilho.py — o `common[42]` num controle deslizante, nos dois aparelhos."""
 
 from __future__ import annotations
 
@@ -53,8 +16,6 @@ _SRC = os.path.join(_RAIZ, "src")
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-# O ESCAPE É DECLARADO, e a responsabilidade é de quem declara (TELA-DELA-02).
-# Sem `--oculta`, esta janela é DELA e nasce na tela dela — é o ponto do painel.
 if "--oculta" not in sys.argv:
     os.environ["HEFESTO_NA_TELA"] = "1"
 
@@ -81,10 +42,8 @@ from o_brilho_de_hardware_da_barra import (
     common_do_nivel,
 )
 
-#: O ritmo do martelo. 10 Hz é o do instrumento da escada, medido lá.
 HZ = 10.0
 
-#: Branco: o brilho é mais legível na cor mais clara que o aparelho faz.
 COR_PADRAO = (255, 255, 255)
 
 
@@ -103,10 +62,9 @@ class Coluna:
         self.escritor = Escritor(alvo)
         try:
             self.escritor.abrir()
-        except Exception as erro:  # a porta é do broker; sem ela a coluna diz por quê
+        except Exception as erro:
             self.erro = str(erro)
 
-    # -- o fio ---------------------------------------------------------------
     def _common(self):
         return common_do_nivel(self.nivel, com_bit=self.com_bit, cor=self.cor)
 
@@ -142,7 +100,6 @@ class Coluna:
         self.devolver()
         self.escritor.fechar()
 
-    # -- a tela --------------------------------------------------------------
     def montar(self) -> Gtk.Widget:
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         caixa.set_margin_top(12)
@@ -342,7 +299,6 @@ def main() -> int:
     colunas = [Coluna(a, lambda: None) for a in aparelhos]
     painel = Painel(colunas)
     if "--oculta" in sys.argv:
-        # Régua automática: monta, bate uma vez e sai sem entrar no laço do GTK.
         painel._tique()
         painel.propor_linhas()
         painel._fechar()

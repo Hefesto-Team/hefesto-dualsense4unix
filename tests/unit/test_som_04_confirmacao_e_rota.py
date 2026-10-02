@@ -55,9 +55,6 @@ from hefesto_dualsense4unix.app.audio_saida import (
     tocar_confirmacao,
 )
 
-#: Os nomes REAIS desta máquina, copiados de `pactl list sinks short` em
-#: 01/08/2026. Nomes inventados esconderiam o detalhe que importa: o sufixo
-#: `-00` do controle é desempate posicional do PipeWire, não identidade.
 SINK_CONTROLE = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-surround-40"
@@ -73,12 +70,7 @@ LISTA_DE_SINKS = (
 
 
 class _Pactl:
-    """Dublê do `pactl`: responde leituras e ANOTA tudo o que foi pedido.
-
-    Guardar o argv inteiro é o que deixa os testes morderem a diferença entre
-    ler e escrever — `set-default-sink` aparece aqui como escrita, e um teste
-    que exige "nenhuma escrita" olha esta lista.
-    """
+    """Dublê do `pactl`: responde leituras e ANOTA tudo o que foi pedido."""
 
     def __init__(self, *, padrao: str = SINK_HDMI, sinks: str = LISTA_DE_SINKS):
         self.padrao = padrao
@@ -123,22 +115,6 @@ class _Tocador:
         return fora
 
 
-#: O som que os dublês fingem ter no disco. Ele é o caminho REAL do primeiro
-#: candidato (:data:`audio_saida._CANDIDATOS_DE_SOM`), mas quem o entrega aqui é
-#: um dublê — e essa é a correção.
-#:
-#: MEDIDO em 18/08/2026 num `ubuntu:24.04` pelado, que é o sistema do runner: o
-#: `arquivo_de_confirmacao` era a ÚNICA borda que `_tocar` deixava ir ao disco
-#: de verdade, e sem o pacote `sound-theme-freedesktop` ele devolve "". Cinco
-#: testes que medem o SINK, a trava e o argv reprovavam com
-#: `motivo='sem_arquivo'` — falando do tema de som da máquina, não do produto.
-#: O docstring de `_tocar` já prometia "todas as bordas dubladas"; agora é
-#: verdade.
-#:
-#: O caminho NEGATIVO (máquina sem tema nenhum) continua aferido de verdade, com
-#: o `arquivo_de_confirmacao` real e sem dublê, em
-#: `test_sem_arquivo_de_som_recusa_com_recado` e nos testes de escolha do
-#: candidato, que injetam `raizes`/`tamanho` próprios.
 ARQUIVO_DE_SOM = "/usr/share/sounds/freedesktop/stereo/audio-volume-change.oga"
 
 
@@ -157,22 +133,8 @@ def _tocar(**kwargs: Any) -> Any:
         return tocar_confirmacao(sink, **base)
 
 
-# ---------------------------------------------------------------------------
-# Entrega 1 — o som sai NO SINK DO CONTROLE, e em nenhum outro
-# ---------------------------------------------------------------------------
-
-
 def test_o_som_sai_no_sink_do_controle_explicitamente() -> None:
-    """A regra 1 da entrega, e a mais fácil de perder de vista.
-
-    O tocador tem de receber o nome do sink DO CONTROLE num argumento próprio.
-    Se o áudio for para o sink padrão, ela clica, não ouve nada, e conclui que
-    o alto-falante quebrou.
-
-    Mordida: tirar o `--device=` do :func:`argv_do_tocador`, deixando só o
-    par executável-e-arquivo — que é o que um "toca esse arquivo" ingênuo faz.
-    Isso esvazia `sinks_usados` e derruba as duas asserções.
-    """
+    """A regra 1 da entrega, e a mais fácil de perder de vista."""
     tocador = _Tocador()
     resultado = _tocar(tocador=tocador)
 
@@ -242,20 +204,9 @@ def test_sem_sink_atribuivel_recusa_de_saida_e_sem_tocar_em_nada() -> None:
 
 
 def test_argv_do_tocador_recusa_sink_vazio() -> None:
-    """A mesma guarda, uma camada abaixo — cinto e suspensório de propósito.
-
-    `argv_do_tocador` é público e pode ser chamado de outro lugar amanhã.
-
-    Mordida: deixar o ``if not sink or not arquivo`` sair da função; o argv
-    volta com ``--device=`` vazio e a asserção cai.
-    """
+    """A mesma guarda, uma camada abaixo — cinto e suspensório de propósito."""
     assert argv_do_tocador("", "/tmp/s.oga", achar=lambda n: f"/usr/bin/{n}") == []
     assert argv_do_tocador(SINK_CONTROLE, "", achar=lambda n: f"/usr/bin/{n}") == []
-
-
-# ---------------------------------------------------------------------------
-# Entrega 1 — não finge, e não erra calado
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -286,17 +237,7 @@ def test_argv_do_tocador_recusa_sink_vazio() -> None:
 def test_quando_nao_da_para_tocar_a_interface_recebe_o_motivo(
     kwargs: dict[str, Any], motivo_esperado: str, porque: str
 ) -> None:
-    """Regra 4 da entrega: se não houver como tocar, não finja — e não cale.
-
-    Um clique que promete som e não entrega é pior que nenhum som. Cada recusa
-    devolve um motivo COM recado, para a interface poder dizer por que não deu
-    para confirmar.
-
-    Mordida: fazer qualquer um destes caminhos devolver
-    ``ResultadoDoSom(True, ...)``, ou apagar a frase do dicionário
-    :data:`RECADOS` (o "errar calado"). As duas asserções são independentes de
-    propósito: a primeira pega o fingimento, a segunda pega o silêncio.
-    """
+    """Regra 4 da entrega: se não houver como tocar, não finja — e não cale."""
     resultado = _tocar(**kwargs)
 
     assert not resultado.tocou, porque
@@ -308,14 +249,7 @@ def test_quando_nao_da_para_tocar_a_interface_recebe_o_motivo(
 
 
 def test_sem_arquivo_de_som_recusa_com_recado() -> None:
-    """Máquina sem tema de som nenhum: recusa, com frase.
-
-    Vale um teste próprio porque o arquivo é procurado por caminho absoluto e
-    não passa por dublê nenhum nos outros casos.
-
-    Mordida: fazer `arquivo_de_confirmacao` devolver um caminho fixo sem
-    conferir existência; o motivo deixa de ser `sem_arquivo` e a asserção cai.
-    """
+    """Máquina sem tema de som nenhum: recusa, com frase."""
     monkey_raizes = ("/lugar/que/nao/existe",)
     assert arquivo_de_confirmacao(raizes=monkey_raizes) == ""
 
@@ -326,21 +260,12 @@ def test_sem_arquivo_de_som_recusa_com_recado() -> None:
         tocador=_Tocador(),
         achar=lambda n: f"/usr/bin/{n}",
     )
-    # Nesta máquina o tema existe; o que se afere aqui é o par motivo/recado do
-    # caminho negativo, montado à mão.
     assert RECADOS[MOTIVO_SEM_ARQUIVO], "o motivo sem_arquivo tem de ter recado"
     assert resultado.motivo in (MOTIVO_TOCOU, MOTIVO_SEM_ARQUIVO)
 
 
 def test_os_dois_silencios_de_proposito_nao_viram_recado() -> None:
-    """Nem todo "não tocou" é falha — e a tela não pode acusar escolha dela.
-
-    ``desligado`` é a chave dela; ``ocupado`` é o antirrajada e o som anterior
-    já vai ser ouvido. Nenhum dos dois é defeito, e escrever "sem confirmação"
-    a cada gesto seria a janela discutindo a decisão da usuária.
-
-    Mordida: dar recado a estes dois motivos em :data:`RECADOS`.
-    """
+    """Nem todo "não tocou" é falha — e a tela não pode acusar escolha dela."""
     assert RECADOS[MOTIVO_DESLIGADO] == ""
     assert RECADOS[MOTIVO_OCUPADO] == ""
     assert RECADOS[MOTIVO_TOCOU] == ""
@@ -364,11 +289,6 @@ def test_a_chave_de_desligar_existe_e_e_respeitada() -> None:
     assert tocador.argvs == [], "desligado quer dizer NENHUM processo de áudio"
 
 
-# ---------------------------------------------------------------------------
-# Entrega 1 — nada de metralhadora de sons
-# ---------------------------------------------------------------------------
-
-
 def test_um_som_por_vez_e_nao_um_por_pixel() -> None:
     """Regra 3: arrastar não pode virar rajada. Esta é a camada do MOTOR.
 
@@ -385,8 +305,6 @@ def test_um_som_por_vez_e_nao_um_por_pixel() -> None:
 
     def _tocador_reentrante(argv: list[str]) -> int:
         chamadas.append(list(argv))
-        # Enquanto ESTE som toca, chegam mais três pedidos — o que um arrasto
-        # de verdade faz. Nenhum deles pode abrir um segundo processo.
         if len(chamadas) == 1:
             for _ in range(3):
                 resultado = _tocar(tocador=_tocador_reentrante)
@@ -403,34 +321,15 @@ def test_um_som_por_vez_e_nao_um_por_pixel() -> None:
 
 
 def test_a_trava_solta_depois_de_tocar() -> None:
-    """A trava é antirrajada, não mordaça: dois gestos seguidos tocam os dois.
-
-    Mordida: esquecer o `finally: _tocando.release()`. O segundo gesto (e todos
-    os seguintes, a sessão inteira) volta `ocupado` e o som some para sempre.
-    """
+    """A trava é antirrajada, não mordaça: dois gestos seguidos tocam os dois."""
     tocador = _Tocador()
     assert _tocar(tocador=tocador).tocou
     assert _tocar(tocador=tocador).tocou
     assert len(tocador.argvs) == 2
 
 
-# ---------------------------------------------------------------------------
-# Entrega 1 — o som escolhido
-# ---------------------------------------------------------------------------
-
-
 def test_o_som_escolhido_e_curto_e_tem_caminho_de_fallback() -> None:
-    """Regra 5: som curto, presente em qualquer distribuição, com fallback.
-
-    A ordem do laço é a que decide: o CANDIDATO por fora, a RAIZ por dentro.
-    Assim a máquina com o tema completo toca `audio-volume-change` (0,067s, o
-    nome que a especificação do freedesktop dá a "mudou o volume") e não o
-    primeiro arquivo que aparecer numa raiz qualquer.
-
-    Mordida: inverter os dois laços de `arquivo_de_confirmacao`. Com o tema em
-    `/app/share` e só o `bell` em `/usr/share`, o `bell` de `/usr` venceria o
-    `audio-volume-change` de `/app` — e a asserção da preferência cai.
-    """
+    """Regra 5: som curto, presente em qualquer distribuição, com fallback."""
     tamanhos = {
         "/app/share/sounds/freedesktop/stereo/audio-volume-change.oga": 5596,
         "/usr/share/sounds/freedesktop/stereo/bell.oga": 8495,
@@ -441,7 +340,6 @@ def test_o_som_escolhido_e_curto_e_tem_caminho_de_fallback() -> None:
         f"o primeiro que aparecer — escolhido {escolhido}"
     )
 
-    # O fallback: sem o som de volume, o `bell`; sem tema nenhum, o do ALSA.
     so_bell = {"/usr/share/sounds/freedesktop/stereo/bell.oga": 8495}
     assert arquivo_de_confirmacao(tamanho=lambda c: so_bell.get(c, 0)).endswith(
         "bell.oga"
@@ -454,21 +352,9 @@ def test_o_som_escolhido_e_curto_e_tem_caminho_de_fallback() -> None:
 
 
 def test_arquivo_existente_e_vazio_nao_conta_como_som() -> None:
-    """Medido: o `window-attention.oga` desta máquina tem 18 bytes.
-
-    Ele EXISTE, o tocador sai com zero e nenhum som sai — a falha calada em
-    pessoa. Um teste de existência (`os.path.exists`) passaria com ele.
-
-    Mordida: trocar o piso de tamanho por um `os.path.exists`; o arquivo de 18
-    bytes passa a ser escolhido e a asserção cai.
-    """
+    """Medido: o `window-attention.oga` desta máquina tem 18 bytes."""
     quebrado = {"/usr/share/sounds/freedesktop/stereo/audio-volume-change.oga": 18}
     assert arquivo_de_confirmacao(tamanho=lambda c: quebrado.get(c, 0)) == ""
-
-
-# ---------------------------------------------------------------------------
-# Entrega 2 — a rota, e o desfazer que é parte da entrega
-# ---------------------------------------------------------------------------
 
 
 def _rota(pactl: _Pactl, memoria: dict[str, str]) -> RotaDeSaida:
@@ -480,17 +366,7 @@ def _rota(pactl: _Pactl, memoria: dict[str, str]) -> RotaDeSaida:
 
 
 def test_mandar_para_o_controle_guarda_o_sink_anterior_antes_de_trocar() -> None:
-    """Regra 1: é reversível, e o desfazer é parte da entrega.
-
-    A ORDEM é a entrega: guardar DEPOIS de trocar deixaria uma janela em que o
-    `pactl` já mudou e a memória ainda não — e uma queda ali dentro apagaria
-    para sempre o caminho de volta. A configuração dela é dela.
-
-    Mordida: apagar o `self._gravar_memoria(atual)` de
-    `mandar_para_o_controle`. A troca continua funcionando, a memória fica
-    vazia e o botão de volta nunca mais aparece — o defeito silencioso que
-    esta casa chama de "a config que eu deixo nunca é respeitada".
-    """
+    """Regra 1: é reversível, e o desfazer é parte da entrega."""
     pactl = _Pactl(padrao=SINK_HDMI)
     memoria: dict[str, str] = {}
     rota = _rota(pactl, memoria)
@@ -504,15 +380,7 @@ def test_mandar_para_o_controle_guarda_o_sink_anterior_antes_de_trocar() -> None
 
 
 def test_voltar_ao_anterior_devolve_o_sink_dela_e_esquece_a_memoria() -> None:
-    """O desfazer inteiro, ida e volta, com a memória limpa no fim.
-
-    Esquecer é parte do desfazer: memória que sobrevive ao retorno faria o
-    próximo `estado()` oferecer "voltar" para onde o som já está.
-
-    Mordida: apagar o `self._gravar_memoria("")` do fim de
-    `voltar_ao_anterior`; a última asserção cai e o botão passa a oferecer uma
-    volta que não vai a lugar nenhum.
-    """
+    """O desfazer inteiro, ida e volta, com a memória limpa no fim."""
     pactl = _Pactl(padrao=SINK_HDMI)
     memoria: dict[str, str] = {}
     rota = _rota(pactl, memoria)
@@ -525,15 +393,7 @@ def test_voltar_ao_anterior_devolve_o_sink_dela_e_esquece_a_memoria() -> None:
 
 
 def test_a_volta_confere_que_o_sink_guardado_ainda_existe() -> None:
-    """Sink guardado que sumiu (monitor desligado, dongle fora) não vira alvo.
-
-    `pactl set-default-sink <inexistente>` não muda nada e não reclama: a
-    janela acharia que desfez.
-
-    Mordida: apagar o ``if guardado not in vivos`` de `voltar_ao_anterior`. A
-    função passa a devolver True sem ter mudado nada, e a primeira asserção
-    cai.
-    """
+    """Sink guardado que sumiu (monitor desligado, dongle fora) não vira alvo."""
     pactl = _Pactl(padrao=SINK_CONTROLE)
     memoria = {"anterior": "alsa_output.monitor_que_foi_desligado"}
     rota = _rota(pactl, memoria)
@@ -544,12 +404,7 @@ def test_a_volta_confere_que_o_sink_guardado_ainda_existe() -> None:
 
 
 def test_a_troca_e_conferida_relendo_e_nao_acreditando_na_propria_escrita() -> None:
-    """A janela que acredita na própria escrita é a janela que mente na tela.
-
-    Mordida: fazer `_trocar` devolver ``True`` fixo depois do
-    `set-default-sink`. Com um `pactl` que aceita e não aplica, a função passa
-    a dizer que trocou.
-    """
+    """A janela que acredita na própria escrita é a janela que mente na tela."""
 
     class _PactlTeimoso(_Pactl):
         def __call__(self, argv: list[str]) -> str:
@@ -558,7 +413,7 @@ def test_a_troca_e_conferida_relendo_e_nao_acreditando_na_propria_escrita() -> N
                 return self.padrao + "\n"
             if argv[:3] == ["pactl", "list", "sinks"]:
                 return self.sinks
-            return ""  # aceita o set-default-sink e NÃO aplica
+            return ""
 
     pactl = _PactlTeimoso(padrao=SINK_HDMI)
     rota = _rota(pactl, {})
@@ -566,26 +421,14 @@ def test_a_troca_e_conferida_relendo_e_nao_acreditando_na_propria_escrita() -> N
 
 
 def test_estado_nao_escreve_nada() -> None:
-    """Ler a rota é leitura. A regra 4 da entrega, aferida no argv.
-
-    Mordida: fazer `estado()` "normalizar" a saída com um `set-default-sink`.
-    """
+    """Ler a rota é leitura. A regra 4 da entrega, aferida no argv."""
     pactl = _Pactl(padrao=SINK_HDMI)
     _rota(pactl, {}).estado(SINK_CONTROLE)
     assert pactl.escritas == []
 
 
-# ---------------------------------------------------------------------------
-# Entrega 2 — o rótulo diz o que o clique faz, e a dica diz o preço
-# ---------------------------------------------------------------------------
-
-
 def test_a_tabela_do_botao_de_rota_inteira() -> None:
-    """Regra 2: o rótulo diz a AÇÃO, nada de "Ativar/Desativar" ambíguo.
-
-    Mordida: qualquer linha trocada de rótulo ou de sensibilidade. A que mais
-    importa é a última — ver o teste seguinte.
-    """
+    """Regra 2: o rótulo diz a AÇÃO, nada de "Ativar/Desativar" ambíguo."""
     fora = acao_da_rota(
         EstadoDaRota(
             sink_padrao=SINK_HDMI, sink_do_controle=SINK_CONTROLE, no_controle=False
@@ -614,17 +457,7 @@ def test_a_tabela_do_botao_de_rota_inteira() -> None:
 
 
 def test_com_o_som_ja_no_controle_e_sem_memoria_nao_ha_desfazer_honesto() -> None:
-    """Regra 6, o caso que não se adivinha — e a linha mais importante da tabela.
-
-    Com o som já no controle e sem memória de quem o pôs lá (foi ela pelas
-    configurações do sistema, ou a janela nunca soube), **não existe desfazer
-    honesto**: escolher um sink qualquer para "voltar" seria a janela decidindo
-    qual é a saída dela.
-
-    Mordida: fazer o ramo cair no primeiro sink não-controle da lista, que é o
-    reflexo natural de quem quer o botão sempre clicável. A asserção da
-    insensibilidade cai, e com ela a promessa de que a config dela é dela.
-    """
+    """Regra 6, o caso que não se adivinha — e a linha mais importante da tabela."""
     acao = acao_da_rota(
         EstadoDaRota(
             sink_padrao=SINK_CONTROLE,
@@ -639,15 +472,7 @@ def test_com_o_som_ja_no_controle_e_sem_memoria_nao_ha_desfazer_honesto() -> Non
 
 
 def test_com_mais_de_um_controle_o_botao_para_e_diz_por_que() -> None:
-    """Regra 6: `escolher_sink` devolve None de propósito, e o botão obedece.
-
-    O nome do sink não carrega identidade — o `-00` é desempate posicional do
-    PipeWire, não número de série. Mandar o som para o controle errado é pior
-    que não mandar, e um botão morto e MUDO seria a janela quebrada.
-
-    Mordida: deixar o botão sensível com `sink_do_controle` vazio; o clique
-    passa a mandar "" ao `pactl`, que é o caminho do sink padrão.
-    """
+    """Regra 6: `escolher_sink` devolve None de propósito, e o botão obedece."""
     acao = acao_da_rota(EstadoDaRota(sink_padrao=SINK_HDMI, sink_do_controle=""))
     assert not acao.sensivel
     assert acao.alvo == ""
@@ -655,14 +480,7 @@ def test_com_mais_de_um_controle_o_botao_para_e_diz_por_que() -> None:
 
 
 def test_a_dica_diz_que_a_troca_e_do_sistema_inteiro_antes_do_clique() -> None:
-    """Regra 3: mandar o áudio para o controle muda o som de TUDO.
-
-    Isso tem de estar na dica ANTES do clique — depois já é tarde. E a segunda
-    metade importa igual: a troca é a mesma que as configurações de som do
-    sistema fazem, e continua valendo depois de fechar a janela.
-
-    Mordida: encurtar a dica para "manda o som do jogo para o controle".
-    """
+    """Regra 3: mandar o áudio para o controle muda o som de TUDO."""
     acao = acao_da_rota(
         EstadoDaRota(sink_padrao=SINK_HDMI, sink_do_controle=SINK_CONTROLE)
     )
@@ -672,17 +490,8 @@ def test_a_dica_diz_que_a_troca_e_do_sistema_inteiro_antes_do_clique() -> None:
     assert "fechar esta janela" in baixa
 
 
-# ---------------------------------------------------------------------------
-# Os parsers, que são a borda com o texto do `pactl`
-# ---------------------------------------------------------------------------
-
-
 def test_parsers_do_pactl() -> None:
-    """Nome do sink padrão e lista de sinks — e o que fazer com resposta ruim.
-
-    Mordida: fazer `sink_padrao_da_saida` devolver a linha bruta sem `strip`,
-    ou aceitar a linha `Failure:` do `pactl` sem servidor como se fosse nome.
-    """
+    """Nome do sink padrão e lista de sinks — e o que fazer com resposta ruim."""
     assert sink_padrao_da_saida(SINK_HDMI + "\n") == SINK_HDMI
     assert sink_padrao_da_saida("") == ""
     assert sink_padrao_da_saida("Failure: No such entity\n") == ""

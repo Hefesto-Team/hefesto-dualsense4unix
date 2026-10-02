@@ -1,18 +1,4 @@
-"""A placa acordada enquanto um jogo vive — O-JOGO-LEVE-ACORDA-A-PLACA-01.
-
-Medido em 01/10 no Pro Jank Footy: com a carga leve, a NVIDIA desce sozinha a
-210 MHz, e o quadro que aperta passa do vsync. Com o piso travado, 116 quadros
-acima de 20 ms viraram 24. Tudo aqui roda o script de verdade, fora do root,
-num `/sys` de mentira e com um `nvidia-smi` de mentira que anota as chamadas.
-
-AS MORDIDAS:
-
-- tire o `_ha_pedido && return 0` de `verbo_devolver` em
-  `scripts/hefesto_placa_acordada.sh` e
-  `test_dois_jogos_o_primeiro_que_sai_nao_devolve` reprova;
-- tire o `_podar` de `verbo_devolver` e
-  `test_o_jogo_que_caiu_nao_segura_a_placa` reprova.
-"""
+"""A placa acordada enquanto um jogo vive — O-JOGO-LEVE-ACORDA-A-PLACA-01."""
 from __future__ import annotations
 
 import os
@@ -191,9 +177,6 @@ def test_a_regra_recusa_nome_torto(nome: str) -> None:
     assert saida.stdout == ""
 
 
-# ---------------------------------------------------------------------------
-# O lançador pede e devolve
-# ---------------------------------------------------------------------------
 LANCADOR = RAIZ / "assets" / "hefesto-launch.sh"
 
 
@@ -206,7 +189,6 @@ def _lar_do_lancador(base: Path) -> tuple[dict[str, str], Path]:
         falso = mudos / nome
         falso.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
         falso.chmod(0o755)
-    # O sudo de mentira só repassa: `sudo -n <script> <verbo>`.
     sudo = mudos / "sudo"
     sudo.write_text('#!/bin/sh\n[ "$1" = "-n" ] && shift\nexec "$@"\n', encoding="utf-8")
     sudo.chmod(0o755)

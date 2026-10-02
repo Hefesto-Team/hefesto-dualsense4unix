@@ -30,7 +30,6 @@ from typing import Any
 from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 
-#: A faixa sintética da casa — octetos 4 e 5 zerados.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
@@ -63,16 +62,8 @@ class _Bus:
         return None
 
 
-# ---------------------------------------------------------------------------
-# 1 e 2. os dois passos, e o que cada desfecho diz
-# ---------------------------------------------------------------------------
 def test_o_elo_morto_cai_e_o_controle_e_chamado_de_volta() -> None:
-    """MORDIDA: tire o `Disconnect` de `reconectar` — a chamada some da lista.
-
-    A ORDEM IMPORTA: um `Connect` por cima do elo morto responde *"já está
-    conectado"* e não levanta sessão de entrada nenhuma. Medido na mesa dela,
-    quatro vezes, com o kernel sem HID o tempo todo.
-    """
+    """MORDIDA: tire o `Disconnect` de `reconectar` — a chamada some da lista."""
     bus = _Bus(conectado="true")
     desfecho = radio.reconectar(P2, executar=bus)
 
@@ -82,8 +73,7 @@ def test_o_elo_morto_cai_e_o_controle_e_chamado_de_volta() -> None:
 
 
 def test_o_controle_fora_do_radio_nao_leva_disconnect() -> None:
-    """Quem já está fora só precisa ser chamado — derrubar o que não está de pé
-    gastaria um `busctl` para não fazer nada."""
+    """Quem já está fora só precisa ser chamado — derrubar o que não está de pé"""
     bus = _Bus(conectado="false")
     desfecho = radio.reconectar(P2, executar=bus)
 
@@ -113,15 +103,8 @@ def test_a_lista_do_radio_so_traz_dualsense() -> None:
     assert [mac for mac, _ in achados] == [P2], achados
 
 
-# ---------------------------------------------------------------------------
-# 3. quem está na mesa não é tocado
-# ---------------------------------------------------------------------------
 def test_quem_esta_na_mesa_nao_e_tocado(monkeypatch: Any) -> None:
-    """O controle que o daemon já enxerga não perde o rádio por um clique.
-
-    MORDIDA: tire o `if (norm_mac(mac) or "") in na_mesa: continue` do
-    `_o_radio_de_volta` — o controle que está jogando cai junto.
-    """
+    """O controle que o daemon já enxerga não perde o rádio por um clique."""
     raiz = __import__("pathlib").Path(__file__).resolve().parents[2]
     interface = raiz / "src" / "hefesto_dualsense4unix" / "interface"
     if str(interface) not in sys.path:
@@ -150,9 +133,6 @@ def test_quem_esta_na_mesa_nao_e_tocado(monkeypatch: Any) -> None:
     assert (voltaram, esperam) == (1, 0)
 
 
-# ---------------------------------------------------------------------------
-# 4. a suíte não fala com o rádio dela — a régua do estrago do dia
-# ---------------------------------------------------------------------------
 def test_a_suite_nunca_alcanca_o_bus_de_verdade() -> None:
     """O `busctl` do dono recusa o barramento dela enquanto a suíte estiver no ar.
 
@@ -168,8 +148,6 @@ def test_a_suite_nunca_alcanca_o_bus_de_verdade() -> None:
     """
     assert bluez_dbus.a_suite_esta_rodando() is True
     assert bluez_dbus.busctl(["tree", bluez_dbus.SERVICO, "--list"]) is None
-    # E o gesto inteiro, sem dublê nenhum, não toca em nada e não mente: sem
-    # árvore não há lista, e sem lista não há controle a mexer.
     assert radio.dualsenses_do_radio() == []
     assert radio.reconectar(P2).estado == radio.ESTADO_SEM_ALVO
 

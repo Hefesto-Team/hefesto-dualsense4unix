@@ -1,36 +1,4 @@
-"""RADIO-ABERTO-01/E10 — o restaurador de bonds recusa snapshot preparado.
-
-`scripts/bt_bonds_restore.sh` copiava o diretório do device com `cp -a`, e
-**`cp -a` preserva symlinks — não os segue**. Um snapshot contendo
-
-    <adaptador>/<MAC>/info -> /etc/sudoers.d/x
-
-era copiado tal e qual para `/var/lib/bluetooth`, e o `bluetoothd` — que roda
-como **root** — passava a escrever ATRAVÉS do link. Isso é escrita arbitrária
-como root a partir de um snapshot.
-
-Hoje o acervo é local e só o root escreve nele, o que limita o alcance. Mas a
-`BONDS-QUE-SOBREVIVEM-01` quer **acionar a restauração automaticamente**, e
-qualquer futuro que inclua importar, sincronizar ou receber um snapshot
-transforma isto em execução remota. É por isso que a cura veio antes do
-acionamento, e não depois.
-
-A cura tem duas camadas, de propósito:
-
-  1. `_validar_snapshot` percorre a árvore ANTES de qualquer coisa — antes de
-     parar o `bluetooth.service`, antes de tocar o storage. Recusa symlink,
-     device, socket, FIFO, hardlink (`nlink > 1`) e todo nome fora do conjunto
-     esperado (`info`, `attributes`, `settings`, `cache/<MAC>`);
-  2. a cópia passou a ser por **conteúdo** — arquivo a arquivo do conjunto
-     esperado — em vez de `cp -a` do diretório. Defesa em profundidade: o que
-     sai daqui não depende de a validação ter enxergado tudo.
-
-E a validação roda antes do `systemctl stop`: um snapshot recusado **não custa
-a ela os controles conectados**.
-
-MORDIDA: troque a chamada a `_validar_snapshot` por `true` e
-`test_symlink_para_fora_da_arvore_e_recusado` fica vermelho.
-"""
+"""RADIO-ABERTO-01/E10 — o restaurador de bonds recusa snapshot preparado."""
 from __future__ import annotations
 
 import os
@@ -42,7 +10,6 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESTORE = REPO_ROOT / "scripts" / "bt_bonds_restore.sh"
 
-# Faixa sintética canônica das fixtures (test_anonimato_de_fixtures.py).
 ADAPTER = "AA:BB:CC:00:00:01"
 DEVICE = "AA:BB:CC:00:00:02"
 
@@ -158,12 +125,7 @@ def test_hardlink_e_recusado(tmp_path: Path) -> None:
 
 
 def test_verificar_nao_para_o_servico_nem_exige_root(tmp_path: Path) -> None:
-    """O modo `--verificar` é só leitura — e é o que o torna testável.
-
-    Se ele tocasse `systemctl`, este teste derrubaria o Bluetooth da máquina em
-    que a suíte roda. A asserção é sobre o CÓDIGO: o caminho de verificação sai
-    antes de qualquer chamada a systemctl.
-    """
+    """O modo `--verificar` é só leitura — e é o que o torna testável."""
     _snapshot(tmp_path)
     proc = _verificar(tmp_path)
     assert proc.returncode == 0

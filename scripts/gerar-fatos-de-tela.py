@@ -1,38 +1,5 @@
 #!/usr/bin/env python3
-"""gerar-fatos-de-tela.py — o CSV vira Python que viaja no pacote.
-
-Executa Z6-02 (docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01…
-.md), a Peça 1 do contrato desenhado na PAREAMENTO-01.
-
-POR QUE GERADO, E NÃO LIDO EM RUNTIME
---------------------------------------
-`docs/data/mapa-controles.csv` **não viaja no pacote** — medido em 24/08/2026:
-`pyproject.toml:79` só empacota `src/hefesto_dualsense4unix`, e nenhum dos
-scripts de empacotamento (`packaging/`, `flatpak/`, `scripts/build_*.sh`)
-carrega `docs/data/`. Uma GUI que lesse o CSV em runtime funcionaria na máquina
-de quem desenvolve e quebraria na de quem instalou. Por isso o CSV é convertido
-para Python **em build time**, e o módulo gerado é commitado e viaja com o
-pacote — o mesmo desenho de `scripts/gerar-mapa.py` para o `specs.html`.
-
-O `--check` PERGUNTA PELO CONTEÚDO, NÃO PELO RELÓGIO
-------------------------------------------------------
-A mesma disciplina de `gerar-mapa.py`: regenera em memória e compara **texto**
-com o arquivo em disco, nunca `mtime`. A MAPA-CONTEÚDO-01 (12/08/2026) já pagou
-duas vezes por comparar relógio.
-
-A FRONTEIRA QUE SALVA A PROPOSTA
----------------------------------
-A PAREAMENTO-01 desenha a fronteira DERIVA x NAO DERIVA: colunas de fato
-(domínio fechado, régua executável) viram Python; prosa de bancada (`rotulo`,
-`*_detalhe`, `*_ressalva`, `nota`, `estado_hoje`, `*_feature_v1`, `*_evidencia`)
-NUNCA vira frase de tela por geração automática — isso seria pôr palavra na
-boca dela. `checar_fronteira()` é o guarda mecânico: se uma coluna de prosa
-entrar na allowlist de emissão, ele reprova.
-
-Uso:
-    python3 scripts/gerar-fatos-de-tela.py            # escreve o módulo gerado
-    python3 scripts/gerar-fatos-de-tela.py --check    # o publicado bate com o CSV?
-"""
+"""gerar-fatos-de-tela.py — o CSV vira Python que viaja no pacote."""
 from __future__ import annotations
 
 import argparse
@@ -44,9 +11,6 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.append(str(Path(__file__).resolve().parent))
 
-# Vocabulário com um dono só (Z6-01): nada aqui redigita valor de domínio — os
-# três nomes vêm do portão que já é dono deles, exatamente como
-# `scripts/gerar-mapa.py` já faz para a legenda da ESCADA no `specs.html`.
 from check_paridade_transporte import (
     DOMINIO_EXISTE,
     DOMINIO_POR_SUFIXO,
@@ -59,18 +23,10 @@ SAIDA_RELATIVO = "src/hefesto_dualsense4unix/app/fatos_do_mapa.py"
 CSV_CAMINHO = RAIZ / CSV_RELATIVO
 SAIDA_CAMINHO = RAIZ / SAIDA_RELATIVO
 
-#: As colunas de FATO que o gerador emite — o lado DERIVA da fronteira da
-#: PAREAMENTO-01. Cada sufixo aqui tem domínio fechado em `DOMINIO_POR_SUFIXO`
-#: (ou é `existe`, com domínio próprio em `DOMINIO_EXISTE`).
 COLUNAS_DERIVAVEIS: frozenset[str] = frozenset(
     {"aceita", "aciona", "de_onde_sei", "ate_onde_foi", "por_que_nao_aciona", "canal"}
 )
 
-#: As colunas de PROSA — o lado NÃO DERIVA. Escritas para quem depura rádio,
-#: não para quem joga; virar dica de tela por geração automática é o erro que
-#: a PAREAMENTO-01 manda evitar (o precedente é "alto-falante" → "placa de
-#: som", que ela derrubou em 15/08/2026). Esta lista não precisa ser
-#: exaustiva — só precisa cobrir o que `checar_fronteira` tem de recusar.
 COLUNAS_PROSA: frozenset[str] = frozenset(
     {
         "rotulo",
@@ -88,9 +44,6 @@ COLUNAS_PROSA: frozenset[str] = frozenset(
         "mordida_provada_em",
         "provado_em",
         "provado_por",
-        # 29/08/2026, pedido dela: "se tal informação veio do git, qual repo
-        # e se eu e vc validamos na mesa". A fonte externa é PROSA DE
-        # BANCADA — ela diz de onde veio a pista, não o que a tela fala.
         "fonte_externa",
         "validade_dias",
         "assimetria_declarada",
@@ -100,13 +53,7 @@ COLUNAS_PROSA: frozenset[str] = frozenset(
 
 
 def checar_fronteira(colunas_permitidas: frozenset[str]) -> None:
-    """Reprova se uma coluna de PROSA entrar na allowlist de emissão.
-
-    É o guarda mecânico da fronteira DERIVA x NAO DERIVA (PAREAMENTO-01, "A
-    FRONTEIRA QUE SALVA A PROPOSTA"). Sem ele, a proposta escorrega em três
-    levas para "gerar a voz dela a partir de célula" — que já foi tentado e
-    derrubado por ela uma vez.
-    """
+    """Reprova se uma coluna de PROSA entrar na allowlist de emissão."""
     intrusas = colunas_permitidas & COLUNAS_PROSA
     if intrusas:
         raise ValueError(
@@ -127,13 +74,7 @@ def _valor(linha: dict[str, str], coluna: str) -> str:
 
 
 def monta_fatos(linhas: list[dict[str, str]]) -> dict[str, dict[str, object]]:
-    """O dicionário `FATOS`, na forma que o módulo gerado publica.
-
-    Cada `id` vira uma entrada com `existe` e um sub-dicionário por lado
-    (`cabo`, `radio`), só com as colunas DERIVÁVEIS. `pares_de_transporte` é o
-    mesmo leitor por sufixo que `check_paridade_transporte.py` usa — nunca uma
-    lista de colunas escrita à mão aqui.
-    """
+    """O dicionário `FATOS`, na forma que o módulo gerado publica."""
     if not linhas:
         return {}
     checar_fronteira(COLUNAS_DERIVAVEIS)

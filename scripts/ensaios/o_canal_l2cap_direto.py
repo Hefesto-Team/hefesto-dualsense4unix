@@ -96,44 +96,19 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
 import hefesto_dualsense4unix.core.ds_output_report as rep
 from comum import RADIO, cabecalho_do_instrumento, descobrir_aparelhos, fisicos, resumo
 
-# O REPORT DE COR VEM DO DONO, e não é remontado aqui. `report_de_cor` é a
-# função do ensaio irmão que produziu o azul que ela viu acender pelos dois
-# envelopes em 10/09/2026 — remontá-lo daria um segundo positivo, parecido e
-# não idêntico, e a comparação entre os dois caminhos deixaria de valer.
 from o_envelope_do_som_no_radio import common_vazio, report_de_cor
 
-# A RAJADA DE ÁUDIO TAMBÉM VEM DO DONO: `pacotes_do_tom` é a mesma função que a
-# folha do som bombeia pelo hidraw, e o tom que ela codifica é byte a byte o PCM
-# que o cabo toca. Só assim o silêncio por AQUI é comparável com o silêncio por LÁ.
 import hefesto_dualsense4unix.integrations.alto_falante_bt as af
 from a_folha_do_som_por_controle import ms_por_report, pacotes_do_tom
 
-#: OS DOIS PSM DO HID, e eles são padrão do perfil, não escolha nossa.
-#: `0x11` é o canal de CONTROLE (SET_REPORT, com handshake); `0x13` é o de
-#: INTERRUPÇÃO (DATA, dispara e esquece). O `write()` do hidraw sai pelo
-#: `0x13`; o `HIDIOCSOUTPUT`, pelo `0x11`.
 PSM_CONTROLE = 0x11
 PSM_INTERRUPCAO = 0x13
 
-#: O byte que o HIDP escreve por nós quando o caminho é o hidraw:
-#: `HIDP_TRANS_DATA (0xa0) | HIDP_DATA_RTYPE_OUTPUT (0x02)`. Medido em
-#: `docs/process/pesquisas/2026-08-31-canais-de-radio/fontes-r3.md` §8,
-#: `net/bluetooth/hidp/core.c:95-126`.
 HIDP_DATA_OUTPUT = 0xA2
 
-#: OS DOIS BOTÕES DE MTU do `setsockopt`, e eles são a única diferença que
-#: sobra entre esta casa e o DS5Dongle. `SOL_L2CAP` e `L2CAP_OPTIONS` não estão
-#: no módulo `socket` do Python — são do `<bluetooth/l2cap.h>`, e o `l2cap_proxy`
-#: do matlo sobe `imtu`/`omtu` para 1024 por aqui
-#: (`l2cap_con.c:30-35,158-184`, lido na pesquisa de 31/08, §8 do `fontes-r3.md`).
-#: O perfil de input do BlueZ NUNCA toca neste botão: vale
-#: `L2CAP_DEFAULT_MTU = 672`.
 SOL_L2CAP = 6
 L2CAP_OPTIONS = 0x01
 
-#: A MESMA COR DO PASSO 0 DA FOLHA DO SOM, e ela é a mesma de propósito: é o
-#: azul que ela viu acender pelos dois envelopes em 10/09/2026. Trocar a cor
-#: aqui faria o positivo deste ensaio deixar de ser comparável com aquele.
 COR_AZUL = (0, 0, 255)
 
 
@@ -154,11 +129,7 @@ def o_controle_no_radio() -> object | None:
 
 
 def perfil_de_input(mac: str, ligar: bool) -> str:
-    """Liga ou desliga o perfil de input do BlueZ para este controle.
-
-    DESLIGAR É O QUE TIRA O CONTROLE DELA, e por isso ele nunca acontece sem
-    `--assumir-o-canal`: enquanto o perfil está fora, o gamepad some do sistema.
-    """
+    """Liga ou desliga o perfil de input do BlueZ para este controle."""
     acao = "connect" if ligar else "disconnect"
     try:
         saida = subprocess.run(
@@ -173,23 +144,9 @@ def perfil_de_input(mac: str, ligar: bool) -> str:
 
 
 def subir_o_mtu(sk: object, mtu: int) -> str:
-    """Sobe `imtu`/`omtu` do canal — o botão que o perfil de input do BlueZ não toca.
-
-    A struct é `l2cap_options` do `<bluetooth/l2cap.h>`: dois `uint16` de MTU,
-    `flush_to`, `mode`, `fcs`, `max_tx` e `txwin_size`. Lê-se primeiro para
-    preservar o que o kernel já pôs — escrever a struct inteira zerada trocaria
-    o modo do canal por acidente.
-    """
+    """Sobe `imtu`/`omtu` do canal — o botão que o perfil de input do BlueZ não toca."""
     import struct
 
-    # O FORMATO É NATIVO (`=`), e não `<`: a struct do C alinha `txwin_size` em
-    # dois bytes, o que põe UM byte de enchimento depois de `max_tx`. Somando os
-    # campos à mão dá 11 e o kernel devolve 12 — foi o erro da primeira corrida.
-    # O `x` É O ENCHIMENTO, e ele decide: o kernel faz
-    # `min(sizeof(struct l2cap_options), optlen)` e `sizeof` lá é 12, porque o
-    # compilador alinha `txwin_size`. Mandar 11 corta o último campo e o kernel
-    # devolve EINVAL — medido nesta máquina em 10/09/2026, primeira corrida.
-    # O `struct` do Python NÃO põe esse enchimento sozinho nem com `=`.
     FORMA = "<HHHBBBxH"
     try:
         crua = sk.getsockopt(SOL_L2CAP, L2CAP_OPTIONS, struct.calcsize(FORMA))  # type: ignore[attr-defined]
@@ -202,17 +159,7 @@ def subir_o_mtu(sk: object, mtu: int) -> str:
 
 
 def abrir_canal(mac: str, psm: int, mtu: int = 0) -> tuple[object | None, str]:
-    """Um socket L2CAP para o controle, no PSM pedido.
-
-    O que cada falha SIGNIFICA, porque um `OSError` cru aqui não diz nada:
-
-    * ``EPERM`` — falta capacidade de rede a este processo (é o caso comum sem
-      privilégio); não é o firmware recusando;
-    * ``EBUSY`` / ``EADDRINUSE`` — o canal já tem dono, que é o BlueZ. É a
-      resposta do degrau A quando o controle só aceita um canal por PSM;
-    * ``ECONNREFUSED`` / ``ETIMEDOUT`` — quem recusou foi o APARELHO, e isso
-      já é resultado do ensaio.
-    """
+    """Um socket L2CAP para o controle, no PSM pedido."""
     try:
         sk = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_SEQPACKET, socket.BTPROTO_L2CAP)
     except (AttributeError, OSError) as erro:
@@ -221,7 +168,6 @@ def abrir_canal(mac: str, psm: int, mtu: int = 0) -> tuple[object | None, str]:
     try:
         sk.settimeout(10.0)
         if mtu:
-            # ANTES do connect: depois de conectado o canal já negociou.
             recado = subir_o_mtu(sk, mtu)
         sk.connect((mac, psm))
     except OSError as erro:
@@ -309,10 +255,6 @@ def main() -> None:
                              f"os que existem: {', '.join(af.ARRANJO_POR_NOME)}"))
                 raise SystemExit(1)
             for nome in nomes:
-                # A CONDIÇÃO É A DO PRODUTO, e o volume é o que ela ouviu no cabo.
-                # Um `common` zerado aqui mandaria áudio com volume 0 e o silêncio
-                # não diria nada — é a armadilha que a folha do som evita com a
-                # linha da condição.
                 common = af.common_de_audio(
                     volume=af.VOLUME_QUE_ELA_OUVIU,
                     rota=rep.SAIDA_SO_NO_ALTO_FALANTE,
@@ -352,9 +294,6 @@ def main() -> None:
               f"({HIDP_DATA_OUTPUT:#04x} + report 0x31 de {len(pacote) - 1} B)")
         print(f"\n  >>> OLHE A BARRA DE LUZ DO CONTROLE pelos próximos "
               f"{args.segundos:g} s. Ela ficou AZUL?", flush=True)
-        # O ACESO REPETE A 10 Hz, e não é enfeite: o daemon é o dono da barra e
-        # a repinta a cada tique dele. Um envio só seria apagado por ele antes
-        # de ela olhar — é o mesmo martelo da chave «Assumir» da folha do som.
         fim = time.monotonic() + args.segundos
         seq = 1
         while time.monotonic() < fim:

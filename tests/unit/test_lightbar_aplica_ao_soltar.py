@@ -31,10 +31,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("lightbar aplica ao soltar")
 
 from typing import Any
@@ -43,8 +39,6 @@ import pytest
 
 gi = pytest.importorskip("gi")
 
-# BUG-TEST-GDK-VERSION-PIN-01: pina Gdk/Gtk 3.0 ANTES de importar módulos da
-# GUI — sem isso o gi pode carregar Gdk 4.0 e envenenar o processo inteiro.
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
@@ -54,7 +48,6 @@ from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsM
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 
 
-#: MACs forjados (faixa aa:bb:cc — teste-guarda de anonimato).
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 
@@ -63,12 +56,7 @@ AZUL = (0, 0, 255)
 
 
 def _gdk_rgba_ok() -> bool:
-    """A CI headless de release tem um Gdk parcial sem RGBA.
-
-    ``install_lightbar_tab`` constrói um ``Gdk.RGBA`` para semear a cor inicial
-    quando o seletor existe — mesmo skip de ``test_lightbar_todos_por_mac_r14``.
-    Os testes de BRILHO não precisam do seletor e rodam em qualquer ambiente.
-    """
+    """A CI headless de release tem um Gdk parcial sem RGBA."""
     try:
         from gi.repository import Gdk
 
@@ -77,18 +65,8 @@ def _gdk_rgba_ok() -> bool:
         return False
 
 
-# ---------------------------------------------------------------------------
-# Widgets falsos que GRAVAM as conexões (é aqui que o teste morde)
-# ---------------------------------------------------------------------------
-
-
 class _WidgetEspiao:
-    """Widget mínimo que guarda quem se conectou a cada sinal.
-
-    ``disparar`` faz o que o GTK faria: chama os handlers registrados NAQUELE
-    sinal, na ordem de conexão. Sinal sem handler é disparo no vazio — que é
-    exatamente o que acontece quando a fiação é arrancada.
-    """
+    """Widget mínimo que guarda quem se conectou a cada sinal."""
 
     def __init__(self) -> None:
         self.handlers: dict[str, list[Any]] = {}
@@ -170,7 +148,7 @@ def _draft(auto: bool = True) -> draft_mod.DraftConfig:
         leds=LedsConfig(
             lightbar=ROXO,
             player_leds=[True, False, False, False, False],
-            lightbar_brightness=1.0,  # 0..1 no perfil; vira 0..100 no rascunho
+            lightbar_brightness=1.0,
             auto_player_colors=auto,
         ),
     )
@@ -237,9 +215,6 @@ def _host_com_brilho(
         conectados=conectados if conectados is not None else {1: UNIQ_1},
     )
     host.install_lightbar_tab()
-    # A cor QUE ESTÁ NA TELA — no app quem a semeia é o
-    # `_refresh_lightbar_from_draft`, que exige a aba inteira montada. Cor e
-    # brilho formam um campo só no backend: soltar o brilho manda os dois.
     host._current_rgb = ROXO
     return host, escala
 
@@ -250,11 +225,6 @@ def _arrastar(host: _Host, escala: _ControleDeslizante, de: int, ate: int) -> No
     for valor in range(de, ate + passo, passo):
         escala.valor = float(valor)
         host.on_lightbar_brightness_changed(escala)
-
-
-# ---------------------------------------------------------------------------
-# Brilho: arrastar não escreve; soltar escreve UMA vez
-# ---------------------------------------------------------------------------
 
 
 def test_arrastar_o_brilho_nao_escreve_um_pedido_por_pixel(
@@ -268,7 +238,6 @@ def test_arrastar_o_brilho_nao_escreve_um_pedido_por_pixel(
         "arrastar escreveu no controle — é a saturação de fila que o "
         "adiamento existe para evitar"
     )
-    # O movimento continua vivo onde deve: rascunho e prévia.
     assert host.draft.leds.lightbar_brightness == 60
 
 
@@ -324,7 +293,7 @@ def test_dois_gestos_seguidos_sao_duas_escritas_e_nao_mais(
     escala.disparar("button-release-event", escala, None)
     _arrastar(host, escala, 80, 40)
     escala.disparar("button-release-event", escala, None)
-    escala.disparar("button-release-event", escala, None)  # solta de novo, parado
+    escala.disparar("button-release-event", escala, None)
 
     assert [c[1] for c in escritas.chamadas] == [
         pytest.approx(0.80),
@@ -372,18 +341,9 @@ def test_alvo_selecionado_recebe_sozinho(escritas: _EspiaoDeEscrita) -> None:
     assert [c[2] for c in escritas.chamadas] == [UNIQ_2]
 
 
-# ---------------------------------------------------------------------------
-# Cor: confirmar a cor no diálogo acende AGORA
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.skipif(not _gdk_rgba_ok(), reason="Gdk.RGBA ausente (CI headless)")
 def test_soltar_o_seletor_de_cor_acende_uma_vez(escritas: _EspiaoDeEscrita) -> None:
-    """O caso mais defensável da queixa: escolher cor não acendia nada.
-
-    Simula a cadeia real: o Builder liga ``color-set`` ao handler de rascunho
-    (que roda primeiro) e ``install_lightbar_tab`` liga o de escrita.
-    """
+    """O caso mais defensável da queixa: escolher cor não acendia nada."""
     seletor = _SeletorDeCor()
     host = _Host(
         _draft(),
@@ -397,8 +357,8 @@ def test_soltar_o_seletor_de_cor_acende_uma_vez(escritas: _EspiaoDeEscrita) -> N
     )
 
     seletor.escolher(AZUL)
-    host.on_lightbar_color_set(seletor)  # o que o glade fia (rascunho + prévia)
-    seletor.disparar("color-set", seletor)  # o que a entrega 1 fia (escrita)
+    host.on_lightbar_color_set(seletor)
+    seletor.disparar("color-set", seletor)
 
     assert escritas.chamadas == [
         (AZUL, 1.0, UNIQ_1),

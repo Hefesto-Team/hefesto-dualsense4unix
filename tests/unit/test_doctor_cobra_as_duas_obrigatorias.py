@@ -1,18 +1,4 @@
-"""VERDE-MENTIROSO-01 (19/08/2026) — o doctor não cobrava as duas obrigatórias.
-
-`grep -n "hidapi\\|rsvg" scripts/doctor.sh` dava ZERO antes desta leva. O
-instalador só passou a GARANTIR a `libhidapi` e o loader SVG em 19/08 — quem
-instalou antes disso, ou instalou por pacote da distro, seguia com verde
-mentiroso na conferência: o doctor dizia que estava tudo bem e o produto não
-abria aparelho nenhum, ou desenhava a bandeja vazia.
-
-A ARMADILHA QUE ESTA LEVA PAGOU, e é por isso que este arquivo mede o EFEITO:
-a primeira versão da régua do SVG perguntava `GdkPixbuf.Pixbuf.get_formats()`.
-Isso lê o CACHE do gdk-pixbuf (`loaders.cache`), não o loader. Medido com o
-`libpixbufloader-svg.so` fora do alcance do processo: o catálogo continuava
-dizendo que sabe ler SVG, e a régua dava verde sobre uma máquina em que o ícone
-sairia vazio. Agora ela CARREGA um SVG, que é o que a interface faz 38 vezes.
-"""
+"""VERDE-MENTIROSO-01 (19/08/2026) — o doctor não cobrava as duas obrigatórias."""
 
 from __future__ import annotations
 
@@ -38,29 +24,13 @@ def _funcao(nome: str) -> str:
 
 
 def _venv_python_ao_alcance() -> str:
-    """O python de venv que o doctor vai achar — resolvido, nunca presumido.
-
-    BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026): esta substituição
-    apontava para `${HEFESTO_RAIZ}/.venv/bin/python`, e `git worktree add` não
-    copia `.venv/`. Em árvore de agente o caminho não existia, o
-    `_python_do_produto` caía no `python3` do PATH — aqui um venv SEM
-    PyGObject — e o `check_loader_svg` reprovava por falta de `gi` numa
-    máquina que carrega SVG sem problema nenhum. Ver `binario_do_venv`.
-
-    Quando não há venv ao alcance, devolve o caminho antigo (inexistente): o
-    doctor simplesmente pula essa entrada, exatamente como fazia.
-    """
+    """O python de venv que o doctor vai achar — resolvido, nunca presumido."""
     achado = binario_do_venv("python")
     return str(achado) if achado is not None else str(RAIZ / ".venv/bin/python")
 
 
 def _corpo_do_python_do_produto() -> str:
-    """O corpo do doctor com a venv DESTA árvore no lugar da do produto.
-
-    O candidato substituído é o PRIMEIRO da lista desde 18/09/2026
-    (INSTALL-UNIVERSAL): a venv ao lado do script. Se a substituição não
-    casar, a régua para aqui — e não roda com um `ROOT_DIR` indefinido.
-    """
+    """O corpo do doctor com a venv DESTA árvore no lugar da do produto."""
     corpo = _funcao("_python_do_produto")
     alvo = '"${ROOT_DIR}/.venv/bin/python"'
     assert alvo in corpo, "o candidato da venv do produto mudou de grafia"
@@ -68,15 +38,7 @@ def _corpo_do_python_do_produto() -> str:
 
 
 def _python_que_o_doctor_usa() -> str:
-    """O interpretador que as checagens do doctor vão de fato rodar.
-
-    MEDIR CONTRA A BIBLIOTECA ERRADA é a armadilha nº 1 desta casa, e esta
-    régua caía nela ao contrário: a PREMISSA (`_tem_loader_svg`) perguntava a
-    `sys.executable`, o python da bancada; a AFIRMAÇÃO rodava o doctor, que
-    escolhe outro interpretador. Premissa e afirmação sobre interpretadores
-    diferentes produzem um vermelho que se lê como "a régua do doctor
-    quebrou". Agora a premissa pergunta a ESTE.
-    """
+    """O interpretador que as checagens do doctor vão de fato rodar."""
     saida = subprocess.run(
         ["/usr/bin/bash", "-c", _corpo_do_python_do_produto() + "\n_python_do_produto\n"],
         capture_output=True,
@@ -86,11 +48,7 @@ def _python_que_o_doctor_usa() -> str:
 
 
 def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
-    """Roda UMA checagem do doctor, opcionalmente sem alguma biblioteca.
-
-    Máscara por `bwrap --bind` de arquivo vazio: nada é apagado da máquina, e a
-    biblioteca só fica fora do alcance DESTE processo.
-    """
+    """Roda UMA checagem do doctor, opcionalmente sem alguma biblioteca."""
     prelude = (
         "set -uo pipefail\n"
         "FAILS=0; WARNS=0\n"
@@ -103,8 +61,6 @@ def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
     script = prelude + corpo + _funcao(nome) + f"\n{nome}\n"
     cmd = ["/usr/bin/bash", "-c", script]
     if mascarar:
-        # BERCO-DE-TMP-01: caminho FIXO em /tmp ignora o TMPDIR do berço e suja
-        # a máquina dela. O `tempfile` respeita o berço.
         import tempfile
 
         fd, vazio = tempfile.mkstemp(prefix="hefesto-mascara-", suffix=".so")
@@ -116,23 +72,9 @@ def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
                 binds += ["--bind", vazio, alvo]
         if not binds:
             pytest.skip(f"nada para mascarar: {mascarar}")
-        # O CI não traz `bwrap`. Sem esta guarda o `subprocess.run` estourava com
-        # `FileNotFoundError` e a mordida virava ERRO — que se lê como "a régua
-        # do doctor quebrou", quando o que falta é a ferramenta de mascarar.
         if shutil.which("bwrap") is None:
             pytest.skip("sem `bwrap` não dá para mascarar a biblioteca")
         envelope = ["bwrap", "--dev-bind", "/", "/", *binds]
-        # MASCARA-QUE-NAO-PEGOU-01 (19/08/2026): PROVE que a máscara pegou antes
-        # de acreditar no código de saída. Sem esta sonda o `returncode` podia ser
-        # do `bwrap`, não do doctor — e foi: no runner do Ubuntu 24.04 o AppArmor
-        # bloqueia user namespace sem privilégio, o `bwrap` saía com 1, e a
-        # mordida reprovava dizendo "o doctor deu verde" com o doctor nunca tendo
-        # rodado. Alarme convincente e falso, a armadilha nº 1 desta casa.
-        #
-        # A sonda pergunta pelo EFEITO: dentro do envelope, o primeiro alvo é um
-        # arquivo VAZIO? Se sim, a máscara está de pé e o que voltar depois é do
-        # doctor. Se não — por qualquer motivo —, o instrumento se declara
-        # incapaz em vez de dar veredito sobre o produto.
         sonda = subprocess.run(
             [*envelope, "/usr/bin/bash", "-c", f'test ! -s "{mascarar[0]}"'],
             capture_output=True,
@@ -149,8 +91,6 @@ def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
         try:
             return subprocess.run(cmd, capture_output=True, text=True).returncode
         finally:
-            # BERCO-DE-TMP-01: a máscara sai com o teste. Ela é um `.so` VAZIO e
-            # inofensivo, mas o berço conta entradas, não perigo.
             Path(vazio).unlink(missing_ok=True)
     return subprocess.run(cmd, capture_output=True, text=True).returncode
 
@@ -183,18 +123,7 @@ class TestOhDoctorCobraALibhidapi:
 
 
 def _tem_loader_svg() -> bool:
-    """O gdk-pixbuf desta máquina CARREGA um SVG?
-
-    A pergunta é pelo efeito, e não pelo pacote — é a mesma disciplina do
-    `check_loader_svg` que este arquivo afere. E precisa ser feita: o job
-    `lint-test` do CI não instala o loader, então "com o loader passa" ali não
-    tinha premissa. Reprovava dizendo que a régua estava errada, quando o que
-    faltava era a coisa medida.
-
-    E ela pergunta ao MESMO python que o doctor vai usar (25/08/2026). Ver
-    `_python_que_o_doctor_usa`: perguntar a `sys.executable` era medir um
-    interpretador e afirmar sobre outro.
-    """
+    """O gdk-pixbuf desta máquina CARREGA um SVG?"""
     py = _python_que_o_doctor_usa()
     if not py:
         return False
@@ -202,8 +131,6 @@ def _tem_loader_svg() -> bool:
         "import gi; gi.require_version('GdkPixbuf','2.0');"
         "from gi.repository import GdkPixbuf;"
         "import os, tempfile, pathlib;"
-        # BERCO-DE-TMP-01: o SVG de mentira sai com o processo. Sem isto a régua
-        # deixava lixo em /tmp e o próprio berço da suíte reclamava dela.
         "fd, nome = tempfile.mkstemp(suffix='.svg'); os.close(fd);"
         "p=pathlib.Path(nome);"
         "p.write_text('<svg xmlns=\"http://www.w3.org/2000/svg\" "
@@ -225,18 +152,7 @@ class TestOhDoctorCobraOLoaderSVG:
         assert _rodar("check_loader_svg") == 0
 
     def test_a_mordida_sem_o_loader_reprova(self) -> None:
-        """E ela mede o EFEITO, não o catálogo.
-
-        Se alguém trocar o carregamento por `Pixbuf.get_formats()`, este teste
-        volta a dar verde com o loader mascarado — medido em 19/08.
-
-        A PREMISSA VEM ANTES DA MORDIDA (25/08/2026), e ela faltava aqui: sem
-        ela esta mordida dava VERDE PELO MOTIVO ERRADO. Medido nesta árvore de
-        agente — o `_python_do_produto` caía num python sem PyGObject, o
-        `check_loader_svg` saía 7 **com ou sem a máscara**, e a asserção de
-        baixo comemorava uma recusa que a máscara não causou. Um verde que não
-        depende da coisa medida não é mordida nenhuma.
-        """
+        """E ela mede o EFEITO, não o catálogo."""
         if not _tem_loader_svg():
             pytest.skip("esta máquina não carrega SVG — não há loader a aferir")
         alvos = _existe(

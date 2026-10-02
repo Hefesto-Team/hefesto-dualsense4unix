@@ -48,14 +48,12 @@ from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
-#: O que a ponte publica — a forma do `default.env`.
 _PONTE = (
     ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "0x054c/0x0ce6"),
     ("PROTON_DISABLE_HIDRAW", "0x054c/0x0ce6"),
     ("SDL_JOYSTICK_HIDAPI", "0"),
 )
 
-#: A recusa que o dono da Steam devolve com um jogo aberto.
 _JOGO_ABERTO = "jogo_aberto"
 
 
@@ -83,10 +81,7 @@ def _flatpak(lar: Path, app_id: str) -> None:
 
 
 def _montar(lar: Path) -> Path:
-    """Um Heroic Flatpak com um jogo, um Lutris e um emulador Flatpak; a ponte.
-
-    Devolve a cópia do jogo do Heroic (`GamesConfig/<app>.json`).
-    """
+    """Um Heroic Flatpak com um jogo, um Lutris e um emulador Flatpak; a ponte."""
     from hefesto_dualsense4unix.utils.xdg_paths import launch_env_dir
 
     amb = launch_env_dir(ensure=True)
@@ -143,27 +138,14 @@ def _o_que_mudou(antes: dict[Path, str], depois: dict[Path, str]) -> list[Path]:
 
 
 def _palavra_do_cartao(chave: str) -> str:
-    """Como a pergunta chama o cartão que a carona escreveu.
-
-    O nome do lançador vem do censo (`_ONDE`); os cartões que não têm
-    biblioteca de jogos na aba Lançadores (`a07._COM_BIBLIOTECA`) são os
-    emuladores — um processo para todas as ROMs —, e a pergunta os chama
-    pela família.
-    """
+    """Como a pergunta chama o cartão que a carona escreveu."""
     if chave in a07._COM_BIBLIOTECA:
         return next(n for n in censo._ONDE if n.casefold() == chave)
     return "emuladores"
 
 
-# ---------------------------------------------------------------------------
-# 1 · A pergunta nomeia cada lançador que o ato escreve
-# ---------------------------------------------------------------------------
 def test_a_pergunta_nomeia_cada_lancador_que_a_carona_escreve(_lar: Path) -> None:
-    """A lista sai da carona de verdade, no lar de mentira — nunca digitada.
-
-    MORDIDA: com o corpo de antes de 02/10 («Cada jogo instalado passa a abrir
-    pelo launcher do Hefesto…») este teste reprova por «Heroic».
-    """
+    """A lista sai da carona de verdade, no lar de mentira — nunca digitada."""
     _montar(_lar)
     escritos = cpe.curar_todas_as_estradas()
     assert {"heroic", "lutris"} <= set(escritos), (
@@ -178,16 +160,9 @@ def test_a_pergunta_nomeia_cada_lancador_que_a_carona_escreve(_lar: Path) -> Non
         f"{pergunta}")
 
 
-# ---------------------------------------------------------------------------
-# 2 · Com um jogo aberto, a pergunta não promete «nada»
-# ---------------------------------------------------------------------------
 def test_com_jogo_aberto_a_pergunta_nao_promete_nada(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O ato inteiro, com a Steam recusando: os outros já receberam o deles.
-
-    MORDIDA: devolver ao corpo a frase «Com um jogo aberto eu não mexo em
-    nada»; a régua reprova citando o arquivo do Heroic que mudou.
-    """
+    """O ato inteiro, com a Steam recusando: os outros já receberam o deles."""
     copia = _montar(_lar)
     visto = _a_steam_recusa(monkeypatch)
     pergunta = _pergunta()
@@ -207,25 +182,13 @@ def test_com_jogo_aberto_a_pergunta_nao_promete_nada(
         f"«não mexo em nada»:\n{pergunta}")
 
 
-# ---------------------------------------------------------------------------
-# 3 · O dono do gesto não diz «só a Steam»
-# ---------------------------------------------------------------------------
 def test_o_dono_do_gesto_cita_a_carona() -> None:
-    """O contrato de dono que o gerador da aba cobra antes do `data-gesto`.
-
-    MORDIDA: o texto de antes de 02/10 («nesta leva só a Steam, e a extensão é
-    a AS-SOLUCOES-NOS-LANCADORES-01»).
-    """
+    """O contrato de dono que o gerador da aba cobra antes do `data-gesto`."""
     dono = aba_sistema.GESTOS["aplicar-aos-jogos"]
     assert "curar_todas_as_estradas" in dono, dono
     assert "só a Steam" not in dono, dono
 
 
-# ---------------------------------------------------------------------------
-# 4 · O backup só se promete onde ele existe
-# ---------------------------------------------------------------------------
-#: Os nomes dos outros lançadores, como a pergunta os diz — os do censo que
-#: têm biblioteca, e a família dos emuladores.
 def _nomes_dos_outros() -> tuple[str, ...]:
     return (*(n for n in censo._ONDE if n.casefold() in a07._COM_BIBLIOTECA),
             "emuladores")
@@ -237,12 +200,7 @@ def _frases(texto: str) -> list[str]:
 
 def test_o_backup_so_se_promete_onde_ele_existe(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Depois do ato, procura um backup ao lado de cada arquivo que a carona
-    mudou. Sem backup, a frase que promete «backup» não nomeia os outros.
-
-    MORDIDA: um corpo com «fica um backup ao lado de cada arquivo» na frase
-    que nomeia o Heroic, o Lutris e os emuladores.
-    """
+    """Depois do ato, procura um backup ao lado de cada arquivo que a carona"""
     _montar(_lar)
     _a_steam_recusa(monkeypatch)
     pergunta = _pergunta()
@@ -275,27 +233,12 @@ def test_a_pergunta_do_painel_e_a_do_dono() -> None:
 
 
 def test_a_pergunta_fala_a_lingua_da_tela() -> None:
-    """A pergunta é texto de tela, e a tela fala português: o atalho do
-    Hefesto na Steam e a desinstalação não entram em inglês (o glossário,
-    `docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`, e a
-    dica do botão, que diz «Põe o Hefesto nos jogos»). Conferência de 02/10/2026.
-
-    MORDIDA: o corpo com «launcher do Hefesto» e «para tirar no uninstall».
-    """
+    """A pergunta é texto de tela, e a tela fala português: o atalho do"""
     pergunta = " ".join(a09._pergunta_da_steam().split())
     em_ingles = [p for p in ("launcher", "uninstall") if p in pergunta.casefold()]
     assert not em_ingles, f"a pergunta diz {em_ingles} na tela:\n{pergunta}"
 
 
-# ---------------------------------------------------------------------------
-# 6 · Nos outros lançadores, a pergunta não promete «na hora»
-# ---------------------------------------------------------------------------
-#: QUANDO CADA ESTRADA DA CARONA CHEGA AO JOGO, lido no leitor de cada uma
-#: (conferência final, 02/10/2026): o Heroic 2.22.3 lê o `config.json` uma vez,
-#: ao abrir (`GlobalConfigV0.getSettings` devolve o `this.config` guardado na
-#: memória, lido no `app.asar` instalado nela), e a caixa do Flatpak só entra no
-#: lançador no `flatpak run` dele. Nenhuma das duas chega a um lançador que já
-#: está aberto: o que a carona escreve vale na próxima vez que cada um abrir.
 _LIDA_AO_ABRIR = {
     "heroic": "o Heroic lê o config.json ao abrir (GlobalConfigV0.getSettings)",
     "caixa": "a caixa do Flatpak vale no `flatpak run` do lançador",
@@ -303,11 +246,7 @@ _LIDA_AO_ABRIR = {
 
 
 def test_nos_outros_lancadores_a_pergunta_nao_promete_na_hora(_lar: Path) -> None:
-    """A carona escreve agora, e o lançador aberto só lê ao abrir de novo.
-
-    MORDIDA: o corpo com «Nos outros lançadores vale na hora, sem fechar nada»
-    (conferência de UI/UX de 02/10); a régua reprova citando a frase.
-    """
+    """A carona escreve agora, e o lançador aberto só lê ao abrir de novo."""
     _montar(_lar)
     escritos = cpe.curar_todas_as_estradas()
     estradas = {"heroic" if c == "heroic" else "caixa" for c in escritos}

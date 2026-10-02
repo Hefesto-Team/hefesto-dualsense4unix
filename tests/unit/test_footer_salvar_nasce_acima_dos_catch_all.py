@@ -70,7 +70,6 @@ def _regra(nome: str, prioridade: int) -> Profile:
     )
 
 
-# O disco dela, medido em 30/07/2026.
 DISCO_DELA = [
     _catch_all("fallback", 0),
     _catch_all("vitoria", 0),
@@ -97,12 +96,7 @@ def test_prioridade_calculada_vence_todo_catch_all_do_disco_dela() -> None:
 
 
 def test_o_default_do_esquema_seria_pior_que_o_calculo() -> None:
-    """Trava a razão de existir do cálculo, para ninguém "simplificar" de volta.
-
-    Se alguém devolver `to_profile(nome)` sem prioridade, o valor que chega ao
-    disco é o default do esquema — e este teste diz, com número, por que isso é
-    uma regressão e não uma neutralidade.
-    """
+    """Trava a razão de existir do cálculo, para ninguém "simplificar" de volta."""
     default_do_esquema = int(Profile.model_fields["priority"].default)
     catch_alls = [p.priority for p in DISCO_DELA if p.e_catch_all]
 
@@ -122,8 +116,7 @@ def test_sem_cache_o_calculo_nao_explode_e_da_a_folga() -> None:
 
 
 def test_regra_especifica_alta_nao_infla_a_prioridade_do_novo() -> None:
-    """Só catch-all entra na conta — senão o `sackboy_nativo` (80) puxaria o novo
-    perfil para 90 e ele passaria a vencer regras de jogo que não são dele."""
+    """Só catch-all entra na conta — senão o `sackboy_nativo` (80) puxaria o novo"""
     app = _app_fake(list(DISCO_DELA))
     prioridade = app._prioridade_acima_dos_catch_all()
     regras = [p.priority for p in DISCO_DELA if not p.e_catch_all]
@@ -134,10 +127,7 @@ def test_regra_especifica_alta_nao_infla_a_prioridade_do_novo() -> None:
 
 
 def test_o_rodape_passa_a_prioridade_calculada_ao_to_profile() -> None:
-    """O contrato do call site: `_persist_profile_async` não pode voltar a chamar
-    `to_profile(nome)` sem prioridade. Lê o fonte porque o caminho real é
-    assíncrono (worker + thread GTK) e montar isso num teste unitário custaria
-    mais do que o valor que ele protege."""
+    """O contrato do call site: `_persist_profile_async` não pode voltar a chamar"""
     from pathlib import Path
 
     fonte = Path(
@@ -155,12 +145,7 @@ def test_o_rodape_passa_a_prioridade_calculada_ao_to_profile() -> None:
 
 
 def test_o_piso_do_fallback_nao_pode_ser_zero() -> None:
-    """O fallback do `getattr` existe para dublê de teste e composição degradada.
-
-    Se alguém o baixar para 0, o defeito volta pela porta de trás — e volta
-    SILENCIOSO, porque nenhum caminho de erro é percorrido. O piso tem de vencer
-    todo catch-all dela e perder para a regra de jogo mais baixa de fábrica.
-    """
+    """O fallback do `getattr` existe para dublê de teste e composição degradada."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("piso do rodapé")
@@ -183,9 +168,7 @@ def _tem_atributo_publico(obj: Any, nome: str) -> bool:
 
 
 def test_o_metodo_de_calculo_segue_alcancavel_pelo_mixin_do_rodape() -> None:
-    """`FooterActionsMixin` e `ProfilesActionsMixin` são irmãos no `HefestoApp`.
-    Se alguém separar os dois, o rodapé perde o método em runtime — e o defeito
-    só apareceria com a janela aberta, no gesto dela."""
+    """`FooterActionsMixin` e `ProfilesActionsMixin` são irmãos no `HefestoApp`."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("composição dos mixins")

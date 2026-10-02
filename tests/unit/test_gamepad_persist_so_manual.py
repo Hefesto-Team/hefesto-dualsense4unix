@@ -1,26 +1,4 @@
-"""R-07 (auditoria 23/07) — só GESTO MANUAL persiste a máscara em disco.
-
-`start_gamepad_emulation`/`stop_gamepad_emulation` gravavam a flag
-``gamepad_emulation.flag`` sem olhar o ``origin``, contradizendo duas decisões
-explícitas do mesmo eixo, escritas no próprio código:
-
-- HARM-06 (`gamepad.py`, mouse): *"persist=False — a preferência de mouse da
-  usuária sobrevive ao modo jogo"*;
-- FEAT-COOP-DEFAULT-ON-01 (`lifecycle.py`, co-op): *"só gesto MANUAL persiste a
-  escolha — perfil ligando/desligando co-op não pode virar opt-out da usuária"*.
-
-Efeitos medidos com a configuração dela (flag = ``xbox``):
-
-1. abre o Sackboy → o perfil pede ``dualsense`` → a flag em disco vira
-   ``dualsense``; fecha o jogo e **a escolha dela sumiu**, sem ela ter tocado em
-   nada, e volta assim no boot seguinte;
-2. alt-tab para o navegador → "Navegação" (sem seção ``mode``) →
-   ``stop_gamepad_emulation`` com ``persist`` default → a flag é **apagada** →
-   no boot seguinte não nasce vpad nenhum e ela religa tudo na mão.
-
-Estes testes olham o ARQUIVO, de propósito: a suíte existente monkeypatcha
-``save_gamepad_emulation`` e por isso não enxergaria a regressão.
-"""
+"""R-07 (auditoria 23/07) — só GESTO MANUAL persiste a máscara em disco."""
 
 from __future__ import annotations
 
@@ -63,13 +41,7 @@ class _DaemonFalso:
 
 
 def _sem_device_real(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Curto-circuita a criação do vpad — só o ramo de persistência interessa.
-
-    ``start_gamepad_emulation`` faz ``from ...virtual_pad import make_virtual_pad``
-    DENTRO da função, então o patch tem de ser no MÓDULO DE ORIGEM: patchar o
-    atributo em `subsystems.gamepad` cria um nome que ninguém lê, e o teste
-    passaria criando um uinput de verdade (efeito colateral real no kernel).
-    """
+    """Curto-circuita a criação do vpad — só o ramo de persistência interessa."""
     import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
     import hefesto_dualsense4unix.integrations.virtual_pad as vp
 
@@ -102,8 +74,6 @@ def test_stop_por_perfil_nao_apaga_a_preferencia(
     daemon = _DaemonFalso()
     daemon.config.gamepad_emulation_enabled = True
 
-    # O contrato é do parâmetro: quem sabe a origem é o chamador (lifecycle
-    # passa persist=(origin == "manual")).
     stop_gamepad_emulation(daemon, persist=False, release_grab=False)
 
     assert flag.exists(), (
@@ -131,8 +101,6 @@ def test_start_por_perfil_nao_reescreve_o_flavor(
     save_gamepad_emulation(True, "xbox")
     daemon = _DaemonFalso()
 
-    # O start real cria device/uhid; aqui só interessa o ramo de persistência,
-    # então o factory é curto-circuitado para um device inerte.
     _sem_device_real(monkeypatch)
 
     start_gamepad_emulation(daemon, flavor="dualsense", origin="profile")

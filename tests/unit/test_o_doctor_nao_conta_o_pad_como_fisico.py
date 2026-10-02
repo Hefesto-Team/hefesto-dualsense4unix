@@ -39,7 +39,6 @@ DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8") if DOCTOR_PATH.exists() else ""
 
 pytestmark = pytest.mark.skipif(not DOCTOR, reason="scripts/doctor.sh ausente")
 
-#: As quatro funções do veredito, na ordem em que uma chama a outra.
 FUNCOES = (
     "_nos_de_entrada_do_hidraw",
     "_entrada_alcancavel_pelo_jogo",
@@ -48,9 +47,7 @@ FUNCOES = (
 )
 
 UHID = "sys/devices/virtual/misc/uhid"
-#: A frase de 29/09, que acusava o pad de físico.
 NAO_FECHOU = "o hide não fechou"
-#: A linha que a cura acrescenta: o resto do hide, fora do veredito.
 FORA = "fora deste veredito:"
 
 
@@ -66,11 +63,6 @@ def _morde(velho: str, novo: str) -> str:
     """O `doctor.sh` com UMA troca, que tem de existir uma vez só."""
     assert DOCTOR.count(velho) == 1, f"a linha da cura mudou de forma: {velho!r}"
     return DOCTOR.replace(velho, novo)
-
-
-# ---------------------------------------------------------------------------
-# A cena: um /dev e um /sys de mentira, com o pai HID de cada nome
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -140,12 +132,7 @@ def _roda(
     censo: list[str],
     doctor: str | None = None,
 ) -> str:
-    """Extrai as funções do doctor, reancora os caminhos na cena e roda o veredito.
-
-    `hide` é o `hidden` do `status` do broker (a ordem dele, que é a de
-    `sorted`), e o `hidden_count` é o tamanho dele, como o
-    `check_hidraw_broker` repassa. `censo` é o `physical_nodes_exposure`.
-    """
+    """Extrai as funções do doctor, reancora os caminhos na cena e roda o veredito."""
     fonte = DOCTOR if doctor is None else doctor
     corpo = "\n".join(_extrai_funcao_bash(fonte, nome) for nome in FUNCOES)
     corpo = corpo.replace("/sys/class/hidraw/", f"{raiz}/sys/class/hidraw/")
@@ -157,7 +144,6 @@ def _roda(
     nos = [f"/dev/{h}" for h in hide]
     script = raiz / "cena.sh"
     script.write_text(
-        # `set -u`, como o doctor roda; o gesto é global do doctor.sh.
         "set -u\n"
         'GESTO_DE_REINICIAR_O_BROKER="(o gesto)"\n'
         'pass() { echo "[PASS] $*"; }\n'
@@ -217,7 +203,6 @@ def _um_teclado() -> Aparelho:
 
 
 OS_QUATRO = ["hidraw10", "hidraw5", "hidraw7", "hidraw9"]
-#: O `hidden` do `status` às 03:55, na ordem do `sorted` do broker.
 O_HIDE_DAS_0355 = ["hidraw10", "hidraw5", "hidraw6", "hidraw7", "hidraw9"]
 
 
@@ -229,11 +214,6 @@ def _a_cena_das_0355(herdeiro: Aparelho | None = None) -> dict[str, Aparelho]:
 
 def _linhas(saida: str, prefixo: str) -> list[str]:
     return [ln for ln in saida.splitlines() if ln.startswith(prefixo)]
-
-
-# ---------------------------------------------------------------------------
-# 1. A cena das 03:55
-# ---------------------------------------------------------------------------
 
 
 class TestACenaDas0355:
@@ -262,13 +242,6 @@ class TestACenaDas0355:
         assert "(event260 event261 event262 event263 js2)" in saida, saida
 
 
-# ---------------------------------------------------------------------------
-# 2. Um teclado com o nome
-# ---------------------------------------------------------------------------
-
-
-#: A mordida da 2: separar pela FORMA do pad (`0003` sob o `uhid`), no bash,
-#: em vez de perguntar ao censo.
 _PELO_CENSO = (
     "            for _do_censo in ${censo}; do\n"
     '                [[ "${_do_censo}" == "${_escondido}" ]] && { _visto=1; break; }\n'
@@ -305,11 +278,6 @@ class TestUmTecladoComONome:
         assert NAO_FECHOU in teclado and "event270" in teclado, teclado
 
 
-# ---------------------------------------------------------------------------
-# 3. O defeito de verdade continua pego
-# ---------------------------------------------------------------------------
-
-
 def _fisico_com_o_gamepad_aberto(hidraw: str, seq: int) -> Aparelho:
     aparelho = _fisico_fechado(hidraw, seq)
     n = hidraw.removeprefix("hidraw")
@@ -319,9 +287,7 @@ def _fisico_com_o_gamepad_aberto(hidraw: str, seq: int) -> Aparelho:
 
 class TestODefeitoDeVerdadeContinua:
     def test_o_fisico_do_censo_com_o_event_aberto_segue_no_warn(self, tmp_path: Path) -> None:
-        """O defeito da HIDE-SO-O-HIDRAW-02: o físico escondido com um nó de
-        entrada aberto está no hide e no censo, e segue acusado com a frase e
-        o gesto de hoje."""
+        """O defeito da HIDE-SO-O-HIDRAW-02: o físico escondido com um nó de"""
         aparelhos = {
             "hidraw5": _fisico_com_o_gamepad_aberto("hidraw5", 0x11),
             "hidraw7": _fisico_fechado("hidraw7", 0x12),
@@ -350,24 +316,16 @@ class TestODefeitoDeVerdadeContinua:
         assert _linhas(saida, "[WARN]") == [], saida
 
 
-# ---------------------------------------------------------------------------
-# 4. Censo vazio segue «não sei»
-# ---------------------------------------------------------------------------
-
-
 class TestCensoVazioSegueNaoSei:
     def test_censo_vazio_mede_o_hide_inteiro_como_hoje(self, tmp_path: Path) -> None:
-        """Sem o validador alcançável o doctor não separa pad de físico: mede o
-        hide inteiro, e o `hidraw6` com os nós abertos segue no `warn`. Só a
-        cura do broker cobre este caso."""
+        """Sem o validador alcançável o doctor não separa pad de físico: mede o"""
         saida = _roda(tmp_path, _a_cena_das_0355(), hide=O_HIDE_DAS_0355, censo=[])
 
         assert NAO_FECHOU in saida and "4 de 5" in saida, saida
         assert FORA not in saida, saida
 
     def test_a_mordida_a_intersecao_com_o_censo_vazio(self, tmp_path: Path) -> None:
-        """Vazio não é tudo fechado: a interseção com o censo vazio sai no
-        `pass` de «nada medido»."""
+        """Vazio não é tudo fechado: a interseção com o censo vazio sai no"""
         arrancado = _morde('    if [[ -n "${censo}" ]]; then\n', "    if true; then\n")
         saida = _roda(
             tmp_path, _a_cena_das_0355(), hide=O_HIDE_DAS_0355, censo=[], doctor=arrancado
@@ -376,15 +334,9 @@ class TestCensoVazioSegueNaoSei:
         assert _linhas(saida, "[PASS]"), saida
 
 
-# ---------------------------------------------------------------------------
-# 5. As contagens
-# ---------------------------------------------------------------------------
-
-
 class TestAsContagens:
     def test_o_de_m_do_warn_e_o_conjunto_medido(self, tmp_path: Path) -> None:
-        """A cena das 03:55 com um quinto físico aberto: «4 de 5», com cinco
-        físicos no censo e o `hidraw6` fora."""
+        """A cena das 03:55 com um quinto físico aberto: «4 de 5», com cinco"""
         aparelhos = _a_cena_das_0355()
         aparelhos["hidraw12"] = _fisico_com_o_gamepad_aberto("hidraw12", 0x20)
         hide = sorted([*O_HIDE_DAS_0355, "hidraw12"])
@@ -408,18 +360,9 @@ class TestAsContagens:
         assert "escondendo 5 nó(s)" in saida, saida
 
 
-# ---------------------------------------------------------------------------
-# O que as réguas de hoje procuram, e a fala de quem usa
-# ---------------------------------------------------------------------------
-
-
 class TestOQueAsReguasDeHojeProcuram:
     def test_as_duas_linhas_e_a_linha_da_cura_ficam_byte_a_byte(self) -> None:
-        """A mordida da `test_esconde_so_o_hidraw_veredito_das_tres_superficies`
-        troca o laço do censo e a chamada da medição por texto; a da
-        `test_hide_so_o_hidraw_02_o_doctor_mede_a_cura` procura o gesto no
-        `warn`. Uma quinta função bash não chegaria à cena delas, e por isso a
-        interseção mora dentro do `_veredito_do_hide`."""
+        """A mordida da `test_esconde_so_o_hidraw_veredito_das_tres_superficies`"""
         corpo = _extrai_funcao_bash(DOCTOR, "_veredito_do_hide")
         assert corpo.count("    for _fisico in ${censo}; do\n") == 1
         assert corpo.count('    _tres_superficies_medir "$@"\n') == 1

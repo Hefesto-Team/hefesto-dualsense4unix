@@ -1,33 +1,4 @@
-"""O lugar sem controle tem UMA leitura nos quatro lugares — e a mesa vazia não guarda o desenho.
-
-**As três fotos dela, 21/09/2026**, com ZERO controles na mesa:
-
-1. *"dois controles conectados quando não tem nenhum"* — a fita de cima dizia
-   `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT`, os dois do desenho,
-   ao lado de `0 controles`. O piloto devolvia `""` com a mesa vazia e a fita
-   ficava como o arquivo publicado a trouxe.
-2. *"os leds na linha dos leds do p3,p4 tem que aparecerem mas não aparecerem
-   ligados como o p1 e o p2"* — a linha LEDs da Iluminação ACESA em azul e
-   vermelho no P1 e no P2 (o alvo `html` fica fora do travessão), e um `—`
-   seco no P3 e no P4.
-3. *"p1,p2 tão diferentes do p3 e p4"* — o cartão da Navegação dizendo
-   `P1 • P1 • Desconectado` com `● USB • Navega o PC` em verde, e o P3 e o P4
-   `P3 • Desconectado` com `—`. E o rótulo do lugar que NASCE vazio saía
-   `P3•Desconectado`, espremido, ao lado de `P1 • Desconectado`.
-
-**A FAMÍLIA É A QUE ESTA CASA MAIS PAGA:** o lugar que o desenho publica como
-OCUPADO e que a mesa esvazia fica com o que o desenho escreveu, onde a pintura
-não alcança. A cura tem três peças, e cada teste abaixo morde uma:
-
-* `pacotes.LUGAR_VAZIO` — a aba declara o que o lugar vazio mostra onde o
-  travessão não chega, e o despachante aplica nos quatro;
-* `pacotes.MARCAS_DO_LUGAR` — a classe que é de UM lugar (o verde de quem
-  navega) acende nele e apaga nos outros, pelo passo `1d` do piloto;
-* o `escrever()` do piloto reescreve o texto IGUAL quando os filhos são só o
-  separador `•`, para os quatro rótulos terem a mesma forma.
-
-AS MORDIDAS, uma por teste, estão escritas em cada docstring.
-"""
+"""O lugar sem controle tem UMA leitura nos quatro lugares — e a mesa vazia não guarda o desenho."""
 
 from __future__ import annotations
 
@@ -57,11 +28,8 @@ from hefesto_dualsense4unix.interface import hefesto_vivo
 
 PILOTO = _INTERFACE / "hefesto_vivo.py"
 LUGARES = sorted(pacotes.TODOS_OS_LUGARES)
-#: AS DEZ ABAS, da tabela que diz quem pinta cada página — nunca digitadas.
 ABAS = sorted(p for p in pacotes.PACOTES if p[:2].isdigit())
 
-#: Um controle de mentira, da faixa sintética da casa — há dois portões de
-#: anonimato e eles não perdoam.
 UNIQ = "aa:bb:cc:00:00:01"
 PRIMARIO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
             "battery_pct": 90, "is_primary": True, "inputs": {}, "audio": {},
@@ -85,21 +53,9 @@ def _o_que_chega_a_tela(pagina: str, ctx: pacotes.Contexto,
     return pacotes.apagar_os_lugares_sem_dono(carga, com_dono)
 
 
-# ---------------------------------------------------------------------------
-# 1. A FITA DA MESA VAZIA
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("arquivo", ABAS)
 def test_a_fita_da_mesa_vazia_troca_o_desenho(arquivo: str) -> None:
-    """Zero controles, zero chips, zero rótulo — e a fita É repintada.
-
-    O RÓTULO SAIU EM 22/09/2026, pedido dela: *"quando não tiver controle Não
-    Aparece o selecionar:"*. Ele sobrava sozinho, apontando para nada.
-
-    A MORDIDA: devolva o `if not mesa: return ""` ao `hefesto_vivo._fita` e
-    este teste reprova nas dez: `""` é o piloto pulando a pintura, e a tela
-    fica com os dois chips do desenho. Tire o `if lista` do rótulo em
-    `monta.fita` e a terceira asserção reprova nas dez.
-    """
+    """Zero controles, zero chips, zero rótulo — e a fita É repintada."""
     fita = hefesto_vivo._fita([], arquivo)
     assert 'class="fita' in fita, (
         f"{arquivo}: com a mesa vazia a fita não foi emitida — o piloto pula a "
@@ -116,16 +72,8 @@ def test_a_fita_da_mesa_vazia_cobre_as_dez() -> None:
     assert fita and "Cosmic Red" not in fita and "Starlight Blue" not in fita
 
 
-# ---------------------------------------------------------------------------
-# 2. O CONTRATO DO LUGAR VAZIO, no despachante
-# ---------------------------------------------------------------------------
 def test_o_lugar_vazio_declarado_chega_aos_tres_vazios_e_nao_ao_ocupado() -> None:
-    """O que a aba declara vale em TODO lugar sem dono, e só neles.
-
-    A MORDIDA: apague o `colunas[pref].update(...)` de
-    `pacotes.apagar_os_lugares_sem_dono` — os três lugares vazios voltam a
-    receber só o travessão, e o desenho do mockup fica neles.
-    """
+    """O que a aba declara vale em TODO lugar sem dono, e só neles."""
     carga = {"colunas": {"p1": {"luz": "VIVO", "brilho": "80%"}},
              pacotes.LUGAR_VAZIO: {"luz": "APAGADO"}}
     fora = pacotes.apagar_os_lugares_sem_dono(carga, ["p1"])
@@ -139,10 +87,7 @@ def test_o_lugar_vazio_declarado_chega_aos_tres_vazios_e_nao_ao_ocupado() -> Non
 
 
 def test_o_lugar_vazio_vence_a_frase_padrao_da_identidade() -> None:
-    """A 06 escreve só o NOME no `identidade`; a frase-padrão traz o número.
-
-    Sem a precedência o cartão dizia `P1 • P1 • Desconectado`.
-    """
+    """A 06 escreve só o NOME no `identidade`; a frase-padrão traz o número."""
     carga = {"colunas": {"p1": {"identidade": "Régua"}},
              pacotes.LUGAR_VAZIO: {"identidade": pacotes.SEM_NINGUEM_AQUI}}
     fora = pacotes.apagar_os_lugares_sem_dono(carga, ["p1"])
@@ -160,12 +105,7 @@ def test_o_bloco_da_aba_ganha_do_lugar_vazio() -> None:
 
 
 def test_o_normalizar_leva_o_vazio_e_traduz_as_marcas() -> None:
-    """As duas chaves são `dict` na raiz — e o laço do `normalizar` come `dict`.
-
-    A MORDIDA: apague o bloco das duas chaves no fim do `normalizar` e este
-    teste reprova; na tela, o lugar vazio volta ao desenho e o verde de quem
-    navega volta a ficar cravado no P1.
-    """
+    """As duas chaves são `dict` na raiz — e o laço do `normalizar` come `dict`."""
     bruto = {"colunas": {UNIQ: {"x": "1"}},
              pacotes.LUGAR_VAZIO: {"luz": "APAGADO", "estrutura": {"n": 1}},
              pacotes.MARCAS_DO_LUGAR: {"navega": [UNIQ], "outra": []}}
@@ -181,16 +121,8 @@ def test_pacote_sem_as_chaves_nao_ganha_chave_nova() -> None:
     assert set(fora) == {"mesa", "colunas"}
 
 
-# ---------------------------------------------------------------------------
-# 3. A ILUMINAÇÃO — os LEDs aparecem, e não aparecem ligados
-# ---------------------------------------------------------------------------
 def test_as_cinco_lampadas_do_lugar_vazio_estao_todas_apagadas() -> None:
-    """`monta.luzinhas(0)` desenha as cinco e não acende nenhuma.
-
-    A MORDIDA: devolva `luzinhas` a `PADRAO_JOGADOR[jogador]` — o `0` levanta
-    `KeyError`, o `desenho_da_luz` o engole e o lugar vazio fica SEM as cinco
-    lâmpadas (o `.pad` vazio), que é a linha que ela pediu para aparecer.
-    """
+    """`monta.luzinhas(0)` desenha as cinco e não acende nenhuma."""
     html = monta.luzinhas(0)
     assert html.count("<i") == 5, html
     assert 'class="on"' not in html, html
@@ -206,11 +138,7 @@ def test_a_linha_leds_do_lugar_vazio_e_o_desenho_apagado() -> None:
 
 
 def test_os_quatro_lugares_vazios_da_04_mostram_a_mesma_coisa() -> None:
-    """Zero controles: o P1 e o P2 (que o desenho publica ocupados) e o P3 e o
-    P4 (que ele publica vazios) recebem a MESMA linha LEDs e a MESMA linha
-    Jogador. A MORDIDA: tire o `LUGAR_VAZIO` do `pacote()` da 04 e o P1 volta
-    a mostrar as tiras acesas do mockup — esta régua acusa o campo ausente.
-    """
+    """Zero controles: o P1 e o P2 (que o desenho publica ocupados) e o P3 e o"""
     carga = _o_que_chega_a_tela("04-iluminacao.html", _mesa_vazia())
     esperado = a04_iluminacao.o_lugar_vazio()
     for pref in LUGARES:
@@ -220,14 +148,8 @@ def test_os_quatro_lugares_vazios_da_04_mostram_a_mesma_coisa() -> None:
                 f"{pref}·{campo} do lugar vazio não é o desenho apagado")
 
 
-# ---------------------------------------------------------------------------
-# 4. A NAVEGAÇÃO — o cartão vazio é um só, e o verde é de quem navega
-# ---------------------------------------------------------------------------
 def test_os_quatro_cartoes_vazios_da_06_sao_iguais() -> None:
-    """`P{n} • Desconectado` e `—`, nos quatro — nem `P1 • P1 • …`, nem a
-    bolinha verde de `Navega o PC`. A MORDIDA: tire o `LUGAR_VAZIO` do
-    `pacote()` da 06 e o P1 volta a dizer o número duas vezes.
-    """
+    """`P{n} • Desconectado` e `—`, nos quatro — nem `P1 • P1 • …`, nem a"""
     carga = _o_que_chega_a_tela("06-navegacao.html", _mesa_vazia())
     for pref in LUGARES:
         coluna = carga["colunas"][pref]
@@ -235,8 +157,6 @@ def test_os_quatro_cartoes_vazios_da_06_sao_iguais() -> None:
         assert coluna.get("navega") == pacotes.TRAVESSAO, (pref, coluna)
     assert carga[pacotes.MARCAS_DO_LUGAR]["navega"] == [], (
         "com a mesa vazia algum cartão ficou com o verde de quem navega")
-    # A CASCA DE VAZIO nos quatro — A-MIRA-NA-NAVEGACAO-02: a marca `vazia`
-    # acende onde não há dono, pela mesma chave do verde.
     assert carga[pacotes.MARCAS_DO_LUGAR]["vazia"] == sorted(LUGARES), (
         "com a mesa vazia algum cartão ficou sem a casca de lugar vazio")
 
@@ -255,9 +175,6 @@ def test_o_verde_vai_para_o_primario() -> None:
         "depois de o controle sair e voltar")
 
 
-# ---------------------------------------------------------------------------
-# 5. O PILOTO, rodado no `node` — a régua mede o ATO, não a palavra
-# ---------------------------------------------------------------------------
 def _trecho(abre: str, fecha: str) -> str:
     fonte = PILOTO.read_text(encoding="utf-8")
     i = fonte.index(abre)
@@ -302,10 +219,7 @@ console.log(JSON.stringify({lugares: fora, n: n}));
 
 
 def test_o_passo_1d_move_o_verde_para_quem_navega() -> None:
-    """O desenho crava `navega` no P1; a marca diz P2 — o verde muda de lugar.
-
-    A MORDIDA: apague o passo `1d` do piloto e o P1 continua verde, o P2 não.
-    """
+    """O desenho crava `navega` no P1; a marca diz P2 — o verde muda de lugar."""
     roteiro = _DOM_DAS_MARCAS.replace("__TRECHO__", _trecho(
         "    // 1d. AS MARCAS DO LUGAR", "    // 2. OS CAMPOS POR CONTROLE"))
     inicial = {"p1": ["nav-ctl", "navega"], "p2": ["nav-ctl"],
@@ -358,11 +272,7 @@ console.log(JSON.stringify(fora));
 
 
 def test_o_rotulo_igual_com_o_ponto_por_dentro_e_reescrito_uma_vez() -> None:
-    """`P3 <span class="pt">•</span> Desconectado` vira texto uma vez, e só.
-
-    A MORDIDA: tire o `|| so_o_ponto` do `escrever()` e o primeiro caso volta
-    a `n1 = 0` — o rótulo do lugar que nasce vazio fica espremido.
-    """
+    """`P3 <span class="pt">•</span> Desconectado` vira texto uma vez, e só."""
     roteiro = _DOM_DO_ESCREVER.replace("__TRECHO__", _trecho(
         "  function escrever(el, v){", "  // OS TRÊS VOCABULÁRIOS DE ENDEREÇO"))
     casos = [

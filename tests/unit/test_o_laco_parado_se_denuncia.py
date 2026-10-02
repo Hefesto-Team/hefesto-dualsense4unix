@@ -1,16 +1,4 @@
-"""O laço parado se denuncia — O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 6.
-
-Em 30/09/2026 o laço do serviço parou 3 min 30 s calado: nenhuma linha no
-diário, a fila do soquete cheia, e só o SIGKILL do install o tirou dali. A
-vigia (``daemon/subsystems/vigia_do_laco.py``) escreve ``laco_parado``, a pilha
-de todos os fios e ``laco_voltou``.
-
-Cada caso roda num PROCESSO FILHO, com a vigia de 1 s de limite em volta de
-uma corrotina que para o laço de verdade: o ``faulthandler`` é um só por
-processo, e a régua não arma o relógio de C no processo da suíte. Nada lê a
-saída da própria vigia por dentro: a régua lê o ``stderr`` do filho, que é o
-que o ``journalctl`` do serviço lê.
-"""
+"""O laço parado se denuncia — O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 6."""
 
 from __future__ import annotations
 
@@ -23,7 +11,6 @@ import time
 
 import pytest
 
-#: O começo de todo filho: o diário no ``stderr`` (como no serviço) e a vigia.
 COMECO = textwrap.dedent("""
     import asyncio, os, re, signal, sys, time
     from hefesto_dualsense4unix.utils.logging_config import configure_logging
@@ -50,12 +37,7 @@ def _pilhas(stderr: str) -> int:
 
 
 def test_o_laco_parado_sem_o_gil_diz_onde_uma_vez_e_diz_que_voltou() -> None:
-    """Uma corrotina que dorme 3 s sem devolver o laço (o GIL solto): sai
-    ``laco_parado`` UMA vez, a pilha com o nome dela UMA vez, e depois
-    ``laco_voltou``.
-
-    MORDIDA: tire o ``dump_traceback_later`` do ``_armar`` — a pilha some.
-    """
+    """Uma corrotina que dorme 3 s sem devolver o laço (o GIL solto): sai"""
     saida = _filho("""
         async def a_corrotina_que_dorme_no_laco():
             await asyncio.sleep(1.5)
@@ -72,12 +54,7 @@ def test_o_laco_parado_sem_o_gil_diz_onde_uma_vez_e_diz_que_voltou() -> None:
 
 
 def test_o_laco_parado_com_o_gil_preso_ainda_deixa_a_pilha() -> None:
-    """Uma corrotina presa ~3 s numa chamada em C que segura o GIL (uma regex
-    de retrocesso catastrófico, calibrada aqui): o fio de Python não roda, e a
-    pilha sai do relógio de C — ANTES de a regex acabar.
-
-    MORDIDA: tire o ``dump_traceback_later`` do ``_armar`` — a pilha some.
-    """
+    """Uma corrotina presa ~3 s numa chamada em C que segura o GIL (uma regex"""
     saida = _filho("""
         def tempo_da_regex(n):
             comeco = time.perf_counter()
@@ -109,13 +86,7 @@ def test_o_laco_parado_com_o_gil_preso_ainda_deixa_a_pilha() -> None:
 
 
 def test_o_laco_sao_nao_acusa_nada() -> None:
-    """Trinta segundos de laço são, com tarefas de 10 ms de CPU: zero
-    ``laco_parado`` e zero pilha.
-
-    MORDIDAS, uma por vez: tire a batida (o ``_batida`` que não anda — a vigia
-    acusa o laço são); tire o rearmar do ``_bater`` (a pilha da primeira armada
-    sai no laço são).
-    """
+    """Trinta segundos de laço são, com tarefas de 10 ms de CPU: zero"""
     saida = _filho("""
         async def trabalho(fim):
             while time.monotonic() < fim:
@@ -137,8 +108,7 @@ def test_o_laco_sao_nao_acusa_nada() -> None:
 
 
 def test_o_sigterm_continua_parando_o_servico() -> None:
-    """O serviço de mentira atende o SIGTERM pelo laço (como o ``lifecycle``)
-    e sai em menos de 2 s com a vigia ligada: o fio dela não segura a saída."""
+    """O serviço de mentira atende o SIGTERM pelo laço (como o ``lifecycle``)"""
     codigo = COMECO + textwrap.dedent("""
         async def o_servico():
             parar = asyncio.Event()
@@ -160,9 +130,9 @@ def test_o_sigterm_continua_parando_o_servico() -> None:
             if not linha and filho.poll() is not None:
                 break
         assert "@@ pronto" in linha, "o serviço de mentira não subiu"
-        time.sleep(1.5)  # a vigia batendo
+        time.sleep(1.5)
         comeco = time.monotonic()
-        filho.send_signal(signal.SIGTERM)  # o PID é o do filho que esta régua abriu
+        filho.send_signal(signal.SIGTERM)
         filho.wait(timeout=10)
         demorou = time.monotonic() - comeco
         resto = filho.stderr.read()
@@ -177,8 +147,7 @@ def test_o_sigterm_continua_parando_o_servico() -> None:
 
 @pytest.mark.parametrize("passo_s", [0.2, 1.0])
 def test_o_olho_diz_a_parada_uma_vez_pelo_relogio_dado(passo_s: float) -> None:
-    """O olho, sem laço nem fio: com o relógio dado, a parada sai uma vez por
-    parada, e a volta, uma vez — o ``passo_s`` não muda a conta."""
+    """O olho, sem laço nem fio: com o relógio dado, a parada sai uma vez por"""
     from hefesto_dualsense4unix.daemon.subsystems.vigia_do_laco import VigiaDoLaco
 
     agora = [100.0]

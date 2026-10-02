@@ -1,19 +1,4 @@
-"""Check "perfis inalcançáveis" do doctor.sh (débito R-12 item 2).
-
-A GUI já dizia "Só manual (nunca ativa sozinho)" na coluna "Quando usar"; na
-linha de comando não havia nada — um perfil sem critério de janela não falha,
-não loga e não aparece em lugar nenhum. Ele só nunca entra, e a leitura de
-quem está do lado de cá é "o autoswitch está quebrado".
-
-A lógica vive em shell puro no doctor.sh (funções testáveis via ``source``,
-padrão de `test_doctor_vpad_motion.py` / `test_doctor_8bitdo_cascade.py`):
-
-- ``_perfis_inalcancaveis <dir>``: classifica cada JSON do diretório em
-  ``inalcancavel`` (criteria com os três campos vazios — o acidente),
-  ``manual`` (sentinel declarado) ou ``ilegivel``. Perfis sãos não saem.
-- ``check_perfis_inalcancaveis``: formata o relatório, lendo o diretório do
-  XDG (funciona com o daemon parado, que é quando ela vai olhar).
-"""
+"""Check "perfis inalcançáveis" do doctor.sh (débito R-12 item 2)."""
 from __future__ import annotations
 
 import json
@@ -109,8 +94,6 @@ class TestRelatorio:
 
         assert "[WARN]" in saida
         assert "coop_local" in saida
-        # A cura tem de estar na própria linha: quem roda o doctor não vai
-        # procurar o significado de "inalcançável" na documentação.
         assert "manual" in saida and "Perfis" in saida
 
     def test_manual_declarado_nao_vira_aviso(self, tmp_path: Path) -> None:

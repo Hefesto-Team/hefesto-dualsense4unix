@@ -74,19 +74,12 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 JOGAR = INTERFACE / "paginas" / "01-jogar.html"  # (noqa-acento) nome de PASTA
-#: O DESENHO, medido junto — O-MODO-FREESTYLE-02, 24/09/2026. É ele que o
-#: `--publicar 01` leva ao produto, e as réguas desta posição têm de valer nele
-#: ANTES da publicação, não depois dela.
 DESENHO = RAIZ / "mockup" / "01-jogar.html"
 PAGINAS = {"publicada": JOGAR, "desenho": DESENHO}
 
 
 def _altura_do_desenho() -> int:
-    """A altura que o gerador dá ao `.cadeado`, LIDA no dono (`aba01.py`).
-
-    É a decisão `D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`; digitá-la aqui seria a
-    régua copiando o que devia ler.
-    """
+    """A altura que o gerador dá ao `.cadeado`, LIDA no dono (`aba01.py`)."""
     import re
 
     fonte = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
@@ -94,8 +87,6 @@ def _altura_do_desenho() -> int:
     assert achado, "o `.cadeado` do gerador perdeu a altura — a régua ficaria cega"
     return int(achado.group(1))
 
-#: A pergunta ao motor. Tudo aqui é medida ou endereço; nenhuma coordenada
-#: esperada está escrita — as comparações são entre elementos da MESMA página.
 O_QUE_O_MOTOR_DESENHA = """() => {
   const cad = document.querySelector('.cadeado');
   if (!cad) return {erro: 'a página não tem `.cadeado`'};
@@ -147,9 +138,6 @@ O_QUE_O_MOTOR_DESENHA = """() => {
   };
 }"""
 
-#: O ESPIÃO DO CLIQUE — ele usa **o mesmo `closest` do piloto**, e de propósito:
-#: a régua não pode ter uma segunda maneira de achar o dono do gesto, senão
-#: passa a medir a si mesma em vez do caminho que o produto percorre.
 O_CAMINHO_DO_CLIQUE = """() => {
   window.__recados = [];
   const ouvir = (ev) => {
@@ -171,8 +159,7 @@ O_CAMINHO_DO_CLIQUE = """() => {
 
 @pytest.fixture(scope="module", params=sorted(PAGINAS))
 def medido(request: pytest.FixtureRequest) -> dict:
-    """O que o Chrome desenha na aba Jogar — a PUBLICADA, que o produto carrega,
-    e o DESENHO, que o `--publicar 01` leva até ela."""
+    """O que o Chrome desenha na aba Jogar — a PUBLICADA, que o produto carrega,"""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     pagina = PAGINAS[request.param]
@@ -195,9 +182,6 @@ def medido(request: pytest.FixtureRequest) -> dict:
     return dict(saida)
 
 
-# ---------------------------------------------------------------------------
-# 1. ONDE ELE ESTÁ — o pedido dela, em pixels
-# ---------------------------------------------------------------------------
 def test_o_cadeado_esta_no_bloco_modo(medido: dict) -> None:
     """É o bloco **Modo** — não outro que por acaso tenha um canto livre."""
     assert medido["titulo_do_bloco"].startswith("Modo"), (
@@ -206,12 +190,7 @@ def test_o_cadeado_esta_no_bloco_modo(medido: dict) -> None:
 
 
 def test_o_cadeado_esta_na_linha_do_titulo(medido: dict) -> None:
-    """Na linha do título, e não no miolo — que é o que o tira de "quinto modo".
-
-    Os dois lados da mesma medida: ele está DENTRO do `.quadro-topo` e FORA do
-    `.quadro-corpo`. O primeiro sozinho passaria se alguém aninhasse um segundo
-    `.quadro-topo` no meio do corpo.
-    """
+    """Na linha do título, e não no miolo — que é o que o tira de "quinto modo"."""
     assert medido["na_linha_do_titulo"], (
         "o cadeado não está no `.quadro-topo`. Embaixo dos modos ele lê como um "
         "quinto modo — foi o que ela viu.")
@@ -220,13 +199,7 @@ def test_o_cadeado_esta_na_linha_do_titulo(medido: dict) -> None:
 
 
 def test_o_cadeado_esta_encostado_na_direita(medido: dict) -> None:
-    """*"canto superior DIREITO"* — e a medida é contra o bloco, não um número.
-
-    A folga da direita é a do `padding` do `.quadro-topo`; a da esquerda é o
-    vão inteiro que o `margin-left:auto` come. Comparar as duas responde "está
-    à direita?" sem nenhuma coordenada digitada aqui, que envelheceria no dia em
-    que a janela mudar de largura — e ela acabou de mudar.
-    """
+    """*"canto superior DIREITO"* — e a medida é contra o bloco, não um número."""
     assert medido["folga_a_esquerda"] > medido["folga_a_direita"] * 5, (
         f"o cadeado não está encostado na direita: sobra "
         f"{medido['folga_a_esquerda']}px à esquerda e "
@@ -234,24 +207,7 @@ def test_o_cadeado_esta_encostado_na_direita(medido: dict) -> None:
 
 
 def test_o_cadeado_nao_empurrou_a_linha_do_titulo(medido: dict) -> None:
-    """A altura do `.quadro-topo` continua sendo a do título — 17px.
-
-    ESTE CASO TEM PREÇO MEDIDO, e não é meu: a `.porta` da Navegação nasceu com
-    19px, dois a mais que o `.quadro-titulo`, e **663 das 733 caixas daquela aba
-    desceram 2px**. O `.quadro-topo` é `align-items:center`, então a altura dele
-    é a do filho mais alto: qualquer coisa mais alta que o título move o bloco
-    inteiro, e as abas vizinhas não.
-
-    A QUEBRA DE LINHA SE MEDE NO NÓ DE TEXTO, pelas caixas de um `Range` — a
-    conta velha (`altura ÷ lineHeight`) devolvia `NaN` desde que a trava virou
-    `<button>`, porque o `lineHeight` de um botão é `normal`.
-
-    OS 26 PX — O-MODO-FREESTYLE-02, 24/09/2026. O «Modo Freestyle» cresceu
-    para 26 px por decisão (`D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`), e a conta
-    foi paga no desenho: a linha do título cresce 9 px e a aba não rola
-    (`test_o_modo_freestyle`). A regra é a altura do gerador, centrada no
-    título; os 17 px da palavra de ontem saíram no `--publicar 01`.
-    """
+    """A altura do `.quadro-topo` continua sendo a do título — 17px."""
     assert medido["altura_do_cadeado"] == _altura_do_desenho(), (
         f"o «Modo Freestyle» mede {medido['altura_do_cadeado']}px e o "
         f"gerador diz {_altura_do_desenho()}px")
@@ -275,25 +231,8 @@ def test_o_cadeado_fica_fora_das_duas_secoes_do_interruptor(medido: dict) -> Non
         "na outra posição do interruptor.")
 
 
-# ---------------------------------------------------------------------------
-# 2. O GESTO NÃO MUDOU — a outra metade, e sem ela a mudança é escondida
-# ---------------------------------------------------------------------------
 def test_o_gesto_do_cadeado_atravessou_a_mudanca(medido: dict) -> None:
-    """Mudou o LUGAR e mais nada: o endereço do clique e o da pintura são os mesmos.
-
-    OS DOIS LADOS, e são o par de sempre: `data-campo` é por onde a verdade
-    CHEGA e `data-gesto` é por onde o dedo dela SAI. Um sem o outro é uma trava
-    que mostra e não deixa mudar, ou que deixa mudar e não mostra o que o daemon
-    guardou.
-
-    E O ALVO É `classe` DESDE 19/09, com as DUAS metades que ele exige: sem o
-    `data-hef-classe` o piloto acende `on`, que folha nenhuma pinta; sem o
-    `data-hef-quando` o alvo vira BOOLEANO (`hefesto_vivo`: *"sem
-    `data-hef-quando` o alvo é booleano"*) e a pílula acenderia com `DESLIGADO`
-    e com o travessão, que é a tela afirmando o contrário do que leu. Por isso
-    as três se medem juntas — e a palavra do `quando` sai do DONO
-    (`a01_jogar.CADEADO_LIGADO`), nunca digitada aqui.
-    """
+    """Mudou o LUGAR e mais nada: o endereço do clique e o da pintura são os mesmos."""
     from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CADEADO_LIGADO
 
     assert medido["gesto"] == "cadeado", (
@@ -320,16 +259,9 @@ def test_o_gesto_do_cadeado_atravessou_a_mudanca(medido: dict) -> None:
 
 
 def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
-    """O rótulo e a dica continuam os que ela já leu — não se reescreve texto dela.
-
-    O literal tem dono em `pacotes/a01_jogar`, e ele veio palavra por palavra do
-    `Gtk.CheckButton` de `home_actions._build_home`. Texto NOVO de tela é decisão
-    dela; texto que ela já leu, não.
-    """
+    """O rótulo e a dica continuam os que ela já leu — não se reescreve texto dela."""
     from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CADEADO_ROTULO
 
-    # A palavra dela de 23/09, «Modo Freestyle», publicada em 24/09/2026: a
-    # isenção da palavra de ontem saiu no `--publicar 01`.
     assert medido["rotulo"] == CADEADO_ROTULO, (
         f"o rótulo na tela é {medido['rotulo']!r} e o dono diz "
         f"{CADEADO_ROTULO!r}")
@@ -337,45 +269,13 @@ def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
 
 
 def test_o_cadeado_nasce_apagado(medido: dict) -> None:
-    """Destravado é o padrão do produto; acendê-lo afirmaria uma escolha dela.
-
-    A PÍLULA NASCE SEM A CLASSE, que é o `el.checked === false` desta língua:
-    quem acende é o piloto, a partir do `freestyle_ligado` do daemon. Um
-    desenho que já trouxesse `class="cadeado ligada"` diria TRAVADO antes de
-    qualquer tique — e continuaria dizendo sobre um estado que ninguém leu, que
-    é o terceiro estado que a pílula nasceu para não mentir.
-    """
+    """Destravado é o padrão do produto; acendê-lo afirmaria uma escolha dela."""
     assert medido["aceso_de_nascenca"] is False, (
         "o cadeado nasce aceso — o desenho afirmaria uma escolha que ela não fez")
 
 
 def test_o_clique_no_rotulo_chega_ao_dono_do_gesto() -> None:
-    """CLICAR NO TEXTO e no pontinho chega ao `data-gesto` — e em `click`.
-
-    Um botão que se move e nunca se clica não está entregue. O que este caso
-    guardava era a associação `<label>`/`<input>`, e ela morreu com a caixa em
-    19/09: o que faz o texto inteiro ser área de clique agora é o próprio
-    `<button>`, e o que leva o clique do `<span class="p">` até o dono é o
-    `ev.target.closest('[data-gesto]')` do piloto (`hefesto_vivo`, o ouvinte
-    único). É esse caminho que se mede aqui, com o mesmo `closest`.
-
-    E A METADE NOVA É O NOME DO EVENTO, que é o que custou caro: **um
-    `<button>` NÃO emite `change`** — só `<input>`, `<select>` e `<textarea>`.
-    O `a01_jogar.cadeado` filtra por `click` por causa disso, e deixá-lo em
-    `change` faria o gesto voltar cedo em TODO clique: a tela pisca verde e o
-    disco não muda. Esta régua reprova nos DOIS sentidos — se o `change`
-    voltasse a sair da trava, o produto teria dois eventos por gesto de novo.
-
-    A PÁGINA ESTÁTICA NÃO TEM PILOTO, e por isso o que se mede é o caminho do
-    evento no MOTOR, não o efeito. Quem prova que o gesto chega ao daemon é a
-    régua do endereço, logo acima: as duas juntas cobrem o caminho.
-
-    A MORDIDA: tire o `data-gesto` do `<button>` e ponha num `<div>` em volta —
-    os dois cliques passam a chegar com o gesto certo pelo `closest`, e é o
-    `o_dono_do_gesto_e_o_proprio` da régua de cima que reprova. Troque o
-    `<button>` por um `<input type="checkbox">` e é AQUI que reprova, com um
-    `change` na lista.
-    """
+    """CLICAR NO TEXTO e no pontinho chega ao `data-gesto` — e em `click`."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     from playwright.sync_api import sync_playwright
@@ -387,15 +287,8 @@ def test_o_clique_no_rotulo_chega_ao_dono_do_gesto() -> None:
             pg.goto(JOGAR.as_uri())
             pg.wait_for_load_state("networkidle")
             caixa = pg.evaluate(O_CAMINHO_DO_CLIQUE)
-            # O CLIQUE NO TEXTO, encostado na borda direita da pílula — é lá que
-            # o rótulo está, e é onde o dedo dela cai. Clicar no centro poderia
-            # acertar o pontinho, que é o outro caso, logo abaixo.
             pg.click(".cadeado", position={"x": caixa["largura"] - 6,
                                            "y": caixa["altura"] / 2})
-            # E O CLIQUE NO PONTINHO, que é o filho: sem o `closest` ele chegaria
-            # ao piloto como um clique em nada. O teto é de 3s e não o padrão de
-            # 30s de propósito: um pontinho que sumiu ou ficou invisível é
-            # defeito, e defeito tem de reprovar depressa.
             pg.click(".cadeado .p", timeout=3000)
             recados = pg.evaluate("() => window.__recados")
         finally:

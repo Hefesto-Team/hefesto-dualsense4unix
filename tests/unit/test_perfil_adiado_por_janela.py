@@ -44,12 +44,7 @@ import pytest
 
 @pytest.fixture()
 def isolated_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Isola config_dir (session.json + active_profile.txt) em tmp_path.
-
-    Cópia deliberada do fixture de `test_session_persist.py`: são dois patches
-    porque `utils.session` alcança o `config_dir` por dois caminhos (o import do
-    topo, usado por `_session_path`, e o import lazy das funções do marker).
-    """
+    """Isola config_dir (session.json + active_profile.txt) em tmp_path."""
     config = tmp_path / "config"
     config.mkdir()
 
@@ -98,11 +93,7 @@ class _BootDaemon:
 
 
 def _salvar_sackboy_dela() -> None:
-    """Grava o perfil `Sackboy` COMO ELE ESTÁ na máquina dela (08/08 01:49).
-
-    O `window_class` é o que torna o perfil escopado a janela — é ele que faz
-    `restore_last_profile` desistir. `steam_app_1599660` é o Sackboy na Steam.
-    """
+    """Grava o perfil `Sackboy` COMO ELE ESTÁ na máquina dela (08/08 01:49)."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
@@ -119,12 +110,7 @@ def _salvar_sackboy_dela() -> None:
 async def test_boot_restaura_o_perfil_de_janela_que_ela_escolheu(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """O caso dela, fim a fim: o Sackboy que ela ativou à mão volta no boot.
-
-    Era `test_boot_adia_perfil_de_janela_e_diz_que_adiou` (o desenho de 22/07,
-    que deixava `active_profile` vazio e o Sackboy esperando a janela). Desde
-    01/10/2026 a escolha dela volta com regra de janela ou sem, e nada espera.
-    """
+    """O caso dela, fim a fim: o Sackboy que ela ativou à mão volta no boot."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing import FakeController
@@ -134,9 +120,6 @@ async def test_boot_restaura_o_perfil_de_janela_que_ela_escolheu(
     )
 
     _salvar_sackboy_dela()
-    # Os DOIS arquivos apontam `Sackboy` — é o disco dela, medido: session.json
-    # `{"last_profile": "Sackboy"}` e active_profile.txt `Sackboy` (convergem,
-    # então o seed de migração do marker não entra em cena aqui).
     save_last_profile("Sackboy")
     save_active_marker("Sackboy")
 
@@ -154,14 +137,7 @@ async def test_boot_restaura_o_perfil_de_janela_que_ela_escolheu(
 async def test_boot_sem_perfil_nenhum_nao_inventa_espera(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """O contraste que dá sentido ao campo — e a mordida de verdade.
-
-    Instalação sem session.json e sem marker: `active_profile` é `None` pelo
-    motivo BANAL (não há perfil nenhum). Um campo que respondesse "Sackboy"
-    sempre — ou que ficasse preso do boot anterior — passaria no teste de cima e
-    reprovaria aqui. É este par que faz os dois `None` deixarem de ser a mesma
-    palavra.
-    """
+    """O contraste que dá sentido ao campo — e a mordida de verdade."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing import FakeController
@@ -180,21 +156,7 @@ async def test_boot_sem_perfil_nenhum_nao_inventa_espera(
 async def test_abrir_o_jogo_encerra_a_espera(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """A espera TERMINA quando o perfil entra — por qualquer porta.
-
-    Desde 01/10/2026 o boot não adia mais (ver o cabeçalho); a régua fica pelo
-    contrato do `StateStore`, que ainda guarda o campo: escrito à mão aqui, ele
-    se limpa com o perfil que entra.
-
-    Encena o que o journal dela mostra acontecendo de verdade: o boot adia, ela
-    abre o Sackboy e o autoswitch ativa o perfil (`profile_autoswitch
-    to=Sackboy wm_class=steam_app_1599660`, 16 vezes em 08/08). A dica não pode
-    sobreviver a isso: mostrar "esperando a janela" com o perfil já ativo seria
-    trocar uma mentira por outra.
-
-    `origin="autoswitch"` de propósito — é a porta pela qual o perfil realmente
-    volta na máquina dela, e a que NÃO regrava a intenção manual (PERFIL-03).
-    """
+    """A espera TERMINA quando o perfil entra — por qualquer porta."""
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
     from hefesto_dualsense4unix.testing import FakeController
@@ -207,7 +169,6 @@ async def test_abrir_o_jogo_encerra_a_espera(
     store.set_perfil_adiado_por_janela("Sackboy")
     assert store.perfil_adiado_por_janela == "Sackboy"
 
-    # A janela do jogo apareceu: o autoswitch ativa o perfil.
     ProfileManager(controller=fc, store=store).activate(
         "Sackboy", origin="autoswitch"
     )

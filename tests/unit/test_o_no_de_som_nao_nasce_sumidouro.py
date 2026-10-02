@@ -74,9 +74,6 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.integrations.alto_falante_bt import SinkVirtualPipeWire
 from hefesto_dualsense4unix.testing import FakeController
 
-#: MAC FORJADO, da faixa sintética que o portão de fixtures permite
-#: (`tests/unit/test_anonimato_de_fixtures.py`). Nem mascarado se usa o OUI
-#: real da bancada dela: a régua pega por FORMA, e está certa.
 _UNIQ = "aa:bb:cc:00:00:ab"
 
 
@@ -99,17 +96,7 @@ def _config(**over: object) -> DaemonConfig:
 
 
 def test_o_no_com_rota_leva_o_som_ao_aparelho_e_sem_rota_nao_engana() -> None:
-    """A MEDIÇÃO, refeita em 09/09/2026: o nó só liga o que ele tem para ligar.
-
-    **FATO SUBSTITUÍDO.** Este teste se chamava
-    `test_o_no_publicado_hoje_nao_leva_o_som_a_lugar_nenhum` e exigia que
-    NENHUM `module-loopback` fosse emitido — congelando a medição que tornava a
-    fiação uma regressão. A rota existe desde a SOM-POR-CONTROLE-01, e o que se
-    mede agora é o PAR: com rota o loopback sai, sem rota ele não sai.
-
-    MORDIDA: emita o loopback também quando `rota is None` e a segunda metade
-    reprova — o produto ligaria o som a um sink que ninguém resolveu.
-    """
+    """A MEDIÇÃO, refeita em 09/09/2026: o nó só liga o que ele tem para ligar."""
     from hefesto_dualsense4unix.integrations.alto_falante_bt import RotaDoNo
 
     def _gravar() -> tuple[list[list[str]], object]:
@@ -144,16 +131,7 @@ def test_o_no_com_rota_leva_o_som_ao_aparelho_e_sem_rota_nao_engana() -> None:
 async def test_o_boot_nao_publica_no_de_som_sem_rota(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O PAR, e é ele que morde: subir o daemon não pode criar sumidouro.
-
-    Duas saídas honestas, e as duas passam:
-
-    * o subsystem continua órfão → nenhum `load-module` acontece;
-    * o subsystem foi ligado JUNTO com a rota → todo `module-null-sink`
-      publicado tem um `module-loopback` ao lado.
-
-    A terceira — ligado sem rota — é a regressão, e é a única que reprova.
-    """
+    """O PAR, e é ele que morde: subir o daemon não pode criar sumidouro."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
     )
@@ -163,9 +141,6 @@ async def test_o_boot_nao_publica_no_de_som_sem_rota(
         mandados.append(list(argv))
         return "77\n"
 
-    # O seam é o `_rodar` do módulo: `SinkVirtualPipeWire.__init__` resolve
-    # `runner or _rodar` nos globais no momento da construção, então o patch
-    # alcança os nós que o daemon criar por conta própria. Nada toca o PipeWire.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.alto_falante_bt._rodar", _recorder
     )
@@ -201,30 +176,7 @@ async def test_o_boot_nao_publica_no_de_som_sem_rota(
 def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_dela(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """SOM-DELA-01: um nó construído SEM runner injetado não sobe de verdade.
-
-    O estrago que esta régua fecha foi medido em 07/09/2026 e estava na
-    máquina dela: **52 sinks fantasma** `hefesto_som_<hex6>` na lista de som,
-    publicados por processo de teste — o daemon não tem uma linha de
-    `som_sink_publicado` no `journalctl`. A porta é
-    `SinkVirtualPipeWire.__init__`, que resolve `runner or _rodar`.
-
-    A MORDIDA, e ela não toca no som dela: o segundo bloco devolve ao `_rodar`
-    um dublê que ACEITA a escrita — o mundo sem a guarda — e o mesmo nó sobe.
-    A única diferença entre os dois blocos é a fixture de sessão.
-
-    O ESPIÃO NO `subprocess.run` (validação da A-SUITE-NAO-PERGUNTA-AO-SOM-01,
-    14/09/2026). Com o dublê do SOM-DE-MENTIRA na sessão, um `load-module` que
-    escapasse da guarda também voltava `None` — o dublê responde rc=1 —, e o
-    primeiro bloco passava com a guarda do alto-falante ARRANCADA (medido: 37
-    verdes nos três arquivos que tocam a guarda). O espião responde como um
-    servidor que ACEITA, igual à régua do microfone em
-    `test_o_som_e_o_volume_respeitam_o_recuo.py`, e o veredito deixa de depender
-    do dublê e da máquina.
-
-    MORDIDA: em `_nenhum_modulo_de_som_de_verdade`, deixe o `alto_falante_bt`
-    sem o `_sem_escrever_no_som`, e o primeiro bloco reprova.
-    """
+    """SOM-DELA-01: um nó construído SEM runner injetado não sobe de verdade."""
     import subprocess
 
     from hefesto_dualsense4unix.integrations import alto_falante_bt
@@ -242,14 +194,12 @@ def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_dela(
     monkeypatch.setattr(alto_falante_bt.subprocess, "run", _run)
     monkeypatch.setattr(alto_falante_bt.shutil, "which", lambda _nome: "/usr/bin/pactl")
 
-    # Com a guarda de pé (fixture `_nenhum_modulo_de_som_de_verdade`).
     no = alto_falante_bt.SinkVirtualPipeWire(uniq=_UNIQ)
     assert no.iniciar() is False
     assert no.module_id is None
     escritas = [argv for argv in chegaram if "load-module" in argv]
     assert escritas == [], f"o `load-module` passou pela guarda: {escritas}"
 
-    # A cura ARRANCADA: um `_rodar` que aceita escrever, como seria sem ela.
     monkeypatch.setattr(alto_falante_bt, "_rodar", lambda argv: "123\n")
     solto = alto_falante_bt.SinkVirtualPipeWire(uniq=_UNIQ)
     assert solto.iniciar() is True, (
@@ -260,25 +210,7 @@ def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_dela(
 
 
 def test_a_guarda_recusa_a_escrita_e_deixa_a_leitura_passar() -> None:
-    """A guarda recusa `load-module`/`unload-module` e entrega a leitura a quem
-    está por baixo dela — e quem está por baixo, aqui, é um ESPIÃO.
-
-    Uma guarda que cortasse TUDO no `_rodar` seria fácil e errada: o `estado()`
-    do nó pergunta ao servidor, e há régua que lê com um `runner` próprio. O
-    contrato é o par — a escrita volta `None` sem chegar a ninguém, a leitura
-    chega inteira a quem está por baixo.
-
-    FATO SUBSTITUÍDO (13/09/2026, A-SUITE-NAO-PERGUNTA-AO-SOM-01). Este teste
-    lia `pactl list sinks short` do servidor de som DE VERDADE, com a razão
-    «ler não muda nada dela». Ler trava junto quando o servidor trava — e o
-    dela travou duas vezes naquele dia —, e o veredito passava a depender da
-    máquina. O par medido é o mesmo; o servidor de quem roda saiu da conta, e
-    quem prova que a suíte inteira não o alcança é
-    `test_a_suite_nao_conversa_com_o_som_dela.py`.
-
-    MORDIDA: faça `_sem_escrever_no_som` delegar também as escritas, e a
-    primeira metade reprova; faça-o devolver `None` para tudo, e a segunda.
-    """
+    """A guarda recusa `load-module`/`unload-module` e entrega a leitura a quem"""
     from tests.conftest import _sem_escrever_no_som
 
     vistos: list[list[str]] = []

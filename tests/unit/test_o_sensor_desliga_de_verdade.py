@@ -1,26 +1,4 @@
-"""O interruptor de giroscópio/acelerômetro desliga DE VERDADE (SENSOR-DE-VERDADE-01).
-
-Decisão dela, 04/09/2026, contra a minha recomendação de virar leitura:
-
-    *"ele tem que funcionar de verdade. ambos independente do modo e da
-    mascara."* <!-- noqa-acento: citação literal dela -->
-
-**A régua desta sprint mede o que SAI, não o que o produto diz que fez** — é a
-lição das quatro réguas que deram verde sobre defeito vivo em 04/09. Por isso
-quase todo teste aqui termina lendo a JANELA que o vpad recebeu, ou o
-`grab_state` que o kernel concedeu, e não o `status: ok` da resposta.
-
-AS TRÊS MORDIDAS, e cada uma arranca uma metade diferente:
-
-1. tire o `REGISTRO.filtrar` do `_emit` do `PhysicalReportReader` — a janela
-   chega ao vpad com o giro dentro e `test_a_janela_que_chega_ao_vpad_perde_o_giro`
-   reprova;
-2. tire a união `vivos_sensores | desligados` do `SensorHub.reconciliar` — o
-   reader morre no TTL e `test_o_reader_do_movimento_sobrevive_a_gui_fechada`
-   reprova (é o interruptor se desligando sozinho cinco segundos depois);
-3. tire o `_reconciliar_grabs` — o nó nunca fica exclusivo e
-   `test_o_no_de_movimento_fica_exclusivo_quando_ela_desliga` reprova.
-"""
+"""O interruptor de giroscópio/acelerômetro desliga DE VERDADE (SENSOR-DE-VERDADE-01)."""
 from __future__ import annotations
 
 import inspect
@@ -49,12 +27,9 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: MAC da faixa da casa (`aa:bb:cc`), nunca um endereço real desta bancada.
 PECA = "aa:bb:cc:00:00:01"
 OUTRA = "aa:bb:cc:00:00:02"
 
-#: Janela de 25 B com TODO byte diferente de zero — assim "ficou zerado" é
-#: sempre efeito do filtro, nunca coincidência do dado de teste.
 JANELA_VIVA = bytes(range(1, TAMANHO_DA_JANELA + 1))
 
 
@@ -64,11 +39,6 @@ def _registro_limpo() -> Any:
     REGISTRO.limpar()
     yield
     REGISTRO.limpar()
-
-
-# ---------------------------------------------------------------------------
-# A PEÇA PURA — cada sensor por si, e o resto da janela intocado
-# ---------------------------------------------------------------------------
 
 
 def test_desligar_o_giro_nao_toca_no_acelerometro() -> None:
@@ -85,13 +55,7 @@ def test_desligar_o_acelerometro_nao_toca_no_giro() -> None:
 
 
 def test_o_touchpad_e_o_relogio_atravessam_o_interruptor() -> None:
-    """Desligar sensor não pode apagar o dedo dela nem o `sensor_timestamp`.
-
-    Os dois viajam na MESMA janela de 25 bytes. O timestamp é o `dt` com que o
-    SDL integra o giro, e os pontos de toque são o touchpad — decisão dela,
-    04/09: *"pedi pra tirar o texto não o touch mostrando os toques"*.
-    <!-- noqa-acento: citação literal dela -->
-    """
+    """Desligar sensor não pode apagar o dedo dela nem o `sensor_timestamp`."""
     fora = janela_com_sensores(JANELA_VIVA, giroscopio=False, acelerometro=False)
     assert fora[12:] == JANELA_VIVA[12:], "o timestamp/touchpad foi junto"
 
@@ -108,25 +72,13 @@ def test_janela_de_tamanho_errado_volta_verbatim() -> None:
 
 
 def test_a_faixa_de_cada_sensor_casa_com_a_do_vpad() -> None:
-    """As constantes daqui e as do `uhid_gamepad` descrevem a MESMA janela.
-
-    `virtual_motion` é PURO de propósito (importar o `uhid_gamepad` puxaria o
-    backend uhid inteiro), e o preço da pureza é uma constante repetida. Esta
-    régua é o que impede as duas de divergirem em silêncio — que é como um
-    filtro passaria a zerar o timestamp em vez do giro.
-    """
+    """As constantes daqui e as do `uhid_gamepad` descrevem a MESMA janela."""
     from hefesto_dualsense4unix.integrations import uhid_gamepad as ug
 
     assert TAMANHO_DA_JANELA == ug._MOTION_WINDOW_LEN
-    # gyro[3] __le16 nos bytes ABSOLUTOS 15-20; accel[3] nos 21-26.
     assert FAIXA_GIROSCOPIO.start + ug._MOTION_WINDOW_START == 15
     assert FAIXA_ACELEROMETRO.start + ug._MOTION_WINDOW_START == 21
     assert FAIXA_ACELEROMETRO.stop + ug._MOTION_WINDOW_START == 27
-
-
-# ---------------------------------------------------------------------------
-# O REGISTRO — campo omitido não mexe no irmão, e ausência é LIGADO
-# ---------------------------------------------------------------------------
 
 
 def test_sem_entrada_os_dois_nascem_ligados() -> None:
@@ -162,11 +114,6 @@ def test_o_endereco_casa_em_maiuscula_e_minuscula() -> None:
     assert reg.estado(PECA).giroscopio is False
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA 1 — o que CHEGA AO VPAD, que é o que o jogo recebe
-# ---------------------------------------------------------------------------
-
-
 class _VpadDeMentira:
     """Guarda as janelas que recebeu. É o "jogo" desta régua."""
 
@@ -185,11 +132,7 @@ def _reader_com_peca(vpad: Any, uniq: str | None) -> Any:
 
 
 def test_a_janela_que_chega_ao_vpad_perde_o_giro() -> None:
-    """**A MORDIDA.** Arranque o `REGISTRO.filtrar` do `_emit` e isto reprova.
-
-    Sem o filtro a janela chega ao vpad com os seis bytes de giro vivos — o
-    interruptor responderia "aplicado" e o jogo continuaria girando.
-    """
+    """**A MORDIDA.** Arranque o `REGISTRO.filtrar` do `_emit` e isto reprova."""
     vpad = _VpadDeMentira()
     leitor = _reader_com_peca(vpad, PECA)
     REGISTRO.definir(PECA, giroscopio=False)
@@ -203,11 +146,7 @@ def test_a_janela_que_chega_ao_vpad_perde_o_giro() -> None:
 
 
 def test_sem_saber_de_quem_e_a_janela_o_filtro_nao_age() -> None:
-    """`uniq` desconhecido = não filtra. Errar para o lado de não desligar.
-
-    Desligar o sensor do controle ERRADO é pior do que não desligar: ela
-    perderia a mira numa peça que não tocou, e nada na tela explicaria.
-    """
+    """`uniq` desconhecido = não filtra. Errar para o lado de não desligar."""
     vpad = _VpadDeMentira()
     leitor = _reader_com_peca(vpad, None)
     REGISTRO.definir(PECA, giroscopio=False)
@@ -218,12 +157,7 @@ def test_sem_saber_de_quem_e_a_janela_o_filtro_nao_age() -> None:
 
 
 def test_o_cache_do_reader_guarda_o_que_o_fisico_mandou() -> None:
-    """O dedup é sobre o físico; o filtro é sobre o que SAI.
-
-    Guardar a janela já filtrada congelaria o dedup com um sensor desligado —
-    todas as janelas ficariam iguais e o touchpad, que viaja na mesma fatia,
-    pararia junto.
-    """
+    """O dedup é sobre o físico; o filtro é sobre o que SAI."""
     vpad = _VpadDeMentira()
     leitor = _reader_com_peca(vpad, PECA)
     REGISTRO.definir(PECA, giroscopio=False, acelerometro=False)
@@ -259,11 +193,6 @@ def test_uniq_do_hidraw_le_o_hid_uniq_do_sysfs(tmp_path: Any) -> None:
         assert prr.uniq_do_hidraw("/dev/hidraw9") == PECA
     finally:
         prr._RAIZ_HIDRAW = original
-
-
-# ---------------------------------------------------------------------------
-# A MORDIDA 2 e 3 — o braço EVDEV, e o que o mantém vivo
-# ---------------------------------------------------------------------------
 
 
 class _MotionDeMentira:
@@ -309,11 +238,7 @@ def _hub_com_dublês(relogio: Any) -> tuple[SensorHub, dict[str, _MotionDeMentir
 
 
 def test_o_no_de_movimento_fica_exclusivo_quando_ela_desliga() -> None:
-    """**A MORDIDA.** Arranque o `_reconciliar_grabs` e isto reprova.
-
-    Sem ele o nó nunca fica exclusivo: quem lê o nó evdev (`evtest`, emulador
-    com backend evdev) continua recebendo o giro que ela desligou.
-    """
+    """**A MORDIDA.** Arranque o `_reconciliar_grabs` e isto reprova."""
     agora = [100.0]
     hub, criados = _hub_com_dublês(lambda: agora[0])
     hub.leitura(PECA)
@@ -355,13 +280,7 @@ def test_desligar_uma_peca_nao_graba_o_no_da_vizinha() -> None:
 
 
 def test_o_reader_do_movimento_sobrevive_a_gui_fechada() -> None:
-    """**A MORDIDA.** Arranque o `| desligados` da união e isto reprova.
-
-    É o defeito mais traiçoeiro desta frente: o reader morre no TTL de 5 s, o
-    `EVIOCGRAB` morre com ele, e o interruptor se desliga sozinho **cinco
-    segundos depois de ela fechar a janela** — com a tela ainda dizendo
-    "desligado".
-    """
+    """**A MORDIDA.** Arranque o `| desligados` da união e isto reprova."""
     agora = [100.0]
     hub, criados = _hub_com_dublês(lambda: agora[0])
     hub.leitura(PECA)
@@ -369,7 +288,7 @@ def test_o_reader_do_movimento_sobrevive_a_gui_fechada() -> None:
     hub.reconciliar()
     reader = criados[PECA]
 
-    agora[0] += SensorHub._DEMANDA_TTL_S + 60.0  # a GUI fechou faz tempo
+    agora[0] += SensorHub._DEMANDA_TTL_S + 60.0
     hub.reconciliar()
 
     assert not reader.parado, "o reader do sensor desligado foi podado"
@@ -392,12 +311,7 @@ def test_a_gui_fechada_ainda_poda_quem_esta_ligado() -> None:
 
 
 def test_o_reader_de_motion_de_verdade_sabe_grabar() -> None:
-    """A máquina de EVIOCGRAB subiu para a base e alcança o nó de movimento.
-
-    MORDIDA: devolva `set_grab`/`grab_state` para dentro do `EvdevReader` e
-    isto reprova com `AttributeError` — que é o estado em que a árvore estava
-    até 04/09/2026, e a razão pela qual o braço evdev não existia.
-    """
+    """A máquina de EVIOCGRAB subiu para a base e alcança o nó de movimento."""
     from hefesto_dualsense4unix.core.evdev_reader import (
         EvdevReader,
         MotionSensorReader,
@@ -412,12 +326,7 @@ def test_o_reader_de_motion_de_verdade_sabe_grabar() -> None:
 
 
 def test_o_grab_volta_a_pendente_quando_o_no_cai() -> None:
-    """Replug e troca de máscara passam por aqui — e o grab tem de voltar.
-
-    É o que faz o interruptor ser *"independente da máscara"*: trocar a máscara
-    derruba e recria o vpad, o nó reabre, e o `_reapply_grab` do loop repõe a
-    exclusividade sem ninguém pedir de novo.
-    """
+    """Replug e troca de máscara passam por aqui — e o grab tem de voltar."""
     from hefesto_dualsense4unix.core.evdev_reader import MotionSensorReader
 
     leitor = MotionSensorReader(device_path=None, target_uniq=PECA)
@@ -425,11 +334,6 @@ def test_o_grab_volta_a_pendente_quando_o_no_cai() -> None:
     leitor._grab_state = "held"
     leitor._reset_on_disconnect()
     assert leitor.grab_state == "pending"
-
-
-# ---------------------------------------------------------------------------
-# O PERFIL — o que ela desliga continua desligado depois do replug
-# ---------------------------------------------------------------------------
 
 
 class _StoreVazia:
@@ -456,22 +360,13 @@ def test_o_perfil_desliga_o_sensor_daquela_peca() -> None:
     )
     relatorio = gerente.apply_controller_sensores(perfil)
 
-    # A CHAVE DO PERFIL NÃO É A DO EVDEV, e é por isso que este teste existe
-    # com as duas grafias à vista: o `Profile` normaliza `aa:bb:cc:00:00:01`
-    # para `aabbcc000001`, e a primeira versão do registro (só `lower()`)
-    # gravava sob uma chave e lia sob outra — o interruptor valia até o
-    # replug e voltava calado.
     assert REGISTRO.estado(PECA) == EstadoDosSensores(False, True)
     assert relatorio == {f"sensores:{chave_de_sensor(PECA)}": "giro=off accel=on"}
     assert REGISTRO.estado(OUTRA).giroscopio is True
 
 
 def test_a_peneira_do_endereco_e_a_mesma_do_resto_da_casa() -> None:
-    """`chave_de_sensor` e `norm_mac` têm de concordar — senão são dois donos.
-
-    MORDIDA: volte `chave_de_sensor` para `strip().lower()` e isto reprova nos
-    endereços com dois-pontos, que são justamente os que o evdev entrega.
-    """
+    """`chave_de_sensor` e `norm_mac` têm de concordar — senão são dois donos."""
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     for endereco in (PECA, PECA.upper(), "aabbcc000001", "e8:47:3a:00:00:0f"):
@@ -499,11 +394,6 @@ def test_o_esquema_recusa_campo_que_ele_nao_aplica() -> None:
     """`extra="forbid"`: nada de campo aceito-e-ignorado na borda."""
     with pytest.raises(ValueError):
         ControllerSensoresOverride.model_validate({"touchpad": False})
-
-
-# ---------------------------------------------------------------------------
-# O MÉTODO — do IPC ao registro, ao disco e ao grab, num ato só
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -570,12 +460,7 @@ def _chamar(h: Any, **params: Any) -> dict[str, Any]:
 
 
 def test_o_metodo_desliga_grava_e_diz_o_alcance(perfis: Any) -> None:
-    """Do IPC ao disco: o giro cai, o disco guarda, e a resposta é honesta.
-
-    O DISCO É O QUE VALE desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01
-    (01/10/2026): o perfil sem sensores próprios deixa o interruptor ir ao
-    computador, e a vista do perfil é o que o aparelho recebe.
-    """
+    """Do IPC ao disco: o giro cai, o disco guarda, e a resposta é honesta."""
     from hefesto_dualsense4unix.profiles import loader as loader_module
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
@@ -598,15 +483,7 @@ def test_o_metodo_desliga_grava_e_diz_o_alcance(perfis: Any) -> None:
 
 
 def test_em_modo_nativo_a_resposta_diz_o_que_nao_alcanca(perfis: Any) -> None:
-    """A entrega mais importante desta frente, e é uma FRASE.
-
-    Medido em 04/09/2026: em Modo Nativo o jogo lê o movimento pelo `hidraw`
-    do físico, onde o daemon não escreve. Responder "aplicado" ali seria o
-    verde falso que esta sprint existe para não cometer.
-
-    MORDIDA: apague o ramo `if nativo` do handler e isto reprova — a resposta
-    passa a afirmar alcance total sobre um giro que continua chegando.
-    """
+    """A entrega mais importante desta frente, e é uma FRASE."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
     save_profile(Profile(name="Bancada", match=MatchAny()))
@@ -634,15 +511,7 @@ def test_ligar_de_volta_nao_tem_ressalva(perfis: Any) -> None:
 
 
 def test_sem_perfil_ativo_o_interruptor_vale_e_vai_ao_computador(perfis: Any) -> None:
-    """Sem perfil ativo, o interruptor vale e sobrevive: ele é do computador.
-
-    Recusar o ato inteiro por falta de perfil deixaria o giro chegando ao jogo
-    porque um arquivo não existia. Até 01/10/2026 ele valia sem gravar; desde a
-    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 os sensores são do computador,
-    e o `maquina.json` guarda a escolha.
-
-    MORDIDA: devolver o «sem perfil não grava» ao handler reprova aqui.
-    """
+    """Sem perfil ativo, o interruptor vale e sobrevive: ele é do computador."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
     h = _handlers(ativo=None, primario=PECA)

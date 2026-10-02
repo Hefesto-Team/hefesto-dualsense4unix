@@ -55,19 +55,8 @@ from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations.eleicao_de_microfone import ResultadoDaEleicao
 
 
-# ---------------------------------------------------------------------------
-# Os dublês — e cada um sabe RECUSAR, que é o que separa régua de carimbo
-# ---------------------------------------------------------------------------
-
-
 class BackendDeMentira:
-    """O backend, com a MESMA assinatura da ponte real.
-
-    `set_microphone_mute(muted, *, uniq=None) -> bool` e
-    `audio_status_for(uniq) -> dict` são copiadas de
-    `core/backend_pydualsense.py`; o teste
-    `test_o_duble_confere_a_assinatura_que_o_produto_chama` prova a cópia.
-    """
+    """O backend, com a MESMA assinatura da ponte real."""
 
     def __init__(self, mic_mudo: bool = True) -> None:
         self.mic_mudo = mic_mudo
@@ -83,8 +72,6 @@ class BackendDeMentira:
         if not self.aceita_escrita:
             return False
         if isinstance(muted, bool):
-            # O aparelho real leva ~550 ms; o dublê responde na hora, e é por
-            # isso que o teste do represamento usa `aceita_escrita=False`.
             self.mic_mudo = muted
         return True
 
@@ -119,9 +106,7 @@ class EleitorDeMentira:
     def passar_o_padrao(
         self, no_ar: list[str], conectados: list[str], calou: str | None = None
     ) -> ResultadoDaEleicao:
-        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,
-        depois a volta à máquina (`devolver_o_microfone`, que aqui sempre tem
-        para onde ir)."""
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,"""
         for candidato in no_ar:
             passado = self.eleger_o_controle(candidato, conectados)
             if passado.ok:
@@ -138,9 +123,6 @@ class DaemonDeMentira:
         self._tasks: list[Any] = []
         self._parando = False
         self.config = type("Cfg", (), {"mic_button_toggles_system": True})()
-        # O MODO ENTRA NO DUBLÊ DE PROPÓSITO. Se algum dia o ato passar a
-        # consultá-lo, a mordida 2 tem onde acontecer — um dublê que não
-        # oferece a informação não consegue provar que ninguém a usou.
         self.store = type("Store", (), {"native_mode_active": native_mode})()
         self.native_mode = native_mode
 
@@ -186,18 +168,8 @@ def _daemon(**kw: Any) -> DaemonDeMentira:
     return DaemonDeMentira(backend=BackendDeMentira(**kw.pop("backend", {})), **kw)
 
 
-# ---------------------------------------------------------------------------
-# 1. Uma função, dois chamadores — POR NOME
-# ---------------------------------------------------------------------------
-
-
 def test_o_botao_do_plastico_e_o_da_tela_chamam_a_mesma_funcao() -> None:
-    """MORDIDA 1: os dois caminhos apontam para `ligar_o_microfone`, por NOME.
-
-    Arranque o `ligar_o_microfone` de dentro de `mic_button_loop` (troque-o de
-    volta por `_eleger_ou_devolver`) e este teste reprova dizendo que o botão
-    do plástico deixou de fazer o ato.
-    """
+    """MORDIDA 1: os dois caminhos apontam para `ligar_o_microfone`, por NOME."""
     fonte_do_laco = inspect.getsource(hotkey.mic_button_loop)
     assert "ligar_o_microfone(" in fonte_do_laco, (
         "o laço do botão do plástico não chama `ligar_o_microfone` — o botão "
@@ -227,21 +199,9 @@ def test_o_metodo_do_ato_esta_registrado_no_ipc() -> None:
     assert '"mic.canal.set": self._handle_mic_canal_set' in fonte
 
 
-# ---------------------------------------------------------------------------
-# 2. O ato não muda de caminho com o modo
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("nativo", [False, True])
 def test_o_ato_nao_muda_de_caminho_com_o_modo_nativo(nativo: bool) -> None:
-    """MORDIDA 2: injete `native_mode=True` e o ato tem de fazer o MESMO.
-
-    Regra dela: *"indepente se nativo ou virtual"*.  # noqa-acento: dela
-
-    Ponha um `if daemon.is_native_mode(): return` em `ligar_o_microfone` e a
-    versão `nativo=True` deste teste reprova. O que o Modo Nativo muda é o que
-    o APARELHO aceita — e isso o ato RELATA, no teste do represamento abaixo.
-    """
+    """MORDIDA 2: injete `native_mode=True` e o ato tem de fazer o MESMO."""
     d = _daemon(native_mode=nativo)
     ato = asyncio.run(hotkey.ligar_o_microfone(d, "aa:bb:cc:00:00:01", ligado=True))
 
@@ -269,23 +229,9 @@ def test_o_ato_e_identico_nos_dois_modos() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. A idempotência é a decisão dela sobre o botão do plástico
-# ---------------------------------------------------------------------------
-
-
 def test_o_botao_do_plastico_nao_toma_a_posse_do_byte() -> None:
-    """MORDIDA 4: vindo do plástico, o byte JÁ está certo — não se escreve.
-
-    Escrever tomaria a posse do `hid-playstation`, e enquanto a posse for nossa
-    *"o botão físico não manda mais"* (`_handle_mic_set`). Ou seja: o próximo
-    toque dela no plástico não faria nada. É o oposto da decisão de 30/08 —
-    *"o botão do Controle sempre controla a interface"*.
-
-    Tire a guarda `if mudo_agora == mudo_desejado` de `_metade_do_firmware` e
-    este teste reprova.
-    """
-    d = _daemon(backend={"mic_mudo": False})  # o kernel já desmutou no aperto
+    """MORDIDA 4: vindo do plástico, o byte JÁ está certo — não se escreve."""
+    d = _daemon(backend={"mic_mudo": False})
     ato = asyncio.run(hotkey.ligar_o_microfone(d, "aa:bb:cc:00:00:01", ligado=True))
 
     assert ato.firmware.feita, "a metade do firmware devia contar como feita"
@@ -297,27 +243,13 @@ def test_o_botao_do_plastico_nao_toma_a_posse_do_byte() -> None:
 
 def test_o_gesto_de_tela_escreve_o_byte_divergente() -> None:
     """O outro lado da mesma guarda: divergindo, o ato escreve."""
-    d = _daemon(backend={"mic_mudo": True})  # está mudo, e a tela pede ligado
+    d = _daemon(backend={"mic_mudo": True})
     asyncio.run(hotkey.ligar_o_microfone(d, "aa:bb:cc:00:00:01", ligado=True))
     assert d.controller.escritas == [(False, "aa:bb:cc:00:00:01")]
 
 
-# ---------------------------------------------------------------------------
-# 4. O eco da nossa própria escrita não é gesto dela
-# ---------------------------------------------------------------------------
-
-
 def test_o_eco_da_nossa_escrita_nao_executa_o_ato_de_novo() -> None:
-    """MORDIDA 3: a borda que a NOSSA escrita causa não pode virar gesto.
-
-    Medido em 04/09: escrever o bit do mudo faz o firmware devolver a mudança
-    no report de input ~550 ms depois, e o laço das bordas não tem como saber,
-    sozinho, se aquilo foi o dedo dela. Tratar o eco como gesto executa o ato
-    duas vezes — e com `ligado=False` a segunda cai no ramo da RECUSA e deposita
-    no cartão dela uma frase dizendo que o microfone está com outro controle.
-
-    Tire o `_borda_e_eco_do_ato` de `mic_button_loop` e este teste reprova.
-    """
+    """MORDIDA 3: a borda que a NOSSA escrita causa não pode virar gesto."""
     hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
     assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is True
 
@@ -330,11 +262,7 @@ def test_o_eco_vale_uma_vez_so() -> None:
 
 
 def test_o_eco_nao_engole_o_gesto_contrario() -> None:
-    """Ela clica na tela e logo aperta o plástico para desfazer: TEM de valer.
-
-    Só o tempo engoliria esse gesto — que é o uso mais provável do botão logo
-    depois de um clique. Por isso o eco exige o MESMO valor, e não só a janela.
-    """
+    """Ela clica na tela e logo aperta o plástico para desfazer: TEM de valer."""
     hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
     assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", False) is False
 
@@ -346,11 +274,6 @@ def test_o_eco_expira(monkeypatch: pytest.MonkeyPatch) -> None:
     hotkey._marcar_eco_do_ato("aa:bb:cc:00:00:01", True)
     relogio["t"] += hotkey.ECO_DO_ATO_S + 0.1
     assert hotkey._borda_e_eco_do_ato("aa:bb:cc:00:00:01", True) is False
-
-
-# ---------------------------------------------------------------------------
-# 5. O ato RECUSA dizendo qual metade faltou
-# ---------------------------------------------------------------------------
 
 
 def test_a_recusa_diz_qual_das_duas_metades_faltou() -> None:
@@ -388,11 +311,6 @@ def test_as_duas_metades_falhando_dao_as_duas_frases() -> None:
     assert " · " in ato.motivo
 
 
-# ---------------------------------------------------------------------------
-# 6. O DUBLÊ TEM DE SER TÃO ESTRITO QUANTO A PONTE REAL
-# ---------------------------------------------------------------------------
-
-
 def test_o_duble_confere_a_assinatura_que_o_produto_chama() -> None:
     """A cicatriz de 04/09: a máscara nunca gravou um byte e a régua deu verde.
 
@@ -416,10 +334,6 @@ def test_o_duble_confere_a_assinatura_que_o_produto_chama() -> None:
     assert real.parameters["uniq"].kind is inspect.Parameter.KEYWORD_ONLY
     assert duble.parameters["uniq"].kind is inspect.Parameter.KEYWORD_ONLY
 
-    # O endereço vai por KEYWORD, e ele é passado dentro do envelope `_mutar`
-    # — que existe porque `_run_blocking` só aceita posicionais (ver o teste
-    # abaixo). Passá-lo posicional escreveria no controle errado numa mesa
-    # cheia, e a assinatura real nem aceitaria.
     fonte = inspect.getsource(hotkey._mutar)
     assert "uniq=uniq" in fonte, (
         "o ato passa o endereço POSICIONAL — numa mesa cheia isso escreve no "
@@ -428,16 +342,7 @@ def test_o_duble_confere_a_assinatura_que_o_produto_chama() -> None:
 
 
 def test_o_run_blocking_do_duble_e_tao_estrito_quanto_o_do_daemon() -> None:
-    """A régua que faltava, e ela nasce de um defeito que o APARELHO achou.
-
-    O dublê deste arquivo tinha `**kwargs` no `_run_blocking` e o daemon real
-    não tem. Resultado: 17 testes verdes sobre um ato que, contra o daemon de
-    verdade, levantava `TypeError` e nunca escrevia o byte do mudo.
-
-    Compara as duas assinaturas por `inspect`, e confere que o produto NÃO
-    passa keyword nenhuma para o `_run_blocking` — quem precisa de keyword
-    embrulha em posicionais (`_mutar`, `_acender`).
-    """
+    """A régua que faltava, e ela nasce de um defeito que o APARELHO achou."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
     real = inspect.signature(Daemon._run_blocking)
@@ -475,8 +380,6 @@ def test_o_recado_do_represamento_usa_um_gesto_que_a_tela_conhece() -> None:
     from hefesto_dualsense4unix.daemon.subsystems import recado_do_microfone
 
     fonte = inspect.getsource(hotkey._confirmar_e_devolver)
-    # Só as linhas de CÓDIGO: o comentário logo acima da chamada cita a
-    # palavra errada de propósito, porque é a cicatriz que ele registra.
     usados = [
         linha.split('gesto="', 1)[1].split('"', 1)[0]
         for linha in fonte.splitlines()
@@ -507,7 +410,6 @@ def test_o_estado_composto_nao_inventa_o_canal_que_ninguem_leu() -> None:
     }
     lido = hotkey.canal_do_microfone("aa:bb:cc:00:00:01")
     assert lido is not None and lido["canal_ativo"] is True
-    # É uma CÓPIA: quem lê o estado não pode escrever nele por acidente.
     lido["canal_ativo"] = False
     assert hotkey._CANAL_POR_UNIQ["aa:bb:cc:00:00:01"]["canal_ativo"] is True
 

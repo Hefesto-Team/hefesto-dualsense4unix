@@ -42,27 +42,8 @@ class EventTopic:
     CONTROLLER_DISCONNECTED = "controller.disconnected"
     TRIGGER_SET = "trigger.set"
     LED_SET = "led.set"
-    #: MIC-DA-MESA-ELEICAO-01: a borda do botão de microfone COM ENDEREÇO —
-    #: `{uniq, mudo, seq}`. Tópico PRÓPRIO, e não `BUTTON_DOWN`, por dois
-    #: motivos medidos: (1) o `BUTTON_DOWN` não carrega `uniq` e dar-lhe um
-    #: quebraria o contrato de perfil e de plugin; (2) o botão do mic nem
-    #: chega lá — o `hid-playstation` CONSOME a borda e ela não vira evdev.
     MIC_DA_MESA = "mic.da_mesa"
-    #: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: o que o JOGO pediu ao
-    #: pad virtual sobre o microfone do controle de um jogador —
-    #: `{uniq, em, luz | mudo | solta}`. Quem publica é o ralo do pad
-    #: (`gamepad.apply_game_mic`); quem aplica são os donos de sempre: a luz, o
-    #: `luz_do_mic`; o mudo, o `hotkey`. Tópico próprio pela razão do de cima:
-    #: o pedido tem endereço, e o `em` é o que decide entre ele e ela.
     MIC_DO_JOGO = "mic.do_jogo"
-    #: O-SOM-DO-SISTEMA-E-O-DA-TELA-01: a saída e a entrada PADRÃO do sistema
-    #: mudaram — `{saida, entrada}`, os nomes crus dos nós. Quem publica é
-    #: `daemon/subsystems/ouvinte_do_som`, que segue um `pactl subscribe`.
-    #:
-    #: **Tópico próprio, e não `STATE_UPDATE`**: este fato não vem do controle
-    #: nem do laço de poll — vem do servidor de som, e chega fora de tique.
-    #: Quem quiser reagir a ele (um plugin, a tela) não pode ser obrigado a
-    #: ouvir o estado inteiro a 10 Hz para vê-lo.
     SOM_DO_SISTEMA = "som.do_sistema"
 
 
@@ -96,12 +77,7 @@ class EventBus:
         self._subs[topic] = [s for s in subs if s.queue is not queue]
 
     def publish(self, topic: str, payload: Any) -> None:
-        """Publica um evento. Seguro para chamar de threads não-loop.
-
-        Se chamado do loop do daemon, entrega direto. Se chamado de outra
-        thread, usa `call_soon_threadsafe` para marshal. Filas cheias
-        descartam o evento mais antigo e logam warning uma vez.
-        """
+        """Publica um evento. Seguro para chamar de threads não-loop."""
         subs = list(self._subs.get(topic, ()))
         if not subs:
             return

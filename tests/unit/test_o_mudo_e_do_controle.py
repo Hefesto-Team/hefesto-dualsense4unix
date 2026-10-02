@@ -69,16 +69,10 @@ from tests.unit.test_o_botao_do_mic_grava_no_perfil import (
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 #: Os dois transportes, na ordem de P1 a P4: cabo e rádio intercalados, para
-#: que todo controle da cena seja medido nos dois quando o parâmetro gira.
 TRANSPORTES = {
     "cabo-primeiro": ("usb", "bt", "usb", "bt"),
     "radio-primeiro": ("bt", "usb", "bt", "usb"),
 }
-
-
-# ===========================================================================
-# 3. A TROCA DE PERFIL NÃO MEXE NO MUDO
-# ===========================================================================
 
 
 class TestATrocaDePerfilNaoMexeNoMudo:
@@ -88,15 +82,7 @@ class TestATrocaDePerfilNaoMexeNoMudo:
     async def test_o_controle_calado_segue_calado_depois_da_troca(
         self, casa: Any, origem: str, calado: str  # noqa: F811
     ) -> None:
-        """Ela cala UM pelo botão; o perfil do jogo diz «no ar» para todos.
-
-        O perfil do jogo carrega um `muted: false` de antes da migração, no
-        global e na peça. A troca — automática ou escolhida na mão — não
-        escreve o mudo, e a reconexão seguinte lê o dono.
-
-        MORDIDA: `apply_mic` voltar a deixar o `muted` atravessar a troca
-        explícita (`origin == "manual"`).
-        """
+        """Ela cala UM pelo botão; o perfil do jogo diz «no ar» para todos."""
         casa.perfil(FREESTYLE)
         casa.perfil(JOGO, mic={"muted": False},
                     por_peca={u: {"mic": {"muted": False}} for u in OS_QUATRO})
@@ -146,38 +132,23 @@ class TestATrocaDePerfilNaoMexeNoMudo:
         assert True not in daemon.controller.mudos_escritos(P2)
 
 
-# ===========================================================================
-# 4. O RESTART DEVOLVE O MUDO DO DONO — a prova dela, em mentira
-# ===========================================================================
-
-
 class TestORestartDevolveODono:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("arranjo", sorted(TRANSPORTES))
     async def test_calar_o_p3_abrir_um_jogo_fechar_e_reiniciar(
         self, casa: Any, arranjo: str  # noqa: F811
     ) -> None:
-        """A prova no aparelho da sprint, com os quatro na mesa.
-
-        Calar o P3 pelo botão, abrir um jogo com outro perfil, fechar,
-        reiniciar o daemon: o P3 segue calado, e os outros três seguem abertos.
-
-        MORDIDA: `_mudo_do_controle` lendo uma memória que morre com o daemon
-        (devolvendo `None` depois do restart).
-        """
+        """A prova no aparelho da sprint, com os quatro na mesa."""
         transportes = TRANSPORTES[arranjo]
         casa.perfil(FREESTYLE)
         casa.perfil(JOGO, por_peca={P3: {"mic": {"muted": False}}})
-        # NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): o
-        # jogo que fecha devolve a escolha dela, e não o Freestyle desligado,
-        # que não entra por origem automática.
         casa.perfil("Desktop Dela")
         daemon = casa.daemon(OS_QUATRO, transportes=transportes)
         for u in OS_QUATRO:
             assert await hotkey.nascer_no_ar(daemon, u) is True
         await _apertar(daemon, P3)
-        _ativar(daemon, JOGO, origin="autoswitch")    # o jogo abre
-        _ativar(daemon, "Desktop Dela", origin="autoswitch")  # o jogo fecha
+        _ativar(daemon, JOGO, origin="autoswitch")
+        _ativar(daemon, "Desktop Dela", origin="autoswitch")
         await _derrubar(daemon)
 
         novo = casa.daemon(OS_QUATRO, ativo=JOGO, transportes=transportes)
@@ -193,27 +164,16 @@ class TestORestartDevolveODono:
             )
 
 
-# ===========================================================================
-# 2. UM ESCRITOR: o 🎙 da tela e o rascunho do «Salvar»
-# ===========================================================================
-
-
 def _pacotes() -> Any:
     sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
     import pacotes
-    import pacotes.a02_controles  # importar é registrar o gesto
+    import pacotes.a02_controles
 
     return pacotes
 
 
 class _PonteQueGravaComoODaemon:
-    """O daemon de papel que CONFIRMA o ato e grava como o daemon grava.
-
-    O `mic.canal.set` do daemon é `hotkey.ligar_o_microfone`, que grava o mudo
-    no dono (`utils.maquina.gravar_o_mudo_do_microfone`). Aqui a ponte faz a
-    MESMA gravação, pelo mesmo escritor — sem ela, uma régua que conta
-    gravações contaria só as da tela.
-    """
+    """O daemon de papel que CONFIRMA o ato e grava como o daemon grava."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []
@@ -268,10 +228,7 @@ class TestUmEscritor:
         assert maquina.mudo_do_microfone(uniq) is True
 
     def test_o_rascunho_nao_escreve_o_mudo(self) -> None:
-        """O «Salvar» da tela não é escritor do mudo: nem cria, nem apaga.
-
-        MORDIDA: devolver o ramo do `muted` ao `with_controller_mic`.
-        """
+        """O «Salvar» da tela não é escritor do mudo: nem cria, nem apaga."""
         chave = "aabbcc000033"
         draft = DraftConfig.from_profile(Profile(name="x", match=MatchManual()))
         pedido = draft.effective_mic_for(chave).model_copy(update={"muted": True})
@@ -284,11 +241,7 @@ class TestUmEscritor:
         assert "muted" not in (depois.with_mic(volume=40, muted=True).to_ipc_dict()["mic"] or {})
 
     def test_o_mudo_de_antes_da_migracao_atravessa_o_rascunho(self) -> None:
-        """Um `muted` que a peça ainda carregue no disco não some num «Salvar».
-
-        O rascunho não é dono do mudo: ele não o escreve nem o apaga. Apagar
-        antes de a migração o levar ao dono perderia o silêncio dela.
-        """
+        """Um `muted` que a peça ainda carregue no disco não some num «Salvar»."""
         chave = "aabbcc000033"
         perfil = Profile(name="x", match=MatchManual(),
                          controllers={chave: {"mic": {"muted": True}}})
@@ -301,21 +254,12 @@ class TestUmEscritor:
         assert mic is not None and mic.muted is True and mic.volume == 40
 
 
-# ===========================================================================
-# 1. UM DONO: o `maquina.json`, pela API do `utils/maquina.py`
-# ===========================================================================
-
-
 class TestODono:
     @pytest.mark.parametrize("uniq", OS_QUATRO)
     def test_nada_mudou_nada_grava(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uniq: str
     ) -> None:
-        """Apertar duas vezes para o mesmo lado não reescreve o arquivo.
-
-        MORDIDA: tirar a pergunta ao disco do começo de
-        `gravar_o_mudo_do_microfone` — a segunda chamada grava de novo.
-        """
+        """Apertar duas vezes para o mesmo lado não reescreve o arquivo."""
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
         gravacoes: list[dict[str, Any]] = []
         real = maquina.gravar_maquina
@@ -339,11 +283,6 @@ class TestODono:
         assert maquina.gravar_o_mudo_do_microfone("02:fe:00:00:00:01", True) is False
         assert maquina.mudo_do_microfone("02:fe:00:00:00:01") is None
         assert not (maquina.carregar_maquina().controles or {})
-
-
-# ===========================================================================
-# 5. A MIGRAÇÃO, UMA VEZ
-# ===========================================================================
 
 
 def _grava_cru(pasta: Path, arquivo: str, dados: dict[str, Any]) -> None:
@@ -386,14 +325,7 @@ class TestAMigracao:
         return dados
 
     def test_o_mudo_do_ativo_vai_para_o_dono(self, pasta: Path) -> None:
-        """A peça vence o global; o global vale para os controles conhecidos.
-
-        O P3 é conhecido pelo `maquina.json` (ela deu nome a ele) e não tem
-        peça no perfil: herda o global calado. O P4 só aparece no perfil do
-        JOGO, que não é o ativo: a peça de lá não conta, mas ele é um controle
-        conhecido, e herda o global calado do ativo — o mesmo que o boot de
-        antes da migração faria com ele ao conectar.
-        """
+        """A peça vence o global; o global vale para os controles conhecidos."""
         self._o_ativo(pasta)
         self._o_do_jogo(pasta)
         assert maquina.gravar_o_nome_do_controle(P3, "Controle da sala")
@@ -408,16 +340,7 @@ class TestAMigracao:
         assert maquina.carregar_maquina().controles[P3].nome == "Controle da sala"
 
     def test_o_global_calado_alcanca_o_controle_de_outro_perfil(self, pasta: Path) -> None:
-        """O controle que só um perfil de jogo conhece herda o global calado do ativo.
-
-        Antes da migração, o `mic.muted: true` global do ativo calava TODO
-        controle que conectasse (o replug e o nascimento liam o global). O P4
-        não está no `maquina.json` e só tem, no perfil do jogo, um volume —
-        nenhuma opinião sobre o mudo. Ficar fora da lista o poria no ar.
-
-        MORDIDA: contar como conhecidos só os controles do ativo e do
-        `maquina.json` — o P4 volta a `None`, e nasce no ar.
-        """
+        """O controle que só um perfil de jogo conhece herda o global calado do ativo."""
         self._o_ativo(pasta)
         _grava_cru(pasta, "jogo.json", {
             "name": "Jogo", "version": 1, "priority": 80,
@@ -433,10 +356,7 @@ class TestAMigracao:
             "mic": {"volume": 55}}, "a migração mexeu num perfil que não tinha mudo"
 
     def test_o_mudo_sai_de_todo_perfil_e_nada_mais_muda(self, pasta: Path) -> None:
-        """Só o `muted` sai; a versão de antes fica no histórico.
-
-        MORDIDA: não tirar o `muted` dos perfis (ou tirar a seção inteira).
-        """
+        """Só o `muted` sai; a versão de antes fica no histórico."""
         ativo = self._o_ativo(pasta)
         jogo = self._o_do_jogo(pasta)
 
@@ -454,14 +374,14 @@ class TestAMigracao:
             assert [json.loads(v.read_text(encoding="utf-8")) for v in guardadas] == [
                 original], f"a versão de antes de {nome} não ficou no histórico"
         for arquivo in ("freestyle.json", "jogo.json"):
-            loader.load_profile(arquivo.removesuffix(".json"))  # continua válido
+            loader.load_profile(arquivo.removesuffix(".json"))
 
     def test_roda_uma_vez_so(self, pasta: Path) -> None:
         """A marca impede a segunda corrida — e o dono de depois não é pisado."""
         self._o_ativo(pasta)
         assert loader.o_mudo_do_microfone_vai_para_o_controle(ativo="Freestyle")
-        assert maquina.gravar_o_mudo_do_microfone(P2, False)  # ela ligou depois
-        self._o_ativo(pasta)  # um perfil de antes, restaurado à mão
+        assert maquina.gravar_o_mudo_do_microfone(P2, False)
+        self._o_ativo(pasta)
 
         assert loader.o_mudo_do_microfone_vai_para_o_controle(ativo="Freestyle") is None
         assert maquina.mudo_do_microfone(P2) is False
@@ -479,11 +399,7 @@ class TestAMigracao:
     def test_o_dono_que_recusa_nao_tira_o_mudo_dos_perfis(
         self, pasta: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem gravar no dono, nada sai dos perfis e não há marca.
-
-        O silêncio dela não pode se perder no meio do caminho: a próxima
-        subida tenta de novo.
-        """
+        """Sem gravar no dono, nada sai dos perfis e não há marca."""
         ativo = self._o_ativo(pasta)
         real = maquina.gravar_o_mudo_do_microfone
         monkeypatch.setattr(maquina, "gravar_o_mudo_do_microfone", lambda *_a: False)
@@ -495,15 +411,7 @@ class TestAMigracao:
         assert loader.o_mudo_do_microfone_vai_para_o_controle(ativo="Freestyle")
 
     def test_a_copia_de_fabrica_fica_como_veio(self, pasta: Path) -> None:
-        """O Freestyle recém-semeado não é reescrito, e o `muted` dele não vai ao dono.
-
-        O asset traz `"muted": false`, que não é escolha dela. Reescrevê-lo
-        faria a fábrica deixar de ser fábrica em TODA máquina nova — a
-        `o_freestyle_de_fabrica_nasce_ligado` e o install comparam os bytes.
-
-        MORDIDAS: tirar o `_e_copia_de_fabrica` do laço dos perfis (o arquivo
-        muda), ou do perfil ativo (o P3 ganha uma opinião que ela não deu).
-        """
+        """O Freestyle recém-semeado não é reescrito, e o `muted` dele não vai ao dono."""
         asset = loader._seed_source_file(loader.ARQUIVO_DO_PADRAO)
         assert asset is not None
         bruto = asset.read_bytes()
@@ -529,30 +437,18 @@ class TestAMigracao:
         assert loader.o_mudo_do_microfone_vai_para_o_controle() == {P4: True}
 
 
-# ===========================================================================
-# 6. O 🎙 SOBRE UMA POSSE VELHA
-# ===========================================================================
-
-
 class TestAPosseVelha:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("uniq", OS_QUATRO)
     async def test_o_microfone_da_tela_escreve_sobre_a_posse_que_desdiz(
         self, casa: Any, uniq: str  # noqa: F811
     ) -> None:
-        """O bit está no ar por um instante, e a posse do Hefesto diz calado.
-
-        O defeito do item 2 da O-BOTAO pelo lado da tela: sem a pergunta à
-        posse, o 🎙 pulava a escrita, respondia «feito», e o report seguinte do
-        Hefesto calava o controle de novo.
-
-        MORDIDA: tirar `_a_posse_nao_desdiz` de `_metade_do_firmware`.
-        """
+        """O bit está no ar por um instante, e a posse do Hefesto diz calado."""
         casa.perfil(FREESTYLE)
         daemon = casa.daemon(OS_QUATRO, transportes=TRANSPORTES["cabo-primeiro"])
         kernel = daemon.controller
-        assert kernel.set_microphone_mute(True, uniq=uniq)  # a posse velha: calado
-        kernel._firmware_mudo[uniq] = False                 # o bit, livre por um instante
+        assert kernel.set_microphone_mute(True, uniq=uniq)
+        kernel._firmware_mudo[uniq] = False
 
         ato = await hotkey.ligar_o_microfone(daemon, uniq, ligado=True)
         kernel.report(uniq)

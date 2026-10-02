@@ -1,42 +1,9 @@
-"""O PCM da háptica vira bloco de rádio — HAPTICA-POR-RADIO-01, P2.
-
-No CABO a vibração dos jogos da Sony viaja como áudio: o jogo abre o endpoint do
-controle com quatro canais e toca os canais 3 e 4, que são os dois motores
-voice-coil. Pelo rádio não há placa de áudio, e o mesmo sinal tem de ir dentro de
-um report HID, num bloco de 64 bytes a cada 10,667 ms.
-
-**MEDIDO EM 18/09/2026, com a mão dela** (`scripts/ensaios/historico/a_haptica_pelo_radio.py`):
-o motor vibra quando o report `0x32` (ou o `0x35`, o do alto-falante) leva o bloco
-`0x91` de AudioControl e, depois dele, o bloco `0x92` com 64 bytes de PCM int8
-estéreo a 3 kHz. Sem o `0x91` não vibra; com as amostras zeradas, cala.
-
-ESTE MÓDULO É SÓ A CONTA, e por isso não importa nada de aparelho: entra PCM de
-48 kHz com quatro canais, sai a lista de blocos prontos. Quem escreve no controle
-é a ponte (P4), que já é dona do report `0x35` do alto-falante — um escritor por
-controle, nunca dois (um segundo escritor desliga o microfone, a queixa de
-10/09/2026).
-
-A CONTA, e cada passo tem uma razão:
-
-1. **só os canais 3 e 4** — os canais 1 e 2 são o alto-falante do controle, e
-   mandá-los aos motores faria o controle tremer com a voz do jogo;
-2. **passa-baixa antes de dizimar** — 48 kHz para 3 kHz é uma dizimação por 16, e
-   sem filtro tudo o que passa de 1,5 kHz volta dobrado em cima do sinal
-   (*aliasing*). O filtro é a média móvel de 16 amostras, que é o que a dizimação
-   pede e custa uma soma por amostra;
-3. **int8 com clamp** — o bloco é de 8 bits com sinal, e o `-128` é o valor que
-   estoura para o outro lado quando alguém soma sem olhar; aqui o piso é `-127`.
-
-**O QUE NÃO ESTÁ MEDIDO, e está escrito de propósito:** qual motor é o canal 3 e
-qual é o 4 (a ordem dos dois no bloco), e a escala exata entre o PCM do jogo e a
-força que ela sente. As duas saem na bancada do P4, com a mão dela.
-"""
+"""O PCM da háptica vira bloco de rádio — HAPTICA-POR-RADIO-01, P2."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-#: 32 amostras por canal por bloco, a 3 kHz: os 10,667 ms do quadro de áudio.
 TAXA_DO_BLOCO = 3000
 AMOSTRAS_POR_CANAL = 32
 BYTES_DO_BLOCO = AMOSTRAS_POR_CANAL * 2
@@ -44,11 +11,8 @@ BYTES_DO_BLOCO = AMOSTRAS_POR_CANAL * 2
 #: A entrada é a do endpoint do DualSense: 48 kHz, quatro canais, s16le.
 TAXA_DE_ENTRADA = 48000
 CANAIS_DE_ENTRADA = 4
-#: Os canais dos motores dentro do quadro de quatro (FL, FR, RL, RR).
 CANAIS_DOS_MOTORES = (2, 3)
 
-#: 48000 / 3000. É também o tamanho da janela do passa-baixa — numa dizimação, o
-#: filtro e o fator andam juntos.
 FATOR = TAXA_DE_ENTRADA // TAXA_DO_BLOCO
 
 _PICO_INT16 = 32768
@@ -57,12 +21,7 @@ _PICO_INT8 = 127
 
 @dataclass
 class ConversorDeHaptica:
-    """Recebe PCM em pedaços de qualquer tamanho e devolve blocos inteiros.
-
-    Guarda o resto entre as chamadas: o jogo entrega quadros que não caem em
-    múltiplos de 512, e um conversor sem memória picotaria o sinal a cada
-    entrega — que é ruído audível no motor, não arredondamento.
-    """
+    """Recebe PCM em pedaços de qualquer tamanho e devolve blocos inteiros."""
 
     ganho: float = 1.0
     canais: int = CANAIS_DE_ENTRADA

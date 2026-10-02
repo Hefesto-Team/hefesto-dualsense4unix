@@ -1,91 +1,5 @@
 #!/usr/bin/env python3
-"""catraca.py — O MOTOR DA CATRACA, e ele é UM SÓ.
-
-O QUE É UMA CATRACA NESTA CASA
--------------------------------
-Uma catraca **nunca pede mutirão**. Ela sabe o número de HOJE, grava-o num
-caderno versionado, e recusa que ele SUBA. O acervo antigo é problema de quem
-for dono dele; a catraca cobra só de quem está escrevendo a linha nova, no
-momento em que a escreve. É assim que o custo some — não porque alguém pagou de
-uma vez, mas porque ninguém mais acrescentou.
-
-A palavra é dela, e é o desenho inteiro:
-
-    "Um Hook que vá facilitando isso seria maravilhoso. Pois organicamente   (noqa-acento: citação literal dela)
-     deixaríamos fácil pra gente e pro outro"
-
-POR QUE O MOTOR É SEPARADO DAS MEDIDAS
----------------------------------------
-Duas implementações da mesma catraca é o defeito que esta casa já nomeou e
-pagou: *a lista de portões vivia em dois lugares — o contrato da casa e o
-`ci.yml` — e as duas divergiam*. Então há **um motor** e **N medidas**: quem
-precisar de uma catraca nova registra a função que conta e não escreve laço,
-caderno, nem comparação nenhuma.
-
-Quem chega primeiro escreve o motor; o segundo IMPORTA. **Medido em 20/09/2026,
-antes de escrever uma linha:** a `PODA-DO-DATADO-01` ainda não tinha aterrissado
-(`scripts/catraca.py` não existia na árvore), então quem escreveu foi a
-`TRADUZIR-O-PROJETO-01`. Quem vier depois importa isto e não escreve motor
-nenhum — registrar a própria medida custa uma :class:`Medida`. A receita, para
-quem vier de `scripts/`::
-
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from catraca import Catraca, Censo, Medida
-
-AS QUATRO ARMADILHAS QUE ESTE MOTOR EXISTE PARA NÃO TER
---------------------------------------------------------
-Cada uma é um defeito medido nesta casa, e cada uma tem mordida no teste.
-
-1. **A trava que se mede contra a própria saída não trava nada.** Medido em
-   07/09/2026: a régua que devia impedir o CSV de perder colunas comparava o
-   arquivo novo com ELE MESMO, e passou verde enquanto o mapa perdia 50. Aqui,
-   ``comparar()`` lê o caderno do DISCO antes de medir e **nunca escreve**.
-   Quem grava é ``aceitar()`` ou ``forcar_piso()``, que são atos separados, com
-   nome próprio e com razão escrita.
-
-2. **O conjunto vazio nunca é a resposta certa.** Medido em quatro instrumentos
-   diferentes: *o portão escolhia a venv pela POSIÇÃO*; *as pastas mudaram de
-   nome e as réguas não foram junto*; *lote montado da árvore ERRADA morre
-   calado, e `no tests ran` lê-se como limpo*; *o `--prova-gesto` nunca clicava
-   o botão do microfone*. Toda medida declara o UNIVERSO que varreu, e universo
-   vazio — ou menor do que a própria medida sabe exigir — é **VERMELHO**, nunca
-   o zero que se lê como verde.
-
-3. **Zero se lê como verde.** Uma medida que ainda não pode medir (porque o
-   dado de que ela depende não existe) devolveria zero, e zero passa. Por isso
-   existe o estado ``PENDENTE``: o piso grava a palavra, com a razão escrita, e
-   o motor **se recusa a comparar**. ``PENDENTE`` nunca vira ``VERDE``.
-
-4. **Instrumento que sabe do próprio risco RESOLVE, não avisa.** Uma medida
-   pendente que ACORDA — o dado apareceu — não fica calada esperando alguém
-   reparar: o motor reprova dizendo que a medida passou a medir e que o piso
-   tem de ser gravado. E uma medida com piso numérico que PARA de poder medir
-   reprova igual, porque piso sobre o que não se mede é piso falso.
-
-O CADERNO
----------
-JSON versionado, um por conjunto de medidas, no formato::
-
-    {
-      "medidas": {
-        "<nome>": {
-          "piso": 1234 | "PENDENTE",
-          "data": "AAAA-MM-DD",
-          "razao": "por que este é o piso",
-          "universo": 2468,
-          "por_item": {"caminho/ou/chave": 123, ...},
-          "bruto": {"censo_de_hoje": 3311},        # só quando PENDENTE
-          "subidas":   [{"data":…, "de":…, "para":…, "razao":…}]
-        }
-      }
-    }
-
-``por_item`` é o que permite dizer **O QUE ENTROU** em vez de só o número — e
-isso não é enfeite: *um número vermelho sem o nome faz a pessoa procurar, e
-procurar é o que desliga portão.*
-"""
+"""catraca.py — O MOTOR DA CATRACA, e ele é UM SÓ."""
 
 from __future__ import annotations
 
@@ -99,8 +13,6 @@ from pathlib import Path
 
 PENDENTE = "PENDENTE"
 
-# Os estados de um veredito. VERDE é o único que passa; PENDENTE passa a
-# execução mas NÃO é verde, e a diferença é o item 3 do cabeçalho.
 VERDE = "VERDE"
 VERMELHO = "VERMELHO"
 ESTADO_PENDENTE = "PENDENTE"
@@ -114,16 +26,7 @@ class CatracaTorta(Exception):
 
 @dataclass(frozen=True)
 class Censo:
-    """O resultado de uma medida: o número, o que o compõe, e o que foi varrido.
-
-    ``numero`` é ``None`` — e só ``None`` — quando a medida **não pode medir**.
-    Devolver ``0`` nesse caso é o defeito do item 3 do cabeçalho, e o motor
-    estoura se as duas coisas não combinarem.
-
-    ``universo`` é o tamanho do corpo varrido (arquivos abertos, páginas
-    encontradas). É por ele que a mordida do vazio reprova: contar zero num
-    universo de zero não é medir, é não ter olhado.
-    """
+    """O resultado de uma medida: o número, o que o compõe, e o que foi varrido."""
 
     numero: int | None
     universo: int
@@ -145,17 +48,7 @@ class Censo:
 
 @dataclass(frozen=True)
 class Medida:
-    """Uma coisa que se conta e não pode subir.
-
-    ``censo`` recebe a raiz da árvore e devolve um :class:`Censo`. Recebe a
-    raiz — em vez de fechá-la por closure — justamente para que a mordida do
-    vazio possa apontar a medida para uma pasta vazia sem mexer no fonte.
-
-    ``conferir_universo`` é a segunda peneira do vazio, e é onde cada medida
-    diz o que ELA sabe exigir do próprio corpo. Devolve a queixa, ou "" quando
-    o universo é plausível. O motor já reprova universo ZERO sozinho; esta é
-    para o caso mais fino — dez páginas que viraram sete.
-    """
+    """Uma coisa que se conta e não pode subir."""
 
     nome: str
     o_que_conta: str
@@ -208,14 +101,8 @@ class Catraca:
         if len(set(nomes)) != len(nomes):
             raise CatracaTorta(f"duas medidas com o mesmo nome: {nomes}")
 
-    # -- o caderno ---------------------------------------------------------
     def _ler_caderno(self) -> dict:
-        """Lê o caderno do DISCO, toda vez. Nunca de um cache em memória.
-
-        Reler é o que impede a tautologia: se o objeto guardasse o piso da
-        primeira leitura e alguém gravasse no meio, a comparação seguinte
-        mediria a própria escrita.
-        """
+        """Lê o caderno do DISCO, toda vez. Nunca de um cache em memória."""
         if not self.caderno.exists():
             return {}
         return json.loads(self.caderno.read_text(encoding="utf-8"))
@@ -250,7 +137,6 @@ class Catraca:
             bruto=dict(bruto.get("bruto", {})),
         )
 
-    # -- medir -------------------------------------------------------------
     def _medida(self, nome: str) -> Medida:
         for m in self.medidas:
             if m.nome == nome:
@@ -261,7 +147,6 @@ class Catraca:
         """Roda o censo da medida contra :attr:`raiz`."""
         return self._medida(nome).censo(self.raiz)
 
-    # -- comparar ----------------------------------------------------------
     def comparar(self, apenas: Sequence[str] | None = None) -> list[Veredito]:
         """O ato que o portão chama. **Lê o disco, mede, e não grava nada.**"""
         vereditos: list[Veredito] = []
@@ -275,7 +160,6 @@ class Catraca:
         piso = self.ler_piso(medida.nome)
         censo = medida.censo(self.raiz)
 
-        # -- a mordida do vazio, e ela vem ANTES de qualquer comparação -----
         if censo.universo <= 0:
             return Veredito(
                 medida,
@@ -298,7 +182,6 @@ class Catraca:
                     medida, IMPOSSIVEL, censo.numero, piso, censo, queixas=(queixa,)
                 )
 
-        # -- a pendência, nos dois sentidos --------------------------------
         if censo.indisponivel is not None and not piso.pendente and piso.existe:
             return Veredito(
                 medida,
@@ -323,7 +206,6 @@ class Catraca:
                 queixas=(censo.indisponivel,),
             )
         if piso.pendente and piso.existe:
-            # A medida ACORDOU. O motor não espera alguém reparar.
             return Veredito(
                 medida,
                 VERMELHO,
@@ -372,11 +254,7 @@ class Catraca:
 
     @staticmethod
     def _o_que_entrou(medida: Medida, piso: Piso, censo: Censo) -> tuple[str, ...]:
-        """O nome do que subiu, nunca só o número.
-
-        Um número vermelho sem o nome faz a pessoa procurar, e procurar é o que
-        desliga portão.
-        """
+        """O nome do que subiu, nunca só o número."""
         linhas: list[str] = []
         ja_nomeados: set[str] = set()
         for chave, valor in sorted(censo.por_item.items()):
@@ -387,19 +265,11 @@ class Catraca:
             elif valor > antes:
                 linhas.append(f"{chave}: {antes} -> {valor} (+{valor - antes})")
                 ja_nomeados.add(chave)
-        # `nomes` é para a medida que sabe nomear o item sem tê-lo no
-        # `por_item`. Repetir o que a linha acima já disse faz a pessoa ler
-        # duas vezes a mesma queixa e duvidar da contagem.
         linhas.extend(nome for nome in censo.nomes if nome not in ja_nomeados)
         return tuple(linhas)
 
-    # -- gravar ------------------------------------------------------------
     def aceitar(self, nomes: Sequence[str] | None = None, razao: str = "") -> list[str]:
-        """Desce o piso até o número de hoje. **Só desce.**
-
-        Subir é ``forcar_piso``, que exige razão escrita. Se ``aceitar``
-        também subisse, a catraca seria um botão de silenciar com nome bonito.
-        """
+        """Desce o piso até o número de hoje. **Só desce.**"""
         caderno = self._ler_caderno()
         caderno.setdefault("medidas", {})
         mexidas: list[str] = []
@@ -416,10 +286,6 @@ class Catraca:
             piso = self.ler_piso(medida.nome)
             registro = caderno["medidas"].setdefault(medida.nome, {})
             if censo.indisponivel is not None:
-                # A RAZÃO DA PENDÊNCIA É A DA MEDIDA, não a de quem grava. Ela
-                # é medida do código — some sozinha no dia em que a condição
-                # cair —, e deixar alguém escrevê-la à mão faria a pendência
-                # sobreviver ao motivo dela.
                 registro["piso"] = PENDENTE
                 registro["razao"] = censo.indisponivel
                 registro["bruto"] = dict(censo.bruto)
@@ -510,9 +376,6 @@ class Catraca:
         )
 
 
-# ---------------------------------------------------------------------------
-# A linha de comando que toda catraca ganha de graça
-# ---------------------------------------------------------------------------
 def montar_argumentos(descricao: str) -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=descricao)
     p.add_argument(
@@ -576,12 +439,7 @@ def relatar(vereditos: Sequence[Veredito], titulo: str) -> int:
 
 
 def executar(catraca: Catraca, argumentos: argparse.Namespace, titulo: str) -> int:
-    """O corpo comum de `main()` de quem usa este motor.
-
-    A recusa do motor sai como MENSAGEM, não como traceback: quem lê o vermelho
-    de um portão está tentando consertar, e uma pilha de chamadas por cima da
-    frase que explica o conserto é ruído.
-    """
+    """O corpo comum de `main()` de quem usa este motor."""
     try:
         return _executar(catraca, argumentos, titulo)
     except CatracaTorta as erro:

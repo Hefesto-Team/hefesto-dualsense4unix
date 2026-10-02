@@ -1,33 +1,5 @@
 #!/usr/bin/env python3
-"""O «Reconectar controles» não diz nada quando um número muda — 24/09/2026.
-
-A-FRASE-DO-RECONECTAR-SAI-01. A decisão é dela, na página «Decisões do
-Hefesto» (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`): *«Nada: o número novo aparece no
-próprio cartão»*. É o fim da proposta da JOGAR-02 (09/09/2026), que esperava o
-olho dela.
-
-O QUE ESTA RÉGUA COBRA, em quatro partes:
-
-1. **a numeração que mudou não vira recado** — o gesto volta `None`, que é a
-   piscada verde do botão, com o `renumbered` cheio ou vazio;
-2. **as frases que pedem um gesto dela FICAM** — as duas falhas do passo 2, a
-   recusa do passo 1 e as duas do rádio (passo 0). O rádio continua falando
-   inteiro mesmo quando o passo 2 renumerou;
-3. **a frase não volta** — o trecho está em `FRASES_BANIDAS`, e nenhuma das
-   frases que ficam cai na lista: uma régua contra a frase que calasse as que
-   pedem um gesto seria o defeito ao contrário;
-4. **o cartão diz o número novo** — é a premissa da decisão. Se o cartão
-   parasse de ler o número do `state`, o silêncio esconderia a mudança.
-
-AS MORDIDAS, aplicadas na entrega (o relatório tem a saída de cada uma):
-
-* devolva o `painel.py` da base (`git show 2b283c81a:<caminho>`) — a frase
-  volta: reprovam as do item 1, o recibo direto e a guarda do fonte
-  (`test_a_frase_que_ela_baniu_nao_chega_a_tela.test_nenhuma_banida_vive_no_fonte`);
-* faça `painel._sem_noticia` devolver `False` para o `ok` — o sucesso vira uma
-  falha que não houve, e reprovam as do item 1;
-* tire `"foram renumerados"` de `FRASES_BANIDAS` — reprova a do item 3.
-"""
+"""O «Reconectar controles» não diz nada quando um número muda — 24/09/2026."""
 from __future__ import annotations
 
 import pathlib
@@ -56,29 +28,18 @@ from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: A faixa sintética da casa — octetos 4 e 5 zerados, nunca endereço real.
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 UNIQ_P3 = "aa:bb:cc:00:00:03"
 RADIO_VOLTA = "aa:bb:cc:00:00:07"
 RADIO_DORME = "aa:bb:cc:00:00:08"
 
-#: O CORPO DE DELITO — a frase como o produto a dizia até 24/09/2026
-#: (`painel._RENUMEROU`, formatada com dois assentos). Ela mora aqui, num texto
-#: de TESTE, porque `app/actions/` e `interface/` não podem mais carregá-la.
 FRASE_QUE_SAIU = "Os controles foram renumerados: P1, P2."
 
-#: O QUE O DAEMON RESPONDE quando a numeração muda — a forma do
-#: `_handle_identity_renumber`: só quem mudou volta, com o lugar novo.
 MUDOU = {"ok": True, "renumbered": {UNIQ_P2: 1, UNIQ_P3: 2}}
 
 
 class _Ponte:
-    """O `ponte.resultado` de mentira — e NÃO mais frouxo que o real.
-
-    O real levanta `RuntimeError` quando o daemon não atende, e o daemon não
-    atende método que não conhece. Por isso um método que ninguém declarou
-    levanta aqui também, em vez de devolver `None` calado.
-    """
+    """O `ponte.resultado` de mentira — e NÃO mais frouxo que o real."""
 
     def __init__(self, respostas: dict[str, Any]) -> None:
         self.respostas = respostas
@@ -107,17 +68,10 @@ def _ctx() -> Contexto:
 
 @pytest.fixture(autouse=True)
 def _radio_sem_ninguem(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O passo 0 não vê rádio nenhum, a não ser que o caso diga o contrário.
-
-    A suíte já recusa o barramento dela na borda (`bluez_dbus`); aqui o dono
-    nem chega a ser perguntado, para o desfecho não depender da máquina.
-    """
+    """O passo 0 não vê rádio nenhum, a não ser que o caso diga o contrário."""
     monkeypatch.setattr(radio, "dualsenses_do_radio", lambda **_k: [])
 
 
-# ---------------------------------------------------------------------------
-# 1. a numeração que mudou não vira recado
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("renumber", [
     MUDOU,
     {"ok": True, "renumbered": {UNIQ_P3: 3}},
@@ -150,20 +104,12 @@ def test_a_numeracao_que_deu_certo_nao_vira_recado(renumber: dict[str, Any]) -> 
 ], ids=["mudou", "compacta", "jogo-aberto", "lock-timeout", "ok-falso",
         "sem-resposta", "resposta-torta"])
 def test_o_recibo_cala_o_sucesso_e_diz_as_duas_falhas(resultado: Any, esperado: str) -> None:
-    """O dono da frase, direto — e as duas funções dele dizem a mesma coisa.
-
-    `_na_lingua_da_tela` é o dono que o mapa dos donos aponta
-    (`docs/data/donos-de-comportamento.csv`, `reconciliar.recado`); chamá-lo
-    sem passar pelo recibo não pode fazer um sucesso cair num ramo de falha.
-    """
+    """O dono da frase, direto — e as duas funções dele dizem a mesma coisa."""
     assert painel.recibo_do_reconectar(None, resultado) == esperado
     assert painel._na_lingua_da_tela(resultado) == esperado
     assert painel._sem_noticia(resultado) is (esperado == "")
 
 
-# ---------------------------------------------------------------------------
-# 2. as frases que pedem um gesto dela FICAM
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("renumber", "frase"), [
     (RuntimeError("o daemon não respondeu a identity.renumber"), painel._NAO_CONFERIU),
     ({"ok": False, "reason": "lock_timeout"}, painel._NAO_COMPACTOU),
@@ -204,11 +150,7 @@ def _radio_com_um_que_volta_e_um_que_dorme(monkeypatch: pytest.MonkeyPatch) -> l
 def test_o_radio_continua_falando_quando_a_numeracao_muda(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """As duas frases do rádio pedem coisas diferentes dela, e as duas ficam.
-
-    O recado é o do rádio INTEIRO e nada mais: a numeração que mudou no mesmo
-    clique não pega carona nele.
-    """
+    """As duas frases do rádio pedem coisas diferentes dela, e as duas ficam."""
     tocados = _radio_com_um_que_volta_e_um_que_dorme(monkeypatch)
     fora = aba.reconectar(_ctx(), {}, _ponte(MUDOU))
     assert tocados == [RADIO_VOLTA, RADIO_DORME], tocados
@@ -225,9 +167,6 @@ def test_o_radio_e_a_falha_saem_juntos_e_na_ordem(monkeypatch: pytest.MonkeyPatc
     assert fora == {"recado": f"{painel.recado_do_radio(1, 1)} {painel._NAO_CONFERIU}"}, fora
 
 
-# ---------------------------------------------------------------------------
-# 3. a frase não volta — e a lista não cala as que ficam
-# ---------------------------------------------------------------------------
 def test_a_frase_que_saiu_esta_na_lista_das_banidas() -> None:
     """O trecho pega a frase como ela era, e com outros assentos também."""
     assert "foram renumerados" in FRASES_BANIDAS, (
@@ -239,13 +178,7 @@ def test_a_frase_que_saiu_esta_na_lista_das_banidas() -> None:
 
 
 def test_nenhuma_frase_que_fica_cai_na_lista() -> None:
-    """A régua contra a frase não pode calar as que pedem um gesto dela.
-
-    O funil de execução (`hefesto_vivo._json`) e a guarda do fonte leem a
-    MESMA lista: um trecho largo demais denunciaria no diário, e reprovaria no
-    fonte, uma frase medida e viva — foi o que o ``"como no PS5"`` faria em
-    06/09/2026.
-    """
+    """A régua contra a frase não pode calar as que pedem um gesto dela."""
     que_ficam = {
         "_NAO_CONFERIU": painel._NAO_CONFERIU,
         "_NAO_COMPACTOU": painel._NAO_COMPACTOU,
@@ -258,9 +191,6 @@ def test_nenhuma_frase_que_fica_cai_na_lista() -> None:
     assert not any(pegas.values()), f"a lista das banidas pegou frase que fica: {pegas}"
 
 
-# ---------------------------------------------------------------------------
-# 4. o cartão diz o número novo — a premissa da decisão
-# ---------------------------------------------------------------------------
 def _contexto_com(slots: dict[str, int]) -> Contexto:
     from hefesto_dualsense4unix.interface import mesa_viva
 
@@ -277,11 +207,7 @@ def _contexto_com(slots: dict[str, int]) -> Contexto:
 
 
 def test_o_cartao_diz_o_numero_novo_no_tique_seguinte() -> None:
-    """O P2 e o P3 viram P1 e P2, e o cartão de cada um diz o número novo.
-
-    É o que torna a frase dispensável: o número mora no cartão, lido do
-    `state` do daemon a cada tique (`a01_jogar.pacote`, a chave `jogador`).
-    """
+    """O P2 e o P3 viram P1 e P2, e o cartão de cada um diz o número novo."""
     antes = aba.pacote(_contexto_com({UNIQ_P2: 2, UNIQ_P3: 3}))["cartoes"]
     depois = aba.pacote(_contexto_com({UNIQ_P2: 1, UNIQ_P3: 2}))["cartoes"]
     assert {u: c["jogador"] for u, c in antes.items()} == {

@@ -71,8 +71,6 @@ import eliminacao
 
 from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA
 
-#: As quatro chaves da escada, na fonte. Nada aqui é redigitado: se um degrau
-#: novo entrar lá, ele entra neste teste junto.
 CHAVES_DA_ESCADA = [degrau.ponte.chave for degrau in ESCADA]
 
 
@@ -95,11 +93,6 @@ def _ensaio(**campos: str) -> dict:
     }
     base.update(campos)
     return base
-
-
-# ---------------------------------------------------------------------------
-# O caderno tem a coluna, e ela nasce onde foi combinado
-# ---------------------------------------------------------------------------
 
 
 def test_o_caderno_tem_a_coluna_ponte_ao_lado_do_degrau() -> None:
@@ -155,11 +148,6 @@ def test_toda_ponte_do_caderno_esta_na_escada() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# A regra de compatibilidade, os dois braços
-# ---------------------------------------------------------------------------
-
-
 def test_ensaio_sem_ponte_sustenta_qualquer_ponte() -> None:
     """O braço legado — e o que ele impede é reprovar afirmação VERDADEIRA."""
     legado = _ensaio(id="legado-1", ponte="")
@@ -192,11 +180,6 @@ def test_afirmacao_sem_ponte_nao_discrimina_nada() -> None:
     ]
     assert eliminacao.sustentam_a_ponte(mistura, "") == mistura
     assert eliminacao.sustentam_a_ponte(mistura, "   ") == mistura
-
-
-# ---------------------------------------------------------------------------
-# Compatibilidade: os quatro chamadores continuam vendo o caderno inteiro
-# ---------------------------------------------------------------------------
 
 
 def test_carrega_por_lado_sem_ponte_nao_perde_ensaio() -> None:
@@ -236,13 +219,7 @@ def test_carrega_por_lado_com_ponte_filtra_pela_regra(tmp_path: Path) -> None:
 
 
 def test_a_chave_do_indice_continua_sendo_o_par() -> None:
-    """A chave NÃO virou tripla, e isso é decisão, não esquecimento.
-
-    Os quatro chamadores escrevem `.get((ident, lado), [])` à mão. Uma chave de
-    três peças faria os quatro devolverem lista vazia sem estourar nada — e o
-    portão lê lista vazia como "esta linha nunca foi ensaiada". A ponte entra
-    por PARÂMETRO por isso.
-    """
+    """A chave NÃO virou tripla, e isso é decisão, não esquecimento."""
     for chave in eliminacao.carrega_por_lado(CADERNO):
         assert isinstance(chave, tuple) and len(chave) == 2, (
             f"a chave do índice virou {chave!r}. Quem lê o caderno espera "
@@ -252,19 +229,8 @@ def test_a_chave_do_indice_continua_sendo_o_par() -> None:
         break
 
 
-# ---------------------------------------------------------------------------
-# O dono do vocabulário é um só
-# ---------------------------------------------------------------------------
-
-
 def test_a_bancada_importa_as_pontes_em_vez_de_redigitar() -> None:
-    """ESCADA-COM-UM-DONO-SO, aplicada à coluna nova.
-
-    Em 19/08 duas listas do mesmo vocabulário divergiram: o portão ganhou dois
-    degraus e o formulário da bancada não, de modo que ele os ACEITAVA e ela não
-    conseguia ESCREVÊ-los. A segunda cópia é o defeito; este teste recusa que
-    ela nasça.
-    """
+    """ESCADA-COM-UM-DONO-SO, aplicada à coluna nova."""
     fonte = BANCADA.read_text(encoding="utf-8")
     arvore = ast.parse(fonte)
     importa = any(
@@ -279,8 +245,6 @@ def test_a_bancada_importa_as_pontes_em_vez_de_redigitar() -> None:
         "vocabulário — e duas cópias divergem no dia em que alguém mexe numa."
     )
 
-    #: As chaves da escada NÃO podem aparecer escritas na bancada. Só os
-    #: comentários podem citá-las; código, nunca.
     literais = {
         no.value
         for no in ast.walk(arvore)

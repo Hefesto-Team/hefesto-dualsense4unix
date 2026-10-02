@@ -1,18 +1,4 @@
-"""Subcomando `hefesto-dualsense4unix gamepad ...` (FEAT-DSX-GAMEPAD-FLAVOR-01).
-
-Liga/desliga o gamepad virtual NO DAEMON (via IPC `gamepad.emulation.set`),
-não como processo avulso — assim há UM leitor do controle (sem input dobrado
-do antigo `emulate xbox360`). A máscara (`flavor`) define o que o jogo vê:
-
-    hefesto-dualsense4unix gamepad on  [--flavor dualsense|xbox|nintendo]
-    hefesto-dualsense4unix gamepad off
-    hefesto-dualsense4unix gamepad status [--json]
-
-`dualsense` (default) → prompts de PlayStation; `xbox` → fallback p/ jogos
-XInput-only; `nintendo` → prompts de Nintendo Switch Pro (desde 07/09/2026;
-custa os gatilhos analógicos, ver `uinput_gamepad._capacidades_procon`).
-Erros de IPC (daemon offline) viram mensagem clara sem traceback.
-"""
+"""Subcomando `hefesto-dualsense4unix gamepad ...` (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
 from __future__ import annotations
 
 from typing import Any
@@ -30,9 +16,6 @@ app = typer.Typer(
 )
 console = Console()
 
-# BOTAO-QUE-NAO-MENTE-01 (entrega 2): a exceção do Steam Input decide QUEM
-# entrega o controle ao jogo — o gamepad virtual daqui ou a Steam. Por isso o
-# desfazer mora debaixo de `gamepad`.
 app.add_typer(steam_input_app, name="steam-input")
 
 
@@ -64,17 +47,10 @@ def cmd_on(
         ),
     ),
 ) -> None:
-    """Liga o gamepad virtual no daemon.
-
-    HARM-08: o default era `dualsense` HARDCODED aqui, enquanto o daemon e a GUI
-    já usavam `xbox` — então um `gamepad on` sem argumento TROCAVA a máscara de
-    quem tinha Xbox configurado e matava o rumble in-game, em silêncio. Sem
-    `--flavor` não mandamos o campo: o daemon mantém a máscara atual.
-    """
+    """Liga o gamepad virtual no daemon."""
     params: dict[str, Any] = {"enabled": True}
     if flavor is not None:
         params["flavor"] = flavor
-    # ORIGEM-QUE-MENTE-01: a CLI é ela digitando — gesto, não reconciliação.
     params["origin"] = "manual"
     result = _call_sync("gamepad.emulation.set", params)
     ok = isinstance(result, dict) and bool(result.get("enabled"))

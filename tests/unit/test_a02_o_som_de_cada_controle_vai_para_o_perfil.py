@@ -29,7 +29,7 @@ sobrevive a fechar a janela sem clicar em nada.
 ``_gravar_a_forca`` da aba Vibração: lá a escolha só chega ao motor PELA
 ativação do perfil; aqui o aparelho já está no valor, e
 ``ProfileManager.activate`` faz ``load_profile`` a cada ativação
-(``profiles/manager.py:297``). Um ``profile.switch`` por clique reaplicaria o
+(``profiles/manager.py:147``). Um ``profile.switch`` por clique reaplicaria o
 perfil INTEIRO — luz, gatilhos, vibração — no meio de uma partida, para
 reafirmar um byte já escrito.
 
@@ -87,13 +87,9 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: Os dois DualSense da bancada dela, com a máscara da casa (octetos 4 e 5
-#: zerados). São DOIS de propósito: metade destas réguas mede que a escolha de
-#: um não encosta no outro, que é o *"pra cada controle"* do pedido.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
-#: A grafia com que o PERFIL guarda cada um — doze hexa, sem dois-pontos. Quem
-#: canoniza é `core.sysfs_leds.norm_mac`, o mesmo que o esquema usa ao carregar.
 CHAVE_P1 = "aabbcc000001"
 CHAVE_P2 = "aabbcc000002"
 
@@ -101,13 +97,7 @@ NOME = "Bancada"
 
 
 class Ponte:
-    """Um daemon de papel que CONFIRMA — e que sabe recusar quando mandado.
-
-    Ela guarda a LISTA de chamadas porque metade destas réguas mede o que o
-    gesto NÃO pediu: gravar o perfil não pode virar um pedido novo ao daemon —
-    o aparelho já está no valor, e reaplicar o perfil inteiro a cada clique é o
-    custo que esta cura existe para não cobrar dela.
-    """
+    """Um daemon de papel que CONFIRMA — e que sabe recusar quando mandado."""
 
     def __init__(self, *, recusa: str = "") -> None:
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
@@ -130,12 +120,7 @@ class Ponte:
 
 @pytest.fixture
 def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Path:
-    """Um `XDG_CONFIG_HOME` só deste teste, com um perfil ativo dentro.
-
-    A pasta de perfis é resolvida na CHAMADA (`utils.xdg_paths.profiles_dir`),
-    nunca no import — por isso o `monkeypatch` da variável basta e não há
-    constante congelada a contornar.
-    """
+    """Um `XDG_CONFIG_HOME` só deste teste, com um perfil ativo dentro."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
@@ -173,7 +158,7 @@ def _ctx(*entradas: dict[str, Any], perfil: str = NOME) -> Any:
 
 def _gesto(nome: str) -> Any:
     import pacotes
-    import pacotes.a02_controles  # importar é registrar: o decorador `@gesto`
+    import pacotes.a02_controles
 
     fn = pacotes.gesto_da_pagina("02-controles.html", nome)
     assert fn is not None, f"02-controles.html:{nome} não tem dono"
@@ -181,13 +166,7 @@ def _gesto(nome: str) -> Any:
 
 
 def _do_controle(uniq_chave: str) -> dict[str, Any]:
-    """O bloco que VALE daquele controle: o do perfil por cima do do computador.
-
-    Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o som é do
-    computador: o clique grava no `maquina.json`, e no perfil só quando ele já
-    sobrepõe o cartão. A régua lê o que vale, que é o que o aparelho recebe na
-    ativação, e não um dos dois arquivos.
-    """
+    """O bloco que VALE daquele controle: o do perfil por cima do do computador."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
         carregar_o_que_vale,
     )
@@ -200,26 +179,15 @@ def _do_controle(uniq_chave: str) -> dict[str, Any]:
     return bloco.model_dump(mode="json", exclude_unset=True) if bloco is not None else {}
 
 def _bytes_do_perfil() -> bytes:
-    """O arquivo CRU. `NADA MUDOU = NADA GRAVA` se mede aqui, e não por eco.
-
-    Comparar os bytes é a leitura, não a digitação: uma régua que perguntasse à
-    ponte *"você chamou save?"* mediria a intenção do arquivo que ela testa.
-    """
+    """O arquivo CRU. `NADA MUDOU = NADA GRAVA` se mede aqui, e não por eco."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
 
     alvo = profiles_dir() / f"{NOME.lower()}.json"
-    # O COMPUTADOR JUNTO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o som
-    # é dele, e «nada gravou» vale para os dois arquivos.
     maquina = caminho_da_maquina()
     return ((alvo.read_bytes() if alvo.exists() else b"")
             + (maquina.read_bytes() if maquina.exists() else b""))
-
-
-# ===========================================================================
-# 1. Os cinco gestos chegam ao disco
-# ===========================================================================
 
 
 def test_o_mudo_do_microfone_nao_vai_ao_perfil(casa: Any) -> None:
@@ -240,22 +208,12 @@ def test_o_mudo_do_microfone_nao_vai_ao_perfil(casa: Any) -> None:
         "o clique no mudo do microfone regravou o perfil — o mudo é do "
         f"controle. No disco: {_perfil_do_disco().get('controllers')!r}")
     # NADA DE REAPLICAR: o aparelho JÁ está no valor, e um `profile.switch`
-    # aqui reaplicaria o perfil INTEIRO — luz, gatilhos, vibração — a cada
-    # clique no mudo, no meio de uma partida.
     assert p.nomes == ["mic_canal_set_detalhado"], (
         f"o clique no mudo pediu mais que o ato ao daemon: {p.nomes!r}")
 
 
 def test_o_mudo_do_alto_falante_grava_volume_e_mudo_juntos(casa: Any) -> None:
-    """A seção do alto-falante é ALL-OR-NOTHING, e o volume vem junto.
-
-    `ProfileSpeakerConfig` exige `volume` porque uma seção sem número manda
-    ZERO ao firmware e tranca o alto-falante (SOM-02, armadilha 1) — nem o
-    próprio botão o solta depois. Guardar só o `muted` seria escrever no disco
-    a armadilha que o esquema recusa.
-
-    MORDIDA: apagar a chamada do ramo `alto-falante`.
-    """
+    """A seção do alto-falante é ALL-OR-NOTHING, e o volume vem junto."""
     p = Ponte()
     _gesto("mudo")(_ctx(), {"uniq": P1, "mudo": "alto-falante"}, p)
 
@@ -265,13 +223,7 @@ def test_o_mudo_do_alto_falante_grava_volume_e_mudo_juntos(casa: Any) -> None:
 
 
 def test_a_rota_do_som_vai_para_o_perfil(casa: Any) -> None:
-    """"Sons do jogo" é um BYTE do firmware, e o perfil o guarda.
-
-    A camada 1 (a saída padrão do PipeWire) não entra aqui de propósito: ela é
-    um fato GLOBAL do sistema, e um perfil por controle não é lugar dela.
-
-    MORDIDA: apagar a chamada do gesto `rota`.
-    """
+    """"Sons do jogo" é um BYTE do firmware, e o perfil o guarda."""
     p = Ponte()
     _gesto("rota")(_ctx(), {"uniq": P1, "rota": "jogo"}, p)
 
@@ -281,16 +233,7 @@ def test_a_rota_do_som_vai_para_o_perfil(casa: Any) -> None:
 
 
 def test_os_dois_volumes_vao_em_escalas_diferentes(casa: Any) -> None:
-    """O mic é 0-100 (a FONTE de captura); o alto-falante é 0-255 (o protocolo).
-
-    SÃO DUAS ESCALAS E NÃO É DETALHE: `ProfileMicConfig.volume` é o por cento
-    da fonte no PipeWire e `ProfileSpeakerConfig.volume` é o registrador do
-    aparelho. Gravar os dois na mesma escala faria o número que ela arrasta e o
-    número que o perfil devolve discordarem.
-
-    MORDIDA: apagar as duas chamadas do gesto `volume`; ou converter o volume
-    do alto-falante duas vezes.
-    """
+    """O mic é 0-100 (a FONTE de captura); o alto-falante é 0-255 (o protocolo)."""
     from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
     p = Ponte()
@@ -304,11 +247,6 @@ def test_os_dois_volumes_vao_em_escalas_diferentes(casa: Any) -> None:
         "o volume do alto-falante não chegou no registrador 0-255 — a curva "
         f"medida diz {volume_do_percentual(37)}, o disco diz "
         f"{(dele.get('speaker') or {}).get('volume')!r}")
-
-
-# ===========================================================================
-# 2. O que a escrita NÃO pode fazer
-# ===========================================================================
 
 
 def test_a_rota_nao_derruba_o_volume_que_ela_escolheu(casa: Any) -> None:
@@ -333,7 +271,6 @@ def test_a_rota_nao_derruba_o_volume_que_ela_escolheu(casa: Any) -> None:
         "o caso não foi montado: o volume escolhido tem de diferir do que o "
         "tique publica (100), senão a régua não mede nada")
 
-    # O tique continua dizendo 100 — é a janela entre a escrita e a publicação.
     _gesto("rota")(_ctx(), {"uniq": P1, "rota": "jogo"}, p)
 
     som = _do_controle(CHAVE_P1).get("speaker") or {}
@@ -382,15 +319,7 @@ def test_o_som_de_um_controle_nao_mexe_no_do_outro(casa: Any) -> None:
 
 
 def test_o_que_iguala_o_global_nao_vira_override(casa: Any) -> None:
-    """COR-04: repetir o global não deixa rastro no mapa por peça.
-
-    Um override que repete o global é dívida silenciosa — some da tela e
-    reaparece no dia em que o global mudar, contradizendo a peça sem ninguém
-    ver. Quem aplica a regra é o produto (`with_controller_speaker`), e esta
-    régua mede que a aba NÃO a contorna com um `if` seu.
-
-    MORDIDA: tirar o ramo `igual_ao_global` de `with_controller_speaker`.
-    """
+    """COR-04: repetir o global não deixa rastro no mapa por peça."""
     from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import (
@@ -420,19 +349,7 @@ def test_o_que_iguala_o_global_nao_vira_override(casa: Any) -> None:
 
 
 def test_o_botao_do_sistema_nao_entra_por_peca(casa: Any) -> None:
-    """`mic.button_toggles_system` é UM por MÁQUINA e não pode viajar por peça.
-
-    Quem o lê é `hotkey.mic_button_loop`, em
-    `daemon.config.mic_button_toggles_system`, sem consultar `uniq` nenhum.
-    Guardá-lo por controle faria quatro controles gravarem quatro opiniões
-    sobre um interruptor só — e campo que grava sem quem leia faz a tela
-    prometer.
-
-    A LISTA VEM DO PRODUTO, não daqui: `_NAO_GRAVA_POR_PECA` é a declaração do
-    arquivo sobre o que ele não escreve, e esta régua a LÊ. Digitar o nome do
-    campo aqui faria a régua e a declaração envelhecerem em separado — e no dia
-    em que um segundo campo entrasse na lista, só a declaração saberia.
-    """
+    """`mic.button_toggles_system` é UM por MÁQUINA e não pode viajar por peça."""
     from pacotes.a02_controles import _NAO_GRAVA_POR_PECA
 
     assert _NAO_GRAVA_POR_PECA, "a declaração está vazia e a régua mede o vácuo"
@@ -448,11 +365,6 @@ def test_o_botao_do_sistema_nao_entra_por_peca(casa: Any) -> None:
             f"{campo!r} foi gravado por peça, e ele é UM por máquina — quatro "
             "controles passariam a gravar quatro opiniões sobre um "
             "interruptor só")
-
-
-# ===========================================================================
-# 3. Quando não há onde lembrar, ele DIZ
-# ===========================================================================
 
 
 def test_sem_perfil_ativo_o_gesto_funciona_e_fica_calado(casa: Any) -> None:
@@ -491,25 +403,7 @@ def test_sem_perfil_ativo_o_gesto_funciona_e_fica_calado(casa: Any) -> None:
 
 
 def test_sem_endereco_estavel_ele_avisa(casa: Any) -> None:
-    """Um `path:` NÃO vira chave de perfil — e quem recusa é a BORDA do esquema.
-
-    **ESTA RÉGUA MEDIU UM DEFEITO MEU, na primeira execução.** A guarda que eu
-    tinha escrito era `norm_mac(uniq) or ""` seguida de `if not chave: raise` —
-    e ela não pega nada, porque `norm_mac("path:/dev/hidraw3")` devolve
-    `"adeda3"`: um caminho tem letras de `a` a `f` no meio, e a peneira as
-    recolhe. É o defeito que `sysfs_leds.norm_mac` já descreve por escrito
-    desde 04/09/2026 — *"para GRAVAR é perda de dado dela: a escolha vai ao
-    disco sob uma chave que parece boa e que aparelho nenhum reivindica, e some
-    calada"*.
-
-    A CURA NÃO FOI UMA TERCEIRA CÓPIA DA REGRA DOS DOZE HEXA. Quem julga é
-    `Profile._validate_controllers_keys`, e o `to_profile` passou a rodar
-    DENTRO do `try` para que a razão dela suba como frase de tela em vez de
-    traço cru de pydantic.
-
-    MORDIDA: tirar o `to_profile` de dentro do `try` — a régua volta a ver um
-    `ValidationError` escapando pela janela.
-    """
+    """Um `path:` NÃO vira chave de perfil — e quem recusa é a BORDA do esquema."""
     from pacotes.a02_controles import SOM_SEM_ENDERECO
 
     avulso = _dele("path:/dev/hidraw3")
@@ -548,8 +442,6 @@ def test_a_rota_sem_volume_nenhum_avisa_em_vez_de_gravar_meia_secao(
     """
     from pacotes.a02_controles import SOM_SEM_VOLUME_PARA_GUARDAR
 
-    # O daemon NÃO publica `speaker` deste controle — é o estado de quem nunca
-    # recebeu um `speaker.set`.
     mudo_de_volume = _dele(P1)
     mudo_de_volume.pop("speaker")
 
@@ -566,19 +458,8 @@ def test_a_rota_sem_volume_nenhum_avisa_em_vez_de_gravar_meia_secao(
         "manda ZERO ao firmware e tranca o alto-falante dela")
 
 
-# ===========================================================================
-# 4. O round-trip não perde nada do resto do perfil
-# ===========================================================================
-
-
 def test_gravar_o_som_nao_derruba_o_resto_do_perfil(casa: Any) -> None:
-    """A escrita passa por `from_profile`/`to_profile`, e nada pode cair no caminho.
-
-    É a mesma travessia que produziu o `BUG-FOOTER-SAVE-DROPS-SECTIONS-01` — o
-    "Salvar" que destruía seções que o produto tinha acabado de gravar. Aqui a
-    régua confere as três coisas que o rodapé já perdeu uma vez: a prioridade,
-    o casamento e o override de OUTRA peça.
-    """
+    """A escrita passa por `from_profile`/`to_profile`, e nada pode cair no caminho."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,

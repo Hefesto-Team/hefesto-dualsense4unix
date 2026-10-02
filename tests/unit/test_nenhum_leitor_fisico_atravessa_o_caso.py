@@ -1,15 +1,4 @@
-"""O leitor de movimento que um caso liga não sobrevive a ele.
-
-A guarda é o ``_nenhum_leitor_fisico_atravessa`` do ``tests/conftest.py``.
-Medido na costura da 6e-3, 25/09/2026: a família da ``MesaHonesta`` deixava
-um ``PhysicalReportReader`` vivo por jogador montado, 189 num arquivo só, e o
-caso que junta todo fio do processo parou a parte 03 da suíte por minutos.
-
-Os dois casos rodam NA ORDEM do arquivo: o primeiro liga um leitor de verdade
-e não o para, e o segundo exige que nenhum tenha atravessado.
-
-MORDIDA: tire o laço do ``leitor.stop()`` da guarda — o segundo caso reprova.
-"""
+"""O leitor de movimento que um caso liga não sobrevive a ele."""
 
 from __future__ import annotations
 

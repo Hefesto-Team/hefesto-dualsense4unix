@@ -1,34 +1,4 @@
-"""BG-SAUDE-01 — o cartão que a pessoa abre quando algo está errado.
-
-**26/08/2026.** "Saúde do sistema" é o cartão da aba Sistema que alguém abre
-justamente quando o controle parou de funcionar. Ele respondia em linguagem de
-kernel, e **nenhuma das doze frases dizia o que fazer**:
-
-| frase de ontem | o que faltava |
-|---|---|
-| *"quirk anti-storm AUSENTE do usbcore (storm pode reincidir sob carga)"* | o gesto |
-| *"WirePlumber sem drop-in ('doctor --fix-safe' instala)"* | o gesto é um BOTÃO na mesma tela |
-| *"regra áudio-off (authorized=0) ATIVA"* | o gesto, e o português |
-| *"Steam Input: nenhum localconfig.vdf encontrado"* | o gesto |
-
-O molde já existe e já está aprovado, na aba Configurações ao lado
-(`docs/usage/assets/readme_configuracoes.png`: *"O que fazer: Vale mudar um
-deles de porta."*) — o dono do prefixo é
-`app/actions/config/secao_exame.PREFIXO_DA_CURA`.
-
-COMO ESTA BANCADA MORDE
-
-Ela não lê o fonte procurando a palavra: ela **chama cada check com fixtures** e
-lê o que a tela receberia. Devolvendo uma frase antiga a qualquer um deles, a
-reprovação NOMEIA a frase.
-
-E ela conta os ramos. `test_todo_ramo_de_alarme_tem_uma_cena` compara a lista de
-cenas com os `return WARN/INFO` que existem no módulo, pela árvore sintática:
-um ramo novo sem cena reprova aqui, em vez de nascer mudo na tela de alguém.
-Sem essa metade, bastaria acrescentar um `return INFO, "…"` para a régua
-aprovar uma frase que ela nunca viu — que é o modo como uma varredura de texto
-já mentiu nesta casa.
-"""
+"""BG-SAUDE-01 — o cartão que a pessoa abre quando algo está errado."""
 
 from __future__ import annotations
 
@@ -39,18 +9,9 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
-#: A palavra que a aba Configurações já usa. Se ela mudar lá, muda aqui — e é
-#: por isso que a régua lê a constante em vez de redigitar o texto.
 PREFIXO = sd.PREFIXO_DA_CURA
 
-#: O comando de terminal que a frase do WirePlumber mandava rodar, com o botão
-#: que roda exatamente esse script visível na mesma tela.
 COMANDO_QUE_TINHA_BOTAO = "doctor --fix-safe"
-
-
-# ---------------------------------------------------------------------------
-# As cenas — uma por ramo de alarme, com o disco montado à mão
-# ---------------------------------------------------------------------------
 
 
 def _casa_sem_steam(tmp_path: Path) -> Path:
@@ -60,13 +21,7 @@ def _casa_sem_steam(tmp_path: Path) -> Path:
 
 
 def _casa_com_steam_input(tmp_path: Path, *, global_ligado: bool) -> Path:
-    """Uma HOME com um `localconfig.vdf` que liga o Steam Input.
-
-    `global_ligado` escolhe entre os dois textos do MESMO `return WARN` — a
-    chave geral da Steam e o opt-in por jogo têm gestos opostos (um manda
-    clicar em "Aplicar correções", o outro manda NÃO clicar nele), e uma cena
-    só cobriria metade do que a tela mostra.
-    """
+    """Uma HOME com um `localconfig.vdf` que liga o Steam Input."""
     casa = tmp_path / ("casa-global" if global_ligado else "casa-por-jogo")
     vdf = casa / ".steam/steam/userdata/123/config/localconfig.vdf"
     vdf.parent.mkdir(parents=True)
@@ -82,11 +37,7 @@ def _casa_com_steam_input(tmp_path: Path, *, global_ligado: bool) -> Path:
 
 
 def cenas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
-    """`{nome do ramo: a frase que a tela recebe}` — só WARN e INFO.
-
-    A allowlist real da mantenedora não pode decidir o resultado (CANARIO-FS-01):
-    o `_allowlist_path` é apontado para um arquivo que não existe.
-    """
+    """`{nome do ramo: a frase que a tela recebe}` — só WARN e INFO."""
     monkeypatch.setattr(sd, "_allowlist_path", lambda: tmp_path / "sem-allowlist")
     ausente = tmp_path / "nao-existe.conf"
     vazio = tmp_path / "diretorio-vazio"
@@ -146,19 +97,10 @@ def cenas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     }
 
 
-# ---------------------------------------------------------------------------
-# A mordida
-# ---------------------------------------------------------------------------
-
-
 def test_toda_frase_de_alarme_tem_o_que_fazer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A mordida, na forma mais curta: devolva uma frase antiga e ela cai.
-
-    A reprovação nomeia o ramo E imprime a frase — quem quebrar isto não
-    precisa caçar qual das treze foi.
-    """
+    """A mordida, na forma mais curta: devolva uma frase antiga e ela cai."""
     mudas = {
         nome: msg for nome, msg in cenas(tmp_path, monkeypatch).items()
         if PREFIXO not in msg
@@ -199,15 +141,7 @@ def test_nenhuma_frase_manda_para_o_terminal_quando_ha_botao(
 def test_a_frase_do_wireplumber_aponta_o_caminho_que_existe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Tirar o comando não basta: sem apontar o caminho, sobra um diagnóstico mudo.
-
-    ERA `test_a_frase_do_wireplumber_aponta_o_botao`, e cobrava *"clique
-    'Aplicar correções' na aba Sistema"*. MUDOU DE CONTRATO EM 13/09/2026
-    (SISTEMA-BOTOES-01): nenhum botão se chama assim, e o «Refazer os consertos
-    automáticos» deixou de rodar o `--install` do WirePlumber — o próprio script
-    o chama de gesto contrário ao de ligar o mic (DROPIN-AMBIGUO-01). Quem repõe
-    o drop-in é a instalação, e o gesto dela é o de `gesto_de_atualizar()`.
-    """
+    """Tirar o comando não basta: sem apontar o caminho, sobra um diagnóstico mudo."""
     msg = cenas(tmp_path, monkeypatch)["wireplumber_sem_dropin"]
 
     assert "Aplicar correções" not in msg, msg
@@ -215,12 +149,7 @@ def test_a_frase_do_wireplumber_aponta_o_caminho_que_existe(
 
 
 def test_a_regua_sabe_recusar() -> None:
-    """Régua que só sabe passar não é régua.
-
-    Sem esta metade, um `PREFIXO_DA_CURA` que virasse string vazia aprovaria
-    as treze frases para sempre — e ninguém notaria, porque a tela continuaria
-    parecendo certa no fonte.
-    """
+    """Régua que só sabe passar não é régua."""
     assert PREFIXO.strip(), "o prefixo virou vazio e a régua passou a absolver tudo"
 
     veneno = "quirk anti-storm AUSENTE do usbcore (storm pode reincidir sob carga)"
@@ -233,16 +162,7 @@ def test_a_regua_sabe_recusar() -> None:
 def test_todo_ramo_de_alarme_tem_uma_cena(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O portão do portão: ramo novo sem cena reprova AQUI, não na tela dela.
-
-    A conta é pela árvore sintática do módulo — `return WARN, …` e
-    `return INFO, …` —, não por `grep`: o texto de um comentário não é frase
-    de tela, e confundir os dois daria um alarme convincente e falso.
-
-    São DOZE ramos e TREZE cenas: o `return WARN` do `check_steam_input`
-    escreve dois textos diferentes (a chave geral da Steam e o opt-in por
-    jogo), e os gestos deles são opostos.
-    """
+    """O portão do portão: ramo novo sem cena reprova AQUI, não na tela dela."""
     fonte = Path(sd.__file__).read_text(encoding="utf-8")
     ramos = [
         no.lineno

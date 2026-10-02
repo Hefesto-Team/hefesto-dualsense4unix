@@ -1,18 +1,4 @@
-"""A cor que FALHOU se pergunta de novo — A-FITA-PERDEU-O-MODELO-E-A-COR-01.
-
-A queixa dela, 22/09/2026: *"houve uma regressão nos botões selecionar. sumiram
-o tipo de plástico (modelo) e a cor dele."* A fita dizia ``P1 • BT`` sem borda,
-e os cartões ``Não sei · BT`` nos dois controles. Reabrir a janela, sem mudar
-uma linha, trouxe ``White`` e ``Galactic Purple`` de volta.
-
-A causa: a janela (``mesa_viva.LeitorDeCor``) e o daemon
-(``ipc_handlers._perguntar_identidade``) guardavam a primeira resposta PARA
-SEMPRE, e a fonte (``ler_identidade_pelo_cabo``) devolvia a falha de um
-instante igual à resposta «não sei a cor». As réguas daqui medem as três
-metades: a fonte separa, a agenda decide, e os dois guardadores obedecem.
-
-Nenhum byte vai a aparelho: o leitor é injetado, e o relógio também.
-"""
+"""A cor que FALHOU se pergunta de novo — A-FITA-PERDEU-O-MODELO-E-A-COR-01."""
 from __future__ import annotations
 
 import ast
@@ -38,7 +24,7 @@ from hefesto_dualsense4unix.integrations import cor_do_plastico as cp
 from hefesto_dualsense4unix.interface import mesa_viva
 
 UNIQ = "aa:bb:cc:00:00:01"
-SERIAL_ROXO = "P5A004XXXXXXXXXXX"  # código 04 = Galactic Purple
+SERIAL_ROXO = "P5A004XXXXXXXXXXX"
 
 
 class Relogio:
@@ -63,7 +49,6 @@ def _ler(hid_id: str = "0005:0000054C:00000CE6") -> Any:
     return lambda _c: f"HID_UNIQ={UNIQ}\nHID_ID={hid_id}\nHID_PHYS=x\n"
 
 
-#: A fonte de verdade, guardada antes de qualquer `monkeypatch` do daemon.
 _LER_DE_VERDADE = cp.ler_identidade_pelo_cabo
 
 
@@ -96,9 +81,6 @@ def _estado(transporte: str = "bt") -> dict[str, Any]:
         {"uniq": UNIQ, "transport": transporte, "connected": True, "player": 1}]}
 
 
-# ---------------------------------------------------------------------------
-# 1 · A FONTE separa «falhou agora» de «respondeu que não sabe»
-# ---------------------------------------------------------------------------
 class TestAFonteSepara:
     def test_o_aparelho_que_nao_respondeu_nao_e_resposta(self) -> None:
         achado = _identidade(lambda _c, _p: None)
@@ -142,9 +124,6 @@ class TestAFonteSepara:
         assert achado.nao_pode and achado.definitiva
 
 
-# ---------------------------------------------------------------------------
-# 2 · A AGENDA — o dono único da nova tentativa
-# ---------------------------------------------------------------------------
 FALHA = cp.IdentidadeDeFabrica(motivo="o aparelho não respondeu")
 
 
@@ -153,7 +132,7 @@ class TestAAgenda:
         relogio = Relogio()
         agenda = cp.AgendaDaPergunta(relogio=relogio)
         instantes = []
-        for _ in range(60 * 10 * 5):  # cinco minutos de tique a 10 Hz
+        for _ in range(60 * 10 * 5):
             if agenda.reservar(UNIQ):
                 instantes.append(relogio.agora - 1000.0)
                 agenda.registrar(UNIQ, FALHA)
@@ -167,7 +146,7 @@ class TestAAgenda:
         for _ in range(3000):
             relogio.agora += 0.1
             assert not agenda.reservar(UNIQ)
-        agenda.esquecer_ausentes(set())  # o controle saiu e voltou no meio
+        agenda.esquecer_ausentes(set())
         assert not agenda.reservar(UNIQ), "a pergunta ainda está no ar"
 
     def test_a_resposta_fecha(self) -> None:
@@ -195,7 +174,7 @@ class TestAAgenda:
         relogio = Relogio()
         agenda = cp.AgendaDaPergunta(relogio=relogio)
         perguntas = 0
-        for _ in range(100):  # dez segundos, a lista vazia um tique sim outro não
+        for _ in range(100):
             if agenda.reservar(UNIQ):
                 perguntas += 1
                 agenda.registrar(UNIQ, cp.IdentidadeDeFabrica(serial=SERIAL_ROXO))
@@ -204,9 +183,6 @@ class TestAAgenda:
         assert perguntas <= 2, perguntas
 
 
-# ---------------------------------------------------------------------------
-# 3 · A JANELA — a fita mostra o modelo e a borda depois da nova tentativa
-# ---------------------------------------------------------------------------
 def _tique(leitor: mesa_viva.LeitorDeCor, estado: dict[str, Any]) -> list[dict[str, Any]]:
     """O que o tique do piloto faz, com a pergunta síncrona no lugar da thread."""
     conectados = estado["controllers"]
@@ -222,13 +198,10 @@ def test_a_fita_ganha_modelo_e_borda_depois_da_nova_tentativa() -> None:
     leitor = mesa_viva.LeitorDeCor(leitor=falso, agenda=cp.AgendaDaPergunta(relogio=relogio))
 
     mesa = _tique(leitor, _estado())
-    # O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01 (25/09/2026): a falha não tira o
-    # NOME do controle — ele se chama pelo modelo, que o sysfs deu sem byte
-    # nenhum ao aparelho. «Não sei» deixou de ser nome; a cor continua sem vir.
     assert mesa[0]["nome"] == cp.MODELO_GENERICO != mesa_viva.COR_DESCONHECIDA
     assert "--plastico" not in monta.fita(mesa=mesa), "a 1ª pergunta falhou"
 
-    for _ in range(60):  # seis segundos de tique
+    for _ in range(60):
         relogio.agora += 0.1
         mesa = _tique(leitor, _estado())
 
@@ -260,7 +233,7 @@ def test_a_falha_nao_apaga_a_cor_que_ja_se_sabia() -> None:
     _tique(leitor, _estado())
     leitor._leitor = lambda _u: FALHA
     assert agenda.reservar(UNIQ) is False, "respondeu: fechado"
-    leitor.perguntar(UNIQ)  # uma pergunta avulsa que falhou
+    leitor.perguntar(UNIQ)
     assert leitor.conhecidos()[UNIQ].nome == "Galactic Purple"
 
 
@@ -269,21 +242,17 @@ def test_a_janela_que_desistiu_pergunta_de_novo_quando_o_controle_volta() -> Non
     relogio = Relogio()
     falso = LeitorQueFalhaUmaVez(falhas=99)
     leitor = mesa_viva.LeitorDeCor(leitor=falso, agenda=cp.AgendaDaPergunta(relogio=relogio))
-    for _ in range(10 * 60 * 5):  # cinco minutos de tique
+    for _ in range(10 * 60 * 5):
         _tique(leitor, _estado())
         relogio.agora += 0.1
     assert falso.perguntas == 4, "a 1ª e as três novas tentativas"
-    _tique(leitor, {"controllers": []})  # saiu da mesa
+    _tique(leitor, {"controllers": []})
     relogio.agora += 0.1
-    _tique(leitor, _estado())  # voltou
+    _tique(leitor, _estado())
     assert falso.perguntas == 5, falso.perguntas
 
 def test_o_piloto_dela_pergunta_pelo_leitor_e_nao_por_trava_propria() -> None:
-    """O lançador abre `hefesto_vivo`, e era ali a TERCEIRA cópia do defeito.
-
-    Um conjunto `perguntados` próprio, uma pergunta por controle por janela:
-    a cura do `LeitorDeCor` não alcançaria a tela dela sem esta linha.
-    """
+    """O lançador abre `hefesto_vivo`, e era ali a TERCEIRA cópia do defeito."""
     fonte = (INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8")
     contexto = next(
         no for no in ast.walk(ast.parse(fonte))
@@ -296,9 +265,7 @@ def test_o_piloto_dela_pergunta_pelo_leitor_e_nao_por_trava_propria() -> None:
     assert "disparar" in chamadas and "perguntar" not in chamadas, chamadas
 
 
-# ---------------------------------------------------------------------------
 # 4 · O DAEMON — a mesma agenda, e o `modelo` do `state_full` volta
-# ---------------------------------------------------------------------------
 class _Handler:
     """O mixin com o mínimo que `_identidade_de_fabrica` toca."""
 
@@ -341,7 +308,7 @@ def test_o_daemon_volta_a_perguntar_e_o_modelo_chega(
     entrada = {"uniq": UNIQ, "connected": True}
 
     assert handler._identidade_de_fabrica(UNIQ, entrada)["modelo"] is None
-    for _ in range(40):  # quatro segundos: ainda no recuo
+    for _ in range(40):
         relogio.agora += 0.1
         assert handler._identidade_de_fabrica(UNIQ, entrada)["modelo"] is None
     assert falso.perguntas == 1
@@ -426,9 +393,9 @@ def test_o_daemon_que_desistiu_pergunta_de_novo_quando_o_controle_volta(
         handler._enrich_controllers_per_controller(entradas, None)
         relogio.agora += 0.1
 
-    for _ in range(10 * 60 * 5):  # cinco minutos
+    for _ in range(10 * 60 * 5):
         tique([{"uniq": UNIQ, "connected": True}])
     assert len(perguntas) == 4, "a 1ª e as três novas tentativas"
-    tique([])  # saiu da mesa
+    tique([])
     tique([{"uniq": UNIQ, "connected": True}])
     assert len(perguntas) == 5, perguntas

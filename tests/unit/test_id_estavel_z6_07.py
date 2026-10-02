@@ -1,13 +1,4 @@
-"""Z6-07 — o `id` para de poder sumir em silêncio, e a ref que não resolve
-reprova alto.
-
-As duas mordidas do aceite: (1) renomear um `id` reprova; acrescentar a nota
-(`id_v1`) e ver passar. (2) `git clone --depth 1` faz o portão reprovar
-pedindo histórico, em vez de sair 0 — replicado aqui SEM clonar de verdade
-(mais rápido): apontando `--contra` para uma ref que não existe no repo de
-teste, que é o mesmo sintoma que um clone raso produz (`git show REF:...`
-falha do mesmo jeito nos dois casos).
-"""
+"""Z6-07 — o `id` para de poder sumir em silêncio, e a ref que não resolve"""
 from __future__ import annotations
 
 import csv
@@ -15,7 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-# O caminho do `specs.html` tem um dono só; esta folha o pede ao irmão.
 from tests.unit.test_check_paridade_transporte import _specs_de
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]
@@ -143,8 +133,6 @@ def test_id_renomeado_com_id_v1_passa(tmp_path: Path) -> None:
         caminho_csv,
         [_linha(id="luz.lightbar.cor@dualsense_novo", id_v1="luz.lightbar.cor@dualsense")],
     )
-    # o specs.html também precisa publicar o novo id (regra 5) — não é o foco
-    # deste teste, então republica aqui.
     _specs_de(raiz).write_text(
         "<html><body>luz.lightbar.cor@dualsense_novo</body></html>", encoding="utf-8"
     )

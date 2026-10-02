@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from typing import Any
 
-#: O que o daemon responde a cada método cru da volta, na forma dele.
 RESPOSTAS: dict[str, Any] = {
     "coop.sync": {"status": "ok", "players": 1, "active": False},
     "identity.renumber": {"ok": True, "renumbered": {}},

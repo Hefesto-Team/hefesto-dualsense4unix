@@ -1,20 +1,4 @@
-"""Testes isolados para `daemon.connection.shutdown` (DAEMON-SHUTDOWN-TEST-01).
-
-Cobre o que `test_daemon_reconnect_loop.py` só exercita implicitamente:
-
-- Subsystems (IPC, plugins, mouse, keyboard, autoswitch) são parados e
-  zerados.
-- Tasks pendentes (poll_loop, reconnect_task) recebem cancel() e são
-  aguardadas.
-- ThreadPoolExecutor é desligado e a referência zerada.
-- Erros isolados em `.stop()` de qualquer subsystem não impedem que os
-  demais sejam limpos (`contextlib.suppress` cobre cada bloco).
-- Chamada redundante de `shutdown` (idempotência) não levanta.
-
-Os testes evitam depender de hardware: usam `FakeController`, IPC habilitado
-contra `XDG_RUNTIME_DIR` em tmp_path e desabilitam UDP/autoswitch para não
-tocar em sockets/serviços externos.
-"""
+"""Testes isolados para `daemon.connection.shutdown` (DAEMON-SHUTDOWN-TEST-01)."""
 from __future__ import annotations
 
 import asyncio
@@ -71,9 +55,6 @@ async def _let_subsystems_boot(daemon: Daemon, *, timeout: float = 1.0) -> None:
 @pytest.mark.asyncio
 async def test_shutdown_zera_subsystems_e_tasks(tmp_path_factory, monkeypatch) -> None:
     """`shutdown` deve liberar IPC, executor e cancelar tasks pendentes."""
-    # AF_UNIX path limita a ~108 bytes; pytest tmp_path padrão estoura quando
-    # combinado com o nome do socket. Usar um dir curto em /tmp evita o erro
-    # "AF_UNIX path too long" sem perder isolamento (numbered=True).
     short_runtime = tmp_path_factory.mktemp("hsd", numbered=True)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(short_runtime))
     daemon = _mk_daemon(ipc_enabled=True)
@@ -119,8 +100,6 @@ async def test_shutdown_tolera_subsystem_que_falha_no_stop(
             type(self).stopped = True
             raise RuntimeError("simulado: falha no stop()")
 
-    # Não precisa rodar daemon.run() — testamos shutdown direto após popular
-    # manualmente _mouse_device e _executor (paths reais usados em produção).
     daemon._mouse_device = _ExplodingDevice()
     from concurrent.futures import ThreadPoolExecutor
 
@@ -140,9 +119,7 @@ async def test_shutdown_eh_idempotente(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     daemon = _mk_daemon(ipc_enabled=False)
 
-    # Daemon nunca rodou: _executor=None, _tasks=[], _ipc_server=None etc.
     await shutdown(daemon)
-    # Segunda chamada deve passar limpa.
     await shutdown(daemon)
 
     assert daemon._executor is None
@@ -154,15 +131,7 @@ async def test_shutdown_eh_idempotente(tmp_path, monkeypatch) -> None:
 async def test_shutdown_nao_fica_preso_na_tarefa_que_engole_o_cancelamento(
     tmp_path, monkeypatch
 ) -> None:
-    """Uma tarefa que engole o primeiro cancelamento não prende o ``shutdown``.
-
-    O-CI-DA-DEV-VOLTA-A-VERDE-01 (28/09/2026): o ouvinte do som engolia o
-    cancelamento de fora, e o ``shutdown`` que cancelava uma vez e esperava sem
-    teto prendeu o CI por seis horas.
-
-    MORDIDA: volte o laço do ``shutdown`` a um ``cancel()`` e um ``await task``
-    — o ``wait_for`` de 5 s estoura.
-    """
+    """Uma tarefa que engole o primeiro cancelamento não prende o ``shutdown``."""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     daemon = _mk_daemon(ipc_enabled=False)
     cancelamentos: list[int] = []
@@ -191,11 +160,7 @@ async def test_shutdown_nao_fica_preso_na_tarefa_que_engole_o_cancelamento(
 async def test_shutdown_segue_depois_do_teto_da_tarefa_que_nunca_cai(
     tmp_path, monkeypatch
 ) -> None:
-    """A tarefa que engole todo cancelamento fica para trás, e o ``shutdown`` volta.
-
-    MORDIDA: tire o ``return`` do prazo em ``_esperar_a_tarefa_cair`` — o
-    ``wait_for`` estoura.
-    """
+    """A tarefa que engole todo cancelamento fica para trás, e o ``shutdown`` volta."""
     from hefesto_dualsense4unix.daemon import connection
 
     monkeypatch.setattr(connection, "_TETO_DA_TAREFA_S", 0.6)

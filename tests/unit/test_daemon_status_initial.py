@@ -1,34 +1,8 @@
-"""Testes do primeiro refresh do status do daemon no bootstrap da GUI.
-
-BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Sistema (e a aba Status) mostrava
-"Offline" no primeiro frame mesmo com o daemon ativo, porque:
-
-  1. O default do Glade em ``status_daemon`` era ``"Offline"``.
-  2. O primeiro tick do polling só disparava após 100 ms / 500 ms.
-  3. ``_refresh_daemon_view`` era chamado síncrono no bootstrap da aba,
-     bloqueando a thread GTK por até 15 s de timeout em ``systemctl`` caso
-     o systemd travasse — atrasando o primeiro frame.
-
-Fix coberto por estes testes:
-
-  - Cenário 1 (daemon ativo): após ``install_daemon_tab``, o label final
-    mostra ``online_systemd`` (verde, " Online").
-  - Cenário 2 (daemon inativo): o label final mostra ``offline``
-    (vermelho, " Offline") — nunca "Iniciando...".
-  - Cenário 3 (systemctl não responde / falha): durante a janela em que o
-    worker ainda está rodando, o label mostra " Consultando..." cinza em
-    vez do falso-negativo "Offline".
-
-Usa stubs de ``gi`` idênticos aos de ``test_daemon_status_matrix.py``.
-"""
+"""Testes do primeiro refresh do status do daemon no bootstrap da GUI."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01 (TESTE-HONESTO-01/E1, lote A): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` — e nunca entrava no job `gtk-real`, que seleciona
-# por `grep exigir_gi_real|skip_sem_gi_real`. Agora ele pula honestamente.
 exigir_gi_real("status do daemon no primeiro frame")
 
 import sys
@@ -38,9 +12,6 @@ from typing import Any
 
 def _install_gi_stubs() -> None:
     """Stubs mínimos de gi.repository para rodar sem GTK real."""
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
-    # "ambiente sem GTK" mesmo com o GTK real presente.
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -94,10 +65,6 @@ import pytest
 import hefesto_dualsense4unix.utils.single_instance as si_mod
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
-# ---------------------------------------------------------------------------
-# Fakes mínimos (espelham test_daemon_status_matrix.py)
-# ---------------------------------------------------------------------------
-
 
 class _FakeBufferObj:
     def set_text(self, _t: str) -> None:
@@ -120,7 +87,6 @@ class _FakeTextViewObj:
     def scroll_to_mark(self, *_a: Any, **_kw: Any) -> None:
         pass
 
-    # UI-DAEMON-LOG-AUTOSCROLL-01: autoscroll do log usa scroll_to_iter.
     def scroll_to_iter(self, *_a: Any, **_kw: Any) -> None:
         pass
 
@@ -197,12 +163,7 @@ class _Host(DaemonActionsMixin):
 
 
 def _patch_installer_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Faz `ServiceInstaller().detect_installed_unit()` retornar None.
-
-    Evita que `_sync_restart_daemon_button_sensitivity` tente rodar systemctl
-    real durante os testes — o sensitivity ramifica em `installed = None`
-    (botão desabilitado).
-    """
+    """Faz `ServiceInstaller().detect_installed_unit()` retornar None."""
     from hefesto_dualsense4unix.daemon import service_install
 
     class _FakeInstaller:
@@ -213,15 +174,7 @@ def _patch_installer_none(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _patch_executor_immediate(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Faz `_get_executor()` devolver um executor síncrono.
-
-    Necessário para que o worker do `_refresh_daemon_view_async` rode antes
-    do teste terminar — em produção é `ThreadPoolExecutor`.
-
-    Também força `GLib.idle_add` a executar a callback na hora: o stub global
-    de `test_daemon_status_matrix.py` (instalado no carregamento do módulo)
-    retorna 0 sem chamar a função, porque lá não precisava — aqui precisa.
-    """
+    """Faz `_get_executor()` devolver um executor síncrono."""
     from hefesto_dualsense4unix.app import ipc_bridge
 
     monkeypatch.setattr(ipc_bridge, "_get_executor", lambda: _ImmediateExecutor())
@@ -229,7 +182,6 @@ def _patch_executor_immediate(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(daemon_actions, "_get_executor", lambda: _ImmediateExecutor())
 
-    # Força `daemon_actions.GLib.idle_add` a executar a callback.
     def _eager_idle_add(fn: Any, *args: Any, **kwargs: Any) -> int:
         fn(*args, **kwargs)
         return 0
@@ -237,20 +189,10 @@ def _patch_executor_immediate(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(daemon_actions.GLib, "idle_add", _eager_idle_add)
 
 
-# ---------------------------------------------------------------------------
-# Testes do primeiro refresh no bootstrap
-# ---------------------------------------------------------------------------
-
-
 def test_install_daemon_tab_com_daemon_ativo_pinta_online(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cenário 1: daemon ativo (systemd + processo vivo).
-
-    Após `install_daemon_tab`, o worker roda imediatamente (executor síncrono),
-    o `GLib.idle_add` (stub) aplica o resultado e o label final mostra
-    " Online" verde — nunca passa por "Offline".
-    """
+    """Cenário 1: daemon ativo (systemd + processo vivo)."""
     _patch_installer_none(monkeypatch)
     _patch_executor_immediate(monkeypatch)
 
@@ -272,22 +214,16 @@ def test_install_daemon_tab_com_daemon_ativo_pinta_online(
     assert "#50fa7b" in host._label.markup, (
         f"esperava cor verde (#2d8) para online_systemd; markup={host._label.markup!r}"
     )
-    # LEIGO-03: o label deixou de dizer "Online (systemd + auto-start)" — o
-    # estado exibido é o mesmo, a palavra é que virou português de gente.
     assert "Funcionando" in host._label.markup
     assert "Desligado" not in host._label.markup
-    assert "Verificando" not in host._label.markup  # já sobrescrito pelo async
-    assert host._sw.active is True  # enabled
+    assert "Verificando" not in host._label.markup
+    assert host._sw.active is True
 
 
 def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cenário 2: daemon inativo (systemd inactive + sem processo).
-
-    Após `install_daemon_tab`, o label final é " Desligado" vermelho — nunca
-    fica preso em "Ligando..." nem no estado "Verificando…" transitório.
-    """
+    """Cenário 2: daemon inativo (systemd inactive + sem processo)."""
     _patch_installer_none(monkeypatch)
     _patch_executor_immediate(monkeypatch)
 
@@ -318,18 +254,11 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
 def test_consulting_placeholder_aparece_antes_do_worker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cenário 3: worker não responde — label permanece "Verificando…".
-
-    Aqui o executor NÃO é substituído pelo síncrono: o `submit` do
-    `ThreadPoolExecutor` real agenda o worker em outra thread e retorna
-    imediatamente. Durante o primeiro frame da GUI (antes do worker terminar),
-    o usuário precisa ver "Verificando…" cinza — nunca "Desligado" cru.
-    """
+    """Cenário 3: worker não responde — label permanece "Verificando…"."""
     _patch_installer_none(monkeypatch)
 
     host = _Host()
 
-    # Captura o worker sem executar — simula thread que ainda está rodando.
     captured: dict[str, Any] = {}
 
     class _LazyExecutor:
@@ -345,8 +274,6 @@ def test_consulting_placeholder_aparece_antes_do_worker(
 
     host.install_daemon_tab()
 
-    # Worker foi agendado mas não executado — label deve mostrar o placeholder
-    # "Verificando…" cinza (nem verde, nem vermelho, nem amarelo).
     assert "Verificando" in host._label.markup, (
         f"esperava o placeholder 'Verificando…'; markup={host._label.markup!r}"
     )
@@ -359,14 +286,10 @@ def test_consulting_placeholder_aparece_antes_do_worker(
 
 
 def test_find_repo_file_resolve_raiz_do_repo() -> None:
-    """BUG-GUI-REPO-ROOT-OFFBYONE-01 (H3 da auditoria): _find_repo_file achava
-    a raiz do repo em parents[3] (= <repo>/src), então os botões do cartão
-    anti-storm eram no-op silencioso. A raiz correta é parents[4] — provamos
-    resolvendo um arquivo REAL que os botões chamam."""
+    """BUG-GUI-REPO-ROOT-OFFBYONE-01 (H3 da auditoria): _find_repo_file achava"""
     host = _Host()
     found = host._find_repo_file("scripts/install_snd_quirk.sh")
     assert found is not None, "não resolveu — _find_repo_file quebrado (parents errado)"
     assert found.name == "install_snd_quirk.sh"
     assert found.is_file()
-    # E um arquivo na raiz do repo (prova que a base é a raiz, não src/).
     assert host._find_repo_file("run.sh") is not None

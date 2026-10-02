@@ -109,12 +109,12 @@ positivo que a primeira versão da regra produziu:
 
 A CONSTANTE QUE ATRAVESSA MÓDULO. A aba Configurações declara o título e a dica
 de cada seção como constante de módulo (`TITULO`, `DICA`) e quem monta lê por
-atributo (`moldura_de_secao(secao.TITULO, secao.DICA)`, `config/mixin.py:46`).
+atributo (`moldura_de_secao(secao.TITULO, secao.DICA)`, `config/mixin.py:28`).
 O portão aprende esses nomes do próprio código, e não de uma lista escrita à
 mão: ele varre o corpo inteiro de `app/` atrás de `alguma_coisa.NOME` em
 posição de texto de tela, e daí em diante toda constante de módulo com esse
 nome conta como texto de tela. Hoje isso resolve para exatamente dois nomes —
-`TITULO` e `DICA` — e é o contrato que `config/secoes.py:23` já escrevia em
+`TITULO` e `DICA` — e é o contrato que `config/secoes.py:14` já escrevia em
 comentário.
 
 POR QUE ELE NASCE COM DÍVIDA DECLARADA. A sprint previa que o portão entrasse
@@ -172,25 +172,13 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-#: Onde mora o texto DECLARATIVO da tela que ela abre — o herdeiro do
-#: `gui/main.glade`, apagado pela `GTK-3` em 06/09/2026.
 PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)  (nome de pasta no disco)
-#: Onde mora o texto de tela montado em Python. Ver "O ALCANCE" no topo:
-#: `core/`, `integrations/` e `cli/` não falam com a tela.
 APP = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
 
-#: As etiquetas cujo conteúdo NUNCA é lido por quem joga. `div.nota` entra pela
-#: mesma razão que na régua irmã: a nota de construção existe só na bancada, e
-#: fala do trabalho, não com quem joga.
 ETIQUETAS_MUDAS = frozenset({"script", "style", "template"})
 
-#: Os atributos que viram texto NA TELA. A dica do `title` é onde estavam nove
-#: das treze ocorrências que a régua irmã achou em 05/09/2026 — atributo de
-#: tela é tela.
 ATRIBUTOS_DE_TELA = ("title", "aria-label", "placeholder", "alt")
 
-#: O jargão que a E3 da PALAVRA-01 aposentou, e o que ele vira. A chave é
-#: comparada sem diferenciar maiúscula de minúscula.
 JARGAO_BANIDO: dict[str, str] = {
     "daemon offline": "O Hefesto está desligado",
     "daemon pausado": "O Hefesto está em pausa",
@@ -200,102 +188,14 @@ JARGAO_BANIDO: dict[str, str] = {
     "Aplicar correções": "Consertar problemas conhecidos",
     "Testar criação de device virtual": "Testar o controle virtual",
     "Gamepads:": "Controles detectados:",
-    # CONFIGURAÇÕES-O-LÉXICO-01 / LEX-10, dente 2 (25/08/2026). A aba
-    # Configurações fala a língua do barramento com quem enxerga um gabinete e
-    # um número de entrada. Ela: *"vizinhança das portas, qual porta?"*.
-    #
-    # ENTRAM SEM DÍVIDA, e a medição é o que autoriza: `devpath` e `vid:pid` não
-    # são texto de tela em lugar nenhum desta árvore hoje — aparecem só em
-    # docstring e comentário, e o `_texto_reconstruido` remonta
-    # `f"Barramento {n}, porta {devpath}"` como `"Barramento {}, porta {}"`, sem
-    # a palavra. São, portanto, proibição PREVENTIVA de custo zero: nada fica
-    # vermelho, e a próxima frase que tentar pôr o identificador do fabricante
-    # na tela reprova.
     "devpath": "diga a entrada USB: 'Entrada 4 do hub'",
     "vid:pid": "o código do fabricante não é palavra de tela — põe na dica",
-    # ORDEM DELA, 05/09/2026, e ela veio em duas partes porque a primeira foi
-    # cumprida pela metade. Primeiro: *"não é pra ter mesa em nada da
-    # interface"*. A leva daquele dia separou dois sentidos e tirou só um — o
-    # jargão desta casa, "mesa" = o conjunto de controles ligados — e deixou o
-    # outro de pé, "mesa" = a escrivaninha dela, por achar que ali a palavra era
-    # a coisa. Então ela corrigiu: *"muda o termo pra objeto e sinônimos nesses
-    # casos"*.
-    #
-    # ENTRA SEM DÍVIDA NENHUMA, e é a medição que autoriza: no dia em que esta
-    # linha foi escrita, as DUAS últimas frases de tela do `app/` que diziam a
-    # palavra saíram no MESMO commit — `secao_mesa.py:711` ("Reexaminar a mesa"
-    # -> "Reexaminar as conexões") e `secao_orcamento.DICA` ("na mesa inteira"
-    # -> "em todos os controles"). É exatamente o que a nota do
-    # `_A_PALAVRA_QUE_ESPERA_A_LEX_6` logo abaixo manda fazer: colar a linha no
-    # commit que troca a última frase, nunca antes.
-    #
-    # O QUE ELE NÃO ALCANÇA, e por isso há uma segunda régua: este portão lê o
-    # `.glade` e o `app/**/*.py` por AST. O texto da interface nova nasce em
-    # `interface/abaNN.py` e, pior, em `<script>` que escreve no DOM em tempo de
-    # execução — três origens que nenhuma leitura de fonte junta. Quem mede
-    # aquele lado é `tests/unit/test_a_palavra_de_tela_da_interface_nova.py`,
-    # que RODA as dez páginas e lê o DOM. Duas réguas independentes é regra
-    # desta casa, e aqui elas nem se sobrepõem: cada uma alcança o que a outra
-    # não vê.
-    #
-    # E A LISTA É UMA SÓ — 05/09/2026. Até este dia aquela régua vigiava UMA
-    # palavra e este portão vigiava ONZE, sobre a janela que vai morrer: as 40
-    # mil palavras de tela das dez abas novas tinham um décimo primeiro da
-    # vigilância que o `.glade` tinha. Agora a régua IMPORTA o `JARGAO_BANIDO`
-    # daqui. Termo novo nesta lista passa a valer nas duas telas no mesmo
-    # commit — que é a razão de ela ser importada e não copiada.
     "mesa": "o termo é 'objeto' ou o sinônimo que couber: escrivaninha, arranjo, "
             "'os controles ligados'",
 }
 
-#: A TERCEIRA ENTRADA DESTA LISTA AINDA NÃO ESTÁ AQUI, E A AUSÊNCIA É MEDIDA.
-#:
-#: A LEX-10 pede também::
-#:
-#:     "barramento": "diga a entrada USB: 'Entrada 4 do hub'",
-#:
-#: Ela NÃO entra hoje porque cinco frases de tela de
-#: `app/actions/config/secao_mesa.py` ainda dizem a palavra — a dica do selo
-#: `(lido)` (`:193`), a tabela vazia (`:949`), a dica do hub, a das duas
-#: perguntas de rádio (`:486`) e a coluna "Onde está" (`:1604`). Elas saem nas
-#: LEX-6 e LEX-11, que moram naquele arquivo, e ele é de outra frente desta leva
-#: (R1: quem edita arquivo alheio desfaz o vizinho em silêncio).
-#:
-#: Pôr a palavra na lista antes da troca deixaria DOIS portões vermelhos — este
-#: e o `test_config_a_palavra_de_tela_da_aba_montada.py`, que importa esta lista
-#: — e a única saída seria declarar cinco dívidas que nascem para ser apagadas
-#: na semana seguinte. Lista de dívida que nasce cheia vira paisagem, e este
-#: portão já pagou essa lição em 13/08.
-#:
-#: **A linha acima é para colar em `JARGAO_BANIDO` no MESMO commit que trocar a
-#: última das cinco frases.** Colada antes, ela reprova; colada depois, ela é o
-#: que impede a palavra de voltar.
 _A_PALAVRA_QUE_ESPERA_A_LEX_6 = "barramento"
 
-#: Os rótulos que AINDA carregam jargão nesta árvore, um a um. Não é perdão: é
-#: a dívida da E1-E4 escrita com nome e endereço, para que o portão possa
-#: entrar sem derrubar o CI por um trabalho de redação que não é dele. Some
-#: daqui no commit que trocar o rótulo — e o portão reprova se alguém esquecer
-#: de apagar a entrada.
-#:
-#: **A LISTA ESTÁ VAZIA DESDE 26/08/2026** (BG-PALAVRA-02), e a vazia vale mais
-#: que a cheia: as cinco entradas que moravam aqui — `Aplicar correções`,
-#: `Travar Proton validado`, `Gamepads:`, `Restaurar Default` e `VID:PID:` —
-#: saíram no commit que trocou os cinco rótulos, que é o que a própria tabela
-#: mandava. O `dict` fica de pé porque o mecanismo continua valendo: o próximo
-#: rótulo que nascer com jargão declara a dívida aqui ou reprova.
-#:
-#: CORREÇÃO DE FATO, junto: a entrada de `VID:PID:` dizia que o rótulo morava na
-#: aba **Sistema**. Morava na **Emulação** — as etiquetas de aba do
-#: `gui/main.glade` são `Sistema` e `Emulação`, e o rótulo ficava dentro do
-#: cartão de diagnóstico da segunda, ao lado do `Controles detectados:`. Quem
-#: fosse conferir o conserto pela aba errada não o acharia.
-#:
-#: 06/09/2026, `GTK-3`: o corpo declarativo trocou de arquivo (do `.glade` para
-#: as dez páginas publicadas) e a lista veio junto, VAZIA, porque o mecanismo é
-#: o mesmo — um rótulo de tela que nasça com jargão declara a dívida aqui, com
-#: nome e endereço, ou reprova. As cinco entradas de 26/08 continuam nomeadas
-#: acima: elas são registro de trabalho pago, não ponteiro para o XML.
 DIVIDA_DA_PALAVRA_01: dict[str, str] = {}
 
 
@@ -313,19 +213,7 @@ class Rotulo:
 
 
 class _ColheitaDaPagina(HTMLParser):
-    """Colhe o que a pessoa LÊ numa página publicada, com a linha de cada item.
-
-    O critério é o MESMO da régua irmã (`COLHER`, em
-    `tests/unit/test_a_palavra_de_tela_da_interface_nova.py`), de propósito: os
-    dois instrumentos têm de discordar por CAUSA do que só o DOM mostra, nunca
-    por terem definições diferentes de "texto de tela". Fora ficam
-    `script`/`style`/`template` e `div.nota`; dentro entram os quatro atributos
-    de `ATRIBUTOS_DE_TELA`.
-
-    **O que este leitor NÃO alcança, e é por isso que a régua irmã existe:** o
-    texto que o `<script>` escreve no DOM em tempo de execução, e o que só
-    nasce depois de um clique. Nenhuma leitura de fonte os vê.
-    """
+    """Colhe o que a pessoa LÊ numa página publicada, com a linha de cada item."""
 
     def __init__(self, caminho: Path) -> None:
         super().__init__(convert_charrefs=True)
@@ -360,10 +248,6 @@ class _ColheitaDaPagina(HTMLParser):
         self._atributos(atributos)
 
     def handle_endtag(self, tag: str) -> None:
-        # O HTML publicado tem etiqueta aberta sem fechar (`<br>`, `<img>`), e
-        # um `pop()` cego desalinharia a pilha inteira a partir da primeira.
-        # Aqui o fecho procura a abertura correspondente e descarta o que ficou
-        # aberto por dentro dela — que é o que o navegador faz.
         for indice in range(len(self._pilha) - 1, -1, -1):
             aberta, _ = self._pilha[indice]
             if aberta != tag:
@@ -392,13 +276,6 @@ def rotulos_da_pagina(caminho: Path) -> list[Rotulo]:
     return colheita.rotulos
 
 
-#: A BORDA DO TERMO É ESCRITA À MÃO, e a razão é medida: em `re` do Python o
-#: `\b` casa entre `m` e `é`, então um termo acentuado casaria no meio de outra
-#: palavra. É a mesma expressão da régua irmã — o `s?` cobre o plural.
-#:
-#: E ela é mais fina que o `in` de `jargao_em`, de propósito: no `.glade` o
-#: rótulo era curto e o `in` bastava; um nó de texto de HTML carrega uma oração
-#: inteira, e ali "mesa" dentro de "mesada" seria falso positivo.
 def regua_do_termo(termo: str) -> re.Pattern[str]:
     return re.compile(r"(?<![\wÀ-ÿ])" + re.escape(termo) + r"s?(?![\wÀ-ÿ])", re.IGNORECASE)
 
@@ -426,13 +303,7 @@ def paginas_publicadas(raiz: Path = PAGINAS) -> list[Path]:
 
 
 def conferir_html(raiz: Path = PAGINAS) -> list[str]:
-    """As reprovações das páginas publicadas, em ordem de arquivo e linha.
-
-    PORTÃO QUE PERDE O QUE LÊ NÃO FICA VERDE — é a cicatriz do
-    `validar-acentuacao.py --check-file`, que devolvia rc=0 contra arquivo que
-    não existe. Aqui a ausência da pasta e a contagem abaixo de dez páginas
-    REPROVAM nomeando, em vez de a varredura publicar verde sobre nada.
-    """
+    """As reprovações das páginas publicadas, em ordem de arquivo e linha."""
     if not raiz.is_dir():
         return [f"{raiz}: pasta de interface não encontrada"]
 
@@ -474,49 +345,6 @@ def conferir_html(raiz: Path = PAGINAS) -> list[str]:
     return achados
 
 
-#: POR QUE A REGRA DA MAIÚSCULA NÃO ATRAVESSA PARA `app/`, e ela é a decisão
-#: mais importante desta extensão. MEDIDO em 23/08/2026, com a regra ligada
-#: sobre os 347 textos de tela de `app/`: **49 reprovações, nenhum defeito.**
-#:
-#: No `.glade`, `<property name="label">` é sempre um rótulo INTEIRO, e
-#: "começa em maiúscula?" tem resposta. Em Python o mesmo escoadouro recebe
-#: PEDAÇO, e o portão estático não tem como saber qual é qual:
-#:
-#: * marcação em volta de um valor de execução — `<span foreground="{}">{}</span>`,
-#:   32 das 49. A primeira letra que existe no literal é o `s` de `span`;
-#: * contagem — `"{n} controles"`, `"1 externo"`, `"{n} do Hefesto + {ext}"`;
-#: * sufixo entre parênteses — `"{} (padrão)"`, `"{} (cópia)"`, `"(nenhum perfil)"`;
-#: * oração colada depois de um marcador — `"· %(n)d controles (%(t)s)"`.
-#:
-#: A pergunta só é respondível depois que os pedaços viram UM rótulo, e aí ela
-#: já tem dono: `tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py`
-#: monta a aba de verdade e confere a maiúscula no texto COMPOSTO. Dois
-#: instrumentos, cada um medindo o que sabe medir — a lição de
-#: `portoes-em-serie-enganam` (19/08/2026).
-#:
-#: O jargão é diferente, e por isso ele atravessa: `"daemon"` dentro de um
-#: pedaço continua sendo `"daemon"` na tela, componha-se como se componha.
-
-#: O jargão que sobreviveu em `app/`, um a um, MEDIDO em 23/08/2026 — a
-#: primeira varredura de Python que este portão fez. Não é perdão: é a mesma
-#: dívida da E1-E4, agora com o endereço em código. Some daqui no commit que
-#: trocar a frase, e o portão reprova se alguém esquecer de apagar a entrada.
-#:
-#: As duas primeiras são jargão PURO, e o conserto é redação de tela — decisão
-#: dela, como a E3 da PALAVRA-01 sempre foi. A terceira CITA um rótulo do
-#: `.glade`: ela tem de mudar no mesmo commit que o botão, senão a frase manda
-#: clicar num botão que não existe mais.
-#:
-#: 26/08/2026 (BG-NAV-01): as DUAS entradas de `mouse_actions.py` saíram daqui.
-#: Elas mandavam clicar em "Aplicar correções" para um defeito de `uinput`, e
-#: aquele botão não toca no `uinput` — o ponteiro estava errado no ALVO, não só
-#: no nome. As frases agora dão o gesto de atualizar esta instalação, que é o
-#: que a aba Emulação já dizia para a mesma condição.
-#: **A DÍVIDA «Daemon offline» SAIU — 19/09/2026.** Ela morava em
-#: `app/compact_window.py`, que foi para `arquivados/` pela
-#: `ORFAOS-DA-MIGRACAO-01`. A régua avisava com todas as letras que a entrada
-#: tinha de sair (*"a frase foi trocada, e é uma boa notícia"*), e aqui a
-#: frase não foi trocada: o arquivo inteiro saiu do caminho.
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
     "ERRO ao aplicar perfil (daemon offline?).": (
@@ -526,13 +354,6 @@ DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
     ),
 }
 
-#: Os ESCOADOUROS DE TELA, e quantas posições iniciais de cada um são texto de
-#: tela. O número não é decoração: `add_button("Fechar", ResponseType.CLOSE)`
-#: tem texto na posição 0 e um valor de enum na 1, e foi essa distinção que
-#: impediu `CANCEL`/`OK` de virarem "nome de constante de tela" (ver o topo).
-#:
-#: `_` é o gettext desta casa (`utils/i18n`), e é o escoadouro mais denso:
-#: 237 chamadas em `app/`.
 ESCOADOUROS: dict[str, int] = {
     "set_label": 1,
     "set_text": 1,
@@ -545,45 +366,13 @@ ESCOADOUROS: dict[str, int] = {
     "new_with_label": 1,
     "new_with_mnemonic": 1,
     "_": 1,
-    # Os dois ajudantes de tela da aba Configurações (`app/actions/config/
-    # moldura.py`). `moldura_de_secao(titulo, dica)` tem texto nas DUAS.
     "moldura_de_secao": 2,
     "rotulo_de_apoio": 1,
 }
 
-#: O RECIBO DO GESTO — os ajudantes de toast desta casa, com a POSIÇÃO exata do
-#: argumento que a pessoa lê. Entrou em 26/08/2026 (BG-TOAST-02), e é o conserto
-#: de uma fresta MEDIDA: o toast é a única frase que a pessoa lê depois de
-#: clicar, e era o único pedaço da tela sem régua. Nenhum dos treze nomes de
-#: `ESCOADOUROS` contém "toast"; das 170 chamadas de toast de `app/`, 163
-#: carregavam texto que régua nenhuma lia. Foi por essa fresta que dois toasts
-#: continuaram dizendo `daemon offline` — a palavra que a E3 da PALAVRA-01
-#: aposentou primeiro — com o portão verde.
-#:
-#: POR QUE UM DICIONÁRIO DE POSIÇÕES, e não o `int` de `ESCOADOUROS`. O
-#: `ESCOADOUROS` conta posições INICIAIS, e o ajudante mais usado desta família
-#: não cabe nesse molde: `_status_toast(context, msg)` (`actions/base.py:346`)
-#: tem o texto na posição **1** e um id de contexto de statusbar (`"daemon"`,
-#: `"footer"`, `"profiles"`) na **0**. Contar duas posições iniciais arrastaria
-#: esses ids para dentro do portão — e `"daemon"` é justamente o começo de um
-#: termo banido. Cada entrada aqui foi lida na assinatura do ajudante.
-#:
-#: FICA DE FORA, e a ausência é medida:
-#:
-#: * `_toast_trigger(side, preset_id, ok, *, motivo=..., spec=..., corpo=...)`
-#:   (`triggers_actions.py:700`) — nenhum argumento dele é texto de tela; ele
-#:   COMPÕE a frase lá dentro, a partir de `motivo` e do preset. O que sai dali
-#:   é texto de execução, e quem alcança isso é o portão de widget montado;
-#: * `toast_da_escolha`, `toast_do_relancamento` (`relancar.py`),
-#:   `reconciliar_toast`, `toast_da_troca_de_mascara` (`home_actions.py`) — os
-#:   quatro DEVOLVEM a frase em vez de mostrá-la. Quem mostra é um `_toast_*`
-#:   desta lista, e o que chega lá é uma variável (ver a lacuna do texto de
-#:   execução no topo do arquivo).
 ESCOADOUROS_DE_RECIBO: dict[str, tuple[int, ...]] = {
-    # `actions/base.py` — o funil por onde TODOS os outros passam.
     "_status_toast": (1,),
     "_toast_do_relancar": (0,),
-    # Um por aba/área, todos com a mesma assinatura `(msg)`.
     "_carona_toast": (0,),
     "_footer_toast": (0,),
     "_toast_camadas": (0,),
@@ -598,60 +387,26 @@ ESCOADOUROS_DE_RECIBO: dict[str, tuple[int, ...]] = {
     "_toast_rumble": (0,),
 }
 
-#: O jargão que sobreviveu DENTRO DE UM TOAST, um a um. Mesmo molde e mesmo
-#: contrato de `DIVIDA_DA_PALAVRA_01_PY`: não é perdão, é a dívida com nome e
-#: endereço, e o portão reprova se a entrada envelhecer sem ser apagada.
-#:
-#: **A LISTA NASCE VAZIA, E A MEDIÇÃO É O QUE AUTORIZA ISSO.** Nascer vazia
-#: "para não incomodar" é o defeito-mãe desta casa (PORTÃO-VIVO-01), escrito no
-#: topo deste arquivo — por isso a lista só pode nascer vazia com o número na
-#: mão. Ele está aqui, medido em 26/08/2026 nesta árvore: ligar
-#: `ESCOADOUROS_DE_RECIBO` levou o alcance de `app/` de **344 rótulos (288
-#: únicos) para 420 (363)** — 75 textos que régua nenhuma lia — e o vermelho
-#: novo foi de UM só: `profiles_actions.py:3237`, `"Falha (daemon offline?)"`.
-#: Ele foi TROCADO no mesmo commit que ampliou o alcance, e é por isso que não
-#: há dívida a declarar. Dívida que nasce quando dá para consertar é dívida
-#: escolhida.
-#:
-#: O `dict` fica de pé porque o mecanismo continua valendo, exatamente como o
-#: `DIVIDA_DA_PALAVRA_01` do `.glade`: o próximo toast que nascer com jargão
-#: declara a dívida aqui — com o endereço e o que a frase vira — ou reprova.
 DIVIDA_DO_RECIBO: dict[str, str] = {}
 
-#: Construtores de widget cujo primeiro argumento — ou o `label=` — é texto de
-#: tela. Casados pelo NOME DO ATRIBUTO (`Gtk.Label(...)`), que é como o código
-#: desta casa os escreve.
 CONSTRUTORES_COM_TEXTO = frozenset(
     {"Label", "Button", "CheckButton", "RadioButton", "MenuItem", "ToggleButton", "LinkButton"}
 )
 
-#: Argumentos NOMEADOS que carregam texto de tela. Fora desta lista, um `kwarg`
-#: é ignorado — `Gtk.Label(name="x")` é id de CSS, não texto.
 NOMEADOS_DE_TELA = frozenset(
     {"label", "text", "title", "tooltip_text", "placeholder_text", "titulo", "dica", "texto"}
 )
 
 
 def _posicoes_do_nome(nome: str) -> tuple[int, ...] | None:
-    """As posições de texto de tela deste nome de chamada, ou None.
-
-    Os dois dicionários dizem a mesma coisa em molde diferente: `ESCOADOUROS`
-    conta posições INICIAIS (`add_button` tem 1, `moldura_de_secao` tem 2) e
-    `ESCOADOUROS_DE_RECIBO` dá o índice exato, porque o funil dos toasts
-    (`_status_toast(context, msg)`) tem o texto na segunda.
-    """
+    """As posições de texto de tela deste nome de chamada, ou None."""
     if nome in ESCOADOUROS:
         return tuple(range(ESCOADOUROS[nome]))
     return ESCOADOUROS_DE_RECIBO.get(nome)
 
 
 def _escoadouro_de(no: ast.Call) -> tuple[int, ...] | None:
-    """Que posições desta chamada são texto de tela, ou None.
-
-    None significa "esta chamada não põe nada na tela" — que é o veredito para
-    a esmagadora maioria das chamadas de `app/`, e é por isso que o portão fica
-    calado sobre chave de dicionário, nome de sinal e mensagem de log.
-    """
+    """Que posições desta chamada são texto de tela, ou None."""
     alvo = no.func
     if isinstance(alvo, ast.Name):
         return _posicoes_do_nome(alvo.id)
@@ -674,28 +429,11 @@ def _argumentos_de_tela(no: ast.Call, posicoes: tuple[int, ...]) -> Iterator[ast
             yield nomeado.value
 
 
-#: O que ocupa, no texto reconstruído, o lugar de um pedaço que só existe em
-#: tempo de execução. Ele PRECISA ser visível: uma f-string remontada sem marca
-#: no buraco vira uma frase que ninguém escreveu — `f"{n} controles"` viraria
-#: `" controles"`, e o portão reprovaria por minúscula um texto que na tela
-#: começa com um número.
 BURACO = "{}"
 
 
 def _texto_reconstruido(no: ast.expr) -> str | None:
-    """A expressão remontada como a pessoa a lê, ou None se não for texto.
-
-    A f-string e a soma de literais são remontadas em UMA frase, com `{}` no
-    lugar de cada pedaço calculado. Isso não é detalhe de implementação: a
-    primeira versão desta função devolvia os pedaços SOLTOS, e o portão nasceu
-    com 35 reprovações — 12 delas contra fragmentos como `'<span foreground="'`
-    e `'%</span>'`, que são metade de uma marcação Pango partida ao meio por um
-    `{cor}`. Nenhuma delas era texto de tela; todas eram a régua quebrando o
-    texto no lugar errado.
-
-    Uma chamada aninhada vira `{}` do mesmo jeito: quem a visita é o
-    `ast.walk`, e contar o conteúdo dela aqui também duplicaria o achado.
-    """
+    """A expressão remontada como a pessoa a lê, ou None se não for texto."""
     if isinstance(no, ast.Constant):
         return no.value if isinstance(no.value, str) else None
     if isinstance(no, ast.JoinedStr):
@@ -729,14 +467,7 @@ def arquivos_de_python(raiz: Path = APP) -> list[Path]:
 
 
 def nomes_de_constante_de_tela(arvores: dict[Path, ast.Module]) -> set[str]:
-    """Os nomes de constante que ATRAVESSAM módulo até um escoadouro.
-
-    O portão não adivinha por nome nem por MAIÚSCULA: ele procura
-    `alguma_coisa.NOME` em posição de texto de tela — hoje, o
-    `moldura_de_secao(secao.TITULO, secao.DICA)` de `config/mixin.py:46` — e é
-    daí que sai a lista. Se a aba Configurações rebatizar o contrato, o portão
-    acompanha sozinho.
-    """
+    """Os nomes de constante que ATRAVESSAM módulo até um escoadouro."""
     nomes: set[str] = set()
     for arvore in arvores.values():
         for no in ast.walk(arvore):
@@ -764,7 +495,6 @@ def _constantes_de_modulo(arvore: ast.Module) -> dict[str, tuple[list[str], int]
         if nome is None or no.value is None:
             continue
         valor = no.value
-        # `TITULO = _("Está tudo certo?")` conta como o texto de dentro.
         if isinstance(valor, ast.Call):
             posicoes = _escoadouro_de(valor)
             textos = (
@@ -780,14 +510,7 @@ def _constantes_de_modulo(arvore: ast.Module) -> dict[str, tuple[list[str], int]
 
 
 def rotulos_do_python(caminho: Path, nomes_de_tela: set[str]) -> list[Rotulo]:
-    """Todo texto de tela ESTÁTICO do módulo, com a linha em que ele mora.
-
-    Duas fontes, e nenhuma delas é o nome da variável:
-
-    1. literal em posição de texto de tela numa chamada de escoadouro;
-    2. constante de módulo que CHEGA a um escoadouro — no próprio arquivo, ou
-       por atributo a partir de outro (`nomes_de_tela`).
-    """
+    """Todo texto de tela ESTÁTICO do módulo, com a linha em que ele mora."""
     arvore = ast.parse(caminho.read_text(encoding="utf-8"))
     constantes = _constantes_de_modulo(arvore)
     achados: list[Rotulo] = []
@@ -823,9 +546,6 @@ def conferir_python(caminho: Path, nomes_de_tela: set[str]) -> list[str]:
 
     achados: list[str] = []
     for rotulo in rotulos_do_python(caminho, nomes_de_tela):
-        # Só a regra do jargão. A da maiúscula fica de fora, e o porquê está
-        # escrito acima de `DIVIDA_DA_PALAVRA_01_PY`: 49 reprovações, nenhum
-        # defeito.
         termo = jargao_em(rotulo.texto)
         perdoado = rotulo.texto in DIVIDA_DA_PALAVRA_01_PY or rotulo.texto in DIVIDA_DO_RECIBO
         if termo is not None and not perdoado:
@@ -840,12 +560,7 @@ def conferir_python(caminho: Path, nomes_de_tela: set[str]) -> list[str]:
 
 
 def conferir_app(raiz: Path = APP) -> list[str]:
-    """A varredura inteira de `app/`, com a checagem de lista envelhecida.
-
-    A pergunta "esta exceção ainda existe?" só tem resposta com o corpo INTEIRO
-    na mão — por isso ela mora aqui, e não em `conferir_python`, que também é
-    chamado com um arquivo só.
-    """
+    """A varredura inteira de `app/`, com a checagem de lista envelhecida."""
     arquivos = arquivos_de_python(raiz)
     arvores = {
         caminho: ast.parse(caminho.read_text(encoding="utf-8")) for caminho in arquivos
@@ -959,9 +674,6 @@ def main(argumentos: list[str] | None = None) -> int:
         achados.extend(conferir_html())
         achados.extend(conferir_app())
     else:
-        # Um arquivo por vez: os nomes que atravessam módulo continuam vindo do
-        # corpo INTEIRO — senão `TITULO` e `DICA` sumiriam justamente quando se
-        # confere a seção que os declara.
         nomes_de_tela: set[str] | None = None
         for alvo in alvos:
             if alvo.suffix == ".html" and not alvo.name.endswith(".dc.html"):

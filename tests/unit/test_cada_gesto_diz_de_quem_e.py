@@ -1,11 +1,4 @@
-"""Cada gesto diz de quem é (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, réguas 9 a 11).
-
-A tabela ``pacotes/camada.CAMADA`` declara, para todo ``data-gesto`` das dez
-páginas, onde o clique grava; a marca de cada cartão do computador diz de quem
-é o valor que o cartão mostra. Estas réguas leem as páginas (a publicada e o
-desenho), o registro dos gestos e o disco de um lar de mentira (o ``conftest``
-desvia os ``XDG_*``), com identidades da faixa sintética da casa.
-"""
+"""Cada gesto diz de quem é (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, réguas 9 a 11)."""
 from __future__ import annotations
 
 import html.parser
@@ -39,12 +32,7 @@ def _pacotes() -> Any:
 
 
 class _Gestos(html.parser.HTMLParser):
-    """Os gestos de uma página, fora dos ``<script>``, com o nome que o piloto despacha.
-
-    O piloto lê ``d.gesto || d.hefGesto || d.papel`` (``hefesto_vivo``,
-    ``manda_do_alvo``): o ``data-gesto``, ou o ``data-hef-gesto`` da 10, ou o
-    ``data-papel`` da 05. A régua lê os três, na mesma ordem.
-    """
+    """Os gestos de uma página, fora dos ``<script>``, com o nome que o piloto despacha."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -87,9 +75,6 @@ def _vistos() -> set[tuple[str, str]]:
             for g in _gestos(nome, publicado=publicado)}
 
 
-# ---------------------------------------------------------------------------
-# Régua 9: todo gesto publicado tem camada, e a camada é verdade
-# ---------------------------------------------------------------------------
 def test_todo_gesto_das_dez_tem_camada() -> None:
     """Cada gesto das dez (publicada e desenho) tem linha em ``CAMADA``.
 
@@ -103,10 +88,7 @@ def test_todo_gesto_das_dez_tem_camada() -> None:
 
 
 def test_toda_linha_da_camada_tem_gesto() -> None:
-    """E toda linha tem gesto: na página, ou registrado para as dez (a marca).
-
-    Uma linha sem gesto seria a tabela afirmando um botão que a tela não tem.
-    """
+    """E toda linha tem gesto: na página, ou registrado para as dez (a marca)."""
     pac = _pacotes()
     camada = pac.camada
     vistos = _vistos()
@@ -119,14 +101,7 @@ def test_toda_linha_da_camada_tem_gesto() -> None:
 
 
 def test_quem_grava_pelo_dono_e_do_computador() -> None:
-    """A camada concorda com o que o gesto declara que grava.
-
-    Todo gesto que declara ``grava="gravar_pelo_gesto"`` (o escritor do
-    cartão do computador) ou volta o computador ao de fábrica está na camada
-    ``computador``; os dois da marca, na ``jogo``. A declaração não se mede
-    contra ela mesma: `test_todo_gesto_que_grava_esta_protegido` confere no AST
-    que a função chama o escritor que declara.
-    """
+    """A camada concorda com o que o gesto declara que grava."""
     pac = _pacotes()
     camada = pac.camada
     erradas = []
@@ -174,7 +149,6 @@ def _perfil(nome: str, **campos: Any) -> Profile:
          **campos})
 
 
-#: Um clique de cada cartão do computador, com o que ela mandou.
 CLIQUES: list[tuple[str, str, dict[str, Any]]] = [
     ("02-controles.html", "volume", {"uniq": UM, "volume": "microfone", "valor": "42"}),
     ("04-iluminacao.html", "brilho-luzes", {"uniq": UM, "controle": "p1", "luzes": "forte"}),
@@ -211,13 +185,7 @@ def test_o_gesto_do_computador_nao_toca_perfil_nenhum(
         f"{aba}·{gesto} não chegou ao maquina.json")
 
 
-# ---------------------------------------------------------------------------
-# Régua 10: os sem dono só diminuem
-# ---------------------------------------------------------------------------
-#: Os oito de 01/10 (a 06 e a 08) menos os dois que esta leva curou: o
 #: ``acao-do-gesto`` (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01) e o
-#: ``padrao-da-aba`` (esta). O ``navegacao-interna`` sai com a
-#: A-NAVEGACAO-INTERNA, e aí esta lista perde uma linha.
 SEM_DONO_PERMITIDOS = frozenset({
     "modo-steam", "navegacao-interna",
     "custo-luz", "custo-som", "custo-vibracao", "novo-hub",
@@ -243,23 +211,13 @@ def test_os_sem_dono_so_diminuem() -> None:
     assert not sem_atendente, f"gesto sem atendente e sem declaração: {sem_atendente}"
 
 
-# ---------------------------------------------------------------------------
-# Régua 11: a marca pinta a verdade
-# ---------------------------------------------------------------------------
 def _marca_da_luz(pac: Any, ctx: Any) -> dict[str, str]:
     _da_mesa, por_controle = pac.camada.marcas("04-iluminacao.html", ctx)
     return {u: c[marca.campo("luz")] for u, c in por_controle.items()}
 
 
 def test_a_marca_pinta_a_verdade() -> None:
-    """O jogo que sobrepõe só a luz do P2: «PC» no P1, o nome do jogo no P2.
-
-    Depois do «Voltar ao do PC» no P2, os dois dizem «PC» e o perfil não tem
-    mais a luz do P2.
-
-    MORDIDA: pintar pelo nome do perfil ativo, sem perguntar ao
-    ``model_fields_set`` (o ``sobrepoe``), reprova no P1.
-    """
+    """O jogo que sobrepõe só a luz do P2: «PC» no P1, o nome do jogo no P2."""
     pac = _pacotes()
     _computador = {"global": {"leds": {"lightbar": [10, 20, 200]}}}
     assert m.gravar_o_computador(_computador)
@@ -314,11 +272,7 @@ def test_sem_jogo_os_botoes_da_marca_recusam_dizendo() -> None:
 
 
 def test_a_pintura_so_pousa_onde_a_pagina_tem_lugar(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A página publicada de antes desta leva não tem a marca: o pacote não a pinta.
-
-    Um campo sem lugar seria um «sem dono» a mais no relatório da pintura. Com o
-    lugar (a página nova), a marca entra na coluna daquele controle.
-    """
+    """A página publicada de antes desta leva não tem a marca: o pacote não a pinta."""
     pac = _pacotes()
     save_profile(_perfil("Jogo X"))
     ctx = _contexto(pac, "Jogo X", UM)
@@ -333,9 +287,6 @@ def test_a_pintura_so_pousa_onde_a_pagina_tem_lugar(monkeypatch: pytest.MonkeyPa
     assert fora == {"colunas": {UM: {"hex": "#000000"}}}, "a pintura mexeu no pacote da aba"
 
 
-# ---------------------------------------------------------------------------
-# Régua 11, o botão que funciona: «Só neste jogo» muda o dono, ou não aparece
-# ---------------------------------------------------------------------------
 def _contexto_vivo(pac: Any, ativo: str, *, speed: int, scroll: int) -> Any:
     """O contexto da régua com o mouse em ``speed``/``scroll`` (o resto como em `_contexto`)."""
     ctx = _contexto(pac, ativo, UM)
@@ -352,17 +303,7 @@ def _miolo_do(pac: Any, ctx: Any, cartao: str) -> str:
 
 @pytest.mark.parametrize("cartao", sorted(opc.SECOES))
 def test_so_neste_jogo_de_todo_cartao_muda_o_dono_num_pc_sem_padrao(cartao: str) -> None:
-    """Num computador sem padrão, o «Só neste jogo» de CADA cartão dá o cartão ao jogo.
-
-    O que vale agora, quando nem o jogo nem o computador declaram, é o que o
-    aparelho tem (o volume, a força, as velocidades, o teclado ligado). Medido
-    na conferência de 02/10/2026: sem esse degrau, o clique no som, na
-    vibração, no mouse e no teclado gravava o perfil igual, e a marca seguia
-    «PC · Só neste jogo», um botão que aceitava o clique e não mudava nada.
-
-    MORDIDA: tirar os ``vivos`` do gesto (``so_neste_jogo`` sem eles) reprova
-    no som, na vibração, no mouse e no teclado.
-    """
+    """Num computador sem padrão, o «Só neste jogo» de CADA cartão dá o cartão ao jogo."""
     pac = _pacotes()
     save_profile(_perfil("Jogo X"))
     ctx = _contexto_vivo(pac, "Jogo X", speed=9, scroll=2)
@@ -377,14 +318,7 @@ def test_so_neste_jogo_de_todo_cartao_muda_o_dono_num_pc_sem_padrao(cartao: str)
 
 
 def test_o_botao_que_nao_mudaria_nada_nao_aparece_e_recusa_sem_gravar() -> None:
-    """As velocidades do mouse no de fábrica: a marca diz só «PC», e o clique velho recusa.
-
-    O esquema não distingue «o jogo escolheu 6 e 1» de «ninguém escolheu», então
-    copiar o de fábrica não daria o cartão ao jogo. O botão não se oferece, e o
-    clique que chega de um tique velho recusa dizendo, sem tocar o arquivo.
-
-    MORDIDA: devolver o miolo sem perguntar ao ``pode_so_neste_jogo`` reprova.
-    """
+    """As velocidades do mouse no de fábrica: a marca diz só «PC», e o clique velho recusa."""
     pac = _pacotes()
     caminho = save_profile(_perfil("Jogo X"))
     antes = caminho.read_bytes()

@@ -1,119 +1,5 @@
 #!/usr/bin/env python3
-"""A JANELA ESTREITA NÃO ENGOLE O DESENHO — as dez abas, medidas fora do tamanho.
-
-**ESTE ARQUIVO NASCEU DE UMA FOTO.** Em 04/09/2026 ela mandou o retrato da
-janela com ~940 px de largura e a frase *"tela do layout quebra direto"*. O
-desenho pede **1212x809** (`gui/ponte_da_tela.LARGURA_DO_DESENHO` e
-`ALTURA_DO_DESENHO`); a janela dela estava 272 px mais estreita.
-
-**E RÉGUA NENHUMA DESTA CASA MEDIA ISSO** — conferido em 04/09/2026, uma a uma.
-Todas as que olham geometria abrem um Chrome MAIOR que o desenho, onde a
-`.janela` nasce no tamanho natural e nada aperta:
-
-===============================  ==========  =======================
-régua                            a janela    onde está o número
-===============================  ==========  =======================
-`interface/regua.py`             1260x2600   linha 320 (`--window-size`)
-`interface/regua_estados.py`     1920x1080   linha 106
-`interface/regua_popup.py`       1920x1080   linha 353
-`interface/olhar.py`             1920x1080   linha 28 (`LARG, ALT`)
-===============================  ==========  =======================
-
-A mais apertada delas ainda é 48 px mais larga que o desenho. O que ninguém
-mediu é o que ela usa: a janela **arrastada**.
-
-E ela PODE ser arrastada até lá. O comentário de `gui/ponte_da_tela.py:158-162`
-promete um piso — *"por isso a janela também ganhou um MÍNIMO (o
-`set_size_request` lá embaixo), sem o qual ela pode ser arrastada até engolir o
-desenho em silêncio"* — e **não existe `set_size_request` nenhum no arquivo**
-(medido com `grep` em 04/09/2026: a única ocorrência é a do próprio comentário).
-Enquanto não existir, o tamanho da janela é o que ela decidir com o rato, e o
-único lugar onde o produto se defende é o CSS.
-
-A REGRA QUE ESTA RÉGUA COBRA
-----------------------------
-**Numa janela menor que o desenho, o produto pode ROLAR e pode ENCOLHER. Não
-pode SUMIR.** Em três artigos, e cada um é um teste:
-
-1. **No seu próprio tamanho o desenho cabe inteiro** — nem uma reticência. É a
-   linha de base: sem ela, uma régua que só olha janela apertada não distingue
-   "quebrou ao encolher" de "já estava quebrado".
-2. **O que não couber tem de continuar ALCANÇÁVEL.** Um pedaço cortado por um
-   ancestral que recorta sem rolar (`overflow:hidden|clip`) só passa se o corte
-   tiver AFORDÂNCIA: reticências (`text-overflow:ellipsis`) **com o texto
-   inteiro guardado num `title`/`aria-label`**. Sem isso é informação que quem
-   olha não tem como ler nem alcançar — é o *sumiço*.
-
-   Essa não é uma regra inventada aqui: é a que a própria aba Sistema escreveu
-   em `interface/aba09.py:389-392` — *"as reticências são o que sobra quando ele
-   encolhe até o limite — e o `title` do valor guarda a frase inteira, para não
-   perder informação no corte"*. Esta régua só a cobra das dez abas.
-3. **A janela inteira continua alcançável.** As três faixas (`.tira`, `.miolo`,
-   `.rodape`) cabem dentro da `.janela` — que tem `overflow:hidden` e por isso
-   não rola nada —, e o que ficar fora da tela tem de ser alcançável rolando o
-   documento. Rolar é aceitável; recortar sem barra não é.
-4. **O campo de escolha continua dizendo o que foi escolhido.** Um `<option>`
-   mede **0x0** no DOM — quem pinta a escolha é o controle de formulário —, e
-   por isso os três artigos acima passam por cima dele. Este mede a largura que
-   o texto escolhido PRECISA, num espelho com a fonte computada do `<select>`,
-   contra a caixa de conteúdo dele.
-
-   Aqui a exigência é mais branda de propósito: quem clica num `<select>` abre o
-   menu nativo e lê a lista inteira, então o valor não se perde — fica ilegível
-   **de relance**, no campo que existe para dizê-lo. A cura é a mesma linha de
-   sempre: o `title` carregar a opção escolhida.
-
-O QUE ELA MEDE, E POR QUE PELO DOM
-----------------------------------
-Pelo DOM porque a pergunta é geométrica: *quem está fora da caixa de quem*. Para
-cada peça que carrega TEXTO PRÓPRIO dentro da `.janela`, a medida é dupla:
-
-* **corte próprio** — a peça recorta a si mesma (`overflow:hidden` e
-  `scrollWidth > clientWidth`); é o caso das reticências;
-* **corte do ancestral** — a peça passa da caixa de cliente do primeiro
-  ancestral que recorta. A subida PARA no primeiro ancestral que rola
-  (`auto`/`scroll`): o que rola está alcançável, e não é sumiço.
-
-**Só peças com texto próprio.** Sem esse filtro a régua acusaria o
-`.luz-grade .moldura` da aba Iluminação, que tem `overflow:hidden` **de
-propósito** para conter o SVG (`interface/aba04.py:533-534`) e come 9 px do
-desenho **no tamanho certo também** — não é regressão de janela estreita, é
-decisão tomada.
-
-OS TAMANHOS, e cada um tem razão escrita em :data:`TAMANHOS`. A altura e a
-largura são independentes, e isso foi MEDIDO: a `.janela` tem altura FIXA
-(`--alt-janela:777px`, `interface/topo.html:592`), então encurtar a janela não
-muda um pixel do miolo — o documento passa a rolar 209 px e o rodapé continua
-inteiro. Quem aperta é a LARGURA, pelo `max-width:100%` da `.janela`.
-
-AS DUAS MORDIDAS
-----------------
-* **o tamanho** — a mesma aba, a mesma régua, só a janela muda:
-  `06-navegacao` no tamanho do desenho não corta nada; a 940 px corta quatro
-  peças. É `test_no_tamanho_do_desenho_nada_e_cortado` verde ao lado de
-  `test_nada_some_sem_afordancia` vermelho, e a diferença entre os dois é a
-  largura da janela;
-* **a afordância** — arranque o `title=` de `.est .val` na aba Sistema e as
-  quatro peças que hoje passam pelo artigo 2 caem para o lado dos engolidos.
-  Provado em 04/09/2026 numa cópia da bancada, e escrito em
-  :func:`test_a_mordida_da_afordancia_sem_o_title_o_corte_vira_sumico`.
-
-O QUE ELA **NÃO** MEDE: nada de pixel (a cor errada passa), nada de `:hover`,
-e nada de widget GTK — a barra de título, os diálogos e o próprio piso da janela
-ficam fora do WebView. E ela mede a **BANCADA** (`mockup/`), que é onde a cura
-chega primeiro: apontá-la para o publicado a deixaria vermelha depois da cura,
-até alguém rodar o `--publicar`. Hoje as duas cópias são byte a byte iguais.
-
-**E ELA DECLARA A LETRA.** As dez abas pedem `Space Grotesk` e `JetBrains Mono`
-ao Google Fonts, e sem rede o motor cai na pilha do sistema: a largura de todo
-texto muda e um vermelho daqui passaria a significar outra coisa. Por isso toda
-reprovação sai com o estado das duas fontes (:func:`_a_letra`) — *medir contra a
-biblioteca errada produz alarme convincente e falso* é a armadilha nº 1 da casa.
-
-CUSTO: cinco segundos para as trinta medidas — UMA janela por tamanho, navegando
-pelas dez abas. Abrir uma janela por medida custaria 38 s, e foi assim que este
-arquivo começou.
-"""
+"""A JANELA ESTREITA NÃO ENGOLE O DESENHO — as dez abas, medidas fora do tamanho."""
 from __future__ import annotations
 
 import json
@@ -170,9 +56,6 @@ class Tamanho(NamedTuple):
     razao: str
 
 
-#: OS TRÊS TAMANHOS. O primeiro é a linha de base e os outros dois são as duas
-#: formas de a janela ficar menor que o desenho — uma por eixo, porque os eixos
-#: são independentes (a `.janela` tem altura fixa; só a largura a aperta).
 TAMANHOS: tuple[Tamanho, ...] = (
     Tamanho(
         "desenho",
@@ -197,9 +80,6 @@ TAMANHOS: tuple[Tamanho, ...] = (
     ),
 )
 
-#: AS DEZ ABAS, da bancada. A leitura é do disco e não de uma lista digitada:
-#: uma aba nova entra na régua sozinha, que é o contrário do defeito de 03/09
-#: (*as pastas mudaram de nome e as réguas não foram junto*).
 ABAS: tuple[str, ...] = tuple(
     p.name for p in sorted(onde.BANCADA.glob("[0-9][0-9]-*.html"))
 )
@@ -211,19 +91,12 @@ if len(ABAS) < 10:
         allow_module_level=True,
     )
 
-#: A FOLHA DE USUÁRIO DO PRODUTO, posta à mão. `ponte_da_tela` a injeta pela
-#: `UserContentManager` e a `regua_de_tela` monta a dela sem folha nenhuma — sem
-#: isto a régua mediria as legendas `.nota` do mockup, que o produto esconde, e
-#: concluiria que o documento rola quando ele não rola.
 POR_A_FOLHA = (
     "(function(){var s=document.createElement('style');"
     f"s.textContent={json.dumps(FOLHA_DA_CASA)};"
     "document.head.appendChild(s);return 'FOLHA-POSTA';})()"
 )
 
-#: A MEDIDA, em pixels de viewport. Devolve as três faixas, o quanto o documento
-#: rola em cada eixo, e a lista de peças CORTADAS — cada uma com o retrato de
-#: quem a corta, para o Python decidir se o corte tem afordância.
 MEDIDA = r"""
 (function(){
   var TOL = 1;
@@ -379,16 +252,7 @@ MEDIDA = r"""
 
 
 def tem_afordancia(corte: dict[str, Any]) -> bool:
-    """O corte é aceitável? Reticências **e** o texto inteiro guardado.
-
-    Reticências sozinhas dizem "tem mais" e não dizem O QUÊ — quem olha vê
-    ``"P2 • Starlight Bl…"`` e não tem como chegar ao nome. O `title` é o que
-    devolve a frase, e é a cura que a própria aba Sistema já aplicou ao
-    ``.est .val`` (``interface/aba09.py:389-394``).
-
-    Vale só no eixo X: ``text-overflow`` é horizontal, e não existe reticência
-    que salve um corte por baixo.
-    """
+    """O corte é aceitável? Reticências **e** o texto inteiro guardado."""
     if corte["eixo"] != "x":
         return False
     peca, corta = corte["peca"], corte["corta"]
@@ -411,18 +275,7 @@ def engolidos(leitura: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def selects_mudos(leitura: dict[str, Any]) -> list[dict[str, Any]]:
-    """Os ``<select>`` cuja opção escolhida não cabe e não está guardada.
-
-    O ``<select>`` tem UMA recuperação que o ``<span>`` não tem: quem clica abre
-    o menu nativo e lê a lista inteira. Por isso o defeito aqui não é *perder* o
-    valor — é o valor escolhido ficar ilegível **de relance**, no campo que
-    existe para dizê-lo. A cura é a mesma linha: o `title` do campo carregar a
-    opção escolhida, e não só o nome do campo.
-
-    E é preciso o texto DA OPÇÃO: a aba Gatilhos tem `title="Efeito pronto do
-    gatilho esquerdo"` num campo que mostra ``"Recuo do MK — pesado no fim"``.
-    O `title` existe e não devolve nada do que foi cortado.
-    """
+    """Os ``<select>`` cuja opção escolhida não cabe e não está guardada."""
     return [
         s for s in leitura["selects_apertados"]
         if not any(s["texto"] in (s.get(chave) or "").strip()
@@ -431,13 +284,7 @@ def selects_mudos(leitura: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _a_letra(leitura: dict[str, Any]) -> str:
-    """A letra com que esta medida foi feita, para toda reprovação declarar.
-
-    *Medir contra a biblioteca errada produz alarme convincente e falso* é a
-    armadilha nº 1 desta casa. Aqui a "biblioteca" é a FONTE: sem rede as duas
-    do Google Fonts não chegam, o motor cai na pilha do sistema e a largura de
-    todo texto muda.
-    """
+    """A letra com que esta medida foi feita, para toda reprovação declarar."""
     letra = leitura.get("letra")
     if not letra:
         return " · a letra desta medida: o motor não respondeu (`document.fonts`)"
@@ -469,17 +316,7 @@ def _contar(cortes: list[dict[str, Any]]) -> str:
 
 def medir(tamanho: Tamanho, abas: tuple[str, ...] = ABAS,
           pasta: pathlib.Path | None = None) -> dict[str, dict[str, Any]]:
-    """Abre UMA janela do tamanho pedido e navega pelas abas, medindo cada uma.
-
-    Uma janela por medida custaria 38 s para as trinta; assim custa 4,5 s. O
-    preço é ter de esperar a navegação COM AS PRÓPRIAS MÃOS: o ajudante
-    ``window.__REGUA`` não sobrevive a `load_uri`, e ``Tela.esperar_ate`` com
-    uma pergunta em texto passa por ele.
-
-    E o `titulo_esperado` não é enfeite. MEDIDO em 04/09/2026: sem ele, a
-    PRIMEIRA `Tela` de um processo confirma a carga contra `about:blank` —
-    `readyState` já é `complete` ali — e a régua mede uma página em branco.
-    """
+    """Abre UMA janela do tamanho pedido e navega pelas abas, medindo cada uma."""
     pasta = pasta or onde.BANCADA
     fora: dict[str, dict[str, Any]] = {}
     with regua_de_tela.Tela(pasta / abas[0], titulo_esperado="Hefesto",
@@ -518,42 +355,29 @@ def medido() -> dict[tuple[str, str], dict[str, Any]]:
     return fora
 
 
-#: O QUE JÁ ESTÁ QUEBRADO, com a cura escrita. **Não é isenção** — é o registro
-#: datado de um defeito que esta régua achou e que não é de quem a escreveu
-#: consertar (ONDA-J, 04/09/2026: os geradores têm outro dono nesta leva).
-#:
-#: São `xfail(strict=True)`: no dia em que a cura entrar, o caso passa, o
-#: `strict` reprova o XPASS, e quem curar é obrigado a apagar a linha daqui. Uma
-#: marca que sobrevive à cura é a mentira seguinte.
 ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
     ("06-navegacao.html", "estreita"): (
-        "DEFEITO VIVO — `.nav-rot` (interface/aba06.py:285-286) tem "
+        "DEFEITO VIVO — `.nav-rot` (interface/aba06.py:204-205) tem "
         "`text-overflow:ellipsis` e NENHUM `title`. A 940 px o nome do controle "
         "vira 'P2 • Starlight Bl…' e o resto não é alcançável por caminho "
-        "nenhum. CURA: o gerador (aba06.py:1215 e 1263) emitir "
+        "nenhum. CURA: o gerador (aba06.py:1069 e 1263) emitir "
         "`title=\"{rótulo inteiro}\"` no `.nav-rot`, como a aba Sistema já faz "
         "no `.est .val`"
     ),
     ("09-sistema.html", "estreita"): (
         "DEFEITO VIVO — o `<span>` de dentro de `.saude .txt` "
-        "(interface/aba09.py:511, emitido em `saude()` na linha 648) recorta com "
+        "(interface/aba09.py:300, emitido em `saude()` na linha 648) recorta com "
         "reticências e não guarda `title`. A 940 px 'Steam Input estava ligado em "
         "2 jogos — desliguei' perde 123 px. E a MESMA aba já resolveu isto no "
-        "`.est .val` (aba09.py:389-394), com o `title` guardando a frase inteira: "
+        "`.est .val` (aba09.py:182-187), com o `title` guardando a frase inteira: "
         "CURA é aplicar ali a decisão que ela mesma escreveu"
     ),
 }
 
-#: O MESMO REGISTRO, para o artigo 1 (o próprio tamanho do desenho), e por PEÇA:
-#: a chave é a aba e o começo do `title` da peça cortada. Só ela sai da conta — o
-#: resto da aba continua medido —, e no dia em que ela couber o artigo 1 reprova
-#: até a linha sair daqui, que é o `strict` desta tabela.
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
 }
 
-#: O MESMO REGISTRO, para o artigo 4 (os campos de escolha). Tabela separada
-#: porque o defeito é outro e a cura cai noutro lugar do gerador.
 ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
     ("03-gatilhos.html", "estreita"): (
         "DEFEITO VIVO — três campos da aba Gatilhos escondem a escolha a 940 px, "
@@ -572,11 +396,7 @@ ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
 
 
 def _casos(esperado: dict[tuple[str, str], str] | None = None) -> list[Any]:
-    """Os trinta casos (aba x tamanho), com a marca vinda da TABELA.
-
-    A marca nunca é digitada solta no meio de um teste: quem quiser saber o que
-    está esperado-vermelho lê uma tabela só, com a razão e a cura ao lado.
-    """
+    """Os trinta casos (aba x tamanho), com a marca vinda da TABELA."""
     return [
         pytest.param(
             aba, tamanho.rotulo,
@@ -595,22 +415,12 @@ def _casos(esperado: dict[tuple[str, str], str] | None = None) -> list[Any]:
 CASOS = _casos(ESPERADO_VERMELHO)
 CASOS_SELECT = _casos(ESPERADO_VERMELHO_SELECT)
 
-#: Os mesmos trinta, sem marca nenhuma — para os artigos que hoje passam em
-#: todos. Marcar um caso verde de `xfail` o faria reprovar por XPASS.
 CASOS_SEM_MARCA = _casos()
 
 
-# ---------------------------------------------------------------------------
-# O PISO — sem ele todos os artigos abaixo passam por vacuidade
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS_SEM_MARCA)
 def test_a_pagina_abriu_inteira_e_no_tamanho_pedido(medido, aba, rotulo):
-    """Zero é resposta legítima do DOM — e por isso tem de ser proibida aqui.
-
-    Uma página que não carregou não corta nada, e a régua diria VERDE. Foi assim
-    que a `regua_de_tela` deu verde sobre dois botões mortos em 29/08. O piso
-    são as três faixas, a folha do produto posta, e o viewport que se pediu.
-    """
+    """Zero é resposta legítima do DOM — e por isso tem de ser proibida aqui."""
     lido = medido[(aba, rotulo)]
     tamanho = next(t for t in TAMANHOS if t.rotulo == rotulo)
     assert lido["viewport"] == {"larg": tamanho.largura, "alt": tamanho.altura}, (
@@ -629,12 +439,7 @@ def test_a_pagina_abriu_inteira_e_no_tamanho_pedido(medido, aba, rotulo):
 
 
 def test_os_campos_de_escolha_existem_para_serem_medidos(medido):
-    """A soma dos `<select>` das dez abas, no tamanho do desenho.
-
-    O artigo 4 mede campos de escolha; se um dia não houver nenhum para medir
-    ele fica verde sem tocar em nada. Este caso é o piso dele — e não crava o
-    número: exige que existam, e nomeia quantos achou.
-    """
+    """A soma dos `<select>` das dez abas, no tamanho do desenho."""
     por_aba = {aba: medido[(aba, "desenho")]["n_selects"] for aba in ABAS}
     total = sum(por_aba.values())
     assert total > 0, (
@@ -642,18 +447,9 @@ def test_os_campos_de_escolha_existem_para_serem_medidos(medido):
         f"Por aba: {por_aba}")
 
 
-# ---------------------------------------------------------------------------
-# ARTIGO 1 — no tamanho do desenho, o desenho cabe
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("aba", ABAS)
 def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
-    """A LINHA DE BASE, e ela é mais dura que o artigo 2: nem reticência.
-
-    No tamanho para o qual o desenho foi feito não existe corte aceitável —
-    reticências aqui seriam texto que não coube onde ele foi desenhado para
-    caber. É esta régua que separa *quebrou ao encolher* de *já estava quebrado*,
-    e é a metade verde da mordida do tamanho.
-    """
+    """A LINHA DE BASE, e ela é mais dura que o artigo 2: nem reticência."""
     lido = medido[(aba, "desenho")]
     cortados = list(lido["cortados"])
     for (pagina, comeco), razao in CORTE_CONHECIDO_NO_DESENHO.items():
@@ -675,18 +471,9 @@ def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
         f"do desenho{_a_letra(lido)}:\n" + _contar_selects(lido["selects_apertados"]))
 
 
-# ---------------------------------------------------------------------------
-# ARTIGO 2 — o que não cabe ou rola, ou avisa. Nunca some.
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS)
 def test_nada_some_sem_afordancia(medido, aba, rotulo):
-    """O CORAÇÃO DA RÉGUA. Rolar é aceitável; reticências com `title` também.
-
-    Cortar em silêncio não: quem olha não vê que falta nada, e não há gesto que
-    devolva o que foi cortado. `.janela` tem `overflow:hidden`
-    (`interface/topo.html:149`) — dentro dela, o que passa da caixa não corta
-    nem rola: **some**.
-    """
+    """O CORAÇÃO DA RÉGUA. Rolar é aceitável; reticências com `title` também."""
     lido = medido[(aba, rotulo)]
     fora = engolidos(lido)
     tamanho = next(t for t in TAMANHOS if t.rotulo == rotulo)
@@ -696,24 +483,9 @@ def test_nada_some_sem_afordancia(medido, aba, rotulo):
         f"frase num `title`{_a_letra(lido)}:\n" + _contar(fora))
 
 
-# ---------------------------------------------------------------------------
-# ARTIGO 4 — o campo de escolha continua dizendo o que foi escolhido
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS_SELECT)
 def test_o_select_estreito_nao_esconde_o_valor_escolhido(medido, aba, rotulo):
-    """O BURACO QUE A GEOMETRIA NÃO VÊ, e ele custou uma foto para aparecer.
-
-    Um `<option>` mede **0x0** no DOM: quem pinta o texto da escolha é o
-    controle de formulário, e nenhuma conta de caixa o alcança. Foi assim que a
-    aba Navegação passou verde pelo artigo 2 com *"Sobe um degrau no Modo de
-    conexão"* aparecendo como *"…Modo de cone"* na foto de 940 px.
-
-    A medida aqui é outra: a largura que o texto escolhido PRECISA, num espelho
-    com a fonte computada do próprio `<select>`, contra a caixa de conteúdo dele.
-
-    São 36 campos de escolha nas dez abas, e no tamanho do desenho **nenhum**
-    aperta — o que faz deste um defeito de janela estreita, e não de desenho.
-    """
+    """O BURACO QUE A GEOMETRIA NÃO VÊ, e ele custou uma foto para aparecer."""
     lido = medido[(aba, rotulo)]
     mudos = selects_mudos(lido)
     tamanho = next(t for t in TAMANHOS if t.rotulo == rotulo)
@@ -723,18 +495,9 @@ def test_o_select_estreito_nao_esconde_o_valor_escolhido(medido, aba, rotulo):
         f"`title` não o devolve{_a_letra(lido)}:\n" + _contar_selects(mudos))
 
 
-# ---------------------------------------------------------------------------
-# ARTIGO 3 — a janela inteira continua alcançável
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS_SEM_MARCA)
 def test_as_tres_faixas_cabem_dentro_da_janela(medido, aba, rotulo):
-    """`.tira`, `.miolo` e `.rodape` dentro da `.janela`, que não rola nada.
-
-    O rodapé é a barra que DECIDE (Aplicar, Guardar, Importar, Exportar). Ele
-    ficar meio pixel fora da `.janela` é a diferença entre um botão que se clica
-    e um botão que não existe — e a `.janela` não tem barra de rolagem para
-    devolvê-lo.
-    """
+    """`.tira`, `.miolo` e `.rodape` dentro da `.janela`, que não rola nada."""
     lido = medido[(aba, rotulo)]
     j = lido["janela"]
     fora = [
@@ -751,13 +514,7 @@ def test_as_tres_faixas_cabem_dentro_da_janela(medido, aba, rotulo):
 
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS_SEM_MARCA)
 def test_o_que_fica_fora_da_tela_se_alcanca_rolando(medido, aba, rotulo):
-    """Janela maior que a tela é ACEITÁVEL — desde que o documento role.
-
-    É o caso `baixa`: a `.janela` tem altura fixa (777 px), então numa tela de
-    600 ela passa 193 px da dobra e o documento rola 209. Rolar é a afordância
-    legítima. O que este teste proíbe é a outra saída — ficar fora da tela **e**
-    não haver rolagem, que é o rodapé inalcançável.
-    """
+    """Janela maior que a tela é ACEITÁVEL — desde que o documento role."""
     lido = medido[(aba, rotulo)]
     j, vp, rola = lido["janela"], lido["viewport"], lido["documento"]
     queixas = []
@@ -772,25 +529,11 @@ def test_o_que_fica_fora_da_tela_se_alcanca_rolando(medido, aba, rotulo):
     assert not queixas, f"{aba} em janela {rotulo}: " + " · ".join(queixas)
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA DA AFORDÂNCIA — a régua tem de sentir o `title` sair
-# ---------------------------------------------------------------------------
-#: O ALVO DA MORDIDA. A aba Sistema é a única das dez em que o artigo 2 SALVA
-#: alguma coisa: a 940 px ela corta doze peças e quatro passam porque o
-#: `.est .val` guarda a frase inteira num `title`.
 ABA_DA_MORDIDA = "09-sistema.html"
 
 
 def test_a_mordida_da_afordancia_sem_o_title_o_corte_vira_sumico(tmp_path):
-    """ARRANCA A CURA: sem o `title`, o que hoje passa cai para os engolidos.
-
-    Copia a aba Sistema para um diretório temporário, troca todo ``title=`` por
-    um atributo inerte e mede de novo, na MESMA janela de 940 px. Se a régua não
-    sentir, ela não está lendo o `title` que diz ler — e estaria dando verde
-    sobre a aba inteira sem ninguém ver.
-
-    A cópia é fora da bancada de propósito: a bancada é o arquivo DELA.
-    """
+    """ARRANCA A CURA: sem o `title`, o que hoje passa cai para os engolidos."""
     inteira = medir(TAMANHOS[1], (ABA_DA_MORDIDA,))[ABA_DA_MORDIDA]
     salvos = [c for c in inteira["cortados"] if tem_afordancia(c)]
     assert salvos, (

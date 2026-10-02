@@ -47,20 +47,14 @@ class TestConnectResiliente:
         with patch.object(
             PyDualSenseController, "_enumerate_device_keys", return_value=[]
         ):
-            inst.connect()  # não deve levantar
+            inst.connect()
 
         assert inst._offline is True
         assert inst._ds is None
         assert inst.is_connected() is False
 
     def test_connect_engole_excecao_de_um_device_e_segue(self) -> None:
-        """LIGHTBAR-BT-ADOPT-01 (complemento): erro de UM device (ex.: permissão
-        hidraw) NÃO aborta o connect() — é logado e o tick segue até o fim
-        (`_refresh_sysfs_leds`/reassert). Antes, a exceção propagava e pulava o
-        refresh em TODO tick; com `_suppress_leds` nascendo True, handles JÁ
-        abertos ficariam suprimidos para sempre (lightbar/player inaplicáveis).
-        O retry natural continua: o device fica fora de `_handles` e o próximo
-        tick do reconnect_loop tenta abrir de novo."""
+        """LIGHTBAR-BT-ADOPT-01 (complemento): erro de UM device (ex.: permissão"""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
 
         with patch.object(
@@ -72,10 +66,8 @@ class TestConnectResiliente:
             "_open_one",
             side_effect=RuntimeError("hidraw permission denied"),
         ):
-            inst.connect()  # não deve levantar
+            inst.connect()
 
-        # O device que falhou não entrou; sem nenhum handle, offline é marcado
-        # ao FIM do tick (o connect chegou ao fim em vez de abortar no meio).
         assert inst._offline is True
         assert inst._ds is None
 
@@ -85,7 +77,6 @@ class TestReadStateOffline:
         """Controller offline → snapshot neutro, sem exceção."""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
         inst._offline = True
-        # _ds permanece None — read_state deve aceitar.
 
         state = inst.read_state()
         assert state.connected is False
@@ -105,9 +96,7 @@ class TestSettersOffline:
         from hefesto_dualsense4unix.core.controller import TriggerEffect
 
         inst = PyDualSenseController(evdev_reader=_null_evdev())
-        # sem handles → caminho offline.
 
-        # Não deve levantar nem chamar nada do pydualsense.
         inst.set_trigger("left", TriggerEffect(mode=0))
         inst.set_trigger("right", TriggerEffect(mode=0))
         inst.set_led((10, 20, 30))
@@ -115,17 +104,14 @@ class TestSettersOffline:
         inst.set_mic_led(True)
         inst.set_player_leds((True, False, True, False, True))
 
-        # get_battery offline retorna 0.
         assert inst.get_battery() == 0
 
 
 class TestHotReconnect:
     def test_connect_apos_offline_recupera_quando_device_aparece(self) -> None:
-        """Sequência: 1ª connect → sem device (offline);
-        2ª connect → device aparece, _offline limpa e _ds populado."""
+        """Sequência: 1ª connect → sem device (offline);"""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
 
-        # 1ª chamada — sem device.
         with patch.object(
             PyDualSenseController, "_enumerate_device_keys", return_value=[]
         ):
@@ -133,7 +119,6 @@ class TestHotReconnect:
         assert inst._offline is True
         assert inst._ds is None
 
-        # 2ª chamada — device aparece. Stub que _detect_transport aceita.
         present = _FakePydualsense()
         present.conType = type("CT", (), {"name": "USB"})()  # type: ignore[attr-defined]
 
@@ -150,19 +135,17 @@ class TestHotReconnect:
         assert inst._transport == "usb"
 
     def test_connect_reativa_evdev_no_hotplug_pos_boot_offline(self) -> None:
-        """BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01: daemon que bootou offline (evdev
-        path=None) re-localiza o evdev quando o controle conecta, em vez de
-        cair no HID-raw cru para sempre (sintoma: sticks ~253 em repouso)."""
+        """BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01: daemon que bootou offline (evdev"""
         from pathlib import Path
         from unittest.mock import MagicMock
 
         reader = EvdevReader(device_path=None)
-        reader._device_path = None  # boot offline: nenhum evdev encontrado
+        reader._device_path = None
         reader._find_device = MagicMock(  # type: ignore[method-assign]
             return_value=Path("/dev/input/event2")
         )
         reader.start = MagicMock(return_value=True)  # type: ignore[method-assign]
-        assert reader.is_available() is False  # antes do connect: sem evdev
+        assert reader.is_available() is False
 
         inst = PyDualSenseController(evdev_reader=reader)
         present = _FakePydualsense()
@@ -180,8 +163,7 @@ class TestHotReconnect:
         reader.start.assert_called_once()
 
     def test_connect_idempotente_quando_ja_conectado(self) -> None:
-        """connect() para um controle já presente não o reabre (não chama
-        `_open_one`) — apenas reconcilia."""
+        """connect() para um controle já presente não o reabre (não chama"""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
         present = _FakePydualsense()
         inst._handles = {"mac1": present}  # type: ignore[dict-item]

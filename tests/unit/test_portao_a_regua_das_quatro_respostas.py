@@ -1,29 +1,4 @@
-"""A régua CABO · BT · PERFIL · CONTROLE morde — CABO-BT-PERFIL-CONTROLE-01.
-
-**A palavra dela, 08/09/2026:** *"tudo funcionando por cabo ou bt ou tudo
-funcionando via perfil e dentro de cada um um setting pra cada controle é assim
-que eu queria que sua revisao nos auxiliasse."*  (noqa-acento: citação dela)
-
-O portão é `scripts/check_cabo_bt_perfil_controle.py`, e ele tem TRÊS mordidas.
-Cada uma nasceu de um jeito real de a tabela envelhecer:
-
-1. **feature nova sem as quatro respostas** — o caso óbvio;
-2. **dívida declarada que já fechou** — a declaração vira propaganda no dia
-   seguinte à cura, e é a régua `divida-fechada` do `check_paridade_gtk_html`;
-3. **classificação que a tela já não oferece** — a lista de features se LÊ, mas
-   a razão se ESCREVE, e escrita envelhece.
-
-**E UMA QUARTA COISA SE TRAVA AQUI, que não é mordida e sim leitura:** `parcial`
-é o TERCEIRO valor de `*_aciona` no mapa e quer dizer *aciona, com a dívida na
-ressalva*. Lê-lo como `não` reprovou quatro features vivas em 09/09/2026 — o
-microfone, o mudo e as cinco lâmpadas de jogador pelo rádio.
-
-**O VALOR SEM ACENTO VEM DA RÉGUA, e não é digitado aqui:** `regua.NAO` é o
-dono, declarado uma vez com a isenção do portão de acentuação. Digitá-lo em
-cada `assert` seria a segunda cópia de um dado — e é o que dois agentes
-independentes fizeram em 09/09, com redações diferentes, antes de o dono
-existir.
-"""
+"""A régua CABO · BT · PERFIL · CONTROLE morde — CABO-BT-PERFIL-CONTROLE-01."""
 from __future__ import annotations
 
 import importlib.util
@@ -49,25 +24,7 @@ def regua():
 
 
 def test_a_tela_de_hoje_passa(regua, capsys):
-    """O estado de agora é VERDE — e toda dívida aberta sai NOMEADA.
-
-    ATÉ 09/09/2026 esta régua exigia aqui o nome `volume` na saída: era a única
-    dívida declarada, e ela tinha de sair NOMEADA em vez de em silêncio. A
-    dívida fechou (MIC-VOLUME-02: a bancada dela mediu o `common[6]`
-    obedecendo, ela mandou ligar o byte, e o gesto e o perfil o escrevem por
-    `uniq`), e de 09 a 20/09 o que se cobrou foi o CONTADOR EM ZERO.
-
-    **ZERO DEIXOU DE SER A PROPRIEDADE EM 20/09/2026**, quando o `ganho-mic`
-    abriu a segunda dívida de verdade desta casa. E a distinção é o ponto: o
-    contador em zero não era a regra — era o ESTADO daquele dia, e cravá-lo
-    aqui fazia esta régua reprovar a próxima dívida HONESTA, declarada com
-    sprint dona, como se fosse defeito. *Uma régua que proíbe o inventário de
-    crescer não mede qualidade: mede a data em que foi escrita.*
-
-    O que se cobra agora é o que sempre foi a propriedade: o portão fica
-    VERDE, e **cada dívida aberta sai com o nome e a dona na saída** — que é o
-    que impede uma dívida de existir em silêncio.
-    """
+    """O estado de agora é VERDE — e toda dívida aberta sai NOMEADA."""
     assert regua.main() == 0
     saida = capsys.readouterr().out
     assert "VERDE" in saida
@@ -82,26 +39,12 @@ def test_a_tela_de_hoje_passa(regua, capsys):
 
 
 def test_divida_aberta_sai_nomeada_e_nao_reprova(regua, monkeypatch, capsys):
-    """A dívida DECLARADA fica verde, mas nunca fica calada.
-
-    Nasceu em 12/09/2026, quando a última dívida de verdade fechou: sem ela, a
-    propriedade que o `test_a_tela_de_hoje_passa` cobrava parou de ter sujeito, e
-    uma propriedade sem sujeito é uma régua desligada em silêncio.
-
-    A dívida de mentira é construída pelo caminho real e não por monkeypatch da
-    saída: o gesto `mudo` passa a responder por uma chave do mapa que NÃO
-    aciona, e é declarado. O portão tem de ficar verde E dizer o nome.
-    """
+    """A dívida DECLARADA fica verde, mas nunca fica calada."""
     monkeypatch.setitem(regua.DO_APARELHO, "mudo", ("luz.lightbar.brilho",))
     monkeypatch.setitem(
         regua.A_DIVIDA_CONHECIDA, "mudo",
         ("2026-01-01-DE-MENTIRA.md", "dívida de mentira, só para provar que a "
                                      "declarada sai nomeada"))
-    # O CONTADOR É O DE HOJE MAIS UMA, e não um número cravado: desde
-    # 20/09/2026 existe dívida de VERDADE declarada (o `ganho-mic`), e cravar
-    # «1» aqui faria este teste medir o inventário do dia em que foi escrito
-    # em vez da propriedade que ele existe para guardar — a mesma cicatriz que
-    # o `test_a_tela_de_hoje_passa` acabou de pagar, na linha de cima.
     quantas = len(regua.A_DIVIDA_CONHECIDA)
     assert regua.main() == 0
     saida = capsys.readouterr().out
@@ -147,12 +90,7 @@ def test_morde_classificacao_que_a_tela_nao_oferece_mais(regua, monkeypatch,
 
 
 def test_parcial_nao_e_nao(regua):
-    """`parcial` é `com ressalva` — nunca a resposta negativa.
-
-    A linha `audio.microfone@dualsense` responde `radio_aciona=parcial`, e o
-    microfone FUNCIONA por rádio na mesa dela. Ler o `parcial` como negativa
-    foi o defeito de 09/09/2026, e é ele que este teste impede de voltar.
-    """
+    """`parcial` é `com ressalva` — nunca a resposta negativa."""
     linha = {"controle": "dualsense", "radio_aciona": "parcial",
              "radio_ressalva": "a dívida escrita"}
     assert regua._resposta_de_transporte([linha], "radio") == "com ressalva"
@@ -164,11 +102,6 @@ def test_o_gesto_responde_pela_pior_das_chaves(regua):
     assert regua._pior(["sim", regua.NAO]) == regua.NAO
     assert regua._pior(["sim", "com ressalva"]) == "com ressalva"
     assert regua._pior([]) == "sem linha"
-    # o `volume` da 02 é o caso vivo de DUAS chaves num gesto. Até 09/09/2026 ele
-    # era também o caso vivo da PIOR delas: o alto-falante respondia `sim` e o
-    # microfone a negativa. A MIC-VOLUME-02 fechou essa metade (o `common[6]`
-    # passou a ser escrito), então hoje o gesto responde inteiro — o que se trava
-    # aqui é o PAR, que é o que faz a régua olhar as duas.
     assert regua.DO_APARELHO["volume"] == ("audio.microfone.volume",
                                            "audio.alto_falante.volume")
 
@@ -184,12 +117,7 @@ def test_so_o_dualsense_responde(regua):
 
 
 def test_morde_o_campo_arrancado_do_esquema(regua, monkeypatch, capsys):
-    """§3 da sprint: tirar `speaker` de `ControllerOverrides` reprova o `rota`.
-
-    A pergunta 4 dela — *"e, dentro do perfil, é por controle?"* — é lida do
-    FONTE do `schema.py`. Sem esta mordida, arrancar o campo deixaria a tabela
-    dizendo `sim` sobre um lugar que já não existe.
-    """
+    """§3 da sprint: tirar `speaker` de `ControllerOverrides` reprova o `rota`."""
     real = regua._campos_do_esquema
 
     def sem_o_speaker(classe: str, *fonte: object) -> set[str]:
@@ -221,13 +149,7 @@ def test_morde_o_transporte_rebaixado_no_mapa(regua, monkeypatch, capsys):
 
 
 def test_o_mudo_do_microfone_responde_no_controle(regua):
-    """O-MUDO-E-DO-CONTROLE-01 (28/09/2026): o mudo não fica no perfil.
-
-    A resposta dela (a 9 da noite de 27/09) é que o mudo do microfone é do
-    controle e vale em todo jogo: ele mora no `maquina.json`. A terceira
-    pergunta responde «no controle», e a quarta, «sim» — guardado por
-    controle, fora do perfil de propósito.
-    """
+    """O-MUDO-E-DO-CONTROLE-01 (28/09/2026): o mudo não fica no perfil."""
     linhas = {linha[0]: linha for linha in regua.tabela()}
     for gesto in ("mudo", "custo-mic"):
         _g, _abas, _cabo, _radio, perfil, controle, _falta = linhas[gesto]
@@ -238,11 +160,7 @@ def test_o_mudo_do_microfone_responde_no_controle(regua):
 
 
 def test_morde_o_mudo_arrancado_do_controle(regua, monkeypatch, capsys):
-    """Tirar `microfone_mudo` de `ControleDeclarado` reprova o `mudo` e o `custo-mic`.
-
-    O campo é LIDO do fonte do `utils/maquina.py`: sem esta mordida, arrancá-lo
-    deixaria a tabela dizendo «no controle» sobre um lugar que não existe.
-    """
+    """Tirar `microfone_mudo` de `ControleDeclarado` reprova o `mudo` e o `custo-mic`."""
     real = regua._campos_do_esquema
 
     def sem_o_mudo(classe: str, *fonte: object) -> set[str]:

@@ -91,55 +91,19 @@ logger = get_logger(__name__)
 #: Raiz dos nós de bateria do kernel (driver ``hid-playstation``).
 RAIZ_POWER_SUPPLY = Path("/sys/class/power_supply")
 
-#: Prefixo do nó de UM controle PlayStation. O sufixo é o endereço com ``:``.
 PREFIXO_NO_KERNEL = "ps-controller-battery-"
 
-#: Prefixo do MAC FORJADO dos nossos gamepads virtuais, sem separador.
-#:
-#: BATERIA-PARADA-01 (B2). **NÃO É BATERIA, E O NÚMERO DELE NUNCA MUDA.**
-#: Medido em 26/08/2026 e reconferido em 06/09/2026 na bancada dela: o sysfs
-#: tinha QUATRO nós de ``ps-controller-battery-*`` para DOIS controles, e dois
-#: eram nossos — os vpads do ``integrations/uhid_gamepad.player_mac()``, cujo
-#: nó diz ``Charging`` para sempre porque é valor de inicialização do uhid, não
-#: medição de aparelho nenhum. Quem casar pelo nó errado lê um número que
-#: **nunca muda** e conclui que a bateria congelou.
-#:
-#: O valor é ESPELHADO de propósito, como o ``VPAD_UNIQ_PREFIX`` do
-#: ``broker/hidraw_broker.py`` e o ``_VPAD_UNIQ_PREFIX`` do
-#: ``core/backend_pydualsense.py`` — este módulo é leve por contrato (stdlib +
-#: logger) e roda no tique lento do daemon. **O que impede o espelho de
-#: divergir em silêncio é o portão**
-#: ``tests/unit/test_a_bateria_nao_le_o_no_do_vpad.py``, que confronta as três
-#: cópias com o ``player_mac(1)`` que as forja: no dia em que o prefixo mudar,
-#: ele NOMEIA em vez de a varredura voltar a ler o nó errado calada.
-#:
-#: A VARREDURA DESTA CASA É :meth:`DiarioDaBateria.observar` + :func:`ler_no_do_kernel`,
-#: e é onde a exclusão mora. Uma função pública que ENUMERASSE
-#: ``/sys/class/power_supply`` chegou a existir aqui em 06/09 e foi apagada
-#: antes do commit: nada em produção a chamava, e o
 #: ``portao_a_casa_sabe_e_o_produto_nao_faz`` a acusou pelo nome. Ela tem lugar
-#: no dia em que alguém fechar `controles_sem_driver` — um controle cuja probe
-#: abortou não tem handle e some da lista, mas o nó de bateria dele fica —,
-#: e nesse dia ela nasce COM o chamador.
 PREFIXO_DO_VPAD = "02fe"
 
-#: Intervalo entre sondas (segundos). Duas leituras de sysfs por sonda.
 INTERVALO_SONDA_S = 30.0
 
-#: Intervalo da âncora periódica (segundos) — a linha que sai mesmo sem mudança
-#: nenhuma, para que "curva reta" não se confunda com "instrumento parado".
 INTERVALO_ANCORA_S = 1800.0
 
-#: Fronteiras das faixas de carga, em ordem crescente. A faixa de um valor é a
-#: MAIOR fronteira menor ou igual a ele. Passo de 5 abaixo de 20% (é lá que a
-#: curva decide, e os limiares do protocolo são 10% e 40%), de 10 acima.
 FAIXAS: tuple[int, ...] = (0, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100)
 
-#: Janela em que uma segunda queda SEM leitura nenhuma cala, para não desmentir
-#: a linha boa que a primeira acabou de escrever. Ver `registrar_queda`.
 JANELA_DEDUP_QUEDA_S = 60.0
 
-#: O que sai no lugar do endereço quando não há endereço reconhecível.
 SEM_ENDERECO = "desconhecido"
 
 
@@ -157,16 +121,7 @@ def faixa_de(pct: int | None) -> int | None:
 
 
 def mascarar_endereco(valor: str | None) -> str:
-    """Endereço na máscara da casa: ``OUI:00:00:NN`` (octetos 4 e 5 zerados).
-
-    Quem mascara é o dono, ``core/formas_do_endereco.mascarar_endereco``: a
-    colada, que é como o endereço sai do ``controllers.json`` e do journal, e a
-    separada, em qualquer caixa. O que não é um endereço vira
-    :data:`SEM_ENDERECO`: é preferível uma linha sem identidade a uma linha com
-    um pseudo-endereço inventado a partir de um path — e por isso o dono
-    DESCARTA o valor com um caractere fora da forma, em vez de peneirar os
-    dígitos hex de qualquer texto, como esta função fazia até 28/09/2026.
-    """
+    """Endereço na máscara da casa: ``OUI:00:00:NN`` (octetos 4 e 5 zerados)."""
     mascarado = _formas.mascarar_endereco(valor)
     return SEM_ENDERECO if mascarado is None else mascarado
 
@@ -180,26 +135,10 @@ def _endereco_com_dois_pontos(uniq: str) -> str | None:
 
 
 def e_no_do_vpad(valor: str | None) -> bool:
-    """True se este endereço é de um gamepad VIRTUAL nosso (:data:`PREFIXO_DO_VPAD`).
-
-    BATERIA-PARADA-01 (B2). Aceita as duas grafias que circulam — a colada
-    (``02fe00000001``) e a com separador (``02:fe:00:00:00:01``) — e também o
-    nome inteiro do nó (``ps-controller-battery-02:fe:…``), porque a varredura
-    do sysfs entrega o nome e o journal entrega o ``uniq``.
-
-    Endereço irreconhecível devolve ``False``: a dúvida aqui erra para *"pode
-    ser controle de verdade"*, e uma leitura a mais custa dois ``read`` de
-    sysfs; o erro contrário — chamar controle dela de vpad — o apagaria da
-    curva da bateria sem deixar rastro.
-    """
+    """True se este endereço é de um gamepad VIRTUAL nosso (:data:`PREFIXO_DO_VPAD`)."""
     if not valor:
         return False
     digitos = "".join(ch for ch in valor.lower() if ch in "0123456789abcdef")
-    # A comparação é pelos ÚLTIMOS 12 dígitos, e isso não é zelo: o nome do nó
-    # é `ps-controller-battery-<mac>`, e o próprio prefixo tem letras a-f
-    # ("controller" dá `c`,`e`; "battery" dá `b`,`a`,`e`). Filtrar hex do nome
-    # inteiro e olhar o COMEÇO leria "cebae…" e nunca casaria; o endereço mora
-    # no fim.
     if len(digitos) < 12:
         return False
     return digitos[-12:].startswith(PREFIXO_DO_VPAD)
@@ -261,23 +200,13 @@ class _Leitura:
     status: str | None
     faixa: int | None
     fonte: str
-    #: Instante (mesmo relógio do ``observar``) em que a amostra foi lida.
     vista_em: float
-    #: Instante da última LINHA escrita para este controle.
     logada_em: float
-    #: O estado de carga que o HANDLE leu (`backend_pydualsense.ESTADO_DE_CARGA`),
-    #: a régua irmã do ``status`` do kernel. BATERIA-PARADA-01.
     estado_handle: str | None = None
 
 
 class DiarioDaBateria:
-    """Decide quando a carga vira linha de journal — e com que identidade.
-
-    Sem estado global: uma instância por daemon, criada sob demanda por
-    :func:`diario_da_bateria`. Os relógios são passados de fora (o poll loop já
-    tem o ``loop.time()`` do tique), o que torna a classe testável sem esperar
-    meia hora de âncora.
-    """
+    """Decide quando a carga vira linha de journal — e com que identidade."""
 
     def __init__(
         self,
@@ -293,21 +222,13 @@ class DiarioDaBateria:
         self._store = store
         self._ultimas: dict[str, _Leitura] = {}
         self._proxima_sonda: float = 0.0
-        #: Instante da última linha de queda escrita — só para a dedup da
-        #: queda dupla (ver `registrar_queda`). None = nenhuma ainda.
         self._ultima_queda_em: float | None = None
 
-    # -- escrita -------------------------------------------------------
 
     def observar(
         self, controles: Iterable[Mapping[str, Any]], agora: float
     ) -> int:
-        """Sonda os controles conectados e escreve as linhas que couberem.
-
-        ``controles`` é a saída de ``describe_controllers()`` do backend (os
-        mesmos getattrs baratos do tique lento). Devolve quantas linhas foram
-        escritas — só para teste e diagnóstico; ninguém gateia por isto.
-        """
+        """Sonda os controles conectados e escreve as linhas que couberem."""
         if agora < self._proxima_sonda:
             return 0
         self._proxima_sonda = agora + self._intervalo_sonda
@@ -319,47 +240,20 @@ class DiarioDaBateria:
                 continue
             uniq = info.get("uniq")
             if not isinstance(uniq, str) or not uniq:
-                # Sem endereço não há nó do kernel nem identidade estável entre
-                # sondas — uma linha aqui não seria atribuível a controle nenhum.
                 continue
             if e_no_do_vpad(uniq):
-                # B2: o gamepad VIRTUAL não tem bateria. Se um dia ele entrar
-                # nesta lista, a curva dele seria uma reta em 100% `Charging` —
-                # e a reta se lê como "o instrumento parou de olhar".
                 continue
             vistos.add(uniq)
             linhas += self._observar_um(
                 uniq, info.get("battery_pct"), info.get("battery_state"), agora
             )
 
-        # Um controle que some do backend com outros ainda de pé NÃO gera
-        # `probe_offline` (o `is_connected()` é um any() sobre os handles) —
-        # é a queda que hoje não deixa rastro nenhum. Aqui ela deixa.
         for uniq in sorted(set(self._ultimas) - vistos):
             linhas += self._escrever_queda(uniq, self._ultimas.pop(uniq), "sumiu_do_backend", agora)
         return linhas
 
     def registrar_queda(self, motivo: str, agora: float) -> int:
-        """Escreve a última capacidade conhecida de cada controle na queda.
-
-        Tenta uma leitura FRESCA do nó do kernel antes de cair no cache: nas
-        quedas de link o nó costuma sobreviver alguns instantes ao handle, e
-        essa amostra vale mais que a de até 30 s atrás. ``idade_s`` diz de qual
-        das duas se trata — 0.0 é fresca.
-
-        Sem nenhuma leitura acumulada (queda antes da primeira sonda), escreve
-        **mesmo assim** uma linha sem carga: *"caiu e ninguém tinha medido"* é
-        informação, e o silêncio aqui é justamente o defeito que esta entrega
-        cura.
-
-        A exceção é a queda DUPLA, e ela é real: um controle que some de vez
-        passa primeiro pelo `poll_read_failed` (o poll loop perdendo a leitura)
-        e, segundos depois, pelo `probe_offline` (o probe confirmando). A
-        segunda chamada já não tem leitura nenhuma — o cache foi consumido pela
-        primeira — e escreveria *"ninguém tinha medido"* logo abaixo da linha
-        boa, dizendo o contrário dela. Dentro de
-        :data:`JANELA_DEDUP_QUEDA_S` a segunda cala.
-        """
+        """Escreve a última capacidade conhecida de cada controle na queda."""
         if not self._ultimas:
             if (
                 self._ultima_queda_em is not None
@@ -387,7 +281,6 @@ class DiarioDaBateria:
         self._ultima_queda_em = agora
         return linhas
 
-    # -- internos ------------------------------------------------------
 
     def _observar_um(
         self,
@@ -400,7 +293,6 @@ class DiarioDaBateria:
         estado = estado_handle if isinstance(estado_handle, str) and estado_handle else None
         pct_kernel, status = ler_no_do_kernel(uniq, raiz=self._raiz)
         if pct_kernel is None and pct_handle is None:
-            # Nada medido por nenhuma das duas réguas: não há o que afirmar.
             return 0
         fonte = "kernel" if pct_kernel is not None else "handle"
         pct = pct_kernel if pct_kernel is not None else pct_handle
@@ -429,12 +321,6 @@ class DiarioDaBateria:
             pct_kernel=pct_kernel,
             pct_handle=pct_handle,
             status=status,
-            # BATERIA-PARADA-01: o estado de carga tem DUAS réguas, como o
-            # percentual — `status` é o do kernel (`Charging`/`Full`/…) e
-            # `estado_handle` é o do byte que o handle leu
-            # (`backend_pydualsense.ESTADO_DE_CARGA`). As duas vão juntas, pela
-            # mesma disciplina que já vale para `pct_kernel`/`pct_handle`: se
-            # discordarem, o resultado é sobre o instrumento, não sobre a carga.
             estado_handle=estado,
             faixa=faixa,
             fonte=fonte,
@@ -480,7 +366,7 @@ class DiarioDaBateria:
         if callable(bump):
             try:
                 bump(contador)
-            except Exception:  # observabilidade nunca derruba o poll loop
+            except Exception:
                 logger.debug("bateria_contador_falhou", contador=contador)
 
 

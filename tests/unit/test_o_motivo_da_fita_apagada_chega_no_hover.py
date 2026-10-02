@@ -70,12 +70,7 @@ from hefesto_dualsense4unix.app.actions.config.mixin import (
 
 
 class _HostDaFita:
-    """O mínimo que `set_alvo_inativo` toca: a fita e a moldura do hover.
-
-    Monta a MESMA estrutura que `status_actions._init_controller_target_combo`
-    monta em produção — fita dentro de `EventBox` —, porque é justamente a
-    relação entre os dois que este arquivo cobra.
-    """
+    """O mínimo que `set_alvo_inativo` toca: a fita e a moldura do hover."""
 
     def __init__(self) -> None:
         self._target_strip = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -105,11 +100,7 @@ def test_a_aba_que_nao_le_o_alvo_explica_no_hover() -> None:
 
 
 def test_o_tooltip_mora_em_widget_que_recebe_o_ponteiro() -> None:
-    """A armadilha do GTK3: quem leva o tooltip não pode ser o insensível.
-
-    Esta é a régua que separa "cura ligada" de "cura escrita e nunca ligada" —
-    um tooltip na fita apagada existe como propriedade e não aparece nunca.
-    """
+    """A armadilha do GTK3: quem leva o tooltip não pode ser o insensível."""
     host = _HostDaFita()
     _set_alvo_inativo(host, True, MOTIVO_ALVO_NAO_SE_APLICA)
 
@@ -148,25 +139,7 @@ def test_a_moldura_do_hover_nao_pinta_nada() -> None:
 
 
 def test_os_dois_motivos_falam_a_lingua_da_tela() -> None:
-    """O texto é para ela, não para quem escreveu o código.
-
-    Os dois nasceram em linguagem de dev — *"o seletor de controle do
-    cabeçalho"*, *"o alvo de edição"* — e foram reescritos em 24/08 saindo do
-    léxico que já está na tela ("Ajustes vão para:", "mesa", "controle").
-    Esta régua trava o vocabulário interno de voltar por descuido.
-    """
-    # O SEGUNDO MOTIVO SAIU — 08/09/2026. Esta régua percorria DOIS textos:
-    # este e o `HefestoApp._MOTIVO_ALVO_AINDA_NAO_LIGADO`, um `ClassVar` que
-    # existia para as abas da JANELA (era o default do `_ALVO_POR_ABA`, o mapa
-    # de aba-do-Glade para motivo). A janela saiu do disco por decisão dela
-    # (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`) e levou o mapa e o texto; o
-    # inventário já os julgava SAI-COM-A-JANELA
-    # (`docs/data/o-que-ainda-aponta-para-a-janela.csv:262`, linha 158).
-    #
-    # A REGRA NÃO AFROUXOU — ela só perdeu um sujeito que não existe.
-    # `MOTIVO_ALVO_NAO_SE_APLICA` é motor (`app/actions/config/mixin.py`), é o
-    # que a interface nova usa, e continua proibido de voltar a falar a língua
-    # de quem escreve o código.
+    """O texto é para ela, não para quem escreveu o código."""
     proibidas = ("alvo de edição", "seletor de controle", "_ALVO_POR_ABA", "leitor")
     for texto in (MOTIVO_ALVO_NAO_SE_APLICA,):
         assert texto, "motivo vazio — `set_alvo_inativo(True)` recusaria"

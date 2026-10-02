@@ -66,20 +66,13 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 PERFIL = "Mortal Kombat"
 
 
 class PonteDeMentira:
-    """O daemon que aceita tudo e anota o que lhe pediram.
-
-    Devolve `True` PELADO de propósito: é a forma da ponte antiga, e
-    `_desfecho` a traduz para `(True, "", None)` — corpo `None`, que é
-    "não há o que ler sobre destino". É a montagem em que `_chegou_ao_aparelho`
-    responde pelo `ok`, e é a que separa esta régua da conversa sobre destinos.
-    """
+    """O daemon que aceita tudo e anota o que lhe pediram."""
 
     def __init__(self, aceita: bool = True) -> None:
         self.aceita = aceita
@@ -109,12 +102,7 @@ def pac():
 
 @pytest.fixture(autouse=True)
 def rascunho_limpo():
-    """O `_RASCUNHO` é estado de MÓDULO, e ele atravessa testes.
-
-    Sem esta limpeza, o `ajuste` do caso 4 leria o que o caso 1 aplicou e sairia
-    pela porta do "já está assim" — verde sobre uma gravação que nunca
-    aconteceu.
-    """
+    """O `_RASCUNHO` é estado de MÓDULO, e ele atravessa testes."""
     from pacotes.a03_gatilhos import esquecer_o_rascunho
 
     esquecer_o_rascunho()
@@ -124,12 +112,7 @@ def rascunho_limpo():
 
 @pytest.fixture
 def disco(monkeypatch):
-    """Um disco de mentira com um `Profile` DE VERDADE dentro.
-
-    O esquema é o do produto porque é ele que esta régua mede: um dublê
-    aceitaria um `ControllerOverrides` malformado e o teste ficaria verde sobre
-    um perfil que o disco recusaria.
-    """
+    """Um disco de mentira com um `Profile` DE VERDADE dentro."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -138,9 +121,6 @@ def disco(monkeypatch):
 
     def _grava(prof: Any, **_: Any) -> None:
         gravados.append(prof)
-        # O DISCO DE MENTIRA GUARDA O QUE RECEBEU. Sem isto, o segundo clique
-        # releria o perfil de antes e a régua do "nada mudou" mediria outra
-        # coisa — é a mesma montagem que o teste do `guardar` monta à mão.
         estado[prof.name] = prof
 
     monkeypatch.setattr(loader, "load_profile", lambda n: estado[n], raising=False)
@@ -148,19 +128,12 @@ def disco(monkeypatch):
     return estado, gravados
 
 
-#: O NOME QUE O DAEMON PUBLICA E ESTE LEITOR NÃO ACHA. É o caso da §2 da D-17:
-#: perfil apagado, renomeado ou noutra pasta — e é dele que a frase das duas
-#: metades tem de falar, com o nome dentro.
 SUMIU = "perfil que sumiu"
 
 
 @pytest.fixture
 def perfil_que_nao_abre(monkeypatch):
-    """O disco em que `load_profile` LEVANTA — o ramo que calava até 06/09.
-
-    Devolve a lista de gravações, que tem de continuar vazia: não abriu, não
-    grava. O que mudou na D-17 é só que ele passou a DIZER.
-    """
+    """O disco em que `load_profile` LEVANTA — o ramo que calava até 06/09."""
     from hefesto_dualsense4unix.profiles import loader
 
     def _sem_perfil(nome: str) -> Any:
@@ -191,11 +164,6 @@ def _triggers_gravados(prof: Any) -> Any:
         f"o clique não criou o override deste controle; "
         f"controllers={prof.controllers!r}")
     return override.triggers
-
-
-# ---------------------------------------------------------------------------
-# 1. O CLIQUE GRAVA — os três gestos que são escolha dela
-# ---------------------------------------------------------------------------
 
 
 def test_escolher_um_modo_grava_no_perfil(pac, disco) -> None:
@@ -245,18 +213,8 @@ def test_arrastar_uma_barra_grava_o_ajuste(pac, disco) -> None:
     assert primeiro == 7, f"a barra 0 foi ao disco como {primeiro}"
 
 
-# ---------------------------------------------------------------------------
-# 2. SÓ O LADO QUE ELA TOCOU
-# ---------------------------------------------------------------------------
-
-
 def test_o_clique_num_lado_nao_da_dono_ao_outro(pac, disco) -> None:
-    """O R2 continua herdando a seção GLOBAL do perfil.
-
-    `profiles/manager._controllers_to_specs` lê `model_fields_set` LADO A LADO:
-    um `right` escrito no override vence o global daquele controle. Densificar o
-    lado que ela não tocou apaga, só ali, o gatilho direito do perfil.
-    """
+    """O R2 continua herdando a seção GLOBAL do perfil."""
     _, gravados = disco
     _gesto(pac, "modo")(_ctx(pac),
                         {"uniq": UNIQ, "lado": "e", "valor": "Rigid"},
@@ -286,17 +244,7 @@ def test_o_segundo_lado_soma_e_nao_substitui(pac, disco) -> None:
 
 
 def test_a_secao_global_do_perfil_fica_intacta(pac, disco) -> None:
-    """A aba tem uma coluna POR CONTROLE: gravar no global mudaria o vizinho.
-
-    NASCE-LIGADO-01 (20/09/2026), e são DUAS trocas pela mesma razão. O
-    gatilho passou a nascer `Rigid`, então:
-
-    * o clique escolhe `Pulse` — clicar o próprio nascimento deixaria esta
-      régua cega, porque um global escrito por engano teria o mesmo valor do
-      global intacto e nada distinguiria os dois;
-    * o "intacto" é o NASCIMENTO lido do esquema, e não um `"Off"` digitado.
-      O perfil desta montagem nunca declarou a seção, então é isso que ele tem.
-    """
+    """A aba tem uma coluna POR CONTROLE: gravar no global mudaria o vizinho."""
     from hefesto_dualsense4unix.profiles.schema import TriggersConfig
 
     _, gravados = disco
@@ -309,11 +257,6 @@ def test_a_secao_global_do_perfil_fica_intacta(pac, disco) -> None:
         "quando ela clicasse na coluna do P2")
 
 
-# ---------------------------------------------------------------------------
-# 4, 5 e 6. AS TRÊS GUARDAS
-# ---------------------------------------------------------------------------
-
-
 def test_nada_mudou_nada_grava(pac, disco) -> None:
     """Regravar idêntico troca a data do arquivo e faz o daemon reaplicar."""
     from pacotes.a03_gatilhos import esquecer_o_rascunho
@@ -323,9 +266,6 @@ def test_nada_mudou_nada_grava(pac, disco) -> None:
     _gesto(pac, "modo")(ctx, {"uniq": UNIQ, "lado": "e", "valor": "Rigid"},
                         PonteDeMentira())
     assert len(gravados) == 1
-    # O RASCUNHO É ARRANCADO DE PROPÓSITO: com ele, o segundo clique poderia
-    # nem chegar ao disco por outro caminho, e a régua mediria a memória de
-    # sessão em vez da guarda de gravação.
     esquecer_o_rascunho()
 
     p2 = PonteDeMentira()
@@ -368,29 +308,7 @@ def test_sem_perfil_ativo_aplica_e_nao_levanta(pac, disco) -> None:
 
 def test_perfil_que_nao_abre_aplica_grava_nada_e_nao_levanta(
         pac, perfil_que_nao_abre) -> None:
-    """O NOME PUBLICADO PODE NÃO EXISTIR PARA ESTE LEITOR — achado em 05/09/2026.
-
-    Não é hipótese: quatro réguas desta aba rodam com `active_profile="régua"`,
-    um nome que não está em disco, e a primeira versão desta cura LEVANTOU nas
-    quatro — transformando um gatilho que FOI para o aparelho num erro na tela.
-    Na máquina dela o mesmo caminho existe (perfil apagado, renomeado, outra
-    pasta), e o preço seria pior: o clique deixaria de funcionar.
-
-    **AS TRÊS ASSERÇÕES CONTINUAM VALENDO DEPOIS DA D-17** (06/09/2026), e o
-    nome deste caso mudou porque prometia menos do que ele mede: o gatilho
-    chega ao aparelho, o disco não recebe nada, e o gesto **não levanta**. O que
-    caducou aqui não é nenhuma das três — é o SILÊNCIO que o docstring antigo
-    desta função defendia. A metade que sobrevive é *"não levanta"*, que é a
-    escolha do CANAL; a que morreu é *"não fala"*.
-
-    Quem cobra a FRASE é `test_a_falha_de_abrir_o_perfil_diz_as_duas_metades`,
-    logo abaixo. Aqui a asserção é só a de que ela existe — este caso é sobre o
-    clique continuar funcionando.
-
-    Abrir e não conseguir gravar é outra coisa, e essa também fala, por outro
-    canal — ver `test_a_falha_de_disco_diz_as_duas_metades`. A diferença é entre
-    "não há onde guardar" e "havia onde e não guardei".
-    """
+    """O NOME PUBLICADO PODE NÃO EXISTIR PARA ESTE LEITOR — achado em 05/09/2026."""
     gravados = perfil_que_nao_abre
     p = PonteDeMentira()
     saida = _gesto(pac, "modo")(_ctx(pac, ativo=SUMIU),
@@ -401,11 +319,6 @@ def test_perfil_que_nao_abre_aplica_grava_nada_e_nao_levanta(
     assert saida and "recado" in saida, (
         "o gesto virou erro porque o perfil ativo não abriu — o efeito FOI "
         "para o aparelho e ela está sentindo na mão")
-
-
-# ---------------------------------------------------------------------------
-# 7. AS DUAS METADES — a D-17, 06/09/2026
-# ---------------------------------------------------------------------------
 
 
 def test_a_falha_de_abrir_o_perfil_diz_as_duas_metades(
@@ -501,12 +414,7 @@ def test_os_tres_gestos_que_gravam_carregam_a_frase(
 
 
 def test_a_falha_de_disco_diz_as_duas_metades(pac, monkeypatch) -> None:
-    """Silêncio aqui é a promessa de amanhã que não se cumpre.
-
-    A frase tem de dizer as DUAS coisas: o aparelho recebeu, o perfil não
-    guardou. Só a primeira metade esconderia o defeito; só a segunda faria ela
-    procurar no aparelho um efeito que está lá.
-    """
+    """Silêncio aqui é a promessa de amanhã que não se cumpre."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -525,10 +433,6 @@ def test_a_falha_de_disco_diz_as_duas_metades(pac, monkeypatch) -> None:
                             PonteDeMentira())
     frase = str(erro.value).lower()
     assert "aparelho" in frase and "perfil" in frase, frase
-    # A RAZÃO DE BAIXO SAIU DA FRASE — 11/09/2026, aprovado por ela (A4-034).
-    # `disco cheio` é o texto cru de um `OSError`, e o cartão dela não é lugar de
-    # mensagem de sistema operacional. ELA NÃO SE PERDE: o `raise ... from erro`
-    # a mantém na cadeia, que é onde quem depura a lê — e é isso que se mede.
     assert isinstance(erro.value.__cause__, OSError), (
         "a razão de baixo saiu da frase E da cadeia — assim ela some de vez, e "
         "quem depura fica sem o que aconteceu")

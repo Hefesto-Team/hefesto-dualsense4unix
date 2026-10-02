@@ -37,8 +37,6 @@ DRIVER = RAIZ / "assets" / "dkms" / "hid-playstation" / "hid-playstation.c"
 PAGINA = RAIZ / "docs" / "protocol" / "dualsense-report-de-entrada.md"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
-#: Quanto ocupa cada tipo do driver, em bytes. `dualsense_touch_point` tem
-#: `static_assert(sizeof(...) == 4)` no próprio fonte — não é chute.
 TAMANHOS = {
     "u8": 1,
     "__le16": 2,
@@ -46,9 +44,6 @@ TAMANHOS = {
     "struct dualsense_touch_point": 4,
 }
 
-#: As cinco chaves do tema ENTRADA, e o que cada uma tem de trazer. A lista
-#: vive aqui porque é o contrato do levantamento; o CONTEÚDO das células é lido
-#: do arquivo, nunca redigitado.
 CHAVES_DO_TEMA = (
     "entrada.botoes",
     "entrada.stick",
@@ -63,11 +58,7 @@ def _texto(caminho: Path) -> str:
 
 
 def _campos_do_struct() -> list[tuple[str, int]]:
-    """Devolve [(nome, offset)] lido do `struct dualsense_input_report`.
-
-    Some o tamanho campo a campo, na ordem do fonte. Não há número escrito
-    aqui: se o driver ganhar um campo, os offsets seguintes andam sozinhos.
-    """
+    """Devolve [(nome, offset)] lido do `struct dualsense_input_report`."""
     fonte = _texto(DRIVER)
     corpo = re.search(
         r"struct dualsense_input_report \{(.*?)\n\} __packed;", fonte, re.S
@@ -80,8 +71,6 @@ def _campos_do_struct() -> list[tuple[str, int]]:
         linha = re.sub(r"/\*.*?\*/", "", linha).strip().rstrip(";")
         if not linha or linha.startswith("/*") or linha.startswith("*"):
             continue
-        # O tipo sai da tabela pelo PREFIXO da linha. Nenhum dos quatro é
-        # prefixo de outro, então a primeira casada é a certa.
         tipo = next((t for t in TAMANHOS if linha.startswith(t + " ")), None)
         if tipo is None:
             pytest.fail(f"tipo desconhecido no struct de entrada: {linha!r}")
@@ -125,13 +114,6 @@ def _linhas_do_mapa() -> dict[str, dict[str, str]]:
         }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# A tabela de offsets da página contra o struct do driver
-# ─────────────────────────────────────────────────────────────────────────────
-
-#: Como cada campo do struct aparece na tabela da página. O offset ABSOLUTO do
-#: cabo é `corpo + 1` e o do `0x31` é `corpo + 2` — as duas âncoras estão em
-#: `hid-playstation.c:1581` e `:1592`, e o teste as confere logo abaixo.
 LINHAS_DA_PAGINA = {
     "x": "LX",
     "y": "LY",
@@ -146,16 +128,11 @@ LINHAS_DA_PAGINA = {
 
 @pytest.mark.parametrize("campo,rotulo", sorted(LINHAS_DA_PAGINA.items()))
 def test_a_pagina_publica_o_offset_que_o_driver_calcula(campo: str, rotulo: str) -> None:
-    """Cada campo do corpo tem de aparecer na tabela com os TRÊS offsets certos.
-
-    MORDIDA (03/09/2026): trocar na página o `6 | 7 | 8 | contador de quadro`
-    por `6 | 8 | 8` reprova com o offset absoluto de cabo do `seq_number`.
-    """
+    """Cada campo do corpo tem de aparecer na tabela com os TRÊS offsets certos."""
     offsets = dict(_campos_do_struct())
     assert campo in offsets, f"o driver não declara mais o campo {campo!r}"
     corpo = offsets[campo]
 
-    # os vetores ocupam faixa; a página escreve `7-10`, o escalar escreve `7`
     largura = {"buttons": 4}.get(campo, 1)
     if largura == 1:
         celula_corpo = str(corpo)
@@ -174,10 +151,7 @@ def test_a_pagina_publica_o_offset_que_o_driver_calcula(campo: str, rotulo: str)
 
 
 def test_as_ancoras_de_cabo_e_de_radio_continuam_um_e_dois() -> None:
-    """`data[1]` no cabo e `data[2]` no rádio — é o que faz o `+1` e o `+2` acima.
-
-    MORDIDA: trocar a âncora do rádio para `&data[1]` no driver reprova aqui.
-    """
+    """`data[1]` no cabo e `data[2]` no rádio — é o que faz o `+1` e o `+2` acima."""
     fonte = _texto(DRIVER)
     assert "(struct dualsense_input_report *)&data[1]" in fonte, (
         "o driver deixou de ancorar o corpo do report de CABO em data[1]"
@@ -191,12 +165,7 @@ def test_as_ancoras_de_cabo_e_de_radio_continuam_um_e_dois() -> None:
 
 
 def test_os_tres_tamanhos_de_report_saem_do_driver_e_do_sdl() -> None:
-    """64 no cabo, 78 no `0x31`, 10 no `0x01` mínimo.
-
-    Os dois primeiros o driver declara; o terceiro NÃO — ele vem de fonte
-    externa, e a página diz isso. Aqui só se confere que os dois do driver não
-    andaram debaixo da página.
-    """
+    """64 no cabo, 78 no `0x31`, 10 no `0x01` mínimo."""
     fonte = _texto(DRIVER)
     assert "#define DS_INPUT_REPORT_USB_SIZE\t\t64" in fonte
     assert "#define DS_INPUT_REPORT_BT_SIZE\t\t\t78" in fonte
@@ -206,11 +175,6 @@ def test_os_tres_tamanhos_de_report_saem_do_driver_e_do_sdl() -> None:
     assert "**10 B**" in pagina
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# O mapa de bits da página contra os `#define` do driver
-# ─────────────────────────────────────────────────────────────────────────────
-
-#: O que a página promete, por `#define` do driver: (byte, bit, rótulo).
 BITS_PROMETIDOS = {
     "DS_BUTTONS0_SQUARE": ("buttons[0]", 4, "quadrado"),
     "DS_BUTTONS0_CROSS": ("buttons[0]", 5, "cruz"),
@@ -234,12 +198,7 @@ BITS_PROMETIDOS = {
 def test_o_mapa_de_bits_da_pagina_bate_com_o_driver(
     define: str, promessa: tuple[str, int, str]
 ) -> None:
-    """O bit que a página publica é o bit que o driver define.
-
-    MORDIDA (03/09/2026): trocar na página `| `buttons[1]` | 7 | R3 |` por
-    `| `buttons[1]` | 6 | R3 |` reprova em DS_BUTTONS1_R3 e em DS_BUTTONS1_L3
-    de uma vez.
-    """
+    """O bit que a página publica é o bit que o driver define."""
     byte, bit, rotulo = promessa
     mascaras = _mascaras_de_botao()
     assert define in mascaras, f"o driver não define mais {define}"
@@ -254,11 +213,7 @@ def test_o_mapa_de_bits_da_pagina_bate_com_o_driver(
 
 
 def test_o_hat_e_valor_e_nao_bitmap() -> None:
-    """O nibble baixo do `buttons[0]` é um VALOR de 0 a 8, e a página avisa.
-
-    Ler o nibble como quatro bits mostra o D-pad neutro como cima+baixo — é o
-    erro que esta linha existe para impedir.
-    """
+    """O nibble baixo do `buttons[0]` é um VALOR de 0 a 8, e a página avisa."""
     mascaras = _mascaras_de_botao()
     assert mascaras["DS_BUTTONS0_HAT_SWITCH"] == 0x0F, (
         "o hat deixou de ocupar os quatro bits baixos do buttons[0]"
@@ -270,12 +225,7 @@ def test_o_hat_e_valor_e_nao_bitmap() -> None:
 
 
 def test_o_driver_desta_maquina_nao_le_os_bits_do_edge() -> None:
-    """A página afirma que as costas de um Edge não chegam por evdev aqui.
-
-    A afirmação é sobre ESTE fonte, então é ele que a sustenta: se um dia o
-    driver ganhar máscara para os bits 4-7 do `buttons[2]`, esta reprova e a
-    página tem de mudar.
-    """
+    """A página afirma que as costas de um Edge não chegam por evdev aqui."""
     mascaras = _mascaras_de_botao()
     do_byte_dois = {
         nome: valor for nome, valor in mascaras.items() if nome.startswith("DS_BUTTONS2_")
@@ -290,18 +240,9 @@ def test_o_driver_desta_maquina_nao_le_os_bits_do_edge() -> None:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# O mapa de canais — as cinco linhas do tema deixaram de ter caminho incompleto
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 @pytest.mark.parametrize("chave", CHAVES_DO_TEMA)
 def test_a_linha_do_tema_tem_report_id_e_offset_nos_dois_transportes(chave: str) -> None:
-    """O buraco que este levantamento veio fechar: `report_id` e `offset` vazios.
-
-    MORDIDA (03/09/2026): esvaziar `radio_offset` de `gatilho.analogico` reprova
-    nomeando a célula.
-    """
+    """O buraco que este levantamento veio fechar: `report_id` e `offset` vazios."""
     linhas = _linhas_do_mapa()
     assert chave in linhas, f"a linha {chave}@dualsense sumiu do mapa"
     linha = linhas[chave]
@@ -317,12 +258,7 @@ def test_a_linha_do_tema_tem_report_id_e_offset_nos_dois_transportes(chave: str)
 
 @pytest.mark.parametrize("chave", CHAVES_DO_TEMA)
 def test_conteudo_de_transporte_viaja_com_procedencia(chave: str) -> None:
-    """Célula de conteúdo escrita exige `de_onde_sei` do MESMO lado preenchido.
-
-    É a regra 19 do `check_paridade_transporte`, repetida aqui para as cinco
-    linhas do tema — porque lá ela só dispara quando `aciona` está respondido, e
-    a `entrada.stick.calibracao` tem `aciona` VAZIO de propósito.
-    """
+    """Célula de conteúdo escrita exige `de_onde_sei` do MESMO lado preenchido."""
     linha = _linhas_do_mapa()[chave]
     for lado in ("cabo", "radio"):
         escreveu = any(
@@ -336,11 +272,7 @@ def test_conteudo_de_transporte_viaja_com_procedencia(chave: str) -> None:
 
 
 def test_a_calibracao_de_stick_deixou_de_ser_desconhecida_e_nao_mentiu_o_grau() -> None:
-    """A linha que estava muda: `existe` subiu, e o grau NÃO subiu junto.
-
-    Nada foi a aparelho nesta leva, então `medido` aqui seria mentira que
-    portão nenhum pega — e `ate_onde_foi` tem de continuar vazio.
-    """
+    """A linha que estava muda: `existe` subiu, e o grau NÃO subiu junto."""
     linha = _linhas_do_mapa()["entrada.stick.calibracao"]
     assert linha["existe"] == "tem", (
         "a `entrada.stick.calibracao@dualsense` voltou a `desconhecido` — se foi "
@@ -358,11 +290,7 @@ def test_a_calibracao_de_stick_deixou_de_ser_desconhecida_e_nao_mentiu_o_grau() 
 
 
 def test_a_leitura_da_calibracao_e_a_mesma_familia_da_cor_do_plastico() -> None:
-    """O `[12, 2]` e o `[1, 19]` são o mesmo mecanismo — e é o que dá crédito ao achado.
-
-    Se a página parar de dizer isso, o leitor perde a única razão pela qual esta
-    casa espera que o comando responda: o par `0x80`/`0x81` já foi medido aqui.
-    """
+    """O `[12, 2]` e o `[1, 19]` são o mesmo mecanismo — e é o que dá crédito ao achado."""
     pagina = _texto(PAGINA)
     assert "SET_FEATURE 0x80  payload [12, 2]" in pagina
     assert "GET_FEATURE 0x81 -> 64 bytes" in pagina
@@ -376,24 +304,8 @@ def test_a_leitura_da_calibracao_e_a_mesma_familia_da_cor_do_plastico() -> None:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Os NÚMEROS dentro das células do mapa — a metade que os testes acima não veem
-# ─────────────────────────────────────────────────────────────────────────────
-# Os testes de cima cobram que a célula não esteja VAZIA e que a PÁGINA bata com
-# o driver. Sobra o meio: uma célula CHEIA pode dizer `payload[9]` onde o driver
-# diz 7, e nada acusa. É o estrago que o `check_paridade_transporte` declara não
-# alcançar — «nenhum portão sem hardware e sem rede consegue dizer que o byte é
-# 11 e não 47». Ele alcança, quando o dono do número mora na árvore. Mora.
-
-
 def _indices_citados(celula: str, palavra: str) -> set[int]:
-    """Os índices que a célula cita em `palavra[...]`, com as FAIXAS abertas.
-
-    A notação desta casa escreve faixa: `payload[32..35] = report[33..36]` é
-    como `toque.touchpad@dualsense` está escrita desde que nasceu. Um leitor
-    que só enxergasse `payload[32` acharia que a célula não cita o 35 — e
-    reprovaria a célula CERTA, que é o pior defeito que uma régua pode ter.
-    """
+    """Os índices que a célula cita em `palavra[...]`, com as FAIXAS abertas."""
     achados: set[int] = set()
     for inicio, fim in re.findall(
         re.escape(palavra) + r"\[(\d+)(?:\s*\.\.\s*(\d+))?", celula
@@ -403,13 +315,6 @@ def _indices_citados(celula: str, palavra: str) -> set[int]:
     return achados
 
 
-#: chave do mapa -> {campo do struct: offset de CORPO que a célula tem de citar}.
-#:
-#: `entrada.combo.ponte` fica FORA de propósito: ela endereça só DOIS dos quatro
-#: bytes de `buttons[]` — os de PS e R3 —, e cobrar dela o `payload[7]` das
-#: faces reprovaria a célula certa. Quem a mede é
-#: :func:`test_o_combo_da_ponte_cita_os_bits_de_ps_e_de_r3`, que calcula o byte
-#: a partir do `#define` de cada botão.
 OFFSETS_QUE_A_CELULA_AFIRMA = {
     "entrada.stick": {"x": 0, "y": 1, "rx": 2, "ry": 3},
     "gatilho.analogico": {"z": 4, "rz": 5},
@@ -419,11 +324,7 @@ OFFSETS_QUE_A_CELULA_AFIRMA = {
 
 @pytest.mark.parametrize("chave", sorted(OFFSETS_QUE_A_CELULA_AFIRMA))
 def test_o_payload_citado_na_celula_sai_do_struct_do_driver(chave: str) -> None:
-    """Cada `payload[N]` da célula é o offset do campo no struct.
-
-    MORDIDA (03/09/2026): trocar `payload[0..3]` por `payload[1..3]` no
-    `cabo_offset` de `entrada.stick` reprova nomeando o eixo X.
-    """
+    """Cada `payload[N]` da célula é o offset do campo no struct."""
     offsets = dict(_campos_do_struct())
     celula = _linhas_do_mapa()[chave]["cabo_offset"]
     citados = _indices_citados(celula, "payload")
@@ -440,15 +341,7 @@ def test_o_payload_citado_na_celula_sai_do_struct_do_driver(chave: str) -> None:
 
 @pytest.mark.parametrize("chave", sorted(OFFSETS_QUE_A_CELULA_AFIRMA))
 def test_o_report_citado_na_celula_soma_a_ancora_do_transporte(chave: str) -> None:
-    """`report[M]` é `payload[N]` mais a âncora do braço — 1 no cabo, 2 no rádio.
-
-    É a assimetria que este mapa existe para pegar. Uma célula que copie o
-    número do cabo para o lado do rádio aponta o campo VIZINHO, sem erro e sem
-    log — e o sintoma, na mesa dela, é dado ERRADO, não dado ausente.
-
-    MORDIDA (03/09/2026): a mesma troca do teste acima reprova aqui também, nos
-    dois lados de uma vez.
-    """
+    """`report[M]` é `payload[N]` mais a âncora do braço — 1 no cabo, 2 no rádio."""
     offsets = dict(_campos_do_struct())
     linha = _linhas_do_mapa()[chave]
     for lado, ancora in (("cabo", 1), ("radio", 2)):
@@ -462,7 +355,6 @@ def test_o_report_citado_na_celula_soma_a_ancora_do_transporte(chave: str) -> No
             )
 
 
-#: Como a célula do mapa nomeia, em português, cada `#define` do driver.
 BOTOES_NOMEADOS_NA_CELULA = {
     "quadrado": "DS_BUTTONS0_SQUARE",
     "cruz": "DS_BUTTONS0_CROSS",
@@ -479,11 +371,7 @@ BOTOES_NOMEADOS_NA_CELULA = {
 
 
 def test_cada_bit_de_botao_na_celula_e_o_bit_do_define_do_driver() -> None:
-    """`5 = cruz` na célula tem de ser `DS_BUTTONS0_CROSS BIT(5)` no driver.
-
-    MORDIDA (03/09/2026): trocar `5 = cruz` por `3 = cruz` no `cabo_offset` de
-    `entrada.botoes` reprova nomeando o botão.
-    """
+    """`5 = cruz` na célula tem de ser `DS_BUTTONS0_CROSS BIT(5)` no driver."""
     mascaras = _mascaras_de_botao()
     celula = _linhas_do_mapa()["entrada.botoes"]["cabo_offset"]
     for rotulo, define in BOTOES_NOMEADOS_NA_CELULA.items():
@@ -496,16 +384,7 @@ def test_cada_bit_de_botao_na_celula_e_o_bit_do_define_do_driver() -> None:
 
 
 def test_o_combo_da_ponte_cita_os_bits_de_ps_e_de_r3() -> None:
-    """A metade de LEITURA do gesto tem endereço, e ele tem de ser o certo.
-
-    Os dois botões do gesto caem em BYTES diferentes do mesmo `buttons[]` — é o
-    que responde, sem aparelho, à pergunta que a linha carregava: não há como o
-    aparelho publicar um sem o outro por acidente de máscara. Se um `#define`
-    mudar de byte ou de bit, o gesto continua funcionando (o caminho é evdev) e
-    só a célula fica mentindo, calada.
-
-    MORDIDA (03/09/2026): trocar `payload[9]` por `payload[8]` no PS reprova.
-    """
+    """A metade de LEITURA do gesto tem endereço, e ele tem de ser o certo."""
     mascaras = _mascaras_de_botao()
     base = dict(_campos_do_struct())["buttons"]
     linha = _linhas_do_mapa()["entrada.combo.ponte"]
@@ -533,16 +412,7 @@ def test_o_combo_da_ponte_cita_os_bits_de_ps_e_de_r3() -> None:
 
 
 def test_o_feature_0x05_e_da_imu_e_a_celula_desmente_quem_o_procura() -> None:
-    """O achado NEGATIVO desta leva, e é o que mais poupa tempo.
-
-    Esta casa já catalogava o `0x05` como «calibração», e ele é da IMU. Quem
-    for caçar o centro do analógico ali acha viés de giro e conclui que a
-    calibração não existe. A régua confere as duas metades: que o driver
-    decodifique só IMU, e que a célula NOMEIE o 0x05 para desmenti-lo.
-
-    MORDIDA (03/09/2026): tirar as três menções ao `0x05` do `cabo_report_id`
-    reprova.
-    """
+    """O achado NEGATIVO desta leva, e é o que mais poupa tempo."""
     fonte = _texto(DRIVER)
     declarado = re.search(
         r"#define\s+DS_FEATURE_REPORT_CALIBRATION\s+(0x[0-9a-fA-F]+)", fonte

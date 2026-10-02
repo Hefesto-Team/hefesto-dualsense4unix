@@ -1,22 +1,4 @@
-"""A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01 — o cabo passa pelo endpoint, e o registro tem dono.
-
-O registro que o jogo lê (o device KS do prefixo) só se grava no lançamento,
-com o ``wineserver`` fora do ar. Desde 28/09 o cabo passa por um laço do
-endpoint de háptica até a placa do controle, e a lista do registro tem um dono
-(``audio_ks_dualsense.controles_do_registro``). De 28/09 a 02/10 os endpoints
-eram quatro, um por LUGAR; desde a A-HAPTICA-E-POR-APARELHO-01 (a palavra dela
-de 29/09, *«todas as features são um por aparelho. sempre.»*) são um por
-APARELHO, e as réguas do lugar que ela revogou saíram daqui: as do aparelho
-estão em ``tests/unit/test_a_haptica_e_por_aparelho.py``. Ficam as do laço, do
-registro, das âncoras e da ordem de queda, medidas pelo aparelho.
-
-Nada aqui toca o servidor de som, o sysfs ou o registro de ninguém: o servidor
-é um dublê com estado, o ``/sys`` e o ``system.reg`` moram no ``tmp_path``, e
-os ``uniq`` são da faixa sintética ``aa:bb:cc``.
-
-LIMITE DECLARADO: é fiação e conta. O atraso do laço na mão é a prova no
-aparelho, e é dela.
-"""
+"""A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01 — o cabo passa pelo endpoint, e o registro tem dono."""
 
 from __future__ import annotations
 
@@ -58,9 +40,7 @@ _P1, _P2, _P3, _P4 = (f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 _SONY = {"device.bus": "usb", "device.vendor.id": "054c", "device.product.id": "0ce6"}
 
 
-# ---------------------------------------------------------------------------
 # O /sys de mentira: âncoras (USB sem placa de som) e DualSense no cabo
-# ---------------------------------------------------------------------------
 
 
 def _aparelho(
@@ -101,16 +81,10 @@ def _caminho_da_placa(nome_do_aparelho: str) -> str:
 
 
 #: O nome da placa de um DualSense no cabo, como o ALSA a publica; dois no cabo
-#: ganham o ``.2``, ``.3`` do PipeWire.
 _PLACA = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller"
     "-00{n}.HiFi__Speaker__sink"
 )
-
-
-# ---------------------------------------------------------------------------
-# O servidor de som de mentira — com memória, e nunca mais frouxo que o real
-# ---------------------------------------------------------------------------
 
 
 def _props_do_argumento(argumento: str) -> dict[str, str]:
@@ -129,15 +103,10 @@ class _Servidor:
     """Um ``pipewire-pulse`` de mentira: módulos, sinks, fluxos e volumes."""
 
     def __init__(self) -> None:
-        #: índice do sink -> {"nome", "props", "canais", "mid"}
         self.sinks: dict[int, dict[str, Any]] = {}
-        #: module_id -> o argumento, como o ``pactl list short modules`` o mostra
         self.modulos: dict[str, str] = {}
-        #: índice do fluxo -> {"sink": índice, "nome": node.name}
         self.fluxos: dict[int, dict[str, Any]] = {}
-        #: índice do fluxo -> os volumes que o ``set-sink-input-volume`` escreveu
         self.volumes: dict[int, list[str]] = {}
-        #: nomes de sink com um fluxo de JOGO tocando
         self.jogo_em: set[str] = set()
         self.cargas: list[str] = []
         self.quedas: list[str] = []
@@ -147,7 +116,6 @@ class _Servidor:
         self._n += 1
         return self._n
 
-    # -- o estado de partida ---------------------------------------------------
 
     def placa(self, nome: str, caminho: str) -> int:
         """A placa de som de um DualSense no cabo, como o ALSA a publica."""
@@ -166,7 +134,6 @@ class _Servidor:
         self.cargas.clear()
         return resposta.strip()
 
-    # -- os laços do cabo (o que o `pw-loopback` publica) -----------------------
 
     def laco_toca(self, chave: str, destino: str) -> None:
         self.fluxos[self._proximo()] = {
@@ -186,7 +153,6 @@ class _Servidor:
         ]
         return indice
 
-    # -- as leituras da régua ----------------------------------------------------
 
     def do_nome(self, nome: str) -> list[dict[str, Any]]:
         return [s for s in self.sinks.values() if s["nome"] == nome]
@@ -198,7 +164,6 @@ class _Servidor:
     def nossos(self) -> list[str]:
         return sorted(s["nome"] for s in self.sinks.values() if eh.MARCA_DO_NOME in s["nome"])
 
-    # -- o pactl -----------------------------------------------------------------
 
     def __call__(self, argv: list[str]) -> str | None:
         a = list(argv)
@@ -336,13 +301,9 @@ class _Mesa:
     servidor: _Servidor
     lacos: _Lacos
     sysfs: Path
-    #: uniq -> o «Controle N» que o dono responde
     assentos: dict[str, int] = field(default_factory=dict)
-    #: uniq -> o nome da placa de som dele (só no cabo)
     placas: dict[str, str] = field(default_factory=dict)
-    #: os uniq que mexeram desde que o jogo abriu
     jogando: set[str] = field(default_factory=set)
-    #: (nó lido, papel) de cada gravador que a ponte pediu
     lidos: list[tuple[str, str]] = field(default_factory=list)
 
     def volta(self, *controles: _Controle) -> None:
@@ -362,7 +323,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     lacos = _Lacos(servidor)
     sysfs = _sysfs(tmp_path, ancoras=4)
     sub = mod.AltoFalanteSubsystem(gerenciador=None, fonte_de_controles=list)
-    # A conferência do grafo diz «não sei» aqui: as réguas dela estão no fim.
     sub._cabo = HapticaDoCabo(lacos=lacos, conferir=lambda _no: None)
     m = _Mesa(sub=sub, servidor=servidor, lacos=lacos, sysfs=sysfs)
     monkeypatch.setattr(af, "_rodar", servidor)
@@ -420,11 +380,6 @@ def _no_cabo(mesa: _Mesa, uniq: str, lugar: int, aparelho: str, devnum: int) -> 
     return _Controle(uniq, "usb")
 
 
-# ---------------------------------------------------------------------------
-# Por controle: as 24 ordens de conexão, cabo e BT misturados
-# ---------------------------------------------------------------------------
-
-#: O número de cada um, e o aparelho dos dois que chegam pelo cabo.
 _LUGAR = {_P1: 1, _P2: 2, _P3: 3, _P4: 4}
 _NO_CABO = {_P1: ("3-8", 28), _P2: ("3-7", 29)}
 _ORDENS = list(itertools.permutations((_P1, _P2, _P3, _P4)))
@@ -436,16 +391,7 @@ _ORDENS = list(itertools.permutations((_P1, _P2, _P3, _P4)))
 def test_em_qualquer_ordem_cada_um_que_chega_ganha_o_endpoint_dele(
     mesa: _Mesa, ordem: tuple[str, ...]
 ) -> None:
-    """O critério «por controle», nas 24 ordens, pelo aparelho.
-
-    P1 e P2 chegam pelo cabo, P3 e P4 pelo rádio, em cada uma das 24 ordens. A
-    cada chegada nasce UM nó, o do aparelho que chegou; nenhum nó cai, e a
-    lista do registro ganha um bloco por aparelho. No fim, os dois do cabo têm
-    laço, e só eles.
-
-    MORDIDA: em ``AltoFalanteSubsystem._aparelhos_da_mesa``, devolva só o
-    primeiro aparelho da mesa — quem chega depois fica sem endpoint.
-    """
+    """O critério «por controle», nas 24 ordens, pelo aparelho."""
     chegaram: list[_Controle] = []
     for uniq in ordem:
         if uniq in _NO_CABO:
@@ -465,11 +411,6 @@ def test_em_qualquer_ordem_cada_um_que_chega_ganha_o_endpoint_dele(
     assert set(mesa.lacos.vivos) == {_chave(_P1), _chave(_P2)}
 
 
-# ---------------------------------------------------------------------------
-# O replug do cabo
-# ---------------------------------------------------------------------------
-
-
 def test_o_replug_nao_muda_o_endpoint_e_o_laco_segue_a_placa_nova(mesa: _Mesa) -> None:
     """O P1 volta com ``DEVNUM`` novo: o endpoint e o bloco do aparelho ficam.
 
@@ -482,7 +423,6 @@ def test_o_replug_nao_muda_o_endpoint_e_o_laco_segue_a_placa_nova(mesa: _Mesa) -
     antes = mesa.registro()
     ancora = _ancora_do_aparelho(mesa.servidor, _P1)
     (primeira,) = [lig for lig in mesa.lacos.ligacoes if lig[0] == _chave(_P1)]
-    # O cabo sai e volta: outro DEVNUM, e o ALSA publica a placa de novo.
     velha = mesa.placas[_P1]
     mesa.servidor.sinks = {i: s for i, s in mesa.servidor.sinks.items() if s["nome"] != velha}
     (mesa.sysfs / "bus" / "usb" / "devices" / "3-8" / "devnum").write_text("41\n")
@@ -499,11 +439,6 @@ def test_o_replug_nao_muda_o_endpoint_e_o_laco_segue_a_placa_nova(mesa: _Mesa) -
     assert "HEFESTOKS&003&041&0" not in _instancias(depois)
 
 
-# ---------------------------------------------------------------------------
-# Um alvo por controle
-# ---------------------------------------------------------------------------
-
-
 def test_o_cabo_com_endpoint_ancorado_nao_tem_bloco_proprio(mesa: _Mesa) -> None:
     """A placa e o endpoint seriam dois alvos para o mesmo controle.
 
@@ -518,17 +453,8 @@ def test_o_cabo_com_endpoint_ancorado_nao_tem_bloco_proprio(mesa: _Mesa) -> None
     assert len(instancias) == 1
 
 
-# ---------------------------------------------------------------------------
-# A (b) no cabo
-# ---------------------------------------------------------------------------
-
-
 def test_so_quem_mexeu_vibra_no_cabo_e_o_alto_falante_passa_nos_dois(mesa: _Mesa) -> None:
-    """Dois no cabo, o mesmo sinal nos dois endpoints, e só o P2 mexeu.
-
-    MORDIDA: em ``_casar_o_cabo``, abra o portão de todo laço
-    (``abertos.add(marca)`` fora do ``if este_joga``).
-    """
+    """Dois no cabo, o mesmo sinal nos dois endpoints, e só o P2 mexeu."""
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
     mesa.servidor.jogo_em.update({eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)})
@@ -546,17 +472,8 @@ def test_so_quem_mexeu_vibra_no_cabo_e_o_alto_falante_passa_nos_dois(mesa: _Mesa
     }
 
 
-# ---------------------------------------------------------------------------
-# A guarda do Black Desert pergunta pelo controle, e não pelo endpoint
-# ---------------------------------------------------------------------------
-
-
 def _lancar(tmp_path: Path, sysfs: Path) -> str:
-    """Roda o wrapper com a opção ligada pelo daemon; devolve o que o jogo viu.
-
-    O ``pactl`` de mentira responde que quatro endpoints estão de pé — o
-    estado em que a sonda de antes dizia "há endpoint" sem controle nenhum.
-    """
+    """Roda o wrapper com a opção ligada pelo daemon; devolve o que o jogo viu."""
     home = tmp_path / "home"
     (home / ".local" / "share" / "hefesto-dualsense4unix" / "bin").mkdir(parents=True)
     estado = tmp_path / "estado"
@@ -616,28 +533,16 @@ def test_o_dualsense_no_radio_liga_a_opcao(tmp_path: Path) -> None:
     (sysfs / "bus" / "usb" / "devices").mkdir(parents=True)
     hid = sysfs / "bus" / "hid" / "devices"
     hid.mkdir(parents=True)
-    (hid / "0003:054C:0DF2.0009").mkdir()  # o vpad do produto: não conta
+    (hid / "0003:054C:0DF2.0009").mkdir()
     assert _lancar(tmp_path / "so-o-vpad", sysfs) == "0"
     (hid / "0005:054C:0CE6.0004").mkdir()
     assert _lancar(tmp_path / "com-o-radio", sysfs) == "1"
 
 
-# ---------------------------------------------------------------------------
-# O aparelho sem âncora: o cabo segue pela placa, e o doctor diz
-# ---------------------------------------------------------------------------
-
-
 def test_o_aparelho_sem_ancora_deixa_o_cabo_na_placa(
     monkeypatch: pytest.MonkeyPatch, mesa: _Mesa, tmp_path: Path
 ) -> None:
-    """Uma âncora e dois no cabo: um pelo endpoint, o outro pelo ``BUSNUM-DEVNUM``.
-
-    Faltando âncora, quem fica de fora é o de marca maior
-    (``endpoint_de_haptica.distribuir_ancoras``), e ele segue pela placa.
-
-    MORDIDA: em ``controles_do_registro``, tire o cabo da lista (``cabo = []``)
-    — sem o recuo, o controle sem âncora fica sem bloco nenhum.
-    """
+    """Uma âncora e dois no cabo: um pelo endpoint, o outro pelo ``BUSNUM-DEVNUM``."""
     uma = _sysfs(tmp_path / "uma", ancoras=1)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", uma)
     mesa.sysfs = uma
@@ -667,11 +572,7 @@ def _doctor(tmp_path: Path, sysfs: Path) -> str:
 
 
 def test_o_doctor_diz_o_lugar_sem_ancora(tmp_path: Path) -> None:
-    """Dois na mesa e uma âncora: «1 lugar(es) sem âncora».
-
-    MORDIDA: troque o ``em_uso`` da comparação por ``lugares`` — o doctor
-    passa a dizer três, contando lugares que ninguém ocupa como falta.
-    """
+    """Dois na mesa e uma âncora: «1 lugar(es) sem âncora»."""
     saida = _doctor(tmp_path, _sysfs(tmp_path, ancoras=1, no_cabo=2))
     assert "[WARN] 1 lugar(es) sem âncora" in saida, saida
     assert "há 1 para 2 DualSense na mesa" in saida
@@ -688,18 +589,8 @@ def test_o_doctor_conta_contra_os_quatro_lugares(tmp_path: Path) -> None:
     assert "[ OK ] âncoras USB da vibração: 4 para os 4 lugares" in saida, saida
 
 
-# ---------------------------------------------------------------------------
-# O órfão de nome velho
-# ---------------------------------------------------------------------------
-
-
 def test_os_endpoints_de_nome_velho_caem_na_primeira_volta(mesa: _Mesa) -> None:
-    """O servidor com os endpoints por controle (até 28/09) e por lugar (28/09 a 02/10).
-
-    MORDIDA: em ``_modulos_desta_casa``, pule a linha que não traz a marca do
-    aparelho (``if "HEFESTOAPARELHO" not in linha: continue``) — o varredor
-    passa a conhecer só o nome novo, e os de antes ficam na lista de som dela.
-    """
+    """O servidor com os endpoints por controle (até 28/09) e por lugar (28/09 a 02/10)."""
     velhos = [
         mesa.servidor.modulo_herdado(eh.MOLDE_DO_NOME.format(marca=marca), f"/d/{n}/i:1.0")
         for n, marca in enumerate(("0000c3", "0000c4", "LUGAR1", "LUGAR2"))
@@ -719,19 +610,10 @@ def test_o_endpoint_do_ensaio_nao_e_orfao(mesa: _Mesa) -> None:
     assert mesa.servidor.quedas == []
 
 
-# ---------------------------------------------------------------------------
-# A ordem da queda: o laço sai antes do endpoint
-# ---------------------------------------------------------------------------
-
-
 def test_o_laco_cai_antes_do_endpoint_do_aparelho(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O laço cujo alvo some pode ser religado à fonte padrão: ele sai primeiro.
-
-    MORDIDA: tire o ``self._o_cabo().soltar(marca)`` de antes do
-    ``endpoint.parar()`` em ``_casar_as_pontes`` — o nó cai com o laço lendo.
-    """
+    """O laço cujo alvo some pode ser religado à fonte padrão: ele sai primeiro."""
     mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
     assert _chave(_P1) in mesa.lacos.vivos
     ordem: list[str] = []
@@ -756,17 +638,8 @@ def test_o_laco_cai_antes_do_endpoint_do_aparelho(
     assert "endpoint" in ordem
 
 
-# ---------------------------------------------------------------------------
-# O dono da lista pergunta pouco: o curador roda dentro do lançamento
-# ---------------------------------------------------------------------------
-
-
 def test_sem_cabo_o_dono_da_lista_nao_pergunta_pelos_fluxos(tmp_path: Path) -> None:
-    """Quem joga pelo rádio paga UMA ida ao servidor no lançamento, e não duas.
-
-    MORDIDA: pergunte `placas_servidas` sempre, antes de saber se há cabo — a
-    pergunta dos fluxos aparece na lista.
-    """
+    """Quem joga pelo rádio paga UMA ida ao servidor no lançamento, e não duas."""
     perguntas: list[tuple[str, ...]] = []
 
     def servidor(argv: list[str]) -> str | None:
@@ -779,14 +652,7 @@ def test_sem_cabo_o_dono_da_lista_nao_pergunta_pelos_fluxos(tmp_path: Path) -> N
 
 
 def test_o_servidor_mudo_cala_a_segunda_pergunta(tmp_path: Path) -> None:
-    """O `pactl` que não responde é perguntado UMA vez; o cabo segue pela placa.
-
-    O curador tem dez segundos no gancho e cada `pactl`, cinco: duas perguntas
-    a um servidor travado estourariam o teto e o lançamento esperaria à toa.
-
-    MORDIDA: tire o `_lembrando` de `controles_do_registro` — a pergunta dos
-    fluxos vai ao servidor mudo, e a lista das perguntas cresce.
-    """
+    """O `pactl` que não responde é perguntado UMA vez; o cabo segue pela placa."""
     perguntas: list[tuple[str, ...]] = []
 
     def mudo(argv: list[str]) -> str | None:
@@ -797,11 +663,6 @@ def test_o_servidor_mudo_cala_a_segunda_pergunta(tmp_path: Path) -> None:
     lista = ks.controles_do_registro(sysfs, tmp_path / "udev", mudo)
     assert [(c.bus, c.dev) for c in lista] == [(3, 28)], "o cabo tem de seguir pela placa"
     assert perguntas == [("pactl", "list", "sinks")]
-
-
-# ---------------------------------------------------------------------------
-# A outra metade da SOM-ECO-02: o laço que pediu o endpoint e caiu noutro nó
-# ---------------------------------------------------------------------------
 
 
 def _com_a_conferencia(mesa: _Mesa, responde: str | None) -> list[str]:
@@ -816,15 +677,7 @@ def _com_a_conferencia(mesa: _Mesa, responde: str | None) -> list[str]:
 
 
 def test_o_laco_ligado_a_outro_no_cai_e_nao_se_religa(mesa: _Mesa) -> None:
-    """Pedido pelo serial e ligado à fonte padrão: o laço sai, e a rota não volta.
-
-    A fonte padrão desta máquina é o microfone do controle; um laço ligado a
-    ela mandaria a voz dela ao alto-falante da placa. Sem o laço, o registro
-    devolve ao controle o bloco da placa, que é o caminho que já vibrava.
-
-    MORDIDA: em ``HapticaDoCabo._conferir``, tire o ``self.soltar(marca)`` do
-    ramo do nó errado — o laço fica de pé, lendo a fonte errada.
-    """
+    """Pedido pelo serial e ligado à fonte padrão: o laço sai, e a rota não volta."""
     olhados = _com_a_conferencia(mesa, "alsa_input.a_fonte_padrao")
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.volta(p1)
@@ -839,23 +692,13 @@ def test_o_laco_ligado_a_outro_no_cai_e_nao_se_religa(mesa: _Mesa) -> None:
 
 
 def test_o_laco_no_endpoint_do_aparelho_se_confere_uma_vez(mesa: _Mesa) -> None:
-    """Ligado ao endpoint certo, o laço fica, e o grafo não se lê a cada volta.
-
-    MORDIDA: tire o ``self._conferidos.add(marca)`` — a conferência passa a
-    ler o grafo inteiro a cada volta do daemon.
-    """
+    """Ligado ao endpoint certo, o laço fica, e o grafo não se lê a cada volta."""
     olhados = _com_a_conferencia(mesa, eh.nome_do_endpoint(_P1))
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     for _ in range(4):
         mesa.volta(p1)
     assert olhados == [no_de_captura(eh.marca_do_aparelho(_P1))]
     assert _chave(_P1) in mesa.lacos.vivos
-
-
-# ---------------------------------------------------------------------------
-# A conferência de 28/09: o «não sei» do servidor não derruba o laço, a ponte
-# que lê o nó segura a reancoragem, e a âncora vai primeiro a quem está na mesa
-# ---------------------------------------------------------------------------
 
 
 def _quem_le(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
@@ -873,15 +716,7 @@ def _quem_le(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
 def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O jogo fecha o fluxo e a âncora do P1 sai, na mesma volta.
-
-    A reancoragem roda antes da troca de ponte: se ela derrubasse o endpoint
-    que a ponte ainda lê, o gravador cairia na fonte padrão (SOM-ECO-02). A
-    ponte desce primeiro; o nó se reancora na volta seguinte.
-
-    MORDIDA: tire o ``atual.nome in lido`` da guarda da reancoragem — o nó do
-    P1 cai com a ponte dele ainda lendo.
-    """
+    """O jogo fecha o fluxo e a âncora do P1 sai, na mesma volta."""
     cinco = _sysfs(tmp_path / "cinco", ancoras=5)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
     mesa.sysfs = cinco
@@ -908,7 +743,6 @@ def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
         return servidor(argv)
 
     monkeypatch.setattr(af, "_rodar", _pactl)
-    # O jogo fecha o fluxo e o aparelho da âncora do P1 sai do barramento.
     servidor.jogo_em.clear()
     ancora_usb = ancora_de_antes.split("/")[-2]
     (cinco / "bus" / "usb" / "devices" / ancora_usb).unlink()
@@ -923,16 +757,7 @@ def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
 def test_o_servidor_mudo_nao_derruba_o_laco_do_cabo(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O ``pipewire-pulse`` que não responde não é «a placa saiu».
-
-    O laço é um processo do PipeWire, e não depende do ``pactl``: com o
-    servidor mudo (a queda de um controle pelo rádio já o deixou horas assim),
-    o cabo seguia vibrando antes desta leva, e tem de seguir. Quem sai do cabo
-    leva o laço mesmo assim — isso o ``/sys`` diz sem o servidor.
-
-    MORDIDA: em ``_casar_as_pontes``, devolva ``motores = lidos`` sem olhar se
-    houve resposta — a lista vazia do servidor mudo derruba o laço.
-    """
+    """O ``pipewire-pulse`` que não responde não é «a placa saiu»."""
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.volta(p1)
     assert _chave(_P1) in mesa.lacos.vivos
@@ -945,34 +770,20 @@ def test_o_servidor_mudo_nao_derruba_o_laco_do_cabo(
 
 
 def test_as_livres_vao_primeiro_a_quem_esta_na_mesa() -> None:
-    """A conta pura, pelas marcas: duas âncoras, três aparelhos, um deles na mesa.
-
-    O aparelho na mesa vem antes do que só segue de pé porque um jogo toca no
-    nó dele; e a posse não muda: quem já tem âncora fica com ela.
-
-    MORDIDA: em ``distribuir_ancoras``, sirva as livres só em ordem de marca
-    (sem os ``ocupados`` primeiro).
-    """
+    """A conta pura, pelas marcas: duas âncoras, três aparelhos, um deles na mesa."""
     a, b, c = sorted(eh.marca_do_aparelho(u) for u in (_P1, _P2, _P3))
     duas = [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(2)]
     postas = eh.distribuir_ancoras((a, b, c), duas, ocupados={c})
     assert {m: x.syspath for m, x in postas.items()} == {c: "/d/0", a: "/d/1"}
     postas = eh.distribuir_ancoras((a, b, c), duas, ja_postas={a: duas[0]}, ocupados={c})
     assert {m: x.syspath for m, x in postas.items()} == {a: "/d/0", c: "/d/1"}
-    # Um número de lugar não é marca: a conta o recusa em vez de lhe dar âncora.
     assert eh.distribuir_ancoras((1, 2), duas) == {}  # type: ignore[arg-type]
 
 
 def test_a_reancoragem_solta_o_laco_antes_do_endpoint(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A âncora do aparelho do P1 saiu: o laço cai ANTES de o endpoint cair.
-
-    O laço cujo alvo some pode ser religado à fonte padrão (SOM-ECO-02), e a
-    reancoragem derruba o endpoint do aparelho como a saída da mesa derruba.
-
-    MORDIDA: tire o ``self._o_cabo().soltar(marca)`` do ramo da reancoragem.
-    """
+    """A âncora do aparelho do P1 saiu: o laço cai ANTES de o endpoint cair."""
     cinco = _sysfs(tmp_path / "cinco", ancoras=5)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
     mesa.sysfs = cinco
@@ -1005,11 +816,7 @@ def test_a_reancoragem_solta_o_laco_antes_do_endpoint(
 
 
 def test_o_stop_solta_os_lacos_do_cabo(mesa: _Mesa) -> None:
-    """Os laços morrem com o subsystem, como as pontes.
-
-    MORDIDA: tire o ``cabo.parar`` do ``stop()`` — o ``pw-loopback`` fica de pé
-    depois do subsystem parado, e o próximo ``start()`` abriria outro.
-    """
+    """Os laços morrem com o subsystem, como as pontes."""
     import asyncio
 
     mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
@@ -1019,13 +826,7 @@ def test_o_stop_solta_os_lacos_do_cabo(mesa: _Mesa) -> None:
 
 
 def test_a_placa_sem_os_quatro_canais_nao_ganha_laco(mesa: _Mesa) -> None:
-    """Placa de dois canais (o perfil estéreo do ALSA): nada de laço de quatro.
-
-    Um laço de quatro canais numa placa de dois faria o PipeWire misturar os
-    motores no alto-falante. O controle segue pela placa, com o bloco dele.
-
-    MORDIDA: tire o ``placa not in placas`` de ``_casar_o_cabo``.
-    """
+    """Placa de dois canais (o perfil estéreo do ALSA): nada de laço de quatro."""
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.servidor.sinks[mesa.servidor.indice(mesa.placas[_P1])]["canais"] = 2
     mesa.volta(p1)
@@ -1034,11 +835,7 @@ def test_a_placa_sem_os_quatro_canais_nao_ganha_laco(mesa: _Mesa) -> None:
 
 
 def test_o_endpoint_nosso_nunca_e_a_placa_do_laco(mesa: _Mesa) -> None:
-    """Se a placa que o dono responde for um endpoint desta casa, não há laço.
-
-    MORDIDA: tire o ``MARCA_DO_NOME in placa`` de ``_casar_o_cabo`` — o P1
-    passa a tocar no endpoint do P2.
-    """
+    """Se a placa que o dono responde for um endpoint desta casa, não há laço."""
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     mesa.placas[_P1] = eh.nome_do_endpoint(_P2)
     mesa.volta(p1)

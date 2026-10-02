@@ -1,13 +1,4 @@
-"""MISC-08 item 3 — vpads NÃO recriam quando a config efetiva não mudou.
-
-Ao vivo (20:15 do estudo 2026-07-18) recriar os vpads mid-game invalidou os
-handles SDL/wine do jogo — a Steam nunca reabriu o hidraw do vpad P1. O
-`start_gamepad_emulation` já é idempotente por (flavor, backend); aqui
-trava-se a camada de cima (`Daemon.set_gamepad_emulation`): um apply IDÊNTICO
-mantém o MESMO device (nenhum teardown+respawn) e NÃO força o ciclo cheio do
-co-op (que reescreve player-LEDs via sysfs a cada força). Mudança REAL de
-flavor continua recriando e repropagando ao co-op.
-"""
+"""MISC-08 item 3 — vpads NÃO recriam quando a config efetiva não mudou."""
 from __future__ import annotations
 
 from typing import Any
@@ -76,7 +67,6 @@ def test_apply_identico_nao_recria_o_vpad_nem_forca_o_coop(daemon: Any) -> None:
         "criação REAL do vpad repropaga ao co-op (force)"
     )
 
-    # Apply idêntico (toggle repetido / perfil reaplicando o mesmo modo):
     assert daemon.set_gamepad_emulation(True, "dualsense", origin="manual") is True
     assert daemon._gamepad_device is device, (
         "apply idêntico recriou o vpad — invalida os handles do jogo mid-game"

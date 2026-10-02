@@ -66,10 +66,7 @@ class TestHidrawPath:
         assert inst.hidraw_path() is None
 
     def test_path_de_libusb_nao_e_hidraw(self) -> None:
-        """hidapi sobre libusb dá paths tipo "0001:0002:00" — ninguém abre isso.
-
-        Deixar passar daria uma falha obscura lá no `capture_dualsense_blueprint`.
-        """
+        """hidapi sobre libusb dá paths tipo "0001:0002:00" — ninguém abre isso."""
         inst = _with_handles(**{MAC_A: _FakeHandle(b"0001:0002:00")})
 
         assert inst.hidraw_path() is None

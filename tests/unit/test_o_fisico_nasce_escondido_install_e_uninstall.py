@@ -41,7 +41,6 @@ INSTALL_UDEV = (RAIZ / "scripts" / "install_udev.sh").read_text(encoding="utf-8"
 HOST_UDEV = (RAIZ / "scripts" / "install-host-udev.sh").read_text(encoding="utf-8")
 UNINSTALL = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
 
-#: O `sudo` de mentira: `install` e `rm` executam; o resto só se anota.
 SUDO_DE_MENTIRA = r"""#!/usr/bin/env bash
 for a in "$@"; do
   case "$a" in
@@ -116,10 +115,6 @@ def _efetivas(arquivo: Path) -> list[str]:
     ]
 
 
-# ---------------------------------------------------------------------------
-# 1-2. install_udev.sh — o caminho do checkout (o install.sh dela)
-# ---------------------------------------------------------------------------
-
 BLOCO_DA_REGRA_DO_NO = _recorte(
     INSTALL_UDEV,
     'if [[ "$ABRIR_O_NO" -eq 1 ]]; then\n    # A transformação tem UM DONO',
@@ -154,10 +149,6 @@ def test_o_opt_out_grava_a_nova_aberta_e_tira_a_velha(tmp_path: Path) -> None:
     assert not any('TAG-="uaccess"' in linha for linha in linhas), linhas
     assert sum('TAG+="uaccess"' in linha for linha in linhas) == 5, linhas
 
-
-# ---------------------------------------------------------------------------
-# 3-4. install-host-udev.sh — o caminho do .deb e do Flatpak
-# ---------------------------------------------------------------------------
 
 LACO_DA_ORIGEM = _recorte(
     HOST_UDEV,
@@ -213,10 +204,6 @@ def test_o_comando_de_root_do_helper_grava_a_nova_e_tira_a_velha(tmp_path: Path)
     assert executar.returncode == 0, executar.stderr
     assert sorted(p.name for p in etc.iterdir()) == sorted([NOVA, "71-uinput.rules"])
 
-
-# ---------------------------------------------------------------------------
-# 5. uninstall.sh — as duas saem
-# ---------------------------------------------------------------------------
 
 RM_DAS_REGRAS = _comando_com_continuacao(
     UNINSTALL, f"sudo rm -f /etc/udev/rules.d/{NOVA}"

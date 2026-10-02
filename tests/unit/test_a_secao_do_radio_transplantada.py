@@ -59,7 +59,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 PAGINA = "08-conexoes.html"
 DESENHO = RAIZ / "mockup" / "mapa-do-radio.html"
 
-#: A faixa sintética da casa — há dois portões de anonimato nesta árvore.
 A1 = "aa:bb:cc:00:00:09"
 A2 = "aa:bb:cc:00:00:15"
 U1 = "aabbcc000011"
@@ -69,15 +68,9 @@ PCI = "0000:00:14.0"
 LUGAR_1 = f"pci-{PCI}-usb-0:1.2"
 LUGAR_2 = f"pci-{PCI}-usb-0:4.1.4"
 
-#: O id de um adaptador na cena é o endereço sem pontuação, em maiúsculas
-#: (`a08_conexoes._mac`) — é o que vai no `data-alvo` e volta no clique.
 I1 = A1.replace(":", "").upper()
 I2 = A2.replace(":", "").upper()
 
-#: As âncoras da cerimônia — abrem por `:target`, e só por ele.
-#: As âncoras das telas do Mapear. DESDE 25/09/2026 é UMA, e ela mora no
-#: Check-up (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o «Mapear Entradas» e o
-#: «Mapear Entrada a Entrada» viraram um botão, por pedido dela.
 ANCORAS = ("mapear-portas",)
 
 _VAZIOS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
@@ -85,8 +78,7 @@ _VAZIOS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
 
 
 class _Arvore(HTMLParser):
-    """Os elementos (tag, atributos) e o texto de um trecho — ou só da subárvore
-    do elemento `id=raiz`, contando a profundidade para saber onde ela fecha."""
+    """Os elementos (tag, atributos) e o texto de um trecho — ou só da subárvore"""
 
     def __init__(self, raiz: str | None = None) -> None:
         super().__init__(convert_charrefs=True)
@@ -116,7 +108,7 @@ class _Arvore(HTMLParser):
         if self.raiz and self.fundo:
             self.fundo -= 1
             if self.fundo == 0:
-                self.fundo = -1  # a subárvore fechou: nada mais entra
+                self.fundo = -1
 
     def handle_data(self, data: str) -> None:
         if self.fundo and self.fundo > 0:
@@ -149,9 +141,6 @@ def a08() -> Any:
     return a08_conexoes
 
 
-# ---------------------------------------------------------------------------
-# A MESA DECLARADA — dois adaptadores, três controles, uma caixa, um vizinho
-# ---------------------------------------------------------------------------
 @pytest.fixture
 def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     from hefesto_dualsense4unix.integrations.bluez_dbus import (
@@ -165,8 +154,6 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(a08, "_FUNDO", {})
     monkeypatch.setattr(a08, "_ABERTO", {})
     monkeypatch.setattr(a08, "_CENA_NA_TELA", {})
-    # O «segura» da cor do Hz lembra por `uniq`, e os desta mesa são os mesmos
-    # em todo teste: cada um começa sem lembrança.
     monkeypatch.setattr(a08, "_NIVEL_NA_TELA", {})
     vizinho = RadioUsb(no="/bancada/usb/3-5", vid="046d", pid="08e5", busnum=3,
                        devpath="5", controlador_pci=PCI)
@@ -227,15 +214,8 @@ def _campos(mesa: Any, **kw: Any) -> dict[str, Any]:
     return mesa.campos_do_radio(_ctx(_estado(**kw)))
 
 
-# ---------------------------------------------------------------------------
-# 1. §P4 — âncora não é gesto
-# ---------------------------------------------------------------------------
 def test_as_ancoras_da_secao_nao_carregam_gesto() -> None:
-    """MORDIDA: ponha `data-gesto` no `<a href="#mapear-portas">` do gerador.
-
-    A ÂNCORA SUBIU PARA O CHECK-UP em 25/09/2026, e por isso a régua lê a
-    página inteira em vez da seção do rádio.
-    """
+    """MORDIDA: ponha `data-gesto` no `<a href="#mapear-portas">` do gerador."""
     tags = re.findall(r'<a [^>]*href="#(mapear-[\w-]+)"[^>]*>', _pagina())
     achadas = {alvo: tag for alvo in tags
                for tag in re.findall(rf'<a [^>]*href="#{alvo}"[^>]*>', _pagina())}
@@ -257,18 +237,13 @@ def test_nenhum_gesto_se_chama_como_uma_ancora() -> None:
     assert not (nomes & telas), f"gesto com nome de tela: {sorted(nomes & telas)}"
 
 
-# ---------------------------------------------------------------------------
-# 2 e 3. Os fios — campo com dono, dono com campo, gesto com dono
-# ---------------------------------------------------------------------------
 def test_todo_campo_da_secao_tem_dono_e_todo_dono_tem_campo(mesa: Any) -> None:
-    """MORDIDA: tire o `data-campo="radio-moldes"` do gerador e publique — o
-    pacote passa a escrever para ninguém, e a segunda asserção nomeia o campo."""
+    """MORDIDA: tire o `data-campo="radio-moldes"` do gerador e publique — o"""
     na_pagina = {a["data-campo"] for _t, a in _secao_da_pagina().elementos
                  if "data-campo" in a}
     emitidos = set(_campos(mesa))
     assert na_pagina - emitidos == set(), (
         f"campo na seção sem dono no pacote: {sorted(na_pagina - emitidos)}")
-    # O contador e o «quem» da cerimônia moram nas três telas, FORA da seção.
     em_toda_a_pagina = set(re.findall(r'data-campo="([^"]+)"', _pagina()))
     assert emitidos - em_toda_a_pagina == set(), (
         f"o pacote escreve para campo que a página não tem: "
@@ -281,10 +256,7 @@ def _gestos_de(html: str) -> set[str]:
 
 
 def test_todo_gesto_da_secao_tem_dono(mesa: Any) -> None:
-    """Na página da bancada E no que o produto pinta (sala, janelas, balão).
-
-    MORDIDA: troque o `data-gesto` do botão do balão por um nome sem `@gesto`.
-    """
+    """Na página da bancada E no que o produto pinta (sala, janelas, balão)."""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     campos = _campos(mesa)
@@ -299,12 +271,8 @@ def test_todo_gesto_da_secao_tem_dono(mesa: Any) -> None:
             "adaptador-renomear", "abrir-adaptador"} <= (pintados | na_pagina)
 
 
-# ---------------------------------------------------------------------------
-# 4. A paridade com o desenho aprovado
-# ---------------------------------------------------------------------------
 def test_as_constantes_do_desenho_sao_as_do_dono(a08: Any) -> None:
-    """MORDIDAS: mude `radio_da_mesa.N_MAX_PONTES` para 3; ponha 120 no
-    `HZ_QUE_ENGASGA` do JS do desenho (O-HZ-TEM-A-COR-DA-DISTANCIA-01)."""
+    """MORDIDAS: mude `radio_da_mesa.N_MAX_PONTES` para 3; ponha 120 no"""
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
     from hefesto_dualsense4unix.integrations import radio_da_mesa as dono
 
@@ -316,7 +284,6 @@ def test_as_constantes_do_desenho_sao_as_do_dono(a08: Any) -> None:
     assert pontes and marginal, "o desenho aprovado perdeu as duas constantes"
     assert float(pontes.group(1)) == a08.PONTES_POR_ADAPTADOR
     assert float(marginal.group(1)) == a08.MARGINAL_DA_PONTE
-    # OS CORTES DA COR, contra os donos (o JS do desenho repete os números).
     for nome, valor in (("HZ_QUE_ENGASGA", dono.HZ_QUE_ENGASGA),
                         ("HZ_DO_JOGO", dono.HZ_DO_JOGO),
                         ("CANAIS_MINIMOS_DO_AFH", ar.CANAIS_MINIMOS_DO_AFH),
@@ -328,9 +295,6 @@ def test_as_constantes_do_desenho_sao_as_do_dono(a08: Any) -> None:
             f"o `{nome}` do desenho é {achado.group(1)}, e o do dono é {valor}")
 
 
-# ---------------------------------------------------------------------------
-# 5. «fatia» não chega à tela
-# ---------------------------------------------------------------------------
 _ATRIBUTOS_QUE_SE_LEEM = ("title", "aria-label", "placeholder", "class", "value")
 
 
@@ -350,15 +314,8 @@ def test_fatia_nao_chega_a_tela(mesa: Any) -> None:
         assert not _fala_fatia(_ler(str(campos[chave]))), chave
 
 
-# ---------------------------------------------------------------------------
-# 6. A sala estável e as listas no lugar certo
-# ---------------------------------------------------------------------------
 def test_a_sala_nao_muda_quando_so_os_hz_mudam(mesa: Any) -> None:
-    """O piloto troca a sala inteira quando o texto muda: com os Hz dentro, ela
-    seria reescrita a cada tique, com o nome que ela está digitando junto.
-
-    MORDIDA: chame `html_da_sala(cena, com_hz=True)` em `campos_da_secao`.
-    """
+    """O piloto troca a sala inteira quando o texto muda: com os Hz dentro, ela"""
     antes = _campos(mesa, hz=(250.0, 98.0, 200.0))
     depois = _campos(mesa, hz=(249.1, 97.3, 201.8))
     assert antes["radio-sala"] == depois["radio-sala"]
@@ -366,10 +323,7 @@ def test_a_sala_nao_muda_quando_so_os_hz_mudam(mesa: Any) -> None:
 
 
 def test_as_listas_de_hz_caem_nos_elementos_certos(mesa: Any) -> None:
-    """A lista vai pela ordem do DOM: ela tem de ser a ordem das linhas na sala.
-
-    MORDIDA: ordene os `controles` de `campos_da_secao` por outra chave.
-    """
+    """A lista vai pela ordem do DOM: ela tem de ser a ordem das linhas na sala."""
     campos = _campos(mesa, hz=(250.0, 98.0, 200.0))
     ordem = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
              if a.get("data-campo") == "hz-movimento"]
@@ -378,9 +332,6 @@ def test_as_listas_de_hz_caem_nos_elementos_certos(mesa: Any) -> None:
     for alvo, valor in zip(ordem, campos["hz-movimento"], strict=True):
         assert valor.startswith(esperado[alvo]), (
             f"o Hz de {alvo} caiu no elemento de outro: {valor!r}")
-    # MUDOU NA O-HZ-TEM-A-COR-DA-DISTANCIA-01: o `hz-pouco` (o laranja abaixo
-    # de 125) virou os três níveis (`hz-nivel`) e a dica do glifo (`hz-dica`),
-    # nos mesmos elementos e na mesma ordem.
     for campo in ("hz-nivel", "hz-dica"):
         alvos = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
                  if a.get("data-campo") == campo]
@@ -393,9 +344,6 @@ def test_as_listas_de_hz_caem_nos_elementos_certos(mesa: Any) -> None:
     assert voz == [U1] and len(campos["hz-voz"]) == 1
 
 
-# ---------------------------------------------------------------------------
-# 7. O dublê do `radio.mover` é o tratador de verdade
-# ---------------------------------------------------------------------------
 class _CentralDeMentira:
     def __init__(self, ocupada: bool = False) -> None:
         self.ocupada = ocupada
@@ -436,8 +384,7 @@ class _GovernadorDeMentira:
 
 
 class _PonteQueVaiAoDaemon:
-    """O `ponte.resultado` com o TRATADOR REAL do daemon atrás — a validação de
-    parâmetro e a tradução de `ocupado` são as dele, nunca mais frouxas."""
+    """O `ponte.resultado` com o TRATADOR REAL do daemon atrás — a validação de"""
 
     def __init__(self, central: Any, governador: Any) -> None:
         from types import SimpleNamespace
@@ -477,8 +424,7 @@ def _gesto(nome: str) -> Any:
 
 
 def test_mover_manda_o_destino_que_a_tela_mostrou(mesa: Any) -> None:
-    """MORDIDA: tire `"destino"` dos parâmetros de `_mover` — a central decide
-    sozinha, e a ordem da tela diverge da dela no empate."""
+    """MORDIDA: tire `"destino"` dos parâmetros de `_mover` — a central decide"""
     _campos(mesa)
     central = _CentralDeMentira()
     ponte = _PonteQueVaiAoDaemon(central, _GovernadorDeMentira())
@@ -497,10 +443,7 @@ def test_ocupado_treme_o_botao_e_nao_passa_calado(mesa: Any) -> None:
 
 
 def test_com_um_movimento_esperando_a_tela_nem_pede(mesa: Any) -> None:
-    """Item 6: um movimento esperando PS + Create segura todo «Mover».
-
-    MORDIDA: tire a guarda do `_CENA_NA_TELA["ocupado"]` de `_mover`.
-    """
+    """Item 6: um movimento esperando PS + Create segura todo «Mover»."""
     esperando = [{"estado": "esperando", "quando": time.time(), "destino": A2,
                   "aparelho": U3}]
     campos = _campos(mesa, movimentos=esperando)
@@ -514,12 +457,7 @@ def test_com_um_movimento_esperando_a_tela_nem_pede(mesa: Any) -> None:
 
 
 def test_o_procurar_liga_a_busca_no_destino_da_tela_e_o_conectar_so_abre(mesa: Any) -> None:
-    """O destino da busca é o adaptador aberto na tela. Quem a liga é o
-    «Procurar»; o «+ Conectar» sem alvo só abre o painel e não fala com o rádio.
-
-    FATO SUBSTITUÍDO (01/10/2026, O-CONECTAR-E-UM-INTERRUPTOR-01): esta régua
-    era o «Conectar» sem alvo abrindo a janela da central no destino da tela.
-    """
+    """O destino da busca é o adaptador aberto na tela. Quem a liga é o"""
     _campos(mesa)
     central = _CentralDeMentira()
     ponte = _PonteQueVaiAoDaemon(central, _GovernadorDeMentira())
@@ -549,23 +487,12 @@ def test_o_pedido_do_governador_vira_a_janela_de_duas_saidas(mesa: Any) -> None:
     assert pedido[0]["data-alvo"] == U2 and pedido[0]["data-destino"] == I2
 
 
-# ---------------------------------------------------------------------------
-# 8. «Além do limite» é laranja, nunca vermelho
-# ---------------------------------------------------------------------------
-#: ONDE O VERMELHO PODE MORAR NA SEÇÃO: o nível «engasga» do Hz e dos «N/79»,
-#: por pedido dela (O-HZ-TEM-A-COR-DA-DISTANCIA-01, a parte A e a B). O resto —
-#: o «além do limite», a ocupação, as pontes — continua sem vermelho.
 _O_VERMELHO_PEDIDO = ('.parte.movimento[data-nivel="engasga"]',
                       '.canais-do-lugar[data-nivel="engasga"]')
 
 
 def test_alem_do_limite_e_laranja_nunca_vermelho(mesa: Any) -> None:
-    """MORDIDA: troque `var(--orange)` por `var(--red)` numa regra `.alem`.
-
-    MUDOU NA O-HZ-TEM-A-COR-DA-DISTANCIA-01: o vermelho entrou, por pedido
-    dela pelo nome, SÓ no nível «engasga» do Hz e dos canais
-    (:data:`_O_VERMELHO_PEDIDO`); em toda outra regra da seção ele continua
-    proibido."""
+    """MORDIDA: troque `var(--orange)` por `var(--red)` numa regra `.alem`."""
     regras = re.findall(r"(\.radio [^{}]*)\{([^}]*)\}", _pagina())
     assert regras, "a folha da seção sumiu da página"
     for seletor, corpo in regras:
@@ -601,23 +528,17 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
     tela = " ".join(map(str, campos.values()))
     assert "dentro da m" not in tela.lower(), (
         "sem o BlueZ, a porta que ninguém descreveu virou «Dentro da máquina»")
-    # E o lugar sem nome nem porta não entra numa frase pela metade: o balão
-    # dizia «funciona melhor na <b></b>», a dica do canal «A  parou de saltar».
     assert "<b></b>" not in tela and 'title="A  ' not in tela, (
         "uma frase nomeou o lugar que ninguém descreveu")
     assert "data-pedido" not in campos["radio-moldes"], (
         "a janela do pedido abriria com o texto do tique em que nada se sabia")
 
-    # O BlueZ descreveu a origem e ainda não a vaga: sem a espera, a vaga
-    # sumia do filtro e a janela dizia «Todas as entradas já têm 2».
     adaptadores, aparelhos = descrito()
     monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: (adaptadores[:1], aparelhos))
     mesa._FUNDO.clear()
     assert "data-pedido" not in _campos(mesa)["radio-moldes"], (
         "com a vaga ainda sem porta sabida, o pedido virou «Todas as entradas»")
 
-    # O BlueZ descreveu os dois, e o `maquina.json` ainda está no fio: a
-    # janela congelaria «A Entrada 1.2» no lugar do «Sala» que ela deu.
     monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
     lido = mesa._ler_a_maquina
 
@@ -630,8 +551,6 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
         "a janela do pedido abriria sem o nome que ela deu ao adaptador")
     monkeypatch.setattr(mesa, "_ler_a_maquina", lido)
 
-    # O BlueZ responde: o pedido chega com os dois lugares pelo nome, e o
-    # adaptador que ELE descreveu sem porta continua dentro da máquina.
     placa = AdaptadorDoBluez("/org/bluez/hci2", "hci2", "AA:BB:CC:00:00:21", lugar="",
                              varrendo=False)
     monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: ((*adaptadores, placa), aparelhos))
@@ -647,21 +566,10 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
 
 
 def test_quem_passou_do_limite_e_quem_o_governador_marcou(mesa: Any) -> None:
-    """A «N de 2» de cada linha é a ordem em que as pontes CHEGARAM, e a que
-    passou do limite é a que o governador marcou — um dono só.
-
-    O governador tira a marca das `n_max` primeiras vagas na ordem de chegada
-    (`_recalcular_o_limite`); a tela numerava pela ordem de `controllers`. Com
-    o Cosmic Red na frente da lista e marcado, a linha dele dizia «1 de 2» com
-    o botão de som laranja, e a de OUTRO controle dizia «Passou do limite».
-
-    MORDIDA: devolva `_pontes` à ordem da cena (tire o `sorted`), ou ordene só
-    pela marca e esqueça a ordem de chegada (`ordem_da_vaga`).
-    """
+    """A «N de 2» de cada linha é a ordem em que as pontes CHEGARAM, e a que"""
     estado = _estado(pedido=False)
     for c in estado["controllers"]:
         c.update(adaptador=A1, ponte_do_radio="som")
-    # Chegaram o P3, o P2 e, por «Ligar aqui», o P1 — a lista da cena é P1, P2, P3.
     estado["radio_governador"] = {A1: {"n_max": 2, "pontes": [
         {"uniq": U3, "tipo": "som", "alem_do_limite": False},
         {"uniq": U2, "tipo": "som", "alem_do_limite": False},
@@ -676,9 +584,6 @@ def test_quem_passou_do_limite_e_quem_o_governador_marcou(mesa: Any) -> None:
     assert laranjas == [U1], f"o som laranja está em outra linha: {laranjas}"
 
 
-# ---------------------------------------------------------------------------
-# 9. O sino — pela palavra dela, pela hora, nada cru
-# ---------------------------------------------------------------------------
 def test_o_sino_diz_so_o_que_a_tela_sabe_dizer_e_pela_hora(a08: Any) -> None:
     """MORDIDA: pouse o `motivo` da linha do diário em vez da frase."""
     agora = time.time()
@@ -712,9 +617,6 @@ def test_o_sino_diz_desde_quando_se_mede(mesa: Any, monkeypatch: pytest.MonkeyPa
     assert 'data-gesto="adaptador-historico"' in mesa.html_da_sala(cena)
 
 
-# ---------------------------------------------------------------------------
-# 10. A porta sem nome, e o nome que ela digita
-# ---------------------------------------------------------------------------
 def test_a_porta_sem_numero_se_chama_pelo_devpath() -> None:
     """MORDIDA: devolva `None` no fim de `rotulo_da_entrada`."""
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
@@ -743,12 +645,7 @@ def test_o_nome_que_ela_digita_nao_vira_marcacao(mesa: Any, monkeypatch: pytest.
 
 def test_o_microfone_da_linha_e_o_gesto_da_aba_02(mesa: Any,
                                                    monkeypatch: pytest.MonkeyPatch) -> None:
-    """D-12: o 🎙 é UM ato. O da linha do controle é o `mudo` da 02, chamado —
-    o que ela grava no perfil, confessa e recusa vale igual aqui.
-
-    MORDIDA: volte a pedir `mic_canal_set_detalhado` direto no `custo_mic` — o
-    perfil deixa de lembrar o microfone ligado por esta aba, e a identidade cai.
-    """
+    """D-12: o 🎙 é UM ato. O da linha do controle é o `mudo` da 02, chamado —"""
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
     assert mesa._o_mudo_da_aba_02 is a02_controles.mudo
@@ -761,9 +658,6 @@ def test_o_microfone_da_linha_e_o_gesto_da_aba_02(mesa: Any,
         _gesto("custo-mic")(ctx, {"alvo": "aabbcc0000ff"}, None)
 
 
-# ---------------------------------------------------------------------------
-# 11. A leitura de fundo não pisca depois de um gesto que grava
-# ---------------------------------------------------------------------------
 def _esperar_o_fio(mesa: Any, chave: str) -> None:
     for _ in range(500):
         if chave not in mesa._FUNDO_EM_VOO:
@@ -774,11 +668,7 @@ def _esperar_o_fio(mesa: Any, chave: str) -> None:
 
 def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
         mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O tique logo depois do renomear pinta o nome de ANTES até a leitura nova
-    chegar — e não o campo em branco.
-
-    MORDIDA: volte o `_esquecer` a apagar a chave (`_FUNDO.pop(chave, None)`).
-    """
+    """O tique logo depois do renomear pinta o nome de ANTES até a leitura nova"""
     import threading
 
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -805,12 +695,7 @@ def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
 
 def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
         mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A leitura que começou ANTES de o gesto gravar leu o disco de antes: ela
-    não vale pela validade inteira, e o tique seguinte pede outra.
-
-    MORDIDA: carimbe sempre com `time.monotonic()` no `trabalhar` de
-    `_em_fundo` (tire a comparação da `_GERACAO`).
-    """
+    """A leitura que começou ANTES de o gesto gravar leu o disco de antes: ela"""
     import threading
 
     monkeypatch.setattr(mesa, "LER_NA_HORA", False)
@@ -834,17 +719,8 @@ def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
     assert mesa._em_fundo("prova-do-voo", ler, 60.0) == "nova"
 
 
-# ---------------------------------------------------------------------------
-# 12. O piloto da aba 08 ouve o endereço que a página emite
-# ---------------------------------------------------------------------------
 def test_o_piloto_da_08_ouve_o_endereco_que_a_pagina_emite() -> None:
-    """Item 4 da sprint: o `conexoes_vivas.py` procurava `[data-g]`, a página
-    emite `data-gesto`, e todo clique caía em `null`. A prova do gesto roda à
-    mão (`--oculta --sem-ponte --prova-gesto`, fora da suíte); esta régua lê o
-    FONTE do piloto — sem importar o GTK — e a página que ele abre.
-
-    MORDIDA: volte o `closest('[data-gesto]')` do `OUVINTE` para `[data-g]`.
-    """
+    """Item 4 da sprint: o `conexoes_vivas.py` procurava `[data-g]`, a página"""
     import ast
 
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/conexoes_vivas.py").read_text(
@@ -858,7 +734,6 @@ def test_o_piloto_da_08_ouve_o_endereco_que_a_pagina_emite() -> None:
     assert clica == {"data-gesto"}, f"a prova do gesto procura {sorted(clica)}"
     from hefesto_dualsense4unix.interface import onde
 
-    # A PUBLICADA, e não a bancada: é ela que o piloto abre (`conexoes_vivas.PAGINA`).
     publicada = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
     secao = _ler(publicada, "rd-secao").elementos
     assert any("data-gesto" in a for _t, a in secao), "a seção publicada perdeu os gestos"

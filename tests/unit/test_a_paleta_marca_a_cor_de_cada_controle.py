@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""A paleta marca a cor de cada controle — A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01.
-
-O achado 7 da bancada de 29/09: com os quatro no rádio, as três primeiras
-colunas da aba Iluminação tinham dois X onde deviam ter três, e a coluna do P4
-não marcava a cor dele. A raiz: a fileira perguntava «este hex é o de algum
-controle?» (três igualdades, dois dicionários de um dono por cor), e a pergunta
-de tela é «de quem é esta casa?». O `#FCFCFC` do P4 (o branco a 99%) não tinha
-casa.
-
-As réguas 1 a 4 e a 6 leem o pacote da aba; a 5 lê a bancada (`mockup/`) no
-WebKit, com a carga do pacote, e fotografa a linha (rode no `xvfb-run -a`: sem
-tela ela PULA, e pulo não é verde). Nenhuma espera o que a própria função
-devolve: o esperado sai da cena montada, do dono do plástico ou de um oráculo
-de força bruta.
-
-A LINHA DO DONO (D-2909-A-LINHA-DA-COR-DO-DONO): a borda da casa escolhida
-era o `currentColor` de um `<button>` e saía `rgba(0, 0, 0, 0.8)` nas quatro
-colunas — é o que a mordida da régua 5 mede de volta.
-"""
+"""A paleta marca a cor de cada controle — A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01."""
 from __future__ import annotations
 
 import itertools
@@ -30,7 +12,6 @@ from hefesto_dualsense4unix.core.led_control import LedSettings
 
 PAGINA = "04-iluminacao.html"
 
-#: Faixa SINTÉTICA da casa, nunca endereço de aparelho.
 UNIQS = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
 AZUL, VERMELHO, VERDE = "#0000FF", "#FF0000", "#00FF00"
@@ -39,11 +20,6 @@ AMARELO, CIANO, BRANCO = "#FFFF00", "#00FFFF", "#FFFFFF"
 
 def _hexa(rgb: Any) -> str:
     return "#{:02X}{:02X}{:02X}".format(*tuple(rgb)[:3])
-
-
-# ---------------------------------------------------------------------------
-# A cena: quatro controles, a luz que o daemon publica e o perfil do disco
-# ---------------------------------------------------------------------------
 
 
 def _peca(n: int, luz: tuple[int, int, int], brilho: float, *, nome: str,
@@ -79,17 +55,10 @@ def _contexto(pecas: list[dict[str, Any]]) -> Any:
 
 
 def _a_cena_da_foto() -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """A mesa das ~01h57 de 29/09, com a luz do diário das 01:59:33.
-
-    O P1 vai no CABO, que a foto não tinha: é o que cobre o transporte.
-    """
+    """A mesa das ~01h57 de 29/09, com a luz do diário das 01:59:33."""
     pecas = [
         _peca(1, (255, 0, 0), 1.0, nome="Cosmic Red", modelo="cosmic-red",
               via="usb"),
-        # A LUZ É A QUE O DAEMON PUBLICA HOJE para o azul a 8%, perguntada ao
-        # dono da escala: a foto tinha `(0, 0, 20)`, e desde o piso do brilho
-        # (D-2909-O-BRILHO-TEM-PISO, 29/09/2026) o mesmo azul a 8% acende
-        # mais claro. A cena é a mesma; o byte é o do produto de agora.
         _peca(2, LedSettings(lightbar=(0, 0, 255)).apply_brightness(0.08).lightbar,
               0.08, nome="White", modelo="white"),
         _peca(3, (255, 255, 0), 1.0, nome="Starlight Blue",
@@ -100,10 +69,8 @@ def _a_cena_da_foto() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     perfil = {
         "leds": {"auto_player_colors": True, "lightbar_brightness": 1.0},
         "controllers": {
-            # o amarelo guardado para o número 1: fóssil, ele é o 2 hoje
             _chave(UNIQS[1]): {"leds": {"lightbar": [255, 255, 0],
                                         "lightbar_para_o_numero": 1}},
-            # o override legado: sem procedência, fora dos onze tons
             _chave(UNIQS[3]): {"leds": {"lightbar": [252, 252, 252],
                                         "lightbar_brightness": 0.99}},
         },
@@ -214,18 +181,8 @@ def _marcas(colunas: dict[str, dict[str, Any]]) -> dict[int, dict[str, Any]]:
     return saida
 
 
-# ---------------------------------------------------------------------------
-# Régua 1 — a casa de cada cor, contra um oráculo de força bruta
-# ---------------------------------------------------------------------------
-
-
 def _os_brilhos_de_cada_trecho() -> list[float]:
-    """Um brilho por trecho constante da conta do dono, e o 1,0.
-
-    A conta trunca `c * brilho` por canal: ela só muda nos saltos `k/c` de
-    cada canal `c` que os tons têm. O meio de cada par de saltos vizinhos
-    representa o trecho inteiro. Os canais se leem dos tons, não se digitam.
-    """
+    """Um brilho por trecho constante da conta do dono, e o 1,0."""
     from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
     canais = {c for t in a04.tons_da_guia() for c in t if c}
@@ -287,19 +244,13 @@ class TestACasaDeCadaCor:
         assert a04.a_casa_da_cor(cor) is None
 
 
-# ---------------------------------------------------------------------------
-# Régua 2 — a foto da bancada, no pacote
-# ---------------------------------------------------------------------------
-
-
 class TestAFotoDaBancada:
     """A cena das ~01h57, com o esperado escrito a partir dela."""
 
     def test_cada_coluna_tem_tres_x_e_a_propria_cor(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: a igualdade de hex no `fileira_de_tons` — as três primeiras
-        colunas ficam com dois X (a foto), e o P4 fica sem marca."""
+        """MORDIDA: a igualdade de hex no `fileira_de_tons` — as três primeiras"""
         _ctx, colunas = _pintar(monkeypatch, "a foto")
         marcas = _marcas(colunas)
 
@@ -337,20 +288,13 @@ class TestAFotoDaBancada:
         assert "P4 (Galactic Purple)" in str(erro.value)
 
 
-# ---------------------------------------------------------------------------
-# Régua 3 — duas peças no mesmo tom
-# ---------------------------------------------------------------------------
-
-
 class TestDuasPecasNoMesmoTom:
     """O «Todos» e o global num tom: a casa de vários donos."""
 
     def test_o_todos_nao_ganha_x_nem_gesto_em_coluna_nenhuma(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA 1: um dono por hex — três colunas ganham X na própria cor.
-        MORDIDA 2: o gesto de volta na casa dividida — as quatro oferecem o
-        clique que a régua 4 mostra recusado."""
+        """MORDIDA 1: um dono por hex — três colunas ganham X na própria cor."""
         _ctx, colunas = _pintar(monkeypatch, "o Todos")
         marcas = _marcas(colunas)
         assert set(marcas) == {1, 2, 3, 4}
@@ -396,13 +340,7 @@ class TestDuasPecasNoMesmoTom:
     def test_a_ordem_e_a_do_numero_e_nao_a_da_chegada(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O `conectados` na ordem inversa: a casa dividida segue na ordem do número.
-
-        As outras cenas chegam já na ordem do número, e nelas a ordem da
-        chegada e a do número não se separam. MORDIDA: `as_casas_da_mesa` sem o
-        `sorted` pelo número — a linha verde sai do P4 ao P1, o `title` também,
-        e a recusa nomeia o último.
-        """
+        """O `conectados` na ordem inversa: a casa dividida segue na ordem do número."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         pecas, perfil = _a_cena_do_todos()
@@ -428,28 +366,17 @@ class TestDuasPecasNoMesmoTom:
         assert "P1 (Cosmic Red)" in str(erro.value), str(erro.value)
 
 
-# ---------------------------------------------------------------------------
-# Régua 4 — o gesto é o que a recusa aceita
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("cena", sorted(CENAS))
 def test_o_gesto_e_o_que_a_recusa_aceita(
     monkeypatch: pytest.MonkeyPatch, cena: str
 ) -> None:
-    """Cada casa de cada coluna: gesto ⇔ a recusa aceita; X ⇔ dono que não é ele.
-
-    A régua antiga com este nome montava o `tomadas` à mão e lia só o X; esta
-    chama a recusa. MORDIDA: a recusa por igualdade — na foto, o branco passa
-    calado na coluna do P1, que tem X nele.
-    """
+    """Cada casa de cada coluna: gesto ⇔ a recusa aceita; X ⇔ dono que não é ele."""
     from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
     ctx, colunas = _pintar(monkeypatch, cena)
     pecas, _perfil = CENAS[cena]()
     discordam = []
     marcas = _marcas(colunas)
-    #: os donos de cada casa, lidos da marca própria de cada coluna
     donos = {tom: {n for n, m in marcas.items() if tom in m["on"]}
              for tom in next(iter(marcas.values()))["casas"]}
     for n, m in marcas.items():
@@ -472,13 +399,6 @@ def test_o_gesto_e_o_que_a_recusa_aceita(
     assert not discordam, "\n".join(discordam)
 
 
-# ---------------------------------------------------------------------------
-# Régua 5 — a linha do dono, medida no WebKit (a bancada, `mockup/`)
-# ---------------------------------------------------------------------------
-
-#: O modelo de cada número nas cenas, e o plástico que o dono dá a ele. O
-#: esperado se pergunta ao dono (`tom_para_a_borda` sobre o `cor_de_css`), e
-#: não à função que o pacote chama.
 def _o_plastico_do_dono(modelo: str) -> str:
     from hefesto_dualsense4unix.interface import pacotes  # noqa: F401 — põe `interface/` no path
     import monta
@@ -488,8 +408,6 @@ def _o_plastico_do_dono(modelo: str) -> str:
     return tom_para_a_borda(monta.cor_de_css(modelo)) if modelo else ""
 
 
-#: As casas de cada cena e os donos dela, na ordem do número — escritos a
-#: partir da cena, não do mapa que o pacote monta.
 DONOS_DA_FOTO = {VERMELHO: [1], AZUL: [2], AMARELO: [3], BRANCO: [4]}
 DONOS_DO_TODOS = {VERDE: [1, 2, 3, 4]}
 
@@ -507,10 +425,6 @@ CENAS_DA_TELA = {
     "o plástico que não chegou": _a_foto_sem_o_plastico_do_p2,
 }
 
-#: A geometria de cada casa e da linha dela, lida do motor, e a caixa
-#: `#RRGGBB` da mesma coluna. Os `top`/`left` do `::before` saem resolvidos em
-#: px porque ele é posicionado; somados à caixa por dentro da borda da casa,
-#: dão a linha na vista.
 MEDIDA_DA_LINHA = r"""
 (function(){
   var primeira = document.querySelector('[data-controle][data-conectado="sim"] .guia');
@@ -589,11 +503,10 @@ def _medir_a_linha(tamanho: tuple[int, int], pintar: str) -> dict[str, Any]:
     def mediu(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # o erro vai ao assert
+        except Exception as e:
             saiu.append(f"ERRO na medida: {e}")
             Gtk.main_quit()
             return
-        # a pintura do motor vem depois da resposta do JavaScript
         GLib.timeout_add(400, fotografar)
 
     def pintou(v: Any, res: Any) -> None:
@@ -707,12 +620,7 @@ def _as_casas_na_tela(medido: dict[str, Any]) -> dict[int, dict[str, dict[str, A
 
 @pytest.mark.parametrize("vista", ["janela", "dela"])
 def test_a_linha_tem_a_cor_do_plastico_do_dono(na_tela, vista: str) -> None:
-    """Toda casa com dono, nas quatro colunas: a linha na tinta do plástico.
-
-    MORDIDA: pinte a linha com `currentColor` (a folha do `aba04.py`, regere a
-    04). A cor computada vira a do texto do botão, quase preta — o defeito da
-    borda desde 09/09, medido pela mesma régua.
-    """
+    """Toda casa com dono, nas quatro colunas: a linha na tinta do plástico."""
     medido = na_tela[("a foto", vista)]
     modelos = _modelos("a foto")
     casas = _as_casas_na_tela(medido)
@@ -794,11 +702,7 @@ def test_o_plastico_que_nao_chegou_e_tracejado(na_tela, vista: str) -> None:
 
 @pytest.mark.parametrize("vista", ["janela", "dela"])
 def test_a_casa_propria_nao_tem_mais_borda(na_tela, vista: str) -> None:
-    """A escolha (a) da D-2909-A-LINHA-DA-COR-DO-DONO: a borda da escolhida saiu.
-
-    Escolha de quem coordena pelo padrão dela (a recomendação da sprint), sobre
-    o pedido dela na bancada de 29/09; a linha fica sozinha.
-    """
+    """A escolha (a) da D-2909-A-LINHA-DA-COR-DO-DONO: a borda da escolhida saiu."""
     medido = na_tela[("a foto", vista)]
     for n, fileira in _as_casas_na_tela(medido).items():
         proprias = [c for c in fileira.values() if c["classes"].split()[:2] == ["tom", "on"]]
@@ -809,13 +713,7 @@ def test_a_casa_propria_nao_tem_mais_borda(na_tela, vista: str) -> None:
 
 @pytest.mark.parametrize("vista", ["janela", "dela"])
 def test_so_a_casa_com_gesto_tem_a_mao_de_clique(na_tela, vista: str) -> None:
-    """O cursor diz o que o gesto faz: a mão só onde há `data-gesto`.
-
-    A casa que ele divide (o «Todos») fica `on`, sem X e sem gesto; com a mão
-    de clique ela prometeria o que não faz. MORDIDA: tire o
-    `[aria-disabled="true"]` da regra do `not-allowed` (regere a 04) — a casa
-    verde volta à mão nas quatro colunas.
-    """
+    """O cursor diz o que o gesto faz: a mão só onde há `data-gesto`."""
     erradas = []
     for cena in ("a foto", "o Todos"):
         for n, fileira in _as_casas_na_tela(na_tela[(cena, vista)]).items():
@@ -832,11 +730,6 @@ def test_a_regua_mede_as_vistas_que_pediu(na_tela) -> None:
         assert medido["viewport"] == list(_vistas()[vista]), (cena, vista, medido["viewport"])
 
 
-# ---------------------------------------------------------------------------
-# Régua 6 — todo modelo tem linha
-# ---------------------------------------------------------------------------
-
-
 def _os_modelos_da_folha() -> list[str]:
     """Os modelos que a folha do desenho publica — lidos, não digitados."""
     from hefesto_dualsense4unix.interface import pacotes  # noqa: F401 — põe `interface/` no path
@@ -846,13 +739,7 @@ def _os_modelos_da_folha() -> list[str]:
 
 
 def test_todo_modelo_tem_linha(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A tinta que o pacote emite para a linha, para cada modelo da folha.
-
-    Um hex com o contraste do piso da borda contra o fundo do card, ou a linha
-    tracejada. Nunca vazia, nunca `url(`. MORDIDA: `plastico_da_linha` lendo a
-    casca por `monta.cor_da_zona` — os oito sem amostra emitem
-    `url(#hachura-sem-hex)` e reprovam.
-    """
+    """A tinta que o pacote emite para a linha, para cada modelo da folha."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import (
         FUNDO_DO_CARD,
         RAZAO_DA_BORDA,

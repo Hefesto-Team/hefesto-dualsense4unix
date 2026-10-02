@@ -1,19 +1,4 @@
-"""Nenhuma linha de ordem existe sem dizer de onde ela veio.
-
-Três selos, e o terceiro **exige nomear o terceiro**: autoridade anônima é
-exatamente como raciocínio se veste de medição, e é o motivo de o selo existir.
-
-POR QUE POR AST, E NÃO CHAMANDO AS REGRAS
-------------------------------------------
-
-Chamar as seis regras só alcança as `Linha` que a bancada faz nascer. Uma linha
-dentro de um ramo que nenhuma fixture cobre passaria em branco — e é justamente
-o ramo raro que ninguém revisa. A varredura por AST lê o ARQUIVO e alcança
-todas as construções de `Linha`, disparem elas ou não.
-
-O molde é `scripts/validar-fala-de-tela.py`, que lê `NUMEROS_MEDIDOS_NO_MAPA`
-sem importar o módulo.
-"""
+"""Nenhuma linha de ordem existe sem dizer de onde ela veio."""
 from __future__ import annotations
 
 import ast
@@ -23,11 +8,8 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import ordens_da_mesa
 
-#: A raiz da árvore — três níveis acima de `tests/unit/<este arquivo>`.
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: O arquivo que a varredura lê. Lido como TEXTO, nunca importado: o ponto do
-#: portão é alcançar o ramo que não roda.
 FONTE = Path(ordens_da_mesa.__file__)
 
 
@@ -50,12 +32,7 @@ def _argumento(chamada: ast.Call, nome: str) -> ast.expr | None:
 
 
 def _constante_do_modulo(no: ast.expr | None) -> object:
-    """O valor de `SELO` ou `"texto"` — resolvendo o nome contra o módulo.
-
-    Os selos são escritos como `MEDIDO_AQUI`, não como a string crua. Resolver
-    o nome contra o módulo é o que deixa o portão ler o VALOR sem executar o
-    arquivo.
-    """
+    """O valor de `SELO` ou `"texto"` — resolvendo o nome contra o módulo."""
     if isinstance(no, ast.Constant):
         return no.value
     if isinstance(no, ast.Name):
@@ -78,10 +55,7 @@ def test_toda_linha_declara_um_dos_tres_selos() -> None:
 
 
 def test_selo_de_terceiro_sem_fonte_nao_existe() -> None:
-    """A regra que o portão guarda: terceiro anônimo não é terceiro.
-
-    Tirar o `fonte=` da linha do USB 3.0 reprova aqui.
-    """
+    """A regra que o portão guarda: terceiro anônimo não é terceiro."""
     for chamada in _construcoes_de_linha():
         selo = _constante_do_modulo(_argumento(chamada, "selo"))
         if selo != ordens_da_mesa.ESPECIFICACAO_DE_TERCEIRO:
@@ -93,11 +67,7 @@ def test_selo_de_terceiro_sem_fonte_nao_existe() -> None:
 
 
 def test_a_fonte_do_selo_existe_em_disco() -> None:
-    """A MORDIDA DA ORDEM-7: a fonte é um caminho desta árvore, não um nome solto.
-
-    "Intel" numa string não é uma fonte: ninguém consegue ir conferir. Apagar
-    `docs/protocol/por-que-usb3-atrapalha-24ghz.md` reprova aqui.
-    """
+    """A MORDIDA DA ORDEM-7: a fonte é um caminho desta árvore, não um nome solto."""
     conferidas = 0
     for chamada in _construcoes_de_linha():
         selo = _constante_do_modulo(_argumento(chamada, "selo"))

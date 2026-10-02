@@ -1,18 +1,4 @@
-"""Testes de `HefestoApp.quit_app` (BUG-MULTI-INSTANCE-01).
-
-Verifica que 'Sair' no tray encerra o daemon via systemctl --user stop.
-
-Abordagem: importamos `HefestoApp` lazy dentro de cada teste pois o módulo
-`hefesto_dualsense4unix.app.app` puxa `gi.repository.GdkPixbuf`, que nem todo ambiente de
-CI tem. Quando ausente, o teste é pulado.
-
-Hermeticidade (GATE-STALE-TEST-01): `_shutdown_backend` tem um fallback que
-lê o `daemon.pid` REAL de `runtime_dir()` e manda SIGTERM/SIGKILL — numa
-auditoria esta suíte matou o daemon vivo da máquina da desenvolvedora. A
-fixture autouse `_isola_runtime_e_kill` abaixo garante que NENHUM teste
-deste arquivo enxerga o runtime dir real nem consegue sinalizar um
-processo de verdade.
-"""
+"""Testes de `HefestoApp.quit_app` (BUG-MULTI-INSTANCE-01)."""
 from __future__ import annotations
 
 import os
@@ -25,19 +11,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _isola_runtime_e_kill(monkeypatch, tmp_path):
-    """Blindagem de hermeticidade contra o daemon real (GATE-STALE-TEST-01).
-
-    Todo teste deste arquivo nasce com:
-
-      - `runtime_dir()` apontando para um tmp vazio (sem `daemon.pid`);
-      - `XDG_RUNTIME_DIR` no mesmo tmp (defesa em profundidade);
-      - `os.kill` trocado por um tripwire que FALHA o teste se qualquer
-        caminho tentar sinalizar um processo de verdade.
-
-    Testes do fallback de pid file re-patcham `runtime_dir`/`os.kill` por
-    cima via `_patch_pid_fallback` (mesmo `monkeypatch`; o último patch
-    vence dentro do teste e tudo é desfeito no teardown).
-    """
+    """Blindagem de hermeticidade contra o daemon real (GATE-STALE-TEST-01)."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     runtime = tmp_path / "runtime-hermetico"
@@ -63,13 +37,7 @@ def _load_app_module():
 
 
 class _InstantThread:
-    """Stub de threading.Thread que executa target() síncrono em start().
-
-    Preserva a assinatura esperada (target, daemon kwarg) mas roda na
-    thread principal pra facilitar asserts nos testes. quit_app dispara
-    `_shutdown_backend` em thread daemon; usar este stub vira execução
-    in-line.
-    """
+    """Stub de threading.Thread que executa target() síncrono em start()."""
 
     def __init__(self, target=None, daemon=False, **_kw):
         self._target = target
@@ -98,10 +66,6 @@ def test_quit_app_chama_systemctl_stop(monkeypatch):
     stub = _make_quit_stub(app_mod)
     app_mod.HefestoApp.quit_app(stub)
 
-    # Com o runtime isolado (sem daemon.pid), o fallback de pid file retorna
-    # cedo e a garantia pkill nem roda: a ÚNICA chamada é o systemctl stop.
-    # O caminho completo (SIGTERM→SIGKILL→pkill) é coberto em
-    # test_quit_app_sigkill_apos_grace.
     fake_run.assert_called_once()
     args, kwargs = fake_run.call_args
     cmd = args[0] if args else kwargs.get("args")
@@ -172,13 +136,7 @@ def _patch_pid_fallback(
     is_alive_value: bool = True,
     is_hef_value: bool = True,
 ) -> dict:
-    """Aparelha o ambiente para o fallback de pid file (TRAY-QUIT-CLEAN-01).
-
-    Retorna dict com mocks que cada teste pode inspecionar:
-      - kills: lista (pid, signum) de cada `os.kill` capturado.
-      - is_alive_calls: lista de pids verificados.
-      - run: o MagicMock que substitui `subprocess.run` (systemctl + pkill).
-    """
+    """Aparelha o ambiente para o fallback de pid file (TRAY-QUIT-CLEAN-01)."""
     from hefesto_dualsense4unix.utils import single_instance, xdg_paths
 
     runtime = tmp_path
@@ -224,7 +182,6 @@ def test_quit_app_mata_daemon_avulso_via_pid_file(monkeypatch, tmp_path):
         monkeypatch, app_mod, tmp_path, pid=12345, is_alive_value=True, is_hef_value=True
     )
 
-    # is_alive: 1ª True (entrada do bloco) + 30 False após SIGTERM (sai do loop).
     estados = iter([True] + [False] * 30)
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.single_instance.is_alive",
@@ -298,7 +255,6 @@ def test_quit_app_sigkill_apos_grace(monkeypatch, tmp_path):
         monkeypatch, app_mod, tmp_path, pid=12345, is_alive_value=True, is_hef_value=True
     )
 
-    # Acelerar loop: time.monotonic avança 0.5s/chamada → 7 iterações cobrem 3s.
     sequencia = iter([0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
     monkeypatch.setattr(app_mod.time, "monotonic", lambda: next(sequencia))
 
@@ -310,15 +266,6 @@ def test_quit_app_sigkill_apos_grace(monkeypatch, tmp_path):
     assert sigterms == [(12345, _signal.SIGTERM)]
     assert sigkills == [(12345, _signal.SIGKILL)]
 
-    # Garantia broad-stroke pós-SIGKILL: 1 systemctl stop + 4 pkill -KILL -f
-    # (era o que fazia o assert antigo de "1 chamada" ficar stale quando o
-    # caminho completo era percorrido — GATE-STALE-TEST-01).
-    #
-    # O QUARTO nasceu em 25/08/2026 com a migração de app-id, e é deliberado:
-    # quem tinha o Flatpak antigo pode estar com uma instância de pé sob
-    # `br.andrefarias.Hefesto`. Fechar só o id novo deixaria a antiga rodando,
-    # segurando o hidraw, e a pessoa veria "já está aberto" sobre um aplicativo
-    # que ela acabou de fechar.
     cmds = [c.args[0] for c in captured["run"].call_args_list if c.args]
     assert cmds[0] == ["systemctl", "--user", "stop", "hefesto-dualsense4unix.service"]
     pkills = [cmd for cmd in cmds if cmd[:3] == ["pkill", "-KILL", "-f"]]
@@ -335,9 +282,7 @@ def test_quit_app_sigkill_apos_grace(monkeypatch, tmp_path):
 
 
 def test_quit_app_main_quit_antes_do_cleanup(monkeypatch):
-    """Invariante crítico: Gtk.main_quit é chamado ANTES de tray.stop /
-    systemctl pra que o processo encerre mesmo se o cleanup travar
-    (D-Bus sem StatusNotifierWatcher robusto)."""
+    """Invariante crítico: Gtk.main_quit é chamado ANTES de tray.stop /"""
     app_mod = _load_app_module()
 
     call_order: list[str] = []

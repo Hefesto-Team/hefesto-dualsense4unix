@@ -39,8 +39,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: OS MARCADORES DO TRECHO, e eles são os comentários do próprio piloto. Recortar
-#: por número de linha faria a régua envelhecer no primeiro `import` novo.
 ABRE = "    // 1b. OS LUGARES VAZIOS"
 FECHA = "    // 2. OS CAMPOS POR CONTROLE"
 
@@ -53,10 +51,6 @@ def _trecho_do_piloto() -> str:
     return fonte[i:j]
 
 
-#: O DOM DE MENTIRA. Ele implementa só o que o trecho usa — `querySelectorAll`
-#: por `[data-controle="pN"]`, `dataset` e `classList` —, e é de propósito:
-#: um DOM completo esconderia, atrás de mil comportamentos, qual deles a cura
-#: precisa. O que ele devolve no fim é o estado de cada lugar, para o Python ler.
 _DOM = """
 function Elemento(controle, fechado){
   this.dataset = {controle: controle};
@@ -101,11 +95,7 @@ console.log(JSON.stringify({lugares: fora, pintados: n}));
 
 
 def _rodar(lugares: dict[str, bool], carga: dict) -> dict:
-    """Roda o trecho do piloto no `node` e devolve o estado de cada lugar.
-
-    :param lugares: prefixo -> o cartão começa FECHADO?
-    :param carga: o que o pacote manda (`vazios` e `ocupados`).
-    """
+    """Roda o trecho do piloto no `node` e devolve o estado de cada lugar."""
     node = shutil.which("node") or shutil.which("nodejs")
     if not node:
         pytest.skip("sem `node` nesta máquina — a régua mede o JS rodando")
@@ -139,29 +129,14 @@ def test_o_lugar_sem_dono_continua_fechando() -> None:
 
 
 def test_o_cartao_ja_aberto_nao_conta_pintura() -> None:
-    """Reabrir o que já está aberto não pode somar ao contador de pintura.
-
-    O `n` é o que a régua do mockup lê para dizer "o produto escreveu aqui".
-    Somar a cada tique sobre um cartão que ninguém mexeu faria o número subir
-    para sempre — é o defeito 2 da lista de mordidas do
-    `test_o_lugar_vazio_para_de_mostrar_o_desenho`, repetido.
-    """
+    """Reabrir o que já está aberto não pode somar ao contador de pintura."""
     fora = _rodar({"p1": False}, {"vazios": [], "ocupados": ["p1"]})
     assert fora["pintados"] == 0, (
         f"reabrir um cartão já aberto somou {fora['pintados']} ao contador")
 
 
 def test_o_lugar_cheio_sem_o_atributo_ganha_a_marca() -> None:
-    """O TERCEIRO ESTADO, medido no DOM vivo em 03/09/2026.
-
-    Nas abas `02-controles`, `05-vibracao` e `08-conexoes` o lugar CHEIO nasce
-    sem `data-conectado` nenhum. A primeira versão do passo `1c` só trocava um
-    valor pelo outro, e os três ficavam em `null` para sempre — a folha não tem
-    como vestir de conectado um lugar sobre o qual a tela não afirma nada.
-
-    O ensaio que pegou isto imprimia `?` nas três colunas, e o `?` era a
-    ausência do atributo, não um erro de leitura.
-    """
+    """O TERCEIRO ESTADO, medido no DOM vivo em 03/09/2026."""
     fora = _rodar({"p1": "nada"}, {"vazios": [], "ocupados": ["p1"]})
     assert fora["lugares"]["p1"]["conectado"] == "sim", (
         "o lugar cheio sem o atributo não ganhou a marca: "
@@ -169,21 +144,13 @@ def test_o_lugar_cheio_sem_o_atributo_ganha_a_marca() -> None:
 
 
 def test_sem_ocupados_nada_reabre() -> None:
-    """Uma carga velha, sem a chave nova, não pode explodir nem reabrir sozinha.
-
-    O `p.ocupados || []` é o que segura isto: uma aba que ainda não passe pelo
-    `apagar_os_lugares_sem_dono` continua funcionando como antes.
-    """
+    """Uma carga velha, sem a chave nova, não pode explodir nem reabrir sozinha."""
     fora = _rodar({"p1": True}, {"vazios": []})
     assert fora["lugares"]["p1"] == {"conectado": "nao", "off": True}  # noqa-acento: valor de atributo
 
 
 def test_o_pacote_diz_quem_tem_dono() -> None:
-    """A outra metade: `apagar_os_lugares_sem_dono` emite `ocupados`.
-
-    E ELE VEM DA MESA, não das colunas. O `com_dono` é a lista de `pN` que têm
-    aparelho agora, perguntada a `hefesto_vivo._com_dono(ctx)`.
-    """
+    """A outra metade: `apagar_os_lugares_sem_dono` emite `ocupados`."""
     from hefesto_dualsense4unix.interface.pacotes import apagar_os_lugares_sem_dono
 
     carga = apagar_os_lugares_sem_dono(
@@ -208,7 +175,6 @@ def test_ter_coluna_nao_e_ter_dono() -> None:
     """
     from hefesto_dualsense4unix.interface.pacotes import apagar_os_lugares_sem_dono
 
-    # a carga EXATA da `03-gatilhos`: coluna para os quatro, dono só do p1
     carga = apagar_os_lugares_sem_dono(
         {"colunas": {"p1": {"modo": "Off"}, "p2": {"modo": "—"},
                      "p3": {"modo": "—"}, "p4": {"modo": "—"},
@@ -220,12 +186,7 @@ def test_ter_coluna_nao_e_ter_dono() -> None:
 
 
 def test_sem_a_mesa_nada_reabre() -> None:
-    """Sem `com_dono`, o caminho antigo — e ele é o SEGURO.
-
-    Nenhum lugar reabre, que é o comportamento anterior à cura. A tela pode
-    ficar atrasada; nunca mentindo a mais. Um `com_dono` opcional que
-    ADIVINHASSE a mesa seria a porta pela qual a regressão voltaria.
-    """
+    """Sem `com_dono`, o caminho antigo — e ele é o SEGURO."""
     from hefesto_dualsense4unix.interface.pacotes import apagar_os_lugares_sem_dono
 
     carga = apagar_os_lugares_sem_dono(
@@ -234,12 +195,7 @@ def test_sem_a_mesa_nada_reabre() -> None:
 
 
 def test_o_com_dono_do_piloto_le_a_mesa() -> None:
-    """`_com_dono(ctx)` traduz os conectados em `pN` pela mesa.
-
-    Sem esta prova a função poderia devolver `uniq` cru — e o piloto procuraria
-    `[data-controle="14:3a:…"]`, que não casa com elemento nenhum. Falha
-    CALADA: nada reabre, e a régua do pacote continua verde.
-    """
+    """`_com_dono(ctx)` traduz os conectados em `pN` pela mesa."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
     from hefesto_dualsense4unix.interface import pacotes
 
@@ -253,11 +209,7 @@ def test_o_com_dono_do_piloto_le_a_mesa() -> None:
 
 
 def test_o_com_dono_ignora_quem_a_mesa_nao_conhece() -> None:
-    """Um conectado sem lugar na mesa não inventa endereço.
-
-    Acontece de verdade na janela entre o controle chegar e a mesa remontar. O
-    certo é ficar de fora — reabrir um `pN` adivinhado abriria o cartão errado.
-    """
+    """Um conectado sem lugar na mesa não inventa endereço."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
     from hefesto_dualsense4unix.interface import pacotes
 
@@ -268,11 +220,7 @@ def test_o_com_dono_ignora_quem_a_mesa_nao_conhece() -> None:
 
 
 def test_ocupados_e_vazios_nunca_se_cruzam() -> None:
-    """Um lugar em AMBAS as listas faria o piloto fechar e abrir no mesmo tique.
-
-    A ordem dos passos decidiria o resultado, e isso é um defeito que só aparece
-    depois de alguém trocar duas linhas de lugar.
-    """
+    """Um lugar em AMBAS as listas faria o piloto fechar e abrir no mesmo tique."""
     from hefesto_dualsense4unix.interface.pacotes import apagar_os_lugares_sem_dono
 
     for vivas in ([], ["p1"], ["p1", "p3"], ["p1", "p2", "p3", "p4"]):

@@ -49,12 +49,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES do import de
-# `secao_controles`, que constrói `Gtk.Box`/`Gtk.Button` de verdade
-# (`set_no_show_all` nas mordidas acima é método real de `Gtk.Widget`) e chega
-# a `import gi` via `config/__init__.py -> mixin.py -> base.py`. Sem ela, este
-# arquivo estourava ERRO DE COLETA no CI sem PyGObject (medido: simulação do
-# job `lint-test` com `gi`/`cairo` bloqueados via `sys.meta_path`).
 exigir_gi_real("o botão A luz não acende do card externo")
 
 import os
@@ -86,7 +80,6 @@ from hefesto_dualsense4unix.app.actions.config.secao_controles import (
 from hefesto_dualsense4unix.app.widgets.external_card import DadosDoControle
 
 #: Um DualSense no rádio. MAC na faixa sintética `aa:bb:cc` que o portão de
-#: anonimato reconhece — em fixture a máscara da casa não basta.
 NO_RADIO = DadosDoControle(
     chave="k1",
     titulo="Jogador 2",
@@ -97,10 +90,7 @@ NO_RADIO = DadosDoControle(
     endereco="aabbcc000001",
     no_cabo=False,
 )
-#: O MESMO controle, no cabo. Só `no_cabo` muda — é o que faz a asserção morder
-#: o transporte e nada mais.
 NO_CABO = DadosDoControle(**{**NO_RADIO.__dict__, "chave": "k2", "no_cabo": True})
-#: Um 8BitDo: o Hefesto vê, não adota, e ele não tem barra nenhuma.
 NAO_ADOTADO = DadosDoControle(
     chave="k3",
     titulo="Jogador 3",
@@ -113,9 +103,6 @@ NAO_ADOTADO = DadosDoControle(
 
 ALVO = uniq_normalizado(NO_RADIO.uniq)
 
-#: O veredito do nascimento como ele chega no payload
-#: (`daemon/ipc_handlers._nascimento_para`). SINAL-NO-NASCIMENTO-01/E2. Desde
-#: 13/09/2026 ele só serve para provar que o card NÃO o mostra.
 _CONDENADO: dict[str, Any] = {
     "confianca": "suspeita",
     "porque": (
@@ -143,11 +130,6 @@ class _SondaDeMentira:
         return self._roteiro.pop(0)
 
 
-# ---------------------------------------------------------------------------
-# Regra 1 — sempre visível, só acionável no rádio
-# ---------------------------------------------------------------------------
-
-
 class TestSoAcionavelNoRadio:
     def test_no_radio_o_botao_e_clicavel(self) -> None:
         assert pode_derrubar(NO_RADIO) is True
@@ -165,12 +147,7 @@ class TestSoAcionavelNoRadio:
         assert pode_derrubar(sem_uniq) is False
 
     def test_a_dica_do_cabo_diz_por_que_esta_apagado(self) -> None:
-        """Botão insensível sem explicação é o defeito que esta casa já pagou.
-
-        A PALAVRA DOS DOIS TRANSPORTES SE PERGUNTA AO DONO desde 24/09/2026
-        (A-GESTAO-SEGUE-O-JOGADOR-01): a dica diz USB e BT, a decisão dela de
-        21/09. Digitar `"cabo"` aqui prendia a palavra que ela revogou.
-        """
+        """Botão insensível sem explicação é o defeito que esta casa já pagou."""
         from hefesto_dualsense4unix.app.actions.home_actions import (
             palavra_do_transporte as palavra,
         )
@@ -185,35 +162,16 @@ class TestSoAcionavelNoRadio:
         assert "não reconecta sozinho" in dica
 
     def test_a_dica_do_radio_e_so_o_que_o_botao_faz(self) -> None:
-        """FRASES-E-DICAS-02, 13/09/2026: o aviso da mesa suja saiu da dica.
-
-        CONTRATO QUE MUDOU: até esta data a dica ANEXAVA um aviso com instrução
-        quando outro programa segurava nó de controle. A ordem dela de 13/09
-        tira frase de aviso da tela em toda forma, `title` incluído; a dica
-        ficou com o que o clique faz, e a função não pergunta mais pela mesa.
-        A régua com a sonda dublada mora em
-        `test_a08_o_veredito_e_a_mesa_de_radio_dela` e em
-        `test_nenhuma_frase_de_aviso_chega_a_tela`.
-        """
+        """FRASES-E-DICAS-02, 13/09/2026: o aviso da mesa suja saiu da dica."""
         import inspect
 
         assert list(inspect.signature(dica_do_botao).parameters) == ["dados"]
         assert dica_do_botao(NO_RADIO) == DICA_NO_RADIO
 
 
-# ---------------------------------------------------------------------------
-# A mentira que a espera não conta
-# ---------------------------------------------------------------------------
-
-
 class TestPrimeiroVerCairDepoisVerVoltar:
     def test_o_controle_ainda_presente_no_primeiro_tique_nao_e_voltou(self) -> None:
-        """A mordida principal deste arquivo.
-
-        O nó leva um tempo para sumir depois do `Disconnect`. Se "está aí" já
-        valesse como "voltou", o card sairia da espera antes de a pessoa
-        encostar no controle.
-        """
+        """A mordida principal deste arquivo."""
         espera = EsperaPeloPS(ALVO, total_s=5, sonda=_SondaDeMentira([{ALVO}] * 3))
         assert espera.tique() == ESPERA_PROCURANDO
         assert espera.tique() == ESPERA_PROCURANDO
@@ -222,27 +180,18 @@ class TestPrimeiroVerCairDepoisVerVoltar:
     def test_sumiu_e_voltou_e_o_unico_caminho_para_voltou(self) -> None:
         sonda = _SondaDeMentira([{ALVO}, set(), set(), {ALVO}])
         espera = EsperaPeloPS(ALVO, total_s=10, sonda=sonda)
-        assert espera.tique() == ESPERA_PROCURANDO  # ainda no rádio
-        assert espera.tique() == ESPERA_PROCURANDO  # sumiu
+        assert espera.tique() == ESPERA_PROCURANDO
+        assert espera.tique() == ESPERA_PROCURANDO
         assert espera.caiu is True
-        assert espera.tique() == ESPERA_PROCURANDO  # continua fora
+        assert espera.tique() == ESPERA_PROCURANDO
         assert espera.tique() == ESPERA_VOLTOU
 
     def test_a_sonda_cega_nao_conta_como_sumiu(self) -> None:
-        """`None` é "não consegui olhar" e não pode virar notícia.
-
-        Sem isto, um `/sys` ilegível faria o produto anunciar que o controle
-        caiu — o ELO-MUDO-01 ao contrário: ausência de leitura virando fato.
-        """
+        """`None` é "não consegui olhar" e não pode virar notícia."""
         espera = EsperaPeloPS(ALVO, total_s=4, sonda=_SondaDeMentira([None, None]))
         espera.tique()
         espera.tique()
         assert espera.caiu is False
-
-
-# ---------------------------------------------------------------------------
-# Regra 3 — o fim da espera diz o que aconteceu
-# ---------------------------------------------------------------------------
 
 
 class TestOFimDaEsperaTemNome:
@@ -290,12 +239,7 @@ class TestOFimDaEsperaTemNome:
 
 
 class TestNenhumaFraseLeALampada:
-    """Ninguém nesta casa consegue LER a barra — nenhuma frase pode fingir.
-
-    `multi_intensity` é a memória da última escrita pela classe LED, e leu
-    `[0 255 0]` com a barra apagada E com ela verde (16/08/2026). Um card que
-    dissesse "a barra acendeu" estaria inventando.
-    """
+    """Ninguém nesta casa consegue LER a barra — nenhuma frase pode fingir."""
 
     def test_nenhuma_frase_afirma_acesa_ou_apagada(self) -> None:
         frases = [
@@ -319,17 +263,6 @@ class TestNenhumaFraseLeALampada:
         assert TEXTO_DO_BOTAO == "A luz não acende"
 
 
-# A RAZÃO DO NASCIMENTO SAIU — FRASES-E-DICAS-03, 13/09/2026. Aqui morava
-# `TestARazaoSoFalaQuandoCONDENA`: a razão que o card mostrava debaixo do botão
-# só falava quando o daemon condenava a conexão (sem carimbo, `limpa` e
-# `nao_sei` calavam). A ordem dela de 13/09
-# (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tirou a
-# razão da tela, e `frase_do_nascimento` saiu do dono sem leitor vivo: a janela
-# GTK saiu em 06/09 (`D-0609-GTK-LEVA-INTEIRA`). As três regras do silêncio
-# ficam escritas na nota de `secao_controles.py`, no lugar da função. O que este
-# arquivo cobra agora é a AUSÊNCIA — `TestARazaoSaiuDoCard`, abaixo.
-
-
 class TestNormalizacaoDoEndereco:
     def test_as_duas_formas_que_circulam_no_produto_batem(self) -> None:
         assert uniq_normalizado("AA:BB:CC:00:00:01") == "aabbcc000001"
@@ -339,10 +272,6 @@ class TestNormalizacaoDoEndereco:
         for lixo in ("", None, "abc", "zz:bb:cc:00:00:01"):
             assert uniq_normalizado(lixo) == ""
 
-
-# ---------------------------------------------------------------------------
-# O bloco na tela — GTK de verdade, sem janela
-# ---------------------------------------------------------------------------
 
 gi = pytest.importorskip("gi", reason="o bloco na tela precisa de PyGObject")
 gi.require_version("Gtk", "3.0")
@@ -357,19 +286,13 @@ CABECA = pytest.mark.skipif(
 def _bloco_num_card(
     dados: DadosDoControle, **kwargs: Any
 ) -> tuple[Any, Any, list[Any]]:
-    """Monta um card de verdade, encaixa o bloco, e faz o `show_all` da seção.
-
-    `Gtk.OffscreenWindow` e nunca `Gtk.Window`: sob Xvfb não há gerenciador de
-    janelas e uma `Gtk.Window` fica 1x1 para sempre.
-    """
+    """Monta um card de verdade, encaixa o bloco, e faz o `show_all` da seção."""
     from hefesto_dualsense4unix.app.actions.config.secao_controles import _BlocoDaLuz
     from hefesto_dualsense4unix.app.widgets.external_card import ExternalCard
 
     opcoes: dict[str, Any] = {
         "ao_derrubar": lambda _alvo: None,
         "ao_voltar": lambda: None,
-        # `None` = "não agendei nada": o `_parar_o_tique` não vai pedir ao
-        # GLib para remover uma fonte que nunca existiu.
         "agendar": lambda _passo: None,
         "correr": lambda _fn, _pronto: None,
     }
@@ -429,9 +352,7 @@ class TestOBlocoNaTela:
         assert bloco.botao.get_visible() is False
         assert bloco.aviso.get_visible() is True
         assert bloco.cancelar.get_visible() is True
-        # A linha do jogador é a última do corpo; ela some.
         assert filhos[-1].get_visible() is False
-        # O espaçador é o penúltimo, e ele fica: sem ele o card encolhe.
         assert filhos[-2].get_visible() is True
 
     def test_o_gesto_que_nao_derrubou_nao_manda_apertar_ps(self) -> None:
@@ -458,12 +379,11 @@ class TestOBlocoNaTela:
         )
         bloco.botao.clicked()
         assert passos, "a contagem tem de ter sido agendada"
-        # Um roteiro que faz o controle sumir e voltar, sem tocar em relógio.
         bloco._espera = EsperaPeloPS(
             NO_RADIO.uniq, total_s=9, sonda=_SondaDeMentira([set(), {ALVO}])
         )
-        assert passos[0]() is True  # sumiu — continua contando
-        assert passos[0]() is False  # voltou — o relógio para
+        assert passos[0]() is True
+        assert passos[0]() is False
         assert voltas == [1], "o card tem de reler a mesa quando ele volta"
         assert bloco.botao.get_visible() is True
         assert filhos[-1].get_visible() is True
@@ -484,13 +404,7 @@ class TestOBlocoNaTela:
 
 @CABECA
 class TestARazaoSaiuDoCard:
-    """O card não ganha linha de razão, nem com a conexão condenada no payload.
-
-    FRASES-E-DICAS-03, 13/09/2026 — ver a nota acima de
-    `TestNormalizacaoDoEndereco`. MORDIDA: devolva ao `_BlocoDaLuz` a linha da
-    razão debaixo do botão e ao painel o `_nascimentos` que a alimentava, e os
-    dois testes reprovam.
-    """
+    """O card não ganha linha de razão, nem com a conexão condenada no payload."""
 
     def test_o_bloco_tem_so_o_botao_e_a_espera(self) -> None:
         bloco, _card, _filhos = _bloco_num_card(NO_RADIO)

@@ -58,18 +58,14 @@ def _bt_valido() -> bytes:
     """Um ``0x31`` de estado com CRC que fecha — o que o aparelho manda."""
     corpo = bytearray(prr.INPUT_REPORT_BT_SIZE - 4)
     corpo[0] = prr.INPUT_REPORT_BT
-    corpo[1] = 0x00  # sem o bit de áudio
-    corpo[prr._BT_STRUCT_BASE + prr.BATTERY_STATUS_OFFSET] = 0x07  # nibble 7 = 75%
+    corpo[1] = 0x00
+    corpo[prr._BT_STRUCT_BASE + prr.BATTERY_STATUS_OFFSET] = 0x07
     crc = prr.bt_crc32(bytes(corpo), seed=prr.BT_INPUT_CRC_SEED)
     return bytes(corpo) + crc.to_bytes(4, "little")
 
 
 def _bt_de_audio() -> bytes:
-    """O MESMO report, com o bit de áudio — e CRC igualmente válido.
-
-    É o ponto inteiro do defeito: ele é indistinguível pelo tamanho e pelo CRC.
-    Só o bit denuncia.
-    """
+    """O MESMO report, com o bit de áudio — e CRC igualmente válido."""
     corpo = bytearray(_bt_valido()[:-4])
     corpo[1] = prr.INPUT_FLAG_AUDIO
     crc = prr.bt_crc32(bytes(corpo), seed=prr.BT_INPUT_CRC_SEED)
@@ -81,13 +77,7 @@ class TestARegua:
         assert prr.eh_report_de_estado(_bt_valido()) is True
 
     def test_o_report_de_audio_e_recusado(self) -> None:
-        """**O CASO QUE ORIGINOU TUDO.**
-
-        Mesmo id, mesmo tamanho, CRC igualmente válido — só o bit muda. Se esta
-        linha cair, a voz dela volta a virar bateria.
-
-        MORDIDA: apagar o `if report[1] & INPUT_FLAG_AUDIO` do `_struct_base`.
-        """
+        """**O CASO QUE ORIGINOU TUDO.**"""
         assert prr.eh_report_de_estado(_bt_de_audio()) is False
 
     def test_o_crc_quebrado_e_recusado(self) -> None:
@@ -99,16 +89,8 @@ class TestARegua:
         assert prr.eh_report_de_estado(bytes([prr.INPUT_REPORT_BT]) + bytes(9)) is False
 
     def test_o_tamanho_errado_e_recusado_tambem_no_cabo(self) -> None:
-        """O furo que o juiz do desenho achou, e ele era real.
-
-        `_struct_base` devolvia a base do USB sem olhar o tamanho: um `0x01` de
-        dez bytes passava, e quem lesse `JACK_STATUS_OFFSET` leria além do fim.
-
-        MORDIDA: tirar o `if len(report) <= _USB_STRUCT_BASE + JACK_STATUS_OFFSET`.
-        """
+        """O furo que o juiz do desenho achou, e ele era real."""
         assert prr.eh_report_de_estado(bytes([prr.INPUT_REPORT_USB]) + bytes(9)) is False
-        #: E o suficiente PASSA — recusar um report curto porém completo
-        #: calaria o cabo por rigor que nada protege.
         assert prr.eh_report_de_estado(bytes([prr.INPUT_REPORT_USB]) + bytes(59)) is True
 
     def test_vazio_e_id_desconhecido_sao_recusados(self) -> None:
@@ -116,10 +98,7 @@ class TestARegua:
         assert prr.eh_report_de_estado(bytes([0x99]) + bytes(77)) is False
 
     def test_a_porta_nao_e_uma_segunda_regua(self) -> None:
-        """Ela delega ao `_struct_base`, e é isso que impede as duas de divergirem.
-
-        MORDIDA: reescrever `eh_report_de_estado` com uma cópia das conferências.
-        """
+        """Ela delega ao `_struct_base`, e é isso que impede as duas de divergirem."""
         import inspect
 
         corpo = inspect.getsource(prr.eh_report_de_estado)
@@ -131,15 +110,9 @@ class TestARegua:
 
 
 class _Espiao(_PinnedPyDualSense):
-    """Um handle que só registra o que passou pelos dois consumidores.
+    """Um handle que só registra o que passou pelos dois consumidores."""
 
-    Desde 29/09/2026 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01) o `_captura_status_audio`
-    É a guarda: ele devolve se o report era estado, e cada report paga uma
-    conferência de CRC só. O espião chama o de produção e registra o que ele
-    ACEITOU; um espião que aceitasse tudo seria mais frouxo que o produto.
-    """
-
-    def __new__(cls):  # o dublê nasce sem `__init__` de propósito
+    def __new__(cls):
         return object.__new__(cls)
 
     def __init__(self) -> None:
@@ -166,10 +139,7 @@ class TestAGuardaNoLaco:
         assert e._reports_recusados == 0
 
     def test_o_report_de_audio_nao_chega_ao_readinput(self) -> None:
-        """**A cura, na ponta que importa.**
-
-        MORDIDA: trocar `_consumir_report` de volta por `readInput` direto.
-        """
+        """**A cura, na ponta que importa.**"""
         e = _Espiao()
         e._consumir_report(_bt_de_audio())
         assert e.viu_readinput == [], "o Opus chegou ao leitor de estado"
@@ -177,11 +147,7 @@ class TestAGuardaNoLaco:
         assert e._reports_recusados == 1
 
     def test_a_guarda_nao_congela_o_controle(self) -> None:
-        """O risco que dói na mesa dela: guarda estrita demais = controle morto.
-
-        `_reports_aceitos` subindo é a prova viva do contrário, e é por isso
-        que o contador existe.
-        """
+        """O risco que dói na mesa dela: guarda estrita demais = controle morto."""
         e = _Espiao()
         for _ in range(50):
             e._consumir_report(_bt_valido())
@@ -190,10 +156,7 @@ class TestAGuardaNoLaco:
         assert len(e.viu_readinput) == 50
 
     def test_avisa_uma_vez_por_handle(self, caplog: pytest.LogCaptureFixture) -> None:
-        """Mais de cem reports de áudio por segundo — um aviso por report afoga.
-
-        MORDIDA: tirar o `if self._recusa_avisada: return`.
-        """
+        """Mais de cem reports de áudio por segundo — um aviso por report afoga."""
         e = _Espiao()
         for _ in range(200):
             e._consumir_report(_bt_de_audio())
@@ -206,13 +169,7 @@ class TestAGuardaNoLaco:
         assert e.viu_readinput == []
 
     def test_os_contadores_sao_default_de_classe(self) -> None:
-        """Dezesseis dublês desta suíte constroem o handle por `__new__`.
-
-        Um dublê mais POBRE que o produto esconde defeito em vez de revelar —
-        regra desta casa.
-
-        MORDIDA: mover os três para o `__init__`.
-        """
+        """Dezesseis dublês desta suíte constroem o handle por `__new__`."""
         assert _PinnedPyDualSense._reports_aceitos == 0
         assert _PinnedPyDualSense._reports_recusados == 0
         assert _PinnedPyDualSense._recusa_avisada is False
@@ -221,15 +178,7 @@ class TestAGuardaNoLaco:
 
 
 class TestACuraEstaLIGADA:
-    """*A cura escrita e nunca ligada* é o defeito mais caro desta casa.
-
-    **ESTA CLASSE NASCEU DE UMA MORDIDA QUE NÃO MORDEU.** A primeira versão
-    desta régua exercitava `_consumir_report` por um espião — e quando o laço
-    foi trocado de volta por `readInput` direto, os dezessete casos passaram
-    VERDES. A régua olhava o método e não o caminho; a cura podia ser desligada
-    sem ninguém ver, que é o mesmo buraco por onde a `sentinela_do_wrapper`
-    passou (19 testes e zero chamadores).
-    """
+    """*A cura escrita e nunca ligada* é o defeito mais caro desta casa."""
 
     def _fonte(self) -> str:
         from pathlib import Path
@@ -239,33 +188,21 @@ class TestACuraEstaLIGADA:
         return Path(bp.__file__).read_text(encoding="utf-8")
 
     def test_o_laco_chama_a_guarda_e_nao_o_readinput(self) -> None:
-        """MORDIDA: devolver `self.readInput(in_report)` ao laço de `sendReport`.
-
-        O `readInput` continua existindo — ele é chamado DE DENTRO da guarda,
-        depois de o report ser aprovado. O que não pode voltar é a chamada
-        NUA no laço.
-        """
+        """MORDIDA: devolver `self.readInput(in_report)` ao laço de `sendReport`."""
         fonte = self._fonte()
-        #: A volta esvazia a fila e entrega o LOTE à guarda; a porta de UM
-        #: report é o lote de um (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, 29/09/2026).
         assert "self._consumir_lote(lidos)" in fonte, (
             "o laço não passa mais pela guarda — a voz dela volta a ser bateria"
         )
         assert "self._consumir_lote((in_report,))" in fonte, (
             "a porta de UM report não passa mais pela guarda do lote"
         )
-        #: A chamada nua tinha esta forma exata, com a captura de áudio ao lado.
         assert (
             "                    self.readInput(in_report)\n"
             "                    self._captura_status_audio(in_report)"
         ) not in fonte, "a chamada NUA voltou ao laço"
 
     def test_o_readinput_so_e_chamado_de_dentro_da_guarda(self) -> None:
-        """Um único chamador executável, e ele é o `_consumir_lote`.
-
-        É o que torna esta cura completa: cobrir aqui cobre TODOS os campos que
-        o `readInput` escreve — bateria, `micBtn`, botões, eixos, IMU.
-        """
+        """Um único chamador executável, e ele é o `_consumir_lote`."""
         fonte = self._fonte()
         chamadas = [
             linha for linha in fonte.splitlines()
@@ -321,13 +258,7 @@ class TestOZeroPorCentoTemDonoProprio:
             self.battery = type("B", (), {"Level": level})()
 
     def test_level_zero_e_sem_dado_ainda_e_nao_bateria_vazia(self) -> None:
-        """`DSBattery.__init__` nasce com `Level = 0`.
-
-        Todo handle recém-aberto — ou seja, toda reconexão de rádio — publicava
-        0% até o primeiro report. A função IRMÃ já tinha esta guarda.
-
-        MORDIDA: tirar o `if value <= 0: return None`.
-        """
+        """`DSBattery.__init__` nasce com `Level = 0`."""
         assert PyDualSenseController._read_battery_opt(self._DS(0)) is None
 
     def test_um_valor_de_verdade_passa(self) -> None:
@@ -339,11 +270,7 @@ class TestOZeroPorCentoTemDonoProprio:
         assert PyDualSenseController._read_battery_opt(object()) is None
 
     def test_a_docstring_parou_de_prometer_o_que_nao_fazia(self) -> None:
-        """Ela dizia *"Preserva a distinção 'sem dado ainda' (None) de '0%'"*.
-
-        Não preservava. Promessa em docstring que o código não cumpre é pior que
-        silêncio: manda a próxima pessoa confiar.
-        """
+        """Ela dizia *"Preserva a distinção 'sem dado ainda' (None) de '0%'"*."""
         import inspect
 
         doc = inspect.getdoc(PyDualSenseController._read_battery_opt) or ""

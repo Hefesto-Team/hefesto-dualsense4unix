@@ -40,21 +40,8 @@ OK = "ok"
 AVISO = "aviso"
 FALHA = "falha"
 
-#: Acima disto o pad nasceu preso. Os da noite de 27/09 deram de +28,7 a
-#: +30,3 s; sem o `cosmic-osk`, de +0,1 a +0,7 s; depois da cura (151 pads,
-#: de 13h07 de 27/09 a 03h27 de 28/09), menos de 4 ms. O número de corte é
-#: hipótese pelos números da noite, e a prova no aparelho o confirma.
 LIMITE_DO_NASCIMENTO_S = 2.0
 
-#: A linha do kernel chega ao diário pelo journald, que a carimba quando a
-#: RECEBE, não quando o kernel a escreveu. Medido nos 162 pads `uinput` do boot
-#: de 27 a 28/09: no normal ela chega menos de 2 ms depois do registro do
-#: daemon; duas vezes chegou 0,11 s e 1,85 s depois, com o journald parado, e
-#: nas duas a linha do PRÓPRIO registro do daemon chegou no mesmo instante.
-#: Esta folga deixa a criação casar com o registro que veio antes dela; a
-#: parada do journald se resolve pela chegada da linha do daemon (ver
-#: :func:`hora_do_pad`), nunca alargando esta folga, porque na noite de 27/09
-#: o pad seguinte nasceu de 0,3 a 0,9 s depois do registro do lento.
 FOLGA_DO_DIARIO_S = 0.1
 
 _BACKENDS = ("uhid", "uinput")
@@ -66,7 +53,6 @@ _NOME_DO_MODO = {
     "nativo": "Conexão Nativa",
     "desligado": "emulação desligada",
 }
-#: A concordância do «pedido» com o nome do modo.
 _PEDIDO = {"nativo": "pedida", "desligado": "pedida"}
 
 _NOME_DA_MASCARA = {"dualsense": "DualSense", "xbox": "Xbox", "nintendo": "Nintendo"}
@@ -77,14 +63,9 @@ class ModoDoJogador:
     """Uma linha por jogador: o modo pedido, o canal que ele dá e o do ar."""
 
     jogador: int
-    #: ``dualsense`` · ``xbox`` · ``nativo`` · ``desligado`` · ``None`` (o
-    #: daemon não publicou o modo).
     pedido: str | None
-    #: ``uhid`` · ``uinput`` · ``nenhum``.
     no_ar: str
-    #: O backend que o pedido dá para este jogador; ``None`` quando não se sabe.
     esperado: str | None
-    #: O motivo de queda que o daemon pendurou, quando há.
     motivo: str | None
     veredito: str
 
@@ -133,13 +114,7 @@ def _caminho(valor: object) -> str | None:
 
 
 def _pads_no_ar(estado: Mapping[str, Any]) -> dict[int, str]:
-    """``{jogador: backend}`` dos pads no ar.
-
-    O `rumble_ff.per_vpad[].backend` é a fonte (o contrato da onda de 28/09 o
-    congela); a `coop.mesa` completa quem não está lá, com ``nenhum`` para o
-    jogador registrado sem pad; o `gamepad_emulation.backend` fala pelo P1
-    quando nenhuma das duas veio.
-    """
+    """``{jogador: backend}`` dos pads no ar."""
     pads: dict[int, str] = {}
     for bloco in _lista(_dict(estado.get("rumble_ff")).get("per_vpad")):
         numero = _jogador(bloco.get("player"))
@@ -257,15 +232,10 @@ def modo_contra_o_ar(estado: Mapping[str, Any]) -> list[ModoDoJogador]:
     return linhas
 
 
-# ---------------------------------------------------------------------------
-# A hora do pad
-# ---------------------------------------------------------------------------
-
 _ISO = re.compile(
     r"(?P<a>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})[T ](?P<h>\d{2}):(?P<mi>\d{2}):(?P<s>\d{2})"
     r"(?:[.,](?P<f>\d{1,9}))?(?P<tz>Z|[+-]\d{2}:?\d{2})?"
 )
-#: O carimbo do structlog vem colado ao nível: ``<iso> [info     ] <evento>``.
 _CONSOLE = re.compile(_ISO.pattern + r"\s+\[\s*\w+\s*\]\s+(?P<evento>\w+)(?P<resto>.*)$")
 _NOME = re.compile(r"\bname=(?P<q>['\"])(?P<nome>.*?)(?P=q)(?=\s|$)")
 _MASCARA = re.compile(r"\bflavor=(?P<m>['\"]?)(?P<mascara>\w+)(?P=m)")
@@ -296,11 +266,7 @@ def _instante(achado: re.Match[str]) -> datetime:
 
 
 def _segundos(depois: datetime, antes: datetime) -> float:
-    """``depois - antes``. Um dos dois sem fuso: compara o relógio de parede.
-
-    O structlog do daemon carimba a hora local sem fuso, e o journalctl imprime
-    a do kernel na hora local com fuso: os dois relógios são o mesmo.
-    """
+    """``depois - antes``. Um dos dois sem fuso: compara o relógio de parede."""
     if (depois.tzinfo is None) != (antes.tzinfo is None):
         depois, antes = depois.replace(tzinfo=None), antes.replace(tzinfo=None)
     return (depois - antes).total_seconds()
@@ -309,23 +275,14 @@ def _segundos(depois: datetime, antes: datetime) -> float:
 @dataclass(frozen=True)
 class _Registro:
     evento: str
-    #: O carimbo do structlog: o instante do registro.
     quando: datetime
     nome: str | None
     mascara: str | None
-    #: O carimbo do journald (a chegada da linha ao diário), quando a linha o traz.
     recebido: datetime | None = None
 
 
 def _registro_do_daemon(linha: str) -> _Registro | None:
-    """O evento, a hora e o pad de uma linha do diário do daemon.
-
-    O carimbo que vale é o do structlog (o instante do registro), e não o do
-    journald, que chega depois quando o journald para. O do journald, quando a
-    linha o traz na frente (``journalctl -o short-iso-precise``), vai junto em
-    ``recebido``: é ele que resolve a linha do kernel que chegou atrasada. Lê
-    os dois formatos do daemon, console e JSON.
-    """
+    """O evento, a hora e o pad de uma linha do diário do daemon."""
     inicio = linha.find('{"')
     if inicio >= 0:
         try:
@@ -377,12 +334,8 @@ def _criacao_no_kernel(linha: str) -> tuple[datetime, str] | None:
 class HoraDoPad:
     """Um pad `uinput` registrado desde que o daemon subiu, e quanto ele levou."""
 
-    #: A máscara do pad, como o daemon a registrou (``xbox``, ``dualsense``…).
     mascara: str | None
-    #: A hora do nascimento (a do kernel; sem ela, a do registro), ``HH:MM:SS``.
     hora: str
-    #: Segundos entre o kernel criar o nó e o daemon registrar. ``None`` =
-    #: não medido.
     atraso_s: float | None
     veredito: str
 
@@ -403,24 +356,7 @@ class HoraDoPad:
 def hora_do_pad(
     linhas_do_kernel: Iterable[str], linhas_do_daemon: Iterable[str]
 ) -> list[HoraDoPad]:
-    """O atraso de cada pad `uinput` registrado desde o último `daemon_starting`.
-
-    Casa, pelo nome do pad, cada ``uinput_device_created`` do daemon com a
-    criação mais recente do mesmo nome no kernel, ainda livre, entre o
-    `daemon_starting` e o registro (mais a :data:`FOLGA_DO_DIARIO_S`). Acima de
-    :data:`LIMITE_DO_NASCIMENTO_S` é FALHA; sem a linha do kernel, AVISO («não
-    medido»), nunca OK.
-
-    O JOURNALD PARADO. Sem criação livre antes do registro, vale a que chegou
-    ao diário JUNTO com a linha do próprio registro (até a folga depois dela ou
-    até :data:`LIMITE_DO_NASCIMENTO_S` antes, e nunca mais de
-    :data:`LIMITE_DO_NASCIMENTO_S` depois do registro): as duas ficaram presas
-    no mesmo journald, e o atraso é a distância entre as duas chegadas, no
-    mesmo relógio. Fora disso as duas chegadas não contam a mesma parada, e o
-    pad sai «não medido». Medido no boot de 27 a 28/09 (a nota de
-    :data:`FOLGA_DO_DIARIO_S`): sem isto, dois pads de 162, sãos, saíam
-    «não medido».
-    """
+    """O atraso de cada pad `uinput` registrado desde o último `daemon_starting`."""
     registros = [r for r in map(_registro_do_daemon, linhas_do_daemon) if r is not None]
     partidas = [i for i, r in enumerate(registros) if r.evento == "daemon_starting"]
     desde = registros[partidas[-1]].quando if partidas else None
@@ -457,8 +393,6 @@ def hora_do_pad(
             nasceu = criacoes[escolhido][0]
             atraso = max(0.0, _segundos(pad.quando, nasceu))
         elif juntos and chegou is not None:
-            # A hora do kernel chegou presa com a do registro: o nascimento é o
-            # registro menos a distância entre as duas chegadas.
             escolhido = min(juntos, key=lambda i: _segundos(criacoes[i][0], chegou))
             atraso = max(0.0, _segundos(chegou, criacoes[escolhido][0]))
             nasceu = pad.quando - timedelta(seconds=atraso)

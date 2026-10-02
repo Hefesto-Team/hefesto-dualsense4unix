@@ -47,20 +47,9 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface.pacotes import rodape
 
-#: O ENDEREÇO DE RÁDIO DA BANCADA, com a máscara da casa (octetos 4 e 5
-#: zerados), e SEM os dois-pontos — é assim que o daemon publica o `uniq` e
-#: assim que o mapa `source_controllers` o guarda. Pedir com dois-pontos não
-#: dá erro: dá override nenhum, que se lê como "a cura não gravou".
 UNIQ = "aabbcc0000ff"
 
-#: O QUE ELA CONFIGUROU NAQUELE CONTROLE, e nenhum destes é o default do
-#: esquema — um valor igual ao default não distingue "sobreviveu" de "nasceu
-#: assim", que é a forma mais fácil de uma régua desta família dar verde sobre
-#: o defeito.
-#: DUAS UNIDADES PARA O MESMO BRILHO, e a régua atravessa a fronteira entre
 #: elas: o esquema do disco guarda 0,0-1,0 (`LedsConfig.lightbar_brightness`) e
-#: o rascunho da GUI guarda 0-100 inteiro (`LedsDraft`). Escrever 25 no disco
-#: não dá "brilho de 25%" — dá `ValidationError`.
 BRILHO_DELA_NO_DISCO = 0.25
 LAMPADAS_DELAS = (True, True, False, False, False)
 COR_DELA = (0, 0, 255)
@@ -76,8 +65,6 @@ class _Ctx:
         self.state = state or {}
 
 
-#: A COR QUE O APARELHO ACENDE, e ela não é a do disco: é a forma do que o
-#: Salvar lia até 27/09 (a luz pós-brilho, a camada da mão, a economia).
 COR_ACESA = (255, 0, 255)
 
 
@@ -99,12 +86,7 @@ def _salvar(perfil: str, ctx: _Ctx) -> Any:
 
 @pytest.fixture
 def perfil_configurado(monkeypatch: pytest.MonkeyPatch) -> str:
-    """Um perfil no disco de mentira com os cinco campos JÁ gravados.
-
-    É o estado real depois de ela passar pelas abas: a 04 grava brilho e
-    lâmpadas por controle no clique, a 06 grava as ações de botão. O disco
-    chega ao rodapé assim, e é isto que o Salvar não pode desfazer.
-    """
+    """Um perfil no disco de mentira com os cinco campos JÁ gravados."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides, LedsConfig, MatchAny, Profile,
@@ -112,13 +94,11 @@ def perfil_configurado(monkeypatch: pytest.MonkeyPatch) -> str:
 
     nome = "perfil-que-ela-configurou"
     p = Profile(name=nome, match=MatchAny(), priority=100)
-    # A ABA 04, no clique: o override DAQUELE controle, com os três campos.
     p.controllers = {UNIQ: ControllerOverrides(leds=LedsConfig(
         lightbar=COR_DELA,
         lightbar_brightness=BRILHO_DELA_NO_DISCO,
         player_leds=list(LAMPADAS_DELAS),
     ))}
-    # A ABA 06, no clique.
     p.button_actions = {"circle": "KEY_ESC"}
     p.teclado_emulado = True
     save_profile(p, origem="teste")
@@ -137,9 +117,6 @@ def _leds_gravados(prof: Any) -> Any:
     return dono.leds
 
 
-# --------------------------------------------------------------------------
-# 1. o Salvar não atropela o override da aba 04
-# --------------------------------------------------------------------------
 def test_o_brilho_daquele_controle_sobrevive_ao_salvar(
         perfil_configurado: str) -> None:
     """O brilho do override é DELE: nem o global de 100, nem o aceso de 90."""
@@ -171,9 +148,6 @@ def test_a_cor_acesa_nao_vence_o_disco(perfil_configurado: str) -> None:
         f"o Salvar gravou a cor acesa {COR_ACESA} como a escolha dela")
 
 
-# --------------------------------------------------------------------------
-# 2. os dois campos que o `to_profile` não emitia
-# --------------------------------------------------------------------------
 def _round_trip(nome_de_saida: str, perfil: str) -> Any:
     """Disco → `DraftConfig` → `Profile`, que é o caminho de todo Salvar."""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -197,30 +171,18 @@ def test_o_teclado_emulado_sobrevive_ao_salvar(perfil_configurado: str) -> None:
 
 
 def test_os_dois_viajam_com_nome_novo(perfil_configurado: str) -> None:
-    """Salvar COM OUTRO NOME leva os dois junto — eles são config, não regra.
-
-    É a decisão do R-11 aplicada: `match`/`mode`/`priority` são identidade do
-    perfil e ficam; `controllers`, `key_bindings` e agora estes dois são
-    configuração DELA e viajam, porque "Salvar como" significa *"guarde o que
-    eu tenho agora"*.
-    """
+    """Salvar COM OUTRO NOME leva os dois junto — eles são config, não regra."""
     saiu = _round_trip("um-nome-que-nao-existia", perfil_configurado)
     assert saiu.button_actions == {"circle": "KEY_ESC"}
     assert saiu.teclado_emulado is True
 
 
-# --------------------------------------------------------------------------
-# 3. o que as abas gravaram no clique atravessa o Salvar, e o aparelho não
-# --------------------------------------------------------------------------
-#: O QUE O DAEMON PUBLICA POR PEÇA, com as chaves que ele usa (`mic_mudo`,
-#: `volume_captura`), divergindo em tudo do que as abas gravaram.
 VIVO_DA_PECA: dict[str, Any] = {
     "speaker": {"volume": 30, "muted": True},
     "audio": {"mic_mudo": False, "volume_captura": 90},
     "sensores": {"giroscopio_ligado": True, "acelerometro_ligado": False},
 }
 
-#: O QUE ELE PUBLICA UMA VEZ PARA A MÁQUINA TODA, divergindo também.
 VIVO_DA_MESA: dict[str, Any] = {
     "rumble_policy": "economia",
     "rumble_passthrough": True,
@@ -275,11 +237,7 @@ def _ctx_do_aparelho() -> _Ctx:
 ])
 def test_o_que_a_aba_gravou_por_peca_sobrevive_ao_salvar(
         perfil_das_abas: str, campo: str, esperado: Any) -> None:
-    """O alto-falante, o microfone e os sensores daquela peça saem como a aba os gravou.
-
-    O `acelerometro` sem opinião (`None`) continua sem opinião com o
-    aparelho dizendo desligado: `D-AUDIO-E-GIRO-NASCEM-LIGADOS`.
-    """
+    """O alto-falante, o microfone e os sensores daquela peça saem como a aba os gravou."""
     salvo = _salvar(perfil_das_abas, _ctx_do_aparelho())
     secao, chave = campo.split(".")
     cfg = getattr(salvo.controllers[UNIQ], secao, None)
@@ -299,11 +257,7 @@ def test_o_que_a_aba_gravou_por_peca_sobrevive_ao_salvar(
 ])
 def test_o_que_e_da_mesa_inteira_sobrevive_ao_salvar(
         perfil_das_abas: str, caminho: str, esperado: Any) -> None:
-    """A política de vibração e o mouse saem como o disco os tinha.
-
-    O teto lembrado de um `custom` antigo (`rumble_policy_custom_mult`) não
-    entra: foi ele que fazia o Salvar recusar em 06/09.
-    """
+    """A política de vibração e o mouse saem como o disco os tinha."""
     salvo = _salvar(perfil_das_abas, _ctx_do_aparelho())
     secao, chave = caminho.split(".")
     assert getattr(getattr(salvo, secao), chave) == esperado

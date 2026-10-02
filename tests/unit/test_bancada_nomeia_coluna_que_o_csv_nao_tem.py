@@ -1,66 +1,4 @@
-"""A bancada só pode nomear coluna que o CSV realmente tem.
-
-O DEFEITO QUE ESTE ARQUIVO GUARDA
----------------------------------
-A migração v2 do mapa de canais desdobrou por transporte as colunas que antes
-eram únicas: `grau` virou o par por transporte (hoje
-`cabo_ate_onde_foi`/`radio_ate_onde_foi`), `ressalva` virou
-`cabo_ressalva`/`radio_ressalva`. A `bancada_do_mapa.py` continuou pedindo os nomes
-velhos, e o `df[vis]` da linha da grade passou a levantar
-
-    KeyError: "['grau', 'ressalva'] not in index"
-
-na PRIMEIRA renderização — antes de qualquer clique. A grade, o caderno de
-eliminação e o formulário de registro de ensaio nunca chegavam a aparecer.
-Medido em 12/08/2026 rodando a bancada inteira sem navegador
-(`streamlit.testing.v1.AppTest`), com a cura e sem ela.
-
-POR QUE ELE EXISTE
-------------------
-A bancada é a porta oficial pela qual um fato medido no aparelho entra no
-repositório, e ela ficou fora do ar sem que NENHUM portão notasse: ela não tem
-teste, o `ruff` do CI (`ruff check src/ tests/`) não alcança a raiz, e nada na
-árvore a importa. Uma renomeação de coluna quebrava a bancada em silêncio.
-
-Este arquivo é a rede que faltou. Ele não roda Streamlit — Streamlit não é
-dependência do produto, e o CI não o teria. Ele lê a `bancada_do_mapa.py` por AST,
-colhe TODO nome de coluna que ela pronuncia, e cruza com o cabeçalho real dos
-dois CSV. Por ler o código em vez de uma lista copiada, ele pega a PRÓXIMA
-renomeação, não só esta.
-
-O SEGUNDO DEFEITO, DA MESMA FAMÍLIA (BANCADA-ESTADOS-01, 13/08/2026)
---------------------------------------------------------------------
-Nomear a coluna certa não basta: o VALOR também tem de caber. As colunas de
-vocabulário da grade são `SelectboxColumn`, e um `SelectboxColumn` oferece
-apenas os seus `options`. As quatro estão em `EDITAVEIS`, e o botão "Gravar no
-CSV" regrava toda coluna editável de toda linha visível com o que voltou da
-grade (`bancada_do_mapa.py`, `base.loc[editado.index, col] = editado[col]`) — de modo
-que um valor que a lista não oferece não tem por onde sobreviver ao passeio.
-
-Era o caso de `estado_hoje`: das 293 linhas do mapa, duas a têm preenchida, com
-as prosas da dose-resposta do keepalive de 11/08/2026 — e a lista `ESTADOS` não
-continha NENHUMA das duas. A casa já tinha visto e curado este caso exato uma
-linha acima, em `provado_por`, e escrito a razão em `bancada_do_mapa.py`; ninguém a
-tinha aplicado a `ESTADOS`.
-
-Uma ressalva de honestidade, porque ela muda o tamanho do dano e não a cura: que
-o `SelectboxColumn` COAJA o valor fora da lista (em vez de deixá-lo passar) é
-INFERIDO — `streamlit` não é dependência do produto e não estava instalado em
-13/08/2026, então isso não foi visto rodar. O que está LIDO no código é a rota
-de gravação acima; o que está MEDIDO é que o seletor não oferecia nenhum dos
-dois valores existentes.
-
-Este arquivo passa a cruzar as `options` de TODO `SelectboxColumn` da grade
-contra os valores que a coluna REALMENTE tem no CSV. Por ler o `column_config`
-em vez de uma lista copiada, ele vale para o seletor que ainda não existe.
-
-MORDE? Troque `cabo_ate_onde_foi`/`radio_ate_onde_foi` de volta por `grau` em
-`EDITAVEIS`, ou
-tire `cabo_ressalva` do CSV, ou renomeie qualquer coluna que a bancada leia por
-atributo: os testes daqui reprovam nomeando a coluna que sumiu. Tire um valor de
-`ESTADOS`, ou troque `QUEM` por uma lista sem `fonte-do-driver`: o teste dos
-seletores reprova nomeando a coluna, a lista e o valor que seria apagado.
-"""
+"""A bancada só pode nomear coluna que o CSV realmente tem."""
 
 from __future__ import annotations
 
@@ -75,18 +13,8 @@ BANCADA = RAIZ / "scripts" / "bancada_do_mapa.py"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ENSAIOS = RAIZ / "docs" / "data" / "ensaios.csv"
 
-#: Os nomes que, dentro da bancada, seguram um quadro do mapa de canais — ou
-#: uma linha dele (`r`, do `itertuples`). Tudo que for lido como atributo de um
-#: destes é nome de COLUNA, e tem de existir no cabeçalho.
-#:
-#: A lista é conferida pelo próprio teste (`test_os_nomes_de_quadro...`): se
-#: alguém renomear `v` para outra coisa, o teste reprova em vez de emudecer —
-#: régua que se desliga sozinha é pior que régua nenhuma.
 NOMES_DE_QUADRO = ("df", "v", "base", "alvos", "editado", "r")
 
-#: O que é API do pandas, e não coluna. Um método novo entra aqui no mesmo
-#: gesto em que entra na bancada; o preço de esquecer é uma reprovação que diz
-#: exatamente qual nome ficou sem explicação.
 API_DO_PANDAS = frozenset({"copy", "to_csv", "loc", "index", "itertuples", "columns"})
 
 
@@ -100,14 +28,7 @@ def _cabecalho(caminho: Path) -> list[str]:
 
 
 def _constantes_de_texto() -> dict[str, str]:
-    """As strings atribuídas no topo do módulo, por nome.
-
-    Existem porque um valor longo demais para caber numa lista legível vira uma
-    constante citada por nome — é o caso das duas prosas de `estado_hoje`, que
-    têm 409 e 350 caracteres. Sem isto, `_lista_literal` reprovaria a lista
-    inteira por não ser "literal", e a régua morreria justamente no caso que ela
-    existe para vigiar.
-    """
+    """As strings atribuídas no topo do módulo, por nome."""
     achados: dict[str, str] = {}
     for no in _arvore().body:
         if not isinstance(no, ast.Assign):
@@ -120,11 +41,7 @@ def _constantes_de_texto() -> dict[str, str]:
 
 
 def _importado_de_scripts(nome: str) -> list[str] | None:
-    """O valor de `nome`, quando o `bancada_do_mapa.py` o IMPORTA de `scripts/`.
-
-    Devolve `None` quando o nome não vem de import — aí quem resolve é o leitor
-    por AST, como sempre.
-    """
+    """O valor de `nome`, quando o `bancada_do_mapa.py` o IMPORTA de `scripts/`."""
     for no in ast.walk(_arvore()):
         if not isinstance(no, ast.ImportFrom) or not no.module:
             continue
@@ -145,10 +62,7 @@ def _importado_de_scripts(nome: str) -> list[str] | None:
 
 
 def _lista_literal(nome: str) -> list[str]:
-    """A lista de strings atribuída a `nome`.
-
-    Resolve `*OUTRA_LISTA` e também o nome de uma constante de texto do módulo.
-    """
+    """A lista de strings atribuída a `nome`."""
     constantes = _constantes_de_texto()
     for no in ast.walk(_arvore()):
         if not isinstance(no, ast.Assign):
@@ -160,14 +74,6 @@ def _lista_literal(nome: str) -> list[str]:
         colunas: list[str] = []
         for item in no.value.elts:
             if isinstance(item, ast.Starred) and isinstance(item.value, ast.Name):
-                # ESCADA-COM-UM-DONO-SO (19/08/2026): o `*NOME` pode vir de um
-                # IMPORT, não só de outra lista do mesmo arquivo. O `GRAUS`
-                # passou a ser `["", *VALORES_DA_ESCADA]`, com o vocabulário
-                # importado de `scripts/check_paridade_transporte` — que é o
-                # ponto: duas listas do mesmo vocabulário divergem no dia em que
-                # alguém mexe numa, e foi assim que o portão passou a aceitar
-                # dois degraus que o formulário não oferecia. Seguir o import é
-                # o que mantém este teste medindo o que ele promete.
                 importado = _importado_de_scripts(item.value.id)
                 if importado is not None:
                     colunas.extend(importado)
@@ -344,21 +250,7 @@ def test_o_column_config_so_configura_coluna_que_a_grade_mostra() -> None:
 
 
 def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
-    """Um seletor cego ao dado não consegue devolver o dado que já estava lá.
-
-    `estado_hoje`, `provado_por` e os dois `*_ate_onde_foi` estão em `EDITAVEIS`, e o
-    botão "Gravar no CSV" regrava TODA coluna editável de toda linha visível com
-    o que voltou da grade — isso está LIDO no código, não inferido. Que o
-    `SelectboxColumn` coaja um valor fora de `options` em vez de deixá-lo passar
-    é INFERIDO: `streamlit` não é dependência do produto e não estava instalado
-    quando isto foi escrito (13/08/2026), então a coerção não foi vista rodar.
-
-    O teste não depende dessa inferência para valer a pena. Mesmo no melhor caso,
-    um valor ausente de `options` é um valor que ela não consegue mais escolher —
-    e o pior caso é a medição sumir sem aviso na primeira gravação. Manter a
-    lista alinhada ao CSV custa uma linha; descobrir qual dos dois casos é custa
-    uma medição perdida.
-    """
+    """Um seletor cego ao dado não consegue devolver o dado que já estava lá."""
     orfaos: list[str] = []
     for coluna, lista in sorted(_options_por_coluna().items()):
         oferecidos = set(_lista_literal(lista))

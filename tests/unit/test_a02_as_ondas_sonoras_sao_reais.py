@@ -1,21 +1,4 @@
-"""As ondas sonoras da aba 02 mostram ÁUDIO, e não o desenho.
-
-Pedido dela, 05/09/2026: *"ondas sonoras do auto falante e do microfone devem
-ser reais na aba controle. sobre o audio que entra e o que sai"*.
-
-**O QUE ESTAS RÉGUAS MORDEM.** Cada uma foi escrita depois de arrancar a cura e
-ver reprovar; o que cada mordida derruba está no docstring do teste. As três que
-mais importam:
-
-* apagar o ``data-campo`` das barrinhas no gerador -> a régua do casamento
-  acusa 28 endereços emitidos para lugar que a página não tem;
-* devolver ``""`` no lugar do piso quando não há leitura -> o teste do travessão
-  reprova, porque ``style.height = '—%'`` é CSS que o CSSOM descarta e a altura
-  do DESENHO fica no atributo (foi assim, exatamente assim, que a primeira
-  versão desta frente errou — e quem pegou foi ``--prova-de-mockup``);
-* tirar ``altura`` de ``ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`` -> o molde do lugar
-  vazio volta a escrever travessão nas barras.
-"""
+"""As ondas sonoras da aba 02 mostram ÁUDIO, e não o desenho."""
 
 from __future__ import annotations
 
@@ -40,18 +23,8 @@ from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 PAGINA = "02-controles.html"
 
 
-# ---------------------------------------------------------------------------
-# O MEDIDOR
-# ---------------------------------------------------------------------------
-
-
 class _FluxoDeMentira:
-    """Um `parec` de mentira: um par de fds em que o teste escreve os picos.
-
-    É um fd DE VERDADE porque o medidor usa `selectors`, e um seletor não
-    registra objeto Python nenhum — só descritor. Um dublê que só respondesse
-    `read()` deixaria o laço inteiro sem exercício.
-    """
+    """Um `parec` de mentira: um par de fds em que o teste escreve os picos."""
 
     def __init__(self) -> None:
         import os
@@ -103,11 +76,7 @@ def medidor() -> Any:
 
 
 def test_o_medidor_traduz_o_pico_em_altura(medidor: Any) -> None:
-    """Um pico medido vira uma barra mais alta que o piso.
-
-    MORDE: devolver o piso para todo pico (a barra parada) faz `cheio` e
-    `meio` colapsarem no mesmo número e o teste reprova.
-    """
+    """Um pico medido vira uma barra mais alta que o piso."""
     m, fluxos, _ = medidor
     m.seguir({"no": "uniq"})
     m.bombear(timeout_s=0)
@@ -129,12 +98,7 @@ def test_o_medidor_traduz_o_pico_em_altura(medidor: Any) -> None:
 
 
 def test_o_medidor_desligado_nao_abre_nada() -> None:
-    """Com o módulo desligado nenhum fluxo nasce — é a trava da suíte.
-
-    MORDE: tirar o `if not _LIGADO[0]: return` do `_reconciliar` faz `abriu`
-    virar verdadeiro e o teste reprova. Sem essa trava, cada chamada de
-    `pacote()` na suíte abriria um `parec` na fonte do microfone DELA.
-    """
+    """Com o módulo desligado nenhum fluxo nasce — é a trava da suíte."""
     abriu: list[str] = []
 
     def abrir(no: str, uniq: str) -> None:
@@ -150,15 +114,7 @@ def test_o_medidor_desligado_nao_abre_nada() -> None:
 
 
 def test_sem_leitura_nunca_vira_silencio(medidor: Any) -> None:
-    """Nó pedido e sem amostra responde ``None`` — nunca uma fila de zeros.
-
-    É a regra que a PEÇA B escreveu e que vale aqui: ``False`` diria "medi e
-    não há som". Uma onda no piso e uma onda sem leitura têm de ser
-    distinguíveis, senão o controle do rádio (que não publica canal nenhum)
-    anuncia silêncio medido.
-
-    MORDE: devolver `tuple([PISO]*14)` no lugar do `None` faz o teste reprovar.
-    """
+    """Nó pedido e sem amostra responde ``None`` — nunca uma fila de zeros."""
     m, fluxos, relogio = medidor
     m.seguir({"no": "uniq"})
     m.bombear(timeout_s=0)
@@ -168,17 +124,12 @@ def test_sem_leitura_nunca_vira_silencio(medidor: Any) -> None:
     m.bombear(timeout_s=0.2)
     assert m.alturas("no") is not None
 
-    # E o fluxo que EMUDECE volta a "não sei", em vez de congelar o passado.
     relogio[0] += ondas_de_som.MUDEZ_S + 1.0
     assert m.alturas("no") is None
 
 
 def test_o_que_sai_da_lista_e_fechado(medidor: Any) -> None:
-    """`seguir` sem um nó fecha o fluxo dele no mesmo instante.
-
-    MORDE: não fechar deixa um `parec` segurando a fonte do controle que a
-    pessoa acabou de desligar — o vazamento que a PEÇA B já pagou uma vez.
-    """
+    """`seguir` sem um nó fecha o fluxo dele no mesmo instante."""
     m, fluxos, _ = medidor
     m.seguir({"a": "u", "b": "u"})
     m.bombear(timeout_s=0)
@@ -189,22 +140,12 @@ def test_o_que_sai_da_lista_e_fechado(medidor: Any) -> None:
     assert not fluxos["a"].parado
 
 
-# ---------------------------------------------------------------------------
-# OS ENDEREÇOS — e eles têm de existir na página PUBLICADA
-# ---------------------------------------------------------------------------
-
-
 def _publicado() -> str:
     return onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
 
 
 def test_cada_barrinha_tem_endereco_e_o_alvo_altura() -> None:
-    """As catorze barras de cada medidor são endereçáveis, com o alvo certo.
-
-    MORDE: tirar o `data-campo` do `<i>` em `aba02.onda` derruba a contagem a
-    zero; trocar `altura` por `largura` derruba o segundo `assert` — e na tela
-    a onda ficaria parada, porque `style.width` não mexe numa barra vertical.
-    """
+    """As catorze barras de cada medidor são endereçáveis, com o alvo certo."""
     doc = _publicado()
     for lado in (a02.LADO_MIC, a02.LADO_ALTO):
         for i in range(ondas_de_som.BARRAS):
@@ -214,13 +155,7 @@ def test_cada_barrinha_tem_endereco_e_o_alvo_altura() -> None:
 
 
 def test_o_selo_da_leitura_acende_a_classe_sem_leitura() -> None:
-    """O contêiner sabe dizer "não medi", e a folha sabe desenhar isso.
-
-    MORDE: tirar a regra `.onda.sem-leitura i{...!important}` da folha faz a
-    página publicada perder o `!important`, e sem ele a folha PERDE para o
-    `style="height:95%"` inline do desenho — a onda do arquivo continuaria na
-    tela afirmando um som que ninguém mediu.
-    """
+    """O contêiner sabe dizer "não medi", e a folha sabe desenhar isso."""
     doc = _publicado()
     assert 'data-hef-classe="sem-leitura"' in doc
     assert 'data-hef-quando="nao"' in doc
@@ -246,32 +181,12 @@ def test_o_lugar_vazio_nao_mostra_onda_do_desenho() -> None:
 
 
 def test_altura_esta_entre_os_alvos_que_o_travessao_nao_atende() -> None:
-    """`altura` sofre a MESMA recusa do CSSOM que tirou `largura` do molde.
-
-    MORDE: tirar `altura` do conjunto faz o molde do lugar vazio escrever
-    `height: "—%"` nas 56 barrinhas — CSS inválido, descartado calado, altura
-    do desenho intacta e o contador de pintura somando +1 por barra POR TIQUE,
-    para sempre.
-    """
+    """`altura` sofre a MESMA recusa do CSSOM que tirou `largura` do molde."""
     assert "altura" in ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE
 
 
-# ---------------------------------------------------------------------------
-# O PACOTE
-# ---------------------------------------------------------------------------
-
-
 def test_sem_leitura_emite_o_piso_e_nunca_o_vazio() -> None:
-    """Sem medição as catorze saem no PISO, e o selo diz que não leu.
-
-    ESTE TESTE NASCEU DE UM DEFEITO MEU, medido em 05/09/2026 com
-    `--prova-de-mockup`: a primeira versão emitia `""`, o `escrever` do piloto
-    levava isso a `style.height = '—%'`, o CSSOM descartava calado e o
-    ATRIBUTO ficava com a onda do desenho. A régua acusou as 56 barrinhas como
-    ENDEREÇO MORTO e estava certa.
-
-    MORDE: voltar o `""` reprova aqui.
-    """
+    """Sem medição as catorze saem no PISO, e o selo diz que não leu."""
     campos = a02.campos_da_onda(a02.LADO_MIC, None)
     assert campos["mic-onda-lida"] == "nao"  # (noqa-acento) valor de atributo
     for i in range(ondas_de_som.BARRAS):
@@ -291,17 +206,7 @@ def test_com_leitura_o_selo_diz_sim_e_as_alturas_passam() -> None:
 
 
 def test_o_alto_falante_mudo_achata_a_onda_sem_apagar_a_leitura() -> None:
-    """Com o alto-falante mudo no firmware, a onda vai ao piso — e o selo fica.
-
-    O `.monitor` mede o que o SERVIDOR mandou; o mudo é um byte aplicado DEPOIS
-    disso. Desenhar a onda do jogo num alto-falante calado seria a tela dizendo
-    que sai som de onde não sai.
-
-    MORDE: tirar o ramo `if mudo` faz as alturas passarem cruas e o teste
-    reprova. E o selo tem de continuar `sim`: nós SABEMOS, e o que sabemos é
-    que está silencioso — trocá-lo pelo valor de "não li" pintaria de cinza
-    um fato medido.
-    """
+    """Com o alto-falante mudo no firmware, a onda vai ao piso — e o selo fica."""
     lidas = tuple([90] * ondas_de_som.BARRAS)
     campos = a02.campos_da_onda(a02.LADO_ALTO, lidas, mudo=True)
     assert campos["alto-onda-lida"] == "sim"
@@ -312,11 +217,7 @@ def test_o_alto_falante_mudo_achata_a_onda_sem_apagar_a_leitura() -> None:
 
 
 def test_o_no_de_saida_e_o_monitor_do_sink_do_controle(monkeypatch: Any) -> None:
-    """"O que sai" mora no `.monitor` do sink — e o sink tem dono.
-
-    MORDE: devolver o sink sem `.monitor` faz o `parec` abrir num SINK, que não
-    é uma fonte de captura: o fluxo morre e a onda nunca sai do "não sei".
-    """
+    """"O que sai" mora no `.monitor` do sink — e o sink tem dono."""
     class _Lida:
         sink_do_controle = "alsa_output.um_sink"
 
@@ -326,14 +227,7 @@ def test_o_no_de_saida_e_o_monitor_do_sink_do_controle(monkeypatch: Any) -> None
 
 
 def test_o_no_de_entrada_vem_do_daemon_e_nao_e_inventado() -> None:
-    """O nó do microfone é o que o daemon publica — ou nada.
-
-    `""` é a resposta CERTA para o controle no rádio: a ponte BT não publica
-    nó nenhum no PipeWire. Inventar um nome abriria `parec` na fonte de outra
-    pessoa.
-
-    MORDE: cair para um nome padrão quando `canal_fonte` falta reprova aqui.
-    """
+    """O nó do microfone é o que o daemon publica — ou nada."""
     com = {"audio": {"canal_fonte": "alsa_input.um_mic"}}
     assert a02.no_do_microfone(com) == "alsa_input.um_mic"
     assert a02.no_do_microfone({"audio": {}}) == ""
@@ -341,11 +235,7 @@ def test_o_no_de_entrada_vem_do_daemon_e_nao_e_inventado() -> None:
 
 
 def test_o_gerador_sem_lado_continua_sem_endereco() -> None:
-    """A peça `onda()` sem `lado` é o desenho puro — nada de endereço.
-
-    Ela é usada por quem só quer a peça, e endereçar ali poria dois elementos
-    com o mesmo `data-campo` fora de um cartão.
-    """
+    """A peça `onda()` sem `lado` é o desenho puro — nada de endereço."""
     import importlib.util
 
     caminho = (

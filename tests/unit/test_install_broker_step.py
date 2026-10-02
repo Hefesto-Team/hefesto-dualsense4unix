@@ -1,24 +1,4 @@
-"""BROKER-01 (Onda S — fd-injection): passo 3h do install.sh + simetria no
-uninstall.sh + doctor.sh.
-
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.
-
-Dois níveis de teste, os dois falha-sem/passa-com:
-
-1. Comportamental REAL: `_render_broker_units` (função pura do install.sh, sem
-   sudo/systemctl) é extraída e executada com bash de verdade contra os
-   assets REAIS de B1 (assets/systemd/hefesto-hidraw-broker.{service,socket})
-   — prova que o sed produz uid/grupo reais e que a guarda pós-render pega
-   placeholder sobrando (ex.: asset com o token errado, sed não substitui).
-
-2. Contrato de TEXTO (padrão do repo para o resto da lógica shell — ver
-   test_plataforma_wiring.py/test_udev_kernel07_path06.py): a mensagem de
-   abort do uid 0, a ordem "uid==0 decide ANTES de qualquer sudo install", o
-   registro de posse, o daemon-reload/enable --now e a simetria do
-   uninstall.sh (restore-all ANTES do rm; header do hefesto antes de remover;
-   disable+stop antes do belt) — a validação viva acontece no ciclo final do
-   install (gate do orquestrador).
-"""
+"""BROKER-01 (Onda S — fd-injection): passo 3h do install.sh + simetria no"""
 from __future__ import annotations
 
 import re
@@ -39,11 +19,6 @@ PRERM_PATH = REPO_ROOT / "packaging" / "debian" / "prerm"
 POSTRM_PATH = REPO_ROOT / "packaging" / "debian" / "postrm"
 POSTINST_PATH = REPO_ROOT / "packaging" / "debian" / "postinst"
 
-#: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh` — as curas de HOST
-#: mudaram de casa em 31/08/2026, e `_render_broker_units` e
-#: `install_broker_host` foram junto. A pergunta deste arquivo continua a
-#: mesma ("o instalador faz X?"); só o lugar onde ela é respondida cresceu.
-#: Ver `tests/unit/fonte_do_instalador.py`.
 INSTALL = texto_do_instalador() if existe_o_instalador() else ""
 UNINSTALL = UNINSTALL_PATH.read_text(encoding="utf-8") if UNINSTALL_PATH.exists() else ""
 DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8") if DOCTOR_PATH.exists() else ""
@@ -53,9 +28,7 @@ POSTINST = POSTINST_PATH.read_text(encoding="utf-8") if POSTINST_PATH.exists() e
 
 
 def _extract_bash_function(source: str, name: str) -> str:
-    """Extrai `name() { ... }` (fecha na 1ª `}` sozinha numa linha após o
-    início) — as funções deste módulo só usam `if/fi`, nunca chaves
-    aninhadas, então o primeiro `}` de coluna 0 é sempre o fim real."""
+    """Extrai `name() { ... }` (fecha na 1ª `}` sozinha numa linha após o"""
     match = re.search(rf"^{re.escape(name)}\(\) \{{\n", source, re.MULTILINE)
     if match is None:
         raise AssertionError(f"função {name}() não encontrada")
@@ -111,8 +84,7 @@ class TestRenderBrokerUnitsComportamental:
         assert "__SESSION_" not in socket_out
 
     def test_uid_e_grupo_nunca_cruzam(self, render_fn_src: str, tmp_path: Path) -> None:
-        """Placeholders são DISTINTOS por arquivo — uid nunca vaza pro
-        .socket nem grupo pro .service (cada sed só conhece o próprio par)."""
+        """Placeholders são DISTINTOS por arquivo — uid nunca vaza pro"""
         if not SERVICE_ASSET.exists() or not SOCKET_ASSET.exists():
             pytest.skip("assets/systemd/hefesto-hidraw-broker.{service,socket} ausentes (lote B1)")
         result = _run_render(
@@ -127,9 +99,7 @@ class TestRenderBrokerUnitsComportamental:
     def test_guarda_pos_render_pega_placeholder_sobrando(
         self, render_fn_src: str, tmp_path: Path
     ) -> None:
-        """Asset com o token ERRADO (typo/edição futura sem seguir o
-        contrato) faz o sed não casar nada — a guarda devolve 1 e NENHUM
-        arquivo de saída fica utilizável (placeholder ainda presente)."""
+        """Asset com o token ERRADO (typo/edição futura sem seguir o"""
         fake_service = tmp_path / "fake.service"
         fake_socket = tmp_path / "fake.socket"
         fake_service.write_text(
@@ -149,8 +119,7 @@ class TestRenderBrokerUnitsComportamental:
     def test_guarda_pega_service_ok_mas_socket_com_placeholder_sobrando(
         self, render_fn_src: str, tmp_path: Path
     ) -> None:
-        """Um dos dois arquivos renderizar limpo não basta — a guarda olha
-        os DOIS (grep com 2 argumentos) antes de devolver sucesso."""
+        """Um dos dois arquivos renderizar limpo não basta — a guarda olha"""
         fake_service = tmp_path / "fake.service"
         fake_socket = tmp_path / "fake.socket"
         fake_service.write_text(
@@ -172,8 +141,6 @@ class TestInstallStep3hContrato:
         assert "BROKER-01" in INSTALL
 
     def test_sem_flag_de_opt_out_e_default_sem_udev_skip(self) -> None:
-        # Gate = mesmo padrão dos passos de plataforma (3d/3f/3g): SKIP_UDEV +
-        # sudo disponível. NENHUMA flag própria de opt-out (broker é DEFAULT).
         assert "--no-broker" not in INSTALL
         step3h = INSTALL[INSTALL.index('step "3h"') - 400 : INSTALL.index('step "3h"')]
         assert '"${SKIP_UDEV}" -eq 0' in step3h
@@ -185,8 +152,6 @@ class TestInstallStep3hContrato:
     def test_uid_0_aborta_com_a_mensagem_antes_de_qualquer_sudo_install(self) -> None:
         msg_idx = INSTALL.index("SESSION_UID resolveu 0")
         assert "Passo ABORTADO" in INSTALL[msg_idx : msg_idx + 400]
-        # A checagem de uid==0 precisa vir ANTES do primeiro `sudo install`
-        # do binário do broker — nunca instala nada com uid inválido.
         uid_check_idx = INSTALL.index('"${_broker_uid}" == "0"')
         broker_install_idx = INSTALL.index("_broker_bin_dst}\" 2>/dev/null")
         assert uid_check_idx < broker_install_idx
@@ -205,15 +170,10 @@ class TestInstallStep3hContrato:
         assert "sha256sum" in INSTALL
 
     def test_help_sed_range_cobre_o_novo_bullet_do_broker(self) -> None:
-        # -h/--help extrai o cabeçalho por range de linha; o bullet do
-        # broker precisa estar DENTRO do range extraído (senão o --help
-        # não documenta o passo).
         match = re.search(r"sed -n '2,(\d+)p'", INSTALL)
         assert match is not None, "extração do --help não encontrada"
         end_line = int(match.group(1))
         header = "\n".join(INSTALL.splitlines()[:end_line])
-        # Pelo texto do bullet, e não pelo ID: o --help fala com quem instala,
-        # e o ID da tarefa saiu dele em 28/09/2026.
         assert "(DEFAULT) broker root hide-hidraw" in header
 
 
@@ -232,9 +192,6 @@ class TestUninstallSimetriaContrato:
         assert disable_idx < restore_idx
 
     def test_belt_restore_all_antes_de_remover_o_binario(self) -> None:
-        # O binário precisa existir ainda quando o restore-all-and-exit roda
-        # — a remoção (rm, dentro do loop do broker-owner.conf OU no branch
-        # sem registro) tem de vir DEPOIS.
         restore_idx = UNINSTALL.index('"${BROKER_BIN}" --restore-all-and-exit')
         owner_loop_idx = UNINSTALL.index('while IFS=\'=\' read -r _bp _bsum')
         assert restore_idx < owner_loop_idx
@@ -262,33 +219,23 @@ class TestDoctorCheckContrato:
         assert "peer_uid" in DOCTOR
 
     def test_cmd_open_e_testado_funcionalmente(self) -> None:
-        """Achado Onda S #9: a tabela de riscos do desenho (§9) promete
-        'doctor cobre com teste funcional de open' para DeviceAllow=
-        char-hidraw — ping/status não exercitam o open(2) sob o device
-        cgroup. O check precisa mandar o cmd `open` de verdade e receber o
-        fd via SCM_RIGHTS (e fechá-lo)."""
+        """Achado Onda S #9: a tabela de riscos do desenho (§9) promete"""
         assert '"cmd": "open"' in DOCTOR
         assert "SCM_RIGHTS" in DOCTOR
         assert "recvmsg" in DOCTOR
 
     def test_falha_do_open_vira_fail_com_dica_de_deviceallow(self) -> None:
-        # Regressão típica: DeviceAllow com 'r' em vez de 'rw', ou
-        # CapabilityBoundingSet sem CAP_DAC_OVERRIDE — o fail precisa
-        # apontar exatamente onde olhar.
         assert "DeviceAllow=char-hidraw rw" in DOCTOR
         assert "CAP_DAC_OVERRIDE" in DOCTOR
 
     def test_sem_candidato_e_skip_informativo_nunca_falso_verde(self) -> None:
         # Sem DualSense físico visível o teste é PULADO com info (nunca
-        # pass) — reject_not_physical_dualsense (vpad) não conta como ok.
         assert "reject_not_physical_dualsense" in DOCTOR
         assert "cmd open não testado" in DOCTOR
 
 
 class TestBrokerEmTodosOsFormatos:
-    """Achado Onda S #7: broker é DEFAULT em TODO formato do install.sh —
-    flatpak/appimage/deb davam `exit 0` antes do passo 3h e ficavam sem a
-    cura de raiz do duplicado, sem nenhum aviso."""
+    """Achado Onda S #7: broker é DEFAULT em TODO formato do install.sh —"""
 
     def test_funcao_compartilhada_existe(self) -> None:
         assert "install_broker_host() {" in INSTALL
@@ -299,8 +246,6 @@ class TestBrokerEmTodosOsFormatos:
 
     def test_formatos_de_pacote_chamam_o_broker_antes_do_exit(self) -> None:
         bloco_ini = INSTALL.index('if [[ "${FORMAT}" != "native" ]]; then')
-        # O fim do bloco é a LINHA `exit 0` (indentada) — não menções em
-        # comentário ("dão `exit 0` antes...").
         fim = re.search(r"^\s+exit 0\s*$", INSTALL[bloco_ini:], re.MULTILINE)
         assert fim is not None, "exit 0 do bloco não-native não encontrado"
         bloco = INSTALL[bloco_ini : bloco_ini + fim.start()]
@@ -309,33 +254,22 @@ class TestBrokerEmTodosOsFormatos:
         )
 
     def test_postinst_do_deb_instrui_a_ativacao(self) -> None:
-        # O postinst roda como root SEM sessão (renderizaria uid 0 —
-        # PROIBIDO), então ele não ativa: ele INSTRUI, como o Arch e o
-        # Fedora já faziam. Antes não havia menção nenhuma.
         assert "BROKER-01" in POSTINST
         assert "install-host-udev.sh" in POSTINST
 
 
 class TestDebRemocaoBrokerContrato:
-    """Achados Onda S #2/#8 (lição 6/#21): purge/remoção do .deb precisa
-    desabilitar + restaurar + remover a unit ROOT do broker — como o Arch
-    (pre_remove) e o Fedora (%preun) já faziam. As units vivem FORA do
-    manifesto do dpkg (render por-máquina), então sem isto o apt nunca as
-    tocaria."""
+    """Achados Onda S #2/#8 (lição 6/#21): purge/remoção do .deb precisa"""
 
     def test_prerm_desabilita_restaura_e_remove_no_remove(self) -> None:
         assert "hefesto-hidraw-broker.socket" in PRERM
         disable_idx = PRERM.index("systemctl disable --now hefesto-hidraw-broker.socket")
-        # O COMANDO do belt (não menções em comentário — por isso o sufixo).
         restore_idx = PRERM.index("--restore-all-and-exit 2>/dev/null || true")
         rm_idx = PRERM.index("rm -f /etc/systemd/system/hefesto-hidraw-broker.service")
-        # Ordem: disable (dispara o ExecStopPost) → belt restore → rm units.
         assert disable_idx < restore_idx < rm_idx
         assert "daemon-reload" in PRERM
 
     def test_prerm_nao_mexe_no_broker_em_upgrade(self) -> None:
-        # upgrade NÃO pode derrubar o broker (o serviço sobrevive à troca de
-        # versão do pacote): o teardown mora num case exclusivo de remove.
         bloco_remove = PRERM.split("remove)", 1)
         assert len(bloco_remove) == 2
         assert "hefesto-hidraw-broker" not in bloco_remove[0]

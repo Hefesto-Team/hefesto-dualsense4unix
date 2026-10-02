@@ -34,8 +34,7 @@ def _latencia_em_ms(argv: list[str]) -> int | None:
 def test_os_dois_gravadores_pedem_latencia_curta(
     monkeypatch: pytest.MonkeyPatch, gravador: str
 ) -> None:
-    """MORDIDA: tire o `--latency-msec` (ou o `--latency`) da tabela
-    `GRAVADORES_DO_MONITOR` — o gravador volta ao fragmento padrão."""
+    """MORDIDA: tire o `--latency-msec` (ou o `--latency`) da tabela"""
     monkeypatch.setattr(
         afb.shutil, "which",
         lambda b: f"/usr/bin/{b}" if b == gravador else None)

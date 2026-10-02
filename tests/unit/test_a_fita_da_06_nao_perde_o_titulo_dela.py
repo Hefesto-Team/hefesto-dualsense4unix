@@ -1,19 +1,4 @@
-"""O `title` PRÓPRIO da fita da aba 06 tem de sobreviver ao tique.
-
-MEDIDO EM 05/09/2026, no DOM vivo: o arquivo publicado traz
-
-    <div class="fita inerte" title="Não se aplica: mouse, teclado e gestos
-    saem de um controle só — o do Player 1 — e o que eles fazem é do perfil.">
-
-e o piloto — que troca o BLOCO INTEIRO da fita a cada tique — emitia a casca
-genérica de `monta.fita()`. No primeiro tique a frase da 06 dava lugar a *"Esta
-aba não usa o controle escolhido aqui — os cards são leitura."*, que diz menos e
-é menos verdadeira: a razão de a 06 não escolher controle não é os cards serem
-leitura, é o mouse sair de um controle só.
-
-A resposta estava DIGITADA DUAS VEZES — `aba06.py` no arquivo, e nada no piloto.
-Agora há um dono: `monta.TITULOS_DA_FITA`, consultado pelos dois.
-"""
+"""O `title` PRÓPRIO da fita da aba 06 tem de sobreviver ao tique."""
 from __future__ import annotations
 
 import sys
@@ -33,7 +18,6 @@ import monta
 
 from hefesto_dualsense4unix.interface import hefesto_vivo
 
-#: Uma mesa mínima, no formato que `_fita` recebe do tique.
 MESA = [{"pref": "p1", "jogador": 1, "nome": "DualSense", "via": "USB",
          "cor": "", "uniq": "aabbcc000001"}]
 
@@ -63,12 +47,7 @@ class TestOTituloDaFitaSobreviveAoTique:
         assert "inerte" not in html
 
     def test_o_arquivo_publicado_e_o_piloto_dizem_a_mesma_frase(self) -> None:
-        """A dona é uma só, e é isto que prova que ela é uma só.
-
-        Se alguém reescrever o `title` no `aba06.py` sem passar pela tabela, o
-        arquivo publicado e a tela viva voltam a divergir — e a divergência dura
-        um tique, que é o tempo de ninguém ver.
-        """
+        """A dona é uma só, e é isto que prova que ela é uma só."""
         publicado = (_INTERFACE / "paginas" / "06-navegacao.html").read_text(  # noqa-acento: nome de pasta no disco
             encoding="utf-8")
         titulo = monta.TITULOS_DA_FITA["06-navegacao.html"]
@@ -80,11 +59,6 @@ class TestOTituloDaFitaSobreviveAoTique:
         assert monta.casca_da_fita("01-jogar.html") is None
 
 
-#: A GUARDA DE `a_fita_escolhe` PARAVA A BANCADA JUNTO COM O TYPO — 05/09/2026.
-#: Ela nasceu no mesmo dia para impedir que um nome errado respondesse *"esta
-#: aba é leitura"* em silêncio, e parava TUDO que não fosse uma das dez. Oito
-#: testes que geram página própria (`98-prova-da-ressalva`, `97-botao-cinza`)
-#: morreram na coleta. Bancada não é aba errada: é outra coisa.
 class TestAGuardaSeparaOTypoDaBancada:
     def test_o_typo_de_uma_das_dez_ainda_para(self) -> None:
         import pytest

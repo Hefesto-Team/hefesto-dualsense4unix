@@ -202,11 +202,7 @@ class TestOQueARotaClassicaSeRecusaAAfirmar:
     async def test_backend_que_nao_sabe_onde_o_seletor_esta_nao_afirma(
         self, tmp_path: Path
     ) -> None:
-        """Sem o getter do alvo, a resposta volta a ser o "não sei em quem".
-
-        Backend legado que sabe LISTAR a mesa mas não sabe dizer se o seletor
-        está mirando alguém: afirmar a mesa inteira aí seria adivinhar.
-        """
+        """Sem o getter do alvo, a resposta volta a ser o "não sei em quem"."""
         from hefesto_dualsense4unix.testing import FakeController
 
         class _SabeQuemMasNaoOndeMira(FakeController):
@@ -250,8 +246,7 @@ class TestDefeitoDOPadraoOtimistaDoMapa:
         assert IpcServer._destinos_por_uniq("falhou", PRIMEIRO) == ([], [])
 
     def test_o_backend_mudo_continua_com_a_resposta_historica(self) -> None:
-        """`None` é "não sei dizer", e `_apply_por_uniq` já o traduz para
-        «escreveu» antes de chegar aqui — o dublê antigo não vira "guardado"."""
+        """`None` é "não sei dizer", e `_apply_por_uniq` já o traduz para"""
         assert IpcServer._destinos_por_uniq(None, PRIMEIRO) == ([], [])
 
 

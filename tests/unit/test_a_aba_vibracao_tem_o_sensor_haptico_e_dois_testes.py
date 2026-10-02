@@ -1,27 +1,4 @@
-"""A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 — o desenho novo dela na aba 05.
-
-Ela, 29/09/2026, à pergunta do desenho da linha da háptica (o controle
-encolhendo de 124 para 78 px), fora das opções:
-
-*«Olha só move o slicer do Personalizado para ficar logo abaixo do 150% qualquer
-valor acima disso é Máximo o botão ativo mas o valor real é o do slicer. aí o
-espaço do slicer vira o Sensor Háptico e o slicer dele é o que usaremos. pode
-ser?»* <!-- noqa-acento: citação literal dela -->
-
-E, à pergunta do «Testar agora»:
-
-*«A linha já fala Testar agora: aí hoje só tem testar. Aí ficam dois botões lado
-a Lado Vibração e Háptica. pode ser?»* <!-- noqa-acento: citação literal dela -->
-
-As seis réguas da sprint: o trilho mora na Força; o degrau aceso segue a faixa
-do trilho; a «Sensor Háptico» grava onde o daemon lê; os dois testes, cada um
-o seu; o teste da háptica toca abaixo da meia escala e com o ganho; e a aba não
-rola, com as colunas acabando no mesmo y (esta no WebKit, com sessão gráfica:
-sem ela, pula). Endereços da faixa forjada ``aa:bb:cc``.
-
-LIMITE DECLARADO: é fiação e conta. A háptica que a mão sente com a «Sensor
-Háptico» a 100 e a 200, no cabo e no rádio, é a prova no aparelho, e é dela.
-"""
+"""A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 — o desenho novo dela na aba 05."""
 
 from __future__ import annotations
 
@@ -76,11 +53,6 @@ MOCKUP = RAIZ / "mockup/05-vibracao.html"
 PAGINA = "05-vibracao.html"
 
 
-# ---------------------------------------------------------------------------
-# O HTML como árvore: quem é filho de quem
-# ---------------------------------------------------------------------------
-
-
 class _Arvore(HTMLParser):
     """Cada elemento com as classes dos ancestrais, na ordem do documento."""
 
@@ -114,12 +86,7 @@ def _arvore(html: str) -> _Arvore:
 
 
 def _celulas_da_coluna(html: str) -> list[dict[str, str]]:
-    """Os filhos DIRETOS do ``.ctrl`` de uma coluna: as faixas da grade.
-
-    A marca da camada (``.camada``, `interface/marca_da_camada.py`) é filha da
-    coluna e não é faixa: ela é ``position:absolute``, e a grade não lhe dá
-    célula. A leitura aqui é do HTML, sem a folha, e por isso a nomeia.
-    """
+    """Os filhos DIRETOS do ``.ctrl`` de uma coluna: as faixas da grade."""
     return [dados for _tag, dados, pais in _arvore(html).elementos
             if len(pais) == 1 and "camada" not in dados.get("class", "").split()]
 
@@ -131,20 +98,10 @@ def _faixas_da_grade() -> list[str]:
     return [p for p in linhas.split() if p.startswith("var(--r-")]
 
 
-# ---------------------------------------------------------------------------
-# 1. O trilho mora na Força
-# ---------------------------------------------------------------------------
-
-
 class TestOTrilhoMoraNaForca:
     @pytest.mark.parametrize("pref", [c["pref"] for c in aba05.MESA])
     def test_o_trilho_e_os_degraus_moram_na_mesma_celula(self, pref: str) -> None:
-        """Régua 1, sobre o HTML que o GERADOR escreve, nos quatro lugares, cheios e vazios.
-
-        MORDIDA: o trilho de volta à faixa própria (o ``_barra`` do ``mult``
-        fora do ``<div class="forca">``) → o trilho perde a Força como pai, e
-        reprova.
-        """
+        """Régua 1, sobre o HTML que o GERADOR escreve, nos quatro lugares, cheios e vazios."""
         coluna = next(c for c in aba05.MESA if c["pref"] == pref)
         elementos = _arvore(aba05._coluna(coluna)).elementos
         (trilho,) = [pais for _t, d, pais in elementos if d.get("data-campo") == "mult-pos"]
@@ -153,11 +110,7 @@ class TestOTrilhoMoraNaForca:
         assert "forca" in degraus, f"{pref}: os degraus saíram da Força: {degraus}"
 
     def test_cada_coluna_tem_as_faixas_da_grade_e_nenhuma_a_mais(self) -> None:
-        """Sete faixas na folha, sete células em cada coluna e sete rótulos.
-
-        MORDIDA: o trilho na Força sem tirar a linha da háptica de baixo → oito
-        células para sete faixas, e reprova (no WebKit, a aba rola).
-        """
+        """Sete faixas na folha, sete células em cada coluna e sete rótulos."""
         faixas = _faixas_da_grade()
         assert faixas[:3] == ["var(--r-des)", "var(--r-nome)", "var(--r-forca)"]
         for c in aba05.MESA:
@@ -167,22 +120,13 @@ class TestOTrilhoMoraNaForca:
         assert len(cabecas) == len(faixas), len(cabecas)
 
     def test_a_faixa_do_personalizado_virou_a_sensor_haptico(self) -> None:
-        """A quarta célula é a linha da háptica, e o rótulo dela é o dela.
-
-        MORDIDA: devolver o rótulo «Personalizado» ou a linha «Háptica por
-        áudio» embaixo dos motores → reprova.
-        """
+        """A quarta célula é a linha da háptica, e o rótulo dela é o dela."""
         html = MOCKUP.read_text(encoding="utf-8")
         assert '<span class="sec-rot">Sensor Háptico' in html
         assert '<span class="sec-rot">Personalizado' not in html
         assert '<span class="sec-rot">Háptica por áudio' not in html
         quarta = _celulas_da_coluna(aba05._coluna(aba05.MESA[0]))[3]
         assert quarta.get("data-campo") == "haptica-fora", quarta
-
-
-# ---------------------------------------------------------------------------
-# 2. O degrau aceso segue a faixa do trilho
-# ---------------------------------------------------------------------------
 
 
 def _ctx(state: dict[str, Any]) -> pacotes.Contexto:
@@ -209,12 +153,7 @@ def _esperado(valor: int) -> str:
 
 @pytest.mark.parametrize("valor", [180, 130, 120, 70, 50, 10])
 def test_o_degrau_aceso_e_o_maior_que_o_trilho_alcanca(valor: int) -> None:
-    """Régua 2: com o personalizado no trilho, acende o maior degrau alcançado.
-
-    MORDIDA: acender pelo degrau mais perto → o 130 acende o ``max``, o 70 o
-    ``balanceado`` e o 10 o ``economia``, e reprova. (O 120 e o 50 sozinhos
-    não mordem: nas duas regras eles acendem o mesmo degrau.)
-    """
+    """Régua 2: com o personalizado no trilho, acende o maior degrau alcançado."""
     coluna = _coluna({"rumble_policy": "custom", "rumble_mult_applied": valor / 100})
     assert coluna["mult-pos"] == str(valor)
     assert coluna["degrau"] == _esperado(valor), (valor, coluna["degrau"])
@@ -231,16 +170,8 @@ def test_o_degrau_clicado_continua_aceso(degrau: str) -> None:
     assert _coluna({"rumble_policy": degrau})["degrau"] == degrau
 
 
-# ---------------------------------------------------------------------------
-# 3. A «Sensor Háptico» grava onde o daemon lê
-# ---------------------------------------------------------------------------
-
-
 def test_a_sensor_haptico_grava_o_ganho_no_perfil(perfis: pathlib.Path) -> None:  # noqa: F811
-    """Régua 3: o arraste a 180 grava o ``haptica_pct``, relido do DISCO pelo esquema.
-
-    MORDIDA: o gesto gravar só na tela (não chamar a ponte) → reprova.
-    """
+    """Régua 3: o arraste a 180 grava o ``haptica_pct``, relido do DISCO pelo esquema."""
     save_profile(Profile(name="Bancada", match=MatchAny()))
     ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
     gesto = pacotes.gesto_da_pagina(PAGINA, "haptica")
@@ -252,10 +183,7 @@ def test_a_sensor_haptico_grava_o_ganho_no_perfil(perfis: pathlib.Path) -> None:
 
 @pytest.mark.parametrize(("no_ar", "acesa"), [(True, "1"), (False, ""), (None, "")])
 def test_a_luz_no_ar_acende_pelo_state_full(no_ar: bool | None, acesa: str) -> None:
-    """A bolinha depois do `%` da «Sensor Háptico» é o ``haptica_no_ar`` do daemon.
-
-    MORDIDA: o pacote ignorar o campo (``haptica-no-ar`` sempre vazio) → reprova.
-    """
+    """A bolinha depois do `%` da «Sensor Háptico» é o ``haptica_no_ar`` do daemon."""
     controle: dict[str, Any] = {"uniq": UNIQ, "connected": True, "player": 1,
                                 "transport": "usb", "index": 0}
     if no_ar is not None:
@@ -266,11 +194,6 @@ def test_a_luz_no_ar_acende_pelo_state_full(no_ar: bool | None, acesa: str) -> N
     assert coluna["haptica-no-ar"] == acesa
     html = MOCKUP.read_text(encoding="utf-8")
     assert html.count('data-campo="haptica-no-ar"') == len(aba05.MESA)
-
-
-# ---------------------------------------------------------------------------
-# 4. Os dois testes, cada um o seu
-# ---------------------------------------------------------------------------
 
 
 class _Ponte:
@@ -380,11 +303,7 @@ class TestOsDoisTestes:
         assert ponte.chamadas[-1] == ("haptica_testar", UNIQ, True)
 
     def test_a_haptica_de_outra_coluna_cala_a_primeira(self) -> None:
-        """Um teste só na mesa: o «Háptica» do segundo controle cala o do primeiro.
-
-        MORDIDA: em ``testar_haptica``, tire o ``_calar_o_teste_da_haptica`` de
-        quem estava ligado → o primeiro segue tocando, e reprova.
-        """
+        """Um teste só na mesa: o «Háptica» do segundo controle cala o do primeiro."""
         outro = "aa:bb:cc:00:00:07"
         ponte = _Ponte()
         _clicar("testar-haptica", ponte)
@@ -413,16 +332,8 @@ class TestOsDoisTestes:
         assert ">Vibração</button>" in bloco and ">Háptica</button>" in bloco
 
 
-# ---------------------------------------------------------------------------
-# 5. O teste da háptica toca abaixo da meia escala, e com o ganho
-# ---------------------------------------------------------------------------
-
-
 def test_o_par_do_teste_no_teto_do_ganho_nao_corta() -> None:
-    """Régua 5, a conta: o bloco do par a 200% fica em 0,996, abaixo de 1,0.
-
-    MORDIDA: o par (128, 128) → 1,004, e reprova.
-    """
+    """Régua 5, a conta: o bloco do par a 200% fica em 0,996, abaixo de 1,0."""
     import array
 
     bloco = array.array("f", eh.bloco_da_haptica(*af_sub.PAR_DO_TESTE_DA_HAPTICA))
@@ -436,11 +347,7 @@ def test_o_par_do_teste_no_teto_do_ganho_nao_corta() -> None:
 def test_no_cabo_o_teste_toca_o_par_no_tocador_dele_e_abre_so_o_laco_dele(
     mundo: _Mundo, lugar: int  # noqa: F811
 ) -> None:
-    """Régua 5: o par vai ao tocador DAQUELE aparelho, e a volta abre só o laço dele.
-
-    MORDIDA: ``testar_a_haptica`` chamando ``levar_o_rumble`` com o par
-    ``(128, 128)`` → reprova no par.
-    """
+    """Régua 5: o par vai ao tocador DAQUELE aparelho, e a volta abre só o laço dele."""
     controles = _no_cabo_os_quatro(mundo)
     mundo.mesa.volta(*controles)
     uniq = _QUATRO[lugar - 1]
@@ -473,11 +380,7 @@ def test_no_radio_o_teste_sobe_a_ponte_da_haptica_de_quem_testa(mundo: _Mundo) -
 
 
 def test_o_teste_que_ninguem_rebate_solta_sozinho(mundo: _Mundo) -> None:  # noqa: F811
-    """A janela que fecha sem o «Parar» não deixa o controle vibrando.
-
-    MORDIDA: tire o ``_conferir_o_teste_da_haptica()`` da volta → o tocador
-    segue no par, e reprova.
-    """
+    """A janela que fecha sem o «Parar» não deixa o controle vibrando."""
     from hefesto_dualsense4unix.daemon.subsystems.rumble import TETO_DO_RUMBLE_FIXADO_S
 
     controles = _no_cabo_os_quatro(mundo)
@@ -541,10 +444,6 @@ def test_a_ponte_do_app_manda_o_metodo(monkeypatch: pytest.MonkeyPatch) -> None:
     assert mandados == [("haptica.testar", {"uniq": UNIQ, "ligado": True})]
 
 
-# ---------------------------------------------------------------------------
-# 6. A aba não rola, e as colunas acabam no mesmo y — no WebKit
-# ---------------------------------------------------------------------------
-
 MEDIDA = r"""
 (function(){
   var m = document.querySelector('.janela > .miolo');
@@ -572,23 +471,14 @@ MEDIDA = r"""
 })()
 """
 
-#: O TAMANHO DO DESENHO ANTES DE 29/09/2026, quando a linha da háptica o pagou
-#: com 46 px (124 → 78, o comentário da folha em ``aba05.CSS``). A fala dela
-#: que fez esta sprint é que ele não precisa encolher.
 DESENHO_DE_ANTES = 124
 
-#: Os dois estados em que a linha de estado acende o aviso (os da régua do
-#: aviso), e o da mesa quieta, em que ela some.
 CENAS = ("quieta", "navegacao", "vpad-nao-subiu")
 
 
 @pytest.fixture(scope="module", params=CENAS)
 def medida(request: Any) -> dict[str, Any]:
-    """Abre o DESENHO (a bancada, ``mockup/``) num WebKit offscreen do tamanho do miolo.
-
-    Com o aviso, a carga do PACOTE é pintada por cima (o mesmo caminho da
-    régua do aviso), e a linha de estado ganha as frases do dia mais largo.
-    """
+    """Abre o DESENHO (a bancada, ``mockup/``) num WebKit offscreen do tamanho do miolo."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -671,11 +561,7 @@ def medida(request: Any) -> dict[str, Any]:
 
 
 def test_a_aba_nao_rola_e_as_colunas_acabam_no_mesmo_y(medida: dict[str, Any]) -> None:
-    """Régua 6, com a mesa quieta e com o aviso aceso.
-
-    MORDIDA: o trilho na Força sem tirar a linha da háptica de baixo → a grade
-    ganha 46 px, e com o aviso a aba rola: reprova.
-    """
+    """Régua 6, com a mesa quieta e com o aviso aceso."""
     assert medida["rola"] <= 0, f"a aba 05 rola {medida['rola']} px: {medida}"
     assert len(set(medida["fundos"])) == 1, f"as colunas acabam em y diferentes: {medida}"
     assert all(b <= medida["fundo_do_miolo"] for b in medida["linhas"]), (

@@ -16,7 +16,7 @@ gravavam — `modo`, `pronto`, `ajuste` e `guardar` — passam por
 `_com_os_gatilhos`, que escreve em `controllers[uniq].triggers`. Não havia, na
 interface nova, caminho nenhum para `profile.triggers`; e é essa seção que um
 aparelho novo herda, porque `profiles/manager` a aplica em broadcast
-(`manager.py:450`) e `_controllers_to_specs` só cobre quem tem override.
+(`manager.py:197`) e `_controllers_to_specs` só cobre quem tem override.
 
 Consequência com dois controles na mesa: ela põe `Rígido` nos dois (dois
 cliques, dois overrides), liga um terceiro — e o terceiro nasce com o gatilho de
@@ -76,37 +76,18 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Faixa sintética da casa — há dois portões de anonimato nesta árvore, e as
-#: chaves abaixo são as que o esquema canoniza (`_validate_controllers_keys`).
 UNIQ_1 = "aa:bb:cc:00:00:01"
 UNIQ_2 = "aa:bb:cc:00:00:02"
-#: O TERCEIRO NUNCA APARECE NA MESA nem no perfil — é ele a mordida. Ele não
-#: pode ter override nenhum, senão a régua mediria a herança olhando para uma
-#: opinião própria, que é o oposto do que ela existe para provar.
 UNIQ_3 = "e8:47:3a:00:00:07"
 CHAVE_1, CHAVE_2 = "aabbcc000001", "aabbcc000002"
 
 PERFIL = "Em todos"
-#: O modo da prova. Ele TEM de ser diferente do NASCIMENTO do gatilho, e desde
-#: a NASCE-LIGADO-01 (20/09/2026) o nascimento é `Rigid` — que era o valor
-#: escrito aqui.
-#:
 #: A razão é medida, e ela não é de estética: `_com_os_gatilhos_de_todos`
-#: devolve `None` quando nada mudou, de propósito (*"regravar um perfil
-#: idêntico troca a data do arquivo e faz o daemon reaplicá-lo"*). Com o modo
-#: do nascimento, o clique desta régua não escrevia nada, e ela passava a medir um gesto
-#: que o produto, com razão, recusa a fazer. `test_o_modo_da_prova_difere_do_
-#: nascimento` trava isso para o dia em que o nascimento mudar de novo.
 MODO = "Pulse"
 
 
 class PonteDeMentira:
-    """O daemon que aceita tudo e ANOTA o `uniq` de cada pedido.
-
-    O `uniq` é o que esta régua mais precisa ver: é a diferença entre um efeito
-    que chega aos quatro aparelhos e um que chega a um só. As outras pontes de
-    mentira desta casa guardam lado/modo/params e jogam o `uniq` fora.
-    """
+    """O daemon que aceita tudo e ANOTA o `uniq` de cada pedido."""
 
     def __init__(self, aceita: bool = True) -> None:
         self.aceita = aceita
@@ -136,12 +117,7 @@ def pac():
 
 @pytest.fixture(autouse=True)
 def rascunho_limpo():
-    """O `_RASCUNHO` é estado de MÓDULO e atravessa testes.
-
-    Sem esta limpeza, o caso do "nada mudou" leria o que outro caso aplicou e
-    sairia pela porta do "já está assim" — verde sobre uma gravação que nunca
-    aconteceu. É a mesma cerca de `test_o_gatilho_aplicado_vai_para_o_perfil`.
-    """
+    """O `_RASCUNHO` é estado de MÓDULO e atravessa testes."""
     from pacotes.a03_gatilhos import esquecer_o_rascunho
 
     esquecer_o_rascunho()
@@ -156,13 +132,7 @@ def _profile(**extra: Any) -> Any:
 
 
 def _overrides(*lados_por_controle: tuple[str, dict[str, Any]]) -> dict[str, Any]:
-    """`{chave: ControllerOverrides(triggers=…)}` com SÓ os lados pedidos escritos.
-
-    O `model_fields_set` é o significado, e não a igualdade dos valores: um lado
-    ausente daqui é *"sem opinião"* e herda o global — é o contrato que
-    `profiles/manager._controllers_to_specs` lê. Montar com `TriggersConfig()`
-    cheio faria a régua medir um perfil que o produto nunca escreve.
-    """
+    """`{chave: ControllerOverrides(triggers=…)}` com SÓ os lados pedidos escritos."""
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
         TriggerConfig,
@@ -178,12 +148,7 @@ def _overrides(*lados_por_controle: tuple[str, dict[str, Any]]) -> dict[str, Any
 
 @pytest.fixture
 def disco(monkeypatch):
-    """Um disco de mentira com um `Profile` DE VERDADE dentro.
-
-    O esquema é o do produto porque é ele que esta régua mede — um dublê
-    aceitaria um `ControllerOverrides` malformado e o teste ficaria verde sobre
-    um perfil que o disco recusaria.
-    """
+    """Um disco de mentira com um `Profile` DE VERDADE dentro."""
     from hefesto_dualsense4unix.profiles import loader
 
     estado: dict[str, Any] = {}
@@ -224,11 +189,6 @@ def _clique(sigla: str = "e") -> dict[str, Any]:
             "forma": {f"modo-chave-{sigla}": MODO}}
 
 
-# ---------------------------------------------------------------------------
-# 1. A SEÇÃO GLOBAL RECEBE — a metade que não existia
-# ---------------------------------------------------------------------------
-
-
 def test_o_em_todos_escreve_a_secao_global_do_perfil(pac, disco) -> None:
     """`profile.triggers.left` passa a ser o efeito dela. É a linha 110 inteira."""
     _, gravados, por = disco
@@ -241,17 +201,12 @@ def test_o_em_todos_escreve_a_secao_global_do_perfil(pac, disco) -> None:
         f"até a próxima troca de perfil e o controle novo nunca o pega.")
     assert gravados[0].triggers.left.mode == MODO, (
         f"a seção GLOBAL ficou em {gravados[0].triggers.left.mode!r}. É ela que "
-        f"`profiles/manager` aplica em broadcast (manager.py:450) e é ela que um "
+        f"`profiles/manager` aplica em broadcast (manager.py:197) e é ela que um "
         f"aparelho sem override herda.")
 
 
 def test_o_modo_da_prova_difere_do_nascimento(pac) -> None:
-    """A premissa desta régua, travada: clicar o nascimento não escreve nada.
-
-    NASCE-LIGADO-01 (20/09/2026). Sem este caso, o dia em que o nascimento do
-    gatilho virar `MODO` faz as outras voltarem a medir um clique que o
-    produto ignora — e elas reprovam longe daqui, sem dizer por quê.
-    """
+    """A premissa desta régua, travada: clicar o nascimento não escreve nada."""
     from hefesto_dualsense4unix.profiles.schema import TriggersConfig
 
     nascimento = TriggersConfig()
@@ -266,9 +221,6 @@ def test_o_lado_que_ela_nao_tocou_nao_entra_no_global(pac, disco) -> None:
     """Clicar com só o L2 escolhido não pode escrever opinião sobre o R2."""
     _, gravados, por = disco
     por(_profile())
-    # O lado intocado é lido ANTES do clique, e não digitado: era `"Off"` até
-    # a NASCE-LIGADO-01 mudar o nascimento, e uma régua que digita o default
-    # de ontem reprova a mudança em vez do defeito.
     direito_antes = _profile().triggers.right
 
     _gesto(pac)(_ctx(pac), _clique("e"), PonteDeMentira())
@@ -279,20 +231,8 @@ def test_o_lado_que_ela_nao_tocou_nao_entra_no_global(pac, disco) -> None:
         "quatro aparelhos.")
 
 
-# ---------------------------------------------------------------------------
-# 2. O LADO EDITADO SAI DOS OVERRIDES — a segunda metade, sem a qual a primeira
-#    não vale nada
-# ---------------------------------------------------------------------------
-
-
 def test_o_lado_editado_sai_dos_overrides_por_controle(pac, disco) -> None:
-    """A regra do backend, espelhada: uma edição em "Todos" vale para todo mundo.
-
-    `app/draft_config.with_override_fields_cleared` a escreve do lado do
-    rascunho da janela GTK, e a razão dela é a mesma aqui: com o override
-    intacto, `_controllers_to_specs` continua mandando o gatilho de ontem para
-    quem já tinha opinião — a global seria escrita e não valeria.
-    """
+    """A regra do backend, espelhada: uma edição em "Todos" vale para todo mundo."""
     _, gravados, por = disco
     por(_profile(controllers=_overrides(
         (CHAVE_1, {"left": {"mode": "Vibration", "params": [3, 8, 20]}}),
@@ -309,15 +249,7 @@ def test_o_lado_editado_sai_dos_overrides_por_controle(pac, disco) -> None:
 
 
 def test_quem_ja_estava_na_mesa_passa_a_receber_o_efeito_novo(pac, disco) -> None:
-    """A régua da mordida B, e ela pergunta ao MOTOR — não ao arquivo.
-
-    Sem a limpeza dos overrides o perfil fica com a global certa e o aparelho
-    continua com o gatilho velho: `_controllers_to_specs` monta o `OutputSpec`
-    de quem tem opinião, e o `OutputSpec` vence o broadcast da seção global.
-    Ou seja, o botão diz *"em todos"* e os dois controles que ela tem na mão
-    ficam de fora — a metade mais visível deste gesto, e a que o caso 3 NÃO
-    cobre, porque o terceiro controle não tem override para atrapalhar.
-    """
+    """A régua da mordida B, e ela pergunta ao MOTOR — não ao arquivo."""
     from hefesto_dualsense4unix.profiles.manager import _controllers_to_specs
 
     _, gravados, por = disco
@@ -357,19 +289,8 @@ def test_o_lado_que_ela_nao_tocou_fica_no_override(pac, disco) -> None:
     assert dele.triggers.right.mode == "Machine"
 
 
-# ---------------------------------------------------------------------------
-# 3. A MORDIDA — o terceiro controle herda, medido pelos DOIS donos
-# ---------------------------------------------------------------------------
-
-
 def test_um_terceiro_controle_herda_o_efeito_no_motor(pac, disco) -> None:
-    """O dono da resolução é `profiles/manager`, e é a ele que se pergunta.
-
-    Um controle sem entrada em `_controllers_to_specs` não tem `OutputSpec`
-    próprio: o que chega nele é o broadcast da seção global (`manager.py:450`).
-    Então a pergunta certa tem DUAS metades, e as duas estão aqui — o terceiro
-    não pode ter spec, e a global tem de ser o efeito dela.
-    """
+    """O dono da resolução é `profiles/manager`, e é a ele que se pergunta."""
     from hefesto_dualsense4unix.profiles.manager import _controllers_to_specs
 
     _, gravados, por = disco
@@ -391,15 +312,7 @@ def test_um_terceiro_controle_herda_o_efeito_no_motor(pac, disco) -> None:
 
 
 def test_um_terceiro_controle_herda_o_efeito_na_tela(pac, disco, monkeypatch) -> None:
-    """A segunda régua, e ela é a ESCADA QUE A TELA PINTA — não o motor.
-
-    Duas réguas independentes sobre o mesmo fato é regra desta casa, e aqui a
-    razão é concreta: o motor e a tela leem o perfil por caminhos diferentes
-    (`_controllers_to_specs` pelo pydantic, `_modo_de_agora` pelo JSON cru), e
-    já houve dia nesta casa em que os dois discordaram. Se a coluna do terceiro
-    controle mostrasse `Desligado` sobre um gatilho que o motor aplica, ela
-    veria o produto mentindo — que é o defeito de sempre por outra porta.
-    """
+    """A segunda régua, e ela é a ESCADA QUE A TELA PINTA — não o motor."""
     from pacotes.a03_gatilhos import _modo_de_agora
 
     _, gravados, por = disco
@@ -409,9 +322,6 @@ def test_um_terceiro_controle_herda_o_efeito_na_tela(pac, disco, monkeypatch) ->
     ctx = _ctx(pac)
     _gesto(pac)(ctx, _clique(), PonteDeMentira())
 
-    # A TELA LÊ O DISCO, e o disco é o que o gesto acabou de gravar. O `ativo`
-    # do módulo `perfil` abre o JSON, então é ele que se desvia — desviar o
-    # `_modo_de_agora` seria a régua medindo a si mesma.
     import pacotes.a03_gatilhos as a03
 
     cru = gravados[0].model_dump(mode="json")
@@ -422,18 +332,8 @@ def test_um_terceiro_controle_herda_o_efeito_na_tela(pac, disco, monkeypatch) ->
         "ontem. É a linha 110 do CSV pela ponta que ela enxerga.")
 
 
-# ---------------------------------------------------------------------------
-# 4. O PEDIDO VAI EM BROADCAST
-# ---------------------------------------------------------------------------
-
-
 def test_o_pedido_vai_sem_uniq(pac, disco) -> None:
-    """Sem `uniq` o daemon escreve nos controles todos — é o que a GTK faz.
-
-    `triggers_actions._apply_trigger` passa `uniq=None` quando o alvo é `TODOS`,
-    e `ipc_bridge._payload_trigger_set` só põe a chave no pedido quando ela é
-    verdadeira. Endereçar aqui faria o botão prometer a mesa e entregar um.
-    """
+    """Sem `uniq` o daemon escreve nos controles todos — é o que a GTK faz."""
     _, _, por = disco
     por(_profile())
     p = PonteDeMentira()
@@ -449,13 +349,7 @@ def test_o_pedido_vai_sem_uniq(pac, disco) -> None:
 
 
 def test_o_rascunho_lembra_para_cada_controle_da_mesa(pac, disco) -> None:
-    """As quatro colunas não podem voltar ao valor do disco no tique seguinte.
-
-    O `_RASCUNHO` é a memória entre o clique e o tique (500 ms). Guardado sob o
-    `uniq` vazio do broadcast, ele seria podado pela varredura de mesa
-    (`_o_rascunho_e_de_quem_esta_na_mesa`) e a coluna do P2 piscaria de volta ao
-    gatilho velho — o defeito mais visível que este gesto poderia ter.
-    """
+    """As quatro colunas não podem voltar ao valor do disco no tique seguinte."""
     from pacotes.a03_gatilhos import _do_rascunho
 
     _, _, por = disco
@@ -473,11 +367,6 @@ def test_o_rascunho_lembra_para_cada_controle_da_mesa(pac, disco) -> None:
         "não é de aparelho nenhum e a poda de mesa a apaga")
 
 
-# ---------------------------------------------------------------------------
-# 5. AS RECUSAS, E ELAS DIZEM O QUE FICOU PELO CAMINHO
-# ---------------------------------------------------------------------------
-
-
 def test_sem_perfil_ativo_o_gesto_diz_o_que_o_controle_novo_perde(pac, disco) -> None:
     """O efeito foi aos ligados; o que não foi é justamente o ponto do botão."""
     _, gravados, _por = disco
@@ -489,10 +378,6 @@ def test_sem_perfil_ativo_o_gesto_diz_o_que_o_controle_novo_perde(pac, disco) ->
     assert p.enviados, "o gesto recusou ANTES de mandar — o aparelho ficou sem"
     assert not gravados, "gravou sem perfil ativo"
     frase = str(erro.value)
-    # ELA DIGITAVA "controle novo" ATÉ 11/09/2026, e a leva de língua aprovada
-    # por ela (A4-036) trocou a oração por *"não vale para os próximos"* — o
-    # mesmo fato, sem a explicação da seção global, que é desenho nosso. O que
-    # se mede é o ATO: a recusa diz que falta perfil E manda onde escolher um.
     assert "perfil" in frase and "aba Perfis" in frase, (
         f"a frase não conta a metade que dói nem diz o conserto: {frase!r}. Sem "
         f"perfil não há seção global, e é a seção global que um controle ligado "
@@ -530,8 +415,7 @@ def test_a_coluna_sem_modo_recusa_dizendo(pac, disco) -> None:
 
 
 def test_o_daemon_que_recusa_nao_deixa_o_disco_mentir(pac, disco) -> None:
-    """Gravar na global um efeito que o aparelho recusou é prometer amanhã o que
-    não se fez hoje — a guarda é a mesma do rascunho."""
+    """Gravar na global um efeito que o aparelho recusou é prometer amanhã o que"""
     _, gravados, por = disco
     por(_profile())
 
@@ -539,11 +423,6 @@ def test_o_daemon_que_recusa_nao_deixa_o_disco_mentir(pac, disco) -> None:
         _gesto(pac)(_ctx(pac), _clique(), PonteDeMentira(aceita=False))
 
     assert not gravados, "o perfil recebeu um efeito que o daemon recusou"
-
-
-# ---------------------------------------------------------------------------
-# 6. O BOTÃO E O DONO — o endereço não pode andar sozinho
-# ---------------------------------------------------------------------------
 
 
 def test_a_bancada_traz_o_botao_com_o_endereco_que_o_pacote_declara() -> None:
@@ -574,11 +453,6 @@ def test_a_bancada_traz_o_botao_com_o_endereco_que_o_pacote_declara() -> None:
     assert f'data-gesto="{GESTO_DE_TODOS}" data-hef-forma="@controle"' in html, (
         "o botão perdeu o `data-hef-forma` — sem ele o piloto não recolhe a "
         "coluna, e o gesto recusa por não saber qual efeito espalhar")
-
-
-# ---------------------------------------------------------------------------
-# 7. NADA MUDOU, NADA GRAVA
-# ---------------------------------------------------------------------------
 
 
 def test_o_perfil_que_ja_esta_assim_nao_e_regravado(pac, disco) -> None:

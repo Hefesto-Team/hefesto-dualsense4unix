@@ -127,31 +127,18 @@ class TestBuildFromNameAninhado:
     def test_multi_position_feedback_10(self) -> None:
         nested = [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8]]
         effect = build_from_name("MultiPositionFeedback", nested)
-        # RIGID_AB = 0x01 | 0x20 | 0x04 = 0x25 = 37
-        # TRIGGER-CANON-01 (01/08/2026): o modo mudou porque o antigo NÃO
-        # FUNCIONAVA — medido pelo tato dela. Ver `test_trigger_canon_01.py`.
         assert effect.mode == TriggerMode.FEEDBACK
-        # 7 forces (packed bits)
         assert len(effect.forces) == 7
 
     def test_multi_position_feedback_5(self) -> None:
         nested = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 8]]
         effect = build_from_name("MultiPositionFeedback", nested)
-        # TRIGGER-CANON-01 (01/08/2026): o modo mudou porque o antigo NÃO
-        # FUNCIONAVA — medido pelo tato dela. Ver `test_trigger_canon_01.py`.
         assert effect.mode == TriggerMode.FEEDBACK
 
     def test_multi_position_vibration_10(self) -> None:
         nested = [[0], [0], [5], [5], [5], [8], [8], [8], [8], [8]]
         effect = build_from_name("MultiPositionVibration", nested)
-        # PULSE_A = 0x02 | 0x20 = 0x22 = 34
-        # TRIGGER-CANON-01 (01/08/2026): o modo mudou porque o antigo NÃO
-        # FUNCIONAVA — medido pelo tato dela. Ver `test_trigger_canon_01.py`.
         assert effect.mode == TriggerMode.VIBRATION
-        # TRIGGER-CANON-01: a frequência mora no byte 9 do bloco, que é
-        # `forces[6]` — antes ela era escrita em `forces[0]`, que no modo
-        # oficial é a metade baixa do BITMASK DE ZONAS. Ou seja: a frequência
-        # pedida virava zonas ativas, e as zonas pedidas não chegavam.
         assert effect.forces[6] == 0, "frequency default = 0 no formato aninhado"
 
     def test_simples_ainda_funciona(self) -> None:
@@ -164,14 +151,7 @@ class TestBuildFromNameAninhado:
             build_from_name("Rigid", [[5], [200]])
 
     def test_dict_ainda_funciona(self) -> None:
-        """Backcompat: dict nomeado continua válido.
-
-        O que este teste trava é o CAMINHO (dict é aceito), não os bytes —
-        estes mudaram na TRIGGER-CANON-01, porque os antigos mandavam `0x05`,
-        que é o OFF do bloco de gatilho. A igualdade é contra a factory, e não
-        contra literais: quem trava os bytes do `Rigid` é o
-        `test_trigger_effects.py`, num lugar só.
-        """
+        """Backcompat: dict nomeado continua válido."""
         from hefesto_dualsense4unix.core.trigger_effects import rigid
 
         effect = build_from_name("Rigid", {"position": 5, "force": 200})

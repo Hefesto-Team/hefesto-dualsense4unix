@@ -1,24 +1,4 @@
-"""JANELA-FIEL-01/E2 — os dois relógios mais quentes olham o ID da aba, não o número.
-
-A casa escreveu a regra (EST-10, em `app.py`: "identificar pelo WIDGET, não pelo
-índice — a fusão de 'Mouse' e 'Teclado' renumerou as páginas, e um mapa por
-índice teria passado a chamar o refresher errado em silêncio") e depois a violou
-nos dois pollers mais quentes: o de 10 Hz da aba Status comparava
-`get_current_page() != 1` e o de 2 s da aba Início comparava `== 0`.
-
-Hoje bate por sorte: `tab_home_box` é a página 0 e `tab_status_box` é a 1. No dia
-em que alguém inserir, remover ou reordenar uma aba no Glade, o tick de 10 Hz
-passa a rodar numa aba onde não pinta nada (saturando o executor de UM worker) e
-a aba Início para de reconciliar — sem exceção, sem log, sem ninguém saber.
-
-MORDIDA: o notebook destes testes tem uma aba A MAIS ANTES da Início, então os
-índices 0 e 1 apontam para as abas ERRADAS. Com o gate por índice de volta, o
-tick de 10 Hz não roda na Status e o da Início não reconcilia na Início: os dois
-testes de reordenação reprovam.
-
-O notebook é REAL de propósito: um dublê sem `Gtk.Buildable` responde `None` para
-tudo e o teste passaria com qualquer coisa.
-"""
+"""JANELA-FIEL-01/E2 — os dois relógios mais quentes olham o ID da aba, não o número."""
 
 from __future__ import annotations
 
@@ -26,18 +6,12 @@ from typing import Any
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("pollers por id de aba")
 
 import pytest
 
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
-# CI-TYPELIB-PARCIAL-01: `importorskip("gi")` não basta — `gi` existe sem as
-# typelibs no runner do CI, e o ImportError na COLETA derruba a suíte inteira.
 pytest.importorskip("gi.repository.Gtk", reason="precisa da typelib Gtk")
 from gi.repository import Gtk
 
@@ -61,12 +35,7 @@ def _pagina(nome: str) -> Gtk.Widget:
 
 
 def _notebook(*ids: str, embrulhar: bool = True) -> Gtk.Notebook:
-    """Monta um notebook com as páginas na ordem pedida.
-
-    `embrulhar` reproduz `_wrap_notebook_pages_in_scroll`, que envolve oito das
-    nove páginas num `GtkScrolledWindow` — e o GTK ainda insere um `GtkViewport`
-    no meio, porque `GtkBox` não rola sozinho.
-    """
+    """Monta um notebook com as páginas na ordem pedida."""
     notebook = Gtk.Notebook()
     for nome in ids:
         pagina: Gtk.Widget = _pagina(nome)
@@ -97,13 +66,7 @@ class _AppFalsa:
         self.home_refreshes += 1
 
     def _maybe_fetch_externos(self) -> None:
-        """I5 (25/08/2026): o tique lento da Início passou a inventariar externos.
-
-        Este dublê existe para medir QUAL ABA o tique reconcilia, e nada mais —
-        então o inventário é um contador, não um no-op: se alguém mudar o tique
-        e parar de pedir o inventário, o número para de subir e o defeito fica
-        visível aqui, em vez de virar silêncio.
-        """
+        """I5 (25/08/2026): o tique lento da Início passou a inventariar externos."""
         self.inventarios_de_externos += 1
 
     def _on_live_state_result(self, _state: Any) -> bool:
@@ -159,15 +122,15 @@ def test_tick_rapido_roda_na_status_mesmo_com_aba_nova_antes(
     notebook = _notebook("aba_nova_box", ABA_INICIO, ABA_STATUS)
     app = _AppFalsa(notebook)
 
-    notebook.set_current_page(2)  # Status
+    notebook.set_current_page(2)
     _tick_rapido(app)
     assert sem_ipc == ["daemon.state_full"], (
         "com gate por índice, o tick de 10 Hz para de rodar na aba Status"
     )
 
-    notebook.set_current_page(1)  # Início
+    notebook.set_current_page(1)
     _tick_rapido(app)
-    notebook.set_current_page(0)  # a aba nova
+    notebook.set_current_page(0)
     _tick_rapido(app)
     assert sem_ipc == ["daemon.state_full"], (
         "10 Hz de state_full fora da Status só saturam o worker compartilhado"
@@ -181,15 +144,15 @@ def test_tick_da_inicio_reconcilia_na_inicio_mesmo_com_aba_nova_antes(
     notebook = _notebook("aba_nova_box", ABA_INICIO, ABA_STATUS)
     app = _AppFalsa(notebook)
 
-    notebook.set_current_page(1)  # Início
+    notebook.set_current_page(1)
     app._tick_home_state()
     assert app.home_refreshes == 1, (
         "com gate por índice, a aba Início para de reconciliar pelo tick"
     )
 
-    notebook.set_current_page(0)  # a aba nova
+    notebook.set_current_page(0)
     app._tick_home_state()
-    notebook.set_current_page(2)  # Status
+    notebook.set_current_page(2)
     app._tick_home_state()
     assert app.home_refreshes == 1
 
@@ -213,11 +176,7 @@ def test_ordem_de_hoje_continua_funcionando(sem_ipc: list[str]) -> None:
 
 
 def test_sem_notebook_o_tick_rapido_nao_e_gateado(sem_ipc: list[str]) -> None:
-    """Sem notebook não há aba à vista para consultar — o gate não se aplica.
-
-    É o comportamento de antes, preservado: quem monta a mixin sem o glade
-    (dublê) continua vendo o tick rodar.
-    """
+    """Sem notebook não há aba à vista para consultar — o gate não se aplica."""
     app = _AppFalsa(None)  # type: ignore[arg-type]
 
     _tick_rapido(app)

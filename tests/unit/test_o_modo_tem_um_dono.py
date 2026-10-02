@@ -48,12 +48,9 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileMod
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session, xdg_paths
 
-#: As escritas e leituras REAIS da sessão, guardadas no import — antes de a
-#: bancada as trocar pelos dublês.
 _SALVAR_EMULACAO_REAL = session.save_gamepad_emulation
 _PREFERENCIA_REAL = session.load_gamepad_preference
 
-#: A faixa sintética da casa — nenhum endereço real em arquivo versionado.
 P1 = "aabbcc000001"
 
 
@@ -197,11 +194,6 @@ def _mesa_no_modo_xbox(cartao: str | None = None) -> _Daemon:
     return d
 
 
-# ---------------------------------------------------------------------------
-# Item 1 — todo restart lê o dono, e diz quem pediu
-# ---------------------------------------------------------------------------
-
-
 def _pela_ordem_do_coop(d: _Daemon) -> None:
     coop = coop_mod.CoopManager(d)  # type: ignore[arg-type]
     coop._derrubar_para_renascer(coop_mod._CHAVE_DO_P1)
@@ -215,7 +207,6 @@ def _pelo_revive(d: _Daemon) -> None:
 
 
 def _pela_volta_do_steam_input(d: _Daemon) -> None:
-    # A foto da suspensão é de ANTES: um perfil entrou no meio e pôs o Xbox.
     _parar(d)
     d._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
     d._steam_input_flavor_suspenso = "dualsense"  # type: ignore[attr-defined]
@@ -225,7 +216,6 @@ def _pela_volta_do_steam_input(d: _Daemon) -> None:
 
 def _pelo_cartao(d: _Daemon) -> None:
     # O gesto do cartão escolhe MÁSCARA (do Pro de volta ao DualSense); o modo
-    # é o do dono.
     em.registro_de_mascaras().set_mask(P1, "dualsense")
     assert d.vestir_a_mascara_do_aparelho(P1) == gp.EMU_APLICADO
 
@@ -246,7 +236,6 @@ def _pelo_juiz_das_mascaras(d: _Daemon) -> None:
     assert gp.reconciliar_as_mascaras(d) == gp.EMU_APLICADO
 
 
-#: motivo -> (o restart, o cartão do P1 antes dele). Os dois restarts de
 #: máscara partem do Pro no cartão, para a troca ao DualSense ser o que recria.
 RESTARTS: dict[str, tuple[Any, str | None]] = {
     "ordem_do_coop": (_pela_ordem_do_coop, None),
@@ -288,11 +277,7 @@ def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
 
 @pytest.mark.usefixtures("_bancada")
 def test_o_cartao_nao_vira_a_escolha_dela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O gesto do cartão é `manual`, e o modo que ele repassa não é escolha.
-
-    MORDE: tire o `caminho_e_escolha=False` do cartão e o modo da sessão vira
-    a escolha dela no arquivo, como se ela tivesse apertado o PS + R3.
-    """
+    """O gesto do cartão é `manual`, e o modo que ele repassa não é escolha."""
     escritos: list[Any] = []
     monkeypatch.setattr(session, "save_gamepad_caminho", lambda *a, **k: escritos.append(a))
     d = _mesa_no_modo_xbox("nintendo")
@@ -335,11 +320,6 @@ def test_a_promocao_segue_o_dono_e_nao_o_pad_velho(dono: str, backend: str) -> N
     ], "a promoção não disse quem pediu"
 
 
-# ---------------------------------------------------------------------------
-# Item (a) — o arquivo dela guarda a origem, e a migração devolve só o legado
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def _arquivo_do_caminho() -> Iterator[Any]:
     pasta = xdg_paths.config_dir(ensure=True)
@@ -369,11 +349,7 @@ def test_o_gesto_fora_do_jogo_grava_com_a_origem(_arquivo_do_caminho: Any) -> No
 
 
 def test_a_escolha_dela_com_origem_sobrevive_aos_boots(_arquivo_do_caminho: Any) -> None:
-    """O `xbox` que ela escolheu fora do jogo NÃO é o vazamento de 18/09.
-
-    MORDE: tire da migração a pergunta pela origem e o primeiro boot desfaz a
-    escolha dela.
-    """
+    """O `xbox` que ela escolheu fora do jogo NÃO é o vazamento de 18/09."""
     gp._guardar_o_caminho(_DaemonDoGesto(), "xbox", origin="manual")  # type: ignore[arg-type]
 
     for _boot in range(2):
@@ -406,18 +382,9 @@ def test_arquivo_ilegivel_e_ninguem_escolheu(_arquivo_do_caminho: Any) -> None:
     assert session.load_gamepad_caminho_com_origem() == (None, None)
 
 
-# ---------------------------------------------------------------------------
-# Item 3 — o boot aplica o modo do perfil que restaura, uma vez, com ou sem foco
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
-    """O lar de mentira: os XDG da régua, com a guarda que sai.
-
-    As réguas daqui leem e gravam perfis, o registro de máscaras e os arquivos
-    de sessão; se o `config_dir()` não for o do lar de mentira, a sessão para.
-    """
+    """O lar de mentira: os XDG da régua, com a guarda que sai."""
     for var, sub in (("XDG_CONFIG_HOME", "config"), ("XDG_STATE_HOME", "state")):
         monkeypatch.setenv(var, str(tmp_path / sub))
     casa = xdg_paths.config_dir(ensure=True)
@@ -427,13 +394,6 @@ def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     return casa
 
 
-#: O perfil que ela ativou à mão, fora de jogo: o que o boot restaura.
-#:
-#: NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): estas
-#: réguas usavam o Freestyle como o perfil de fora do jogo que o boot restaura,
-#: e o ativavam pela origem `autoswitch`. O Freestyle desligado não vale em
-#: lugar nenhum desde então, e o boot restaura a escolha dela; o que as réguas
-#: medem (o modo do primeiro pad, a máscara que entra junto) não muda.
 DE_FORA = "Desktop Dela"
 
 
@@ -474,8 +434,7 @@ def _config_do_boot() -> lifecycle.DaemonConfig:
 async def _o_boot(
     *, com_foco: bool, controle: Any = None, nome: str = DE_FORA
 ) -> lifecycle.Daemon:
-    """Sobe o `Daemon` REAL até o restore, e (com foco) ativa a escolha dela como
-    o autoswitch ativa: com o `apply_profile_mode` do daemon como applier."""
+    """Sobe o `Daemon` REAL até o restore, e (com foco) ativa a escolha dela como"""
     store = StateStore()
     estado = ControllerState(
         battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
@@ -613,17 +572,7 @@ def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_dela(
     assert gp.caminho_da_sessao(daemon) == "xbox"
 
 
-# ---------------------------------------------------------------------------
-# Item 2 — o perfil que entra aplica o modo E a máscara, na mesma ativação
-# ---------------------------------------------------------------------------
-# G3 (a sessão dela, 27/09 23h38): o Future Knight abriu com o modo Xbox já de
 # pé, e o P1 e o P3 ficaram com a máscara DualSense do Freestyle. (Desde
-# 01/10/2026 o perfil de antes é a escolha dela, `DE_FORA`: o Freestyle
-# desligado não entra por origem automática.) A ativação
-# aplicava o `mode` ANTES das máscaras por controle: o pedido do P1 comparava a
-# máscara com o cartão do perfil ANTERIOR (`ja_estava`), e o cartão novo só
-# chegava ao registro depois, sem ninguém para vestir o P1 — o juiz das máscaras
-# espera o jogo soltar a autoridade.
 
 
 def _perfis_do_g3() -> None:
@@ -735,7 +684,6 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
     assert gp.caminho_da_sessao(daemon) is None, "o dono seguiu com o caminho do anterior"
 
 
-#: O appid da régua: um jogo qualquer da biblioteca, só o número do marcador.
 APPID_DO_G3 = 1599660
 
 
@@ -782,16 +730,6 @@ def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
     assert resultado["convergiu"] is True
 
 
-# ---------------------------------------------------------------------------
-# Item 4 — o P1 é o controle da carta 1 (a lâmpada que acende o «1»)
-# ---------------------------------------------------------------------------
-# A sessão dela de 27/09 (G0 e o arme das 21h07): o primário era o roxo, o
-# primeiro que o backend enumerou, e a lâmpada dele dizia 3. O co-op pôs cada
-# secundário no boneco da carta dele, e o vpad do P1 (carta 3) ficou fora de
-# ordem: `coop_ordem_recriada recriar=[…, 'p1']` a cada start. A bancada é a de
-# queda (backend, co-op e registro de identidade REAIS), com o provider de cor
-# fiado como o `lifecycle._wire_identity_registry` fia.
-
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     UNIQS,
     MesaDoJogo,
@@ -800,7 +738,6 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
 )
 
 BRANCO, VERMELHO, ROXO, AZUL = UNIQS[:4]
-#: A fila gravada da mesa dela: o branco é a carta 1, o azul a 4.
 FILA_DELA = (BRANCO, VERMELHO, ROXO, AZUL)
 
 
@@ -812,7 +749,6 @@ def _gravar_a_fila_dela() -> None:
     anterior.sync_connected(list(FILA_DELA))
 
 
-#: A matriz de transportes, na ordem da fila dela (branco, vermelho, roxo, azul).
 TRANSPORTES = {
     "usb": ("usb", "usb", "usb", "usb"),
     "bt": ("bt", "bt", "bt", "bt"),
@@ -827,12 +763,7 @@ def _a_mesa_do_boot(
     jogo: bool = False,
     transporte: str = "bt",
 ) -> MesaDoJogo:
-    """O daemon sobe com a fila gravada, e os controles entram na ordem `chegada`.
-
-    O vpad do P1 já está de pé (o `_safe_start("gamepad")` vem antes do primeiro
-    `connect()`), e o provider de cor é o do produto. `transporte` escolhe a
-    linha de :data:`TRANSPORTES`: cada controle entra pelo da sua carta.
-    """
+    """O daemon sobe com a fila gravada, e os controles entram na ordem `chegada`."""
     from hefesto_dualsense4unix.daemon.subsystems.identity import make_auto_output_provider
 
     _gravar_a_fila_dela()
@@ -859,14 +790,7 @@ def _recriacoes_do_p1(diario: list[dict[str, Any]]) -> list[Any]:
 def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
     monkeypatch: pytest.MonkeyPatch, jogo: bool, transporte: str
 ) -> None:
-    """Fila branco=1, vermelho=2, roxo=3, azul=4; o roxo conecta primeiro.
-
-    Nos três transportes (conferência de 28/09: a régua só sentava pelo rádio).
-
-    MORDE: devolva o `_quem_senta_no_posto` à 1ª chave de inserção
-    (`next(iter(self._handles))`) — o roxo senta no posto, e o co-op recria o
-    vpad do P1 para pô-lo atrás das cartas 1 e 2.
-    """
+    """Fila branco=1, vermelho=2, roxo=3, azul=4; o roxo conecta primeiro."""
     bancada = _a_mesa_do_boot(
         monkeypatch, (ROXO, BRANCO, VERMELHO, AZUL), jogo=jogo, transporte=transporte
     )
@@ -894,14 +818,7 @@ def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
 def test_o_numero_que_ela_troca_na_tela_leva_o_posto(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
-    """Ela dá o «1» ao vermelho na aba Controles: o posto vai com a lâmpada.
-
-    Sem hotplug nenhum — o `connect()` só roda a cada ~30 s com a mesa parada —,
-    quem pergunta é o tique lento (`seguir_a_carta`), logo depois do registro.
-
-    MORDE: tire o ramo da carta menor do `_quem_senta_no_posto` (o posto
-    ocupado não se reelege) — o branco segue primário com a lâmpada dizendo 2.
-    """
+    """Ela dá o «1» ao vermelho na aba Controles: o posto vai com a lâmpada."""
     bancada = _a_mesa_do_boot(monkeypatch, (BRANCO, VERMELHO, ROXO, AZUL), jogo=jogo)
     for _ in range(3):
         bancada.tique()
@@ -919,9 +836,6 @@ def test_o_numero_que_ela_troca_na_tela_leva_o_posto(
     )
     assert bancada.inst.seguir_a_carta() is False, "a segunda pergunta não muda nada"
 
-    # E a mesa se refaz sem ninguém perder o controle: o co-op recolhe o vpad
-    # que o vermelho tinha como secundário e dá um ao branco, sem EBUSY e sem
-    # dois vpads com o mesmo endereço (as invariantes da bancada, a cada tique).
     for _ in range(4):
         bancada.tique()
     assert bancada.inst.primary_uniq == VERMELHO
@@ -942,12 +856,7 @@ class _ControleQueSegueACarta(FakeController):
 
 
 def test_o_tique_lento_pergunta_a_carta(_lar_do_boot: list[Any]) -> None:
-    """O laço do daemon pergunta ao backend, a cada tique lento, se a carta 1 mudou.
-
-    MORDE: tire o `self._seguir_a_carta()` do tique lento do `_poll_loop` — o
-    backend nunca é perguntado, e o número que ela troca na tela só levaria o
-    posto no próximo hotplug.
-    """
+    """O laço do daemon pergunta ao backend, a cada tique lento, se a carta 1 mudou."""
     estado = ControllerState(
         battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
         transport="usb", buttons_pressed=frozenset(),
@@ -955,19 +864,6 @@ def test_o_tique_lento_pergunta_a_carta(_lar_do_boot: list[Any]) -> None:
     controle = _ControleQueSegueACarta(transport="usb", states=[estado])
     asyncio.run(_o_boot(com_foco=False, controle=controle))
     assert controle.perguntas >= 1, "o tique lento não perguntou a carta ao backend"
-
-
-# ---------------------------------------------------------------------------
-# Item 6 — o número do jogador é da pessoa: quem sai não renumera os outros
-# ---------------------------------------------------------------------------
-# G6 (27/09, 23h42, `medidas/sessao/G6-o-branco-no-cabo-e-a-volta/`): o branco
-# foi para o cabo, e no meio da troca o daemon pintou um 5 no azul e um 4 no
-# branco; quando a mesa voltou a 1, 2, 3 e 4, ninguém repintou as lâmpadas de
-# jogador. Duas causas: a numeração do co-op deixava o `fallback` de quem estava
-# FORA (na troca) tomar o número da carta de quem estava na mesa, e a camada do
-# co-op só se republicava num ciclo com hotplug — o número que muda sem mexer em
-# `/dev/input` (a lâmpada liberada depois, o número trocado na tela) ficava
-# pintado com o de antes.
 
 
 def _numero_aceso(bancada: MesaDoJogo, uniq: str) -> int | None:
@@ -992,11 +888,7 @@ def _nome_do_microfone(bancada: MesaDoJogo, uniq: str) -> int | None:
 def test_a_carta_1_sai_e_os_outros_seguem_2_3_4(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
-    """O branco sai: o vermelho, o roxo e o azul seguem 2, 3 e 4 na lâmpada e no microfone.
-
-    MORDE: faça o `slot_de_sessao` (`subsystems/base.py`) não responder — o nome
-    do microfone cai na contagem de quem está conectado, e diz 1, 2 e 3.
-    """
+    """O branco sai: o vermelho, o roxo e o azul seguem 2, 3 e 4 na lâmpada e no microfone."""
     bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=jogo)
     for _ in range(3):
         bancada.tique()
@@ -1017,21 +909,14 @@ def test_a_carta_1_sai_e_os_outros_seguem_2_3_4(
 
 
 def test_quem_esta_fora_na_troca_nao_toma_o_numero_de_quem_esta_na_mesa() -> None:
-    """A tabela que o G6 deixou: o roxo trocando de transporte, fora da mesa.
-
-    O `player_index` de cada jogador é o índice de ALOCAÇÃO do vpad, e depois de
-    quedas e voltas ele não é a carta (no G6, o branco era secundário com o 2).
-    O roxo fora não tem lâmpada; o `fallback` dele não pode tirar o 4 do azul.
-
-    MORDE: volte `numeros_de_jogador` à passada única — o azul acende 3.
-    """
+    """A tabela que o G6 deixou: o roxo trocando de transporte, fora da mesa."""
     from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
     from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
 
     registro = ControllerIdentityRegistry(clock=(relogio := Relogio()))
     registro.sync_connected(list(FILA_DELA))
     relogio.avancar(2.0)
-    registro.sync_connected([BRANCO, VERMELHO, AZUL])  # o roxo saiu: o lugar fica guardado
+    registro.sync_connected([BRANCO, VERMELHO, AZUL])
     daemon = SimpleNamespace(
         config=lifecycle.DaemonConfig(coop_enabled=True),
         controller=SimpleNamespace(primary_uniq=BRANCO),
@@ -1052,15 +937,10 @@ def test_quem_esta_fora_na_troca_nao_toma_o_numero_de_quem_esta_na_mesa() -> Non
 def test_o_numero_novo_repinta_a_lampada_sem_hotplug(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
-    """Ela troca o 2 e o 3 na tela: as lâmpadas se repintam sem ninguém mexer em /dev/input.
-
-    MORDE: tire a republicação do tique quieto do `CoopManager.sync` — o
-    vermelho e o roxo ficam com o número de antes aceso.
-    """
+    """Ela troca o 2 e o 3 na tela: as lâmpadas se repintam sem ninguém mexer em /dev/input."""
     bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=jogo)
     for _ in range(3):
         bancada.tique()
-    # Daqui em diante /dev/input não muda: o ciclo cheio do co-op não roda.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda _self: False
     )

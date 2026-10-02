@@ -1,67 +1,4 @@
-"""MIC-QUINTO-AJUSTE-01 (03/09/2026) — o microfone entra no perfil POR CONTROLE.
-
-A DECISÃO DELA, e é ela que abre este arquivo
-----------------------------------------------
-*"4 controles os 4 tem que ter canais de entrada
-unico pra cada qual."*  (noqa-acento: citação literal dela)
-
-Com o canal por controle, o ajuste que faz aquele canal funcionar deixa de
-caber num valor só para a mesa: **um controle no cabo e outro no rádio precisam
-poder ter tratamentos diferentes.** Por isso o microfone vira o QUINTO ajuste de
-``ControllerOverrides``, ao lado de luz, gatilhos, vibração e alto-falante.
-
-O QUE ENTROU, E POR QUE SÓ ISSO
---------------------------------
-``ProfileMicConfig`` tem TRÊS campos e ``ControllerMicOverride`` aceita UM. Não
-é economia: é a ordem que esta casa não inverte — **primeiro o caminho por
-unidade EXISTIR, depois o campo entrar no esquema.** Campo que grava e ninguém
-lê é pior que campo nenhum: ele faz a coluna "Ajuste próprio" da aba Perfis
-acender sobre um valor que nada aplica.
-
-- ``muted`` — **entra.** ``set_microphone_mute(muted, uniq=…)`` →
-  ``_handle_for(uniq)`` casa o MAC com o handle daquela peça.
-- ``volume`` — fica fora. ``Daemon.apply_profile_mic`` resolve a fonte com
-  ``fonte_de_captura_do_controle()``, a PRIMEIRA da lista; na mesa cheia o
-  número iria para o microfone do vizinho.
-- ``button_toggles_system`` — fica fora. ``hotkey.mic_button_loop`` lê
-  ``daemon.config``, que é UM por máquina.
-
-Os dois "não" são recusados na BORDA, com a razão na mensagem — a mesma
-disciplina do ``custom_mult`` do rumble e do ``auto`` por unidade. E cada um tem
-fio de gatilho em
-``tests/unit/test_perfil_por_controle_o_campo_espera_o_caminho.py``: quando a
-costura nascer, o fio fica vermelho e diz qual campo trazer.
-
-A GUARDA QUE NÃO PODE SER COPIADA
-----------------------------------
-``muted`` é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho, e a exceção
-MIC-GRAVACAO-01 o deixava atravessar só a troca EXPLÍCITA de perfil (revogada
-em 29/09/2026: nenhuma troca o leva, ver a nota abaixo). Se
-``apply_controller_mics`` tivesse a própria cópia dessa regra, o perfil de um
-jogo voltaria a roubar o mudo dela no meio de uma gravação — o defeito que a
-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 fechou. Por isso o método REUSA
-``apply_mic`` verbatim, e há teste abaixo que prova a herança da guarda.
-
-NOTA DATADA — 29/09/2026 (O-MUDO-E-DO-CONTROLE-01): O MUDO SAIU DO PERFIL
--------------------------------------------------------------------------
-A resposta 9 dela (27/09): *o mudo do microfone é do controle, e vale em todo
-jogo*. Ele mora no ``maquina.json`` (``controles[k].microfone_mudo``), e
-nenhuma ativação de perfil o escreve — nem a explícita. O ``muted`` do
-``ControllerMicOverride`` continua legível no esquema (a migração
-``loader.o_mudo_do_microfone_vai_para_o_controle`` o leva ao dono e o tira do
-arquivo), e ``apply_mic`` o ignora. O caminho por peça que este arquivo prova
-segue o mesmo, agora com o ``volume`` da peça, que atravessa toda ativação.
-
-AS MORDIDAS (o que arrancar para ver reprovar)
------------------------------------------------
-1. apagar ``mic: ControllerMicOverride | None = None`` de ``ControllerOverrides``;
-2. tirar o ``uniq=str(uniq)`` da chamada em ``apply_controller_mics``;
-3. apagar a linha ``self.apply_controller_mics(...)`` de ``_apply_appliers``;
-4. apagar o validador ``_o_que_ainda_nao_tem_caminho_por_peca`` do esquema.
-
-Endereços de rádio: faixa SINTÉTICA da casa (``aabbcc…``) — nunca o OUI de um
-aparelho real.
-"""
+"""MIC-QUINTO-AJUSTE-01 (03/09/2026) — o microfone entra no perfil POR CONTROLE."""
 from __future__ import annotations
 
 from typing import Any
@@ -79,13 +16,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 from tests.unit.test_por_unidade_01_todas_as_abas import (
     BRANCO,
 
-# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
-# `test_a_trava_manual_de_audio_vence_o_override_da_peca`.
-#
-# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
-# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
     PRETO,
     _StoreSemTrava,
 )
@@ -122,32 +52,8 @@ def _espiao() -> tuple[Any, list[tuple[int | None, bool | None, str | None, str]
     return applier, chamadas
 
 
-# ---------------------------------------------------------------------------
-# O ESQUEMA — o campo existe, é o quinto, e o que sobra é recusado com a razão
-# ---------------------------------------------------------------------------
-
-
 def test_o_microfone_e_o_quinto_ajuste_por_controle() -> None:
-    """O ``mic`` é o QUINTO, depois de luz, gatilhos, vibração e alto-falante.
-
-    MORDIDA 1: apagar o campo de ``ControllerOverrides`` — a lista encurta e o
-    prefixo deixa de casar. Trocar a ORDEM reprova igual, e é a metade que
-    importa: quem lê o esquema conta as seções na ordem em que elas aparecem.
-
-    **O SEXTO NASCEU EM 04/09/2026, e esta régua reprovou por isso.** Ela cravava
-    a lista INTEIRA (``== [leds, triggers, rumble, speaker, mic]``), e a ONDA1-D3
-    acrescentou ``sensores`` — o interruptor de giroscópio e acelerômetro por
-    peça, decisão dela (*"ele tem que funcionar de verdade. ambos independente do
-    modo e da mascara."*).  <!-- noqa-acento: citação literal dela -->
-    Medido com ``list(ControllerOverrides.model_fields)``:
-    ``['leds', 'triggers', 'rumble', 'speaker', 'mic', 'sensores']``.
-
-    O QUE ESTA RÉGUA AFIRMA continua sendo o que o título deste arquivo diz — o
-    microfone é o quinto —, e ela passou a afirmar SÓ isso. Cravar o comprimento
-    total nunca foi o contrato: obrigaria toda frente que abrir um ajuste novo
-    por controle a vir editar um arquivo sobre microfone, e foi assim que a
-    ONDA1-D3 deixou este arquivo vermelho sem tocar numa linha dele.
-    """
+    """O ``mic`` é o QUINTO, depois de luz, gatilhos, vibração e alto-falante."""
     assert list(ControllerOverrides.model_fields)[:5] == [
         "leds",
         "triggers",
@@ -158,34 +64,18 @@ def test_o_microfone_e_o_quinto_ajuste_por_controle() -> None:
 
 
 def test_o_override_e_subconjunto_estrito_do_global() -> None:
-    """``ControllerMicOverride`` só pode ter campos que o global também tem.
-
-    É o que torna honesta a vista (``model_copy(update={"mic": override})``) que
-    ``apply_controller_mics`` usa para reusar ``apply_mic``: o applier lê a
-    seção por ``getattr`` e um campo que só existisse no override sumiria calado
-    no caminho.
-    """
+    """``ControllerMicOverride`` só pode ter campos que o global também tem."""
     do_override = set(ControllerMicOverride.model_fields)
     do_global = set(ProfileMicConfig.model_fields)
     assert do_override <= do_global, (
         f"campo(s) só no override: {sorted(do_override - do_global)} — "
         "`apply_mic` lê a seção por getattr e não os veria"
     )
-    # O CONJUNTO É `{muted, volume}` DESDE 03/09/2026 — ela mandou abrir o
-    # volume por peça, e o applier já o consumia (`apply_mic` lê a seção por
-    # `getattr(secao, "volume"/"muted")`).
-    #
-    # E ELE DEIXOU DE SER DIGITADO: a régua cobra a RELAÇÃO — todo campo do
-    # override tem de existir no global —, que é o contrato de verdade. Uma
-    # lista literal aqui obrigaria alguém a vir editar duas vezes a cada campo
-    # novo, e foi assim que ela reprovou a abertura do `volume` no mesmo dia.
     assert do_override <= do_global, (
         f"o override tem campo que o global não tem: {do_override - do_global}. "
         "O override é subconjunto do global por construção — `apply_mic` lê a "
         "seção por `getattr`, e um campo só daqui não teria quem o lesse.")
     assert do_override, "o override ficou vazio — nenhum ajuste de mic por peça"
-    # E O QUE FICA DE FORA CONTINUA FORA, com a razão na borda. Sem esta
-    # metade, abrir `button_toggles_system` passaria calado.
     assert "button_toggles_system" not in do_override, (
         "`button_toggles_system` entrou no override: ele é UM por máquina "
         "(`hotkey.mic_button_loop` lê `daemon.config`, sem consultar uniq), e "
@@ -193,22 +83,11 @@ def test_o_override_e_subconjunto_estrito_do_global() -> None:
 
 
 def test_o_que_continua_recusado_diz_a_medicao_na_mensagem() -> None:
-    """"Extra inputs are not permitted" mandaria procurar no lugar errado.
-
-    O `volume` SAIU desta lista em 03/09/2026 — ela mandou abri-lo. O que
-    sobrou é `button_toggles_system`, e a razão dele NÃO é decisão: o
-    interruptor é UM por máquina, e a mensagem tem de dizer isso, senão quem
-    esbarrar nele vai procurar a palavra dela em vez do limite técnico.
-
-    MORDIDA: apagar o validador ``_o_que_ainda_nao_tem_caminho_por_peca``.
-    """
-    # O que ABRIU passa, nos dois níveis do esquema.
+    """"Extra inputs are not permitted" mandaria procurar no lugar errado."""
     assert ControllerMicOverride.model_validate({"volume": 50}).volume == 50
     assert ControllerOverrides.model_validate(
         {"mic": {"volume": 50}}).mic.volume == 50
 
-    # O que continua fora recusa DIZENDO o motivo — e o motivo é o mecanismo,
-    # não a fila.
     for erro in (pytest.raises(ValueError, match="UM por"),
                  pytest.raises(ValueError, match="interruptor só")):
         with erro:
@@ -225,11 +104,7 @@ def test_o_interruptor_do_botao_por_peca_e_recusado_com_a_razao() -> None:
 
 
 def test_o_perfil_antigo_sem_o_campo_carrega_e_vale() -> None:
-    """Aditivo, sem bump de versão — é o contrato do ``speaker`` e do ``mode``.
-
-    Os perfis do disco dela nasceram antes deste campo. Um que não o tem carrega
-    e a peça segue SEM OPINIÃO, herdando o ``mic`` global do perfil.
-    """
+    """Aditivo, sem bump de versão — é o contrato do ``speaker`` e do ``mode``."""
     perfil = Profile.model_validate(
         {
             "name": "jogo_de_ontem",
@@ -245,12 +120,7 @@ def test_o_perfil_antigo_sem_o_campo_carrega_e_vale() -> None:
 
 
 def test_a_ida_e_volta_pelo_disco_preserva_o_mudo_da_peca() -> None:
-    """Grava, lê de volta, e o ``muted`` daquela peça volta igual.
-
-    E o dump de quem NÃO opinou continua idêntico ao que era: sem isso um
-    hefesto antigo (``extra="forbid"``) recusaria o perfil inteiro ao ver a
-    chave nova, e "voltar uma versão" viraria "todos os perfis quebrados".
-    """
+    """Grava, lê de volta, e o ``muted`` daquela peça volta igual."""
     perfil = Profile(
         name="mic_por_peca",
         match=MatchAny(),
@@ -283,21 +153,8 @@ def test_a_ida_e_volta_pelo_disco_preserva_o_mudo_da_peca() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O CAMINHO — o gesto de UMA peça sai endereçado ÀQUELA peça
-# ---------------------------------------------------------------------------
-
-
 def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
-    """Duas unidades, dois volumes, um perfil só — o pedido dela por microfone.
-
-    Até 29/09 este caso provava o MUDO por peça; o mudo passou a ser do controle
-    (O-MUDO-E-DO-CONTROLE-01), e o endereço se prova pelo volume.
-
-    MORDIDA 2: tirar o ``uniq=str(uniq)`` da chamada em
-    ``apply_controller_mics`` — o dado continua sendo calculado e deixa de ter
-    dono, que é o defeito, e não a ausência do valor.
-    """
+    """Duas unidades, dois volumes, um perfil só — o pedido dela por microfone."""
     applier, chamadas = _espiao()
     gerente = _gerente(applier)
     perfil = Profile(
@@ -315,22 +172,16 @@ def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
     gerente.apply_controller_mics(perfil, relatorio=relatorio)
 
     assert chamadas == [
-        (50, None, None, "manual"),  # o global, sem endereço
+        (50, None, None, "manual"),
         (30, None, BRANCO, "manual"),
         (80, None, PRETO, "manual"),
     ]
-    # O relatório diz QUAL peça, para a GUI não fundir tudo num rótulo só.
     assert relatorio[f"mic:{BRANCO}"] == "aplicado"
     assert relatorio[f"mic:{PRETO}"] == "aplicado"
 
 
 def test_a_ativacao_do_perfil_chama_o_por_peca_depois_do_global() -> None:
-    """A ordem é a entrega: invertê-la faria o global apagar a peça.
-
-    MORDIDA 3: apagar a linha ``self.apply_controller_mics(...)`` de
-    ``apply_emulation`` — sobra só a chamada global e a lista perde a entrada
-    com ``uniq``.
-    """
+    """A ordem é a entrega: invertê-la faria o global apagar a peça."""
     applier, chamadas = _espiao()
     gerente = _gerente(applier)
     perfil = Profile(
@@ -348,11 +199,7 @@ def test_a_ativacao_do_perfil_chama_o_por_peca_depois_do_global() -> None:
 
 
 def test_a_peca_sem_opiniao_nao_produz_ordem_nenhuma() -> None:
-    """``mic=None`` é ausência de opinião — e ausência não vira chamada vazia.
-
-    Vale também para a seção que EXISTE e não escreveu nada: ``apply_mic`` sai
-    antes de tocar no applier quando não há ``volume`` nem ``muted``.
-    """
+    """``mic=None`` é ausência de opinião — e ausência não vira chamada vazia."""
     applier, chamadas = _espiao()
     gerente = _gerente(applier)
     perfil = Profile(
@@ -370,26 +217,8 @@ def test_a_peca_sem_opiniao_nao_produz_ordem_nenhuma() -> None:
     assert relatorio == {}
 
 
-# ---------------------------------------------------------------------------
-# AS GUARDAS HERDADAS — o reuso de `apply_mic` é a entrega, e ele se prova
-# ---------------------------------------------------------------------------
-
-
 def test_o_mudo_da_peca_nao_atravessa_ativacao_nenhuma() -> None:
-    """A guarda do mudo vale igual por peça — e é a guarda mais cara de perder.
-
-    Ela grava, o jogo abre, o autoswitch entra com a trava manual já limpa
-    (``profiles/autoswitch.py``, exceção F2). Se o ``muted`` por peça
-    atravessasse, o perfil do jogo roubaria o mudo dela no meio da gravação e
-    apagaria o LED vermelho como COLATERAL — o que a
-    AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 proíbe. Desde 29/09
-    (O-MUDO-E-DO-CONTROLE-01) nem a troca explícita o leva: o mudo é do
-    controle.
-
-    MORDIDA: escrever a chamada ao applier direto em ``apply_controller_mics``,
-    em vez de reusar ``apply_mic`` — a guarda fica do lado de fora e este teste
-    vê a ordem passar.
-    """
+    """A guarda do mudo vale igual por peça — e é a guarda mais cara de perder."""
     applier, chamadas = _espiao()
     gerente = _gerente(applier)
     perfil = Profile(
@@ -401,8 +230,6 @@ def test_o_mudo_da_peca_nao_atravessa_ativacao_nenhuma() -> None:
     for origem in ("autoswitch", "system", "manual"):
         assert gerente.apply_controller_mics(perfil, origin=origem) == {}
     assert chamadas == [], "o mudo da peça atravessou uma ativação de perfil"
-
-
 
 
 def test_o_applier_que_cai_nao_aborta_a_ativacao_e_diz_qual_peca() -> None:
@@ -438,13 +265,7 @@ def test_o_applier_que_cai_nao_aborta_a_ativacao_e_diz_qual_peca() -> None:
 
 
 def test_o_override_da_peca_nao_suja_o_perfil_em_memoria() -> None:
-    """A vista é uma CÓPIA: o ``mic`` global do perfil sai da ativação intacto.
-
-    ``model_copy`` não muta o original — mas quem lê o método precisa ver isso
-    provado, porque um ``profile.mic = secao`` no lugar da cópia produziria o
-    defeito mais silencioso possível: o perfil salvo depois levaria o mudo de
-    uma peça como se fosse da mesa inteira.
-    """
+    """A vista é uma CÓPIA: o ``mic`` global do perfil sai da ativação intacto."""
     applier, _ = _espiao()
     gerente = _gerente(applier)
     global_original = ProfileMicConfig(button_toggles_system=True, muted=False)

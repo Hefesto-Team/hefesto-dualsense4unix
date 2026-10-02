@@ -29,9 +29,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`, e no TOPO do arquivo —
-# o skip é de módulo e afundaria junto as checagens que não precisam de GTK
-# (elas moram em `test_coop_nao_cai_em_silencio.py`, que não importa GTK).
 exigir_gi_real("contagem: um numero so na janela")
 
 from typing import Any
@@ -44,14 +41,8 @@ from hefesto_dualsense4unix.app.actions.status_actions import (
     texto_de_contagem,
 )
 
-#: MACs sempre na faixa forjada aa:bb:cc (teste-guarda de anonimato).
 UNIQ_A = "aabbcc000001"
 UNIQ_B = "aabbcc000002"
-
-
-# ---------------------------------------------------------------------------
-# Dublês de widget — nenhuma janela real (a aba não é o objeto do teste)
-# ---------------------------------------------------------------------------
 
 
 class _Rotulo:
@@ -94,15 +85,7 @@ class _Builder:
 
 
 class _Janela(StatusActionsMixin):
-    """Host mínimo: builder dublado + os colaboradores de widget anotados.
-
-    Os quatro métodos substituídos abaixo (`_rebuild_target_buttons`,
-    `_set_target_active`, `_set_target_strip_visible`,
-    `_refresh_numero_selector`) são de CONSTRUÇÃO de widget — não é neles que a
-    contagem mora. Substituí-los aqui deixa o caminho real de
-    `_refresh_controller_target_combo` rodar inteiro e, de quebra, permite
-    observar o número que ele ENTREGA para a faixa, que é o denominador nº 2.
-    """
+    """Host mínimo: builder dublado + os colaboradores de widget anotados."""
 
     def __init__(self, externos: int = 0) -> None:
         self.builder = _Builder()
@@ -123,11 +106,8 @@ class _Janela(StatusActionsMixin):
         self._totais_da_faixa: list[int] = []
         self._linhas_construidas: list[list[tuple[str, int | None]]] = []
 
-    # -- colaboradores de widget, observados --------------------------------
     def _maybe_fetch_externals(self) -> None:
-        """No-op: o inventário de externos é IPC (`controller.list`) e este
-        teste não fala com o daemon vivo da máquina dela — a lista já vem
-        semeada em ``_externals``."""
+        """No-op: o inventário de externos é IPC (`controller.list`) e este"""
 
 
     def _rebuild_target_buttons(
@@ -181,11 +161,6 @@ def mesa_2x2() -> tuple[_Janela, dict[str, Any]]:
     return janela, estado
 
 
-# ---------------------------------------------------------------------------
-# A função única e o texto nomeado (partes puras)
-# ---------------------------------------------------------------------------
-
-
 def test_a_mesa_e_a_soma_e_os_dois_espacos_seguem_separados() -> None:
     contagem = ContagemDeControles(adotados=2, externos=2)
     assert contagem.na_mesa == 4
@@ -197,9 +172,9 @@ def test_a_mesa_e_a_soma_e_os_dois_espacos_seguem_separados() -> None:
     ("adotados", "externos", "esperado"),
     [
         (0, 0, ""),
-        (1, 0, ""),  # caminho single: "Conectado Via USB", como sempre
-        (0, 1, ""),  # um externo sozinho também não tem plural a explicar
-        (2, 0, "2 controles"),  # texto de sempre — nada a desambiguar
+        (1, 0, ""),
+        (0, 1, ""),
+        (2, 0, "2 controles"),
         (4, 0, "4 controles"),
         (2, 2, "2 do Hefesto + 2 externos"),
         (1, 1, "1 do Hefesto + 1 externo"),
@@ -210,8 +185,7 @@ def test_a_mesa_e_a_soma_e_os_dois_espacos_seguem_separados() -> None:
 def test_o_texto_diz_de_qual_numero_se_trata(
     adotados: int, externos: int, esperado: str
 ) -> None:
-    """Sem externos o número é único e o texto não muda (a largura da CI agradece);
-    com externos, ele passa a dizer QUAL número é qual."""
+    """Sem externos o número é único e o texto não muda (a largura da CI agradece);"""
     assert texto_de_contagem(ContagemDeControles(adotados, externos)) == esperado
 
 
@@ -224,27 +198,17 @@ def test_a_contagem_da_janela_le_os_dois_espacos_de_uma_vez(
 
 
 def test_placeholder_offline_nao_entra_na_conta() -> None:
-    """HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada com
-    ``connected=False`` quando não há controle nenhum. Ela não é um controle."""
+    """HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada com"""
     janela = _Janela()
     fantasma = _dualsense(0, "usb", None, UNIQ_A) | {"connected": False}
     contagem = janela._contagem_de_controles({"controllers": [fantasma]})
     assert contagem.na_mesa == 0
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA: a mesma tela, os mesmos números
-# ---------------------------------------------------------------------------
-
-
 def test_cabecalho_e_frame_estado_nomeiam_os_externos(
     mesa_2x2: tuple[_Janela, dict[str, Any]],
 ) -> None:
-    """O defeito, no ponto exato: "2 controles" com QUATRO na mesa.
-
-    Com a cura arrancada (cabeçalho e frame voltando a ``len(conectados)``), o
-    cabeçalho volta a dizer "2 controles" e estas asserções reprovam.
-    """
+    """O defeito, no ponto exato: "2 controles" com QUATRO na mesa."""
     janela, estado = mesa_2x2
 
     janela._render_online(estado)
@@ -255,8 +219,6 @@ def test_cabecalho_e_frame_estado_nomeiam_os_externos(
     assert "2 controles" not in cabecalho, (
         "o texto antigo dizia 2 com quatro controles na mesa"
     )
-    # Os transportes dos ADOTADOS seguem no cabeçalho (FEAT-DSX-MULTI-CONTROLLER-01),
-    # com o primário em negrito.
     assert "<b>USB</b>" in cabecalho and "BT" in cabecalho
 
     linha = janela.builder.get_object("status_connection").texto
@@ -264,9 +226,7 @@ def test_cabecalho_e_frame_estado_nomeiam_os_externos(
 
 
 def test_um_dualsense_com_externos_para_de_calar_o_cabecalho() -> None:
-    """A pior forma da divergência: o cabeçalho antigo entrava no caminho
-    single (``len(conectados) > 1`` é False) e NÃO dizia uma palavra sobre os
-    dois outros controles que a fita ao lado mostrava."""
+    """A pior forma da divergência: o cabeçalho antigo entrava no caminho"""
     janela = _Janela(externos=2)
     estado = _estado([_dualsense(0, "usb", 1, UNIQ_A)])
 
@@ -298,9 +258,7 @@ def test_um_dualsense_sozinho_mantem_o_texto_de_sempre() -> None:
 
 
 def test_dois_dualsense_sem_externos_mantem_o_texto_de_sempre() -> None:
-    """Idem para 2+: "2 controles" é o texto histórico e não há ambiguidade —
-    ``na_mesa == adotados``. Trocar isto engordaria o cabeçalho de graça (a
-    lição dos 12px de folga da CI de 29/07)."""
+    """Idem para 2+: "2 controles" é o texto histórico e não há ambiguidade —"""
     janela = _Janela()
     estado = _estado(
         [_dualsense(0, "usb", 1, UNIQ_A), _dualsense(1, "bt", 2, UNIQ_B)]
@@ -320,12 +278,7 @@ def test_dois_dualsense_sem_externos_mantem_o_texto_de_sempre() -> None:
 def test_a_fita_e_a_faixa_de_numeros_seguem_a_mesa_inteira(
     mesa_2x2: tuple[_Janela, dict[str, Any]],
 ) -> None:
-    """Os denominadores 1 e 2, agora derivados da MESMA função.
-
-    A faixa recebe ``na_mesa`` (4 — o espaço de numeração é único, R-24/NUM-01)
-    e a base do rótulo dos externos recebe ``adotados`` (2 — inflar isto
-    deslizaria o número dos externos, o ponto cego citado em `slot_of`).
-    """
+    """Os denominadores 1 e 2, agora derivados da MESMA função."""
     janela, estado = mesa_2x2
 
     janela._refresh_controller_target_combo(estado)
@@ -333,7 +286,6 @@ def test_a_fita_e_a_faixa_de_numeros_seguem_a_mesa_inteira(
     assert janela._totais_da_faixa[-1] == 4
     assert janela._dualsense_count == 2
     # A fita continua com "Todos" + um chip por DualSense; os externos entram
-    # no rebuild como botões próprios (fora do grupo de rádio).
     assert [rotulo for rotulo, _idx in janela._linhas_construidas[-1]] == [
         "Todos os controles",
         "Controle 1 — USB",

@@ -1,31 +1,4 @@
-"""A escada da intensidade (30/100/150) e o teto que satura em 255.
-
-Três decisões dela, de 11/08/2026:
-
-1. **`Balanceado` passa de 0,7 a 1,0.** O tooltip da tela sempre prometeu *"do
-   jeito que o jogo pediu, sem aumentar nem diminuir"*, e o número dizia outra
-   coisa. Agora a promessa é verdade.
-2. **`Máximo` passa de 1,0 a 1,5, e AMPLIFICA.** Um "Máximo" que valia 1,0 era
-   idêntico a não mexer em nada. Amplificar é multiplicar **e saturar em 255**:
-   sem a saturação, `200 * 1,5` daria 300, e 300 num byte é 44 — o motor cairia
-   a um sexto justamente no pico. É a mordida principal deste arquivo.
-3. **O deslizador vai até 200, e o esquema do perfil valida até 2,0 — mais que o
-   botão, de propósito.** Os quatro botões são presets seguros; o deslizador é o
-   ajuste livre de quem aceita o preço. O 2,0 no BOTÃO foi considerado e
-   **descartado por ela**: satura a partir de 128, e metade da faixa que o jogo
-   pede vira força constante (medição SATURA-01). A 1,5 satura a partir de 170 —
-   um terço, não a metade.
-
-E uma decisão de projeto, do mesmo dia: **`Auto` NUNCA amplifica**. Ele existe
-para poupar bateria; a escada dele (1,0 / 0,7 / 0,3) é própria e não acompanha
-o "Máximo".
-
-**Este arquivo não importa GTK de propósito** (GUARDA-GI-REAL-01): tudo aqui é
-conta, esquema e texto de `.glade` lido como arquivo. Um skip de módulo por
-falta de PyGObject afundaria junto a prova da saturação, que é a que não pode
-faltar. O que precisa de widget mora em
-`test_politica_de_vibracao_o_alcance_na_tela.py`.
-"""
+"""A escada da intensidade (30/100/150) e o teto que satura em 255."""
 from __future__ import annotations
 
 import re
@@ -56,15 +29,7 @@ def _config(policy: str, custom_mult: float = 1.0) -> DaemonConfig:
 
 
 def _atributo_do_trilho(nome: str) -> float:
-    """`max`/`min` do trilho da Intensidade, na TELA QUE ELA USA.
-
-    **A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta): era o
-    `<property name="upper">` do `rumble_policy_adj` no `gui/main.glade`, e a
-    janela GTK sai inteira (`D-0609-GTK-LEVA-INTEIRA`). Quem oferece a faixa é
-    o `<input type="range" data-campo="mult-pos">` de
-    `interface/paginas/05-vibracao.html`. Continua sendo LEITURA de arquivo, e
-    não número digitado aqui.
-    """
+    """`max`/`min` do trilho da Intensidade, na TELA QUE ELA USA."""
     pagina = (
         Path(__file__).resolve().parents[2]
         / "src" / "hefesto_dualsense4unix"
@@ -82,17 +47,10 @@ def _atributo_do_trilho(nome: str) -> float:
     return float(achado.group(1))
 
 
-# ---------------------------------------------------------------------------
-# A escada
-# ---------------------------------------------------------------------------
-
-
 def test_a_escada_da_intensidade_e_30_100_150() -> None:
     """Os três degraus, no dono único, e cada um com a sua razão de ser."""
     assert RUMBLE_POLICY_MULT["economia"] == pytest.approx(0.3)
-    # Se este voltar a 0,7, o tooltip do botão volta a mentir.
     assert RUMBLE_POLICY_MULT["balanceado"] == pytest.approx(1.0)
-    # Se este voltar a 1,0, "Máximo" volta a ser idêntico a "Balanceado".
     assert RUMBLE_POLICY_MULT["max"] == pytest.approx(1.5)
     assert RUMBLE_POLICY_MULT["max"] > RUMBLE_POLICY_MULT["balanceado"], (
         'um botão chamado "Máximo" tem de entregar mais que o "Balanceado"'
@@ -118,17 +76,7 @@ def test_maximo_amplifica_acima_do_que_o_jogo_pediu() -> None:
 
 @pytest.mark.parametrize("bruto", [200, 220, 255])
 def test_amplificar_satura_em_255_e_nunca_da_a_volta(bruto: int) -> None:
-    """A MORDIDA: amplificar é multiplicar **e** saturar.
-
-    Sem o recorte em 255, `200 * 1,5 = 300`, e 300 escrito num byte é **44** —
-    o motor cairia a um sexto exatamente no pico da cena. Um valor "acima do
-    máximo" que vira lixo é pior que não amplificar.
-
-    Os brutos desta lista estão TODOS acima do ponto de saturação do degrau
-    (170, para mult 1,5) — a asserção afirma que dali para cima o motor fica
-    NO teto, e é justamente por saturar que a variação some. O preço está
-    medido e aceito: é por causa dele que o botão parou em 1,5 e não em 2,0.
-    """
+    """A MORDIDA: amplificar é multiplicar **e** saturar."""
     assert bruto * RUMBLE_POLICY_MULT["max"] > 255, (
         "o bruto escolhido tem de estourar o teto, senão o teste não fala de "
         "saturação nenhuma"
@@ -140,13 +88,7 @@ def test_amplificar_satura_em_255_e_nunca_da_a_volta(bruto: int) -> None:
 
 
 def test_o_caminho_do_rumble_fixado_tambem_satura() -> None:
-    """O rumble que ELA fixa passa pela mesma conta — e satura igual.
-
-    Duas conclusões numa: a intensidade vale também para a vibração fixada
-    (o rodapé da aba diz isso, e é ele quem tem razão — `docs/usage/modos.md`
-    dizia o contrário até 11/08/2026), e o recorte existe nos dois caminhos,
-    não só no `apply_rumble_policy` do `rumble.set`.
-    """
+    """O rumble que ELA fixa passa pela mesma conta — e satura igual."""
     daemon = MagicMock()
     daemon.config = _config("max")
     daemon.config.rumble_active = (200, 30)
@@ -158,14 +100,9 @@ def test_o_caminho_do_rumble_fixado_tambem_satura() -> None:
 
     mult = RUMBLE_POLICY_MULT["max"]
     daemon.controller.set_rumble.assert_called_once_with(
-        weak=min(255, round(200 * mult)),  # estoura o teto e para nele
-        strong=round(30 * mult),  # bem abaixo do teto: amplifica de verdade
+        weak=min(255, round(200 * mult)),
+        strong=round(30 * mult),
     )
-
-
-# ---------------------------------------------------------------------------
-# O teto, com um dono só
-# ---------------------------------------------------------------------------
 
 
 def test_o_teto_do_deslizador_e_o_do_esquema_do_perfil() -> None:
@@ -176,17 +113,7 @@ def test_o_teto_do_deslizador_e_o_do_esquema_do_perfil() -> None:
 
 
 def test_o_deslizador_vai_mais_longe_que_o_botao_maximo() -> None:
-    """Não é incoerência — é a divisão de papéis que ela decidiu em 11/08.
-
-    Os quatro botões são presets SEGUROS: quem só quer clicar não pode cair
-    numa armadilha, e por isso o Máximo parou em 1,5 (satura a partir de 170,
-    um terço da faixa). O deslizador é o ajuste LIVRE de quem quer ir além e
-    aceita o preço — a 2,0 satura a partir de 128, metade da faixa, e foi por
-    isso que o 2,0 foi descartado como PRESET, não como limite.
-
-    Igualar os dois apagaria a decisão nos dois sentidos: baixar o teto
-    tiraria dela a escolha; subir o botão devolveria a armadilha.
-    """
+    """Não é incoerência — é a divisão de papéis que ela decidiu em 11/08."""
     teto_do_botao = RUMBLE_POLICY_MULT["max"]
     assert teto_do_botao < RUMBLE_CUSTOM_MULT_MAX, (
         "o preset ficou tão longe quanto o ajuste livre — some a diferença "
@@ -196,18 +123,12 @@ def test_o_deslizador_vai_mais_longe_que_o_botao_maximo() -> None:
 
 
 def test_o_rascunho_da_janela_aceita_o_mesmo_teto_do_perfil() -> None:
-    """As duas pontas eram inconsistentes — o rascunho aceitava o que o perfil
-    recusava, e a divergência só aparecia no "Salvar Perfil"."""
+    """As duas pontas eram inconsistentes — o rascunho aceitava o que o perfil"""
     from hefesto_dualsense4unix.app.draft_config import RumbleDraft
 
     RumbleDraft(policy="custom", custom_mult=RUMBLE_CUSTOM_MULT_MAX)
     with pytest.raises(ValueError):
         RumbleDraft(policy="custom", custom_mult=RUMBLE_CUSTOM_MULT_MAX + 0.1)
-
-
-# ---------------------------------------------------------------------------
-# O Auto nunca amplifica
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("bateria", [0, 5, 19, 20, 35, 50, 51, 80, 100])

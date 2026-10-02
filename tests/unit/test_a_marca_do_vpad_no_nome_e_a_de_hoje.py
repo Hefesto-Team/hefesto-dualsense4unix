@@ -56,12 +56,7 @@ _HID_USB = "/devices/pci0000:00/0000:0d:00.3/usb1/1-4/1-4:1.0/0003:054C:0CE6.000
 
 
 def _nome_publicado_pelo_vpad(jogador: int) -> str:
-    """O nome de hoje, extraído do `return` da property `name` do vpad uhid.
-
-    Por AST e não por instanciação: montar um `UhidGamepad` abriria
-    `/dev/uhid`, e nenhum teste desta casa toca aparelho (a suíte já derrubou a
-    sessão gráfica dela uma vez criando nós de verdade).
-    """
+    """O nome de hoje, extraído do `return` da property `name` do vpad uhid."""
     arvore = ast.parse(_UHID.read_text(encoding="utf-8"), filename=str(_UHID))
     for no in ast.walk(arvore):
         if not isinstance(no, ast.FunctionDef) or no.name != "name":
@@ -84,11 +79,7 @@ def _nome_publicado_pelo_vpad(jogador: int) -> str:
 
 
 def _constante_do_script(nome: str) -> str:
-    """Uma constante de `scripts/identidade_do_vpad.py`, lida por AST.
-
-    `scripts/` não é pacote importável a partir de `src/`; ler por AST evita
-    mexer em `sys.path` só para conferir uma string.
-    """
+    """Uma constante de `scripts/identidade_do_vpad.py`, lida por AST."""
     arvore = ast.parse(_IDENTIDADE.read_text(encoding="utf-8"), filename=str(_IDENTIDADE))
     for no in arvore.body:
         alvos = list(no.targets) if isinstance(no, ast.Assign) else []
@@ -105,9 +96,6 @@ def _no(dev: str, nome: str, uniq: str, sysfs: str) -> dict[str, str]:
     return {"path": dev, "name": nome, "uniq": uniq, "sys": sysfs}
 
 
-# ---------------------------------------------------------------------------
-# As três pontas
-# ---------------------------------------------------------------------------
 def test_a_marca_da_aba_esta_no_nome_que_o_vpad_publica_hoje() -> None:
     """ARRANQUE A CURA: devolva `"Hefesto Virtual"` e este caso REPROVA."""
     for jogador in (1, 2, 5):
@@ -143,15 +131,8 @@ def test_a_marca_nao_casa_com_o_nome_de_um_aparelho_de_verdade() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# A regra viva, isolada — sem `uniq`, que é para isso que ela existe
-# ---------------------------------------------------------------------------
 def test_sem_uniq_o_vpad_de_hoje_continua_sendo_nosso() -> None:
-    """A MORDIDA que a sprint pede: arranque a regra do `uniq` e sobra o nome.
-
-    Antes desta cura o caso reprovava — o nó era classificado como "de outro
-    programa", porque o nome que ele publica não começa por "Hefesto Virtual".
-    """
+    """A MORDIDA que a sprint pede: arranque a regra do `uniq` e sobra o nome."""
     nome = _nome_publicado_pelo_vpad(1)
     nos = [
         _no("/dev/input/js0", nome, "", f"{_HID_UHID}/input/input325/js0"),
@@ -168,11 +149,7 @@ def test_sem_uniq_o_vpad_de_hoje_continua_sendo_nosso() -> None:
 
 
 def test_o_dualsense_fisico_por_radio_nao_vira_nosso_pelo_nome() -> None:
-    """BLUEZ-UHID-01: o físico de rádio mora no MESMO lugar do sysfs.
-
-    Sem este contrapeso, ampliar a regra do nome poderia engolir o aparelho
-    dela — e a aba passaria a contar zero controles físicos.
-    """
+    """BLUEZ-UHID-01: o físico de rádio mora no MESMO lugar do sysfs."""
     nos = [
         _no(
             "/dev/input/js0",
@@ -185,18 +162,7 @@ def test_o_dualsense_fisico_por_radio_nao_vira_nosso_pelo_nome() -> None:
 
 
 def test_o_nome_antigo_nao_e_regua_de_constante_nenhuma_desta_aba() -> None:
-    """Fato errado sai de todos os lugares onde AINDA É RÉGUA.
-
-    A régua deste caso é deliberadamente estreita, e vale escrever por quê: a
-    outra regra da casa manda PRESERVAR a decisão medida numa nota datada, e as
-    notas desta aba precisam citar o nome antigo para explicar o que mudou.
-    Proibir a string no arquivo inteiro poria as duas regras em contradição e
-    apagaria a explicação. O que não pode sobreviver é o nome antigo VALENDO —
-    ou seja, sendo o valor de uma constante de módulo, que é o que o produto lê.
-
-    ARRANQUE A CURA: devolva `_VPAD_MARCA_NO_NOME = "Hefesto Virtual"` e este
-    caso REPROVA nomeando a constante.
-    """
+    """Fato errado sai de todos os lugares onde AINDA É RÉGUA."""
     fonte = Path(ea.__file__).read_text(encoding="utf-8")
     arvore = ast.parse(fonte, filename=ea.__file__)
     vivas: list[str] = []

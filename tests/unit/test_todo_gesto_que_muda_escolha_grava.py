@@ -1,35 +1,4 @@
-"""Todo gesto que muda uma escolha dela grava no clique — ou diz por que não é escolha.
-
-O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01, 27/09/2026. Desde
-`D-2709-O-SALVAR-LE-O-PERFIL` o «Salvar» do rodapé não lê o aparelho: ele
-regrava o perfil do disco. Isso só é seguro se toda escolha dela chegar ao
-disco no gesto que a fez — a D2 de 05/09. Um gesto que muda uma escolha no
-aparelho e não grava é uma escolha que o próximo Salvar, a próxima troca de
-perfil ou o próximo boot desfazem, calado.
-
-A RÉGUA É EXAUSTIVA NOS DOIS SENTIDOS, sobre o registro do produto
-(`pacotes.GESTOS`), nunca sobre uma lista digitada:
-
-* **todo gesto registrado tem um veredito**, e um só: declara `grava=` (a
-  porta que a árvore confere em `test_todo_gesto_que_grava_esta_protegido.py`);
-  ou é isento lá (grava o valor que a própria página mostra); ou está em
-  :data:`GRAVAM_SEM_DECLARAR` (grava no clique por um caminho que o `grava=`
-  não declara, com a razão); ou está em :data:`ATOS` (não é escolha a guardar:
-  ato, sessão, tela ou leitura, com a razão). Gesto novo sem nenhum dos quatro
-  reprova, nomeado;
-* **toda entrada das duas tabelas aponta um gesto que existe**, com a razão
-  escrita, sem cruzar com as outras categorias; e o ato não grava — a árvore
-  dele não alcança porta de escrita nenhuma.
-
-O SENSOR É O ÚNICO QUE GRAVA PELO DAEMON, e a régua confere a outra ponta: o
-gesto chama `sensor.set`, e o `_handle_sensor_set` do daemon chama
-`save_profile` (ele grava `ControllerOverrides.sensores` no perfil que vale).
-
-A MORDIDA (medida na entrega): tire o `grava=` do `@gesto("*", "salvar")` e
-:func:`test_todo_gesto_tem_um_veredito` reprova nomeando `*·salvar`; ponha em
-:data:`ATOS` um gesto que grava (`04-iluminacao.html·cor`) e
-:func:`test_toda_entrada_aponta_um_gesto_e_nao_cruza` reprova.
-"""
+"""Todo gesto que muda uma escolha dela grava no clique — ou diz por que não é escolha."""
 from __future__ import annotations
 
 import ast
@@ -42,15 +11,11 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
-# O PILOTO REGISTRA UM GESTO SÓ AO SER IMPORTADO (`*·escolher-na-fita`). Sem
-# esta linha o registro depende da ordem dos arquivos no lote.
 from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: F401
 from tests.unit import test_todo_gesto_que_grava_esta_protegido as protegido
 
 Chave = tuple[str, str]
 
-#: AS ESCOLHAS QUE VÃO AO DISCO NO CLIQUE POR UM CAMINHO QUE O `grava=` NÃO
-#: DECLARA. Cada uma diz onde a escolha mora.
 GRAVAM_SEM_DECLARAR: dict[Chave, str] = {
     ("02-controles.html", "sensor"):
         "`sensor.set`: o daemon grava `ControllerOverrides.sensores` no perfil "
@@ -80,8 +45,6 @@ _PERGUNTA_DO_RADIO = (
     "abre a pergunta do rádio; quem muda o pareamento é a confirmação dela, "
     "que declara `grava=`")
 
-#: OS GESTOS QUE NÃO SÃO ESCOLHA A GUARDAR — e por quê. O Salvar nunca os
-#: levou ao disco, e nenhum deles muda um campo de perfil.
 ATOS: dict[Chave, str] = {
     ("*", "aplicar"):
         "ato: manda o perfil do disco aos controles e não muda escolha "
@@ -130,7 +93,6 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "abrir-adaptador"):
         "tela: abre um adaptador e fecha os outros (o acordeão)",
     ("08-conexoes.html", "aceitar-sugestao"): _PERGUNTA_DO_RADIO,
-    # O «⋮» da linha (ESQUECER-E-LIMPAR-AS-CONEXOES-01): só abre o menu.
     ("08-conexoes.html", "aparelho-menu"):
         "tela: abre o menu «⋮» da linha; quem muda o pareamento é o "
         "«Esquecer» de lá, confirmado na pergunta, que declara `grava=`",
@@ -221,24 +183,11 @@ def test_toda_entrada_aponta_um_gesto_e_nao_cruza() -> None:
             assert not nos_dois, f"gesto(s) em «{a}» e em «{b}» ao mesmo tempo: {nos_dois}"
 
 
-#: AS PORTAS QUE GRAVAM DO OUTRO LADO DO IPC e que o `ESCREVEM` da régua irmã
-#: não lista: lá, listá-las exigiria o `grava=` do gesto que as chama, e o
-#: sensor grava sem declarar (:data:`GRAVAM_SEM_DECLARAR`). Aqui elas contam:
-#: um ato que chame o `sensor.set` grava no perfil dela pelo daemon.
 ESCREVEM_PELO_DAEMON = frozenset({"sensor_set_detalhado"})
 
 
 def test_o_ato_nao_grava(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A árvore de cada ato não alcança porta de escrita nenhuma.
-
-    As portas são as de `test_todo_gesto_que_grava_esta_protegido.ESCREVEM`,
-    mais :data:`ESCREVEM_PELO_DAEMON`, e a descida é a mesma dele: um nome
-    aqui que grave é um gesto que muda a máquina dela e se diz ato.
-
-    MORDIDA (conferência de 28/09): mova o `02-controles.html·sensor` para
-    :data:`ATOS` e esta reprova pelo `sensor_set_detalhado`; sem as portas
-    do daemon, passava.
-    """
+    """A árvore de cada ato não alcança porta de escrita nenhuma."""
     monkeypatch.setattr(protegido, "ESCREVEM",
                         set(protegido.ESCREVEM) | ESCREVEM_PELO_DAEMON)
     gravam = sorted(f"{p}·{n} (por `{sorted(portas)[0]}`)"
@@ -268,9 +217,6 @@ def test_o_sensor_grava_pelo_daemon() -> None:
                    and no.name == "_handle_sensor_set")
     grava = {getattr(no.func, "id", getattr(no.func, "attr", ""))
              for no in ast.walk(handler) if isinstance(no, ast.Call)}
-    # Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o
-    # sensor é do computador e grava pelo dono do cartão: no `maquina.json`,
-    # ou no perfil quando ele já sobrepõe os sensores daquele controle.
     assert grava & {"save_profile", "gravar_pelo_gesto"}, (
         "o `sensor.set` do daemon deixou de gravar: o sensor que ela "
         "desliga voltaria ligado no próximo Salvar ou na próxima troca")

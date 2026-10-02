@@ -81,31 +81,22 @@ from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: A DECISÃO — digitada, não lida do dono.
 _SONY = " (DualSense Wireless Controller)"
 _HAPTICA = "Háptica do Controle"
 
-#: O teto do Wine (``MAX_DEVICE_NAME_LEN``, ``winepulse.drv/pulse.c``): acima
-#: dele o ``get_device_name`` troca a frase inteira pelo ``device.product.name``.
 _TETO_DO_WINE = 62
 _MONITOR_DE = "Monitor of "
 
-#: A mesa de quatro: P1 e P2 no USB, P3 e P4 no BT, cada um com o endpoint dele
-#: (desde 02/10/2026, também os do cabo). Faixa sintética; o rabo tem
-#: LETRAS de propósito, para o «nenhum hex do endereço» não passar por sorte.
 _P1, _P2, _P3, _P4 = (f"aa:bb:cc:5e:a3:c{n}" for n in (1, 2, 3, 4))
 _ASSENTO = {_P1: 1, _P2: 2, _P3: 3, _P4: 4}
 
 #: A placa de som de um DualSense no USB, como o servidor a descreve — medido
-#: em 21/09/2026 (A-FORJA-VALIDA-O-SOM-01, §1.2). As duas placas têm o mesmo
-#: nome, e é por isso que o Hefesto publica os nós com número.
 _PLACA_DESCRICAO = "DualSense wireless controller (PS5) Controller speaker and haptic motors"
 _PLACAS = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.HiFi__Speaker__sink",
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.2.HiFi__Speaker__sink",
 )
 
-#: A célula da bancada que é a régua desta sprint.
 _CELULA = "mapa-audio.saida_dedicada.payload_do_degrau-cabo"
 
 
@@ -118,7 +109,6 @@ def _ancora(i: int) -> eh.Ancora:
 
 _ANCORAS = [_ancora(i) for i in range(4)]
 
-#: O numerador de mentira: ``uniq`` → o número do jogador (``None`` = não sei).
 _Assentos = dict[str, int | None]
 
 
@@ -133,18 +123,8 @@ def assentos() -> Iterator[_Assentos]:
         mic.registrar_numerador_de_assento(anterior)
 
 
-# ---------------------------------------------------------------------------
-# O servidor de som de mentira
-# ---------------------------------------------------------------------------
-
-
 def _como_o_servidor_le(argumento: str) -> dict[str, str]:
-    """O ``sink_properties=`` como o ``pipewire-pulse`` o lê.
-
-    COM as aspas duplas de fora, o miolo se parte respeitando as simples. SEM
-    elas, o servidor corta no primeiro espaço e só a primeira propriedade chega
-    — o defeito de 06/09/2026, que a régua que lia o argv cru deu verde.
-    """
+    """O ``sink_properties=`` como o ``pipewire-pulse`` o lê."""
     valor = argumento.split("=", 1)[1]
     if len(valor) >= 2 and valor.startswith('"') and valor.endswith('"'):
         miolo = valor[1:-1]
@@ -159,32 +139,18 @@ def _como_o_servidor_le(argumento: str) -> dict[str, str]:
 
 
 class _Servidor:
-    """Um ``pipewire-pulse`` de mentira, com memória — e nunca mais frouxo que o real.
-
-    O ``pactl`` de mentira da bancada de tela responde ``rc=0`` calado a tudo
-    que não é ``list sinks short``. Este guarda os módulos que carregou, com as
-    propriedades lidas como o servidor as lê, e devolve cada nó em
-    ``list sinks`` com a ``Description`` que a lista de som da pessoa mostra.
-    Nome acima de 127 caracteres é recusado, como no real.
-    """
+    """Um ``pipewire-pulse`` de mentira, com memória — e nunca mais frouxo que o real."""
 
     def __init__(self) -> None:
-        #: índice do sink -> {"nome", "props", "canais", "mid"}
         self.sinks: dict[str, dict[str, Any]] = {}
-        #: module_id -> o argumento, como o ``pactl`` o repassa (argv juntado)
         self.argumentos: dict[str, str] = {}
         self.cargas: list[str] = []
         self.quedas: list[str] = []
-        #: Quantos ``load-module`` seguidos o servidor recusa.
         self.recusar_cargas = 0
-        #: nomes de sink com um stream de JOGO tocando (sink-input)
         self.jogo_em: set[str] = set()
-        #: O servidor que não responde sobre os streams (prazo estourado): o
-        #: ``pactl`` sai com erro, e quem pergunta recebe ``None`` — «não sei».
         self.mudo_nos_streams = False
         self._proximo = 500
 
-    # -- o estado de partida -------------------------------------------------
 
     def _novo_indice(self) -> str:
         self._proximo += 1
@@ -206,7 +172,6 @@ class _Servidor:
         self.cargas.clear()
         return resposta.strip()
 
-    # -- as leituras da régua -----------------------------------------------
 
     def do_nome(self, nome: str) -> list[dict[str, Any]]:
         return [s for s in self.sinks.values() if s["nome"] == nome]
@@ -219,7 +184,6 @@ class _Servidor:
         """O que a lista de saídas das configurações de Som mostra: as descrições."""
         return [self.descricao(s) for s in self.sinks.values()]
 
-    # -- o pactl --------------------------------------------------------------
 
     def __call__(self, argv: list[str]) -> str | None:
         if argv[:2] == ["pactl", "load-module"]:
@@ -260,7 +224,6 @@ class _Servidor:
                     f"\tProperties:\n{props}"
                 )
             return "\n\n".join(blocos)
-        # O resto (set-sink-volume…) o real aceita calado, como o de mentira.
         return ""
 
     def _carregar(self, argv: list[str]) -> str | None:
@@ -283,11 +246,6 @@ class _Servidor:
         }
         self.cargas.append(nome)
         return f"{mid}\n"
-
-
-# ---------------------------------------------------------------------------
-# 1. O RÓTULO — a forma A, com o número do jogador, e sem endereço
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, None])
@@ -324,16 +282,7 @@ def test_nenhum_hex_do_endereco_chega_ao_rotulo(assentos: _Assentos, uniq: str) 
 
 
 def test_o_rotulo_cabe_no_teto_e_o_monitor_tem_reserva(assentos: _Assentos) -> None:
-    """O rótulo cabe nos 62 do Wine; o monitor passa, e o ``product.name`` o salva.
-
-    O ``pipewire-pulse`` chama o monitor de «Monitor of <descrição>»: com a
-    forma A isso dá 64. Acima do teto o ``get_device_name`` monta o ``drv_id``
-    a partir do ``device.product.name`` — sem ele, o comprido fica inteiro ali.
-    O nome que o JOGO lê não passa por aqui: é o do produto, pelo USB
-    ``054c:0ce6`` (:func:`test_a_identidade_do_no_fica_intacta`).
-
-    MORDIDA 2: tire ``*campos_do_nome()`` de ``propriedades_do_endpoint``.
-    """
+    """O rótulo cabe nos 62 do Wine; o monitor passa, e o ``product.name`` o salva."""
     for numero in (1, 2, 3, 4):
         assentos[_P3] = numero
         rotulo = eh.descricao_da_haptica(_P3)
@@ -346,14 +295,7 @@ def test_o_rotulo_cabe_no_teto_e_o_monitor_tem_reserva(assentos: _Assentos) -> N
 
 
 def test_a_identidade_do_no_fica_intacta(assentos: _Assentos) -> None:
-    """O NOME segue pela marca e a identidade é a de antes — é o que o jogo lê.
-
-    O id do endpoint no Wine sai do nome do sink, e o ``ContainerId`` que a RE
-    Engine casa com o device KS sai do ``sysfs.path``. Nenhum dos dois pode
-    mudar por causa de um rótulo. E o USB ``054c:0ce6`` é o que faz o
-    ``find_product_name_override`` do ``mmdevapi`` dar ao endpoint o nome do
-    produto — o rótulo nunca chega ao nome que o jogo lê.
-    """
+    """O NOME segue pela marca e a identidade é a de antes — é o que o jogo lê."""
     ancora = _ANCORAS[2]
     props = _como_o_servidor_le(eh.propriedades_do_endpoint(_P3, ancora))
     assert props["device.bus"] == "usb"
@@ -362,7 +304,6 @@ def test_a_identidade_do_no_fica_intacta(assentos: _Assentos) -> None:
     assert props["sysfs.path"] == ancora.declarado
     assert props["device.vendor.name"] == "Sony Interactive Entertainment"
     assert props["priority.session"] == "0", "o endpoint não pode virar a saída padrão"
-    # O NOME é pela marca do aparelho desde 02/10/2026, e não pelo rabo do endereço.
     assert eh.nome_do_endpoint(_P3) == eh.MOLDE_DO_NOME.format(marca=eh.marca_do_aparelho(_P3))
     assert eh.marca_do_controle(_P3) not in eh.nome_do_endpoint(_P3).lower()
 
@@ -377,11 +318,6 @@ def test_o_no_publicado_diz_o_controle(assentos: _Assentos) -> None:
     assert publicado["props"]["sysfs.path"] == _ANCORAS[1].declarado
     assert publicado["canais"] == 4
     assert no.rotulo == f"{_HAPTICA} 4{_SONY}", "o nó não lembra o rótulo que publicou"
-
-
-# ---------------------------------------------------------------------------
-# 2. O NÓ ADOTADO — o rótulo de quando ele nasceu se lê do servidor
-# ---------------------------------------------------------------------------
 
 
 def test_o_rotulo_do_no_adotado_se_le_do_argumento_do_modulo() -> None:
@@ -403,42 +339,30 @@ def test_o_rotulo_do_no_adotado_se_le_do_argumento_do_modulo() -> None:
     assert eh.rotulo_no_ar("536870913", lambda _a: None) == ""
 
 
-# ---------------------------------------------------------------------------
-# 3. O QUE O JOGO CASA NÃO MUDOU — a medição, transcrita do GE
-# ---------------------------------------------------------------------------
-#
-# GE-Proton11-7 (`proton-hefesto/fonte`, commit `c191f35`), com os 182 patches de
-# `patches/proton-ds5-haptic/` aplicados em ordem sobre o `wine` dele — 179
-# entram limpos; 0022, 0109 e 0150 falham em trechos de formato e de include,
-# longe do nome. A descrição do nó chega ao `mmdevapi` como o `drv_id`
-# (`get_device_name` → `MMDevice.drv_id`). O `DEVPKEY_Device_FriendlyName` que
-# o jogo lê NÃO sai dela: o nó declara USB `054c:0ce6`, e o
 # `find_product_name_override` troca o nome por «Speakers (DualSense Wireless
-# Controller)», com o rótulo velho e com o novo. Os predicados que LEEM o
-# `drv_id`, de `dlls/mmdevapi/devenum.c`, transcritos um a um:
 
 
-def _ge_dualsense(n: str) -> bool:  # is_dualsense_endpoint_name (e o 0187)
+def _ge_dualsense(n: str) -> bool:
     return any(s in n for s in ("DualSense", "DualShock", "Wireless Controller"))
 
 
-def _ge_mono(n: str) -> bool:  # is_dualsense_mono_endpoint_name
+def _ge_mono(n: str) -> bool:
     if "DualShock" in n and ("Internal Mono Speaker" in n or "Analog Stereo" in n):
         return True
     return ("DualSense" in n or "Wireless Controller" in n) and "Internal Mono Speaker" in n
 
 
-def _ge_direct(n: str) -> bool:  # is_sony_direct_render_name
+def _ge_direct(n: str) -> bool:
     return _ge_dualsense(n) and "Direct Wireless Controller" in n
 
 
-def _ge_audioendpoint(n: str) -> bool:  # is_dualsense_audioendpoint_name
+def _ge_audioendpoint(n: str) -> bool:
     return _ge_mono(n) or any(s in n for s in (
         "Wireless Controller Speaker", "DualShock 4 Wireless Controller Speaker",
         "DualSense Wireless Controller Speaker", "DualSense Edge Wireless Controller Speaker"))
 
 
-def _ge_sony_persistente(n: str) -> bool:  # is_persistent_sony_audioendpoint_name
+def _ge_sony_persistente(n: str) -> bool:
     return _ge_audioendpoint(n) or "DualSense" in n or "DualShock" in n
 
 
@@ -465,7 +389,6 @@ def test_os_casamentos_do_ge_dao_o_mesmo_resultado(assentos: _Assentos, numero: 
     velho = f"DualSense {eh.marca_do_controle(_P3)} (háptica)"
     novo = eh.descricao_da_haptica(_P3)
     assert [r for _f, r in _o_que_o_ge_ve(novo)] == [r for _f, r in _o_que_o_ge_ve(velho)]
-    # e o monitor: com o nome de reserva, que é o que o Wine usa acima do teto
     props = _como_o_servidor_le(eh.propriedades_do_endpoint(_P3, _ANCORAS[0]))
     reserva = props["device.product.name"]
     for monitor in (_MONITOR_DE + reserva, reserva):
@@ -480,11 +403,6 @@ def test_a_transcricao_do_ge_morde() -> None:
     assert _ge_direct("Direct Wireless Controller") is True
     assert _ge_dualsense("Alto-falante do Controle 1") is False
     assert _ge_sony_persistente("Speakers (Built-in Audio)") is False
-
-
-# ---------------------------------------------------------------------------
-# 4. A VOLTA — o rótulo acompanha o número, e só sem jogo aberto
-# ---------------------------------------------------------------------------
 
 
 class _PonteDeMentira:
@@ -554,9 +472,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, assentos: _Assentos) -> _Mesa:
     )
     monkeypatch.setattr(som, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
-    # Nenhum jogo LENDO controle — a volta não sobe ponte de háptica sozinha.
     monkeypatch.setattr(mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, c: set())
-    # O laço do cabo não é desta régua: a placa não se procura aqui.
     monkeypatch.setattr(som, "sink_do_controle", lambda *_a, **_k: "")
 
     class _Ger:
@@ -571,28 +487,17 @@ def mesa(monkeypatch: pytest.MonkeyPatch, assentos: _Assentos) -> _Mesa:
 
     sub = mod.AltoFalanteSubsystem(gerenciador=_Ger(), fonte_de_controles=list)
     m = _Mesa(sub=sub, servidor=servidor)
-    # O `/proc` da máquina que roda a suíte não decide nada aqui: a régua diz
-    # se há jogo aberto (memória "régua que depende de app aberto mede a máquina").
     monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: m.jogo_aberto)
     return m
 
 
 def _o_que_o_ks_le(servidor: _Servidor) -> list[tuple[int, str]]:
-    """Os endpoints que o gravador do device KS acha — pelo leitor DELE, não por uma cópia.
-
-    ``audio_ks_dualsense.endpoints_de_mentira`` é quem acha cada endpoint para
-    gravar no prefixo o device KS que a RE Engine casa pelo ``ContainerId``. Ele
-    lê o VID, o PID e o ``sysfs.path`` do nó, e nunca a descrição.
-    """
+    """Os endpoints que o gravador do device KS acha — pelo leitor DELE, não por uma cópia."""
     return sorted(ks.endpoints_de_mentira(servidor))
 
 
 def test_cada_controle_ganha_a_haptica_dele_no_cabo_e_no_radio(mesa: _Mesa) -> None:
-    """FATO QUE CAIU (28/09/2026): «no USB a vibração viaja pela placa; o endpoint é só do BT».
-
-    Desde 02/10 o endpoint é do APARELHO, nos dois transportes; o cabo passa
-    por ele num laço (``haptica_do_cabo``).
-    """
+    """FATO QUE CAIU (28/09/2026): «no USB a vibração viaja pela placa; o endpoint é só do BT»."""
     mesa.volta()
     for uniq in (_P1, _P2, _P3, _P4):
         assert mesa.rotulo(uniq) == f"{_HAPTICA} {_ASSENTO[uniq]}{_SONY}"
@@ -602,11 +507,7 @@ def test_cada_controle_ganha_a_haptica_dele_no_cabo_e_no_radio(mesa: _Mesa) -> N
 def test_o_rotulo_segue_o_assento_e_nada_que_o_jogo_le_muda(
     mesa: _Mesa, assentos: _Assentos
 ) -> None:
-    """P3 e P4 trocam de lugar: os dois rótulos seguem, o nome e a âncora não.
-
-    MORDIDA 3: tire a chamada a ``_renovar_o_rotulo_da_haptica`` da volta.
-    MORDIDA 7: tire o ``device.product.id`` do nó.
-    """
+    """P3 e P4 trocam de lugar: os dois rótulos seguem, o nome e a âncora não."""
     mesa.volta()
     antes = {u: (mesa.ancora(u), eh.nome_do_endpoint(u)) for u in (_P3, _P4)}
     o_ks_antes = _o_que_o_ks_le(mesa.servidor)
@@ -617,17 +518,13 @@ def test_o_rotulo_segue_o_assento_e_nada_que_o_jogo_le_muda(
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 3{_SONY}"
     assert {u: (mesa.ancora(u), eh.nome_do_endpoint(u)) for u in (_P3, _P4)} == antes
     assert _o_que_o_ks_le(mesa.servidor) == o_ks_antes, "o device KS perdeu o endpoint renomeado"
-    # E uma volta a mais não mexe em nada: o rótulo certo não envelhece.
     quedas = list(mesa.servidor.quedas)
     mesa.volta()
     assert mesa.servidor.quedas == quedas, "o nó renasceu sem o assento ter andado"
 
 
 def test_com_jogo_aberto_o_rotulo_espera(mesa: _Mesa, assentos: _Assentos) -> None:
-    """Republicar é hotplug de endpoint Sony: com jogo aberto, o nome espera.
-
-    MORDIDA 4: tire ``self._ha_jogo_aberto()`` de ``_a_haptica_esta_em_uso``.
-    """
+    """Republicar é hotplug de endpoint Sony: com jogo aberto, o nome espera."""
     mesa.volta()
     assentos[_P3] = 1
     mesa.jogo_aberto = True
@@ -640,18 +537,7 @@ def test_com_jogo_aberto_o_rotulo_espera(mesa: _Mesa, assentos: _Assentos) -> No
 
 
 def test_o_jogo_aberto_e_a_pergunta_de_quem_vibra(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A guarda pergunta «há jogo?» ao dono dessa resposta, e só a ele.
-
-    O ``mesa`` acima troca ``_ha_jogo_aberto`` inteiro, e com razão: o
-    ``/proc`` de quem roda a suíte não decide nada. Mas aí nenhuma régua via
-    a guarda de verdade — um corpo que diga «há jogo» sempre, ou um import
-    errado que o ``except`` de quem chama engole, e o rótulo nunca mais se
-    renova, com tudo verde.
-    Aqui a pergunta vai a ``quem_o_jogo_le.pids_de_jogo``, o mesmo dono que
-    decide quem vibra, com o ``/proc`` trocado por um dublê.
-
-    MORDIDA: troque o corpo de ``_ha_jogo_aberto`` por ``return True``.
-    """
+    """A guarda pergunta «há jogo?» ao dono dessa resposta, e só a ele."""
     from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
 
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=list)
@@ -674,14 +560,7 @@ def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos: _Assent
 
 
 def test_a_ponte_em_modo_haptica_segura_o_rotulo(mesa: _Mesa, assentos: _Assentos) -> None:
-    """A ponte deste controle mandando a háptica segura o nó — ela lê o monitor dele.
-
-    Pode não haver stream à vista nem jogo achado em ``/proc`` naquele instante,
-    e a ponte ainda estar lendo o monitor do endpoint: derrubá-lo ali deixa a
-    leitura pendurada, com a vibração no meio.
-
-    MORDIDA: tire a guarda da ponte de ``_a_haptica_esta_em_uso``.
-    """
+    """A ponte deste controle mandando a háptica segura o nó — ela lê o monitor dele."""
     from types import MappingProxyType
 
     mesa.volta()
@@ -692,7 +571,6 @@ def test_a_ponte_em_modo_haptica_segura_o_rotulo(mesa: _Mesa, assentos: _Assento
     mesa.volta()
     assert mesa.rotulo(_P3) == f"{_HAPTICA} 3{_SONY}", "o endpoint renasceu debaixo da ponte"
     assert mesa.servidor.quedas == []
-    # A ponte sem jogo desce naquela mesma volta, pelo laço de sempre; e o nome segue.
     mesa.volta()
     assert mesa.rotulo(_P3) == f"{_HAPTICA} 1{_SONY}"
 
@@ -700,10 +578,7 @@ def test_a_ponte_em_modo_haptica_segura_o_rotulo(mesa: _Mesa, assentos: _Assento
 def test_o_servidor_mudo_sobre_os_streams_segura_o_rotulo(
     mesa: _Mesa, assentos: _Assentos
 ) -> None:
-    """«Não sei se o jogo toca» vale como «toca»: o nó fica, e o nome espera.
-
-    MORDIDA: troque o ``na_duvida=True`` da guarda por ``False``.
-    """
+    """«Não sei se o jogo toca» vale como «toca»: o nó fica, e o nome espera."""
     mesa.volta()
     assentos[_P2], assentos[_P4] = 4, 2
     mesa.servidor.mudo_nos_streams = True
@@ -725,15 +600,7 @@ def test_perder_o_numero_nao_republica(mesa: _Mesa, assentos: _Assentos) -> None
 
 
 def test_o_no_herdado_com_o_rotulo_de_antes_renasce_uma_vez(mesa: _Mesa) -> None:
-    """Depois do install, o endpoint que o daemon anterior deixou muda UMA vez.
-
-    O restart adota o nó (não recarrega um nó vivo), lembra o rótulo que o
-    servidor diz, e a volta seguinte, sem jogo aberto, o renova. A âncora e o
-    nome ficam; e a forma A igual a si mesma não envelhece, senão o nó
-    renasceria em laço.
-
-    MORDIDA 5: tire ``self.rotulo = rotulo_no_ar(...)`` da adoção.
-    """
+    """Depois do install, o endpoint que o daemon anterior deixou muda UMA vez."""
     for uniq, ancora in ((_P3, _ANCORAS[2]), (_P4, _ANCORAS[3])):
         mesa.servidor.modulo_herdado([
             "module-null-sink", f"sink_name={eh.nome_do_endpoint(uniq)}",
@@ -763,14 +630,7 @@ def test_o_no_herdado_com_o_rotulo_de_antes_renasce_uma_vez(mesa: _Mesa) -> None
 
 
 def test_o_no_herdado_de_rotulo_ilegivel_nao_se_toca(mesa: _Mesa) -> None:
-    """O rótulo que o servidor não diz é «não sei», e «não sei» não derruba nó.
-
-    Um nó herdado cujo argumento não traz o ``device.description='…'`` desta
-    casa fica como está até o controle reconectar — a mesma recusa do nó do
-    alto-falante sem rótulo legível (``AltoFalanteSubsystem._o_rotulo_envelheceu``).
-
-    MORDIDA: tire o ``not self.rotulo`` de ``EndpointDeHaptica._rotulo_novo``.
-    """
+    """O rótulo que o servidor não diz é «não sei», e «não sei» não derruba nó."""
     mesa.servidor.modulo_herdado([
         "module-null-sink", f"sink_name={eh.nome_do_endpoint(_P3)}",
         "format=float32le", "rate=48000", "channels=4",
@@ -789,16 +649,7 @@ def test_o_no_herdado_de_rotulo_ilegivel_nao_se_toca(mesa: _Mesa) -> None:
 def test_o_no_que_nem_com_o_rotulo_velho_volta_renasce_na_volta_seguinte(
     mesa: _Mesa, assentos: _Assentos
 ) -> None:
-    """O servidor que recusa as duas cargas não deixa o controle sem háptica.
-
-    O rótulo novo não subiu, e o velho também não: o nó está fora do servidor,
-    e o subsystem o esquece. A volta seguinte o publica pelo caminho de
-    sempre. Guardá-lo com o ``module_id`` vazio o deixaria de fora até o
-    controle reconectar — o laço só cria endpoint para quem não tem.
-
-    MORDIDA: tire o ``self._endpoints.pop`` do fim de
-    ``_renovar_o_rotulo_da_haptica``.
-    """
+    """O servidor que recusa as duas cargas não deixa o controle sem háptica."""
     mesa.volta()
     assentos[_P3] = 1
     mesa.servidor.recusar_cargas = 2
@@ -823,14 +674,8 @@ def test_o_rotulo_novo_que_nao_sobe_devolve_o_velho(assentos: _Assentos) -> None
     assert no.rotulo == f"{_HAPTICA} 3{_SONY}"
     (publicado,) = servidor.do_nome(eh.nome_do_endpoint(_P3))
     assert servidor.descricao(publicado) == f"{_HAPTICA} 3{_SONY}"
-    # e na volta seguinte, com o servidor atendendo, o nome segue o assento
     assert no.renovar_o_rotulo() is True
     assert no.rotulo == f"{_HAPTICA} 2{_SONY}"
-
-
-# ---------------------------------------------------------------------------
-# 5. A BANCADA — a célula que é a régua desta sprint fecha com duas
-# ---------------------------------------------------------------------------
 
 
 def _o_passo_que_conta() -> str:
@@ -844,16 +689,7 @@ def _o_passo_que_conta() -> str:
 
 
 def test_a_bancada_conta_duas_placas(mesa: _Mesa) -> None:
-    """A conta que a célula pede, feita sobre a lista que o servidor publica.
-
-    Lê o passo da célula no arquivo dono do gesto — os começos de nome que ela
-    manda descontar, entre «» — e aplica a conta às saídas da mesa de quatro:
-    as duas placas do USB, os quatro «Alto-falante do Controle N» e os QUATRO
-    endpoints de háptica, um por aparelho (cabo e rádio desde 28/09/2026).
-
-    MORDIDA 1 (de novo): com o rótulo de antes, a conta dá quatro.
-    MORDIDA 6: devolva o passo que só nomeia «Alto-falante do Controle».
-    """
+    """A conta que a célula pede, feita sobre a lista que o servidor publica."""
     mesa.volta()
     conta = _o_passo_que_conta()
     assert "têm de ser duas" in conta, conta
@@ -864,25 +700,16 @@ def test_a_bancada_conta_duas_placas(mesa: _Mesa) -> None:
         if "DualSense" in d and not any(d.startswith(c) for c in do_hefesto)
     ]
     assert contadas == [_PLACA_DESCRICAO, _PLACA_DESCRICAO], contadas
-    # E os quatro endpoints de háptica estão NA lista — descontados, não ausentes.
     haptica = [d for d in mesa.servidor.saidas() if d.startswith(_HAPTICA)]
     assert sorted(haptica) == [f"{_HAPTICA} {n}{_SONY}" for n in (1, 2, 3, 4)]
 
 
-#: O rótulo citado nos dois arquivos do gesto, com o número (ou o N genérico).
 _CITADO = re.compile(r"«(Háptica do Controle ([1-4N]))([^»]*)»")
-#: Quem cita pelo COMEÇO não depende da forma — é a leitura certa para contar.
 _PELO_COMECO = re.compile(r"(começa com|começam com|outra com|nem com|ou com) $")
 
 
 def test_o_gesto_cita_a_haptica_como_a_lista_mostra(assentos: _Assentos) -> None:
-    """O irmão de ``test_a_bancada_fala_a_forma_a`` para o terceiro nó do controle.
-
-    Um gesto que manda achar «Háptica do Controle 3» pelo nome inteiro tem de
-    citar o nome que a lista MOSTRA, e o nome sai do dono
-    (:func:`endpoint_de_haptica.rotulo_da_haptica`); quem cita pelo começo só
-    precisa ser o começo dele.
-    """
+    """O irmão de ``test_a_bancada_fala_a_forma_a`` para o terceiro nó do controle."""
     arquivos = (
         RAIZ / "docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md",
         RAIZ / "docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md",

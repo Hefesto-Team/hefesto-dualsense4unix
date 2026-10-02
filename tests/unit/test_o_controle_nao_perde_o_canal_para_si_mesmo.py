@@ -52,8 +52,6 @@ class _DaemonDeMentira:
         self.acendeu.append((aceso, uniq))
 
 
-#: O MESMO controle, nas duas escritas que o daemon usa de verdade. O da
-#: esquerda é o que `dono_antes` traz; o da direita, o que `quem_tocou` traz.
 COM_DOIS_PONTOS = "aa:bb:cc:dd:ee:d8"
 NORMALIZADO = "aabbccddeed8"
 
@@ -91,8 +89,8 @@ async def test_nao_apaga_quando_o_eleito_continua_sendo_o_ex_dono(monkeypatch):
         daemon,
         acender=lambda *a, **k: None,
         dono_antes=COM_DOIS_PONTOS,
-        quem_tocou="aa:bb:cc:00:00:11",   # outro controle tocou…
-        eleitor=_EleitorDeMentira(NORMALIZADO),  # …mas a posse ficou com o ex-dono
+        quem_tocou="aa:bb:cc:00:00:11",
+        eleitor=_EleitorDeMentira(NORMALIZADO),
     )
 
     assert esquecidos == [], (
@@ -103,11 +101,7 @@ async def test_nao_apaga_quando_o_eleito_continua_sendo_o_ex_dono(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_APAGA_quando_a_posse_de_fato_mudou_de_dono(monkeypatch):  # noqa: N802
-    """E o positivo: quem perdeu o canal de verdade PERDE a luz e a palavra.
-
-    Sem este teste a cura acima poderia ser um `return` no topo da função, que
-    passaria nos dois primeiros e mataria o comportamento inteiro.
-    """
+    """E o positivo: quem perdeu o canal de verdade PERDE a luz e a palavra."""
     esquecidos: list[str] = []
     monkeypatch.setattr(hotkey, "esquecer_a_palavra", esquecidos.append)
     daemon = _DaemonDeMentira()

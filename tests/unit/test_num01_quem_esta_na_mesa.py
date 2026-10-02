@@ -1,29 +1,4 @@
-"""NUM-01 — quem está na mesa é 1..N (sprint 2026-07-25).
-
-O relato medido: "ao usar o branco ele sempre liga no player 2 setado, ao
-invés de ligar pela ordem correta — se ele conectou primeiro deveria ser o
-player 1". O ``controllers.json`` dela, com UM controle ligado, dizia
-``{"version": 2, "slots": {"<A>": 1, "<B>": 2}}``: o número 1 estava
-RESERVADO a um endereço que não estava na mesa, e o único controle ligado
-exibia 2.
-
-A cura separa dois conceitos que eram o mesmo inteiro — IDENTIDADE (o
-endereço, que carrega um LUGAR NA FILA de preferência) e POSIÇÃO NA MESA
-(1..N entre os presentes, derivada). Este arquivo cobre os seis cenários de
-validação da sprint mais o critério que os resume: **nunca deve existir um
-jogador 2 sem jogador 1**.
-
-Os dois requisitos que a sprint diz serem verdadeiros AO MESMO TEMPO — e que
-antes se excluíam — têm caso próprio aqui:
-
-- ESTABILIDADE (R-15/R-23): com os dois na mesa, cada um mantém o seu número
-  entre sessões e entre boots; a ordem de wake não troca dono de nada;
-- NATURALIDADE (NUM-01): sozinho na mesa, o controle é o jogador 1.
-
-Herméticos: ``config_dir`` monkeypatchado nos DOIS módulos de registro (eles
-dividem o MESMO arquivo) e ``boot_id`` fixo. MACs sempre na faixa forjada
-``aa:bb:cc:*`` — teste-guarda de anonimato.
-"""
+"""NUM-01 — quem está na mesa é 1..N (sprint 2026-07-25)."""
 from __future__ import annotations
 
 import json
@@ -43,9 +18,8 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 )
 
 #: Os dois DualSense da casa (MACs forjados — faixa aa:bb:cc).
-UNIQ_A = "aabbcc000001"  # o roxo
-UNIQ_B = "aabbcc000002"  # o branco, o do relato
-#: Um externo (Pro Nintendo / 8BitDo) para o cenário de mesa mista.
+UNIQ_A = "aabbcc000001"
+UNIQ_B = "aabbcc000002"
 MAC_EXTERNO = "aabbcc0000fe"
 
 BOOT = "boot-teste-num01"
@@ -103,12 +77,7 @@ def _registro_externo() -> ExternalIdentityRegistry:
 
 
 def _passar_o_prazo(*registros: object) -> None:
-    """O lugar de quem saiu deixa de estar guardado — O-ASSENTO-GUARDADO-NAO-ANDA-01.
-
-    Dentro do prazo ninguém anda (a linha 17 dela, com régua própria em
-    ``test_o_assento_guardado_nao_anda.py``). A NUM-01 que ESTE arquivo mede é
-    a de depois do prazo, e é por aqui que ela continua mordendo.
-    """
+    """O lugar de quem saiu deixa de estar guardado — O-ASSENTO-GUARDADO-NAO-ANDA-01."""
     for registro in registros:
         relogio = getattr(registro, "_clock", None)
         assert isinstance(relogio, _Relogio), "registro sem relógio de mentira"
@@ -116,14 +85,7 @@ def _passar_o_prazo(*registros: object) -> None:
 
 
 def _mesa(reg: ControllerIdentityRegistry, *uniqs: str) -> dict[str, int | None]:
-    """Números EXIBIDOS depois de reconciliar a mesa com ``uniqs``.
-
-    Espelha o que o lifecycle faz a cada tick lento (``sync_connected`` com a
-    ordem de ``describe_controllers``) e depois consulta como o provider de
-    cor consulta — leitura pura, para a consulta não mexer na presença. Quem
-    saiu nesta olhada está fora há mais que o prazo do lugar guardado; sem
-    saída, o relógio não anda (quem chega junto continua na mesma onda, D-30).
-    """
+    """Números EXIBIDOS depois de reconciliar a mesa com ``uniqs``."""
     antes = reg.snapshot_connected()
     reg.sync_connected(list(uniqs))
     if antes - reg.snapshot_connected():
@@ -132,12 +94,7 @@ def _mesa(reg: ControllerIdentityRegistry, *uniqs: str) -> dict[str, int | None]
 
 
 class TestOsSeisCenariosDaSprint:
-    """A sequência de validação da sprint, na ordem, num registro só.
-
-    Falha-sem (o estado medido): o passo 1 devolvia 2 para o controle sozinho
-    na mesa, porque o lugar 1 pertencia a um endereço desligado e lugar era
-    número.
-    """
+    """A sequência de validação da sprint, na ordem, num registro só."""
 
     def test_1_o_controle_sozinho_na_mesa_e_o_jogador_1(
         self, config_isolado: Path
@@ -156,8 +113,7 @@ class TestOsSeisCenariosDaSprint:
     def test_3_desligar_o_primeiro_promove_quem_ficou(
         self, config_isolado: Path
     ) -> None:
-        """A lacuna se fecha sozinha: é a "compactação automática" da sprint,
-        que aqui não é um passo — é consequência de contar só os presentes."""
+        """A lacuna se fecha sozinha: é a "compactação automática" da sprint,"""
         reg = _registro()
         _mesa(reg, UNIQ_B, UNIQ_A)
         assert _mesa(reg, UNIQ_A) == {UNIQ_A: 1}
@@ -165,11 +121,10 @@ class TestOsSeisCenariosDaSprint:
     def test_4_religar_devolve_a_cada_um_a_sua_colocacao(
         self, config_isolado: Path
     ) -> None:
-        """A ordem de preferência não mudou em nenhum dos passos acima: com
-        os dois de volta, cada um recupera o número que era dele."""
+        """A ordem de preferência não mudou em nenhum dos passos acima: com"""
         reg = _registro()
         _mesa(reg, UNIQ_B, UNIQ_A)
-        _mesa(reg, UNIQ_A)  # B saiu; A virou 1
+        _mesa(reg, UNIQ_A)
         assert _mesa(reg, UNIQ_A, UNIQ_B) == {UNIQ_A: 2, UNIQ_B: 1}
         assert reg.snapshot() == {UNIQ_B: 1, UNIQ_A: 2}, "a fila nunca mudou"
 
@@ -181,8 +136,6 @@ class TestOsSeisCenariosDaSprint:
         reiniciado = _registro()
         reiniciado.load()
         assert _mesa(reiniciado, UNIQ_A, UNIQ_B) == {UNIQ_A: 2, UNIQ_B: 1}
-        # E com um só ligado depois do restart ele é o jogador 1 — o
-        # cruzamento exato dos dois requisitos da sprint.
         assert _mesa(reiniciado, UNIQ_A) == {UNIQ_A: 1}
 
     def test_6_reboot_da_maquina_mantem_a_ordem(
@@ -200,15 +153,11 @@ class TestOsSeisCenariosDaSprint:
 
 
 class TestOsDoisRequisitosJuntos:
-    """A tabela da sprint: fila ``[A, B]`` persistida, três estados de mesa.
-
-    É o caso que prova que a escolha "estabilidade OU naturalidade" acabou —
-    a mesma fila gravada responde as duas perguntas.
-    """
+    """A tabela da sprint: fila ``[A, B]`` persistida, três estados de mesa."""
 
     def _com_fila_ab(self, tmp: Path) -> ControllerIdentityRegistry:
         semente = _registro()
-        semente.sync_connected([UNIQ_A, UNIQ_B])  # A chegou primeiro
+        semente.sync_connected([UNIQ_A, UNIQ_B])
         assert _fila(tmp) == {UNIQ_A: 1, UNIQ_B: 2}
         reg = _registro()
         reg.load()
@@ -221,11 +170,7 @@ class TestOsDoisRequisitosJuntos:
         assert _mesa(reg, UNIQ_A, UNIQ_B) == {UNIQ_A: 1, UNIQ_B: 2}
 
     def test_so_o_b_ligado_ele_e_o_jogador_1(self, config_isolado: Path) -> None:
-        """O caso EXATO do relato — com a fila dizendo que A vem antes.
-
-        Falha-sem: era aqui que saía 2, e era permanente (nada expirava e
-        nada reivindicava um número vago).
-        """
+        """O caso EXATO do relato — com a fila dizendo que A vem antes."""
         reg = self._com_fila_ab(config_isolado)
         assert _mesa(reg, UNIQ_B) == {UNIQ_B: 1}
         assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}, "sem mexer na fila"
@@ -275,8 +220,6 @@ class TestNuncaJogador2SemJogador1:
         ds = _registro()
         ext = _registro_externo()
         ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
-        # Fiação de produção da EXIBIÇÃO: é o `ExternalLedSync` que casa os
-        # dois registros nos dois sentidos (`_wire_presence_providers`).
         ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
 
         # Estado inicial: os dois DualSense e o externo, todos na mesa.
@@ -318,17 +261,7 @@ class TestNuncaJogador2SemJogador1:
 
 
 class TestRenumerarAgoraNaoEstragaOAusente:
-    """Entrega 2 da sprint: o gesto de conserto perdeu o efeito colateral.
-
-    O plano do ``identity.renumber`` continua o MESMO (presentes na frente,
-    ausentes atrás — R-15); o que mudou é que os inteiros que ele escreve são
-    LUGARES NA FILA. Empurrar o ausente para trás deixou de rebaixá-lo: o
-    número dele volta a ser calculado quando ele voltar para a mesa.
-
-    Falha-sem: com o número absoluto, este mesmo gesto gravava o ausente como
-    "o segundo" para sempre — foi assim que o arquivo dela apareceu invertido
-    dentro de uma única sessão do daemon.
-    """
+    """Entrega 2 da sprint: o gesto de conserto perdeu o efeito colateral."""
 
     def test_o_ausente_volta_no_numero_certo_depois_do_renumerar(
         self, config_isolado: Path
@@ -336,17 +269,14 @@ class TestRenumerarAgoraNaoEstragaOAusente:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
         ds = _registro()
-        ds.sync_connected([UNIQ_A, UNIQ_B])  # fila [A, B]
-        ds.sync_connected([UNIQ_B])  # A saiu; B exibe 1
+        ds.sync_connected([UNIQ_A, UNIQ_B])
+        ds.sync_connected([UNIQ_B])
 
         renumerados = IpcHandlersMixin._renumber_locked(ds, None)
-        # O plano põe o presente na frente: B passa ao lugar 1, A ao 2.
         assert renumerados == {UNIQ_B: 1, UNIQ_A: 2}
         assert ds.snapshot() == {UNIQ_B: 1, UNIQ_A: 2}
         assert ds.slot_for(UNIQ_B, assign=False) == 1
 
-        # E o ausente NÃO foi rebaixado a "jogador 2 permanente": sozinho na
-        # mesa ele é 1, e com os dois ele é o 2 (a fila que ela pediu).
         assert _mesa(ds, UNIQ_A) == {UNIQ_A: 1}
         assert _mesa(ds, UNIQ_A, UNIQ_B) == {UNIQ_A: 2, UNIQ_B: 1}
 
@@ -364,12 +294,7 @@ class TestRenumerarAgoraNaoEstragaOAusente:
 
 
 class TestMigracaoDoArquivoReal:
-    """O bump de esquema é o que devolve a casa à numeração certa.
-
-    O ``controllers.json`` da mantenedora (schema 2) grava NÚMERO ABSOLUTO:
-    descartá-lo uma vez e renumerar na ordem de chegada é aceitável, e é
-    exatamente para isso que o campo de versão existe (R-23).
-    """
+    """O bump de esquema é o que devolve a casa à numeração certa."""
 
     def test_arquivo_schema_2_e_descartado_e_a_casa_renumera_na_chegada(
         self, config_isolado: Path
@@ -391,19 +316,16 @@ class TestMigracaoDoArquivoReal:
         ext.load()
         assert ds.snapshot() == {} and ext.snapshot() == {}
 
-        # Primeira sessão do regime novo: só o branco está ligado, e ele é o
-        # jogador 1 — o desfecho que o relato pedia.
         assert _mesa(ds, UNIQ_B) == {UNIQ_B: 1}
         assert _arquivo(config_isolado)["version"] == (
             id_mod.CONTROLLERS_SCHEMA_VERSION
         )
         assert _fila(config_isolado) == {UNIQ_B: 1}
-        # E a numeração velha não pode ressuscitar por um save do outro lado.
         assert _fila(config_isolado, id_mod.KIND_EXTERNAL) == {}
 
     def test_a_casa_sem_arquivo_nenhum_nasce_no_1(
         self, config_isolado: Path
     ) -> None:
         ds = _registro()
-        ds.load()  # não existe arquivo — não levanta
+        ds.load()
         assert _mesa(ds, UNIQ_B) == {UNIQ_B: 1}

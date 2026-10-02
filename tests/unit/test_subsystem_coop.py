@@ -1,29 +1,4 @@
-"""FEAT-DSX-COOP-LOCAL-01 + FEAT-DSX-CONTROLLER-IDENTITY-01 — CoopManager.
-
-Cobre a reconciliação (sync) com fakes de EvdevReader/UinputGamepad: cria um
-jogador por controle físico ALÉM do primário (keyed por IDENTIDADE/MAC, cada um
-com reader+grab+vpad próprios), repassa o input ao vpad certo (forward_all),
-desmonta no hotplug-out / na SUSPENSÃO (`disable()`) / sem gamepad virtual e
-recria quando o node evdev do MESMO controle muda (re-enumeração). Sem hardware
-real.
-
-NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: os testes de teardown deste
-arquivo desligavam `config.coop_enabled` para chegar ao caminho. Nenhuma
-superfície de comando faz mais isso (o co-op deixou de ser opção, por decisão
-dela), então eles passaram a entrar pelo caminho que SOBREVIVEU e que sempre foi
-o real na máquina dela: `CoopManager.disable()`, a suspensão por Steam Input —
-que não toca a flag, e é por isso que o co-op volta sozinho quando o jogo fecha.
-O MECANISMO não mudou uma linha; mudou por onde o teste entra nele.
-
-BUG-COOP-GRAB-PENDING-VPAD-01: o vpad NUNCA nasce sem grab CONFIRMADO ("held").
-Grab "pending" registra o jogador sem vpad (promovido no tick quando o grab
-confirma); "pending" → "failed" derruba sem jamais criar vpad (retry no sync).
-
-FEAT-COOP-PLAYER-LED-01: com o co-op ativo cada controle acende o padrão
-canônico do SEU jogador (P1 primário, P2.. secundários) via sysfs (fakeado
-aqui — hermético); desligar o co-op / perder um jogador restaura o padrão do
-perfil ativo.
-"""
+"""FEAT-DSX-COOP-LOCAL-01 + FEAT-DSX-CONTROLLER-IDENTITY-01 — CoopManager."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -43,10 +18,7 @@ PROFILE_LEDS = (False, False, False, False, True)
 
 
 class _FakeReader:
-    grab_ok: bool = True  # knob de classe: EVIOCGRAB aceita?
-    # knob de classe: estado após set_grab(True) bem-sucedido — "held" simula o
-    # device já aberto (grab imediato); "pending" simula a thread do reader
-    # ainda sem abrir o device (BUG-COOP-GRAB-PENDING-VPAD-01).
+    grab_ok: bool = True
     grab_result: str = "held"
 
     def __init__(self, device_path: Any = None, target_uniq: str | None = None) -> None:
@@ -81,7 +53,6 @@ class _FakeReader:
 
 
 class _FakeVpad:
-    #: Registro de TODOS os vpads criados (invariante "nunca vpad sem held").
     created: ClassVar[list[_FakeVpad]] = []
 
     def __init__(self) -> None:
@@ -90,7 +61,6 @@ class _FakeVpad:
         self.flavor = ""
         self.analog: list[dict[str, int]] = []
         self.buttons: list[frozenset[str]] = []
-        # FEAT-VPAD-FF-PASSTHROUGH-01: sink de rumble injetado + nº de pumps.
         self.rumble_sink: Any = None
         self.ff_pumps = 0
 
@@ -147,15 +117,9 @@ def _make_daemon(
     controller = SimpleNamespace(
         _evdev=evdev,
         primary_uniq=primary_uniq,
-        # FEAT-COOP-PLAYER-LED-01: o backend guarda o último padrão broadcast
-        # em `_desired.player_leds`; o coop o relê para reverter.
         _desired=SimpleNamespace(player_leds=desired_leds),
         set_player_leds=led_calls.append,
     )
-    # R-24: `slots` liga um `identity_registry` dublê — é dele que sai o
-    # número ACESO na barra de player (espaço de numeração ÚNICO). `None`
-    # (default) = daemon SEM registro, o caso do FakeController/backend
-    # legado, em que o co-op cai no `player_index` histórico.
     identity_registry = (
         SimpleNamespace(
             slot_for=lambda uniq, assign=True: (slots or {}).get(uniq)
@@ -178,9 +142,6 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
     _FakeReader.grab_ok = True
     _FakeReader.grab_result = "held"
     _FakeVpad.created = []
-    # O gate de listdir (InputDirWatch) fica sempre "sujo" nos testes: aqui o
-    # hotplug é simulado trocando o mapping de discover, não mexendo em
-    # /dev/input real.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll",
         lambda self: True,
@@ -191,37 +152,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.uinput_gamepad.UinputGamepad", _FakeVpad
     )
-    # O DUBLÊ DE `normalize_flavor` SAIU — 08/09/2026, e ele nunca foi preciso.
-    #
-    # Aqui havia `lambda f: f or "dualsense"` sobre
-    # `uinput_gamepad.normalize_flavor`. Ele VAZAVA, e é REINCIDÊNCIA: em 04/09
-    # esta casa mediu *"o dublê do co-op era mais frouxo que a função real e
-    # envenenava outro arquivo por ordem de teste"*, e o mesmo arquivo repetiu.
-    # O alvo desta vez foi `test_flavor_desconhecido_normaliza_antes_de_escolher`
-    # — com este arquivo rodando antes, `'ps'` chegava CRU ao uinput e a factory
-    # do vpad escolhia o backend errado.
-    #
-    # A CAUSA, medida com sonda: `daemon/subsystems/external_mask` é importado
-    # TARDE (a factory o traz de dentro da função), então nascia DENTRO da
-    # janela do `monkeypatch` e o `from … import normalize_flavor` copiava o
-    # DUBLÊ. O `undo` do pytest desfaz o que ELE trocou; **não desfaz o que
-    # nasceu torto.**
-    #
-    # E A MORDIDA REVELOU O QUE O CONSERTO ESCONDERIA: arrancado o dublê
-    # INTEIRO, os 37 testes deste arquivo passam com a função real. Ele diferia
-    # dela em quatro de sete entradas (`None` → real diz `'xbox'`, ele dizia
-    # `'dualsense'`) e nenhuma dessas quatro é exercitada aqui. **Um dublê que
-    # não muda nenhum resultado só pode esconder — nunca provar.**
-    #
-    # SE ALGUM DIA FOR PRECISO DUBLAR ISTO: trocar em `uinput_gamepad` não
-    # basta. Cinco módulos de `src/` capturam o símbolo no import, e quem nasce
-    # depois copia o que estiver de pé. Quem protege contra a volta é
-    # `test_virtual_pad_factory.py::test_a_normalizacao_sobrevive_ao_duble_do_coop`,
-    # que mede a PROPRIEDADE — nenhum módulo segurando um símbolo que não é o do
-    # dono — em vez da ordem.
-    # Hermético: NUNCA tocar o /sys/class/leds real (na máquina da mantenedora
     # há um DualSense de verdade plugado). Testes de LED sobrescrevem com nós
-    # falsos via _set_led_nodes.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {}
     )
@@ -259,12 +190,12 @@ def test_sync_cria_secundario_excluindo_o_primario(
     mgr = CoopManager(_make_daemon(primary_uniq=MAC_P1))
     mgr.sync()
 
-    assert mgr.player_count() == 2  # P1 (primário) + 1 secundário
-    assert list(mgr._players) == [MAC_P2]  # primário (por MAC) excluído
+    assert mgr.player_count() == 2
+    assert list(mgr._players) == [MAC_P2]
     player = mgr._players[MAC_P2]
     assert player.reader.started is True
-    assert player.reader.grabbed is True  # grab: jogo vê só o vpad, não o cru
-    assert player.reader.target_uniq == MAC_P2  # reconexões miram ESTE controle
+    assert player.reader.grabbed is True
+    assert player.reader.target_uniq == MAC_P2
     assert player.player_index == 2
     assert player.vpad is not None and player.vpad.started is True
 
@@ -272,9 +203,6 @@ def test_sync_cria_secundario_excluindo_o_primario(
 def test_sync_exclui_primario_por_mac_mesmo_com_path_stale(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Raiz da duplicação do 3º controle: o path do reader do primário fica
-    # None/stale durante hotplug. Com identidade por MAC, o primário continua
-    # excluído e NÃO nasce vpad duplicado para o controle do P1.
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     mgr = CoopManager(_make_daemon(primary_uniq=MAC_P1, primary_path=None))
     mgr.sync()
@@ -312,7 +240,6 @@ def test_sync_recria_quando_node_do_mesmo_mac_muda(
     mgr.sync()
     old = mgr._players[MAC_P2]
 
-    # Re-enumeração (storm/replug): mesmo MAC, node novo.
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event25"})
     mgr.sync()
 
@@ -324,8 +251,6 @@ def test_sync_recria_quando_node_do_mesmo_mac_muda(
 def test_spawn_sem_grab_confirmado_nao_cria_vpad(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # BUG-COOP-GRAB-SILENT-FAIL-01: EVIOCGRAB recusado → sem vpad (o físico
-    # dobraria o input no jogo); retry natural no próximo sync.
     _FakeReader.grab_ok = False
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     mgr = CoopManager(_make_daemon())
@@ -333,9 +258,8 @@ def test_spawn_sem_grab_confirmado_nao_cria_vpad(
 
     assert mgr.player_count() == 1
     assert mgr._players == {}
-    assert _FakeVpad.created == []  # NUNCA nasceu vpad sem grab confirmado
+    assert _FakeVpad.created == []
 
-    # Grab voltou a funcionar → o retry do sync cria o jogador.
     _FakeReader.grab_ok = True
     mgr.sync()
     assert mgr.player_count() == 2
@@ -344,9 +268,6 @@ def test_spawn_sem_grab_confirmado_nao_cria_vpad(
 def test_grab_pendente_registra_jogador_sem_vpad(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # BUG-COOP-GRAB-PENDING-VPAD-01: set_grab "aceito" com device ainda não
-    # aberto (pending) NÃO pode criar o vpad — antes, uma recusa tardia
-    # (EBUSY) deixava até ~2s de input dobrado no jogo.
     _FakeReader.grab_result = "pending"
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     mgr = CoopManager(_make_daemon())
@@ -355,7 +276,6 @@ def test_grab_pendente_registra_jogador_sem_vpad(
     player = mgr._players[MAC_P2]
     assert player.vpad is None
     assert _FakeVpad.created == []
-    # forward_all com jogador pendente: não repassa nada e não explode.
     mgr.forward_all()
     assert player.vpad is None
 
@@ -370,9 +290,8 @@ def test_grab_pendente_promovido_quando_held_no_forward_all(
     player = mgr._players[MAC_P2]
     assert player.vpad is None
 
-    # A thread do reader abriu o device e o EVIOCGRAB confirmou.
     player.reader.grab_state = "held"
-    mgr.forward_all()  # promoção acontece no tick, sem esperar o sync (~2s)
+    mgr.forward_all()
 
     assert player.vpad is not None and player.vpad.started is True
     assert player.vpad.analog[-1] == {
@@ -389,8 +308,6 @@ def test_grab_pendente_promovido_no_sync_em_tick_quieto(
     mgr.sync()
     player = mgr._players[MAC_P2]
 
-    # Tick quieto (/dev/input não mudou): a promoção NÃO depende do watch —
-    # confirmar o grab não altera o conteúdo de /dev/input.
     _watch_quiet(monkeypatch)
     player.reader.grab_state = "held"
     mgr.sync()
@@ -407,15 +324,13 @@ def test_grab_pendente_que_falha_nunca_cria_vpad_e_respawna(
     mgr.sync()
     player = mgr._players[MAC_P2]
 
-    # O EVIOCGRAB real (na thread do reader) foi recusado: pending → failed.
     player.reader.grab_state = "failed"
     mgr.forward_all()
 
-    assert MAC_P2 not in mgr._players  # derrubado…
-    assert _FakeVpad.created == []  # …sem NUNCA ter criado vpad
+    assert MAC_P2 not in mgr._players
+    assert _FakeVpad.created == []
     assert player.reader.stopped is True
 
-    # Retry: mesmo em tick quieto, o próximo sync respawna (grab agora ok).
     _watch_quiet(monkeypatch)
     _FakeReader.grab_result = "held"
     mgr.sync()
@@ -431,40 +346,29 @@ def test_sync_derruba_player_cujo_grab_degradou(
     mgr.sync()
     player = mgr._players[MAC_P2]
 
-    # O loop de reconexão do reader reportou falha de grab (ex.: EBUSY).
     player.reader.grab_state = "failed"
     mgr.sync()
 
     assert player.reader.stopped is True
-    # Recriado limpo no mesmo ciclo (retry imediato do hotplug-IN).
     assert MAC_P2 in mgr._players and mgr._players[MAC_P2] is not player
 
 
 def test_sync_derruba_e_respawna_player_com_vpad_morto(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Achado Onda S #1: vpad uhid derrubado por UHID_STOP pós-promoção.
-
-    O kernel derruba o uhid (`_started=False`) sem destruir o objeto Python
-    e SEM tocar /dev/input — nenhum watch dispara. Antes, o jogador ficava
-    vpad-morto para sempre (e o rehide ainda escondia o físico dele = zero
-    input). Agora o sync detecta VIDA (mesmo em tick quieto), derruba (o
-    teardown restaura o físico via broker) e respawna no mesmo ciclo.
-    """
+    """Achado Onda S #1: vpad uhid derrubado por UHID_STOP pós-promoção."""
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     mgr = CoopManager(_make_daemon())
     mgr.sync()
     player = mgr._players[MAC_P2]
     assert player.vpad is not None
 
-    # UHID_STOP: objeto vivo, device morto — e o tick é QUIETO (sem watch).
     player.vpad._started = False
     _watch_quiet(monkeypatch)
     mgr.sync()
 
     assert player.vpad.stopped is True
     assert player.reader.stopped is True
-    # Recriado limpo no mesmo ciclo, com vpad novo e VIVO.
     renascido = mgr._players.get(MAC_P2)
     assert renascido is not None and renascido is not player
     assert renascido.vpad is not None and renascido.vpad is not player.vpad
@@ -482,8 +386,6 @@ def test_forward_all_repassa_snapshot_ao_vpad(
     assert vpad is not None
     assert vpad.analog[-1] == {"lx": 200, "ly": 50, "rx": 128, "ry": 128, "l2": 10, "r2": 20}
     assert vpad.buttons[-1] == frozenset({"cross"})
-    # FEAT-VPAD-FF-PASSTHROUGH-01: o vpad do jogador nasce com sink de rumble
-    # (FF do jogo → controle DELE) e o tick bombeia o FF.
     assert vpad.rumble_sink is not None
     assert vpad.ff_pumps == 1
 
@@ -496,12 +398,11 @@ def test_sync_remove_no_hotplug_out(
     mgr.sync()
     player = mgr._players[MAC_P2]
 
-    # Secundário desconectou: só o primário sobrou.
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5"})
     mgr.sync()
 
     assert mgr.player_count() == 1
-    assert player.reader.grabbed is False  # soltou o grab
+    assert player.reader.grabbed is False
     assert player.reader.stopped is True
     assert player.vpad is not None and player.vpad.stopped is True
 
@@ -509,21 +410,14 @@ def test_sync_remove_no_hotplug_out(
 def test_disable_desmonta_tudo_e_o_coop_volta_no_ciclo_seguinte(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A suspensão desmonta os secundários — e NÃO é um desligamento.
-
-    NOTA DATADA (06/08/2026): era ``test_desligar_coop_desmonta_tudo``, e
-    chegava aqui zerando `config.coop_enabled`. O caminho vivo é o
-    `disable()` da exceção de Steam Input. A segunda metade é o que aquela
-    versão não podia medir e é o coração da diferença: a flag continua ligada,
-    então o ciclo seguinte traz os jogadores de volta sozinho.
-    """
+    """A suspensão desmonta os secundários — e NÃO é um desligamento."""
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     daemon = _make_daemon(coop=True)
     mgr = CoopManager(daemon)
     mgr.sync()
     assert mgr.player_count() == 2
 
-    mgr.disable()  # o que `suspend_vpads_for_steam_input` chama
+    mgr.disable()
 
     assert mgr.player_count() == 1
     assert mgr._players == {}
@@ -535,14 +429,7 @@ def test_disable_desmonta_tudo_e_o_coop_volta_no_ciclo_seguinte(
 
 
 def test_should_be_active_gates(patched: None) -> None:
-    """Os dois gates do mecanismo, intocados.
-
-    NOTA DATADA (06/08/2026): o ramo `coop=False` continua sendo medido porque
-    continua sendo MECANISMO — mas nenhuma superfície de comando chega mais a
-    esse estado (o `coop.set` recusa desligar, o perfil parou de governar e a
-    CLI explica). Quem tira o co-op de cena em produção é o gate do gamepad,
-    logo abaixo: sem vpad do P1 não há jogador 2.
-    """
+    """Os dois gates do mecanismo, intocados."""
     assert CoopManager(_make_daemon(coop=True, gamepad=True)).should_be_active() is True
     assert CoopManager(_make_daemon(coop=False, gamepad=True)).should_be_active() is False
     assert CoopManager(_make_daemon(coop=True, gamepad=False)).should_be_active() is False
@@ -554,10 +441,7 @@ def test_sync_sem_gamepad_nao_cria(
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     mgr = CoopManager(_make_daemon(gamepad=False))
     mgr.sync()
-    assert mgr.player_count() == 1  # gamepad virtual desligado → co-op inativo
-
-
-# --- player LEDs por jogador (FEAT-COOP-PLAYER-LED-01) ----------------------
+    assert mgr.player_count() == 1
 
 
 def test_padroes_canonicos_por_indice() -> None:
@@ -565,7 +449,6 @@ def test_padroes_canonicos_por_indice() -> None:
     assert player_led_pattern(2) == (False, True, False, True, False)
     assert player_led_pattern(3) == (True, False, True, False, True)
     assert player_led_pattern(4) == (True, True, False, True, True)
-    # P5+ sem padrão oficial → todos acesos (nunca colide com P1..P4).
     assert player_led_pattern(5) == (True, True, True, True, True)
 
 
@@ -584,7 +467,6 @@ def test_coop_aplica_padrao_canonico_por_jogador(
     mgr = CoopManager(_make_daemon(primary_uniq=MAC_P1))
     mgr.sync()
 
-    # Cada controle mostra o padrão do SEU jogador — dá pra saber quem é quem.
     assert nodes[MAC_P1].patterns[-1] == player_led_pattern(1)
     assert nodes[MAC_P2].patterns[-1] == player_led_pattern(2)
     assert nodes[MAC_P3].patterns[-1] == player_led_pattern(3)
@@ -593,13 +475,7 @@ def test_coop_aplica_padrao_canonico_por_jogador(
 def test_indice_de_alocacao_do_vpad_e_estavel_e_reusado_apos_saida(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`player_index` é o índice de ALOCAÇÃO do vpad — 1..N contíguo, reusado.
-
-    Ele é o recuo do MAC e do nome do vpad sem identidade de aparelho (E3), e o
-    jogo quer P1..PN contíguos, então contiguidade e reuso são o CERTO aqui. R-24
-    tirou dele a única responsabilidade que não era sua: acender a lâmpada
-    (ver `test_lampada_usa_o_espaco_de_numeracao_unico` abaixo).
-    """
+    """`player_index` é o índice de ALOCAÇÃO do vpad — 1..N contíguo, reusado."""
     _set_led_nodes(monkeypatch, MAC_P1, MAC_P2, MAC_P3, MAC_P4)
     _set_evdevs(
         monkeypatch,
@@ -612,13 +488,10 @@ def test_indice_de_alocacao_do_vpad_e_estavel_e_reusado_apos_saida(
     mgr = CoopManager(_make_daemon())
     mgr.sync()
 
-    # P2 sai; P3 NÃO é renumerado (segue jogador 3)…
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P3: "/dev/input/event9"})
     mgr.sync()
     assert mgr._players[MAC_P3].player_index == 3
 
-    # …e o próximo controle que entrar reusa o índice 2 (menor livre) — o vpad
-    # do jogo precisa disso; a barra de player, não.
     _set_evdevs(
         monkeypatch,
         {
@@ -634,15 +507,7 @@ def test_indice_de_alocacao_do_vpad_e_estavel_e_reusado_apos_saida(
 def test_lampada_usa_o_espaco_de_numeracao_unico(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R-24 (25/07) — TROCA DELIBERADA de contrato.
-
-    O caso acima assertava também `nodes[MAC_P4].patterns[-1] ==
-    player_led_pattern(2)`: o índice de alocação do vpad, REUSADO de quem
-    saiu, acendendo a barra. Com o registro de identidade reservando o 2 para
-    o MAC_P2 que saiu, bastava MAC_P2 voltar para haver dois "player 2"
-    acesos — a queixa literal. A lâmpada agora fala só o espaço único
-    (`identity_registry`); o `player_index` continua sendo o do jogo.
-    """
+    """R-24 (25/07) — TROCA DELIBERADA de contrato."""
     nodes = _set_led_nodes(monkeypatch, MAC_P1, MAC_P2, MAC_P3, MAC_P4)
     _set_evdevs(
         monkeypatch,
@@ -652,13 +517,10 @@ def test_lampada_usa_o_espaco_de_numeracao_unico(
             MAC_P4: "/dev/input/event11",
         },
     )
-    # O registro reserva o 2 ao MAC_P2 (desligado agora) — o P4 é o Controle 4.
     slots = {MAC_P1: 1, MAC_P2: 2, MAC_P3: 3, MAC_P4: 4}
     mgr = CoopManager(_make_daemon(slots=slots))
     mgr.sync()
 
-    # P2 nunca entrou nesta sessão de co-op: P3 e P4 alocaram os vpads 2 e 3
-    # (contíguos, como o jogo quer) — números que NÃO são os deles no registro.
     assert mgr._players[MAC_P3].player_index == 2
     assert mgr._players[MAC_P4].player_index == 3
     assert nodes[MAC_P4].patterns[-1] == player_led_pattern(4), (
@@ -693,8 +555,7 @@ def test_primario_nao_crava_1_quando_o_registro_diz_outro_numero(
 def test_nunca_dois_controles_com_o_mesmo_padrao(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Última linha de defesa: registro degenerado (dois MACs no mesmo slot)
-    não pode acender dois controles iguais — o segundo desempata para cima."""
+    """Última linha de defesa: registro degenerado (dois MACs no mesmo slot)"""
     nodes = _set_led_nodes(monkeypatch, MAC_P1, MAC_P2, MAC_P3)
     _set_evdevs(
         monkeypatch,
@@ -719,17 +580,12 @@ def test_desligar_coop_reverte_player_leds_do_perfil(
     daemon = _make_daemon(desired_leds=PROFILE_LEDS)
     mgr = CoopManager(daemon)
     mgr.sync()
-    assert daemon.led_calls == []  # co-op ativo: nada de broadcast
+    assert daemon.led_calls == []
 
-    # NOTA DATADA (06/08/2026): a entrada era `config.coop_enabled = False`;
-    # agora é a exceção de Steam Input ao pé da letra — `disable()` primeiro,
-    # e o vpad do P1 cai em seguida (`stop_gamepad_emulation`).
     mgr.disable()
     daemon._gamepad_device = None
 
-    # Reversão = re-emitir o padrão do perfil pelo caminho público broadcast.
     assert daemon.led_calls == [PROFILE_LEDS]
-    # Idempotente: novo tick inativo não re-emite.
     mgr.sync()
     assert daemon.led_calls == [PROFILE_LEDS]
 
@@ -737,15 +593,13 @@ def test_desligar_coop_reverte_player_leds_do_perfil(
 def test_desligar_coop_sem_padrao_do_perfil_nao_emite_nada(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Nenhum perfil setou player-LED ainda (None): não há o que restaurar —
-    # o próximo apply de perfil / reassert do backend cobre.
     _set_led_nodes(monkeypatch, MAC_P1, MAC_P2)
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     daemon = _make_daemon(desired_leds=None)
     mgr = CoopManager(daemon)
     mgr.sync()
 
-    mgr.disable()  # a suspensão por Steam Input (06/08: era o flag zerado)
+    mgr.disable()
     daemon._gamepad_device = None
     mgr.sync()
     assert daemon.led_calls == []
@@ -760,9 +614,6 @@ def test_jogador_derrubado_tem_led_revertido_ao_padrao_do_perfil(
     mgr.sync()
     assert nodes[MAC_P2].patterns[-1] == player_led_pattern(2)
 
-    # Grab degradou E o respawn é recusado: o controle continua plugado mas
-    # deixa de ser jogador — o LED volta ao padrão do perfil, não fica preso
-    # no padrão de P2.
     mgr._players[MAC_P2].reader.grab_state = "failed"
     _FakeReader.grab_ok = False
     mgr.sync()
@@ -774,8 +625,6 @@ def test_jogador_derrubado_tem_led_revertido_ao_padrao_do_perfil(
 def test_sysfs_indisponivel_nao_derruba_o_coop(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Falha de sysfs (BT sem nó, permissão, ambiente sem /sys) = warning e
-    # segue: o co-op continua funcional, só sem o LED por jogador.
     def _boom() -> dict[str, Any]:
         raise RuntimeError("sem /sys")
 
@@ -787,11 +636,6 @@ def test_sysfs_indisponivel_nao_derruba_o_coop(
     assert mgr.player_count() == 2
     player = mgr._players[MAC_P2]
     assert player.vpad is not None and player.vpad.started is True
-
-
-# ---------------------------------------------------------------------------
-# LEIGO-01b — o número do jogador tem de ser o que o JOGO vê
-# ---------------------------------------------------------------------------
 
 
 class TestPlayerIndexes:
@@ -813,12 +657,7 @@ class TestPlayerIndexes:
     def test_indice_reusado_diverge_da_ordem_da_lista(
         self, patched: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O caso que o `idx+1` da GUI mentia: P2 sai, entra outro e reusa o 2.
-
-        Depois do rodízio, o controle que está em SEGUNDO na lista (MAC_P3) é o
-        jogador 3, e o TERCEIRO (MAC_P4) é o jogador 2 — rotular por posição
-        trocaria os dois de personagem.
-        """
+        """O caso que o `idx+1` da GUI mentia: P2 sai, entra outro e reusa o 2."""
         _set_evdevs(
             monkeypatch,
             {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7",
@@ -828,7 +667,6 @@ class TestPlayerIndexes:
         mgr.sync()
         assert mgr.player_indexes()[MAC_P2] == 2
 
-        # P2 despluga; P4 entra e reusa o índice 2 que ficou livre.
         _set_evdevs(
             monkeypatch,
             {MAC_P1: "/dev/input/event5", MAC_P3: "/dev/input/event9",
@@ -871,11 +709,7 @@ class TestResolvePlayerNumbers:
         ) == [None, None]
 
     def test_coop_desligado_todos_sao_o_jogador_1(self) -> None:
-        """O que o jogo vê de verdade: um vpad só, alimentado pelo primário.
-
-        Era exatamente aqui que a GUI mentia — rotulava P1/P2 por posição com o
-        co-op DESLIGADO, quando os dois controles moviam o mesmo personagem.
-        """
+        """O que o jogo vê de verdade: um vpad só, alimentado pelo primário."""
         from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
 
         daemon = _make_daemon(coop=False)
@@ -925,14 +759,7 @@ class TestResolvePlayerNumbers:
         ) == [1, None]
 
 
-# -- PERFIL-01 (4P-01): regressão do contrato `_desired` com o backend REAL --
-#
-# O coop lê `getattr(ctrl, "_desired", None).player_leds` como "o padrão do
-# perfil" — um rename seco no backend falharia EM SILÊNCIO (getattr devolvendo
-# None para sempre; o revert do co-op pararia de restaurar o player-LED do
 # perfil sem nenhum teste quebrando). Estes testes usam o PyDualSenseController
-# de verdade (handles stubados) para travar o contrato após o refactor
-# `_desired` → `_desired_default` + `_desired_by_uniq`.
 
 
 def _backend_real_com_handle() -> tuple[Any, Any]:
@@ -952,10 +779,9 @@ def _backend_real_com_handle() -> tuple[Any, Any]:
 
 
 def test_profile_player_leds_le_o_default_do_backend_real() -> None:
-    """Após o refactor PERFIL-01, `_desired` (property de compat) segue
-    devolvendo o padrão BROADCAST do perfil — o que o revert precisa."""
+    """Após o refactor PERFIL-01, `_desired` (property de compat) segue"""
     backend, _handle = _backend_real_com_handle()
-    backend.set_player_leds(PROFILE_LEDS)  # broadcast do perfil
+    backend.set_player_leds(PROFILE_LEDS)
 
     daemon = SimpleNamespace(
         config=SimpleNamespace(coop_enabled=True, gamepad_flavor="dualsense"),
@@ -968,8 +794,7 @@ def test_profile_player_leds_le_o_default_do_backend_real() -> None:
 
 
 def test_profile_player_leds_ignora_override_por_uniq() -> None:
-    """O override de UM controle não é "o padrão do perfil": o revert broadcast
-    do co-op lê só o default (revert por-uniq é assunto do PERFIL-06)."""
+    """O override de UM controle não é "o padrão do perfil": o revert broadcast"""
     from hefesto_dualsense4unix.core.controller import OutputSpec
 
     backend, _handle = _backend_real_com_handle()
@@ -989,8 +814,7 @@ def test_profile_player_leds_ignora_override_por_uniq() -> None:
 
 
 def test_revert_do_coop_restaura_o_padrao_do_perfil_no_backend_real() -> None:
-    """O revert re-emite o padrão do perfil pelo caminho público broadcast e o
-    hardware (handle stub) recebe o valor CERTO — fim a fim no backend real."""
+    """O revert re-emite o padrão do perfil pelo caminho público broadcast e o"""
     from pydualsense.enums import PlayerID
 
     backend, handle = _backend_real_com_handle()

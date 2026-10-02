@@ -59,10 +59,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_o_botao_de_ligar_funciona_e_se_lembra: importa código da janela GTK")
 
 import pathlib
@@ -77,8 +73,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DESENHO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "01-jogar.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 PILOTO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py"
 
-#: Os `data-modo` que o DESENHO tem, lidos dele. Nunca digitados: o dia em que
-#: ela acrescentar um botão à fileira, esta régua o encontra sozinha.
 _DATA_MODO = re.compile(r'data-modo="([a-z-]+)"')
 
 
@@ -88,16 +82,8 @@ def modos_do_desenho() -> set[str]:
     return set(_DATA_MODO.findall(DESENHO.read_text(encoding="utf-8")))
 
 
-# ---------------------------------------------------------------------------
-# 1. A fileira é lida do desenho
-# ---------------------------------------------------------------------------
 def test_todo_botao_do_desenho_tem_linha_na_fileira() -> None:
-    """Nenhum botão do desenho fica órfão, e nenhuma linha sobra sem botão.
-
-    **A mordida:** troque ``data-modo="gamepad"`` por ``data-modo="jogar"`` no
-    ``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`` e este teste acusa o órfão nos
-    dois sentidos.
-    """
+    """Nenhum botão do desenho fica órfão, e nenhuma linha sobra sem botão."""
     do_desenho = modos_do_desenho()
     da_fileira = {modo.chave for modo in painel.MODOS_DA_TELA}
     assert do_desenho, "o desenho não tem um único [data-modo] — leia o arquivo certo"
@@ -108,12 +94,7 @@ def test_todo_botao_do_desenho_tem_linha_na_fileira() -> None:
 
 
 def test_todo_botao_ou_tem_escritor_ou_tem_motivo() -> None:
-    """Um botão sem escritor tem de dizer POR QUÊ, em português.
-
-    Botão cinza sem explicação manda a pessoa procurar defeito onde não há;
-    botão vivo que ninguém atende dispara trabalho que não acontece e a tela
-    confirma. Os dois males têm a mesma cura, e ela é esta linha.
-    """
+    """Um botão sem escritor tem de dizer POR QUÊ, em português."""
     for chave in modos_do_desenho():
         tem_escritor = chave in painel.ESCRITOR_DOS_MODOS
         motivo = painel.porque_nao_aplica(chave)
@@ -124,17 +105,8 @@ def test_todo_botao_ou_tem_escritor_ou_tem_motivo() -> None:
         assert painel.escritor_do_modo(chave), f"{chave!r} sem uma linha de dono"
 
 
-# ---------------------------------------------------------------------------
-# 2 e 3. Quem aplica é o dono declarado
-# ---------------------------------------------------------------------------
 def test_quem_aplica_e_o_dono_e_nao_uma_copia(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``plano_do_modo`` DELEGA a ``mode_transition.plan_mode_transition``.
-
-    **A mordida está DENTRO do teste:** o dono é trocado em tempo de execução
-    por um dublê que devolve um passo inventado. Se ``plano_do_modo`` tivesse
-    uma cópia própria da sequência — o "segundo dono" que o HARM-01 enterrou —
-    ela continuaria devolvendo a sequência de verdade e este teste reprovaria.
-    """
+    """``plano_do_modo`` DELEGA a ``mode_transition.plan_mode_transition``."""
     for chave in painel.ESCRITOR_DOS_MODOS:
         assert painel.plano_do_modo(chave) == mode_transition.plan_mode_transition(chave)
 
@@ -146,16 +118,7 @@ def test_quem_aplica_e_o_dono_e_nao_uma_copia(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_todo_passo_que_define_modo_declara_origem_manual() -> None:
-    """``origin="manual"`` em todo passo definidor — ORIGEM-QUE-MENTE-01.
-
-    Sem o campo, o daemon lê o clique dela como reconciliação automática, e o
-    portão JOGO-01 recusa o gamepad com o jogo na allowlist do Steam Input.
-    MEDIDO na máquina dela: o botão "Jogar pelo Hefesto" parou de funcionar e o
-    journal dizia ``gamepad_start_recusado_steam_input``.
-
-    **A mordida:** tire o ``"origin": "manual"`` de um passo do
-    ``plan_mode_transition`` e este teste reprova nomeando o passo.
-    """
+    """``origin="manual"`` em todo passo definidor — ORIGEM-QUE-MENTE-01."""
     definidores = {"native.mode.set", "gamepad.emulation.set"}
     for chave in painel.ESCRITOR_DOS_MODOS:
         plano = painel.plano_do_modo(chave)
@@ -193,33 +156,22 @@ def test_o_desligado_virou_modo_nativo_e_saiu_da_fileira() -> None:
     assert painel.MODO_DESLIGADO not in painel.ESCRITOR_DOS_MODOS
     assert painel.MODO_DESLIGADO not in modos_do_desenho()
 
-    # E ELE PASSOU A SER TRATADO COMO QUALQUER ENDEREÇO QUE O GERADOR NÃO
-    # ESCREVE: nada é aplicado, nada derruba a tela, e a frase diz o que houve.
     assert painel.plano_do_modo(painel.MODO_DESLIGADO) is None
     assert painel.porque_nao_aplica(painel.MODO_DESLIGADO)
     assert "SEM LINHA" in painel.escritor_do_modo(painel.MODO_DESLIGADO)
 
-    # O QUE FICOU NO LUGAR DELE: a posição Desligado é o Modo Nativo, e esse tem
-    # os dois lados. Sem esta linha a lápide provaria só a ausência.
     assert mode_transition.MODE_NATIVE in fileira
     assert mode_transition.MODE_NATIVE in painel.ESCRITOR_DOS_MODOS
     assert painel.plano_do_modo(mode_transition.MODE_NATIVE)
 
 
 def test_gesto_de_endereco_inventado_nao_derruba_nem_aplica() -> None:
-    """Um ``data-modo`` que o gerador não escreve chega pelo DOM adulterado.
-
-    Derrubar a tela dela para relatar um dono desconhecido é o pior dos dois
-    males; aplicá-lo é o outro. A resposta é uma frase e um ``None``.
-    """
+    """Um ``data-modo`` que o gerador não escreve chega pelo DOM adulterado."""
     assert painel.plano_do_modo("modo-que-nao-existe") is None
     assert painel.porque_nao_aplica("modo-que-nao-existe")
     assert "SEM LINHA" in painel.escritor_do_modo("modo-que-nao-existe")
 
 
-# ---------------------------------------------------------------------------
-# 4. A tela mostra o AGORA, não o desenho
-# ---------------------------------------------------------------------------
 def test_a_tela_acende_o_modo_vivo_e_nao_o_do_desenho() -> None:
     """O caso DELA, de 30/08 às 21:15, congelado como fixture.
 
@@ -238,32 +190,11 @@ def test_a_tela_acende_o_modo_vivo_e_nao_o_do_desenho() -> None:
     ligado = {"native_mode": False, "gamepad_emulation": {"enabled": True}}
     assert painel.modo_vivo(ligado) == mode_transition.MODE_GAMEPAD
 
-    # O DAEMON CALADO NÃO ACENDE NADA. Escolher um botão sem saber seria a tela
-    # afirmando um estado — e é a diferença entre "não sei" e "desligado".
     assert painel.modo_vivo(None) is None
 
 
-# ---------------------------------------------------------------------------
-# O INTERRUPTOR — dois modos lidos como um lado só
-# ---------------------------------------------------------------------------
 def test_o_interruptor_le_dois_modos_como_ligado() -> None:
-    """``hefesto_ligado`` — a leitura DERIVADA que o desenho de 31/08 encomendou.
-
-    A pintura viva acende ``[data-modo]`` comparando a chave com o modo do
-    daemon, **uma a uma**. O Hefesto ligado, porém, é ``gamepad`` *ou*
-    ``desktop`` (a Navegação): sem esta função, com o modo vivo em ``desktop`` o
-    interruptor fica **apagado dos dois lados** — a tela não estaria mentindo,
-    estaria muda, e mudo é pior, porque parece defeito.
-
-    O caso não é hipotético: é o estado em que a máquina dela estava quando isto
-    nasceu — ``modo_vivo`` respondendo ``desktop``, gamepad desligado por gesto
-    dela.
-
-    **A mordida está DENTRO do teste:** a segunda metade repete a comparação um
-    a um, que é o que a tela faz sem esta leitura, e exige que ela apague os
-    dois lados. Se alguém trocar ``hefesto_ligado`` por essa comparação, a
-    primeira metade cai.
-    """
+    """``hefesto_ligado`` — a leitura DERIVADA que o desenho de 31/08 encomendou."""
     navegando = {"native_mode": False, "gamepad_emulation": {"enabled": False}}
     jogando = {"native_mode": False, "gamepad_emulation": {"enabled": True}}
     nativo = {"native_mode": True, "gamepad_emulation": {"enabled": False}}
@@ -274,11 +205,8 @@ def test_o_interruptor_le_dois_modos_como_ligado() -> None:
     )
     assert painel.hefesto_ligado(jogando) is True
     assert painel.hefesto_ligado(nativo) is False
-    # O DAEMON CALADO NÃO POSICIONA O INTERRUPTOR. `False` ali seria a tela
-    # respondendo "Desligado" à pergunta dela sem ter perguntado a ninguém.
     assert painel.hefesto_ligado(None) is None
 
-    # A MORDIDA: a comparação um a um, que é o que sobra sem a leitura derivada.
     for lado in (mode_transition.MODE_GAMEPAD, mode_transition.MODE_NATIVE):
         assert painel.modo_vivo(navegando) != lado, (
             "com o modo vivo em desktop, NENHUMA das duas posições do "
@@ -286,55 +214,25 @@ def test_o_interruptor_le_dois_modos_como_ligado() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# A escada — o algarismo derivado, e as duas perguntas que não são uma
-# ---------------------------------------------------------------------------
 def test_o_algarismo_do_circulo_e_derivado_da_escada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O número do círculo sai da ``ESCADA``, e não de um literal.
-
-    Ele é a ordem em que o produto TENTA, e o dono dessa ordem é
-    ``integrations/ponte_escada.ESCADA``. O mesmo número escrito à mão em dois
-    lugares diverge no primeiro dia em que alguém mexe num deles.
-
-    **A mordida está DENTRO do teste:** a ``ESCADA`` é invertida em tempo de
-    execução e os algarismos têm de acompanhar. Um literal ficaria preso ao
-    número antigo e reprovaria.
-    """
+    """O número do círculo sai da ``ESCADA``, e não de um literal."""
     from hefesto_dualsense4unix.integrations import ponte_escada
 
     antes = {c.chave: c.algarismo for c in painel.CHIPS_DA_ESCADA}
     assert antes["dualsense"] == "1", "a DualSense é o primeiro degrau da ESCADA"
-    # QUEM NÃO É DEGRAU LEVA TRAÇO, NUNCA UM NÚMERO: um algarismo ali diria em
-    # que posição a escada AUTOMÁTICA tenta aquele modo, e ela não tenta.
-    #
-    # ERA O `pointclick` QUEM PROVAVA ISTO, e ele saiu — POINT-AND-CLICK-01,
-    # 17/09/2026: a linha não estava na tela desde 31/08. Quem prova agora é a
-    # Navegação, que é o caso REAL de `KIND_DESKTOP` sem degrau na ESCADA.
-    # FATO SUBSTITUÍDO no comentário acima: dizia-se que o traço significava
-    # "o PS + R3 não para naquele modo". O PS + R3 PARA na Navegação desde
-    # 13/09 (`hotkey.CICLO_DE_PONTES`) — a escada e o ciclo do gesto são dois
-    # objetos, e confundi-los foi o defeito que aquela sprint mediu.
     assert antes["navegacao"] == painel.SEM_ALGARISMO
 
     monkeypatch.setattr(ponte_escada, "ESCADA", tuple(reversed(ponte_escada.ESCADA)))
     depois = {c.chave: c.algarismo for c in painel.CHIPS_DA_ESCADA}
     assert depois != antes, "o algarismo não seguiu a ESCADA — ele está digitado"
     assert depois["dualsense"] == "4" and depois["steam"] == "1"
-    # O traço não é número: invertida ou não, quem não é degrau continua sem ordem.
     assert depois["navegacao"] == painel.SEM_ALGARISMO
 
 
 def _degraus_sem_lugar_na_tela(painel_: object) -> list[object]:
-    """Os degraus da ``ESCADA`` que a tela não mostra em lugar nenhum.
-
-    A CONTA MORA AQUI, e não no produto — A-TELA-PERGUNTA-AO-DONO-01,
-    28/09/2026. Ela era ``painel.degraus_sem_chip()``, e nenhuma tela a
-    perguntava: é pergunta de quem desenvolve ("a escada deve algo à tela?"), e
-    régua mora na suíte. As duas metades do "lugar" são LIDAS do produto: os
-    chips da fileira e as pontes do interruptor.
-    """
+    """Os degraus da ``ESCADA`` que a tela não mostra em lugar nenhum."""
     from hefesto_dualsense4unix.integrations import ponte_escada
 
     nomeadas = {c.ponte for c in painel_.CHIPS_DA_ESCADA if c.ponte is not None}  # type: ignore[attr-defined]
@@ -343,17 +241,7 @@ def _degraus_sem_lugar_na_tela(painel_: object) -> list[object]:
 
 
 def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Todo degrau da escada tem onde aparecer — desde 31/08/2026.
-
-    Até 30/08 a conta denunciava o segundo degrau, ``Ponte(gamepad, xbox)`` —
-    *"o piso mais largo que existe"* —, por onde a escada automática passava
-    sem a tela ter onde mostrá-lo. O desenho novo o pôs na fileira.
-
-    **A mordida está DENTRO do teste:** sem :data:`painel.PONTES_DO_INTERRUPTOR`
-    a régua acusaria o Nativo, que TEM lugar na tela (a posição Desligado) e só
-    não tem chip na fileira. Seria a régua reprovando a melhora em vez do
-    defeito, que é o defeito mais caro desta casa.
-    """
+    """Todo degrau da escada tem onde aparecer — desde 31/08/2026."""
     from hefesto_dualsense4unix.integrations import ponte_escada
 
     assert _degraus_sem_lugar_na_tela(painel) == []
@@ -366,27 +254,7 @@ def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_sem_degrau_e_sem_dono_sao_perguntas_diferentes() -> None:
-    """A Navegação separa as duas, e pintar uma pela outra mente na tela.
-
-    * **sem degrau** = a ``ESCADA`` automática não tem este chip
-      (:attr:`painel.Chip.indice` é ``-1``). Hoje: a Navegação.
-    * **sem dono** = sem degrau E sem modo com escritor. Hoje: nenhum.
-
-    A Navegação está na primeira e não na segunda: marcá-la como órfã seria a
-    tela dizendo "não dá" sobre ``apply_mode('desktop')``, que funciona hoje.
-
-    AS DUAS CONTAS MORAM AQUI desde 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): no
-    produto elas eram ``chips_sem_degrau`` e ``chips_sem_dono``, e nenhuma tela
-    as perguntava.
-
-    DUAS SUBSTITUIÇÕES DE FATO — POINT-AND-CLICK-01, 17/09/2026:
-
-    * a conta dos sem dono devolvia ``["pointclick"]`` sobre uma linha que a
-      tela não mostra desde 31/08. A linha saiu e a resposta é vazia;
-    * "sem degrau" não é "o PS + R3 não para aqui". Ele PARA na Navegação
-      desde 13/09 (``hotkey.CICLO_DE_PONTES``). O que ela mede é a ``ESCADA``,
-      que é outro objeto.
-    """
+    """A Navegação separa as duas, e pintar uma pela outra mente na tela."""
     sem_degrau = [c.chave for c in painel.CHIPS_DA_ESCADA
                   if c.ponte is not None and c.indice < 0]
     sem_dono = [c.chave for c in painel.CHIPS_DA_ESCADA
@@ -420,31 +288,17 @@ def test_as_conferencias_sairam_do_produto() -> None:
 
 
 def test_a_recusa_do_botao_sem_escritor_e_a_do_dono() -> None:
-    """A frase com que o gesto recusa é a de ``escritor_do_modo`` — uma só.
-
-    ``porque_nao_aplica`` tinha a segunda redação do mesmo fato (*"ainda não
-    tem quem o atenda no Hefesto. Ele está no desenho e a decisão é dela"*).
-    **A mordida:** devolva a frase própria, e as duas divergem aqui.
-    """
+    """A frase com que o gesto recusa é a de ``escritor_do_modo`` — uma só."""
     for chave in (painel.MODO_DESLIGADO, "modo-que-nao-existe"):
         assert painel.porque_nao_aplica(chave) == painel.escritor_do_modo(chave)
     for chave in painel.ESCRITOR_DOS_MODOS:
         assert painel.porque_nao_aplica(chave) == ""
 
 
-# ---------------------------------------------------------------------------
-# 5 e 6. A lembrança
-# ---------------------------------------------------------------------------
 def test_a_lembranca_tem_um_lugar_so_e_e_o_do_produto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A memória vem do ``session.load_gamepad_preference`` e de mais lugar nenhum.
-
-    **A mordida está DENTRO do teste:** o dono é trocado por um dublê e a
-    resposta tem de acompanhar nos TRÊS estados. Um segundo lugar de verdade
-    (um cache, um arquivo próprio, um default escrito aqui) ficaria preso ao
-    valor antigo e reprovaria.
-    """
+    """A memória vem do ``session.load_gamepad_preference`` e de mais lugar nenhum."""
     from hefesto_dualsense4unix.utils import session
 
     for resposta, esperado in (
@@ -457,25 +311,13 @@ def test_a_lembranca_tem_um_lugar_so_e_e_o_do_produto(
         assert lembra.ligado is esperado, f"o dublê disse {resposta}, veio {lembra}"
         assert lembra.frase, "toda lembrança tem de vir com a frase que ela lê"
 
-    # A FRASE RESPONDE À PERGUNTA DELA, e por isso ela é medida: *"não sei se
-    # segue desativado"* só se responde dizendo que a decisão está GRAVADA.
     monkeypatch.setattr(session, "load_gamepad_preference", lambda: (False, None))
     frase = painel.modo_lembrado().frase
     assert "DESLIGADO" in frase and "reiniciar" in frase
 
 
 def test_o_disco_lembra_o_desligar_e_o_ligar(tmp_path: pathlib.Path) -> None:
-    """O ciclo inteiro, no disco — o "se lembre" que ela pediu.
-
-    Roda no lar de mentira da suíte (``tests/conftest.py`` desvia ``HOME`` e os
-    quatro ``XDG_*``), então nada aqui toca a mesa dela.
-
-    **A mordida:** troque o ``optout.write_text`` de
-    ``session.save_gamepad_emulation`` por um ``pass`` e a segunda asserção cai
-    — que é exatamente o defeito de antes da AUTO-01.1, quando desligar era
-    APAGAR o flag e "nunca configurado" ficava indistinguível de "ela desligou
-    de propósito".
-    """
+    """O ciclo inteiro, no disco — o "se lembre" que ela pediu."""
     from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
@@ -491,16 +333,11 @@ def test_o_disco_lembra_o_desligar_e_o_ligar(tmp_path: pathlib.Path) -> None:
     assert lembra.ligado is True
     assert lembra.mascara == "dualsense"
 
-    # E de volta, porque é o gesto dela: desligar depois de ligar tem de gravar
-    # de novo. Um `unlink` sem `write` deixaria o flag morto para sempre.
     save_gamepad_emulation(False)
     assert flag.exists()
     assert painel.modo_lembrado().ligado is False
 
 
-# ---------------------------------------------------------------------------
-# As duas de forma, sobre o piloto que ela abre
-# ---------------------------------------------------------------------------
 def _fonte_do_piloto() -> str:
     if not PILOTO.is_file():
         pytest.skip(f"o piloto não está nesta árvore: {PILOTO}")
@@ -508,12 +345,7 @@ def _fonte_do_piloto() -> str:
 
 
 def test_o_piloto_nao_digita_o_dono_do_modo() -> None:
-    """A tabela de donos do piloto é LIDA do ``painel``, nunca digitada.
-
-    **A mordida:** troque a compreensão por quatro linhas escritas à mão e este
-    teste reprova. É a mesma forma dos onze instrumentos falsos de 26/08 — eles
-    digitavam o que deviam LER, e por isso mediam a cópia, não o produto.
-    """
+    """A tabela de donos do piloto é LIDA do ``painel``, nunca digitada."""
     fonte = _fonte_do_piloto()
     assert "painel.escritor_do_modo(modo.chave)" in fonte, (
         "o DONOS_DOS_GESTOS do piloto deixou de derivar do painel"
@@ -522,21 +354,12 @@ def test_o_piloto_nao_digita_o_dono_do_modo() -> None:
 
 
 def test_o_piloto_aplica_pelo_dono_e_nao_por_ipc_cru() -> None:
-    """O clique sai por ``mode_transition.apply_mode`` — nunca por IPC cru.
-
-    Chamar ``gamepad.emulation.set`` direto daqui é o defeito que o HARM-01
-    mediu: pela Emulação, nativo e gamepad ficavam ligados JUNTOS, o físico
-    seguia grabado pelo jogo e o vpad nascia congelado — jogo sem controle
-    nenhum, com a tela dizendo que estava tudo bem.
-
-    **A mordida:** troque a chamada por um ``call_async('gamepad.emulation.set',
-    …)`` e este teste reprova nomeando o método cru.
-    """
+    """O clique sai por ``mode_transition.apply_mode`` — nunca por IPC cru."""
     fonte = _fonte_do_piloto()
     assert "mode_transition.apply_mode(" in fonte, (
         "o piloto deixou de aplicar pelo dono da sequência"
     )
-    corpo = fonte.split('"""', 2)[-1]  # fora do docstring de módulo
+    corpo = fonte.split('"""', 2)[-1]
     for cru in ("gamepad.emulation.set", "native.mode.set", "mouse.emulation.restore"):
         assert f'"{cru}"' not in corpo and f"'{cru}'" not in corpo, (
             f"o piloto pronuncia {cru!r} cru — a sequência tem UM dono, e é o "
@@ -544,31 +367,15 @@ def test_o_piloto_aplica_pelo_dono_e_nao_por_ipc_cru() -> None:
         )
 
 
-#: Os endereços que um roteiro de prova CLICA, colhidos do próprio fonte. Só a
-#: forma `querySelector('[data-x="y"]')` conta: citar um endereço num comentário
-#: não é clicá-lo, e uma régua que confundisse os dois reprovaria o texto — é a
-#: armadilha que o `01-jogar.html` declara por extenso no CSS do interruptor.
 _CLIQUE_POR_ENDERECO = re.compile(r"""querySelector\('\[data-(modo|degrau)=\\"([a-z-]+)\\"\]'\)""")
 
-#: Os `data-degrau` do desenho, lidos dele — o par do :data:`_DATA_MODO`.
 _DATA_DEGRAU = re.compile(r'data-degrau="([a-z-]+)"')
 
 JOGAR_VIVO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "jogar_vivo.py"
 
 
 def test_o_roteiro_das_provas_clica_endereco_que_existe() -> None:
-    """`.click()` sobre `null` levanta ``TypeError`` — e a régua morre calada.
-
-    Os dois roteiros de prova de tela (`--prova-gesto` na aba Jogar,
-    `--prova-interruptor` no piloto) clicam por endereço. Em 31/08 dois
-    endereços saíram do desenho — o `desligado` da fileira e o `desktop` da
-    escada — e os roteiros continuaram apontando para eles: o passo levanta
-    exceção dentro do WebKit, os passos seguintes nunca acontecem, e o relato
-    sai verde por não ter medido nada.
-
-    **A mordida:** troque um endereço do roteiro por um que não existe no
-    ``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`` e este teste o nomeia.
-    """
+    """`.click()` sobre `null` levanta ``TypeError`` — e a régua morre calada."""
     texto = DESENHO.read_text(encoding="utf-8") if DESENHO.is_file() else ""
     if not texto:
         pytest.skip(f"o desenho da aba Jogar não está nesta árvore: {DESENHO}")
@@ -596,31 +403,10 @@ def test_o_roteiro_das_provas_clica_endereco_que_existe() -> None:
 
 
 def test_o_interruptor_da_tela_viva_segue_o_daemon_e_nao_o_clique() -> None:
-    """A cura de 31/08, nos dois pilotos — e ela é LIDA, nunca digitada.
-
-    O mockup trocou os `<button>` da fileira por `<label>` sobre `radio`
-    escondido, que é como as dez abas abrem seção sem JavaScript. O
-    ``ev.preventDefault()`` dos ouvintes — que existe para o clique não navegar
-    — passou a IMPEDIR o rádio de mudar. A cura não é tirá-lo: é a pintura mover
-    o rádio, pelo que o **daemon** diz.
-
-    Duas formas ficam provadas aqui, e as duas já custaram caro nesta casa:
-
-    * a REGRA de quais modos são "Ligado" não é reescrita em JavaScript — ela
-      chega pronta de ``painel.hefesto_ligado``;
-    * o ID do rádio não é digitado — sai do ``for`` do próprio rótulo
-      (``htmlFor``), que é o que o gerador escreve.
-
-    **A mordida:** troque ``painel.hefesto_ligado(state)`` por ``None`` e o
-    interruptor congela no lado em que o mockup nasceu — medido em 31/08, com o
-    daemon em ``native`` e a tela mostrando as duas posições acesas ao mesmo
-    tempo.
-    """
+    """A cura de 31/08, nos dois pilotos — e ela é LIDA, nunca digitada."""
     if not DESENHO.is_file():
         pytest.skip(f"o desenho da aba Jogar não está nesta árvore: {DESENHO}")
     html = DESENHO.read_text(encoding="utf-8")
-    # O DESENHO TEM DE SUSTENTAR A DERIVAÇÃO: dois rótulos com as classes, cada
-    # um com um `for` que aponta para um rádio de verdade.
     for lado in ("ligado", "desligado"):
         assert f'class="hef-pos {lado}"' in html, (
             f"o desenho perdeu o rótulo .hef-pos.{lado} — a pintura endereça por "
@@ -646,24 +432,7 @@ def test_o_interruptor_da_tela_viva_segue_o_daemon_e_nao_o_clique() -> None:
 
 
 def test_a_aba_jogar_viva_nao_injeta_folha_por_cima_do_desenho() -> None:
-    """Nenhuma regra de estilo injetada — o desenho é o dono do que a tela mostra.
-
-    Até 30/08 esta aba injetava ``.degrau.sem-dono{opacity:.45}`` porque o
-    mockup não tinha o estado "sem dono". Ela desenhou-o em 31/08, e **sem
-    `opacity`** — é a lição medida da ``.fita.inerte``: a opacidade mora no
-    ancestral, o texto cai para perto de 2:1 e toda régua de contraste que lê
-    ``color`` fica cega a isso.
-
-    A folha injetada chega DEPOIS e vence no desempate: mantê-la desfaria a cura
-    sem que nada acusasse. **A mordida:** devolva o
-    ``document.createElement('style')`` e este teste reprova.
-
-    **A RÉGUA MEDE O ATO, NÃO A PALAVRA**, e isso é cicatriz: a primeira versão
-    dela procurava a palavra ``opacity`` no arquivo e reprovava a LÁPIDE que
-    explica por que a folha saiu. É a forma exata dos instrumentos falsos de
-    26/08 — *a régua confunde a PALAVRA com o ATO, e desliga quando alguém
-    escreve bem*. O ato é criar um ``<style>`` e pendurá-lo no documento.
-    """
+    """Nenhuma regra de estilo injetada — o desenho é o dono do que a tela mostra."""
     if not JOGAR_VIVO.is_file():
         pytest.skip(f"a aba viva não está nesta árvore: {JOGAR_VIVO}")
     fonte = JOGAR_VIVO.read_text(encoding="utf-8")
@@ -675,12 +444,7 @@ def test_a_aba_jogar_viva_nao_injeta_folha_por_cima_do_desenho() -> None:
 
 
 def test_o_piloto_nao_manda_mais_ninguem_para_um_botao_que_nao_existe() -> None:
-    """A frase do daemon calado apontava para "Ligar o Hefesto" na aba Sistema.
-
-    ``grep -rn "Ligar o Hefesto" layout/*.html`` devolve ZERO: aquele botão não
-    está desenhado em lugar nenhum. Mandar alguém para um botão inexistente é a
-    tela afirmando uma saída que ela não tem.
-    """
+    """A frase do daemon calado apontava para "Ligar o Hefesto" na aba Sistema."""
     assert 'aba Sistema e clique em "Ligar o Hefesto"' not in _fonte_do_piloto()
     if DESENHO.is_file():
         for html in sorted(DESENHO.parent.glob("*.html")):

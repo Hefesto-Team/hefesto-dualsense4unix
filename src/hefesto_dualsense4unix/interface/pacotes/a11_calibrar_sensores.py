@@ -83,30 +83,15 @@ from .a02_controles import (
     meias_da_barra,
 )
 
-#: A PÁGINA, escrita uma vez. É o nome do arquivo, que é o que o `load-changed`
-#: do WebView entrega ao despachante.
 PAGINA = "calibrar-sensores.html"
 
-#: O SELETOR DO BLOCO QUE O PRODUTO TROCA. Ele vive escrito em DOIS lugares — o
-#: `data-bloco="controles"` do gerador e este — e não há como ser um só: um é
-#: atributo de HTML e o outro é chave de um dicionário Python. A régua
-#: `test_a_calibracao_mostra_quem_esta_na_mao.py` mede os dois um contra o outro.
 BLOCO_DOS_CONTROLES = '[data-bloco="controles"]'
 
-#: AS DUAS FAMÍLIAS DE EIXO E QUEM RESPONDE POR CADA UMA — o leitor do `inputs`,
-#: a escala da barra e a grafia do número. **Nada disto é regra nova**: os seis
-#: donos são os do produto, os mesmos que a aba Controles chama
-#: (`controller_card.gyro_do_inputs`, `sensor_widgets.texto_eixo`…). O que este
-#: arquivo escreve é só o ENDEREÇO, que é dele.
 SENSORES = (
     ("giro", gyro_do_inputs, ESCALA_GYRO_GRAUS_S, texto_eixo),
     ("accel", accel_do_inputs, ESCALA_ACCEL_G, texto_eixo_g),
 )
 
-#: O BLOCO DA MIRA VIRTUAL — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01. É o
-#: `data-bloco="miras"` do gerador, e ele só é remontado (e só se pinta dentro
-#: dele) quando a página PUBLICADA o tiver: o desenho novo espera o OK dela, e
-#: emitir para um endereço que a página não tem é pintar no vazio.
 BLOCO_DAS_MIRAS = '[data-bloco="miras"]'
 
 _TEM_A_MIRA: bool | None = None
@@ -145,19 +130,12 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
             campos[f"{campo}-num"] = str(round(valor))
         else:
             campos[f"{campo}-num"] = calibrar.SEM_LEITURA
-    # «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — A-MIRA-POR-MOVIMENTO-NA-TELA-02.
-    # A lista recebe o botão que a peça usa, e `sempre` quando é `None`; sem a
-    # chave no bloco, a lista fica onde está, pela razão do trilho acima. Um
-    # botão que a lista não oferece também não se escreve: o `<select>` não o
-    # mostraria, e o piloto contaria uma pintura que não aconteceu.
     if "gatilho" in b:
         gatilho = b.get("gatilho")
         if gatilho is None:
             campos["mira-segurar"] = calibrar.SEMPRE
         elif gatilho in calibrar.REMAPEAVEIS:
             campos["mira-segurar"] = str(gatilho)
-    # Os dois interruptores, com as TRÊS respostas do chip de sensor: aceso,
-    # apagado e o travessão de quem não leu.
     for qual, _rotulo, chave in calibrar.INVERTER:
         valor = b.get(chave)
         campos[f"mira-inverter-{qual}"] = _selo_do_sensor(
@@ -165,21 +143,11 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
     return campos
 
 
-#: O QUE A PÁGINA OFERECE E O PRODUTO NÃO FAZ — e ele é declarado aqui para que
-#: a `cobertura` não passe por completa. Ver a última seção da docstring.
 SEM_DONO = ("calibrar", )
 
 
 def _eixos_do_controle(entrada: dict[str, Any]) -> dict[str, Any]:
-    """Os doze campos de leitura de um controle: quatro por eixo, seis eixos.
-
-    `lido is None` é *"a leitura não chegou"*, e é o desfecho honesto: travessão
-    no número e barra a zero. **Ele é o caso comum na bancada dela hoje** —
-    medido em 11/09: `sensores.grab_do_movimento = "sem_reader"` nos dois
-    controles, e por isso `inputs` sai sem a chave `gyro`. Desenhar zero ali
-    seria repouso mentiroso, que é a lição que o `_merge_sensores` do daemon já
-    escreve do lado dele.
-    """
+    """Os doze campos de leitura de um controle: quatro por eixo, seis eixos."""
     lido = entrada.get("inputs")
     e: dict[str, Any] = lido if isinstance(lido, dict) else {}
     campos: dict[str, Any] = {}
@@ -229,31 +197,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "colunas": colunas,
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 1,
                       "sem_dono": len(SEM_DONO)},
-        # O NOME do órfão, e não só a contagem — 11/09/2026. A `cobertura`
-        # dizia *quantos*, e `test_o_perfil_chega_na_tela` pergunta *quais*:
-        # sem esta chave a página entrava na régua com a contagem cheia e a
-        # lista vazia, que é uma dívida sem endereço. Os outros dez pacotes já
-        # devolvem as duas coisas.
         "sem_dono": {chave: "" for chave in SEM_DONO},
     }
 
 
-# ---------------------------------------------------------------------------
-# OS DOIS DESLIZANTES DA MIRA — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01
-# ---------------------------------------------------------------------------
 def _pedir_a_mira(p: Any, uniq: str, **campo: Any) -> None:
-    """Manda UM campo da mira ao daemon e recusa quando ele não confirma.
-
-    AS FRASES SÃO AS DO CHIP da aba Controles (`a02_controles.mira`), que é o
-    mesmo pedido: duas redações para a mesma recusa seriam a tela explicando o
-    mesmo fato de duas maneiras.
-
-    NO MODO NATIVO O AJUSTE GRAVA E NÃO RECUSA — A-MIRA-POR-MOVIMENTO-NA-TELA-02.
-    Até aqui o `alcance.tique = "nao_se_aplica"` virava recusa com a frase do
-    Nativo; ela escolheu *"fica cinza no Nativo, sem gravar"* para o CHIP, e o
-    ajuste daqui não acende mira nenhuma: ele grava e vale quando o modo voltar,
-    calado, como qualquer ajuste que deu certo.
-    """
+    """Manda UM campo da mira ao daemon e recusa quando ele não confirma."""
     corpo = _corpo(p.mira_set_detalhado(uniq=uniq, **campo))
     if corpo is None:
         raise RuntimeError(
@@ -264,12 +213,7 @@ def _pedir_a_mira(p: Any, uniq: str, **campo: Any) -> None:
 
 
 def _numero_do_deslizante(o: dict[str, Any], nome: str, faixa: tuple[int, int, int]) -> int | None:
-    """O número que o polegar marca, ou `None` quando o evento é o `click` repetido.
-
-    O `click` QUE VEM DEPOIS DO `change` NÃO É UM SEGUNDO PEDIDO — a mesma
-    guarda do deslizante de volume da aba Controles, e pela mesma razão: um
-    `<input type="range">` clicado na pista dispara `change` e `click`.
-    """
+    """O número que o polegar marca, ou `None` quando o evento é o `click` repetido."""
     if (str(o.get("tipo") or "").lower() == "input"
             and str(o.get("evento") or "").lower() == "click"):
         return None
@@ -287,10 +231,7 @@ def _numero_do_deslizante(o: dict[str, Any], nome: str, faixa: tuple[int, int, i
 
 @gesto(PAGINA, "mira-sensibilidade", grava="mira_set_detalhado")
 def mira_sensibilidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«O quanto um gesto anda» — a sensibilidade da mira DESTE controle.
-
-    UM CAMPO SÓ: mexer aqui não acende nem apaga o chip, e não mexe no tremor.
-    """
+    """«O quanto um gesto anda» — a sensibilidade da mira DESTE controle."""
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("mira-sensibilidade: o clique não disse em qual controle")
@@ -301,11 +242,7 @@ def mira_sensibilidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto(PAGINA, "mira-tremor", grava="mira_set_detalhado")
 def mira_tremor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Ignorar tremor até» — o giro abaixo disto não move a mira, em graus/s.
-
-    É o campo de acessibilidade desta tela: um tremor essencial mora em 15 a 30
-    graus/s, muito acima do que a curva da mira corta sozinha (§3 da sprint).
-    """
+    """«Ignorar tremor até» — o giro abaixo disto não move a mira, em graus/s."""
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("mira-tremor: o clique não disse em qual controle")
@@ -314,31 +251,9 @@ def mira_tremor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         _pedir_a_mira(p, uniq, zona_morta_graus_s=float(n))
 
 
-# ---------------------------------------------------------------------------
-# «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-02
-# ---------------------------------------------------------------------------
-# Palavra dela (`D-2409-SEGURAR-E-INVERTER-ENTRAM-NA-TELA`): «entram as duas».
-# Cada gesto manda UM campo só ao `mira.set`, pelo mesmo `_pedir_a_mira` dos
-# deslizantes: escolher o botão não acende o chip, e inverter um lado não mexe
-# no outro.
-
-
 @gesto(PAGINA, "mira-segurar", grava="mira_set_detalhado")
 def mira_segurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Só enquanto eu segurar» — a mira DESTE controle só anda com o botão
-    escolhido apertado; «Sempre» a devolve a andar sem botão.
-
-    O `click` DA LISTA NÃO É ESCOLHA: abrir a lista dispara `click` com o valor
-    de antes, e só o `change` traz o que ela escolheu. Mandar no `click`
-    regravaria o perfil a cada vez que ela abrisse a lista para olhar. E ele
-    volta com `armou` (o contrato de `hefesto_vivo.CHAVE_DO_CLIQUE_QUE_SO_ARMOU`):
-    voltar com `None` faria a lista piscar o verde de «aplicado» só por ter sido
-    aberta — a tela afirmando o que não aconteceu.
-
-    A lista oferece o que o esquema aceita (`calibrar.REMAPEAVEIS`); um valor
-    fora dela é DOM adulterado, e recusa aqui — o PS, que é a saída de
-    emergência dela, nem chega ao daemon.
-    """
+    """«Só enquanto eu segurar» — a mira DESTE controle só anda com o botão"""
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("mira-segurar: o clique não disse em qual controle")

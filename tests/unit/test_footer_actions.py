@@ -1,21 +1,8 @@
-"""Testes unitários do FooterActionsMixin (UI-GLOBAL-FOOTER-ACTIONS-01).
-
-Cobre:
-  - on_apply_draft: chama ipc_bridge.call_async com método e draft_dict corretos.
-  - on_save_profile: chama save_profile e recarrega lista de perfis.
-  - on_import_profile: valida JSON, copia para profiles_dir.
-  - _freeze_ui: seta sensitive nos widgets de FROZEN_WIDGET_IDS.
-
-Não requer GTK instalado: usa mocks para todos os widgets e diálogos.
-"""
+"""Testes unitários do FooterActionsMixin (UI-GLOBAL-FOOTER-ACTIONS-01)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("footer actions")
 
 from pathlib import Path
@@ -30,36 +17,20 @@ from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture(autouse=True)
 def _sync_run_in_thread(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Executa ``ipc_bridge.run_in_thread`` de forma síncrona nos testes.
-
-    PERF-FOOTER-ASYNC-IO-01 moveu o I/O de disco dos handlers do rodapé para um
-    worker (``run_in_thread`` + ``GLib.idle_add``). Sem um loop GTK rodando nos
-    testes unit, os callbacks nunca executariam — então rodamos o worker e o
-    callback na mesma thread, preservando a semântica observável.
-    """
+    """Executa ``ipc_bridge.run_in_thread`` de forma síncrona nos testes."""
 
     def _sync(fn: Any, on_success: Any, on_failure: Any = None) -> None:
         try:
             result = fn()
-        except Exception as exc:  # espelha o run_in_thread real
+        except Exception as exc:
             if on_failure is not None:
                 on_failure(exc)
             return
         on_success(result)
 
     monkeypatch.setattr(footer_actions.ipc_bridge, "run_in_thread", _sync)
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 
 def _make_stub() -> FooterActionsMixin:
@@ -89,11 +60,6 @@ def _make_profile(name: str = "teste") -> Profile:
     return Profile(name=name, version=1, match=MatchAny(), priority=0)
 
 
-# ---------------------------------------------------------------------------
-# _freeze_ui
-# ---------------------------------------------------------------------------
-
-
 class TestFreezeUi:
     def test_freeze_true_chama_set_sensitive_false(self) -> None:
         stub = _make_stub()
@@ -119,13 +85,7 @@ class TestFreezeUi:
     def test_widget_ausente_ignorado_sem_excecao(self) -> None:
         stub = _make_stub()
         stub.builder.get_object.return_value = None
-        # Não deve lançar exceção
         stub._freeze_ui(True)
-
-
-# ---------------------------------------------------------------------------
-# on_apply_draft
-# ---------------------------------------------------------------------------
 
 
 class TestOnApplyDraft:
@@ -162,8 +122,8 @@ class TestOnApplyDraft:
             mock_ipc.call_async.side_effect = fake_call_async
             stub.on_apply_draft()
 
-        assert False in sensitive_calls   # congelou
-        assert True in sensitive_calls    # descongelou
+        assert False in sensitive_calls
+        assert True in sensitive_calls
 
     def test_descongela_apos_erro(self) -> None:
         stub = _make_stub()
@@ -183,18 +143,12 @@ class TestOnApplyDraft:
         assert True in sensitive_calls
 
 
-# ---------------------------------------------------------------------------
-# on_save_profile
-# ---------------------------------------------------------------------------
-
-
 class TestOnSaveProfile:
     def test_salva_e_recarrega_lista(self, monkeypatch: pytest.MonkeyPatch) -> None:
         stub = _make_stub()
         salvo: list[str] = []
 
         def fake_save(profile: Profile, *, origem: str | None = None) -> Path:
-            # `origem` espelha a assinatura real de `save_profile`.
             salvo.append(profile.name)
             return Path(f"/tmp/{profile.name}.json")
 
@@ -264,34 +218,8 @@ class TestOnSaveProfile:
         assert any("meu_novo" in msg for msg in stub._toasted)
 
 
-# ---------------------------------------------------------------------------
-# JANELA-FIEL-01/E4 — o conflito de perfil é por SLUG, não por nome cru
-# ---------------------------------------------------------------------------
-
-
 class TestSaveProfileConflitoPorSlug:
-    """R-10 (auditoria 23/07): a identidade de um perfil em disco é o SLUG.
-
-    `save_profile` grava `<slugify(name)>.json`, e o `slugify` tira acento e
-    baixa a caixa. O gate deste rodapé comparava STRING CRUA, então digitar
-    "Navegacao" com a "Navegação" dela em disco (prioridade 50, com regra de
-    janela e de processo) não casava: o diálogo de sobrescrita não aparecia e
-    `navegacao.json` era regravado em silêncio — com `MatchAny()` e prioridade
-    recalculada, virando um catch-all a mais, que é a doença da
-    AUTOMATISMO-MORTO-01. Cinco dos quinze perfis dela colidem por acento ou
-    por caixa.
-
-    NOTA DATADA — 06/08/2026: o número caducou; a frase, não. São 13 arquivos
-    hoje e nove nomes cujo slug difere. E "colidir" aqui nunca significou perfil
-    contra perfil — significa que uma variante digitada cai em cima do arquivo
-    que já existe. A conta está na JANELA-FIEL-01. O que este teste mede não
-    mudou: o gate compara nome cru, e é isso que ele morde.
-
-    MORDIDA: os testes de hoje só exercitavam nome IDÊNTICO ("existente" contra
-    "existente"), que passa com a cura arrancada. Aqui o par é acentuado contra
-    sem acento (e maiúscula contra minúscula): com `nome in existentes` de
-    volta, o diálogo nunca é chamado e o `save_profile` é — reprova nas duas.
-    """
+    """R-10 (auditoria 23/07): a identidade de um perfil em disco é o SLUG."""
 
     @staticmethod
     def _dialogos(resposta: bool) -> MagicMock:

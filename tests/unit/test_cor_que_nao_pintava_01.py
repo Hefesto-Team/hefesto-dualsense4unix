@@ -1,29 +1,9 @@
-"""COR-QUE-NAO-PINTAVA-01 (19/08/2026) — a classe de cor que o GTK ignorava.
-
-As cinco classes de cor do `theme.css` (`status-ok`, `status-warn`,
-`status-err`, `accent-purple`, `accent-pink`) nasceram SOLTAS — seletor de
-especificidade (0,1,0). A regra `.hefesto-dualsense4unix-window label` do mesmo
-arquivo é (0,1,1) e casa o label DIRETAMENTE, então ela vencia: a classe era
-aplicada, o GTK a lia, e o texto saía na cor do tema.
-
-A casa já tinha visto o sintoma e contornado sem achar a causa. O
-`app/widgets/painel_no_jogo.py:135` diz, textual: *"a classe existe, é aplicada
-e não pinta nada (a primeira foto saiu com 'no jogo agora' em branco)"*.
-
-Quem sofria, contado em 19/08: `status-warn` em doze lugares, dois deles
-rótulos do próprio `main.glade` (`:310` e `:325`).
-
-ESTE TESTE MEDE A COR RENDERIZADA, não o texto do CSS. Um teste que lesse o
-arquivo passaria com a regra solta — e foi exatamente a regra solta que não
-pintou nada por semanas.
-"""
+"""COR-QUE-NAO-PINTAVA-01 (19/08/2026) — a classe de cor que o GTK ignorava."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# `import gi` cru aceita o stub que outro arquivo planta em `sys.modules`, e com
-# o stub dentro o `Gtk.init_check()` estoura e derruba a COLETA deste módulo.
 exigir_gi_real("COR-QUE-NAO-PINTAVA-01 (a cor que o GTK resolvia)")
 
 from pathlib import Path
@@ -38,7 +18,6 @@ from gi.repository import Gdk, Gtk
 RAIZ = Path(__file__).resolve().parents[2]
 THEME = RAIZ / "src/hefesto_dualsense4unix/gui/theme.css"
 
-#: classe -> a cor que o `theme.css` promete, em (r, g, b) de 0 a 255.
 PROMESSAS = {
     "hefesto-dualsense4unix-status-ok": (0x50, 0xFA, 0x7B),
     "hefesto-dualsense4unix-status-warn": (0xF1, 0xFA, 0x8C),
@@ -61,12 +40,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def _cor_resolvida(classe: str) -> tuple[int, int, int]:
-    """A cor que o GTK REALMENTE resolve para um label dentro da janela.
-
-    Monta a mesma hierarquia da tela — a janela com a classe do aplicativo e o
-    label dentro dela —, aplica o `theme.css` no screen e pergunta ao contexto
-    de estilo. É a única pergunta que a regra solta responde errado.
-    """
+    """A cor que o GTK REALMENTE resolve para um label dentro da janela."""
     provider = Gtk.CssProvider()
     provider.load_from_path(str(THEME))
     Gtk.StyleContext.add_provider_for_screen(
@@ -97,12 +71,7 @@ class TestAClassePinta:
     def test_a_cor_prometida_chega_ao_label(
         self, classe: str, esperado: tuple[int, int, int]
     ) -> None:
-        """A MORDIDA. Tire o escopo da window no `theme.css` e isto reprova.
-
-        Sem o escopo, o GTK devolve a cor do tema (o `@fg` claro da janela) e
-        não a cor da classe — que é o "aplicada e não pinta nada" que a casa
-        registrou em `painel_no_jogo.py:135`.
-        """
+        """A MORDIDA. Tire o escopo da window no `theme.css` e isto reprova."""
         obtido = _cor_resolvida(classe)
         assert obtido == esperado, (
             f"a classe `{classe}` é aplicada e o GTK resolve {obtido}, não "

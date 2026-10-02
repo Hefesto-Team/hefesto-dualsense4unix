@@ -1,18 +1,4 @@
-"""O agente de pareamento é NOSSO para o que ela inicia — R5, BLUEZ-UM-DONO-01.
-
-A decisão R5 dela (23/09/2026) revoga a D2: o ``hefesto-bt-agent`` fica de PISO,
-para o que chega sozinho, e o daemon registra o próprio ``Agent1`` e pareia por
-ele o que ELA inicia — sem virar o agente padrão e sem mexer na capacidade dos
-adaptadores.
-
-O que o fonte do BlueZ 5.86 diz, e é o que esta régua cobra: ``pair_device``
-escolhe o agente por ``agent_get(sender)`` (``src/device.c:3374``) — o agente
-registrado pelo MESMO remetente do ``Pair`` vence o padrão. O BlueZ de mentira
-da bancada (``bluez_de_mentira.py``) faz a mesma escolha.
-
-Duas bancadas: um barramento em processo, rápido, e um ``dbus-daemon``
-particular com o Gio de verdade — que é o que prova o caminho que o produto usa.
-"""
+"""O agente de pareamento é NOSSO para o que ela inicia — R5, BLUEZ-UM-DONO-01."""
 
 from __future__ import annotations
 
@@ -60,16 +46,10 @@ def _agente(barramento: bm.BarramentoDeMentira) -> AgenteDePareamento:
     return agente
 
 
-# ---------------------------------------------------------------------------
-# em processo
-# ---------------------------------------------------------------------------
-
-
 def test_o_pair_que_nos_iniciamos_e_atendido_pelo_nosso_agente(
     vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira
 ) -> None:
-    """MORDIDA: faça ``DonoVivo.parear`` cair no ``parear`` da base (sem agente) —
-    quem atende passa a ser o padrão, e esta régua reprova."""
+    """MORDIDA: faça ``DonoVivo.parear`` cair no ``parear`` da base (sem agente) —"""
     escrita = vivo.parear(DISPOSITIVO)
 
     assert escrita.feita, escrita
@@ -127,17 +107,7 @@ def test_pin_e_chave_sao_recusados_e_o_que_so_mostra_passa(
 def test_o_agente_atende_sem_pedir_a_trava(
     barramento: bm.BarramentoDeMentira, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Decisão de quem coordena: o agente NUNCA pede a trava do rádio.
-
-    O ``Pair`` segura a trava enquanto o BlueZ chama o agente — e a chamada chega
-    no fio do barramento, que não é o fio do ``Pair``: a trava reentrante não o
-    reconhece. Se o agente a pedisse, esperaria o próprio ``Pair`` até o prazo,
-    de 10 a 30 s em cada pareamento. Aqui o ``Pair`` é o fio da régua, com a
-    trava na mão, e o BlueZ é outro fio.
-
-    MORDIDA: faça o ``_atender`` pedir ``bluez_dbus.na_trava`` — a resposta só
-    sai no prazo da trava, recusada.
-    """
+    """Decisão de quem coordena: o agente NUNCA pede a trava do rádio."""
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.5)
     agente = _agente(barramento)
     tratador = barramento.exportados[CAMINHO_DO_AGENTE]
@@ -175,7 +145,7 @@ def test_o_bluetoothd_que_reinicia_leva_o_registro_e_o_proximo_parear_registra(
     vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira
 ) -> None:
     assert vivo.parear(DISPOSITIVO).feita
-    barramento.agentes.clear()  # o bluetoothd novo não conhece ninguém
+    barramento.agentes.clear()
     barramento.emitir(bd.Sinal("dono", dono_novo=""))
     barramento.emitir(bd.Sinal("dono", dono_novo=":1.8"))
     assert bm.esperar(lambda: vivo.caminhos() is not None)
@@ -205,10 +175,6 @@ def test_sob_a_suite_o_agente_nao_se_registra_no_sistema() -> None:
     assert sistema.chamadas == [] and sistema.exportados == {}
 
 
-# ---------------------------------------------------------------------------
-# pelo barramento de verdade — um dbus-daemon particular
-# ---------------------------------------------------------------------------
-
 sem_barramento = pytest.mark.skipif(
     not bm.ha_dbus_daemon(), reason="sem dbus-daemon ou sem Gio nesta máquina"
 )
@@ -216,11 +182,7 @@ sem_barramento = pytest.mark.skipif(
 
 @sem_barramento
 def test_pelo_gio_o_pair_e_nosso_e_o_padrao_continua_o_bt_agent(tmp_path: Path) -> None:
-    """O caminho que o produto usa, de ponta a ponta: foto, sinal, agente, ``Pair``.
-
-    MORDIDAS: pedir ``RequestDefaultAgent`` em ``registrar`` põe o nosso nome na
-    pilha de padrões; tirar o agente do ``DonoVivo.parear`` faz o bt-agent atender.
-    """
+    """O caminho que o produto usa, de ponta a ponta: foto, sinal, agente, ``Pair``."""
     with bm.BluezParticular(tmp_path) as bluez:
         barramento = bd.BarramentoGio(bluez.endereco)
         assert barramento.abrir(), barramento.erro
@@ -237,12 +199,10 @@ def test_pelo_gio_o_pair_e_nosso_e_o_padrao_continua_o_bt_agent(tmp_path: Path) 
             assert bluez.padroes == [bluez.nome_do_bt_agent]
             assert bluez.o_padrao_atendeu == []
             assert bluez.mesa[DISPOSITIVO][bd.APARELHO]["Trusted"] is True
-            # O sinal do BlueZ chega à foto: ninguém perguntou de novo.
             assert bm.esperar(
                 lambda: vivo.propriedade(DISPOSITIVO, bd.APARELHO, "Paired") is True
             )
 
-            # O que chega por outro cliente — o watchdog — é do padrão.
             outro = bluez.outro_cliente()
             outro.chamar(bd.SERVICO, bm.no_de(bm.OUTRO), bd.APARELHO, "Pair")
             assert bluez.o_padrao_atendeu == [bm.no_de(bm.OUTRO)]
@@ -253,11 +213,7 @@ def test_pelo_gio_o_pair_e_nosso_e_o_padrao_continua_o_bt_agent(tmp_path: Path) 
 
 @sem_barramento
 def test_pelo_gio_a_janela_de_busca_e_nossa(tmp_path: Path) -> None:
-    """A busca abre na NOSSA conexão, os candidatos vêm da foto, o parear é nosso.
-
-    A busca é por cliente: um ``StopDiscovery`` de quem não abriu é recusado
-    pelo BlueZ de mentira, como pelo de verdade (medido em 19/09).
-    """
+    """A busca abre na NOSSA conexão, os candidatos vêm da foto, o parear é nosso."""
     with bm.BluezParticular(tmp_path) as bluez:
         barramento = bd.BarramentoGio(bluez.endereco)
         assert barramento.abrir(), barramento.erro

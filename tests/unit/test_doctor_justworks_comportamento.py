@@ -1,31 +1,4 @@
-"""RADIO-ABERTO-01/E1-bis — o detector de `JustWorksRepairing` tem MORDIDA?
-
-O DEFEITO DESTA BANCADA (MEDIDO em 06/08/2026, por duas mutações independentes
-que deixavam a suíte INTEIRA verde — 138 passed e paridade OK nas duas):
-
-  (A) trocar ``fail "JustWorksRepairing=always ATIVO...`` por ``pass "...`` em
-      ``scripts/doctor.sh``. O doctor passava a APROVAR, com selo verde, o valor
-      que a própria sprint classifica como injeção de teclas.
-  (C) apagar a linha ``check_bluez_justworks_repairing`` de ``main()``. A função
-      ficava viva e NUNCA CHAMADA — ENTREGA-QUE-NAO-LIGOU-01 literal.
-
-Os dois únicos testes que existiam (``test_doctor_le_pelo_dono_unico`` e
-``test_doctor_avisa_em_vez_de_mentir_quando_o_dono_some``) são grep de TEXTO e
-sobreviviam às duas mutilações; o portão de paridade também, porque procurava
-palavras que continuam vivas DENTRO da função morta.
-
-COMO ESTA BANCADA MORDE
-
-Ela EXECUTA a função. O harness extrai ``check_bluez_justworks_repairing`` do
-``scripts/doctor.sh`` por ``awk`` (do cabeçalho até o ``}`` de coluna 1), põe por
-cima stubs de ``pass``/``fail``/``warn``/``info`` que só imprimem o rótulo, e a
-roda contra uma RAIZ FALSA (``HEFESTO_BT_ETC``) com um ``systemctl`` de mentira
-no ``PATH``. Nada em ``/etc`` é lido, nada é escrito, e não é preciso root.
-
-A extração por ``awk`` é deliberada: se alguém renomear a função, o harness não
-a encontra e TODOS os testes deste arquivo ficam vermelhos — renomear não é
-rota de fuga.
-"""
+"""RADIO-ABERTO-01/E1-bis — o detector de `JustWorksRepairing` tem MORDIDA?"""
 
 from __future__ import annotations
 
@@ -36,19 +9,11 @@ import pytest
 
 from tests.conftest import arvore_congelada
 
-#: Cópia da árvore tirada uma vez por sessão — ver ARVORE-CONGELADA-01 em
-#: `tests/conftest.py`. Esta bancada EXTRAI a função do `scripts/doctor.sh` por
-#: `awk` e a EXECUTA; se o arquivo mudar debaixo da medição (agente irmão,
-#: `git checkout`, editor salvando), o veredito é sobre o produto de outra
-#: pessoa. MEDIDO em 06/08/2026, com reprodução em três braços.
 RAIZ = arvore_congelada()
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 BLUEZ = RAIZ / "scripts" / "bluez_config.sh"
 FUNCAO = "check_bluez_justworks_repairing"
 
-#: Os cinco valores que o `case` do detector distingue, e o veredito que cada um
-#: TEM de produzir. A tabela é o contrato: `always` é `[FAIL]` e não `[WARN]`,
-#: porque a sprint o classifica como injeção de teclas.
 _MAIN_CONF = {
     "confirm": "[General]\nFastConnectable=true\nJustWorksRepairing=confirm\n",
     "always": "[General]\nFastConnectable=true\nJustWorksRepairing=always\n",
@@ -123,9 +88,6 @@ def _rodar(
         "HEFESTO_BT_ETC": str(etc),
         "HEFESTO_BT_ASSETS": str(RAIZ / "assets" / "bluetooth"),
         "PATH": f"{tmp_path / 'bin'}:{os.environ.get('PATH', '')}",
-        # Os marcadores de sandbox apontam para caminhos que NÃO EXISTEM por
-        # padrão: a bancada roda fora de container, e um teste que dependesse
-        # do `/.flatpak-info` da máquina seria um teste diferente a cada máquina.
         "HEFESTO_MARCA_SANDBOX": str(tmp_path / "sem-flatpak-info"),
         "HEFESTO_MARCA_CONTAINER": str(tmp_path / "sem-containerenv"),
         "FLATPAK_ID": "",
@@ -137,18 +99,8 @@ def _rodar(
     )
 
 
-# ---------------------------------------------------------------------------
-# Os cinco ramos, executados
-# ---------------------------------------------------------------------------
-
-
 def test_always_reprova_e_nao_ganha_selo_verde(tmp_path: Path) -> None:
-    """A MUTAÇÃO (A): `fail` virando `pass` deixava a suíte inteira verde.
-
-    `always` remove a última recusa do BlueZ ao re-pareamento por Just Works de
-    quem já tem bond. Com o agente NoInputNoOutput, isso termina em injeção de
-    teclas. O veredito é `[FAIL]`, não `[WARN]` e muito menos `[ OK ]`.
-    """
+    """A MUTAÇÃO (A): `fail` virando `pass` deixava a suíte inteira verde."""
     proc = _rodar(tmp_path, _MAIN_CONF["always"])
 
     assert "[FAIL]" in proc.stdout, (
@@ -171,21 +123,7 @@ def test_confirm_e_aprovado(tmp_path: Path) -> None:
 
 
 def test_confirm_com_agente_morto_reprova(tmp_path: Path) -> None:
-    """A contrapartida honesta da cura: `confirm` DEPENDE do agente registrado.
-
-    Com o `hefesto-bt-agent.service` morto (já falhou duas vezes em 04/08), o
-    re-pareamento legítimo dela é RECUSADO — e é o doctor que tem de dizer isso
-    antes que ela descubra pelo controle que não conecta.
-
-    O GRAU MUDOU EM 25/08/2026 (BG-06), e este teste mudou com ele. Até então a
-    cena saía `[WARN]`, e a decisão que este arquivo registrava era "avisar".
-    Ela caducou por um motivo medido: um aviso no meio de centenas de linhas
-    SOME, e o que a cena descreve não é um risco à espreita — é o pareamento
-    por rádio parado. A régua nova, com a cena inteira e as contraprovas, está
-    em `tests/unit/test_bg06_o_grau_e_o_conselho_que_serve_para_esta_instalacao.py`;
-    esta asserção fica aqui para que o vizinho de arquivo não volte a rebaixar
-    o grau sem tropeçar.
-    """
+    """A contrapartida honesta da cura: `confirm` DEPENDE do agente registrado."""
     proc = _rodar(tmp_path, _MAIN_CONF["confirm"], agente="inactive")
 
     assert "[ OK ]" in proc.stdout, "o valor continua certo; o que falta é o agente"
@@ -206,12 +144,7 @@ def test_chave_ausente_avisa_o_default_da_distro(tmp_path: Path) -> None:
 
 
 def test_never_avisa_sem_prometer_o_que_nao_cumpre(tmp_path: Path) -> None:
-    """`never` é MAIS restritivo que o nosso `confirm` — e a promessa tem ressalva.
-
-    A promessa antiga ("a sua linha é neutralizada, e o remover a devolve") é
-    FALSA quando o `never` está DENTRO do bloco hefesto, que é justamente onde
-    quem lê este aviso vai escrever. Hoje o aviso separa os dois casos.
-    """
+    """`never` é MAIS restritivo que o nosso `confirm` — e a promessa tem ressalva."""
     proc = _rodar(tmp_path, _MAIN_CONF["never"])
 
     assert "[WARN]" in proc.stdout
@@ -244,11 +177,7 @@ def test_arquivo_ilegivel_nao_vira_nao_declarado(tmp_path: Path) -> None:
 
 
 def test_sem_main_conf_o_detector_pula_em_vez_de_reprovar(tmp_path: Path) -> None:
-    """Máquina sem BlueZ não é máquina insegura.
-
-    E é a LINHA DE BASE do par de testes de sandbox abaixo: fora de container, a
-    ausência do arquivo continua sendo `info`, sem WARN e sem FAIL.
-    """
+    """Máquina sem BlueZ não é máquina insegura."""
     proc = _rodar(tmp_path, None)
 
     assert "RESUMO fails=0 warns=0" in proc.stdout
@@ -256,18 +185,7 @@ def test_sem_main_conf_o_detector_pula_em_vez_de_reprovar(tmp_path: Path) -> Non
 
 
 def test_dentro_do_sandbox_o_detector_diz_que_nao_sabe(tmp_path: Path) -> None:
-    """CEGO E SILENCIOSO era o pior dos dois (achado de 06/08/2026).
-
-    Dentro do Flatpak, `/etc/bluetooth` não existe: o manifesto não pede
-    `--filesystem=host`, então o /etc do host não é alcançável. A função caía no
-    ramo "BlueZ ausente?" e imprimia `info ... pulo o check` — nem WARN, nem
-    FAIL — numa máquina cujo HOST tem `JustWorksRepairing=always` ATIVO. Pior
-    que o caso do `.deb`, que ao menos avisava.
-
-    "Não existe" e "não consigo ver" são respostas diferentes, e a segunda tem
-    de ser dita em voz alta: é a diferença entre "você está segura" e "eu não
-    sei se você está segura".
-    """
+    """CEGO E SILENCIOSO era o pior dos dois (achado de 06/08/2026)."""
     marca = tmp_path / "flatpak-info-de-mentira"
     marca.write_text(
         "[Application]\nname=io.github.hefesto_team.hefesto_dualsense4unix\n",
@@ -289,12 +207,7 @@ def test_dentro_do_sandbox_o_detector_diz_que_nao_sabe(tmp_path: Path) -> None:
 
 
 def test_sandbox_que_enxerga_o_arquivo_julga_normalmente(tmp_path: Path) -> None:
-    """O marcador não sequestra a leitura: se o arquivo está lá, ele vale.
-
-    Sem esta metade, um `--filesystem=host` no manifesto (ou um Flatpak que
-    monte o /etc) faria o doctor virar um "não sei" permanente — trocar um
-    silêncio por um ruído não é cura.
-    """
+    """O marcador não sequestra a leitura: se o arquivo está lá, ele vale."""
     marca = tmp_path / "flatpak-info-de-mentira"
     marca.write_text("[Application]\n", encoding="utf-8")
 
@@ -308,12 +221,7 @@ def test_sandbox_que_enxerga_o_arquivo_julga_normalmente(tmp_path: Path) -> None
 
 
 def test_sem_o_dono_unico_o_detector_avisa_em_vez_de_inventar(tmp_path: Path) -> None:
-    """Sem `bluez_config.sh` ao lado, o doctor NÃO pode dizer "não declarado".
-
-    É o layout do `.deb` antes desta leva: o `doctor.sh` viajava sozinho e a
-    função caía neste ramo contra o /etc REAL, que tem `always`. Ver
-    `test_empacotamento_leva_o_dono_do_bluez` (bancada de paridade).
-    """
+    """Sem `bluez_config.sh` ao lado, o doctor NÃO pode dizer "não declarado"."""
     etc = tmp_path / "bluetooth"
     etc.mkdir(exist_ok=True)
     (etc / "main.conf").write_text(_MAIN_CONF["always"], encoding="utf-8")
@@ -337,11 +245,6 @@ def test_sem_o_dono_unico_o_detector_avisa_em_vez_de_inventar(tmp_path: Path) ->
     assert "[ OK ]" not in proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# A CHAMADA — a mutação (C) apagava a linha de `main()` e ninguém via
-# ---------------------------------------------------------------------------
-
-
 def _corpo_do_main() -> str:
     proc = subprocess.run(
         ["awk", "/^main\\(\\) \\{$/ { dentro = 1 } dentro { print } "
@@ -355,12 +258,7 @@ def _corpo_do_main() -> str:
 
 
 def test_o_detector_e_chamado_por_main(tmp_path: Path) -> None:
-    """ENTREGA-QUE-NAO-LIGOU-01 literal: função viva e nunca chamada.
-
-    MEDIDO: apagar esta linha de `main()` deixava 138 passed e a paridade OK.
-    O grep é dentro do CORPO de `main()` — a definição da função (que continua
-    existindo na mutação) fica de fora por construção.
-    """
+    """ENTREGA-QUE-NAO-LIGOU-01 literal: função viva e nunca chamada."""
     corpo = _corpo_do_main()
     chamadas = [
         ln.strip() for ln in corpo.splitlines() if ln.strip() == FUNCAO
@@ -383,33 +281,8 @@ def test_o_detector_e_chamado_no_bloco_de_radio(tmp_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O EMPACOTAMENTO — o doctor empacotado era CEGO (achado de 06/08/2026)
-# ---------------------------------------------------------------------------
-
-
 def test_empacotamento_leva_o_dono_do_bluez() -> None:
-    """Quem leva o `doctor.sh` leva o `bluez_config.sh`. Sem exceção.
-
-    MEDIDO: `scripts/build_deb.sh` copiava `doctor.sh` e NÃO copiava
-    `bluez_config.sh`. Como o detector lê EXCLUSIVAMENTE pelo dono único em
-    `${ROOT_DIR}/scripts/bluez_config.sh`, no layout do .deb ele caía no ramo
-    "o dono único da config do BlueZ não está aqui" e NÃO VIA NADA — reproduzido
-    contra o /etc REAL desta máquina, que tem `always`.
-
-    O curador anterior registrou isso como dívida de empacotamento com a
-    justificativa "exige postinst próprio, e é entrega à parte": verdade para
-    APLICAR a config (reescreve conffile do dpkg), FALSO para o DETECTOR, que é
-    leitura pura e entra numa linha do laço `for _s in ...` que já existia.
-    """
-    # O FLATPAK ENTRA PELO MANIFESTO, não pelo invólucro (achado de 06/08/2026,
-    # MEDIDO): `scripts/build_flatpak.sh` tem 120 linhas, chama o
-    # `flatpak-builder` e NÃO LISTA ARQUIVO NENHUM. Quem declara o conteúdo do
-    # pacote é `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`.
-    # Com o invólucro na lista,
-    # pôr o `doctor.sh` no manifesto sem o `bluez_config.sh` passava verde aqui
-    # e no `check_packaging_parity.sh`: o invólucro não cita `doctor.sh`, o
-    # `continue` disparava, e a regra de PAR nunca alcançava o Flatpak.
+    """Quem leva o `doctor.sh` leva o `bluez_config.sh`. Sem exceção."""
     empacotadores = [
         RAIZ / "scripts" / "build_deb.sh",
         RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml",
@@ -424,10 +297,6 @@ def test_empacotamento_leva_o_dono_do_bluez() -> None:
     for arquivo in empacotadores:
         if not arquivo.exists():
             continue
-        # SÓ LINHA DE CÓDIGO CONTA. Procurar a palavra no arquivo inteiro é o
-        # que fez o portão de paridade passar verde com o `bluez_config.sh`
-        # arrancado da linha de cópia do `build_deb.sh` (MEDIDO por mutação):
-        # o próprio comentário que EXPLICA a regra a satisfazia.
         codigo = "\n".join(
             ln for ln in arquivo.read_text(encoding="utf-8").splitlines()
             if not ln.lstrip().startswith("#")
@@ -450,24 +319,14 @@ def test_empacotamento_leva_o_dono_do_bluez() -> None:
 
 
 class TestOSeloVerdeNaoSaiAntesDoDaemonCarregar:
-    """SELO-VERDE-CEDO-DEMAIS-01 (06/08/2026).
-
-    O `[ OK ]` de `confirm` carimbava VERDE um rádio ainda ABERTO: o
-    `bluez_config.sh` grava e NÃO reinicia o `bluetoothd` de propósito — diz por
-    escrito que os valores "VALEM NO PRÓXIMO BOOT" —, então entre a cura e o
-    próximo start o daemon VIVO continua com `always`. Quem lesse o verde
-    fecharia o terminal achando que a janela de Just Works tinha fechado.
-
-    A medida é a comparação de relógios: `main.conf` mais novo que o start do
-    `bluetoothd` significa que o disco ainda não é o que o daemon carregou.
-    """
+    """SELO-VERDE-CEDO-DEMAIS-01 (06/08/2026)."""
 
     def test_config_mais_nova_que_o_daemon_avisa(self, tmp_path: Path) -> None:
         """O ramo que fecha o defeito: o disco já mudou, o daemon não sabe."""
         proc = _rodar(
             tmp_path,
             _MAIN_CONF["confirm"],
-            extra={"HEFESTO_BT_ATIVO_DESDE": "1"},  # daemon de 1970: tudo é mais novo
+            extra={"HEFESTO_BT_ATIVO_DESDE": "1"},
         )
 
         assert "[ OK ]" in proc.stdout, "o valor no disco continua certo"
@@ -479,7 +338,7 @@ class TestOSeloVerdeNaoSaiAntesDoDaemonCarregar:
         proc = _rodar(
             tmp_path,
             _MAIN_CONF["confirm"],
-            extra={"HEFESTO_BT_ATIVO_DESDE": "9999999999"},  # daemon do futuro
+            extra={"HEFESTO_BT_ATIVO_DESDE": "9999999999"},
         )
 
         assert "[ OK ]" in proc.stdout
@@ -487,18 +346,7 @@ class TestOSeloVerdeNaoSaiAntesDoDaemonCarregar:
         assert "RESUMO fails=0 warns=0" in proc.stdout
 
     def test_sem_systemd_que_responda_o_aviso_se_cala(self, tmp_path: Path) -> None:
-        """O defeito que a cura da cura fechou, e que era de PRODUÇÃO.
-
-        `date -d ""` **não falha**: o GNU date devolve meia-noite de hoje
-        (MEDIDO em 06/08/2026). A primeira escrita desta guarda confiava num
-        `|| echo 0` que nunca disparava, então em toda máquina onde o
-        `bluetooth.service` não reporta `ActiveEnterTimestamp` — inativo,
-        mascarado, container sem systemd — o `main.conf` era comparado contra
-        meia-noite, e o aviso saía em FALSO para qualquer arquivo tocado no dia.
-
-        O `systemctl` da bancada é exatamente esse caso: responde `is-active` e
-        cala no resto.
-        """
+        """O defeito que a cura da cura fechou, e que era de PRODUÇÃO."""
         proc = _rodar(tmp_path, _MAIN_CONF["confirm"])
 
         assert "[ OK ] " in proc.stdout

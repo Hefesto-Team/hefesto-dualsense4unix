@@ -1,77 +1,5 @@
 #!/usr/bin/env python3
-"""censo_features.py — lê os feature reports de cada controle, cabo x rádio.
-
-A PERGUNTA QUE ELE RESPONDE
-----------------------------
-*Cada feature report é o MESMO byte a byte no cabo e no rádio, ou o transporte
-muda o que o aparelho conta de si?*
-
-E, de tabela, uma segunda pergunta que a casa carregava errada: *quantos feature
-reports "ninguém nunca leu"?* Em 15/08/2026 os do rádio foram lidos nos quatro
-controles, com retry e validação de id. A linha de índice que fala em "catorze
-feature reports que ninguém nunca leu" está derrubada por medição.
-
-NÃO EXISTE "A LISTA DOS FEATURE REPORTS DO DUALSENSE" (medido 15/08/2026)
---------------------------------------------------------------------------
-Existe **uma por transporte**, e nenhuma é subconjunto da outra. O mesmo
-controle declara 17 feature reports por rádio e 22 no cabo; o rádio tem
-`0xf6` (547 B) e `0xf7`, o cabo tem `0x0a`, `0x0c`, `0x21`, `0x84`, `0x85`,
-`0xa0`, `0xe0`, e até um id comum como `0xf5` muda de tamanho (8 B no rádio,
-4 B no cabo).
-
-Isso é uma armadilha real, e este instrumento já caiu nela: a primeira versão
-tirava a lista de reports do PRIMEIRO aparelho e a aplicava a todos, de modo
-que os reports exclusivos do outro transporte nunca eram pedidos. O erro só
-aparece com os dois transportes na mesa **ao mesmo tempo** — que é precisamente
-o que o desenho de ensaio 2+2 existe para pegar. Hoje ele usa a UNIÃO dos
-descritores e imprime, antes de ler qualquer coisa, quem declara o quê.
-
-AS TRÊS COISAS QUE ESTE INSTRUMENTO SABE E QUE CUSTARAM CARO
--------------------------------------------------------------
-1. **Por rádio, o `GET_FEATURE` falha por TIMEOUT, não por erro.** O pedido sai
-   pelo canal de controle L2CAP e bate no `REPORT_REQ_TIMEOUT` de 3 s do BlueZ.
-   Cada falha custa ~3,2-3,7 s — essa é a assinatura, e é como se reconhece o
-   caso. **A cura é REPETIR**: em 15/08/2026, dois dos quatro controles
-   responderam na 1ª tentativa e um precisou de 5. É a mesma medição que
-   justifica o `feature_retries` do DKMS desta casa.
-
-2. **O aparelho pode devolver o report ERRADO.** Um controle respondeu com id
-   `0x80` a um pedido de `0x20` — resposta TROCADA, não erro; o ioctl retornou
-   sucesso. Por isso `buf[0] == report_id` é **obrigatório**: sem essa checagem
-   se parseia lixo com convicção.
-
-3. **Os tamanhos vêm do `report_descriptor`, nunca de chute.** O parser em
-   `comum.tamanhos_do_descritor` foi conferido contra os 17 valores conhecidos e
-   bate item a item, `0xf6` de 547 bytes incluído.
-
-O DAEMON NÃO PRECISA ESTAR PARADO (corrigido em 15/08/2026)
-------------------------------------------------------------
-Este bloco dizia o contrário, e era falso. Com o daemon vivo, o
-`hefesto-hidraw-broker` deixa mesmo o hidraw do controle FÍSICO em
-`0600 root:root`, de propósito, para esconder o aparelho do jogo — mas este
-instrumento não abre pelo `os.open`: ele pede o descritor ao broker
-(`comum.abrir_no_hidraw`, usado em `diagnostico_de_acesso` e na leitura), e o
-broker o empresta por SCM_RIGHTS. MEDIDO em 15/08/2026, 17h32: o censo rodou com
-o daemon VIVO e leu os quatro controles, os dois do cabo e os dois do rádio
-(bruto em `docs/data/ensaios-brutos/2026-08-15-D-32-familia-f0-f7.txt`).
-
-O que continua verdade é a parte que era sobre HONESTIDADE do instrumento: se a
-porta fechar mesmo, ele não imprime "o controle não respondeu" — que é uma
-afirmação sobre o aparelho —, ele nomeia o broker.
-
-A COR DO CONTROLE, E POR QUE ELA NÃO SAI DAQUI
------------------------------------------------
-A cor mora nos caracteres 5 e 6 do serial de fábrica, que se lê no `0x81` —
-**mas só depois de um `SET_FEATURE 0x80`**, que é ESCRITA. Nesta rodada nada se
-escreve no aparelho. Com `--mostrar-comando-da-cor` o instrumento imprime o
-comando exato e para, para a decisão de escrever ser dela.
-
-USO
-    censo_features.py                      # lê todos os físicos que achar
-    censo_features.py --tentativas 8       # mais paciência com o rádio
-    censo_features.py --so 0x20 --so 0x22  # só alguns reports
-    censo_features.py --mostrar-comando-da-cor
-"""
+"""censo_features.py — lê os feature reports de cada controle, cabo x rádio."""
 
 from __future__ import annotations
 
@@ -100,9 +28,6 @@ from comum import (
     tamanhos_do_descritor,
 )
 
-# HIDIOCGFEATURE: _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x07, tamanho).
-# Montado à mão de propósito — não há dependência nova aqui, e o número mágico
-# fica visível em vez de escondido atrás de uma lib.
 _IOC_WRITE_LEITURA = 3
 _IOC_TIPO_HID = ord("H")
 _IOC_NR_GETFEATURE = 0x07
@@ -117,7 +42,6 @@ def _hidiocgfeature(tamanho: int) -> int:
     )
 
 
-# A assinatura do timeout do BlueZ. Abaixo disto a falha é outra coisa.
 SEGUNDOS_DE_TIMEOUT_L2CAP = 2.5
 
 # CRC-32 do DualSense: semente 0xA3 no primeiro byte, IEEE 802.3 no resto.
@@ -144,10 +68,6 @@ class Leitura:
         self.crc: str = "-"
         self.definitivo = False
         self.sumiu = False
-        #: Por qual porta o nó foi aberto (broker ou `open()` direto). Fica na
-        #: leitura, e não só no cabeçalho, porque numa mesa 2+2 os dois braços
-        #: podem entrar por portas diferentes — o vpad é recusado pelo broker
-        #: de propósito, e cai no `open()`.
         self.porta = ""
 
     @property
@@ -156,14 +76,7 @@ class Leitura:
 
 
 def como_abre(caminho: str) -> tuple[str, str]:
-    """`(porta, motivo)` de um nó ESPECÍFICO — abrindo e fechando de verdade.
-
-    Existe porque a pergunta "este nó abre?" mudou de resposta em 15/08/2026.
-    Antes, `os.access()` bastava: quem não podia `open()` não media. Agora o  # (noqa-acento: verbo medir, imperfeito)
-    broker abre o que a permissão do fs nega, e um instrumento que decidisse
-    por `os.access` desistiria de medir um aparelho perfeitamente legível —
-    imprimindo "0 de 4 controles legíveis" com os quatro ao alcance da mão.
-    """
+    """`(porta, motivo)` de um nó ESPECÍFICO — abrindo e fechando de verdade."""
     try:
         no = abrir_no_hidraw(caminho, escrita=False)
     except PortaFechadaError as erro:
@@ -182,26 +95,9 @@ def ler_feature(
     *,
     e_radio: bool = False,
 ) -> Leitura:
-    """Pede um feature report, com retry e validação de id.
-
-    Devolve SEMPRE — a falha vira campo, não exceção, porque uma tabela com
-    buraco silencioso é pior que uma tabela com a palavra "falhou" escrita.
-
-    **Nem toda falha merece retry, e insistir na errada custa tempo à toa.**
-    Medido em 15/08/2026, com os controles no cabo: um report que o descritor
-    DECLARA mas o firmware não implementa devolve `EPIPE` (stall do endpoint)
-    na hora, sempre, nas seis tentativas. Isso é resposta DEFINITIVA do
-    aparelho — "não tenho esse report" — e é categoria diferente do
-    `REPORT_REQ_TIMEOUT` de 3 s do BlueZ, que é o rádio se perdendo e a única
-    coisa que repetir de fato cura. Repetir um `EPIPE` seis vezes só faz o
-    censo demorar seis vezes mais para chegar à mesma conclusão.
-    """
+    """Pede um feature report, com retry e validação de id."""
     leitura = Leitura(report_id, tamanho)
     inicio = time.monotonic()
-    # A PORTA (A-PORTA-QUE-A-CASA-CONSTRUIU-01): broker primeiro, `open()`
-    # depois, e a que foi usada fica gravada na leitura. O `os.open` que estava
-    # aqui colhia `EACCES` em toda a mesa com o co-op ligado — o produto
-    # escondendo o físico do jogo, funcionando como promete.
     try:
         no = abrir_no_hidraw(caminho, escrita=True)
     except PortaFechadaError:
@@ -224,17 +120,10 @@ def ler_feature(
                 escritos = fcntl.ioctl(fd, _hidiocgfeature(tamanho), buffer, True)
             except OSError as erro:
                 if erro.errno == errno.EPIPE:
-                    # Stall: o firmware não implementa este report. Definitivo.
                     leitura.erro = "não implementado (EPIPE)"
                     leitura.definitivo = True
                     break
                 if erro.errno in (errno.ENODEV, errno.ENOENT):
-                    # O controle SUMIU no meio do ensaio. Medido em 15/08/2026:
-                    # um controle de rádio caiu na metade do censo, e as falhas
-                    # passaram a voltar em 0,01 s — o oposto da assinatura de
-                    # ~3 s do timeout L2CAP. Sem esta separação, uma tabela
-                    # inteira de "FALHOU" seria lida como "o aparelho recusa os
-                    # reports", quando o aparelho simplesmente não está mais lá.
                     leitura.erro = "controle DESCONECTOU no meio do ensaio (ENODEV)"
                     leitura.definitivo = True
                     leitura.sumiu = True
@@ -246,7 +135,6 @@ def ler_feature(
                 continue
             recebido = bytes(buffer[:escritos])
             if recebido[0] != report_id:
-                # A resposta TROCADA de 15/08. Não é erro: é outro report.
                 leitura.id_trocado = recebido[0]
                 leitura.erro = f"veio id 0x{recebido[0]:02x} no lugar de 0x{report_id:02x}"
                 continue
@@ -257,18 +145,9 @@ def ler_feature(
         no.fechar()
 
     leitura.segundos = time.monotonic() - inicio
-    # O CRC-32 de semente 0xA3 é o enquadramento do BLUETOOTH. No cabo os quatro
-    # últimos bytes são payload como qualquer outro, e conferi-los ali produz
-    # "difere" em TODOS os reports — um alarme convincente e inteiramente falso,
-    # que é a forma de erro mais cara desta casa. Por isso o CRC só é calculado
-    # no rádio; no cabo a coluna diz que não se aplica, em vez de inventar.
     if leitura.ok and e_radio and len(leitura.dados) >= 5:
         esperado = int.from_bytes(leitura.dados[-4:], "little")
         if esperado == 0:
-            # Trailer zerado: este report não CARREGA CRC. Chamar isso de
-            # "difere" seria alarme falso — e alarme falso convincente é o
-            # defeito mais caro desta casa. Um report todo zero tem os quatro
-            # últimos bytes zero por ser todo zero, não por estar corrompido.
             leitura.crc = "sem trailer"
         else:
             calculado = _crc32_dualsense(bytes([SEMENTE_CRC]) + leitura.dados[:-4])
@@ -301,9 +180,6 @@ def medir(alvos: list[Aparelho], ids: list[int], tentativas: int) -> dict[str, d
         for report_id in ids:
             tamanho = tamanhos.get(report_id)
             if tamanho is None:
-                # Não é falha: este transporte simplesmente não DECLARA o report.
-                # Dizer isso é o ponto — foi assim que se viu que os dois lados
-                # declaram conjuntos diferentes.
                 print(f"      0x{report_id:02x}    -   não declarado neste transporte")
                 continue
             leitura = ler_feature(
@@ -328,15 +204,7 @@ def medir(alvos: list[Aparelho], ids: list[int], tentativas: int) -> dict[str, d
 
 
 def imprimir_o_que_cada_transporte_declara(alvos: list[Aparelho]) -> None:
-    """Quais feature reports cada TRANSPORTE declara — antes de ler qualquer um.
-
-    Esta tabela é o ensaio 2+2 em estado puro: ela sai do `report_descriptor`,
-    de graça, e mostra que cabo e rádio **não expõem o mesmo conjunto**. A
-    primeira versão deste instrumento tirava a lista de reports do PRIMEIRO
-    aparelho e a aplicava a todos — e com isso nunca pedia os reports que só o
-    rádio declara. O erro só aparece com os dois transportes na mesa ao mesmo
-    tempo, que é exatamente o que este desenho de ensaio existe para pegar.
-    """
+    """Quais feature reports cada TRANSPORTE declara — antes de ler qualquer um."""
     por_transporte: dict[str, set[int]] = {}
     for aparelho in alvos:
         declarados = set(tamanhos_do_descritor(aparelho.dir_device)["feature"])
@@ -400,9 +268,6 @@ def imprimir_tabela_cabo_x_radio(
             continue
 
         pior = max(x.tentativas for x in boas)
-        # O CRC só existe no rádio, então só o veredito do rádio entra na coluna.
-        # Misturar o "n/a (cabo)" ali produzia células como "confere/n/a (cabo)",
-        # que obrigam quem lê a decidir qual metade vale.
         crcs = {x.crc for x in boas if x.crc != "n/a (cabo)"} or {"n/a (cabo)"}
         conteudo = _classificar(boas[0].dados)
 
@@ -533,11 +398,6 @@ def main() -> int:
             "cada feature report é o mesmo byte a byte no cabo e no rádio?",
             bibliotecas=["fcntl", "array", "zlib"],
             escreve_no_aparelho=False,
-            # CORRIGIDO em 15/08/2026: era `True`, e o cabeçalho mandava parar o
-            # daemon antes de medir. Falso — a leitura entra por
-            # `comum.abrir_no_hidraw`, e o broker empresta o fd por SCM_RIGHTS.
-            # Medido às 17h32 com o daemon VIVO: os quatro controles responderam
-            # (docs/data/ensaios-brutos/2026-08-15-D-32-familia-f0-f7.txt).
             daemon_precisa_parar=False,
         )
     )
@@ -555,11 +415,6 @@ def main() -> int:
         print(resumo("nenhum DualSense físico encontrado — nada medido."))
         return 1
 
-    # A coluna "porta" nasceu em 15/08/2026 no lugar de uma coluna "acesso" que
-    # só sabia dizer `os.access`. Ela é o par da linha de biblioteca: quem lê a
-    # tabela precisa saber por onde cada aparelho foi alcançado, porque cabo e
-    # rádio podem entrar por portas diferentes, e comparar dois braços que
-    # entraram por portas diferentes sem dizer isso é o erro que o 2+2 evita.
     cabecalho = ["aparelho", "hidraw", "transporte", "permissão do fs", "porta"]
     portas = {a.hidraw: como_abre(a.caminho_hidraw) for a in alvos}
     linhas = [
@@ -591,9 +446,6 @@ def main() -> int:
 
     imprimir_o_que_cada_transporte_declara(alvos)
 
-    # A UNIÃO dos declarados por todos os aparelhos, não os do primeiro: cabo e
-    # rádio expõem conjuntos diferentes, e tirar a lista de um só deixaria os
-    # reports exclusivos do outro sem nunca serem pedidos.
     disponiveis: set[int] = set()
     for aparelho in alvos:
         disponiveis.update(tamanhos_do_descritor(aparelho.dir_device)["feature"])

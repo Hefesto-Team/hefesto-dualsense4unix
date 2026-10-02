@@ -45,26 +45,16 @@ from hefesto_dualsense4unix.broker.hidraw_broker import (
 
 UID = os.getuid()
 ACL = "system.posix_acl_access"
-#: Faixas sintéticas da casa para fixture: nunca endereço real mascarado.
 MAC_DO_ADAPTADOR = "aa:bb:cc:00:00:01"
 
-#: As conexões: o daemon (a lease que vive enquanto ele vive), o Modo Nativo e
-#: um segundo daemon em takeover.
 DAEMON = 7
 NATIVO = 3
 OUTRA = 8
 
-#: A cena de 29/09: os quatro físicos pelo rádio que seguiram na mesa, e o
-#: `hidraw6` do vermelho, o P1 que saiu.
 OS_QUATRO = ("hidraw5", "hidraw7", "hidraw9", "hidraw10")
 O_DO_P1 = "hidraw6"
 
 EVENTO = "lease_do_aparelho_que_saiu"
-
-
-# ---------------------------------------------------------------------------
-# A mesa de mentira: aparelhos que nascem, saem e trocam de nome
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -207,11 +197,7 @@ class Mesa:
 
 
 class _StatQueAceitaArquivo(ModuleType):
-    """O módulo `stat` com UMA troca: o `S_ISCHR` aceita arquivo comum.
-
-    Só o `hidraw_broker` o recebe, e só enquanto o teste vive (o molde da
-    `test_o_broker_nao_reescreve_o_que_nao_mudou.py`).
-    """
+    """O módulo `stat` com UMA troca: o `S_ISCHR` aceita arquivo comum."""
 
     def __init__(self) -> None:
         super().__init__("stat")
@@ -225,11 +211,7 @@ class _StatQueAceitaArquivo(ModuleType):
 
 
 class _Gravador(FsAclOps):
-    """O `FsAclOps` de produção, anotando cada pedido de escrita.
-
-    Anota antes de delegar: o que importa à régua 5 é se o broker PEDIU ao fs,
-    e não se o `_pin` recusou depois.
-    """
+    """O `FsAclOps` de produção, anotando cada pedido de escrita."""
 
     _e_char_device = staticmethod(stat.S_ISREG)
 
@@ -330,16 +312,9 @@ def _a_cena_de_2909(mesa: Mesa) -> tuple[BrokerState, _Gravador, Diario, Aparelh
     return st, ops, diario, vermelho
 
 
-# ---------------------------------------------------------------------------
-# 1. A cena de 29/09
-# ---------------------------------------------------------------------------
-
-
 class TestACenaDe2909:
     def test_o_status_devolve_os_quatro_e_o_diario_diz_quem_saiu(self, mesa: Mesa) -> None:
-        """MORDIDA: tire a chamada da poda do `handle_line`, e o `status` volta
-        a ter cinco. MORDIDA 2: compare o `dev` do sysfs em vez do pai HID; ele
-        é `0:0` antes e depois, e o `status` volta a ter cinco."""
+        """MORDIDA: tire a chamada da poda do `handle_line`, e o `status` volta"""
         st, _ops, diario, vermelho = _a_cena_de_2909(mesa)
 
         assert _escondidos(st) == sorted(mesa.no(b) for b in OS_QUATRO)
@@ -400,15 +375,9 @@ class TestACenaDe2909:
         assert podas[0]["agora"] == ("-" if herdeiro == "ninguem" else mesa.aparelhos[base].hid)
 
 
-# ---------------------------------------------------------------------------
-# 2. O nome some
-# ---------------------------------------------------------------------------
-
-
 class TestONomeSome:
     def test_o_nome_sem_diretorio_sai_do_status(self, mesa: Mesa) -> None:
-        """MORDIDA: faça o `pai_hid_do_no` devolver `None` para o diretório
-        ausente (sumido lido como mudo), e a entrada fica."""
+        """MORDIDA: faça o `pai_hid_do_no` devolver `None` para o diretório"""
         vermelho = mesa.nascer(O_DO_P1, "radio", 1)
         st, _ops, diario = _estado(mesa)
         _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no(O_DO_P1)})
@@ -421,10 +390,7 @@ class TestONomeSome:
     def test_o_eof_nao_pede_nada_ao_fs_pelo_nome_que_sumiu(
         self, mesa: Mesa, no_nasce_fechado: bool
     ) -> None:
-        """A poda roda também no EOF: sem ela, o `_repouso` pedia `hide` (ou
-        `restore`, no mundo histórico) e `fechar_entradas` por um nome que já
-        não é de ninguém. MORDIDA: tire a poda do `on_conn_closed`, e o
-        gravador anota o `hidraw6`."""
+        """A poda roda também no EOF: sem ela, o `_repouso` pedia `hide` (ou"""
         mesa.nascer("hidraw5", "radio", 2)
         mesa.nascer(O_DO_P1, "radio", 1)
         st, ops, _diario = _estado(mesa, no_nasce_fechado=no_nasce_fechado)
@@ -440,19 +406,9 @@ class TestONomeSome:
         assert st.hidden == {}
 
 
-# ---------------------------------------------------------------------------
-# 3. O mesmo controle volta com o mesmo nome e outro <seq>
-# ---------------------------------------------------------------------------
-
-
 class TestOMesmoControleVolta:
     def test_a_lease_velha_sai_e_a_nova_lembra_o_pai_novo(self, mesa: Mesa) -> None:
-        """O vermelho às 02:49:21: saiu e voltou com o mesmo nome.
-
-        MORDIDA: rode a poda DEPOIS do `cmd`. O `hide` acha o nome já no
-        `held` da conexão e não grava o pai novo; a poda de depois o tira, e o
-        `status` sai sem o nome que acabou de ser escondido.
-        """
+        """O vermelho às 02:49:21: saiu e voltou com o mesmo nome."""
         antes = mesa.nascer(O_DO_P1, "radio", 1)
         st, _ops, diario = _estado(mesa)
         _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no(O_DO_P1)})
@@ -472,15 +428,9 @@ class TestOMesmoControleVolta:
         assert _escondidos(st) == [mesa.no(O_DO_P1)], "a lease nova não pode cair"
 
 
-# ---------------------------------------------------------------------------
-# 4. Nada muda, nada sai
-# ---------------------------------------------------------------------------
-
-
 class TestNadaMudaNadaSai:
     def test_duas_leases_do_mesmo_aparelho_seguem_contadas(self, mesa: Mesa) -> None:
-        """MORDIDA: trate todo pai como mudado (a poda que esquece tudo), e o
-        nome sai do `status` com as duas leases vivas."""
+        """MORDIDA: trate todo pai como mudado (a poda que esquece tudo), e o"""
         mesa.nascer("hidraw5", "radio", 2)
         st, _ops, diario = _estado(mesa)
         _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no("hidraw5")})
@@ -497,20 +447,9 @@ class TestNadaMudaNadaSai:
         assert _podas(diario) == []
 
 
-# ---------------------------------------------------------------------------
-# 5. A poda não escreve
-# ---------------------------------------------------------------------------
-
-
 class TestAPodaNaoEscreve:
     def test_a_poda_do_nome_herdado_pelo_pad_nao_pede_nada_ao_fs(self, mesa: Mesa) -> None:
-        """O pad é o controle que o jogo vê: nada nele muda.
-
-        MORDIDA: solte a lease podada pelo `_repouso` (o jeito do `restore`), e
-        o gravador anota o `hide` do `_fs_fechar`, mesmo com o `_pin` recusando
-        o pad depois. O modo do arquivo sozinho não morde, porque o `_pin` já o
-        protege; quem morde é o gravador.
-        """
+        """O pad é o controle que o jogo vê: nada nele muda."""
         mesa.nascer(O_DO_P1, "radio", 1)
         st, ops, diario = _estado(mesa)
         _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no(O_DO_P1)})
@@ -526,18 +465,9 @@ class TestAPodaNaoEscreve:
         assert antes[mesa.dev / O_DO_P1] == (0o660, encode_access_acl(UID))
 
 
-# ---------------------------------------------------------------------------
-# 6. A exposição e os nós de entrada seguem
-# ---------------------------------------------------------------------------
-
-
 class TestAExposicaoSegue:
     def test_o_hide_do_fisico_novo_com_o_nome_nao_e_adiado(self, mesa: Mesa) -> None:
-        """O Modo Nativo expôs um físico que saiu; outro físico chega com o nome.
-
-        MORDIDA: pode só o `hidden`, e o `hide` volta `state: "exposed"`
-        (`hide_adiado_por_exposicao`) com o nome no `entradas_expostas`.
-        """
+        """O Modo Nativo expôs um físico que saiu; outro físico chega com o nome."""
         mesa.nascer(O_DO_P1, "radio", 1)
         st, _ops, diario = _estado(mesa)
         exposto = _pede(st, NATIVO, {"cmd": "expose", "node": mesa.no(O_DO_P1), "entradas": True})
@@ -553,11 +483,6 @@ class TestAExposicaoSegue:
         assert status["hidden"] == [mesa.no(O_DO_P1)]
         assert not any(evento == "hide_adiado_por_exposicao" for evento, _ in diario)
         assert mesa.no(O_DO_P1) not in st.expostos_by_conn.get(NATIVO, set())
-
-
-# ---------------------------------------------------------------------------
-# 7. Sysfs mudo não poda
-# ---------------------------------------------------------------------------
 
 
 class _Mudavel(_Gravador):
@@ -616,23 +541,15 @@ class TestSysfsMudoNaoPoda:
         assert _podas(diario) == []
 
 
-# ---------------------------------------------------------------------------
-# 8. O dono da pergunta
-# ---------------------------------------------------------------------------
-
-
 class TestODonoDaPergunta:
     def test_o_broker_de_producao_sabe_perguntar(self) -> None:
-        """Régua de dono, e não da palavra: sem ela, um dublê sem a pergunta
-        esconderia a poda da produção. MORDIDA: renomeie o método no
-        `FsAclOps`; esta reprova junto com a 1."""
+        """Régua de dono, e não da palavra: sem ela, um dublê sem a pergunta"""
         st = BrokerState(allowed_uid=UID)
         assert isinstance(st._ops, FsAclOps)
         assert callable(getattr(st._ops, "pai_hid_do_no", None))
 
     def test_as_tres_respostas(self, mesa: Mesa) -> None:
-        """O pai HID quando o `device` resolve; `""` (sumido) sem o diretório
-        do nome; `None` (mudo) com o diretório e a leitura falhando."""
+        """O pai HID quando o `device` resolve; `""` (sumido) sem o diretório"""
         aparelho = mesa.nascer("hidraw5", "radio", 2)
         ops = FsAclOps(sys_class_hidraw=str(mesa.sys_hidraw))
 
@@ -649,11 +566,6 @@ class TestODonoDaPergunta:
         assert len(_escondidos(st)) == 5
 
 
-# ---------------------------------------------------------------------------
-# O órfão: a lease morta com o restore falho passa pela mesma poda
-# ---------------------------------------------------------------------------
-
-
 class _QueFalhaAoFechar(_Gravador):
     """O `FsAclOps` de produção com o fechar falhando quando a régua manda."""
 
@@ -668,10 +580,7 @@ class _QueFalhaAoFechar(_Gravador):
 
 class TestOOrfao:
     def test_o_orfao_do_aparelho_que_saiu_sai_do_status(self, mesa: Mesa) -> None:
-        """O EOF com o fs falhando deixa o nó no `hidden` sem lease (a lição
-        2: nunca esquecer um `0600`). Se o aparelho saiu, o `0600` dele não
-        existe mais, e o órfão sai como qualquer lease. MORDIDA: faça a poda
-        olhar só os nomes que alguma conexão segura, e o órfão fica."""
+        """O EOF com o fs falhando deixa o nó no `hidden` sem lease (a lição"""
         mesa.nascer(O_DO_P1, "radio", 1)
         ops = _QueFalhaAoFechar(
             sys_class_hidraw=str(mesa.sys_hidraw),
@@ -693,22 +602,12 @@ class TestOOrfao:
         assert [p["node"] for p in _podas(diario)] == [mesa.no(O_DO_P1)]
 
 
-# ---------------------------------------------------------------------------
-# 9. O caminho que já funcionava: o restore do secundário que saiu
-# ---------------------------------------------------------------------------
-
-
 class TestOCaminhoQueJaFuncionava:
     @pytest.mark.parametrize("herdeiro", ["ninguem", "pad"])
     def test_o_restore_do_dono_responde_gone_e_a_poda_nao_fala(
         self, mesa: Mesa, herdeiro: str
     ) -> None:
-        """O `_teardown_player` do co-op pede o `restore` do nome do secundário
-        que saiu (02:17:45, `restored … state=gone`). O pedido explícito do
-        dono sobre o próprio nome vence a poda: a resposta segue a de sempre, e
-        o diário não ganha a linha da poda. MORDIDA: tire a exceção do pedido
-        que solta o próprio nome, e a resposta vira
-        `reject_not_physical_dualsense`."""
+        """O `_teardown_player` do co-op pede o `restore` do nome do secundário"""
         mesa.nascer("hidraw7", "cabo", 3)
         st, _ops, diario = _estado(mesa)
         _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no("hidraw7")})
@@ -729,12 +628,7 @@ class TestOCaminhoQueJaFuncionava:
     def test_o_pedido_de_outra_conexao_antes_do_restore_nao_muda_a_resposta(
         self, mesa: Mesa, herdeiro: str
     ) -> None:
-        """A corrida: entre a saída do secundário e o `restore` do teardown, um
-        pedido de OUTRA conexão (o `status` do doctor, o `open` de um leitor)
-        roda a poda antes. A resposta ao dono segue `gone`, e nada vai ao fs.
-        MORDIDA: tire o `gone` do nome podado no `_cmd_restore`, e a resposta
-        vira `reject_not_physical_dualsense` (o validador recusa o nome que
-        sumiu ou que o pad herdou)."""
+        """A corrida: entre a saída do secundário e o `restore` do teardown, um"""
         mesa.nascer("hidraw7", "cabo", 3)
         st, ops, diario = _estado(mesa)
         _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no("hidraw7")})
@@ -776,11 +670,7 @@ class TestOCaminhoQueJaFuncionava:
     def test_o_restore_all_do_dono_conta_o_nome_que_saiu(
         self, mesa: Mesa, corrida: bool
     ) -> None:
-        """O `restore_all` (o teardown, o Modo Nativo) solta os nomes da própria
-        lease, e o que saiu entra no `restored` como `gone`, com ou sem um
-        pedido de outra conexão no meio. MORDIDA: tire o `restore_all` da
-        exceção do pedido do dono (sem corrida), ou os nomes podados do laço
-        do `restore_all` (com corrida), e o nome some do `restored`."""
+        """O `restore_all` (o teardown, o Modo Nativo) solta os nomes da própria"""
         mesa.nascer("hidraw5", "radio", 2)
         mesa.nascer("hidraw7", "cabo", 3)
         st, _ops, diario = _estado(mesa)
@@ -798,9 +688,7 @@ class TestOCaminhoQueJaFuncionava:
         assert _escondidos(st) == []
 
     def test_o_unexpose_do_dono_nao_passa_pela_poda(self, mesa: Mesa) -> None:
-        """O `unexpose` do Modo Nativo sobre o próprio nome, depois de o
-        físico sair, solta a exposição sem a linha da poda. MORDIDA: tire o
-        `unexpose` da exceção do pedido do dono, e o diário ganha a linha."""
+        """O `unexpose` do Modo Nativo sobre o próprio nome, depois de o"""
         mesa.nascer("hidraw7", "cabo", 3)
         st, _ops, diario = _estado(mesa)
         _pede(st, NATIVO, {"cmd": "expose", "node": mesa.no("hidraw7"), "entradas": True})

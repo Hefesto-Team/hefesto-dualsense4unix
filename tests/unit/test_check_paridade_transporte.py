@@ -1,17 +1,4 @@
-"""Testes do censo do mapa de canais — a camada 0 do portão (PARIDADE-PORTAO-01).
-
-Um por regra de reprovação, todos contra CSV de mentira em `tmp_path`, mais um
-que roda contra a ÁRVORE REAL e confere o instrumento contra uma contagem
-independente: nesta casa o instrumento já mentiu mais que o produto, e uma
-régua que ninguém confere é a mesma doença que o portão existe para curar.
-
-PROVA DE QUE MORDEM (arrancar, ver reprovar, devolver) — feita em 11/08/2026,
-uma cura de cada vez, com este arquivo e o `test_portao_do_mapa_esta_ligado.py`
-rodando juntos. Dez arrancamentos no censo, quatro no que o liga: TODOS
-reprovaram, cada um derrubando só os testes da sua própria regra, e com as
-curas devolvidas a rodada de controle voltou inteira verde. O que cada
-arrancamento derrubou está escrito na docstring do teste correspondente.
-"""
+"""Testes do censo do mapa de canais — a camada 0 do portão (PARIDADE-PORTAO-01)."""
 from __future__ import annotations
 
 import ast
@@ -26,14 +13,7 @@ from typing import Any
 import pytest
 
 def _specs_de(raiz: Path) -> Path:
-    """O caminho do `specs.html` numa árvore de brinquedo, com a pasta criada.
-
-    O caminho é o do dono, `SPECS_RELATIVO` no portão — lido, nunca digitado: a
-    página já mudou de pasta duas vezes, e cada mudança digitada em cinco
-    folhas era cinco lugares para esquecer um. A pasta nasce ANTES do
-    `write_text`, senão o erro é um `FileNotFoundError` de diretório, que não
-    diz nada sobre o que se testa. As outras folhas do mapa importam daqui.
-    """
+    """O caminho do `specs.html` numa árvore de brinquedo, com a pasta criada."""
     caminho = raiz / _specs_relativo()
     caminho.parent.mkdir(parents=True, exist_ok=True)
     return caminho
@@ -49,10 +29,6 @@ RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "check_paridade_transporte.py"
 CSV_REAL = RAIZ_REAL / "docs" / "data" / "mapa-controles.csv"
 
-#: Cabeçalho mínimo: as colunas exigidas mais um par `cabo_*`/`radio_*` de cada
-#: sufixo que as regras leem. De propósito NÃO é o cabeçalho real — o portão
-#: descobre os pares lendo o arquivo, e um teste que copiasse as 45 colunas de
-#: hoje estaria fixando uma contagem que muda toda leva.
 CABECALHO = [
     "chave",
     "controle",
@@ -63,18 +39,8 @@ CABECALHO = [
     "radio_de_onde_sei",
     "cabo_canal",
     "radio_canal",
-    # O par do degrau entrou em 12/08/2026, quando a regra 6 (`grau-sem-ensaio`)
-    # passou a exigir ensaio no caderno de bancada para os dois degraus altos.
-    # Ele é EXIGIDO no cabeçalho, e não apenas lido: sem a coluna, a régua da
-    # regra dura morreria em silêncio. Vazio aqui, que é o que estes casos
-    # querem — nenhum deles fala de grau.
     "cabo_ate_onde_foi",
     "radio_ate_onde_foi",
-    # PONTE-NAO-DECLARADA-01 (20/08/2026): a régua da regra 15, e EXIGIDA no
-    # cabeçalho pelo mesmo motivo do par acima — sem a coluna,
-    # `linha.get("ponte_alcanca")` devolveria None em toda linha e a regra dura
-    # aprovaria o mapa inteiro sem dizer uma palavra. Vazia aqui, que é o que
-    # estes casos querem: nenhum deles fala de ponte, e nenhum é `uhid` forte.
     "ponte_alcanca",
     "teste_que_morde",
     "provado_em",
@@ -83,7 +49,6 @@ CABECALHO = [
     "id",
 ]
 
-#: Um teste de verdade, na árvore falsa, para a regra 2 ter o que indexar.
 TESTE_FALSO = '''\
 """Arquivo de teste de mentira, só para o índice por AST ter o que ler."""
 
@@ -103,14 +68,7 @@ class TestOEnvelope:
 
 
 def modulo_do_censo() -> Any:
-    """Importa o script como módulo, para os testes que precisam da constante.
-
-    O registro em `sys.modules` ANTES do `exec_module` não é enfeite: sem ele o
-    `@dataclass` do módulo estoura `AttributeError: 'NoneType' object has no
-    attribute '__dict__'` ao resolver a anotação em string do `from __future__
-    import annotations`, porque o `dataclasses` procura o módulo pelo nome e não
-    o acha. Medido aqui em 11/08.
-    """
+    """Importa o script como módulo, para os testes que precisam da constante."""
     spec = importlib.util.spec_from_file_location("censo_do_mapa", SCRIPT)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
@@ -192,10 +150,6 @@ def linha_forte(**mudancas: str) -> dict[str, str]:
     return base
 
 
-# --------------------------------------------------------------------------
-# O caso legítimo. Um portão que reprova tudo é tão inútil quanto um que não
-# reprova nada — este teste é o contrapeso de todos os de baixo.
-# --------------------------------------------------------------------------
 def test_mapa_com_afirmacao_forte_e_teste_que_morde_passa(tmp_path: Path) -> None:
     caminho = monta_arvore(tmp_path, [linha_forte()])
     processo = rodar(caminho, tmp_path)
@@ -204,16 +158,8 @@ def test_mapa_com_afirmacao_forte_e_teste_que_morde_passa(tmp_path: Path) -> Non
     assert "Resumo do censo" in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# REGRA 1 — sem-mordida
-# --------------------------------------------------------------------------
 def test_afirmacao_forte_sem_teste_que_morda_reprova(tmp_path: Path) -> None:
-    """MORDIDA MEDIDA: trocado, no script, o `if not mordidas:` da regra 1 por
-    `if False:` (a afirmação forte deixa de cobrar rede). Reprovaram DOIS
-    testes: este, e o `test_o_censo_conta_o_mesmo_que_uma_regua_independente`,
-    que viu a régua achar zero onde a contagem à mão, feita contra o mapa real
-    na hora, achava muitas. Cura devolvida.
-    """
+    """MORDIDA MEDIDA: trocado, no script, o `if not mordidas:` da regra 1 por"""
     caminho = monta_arvore(tmp_path, [linha_forte(teste_que_morde="")])
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1
@@ -237,9 +183,6 @@ def test_afirmacao_fraca_sem_teste_nao_reprova(tmp_path: Path) -> None:
     assert processo.returncode == 0, processo.stdout
 
 
-# --------------------------------------------------------------------------
-# REGRA 2 — mordida-fantasma
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("alvo", "pedaco_esperado"),
     [
@@ -261,18 +204,7 @@ def test_afirmacao_fraca_sem_teste_nao_reprova(tmp_path: Path) -> None:
 def test_mordida_que_o_pytest_nao_coleta_reprova(
     tmp_path: Path, alvo: str, pedaco_esperado: str
 ) -> None:
-    """MORDIDA MEDIDA: posto um `return None` na primeira linha de
-    `motivo_de_o_pytest_nao_coletar` (todo alvo passa a valer). Os SETE casos
-    deste parametrize reprovaram de uma vez, e nenhum outro teste caiu junto.
-    Cura devolvida.
-
-    Os sete cobrem as formas de mentira que a coluna aceita sem piscar: arquivo
-    inexistente, função inexistente, função que existe mas o pytest não coleta
-    (não começa com `test`), arquivo que existe mas está fora da convenção de
-    nome, método inexistente dentro de classe que existe, classe inexistente, e
-    prosa em vez de id de nó — que é a forma mais provável de alguém preencher
-    a coluna com boa intenção e rede nenhuma.
-    """
+    """MORDIDA MEDIDA: posto um `return None` na primeira linha de"""
     caminho = monta_arvore(tmp_path, [linha_forte(teste_que_morde=alvo)])
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1, processo.stdout
@@ -299,12 +231,7 @@ def test_alvos_aceitos_pelo_pytest_passam(tmp_path: Path) -> None:
 def test_sem_pasta_de_testes_a_regra_dois_se_desliga_em_vez_de_acusar_tudo(
     tmp_path: Path,
 ) -> None:
-    """Índice vazio não pode virar "todo alvo é fantasma".
-
-    É a mesma decisão do `validar-referencias-docs.py`: um gate que reprova
-    tudo quando tropeça é pior que gate nenhum. E o desligamento é DITO, não
-    calado — o resumo imprime a regra desligada.
-    """
+    """Índice vazio não pode virar "todo alvo é fantasma"."""
     caminho = monta_arvore(tmp_path, [linha_forte()])
     for arquivo in sorted((tmp_path / "tests").rglob("*.py")):
         arquivo.unlink()
@@ -314,13 +241,8 @@ def test_sem_pasta_de_testes_a_regra_dois_se_desliga_em_vez_de_acusar_tudo(
     assert "mordida-fantasma" in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# REGRA 3 — prova-vencida
-# --------------------------------------------------------------------------
 def test_prova_vencida_reprova(tmp_path: Path) -> None:
-    """MORDIDA MEDIDA: trocado `if vence < hoje:` por `if False:`. Reprovou
-    este teste, e só ele — a regra é isolada das outras. Cura devolvida.
-    """
+    """MORDIDA MEDIDA: trocado `if vence < hoje:` por `if False:`. Reprovou"""
     caminho = monta_arvore(
         tmp_path, [linha_forte(provado_em="2026-07-01", validade_dias="7")]
     )
@@ -339,11 +261,7 @@ def test_prova_dentro_do_prazo_passa(tmp_path: Path) -> None:
 
 
 def test_as_duas_colunas_vazias_nao_reprovam(tmp_path: Path) -> None:
-    """A política de validade ainda é decisão dela (seção 8 do índice da sprint).
-
-    Enquanto ela não existir, cobrar prazo seria castigar quem não prometeu
-    nada — e portão que castiga a honestidade é pior que portão nenhum.
-    """
+    """A política de validade ainda é decisão dela (seção 8 do índice da sprint)."""
     caminho = monta_arvore(tmp_path, [linha_forte(provado_em="", validade_dias="")])
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
@@ -377,14 +295,8 @@ def test_validade_sem_data_e_aviso_nao_falha(tmp_path: Path) -> None:
     assert "AVISO validade-sem-data" in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# REGRA 6 — assimetria não declarada (AVISO hoje, FALHA quando ela mandar)
-# --------------------------------------------------------------------------
 def test_assimetria_nao_declarada_avisa_e_nao_derruba(tmp_path: Path) -> None:
-    """MORDIDA MEDIDA: apagada a chamada de `_regra_da_assimetria` no laço do
-    censo. Reprovaram TRÊS testes — este, o do lado mudo e o da promoção pela
-    constante. Cura devolvida.
-    """
+    """MORDIDA MEDIDA: apagada a chamada de `_regra_da_assimetria` no laço do"""
     caminho = monta_arvore(tmp_path, [linha_forte(radio_aciona="não")])
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
@@ -417,11 +329,7 @@ def test_assimetria_declarada_silencia_o_aviso(tmp_path: Path) -> None:
 
 
 def test_a_promocao_da_assimetria_e_uma_constante_que_funciona(tmp_path: Path) -> None:
-    """A promoção prometida no cabeçalho tem de ser real, não decorativa.
-
-    Sem este teste, `ASSIMETRIA_REPROVA` seria mais uma cura escrita e nunca
-    ligada — que é o defeito mais caro desta casa.
-    """
+    """A promoção prometida no cabeçalho tem de ser real, não decorativa."""
     censo = modulo_do_censo()
     caminho = monta_arvore(tmp_path, [linha_forte(radio_aciona="não")])
 
@@ -431,24 +339,8 @@ def test_a_promocao_da_assimetria_e_uma_constante_que_funciona(tmp_path: Path) -
     assert niveis == {censo.FALHA}
 
 
-# --------------------------------------------------------------------------
-# REGRA 4 — integridade do CSV
-# --------------------------------------------------------------------------
 def test_coluna_que_some_do_cabecalho_reprova(tmp_path: Path) -> None:
-    """MORDIDA MEDIDA: trocado `if faltando:` por `if False:`. Reprovaram este
-    teste e o do par de transporte, e o INTERESSANTE é que reprovaram de
-    maneiras diferentes — que é a razão de os dois existirem:
-
-      - aqui o script ainda saiu 1, mas por `sem-mordida`: sem a coluna
-        `teste_que_morde` no cabeçalho, TODA célula vira "afirmação sem rede".
-        O portão acusava a coisa certa pelo motivo errado, e o
-        `assert "integridade" in stdout` foi o que pegou isso;
-      - no do par de transporte ele EXPLODIU: `KeyError: 'radio_aciona'`,
-        stdout vazio, traceback no lugar de relatório.
-
-    Cura devolvida. Reprovar e explodir não são a mesma coisa, e a conferência
-    de cabeçalho existe para o portão nunca fazer o segundo.
-    """
+    """MORDIDA MEDIDA: trocado `if faltando:` por `if False:`. Reprovaram este"""
     cabecalho = [c for c in CABECALHO if c != "teste_que_morde"]
     caminho = monta_arvore(tmp_path, [linha_forte()], cabecalho=cabecalho)
     processo = rodar(caminho, tmp_path)
@@ -467,11 +359,7 @@ def test_par_de_transporte_que_some_reprova(tmp_path: Path) -> None:
 
 
 def test_id_duplicado_reprova(tmp_path: Path) -> None:
-    """MORDIDA MEDIDA: trocado `elif ident in vistos:` por `elif False:`.
-    Reprovou só este teste. O mesmo com `if not ident:` derrubou só o de `id`
-    vazio. Curas devolvidas. O `id` é a chave que liga o CSV ao `specs.html`:
-    duplicado, ele publica uma linha e esconde a outra.
-    """
+    """MORDIDA MEDIDA: trocado `elif ident in vistos:` por `elif False:`."""
     caminho = monta_arvore(tmp_path, [linha_forte(), linha_forte()])
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1, processo.stdout
@@ -495,16 +383,7 @@ def test_id_vazio_reprova(tmp_path: Path) -> None:
     ],
 )
 def test_valor_fora_do_dominio_reprova(tmp_path: Path, coluna: str, valor: str) -> None:
-    """MORDIDA MEDIDA: desligado o `if valor not in dominio:` do laço que
-    confere `DOMINIO_POR_SUFIXO`. Reprovaram os TRÊS casos de coluna com sufixo
-    (`cabo_canal`, `radio_de_onde_sei`, `cabo_aciona`) e o caso de `existe`
-    continuou VERDE — prova de que as duas conferências são independentes.
-    Desligando a de `existe` (`if existe not in DOMINIO_EXISTE:`), acontece o
-    inverso: cai só o caso de `existe`. Curas devolvidas.
-
-    `cabo_aciona` está na lista porque um valor novo ali desligaria a regra 1
-    e a 6 em silêncio, que é a pior forma de um portão morrer.
-    """
+    """MORDIDA MEDIDA: desligado o `if valor not in dominio:` do laço que"""
     caminho = monta_arvore(tmp_path, [linha_forte(**{coluna: valor})])
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1, processo.stdout
@@ -512,16 +391,8 @@ def test_valor_fora_do_dominio_reprova(tmp_path: Path, coluna: str, valor: str) 
     assert coluna in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# REGRA 5 — mapa não publicado
-# --------------------------------------------------------------------------
 def test_linha_que_nao_chegou_ao_specs_reprova(tmp_path: Path) -> None:
-    """MORDIDA MEDIDA: trocado `if nao_publicados:` por `if False:`. Reprovou
-    só este teste. Cura devolvida.
-
-    Esta regra existe porque `gerar-mapa.py --check` compara MTIME, e no runner
-    mtime é ordem de checkout: lá ele passa sempre. Aqui se compara conteúdo.
-    """
+    """MORDIDA MEDIDA: trocado `if nao_publicados:` por `if False:`. Reprovou"""
     caminho = monta_arvore(tmp_path, [linha_forte()], publicar=False)
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1, processo.stdout
@@ -537,21 +408,8 @@ def test_sem_specs_a_regra_cinco_se_desliga(tmp_path: Path) -> None:
     assert "regra DESLIGADA" in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# A ÁRVORE REAL — a régua conferida contra uma contagem independente
-# --------------------------------------------------------------------------
 def test_o_censo_conta_o_mesmo_que_uma_regua_independente() -> None:
-    """O instrumento mente mais que o produto: esta é a contraprova dele.
-
-    O teste recalcula, com um `csv.DictReader` próprio, quantas células do mapa
-    REAL afirmam `aciona = sim` com `de_onde_sei = medido` sem `teste_que_morde`,
-    e exige que o script tenha reprovado exatamente esse número de vezes por
-    `sem-mordida`. Se a régua começar a enxergar de menos — um sufixo que ela
-    deixe de descobrir, um `strip()` que suma — os dois números divergem aqui,
-    e não daqui a três levas.
-
-    Nenhuma contagem fica ESCRITA: o número é medido nos dois lados na hora.
-    """
+    """O instrumento mente mais que o produto: esta é a contraprova dele."""
     processo = subprocess.run(
         [sys.executable, str(SCRIPT)],
         capture_output=True,
@@ -579,16 +437,6 @@ def test_o_censo_conta_o_mesmo_que_uma_regua_independente() -> None:
     )
 
 
-# --------------------------------------------------------------------------
-# REGRA 9 + REGRA 12 — o veredicto da FEATURE, separado do veredicto do SUSPEITO
-#
-# A cura de 13/08/2026: `resultado` responde pelo SUSPEITO da linha, e há
-# ensaio em que as duas respostas são OPOSTAS sem que nenhuma esteja errada.
-# Estes casos existem para provar as DUAS metades do contrato — que a coluna
-# nova é lida, e que ela não é o botão de desligar a regra 9.
-# --------------------------------------------------------------------------
-#: Cabeçalho do caderno de bancada, com a coluna de 13/08/2026 no lugar dela:
-#: logo depois de `resultado`, que é o par que ela desambigua.
 CABECALHO_DO_CADERNO = [
     "id",
     "linha_id",
@@ -638,12 +486,7 @@ def linha_que_obedeceu(**mudancas: str) -> dict[str, str]:
 
 
 def test_resultado_do_suspeito_sozinho_ainda_avisa(tmp_path: Path) -> None:
-    """O estado ANTES da cura: `resultado` nega e não há coluna que o desminta.
-
-    Este é o contrapeso do teste seguinte. Sem ele, um `resultado_da_feature`
-    lido de qualquer jeito passaria despercebido, porque nada afirmaria que a
-    régua ainda enxerga a negação quando ela é a única coisa escrita.
-    """
+    """O estado ANTES da cura: `resultado` nega e não há coluna que o desminta."""
     caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
     escreve_caderno(tmp_path, [ensaio_do_cabo(resultado="não obedece")])
     processo = rodar(caminho, tmp_path)
@@ -651,13 +494,7 @@ def test_resultado_do_suspeito_sozinho_ainda_avisa(tmp_path: Path) -> None:
 
 
 def test_a_coluna_da_feature_desmente_o_resultado_do_suspeito(tmp_path: Path) -> None:
-    """A cura: o `resultado` é do SUSPEITO, e a coluna nova diz o que a feature fez.
-
-    MORDE? Trocar `veredicto_da_feature(ensaio)` de volta por
-    `(ensaio.get("resultado") or "").strip()` em `_regra_do_caderno` faz este
-    teste reprovar — o aviso volta a sair para um ensaio em que o aparelho
-    obedeceu, que é o defeito que a cura de 13/08/2026 tirou do portão.
-    """
+    """A cura: o `resultado` é do SUSPEITO, e a coluna nova diz o que a feature fez."""
     caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
     escreve_caderno(
         tmp_path,
@@ -674,13 +511,7 @@ def test_a_coluna_da_feature_desmente_o_resultado_do_suspeito(tmp_path: Path) ->
 
 
 def test_a_feature_que_de_fato_nao_obedeceu_continua_avisando(tmp_path: Path) -> None:
-    """A GUARDA: a cura não pode ter virado "desligar a regra 9".
-
-    O ensaio aqui é genuinamente contraditório — a linha jura `O APARELHO
-    OBEDECEU` e o caderno diz, na coluna da FEATURE, que ela não obedeceu. Se
-    este aviso sumir, o portão parou de fazer a única pergunta que ele existe
-    para fazer, e a coluna nova virou a saída em vez da régua.
-    """
+    """A GUARDA: a cura não pode ter virado "desligar a regra 9"."""
     caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
     escreve_caderno(
         tmp_path,
@@ -698,12 +529,7 @@ def test_a_feature_que_de_fato_nao_obedeceu_continua_avisando(tmp_path: Path) ->
 
 
 def test_veredicto_da_feature_fora_do_vocabulario_reprova(tmp_path: Path) -> None:
-    """Regra 12, primeira metade: valor novo na coluna nova é FALHA, não silêncio.
-
-    Sem isto, `resultado_da_feature = talvez` desligaria a regra 9 sem dizer
-    nada — o `talvez` não está em `RESULTADOS_QUE_SUSTENTAM`, mas também não
-    está em lugar nenhum que alguém leia.
-    """
+    """Regra 12, primeira metade: valor novo na coluna nova é FALHA, não silêncio."""
     caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
     escreve_caderno(
         tmp_path,
@@ -722,12 +548,7 @@ def test_veredicto_da_feature_fora_do_vocabulario_reprova(tmp_path: Path) -> Non
 
 
 def test_veredicto_da_feature_que_diverge_sem_nota_reprova(tmp_path: Path) -> None:
-    """Regra 12, segunda metade: divergir sem explicar é o botão de desligar.
-
-    É esta metade que faz a coluna ser CARA. Quem quiser calar a regra 9 tem de
-    escrever no caderno, na mesma linha, o que o aparelho fez — que é o preço
-    que a casa cobra em toda parte.
-    """
+    """Regra 12, segunda metade: divergir sem explicar é o botão de desligar."""
     caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
     escreve_caderno(
         tmp_path,
@@ -746,12 +567,7 @@ def test_veredicto_da_feature_que_diverge_sem_nota_reprova(tmp_path: Path) -> No
 
 
 def test_caderno_sem_a_coluna_nova_segue_lendo_o_resultado(tmp_path: Path) -> None:
-    """Compatibilidade: 76 dos 77 ensaios reais não têm a coluna preenchida.
-
-    Um caderno SEM a coluna no cabeçalho — que é o de qualquer árvore anterior a
-    13/08/2026 — tem de continuar sendo lido por `resultado`, sem estourar e sem
-    mudar de veredicto. Coluna nova que quebra o dado velho não é cura.
-    """
+    """Compatibilidade: 76 dos 77 ensaios reais não têm a coluna preenchida."""
     caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
     caderno = tmp_path / "docs" / "data" / "ensaios.csv"
     caderno.parent.mkdir(parents=True, exist_ok=True)
@@ -768,13 +584,7 @@ def test_caderno_sem_a_coluna_nova_segue_lendo_o_resultado(tmp_path: Path) -> No
 
 
 def test_o_caderno_real_declara_a_coluna_da_feature() -> None:
-    """Contra a ÁRVORE REAL: a coluna existe, e quem a preenche explica por quê.
-
-    Sem este caso, alguém poderia apagar a coluna do `docs/data/ensaios.csv` e
-    os testes acima — todos contra caderno de mentira — continuariam verdes,
-    enquanto o portão real voltaria a ler o veredicto do SUSPEITO como se fosse
-    o da feature. Nenhuma contagem fica escrita aqui: tudo é medido na hora.
-    """
+    """Contra a ÁRVORE REAL: a coluna existe, e quem a preenche explica por quê."""
     caderno_real = RAIZ_REAL / "docs" / "data" / "ensaios.csv"
     with caderno_real.open(encoding="utf-8", newline="") as arquivo:
         ensaios = list(csv.DictReader(arquivo))
@@ -794,28 +604,12 @@ def test_o_caderno_real_declara_a_coluna_da_feature() -> None:
             )
 
 
-#: Quem, além da bancada, ESCREVE no caderno com a lista de colunas na mão. A
-#: bancada já tem o seu par em `test_bancada_nomeia_coluna_que_o_csv_nao_tem.py`;
-#: estes dois não tinham nenhum, e foi assim que a coluna de 13/08/2026 quase
-#: passou deixando os dois desalinhados EM SILÊNCIO — o `csv.writer` do
-#: `ensaio_rumble_um_bit_por_vez.py` escreve por POSIÇÃO, então uma coluna a
-#: menos não estoura: ela empurra `fonte` para dentro de `observado_por`.
-#:
-#: A LISTA NÃO SE DIGITA MAIS — 05/09/2026. Ela trazia
-#: `scripts/migrar-mapa-v2.py`, que foi APAGADO no dia em que o grão v2 virou o
-#: único (decisão dela: *"a ideia é termos menos arquivos"*), e o parametrize
-#: passou a estourar `FileNotFoundError` sobre um arquivo que ninguém devia
-#: procurar. A régua tem de LER: quem escreve no caderno é quem chama
-#: `csv.writer` sobre `ensaios.csv`, e isso se acha varrendo `scripts/`.
 def _escritores_do_caderno() -> list[str]:
     achados = []
     for py in sorted((RAIZ_REAL / "scripts").rglob("*.py")):
         texto = py.read_text(encoding="utf-8", errors="ignore")
         if "ensaios.csv" in texto and "csv.writer" in texto:
             achados.append(str(py.relative_to(RAIZ_REAL)))
-    # RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE: se o caderno mudar de nome, esta
-    # linha reprova em vez de o parametrize sumir e a suíte ficar verde sobre
-    # nenhum escritor.
     assert achados, "nenhum escritor de ensaios.csv em scripts/ — o caderno mudou de nome?"
     return achados
 
@@ -824,11 +618,7 @@ ESCRITORES_DO_CADERNO = tuple(_escritores_do_caderno())
 
 
 def _listas_literais_de_colunas(fonte: Path) -> list[list[str]]:
-    """Toda lista ou tupla literal de strings do arquivo com cara de cabeçalho.
-
-    Por AST, não por texto: uma expressão regular acharia a lista dentro de um
-    comentário ou de uma docstring e passaria a medir prosa.
-    """
+    """Toda lista ou tupla literal de strings do arquivo com cara de cabeçalho."""
     achadas = []
     for no in ast.walk(ast.parse(fonte.read_text(encoding="utf-8"))):
         if not isinstance(no, (ast.List, ast.Tuple)):
@@ -844,11 +634,7 @@ def _listas_literais_de_colunas(fonte: Path) -> list[list[str]]:
 
 @pytest.mark.parametrize("relativo", ESCRITORES_DO_CADERNO)
 def test_quem_escreve_no_caderno_conhece_todas_as_colunas(relativo: str) -> None:
-    """Escritor que não conhece uma coluna desalinha o caderno inteiro, calado.
-
-    A régua é o cabeçalho REAL de `docs/data/ensaios.csv`, lido na hora — nunca
-    uma lista escrita aqui, que envelheceria junto com as que ela vigia.
-    """
+    """Escritor que não conhece uma coluna desalinha o caderno inteiro, calado."""
     with (RAIZ_REAL / "docs" / "data" / "ensaios.csv").open(
         encoding="utf-8", newline=""
     ) as arquivo:

@@ -1,22 +1,4 @@
-"""A entrada do computador não repete o nome — STORM-USB-02, 24/09/2026.
-
-Sem nome dado por ela e sem número no desenho, a porta se chama pelo
-``devpath`` («Entrada 4.1.4», o desenho aprovado). Mas a entrada do PRÓPRIO
-computador é um ``devpath`` de um número só, e cada hub-raiz numera as dele a
-partir de 1: na mesa dela, com dois controladores USB, o ``1-4`` (o adaptador
-do rádio) e o ``3-4`` (o hub) saíam os dois «Entrada 4» — no doctor e na seção
-do rádio. O dono do nome (``entrada_a_entrada``) desempata: numa máquina com
-mais de um controlador, a entrada do computador leva o barramento.
-
-AS MORDIDAS (arranque a cura, veja reprovar, devolva):
-
-* :func:`test_as_duas_entradas_4_nao_se_chamam_igual` — volte o
-  ``_rotulo_de_reserva`` a ``rotulo_do_numero(devpath)``;
-* :func:`test_o_doctor_diz_o_nome_uma_vez_so` — tire a guarda do
-  ``Aparelho.onde``, e a frase sai «Entrada 3-4 (3-4)».
-
-Controladores PCI forjados (``0000:0a``/``0000:0b``); nada lê o ``/sys`` dela.
-"""
+"""A entrada do computador não repete o nome — STORM-USB-02, 24/09/2026."""
 
 from __future__ import annotations
 
@@ -30,7 +12,6 @@ from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
 PCI_DO_RADIO = "0000:0b:00.0"
 PCI_DO_HUB = "0000:0a:00.0"
-#: A mesa dela: dois controladores, cada um com o lado 2.0 e o 3.x.
 DOIS = {1: PCI_DO_RADIO, 2: PCI_DO_RADIO, 3: PCI_DO_HUB, 4: PCI_DO_HUB}
 UM = {3: PCI_DO_HUB, 4: PCI_DO_HUB}
 VAZIA = MaquinaConfig()
@@ -43,7 +24,6 @@ def test_as_duas_entradas_4_nao_se_chamam_igual() -> None:
     assert ee.nome_da_porta(f"pci-{PCI_DO_RADIO}-usb-0:4", maquina=VAZIA, controladores=DOIS) == (
         "Entrada 1-4"
     )
-    # A seção do rádio pergunta por aqui (`a08_conexoes`, o rótulo da face).
     rotulo = ee.rotulo_da_entrada
     assert rotulo(f"pci-{PCI_DO_HUB}-usb-0:4", maquina=VAZIA, controladores=DOIS) == "Entrada 3-4"
     assert rotulo(f"pci-{PCI_DO_RADIO}-usb-0:4", maquina=VAZIA, controladores=DOIS) == (

@@ -1,18 +1,4 @@
-"""JOGO-QUE-SE-DIZ-01 — o campo "Nome do jogo:" entende o endereço da loja.
-
-Pedido dela, 13/08/2026: *"ou aplicamos um regex automático só de colar o link
-da loja do jogo e ele pega o id"*. O campo exigia o appid CRU — o único dado
-que ninguém tem em mãos — e a foto do editor dela mostrava `851100` digitado à
-mão.
-
-Este arquivo é a tabela de formas, com as que TÊM de falhar juntas. Puro: nada
-de GTK, nada de disco, nada da biblioteca dela.
-
-A mordida: apagar `_LOJA_STEAM_RE` da lista de tentativas em
-`steam_app.steam_appid_de_texto` faz os quatro casos de endereço reprovarem, e
-`normalize_appid` junto — que é o que prova que o Salvar aceita o endereço mesmo
-sem a janela reescrever o campo.
-"""
+"""JOGO-QUE-SE-DIZ-01 — o campo "Nome do jogo:" entende o endereço da loja."""
 from __future__ import annotations
 
 import pytest
@@ -28,10 +14,8 @@ from hefesto_dualsense4unix.profiles.steam_app import (
     steam_appid_de_texto,
 )
 
-#: O appid que ela digitou à mão na foto do editor, em 13/08/2026.
 APPID = 851100
 
-#: As formas que TÊM de virar `851100`, uma a uma, do pedido dela.
 FORMAS_QUE_VIRAM_APPID: list[tuple[str, str]] = [
     (
         "endereço da loja com o nome do jogo no caminho",
@@ -53,7 +37,6 @@ FORMAS_QUE_VIRAM_APPID: list[tuple[str, str]] = [
      "https://store.steampowered.com/agecheck/app/851100/"),
 ]
 
-#: O que NÃO pode virar appid nenhum. O campo não adivinha.
 FORMAS_QUE_NAO_VIRAM_NADA: list[tuple[str, str]] = [
     ("link de outra loja", "https://www.gog.com/game/sea_of_stars"),
     ("link da Steam que não é da página do jogo (perfil)",

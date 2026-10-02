@@ -1,60 +1,4 @@
-"""PERFIL-POR-CONTROLE (02/09/2026) — campo por peça só entra COM caminho.
-
-O QUE ELA DECIDIU, e é o que abre esta régua
----------------------------------------------
-*"acelerômetro, giroscópio, e todas as demais features. **é tudo mesmo**"* — o
-perfil por controle passa a ser TUDO, e a lista de exclusões que morava na
-docstring de ``ControllerOverrides`` caiu com ela.
-
-O QUE A DECISÃO **NÃO** DERRUBA, e é o defeito que este arquivo existe para
-impedir: **um campo que grava e ninguém lê é pior que campo nenhum.** Ele faz a
-tela prometer — a coluna da aba Perfis acende dizendo *"este controle tem
-ajuste próprio"* sobre um valor que nada aplica, e a próxima pessoa gasta uma
-tarde procurando o defeito no lugar errado. A ordem, então, não se inverte:
-primeiro o caminho por unidade EXISTIR, depois o campo entrar no esquema.
-
-POR QUE ESTA RÉGUA E NÃO A QUE JÁ EXISTIA
-------------------------------------------
-``test_toda_secao_de_perfil_tem_quem_a_aplique`` classifica
-``Profile.model_fields`` — o perfil INTEIRO. Ela é exaustiva e morde, e
-**ControllerOverrides não passa por ela**: o mapa ``controllers`` é UM campo do
-``Profile``, e o que está DENTRO de cada entrada nunca foi contado. Um campo
-novo aqui entra sem uma linha vermelha em lugar nenhum — que é exatamente o
-buraco por onde a leva de hoje passaria, com a decisão dela na mão e nove
-seções para trazer.
-
-O QUE CADA TESTE VIGIA
------------------------
-1. a classificação bate com ``ControllerOverrides.model_fields`` nos DOIS
-   sentidos: campo sem consumidor reprova, consumidor órfão reprova;
-2. o consumidor declarado EXISTE e LÊ o campo — derivado da fonte do gerente,
-   não digitado aqui;
-3. o consumidor ENDEREÇA a peça: um perfil que escreve o campo para UM ``uniq``
-   produz saída carregando aquele ``uniq``. É o que separa *"guardei"* de
-   *"chega ao aparelho"*;
-4. a régua sabe RECUSAR — as duas contas são funções puras, exercitadas com um
-   conjunto sintético. Régua que só sabe passar não é régua;
-5. **os fios de gatilho da fila**: o que hoje IMPEDE cada campo de entrar está
-   afirmado como medição, não como opinião. Quando um deles ficar vermelho, a
-   notícia é boa — o caminho nasceu, e a mensagem diz qual campo trazer.
-
-**O PRIMEIRO FIO QUEIMOU EM 03/09/2026, e é assim que se lê esta régua
-funcionando.** O ``mic`` era o item 1 da fila; a decisão dela
-(MIC-QUINTO-AJUSTE-01) mandou o microfone virar o quinto ajuste por controle, a
-costura do gerente foi feita (``apply_controller_mics``) e o ``muted`` entrou.
-Os outros dois campos do microfone continuam FORA, cada um com o seu fio de
-gatilho abaixo — e a recusa deles agora mora na BORDA de
-``ControllerMicOverride``, com a razão na mensagem em vez do ``extra_forbidden``
-cru. **A granularidade da fila desceu de SEÇÃO para CAMPO**, e isso é o
-esperado: o caminho por unidade não nasce inteiro de uma vez.
-
-MORDIDA (o que arrancar para ver reprovar): acrescente ``sensors: bool | None =
-None`` a ``ControllerOverrides`` sem tocar em mais nada. O teste 1 aponta o
-campo pelo nome e diz que ele não tem quem o leia por peça.
-
-Endereços de rádio: faixa SINTÉTICA da casa, reusada do banco de provas do
-backend (``aabbcc…``) — nunca o OUI de um aparelho real.
-"""
+"""PERFIL-POR-CONTROLE (02/09/2026) — campo por peça só entra COM caminho."""
 from __future__ import annotations
 
 import ast
@@ -93,24 +37,15 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from tests.unit.test_por_unidade_01_todas_as_abas import BRANCO, _StoreSemTrava
 
-# ---------------------------------------------------------------------------
-# A CLASSIFICAÇÃO — exaustiva, e é ela que ninguém contorna em silêncio
-# ---------------------------------------------------------------------------
-
 
 @dataclass(frozen=True)
 class ConsumidorPorUnidade:
     """Quem lê este campo POR PEÇA, e o que ele faz chegar ao aparelho."""
 
-    #: a função do `profiles/manager.py` que percorre `profile.controllers`.
     funcao: str
-    #: em uma frase, o que sai dela com o endereço junto — o vocabulário de
-    #: quem lê o defeito, não o nome do parâmetro.
     chega_em: str
 
 
-#: Um campo de `ControllerOverrides` por entrada. Campo novo que não esteja
-#: aqui reprova por estar SEM CONSUMIDOR — nunca por estar numa denylist.
 _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
     "leds": ConsumidorPorUnidade(
         funcao="_controllers_to_specs",
@@ -130,8 +65,6 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
     ),
     "mic": ConsumidorPorUnidade(
         funcao="apply_controller_mics",
-        # O-MUDO-E-DO-CONTROLE-01 (29/09/2026): o mudo é do controle e mora no
-        # `maquina.json`; pela peça do perfil chega o volume.
         chega_em="apply_mic(uniq=...) → apply_profile_mic(volume, uniq=...)",
     ),
     "sensores": ConsumidorPorUnidade(
@@ -174,11 +107,7 @@ def _consumidores_orfaos(
 
 
 def test_a_classificacao_cobre_o_esquema_nos_dois_sentidos() -> None:
-    """Campo sem consumidor reprova; consumidor órfão reprova.
-
-    MORDIDA: acrescente um campo qualquer a ``ControllerOverrides`` sem lhe dar
-    consumidor — este teste o aponta pelo nome.
-    """
+    """Campo sem consumidor reprova; consumidor órfão reprova."""
     campos = set(ControllerOverrides.model_fields)
     sem_dono = _campos_sem_consumidor(campos, _CONSUMIDOR)
     assert not sem_dono, (
@@ -194,11 +123,7 @@ def test_a_classificacao_cobre_o_esquema_nos_dois_sentidos() -> None:
 
 
 def test_a_regua_sabe_recusar() -> None:
-    """As duas contas, exercitadas com um conjunto sintético.
-
-    Sem isto, um erro nas duas funções puras faria o teste acima passar em
-    silêncio para sempre — o formato *régua que se confere contra ela mesma*.
-    """
+    """As duas contas, exercitadas com um conjunto sintético."""
     sintetico = {"leds", "touchpad"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
@@ -212,11 +137,6 @@ def test_a_regua_sabe_recusar() -> None:
     ]
 
 
-# ---------------------------------------------------------------------------
-# O CONSUMIDOR EXISTE E LÊ O CAMPO — derivado da fonte, não digitado
-# ---------------------------------------------------------------------------
-
-
 def _fonte_da_funcao(nome: str) -> str:
     alvo = getattr(manager_module, nome, None) or getattr(ProfileManager, nome, None)
     assert alvo is not None, f"{nome} não existe em profiles/manager.py"
@@ -225,12 +145,7 @@ def _fonte_da_funcao(nome: str) -> str:
 
 @pytest.mark.parametrize("campo", sorted(_CONSUMIDOR))
 def test_o_consumidor_declarado_le_o_campo(campo: str) -> None:
-    """A função nomeada existe e cita o campo — e percorre `controllers`.
-
-    MORDIDA: troque o nome da função na classificação por um vizinho que não
-    lê aquele campo (``_controllers_to_led_scales`` para ``speaker``, por
-    exemplo) e veja reprovar.
-    """
+    """A função nomeada existe e cita o campo — e percorre `controllers`."""
     fonte = _fonte_da_funcao(_CONSUMIDOR[campo].funcao)
     assert re.search(rf"\bcfg\.{campo}\b|getattr\(cfg, \"{campo}\"", fonte), (
         f"{_CONSUMIDOR[campo].funcao} não lê o campo {campo!r} de cada entrada"
@@ -238,11 +153,6 @@ def test_o_consumidor_declarado_le_o_campo(campo: str) -> None:
     assert "controllers" in fonte, (
         f"{_CONSUMIDOR[campo].funcao} não percorre o mapa por peça"
     )
-
-
-# ---------------------------------------------------------------------------
-# O CONSUMIDOR ENDEREÇA A PEÇA — é o que separa "guardei" de "chegou"
-# ---------------------------------------------------------------------------
 
 
 def _prova_leds(uniq: str) -> object:
@@ -335,7 +245,6 @@ def _prova_sensores(uniq: str) -> object:
             },
         )
         gerente.apply_controller_sensores(perfil)
-        # O ENDEREÇO É O TESTE: o giro DESTA peça caiu e o da vizinha não.
         return (
             REGISTRO.estado(uniq).giroscopio is False
             and REGISTRO.estado("aa:bb:cc:00:00:ff").giroscopio is True
@@ -345,13 +254,7 @@ def _prova_sensores(uniq: str) -> object:
 
 
 def _prova_mascara(uniq: str) -> object:
-    """A máscara escrita para UMA peça vale só nela (MASCARA-NO-PERFIL-01).
-
-    O ENDEREÇO É O TESTE, como no sensor: a peça que o perfil nomeia recebe
-    ``xbox`` e a vizinha continua herdando a máscara do jogo. Sem isso o campo
-    novo poderia estar gravando no registro inteiro — que é o defeito que a
-    escolha por controle existe para não ter.
-    """
+    """A máscara escrita para UMA peça vale só nela (MASCARA-NO-PERFIL-01)."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         _zerar_registro_de_mascaras,
         mascara_efetiva,
@@ -375,19 +278,12 @@ def _prova_mascara(uniq: str) -> object:
             and mascara_efetiva("aa:bb:cc:00:00:ff", "dualsense") == "dualsense"
         ) or None
     finally:
-        # O registro PERSISTE (o `config_dir` do conftest é de mentira, mas é o
-        # mesmo entre testes): sem apagar, a máscara desta prova sobreviveria a
-        # ela e responderia por outro teste.
         registro_de_mascaras().clear_mask(uniq)
         _zerar_registro_de_mascaras()
 
 
 def _prova_movimento(uniq: str) -> object:
-    """A mira escrita para UMA peça vale só nela (A-MIRA-POR-MOVIMENTO-NA-TELA-01).
-
-    O ENDEREÇO É O TESTE: o chip «Mira Virtual» aceso no controle que o perfil
-    nomeia, e a vizinha — sem opinião, num perfil sem mira — não mira.
-    """
+    """A mira escrita para UMA peça vale só nela (A-MIRA-POR-MOVIMENTO-NA-TELA-01)."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
     from hefesto_dualsense4unix.profiles.schema import ProfileMovimentoConfig
@@ -414,8 +310,6 @@ def _prova_movimento(uniq: str) -> object:
             and rot.da_peca(store, "aa:bb:cc:00:00:ff", mesa) is None
         ) or None
     finally:
-        # O filtro do report é do PROCESSO (`virtual_motion.REGISTRO`): a peça
-        # que esta prova pôs a mirar não pode sair daqui mirando.
         REGISTRO.limpar()
 
 
@@ -438,13 +332,7 @@ def test_toda_entrada_da_classificacao_tem_prova() -> None:
 
 @pytest.mark.parametrize("campo", sorted(_CONSUMIDOR))
 def test_o_valor_da_peca_sai_com_o_endereco_dela(campo: str) -> None:
-    """Escrito para UM ``uniq``, o valor sai endereçado àquele ``uniq``.
-
-    MORDIDA: em ``_controllers_to_specs``, troque a chave ``out[uniq]`` por uma
-    chave fixa qualquer; em ``apply_controller_speakers``, tire o
-    ``uniq=str(uniq)`` da chamada. Nos dois casos o dado continua sendo
-    calculado e deixa de ter dono — que é o defeito, e não a ausência do valor.
-    """
+    """Escrito para UM ``uniq``, o valor sai endereçado àquele ``uniq``."""
     resultado = _PROVAS[campo](BRANCO)
     assert resultado, (
         f"o override de {campo!r} de uma peça não saiu endereçado a ela "
@@ -452,31 +340,8 @@ def test_o_valor_da_peca_sai_com_o_endereco_dela(campo: str) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# OS FIOS DE GATILHO DA FILA — o que hoje impede cada campo de entrar
-#
-# Estes cinco afirmam MEDIÇÕES, não opiniões. Vermelho aqui é boa notícia: o
-# caminho por unidade nasceu, e a mensagem diz qual campo trazer para o
-# esquema. A fila por extenso, ordenada por custo, está na docstring de
-# `ControllerOverrides`.
-# ---------------------------------------------------------------------------
-
-
 def test_o_microfone_ja_tem_endereco_por_peca() -> None:
-    """As três primitivas do mic por unidade existem — e o ``muted`` já entrou.
-
-    Isto DERRUBA a frase que morava na docstring do esquema: *"o
-    ``EventTopic.BUTTON_DOWN`` não carrega uniq, então o laço do mic não sabe
-    de qual peça veio o toque"*. Desde MIC-DA-MESA-ELEICAO-01 (01/09/2026) o
-    gesto do microfone não passa mais pelo ``BUTTON_DOWN``: ele tem tópico
-    próprio, e o tópico carrega o endereço.
-
-    A costura do gerente foi feita em 03/09/2026 (MIC-QUINTO-AJUSTE-01,
-    ``apply_controller_mics``) e o ``muted`` é campo de
-    ``ControllerMicOverride``. As duas que sobram estão nomeadas na fila da
-    docstring do esquema e cada uma tem o seu fio de gatilho abaixo. Este teste
-    fixa o que JÁ existe para que não se reaprenda de novo que "não dá".
-    """
+    """As três primitivas do mic por unidade existem — e o ``muted`` já entrou."""
     assert hasattr(EventTopic, "MIC_DA_MESA"), (
         "a borda do botão de mic COM endereço sumiu — sem ela o mic volta a "
         "não saber de qual peça veio o toque"
@@ -509,30 +374,16 @@ def test_o_volume_do_mic_vale_por_peca_e_a_fiacao_continua_inteira() -> None:
     Então o teste guarda hoje as TRÊS coisas de uma vez: o campo existe, o
     applier chama a rota por unidade, e não há queda para a global.
     """
-    # 1. A PORTA ABRIU.
     assert "volume" in ControllerMicOverride.model_fields, (
         "o `volume` saiu do override por peça — ela mandou abri-lo em "
         "03/09/2026, e sem ele o ganho de captura volta a ser um só para a "
         "mesa inteira")
     assert ControllerMicOverride.model_validate({"volume": 50}).volume == 50
 
-    # 2. E A FAIXA É A MESMA DO GLOBAL, lida do dono e não digitada aqui.
     from pydantic import ValidationError
 
     from hefesto_dualsense4unix.profiles.schema import ProfileMicConfig
 
-    # A RECUSA TEM DE SER POR FAIXA, e não por o campo não existir — a
-    # diferença foi medida numa mordida de 03/09/2026 que NÃO mordeu. Eu
-    # arranquei `volume: int | None = Field(...)` do arquivo com um `replace`
-    # de UMA ocorrência, e a linha existe DUAS vezes (aqui e em
-    # `ProfileMicConfig`): saiu a do GLOBAL. Os testes continuaram verdes —
-    # `extra="forbid"` recusava `{"volume": -1}` por o campo ter sumido, e a
-    # asserção `pytest.raises(ValidationError)` não sabe distinguir os dois
-    # casos. Verde sobre a cura arrancada é exatamente o que uma mordida existe
-    # para impedir.
-    #
-    # Então o tipo do erro é conferido: `greater_than_equal`/`less_than_equal`
-    # é faixa; `extra_forbidden` é campo inexistente, e reprova aqui.
     for modelo in (ControllerMicOverride, ProfileMicConfig):
         assert "volume" in modelo.model_fields, (
             f"{modelo.__name__} perdeu o campo `volume` — sem ele a recusa "
@@ -546,12 +397,6 @@ def test_o_volume_do_mic_vale_por_peca_e_a_fiacao_continua_inteira() -> None:
                 f"{modelo.__name__} recusou {fora_da_faixa} por {tipos}, e o "
                 f"esperado era `{esperado}` — a faixa 0..100 caiu")
 
-    # 3. A FIAÇÃO. LÊ-SE A ÁRVORE, NÃO O TEXTO — e esta linha custou uma mordida
-    # para nascer. A primeira versão fazia `"fonte_de_captura_do_uniq" in
-    # inspect.getsource(...)`, e passou VERDE com a costura inteiramente
-    # arrancada: o nome aparece no comentário de doze linhas que explica a
-    # escolha, então a régua lia a PROSA e dizia que era fiação. É a forma exata
-    # que esta casa mais pegou — *a régua confunde a PALAVRA com o ATO*.
     arvore = ast.parse(textwrap.dedent(inspect.getsource(Daemon.apply_profile_mic)))
     chamadas = [n for n in ast.walk(arvore)
                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
@@ -560,9 +405,6 @@ def test_o_volume_do_mic_vale_por_peca_e_a_fiacao_continua_inteira() -> None:
         "volume por peça cai no microfone do vizinho, e o campo que acabou de "
         "abrir passa a gravar sobre a placa de som errada"
     )
-    # 4. A QUEDA PARA A ROTA GLOBAL É O QUE NÃO PODE VOLTAR. O `or` a
-    # reintroduziria em silêncio; o `if uniq else` é o que separa os dois — e a
-    # diferença só existe na árvore, porque as duas formas dizem os mesmos nomes.
     for no in ast.walk(arvore):
         if not (isinstance(no, ast.BoolOp) and isinstance(no.op, ast.Or)):
             continue
@@ -576,17 +418,7 @@ def test_o_volume_do_mic_vale_por_peca_e_a_fiacao_continua_inteira() -> None:
 
 
 def test_o_applier_do_mic_por_peca_repassa_o_volume() -> None:
-    """E o campo CHEGA à peça — abrir a borda sem isso seria o pior dos dois.
-
-    *"Campo que grava e ninguém lê é pior que campo nenhum"* — é o contrato do
-    topo de `ControllerOverrides`, e a régua que o sustenta é esta.
-
-    `apply_controller_mics` monta uma VISTA do perfil com o override no lugar da
-    seção global (`model_copy(update={"mic": secao})`) e chama `apply_mic`, que
-    lê a seção por `getattr(secao, "volume"/"muted", None)`. O `volume` novo
-    passa por esse caminho sem uma linha a mais — e é justamente isso que este
-    teste prova, em vez de supor.
-    """
+    """E o campo CHEGA à peça — abrir a borda sem isso seria o pior dos dois."""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
     vistos: list[tuple[str | None, int | None]] = []
@@ -597,7 +429,7 @@ def test_o_applier_do_mic_por_peca_repassa_o_volume() -> None:
             vistos.append((uniq, getattr(secao, "volume", None)))
             return "aplicado"
 
-    uniq = "aa:bb:cc:00:00:07"  # forjado, faixa de fixture
+    uniq = "aa:bb:cc:00:00:07"
     perfil = Profile(
         name="p", match=MatchAny(), priority=1,
         controllers={uniq: ControllerOverrides(
@@ -606,11 +438,6 @@ def test_o_applier_do_mic_por_peca_repassa_o_volume() -> None:
     mgr = _Mgr.__new__(_Mgr)
     saida = ProfileManager.apply_controller_mics(mgr, perfil)
 
-    # A CHAVE É A NORMALIZADA, e ela é PERGUNTADA ao perfil — não digitada. O
-    # esquema canoniza o `uniq` (doze hexadecimais, sem separador) no load, e um
-    # teste que escrevesse `aa:bb:cc:...` do lado direito estaria afirmando um
-    # formato que o produto não usa. Descobri isto aqui: a primeira versão
-    # comparava com o endereço COM dois-pontos e reprovou.
     (chave,) = perfil.controllers
     assert vistos == [(chave, 33)], (
         f"o volume por peça não chegou ao applier: {vistos}")
@@ -618,17 +445,7 @@ def test_o_applier_do_mic_por_peca_repassa_o_volume() -> None:
 
 
 def test_o_interruptor_do_botao_de_mic_continua_um_por_maquina() -> None:
-    """``mic_button_toggles_system`` não consulta ``uniq`` nenhum.
-
-    Quem o lê é ``hotkey.mic_button_loop``, em ``daemon.config``, que é um por
-    máquina. Guardá-lo por peça faria quatro controles gravarem quatro opiniões
-    sobre um interruptor só — por isso ``ControllerMicOverride`` o recusa na
-    borda, e a mensagem diz onde ele continua valendo.
-
-    VERMELHO AQUI É BOA NOTÍCIA: o laço passou a consultar o override daquele
-    ``uniq``. Traga ``button_toggles_system`` para ``ControllerMicOverride`` e
-    apague este teste.
-    """
+    """``mic_button_toggles_system`` não consulta ``uniq`` nenhum."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey as hotkey_module
 
     fonte = inspect.getsource(hotkey_module.mic_button_loop)
@@ -645,41 +462,12 @@ def test_o_interruptor_do_botao_de_mic_continua_um_por_maquina() -> None:
 
 
 def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
-    """O sensor SAIU da fila em 04/09/2026 — e esta régua virou de lado.
-
-    **ELA DIZIA O CONTRÁRIO ATÉ ONTEM**, e a mudança é a entrega: o teste se
-    chamava ``test_os_sensores_nao_tem_por_onde_ser_desligados`` e afirmava
-    que o ``SensorHub`` *"só LÊ"* e que nenhum método do IPC casava
-    ``sensor``. A própria docstring dele dizia *"VERMELHO AQUI É BOA NOTÍCIA:
-    o interruptor nasceu"*. Nasceu — SENSOR-DE-VERDADE-01, decisão dela:
-    *"ele tem que funcionar de verdade. ambos independente do modo e da
-    mascara."* <!-- noqa-acento: citação literal dela -->
-
-    O que ela cobra agora são as TRÊS metades do ato, porque foi assim que a
-    medição de 04/09 mostrou que o caminho se divide:
-
-    1. o método existe no IPC e se chama ``sensor.set``;
-    2. o hub sabe DIZER se o nó de movimento ficou exclusivo — sem isso a
-       resposta afirmaria alcance que ninguém conferiu;
-    3. a resposta carrega ``alcance`` e ``ressalva``, que é onde o limite do
-       Modo Nativo aparece em vez de virar "aplicado" sobre um giro vivo.
-
-    MORDIDA: tire a linha ``"sensor.set"`` do ``ipc_server`` e o item 1
-    reprova; tire o ``grab_do_movimento`` do hub e o item 2 reprova.
-    """
+    """O sensor SAIU da fila em 04/09/2026 — e esta régua virou de lado."""
     publicos = {
         nome
         for nome, _ in inspect.getmembers(sensor_hub_module.SensorHub, inspect.isfunction)
         if not nome.startswith("_")
     }
-    # AS DUAS PORTAS DA MIRA POR MOVIMENTO entraram em 21/09/2026
-    # (MOVIMENTO-EM-QUALQUER-MASCARA-01, E4): `angulo_do_movimento` drena o
-    # ângulo integrado no ritmo do nó, `velocidade_do_movimento` só lê.
-    # E `hz_do_movimento` em 23/09/2026 (AR-MEDIDO-01, R10 dela): os pacotes
-    # por segundo que o nó recebe AGORA — leitura, não interruptor.
-    # E as duas do toque e da inclinação em 28/09/2026
-    # (NO-MODO-XBOX-TUDO-FUNCIONA-01): `aceleracao_do_movimento` só lê, e
-    # `toque_da_peca` lê o dedo e pede o nó do touchpad enquanto a rota anda.
     assert publicos == {
         "aceleracao_do_movimento",
         "angulo_do_movimento",

@@ -44,10 +44,6 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     mode_of_state,
 )
 
-# AGORA-E-DEPOIS-01: os textos do "depois" moram no módulo puro — a aba Início e
-# o diálogo do rodapé dizem as mesmas palavras porque leem a mesma fonte, e o
-# teste os alcança sem abrir janela nenhuma. (O `apply_mode` saiu deste import
-# junto com o IPC dos cliques: quem aplica agora é o rodapé.)
 from hefesto_dualsense4unix.app.actions.relancar import (
     TOAST_ESCOLHA_ANOTADA,
     TOAST_ESCOLHA_DESFEITA,
@@ -60,37 +56,16 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Intervalo do poller da aba Início (só age com a aba visível).
 HOME_POLL_INTERVAL_MS = 2000
 
-#: AVISO-VIVO-01: prazo de validade do latch `_home_inflight` — três ticks do
-#: poller. O latch existe para não empilhar chamadas de estado, mas sem prazo
 #: uma chamada que NUNCA volta (daemon morto no meio do `state_full`) o prendia
-#: para sempre e a aba congelava em silêncio: sem erro, sem banner, só parada.
-#: Passado o prazo a chamada em voo é dada como perdida e uma nova sai. O prazo
-#: é conferido no próprio tick, por carimbo de tempo — sem thread nem timer novo.
 HOME_INFLIGHT_TIMEOUT_S = 3 * HOME_POLL_INTERVAL_MS / 1000.0
 
-#: Id do Glade da aba Início. É por ele que o poller pergunta se está à vista —
-#: nunca pelo número da página (EST-10).
 ABA_INICIO = "tab_home_box"
 
 
 def id_da_pagina(pagina: Any) -> str | None:
-    """Id do Glade de uma página do notebook, desembrulhando o rolador.
-
-    ``_wrap_notebook_pages_in_scroll`` envolve oito das nove páginas num
-    ``GtkScrolledWindow``, que por sua vez pode inserir um ``GtkViewport`` entre
-    ele e a página — então o widget que o notebook devolve NÃO é a página do
-    Glade, e sem desembrulhar nenhuma aba seria reconhecida.
-
-    Devolve ``None`` para o que não é ``Gtk.Buildable`` (dublê de teste), em vez
-    de levantar.
-
-    Mora neste módulo por causa do grafo de import: ``status_actions`` importa
-    ``home_actions`` (nunca o contrário) e ``app.py`` importa os dois — é o
-    único ponto onde os três chegam sem ciclo.
-    """
+    """Id do Glade de uma página do notebook, desembrulhando o rolador."""
     from gi.repository import Gtk
 
     alvo = pagina
@@ -107,13 +82,7 @@ def id_da_pagina(pagina: Any) -> str | None:
 
 
 def id_da_pagina_corrente(notebook: Any) -> str | None:
-    """Id do Glade da página à vista — o que os pollers têm de perguntar.
-
-    EST-10: identificar a aba pelo ÍNDICE passa a apontar para a aba errada, em
-    silêncio, no dia em que alguém inserir, remover ou reordenar uma página no
-    Glade — sem exceção, sem log, só o relógio errado rodando na aba errada. O
-    id do Glade não muda quando a ordem ou o rótulo mudam.
-    """
+    """Id do Glade da página à vista — o que os pollers têm de perguntar."""
     if notebook is None:
         return None
     indice = notebook.get_current_page()
@@ -122,34 +91,12 @@ def id_da_pagina_corrente(notebook: Any) -> str | None:
     return id_da_pagina(notebook.get_nth_page(indice))
 
 
-#: HARM-01: a folga da troca de modo mora em `mode_transition` (dono único) —
-#: aqui ela vale também para o co-op e a máscara, que criam/desmontam os mesmos
-#: uinput e não cabem nos 0.25s default do call_async.
 _MODE_IPC_TIMEOUT_S = MODE_IPC_TIMEOUT_S
 
-#: HARM-15: o refresh também não cabe nos 0.25s default do call_async — sem folga
-#: o `_fail` pintava a aba inteira de "Daemon desligado" com o daemon VIVO. Vem de
 #: `mode_transition` (dono único): a aba Mouse lê o MESMO state_full para saber o
-#: modo e precisa exatamente da mesma folga.
 _STATE_IPC_TIMEOUT_S = STATE_IPC_TIMEOUT_S
 
-# UX-MODE-TERMS-01: rótulos pela AÇÃO da usuária ("o que o controle faz
-# agora"), não pela tecnologia — "gamepad virtual"/"nativo" viravam jargão.
-#
-# UX-MODE-TERMS-02 (06/08/2026, decisão dela, literal: *"Jogar direto é péssimo
-# também. Já tinha pedido pra deixarmos: Conexão Nativa (Sony)"*): o terceiro
-# rótulo era "Jogar direto (Sony)" e CADUCOU. Ele dizia o gesto ("jogar") e não
-# a coisa — os outros dois já dizem para ONDE o controle fala ("o PC", "o
-# Hefesto"), e "direto" não completava a frase. "Conexão Nativa (Sony)" nomeia
-# o que de fato acontece: o Hefesto solta o controle e o jogo fala com o
 # DualSense físico, sem intermediário (docs/usage/modos.md).
-#
-# É SÓ o rótulo: o id `native` continua sendo chave de perfil, do IPC e da CLI
-# (`native on`) — renomeá-lo quebraria perfil salvo em disco. Esta lista é a
-# frase-dona; a aba Perfis (`profiles_actions._MODE_KIND_ITEMS`) e o applet
-# COSMIC (`packaging/cosmic-applet/src/app.rs`, `let entries`) repetem os mesmos
-# rótulos, e o `test_vocabulario_das_quatro_superficies.py` reprova quem mudar
-# um lado só.
 _MODE_ITEMS = [
     ("desktop", "Controlar o PC"),
     ("gamepad", "Jogar pelo Hefesto"),
@@ -157,10 +104,6 @@ _MODE_ITEMS = [
 ]
 
 # LEIGO-02: "(vibra)"/"(sem vibrar)" eram verdade enquanto a máscara DualSense
-# não vibrava; com o vpad uhid (SPRINT-UHID-VPAD-01) as duas vibram, então o
-# rótulo antigo virou MENTIRA. O que resta de diferença é o que a usuária vê na
-# tela do jogo: os desenhos dos botões. Xbox segue na lista porque há jogos que
-# só entendem XInput.
 _FLAVOR_ITEMS = [
     ("xbox", "Xbox 360"),
     ("dualsense", "DualSense (botões PlayStation)"),
@@ -168,80 +111,22 @@ _FLAVOR_ITEMS = [
 ]
 
 _MODE_DESCRIPTIONS = {
-    # NOTA DATADA (MODO-QUE-NAO-CONTROLA-01, 09/08/2026): esta frase mandava
-    # para "as abas Mouse e Teclado", e essas duas abas NÃO EXISTEM desde a
-    # PALAVRA-01 (28/07, pedido dela: o nome curto) — as duas colunas moram numa
-    # aba só, "Navegação" (`tab_navegacao_dsx` no glade, com `tab_mouse` e
-    # `tab_keyboard` como os boxes de dentro). Caducou naquele dia e ficou
-    # apontando para um lugar que a janela não tem — o que só apareceu agora,
-    # porque a linha logo abaixo passou a dizer ONDE ligar o mouse e as duas
-    # não podiam divergir.
     "desktop": (
         "O controle vira mouse/teclado do computador (ajustes na aba "
         "Navegação)."
     ),
-    # LEIGO-02: a recomendação de 3 linhas ("use a máscara Xbox 360 e cole as
     # opções da Steam") existia só para contornar a máscara DualSense que não
-    # vibrava. O SPRINT-UHID-VPAD-01 curou isso (o gamepad virtual é um
     # DualSense de verdade via /dev/uhid, e vibra) — o trade-off morreu com ele,
-    # e a frase que o explicava morre junto.
     "gamepad": (
         "Escolha certa para quase todos os jogos: o Hefesto acende as luzes, "
         "faz o controle vibrar e dá um jogador para cada controle."
     ),
-    # NOTA DATADA (ONDA5-01-02, 06/09/2026) — A PROFECIA SAIU DAQUI, e ela
-    # precisou de TRÊS palavras dela, em três dias diferentes, para cair:
-    #
-    #   31/08/2026 — *"o modo nativo já existe ali (…) e se eu quiser desligar
-    #     modo hefesto clico em desligado e o modo nativo fica online. Qualquer
-    #     coisa fora isso tá incorreta."* A interface nova encolheu o texto
-    #     naquele dia (`interface/aba01.py`, a constante `INTERRUPTOR`); esta
-    #     janela não foi junto, e as duas passaram uma semana divergindo.
-    #   04/09/2026 — a leitura de PO do OITAVO CONFLITO: a tela pode dizer o
-    #     ESTADO MEDIDO, nunca a consequência que ninguém mediu. É o que o
-    #     `interface/frases_que_ela_baniu` conta, e o que ele guarda.
-    #   05/09/2026 — *"Não me lembro disso acontecer. E não deveria."*
-    #
-    # O QUE SAIU, e as duas metades são banidas por medição, não por gosto:
-    # os gatilhos que endureceriam e os jogos que derrubariam o controle.
-    # **Os trechos NÃO se digitam aqui** — eles moram nos índices 0 e 2 de
-    # `interface.frases_que_ela_baniu.FRASES_BANIDAS`, e uma cópia neste
-    # comentário faria deste arquivo a primeira ocorrência de novo.
-    #
-    # CAIU JUNTO o comentário do SPRINT-GAME-RUMBLE-01, que explicava o
-    # travamento pelo canal de áudio (haptics do PS5). Ele era a CAUSA de um
-    # efeito que ensaio nenhum desta casa mede — sem a frase, ficou sem objeto.
-    #
-    # A CHAVE NÃO SE APAGA: `_MODE_DESCRIPTIONS.get(...)` é lido seco em
-    # `_render_home` e em `_on_home_mode_changed`, e apagar a chave escreveria
-    # string VAZIA na tela — trocar uma frase errada por nenhuma não é o que
-    # ela pediu. O texto que fica é o da interface nova, palavra por palavra:
-    # as duas janelas passam a dizer a mesma coisa.
     "native": (
         "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o "
         "controle."
     ),
 }
 
-#: O que a aba diz quando o Hefesto está PARADO. Substitui a descrição do modo,
-#: não a acompanha: com o produto em pausa, "o Hefesto acende as luzes, faz o
-#: controle vibrar e dá um jogador para cada controle" é uma promessa que nada
-#: está cumprindo.
-#:
-#: PROVISÓRIO — decisão dela (texto de tela é palavra dela).
-#: CLASSE DE TELA: ESTRUTURAL — estado novo.
-#: A FRASE MANDAVA PARA UMA ABA QUE NÃO EXISTE — substituída em 06/09/2026,
-#: achado da `JOGAR-O-QUE-FALTA-01`. Ela dizia *"ou a aba Emulação"*, e a
-#: interface nova tem dez abas: Jogar, Controles, Gatilhos, Iluminação,
-#: Vibração, Navegação, Lançadores, Conexões, Sistema e Perfis. É a forma que o
-#: glossário desta casa proíbe com todas as letras — *qualquer frase que mande a
-#: pessoa procurar um botão ou uma janela que não existe*.
-#:
-#: O botão foi MEDIDO: quem retoma o serviço é o botão da aba Sistema que diz
-#: `Retomar` com a pausa ativa (`pacotes/a09_sistema.py:2703`, `RETOMAR`). O
-#: interruptor da aba Jogar NÃO serve — ele é Ligado/Desligado entre o gamepad
-#: do Hefesto e o modo nativo, e nunca chama `daemon.pause`/`daemon.resume`
-#: (decisão dela, 31/08/2026, escrita no gesto `hefesto`).
 TEXTO_EM_PAUSA: Final[str] = (
     "O Hefesto está em pausa: nada disto está acontecendo agora — sem luzes, "
     "sem vibração e sem os seus ajustes. O controle segue funcionando nos "
@@ -251,35 +136,12 @@ TEXTO_EM_PAUSA: Final[str] = (
 
 
 def texto_da_pausa(state: dict[str, Any] | None) -> str | None:
-    """O produto está PARADO? — função pura (I4, 25/08/2026).
-
-    O ``_render_home`` tinha exatamente DOIS estados: daemon vivo e daemon
-    morto. Com o Hefesto em pausa — decisão tomada noutra aba, ou noutra
-    sessão — o payload continua ``connected: true`` e a aba pintava o caminho
-    feliz inteiro, prometendo luz, vibração e um jogador por controle enquanto
-    nada disso acontecia.
-
-    A regra da casa, e é a que separa este estado do offline: **sem daemon é
-    "não sei"; em pausa é "sei, e está parado" — nunca o verde.**
-
-    Só o ``True`` LITERAL acende, a mesma disciplina do ``wrapper_used``: chave
-    ausente (daemon antigo) ou valor de outro tipo não viram aviso.
-
-    O MESMO campo que a aba Emulação já lê (`emulation_actions`, o rótulo "O
-    Hefesto está em pausa") — uma fonte só, nunca duas leituras do mesmo fato
-    que possam discordar.
-    """
+    """O produto está PARADO? — função pura (I4, 25/08/2026)."""
     if not isinstance(state, dict):
         return None
     return TEXTO_EM_PAUSA if state.get("paused") is True else None
 
 
-# LEIGO-02: o glossário enfileirava 4 conceitos, dois deles mortos — "Pausar"
-# não é mais botão de lugar nenhum e "Conexão Nativa (Sony)" já é um dos botões
-# logo acima (com descrição própria). Sobram os dois que a aba NÃO explica por
-# si: o "Modo jogo" (que mora em outra aba) e o desligar de verdade.
-# ONDA-U (U1): o "ligar de novo" deixou de mandar pra aba Sistema — o mesmo
-# botão vira "Ligar o Hefesto" nesta própria aba (toggle in-place).
 _GLOSSARY = (
     "Modo jogo (aba Emulação): pausa só o mouse/teclado, sem soltar o "
     "controle.  ·  "
@@ -287,37 +149,12 @@ _GLOSSARY = (
     "mesmo, nesta aba."
 )
 
-# ONDA-U (U1): rótulos do botão único de energia da aba Início — ele TROCA de
-# texto/ação conforme o daemon está online ou offline (nunca dois botões).
 _BTN_LABEL_ONLINE = "Desligar Hefesto (voltar ao Linux puro)"
 _BTN_LABEL_OFFLINE = "Ligar o Hefesto"
 
 
 def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
-    """Frase do Modo Freestyle ligado — função PURA (UX-05).
-
-    Vazia quando desligado (nada a explicar: é o comportamento normal). Ligado,
-    diz o que vale: o perfil ativo, em todo jogo.
-
-    FATO SUBSTITUÍDO — 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01). A frase
-    dizia *"Jogos com perfil próprio ainda entram"*, a metade da LOCK-CEDE-01.
-    A decisão dela (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) a revogou:
-    ligado, nenhum jogo entra por cima. A frase dizia o contrário do produto.
-
-    O nome do perfil ativo entra quando ALGUÉM sabe dizer qual é: "o perfil não
-    troca sozinho" sem dizer QUAL perfil ficou é meia informação.
-
-    P1 (25/08/2026) — o dono da pergunta. Esta linha lia `state["active_profile"]`
-    direto, e na máquina dela esse campo é ``null`` enquanto o marcador em disco
-    diz ``Sackboy``: a frase saía sem o nome, e a aba Perfis, ao lado, mostrava
-    o nome em verde. Quatro superfícies, duas respostas, o mesmo fato
-    (§2.1/1 da sprint). Agora quem responde é `perfil_que_esta_valendo` —
-    daemon primeiro, disco como segunda perna DECLARADA —, e o silêncio ficou
-    reservado para o caso em que ninguém sabe.
-
-    **Import adiado de propósito:** `profiles_actions` importa deste módulo
-    (`texto_do_custo_da_mascara`), então um import no topo fecharia o ciclo.
-    """
+    """Frase do Modo Freestyle ligado — função PURA (UX-05)."""
     if not state or not state.get("freestyle_ligado"):
         return ""
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
@@ -329,11 +166,6 @@ def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
     return f"Modo Freestyle ligado: o perfil não troca sozinho, nem no jogo{alvo}."
 
 
-#: O que o botão «Modo Freestyle» NÃO vai fazer
-#: quando o mecanismo que ela governa está cego.
-#:
-#: PROVISÓRIO — decisão dela (o texto exato é palavra dela, PROVA-DE-TELA-01).
-#: CLASSE DE TELA: ESTRUTURAL — linha nova onde antes não havia nada.
 TEXTO_DETECTOR_CEGO: Final[str] = (
     "O Hefesto não está conseguindo ver qual programa está na frente, então o "
     "perfil não vai trocar sozinho de qualquer jeito — isto não é escolha sua. "
@@ -342,72 +174,18 @@ TEXTO_DETECTOR_CEGO: Final[str] = (
 
 
 def texto_do_cadeado_cego(state: dict[str, Any] | None) -> str:
-    """O mecanismo do cadeado está cego? — função PURA (I11, 25/08/2026).
-
-    O botão «Modo Freestyle» governa a troca
-    automática POR JANELA. **Na máquina dela, medido em 23/08/2026**, essa
-    troca está cega — ``window_detect_seeing=False``,
-    ``reason='sem_conexao_x'`` — e o produto ainda publica
-    ``window_detect_healthy=True``. Com a caixa desmarcada, que é o padrão, a
-    linha ao lado era **vazia**: a aba não dizia nem que o mecanismo existia,
-    nem que ele tinha parado.
-
-    Devolve ``""`` quando não há o que dizer, e a AUSÊNCIA DA CHAVE conta como
-    "não sei" — nunca como "está cego". Um daemon mais velho não afirma nada
-    sobre um detector que ele não publica, e acender um aviso a partir de
-    payload incompleto é o alarme falso que os outros avisos desta aba evitam
-    de propósito.
-
-    **Isto NÃO conserta o vigia.** O ``healthy=True`` mentindo é da Z7
-    (`NO-MEU-FUNCIONA-01`); esta função faz a aba parar de calar, e só.
-
-    POR QUE UMA FUNÇÃO NOVA, e não uma linha dentro de `autoswitch_lock_text`
-    ------------------------------------------------------------------------
-
-    Porque o retorno de `autoswitch_lock_text` tem DOIS consumidores com
-    contratos diferentes: a linha da aba e — por BORDA, quando o valor muda —
-    o toast do rodapé (`_render_home`, AVISO-VIVO-01). Enfiar a cegueira ali
-    faria o rodapé anunciar o detector toda vez que ele piscasse, que é ruído
-    sobre um fato que já está escrito na tela. Duas perguntas, dois valores: é
-    a mesma lei que separou ``orcamento_em_vigor`` de ``orcamento_na_tela``.
-    """
+    """O mecanismo do cadeado está cego? — função PURA (I11, 25/08/2026)."""
     if not isinstance(state, dict) or "window_detect_seeing" not in state:
         return ""
     return "" if state.get("window_detect_seeing") else TEXTO_DETECTOR_CEGO
 
 
 def _mode_label(mode_id: object) -> str:
-    """Rótulo do modo como a usuária o lê no botão (LEIGO-02) — função pura.
-
-    Os toasts ecoavam o id interno ("gamepad", "native"): palavras que não
-    aparecem em lugar nenhum da interface. O fallback devolve o próprio id para
-    um modo desconhecido (payload de daemon mais novo) ser visível em vez de
-    virar texto vazio.
-    """
+    """Rótulo do modo como a usuária o lê no botão (LEIGO-02) — função pura."""
     return dict(_MODE_ITEMS).get(str(mode_id), str(mode_id))
 
 
-#: MASCARA-CUSTO-01 (01/08) — o que cada máscara CUSTA, em uma frase.
-#:
 #: Função pura, no padrão de `vpad_degradation_text`, para que a aba Início e
-#: a aba Emulação nunca digam coisas diferentes sobre o mesmo fato.
-#:
-#: O fato, medido pela auditoria de 01/08: com a máscara Xbox o gamepad virtual
-#: é uinput, que declara 8 eixos e 11 botões — **não há onde pôr giroscópio nem
-#: touchpad**, e `integrations/virtual_pad.py` recusa o uhid para qualquer
-#: sabor que não seja `dualsense`. Não é bug, é a API do Xbox 360; o que faltava
-#: era a tela dizer isso.
-#:
-#: Vibração, microfone e alto-falante NÃO estão na lista de perdas de propósito:
-#: a vibração funciona nas duas máscaras, e microfone e alto-falante nem passam
-#: pelo gamepad (são PipeWire, e seguem valendo em qualquer máscara).
-#:
-#: NOTA DATADA — 22/08/2026 (MASCARA-QUE-GRUDA-01): a lista era de DOIS e o
-#: descritor tem TRÊS buracos. O `acelerômetro` entrou, e não é frase nova: os
-#: 8 eixos do vpad uinput são ABS_X/Y/RX/RY/Z/RZ/HAT0X/HAT0Y (`uinput_gamepad.py`,
-#: contados um a um) — nenhum é IMU, então o acelerômetro cai junto com o
-#: giroscópio. É a mesma medição de `c9859ff`, que nomeia os três. Ela pediu que
-#: o perfil guardasse acelerômetro (18/08), então a palavra já é do léxico dela.
 TEXTO_CUSTO_MASCARA_XBOX: Final[str] = (
     "Nesta máscara o jogo não recebe giroscópio, acelerômetro nem touchpad — o "
     "controle de Xbox não tem esses três, então não há onde eles caberem. "
@@ -416,45 +194,7 @@ TEXTO_CUSTO_MASCARA_XBOX: Final[str] = (
 )
 
 
-#: O preço da máscara Nintendo Pro (07/09/2026), e ele é MAIOR que o do Xbox:
-#: os três buracos daquela mais um quarto que é dela sozinha.
-#:
-#: O QUARTO É MEDIDO, não suposto. O Pro Controller **não tem gatilho
-#: analógico**: o `hid-nintendo` registra `ABS_X/Y/RX/RY` e mais nada
-#: (`joycon_config_left_stick`/`_right_stick`), e ZL/ZR são os botões
-#: `BTN_TL2`/`BTN_TR2` (`procon_button_mappings`, lido no fonte C em
-#: `assets/dkms/hid-nintendo/hid-nintendo.c`). Imitar o aparelho obriga a
-#: imitar o buraco: sob esta máscara o L2/R2 chega ao jogo como ligado ou
-#: desligado, sem meio-termo.
-#:
-#: Giroscópio, acelerômetro e touchpad caem pelo mesmo motivo do Xbox — o
-#: aparelho imitado não os tem por onde entregar. Vibração continua: o Pro tem
-#: `FF_RUMBLE` de verdade (`joycon_config_rumble`), e a SDL confirmou o vpad
-#: com `SDL_GameControllerHasRumble = 1` (medido em 07/09/2026).
-#:
-#: E HÁ UM QUINTO, que esta frase escondeu até 07/09/2026 e que é PIOR que os
-#: outros quatro porque *parece funcionar*: fora do lançador do Hefesto os
-#: quatro botões da frente chegam TROCADOS AOS PARES. Medido nesta máquina
-#: consultando a libSDL2 (2.30.0) pelo GUID das TRÊS máscaras que o produto
-#: emite, com e sem a env que o `daemon.launch_env.compose_env` materializa
-#: (`SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0`):
-#:
-#:     057e:2009 (nintendo) sem a env -> a:b1,b:b0,x:b2,y:b3
-#:     057e:2009 (nintendo) com  =0   -> a:b0,b:b1,x:b3,y:b2
-#:     045e:028e (xbox)     -> a:b0,b:b1,x:b2,y:b3  nos DOIS
-#:     054c:0df2 (dualsense)-> a:b0,b:b1,x:b3,y:b2  nos DOIS
-#:
-#: O mapeamento de fábrica da SDL para o Pro traz
-#: `hint:SDL_GAMECONTROLLER_USE_BUTTON_LABELS:=1` — a etiqueta da Nintendo, em
-#: que confirmar fica à DIREITA. Com o vpad de pé isso significa X (Cruz) -> B
-#: e Círculo -> A, ou seja, confirmar vira voltar em todo jogo aberto por fora
-#: do `hefesto-launch.sh`. **É a única máscara do catálogo com essa
 #: dependência**: Xbox e DualSense entregam o mesmo mapa com ou sem a env.
-#:
-#: Por isso a frase abaixo diz o quinto preço. Declarar quatro e calar este
-#: seria a metade errada — "o preço, declarado E NÃO ESCONDIDO" aplicado só ao
-#: que não constrange, e um jogo com confirmar/cancelar trocados é pior para
-#: quem joga que um chip cinza, porque não acusa nada.
 TEXTO_CUSTO_MASCARA_NINTENDO: Final[str] = (
     "Nesta máscara o jogo não recebe giroscópio, acelerômetro nem touchpad, e "
     "os gatilhos L2/R2 chegam como botão — apertado ou solto, sem meio-termo: "
@@ -469,12 +209,7 @@ TEXTO_CUSTO_MASCARA_NINTENDO: Final[str] = (
 
 
 def texto_do_custo_da_mascara(flavor: object) -> str:
-    """A frase de preço da máscara; ``""`` quando não há preço a dizer.
-
-    Devolve vazio para `dualsense` (nada se perde) e para valor desconhecido
-    ou ausente — inventar um aviso a partir de payload incompleto seria a
-    mesma família de erro que o `or "xbox"` que esta casa já removeu daqui.
-    """
+    """A frase de preço da máscara; ``""`` quando não há preço a dizer."""
     if flavor == "xbox":
         return TEXTO_CUSTO_MASCARA_XBOX
     if flavor == "nintendo":
@@ -487,37 +222,17 @@ def _flavor_label(flavor_id: object) -> str:
     return dict(_FLAVOR_ITEMS).get(str(flavor_id), str(flavor_id))
 
 
-# UX-03 (SPRINT-UX-AUTOSWITCH-01): texto do banner de degradação do vpad.
-# "Reconecte o controle" foi REFUTADO pela revisão adversarial — a promoção
-# uinput→uhid só acontece no boot do daemon (único call site do
-# `upgrade_primary_vpad_to_uhid` é o connect, `lifecycle.py`), então reconectar
-# NÃO cura nada; o conselho honesto é reiniciar o Hefesto pela aba Sistema.
 VPAD_DEGRADED_TEXT = (
     "O gamepad virtual subiu no modo simples: a vibração e a separação do "
     "controle físico não estão garantidas. Reinicie o Hefesto na aba Sistema."
 )
 
-# DEDUP-06: um jogador do co-op degradado em uinput com o jogo aberto sob o
-# IGNORE congelado é AQUELE jogador com zero controle — o banner do primário
-# não o cobria (a dedup quebrada voltava a ser silenciosa, o que o item P0
-# proíbe). Sempre banner inline, nunca popover (cosmic-epoch#2497).
-#
-# MESA-CHEIA-11/E2 (14/08/2026): este texto é o FALLBACK, não a regra. O daemon
-# sempre soube QUAL jogador caiu (`jogador_<N>_uinput`, em
-# `daemon/subsystems/gamepad.py:dedup_status`) e a janela jogava o número fora —
-# com a mesa cheia ela mandava a usuária testar quatro controles um por um para
-# reencontrar o que o payload já dizia. Esta frase só sobra quando o rótulo veio
-# sem número (`jogador_?_uinput`: o co-op sem `player_index`).
 VPAD_COOP_DEGRADED_TEXT = (
     "O gamepad virtual de um dos jogadores do co-op subiu no modo simples: "
     "aquele jogador pode ficar sem vibração — e sem controle, se o jogo foi "
     "aberto com a desduplicação ligada. Reinicie o Hefesto na aba Sistema."
 )
 
-#: MESA-CHEIA-11/E2: o consertado do banner do co-op fica NUM LUGAR SÓ (a regra
-#: de execução da D-9), para que trocar a palavra seja uma linha e não uma
-#: caçada por strings. `{quem}` é só a LISTA de números ("3", "2 e 3") — a
-#: palavra "Jogador"/"Jogadores" já está no molde, e é o que se troca aqui.
 _COOP_DEGRADED_UM = (
     "O gamepad virtual do Jogador {quem} subiu no modo simples: esse jogador "
     "pode ficar sem vibração — e sem controle, se o jogo foi aberto com a "
@@ -529,32 +244,11 @@ _COOP_DEGRADED_VARIOS = (
     "com a desduplicação ligada. Reinicie o Hefesto na aba Sistema."
 )
 
-#: Rótulo que o daemon emite por jogador degradado. O `?` é real e previsto:
-#: `dedup_status` usa `str(indice) if isinstance(indice, int) else "?"`.
 _JOGADOR_DEGRADADO_RE = re.compile(r"\bjogador_(\d+)_uinput\b")
 
 
 def jogadores_degradados(motivo: object) -> list[int]:
-    """Números dos jogadores citados no ``dedup_motivo`` — função pura.
-
-    O campo chega como lista separada por vírgula (`", ".join(motivos)` em
-    `daemon/ipc_handlers.py`), e pode misturar motivos do primário
-    (`sem_uhid`), do wrapper (`jogo_sem_wrapper`) e dos jogadores do co-op.
-    Devolve só os números, sem repetição; entrada que não for texto, ou sem
-    nenhum `jogador_<N>_uinput`, devolve lista vazia — e é isso que faz o
-    chamador cair no texto genérico em vez de inventar um número.
-
-    Os números saem **CRESCENTES**, e não na ordem de chegada, pela mesma regra
-    que a entrega irmã desta sprint escreveu na função de banner ao lado
-    (`daemon/ipc_handlers.controles_bt_frageis`, MESA-CHEIA-11/E1): quem lê a
-    frase procura o card pelo número, e uma lista fora de ordem a faria varrer a
-    fileira duas vezes. E a ordem de chegada FICA fora de ordem sozinha: o
-    `dedup_status` itera `players.values()` (ordem de entrada no dict) e o
-    `CoopManager._next_player_index` REUSA o índice de quem saiu, então o
-    jogador que entra no lugar do P2 leva o "2" para o FIM da frase
-    ("Jogadores 3, 4 e 2"). O custo é só este: a frase deixa de contar a ordem
-    em que os jogadores caíram — que é dado que ela não usa para achar o card.
-    """
+    """Números dos jogadores citados no ``dedup_motivo`` — função pura."""
     if not isinstance(motivo, str):
         return []
     vistos: set[int] = set()
@@ -577,9 +271,7 @@ def texto_coop_degradado(jogadores: Sequence[int]) -> str:
     return molde.format(quem=quem)
 
 
-# DEDUP-06 (achado novo da revisão): Modo Nativo com o físico em Bluetooth é
 # estruturalmente frágil — o SDL pode não enxergar o DualSense BT nem sem
-# launch option (o backend evdev deferencia ao HIDAPI, que não lê o hidraw BT).
 NATIVE_BT_FRAGIL_TEXT = (
     "Modo Nativo com o controle em Bluetooth: alguns jogos não enxergam o "
     "DualSense por BT (limite do SDL). Se o jogo não vir o controle, use o "
@@ -627,14 +319,7 @@ def controles_bt_frageis(state: dict[str, Any] | None) -> list[int]:
 
 
 def texto_native_bt_fragil(numeros: Sequence[int]) -> str:
-    """Banner do BT frágil NOMEANDO os controles; genérico sem número.
-
-    MESA-CHEIA-11/E1 — o número é o do CONTROLE (`numero_do_controle`: o slot
-    de sessão), que é como o card se identifica no título e como o cabeçalho
-    lista o alvo. Não é o número do JOGADOR: no payload real de 14/08 os dois
-    divergem (slots [4, 1, 3, 2] contra jogadores [1, 2, 3, 4]), e quem ela
-    precisa achar para trocar o cabo é o card, não o slot do jogo.
-    """
+    """Banner do BT frágil NOMEANDO os controles; genérico sem número."""
     validos = [n for n in numeros if isinstance(n, int) and not isinstance(n, bool)]
     if not validos:
         return NATIVE_BT_FRAGIL_TEXT
@@ -643,36 +328,7 @@ def texto_native_bt_fragil(numeros: Sequence[int]) -> str:
     return molde.format(quem=quem)
 
 
-# GUI-05 item 3 (honestidade do dedup): texto do banner "jogo sem wrapper".
-# Discreto e pro leigo — diz a consequência (duplicar) e o que o PRODUTO faz,
-# sem jargão de env/vdf.
-#
-# ELA MANDAVA COPIAR, E O BOTÃO NÃO EXISTE — decisão dela, 05/09/2026 (`07-Q2`):
-# *"O produto aplica ela"*. A frase terminava em *"Copie as opções na aba
-# Sistema."*, e a aba Sistema da interface nova tem doze botões e nenhum copia
-# coisa alguma (`grep -c Copiar interface/paginas/09-sistema.html` = 0). O
-# Hefesto não explica a própria falha: ele a conserta. Ela recusou as TRÊS
-# opções que lhe foram oferecidas (só o fato · apontar o Consertar · duas
-# frases) e respondeu com uma quarta, que é a única que age.
-#
-# A PROMESSA É MEDIDA, E POR ISSO TRAZ A CONDIÇÃO — 06/09/2026, ONDA5-07-03.
-# Quem repõe é a carona (`carona_do_wrapper.passada`), e ela NÃO tem relógio
-# próprio: pega carona nos gestos de perfil, nas duas janelas — a estável por
-# `profile_writer.pegar_carona_no_gesto(GESTO_SALVAR)`, a nova por
 # `interface/pacotes/perfil.com_a_carona`, que o rodapé das dez abas chama no
-# Aplicar, no Salvar Perfil e no Importar (ONDA5-07-02). Com a Steam aberta o
-# reparo é adiado (`sentinela_do_wrapper._como_reparar`), e por isso a condição
-# está ESCRITA. Uma promessa sem ela — *"reponho assim que a Steam fechar"* —
-# dependeria de uma vigia que a interface nova só armava por clique dela na
-# aba Lançadores (a `_VigiaDaSteam`, que saiu em 21/09/2026); prometer isso
-# aqui seria prometer o que ninguém cumpria.
-#
-# "ATALHO DE INICIALIZAÇÃO" É A PALAVRA DA TELA e `hefesto-launch` é a da casa
-# (`docs/A-LINGUA-DESTA-CASA`, §2). E os dois botões que a frase nomeia — os
-# rótulos "Aplicar" e "Salvar Perfil" — estão no rodapé, que é das DEZ abas da
-# interface nova: em qualquer aba onde este aviso acenda, os dois estão à
-# vista. É o que mantém UMA frase com UM dono certa em toda tela que a mostre,
-# e é o contrário da frase velha, que mandava a um botão inexistente.
 WRAPPER_MISSING_TEXT = (
     "O jogo está rodando sem o atalho de inicialização — controles podem "
     "duplicar. Reponho o atalho no próximo Aplicar ou Salvar Perfil, com a "
@@ -705,12 +361,7 @@ def wrapper_banner_text(state: dict[str, Any] | None) -> str | None:
 
 
 def appid_do_jogo_em_foco(state: dict[str, Any] | None) -> str:
-    """O appid da Steam do jogo que está na frente, ou "" — função pura.
-
-    A mesma derivação que a aba Lançadores faz (`a07_lancadores._appid_em_foco`)
-    e que o diálogo da janela estável usa (`launch_wrapper_dialog.py:81`): a
-    classe da janela vira appid por `steam_appid_from_wm_class`.
-    """
+    """O appid da Steam do jogo que está na frente, ou "" — função pura."""
     if not isinstance(state, dict):
         return ""
     from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as _lwd
@@ -766,7 +417,7 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     Nasceu em 05/09/2026, e a razão é um defeito medido: ela dispensava o aviso
     na aba Lançadores e **três outras telas continuavam acusando** — a Início, a
     Status e a coluna Atenção da aba Jogar
-    (`app/actions/jogar/painel.py:649`), porque as três chamavam
+    (`app/actions/jogar/painel.py:358`), porque as três chamavam
     `wrapper_banner_text` direto, sem consultar lista nenhuma.
 
     A decisão dela, 05/09/2026 (pergunta `07-Q3`): *"as duas recusas calam
@@ -845,9 +496,6 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     """
     if not isinstance(state, dict):
         return None
-    # §P8 (25/08/2026): a decisão do rádio frágil saiu daqui e virou
-    # `texto_do_radio_fragil`, porque a aba Perfis passou a precisar da MESMA
-    # frase. O banner desta aba não mudou — ele só parou de ser o dono.
     do_radio = texto_do_radio_fragil(state)
     if do_radio is not None:
         return do_radio
@@ -858,9 +506,6 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
         return None
     if gamepad.get("flavor") != "dualsense":
         return None
-    # O-MODO-XBOX-NAO-E-QUEDA-02 (27/09/2026): quem diz se o pad caiu é o
-    # daemon (`degraded`, de `motivo_da_degradacao`). Ler `backend == "uinput"`
-    # aqui acendia o aviso de queda sobre o modo Xbox que ela escolheu.
     if gamepad.get("degraded") is True:
         return VPAD_DEGRADED_TEXT
     motivo = gamepad.get("dedup_motivo")
@@ -869,28 +514,12 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
         and isinstance(motivo, str)
         and "jogador" in motivo
     ):
-        # MESA-CHEIA-11/E2: o gatilho continua sendo o mesmo ("jogador" no
-        # motivo, o que cobre o `jogador_?_uinput` sem número); o que mudou é
-        # que o texto passa a dizer QUAL, quando o daemon disse.
         return texto_coop_degradado(jogadores_degradados(motivo))
     return None
 
 
-#: COOP-SEM-INTERRUPTOR-01 (06/08/2026): rótulo do botão que era "Renumerar
-#: agora". Ele deixou de ser só faxina de numeração: agora RECONCILIA os
-#: jogadores primeiro (`coop.sync`) e compacta a numeração depois
-#: (`identity.renumber`). A troca de nome é a entrega 5 do roteiro — sem ela,
-#: tirar "Preparar co-op" da tela tiraria dela o único gesto capaz de trazer de
-#: volta o jogador que nasce e morre em dois segundos.
 RECONCILIAR_LABEL = "Reconciliar jogadores"
 
-# ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): texto exibido quando há
-# jogo aberto. NOTA DATADA — até 06/08/2026 este aviso DESABILITAVA o botão,
-# porque o gesto era só `identity.renumber` e o daemon o recusa com jogo aberto
-# (repintar o LED do controle em uso no meio da partida é o erro que a NUMA-03
-# fechou). Com a reconciliação dos jogadores no mesmo botão, desabilitar
-# passaria a esconder o gesto EXATAMENTE quando ela mais precisa dele — o P2 cai
-# DURANTE a partida. Então o aviso vira o que sempre deveria ter sido: uma
 # explicação do que NÃO vai acontecer, com o botão de pé.
 RECONCILIAR_JOGO_ABERTO_TEXT = (
     "Com o jogo aberto os jogadores voltam, mas a numeração não muda — "
@@ -933,29 +562,7 @@ def _reconciliar_gate_text(state: dict[str, Any] | None) -> str | None:
     return RECONCILIAR_JOGO_ABERTO_TEXT if jogo_com_autoridade(state) else None
 
 
-# MODO-QUE-NAO-CONTROLA-01 (09/08/2026) — medido com ela ao vivo, às 23h50.
-#
-# Ela escolheu "Controlar o PC", clicou no "Aplicar" e relatou: *"cliquei em
-# aplicar e nada"*. O modo ENTROU (o journal prova: `native_mode_changed
-# native=False`, `gamepad_controller_grab state=off`, `mouse_preference_restored
-# enabled=False ok=True`) — e o controle não movia o cursor, porque a
-# preferência de mouse persistida dela estava desligada.
-#
 # O daemon fez o certo, e continua fazendo: `mouse.emulation.restore` RESTAURA a
-# preferência dela (HARM-06), não impõe uma. Ligar o mouse por conta própria
-# atropelaria o interruptor que ela mesma desligou na aba Navegação — e "a
-# vontade na GUI prevalece sempre" (decisão dela, 09/08) vale para o gesto do
-# interruptor tanto quanto para o gesto do modo.
-#
-# O que estava errado era o SILÊNCIO: o modo cujo nome promete controlar o PC
-# entrava sem controlar nada e nenhuma superfície dizia por quê. Ela só
-# descobriu quando alguém leu o journal por ela.
-#
-# Estas frases são o mesmo padrão do `_reconciliar_gate_text` logo acima: dizem
-# o que NÃO vai acontecer e onde é o botão — sem impedir gesto nenhum. E são o
-# espelho do `mouse_actions.MODE_GATE_HINT`, que já mandava a usuária de lá para
-# cá ("Só dá para ligar o mouse em \"Controlar o PC\" (aba Início)"); faltava a
-# volta.
 TEXTO_DESKTOP_SEM_MOUSE: Final[str] = (
     "Você está em \"Controlar o PC\", mas o mouse emulado está desligado — o "
     "controle não move o cursor. Ligue \"Emular mouse\" na aba Navegação."
@@ -1033,18 +640,7 @@ def texto_do_desktop_sem_emulacao(
 
 
 def reconciliar_toast(jogadores: object, resultado_renumber: object) -> str:
-    """Frase única do "Reconciliar jogadores" — função pura (06/08/2026).
-
-    Um clique, dois passos, UM toast: anunciar duas vezes o mesmo gesto seria
-    ruído, e anunciar só um deles esconderia metade do que aconteceu. A ordem
-    da frase é a ordem dos passos — jogadores primeiro (é o que ela veio
-    buscar), numeração depois (é acabamento).
-
-    ``resultado_renumber`` é o retorno cru do ``identity.renumber`` (ou ``None``
-    quando o IPC do acabamento falhou): a recusa por jogo aberto NÃO vira falha
-    do gesto, pela mesma razão do ``reported_step_index`` — com os jogadores já de
-    pé, um toast de erro seria a interface mentindo.
-    """
+    """Frase única do "Reconciliar jogadores" — função pura (06/08/2026)."""
     n = jogadores if isinstance(jogadores, int) and not isinstance(jogadores, bool) else None
     cabeca = (
         f"Jogadores reconciliados — {n} jogador(es)."
@@ -1064,61 +660,21 @@ def reconciliar_toast(jogadores: object, resultado_renumber: object) -> str:
     return f"{cabeca} A numeração já estava compacta."
 
 
-# --- PONTE-NA-TELA-01: a divergência e a ponte, escritas na aba -------------
-#
-# Os dois defeitos de tela medidos na noite de 18→19/08/2026, com o jogo
-# DON'T SCREAM aberto:
-#
-# 1. ela escolheu "Xbox 360" no seletor "O jogo vê o controle como:", e a
-#    janela seguiu dizendo que estava tudo certo enquanto o aparelho continuava
 #    DualSense. O gate R-04 do daemon (`_recriacao_bloqueada_por_jogo`) tinha
-#    RECUSADO a troca — destruir/recriar o vpad com o jogo segurando os handles
-#    arranca o controle da mão dela no meio da partida — e nada na tela disse
-#    isso. Pior: o rodapé anunciou desfecho de sucesso sobre a recusa, porque
-#    `set_gamepad_emulation` devolve o MESMO ``True`` para "apliquei", "já
-#    estava" e "recusei" (o contrato de retorno é "ativo ao final", não
-#    "apliquei o pedido" — está escrito no próprio `start_gamepad_emulation`);
-# 2. a janela não dizia por ONDE o jogo estava recebendo o controle.
-#
-#    CORREÇÃO DE FATO — 25/08/2026 (I6, ramo 2). Este parágrafo dizia: *"com a
-#    exceção de Steam Input ativa o vpad é suspenso, `gamepad_emulation.enabled`
 #    cai para False e `mode_of_state` chama isso de Controlar o PC — a aba
-#    mostrava o modo desktop com o jogo jogando pelo espelho da Steam"*. Aquilo
-#    era verdade até **09/08/2026**, e a decisão dela naquele dia
-#    (ESCONDER-EM-VEZ-DE-SAIR-01) trocou o mecanismo: a exceção passou a
-#    ESCONDER O FÍSICO e a MANTER O VPAD DE PÉ, então a emulação NÃO cai, o modo
-#    NÃO vira desktop, e quem alimenta o jogo durante a exceção continua sendo o
-#    gamepad do Hefesto (medição em jogo de 11/08: zero espelhos da Steam —
-#    `docs/protocol/pilha-steam-input-xpad-sdl.md`, §2.4-bis).
-#
-#    O defeito de ONDE continuou existindo, e é o que esta aba curou: a linha da
-#    ponte respondia sobre o VPAD e a pessoa lia como resposta sobre o JOGO —
-#    daí o verde com a mesa vazia (I6, o veredito que faltava).
-#
-# A voz é a do diagnóstico da aba Sistema (`descrever_deteccao_de_janela`):
-# prefixo fixo, o veredito em cor, e a frase em português de quem usa. As cores
-# são as mesmas três de lá e do cartão "Saúde do sistema".
 
-#: Verde/laranja do diagnóstico da aba Sistema (`daemon_actions`, mesmo par).
 _COR_OK = "#50fa7b"
 _COR_AVISO = "#ffb86c"
 
-#: Prefixo fixo da linha da ponte. "Ponte" é palavra DELA (18/08): "o Hefesto é
-#: a construção de todas as pontes, de forma que usemos sempre todas as
 #: features do DualSense".
 PONTE_PREFIXO = "Ponte com o jogo: "
 
-#: Prefixo da linha de divergência, no mesmo formato ("assunto: veredito —
 #: explicação") do `PONTE_PREFIXO` e do detector de janela da aba Sistema.
 DIVERGENCIA_PREFIXO = "Sua escolha: "
 
 
 def _escapar(texto: object) -> str:
-    """Escapa markup Pango. Os rótulos de máscara são literais, mas o
-    `_flavor_label` devolve o id CRU para uma máscara desconhecida (payload de
-    daemon mais novo) — e um `&` ali viraria markup inválido, que o GTK recusa
-    inteiro: a linha sumiria da tela em vez de mostrar o id estranho.
-    """
+    """Escapa markup Pango. Os rótulos de máscara são literais, mas o"""
     return (
         str(texto)
         .replace("&", "&amp;")
@@ -1147,7 +703,7 @@ def mascara_viva(state: dict[str, Any] | None) -> str | None:
     a afirmar". Enquanto o campo explícito não existir, a divergência é medida
     contra `gamepad_emulation.flavor` — que serve, porque o daemon só grava
     `config.gamepad_flavor` DEPOIS de o vpad novo nascer
-    (`subsystems/gamepad.py:2556`); uma troca recusada pelo gate volta com a
+    (`subsystems/gamepad.py:1679`); uma troca recusada pelo gate volta com a
     máscara antiga no payload.
     """
     if not isinstance(state, dict):
@@ -1165,12 +721,7 @@ def mascara_viva(state: dict[str, Any] | None) -> str | None:
 
 
 def mascara_do_aparelho(state: dict[str, Any] | None) -> str | None:
-    """A máscara que o JOGO vê agora; ``None`` = não sei (offline/sem vpad).
-
-    O explícito (`mascara_viva`) vence; sem ele vale o `gamepad_emulation.
-    flavor` do payload, que é `config.gamepad_flavor` — gravado só depois de o
-    vpad novo existir, e portanto ainda o ANTIGO quando o gate recusa a troca.
-    """
+    """A máscara que o JOGO vê agora; ``None`` = não sei (offline/sem vpad)."""
     viva = mascara_viva(state)
     if viva:
         return viva
@@ -1183,41 +734,16 @@ def mascara_do_aparelho(state: dict[str, Any] | None) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
-#: As duas origens possíveis de uma máscara "escolhida" — I3 (25/08/2026).
-#:
-#: São DOIS FATOS diferentes, e a frase que os confundia acusava a pessoa de um
-#: gesto que ela não deu: com a fonte 1 morta (§2.2c da sprint), a divergência
-#: era SEMPRE medida contra `draft.source_mode.gamepad_flavor` — a máscara do
-#: PERFIL, que entra sozinho pelo autoswitch — e a tela dizia "você escolheu
-#: Xbox 360" sobre um valor que ela nunca clicou.
 FONTE_GESTO_DELA: Final[str] = "gesto"
 FONTE_PERFIL: Final[str] = "perfil"
 
-#: Prefixo da linha quando a máscara veio do PERFIL, e não do dedo dela. Mesmo
-#: formato dos outros ("assunto: veredito — explicação").
-#:
-#: PROVISÓRIO — decisão dela. CLASSE DE TELA: ESTRUTURAL.
 DIVERGENCIA_DO_PERFIL_PREFIXO: Final[str] = "O perfil ativo: "
 
 
 def mascara_divergente_do_daemon(
     state: dict[str, Any] | None,
 ) -> dict[str, Any] | None:
-    """A divergência que o daemon apontou para o jogo EM CENA; ``None`` se não há.
-
-    I3 (25/08/2026). O daemon publica isto desde a MASCARA-01
-    (`daemon/ipc_handlers.py`, `gamepad_emulation.mascara_divergente`) e a
-    janela **não tinha um leitor** — `grep -rn "mascara_divergente" src/` só
-    achava o escritor. Ele é o ALARME: o jogo está em cena AGORA e vê máscara
-    diferente da que o perfil dele pede. A lista irmã
-    (`mascara_divergencias`) é antecipação de jogo fechado, e esta função
-    deliberadamente NÃO a lê — mostrar divergência de jogo que não está aberto
-    seria aviso sobre coisa que não está em uso.
-
-    Shape publicado: ``{appid, profile, mascara_perfil, mascara_viva, motivo,
-    em_cena}``. Leitura defensiva em tudo: payload de outro formato devolve
-    ``None`` em vez de estourar dentro de um render.
-    """
+    """A divergência que o daemon apontou para o jogo EM CENA; ``None`` se não há."""
     if not isinstance(state, dict):
         return None
     gamepad = state.get("gamepad_emulation")
@@ -1235,46 +761,7 @@ def texto_da_divergencia(
     fonte: object = FONTE_GESTO_DELA,
     perfil: object = None,
 ) -> str | None:
-    """A frase da divergência entre o que ela escolheu e o que o jogo vê.
-
-    ``None`` quando não há divergência a mostrar — inclusive quando falta uma
-    das duas pontas: afirmar divergência sem saber as duas máscaras seria o
-    alarme falso que os outros banners desta aba evitam de propósito.
-
-    Duas frases porque são duas verdades diferentes:
-
-    - **com o jogo aberto** o Hefesto RECUSOU a troca de propósito (gate R-04),
-      e a recusa tem cura conhecida: fechar e abrir o jogo. A frase diz o
-      motivo, senão a recusa vira "o Hefesto não obedece";
-    - **sem jogo aberto** não há gate nenhum — a escolha simplesmente não
-      chegou, e o que resta a dizer é a verdade nua mais o gesto que tenta de
-      novo.
-
-    ``fonte`` E ``perfil`` — I3 (25/08/2026), e são a metade que faltava
-    ---------------------------------------------------------------------
-
-    Duas verdades viraram QUATRO frases, porque quem pediu a máscara também é
-    fato. Com a fonte 1 morta (`_home_flavor_pedido` sem escritor — §2.2c da
-    sprint), a divergência era sempre medida contra
-    ``draft.source_mode.gamepad_flavor``, que é **a máscara do PERFIL** — e o
-    perfil entra sozinho pelo autoswitch. A tela dizia *"você escolheu Xbox
-    360"* sobre um valor que ela nunca clicou, e quatro dos perfis desta casa
-    pedem ``xbox`` (MASCARA-QUE-GRUDA-01).
-
-    ``FONTE_GESTO_DELA`` mantém "você escolheu"; ``FONTE_PERFIL`` nomeia o
-    perfil. O default continua sendo o gesto — quem não declara a origem está
-    afirmando a mesma coisa que afirmava antes, e nenhum chamador antigo passa
-    a mentir por causa desta mudança.
-
-    Devolve MARKUP, e o veredito vai colorido por `<span>` em vez de por classe
-    de CSS. Não é preferência: `.hefesto-dualsense4unix-window label
-    { color: #f8f8f2 }` (`theme.css:470`, especificidade 0,1,1) vence
-    `.hefesto-dualsense4unix-status-warn` (0,1,0), e a própria `theme.css`
-    documenta essa armadilha no BUG-GUI-FOOTER-LABEL-BRANCO-01. Medido na foto
-    offscreen desta leva: o aviso saía #f8f8f2, indistinguível do texto ao
-    lado. O `descrever_deteccao_de_janela` da aba Sistema já usa `<span>` pelo
-    mesmo motivo — é a voz da casa para diagnóstico, e é a que funciona.
-    """
+    """A frase da divergência entre o que ela escolheu e o que o jogo vê."""
     if not isinstance(escolhida, str) or not escolhida:
         return None
     if not isinstance(no_aparelho, str) or not no_aparelho:
@@ -1283,10 +770,6 @@ def texto_da_divergencia(
         return None
     quero = _escapar(_flavor_label(escolhida))
     tenho = _escapar(_flavor_label(no_aparelho))
-    # I3 (25/08/2026): quem PEDIU decide a voz. "Você escolheu" só sobre gesto
-    # dela; vindo do perfil, a frase nomeia o perfil — porque o perfil entra
-    # sozinho pelo autoswitch e acusar a pessoa de um gesto que ela não deu é
-    # pior que não dizer nada.
     if fonte == FONTE_PERFIL:
         nome = _escapar(perfil) if isinstance(perfil, str) and perfil else None
         quem = f"o perfil “{nome}” pede" if nome else "o perfil ativo pede"
@@ -1311,19 +794,7 @@ def texto_da_divergencia(
 
 
 def controles_na_mesa(state: dict[str, Any] | None) -> int:
-    """Quantos controles CONECTADOS o daemon reporta — função pura.
-
-    O filtro por ``connected`` não é escolha desta função: é o do produto.
-    ``describe_controllers`` devolve UMA entrada com ``connected=False`` quando
-    não há controle nenhum, e a aba filtra exatamente assim desde a
-    HARM-CARD-FANTASMA-01. Contar sem o filtro daria "1 controle" com a mesa
-    vazia — que é o card fantasma de volta, por outra porta.
-
-    Uma contagem, um lugar: a linha da ponte (I6) e o frame de Controles têm de
-    concordar sobre quantos controles há, senão a aba volta a dizer duas coisas
-    no mesmo instante — que é o defeito que esta onda inteira existe para
-    fechar.
-    """
+    """Quantos controles CONECTADOS o daemon reporta — função pura."""
     if not isinstance(state, dict):
         return 0
     entradas = state.get("controllers") or []
@@ -1392,17 +863,7 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
         )
     gamepad = state.get("gamepad_emulation")
     if isinstance(gamepad, dict) and gamepad.get("enabled"):
-        # I6 (25/08/2026) — O VEREDITO QUE FALTAVA: a ponte de pé sem quem a
         # atravesse. MEDIDO na bancada de 23/08 com ZERO DualSense na casa: o
-        # frame de Controles dizia "Nenhum controle conectado." e esta linha,
-        # logo acima, dizia em VERDE "pelo Hefesto — o jogo recebe o controle".
-        # A função respondia sobre o VPAD e a pessoa lia como resposta sobre o
-        # JOGO. É a forma exata do defeito F7 nesta aba: o estado vazio pintado
-        # com a cor do estado bom.
-        #
-        # A ordem das perguntas NÃO muda — isto é uma bifurcação DENTRO da
-        # pergunta do gamepad, e vem antes de nomear a máscara porque não há a
-        # quem a máscara se aplique.
         if not controles_na_mesa(state):
             return (
                 PONTE_PREFIXO
@@ -1428,21 +889,12 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
     )
 
 
-#: Os desfechos distinguíveis de um `gamepad.emulation.set`. Os três primeiros
-#: são o contrato que a lane do daemon está construindo em paralelo; os dois
-#: últimos são desta janela — "falhou" já existia (status "failed") e "incerto"
-#: é o que sobra quando o daemon do outro lado do socket é antigo demais para
-#: dizer qualquer das coisas acima.
 DESFECHO_APLICADO = "aplicado"
 DESFECHO_JA_ESTAVA = "ja_estava"
 DESFECHO_BLOQUEADO = "bloqueado_por_jogo"
 DESFECHO_FALHOU = "falhou"
 DESFECHO_INCERTO = "incerto"
 
-#: Aliases aceitos no payload para o mesmo desfecho — a lane do daemon pode
-#: nomear a chave em português ou em inglês, e esta janela não pode passar a
-#: mentir por causa de uma letra. O que NÃO se aceita é inferir "aplicado" de
-#: um campo que não existe: sem informação o desfecho é "incerto".
 _ALIASES_DE_DESFECHO = {
     "aplicado": DESFECHO_APLICADO,
     "applied": DESFECHO_APLICADO,
@@ -1499,12 +951,7 @@ def desfecho_da_troca(resultado: Any, *, pedida: object = None) -> str:
 
 
 def toast_da_troca_de_mascara(desfecho: str, pedida: object) -> str:
-    """A frase do rodapé para cada desfecho — função pura.
-
-    O que esta função existe para impedir: o rodapé dizer "pronto" sobre uma
-    troca recusada. Cada desfecho tem uma frase própria, e a do bloqueio diz o
-    motivo E o caminho — a mesma disciplina do `RECONCILIAR_JOGO_ABERTO_TEXT`.
-    """
+    """A frase do rodapé para cada desfecho — função pura."""
     alvo = _flavor_label(pedida)
     if desfecho == DESFECHO_BLOQUEADO:
         return (
@@ -1516,39 +963,12 @@ def toast_da_troca_de_mascara(desfecho: str, pedida: object) -> str:
     if desfecho == DESFECHO_FALHOU:
         return f"Não consegui trocar para {alvo} — o jogo continua como estava."
     if desfecho == DESFECHO_INCERTO:
-        # Sem dado que sustente "pronto", a frase descreve o que a janela
-        # REALMENTE sabe (o pedido saiu) e manda ela conferir na linha que
-        # agora responde isso.
         return f"Pedi a troca para {alvo} — confira em “Ponte com o jogo”."
     return f"O jogo agora vê: {alvo}"
 
 
-#: O vocabulário de transporte DA TELA, e ele tem UM dono: esta tabela.
-#:
-#: I9 (25/08/2026). Medido no §2.2h da sprint: QUATRO dialetos para o mesmo
-#: fato, na mesma janela — a Início dizia `USB`/`BT`, os externos `cabo`/`BT`, a
-#: Configurações `Rádio em uso`, e o mapa, que é o PORTÃO, `cabo`/`rádio`.
-#: Nenhum deles estava errado sozinho; juntos ensinavam que são coisas
-#: diferentes.
-#:
-#: A I9 FOI REVOGADA POR ELA EM 21/09/2026, e a revogação veio em dois tempos,
-#: com a janela aberta na frente dela. Primeiro a caixa: *"cabo e bt escrito em
 #: minúsculo. Escreva: Cabo ou BT"*; <!-- noqa-acento: citação literal dela -->
-#: e depois, vendo a fita inteira, a palavra: *"USB e BT é muito bom"*.
-#:
-#: **O QUE A I9 MEDIU CONTINUA MEDIDO** — quatro dialetos na mesma janela é
-#: defeito, e um dono só é a cura. O que caiu foi a ESCOLHA da palavra: o
-#: argumento de 25/08 era que "USB"/"BT" não são palavras de quem quer jogar.
-#: A dona da tela discordou olhando para ela, e é a única medição que decide
-#: isto. O dono segue sendo esta tabela.
-#:
-#: **E A DIVERGÊNCIA COM O DESENHO FECHOU DE GRAÇA:** a mesa do mockup
-#: (`interface/monta.MESA`) sempre disse `USB`/`BT`, e o produto dizia
-#: `cabo`/`rádio`. Eram duas telas com duas línguas, e a `A-PALAVRA-MESA-SAI-01`
 #: existia para escolher uma. Ela escolheu.
-#:
-#: `cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS
-#: (`docs/data/mapa-controles.csv`), que é DADO e não tela.
 _PALAVRA_DO_TRANSPORTE: Final[dict[str, str]] = {
     "usb": "USB",
     "cabo": "USB",
@@ -1558,58 +978,21 @@ _PALAVRA_DO_TRANSPORTE: Final[dict[str, str]] = {
     "rádio": "BT",
 }
 
-#: O que se diz quando o daemon não disse por onde o controle fala. "?" era o
-#: que a aba mostrava, e "?" não é resposta — é a tela encolhendo os ombros.
 PALAVRA_DE_TRANSPORTE_DESCONHECIDO: Final[str] = "não sei por onde"
 
 
 def palavra_do_transporte(transporte: object) -> str:
-    """O transporte na língua do mapa de canais — função pura (I9).
-
-    Valor que o mapa não conhece volta CRU, e não vira "não sei": um transporte
-    novo (um daemon mais recente) tem de aparecer na tela para alguém o ver, em
-    vez de ser escondido atrás de uma frase genérica. Só a AUSÊNCIA de valor
-    cai na frase de "não sei".
-    """
+    """O transporte na língua do mapa de canais — função pura (I9)."""
     if transporte is None or transporte == "":
         return PALAVRA_DE_TRANSPORTE_DESCONHECIDO
     bruto = str(transporte).strip()
     return _PALAVRA_DO_TRANSPORTE.get(bruto.lower(), bruto)
 
 
-#: O aviso do card quando o Hefesto NÃO conseguiu ficar com o controle só para
-#: si. Duas metades: a linha, que fica à vista, e o porquê, que só aparece no
-#: hover — o mesmo desenho da fita apagada do cabeçalho, e pela mesma razão:
-#: a fileira tem até quatro cards, e o aviso mora DENTRO de um deles.
-#:
-#: I9 (25/08/2026), a metade que estava bloqueada. Até hoje a linha dizia
-#: *"Grab falhou — input pode dobrar no jogo"*: `grab` é o nome da chamada de
-#: sistema que falhou (`EVIOCGRAB`), e `input` é o que ela chama de botão. Numa
-#: tela para quem quer jogar, isso conta o que aconteceu com o KERNEL e cala o
-#: que aconteceu com ELA.
-#:
-#: A frase só pôde nascer agora porque dependia de duas medições, e as duas
-#: existem:
-#:
-#: 1. **o que o jogo continua vendo** — `ESCONDE-SÓ-O-HIDRAW-01`, MEDIDO nesta
 #:    bancada em 25/08/2026: o `hide` do broker age em UMA superfície
-#:    (`/dev/hidraw*`) e o mesmo controle mora em TRÊS; `event*` e `js*` seguem
-#:    alcançáveis. O `EVIOCGRAB` é o que impede o físico de PRODUZIR entrada
-#:    nessas duas — logo, com ele recusado, quem enumerar `/dev/input` acha o
-#:    controle dobrado. A duplicação não é hipótese: é o que sobra;
-#: 2. **o que fazer** — `GRAB-DOBRADO-01`, MEDIDO em 15/08/2026: as quatro
-#:    recusas do journal (13, 14 e 15/08) trazem **Errno 16**, que só existe
-#:    quando OUTRO leitor já tem o dispositivo — quem, não está provado, e por
-#:    isso a frase não acusa ninguém. O daemon retoma sozinho a cada
-#:    `GRAB_RECONCILE_SEC` = 2 s (`daemon/lifecycle.py:96`), e o que curou na
-#:    medição daquele dia foi reiniciar o Hefesto.
-#:
-#: PROVISÓRIO — decisão dela (o texto exato é palavra dela, PROVA-DE-TELA-01).
 #: CLASSE DE TELA: ESTRUTURAL — frase reescrita, e um hover onde não havia.
 AVISO_DE_GRAB_LINHA: Final[str] = "O jogo pode receber cada botão duas vezes"
 
-#: O porquê, no hover. Diz o que é, o que causa e o que fazer — nessa ordem, e
-#: sem nomear culpado que a medição não nomeou.
 AVISO_DE_GRAB_PORQUE: Final[str] = (
     "Outro programa pegou este controle antes e não solta, então o Hefesto não "
     "conseguiu ficar com ele só para si. Enquanto isso durar, o jogo pode "
@@ -1660,18 +1043,7 @@ def _format_controller_subtitle(
 
 
 def _format_external_title(entry: dict[str, Any]) -> str:
-    """Título do card de um externo — "Controle 3 — 8BitDo" (I5, 25/08/2026).
-
-    O número é o SLOT GLOBAL de co-op, que é o mesmo que o Hefesto escreve no
-    LED de player do próprio controle: sem ele, a GUI e o aparelho diriam
-    números diferentes sobre a mesma coisa. A marca vem de
-    ``external_controllers.brand_of``, que é a dona da palavra — copiar o nome
-    para cá criaria um segundo dono e faria esta aba dizer "Pro Controller"
-    sobre um 8BitDo no dia em que a outra aprendesse a desmentir o VID.
-
-    ``None`` de slot vira "—" (NUMA-05: nulo honesto vale mais que número
-    errado), pela função da casa que já decide isso.
-    """
+    """Título do card de um externo — "Controle 3 — 8BitDo" (I5, 25/08/2026)."""
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         brand_of,
         slot_label,
@@ -1785,32 +1157,11 @@ def _format_players_hint(
     return f"{len(controllers)} controles = {len(players)} jogadores"
 
 
-# LÁPIDE — COOP-SEM-INTERRUPTOR-01 (06/08/2026). Aqui moravam o rótulo
-# (`COOP_PREP_LABEL_BASE`), as três frases (`COOP_PREP_HINT_*`) e as duas
-# funções puras (`coop_prep_label`/`coop_prep_hint`) do botão "Preparar co-op"
-# da AUTO-01.2. Todas descreviam a mesma pergunta — *"o que acontece se eu
-# clicar agora?"* — e a pergunta deixou de existir: cada controle conectado já
-# é um jogador, sempre. Quem conta os jogadores hoje é `_format_players_hint`,
 # acima, e a contagem vem do `daemon.state_full` (campo `player` por controle,
-# resolvido por `subsystems/coop.resolve_player_numbers`) — nunca de um cache
-# de outra aba.
 
 
 def _format_controller_title(entry: dict[str, Any]) -> str:
-    """Título do card: "Controle 2 — P3" (função pura).
-
-    Recebe a ENTRY inteira, não o número já resolvido: o defeito que isto
-    corrige não estava na formatação e sim em quem chamava — o call site
-    passava a posição no loop (`idx + 1`), e com um controle só a aba Início
-    dizia "Controle 1" enquanto o cabeçalho dizia "Sony 3" sobre esse mesmo
-    controle. Com a entry aqui dentro, a origem do número entra no contrato da
-    função e o teste cobre os dois.
-
-    LEIGO-01b: o número do JOGADOR vem do daemon e pode divergir do número do
-    controle (índices são reusados quando alguém sai e outro entra). Sem número
-    de jogador (modo desktop/nativo, jogador ainda subindo) o card só se
-    identifica, em vez de inventar um "P" que o jogo não confirma.
-    """
+    """Título do card: "Controle 2 — P3" (função pura)."""
     name = f"Controle {numero_do_controle(entry)}"
     player = entry.get("player")
     if isinstance(player, int) and not isinstance(player, bool):
@@ -1818,44 +1169,11 @@ def _format_controller_title(entry: dict[str, Any]) -> str:
     return name
 
 
-# --- PERFIL-SALVA-TUDO-01/E3: o gesto de MODO chega ao RASCUNHO --------------
-#
-# A queixa dela, 29/07: *"temos o perfil do jogo tipo pragmata, aí em todas as
-# abas fiz alterações e salvei o perfil, aí essas configs de outras abas não
-# ficam salvas"*. A onda 2 construiu o lugar de guardar
-# (`DraftConfig.with_mode`/`with_suppress`) e deixou escrito que não havia UM
-# escritor: `grep -c 'self\.draft'` valia 0 nas abas Início e Emulação. Modo,
-# máscara, co-op e "modo jogo" iam só para o estado VIVO do daemon, e o
-# "Salvar Perfil" gravava `mode: null` em cima do trabalho dela
-# (`pragmata2.json`, medido no disco dela).
-#
-# A LINHA QUE NÃO PODE SER CRUZADA (HARM-05, e é a razão pela qual a onda 2
-# parou aqui de propósito): REGISTRAR não é APLICAR. Quem aplica o modo ao vivo
-# é `mode_transition.apply_mode` (e a supressão, `daemon.emulation.suppress`),
-# pelo gesto dela e só por ele. O miolo (`_coop_do_rascunho`, `rascunho_com_modo`)
-# é função PURA — não toca IPC nem widget — e o único ponto de escrita
-# (`registrar_modo_no_rascunho`) não faz nada além de trocar o rascunho da janela:
-# eles só anotam o que JÁ está de pé, para o "Salvar Perfil" do rodapé persistir.
-# Se um escritor destes disparar aplicação, um toque num gatilho (que também mexe
-# no rascunho) passa a poder recriar o vpad ou suspender a emulação no meio da
-# partida — exatamente o estrago que o HARM-05 documenta na seção `mouse` do
-# "Aplicar". O portão que tranca isso é
 # `tests/unit/test_perfil_salva_tudo_registrar_nao_e_aplicar.py`, por AST, para
-# valer também onde não há GTK.
-#
-# Por que aqui, e não na aba Emulação: a Início é a dona do MODO desde o HARM-01
-# (`mode_transition`); a Emulação importa daqui em vez de ter cópia própria.
 
 
 def _coop_do_rascunho(draft: DraftConfig | None) -> bool | None:
-    """O ``coop`` que o perfil de origem já dizia, ou ``None`` se ele não diz.
-
-    Sem isto, registrar o modo por causa de uma troca de MÁSCARA carimbaria o
-    default do esquema (``coop=True``) num perfil que dizia ``coop: false`` — a
-    aba não tem seletor de co-op, então ela nunca pediu essa mudança. É a mesma
-    disciplina do passthrough de ``controllers`` no ``to_profile``: o que a
-    janela não edita, ela não reescreve.
-    """
+    """O ``coop`` que o perfil de origem já dizia, ou ``None`` se ele não diz."""
     if draft is None:
         return None
     origem = draft.source_mode
@@ -1875,25 +1193,7 @@ def rascunho_com_modo(
     kind: str,
     flavor: object = None,
 ) -> DraftConfig | None:
-    """Rascunho com o MODO dela registrado. Pura: NÃO aplica nada (E3).
-
-    ``kind`` é um dos ``mode_transition.MODES`` — os mesmos três ids dos botões
-    da Início, que por construção já são o vocabulário de
-    ``ProfileModeConfig.kind``. Id desconhecido devolve o rascunho INTACTO em vez
-    de levantar: um modo novo tem de passar por `plan_mode_transition` (que
-    levanta) antes de existir aqui, e registrar lixo no rascunho seria pior que
-    não registrar.
-
-    ``flavor`` só vale no modo gamepad e atravessa `normalizar_gamepad_flavor`
-    (MODO-01): máscara desconhecida vira ``None``, que no applier significa
-    "mantém a atual" — nunca recriar o vpad por causa de um id que ninguém
-    O ``coop`` do perfil de origem é SEMPRE preservado (`_coop_do_rascunho`) —
-    a janela nunca o edita. COOP-SEM-INTERRUPTOR-01 (06/08/2026): havia aqui um
-    parâmetro ``coop`` para o único gesto que o escrevia na mão, o botão
-    "Preparar co-op". O botão saiu (o co-op deixou de ser opção) e o parâmetro
-    foi junto: um argumento que ninguém mais passa é a mesma dívida que esta
-    casa persegue — código que ficou depois de o motivo morrer.
-    """
+    """Rascunho com o MODO dela registrado. Pura: NÃO aplica nada (E3)."""
     if draft is None or kind not in MODES:
         return draft
     from hefesto_dualsense4unix.profiles.schema import (
@@ -1911,35 +1211,13 @@ def rascunho_com_modo(
 
 
 def reconciliar_pendente(janela: Any) -> dict[str, str]:
-    """A escolha dela MENOS o que o daemon já alcançou. Devolve o que sobra.
-
-    AGORA-E-DEPOIS-01 (08/08/2026). Uma pendência só existe enquanto DIVERGE do
-    vigente: se o daemon chegou ao que ela escolheu — por esta janela, pela CLI,
-    pelo applet ou por uma troca de perfil —, não há mais nada a aplicar, e
-    manter a linha "vai mudar para:" na tela seria a janela prometendo uma
-    mudança que já aconteceu.
-
-    Roda no `_render_home` (a cada tique) e no clique, com a MESMA regra nos
-    dois lugares porque é a MESMA pergunta. Escreve em ``_escolha_pendente`` de
-    propósito: a limpeza tem de sobreviver ao retorno, senão a próxima leitura
-    ressuscita o que este tique acabou de dar por resolvido.
-
-    Função de MÓDULO pelas duas razões já pagas por esta base em
-    `registrar_modo_no_rascunho`: o rodapé precisa do MESMO reconciliador que a
-    Início (um método em cada mixin seriam dois donos, sombreados em silêncio
-    pela MRO da `HefestoApp`), e chamada entre mixins quebra dublê PARCIAL de
-    teste — o `_HomeStub` copia handlers avulsos, sem o resto da classe.
-    """
+    """A escolha dela MENOS o que o daemon já alcançou. Devolve o que sobra."""
     pendente = dict(getattr(janela, "_escolha_pendente", None) or {})
     if "modo" in pendente and pendente["modo"] == getattr(
         janela, "_modo_vigente_do_daemon", None
     ):
         pendente.pop("modo")
-    # O TERCEIRO CAMPO — MODO-DE-CONEXAO-01, 13/09/2026. O chip de modo da aba
-    # Jogar pede um CAMINHO (`"dualsense"` · `"xbox"`), e ele se compara com o
-    # caminho vivo que o daemon publica — nunca com a máscara. Comparado com a
     # máscara, o chip «Xbox» com o cartão em DualSense deixava na linha um
-    # «Vai mudar para: Xbox» que não sumia nunca.
     if "caminho" in pendente and pendente["caminho"] == getattr(
         janela, "_caminho_vigente_do_daemon", None
     ):
@@ -1953,15 +1231,7 @@ def reconciliar_pendente(janela: Any) -> dict[str, str]:
 
 
 def render_pendente(janela: Any, *, visivel: bool = True) -> None:
-    """Escreve (ou apaga) a linha do que ela escolheu e ainda não aplicou.
-
-    ``visivel=False`` esconde a linha SEM tocar na escolha — é o que o ramo
-    offline usa: sem daemon não há como aplicar, mas o que ela decidiu não pode
-    evaporar por causa de um engasgo de IPC.
-
-    Sem o rótulo montado (dublê de teste, aba nunca instalada) reconcilia
-    assim mesmo e volta: o estado da escolha é verdade do modelo, não do widget.
-    """
+    """Escreve (ou apaga) a linha do que ela escolheu e ainda não aplicou."""
     pendente = reconciliar_pendente(janela)
     label = getattr(janela, "_home_pendente_label", None)
     if label is None:
@@ -1989,8 +1259,6 @@ def marcar_escolha(janela: Any, campo: str, valor: str) -> None:
     pendente[campo] = valor
     janela._escolha_pendente = pendente
     render_pendente(janela)
-    # Depois da reconciliação: se ela voltou ao que já está valendo, a pendência
-    # se desfez sozinha e o rodapé tem de dizer ISSO.
     ficou = bool(getattr(janela, "_escolha_pendente", None))
     toast = getattr(janela, "_status_toast", None)
     if callable(toast):
@@ -2000,22 +1268,7 @@ def marcar_escolha(janela: Any, campo: str, valor: str) -> None:
 def registrar_modo_no_rascunho(
     janela: Any, kind: str, flavor: object = None
 ) -> None:
-    """Anota na janela o modo que ela acabou de aplicar. Único ponto de escrita.
-
-    Função de MÓDULO, e não método de mixin, por duas medições desta base:
-
-    1. as duas abas precisam do MESMO escritor, e um método em cada mixin seria
-       dois donos — com os dois mixins na MESMA classe (`HefestoApp`), nomes
-       iguais se sombreariam pela MRO em silêncio;
-    2. chamada entre mixins quebra dublê PARCIAL de teste: a onda 2 pagou esse
-       preço e o `_HomeStub` de `test_auto01_um_clique_em_vez_de_dez` copia
-       handlers avulsos da Início, sem o resto da classe. Uma função não depende
-       da montagem do dublê.
-
-    ``getattr`` no rascunho pelo mesmo motivo dos outros escritores
-    (`mouse_actions`, `triggers_actions`): janela sem `draft` (dublê, bootstrap
-    ainda em voo) não pode virar `AttributeError` dentro do callback do IPC.
-    """
+    """Anota na janela o modo que ela acabou de aplicar. Único ponto de escrita."""
     draft = getattr(janela, "draft", None)
     if draft is None:
         return
@@ -2115,8 +1368,6 @@ def recolher_escolha_pendente_no_rascunho(janela: Any) -> dict[str, str] | None:
     registrar_modo_no_rascunho(janela, kind, flavor)
     depois = getattr(janela, "draft", None)
     if depois is antes:
-        # Rascunho ausente (dublê, bootstrap ainda em voo) ou ``kind`` que o
-        # `rascunho_com_modo` não conhece: nada foi escrito, nada a anunciar.
         return None
     secao = getattr(depois, "source_mode", None)
     registrado: dict[str, str] = {"modo": str(getattr(secao, "kind", "") or "")}
@@ -2130,12 +1381,6 @@ def recolher_escolha_pendente_no_rascunho(janela: Any) -> dict[str, str] | None:
 class HomeActionsMixin(WidgetAccessMixin):
     """Mixin da aba Início (página 0 do notebook)."""
 
-    #: O-DESLIGADO-DE-ONTEM-01: última leitura do opt-out de gamepad no disco.
-    #: Ele é um arquivo-flag (`gamepad_disabled.flag`) e muda por GESTO dela, o
-    #: que é raro; o `_render_home` roda junto do estado, a cada tique. Ler o
-    #: disco ali dentro seria um `stat()` por repintura para responder uma
-    #: pergunta que muda uma vez por sessão — o poller cego que esta casa já
-    #: pagou uma vez (104 % de um núcleo). Quem atualiza é o tique lento.
     _home_opt_out_cache: bool = False
 
     def install_home_tab(self) -> None:
@@ -2148,41 +1393,16 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_installed = True
         self._home_guard = False
         self._home_inflight = False
-        # AGORA-E-DEPOIS-01 (08/08/2026): o que ELA escolheu e ainda não
-        # aplicou. `None` = nada pendente, e a caixa espelha o vigente do
-        # daemon, exatamente como sempre fez. Chaves possíveis: "modo" e
-        # "mascara" — os dois campos cujo efeito só chega ao jogo na ABERTURA.
-        #
-        # Isto NÃO revoga a AUTO-01.3 ("o dono da máscara é o DAEMON, a GUI só
-        # ECOA"): não há dois donos do MESMO valor. Há o valor VIGENTE (do
-        # daemon, que a caixa continua ecoando quando não há pendência) e o
-        # valor ESCOLHIDO (dela, que mora aqui até o "Aplicar" do rodapé).
-        #
-        # A declaração de tipo mora em `base.WidgetAccessMixin` (o rodapé também
-        # toca este campo, e dois mixins da mesma classe não podem declará-lo
-        # cada um do seu jeito); aqui é só a partida de cada sessão da aba.
         self._escolha_pendente = None
-        # O vigente do daemon, guardado no mesmo tique do `_render_home` —
-        # é contra ele que uma escolha se cancela sozinha (escolher o que já
-        # está valendo não é pendência nenhuma). O do modo mora em
         # `_modo_vigente_do_daemon`, que a aba Perfis já usava.
         self._mascara_vigente_do_daemon: str | None = None
-        # AVISO-VIVO-01: quando a chamada em voo saiu (relógio monotônico) —
-        # é o que dá prazo de validade ao latch acima.
         self._home_inflight_since = 0.0
         # AVISO-VIVO-01: última frase de ESTADO que o rodapé recebeu desta aba.
-        # `None` = ainda não escrevemos nenhuma (não há afirmação nossa a
-        # desfazer); `""` = escrevemos e depois limpamos.
         self._home_lock_toast: str | None = None
-        # I5 (25/08/2026): o inventário de externos e o teto do pedido.
         self._home_externos = []
         self._home_externos_ts = 0.0
         self._home_externos_inflight = False
 
-        # --- Banner: degradação do vpad (UX-03) -----------------------------
-        # Rótulo simples e sempre inline no topo da aba — nada de popup nem
-        # popover (cosmic-epoch#2497 fecha qualquer popup no COSMIC). Invisível
-        # por padrão; o `_render_home` liga/desliga a partir do
         # `gamepad_emulation.backend` do state_full (`vpad_degradation_text`).
         vpad_banner = Gtk.Label(label="")
         vpad_banner.set_xalign(0.0)
@@ -2195,11 +1415,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_vpad_banner = vpad_banner
         box.pack_start(vpad_banner, False, False, 0)
 
-        # --- Banner: a emulação está desligada por escolha ANTERIOR ---------
-        # O-DESLIGADO-DE-ONTEM-01 (10/08/2026). Mesmo desenho dos dois vizinhos.
-        # Ele existe porque o estado mais confuso deste produto não é o
-        # quebrado — é o inerte por decisão antiga: nada falha, nada avisa, e o
-        # giroscópio simplesmente não chega ao jogo. Ver
         # `aviso_de_opt_out_antigo`.
         opt_out_banner = Gtk.Label(label="")
         opt_out_banner.set_xalign(0.0)
@@ -2213,9 +1428,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_opt_out_banner = opt_out_banner
         box.pack_start(opt_out_banner, False, False, 0)
 
-        # --- Banner: jogo aberto SEM o wrapper (GUI-05 item 3) --------------
-        # Mesmo desenho do banner do vpad: label inline, invisível por padrão;
-        # o `_render_home` liga/desliga a partir do
         # `gamepad_emulation.wrapper_used` do state_full (`wrapper_banner_text`).
         wrapper_banner = Gtk.Label(label="")
         wrapper_banner.set_xalign(0.0)
@@ -2228,26 +1440,11 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_wrapper_banner = wrapper_banner
         box.pack_start(wrapper_banner, False, False, 0)
 
-        # LÁPIDE — COOP-SEM-INTERRUPTOR-01 (06/08/2026): aqui morava a fiação do
-        # "Preparar co-op" (o único widget que vinha do Glade nesta aba, e que
-        # este trecho re-posicionava abaixo dos banners). Ver a lápide do
-        # `main.glade`: preparar o co-op deixou de ser gesto porque o co-op
-        # deixou de ser opção. Com isto a aba Início passa a ser 100% código.
 
-        # --- Frame: modo do sistema ---------------------------------------
         from hefesto_dualsense4unix.app.widgets.segmented_selector import (
             SegmentedSelector,
         )
 
-        # AGORA-E-DEPOIS-01 (08/08/2026): a caixa se chamava "O que o controle
-        # faz agora" — e era MENTIRA, no defeito 8 da OITO-DEFEITOS-01. Nada do
-        # que está aqui dentro vale agora: o jogo lê a configuração UMA VEZ, na
-        # abertura (`assets/hefesto-launch.sh:320`, `exec env "$@"`), então modo
-        # e máscara só o alcançam quando ele abre. Cor, brilho, gatilho,
-        # vibração e microfone — esses sim mudam na hora — moram em outras abas.
-        #
-        # O nome sai do desenho que ela aprovou em 08/08, e deriva do produto:
-        # ela recusa vocabulário novo que não venha do que já existe.
         frame_mode = Gtk.Frame(label="Quando o jogo abrir")
         mode_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         mode_box.set_margin_top(10)
@@ -2255,18 +1452,11 @@ class HomeActionsMixin(WidgetAccessMixin):
         mode_box.set_margin_start(12)
         mode_box.set_margin_end(12)
 
-        # O rótulo do CAMPO desceu do frame para cá, e isso não é cosmética: a
-        # frase "O que o controle faz agora" é o nome do seletor em três páginas
-        # da documentação (`docs/usage/modos.md`, `interface.md`, `quickstart.md`)
-        # e no texto do diálogo de relançamento (`relancar.frase_da_mudanca`).
         # Perdê-la deixaria as quatro órfãs; aqui ela continua nomeando
-        # exatamente o que sempre nomeou — o seletor logo abaixo.
         modo_label = Gtk.Label(label="O que o controle faz agora:")
         modo_label.set_xalign(0.0)
         mode_box.pack_start(modo_label, False, False, 0)
 
-        # wrap=True: FlowBox — lado a lado em janela larga, empilha na estreita
-        # (sem estourar o frame sob tiling do COSMIC).
         selector = SegmentedSelector(wrap=True)
         selector.set_items(_MODE_ITEMS)
         selector.connect("changed", self._on_home_mode_changed)
@@ -2280,13 +1470,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_mode_desc = desc
         mode_box.pack_start(desc, False, False, 0)
 
-        # MODO-QUE-NAO-CONTROLA-01 (09/08/2026): logo ABAIXO da descrição do
-        # modo, porque é a continuação dela — a descrição promete "o controle
-        # vira mouse/teclado do computador" e esta linha diz quando essa
-        # promessa não está de pé. Mesmo desenho dos banners de vpad/wrapper
-        # (label inline, `no_show_all` para o `show_all()` do build não desfazer
-        # o que o `_render_home` mandou), e a mesma classe de aviso da linha do
-        # pendente: é ressalva, não erro — o modo entrou.
         desktop_aviso = Gtk.Label(label="")
         desktop_aviso.set_xalign(0.0)
         desktop_aviso.set_line_wrap(True)
@@ -2299,16 +1482,9 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_desktop_aviso = desktop_aviso
         mode_box.pack_start(desktop_aviso, False, False, 0)
 
-        # BUG-HOME-MASK-CLIP-01: co-op e máscara em LINHAS separadas — na mesma
-        # HBox o seletor de máscara estourava a largura do frame e era cortado
-        # na borda direita (visto ao vivo 2026-07-13). A linha própria dá ao
         # seletor a largura toda para os 2 botões.
         opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        # LEIGO-01: onde havia um checkbox de co-op agora só há INFORMAÇÃO.
-        # Ninguém pluga dois controles esperando que os dois movam o MESMO
         # personagem, então não existe escolha a oferecer — cada controle é um
-        # jogador, sempre. O texto é preenchido no _render_home a partir dos
-        # jogadores que o daemon reporta; com um controle só, fica vazio.
         players_hint = Gtk.Label(label="")
         players_hint.set_xalign(0.0)
         players_hint.set_line_wrap(True)
@@ -2317,7 +1493,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         opts.pack_start(players_hint, False, False, 0)
 
         mask_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        # UX (auditoria): rotula pela CONSEQUÊNCIA, não pela tecnologia.
         flavor_label = Gtk.Label(label="O jogo vê o controle como:")
         mask_row.pack_start(flavor_label, False, False, 0)
         flavor = SegmentedSelector(wrap=True)
@@ -2328,19 +1503,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         opts.pack_start(mask_row, False, False, 0)
 
         # MASCARA-CUSTO-01 (01/08): o preço da máscara, dito ANTES do clique.
-        #
-        # A pergunta dela, literal: *"não sei se o alto-falante, giroscópio,
-        # microfone e touchpad na hora de jogar um jogo na Steam vão estar
-        # funcionando. Elas precisam funcionar."* A auditoria respondeu com
-        # número: com a máscara Xbox o giroscópio e o touchpad **não existem
-        # na API** — o gamepad virtual vira uinput, que declara 8 eixos e 11
-        # botões e não tem onde pôr IMU nem dedo
-        # (`integrations/uinput_gamepad.py`; `virtual_pad.py` recusa o uhid
-        # para qualquer sabor que não seja `dualsense`).
-        #
-        # Isso não era um defeito escondido: era uma escolha sem etiqueta de
-        # preço. Seis dos oito perfis de jogo desta casa pediam Xbox, e nada na
-        # tela dizia o que se perdia. Agora diz, e diz no lugar do gesto.
         custo = Gtk.Label(label="")
         custo.set_xalign(0.0)
         custo.set_line_wrap(True)
@@ -2352,28 +1514,12 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_gamepad_opts = opts
         mode_box.pack_start(opts, False, False, 0)
 
-        # PONTE-NA-TELA-01: as duas linhas que faltavam, imediatamente ABAIXO do
-        # "O jogo vê o controle como:" — é onde o olho dela já está quando faz a
-        # única escolha desta aba, e é a resposta à pergunta seguinte ("por onde
-        # o jogo recebe isso?"). Mandar essa resposta para a aba Status custaria
-        # uma troca de aba a cada clique.
-        #
-        # Fora da `opts` de propósito: a `opts` some fora do modo gamepad, e a
-        # ponte tem de continuar respondendo no Modo Nativo e no Steam Input —
-        # que são justamente os modos em que a aba mais enganava.
         ponte = Gtk.Label(label="")
         ponte.set_xalign(0.0)
         ponte.set_line_wrap(True)
         self._home_ponte_label = ponte
         mode_box.pack_start(ponte, False, False, 0)
 
-        # A divergência usa o mesmo desenho dos banners de vpad/wrapper — label
-        # inline, `no_show_all` para o `show_all()` do build não desfazer o
-        # estado que o `_render_home` manda, nada de popup/popover no COSMIC
-        # (cosmic-epoch#2497). O que muda é a COR: aqui ela vem por markup
-        # (`texto_da_divergencia`), não por `hefesto-dualsense4unix-status-warn`
-        # — a classe perde para `.hefesto-dualsense4unix-window label` em
-        # especificidade, e o aviso saía branco (ver a docstring da função).
         divergencia = Gtk.Label(label="")
         divergencia.set_xalign(0.0)
         divergencia.set_line_wrap(True)
@@ -2382,29 +1528,11 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_divergencia_banner = divergencia
         mode_box.pack_start(divergencia, False, False, 0)
 
-        # PONTE-NA-TELA-01 + AGORA-E-DEPOIS-01 (fusão de 19/08/2026): a máscara
-        # que ela APLICOU por esta aba nesta sessão — não a que ela marcou. As
-        # duas coisas deixaram de ser a mesma em 08/08, quando o clique no
-        # seletor passou a só MARCAR (`marcar_escolha`) e a aplicação foi para o
-        # "Aplicar" do rodapé; marcar aqui um "pedido" no clique acenderia a
-        # divergência sobre uma escolha que ela ainda nem mandou aplicar — em
-        # cima da linha do pendente, que já diz isso com as palavras certas.
-        # Fica escrito e é lido: é o rodapé (`footer_actions`) que tem o
-        # desfecho do IPC na mão e o dono deste campo. Sem ele, a divergência
-        # ainda se sustenta pelo rascunho (ver `_mascara_escolhida_por_ela`).
         self._home_flavor_pedido: str | None = None
 
-        # AGORA-E-DEPOIS-01: a linha do que ela escolheu e ainda não aplicou.
-        # Fica FORA do `opts` de propósito: uma pendência de modo ("Controlar o
-        # PC") existe quando a caixa da máscara está escondida, e dentro do
-        # `opts` ela sumiria junto — a pessoa clicaria e não veria prova nenhuma
-        # de que o clique registrou, que é o defeito que esta linha existe para
-        # não criar. Texto pela função pura `relancar.texto_do_pendente`.
         pendente = Gtk.Label(label="")
         pendente.set_xalign(0.0)
         pendente.set_line_wrap(True)
-        # Mesmo desenho dos banners de vpad/wrapper: `no_show_all` para o
-        # `show_all()` do build não desfazer o que o `_render_home` mandou.
         pendente.set_no_show_all(True)
         pendente.set_visible(False)
         pendente.get_style_context().add_class(
@@ -2419,21 +1547,9 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_origin_label = origin
         mode_box.pack_start(origin, False, False, 0)
 
-        # FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07): o cadeado da
-        # troca automática de perfil. Marcado = "usa o perfil que EU escolhi,
-        # não troca sozinho quando eu abrir um jogo" — vale para qualquer
-        # app. Diferente do Modo Nativo (que solta
-        # o controle) e do pause (que para tudo): aqui só a DECISÃO de perfil
-        # congela; gamepad/co-op/rumble seguem. O estado vem do daemon no
-        # _render_home; o toggle persiste e vale na hora.
         lock_check = Gtk.CheckButton(
             label="Modo Freestyle"
         )
-        # A PALAVRA MUDOU NOS DOIS DONOS — 11/09/2026, proposta A3-014,
-        # aprovada por ela. O rótulo ao lado já diz «Trava o perfil ativo», e
-        # *"congela a troca automática"* era a terceira palavra para a mesma
-        # coisa na mesma linha. A gêmea é `a01_jogar.CADEADO_DICA`, e
-        # `test_a_palavra_do_cadeado_e_a_que_ela_ja_leu` cobra as duas iguais.
         lock_check.set_tooltip_text(
             "O perfil ativo continua valendo mesmo quando você abre outro "
             "jogo. Desligue para o Hefesto voltar a escolher sozinho."
@@ -2442,19 +1558,10 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_autoswitch_lock = lock_check
         mode_box.pack_start(lock_check, False, False, 0)
 
-        # UX-05 (auditoria 24/07): o cadeado tinha EFEITO visível e CAUSA
-        # invisível. Na máquina dela a flag estava ligada desde 24/07 20:42 e o
-        # que ela via era "o modo jogo não ativa" — o marcador do checkbox é uma
-        # caixinha de 16 px que ninguém relê depois de marcar. Esta linha diz,
-        # em texto, o que está acontecendo AGORA (o Modo Freestyle ligado vale
-        # também no jogo desde 28/09/2026), preenchida no `_render_home` a
-        # partir do estado do daemon; some quando desligado.
         lock_hint = Gtk.Label(label="")
         lock_hint.set_xalign(0.0)
         lock_hint.set_line_wrap(True)
         lock_hint.get_style_context().add_class("dim-label")
-        # Mesmo desenho dos banners de vpad/wrapper: `no_show_all` para o
-        # `show_all()` do build não desfazer o estado que o `_render_home` manda.
         lock_hint.set_no_show_all(True)
         lock_hint.set_visible(False)
         self._home_autoswitch_lock_hint = lock_hint
@@ -2463,13 +1570,10 @@ class HomeActionsMixin(WidgetAccessMixin):
         frame_mode.add(mode_box)
         box.pack_start(frame_mode, False, False, 0)
 
-        # --- Frame: controles conectados -----------------------------------
         frame_ctrl = Gtk.Frame(label="Controles")
         ctrl_frame_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
 
         ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        # Cards de tamanho IGUAL (homogeneous): sem isso o card do primário
-        # (linha extra "primário") ficava mais largo que o dos demais.
         ctrl_box.set_homogeneous(True)
         ctrl_box.set_margin_top(10)
         ctrl_box.set_margin_start(12)
@@ -2477,12 +1581,7 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_controllers_box = ctrl_box
         ctrl_frame_box.pack_start(ctrl_box, False, False, 0)
 
-        # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): "Reconciliar
-        # jogadores" — reconcilia o co-op (`coop.sync`, ciclo cheio) e depois
         # compacta a numeração de exibição (DualSense + externos,
-        # `identity.renumber`) para 1..N preservando a ordem relativa. Fica
-        # junto dos cards: é aqui que jogador e numeração aparecem ("sony 1 /
-        # sony 4" com só 2 controles, ou o P2 que sumiu no meio da partida).
         reconciliar_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         reconciliar_row.set_margin_start(12)
         reconciliar_row.set_margin_end(12)
@@ -2507,7 +1606,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         frame_ctrl.add(ctrl_frame_box)
         box.pack_start(frame_ctrl, False, False, 0)
 
-        # --- Frame: sessão (desligar de verdade) ---------------------------
         frame_sess = Gtk.Frame(label="Sessão")
         sess_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         sess_box.set_margin_top(10)
@@ -2516,9 +1614,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         sess_box.set_margin_end(12)
 
         shutdown_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        # ONDA-U (U1): botão ÚNICO — o `_render_home` troca rótulo/estilo
-        # entre "Desligar"/"Ligar" conforme o daemon está online/offline; o
-        # clique sempre passa por `_on_home_power_clicked` (dispatcher).
         shutdown_btn = Gtk.Button(label=_BTN_LABEL_ONLINE)
         shutdown_btn.get_style_context().add_class("destructive-action")
         shutdown_btn.connect("clicked", self._on_home_power_clicked)
@@ -2541,19 +1636,12 @@ class HomeActionsMixin(WidgetAccessMixin):
         box.pack_start(frame_sess, False, False, 0)
         box.show_all()
 
-        # Poller: só age com a aba Início à vista (identificada pelo id do Glade).
         GLib.timeout_add(HOME_POLL_INTERVAL_MS, self._tick_home_state)
 
-    # --- refresh ----------------------------------------------------------
 
     def _tick_home_state(self) -> bool:
         notebook = self._get("main_notebook")
         if notebook is not None and id_da_pagina_corrente(notebook) == ABA_INICIO:
-            # O-DESLIGADO-DE-ONTEM-01: o opt-out sai do disco AQUI, no tique, e
-            # não no `_render_home` — uma leitura por ciclo, e só com a aba à
-            # vista. `suppress` porque um flag ilegível não pode derrubar a aba:
-            # sem leitura, não há aviso, que é o mesmo silêncio de antes e nunca
-            # pior que ele.
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.utils.session import (
                     load_gamepad_preference,
@@ -2561,30 +1649,16 @@ class HomeActionsMixin(WidgetAccessMixin):
 
                 preferencia, _flavor = load_gamepad_preference()
                 self._home_opt_out_cache = preferencia is False
-            # I5 (25/08/2026): o inventário de externos, no tique LENTO e com
-            # teto próprio — nunca no caminho quente. A enumeração de evdev
-            # mais a sonda de holders custa 10-40 ms e um subprocess, e a aba
-            # Status já paga esse preço no lugar certo (`_maybe_fetch_externals`).
             self._maybe_fetch_externos()
             self._refresh_home_tab()
-        return True  # timer permanente
+        return True
 
-    #: I5: o inventário de externos que a aba desenhou por último. Só ANOTADO
-    #: aqui — quem o cria é `install_home_tab`, como todo estado desta aba: uma
-    #: lista como default de classe seria compartilhada por toda instância.
-    #: Vazio nasce e vazio fica enquanto ninguém responder — a lista vazia não
     #: é afirmação de ausência, e por isso ninguém acusa nada com ela.
     _home_externos: list[dict[str, Any]]
 
-    #: Quando o inventário foi pedido pela última vez (relógio monotônico) e se
-    #: há um pedido em voo. Mesmo par, mesmo teto e mesma razão do
-    #: `status_actions._maybe_fetch_externals`.
     _home_externos_ts: float
     _home_externos_inflight: bool
 
-    #: Teto entre dois pedidos de inventário. Quatro segundos, o mesmo da aba
-    #: Status — e o tique desta aba é de dois, então na prática ela pergunta a
-    #: cada dois tiques.
     EXTERNOS_THROTTLE_S = 4.0
 
     def _maybe_fetch_externos(self) -> None:
@@ -2602,9 +1676,6 @@ class HomeActionsMixin(WidgetAccessMixin):
         comportamento de antes desta cura e nunca pior que ele.
         """
         agora = time.monotonic()
-        # `getattr` pelo mesmo motivo do resto desta aba: dublê parcial de
-        # teste não passa pelo `install_home_tab`, e um atributo novo aqui já
-        # derrubou 51 testes de cinco arquivos uma vez.
         if getattr(self, "_home_externos_inflight", False):
             return
         if agora - getattr(self, "_home_externos_ts", 0.0) < self.EXTERNOS_THROTTLE_S:
@@ -2631,24 +1702,11 @@ class HomeActionsMixin(WidgetAccessMixin):
             {"external": True},
             _ok,
             _fail,
-            # Folga grande de propósito: o inventário enumera TODOS os
-            # /dev/input e roda a sonda de holders (subprocess). O default de
-            # 0,25 s do `call_async` estouraria sempre. Mesmo teto da Status.
             timeout_s=3.0,
         )
 
     def _refresh_home_tab(self) -> None:
-        """Reconcilia o comutador/cards com o estado VIVO do daemon.
-
-        AVISO-VIVO-01: o latch `_home_inflight` tem PRAZO. Sem prazo, uma
-        chamada que nunca voltou o deixava ligado para sempre e a aba parava de
-        reconciliar em silêncio — foi o que fez uma reconciliação de 2 s levar
-        78 s na tela. Passado `HOME_INFLIGHT_TIMEOUT_S` a chamada anterior é
-        dada como perdida e uma nova sai; o relógio é lido aqui mesmo, no tick.
-
-        A resposta atrasada da chamada abandonada só desliga o latch de novo
-        (`_ok`/`_fail`), o que no pior caso adianta um refresh — nunca trava.
-        """
+        """Reconcilia o comutador/cards com o estado VIVO do daemon."""
         if not getattr(self, "_home_installed", False):
             return
         agora = time.monotonic()
@@ -2682,25 +1740,12 @@ class HomeActionsMixin(WidgetAccessMixin):
         from gi.repository import Gtk
 
         offline = state is None
-        # AVISO-VIVO-01: o rodapé passa a descrever o ESTADO, não o último
-        # clique. O toast do cadeado era o registro de "o que eu pedi uma vez" e
-        # sobrevivia ao estado: com o cadeado religado por fora da janela, o
         # rodapé seguiu minutos escrito "Troca automática de perfil LIBERADA"
-        # enquanto o texto de causa, logo acima, dizia o contrário.
-        #
-        # Contexto "home" DE PROPÓSITO (e não um contexto próprio): é nele que
-        # o handler do cadeado deixa a frase, e na Gtk.Statusbar o `pop` de um
-        # contexto meu não apagaria a dele — apenas faria a mensagem antiga
-        # RESSURGIR de baixo da pilha. Para não comer o toast das outras ações
-        # ("Numeração compactada...", "Co-op pronto."), a escrita é por BORDA:
         # só quando a frase de estado MUDA de valor — e nesse instante o que
-        # estava escrito ali já está velho de qualquer jeito.
         aviso_estado = autoswitch_lock_text(state)
         anterior = getattr(self, "_home_lock_toast", None)
         if aviso_estado != anterior:
             self._home_lock_toast = aviso_estado
-            # `getattr` defensivo pelo mesmo motivo do cadeado/co-op: os dublês
-            # de teste do `_render_home` não montam a statusbar inteira.
             toast = getattr(self, "_status_toast", None)
             if toast is not None and (aviso_estado or anterior):
                 toast("home", aviso_estado)
@@ -2712,42 +1757,19 @@ class HomeActionsMixin(WidgetAccessMixin):
                 selector.set_sensitive(False)
                 self._home_players_hint.set_text("")
                 self._home_flavor_selector.set_sensitive(False)
-                # BUG-HOME-OFFLINE-STALE-01: sem limpar, descrição/origem/
-                # opções do gamepad ficavam do último estado online.
                 self._home_mode_desc.set_text("")
                 self._home_origin_label.set_text("")
                 self._home_gamepad_opts.set_visible(False)
-                # AGORA-E-DEPOIS-01: sem daemon não há como aplicar, então a
-                # linha do pendente sai da tela — mas a ESCOLHA fica guardada
-                # em `_escolha_pendente`: o daemon volta e ela reaparece
-                # inteira. Apagar a escolha aqui perderia, num engasgo de IPC,
-                # o que a pessoa acabou de decidir.
                 render_pendente(self, visivel=False)
-                # UX-03: offline não é degradação do vpad — o banner some junto.
                 self._home_vpad_banner.set_visible(False)
-                # GUI-05: idem para o aviso "jogo sem wrapper".
                 self._home_wrapper_banner.set_visible(False)
-                # MODO-QUE-NAO-CONTROLA-01: sem daemon não há modo nem emulação
-                # a julgar — "não sei" não pode virar "o mouse está desligado".
                 _desktop_aviso = getattr(self, "_home_desktop_aviso", None)
                 if _desktop_aviso is not None:
                     _desktop_aviso.set_visible(False)
-                # PONTE-NA-TELA-01: offline a ponte é "não sei" (a função pura
-                # escreve isso), e não há divergência a afirmar — sem daemon não
-                # se sabe o que o aparelho está fazendo.
-                #
-                # `getattr` no MÉTODO, e não chamada direta: os dublês parciais
-                # de `_render_home` copiam handlers avulsos da mixin, e a lição
-                # já escrita algumas linhas abaixo ("um atributo novo aqui
-                # derrubou 51 testes de cinco arquivos") vale igual para um
-                # método novo — 28 testes de dois arquivos, medidos na fusão de
-                # 19/08/2026. Na janela de verdade a mixin sempre o tem.
                 _ponte = getattr(self, "_render_ponte_e_divergencia", None)
                 if _ponte is not None:
                     _ponte(None)
                 self._render_home_controllers([])
-                # ONDA-U (U1): toggle in-place — o botão de "Desligar" vira
-                # "Ligar o Hefesto" bem aqui, nada de mandar pra aba Sistema.
                 self._home_offline = True
                 self._home_shutdown_btn.set_label(_BTN_LABEL_OFFLINE)
                 self._home_shutdown_btn.get_style_context().remove_class(
@@ -2756,16 +1778,11 @@ class HomeActionsMixin(WidgetAccessMixin):
                 self._home_shutdown_btn.get_style_context().add_class(
                     "suggested-action"
                 )
-                # ONDA-U (U2/U10): sem daemon, "Reconciliar jogadores" não tem
-                # quem atenda o IPC.
                 self._home_reconciliar_btn.set_sensitive(False)
                 self._home_reconciliar_hint.set_text("")
-                # FEAT-AUTOSWITCH-LOCK-01: sem daemon, o cadeado não tem estado.
                 _lock = getattr(self, "_home_autoswitch_lock", None)
                 if _lock is not None:
                     _lock.set_sensitive(False)
-                # UX-05: idem para a frase — offline não é "destravado", é
-                # "não sei"; afirmar qualquer das duas coisas seria mentira.
                 _lock_hint = getattr(self, "_home_autoswitch_lock_hint", None)
                 if _lock_hint is not None:
                     _lock_hint.set_text("")
@@ -2774,20 +1791,13 @@ class HomeActionsMixin(WidgetAccessMixin):
             assert state is not None
             selector.set_sensitive(True)
             self._home_flavor_selector.set_sensitive(True)
-            # FEAT-AUTOSWITCH-LOCK-01: reflete o cadeado do daemon (sob guard —
             # set_active emite "toggled", que reenviaria o IPC em loop).
             _lock = getattr(self, "_home_autoswitch_lock", None)
             if _lock is not None:
                 _lock.set_sensitive(True)
                 _lock.set_active(bool(state.get("freestyle_ligado", False)))
-            # UX-05: a CAUSA fica visível junto do efeito, em texto.
             _lock_hint = getattr(self, "_home_autoswitch_lock_hint", None)
             if _lock_hint is not None:
-                # I11 (25/08/2026): a linha passa a ter DUAS metades, e a
-                # segunda fala mesmo com o cadeado destravado — que é o estado
-                # padrão, e o estado em que a linha era vazia. O cadeado diz o
-                # que ELA escolheu; o detector diz o que não vai acontecer de
-                # qualquer jeito, e que não é escolha dela.
                 aviso_lock = " ".join(
                     parte
                     for parte in (
@@ -2799,7 +1809,6 @@ class HomeActionsMixin(WidgetAccessMixin):
                 _lock_hint.set_text(aviso_lock)
                 _lock_hint.set_visible(bool(aviso_lock))
             self._home_session_label.set_text("")
-            # ONDA-U (U1): online devolve o botão único ao estado "Desligar".
             self._home_offline = False
             self._home_shutdown_btn.set_label(_BTN_LABEL_ONLINE)
             self._home_shutdown_btn.get_style_context().remove_class(
@@ -2808,57 +1817,27 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._home_shutdown_btn.get_style_context().add_class(
                 "destructive-action"
             )
-            # COOP-SEM-INTERRUPTOR-01 (06/08): com daemon vivo o botão fica
-            # SEMPRE de pé — jogo aberto só ganha a frase que diz o que não vai
-            # acontecer (a numeração). Ver `RECONCILIAR_JOGO_ABERTO_TEXT`: o
-            # gesto de trazer o jogador de volta é justamente o de partida
-            # aberta, e desabilitá-lo ali o esconderia na hora exata do defeito.
             aviso_reconciliar = _reconciliar_gate_text(state)
             self._home_reconciliar_btn.set_sensitive(True)
             self._home_reconciliar_hint.set_text(aviso_reconciliar or "")
 
             gamepad = state.get("gamepad_emulation") or {}
-            # HARM-01: a leitura do modo também tem um dono só — a Emulação
-            # deriva do MESMO payload pela MESMA regra, então as duas abas não
-            # podem mais discordar sobre em que modo o sistema está.
             mode = mode_of_state(state) or "desktop"
-            # AGORA-E-DEPOIS-01: os dois vigentes do daemon são gravados AQUI,
-            # antes de qualquer coisa que os leia. A máscara vem do mesmo
-            # payload, umas linhas abaixo — subi-la para cá é o que permite
-            # reconciliar a pendência no MESMO tique em que o daemon mudou, em
-            # vez de um tique depois (2 s de tela mostrando escolha vencida).
             flavor = gamepad.get("flavor")
             if isinstance(flavor, str) and flavor:
                 self._mascara_vigente_do_daemon = flavor
-            # MODO-QUE-NAO-CONTROLA-01: o modo do tique ANTERIOR, lido antes de
-            # ser sobrescrito na linha seguinte. É com ele que o aviso do
-            # desktop calado sabe que a transição acabou de acontecer e que o
             # `mouse.emulation.restore` — o ÚLTIMO dos três IPCs do plano —
-            # ainda pode estar em voo. Ver `texto_do_desktop_sem_emulacao`.
             modo_anterior = getattr(self, "_modo_vigente_do_daemon", None)
             self._modo_vigente_do_daemon = mode
-            # A guarda do valor. Enquanto não há pendência os seletores
             # espelham o daemon, como sempre; com pendência eles mostram a
             # ESCOLHA DELA, e este tique não a sobrescreve. Sem isto o desenho
-            # inteiro cai: `_render_home` roda a cada 2 s, e a escolha dela
-            # voltaria sozinha antes de ela alcançar o botão "Aplicar".
             pendente = reconciliar_pendente(self)
             modo_exibido = pendente.get("modo") or mode
             selector.set_active_id(modo_exibido)
-            # I4 (25/08/2026) — O TERCEIRO ESTADO. Em pausa, a promessa do modo
-            # SAI da tela e a frase da pausa entra no lugar dela. Não é banner
-            # ao lado: enquanto o produto está parado, "o Hefesto acende as
-            # luzes, faz o controle vibrar e dá um jogador para cada controle"
-            # não é uma promessa com ressalva — é uma promessa que nada está
-            # cumprindo, e deixá-la na tela ao lado do aviso faria a aba dizer
-            # duas coisas no mesmo instante (o defeito desta onda inteira).
             aviso_pausa = texto_da_pausa(state)
             self._home_mode_desc.set_text(
                 aviso_pausa or _MODE_DESCRIPTIONS.get(modo_exibido, "")
             )
-            # MODO-QUE-NAO-CONTROLA-01: e, logo abaixo da descrição, a ressalva
-            # — "Controlar o PC" de pé com o mouse (ou o teclado) emulado
-            # desligado. Quem decide é a função pura; a aba só escreve.
             aviso_desktop = texto_do_desktop_sem_emulacao(
                 state,
                 modo_exibido=modo_exibido,
@@ -2869,18 +1848,7 @@ class HomeActionsMixin(WidgetAccessMixin):
                 if aviso_desktop:
                     _desktop_aviso.set_text(aviso_desktop)
                 _desktop_aviso.set_visible(bool(aviso_desktop))
-            # E a VISIBILIDADE junto. AGORA-E-DEPOIS-01 §9, decisão 2 —
-            # REVISTA por ela em 08/08 à noite, VENDO a tela:
-            #
             #   *"a máscara volta ao que era. Não temos que burocratizar aí.
-            #    Clico hefesto, a máscara aparece, clico em jogar xbox ou
-            #    dualsense e ao clicar em aplicar lá embaixo o efeito aplica de
-            #    fato. só isso"*
-            #
-            # A primeira versão fazia esta linha ler `mode` (o do daemon), e o
-            # efeito na tela dela foi o pior possível: clicou em "Jogar pelo
-            # Hefesto", o botão acendeu e a caixa da máscara **sumiu** — porque
-            # o daemon ainda estava em desktop. Ler "a máscara ainda não cabe
             # aqui" exige saber que o modo é pendente; o que se lê é "a máscara
             # sumiu", que é outra coisa.
             #
@@ -2890,25 +1858,13 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._home_gamepad_opts.set_no_show_all(modo_exibido != "gamepad")
 
             # AUTO-01.3: o dono da máscara é o DAEMON — a GUI só ECOA o que ele
-            # reporta (`gamepad_emulation.flavor`, presente sempre que o daemon
-            # está vivo). O `or "xbox"` que estava aqui era um segundo dono do
-            # valor: com o campo ausente a aba mostrava Xbox e, no clique
-            # seguinte, MANDAVA Xbox — trocando a máscara do daemon por causa de
-            # um payload incompleto. Sem valor conhecido, o seletor fica como
             # está e o plano de transição sai sem o campo (ver
-            # `plan_mode_transition`), preservando a máscara vigente.
-            # (o `flavor` foi lido acima, junto do modo — AGORA-E-DEPOIS-01.)
-            # A mesma guarda do modo, para o mesmo defeito: sem ela a máscara
-            # escolhida voltaria à do daemon no tique seguinte.
             mascara_exibida = pendente.get("mascara") or (
                 flavor if isinstance(flavor, str) and flavor else None
             )
             if mascara_exibida:
                 self._home_flavor_selector.set_active_id(mascara_exibida)
             # MASCARA-CUSTO-01: o preço da máscara, embaixo do seletor — e é o
-            # preço do que a caixa MOSTRA. Com uma máscara pendente, mostrar o
-            # custo da vigente responderia a pergunta errada: ela está decidindo
-            # sobre a nova, e é o preço DELA que precisa estar na mesa.
             custo = getattr(self, "_home_flavor_custo", None)
             if custo is not None:
                 texto = texto_do_custo_da_mascara(mascara_exibida)
@@ -2916,25 +1872,18 @@ class HomeActionsMixin(WidgetAccessMixin):
                 custo.set_visible(bool(texto))
                 custo.set_no_show_all(not texto)
 
-            # UX-03: banner de degradação do vpad — visível SÓ quando a máscara
             # DualSense caiu no backend uinput (função pura decide; backend
-            # ausente/"" é transitório e não acende nada).
             aviso_vpad = vpad_degradation_text(state)
             if aviso_vpad:
                 self._home_vpad_banner.set_text(aviso_vpad)
             self._home_vpad_banner.set_visible(bool(aviso_vpad))
 
-            # GUI-05 item 3: banner "jogo sem wrapper" — só o False LITERAL de
             # `gamepad_emulation.wrapper_used` acende (função pura decide).
-            aviso_wrapper = aviso_do_wrapper(state)  # cala o que ela já dispensou
+            aviso_wrapper = aviso_do_wrapper(state)
             if aviso_wrapper:
                 self._home_wrapper_banner.set_text(aviso_wrapper)
             self._home_wrapper_banner.set_visible(bool(aviso_wrapper))
 
-            # O-DESLIGADO-DE-ONTEM-01: a leitura do flag é I/O, e por isso vem
-            # do cache do tique lento (`_home_opt_out_cache`), nunca a cada
-            # repintura — o `_render_home` roda junto do estado e não pode virar
-            # um `stat()` por quadro.
             aviso_opt_out = aviso_de_opt_out_antigo(
                 state,
                 opt_out=bool(getattr(self, "_home_opt_out_cache", False)),
@@ -2946,11 +1895,6 @@ class HomeActionsMixin(WidgetAccessMixin):
                     ]
                 ),
             )
-            # `getattr` e não acesso direto: os dublês de teste desta aba montam
-            # só os widgets que o caso deles precisa, e um atributo novo aqui
-            # derrubou 51 testes de cinco arquivos na primeira versão desta cura.
-            # É a lição já escrita para `registrar_modo_no_rascunho` — código de
-            # aba tem de sobreviver a dublê parcial, senão cada widget novo cobra
             # um pedágio em arquivos que não têm nada a ver com ele.
             banner_opt_out = getattr(self, "_home_opt_out_banner", None)
             if banner_opt_out is not None:
@@ -2958,9 +1902,6 @@ class HomeActionsMixin(WidgetAccessMixin):
                     banner_opt_out.set_text(aviso_opt_out)
                 banner_opt_out.set_visible(bool(aviso_opt_out))
 
-            # PONTE-NA-TELA-01: qual ponte está de pé, e — quando a escolha dela
-            # não chegou ao aparelho — a divergência, com o motivo. `getattr`
-            # pelo mesmo motivo do ramo offline (dublê parcial).
             _ponte = getattr(self, "_render_ponte_e_divergencia", None)
             if _ponte is not None:
                 _ponte(state)
@@ -2970,56 +1911,22 @@ class HomeActionsMixin(WidgetAccessMixin):
                 origin_bits.append("Nativo ligado pelo perfil ativo")
             if state.get("mode_from_profile") == "gamepad":
                 origin_bits.append("Gamepad ligado pelo perfil ativo")
-            # LEIGO-01: a contagem de jogadores saiu daqui — dizia "co-op: N
-            # jogador(es)" (jargão) e agora mora na frase do próprio bloco do
-            # gamepad, contada a partir dos jogadores que o daemon numerou.
             self._home_origin_label.set_text(" · ".join(origin_bits))
 
-            # HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada
-            # com connected=False quando não há nenhum controle — sem filtrar, a
             # aba inventava um card "Controle 1 — P1 · ?" com o cabo na mesa. A
-            # aba Status (_connected_controllers) e o applet já filtravam; a
-            # Início era a única que não.
             connected = [
                 c
                 for c in (state.get("controllers") or [])
                 if isinstance(c, dict) and c.get("connected")
             ]
-            # COOP-SEM-INTERRUPTOR-01 (06/08): esta frase é o que ficou no
-            # lugar do botão "Preparar co-op" — e a contagem sai dos MESMOS
             # controles conectados que os cards mostram (`state_full`), uma
-            # fonte só, nunca o cache assíncrono de outra aba.
-            # I5 (25/08/2026): a mesa inteira, e não só quem o Hefesto adotou.
             externos = externos_na_mesa(state, getattr(self, "_home_externos", ()))
             self._home_players_hint.set_text(
                 _format_players_hint(connected, externos)
             )
-            # QUEM-DÁ-O-JOGADOR-2-01 (08/08/2026): a caixinha do Steam Input, na
-            # aba Perfis, precisa saber quantos controles há para avisar que a
-            # marca troca o dono do jogador 2 — e o toast dela é SÍNCRONO, sem
-            # tempo de perguntar ao daemon. Guardar aqui é de graça: esta função
-            # já recebe o estado, já filtrou os conectados, e roda a cada tique.
-            # Uma contagem só, num lugar só, para as duas abas não divergirem.
             self._controles_conectados = len(connected)
-            # RELANCAR-01 (08/08/2026): a aba Perfis precisa saber se há jogo
-            # aberto para decidir se pergunta antes de mudar a entrada — e o
-            # toast dela é SÍNCRONO. Guardar aqui usa o MESMO critério que
-            # `reconciliar_aviso` já usa (`game_signal.authority == "game"`),
-            # em vez de sondar processo com dois `pgrep` de 5 s que
-            # congelariam a janela. Uma fonte da verdade, não duas.
-            # PONTE-NA-TELA-01 (19/08): a leitura literal do `game_signal` que
-            # morava aqui virou `jogo_com_autoridade` — a MESMA função que o
-            # aviso do "Reconciliar jogadores" e a divergência de máscara usam.
-            # Eram três cópias da mesma condição; a terceira que divergisse
-            # viraria a segunda fonte da verdade que todas elas juram evitar.
-            # RELANCAR-NO-BOTAO-01: o modo vigente, para o "Salvar este
-            # perfil" saber se o perfil salvo MUDA o que o jogo vê. Mesma
-            # fonte da aba Início — nunca uma segunda verdade.
-            # AGORA-E-DEPOIS-01: reusa o `mode` já derivado acima em vez de
             # derivá-lo de novo. Duas chamadas de `mode_of_state` no mesmo tique
-            # não podem discordar hoje, mas são duas leituras onde cabe uma — e
             # a pendência agora depende deste valor para saber se a escolha dela
-            # ainda diverge do que está valendo.
             self._modo_vigente_do_daemon = mode
             self._jogo_aberto = jogo_com_autoridade(state)
             self._render_home_controllers(
@@ -3028,62 +1935,18 @@ class HomeActionsMixin(WidgetAccessMixin):
                 gamepad_on=bool(gamepad.get("enabled")),
                 externos=externos,
             )
-            # AGORA-E-DEPOIS-01: a linha do pendente é reescrita a cada tique,
-            # como todo o resto desta aba. Isso não é desperdício — é o que faz
-            # a pendência SUMIR sozinha quando o daemon alcança a escolha dela
-            # por outro caminho (a CLI, o applet, a troca de perfil).
             render_pendente(self)
-            # Gtk referenciado para manter o import local óbvio (sem uso direto
-            # neste ramo; os cards usam via _render_home_controllers).
             _ = Gtk
         finally:
             self._home_guard = False
 
     def _mascara_escolhida_por_ela(self) -> str | None:
-        """A máscara que ELA pediu, sem perguntar ao daemon (PONTE-NA-TELA-01).
-
-        Duas fontes, nesta ordem — as duas são gesto dela, e a mais recente
-        ganha:
-
-        1. o pedido APLICADO nesta sessão (`_home_flavor_pedido`). É a única
-           memória de um pedido que o daemon não atendeu: o `_render_home`
-           reescreve o seletor com o valor do daemon a cada tique, então sem
-           isto a escolha dela sumiria da tela em 2 segundos. Quem grava é o
-           "Aplicar" do rodapé, que é quem tem o desfecho do IPC na mão desde a
-           AGORA-E-DEPOIS-01 (08/08) — aqui o campo é só lido;
-        2. a seção `mode` do rascunho do perfil (`draft.source_mode`), que é
-           onde o "Aplicar" e o "Salvar Perfil" gravam a máscara. Foi essa a
-           divergência medida na noite de 18→19/08: o perfil dizia
-           `gamepad_flavor="xbox"` e o aparelho estava `dualsense`.
-
-        O que NÃO entra aqui é a pendência (`_escolha_pendente`): ela é o que
-        ela MARCOU e ainda não mandou aplicar, e já tem linha própria na tela
-        (`render_pendente`). Lê-la como divergência acusaria o Hefesto de não
-        obedecer uma ordem que ninguém deu.
-
-        `getattr` em tudo pelo mesmo motivo do `registrar_modo_no_rascunho`:
-        janela sem `draft` (dublê de teste, bootstrap em voo) não pode virar
-        `AttributeError` dentro de um render.
-        """
+        """A máscara que ELA pediu, sem perguntar ao daemon (PONTE-NA-TELA-01)."""
         mascara, _fonte = self._mascara_escolhida_com_fonte()
         return mascara
 
     def _mascara_escolhida_com_fonte(self) -> tuple[str | None, str]:
-        """A mesma máscara da função acima, e DE ONDE ela veio (I3, 25/08/2026).
-
-        Devolve ``(mascara, fonte)`` com ``fonte`` em
-        ``FONTE_GESTO_DELA``/``FONTE_PERFIL``. Sem máscara a fonte é o gesto,
-        por convenção — não há frase a escrever, e o valor não é lido.
-
-        Existe porque a frase da divergência precisa saber QUEM pediu: a fonte
-        1 é o dedo dela; a 2 é o perfil, que entra sozinho pelo autoswitch.
-        Confundir as duas é acusar a pessoa de um gesto que ela não deu, que é
-        o defeito que a I3 fecha.
-
-        A função de UMA resposta continua existindo e delega para esta: ela tem
-        chamador em dublê parcial de teste, e duas implementações da mesma
-        leitura seriam dois donos.
-        """
+        """A mesma máscara da função acima, e DE ONDE ela veio (I3, 25/08/2026)."""
         pedido = getattr(self, "_home_flavor_pedido", None)
         if isinstance(pedido, str) and pedido:
             return pedido, FONTE_GESTO_DELA
@@ -3101,14 +1964,7 @@ class HomeActionsMixin(WidgetAccessMixin):
         return None, FONTE_GESTO_DELA
 
     def _render_ponte_e_divergencia(self, state: dict[str, Any] | None) -> None:
-        """Pinta a linha da ponte e o aviso de divergência (PONTE-NA-TELA-01).
-
-        Só widget: as duas frases saem de funções puras (`texto_da_ponte`,
-        `texto_da_divergencia`), como o resto dos avisos desta aba. `getattr`
-        defensivo nos dois labels porque os dublês de `_render_home` nos testes
-        montam só os widgets que conhecem — a aba inteira não pode cair porque
-        um deles falta.
-        """
+        """Pinta a linha da ponte e o aviso de divergência (PONTE-NA-TELA-01)."""
         ponte = getattr(self, "_home_ponte_label", None)
         if ponte is not None:
             ponte.set_markup(texto_da_ponte(state))
@@ -3116,29 +1972,12 @@ class HomeActionsMixin(WidgetAccessMixin):
         if banner is None:
             return
         no_aparelho = mascara_do_aparelho(state)
-        # O pedido é PENDÊNCIA, não preferência: assim que o aparelho passa a
-        # dizer a mesma coisa, ele morre. Sem isto um pedido antigo e já
-        # atendido acusaria divergência falsa na próxima troca vinda de outro
         # lugar (a aba Perfis, o autoswitch) — a aba passaria a mentir para o
-        # outro lado, que é o defeito de sempre com o sinal trocado.
         pedido = getattr(self, "_home_flavor_pedido", None)
         if pedido and no_aparelho and pedido == no_aparelho:
             self._home_flavor_pedido = None
-        # Fora do modo gamepad não há máscara valendo: no Modo Nativo quem
-        # entrega o controle é o físico, e cobrar a máscara ali seria aviso
-        # sobre coisa que não está em uso. Mesmo gate do
         # `vpad_degradation_text`.
-        #
-        # CORREÇÃO DE FATO — 25/08/2026: esta linha citava também "a exceção de
-        # Steam Input" como caso em que o vpad não entrega. Desde a
-        # ESCONDER-EM-VEZ-DE-SAIR-01 (09/08/2026) é o contrário — a exceção
-        # esconde o FÍSICO e mantém o vpad de pé, o modo continua sendo gamepad
-        # e a máscara continua valendo. Nada muda no código: o gate sempre foi
         # `mode_of_state`, e é ele que continua decidindo.
-        # I3 (25/08/2026): duas leituras, e o daemon tem a palavra sobre o jogo
-        # em cena. `mascara_divergente` é o ALARME que ele já publicava e que
-        # esta janela nunca leu — quando ele existe, quem nomeia o perfil é o
-        # daemon (que enxerga o jogo aberto) e não o rascunho da janela.
         escolhida, fonte = self._mascara_escolhida_com_fonte()
         alarme = mascara_divergente_do_daemon(state)
         perfil = None
@@ -3175,21 +2014,9 @@ class HomeActionsMixin(WidgetAccessMixin):
         box = self._home_controllers_box
         for child in box.get_children():
             box.remove(child)
-        # I5 (25/08/2026): os externos entram no MESMO frame, DEPOIS dos
-        # adotados. A ordem é a do número de jogador (os adotados ocupam 1..N e
         # os externos continuam a fila), e é a mesma que o LED de player mostra
-        # — a fileira lê como a mesa.
-        #
-        # O card é montado AQUI, na mesma gramática visual dos adotados, e não
-        # com o `ExternalCard` da aba Configurações. A razão é medida e vale
-        # registro: aquele widget é um `Gtk.Frame` com seletor de jogador e
         # seletor de modo que ESCREVEM, e trazê-lo para cá daria à primeira
-        # tela um poder de edição que ela nunca teve — decisão de produto, e
-        # dela. Além disso a fileira passaria a ter DUAS gramáticas de card lado
-        # a lado (o `Gtk.Box` daqui e o `Gtk.Frame` de lá), que é exatamente o
         # que a regra "aba nova copia a gramática visual das antigas" evita. O
-        # que NÃO se copia é o vocabulário: marca, slot e transporte saem das
-        # funções donas (`external_controllers`, `palavra_do_transporte`).
         validos = [e for e in externos if isinstance(e, dict)]
         if not controllers and not validos:
             empty = Gtk.Label(label="Nenhum controle conectado.")
@@ -3203,9 +2030,6 @@ class HomeActionsMixin(WidgetAccessMixin):
             card.set_margin_end(6)
             is_primary = bool(ctrl.get("is_primary"))
             title = Gtk.Label()
-            # LEIGO-01b: nem o número do jogador nem o do controle saem da
-            # posição na lista — o primeiro vem do daemon, o segundo do slot de
-            # sessão, o mesmo que o resto da GUI mostra.
             name = _format_controller_title(ctrl)
             title.set_markup(f"<b>{name}</b>" if is_primary else name)
             title.set_xalign(0.0)
@@ -3220,16 +2044,7 @@ class HomeActionsMixin(WidgetAccessMixin):
             sub.set_xalign(0.0)
             sub.get_style_context().add_class("dim-label")
             card.pack_start(sub, False, False, 0)
-            # LEIGO-02: aqui saía o fim do MAC ("…0000f0"). Ele não serve a
-            # nenhuma tarefa dela: o número não está gravado no controle
-            # físico, então não há como casar card com aparelho por ele. Quem
-            # distingue os controles na mesa é a COR da lightbar e o LED de
-            # jogador — o card já mostra o número do jogador.
-            # I9 (25/08/2026): a CONDIÇÃO e o TEXTO saíram daqui para
-            # `aviso_de_grab` — função pura, testável sem GTK. A linha dizia
             # "Grab falhou — input pode dobrar no jogo", que é o que aconteceu
-            # com o kernel; agora diz o que acontece com ela, e o porquê vai no
-            # hover, sem custar um pixel da fileira.
             aviso = aviso_de_grab(
                 grab_state, is_primary=is_primary, gamepad_on=gamepad_on
             )
@@ -3256,65 +2071,25 @@ class HomeActionsMixin(WidgetAccessMixin):
             box.pack_start(card, True, True, 0)
         box.show_all()
 
-    # --- handlers -----------------------------------------------------------
 
     def _on_home_mode_changed(self, selector: Any) -> None:
-        # "changed" do SegmentedSelector é sem argumentos (como GtkComboBox);
-        # o id ativo vem de get_active_id() — BUG-HOME-SEGMENTED-SIGNATURE-01.
         mode_id = selector.get_active_id()
         if getattr(self, "_home_guard", False) or not mode_id:
             return
-        # A descrição acompanha o botão que ela acabou de clicar — ela descreve
-        # o que ESTÁ ESCOLHIDO, não o que está valendo, e é o único retorno
-        # imediato junto da linha do pendente.
         self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(mode_id, ""))
-        # AGORA-E-DEPOIS-01 (08/08/2026): aqui saíam `apply_mode(...)` e o
-        # registro no rascunho. Os dois foram para o "Aplicar" do rodapé — o
-        # botão verde, que é o gesto que ela usa para fechar a edição:
-        #
         #   *"talvez fosse interessante isso aparecer somente quando clicarmos
-        #    no botão final em aplicar, o botão verde — dessa forma eu posso
-        #    passar em todas as abas e isso entra na alteração do perfil ativo"*
-        #
-        # O clique só MARCA. É o que desfaz o defeito 2 da OITO-DEFEITOS-01 (a
-        # máscara perguntando a cada clique): sem aplicação não há o que
-        # perguntar, e a pergunta passa a existir uma vez só, onde a mudança
-        # sai. E é o que desfaz o 8: a caixa deixa de misturar o que É com o que
-        # VAI SER.
-        #
-        # O `_home_guard` continua indispensável e não foi substituído por isto:
-        # ele impede que o `set_active_id` do próprio `_render_home` entre aqui
-        # como se fosse clique dela — o que gravaria uma "pendência" igual ao
-        # vigente a cada 2 segundos.
         marcar_escolha(self, "modo", mode_id)
 
     def _on_home_flavor_changed(self, selector: Any) -> None:
         flavor_id = selector.get_active_id()
         if getattr(self, "_home_guard", False) or not flavor_id:
             return
-        # O gate lê o seletor de MODO, que com pendência mostra a escolha dela:
-        # quem marcou "Controlar o PC" e ainda não aplicou não está escolhendo
-        # máscara nenhuma — a máscara só existe dentro de "Jogar pelo Hefesto".
         mode = self._home_mode_selector.get_active_id()
         if mode != "gamepad":
             return
-        # AGORA-E-DEPOIS-01: idem ao modo — aqui saíam o `gamepad.emulation.set`
-        # e o `_perguntar_antes_de_relancar`. A pergunta não sumiu: ela migrou
         # para o "Aplicar" (`footer_actions._aplicar_escolha_pendente`), onde a
         # decisão dela está COMPLETA — modo e máscara escolhidos — em vez de
-        # interromper no meio da escolha.
         #
-        # PONTE-NA-TELA-01 (19/08/2026), a metade que este handler NÃO faz mais:
-        # a cura contra o toast que dizia "O jogo agora vê: Xbox 360" sobre uma
-        # troca RECUSADA nasceu aqui, no `_done` deste IPC — que já não mora
-        # nesta aba. Ela não se perdeu: virou as funções puras
-        # `desfecho_da_troca`/`toast_da_troca_de_mascara`, publicadas no
-        # `__all__` para quem HOJE tem a resposta do daemon na mão (o "Aplicar"
-        # do rodapé) ler o desfecho em vez de presumir sucesso do `status: "ok"`
-        # — que é o mesmo para "apliquei", "já estava" e "recusei". Enquanto o
-        # rodapé não as chamar, quem conta a verdade na tela é a linha de
-        # divergência, que compara a escolha dela com a máscara do aparelho a
-        # cada tique.
         marcar_escolha(self, "mascara", flavor_id)
 
     def _on_home_autoswitch_lock_toggled(self, check: Any) -> None:
@@ -3330,13 +2105,8 @@ class HomeActionsMixin(WidgetAccessMixin):
         desejado = bool(check.get_active())
 
         def _fim(resultado: Any) -> bool:
-            # O daemon devolve o estado efetivo; se veio None (offline), a
-            # próxima renderização reconverge com o estado real.
             if resultado is None:
                 self._status_toast(
-                    # «cadeado» era o segundo nome da caixa que o rótulo ao
-                    # lado chama de «Trava» — A3-022, 11/09/2026. A gêmea é
-                    # `a01_jogar.CADEADO_RECUSA`.
                     "home", "O Hefesto está desligado: a trava não foi aplicada."
                 )
             else:
@@ -3354,26 +2124,7 @@ class HomeActionsMixin(WidgetAccessMixin):
         )
 
     def _on_home_reconciliar_clicked(self, _button: object) -> None:
-        """"Reconciliar jogadores": ``coop.sync`` e, em seguida, ``identity.renumber``.
-
-        COOP-SEM-INTERRUPTOR-01, entrega 5 (06/08/2026). NOTA DATADA: até aqui
-        este botão se chamava "Renumerar agora" e disparava um método só. Ele
-        herdou o gesto de recuperação que morreu com o botão "Preparar co-op" —
-        o ciclo FORÇADO do co-op, que é o único capaz de trazer de volta o
-        jogador cujo grab foi recusado ou cujo vpad morreu sem que /dev/input
-        mudasse (COOP-QUE-NÃO-DESMONTA-01).
-
-        Os dois passos são ENCADEADOS, não paralelos, e a ordem é a entrega:
-        renumerar antes de reconciliar compactaria uma mesa que ainda não está
-        completa. O `coop.sync` é quem reporta a falha de IPC (é o passo que
-        responde "meus jogadores voltaram?"); a recusa do `identity.renumber`
-        com jogo aberto NÃO vira erro — com os jogadores já de pé seria a
-        interface mentindo, a mesma regra do ``reported_step_index``.
-
-        Contrato fixado com o daemon: ``coop.sync {}`` ->
-        ``{status, players, active}``; ``identity.renumber {}`` ->
-        ``{ok: true, renumbered: {uniq: slot}}`` | ``{ok: false, reason}``.
-        """
+        """"Reconciliar jogadores": ``coop.sync`` e, em seguida, ``identity.renumber``."""
 
         def _sync_ok(resultado_sync: Any) -> bool:
             jogadores = (
@@ -3388,7 +2139,6 @@ class HomeActionsMixin(WidgetAccessMixin):
                 return False
 
             def _renumber_fail(_exc: Exception) -> bool:
-                # O acabamento falhou, a reconciliação não: o toast diz os dois.
                 self._status_toast("home", reconciliar_toast(jogadores, None))
                 self._refresh_home_tab()
                 return False
@@ -3443,16 +2193,12 @@ class HomeActionsMixin(WidgetAccessMixin):
             buttons=Gtk.ButtonsType.YES_NO,
             text="Desligar o Hefesto?",
         )
-        # GUI-05/P5: sem a classe de tema o diálogo herdava o claro do sistema
-        # (precedente: gui_dialogs._apply_app_theme).
         with contextlib.suppress(Exception):
             dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
         dialog.format_secondary_text(
             "O controle continua funcionando nos jogos, mas sem luzes, sem "
             "gatilhos e sem os seus ajustes.\n"
             "Esta janela continua aberta e NÃO liga o Hefesto de novo sozinha "
-            # ONDA-U (U1): "Ligar o Hefesto" agora é o MESMO botão desta aba
-            # (toggle in-place) — o aviso não manda mais pra aba Sistema.
             "— para ligar de novo, clique em \"Ligar o Hefesto\" aqui mesmo, "
             "nesta aba."
         )
@@ -3461,13 +2207,9 @@ class HomeActionsMixin(WidgetAccessMixin):
             dlg.destroy()
             if response != Gtk.ResponseType.YES:
                 return
-            # FEAT-GUI-HOME-TAB-01: o ensure_daemon_running respeita este flag —
-            # sem ele, reabrir/atualizar a GUI ressuscitava o daemon parado.
             self._user_stopped_daemon = True
 
             def _worker_ok(result: Any) -> bool:
-                # BUG-HOME-SHUTDOWN-FALSE-OK-01: systemctl com rc!=0 (sem
-                # sessão systemd, daemon avulso) NÃO desligou nada — o toast
                 # não pode mentir nem armar o _user_stopped_daemon à toa.
                 rc = getattr(result, "returncode", 1)
                 if rc == 0:
@@ -3503,12 +2245,6 @@ class HomeActionsMixin(WidgetAccessMixin):
             run_in_thread(_stop, _worker_ok, lambda _e: False)
 
         dialog.connect("response", _on_response)
-        # DIALOGO-QUE-MATA-A-JANELA-01, segunda metade (06/08/2026): um
-        # `dialog.show()` cru num diálogo `modal=True` instala o grab do GTK e,
-        # se a janela não chegar ao servidor, prende a janela dela inteira —
-        # clique, tecla e o "X" do gerenciador, os três. MEDIDO por verificação
-        # adversarial (0/0/0 contra 2/1/1 no controle). Não bloquear NÃO salva:
-        # quem prende é a modalidade, não o laço.
         from hefesto_dualsense4unix.app import gui_dialogs as _gd
 
         _gd.mostrar_dialogo_assincrono(dialog, nome="home_desligar_hefesto")
@@ -3572,35 +2308,7 @@ __all__ = [
 def aviso_de_opt_out_antigo(
     state: dict[str, Any] | None, *, opt_out: bool, conectados: int
 ) -> str | None:
-    """O produto está inerte por uma escolha ANTIGA dela. ``None`` = nada a dizer.
-
-    O-DESLIGADO-DE-ONTEM-01 (10/08/2026). Ela: *"o touchpad não tá funcionando e
-    o giroscópio não funciona também e se tão no modo nativo ou hefesto dualsense,
-    deveriam funcionar por default"*.
-
-    O QUE FOI MEDIDO na máquina dela, com o controle no cabo e 85 % de bateria:
-
-        native_mode: False | emulacao: False | vpads vivos: 0 | perfil: nenhum
-        ~/.config/hefesto-dualsense4unix/gamepad_disabled.flag  ->  09/08 23:50
-
-    O flag é opt-out **explícito e permanente** — o daemon o respeita a cada
-    boot e diz por quê a cada dois segundos no journal
-    (``motivo=desligada_de_proposito``). É a regra R-07, e ela está certa: só o
-    gesto manual escreve preferência em disco, e uma automação não pode desfazer
-    o que a dona mandou.
-
-    O QUE ESTAVA ERRADO era o silêncio, e o preço dele foi grande: sem gamepad
-    virtual não há por onde o giroscópio chegar ao jogo, e ela passou a noite
-    concluindo que o **produto** estava quebrado. O que a tela mostrava —
-    "Controlar o PC" — é a verdade, e é insuficiente: diz o QUE está valendo e
-    não que isso veio de uma decisão de ontem que continua valendo hoje.
-
-    Some no instante em que ela troca de modo, e não reaparece enquanto o gesto
-    novo estiver de pé: é aviso de estado, nunca um pedido repetido.
-
-    Sem controle na mesa devolve ``None``: aí não há nada para atravessar, e o
-    aviso seria ruído sobre um problema que não existe agora.
-    """
+    """O produto está inerte por uma escolha ANTIGA dela. ``None`` = nada a dizer."""
     if not isinstance(state, dict) or not opt_out or conectados < 1:
         return None
     if state.get("native_mode"):

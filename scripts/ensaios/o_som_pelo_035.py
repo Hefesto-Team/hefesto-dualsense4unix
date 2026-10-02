@@ -103,39 +103,21 @@ from a_folha_do_som_por_controle import quadros_opus
 from comum import RADIO, abrir_no_hidraw, cabecalho_do_instrumento, descobrir_aparelhos, fisicos, resumo
 from escrita_pelo_broker import mascarar
 
-#: O TAMANHO DO REPORT, e ele é do descritor do aparelho — não escolha nossa.
 TAMANHO_035 = 334
 
-#: A TAG DA ROTA. `0x13` alto-falante interno, `0x16` fone. O bit 7 diz "bloco
-#: presente"; o bit 6 (que dobraria o comprimento) fica FORA aqui de propósito:
-#: o `0x35` leva UM quadro de 200 B, e é essa simplicidade que o torna o
-#: primeiro a tentar.
 ROTAS = {"alto-falante": 0x13, "fone": 0x16}
 
-#: OS CINCO BYTES DE `audio_buffer_length`, nas duas formas vivas. O
-#: `HeadsetPlayMusic` escreve `00 00 00 00 FF`; o `LinuxAudio4Dualsense5`, o
 #: `DualSenseClient` e o `DS5Dongle-OLED` escrevem `40` nos cinco. O autor de um
-#: deles anotou no fonte que só o ÚLTIMO byte tem efeito — as duas formas estão
-#: aqui porque a divergência é real e barata de varrer.
 BUFFERS = {"ff": bytes([0x00, 0x00, 0x00, 0x00, 0xFF]), "40": bytes([0x40] * 5)}
 
-#: O PRIMEIRO BYTE DO BLOCO `0x11`: sete bits de enable. `0xFF` liga o microfone
-#: junto — e o bit 0 é o que uma casa inteira levou meses para achar, segundo o
-#: relato público que a pesquisa trouxe.
 ENABLES_SEM_MIC = 0xFE
 ENABLES_COM_MIC = 0xFF
 
-#: O VOLUME DO PRIMER. As implementações vivas mandam `0x64` (100), e há relato
-#: de que o firmware só aceita entre `0x3D` e `0x64`.
 VOLUME_DO_PRIMER = 0x64
 
 
 def primer_que_arma(seq: int) -> bytes:
-    """O `0x31` que pede a rota do alto-falante — o que faltava antes do áudio.
-
-    O `common` sai do produto. A rota `SAIDA_SO_NO_ALTO_FALANTE` vira `0x30` no
-    byte `audio_control`, que é o valor que as quatro implementações mandam.
-    """
+    """O `0x31` que pede a rota do alto-falante — o que faltava antes do áudio."""
     common = af.common_de_audio(
         volume=VOLUME_DO_PRIMER,
         rota=rep.SAIDA_SO_NO_ALTO_FALANTE,
@@ -171,7 +153,7 @@ def report_035(quadro: bytes, *, seq: int, contador: int, rota: int,
     return bytes(pkt)
 
 
-def o_controle_no_radio():  # o tipo é o `Aparelho` de `comum`
+def o_controle_no_radio():
     """O DualSense do rádio. Um só: com dois, não se sabe de quem é o som."""
     reais = [a for a in fisicos(descobrir_aparelhos()) if a.transporte == RADIO]
     return reais[0] if len(reais) == 1 else None
@@ -231,12 +213,6 @@ def main() -> int:
     seq = 0
     try:
         if args.desarmar:
-            # A ROTA PERSISTE NO FIRMWARE ENTRE CORRIDAS, e isso furou a
-            # mordida 1 em 10/09/2026: ela tocou SEM primer logo depois de uma
-            # corrida COM primer, e ouviu — o aparelho continuava armado. Uma
-            # mordida que não desarma antes não mede o primer, mede a memória do
-            # aparelho. `SAIDA_ESTEREO_NO_FONE` é o valor de fábrica: `0x00`,
-            # que manda L+R ao fone e deixa o alto-falante MUDO.
             seq = (seq + 1) & 0x0F
             os.write(no.fd, bytes(rep.build_bt_report(
                 af.common_de_audio(volume=VOLUME_DO_PRIMER,
@@ -256,15 +232,12 @@ def main() -> int:
         marca = " · CRC ERRADO (a mordida — tem de CALAR)" if args.crc_errado else ""
         print(f"\n  >>> OUÇA O ALTO-FALANTE DO CONTROLE DO RÁDIO — "
               f"{args.segundos:g} s{marca}", flush=True)
-        # A CADÊNCIA É 512/48000, e não 10 ms: o erro não dá silêncio, dá
-        # gagueira periódica de ~0,5 s. É o item 3 do `reverse_engineered` do
-        # LinuxAudio4Dualsense5, achado por eles com `btmon`.
         intervalo = 512 / 48000
         recusas, enviados, contador = 0, 0, 0
         proximo = time.monotonic()
         for quadro in quadros:
             seq = (seq + 1) & 0x0F
-            contador = (contador + 1) & 0xFF  # conta QUADROS, não reports
+            contador = (contador + 1) & 0xFF
             pkt = report_035(quadro, seq=seq, contador=contador, rota=rota,
                              buffer=buffer, com_mic=args.com_mic,
                              crc_errado=args.crc_errado)

@@ -1,26 +1,4 @@
-"""O Check-up da aba Conexões mostra TODO achado, e não inventa nenhum.
-
-DECISÃO DELA, 19/09/2026: *"A lista rola, sem teto — todo achado aparece."*
-
-O QUE ESTA RÉGUA MEDE, e são DUAS pontas do mesmo defeito, as duas medidas na
-página PUBLICADA antes de existir cura:
-
-* **a lista que SOBRA sumia.** O desenho tem cinco blocos e o exame da bancada
-  dela devolve sete: dois achados não chegavam à tela, e a tira ficava com
-  cinco CERTO — a tela dizendo "está tudo bem" com dois achados abertos;
-* **a lista que FALTA mentia.** Com três achados (uma máquina sem a bancada
-  dela — e o produto é para qualquer computador), os dois blocos que sobravam
-  ficavam com o travessão de `escrever(el, '')`. A tela INVENTAVA duas linhas.
-
-UM TETO MAIOR NÃO CURARIA NENHUMA DAS DUAS: as conferências do exame devolvem
-LISTAS (`a08_conexoes._conferencias`), uma porta problemática por item, e o
-número de achados não tem máximo.
-
-ELA DIRIGE A PÁGINA PUBLICADA NUM CHROME DE VERDADE, com o `BOOTSTRAP` lido do
-fonte do piloto — é o mesmo instrumento de `test_a_tela_entrega_as_vinte_e_uma_
-linhas`. Medir o HTML do gerador não serviria: quem clona é o piloto, e o
-defeito só existe depois que a mesa chega.
-"""
+"""O Check-up da aba Conexões mostra TODO achado, e não inventa nenhum."""
 from __future__ import annotations
 
 import pathlib
@@ -55,7 +33,7 @@ def _mesa(n: int) -> dict:
 
 
 @pytest.fixture(scope="module")
-def tela():  # o tipo é o `Page` do playwright, importado lá dentro
+def tela():
     """A `08-conexoes` publicada, com o piloto e a folha da casa no ar."""
     from playwright.sync_api import sync_playwright
 
@@ -69,9 +47,6 @@ def tela():  # o tipo é o `Page` do playwright, importado lá dentro
         try:
             pg = navegador.new_page(viewport={"width": 1180, "height": 780})
             pg.goto(pagina.as_uri())
-            # A FOLHA DA CASA entra à mão porque quem a injeta é o piloto GTK
-            # (`hefesto_vivo`), não a página. Sem ela o `.hef-sem-item` seria
-            # uma classe sem lâmpada, e a régua veria o bloco vazio aceso.
             pg.add_style_tag(content=FOLHA_DA_CASA)
             pg.evaluate(
                 "window.webkit={messageHandlers:{hefesto:{postMessage:function(){}}}};")
@@ -83,9 +58,6 @@ def tela():  # o tipo é o `Page` do playwright, importado lá dentro
 
 def _linhas(pg, n: int) -> list[dict]:
     """Pinta `n` achados — TRÊS tiques — e devolve o que está na tela."""
-    # TRÊS TIQUES E NÃO UM: a peça do molde tem de ser IDEMPOTENTE. Sem a marca
-    # `data-hef-clone` o tique seguinte leria os clones como originais e a lista
-    # dobraria a cada volta — o defeito que esta linha existe para pegar.
     for _ in range(3):
         pg.evaluate("p => window.__hef.pintar(p)", _mesa(n))
     return pg.evaluate("""() => Array.from(
@@ -112,15 +84,7 @@ def test_todo_achado_chega_a_tela_mesmo_passando_do_desenho(tela, quantos: int) 
 
 @pytest.mark.parametrize("quantos", [1, 2, 3])
 def test_a_tela_nao_inventa_achado_quando_a_lista_e_menor(tela, quantos: int) -> None:
-    """Bloco do desenho sem item some — NUNCA vira uma linha de travessão.
-
-    ESTE É O LADO QUE NINGUÉM TINHA VISTO, e ele é universal: a bancada dela
-    devolve sete achados e enche os cinco blocos, mas o produto é para qualquer
-    computador. Numa máquina sem controle no cabo o exame devolve TRÊS — medido
-    em 19/09 com o `HOME` desviado — e as duas linhas que sobravam mostravam
-    `—`. Uma tela que inventa achado é pior que uma que esconde: ela pede
-    conferência de um problema que não existe.
-    """
+    """Bloco do desenho sem item some — NUNCA vira uma linha de travessão."""
     linhas = _linhas(tela, quantos)
     assert len(linhas) == quantos, (
         f"{quantos} achados na mesa e {len(linhas)} linhas visíveis. "
@@ -134,11 +98,7 @@ def test_a_tela_nao_inventa_achado_quando_a_lista_e_menor(tela, quantos: int) ->
 
 
 def test_a_lista_que_encolhe_devolve_os_clones(tela) -> None:
-    """Doze achados e depois três: os nove clones SAEM do DOM.
-
-    Sem isto a aba acumularia um nó por achado que já houve, para sempre — e a
-    próxima lista de doze encontraria vinte e um blocos.
-    """
+    """Doze achados e depois três: os nove clones SAEM do DOM."""
     _linhas(tela, 12)
     depois = tela.evaluate(
         "() => document.querySelectorAll('.col-exame .exame[data-hef-clone]').length")
@@ -152,14 +112,7 @@ def test_a_lista_que_encolhe_devolve_os_clones(tela) -> None:
 
 
 def test_a_coluna_rola_em_vez_de_empurrar_quando_a_tela_e_pequena(tela) -> None:
-    """A rede de `60vh` — a resposta à pergunta dela sobre a resolução da tela.
-
-    NUMA JANELA GRANDE ISTO NUNCA DISPARA, e é de propósito: medido a 1180x780,
-    dezesseis achados terminam em y=527 com 250px de sobra. Rolagem dentro de
-    tela vazia é pior que crescer. O que a régua exige é que o teto EXISTA e
-    acompanhe a tela, para a coluna não empurrar o resto da aba para fora numa
-    janela baixa.
-    """
+    """A rede de `60vh` — a resposta à pergunta dela sobre a resolução da tela."""
     teto = tela.evaluate(
         "() => getComputedStyle(document.querySelector('.col-exame')).maxHeight")
     assert teto.endswith("px") and float(teto[:-2]) > 0, (

@@ -1,34 +1,4 @@
-"""AMBIENTE-DO-JOGO-01 — o interpretador do terminal não vai para a Steam nem para o jogo.
-
-Medido em 17/09/2026 no `environ` do `PRAGMATA.exe`: uma Steam aberta de um
-terminal passa a todo jogo a venv desse terminal, com o `bin/` dela na frente do
-`SYSTEM_PATH`. O `proton` é script Python, e quem o roda passa a ser o `python3`
-que o terminal escolheu. O produto reabre a Steam de dentro do terminal da
-pessoa (o install roda `steam_launch_options.py --stop-steam` e
-`disable_steam_input.sh --apply`), e a devolvia assim.
-
-O `SYSTEM_PATH` é o portador que decide: o `steam.sh` o grava com o `PATH` da
-Steam, e a Steam Linux Runtime o devolve ao `PATH` DEPOIS do gancho do jogo,
-antes do `proton`. Podar só o `PATH` no gancho não chegava ao jogo Proton.
-
-A régua lê as TRÊS pontas contra o dono, `ambiente_do_jogo`:
-
-- as chamadas Python que fazem a Steam nascer (`reopen_steam`,
-  `start_steam_game`, `stop_steam` e o `_spawn_steam` do botão PS);
-- o gancho `assets/hefesto-launch.sh`, rodado de verdade, por onde todo jogo
-  passa — é ele que cobre a Steam que a PESSOA abriu de um terminal;
-- o `scripts/disable_steam_input.sh`, rodado de verdade, com uma Steam de
-  mentira que só grava o ambiente que recebeu.
-
-Das pontas em shell a régua compara os NOMES e o COMPORTAMENTO: as duas
-funções rodam sob o shell de cada arquivo, caso a caso, e o dono Python é o
-oráculo de cada resposta.
-
-Nenhum teste daqui abre, fecha ou mata a Steam da máquina: os dublês ficam na
-frente do `PATH`, e o `pkill` também é dublê. Nenhum chega à sessão de quem
-roda a suíte: o `XDG_RUNTIME_DIR` (a porta do daemon) e o barramento de
-sessão apontam para o tmp do teste.
-"""
+"""AMBIENTE-DO-JOGO-01 — o interpretador do terminal não vai para a Steam nem para o jogo."""
 from __future__ import annotations
 
 import ast
@@ -53,30 +23,17 @@ _WRAPPER = _RAIZ / "assets" / "hefesto-launch.sh"
 _DISABLE = _RAIZ / "scripts" / "disable_steam_input.sh"
 _SLO = Path(slo.__file__).resolve()
 _LAUNCHER = Path(steam_launcher.__file__).resolve()
-#: STEAM-FORA-DO-SERVICO-01: os outros dois que abrem aplicativo da pessoa — os
-#: lançadores repostos pelo «Reiniciar» e o comando próprio do botão PS.
 _PACOTE = _RAIZ / "src" / "hefesto_dualsense4unix"
 _REPOSICAO = _PACOTE / "integrations" / "reposicao_dos_lancadores.py"
 _HOTKEY = _PACOTE / "daemon" / "subsystems" / "hotkey.py"
 
-#: As funções em shell que repetem o dono, na ordem em que aparecem.
 _FUNCOES_EM_SHELL = ("podar_bins_do_interpretador", "limpar_ambiente_do_interpretador")
 
-#: As listas de busca que a Steam lê: o `PATH`, e o `SYSTEM_PATH` que o
-#: `steam.sh` grava ao subir e a Steam Linux Runtime devolve ao `PATH` antes
-#: do `proton`. É fato da Steam, e não do dono, e por isso está digitado: se o
-#: dono esquecer uma delas, a régua tem de reprovar, e não esquecer junto.
 _LISTAS_DE_BUSCA_DA_STEAM = ("PATH", "SYSTEM_PATH")
 
 
 def _da_sessao(base: Path) -> dict[str, str]:
-    """O que a Steam precisa para abrir e que a limpeza NÃO pode levar junto.
-
-    Valores de MENTIRA, sob o tmp do teste: o `XDG_RUNTIME_DIR` é a porta do
-    daemon de quem roda a suíte (o socket IPC mora nele), e o barramento de
-    sessão também. O `DISPLAY` aponta um servidor que não existe: uma janela
-    que nascesse por engano falharia, em vez de aparecer na tela de alguém.
-    """
+    """O que a Steam precisa para abrir e que a limpeza NÃO pode levar junto."""
     runtime = base / "run"
     runtime.mkdir(parents=True, exist_ok=True)
     return {
@@ -88,11 +45,7 @@ def _da_sessao(base: Path) -> dict[str, str]:
 
 
 def _terminal_sujo(base: Path) -> dict[str, str]:
-    """A classe inteira do dono, com as pastas de verdade de cada prefixo.
-
-    Monta-se a partir das listas do dono, e não de uma cópia digitada: uma
-    variável nova no dono vira caso novo aqui sem ninguém lembrar.
-    """
+    """A classe inteira do dono, com as pastas de verdade de cada prefixo."""
     env: dict[str, str] = {}
     for nome in adj.VARIAVEIS_DO_INTERPRETADOR:
         env[nome] = f"valor-de-{nome.lower()}"
@@ -100,9 +53,6 @@ def _terminal_sujo(base: Path) -> dict[str, str]:
         pasta = base / nome.lower()
         (pasta / "bin").mkdir(parents=True, exist_ok=True)
         env[nome] = str(pasta)
-    # PYTHONHOME aponta o interpretador da MÁQUINA: o `disable_steam_input.sh`
-    # roda `python3` para a ponte, e um PYTHONHOME inventado o derrubaria antes
-    # de chegar ao que se mede aqui.
     env["PYTHONHOME"] = sys.base_prefix
     return env
 
@@ -112,11 +62,7 @@ def _bins_sujos(env: dict[str, str]) -> list[str]:
 
 
 def _busca_suja(sujo: dict[str, str], *antes: str) -> dict[str, str]:
-    """As listas de busca de um terminal ativado: os `bin/` dele na frente.
-
-    O `SYSTEM_PATH` é o que o `steam.sh` grava com o `PATH` da Steam que subiu
-    daquele terminal, então as duas nascem iguais.
-    """
+    """As listas de busca de um terminal ativado: os `bin/` dele na frente."""
     caminho = ":".join([*antes, *_bins_sujos(sujo), "/usr/bin", "/bin"])
     return {nome: caminho for nome in _LISTAS_DE_BUSCA_DA_STEAM}
 
@@ -124,11 +70,6 @@ def _busca_suja(sujo: dict[str, str], *antes: str) -> dict[str, str]:
 def _sem_a_classe(env: dict[str, str]) -> list[str]:
     """O que sobrou da classe; vazio é o certo."""
     return [nome for nome in adj.VARIAVEIS_DO_INTERPRETADOR if nome in env]
-
-
-# ---------------------------------------------------------------------------
-# 1. O dono
-# ---------------------------------------------------------------------------
 
 
 class TestODono:
@@ -147,8 +88,7 @@ class TestODono:
         assert adj.ambiente_limpo(sujo)["PATH"] == "/usr/local/bin:/usr/bin::/bin"
 
     def test_o_system_path_da_steam_tambem_sai_podado(self, tmp_path: Path) -> None:
-        """O portador medido no PRAGMATA: a Steam Linux Runtime devolve o
-        `SYSTEM_PATH` ao `PATH` antes do `proton`."""
+        """O portador medido no PRAGMATA: a Steam Linux Runtime devolve o"""
         sujo = _terminal_sujo(tmp_path)
         venv_bin, conda_bin = _bins_sujos(sujo)
         sujo["PATH"] = "/usr/bin:/bin"
@@ -192,11 +132,6 @@ class TestODono:
         assert "VIRTUAL_ENV" not in limpo
 
 
-# ---------------------------------------------------------------------------
-# 2. A ponta Python: quem faz a Steam nascer
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture()
 def sessao(tmp_path: Path) -> dict[str, str]:
     return _da_sessao(tmp_path)
@@ -215,11 +150,7 @@ def terminal_sujo(
 
 @pytest.fixture()
 def popen_de_mentira(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
-    """`subprocess` e `shutil` do módulo trocados por dublês que só anotam.
-
-    Troca-se o NOME dentro do módulo, e não o `subprocess` global: o `run` de
-    mentira explode, e nenhum `pkill` real sai daqui.
-    """
+    """`subprocess` e `shutil` do módulo trocados por dublês que só anotam."""
     chamadas: list[dict[str, Any]] = []
 
     def _popen(cmd: list[str], **kwargs: Any) -> object:
@@ -306,15 +237,7 @@ class TestAPontaPython:
         "arquivo", [_SLO, _LAUNCHER, _REPOSICAO, _HOTKEY], ids=lambda p: p.name
     )
     def test_toda_steam_que_nasce_do_modulo_passa_pelo_dono(self, arquivo: Path) -> None:
-        """Um `Popen` novo, ou uma chamada nova com a Steam no argv, sem
-        `env=ambiente_limpo(os.environ)` reprova aqui.
-
-        Nos dois módulos que fazem a Steam nascer, e nos dois que abrem outro
-        aplicativo da pessoa (os lançadores e o comando próprio do PS). O
-        argumento tem de ser o ambiente do processo: `ambiente_limpo({})`
-        tiraria a sessão junto, e a Steam não abriria. Desde
-        STEAM-FORA-DO-SERVICO-01 o `fora_do_servico.abrir` conta como abertura.
-        """
+        """Um `Popen` novo, ou uma chamada nova com a Steam no argv, sem"""
         chamadas = _quem_abre_processo(ast.parse(arquivo.read_text(encoding="utf-8")))
         assert chamadas, f"a régua não achou chamada nenhuma em {arquivo.name}"
         sem_dono = [no.lineno for no in chamadas if not _env_pelo_dono(no)]
@@ -323,8 +246,7 @@ class TestAPontaPython:
         )
 
     def test_o_modulo_avulso_acha_o_dono(self, tmp_path: Path) -> None:
-        """O install roda `steam_launch_options.py` como SCRIPT, com o python3
-        do sistema e sem o pacote: o dono tem de chegar pelo irmão."""
+        """O install roda `steam_launch_options.py` como SCRIPT, com o python3"""
         proc = subprocess.run(
             [sys.executable, "-S", "-E", str(_SLO), "--help"],
             capture_output=True,
@@ -377,22 +299,13 @@ def _argv_da_steam(chamada: ast.Call) -> bool:
 
 
 def _so_repassa(chamada: ast.Call) -> bool:
-    """`Popen(cmd, **kwargs)` sem `env` próprio: quem decide é quem chamou.
-
-    É o `_default_popen` do botão PS; a chamada que o alcança leva a Steam no
-    argv e é cobrada por `_argv_da_steam`.
-    """
+    """`Popen(cmd, **kwargs)` sem `env` próprio: quem decide é quem chamou."""
     nomes = [kw.arg for kw in chamada.keywords]
     return None in nomes and "env" not in nomes
 
 
 def _pelo_dono_de_abrir(chamada: ast.Call) -> bool:
-    """`fora_do_servico.abrir(...)` — STEAM-FORA-DO-SERVICO-01, 26/09/2026.
-
-    Desde então a Steam de `reopen_steam` e `start_steam_game` nasce por ele,
-    com o `argv` numa variável do laço: sem esta pergunta a régua deixaria de
-    ver as duas, e o `env` delas poderia voltar a ser o do terminal.
-    """
+    """`fora_do_servico.abrir(...)` — STEAM-FORA-DO-SERVICO-01, 26/09/2026."""
     return (
         isinstance(chamada.func, ast.Attribute)
         and chamada.func.attr == "abrir"
@@ -416,11 +329,6 @@ def _quem_abre_processo(arvore: ast.AST) -> list[ast.Call]:
             or _pelo_dono_de_abrir(no)
         )
     ]
-
-
-# ---------------------------------------------------------------------------
-# 3. As pontas em shell
-# ---------------------------------------------------------------------------
 
 
 def _funcao(caminho: Path, nome: str) -> str:
@@ -461,8 +369,7 @@ class TestAListaDasPontasEmShell:
 
     @pytest.mark.parametrize("caminho", _PONTAS_EM_SHELL, ids=lambda p: p.name)
     def test_as_listas_podadas_sao_as_do_dono(self, caminho: Path) -> None:
-        """O `SYSTEM_PATH` entra aqui: sem ele o jogo Proton volta a achar o
-        `python3` do terminal depois da Steam Linux Runtime."""
+        """O `SYSTEM_PATH` entra aqui: sem ele o jogo Proton volta a achar o"""
         corpo = _funcao(caminho, "limpar_ambiente_do_interpretador")
         lidas = re.findall(r'podar_bins_do_interpretador "\$\{([A-Z_]+):-\}"', corpo)
         gravadas = re.findall(r'&& (?:export )?([A-Z_]+)="\$la_novo"', corpo)
@@ -473,9 +380,6 @@ class TestAListaDasPontasEmShell:
         assert _funcoes(_WRAPPER) == _funcoes(_DISABLE)
 
 
-#: A borda, caso a caso. Cada um roda sob o shell de cada ponta, e o dono
-#: Python responde o que devia sair. Os valores não precisam existir no disco:
-#: a poda é só texto.
 _CASOS_DE_BORDA: dict[str, dict[str, str]] = {
     "a-classe-inteira": {
         **{nome: f"valor-de-{nome.lower()}" for nome in adj.VARIAVEIS_DO_INTERPRETADOR},
@@ -530,8 +434,7 @@ _DIVISA = "--hefesto-antes-e-depois--"
 
 
 def _shell_da_ponta(caminho: Path) -> list[str]:
-    """O gancho roda sob `sh` (a Steam o chama pelo shebang); o roteiro, sob
-    bash com o `set -u` que ele liga no topo."""
+    """O gancho roda sob `sh` (a Steam o chama pelo shebang); o roteiro, sob"""
     nome, opcoes = ("sh", []) if caminho == _WRAPPER else ("bash", ["-u"])
     achado = shutil.which(nome, path="/usr/bin:/bin")
     assert achado, f"sem {nome} na máquina"
@@ -546,9 +449,6 @@ class TestAPontaEmShellSegueODono:
     def test_a_borda_e_a_do_dono(self, caminho: Path, caso: str, tmp_path: Path) -> None:
         env_bin = shutil.which("env", path="/usr/bin:/bin")
         assert env_bin, "sem env(1) na máquina"
-        # O ambiente é lido ANTES e DEPOIS no mesmo processo: o oráculo recebe
-        # exatamente o que o shell recebeu, inclusive o que a `conftest` põe
-        # no PATH de todo subprocesso da suíte.
         roteiro = (
             _funcoes(caminho)
             + f'\n"$1"\nprintf "%s\\n" "{_DIVISA}"\n'
@@ -585,9 +485,7 @@ def _dubles(pasta: Path, corpos: dict[str, str]) -> None:
 
 
 def _path_sem_o_som_da_suite(caminho: str) -> str:
-    """O PATH que o processo recebeu, sem os diretórios que a `conftest` põe na
-    frente: o do som (a suíte não fala com o servidor de som) e o dos
-    lançadores (a suíte não abre nem fecha o lançador de quem a roda)."""
+    """O PATH que o processo recebeu, sem os diretórios que a `conftest` põe na"""
     da_suite = {str(d) for d in (som_de_mentira(), lancador_de_mentira()) if d is not None}
     return ":".join(e for e in caminho.split(":") if e not in da_suite)
 
@@ -601,8 +499,6 @@ def _le_env(texto: str) -> dict[str, str]:
     return env
 
 
-#: O que a Steam Linux Runtime faz entre o gancho e o `proton`, copiado do
-#: `pressure-vessel-unruntime` (o `%command%` de todo jogo Proton passa por ele).
 _A_STEAM_LINUX_RUNTIME = (
     'if [ -n "${SYSTEM_PATH+set}" ]; then export PATH="$SYSTEM_PATH"; fi; exec env'
 )
@@ -614,12 +510,9 @@ class TestOGanchoDoJogo:
     def _roda(self, tmp_path: Path, *jogo: str) -> tuple[dict[str, str], dict[str, str]]:
         sujo = _terminal_sujo(tmp_path)
         mudos = tmp_path / "mudos"
-        # O Game Mode do gancho fala com o daemon de energia: dublês mudos na
-        # frente do PATH, como em `test_hefesto_launch_wrapper.py`.
         _dubles(mudos, {n: "exit 1" for n in ("system76-power", "busctl", "dbus-send")})
         env = {
             **sujo,
-            # Sem socket no XDG_RUNTIME_DIR de mentira: nenhuma env nossa.
             **_da_sessao(tmp_path),
             "XDG_STATE_HOME": str(tmp_path / "state"),
             "HOME": str(tmp_path),
@@ -654,9 +547,7 @@ class TestOGanchoDoJogo:
     def test_o_proton_nao_acha_o_python_do_terminal_depois_da_runtime(
         self, tmp_path: Path
     ) -> None:
-        """O caminho inteiro de um jogo Proton: o gancho e, DEPOIS dele, a
-        Steam Linux Runtime devolvendo o `SYSTEM_PATH` ao `PATH`. É o `PATH`
-        que o `#!/usr/bin/env python3` do `proton` usa."""
+        """O caminho inteiro de um jogo Proton: o gancho e, DEPOIS dele, a"""
         proton, sujo = self._roda(tmp_path, "sh", "-c", _A_STEAM_LINUX_RUNTIME)
         for bin_sujo in _bins_sujos(sujo):
             assert bin_sujo not in proton["PATH"].split(":"), proton["PATH"]
@@ -693,7 +584,6 @@ class TestOInstallReabreASteamLimpa:
         _dubles(
             dubles,
             {
-                # Steam "aberta" até o -shutdown; jogo nenhum aberto.
                 "pgrep": (
                     'case "$*" in *SteamLaunch*) exit 1 ;; esac\n'
                     '[ -f "$FAKE_STATE/steam_down" ] && exit 1\n'
@@ -707,8 +597,6 @@ class TestOInstallReabreASteamLimpa:
                     '     mv "$FAKE_STATE/reabertura.tmp" "$FAKE_STATE/env_da_reabertura" ;;\n'
                     "esac"
                 ),
-                # O pkill é dublê: se a espera perder a corrida, a régua
-                # reprova em vez de matar a Steam de alguém.
                 "pkill": 'printf "%s\\n" "$*" >> "$FAKE_STATE/pkill"; exit 0',
                 "sleep": f"exec {dorme} 0.05",
             },
@@ -736,8 +624,6 @@ class TestOInstallReabreASteamLimpa:
         assert "reabrindo Steam" in proc.stdout, proc.stdout
         assert not (estado / "pkill").exists()
 
-        # A reabertura é desanexada (`setsid nohup steam &`): espera curta pelo
-        # arquivo que o dublê grava por último.
         reabertura = estado / "env_da_reabertura"
         prazo = time.monotonic() + 10
         while not reabertura.exists() and time.monotonic() < prazo:
@@ -752,8 +638,6 @@ class TestOInstallReabreASteamLimpa:
                     arquivo,
                     nome,
                 )
-            # A sessão atravessa, e é a de MENTIRA: o roteiro nunca recebeu a
-            # porta do daemon nem o barramento de quem roda a suíte.
             for nome, valor in sessao.items():
                 assert steam[nome] == valor, (arquivo, nome)
             assert steam["XDG_RUNTIME_DIR"].startswith(str(tmp_path)), arquivo

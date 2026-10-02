@@ -54,15 +54,12 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
 
 UNIQ = "aa:bb:cc:00:00:01"
 
-#: A saída de `pactl list sources short` que ela tem NO CABO: a do kernel e a
-#: nossa, lado a lado. Os nomes são os medidos, com o endereço mascarado.
 NO_CABO = (
     "42\talsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00"
     ".HiFi__Mic__source\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED\n"
     f"43\t{PREFIXO_SOURCE_CANAL_DO_MIC}aabbcc\tPipeWire\ts16le 1ch 48000Hz\tIDLE\n"
 )
 
-#: E a que ela tem NO RÁDIO: só as nossas, nos dois prefixos que convivem.
 NO_RADIO = (
     f"51\t{PREFIXO_SOURCE_CANAL_DO_MIC}aabbcc\tPipeWire\ts16le 1ch 48000Hz\tIDLE\n"
     f"52\t{PREFIXO_SOURCE_PONTE_BT}aabbcc\tPipeWire\ts16le 1ch 48000Hz\tIDLE\n"
@@ -88,12 +85,7 @@ class TestAPerguntaEAoAparelho:
         assert "hefesto" not in nativas[0].lower()
 
     def test_no_radio_nao_existe_nenhuma(self) -> None:
-        """As duas do rádio são nossas — inclusive a que tem «dualsense» no nome.
-
-        É por isso que o filtro é por PREFIXO e não por marcador: o nome da
-        ponte de rádio carrega a palavra e passaria por qualquer teste de
-        marcador.
-        """
+        """As duas do rádio são nossas — inclusive a que tem «dualsense» no nome."""
         assert fontes_dualsense(NO_RADIO), "a mesa de teste ficou vazia"
         assert fontes_nativas(NO_RADIO) == []
 
@@ -123,12 +115,7 @@ class TestARazaoEUmaSo:
         assert a02.nativo_fora_de_alcance(UNIQ) == ""
 
     def test_nao_sei_nao_apaga_botao(self, a02: Any) -> None:
-        """`None` e a chave AUSENTE são a mesma coisa: não sei.
-
-        Apagar uma escolha dela por servidor de som mudo seria a tela decidindo
-        no escuro — a mesma disciplina de `canal_publicado`, que nunca
-        transforma silêncio em "saiu do ar".
-        """
+        """`None` e a chave AUSENTE são a mesma coisa: não sei."""
         a02._MIC_NATIVO[UNIQ] = None
         assert a02.nativo_fora_de_alcance(UNIQ) == ""
         del a02._MIC_NATIVO[UNIQ]
@@ -185,10 +172,7 @@ class TestOGestoRecusaDizendo:
 
     def test_o_virtual_continua_gravando_no_radio(self, a02: Any,
                                                   monkeypatch: pytest.MonkeyPatch) -> None:
-        """Só o «Nativo» recusa. O «Virtual» grava nos dois desde a D-12.
-
-        Recusá-lo aqui reabriria a queixa 15 dela.
-        """
+        """Só o «Nativo» recusa. O «Virtual» grava nos dois desde a D-12."""
         a02._MIC_NATIVO[UNIQ] = False
         monkeypatch.setattr(a02, "_DECLARADOS", {"aabbcc000001": SimpleNamespace()})
         monkeypatch.setattr(a02, "_controles_declarados", lambda recarregar=False: {})
@@ -212,23 +196,14 @@ class TestODesenhoTemOndeOProdutoEscrever:
         assert 'data-hef-classe="sem-nativo"' in corpo
 
     def test_um_campo_so_alimenta_o_cinza_e_a_razao(self) -> None:
-        """O contrato de `monta.botao_cinza`: com dois campos, eles divergem.
-
-        O container leva o alvo `classe` (o cinza) e a `.dica` leva o alvo
-        `html` (a razão) — o MESMO `data-campo`.
-        """
+        """O contrato de `monta.botao_cinza`: com dois campos, eles divergem."""
         corpo = self._bancada()
         assert 'data-campo="mic-nativo-fora" data-hef-alvo="classe"' in corpo
         assert ('<span class="dica" data-campo="mic-nativo-fora" '
                 'data-hef-alvo="html">') in corpo
 
     def test_o_endereco_do_container_e_de_alvo_classe_e_nunca_de_texto(self) -> None:
-        """A exceção ao «container endereçado é container que some» é de ALVO.
-
-        O que apagava os dois botões em 01/09 era o alvo `texto`, que faz
-        `el.textContent = t`. O alvo `classe` retorna antes de tocar em
-        conteúdo — está no próprio piloto.
-        """
+        """A exceção ao «container endereçado é container que some» é de ALVO."""
         corpo = self._bancada()
         assert 'class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe"' in corpo
         piloto = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
@@ -241,11 +216,7 @@ class TestODesenhoTemOndeOProdutoEscrever:
         assert '.mic-modo.sem-nativo button[data-mic-modo="nativo"]' in corpo
 
     def test_o_pacote_so_emite_o_que_a_pagina_publicada_tem(self, a02: Any) -> None:
-        """A guarda que impede a chave de virar órfã no casamento das dez.
-
-        O gerador escreve em `mockup/`; quem publica é ELA. Enquanto não
-        publicar, o campo não sai — e no dia em que publicar, liga sozinho.
-        """
+        """A guarda que impede a chave de virar órfã no casamento das dez."""
         from hefesto_dualsense4unix.interface import onde
 
         publicado = onde.pagina("02-controles.html", publicado=True).read_text(
@@ -255,18 +226,7 @@ class TestODesenhoTemOndeOProdutoEscrever:
 
 
 class TestNoCaboONativoNaoNasceCinza:
-    """O VALOR QUE A TELA RECEBE, lido com a régua do PILOTO — conferência da
-    A-MIRA-POR-MOVIMENTO-NA-TELA-02, 24/09/2026.
-
-    As réguas acima medem `nativo_fora_de_alcance`, e ela sempre respondeu
-    certo (`""` no cabo). O defeito morava UM PASSO DEPOIS, no pacote: `""`
-    virava `NADA_A_DIZER` (`<i class="nada"></i>`), e o alvo `classe` do
-    container acende quando o valor é "ligado" pela conta do piloto
-    (`hefesto_vivo.escrever`, função `ligado`) — e o marcador não é nenhum dos
-    valores que ela apaga. Medido na tela, no piloto oculto e num lar de
-    mentira: o «Nativo» do P2 no USB com `sem-nativo` e `cursor: not-allowed`,
-    contra a decisão dela de 20/09 (*"no rádio o botão fica cinza"*).
-    """
+    """O VALOR QUE A TELA RECEBE, lido com a régua do PILOTO — conferência da"""
 
     @staticmethod
     def _apagados_pelo_piloto() -> set[str]:
@@ -285,13 +245,7 @@ class TestNoCaboONativoNaoNasceCinza:
     def test_o_valor_da_chave_segue_o_aparelho(self, a02: Any,
                                               monkeypatch: pytest.MonkeyPatch,
                                               transporte: str) -> None:
-        """Alcança: a chave vai num valor que o piloto APAGA; não alcança: vai
-        a razão, que ele ACENDE. O transporte não entra na conta — quem
-        responde é o aparelho.
-
-        MORDIDA: devolva o `or NADA_A_DIZER` à chave `mic-nativo-fora` no
-        `pacote` da aba e o caso «alcança» reprova, no USB e no BT.
-        """
+        """Alcança: a chave vai num valor que o piloto APAGA; não alcança: vai"""
         from pacotes import Contexto
 
         apagados = self._apagados_pelo_piloto()
@@ -313,23 +267,17 @@ class TestAMordida:
 
     def test_sem_a_recusa_o_radio_grava_o_nativo(self, a02: Any,
                                                  monkeypatch: pytest.MonkeyPatch) -> None:
-        """A cura arrancada = o gesto sem o `raise` do «Nativo».
-
-        Aqui ela é arrancada pela RESPOSTA, que é o mesmo efeito com uma linha
-        a menos: com o dono dizendo "há fonte nativa", o gesto grava pelo
-        rádio exatamente como gravava antes desta sprint. Se as duas respostas
-        levassem ao mesmo desfecho, esta régua não mediria nada.
-        """
+        """A cura arrancada = o gesto sem o `raise` do «Nativo»."""
         monkeypatch.setattr(a02, "_DECLARADOS", {"aabbcc000001": SimpleNamespace()})
         monkeypatch.setattr(a02, "_controles_declarados", lambda recarregar=False: {})
         ctx = TestOGestoRecusaDizendo._ctx("bt")
 
-        a02._MIC_NATIVO[UNIQ] = True  # a cura arrancada
+        a02._MIC_NATIVO[UNIQ] = True
         ponte = TestOGestoRecusaDizendo._Ponte()
         a02.mic_modo(ctx, {"uniq": UNIQ, "micModo": "nativo"}, ponte)
         assert ponte.declarados, "a mordida não reproduziu o mundo pré-cura"
 
-        a02._MIC_NATIVO[UNIQ] = False  # a cura no lugar
+        a02._MIC_NATIVO[UNIQ] = False
         ponte = TestOGestoRecusaDizendo._Ponte()
         with pytest.raises(RuntimeError):
             a02.mic_modo(ctx, {"uniq": UNIQ, "micModo": "nativo"}, ponte)

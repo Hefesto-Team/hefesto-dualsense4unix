@@ -31,9 +31,6 @@ from typing import Any
 
 from hefesto_dualsense4unix.utils.color_contrast import ensure_min_contrast, rgb_para_hex
 
-# ---------------------------------------------------------------------------
-# Mapa PT-BR — consumido por UI-STATUS-STICKS-REDESIGN-01
-# ---------------------------------------------------------------------------
 BUTTON_GLYPH_LABELS: dict[str, str] = {
     "cross": "Cruz",
     "circle": "Circulo",
@@ -58,28 +55,13 @@ BUTTON_GLYPH_LABELS: dict[str, str] = {
     "stick_r": "Analogico Direito",
 }
 
-# ---------------------------------------------------------------------------
-# Resolucao de caminho dos glyphs
-# ---------------------------------------------------------------------------
-
 
 def _resolver_dir_glyphs() -> pathlib.Path:
-    """Retorna o diretório de glyphs disponivel.
-
-    Cobre 3 cenários de instalação. A ordem reflete preferência: usuário
-    ganha de sistema (override pessoal); sistema ganha de dev fallback.
-    """
+    """Retorna o diretório de glyphs disponivel."""
     candidatos: list[pathlib.Path] = [
-        # 1) install.sh nativo copia para ~/.local/share/
         pathlib.Path.home() / ".local" / "share" / "hefesto-dualsense4unix" / "glyphs",
-        # 2) Flatpak: o manifesto instala em /app/share/...; sys.prefix=/app
-        # dentro do sandbox. Nem ~/.local/share (home isolado) nem /usr/share
-        # (runtime) resolvem lá — sem este candidato os glyphs somem no Flatpak.
         pathlib.Path(sys.prefix) / "share" / "hefesto-dualsense4unix" / "glyphs",
-        # 3) .deb instala assets em /usr/share/hefesto-dualsense4unix/assets/
         pathlib.Path("/usr/share/hefesto-dualsense4unix/assets/glyphs"),
-        # 4) Dev: caminho relativo ao pacote
-        # (src/hefesto_dualsense4unix/gui/widgets/ -> raiz/assets/glyphs/)
         pathlib.Path(__file__).parent.parent.parent.parent.parent / "assets" / "glyphs",
     ]
     for cand in candidatos:
@@ -98,16 +80,8 @@ except FileNotFoundError:
     GLYPHS_DIR = None
 
 
-# ---------------------------------------------------------------------------
-# Tinting da variante ativa (STATUS-03)
-# ---------------------------------------------------------------------------
-
-#: Literal presente nos 19 ``*_active.svg`` shipados (roxo Drácula).
 _HEX_ATIVO_STOCK = "#bd93f9"
 
-#: Cache de pixbufs tintados. A chave embute o caminho RESOLVIDO do SVG
-#: (dir + nome — hermético quando GLYPHS_DIR muda em teste), o tamanho e o
-#: hex ajustado: no máximo 1 carga de pixbuf por (nome, size, hex).
 _PIXBUF_TINT_CACHE: dict[tuple[str, int, str], Any] = {}
 
 
@@ -122,10 +96,6 @@ def limpar_cache_tinting() -> None:
     """Esvazia o cache de pixbufs tintados (higiene de testes)."""
     _PIXBUF_TINT_CACHE.clear()
 
-
-# ---------------------------------------------------------------------------
-# ButtonGlyph
-# ---------------------------------------------------------------------------
 
 try:
     import gi
@@ -142,14 +112,7 @@ except (ImportError, ValueError):
 if _GTK_DISPONIVEL:
 
     def _carregar_pixbuf_tintado(nome: str, size: int, hex_cor: str) -> Any:
-        """Carrega a variante ativa tintada (caminho de MISS do cache).
-
-        Lê SEMPRE do ``GLYPHS_DIR`` resolvido (módulo — funciona nos 4
-        caminhos de resolução e é monkeypatchável em teste), tinta o texto
-        do SVG e materializa via ``GdkPixbuf.PixbufLoader`` com
-        ``set_size(size, size)``. Retorna None em qualquer falha (o widget
-        cai na variante stock).
-        """
+        """Carrega a variante ativa tintada (caminho de MISS do cache)."""
         if GLYPHS_DIR is None:
             return None
         caminho = GLYPHS_DIR / f"{nome}_active.svg"
@@ -160,7 +123,6 @@ if _GTK_DISPONIVEL:
         loader = None
         try:
             loader = GdkPixbuf.PixbufLoader()
-            # set_size ANTES do write: pós size-prepared o pedido é ignorado.
             loader.set_size(size, size)
             loader.write(_tintar_svg(texto, hex_cor).encode("utf-8"))
             loader.close()
@@ -214,25 +176,15 @@ if _GTK_DISPONIVEL:
             self._pb_normal: GdkPixbuf.Pixbuf | None = None
             self._pb_active: GdkPixbuf.Pixbuf | None = None
             self._load_pixbuf_pair()
-            # STATUS-03: guarda a variante ativa stock (roxo Drácula) para
-            # set_accent(None) restaurar sem reler o disco.
             self._pb_active_stock: GdkPixbuf.Pixbuf | None = self._pb_active
             self._accent_hex: str | None = None
             self.set_size_request(size, size)
             self.connect("draw", self._on_draw)
-            # BUG-GLYPH-TOOLTIP-ORFAO-01: tooltip DESLIGADO de propósito. Sob
-            # COSMIC+XWayland a janelinha de tooltip ficava PRESA na tela
-            # (órfã, sobre o grid) após o hover — visto ao vivo em 2026-07-13.
-            # O glyph é auto-evidente; o rótulo segue acessível ao leitor de
-            # tela via accessible-name.
             label = tooltip_pt_br or BUTTON_GLYPH_LABELS.get(name, name)
             self.set_has_tooltip(False)
             with contextlib.suppress(Exception):
                 self.get_accessible().set_name(label)
 
-        # ------------------------------------------------------------------
-        # API publica
-        # ------------------------------------------------------------------
 
         def set_pressed(self, pressed: bool) -> None:
             """Altera o estado pressionado e agenda redesenho."""
@@ -241,14 +193,7 @@ if _GTK_DISPONIVEL:
                 self.queue_draw()
 
         def set_accent(self, rgb: Sequence[int] | None) -> None:
-            """Tinta a variante ativa com a cor do controle, sem recriar o widget.
-
-            A cor é AJUSTADA por ``ensure_min_contrast`` (decisão D8: swatch
-            cru, traços ajustados); o pixbuf tintado vem do cache por
-            ``(nome, size, hex)`` — repetir cores NÃO relê SVG do disco.
-            ``None`` restaura o roxo Drácula stock. Aceita ``[r, g, b]`` do
-            IPC ou tuple.
-            """
+            """Tinta a variante ativa com a cor do controle, sem recriar o widget."""
             hex_novo = (
                 None if rgb is None else rgb_para_hex(ensure_min_contrast(rgb))
             )
@@ -270,9 +215,6 @@ if _GTK_DISPONIVEL:
             """Retorna True se o glyph esta no estado pressionado."""
             return self._pressed
 
-        # ------------------------------------------------------------------
-        # Internos
-        # ------------------------------------------------------------------
 
         def _load_pixbuf_pair(self) -> None:
             """Carrega os dois pixbufs (normal e ativo) do disco."""
@@ -296,7 +238,7 @@ if _GTK_DISPONIVEL:
         def _on_draw(
             self,
             _widget: Gtk.DrawingArea,
-            ctx: Any,  # cairo.Context — sem stubs oficiais
+            ctx: Any,
         ) -> bool:
             """Callback de desenho do widget."""
             pb = self._pb_active if self._pressed else self._pb_normal
@@ -309,7 +251,6 @@ if _GTK_DISPONIVEL:
             return False
 
 else:
-    # Stub mínimo para ambientes sem GTK (testes, CI sem display).
     class ButtonGlyph:  # type: ignore[no-redef]
         """Stub de ButtonGlyph para ambientes sem GTK3."""
 

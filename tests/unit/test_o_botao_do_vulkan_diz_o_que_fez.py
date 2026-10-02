@@ -1,37 +1,4 @@
-"""O-BOTAO-DO-VULKAN-NAO-RESPONDE-01 — o botão que agia calado e no verbo errado.
-
-**Queixa dela, 21/09/2026**, com a janela aberta e um jogo rodando:
-
-    *"tirar a sobreposição do Vulcan. Clico em confirma e não aparece nada. Os
-    logs não falam nada que preste também."*  — e, logo depois, *"não sei se
-    esse botão presta tambem."*  <!-- noqa-acento: citação literal dela -->
-
-**MEDIDO NA MÁQUINA DELA no mesmo dia**, com `camadas_vulkan --relatorio`: há
-UM prefixo com camada (o Sackboy) e as duas do Epic estão **desligadas** — quer
-dizer, nós já as tiramos. Logo `tem_tirar` é `False` e `tem_devolver` é `True`:
-**o segundo clique dela ia DEVOLVER a sobreposição**, com o botão dizendo
-"Tirar" e o armado dizendo "Confirma?".
-
-Os dois defeitos que este arquivo prende:
-
-1. **O verbo não estava onde o dedo clica.** A frase do painel avisava; o olho
-   dela estava no botão.
-2. **O clique 2 não deixava rastro nenhum na tela.** É o único dos seis
-   destrutivos desta aba cujo efeito é invisível — ele escreve no registro do
-   prefixo Wine, e a linha do exame diz `✓ OK` antes e depois.
-
-**25/09/2026 — A-09-SISTEMA-EM-TRES-SECOES-01.** O botão virou o ligável
-«Corrigir Vulkan» (a pílula do Modo Freestyle), de UM clique: aceso quando há
-camada que nós tiramos, e o clique desliga devolvendo. O defeito 1 (o verbo
-longe do dedo) perdeu o objeto — o ligável não tem segundo tempo —; o defeito 2
-(o ato que não deixa rastro) continua preso aqui.
-
-**28/09/2026 — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Ligar grava a
-escolha que o lançador lê, e o jogo que abrir depois nasce sem as duas camadas
-da Steam; desligar apaga a escolha e devolve o que o registro guarda de nós. A
-pílula lê a escolha, e o ato continua invisível na hora — vale no próximo jogo
-—, por isso o recibo fica.
-"""
+"""O-BOTAO-DO-VULKAN-NAO-RESPONDE-01 — o botão que agia calado e no verbo errado."""
 
 from __future__ import annotations
 
@@ -44,12 +11,7 @@ pytest_plugins = ["tests.unit.test_a_09_sistema_fecha_a_paridade"]
 
 def _mesa(a09: Any, monkeypatch: pytest.MonkeyPatch, *, ligado: bool,
           com_registro: bool = False, curou: list[Any] | None = None) -> None:
-    """A escolha e o estado PELO DONO, e o `curar_todos` espionado.
-
-    `ligado` é a escolha gravada (a pílula); `com_registro` é o estado dizer
-    que NÓS desligamos uma camada de um prefixo — o que dá à devolução o que
-    fazer. O XDG é o do lar de mentira do `conftest`.
-    """
+    """A escolha e o estado PELO DONO, e o `curar_todos` espionado."""
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
@@ -75,14 +37,8 @@ def _clicar(gesto: Any, ctx: Any, texto: str = "") -> Any:
     return gesto(ctx, {"texto": texto}, PonteDeMentira())
 
 
-# ---------------------------------------------------------------------------
-# 1 — A PÍLULA LÊ O QUE O LANÇADOR LÊ
-# ---------------------------------------------------------------------------
 def test_a_pilula_segue_a_escolha_que_o_lancador_le(a09: Any) -> None:
-    """Acesa é «o jogo nasce sem as camadas da Steam», e nada mais.
-
-    MORDE: faça `vulkan_corrigido` voltar a olhar o registro do prefixo.
-    """
+    """Acesa é «o jogo nasce sem as camadas da Steam», e nada mais."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     cv.gravar_camadas_da_steam_fora(False)
@@ -103,16 +59,9 @@ def test_o_clique_liga_e_desliga_pela_escolha(
     assert cv.camadas_da_steam_fora() is False
 
 
-# ---------------------------------------------------------------------------
-# 2 — O ATO DEIXA RASTRO NA TELA
-# ---------------------------------------------------------------------------
 def test_o_clique_escreve_o_recibo_na_tela(
         a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A QUEIXA DELA, presa por régua: "Clico em confirma e não aparece nada".
-
-    MORDE: tire `"corrigir-vulkan"` de `RECIBO_QUE_FICA_NA_TELA` e a régua
-    reprova com o painel vazio.
-    """
+    """A QUEIXA DELA, presa por régua: "Clico em confirma e não aparece nada"."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     _mesa(a09, monkeypatch, ligado=False)
@@ -136,10 +85,7 @@ def test_o_recibo_diz_o_ato_que_aconteceu(
 
 def test_desligar_sem_nada_nosso_no_registro_nao_mexe_nele(
         a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O registro dela só se abre quando há o que devolver.
-
-    MORDE: tire o `cv.ha_o_que_devolver()` de `corrigir_vulkan`.
-    """
+    """O registro dela só se abre quando há o que devolver."""
     curou: list[Any] = []
     _mesa(a09, monkeypatch, ligado=True, com_registro=False, curou=curou)
     _clicar(a09.corrigir_vulkan, ctx)
@@ -157,12 +103,7 @@ def test_ligar_nao_mexe_no_registro(
 
 def test_a_escolha_que_nao_grava_recusa_e_nao_diz_pronto(
         a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Pasta de configuração sem escrita: a tela diz que não pegou.
-
-    O recibo «Pronto» sobre um arquivo que não nasceu deixaria a pílula
-    apagada e o texto dizendo o contrário. MORDIDA: tire o `try/except
-    OSError` em volta do `gravar_camadas_da_steam_fora` de `corrigir_vulkan`.
-    """
+    """Pasta de configuração sem escrita: a tela diz que não pegou."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     _mesa(a09, monkeypatch, ligado=False)
@@ -180,11 +121,7 @@ def test_a_escolha_que_nao_grava_recusa_e_nao_diz_pronto(
 
 
 def test_a_lista_do_recibo_que_fica_e_curta_e_declarada() -> None:
-    """A TELA-CALADA-03 continua valendo para os outros destrutivos.
-
-    A regra que cabe nas duas: **recibo de status sai; recibo de ato que não se
-    vê FICA**. Um gesto novo nesta lista é um ato que se vê no diff.
-    """
+    """A TELA-CALADA-03 continua valendo para os outros destrutivos."""
     from pacotes import a09_sistema as a09
 
     assert a09.RECIBO_QUE_FICA_NA_TELA == ("corrigir-vulkan",)
@@ -200,16 +137,9 @@ def test_o_recibo_dos_outros_continua_fora_da_tela(
     assert a09._PAINEL[0] is None
 
 
-# ---------------------------------------------------------------------------
-# 3 — A RECUSA POR JOGO ABERTO, E O DONO QUE ELA PASSOU A PERGUNTAR
-# ---------------------------------------------------------------------------
 def test_a_recusa_pergunta_ao_dono_que_invalida_a_foto(
         a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Era `steam_game_running` direto, que lê uma FOTO de até 5 s.
-
-    MORDE: volte a chamar `slo.steam_game_running()` aqui e a régua reprova,
-    porque ninguém invalida a varredura antes.
-    """
+    """Era `steam_game_running` direto, que lê uma FOTO de até 5 s."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo

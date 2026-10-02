@@ -43,46 +43,31 @@ logger = get_logger(__name__)
 DEVICE_NAME = "Hefesto - Dualsense4Unix Virtual Keyboard"
 
 # Superset de teclas que o device expõe. Cobre DEFAULT_BUTTON_BINDINGS mais
-# letras/números/funções que o usuário poderá atribuir via UI futura.
-# Manter em ordem alfabética facilita diff.
 SUPPORTED_KEYS: tuple[str, ...] = (
-    # Modificadores
     "KEY_LEFTALT", "KEY_RIGHTALT",
     "KEY_LEFTCTRL", "KEY_RIGHTCTRL",
     "KEY_LEFTSHIFT", "KEY_RIGHTSHIFT",
     "KEY_LEFTMETA", "KEY_RIGHTMETA",
-    # Controle e navegação
     "KEY_BACKSPACE", "KEY_DELETE", "KEY_ENTER", "KEY_ESC",
     "KEY_HOME", "KEY_END", "KEY_INSERT", "KEY_PAGEUP", "KEY_PAGEDOWN",
     "KEY_SPACE", "KEY_TAB",
-    "KEY_SYSRQ",  # PrintScreen
-    # Setas
+    "KEY_SYSRQ",
     "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
-    # Letras
     "KEY_A", "KEY_B", "KEY_C", "KEY_D", "KEY_E", "KEY_F", "KEY_G",
     "KEY_H", "KEY_I", "KEY_J", "KEY_K", "KEY_L", "KEY_M", "KEY_N",
     "KEY_O", "KEY_P", "KEY_Q", "KEY_R", "KEY_S", "KEY_T", "KEY_U",
     "KEY_V", "KEY_W", "KEY_X", "KEY_Y", "KEY_Z",
-    # Números (linha principal)
     "KEY_0", "KEY_1", "KEY_2", "KEY_3", "KEY_4",
     "KEY_5", "KEY_6", "KEY_7", "KEY_8", "KEY_9",
-    # Pontuação (FEAT-POINT-AND-CLICK-01: "." pula diálogo no Grim Fandango)
     "KEY_COMMA", "KEY_DOT",
-    # Função
     "KEY_F1", "KEY_F2", "KEY_F3", "KEY_F4", "KEY_F5", "KEY_F6",
     "KEY_F7", "KEY_F8", "KEY_F9", "KEY_F10", "KEY_F11", "KEY_F12",
-    # Volume (para handlers futuros)
     "KEY_VOLUMEUP", "KEY_VOLUMEDOWN", "KEY_MUTE",
 )
 
 
 def _build_capabilities() -> list[Any]:
-    """Lista de eventos que o uinput device expõe. Import lazy.
-
-    Filtra teclas que o módulo `uinput` não conhece (versões antigas podem
-    faltar KEY_SYSRQ etc.) com log de aviso; não quebra o start por tecla
-    faltante — apenas pula.
-    """
+    """Lista de eventos que o uinput device expõe. Import lazy."""
     import uinput
 
     caps: list[Any] = []
@@ -103,10 +88,6 @@ class UinputKeyboardDevice:
     bindings: dict[str, KeyBinding] = field(
         default_factory=lambda: dict(DEFAULT_BUTTON_BINDINGS)
     )
-    # Callback para tokens virtuais `__*__` (FEAT-KEYBOARD-UI-01). Recebe
-    # `(token, phase)` onde phase é "press" ou "release". Quando None, tokens
-    # virtuais são ignorados (log warning uma vez). Ver keyboard subsystem
-    # para o binding típico: `__OPEN_OSK__` → abrir onboard/wvkbd.
     virtual_token_callback: Callable[[str, str], None] | None = None
 
     _device: Any = None
@@ -139,8 +120,6 @@ class UinputKeyboardDevice:
     def stop(self) -> None:
         if self._device is None:
             return
-        # Solta tudo que ainda estiver pressionado antes de destruir o device
-        # para evitar ghost-keys no sistema do usuário.
         self._release_all()
         with contextlib.suppress(Exception):
             self._device.destroy()
@@ -157,22 +136,14 @@ class UinputKeyboardDevice:
 
         Não recria o device; capabilities são superset fixo.
         """
-        # Antes de trocar, libera tudo que estava pressionado sob o mapping antigo
-        # para evitar tecla "colada".
         self._release_all()
         self.bindings = dict(bindings)
 
     def dispatch(self, buttons_pressed: frozenset[str]) -> None:
-        """Aplica snapshot de botões pressionados no device virtual.
-
-        Edge-triggered: emite press da sequência (modificadores+tecla) ao
-        detectar transição False→True de um botão mapeado; emite release
-        ao detectar True→False.
-        """
+        """Aplica snapshot de botões pressionados no device virtual."""
         if self._device is None or self._uinput_mod is None:
             return
 
-        # Considera apenas os botões que tenham binding ativo.
         now_mapped = frozenset(b for b in buttons_pressed if b in self.bindings)
         newly_pressed = now_mapped - self._pressed_buttons
         newly_released = self._pressed_buttons - now_mapped
@@ -185,27 +156,13 @@ class UinputKeyboardDevice:
         self._pressed_buttons = now_mapped
 
     def prime(self, buttons_pressed: frozenset[str]) -> None:
-        """Semeia o edge-tracker com `buttons_pressed` SEM emitir nada.
-
-        Usado pelo poll loop no 1º tick após conectar (BUG-DAEMON-CONNECT-
-        GHOST-INPUT-01): adota o estado cru lido no instante da conexão como
-        baseline. Assim botões fantasma/segurados na conexão são tratados como
-        "já pressionados" e só geram sequência de teclas quando o usuário
-        soltá-los e pressioná-los de novo — análogo ao racional de
-        `_release_all`, mas no sentido inverso (zero emissão, só estado).
-
-        No-op se o device ainda não foi criado: o `dispatch` também é no-op
-        nesse caso, então não há divergência de estado.
-        """
+        """Semeia o edge-tracker com `buttons_pressed` SEM emitir nada."""
         if self._device is None or self._uinput_mod is None:
             return
         self._pressed_buttons = frozenset(
             b for b in buttons_pressed if b in self.bindings
         )
 
-    # ------------------------------------------------------------------
-    # Helpers internos
-    # ------------------------------------------------------------------
 
     def _emit_sequence_press(self, button: str) -> None:
         seq = self.bindings.get(button)
@@ -241,7 +198,6 @@ class UinputKeyboardDevice:
             return
         u = self._uinput_mod
         any_emitted = False
-        # Libera em ordem reversa ao press (modificadores por último saem).
         for key_name in reversed(seq):
             ev = getattr(u, key_name, None)
             if ev is None:
@@ -260,13 +216,7 @@ class UinputKeyboardDevice:
     def _delegate_virtual_tokens(
         self, button: str, seq: KeyBinding, phase: str
     ) -> bool:
-        """Se `seq` for inteiramente tokens virtuais `__*__`, delega ao callback.
-
-        Retorna True quando o binding foi tratado como virtual (caller deve
-        sair sem emitir pelo uinput). False quando é um binding normal com
-        `KEY_*`. Binding misto (`__OPEN_OSK__` + `KEY_TAB`) é rejeitado com
-        warning — semântica mista seria confusa e a UI futura impede.
-        """
+        """Se `seq` for inteiramente tokens virtuais `__*__`, delega ao callback."""
         virtual = [tok for tok in seq if is_virtual_token(tok)]
         if not virtual:
             return False
@@ -321,4 +271,3 @@ __all__ = [
     "UinputKeyboardDevice",
 ]
 
-# "Não há mau maior para o homem do que ignorar o bem." — Platão

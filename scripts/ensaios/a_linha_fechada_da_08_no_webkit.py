@@ -1,32 +1,5 @@
 #!/usr/bin/env python3
-"""A linha fechada da Gestão de Controles, medida DENTRO do WebKit dela.
-
-POR QUE ELE EXISTE, e é a regra desta casa: o teste de unidade
-``test_a_linha_fechada_da_aba08_segue_o_aparelho`` prova que o **pacote emite**
-e que a **bancada tem endereço**. Isso prova a CONTA. O que prova o PRODUTO é o
-mesmo valor chegando ao elemento certo dentro do ``WebKit2.WebView`` que ela
-usa, com a folha de estilo real aplicando o ``apagado`` — porque o que ela vê
-não é uma chave de dicionário, é um botão apagado e a palavra "Desligado".
-
-O ENSAIO LÊ A **BANCADA**, e não a página publicada. É de propósito e está
-declarado: os endereços desta leva nasceram em ``mockup/08-conexoes.html`` e só
-alcançam a tela dela depois do ``--publicar``, que é ato de quem coordena.
-Apontar para o publicado daria **não-achado convincente** — a armadilha mais
-cara do ``docs/method/COMO-OLHAR-A-TELA.md``. O desvio é de PROCESSO
-(``onde.PUBLICADO`` desta execução), nunca de disco: nenhum arquivo é copiado.
-
-O QUE ELE MEDE, com o daemon VIVO e a mesa como ela estiver:
-
-1. o **antes** — o que o arquivo da bancada traz cravado naquele elemento;
-2. o **depois** — o que o DOM mostra depois de o piloto pintar;
-3. e reprova quando os dois são iguais em TODO campo, porque aí a pintura não
-   está acontecendo e o verde seria sobre o desenho.
-
-Uso (sempre oculto; ela tem UMA tela)::
-
-    scripts/ensaios/a_linha_fechada_da_08_no_webkit.py
-    scripts/ensaios/a_linha_fechada_da_08_no_webkit.py --foto /tmp/depois.png
-"""
+"""A linha fechada da Gestão de Controles, medida DENTRO do WebKit dela."""
 from __future__ import annotations
 
 import argparse
@@ -38,9 +11,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -60,8 +30,6 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, onde
 
 ABA = "08-conexoes.html"
 
-#: O QUE SE LÊ DO DOM. Cada linha é um campo desta leva, e o seletor é o do
-#: DESENHO — quem mudar o desenho e não este ensaio verá `null` e saberá.
 ROTEIRO = r"""
 (function(){
   function um(raiz, campo){
@@ -105,12 +73,7 @@ BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
 
 
 def _do_arquivo() -> dict[str, str]:
-    """O ANTES — o que a bancada crava, lido do arquivo e não do DOM.
-
-    Ele tem de vir do arquivo: depois da primeira pintura o DOM já é a mistura
-    do que o desenho escreveu com o que o produto reescreveu, e não há como
-    desfazer a mistura olhando o resultado.
-    """
+    """O ANTES — o que a bancada crava, lido do arquivo e não do DOM."""
     import re
 
     html = onde.pagina(ABA).read_text(encoding="utf-8")
@@ -127,8 +90,6 @@ def main() -> int:
     ap.add_argument("--foto", default="", help="grava um PNG da janela oculta")
     escolha = ap.parse_args()
 
-    # O DESVIO DE PROCESSO — a razão está no cabeçalho. Nada é copiado no disco;
-    # esta execução passa a ler as páginas da bancada, e só ela.
     onde.PUBLICADO = onde.BANCADA
 
     antes = _do_arquivo()
@@ -143,11 +104,6 @@ def main() -> int:
         def respondeu(texto: str | None, erro: Exception | None) -> None:
             saida["dom"] = json.loads(texto) if texto and not erro else None
             saida["erro"] = str(erro) if erro else ""
-            # A FOTO SAI DAQUI, e não do `--foto` do piloto: aquele é tirado no
-            # `_relatar`, que só roda no fim do passeio (`--segundos`). Este
-            # ensaio fecha a janela assim que lê o DOM, e a foto tem de ser do
-            # MESMO instante que a leitura — senão as duas contam coisas
-            # diferentes.
             if escolha.foto:
                 piloto.tela.fotografar(escolha.foto)
             Gtk.main_quit()
@@ -156,8 +112,6 @@ def main() -> int:
         return False
 
     GLib.timeout_add(400, lambda: piloto._ir(ABA))
-    # DOIS TIQUES DE FOLGA (o tique é de 500 ms): o exame de entrada corre em
-    # thread, e a primeira pintura pode chegar antes de ele voltar.
     GLib.timeout_add(4000, perguntar)
     GLib.timeout_add(30000, Gtk.main_quit)
     Gtk.main()
@@ -178,9 +132,6 @@ def main() -> int:
         print(f"        luz          {d['luz']}")
     print(f"\n  confissão   {dom['confissao']}")
 
-    # A GUARDA DE VACUIDADE: pelo menos um campo desta leva tem de ter sido
-    # VISITADO pelo piloto. Sem ela, uma página que o produto nunca alcançou
-    # imprimiria os valores do desenho e o ensaio pareceria verde.
     visitados = [f"{pref}.{chave}"
                  for pref, d in dom["controles"].items()
                  for chave in ("mic_existe", "mic_caminho")

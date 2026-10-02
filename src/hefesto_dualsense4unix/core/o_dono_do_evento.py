@@ -1,44 +1,4 @@
-"""O dono do evento — O-REPOUSO-ESPERA-O-EVENTO-01 (29/09/2026).
-
-O que se mediu (sonda S.4 da bancada de 29/09, 60 s, os quatro no rádio, parados,
-sem jogo): o daemon fazia 491 ``open`` por segundo em repouso, quase todos de
-varreduras que rodavam por RELÓGIO (validade de 1, 2 e 5 s; tique de 1, 2 e 30 s)
-para responder perguntas cuja resposta só muda num EVENTO: um nó que nasce, some
-ou muda de dono. Cada módulo inventou a sua validade, e o que mais se aproximava
-de um dono do evento (o ``InputDirWatch``) era um ``listdir`` por consumidor.
-
-Este módulo é o dono: **um ``inotify`` só por processo**, pela ``libc`` via
-``ctypes`` (sem dependência nova), olhando duas raízes, a das entradas
-(``/dev/input``) e a dos nós (``/dev``, onde só contam os nomes ``hidraw*``).
-Para cada raiz ele responde três gerações, números que só sobem:
-
-- ``NOMES``: um nome nasceu, sumiu ou mudou de lugar;
-- ``CRIACOES``: um nome nasceu (é o ``nasceu`` do ``InputDirWatch``);
-- ``PERMISSOES``: um nome mudou de permissão (``IN_ATTRIB``). Fica numa geração
-  própria porque o próprio produto a provoca (o broker faz ``chmod`` ao
-  esconder), e quem só depende de nomes não acorda com isso. Entra de propósito:
-  a permissão que o udev põe no nó que acabou de nascer e a ACL que um
-  ``udevadm trigger`` devolve ao físico escondido chegam como evento.
-
-Um ``IN_Q_OVERFLOW`` sobe todas as gerações: evento perdido é «tudo mudou»,
-nunca «nada mudou». A raiz cujo olhar morre (``IN_IGNORED``) deixa de ser
-olhada, e quem pergunta por ela volta ao comportamento de antes.
-
-**Ler uma geração é drenar um fd não bloqueante**, sob uma trava (o poll loop, os
-handlers de IPC, o ``reconnect_loop`` e os executores perguntam de fios
-diferentes): nenhum ``open``, nenhuma listagem.
-
-**O dono se ARMA, e só o daemon arma** (o ``reconnect_loop``, no caminho de
-produção, com o desarme no ``finally``). Sem armar, e sem ``inotify`` (a chamada
-falha), nenhuma resposta sai daqui, e toda função que pergunta a ele se
-comporta como antes: a janela, a CLI e os instrumentos não ganham cache que
-ninguém invalida. Desarmar chama as limpezas registradas em
-:func:`ao_desarmar`, que zeram os caches presos a ele.
-
-O ``sysfs`` não emite ``inotify`` para o que o kernel cria, e por isso ele não
-é olhado aqui: o ``InputDirWatch`` de outra raiz (o do barramento HID) segue no
-``listdir`` de sempre.
-"""
+"""O dono do evento — O-REPOUSO-ESPERA-O-EVENTO-01 (29/09/2026)."""
 
 from __future__ import annotations
 
@@ -50,9 +10,7 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-#: A raiz das entradas: os nós ``eventN``/``jsN`` que a descoberta percorre.
 RAIZ_DAS_ENTRADAS = "/dev/input"
-#: A raiz dos nós ``hidraw*``. Os outros nomes de ``/dev`` não contam.
 RAIZ_DOS_NOS = "/dev"
 PREFIXO_DOS_NOS = "hidraw"
 
@@ -61,7 +19,6 @@ CRIACOES = "criações"
 PERMISSOES = "permissões"
 _TIPOS: tuple[str, ...] = (NOMES, CRIACOES, PERMISSOES)
 
-# linux/inotify.h
 IN_ATTRIB = 0x00000004
 IN_MOVED_FROM = 0x00000040
 IN_MOVED_TO = 0x00000080
@@ -73,8 +30,6 @@ IN_Q_OVERFLOW = 0x00004000
 IN_IGNORED = 0x00008000
 IN_ONLYDIR = 0x01000000
 
-#: O que cada raiz pede ao kernel. O ``IN_ATTRIB`` é o que a régua da permissão
-#: tardia arranca para morder.
 MASCARA_DO_OLHAR = (
     IN_CREATE
     | IN_DELETE
@@ -86,12 +41,9 @@ MASCARA_DO_OLHAR = (
     | IN_ONLYDIR
 )
 
-#: ``struct inotify_event``: ``int wd; uint32 mask; uint32 cookie; uint32 len``.
 _CABECALHO = struct.Struct("iIII")
 _TAMANHO_DA_LEITURA = 64 * 1024
 
-#: A época é global e só sobe: a ficha de um dono re-armado, ou de outro dono,
-#: nunca casa com a de antes.
 _EPOCA = 0
 _EPOCA_TRAVA = threading.Lock()
 
@@ -113,12 +65,7 @@ def _libc_do_processo() -> Any:
 
 
 class DonoDoEvento:
-    """O ``inotify`` das duas raízes, e as gerações de cada uma.
-
-    ``libc`` e ``ler`` são costuras de teste: o primeiro troca o
-    ``inotify_init1``/``inotify_add_watch`` (o dublê que falha), o segundo a
-    leitura do fd (o dublê que entrega um ``IN_Q_OVERFLOW``).
-    """
+    """O ``inotify`` das duas raízes, e as gerações de cada uma."""
 
     def __init__(
         self,
@@ -144,7 +91,6 @@ class DonoDoEvento:
             raiz: dict.fromkeys(_TIPOS, 0) for raiz in self._prefixos
         }
 
-    # -- armar e desarmar ---------------------------------------------------
 
     @property
     def armado(self) -> bool:
@@ -201,7 +147,6 @@ class DonoDoEvento:
                 os.close(fd)
         _limpar_os_caches()
 
-    # -- as perguntas -------------------------------------------------------
 
     def olha(self, raiz: str) -> bool:
         """Esta raiz está sob o olhar agora? (armado, e o olhar dela vivo)."""
@@ -217,12 +162,7 @@ class DonoDoEvento:
         return None if ficha is None else ficha[1]
 
     def ficha(self, *pedidos: tuple[str, str]) -> tuple[int, ...] | None:
-        """``(época, geração, …)`` dos pedidos, ou None se algum não se olha.
-
-        É a chave com que um cache se prende ao evento: ficha igual, resposta
-        igual. Quem guarda anota a ficha ANTES de calcular a resposta; o evento
-        que chega durante o cálculo muda a ficha, e a pergunta seguinte refaz.
-        """
+        """``(época, geração, …)`` dos pedidos, ou None se algum não se olha."""
         with self._trava:
             if self._armes == 0:
                 return None
@@ -235,7 +175,6 @@ class DonoDoEvento:
                 valores.append(self._geracoes[chave][tipo])
             return tuple(valores)
 
-    # -- o fd ---------------------------------------------------------------
 
     def _drenar(self) -> None:
         """Lê tudo o que o kernel enfileirou. Chamado sob a trava."""
@@ -245,7 +184,6 @@ class DonoDoEvento:
             except BlockingIOError:
                 return
             except OSError:
-                # O fd quebrou: «tudo mudou», e daqui em diante nada se olha.
                 self._subir_tudo()
                 self._vivas = set()
                 return
@@ -288,10 +226,6 @@ class DonoDoEvento:
             self._subir(raiz, *_TIPOS)
 
 
-# ---------------------------------------------------------------------------
-# O dono do processo
-# ---------------------------------------------------------------------------
-
 _DONO: DonoDoEvento | None = None
 _DONO_TRAVA = threading.Lock()
 _LIMPEZAS: list[Callable[[], None]] = []
@@ -319,12 +253,7 @@ def armar(
     libc: Any = None,
     ler: Callable[[int, int], bytes] | None = None,
 ) -> bool:
-    """Arma o dono do PROCESSO. Devolve se ele ficou armado.
-
-    Já armado, só conta mais um ``armar`` (as raízes pedidas não mudam nada).
-    Desarmado, nasce de novo com as raízes pedidas: as padrão no daemon, as de
-    mentira na suíte.
-    """
+    """Arma o dono do PROCESSO. Devolve se ele ficou armado."""
     global _DONO
     with _DONO_TRAVA:
         dono = _DONO

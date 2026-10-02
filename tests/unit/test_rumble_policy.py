@@ -23,21 +23,9 @@ from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
-# 11/08/2026: os degraus eram números escritos à mão aqui (0.7 para o
-# balanceado, 1.0 para o máximo). No dia em que a escada mudou
-# (30/100/150, decisão dela), estes testes passaram a reprovar sem que nada
-# do produto estivesse errado — eles fixavam o VALOR, não a REGRA. Agora
-# derivam do dono único; o que eles provam é que `_effective_mult` entrega o
-# que a tabela diz, e isso vale em qualquer escada.
 
-# AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: _effective_mult_inline foi deletado;
-# testes usam a função canônica _effective_mult. Alias local mantém os
-# call sites curtos e legíveis sem alterar semântica dos asserts.
 _effective_mult_inline = _effective_mult
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _config(policy: str, custom_mult: float = 0.7) -> DaemonConfig:
     cfg = DaemonConfig()
@@ -45,10 +33,6 @@ def _config(policy: str, custom_mult: float = 0.7) -> DaemonConfig:
     cfg.rumble_policy_custom_mult = custom_mult
     return cfg
 
-
-# ---------------------------------------------------------------------------
-# Presets
-# ---------------------------------------------------------------------------
 
 class TestPresets:
     """Cada preset retorna o multiplicador esperado."""
@@ -80,13 +64,7 @@ class TestPresets:
         assert mult == pytest.approx(0.55)
 
 
-# ---------------------------------------------------------------------------
-# MISC-08 item 1 (2026-07-18) — o 2º retorno de _effective_mult é o último
-# mult EFETIVO (fonte de `daemon._last_auto_mult` → `rumble_mult_applied`
 # do state_full). Políticas fixas o deixavam INTOCADO, preso no default 0.7:
-# ao vivo, policy=max reportava rumble_mult_applied=0.7 e parecia atenuação
-# real do rumble do jogo (o hardware recebia 1.0).
-# ---------------------------------------------------------------------------
 
 
 class TestMultEfetivoObservavel:
@@ -116,22 +94,15 @@ class TestMultEfetivoObservavel:
     def test_politica_desconhecida_sincroniza_fallback(self) -> None:
         cfg = _config("turbo")
         mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.3, 0.0)
-        # O fallback é o BALANCEADO, e é a regra que importa: era o literal
-        # 0.7 aqui e no produto, e os dois viraram âncora morta juntos.
         assert mult == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
         assert new_last == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
 
     def test_politica_fixa_preserva_relogio_do_debounce_auto(self) -> None:
-        """Política fixa não mexe no timestamp do debounce do auto — só no
-        valor observável."""
+        """Política fixa não mexe no timestamp do debounce do auto — só no"""
         cfg = _config("max")
         _, _, new_at = _effective_mult(cfg, 100, 500.0, 0.7, 123.0)
         assert new_at == pytest.approx(123.0)
 
-
-# ---------------------------------------------------------------------------
-# Modo Auto — thresholds de bateria
-# ---------------------------------------------------------------------------
 
 class TestAutoMode:
     """Modo auto respeita thresholds de bateria."""
@@ -175,17 +146,12 @@ class TestAutoMode:
         assert mult == pytest.approx(0.3)
 
 
-# ---------------------------------------------------------------------------
-# Debounce do modo auto
-# ---------------------------------------------------------------------------
-
 class TestAutoDebounce:
     """Debounce de 5s evita flapping no modo auto."""
 
     def test_sem_debounce_muda(self) -> None:
         """Primeira mudança (last_change_at == 0.0) ocorre imediatamente."""
         cfg = _config("auto")
-        # Começa sem debounce registrado (0.0).
         mult, new_last, new_at = _effective_mult_inline(cfg, 10, 100.0, 0.7, 0.0)
         assert mult == pytest.approx(0.3)
         assert new_last == pytest.approx(0.3)
@@ -194,19 +160,18 @@ class TestAutoDebounce:
     def test_dentro_debounce_nao_muda(self) -> None:
         """Mudança dentro de 5s mantém mult anterior."""
         cfg = _config("auto")
-        # bateria 10% -> mult alvo 0.3; mas debounce: last_change_at=100.0, now=102.0 (<5s).
         mult, new_last, new_at = _effective_mult_inline(
-            cfg, 10, 102.0, 0.7, 100.0  # 2s desde mudança
+            cfg, 10, 102.0, 0.7, 100.0
         )
-        assert mult == pytest.approx(0.7)  # mantém anterior
+        assert mult == pytest.approx(0.7)
         assert new_last == pytest.approx(0.7)
-        assert new_at == pytest.approx(100.0)  # timestamp não muda
+        assert new_at == pytest.approx(100.0)
 
     def test_apos_debounce_muda(self) -> None:
         """Mudança após 5s+ é aplicada."""
         cfg = _config("auto")
         mult, new_last, new_at = _effective_mult_inline(
-            cfg, 10, 106.0, 0.7, 100.0  # 6s desde mudança
+            cfg, 10, 106.0, 0.7, 100.0
         )
         assert mult == pytest.approx(0.3)
         assert new_last == pytest.approx(0.3)
@@ -216,27 +181,15 @@ class TestAutoDebounce:
         """Se target == last_auto_mult, retorna estável sem debounce."""
         cfg = _config("auto")
         mult, new_last, new_at = _effective_mult_inline(
-            cfg, 80, 200.0, 1.0, 100.0  # bateria 80% -> alvo 1.0 = current
+            cfg, 80, 200.0, 1.0, 100.0
         )
         assert mult == pytest.approx(1.0)
         assert new_last == pytest.approx(1.0)
-        assert new_at == pytest.approx(100.0)  # timestamp não muda
+        assert new_at == pytest.approx(100.0)
 
-
-# ---------------------------------------------------------------------------
-# Integração: rumble.set com política
-# ---------------------------------------------------------------------------
 
 class TestRumbleSetComPolitica:
-    """rumble.set(100, 200) com policy 'economia' aplica (30, 60).
-
-    PELO FUNIL VIVO desde 28/09/2026. Estes seis casos rodavam sobre o
-    ``RumbleEngine``, uma classe que o daemon nunca construiu; ela saiu da
-    árvore (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01), e as réguas passaram ao dono:
-    ``apply_rumble_policy``, a rota do ``rumble.set`` e do "Aplicar". O daemon
-    aqui é o mínimo que ela lê, com o ``StateStore`` DE VERDADE no lugar do
-    estado do controle, para a bateria chegar pelo mesmo caminho do produto.
-    """
+    """rumble.set(100, 200) com policy 'economia' aplica (30, 60)."""
 
     @staticmethod
     def _daemon(cfg: DaemonConfig | None, bateria: int | None = None) -> SimpleNamespace:
@@ -251,27 +204,17 @@ class TestRumbleSetComPolitica:
         return SimpleNamespace(config=cfg, store=store)
 
     def test_economia_aplica_mult_30(self) -> None:
-        # Sem controle no estado: a bateria cai no neutro de 50.
         daemon = self._daemon(_config("economia"))
-        # 100 * 0.3 = 30, 200 * 0.3 = 60
         assert apply_rumble_policy(daemon, 100, 200) == (30, 60)
 
     def test_balanceado_entrega_o_que_o_jogo_pediu(self) -> None:
-        """Era `test_balanceado_aplica_mult_70`, com o 0.7 no NOME.
-
-        Em 11/08/2026 o balanceado virou 1,0 (decisão dela) e o nome do
-        teste passou a mentir antes mesmo do corpo. O que ele prova agora é
-        a promessa do tooltip: "sem aumentar nem diminuir".
-        """
+        """Era `test_balanceado_aplica_mult_70`, com o 0.7 no NOME."""
         daemon = self._daemon(_config("balanceado"))
         esperado = round(100 * RUMBLE_POLICY_MULT["balanceado"])
         assert apply_rumble_policy(daemon, 100, 100) == (esperado, esperado)
 
     def test_max_amplifica(self) -> None:
-        """Era `test_max_sem_alteracao`, e o nome contava a história certa
-        do produto de então: o "Máximo" valia 1,0 e não alterava NADA. Em
-        11/08/2026 ele passou a amplificar, e o nome virou o oposto do que
-        o botão faz. Satura em 255."""
+        """Era `test_max_sem_alteracao`, e o nome contava a história certa"""
         daemon = self._daemon(_config("max"))
         mult = RUMBLE_POLICY_MULT["max"]
         assert apply_rumble_policy(daemon, 100, 200) == (
@@ -291,18 +234,12 @@ class TestRumbleSetComPolitica:
     def test_auto_com_bateria_baixa(self) -> None:
         """Modo auto + battery 10% -> mult 0.3, e a memória do debounce anda."""
         daemon = self._daemon(_config("auto"), bateria=10)
-        # O primeiro tique: nenhuma mudança anterior (last_change_at == 0.0).
         daemon._last_auto_change_at = 0.0
         daemon._last_auto_mult = 0.7
 
-        # 100 * 0.3 = 30, 200 * 0.3 = 60
         assert apply_rumble_policy(daemon, 100, 200) == (30, 60)
         assert daemon._last_auto_mult == pytest.approx(0.3)
 
-
-# ---------------------------------------------------------------------------
-# IPC handlers
-# ---------------------------------------------------------------------------
 
 class TestIpcHandlers:
     """_handle_rumble_policy_set e _handle_rumble_policy_custom."""
@@ -349,13 +286,7 @@ class TestIpcHandlers:
         assert cfg.rumble_policy_custom_mult == pytest.approx(0.45)
 
     def test_policy_custom_fora_de_range(self) -> None:
-        """HARM-19: o teto é o do esquema (2.0), não 1.0.
-
-        Este teste travava `1.5` como inválido — mas 1.5 é justamente o caso de
-        uso: acima de 1.0 o multiplicador AMPLIFICA o que o jogo pediu, e o
-        slider da GUI (0-200%) sempre ofereceu essa faixa. Quem estava fora do
-        combinado era o handler.
-        """
+        """HARM-19: o teto é o do esquema (2.0), não 1.0."""
         server, _cfg = self._make_server()
         with pytest.raises(ValueError, match="fora de"):
             asyncio.run(server._handle_rumble_policy_custom({"mult": 2.5}))
@@ -411,8 +342,6 @@ class TestIpcHandlers:
         server.store = MagicMock()
         server.store.snapshot.return_value = snap
 
-        # L1: rumble_mult_applied agora vem da origem VIVA daemon._last_auto_mult
-        # (não do _rumble_engine morto). Confirma que o valor é propagado.
         server.daemon._last_auto_mult = 0.3
 
         result = asyncio.run(server._handle_daemon_state_full({}))

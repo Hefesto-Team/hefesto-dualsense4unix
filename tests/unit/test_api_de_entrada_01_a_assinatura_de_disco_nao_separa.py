@@ -35,12 +35,6 @@ from hefesto_dualsense4unix.integrations.api_de_entrada import (
     parece_infraestrutura,
 )
 
-# ---------------------------------------------------------------------------
-# O forjador de PE. Monta um PE32+ mínimo mas VÁLIDO: cabeçalho MZ, assinatura
-# PE, um optional header de 64 bits, uma seção `.rdata` e, dentro dela, uma
-# tabela de importação de verdade. É o que permite testar o parser sem tocar
-# em nenhum byte da biblioteca real dela.
-# ---------------------------------------------------------------------------
 
 _BASE_SECAO = 0x1000
 _OFFSET_CRU = 0x400
@@ -51,19 +45,13 @@ def _forjar_pe(
     *,
     strings_soltas: list[str] | None = None,
 ) -> bytes:
-    """Um PE32+ com as DLLs dadas na tabela de importação.
-
-    `strings_soltas` entra depois da tabela, fora dela: é como o binário do
-    Duskfade guarda `XINPUT1_4.dll`, que ele carrega por `LoadLibrary` e
-    portanto NÃO aparece em import nenhum.
-    """
+    """Um PE32+ com as DLLs dadas na tabela de importação."""
     n_descritores = len(dlls_importadas) + 1
     tam_tabela = n_descritores * 20
     corpo = bytearray(tam_tabela)
     nomes = bytearray()
     for i, dll in enumerate(dlls_importadas):
         rva_nome = _BASE_SECAO + tam_tabela + len(nomes)
-        # O descritor tem 20 bytes; o RVA do nome mora no offset 12.
         struct.pack_into("<I", corpo, i * 20 + 12, rva_nome)
         nomes += dll.encode("latin-1") + b"\0"
     dados_secao = bytes(corpo) + bytes(nomes)
@@ -71,8 +59,7 @@ def _forjar_pe(
         dados_secao += extra.encode("latin-1") + b"\0"
 
     optional = bytearray(240)
-    struct.pack_into("<H", optional, 0, 0x20B)  # PE32+
-    # Data directory 1 = import table; em PE32+ os diretórios começam em 112.
+    struct.pack_into("<H", optional, 0, 0x20B)
     struct.pack_into("<II", optional, 112 + 8, _BASE_SECAO, tam_tabela)
 
     secao = bytearray(40)
@@ -99,11 +86,7 @@ def _forjar_pe(
 
 @pytest.fixture
 def duskfade(tmp_path: Path) -> Path:
-    """O jogo QUEBRADO, como ele é no disco dela (medido 16/08/2026).
-
-    Nenhuma DLL de entrada na tabela de importação; `XINPUT1_4.dll` presente
-    só como string, porque o Unreal a carrega por `LoadLibrary`.
-    """
+    """O jogo QUEBRADO, como ele é no disco dela (medido 16/08/2026)."""
     alvo = tmp_path / "Duskfade" / "Duskfade" / "Binaries" / "Win64"
     alvo.mkdir(parents=True)
     exe = alvo / "Duskfade-Win64-Shipping.exe"
@@ -139,11 +122,6 @@ def jogo_sdl(tmp_path: Path) -> Path:
     exe = alvo / "GrimFandango.exe"
     exe.write_bytes(_forjar_pe(["SDL2.dll", "KERNEL32.dll"]))
     return exe
-
-
-# ---------------------------------------------------------------------------
-# A MORDIDA
-# ---------------------------------------------------------------------------
 
 
 def test_xinput_dinamico_e_visto_mesmo_sem_import(duskfade: Path) -> None:

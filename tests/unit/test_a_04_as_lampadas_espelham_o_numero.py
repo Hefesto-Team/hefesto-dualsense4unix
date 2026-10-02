@@ -70,7 +70,6 @@ for _p in (str(RAIZ / "src"), str(INTERFACE)):
 
 PAGINA = "04-iluminacao.html"
 
-#: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UM = "aa:bb:cc:00:00:01"
 DOIS = "aa:bb:cc:00:00:02"
 CHAVE_UM, CHAVE_DOIS = "aabbcc000001", "aabbcc000002"
@@ -114,12 +113,7 @@ def _ctx(pac, *, perfil="regua", conectados=None, state=None):
 
 
 class PonteDeMentira:
-    """Um dublê da ponte que guarda o que foi chamado e devolve o caminho feliz.
-
-    **ELE SABE RECUSAR** — com `corpo=None` o `player_leds_set_detalhado` volta
-    sem corpo e os gestos levantam a frase do produto. Um dublê que só sabe
-    passar não é dublê, e esta casa já mediu o preço disso três vezes.
-    """
+    """Um dublê da ponte que guarda o que foi chamado e devolve o caminho feliz."""
 
     def __init__(self, corpo: object = ...):
         self.corpo = ({"status": "ok", "aplicado_em": [UM, DOIS],
@@ -204,37 +198,17 @@ def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
         assert morto not in vivos, (
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
             f"ela mandou tirar os dois em 07/09/2026, e a poda acompanha a peça")
-    # E OS AJUDANTES ÓRFÃOS SAÍRAM JUNTO. Os dois só tinham aquele chamador; um
-    # ajudante privado que ninguém chama é código morto que portão nenhum vê, e
-    # a próxima pessoa o lê como caminho vivo.
     for orfao in ("_leds_sem", "_perfil_ativo_ou_recusa"):
         assert not hasattr(a04, orfao), (
             f"`{orfao}` ficou no pacote sem chamador — ele só existia para o "
             f"gesto de escopo global, que saiu em 07/09/2026")
-    # E O MÉTODO DE PONTE QUE SÓ AQUELE BOTÃO CHAMAVA saiu da declaração: uma
-    # `METODOS` que lista o que ninguém chama é a régua verde sobre uma ponte
-    # que a tela não atravessa.
     assert sorted(a04.METODOS) == ["coop.sync"], (
         f"a declaração de métodos desta aba é {sorted(a04.METODOS)} — só o "
         f"`coop.sync` sobrevive à poda de 07/09/2026")
 
 
 def test_a_faixa_do_titulo_tem_um_morador_so():
-    """Ficou o interruptor, e só ele — ordem dela de 07/09/2026.
-
-    A RÉGUA MEDE O RÓTULO, e não só o endereço, porque o `data-gesto` some no
-    instante em que o `<button>` sai — mas um `<span>` com o mesmo texto
-    passaria calado, e é a forma exata que a próxima pessoa usaria para "só
-    deixar a informação". O que ela mandou tirar foi o CANTO da tela que fala de
-    automático, não o atributo.
-
-    E OS DOIS LADOS, porque a bancada e o publicado divergem em silêncio: um
-    conserto que fica só no `mockup/` não chega à tela dela, e a página que o
-    `WebKit2.WebView` lê é a de `paginas/`.
-
-    A MORDIDA: devolva o `<button>` ao `quadro-topo` de `aba04.MIOLO`, regere e
-    publique — esta linha reprova, e o `_conferir` do gerador reprova antes.
-    """
+    """Ficou o interruptor, e só ele — ordem dela de 07/09/2026."""
     from hefesto_dualsense4unix.interface import onde
 
     for caminho in (onde.pagina(PAGINA), onde.PUBLICADO / PAGINA):
@@ -250,16 +224,7 @@ def test_a_faixa_do_titulo_tem_um_morador_so():
 
 
 def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
-    """*"sai todos"* alcançou a célula Opções de cada coluna — e só ela.
-
-    O `Desligar` FICA, e a razão é MEDIDA, não zelo: os dois botões faziam
-    coisas diferentes. O que saiu largava o claim da barra ao jogo e pintava a
-    cor do número por cima; este escreve preto no aparelho e mais nada. Ela não
-    citou este — e é a diferença de ato que autoriza deixá-lo até ela dizer.
-
-    A MORDIDA: devolva o botão à célula Opções de `aba04.coluna`, regere e
-    publique.
-    """
+    """*"sai todos"* alcançou a célula Opções de cada coluna — e só ela."""
     from hefesto_dualsense4unix.interface import onde
 
     for caminho in (onde.pagina(PAGINA), onde.PUBLICADO / PAGINA):
@@ -268,10 +233,6 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
         grade = grade.split('<div class="rodape"', 1)[0]
         assert ">Automático</button>" not in grade, (
             f"o botão `Automático` voltou à célula Opções em {caminho.name}")
-        # O NÚMERO SAI DA PÁGINA, e não do `MESA` deste arquivo: a mesa
-        # daqui tem dois lugares (é o dublê dos gestos) e a página tem os
-        # quatro do gerador. Comparar as duas dava 4 contra 2 e reprovava o
-        # desenho certo — é a armadilha de medir contra a fonte errada.
         lugares = len(re.findall(r'<div class="ctrl(?:"| vazia")', grade))
         assert lugares >= 2, "a régua não achou as colunas — não mediria nada"
         assert grade.count(">Desligar</button>") == lugares, (
@@ -280,22 +241,8 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
             f"ela NÃO citou este botão")
 
 
-# ---------------------------------------------------------------------------
-# A RÉPLICA — a célula LEDs acende o padrão do NÚMERO daquela coluna
-# ---------------------------------------------------------------------------
 def _grade() -> str:
-    """A grade das colunas da página da BANCADA — o desenho de hoje.
-
-    **OS COMENTÁRIOS SAEM ANTES**, e não é asseio: é a mesma primeira linha do
-    `aba04._conferir`, e ela existe porque a prosa desta aba CITA os endereços
-    que as réguas procuram. O comentário que explica por que a linha de ressalva
-    saiu escreve `data-campo="luz-ressalva"` por extenso; o que explica a poda da
-    botoeira nomeia os três gestos. Uma régua que lesse a prosa junto com a
-    marcação acusaria o AVISO como se fosse o defeito que ele descreve — que é a
-    armadilha que esta casa pagou três vezes em três dias, a última em 05/09,
-    quando um comentário sobre o `BOOTSTRAP` virou a primeira ocorrência do
-    padrão proibido e derrubou treze testes.
-    """
+    """A grade das colunas da página da BANCADA — o desenho de hoje."""
     import re
 
     from hefesto_dualsense4unix.interface import onde
@@ -307,18 +254,7 @@ def _grade() -> str:
 
 
 def _celulas_de_leds(grade: str) -> list[tuple[int, str]]:
-    """`(número do jogador, HTML do DESENHO da célula LEDs)` de cada coluna CONECTADA.
-
-    O RECORTE PASSA PELA COLUNA, e não pelo miolo inteiro: os quatro lugares
-    emitem a `.cel-leds` desde 07/09/2026, e casar `<div class="cel-leds">` no
-    documento todo devolveria as duas vazias junto com as duas cheias.
-
-    E ELE PARA NAS PÍLULAS DO BRILHO — 24/09/2026, decisão dela
-    (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): a célula ganhou, debaixo do
-    desenho, as três pílulas Fraco · Médio · Forte, com o gesto delas. O que
-    este arquivo mede é o DESENHO (as tiras e as cinco lâmpadas), e quem mede as
-    pílulas é `tests/unit/test_o_brilho_das_luzes_de_numero.py`.
-    """
+    """`(número do jogador, HTML do DESENHO da célula LEDs)` de cada coluna CONECTADA."""
     import re
 
     fora = []
@@ -359,41 +295,7 @@ def test_as_cinco_lampadas_desenham_o_padrao_do_numero_da_coluna():
 
 
 def test_a_celula_de_leds_nao_oferece_gesto_nenhum():
-    """As lâmpadas MOSTRAM o número; quem o escolhe é a linha `Jogador`.
-
-    O RECORTE É O DESENHO DA CÉLULA (ver `_celulas_de_leds`): desde 24/09/2026
-    as três pílulas do brilho moram debaixo dele, por decisão dela, e elas não
-    mexem no DESENHO das lâmpadas — mudam o brilho. A ausência que esta régua
-    mede continua a mesma: nenhuma segunda maneira de escolher QUAIS lâmpadas
-    acendem.
-
-    ESTA RÉGUA MEDE UMA AUSÊNCIA, e por isso nomeia os três gestos que não podem
-    voltar. Um `data-gesto` nesta faixa é a botoeira de volta — a segunda maneira
-    de mexer nas mesmas luzes, que é exatamente o que ela mandou tirar.
-
-    A MORDIDA (medida em 07/09/2026, e ela tem DOIS degraus): acrescente uma
-    tecla dentro da `.cel-leds` de `aba04.coluna` — literalmente
-    `<button class="btn" data-gesto="luzes">Desenho</button>` acima da
-    `<div class="aceso" …>` — e rode `aba04.py`.
-
-    O GERADOR RECUSA PRIMEIRO, `rc=1`, nomeando a célula duas vezes: o item 10
-    de `aba04._conferir` mede a mesma ausência, e é o degrau de cima. Para ver
-    ESTA régua vermelha é preciso passar por ele — escreva o `<button>` direto
-    em `mockup/04-iluminacao.html` e rode o pytest: as duas asserções reprovam,
-    uma por `data-gesto=`, outra por `<button`.
-
-    **DEVOLVA A PÁGINA DEPOIS** (`git checkout -- mockup/04-iluminacao.html`).
-    A guarda do `__main__` de `aba04.py` já devolve o desenho aprovado quando o
-    gerador recusa, mas uma mordida escrita à mão no HTML é sua para desfazer —
-    e `--publicar` copia `mockup/` para `paginas/`, que é o que ela vê.
-
-    A RECEITA ANTIGA MORREU COM A FUNÇÃO QUE MORDIA. Ela mandava devolver
-    `bits=_pacote04.desenho_de_agora(None, "", j)` a `desenho_da_luz`, e as duas
-    metades saíram nesta mesma leva: `desenho_de_agora` foi deletada e
-    `desenho_da_luz` não tem mais parâmetro `bits`. Quem a seguisse receberia
-    `AttributeError`/`TypeError` — um erro de digitação, não uma asserção
-    vermelha —, e leria isso como "a régua não morde".
-    """
+    """As lâmpadas MOSTRAM o número; quem o escolhe é a linha `Jogador`."""
     for n, bloco in _celulas_de_leds(_grade()):
         assert "data-gesto=" not in bloco, (
             f"a célula LEDs do P{n} voltou a oferecer gesto — ela é desenho de "
@@ -404,12 +306,7 @@ def test_a_celula_de_leds_nao_oferece_gesto_nenhum():
 
 
 def test_nenhum_lugar_vazio_oferece_tecla_de_luz():
-    """Sem aparelho não há desenho a mandar — a mesma regra das outras células.
-
-    ELA CONTINUA VALENDO DEPOIS DA REMOÇÃO, e por isso fica: a coluna vazia
-    nunca teve estes gestos, e a régua é a que garante que a poda não os deixou
-    cair de volta só ali — onde ninguém olha.
-    """
+    """Sem aparelho não há desenho a mandar — a mesma regra das outras células."""
     import re
 
     for bloco in re.findall(
@@ -422,39 +319,20 @@ def test_nenhum_lugar_vazio_oferece_tecla_de_luz():
 
 
 def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
-    """O widget e o gesto saíram no MESMO commit — e é o que fecha o `casa-sabe`.
-
-    A ALTERNATIVA ERA DECLARÁ-LOS EM `_SEM_CAMINHO_HOJE`, e ela estaria errada:
-    aquela lista é para PROMESSA cujo caminho ainda não existe. Um gesto cujo
-    widget ela mandou remover não é promessa por cumprir — é código morto, e a
-    regra desta casa manda que a poda acompanhe a peça.
-
-    A MORDIDA: registre de novo qualquer um dos três com `@gesto` e a primeira
-    asserção reprova.
-    """
+    """O widget e o gesto saíram no MESMO commit — e é o que fecha o `casa-sabe`."""
     vivos = {nome for (pagina, nome) in pac.GESTOS if pagina == PAGINA}
     for morto in ("luzes", "desenho-de", "reenviar-desenho"):
         assert morto not in vivos, (
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
-    # `brilho-luzes` ENTROU EM 24/09/2026, por decisão dela
-    # (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): as três pílulas do brilho
-    # das luzes de número, na linha LEDs. Não é nenhum dos três da botoeira —
-    # aqueles escolhiam o DESENHO; este escolhe o brilho.
     assert vivos == {"cor", "apagar", "brilho", "player",
                      "reenviar", "auto-cores", "brilho-luzes"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
 def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
-    """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data.
-
-    A regra ("o piso só sobe") existe porque uma queda não aparece na tela: o
-    clique simplesmente deixa de fazer alguma coisa, calado. Aqui não há queda
-    calada — há uma ordem dela, e os três que saem são exatamente os três que a
-    LUZES-01 trouxe. Ver a nota datada em `a04_iluminacao.PISO_DA_ABA`.
-    """
+    """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data."""
     assert a04.PISO_DA_ABA == 7, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
         f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
@@ -464,21 +342,7 @@ def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():
-    """*"o que eu não quero é frase da steam ou outras"* — 07/09/2026.
-
-    AS DUAS METADES ANDAM JUNTAS, e é isso que esta régua guarda: o widget saiu
-    do gerador E o campo saiu do pacote. Um campo que o pacote emite e a página
-    não tem é ÓRFÃO calado no piloto — escreve-se em nada, tique após tique, sem
-    erro nenhum.
-
-    A MORDIDA: devolva o `monta_.ressalva(...)` ao `.cel-leds` de `aba04.coluna`
-    e a primeira asserção reprova; devolva a chave ao pacote e a segunda reprova.
-
-    E OS COMENTÁRIOS SAEM ANTES, pela razão que `_grade` documenta: o comentário
-    que EXPLICA a remoção escreve `luz-ressalva` por extenso, quatro vezes na
-    página. Lê-lo como marcação faria o aviso reprovar como se fosse o defeito
-    que ele descreve.
-    """
+    """*"o que eu não quero é frase da steam ou outras"* — 07/09/2026."""
     import re
 
     from hefesto_dualsense4unix.interface import onde

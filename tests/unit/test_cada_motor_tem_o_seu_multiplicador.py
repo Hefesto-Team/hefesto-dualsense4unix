@@ -1,57 +1,4 @@
-"""VIBRACAO-POR-MOTOR-01 (04/09/2026) — a barra de cada motor MULTIPLICA o degrau.
-
-A DECISÃO É DELA, E VEIO FORA DAS TRÊS OPÇÕES QUE EU OFERECI
--------------------------------------------------------------
-Eu perguntei se arrastar a barra de um motor mandava o par ``rumble.set`` agora
-ou virava leitura. As duas metades da pergunta estavam erradas — a barra não é
-comando nem leitura, é **política**:
-
-    *"os slcers do botão esquerdo e direito (forte e fraco) se multiplicam*
-    *(interagem com os botões economia, moderado, máximo, se eu tiver 150% do*
-    *perfil de vibração e as duas linhas estiverem 100 entao a vibração dos 2*
-    *será 150%, mas se so a do motor fraco tiver 100 e a outrqa 50% então será*
-    *150 em um e 75% no outro entende?"*
-    <!-- noqa-acento: citação literal dela -->
-
-A CONTA, com os números dela — e é o caso do primeiro teste deste arquivo::
-
-    efetivo(motor) = degrau(coluna) x barra(motor)
-
-    degrau 150 %, fraca 100 %, forte 100 %  ->  150 % e 150 %
-    degrau 150 %, fraca 100 %, forte  50 %  ->  150 % e  75 %
-
-O QUE CADA GRUPO VIGIA
------------------------
-1. **A conta dela**, com o par exato, do disco ao par escrito no controle —
-   ``TestAContaDela``;
-2. **o que NÃO muda** — sem barra escrita, sem endereço pedido, ou com as duas
-   em 100, o par é byte-idêntico ao de antes desta sprint. Um arredondamento
-   novo no caminho de quem não pediu nada é regressão silenciosa em catorze
-   perfis (``TestOQueNaoMuda``);
-3. **a composição com o TETO por controle** — a barra multiplica *antes*, o
-   teto do card do cabo (``08-conexoes``) escala *depois*, dentro do backend.
-   Os dois medidos JUNTOS, porque a sprint pede exatamente isso: a conta nova
-   tem de compor com o teto sem apagá-lo (``TestCompoeComOTeto``);
-4. **a borda do esquema** — 0 é escolha, 101 e -1 são recusa com razão
-   (``TestABordaDoEsquema``);
-5. **o cache do mapa** — memoizado pelo nome do perfil, e a linha que o
-   invalida (``TestOCacheDoMapa``);
-6. **a régua sabe RECUSAR** — as duas funções puras exercitadas com entrada
-   sintética, nos dois sentidos (``TestARéguaSabeRecusar``);
-7. **o degrau não escapa sozinho** — uma leitura por AST que reprova se
-   ``apply_game_rumble`` voltar a chamar ``_game_rumble_mult`` direto, que é o
-   jeito exato de a barra sumir sem nenhum teste ficar vermelho
-   (``TestODegrauNaoEscapaSozinho``).
-
-MORDIDA (o que arrancar para ver reprovar): em
-``daemon/subsystems/gamepad._mults_por_motor``, troque o ``return`` por
-``(degrau, degrau)`` — a barra some e o degrau vai inteiro nos dois motores. O
-caso dela passa a sair ``(150, 150)`` onde tem de sair ``(150, 75)``, e
-``TestAContaDela`` reprova nomeando os dois números.
-
-Endereços de rádio: a máscara da casa (octetos 4 e 5 zerados), reusados do
-banco de provas do backend — nunca o endereço de um aparelho real.
-"""
+"""VIBRACAO-POR-MOTOR-01 (04/09/2026) — a barra de cada motor MULTIPLICA o degrau."""
 from __future__ import annotations
 
 import ast
@@ -89,14 +36,9 @@ from tests.unit.test_backend_multi_controller import (
     _null_evdev,
 )
 
-#: Os dois controles dela, com a máscara da casa (octetos 4 e 5 zerados).
 BRANCO = UNIQ_1
 PRETO = UNIQ_2
 
-#: O degrau "Máximo" — 150 %, e é o número da frase dela. NÃO se digita `1.5`:
-#: quem manda na escada é `daemon.subsystems.rumble.RUMBLE_POLICY_MULT`, e uma
-#: segunda cópia divergiria no primeiro dia em que o degrau mudasse (é o mesmo
-#: HARM-19 que já custou uma tarde nesta casa).
 def _degrau(nome: str) -> float:
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
@@ -143,8 +85,7 @@ def _daemon(
     battery: int = 80,
     controller: Any | None = None,
 ) -> Any:
-    """Daemon de mentira — o mesmo molde do `test_vpad_ff_passthrough._make_daemon`,
-    mais o `store.active_profile`, que é de onde o mapa por peça sai."""
+    """Daemon de mentira — o mesmo molde do `test_vpad_ff_passthrough._make_daemon`,"""
     estado = SimpleNamespace(battery_pct=battery)
     return SimpleNamespace(
         config=SimpleNamespace(
@@ -179,22 +120,9 @@ def _grava(nome: str, **barras: int | None) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. A CONTA DELA
-# ---------------------------------------------------------------------------
-
-
 class TestAContaDela:
     def test_degrau_150_fraca_100_forte_50_sai_150_e_75(self, perfis: Path) -> None:
-        """O CASO EXATO DA FRASE DELA, do disco ao par escrito no controle.
-
-        `weak` é o motor FRACO (o pequeno, `setRightMotor`) e `strong` é o
-        FORTE (o grande, `setLeftMotor`) — a nomenclatura do pydualsense, e é
-        por isso que a barra "forte" mexe no `strong` e não no `weak`.
-
-        MORDIDA: `_mults_por_motor` devolvendo `(degrau, degrau)` faz o forte
-        sair 150 em vez de 75, e o assert nomeia os dois números.
-        """
+        """O CASO EXATO DA FRASE DELA, do disco ao par escrito no controle."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
         d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
@@ -212,11 +140,7 @@ class TestAContaDela:
         assert backend.rumbles == [(BRANCO, *esperado)]
 
     def test_a_outra_peca_da_mesa_nao_e_tocada(self, perfis: Path) -> None:
-        """A barra do BRANCO não escala o PRETO — é por peça, não por mesa.
-
-        MORDIDA: fazer `_pcts_dos_motores` ignorar o `target_uniq` e devolver
-        o primeiro par do mapa. O PRETO passa a sair 75 no forte e reprova.
-        """
+        """A barra do BRANCO não escala o PRETO — é por peça, não por mesa."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
         d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
@@ -230,12 +154,7 @@ class TestAContaDela:
         )
 
     def test_zero_cala_um_motor_e_o_outro_continua(self, perfis: Path) -> None:
-        """`0` é escolha, não ausência: um motor mudo e o outro inteiro.
-
-        MORDIDA: trocar o `if valor is None` do esquema por `if not valor` —
-        o zero passa a ser lido como "sem opinião" e este teste reprova com o
-        motor fraco vibrando.
-        """
+        """`0` é escolha, não ausência: um motor mudo e o outro inteiro."""
         _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=0)
         backend = _Backend()
         d = _daemon(perfil_ativo="Bancada", controller=backend)
@@ -247,18 +166,9 @@ class TestAContaDela:
         )
 
 
-# ---------------------------------------------------------------------------
-# 2. O QUE NÃO MUDA — e é metade da entrega
-# ---------------------------------------------------------------------------
-
-
 class TestOQueNaoMuda:
     def test_perfil_sem_barra_e_byte_identico_ao_de_antes(self, perfis: Path) -> None:
-        """Catorze perfis no disco dela não têm as chaves novas. Nada muda neles.
-
-        MORDIDA: fazer `pcts_dos_motores` devolver `(99, 99)` no caso `None`.
-        O 200 vira 198 e este assert pega.
-        """
+        """Catorze perfis no disco dela não têm as chaves novas. Nada muda neles."""
         save_profile(Profile(name="Simples", match=MatchAny()))
         backend = _Backend()
         d = _daemon(perfil_ativo="Simples", controller=backend)
@@ -279,14 +189,7 @@ class TestOQueNaoMuda:
         assert backend.rumbles == [(BRANCO, inteiro, inteiro)]
 
     def test_sem_endereco_pedido_nao_ha_peca(self, perfis: Path) -> None:
-        """`target_uniq is None` = ninguém nomeou peça → par neutro.
-
-        Mesma disciplina do BROADCAST-PROIBIDO-01: sem endereço, aplicar a
-        barra de UMA peça seria pôr a escolha do jogador 2 na mão do 1.
-
-        MORDIDA: fazer `_pcts_dos_motores` cair no `primary_uniq` quando o
-        alvo é `None`. Este caso passa a sair 50 no forte e reprova.
-        """
+        """`target_uniq is None` = ninguém nomeou peça → par neutro."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=50)
         registrados: list[tuple[int, int]] = []
         controller = SimpleNamespace(
@@ -301,14 +204,7 @@ class TestOQueNaoMuda:
     def test_perfil_ilegivel_nao_derruba_a_vibracao(
         self, perfis: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """JSON torto = mapa vazio, não jogo sem vibração.
-
-        Vibração é caminho quente e transitório: levantar aqui trocaria um
-        ajuste perdido por uma partida inteira muda.
-
-        MORDIDA: tirar o `try/except` de `_motores_do_perfil_ativo` — a
-        exceção sobe pelo `apply_game_rumble` e este teste vira erro.
-        """
+        """JSON torto = mapa vazio, não jogo sem vibração."""
 
         def _explode(_nome: str) -> Any:
             raise ValueError("perfil torto")
@@ -322,23 +218,11 @@ class TestOQueNaoMuda:
         assert backend.rumbles == [(BRANCO, 111, 222)]
 
 
-# ---------------------------------------------------------------------------
-# 3. A COMPOSIÇÃO COM O TETO POR CONTROLE — medidos JUNTOS
-# ---------------------------------------------------------------------------
-
-
 class TestCompoeComOTeto:
-    """A sprint manda: *"a sua conta tem de compor com ele sem apagá-lo — meça
-    os dois juntos antes de afirmar"*. Aqui os dois estão no MESMO perfil, na
-    MESMA peça, e a medição percorre os dois andares: a barra no
-    `apply_game_rumble` e o teto no `_escalar_rumble` do backend."""
+    """A sprint manda: *"a sua conta tem de compor com ele sem apagá-lo — meça"""
 
     def test_a_barra_multiplica_e_o_teto_escala_depois(self, perfis: Path) -> None:
-        """Barra 50 % no forte + teto "Economia" na mesma peça, e nenhum come o outro.
-
-        MORDIDA: fazer `motores_dos_controles` devolver `{}` sempre — o forte
-        deixa de perder a metade e o assert nomeia os dois números.
-        """
+        """Barra 50 % no forte + teto "Economia" na mesma peça, e nenhum come o outro."""
         from hefesto_dualsense4unix.core.backend_pydualsense import (
             PyDualSenseController,
         )
@@ -359,7 +243,6 @@ class TestCompoeComOTeto:
             )
         )
 
-        # ANDAR 1 — a barra, no caminho do FF do jogo.
         backend_falso = _Backend()
         d = _daemon(perfil_ativo="Bancada", controller=backend_falso)
         gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
@@ -368,8 +251,6 @@ class TestCompoeComOTeto:
             "a barra do motor forte não cortou a metade no primeiro andar"
         )
 
-        # ANDAR 2 — o teto por controle, dentro do backend REAL. O fator é o
-        # do produto (`_controllers_to_rumble_scales`), nunca digitado aqui.
         escalas = _controllers_to_rumble_scales(
             overrides, RumbleConfig(policy="balanceado")
         )
@@ -393,20 +274,11 @@ class TestCompoeComOTeto:
         assert h2.right_motor == [] and h2.left_motor == []
 
 
-# ---------------------------------------------------------------------------
-# 4. A BORDA DO ESQUEMA
-# ---------------------------------------------------------------------------
-
-
 class TestABordaDoEsquema:
     @pytest.mark.parametrize("campo", ["motor_forte_pct", "motor_fraco_pct"])
     @pytest.mark.parametrize("valor", [101, -1, 1000])
     def test_fora_da_faixa_morre_no_load(self, campo: str, valor: int) -> None:
-        """A recusa é na BORDA, e a mensagem EXPLICA — nunca o literal cru.
-
-        MORDIDA: apagar o `_validate_barras_de_motor`. O 101 entra no disco e
-        um motor passa a amplificar por uma porta que ninguém desenhou.
-        """
+        """A recusa é na BORDA, e a mensagem EXPLICA — nunca o literal cru."""
         with pytest.raises(ValueError) as erro:
             ControllerRumbleOverride.model_validate({campo: valor})
         assert campo in str(erro.value)
@@ -422,15 +294,7 @@ class TestABordaDoEsquema:
     def test_a_chave_nova_nao_aparece_em_perfil_que_nao_a_usa(
         self, perfis: Path
     ) -> None:
-        """Downgrade continua possível: `exclude_unset` mantém o arquivo igual.
-
-        Um `extra="forbid"` de um hefesto ANTIGO rejeitaria o perfil inteiro se
-        `save` passasse a gravar `"motor_forte_pct": null` em todo override —
-        é o defeito medido em PERFIL-02 e em SOM-02/E4.
-
-        MORDIDA: trocar o `exclude_unset=True` do `_payload_do_perfil` por
-        `exclude_unset=False`. As duas chaves aparecem e este assert pega.
-        """
+        """Downgrade continua possível: `exclude_unset` mantém o arquivo igual."""
         import json
 
         caminho = save_profile(
@@ -450,21 +314,11 @@ class TestABordaDoEsquema:
         )
 
 
-# ---------------------------------------------------------------------------
-# 5. O CACHE DO MAPA
-# ---------------------------------------------------------------------------
-
-
 class TestOCacheDoMapa:
     def test_o_disco_e_lido_uma_vez_por_perfil(
         self, perfis: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O FF do jogo chega a centenas de Hz — o disco não pode ir junto.
-
-        MORDIDA: apagar o `if isinstance(cache, tuple)` de
-        `_motores_do_perfil_ativo`. As dez chamadas viram dez leituras e a
-        contagem reprova.
-        """
+        """O FF do jogo chega a centenas de Hz — o disco não pode ir junto."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         leituras: list[str] = []
         original = loader_module.load_profile
@@ -481,11 +335,7 @@ class TestOCacheDoMapa:
         assert len(leituras) == 1, f"o disco foi lido {len(leituras)} vezes"
 
     def test_trocar_de_perfil_troca_o_mapa(self, perfis: Path) -> None:
-        """O cache é chaveado pelo NOME do perfil ativo.
-
-        MORDIDA: guardar só o mapa (sem o nome) no `_rumble_motores_pct`. O
-        segundo perfil passa a herdar a barra do primeiro e reprova.
-        """
+        """O cache é chaveado pelo NOME do perfil ativo."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         save_profile(Profile(name="Limpo", match=MatchAny()))
         backend = _Backend()
@@ -498,36 +348,20 @@ class TestOCacheDoMapa:
         assert backend.rumbles == [(BRANCO, 200, 100), (BRANCO, 200, 200)]
 
     def test_invalidar_o_cache_e_uma_linha(self, perfis: Path) -> None:
-        """`daemon._rumble_motores_pct = None` faz a barra nova valer AGORA.
-
-        É a linha que o método `rumble.motores.set` de `daemon/ipc_handlers.py`
-        tem de rodar ao gravar — sem ela a barra nova só entra na próxima troca
-        de perfil, e a tela diria "aplicado" sobre um motor que não mudou. Este
-        teste é o CONTRATO daquela linha, escrito de fora, porque
-        `ipc_handlers.py` não é da posse desta sprint.
-
-        MORDIDA: fazer o cache ignorar o `None` (ex.: só recarregar quando o
-        nome mudar). O segundo par volta 100 no forte e reprova.
-        """
+        """`daemon._rumble_motores_pct = None` faz a barra nova valer AGORA."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
         d = _daemon(perfil_ativo="Bancada", controller=backend)
         gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
 
         _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=100)
-        d._rumble_motores_pct = None  # a linha inteira
+        d._rumble_motores_pct = None
         gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
 
         assert backend.rumbles == [(BRANCO, 200, 100), (BRANCO, 200, 200)]
 
     def test_o_endereco_com_dois_pontos_casa_a_peca(self, perfis: Path) -> None:
-        """`AA:BB:...` e `aabbcc...` são a MESMA peça — normalizar é a cura.
-
-        Sem a normalização o mapa fica mudo e ninguém vê: o par sai o de
-        sempre, e a tela diz "aplicado".
-
-        MORDIDA: fazer `_chave_da_peca` devolver o argumento cru.
-        """
+        """`AA:BB:...` e `aabbcc...` são a MESMA peça — normalizar é a cura."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend(uniqs=(KEY_1,))
         d = _daemon(perfil_ativo="Bancada", controller=backend)
@@ -535,11 +369,6 @@ class TestOCacheDoMapa:
         gp_mod.apply_game_rumble(d, 200, 200, target_uniq=KEY_1)
 
         assert backend.rumbles == [(KEY_1, 200, 100)]
-
-
-# ---------------------------------------------------------------------------
-# 6. A RÉGUA SABE RECUSAR — as funções puras, nos dois sentidos
-# ---------------------------------------------------------------------------
 
 
 class TestARéguaSabeRecusar:
@@ -551,12 +380,7 @@ class TestARéguaSabeRecusar:
         assert motores_dos_controles(entrada) == {}
 
     def test_o_mapa_ignora_quem_escreveu_cem_nos_dois(self) -> None:
-        """`100/100` no disco é escolha, mas no APARELHO é o par neutro.
-
-        Deixá-lo no mapa faria o consumidor distinguir dois casos que se
-        comportam igual — e o irmão `_controllers_to_rumble_scales` já corta o
-        `1.0` pela mesma razão.
-        """
+        """`100/100` no disco é escolha, mas no APARELHO é o par neutro."""
         entrada = {
             BRANCO: ControllerOverrides(
                 rumble=ControllerRumbleOverride(
@@ -585,19 +409,8 @@ class TestARéguaSabeRecusar:
         assert motores_dos_controles({}) == {}
 
 
-# ---------------------------------------------------------------------------
-# 7. O DEGRAU NÃO ESCAPA SOZINHO
-# ---------------------------------------------------------------------------
-
-
 class TestODegrauNaoEscapaSozinho:
-    """A multiplicação mora num lugar só, e é esta régua que impede o segundo.
-
-    Se `apply_game_rumble` voltar a chamar `_game_rumble_mult` direto — que é o
-    estado de antes desta sprint, e um merge desatento o restaura —, o degrau
-    chega ao motor SEM a barra, e nenhum teste de valor fica vermelho quando o
-    perfil da suíte não tem barra escrita. A leitura por AST pega a chamada.
-    """
+    """A multiplicação mora num lugar só, e é esta régua que impede o segundo."""
 
     def test_apply_game_rumble_passa_pelo_par(self) -> None:
         arvore = ast.parse(
@@ -627,18 +440,6 @@ class TestODegrauNaoEscapaSozinho:
         degrau = _degrau("max")
         assert fraco == pytest.approx(degrau)
         assert forte == pytest.approx(degrau * 0.5)
-
-
-# ---------------------------------------------------------------------------
-# 8. O MÉTODO QUE GRAVA — `rumble.motores.set`
-# ---------------------------------------------------------------------------
-#
-# A METADE DE IPC, e ela fecha o que a metade de daemon deixou em aberto:
-# `gamepad._motores_do_perfil_ativo` LÊ um mapa; alguém tem de ESCREVER, e tem
-# de derrubar o cache no mesmo ato. Enquanto `daemon/ipc_handlers.py` não era
-# desta posse, o contrato da invalidação vivia escrito de FORA
-# (`TestOCacheDoMapa::test_invalidar_o_cache_e_uma_linha`, que ainda vale como
-# régua do mecanismo). Agora ele é medido por dentro, pelo método real.
 
 
 class _Store:
@@ -674,11 +475,7 @@ def _grava_ipc(h: _Handlers, **params: Any) -> dict[str, Any]:
 
 class TestOMetodoQueGrava:
     def test_grava_a_barra_no_perfil_da_peca(self, perfis: Path) -> None:
-        """Do IPC ao disco: o par dela cai no `controllers[chave].rumble`.
-
-        MORDIDA: apagar o `save_profile` do handler — o `load_profile` abaixo
-        devolve o perfil sem as barras e o assert nomeia os dois campos.
-        """
+        """Do IPC ao disco: o par dela cai no `controllers[chave].rumble`."""
         save_profile(Profile(name="Bancada", match=MatchAny()))
         h = _Handlers(ativo="Bancada", primario=BRANCO)
 
@@ -694,20 +491,12 @@ class TestOMetodoQueGrava:
         )
 
     def test_a_gravacao_derruba_o_cache_no_mesmo_ato(self, perfis: Path) -> None:
-        """A LINHA QUE FAZ A BARRA VALER AGORA, medida por dentro.
-
-        Sem ela a barra nova só entraria na próxima troca de perfil, e a tela
-        diria "aplicado" sobre um motor que não mudou.
-
-        MORDIDA: apagar `self.daemon._rumble_motores_pct = None` do handler. O
-        segundo par volta 200/200 — o degrau inteiro nos dois — e reprova.
-        """
+        """A LINHA QUE FAZ A BARRA VALER AGORA, medida por dentro."""
         save_profile(Profile(name="Bancada", match=MatchAny()))
         backend = _Backend()
         h = _Handlers(ativo="Bancada", primario=BRANCO)
         h.daemon.controller = backend
 
-        # Um FF ANTES da gravação: é ele que popula o cache com o mapa vazio.
         gp_mod.apply_game_rumble(h.daemon, 200, 200, target_uniq=BRANCO)
         _grava_ipc(h, uniq=BRANCO, forte_pct=50)
         gp_mod.apply_game_rumble(h.daemon, 200, 200, target_uniq=BRANCO)
@@ -718,14 +507,7 @@ class TestOMetodoQueGrava:
         )
 
     def test_cem_nos_dois_apaga_a_secao_sem_matar_o_degrau(self, perfis: Path) -> None:
-        """Voltar as duas a 100 limpa as barras e PRESERVA o teto da peça.
-
-        `policy` é o degrau daquela peça (`08-conexoes`) e não é deste gesto —
-        apagá-lo junto seria o gesto comendo a decisão do vizinho.
-
-        MORDIDA: trocar o `campos.pop(campo, None)` por `campos.clear()`. O
-        `policy` some e o assert do teto reprova.
-        """
+        """Voltar as duas a 100 limpa as barras e PRESERVA o teto da peça."""
         save_profile(
             Profile(
                 name="Bancada",
@@ -750,11 +532,7 @@ class TestOMetodoQueGrava:
         assert dele.rumble.motor_forte_pct is None
 
     def test_secao_vazia_vira_none(self, perfis: Path) -> None:
-        """Sem degrau e sem barras, a seção `rumble` inteira sai do disco.
-
-        É a mesma disciplina do `_com_o_teto`: "sem opinião" é AUSÊNCIA, e
-        `_controllers_to_rumble_scales` desvia por `cfg.rumble is None`.
-        """
+        """Sem degrau e sem barras, a seção `rumble` inteira sai do disco."""
         _grava("Bancada", motor_forte_pct=50)
         h = _Handlers(ativo="Bancada", primario=BRANCO)
 
@@ -764,11 +542,7 @@ class TestOMetodoQueGrava:
         assert dele.rumble is None
 
     def test_nada_mudou_nao_regrava(self, perfis: Path) -> None:
-        """Regravar perfil idêntico troca a data do arquivo e o daemon reaplica.
-
-        MORDIDA: apagar o `if antes_campos == depois_campos`. O `gravado` volta
-        `True` e o assert pega.
-        """
+        """Regravar perfil idêntico troca a data do arquivo e o daemon reaplica."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
         h = _Handlers(ativo="Bancada", primario=BRANCO)
 
@@ -795,7 +569,6 @@ class TestOMetodoQueGrava:
         assert corpo["uniq"] == BRANCO
         assert BRANCO in (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
 
-    # --- A RÉGUA SABE RECUSAR, e as quatro recusas têm razão escrita --------
 
     def test_mesa_vazia_recusa_com_razao(self, perfis: Path) -> None:
         save_profile(Profile(name="Bancada", match=MatchAny()))
@@ -805,12 +578,7 @@ class TestOMetodoQueGrava:
         assert "POR PEÇA" in corpo["motivo"]
 
     def test_sem_perfil_ativo_grava_no_computador(self, perfis: Path) -> None:
-        """Sem perfil ativo, a barra vai ao computador (01/10/2026).
-
-        O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01: a vibração é do
-        computador. Até ali esta régua exigia o `sem_perfil` («a barra mora no
-        perfil»). MORDIDA: devolver a recusa sem perfil ao handler reprova.
-        """
+        """Sem perfil ativo, a barra vai ao computador (01/10/2026)."""
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
         h = _Handlers(ativo=None, primario=BRANCO)
@@ -822,19 +590,7 @@ class TestOMetodoQueGrava:
     def test_endereco_sem_mac_recusa_em_vez_de_gravar_errado(
         self, perfis: Path
     ) -> None:
-        """Gravar sob uma chave que o motor nunca casa faz a escolha sumir calada.
-
-        **ESTA RÉGUA ACHOU UM DEFEITO VIVO em 04/09/2026**, e ele era do tipo
-        que nenhum verde vê: `norm_mac` promete `None` para um `path`, e
-        entrega `"adeee9"` para `"path:/dev/input/event9"` — as letras hex do
-        caminho sobrevivem à filtragem. Uma chave que PARECE boa e que motor
-        nenhum casa: a escolha dela iria para o disco e sumiria calada. A cura
-        é `_chave_de_peca_que_grava`, que exige DOZE dígitos hex.
-
-        MORDIDA: trocar `self._chave_de_peca_que_grava(alvo)` por
-        `norm_mac(alvo)` no handler — o status volta `"ok"` e o perfil ganha um
-        override sob `adeee9`.
-        """
+        """Gravar sob uma chave que o motor nunca casa faz a escolha sumir calada."""
         save_profile(Profile(name="Bancada", match=MatchAny()))
         h = _Handlers(ativo="Bancada", primario="path:/dev/input/event9")
         corpo = _grava_ipc(h, forte_pct=50)
@@ -844,11 +600,7 @@ class TestOMetodoQueGrava:
         )
 
     def test_o_vpad_nao_tem_motor_e_e_recusado(self, perfis: Path) -> None:
-        """`02fe…` é o gamepad VIRTUAL — não é peça de plástico, não tem motor.
-
-        MORDIDA: apagar o desvio do `VPAD_UNIQ_PREFIX`. O perfil dela passa a
-        guardar uma barra de motor para um device que não tem motor.
-        """
+        """`02fe…` é o gamepad VIRTUAL — não é peça de plástico, não tem motor."""
         from hefesto_dualsense4unix.broker.hidraw_broker import VPAD_UNIQ_PREFIX
 
         save_profile(Profile(name="Bancada", match=MatchAny()))
@@ -864,14 +616,7 @@ class TestOMetodoQueGrava:
             _grava_ipc(h, uniq=BRANCO)
 
     def test_a_faixa_e_a_do_esquema_e_nada_e_gravado(self, perfis: Path) -> None:
-        """O 101 morre com a FRASE do esquema, e o disco não é tocado.
-
-        A faixa não se digita no handler — seria o HARM-19 renascendo, que é o
-        que fez `rumble.policy_custom` divergir do esquema em 0-1 contra 0-2.
-
-        MORDIDA: mover o `model_validate` para DEPOIS do `save_profile`. O
-        perfil ganha a chave e o assert de disco reprova.
-        """
+        """O 101 morre com a FRASE do esquema, e o disco não é tocado."""
         save_profile(Profile(name="Bancada", match=MatchAny()))
         h = _Handlers(ativo="Bancada", primario=BRANCO)
         with pytest.raises(ValueError, match="SEGUNDO fator"):
@@ -885,20 +630,14 @@ class TestOMetodoQueGrava:
             _grava_ipc(h, uniq=BRANCO, forte_pct=valor)
 
     def test_o_metodo_esta_no_despacho(self) -> None:
-        """Handler sem entrada na tabela é método inalcançável.
-
-        MORDIDA: apagar a linha do `ipc_server._handlers`. O produto continua
-        compilando e o método fica morto — e é só isto que pega.
-        """
+        """Handler sem entrada na tabela é método inalcançável."""
         from hefesto_dualsense4unix.daemon import ipc_server
 
         fonte = inspect.getsource(ipc_server)
         assert '"rumble.motores.set": self._handle_rumble_motores_set' in fonte
 
 
-# ---------------------------------------------------------------------------
 # 9. O `state_full` DEVOLVE OS DOIS NÚMEROS
-# ---------------------------------------------------------------------------
 
 
 class TestOEstadoDevolveAsBarras:
@@ -944,12 +683,7 @@ class TestOEstadoDevolveAsBarras:
         )
 
     def test_o_padrao_viaja_junto_para_a_tela_nao_digitar_o_cem(self) -> None:
-        """Peça ausente do mapa vale 100, e o 100 vem do produto.
-
-        MORDIDA: apagar `result["rumble_motor_pct_padrao"]`. A aba 05 passa a
-        ter de digitar o 100, que é a segunda grafia que divergiria no primeiro
-        dia em que o padrão mudasse.
-        """
+        """Peça ausente do mapa vale 100, e o 100 vem do produto."""
         from hefesto_dualsense4unix.daemon import ipc_handlers
 
         fonte = inspect.getsource(
@@ -957,11 +691,6 @@ class TestOEstadoDevolveAsBarras:
         )
         assert 'result["rumble_motor_pct_padrao"] = MOTOR_PCT_PADRAO' in fonte
         assert MOTOR_PCT_PADRAO == 100
-
-
-# ---------------------------------------------------------------------------
-# 10. A PONTE, e a armadilha que ela deixava de contar
-# ---------------------------------------------------------------------------
 
 
 class TestAPonte:
@@ -988,21 +717,7 @@ class TestAPonte:
         assert ipc_bridge.rumble_motores_set(forte_pct=50) == (False, None)
 
     def test_parar_avisa_que_nao_devolve_a_vibracao_ao_jogo(self) -> None:
-        """A ARMADILHA MEDIDA NO APARELHO em 04/09/2026, e a cura é a frase.
-
-        `rumble_stop` fixa `(0, 0)` — um par FIXADO, não `None` —, e enquanto
-        ele estiver de pé `apply_game_rumble` descarta o FF de TODO jogo na
-        primeira linha. O ensaio desta sprint chamou `rumble_stop` achando que
-        estava limpando a bagunça e deixou a máquina dela sem vibração em jogo
-        nenhum, em silêncio.
-
-        A FIXAÇÃO NÃO É DEFEITO — é decisão medida (HARM-16): o poll loop
-        re-afirma o silêncio para que outra escrita HID não reative os motores.
-        Trocá-la seria repropor decisão medida, que esta casa não faz. O que
-        faltava era a ponte DIZER, e é isso que esta régua trava.
-
-        MORDIDA: apagar a advertência da docstring de `rumble_stop`.
-        """
+        """A ARMADILHA MEDIDA NO APARELHO em 04/09/2026, e a cura é a frase."""
         from hefesto_dualsense4unix.app import ipc_bridge
 
         doc = inspect.getdoc(ipc_bridge.rumble_stop) or ""
@@ -1013,22 +728,11 @@ class TestAPonte:
             "a ponte não conta a consequência do par fixado — quem chamar "
             "`rumble_stop` continua deixando a máquina sem vibração em jogo"
         )
-        # E o par simétrico aponta de volta, senão a advertência é um beco.
         assert "rumble_stop" in (inspect.getdoc(ipc_bridge.rumble_passthrough) or "")
 
 
 def test_o_norm_mac_nao_devolve_none_para_caminho_e_a_docstring_diz_isso() -> None:
-    """FATO ERRADO SUBSTITUÍDO (04/09/2026) — e a régua guarda o fato certo.
-
-    A docstring de `norm_mac` afirmava devolver `None` para um `path`, e dava
-    esse exemplo. Medido, ela devolve `'adeee9'`: um caminho tem letras de `a` a
-    `f` no meio e a peneira as recolhe.
-
-    Para LER é inofensivo (a chave não casa com nada). Para GRAVAR é perda de
-    dado dela — a escolha vai ao disco sob uma chave que aparelho nenhum
-    reivindica. Esta régua trava as duas metades: o comportamento REAL, e a
-    docstring dizendo a verdade sobre ele.
-    """
+    """FATO ERRADO SUBSTITUÍDO (04/09/2026) — e a régua guarda o fato certo."""
     from hefesto_dualsense4unix.core import sysfs_leds
 
     assert sysfs_leds.norm_mac("path:/dev/input/event9") == "adeee9"
@@ -1043,43 +747,16 @@ def test_o_norm_mac_nao_devolve_none_para_caminho_e_a_docstring_diz_isso() -> No
     assert "adeee9" in doc, "a docstring tem de carregar a medição, não a promessa"
 
 
-# ---------------------------------------------------------------------------
-# 9. A TELA DIZ A MULTIPLICAÇÃO — VIBRA-MULT-01, 09/09/2026
-# ---------------------------------------------------------------------------
-#: A QUEIXA DELA, como está registrada na sprint VIBRA-MULT-01:
-#:
-#:     "na guia vibração os slicers não estão se multiplicando: motor
 #:      esquerdo × força de vibração (ou personalizado), motor direito ×  # noqa: RUF003
-#:      força de vibração ou personalizado, pra cada controle"
-#:
-#: ELA MORA NUM COMENTÁRIO, e não na docstring abaixo, por uma razão de
-#: ferramenta: o sinal de multiplicação da digitação dela é ambíguo para o
-#: `ruff` (RUF002/RUF003), e um
 #: `# noqa` dentro de uma docstring é texto, não diretiva. Trocar o símbolo
-#: seria limpar a citação dela, que esta casa não faz.
 _QUEIXA = "os slicers não estão se multiplicando"
 
 
 class TestATelaDizOProduto:
-    """A conta acontecia e a tela não a mostrava em lugar nenhum.
-
-    **A QUEIXA DELA** está no comentário acima, com a digitação preservada.
-
-    **MEDIDO EM 09/09/2026, com os QUATRO controles na mesa:** o P2 imprimia
-    `mult 200%` com os DOIS motores em **0%**. A conta do daemon estava certa
-    — o efetivo era zero — e a tela dizia `200%` e mais nada. *Um número que
-    não diz o que produz é um número que ela tem de multiplicar de cabeça.*
-
-    O `mult` CONTINUA SENDO O DEGRAU: ele é o que o trilho ao lado move.
-    """
+    """A conta acontecia e a tela não a mostrava em lugar nenhum."""
 
     def test_a_dica_diz_barra_forca_e_o_efetivo(self) -> None:
-        """Os três números na mesma frase, sem um clique.
-
-        **A MORDIDA:** faça `_quanto_multiplica` devolver `""` sempre e a
-        dica volta a ficar vazia quando o jogo não treme — que era o estado
-        em que ela olhou a tela.
-        """
+        """Os três números na mesma frase, sem um clique."""
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
         frase = a05._quanto_multiplica({"sabe": True, "n": "150%"}, 50)
@@ -1088,11 +765,7 @@ class TestATelaDizOProduto:
         assert "75%" in frase, f"o produto não saiu na frase: {frase}"
 
     def test_o_caso_dela_barra_zero_confessa_o_zero(self) -> None:
-        """O P2 da mesa dela: força 200%, motores em 0%.
-
-        **A MORDIDA:** troque o produto pelo degrau e a frase volta a dizer
-        `200%` sobre um motor que não sai do lugar.
-        """
+        """O P2 da mesa dela: força 200%, motores em 0%."""
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
         frase = a05._quanto_multiplica({"sabe": True, "n": "200%"}, 0)
@@ -1100,28 +773,14 @@ class TestATelaDizOProduto:
         assert "sai 0%" in frase, frase
 
     def test_sem_degrau_conhecido_a_dica_cala(self) -> None:
-        """Campo sem informação não mostra nada — a regra dela.
-
-        Uma política fora das cinco que o produto conhece não tem degrau, e
-        uma frase com travessão no meio afirma menos do que o silêncio.
-
-        **A MORDIDA:** tire o `if not pct.get("sabe")` e a frase sai com um
-        `0%` inventado no lugar do degrau.
-        """
+        """Campo sem informação não mostra nada — a regra dela."""
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
         assert a05._quanto_multiplica({"sabe": False, "n": "—"}, 100) == ""
         assert a05._quanto_multiplica({"sabe": True, "n": "150%"}, None) == ""
 
     def test_o_pedido_do_jogo_ainda_ganha_a_dica(self) -> None:
-        """Quando o jogo TREME, o que ela precisa ver é o pedido dele.
-
-        A frase da multiplicação é o que ocupa o silêncio, e não o que o
-        substitui: com o motor em movimento, o número de 0-255 é o dado vivo.
-
-        **A MORDIDA:** troque a ordem do ternário no pacote e a dica passa a
-        esconder o pedido do jogo atrás de uma conta que não mudou.
-        """
+        """Quando o jogo TREME, o que ela precisa ver é o pedido dele."""
         import inspect
 
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05

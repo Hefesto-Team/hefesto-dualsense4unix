@@ -1,20 +1,4 @@
-"""A cura do engasgo tem de ALCANÇAR os prefixos — todos, em todo disco.
-
-ENGASGO-VULKAN-01 (23/08/2026). O defeito que este portão existe para impedir é
-o mesmo de sempre nesta casa: a cura escrita e nunca ligada, ou ligada só onde é
-fácil. `compatdata` não mora num lugar só — nesta máquina são DOIS, e o segundo
-(`/mnt/Mnemosyne/SteamLibrary`) só aparece pelo `libraryfolders.vdf`.
-
-Morde em quatro alturas:
-
-1. **alcance** — o censo enxerga as duas bibliotecas, não só a padrão;
-2. **reversibilidade** — devolver deixa o registro byte a byte como estava;
-3. **memória da escolha dela** — o que ela devolveu PELO BOTÃO não é desligado
-   de novo no lançamento seguinte, e o que só reapareceu ligado é refeito
-   (decisão dela de 16/09/2026; ver o caso `test_o_que_reapareceu_ligado...`);
-4. **fiação** — o gancho de lançamento, o install e o uninstall chamam mesmo o
-   curador; sem isto a cura existe e nunca roda em jogo nenhum.
-"""
+"""A cura do engasgo tem de ALCANÇAR os prefixos — todos, em todo disco."""
 from __future__ import annotations
 
 import os
@@ -32,12 +16,7 @@ _CABECALHO = "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machi
 
 
 def _registro(*camadas: tuple[str, str]) -> str:
-    """Monta um `system.reg` com o driver e as camadas pedidas.
-
-    `camadas` são pares `(caminho_windows, dword)`. O driver entra SEMPRE, na
-    chave dele, porque é assim no real e porque nenhum teste daqui pode rodar
-    contra um registro mais fácil que o da máquina dela.
-    """
+    """Monta um `system.reg` com o driver e as camadas pedidas."""
     linhas = [
         _CABECALHO,
         "[Software\\\\Khronos\\\\Vulkan\\\\Drivers] 1774238072",
@@ -74,7 +53,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     _monta_biblioteca(
         padrao,
         {
-            "111": _registro(),  # jogo sem camada nenhuma
+            "111": _registro(),
             "222": _registro((EPIC, "00000000")),
         },
     )
@@ -86,11 +65,6 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     )
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     return home
-
-
-# ---------------------------------------------------------------------------
-# 1. Alcance
-# ---------------------------------------------------------------------------
 
 
 def test_o_censo_enxerga_a_biblioteca_do_outro_disco(casa: Path) -> None:
@@ -131,11 +105,6 @@ def test_curar_todos_mexe_no_desconhecido_e_deixa_o_preservado(casa: Path) -> No
     ).read_bytes() == antes_mango
 
 
-# ---------------------------------------------------------------------------
-# 2. Reversibilidade
-# ---------------------------------------------------------------------------
-
-
 def test_devolver_deixa_o_registro_byte_a_byte_como_estava(casa: Path) -> None:
     """Reversível SEM terminal é requisito dela — e reversível é byte a byte."""
     registro = (
@@ -159,18 +128,12 @@ def test_a_cura_e_idempotente(casa: Path) -> None:
     assert de_novo["222"].erro == ""
 
 
-# ---------------------------------------------------------------------------
-# 3. A escolha dela sobrevive ao próximo lançamento
-# ---------------------------------------------------------------------------
-
-
 def test_o_gancho_nao_desfaz_o_que_ela_devolveu(casa: Path) -> None:
     """Ela devolveu de propósito: o jogo seguinte NÃO pode desligar de novo."""
     raiz = casa / ".steam" / "steam" / "steamapps" / "compatdata" / "222"
     cv.curar_todos(casa)
     cv.curar_todos(casa, religar=True)
 
-    # O gancho de lançamento passa por aqui, e nunca força.
     resultado = cv.curar_um_prefixo(raiz, appid="222", home=casa)
     assert resultado.desligadas == ()
     assert resultado.respeitadas == ("EOSOverlayVkLayer-Win64.json",)
@@ -178,31 +141,11 @@ def test_o_gancho_nao_desfaz_o_que_ela_devolveu(casa: Path) -> None:
 
 
 def test_o_que_reapareceu_ligado_e_desligado_de_novo_pelo_gancho(casa: Path) -> None:
-    """A camada voltou a `00000000` sem passar pelo botão: o gancho REFAZ a cura.
-
-    **ESTE CASO ERA O CONTRÁRIO ATÉ 16/09/2026**, e chamava-se
-    `test_religar_por_fora_tambem_conta_como_escolha`: ele exigia
-    `desligadas == ()` e o registro intacto em `dword:00000000`, porque a regra
-    2 de `aplicar_no_prefixo` lia "camada que nós desligamos, agora ligada"
-    como gesto dela e gravava `manter` para sempre.
-
-    A regra caiu por uma premissa falsa, não por gosto: o `wineserver` regrava
-    o registro que tinha em memória ao sair do prefixo, devolvendo a camada a
-    `dword:00000000` **com o mesmo byte** que uma pessoa editando o arquivo à
-    mão. Era indistinguível, e o empate ia sempre para o lado que aposentava a
-    cura — um prefixo curado uma vez e reaberto uma vez nunca mais era curado,
-    ao contrário do que o docstring do módulo prometia.
-
-    Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o
-    botão devolver é permanente. O botão vira a única voz de escolha e o
-    wineserver perde o voto."* Quem quer a camada de volta clica em «devolver»,
-    que já existia e não mudou.
-    """
+    """A camada voltou a `00000000` sem passar pelo botão: o gancho REFAZ a cura."""
     raiz = casa / ".steam" / "steam" / "steamapps" / "compatdata" / "222"
     registro = raiz / "pfx" / "system.reg"
     cv.curar_todos(casa)
 
-    # A camada reaparece LIGADA — wineserver ou mão humana, o registro não diz.
     registro.write_text(
         registro.read_text(encoding="utf-8").replace("dword:00000001", "dword:00000000"),
         encoding="utf-8",
@@ -221,11 +164,6 @@ def test_o_botao_forca_e_vence_a_memoria(casa: Path) -> None:
     assert de_novo["222"].desligadas == ("EOSOverlayVkLayer-Win64.json",)
 
 
-# ---------------------------------------------------------------------------
-# 4. Fiação — a cura escrita e nunca ligada é o defeito mais caro desta casa
-# ---------------------------------------------------------------------------
-
-
 def test_o_gancho_de_lancamento_chama_o_curador() -> None:
     """`hefesto-launch` roda em TODO jogo: é ele que cobre o jogo de amanhã."""
     texto = (RAIZ / "assets" / "hefesto-launch.sh").read_text(encoding="utf-8")
@@ -239,13 +177,7 @@ def test_o_gancho_de_lancamento_chama_o_curador() -> None:
 
 
 def _path_sem_game_mode(base: Path) -> str:
-    """O PATH do sistema com o Game Mode mudo na frente.
-
-    O lançador pede o perfil de energia a `system76-power`, `busctl` ou
-    `dbus-send`, o que responder primeiro. Com o `/usr/bin` cru, esta régua
-    conversava com o daemon de energia da máquina de quem a rodava — e podia
-    pô-lo em Performance.
-    """
+    """O PATH do sistema com o Game Mode mudo na frente."""
     mudos = base / "game-mode-mudo"
     mudos.mkdir(exist_ok=True)
     for nome in ("system76-power", "busctl", "dbus-send"):
@@ -256,12 +188,7 @@ def _path_sem_game_mode(base: Path) -> str:
 
 
 def test_o_gancho_e_a_prova_de_falha_e_nao_atrasa_jogo_nativo(tmp_path: Path) -> None:
-    """Sem prefixo Proton o gancho sai na primeira linha — e o jogo abre.
-
-    Roda o wrapper DE VERDADE com um HOME de mentira: sem
-    `STEAM_COMPAT_DATA_PATH` (jogo nativo) e sem curador instalado, o comando
-    final tem de executar mesmo assim.
-    """
+    """Sem prefixo Proton o gancho sai na primeira linha — e o jogo abre."""
     home = tmp_path / "home"
     home.mkdir()
     saida = subprocess.run(
@@ -281,14 +208,7 @@ def test_o_gancho_e_a_prova_de_falha_e_nao_atrasa_jogo_nativo(tmp_path: Path) ->
 
 
 def test_o_gancho_cura_de_verdade_um_prefixo_e_o_jogo_abre(tmp_path: Path) -> None:
-    """A prova de ponta a ponta: wrapper + curador materializado + prefixo real.
-
-    Reproduz o que o `install.sh` monta: o curador em
-    `~/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas`, executável.
-    Desde 28/09/2026 o registro só se mexe com o «Corrigir Vulkan» ligado e no
-    jogo que traz o carregador da Khronos (`vulkan-1.dll`) — o único leitor da
-    chave; a régua do caso sem ele é `test_o_que_chega_ao_jogo.py`.
-    """
+    """A prova de ponta a ponta: wrapper + curador materializado + prefixo real."""
     home = tmp_path / "home"
     config = home / ".config"
     cv.gravar_camadas_da_steam_fora(True, config_home=config)
@@ -336,18 +256,7 @@ def test_o_gancho_cura_de_verdade_um_prefixo_e_o_jogo_abre(tmp_path: Path) -> No
 
 
 def test_a_copia_avulsa_nao_finge_que_olhou(tmp_path: Path) -> None:
-    """A cópia instalada não alcança o irmão — e tem de DIZER isso.
-
-    Medido em 23/08/2026: instalada em `bin/hefesto-camadas`, longe do pacote,
-    a CLI respondia *"nenhum prefixo com camada Vulkan implícita registrada"* —
-    quando a verdade era que ela não conseguiu abrir a lista de jogos. É a
-    armadilha número um desta casa (*o instrumento mente mais que o produto*):
-    "não achei" e "não consegui olhar" dão a mesma lista vazia, e só o primeiro
-    é notícia boa.
-
-    O modo `--prefixo`, que é o do gancho de lançamento, continua inteiro:
-    ele recebe o caminho pronto e nunca enumera.
-    """
+    """A cópia instalada não alcança o irmão — e tem de DIZER isso."""
     avulso = tmp_path / "bin" / "hefesto-camadas"
     avulso.parent.mkdir(parents=True)
     fonte = RAIZ / "src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
@@ -375,18 +284,7 @@ def test_a_copia_avulsa_nao_finge_que_olhou(tmp_path: Path) -> None:
 
 
 def _bloco_do_install(nome: str = "CAMADAS_SRC") -> str:
-    """Recorta do `install.sh` o bloco que materializa o curador.
-
-    Padrão da casa para lógica de `sh` (`test_install_broker_step.py`): não se
-    confere um passo de instalação por `grep` — recorta-se e RODA-SE com bash
-    de verdade. Aprendido na mordida desta leva: a versão só-texto deste teste
-    passava com o bloco inteiro trancado atrás de um `if false`, porque a
-    linha do `install -Dm755` continuava lá, escrita e inalcançável — que é
-    exatamente o defeito "a casa sabe e o produto não faz".
-
-    O recorte vai do `readonly <nome>=` até o primeiro `fi` em coluna zero; o
-    bloco só usa `if/else/fi`, sem aninhamento, então esse `fi` é o fim real.
-    """
+    """Recorta do `install.sh` o bloco que materializa o curador."""
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
     inicio = re.search(rf"^readonly {re.escape(nome)}=", texto, re.MULTILINE)
     assert inicio is not None, f"bloco {nome} não encontrado no install.sh"
@@ -396,12 +294,7 @@ def _bloco_do_install(nome: str = "CAMADAS_SRC") -> str:
 
 
 def test_o_install_materializa_o_curador_sem_flag(tmp_path: Path) -> None:
-    """Toda cura entra no install, sem flag (regra da casa, 08/08/2026).
-
-    RODA o bloco de verdade num `HOME` de mentira e cobra o arquivo no disco —
-    é a única forma de o teste morder quando alguém desliga o passo em vez de
-    apagá-lo.
-    """
+    """Toda cura entra no install, sem flag (regra da casa, 08/08/2026)."""
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
     for flag in ("--camadas", "--no-camadas", "--vulkan"):
         assert flag not in texto, f"a cura ganhou uma flag ({flag}) — não pode"
@@ -432,8 +325,6 @@ def test_o_install_materializa_o_curador_sem_flag(tmp_path: Path) -> None:
     )
     assert "WARN:" not in saida.stderr
 
-    # Reinstalar ATUALIZA a cópia em vez de falhar (o `install.sh` roda de novo
-    # a cada release, e um curador velho seria pior que nenhum).
     alvo.write_text("velho\n", encoding="utf-8")
     de_novo = subprocess.run(
         ["bash", "-c", roteiro], capture_output=True, text=True, timeout=60

@@ -1,46 +1,5 @@
 #!/usr/bin/env python3
-"""O recibo da medida: o que a trava do push da máquina lê.
-
-O DEFEITO, medido em 26 e 27/09/2026: os portões e a suíte só travavam se
-alguém os rodasse, e o `dev` subiu dez vezes com o CI vermelho. A trava do push
-da máquina pede, para a árvore do commit que sobe, dois arquivos em
-``<git comum>/hefesto-recibos/``: ``<árvore>.portoes-completo`` e
-``<árvore>.suite``. Até aqui nenhum roteiro os escrevia, e por isso a regra
-dorme enquanto a pasta não existe. Quem a acorda é o primeiro recibo.
-
-DOIS VERBOS, chamados pelo ``scripts/portoes.sh`` (camada completa) e pelo
-``scripts/rodar-a-suite.sh`` (corrida inteira):
-
-* ``abrir <nome>`` guarda, no arquivo da própria corrida (``--corrida``), a
-  árvore do índice, o ``HEAD``, o que está mudado fora do índice e o que está
-  fora do git sem ser ignorado;
-* ``fechar <nome> <rc>`` escreve ``<git comum>/hefesto-recibos/<árvore>.<nome>``
-  **só se** o ``rc`` é 0, a árvore do índice é a mesma do começo, e não havia
-  nem há mudança rastreada fora do índice. O recibo diz a data, a árvore, o
-  ``HEAD``, a contagem e os NÃO MEDIDOS.
-
-A ÁRVORE É A DO CONTEÚDO, não a do ramo: os portões rodam depois do
-``git add`` e antes do commit; o commit, o merge fast-forward e o push levam a
-mesma árvore (``<sha>^{tree}``), e o diretório comum é um só para todas as
-árvores de trabalho do mesmo ``.git``.
-
-O ÍNDICE DE VERDADE NÃO É TOCADO. Medido em 28/09/2026 (git 2.43): o
-``git write-tree`` toma a trava do índice mesmo com ``GIT_OPTIONAL_LOCKS=0``
-(sai 128 se outra sessão a segura) e regrava o índice. O índice é compartilhado
-entre as sessões da mesma árvore, então as três leituras rodam sobre uma CÓPIA
-dele, que dá o mesmo hash.
-
-ARQUIVO FORA DO GIT NO COMEÇO IMPEDE O RECIBO. Os portões e a suíte leem o
-disco: um ``tests/unit/test_x.py`` ou um módulo de ``src/`` esquecido fora do
-``git add`` entra na medida e não entra na árvore. É a regra «portões são cegos
-a arquivo novo» pelo outro lado. O que aparecer DURANTE a corrida (sobra de
-teste) não muda a árvore medida: sai nomeado no recibo, sem impedi-lo.
-
-Uso:
-    recibo_da_medida.py abrir  <nome> --corrida <arquivo> [--raiz <árvore>]
-    recibo_da_medida.py fechar <nome> <rc> --corrida <arquivo> [--raiz <árvore>]
-                               [--contagem <texto>] [--nao-medido <id>]...
-"""
+"""O recibo da medida: o que a trava do push da máquina lê."""
 from __future__ import annotations
 
 import argparse
@@ -55,13 +14,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
-#: A pasta que a trava do push lê, dentro do diretório git comum.
 PASTA = "hefesto-recibos"
 
-#: O nome vira sufixo de arquivo: nada de barra, ponto ou espaço.
 _NOME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
-#: Quantos caminhos a mensagem nomeia antes de resumir.
 _MOSTRA = 5
 
 
@@ -109,7 +65,6 @@ def retratar(raiz: Path) -> Retrato:
         copia = Path(pasta) / "index"
         if indice.exists():
             shutil.copyfile(indice, copia)
-        # sem índice (repositório recém-criado), o git lê a cópia ausente como vazia
         arvore = _git(topo, "write-tree", indice=copia).strip()
         sujos = _lista_z(_git(topo, "diff", "--name-only", "-z", indice=copia))
         fora = _lista_z(_git(topo, "ls-files", "--others", "--exclude-standard", "-z",
@@ -136,7 +91,6 @@ def _diz(texto: str) -> None:
 
 
 def abrir(nome: str, corrida: Path, raiz: Path) -> int:
-    # A abertura velha de outra corrida no mesmo arquivo nunca pode valer.
     corrida.unlink(missing_ok=True)
     try:
         r = retratar(raiz)

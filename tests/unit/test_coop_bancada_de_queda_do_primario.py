@@ -89,8 +89,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseControlle
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.integrations.uhid_gamepad import player_mac
 
-#: Os dois controles da mesa. Faixa FORJADA (aa:bb:cc) e octetos 4-5 zerados —
-#: a máscara desta casa. Nenhum endereço real entra em arquivo versionado.
 KEY_A = "AA:BB:CC:00:00:0A"
 KEY_B = "AA:BB:CC:00:00:0B"
 UNIQ_A = "aabbcc00000a"
@@ -111,34 +109,18 @@ class _Relogio:
 
 
 class _Mesa:
-    """O mundo: quem está na mesa, em que node, e quem segura o grab de cada um.
-
-    Fonte ÚNICA dos dois enumeradores do produto. O grab é exclusivo de
-    verdade: um segundo pretendente leva `EBUSY`, como no kernel.
-    """
+    """O mundo: quem está na mesa, em que node, e quem segura o grab de cada um."""
 
     def __init__(self) -> None:
         self.nodes: dict[str, str] = {}
-        #: Em que transporte cada controle está SENTADO agora (RESERVA-DO-POSTO-01
-        #: §RESERVA-5). O `norm_mac` é estável entre cabo e rádio, então o mesmo
-        #: controle pode voltar por um transporte diferente daquele em que caiu —
-        #: e é exatamente essa a volta que a §6 da sprint infere sem ter medido.
         self.transportes: dict[str, str] = {}
         self.dono_do_grab: dict[str, str] = {}
-        #: Todo `EBUSY` recusado, com quem pediu e quem já tinha. A asserção 1
-        #: lê daqui — e a lista guarda o TEXTO da colisão, para o teste que
-        #: reprova dizer O QUE está errado, não só que algo está.
         self.ebusy: list[str] = []
         self._proximo = 30
 
-    # -- o mundo muda ---------------------------------------------------
 
     def sentar(self, uniq: str, *, transporte: str = "bt") -> str:
-        """Um controle entra. O node é SEMPRE novo — é o que o replug BT faz.
-
-        `transporte` é `bt` por default porque o rádio é onde o defeito desta
-        bancada vive; `usb` existe para a volta pelo cabo (§RESERVA-5).
-        """
+        """Um controle entra. O node é SEMPRE novo — é o que o replug BT faz."""
         node = f"/dev/input/event{self._proximo}"
         self._proximo += 1
         self.nodes[uniq] = node
@@ -155,7 +137,6 @@ class _Mesa:
     def transporte_de(self, uniq: str) -> str:
         return self.transportes.get(uniq, "bt")
 
-    # -- o kernel responde ----------------------------------------------
 
     def grab(self, node: str, quem: str) -> bool:
         dono = self.dono_do_grab.get(node)
@@ -171,7 +152,6 @@ class _Mesa:
         if node is not None and self.dono_do_grab.get(node) == quem:
             del self.dono_do_grab[node]
 
-    # -- as duas réguas do produto, saindo da MESMA fonte ----------------
 
     def como_o_backend_ve(self) -> list[tuple[str, bytes, bool]]:
         """O que `_enumerate_device_keys` devolveria: `(key, path_hidraw, edge)`."""
@@ -190,12 +170,7 @@ class _Mesa:
 
 
 class _LeitorDoPrimario:
-    """O `EvdevReader` do P1, injetado no backend real.
-
-    Modela as três coisas que o `_recompute_primary` faz com ele: mirar outro
-    MAC (`retarget`), reabrir (`refresh_device`) e subir (`start`) — e o `start`
-    é onde ele pede o grab, que é onde o `EBUSY` do journal aconteceu.
-    """
+    """O `EvdevReader` do P1, injetado no backend real."""
 
     NOME = "leitor-do-P1"
 
@@ -203,16 +178,10 @@ class _LeitorDoPrimario:
         self._mesa = mesa
         self._alvo: str | None = None
         self.node: str | None = None
-        #: `False` liga o modo HONESTO-E-LENTO: o node antigo só é solto quando
-        #: `a_thread_do_leitor_acorda()` for chamada. É assim que o produto se
-        #: comporta — `retarget` só SINALIZA (`request_reopen`), e quem fecha o
-        #: fd é a thread dona. O default `True` é a simplificação declarada no
-        #: cabeçalho; este knob existe para o teste que mede o que ela esconde.
         self.solta_na_hora = solta_na_hora
         self._a_soltar: str | None = None
 
     def retarget(self, uniq: str | None) -> None:
-        # O fd antigo fecha ao reabrir, e fechar solta o grab.
         if uniq != self._alvo:
             if self.solta_na_hora:
                 self._mesa.ungrab(self.node, self.NOME)
@@ -253,13 +222,7 @@ class _LeitorDoPrimario:
 
 
 class _LeitorDeSecundario:
-    """O `EvdevReader` de um jogador de co-op. Uma instância por spawn.
-
-    `mesa` é atributo de CLASSE porque quem constrói é o produto
-    (`_spawn_player` faz `EvdevReader(device_path=..., target_uniq=...)`) e não
-    o teste — o mesmo truque dos knobs de `_FakeReader` em
-    `test_subsystem_coop.py`.
-    """
+    """O `EvdevReader` de um jogador de co-op. Uma instância por spawn."""
 
     mesa: _Mesa | None = None
 
@@ -329,12 +292,7 @@ class _VpadFalso:
 
 
 class _FakeHandle:
-    """Handle pydualsense de um controle. Rádio por default — é o transporte do defeito.
-
-    O `conType.name` é o que `_detect_transport` do produto lê (`"usb" in
-    name.lower()`), e por isso ele é a ÚNICA coisa que este dublê precisa
-    acertar para que o transporte da bancada seja o transporte do produto.
-    """
+    """Handle pydualsense de um controle. Rádio por default — é o transporte do defeito."""
 
     def __init__(self, transporte: str = "bt") -> None:
         self.connected = True
@@ -354,9 +312,6 @@ class Bancada:
         self.leitor_p1 = _LeitorDoPrimario(self.mesa)
         self.inst = PyDualSenseController(evdev_reader=self.leitor_p1)  # type: ignore[arg-type]
         self.inst._relogio = self.relogio.agora
-        # A leitura do 0x05 é hidraw de verdade e não tem nada a ver com este
-        # defeito: neutralizada em voz alta (o vpad nasce com o canônico, que é
-        # o fail-safe que o próprio produto já prevê).
         self.inst.read_calibration = lambda _uniq=None: None  # type: ignore[assignment]
         self.daemon = SimpleNamespace(
             config=SimpleNamespace(coop_enabled=True, gamepad_flavor="dualsense"),
@@ -367,14 +322,10 @@ class Bancada:
         )
         self.coop = CoopManager(self.daemon)  # type: ignore[arg-type]
         self.daemon._coop_manager = self.coop
-        #: Todo vpad que já nasceu, para a asserção 4 (colisão de MAC).
         self.vpads: list[_VpadFalso] = []
         self._instalar_dubles(monkeypatch)
-        #: `(instante, uniq_do_jogador_2)` a cada olhada — a linha do tempo que
-        #: as asserções 2 e 3 leem.
         self.historico: list[tuple[float, str | None, int | None]] = []
 
-    # -- fiação ---------------------------------------------------------
 
     def _instalar_dubles(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _LeitorDeSecundario.mesa = self.mesa
@@ -394,7 +345,6 @@ class Bancada:
             self._nascer_vpad,
         )
         # Hermético: NUNCA o /sys/class/leds real (há DualSense de verdade na
-        # máquina da mantenedora).
         monkeypatch.setattr("hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {})
 
     def _nascer_vpad(self, _flavor: Any, *, player: int = 1, **_kw: Any) -> _VpadFalso:
@@ -402,7 +352,6 @@ class Bancada:
         self.vpads.append(vpad)
         return vpad
 
-    # -- o mundo muda ---------------------------------------------------
 
     def sentar(self, uniq: str, *, transporte: str = "bt") -> None:
         self.mesa.sentar(uniq, transporte=transporte)
@@ -410,18 +359,9 @@ class Bancada:
     def levantar(self, uniq: str) -> None:
         self.mesa.levantar(uniq)
 
-    # -- os dois laços do daemon ----------------------------------------
 
     def tique_do_reconnect_loop(self) -> None:
-        """Um `connect()` — o `backend_hotplug_reconcile` do `reconnect_loop`.
-
-        O handle nasce com o transporte do controle que está NAQUELE path, e
-        não em ordem de fila. A diferença passou a importar com a §RESERVA-5:
-        `connect()` só abre as keys que ainda não têm handle (`if key in
-        existing: continue`), então uma fila posicional entregaria o handle do
-        controle que voltou para... o índice errado, sempre que um dos dois já
-        estivesse de pé. Com todos os dublês idênticos isso nunca apareceu.
-        """
+        """Um `connect()` — o `backend_hotplug_reconcile` do `reconnect_loop`."""
         por_path = {
             path: uniq
             for (_key, path, _edge), uniq in zip(
@@ -456,13 +396,10 @@ class Bancada:
         else:
             self.tique_do_reconnect_loop()
             self.tique_do_poll_loop()
-        # O poll loop gira a ~100 Hz: o tique seguinte, sem sync, é o que
-        # recolhe quem cedeu o controle ao primário.
         self.tique_do_poll_loop(sync=False)
         self.anotar()
         self.conferir_invariantes()
 
-    # -- leitura ---------------------------------------------------------
 
     def jogador_2(self) -> str | None:
         """O MAC do controle que ALIMENTA o vpad do Jogador 2 agora."""
@@ -497,18 +434,15 @@ class Bancada:
 def _rodar_a_noite_dela(bancada: Bancada, *, sync_antes_do_connect: bool) -> None:
     """O roteiro mínimo: A,B → só B (A cai) → B,A (A volta com node novo)."""
     ordem = {"sync_antes_do_connect": sync_antes_do_connect}
-    # t=0 — os dois na mesa; A é o primeiro a ser enumerado, logo é o P1.
     bancada.sentar(UNIQ_A)
     bancada.sentar(UNIQ_B)
     bancada.passo(0.0, **ordem)
-    bancada.passo(2.0, **ordem)  # o co-op assenta o Jogador 2
-    # t=5 — a piscada: o primário A cai.
+    bancada.passo(2.0, **ordem)
     bancada.levantar(UNIQ_A)
     bancada.passo(3.0, **ordem)
-    # t=8 — A volta, com node NOVO (é o que o replug por BT faz).
     bancada.sentar(UNIQ_A)
     bancada.passo(3.0, **ordem)
-    bancada.passo(2.0, **ordem)  # e a mesa assenta
+    bancada.passo(2.0, **ordem)
 
 
 @pytest.fixture
@@ -523,12 +457,7 @@ class TestAPiscadaDoPrimario:
     def test_o_jogador_2_continua_sendo_o_mesmo_controle(
         self, bancada: Bancada, sync_antes_do_connect: bool
     ) -> None:
-        """Asserção 2 — a queixa dela, em uma linha.
-
-        Antes da piscada o Jogador 2 é B. Depois dela também tem de ser B: o
-        controle de quem está jogando não muda de mãos porque o controle da
-        OUTRA pessoa piscou.
-        """
+        """Asserção 2 — a queixa dela, em uma linha."""
         _rodar_a_noite_dela(bancada, sync_antes_do_connect=sync_antes_do_connect)
 
         assert bancada.jogador_2() == UNIQ_B, (
@@ -544,16 +473,7 @@ class TestAPiscadaDoPrimario:
     def test_quem_nao_saiu_da_mesa_nao_muda_de_indice(
         self, bancada: Bancada, sync_antes_do_connect: bool
     ) -> None:
-        """Asserção 3 — o índice de quem não saiu não passeia.
-
-        B nunca saiu da mesa. O índice é o lugar dele no jogo (P1..PN contíguos)
-        e o recuo do MAC e do nome do vpad sem identidade de aparelho (E3,
-        A-MESMA-LINGUA-01): se ele passeia, o Jogador 2 muda de lugar sem sair.
-
-        A janela em que B é o PRIMÁRIO (entre a queda de A e a volta dele)
-        fica de fora de propósito: ali B não é secundário nenhum, é o P1, e
-        isso é o produto funcionando com um controle só — não um passeio.
-        """
+        """Asserção 3 — o índice de quem não saiu não passeia."""
         _rodar_a_noite_dela(bancada, sync_antes_do_connect=sync_antes_do_connect)
 
         indices = {i for _t, _j2, i in bancada.historico if i is not None}
@@ -592,8 +512,7 @@ class TestOQueOInstrumentoPrecisaSaberRecusar:
         assert mesa.ebusy and node in mesa.ebusy[0]
 
     def test_a_mesa_deixa_o_mesmo_dono_regrabar(self) -> None:
-        """O `EBUSY` de re-grab do próprio fd não é colisão (BUG-GRAB-DOUBLE-
-        EBUSY-01) — se a bancada o contasse, ela acusaria defeito onde não há."""
+        """O `EBUSY` de re-grab do próprio fd não é colisão (BUG-GRAB-DOUBLE-"""
         mesa = _Mesa()
         node = mesa.sentar(UNIQ_A)
         assert mesa.grab(node, "dono") is True
@@ -627,8 +546,7 @@ class TestOAvisoDeTrocaDePrimario:
     def test_o_backend_avisa_antes_de_re_atrelar_o_evdev(
         self, bancada: Bancada
     ) -> None:
-        """A ordem É a cura. Avisar depois do retarget seria avisar tarde: o
-        `EBUSY` do journal já teria acontecido."""
+        """A ordem É a cura. Avisar depois do retarget seria avisar tarde: o"""
         ordem: list[str] = []
 
         def _observador(_anterior: str | None, _novo: str | None) -> None:
@@ -650,8 +568,7 @@ class TestOAvisoDeTrocaDePrimario:
     def test_o_coop_liga_o_aviso_sozinho_no_primeiro_sync(
         self, bancada: Bancada
     ) -> None:
-        """A fiação é do co-op, não do `lifecycle`: o manager nasce sob demanda
-        e o backend pode nem existir no boot."""
+        """A fiação é do co-op, não do `lifecycle`: o manager nasce sob demanda"""
         assert bancada.inst._primary_change_observer is None
         bancada.sentar(UNIQ_A)
         bancada.sentar(UNIQ_B)
@@ -661,18 +578,16 @@ class TestOAvisoDeTrocaDePrimario:
     def test_backend_sem_a_api_nao_derruba_o_coop(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Degradação declarada: fake/legado sem `set_primary_change_observer`
-        segue funcionando (com o defeito), nunca quebrando."""
+        """Degradação declarada: fake/legado sem `set_primary_change_observer`"""
         bancada = Bancada(monkeypatch)
         bancada.daemon.controller = SimpleNamespace(primary_uniq=UNIQ_A, _evdev=None)
         bancada.sentar(UNIQ_A)
         bancada.sentar(UNIQ_B)
-        bancada.coop.sync()  # não levanta
+        bancada.coop.sync()
         assert UNIQ_B in bancada.coop._players
 
     def test_ceder_solta_o_grab_e_nao_para_o_reader(self, bancada: Bancada) -> None:
-        """As regras do que pode rodar sob o `_io_lock`: solta o grab (ioctl,
-        µs) e NÃO chama `stop()` (que faz `join(timeout=2.0)`)."""
+        """As regras do que pode rodar sob o `_io_lock`: solta o grab (ioctl,"""
         bancada.sentar(UNIQ_A)
         bancada.sentar(UNIQ_B)
         bancada.tique_do_reconnect_loop()
@@ -696,8 +611,7 @@ class TestOAvisoDeTrocaDePrimario:
     def test_o_cedido_para_de_alimentar_o_vpad_na_hora(
         self, bancada: Bancada
     ) -> None:
-        """Entre o `ungrab` e o desmonte o vpad fica MUDO, não solto — senão o
-        físico alimentaria o vpad do P1 E o do P2 ao mesmo tempo."""
+        """Entre o `ungrab` e o desmonte o vpad fica MUDO, não solto — senão o"""
         bancada.sentar(UNIQ_A)
         bancada.sentar(UNIQ_B)
         bancada.tique_do_reconnect_loop()
@@ -709,8 +623,6 @@ class TestOAvisoDeTrocaDePrimario:
         vpad.forward_buttons = enviados.append  # type: ignore[method-assign]
 
         bancada.coop.ceder_ao_primario(UNIQ_A, UNIQ_B)
-        # O tique que ainda encontra o jogador na lista (o desmonte é feito
-        # pelo `_recolher_os_cedidos`, e a marca é lida antes de repassar).
         bancada.coop.forward_all()
 
         assert enviados == []
@@ -741,8 +653,7 @@ class TestAReservaDoPostoDePrimario:
     def test_a_reserva_caduca_e_o_posto_nao_fica_pendurado(
         self, bancada: Bancada
     ) -> None:
-        """Ela desligou o controle e continuou jogando com o outro: passados 30 s
-        o posto é de quem está na mesa, e a volta de A não desmonta nada."""
+        """Ela desligou o controle e continuou jogando com o outro: passados 30 s"""
         from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
 
         bancada.sentar(UNIQ_A)
@@ -758,8 +669,7 @@ class TestAReservaDoPostoDePrimario:
         assert bancada.inst.primary_uniq == UNIQ_B
 
     def test_controle_novo_nunca_rouba_o_posto(self, bancada: Bancada) -> None:
-        """A regra da 1ª chave continua valendo para todo o resto: só o DEPOSTO
-        tem reserva, e ele só tem porque já era o P1."""
+        """A regra da 1ª chave continua valendo para todo o resto: só o DEPOSTO"""
         bancada.sentar(UNIQ_A)
         bancada.tique_do_reconnect_loop()
         bancada.sentar(UNIQ_B)
@@ -770,23 +680,7 @@ class TestAReservaDoPostoDePrimario:
     def test_o_deposto_que_vira_secundario_e_a_corrida_que_sobrou(
         self, bancada: Bancada
     ) -> None:
-        """**A corrida que esta sprint NÃO fecha, medida em vez de suposta.**
-
-        O aviso cobre um sentido — o secundário solta ANTES de o primário
-        pegar. O sentido INVERSO não tem aviso: quando A retoma o posto, o
-        leitor do primário larga o node de B de forma ASSÍNCRONA (o `retarget`
-        só sinaliza; quem fecha o fd é a thread dona). Se o `sync` do co-op
-        chegar antes desse fechamento, quem leva `EBUSY` é o co-op.
-
-        Não dá para fechar por aqui: fechar fd de outra thread é justamente o
-        que o HANG-01/GYRO-FD-01 baniu nesta casa. O que dá é **medir o
-        desfecho**, e o desfecho é aceitável — o retry que o co-op já tinha
-        (`BUG-COOP-GRAB-SILENT-FAIL-01`) assenta o Jogador 2 no ciclo seguinte.
-        O preço é ~2 s a mais para o P2 entrar, e uma linha no journal.
-
-        O que este teste PROÍBE: que o desfecho vire "o jogador morre" ou "o
-        físico dobra o input". Se algum dia virar, ele reprova aqui.
-        """
+        """**A corrida que esta sprint NÃO fecha, medida em vez de suposta.**"""
         bancada.leitor_p1.solta_na_hora = False
         bancada.sentar(UNIQ_A)
         bancada.sentar(UNIQ_B)
@@ -800,14 +694,12 @@ class TestAReservaDoPostoDePrimario:
         bancada.tique_do_poll_loop()
         bancada.leitor_p1.a_thread_do_leitor_acorda()
 
-        # A conta zerada AQUI é o que garante que o `EBUSY` medido abaixo é o
-        # desta corrida, e não sobra de um passo anterior.
         assert bancada.mesa.ebusy == []
 
         bancada.relogio.avancar(3.0)
         bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()  # A retoma; o node de B fica preso
-        bancada.tique_do_poll_loop()  # o co-op tenta B cedo demais
+        bancada.tique_do_reconnect_loop()
+        bancada.tique_do_poll_loop()
 
         assert bancada.mesa.ebusy, (
             "a corrida deixou de existir — se foi de propósito, esta lápide "
@@ -818,7 +710,6 @@ class TestAReservaDoPostoDePrimario:
             "o input no jogo (BUG-COOP-GRAB-SILENT-FAIL-01)"
         )
 
-        # ...e o ciclo seguinte, com o fd já fechado, assenta o Jogador 2.
         bancada.leitor_p1.a_thread_do_leitor_acorda()
         bancada.tique_do_poll_loop()
 
@@ -828,15 +719,13 @@ class TestAReservaDoPostoDePrimario:
     def test_a_retomada_refaz_o_transporte_e_o_retarget(
         self, bancada: Bancada
     ) -> None:
-        """A armadilha nomeada na sprint: uma 'estabilidade' que devolvesse o
-        posto sem refazer `_detect_transport` e o `retarget` deixaria o daemon
-        achando que o controle está no cabo quando ele voltou por rádio."""
+        """A armadilha nomeada na sprint: uma 'estabilidade' que devolvesse o"""
         bancada.sentar(UNIQ_A)
         bancada.sentar(UNIQ_B)
         bancada.tique_do_reconnect_loop()
         bancada.levantar(UNIQ_A)
         bancada.tique_do_reconnect_loop()
-        bancada.inst._transport = "usb"  # o que um atalho deixaria para trás
+        bancada.inst._transport = "usb"
 
         bancada.sentar(UNIQ_A)
         bancada.tique_do_reconnect_loop()

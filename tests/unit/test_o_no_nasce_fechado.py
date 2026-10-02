@@ -52,10 +52,6 @@ INSTALL_UDEV = RAIZ / "scripts" / "install_udev.sh"
 UID = 1000
 
 #: Os casamentos do DualSense FÍSICO — o standard (054c:0ce6) e, desde a
-#: STEAM-NO-FISICO-01 (24/09/2026), o Edge (054c:0df2), cada um pelo cabo e
-#: pelo rádio. São ESTES que a cura fecha. O 0df2 é também o PID do nosso vpad
-#: uhid, e a linha dele é separada pelo `DEVPATH` — ver
-#: `TestOEdgeFisicoFechaEOVpadNao`.
 CASAMENTOS_DO_FISICO = (
     'ATTRS{idProduct}=="0ce6"',
     'KERNELS=="0005:054C:0CE6.*"',
@@ -79,11 +75,6 @@ def linha_do_casamento(casamento: str) -> str:
     return achadas[0]
 
 
-# ---------------------------------------------------------------------------
-# 1. A REGRA UDEV — o nó nasce fechado, e antes do 73
-# ---------------------------------------------------------------------------
-
-
 class TestARegraFechaONo:
     @pytest.mark.parametrize("casamento", CASAMENTOS_DO_FISICO)
     def test_o_fisico_perde_a_tag_uaccess(self, casamento: str) -> None:
@@ -101,14 +92,8 @@ class TestARegraFechaONo:
 
     @pytest.mark.parametrize("casamento", CASAMENTOS_DO_FISICO)
     def test_o_fisico_nasce_0600_de_root(self, casamento: str) -> None:
-        """Tirar a TAG sem fechar o MODE deixaria o nó `0660 root:root`.
-
-        O grupo importa: `0660` com `GROUP="input"` (ou qualquer grupo em que
-        a usuária esteja) abriria o nó por outra porta, e a régua da TAG
-        passaria verde sobre um nó aberto.
-        """
+        """Tirar a TAG sem fechar o MODE deixaria o nó `0660 root:root`."""
         linha = linha_do_casamento(casamento)
-        # FINAIS desde 25/09/2026 (`:=`): uma regra posterior não os desfaz.
         assert 'MODE:="0600"' in linha, linha
         assert 'OWNER:="root"' in linha, linha
         assert 'GROUP:="root"' in linha, linha
@@ -123,31 +108,14 @@ class TestARegraFechaONo:
         linha = linha_do_casamento('KERNELS=="0003:054C:0DF2.*"')
         assert 'TAG+="uaccess"' in linha, linha
         assert 'MODE="0660"' in linha, linha
-        # STEAM-NO-FISICO-01: sem o DEVPATH, esta linha casaria também o Edge
-        # FÍSICO pelo cabo (`0003:054C:0DF2`) e o reabriria depois de fechado.
         assert 'DEVPATH=="/devices/virtual/misc/uhid/*"' in linha, linha
 
     def test_o_arquivo_corre_antes_do_73_seat_late(self) -> None:
-        """Quem transforma a TAG em ACL é o `73-seat-late.rules`.
-
-        Pôr este asset depois dele faria o `TAG-=` rodar DEPOIS de a ACL já
-        ter sido escrita — e aí ele não tira nada. O nome é parte da cura, não
-        organização de pasta.
-
-        CORREÇÃO DE FATO (25/09/2026): a régua era `int(numero) < 73`, e ela
-        mentia nos dois sentidos. O udev ordena pelo NOME, byte a byte: o
-        `73-hefesto-…` corre antes do `73-seat-late` (h < s) e a régua o
-        reprovaria; e o `70-ps5-controller.rules` passava nela enquanto a
-        `71-sony-controllers.rules` o desfazia na máquina dela.
-        """
+        """Quem transforma a TAG em ACL é o `73-seat-late.rules`."""
         assert REGRA.name.encode() < b"73-seat-late.rules", REGRA.name
 
     def test_o_comentario_carrega_a_decisao_e_a_volta(self) -> None:
-        """Regra udev sem o porquê é regra que a próxima pessoa apaga.
-
-        Três coisas, e as três foram pedidas: a decisão dela datada, a causa
-        (descritor já aberto não fecha com a ACL) e como reverter.
-        """
+        """Regra udev sem o porquê é regra que a próxima pessoa apaga."""
         texto = REGRA.read_text(encoding="utf-8")
         assert "20/09/2026" in texto
         assert "Hefesto tem que ter prioridade em tudo" in texto
@@ -156,18 +124,12 @@ class TestARegraFechaONo:
 
 
 class _Aparelho:
-    """Um hidraw como o udev o vê: o próprio nó e a corrente de pais.
-
-    `pais` é a lista (kernel, attrs) do nó para cima; o `KERNELS`/`ATTRS` de
-    uma regra casa em QUALQUER elo, mas todos os do mesmo tipo-pai de uma
-    linha têm de casar no MESMO elo — a regra do udev.
-    """
+    """Um hidraw como o udev o vê: o próprio nó e a corrente de pais."""
 
     def __init__(self, devpath: str, pais: list[tuple[str, dict[str, str]]]) -> None:
         self.devpath = devpath
         self.kernel = devpath.rsplit("/", 1)[-1]
         self.pais = [(self.kernel, {}), *pais]
-        # Como o `steam-devices` o deixa: um 60-* já pôs `uaccess` e 0660.
         self.mode = "0660"
         self.owner = "root"
         self.tags = {"uaccess"}
@@ -247,18 +209,7 @@ def _pelo_uhid(hid: str) -> _Aparelho:
 
 
 class TestOEdgeFisicoFechaEOVpadNao:
-    """STEAM-NO-FISICO-01, 24/09/2026 — o Edge físico nasce fechado, e o vpad não.
-
-    O Edge (0df2) ficou aberto em 20/09 porque o 0df2 é o PID do nosso vpad.
-    Aberto, ele era a mesma janela da Steam, e a vigia do sequestro varria o
-    `/proc` a cada 0,5 s para sempre por causa dele. O que separa os dois é a
-    TOPOLOGIA, e esta classe roda o asset linha a linha sobre os cinco
-    aparelhos, com a regra do udev de que os pais de uma linha casam no mesmo
-    elo.
-
-    A MORDIDA: tire o `DEVPATH` da linha do vpad e o Edge físico pelo cabo sai
-    daqui ABERTO — a linha do vpad casa o `0003:054C:0DF2` dele também.
-    """
+    """STEAM-NO-FISICO-01, 24/09/2026 — o Edge físico nasce fechado, e o vpad não."""
 
     @pytest.mark.parametrize(
         "aparelho",
@@ -283,19 +234,8 @@ class TestOEdgeFisicoFechaEOVpadNao:
         assert "uaccess" in feito.tags
 
 
-# ---------------------------------------------------------------------------
-# 2. O BROKER ABRE SOB PEDIDO
-# ---------------------------------------------------------------------------
-
-
 class OpsDeMentira:
-    """Dublê de fs que MODELA o estado do nó, em vez de só gravar chamadas.
-
-    Um dublê que sempre responde «exposto» é mais frouxo que o produto e
-    esconderia justamente o defeito que esta suíte procura: o `_fs_restore`
-    verifica com `is_exposed_to` antes de responder ok, e um `is_exposed_to`
-    constante faria um restore que não restaurou passar por restaurado.
-    """
+    """Dublê de fs que MODELA o estado do nó, em vez de só gravar chamadas."""
 
     def __init__(self, *, fechados: set[str] | None = None) -> None:
         self.chamadas: list[tuple[Any, ...]] = []
@@ -351,9 +291,7 @@ class TestOBrokerAbreSobPedido:
         assert "/dev/hidraw3" not in ops.fechados
 
     def test_unexpose_fecha_de_volta(self) -> None:
-        """A MORDIDA da lease: sem o `unexpose` fechar, sair do Modo Nativo
-        deixaria o nó aberto e a Steam voltaria a pegá-lo no próximo replug.
-        """
+        """A MORDIDA da lease: sem o `unexpose` fechar, sair do Modo Nativo"""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         resposta = pedir(st, 1, {"cmd": "unexpose", "node": "/dev/hidraw3"})
@@ -362,11 +300,7 @@ class TestOBrokerAbreSobPedido:
         assert "/dev/hidraw3" in ops.fechados
 
     def test_duas_leases_e_o_refcount(self) -> None:
-        """Dois pedidos, um `unexpose`: o nó SEGUE aberto.
-
-        É a mesma aritmética do `hide`, e pela mesma razão: quem soltou não é
-        dono do nó, é dono do PEDIDO dele.
-        """
+        """Dois pedidos, um `unexpose`: o nó SEGUE aberto."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         pedir(st, 2, {"cmd": "expose", "node": "/dev/hidraw3"})
@@ -376,11 +310,7 @@ class TestOBrokerAbreSobPedido:
         assert "/dev/hidraw3" in ops.fechados
 
     def test_eof_da_lease_fecha_o_que_ela_expos(self) -> None:
-        """O daemon morreu no Modo Nativo: o físico não pode ficar aberto.
-
-        Sem isto, um crash no meio da partida deixaria o nó exposto até o
-        próximo boot — e a Steam o pegaria na reconexão seguinte.
-        """
+        """O daemon morreu no Modo Nativo: o físico não pode ficar aberto."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         assert "/dev/hidraw3" not in ops.fechados
@@ -389,23 +319,14 @@ class TestOBrokerAbreSobPedido:
         assert st.expostos == {}
 
     def test_expose_recusa_o_que_nao_e_dualsense_fisico(self) -> None:
-        """Abrir sob pedido não pode virar «abra qualquer hidraw».
-
-        O `expose` é uma primitiva de ROOT que solta permissão: sem o
-        validador, um cliente do mesmo uid pediria a ACL de um teclado BT.
-        """
+        """Abrir sob pedido não pode virar «abra qualquer hidraw»."""
         st, _ = estado(no_nasce_fechado=True)
         resposta = pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw9"})
         assert resposta["ok"] is False
         assert resposta["error"] == "reject_not_physical_dualsense"
 
     def test_o_hide_cede_a_lease_de_exposicao(self) -> None:
-        """«O Hefesto tem que ter prioridade em tudo» — e a ordem interna também.
-
-        Um pedido EXPLÍCITO de exposição (o Modo Nativo) vence um hide
-        implícito que chegue fora de ordem. A lease do hide fica registrada,
-        para que o último `unexpose` encontre o nó e o feche.
-        """
+        """«O Hefesto tem que ter prioridade em tudo» — e a ordem interna também."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         resposta = pedir(st, 2, {"cmd": "hide", "node": "/dev/hidraw3"})
@@ -423,33 +344,16 @@ class TestOBrokerAbreSobPedido:
         assert resposta["no_nasce_fechado"] is True
 
 
-# ---------------------------------------------------------------------------
-# 3. O REPOUSO — o restore deixa de ABRIR o que a regra fechou
-# ---------------------------------------------------------------------------
-
-
 class TestORepousoSegueARegra:
     def test_restore_de_no_nao_rastreado_fecha_com_a_cura(self) -> None:
-        """A MORDIDA mais fina da leva, e ela pega a cura pela metade.
-
-        O `restore` do ungrab (`gamepad.py::_broker_sync_grab`) chega aqui
-        pelo ramo «não rastreado». Com o nó nascendo fechado, ABRIR aqui
-        recriaria exatamente a janela que a Steam usa — e o faria por
-        ACIDENTE, não por desenho. Troque `_repouso` de volta por
-        `_fs_restore` no produto e este teste reprova.
-        """
+        """A MORDIDA mais fina da leva, e ela pega a cura pela metade."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         resposta = pedir(st, 1, {"cmd": "restore", "node": "/dev/hidraw3"})
         assert resposta["state"] == "fechado"
         assert "/dev/hidraw3" in ops.fechados
 
     def test_sem_a_cura_o_restore_continua_abrindo(self) -> None:
-        """A máquina SEM a regra instalada não pode mudar de comportamento.
-
-        É o outro lado da mordida: a cura não pode vazar para quem não a
-        instalou (`--no-fechar-o-no`, ou um install antigo). Ali o repouso
-        do nó é ABERTO, e o `restore` de sempre é o certo.
-        """
+        """A máquina SEM a regra instalada não pode mudar de comportamento."""
         st, ops = estado(no_nasce_fechado=False, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         resposta = pedir(st, 1, {"cmd": "restore", "node": "/dev/hidraw3"})
         assert resposta["state"] == "exposed"
@@ -464,12 +368,7 @@ class TestORepousoSegueARegra:
         assert "/dev/hidraw3" not in ops.fechados
 
     def test_o_desligamento_do_broker_abre_mesmo_com_a_cura(self) -> None:
-        """O piso de recuperação, e é a única exceção ao repouso.
-
-        Broker fora do ar é broker que deixou de ser a porta: um nó `0600`
-        sem porta só volta com sudo, e isto é um app de acessibilidade. O
-        `ExecStartPre` re-fecha no próximo start.
-        """
+        """O piso de recuperação, e é a única exceção ao repouso."""
         st, ops = estado(no_nasce_fechado=True)
         pedir(st, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
         assert "/dev/hidraw3" in ops.fechados
@@ -477,19 +376,13 @@ class TestORepousoSegueARegra:
         assert "/dev/hidraw3" not in ops.fechados
 
     def test_fechar_todo_fisico_e_o_espelho_do_restore_all(self) -> None:
-        """O baseline do start com a cura: fecha o que a udev não alcançou.
-
-        O controle que JÁ estava conectado quando a cura foi instalada não
-        passou pela regra nova. Sem esta varredura ele ficaria aberto até o
-        replug — e o `--restore-all-and-exit` que morava no ExecStartPre
-        ABRIRIA os outros junto, desfazendo a cura a cada restart.
-        """
+        """O baseline do start com a cura: fecha o que a udev não alcançou."""
         ops = OpsDeMentira()
         fechados = fechar_todo_fisico(
             uid=UID,
             ops=ops,
             dev_root="/dev",
-            sys_class_hidraw=str(RAIZ),  # listdir de uma pasta qualquer
+            sys_class_hidraw=str(RAIZ),
             validator=lambda no: "hidraw3" if no.endswith("assets") else None,
             log=lambda *a, **k: None,
         )
@@ -497,22 +390,9 @@ class TestORepousoSegueARegra:
         assert ("hide", "/dev/assets", "assets") in ops.chamadas
 
 
-# ---------------------------------------------------------------------------
-# 4. QUEM SÓ SABE `open(path)` — o hidapi e o Modo Nativo
-# ---------------------------------------------------------------------------
-
-
 class TestQuemAbrePorCaminhoPede:
     def test_open_one_abre_dentro_da_exposicao(self) -> None:
-        """O ÚNICO bloqueador real da cura, e ele é nosso.
-
-        `hidapi.Device(path=…)` não aceita fd, e reabrir por `/proc/self/fd/N`
-        refaz a checagem de permissão no inode. Com o nó `0600 root` o handle
-        de controle do daemon — barra, rumble, gatilhos, mic, bateria — volta
-        `EACCES` para TODOS os controles. A ORDEM é o que o teste crava:
-        expor, abrir, desexpor. Arranque o `with` do `_open_one` e a ordem
-        vira só «abrir», o que reprova aqui.
-        """
+        """O ÚNICO bloqueador real da cura, e ele é nosso."""
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
         ordem: list[str] = []
@@ -548,9 +428,7 @@ class TestQuemAbrePorCaminhoPede:
         assert ctl._open_one(b"/dev/hidraw3", is_edge=False) == "handle"
 
     def test_open_one_desexpoe_mesmo_com_erro(self) -> None:
-        """Exposição que vaza é a janela que a Steam usa — e ela vazaria no
-        caminho de erro, que é onde ninguém olha.
-        """
+        """Exposição que vaza é a janela que a Steam usa — e ela vazaria no"""
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
         ordem: list[str] = []
@@ -593,13 +471,7 @@ class TestQuemAbrePorCaminhoPede:
 
 class TestOModoNativoPede:
     def test_ligar_e_desligar_pedem_expose_e_unexpose(self) -> None:
-        """Até 20/09 a exposição no nativo vinha DE CARONA, pelo ungrab.
-
-        Funcionava por acidente. Com o nó nascendo fechado aquele ramo passa a
-        FECHAR — e é este pedido explícito que o substitui. Sem ele, o jogo
-        no Modo Nativo encontra a porta trancada, que é o «zero controles»
-        que esta casa já relatou ao vivo.
-        """
+        """Até 20/09 a exposição no nativo vinha DE CARONA, pelo ungrab."""
         from hefesto_dualsense4unix.daemon import lifecycle as mod
 
         atos: list[tuple[str, str]] = []
@@ -641,42 +513,26 @@ class TestOModoNativoPede:
         ]
 
 
-# ---------------------------------------------------------------------------
-# 5. NO INSTALL, POR DEFAULT — ordem dela, literal
-# ---------------------------------------------------------------------------
-
-
 class TestNoInstallPorDefault:
     def test_a_unit_declara_o_env_da_cura(self) -> None:
-        """As duas metades têm de concordar: a udev decide o NASCIMENTO do nó,
-        e o broker precisa saber qual é o REPOUSO para onde devolve o nó.
-        """
+        """As duas metades têm de concordar: a udev decide o NASCIMENTO do nó,"""
         texto = UNIT.read_text(encoding="utf-8")
         assert f"Environment={NO_NASCE_FECHADO_ENV}=__NO_NASCE_FECHADO__" in texto
 
     def test_o_start_fecha_e_o_stop_abre(self) -> None:
-        """Os dois lados são ASSIMÉTRICOS de propósito — ver a nota datada em
-        `test_hidraw_broker_assets.py`.
-        """
+        """Os dois lados são ASSIMÉTRICOS de propósito — ver a nota datada em"""
         texto = UNIT.read_text(encoding="utf-8")
         assert re.search(r"^ExecStartPre=.*--fechar-tudo-e-sair$", texto, re.MULTILINE)
         assert re.search(r"^ExecStopPost=.*--restore-all-and-exit$", texto, re.MULTILINE)
 
     def test_o_install_nasce_com_a_cura_ligada(self) -> None:
-        """A MORDIDA da ordem dela: «no install por default».
-
-        Troque o `ABRIR_O_NO=0` por `=1` e isto reprova. Um default invertido
-        faria toda máquina nova nascer com a janela aberta, em silêncio — que
-        é exatamente o estado que a decisão de 20/09 veio encerrar.
-        """
+        """A MORDIDA da ordem dela: «no install por default»."""
         texto = INSTALL.read_text(encoding="utf-8")
         assert re.search(r"^ABRIR_O_NO=0$", texto, re.MULTILINE)
         assert re.search(r"^\s*--no-fechar-o-no\)\s+ABRIR_O_NO=1 ;;$", texto, re.MULTILINE)
 
     def test_o_render_do_broker_default_e_fechado(self) -> None:
-        """Sem o default 1 aqui, a metade de cima da cura (a udev) ficaria sem
-        a de baixo (o broker): nó fechado que ninguém abre.
-        """
+        """Sem o default 1 aqui, a metade de cima da cura (a udev) ficaria sem"""
         texto = CAMADA.read_text(encoding="utf-8")
         assert 'local fechado="${6:-1}"' in texto
         assert "__NO_NASCE_FECHADO__" in texto
@@ -687,18 +543,7 @@ class TestNoInstallPorDefault:
         assert "_udev_args+=(--no-fechar-o-no)" in CAMADA.read_text(encoding="utf-8")
 
     def test_set_native_mode_chama_as_duas_pontas_na_ordem_certa(self) -> None:
-        """A régua do CALL SITE, e a ordem é parte da cura.
-
-        Ligar: o pedido de exposição vai ANTES do release, porque o release
-        desce até o `restore` do ungrab — e com o nó nascendo fechado esse
-        caminho FECHA. Pedir depois seria abrir, fechar, e deixar o jogo
-        achar a porta trancada.
-
-        Desligar: solta DEPOIS de o grab voltar, para não abrir uma fresta
-        entre o nó fechar e o daemon reassumir.
-
-        Roda o método REAL do `lifecycle.Daemon`; só a borda é dublê.
-        """
+        """A régua do CALL SITE, e a ordem é parte da cura."""
         from types import SimpleNamespace
 
         from hefesto_dualsense4unix.daemon import lifecycle as mod

@@ -1,23 +1,8 @@
-"""Merge do cmdline de kernel (PLAT-03 item 2) — o núcleo delicado.
-
-ARMADILHA PROVADA (estudo 2026-07-18-estudo-kernel-hardening.md §1): o kernel
-respeita SÓ UM token ``usbcore.quirks=`` no cmdline. Estes testes travam:
-
-- máquina VIRGEM → plano adiciona os 2 params, dono "hefesto";
-- máquina com Aurora (cmdline REAL do estudo) → plano é no-op, dono "terceiro";
-- token de terceiro sem os nossos IDs → MERGE num token único ("compartilhado"),
-  NUNCA um segundo token;
-- caso patológico (2 tokens já no cmdline) → fundidos num só;
-- flags mortas (``:k``) não sobrevivem nem são reintroduzidas;
-- uninstall (strip) remove SÓ as entradas nossas, re-fundindo o resto.
-
-Tudo com cmdline SINTÉTICO — nada de kernelstub/sistema real.
-"""
+"""Merge do cmdline de kernel (PLAT-03 item 2) — o núcleo delicado."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
 
-# O cmdline REAL da máquina de referência (estudo §1) — Aurora já provê tudo.
 CMDLINE_AURORA = (
     "initrd=\\EFI\\Pop_OS\\initrd.img root=UUID=7c6a1403 ro "
     "systemd.show_status=false loglevel=0 mitigations=off nvidia-drm.modeset=1 "
@@ -78,7 +63,6 @@ class TestMergeTokenUnico:
         assert quirks.op == kc.OP_REPLACE
         assert quirks.owner == kc.OWNER_COMPARTILHADO
         assert quirks.remove_tokens == ("usbcore.quirks=0bda:8153:k",)
-        # Entrada do terceiro preservada NA FRENTE; as nossas apensadas.
         assert quirks.token == "usbcore.quirks=0bda:8153:k,054c:0ce6:gn,054c:0df2:gn"
 
     def test_nunca_dois_tokens_no_resultado(self) -> None:
@@ -87,7 +71,7 @@ class TestMergeTokenUnico:
             CMDLINE_AURORA,
             "usbcore.quirks=0bda:8153:k",
             "usbcore.quirks=054c:0ce6:gn",
-            "usbcore.quirks=a:b:c usbcore.quirks=d:e:f",  # patológico
+            "usbcore.quirks=a:b:c usbcore.quirks=d:e:f",
         ]
         for cmdline in cenarios:
             tokens = kc.parse_cmdline(cmdline)
@@ -153,23 +137,13 @@ class TestUninstallStrip:
         assert restante is None
 
     def test_strip_nao_toca_entrada_alterada_por_terceiro(self) -> None:
-        # Alguém mudou as flags depois de nós — a entrada não é mais nossa.
         restante, mudou = kc.strip_quirks_token("usbcore.quirks=054c:0ce6:xyz")
         assert not mudou
         assert restante == "usbcore.quirks=054c:0ce6:xyz"
 
 
 class TestRegistroDeDono:
-    """PODA de 26/08/2026: quem monta o registro é o SHELL, e é ele que se mede.
-
-    Até aqui estas duas medidas passavam por `kc.ownership_record`, uma função
-    Python que montava `{"cmdline.<param>": "<dono>"}` e que NENHUM caminho de
-    produção chamava. O registro é gravado — só que pelo caminho vivo: o heredoc
-    do passo `3e` do `install.sh` imprime o `a.owner` de cada ação do plano, e o
-    shell o repassa a `_register_cmdline_owner cmdline.<param> <dono>`. As
-    medidas continuam sendo as mesmas duas, agora sobre o que o heredoc lê de
-    verdade: `a.param` e `a.owner` de cada `CmdlineAction`.
-    """
+    """PODA de 26/08/2026: quem monta o registro é o SHELL, e é ele que se mede."""
 
     @staticmethod
     def _registro(cmdline: str) -> dict[str, str]:

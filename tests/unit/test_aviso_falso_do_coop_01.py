@@ -1,33 +1,4 @@
-"""AVISO-FALSO-DO-COOP-01 (09/08/2026) — o aviso fala de CONTROLE, não de vpad.
-
-O defeito, na tela dela: *"1 jogador saiu — não foi você; volta sozinho"* em
-vermelho no topo da janela, com os **dois controles dela listados logo abaixo,
-conectados**. É o defeito nº 3 da fila
-(`docs/process/sprints/2026-08-08-OITO-DEFEITOS-01-*.md`, §2.3) e o desenho
-aprovado está em `2026-08-08-AGORA-E-DEPOIS-01-*.md`, §5.
-
-A causa, medida: o número vinha de **gamepads virtuais recolhidos**. A caixinha
-de Steam Input do jogo suspende os vpads a cada entrada em sessão, e cada
-reinício do daemon repete a suspensão — o journal dela registrou
-``coop_derrubado_pela_excecao_steam_input`` **20 vezes** num dia. Nenhuma delas
-foi um controle saindo da mesa.
-
-A regra nova, em uma linha: **o produto fala do que ela vê** — enquanto todo
-controle que estava sentado continuar conectado, o número publicado é 0 e a
-janela cala; quando um controle DELA cair de verdade, o número sobe e o aviso
-aparece.
-
-**As duas metades são obrigatórias, e este arquivo trava as duas.** Silenciar o
-aviso sem a segunda seria trocar um defeito por outro pior — o caso em que um
-controle cai de verdade no meio da partida e ninguém avisa.
-
-Sem GTK aqui, de propósito e por duas razões: o mapeamento número → texto do
-banner já está travado em `test_coop_derrubado_aparece_no_banner.py`
-(``derrubado_por_steam_input=False`` ⇒ frase vazia), e importar
-`status_actions` arrastaria a aba inteira para dentro de uma checagem que é do
-daemon. O que este arquivo prova é o DADO que a janela lê — se o dado diz a
-verdade, o texto conserta sozinho.
-"""
+"""AVISO-FALSO-DO-COOP-01 (09/08/2026) — o aviso fala de CONTROLE, não de vpad."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -57,19 +28,12 @@ from tests.unit.test_coop_nao_cai_em_silencio import (
     sem_disco_nem_broker,  # noqa: F401
 )
 
-#: Os MACs dos secundários que o `_CoopDublado` cria, na ordem. Máscara da casa
-#: (octetos 4 e 5 zerados) — há portão que reprova MAC real em arquivo
-#: versionado.
 P2 = "aa:bb:cc:00:00:00"
 P3 = "aa:bb:cc:00:00:01"
 
 
 class _WatchDublado:
-    """O detector barato de mudança em /dev/input, com a resposta na mão.
-
-    True = "o conjunto de nodes mudou" — o único gatilho que autoriza a
-    enumeração cara (PERF-MULTI-CONTROLLER-01).
-    """
+    """O detector barato de mudança em /dev/input, com a resposta na mão."""
 
     def __init__(self, mudou: bool) -> None:
         self.mudou = mudou
@@ -91,11 +55,6 @@ def _daemon_suspenso(sentados: tuple[str, ...]) -> Any:
     )
 
 
-# ---------------------------------------------------------------------------
-# A regra, pura — os dois lados no mesmo lugar
-# ---------------------------------------------------------------------------
-
-
 class TestARegraDaMesa:
     def test_com_todos_os_controles_conectados_o_numero_e_zero(self) -> None:
         """LADO A: vpad recolhido não é ninguém saindo da mesa."""
@@ -107,31 +66,20 @@ class TestARegraDaMesa:
         assert secundarios_fora_da_mesa((P2, P3), set()) == 2
 
     def test_identidade_por_path_nunca_acusa_queda(self) -> None:
-        """Node evdev é volátil por construção: uma re-enumeração troca
-        ``eventN`` sem ninguém sair da mesa. Acusar a partir dele seria o mesmo
-        aviso falso com outra roupa."""
+        """Node evdev é volátil por construção: uma re-enumeração troca"""
         assert secundarios_fora_da_mesa(("path:/dev/input/event9",), set()) == 0
-
-
-# ---------------------------------------------------------------------------
-# LADO A — a suspensão de Steam Input não acende mais o aviso
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("sem_disco_nem_broker")
 class TestOLadoQueCala:
     async def test_suspender_os_vpads_nao_acende_o_aviso(self) -> None:
-        """A MORDIDA. Com a cura arrancada (o `_steam_input_coop_derrubados`
-        voltando a receber a contagem de vpads), esta linha vira 2 — que é
-        exatamente o aviso vermelho que ela fotografou, com os dois controles
-        conectados na tela."""
+        """A MORDIDA. Com a cura arrancada (o `_steam_input_coop_derrubados`"""
         daemon = _DaemonDublado(secundarios=2)
 
         assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
         await _encerrar_vigia(daemon)
 
         assert gp.steam_input_coop_derrubados(daemon) == 0
-        # E a mesa fica registrada: é contra ela que o tique vai perguntar.
         assert gp.coop_sentados_na_suspensao(daemon) == (P2, P3)
 
     async def test_o_tique_com_os_controles_na_mesa_mantem_o_silencio(self) -> None:
@@ -144,13 +92,7 @@ class TestOLadoQueCala:
         assert gp.steam_input_coop_derrubados(daemon) == 0
 
     async def test_o_journal_continua_contando_os_vpads_recolhidos(self) -> None:
-        """A cura cala a JANELA, não o diagnóstico.
-
-        O número de vpads recolhidos é o fato de engenharia — foi ele que
-        deixou medir este defeito (20 ocorrências num dia). Se alguém "curar"
-        zerando o journal junto, a próxima medição fica cega e este teste
-        reprova.
-        """
+        """A cura cala a JANELA, não o diagnóstico."""
         daemon = _DaemonDublado(secundarios=2)
 
         with structlog.testing.capture_logs() as registros:
@@ -166,11 +108,6 @@ class TestOLadoQueCala:
         assert queda["log_level"] == "warning"
         assert "gamepad.steam_input.coop_derrubado" in daemon.store.contadores
         assert gp.steam_input_coop_derrubados(daemon) == 0
-
-
-# ---------------------------------------------------------------------------
-# LADO B — o CONTRAPESO: um controle DELA cai, e o aviso aparece
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("sem_disco_nem_broker")
@@ -202,14 +139,7 @@ class TestOLadoQueFala:
     def test_o_tique_do_coop_e_quem_mede_no_produto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA do CONTRAPESO no caminho real.
-
-        Enquanto os vpads estão suspensos o co-op fica INATIVO
-        (`should_be_active()` é False sem `_gamepad_device`) e o `sync()`
-        retornava ali mesmo. Sem o gancho `_reavaliar_a_mesa_suspensa` o número
-        fica congelado em 0 para sempre e um controle que caia no meio da
-        partida NUNCA acende o aviso — o defeito pior.
-        """
+        """A MORDIDA do CONTRAPESO no caminho real."""
         daemon = _daemon_suspenso((P2, P3))
         manager = CoopManager(daemon)
         manager._watch = _WatchDublado(True)  # type: ignore[assignment]
@@ -224,9 +154,7 @@ class TestOLadoQueFala:
     def test_sem_mudanca_em_dev_input_o_tique_nao_paga_a_enumeracao(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """PERF-MULTI-CONTROLLER-01 continua de pé: a enumeração cara
-        (~10-40ms) só roda quando o `listdir` acusou mudança, e o co-op é
-        chamado a cada ~2s no event loop."""
+        """PERF-MULTI-CONTROLLER-01 continua de pé: a enumeração cara"""
         daemon = _daemon_suspenso((P2, P3))
         manager = CoopManager(daemon)
         manager._watch = _WatchDublado(False)  # type: ignore[assignment]
@@ -253,9 +181,7 @@ class TestOLadoQueFala:
         assert manager._watch.consultas == 0  # type: ignore[attr-defined]
 
 
-# ---------------------------------------------------------------------------
 # O contrato que a JANELA lê — os dois lados no `state_full`
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("config_em_tmp")
@@ -281,17 +207,10 @@ class TestOStateFullDizAVerdade:
         assert cheio["coop"]["secundarios_derrubados"] == 1
 
 
-# ---------------------------------------------------------------------------
-# A saída da suspensão apaga a mesa junto com o número
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.usefixtures("sem_disco_nem_broker")
 class TestASaidaLimpaAMesa:
     async def test_sair_da_excecao_apaga_a_lista_dos_sentados(self) -> None:
-        """Deixar a lista de pé faria o tique reabrir a conta de uma suspensão
-        encerrada — o aviso ressuscitaria sozinho, e a janela lamentaria um
-        estrago que já acabou."""
+        """Deixar a lista de pé faria o tique reabrir a conta de uma suspensão"""
         daemon = _DaemonDublado(secundarios=2)
         assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
         await _encerrar_vigia(daemon)

@@ -223,7 +223,7 @@ Por rádio o **único** discriminador entre o Pro genuíno e o clone é a OUI.
 > escritores.
 
 A regra vive em `core/linhagem_nintendo.py`; `NINTENDO_REAL_OUI`
-(`daemon/subsystems/external_identity.py:213`) e `scripts/bt_active_mode.sh` a
+(`daemon/subsystems/external_identity.py:210`) e `scripts/bt_active_mode.sh` a
 consomem, junto de `assets/82-nintendo-pro-nosniff.rules`; e a
 `assets/84-nintendo-pro-variant.rules`, que usa o `bcdDevice`, é escopada só ao
 cabo. GRAU: ALTA.
@@ -355,7 +355,7 @@ GRAU: ALTA (`:883-911`) + MEDIDO AQUI (o parâmetro).
 `joycon_enable_imu()` (subcomando `0x40`, `data[0] = 0x01`) é chamado dentro do
 `joycon_init` sob `if (joycon_has_imu(ctlr))`, **sem nenhum porteiro de bus**
 (`:1569-1580`, chamada em `:2937`). O pacote que ele monta é **byte a byte** o
-mesmo que o `build_enable_imu_packet` (`core/external_leds.py:155`) monta.
+mesmo que o `build_enable_imu_packet` (`core/external_leds.py:147`) monta.
 GRAU: ALTA.
 
 **As escalas, e elas NÃO são as do DualSense:**
@@ -1118,8 +1118,8 @@ linha de grau baixo, isso é dívida e tem de estar à vista.**
 
 | caminho | escreve o quê | onde | estado |
 |---|---|---|---|
-| `apply_player_number` (`core/external_leds.py:314`) | número do jogador, lâmpada por lâmpada | `sysfs` | **DESLIGADO** desde 07/08 02:59 |
-| `enable_imu` (`core/external_leds.py:155`) | pacote cru de 12 bytes | `hidraw` | vivo, **só por USB** |
+| `apply_player_number` (`core/external_leds.py:306`) | número do jogador, lâmpada por lâmpada | `sysfs` | **DESLIGADO** desde 07/08 02:59 |
+| `enable_imu` (`core/external_leds.py:147`) | pacote cru de 12 bytes | `hidraw` | vivo, **só por USB** |
 
 ### 7.2 O que o produto apoia, e em que grau
 

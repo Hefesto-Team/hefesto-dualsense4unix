@@ -44,9 +44,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
-# ------------------------------------------------------------------ o daemon
-
-
 class _Bancada:
     def __init__(self, sub: Any, ancoras: list[Any]) -> None:
         self.sub = sub
@@ -97,13 +94,7 @@ def _avisos(registros: list[dict[str, Any]], evento: str) -> list[dict[str, Any]
 
 
 def test_faltando_ancora_o_daemon_diz_quantos(bancada: _Bancada) -> None:
-    """Uma âncora para os três aparelhos da mesa: dois sem âncora.
-
-    Desde 02/10/2026 a conta é por APARELHO (A-HAPTICA-E-POR-APARELHO-01; de
-    28/09 a 02/10 era contra os quatro lugares).
-
-    A MORDIDA: arranque o aviso e o `continue` volta a ser mudo.
-    """
+    """Uma âncora para os três aparelhos da mesa: dois sem âncora."""
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
     with structlog.testing.capture_logs() as registros:
@@ -154,9 +145,6 @@ def test_ancoras_de_sobra_nao_avisam_nada(bancada: _Bancada) -> None:
     assert not _avisos(registros, "haptica_ancoras_bastam")
 
 
-# ------------------------------------------------------------------ o doctor
-
-
 def _sysfs(raiz: Path, *, no_radio: int, ancoras: int, no_cabo: int = 0) -> Path:
     """`/sys` de mentira: DualSense por BT em `class/hidraw`, âncoras em `bus/usb`.
 
@@ -197,8 +185,6 @@ def _sysfs(raiz: Path, *, no_radio: int, ancoras: int, no_cabo: int = 0) -> Path
         (d / f"{nome}:1.0" / "uevent").write_text("DEVTYPE=usb_interface\n", encoding="utf-8")
         (d / "busnum").write_text("3\n", encoding="utf-8")
         (d / "devnum").write_text(f"{i + 2}\n", encoding="utf-8")
-    # Um aparelho COM placa de som não é âncora (o ContainerId dele já é de um
-    # endpoint de verdade): tem de ficar de fora da conta.
     com_som = usb / "3-9"
     (com_som / "3-9:1.0" / "sound" / "card3").mkdir(parents=True)
     (com_som / "3-9:1.0" / "uevent").write_text("DEVTYPE=usb_interface\n", encoding="utf-8")

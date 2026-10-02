@@ -1,19 +1,4 @@
-"""JOGO-QUE-SE-DIZ-01 — a lista dos jogos que JÁ estão nesta máquina.
-
-Pedido dela, 13/08/2026: *"ou ele pré-apresenta os nomes dos jogos em .desktop
-localmente instalados no pc, dessa forma ao digitar o nome do jogo ele
-apareceria ali."*
-
-**A biblioteca aqui é de MENTIRA, montada em `tmp_path`.** Ler a dela num teste
-faria o resultado depender do que ela instalou hoje — e o portão de dados de
-teste desta casa proíbe caminho pessoal em teste. Os nomes usados são
-inventados de propósito.
-
-A mordida está escrita no fim do arquivo: arrancar a leitura do `.acf` (o
-`glob("appmanifest_*.acf")` de `jogos_da_biblioteca_steam`) faz
-`test_a_lista_nasce_da_biblioteca_steam` reprovar dizendo que a lista veio
-VAZIA, e leva junto o teste da fiação da janela.
-"""
+"""JOGO-QUE-SE-DIZ-01 — a lista dos jogos que JÁ estão nesta máquina."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -34,14 +19,12 @@ from hefesto_dualsense4unix.integrations.jogos_locais import (
     nomes_por_appid,
 )
 
-#: Os jogos da biblioteca falsa: (appid, nome). Nomes inventados.
 JOGOS_FALSOS: list[tuple[str, str]] = [
     ("851100", "Mar de Estrelas"),
     ("1599660", "Saco de Aventura™: O Retorno"),
     ("2111190", "Café Cósmico"),
 ]
 
-#: O que a Steam instala como se fosse jogo, e a lista dela não pode mostrar.
 FERRAMENTAS_FALSAS: list[tuple[str, str]] = [
     ("1493710", "Proton Experimental"),
     ("2180100", "Proton Hotfix"),
@@ -50,7 +33,6 @@ FERRAMENTAS_FALSAS: list[tuple[str, str]] = [
     ("228980", "Steamworks Common Redistributables"),
 ]
 
-#: O jogo que só existe como atalho `.desktop` — o caso que a fonte 2 cobre.
 SO_NO_ATALHO = ("321000", "Jogo Sem Manifesto")
 
 
@@ -91,12 +73,7 @@ def _escrever_desktop(pasta: Path, arquivo: str, nome: str, appid: str) -> None:
 
 @pytest.fixture
 def casa_de_mentira(tmp_path: Path) -> Path:
-    """Uma máquina inteira de mentira: duas bibliotecas Steam e uma de atalhos.
-
-    A segunda biblioteca entra pelo `libraryfolders.vdf`, que é como a Steam
-    registra disco extra — sem ela o teste não cobriria o caminho que na
-    máquina dela guarda um jogo de 150 GB.
-    """
+    """Uma máquina inteira de mentira: duas bibliotecas Steam e uma de atalhos."""
     principal = tmp_path / ".steam" / "steam" / "steamapps"
     extra = tmp_path / "OutroDisco" / "SteamLibrary" / "steamapps"
     for appid, nome in JOGOS_FALSOS[:2]:
@@ -127,10 +104,7 @@ def atalhos_de_mentira(tmp_path: Path) -> Path:
     pasta = tmp_path / "atalhos"
     appid_orfao, nome_orfao = SO_NO_ATALHO
     _escrever_desktop(pasta, "jogo-sem-manifesto.desktop", nome_orfao, appid_orfao)
-    # O atalho de um jogo que TAMBÉM está na biblioteca, com o nome cortado —
-    # medido na máquina dela: `Name=ORPHEUS` para `ORPHEUS: TO HELL AND BACK`.
     _escrever_desktop(pasta, "cafe.desktop", "Café", "2111190")
-    # Um atalho que o menu não mostra não entra na lista dela.
     (pasta / "escondido.desktop").write_text(
         "[Desktop Entry]\nType=Application\nName=Escondido\n"
         "Exec=steam steam://rungameid/999999\nNoDisplay=true\n",
@@ -169,11 +143,7 @@ class TestABibliotecaDeMentira:
     def test_a_mesma_biblioteca_listada_duas_vezes_nao_duplica(
         self, casa_de_mentira: Path
     ) -> None:
-        """O `libraryfolders.vdf` desta casa aponta para a pasta padrão.
-
-        É o caso REAL da máquina dela (`~/.steam/steam` -> `debian-installation`):
-        sem resolver o caminho, a mesma biblioteca é varrida duas vezes.
-        """
+        """O `libraryfolders.vdf` desta casa aponta para a pasta padrão."""
         jogos = jogos_da_biblioteca_steam(home=casa_de_mentira)
         appids = [j.appid for j in jogos]
         assert len(appids) == len(set(appids))
@@ -209,9 +179,7 @@ class TestOCatalogoInteiro:
             home=casa_de_mentira, pastas_de_atalhos=[atalhos_de_mentira]
         )
         por_id = {j.appid: j for j in catalogo}
-        # O que só existe como atalho entra.
         assert por_id["321000"].nome == "Jogo Sem Manifesto"
-        # O que existe nos dois fica com o nome COMPLETO, o do manifest.
         assert por_id["2111190"].nome == "Café Cósmico"
         assert por_id["2111190"].fonte == "steam"
 

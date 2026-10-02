@@ -1,39 +1,8 @@
-"""O portão de redação da aba Configurações — sobre a aba MONTADA, não o XML.
-
-`scripts/validar-palavra-de-tela.py` é o portão de redação desta casa, e ele
-varre um arquivo só: o `main.glade` (`:60`, e o docstring declara o alcance
-estreito de propósito). Isso bastou enquanto todo texto de tela morava no XML.
-
-A aba Configurações não mora no XML. Ela é montada em código, um módulo por
-seção, e a decisão é anterior a este arquivo: o Glade reserva só o container.
-Consequência medida em 22/08/2026, com o andaime pronto e as seções ainda
-vazias: **cem por cento do texto desta aba nasceria fora do alcance do portão
-de redação** — cinco seções, mais de cem rótulos, nenhum conferido.
-
-Portão que não alcança o texto novo é portão que envelhece sozinho. Este
-arquivo é o alcance que faltava: monta a aba de verdade, anda a árvore de
-widgets e aplica as MESMAS regras do validador — as do módulo, importadas dele,
-nunca copiadas. Copiar as regras criaria duas listas de jargão que divergem na
-primeira edição, que é o defeito que a casa já pagou.
-
-O QUE ELE COBRA
-
-1. **Maiúscula inicial** em todo rótulo, opção e título — inclusive dentro de
-   botão segmentado, que era onde a inconsistência morava.
-2. **Jargão banido** — a lista viva de `validar-palavra-de-tela.py`, que
-   recusa "daemon", "uinput" e companhia.
-3. **Acentuação** — texto de tela em português do Brasil, escrito certo.
-
-A MORDIDA (verificada em 22/08/2026): pus `TITULO = "orçamento"` em
-`secao_orcamento.py` e o primeiro teste reprovou pela minúscula; troquei a dica
-da mesa por uma frase com "daemon" e o segundo reprovou pelo jargão.
-"""
+"""O portão de redação da aba Configurações — sobre a aba MONTADA, não o XML."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi`, como no portão
-# irmão. "Pulei porque não tenho GTK" é reprovação no job `gtk-real`.
 exigir_gi_real("palavra de tela da aba configurações")
 
 import importlib.util
@@ -63,12 +32,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 
 def _validador() -> Any:
-    """O `validar-palavra-de-tela.py` importado como módulo.
-
-    Ele mora em `scripts/` e tem hífen no nome, então não é importável pelo
-    caminho normal. A alternativa — copiar `JARGAO_BANIDO` para cá — criaria
-    duas listas de jargão para divergirem na primeira edição.
-    """
+    """O `validar-palavra-de-tela.py` importado como módulo."""
     caminho = RAIZ / "scripts" / "validar-palavra-de-tela.py"
     spec = importlib.util.spec_from_file_location("_validador_de_tela", caminho)
     assert spec is not None and spec.loader is not None
@@ -104,11 +68,7 @@ def _aba_montada() -> Any:
 
 
 def _textos_da_arvore(raiz: Any) -> list[tuple[str, str]]:
-    """Todo texto visível da árvore, como `(origem, texto)`.
-
-    Origem é o nome do tipo do widget mais o papel do texto (rótulo, dica),
-    para a mensagem de falha dizer ONDE consertar sem obrigar a caçar.
-    """
+    """Todo texto visível da árvore, como `(origem, texto)`."""
     achados: list[tuple[str, str]] = []
     pilha = [raiz]
     while pilha:
@@ -137,27 +97,7 @@ def _textos_da_arvore(raiz: Any) -> list[tuple[str, str]]:
 
 
 def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
-    """O berço em código entrega a MESMA aba que o `main.glade` entregava.
-
-    06/09/2026 (`GTK-3`), e a régua nasceu de um defeito real: a primeira versão
-    do berço devolvia SÓ a caixa e a aba saiu com **193 textos contra os 196**
-    do XML montado no mesmo processo — `secao_janela._linha_do_espelho` devolve
-    `None` sem o `daemon_autostart_switch` e a linha inteira some sem levantar.
-    Três frases a menos, em silêncio, numa régua de REDAÇÃO: ela passaria com a
-    frase errada dentro.
-
-    A régua cobra as FRASES, cada MOLDURA e o TOTAL, nesta ordem — a mais
-    específica primeiro, para a mensagem apontar a causa. Uma seção que sobe oca
-    é também uma colheita abaixo do piso, e o total sozinho diria só "sumiu
-    texto"; a moldura diz qual seção.
-
-    O PISO É O DA BANCADA FIXA (13/09/2026). Até ali ele valia 186 e contava o
-    barramento USB da máquina de quem roda, e foi assim que a suíte
-    reprovou 172 contra 186 sobre o mesmo código que tinha fechado verde de
-    manhã. E ele valeu 175 até 08/09, deixando passar uma seção cortada a menos
-    da metade — que é o que `test_a_folga_do_piso_tem_tamanho_medido` reprova.
-    Ver `aba_config_sem_a_janela.PISO_DA_COLHEITA`.
-    """
+    """O berço em código entrega a MESMA aba que o `main.glade` entregava."""
     caixa = _aba_montada()
     assert len(caixa.get_children()) == SECOES_NO_GLADE, (
         f"a aba montou {len(caixa.get_children())} seções e o glade dava "
@@ -172,9 +112,6 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
             "aba passam a medir menos sem nada acusar."
         )
 
-    # CADA MOLDURA DE PÉ TEM DE TER CONTEÚDO — 08/09/2026. O modo de falha real
-    # do berço é uma seção que monta OCA: o `montar` levanta, o mixin engole, e
-    # a moldura fica na tela só com o título.
     for moldura in caixa.get_children():
         rotulo = getattr(moldura, "get_label", lambda: None)() or "?"
         quantos = len(textos_da_arvore(moldura))
@@ -192,25 +129,7 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
 
 
 def test_a_folga_do_piso_tem_tamanho_medido() -> None:
-    """A folga entre a colheita e o piso é a do AMBIENTE, e nada além.
-
-    ESTA RÉGUA NASCE DE UM PISO COMPRADO, e o preço dele foi medido — 08/09/2026.
-    `PISO_DA_COLHEITA` valia 175 contra uma colheita de 186 sob a suíte: onze de
-    folga sem fonte declarada. Cortada a seção "Está tudo certo?" de 20 textos
-    para 9, a aba caiu a exatos 175 e o arquivo inteiro deu `4 passed`, `rc=0` —
-    uma seção perdendo 55% do conteúdo passava pelos DOIS pisos, porque 9 ainda
-    é folgadamente maior que `PISO_POR_SECAO`.
-
-    O que se cobra aqui é o TAMANHO da folga, e a fonte dela acabou em
-    13/09/2026. Até ali eram as três frases do censo do gabinete, que só
-    apareciam com o `HOME` de verdade; o berço agora fixa o gabinete e a
-    bancada, e a colheita deu 190 num processo solto sob um lar vazio, 190 sob
-    um lar com o produto instalado e declarado, e 190 sob a suíte. A folga é
-    `FOLGA_DO_AMBIENTE`, zero.
-
-    Por isso o piso é também o teto: texto novo na aba reprova aqui, e quem o
-    pôs sobe o `PISO_DA_COLHEITA` e diz na nota dele o que entrou.
-    """
+    """A folga entre a colheita e o piso é a do AMBIENTE, e nada além."""
     colhidos = len(textos_da_arvore(_aba_montada()))
     folga = colhidos - PISO_DA_COLHEITA
 
@@ -231,24 +150,7 @@ def test_a_folga_do_piso_tem_tamanho_medido() -> None:
 def test_a_colheita_nao_le_o_sys_nem_pergunta_ao_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A régua mede a ABA, e não a máquina de quem roda — BERCO-SEM-A-BANCADA-01.
-
-    A suíte de 13/09/2026 reprovou este arquivo com 172 textos contra 186 sobre
-    o mesmo código que tinha fechado verde de manhã. "Conexões" lia o barramento
-    USB DESTA máquina: o berço não injetava leitor nenhum, e
-    `secao_mesa._PainelDaMesa` cai em `ler_a_mesa()`, `ler_o_barramento()` e
-    `listar_entradas()` quando o hospedeiro não traz os seus — e em
-    `ler_do_disco()` para o gabinete, sob o `HOME` de quem roda.
-
-    Os dublês LEVANTAM, e quem acusa é a lista: `_reler_a_mesa` engole a própria
-    exceção (uma leitura de `/sys` que falha não pode derrubar a troca de aba), e
-    sem a lista a régua passaria com a seção vazia. O pedido ao daemon entra
-    junto, porque é o mesmo desvio que o cala. E a colheita tem de continuar no
-    piso com os dublês de pé: a bancada do berço não passa por nenhum deles.
-
-    MORDIDA: tirar do `HospedeiroDaAbaConfig` os leitores da bancada — reprova
-    nomeando `ler_a_mesa` e os dois `call_async`.
-    """
+    """A régua mede a ABA, e não a máquina de quem roda — BERCO-SEM-A-BANCADA-01."""
     from hefesto_dualsense4unix.app import ipc_bridge
     from hefesto_dualsense4unix.app.actions.config import secao_controles, secao_mesa
 
@@ -263,8 +165,6 @@ def test_a_colheita_nao_le_o_sys_nem_pergunta_ao_daemon(
 
     for nome in ("ler_a_mesa", "ler_o_barramento", "listar_entradas", "ler_do_disco"):
         monkeypatch.setattr(secao_mesa, nome, _que_levanta(nome))
-    # `secao_controles` importa `call_async` no topo; `secao_mesa` e
-    # `secao_orcamento` o buscam em `ipc_bridge` na hora da chamada.
     monkeypatch.setattr(secao_controles, "call_async", _que_levanta("call_async"))
     monkeypatch.setattr(ipc_bridge, "call_async", _que_levanta("call_async"))
 
@@ -286,22 +186,7 @@ def test_a_colheita_nao_le_o_sys_nem_pergunta_ao_daemon(
 def test_a_cor_do_plastico_nao_e_perguntada_ao_aparelho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com controle na aba, a cor do plástico vem do berço, e não do `/sys`.
-
-    `secao_controles._PainelDosControles._perguntar_as_cores` pergunta a cada
-    controle novo, e sem `_cor_do_plastico_leitor` quem responde é
-    `cor_do_plastico.ler_pelo_cabo`, que procura o controle em
-    `/sys/class/hidraw`. `test_config_01_a_aba_nasce_vazia` monta este berço com
-    dois controles, e é por ali que se chega aqui.
-
-    O executor roda NA HORA, como no `test_config_selo_de_saude`: esperar que
-    "a thread provavelmente já rodou" mediria o escalonador, não o produto. E a
-    régua confere que o caminho foi percorrido — sem as duas perguntas, ela
-    passaria sem ter olhado.
-
-    MORDIDA: tirar o `_cor_do_plastico_leitor` do berço — reprova nomeando
-    `ler_pelo_cabo` duas vezes.
-    """
+    """Com controle na aba, a cor do plástico vem do berço, e não do `/sys`."""
     from hefesto_dualsense4unix.app.actions.config import secao_controles
 
     chamadas: list[str] = []
@@ -364,11 +249,7 @@ def test_a_cor_do_plastico_nao_e_perguntada_ao_aparelho(
 
 
 def test_todo_rotulo_da_aba_comeca_em_maiuscula() -> None:
-    """Rótulo, opção e título começam com maiúscula.
-
-    A regra vale para dentro do segmentado, que é onde a inconsistência estava
-    quando o desenho foi revisado: `teclado sem fio` ao lado de `Não sei`.
-    """
+    """Rótulo, opção e título começam com maiúscula."""
     fora_da_regra = []
     for origem, texto in _textos_da_arvore(_aba_montada()):
         primeira = texto.strip()[:1]
@@ -395,23 +276,7 @@ def test_nenhum_texto_da_aba_carrega_jargao_banido() -> None:
     assert not achados, "jargão na aba Configurações:\n  " + "\n  ".join(achados)
 
 
-#: Pares em que as DUAS grafias são palavras do português, e a diferença de
-#: acento é a diferença entre singular e plural — não um deslize de digitação.
-#:
-#: MEDIDO EM 22/08/2026, e o portão estava REPROVANDO TEXTO CERTO: a seção "A
-#: mesa" diz *"o rádio **tem** 1.600 fatias de tempo por segundo"* e a seção
-#: "Orçamento" diz *"gatilhos, barra de luz e giroscópio ainda não **têm** por
-#: onde ser limitados"*. As duas frases estão corretas, e a heurística de
-#: "mesma palavra com e sem acento" não tem como saber disso sozinha.
-#:
-#: Um portão que acusa de erro quem escreveu certo é pior que portão nenhum:
-#: ensina a próxima pessoa a não acreditar nele, que é a lição que esta casa já
 #: pagou em 13/08 com o `portao_a_casa_sabe_e_o_produto_nao_faz`. A isenção é
-#: por PAR e não por palavra — isentar "tem" sozinho deixaria passar um "tem"
-#: onde o certo fosse "têm".
-#:
-#: A lista é curta de propósito. Ela cresce quando uma frase NOVA da aba precisa
-#: dela, nunca por precaução: par isento é par que este portão deixa de vigiar.
 PARES_LEGITIMOS: frozenset[tuple[str, str]] = frozenset(
     {
         ("tem", "têm"),
@@ -423,15 +288,7 @@ PARES_LEGITIMOS: frozenset[tuple[str, str]] = frozenset(
 
 
 def test_o_texto_da_aba_esta_acentuado() -> None:
-    """Português do Brasil escrito certo, na tela como no fonte.
-
-    A checagem é a que cabe num portão de widget: uma palavra que aparece na
-    aba SEM acento, quando a mesma palavra aparece COM acento em outro ponto da
-    mesma aba, é erro de digitação e não escolha. Comparar contra um dicionário
-    inteiro seria o trabalho do `validar-acentuacao.py`, que já roda no fonte.
-
-    A exceção está em `PARES_LEGITIMOS`, e ela é medida — leia lá.
-    """
+    """Português do Brasil escrito certo, na tela como no fonte."""
     palavras_com_acento: dict[str, str] = {}
     todas: list[tuple[str, str, str]] = []
     for origem, texto in _textos_da_arvore(_aba_montada()):

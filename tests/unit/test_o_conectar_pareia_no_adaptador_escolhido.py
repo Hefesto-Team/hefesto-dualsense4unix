@@ -57,8 +57,7 @@ def id_da_tela(endereco: str) -> str:
 
 
 class PonteQueVaiAoDaemon:
-    """O ``ponte.resultado`` com o TRATADOR REAL do daemon atrás — a validação de
-    parâmetro e a tradução de «ocupado» são as dele, nunca mais frouxas."""
+    """O ``ponte.resultado`` com o TRATADOR REAL do daemon atrás — a validação de"""
 
     def __init__(self, central: cr.CentralDoRadio) -> None:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -71,7 +70,6 @@ class PonteQueVaiAoDaemon:
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
 
     def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
-        # O «Procurar» (O-CONECTAR-E-UM-INTERRUPTOR-01) fala pelo `radio.busca.set`.
         tratadores = {"radio.mover": self.eu._handle_radio_mover,
                       "radio.busca.set": self.eu._handle_radio_busca_set}
         assert metodo in tratadores, f"método que esta régua não esperava: {metodo}"
@@ -138,15 +136,7 @@ class Bancada:
         return GESTOS[(PAGINA, nome)](self.ctx(), clique, self.ponte)
 
     def esperar_a_central(self, teto: float = 15.0) -> None:
-        """O «Conectar» segue num fio da central; a régua espera ele acabar.
-
-        O FIO, e não só o movimento (02/10/2026): o movimento sai «acabado» de
-        dentro da janela, e a janela fecha (o ``StopDiscovery``, o ``Pairable``
-        de volta) no ``finally`` do mesmo fio, logo depois. A régua que
-        perguntava ao rádio assim que o movimento acabava chegava, sob carga,
-        antes do ``finally`` (medido no lote dos vizinhos: o ``StopDiscovery``
-        ainda não chamado). A faxina é o único fio que não acaba, e fica fora.
-        """
+        """O «Conectar» segue num fio da central; a régua espera ele acabar."""
         fim = time.monotonic() + teto
         while time.monotonic() < fim:
             movimentos = self.central.movimentos()
@@ -197,7 +187,6 @@ def preparar_a_tela(monkeypatch: pytest.MonkeyPatch) -> Any:
     return a08_conexoes
 
 
-
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return preparar_o_diario(tmp_path, monkeypatch)
@@ -223,12 +212,7 @@ def ela_segura_ps_create(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho
 
 
 class BuscaDePe:
-    """Segura o fio da central DENTRO da janela, esperando o gesto dela.
-
-    O relógio de mentira anda meio segundo a cada volta da espera; sem isto a
-    janela de 30 s passaria num piscar e a busca acabaria antes do clique dela.
-    Só o fio do movimento fica preso — o tique da tela não dorme neste relógio.
-    """
+    """Segura o fio da central DENTRO da janela, esperando o gesto dela."""
 
     def __init__(self, relogio: rm.Relogio) -> None:
         self.portao = threading.Event()
@@ -271,9 +255,7 @@ def test_abrir_o_adaptador_e_conectar_pareia_nele(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     destino: str, ordem: str, jogadores: str,
 ) -> None:
-    """E1 da sprint: abrir um adaptador e clicar «Conectar» — a busca, o ``Pair``
-    e a chegada saem DAQUELE adaptador, em qualquer posição da lista e com
-    qualquer número de jogador."""
+    """E1 da sprint: abrir um adaptador e clicar «Conectar» — a busca, o ``Pair``"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=ORDENS[ordem],
                       jogadores=JOGADORES[jogadores])
@@ -284,14 +266,10 @@ def test_abrir_o_adaptador_e_conectar_pareia_nele(
             bancada.gesto("abrir-adaptador", alvo=id_da_tela(destino))
         assert bancada.cena()["destino_do_conectar"] == id_da_tela(destino)
 
-        # PS + Create, e o clique dela no «Parear» da linha do verde
-        # (O-PAREAR-ESPERA-O-CLIQUE-01: sem o clique, nada pareia).
         rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         assert bancada.gesto("radio-procurar") == {"armou": True}
         bancada.esperar_a_central()
 
-        # Quem liga a busca é o «Procurar» (O-CONECTAR-E-UM-INTERRUPTOR-01), no
-        # adaptador aberto, com valor absoluto.
         assert bancada.ponte.chamadas == [
             ("radio.busca.set", {"ligada": True, "destino": id_da_tela(destino)})]
         assert onde_buscou(mundo) == [rm.HCIS[destino]], "a busca saiu de outro adaptador"
@@ -306,8 +284,7 @@ def test_abrir_o_adaptador_e_conectar_pareia_nele(
 def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O chip e a lista dizem a mesma coisa: escolher a varanda no chip ABRE a
-    caixa da varanda, e é nela que a busca acontece."""
+    """O chip e a lista dizem a mesma coisa: escolher a varanda no chip ABRE a"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -320,8 +297,6 @@ def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
         assert f'class="lugar aberto" data-id="{id_da_tela(VARANDA)}"' in sala
 
         ela_segura_ps_create(mundo, relogio, VERDE)
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[VARANDA]]
@@ -332,8 +307,7 @@ def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
 def test_sem_nenhum_aberto_vale_a_escolha_da_central(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com todas as caixas fechadas por ela, o destino é o da D8 — e a caixa
-    dele fica aberta depois, onde ela vê o «Segure PS + Create» e a chegada."""
+    """Com todas as caixas fechadas por ela, o destino é o da D8 — e a caixa"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
@@ -346,8 +320,6 @@ def test_sem_nenhum_aberto_vale_a_escolha_da_central(
         assert cena["destino_do_conectar"] == d8
 
         ela_segura_ps_create(mundo, relogio, VERDE)
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         (hci,) = onde_buscou(mundo)
@@ -360,17 +332,7 @@ def test_sem_nenhum_aberto_vale_a_escolha_da_central(
 def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com a busca de pé no quarto, o chip da varanda PEDE ao rádio a busca
-    para lá, e a central a leva (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): a
-    janela do quarto fecha, a da varanda abre inteira, e o verde que ela segura
-    e escolhe na lista depois chega na varanda — o adaptador que ela escolheu
-    por último.
-
-    A CENTRAL É A REAL (A-CAIXA-FICA-ONDE-ELA-ABRIU-01): até 28/09 esta régua
-    publicava um movimento de mentira com a central real parada, e o chip
-    recusava pela tela. FATO SUBSTITUÍDO (28/09/2026): até a O-CONECTAR a
-    central respondia ``ocupado``, e esta régua conferia o botão tremendo.
-    """
+    """Com a busca de pé no quarto, o chip da varanda PEDE ao rádio a busca"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
@@ -378,8 +340,6 @@ def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
         bancada.cena()
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(QUARTO))
         bancada.cena()
-        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-        # o «+ Conectar» só abre o painel.
         bancada.gesto("radio-procurar")
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
         cena = bancada.cena()

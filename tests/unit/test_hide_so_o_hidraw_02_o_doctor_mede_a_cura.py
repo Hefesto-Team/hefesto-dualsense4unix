@@ -1,24 +1,4 @@
-"""HIDE-SO-O-HIDRAW-02 — o doctor mede a cura, e o install que não reiniciou.
-
-Três instrumentos do `scripts/doctor.sh`, e cada um tem a sua mordida escrita
-no teste que a cobra:
-
-1. **o broker em memória** (`_veredito_do_broker_em_memoria`). O achado do
-   install de 24/09/2026: o install copiou o binário novo e NÃO reiniciou o
-   serviço, que rodava desde 22/09 com o código velho — medido no diário do
-   broker (`ready` às 23:35 de 22/09, `Stopping` só às 08:18 de 24/09, depois
-   de o binário ter sido trocado às 08:17). Nada acusava.
-2. **o `open` do nó de ENTRADA** (`_veredito_do_open_de_entrada`): o broker de
-   antes da cura responde `reject_bad_path` a `/dev/input/eventN`, e é essa a
-   assinatura de «o install não reiniciou».
-3. **o touchpad e o giroscópio do físico** (`check_input_uaccess`): fechados
-   com o broker de pé é a cura, não a falta dela. E o controle dela pelo
-   rádio, que mora em `/devices/virtual/misc/uhid/` desde o BlueZ 5.73,
-   deixa de ser contado como «gamepad VIRTUAL».
-
-As cenas rodam em bash contra um `/dev`, `/sys` e `/run` de mentira, com
-`getfacl` de mentira — sem hardware, sem root e sem tocar a máquina.
-"""
+"""HIDE-SO-O-HIDRAW-02 — o doctor mede a cura, e o install que não reiniciou."""
 from __future__ import annotations
 
 import contextlib
@@ -73,11 +53,6 @@ def _bash(tmp_path: Path, corpo: str, env: dict[str, str] | None = None) -> str:
     return r.stdout + r.stderr
 
 
-# ---------------------------------------------------------------------------
-# 1. O broker em memória
-# ---------------------------------------------------------------------------
-
-
 class TestOBrokerEmMemoria:
     def _roda(self, tmp_path: Path, inicio: str, binario: str, recarregar: str) -> str:
         corpo = (
@@ -89,8 +64,7 @@ class TestOBrokerEmMemoria:
         return _bash(tmp_path, corpo)
 
     def test_o_binario_mais_novo_que_o_processo_acusa(self, tmp_path: Path) -> None:
-        """A cena de 24/09: o processo de 22/09 23:35, o binário de 24/09
-        08:17. A MORDIDA: troque o `>` por `<` e a cena sai verde."""
+        """A cena de 24/09: o processo de 22/09 23:35, o binário de 24/09"""
         saida = self._roda(tmp_path, "1790130901", "1790248632", "no")
         assert "[WARN]" in saida, saida
         assert "de antes do binário instalado" in saida
@@ -109,12 +83,7 @@ class TestOBrokerEmMemoria:
         assert "daemon-reload" in saida
 
     def test_o_gesto_nao_deixa_o_broker_velho_abrir(self) -> None:
-        """O gesto cura o broker de ANTES da cura na memória, que não conhece
-        o `reinicio-sem-abrir`: o SIGTERM de um `restart` puro roda o
-        `restore_everything` dele e abre todo nó escondido. A MORDIDA
-        (conferência): volte o gesto ao `touch && restart` e esta régua
-        reprova. A ordem também é a cura: o arquivo antes do SIGKILL (o
-        ExecStopPost do binário novo o lê), e o `restart` por último."""
+        """O gesto cura o broker de ANTES da cura na memória, que não conhece"""
         gesto = _gesto()
         toque = gesto.index("reinicio-sem-abrir")
         morte = gesto.index("systemctl kill -s SIGKILL hefesto-hidraw-broker.service")
@@ -122,20 +91,13 @@ class TestOBrokerEmMemoria:
         assert toque < morte < volta, gesto
 
     def test_o_gesto_tem_um_dono_so(self) -> None:
-        """Os avisos que mandam reiniciar leem a MESMA variável — uma cópia
-        escrita à mão envelheceria sozinha, como a do `_veredito_do_hide`,
-        que a conferência achou com o `restart` puro."""
+        """Os avisos que mandam reiniciar leem a MESMA variável — uma cópia"""
         assert DOCTOR.count("sudo systemctl kill -s SIGKILL hefesto-hidraw-broker") == 1
         assert "${GESTO_DE_REINICIAR_O_BROKER}" in _funcao("_veredito_do_hide")
 
     def test_servico_parado_nao_afirma_nada(self, tmp_path: Path) -> None:
         saida = self._roda(tmp_path, "", "1790248632", "no")
         assert "[PASS]" not in saida and "[WARN]" not in saida, saida
-
-
-# ---------------------------------------------------------------------------
-# 2. O open do nó de entrada
-# ---------------------------------------------------------------------------
 
 
 class TestOOpenDoNoDeEntrada:
@@ -154,8 +116,6 @@ class TestOOpenDoNoDeEntrada:
     def test_o_broker_de_antes_da_cura_e_acusado(self, tmp_path: Path) -> None:
         saida = self._roda(tmp_path, "velho", "/dev/input/event27")
         assert "[WARN]" in saida, saida
-        # A mensagem diz a data da cura, e não o ID da sprint (a parte do
-        # doctor.sh da AS-PAGINAS-DE-USO-FALAM-COM-QUEM-USA-01, 29/09/2026).
         assert "é o de antes de 24/09/2026" in saida
         assert "HIDE-SO" not in saida
         assert "reinicio-sem-abrir" in saida
@@ -169,18 +129,11 @@ class TestOOpenDoNoDeEntrada:
         assert self._roda(tmp_path, "skip", "").strip() == ""
 
     def test_a_sonda_existe_no_check_do_broker(self) -> None:
-        """A sonda mora no python do `check_hidraw_broker` e o veredito é
-        chamado com o que ela imprime. A MORDIDA: tire a chamada e este
-        teste reprova — a sonda viraria texto morto."""
+        """A sonda mora no python do `check_hidraw_broker` e o veredito é"""
         corpo = _funcao("check_hidraw_broker")
         assert 'print(f"open_entrada={resultado_e}")' in corpo
         assert "_veredito_do_open_de_entrada" in corpo
         assert "_medir_o_broker_em_memoria" in corpo
-
-
-# ---------------------------------------------------------------------------
-# 3. A ACL que a máscara anula
-# ---------------------------------------------------------------------------
 
 
 def _getfacl_de_mentira(raiz: Path, linha_do_usuario: str) -> Path:
@@ -205,8 +158,6 @@ class TestAAclQueAMascaraAnula:
         no = tmp_path / "event27"
         no.write_text("", encoding="ascii")
         no.chmod(modo)
-        # O grupo do arquivo de teste é o da própria suíte: o ramo do grupo
-        # ficaria verde por outro motivo. Aqui só interessa a ACL.
         corpo = (
             _funcao("_entrada_alcancavel_pelo_jogo").replace('id -nG', 'echo nenhum-grupo')
             + f'\n_entrada_alcancavel_pelo_jogo "{no}" && echo SIM || echo NAO\n'
@@ -216,25 +167,18 @@ class TestAAclQueAMascaraAnula:
         return "SIM" in saida
 
     def test_a_linha_anulada_pela_mascara_nao_abre(self, tmp_path: Path) -> None:
-        """O formato é o do getfacl real (medido com a ACL nomeada e a
-        máscara zerada). A MORDIDA: tire o `grep -vq '#effective:-'` e o
-        nó que o broker fechou volta a contar como aberto."""
+        """O formato é o do getfacl real (medido com a ACL nomeada e a"""
         assert not self._alcancavel(tmp_path, "user:ela:rw-\t#effective:---", 0o600)
 
     def test_a_linha_que_vale_abre(self, tmp_path: Path) -> None:
         assert self._alcancavel(tmp_path, "user:ela:rw-", 0o660)
 
 
-# ---------------------------------------------------------------------------
-# 4. O touchpad e o giroscópio do físico, fechados pelo Hefesto
-# ---------------------------------------------------------------------------
-
 #: O DualSense dela pelo RÁDIO: o BlueZ ≥5.73 o põe sob `/misc/uhid/`.
 RADIO = "/sys/devices/virtual/misc/uhid/0005:054C:0CE6.0006"
 CABO = "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-3/3-3:1.0/0003:054C:0CE6.0042"
 VPAD = "/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F"
 
-#: (base, vendor, product, uniq, nome, pai, modo)
 No = tuple[str, str, str, str, str, str, int]
 
 
@@ -286,11 +230,7 @@ def _check(raiz: Path, antes: str = "", env: dict[str, str] | None = None) -> st
         "/run/hefesto-hidraw-broker/",
     ):
         corpo = corpo.replace(real, f"{raiz}{real}")
-    # A ACL da sessão é a de quem roda o check: o getfacl de mentira a dá a
-    # QUEM PERGUNTA, que é o que o `uaccess` faz no login.
     bin_dir = _getfacl_de_mentira(raiz, f"user:{getpass.getuser()}:rw-")
-    # O `udevadm settle` do check é o da máquina se ninguém o trocar; a cena
-    # não tem udev, e um de mentira volta na hora.
     udevadm = bin_dir / "udevadm"
     udevadm.write_text("#!/bin/sh\nexit 0\n", encoding="ascii")
     udevadm.chmod(0o755)
@@ -312,8 +252,7 @@ def _fisico(pai: str, modo: int, uniq: str = "e8:47:3a:00:00:07") -> list[No]:
 class TestOTouchpadDoFisicoFechadoEACura:
     @pytest.mark.parametrize("pai", [RADIO, CABO], ids=["radio", "cabo"])
     def test_fechados_com_o_broker_de_pe_passam(self, tmp_path: Path, pai: str) -> None:
-        """A MORDIDA: tire o ramo `fechados_pelo_hefesto` e o nó fechado cai
-        no «sem permissão de leitura», um FAIL sobre a cura."""
+        """A MORDIDA: tire o ramo `fechados_pelo_hefesto` e o nó fechado cai"""
         if os.geteuid() == 0:  # pragma: no cover - como root tudo é legível
             pytest.skip("como root o 0000 não fecha nada")
         _cena(tmp_path, _fisico(pai, 0o000), com_broker=True)
@@ -337,9 +276,7 @@ class TestOTouchpadDoFisicoFechadoEACura:
         assert "ACL da sessão" in saida
 
     def test_o_radio_dela_nao_e_o_gamepad_virtual(self, tmp_path: Path) -> None:
-        """FATO QUE CAIU: o físico pelo rádio mora sob `/misc/uhid/`. A
-        MORDIDA: volte a classificação para só `/devices/virtual/` e o
-        controle dela aparece como «gamepad VIRTUAL»."""
+        """FATO QUE CAIU: o físico pelo rádio mora sob `/misc/uhid/`. A"""
         if os.geteuid() == 0:  # pragma: no cover
             pytest.skip("como root o 0000 não fecha nada")
         _cena(tmp_path, _fisico(RADIO, 0o000), com_broker=False)
@@ -358,10 +295,7 @@ class TestOTouchpadDoFisicoFechadoEACura:
         assert "[PASS]" not in saida
 
     def test_o_vpad_que_acabou_de_nascer_nao_reprova(self, tmp_path: Path) -> None:
-        """25/09/2026: o install reinicia o daemon e roda o doctor; o vpad
-        renasce e a ACL chega depois do nó. O install acusou FALHA sobre dois
-        nós que, segundos depois, eram legíveis. A MORDIDA: tire a espera antes
-        do `fail` e o nó que abre um segundo depois reprova."""
+        """25/09/2026: o install reinicia o daemon e roda o doctor; o vpad"""
         if os.geteuid() == 0:  # pragma: no cover
             pytest.skip("como root o 0000 não fecha nada")
         nos: list[No] = [
@@ -387,10 +321,7 @@ class TestOTouchpadDoFisicoFechadoEACura:
         assert "[FAIL]" in saida and "gamepad VIRTUAL" in saida, saida
 
     def test_o_modo_nativo_devolve_e_o_doctor_nao_acusa(self, tmp_path: Path) -> None:
-        """O Nativo DEVOLVE os nós de entrada ao jogo — é o produto. O broker
-        de verdade responde o `status` com `entradas_expostas`, e o doctor
-        pergunta a ele antes de acusar. A MORDIDA (conferência): tire o ramo
-        `devolvidos_ao_nativo` e o Nativo inteiro sai como «seguem abertos»."""
+        """O Nativo DEVOLVE os nós de entrada ao jogo — é o produto. O broker"""
         raiz = Path(tempfile.mkdtemp(prefix="h2n-", dir="/tmp"))
         try:
             _cena(raiz, _fisico(RADIO, 0o660), com_broker=False)
@@ -412,8 +343,7 @@ class TestOTouchpadDoFisicoFechadoEACura:
         assert "event28" in saida and "event29" in saida
 
     def test_o_doctor_le_o_campo_que_o_broker_escreve(self) -> None:
-        """Dois donos da mesma palavra: o `status` do broker e a pergunta do
-        doctor. Renomear um lado sem o outro calaria o ramo do Nativo."""
+        """Dois donos da mesma palavra: o `status` do broker e a pergunta do"""
         broker = (RAIZ / "src" / "hefesto_dualsense4unix" / "broker" / "hidraw_broker.py")
         assert '"entradas_expostas":' in broker.read_text(encoding="utf-8")
         assert 'resposta.get("entradas_expostas")' in _funcao("_entradas_expostas_no_broker")
@@ -435,10 +365,7 @@ class TestOTouchpadDoFisicoFechadoEACura:
 
 @contextlib.contextmanager
 def _broker_de_status(caminho: Path, resposta: dict[str, object]) -> Iterator[None]:
-    """Um broker de mentira que responde UMA linha ao `status`, num socket
-    AF_UNIX de verdade — o doctor fala com ele pelo mesmo python que fala com
-    o de produção. O caminho vem de um `mkdtemp` curto em /tmp porque o
-    AF_UNIX não aceita mais de 107 bytes."""
+    """Um broker de mentira que responde UMA linha ao `status`, num socket"""
     caminho.parent.mkdir(parents=True, exist_ok=True)
     servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     servidor.bind(str(caminho))

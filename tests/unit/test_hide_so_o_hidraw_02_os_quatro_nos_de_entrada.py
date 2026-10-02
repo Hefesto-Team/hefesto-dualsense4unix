@@ -61,14 +61,8 @@ TRANSFORMA = RAIZ / "scripts" / "regra_do_no_aberta.sh"
 SOCKET_DO_BROKER = "/run/hefesto-hidraw-broker/broker.sock"
 
 UID = os.getuid()
-#: Faixas sintéticas da casa para fixture: nunca endereço real mascarado.
 MAC_DO_CONTROLE = "e8:47:3a:00:00:07"
 MAC_DO_ADAPTADOR = "aa:bb:cc:00:00:01"
-
-
-# ---------------------------------------------------------------------------
-# 1. A REGRA 72 — o udev de bolso, agora para nós de ENTRADA
-# ---------------------------------------------------------------------------
 
 
 def _linhas_de_codigo(caminho: Path) -> list[str]:
@@ -80,14 +74,7 @@ def _linhas_de_codigo(caminho: Path) -> list[str]:
 
 
 class _NoDeEntrada:
-    """Um nó de `/dev/input` como o udev o vê, já com o que o sistema fez antes.
-
-    `pais` é a corrente do nó para cima; `KERNELS`/`ATTRS` de uma linha casam
-    no MESMO elo, que é a regra do udev. O estado inicial é o que as regras
-    do sistema deixam antes do 72: o `70-uaccess.rules` pôs `uaccess` no
-    gamepad (ID_INPUT_JOYSTICK), o `50-udev-default` pôs 0660 (event) ou 0664
-    (js) com grupo `input`.
-    """
+    """Um nó de `/dev/input` como o udev o vê, já com o que o sistema fez antes."""
 
     def __init__(self, devpath: str, pais: list[tuple[str, dict[str, str]]]) -> None:
         self.devpath = devpath
@@ -228,12 +215,7 @@ class TestARegraFechaOsNosDeEntrada:
         ],
     )
     def test_o_fisico_nasce_0600_de_root_sem_uaccess(self, montar: Any, qual: str) -> None:
-        """Os quatro nós, nos dois transportes, standard e Edge.
-
-        A MORDIDA: suba as duas linhas de fechar para ANTES das de acesso e o
-        touchpad e o movimento saem daqui com `uaccess` — a linha de acesso
-        (`ATTRS{name}=="*Touchpad"`) os reabre depois de fechados.
-        """
+        """Os quatro nós, nos dois transportes, standard e Edge."""
         no = _aplicar_a_72(montar(qual), existe={SOCKET_DO_BROKER})
 
         assert no.mode == "0600", (qual, no.mode)
@@ -243,11 +225,7 @@ class TestARegraFechaOsNosDeEntrada:
 
     @pytest.mark.parametrize("qual", _TODOS)
     def test_o_vpad_continua_aberto(self, qual: str) -> None:
-        """O vpad é o controle que o Hefesto ENTREGA ao jogo.
-
-        A MORDIDA: tire o `DEVPATH!=` da linha do cabo e o vpad fecha — ele é
-        `0003:054C:0DF2` como o Edge físico pelo cabo.
-        """
+        """O vpad é o controle que o Hefesto ENTREGA ao jogo."""
         no = _aplicar_a_72(_do_vpad(qual), existe={SOCKET_DO_BROKER})
 
         assert no.mode != "0600", (qual, no.mode)
@@ -256,12 +234,7 @@ class TestARegraFechaOsNosDeEntrada:
 
     @pytest.mark.parametrize("qual", _TODOS)
     def test_sem_o_broker_de_pe_nada_fecha(self, qual: str) -> None:
-        """Sem broker, fechar é matar o gamepad inteiro: o daemon lê por aqui.
-
-        É o que protege os pacotes de distro que não instalam o broker, e a
-        máquina em que ele foi desinstalado. A MORDIDA: tire o `TEST==` e o
-        físico sai fechado com o socket ausente.
-        """
+        """Sem broker, fechar é matar o gamepad inteiro: o daemon lê por aqui."""
         antes = _pelo_radio(qual)
         tags_antes = set(antes.tags)
         no = _aplicar_a_72(antes, existe=set())
@@ -276,13 +249,7 @@ class TestARegraFechaOsNosDeEntrada:
         assert ultima_de_acesso < primeira_de_fechar
 
     def test_a_variante_aberta_sai_do_mesmo_script_da_70(self, tmp_path: Path) -> None:
-        """«Uma regra de udev, um dono»: o `--no-fechar-o-no` reabre as duas.
-
-        A cura só é reversível sem editar asset se o `regra_do_no_aberta.sh`
-        — o dono da transformação desde 20/09 — souber abrir também estas
-        linhas. A MORDIDA: escreva as linhas de fechar sem o `GROUP="root"` e
-        o `sed` dele não as alcança; a guarda 1 dele reprova e isto também.
-        """
+        """«Uma regra de udev, um dono»: o `--no-fechar-o-no` reabre as duas."""
         destino = tmp_path / "72-aberta.rules"
         r = subprocess.run(
             ["bash", str(TRANSFORMA), str(REGRA_72), str(destino)],
@@ -297,11 +264,6 @@ class TestARegraFechaOsNosDeEntrada:
         assert len(do_fisico) == 2
         for ln in do_fisico:
             assert 'MODE="0660"' in ln and 'TAG+="uaccess"' in ln, ln
-
-
-# ---------------------------------------------------------------------------
-# 2. O SYSFS DE MENTIRA — um aparelho com os seus nós de entrada
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -323,11 +285,7 @@ class Mesa:
 
 
 class _OpsDeArquivo(FsAclOps):
-    """O `FsAclOps` de produção aceitando ARQUIVO COMUM no lugar do char device.
-
-    Só isso muda. O arquivo comum tem `st_rdev == 0`, e o `dev` do sysfs de
-    mentira diz `0:0` — o cruzamento do rdev continua sendo o de produção.
-    """
+    """O `FsAclOps` de produção aceitando ARQUIVO COMUM no lugar do char device."""
 
     _e_char_device = staticmethod(stat.S_ISREG)
     input_id: tuple[int, int, int, int] = (0x0005, 0x054C, 0x0CE6, 0x8111)
@@ -422,9 +380,7 @@ class TestOsNosDeEntradaDoAparelho:
     def test_acha_os_quatro_eventos_e_o_joystick_mas_nao_o_js_do_movimento(
         self, tmp_path: Path
     ) -> None:
-        """A MORDIDA: tire o `continue` do `jsN` de movimento e o `js2` entra
-        — o `restore` daria à sessão o joystick fantasma que a regra 80 fecha
-        para todos."""
+        """A MORDIDA: tire o `continue` do `jsN` de movimento e o `js2` entra"""
         mesa = _montar(tmp_path)
         nos = [no for no, _ in mesa.ops().entradas_do_no("hidraw5")]
         nomes = sorted(Path(no).name for no in nos)
@@ -435,16 +391,12 @@ class TestOsNosDeEntradaDoAparelho:
         assert len(mesa.ops().entradas_do_no("hidraw5")) == 5
 
     def test_o_vpad_nao_tem_nos_de_entrada_para_o_broker(self, tmp_path: Path) -> None:
-        """D1: USB sob `/misc/uhid/` é o vpad. Fechar os nós dele é tirar o
-        controle do jogo — o mesmo cinto que recusa o hidraw dele."""
+        """D1: USB sob `/misc/uhid/` é o vpad. Fechar os nós dele é tirar o"""
         mesa = _montar(tmp_path, hid="0003:054C:0DF2.001C", sob_uhid=True, extra="")
         assert mesa.ops().entradas_do_no("hidraw5") == []
 
     def test_nome_reciclado_para_um_teclado_nao_devolve_nada(self, tmp_path: Path) -> None:
-        """Se o `hidrawN` virou o teclado dela entre o pedido e aqui, os nós
-        de entrada seriam os do teclado. O broker não toca aparelho que não
-        validou. A MORDIDA: tire o `_pai_hid_e_dualsense_fisico` do
-        `entradas_do_no` e este teste devolve os nós do teclado."""
+        """Se o `hidrawN` virou o teclado dela entre o pedido e aqui, os nós"""
         mesa = _montar(tmp_path, hid="0005:3554:FA09.0002", extra="HID_PHYS=x\n")
         assert mesa.ops().entradas_do_no("hidraw5") == []
 
@@ -466,7 +418,6 @@ class TestOsNosDeEntradaDoAparelho:
         assert _modo(mesa.dev_input / "js2") == 0o660, "o js do movimento é da regra 80"
         assert ops.entradas_abertas("hidraw5") == []
 
-        # Reafirmar não é transição: o rehide de 30 s não enche o journal.
         assert ops.fechar_entradas("hidraw5") == ([], [])
 
         mudados, falhos = ops.abrir_entradas("hidraw5", UID)
@@ -480,8 +431,7 @@ class TestOsNosDeEntradaDoAparelho:
     def test_um_0600_com_acl_velha_conta_como_fechado(
         self, tmp_path: Path, acl_funciona: None
     ) -> None:
-        """Num nó com ACL, os bits de grupo SÃO a máscara. `chmod 0600` sobre
-        uma ACL de `user:ela:rw` deixa a entrada lá e sem valer nada."""
+        """Num nó com ACL, os bits de grupo SÃO a máscara. `chmod 0600` sobre"""
         mesa = _montar(tmp_path)
         no = mesa.dev_input / "event29"
         os.setxattr(no, "system.posix_acl_access", encode_access_acl(UID))
@@ -496,7 +446,7 @@ class TestOValidadorDoNoDeEntrada:
         """O nó de mentira visto como char device `0:0`, como o sysfs diz."""
         from types import SimpleNamespace
 
-        os.stat(caminho)  # o arquivo tem de existir, como o nó real
+        os.stat(caminho)
         return SimpleNamespace(st_mode=stat.S_IFCHR | 0o600, st_rdev=os.makedev(0, 0))
 
     def _valida(self, mesa: Mesa, no: str) -> str | None:
@@ -563,10 +513,7 @@ class TestOOpenDoNoDeEntrada:
     def test_o_vpad_pelo_cabo_e_recusado_mesmo_com_o_eviocgid_certo(
         self, tmp_path: Path
     ) -> None:
-        """O EVIOCGID não separa o Edge físico do vpad (os dois são
-        0003:054c:0df2). A MORDIDA: tire o `_e_o_nosso_vpad` do
-        `open_entrada` e o broker serve o fd do controle que ele mesmo
-        entrega ao jogo."""
+        """O EVIOCGID não separa o Edge físico do vpad (os dois são"""
         mesa = _montar(tmp_path, hid="0003:054C:0DF2.001C", extra="HID_PHYS=hefesto-vpad\n")
         ops = mesa.ops()
         ops.input_id = (0x0003, 0x054C, 0x0DF2, 1)
@@ -580,17 +527,8 @@ class TestOOpenDoNoDeEntrada:
             mesa.ops().open_entrada(f"{mesa.dev_input}/event29", "event29")
 
 
-# ---------------------------------------------------------------------------
-# 3. A LEASE — os nós de entrada seguem o hidraw, e só o Nativo os devolve
-# ---------------------------------------------------------------------------
-
-
 class OpsComEntradas:
-    """Dublê que MODELA os dois estados: o do hidraw e o dos nós de entrada.
-
-    Responde `mudados` só na transição, como o de produção — um dublê que
-    sempre dissesse «mudei» esconderia um laço que reescreve sem parar.
-    """
+    """Dublê que MODELA os dois estados: o do hidraw e o dos nós de entrada."""
 
     def __init__(self, *, entradas_abertas: bool = True) -> None:
         self.chamadas: list[tuple[Any, ...]] = []
@@ -678,9 +616,7 @@ def _pede(st: BrokerState, conn: int, payload: dict[str, Any]) -> dict[str, Any]
 
 class TestAsEntradasSeguemALease:
     def test_o_hide_fecha_os_nos_de_entrada(self) -> None:
-        """A MORDIDA: tire o `_entradas_seguem` do `hide` e o
-        `hidraw_broker_hidden` sai com os quatro nós abertos — o «0 de 1» do
-        doctor de volta."""
+        """A MORDIDA: tire o `_entradas_seguem` do `hide` e o"""
         st, ops, diario = _estado(no_nasce_fechado=True)
         assert _pede(st, 1, {"cmd": "hide", "node": "/dev/hidraw3"})["ok"]
         assert not ops.aberta("hidraw3")
@@ -688,9 +624,7 @@ class TestAsEntradasSeguemALease:
         assert ("entradas_fechadas", transicao) in diario
 
     def test_a_exposicao_transitoria_nao_abre_os_nos_de_entrada(self) -> None:
-        """O `hidapi` do handle de controle precisa do hidraw por caminho, e
-        de mais nada. A MORDIDA: faça o `expose` sem o campo abrir as
-        entradas e esta régua reprova — a janela da Steam volta pelo evdev."""
+        """O `hidapi` do handle de controle precisa do hidraw por caminho, e"""
         st, ops, _ = _estado(no_nasce_fechado=True)
         resposta = _pede(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         assert resposta["state"] == "exposed"
@@ -709,8 +643,7 @@ class TestAsEntradasSeguemALease:
         assert _pede(st, 1, {"cmd": "status"})["entradas_expostas"] == []
 
     def test_o_daemon_que_morre_no_nativo_fecha_tudo(self) -> None:
-        """O EOF da lease: no mundo em que o nó nasce fechado, abrir tudo no
-        EOF seria entregar o físico à Steam no instante em que o daemon caiu."""
+        """O EOF da lease: no mundo em que o nó nasce fechado, abrir tudo no"""
         st, ops, _ = _estado(no_nasce_fechado=True)
         _pede(st, 1, {"cmd": "expose", "node": "/dev/hidraw3", "entradas": True})
         st.on_conn_closed(1)
@@ -718,9 +651,7 @@ class TestAsEntradasSeguemALease:
         assert "/dev/hidraw3" in ops.fechados
 
     def test_o_pedido_explicito_vence_o_hide_de_outra_conexao(self) -> None:
-        """Dois daemons em takeover: o do Nativo pediu os nós, o outro
-        esconde. O pedido EXPLÍCITO vence (O-NO-NASCE-FECHADO-01), e quando
-        ele morre o hide que sobra fecha."""
+        """Dois daemons em takeover: o do Nativo pediu os nós, o outro"""
         st, ops, _ = _estado(no_nasce_fechado=True)
         _pede(st, 1, {"cmd": "expose", "node": "/dev/hidraw3", "entradas": True})
         _pede(st, 2, {"cmd": "hide", "node": "/dev/hidraw3"})
@@ -728,14 +659,10 @@ class TestAsEntradasSeguemALease:
         assert "/dev/hidraw3" not in ops.fechados
         st.on_conn_closed(1)
         assert not ops.aberta("hidraw3")
-        # HIDE-SO-O-HIDRAW-03: o hidraw fecha junto com as entradas. Esta
-        # linha conferia só as entradas, e passava com o hidraw aberto até o
-        # rehide de 30 s.
         assert "/dev/hidraw3" in ops.fechados
 
     def test_no_mundo_historico_o_restore_devolve_os_nos(self) -> None:
-        """`--no-fechar-o-no`: o repouso é aberto, e os nós voltam com o
-        hidraw quando o grab solta."""
+        """`--no-fechar-o-no`: o repouso é aberto, e os nós voltam com o"""
         st, ops, _ = _estado(no_nasce_fechado=False)
         _pede(st, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
         assert not ops.aberta("hidraw3")
@@ -755,8 +682,7 @@ class TestAsEntradasSeguemALease:
         assert not any(c[0].endswith("_entradas") for c in ops.chamadas)
 
     def test_dublê_antigo_sem_mecanica_de_entrada_segue_funcionando(self) -> None:
-        """Os dublês da suíte de antes modelam um aparelho sem nós de
-        entrada; o broker não pode quebrar sobre eles."""
+        """Os dublês da suíte de antes modelam um aparelho sem nós de"""
 
         class OpsAntigo:
             def hide(self, node: str, base: str) -> None:
@@ -810,11 +736,6 @@ class TestOOpenServeOEvdevDoFisico:
             assert fd is None and resposta["ok"] is False, torto
 
 
-# ---------------------------------------------------------------------------
-# 4. OS BASELINES — o que abre ao parar e o que fecha ao subir
-# ---------------------------------------------------------------------------
-
-
 def _lista(tmp_path: Path, *bases: str) -> Path:
     """Um `/sys/class/hidraw` que só serve para o `listdir` dos baselines."""
     pasta = tmp_path / "sys-class-hidraw"
@@ -825,11 +746,9 @@ def _lista(tmp_path: Path, *bases: str) -> Path:
 
 class TestOsBaselinesLevamOsNosDeEntrada:
     def test_o_start_fecha_os_nos_que_nasceram_abertos(self, tmp_path: Path) -> None:
-        """O controle que conectou antes do socket existir nasceu aberto.
-        A MORDIDA: tire o bloco das entradas do `fechar_todo_fisico` e o
-        cabo plugado no boot fica visível ao jogo até o replug."""
+        """O controle que conectou antes do socket existir nasceu aberto."""
         ops = OpsComEntradas(entradas_abertas=True)
-        ops.fechados.add("/dev/hidraw3")  # o hidraw já nasceu fechado pela 70
+        ops.fechados.add("/dev/hidraw3")
         fechar_todo_fisico(
             uid=UID, ops=ops, dev_root="/dev", sys_class_hidraw=str(_lista(tmp_path, "hidraw3")),
             validator=_validador, log=lambda *a, **k: None,
@@ -843,11 +762,6 @@ class TestOsBaselinesLevamOsNosDeEntrada:
             validator=_validador, log=lambda *a, **k: None,
         )
         assert ops.aberta("hidraw3")
-
-
-# ---------------------------------------------------------------------------
-# 5. O REINÍCIO QUE NÃO ABRE — o achado do install de 24/09
-# ---------------------------------------------------------------------------
 
 
 class TestOReinicioPedidoNaoAbre:
@@ -880,9 +794,7 @@ class TestOReinicioPedidoNaoAbre:
         assert reinicio_sem_abrir_pedido(str(tmp_path / "nada"), dono_esperado=UID) is False
 
     def test_o_broker_que_sai_num_reinicio_pedido_nao_abre(self) -> None:
-        """A MORDIDA: tire o `if ... self._reinicio_sem_abrir()` do
-        `restore_everything` e o broker que sai reabre o hidraw e os quatro
-        nós no segundo em que a Steam vigia /dev."""
+        """A MORDIDA: tire o `if ... self._reinicio_sem_abrir()` do"""
         st, ops, diario = _estado(no_nasce_fechado=True, reinicio_sem_abrir=lambda: True)
         _pede(st, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
         ops.chamadas.clear()
@@ -901,10 +813,7 @@ class TestOReinicioPedidoNaoAbre:
         assert ops.aberta("hidraw3")
 
     def test_o_broker_que_para_abre_as_entradas_do_no_so_exposto(self) -> None:
-        """O nó que a conexão só EXPÔS (o `with` transitório do handle) tem o
-        hidraw aberto e as entradas fechadas. O broker que para de verdade
-        abre as entradas dele também. A MORDIDA (conferência): tire o laço dos
-        `expostos` do `restore_everything` e elas ficam fechadas sem broker."""
+        """O nó que a conexão só EXPÔS (o `with` transitório do handle) tem o"""
         st, ops, _ = _estado(no_nasce_fechado=True, reinicio_sem_abrir=lambda: False)
         _pede(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         assert not ops.aberta("hidraw3")
@@ -913,8 +822,7 @@ class TestOReinicioPedidoNaoAbre:
         assert ops.aberta("hidraw3")
 
     def test_no_mundo_historico_o_pedido_nao_muda_nada(self) -> None:
-        """Sem a cura instalada o nó nasce aberto, e abrir ao parar é só
-        voltar ao estado de nascimento."""
+        """Sem a cura instalada o nó nasce aberto, e abrir ao parar é só"""
         st, ops, _ = _estado(no_nasce_fechado=False, reinicio_sem_abrir=lambda: True)
         _pede(st, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
         assert st.restore_everything() == ["/dev/hidraw3"]

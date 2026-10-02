@@ -83,41 +83,20 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O cabeçalho de bloco de ``pactl list source-outputs`` com ``LC_ALL=C``.
-#: Sem o ambiente C ele é ``Saída da fonte #`` nesta máquina — ver a armadilha 2
-#: do cabeçalho.
 _CABECALHO_DE_BLOCO = "Source Output #"
 
-#: A marca que identifica um processo/stream como NOSSO, em nome de aplicativo,
-#: nome de nó ou ``application.id``. Minúscula: todo casamento por nome aqui é
-#: feito em ``lower()``.
 MARCA_HEFESTO = "hefesto"
 
-#: O ESPAÇO DE NOME das propriedades que o Hefesto planta no stream
-#: (``hefesto.papel``, ``hefesto.uniq``, e o que a PEÇA B inventar depois).
-#: Reconhecer o prefixo, e não uma chave combinada, é o que faz esta régua
-#: continuar valendo quando o outro lado acrescenta uma chave sem avisar.
 PREFIXO_PROPRIEDADE_HEFESTO = "hefesto."
 
-#: A propriedade que LIGA o modo de pico do reamostrador do PipeWire — e que é,
-#: ao mesmo tempo, o crivo INTRÍNSECO desta peça. Quem a declara recebe
-#: ``max|x|`` por bloco, um envelope, não áudio.
 CHAVE_DO_MODO_DE_PICO = "resample.peaks"
 
-#: Quantos ancestrais subir em ``/proc`` antes de desistir. Seis alcança
-#: ``parec`` → janela/daemon com folga e nunca chega ao ``systemd --user``, que
-#: é ancestral de TODO processo da sessão dela e faria a regra pegar tudo.
 _MAX_ANCESTRAIS = 6
 
 
 @dataclass(frozen=True)
 class StreamDeCaptura:
-    """Um bloco de ``pactl list source-outputs`` — alguém lendo uma fonte.
-
-    ``fonte`` é o ÍNDICE da fonte (o campo ``Source:``), não o nome: o bloco
-    não traz nome nenhum, e o campo que pareceria trazer (``target.object``)
-    é o que some quando o app grava da fonte padrão.
-    """
+    """Um bloco de ``pactl list source-outputs`` — alguém lendo uma fonte."""
 
     indice: int
     fonte: int
@@ -126,12 +105,7 @@ class StreamDeCaptura:
 
     @property
     def nome_do_cliente(self) -> str:
-        """Como este stream se apresenta — o que a luz vai poder nomear.
-
-        ``application.name`` primeiro (é o que o usuário reconhece: ``Google
-        Chrome input``), ``node.name`` como reserva — um cliente PipeWire
-        nativo publica os dois, mas nem todo cliente publica o primeiro.
-        """
+        """Como este stream se apresenta — o que a luz vai poder nomear."""
         for chave in ("application.name", "node.name", "media.name"):
             valor = self.props.get(chave, "").strip()
             if valor:
@@ -140,12 +114,7 @@ class StreamDeCaptura:
 
     @property
     def pid(self) -> int | None:
-        """O PID do processo dono, quando ele existe.
-
-        **Não existe em cliente PipeWire nativo** — medido: um ``pw-cat``
-        publica ``application.name`` e ``node.name`` e mais nada de processo.
-        Por isso o PID é sinal auxiliar aqui, nunca o crivo principal.
-        """
+        """O PID do processo dono, quando ele existe."""
         bruto = self.props.get("application.process.id", "").strip()
         try:
             return int(bruto)
@@ -155,21 +124,7 @@ class StreamDeCaptura:
 
 @dataclass(frozen=True)
 class LeituraDeOuvintes:
-    """A resposta inteira de um ciclo — e ela distingue três coisas.
-
-    ``lida=False`` é **não sei**: não havia ``pactl``, ou ele não respondeu. A
-    luz não deve mudar por causa disto.
-
-    ``por_uniq[uniq] == []`` é **sei, e ninguém ouve** — a fonte daquele
-    controle existe e não tem nenhum ouvinte de fora.
-
-    ``uniq in sem_canal`` é **não há o que medir**: o PipeWire não publica
-    canal de captura para aquele controle. Medido em 03/09/2026 com dois
-    controles na mesa: o do RÁDIO não publica nenhum, e enquanto isso valer o
-    estado ``aceso`` nunca acende para quem joga sem fio (a §1.2 da sprint tem
-    a nota, e quem cura é a CANAL-POR-CONTROLE-01). Colapsar este caso em
-    ``[]`` faria a ausência de canal parecer defeito da luz.
-    """
+    """A resposta inteira de um ciclo — e ela distingue três coisas."""
 
     por_uniq: dict[str, list[str]] = field(default_factory=dict)
     pausados_por_uniq: dict[str, list[str]] = field(default_factory=dict)
@@ -177,30 +132,14 @@ class LeituraDeOuvintes:
     lida: bool = True
 
     def alguem_ouve(self, uniq: str) -> bool | None:
-        """``True``/``False`` por controle — e ``None`` quando não dá para saber.
-
-        ``None`` cobre os dois "não sei" de propósito: a leitura que não
-        aconteceu e o controle sem canal. Quem consome (a PEÇA C) não pode
-        acender nem apagar por causa de ``None``.
-        """
+        """``True``/``False`` por controle — e ``None`` quando não dá para saber."""
         if not self.lida or uniq not in self.por_uniq:
             return None
         return bool(self.por_uniq[uniq])
 
 
 def nomes_de_fonte_por_indice(saida_pactl: str) -> dict[int, str]:
-    """``{índice: nome}`` a partir de ``pactl list sources short``.
-
-    É o elo que faltava: o bloco do stream diz ``Source: 600``, um número, e o
-    resto da casa fala por NOME. O formato é
-    ``índice\\tnome\\tdriver\\tformato\\testado`` e não é traduzido — a mesma
-    saída que
-    :func:`~hefesto_dualsense4unix.integrations.fontes_de_captura.fontes_dualsense`
-    já lê, para não pagar uma terceira chamada de ``pactl``.
-
-    O índice MUDA quando o aparelho re-pluga, então este mapa é remontado a
-    cada ciclo. Linha ilegível é pulada, nunca chutada.
-    """
+    """``{índice: nome}`` a partir de ``pactl list sources short``."""
     mapa: dict[int, str] = {}
     for linha in saida_pactl.splitlines():
         partes = linha.split("\t")
@@ -217,16 +156,7 @@ def nomes_de_fonte_por_indice(saida_pactl: str) -> dict[int, str]:
 
 
 def streams_de_captura(saida_pactl: str) -> list[StreamDeCaptura]:
-    """Os blocos de ``pactl list source-outputs``, já em estrutura.
-
-    Corpo VAZIO é resposta legítima e quer dizer "ninguém está capturando" —
-    medido: com nada capturando o comando devolve ``rc=0`` e zero byte. Quem
-    chama é que separa isso de "não deu para ler" (``rc != 0``), e é a razão de
-    :class:`LeituraDeOuvintes` ter o campo ``lida``.
-
-    Bloco sem ``Source:`` é descartado: sem o índice não há a que atribuir o
-    ouvinte, e atribuir ao primeiro da lista seria inventar dado.
-    """
+    """Os blocos de ``pactl list source-outputs``, já em estrutura."""
     saidas: list[StreamDeCaptura] = []
     indice: int | None = None
     fonte: int | None = None
@@ -276,23 +206,6 @@ def streams_de_captura(saida_pactl: str) -> list[StreamDeCaptura]:
     return saidas
 
 
-#: OS NOMES DE NÓ QUE ESTA CASA PUBLICA, e que por isso NÃO valem como prova de
-#: que um processo é nosso. Lidos do dono (`fontes_de_captura`), nunca digitados.
-#:
-#: MEDIDO EM 06/09/2026, e é uma regressão que a ONDA5-MIC-VIRTUAL-01 criou ao
-#: batizar o canal por controle de ``hefesto_mic_<hex6>``: o nome do NÓ tem a
-#: palavra ``hefesto`` dentro, e todo app dela que grave daquele canal a carrega
-#: na própria linha de comando —
-#: ``obs --record --device=hefesto_mic_000001``. Sem esta poda,
-#: :func:`descende_do_hefesto` responde ``True`` para o OBS, o ouvinte de VERDADE
-#: sai da conta e **a luz vermelha nunca acende para o canal que a sprint
-#: inteira existe para construir**. Medido: o MESMO app no nó ALSA antigo dava
-#: ``False``, que é a resposta certa.
-#:
-#: O que a poda NÃO alcança, de propósito: qualquer outra ocorrência de
-#: ``hefesto`` na linha de comando (o binário, o `parec` que a janela lança, as
-#: propriedades ``hefesto.`` do alimentador) continua valendo — a regra de
-#: ancestralidade fica inteira, e o que sai é só o casamento pelo nome do nó.
 _NOMES_DE_NO_DESTA_CASA = (PREFIXO_SOURCE_CANAL_DO_MIC, PREFIXO_SOURCE_PONTE_BT)
 
 
@@ -313,12 +226,7 @@ def _cmdline(pid: int, raiz_proc: Path) -> str:
 
 
 def _ppid(pid: int, raiz_proc: Path) -> int | None:
-    """O pai do processo, lido do campo 4 de ``/proc/<pid>/stat``.
-
-    O ``comm`` do campo 2 vem entre parênteses e pode conter espaço, então o
-    corte é feito depois do ÚLTIMO ``)`` — cortar pelo primeiro espaço lê o
-    campo errado para todo processo com espaço no nome.
-    """
+    """O pai do processo, lido do campo 4 de ``/proc/<pid>/stat``."""
     try:
         stat = (raiz_proc / str(pid) / "stat").read_text(encoding="utf-8")
     except OSError:
@@ -334,27 +242,7 @@ def _ppid(pid: int, raiz_proc: Path) -> int | None:
 
 
 def descende_do_hefesto(pid: int | None, raiz_proc: Path | str = "/proc") -> bool:
-    """O processo (ou algum ancestral próximo) é do Hefesto?
-
-    Existe por um buraco que nenhuma das outras regras alcança: a JANELA já
-    captura o microfone hoje (``app/mic_monitor.py``, ``_garantir_captura``) e
-    o ``parec`` que ela lança sai **cru** — ``application.name = "parec"``,
-    igual ao ``parec`` de qualquer outro programa. Excluir pelo nome ``parec``
-    excluiria os alheios junto; não excluir faz a luz acender quando ela abre a
-    aba Status, que se lê como *"a aba está me espionando"*.
-
-    A árvore de processos responde sem ambiguidade: aquele ``parec`` desce da
-    janela do Hefesto. A subida é limitada a :data:`_MAX_ANCESTRAIS` de
-    propósito — o ``systemd --user`` é ancestral de tudo o que ela roda, e
-    chegar até lá faria a regra excluir a máquina inteira.
-
-    ``raiz_proc`` é injetável para o teste medir a REGRA sem depender da mesa.
-
-    **O NOME DO NÓ NÃO CONTA COMO PROVA** — ver :data:`_NOMES_DE_NO_DESTA_CASA`.
-    Desde que o canal por controle passou a se chamar ``hefesto_mic_<hex6>``,
-    todo app que grava dele carrega a palavra ``hefesto`` na linha de comando, e
-    sem a poda esta função diria que o OBS dela é nosso.
-    """
+    """O processo (ou algum ancestral próximo) é do Hefesto?"""
     if pid is None:
         return False
     raiz = Path(raiz_proc)
@@ -369,32 +257,7 @@ def descende_do_hefesto(pid: int | None, raiz_proc: Path | str = "/proc") -> boo
 
 
 def e_stream_do_hefesto(stream: StreamDeCaptura, raiz_proc: Path | str = "/proc") -> bool:
-    """Este stream é NOSSO? — o risco central da peça, em uma função.
-
-    Se o medidor de nível da PEÇA B contar como ouvinte, a luz acende sozinha e
-    a peça inteira mente. As regras são independentes de propósito, porque a
-    forma do stream irmão ainda não está fixada — ele foi visto em duas formas
-    no mesmo dia, ``parec`` pulse e ``pw-cat`` nativo, e a segunda não publica
-    processo nenhum:
-
-    1. **Qualquer propriedade em ``hefesto.``** — o espaço de nome, não uma
-       chave combinada. Pega ``hefesto.papel``, ``hefesto.uniq`` e o que a
-       PEÇA B acrescentar depois sem avisar ninguém.
-    2. **``application.id``** — ``br.dev.hefesto.…``. Sobrevive a troca de nome
-       de aplicativo, e é o que o servidor guarda no ``stream-restore``.
-    3. **``application.name`` / ``node.name`` / ``media.name``** — o único crivo
-       que existe nas DUAS formas do stream, e por isso o que não pode faltar.
-    4. **``resample.peaks = "true"``** — e esta é INTRÍNSECA, não convencional:
-       um stream em modo de pico recebe ``max|x|`` por bloco, um envelope, não
-       áudio. Ele estruturalmente não consegue ouvir o que ela diz, seja de
-       quem for. Vale para um medidor de terceiro pelo mesmo motivo.
-    5. **A árvore de processos** (:func:`descende_do_hefesto`) — a rede que pega
-       o ``parec`` cru da janela, que não tem marca nenhuma para pegar.
-
-    A direção do erro é escolhida: excluir demais apaga uma luz que devia
-    acender; excluir de menos acende uma luz sozinha, para sempre, e é este o
-    defeito que a sprint nomeia.
-    """
+    """Este stream é NOSSO? — o risco central da peça, em uma função."""
     props = stream.props
     for chave, valor in props.items():
         if chave.lower().startswith(PREFIXO_PROPRIEDADE_HEFESTO) and valor.strip():
@@ -415,20 +278,7 @@ def ouvintes_por_fonte(
     saida_sources_short: str,
     raiz_proc: Path | str = "/proc",
 ) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
-    """``({fonte: [ouvintes]}, {fonte: [pausados]})`` — os dois, por NOME de fonte.
-
-    Streams do Hefesto saem fora dos dois mapas: eles não são ouvintes nem
-    ouvintes pausados, são a régua se olhando no espelho.
-
-    A separação entre ouvinte e PAUSADO é o campo ``Corked``, e a decisão de
-    qual conta para a luz **não é deste módulo**: o primeiro mapa é o que
-    responde "alguém está me ouvindo AGORA", o segundo é "alguém tem aberto,
-    mas parado". A PEÇA C escolhe. Registrado porque o caso ``Corked: yes``
-    NÃO foi medido no levantamento de 03/09 — só o ``no`` apareceu na mesa.
-
-    Só entram fontes que existem no mapa de índices: um stream cujo índice não
-    casa com fonte nenhuma é descartado, não atribuído por proximidade.
-    """
+    """``({fonte: [ouvintes]}, {fonte: [pausados]})`` — os dois, por NOME de fonte."""
     nomes = nomes_de_fonte_por_indice(saida_sources_short)
     ouvindo: dict[str, list[str]] = {}
     pausados: dict[str, list[str]] = {}
@@ -446,25 +296,7 @@ def ouvintes_por_fonte(
 def quem_ouve_agora(
     uniqs: list[str], raiz_proc: Path | str = "/proc"
 ) -> dict[str, list[str]] | None:
-    """``{uniq: [nomes dos clientes]}`` — o contrato da §3, e nada além dele.
-
-    **É esta a função que a PEÇA C chama**, e o tipo é o contrato inteiro: o
-    laço da luz aceita o retorno só quando ele é ``dict``
-    (``daemon/subsystems/luz_do_mic.py``, ``_perguntar``). Devolver a leitura
-    rica aqui não daria erro nenhum — daria a luz apagada para sempre, com o
-    laço descartando toda resposta em silêncio. A leitura rica é
-    :func:`ler_quem_ouve`, com outro nome, exatamente por isso.
-
-    Três respostas, e são três coisas diferentes:
-
-    * ``None`` — **não sei**. Não havia ``pactl``, ou ele não respondeu.
-    * ``uniq`` ausente do dicionário — **não há o que medir**: o PipeWire não
-      publica canal de captura para aquele controle (o do rádio, hoje).
-    * ``[]`` — **sei, e ninguém ouve**.
-
-    As duas primeiras chegam ao laço como o mesmo ``None`` por ``uniq``, e o
-    laço não escreve; a terceira apaga a luz com todas as letras.
-    """
+    """``{uniq: [nomes dos clientes]}`` — o contrato da §3, e nada além dele."""
     leitura = ler_quem_ouve(uniqs, raiz_proc)
     return leitura.por_uniq if leitura.lida else None
 

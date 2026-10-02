@@ -10,7 +10,6 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     quem_faz_o_gesto,
 )
 
-#: Dois controles da faixa forjada (octetos 4 e 5 zerados).
 UM = "aabbcc000001"
 OUTRO = "aabbcc000002"
 
@@ -19,11 +18,9 @@ def test_combo_nao_dispara_antes_do_buffer():
     fired = []
     mgr = HotkeyManager(on_next=lambda: fired.append("next"))
 
-    # t=0: pressiona combo
     assert mgr.observe(["ps", "dpad_up"], now=0.0) is None
     assert fired == []
 
-    # t=0.1s: ainda dentro do buffer (150ms)
     assert mgr.observe(["ps", "dpad_up"], now=0.1) is None
     assert fired == []
 
@@ -33,7 +30,7 @@ def test_combo_dispara_apos_buffer():
     mgr = HotkeyManager(on_next=lambda: fired.append("next"))
 
     mgr.observe(["ps", "dpad_up"], now=0.0)
-    result = mgr.observe(["ps", "dpad_up"], now=0.2)  # >150ms
+    result = mgr.observe(["ps", "dpad_up"], now=0.2)
     assert result == "next"
     assert fired == ["next"]
 
@@ -53,7 +50,6 @@ def test_combo_pode_redisparar_apos_release():
     mgr = HotkeyManager(on_next=lambda: fired.append("n"))
     mgr.observe(["ps", "dpad_up"], now=0.0)
     mgr.observe(["ps", "dpad_up"], now=0.2)
-    # solta
     mgr.observe([], now=0.25)
     mgr.observe(["ps", "dpad_up"], now=0.3)
     mgr.observe(["ps", "dpad_up"], now=0.5)
@@ -108,17 +104,14 @@ def test_config_customizado():
     fired = []
     mgr.on_next = lambda: fired.append("n")
     mgr.observe(["l1", "r1"], now=0.0)
-    mgr.observe(["l1", "r1"], now=0.08)  # 80ms > buffer de 50ms
+    mgr.observe(["l1", "r1"], now=0.08)
     assert fired == ["n"]
 
 
 def test_default_buffer_configuracao():
-    assert DEFAULT_BUFFER_MS == 150  # V3-2
+    assert DEFAULT_BUFFER_MS == 150
     cfg = HotkeyConfig()
     assert cfg.buffer_ms == 150
-
-
-# --- O-MODO-XBOX-NAO-E-QUEDA-02, item 5: o aperto de cada controle ------------
 
 
 def test_o_ps_de_um_e_o_r3_de_outro_nao_sao_um_combo():

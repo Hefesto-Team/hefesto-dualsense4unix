@@ -1,15 +1,4 @@
-"""R-17 e R-18 (auditoria 23/07) — alvo certo e sucesso honesto.
-
-R-17: o "Apagar" da aba Lightbar era o ÚNICO output da GUI que não mandava o
-`uniq` do controle selecionado — o "Aplicar" logo ao lado manda. Sem ele o
-pedido caía na rota GLOBAL (broadcast) que o PERFIL-05 abandonou: apagava a
-lightbar dos QUATRO quando ela pediu para apagar a de UM, e ainda derrubava o
-override por-MAC dos outros.
-
-R-18: `profile.apply_draft` responde `status:"ok"` SEMPRE — inclusive quando o
-applier não aplicou seção nenhuma. A GUI lia só o status e toastava "aplicado"
-para um no-op. A resposta já carregava `applied`, e ninguém lia.
-"""
+"""R-17 e R-18 (auditoria 23/07) — alvo certo e sucesso honesto."""
 
 from __future__ import annotations
 
@@ -27,12 +16,7 @@ class TestR17ApagarMandaOUniq:
             REPO / "src/hefesto_dualsense4unix/app/actions/lightbar_actions.py"
         ).read_text(encoding="utf-8")
         # Z2-1 (24/08/2026): `_edit_uniq()` devolve `AlvoDeEdicao`, não mais
-        # `str | None` — o alvo vem de `estado_alvo.uniq`, lido uma vez no
-        # topo da função. A garantia do R-17 é a mesma: o "Apagar" manda o
-        # MAC do controle selecionado, nunca broadcast.
         # BG-01 (26/08/2026): a chamada virou `led_set_detalhado` — a aba lê o
-        # CORPO do daemon em vez do `bool`. O `uniq`, que é o que este teste
-        # guarda, viaja igual.
         assert "led_set_detalhado((0, 0, 0), uniq=estado_alvo.uniq)" in fonte, (
             "apagar sem `uniq` vira broadcast: apaga a lightbar dos quatro "
             "quando ela pediu para apagar a de um"
@@ -52,21 +36,7 @@ class TestR17ApagarMandaOUniq:
 class TestR18SucessoHonesto:
     @staticmethod
     def _apply(monkeypatch: pytest.MonkeyPatch, resposta: Any) -> bool:
-        """A R-18 medida onde ela mora HOJE, e a regra não mudou uma vírgula.
-
-        **26/08/2026:** até aqui esta régua chamava `ipc_bridge.apply_draft`, o
-        invólucro `bool`. Ele foi PODADO por não ter um único chamador de
-        produção, e a regra que ele guardava passou a ter dono único e
-        nomeado — `aplicacao_confirmada` —, atravessada pela porta
-        `apply_draft_detalhado`. O teste segue a regra para onde ela foi: medir
-        função que não existe mais é régua que vira mentira, e afrouxar a R-18
-        seria pior ainda. As quatro asserções abaixo continuam idênticas.
-
-        A composição é exercitada de ponta a ponta de propósito (a porta E o
-        juiz), porque foi entre as duas que o defeito histórico morava: um
-        `dict` devolvido no lugar do `bool` é SEMPRE verdadeiro num `if`, e um
-        chamador não migrado diria "aplicado" para um no-op.
-        """
+        """A R-18 medida onde ela mora HOJE, e a regra não mudou uma vírgula."""
         from hefesto_dualsense4unix.app import ipc_bridge
 
         monkeypatch.setattr(
@@ -97,11 +67,7 @@ class TestR18SucessoHonesto:
         assert self._apply(monkeypatch, {"status": "erro", "applied": ["leds"]}) is False
 
     def test_status_ok_foi_mantido_de_proposito(self) -> None:
-        """Trocar para "partial"/"failed" faria a GUI dizer "daemon offline?".
-
-        Essa mensagem mandaria a usuária caçar o problema no lugar errado — a
-        honestidade entra pelo campo `applied`, não pelo status.
-        """
+        """Trocar para "partial"/"failed" faria a GUI dizer "daemon offline?"."""
         fonte = (
             REPO / "src/hefesto_dualsense4unix/daemon/ipc_handlers.py"
         ).read_text(encoding="utf-8")

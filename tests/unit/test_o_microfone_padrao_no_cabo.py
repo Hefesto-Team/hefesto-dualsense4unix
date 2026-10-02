@@ -47,7 +47,6 @@ Nenhum teste deste arquivo toca o áudio da máquina.
 """
 
 # ruff: noqa: E501 — os dublês imprimem linhas de `pactl list` inteiras, e
-# quebrá-las inventaria uma saída que o parser do doctor nunca recebe.
 
 from __future__ import annotations
 
@@ -76,47 +75,22 @@ DS_SAIDA = (
 WEBCAM = "alsa_input.usb-046d_HD_Pro_Webcam_C920-02.analog-stereo"
 ONBOARD = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 
-#: MIC-CABO-SPDIF-01, 20/09/2026 — A PORTA DO CENÁRIO «desconhecida» SAI DA
-#: MÁQUINA, e não da memória de quem escreveu o dublê.
-#:
-#: Aqui estava digitada à mão a linha
-#: `iec958-stereo-input: Digital Input (S/PDIF) (type: SPDIF, priority: 0,
-#: availability unknown)`. Ela já divergia do vivo quando foi conferida, e
-#: divergia CALADA — que é o defeito de toda fixture digitada. Em 20/09 ela
-#: divergia duas vezes: com o UCM desta casa instalado (HAPTICA-NATIVA-01), a
 #: porta de captura do DualSense no cabo nem se chama mais assim.
-#:
-#: O cenário continua sendo o mesmo — uma porta cuja disponibilidade o ALSA não
-#: declara —, e é isso que `test_a_fixture_da_porta_desconhecida_e_gravada`
-#: trava: se a gravação deixar de dizer `availability unknown`, o teste acusa,
-#: em vez de o dublê passar a medir outro cenário em silêncio.
 _FIXTURES_MIC_CABO = RAIZ / "tests" / "fixtures" / "mic-cabo"
 _SOURCES_GRAVADA = _FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.txt"
 
 
 def _primeira_porta_e_ativa(texto: str) -> tuple[str, str]:
-    """`(linha da porta, nome da porta ativa)` da PRIMEIRA source do texto.
-
-    Para na primeira `Active Port:`, e desiste se uma segunda source começar
-    antes dela. A leitura anterior varria o texto inteiro e guardava a PRIMEIRA
-    porta listada com a ÚLTIMA porta ativa — que num texto de mais de uma
-    source são de blocos diferentes, e o dublê passaria a descrever uma máquina
-    que não existe. Hoje a gravação tem uma source só; a régua não pode
-    depender disso.
-    """
+    """`(linha da porta, nome da porta ativa)` da PRIMEIRA source do texto."""
     porta = ""
     dentro = False
     cabecalhos = nomes = 0
     for linha in texto.splitlines():
         nua = linha.strip()
-        # Uma source começa com `Source #N` (saída completa) ou, num recorte de
-        # um bloco só como o desta gravação, com a própria linha `Name:`. As
-        # duas contam separado: no formato completo, as duas aparecem na MESMA
-        # source, e somá-las faria a leitura parar na primeira delas.
         if nua.startswith("Source #"):
             cabecalhos += 1
             if cabecalhos > 1:
-                break  # a primeira source acabou sem porta ativa
+                break
             continue
         if nua.startswith("Name:"):
             nomes += 1
@@ -143,19 +117,13 @@ def _porta_desconhecida_gravada() -> tuple[str, str]:
 
 
 PORTA_DESCONHECIDA, ATIVA_DESCONHECIDA = _porta_desconhecida_gravada()
-#: Os nós virtuais da casa, na máscara (octetos 4 e 5 zerados).
 SOM = "hefesto_som_000003"
 MIC = "hefesto_mic_000003"
 MIC_ANTIGO = "hefesto_mic_0000ab"
 MONITOR_DO_SOM = f"{SOM}.monitor"
 
-#: Todo nome que um dos três programas pode chamar e que falaria com a sessão de
-#: som de quem roda a suíte. O `sleep` entra porque o laço dorme 20 vezes.
 NOMES_DUBLADOS = ("pactl", "wpctl", "systemctl", "pw-metadata", "pw-dump", "pw-cli", "sleep")
 
-# ---------------------------------------------------------------------------
-# O WirePlumber de mentira
-# ---------------------------------------------------------------------------
 
 _SIM = r"""# _sim.sh — o WirePlumber de mentira da MIC-PADRAO-NO-CABO-01, por CONTAGEM
 # DE CHAMADAS. Lê e escreve só em $HEFESTO_SIM e no HOME desviado.
@@ -398,8 +366,6 @@ printf '%s\n' "$*" >> "${SIM}/sonos"
 exit 0
 """
 
-#: Roda ANTES de qualquer script. Sai com 97 se um nome escapar do dublê ou se
-#: o ambiente não for o lar de mentira.
 GUARDA = r"""set -euo pipefail
 for _nome in pactl wpctl systemctl pw-metadata pw-dump pw-cli sleep; do
     if [[ "$(type -P "${_nome}" || true)" != "${HEFESTO_DUBLES}/${_nome}" ]]; then
@@ -415,7 +381,6 @@ fi
 unset _nome
 """
 
-#: As funções do `install.sh` que o bloco do passo usa, com as mesmas saídas.
 _PREAMBULO_DO_PASSO = r"""step()  { printf '\n[%s] %s\n' "$1" "$2"; }
 warn()  { printf '      aviso: %s\n' "$*"; }
 _faria() { :; }
@@ -474,8 +439,6 @@ class Bancada:
         return int(caminho.read_text(encoding="utf-8").strip()) if caminho.exists() else 0
 
 
-#: A pilha do WirePlumber antes do install das 22:58, na máscara: o topo é o
-#: canal do rádio (eleito às 05:30) e o histórico traz o outro canal.
 PILHA_DE_ANTES = [
     f"default.configured.audio.source={MIC}",
     f"default.configured.audio.source.0={MIC_ANTIGO}",
@@ -523,7 +486,6 @@ def montar_bancada(
         (dubles / nome).write_text(corpo, encoding="utf-8")
         (dubles / nome).chmod(0o755)
 
-    # §E.3 da sprint: os drop-ins 51 e 54 já estavam no lugar.
     conf_d = lar / ".config" / "wireplumber" / "wireplumber.conf.d"
     conf_d.mkdir(parents=True)
     for dropin in (
@@ -594,15 +556,11 @@ def rodar_o_veredito(bancada: Bancada) -> subprocess.CompletedProcess[str]:
     return _rodar(bancada, 'set --\nsource "${HEFESTO_WP_FIX}"\nverify_active_not_dualsense\n')
 
 
-#: Os cenários do passo inteiro, com `a` e `b` em tiques do `pactl`.
 CENARIOS = {
-    # No rádio o microfone virtual já está no ar antes do restart.
     "radio": {"aparelhos": ("radio",), "a": 1, "b": 8},
     # O relógio do log das 22:58: o doctor lia o monitor e gravava o DualSense.
     "cabo": {"aparelhos": ("cabo",), "a": 1, "b": 8},
-    # O monitor não passa dentro do orçamento do laço.
     "cabo-lento": {"aparelhos": ("cabo",), "a": 1, "b": 1_000_000},
-    # A webcam volta à lista três leituras depois do restart.
     "cabo-webcam": {"aparelhos": ("cabo", "webcam"), "a": 4, "b": 8},
 }
 
@@ -614,17 +572,8 @@ def _passo(tmp_path: Path, cenario: str) -> tuple[Bancada, subprocess.CompletedP
     return bancada, res
 
 
-# ---------------------------------------------------------------------------
-# A guarda
-# ---------------------------------------------------------------------------
-
-
 def test_a_guarda_nao_deixa_rodar_sem_o_duble(tmp_path: Path) -> None:
-    """A mordida da guarda: sem um dublê, nada roda.
-
-    O `sleep` sai da pasta de dublês e passa a resolver para o do sistema. A
-    guarda do shell tem de sair com 97 antes do corpo, que só escreveria no argv.
-    """
+    """A mordida da guarda: sem um dublê, nada roda."""
     bancada = montar_bancada(tmp_path, aparelhos=("cabo",))
     (bancada.dubles / "sleep").unlink()
     res = subprocess.run(
@@ -641,17 +590,8 @@ def test_a_guarda_nao_deixa_rodar_sem_o_duble(tmp_path: Path) -> None:
     assert bancada.argv() == [], "o corpo rodou com um nome fora do dublê"
 
 
-# ---------------------------------------------------------------------------
-# R1 e R2 — o veredito do wp-fix não depende do relógio
-# ---------------------------------------------------------------------------
-
-
 def test_r1_o_laco_atravessa_o_monitor_de_passagem_ate_a_webcam(tmp_path: Path) -> None:
-    """Três leituras do monitor do sink virtual e depois a webcam: OK.
-
-    MORDIDA: tirar `! is_monitor_source` do laço faz a primeira leitura
-    encerrar tudo com exit 3 e «FALHA: … MONITOR».
-    """
+    """Três leituras do monitor do sink virtual e depois a webcam: OK."""
     bancada = montar_bancada(
         tmp_path, aparelhos=("webcam",), roteiro=[MONITOR_DO_SOM] * 3 + [WEBCAM]
     )
@@ -686,17 +626,8 @@ def test_r2_monitor_que_nao_passa_continua_reprovando(tmp_path: Path) -> None:
     assert bancada.contagem("sonos") == 20
 
 
-# ---------------------------------------------------------------------------
-# R3 — o passo inteiro, no cabo, diz uma coisa só
-# ---------------------------------------------------------------------------
-
-
 def test_r3_o_passo_no_cabo_so_com_o_dualsense_diz_uma_coisa_so(tmp_path: Path) -> None:
-    """O cenário das 22:58, com o bloco real do install, o wp-fix e o doctor.
-
-    MORDIDA: devolver o laço traz a «FALHA: … MONITOR» de volta. Devolver a
-    linha `persistido:` do `show_status` também reprova aqui.
-    """
+    """O cenário das 22:58, com o bloco real do install, o wp-fix e o doctor."""
     bancada, res = _passo(tmp_path, "cabo")
     saida = res.stdout
     assert "FALHA" not in saida, saida
@@ -710,11 +641,7 @@ def test_r3_o_passo_no_cabo_so_com_o_dualsense_diz_uma_coisa_so(tmp_path: Path) 
 
 
 def test_r3_quando_o_monitor_nao_passa_o_passo_nao_da_dois_vereditos(tmp_path: Path) -> None:
-    """O WirePlumber não assenta dentro do orçamento: o veredito é o do fim.
-
-    MORDIDA: devolver o `case 3)` traz «a fonte padrão ainda não é um microfone»;
-    devolver a receita do fim traz o `--fix-mic` que acabou de rodar.
-    """
+    """O WirePlumber não assenta dentro do orçamento: o veredito é o do fim."""
     bancada, res = _passo(tmp_path, "cabo-lento")
     saida = res.stdout
     assert "ainda não é um microfone" not in saida, saida
@@ -724,16 +651,12 @@ def test_r3_quando_o_monitor_nao_passa_o_passo_nao_da_dois_vereditos(tmp_path: P
     assert "(entrada de verdade)" not in saida, saida
     assert f"pactl set-default-source {DS_ENTRADA}" not in bancada.argv(), bancada.argv()
     # A VALIDAÇÃO (14/09): o fim mandava «conecte o DualSense (no cabo)» com a
-    # entrada dele no ar e o doctor dizendo isso uma linha acima. MORDIDA: trocar
-    # o `if [[ -n "${_no_ar}" ]]` do ramo do monitor por `if false`.
     assert "DualSense (no cabo)" not in saida, saida
     assert f"Há uma entrada com porta usável no ar ({DS_ENTRADA})" in saida, saida
 
 
 def test_r3_sem_entrada_no_ar_o_monitor_ainda_pede_uma_entrada_de_verdade(tmp_path: Path) -> None:
     """O contraste da régua acima: sem entrada com porta usável, pedir hardware é a receita certa.
-
-    MORDIDA: trocar o `if [[ -n "${_no_ar}" ]]` do ramo do monitor por `if true`.
     """
     bancada = montar_bancada(tmp_path, aparelhos=(), roteiro=[MONITOR_DO_SOM])
     res = rodar_o_passo(bancada)
@@ -742,27 +665,12 @@ def test_r3_sem_entrada_no_ar_o_monitor_ainda_pede_uma_entrada_de_verdade(tmp_pa
     assert "Não há comando que resolva sem uma entrada de verdade" in res.stdout, res.stdout
 
 
-# ---------------------------------------------------------------------------
-# R4 — no rádio, o microfone virtual continua sendo o eleito
-# ---------------------------------------------------------------------------
-
-
 def test_r4_no_radio_o_passo_elege_o_microfone_virtual(tmp_path: Path) -> None:
-    """§D.2: pelo rádio o eleito é o `hefesto_mic_…`.
-
-    MORDIDA: pôr `hefesto_mic` na exclusão de `fontes_elegiveis` tira a eleição
-    do argv (o restart ainda devolve o topo da pilha, e por isso a régua olha o
-    argv, não só o OK).
-    """
+    """§D.2: pelo rádio o eleito é o `hefesto_mic_…`."""
     bancada, res = _passo(tmp_path, "radio")
     assert f"pactl set-default-source {MIC}" in bancada.argv(), bancada.argv()
     assert f"OK: microfone padrão ativo = {MIC}" in res.stdout, res.stdout
     assert f"microfone padrão do sistema: {MIC} (entrada de verdade)" in res.stdout, res.stdout
-
-
-# ---------------------------------------------------------------------------
-# R5 — nada de gravar como padrão um nó que não existe
-# ---------------------------------------------------------------------------
 
 
 def test_r5_o_duble_recusa_no_ausente(tmp_path: Path) -> None:
@@ -774,25 +682,16 @@ def test_r5_o_duble_recusa_no_ausente(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("cenario", sorted(CENARIOS))
 def test_r5_nenhum_no_ausente_e_gravado(tmp_path: Path, cenario: str) -> None:
-    """§D.4. MORDIDA: `pick_target_source_name` lendo o topo da pilha grava o
-    `hefesto_mic_…` no cabo, e o dublê recusa como o pactl de verdade."""
+    """§D.4. MORDIDA: `pick_target_source_name` lendo o topo da pilha grava o"""
     bancada, _res = _passo(tmp_path, cenario)
     recusas = [linha for linha in bancada.argv() if linha.startswith("RECUSADO")]
     assert recusas == [], recusas
 
 
-# ---------------------------------------------------------------------------
-# R6 — «entrada de verdade» só para quem tem porta de captura usável
-# ---------------------------------------------------------------------------
-
-
 def test_r6_a_conferencia_final_nao_chama_de_entrada_de_verdade_quem_grava_silencio(
     tmp_path: Path,
 ) -> None:
-    """§D.5: a onboard com as três portas `not available` grava silêncio.
-
-    MORDIDA: devolver o `*)` de hoje imprime «(entrada de verdade)» para ela.
-    """
+    """§D.5: a onboard com as três portas `not available` grava silêncio."""
     bancada = montar_bancada(tmp_path, aparelhos=(), roteiro=[ONBOARD])
     res = rodar_o_passo(bancada)
     assert res.returncode == 0, res.stderr
@@ -820,39 +719,15 @@ def test_r6_o_dualsense_com_outra_entrada_usavel_e_aviso(tmp_path: Path) -> None
     assert f"mas há outra entrada com porta usável: {WEBCAM}" in res.stdout, res.stdout
 
 
-# ---------------------------------------------------------------------------
-# R7 — a pilha do WirePlumber sai do passo como entrou
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("cenario", ["cabo", "cabo-lento"])
 def test_r7_a_pilha_sai_do_passo_como_entrou(tmp_path: Path, cenario: str) -> None:
-    """No cabo sem outra fonte, nenhum dos três programas grava a preferência.
-
-    MORDIDA: no `cabo`, devolver o laço E tirar a guarda do §D.7 (uma só não
-    basta: são duas travas); no `cabo-lento`, tirar só a guarda do §D.7.
-    """
+    """No cabo sem outra fonte, nenhum dos três programas grava a preferência."""
     bancada, _res = _passo(tmp_path, cenario)
     assert bancada.pilha() == PILHA_DE_ANTES, bancada.argv()
 
 
-# ---------------------------------------------------------------------------
-# MIC-CABO-SPDIF-01 — a guarda da fixture GRAVADA
-# ---------------------------------------------------------------------------
-
-
 def test_a_fixture_da_porta_desconhecida_e_gravada() -> None:
-    """A porta do cenário «desconhecida» tem de vir do disco e valer o cenário.
-
-    Duas coisas, e as duas já falharam nesta casa de jeitos diferentes:
-
-    1. **Ela existe.** Se a gravação sumir, o dublê imprimiria uma linha vazia e
-       o cenário viraria «source sem porta» — que é OUTRO cenário, e daria verde
-       ou vermelho pelo motivo errado, calado.
-    2. **Ela ainda significa «disponibilidade desconhecida».** É o que o nome do
-       cenário promete. Se um `pactl` novo passar a declarar a porta, esta linha
-       acusa, em vez de sete réguas medirem outra coisa sem ninguém notar.
-    """
+    """A porta do cenário «desconhecida» tem de vir do disco e valer o cenário."""
     assert _SOURCES_GRAVADA.is_file(), (
         f"a gravação de 20/09/2026 sumiu de {_SOURCES_GRAVADA} — sem ela o "
         "dublê imprime porta vazia e o cenário troca de significado"
@@ -870,14 +745,7 @@ def test_a_fixture_da_porta_desconhecida_e_gravada() -> None:
 
 
 def test_a_leitura_da_porta_para_na_primeira_source() -> None:
-    """A dupla tem de sair do MESMO bloco, e a gravação de hoje não prova isso.
-
-    Ela tem uma source só, então uma leitura que varresse o arquivo inteiro
-    daria o mesmo resultado — e passaria verde guardando a primeira porta de um
-    bloco com a última `Active Port:` de outro. Aqui vão duas sources nas duas
-    formas que o `pactl` emite (com e sem o cabeçalho `Source #`), e o que se
-    cobra é que a segunda não contamine a primeira.
-    """
+    """A dupla tem de sair do MESMO bloco, e a gravação de hoje não prova isso."""
     com_cabecalho = (
         "Source #1\n"
         "\tName: alsa_input.primeira\n"

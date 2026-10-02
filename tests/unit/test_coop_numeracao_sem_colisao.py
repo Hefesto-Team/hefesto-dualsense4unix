@@ -104,25 +104,6 @@ class TestCoopSemSecundarioNaoEscreveLed:
         )
 
 
-# ---------------------------------------------------------------------------
-# COOP-QUE-NÃO-DESMONTA-01 / E3 — o número do jogador para de trocar de dono
-# ---------------------------------------------------------------------------
-#
-# A queixa desta metade é irmã da de cima e mais silenciosa: o número do jogador
-# é REUSADO de propósito (o jogo quer P1..PN contíguos), e o MAC do vpad saía
-# desse número. Com três controles e uma queda no meio, **o MAC do Jogador 2
-# passava a pertencer a outra pessoa** — e um jogo que salve por slot de
-# dispositivo troca os perfis de dono sem uma linha de log.
-#
-# A cura NÃO é parar de reusar o índice; é desacoplar o MAC dele
-# (`integrations/uhid_gamepad.vpad_mac`). Estas réguas medem o desacoplamento,
-# com DUBLÊ — a prova de aparelho (dois controles, o primário cai e volta) é da
-# MESA-DE-QUATRO-01, por `D-0609-A-BANCADA-PROVA-NAO-BLOQUEIA`.
-#
-# Os endereços abaixo estão na máscara da casa (octetos 4 e 5 zerados), e os
-# `02:fe:` que aparecem são endereço FABRICADO por nós — não é de ninguém.
-
-#: Os quatro plásticos do alvo desta casa, com o endereço mascarado.
 _A = "aa:bb:cc:00:00:01"
 _B = "aa:bb:cc:00:00:02"
 _C = "e8:47:3a:00:00:d8"
@@ -133,11 +114,7 @@ class TestOMacDoVpadSegueOAparelho:
     """O MAC do vpad é do CONTROLE, e o número do jogador é da MESA."""
 
     def test_o_mesmo_controle_mantem_o_mac_em_qualquer_numero(self) -> None:
-        """O aceite da E3, em uma linha.
-
-        Mordida: devolva `vpad_mac` para `return player_mac(player)` e os quatro
-        números dão quatro MACs diferentes para o MESMO plástico.
-        """
+        """O aceite da E3, em uma linha."""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
 
         macs = {vpad_mac(_A, numero) for numero in (1, 2, 3, 4)}
@@ -149,19 +126,13 @@ class TestOMacDoVpadSegueOAparelho:
     def test_a_noite_dela_o_controle_cai_volta_e_o_jogo_ve_o_mesmo_device(
         self,
     ) -> None:
-        """O roteiro do journal de 02/08, reduzido ao que a E3 responde.
-
-        `t=0` A(P2) e B(P3) na mesa · `t=5` A cai e B é renumerado · `t=8` A
-        volta e pega o número que sobrou. O que o JOGO enxerga tem de ser: A com
-        o MAC de sempre, B com o MAC de sempre.
-        """
+        """O roteiro do journal de 02/08, reduzido ao que a E3 responde."""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
         antes = {
             ident: UhidDualSense(player=n, identity=ident).mac
             for ident, n in ((_A, 2), (_B, 3))
         }
-        # A queda de A libera o índice 2, e `_next_player_index` o entrega a B.
         depois = {
             ident: UhidDualSense(player=n, identity=ident).mac
             for ident, n in ((_B, 2), (_A, 3))
@@ -186,12 +157,7 @@ class TestOMacDoVpadSegueOAparelho:
         assert vpad_mac(_A.upper(), 2) == vpad_mac(_A, 2)
 
     def test_o_mac_derivado_e_o_do_numero_nunca_se_cruzam(self) -> None:
-        """Os dois espaços são disjuntos por CONSTRUÇÃO, não por sorte.
-
-        Todo MAC derivado tem o bit 0x80 no terceiro octeto; todo MAC de
-        fallback tem `00:00:00` ali. Sem esta reserva, um hash azarado daria
-        dois vpads com o mesmo MAC — o -EEXIST de volta pela porta da cura.
-        """
+        """Os dois espaços são disjuntos por CONSTRUÇÃO, não por sorte."""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import (
             player_mac,
             vpad_mac,
@@ -204,13 +170,7 @@ class TestOMacDoVpadSegueOAparelho:
             assert int(derivado.split(":")[2], 16) & 0x80, derivado
 
     def test_identidade_instavel_recua_para_o_numero(self) -> None:
-        """`dev:` e `path:` não prometem estabilidade que não têm.
-
-        O node evdev é RENUMERADO pelo kernel a cada replug (é o que o journal
-        de 02/08 mostra) e a instância HID também muda. Derivar o MAC deles
-        seria trocar um MAC instável por outro, com a agravante de parecer
-        curado.
-        """
+        """`dev:` e `path:` não prometem estabilidade que não têm."""
         from hefesto_dualsense4unix.integrations.uhid_gamepad import (
             player_mac,
             vpad_mac,
@@ -220,14 +180,7 @@ class TestOMacDoVpadSegueOAparelho:
             assert vpad_mac(instavel, 3) == player_mac(3), instavel
 
     def test_a_derivacao_sobrevive_a_um_daemon_novo(self) -> None:
-        """`hashlib`, nunca `hash()` — e esta régua é a que separa os dois.
-
-        O `hash()` de `str` é salgado por processo (`PYTHONHASHSEED`): com ele o
-        MAC do vpad mudaria a cada reinício do daemon, e o sintoma seria
-        idêntico ao defeito curado — o jogo vendo um controle novo onde está o
-        mesmo plástico. Dois interpretadores com sementes DIFERENTES têm de
-        responder a mesma coisa.
-        """
+        """`hashlib`, nunca `hash()` — e esta régua é a que separa os dois."""
         import os
         import subprocess
         import sys
@@ -250,12 +203,7 @@ class TestOMacDoVpadSegueOAparelho:
 
 
 class TestACuraChegaAoProduto:
-    """De nada adianta a função certa se a identidade não chega até ela.
-
-    O caminho é `coop._promote_player` → `virtual_pad.make_virtual_pad` →
-    `_try_uhid` → o vpad. Os dois primeiros degraus já passavam `identity`
-    desde a MÁSCARA-POR-JOGADOR-01; o terceiro a descartava.
-    """
+    """De nada adianta a função certa se a identidade não chega até ela."""
 
     def _fabrica(self, monkeypatch: Any, identity: str | None) -> Any:
         from hefesto_dualsense4unix.integrations import uhid_gamepad, virtual_pad

@@ -1,36 +1,4 @@
-"""PERFIL-MANDA-01 — o que ela escolheu para o controle não cede ao jogo.
-
-A QUEIXA, palavra dela em 16/09/2026 com o Sackboy aberto: *"pq jogos tipo
-sackboy seguem não aplicando as configs setadas na interface?"* — e, depois de
-medido: *"meu perfil manda"*.
-
-O QUE O JOURNAL DELA MOSTROU, e é o contrário do que a queixa sugeria: o perfil
-ENTROU inteiro. Às 00:18:34 o `launch_perfil_ativado` trouxe `secoes={'led':
-'aplicado', 'trigger': 'aplicado', …}` e a cor de cada controle chegou ao nó
-(`(255,255,0)` e `(0,255,128)`). Dezenove segundos depois, o
-`game_output_replicado autoridade=game` trocou as duas pela paleta de jogador do
-SDL — `(0,64,0)` e `(32,0,32)`, os mesmos 0x40/0x20 que a LIGHTBAR-NA-STEAM-01
-mediu — e às 00:20:26 o `uhid_replica_ativa categoria=trigger_left/right` trocou
-os gatilhos. Trinta minutos depois os nós estavam em `(0,0,64)` e `(64,0,0)`.
-
-Não era a trava manual (essa saiu em 14/09 e o log prova que nada foi ignorado):
-era a camada GAME sendo o TOPO do merge, por desenho, desde a REPLICA-03.
-
-A REGRA: campo com DONO declarado para aquele controle — `perfil` ou `usuaria`,
-o carimbo do R-20 — é recusado ao jogo na ENTRADA e removido da camada GAME no
-MERGE. O que não tem dono (o broadcast global, a cor automática do número)
-continua cedendo: um perfil que nunca escolheu cor não pode APAGAR a barra
-dentro do jogo, e quem nunca configurou nada não perde a luz que o jogo pinta.
-
-É o §I.4 da LIGHTBAR-NA-STEAM-01 — escrito em 13/09, adiado com a condição
-*"só se a telemetria do passo 2 mostrar a paleta chegando já sob `game`"*. A
-telemetria mostrou.
-
-AS MORDIDAS: arrancar a peneira da entrada devolve a cor do jogo ao nó sysfs;
-arrancar a do merge devolve a cor do jogo ao resolve (e com ela ao reassert e ao
-`0x31` do gatilho da cor, que é a única rota que chega ao plástico pelo rádio).
-As duas foram feitas, uma de cada vez, e as duas reprovaram.
-"""
+"""PERFIL-MANDA-01 — o que ela escolheu para o controle não cede ao jogo."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -44,23 +12,12 @@ from hefesto_dualsense4unix.core import backend_pydualsense as bp
 MAC_1 = "AA:BB:CC:00:00:01"
 UNIQ_1 = "aabbcc000001"
 
-#: O que ELA escolheu para este controle — a cor do perfil do Sackboy.
 COR_DELA = (255, 255, 0)
 PADRAO_DELA = (True, False, False, False, False)
 
-#: O que o JOGO pinta: uma cor de GAMEPLAY, escolhida pelo jogo.
-#:
-#: STEAM-NO-FISICO-01 (23/09/2026): até ali esta régua usava a paleta de
-#: jogador do SDL, `(0, 64, 0)`, que foi o caso medido no Sackboy. Desde a
-#: decisão dela de 23/09 (*"Hefesto manda e controla sempre"*) aquela cor é
-#: NÚMERO, e o número é do Hefesto com ou sem perfil
-#: (`bp.numeracao_do_jogo`) — ela nem chega à peneira do perfil. A regra do
-#: perfil continua valendo para a cor que o jogo ESCOLHE, e é com ela que esta
-#: régua mede. O número do jogo (`PADRAO_DO_JOGO`) é recusado sempre.
 COR_DO_JOGO = (200, 60, 0)
 PADRAO_DO_JOGO = (True, False, True, False, True)
 
-#: Os onze bytes (modo + 10 parâmetros) de um trigger effect do jogo.
 BLOCO_DO_JOGO = bytes([0x26, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 
@@ -99,12 +56,7 @@ def _controle(
     campos_dela: dict[str, Any] | None = None,
     autoridade: str = "game",
 ) -> tuple[bp.PyDualSenseController, _NoDeLed, SimpleNamespace]:
-    """Controle com o jogo no comando e os campos DELA já carimbados.
-
-    O carimbo é o que distingue esta régua das irmãs da REPLICA-03, que montam
-    `_desired_by_uniq` sem dono nenhum: lá o jogo vence porque ninguém
-    reivindicou o campo, e isso continua verdade.
-    """
+    """Controle com o jogo no comando e os campos DELA já carimbados."""
     ctl = bp.PyDualSenseController()
     handle = _handle()
     no = _NoDeLed()
@@ -174,9 +126,7 @@ class TestOQueNaoEDelaContinuaSendoDoJogo:
         assert no.rgb_calls == [COR_DO_JOGO]
 
     def test_o_valor_sem_carimbo_nao_defende(self) -> None:
-        """Override por-uniq SEM dono é a camada de compatibilidade das irmãs:
-        o jogo vence, e é o que impede esta cura de mudar teste alheio por
-        baixo do pano."""
+        """Override por-uniq SEM dono é a camada de compatibilidade das irmãs:"""
         ctl, _no, _ = _controle()
         ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(led=COR_DELA)
 
@@ -186,12 +136,7 @@ class TestOQueNaoEDelaContinuaSendoDoJogo:
             assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_JOGO
 
     def test_a_defesa_e_por_campo_o_resto_passa(self) -> None:
-        """Ela escolheu o número e não a cor: a cor de gameplay continua do jogo.
-
-        STEAM-NO-FISICO-01 inverteu os papéis desta régua: até 23/09 ela
-        escolhia a cor e o NÚMERO passava; desde a decisão dela o número do
-        jogo nunca passa, então o campo que prova «por campo» é a cor.
-        """
+        """Ela escolheu o número e não a cor: a cor de gameplay continua do jogo."""
         ctl, no, _ = _controle(campos_dela={"player_leds": PADRAO_DELA})
 
         ctl.set_game_output_for(
@@ -212,8 +157,6 @@ class TestOQueNaoEDelaContinuaSendoDoJogo:
             MAC_1, led=COR_DO_JOGO, player_leds=PADRAO_DO_JOGO
         )
 
-        # Nada passou: a cor era dela e o número é do Hefesto — a camada nem
-        # nasce (STEAM-NO-FISICO-01).
         assert UNIQ_1 not in ctl._game_output_by_uniq
 
 
@@ -238,8 +181,7 @@ class TestOGatilhoDelaNaoCede:
         assert ctl._game_triggers_by_uniq[UNIQ_1] == {"right": BLOCO_DO_JOGO}
 
     def test_o_recusado_nao_fica_registrado_para_o_hotplug(self) -> None:
-        """Quem está em `_game_triggers_by_uniq` é re-pendurado na reconexão:
-        um bloco recusado que ficasse lá voltaria ao controle no replug."""
+        """Quem está em `_game_triggers_by_uniq` é re-pendurado na reconexão:"""
         efeito = bp.TriggerEffect(mode=1, forces=(6, 0, 0, 0, 0, 0, 0))
         ctl, _no, _ = _controle(campos_dela={"trigger_left": efeito})
 
@@ -249,23 +191,14 @@ class TestOGatilhoDelaNaoCede:
 
 
 class TestOGestoDelaNoMeioDoJogo:
-    """A ordem inversa, e é a que ela vive: o jogo pinta ANTES do carimbo.
-
-    Ela abre a interface com o jogo rodando e clica. A camada GAME já existe e
-    o bloco cru já está pendurado — a peneira da ENTRADA não alcança nada disso,
-    porque a escrita do jogo já aconteceu. Quem cura aqui é a peneira do MERGE
-    (a luz) e o solta-o-bloco do `_stamp_owner_locked` (o gatilho).
-    """
+    """A ordem inversa, e é a que ela vive: o jogo pinta ANTES do carimbo."""
 
     def test_a_cor_que_ela_escolhe_agora_vence_a_camada_do_jogo(self) -> None:
-        """A MORDIDA da peneira do MERGE: sem ela, o resolve devolve a do jogo —
-        e com o resolve vão o reassert e o `0x31` do gatilho da cor, que é a
-        única rota que chega ao plástico pelo rádio."""
+        """A MORDIDA da peneira do MERGE: sem ela, o resolve devolve a do jogo —"""
         ctl, _no, _ = _controle()
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
         assert ctl._game_output_by_uniq[UNIQ_1].led == COR_DO_JOGO
 
-        # O gesto dela: o campo ganha valor e dono, como no `led.set` da aba.
         with ctl._io_lock:
             ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(led=COR_DELA)
             ctl._stamp_owner_locked(UNIQ_1, ("led",), bp._LAYER_USER)
@@ -286,8 +219,7 @@ class TestOGestoDelaNoMeioDoJogo:
         assert no.rgb_calls == [COR_DELA]
 
     def test_o_gatilho_dela_solta_o_bloco_cru_do_jogo(self) -> None:
-        """`_build_common` dá precedência ao bloco cru: sem soltá-lo, o efeito
-        dela é gravado no handle e NÃO sai no fio."""
+        """`_build_common` dá precedência ao bloco cru: sem soltá-lo, o efeito"""
         ctl, _no, handle = _controle()
         ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
         assert handle._raw_trigger_right == BLOCO_DO_JOGO

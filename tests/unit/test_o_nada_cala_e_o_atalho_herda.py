@@ -40,19 +40,11 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import Profile
 
-#: AS SEIS QUE ESCAPAVAM, derivadas dos mapas do dono e não digitadas: são
-#: exatamente os botões que o device de mouse atende por tecla, e por isso os
-#: únicos que a subtração por `do_mouse` não alcançava.
 AS_SEIS: frozenset[str] = frozenset(DPAD_TO_KEY) | frozenset(EDGE_KEY_MAP)
 
 
 class _UinputDeMentira:
-    """O módulo `uinput`, e ele só conhece nomes que existem de verdade.
-
-    Um objeto que respondesse a qualquer atributo imitaria um device que sabe
-    tudo — e esta casa já pagou três vezes por dublê mais frouxo que a função
-    real.
-    """
+    """O módulo `uinput`, e ele só conhece nomes que existem de verdade."""
 
     class _Ev:
         def __init__(self, nome: str) -> None:
@@ -88,20 +80,12 @@ def _mouse_de_pe() -> tuple[UinputMouseDevice, _DeviceDeMentira]:
 
 
 def _apertar(d: UinputMouseDevice, botao: str) -> None:
-    """Uma borda de subida e uma de descida naquele botão, e nada mais.
-
-    Os sticks vão no centro (128) e os gatilhos em zero de propósito: um valor
-    fora disso injetaria `cross`/`triangle` por `_resolve_emulated_set` e
-    sujaria a leitura com evento que não é do botão medido.
-    """
+    """Uma borda de subida e uma de descida naquele botão, e nada mais."""
     comum = dict(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
     d.dispatch(buttons=frozenset({botao}), now=1.0, **comum)  # type: ignore[arg-type]
     d.dispatch(buttons=frozenset(), now=2.0, **comum)  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
-# 1. o `— Nada —` cala — e quem responde é o que SAIU do device
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("botao", sorted(AS_SEIS))
 def test_o_nada_cala_as_seis_que_escapavam(botao: str) -> None:
     """Ela põe `— Nada —`, e o botão para de emitir. Medido no evento.
@@ -124,11 +108,7 @@ def test_o_nada_cala_as_seis_que_escapavam(botao: str) -> None:
 
 
 def test_as_vinte_e_duas_calam_e_nenhuma_sobra() -> None:
-    """A conta fechada: `— Nada —` em TODAS, e o device fica sem mapa nenhum.
-
-    Ela mede o conjunto, e não seis casos soltos, porque o defeito era de
-    COBERTURA: dezesseis calavam e seis não, e o que se perdeu era a diferença.
-    """
+    """A conta fechada: `— Nada —` em TODAS, e o device fica sem mapa nenhum."""
     escolhas = {b: acoes.TOKEN_NADA for b in acoes.BOTOES}
     do_mouse, do_teclado, _sem = acoes.resolver(escolhas)
     calados = acoes.botoes_calados(escolhas)
@@ -145,12 +125,7 @@ def test_as_vinte_e_duas_calam_e_nenhuma_sobra() -> None:
 
 
 def test_o_que_ja_calava_continua_calando() -> None:
-    """A cura tem de EXPLICAR o que já funcionava — e não pode quebrá-lo.
-
-    Os dezesseis que já calavam calavam por outra via: `_mapa_botoes` e o
-    `set_bindings` do teclado virtual são SUBSTITUÍDOS inteiros. Se a cura
-    tivesse mexido nessa via, isto reprovaria.
-    """
+    """A cura tem de EXPLICAR o que já funcionava — e não pode quebrá-lo."""
     for botao in ("cross", "triangle", "r3"):
         escolhas = {botao: acoes.TOKEN_NADA}
         do_mouse, _t, _s = acoes.resolver(escolhas)
@@ -196,16 +171,8 @@ def test_o_de_fabrica_nao_cala_ninguem() -> None:
     assert d._mapa_botoes == BUTTON_TO_UINPUT
 
 
-# ---------------------------------------------------------------------------
-# 2. o atalho dela sobrevive ao Guardar da tela nova
-# ---------------------------------------------------------------------------
 def test_o_resolver_herda_os_atalhos_dela() -> None:
-    """O que ela escreveu na janela antiga chega ao teclado virtual.
-
-    A MORDIDA: apague o bloco `if key_bindings is not None:` de
-    `_tabela_efetiva` — este caso reprova mostrando o `KEY_LEFTMETA` de fábrica
-    no lugar do `KEY_F1` dela.
-    """
+    """O que ela escreveu na janela antiga chega ao teclado virtual."""
     dela = {"options": ["KEY_F1"], "l1": ["KEY_F2", "KEY_LEFTCTRL"]}
     _m, sem_herdar, _s = acoes.resolver({"cross": "KEY_ENTER"})
     _m, com_herdar, _s = acoes.resolver({"cross": "KEY_ENTER"}, dela)
@@ -220,11 +187,7 @@ def test_o_resolver_herda_os_atalhos_dela() -> None:
 
 
 def test_a_escolha_da_tela_nova_vence_o_atalho_antigo() -> None:
-    """A precedência é a das três camadas, e a última é a que ela acabou de ver.
-
-    Se o `key_bindings` vencesse, o "Guardar" da tela nova não guardaria — e o
-    defeito trocaria de lado em vez de fechar.
-    """
+    """A precedência é a das três camadas, e a última é a que ela acabou de ver."""
     dela = {"options": ["KEY_F1"]}
     _m, do_teclado, _s = acoes.resolver({"options": "KEY_ESC"}, dela)
     assert do_teclado["options"] == ("KEY_ESC",), (
@@ -248,12 +211,7 @@ def test_o_r3_fica_fora_da_camada_e_continua_botao_do_meio() -> None:
 
 
 def test_o_dict_vazio_e_o_none_sao_coisas_diferentes() -> None:
-    """`None` HERDA e `{}` ESVAZIA — o mesmo contrato de `resolve_key_bindings`.
-
-    O `{}` é ela tendo removido tudo na janela antiga, e o `apply_keyboard` já
-    entrega um teclado mudo nesse caso. Se esta camada mesclasse com o de
-    fábrica, os dois appliers voltariam a discordar — que é o defeito inteiro.
-    """
+    """`None` HERDA e `{}` ESVAZIA — o mesmo contrato de `resolve_key_bindings`."""
     _m, herdando, _s = acoes.resolver({"cross": "KEY_ENTER"}, None)
     assert herdando["options"] == ("KEY_LEFTMETA",)
     _m, esvaziado, _s = acoes.resolver({"cross": "KEY_ENTER"}, {})

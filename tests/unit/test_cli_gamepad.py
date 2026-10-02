@@ -1,16 +1,4 @@
-"""`hefesto-dualsense4unix gamepad on/off` — a máscara não pode mudar sozinha.
-
-HARM-08 (auditoria de harmonia, 2026-07-15): o `--flavor` tinha default
-``"dualsense"`` HARDCODED no comando, enquanto o daemon e a GUI já usavam
-``xbox`` (`DEFAULT_FLAVOR`) desde o SPRINT-GAME-RUMBLE-01. Resultado: um
-`gamepad on` sem argumento — o gesto mais natural que existe — **trocava** a
-máscara de quem tinha Xbox configurado e **matava o rumble in-game**, em
-silêncio. O mesmo gesto ligava máscaras diferentes conforme a porta de entrada
-(GUI/applet/CLI).
-
-O contrato do daemon (`ipc_handlers._handle_gamepad_emulation_set`) sempre foi
-"flavor é opcional; mantém o atual se ausente" — a CLI é que não o respeitava.
-"""
+"""`hefesto-dualsense4unix gamepad on/off` — a máscara não pode mudar sozinha."""
 from __future__ import annotations
 
 from typing import Any

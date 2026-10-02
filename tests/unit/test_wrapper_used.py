@@ -39,26 +39,17 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID = 1599660  # Sackboy (wm_class provado ao vivo)
-
-
-# --- decisão pura -------------------------------------------------------------
+APPID = 1599660
 
 
 @pytest.mark.parametrize(
     ("marker", "first_seen", "esperado"),
     [
-        # Sem marker: o wrapper nunca rodou.
         (None, 1000.0, False),
-        # Marker de OUTRO appid não conta.
         ((999, 1000), 1000.0, False),
-        # Caso bom: wrapper rodou logo antes de a janela aparecer.
         ((APPID, 990), 1000.0, True),
-        # Fronteira: exatamente na janela.
         ((APPID, 1000 - int(WRAPPER_MARKER_WINDOW_SEC)), 1000.0, True),
-        # Marker velho demais (launch anterior, sessão de ontem).
         ((APPID, 1000 - int(WRAPPER_MARKER_WINDOW_SEC) - 1), 1000.0, False),
-        # Marker mais NOVO que a 1ª detecção (relaunch com leitura quente).
         ((APPID, 1005), 1000.0, True),
     ],
 )
@@ -72,21 +63,14 @@ def test_wrapper_used_state_parametrizado(
 
 
 def test_wrapper_used_jogo_pesado_abre_janela_minutos_depois() -> None:
-    """Regressão do falso alarme "jogo sem wrapper" em AAA de carregamento
-    longo (RDR2/compilação de shaders): a janela `steam_app_N` só aparece
-    ~5 min APÓS o launch. O marker é do LAUNCH, então o gap marker→janela é de
-    300 s — dentro da janela de 15 min, mas passava dos 120 s antigos. O
-    wrapper RODOU e exportou as envs; `wrapper_used` tem que continuar True (o
-    número é concreto de propósito: falha com a janela de 120 s, passa com 900).
-    """
-    gap = 300.0  # 5 min entre o launch (marker) e a 1ª janela do jogo
+    """Regressão do falso alarme "jogo sem wrapper" em AAA de carregamento"""
+    gap = 300.0
     first_seen = 10_000.0
     marker = (APPID, int(first_seen - gap))
     assert (
         wrapper_used_state(appid=APPID, marker=marker, first_seen_epoch=first_seen)
         is True
     )
-    # A constante precisa ser generosa o bastante para cobrir AAA pesado.
     assert gap <= WRAPPER_MARKER_WINDOW_SEC
 
 
@@ -98,30 +82,15 @@ def test_steam_appid_from_wm_class() -> None:
 
 
 def test_steam_appid_from_wm_class_ignora_caixa_e_espaco() -> None:
-    """UNIFICA-PREDICADO-01: a fonte ÚNICA é insensível a caixa e tolera espaço.
-
-    A `wm_class` chega do X/XWayland com a caixa que o toolkit escolheu e MUDA
-    DE GRAFIA ENTRE BACKENDS de detecção — é o que `schema._casa_sem_caixa`
-    documenta e o que o matcher de perfil já respeitava. Um predicado
-    CASE-SENSITIVE aqui embaixo faria as cinco cópias do mesmo teste
-    divergirem de novo, e a divergência entre predicados é o buraco de sempre
-    (R-01/R-21). O `.strip()` entra pelo mesmo motivo: dois dos cinco lugares
-    que este módulo unifica já limpavam espaço acidental, e a fonte não —
-    absorver isso em silêncio seria mudar comportamento em silêncio.
-    """
+    """UNIFICA-PREDICADO-01: a fonte ÚNICA é insensível a caixa e tolera espaço."""
     assert steam_appid_from_wm_class(f"STEAM_APP_{APPID}") == APPID
     assert steam_appid_from_wm_class(f"Steam_App_{APPID}") == APPID
     assert steam_appid_from_wm_class(f"  steam_app_{APPID}  ") == APPID
     assert steam_appid_from_wm_class(f"\tSTEAM_APP_{APPID}\n") == APPID
-    # O alargamento é SÓ de caixa e espaço: o que não era appid continua não
-    # sendo, em qualquer grafia.
     assert steam_appid_from_wm_class("STEAM_APP_") is None
     assert steam_appid_from_wm_class("Steam_App_abc") is None
     assert steam_appid_from_wm_class("steam_app_12x") is None
     assert steam_appid_from_wm_class("xsteam_app_42") is None
-
-
-# --- parse do marker ----------------------------------------------------------
 
 
 def _grava_marker(base: Path, texto: str) -> None:
@@ -145,12 +114,12 @@ def test_read_last_run_marker_tolerante_a_lixo(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "texto",
     [
-        "",  # vazio
-        "appid=123\n",  # sem epoch
-        "epoch=99\n",  # sem appid
-        "appid=abc\nepoch=99\n",  # appid não-numérico
-        "appid=0\nepoch=99\n",  # appid 0 = launch fora da Steam
-        "appid=-3\nepoch=99\n",  # negativo não passa no isdigit
+        "",
+        "appid=123\n",
+        "epoch=99\n",
+        "appid=abc\nepoch=99\n",
+        "appid=0\nepoch=99\n",
+        "appid=-3\nepoch=99\n",
     ],
 )
 def test_read_last_run_marker_invalido_devolve_none(
@@ -162,9 +131,6 @@ def test_read_last_run_marker_invalido_devolve_none(
 
 def test_read_last_run_marker_sem_arquivo(tmp_path: Path) -> None:
     assert read_last_run_marker(tmp_path / "nao_existe") is None
-
-
-# --- NUMA-01: pid opcional, last_exit, wrapper_game_running -------------------
 
 
 def test_read_last_run_marker_tolera_pid_opcional(tmp_path: Path) -> None:
@@ -214,8 +180,7 @@ def test_read_last_exit_marker_sem_arquivo(tmp_path: Path) -> None:
 
 
 def test_read_last_exit_pid_le_o_campo_novo(tmp_path: Path) -> None:
-    """Correção pós-auditoria: `pid=` no `last_exit` correlaciona a saída ao
-    launch que a gravou (ver `TestWrapperGameRunning`)."""
+    """Correção pós-auditoria: `pid=` no `last_exit` correlaciona a saída ao"""
     tmp_path.mkdir(parents=True, exist_ok=True)
     (tmp_path / "last_exit").write_text("epoch=555\npid=111\n", encoding="utf-8")
     assert read_last_exit_pid(tmp_path) == 111
@@ -349,9 +314,7 @@ class TestWrapperGameRunning:
         )
 
     def test_exit_igual_ao_marker_e_false(self) -> None:
-        """Fronteira: `exit_marker >= marker_epoch` — empate conta como
-        "já terminou" (fail-safe do lado conservador desta evidência
-        específica; `classify` ainda tem os outros 2 ramos)."""
+        """Fronteira: `exit_marker >= marker_epoch` — empate conta como"""
         assert (
             wrapper_game_running(
                 marker=(APPID, 990),
@@ -363,8 +326,7 @@ class TestWrapperGameRunning:
         )
 
     def test_exit_mais_velho_que_o_marker_e_ignorado(self) -> None:
-        """`last_exit` de um launch ANTERIOR (mais velho que o marker
-        atual) não invalida o launch corrente."""
+        """`last_exit` de um launch ANTERIOR (mais velho que o marker"""
         assert (
             wrapper_game_running(
                 marker=(APPID, 990),
@@ -383,55 +345,39 @@ class TestWrapperGameRunning:
             is True
         )
 
-    # --- correção pós-auditoria: correlação por pid entre last_run/last_exit
-    #
-    # Achado: `last_run`/`last_exit` são arquivos GLOBAIS (sem pid/sessão
-    # amarrando um ao outro). Sequência do incidente: launch A grava
-    # last_run(epoch=990, pid=P_A) e o próprio `exec` FALHA; launch B (retry
-    # ou outro jogo) grava last_run(epoch=995, pid=P_B) com SUCESSO — P_B
-    # vivo rodando o jogo de verdade; o trap tardio de A só termina de
-    # gravar last_exit(epoch=999) DEPOIS que B já sobrescreveu o marker. Sem
-    # a correlação por pid, exit_marker(999) >= marker_epoch(995) derrubava
-    # B com o jogo de B genuinamente vivo.
 
     def test_exit_de_outro_launch_nao_invalida_com_pids_correlacionados(
         self,
     ) -> None:
-        """`exit_pid` (do launch A, que falhou) != `marker_pid` (do launch B,
-        vivo): o `last_exit` tardio de A é reconhecido como de OUTRO launch
-        e IGNORADO — B continua contando como jogo rodando."""
+        """`exit_pid` (do launch A, que falhou) != `marker_pid` (do launch B,"""
         assert (
             wrapper_game_running(
-                marker=(APPID, 995),  # last_run do launch B (sucesso)
-                exit_marker=999,  # last_exit tardio do launch A (falhou)
-                pid_alive=True,  # P_B (o pid do marker atual) está vivo
-                marker_pid=222,  # pid de B
-                exit_pid=111,  # pid de A — DIFERENTE de marker_pid
+                marker=(APPID, 995),
+                exit_marker=999,
+                pid_alive=True,
+                marker_pid=222,
+                exit_pid=111,
                 now=1000.0,
             )
             is True
         )
 
     def test_exit_do_mesmo_launch_ainda_invalida_com_pids_iguais(self) -> None:
-        """Quando `exit_pid` CASA com `marker_pid` (o mesmo launch cujo
-        `exec` falhou de verdade), o critério antigo se mantém: o marker
-        não atesta jogo rodando."""
+        """Quando `exit_pid` CASA com `marker_pid` (o mesmo launch cujo"""
         assert (
             wrapper_game_running(
                 marker=(APPID, 990),
                 exit_marker=995,
                 pid_alive=True,
                 marker_pid=111,
-                exit_pid=111,  # MESMO pid do marker — mesmo launch
+                exit_pid=111,
                 now=1000.0,
             )
             is False
         )
 
     def test_sem_pids_cai_no_criterio_antigo_so_por_epoch(self) -> None:
-        """`marker_pid`/`exit_pid` ausentes (markers antigos, gravados antes
-        da correção, ou leitura que falhou): fallback conservador idêntico
-        ao comportamento pré-correção — exit mais novo/igual invalida."""
+        """`marker_pid`/`exit_pid` ausentes (markers antigos, gravados antes"""
         assert (
             wrapper_game_running(
                 marker=(APPID, 990),
@@ -457,7 +403,6 @@ def server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
         return target
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
-    # Marker do wrapper em tmp (o read usa o launch_env_dir do módulo).
     monkeypatch.setattr(
         le_mod, "launch_env_dir", lambda ensure=False: tmp_path / "launch_env"
     )
@@ -528,8 +473,7 @@ async def test_wrapper_used_true_com_marker_fresco(
 async def test_wrapper_used_false_sem_marker_derruba_dedup_ok(
     server: IpcServer,
 ) -> None:
-    """O FATO 0 curado: jogo aberto sem wrapper → wrapper_used=false E o
-    dedup_ok deixa de mentir (motivo `jogo_sem_wrapper`)."""
+    """O FATO 0 curado: jogo aberto sem wrapper → wrapper_used=false E o"""
     server.store.record_window_detect_read("xlib", f"steam_app_{APPID}")
     result = await server._handle_daemon_state_full({})
     ge = result["gamepad_emulation"]
@@ -553,8 +497,7 @@ async def test_wrapper_used_false_com_marker_velho(
 async def test_wrapper_used_false_em_nativo_nao_derruba_dedup(
     server: IpcServer,
 ) -> None:
-    """Modo Nativo: não há env que importe (o launch_env omite DISABLE/IGNORE)
-    — wrapper ausente é informativo, não quebra de dedup."""
+    """Modo Nativo: não há env que importe (o launch_env omite DISABLE/IGNORE)"""
     server.daemon.is_native_mode = lambda: True  # type: ignore[union-attr]
     server.store.record_window_detect_read("xlib", f"steam_app_{APPID}")
     result = await server._handle_daemon_state_full({})

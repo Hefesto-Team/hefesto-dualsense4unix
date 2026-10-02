@@ -39,8 +39,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
     _DesiredOutput,
 )
 
-#: Offsets DENTRO do envelope 0x31 (o common começa em [3]): flag1, número do
-#: jogador e os três bytes de cor.
 POS_FLAG1 = 3 + 1
 POS_PLAYERS = 3 + 43
 POS_R = 3 + 44
@@ -108,26 +106,18 @@ def _backend(handles: dict[str, Any], **kw: Any) -> Any:
     alvo = _BackendMinimo(handles, **kw)
     for nome in (
         "reescrever_lightbar_por_hidraw",
-        # STEAM-NO-FISICO-01: o corpo da escrita mora num método só, que o
-        # gatilho e a vigia do sequestro dividem.
         "_escrever_barra_e_numero_bt",
         "consumir_conexoes_bt_novas",
         "_pode_escrever_player_leds",
         "_detect_transport",
     ):
         metodo = getattr(PyDualSenseController, nome)
-        # `_detect_transport` é staticmethod — não se liga a instância.
         setattr(alvo, nome, metodo if nome == "_detect_transport" else metodo.__get__(alvo))
     return alvo
 
 
 def test_escreve_pela_rota_hidraw_e_nunca_pelo_no_sysfs() -> None:
-    """A rota é o achado da noite. Com a Steam viva, o sysfs perde e o hidraw vence.
-
-    Ensaio `cor-rota-sysfs-com-steam` (não obedece) contra
-    `cor-rota-hidraw-com-steam` (pintou os três). O produto tinha desligado
-    justamente a rota que funciona: por rádio só sobrava o sysfs.
-    """
+    """A rota é o achado da noite. Com a Steam viva, o sysfs perde e o hidraw vence."""
     handle = _Handle("bt")
     no = _NoSysfs()
     backend = _backend({"aa:bb": handle}, sysfs={"aa:bb": no})
@@ -143,12 +133,7 @@ def test_escreve_pela_rota_hidraw_e_nunca_pelo_no_sysfs() -> None:
 
 
 def test_escreve_em_TODOS_os_do_radio_e_nao_so_no_que_chegou() -> None:  # noqa: N802
-    """A lição do ensaio que falhou: a rajada da Steam repinta TODOS.
-
-    `gatilho-1500ms-por-controle`, 12/08: escrever só no controle recém-chegado
-    deixou dois dos três no padrão da Steam. Literal dela: *"só o player 4 que
-    é o controle azul o resto tá no padrão da steam"*.
-    """
+    """A lição do ensaio que falhou: a rajada da Steam repinta TODOS."""
     handles = {"aa:bb": _Handle("bt"), "cc:dd": _Handle("bt"), "ee:ff": _Handle("bt")}
     backend = _backend(handles)
 
@@ -160,12 +145,7 @@ def test_escreve_em_TODOS_os_do_radio_e_nao_so_no_que_chegou() -> None:  # noqa:
 
 
 def test_o_cabo_fica_de_fora() -> None:
-    """Pelo cabo a barra obedece — escrever lá é trabalho sem defeito para curar.
-
-    Ensaio `lightbar-usb-1` (03/08) e a mesa cheia de 11/08: com o daemon
-    parado e escrita direta, os DOIS do cabo ficaram brancos e os dois do rádio
-    não.
-    """
+    """Pelo cabo a barra obedece — escrever lá é trabalho sem defeito para curar."""
     radio, cabo = _Handle("bt"), _Handle("usb")
     backend = _backend({"radio": radio, "cabo": cabo})
 
@@ -177,17 +157,7 @@ def test_o_cabo_fica_de_fora() -> None:
 
 
 def test_a_cor_e_o_numero_saem_no_MESMO_report() -> None:  # noqa: N802
-    """*"isso vai servir pro player e pro lightbar, certo?"* — dela, 12/08.
-
-    A Steam repinta os dois: ao abrir com as barras acesas, elas migraram para
-    as cores de jogador dela e o número acompanhou. Um report carrega os dois
-    (flag1 0x04|0x10, `common[43]` e `common[44..46]`); fazer duas escritas
-    seria dobrar a chance de cair no meio de uma rajada nova.
-
-    O padrão conferido é o do Controle 3 — `x-x-x`, que no driver desta máquina
-    é `BIT(4)|BIT(2)|BIT(0)` = 0x15
-    (`assets/dkms/hid-playstation/hid-playstation.c:1836-1842`).
-    """
+    """*"isso vai servir pro player e pro lightbar, certo?"* — dela, 12/08."""
     handle = _Handle("bt")
     desired = _DesiredOutput(
         led=(255, 0, 128), player_leds=(True, False, True, False, True)
@@ -204,13 +174,7 @@ def test_a_cor_e_o_numero_saem_no_MESMO_report() -> None:  # noqa: N802
 
 
 def test_nao_manda_o_0x08_nem_os_bits_de_setup_da_lightbar() -> None:
-    """Dois reports desta casa já travaram a barra. Nenhum dos dois sai daqui.
-
-    - `RELEASE_LEDS` (0x08): travou a barra 7 de 7 dentro da janela pós-conexão
-      (`LIGHTBAR-BT-CULPADO-01`, 03/08) e apaga os player-LEDs sempre;
-    - `LIGHTBAR_SETUP_CONTROL_ENABLE` (flag2 0x02): reengatado em regime, trava
-      a exibição no firmware (`LIGHTBAR-BT-KEEPALIVE-01`, 22/07).
-    """
+    """Dois reports desta casa já travaram a barra. Nenhum dos dois sai daqui."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle})
 
@@ -223,13 +187,7 @@ def test_nao_manda_o_0x08_nem_os_bits_de_setup_da_lightbar() -> None:
 
 
 def test_sem_cor_resolvida_usa_o_azul_default_do_kernel() -> None:
-    """Controle virgem tem de nascer ACESO, não apagado.
-
-    É a mesma escolha do priming (`_refresh_sysfs_leds`): sem cor resolvida, o
-    azul que o kernel pinta na probe. Decisão dela de 12/08 — *"nada de macs,
-    nada de personalizacao por controle; se eu conectar controle virgem ele tem
-    que funcionar via produto"*.
-    """
+    """Controle virgem tem de nascer ACESO, não apagado."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle})
 
@@ -240,14 +198,7 @@ def test_sem_cor_resolvida_usa_o_azul_default_do_kernel() -> None:
 
 
 def test_em_modo_nativo_escreve_a_barra_e_o_numero() -> None:
-    """O portão do Modo Nativo SAIU daqui em 23/09/2026.
-
-    Até então valia a regra *"no modo nativo devolvemos o controle pra steam e
-    no modo conexão também, todo o resto é o hefesto"*, e o gatilho era no-op
-    sob `_output_mute`. A decisão dela
-    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01) a
-    revogou SÓ para a luz e o número — e este report só carrega os dois.
-    """
+    """O portão do Modo Nativo SAIU daqui em 23/09/2026."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle}, mute=True)
 
@@ -258,11 +209,7 @@ def test_em_modo_nativo_escreve_a_barra_e_o_numero() -> None:
 
 
 def test_o_instrumento_de_isolar_players_tira_o_numero_e_mantem_a_cor() -> None:
-    """LIGHTBAR-ISOLAR-OS-PLAYERS-01: o instrumento dela vale nesta rota também.
-
-    Ligado, o número não sai — e o bit dele nem é autorizado, porque autorizar
-    um campo que sai zerado é mandar "apaga" com cara de keepalive.
-    """
+    """LIGHTBAR-ISOLAR-OS-PLAYERS-01: o instrumento dela vale nesta rota também."""
     handle = _Handle("bt")
     desired = _DesiredOutput(led=(1, 2, 3), player_leds=(True, True, True, True, True))
     backend = _backend({"aa:bb": handle}, desired={"aa:bb": desired})

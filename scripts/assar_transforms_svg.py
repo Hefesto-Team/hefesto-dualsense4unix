@@ -1,35 +1,5 @@
 #!/usr/bin/env python3
-"""assar_transforms_svg.py — o SVG dela vira PNG igual ao que ela desenhou.
-
-DECISÃO DELA, 30/08/2026: *"então o nosso install sempre deve corrigir ele pra
-ter o mesmo SVG em qualquer versão, PNG ou afins."*
-
-O PROBLEMA, medido três vezes hoje. O editor dela (Boxy SVG) escreve rotação e
-espelho com `transform-box` e `transform-origin` — atributos CSS que o
-**navegador honra e o `librsvg` IGNORA**. Como é o `librsvg` que gera o ícone da
-dock, o desenho saía mutilado: o anel e o martelo iam para fora da arte, e ela
-via na dock um ícone que não era o dela.
-
-A CURA NÃO É PEDIR QUE ELA MUDE O DESENHO. É o gerador de ícones assar os
-transforms antes de rasterizar, e é o que este arquivo faz — em memória, sem
-tocar no arquivo dela.
-
-A CONTA: `transform-origin: (cx,cy)` com `transform: M` significa
-``T(cx,cy) · M · T(-cx,-cy)``. Só a translação muda; a, b, c e d ficam:
-
-    e' = cx + e - (a·cx + c·cy)
-    f' = cy + f - (b·cx + d·cy)
-
-E A ARMADILHA QUE CUSTOU UMA RODADA: com `transform-box: fill-box`, o `50% 50%`
-é o centro da caixa REAL do elemento. Os quatro pontos de uma cúbica não são a
-caixa dela — a curva passa pelo primeiro e pelo último e apenas TENDE aos dois
-do meio. Usar os pontos de controle deslocou o anel em 6px em x e 8px em y, o
-bastante para vazar do `viewBox` de 200×200. Os extremos saem das raízes da
-derivada, e é isso que `_bbox_cubica` resolve.
-
-    assar_transforms_svg.py entrada.svg [saida.svg]
-    assar_transforms_svg.py --check entrada.svg    # só diz se precisa
-"""
+"""assar_transforms_svg.py — o SVG dela vira PNG igual ao que ela desenhou."""
 from __future__ import annotations
 
 import re

@@ -1,40 +1,13 @@
-"""Testes dos widgets de preview (W5.2).
-
-GATE-EMOJI-01 (27/07/2026) — por que nenhum glifo aparece desenhado aqui
-=======================================================================
-
-Este arquivo e ``src/hefesto_dualsense4unix/tui/widgets/__init__.py``
-guardavam os MESMOS literais de desenho (cerca de 20 de cada lado). O
-higienizador do ambiente apaga esses codepoints — que o ADR-011 manda
-preservar — e reescreve o arquivo antes de qualquer revisão. Como quem mexe no
-``BatteryMeter`` mexe no teste dele, os dois entram no mesmo passe: a função
-passa a devolver string vazia, o valor esperado do teste passa a ser string
-vazia, e o teste fica VERDE com a função quebrada. Foi o incidente de
-21/04/2026, e ele se repetiu em 26/07.
-
-A cura tem duas metades e as duas importam:
-
-1. o esperado nasce de ``chr()`` sobre o codepoint, então nenhuma ferramenta de
-   texto consegue mutá-lo;
-2. as constantes abaixo são declaradas AQUI, nunca importadas do módulo sob
-   teste. Se o teste importasse ``_PILHA_CHEIA`` da produção, arrancar o glifo
-   de lá mudaria o esperado junto e o teste voltaria a ser verde por nada.
-
-Há ainda um terceiro cinto: ``test_icone_bateria_e_a_tabela_de_codepoints``
-compara ``ord()`` com números inteiros. Esse não depende nem de ``chr()``.
-"""
+"""Testes dos widgets de preview (W5.2)."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.tui.widgets import BatteryMeter, StickPreview, TriggerBar
 
-# Tabela de codepoints do ADR-011 usada por este teste. Declarada aqui de
-# propósito (ver o cabeçalho): é a referência independente contra a qual a
-# produção é medida.
-BLOCO_CHEIO = chr(0x2588)  # FULL BLOCK
-BLOCO_VAZIO = chr(0x2591)  # LIGHT SHADE
-PILHA_CHEIA = chr(0x25AE)  # BLACK VERTICAL RECTANGLE
-PILHA_VAZIA = chr(0x25AF)  # WHITE VERTICAL RECTANGLE
-PONTO_GRADE = chr(0x00B7)  # MIDDLE DOT
+BLOCO_CHEIO = chr(0x2588)
+BLOCO_VAZIO = chr(0x2591)
+PILHA_CHEIA = chr(0x25AE)
+PILHA_VAZIA = chr(0x25AF)
+PONTO_GRADE = chr(0x00B7)
 
 LARGURA_BARRA = 30
 
@@ -100,11 +73,7 @@ class TestBatteryMeter:
         assert BatteryMeter._icon_for_level(5) == PILHA_VAZIA * 4
 
     def test_icone_bateria_e_a_tabela_de_codepoints(self):
-        """Mede ``ord()`` contra inteiros — sem ``chr()``, sem literal, sem desenho.
-
-        É o cinto que sobrevive até a um higienizador que soubesse reescrever
-        chamadas de ``chr()``: aqui o esperado é aritmética.
-        """
+        """Mede ``ord()`` contra inteiros — sem ``chr()``, sem literal, sem desenho."""
         assert [ord(c) for c in BatteryMeter._icon_for_level(100)] == [
             0x25AE,
             0x25AE,
@@ -151,7 +120,6 @@ class TestStickPreview:
     def test_centro_renderiza_com_plus(self):
         s = StickPreview("L", 128, 128)
         rendered = s.render()
-        # Centro tem o '+' dim e o 'o' yellow sobrepostos (o 'o' ganha prioridade)
         assert "[yellow]o[/]" in rendered or "[dim]+[/]" in rendered
         assert "L" in rendered
 
@@ -166,9 +134,8 @@ class TestStickPreview:
     def test_linhas_certas(self):
         s = StickPreview("L", 128, 128)
         rendered = s.render()
-        # 5 linhas + label
         lines = rendered.split("\n")
-        assert len(lines) == 6  # label + 5 linhas
+        assert len(lines) == 6
 
     def test_fundo_da_grade_e_o_ponto(self):
         rendered = StickPreview("L", 0, 0).render()
@@ -219,21 +186,16 @@ def test_bar_e_a_tabela_de_codepoints():
 
 
 def test_nenhum_glifo_desenhado_neste_arquivo_nem_na_producao():
-    """O portão desta sprint, aplicado aos dois arquivos que ele protege.
-
-    Se alguém voltar a colar um desenho em qualquer um dos dois, este teste
-    reprova — antes que o higienizador apague os dois no mesmo passe e o resto
-    da suíte fique verde por nada.
-    """
+    """O portão desta sprint, aplicado aos dois arquivos que ele protege."""
     import pathlib
 
     from hefesto_dualsense4unix.tui import widgets as modulo
 
     faixas_protegidas = (
-        (0x2190, 0x21FF),  # Arrows
-        (0x2500, 0x257F),  # Box Drawing
-        (0x2580, 0x259F),  # Block Elements
-        (0x25A0, 0x25FF),  # Geometric Shapes
+        (0x2190, 0x21FF),
+        (0x2500, 0x257F),
+        (0x2580, 0x259F),
+        (0x25A0, 0x25FF),
     )
     alvos = [pathlib.Path(__file__), pathlib.Path(modulo.__file__)]
     achados: list[str] = []

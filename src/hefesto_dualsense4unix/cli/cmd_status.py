@@ -1,8 +1,4 @@
-"""Subcomandos `hefesto-dualsense4unix status` e `hefesto-dualsense4unix battery`.
-
-Falam com o daemon via IPC para apresentar informação atual ao usuário.
-Se o daemon estiver parado, tenta ler o controle direto como fallback.
-"""
+"""Subcomandos `hefesto-dualsense4unix status` e `hefesto-dualsense4unix battery`."""
 from __future__ import annotations
 
 import asyncio
@@ -18,17 +14,6 @@ from hefesto_dualsense4unix.utils import identidade
 
 console = Console()
 
-# ONDA0-Z5/T13 [PROVISÓRIO — decisão dela pendente, D-N]: das TRÊS rotas que
-# guardam "perfil ativo" (`store.active_profile`, publicado aqui; o marker
-# `session.json`; o marker `active_profile.txt`), esta tabela mostra a que
-# responde "o que está EM VIGOR agora" no daemon vivo — não "a última
-# escolha", que é o que as outras duas rotas guardam em disco (elas podem
-# divergir por decisão MEDIDA: o restauro de perfil de janela às vezes é
-# pulado de propósito, `last_profile_restore_pulado_perfil_de_janela`,
-# journal). Qual das três deveria "vencer" quando elas divergem é D-N, ainda
-# em aberto — ver ONDA0-Z5 §10 (proposta: o daemon responde "em vigor", as
-# duas rotas em disco passam a se chamar "a última escolha"). Este rótulo
-# só NOMEIA o que este campo já responde hoje; não decide nada.
 _ROTULOS_DE_CAMPO: dict[str, str] = {
     "active_profile": "active_profile (em vigor agora)",
 }

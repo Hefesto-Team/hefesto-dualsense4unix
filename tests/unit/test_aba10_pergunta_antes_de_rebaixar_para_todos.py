@@ -1,29 +1,4 @@
-"""Trocar "Funciona em" para "Todos" APAGA a regra do jogo. Agora pergunta antes.
-
-COR-A + SALVAR-NAO-REBAIXA-02, trazidas para a interface nova em 03/09/2026.
-
-A janela estável tem CINCO perguntas no Salvar, e cada uma nasceu de um defeito
-medido. A forma dos gestos da interface nova — **um campo por vez, sem
-rascunho** — dispensa três delas: gravar UM campo não pode rebaixar
-``match`` e ``priority`` juntos, que era o caminho do defeito de 27/07 (o
-``Pragmata`` era regra de jogo com prioridade 100 e amanheceu catch-all).
-
-**Esta continuava aberta e alcançável em UM clique.** Escolher o catch-all no
-seletor de um perfil de jogo gravava o catch-all calado: o perfil que valia só
-no Elden Ring passava a valer para tudo, sem aviso, e sem caminho de volta pela
-tela (a regra antiga não fica em lugar nenhum que o editor mostre).
-
-A GUARDA É A DA JANELA ESTÁVEL, condição por condição
-(``profiles_actions.py:3400``): a regra NOVA é ``MatchAny`` e a ANTIGA não é. O
-``MatchManual`` e o ``criteria`` vazio entram junto — virar "vale para TUDO" é,
-nesses dois, a mudança mais violenta que a aba sabe fazer, e era a única que
-passava calada.
-
-A PERGUNTA MORA NO GESTO, e não num diálogo, pela razão já escrita em
-``_rotulo_do_remover``: os gestos rodam em thread e o GTK só aceita diálogo no
-laço principal. O primeiro clique RECUSA dizendo — a frase vira tarja de 30 s —
-e o segundo, dentro de oito segundos, grava.
-"""
+"""Trocar "Funciona em" para "Todos" APAGA a regra do jogo. Agora pergunta antes."""
 from __future__ import annotations
 
 from typing import Any
@@ -41,21 +16,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     PROCEDENCIA_DE_QUALQUER_JOGO,
 )
 
-# O RÓTULO DO CATCH-ALL DEIXOU DE SER "Todos" — C4-FUNCIONA-EM, 11/09/2026.
-# O campo «Funciona em:» passou a dizer DE ONDE O JOGO VEM, por ordem dela, e
-# o catch-all virou «Qualquer jogo». **Esta régua não é sobre o rótulo** — é
-# sobre a guarda que impede apagar a regra do jogo dela em um clique —, então
-# ela pergunta ao produto qual é a palavra em vez de digitá-la: uma régua que
-# digita o que devia LER desliga no dia em que a palavra muda, e foi assim que
-# onze delas reprovaram a melhora em 26/08/2026.
-#
-# E A "OUTRA ESCOLHA" É «Navegação», e não «Steam»: o dublê destas réguas casa
-# por nome de programa (`eldenring.exe`), e escolher «Steam» com esse texto no
-# campo ao lado é recusado pelo casamento (`MSG_STEAM_APPID_INVALIDO`) — a
-# recusa seria de outra coisa que não a guarda do rebaixamento. «Navegação» é
-# uma troca que grava no primeiro clique, que é o que se mede.
 
-#: A MESA — endereço MASCARADO (octetos 4 e 5 zerados).
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
@@ -131,7 +92,6 @@ def _escolher(rotulo: str) -> dict[str, Any]:
             "tipo": "select"}
 
 
-# --------------------------------------------------------------------------
 def test_o_primeiro_clique_recusa_dizendo_o_que_se_perde(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
@@ -165,11 +125,7 @@ def test_o_primeiro_clique_recusa_dizendo_o_que_se_perde(
 def test_o_segundo_clique_grava(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """A vontade dela prevalece — a guarda pergunta, nunca decide por ela.
-
-    É a mesma escolha da janela estável, escrita lá com todas as letras:
-    *"PERGUNTA, nunca recusa: a vontade dela na GUI prevalece sempre."*
-    """
+    """A vontade dela prevalece — a guarda pergunta, nunca decide por ela."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny
 
     _o_disco_tem(monkeypatch, _de_jogo("Elden Ring"))
@@ -189,12 +145,7 @@ def test_o_segundo_clique_grava(
 def test_o_armamento_vence_com_o_prazo(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """Oito segundos, o mesmo prazo do Remover — armamento sem prazo é armadilha.
-
-    Ela clica, se distrai, volta meia hora depois e escolhe "Todos" de novo: sem
-    o prazo, a regra do jogo dela sumiria sem que nada tivesse perguntado
-    naquele minuto.
-    """
+    """Oito segundos, o mesmo prazo do Remover — armamento sem prazo é armadilha."""
     _o_disco_tem(monkeypatch, _de_jogo("Elden Ring"))
     a10_perfis._ESCOLHIDO = "Elden Ring"
     ponte = PonteDeMentira()
@@ -213,11 +164,7 @@ def test_o_armamento_vence_com_o_prazo(
 def test_o_armamento_e_por_perfil(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """Armar num perfil não pode liberar o rebaixamento de OUTRO.
-
-    É a mesma disciplina do Remover, e pela mesma razão: seria a pior forma de
-    perder a regra do perfil errado.
-    """
+    """Armar num perfil não pode liberar o rebaixamento de OUTRO."""
     _o_disco_tem(monkeypatch, _de_jogo("Elden Ring"), _de_jogo("Pragmata"))
     ponte = PonteDeMentira()
 
@@ -235,20 +182,10 @@ def test_o_armamento_e_por_perfil(
 def test_quem_ja_e_catch_all_nao_e_perguntado(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """A guarda protege o que se PERDE — e um catch-all não perde nada.
-
-    Perguntar aqui seria ruído, e ruído treina a pessoa a confirmar sem ler.
-
-    **E ELE TAMBÉM NÃO GRAVA, desde 11/09/2026** — a segunda metade é nova e é
-    do C4-FUNCIONA-EM: escolher a procedência que o campo JÁ mostra não é uma
-    mudança, e reescrever a regra por um gesto que não mudou nada é como um
-    perfil por `process_name` viraria um por `wm_class` sozinho. O que esta
-    régua mede continua sendo o que ela sempre mediu: **não houve pergunta**.
-    """
+    """A guarda protege o que se PERDE — e um catch-all não perde nada."""
     _o_disco_tem(monkeypatch, _catch_all("meu_perfil"))
     a10_perfis._ESCOLHIDO = "meu_perfil"
 
-    # Sem `pytest.raises`: uma exceção aqui é a pergunta, e ela é o defeito.
     a10_perfis.editor_ambiente(
         _ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), PonteDeMentira())
     assert gravados == [], (
@@ -260,12 +197,7 @@ def test_quem_ja_e_catch_all_nao_e_perguntado(
 def test_as_outras_escolhas_nao_perguntam(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """As outras procedências continuam gravando no primeiro clique.
-
-    A guarda é sobre PERDER o alvo, não sobre trocá-lo. Uma guarda que pegasse
-    toda troca de regra viraria dois cliques para tudo — e a decisão dela de
-    01/09 é ação imediata.
-    """
+    """As outras procedências continuam gravando no primeiro clique."""
     _o_disco_tem(monkeypatch, _de_jogo("Elden Ring"))
     a10_perfis._ESCOLHIDO = "Elden Ring"
 
@@ -277,12 +209,7 @@ def test_as_outras_escolhas_nao_perguntam(
 def test_a_guarda_desarma_quando_ela_escolhe_outra_coisa(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """Armar o catch-all, desistir e escolher outra coisa não deixa o armamento.
-
-    Sem isto, a próxima escolha de «Qualquer jogo» — em qualquer momento dos oito
-    segundos, e sobre o mesmo perfil — gravaria sem perguntar, e a pergunta que
-    a autorizou falava de outro gesto.
-    """
+    """Armar o catch-all, desistir e escolher outra coisa não deixa o armamento."""
     _o_disco_tem(monkeypatch, _de_jogo("Elden Ring"))
     a10_perfis._ESCOLHIDO = "Elden Ring"
     ponte = PonteDeMentira()

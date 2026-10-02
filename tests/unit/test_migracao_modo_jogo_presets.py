@@ -1,16 +1,4 @@
-"""MODO-01 — a sprint precisa alcançar quem JÁ tem o Hefesto instalado.
-
-O defeito que estes testes travam não é de código, é de alcance: a semeadura de
-presets não sobrescreve arquivo existente (de propósito — é o que impede o
-projeto de apagar configuração da usuária), então mudar o preset em `assets/`
-conserta só a instalação nova. Medido na máquina de desenvolvimento em 25/07:
-11 dos 13 perfis com ``mode: null`` e o `coop_local` em prioridade 45, perdendo
-para o perfil de navegação (50) — abrir um jogo de co-op pela Steam entregava o
-perfil de navegação.
-
-O outro lado é igualmente importante e tem teste próprio: a migração NÃO pode
-passar por cima de escolha dela. Onde houver edição, recua.
-"""
+"""MODO-01 — a sprint precisa alcançar quem JÁ tem o Hefesto instalado."""
 from __future__ import annotations
 
 import json
@@ -44,12 +32,7 @@ def test_preset_de_jogo_sem_modo_recebe_o_modo_jogo(tmp_path: Path) -> None:
 
 
 def test_modo_escolhido_por_ela_nao_e_sobrescrito(tmp_path: Path) -> None:
-    """A regra que torna a migração segura: onde ela mexeu, recua.
-
-    Um perfil de jogo em Modo Nativo é uma escolha deliberada ("Conexão
-    Nativa (Sony)") — trocá-la por gamepad seria a migração decidindo no
-    lugar dela.
-    """
+    """A regra que torna a migração segura: onde ela mexeu, recua."""
     escolha = {"kind": "native"}
     fps = _escreve(tmp_path, "fps", {"name": "FPS", "priority": 60,
                                      "mode": dict(escolha)})
@@ -60,24 +43,7 @@ def test_modo_escolhido_por_ela_nao_e_sobrescrito(tmp_path: Path) -> None:
 
 
 def test_o_ramo_do_coop_local_esta_aposentado_e_relata(tmp_path: Path) -> None:
-    """NOTA DATADA — 26/08/2026: o ramo `coop_local` desta migração aposentou.
-
-    Aqui estava `test_coop_local_sai_de_tras_do_perfil_de_navegacao`, que
-    escrevia um `coop_local` em prioridade 45 e exigia que a migração o
-    levasse a 75 ou mais — porque 45 perdia para a `navegacao` (50), que casa
-    a janela do cliente Steam.
-
-    A prioridade nova vinha do ASSET `assets/profiles_default/coop_local.json`,
-    e o asset foi PODADO nesta data, a pedido dela (*"em termos de perfis de
-    jogo vamos manter os que temos ativos apenas"* — nenhum dos três podados
-    estava ativo no disco dela). Sem asset não há de onde copiar prioridade, e
-    inventar um número no perfil de alguém é o produto escolhendo por ela.
-
-    O que a migração passa a fazer é RELATAR, e é isso que este teste trava.
-    Migração muda é decisão apagada em silêncio: quem tiver um `coop_local`
-    velho no disco continua em 45, atrás do perfil de navegação, e sem esta
-    linha no journal ninguém descobre por quê.
-    """
+    """NOTA DATADA — 26/08/2026: o ramo `coop_local` desta migração aposentou."""
     import structlog.testing
 
     coop = _escreve(tmp_path, "coop_local", {"name": "Co-op local", "priority": 45,
@@ -100,13 +66,7 @@ def test_o_ramo_do_coop_local_esta_aposentado_e_relata(tmp_path: Path) -> None:
 
 
 def test_prioridade_ajustada_por_ela_e_preservada(tmp_path: Path) -> None:
-    """Qualquer número diferente do de fábrica antigo é escolha dela.
-
-    Desde a poda de 26/08/2026 há uma segunda razão para este perfil não ser
-    tocado (não há asset de onde copiar), e as duas levam ao mesmo lugar: o
-    número dela fica. O teste continua porque a primeira razão é a que vale se
-    o asset voltar algum dia.
-    """
+    """Qualquer número diferente do de fábrica antigo é escolha dela."""
     coop = _escreve(tmp_path, "coop_local", {"name": "Co-op local", "priority": 92,
                                              "mode": {"kind": "gamepad"}})
 

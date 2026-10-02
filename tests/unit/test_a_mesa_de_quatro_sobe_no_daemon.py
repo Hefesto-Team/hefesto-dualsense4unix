@@ -47,8 +47,6 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.testing import FakeController
 
-#: MACs FORJADOS, da faixa sintética que o portão de fixtures permite. Nem
-#: mascarado se usa o OUI real da bancada dela — a régua pega por FORMA.
 _MESA = (
     ("aa:bb:cc:00:00:a1", "radio"),
     ("aa:bb:cc:00:00:a2", "radio"),
@@ -116,19 +114,9 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[dict[str, 
         return "77\n"
 
     monkeypatch.setattr(af, "_rodar", _recorder)
-    # O CABO tem placa: cada `uniq` resolve para o SEU sink USB. Sem isto o do
-    # cabo não teria rota e a guarda «sem rota, sem nó» o deixaria de fora —
-    # medindo três, não quatro.
     monkeypatch.setattr(
         af, "sink_do_controle", lambda uniq, *a, **k: f"alsa_output.usb-{uniq[-2:]}"
     )
-    # O RÁDIO não toca no aparelho: a fonte de PCM é muda e o hidraw é um fd
-    # inventado. O que se mede aqui é a FIAÇÃO, não o protocolo — o protocolo
-    # tem régua própria em `test_o_produto_monta_o_report_que_tocou.py`.
-    # A fonte devolve SILÊNCIO DO TAMANHO PEDIDO, e não `b""`: uma fonte vazia
-    # é «a fonte secou» para a bomba, e o laço morre no primeiro quadro. A
-    # ponte subia e caía antes de o nó nascer — e a rota do rádio saía
-    # «recusada» com a ponte de pé no log, uma linha acima.
     monkeypatch.setattr(
         af, "fonte_do_monitor_do_no",
         lambda id_do_no, **k: (
@@ -142,17 +130,10 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[dict[str, 
     class _No:
         def __init__(self, caminho: str) -> None:
             abertos.append(caminho)
-            # UM FD DE VERDADE, PARA `/dev/null`. A ponte precisa de um
-            # descritor para montar a bomba, e um `None` aqui a faria recusar
-            # com "não consegui abrir o hidraw" — a régua mediria o dublê, não
-            # o produto. Escrever em `/dev/null` é inofensivo, e o `seco`
-            # abaixo garante que nem isso acontece.
             self.fd = os.open(os.devnull, os.O_WRONLY)
             fds.append(self.fd)
 
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **k: _No(no))
-    # A ponte responde «de pé» sem mandar byte nenhum: é o `seco`, que existe
-    # no produto exatamente para este uso.
     verdadeira = af.PonteDeSomPorRadio
 
     def _ponte_seca(**kw: Any) -> Any:
@@ -180,12 +161,6 @@ async def _subir_o_daemon(mesa: dict[str, Any]) -> tuple[Any, list[str]]:
         if store.counter("poll.tick") >= 1:
             break
         await asyncio.sleep(0.01)
-    # Uma varredura do som já rodou no `start()`; o laço reconcilia sozinho.
-    # ESPERA OS QUATRO, e não o primeiro (conferência de 23/09/2026): os nós
-    # nascem um a um na mesma volta, e esperar «algum nó» deixava a régua
-    # conferir no meio da volta — 1 em 10 na base, 5 em 12 com o governador,
-    # que deslocou a volta alguns milissegundos. Medido com o carimbo de cada
-    # `load-module`: o vermelho era o nó 2 nascendo 0,7 ms depois da conferência.
     for _ in range(200):
         sub = getattr(daemon, "_alto_falante_subsystem", None)
         ger = getattr(sub, "_gerenciador", None) if sub is not None else None
@@ -247,13 +222,7 @@ async def test_cada_um_do_radio_tem_a_sua_ponte(mesa: dict[str, Any]) -> None:
 
 @pytest.mark.asyncio
 async def test_nenhum_no_da_mesa_nasce_sumidouro(mesa: dict[str, Any]) -> None:
-    """Item 5, e é a invariante 4 de `app/audio_saida.py` com quatro na mesa.
-
-    A conta de 07/09 era `sinks <= loopbacks`, e ela média o mundo do CABO: no
-    rádio a rota **não é** um `module-loopback` — é a ponte lendo o monitor do
-    nó e escrevendo o report `0x35` no controle. Contar só loopback aqui
-    reprovaria a cena que a casa passou meses tentando entregar.
-    """
+    """Item 5, e é a invariante 4 de `app/audio_saida.py` com quatro na mesa."""
     daemon, run_task = await _subir_o_daemon(mesa)
     try:
         carregados = [
@@ -282,11 +251,7 @@ async def test_nenhum_no_da_mesa_nasce_sumidouro(mesa: dict[str, Any]) -> None:
 
 @pytest.mark.asyncio
 async def test_o_shutdown_leva_no_e_ponte_junto(mesa: dict[str, Any]) -> None:
-    """A terceira ponta da receita: quem sobe subsystem e não o para, vaza.
-
-    No caso do som o preço é visível para ela: o nó fica na lista de saída
-    depois de o daemon morrer, e cada ponte segura um fd e um `pw-record`.
-    """
+    """A terceira ponta da receita: quem sobe subsystem e não o para, vaza."""
     daemon, run_task = await _subir_o_daemon(mesa)
     sub = daemon._alto_falante_subsystem
     pontes = list(sub._pontes.values())
@@ -310,20 +275,7 @@ async def test_o_shutdown_leva_no_e_ponte_junto(mesa: dict[str, Any]) -> None:
 async def test_quem_nao_tem_ponte_nao_ganha_no_mudo(
     mesa: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A GUARDA *sem rota, sem nó*, com a máquina que não tem `pw-record`.
-
-    É o caso real de quem instala o produto numa máquina sem PipeWire-utils:
-    `fonte_do_monitor_do_no` recusa com a frase honesta, a ponte não sobe, e o
-    rádio fica sem rota. **O que não pode acontecer é o nó ir para a lista de
-    som dela assim mesmo** — três entradas mudas com nome de controle, e ela
-    escolhe uma e o som some.
-
-    O do CABO continua ganhando nó: a rota dele não depende de ponte nenhuma.
-    Uma guarda que derrubasse os quatro seria pior que o defeito.
-
-    MORDIDA: troque a guarda de `GerenciadorDeNosDeSom.reconciliar` por `if
-    False:` e este teste conta quatro nós, três deles sumidouros.
-    """
+    """A GUARDA *sem rota, sem nó*, com a máquina que não tem `pw-record`."""
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
     monkeypatch.setattr(
@@ -351,19 +303,7 @@ async def test_quem_nao_tem_ponte_nao_ganha_no_mudo(
 async def test_o_mix_de_um_nao_vira_o_mix_do_vizinho(
     mesa: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SFX-POR-CONTROLE-01 no DAEMON: a fonte é de cada um.
-
-    É a régua de aceitação dela, dita com as palavras dela: *"se cada user
-    escolher desativar uma delas, vai conseguir sem impactar os demais"*.
-
-    O `mix` carrega o monitor da SAÍDA PADRÃO para dentro do nó — o áudio do
-    sistema inteiro. Publicá-lo em quem pediu `sfx` põe a chamada de voz, o
-    navegador e a música no ouvido daquele jogador; e não publicá-lo em quem
-    pediu `mix` cala o «HDMI completo» que ela desenhou.
-
-    MORDIDA: tire `fonte_por_controle=` do `_start_alto_falante` e os quatro
-    nós nascem com o padrão — o `mix` do P1 some.
-    """
+    """SFX-POR-CONTROLE-01 no DAEMON: a fonte é de cada um."""
     import json
 
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
@@ -389,8 +329,6 @@ async def test_o_mix_de_um_nao_vira_o_mix_do_vizinho(
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_last_profile", lambda: nome
     )
-    # O monitor da saída padrão existe nesta máquina de mentira: sem ele o
-    # `mix` não teria de onde puxar e a régua mediria a ausência do PipeWire.
     monkeypatch.setattr(
         af, "monitor_da_saida_padrao", lambda **k: "alsa_output.hdmi.monitor"
     )

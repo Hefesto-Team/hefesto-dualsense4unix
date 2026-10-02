@@ -1,116 +1,25 @@
-# A PASTA, não /tmp: estas três liam um `monta` de /tmp — o de 26/08 23:50 —
-# que por sua vez lia um `topo.html` de /tmp parado às 10:59. Três das dez
-# abas vinham de um montador e de um esqueleto de ontem, e nenhuma correção
-# no topo.html desta pasta as alcançava. Achado em 27/08.
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import csv
 import dataclasses
 import re
 
 import onde
-# `MESA` SAIU DO IMPORT em 02/09/2026, e a razão é a mesma que mudou a régua da
-# promessa: os cartões deixaram de contar controle. `CONECTADOS` FICA, e só como
-# ESTADO DE PARTIDA — hoje ele não escreve uma palavra desta aba.
-#
-# O TEXTO DO "?" DEIXOU DE CONTAR CONTROLE EM 11/09/2026 (A2-002, aprovada por
-# ela): a frase *"a resposta vale igual para os N (x no cabo, y no rádio)"*
-# repetia o cabeçalho a dois centímetros, que é o dono do número. Com ela saiu o
-# endereço `lanc-quantos` — ver o registro em `desenho_dos_lancadores`, onde a
-# constante e a função moravam. Entre 03/09 e hoje o número era vivo; antes
-# disso a tela dela dizia "os 2 (1 no cabo, 1 no rádio)" ao lado de um cabeçalho
-# que dizia "1 controle: 1 USB · 0 BT".
-#
-# `cor_da_zona` entrou em 03/09/2026 e serve à RÉGUA, não ao desenho: é ele que
-# transforma a isenção das cinco variáveis do esqueleto numa MEDIÇÃO. Ver
-# `identidade_congelada`.
-# `CSS_POPUP` ENTROU EM 08/09/2026, com a tela de registro — e a AUSÊNCIA dele
-# era um defeito que régua nenhuma via e a FOTO viu na primeira olhada: sem as
-# regras `.tela-nova{display:none}` / `:target{display:flex}`, a caixa de
-# registro renderiza SEMPRE, embaixo da janela, aberta e sem moldura. A página
-# publicada saiu assim, com os 49 portões verdes e 60 testes passando.
-#
-# O DONO É O `monta.py` desde 29/08, e é justamente o caso que ele existe para
-# cobrir: a segunda aba com pop-up não copia as 49 linhas da primeira — ela
-# IMPORTA. A `aba06` já fazia; esta faltava.
 from monta import CONECTADOS, CSS_POPUP, cor_da_zona, monta
 
-# O DESENHO DOS CARTÕES TEM UM DONO SÓ, e ele é o mesmo que o pacote
-# `pacotes/a07_lancadores.py` usa em tempo de execução. Enquanto os cartões
-# moravam AQUI, os números eram digitados — `412 jogos`, `28 jogos`, `3 jogos já
-# sabem por onde entrar` — e o produto não tinha por onde contradizê-los.
-# Medido em 02/09/2026 na máquina dela: 23 jogos instalados, 63 appids com o
-# atalho no vdf, 0 pontes confirmadas. Quatro números, quatro contradições.
-#
-# `cartoes(None)` é o estado da PRIMEIRA MEIA VOLTA — o que a tela mostra antes
-# de a leitura de disco voltar. É o único desenho honesto para uma página
-# estática: ela não sabe nada da biblioteca dela até o produto abrir.
 import desenho_dos_lancadores as dl
 
-# ---------------------------------------------------------------------------
-# A RÉGUA DA IDENTIDADE DESTA ABA — CINCO FORMAS, e três delas cegas em toda a
-# casa até 03/09/2026.
-#
-# A LEI, e ela é dela:
-#
-#     "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
-#      players com cada controle — tudo isso muda de acordo com o controle
-#      identificado no canto superior. é white no p1, mas a borda de tudo é
-#      cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
-#
-# O QUE JÁ HAVIA, e cobre DUAS formas: `scripts/check_identidade_vem_de_cima.py`
-# e `tests/unit/test_a_aba_07_usa_o_controle_da_fita.py` pegam (1) o NOME de um
 # colorway no texto e (2) o `--plastico:` cravado.
-#
-# O QUE NENHUMA DAS DUAS ENXERGA, medido nesta árvore em 03/09/2026 injetando
-# cada forma na `07-lancadores.html` e rodando as duas réguas — as três saíram
-# VERDES sobre a página envenenada:
-#
-#   3. o APELIDO do modelo (`cosmic-red`), que é o que vai num
-#      `data-colorway="…"` ou numa classe. Nenhum "Cosmic Red" aparece: o
-#      apelido não é o nome, e a régua por nome não o vê. É exatamente a forma
-#      que a frase dela nomeia — *"os svgs não são os que o meu mapa cataloga"*;
-#   4. o HEXADECIMAL do mapa (`#A51C48`) solto num `fill=` ou num
 #      `border-color:`. Sem nome e sem `--plastico:`, ele passa pelas duas —
-#      e é a forma de *"a borda de tudo é cosmic red"*;
-#   5. o `var(--cosmic-red)`, que empresta a tabela de CINCO plásticos do
-#      esqueleto. É a mais silenciosa das três: não há nome, nem apelido em
-#      posição de valor, nem hexadecimal — só uma referência.
-#
-# A TABELA DO ESQUELETO NÃO É ISENTA POR DECRETO. O `topo.html` declara
-# `--cosmic-red`, `--nova-pink`, `--starlight-blue`, `--galactic-purple` e
-# `--midnight-black` no `:root` das DEZ páginas, e `monta.monta()` reescreve o
-# valor de cada uma com `cor_da_zona`, que lê o mapa dela. A régua CONFERE isso
-# em vez de acreditar: se um sexto plástico for digitado à mão no esqueleto, ou
-# se um dos cinco divergir do CSV, ela acusa. Isenção sem razão é ponto cego com
-# nome bonito; isenção MEDIDA é régua.
-#
-# `--conferir <arquivo>` roda só esta régua sobre um HTML qualquer, sem gerar
-# nada. É por essa porta que a mordida entra
-# (`tests/unit/test_aba07_a_cor_do_aparelho_nao_se_crava.py`): sem ela o teste
-# teria de reescrever a regra, e duas escritas da mesma regra é o defeito que
-# esta casa mais paga.
-# ---------------------------------------------------------------------------
-#: A prosa não conta: `<!-- -->` e `/* */` falam DE cor sem pintar nenhuma.
-#: Contá-los inflaria o número, e número inflado é o que esta casa mais derruba.
 _PROSA = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
 
-#: A tabela do esqueleto, na forma `--<apelido>:#hex`. O `<apelido>` só vale se
 #: for um `id` do mapa — `--plastico:#fff` cai fora daqui e é acusado à parte.
 _TABELA_DO_ESQUELETO = re.compile(r"--([a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6})")
 
-#: Um elemento com `data-colorway`. O CONTRATO do alvo novo (frente irmã,
-#: 03/09/2026) é `data-hef-alvo="atributo"` + `data-hef-atributo="data-colorway"`
-#: no MESMO elemento — o par em atributos separados, como o alvo `classe` já faz.
 _COM_COLORWAY = re.compile(r"<[a-zA-Z][^>]*\bdata-colorway\s*=[^>]*>")
 
 
 def _mapa_das_cores() -> list[dict[str, str]]:
-    """As 233 linhas de `docs/data/cores-do-dualsense.csv`: 28 modelos, 10 zonas.
-
-    Digitar aqui um nome, um apelido ou um hexadecimal criaria a segunda lista
-    que o CSV existe para não ter — e ela envelheceria calada no dia em que ela
-    mapear o vigésimo nono modelo.
-    """
+    """As 233 linhas de `docs/data/cores-do-dualsense.csv`: 28 modelos, 10 zonas."""
     linhas = [ln for ln in (onde.RAIZ / "docs/data/cores-do-dualsense.csv")
               .read_text(encoding="utf-8").splitlines()
               if ln.strip() and not ln.lstrip().startswith("#")]
@@ -118,22 +27,15 @@ def _mapa_das_cores() -> list[dict[str, str]]:
 
 
 def identidade_congelada(doc: str) -> list[str]:
-    """As cores de APARELHO cravadas nesta página, uma frase por achado.
-
-    Devolve lista vazia quando a página está limpa — que é o estado da
-    `07-lancadores` desde 03/09/2026, e o que esta régua existe para manter.
-    """
+    """As cores de APARELHO cravadas nesta página, uma frase por achado."""
     mapa = _mapa_das_cores()
     nomes = sorted({(ln.get("nome") or "").strip() for ln in mapa} - {""})
     apelidos = sorted({(ln.get("id") or "").strip() for ln in mapa} - {""})
     tons = sorted({(ln.get("hex") or "").strip().lower() for ln in mapa} - {""})
 
-    # As quebras de linha sobrevivem ao apagador de prosa: sem isso um
-    # comentário de vinte linhas vira uma só e todo número depois dele erra.
     limpo = _PROSA.sub(lambda m: "".join(c if c == "\n" else " " for c in m.group(0)), doc)
     achados: list[str] = []
 
-    # 0. A TABELA DO ESQUELETO, conferida contra o mapa antes de ser isentada.
     vaos: list[tuple[int, int]] = []
     for m in _TABELA_DO_ESQUELETO.finditer(limpo):
         apelido, tom = m.group(1), m.group(2)
@@ -151,19 +53,16 @@ def identidade_congelada(doc: str) -> list[str]:
     def _fora_da_tabela(i: int) -> bool:
         return not any(a <= i < b for a, b in vaos)
 
-    # 1. O NOME do modelo no que a tela mostra.
     achados += [f"nome de colorway na página: {nome!r}. A identidade do controle "
                 f"vem da FITA, que lê do APARELHO — um nome de modelo escrito "
                 f"aqui é o desenho mandando na tela do produto."
                 for nome in nomes if len(nome) >= 4 and nome in limpo]
 
-    # 2. A COR do plástico cravada.
     if re.search(r"--plastico\s*:", limpo):
         achados.append(
             "voltou um `--plastico:` cravado à página. A cor do plástico é "
             "leitura de aparelho — quem a escreve é o pacote, nunca o gerador.")
 
-    # 3. O APELIDO do modelo em posição de valor (`data-colorway`, classe…).
     for apelido in apelidos:
         agulha = rf"(?<![A-Za-z0-9_-]){re.escape(apelido)}(?![A-Za-z0-9_-])"
         achados += [f"apelido de modelo do mapa na página: {apelido!r}. É o que "
@@ -172,14 +71,12 @@ def identidade_congelada(doc: str) -> list[str]:
                     f"`data-colorway=\"cosmic-red\"`."
                     for m in re.finditer(agulha, limpo) if _fora_da_tabela(m.start())]
 
-    # 3b. A TABELA DE CINCO DO ESQUELETO, emprestada por esta aba.
     achados += [f"a página usa `var(--{apelido})`. Aquelas cinco são a paleta do "
                 f"DESENHO, congelada no esqueleto: elas respondem por 5 dos 28 "
                 f"modelos do mapa, e quem tiver o sexto vê a cor de outro "
                 f"aparelho. A cor do controle DELA vem do pacote, no tique."
                 for apelido in apelidos if f"var(--{apelido})" in limpo]
 
-    # 4. O HEXADECIMAL do mapa solto — a forma de "a borda de tudo é cosmic red".
     for tom in tons:
         achados += [f"hexadecimal do mapa cravado na página: {tom}. Ele não tem "
                     f"nome nem `--plastico:` e por isso atravessa as duas réguas "
@@ -188,7 +85,6 @@ def identidade_congelada(doc: str) -> list[str]:
                     for m in re.finditer(re.escape(tom), limpo, re.I)
                     if _fora_da_tabela(m.start())]
 
-    # 5. O `data-colorway` SEM o endereço que deixa o produto reescrevê-lo.
     achados += [f"`data-colorway` sem endereço em {' '.join(m.group(0).split())[:90]!r}. "
                 f"O contrato é `data-hef-alvo=\"atributo\"` com "
                 f"`data-hef-atributo=\"data-colorway\"` no mesmo elemento; sem "
@@ -209,37 +105,10 @@ if "--conferir" in sys.argv:
     raise SystemExit(1 if _PROBLEMAS else 0)
 
 
-# ---------------------------------------------------------------------------
-# A MESA RESPONDE PELO NÚMERO — aqui não se escreve "quatro".
-#
-# Pedido dela, 27/08: cada aba reescrita para quatro controles conectados. Nesta
-# aba o que muda NÃO é o desenho (ela fechou: *"lançadores perfeito parabéns"*) e
-# não é feature nova (ela: *"essa aba em si só vamos desenhar e deixar placeholder
-# mesmo"*). O que muda é o ALCANCE DA PROMESSA: a aba dizia "o controle chega", no
-# singular, com quatro na mesa — e a primeira pergunta de quem lê passa a ser
-# *"qual deles?"*.
-#
-# A resposta é: os quatro, e por uma razão medida — nenhum dos cinco impedimentos
-# desta aba depende de controle. `integrations/prontuario_dos_jogos.py` não tem
-# UMA função que receba controle, MAC, device ou transporte: `SEM_WRAPPER`,
-# `LINHA_INTOCAVEL`, `EXCECAO_INERTE`, `PONTE_DIVERGENTE` e `SEM_EXECUTAVEL` são
-# fatos do jogo em disco (`:139-143`), e as duas curas de `_CURAS` (`:878`) mexem
-# na linha de inicialização e na exceção do Steam Input. É o mesmo motivo pelo
-# qual a fita desta aba nasce esmaecida (fora de `monta.ABAS_QUE_ESCOLHEM`).
-#
-# Por isso o número sai de `MESA` e não do teclado: no dia em que a mesa mudar, o
-# texto dos cartões muda junto com o cabeçalho, que já sai de lá.
-# QUEM CONTA CONTROLE CONTA QUEM ESTÁ NA MESA — 31/08/2026. A `MESA` passou a ter
-# um campo `conectado`, e com ele dois lugares vazios: esta aba prometia que "os 4
-# controles chegam" com dois deles fora, em QUATRO cartões de lançador. A promessa
-# não era pouca — ela é o que a aba existe para dizer.
-#
-# `MESA` continua sendo a lista dos quatro LUGARES; `CONECTADOS` é quem está neles.
 N_CTRL = len(CONECTADOS)
 N_USB = sum(1 for c in CONECTADOS if c["via"] == "USB")
 N_BT = sum(1 for c in CONECTADOS if c["via"] == "BT")
 
-#: A promessa de um cartão que não impede nada, no plural da mesa.
 CHEGAM = f"Os {N_CTRL} controles chegam."
 
 CSS = """
@@ -510,16 +379,6 @@ CSS = """
     align-items:center;justify-content:center}
 """ + CSS_POPUP + dl.CSS_DA_EXCLUSAO
 
-# OS CARTÕES SAEM DO DESENHO, e a lista deixou de ser digitada. Ela era seis
-# dicionários com os selos e as contagens escritos à mão; agora é o que
-# `dl.cartoes(None)` devolve — os mesmos seis cartões que o produto monta, no
-# estado "ainda não li o disco".
-#
-# A CONTAGEM DO QUADRO CONTINUA DERIVADA, e agora de uma fonte que o produto
-# também usa: `Quadro.achados` conta os cartões cujo selo AFIRMA algo (`ok` ou
-# `warn`), e os cinco `NÃO SEI` ficam de fora pelo mesmo motivo pelo qual o
-# `NÃO ACHEI` já ficava — em nenhum dos dois a aba pode dizer que o lançador
-# está aqui.
 QUADRO = dl.Quadro(lancadores=dl.cartoes(None))
 CARTOES = dl.cartoes_html(QUADRO.lancadores)
 
@@ -555,7 +414,7 @@ LEGENDA = f'''<div class="nota">
   <h2>A aba mudou de assunto inteiro</h2>
   <ul>
     <li><b>A antiga era "Emulação" de <i>gamepad</i></b> (<code>uinput</code>) — termo técnico que ninguém entende. O conteúdo dela foi para os donos certos: diagnóstico e "Testar o controle virtual" para a <b>Sistema</b>, os combos para a <b>Navegação</b>, o microfone para a <b>Conexões</b>, modo e máscara para a <b>Jogar</b> e os <b>Perfis</b>.</li>
-    <li><b>A nova é sobre de onde o jogo vem</b> — e existe para fechar uma lacuna medida: o produto tem <b>zero</b> menção a RetroArch, Dolphin ou mGBA no código, e o Orpheus depende de um emulador de GBC. Heroic e Lutris só aparecem em <b>comentário</b> (<code>hotkey.py:56</code>, <code>lifecycle.py:2421</code> — era <code>:2250</code>, e a linha andou).</li>
+    <li><b>A nova é sobre de onde o jogo vem</b> — e existe para fechar uma lacuna medida: o produto tem <b>zero</b> menção a RetroArch, Dolphin ou mGBA no código, e o Orpheus depende de um emulador de GBC. Heroic e Lutris só aparecem em <b>comentário</b> (<code>hotkey.py:37</code>, <code>lifecycle.py:1407</code> — era <code>:2250</code>, e a linha andou).</li>
     <li><b>A interface diz "Steam" 689 vezes</b> para um motor que já casa por <code>process_name</code> e <code>window_class</code>. É aqui que o jogo de fora da Steam ganha porta de entrada.</li>
   </ul>
 
@@ -599,29 +458,6 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-# ---------------------------------------------------------------------------
-# A RÉGUA DA PROMESSA — 31/08/2026, REFEITA em 02/09/2026.
-#
-# O QUE ELA COBRAVA: que o "Os N controles chegam" dos cartões batesse com a
-# `MESA`. Ela nasceu de um defeito real — com dois lugares vazios, cinco cartões
-# prometiam a QUATRO controles.
-#
-# O QUE MUDOU, e é por isso que ela mudou de forma: **os cartões deixaram de
-# contar controle.** O próprio arquivo já tinha medido a razão, no comentário do
-# topo: nenhuma função de `prontuario_dos_jogos` recebe controle, MAC, device ou
-# transporte — os cinco impedimentos são fatos do JOGO EM DISCO. Contar
-# controles nesta aba era responder com um número que a pergunta não tem, e foi
-# exatamente esse número que a régua velha existia para corrigir.
-#
-# A régua nova cobra o que sobrou, e cobra dos dois lados:
-#   1. NENHUM cartão promete um número de controles (a recaída da velha);
-#   2. os seis cartões existem, e cada um tem os quatro endereços que o pacote
-#      pinta — um cartão sem endereço fica com o desenho para sempre, e é
-#      invisível na tela.
-#
-# ELA LÊ O MIOLO, e não as variáveis que o escreveram: comparar o produto com
-# ele mesmo é como uma régua irmã, na aba Conexões, passou por uma mordida.
-# ---------------------------------------------------------------------------
 _PROMESSAS = re.findall(r"[Oo]s (\d+) controles chegam", MIOLO)
 if _PROMESSAS:
     raise SystemExit(
@@ -631,16 +467,6 @@ if _PROMESSAS:
         "controle, MAC, device ou transporte. Um número aqui é uma promessa que "
         "o produto não tem como conferir.")
 
-# A CONTA SUBIU PARA SETE E VOLTOU PARA SEIS no mesmo dia — 08/09/2026. A Epic
-# ganhou cartão a pedido dela e o perdeu por decisão dela; a razão inteira está
-# em `desenho_dos_lancadores.SEM_FONTE`, e o que sobra aqui é a conta.
-#
-# ELA CONTINUA CRAVADA, e o número cravado é o ponto: esta régua lê a página
-# ESTÁTICA, que é o desenho de referência. Um cartão que apareça ou suma daqui
-# sem alguém mexer neste número é um cartão que ninguém decidiu — e o desenho
-# desta aba é dela. O que ela NÃO conta são os declarados: aqueles só existem na
-# máquina de quem os declarou, e chegam pela troca da grade inteira
-# (`a07_lancadores._pintura`), nunca pelo HTML publicado.
 _ESPERADOS = [x.chave for x in QUADRO.lancadores]
 if len(_ESPERADOS) != 6:
     raise SystemExit(f"ERRO: {len(_ESPERADOS)} cartões, e o desenho dela tem "
@@ -655,33 +481,7 @@ if _FALTAM:
         "é pintura perdida — `querySelector` devolve `null`, a pintura conta "
         "zero, e zero passa por 'nada mudou'.")
 
-# ---------------------------------------------------------------------------
-# O ENDEREÇO NÃO DEPENDE DO ESTADO — 07/09/2026.
-#
-# ESTA ABA NÃO TEM LUGAR VAZIO, e por isso esta régua não é a das irmãs. Nas
-# abas 01-06 e 08 o cartão é POR CONTROLE, e o defeito medido hoje com os
 # quatro DualSense dela na mesa foi esse: o lugar vazio saía por um ramo
-# separado, SEM `data-campo` nenhum, e o dado dos dois controles que chegaram
-# depois não tinha onde pousar — a tela mostrava dois de quatro. Aqui o cartão
-# é por LANÇADOR (`data-lancador`, seis), não por controle: `grep data-controle`
-# neste gerador e na página publicada dá ZERO, e a razão está no comentário do
-# topo — nenhuma função de `prontuario_dos_jogos` recebe controle.
-#
-# MAS O DEFEITO TEM O MESMO EIXO, e ele existe aqui: *um cartão num estado
-# carrega endereço que o mesmo cartão noutro estado não tem.* Lá o eixo é
-# conectado/vazio; aqui é o `selo` — `ok`, `warn`, `off`, `nao_sei`.
-#
-# E A RÉGUA DE CIMA NÃO ALCANÇA ISSO, medido: o `_FALTAM` lê o `MIOLO`, e o
-# `MIOLO` sai de `cartoes(None)`, que é o estado de PARTIDA — os seis cartões
-# nascem `nao_sei`, e a página publicada tem `class="lanc ausente"` SEIS vezes
-# e nenhuma outra. Um ramo que largasse um endereço no estado `ok` passaria
-# verde por aqui e quebraria exatamente na máquina dela, que é onde os
-# lançadores são ACHADOS. A régua que só vê um estado mede um instante.
-#
-# O CONTRATO: os quatro `SUFIXOS` estão em todo cartão em TODO estado, e o
-# quinto (`-fora`, só onde há lista) não pode variar com o `selo` — ele
-# responde a `tem_lista`, que é fato do lançador, não do estado.
-# ---------------------------------------------------------------------------
 _ESTADOS = tuple(dl.MOLDURA)
 _POR_ESTADO: dict[str, dict[str, set[str]]] = {}
 for _lanc in QUADRO.lancadores:
@@ -718,30 +518,12 @@ if _SEM_OBRIGATORIOS:
         f"endereços que o pacote pinta: {_SEM_OBRIGATORIOS}. Os seis cartões "
         "carregam o MESMO conjunto — o que muda entre eles é o texto.")
 
-# ---------------------------------------------------------------------------
-# O GERADOR SÓ ESCREVE QUANDO ALGUÉM O RODA — 06/09/2026.
-#
-# ATÉ HOJE ELE ESCREVIA NO IMPORT. Tudo daqui para baixo corria no NÍVEL DO
-# MÓDULO, e `import aba07` bastava para reescrever `mockup/07-lancadores.html`
-# no disco — a bancada DELA, o arquivo que ela abre para olhar o desenho.
-# Medido na costura desta leva com a irmã `aba05`: bastou o `pytest` COLETAR
-# um teste que a importava no topo para o mockup mudar em disco, com o estado
-# vivo da mesa dentro. Oito dos dez geradores estavam assim; `aba01.py` e
-# `aba02.py` já tinham a guarda, e é a forma delas que está aqui.
-#
-# A MORDIDA é `test_a_palavra_do_transporte_tem_um_dono_so.py::
-# test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import`, que importa o
-# módulo e cobra que o arquivo não tenha mudado.
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import os
     import pathlib
     import shutil
     import tempfile
 
-    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
-    # PROVISÓRIA e só vai para a de verdade se passar (a cópia é a última
-    # linha deste bloco); a razão e a régua estão no fim do `aba04.py`.
     _real = onde.saida()
     _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-07-"))
     for _vizinha in _real.glob("*.html"):
@@ -749,59 +531,7 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("07-lancadores", "Lançadores", MIOLO, CSS, legenda=LEGENDA)
 
-    # ---------------------------------------------------------------------------
-    # A FITA NÃO NOMEIA UM CONTROLE QUE NÃO ESTÁ NA MESA — 03/09/2026
-    #
-    # A LEI, e ela é dela:
-    #
-    #     "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    #     os controles lá de cima. Não mistura com a info dos mockups."
-    #
-    # O QUE ESTAVA NA TELA, medido nesta máquina com os dois controles dela na mesa
-    # (foto em `docs/process/`), na `07-lancadores`:
-    #
-    #     cabeçalho   2 controles: 1 USB · 1 BT      ← certo, lido do aparelho
-    #     fita        P1 · Cosmic Red · USB          ← o MOCKUP; ela não tem esse
-    #                 P2 · Starlight Blue · BT       ← o MOCKUP
-    #
-    # `monta()` injeta a fita com `fita(inerte=True)` e SEM `mesa`, e nesse caminho
-    # ela cai nos `CONECTADOS` do desenho. Os seis valores que a
-    # `scripts/check_identidade_vem_de_cima.py --bancada --aba 07` acusava eram
     # esses dois chips inteiros: dois `--plastico`, dois nomes de colorway no texto
-    # e dois no `title`.
-    #
-    # POR QUE OS CHIPS SAEM DAQUI EM VEZ DE GANHAREM ENDEREÇO: a página estática não
-    # sabe NADA dos controles dela, e a regra é a dela — *campo sem informação não
-    # mostra nada*. Um `data-campo` no chip do desenho zeraria a régua e deixaria a
-    # tela dizendo a mesma coisa errada até o produto chegar; e o produto pode nem
-    # chegar a este endereço, porque `hefesto_vivo.pintar` troca `.fita` INTEIRA
-    # (`p.fita`) antes de visitar campo nenhum — quando essa troca acontece, todo
-    # `data-campo` que estivesse dentro da fita deixa de existir no DOM.
-    #
-    # QUEM ESCREVE OS CHIPS, e sem ele isto seria maquiagem: o piloto,
-    # `hefesto_vivo._fita` (`monta.fita` com a mesa viva), o mesmo das dez abas.
-    # O pacote da aba escrevia a fita da mesa vazia até 22/09/2026 — ver o
-    # `pacote()` de `pacotes/a07_lancadores.py`.
-    #
-    # O QUE FICA: o `Selecionar:` e o chip `Todos`, que são ESTRUTURA — não nomeiam
-    # aparelho nenhum e o `Todos` é o alvo desta aba (fora de `monta.ABAS_QUE_ESCOLHEM`).
-    # ---------------------------------------------------------------------------
-    # O CHIP É `<label>` DESDE 05/09/2026 (`monta.fita`), para poder clicar nas
-    # três abas que escolhem controle. Nesta, que não escolhe, ele nasce sem
-    # `data-gesto` e sai daqui inteiro — mas a ÂNCORA tinha de acompanhar: com
-    # `<span>` ela deixaria de casar e este bloco ficaria verde sem apagar nada.
-    # ---------------------------------------------------------------------------
-    # A TELA DE REGISTRO ENTRA IRMÃ DA JANELA, FORA DO MIOLO — 08/09/2026.
-    #
-    # É a mesma injeção que o `aba06.py` faz com as quatro pop-ups dele, e a
-    # razão é a mesma: a `.tela-nova` é `position:fixed` e não pertence ao
-    # `.miolo` que as réguas varrem. Pôr o bloco dentro do `MIOLO` faria a régua
-    # de estados contar dois campos de texto vazios como conteúdo da aba.
-    #
-    # A MARCA É CONFERIDA ANTES, e a recusa é dura: um `replace` que não casa
-    # não levanta — ele devolve o texto igual, e a página sairia SEM a tela com
-    # o gerador imprimindo sucesso. É o silêncio que esta casa já nomeou.
-    # ---------------------------------------------------------------------------
     _MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
     _PAG = onde.pagina("07-lancadores.html")
     _DOC = _PAG.read_text()
@@ -812,9 +542,6 @@ if __name__ == "__main__":
             f"«{dl.ADICIONAR_NOVO_ROTULO}» abrem NADA — o "
             f"`href=\"#{dl.TELA_DO_NOVO}\"` aponta para um `id` que não existe, "
             "e o clique some sem uma palavra.")
-    # E A ESCOLHA DO JOGO ENTRA AO LADO, pela mesma razão — 21/09/2026, o
-    # desenho aprovado dos lançadores iguais. A casca é estática; o miolo (o
-    # título, a lista do lançador clicado e o confirmar) o pacote repinta.
     _DOC = _DOC.replace(
         _MARCA, dl.tela_do_registro_html().strip() + "\n\n"
         + dl.tela_da_escolha_html().strip() + "\n\n" + _MARCA, 1)
@@ -831,15 +558,6 @@ if __name__ == "__main__":
             "fita viva morreu calada em 27/08.")
     onde.gravar("07-lancadores.html", _CHIP_DE_CONTROLE.sub("", _DOC))
 
-    # ---------------------------------------------------------------------------
-    # A RÉGUA DA IDENTIDADE roda sobre o HTML JÁ GRAVADO, que é a última coisa que a
-    # página é. Ler o `MIOLO` deixaria de fora justamente a fita, que vem do
-    # esqueleto e é onde o defeito morava.
-    #
-    # A REGRA MORA EM `identidade_congelada`, lá em cima, com as cinco formas e a
-    # razão de cada uma. Aqui só se aplica — e a mesma função responde ao
-    # `--conferir`, que é por onde o teste a morde.
-    # ---------------------------------------------------------------------------
     _CRAVADAS = identidade_congelada(onde.pagina("07-lancadores.html").read_text())
     if _CRAVADAS:
         raise SystemExit("ERRO: " + "\nERRO: ".join(_CRAVADAS))

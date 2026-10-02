@@ -1,37 +1,9 @@
-"""SOM-ROTA-03 — o replug devolve a escolha DAQUELA PEÇA, não a global.
-
-O DEFEITO, medido em 16/09/2026 sobre cópias dos perfis reais dela: o gancho
-`reapply_speaker_on_connect` olhava só `profile.speaker`, a seção GLOBAL, e
-desistia sem ela. Só que o alto-falante é da PEÇA — decisão dela de 10/08 — e os
-perfis dela guardam o som exclusivamente em ``controllers[uniq].speaker``:
-
-    personalizado.json        global_speaker: null · d42f4b…d8 -> rota 3, mudo
-    sackboy…adventure.json    global_speaker: null · 444648…03 -> rota 2
-
-Nos dois, o gancho devolvia ``None`` e a lista de chamadas ao applier ficava
-VAZIA. Efeito: **a escolha dela nunca voltava depois de um replug.** A posse dos
-bytes de áudio morre com o cabo (cada conexão cria um handle novo), então a
-última palavra ficava sendo a da ADOÇÃO — `ROTA_PADRAO_DO_SOM` —, e o "rota 3 +
-mudo" que ela gravou sumia ao trocar o cabo, sem recado.
-
-E o mesmo defeito existia com o SINAL TROCADO: quando havia global, o gancho
-mandava a GLOBAL para o ``uniq`` que voltou e ignorava o override da peça — o
-replug pisava o ajuste dela.
-
-A cura não inventa caminho: reusa a vista ``model_copy`` de
-``apply_controller_speakers`` e a ordem que ``apply`` já respeita — global
-primeiro, peça por cima.
-
-AS MORDIDAS: exigir a seção global de volta cala o gancho nos perfis dela; e
-aplicar só a global faz o replug pisar o override.
-"""
+"""SOM-ROTA-03 — o replug devolve a escolha DAQUELA PEÇA, não a global."""
 from __future__ import annotations
 
 from typing import Any
 
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
-#: O construtor vem da régua VIZINHA da mesma seção: as duas medem o mesmo
-#: `ProfileSpeakerConfig` e não podem divergir no que é "um perfil válido".
 from tests.unit.test_profile_speaker_section import _mk_profile
 
 from hefesto_dualsense4unix.profiles.schema import (
@@ -40,7 +12,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileSpeakerConfig,
 )
 
-#: As duas peças da mesa dela, mascaradas: o octeto 4 e o 5 zerados.
 PECA_A = "aa:bb:cc:00:00:01"
 PECA_B = "aa:bb:cc:00:00:02"
 
@@ -51,11 +22,7 @@ class _Loja:
 
 
 def _manager(profile: Profile, monkeypatch: Any) -> tuple[ProfileManager, list[dict]]:
-    """`ProfileManager` real; só o applier e o `load_profile` são de mentira.
-
-    Real de propósito: o que se afere é o gancho que roda na máquina dela, e um
-    dublê de manager provaria apenas que a linha foi digitada.
-    """
+    """`ProfileManager` real; só o applier e o `load_profile` são de mentira."""
     chamadas: list[dict] = []
 
     def applier(volume: int, muted: bool, **kw: Any) -> str:
@@ -85,10 +52,7 @@ def _perfil(
 
 class TestOReplugDevolveOQueElaGravou:
     def test_o_perfil_sem_global_volta_a_ser_aplicado(self, monkeypatch: Any) -> None:
-        """A MORDIDA: exigir `profile.speaker` de novo cala isto por inteiro.
-
-        É a forma exata dos perfis dela — som só por peça, global nenhuma.
-        """
+        """A MORDIDA: exigir `profile.speaker` de novo cala isto por inteiro."""
         p = _perfil(
             global_=None,
             por_peca={PECA_A: ProfileSpeakerConfig(volume=102, muted=True, rota=3)},

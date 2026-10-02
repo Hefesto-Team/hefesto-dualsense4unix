@@ -1,16 +1,4 @@
-"""O portão do texto público MORDE, e não morde o verbo.
-
-O portão é ``scripts/check_texto_publico.py``. Cada caso monta uma árvore de
-mentira em ``tmp_path`` e roda o script de verdade, por subprocesso, com
-``--raiz`` apontada para ela: arrancar a cura na árvore viva seria reescrever
-as páginas para depois desfazer.
-
-As três frases da sprint vêm primeiro: «a decisão dela» reprova, «Clicar num
-cartão leva a fita» passa (é o verbo, e uma régua que o reprovasse ensinaria a
-escrever pior), e ``FOO-BAR-01`` reprova. As frases estão digitadas aqui, e não
-importadas do portão: um teste que lê a constante do código sob teste passa com
-a cura arrancada.
-"""
+"""O portão do texto público MORDE, e não morde o verbo."""
 
 from __future__ import annotations
 
@@ -101,7 +89,6 @@ def _modulo():
     spec = importlib.util.spec_from_file_location("check_texto_publico", PORTAO)
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)
-    # O @dataclass procura o módulo em sys.modules pelo nome.
     sys.modules[spec.name] = modulo
     spec.loader.exec_module(modulo)
     return modulo
@@ -124,12 +111,7 @@ def test_a_arvore_de_hoje_passa() -> None:
 
 
 def test_o_que_a_lista_promete_varrer_existe(tmp_path: Path) -> None:
-    """Um arquivo da lista que muda de nome não sai da varredura calado.
-
-    Na árvore de mentira vazia, os quatro arquivos e as duas pastas faltam; na
-    do projeto, nada falta. Mordida: tirar o `ausentes` do `main` deixa o caso
-    de baixo verde com um nome que não existe na lista.
-    """
+    """Um arquivo da lista que muda de nome não sai da varredura calado."""
     modulo = _modulo()
     assert sorted(modulo.ausentes(tmp_path)) == sorted(
         [

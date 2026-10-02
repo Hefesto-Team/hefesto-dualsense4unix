@@ -1,10 +1,4 @@
-"""DEDUP-04: o compositor de envs do wrapper — todos os estados do daemon.
-
-O wrapper `hefesto-launch` só EXPORTA; quem decide é o daemon, regravando os
-arquivos de `launch_env/` com o backend REAL agregado POR JOGADOR. A regra de
-ouro fail-safe: qualquer vpad degradado (uinput/0ce6) => SEM IGNORE — o pior
-caso permitido é controle DUPLICADO, nunca zero controles.
-"""
+"""DEDUP-04: o compositor de envs do wrapper — todos os estados do daemon."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,40 +14,25 @@ from hefesto_dualsense4unix.daemon.launch_env import (
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 _DISABLE = "PROTON_DISABLE_HIDRAW"
 
-#: Os pares que o IGNORE esconde do jogo, e por que são DOIS desde 10/08/2026
 #: (TRES-CONTROLES-01): o DualSense FÍSICO dela, e o espelho VIRTUAL que o Steam
-#: Input cria (`28de:11ff`, Valve). Sem o segundo, o jogo ficava com três
-#: controles — o nosso vpad e os DOIS espelhos que o Steam faz, um do físico e
-#: outro do nosso vpad. Medido com o Pragmata aberto: `event21`/`event23`,
-#: nascidos pelo processo `steam`, o `pad 0` no mesmo segundo do
-#: `steam_input_excecao_ativada appid=3357650`.
-#:
-#: Comparação por CONJUNTO, não por string: travar a ordem faria estes quatro
-#: testes reprovarem por um detalhe que nenhum consumidor lê (o SDL parte por
-#: vírgula e compara por substring sem caixa).
 _IGNORE_ESPERADO = {"0x054c/0x0ce6", "0x28de/0x11ff"}
 
 
-# --- compose_env (pura) — os estados do critério de aceite -------------------
-
-
 def test_uhid_vivo_em_todos_os_vpads_desduplica_no_layout_ps():
-    """GUERRA-01: IGNORE (caminho SDL) + DISABLE (caminho winebus-hidraw dos
-    Protons 10/11, que a env do SDL não filtra). PROTON_ENABLE_HIDRAW morreu."""
+    """GUERRA-01: IGNORE (caminho SDL) + DISABLE (caminho winebus-hidraw dos"""
     env = compose_env(
         native_mode=False, emulation_enabled=True,
         flavor="dualsense", backends=["uhid"],
     )
     assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
     assert env[_DISABLE] == "0x054C/0x0CE6"
-    assert "PROTON_ENABLE_HIDRAW" not in env  # aposentada (Proton 10+)
-    assert "SDL_JOYSTICK_HIDAPI" not in env  # HIDAPI ligado (driver PS5 no vpad)
+    assert "PROTON_ENABLE_HIDRAW" not in env
+    assert "SDL_JOYSTICK_HIDAPI" not in env
     assert env["__GL_SHADER_DISK_CACHE"] == "1"
 
 
 def test_disable_nunca_inclui_o_vpad_0df2():
-    """O vpad Edge 0df2 PRECISA do hidraw (rumble/triggers/lightbar do jogo
-    chegam por ele) — o DISABLE lista SÓ o físico 0ce6."""
+    """O vpad Edge 0df2 PRECISA do hidraw (rumble/triggers/lightbar do jogo"""
     for flavor, backends in (("dualsense", ["uhid"]), ("xbox", ["uinput"])):
         env = compose_env(
             native_mode=False, emulation_enabled=True,
@@ -81,12 +60,7 @@ def test_uinput_degradado_nunca_esconde_o_fisico():
 
 
 def test_coop_com_um_jogador_degradado_derruba_o_ignore():
-    """dedup POR JOGADOR: P1 uhid + P2 uinput => o IGNORE congelado deixaria
-    AQUELE jogador com zero controle — então não sai IGNORE nenhum.
-
-    NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o P2 em uinput é o Edge 0df2 e
-    continua visível com o IGNORE; o que derruba o IGNORE é a COBERTURA (um vpad
-    por físico, `cobertura_total`), e não o canal."""
+    """dedup POR JOGADOR: P1 uhid + P2 uinput => o IGNORE congelado deixaria"""
     env = compose_env(
         native_mode=False, emulation_enabled=True,
         flavor="dualsense", backends=["uhid", "uinput"],
@@ -101,20 +75,18 @@ def test_xbox_forca_evdev_e_esconde_o_fisico():
     )
     assert env["SDL_JOYSTICK_HIDAPI"] == "0"
     assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
-    # GUERRA-01: o vazamento winebus-hidraw vale para QUALQUER máscara.
     assert env[_DISABLE] == "0x054C/0x0CE6"
 
 
 def test_modo_nativo_entrega_o_hidraw_sem_esconder_nada():
-    """Nativo: NENHUMA env de hidraw — a whitelist default do winebus já expõe
-    o físico Sony; DISABLE aqui seria o "zero controles" ao vivo."""
+    """Nativo: NENHUMA env de hidraw — a whitelist default do winebus já expõe"""
     env = compose_env(
         native_mode=True, emulation_enabled=False,
         flavor="dualsense", backends=[],
     )
     assert _IGNORE not in env
     assert _DISABLE not in env
-    assert "PROTON_ENABLE_HIDRAW" not in env  # aposentada, nem no nativo
+    assert "PROTON_ENABLE_HIDRAW" not in env
 
 
 def test_emulacao_desligada_ou_sem_vpad_vivo_nao_esconde():
@@ -127,8 +99,7 @@ def test_emulacao_desligada_ou_sem_vpad_vivo_nao_esconde():
 
 
 def test_compose_env_so_emite_vars_da_allowlist():
-    """O wrapper filtra por allowlist — emitir var fora dela = env que nunca
-    chega ao jogo (drift silencioso)."""
+    """O wrapper filtra por allowlist — emitir var fora dela = env que nunca"""
     estados = [
         dict(native_mode=True, emulation_enabled=False, flavor="dualsense", backends=[]),
         dict(native_mode=False, emulation_enabled=True, flavor="xbox", backends=["uinput"]),
@@ -141,16 +112,11 @@ def test_compose_env_so_emite_vars_da_allowlist():
 
 
 def test_allowlist_espelhada_no_wrapper_sh():
-    """Contrato allowlist Python <-> wrapper POSIX-sh: cada var precisa ter o
-    seu `case` no assets/hefesto-launch.sh, senão o daemon a materializa e o
-    wrapper a descarta calado."""
+    """Contrato allowlist Python <-> wrapper POSIX-sh: cada var precisa ter o"""
     root = Path(__file__).resolve().parents[2]
     wrapper = (root / "assets/hefesto-launch.sh").read_text(encoding="utf-8")
     for var in ENV_ALLOWLIST:
         assert f"{var}=*)" in wrapper, var
-
-
-# --- materialize_launch_env (arquivos) ---------------------------------------
 
 
 def _fake_daemon(
@@ -203,14 +169,11 @@ def test_materialize_reflete_degradacao_por_jogador(tmp_path, monkeypatch):
         _fake_daemon(backend="uhid", coop_backends=("uhid", "uinput"))
     )
     env = _env_do_arquivo(tmp_path / "default.env")
-    # NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o jogador em uinput é o Edge
-    # 0df2, que o IGNORE do 0ce6 não esconde; o arquivo passou a esconder o físico.
     assert _IGNORE in env
 
 
 def test_materialize_por_appid_e_limpeza_de_rancosos(tmp_path, monkeypatch):
-    """Perfil com `steam_app_<appid>` no match ganha arquivo próprio com a
-    opinião DELE (modo nativo antecipado); arquivos de perfis apagados somem."""
+    """Perfil com `steam_app_<appid>` no match ganha arquivo próprio com a"""
     monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: tmp_path)
     perfil_nativo = SimpleNamespace(mode=SimpleNamespace(kind="native"))
     monkeypatch.setattr(
@@ -222,7 +185,7 @@ def test_materialize_por_appid_e_limpeza_de_rancosos(tmp_path, monkeypatch):
     materialize_launch_env(_fake_daemon(backend="uhid"))
 
     env_jogo = _env_do_arquivo(tmp_path / "steam_app_1599660.env")
-    assert _IGNORE not in env_jogo  # nativo: esconder o físico = zero controles
+    assert _IGNORE not in env_jogo
     assert _DISABLE not in env_jogo
     assert env_jogo["__GL_SHADER_DISK_CACHE"] == "1"
     assert not rancoso.exists()
@@ -247,10 +210,7 @@ def test_materialize_nunca_propaga_excecao(monkeypatch):
         raise OSError("disco cheio")
 
     monkeypatch.setattr(launch_env, "launch_env_dir", _explode)
-    materialize_launch_env(_fake_daemon())  # não levanta
-
-
-# --- perfil nativo fora da antecipação por appid (achado MED da revisão) -----
+    materialize_launch_env(_fake_daemon())
 
 
 def _perfil(
@@ -273,8 +233,7 @@ def _perfil(
 
 
 def test_nativo_por_titulo_e_arriscado_e_por_appid_nao():
-    """Perfil nativo casado por título/processo escapa do steam_app_<id>.env;
-    o casado SÓ por steam_app_* está coberto pela antecipação."""
+    """Perfil nativo casado por título/processo escapa do steam_app_<id>.env;"""
     arriscado = _perfil(kind="native", title="Rockstar Games Launcher", name="rdr2")
     coberto = _perfil(
         kind="native", window_class=("steam_app_1599660",), name="sackboy_nativo"
@@ -289,16 +248,7 @@ def test_nativo_por_titulo_e_arriscado_e_por_appid_nao():
 
 
 def test_nativo_matchany_e_arriscado_e_a_navegacao_por_processo_nao_e():
-    """NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: o `desktop` saiu da
-    lista por decisão dela (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL).
-
-    A Navegação é mouse: o jogo não ver gamepad ali é a intenção, e é o único
-    jeito de o PS + R3 valer DENTRO do jogo — a env é lida uma vez, no `exec`.
-    Enquanto o desktop contava, um perfil de Navegação casado por processo
-    deixava o `default.env` de TODO jogo sem IGNORE, em qualquer modo.
-
-    MORDE: devolver o `desktop` ao filtro faz `navegacao` reaparecer na lista.
-    """
+    """NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: o `desktop` saiu da"""
     matchany_nativo = SimpleNamespace(
         name="tudo_nativo", mode=SimpleNamespace(kind="native"), match=SimpleNamespace()
     )
@@ -325,10 +275,7 @@ def test_nativo_com_appid_mais_titulo_continua_arriscado():
 def test_default_env_omite_ignore_quando_ha_nativo_fora_da_antecipacao(
     tmp_path, monkeypatch
 ):
-    """Estado uhid saudável (IGNORE sairia) + perfil nativo por título → o
-    default.env OMITE o IGNORE: se o autoswitch ativar esse perfil depois do
-    launch, a emulação cai e o IGNORE congelado deixaria zero controles.
-    Duplicado > zero."""
+    """Estado uhid saudável (IGNORE sairia) + perfil nativo por título → o"""
     monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: tmp_path)
     monkeypatch.setattr(
         launch_env,
@@ -359,8 +306,6 @@ def test_default_env_mantem_ignore_quando_todos_os_nativos_tem_appid(
     materialize_launch_env(_fake_daemon(backend="uhid"))
     env = _env_do_arquivo(tmp_path / "default.env")
     assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
-    # E o arquivo por-appid antecipa o modo nativo DAQUELE jogo (sem
-    # IGNORE/DISABLE — o jogo fala com o hidraw do físico).
     env_jogo = _env_do_arquivo(tmp_path / "steam_app_1599660.env")
     assert _IGNORE not in env_jogo
     assert _DISABLE not in env_jogo

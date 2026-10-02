@@ -1,26 +1,4 @@
-"""INSTALL-UNIVERSAL (18/09/2026) — o device KS espera o prefixo e deixa rastro.
-
-Ordem dela: *"ele precisa funcionar como produto"* — a vibração que chega aos
-jogos da Sony na máquina dela tem de chegar na de qualquer pessoa, e quando
-não chegar, tem de DIZER.
-
-O curador do device KS (`hefesto-audio-ks`) roda dentro do lançamento, antes do
-`exec`, com a saída em /dev/null. Três buracos, medidos pelo auditor e pelo
-cético do INSTALL-UNIVERSAL:
-
-1. **`ocupado`** — o wineserver do prefixo ainda vivo (o do install script da
-   Steam, ou o da sessão que acabou de fechar). O curador recusava e o jogo
-   abria sem vibração. Agora o wrapper espera, até cinco tentativas a mais.
-2. **a falha era calada** — nem o doctor nem o daemon olhavam o curador. O
-   wrapper deixa `launch_env/audio_ks_ultimo`, e o `check_ultimo_device_ks` lê.
-   Todo caminho deixa o SEU motivo: o install incompleto (`sem-curador`), a
-   máquina sem `python3` (`sem-python`, que antes saía sem rastro ou como
-   `desligado`) e o device que SAIU (`removido`, que antes se dizia `ok`).
-3. **a cópia em bin/ envelhece** — um `git pull` sem reinstalar deixa as três
-   cópias velhas. O `check_copias_do_wrapper` compara com o checkout.
-
-Tudo com prefixo, sysfs e HOME sintéticos: a suíte nunca lê a Steam dela.
-"""
+"""INSTALL-UNIVERSAL (18/09/2026) — o device KS espera o prefixo e deixa rastro."""
 
 from __future__ import annotations
 
@@ -50,9 +28,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 APPID = "3357650"
 
-#: Um curador de mentira que responde `ocupado` (3) nas primeiras N chamadas e
-#: depois `feito` (0). Conta as chamadas num arquivo: é a única forma de medir
-#: QUANTAS vezes o wrapper tentou, que é o que a espera promete.
 _CURADOR_TEIMOSO = """\
 import os
 import sys
@@ -75,13 +50,7 @@ def _lancar(
     sem_curador: bool = False,
     sem_python: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
-    """Roda o wrapper DE VERDADE; devolve (o processo, o compatdata, o rastro).
-
-    `registro=None` é o prefixo que ainda não existe: a primeira sessão de todo
-    jogo novo, em que o proton cria o `system.reg` DEPOIS do wrapper.
-    `sem_curador` é o install incompleto (o `hefesto-audio-ks` não foi
-    materializado); `sem_python` é o PATH do lançamento sem `python3`.
-    """
+    """Roda o wrapper DE VERDADE; devolve (o processo, o compatdata, o rastro)."""
     home = tmp_path / "home"
     binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
     binario.mkdir(parents=True)
@@ -102,14 +71,12 @@ def _lancar(
     else:
         compat = _prefixo(tmp_path, registro)
     caminho = Path(_path_minimo(tmp_path / "bin"))
-    # A espera precisa do `sleep`; o PATH mínimo do produto não o tem, e sem
-    # ele o wrapper desiste na primeira tentativa (o lado seguro de errar).
     sono = shutil.which("sleep")
     assert sono is not None
     (caminho / "sleep").symlink_to(sono)
     if sem_python:
         (caminho / "python3").unlink()
-    runtime = Path(tempfile.mkdtemp(prefix="hefks-"))  # AF_UNIX: caminho curto
+    runtime = Path(tempfile.mkdtemp(prefix="hefks-"))
     (runtime / "hefesto-dualsense4unix").mkdir()
     daemon = _DaemonQueResponde(runtime / "hefesto-dualsense4unix" / "hefesto-dualsense4unix.sock")
     env = {
@@ -145,17 +112,8 @@ def _rastro(arquivo: Path) -> dict[str, str]:
     )
 
 
-# ---------------------------------------------------------------- o wrapper
-
-
 def test_o_ocupado_passageiro_e_esperado_e_o_device_sai(tmp_path: Path) -> None:
-    """A MORDIDA da espera: tire o laço do `curar_audio_ks` e o rastro diz
-    `ocupado` com UMA tentativa, e o jogo abre sem o device.
-
-    O wineserver do install script da Steam fica vivo por um instante; o
-    `proton waitforexitandrun` espera por ELE antes de abrir o jogo, então
-    esperar aqui custa zero.
-    """
+    """A MORDIDA da espera: tire o laço do `curar_audio_ks` e o rastro diz"""
     contador = tmp_path / "contador"
     feito, _, arquivo = _lancar(
         tmp_path,
@@ -174,12 +132,7 @@ def test_o_ocupado_passageiro_e_esperado_e_o_device_sai(tmp_path: Path) -> None:
 
 
 def test_a_espera_tem_teto_e_o_jogo_abre_mesmo_assim(tmp_path: Path) -> None:
-    """Com o prefixo travado o tempo todo: seis tentativas, e o jogo abre.
-
-    O curador DE VERDADE, com a mesma trava que o proton usa (`pfx.lock`)
-    segurada por este processo. Sem teto, o lançamento nunca chegaria ao
-    `exec` — e o jogo abrir é a promessa que vale acima de todas.
-    """
+    """Com o prefixo travado o tempo todo: seis tentativas, e o jogo abre."""
     compat_previsto = tmp_path / "compatdata" / APPID
     (compat_previsto / "pfx").mkdir(parents=True)
     (compat_previsto / "pfx" / "system.reg").write_text(_registro(), encoding="utf-8")
@@ -260,11 +213,7 @@ def test_o_curador_de_verdade_grava_e_o_rastro_diz_ok(tmp_path: Path) -> None:
 
 
 def test_sem_o_curador_o_jogo_abre_e_o_rastro_diz(tmp_path: Path) -> None:
-    """A máquina com o install incompleto — a razão de esta leva existir.
-
-    A MORDIDA: tire o `registrar_audio_ks 0 sem-curador 0` e o rastro não
-    nasce; o doctor passa a dizer "nenhum lançamento" sobre um que houve.
-    """
+    """A máquina com o install incompleto — a razão de esta leva existir."""
     feito, compat, arquivo = _lancar(
         tmp_path, env_do_daemon=_ENV_LIGADO, registro=_registro(), sem_curador=True
     )
@@ -280,9 +229,7 @@ def _nosso() -> str:
 
 
 def test_sem_a_opcao_o_device_de_antes_sai_e_o_rastro_diz_removido(tmp_path: Path) -> None:
-    """A MORDIDA: com o `--remover`, o 0 do curador virava `ok` — e o doctor
-    dava "[ OK ] device KS conferido" sobre o device que acabara de SAIR.
-    """
+    """A MORDIDA: com o `--remover`, o 0 do curador virava `ok` — e o doctor"""
     feito, compat, arquivo = _lancar(
         tmp_path,
         env_do_daemon="PROTON_ENABLE_MHWILDS_USB_AUDIO=0\n",
@@ -296,12 +243,7 @@ def test_sem_a_opcao_o_device_de_antes_sai_e_o_rastro_diz_removido(tmp_path: Pat
 
 @pytest.mark.parametrize("com_bloco_nosso", [False, True], ids=["limpo", "com-bloco-de-antes"])
 def test_sem_python3_o_jogo_abre_e_o_rastro_diz(tmp_path: Path, com_bloco_nosso: bool) -> None:
-    """Sem `python3` no PATH do lançamento: rastro que aponta a MÁQUINA.
-
-    As duas mordidas, uma por caso: com um bloco nosso a limpar, o wrapper
-    saía sem rastro nenhum (o doctor lia o lançamento anterior como se fosse
-    este); sem bloco, dizia `desligado`, que aponta para o controle.
-    """
+    """Sem `python3` no PATH do lançamento: rastro que aponta a MÁQUINA."""
     registro = _registro(_nosso()) if com_bloco_nosso else _registro()
     feito, _, arquivo = _lancar(
         tmp_path, env_do_daemon=_ENV_LIGADO, registro=registro, sem_python=True
@@ -321,9 +263,6 @@ def test_jogo_nativo_nao_deixa_rastro(tmp_path: Path) -> None:
     )
     assert feito.returncode == 0, feito.stderr
     assert not arquivo.exists()
-
-
-# ------------------------------------------------------------------ o doctor
 
 
 def _doctor(funcao: str, tmp_path: Path, **env: str) -> str:
@@ -395,7 +334,6 @@ def test_doctor_sem_python_e_aviso(tmp_path: Path) -> None:
     saida = _doctor("check_ultimo_device_ks", tmp_path)
     assert "[WARN] o último lançamento pelo Proton" in saida
     assert "não achou python3" in saida
-    # O aviso diz o gesto: é a máquina, e não o controle.
     assert "instale o python3" in saida and "abra o jogo de novo" in saida
 
 
@@ -461,11 +399,7 @@ def test_doctor_copias_iguais_ao_checkout_passam(tmp_path: Path) -> None:
 
 
 def test_doctor_acusa_a_copia_velha_de_qualquer_dos_tres(tmp_path: Path) -> None:
-    """A MORDIDA do `cmp`: tire a comparação e a cópia velha passa em verde.
-
-    É a CLASSE: os três pares envelhecem do mesmo jeito, e o `hefesto-camadas`
-    é o que nenhum check olhava antes.
-    """
+    """A MORDIDA do `cmp`: tire a comparação e a cópia velha passa em verde."""
     for nome in _COPIAS:
         caso = tmp_path / nome
         caso.mkdir()

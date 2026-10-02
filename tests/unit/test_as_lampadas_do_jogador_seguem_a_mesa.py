@@ -66,12 +66,7 @@ def _lampadas(jogador: int) -> str:
 
 
 def test_o_desenho_tem_o_endereco_das_lampadas() -> None:
-    """MORDIDA: sem `data-campo`, o piloto nunca visita as cinco lâmpadas.
-
-    E ela cobra os QUATRO, um por coluna: um endereço que só o card aberto
-    tivesse deixaria os três fechados com o desenho do mockup — e é justamente ao
-    trocar de card que o assento muda de cara.
-    """
+    """MORDIDA: sem `data-campo`, o piloto nunca visita as cinco lâmpadas."""
     html = PAGINA.read_text(encoding="utf-8")
     divs = re.findall(r'<div class="lampadas"[^>]*>', html)
     assert divs, "a aba não tem mais o campo das cinco lâmpadas"
@@ -115,12 +110,7 @@ def test_o_p1_acende_a_do_meio() -> None:
 
 
 def test_o_desenho_vem_do_dono_e_nao_de_uma_tabela_daqui() -> None:
-    """A régua contra a terceira cópia do padrão do PS5.
-
-    `monta.luzinhas` é quem o gerador usa; se o pacote passar a montar o HTML por
-    conta própria, os dois divergem no dia em que alguém mexer num deles — e a
-    tela desenha um padrão que o produto não acende.
-    """
+    """A régua contra a terceira cópia do padrão do PS5."""
     import sys
 
     sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))

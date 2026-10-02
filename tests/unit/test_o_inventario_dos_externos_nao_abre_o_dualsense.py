@@ -54,7 +54,6 @@ from tests.unit.test_hidraw_broker_client import (
     _short_socket_dir,
 )
 
-# --- os aparelhos -----------------------------------------------------------
 
 _AXIS_DS = (128, 0, 255, 0, 0, 0)
 _AXIS_PRO = (0, -32767, 32767, 250, 500, 0)
@@ -89,9 +88,6 @@ _CAPS_TOUCHPAD = {
 }
 _CAPS_TECLADO = {ecodes.EV_KEY: [ecodes.KEY_ESC, ecodes.KEY_A, ecodes.KEY_ENTER]}
 
-#: O bitmap `capabilities/key` do sysfs: o do gamepad tem BTN_SOUTH..BTN_THUMBR
-#: na palavra 4 (a régua da HIDE-02 usa o mesmo), o do touchpad não tem o
-#: BTN_GAMEPAD, e o de movimento é vazio.
 _TECLAS_GAMEPAD = "7fdb000000000000 0 0 0 0"
 _TECLAS_TOUCHPAD = "e520 10000 0 0 0 0"
 _TECLAS_VAZIAS = "0"
@@ -110,15 +106,15 @@ class _No:
     uniq: str
     caps: dict[int, list[Any]]
     teclas: str
-    dono: str  # o dir do aparelho no sysfs, relativo a `sys/devices`
-    papel: str  # gamepad | movimento | touchpad | teclado
+    dono: str
+    papel: str
     dualsense: bool
     virtual: bool = False
 
 
 @dataclass(frozen=True)
 class _DS:
-    transporte: str  # "bt" | "usb"
+    transporte: str
     pid: int = 0x0CE6
 
 
@@ -126,7 +122,6 @@ BT = _DS("bt")
 USB = _DS("usb")
 EDGE = _DS("usb", 0x0DF2)
 
-#: A matriz dela: um a quatro, cabo, rádio e misto, e o Edge.
 MESAS: dict[str, list[_DS]] = {
     "1-bt": [BT],
     "1-usb": [USB],
@@ -216,9 +211,6 @@ def _nos_do_teclado() -> list[tuple[str, dict[str, Any]]]:
     })]
 
 
-# --- a mesa -----------------------------------------------------------------
-
-#: O que é dela: os nós de verdade e o sysfs de verdade dos nós de entrada.
 _PORTAS_PROIBIDAS = (
     "/dev/input", "/dev/hidraw", "/dev/uinput", "/dev/uhid", "/sys/class/input",
 )
@@ -229,15 +221,14 @@ class Mesa:
     raiz: Path
     dev_input: Path
     sys_class: Path
-    nos: dict[str, _No] = field(default_factory=dict)  # eventN -> nó
-    caminho: dict[str, str] = field(default_factory=dict)  # eventN -> o /dev de mentira
-    tentativas: list[str] = field(default_factory=list)  # cada InputDevice(caminho)
-    pedidos: list[dict[str, Any]] = field(default_factory=list)  # cada linha no socket
+    nos: dict[str, _No] = field(default_factory=dict)
+    caminho: dict[str, str] = field(default_factory=dict)
+    tentativas: list[str] = field(default_factory=list)
+    pedidos: list[dict[str, Any]] = field(default_factory=list)
     diario: list[tuple[str, str, dict[str, Any]]] = field(default_factory=list)
-    no_dev_de_verdade: list[str] = field(default_factory=list)  # tem de ficar vazia
-    escritas_de_led: list[Any] = field(default_factory=list)  # luz e IMU, anotadas
+    no_dev_de_verdade: list[str] = field(default_factory=list)
+    escritas_de_led: list[Any] = field(default_factory=list)
 
-    # -- leitura para as réguas --
     def de(self, k: int, papel: str = "gamepad") -> str:
         """O caminho do nó `papel` do DualSense k (1..N)."""
         for evento, no in self.nos.items():
@@ -269,12 +260,7 @@ class Mesa:
 
 
 class _RoteiroQueConta(dict[str, Any]):
-    """O roteiro do servidor, que conta TODA linha que chega ao socket.
-
-    O `_ServidorRoteirizado` pergunta `cmd in roteiro` uma vez por linha: é
-    ali que a contagem mora, e todo comando acha resposta (o `open` é servido,
-    o resto é recusado como o broker velho recusa).
-    """
+    """O roteiro do servidor, que conta TODA linha que chega ao socket."""
 
     def __init__(self, mesa: Mesa, servir: Any) -> None:
         super().__init__()
@@ -356,8 +342,6 @@ def _montar(
             numero += 1
             no = _No(evento=evento, papel=papel, **spec)
             mesa.nos[evento] = no
-            # O sysfs: `<dono>/input/inputM` com id, name, uniq, phys e caps;
-            # o dono tem `driver` e `hidraw/`, como a subida espera.
             dono = tmp_path / "sys" / "devices" / no.dono
             entrada = dono / "input" / f"input{numero}"
             (entrada / "id").mkdir(parents=True)
@@ -380,7 +364,6 @@ def _montar(
             (mesa.sys_class / evento).mkdir()
             (mesa.sys_class / evento / "device").symlink_to(entrada)
             realpaths[f"/sys/class/input/{evento}/device"] = str(entrada)
-            # O /dev/input: o físico escondido é 0000, o resto é 0660.
             arquivo = mesa.dev_input / evento
             arquivo.write_text("", encoding="ascii")
             fechado = escondidos and no.dualsense and not no.virtual
@@ -388,7 +371,6 @@ def _montar(
             mesa.caminho[evento] = str(arquivo)
             (sombras / evento).write_text("", encoding="ascii")
 
-    # -- o sysfs --
     monkeypatch.setattr(er, "SYS_CLASS_INPUT", str(mesa.sys_class))
     monkeypatch.setattr(er, "DEV_INPUT_DIR", str(mesa.dev_input))
     realpath_de_verdade = os.path.realpath
@@ -396,16 +378,11 @@ def _montar(
     def _realpath(caminho: Any, **kw: Any) -> str:
         texto = os.fspath(caminho)
         if isinstance(texto, str) and texto.startswith("/sys/class/input/"):
-            # Nunca o sysfs dela: fora da mesa é um diretório que não existe.
             return realpaths.get(texto, str(tmp_path / "sys" / "fora-da-mesa"))
         return str(realpath_de_verdade(caminho, **kw))
 
     monkeypatch.setattr("os.path.realpath", _realpath)
 
-    # -- o /dev e o sysfs de verdade são proibidos, pelas duas portas --
-    # O `os.open` (o do `InputDevice`) e o `open` embutido (o das leituras de
-    # sysfs do `evdev_reader`). A descoberta engole toda exceção de um nó, então
-    # a guarda ANOTA antes de levantar, e a mesa reprova no fim pela anotação.
     os_open_de_verdade = os.open
     open_de_verdade = builtins.open
 
@@ -427,7 +404,6 @@ def _montar(
     monkeypatch.setattr(os, "open", _os_open)
     monkeypatch.setattr(builtins, "open", _open)
 
-    # -- a biblioteca --
     def _list_devices(input_device_dir: str | None = None) -> list[str]:
         assert input_device_dir in (None, str(mesa.dev_input)), input_device_dir
         return [str(c) for c in sorted(mesa.dev_input.glob("event*"))
@@ -470,7 +446,6 @@ def _montar(
     )
     monkeypatch.setattr(_input, "ioctl_EVIOCGEFFECTS", lambda fd: (_no_do_fd(fd), 0)[1])
 
-    # -- o broker, num socket de verdade --
     sockdir = _short_socket_dir(tmp_path)
     sock = os.path.join(sockdir, "broker.sock")
     servidos = {
@@ -497,7 +472,6 @@ def _montar(
     monkeypatch.setattr(er, "_CLIENTE_DO_BROKER", None)
     monkeypatch.setattr(hbc, "logger", _Diario(hbc.logger, mesa.diario))
 
-    # -- nada de luz nem de IMU de verdade nos externos --
     import hefesto_dualsense4unix.core.external_leds as leds
 
     def _sem_escrita(nome: str) -> Any:
@@ -539,8 +513,7 @@ def montar(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Any]:
 
 
 def _vista_de_hoje() -> list[dict[str, Any]]:
-    """O que a vista dos externos devolvia antes da cura: a descoberta sem
-    espécie, filtrada depois de abrir."""
+    """O que a vista dos externos devolvia antes da cura: a descoberta sem"""
     return [
         gp.como_entrada_de_inventario()
         for gp in er.discover_gamepads()
@@ -606,7 +579,6 @@ def test_r0_a_descoberta_acha_todos_os_dualsense_sem_pedir_ao_broker(
     assert mesa.fd_recebidos() == []
     assert mesa.tentativas_em_dualsense() == [], "a descoberta abriu um nó de DualSense"
 
-    # O irmão que mede antes: quem LÊ o nó alcança o broker.
     for caminho in gamepads:
         with contextlib.suppress(Exception):
             er.abrir_input_device(caminho).close()
@@ -618,12 +590,8 @@ def test_r0_a_descoberta_acha_todos_os_dualsense_sem_pedir_ao_broker(
         assert mesa.tentativas_em_dualsense() == gamepads
 
 
-# --- R1, no tempo e pelos dois chamadores reais -----------------------------
-
-
 def _chamadores(dualsenses: list[_DS], tmp_path: Path) -> tuple[Any, Any]:
-    """O tique dos externos e o `controller.list` de verdade, sobre um só
-    registro — como no daemon."""
+    """O tique dos externos e o `controller.list` de verdade, sobre um só"""
     from hefesto_dualsense4unix.core.controller import ControllerState
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
     from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -759,20 +727,11 @@ async def test_r1_o_tique_e_a_janela_nao_abrem_o_dualsense_no_tempo(
         assert tique._registry.peek(identidades_do_pro.pop()) == numeros_do_pro[0]
 
 
-# --- R2, o oráculo ----------------------------------------------------------
-
-
 @pytest.mark.parametrize(("nome", "escondidos", "externos"), _MATRIZ)
 def test_r2_o_inventario_sai_identico_ao_de_hoje(
     montar: Any, nome: str, escondidos: bool, externos: bool
 ) -> None:
-    """Os mesmos dicts, na mesma ordem. O 8BitDo em modo PS4 é Sony e
-    continua externo. A MORDIDA: pule pelo vendor 054c só e ele some.
-
-    E a espécie pedida é a única que volta, nas duas espécies: a lista de
-    cada uma é a descoberta sem espécie filtrada por ela, registro a registro.
-    A MORDIDA: tire o filtro depois da abertura e o Pro e o 8BitDo voltam
-    em `especie=dualsense`."""
+    """Os mesmos dicts, na mesma ordem. O 8BitDo em modo PS4 é Sony e"""
     mesa = montar(MESAS[nome], escondidos=escondidos, externos=externos)
 
     hoje = _vista_de_hoje()
@@ -795,14 +754,10 @@ def test_r2_o_inventario_sai_identico_ao_de_hoje(
 
 
 def test_r2_especie_desconhecida_e_recusada(montar: Any) -> None:
-    """Uma espécie com erro de digitação não vira lista vazia calada — uma
-    lista vazia no tique contaria ausência e tiraria o número do externo."""
+    """Uma espécie com erro de digitação não vira lista vazia calada — uma"""
     montar(MESAS["1-bt"], escondidos=True, externos=True)
     with pytest.raises(ValueError, match="espécie"):
         er.discover_gamepads(especie="externo")
-
-
-# --- R3, na dúvida o nó é aberto --------------------------------------------
 
 
 @pytest.mark.parametrize("escondidos", [True, False], ids=["escondidos", "abertos"])
@@ -828,8 +783,7 @@ def test_r3_o_externo_de_sysfs_ilegivel_continua_no_inventario(
 def test_r3_o_dualsense_de_sysfs_ilegivel_e_tratado_como_hoje(
     montar: Any, escondidos: bool
 ) -> None:
-    """Sem o sysfs, o nó do P1 é aberto e descartado — o mesmo número de
-    tentativas nele que a vista de hoje faz, e nenhum pedido ao broker."""
+    """Sem o sysfs, o nó do P1 é aberto e descartado — o mesmo número de"""
     mesa = montar(MESAS["4-misto"], escondidos=escondidos, externos=True)
     p1 = mesa.de(1)
     mesa.sysfs_ilegivel(p1)
@@ -858,11 +812,7 @@ def test_r3_o_dualsense_de_sysfs_ilegivel_e_tratado_como_hoje(
 def test_r4_localizar_o_p3_pela_identidade_sem_pedir_ao_broker(
     montar: Any, nome: str, escondidos: bool
 ) -> None:
-    """O leitor que perdeu o nó do P3 o reencontra pela identidade, e a busca
-    não abre nada: nem o P3, nem os outros três
-    (O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01). A MORDIDA: aplique o
-    pulo sem olhar a espécie e o P3 some daqui; abra o nó na descoberta e os
-    pedidos voltam."""
+    """O leitor que perdeu o nó do P3 o reencontra pela identidade, e a busca"""
     mesa = montar(MESAS[nome], escondidos=escondidos, externos=True)
 
     no = er.localizar_node_por_identidade(norm_mac(mac_ds(3)) or "")
@@ -873,14 +823,8 @@ def test_r4_localizar_o_p3_pela_identidade_sem_pedir_ao_broker(
     assert mesa.tentativas_em_dualsense() == []
 
 
-# --- R5, a suíte não lê o sysfs dela ----------------------------------------
-
-
 def test_r5_sob_teste_o_sysfs_dos_nos_de_entrada_e_uma_pasta_vazia(tmp_path: Path) -> None:
-    """O `tests/conftest.py` aponta o `SYS_CLASS_INPUT` para uma pasta vazia,
-    nova a cada teste. Na máquina dela o `event30` é o movimento do P1: sob
-    teste, o sysfs não sabe dele. A MORDIDA: tire a linha do conftest e esta
-    régua reprova em qualquer máquina."""
+    """O `tests/conftest.py` aponta o `SYS_CLASS_INPUT` para uma pasta vazia,"""
     raiz = Path(er.SYS_CLASS_INPUT)
 
     assert er.SYS_CLASS_INPUT != "/sys/class/input"

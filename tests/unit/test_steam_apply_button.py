@@ -33,10 +33,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_steam_apply_button: importa código da janela GTK")
 
 import contextlib
@@ -52,10 +48,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
     format_apply_wrapper_result,
 )
 from tests.conftest import skip_sem_gtk_response
-
-# ---------------------------------------------------------------------------
-# format_apply_wrapper_result — pura, o miolo do toast
-# ---------------------------------------------------------------------------
 
 
 class TestFormatDoResultado:
@@ -102,13 +94,7 @@ class TestFormatDoResultado:
         assert "Nada a mudar" in format_apply_wrapper_result({})
 
     def test_bool_nao_conta_como_int(self) -> None:
-        # blindagem: {"applied": True} não pode virar "1 jogo(s)".
         assert "Nada a mudar" in format_apply_wrapper_result({"applied": True})
-
-
-# ---------------------------------------------------------------------------
-# Fluxo do worker (Steam aberta / contrato / função ausente / exceção)
-# ---------------------------------------------------------------------------
 
 
 class _Stub(DaemonActionsMixin):
@@ -204,18 +190,16 @@ class TestWorker:
         slo_fake: dict[str, Any],
         dialogo_fake: dict[str, Any],
     ) -> None:
-        """A recusa que NÃO virou pergunta: com jogo aberto, `steam -shutdown`
-        mataria o jogo (progresso não salvo perdido). Nem aplica, nem fecha,
-        nem sequer pergunta."""
+        """A recusa que NÃO virou pergunta: com jogo aberto, `steam -shutdown`"""
         slo_fake["running"] = True
         slo_fake["jogo"] = True
         stub = _Stub()
 
         stub._steam_apply_launch_worker()
 
-        assert slo_fake["chamadas"] == 0  # NÃO tocou em nada
-        assert slo_fake["parou"] == 0  # NÃO derrubou a Steam
-        assert not dialogo_fake.get("montado")  # nem ofereceu fechar
+        assert slo_fake["chamadas"] == 0
+        assert slo_fake["parou"] == 0
+        assert not dialogo_fake.get("montado")
         assert any("jogo aberto" in t for t in stub.toasts)
         assert any("progresso" in t for t in stub.toasts)
 
@@ -314,13 +298,11 @@ class TestWorker:
         slo_fake: dict[str, Any],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Instalação antiga sem a função de massa: recusa honesta apontando
-        o install — nunca AttributeError nem toast de sucesso."""
+        """Instalação antiga sem a função de massa: recusa honesta apontando"""
         from hefesto_dualsense4unix.integrations import (
             steam_launch_options as slo,
         )
 
-        # `None` simula o atributo ausente (getattr(..., None) do handler).
         monkeypatch.setattr(
             slo, "apply_wrapper_to_all_games", None, raising=False
         )
@@ -337,14 +319,9 @@ class TestWorker:
         slo_fake["result"] = OSError("disco sumiu")
         stub = _Stub()
 
-        stub._steam_apply_launch_worker()  # não propaga
+        stub._steam_apply_launch_worker()
 
         assert any("Não consegui aplicar" in t for t in stub.toasts)
-
-
-# ---------------------------------------------------------------------------
-# Confirmação — só o OK dispara; qualquer outra resposta é no-op
-# ---------------------------------------------------------------------------
 
 
 class _FakeDialog:
@@ -377,7 +354,7 @@ class TestConfirmacao:
         assert dlg.destroyed is True
         assert stub.worker_calls == 1
 
-    @pytest.mark.parametrize("resposta", [-6, -4, 0])  # CANCEL, DELETE, outro
+    @pytest.mark.parametrize("resposta", [-6, -4, 0])
     def test_qualquer_outra_resposta_so_fecha(self, resposta: int) -> None:
         stub = self._stub_com_worker_gravado()
         dlg = _FakeDialog()
@@ -389,8 +366,7 @@ class TestConfirmacao:
 
 
 class TestDialogoDeConfirmacaoPorFonte:
-    """Espelho stub-level (headless): confirmação temada, não-bloqueante e
-    com o texto honesto — o assert GTK-real vive na classe guardada abaixo."""
+    """Espelho stub-level (headless): confirmação temada, não-bloqueante e"""
 
     def test_confirmacao_e_temada_e_nao_bloqueante(self) -> None:
         src = inspect.getsource(
@@ -398,32 +374,15 @@ class TestDialogoDeConfirmacaoPorFonte:
         ) + inspect.getsource(DaemonActionsMixin.on_steam_apply_launch)
         compacto = src.replace("\n", "").replace(" ", "")
         assert 'add_class("hefesto-dualsense4unix-window")' in compacto
-        assert 'connect("response"' in compacto  # nunca run() (imkillable)
+        assert 'connect("response"' in compacto
         assert ".run()" not in src
 
-        # A RÉGUA PERGUNTA AO DONO — 08/09/2026. As três promessas abaixo eram
-        # procuradas no FONTE DO MÉTODO, e o corpo da pergunta saiu de lá em
-        # 06/09: virou o `_STEAM_APPLY_CORPO`, porque a interface nova faz a
-        # mesma pergunta e uma frase digitada duas vezes se afasta no primeiro
-        # dia. O texto continuava correto e a régua ficou vermelha sobre a
-        # MELHORA — o defeito clássico de medir o texto do código em vez do
-        # valor.
-        #
-        # E o alvo novo é mais forte que o antigo: o método só é honesto se o
-        # que ele EXIBE promete isso, e é exatamente a constante que ele passa
-        # ao `format_secondary_text`. A ligação entre as duas pontas é a linha
-        # afirmada logo abaixo — sem ela, a constante poderia estar certa e o
-        # diálogo mostrar outra coisa.
         assert "format_secondary_text(self._STEAM_APPLY_CORPO)" in compacto, (
             "o diálogo deixou de exibir o `_STEAM_APPLY_CORPO` — as promessas "
             "podem estar na constante e não chegar à tela dela"
         )
         corpo = DaemonActionsMixin._STEAM_APPLY_CORPO
-        assert "preservadas" in corpo  # promessa do PATH-06 no texto
-        # HONESTIDADE-STEAM-01: o texto dizia "A Steam precisa estar
-        # FECHADA — se estiver aberta, eu aviso e não mexo em nada". O
-        # botão passou a saber fechá-la COM consentimento, então o que o
-        # diálogo tem de prometer agora é a PERMISSÃO, não a parede.
+        assert "preservadas" in corpo
         assert "permissão" in corpo
         assert "20 segundos" in corpo
 

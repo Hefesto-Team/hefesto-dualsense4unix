@@ -58,17 +58,9 @@ import re
 from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 
-#: Quantos caracteres do serial de fábrica ficam à mostra: os quatro de
-#: modelo e planta, que são de lote, e os dois da cor. Os onze seguintes são a
-#: unidade. Nasceu no ensaio da cor do plástico (15/08/2026), e o produto
-#: passa a ser o dono.
 CARACTERES_PUBLICOS_DO_SERIAL = 6
 
 #: A forma do serial de fábrica do DualSense, MEDIDA nos aparelhos da bancada
-#: (a letra, dois dígitos, letra ou dígito, os dois dígitos da cor e onze
-#: caracteres que ninguém mediu). Os dígitos nas posições 2, 3, 5 e 6 são o que
-#: tira as palavras compridas da língua da conta. É o mesmo padrão do portão de
-#: serial do ``test_docs_mac_anonimato.py`` e do ``check_anonymity.sh``.
 PADRAO_DE_SERIAL = (
     r"(?<![A-Z0-9])"
     r"[A-Z][0-9]{2}[A-Z0-9][0-9]{2}"
@@ -76,14 +68,10 @@ PADRAO_DE_SERIAL = (
     r"(?![A-Z0-9])"
 )
 
-#: Os índices (a partir de 0) dos octetos que a máscara da casa esconde.
 _ESCONDIDOS = (3, 4)
 
-#: Os separadores da forma genérica. Sem o espaço, de propósito: ver o topo.
 _SEPARADORES_DA_FORMA = ":-_."
 
-#: Os separadores que a camada dos conhecidos lê: os da forma, o espaço e o
-#: nada (a colada).
 _SEPARADORES_DOS_CONHECIDOS = (":", "-", "_", ".", " ", "")
 
 _HEX2 = r"[0-9A-Fa-f]{2}"
@@ -97,40 +85,27 @@ _UUID = re.compile(
     r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}"
     r"-[0-9A-Fa-f]{12}(?![0-9A-Fa-f])"
 )
-#: O appid da Steam na classe da janela: só algarismos, nunca endereço.
 _APPID_DA_STEAM = re.compile(r"steam_app_[0-9]+(?![0-9A-Za-z])")
-#: O carimbo de versão do perfil (``20260805T031500_123456``): só algarismos.
 _CARIMBO_DE_VERSAO = re.compile(r"(?<![0-9])[0-9]{8}T[0-9]{6}_[0-9]{6}(?![0-9A-Za-z])")
 
-#: Forma 1: seis octetos com o mesmo separador nos cinco.
 _SEPARADA = re.compile(
     rf"(?<![0-9A-Fa-f])({_HEX2})([:\-_.])({_HEX2})\2({_HEX2})\2({_HEX2})\2({_HEX2})\2({_HEX2})"
     r"(?![0-9A-Fa-f])"
 )
-#: Forma 2: doze hex entre não alfanuméricos.
 _COLADA = re.compile(r"(?<![0-9A-Za-z])([0-9A-Fa-f]{12})(?![0-9A-Za-z])")
-#: Forma 3: o sufixo de seis hex de um nó de som (octetos 4, 5 e 6).
 _SUFIXO_DO_NO = re.compile(r"(?<=_)[0-9A-Fa-f]{4}([0-9A-Fa-f]{2})(?![0-9A-Za-z])")
-#: Forma 4: o nome do endpoint da háptica.
 _NOME_DO_ENDPOINT = re.compile(r"((?i:HEFESTO))[0-9A-Fa-f]{4}([0-9A-Fa-f]{2})(?![0-9A-Fa-f])")
-#: Forma 6: o rótulo do gravador da ponte do rádio.
 _ROTULO_DO_GRAVADOR = re.compile(
     r"((?i:hefesto)-(?:[A-Za-z]+-)+)[0-9A-Fa-f]{4}([0-9A-Fa-f]{2})(?![0-9A-Za-z])"
 )
 _SERIAL = re.compile(PADRAO_DE_SERIAL)
 
-#: Uma corrida hex de seis dígitos para cima, onde a camada dos conhecidos
-#: procura as janelas coladas.
 _CORRIDA_HEX = re.compile(r"[0-9A-Fa-f]{6,}")
 
 
 @functools.cache
 def _o_virtual() -> tuple[tuple[str, str], int]:
-    """O prefixo do vpad e o bit que marca o MAC derivado, lidos do ``uhid_gamepad``.
-
-    Dentro da função porque o ``uhid_gamepad`` importa o ``logging_config``, e
-    o ``logging_config`` chama este módulo: no topo, é um ciclo.
-    """
+    """O prefixo do vpad e o bit que marca o MAC derivado, lidos do ``uhid_gamepad``."""
     from hefesto_dualsense4unix.integrations import uhid_gamepad
 
     primeiro, segundo = uhid_gamepad.VPAD_MAC_PREFIXO.lower().split(":")
@@ -138,13 +113,7 @@ def _o_virtual() -> tuple[tuple[str, str], int]:
 
 
 def _mascarado(octetos: Sequence[str]) -> tuple[str, ...]:
-    """Os seis octetos na máscara da casa, com a grafia de cada um preservada.
-
-    O virtual derivado sai com os quatro bytes do hash zerados, e o terceiro
-    guarda só o bit de derivação: nenhum byte do endereço de onde ele veio. O
-    virtual numerado (terceiro octeto sem o bit) não carrega endereço e segue
-    a regra de todos.
-    """
+    """Os seis octetos na máscara da casa, com a grafia de cada um preservada."""
     prefixo, bit = _o_virtual()
     if (octetos[0].lower(), octetos[1].lower()) == prefixo and int(octetos[2], 16) & bit:
         return (octetos[0], octetos[1], f"{bit:02x}", "00", "00", "00")
@@ -152,12 +121,7 @@ def _mascarado(octetos: Sequence[str]) -> tuple[str, ...]:
 
 
 def _octetos_de(valor: str, separadores: str) -> tuple[str, ...] | None:
-    """Os seis octetos (minúsculos) de UM endereço, ou ``None``.
-
-    Descarta em vez de peneirar: um caractere fora da forma invalida o valor
-    inteiro. ``dev:`` e ``path:`` têm dígitos hex no meio, e uma peneira que
-    ficasse com eles inventaria um endereço a partir de um caminho.
-    """
+    """Os seis octetos (minúsculos) de UM endereço, ou ``None``."""
     limpo = valor.strip()
     if _DOZE_COLADOS.fullmatch(limpo):
         return tuple(limpo[i : i + 2].lower() for i in range(0, 12, 2))
@@ -179,10 +143,7 @@ def _os_seis(octetos: Sequence[str]) -> tuple[str, ...] | None:
 
 
 def _janelas(octetos: Sequence[str]) -> Iterator[tuple[int, int, int]]:
-    """As janelas de três octetos que carregam um escondido não nulo, nas duas ordens.
-
-    Uma janela só com escondidos zerados não entrega nada: é a máscara.
-    """
+    """As janelas de três octetos que carregam um escondido não nulo, nas duas ordens."""
     for inicio in (1, 2, 3):
         direta = (inicio, inicio + 1, inicio + 2)
         if any(octetos[i] != "00" for i in _ESCONDIDOS if i in direta):
@@ -191,18 +152,7 @@ def _janelas(octetos: Sequence[str]) -> Iterator[tuple[int, int, int]]:
 
 
 def formas_do_endereco(octetos: Sequence[str]) -> frozenset[str]:
-    """Os pedaços de texto que entregam o 4.º ou o 5.º octeto de UM endereço.
-
-    Cada janela de três octetos que contém um octeto escondido não nulo, nas
-    duas ordens de byte, com ``:`` ``-`` ``_`` ``.``, espaço e colada, em
-    minúsculas e em maiúsculas. ``octetos`` são os seis, como sequência de
-    pares hex ou como o endereço numa grafia só. Endereço já mascarado, ou
-    valor que não é endereço, devolve o conjunto vazio.
-
-    É o que as réguas de forma procuram. Quem procura em texto de caixa mista
-    baixa a caixa antes; quem procura colado dentro de uma corrida hex maior
-    alinha pelo octeto.
-    """
+    """Os pedaços de texto que entregam o 4.º ou o 5.º octeto de UM endereço."""
     seis = _os_seis(octetos)
     if seis is None:
         return frozenset()
@@ -225,11 +175,7 @@ def _serial_mascarado(serial: str) -> str:
 
 
 def _serial_conhecido(valor: str) -> bool:
-    """Um serial que quem chama declarou: alfanumérico, com algarismo, maior que a parte pública.
-
-    O algarismo é a trava contra uma palavra passada por engano (um ``serial``
-    que vem ``"desconhecido"`` mascararia a palavra em todo o texto).
-    """
+    """Um serial que quem chama declarou: alfanumérico, com algarismo, maior que a parte pública."""
     return (
         len(valor) > CARACTERES_PUBLICOS_DO_SERIAL
         and valor.isascii()
@@ -240,9 +186,7 @@ def _serial_conhecido(valor: str) -> bool:
 
 @dataclass(frozen=True)
 class _Conhecidos:
-    #: (padrão, octetos da janela a zerar) das janelas com separador.
     separadas: tuple[tuple[re.Pattern[str], tuple[int, ...]], ...]
-    #: janela colada (seis hex minúsculos) -> octetos da janela a zerar.
     coladas: dict[str, tuple[int, ...]]
     seriais: re.Pattern[str] | None
 
@@ -293,12 +237,7 @@ def _o_que_se_conhece(chave: tuple[str, ...]) -> _Conhecidos:
 
 
 def _pelos_conhecidos(texto: str, dono: _Conhecidos) -> str:
-    """A primeira camada: as janelas dos conhecidos zeradas, e os seriais deles.
-
-    As posições a zerar se juntam ANTES de escrever: duas janelas do mesmo
-    endereço se sobrepõem, e zerar uma antes de procurar a outra deixava o
-    segundo escondido à mostra no despejo invertido.
-    """
+    """A primeira camada: as janelas dos conhecidos zeradas, e os seriais deles."""
     zerar: set[int] = set()
     for padrao, octetos in dono.separadas:
         for achado in padrao.finditer(texto):
@@ -306,8 +245,6 @@ def _pelos_conhecidos(texto: str, dono: _Conhecidos) -> str:
     if dono.coladas:
         for corrida in _CORRIDA_HEX.finditer(texto):
             hexa = corrida.group(0).lower()
-            # A corrida par se alinha pelo começo; a ímpar não diz onde começa
-            # o octeto, e as duas paridades são lidas.
             inicios = (0, 1) if len(hexa) % 2 else (0,)
             for paridade in inicios:
                 for i in range(paridade, len(hexa) - 5, 2):
@@ -363,9 +300,6 @@ def _guardados(texto: str) -> list[tuple[int, int]]:
 def mascarar(texto: str, conhecidos: Iterable[str] = ()) -> str:
     """O texto com toda identidade de aparelho na máscara da casa."""
     if isinstance(conhecidos, str):
-        # Um endereço solto é UM conhecido. Iterado, ele viraria letras soltas,
-        # nenhuma delas endereço, e a camada calaria sem aviso: o tipo aceita
-        # ``str`` como ``Iterable[str]``, e nada reprovaria o chamador.
         conhecidos = (conhecidos,)
     chave = _chave(conhecidos)
     if chave:
@@ -381,13 +315,7 @@ def mascarar(texto: str, conhecidos: Iterable[str] = ()) -> str:
 
 
 def mascarar_endereco(valor: str | None) -> str | None:
-    """Um endereço só -> 'aa:bb:cc:00:00:ff'; None se o valor não é um endereço.
-
-    Aceita as grafias da forma separada (``:`` ``-`` ``_`` ``.``, o mesmo nos
-    cinco) e a colada, em qualquer caixa, e devolve sempre minúsculo com
-    dois-pontos. O virtual derivado sai sem nenhum byte do hash, como em
-    :func:`mascarar`.
-    """
+    """Um endereço só -> 'aa:bb:cc:00:00:ff'; None se o valor não é um endereço."""
     if not isinstance(valor, str):
         return None
     octetos = _octetos_de(valor, _SEPARADORES_DA_FORMA)

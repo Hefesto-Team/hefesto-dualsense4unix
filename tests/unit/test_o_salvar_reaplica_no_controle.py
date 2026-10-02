@@ -49,7 +49,6 @@ class _Ponte:
     def profile_switch(self, nome: str) -> None:
         self.trocou.append(nome)
 
-    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
     def profile_reaplicar(self, nome: str) -> None:
         self.trocou.append(nome)
 
@@ -131,27 +130,16 @@ def test_o_renomear_casa_com_o_nome_anterior(monkeypatch, gravado):
 
 
 def test_o_dono_tem_a_perna_de_disco_que_o_campo_cru_nao_tem():
-    """A MORDIDA, sem tocar no código: prova que o defeito era real.
-
-    Aqui o lar é de mentira (o `conftest.py` desvia `HOME` e os quatro `XDG_*`),
-    então não há marcador em disco e o dono responde `nao_sei`. Na máquina dela
-    há: medido em 05/09/2026, com `active_profile: null` o dono responde
-    `PerfilQueVale(nome='Personalizado', fonte='disco')` e o campo cru responde
-    `''`. O que esta régua prova é o MECANISMO — que o dono tem uma segunda
-    perna e o campo cru não tem nenhuma.
-    """
+    """A MORDIDA, sem tocar no código: prova que o defeito era real."""
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         perfil_que_esta_valendo,
     )
 
-    # Com o daemon falando, as duas fontes concordam.
     assert perfil_que_esta_valendo({"active_profile": "Jogos"}).nome == "Jogos"
 
-    # Com o daemon mudo, o campo cru não tem para onde ir...
     estado = {"active_profile": None}
     assert str(estado.get("active_profile") or "") == ""
 
-    # ...e o dono vai ao disco, em vez de devolver vazio por omissão.
     vale = perfil_que_esta_valendo(estado)
     assert vale.fonte != "daemon", (
         "o dono devolveu 'daemon' sobre uma resposta nula: a perna de disco "

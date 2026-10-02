@@ -27,12 +27,6 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 PACOTE = RAIZ / "src" / "hefesto_dualsense4unix"
-# `APP_PY` SAIU — 08/09/2026. Apontava para `app/app.py`, que deixou o disco
-# com a janela GTK (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`), e as duas leituras
-# por AST que ele alimentava (`_chaves_de_signal_handlers` e
-# `_refreshers_da_aba`) morriam em `FileNotFoundError`. Veredito do inventário
-# `docs/data/o-que-ainda-aponta-para-a-janela.csv`: SAI-COM-A-JANELA — a
-# citação mede a janela e sai com ela; o que este arquivo cobre do MOTOR fica.
 EMULACAO_PY = PACOTE / "app" / "actions" / "emulation_actions.py"
 DAEMON_PY = PACOTE / "app" / "actions" / "daemon_actions.py"
 
@@ -44,41 +38,13 @@ def _metodos(caminho: Path) -> set[str]:
     }
 
 
-# --- E1: o interruptor do teclado existe e o do mouse para de mentir --------
-
-
 class TestOsDoisInterruptores:
 
     def test_o_interruptor_do_teclado_esta_ligado_de_ponta_a_ponta(self) -> None:
-        """O mixin do teclado está inteiro: o handler e o refresher, no motor.
-
-        **METADE DESTE TESTE SAIU EM 08/09/2026, e a que ficou é a que mede o
-        que existe.** A primeira asserção era `"on_keyboard_toggle_set" in
-        _chaves_de_signal_handlers()` — o dict de sinais que o
-        `builder.connect_signals` do Glade recebia —, e a última congelava a
-        tupla de `_REFRESH_POR_ABA` do `app.py`. Os dois mecanismos são a
-        JANELA: saíram por decisão dela (`D-0609-GTK-LEVA-INTEIRA`), e a régua
-        passou a reprovar com `FileNotFoundError`.
-
-        O que sobra NÃO é sobra: `emulation_actions.py` é motor, é o que a
-        interface nova chama, e continua sendo verdade que o handler e o
-        refresher têm de existir e o refresher tem de estar no agregador — sem
-        ele o interruptor mostra a posição do bootstrap pelo resto da sessão.
-
-        **O QUE A INTERFACE NOVA PASSA A DEVER**, e fica escrito para não se
-        perder junto com o mecanismo: era o Glade que garantia que o
-        interruptor da tela chegasse em `on_keyboard_toggle_set`, e era a
-        `_REFRESH_POR_ABA` que garantia a releitura ao exibir a aba. A aba
-        Navegação nova (`interface/pacotes/a06_navegacao.py`) tem o campo, mas
-        quem prova essas duas pontas hoje é outra régua, não esta.
-        """
+        """O mixin do teclado está inteiro: o handler e o refresher, no motor."""
         metodos = _metodos(EMULACAO_PY)
         assert "on_keyboard_toggle_set" in metodos
         assert "_refresh_keyboard_switch" in metodos
-        # A chave é populada no bootstrap e relida pelo agregador da aba
-        # Emulação (que é o que o botão "Atualizar" e o `switch-page` da aba
-        # Emulação chamam) e, desde 22/08/2026, também pelo gancho da aba onde
-        # ela DESENHA — ver o teste do segundo escritor logo abaixo.
         fonte = EMULACAO_PY.read_text(encoding="utf-8")
         assert '"_refresh_keyboard_switch",' in fonte, (
             "a chave do teclado saiu do agregador `_refresh_emulation_tab`: ela "
@@ -127,12 +93,6 @@ class TestOsDoisInterruptores:
                 "gancho da aba Navegação volta a ser opcional"
             )
 
-        # O ALVO MUDOU DE MECANISMO — 08/09/2026. Esta linha cobrava
-        # `_REFRESH_POR_ABA["tab_navegacao_dsx"]`, a tupla do `app.py` que saiu
-        # com a janela. O REQUISITO não caducou: enquanto o daemon escrever a
-        # flag por fora, o interruptor tem de ser RELIDO em vez de mostrar a
-        # posição de antes do gesto. Quem responde por essa releitura no motor
-        # é o agregador `_refresh_emulation_tab`, que a interface nova chama.
         fonte = EMULACAO_PY.read_text(encoding="utf-8")
         assert '"_refresh_keyboard_switch",' in fonte, (
             "o gesto PS + R3 escreve a `keyboard_emulation.flag` em "
@@ -141,11 +101,6 @@ class TestOsDoisInterruptores:
         )
 
 
-# --- o miolo: as duas funções puras ---------------------------------------
-# GUARDA-GI-REAL-01: os dois módulos fazem `import gi` no topo, então a guarda
-# vem ANTES do import deles. `pytest.importorskip("gi")` aceitaria o stub que
-# outro arquivo de teste planta em sys.modules, e sem guarda nenhuma este módulo
-# derrubaria a COLETA no CI headless em vez de pular.
 from tests.conftest import exigir_gi_real
 
 exigir_gi_real("fiacao da janela: teclado emulado e detector de janela")
@@ -181,14 +136,7 @@ class TestAFraseDoTecladoEmulado:
         "bloqueio", ["modo_jogo", "vpad_suspenso_pelo_steam_input"]
     )
     def test_pausa_nunca_e_chamada_de_desligado(self, bloqueio: str) -> None:
-        """Invariante que o daemon deixou por escrito.
-
-        Nos dois casos de pausa o `enabled` continua TRUE: o teclado dela não
-        foi desligado, está em pausa. A frase tem de ABRIR afirmando "Ligado" —
-        abrir com "Desligado" a mandaria procurar um interruptor que já está
-        ligado. (Dizer "não foi desligado" mais adiante é o contrário: é a
-        explicação.)
-        """
+        """Invariante que o daemon deixou por escrito."""
         ligado, dica = descrever_teclado_emulado(
             {"enabled": True, "device_ativo": True, "despachando": False,
              "bloqueio": bloqueio}
@@ -206,14 +154,7 @@ class TestAFraseDoTecladoEmulado:
         assert "fechar o jogo" in dica.lower()
 
     def test_a_pausa_do_steam_input_nao_promete_perder_a_luz(self) -> None:
-        """NOTA DATADA — 07/08/2026: a frase dizia "o jogo assumiu o controle".
-
-        `CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, 06/08, grau MEDIDO: num
-        jogo da lista de exceções o jogo assume a **entrada**, e a cor e os
-        gatilhos dela continuam valendo — o contrário do que "assumiu o
-        controle" faz a pessoa concluir. Quem assume tudo é o jogo de **fora**
-        da lista.
-        """
+        """NOTA DATADA — 07/08/2026: a frase dizia "o jogo assumiu o controle"."""
         _ligado, dica = descrever_teclado_emulado(
             {"enabled": True, "bloqueio": "vpad_suspenso_pelo_steam_input"}
         )
@@ -270,17 +211,11 @@ class TestAFraseDoDetectorDeJanela:
         )
         assert "Wayland" in texto and "XWayland" in texto
         assert "não troca sozinho" in texto
-        # O sticky NÃO pode reaparecer como se fosse a janela da frente: era
-        # exatamente ele que fazia o daemon afirmar saúde estando cego.
         assert "Hefesto-Dualsense4Unix" not in texto
         assert "sem_foco_x" not in texto, "o código cru vazou para a tela"
 
     def test_healthy_sozinho_nao_declara_sucesso(self) -> None:
-        """`healthy` é trinco de mão única e `last_class` é sticky.
-
-        Medido ao vivo em 28/07: os dois afirmavam saúde com o backend
-        devolvendo `None` a 2 Hz. Quem manda na frase é `seeing`.
-        """
+        """`healthy` é trinco de mão única e `last_class` é sticky."""
         texto = descrever_deteccao_de_janela(
             {
                 "window_detect_backend": "xlib",
@@ -305,9 +240,7 @@ class TestAFraseDoDetectorDeJanela:
             assert "não consegui ler" in descrever_deteccao_de_janela(estado)
 
     def test_a_frase_nao_diz_a_mesma_coisa_duas_vezes(self) -> None:
-        """O motivo do X11 já nomeia o XWayland; repetir é ruído na frase que
-        ela mais vai ler. Já quando o motivo é genérico, o caminho ENTRA — é a
-        única pista de qual mecanismo está sendo usado."""
+        """O motivo do X11 já nomeia o XWayland; repetir é ruído na frase que"""
         com_caminho_no_motivo = descrever_deteccao_de_janela(
             {
                 "window_detect_backend": "xlib",
@@ -338,11 +271,7 @@ class TestAFraseDoDetectorDeJanela:
         assert "portal" in texto
 
     def test_nome_de_janela_com_e_comercial_nao_apaga_a_frase(self) -> None:
-        """Pango: um `&` cru fecha o parser e o rótulo fica EM BRANCO.
-
-        Seria a linha honesta desaparecendo justamente quando o nome da janela
-        é estranho.
-        """
+        """Pango: um `&` cru fecha o parser e o rótulo fica EM BRANCO."""
         texto = descrever_deteccao_de_janela(
             {
                 "window_detect_backend": "xlib",
@@ -354,11 +283,7 @@ class TestAFraseDoDetectorDeJanela:
         assert "& D" not in texto
 
     def test_todos_os_motivos_do_projeto_tem_traducao(self) -> None:
-        """Portão de completude: motivo novo no daemon = frase nova aqui.
-
-        Sem ele, um motivo acrescentado em `window_backends/` cairia no ramo
-        "código cru" e ela leria `foco_sem_top_level` na tela.
-        """
+        """Portão de completude: motivo novo no daemon = frase nova aqui."""
         from hefesto_dualsense4unix.integrations import window_detect
         from hefesto_dualsense4unix.integrations.window_backends import null, xlib
 

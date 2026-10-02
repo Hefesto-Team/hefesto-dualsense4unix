@@ -61,22 +61,10 @@ _OPCAO = re.compile(r"<option(?P<attrs>[^>]*)>(?P<texto>[^<]*)</option>")
 
 
 def _listas(caminho: pathlib.Path) -> dict[str, tuple[list[str], str]]:
-    """`{data-linha: ([rótulos oferecidos], rótulo que a tela abre mostrando)}`.
-
-    O SEGUNDO VALOR É O QUE O NAVEGADOR DEVOLVERIA em `select.value`: a opção
-    marcada com `selected`, ou a primeira quando não há nenhuma marcada. As
-    opções desta tela não têm atributo `value` — pô-lo faria toda a marcação
-    virar divergência de desenho —, então `select.value` é o TEXTO da opção.
-    """
+    """`{data-linha: ([rótulos oferecidos], rótulo que a tela abre mostrando)}`."""
     fora: dict[str, tuple[list[str], str]] = {}
     html = caminho.read_text(encoding="utf-8")
     for m in _SELECT.finditer(html):
-        # SÓ AS LINHAS DE "o que cada botão faz" — 13/09/2026, F1-REMAPEAR. A tela
-        # "Trocar os botões" da mesma página passou a marcar as 22 listas dela
-        # com `data-linha`, e o valor delas é o DESTINO da troca, não uma ação:
-        # sem o recorte, a última lista de cada botão vencia e todo padrão virava
-        # `None`. Na página de antes, as 28 listas com `data-linha` eram todas
-        # deste gesto.
         if 'data-gesto="linha-de-botao"' not in m.group("attrs"):
             continue
         alvo = _LINHA.search(m.group("attrs"))
@@ -95,11 +83,7 @@ def _listas(caminho: pathlib.Path) -> dict[str, tuple[list[str], str]]:
 
 
 def _padrao_fora_da_lista(caminho: pathlib.Path) -> dict[str, tuple[str, str]]:
-    """Botão -> (o token de fábrica, o token que a tela poria no lugar).
-
-    Só entram os botões cuja linha existe na página: o que a tela não mostra,
-    ela também não grava.
-    """
+    """Botão -> (o token de fábrica, o token que a tela poria no lugar)."""
     de_fabrica = acoes.padrao()
     listas = _listas(caminho)
     fora: dict[str, tuple[str, str]] = {}
@@ -129,15 +113,7 @@ def test_o_padrao_de_todas_as_linhas_tem_nome_na_lista_da_tela() -> None:
 
 
 def test_o_que_a_tela_publicada_nao_diz_esta_declarado_e_nada_mais() -> None:
-    """A MEDIÇÃO E A DECLARAÇÃO TÊM DE SER A MESMA COISA — nos dois sentidos.
-
-    A mais: alguém trocou um padrão e a página que o produto renderiza não sabe
-    dizê-lo. O "Guardar" da Navegação vai gravar isso no perfil ATIVO dela sem
-    ela pedir, e no tique seguinte a pintura volta a casar — o rastro some.
-
-    A menos: a página foi publicada e o rótulo passou a existir. A declaração
-    caducou e tem de sair, ou ela vira lápide.
-    """
+    """A MEDIÇÃO E A DECLARAÇÃO TÊM DE SER A MESMA COISA — nos dois sentidos."""
     medido = _padrao_fora_da_lista(onde.pagina(PAGINA, publicado=True))
     declarado = dict(PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ)
     a_mais = {b: v for b, v in medido.items() if declarado.get(b) != v}
@@ -159,12 +135,7 @@ def test_o_que_a_tela_publicada_nao_diz_esta_declarado_e_nada_mais() -> None:
 
 
 def test_a_bancada_ja_sabe_dizer_todos_os_padroes() -> None:
-    """O que falta é a PUBLICAÇÃO, e a régua diz isso em vez de deixar supor.
-
-    Se a bancada também não souber, o buraco não é de ordem de merge: é do
-    gerador da aba, que ficou para trás do padrão. São duas curas diferentes, e
-    confundi-las custa uma leva.
-    """
+    """O que falta é a PUBLICAÇÃO, e a régua diz isso em vez de deixar supor."""
     fora = _padrao_fora_da_lista(onde.pagina(PAGINA))
     assert not fora, (
         f"nem a BANCADA sabe dizer o padrão destes botões: {fora}. Não adianta "
@@ -207,4 +178,3 @@ def test_o_que_a_tela_publicada_poria_no_lugar_muda_o_que_o_device_faz() -> None
         "medindo a palavra em vez do ato.")
 
 
-# "O homem é a medida de todas as coisas." — Protágoras

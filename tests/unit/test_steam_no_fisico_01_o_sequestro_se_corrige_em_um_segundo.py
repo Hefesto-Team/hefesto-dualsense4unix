@@ -1,28 +1,4 @@
-"""STEAM-NO-FISICO-01 — um sequestro se corrige em até um segundo.
-
-A PALAVRA DELA, 23/09/2026: *"steam sequestrou hefesto corrigiu ao no segundo
-após"* — e, escrita na sprint, a segunda obrigação: *"se outro processo escreve
-no físico (o escritor_cru já detecta), o Hefesto reescreve a barra e o número em
-até 1 s, quantas vezes for preciso."*
-
-O QUE HAVIA: o produto reafirmava a cor UMA vez, 1,5 s depois de a rajada
-sossegar (GATILHO-DA-COR-01), e o Modo Nativo era no-op total. A Steam que
-reescrevesse a barra depois disso ganhava até o próximo evento — e o 19/09
-mediu que só reconectar o controle curava.
-
-A MATRIZ (regra dela, 23/09): vale nos dois transportes — o `0x31` mínimo pelo
-rádio, a classe LED pelo cabo —, nos quatro jogadores, e no Modo Nativo também:
-*"no Nativo o jogo recebe o físico, e mesmo assim o número e a barra são do
-Hefesto"*.
-
-AS MORDIDAS, exercidas uma a uma e devolvidas: (1) a vigia sem a reescrita
-periódica (só na borda) deixa um buraco de mais de um segundo; (2) o
-`reafirmar_barra_e_numero` com o portão do `_output_mute` cala o Modo Nativo;
-(3) a fatia que não encolhe deixa o laço dormir dois segundos com o nó
-sequestrado; (4) sem a FIRMA do nó, a vigia que só varre com o nó alcançável
-nunca vê o fd que a Steam abriu ANTES de o broker fechar — o mecanismo inteiro
-da sprint (conferência de 23/09/2026).
-"""
+"""STEAM-NO-FISICO-01 — um sequestro se corrige em até um segundo."""
 from __future__ import annotations
 
 import asyncio
@@ -61,11 +37,6 @@ NUMERO_2 = (False, True, False, True, False)
 COR_DO_NUMERO_2 = (255, 40, 40)
 
 
-# ---------------------------------------------------------------------------
-# A vigia, pura — relógio, sonda e permissão de mentira
-# ---------------------------------------------------------------------------
-
-
 class _Mesa:
     """O `/proc` e o `/dev` de mentira que a vigia consulta."""
 
@@ -75,8 +46,6 @@ class _Mesa:
         self.vivos: set[int] = set()
         self.sondas = 0
         self.falhar = False
-        #: nó -> firma (inode, ctime). Todo nó da mesa existe e nasce com uma;
-        #: `mexer` é o broker fechando/expondo (o `chmod` anda o ctime).
         self.firmas: dict[str, tuple[int, int]] = {}
 
     def sonda(self, nos: Any) -> dict[str, list[int]]:
@@ -121,8 +90,7 @@ def _passo(vigia: ec.VigiaDoSequestro, nos: list[str], agora: float) -> ec.Passo
 
 class TestEmRepousoNaoCustaNada:
     def test_no_fechado_e_ninguem_segurando_varre_uma_vez_so(self) -> None:
-        """Com a regra udev da cura, o nó é `0600 root`: ninguém NOVO entra.
-        A vigia olha UMA vez, na primeira vista, e depois só com a firma nova."""
+        """Com a regra udev da cura, o nó é `0600 root`: ninguém NOVO entra."""
         mesa = _Mesa()
         vigia = _vigia(mesa)
 
@@ -147,8 +115,7 @@ class TestEmRepousoNaoCustaNada:
         assert mesa.sondas == 0
 
     def test_a_firma_real_anda_com_o_chmod(self, tmp_path: Any) -> None:
-        """`firma_do_no` pergunta ao kernel (`stat`): o `chmod` do broker anda
-        o ctime, e o nó que não existe não tem firma."""
+        """`firma_do_no` pergunta ao kernel (`stat`): o `chmod` do broker anda"""
         no = tmp_path / "hidraw-de-mentira"
         no.write_bytes(b"")
         antes = ec.firma_do_no(str(no))
@@ -191,9 +158,7 @@ class TestOSequestroVisto:
         assert passo.pids[NO_1] == (STEAM,)
 
     def test_quantas_vezes_for_preciso_e_nunca_mais_de_um_segundo_sem(self) -> None:
-        """A MORDIDA (1): a reescrita não pode ser só na borda. Dez segundos de
-        sequestro, fatias de `PASSO_DA_VIGIA_S`: o maior intervalo entre duas
-        reescritas tem de caber em um segundo."""
+        """A MORDIDA (1): a reescrita não pode ser só na borda. Dez segundos de"""
         mesa = _Mesa()
         mesa.abertos.add(NO_1)
         mesa.segurar(NO_1, STEAM)
@@ -214,11 +179,9 @@ class TestOSequestroVisto:
     def test_o_fd_aberto_antes_de_o_no_fechar_e_visto_na_primeira_olhada(
         self,
     ) -> None:
-        """A MORDIDA (4), e é o mecanismo da sprint: a Steam abriu o nó na janela
-        em que ele estava exposto, o broker fechou (`0600`), e a vigia olha só
-        DEPOIS. `access(2)` responde «inalcançável» — e a Steam segura o fd."""
+        """A MORDIDA (4), e é o mecanismo da sprint: a Steam abriu o nó na janela"""
         mesa = _Mesa()
-        mesa.segurar(NO_1, STEAM)  # o fd entrou pela janela; o nó já fechou
+        mesa.segurar(NO_1, STEAM)
 
         vigia = _vigia(mesa)
         passo = _passo(vigia, [NO_1], 0.0)
@@ -228,31 +191,29 @@ class TestOSequestroVisto:
         assert _passo(vigia, [NO_1], 1.0).a_reafirmar == (NO_1,)
 
     def test_a_janela_que_abre_e_fecha_depois_da_primeira_olhada(self) -> None:
-        """O `_open_one` expõe o nó para o `hidapi` e fecha — ou o `rehide` da
-        reconciliação. A firma anda, e a vigia varre UMA vez: vê quem entrou."""
+        """O `_open_one` expõe o nó para o `hidapi` e fecha — ou o `rehide` da"""
         mesa = _Mesa()
         vigia = _vigia(mesa)
         _passo(vigia, [NO_1], 0.0)
         _passo(vigia, [NO_1], 2.0)
         assert mesa.sondas == 1
 
-        mesa.segurar(NO_1, STEAM)  # entrou pela janela...
-        mesa.mexer(NO_1)  # ...que o broker fechou
+        mesa.segurar(NO_1, STEAM)
+        mesa.mexer(NO_1)
         passo = _passo(vigia, [NO_1], 4.0)
 
         assert mesa.sondas == 2
         assert passo.a_reafirmar == (NO_1,)
 
     def test_o_no_fechado_com_dono_antigo_continua_vigiado(self) -> None:
-        """O descritor aberto ANTES de o nó fechar (a Steam das quatro noites)
-        não se fecha sozinho: com o nó `0600` a vigia continua reescrevendo."""
+        """O descritor aberto ANTES de o nó fechar (a Steam das quatro noites)"""
         mesa = _Mesa()
         mesa.abertos.add(NO_1)
         mesa.segurar(NO_1, STEAM)
         vigia = _vigia(mesa)
         _passo(vigia, [NO_1], 0.0)
 
-        mesa.abertos.clear()  # o broker fechou o nó; o fd da Steam ficou
+        mesa.abertos.clear()
         assert _passo(vigia, [NO_1], 1.0).a_reafirmar == (NO_1,)
         assert vigia.vigilante is True
 
@@ -265,7 +226,7 @@ class TestOSequestroVisto:
         _passo(vigia, [NO_1], 0.0)
         antes = mesa.sondas
 
-        for n in range(1, 9):  # 4 segundos em fatias de meio
+        for n in range(1, 9):
             _passo(vigia, [NO_1], n * 0.5)
 
         assert mesa.sondas - antes == 2
@@ -284,11 +245,9 @@ class TestOSequestroAcaba:
 
         assert passo.soltos == (NO_1,)
         assert passo.pids[NO_1] == (STEAM,)
-        # A MORDIDA (5): a reescrita FINAL. Quem larga o nó pode ter escrito
-        # depois da última reescrita; sem esta, o último a escrever é ele.
         assert passo.a_reafirmar == (NO_1,)
         assert _passo(vigia, [NO_1], 3.0).a_reafirmar == ()
-        assert vigia.encerrar(NO_1) == 1  # a final não entra na conta
+        assert vigia.encerrar(NO_1) == 1
 
     def test_o_processo_que_morre_solta_sem_esperar_a_varredura(self) -> None:
         mesa = _Mesa()
@@ -298,11 +257,11 @@ class TestOSequestroAcaba:
         _passo(vigia, [NO_1], 0.0)
         mesa.abertos.clear()
 
-        mesa.vivos.discard(STEAM)  # SIGTERM na Steam
+        mesa.vivos.discard(STEAM)
         passo = _passo(vigia, [NO_1], 0.5)
 
         assert passo.soltos == (NO_1,)
-        assert passo.a_reafirmar == (NO_1,)  # a reescrita final
+        assert passo.a_reafirmar == (NO_1,)
         assert vigia.vigilante is False
 
     def test_o_controle_que_sai_da_mesa_sai_da_vigia(self) -> None:
@@ -315,7 +274,7 @@ class TestOSequestroAcaba:
         passo = _passo(vigia, [], 0.5)
 
         assert passo.soltos == (NO_1,)
-        assert passo.a_reafirmar == ()  # saiu da mesa: não há a quem escrever
+        assert passo.a_reafirmar == ()
         assert vigia.sequestrados == {}
 
     def test_sonda_que_falha_nao_vira_ninguem_segura(self) -> None:
@@ -334,8 +293,7 @@ class TestOSequestroAcaba:
 
 class TestOsQuatroJogadores:
     def test_cada_no_tem_o_seu_relogio(self) -> None:
-        """A vigia não é do P1: dois sequestros em nós diferentes, cada um
-        reescrito no seu passo."""
+        """A vigia não é do P1: dois sequestros em nós diferentes, cada um"""
         mesa = _Mesa()
         mesa.abertos.update({NO_1, NO_2})
         mesa.segurar(NO_1, STEAM)
@@ -348,11 +306,6 @@ class TestOsQuatroJogadores:
         assert passo.novos == (NO_2,)
         assert passo.a_reafirmar == (NO_2,)
         assert _passo(vigia, [NO_1, NO_2], 1.0).a_reafirmar == (NO_1,)
-
-
-# ---------------------------------------------------------------------------
-# O backend: o que sai no fio, nos dois transportes, e no Modo Nativo
-# ---------------------------------------------------------------------------
 
 
 class _NoDeLed:
@@ -425,7 +378,6 @@ class TestOQueSaiNoFio:
         assert tuple(common[COMMON_LIGHTBAR_R : COMMON_LIGHTBAR_B + 1]) == COR_DO_NUMERO_1
         assert common[COMMON_PLAYER_LEDS] == mascara_de_player_leds(NUMERO_1)
         assert COMMON_LIGHTBAR_G == COMMON_LIGHTBAR_R + 1
-        # Só a barra e o número: vibração, gatilhos e áudio continuam do jogo.
         assert common[0] == 0, "valid_flag0 pede vibração/gatilho/áudio"
         assert common[38] == 0, "valid_flag2 religaria o setup da barra"
         assert common[2] == common[3] == 0, "motores"
@@ -450,8 +402,7 @@ class TestOQueSaiNoFio:
         assert no.rgb_calls == [COR_DO_NUMERO_2]
 
     def test_o_numero_do_jogo_nao_volta_pela_reescrita(self) -> None:
-        """As duas obrigações juntas: o jogo numerou o vpad, a vigia reescreve —
-        e o que sai é o número da mesa."""
+        """As duas obrigações juntas: o jogo numerou o vpad, a vigia reescreve —"""
         ctl, radio, _ = _backend(nativo=False)
         ctl.set_game_authority_provider(lambda: "game")
         ctl.set_game_output_for(MAC_1, led=(64, 0, 0), player_leds=(True, True, False, True, True))
@@ -469,11 +420,6 @@ class TestOQueSaiNoFio:
         ctl.reafirmar_barra_e_numero([UNIQ_1, UNIQ_2])
 
         assert ctl.consumir_pinturas_de_lightbar() == 0
-
-
-# ---------------------------------------------------------------------------
-# O daemon: a fatia que encolhe e o diário que conta
-# ---------------------------------------------------------------------------
 
 
 class _Controle:
@@ -506,10 +452,9 @@ def _daemon(controle: _Controle, mesa: _Mesa, *, nativo: bool = True) -> SimpleN
 
 class TestNoDaemon:
     def test_o_modo_nativo_tambem_e_vigiado_e_o_diario_conta(self) -> None:
-        """A MATRIZ: no Nativo o jogo recebe o físico, e o número e a barra
-        continuam do Hefesto."""
+        """A MATRIZ: no Nativo o jogo recebe o físico, e o número e a barra"""
         mesa = _Mesa()
-        mesa.abertos.add(NO_1)  # Modo Nativo: o broker expôs o nó ao jogo
+        mesa.abertos.add(NO_1)
         controle = _Controle({UNIQ_1: NO_1})
         daemon = _daemon(controle, mesa, nativo=True)
 
@@ -527,11 +472,9 @@ class TestNoDaemon:
 
         registros = asyncio.run(_roteiro())
 
-        # Duas durante o sequestro e a FINAL, quando o jogo larga o nó.
         assert controle.reescritos == [[UNIQ_1], [UNIQ_1], [UNIQ_1]]
         eventos = [r["event"] for r in registros]
         assert eventos.count("sequestro_detectado") == 1
-        # O nome diz o que se mede desde 25/09/2026: a escrita, não a lâmpada.
         assert eventos.count("sequestro_reescrito") == 1
         assert eventos.count("sequestro_corrigido") == 0
         encerrado = [r for r in registros if r["event"] == "sequestro_encerrado"]
@@ -543,9 +486,7 @@ class TestNoDaemon:
     def test_a_fatia_encolhe_enquanto_ha_o_que_vigiar(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA (3): sem a fatia curta, o laço dorme 2 s com o nó
-        sequestrado, e «em até um segundo» vira «em até dois». E a vigia olha
-        ANTES da primeira fatia: a primeira já nasce curta."""
+        """A MORDIDA (3): sem a fatia curta, o laço dorme 2 s com o nó"""
         mesa = _Mesa()
         mesa.abertos.add(NO_1)
         mesa.segurar(NO_1, STEAM)
@@ -570,7 +511,7 @@ class TestNoDaemon:
         assert controle.reescritos[0] == [UNIQ_1]
 
     def test_em_repouso_a_fatia_e_a_de_sempre(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        mesa = _Mesa()  # nó fechado, ninguém segurando
+        mesa = _Mesa()
         controle = _Controle({UNIQ_1: NO_1})
         daemon = _daemon(controle, mesa)
         passos: list[float] = []
@@ -589,17 +530,12 @@ class TestNoDaemon:
         asyncio.run(conn._wait_online_or_hotplug(daemon, watch))
 
         assert set(passos) == {conn.RECONNECT_HOTPLUG_POLL_INTERVAL_SEC}
-        assert mesa.sondas == 1  # a primeira vista do nó, e nenhuma depois
+        assert mesa.sondas == 1
         assert controle.reescritos == []
 
 
 class TestAVigiaTemLugarNoDaemon:
-    """O campo `_vigia_do_sequestro` é DECLARADO no `Daemon` e no protocolo.
-
-    Nasceu por `setattr` (com `noqa: B010`) enquanto o `lifecycle.py` era de
-    outra sprint; a MOVER-UM-POR-VEZ-01 o soltou em 24/09. Declarado, o mypy vê
-    o campo e a vigia é a MESMA para quem sonda e para quem pergunta.
-    """
+    """O campo `_vigia_do_sequestro` é DECLARADO no `Daemon` e no protocolo."""
 
     def test_o_daemon_declara_o_campo_e_nasce_sem_vigia(self) -> None:
         import dataclasses

@@ -7,9 +7,9 @@ o campo pisca em verde — **mas o botão tem de realmente fazer o que promete**
 O DEFEITO QUE ESTA RÉGUA FECHA, medido em 05/09/2026: o gesto era
 `p.chamar("daemon.reload")` e `chamar` devolve um `bool` que ninguém lia.
 `_safe_call` devolve `False` para **serviço desligado, socket ausente, timeout
-de conexão e erro JSON-RPC** (`app/ipc_bridge.py:105-112`) — e como o gesto não
+de conexão e erro JSON-RPC** (`app/ipc_bridge.py:74-81`) — e como o gesto não
 levantava, o piloto executava o ramo do sucesso
-(`interface/hefesto_vivo.py:2111-2113`) e depositava **"Pronto."** em verde. Com
+(`interface/hefesto_vivo.py:1862-1864`) e depositava **"Pronto."** em verde. Com
 o serviço parado, o botão trocava de palavra, esperava o teto, voltava ao rótulo
 e afirmava ter feito. **Nenhum byte havia saído.**
 
@@ -48,17 +48,7 @@ UNIQ = "aa:bb:cc:00:00:01"
 
 
 class PonteQueResponde:
-    """Um dublê da `pacotes/ponte.py` que sabe RECUSAR — as três respostas.
-
-    Régua cujo dublê só sabe passar não é régua: em 23/08/2026 um conserto que
-    **reintroduzia o defeito que curava** atravessou a conferência porque o
-    caminho de erro nunca era exercido.
-
-    As três formas são as do produto, e não invenção desta régua:
-    `_call_checked` devolve `(True, None)` no sucesso, `(False, <frase>)` quando
-    o daemon respondeu e recusou por parâmetro inválido, e `(False, None)` para
-    **toda** falha de transporte — `app/ipc_bridge.py:382-387`.
-    """
+    """Um dublê da `pacotes/ponte.py` que sabe RECUSAR — as três respostas."""
 
     def __init__(self, resposta: object) -> None:
         self.resposta = resposta
@@ -94,9 +84,6 @@ def clicar():
     return _clicar
 
 
-# --------------------------------------------------------------------------
-# 1 e 2. a recusa CHEGA À TELA — e a frase é a de quem sabe o motivo
-# --------------------------------------------------------------------------
 def test_com_o_servico_mudo_o_botao_recusa_em_vez_de_dizer_pronto(a09, clicar):
     """O caso da mesa dela: serviço parado, motivo `None`, e nada de "Pronto.".
 
@@ -114,12 +101,7 @@ def test_com_o_servico_mudo_o_botao_recusa_em_vez_de_dizer_pronto(a09, clicar):
 
 
 def test_quando_o_servico_diz_por_que_recusou_a_tela_mostra_a_frase_dele(a09, clicar):
-    """A frase de reserva é RESERVA — ela não engole o motivo do daemon.
-
-    `_call_checked` só traz `motivo` quando o daemon respondeu e recusou por
-    parâmetro inválido: ele está VIVO, o pedido é que não serve. Trocar essa
-    frase pela genérica seria a tela acusando de morto um serviço que falou.
-    """
+    """A frase de reserva é RESERVA — ela não engole o motivo do daemon."""
     recusa = "o serviço recusou: já há um reload em curso"
     with pytest.raises(RuntimeError) as caiu:
         clicar(PonteQueResponde((False, recusa)))
@@ -129,18 +111,8 @@ def test_quando_o_servico_diz_por_que_recusou_a_tela_mostra_a_frase_dele(a09, cl
         f"dele vence a frase de reserva sempre que existe.")
 
 
-# --------------------------------------------------------------------------
-# 3. o sucesso continua sendo sucesso
-# --------------------------------------------------------------------------
 def test_com_o_servico_de_pe_o_botao_nao_levanta(a09, clicar):
-    """A cura não pode transformar o clique que funciona em recusa.
-
-    E ela cobre as DUAS formas de "deu certo" que o gesto pode receber: a dupla
-    do `_call_checked` e o `bool` cru do dublê de `test_os_botoes_tem_dono`
-    (`PonteDeMentira.__getattr__` devolve `True` para todo nome que não é
-    `identity…_set`). É `_ok_e_motivo` quem aceita as duas — sem ele o gesto
-    rebentaria com `TypeError` na régua e funcionaria na mão dela.
-    """
+    """A cura não pode transformar o clique que funciona em recusa."""
     for resposta in ((True, None), True):
         p = clicar(PonteQueResponde(resposta))
         assert p.chamadas == [("chamar_detalhado", ("daemon.reload",), {})], (
@@ -148,21 +120,12 @@ def test_com_o_servico_de_pe_o_botao_nao_levanta(a09, clicar):
             f"que traz o motivo da recusa, e com o método do daemon.")
 
 
-# --------------------------------------------------------------------------
-# 4. a aba relê nos DOIS desfechos
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("resposta", "levanta"),
     [((True, None), False), ((False, None), True)],
     ids=["deu-certo", "recusou"])
 def test_a_aba_rele_na_hora_nos_dois_desfechos(a09, clicar, resposta, levanta):
-    """`_LENTO` zerado nos dois — e a recusa é o caso que custa.
-
-    As cinco leituras caras desta aba vivem num cache de `LENTO_S = 2.0`. Uma
-    recusa na tela ao lado de valores de dois segundos atrás é a tela dizendo
-    "não deu" sobre números que ninguém releu — e quem clicou não tem como
-    separar o cache velho do estado de agora.
-    """
+    """`_LENTO` zerado nos dois — e a recusa é o caso que custa."""
     a09._LENTO["marcador"] = "o valor de antes do clique"
 
     if levanta:
@@ -177,24 +140,8 @@ def test_a_aba_rele_na_hora_nos_dois_desfechos(a09, clicar, resposta, levanta):
         f"voltar — zerar antes publicaria o estado de antes como o de depois.")
 
 
-# --------------------------------------------------------------------------
-# 5. a frase diz o que se sabe E o que não se sabe
-# --------------------------------------------------------------------------
 def test_a_frase_de_reserva_diz_as_duas_metades(a09):
-    """AS-DUAS-ABAS-FALAM-01, e aqui ela protege contra uma afirmação FALSA.
-
-    A frase **não pode** dizer que nada foi reaplicado: um timeout é exatamente
-    o caso em que o daemon fez o trabalho e a resposta não chegou — o DEFEITO
-    VIVO de 03/09/2026, registrado em `daemon/ipc_handlers.py:46-60`, cuja frase
-    vale palavra por palavra aqui: *"o pior desfecho não é o erro; é o trabalho
-    feito sem resposta"*.
-
-    OS LITERAIS SÃO DIGITADOS DE PROPÓSITO, e é a única maneira: não há dono a
-    quem perguntar — `docs/data/decisoes-dela.csv` não tem a linha da `09-Q3`.
-    Uma asserção que só comparasse a constante consigo mesma daria verde sobre
-    qualquer reescrita, inclusive a que volta a mentir. É a forma de defeito que
-    esta leva já achou três vezes: *a régua medindo a si mesma*.
-    """
+    """AS-DUAS-ABAS-FALAM-01, e aqui ela protege contra uma afirmação FALSA."""
     frase = a09.SEM_RESPOSTA_DO_SERVICO
 
     assert "pode não ter reaplicado nada" in frase, (
@@ -205,7 +152,7 @@ def test_a_frase_de_reserva_diz_as_duas_metades(a09):
     assert "de novo" in frase, (
         f"a frase parou de dizer o que fazer: {frase!r}. Clicar de novo é "
         f"seguro — sem `config_overrides` o reload é `replace` do mesmo valor "
-        f"(`daemon/ipc_handlers.py:5462`) —, e uma recusa sem saída deixa quem "
+        f"(`daemon/ipc_handlers.py:4002`) —, e uma recusa sem saída deixa quem "
         f"clicou sem próximo passo.")
 
     for mentira in ("nada foi reaplicado", "nada aconteceu", "não fez nada"):
@@ -214,9 +161,6 @@ def test_a_frase_de_reserva_diz_as_duas_metades(a09):
             f"pode ter feito o trabalho e a resposta não ter chegado.")
 
 
-# --------------------------------------------------------------------------
-# 6. a espera não encolheu com a troca de porta
-# --------------------------------------------------------------------------
 def test_a_porta_nova_continua_esperando_os_quinze_segundos(monkeypatch):
     """Se a espera encolher, o botão passa a recusar todo clique que FUNCIONA.
 
@@ -232,13 +176,6 @@ def test_a_porta_nova_continua_esperando_os_quinze_segundos(monkeypatch):
 
     visto: list[float | None] = []
 
-    # O NOME DA FUNÇÃO MUDOU EM 11/09/2026, e o teto NÃO — A-PERNA-QUE-FALTA-01
-    # trocou `_call_checked` por `_call_checked_detalhado` dentro do
-    # `chamar_detalhado`, para o motivo que vem NO CORPO parar de morrer na
-    # ponte. O `timeout` seguiu vindo do mesmo `teto()`, na mesma linha. A régua
-    # espionava o nome velho: com ele fora do caminho, `visto` chegava VAZIO e
-    # a régua reprovava anunciando uma espera encolhida que ninguém encolheu.
-    # Ela mede o número que SAI da ponte — então tem de espionar quem o leva.
     def espiao(metodo, params, timeout=None):
         visto.append(timeout)
         return True, None, None

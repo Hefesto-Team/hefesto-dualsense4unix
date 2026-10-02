@@ -1,33 +1,4 @@
-"""Desligar o botão do mic DEVOLVE a luz ao kernel — a prosa vira ato.
-
-ACHADO DA AUDITORIA DE 02/09/2026. O comentário de `mic_button_toggles_system`
-em `daemon/lifecycle.py` prometia, na versão da onda:
-
-    *"Desligado, não elegemos e não acendemos: o kernel segue dono do mudo E da
-    luz do próprio controle, que é o contrato de fábrica."*
-
-A segunda metade era FALSA depois da primeira eleição. A posse do `common[8]`
-é grudenta — ela só cai por `set_microphone_led(None)` —, e o ramo do
-interruptor desligado (`hotkey.mic_button_loop`) fazia `continue`, sem devolver
-nada. Medido sobre o `_build_common` desta árvore, antes da cura:
-
-    1. de fabrica                   : flag1&0x01=0  common[8]=0  -> kernel
-    2. depois de UMA eleicao ok     : flag1&0x01=1  common[8]=1  -> hefesto
-    3. perfil desliga o interruptor : flag1&0x01=1  common[8]=1  -> hefesto
-    4. so `mic led-release`         : flag1&0x01=0  common[8]=0  -> kernel
-
-E o caminho é reentrante em RUNTIME: `daemon/ipc_draft_applier.py` escreve o
-campo sem restart. A cena é real — ela joga, aperta o mic (LED aceso, posse
-nossa), depois carrega um perfil de gravação com `mic.button_toggles_system:
-false`. Daí em diante o botão físico não mexe mais na luz, e a luz fica
-congelada no que a última eleição deixou. Havia porta de emergência
-(`hefesto-dualsense4unix mic led-release`), mas ela é comando de terminal, e a
-prosa prometia que não precisava dela.
-
-DAS DUAS CURAS QUE SERVIAM — devolver a posse, ou reescrever a prosa — esta leva
-fez as duas, e nesta ordem: o applier passou a devolver na transição
-ligado -> desligado, e o comentário passou a dizer o que o código faz.
-"""
+"""Desligar o botão do mic DEVOLVE a luz ao kernel — a prosa vira ato."""
 
 from __future__ import annotations
 
@@ -68,11 +39,7 @@ _J2 = "aabbcc000022"
 
 
 def test_desligar_o_interruptor_devolve_a_posse_de_cada_controle() -> None:
-    """CURA A ARRANCAR: o `devolver_a_luz_ao_kernel` do applier.
-
-    Sem ele a luz fica congelada no que a última eleição deixou, e o botão
-    físico já não a alcança.
-    """
+    """CURA A ARRANCAR: o `devolver_a_luz_ao_kernel` do applier."""
     from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 
     backend = _Backend((_J1, _J2))
@@ -90,12 +57,7 @@ def test_desligar_o_interruptor_devolve_a_posse_de_cada_controle() -> None:
 
 
 def test_ligar_o_interruptor_nao_devolve_nada() -> None:
-    """A metade que prova que a cura não é "devolve sempre".
-
-    Ligar é o gesto de TOMAR o botão; devolver a posse ali apagaria a luz que a
-    eleição seguinte vai acender, e por um instante o plástico mentiria ao
-    contrário.
-    """
+    """A metade que prova que a cura não é "devolve sempre"."""
     from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 
     backend = _Backend((_J1,))
@@ -126,11 +88,7 @@ def test_desligar_o_que_ja_estava_desligado_nao_mexe_no_aparelho() -> None:
 
 
 def test_backend_sem_endereco_degrada_declarado_e_nao_calado() -> None:
-    """O dublê/backend antigo sem `uniq` cai para a chamada global — e loga.
-
-    "Degradou calado" é como esta casa fabrica o LED do controle errado; aqui a
-    degradação existe, é declarada, e a posse ainda assim é devolvida.
-    """
+    """O dublê/backend antigo sem `uniq` cai para a chamada global — e loga."""
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import devolver_a_luz_ao_kernel
 
     backend = _Backend((_J1, _J2), com_endereco=False)
@@ -143,20 +101,7 @@ def test_backend_sem_endereco_degrada_declarado_e_nao_calado() -> None:
 
 
 def test_a_prosa_do_interruptor_nao_promete_o_que_o_codigo_nao_faz() -> None:
-    """A frase corrigida não pode voltar à versão que a auditoria derrubou.
-
-    Esta régua guarda a PROSA porque foi a prosa que estava errada — e a casa
-    trata fato errado como coisa que se substitui, não que se deixe ao lado do
-    certo.
-
-    Ela guarda pelo PONTEIRO, não por proibir a frase velha: o comentário
-    corrigido CITA a frase derrubada para dizer que ela era falsa, e uma régua
-    de substring negativa reprovaria justamente porque alguém explicou bem —
-    a forma das onze réguas que caíram nesta casa em 26/08.
-
-    CURA A ARRANCAR: tirar a chamada de `devolver_a_luz_ao_kernel` do applier —
-    reprova aqui, e nas quatro réguas de comportamento acima.
-    """
+    """A frase corrigida não pode voltar à versão que a auditoria derrubou."""
     import inspect
 
     from hefesto_dualsense4unix.daemon import ipc_draft_applier, lifecycle
@@ -176,11 +121,7 @@ def test_a_prosa_do_interruptor_nao_promete_o_que_o_codigo_nao_faz() -> None:
 
 @pytest.mark.parametrize("valor", ["sim", 1, 0])
 def test_valor_que_nao_e_booleano_continua_recusado(valor: Any) -> None:
-    """A cura não pode ter afrouxado a validação do campo.
-
-    E a recusa vem ANTES de qualquer conversa com o aparelho: um rascunho
-    inválido não pode apagar a luz de ninguém no caminho de ser rejeitado.
-    """
+    """A cura não pode ter afrouxado a validação do campo."""
     from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 
     backend = _Backend((_J1,))

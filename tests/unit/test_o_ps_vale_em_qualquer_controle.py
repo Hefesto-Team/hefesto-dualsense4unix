@@ -1,47 +1,4 @@
-"""O-MODO-XBOX-NAO-E-QUEDA-02, item 5 — o PS e as combinações valem em qualquer um dos quatro.
-
-**A decisão é dela** (27/09/2026, resposta 11 das respostas da noite,
-``D-2709-O-PS-R3-EM-QUALQUER-CONTROLE``): o PS + R3 vale em qualquer um dos
-quatro controles, e não só no P1. A cura consolidada da sprint estende a regra
-ao PS sozinho e às outras combinações, e o PS + L3 anda o cartão de quem o faz.
-
-**O QUE FOI MEDIDO, antes da cura** (a sessão dela de 27/09, ``G0`` e ``G9``):
-o PS do branco, que acende o «1», não abria a Steam — nenhum ``hotkey_*`` no
-diário —, e o do roxo, o «primário» de então, abria. O laço só entregava aos
-atalhos os botões do leitor do primário (``poll.observar_os_atalhos``), e na
-bancada desta régua o PS + R3 do controle da carta 2, com o P1 na mesa, caía
-no vazio (a régua ``test_com_todos_na_mesa_so_o_p1_segura`` de
-``test_os_atalhos_na_espera.py`` o afirmava até 28/09).
-
-**A cura mora em dois donos.** O ``poll.botoes_de_cada_controle`` lê cada
-controle na mesa de uma fonte só — o posto pelo leitor do primário, quem está
-sentado no co-op pelo leitor dele, e os outros pelo leitor passivo do
-``SensorHub`` —, e o ``HotkeyManager`` guarda um aperto por controle
-(``observe(..., de=<MAC>)``), com o MAC de quem fez o gesto no contexto do ato
-(``hotkey_daemon.quem_faz_o_gesto``), que o ``poll.quem_segura_os_atalhos``
-responde.
-
-**A bancada é a honesta da OS-ATALHOS-NA-ESPERA-01** (:class:`MesaDosAtalhos`):
-o backend, o co-op e o registro de identidade reais, os vpads da fábrica real
-contra o kernel de mentira, e o ``HotkeyManager`` real. Para os modos sem co-op
-ela ganha o ``SensorHub`` real, com a fábrica e a descoberta da mesa
-(:class:`_LeitorPassivoDaMesa`), surdo ao nó que outro leitor segura — como o
-``EVIOCGRAB`` faz com o leitor passivo de verdade.
-
-AS MORDIDAS (28/09/2026, cada uma devolvida com o md5 conferido):
-
-- o laço lendo só o posto (o produto de antes) reprova a carta 2, os seis
-  atalhos em cada controle, o PS + L3 de quem faz e os modos sem co-op;
-- um aperto só para todos os controles (o ``de`` ignorado) reprova os apertos
-  que não se misturam: o PS de um e o R3 de outro viram um PS + R3;
-- a pergunta «de quem é o gesto» respondendo o posto (sem o contexto do ato)
-  reprova o PS + L3 do P3: o cartão do P1 anda;
-- sem o leitor passivo do hub, os modos sem co-op ficam mudos fora do posto;
-- quem renasce no co-op (o grab pendente) contado como «sem leitor» ganha um
-  leitor passivo sobre o nó que o co-op segura.
-
-Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
-"""
+"""O-MODO-XBOX-NAO-E-QUEDA-02, item 5 — o PS e as combinações valem em qualquer um dos quatro."""
 from __future__ import annotations
 
 import asyncio
@@ -111,11 +68,6 @@ def _apertar_juntos(bancada: MesaDosAtalhos, apertos: dict[str, tuple[str, ...]]
     return bancada.disparos[antes:]
 
 
-# ---------------------------------------------------------------------------
-# A régua da sprint: o PS + R3 no controle da carta 2
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.usefixtures("config_isolado")
 class TestNoControleDaCarta2:
     """Com o P1 na mesa, o PS + R3 do controle que acende o «2» troca o modo."""
@@ -133,7 +85,6 @@ class TestNoControleDaCarta2:
                 "o PS + R3 do controle da carta 2 caiu no vazio com o P1 na mesa"
             )
         assert _disparos_no_diario(registros) == [("ponte", P2)]
-        # O gesto não mexe em número, lâmpada nem boneco de ninguém.
         assert bancada.a_tela() == {u: n + 1 for n, u in enumerate(UNIQS[:quantos])}
         assert bancada.dono_do_vpad_do_p1() == P1
 
@@ -146,11 +97,6 @@ class TestNoControleDaCarta2:
         bancada = montar_atalhos(monkeypatch, kernel, 4, transporte)
         for uniq in UNIQS[:4]:
             assert bancada.apertar(uniq, *botoes) == [gesto], f"{uniq} não alcançou {gesto}"
-
-
-# ---------------------------------------------------------------------------
-# Cada controle aperta os dele
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -187,19 +133,8 @@ class TestOsApertosNaoSeMisturam:
         )
 
 
-# ---------------------------------------------------------------------------
-# O PS + L3 anda o cartão de quem o faz
-# ---------------------------------------------------------------------------
-
-
 def _o_gesto_pelo_laco(bancada: MesaDosAtalhos, uniq: str, *botoes: str) -> None:
-    """``uniq`` faz o gesto, e o ato roda como o daemon o roda: tarefa, com o laço seguindo.
-
-    O ato nasce DENTRO do ``observe`` (``HotkeyManager._fire`` → ``create_task``),
-    e o laço segue a cada tique enquanto ele espera o vpad de quem trocou voltar.
-    É o caminho em que a pergunta «de quem é o gesto» é feita um tique DEPOIS do
-    aperto — chamar o callback direto não passaria por ela.
-    """
+    """``uniq`` faz o gesto, e o ato roda como o daemon o roda: tarefa, com o laço seguindo."""
 
     async def _junto() -> None:
         bancada.apertar(uniq, *botoes)
@@ -247,20 +182,8 @@ class TestOPsL3AndaOCartaoDeQuemFaz:
         bancada.o_jogo_segue_a_tela()
 
 
-# ---------------------------------------------------------------------------
-# Sem co-op: o leitor passivo do SensorHub
-# ---------------------------------------------------------------------------
-
-
 class _LeitorPassivoDaMesa:
-    """O leitor PASSIVO do ``SensorHub`` (STATUS-04), sem grab, sobre a mesa da bancada.
-
-    Como o ``EvdevReader`` de verdade sem ``EVIOCGRAB``: lê o que se aperta no
-    controle cujo nó ele abriu, e fica SURDO quando outro leitor segura o nó
-    (o grab do co-op, ou o do leitor do P1 desta bancada). Um leitor que lesse
-    através do grab seria mais frouxo que o real exatamente onde o co-op está
-    sentado.
-    """
+    """O leitor PASSIVO do ``SensorHub`` (STATUS-04), sem grab, sobre a mesa da bancada."""
 
     def __init__(self, mesa: Any, uniq: str, node: Any) -> None:
         self._mesa = mesa
@@ -299,7 +222,6 @@ class MesaSemCoop(MesaDosAtalhos):
         self.daemon._garantir_sensor_hub = lambda: self.hub
 
     def tique(self, segundos: float = TIQUE) -> None:
-        # A thread de manutenção do hub roda fora do laço; aqui, uma volta por tique.
         self.hub.reconciliar()
         super().tique(segundos)
 
@@ -307,12 +229,7 @@ class MesaSemCoop(MesaDosAtalhos):
 def montar_sem_coop(
     monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, modo: str, transporte: str
 ) -> MesaSemCoop:
-    """Três controles na mesa, com o co-op desligado ou em mouse e teclado (sem vpad do P1).
-
-    Mouse e teclado é a ponte sem vpad nenhum: o co-op se desmonta e o laço
-    segue chamando os atalhos. O Modo Nativo não entra aqui: nele o
-    ``_poll_loop`` congela o tique antes dos atalhos, para todos os controles.
-    """
+    """Três controles na mesa, com o co-op desligado ou em mouse e teclado (sem vpad do P1)."""
     bancada = MesaSemCoop(
         monkeypatch,
         kernel=kernel,

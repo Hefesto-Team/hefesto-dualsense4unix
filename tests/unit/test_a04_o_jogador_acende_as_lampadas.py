@@ -43,8 +43,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Dois controles de mentira. MACs da faixa sintética da casa — há dois portões
-#: de anonimato nesta árvore e eles não perdoam.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
@@ -59,22 +57,13 @@ MESA = [
     {"pref": "p2", "jogador": 2, "uniq": P2, "nome": "Dois", "via": "BT"},
 ]
 
-#: O CORPO FELIZ do `led.player_set`, na forma EXATA que a mesa dela devolveu
-#: (medida em 04/09/2026, colada do log). Um dicionário inventado aqui poria a
-#: régua a medir uma resposta que o daemon não dá.
 def _corpo(uniq: str, bits: tuple[bool, ...]) -> dict:
     return {"status": "ok", "bits": list(bits),
             "aplicado_em": [uniq], "guardado_em": []}
 
 
 class Ponte:
-    """O dublê da `pacotes/ponte.py` — guarda o que foi chamado, na ORDEM.
-
-    Ele responde por QUALQUER nome de propósito (o mesmo desenho do dublê da
-    régua dos botões): virar uma segunda lista das funções da ponte faria a
-    régua envelhecer em silêncio. Quem confere que o nome existe de verdade é
-    `test_os_botoes_tem_dono.test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem`.
-    """
+    """O dublê da `pacotes/ponte.py` — guarda o que foi chamado, na ORDEM."""
 
     def __init__(self, *, numero_ok: bool = True, motivo: str | None = None,
                  corpo: object = "feliz", coop_ok: bool = True) -> None:
@@ -120,12 +109,7 @@ def pac():
 
 
 def _ctx(pac, *, coop_players: int = 0):
-    """A mesa da régua. `coop_players` > 1 é o co-op MANDANDO nas lâmpadas.
-
-    O gate é `players`, e não `enabled`, porque é o que `o_coop_manda` mede — a
-    camada do co-op no backend só existe com secundário na mesa, e ler o
-    booleano diria "quem manda é o co-op" numa mesa de um jogador só.
-    """
+    """A mesa da régua. `coop_players` > 1 é o co-op MANDANDO nas lâmpadas."""
     state = {"active_profile": "regua",
              "coop": {"enabled": bool(coop_players), "players": coop_players}}
     return pac.Contexto(state=state, mesa=MESA, conectados=CONECTADOS,
@@ -142,15 +126,8 @@ def _gesto(pac):
     return fn
 
 
-# --------------------------------------------------------------------------
-# 1. o coração: o clique acende, e acende o desenho CERTO no controle CERTO
-# --------------------------------------------------------------------------
 def test_o_clique_no_jogador_escreve_o_desenho_das_cinco_lampadas(pac):
-    """MORDIDA: tire `_acender_o_numero(ctx, p, uniq, n)` do fim do gesto.
-
-    Sem ela o gesto volta a ser meio gesto — renumera e não acende —, que é
-    exatamente a queixa dela. Este teste reprova dizendo que só o número foi.
-    """
+    """MORDIDA: tire `_acender_o_numero(ctx, p, uniq, n)` do fim do gesto."""
     p = Ponte()
     _gesto(pac)(_ctx(pac), _clique(P1, 2), p)
 
@@ -182,17 +159,10 @@ def test_o_desenho_sai_da_tabela_do_daemon_e_nao_de_um_literal(pac):
 
 
 def test_o_parceiro_da_troca_tambem_acende_o_numero_novo(pac):
-    """Trocar é TROCA: os DOIS mudam de número, os dois mudam de lâmpada.
-
-    MORDIDA: devolva só `[(uniq, n)]` em `_pares_da_troca`. O alvo acende
-    certo e o parceiro fica preso no desenho que o alvo acabou de receber —
-    dois controles com o MESMO padrão aceso, que é a colisão que a numeração
-    única (R-24) existe para matar.
-    """
+    """Trocar é TROCA: os DOIS mudam de número, os dois mudam de lâmpada."""
     from hefesto_dualsense4unix.core.led_control import player_led_pattern
 
     p = Ponte()
-    # O P1 é o 1 e pede o 2; o P2, que tem o 2, fica com o 1.
     _gesto(pac)(_ctx(pac), _clique(P1, 2), p)
 
     assert p.desenhos() == [
@@ -202,30 +172,17 @@ def test_o_parceiro_da_troca_tambem_acende_o_numero_novo(pac):
 
 
 def test_sem_parceiro_na_mesa_so_o_alvo_recebe(pac):
-    """Número livre não inventa um segundo destinatário.
-
-    MORDIDA: faça `_pares_da_troca` devolver sempre dois pares. Com um número
-    que ninguém tem, o segundo par teria `uniq` vazio — um `led.player_set` sem
-    alvo, que o daemon grava no DEFAULT GLOBAL e o próximo reforço do
-    automático desfaz. É o defeito PLAYER-01 medido na GTK: sucesso mentiroso.
-    """
+    """Número livre não inventa um segundo destinatário."""
     p = Ponte()
-    _gesto(pac)(_ctx(pac), _clique(P1, 4), p)  # ninguém tem o 4 nesta mesa
+    _gesto(pac)(_ctx(pac), _clique(P1, 4), p)
 
     assert [u for u, _ in p.desenhos()] == [P1], (
         f"o clique num número livre escreveu em mais de um controle: "
         f"{p.desenhos()}")
 
 
-# --------------------------------------------------------------------------
-# 2. a ordem, e o que ela decide
-# --------------------------------------------------------------------------
 def test_renumera_primeiro_e_acende_depois(pac):
-    """Sem o número novo não há padrão de lâmpada a acender.
-
-    MORDIDA: inverta as duas metades de `player`. A lâmpada passa a acender o
-    número VELHO — e o teste reprova na ordem, não no conteúdo.
-    """
+    """Sem o número novo não há padrão de lâmpada a acender."""
     p = Ponte()
     _gesto(pac)(_ctx(pac), _clique(P1, 2), p)
 
@@ -235,12 +192,7 @@ def test_renumera_primeiro_e_acende_depois(pac):
 
 
 def test_a_renumeracao_recusada_nao_acende_nada(pac):
-    """O daemon recusou o número (jogo aberto, número fora da mesa): pare aí.
-
-    MORDIDA: tire o `raise` do ramo `if not ok`. As lâmpadas passam a acender
-    um número que o produto NÃO deu ao controle — a tela mostrando um jogador e
-    o plástico mostrando outro.
-    """
+    """O daemon recusou o número (jogo aberto, número fora da mesa): pare aí."""
     p = Ponte(numero_ok=False, motivo="O jogo está aberto")
     with pytest.raises(RuntimeError, match="O jogo está aberto"):
         _gesto(pac)(_ctx(pac), _clique(P1, 2), p)
@@ -250,21 +202,8 @@ def test_a_renumeracao_recusada_nao_acende_nada(pac):
         "mesmo.")
 
 
-# --------------------------------------------------------------------------
-# 3. o ramo do co-op — o que a medição da mesa dela derrubou
-# --------------------------------------------------------------------------
 def test_com_o_coop_mandando_o_gesto_reconcilia_em_vez_de_escrever(pac):
-    """Com o co-op ligado, o override por-uniq é escrito DEBAIXO de quem manda.
-
-    Medido na mesa dela em 04/09/2026: `led.player_set` por `uniq` respondeu
-    `aplicado_em` para os DOIS controles e nenhuma lâmpada se mexeu — a camada
-    do co-op fica acima do override no merge por campo do backend. O que move é
-    recalcular a camada, e o gesto que o produto tem para isso é `coop.sync`.
-
-    MORDIDA: apague o ramo do co-op de `_acender_o_numero` e deixe só a escrita
-    por `uniq`. Este teste reprova nos dois sentidos — o `coop.sync` some e o
-    override aparece.
-    """
+    """Com o co-op ligado, o override por-uniq é escrito DEBAIXO de quem manda."""
     p = Ponte()
     _gesto(pac)(_ctx(pac, coop_players=2), _clique(P1, 2), p)
 
@@ -278,15 +217,7 @@ def test_com_o_coop_mandando_o_gesto_reconcilia_em_vez_de_escrever(pac):
 
 
 def test_um_jogador_so_nao_e_coop_mandando(pac):
-    """`players: 1` é o co-op LIGADO sem secundário — e aí a camada não existe.
-
-    `coop._apply_coop_player_leds` volta antes de publicar quando não há
-    secundário (e revoga a camada que houver). Ler `enabled` em vez de
-    `players` mandaria um `coop.sync` inútil e deixaria o override — que é o
-    que de fato acende — sem ser escrito.
-
-    MORDIDA: troque `o_coop_manda` por `state["coop"]["enabled"]`.
-    """
+    """`players: 1` é o co-op LIGADO sem secundário — e aí a camada não existe."""
     p = Ponte()
     _gesto(pac)(_ctx(pac, coop_players=1), _clique(P1, 2), p)
 
@@ -297,12 +228,7 @@ def test_um_jogador_so_nao_e_coop_mandando(pac):
 
 
 def test_o_coop_que_nao_reconcilia_recusa_dizendo(pac):
-    """O daemon não respondeu ao `coop.sync`: quem clicou fica sabendo.
-
-    MORDIDA: troque o `raise` por um `return`. O número muda, as lâmpadas não,
-    e a tela não diz uma palavra — o silêncio que esta casa nomeia como o
-    defeito mais caro.
-    """
+    """O daemon não respondeu ao `coop.sync`: quem clicou fica sabendo."""
     p = Ponte(coop_ok=False)
     with pytest.raises(RuntimeError) as erro:
         _gesto(pac)(_ctx(pac, coop_players=2), _clique(P1, 2), p)
@@ -311,16 +237,8 @@ def test_o_coop_que_nao_reconcilia_recusa_dizendo(pac):
         f"a frase da recusa não fala das lâmpadas: {erro.value}")
 
 
-# --------------------------------------------------------------------------
-# 4. o desfecho se LÊ do corpo do daemon — a razão de a porta ser `_detalhado`
-# --------------------------------------------------------------------------
 def test_sem_resposta_do_daemon_o_gesto_recusa_dizendo(pac):
-    """`None` = o Hefesto não respondeu. A frase é a da GTK, não uma nossa.
-
-    MORDIDA: troque `player_leds_set_detalhado` por `player_leds_set` e jogue o
-    retorno fora. O gesto passa a dizer "aplicado" para um daemon desligado —
-    o mesmo defeito que os três gestos de cor desta aba tinham até 02/09.
-    """
+    """`None` = o Hefesto não respondeu. A frase é a da GTK, não uma nossa."""
     from hefesto_dualsense4unix.app.actions import lightbar_actions
 
     p = Ponte(corpo=None)
@@ -332,15 +250,7 @@ def test_sem_resposta_do_daemon_o_gesto_recusa_dizendo(pac):
 
 
 def test_o_guardado_chega_na_tela_em_vez_de_virar_aplicado(pac):
-    """O daemon GUARDOU (o controle não está na mesa): a tela tem de dizer.
-
-    É a razão inteira de a porta ser a `_detalhado`. Com o `bool` do
-    `player_leds_set`, um "guardado" e um "aplicado" são o mesmo `True`, e o
-    cartão diria que a lâmpada acendeu.
-
-    MORDIDA: no `_cobrar_a_frase_do_desenho`, devolva sem comparar. Este teste
-    reprova dizendo que o gesto engoliu o guardado.
-    """
+    """O daemon GUARDOU (o controle não está na mesa): a tela tem de dizer."""
     p = Ponte(corpo={"status": "ok", "aplicado_em": [], "guardado_em": [P1]})
     with pytest.raises(RuntimeError) as erro:
         _gesto(pac)(_ctx(pac), _clique(P1, 2), p)
@@ -350,20 +260,9 @@ def test_o_guardado_chega_na_tela_em_vez_de_virar_aplicado(pac):
 
 
 def test_a_frase_feliz_e_perguntada_ao_dono_e_nao_digitada(pac):
-    """O caminho feliz sai CALADO — e o texto dele não mora neste lado.
-
-    A frase do desenho das cinco luzes é montada dentro de
-    `lightbar_actions._msg_do_desenho` e não tem nome público; digitá-la no
-    pacote seria a segunda escrita da mesma frase, e o dia em que a GTK a
-    mudasse esta aba passaria a levantar sobre um clique que deu certo.
-
-    MORDIDA: escreva a frase feliz à mão no pacote (`f"Desenho das luzes
-    atualizado — {descricao}"`) e depois mude o `feito` da GTK para
-    "aplicado" — este teste reprova; a comparação por igualdade contra o que o
-    dono DIZ não reprova, porque acompanha.
-    """
+    """O caminho feliz sai CALADO — e o texto dele não mora neste lado."""
     p = Ponte()
-    _gesto(pac)(_ctx(pac), _clique(P1, 2), p)  # não levanta: é o caminho feliz
+    _gesto(pac)(_ctx(pac), _clique(P1, 2), p)
 
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/pacotes"
                     "/a04_iluminacao.py").read_text(encoding="utf-8")
@@ -372,9 +271,6 @@ def test_a_frase_feliz_e_perguntada_ao_dono_e_nao_digitada(pac):
         "`lightbar_actions._msg_do_desenho`; pergunte a ele.")
 
 
-# --------------------------------------------------------------------------
-# 5. o eco: por que esta aba continua SEM `SEM_ECO`
-# --------------------------------------------------------------------------
 def test_a_aba_iluminacao_nao_declara_sem_eco(pac):
     """`SEM_ECO` é *"o daemon não publica este assunto"* — e não é o caso aqui.
 

@@ -69,32 +69,16 @@ from dataclasses import dataclass
 
 RGB = tuple[int, int, int]
 
-#: A DISTÂNCIA MÍNIMA entre duas cores da mesma paleta, em soma de |ΔR|+|ΔG|+|ΔB|.
-#: 90 foi medido contra a paleta canônica de jogador (`led_control`), cujas
-#: vizinhas mais próximas — azul e roxo — distam 128. Um piso abaixo do que a
-#: casa já considera distinguível seria inventar tolerância.
 DISTANCIA_MINIMA = 90
 
-#: QUANTO O MATIZ GIRA entre uma unidade e a seguinte, em voltas. 0.055 é ~20°:
-#: o bastante para separar, pouco para a família continuar reconhecível como
-#: "o vermelho do FPS".
 GIRO_DE_MATIZ = 0.055
 
-#: E O PASSO DE LUMINÂNCIA, que é a segunda dimensão. Só o matiz não bastaria
-#: para as famílias quase acromáticas (o branco do Retrô, o cinza), onde girar
-#: matiz não muda quase nada.
 PASSO_DE_LUZ = 0.13
 
 
 @dataclass(frozen=True)
 class Estilo:
-    """Uma receita: o que o estilo faz no gatilho, na vibração e na luz.
-
-    `gatilho` é a CHAVE do modo (`AutoGun`, `Resistance`…), a mesma que a aba
-    Gatilhos oferece — nunca o rótulo, que é texto de tela e muda.
-    `vibracao` é o degrau (`economia`/`balanceado`/`max`), e `familia` é a cor
-    de onde as quatro variações saem.
-    """
+    """Uma receita: o que o estilo faz no gatilho, na vibração e na luz."""
 
     chave: str
     rotulo: str
@@ -105,20 +89,11 @@ class Estilo:
     porque: str
 
 
-#: AS RECEITAS, propostas por mim e APROVADAS por ela em 03/09/2026 —
-#: *"o resto ta aprovado"* —, com a emenda da cor que esta docstring abre. Eram
-#: quinze; o «Co-op local» saiu em 25/09/2026 (ver a docstring do módulo). A
-#: conta que a tela diz sai de :data:`DE_FABRICA`, nunca digitada.
-#:
-#: A REGRA QUE GEROU A COLUNA DO GATILHO: o efeito descreve a RESISTÊNCIA que o
-#: gênero pede no dedo, não o clima do jogo. `None` = não mexe no gatilho.
 ESTILOS: tuple[Estilo, ...] = (
     Estilo("fps", "FPS", "AutoGun", "max", (255, 40, 40), 1.0,
            "o gatilho estala em rajada, que é o gesto do gênero"),
     Estilo("corrida", "Corrida", "Resistance", "balanceado", (255, 140, 0), 1.0,
            "o acelerador tem peso constante; o freio também"),
-    # A CHAVE VAI SEM ACENTO de propósito — chave de contrato não leva; quem
-    # carrega a palavra dela é o rótulo ao lado.
     Estilo("acao", "Ação", "Weapon", "max", (170, 60, 255), 1.0,  # noqa-acento: chave
            "trava, solta no estalo e fica leve — o golpe"),
     Estilo("aventura", "Aventura", "Feedback", "balanceado", (40, 200, 90), 1.0,
@@ -127,11 +102,6 @@ ESTILOS: tuple[Estilo, ...] = (
            "curso curto e previsível; o gatilho não conta história"),
     Estilo("point_and_click", "Point-and-click", "Off", "economia", (0, 200, 210), 1.0,
            "o gatilho não é usado; vibração baixa não distrai a leitura"),
-    # A FAMÍLIA DO TERROR MUDOU PORQUE A RÉGUA REPROVOU A PRIMEIRA. Era
-    # `(150, 20, 30)`, um vinho escuro, e as quatro unidades saíam a 61 de
-    # distância — abaixo do mínimo. Escuro não rende quatro: o espaço de
-    # luminância abaixo do meio é estreito. O clima escuro continua, e vem do
-    # `brilho` 0.7, que é o lugar certo dele.
     Estilo("terror", "Terror", "PulseB", "max", (215, 30, 55), 0.7,
            "o pulso irregular é o susto no dedo; a luz baixa não denuncia"),
     Estilo("luta", "Luta", "SemiAutoGun", "max", (255, 40, 180), 1.0,
@@ -141,15 +111,6 @@ ESTILOS: tuple[Estilo, ...] = (
            "NÃO apaga, porque apagada os quatro ficariam iguais"),
     Estilo("plataforma", "Plataforma", "Off", "balanceado", (255, 210, 40), 1.0,
            "o pulo é botão, não gatilho; a vibração marca o impacto"),
-    # E A DO RETRÔ FOI O CASO QUE MAIS ENSINOU: era `(230, 230, 235)`, quase
-    # branco, e a régua devolveu as quatro a **9** de distância. Branco não tem
-    # matiz para girar nem saturação para variar — ele não rende quatro cores
-    # distintas por construção, e nenhuma abertura de família conserta isso.
-    # O verde-fósforo do monitor de tubo é mais temático que o branco E rende.
-    #
-    # COLIDIR COM A FAMÍLIA DA AVENTURA É ACEITÁVEL, e vale dizer por quê: a
-    # regra dela é sobre DUAS UNIDADES NA MESMA MESA ao mesmo tempo, não sobre
-    # dois estilos que nunca convivem — um perfil tem um estilo só.
     Estilo("retro", "Retrô/Emulador", "Off", "economia", (60, 230, 90), 1.0,
            "o console original não tinha nada disso; o verde é o do tubo"),
     Estilo("ritmo", "Ritmo/Música", "Off", "max", (255, 0, 220), 1.0,
@@ -163,67 +124,30 @@ ESTILOS: tuple[Estilo, ...] = (
 POR_CHAVE = {e.chave: e for e in ESTILOS}
 POR_ROTULO = {e.rotulo: e for e in ESTILOS}
 
-#: OS DE FÁBRICA — os que trazem receita. O «Personalizado» fica de fora porque
-#: ele é o estilo que diz *"eu ajusto na mão"* e não escolhe nada. É daqui que
-#: a dica da aba Perfis tira a conta que diz; digitá-la lá faria a tela
-#: prometer um número que o motor já não tem no dia em que um estilo sair —
-#: foi o que aconteceu com os «catorze» quando o «Co-op local» saiu.
 DE_FABRICA: tuple[Estilo, ...] = tuple(e for e in ESTILOS if e.chave != "personalizado")
 
 
 def _distancia(a: RGB, b: RGB) -> int:
-    """|ΔR| + |ΔG| + |ΔB| — a conta grosseira, e ela é a honesta aqui.
-
-    Ver a docstring do módulo: o alvo é um LED difuso atrás de plástico, e uma
-    métrica perceptual prometeria precisão que o aparelho não entrega.
-    """
+    """|ΔR| + |ΔG| + |ΔB| — a conta grosseira, e ela é a honesta aqui."""
     return sum(abs(x - y) for x, y in zip(a, b, strict=True))
 
 
 def _variar(base: RGB, passo: int, escala: float) -> RGB:
-    """A cor da unidade `passo` (0..3) dentro da família de `base`.
-
-    DOIS EIXOS, e os dois são precisos. O matiz gira em torno da família —
-    SIMÉTRICO (`-1.5, -0.5, +0.5, +1.5` passos), para as quatro ficarem
-    igualmente distantes do centro em vez de a última acabar longe da família; e
-    a luminância anda em quatro degraus, porque nas famílias quase acromáticas
-    (o branco do Retrô, o cinza da Maratona) girar matiz quase não muda nada.
-
-    A PRIMEIRA VERSÃO GIRAVA SÓ PARA FRENTE e somava luz sempre, e as duas
-    coisas quebraram no mesmo minuto: a quarta unidade do FPS saía
-    `(255, 254, 173)` — um amarelo-claro que ninguém chamaria de "o vermelho do
-    FPS" — e o Esportes colidia nas unidades 1 e 2 a 73 de distância. A régua
-    pegou os dois, que é para isso que ela existe.
-    """
+    """A cor da unidade `passo` (0..3) dentro da família de `base`."""
     r, g, b = (c / 255 for c in base)
     h, luz, s = colorsys.rgb_to_hls(r, g, b)
-    lado = (passo - 1.5)          # -1.5, -0.5, +0.5, +1.5
+    lado = (passo - 1.5)
     h = (h + GIRO_DE_MATIZ * lado * escala) % 1.0
-    # A LUZ RESPEITA O TETO E O PISO: acima de 0.92 tudo vira branco e as
-    # famílias colidem entre si; abaixo de 0.18 o LED difuso não distingue.
     luz = min(0.92, max(0.18, luz + PASSO_DE_LUZ * lado * escala))
-    # E A SATURAÇÃO ACOMPANHA, para a família não se dissolver quando a luz sobe.
     s = min(1.0, max(0.25, s))
     return tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, luz, s))  # type: ignore[return-value]
 
 
-#: ATÉ ONDE A BUSCA ABRE A FAMÍLIA. A escala 1.0 é o desenho; se duas unidades
-#: colidirem, ela cresce até separar. O teto existe para a "família" não virar
-#: uma volta inteira no círculo de cores — chegando aqui, é a `familia` que está
-#: errada, e a régua diz isso em vez de devolver quatro cores de gêneros
-#: diferentes.
 ESCALA_MAXIMA = 2.6
 
 
 def as_quatro(estilo: str | Estilo) -> tuple[RGB, RGB, RGB, RGB]:
-    """As quatro cores daquele estilo, uma por unidade — e nunca duas iguais.
-
-    A GARANTIA É MEDIDA, não prometida: a busca abre a família até as quatro
-    ficarem a pelo menos :data:`DISTANCIA_MINIMA` umas das outras, e se nem no
-    teto conseguir, LEVANTA. Devolver silenciosamente um par colidido seria a
-    tela apagando a única informação que diz qual controle é qual — que é
-    exatamente o que a regra dela existe para impedir.
-    """
+    """As quatro cores daquele estilo, uma por unidade — e nunca duas iguais."""
     e = estilo if isinstance(estilo, Estilo) else POR_CHAVE[str(estilo)]
     if e.chave == "personalizado":
         raise ValueError(

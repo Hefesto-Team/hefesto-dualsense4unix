@@ -1,40 +1,8 @@
-"""ATALHO-FORA-DA-LISTA-01 — um gesto na aba apagava três atalhos do perfil.
-
-Medido em 24/08/2026 (sprint NAVEGAÇÃO — UM CONTROLE SÓ-01, §2.1) com o código
-de produto de verdade e o `point_and_click.json` dela lido do disco:
-
-    no DISCO: ['create', 'l1', 'options', 'r1', 'touchpad_left_press',
-               'touchpad_middle_press', 'touchpad_right_press']
-    na TELA : ['l1', 'r1', 'options', 'create']
-    no DRAFT depois de UM gesto: ['create', 'l1', 'options', 'r1']
-    PERDIDOS: ['touchpad_left_press', 'touchpad_middle_press',
-               'touchpad_right_press']
-
-As duas metades do defeito, e cada uma tem o seu teste aqui:
-
-1. `_persist_key_bindings_to_draft` escrevia a lista da TELA por cima do
-   rascunho, e a lista só tem linha para botão de `CANONICAL_BUTTONS` — o que
-   não aparece era descartado no primeiro "Adicionar"/"Remover"/edição de
-   célula. O rodapé "Salvar Perfil" gravava o rascunho podado por cima do
-   arquivo dela;
-2. nada na tela dizia que aqueles três existiam, então a falta não tinha como
-   ser notada.
-
-A perda é de CONFIGURAÇÃO GRAVADA, não de comportamento vivo: desde 09/08 o
-touchpad é ponteiro do sistema e as três regiões não disparam tecla nenhuma
-(`daemon/subsystems/keyboard._combine_with_touchpad`). Isso não a torna
-aceitável — é o único registro do que ela escolheu.
-
-Estes testes MORDEM: arrancar a fusão faz o primeiro reprovar nomeando as três
-chaves; arrancar a frase faz o último reprovar.
-"""
+"""ATALHO-FORA-DA-LISTA-01 — um gesto na aba apagava três atalhos do perfil."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi` — o stub que outro
-# arquivo planta em `sys.modules` passaria pelo `importorskip` e derrubaria a
-# coleta (mesma disciplina de `test_o_teclado_que_nao_digita.py`).
 exigir_gi_real("atalho fora da lista")
 
 from typing import Any
@@ -52,9 +20,6 @@ from hefesto_dualsense4unix.app.actions.input_actions import (
 )
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
 
-#: O perfil dela, campo a campo — os quatro canônicos e as três regiões. Os
-#: tokens são os que o arquivo guarda (`E`, `U`, `P` do Grim Fandango nas
-#: regiões); o que importa aqui é a CHAVE sobreviver, não a tecla.
 PERFIL_DELA: dict[str, list[str]] = {
     "l1": ["KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"],
     "r1": ["KEY_LEFTALT", "KEY_TAB"],
@@ -123,9 +88,6 @@ def _host(key_bindings: dict[str, list[str]] | None) -> Any:
     return instance
 
 
-# --- 1. o gesto para de apagar o que a aba não mostra (N1) ---------------
-
-
 def test_o_gesto_na_aba_nao_apaga_os_atalhos_do_touchpad() -> None:
     """O repro da §2.1, com o produto: sete no disco, sete no rascunho."""
     host = _host(dict(PERFIL_DELA))
@@ -137,7 +99,7 @@ def test_o_gesto_na_aba_nao_apaga_os_atalhos_do_touchpad() -> None:
         f"o rascunho, e precisa saber o que a tela mostra: {na_tela}"
     )
 
-    host._persist_key_bindings_to_draft()  # é o que TODO gesto da aba faz
+    host._persist_key_bindings_to_draft()
 
     perdidos = sorted(set(PERFIL_DELA) - set(host.draft.key_bindings or {}))
     assert perdidos == [], (
@@ -152,12 +114,7 @@ def test_o_gesto_na_aba_nao_apaga_os_atalhos_do_touchpad() -> None:
 
 
 def test_remover_uma_linha_continua_removendo() -> None:
-    """A fusão preserva o que a tela não mostra, nunca o que ela removeu.
-
-    Sem esta régua, "fundir" viraria "nada nunca sai" — e o botão "Remover" da
-    aba deixaria de ter efeito, trocando uma perda silenciosa por uma recusa
-    silenciosa.
-    """
+    """A fusão preserva o que a tela não mostra, nunca o que ela removeu."""
     host = _host(dict(PERFIL_DELA))
     host._refresh_key_bindings_from_draft()
     host._key_bindings_store.rows = [
@@ -173,18 +130,14 @@ def test_remover_uma_linha_continua_removendo() -> None:
 
 
 def test_rascunho_que_herda_de_fabrica_nao_perde_o_touchpad() -> None:
-    """`key_bindings=None` herda os defaults — e eles TÊM as três regiões.
-
-    É o caminho de quem nunca editou nada: o primeiro "Adicionar" congelava o
-    rascunho como override explícito, e o override nascia sem as três.
-    """
+    """`key_bindings=None` herda os defaults — e eles TÊM as três regiões."""
     assert set(REGIOES_DO_TOUCHPAD) <= set(DEFAULT_BUTTON_BINDINGS), (
         "os defaults perderam as regiões do touchpad — se isso foi de propósito, "
         "este teste e a frase da legenda caducaram juntos"
     )
     host = _host(None)
     host._refresh_key_bindings_from_draft()
-    host._key_bindings_store.append(["cross", "KEY_SPACE"])  # o "Adicionar"
+    host._key_bindings_store.append(["cross", "KEY_SPACE"])
     host._persist_key_bindings_to_draft()
 
     gravado = host.draft.key_bindings or {}
@@ -202,9 +155,6 @@ def test_teclado_silencioso_continua_silencioso() -> None:
     assert host.draft.key_bindings is None, (
         "a fusão ressuscitou atalhos num teclado que ela silenciou de propósito"
     )
-
-
-# --- 2. a tela passa a dizer que eles existem (N2) -----------------------
 
 
 def test_a_frase_nomeia_os_tres_e_diz_o_motivo() -> None:

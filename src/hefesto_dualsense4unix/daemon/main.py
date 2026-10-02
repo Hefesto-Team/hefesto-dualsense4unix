@@ -1,9 +1,4 @@
-"""Entry do daemon: monta dependências e chama `Daemon.run()`.
-
-Controlado pela CLI (`hefesto-dualsense4unix daemon start`). Suporta backend fake via
-env `HEFESTO_DUALSENSE4UNIX_FAKE=1` — útil para smoke tests runtime (meta-regra 9.8)
-sem hardware.
-"""
+"""Entry do daemon: monta dependências e chama `Daemon.run()`."""
 from __future__ import annotations
 
 import asyncio
@@ -62,19 +57,6 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     configure_logging()
     logger = get_logger(__name__)
 
-    # A CHAVE (29/08/2026) — pedido dela: *"garantir que eu possa DESLIGAR o
-    # impacto do outro Hefesto por completo"*. Ver `utils/chave.py`.
-    #
-    # A ORDEM AQUI É O QUE IMPORTA: esta checagem vem ANTES do
-    # `acquire_or_takeover` logo abaixo. Se viesse depois, um daemon que está
-    # prestes a RECUSAR já teria mandado SIGTERM (e depois SIGKILL) no daemon
-    # que estava no ar — desligar um Hefesto derrubaria o outro, que é o
-    # oposto exato do que a chave existe para garantir.
-    #
-    # E ela é necessária porque `systemctl mask` NÃO fecha o caminho todo: o
-    # botão "Ligar daemon" da GUI cai num `subprocess.Popen` quando o
-    # `systemctl start` falha (`app/actions/daemon_actions.py:2192-2206`), e
-    # esse caminho não passa por systemd nenhum. Medido em 29/08.
     from hefesto_dualsense4unix.utils import chave
 
     motivo = chave.motivo_do_desligamento()
@@ -82,37 +64,19 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         logger.warning("daemon_recusado_pela_chave", motivo=motivo)
         print(chave.recado_da_recusa(motivo), file=sys.stderr)
         # 0, e não 1: SIGTERM limpo e saída zero não disparam o
-        # `Restart=on-failure` da unit (assets/hefesto-dualsense4unix.service:23).
-        # Recusar é uma decisão, não uma falha — respawnar seria brigar com ela.
         return 0
 
-    # CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: traz perfis/sessão/prefs do
-    # layout curto legado (~/.config/hefesto) para o atual, se necessário.
-    # Idempotente e não-destrutivo; roda antes de qualquer leitura de config.
     from hefesto_dualsense4unix.utils.migrate_legacy_paths import migrate_legacy_paths
 
     migrate_legacy_paths()
 
-    # BUG-MULTI-INSTANCE-01: "última vence" — encerra daemon predecessor
-    # (SIGTERM grace 2s, depois SIGKILL) antes de subir. Evita dois daemons
     # disputando /dev/hidraw* e criando uinput duplicado. Ver armadilha A-10.
     from hefesto_dualsense4unix.utils.single_instance import acquire_or_takeover
 
     acquire_or_takeover(single_instance_name())
 
-    # PERF-MULTI-CONTROLLER-01 (13/07/2026, `60bbf1910`): o daemon roda em
     # nice 5 para não disputar CPU de igual com o jogo. Opt-out / ajuste:
-    # HEFESTO_DUALSENSE4UNIX_NICE=0..19 (default 5).
-    #
-    # FATO ERRADO, SUBSTITUÍDO (26/09/2026): aqui se lia que o nice moderado
     # «elimina o stutter por starvation». Nunca foi medido — o commit que o
-    # trouxe não tem medição, e o estudo do engasgo do Sackboy (§3.4 e C3) não
-    # achou nenhuma. O que se mediu foi o custo: todo filho do daemon nasce com
-    # este nice (60 de 60 `pactl` em nice 5), e a Steam que o botão PS abria o
-    # passava ao jogo. Por isso aplicativo da pessoa nasce fora do serviço
-    # (`integrations/fora_do_servico.py`, STEAM-FORA-DO-SERVICO-01). E, nesta
-    # máquina, o nice nem disputa com o compositor: ele roda em
-    # `session-N.scope`, outro grupo de CPU (a conferência do estudo, §6).
     try:
         nice_level = int(os.getenv("HEFESTO_DUALSENSE4UNIX_NICE", "5"))
         if nice_level > 0:
@@ -124,19 +88,10 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),
         auto_reconnect=auto_reconnect,
-        # FEAT-EMULATION-GAMEMODE-COMBO-01: modo jogo e' so pelo combo PS+Options.
-        # Default 0 = long-press DESLIGADO (evita o modo-jogo acidental); quem
-        # quiser o gesto seta HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS>0.
         ps_long_press_ms=int(
             os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "0")
         ),
-        # EMULACAO-NO-JOGO-01: até 29/07 este campo NUNCA era passado aqui — o
-        # default True da dataclass vencia sempre e não havia superfície nenhuma
-        # que o desligasse (nem env, nem arquivo, nem IPC), enquanto o R1 do mapa
-        # default emitia Alt+Tab dentro da partida dela.
-        # Precedência, do mais fraco ao mais forte: default da dataclass (True) <
         # este env < `keyboard_emulation.flag` (a decisão DELA, lida no boot em
-        # `Daemon.run`). `=0` desliga; qualquer outro valor mantém ligado.
         keyboard_emulation_enabled=(
             os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
         ),
@@ -144,9 +99,6 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     daemon = Daemon(controller=controller, config=config)
 
     logger.info("daemon_main", fake=os.getenv("HEFESTO_DUALSENSE4UNIX_FAKE") == "1")
-    # O LAÇO QUE PARA SE DENUNCIA (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 6):
-    # em 30/09 ele parou 3 min 30 s calado, e só o SIGKILL do install o tirou
-    # dali. A vigia escreve `laco_parado` e a pilha de todos os fios no diário.
     from hefesto_dualsense4unix.daemon.subsystems.vigia_do_laco import vigiado
 
     try:

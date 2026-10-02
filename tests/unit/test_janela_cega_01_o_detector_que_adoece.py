@@ -59,10 +59,6 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-# ---------------------------------------------------------------------------
-# 1-3. A saúde que cai (e a que, de propósito, não cai)
-# ---------------------------------------------------------------------------
-
 
 def _semeado() -> StateStore:
     """Store com o detector semeado como o subsystem faz no boot do xlib."""
@@ -72,8 +68,7 @@ def _semeado() -> StateStore:
 
 
 def test_seeing_nasce_falso_porque_presuncao_nao_e_medicao() -> None:
-    """O xlib nasce `healthy=True` por PRESUNÇÃO (`state_store` documenta).
-    `seeing` só sobe com leitura medida."""
+    """O xlib nasce `healthy=True` por PRESUNÇÃO (`state_store` documenta)."""
     store = _semeado()
 
     assert store.window_detect_healthy is True
@@ -82,16 +77,11 @@ def test_seeing_nasce_falso_porque_presuncao_nao_e_medicao() -> None:
 
 
 def test_seeing_cai_depois_do_teto_de_cegueira_e_volta_na_leitura_util() -> None:
-    """O coração da leva: um detector cego para de se declarar são.
-
-    FALHA-SEM: sem o carimbo da última leitura útil, `seeing` não existe e o
-    único sinal disponível (`healthy`) fica True para sempre.
-    """
+    """O coração da leva: um detector cego para de se declarar são."""
     store = _semeado()
     store.record_window_detect_read("xlib", "steam_app_3357650", now=100.0)
 
     assert store.window_detect_seeing(now=100.0) is True
-    # Um tique antes do teto ainda é "enxergando" (alt-tab longo é normal).
     quase = 100.0 + WINDOW_DETECT_BLIND_AFTER_SEC - 0.5
     store.record_window_detect_read("xlib", "unknown", now=quase)
     assert store.window_detect_seeing(now=quase) is True
@@ -100,16 +90,13 @@ def test_seeing_cai_depois_do_teto_de_cegueira_e_volta_na_leitura_util() -> None
     store.record_window_detect_read("xlib", "unknown", now=cego)
     assert store.window_detect_seeing(now=cego) is False
 
-    # E VOLTA na primeira leitura útil seguinte, sem precisar de restart.
     store.record_window_detect_read("xlib", "steam", now=cego + 1.0)
     assert store.window_detect_seeing(now=cego + 1.0) is True
 
 
 def test_idade_da_ultima_leitura_util_cresce_enquanto_o_sticky_mente() -> None:
-    """A medição ao vivo, reproduzida: o sticky continua exibindo a classe de
-    minutos atrás; a idade é quem conta que ninguém mais viu nada."""
+    """A medição ao vivo, reproduzida: o sticky continua exibindo a classe de"""
     store = _semeado()
-    # A classe é de OUTRO app de propósito — ver o aviso de 21/09 no cabeçalho.
     store.record_window_detect_read("xlib", "firefox", now=10.0)
     for passo in range(1, 21):
         store.record_window_detect_read("xlib", "unknown", now=10.0 + passo * 30.0)
@@ -121,9 +108,7 @@ def test_idade_da_ultima_leitura_util_cresce_enquanto_o_sticky_mente() -> None:
 
 
 def test_healthy_continua_sendo_trinco_de_mao_unica_de_proposito() -> None:
-    """Trava de decisão: `healthy` NÃO pode decair enquanto o consumidor for o
-    `game_signal` — sob `unknown` o gate da camada GAME abre e a luz que o
-    cliente escrever no vpad repinta a lightbar dela. Quem decai é `seeing`."""
+    """Trava de decisão: `healthy` NÃO pode decair enquanto o consumidor for o"""
     store = _semeado()
     store.record_window_detect_read("xlib", "steam", now=0.0)
     store.record_window_detect_read(
@@ -135,8 +120,7 @@ def test_healthy_continua_sendo_trinco_de_mao_unica_de_proposito() -> None:
 
 
 def test_boot_novo_do_detector_zera_a_contabilidade() -> None:
-    """`set_window_detect_backend` = episódio novo: idade, motivo e `seeing`
-    voltam ao zero (não se herda leitura útil de sessão anterior)."""
+    """`set_window_detect_backend` = episódio novo: idade, motivo e `seeing`"""
     store = _semeado()
     store.record_window_detect_read("xlib", "steam", now=5.0)
     store.record_window_detect_read("xlib", None, now=6.0, reason="sem_foco_x")
@@ -163,10 +147,6 @@ def test_motivo_guardado_ao_lado_da_leitura_crua_e_zerado_na_leitura_util() -> N
     store.record_window_detect_read("xlib", "steam", now=3.0)
     assert store.window_detect_reason is None
 
-
-# ---------------------------------------------------------------------------
-# 4. As seis causas de `None` do backend X11 param de colapsar num só
-# ---------------------------------------------------------------------------
 
 ROOT_ID = 0x1
 
@@ -266,11 +246,7 @@ def test_motivo_foco_sem_id() -> None:
 
 
 def test_motivo_sem_foco_x() -> None:
-    """`X.NONE` — o caso NORMAL nesta máquina: app Wayland nativo em foco.
-
-    Foi o que as 10 amostras ao vivo mostraram; não pode ficar com a mesma
-    cara de "o XWayland caiu".
-    """
+    """`X.NONE` — o caso NORMAL nesta máquina: app Wayland nativo em foco."""
     backend = _backend(_Display(foco=0, janelas={}, net_active=0))
 
     assert backend.get_active_window_info() is None
@@ -347,11 +323,6 @@ def test_null_backend_diz_que_e_cego_por_construcao() -> None:
     assert null.NullBackend().last_failure_reason == null.MOTIVO_SEM_BACKEND
 
 
-# ---------------------------------------------------------------------------
-# 5. O leitor colhe o motivo do backend
-# ---------------------------------------------------------------------------
-
-
 class _BackendFalso:
     backend_name = "falso"
 
@@ -379,8 +350,7 @@ def test_reader_propaga_o_motivo_do_backend_e_zera_na_leitura_util() -> None:
 
 
 def test_reader_nomeia_janela_sem_classe() -> None:
-    """Backend DEVOLVEU janela, mas sem `wm_class`: a leitura não é útil e o
-    motivo não pode virar "não sei por quê"."""
+    """Backend DEVOLVEU janela, mas sem `wm_class`: a leitura não é útil e o"""
     from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
 
     reader = window_detect.WindowReaderDiag(
@@ -393,8 +363,7 @@ def test_reader_nomeia_janela_sem_classe() -> None:
 
 
 def test_reader_com_backend_sem_campo_ainda_diz_alguma_coisa() -> None:
-    """`Protocol` intocado: backend de terceiro (ou dublê antigo) não expõe
-    `last_failure_reason` — e mesmo assim o motivo é DITO, não engolido."""
+    """`Protocol` intocado: backend de terceiro (ou dublê antigo) não expõe"""
 
     class _Antigo:
         def get_active_window_info(self) -> Any:
@@ -424,11 +393,6 @@ def test_cascata_wayland_nomeia_a_propria_cegueira() -> None:
     assert cascata.last_failure_reason == window_detect.MOTIVO_CASCATA_SEM_LEITURA
 
 
-# ---------------------------------------------------------------------------
-# 6. O estado publicado deixa a cegueira à vista
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def ipc_server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
     """IpcServer mínimo (sem socket no ar) para chamar os handlers."""
@@ -454,18 +418,9 @@ def ipc_server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
 
 
 def _cegueira_ao_vivo(store: StateStore) -> None:
-    """Reproduz a medição de 28/07: sticky preso, leitura crua cega há 10
-    minutos, motivo "sem foco X".
-
-    Ancorado no monotonic REAL (nada de congelar `time.monotonic` global: o
-    relógio do event loop do asyncio é o mesmo, e travá-lo no meio de um
-    handler `async` é armadilha para os próximos).
-    """
+    """Reproduz a medição de 28/07: sticky preso, leitura crua cega há 10"""
     agora = time.monotonic()
     store.set_window_detect_backend("xlib", healthy=True)
-    # Era a nossa própria GUI até 21/09; hoje ela não entra no sticky, e o que
-    # este cenário precisa é de uma classe PRESA há dez minutos — qualquer uma
-    # de outro app serve, e é isso que a régua mede.
     store.record_window_detect_read("xlib", "firefox", now=agora - 600.0)
     store.record_window_detect_read(
         "xlib", "unknown", now=agora, reason=xlib.MOTIVO_SEM_FOCO
@@ -484,7 +439,6 @@ async def test_state_full_publica_a_cegueira(ipc_server: IpcServer) -> None:
     assert result["window_detect_useful_age_sec"] == pytest.approx(600.0, abs=1.0)
     assert result["window_detect_seeing"] is False
     assert result["window_detect_reason"] == xlib.MOTIVO_SEM_FOCO
-    # O trinco continua True — e agora dá para ver que ele está mentindo.
     assert result["window_detect_healthy"] is True
 
 

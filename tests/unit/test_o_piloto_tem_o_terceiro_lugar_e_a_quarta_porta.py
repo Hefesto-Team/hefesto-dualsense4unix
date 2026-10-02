@@ -1,50 +1,5 @@
 #!/usr/bin/env python3
-"""AS TRÊS PEÇAS DE INFRA DO PILOTO — ONDA5-P-01, 06/09/2026.
-
-Três relatos que a ONDA CINCO deixou para o piloto, e nenhuma das três frentes
-podia escrevê-los: ``hefesto_vivo.py`` está no ``nao_toca`` de todas.
-
-1. **O TERCEIRO LUGAR DO RECADO.** A página pode declarar onde o recado pousa
-   (``data-hef-recados``), e o depósito só conhecia cartão e tarja. A metade que
-   já existia entrou na costura de 06/09 (`14e0771f`); o que falta aqui é a
-   outra metade da decisão: **um lugar por página**. Com dois containers
-   declarando o mesmo tom, um ``querySelector`` escolheria o primeiro do
-   documento — a tela decidindo por ordem de marcação. O piloto **recusa os
-   dois**, diz quais são em ``window.__hef.faixasDemais`` e cai no comportamento
-   de sempre. **SAIU EM 13/09/2026** (FRASES-E-DICAS-01): o recado saiu da tela,
-   e com ele os três lugares. A régua da peça 1 passou a cobrar o avesso — a
-   página que declara um lugar, ou dois, não recebe recado nenhum.
-
-2. **A QUARTA PORTA — ``data-hef-vivo``.** O ouvinte tinha três portas
-   (``change``, ``click``, ``blur``) e nas três quem responde é o gesto de
-   ``data-hef-gesto`` — que no campo do jogo da aba 10 **grava o perfil dela**.
-   O ``input`` é o único evento que um campo de texto dispara a cada TECLA, e
-   ligá-lo ao mesmo atributo regravaria o ``.json`` a cada letra. A porta nova
-   carrega endereço PRÓPRIO e de LEITURA.
-
-3. **O DONO DO CAMPO — assento não é modelo.** O desenho compartilhado leva
-   ``data-controle="dualsense"`` (``ds_limpo.svg:2``), e ali o valor é o MODELO.
-   O piloto resolvia o dono subindo até o primeiro ``data-controle``, então todo
-   campo de dentro do ``<svg>`` voltava com dono ``"dualsense"``. **Não é
-   hipotético:** ``treme-e`` e ``treme-d`` da ``05-vibracao`` moram lá dentro,
-   nas colunas do p1 e do p2.
-
-POR QUE ELA ABRE UM WebKit DE VERDADE, com o piloto do produto: porque a forma
-de defeito mais cara desta casa é *alguém curar o caminho e provar a cura num
-caminho que ela não usa*. O clique é no botão do produto, o ``input`` é um
-``Event`` de verdade no ouvinte de verdade, e a leitura é do DOM.
-
-A JANELA É OCULTA. Ela tem UMA tela.
-
-AS MORDIDAS, uma por peça (as três estão escritas nas docstrings dos testes):
-
-* devolva o piloto de antes (``249af1f6``) e a faixa declarada volta a
-  receber o recado — a peça 1 reprova;
-* ligue ``data-hef-vivo`` ao gesto que grava e a régua reprova nomeando o gesto;
-  arranque a quarta porta e o ``input`` volta a não fazer nada;
-* ponha um ``data-campo`` dentro do ``<svg>`` de uma coluna ``p2`` e leia o
-  dono: tem de ser ``p2``, nunca ``dualsense``.
-"""
+"""AS TRÊS PEÇAS DE INFRA DO PILOTO — ONDA5-P-01, 06/09/2026."""
 from __future__ import annotations
 
 import json
@@ -57,38 +12,21 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: OS DOIS CONTROLES DA MESA DUBLÊ, na faixa sintética da casa. Nada de MAC real
-#: em arquivo versionado — há dois portões, e eles não perdoam.
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 
-#: O `uniq` NORMALIZADO é a chave do depósito. Escrito à mão de propósito: a
-#: régua confere o VALOR que o produto usa, e importar a mesma função dos dois
-#: lados faria os dois errarem juntos em silêncio.
 CHAVE_P1 = "aabbcc000001"
 
-#: A PÁGINA DO CLIQUE. A `02-controles` é a única das dez cujo HTML PUBLICADO
-#: traz um botão de gesto dentro do cartão de um controle (`data-mudo`), e é a
-#: mesma que a régua irmã do canal de recado usa.
 PAGINA = "02-controles.html"
 
-#: A PÁGINA DO DESENHO COMPARTILHADO. A `05-vibracao` é onde o defeito do dono
-#: está VIVO no arquivo publicado: `treme-e` e `treme-d` moram dentro do
-#: `<svg data-controle="dualsense">`, nas colunas do p1 e do p2.
 PAGINA_DO_SVG = "05-vibracao.html"
 
-#: O GESTO DA ABA 02 que a régua sequestra para o clique — o mesmo da irmã.
 GESTO_DO_CLIQUE = "mudo"
 
-#: OS TRÊS GESTOS VIVOS que esta régua registra. Nomes próprios, para não
-#: colidirem com nenhum dos que os pacotes declaram.
 VIVO = "regua-vivo"
 VIVO_QUE_GRAVA = "regua-vivo-que-grava"
 VIVO_QUE_TROCA_BLOCO = "regua-vivo-com-bloco"
 
-#: O ENDEREÇO QUE O GESTO VIVO PINTA. Ele nasce nesta régua, dentro da coluna do
-#: p1 — nenhuma das dez páginas publica um campo vivo, porque publicar é ato
-#: dela e a metade do endereço é da frente da aba.
 CAMPO_DO_ROTULO = "regua-jogo-rotulo"
 
 FRASE_DO_RECADO = "o motor recebeu, mas o perfil não guardou"
@@ -107,18 +45,11 @@ ESTADO = {
 
 MESA = {"estado": ESTADO}
 
-#: QUANTO O GESTO VIVO LENTO DEMORA. Ele existe para a prova da ordem: sem uma
-#: leitura que demore, as duas respostas voltam na ordem em que saíram e o
-#: descarte nunca é exercido.
 VIVO_LENTO_S = 0.9
 
-#: O QUE A LEITURA DEVOLVE em cada volta. A régua compara o que ficou na tela.
 ROTULO_VELHO = "o rótulo da tecla velha"
 ROTULO_NOVO = "o rótulo da tecla nova"
 
-#: QUANTO O CLIQUE LENTO DA CORRIDA DEMORA. Ele tem de pousar DEPOIS de o
-#: vizinho ter escrito o desfecho dele — é esse atraso que faz a corrida
-#: existir — e ANTES de a piscada do vizinho vencer (`MS_DA_PISCADA`, 1,5 s).
 CORRIDA_LENTA_S = 0.8
 
 
@@ -144,9 +75,6 @@ LER_A_TELA = r"""
 })()
 """.replace("ROTULO", CAMPO_DO_ROTULO)
 
-#: O CLIQUE, no 🎙 do cartão do p1 — o botão do produto, com o `data-mudo` que a
-#: página publicada traz. Clicar por coordenada é a armadilha que esta casa já
-#: pagou duas vezes.
 CLICAR_NO_MIC = r"""
 (function(){
   const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
@@ -156,10 +84,6 @@ CLICAR_NO_MIC = r"""
 })()
 """
 
-#: O CLIQUE NO 🎙 DE UMA COLUNA QUALQUER — o mesmo gesto, dois elementos.
-#: É o que exercita as DUAS threads na mesma chave de desfecho: o `click` e o
-#: `change` de um `<select>` chegam assim, e dois cliques em colunas diferentes
-#: reproduzem a corrida com um roteiro que se lê.
 CLICAR_NO_MIC_DE = r"""
 (function(pref){
   const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="alto-falante"]');
@@ -169,8 +93,6 @@ CLICAR_NO_MIC_DE = r"""
 })(%s)
 """
 
-#: O QUE CADA BOTÃO DE MICROFONE MOSTRA — a classe do "deu certo" é o que
-#: separa a piscada verde do silêncio.
 LER_OS_DOIS_BOTOES = r"""
 (function(){
   const fora = {};
@@ -184,16 +106,6 @@ LER_OS_DOIS_BOTOES = r"""
 })()
 """
 
-#: AS FAIXAS QUE A PÁGINA DECLARARIA. Nenhuma das dez publicadas traz o
-#: atributo — publicar é ato dela —, então a régua o escreve, que é o mesmo que
-#: a `ONDA5-05-03` fez no `#vib-estado` da bancada.
-#:
-#: O TOM DA FAIXA PASSOU A SER `recusa` EM 13/09/2026 (TELA-CALADA-01). Até
-#: então a régua declarava `sucesso` e clicava um gesto que devolvia recado; o
-#: sucesso deixou de ser depositado por pedido dela (*"em todas as abas da
-#: interface"*), e o único tom que ainda atravessa o canal é a recusa. O que
-#: esta régua mede — a página declara o lugar, e dois lugares iguais perdem os
-#: dois — é do BOOTSTRAP, e não do tom.
 POR_AS_FAIXAS = r"""
 (function(quantas){
   for(const v of document.querySelectorAll('.regua-faixa')) v.remove();
@@ -209,9 +121,6 @@ POR_AS_FAIXAS = r"""
 })(%d)
 """
 
-#: O CAMPO VIVO, criado e disparado NA MESMA CHAMADA. Criar antes e disparar
-#: depois deixaria uma janela de tiques em que a pintura pode trocar o bloco que
-#: o abriga — e a régua mediria o sumiço do elemento, não a porta.
 O_CAMPO_VIVO = r"""
 (function(vivo, gesto, evento, valor){
   const col = document.querySelector('[data-controle="p1"]') || document.body;
@@ -246,15 +155,9 @@ O_CAMPO_VIVO = r"""
 })(%s, %s, %s, %s)
 """.replace("ROTULO", CAMPO_DO_ROTULO)
 
-#: O DONO DE CADA CAMPO, lido pelo INSTRUMENTO DO PRODUTO — `LER_CAMPOS`, o
-#: mesmo que o `--prova-de-mockup` usa. Reescrevê-lo aqui mediria a régua, não o
-#: piloto.
 SO_OS_QUE_TREMEM = ("treme-e", "treme-d")
 
 
-#: O PERFIL ATIVO PRECISA EXISTIR NO DISCO — mesma razão da régua irmã: desde
-#: que a aba 02 aprendeu a GUARDAR o som por controle, o gesto lê o perfil ativo
-#: para escrever nele.
 @pytest.fixture(scope="module", autouse=True)
 def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.profiles import loader
@@ -287,10 +190,6 @@ def medido() -> dict:
 
     chamados: list[str] = []
 
-    # OS DUBLÊS SÃO DEVOLVIDOS NO FIM. `mesa_viva` e o registro `GESTOS` são
-    # módulos COMPARTILHADOS do produto: escrever neles sem devolver deixaria,
-    # no mesmo processo, uma mesa de mentira para todo vizinho que abrir um
-    # `Piloto` depois.
     chaves = [(PAGINA, GESTO_DO_CLIQUE), (PAGINA, VIVO),
               (PAGINA, VIVO_QUE_GRAVA), (PAGINA, VIVO_QUE_TROCA_BLOCO)]
     guardado_gestos = {k: hv.pacotes.GESTOS.get(k) for k in chaves}
@@ -300,20 +199,12 @@ def medido() -> dict:
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
 
-    # O CLIQUE RECUSA DESDE 13/09/2026 (TELA-CALADA-01): o recado de sucesso
-    # deixou de ser depositado, e a recusa é o tom que ainda chega às faixas e
-    # ao cartão. A frase é a mesma; o caminho passou a ser o `RuntimeError`.
     def clique_que_diz(ctx, o, p):
         chamados.append(f"clique:{GESTO_DO_CLIQUE}")
         raise RuntimeError(FRASE_DO_RECADO)
 
     def vivo_que_le(ctx, o, p):
-        """A leitura: devolve carga de pintura, e nada mais.
-
-        A LENTIDÃO É POR VALOR, e é o que torna a ordem mensurável: a "tecla
-        velha" demora, a "tecla nova" responde na hora — exatamente o caso em
-        que a resposta velha chegaria por último.
-        """
+        """A leitura: devolve carga de pintura, e nada mais."""
         chamados.append(f"vivo:{o.get('valor')}")
         if str(o.get("valor") or "") == "velha":
             _time.sleep(VIVO_LENTO_S)
@@ -334,8 +225,6 @@ def medido() -> dict:
     hv.pacotes.GESTOS[(PAGINA, VIVO)] = vivo_que_le
     hv.pacotes.GESTOS[(PAGINA, VIVO_QUE_GRAVA)] = vivo_que_grava
     hv.pacotes.GESTOS[(PAGINA, VIVO_QUE_TROCA_BLOCO)] = vivo_com_bloco
-    # O `grava=` É O QUE O DECORADOR ESCREVERIA. A guarda do piloto pergunta ao
-    # registro, que é o dono — e não a uma lista própria.
     hv.pacotes.GESTOS_QUE_MEXEM[(PAGINA, VIVO_QUE_GRAVA)] = "save_profile"
 
     args = argparse.Namespace(
@@ -366,14 +255,9 @@ def medido() -> dict:
         return O_CAMPO_VIVO % (js(vivo), js(gesto), js(evento), js(valor))
 
     def por_gesto(fn) -> None:
-        """Troca quem atende o 🎙 — pelo REGISTRO do produto, não por atalho.
-
-        `@gesto` grava em `pacotes.GESTOS`, e é daí que o `_gesto` lê. Injetar
-        aqui é exercitar exatamente o caminho que um pacote real percorre.
-        """
+        """Troca quem atende o 🎙 — pelo REGISTRO do produto, não por atalho."""
         hv.pacotes.GESTOS[(PAGINA, GESTO_DO_CLIQUE)] = fn
 
-    # ---- o roteiro, um passo por peça ----------------------------------
     def sem_faixa() -> bool:
         if not piloto.pronto:
             return True
@@ -410,10 +294,7 @@ def medido() -> dict:
         GLib.timeout_add(300, a_porta_muda)
         return False
 
-    # ---- a quarta porta ------------------------------------------------
     def a_porta_muda() -> bool:
-        # SEM `data-hef-vivo` O `input` NÃO FAZ NADA — é a mordida da peça 2, e
-        # ela vem ANTES da cura para que a lista de chamados fique legível.
         fora["chamados-antes-da-porta-muda"] = list(chamados)
         piloto.ponte.perguntar(
             campo_vivo(None, GESTO_DO_CLIQUE, "input", "muda"),
@@ -456,8 +337,6 @@ def medido() -> dict:
         return False
 
     def duas_teclas() -> bool:
-        # A ORDEM: a "velha" demora, a "nova" responde na hora. A resposta que
-        # chegar por último é a velha, e ela NÃO pode pintar.
         piloto.ponte.perguntar(
             campo_vivo(VIVO, None, "input", "velha"), anotar("tecla-velha"))
         GLib.timeout_add(120, a_tecla_nova)
@@ -475,14 +354,7 @@ def medido() -> dict:
         return False
 
     def a_terceira_porta() -> bool:
-        # AS TRÊS PORTAS DE HOJE NÃO MUDARAM: um `change` no MESMO elemento, que
-        # carrega os dois atributos, continua despachando o `data-hef-gesto`.
         fora["chamados-antes-do-change"] = list(chamados)
-        # A TELA ZERA ANTES DO `change`. Até 13/09/2026 zerava também o
-        # depósito de recados do piloto, que saiu com a FRASES-E-DICAS-01; e a
-        # prova de que o `change` seguiu o caminho do clique deixou de ser o
-        # recado na tela e passou a ser o CARIMBO DE VOO que só esse caminho dá
-        # (ver `test_as_tres_portas_de_hoje_nao_mudaram`).
         piloto.ponte.perguntar(
             "for(const el of document.querySelectorAll('.hef-recado')) el.remove();"
             " String(document.querySelectorAll('.hef-recado').length)",
@@ -499,25 +371,8 @@ def medido() -> dict:
         GLib.timeout_add(400, a_corrida_do_desfecho)
         return False
 
-    # ---- a corrida do desfecho (achado da ONDA5-01-03) ------------------
     def a_corrida_do_desfecho() -> bool:
-        """DUAS THREADS, UMA CHAVE — e a corrida é FORJADA, não esperada.
-
-        **A primeira versão desta fase não mordia**, e a razão é a forma do
-        defeito: entre o `except` que ESCREVE o desfecho e o `finally` que o LÊ
-        não passa tempo nenhum — nem uma linha. Fazer um gesto demorar não abre
-        essa fresta; medido em 06/09/2026, com a cura arrancada e a régua verde.
-
-        Então a fresta se abre POR DENTRO, no dicionário do produto: quando a
-        thread que RECUSOU escreve o desfecho dela, este `dict` a segura e deixa
-        a vizinha escrever `"aplicou"` na mesma chave. É exatamente o
-        entrelaçamento que o escalonador pode produzir sozinho e que ninguém
-        consegue agendar de fora.
-
-        O DICIONÁRIO É O DO PRODUTO — a mesma classe, o mesmo atributo, o mesmo
-        `__setitem__` que o `_gesto` chama. Não há dublê de comportamento aqui:
-        só um ponto de sincronização.
-        """
+        """DUAS THREADS, UMA CHAVE — e a corrida é FORJADA, não esperada."""
         import threading as _th
 
         recusou = _th.Event()
@@ -529,8 +384,6 @@ def medido() -> dict:
                 if valor and valor[0] == "aplicou":
                     aplicou.set()
                 elif valor and valor[0] == "recusou dizendo":
-                    # A THREAD QUE RECUSOU ESPERA AQUI, entre a escrita e a
-                    # leitura do `finally`. É a única fresta do defeito.
                     recusou.set()
                     aplicou.wait(timeout=5.0)
 
@@ -541,9 +394,6 @@ def medido() -> dict:
             chamados.append(f"corrida:{qual}")
             if qual == "p1":
                 raise RuntimeError("o daemon não confirmou o mudo do microfone")
-            # O p2 SÓ APLICA DEPOIS de o p1 ter escrito a recusa — senão as duas
-            # escritas saem na ordem em que o escalonador quiser, e a régua
-            # mediria uma corrida diferente a cada execução.
             recusou.wait(timeout=5.0)
             return None
 
@@ -554,10 +404,6 @@ def medido() -> dict:
 
     def a_corrida_do_p2() -> bool:
         piloto.ponte.perguntar(CLICAR_NO_MIC_DE % js("p2"), anotar("corrida-p2"))
-        # LER DENTRO DA PISCADA DOS DOIS: os dois pousam em menos de 300 ms — o
-        # p1 destrava assim que o p2 escreve —, e `MS_DA_PISCADA` é 1,5 s. Aos
-        # ~700 ms os dois estão dentro da janela, e é o único instante em que
-        # "o p2 piscou" e "o p1 não piscou" se medem juntos.
         GLib.timeout_add(700, leu_a_corrida)
         return False
 
@@ -566,7 +412,6 @@ def medido() -> dict:
         GLib.timeout_add(300, ir_para_o_svg)
         return False
 
-    # ---- o dono do campo ------------------------------------------------
     def ir_para_o_svg() -> bool:
         piloto._ir(PAGINA_DO_SVG)
         GLib.timeout_add(2500, leu_o_svg)
@@ -592,23 +437,13 @@ def medido() -> dict:
 
     GLib.timeout_add(400, lambda: piloto._ir(args.abre))
     GLib.timeout_add(2000, sem_faixa)
-    # O RELÓGIO DE SEGURANÇA GUARDA O SEU `id` e é desarmado no `finally`: um
-    # `timeout_add` pendente depois da fixture dispara DENTRO do laço do PRÓXIMO
-    # teste de GUI do mesmo processo. Já matou onze medições de um vizinho.
     guarda = GLib.timeout_add(90000, Gtk.main_quit)
     try:
-        # O LAÇO REENTRA ATÉ O ROTEIRO ACABAR, e a condição é a ÚLTIMA etapa —
-        # ver a nota inteira em `test_o_recado_de_sucesso_pousa_no_cartao`: um
-        # `Gtk.main_quit` pendente de OUTRO teste de GUI do mesmo processo cai
-        # dentro deste laço e o encerra no meio.
         limite = _time.monotonic() + 90.0
         while "chamados_finais" not in fora and _time.monotonic() < limite:
             Gtk.main()
     finally:
         GLib.source_remove(guarda)
-        # E O PILOTO TAMBÉM PARA: o tique é um `timeout_add` que se reagenda
-        # para sempre, e deixá-lo vivo faria esta janela pintar por cima de todo
-        # laço GTK que vier depois, no mesmo processo.
         piloto.pronto = False
         piloto.tela.janela.destroy()
         hv.mesa_viva.estado_do_daemon = guardado_estado  # type: ignore[assignment]
@@ -636,23 +471,8 @@ def _r(leitura: object) -> list[dict]:
     return list(leitura["recados"])
 
 
-# --------------------------------------------------------------------------
-# 1. o terceiro lugar — a página declara onde o recado pousa
-# --------------------------------------------------------------------------
-#
-# O CONTRATO VIROU O AVESSO EM 13/09/2026 (FRASES-E-DICAS-01). As três réguas
-# desta seção exigiam o recado no cartão, na faixa declarada e de volta ao
-# cartão com duas faixas. O recado saiu da tela pela palavra dela no índice da
-# leva (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19), e o roteiro
-# ficou: o mesmo clique recusado, com zero, uma e duas faixas declaradas, e a
-# pergunta é se alguma das três leituras mostra recado.
 def test_sem_o_atributo_nenhum_recado_no_cartao(medido: dict) -> None:
-    """ERA `test_sem_o_atributo_o_recado_continua_no_cartao` — 13/09/2026.
-
-    Sem `data-hef-recados` o recado pousava no cartão. Hoje o clique recusado
-    não deixa recado em lugar nenhum; a resposta dele é a piscada de recusa no
-    botão (`test_a_recusa_pisca_no_botao`).
-    """
+    """ERA `test_sem_o_atributo_o_recado_continua_no_cartao` — 13/09/2026."""
     assert medido["clique-1"] == "cliquei", (
         f"o clique no 🎙 do p1 não aconteceu — a régua passaria sobre nada: "
         f"{medido['clique-1']!r}")
@@ -663,24 +483,14 @@ def test_sem_o_atributo_nenhum_recado_no_cartao(medido: dict) -> None:
 
 
 def test_com_uma_faixa_nenhum_recado_pousa_nela(medido: dict) -> None:
-    """ERA `test_com_uma_faixa_o_recado_pousa_nela` — 13/09/2026.
-
-    A página declarava o lugar e o recado ia para lá, vestido pelas classes do
-    `data-hef-recado-classe`. Uma faixa declarada hoje é endereço de um canal
-    que não existe, e ela fica vazia.
-    """
+    """ERA `test_com_uma_faixa_o_recado_pousa_nela` — 13/09/2026."""
     assert medido["faixas-1"] == "1", (
         f"a régua não conseguiu declarar UMA faixa: {medido['faixas-1']!r}")
     assert _r(medido["com-uma-faixa"]) == [], medido["com-uma-faixa"]
 
 
 def test_com_dois_lugares_nenhum_recado_e_nada_a_recusar(medido: dict) -> None:
-    """ERA `test_dois_lugares_iguais_a_pagina_perde_os_dois` — 13/09/2026.
-
-    Com dois containers declarando o mesmo tom o piloto recusava os dois,
-    nomeava-os em `faixasDemais` e voltava ao cartão. Sem canal, não há faixa a
-    escolher nem a recusar: `faixasDemais` fica vazio, e recado nenhum aparece.
-    """
+    """ERA `test_dois_lugares_iguais_a_pagina_perde_os_dois` — 13/09/2026."""
     assert medido["faixas-2"] == "2", (
         f"a régua não conseguiu declarar DUAS faixas: {medido['faixas-2']!r}")
     leitura = medido["com-duas-faixas"]
@@ -690,17 +500,8 @@ def test_com_dois_lugares_nenhum_recado_e_nada_a_recusar(medido: dict) -> None:
     assert _r(leitura) == [], leitura["recados"]
 
 
-# --------------------------------------------------------------------------
-# 2. a quarta porta — `data-hef-vivo`, o gesto que lê e não grava
-# --------------------------------------------------------------------------
 def test_sem_o_atributo_o_input_nao_faz_nada(medido: dict) -> None:
-    """A MORDIDA da peça 2, primeira metade: o `input` nasce mudo sem endereço.
-
-    É a régua de regressão das dez abas: nenhuma delas publica `data-hef-vivo`,
-    então a porta nova não pode acordar gesto nenhum por conta própria. O
-    elemento do disparo CARREGA um `data-hef-gesto` — e é justamente ele que não
-    pode ser chamado por uma tecla.
-    """
+    """A MORDIDA da peça 2, primeira metade: o `input` nasce mudo sem endereço."""
     antes = list(medido["chamados-antes-da-porta-muda"])
     depois = list(medido["chamados-antes-do-vivo"])
     novos = depois[len(antes):]
@@ -737,12 +538,7 @@ def test_a_leitura_pinta_o_que_trouxe(medido: dict) -> None:
 
 
 def test_o_gesto_vivo_nao_veste_o_em_voo(medido: dict) -> None:
-    """O cursor `progress` a cada tecla seria a tela mentindo sobre o trabalho.
-
-    O `hef-em-voo` diz *"estou trabalhando"* e existe para um gesto de 9,5 s. Uma
-    leitura de milissegundos vestida com ele faria o campo piscar de opacidade a
-    cada letra digitada.
-    """
+    """O cursor `progress` a cada tecla seria a tela mentindo sobre o trabalho."""
     resposta = medido["porta-viva"]
     assert isinstance(resposta, str), resposta
     lido = json.loads(resposta)
@@ -756,15 +552,7 @@ def test_o_gesto_vivo_nao_veste_o_em_voo(medido: dict) -> None:
 
 
 def test_o_gesto_vivo_que_grava_e_recusado_nomeando(medido: dict) -> None:
-    """A MORDIDA da peça 2, segunda metade: ligue o vivo ao gesto que grava.
-
-    Quem declara o que muda na máquina dela é o próprio gesto, no decorador
-    (`grava=`), e é esse registro que a guarda consulta. **A função nem chega a
-    ser chamada** — recusar depois de gravar seria recusar tarde.
-
-    ARRANQUE A GUARDA e o gesto entra na lista de chamados: as duas asserções
-    reprovam.
-    """
+    """A MORDIDA da peça 2, segunda metade: ligue o vivo ao gesto que grava."""
     novos = [c for c in medido["chamados-depois-do-grava"]
              if c not in medido["chamados-depois-do-vivo"]]
     assert "vivo:GRAVOU" not in novos, (
@@ -776,12 +564,7 @@ def test_o_gesto_vivo_que_grava_e_recusado_nomeando(medido: dict) -> None:
 
 
 def test_o_gesto_vivo_nao_troca_bloco(medido: dict) -> None:
-    """Uma troca de HTML a cada tecla arrancaria o campo debaixo do dedo dela.
-
-    É o defeito que a `A-TELA-SAMBA-01` mediu em 06/09: `innerHTML =` destrói
-    todos os descendentes, e quem estava digitando perde o nó. Aqui o bloco
-    pedido é a COLUNA INTEIRA do p1 — o cartão em que o campo mora.
-    """
+    """Uma troca de HTML a cada tecla arrancaria o campo debaixo do dedo dela."""
     recusados = medido["vivos_recusados"]
     assert any(VIVO_QUE_TROCA_BLOCO in r and "blocos" in r for r in recusados), (
         f"a recusa do bloco não aparece: {recusados!r}")
@@ -793,15 +576,7 @@ def test_o_gesto_vivo_nao_troca_bloco(medido: dict) -> None:
 
 
 def test_a_resposta_velha_nao_pinta_por_cima_da_nova(medido: dict) -> None:
-    """UM VIVO EM VOO POR ELEMENTO: a tecla nova cancela a leitura anterior.
-
-    Sem a série, a leitura da tecla `1` pode voltar DEPOIS da leitura de `15` e
-    pintar o rótulo errado — e ficar assim até a próxima tecla, porque nada mais
-    repinta aquele endereço.
-
-    ARRANQUE o descarte (`self._vivos.get(chave) != serial`) e o rótulo termina
-    com a resposta VELHA, que chegou por último.
-    """
+    """UM VIVO EM VOO POR ELEMENTO: a tecla nova cancela a leitura anterior."""
     novos = [c for c in medido["chamados_finais"]
              if c in ("vivo:velha", "vivo:nova")]
     assert novos == ["vivo:velha", "vivo:nova"], (
@@ -816,12 +591,7 @@ def test_a_resposta_velha_nao_pinta_por_cima_da_nova(medido: dict) -> None:
 
 
 def test_as_tres_portas_de_hoje_nao_mudaram(medido: dict) -> None:
-    """A regressão: o `change` continua despachando o `data-hef-gesto`.
-
-    O MESMO elemento carrega os dois atributos. Se a quarta porta tivesse
-    roubado o despacho, o gesto que GRAVA deixaria de ser chamado no evento em
-    que ele deve ser chamado — e a cura teria trocado um defeito por outro.
-    """
+    """A regressão: o `change` continua despachando o `data-hef-gesto`."""
     antes = list(medido["chamados-antes-do-change"])
     depois = list(medido["chamados-depois-do-change"])
     novos = depois[len(antes):]
@@ -831,12 +601,6 @@ def test_as_tres_portas_de_hoje_nao_mudaram(medido: dict) -> None:
         f"disparo devolveu {medido['porta-change']!r}")
     assert "vivo:abc" not in novos, (
         f"o `change` despachou o gesto VIVO: {novos!r}")
-    # E ELE SEGUIU O CAMINHO DO CLIQUE INTEIRO, não só o despacho. O elemento
-    # carrega um `data-vivo` de ruído — um atributo que nenhuma página tem, e
-    # que o ouvinte manda ao Python junto com o dataset. Se a marca do vivo não
-    # nascesse vazia na carga, este clique cairia no caminho do gesto vivo, que
-    # não veste voo. O CARIMBO DE VOO separa os dois caminhos desde 13/09/2026:
-    # até ali era o recado na tela, que saiu com a FRASES-E-DICAS-01.
     do_change = [g for g in medido["gestos"]
                  if g["gesto"] == GESTO_DO_CLIQUE and g["campo"] == "regua-jogo"]
     assert do_change, (
@@ -846,23 +610,8 @@ def test_as_tres_portas_de_hoje_nao_mudaram(medido: dict) -> None:
         f"no dataset — ele chegou sem voo: {do_change!r}")
 
 
-# --------------------------------------------------------------------------
-# 2b. a corrida do desfecho — dois cliques, uma chave (achado da ONDA5-01-03)
-# --------------------------------------------------------------------------
 def test_o_botao_que_recusou_nao_pisca_verde_pelo_vizinho(medido: dict) -> None:
-    """A piscada é do desfecho DESTA execução, e não do que está na chave.
-
-    A chave de `self.desfechos` é `página:gesto`, e o MESMO gesto pode estar em
-    voo duas vezes — o `click` e o `change` de um `<select>`, ou dois cliques em
-    colunas diferentes. As duas threads escrevem na mesma chave, e o `finally`
-    de cada uma lia dali para decidir a cor do pouso.
-
-    Aqui o p1 demora e RECUSA; o p2 responde na hora e aplica. Quando o p1
-    pousa, a chave já diz `"aplicou"` — do vizinho.
-
-    ARRANQUE a cura (volte o `finally` a ler `self.desfechos`) e o botão do p1
-    pousa **verde**, dizendo que deu certo o que o produto acabou de recusar.
-    """
+    """A piscada é do desfecho DESTA execução, e não do que está na chave."""
     lido = medido["a-corrida"]
     assert isinstance(lido, dict), lido
     assert lido["p1"] and lido["p2"], (
@@ -874,8 +623,6 @@ def test_o_botao_que_recusou_nao_pisca_verde_pelo_vizinho(medido: dict) -> None:
     assert not lido["p1"]["deu_certo"], (
         "o botão do p1 piscou VERDE depois de o produto ter RECUSADO: o pouso "
         "leu o desfecho que o vizinho escreveu na mesma chave")
-    # E ELE PISCOU A RECUSA, que é o desfecho DELE — 13/09/2026,
-    # FRASES-E-DICAS-01. Sem isto, um pouso que não piscasse nada passaria aqui.
     assert lido["p1"]["recusou"] and not lido["p2"]["recusou"], (
         f"a piscada de recusa não é a do desfecho de cada botão: {lido!r}")
     assert not lido["p1"]["em_voo"], (
@@ -886,20 +633,8 @@ def test_o_botao_que_recusou_nao_pisca_verde_pelo_vizinho(medido: dict) -> None:
         f"os dois cliques não chegaram ao mesmo gesto: {corridas!r}")
 
 
-# --------------------------------------------------------------------------
-# 3. o dono do campo — assento não é modelo
-# --------------------------------------------------------------------------
 def test_o_dono_de_um_campo_dentro_do_desenho_e_o_assento(medido: dict) -> None:
-    """A MORDIDA da peça 3, medida no arquivo publicado e não num dublê.
-
-    `treme-e` e `treme-d` da `05-vibracao` moram DENTRO do
-    `<svg data-controle="dualsense">`, nas colunas do p1 e do p2. Antes desta
-    cura o `LER_CAMPOS` os devolvia com dono `"dualsense"` — o MODELO no lugar
-    do assento —, e a régua do mockup não os casava com a coluna que os pinta.
-
-    ARRANQUE a lista de permitidos (volte ao seletor genérico) e os quatro
-    voltam a dizer `dualsense`.
-    """
+    """A MORDIDA da peça 3, medida no arquivo publicado e não num dublê."""
     campos = medido["campos-do-svg"]
     assert isinstance(campos, list), campos
     donos = {}
@@ -916,18 +651,7 @@ def test_o_dono_de_um_campo_dentro_do_desenho_e_o_assento(medido: dict) -> None:
 
 
 def test_o_seletor_do_dono_pergunta_ao_dono() -> None:
-    """A segunda régua do dono impossível — os três lados dizem o mesmo.
-
-    O bootstrap e o leitor de campos são strings CRUAS que seis réguas desta
-    casa extraem do fonte por expressão regular; nenhuma das duas pode ser
-    concatenada nem interpolada, e uma f-string não serve porque o JS é cheio de
-    chaves. Então o seletor vive escrito nas três e a igualdade é cobrada aqui —
-    a mesma forma de `MS_DA_PISCADA`.
-
-    E ELA PERGUNTA AO DONO: os assentos saem de `pacotes.TODOS_OS_LUGARES`, não
-    de uma lista digitada nesta régua. Acrescentar um quinto lugar lá e esquecer
-    o piloto reprova aqui.
-    """
+    """A segunda régua do dono impossível — os três lados dizem o mesmo."""
     import hefesto_vivo as hv
 
     esperado = hv.SELETOR_DO_DONO
@@ -944,9 +668,6 @@ def test_o_seletor_do_dono_pergunta_ao_dono() -> None:
             f"o {nome} não usa o seletor do dono — ele resolve o dono de outro "
             f"jeito, e um instrumento que resolve diferente do produto mede "
             f"outra coisa")
-        # O SELETOR GENÉRICO NÃO PODE SOBRAR EM LUGAR NENHUM: é ele que devolve
-        # o MODELO como se fosse assento. Descrever, e não escrever, é a regra
-        # que o BOOTSTRAP já paga — por isso ele é montado aqui, não citado.
         generico = "[data-controle],[data-uniq]"
         assert generico not in js, (
             f"o {nome} ainda resolve o dono pelo seletor genérico — o campo de "

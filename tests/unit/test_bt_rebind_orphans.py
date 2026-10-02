@@ -35,8 +35,8 @@ SCRIPT = REPO_ROOT / "scripts" / "bt_rebind_orphans.sh"
 SCRIPT_TEXT = SCRIPT.read_text(encoding="utf-8")
 
 ORFAO_NO_ESCOPO = "0005:054C:0CE6.000F"       # DualSense por Bluetooth
-ORFAO_FORA_ESCOPO = "0003:057E:2009.0001"     # Pro Controller por USB
-VPAD_COM_DRIVER = "0003:054C:0DF2.0010"       # vpad do hefesto (uhid, bus 0003)
+ORFAO_FORA_ESCOPO = "0003:057E:2009.0001"
+VPAD_COM_DRIVER = "0003:054C:0DF2.0010"
 
 
 def _monta_sysfs(tmp_path: Path, orfaos: list[str], com_driver: list[str]) -> Path:
@@ -80,7 +80,6 @@ class TestEscopo:
         assert "faria" in r.stdout
 
     def test_ignora_orfao_fora_do_escopo(self, tmp_path: Path) -> None:
-        # Chutar bind em device alheio é como se inventa bug novo.
         _monta_sysfs(tmp_path, [ORFAO_FORA_ESCOPO], [])
         r = _roda(tmp_path, "--dry-run")
         assert r.returncode == 0
@@ -88,8 +87,6 @@ class TestEscopo:
         assert "faria" not in r.stdout
 
     def test_nunca_toca_em_device_que_ja_tem_driver(self, tmp_path: Path) -> None:
-        # O vpad do hefesto está SEMPRE nesta situação; um rebind nele seria
-        # briga com o daemon.
         _monta_sysfs(tmp_path, [], [VPAD_COM_DRIVER])
         r = _roda(tmp_path, "--dry-run")
         assert r.returncode == 0
@@ -97,15 +94,12 @@ class TestEscopo:
         assert "nenhum device HID órfão" in r.stdout
 
     def test_escopo_e_bluetooth_mais_sony_no_codigo(self) -> None:
-        # O barramento 0005 é o que exclui o vpad (uhid nasce no 0003) — se
-        # alguém afrouxar isso, o script passa a brigar com o daemon.
         assert '"${bus}" == "0005"' in SCRIPT_TEXT
         assert '"${vid}" == "054C"' in SCRIPT_TEXT
 
 
 class TestGuardaContraLaco:
     def test_para_apos_o_teto_e_desiste_uma_vez_so(self, tmp_path: Path) -> None:
-        # bind aceita a escrita mas o driver nunca aparece == falha permanente.
         _monta_sysfs(tmp_path, [ORFAO_NO_ESCOPO], [])
         saidas = [_roda(tmp_path, "--quiet").stdout for _ in range(5)]
 
@@ -133,14 +127,12 @@ class TestGuardaContraLaco:
         r = subprocess.run(["bash", str(SCRIPT), "--quiet"], capture_output=True,
                            text=True, check=False, env=env)
         assert "DESISTINDO" in r.stdout
-        # o contador é por device (o id muda a cada reconexão -> orçamento novo)
         assert (tmp_path / "stamps" / ORFAO_NO_ESCOPO).exists()
 
     def test_stamp_de_device_que_sumiu_e_limpo(self, tmp_path: Path) -> None:
         _monta_sysfs(tmp_path, [ORFAO_NO_ESCOPO], [])
         _roda(tmp_path, "--quiet")
         assert (tmp_path / "stamps" / ORFAO_NO_ESCOPO).exists()
-        # controle desconectou: o diretório do device some do sysfs
         (tmp_path / "devices" / ORFAO_NO_ESCOPO).rmdir()
         _roda(tmp_path, "--quiet")
         assert not (tmp_path / "stamps" / ORFAO_NO_ESCOPO).exists(), (
@@ -151,7 +143,6 @@ class TestGuardaContraLaco:
 class TestContratoDeSeguranca:
     def test_nunca_carrega_ou_descarrega_modulo(self) -> None:
         # Recarregar hid_playstation derrubaria TODOS os DualSense, inclusive
-        # os por Bluetooth. Mesma regra do dkms_lib.sh.
         codigo = "\n".join(
             linha for linha in SCRIPT_TEXT.splitlines() if not linha.strip().startswith("#")
         )
@@ -167,8 +158,6 @@ class TestContratoDeSeguranca:
         assert list((tmp_path / "stamps").iterdir()) == []
 
     def test_sai_zero_mesmo_sem_orfao(self, tmp_path: Path) -> None:
-        # Roda de dentro do watchdog, que tem set -e: sair != 0 mataria as
-        # outras vigias.
         _monta_sysfs(tmp_path, [], [VPAD_COM_DRIVER])
         assert _roda(tmp_path).returncode == 0
 
@@ -199,7 +188,6 @@ class TestIntegracaoComOWatchdog:
 
 class TestDocumentaAMedicao:
     def test_cabecalho_registra_a_cadeia_causal_e_a_prova(self) -> None:
-        # Sem isso, em 6 meses alguém "simplifica" o escopo e volta o bug.
         cabecalho = SCRIPT_TEXT.split("set -euo pipefail")[0]
         assert "REPORT_REQ_TIMEOUT" in cabecalho
         assert "uhid" in cabecalho

@@ -1,59 +1,4 @@
-"""Subcomando `hefesto-dualsense4unix gamepad steam-input ...` — o desfazer.
-
-BOTAO-QUE-NAO-MENTE-01 (entrega 2) e STEAM-INPUT-01 (entrega 3).
-
-`integrations/steam_launch_options.remove_appid_from_steam_input_allowlist`
-foi escrita, testada com nove casos — e nunca ligada. Grep em `src/` achava
-**zero** chamadores. Consequência medida: pôr um jogo na exceção do Steam Input
-é um clique ("Este jogo não funciona"); tirar exigia abrir
-`~/.config/hefesto-dualsense4unix/steam_input_apps.txt` num editor de texto. Na
-prática o opt-in era irreversível para quem não mexe em arquivo de configuração
-— e o preço de um jogo marcado por engano é alto: ele deixa de ter cor,
-gatilhos e co-op do Hefesto até ser desmarcado.
-
-NOTA DATADA — 07/08/2026: os DOIS parágrafos acima caducaram, cada um por um
-motivo diferente, e ficam porque decisão medida não se apaga.
-
-- **"tirar exigia abrir num editor de texto"** deixou de ser verdade hoje: por
-  decisão dela (resposta 1 do painel de 07/08,
-  `docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md`) o
-  desmarcar nasceu na **aba Perfis**, na caixinha `profile_steam_input_check`
-  do editor do perfil, logo abaixo do jogo escolhido. Este módulo deixou de ser
-  a única porta de saída — continua sendo a porta da linha de comando, e o
-  motivo de existir não muda.
-- **"ele deixa de ter cor, gatilhos e co-op"** está **refutado inteiro**, em
-  duas etapas. A medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`, seção *A
-  INVERSÃO*, grau MEDIDO) derrubou a primeira metade: com o jogo marcado,
-  **cor e gatilhos continuam valendo** (os gatilhos dela seguraram duros e o
-  vermelho dela ficou, com o Mullet Mad Jack aberto). E a decisão dela de
-  09/08 (`ESCONDER-EM-VEZ-DE-SAIR-01`) derrubou a outra: a marca inverteu de
-  lado — passou a **esconder o controle físico** em vez de entregar a entrada
-  à Steam —, e os gamepads virtuais **ficam de pé, um por jogador**. O co-op
-  não cai mais. (FATO ERRADO, SUBSTITUÍDO em 28/08/2026, S4: esta linha ainda
-  dizia *"o co-op, esse sim, cai"*, dezenove dias depois de deixar de ser
-  verdade.)
-
-Este módulo é a porta de saída da linha de comando:
-
-    hefesto-dualsense4unix gamepad steam-input list
-    hefesto-dualsense4unix gamepad steam-input remove 2111190
-    hefesto-dualsense4unix gamepad steam-input remove "mullet"
-
-**Por nome, não por número.** A allowlist é um arquivo de appids; um appid não
-diz nada para quem joga. O nome vem do `appmanifest_<appid>.acf` da Steam
-(leitura pura, sem rede) e serve para os dois lados: a listagem mostra o nome, e
-o `remove` aceita o nome no lugar do número. Jogo desinstalado não tem manifest
-— nesse caso a linha diz "(não instalado)" em vez de inventar: o comentário que
-o `add` escreve acima do appid é texto livre da mantenedora (a instalação nasce
-com sete linhas de cabeçalho) e adivinhar nome ali erraria com facilidade.
-
-**Onde este comando mora, e por quê.** O lugar natural seria um `steam` de
-primeiro nível, mas registrar sub-app novo exige mexer em `cli/app.py`, que
-nesta leva tem outro dono. Fica pendurado em `gamepad` — que é exatamente o
-domínio da allowlist: ela diz em que jogos o guarda
-(`scripts/disable_steam_input.sh`) **não** desliga o Steam Input, e reafirma
-ali o esconderijo do controle físico que o produto já mantém em todo jogo.
-"""
+"""Subcomando `hefesto-dualsense4unix gamepad steam-input ...` — o desfazer."""
 from __future__ import annotations
 
 import contextlib
@@ -62,11 +7,7 @@ import typer
 from rich.console import Console
 from rich.markup import escape
 
-# D-33 (05/08/2026): a leitura do `appmanifest_<appid>.acf` morava AQUI, e por
-# isso só a linha de comando sabia dizer o nome do jogo — o doctor e a janela
 # não podem importar este módulo (typer/rich no topo). A função mudou de casa
-# para `integrations/steam_launch_options`, que já é o dono da allowlist e é
-# stdlib puro; aqui fica o reexport, para não quebrar quem já a importava.
 from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_appid
 
 app = typer.Typer(
@@ -98,14 +39,7 @@ def _rotulo(appid: str, nome: str | None) -> str:
 
 
 def _resolver(alvo: str, entradas: list[tuple[str, str | None]]) -> str | None:
-    """Traduz o que a pessoa digitou em appid. `None` = não deu para decidir.
-
-    Número passa direto (inclusive appid que nem está na allowlist — quem julga
-    presença é a função de remoção, que tem o status `nao_estava`). Texto casa
-    contra os NOMES da allowlist: primeiro igualdade exata (sem caixa), depois
-    trecho contido. Empate não é resolvido no chute — o comando mostra os
-    candidatos e sai sem mexer em nada.
-    """
+    """Traduz o que a pessoa digitou em appid. `None` = não deu para decidir."""
     bruto = alvo.strip()
     if bruto.isdigit():
         return bruto
@@ -130,14 +64,7 @@ def _resolver(alvo: str, entradas: list[tuple[str, str | None]]) -> str | None:
 
 
 def _avisar_daemon() -> None:
-    """Faz a mudança valer agora, sem reiniciar nada (best-effort).
-
-    A allowlist é relida do disco a cada consulta; o que NÃO é relido é a
-    materialização do `steam_app_<appid>.env`, que só nasce em
-    `materialize_launch_env`. Mesmo aviso que a GUI manda em
-    `_recarregar_apos_allowlist`. Daemon offline é normal — ele rematerializa
-    sozinho no próximo boot.
-    """
+    """Faz a mudança valer agora, sem reiniciar nada (best-effort)."""
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.app.ipc_bridge import _run_call
 
@@ -161,10 +88,6 @@ def cmd_list() -> None:
         )
         return
 
-    # S4 (28/08/2026): estas duas linhas diziam "a Steam entrega o controle (a
-    # entrada vem dela)" e "entrada pela Steam, sem co-op" — o mecanismo de
-    # ANTES de 09/08, invertido pela ESCONDER-EM-VEZ-DE-SAIR-01. Ver a NOTA
-    # DATADA do topo do módulo.
     console.print("Jogos em que o Hefesto não deixa o Steam Input ser desligado:")
     for appid, nome in entradas:
         console.print(

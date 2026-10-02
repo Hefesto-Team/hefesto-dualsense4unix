@@ -59,20 +59,13 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: Os dois lados, como a tela os chama. Vêm do dono da tradução
-#: (`app/telas/vibracao.LADO_PARA_MOTOR`) e não de uma lista digitada: uma
-#: terceira sigla que nascesse lá e não aqui passaria calada.
 LADOS = tuple(a05._tela.LADO_PARA_MOTOR)
 
 UNIQ = "aa:bb:cc:00:00:01"
 
 
 def _ctx(barra_e: int, barra_d: int) -> pacotes.Contexto:
-    """Uma mesa de um controle, com as duas barras onde o teste quiser.
-
-    O `rumble_motores` é o mapa que `_barras_dos_motores` lê — o MESMO que o
-    daemon publica e que `apply_game_rumble` multiplica.
-    """
+    """Uma mesa de um controle, com as duas barras onde o teste quiser."""
     controle = {"uniq": UNIQ, "connected": True, "player": 1, "transport": "usb"}
     state: dict[str, Any] = {
         "controllers": [controle],
@@ -81,8 +74,6 @@ def _ctx(barra_e: int, barra_d: int) -> pacotes.Contexto:
         "rumble_policy": "balanceado",
     }
     # O ITEM DE MESA tem a forma que `mesa_viva.mesa_do_estado` monta — as nove
-    # chaves, medidas contra o daemon vivo. Faltar uma faz o pacote levantar
-    # `KeyError` no meio, que é uma régua medindo o dublê e não o produto.
     item = {"uniq": UNIQ, "pref": "p1", "jogador": 1, "nome": "Prova",
             "cor": "", "transporte": "usb", "via": "cabo",
             "alvo": True, "mascara": "dualsense"}
@@ -91,12 +82,7 @@ def _ctx(barra_e: int, barra_d: int) -> pacotes.Contexto:
 
 
 def _coluna(barra_e: int, barra_d: int) -> dict[str, Any]:
-    """A coluna daquele controle, pela chave que o PACOTE usou.
-
-    A chave não se digita: o daemon publica o endereço normalizado e a mesa pode
-    trazê-lo com dois-pontos, e escolher uma das duas aqui faria a régua medir a
-    grafia em vez do valor.
-    """
+    """A coluna daquele controle, pela chave que o PACOTE usou."""
     colunas = a05.pacote(_ctx(barra_e, barra_d))["colunas"]
     assert len(colunas) == 1, f"a mesa de prova tem um controle; vieram {len(colunas)}"
     return next(iter(colunas.values()))
@@ -114,10 +100,6 @@ class _Ponte:
             return True, {"status": "ok"}
         return falso
 
-
-# ---------------------------------------------------------------------------
-# 1. O DESENHO — os dois endereços, e o do clique é um que o ouvinte enxerga
-# ---------------------------------------------------------------------------
 
 def test_o_botao_do_punho_tem_o_endereco_da_pintura() -> None:
     html = PAGINA.read_text(encoding="utf-8")
@@ -138,16 +120,7 @@ def test_o_botao_do_punho_tem_o_endereco_da_pintura() -> None:
 
 
 def test_o_clique_do_punho_usa_um_endereco_que_o_ouvinte_enxerga() -> None:
-    """A metade que faltava e que nenhuma régua via.
-
-    `data-hef` não está no `closest` do `manda_do_alvo`, então um botão que só o
-    tivesse nunca chegaria ao Python — e o teste de gesto passaria, porque ele
-    chama a função direto. É a assinatura desta casa: *a régua responde sobre
-    outra coisa que não o produto*.
-
-    Ela lê a lista DO PILOTO, nunca uma cópia: o dia em que o ouvinte aprender um
-    vocabulário novo, esta régua aprende junto.
-    """
+    """A metade que faltava e que nenhuma régua via."""
     piloto = PILOTO.read_text(encoding="utf-8")
     trecho = piloto[piloto.index("function manda_do_alvo"):][:600]
     vocabulario = set(re.findall(r"\[data-([a-z-]+)\]", trecho))
@@ -164,18 +137,14 @@ def test_o_clique_do_punho_usa_um_endereco_que_o_ouvinte_enxerga() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# 2. O PACOTE — acende pela barra, nos dois sentidos
-# ---------------------------------------------------------------------------
-
 @pytest.mark.parametrize(
     ("barra_e", "barra_d", "aceso_e", "aceso_d"),
     [
-        (100, 100, "1", "1"),   # os dois cheios: os dois acesos
-        (0, 100, "", "1"),      # o caso DELA, ao contrário: só o direito
+        (100, 100, "1", "1"),
+        (0, 100, "", "1"),
         (100, 0, "1", ""),
-        (0, 0, "", ""),         # nenhum
-        (1, 1, "1", "1"),       # *"> 0"*, e não ">= 50": um ponto já acende
+        (0, 0, "", ""),
+        (1, 1, "1", "1"),
     ],
 )
 def test_o_punho_acende_pela_barra(
@@ -190,12 +159,7 @@ def test_o_punho_acende_pela_barra(
 
 
 def test_o_aceso_e_a_barra_nunca_discordam() -> None:
-    """A razão de não haver campo próprio, medida em vez de afirmada.
-
-    MORDIDA: dar ao interruptor uma fonte separada da barra reprova aqui na
-    primeira vez que as duas divergirem — que é o dia em que a tela passa a poder
-    dizer "ligado" com o trilho em zero.
-    """
+    """A razão de não haver campo próprio, medida em vez de afirmada."""
     for barra in (0, 1, 37, 100):
         coluna = _coluna(barra, barra)
         for lado in LADOS:
@@ -215,10 +179,6 @@ def test_a_divida_declarada_fechou() -> None:
     assert "lado:ligado" not in vibracao.SEM_FONTE
 
 
-# ---------------------------------------------------------------------------
-# 3. O GESTO — existe, escreve o par certo, e recusa dizendo
-# ---------------------------------------------------------------------------
-
 def test_o_gesto_existe() -> None:
     assert pacotes.gesto_da_pagina("05-vibracao.html", "lado") is not None, (
         "o gesto `lado` sumiu — os oito interruptores voltaram a ser desenho"
@@ -228,8 +188,8 @@ def test_o_gesto_existe() -> None:
 @pytest.mark.parametrize(
     ("lado", "barra_antes", "campo", "valor"),
     [
-        ("e", 100, "forte_pct", 0),    # aceso -> desliga
-        ("e", 0, "forte_pct", 100),    # apagado -> liga cheio
+        ("e", 100, "forte_pct", 0),
+        ("e", 0, "forte_pct", 100),
         ("d", 100, "fraco_pct", 0),
         ("d", 0, "fraco_pct", 100),
     ],
@@ -237,14 +197,7 @@ def test_o_gesto_existe() -> None:
 def test_o_clique_escreve_o_par_certo(
     lado: str, barra_antes: int, campo: str, valor: int
 ) -> None:
-    """O interruptor é o PAR da barra, e escreve pelo método dela.
-
-    O campo importa: `forte_pct` é o motor ESQUERDO (`e` -> `strong`) e
-    `fraco_pct` o direito, e a
-    tradução tem um dono (`app/telas/vibracao.MOTOR_PARA_BARRA`). Trocá-los faria
-    o punho esquerdo desligar o motor direito — com a tela certa e a mão dela
-    sentindo o contrário.
-    """
+    """O interruptor é o PAR da barra, e escreve pelo método dela."""
     ctx = _ctx(barra_antes if lado == "e" else 50,
                barra_antes if lado == "d" else 50)
     ponte = _Ponte()
@@ -271,11 +224,10 @@ def test_o_estado_vem_do_daemon_e_nao_do_que_o_clique_afirma() -> None:
     `ctx.state` reprova aqui — o clique chega com uma afirmação velha e o gesto
     tem de ignorá-la.
     """
-    ctx = _ctx(100, 100)          # o daemon diz: os dois ligados
+    ctx = _ctx(100, 100)
     ponte = _Ponte()
     gesto = pacotes.gesto_da_pagina("05-vibracao.html", "lado")
     assert gesto is not None
-    # …e o clique chega afirmando o contrário, como um botão pintado há um tique
     gesto(ctx, {"lado": "e", "uniq": UNIQ, "controle": "p1", "ligado": "0"}, ponte)
 
     escritas = [k for nome, k in ponte.chamadas if nome == "rumble_motores_set"]

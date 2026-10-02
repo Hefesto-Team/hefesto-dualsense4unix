@@ -18,34 +18,6 @@ if TYPE_CHECKING:
 Transport = Literal["usb", "bt"]
 Side = Literal["left", "right"]
 
-#: MESA-CHEIA-09 (E1) — o que uma escrita por-MAC FEZ, em cinco palavras.
-#:
-#: `apply_output_for` era a porta da camada da usuária e devolvia ``None`` nos
-#: quatro caminhos: spec vazio, sem MAC estável, controle desconectado (o
-#: override fica REGISTRADO e o hotplug o aplica) e escrita de verdade. Os
-#: quatro eram indistinguíveis de fora, e é daí que descem as quatro mentiras
-#: de "aplicado" da janela — quem chamou não tinha como saber se algum byte
-#: saiu.
-#:
-#: * ``"escreveu"``      — o byte saiu para o aparelho;
-#: * ``"registrado"``    — o override ficou no mapa e vale DEPOIS, quando o
-#:   evento que o segura passar: o hotplug (controle fora da mesa) ou o
-#:   desmute (Modo Nativo). É o que a tela chama de **guardado** (D-9);
-#: * ``"falhou"``        — havia alvo e havia escrita a fazer, e ela LEVANTOU:
-#:   nenhuma garantia de que byte nenhum saiu;
-#: * ``"sem_alvo"``      — não há MAC 12-hex (receiver 2.4G, key por path);
-#:   nada foi guardado;
-#: * ``"nada_a_fazer"``  — o spec não pedia campo nenhum.
-#:
-#: A sprint previa TRÊS palavras. A quarta entrou porque spec vazio não é
-#: "sem alvo": chamar as duas de "sem_alvo" recriaria, um andar acima, a
-#: mesma indistinção que esta entrega existe para acabar.
-#:
-#: A QUINTA (``"falhou"``) entrou no conserto 1.3, e pelo mesmo motivo: o
-#: ``_write_partial_output`` engole a exceção da escrita (loga e segue), e o
-#: caminho terminava em "escreveu" mesmo quando o `hidraw` sumia debaixo da
-#: escrita. "Não sei se saiu" não pode usar a palavra de "saiu" — e também não
-#: pode usar a de "guardado", que PROMETE que vale depois.
 ResultadoDeSaida = Literal[
     "escreveu", "registrado", "falhou", "sem_alvo", "nada_a_fazer"
 ]
@@ -53,16 +25,7 @@ ResultadoDeSaida = Literal[
 
 @dataclass(frozen=True)
 class TriggerEffect:
-    """Efeito de gatilho no nível HID (baixo nível).
-
-    Factories de alto nível (galloping, machine, bow, etc.) são entregues
-    em W2.1 em `hefesto_dualsense4unix.core.trigger_effects`. Aqui expomos apenas o par
-    canônico `(mode, forces)` que o protocolo HID aceita.
-
-    - `mode`: valor do enum `pydualsense.TriggerModes` (0, 1, 2, 5, 6, 33, 34, 37, 38, 252).
-    - `forces`: 7 bytes (0-255) na ordem dos offsets HID 11/12..17/20 (USB)
-      ou 12/13..18/21 (BT). Posições não usadas pelo modo ficam em 0.
-    """
+    """Efeito de gatilho no nível HID (baixo nível)."""
 
     mode: int
     forces: tuple[int, int, int, int, int, int, int] = (0, 0, 0, 0, 0, 0, 0)
@@ -79,28 +42,13 @@ class TriggerEffect:
 
 @dataclass(frozen=True)
 class OutputSpec:
-    """Saída parcial desejada de um controle (PERFIL-01 / 4P-01).
-
-    Vocabulário da API por-uniq do backend: campo ``None`` = "sem opinião"
-    (o campo herda o padrão broadcast no MERGE POR CAMPO — nunca resolução
-    por objeto, refutada na revisão: um override parcial só de gatilhos
-    precisa herdar a cor global do perfil).
-
-    Usado por `IController.apply_output_defaults` (padrão do perfil em
-    broadcast REAL), `apply_output_for` (override de UM controle, keyed por
-    MAC) e `reset_output_overrides` (substituição do mapa na ativação de
-    perfil).
-    """
+    """Saída parcial desejada de um controle (PERFIL-01 / 4P-01)."""
 
     trigger_left: TriggerEffect | None = None
     trigger_right: TriggerEffect | None = None
     led: tuple[int, int, int] | None = None
     player_leds: tuple[bool, bool, bool, bool, bool] | None = None
     mic_led: bool | None = None
-    #: O brilho das cinco luzes de número, no degrau do FIRMWARE (`common[42]`:
-    #: 0 alto · 1 médio · 2 baixo), e não na palavra do perfil — a tradução é
-    #: de `core/led_control.degrau_do_brilho_das_luzes`. Decisão dela de
-    #: 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`).
     player_led_brightness: int | None = None
 
 
@@ -138,9 +86,6 @@ class ControllerState:
     raw_rx: int = 128
     raw_ry: int = 128
     buttons_pressed: frozenset[str] = field(default_factory=frozenset)
-    # Campo NOVO no FIM da lista de propósito: um campo intercalado no meio
-    # trocaria o significado de todo `ControllerState(...)` construído por
-    # POSIÇÃO, e a casa tem dezenas deles em `tests/`. No fim, ninguém se move.
     battery_state: str | None = None
 
     def __post_init__(self) -> None:
@@ -187,42 +132,12 @@ class IController(ABC):
 
     @abstractmethod
     def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
-        """Define os 5 LEDs de player (indicadores abaixo do touchpad).
-
-        ``bits[0]`` corresponde ao LED 1 (extremo esquerdo), ``bits[4]`` ao LED 5
-        (extremo direito). O bitmask resultante é enviado diretamente ao hardware
-        via `pydualsense.light.playerNumber` (atributo `IntFlag` aceitando qualquer
-        valor de 5 bits), sem exigir PlayerID canônico.
-        """
+        """Define os 5 LEDs de player (indicadores abaixo do touchpad)."""
         ...
 
     @abstractmethod
     def set_mic_led(self, aceso: bool) -> None:
-        """Acende (`aceso=True`) ou apaga (`aceso=False`) o LED do microfone.
-
-        MIC-DA-MESA-ELEICAO-01 (01/09/2026) — A INVERSÃO, e ela é do CHAMADOR.
-
-        Este docstring dizia *"`muted=True` → LED aceso (vermelho, padrão do
-        firmware indicando 'mic desligado')"*. Isso descrevia o significado que
-        a Sony dá à luz, e ela mandou trocar o significado, com estas palavras:
-        *"As pessoas precisam ter um aviso visual que o mic tá funcionando. (…)
-        com 4 pessoas com controle na mão localmente isso é necessário."*
-
-        **Nesta casa, aceso = este microfone está VIVO.** O contrato do BYTE
-        não mudou (`common[8]` continua "1 = LED ligado"); o que mudou é quem
-        decide o argumento — `daemon/subsystems/mic_da_mesa.py` passa
-        `not mudo`, ao contrário do kernel, que passa `mic_muted`
-        (`hid-playstation.c:1538-1540`).
-
-        Acender NÃO muta nada: o LED é campo próprio (`common[8]`, autorizado
-        pelo `MIC_MUTE_LED_CONTROL_ENABLE`), separado do mudo (`common[9]`,
-        autorizado pelo `POWER_SAVE_CONTROL_ENABLE`). Esta casa **não escreve**
-        no `common[9]` — as três recusas medidas (BT-E-VPAD-01, MIC-BT-DONO-01,
-        MIC-DOIS-DONOS-01) continuam inteiras.
-
-        Implementação real via `ds.audio.setMicrophoneLED(bool)` (INFRA-SET-MIC-LED-01).
-        Player LEDs ainda dependem de API complementar futura.
-        """
+        """Acende (`aceso=True`) ou apaga (`aceso=False`) o LED do microfone."""
         ...
 
     @abstractmethod
@@ -231,35 +146,10 @@ class IController(ABC):
     @abstractmethod
     def get_transport(self) -> Transport: ...
 
-    # --- API por-uniq (PERFIL-01 / 4P-01) --------------------------------
-    # Métodos CONCRETOS de propósito: backends de um controle só
-    # (FakeController) herdam comportamento seguro sem mudança; o backend
     # multi-controle (PyDualSenseController) sobrescreve os quatro com o
-    # estado desejado por-controle de verdade.
 
     def apply_output_defaults(self, spec: OutputSpec) -> ResultadoDeSaida | None:
-        """Aplica `spec` como PADRÃO do perfil em TODOS os controles.
-
-        Base: delega aos setters clássicos (suficiente para backend de um
-        controle só). O backend multi-controle sobrescreve para IGNORAR o
-        seletor de alvo da GUI — os setters clássicos o respeitam, então
-        ativar um perfil (manual OU autoswitch, mesma cadeia) com um alvo
-        selecionado aplicava SÓ no alvo (bug provado do PERFIL-01).
-
-        ELO-MUDO-02 (23/08/2026): **devolve o que fez** — a mesma medicina do
-        `apply_output_for` (MESA-CHEIA-09), estendida à porta que o PERFIL usa.
-        Enquanto este método era `-> None`, o relatório de ativação escrevia
-        `'trigger': 'aplicado'` e `'led': 'aplicado'` **sem nenhum byte ter
-        saído**: com a mesa vazia o backend faz `output_offline_noop` e volta
-        calado. Ver `profiles.manager.ProfileManager.apply`.
-
-        `None` é resposta legítima e significa **"este backend não sabe
-        dizer"** — nunca "nada aconteceu". A base devolve `None` porque os
-        setters clássicos em que ela se apoia também não relatam, e é a mesma
-        disciplina do `profiles.manager._estado_da_secao`: quem não sabe não
-        pode fabricar um veredito. Só o backend que conhece a mesa responde
-        com uma das palavras de `ResultadoDeSaida`.
-        """
+        """Aplica `spec` como PADRÃO do perfil em TODOS os controles."""
         if spec.trigger_left is not None:
             self.set_trigger("left", spec.trigger_left)
         if spec.trigger_right is not None:
@@ -273,23 +163,7 @@ class IController(ABC):
         return None
 
     def apply_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
-        """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override.
-
-        O alvo é o PARÂMETRO (resolvido na borda pelo chamador) — nunca o
-        seletor global mutável de output. Base: no-op — backend sem
-        identidade por-controle não tem onde registrar. No backend real, um
-        controle DESCONECTADO fica registrado no mapa em memória e recebe o
-        override quando o hotplug o trouxer de volta.
-
-        MESA-CHEIA-09 (E1): devolve o que FEZ (`ResultadoDeSaida`). A base
-        devolve ``"sem_alvo"`` porque é a verdade dela: sem identidade
-        por-controle nada foi escrito e nada ficou guardado.
-
-        Conserto 1.3: spec VAZIO devolve ``"nada_a_fazer"`` também aqui. A base
-        juntava numa palavra só as duas coisas que o vocabulário existe para
-        separar — "não havia onde escrever" e "não havia o que escrever" —,
-        divergindo da subclasse no mesmo pedido.
-        """
+        """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override."""
         if all(getattr(spec, campo.name) is None for campo in fields(spec)):
             return "nada_a_fazer"
         return "sem_alvo"
@@ -297,27 +171,13 @@ class IController(ABC):
     def reset_output_overrides(
         self, overrides: Mapping[str, OutputSpec] | None = None
     ) -> None:
-        """SUBSTITUI o mapa de overrides por-controle (ativação de perfil).
-
-        Ciclo de vida explícito do PERFIL-01: toda ativação de perfil troca o
-        mapa inteiro (vazio quando o perfil não tem overrides) — senão o
-        override do perfil ANTERIOR ressuscita no hotplug sob o perfil novo.
-        Base: no-op — sem estado por-controle não há mapa a substituir.
-        """
+        """SUBSTITUI o mapa de overrides por-controle (ativação de perfil)."""
         return
 
     def resolved_player_leds_for(
         self, uniq: str
     ) -> tuple[bool, bool, bool, bool, bool] | None:
-        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura).
-
-        PERFIL-06: merge por campo do default broadcast com o override
-        por-uniq — a fonte do revert do co-op restaurar o padrão POR
-        CONTROLE (override do perfil onde existe, default onde não) em vez
-        do broadcast cego. Base: None — backend sem estado por-controle não
-        conhece padrão nenhum, e o chamador trata None como "não escrever
-        nada" (None-safe por contrato). Nunca toca hardware.
-        """
+        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura)."""
         return None
 
 

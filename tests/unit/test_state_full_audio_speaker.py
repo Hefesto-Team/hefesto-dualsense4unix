@@ -117,7 +117,6 @@ class TestSpeaker:
         payload = await _state_full(socket_path)
         assert "speaker" not in _entrada(payload, MAC1)
         assert "audio" not in _entrada(payload, MAC1)
-        # O resto do payload continua íntegro (o merge é aditivo).
         assert len(payload["controllers"]) == 2
 
     @pytest.mark.asyncio
@@ -248,11 +247,6 @@ class TestHotkeyEMic:
         daemon.config.mic_button_toggles_system = False
         payload = await _state_full(socket_path)
         assert payload["mic_button_toggles_system"] is False
-        # A TERCEIRA chave entrou em 22/08/2026 (QUATRO-MICROFONES-01): `uniqs`
-        # diz de QUAIS controles a ponte de microfone está de pé. As outras duas
-        # são do PROCESSO; só esta fala de controle, e é a que o medidor de
-        # rádio consome. A QUARTA, `motivo`, entrou em 28/09/2026 (c2c9a8e7c): o
-        # que do sistema segura a ponte; vazia quando nada segura.
         assert payload["bt_mic"] == {
             "enabled": False, "running": False, "uniqs": [], "motivo": "",
         }

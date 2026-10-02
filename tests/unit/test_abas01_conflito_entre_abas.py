@@ -1,29 +1,4 @@
-"""ABAS-01 — as abas brigam pelo mesmo estado (sprint 2026-07-25).
-
-Os quatro defeitos de PERDA SILENCIOSA DE DADOS da sprint têm uma raiz comum: a
-aba Perfis é a única superfície que edita e persiste perfil sem NUNCA ler nem
-escrever o rascunho de edição (``self.draft``) — não havia uma única atribuição
-a ele no arquivo inteiro.
-
-- **ABAS-01** — a aba Perfis grava a seção ``mode`` direto no disco; o rodapé,
-  ao salvar com o MESMO nome, reemite o ``mode`` fotografado no boot e apaga a
-  seção. Vale igual para regra de janela, prioridade e supressão.
-- **ABAS-02** — com o alvo em "Todos", mover o controle de brilho um pixel
-  limpava o campo de cor de TODOS os ajustes por controle e não os re-semeava
-  (a lista de alvos está vazia nesse ramo, porque brilho não disputa com a
-  paleta automática). O evento dispara a cada movimento do arraste.
-- **ABAS-03** — ao RENOMEAR, a mesclagem com o rascunho não acontecia (o nome já
-  mudou, então a base vinha do disco) e o perfil antigo era apagado em seguida:
-  toda edição da sessão se perdia sem aviso e sem como desfazer.
-- **ABAS-04** — "Parar" e "Deixar o jogo controlar a vibração" zeravam os
-  controles deslizantes mas não escreviam no rascunho.
-
-Todos os testes entram pelo caminho PÚBLICO — o handler que o botão da tela
-realmente chama, e a sequência de cliques entre abas que a sprint descreve.
-Teste que chama o método privado direto passa com a cura arrancada; é a lição
-que custou caro nesta casa, e ela vale mais aqui do que em qualquer outro lugar,
-porque estes quatro defeitos SÓ existem na fronteira entre duas abas.
-"""
+"""ABAS-01 — as abas brigam pelo mesmo estado (sprint 2026-07-25)."""
 from __future__ import annotations
 
 import sys
@@ -35,19 +10,11 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o
-# stub que outro arquivo de teste planta em sys.modules — e por isso
-# deixava este módulo rodar contra um GTK de mentira.
 exigir_gi_real("ABAS-01 (abas Perfis/rodape)")
 
 
 def _install_gi_stubs() -> None:
-    """Stubs mínimos de ``gi.repository`` (armadilha A-12: venv de CI sem PyGObject).
-
-    Mesmo procedimento de ``test_r10_slug_e_rename.py``: com o PyGObject REAL
-    disponível não instala nada (mutar o ``gi`` real sobrescreveria
-    ``GLib.idle_add`` e faria testes de GUI pularem como "ambiente sem GTK").
-    """
+    """Stubs mínimos de ``gi.repository`` (armadilha A-12: venv de CI sem PyGObject)."""
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -96,9 +63,6 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import footer_actions as fa
-# GRAVA-POR-UM-FUNIL-01: quem chama `save_profile` pelo rodapé é o funil
-# (`profile_writer`), não mais o `footer_actions` — o dublê de disco tem de
-# ser plantado onde a gravação acontece de verdade.
 from hefesto_dualsense4unix.app.actions import profile_writer as pw
 from hefesto_dualsense4unix.app.actions import lightbar_actions as la
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
@@ -114,18 +78,12 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.profiles.slug import slugify
 
-#: MACs forjados da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 
 ROXO = (129, 61, 156)
 AZUL = (0, 0, 255)
 VERMELHO = (255, 0, 0)
-
-
-# ---------------------------------------------------------------------------
-# Perfis e disco em memória
-# ---------------------------------------------------------------------------
 
 
 def _perfil(
@@ -138,13 +96,7 @@ def _perfil(
     controllers: dict[str, ControllerOverrides] | None = None,
     rumble: RumbleConfig | None = None,
 ) -> Profile:
-    """Perfil de teste com a paleta automática DESLIGADA.
-
-    O automático ligado faria o D4 (COR-04/R-14) entrar em cena a cada clique de
-    cor sem controles conectados conhecidos — comportamento coberto em
-    ``test_lightbar_todos_por_mac_r14.py`` e ruído puro aqui, onde o que está sob
-    teste é o que sobrevive ao salvar.
-    """
+    """Perfil de teste com a paleta automática DESLIGADA."""
     dados: dict[str, Any] = {
         "name": nome,
         "version": 1,
@@ -165,18 +117,13 @@ def _perfil(
 
 
 class _Disco:
-    """Disco em memória: ``save_profile`` grava aqui, ``load_all_profiles`` lê daqui.
-
-    A identidade é o SLUG, como no disco de verdade (``save_profile`` grava
-    ``<slugify(name)>.json``) — é o que faz o rename apagar o arquivo certo.
-    """
+    """Disco em memória: ``save_profile`` grava aqui, ``load_all_profiles`` lê daqui."""
 
     def __init__(self, *perfis: Profile) -> None:
         self.por_slug: dict[str, Profile] = {slugify(p.name): p for p in perfis}
         self.gravacoes: list[Profile] = []
 
     def salvar(self, profile: Profile, *, origem: str | None = None) -> Path:
-        # `origem` espelha a assinatura real de `save_profile` (loader.py:787).
         self.por_slug[slugify(profile.name)] = profile
         self.gravacoes.append(profile)
         return Path(f"/perfis/{slugify(profile.name)}.json")
@@ -191,11 +138,6 @@ class _Disco:
     def ultimo(self) -> Profile:
         assert self.gravacoes, "nada foi gravado — o save nem chegou ao disco"
         return self.gravacoes[-1]
-
-
-# ---------------------------------------------------------------------------
-# Widgets fake (mesma API por-ID do SegmentedSelector; sem GTK real)
-# ---------------------------------------------------------------------------
 
 
 class _FakeEntry:
@@ -293,19 +235,8 @@ class _FakeColorButton:
         self._rgba = rgba
 
 
-# ---------------------------------------------------------------------------
-# A janela: as MESMAS abas da tela, na mesma MRO do HefestoApp
-# ---------------------------------------------------------------------------
-
-
 class _Janela(pa.ProfilesActionsMixin, la.LightbarActionsMixin, fa.FooterActionsMixin):
-    """Aba Perfis + aba Lightbar + rodapé compartilhando UM rascunho.
-
-    É a montagem mínima que reproduz o conflito da sprint: os três mixins
-    convivem na MRO do ``HefestoApp`` de verdade e disputam ``self.draft``.
-    Testar cada um isolado é justamente o que deixou os quatro defeitos
-    passarem — nenhum deles existe dentro de um único arquivo.
-    """
+    """Aba Perfis + aba Lightbar + rodapé compartilhando UM rascunho."""
 
     def __init__(self, disco: _Disco, ativo: Profile) -> None:
         self._disco = disco
@@ -320,13 +251,11 @@ class _Janela(pa.ProfilesActionsMixin, la.LightbarActionsMixin, fa.FooterActions
         self._pending_brightness = float(ativo.leds.lightbar_brightness)
         self._edit_target_uniq: str | None = None
         self._refresh_guard = False
-        # Respostas dos diálogos (default: confirma tudo, como quem clica "sim").
         self.resposta_overwrite = True
         self.resposta_downgrade = True
         self.resposta_rename: str | None = "renomear"
         self.nome_no_rodape = ativo.name
         self.ativo_no_daemon: str | None = ativo.name
-        # Registro do que aconteceu.
         self.toasts: list[str] = []
         self.switches: list[str] = []
         self.renames_perguntados: list[tuple[str, str]] = []
@@ -347,11 +276,8 @@ class _Janela(pa.ProfilesActionsMixin, la.LightbarActionsMixin, fa.FooterActions
         self._mode_kind_selector = _FakeSelector("none")
         self._mode_flavor_selector = _FakeSelector("xbox")
         self._mode_gamepad_opts = None
-        # Entrar na aba Perfis e clicar na linha do perfil ativo é o gesto que
-        # popula o editor — inclusive a seção "Modo" e o "Aplica a".
         self._populate_editor(ativo)
 
-    # --- ganchos do host ---
 
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
@@ -385,7 +311,7 @@ def _sync_run_in_thread(
     """``run_in_thread`` síncrono: sem loop GTK, o callback nunca rodaria."""
     try:
         resultado = fn()
-    except Exception as exc:  # espelha o run_in_thread real
+    except Exception as exc:
         if on_failure is not None:
             on_failure(exc)
         return
@@ -394,13 +320,7 @@ def _sync_run_in_thread(
 
 
 def _daemon_aceita(*_a: Any, **kw: Any) -> dict[str, Any]:
-    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU no alvo pedido.
-
-    BG-01 (26/08/2026). É a forma exata que o handler monta
-    (``daemon/ipc_handlers.py``): ``status`` fixo em "ok" por contrato, mais os
-    dois destinos que a MESA-CHEIA-09 acrescentou. Aqui o que está em jogo não
-    é o destino — é que a aba não fale com o daemon de verdade.
-    """
+    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU no alvo pedido."""
     uniq = kw.get("uniq")
     return {
         "status": "ok",
@@ -419,8 +339,6 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
         lambda parent, name: janela.resposta_overwrite,
         raising=False,
     )
-    # SALVAR-NAO-REBAIXA-02: os dois avisos de rebaixamento (regra e
-    # PRIORIDADE) — `**_kw` acompanha o `regra_atual` novo do primeiro.
     monkeypatch.setattr(
         gd,
         "confirm_downgrade_match_to_any",
@@ -439,51 +357,29 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
         lambda parent, default_name="": janela.nome_no_rodape,
         raising=False,
     )
-    # Aba Perfis.
     monkeypatch.setattr(pa, "save_profile", janela._disco.salvar)
     monkeypatch.setattr(pa, "delete_profile", janela._disco.apagar)
     monkeypatch.setattr(pa, "active_profile_name", lambda: janela.ativo_no_daemon)
     # P3 (25/08/2026): o `profile.switch` do Salvar saiu da thread do GTK e
-    # passou pelo `call_async` do botão Ativar, que a linha abaixo já engole.
     monkeypatch.setattr(pa, "call_async", lambda *_a, **_kw: None)
-    # Rodapé.
     monkeypatch.setattr(pw, "save_profile", janela._disco.salvar)
     monkeypatch.setattr(fa, "load_all_profiles", janela._disco.todos)
     monkeypatch.setattr(fa.ipc_bridge, "run_in_thread", _sync_run_in_thread)
     monkeypatch.setattr(fa.ipc_bridge, "call_async", lambda *_a, **_kw: None)
-    # Aba Lightbar (o clique na cor não pode tentar falar com o daemon).
-    # BG-01 (26/08/2026): a aba passou a chamar as pontes `_detalhado`, que
-    # devolvem o CORPO do daemon em vez de `bool` — o dublê devolve o corpo
-    # de um daemon que aceitou e escreveu no alvo pedido.
     monkeypatch.setattr(la, "led_set_detalhado", _daemon_aceita)
     monkeypatch.setattr(la, "player_leds_set_detalhado", _daemon_aceita)
-
-
-# ---------------------------------------------------------------------------
-# ABAS-01 — o "Salvar Perfil" do rodapé apagava o que a aba Perfis gravou
-# ---------------------------------------------------------------------------
 
 
 class TestABAS01ModoNaoEvapora:
     def test_o_modo_da_aba_perfis_sobrevive_ao_salvar_do_rodape(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A reprodução literal da sprint, clique a clique.
-
-        aba Perfis → Modo = "Jogar pelo Hefesto" → Salvar *(grava certo)* → aba
-        Lightbar → muda a cor → rodapé "Salvar Perfil" → a seção ``mode`` SOME.
-
-        Sem a cura, o rodapé reemite o ``source_mode`` fotografado no boot da
-        janela (``None``, porque o perfil ainda não tinha modo) por cima do que
-        a aba Perfis acabou de gravar. É o MODO-01 visto de outro ângulo: ela
-        faz tudo certo e o modo do perfil evapora.
-        """
+        """A reprodução literal da sprint, clique a clique."""
         perfil = _perfil("vitoria")
         disco = _Disco(perfil)
         janela = _Janela(disco, perfil)
         _ligar(janela, monkeypatch)
 
-        # Aba Perfis: "Jogar pelo Hefesto" com os botões do PlayStation.
         janela._mode_kind_selector.set_active_id("gamepad")
         janela._mode_flavor_selector.set_active_id("dualsense")
         janela.on_profile_save(None)
@@ -492,11 +388,9 @@ class TestABAS01ModoNaoEvapora:
         assert gravado_pela_aba.mode is not None
         assert gravado_pela_aba.mode.kind == "gamepad"
 
-        # Aba Lightbar: ela muda a cor (handler real do botão de cor).
         janela.on_lightbar_color_set(_FakeColorButton(AZUL))
         assert janela.draft.leds.lightbar_rgb == AZUL
 
-        # Rodapé: "Salvar Perfil" com o MESMO nome.
         janela.on_save_profile(None)
 
         salvo = disco.ultimo
@@ -522,7 +416,6 @@ class TestABAS01ModoNaoEvapora:
         janela = _Janela(disco, perfil)
         _ligar(janela, monkeypatch)
 
-        # Aba Perfis: "Jogo da Steam" + appid + prioridade alta.
         janela._aplica_a.set_active_id("steam_game")
         janela._widgets["profile_simple_custom_name"].set_text("1599660")
         janela._widgets["profile_priority_scale"].set_value(80)
@@ -532,7 +425,6 @@ class TestABAS01ModoNaoEvapora:
         assert disco.ultimo.match.window_class == ["steam_app_1599660"]
         assert disco.ultimo.priority == 80
 
-        # Aba Lightbar + rodapé.
         janela.on_lightbar_color_set(_FakeColorButton(AZUL))
         janela.on_save_profile(None)
 
@@ -543,11 +435,6 @@ class TestABAS01ModoNaoEvapora:
         assert salvo.match.window_class == ["steam_app_1599660"]
         assert salvo.priority == 80
         assert tuple(salvo.leds.lightbar) == AZUL
-
-
-# ---------------------------------------------------------------------------
-# ABAS-03 — renomear na aba Perfis descartava o rascunho inteiro
-# ---------------------------------------------------------------------------
 
 
 class TestABAS03RenomearNaoDescartaORascunho:
@@ -567,10 +454,8 @@ class TestABAS03RenomearNaoDescartaORascunho:
         janela = _Janela(disco, perfil)
         _ligar(janela, monkeypatch)
 
-        # Aba Lightbar: a edição da sessão, que só existe no rascunho.
         janela.on_lightbar_color_set(_FakeColorButton(AZUL))
 
-        # Aba Perfis: ela troca o nome no campo Nome e clica Salvar.
         janela._widgets["profile_name_entry"].set_text("Sackboy")
         janela.on_profile_save(None)
 
@@ -592,7 +477,6 @@ class TestABAS03RenomearNaoDescartaORascunho:
         janela = _Janela(disco, perfil)
         _ligar(janela, monkeypatch)
 
-        # Aba Lightbar com o Controle 2 selecionado no banner.
         janela._edit_target_uniq = UNIQ_2
         janela.on_lightbar_color_set(_FakeColorButton(VERMELHO))
         janela._edit_target_uniq = None
@@ -628,7 +512,6 @@ class TestABAS03RenomearNaoDescartaORascunho:
         assert janela.draft.source_mode is not None
         assert janela.draft.source_mode.kind == "native"
 
-        # E o "Salvar Perfil" do rodapé, logo em seguida, mantém o modo.
         janela.nome_no_rodape = "Sackboy"
         janela.on_lightbar_color_set(_FakeColorButton(AZUL))
         janela.on_save_profile(None)
@@ -640,21 +523,14 @@ class TestOutroPerfilNaoRoubaORascunho:
     def test_salvar_outro_perfil_pela_aba_nao_usa_o_rascunho(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A contrapartida da cura: a mesclagem é do perfil DO rascunho, e só.
-
-        Salvar um perfil que não é o que as demais abas estão editando não pode
-        levar a configuração delas junto — seria trocar uma perda de dados por
-        uma contaminação silenciosa entre perfis (a mesma classe do R-09).
-        """
+        """A contrapartida da cura: a mesclagem é do perfil DO rascunho, e só."""
         ativo = _perfil("vitoria", cor=ROXO)
         outro = _perfil("navegacao", cor=VERMELHO)
         disco = _Disco(ativo, outro)
         janela = _Janela(disco, ativo)
         _ligar(janela, monkeypatch)
 
-        # Ela mexe na cor (rascunho do perfil ATIVO)...
         janela.on_lightbar_color_set(_FakeColorButton(AZUL))
-        # ...e depois seleciona OUTRO perfil na lista e o salva.
         janela._selecionado = "navegacao"
         janela._populate_editor(outro)
         janela.on_profile_save(None)
@@ -666,11 +542,6 @@ class TestOutroPerfilNaoRoubaORascunho:
         )
         assert janela._active_profile_name == "vitoria"
         assert janela.draft.source_name == "vitoria"
-
-
-# ---------------------------------------------------------------------------
-# ABAS-02 — arrastar o brilho em "Todos" destruía as cores por controle
-# ---------------------------------------------------------------------------
 
 
 class _AbaLightbar(la.LightbarActionsMixin):
@@ -703,22 +574,14 @@ def _draft_com_duas_cores_proprias() -> DraftConfig:
 
 class TestABAS02BrilhoEmTodosNaoApagaAsCores:
     def test_um_pixel_de_brilho_nao_destroi_as_cores_por_controle(self) -> None:
-        """Repro: alvo em "Todos", um movimento do controle de brilho.
-
-        O campo de cor saía de TODOS os overrides junto com o brilho (cor e
-        brilho formam um único campo no estado desejado do backend) e não era
-        re-semeado: a lista de alvos fica vazia neste ramo, porque brilho não
-        disputa com a paleta automática. Controle 1 azul e Controle 2 vermelho
-        viravam nada — e o "Salvar Perfil" persistia a perda.
-        """
-        host = _AbaLightbar(_draft_com_duas_cores_proprias(), None)  # alvo: Todos
+        """Repro: alvo em "Todos", um movimento do controle de brilho."""
+        host = _AbaLightbar(_draft_com_duas_cores_proprias(), None)
 
         host.on_lightbar_brightness_changed(_FakeScale(37.0))
 
         assert host.draft.leds.lightbar_brightness == 37, "o brilho global mudou"
         assert host.draft.effective_leds_for(UNIQ_1).lightbar_rgb == AZUL
         assert host.draft.effective_leds_for(UNIQ_2).lightbar_rgb == VERMELHO
-        # E o brilho novo vale para os dois — é o que "Todos" quer dizer.
         assert host.draft.effective_leds_for(UNIQ_1).lightbar_brightness == 37
         assert host.draft.effective_leds_for(UNIQ_2).lightbar_brightness == 37
 
@@ -734,12 +597,7 @@ class TestABAS02BrilhoEmTodosNaoApagaAsCores:
         assert host.draft.effective_leds_for(UNIQ_2).lightbar_rgb == VERMELHO
 
     def test_o_brilho_editado_em_todos_vence_o_brilho_proprio(self) -> None:
-        """A limpeza continua existindo — do campo EDITADO, e só dele.
-
-        Uma edição em "Todos" vale para todo mundo: quem tinha brilho próprio
-        passa a herdar o global. Sem esta parte, "abaixei o brilho de todos" e
-        um controle continuaria estourado na próxima ativação.
-        """
+        """A limpeza continua existindo — do campo EDITADO, e só dele."""
         draft = _draft_com_duas_cores_proprias()
         base = draft.effective_leds_for(UNIQ_1)
         draft = draft.with_controller_leds(
@@ -754,12 +612,7 @@ class TestABAS02BrilhoEmTodosNaoApagaAsCores:
         assert host.draft.effective_leds_for(UNIQ_1).lightbar_rgb == AZUL
 
     def test_mudar_a_cor_em_todos_preserva_o_brilho_proprio(self) -> None:
-        """A recíproca: cor editada em "Todos" não apaga o brilho de ninguém.
-
-        Sem controles conectados conhecidos o fluxo cai no caminho degradado do
-        D4 (a cor única só aparece desligando a paleta) — o que importa aqui é
-        que o brilho próprio do Controle 1 continua de pé.
-        """
+        """A recíproca: cor editada em "Todos" não apaga o brilho de ninguém."""
         draft = _draft_com_duas_cores_proprias()
         base = draft.effective_leds_for(UNIQ_1)
         draft = draft.with_controller_leds(
@@ -771,11 +624,6 @@ class TestABAS02BrilhoEmTodosNaoApagaAsCores:
 
         assert host.draft.leds.lightbar_rgb == (0, 255, 0)
         assert host.draft.effective_leds_for(UNIQ_1).lightbar_brightness == 20
-
-
-# ---------------------------------------------------------------------------
-# ABAS-04 — "Parar" não pegava, e a vibração voltava sozinha
-# ---------------------------------------------------------------------------
 
 
 class _AbaRumble(ra.RumbleActionsMixin):
@@ -802,7 +650,6 @@ class _AbaRumble(ra.RumbleActionsMixin):
 def _aba_rumble(
     monkeypatch: pytest.MonkeyPatch, draft: DraftConfig | None = None
 ) -> _AbaRumble:
-    # NATIVO-RUMBLE-01 (19/08/2026): a aba usa a rota "checked" — `(ok, motivo)`.
     monkeypatch.setattr(ra, "rumble_set_checked", lambda *_a, **_kw: (True, None))
     monkeypatch.setattr(ra, "rumble_stop", lambda *_a, **_kw: True)
     monkeypatch.setattr(ra, "rumble_passthrough", lambda *_a, **_kw: True)
@@ -814,12 +661,7 @@ class TestABAS04PararPega:
     def test_parar_zera_o_rascunho_e_o_proximo_aplicar_nao_re_trava(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Aplicar" trava a vibração; "Parar" tinha de soltá-la do rascunho.
-
-        ``to_ipc_dict`` emite a seção ``rumble`` SEMPRE, então o próximo
-        "Aplicar" de qualquer aba — mexer no brilho já basta — reenviava os
-        valores travados que ela acabara de mandar parar.
-        """
+        """"Aplicar" trava a vibração; "Parar" tinha de soltá-la do rascunho."""
         aba = _aba_rumble(monkeypatch)
         aba._set_scales(200, 180)
         aba.on_rumble_apply(None)
@@ -835,11 +677,7 @@ class TestABAS04PararPega:
     def test_voltar_a_aba_nao_repinta_os_valores_travados(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A aba MENTIA sobre o estado parado.
-
-        ``_refresh_rumble_from_draft`` roda ao exibir a aba e repinta os
-        deslizantes a partir do rascunho — que seguia com os valores antigos.
-        """
+        """A aba MENTIA sobre o estado parado."""
         aba = _aba_rumble(monkeypatch)
         aba._set_scales(200, 180)
         aba.on_rumble_apply(None)
@@ -867,19 +705,15 @@ class TestABAS04PararPega:
     def test_o_fim_do_teste_de_motores_tambem_zera(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O "Testar motores" termina em passthrough — o rascunho segue junto.
-
-        Sem isto, os valores do teste ficavam no rascunho e o próximo "Aplicar"
-        de qualquer aba os reenviava como se fossem escolha dela.
-        """
+        """O "Testar motores" termina em passthrough — o rascunho segue junto."""
         perfil = _perfil("vitoria", rumble=RumbleConfig(passthrough=False))
         aba = _aba_rumble(monkeypatch, DraftConfig.from_profile(perfil))
         aba._set_scales(200, 180)
-        aba.on_rumble_apply(None)  # trava a vibração: rascunho em 200/180
+        aba.on_rumble_apply(None)
         aba.on_rumble_test_500ms(None)
         assert (aba.draft.rumble.weak, aba.draft.rumble.strong) == (200, 180)
 
-        aba._rumble_test_stop()  # o timer de meio segundo dispara
+        aba._rumble_test_stop()
 
         assert (aba.draft.rumble.weak, aba.draft.rumble.strong) == (0, 0)
         assert aba.draft.rumble.passthrough is True
@@ -889,16 +723,10 @@ class TestABAS04PassthroughEhEscrito:
     def test_o_botao_grava_o_campo_que_ninguem_editava(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """``RumbleDraft.passthrough`` existe desde a v1 e NENHUMA superfície o
-        escrevia, apesar de o botão estar na tela.
-
-        Num perfil que trazia ``passthrough: false``, o clique em "Deixar o jogo
-        controlar a vibração" não sobrevivia ao "Salvar Perfil": a ativação
-        seguinte re-travava a vibração.
-        """
+        """``RumbleDraft.passthrough`` existe desde a v1 e NENHUMA superfície o"""
         perfil = _perfil("vitoria", rumble=RumbleConfig(passthrough=False))
         aba = _aba_rumble(monkeypatch, DraftConfig.from_profile(perfil))
-        assert aba.draft.rumble.passthrough is False  # pré-condição
+        assert aba.draft.rumble.passthrough is False
 
         aba.on_rumble_passthrough(None)
 
@@ -908,20 +736,7 @@ class TestABAS04PassthroughEhEscrito:
     def test_travar_a_vibracao_nao_mexe_no_passthrough(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Regra deliberada, e é o oposto do que parece intuitivo.
-
-        ``passthrough=True`` no perfil é o que SOLTA um rumble fixado em valor
-        não-zero na ativação — a cura do "testei os motores e o jogo não vibra
-        mais" (SPRINT-GAME-RUMBLE-01) e a rede de segurança do RUMBLE-PRESO-01.
-        Gravar ``False`` a partir do "Aplicar"/"Parar" congelaria a trava no
-        JSON e ressuscitaria as duas queixas; o silêncio deliberado do "Parar"
-        já sobrevive à ativação por conta própria (o applier preserva ``(0,0)``).
-        Escrever ``True`` também seria mentira — travar não é devolver ao jogo.
-        Logo: os dois botões NÃO TOCAM o campo, nas duas direções.
-
-        Guarda de não-ação: pinado nos dois sentidos justamente porque nenhuma
-        asserção sobre o valor final o pegaria sozinha.
-        """
+        """Regra deliberada, e é o oposto do que parece intuitivo."""
         for inicial in (True, False):
             perfil = _perfil("vitoria", rumble=RumbleConfig(passthrough=inicial))
             aba = _aba_rumble(monkeypatch, DraftConfig.from_profile(perfil))

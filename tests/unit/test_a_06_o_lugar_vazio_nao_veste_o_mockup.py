@@ -65,8 +65,6 @@ from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
 PAGINA = "06-navegacao.html"
-#: A CAIXA DA ABA 06. A 04 passa a sua (`.ctrl`) — o parâmetro existe para que
-#: as duas leiam a MESMA função, e é por isso que os testes daqui o exercitam.
 CAIXA = ".nav-ctl"
 
 
@@ -81,10 +79,6 @@ def _regras(folha: str) -> dict[str, str]:
     return {s.strip(): c for s, c in re.findall(r"([^{}]+)\{([^{}]*)\}", folha)}
 
 
-# ---------------------------------------------------------------------------
-# 1. O QUE A PÁGINA PUBLICADA REALMENTE TRAZ — o defeito não é hipótese
-# ---------------------------------------------------------------------------
-
 def test_o_desenho_crava_um_aparelho_no_lugar_do_p2(publicado: str) -> None:
     """Sem a cura não há o que apagar: o mockup crava o P2 vestido e aceso."""
     assert 'data-controle="p2"' in publicado, (
@@ -93,14 +87,6 @@ def test_o_desenho_crava_um_aparelho_no_lugar_do_p2(publicado: str) -> None:
     assert 'id="p2-lightbar" style="--luz:#ff0000"' in publicado, (
         "o `--luz` cravado do P2 mudou de forma; a régua aferia o vermelho "
         "do mockup num lugar vazio e passou a medir outra coisa")
-    # A ÂNCORA NÃO PODE EXIGIR A POSIÇÃO DO ATRIBUTO — corrigido em 03/09/2026,
-    # e o defeito nasceu de um MERGE. Esta régua veio de uma frente que ancorava
-    # em `<svg data-colorway="…"`; outra frente, no mesmo dia, endereçou o
-    # desenho e inseriu três atributos ANTES dele
-    # (`data-campo`, `data-hef-alvo`, `data-hef-atributo`). As duas verdes na
-    # própria árvore, vermelhas juntas — o par de olhos que falta é sempre o do
-    # merge. O que a régua quer saber é se o desenho do P2 CRAVA o Starlight
-    # Blue, não em que ordem o gerador escreve os atributos.
     assert re.search(r'<svg [^>]*data-colorway="starlight-blue"[^>]*class="ds-svg"',
                      publicado), (
         "o `data-colorway` do desenho do P2 mudou — era o Starlight Blue do "
@@ -108,18 +94,7 @@ def test_o_desenho_crava_um_aparelho_no_lugar_do_p2(publicado: str) -> None:
 
 
 def test_o_desenho_sabe_pintar_um_lugar_vazio(publicado: str) -> None:
-    """O neutro NÃO é digitado na cura: é o que o `.vazia` do desenho já usa.
-
-    A BUSCA É POR PADRÃO, NÃO POR SELETOR DIGITADO — 17/09/2026. Esta linha
-    procurava a string exata `.nav-ctl.vazia .ds-svg`, e reprovou quando a
-    folha passou a cobrir TAMBÉM a classe `off` que o piloto escreve
-    (`:is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg`, NAV-VAZIO-01). A régua estava
-    medindo a GRAFIA do seletor quando a pergunta dela é outra: *o desenho do
-    lugar vazio tem dono na folha?*
-
-    É a armadilha que esta casa já nomeou onze vezes numa leva só — a régua
-    digitava o que devia LER —, e desta vez ela reprovou uma melhora.
-    """
+    """O neutro NÃO é digitado na cura: é o que o `.vazia` do desenho já usa."""
     pinta_o_vazio = re.search(r"\.nav-ctl\.(?:vazia|off)[^{]*\.ds-svg", publicado)
     assert pinta_o_vazio, (
         "a folha do desenho não fala mais do lugar vazio — o `var(--linha)` da "
@@ -128,10 +103,6 @@ def test_o_desenho_sabe_pintar_um_lugar_vazio(publicado: str) -> None:
         "o `--linha` sumiu da página: a cura escreveria uma variável que não "
         "resolve, e o casco cairia nos `fill` crus do `ds_limpo.svg`")
 
-
-# ---------------------------------------------------------------------------
-# 2. A CURA — o que a folha viva passa a emitir
-# ---------------------------------------------------------------------------
 
 def test_o_lugar_sem_dono_ganha_o_neutro_do_desenho() -> None:
     """Com UM controle na mesa, os outros TRÊS lugares são apagados."""
@@ -176,7 +147,6 @@ def test_o_lugar_ocupado_nao_e_apagado() -> None:
         assert "var(--linha)" not in regras[alvo]
     assert f'{CAIXA}[data-controle="p2"] [id$="-lightbar"]' not in regras, (
         "o P2 está na mesa e mesmo assim teve a lightbar apagada")
-    # os dois que sobram continuam apagados
     assert f'{CAIXA}[data-controle="p3"] .ds-svg' in regras
 
 

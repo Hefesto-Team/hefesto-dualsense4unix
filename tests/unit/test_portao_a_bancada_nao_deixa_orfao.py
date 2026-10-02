@@ -1,39 +1,4 @@
-"""O PORTÃO DO SEMÁFORO DA BANCADA — e a cicatriz que ele nasce carregando.
-
-A CICATRIZ, ANTES DE TUDO. Em 24/08/2026 a prova de que o ``flock`` não deixa
-órfão devolveu **"AINDA OCUPADO" duas vezes** -- um falso negativo convincente,
-que teria matado a peça no papel. A causa não era o mecanismo: era o dublê. Na
-primeira tentativa o dublê **forqueava** e matar o pai deixava o filho segurando
-o descritor; na segunda, meio segundo de espera não bastou. **Só quando o dublê
-passou a declarar o próprio PID** e a prova passou a conferir o detentor de
-verdade é que a medição virou verdade.
-
-Por isso este portão faz três coisas que parecem exagero e não são:
-  - o dublê é um processo REAL (``sleep``), e o teste declara o PID dele via
-    ``HEFESTO_BANCADA_PID`` em vez de deixar o script adivinhar;
-  - depois de ``kill -9`` o teste ESPERA o PID sumir de verdade antes de
-    perguntar qualquer coisa ao semáforo -- e falha dizendo isso se ele não
-    sumir, em vez de acusar o semáforo;
-  - o relógio é INJETADO (``HEFESTO_BANCADA_AGORA``), porque um teste que espera
-    quatro horas não roda, e um teto de um segundo não prova o teto de quatro
-    horas.
-
-O QUE ELE COBRA: **duas provas de vida INDEPENDENTES.**
-  1. o PID do detentor está vivo?  -- quem responde é o KERNEL;
-  2. já passou de ``expira_em``?    -- quem responde é o RELÓGIO.
-Basta uma dizer "não" para a bancada estar livre. Só o PID deixaria a bancada
-travada por um processo zumbi; só o relógio deixaria a bancada travada as
-quatro horas seguintes à morte da sessão dela.
-
-A MORDIDA, e ela é a mais exigente desta peça: arranque UMA prova de vida de
-``bancada.sh`` de cada vez. **Cada arranque tem de reprovar UM caso só.** Se
-arrancar uma reprovar as duas, as provas não são independentes e a peça está
-errada -- é o teste do desenho, não do código.
-
-E o teto não é zelo: é a lição do ``btmgmt`` sem adaptador, que travava o
-``install.sh`` PARA SEMPRE em quem não tem Bluetooth. O que não volta sozinho
-trava a casa.
-"""
+"""O PORTÃO DO SEMÁFORO DA BANCADA — e a cicatriz que ele nasce carregando."""
 
 from __future__ import annotations
 
@@ -69,22 +34,13 @@ def _roda(*argv: str, arq: Path, agora: int | None = None, pid: int | None = Non
 
 @pytest.fixture
 def arq(tmp_path: Path) -> Path:
-    """O estado vive em tmp, nunca no XDG_RUNTIME_DIR de verdade.
-
-    Se o teste escrevesse no arquivo real, ele apagaria a reserva DELA no meio
-    de uma medição de Bluetooth -- que é exatamente o defeito que esta peça
-    existe para impedir.
-    """
+    """O estado vive em tmp, nunca no XDG_RUNTIME_DIR de verdade."""
     return tmp_path / "hefesto-bancada.json"
 
 
 @pytest.fixture
 def detentor():
-    """Um processo de verdade para segurar a bancada, e para matar depois.
-
-    Um PID inventado não serve: `kill -0` sobre número aleatório pode acertar um
-    processo vivo de outra pessoa, e aí o teste passa por acaso.
-    """
+    """Um processo de verdade para segurar a bancada, e para matar depois."""
     proc = subprocess.Popen(["sleep", "300"])
     try:
         yield proc
@@ -106,11 +62,6 @@ def _pid_morreu(pid: int, teto_s: float = 5.0) -> bool:
     return False
 
 
-# ---------------------------------------------------------------------------
-# CASO 1 — reservada: `exigir` recusa com motivo e hora
-# ---------------------------------------------------------------------------
-
-
 def test_reservada_o_exigir_recusa_com_motivo_e_hora(arq: Path, detentor) -> None:
     agora = int(time.time())
     r = _roda(
@@ -127,16 +78,10 @@ def test_reservada_o_exigir_recusa_com_motivo_e_hora(arq: Path, detentor) -> Non
     assert str(detentor.pid) in tudo, "a recusa não diz QUEM segura (PID):\n" + tudo
 
 
-# ---------------------------------------------------------------------------
-# CASO 2 — o detentor morre: quem solta é o KERNEL, e ninguém libera nada
-# ---------------------------------------------------------------------------
-
-
 def test_detentor_morto_a_bancada_volta_a_ficar_livre(arq: Path, detentor) -> None:
     agora = int(time.time())
     _roda("reservar", "medição de BT", "--horas", "4", arq=arq, agora=agora, pid=detentor.pid)
 
-    # antes: ocupada, e o detentor está mesmo vivo
     os.kill(detentor.pid, 0)
     assert _roda("exigir", arq=arq, agora=agora + 60, pid=detentor.pid).returncode == 1
 
@@ -147,8 +92,6 @@ def test_detentor_morto_a_bancada_volta_a_ficar_livre(arq: Path, detentor) -> No
         "não do semáforo. Foi assim que as duas primeiras medições do flock mentiram."
     )
 
-    # O arquivo continua lá, intocado. Ninguém liberou nada: quem respondeu foi
-    # o kernel, e é isso que separa este desenho de um lock file.
     assert arq.exists()
     r = _roda("status", arq=arq, agora=agora + 60)
     assert "LIVRE" in r.stdout, (
@@ -158,20 +101,12 @@ def test_detentor_morto_a_bancada_volta_a_ficar_livre(arq: Path, detentor) -> No
     assert _roda("exigir", arq=arq, agora=agora + 60).returncode == 0
 
 
-# ---------------------------------------------------------------------------
-# CASO 3 — o teto vence com o PID AINDA VIVO: quem solta é o RELÓGIO
-# ---------------------------------------------------------------------------
-
-
 def test_o_teto_vence_mesmo_com_o_detentor_vivo(arq: Path, detentor) -> None:
     agora = int(time.time())
     _roda("reservar", "medição de BT", "--horas", "4", arq=arq, agora=agora, pid=detentor.pid)
 
-    # ainda dentro do teto: ocupada
     assert _roda("exigir", arq=arq, agora=agora + 3 * _UMA_HORA).returncode == 1
 
-    # relógio adiantado além de `expira_em`, e o detentor CONTINUA VIVO --
-    # é o processo zumbi, e é a razão de a segunda prova de vida existir.
     os.kill(detentor.pid, 0)
     depois = agora + 5 * _UMA_HORA
     r = _roda("status", arq=arq, agora=depois)
@@ -180,12 +115,7 @@ def test_o_teto_vence_mesmo_com_o_detentor_vivo(arq: Path, detentor) -> None:
         "adaptador de novo:\n" + r.stdout + r.stderr
     )
     assert _roda("exigir", arq=arq, agora=depois).returncode == 0
-    os.kill(detentor.pid, 0)  # e o dublê seguiu vivo o tempo todo
-
-
-# ---------------------------------------------------------------------------
-# As bordas que já morderam em outros portões desta casa
-# ---------------------------------------------------------------------------
+    os.kill(detentor.pid, 0)
 
 
 def test_sem_arquivo_nenhum_a_bancada_e_livre(arq: Path) -> None:

@@ -1,49 +1,4 @@
-"""O portão de anonimato do servidor não aprova mais quando NÃO CONSEGUE medir.
-
-PUBLICAÇÃO-FIEL-01/E5, medido em 31/07 e curado em 01/08. O passo "Auditar
-mensagens de commit" do `.github/workflows/anonymity-check.yml` montava a lista
-de commits assim:
-
-    MAPFILE=$(git log --pretty=format:'%H' "$RANGE" 2>/dev/null || true)
-    if [ -z "$MAPFILE" ]; then
-      echo "Nada a auditar (intervalo vazio)."
-      exit 0
-    fi
-
-O `2>/dev/null || true` engolia o código de saída. Um `git log` que FALHA — ref
-inválida, objeto ausente num clone raso, `before` órfão depois de force-push —
-produzia exatamente o mesmo estado que "não havia commit no intervalo": lista
-vazia. O portão então saía 0 sem olhar commit NENHUM, e o pior caso é o evento
-mais arriscado: no force-push, o `github.event.before` pode apontar para um
-commit que o checkout não tem. Esta main já levou dois force-push (a purga de
-MAC de 20/07 e a sobrescrita de 29/07).
-
-Era o único portão de segurança da casa que não bloqueava nada no pior caso, e
-o anonimato é requisito duro daqui. A cura copia a polaridade do guarda de CI
-do `release.yml`, que usa o mesmo idioma `|| true` e é fail-CLOSED: o que não dá
-para medir reprova.
-
-Os testes vêm em dois andares:
-
-  - ESTRUTURAL, no molde do tests/unit/test_release_workflow_nomes_e_portoes.py:
-    o YAML é lido e afirmado, para que o `exit 0` incondicional não volte.
-  - COMPORTAMENTAL: o shell do passo é EXTRAÍDO do YAML e executado num repo
-    git de mentira, com `RANGE` apontando para uma SHA que não existe. Não é
-    preciso GitHub Actions para provar que o portão reprova — e é este andar
-    que impede a cura de virar comentário bonito com o comportamento antigo.
-
-O que esta cura NÃO faz, e continua valendo da E5: o workflow segue disparando
-só em push e pull_request de `main` (`:11-15`), então branch de trabalho e tag
-não passam por ele; e nenhum ruleset da `main` exige o check `scan-commits`, de
-modo que o job reprova DEPOIS do push, sem impedi-lo. As duas coisas são de
-outra natureza (uma muda o gatilho de todas as branches, a outra é configuração
-do servidor, medida com `gh api`, não código) e ficaram fora desta entrega.
-
-Nota sobre os textos venenosos usados aqui: eles são montados por CONCATENAÇÃO
-(`"dev@open" "ai.com"`) de propósito. O `scripts/check_anonymity.sh` varre este
-arquivo e reprova o nome do provedor escrito por inteiro — este arquivo não
-está na lista de exclusões dele, e não deve estar.
-"""
+"""O portão de anonimato do servidor não aprova mais quando NÃO CONSEGUE medir."""
 from __future__ import annotations
 
 import os
@@ -60,10 +15,8 @@ WORKFLOW = REPO / ".github" / "workflows" / "anonymity-check.yml"
 JOB = "scan-commits"
 PASSO_AUDITORIA = "Auditar mensagens de commit"
 
-#: E-mail de provedor de IA, montado por partes (ver nota no topo do módulo).
 EMAIL_VENENOSO = "dev@open" "ai.com"
 
-#: SHA que não existe em repositório nenhum — é o `before` órfão do force-push.
 SHA_FANTASMA = "dead" "beef" * 8
 SHA_FANTASMA = SHA_FANTASMA[:40]
 
@@ -95,14 +48,8 @@ def _sem_comentarios(linhas: list[str]) -> list[str]:
     return [ln for ln in linhas if not ln.strip().startswith("#")]
 
 
-# --------------------------------------------------------------------------
-# 1) Estrutural: o código de saída do git log não pode ser engolido.
-# --------------------------------------------------------------------------
-
-
 def test_o_git_log_do_intervalo_nao_engole_o_codigo_de_saida() -> None:
-    """A cura em uma linha: sem `|| true` e sem `2>/dev/null` no git log que
-    monta a lista de commits. Devolver qualquer um dos dois refaz o furo."""
+    """A cura em uma linha: sem `|| true` e sem `2>/dev/null` no git log que"""
     for linha in _sem_comentarios(_linhas_da_auditoria()):
         if "git log" not in linha or "%H" not in linha:
             continue
@@ -124,13 +71,7 @@ def test_o_passo_consulta_o_codigo_de_saida_do_git_log() -> None:
 
 
 def test_a_captura_do_codigo_sobrevive_ao_bash_e() -> None:
-    """O runner roda todo `run:` com `bash -e`.
-
-    Sem o `|| RC_...=$?`, um git log que falha derruba o passo na própria linha:
-    reprova — o que já é melhor que o fail-open —, mas sem a segunda tentativa
-    e sem dizer QUAL intervalo não pôde ser auditado. A guarda existe para que
-    a cura não perca a voz numa limpeza futura.
-    """
+    """O runner roda todo `run:` com `bash -e`."""
     for linha in _sem_comentarios(_linhas_da_auditoria()):
         if "git log" in linha and "%H" in linha:
             assert re.search(r"\|\|\s*RC_\w+=\$\?", linha), (
@@ -139,12 +80,7 @@ def test_a_captura_do_codigo_sobrevive_ao_bash_e() -> None:
 
 
 def test_entre_o_git_log_e_o_primeiro_exit_0_existe_um_exit_1() -> None:
-    """Reprova se o `exit 0` incondicional voltar.
-
-    A ordem no texto do passo é o contrato: primeiro se monta a lista, depois
-    se trata a FALHA (com `exit 1`), e só então o vazio legítimo pode sair 0.
-    Um `exit 0` que apareça antes de qualquer `exit 1` é o furo de volta.
-    """
+    """Reprova se o `exit 0` incondicional voltar."""
     linhas = _sem_comentarios(_linhas_da_auditoria())
     i_git = next(
         (i for i, ln in enumerate(linhas) if "git log" in ln and "%H" in ln), None
@@ -155,7 +91,7 @@ def test_entre_o_git_log_e_o_primeiro_exit_0_existe_um_exit_1() -> None:
         (i for i, ln in enumerate(linhas) if i > i_git and "exit 0" in ln), None
     )
     if i_exit0 is None:
-        return  # sem saída-cedo não há fail-open a provar
+        return
     houve_exit_1 = any("exit 1" in ln for ln in linhas[i_git:i_exit0])
     assert houve_exit_1, (
         "o passo sai 0 depois do git log sem nenhum caminho de `exit 1` no meio: "
@@ -178,20 +114,13 @@ def test_a_reprovacao_por_intervalo_irresoluvel_nomeia_o_intervalo() -> None:
 
 
 def test_o_vazio_legitimo_continua_aprovando() -> None:
-    """A outra metade da separação: intervalo que RESOLVE e não tem commit não
-    pode reprovar, senão o portão vira ruído em todo push sem commit novo."""
+    """A outra metade da separação: intervalo que RESOLVE e não tem commit não"""
     shell = _shell_da_auditoria()
     assert "Nada a auditar" in shell
 
 
-# --------------------------------------------------------------------------
-# 2) Comportamental: o shell do passo, rodado de verdade.
-# --------------------------------------------------------------------------
-
-
 def _git(repo: Path, *args: str, env: dict[str, str] | None = None) -> None:
-    """git com os ganchos globais desligados — a máquina de desenvolvimento tem
-    hook de coautoria instalado e ele não pode tocar num repo de teste."""
+    """git com os ganchos globais desligados — a máquina de desenvolvimento tem"""
     ambiente = dict(os.environ)
     ambiente.update(env or {})
     subprocess.run(
@@ -242,12 +171,7 @@ def _sha(repo: Path, ref: str = "HEAD") -> str:
 def _rodar_o_passo(
     repo: Path, *, intervalo: str, topo: str
 ) -> subprocess.CompletedProcess[str]:
-    """Executa o shell REAL do passo, extraído do YAML, no repo de mentira.
-
-    `bash -e` de propósito: é o shell com que o runner executa um `run:` sem
-    `shell:` declarado. Rodar sem o `-e` aqui esconderia toda uma classe de
-    defeito — a de comando que derruba o passo antes da mensagem.
-    """
+    """Executa o shell REAL do passo, extraído do YAML, no repo de mentira."""
     script = repo / "passo_auditoria.sh"
     script.write_text(_shell_da_auditoria(), encoding="utf-8")
     ambiente = dict(os.environ)
@@ -262,11 +186,7 @@ def _rodar_o_passo(
 
 
 def test_intervalo_irresoluvel_reprova(repo_limpo: Path) -> None:
-    """O caso do force-push: `before` órfão, e nem o topo resolve.
-
-    Com o `|| true` de volta, este teste passa a ver returncode 0 com
-    'Nada a auditar' — é a mordida desta cura.
-    """
+    """O caso do force-push: `before` órfão, e nem o topo resolve."""
     proc = _rodar_o_passo(
         repo_limpo, intervalo=f"{SHA_FANTASMA}..HEAD", topo=SHA_FANTASMA
     )
@@ -309,8 +229,7 @@ def test_identidade_de_provedor_de_ia_reprova(tmp_path: Path) -> None:
 
 
 def test_recuo_para_o_topo_audita_de_verdade(tmp_path: Path) -> None:
-    """O recuo não pode ser carimbo: quando o intervalo não resolve e o topo
-    resolve, o topo tem de ser AUDITADO — com commit sujo lá, reprova."""
+    """O recuo não pode ser carimbo: quando o intervalo não resolve e o topo"""
     repo = tmp_path / "sujo-com-intervalo-quebrado"
     repo.mkdir()
     _git(repo, "init", "-q")

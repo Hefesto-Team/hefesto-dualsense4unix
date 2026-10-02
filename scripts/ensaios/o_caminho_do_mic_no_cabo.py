@@ -293,31 +293,18 @@ import shutil
 import subprocess
 import sys
 
-#: O nó do cabo é reconhecido por PROPRIEDADE, nunca pelo texto do
-#: ``Description`` — decisão dela: *"o produto é pra outra pessoa também"*. O
 #: que identifica é ser uma source ALSA de um dispositivo Sony/DualSense, e quem
-#: é dono dessa resposta é ``integrations/fontes_de_captura``. Aqui, fora do
-#: pacote, se usa o mesmo critério que ELE usa: o prefixo ``alsa_input.`` mais o
-#: nome do produto no ``node.name`` — que vem do USB, não de rótulo editável.
 _PREFIXO_ALSA_INPUT = "alsa_input."
 _MARCA_NO_NOME = "dualsense"
 
-#: s16le. É o formato que o ``parec`` pede e o que este instrumento decodifica.
 _BYTES_POR_AMOSTRA = 2
 
-#: Os aparelhos cujo descritor este instrumento sabe ler, por ``idVendor:idProduct``.
 #: O DualSense e o DualSense Edge — os mesmos dois do quirk de áudio desta casa
-#: (``/etc/modprobe.d/hefesto-dualsense-storm.conf``).
 _APARELHOS_UAC = {
     ("054c", "0ce6"): "DualSense",
     ("054c", "0df2"): "DualSense Edge",
 }
 
-#: ``wTerminalType`` → nome do PADRÃO, da «USB Device Class Definition for
-#: Terminal Types» 1.0. **Esta tabela é o único texto digitado do
-#: ``--descritor``; o valor que se traduz vem do aparelho.** Os dois códigos que
-#: significam digital são o ``0x0602`` e o ``0x0605``, e é por eles que a
-#: pergunta «é S/PDIF?» se responde LENDO em vez de acreditar no rótulo do host.
 _TIPOS_DE_TERMINAL = {
     0x0100: "USB Undefined", 0x0101: "USB Streaming", 0x01FF: "USB vendor specific",
     0x0200: "Input Undefined", 0x0201: "Microphone", 0x0202: "Desktop microphone",
@@ -339,12 +326,8 @@ _TIPOS_DE_TERMINAL = {
     0x0700: "Embedded Undefined", 0x0703: "CD player", 0x0710: "Radio Receiver",
 }
 
-#: Os DOIS códigos que declarariam uma interface digital. Se nenhum aparecer no
-#: descritor, a palavra «S/PDIF» que a tela do sistema mostra é do host.
 _TIPOS_DIGITAIS = (0x0602, 0x0605)
 
-#: Subtipos de descritor de classe (``bDescriptorType`` 0x24) que interessam
-#: numa interface AudioControl de UAC1.
 _AC_HEADER, _AC_INPUT, _AC_OUTPUT, _AC_FEATURE = 0x01, 0x02, 0x03, 0x06
 
 
@@ -353,7 +336,7 @@ def _rodar(argv: list[str], *, entrada: bytes | None = None) -> str:
     if shutil.which(argv[0]) is None:
         return ""
     try:
-        saida = subprocess.run(  # argv fixo, sem shell
+        saida = subprocess.run(
             argv,
             input=entrada,
             capture_output=True,
@@ -428,11 +411,7 @@ def _indice_alsa() -> str:
 
 
 def _mixer_de_captura(indice: str) -> list[str]:
-    """Os controles de CAPTURA do mixer ALSA daquela placa, com a porcentagem.
-
-    **Este é o estágio de ganho que o produto não sabe que existe.** Lê, nunca
-    escreve — mexer no mixer dela sem ela pedir está fora desta janela.
-    """
+    """Os controles de CAPTURA do mixer ALSA daquela placa, com a porcentagem."""
     if not indice:
         return []
     texto = _rodar(["amixer", "-c", indice, "scontents"])
@@ -449,16 +428,11 @@ def _mixer_de_captura(indice: str) -> list[str]:
 
 
 def _parametros_nativos(indice: str) -> list[str]:
-    """Taxa, canais e formato NATIVOS do endpoint USB, pelo ``--dump-hw-params``.
-
-    É a ORIGEM de verdade: o que o aparelho entrega antes de qualquer perfil,
-    remix ou reamostragem. O ``arecord`` escreve isso no stderr e sai com erro —
-    é o comportamento normal do ``--dump-hw-params``, não uma falha.
-    """
+    """Taxa, canais e formato NATIVOS do endpoint USB, pelo ``--dump-hw-params``."""
     if not indice or shutil.which("arecord") is None:
         return []
     try:
-        saida = subprocess.run(  # argv fixo, sem shell
+        saida = subprocess.run(
             ["arecord", "-D", f"hw:{indice},0", "--dump-hw-params", "-d", "1"],
             capture_output=True,
             timeout=15,
@@ -487,9 +461,6 @@ def _rms_e_pico(pcm: bytes, canais: int) -> list[tuple[float, int]]:
         soma = sum(float(v) * v for v in fatia)
         saida.append((math.sqrt(soma / len(fatia)), max(abs(v) for v in fatia)))
     return saida
-
-
-# --- O DESCRITOR USB, que responde «é S/PDIF?» sem servidor de som ----------
 
 
 def _aparelho_uac() -> tuple[str, str, str]:
@@ -528,16 +499,7 @@ def _descritores_crus(pasta: str) -> bytes:
 
 
 def _ler_uac(bruto: bytes) -> tuple[dict[int, dict], list[str]]:
-    """Percorre os descritores e devolve ``(unidades por id, linhas de fluxo)``.
-
-    Caminha a lista TLV (``bLength``, ``bDescriptorType``, …) e só interpreta o
-    que está DENTRO de uma interface de classe 0x01 (Audio): ``0x24`` é
-    CS_INTERFACE, e o significado do subtipo depende da subclasse da interface
-    corrente — AudioControl (0x01) tem terminais e unidades; AudioStreaming
-    (0x02) tem o formato e o terminal a que se liga.
-
-    Função PURA: recebe bytes, devolve estrutura. É ela que os testes medem.
-    """
+    """Percorre os descritores e devolve ``(unidades por id, linhas de fluxo)``."""
     unidades: dict[int, dict] = {}
     fluxo: list[str] = []
     subclasse = 0
@@ -549,10 +511,10 @@ def _ler_uac(bruto: bytes) -> tuple[dict[int, dict], list[str]]:
         if tamanho < 2 or pos + tamanho > len(bruto):
             break
         corpo = bruto[pos : pos + tamanho]
-        if tipo == 0x04 and tamanho >= 9:  # INTERFACE
+        if tipo == 0x04 and tamanho >= 9:
             subclasse = corpo[6] if corpo[5] == 0x01 else 0
             ligado_a = 0
-        elif tipo == 0x24 and tamanho >= 3 and subclasse == 0x01:  # AudioControl
+        elif tipo == 0x24 and tamanho >= 3 and subclasse == 0x01:
             sub = corpo[2]
             if sub == _AC_INPUT and tamanho >= 12:
                 unidades[corpo[3]] = {
@@ -579,11 +541,11 @@ def _ler_uac(bruto: bytes) -> tuple[dict[int, dict], list[str]]:
                     "mapa": 0,
                     "controles": bytes(corpo[6 : tamanho - 1]),
                 }
-        elif tipo == 0x24 and tamanho >= 3 and subclasse == 0x02:  # AudioStreaming
+        elif tipo == 0x24 and tamanho >= 3 and subclasse == 0x02:
             sub = corpo[2]
-            if sub == 0x01 and tamanho >= 4:  # AS_GENERAL
+            if sub == 0x01 and tamanho >= 4:
                 ligado_a = corpo[3]
-            elif sub == 0x02 and tamanho >= 11:  # FORMAT_TYPE I
+            elif sub == 0x02 and tamanho >= 11:
                 taxa = corpo[8] | (corpo[9] << 8) | (corpo[10] << 16)
                 fluxo.append(
                     f"terminal {ligado_a}: {corpo[4]} canal(is) × "
@@ -594,13 +556,7 @@ def _ler_uac(bruto: bytes) -> tuple[dict[int, dict], list[str]]:
 
 
 def _terminal_da_captura(unidades: dict[int, dict]) -> int | None:
-    """O ``wTerminalType`` da ENTRADA que alimenta o fluxo que sobe para o host.
-
-    Anda a corrente ao contrário a partir do ``OUTPUT TERMINAL`` de tipo «USB
-    Streaming» (0x0101) — que é por onde o host recebe —, seguindo ``bSourceID``
-    até chegar a um terminal de entrada. **Não adivinha pelo nome nem pelo
-    índice: segue o que o descritor liga.**
-    """
+    """O ``wTerminalType`` da ENTRADA que alimenta o fluxo que sobe para o host."""
     origem: int | None = None
     for unidade in unidades.values():
         if unidade["tipo"] == "saida" and unidade["terminal"] == 0x0101:
@@ -719,14 +675,7 @@ def _descritor() -> int:
 
 
 def _ganho_plano() -> int:
-    """IMPRIME o protocolo do par controlado do ganho. **Não mede nada.**
-
-    O passo que este texto descreve ESCREVE no mixer dela, e por isso ele não
-    roda aqui: a execução é janela própria, com ela presente, e com um
-    ``--restaura`` que devolve o valor **lido** antes de qualquer escrita — o
-    valor lido, nunca um valor digitado, que é a armadilha de medir contra a
-    própria saída.
-    """
+    """IMPRIME o protocolo do par controlado do ganho. **Não mede nada.**"""
     print("=" * 78)
     print("  o_caminho_do_mic_no_cabo — o PLANO do ganho (não mede, não escreve)")
     print("=" * 78)
@@ -857,7 +806,7 @@ def _canais(segundos: int) -> int:
         "--client-name=hefesto-ensaio-mic-no-cabo",
     ]
     try:
-        proc = subprocess.run(  # argv fixo, sem shell
+        proc = subprocess.run(
             argv, capture_output=True, timeout=segundos + 5, check=False,
             env={**os.environ, "LC_ALL": "C"},
         )

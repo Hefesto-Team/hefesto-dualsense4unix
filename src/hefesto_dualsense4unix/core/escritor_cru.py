@@ -83,80 +83,29 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Orçamentos da sonda. A varredura de ``/proc`` que acha os PIDs da Steam e a
-#: varredura de ``/proc/<pid>/fd`` têm, cada uma, teto de tempo — o estudo do
-#: broker mediu ~6 ms para ~4600 fds, então 0,5 s é folga patológica. Nunca
-#: rodam no event loop.
 ORCAMENTO_DA_VARREDURA_DE_PIDS_S: float = 1.0
 ORCAMENTO_DA_VARREDURA_S: float = 0.5
 MAX_PIDS_DA_STEAM: int = 8
 
-#: **NOME VELHO, e ele mente desde 06/09/2026: não há mais ``pgrep`` aqui.**
-#: DAEMON-ACORDADO-01/E2 trocou o par de ``pgrep`` de :func:`pids_da_steam` por
-#: uma varredura nativa de ``/proc``, e o número (1,0 s) sobreviveu inteiro —
-#: virou o teto da varredura. O alias fica porque
-#: ``daemon/ipc_handlers.py:664`` (``_HOLDERS_PGREP_TIMEOUT_SEC``) o importa, e
-#: aquele arquivo **não é posse desta sprint**: R1 desta casa manda RELATAR em
-#: vez de editar arquivo alheio. Quem tiver o ``ipc_handlers`` na posse aposenta
-#: os dois nomes de uma vez — está escrito na entrega desta sprint.
 PGREP_TIMEOUT_S: float = ORCAMENTO_DA_VARREDURA_DE_PIDS_S
 
-#: Agulha do ``pgrep -f steamrt64/steam`` que a varredura substituiu: casa o
-#: runtime da Steam pelo PATH. **Nunca ``steam`` solto** — é o falso-positivo
-#: histórico do earlyoom, e a razão de o ``steam_running`` canônico nunca ter
-#: usado ``-f steam``.
 _AGULHA_DA_STEAM_NA_CMDLINE = "steamrt64/steam"
 
-#: Nome EXATO de processo do ``pgrep -x steam``, para instalações fora do
-#: runtime. ``-x`` compara com o ``comm`` do processo, não com a cmdline — daí
-#: a varredura ler ``/proc/<pid>/comm``, e não deduzir o nome do ``argv[0]``:
-#: ``comm`` é definível por ``prctl`` e truncado em 15 bytes, então deduzir
-#: seria uma regra DIFERENTE com cara de igual.
 _COMM_EXATO_DA_STEAM = "steam"
 
-#: Quanto um veredito vale antes de a sonda poder rodar de novo. Existe para
-#: que uma rajada de escritas nossas (arrastar o seletor de cor da GUI) não
-#: vire uma rajada de varreduras: a rajada inteira lê o MESMO veredito.
-#:
-#: **DAEMON-ACORDADO-01/BG-03 (25/08/2026): agora ela cobre também a
-#: VARREDURA, e não só o veredito.** O número existia desde a ESCRITOR-CRU-01
-#: com este comentário, e mesmo assim o ``pgrep`` continuava forkando a cada
-#: chamada — porque a validade morava no :class:`SentinelaDeEscritorCru` e o
-#: caminho da JANELA (``controller.list`` → ``ipc_handlers._steam_hidraw_holders``
-#: → :func:`holders_de_hidraw` → :func:`pids_da_steam`) **não passa pelo
-#: sentinela**. Era a cura escrita e nunca ligada.
 VALIDADE_DO_VEREDITO_S: float = 5.0
 
-#: A última lista de PIDs e QUANDO ela foi colhida — ``None`` = nunca.
-#: Escrita numa tupla só de propósito: a atribuição é atômica sob a GIL, e a
-#: sonda roda em thread (``asyncio.to_thread`` do inventário) enquanto o vigia
-#: da lightbar pode ler. Duas gravações concorrentes custam uma varredura a
-#: mais, nunca uma foto meio velha e meio nova.
 _ultima_foto_de_pids: tuple[float, tuple[int, ...]] | None = None
 
 
 def invalidar_pids_da_steam() -> None:
-    """Joga fora a foto de PIDs: a próxima chamada varre `/proc` de verdade.
-
-    Existe para o ``forcar=True`` de :meth:`SentinelaDeEscritorCru.sondar`
-    continuar valendo o que a docstring dele promete — sem isto, um cache
-    novo por baixo transformaria "ignora a validade" em mentira.
-    """
+    """Joga fora a foto de PIDs: a próxima chamada varre `/proc` de verdade."""
     global _ultima_foto_de_pids
     _ultima_foto_de_pids = None
 
 
 def processo_vivo(pid: int) -> bool:
-    """Ainda existe processo com este PID?
-
-    ESCRITOR-CRU-03 (19/09/2026) — é o que separa a foto do presente, e é
-    barato de propósito: UM `stat` em ``/proc/<pid>``, sem `pgrep`, sem
-    subprocesso e sem varrer diretório. É o que torna pagável conferir a foto
-    no tique de 1 s da GUI, que é onde `_lightbar_disputada` é lido.
-
-    Não conseguir olhar devolve ``True``: falha de leitura não é prova de
-    morte, e a disciplina desta casa é não mudar a resposta por falta de dado.
-    """
+    """Ainda existe processo com este PID?"""
     try:
         return os.path.exists(f"/proc/{int(pid)}")
     except Exception:  # pragma: no cover - `int()` de lixo, `/proc` ausente
@@ -164,11 +113,7 @@ def processo_vivo(pid: int) -> bool:
 
 
 def _comm_de_pid(pid: str | int) -> str:
-    """``comm`` de um pid — o nome de processo que o ``pgrep -x`` compara.
-
-    Nunca levanta, pela mesma razão de :func:`cmdline_de_pid`: pid que morreu
-    entre o ``listdir`` e o ``open`` é o caso comum, não a exceção.
-    """
+    """``comm`` de um pid — o nome de processo que o ``pgrep -x`` compara."""
     try:
         with open(f"/proc/{pid}/comm", "rb") as fh:
             return fh.read().decode("utf-8", "replace").strip()
@@ -271,7 +216,6 @@ def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[i
     try:
         entradas = os.listdir("/proc")
     except OSError:
-        # Sem `/proc` não houve varredura: NÃO carimba a foto (ver docstring).
         return []
     deadline = time.monotonic() + ORCAMENTO_DA_VARREDURA_DE_PIDS_S
     pids: set[int] = set()
@@ -279,7 +223,6 @@ def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[i
         if not entrada.isdigit():
             continue
         if time.monotonic() > deadline:
-            # Varredura truncada: devolve o que juntou e não carimba.
             return sorted(pids)[:MAX_PIDS_DA_STEAM]
         if _comm_de_pid(entrada) == _COMM_EXATO_DA_STEAM:
             with contextlib.suppress(ValueError):
@@ -321,7 +264,7 @@ def holders_de_hidraw(
         try:
             entries = os.listdir(fd_dir)
         except OSError:
-            continue  # processo morreu / sem permissão: segue degradado
+            continue
         for fd in entries:
             if time.monotonic() > deadline:
                 return holders
@@ -338,55 +281,13 @@ def holders_de_hidraw(
     return holders
 
 
-#: ESCRITOR-CRU-02 (16/09/2026) — o teto da varredura AMPLA.
-#:
-#: O número é medido nesta máquina, não estimado: três voltas sobre **122
-#: processos legíveis e 4.139 fds** deram 12,8 · 10,8 · 9,5 ms. O teto de 0,5 s
-#: é a mesma folga patológica do irmão restrito, e pelo mesmo motivo — o que
-#: importa é nunca travar, não ser rápido.
 ORCAMENTO_DA_VARREDURA_AMPLA_S: float = 0.5
 
 
 def holders_de_hidraw_de_qualquer_um(
     nos: Iterable[str] | None = None,
 ) -> dict[str, list[int]]:
-    """Mapa ``/dev/hidrawN`` -> PIDs de QUALQUER processo que segure o nó.
-
-    ESCRITOR-CRU-02, 16/09/2026 — e ele existe por uma ORDEM DELA:
-
-        *"O app deveria construir tudo independente de qual jogo ou launcher.
-        (…) é um app que será focado pra acessibilidade. Isso não pode se
-        repetir."*
-
-    **O PONTO CEGO, e este módulo o declarava desde que nasceu:** *"Só reconhece
-    a Steam. (…) Um segundo escritor cru — um jogo fora do Steam, outro daemon
-    de controle — passa despercebido. Varrer ``/proc/*/fd`` inteiro seria caro e
-    indiscreto, e a Steam é o escritor que a mesa dela mediu."*
-
-    As três razões foram medidas em 16/09/2026, e **duas caíram**:
-
-    1. **"seria caro" — FALSO nesta máquina.** Varrer TODOS os processos custa
-       9,5 a 12,8 ms (122 legíveis, 4.139 fds), contra os ~6 ms do irmão
-       restrito. A diferença é de milissegundos, e a sonda já é rate-limitada
-       por :data:`VALIDADE_DO_VEREDITO_S` e nunca roda no event loop.
-    2. **"a Steam é o escritor que a mesa dela mediu" — VERDADEIRO E
-       INSUFICIENTE.** A mesa dela é uma; o produto é de outras pessoas. Quem
-       joga por Lutris, Heroic, Flatpak ou execução direta tem um escritor cru
-       que este módulo não enxergava — e "não enxergo" saía como "ninguém
-       segura", que é o erro que a leitura de ``multi_intensity`` já cometia.
-    3. **"indiscreto" — DE PÉ, e por isso a disciplina:** lemos o alvo do
-       symlink e **descartamos na hora** tudo que não começa com
-       ``/dev/hidraw``. Nenhum outro caminho é guardado, logado ou devolvido.
-       O que sai daqui é só *"o PID N segura o hidraw M"*.
-
-    **O QUE ELE CONTINUA NÃO VENDO**, dito aqui antes que custe caro: segurar
-    não é escrever (a mesma honestidade do irmão), e processo de OUTRO usuário
-    fica fora — ``/proc/<pid>/fd`` alheio precisa de root, e subir privilégio
-    para pintar uma barra não é troca que esta casa faça.
-
-    Degrada igual ao irmão: sem ``/proc``, sem permissão ou orçamento estourado,
-    devolve o que juntou. Ausência é "não sondado", **nunca** "ninguém segura".
-    """
+    """Mapa ``/dev/hidrawN`` -> PIDs de QUALQUER processo que segure o nó."""
     interesse = {str(n) for n in nos} if nos is not None else None
     holders: dict[str, list[int]] = {}
     deadline = time.monotonic() + ORCAMENTO_DA_VARREDURA_AMPLA_S
@@ -401,15 +302,13 @@ def holders_de_hidraw_de_qualquer_um(
         try:
             entries = os.listdir(fd_dir)
         except OSError:
-            continue  # morreu, ou é de outro usuário: segue degradado
+            continue
         for fd in entries:
             if time.monotonic() > deadline:
                 return holders
             target = ""
             with contextlib.suppress(OSError):
                 target = os.readlink(os.path.join(fd_dir, fd))
-            # O DESCARTE É AQUI, e é o que mantém a sonda discreta: tudo que
-            # não é hidraw morre nesta linha, sem ser guardado nem logado.
             if not target.startswith("/dev/hidraw"):
                 continue
             if interesse is not None and target not in interesse:
@@ -426,16 +325,7 @@ def escritores_crus_alheios(
     *,
     meu_pid: int | None = None,
 ) -> dict[str, list[int]]:
-    """Os nós de :func:`holders_de_hidraw_de_qualquer_um` TIRANDO nós mesmos.
-
-    É a forma que um gatilho de defesa quer: *"além de mim, quem mais segura o
-    hidraw deste controle?"*. O daemon segura o próprio nó — e vê-lo na lista
-    faria toda sonda acusar escritor alheio a cada volta.
-
-    O filtro é por PID, e inclui o processo ATUAL e o pai: o daemon abre o
-    hidraw em mais de um fd (medido: quatro no mesmo PID), e o broker roda em
-    processo próprio. Nada aqui supõe quantos — só que o nosso não conta.
-    """
+    """Os nós de :func:`holders_de_hidraw_de_qualquer_um` TIRANDO nós mesmos."""
     eu = os.getpid() if meu_pid is None else int(meu_pid)
     try:
         pai = os.getppid()
@@ -452,13 +342,7 @@ def escritores_crus_alheios(
 
 @dataclass(frozen=True)
 class Veredito:
-    """O que a última sonda viu. Imutável de propósito: é uma FOTO, não estado.
-
-    ``sondado_em`` a ``None`` é o terceiro estado que esta casa aprendeu a
-    respeitar: **não sondado** não é "limpo". Quem lê tem de saber a diferença,
-    porque rotular "ninguém segura" sem ter olhado é exatamente o erro que a
-    leitura de ``multi_intensity`` cometia.
-    """
+    """O que a última sonda viu. Imutável de propósito: é uma FOTO, não estado."""
 
     sondado_em: float | None = None
     por_no: Mapping[str, tuple[int, ...]] = field(default_factory=dict)
@@ -486,7 +370,6 @@ class Veredito:
         """True se ao menos um nó da mesa está segurado."""
         return bool(self.nos_segurados)
 
-    # --- a foto conferida contra o presente (ESCRITOR-CRU-03) -------------
 
     def pids_vivos(
         self, no: str | None, *, vivo: Callable[[int], bool] | None = None
@@ -539,28 +422,11 @@ class Veredito:
         )
 
 
-#: A sonda, em forma de tipo — é o que torna o sentinela exercitável sem
-#: ``/proc``, sem Steam e sem hardware.
 Sonda = Callable[[Iterable[str] | None], Mapping[str, list[int]]]
 
 
 class SentinelaDeEscritorCru:
-    """Guarda o último veredito e diz **quando um nó GANHOU** um escritor cru.
-
-    Duas responsabilidades, e nenhuma delas é escrever no aparelho:
-
-    - **cachear** — a sonda varre ``/proc`` + ``readlink``; sem cache, cada
-      escrita de cor da GUI pagaria a varredura. ``VALIDADE_DO_VEREDITO_S``
-      é o teto: dentro dela, ``sondar`` devolve a foto que já tem;
-    - **achar a BORDA** — o que interessa não é "a Steam está aberta" (estado
-      normal, o dia inteiro), é *"este nó, que estava livre, acabou de ser
-      segurado"*. É a borda que corresponde à rajada de repintura medida em
-      12/08, e é ela que licencia UMA reafirmação.
-
-    Não lê relógio: recebe ``agora`` de fora, como o
-    ``GatilhoDeFimDeSequencia``. É o que permite exercitar cinco segundos de
-    validade em microssegundos de teste.
-    """
+    """Guarda o último veredito e diz **quando um nó GANHOU** um escritor cru."""
 
     def __init__(
         self,
@@ -568,29 +434,11 @@ class SentinelaDeEscritorCru:
         sonda: Sonda | None = None,
         validade_s: float = VALIDADE_DO_VEREDITO_S,
     ) -> None:
-        #: **ESCRITOR-CRU-02 (16/09/2026): o default deixou de ser só a Steam.**
-        #:
-        #: Era :func:`holders_de_hidraw`, que varre apenas os PIDs do cliente
-        #: Steam. Quem joga por Lutris, Heroic, Flatpak ou execução direta tinha
-        #: um escritor cru INVISÍVEL a esta sentinela — e invisível saía como
-        #: "ninguém segura", que é o verde sobre nada. Ordem dela de 16/09: o
-        #: app independe do lançador.
-        #:
-        #: É :func:`escritores_crus_alheios`, e não a varredura ampla nua, por
-        #: uma razão que a régua trava: **o daemon segura o próprio hidraw**
-        #: (medido: quatro fds no mesmo PID). A varredura nua nos devolveria a
-        #: nós mesmos, a borda dispararia na primeira volta e a sentinela
-        #: passaria a acusar escritor alheio para sempre.
-        #:
-        #: O caminho da JANELA (`ipc_handlers._steam_hidraw_holders`) segue com
-        #: a sonda restrita DE PROPÓSITO: ali a frase da aba Status nomeia a
-        #: Steam, e trocar a sonda trocaria o texto sem ninguém pedir.
         self._sonda: Sonda = (
             sonda if sonda is not None else escritores_crus_alheios
         )
         self._validade_s = float(validade_s)
         self._veredito = Veredito()
-        #: A PRIMEIRA sonda não tem foto anterior contra a qual haver borda.
         self._ja_sondou = False
 
     @property
@@ -606,28 +454,7 @@ class SentinelaDeEscritorCru:
     def sondar(
         self, nos: Iterable[str], agora: float, *, forcar: bool = False
     ) -> tuple[Veredito, tuple[str, ...]]:
-        """Sonda (respeitando a validade) e devolve ``(veredito, nós NOVOS)``.
-
-        ``nós NOVOS`` são os que **ganharam** um escritor cru desde a foto
-        anterior — a borda. Um nó que já estava segurado na foto passada não
-        volta na lista: a Steam aberta o dia inteiro arma o gatilho UMA vez,
-        não o dia inteiro.
-
-        ``forcar`` ignora a validade (o tique de 30 s do ``reconnect_loop``,
-        que é quem tem orçamento para a varredura). Sem ele, uma sonda dentro
-        da validade é no-op e devolve a foto que já existe, com borda vazia —
-        e isso é resposta, não falha.
-
-        **BG-03 (25/08/2026): ``forcar`` também joga fora a foto de PIDs.** O
-        cache novo de :func:`pids_da_steam` fica DEBAIXO desta classe, e sem
-        esta linha "ignora a validade" passaria a ignorar só metade dela — o
-        ``forcar=True`` da chegada de um controle (``connection.py``) veria
-        pids de até cinco segundos atrás.
-
-        Falha da sonda **preserva a foto anterior**: uma varredura que morreu
-        não é prova de que a Steam fechou, e apagar o veredito por causa dele
-        faria a aba Status mentir para o outro lado.
-        """
+        """Sonda (respeitando a validade) e devolve ``(veredito, nós NOVOS)``."""
         alvos = [str(n) for n in nos if n]
         if not alvos:
             return self._veredito, ()
@@ -637,7 +464,7 @@ class SentinelaDeEscritorCru:
             invalidar_pids_da_steam()
         try:
             bruto = self._sonda(alvos)
-        except Exception as exc:  # sonda é best-effort por contrato
+        except Exception as exc:
             logger.debug("escritor_cru_sonda_falhou", err=str(exc))
             return self._veredito, ()
         por_no = {
@@ -650,57 +477,22 @@ class SentinelaDeEscritorCru:
         novo = Veredito(sondado_em=float(agora), por_no=por_no)
         self._veredito = novo
         self._ja_sondou = True
-        # A borda só existe contra uma foto anterior. Na PRIMEIRA sonda tudo
-        # seria "novo", e o daemon repintaria no boot por nada — o priming do
-        # `_refresh_sysfs_leds` já cuidou daquele instante.
         if primeira:
             return novo, ()
         return novo, tuple(n for n in novo.nos_segurados if n not in antes)
 
 
-# ---------------------------------------------------------------------------
-# STEAM-NO-FISICO-01 — a vigia do sequestro: corrigir em até um segundo
-# ---------------------------------------------------------------------------
-
-#: A fatia do laço de reconexão enquanto a vigia está de guarda. É o que torna
-#: «em até um segundo» uma conta que fecha: reafirmação a cada
-#: `INTERVALO_DA_REAFIRMACAO_S`, avaliada a cada meia fatia.
 PASSO_DA_VIGIA_S: float = 0.5
 
-#: De quanto em quanto a barra e o número são reescritos num nó sequestrado.
-#: 0,9 s com a fatia de 0,5 s dá uma reescrita a cada segundo cravado — o teto
-#: que ela deu (*"corrigiu ao no segundo após"*) — e não duas: meio segundo
-#: pagaria o dobro de reports sem que o olho dela visse diferença.
 INTERVALO_DA_REAFIRMACAO_S: float = 0.9
 
-#: A sonda de `/proc` (≈11 ms nesta máquina, medido em 23/09/2026: 453 pids,
-#: 146 legíveis, 4.385 fds) roda a cada fatia só enquanto há nó ABERTO sem
-#: sequestrador conhecido — é o único estado em que um processo novo pode
-#: chegar sem aviso, e a borda dele tem de ser vista em meio segundo.
 INTERVALO_DA_SONDA_S: float = 0.5
 
-#: Com o sequestro já visto, a sonda só precisa dizer quando ele acabou; a
-#: reescrita continua a cada segundo, e reafirmar um nó que já foi solto é
-#: inofensivo (é a cor do próprio Hefesto). Dois segundos cortam três quartos
-#: da varredura numa sessão longa de Modo Nativo, que é onde o jogo segura o nó
-#: o tempo inteiro.
 INTERVALO_DA_SONDA_COM_SEQUESTRO_S: float = 2.0
 
 
 def no_alcancavel(no: str) -> bool:
-    """Um processo DESTE usuário consegue abrir este nó agora?
-
-    É a pergunta que decide se vale varrer `/proc`: com a regra udev da cura
-    (O-NO-NASCE-FECHADO-01) o nó do físico é `0600 root`, e nenhum processo da
-    sessão consegue abri-lo — logo ninguém NOVO pode sequestrá-lo, e a sonda
-    seria gasto sem pergunta. Ele fica alcançável no Modo Nativo (o broker
-    expõe de propósito), numa máquina sem a cura, ou na janela de milissegundos
-    em que o `_open_one` expõe o nó para o `hidapi`.
-
-    `os.access` respeita a ACL (é o `access(2)` do kernel), custa ~0,4 µs
-    (medido em 23/09/2026) e não abre nada. Falha de leitura devolve ``True``:
-    na dúvida, a vigia olha.
-    """
+    """Um processo DESTE usuário consegue abrir este nó agora?"""
     try:
         return os.access(no, os.R_OK | os.W_OK)
     except Exception:  # pragma: no cover - caminho malformado
@@ -708,31 +500,7 @@ def no_alcancavel(no: str) -> bool:
 
 
 def firma_do_no(no: str) -> tuple[int, int] | None:
-    """A FIRMA do nó: ``(st_ino, st_ctime_ns)``, ou ``None`` se ele não existe.
-
-    **POR QUE `no_alcancavel` NÃO BASTA** (conferência de 23/09/2026). O
-    `access(2)` responde *"alguém consegue abrir este nó AGORA?"*, e a pergunta
-    da vigia é outra: *"alguém SEGURA este nó?"*. A sprint mediu a diferença,
-    e ela é o defeito inteiro: *"Esconder depois (tirar a ACL) não fecha um
-    descritor já aberto"*. A Steam que abre o nó na janela em que ele está
-    exposto (a regra udev desligada por ``--no-fechar-o-no``, ou a exposição
-    que o `_open_one` pede para o `hidapi`) continua com o fd depois que o
-    broker fecha — e o nó fechado responde "inalcançável". Uma vigia que só
-    varresse com o nó alcançável nunca veria esse sequestro.
-
-    O ``ctime`` é o que fecha o buraco sem pagar varredura em regime: todo
-    fechamento e toda exposição do broker é um ``chmod`` + ``xattr`` NO NÓ, e os
-    dois mexem no ``ctime``; nó recriado (replug, mesmo ``hidrawN``) ganha
-    inode e ``ctime`` novos. Logo, **todo fd aberto numa janela foi aberto
-    antes da mudança de firma que fechou a janela**, e uma varredura depois
-    dela o vê. O broker só escreve o nó que mudou
-    (O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01, 25/09/2026): com os nós
-    parados, o ``ctime`` fica parado, e escrever e ler no nó não o move.
-
-    Custa um ``stat`` (sem abrir o nó, sem permissão sobre ele). Nó que não
-    existe devolve ``None``: ninguém segura um nó que não está lá, e a vigia
-    não varre por ele.
-    """
+    """A FIRMA do nó: ``(st_ino, st_ctime_ns)``, ou ``None`` se ele não existe."""
     try:
         st = os.stat(no)
     except OSError:
@@ -752,53 +520,7 @@ class PassoDaVigia:
 
 
 class VigiaDoSequestro:
-    """Diz, a cada fatia, QUAIS nós do físico reescrever — e só isso.
-
-    STEAM-NO-FISICO-01, a segunda obrigação da decisão dela de 23/09/2026:
-
-        *"steam sequestrou hefesto corrigiu ao no segundo após"* — e,
-        na sprint: *"o Hefesto reescreve a barra e o número em até 1 s,
-        quantas vezes for preciso"*.
-
-    **POR QUE NÃO É O `SentinelaDeEscritorCru`.** O sentinela licencia UMA
-    reafirmação no fim da sequência, e a foto dele é a verdade que a aba Status
-    lê. A vigia muda as duas coisas: ela reafirma enquanto o sequestro durar, e
-    olha também no Modo Nativo, onde o sentinela não olha por regra antiga
-    (*"no modo nativo devolvemos o controle pra steam"*). Pendurar isto nele
-    trocaria o texto da aba Status sem ninguém pedir. A SONDA é a mesma
-    (:func:`escritores_crus_alheios`) — uma varredura só de `/proc` no produto,
-    chamada por dois donos.
-
-    **SEGURAR NÃO É ESCREVER, e a vigia sabe.** Não há como ler a cor que a
-    barra mostra (ver o cabeçalho deste módulo). Então enquanto um processo
-    alheio segura o nó, a barra e o número são reescritos a cada segundo — o
-    preço é um report mínimo por segundo por controle sequestrado (duas fatias
-    de rádio, contra ~800 reports/s de uma mesa cheia), e ele só existe
-    enquanto houver sequestrador.
-
-    **QUANDO ELA VARRE.** Uma vez a cada mudança de FIRMA do nó
-    (:func:`firma_do_no`): o nó que a vigia ainda não viu, o nó recriado, e
-    todo nó cuja permissão o broker mexeu — é assim que o fd aberto numa
-    janela de exposição é visto depois de a janela fechar, com o nó já
-    `0600 root`. Nó alcançável: a cada `INTERVALO_DA_SONDA_S`. Sequestro
-    conhecido: a cada `INTERVALO_DA_SONDA_COM_SEQUESTRO_S`, só para saber
-    quando acabou; entre duas varreduras, o PID que morreu solta o nó na hora
-    (um `stat`) — e, como a morte não prova que ninguém mais segura o nó (o
-    fd herdado por um filho, ou passado por `SCM_RIGHTS`), o nó que perdeu um
-    dono conhecido por morte varre UMA vez. Nó fechado, firma parada e
-    ninguém segurando: nunca.
-
-    **CORREÇÃO DE FATO (conferência de 23/09/2026).** A primeira versão dizia
-    "nó fechado e nenhum sequestrador conhecido: nunca" e só varria com o nó
-    alcançável — e ficava cega exatamente ao mecanismo da sprint, a Steam que
-    abriu o nó ANTES de o broker fechar. Com a firma, o preço é uma varredura
-    (de 16 a 21 ms na máquina dela, medido em 25/09) por mudança real de
-    permissão e uma por morte de dono conhecido; com os nós parados, zero.
-
-    Não lê relógio nem `/proc` por conta própria: tudo entra por injeção
-    (`sonda`, `alcancavel`, `vivo`, `firma`), como no sentinela. É o que deixa
-    exercitar minutos de vigia em microssegundos de teste.
-    """
+    """Diz, a cada fatia, QUAIS nós do físico reescrever — e só isso."""
 
     def __init__(
         self,
@@ -817,23 +539,14 @@ class VigiaDoSequestro:
         self._firma: Callable[[str], object | None] = (
             firma if firma is not None else firma_do_no
         )
-        #: nó -> a firma que ele tinha quando a última varredura BEM-SUCEDIDA
-        #: começou. Firma diferente = a permissão mudou ou o nó é outro, e um fd
-        #: pode ter entrado pela janela: vale uma varredura.
         self._firma_sondada: dict[str, object] = {}
         self._intervalo_da_sonda_s = float(intervalo_da_sonda_s)
         self._intervalo_com_sequestro_s = float(intervalo_com_sequestro_s)
         self._intervalo_da_reafirmacao_s = float(intervalo_da_reafirmacao_s)
-        #: nó -> PIDs alheios que o seguram, pela última sonda (só vivos).
         self._por_no: dict[str, tuple[int, ...]] = {}
         self._sondado_em: float | None = None
-        #: nó -> quando a barra e o número dele foram reescritos pela última vez.
         self._reafirmado_em: dict[str, float] = {}
-        #: nó -> quantas reescritas desde que o sequestro começou (para o diário).
         self._reescritas: dict[str, int] = {}
-        #: Os sequestros já DITOS (nó -> PIDs): é contra eles que as bordas se
-        #: medem. Separado de `_por_no` porque o PID morto sai de lá entre duas
-        #: varreduras, e a borda de saída não pode sumir junto.
         self._anunciados: dict[str, tuple[int, ...]] = {}
         self._vigilante = False
 
@@ -852,11 +565,7 @@ class VigiaDoSequestro:
         return self._reescritas.get(str(no), 0)
 
     def quer_sondar(self, nos: Iterable[str], agora: float) -> bool:
-        """Este passo precisa varrer `/proc`? Barato: `access` e `stat`.
-
-        Atualiza `vigilante` como efeito — quem pergunta é a fatia, e a
-        resposta decide o tamanho da próxima.
-        """
+        """Este passo precisa varrer `/proc`? Barato: `access` e `stat`."""
         alvos = {str(n) for n in nos if n}
         self._esquecer_fora(alvos)
         self._soltar_os_mortos()
@@ -880,23 +589,15 @@ class VigiaDoSequestro:
     def passo(
         self, nos: Iterable[str], agora: float, *, sondar: bool
     ) -> PassoDaVigia:
-        """Um passo da vigia: (talvez) varre, e diz o que reescrever AGORA.
-
-        ``sondar`` vem de :meth:`quer_sondar`; separar as duas é o que deixa o
-        chamador mandar SÓ a varredura para o executor — o resto é memória.
-        Falha da sonda preserva a foto anterior (ausência não é "ninguém
-        segura", a mesma disciplina do sentinela).
-        """
+        """Um passo da vigia: (talvez) varre, e diz o que reescrever AGORA."""
         agora = float(agora)
         alvos = sorted({str(n) for n in nos if n})
         sondou = False
         if sondar and alvos:
-            # A firma é lida ANTES da varredura: se o broker mexer no nó durante
-            # ela, a firma gravada é a velha e o passo seguinte varre de novo.
             firmas = {n: self._firma(n) for n in alvos}
             try:
                 bruto = self._sonda(alvos)
-            except Exception as exc:  # sonda é best-effort por contrato
+            except Exception as exc:
                 logger.debug("vigia_do_sequestro_sonda_falhou", err=str(exc))
             else:
                 sondou = True
@@ -918,11 +619,6 @@ class VigiaDoSequestro:
         self._anunciados = dict(self._por_no)
         for no in soltos:
             self._reafirmado_em.pop(no, None)
-        # O SOLTO GANHA UMA REESCRITA FINAL (conferência de 23/09/2026). Quem
-        # larga o nó pode ter escrito depois da última reescrita — o jogo que
-        # pinta e fecha, a Steam que sai —, e sem esta o último a escrever no
-        # físico seria ELE, para sempre: no Modo Nativo nada mais reafirma.
-        # Só o nó que continua na mesa; o que saiu não tem a quem escrever.
         presentes = set(alvos)
         a_reafirmar = tuple(
             sorted(
@@ -946,11 +642,7 @@ class VigiaDoSequestro:
         )
 
     def reafirmado(self, nos: Iterable[str], agora: float) -> None:
-        """Marca que a barra e o número destes nós acabaram de ser reescritos.
-
-        A reescrita FINAL de um sequestro que acabou não conta: o nó já saiu da
-        foto, e contá-la abriria a conta do próximo sequestro com uma a mais.
-        """
+        """Marca que a barra e o número destes nós acabaram de ser reescritos."""
         for no in (str(n) for n in nos):
             if no not in self._por_no:
                 continue
@@ -962,18 +654,7 @@ class VigiaDoSequestro:
         return self._reescritas.pop(str(no), 0)
 
     def _soltar_os_mortos(self) -> None:
-        """O PID que morreu solta o nó sem esperar a próxima varredura.
-
-        E a vigia NÃO CONFIA NA MORTE (O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01,
-        25/09/2026): o nó que perdeu um PID conhecido esquece a firma sondada, e
-        o passo varre UMA vez. Um fd herdado por um filho (sem `O_CLOEXEC`) ou
-        passado por `SCM_RIGHTS` antes de o dono morrer segue no nó — e, com o
-        nó fechado e a firma parada, nada mais o faria aparecer. Até 25/09 quem
-        o achava, por acaso, era o rehide que reescrevia o nó a cada 30 s.
-
-        O nó que o dono SOLTOU (fechou o fd e segue vivo) não passa por aqui:
-        quem o viu soltar foi uma varredura.
-        """
+        """O PID que morreu solta o nó sem esperar a próxima varredura."""
         vivos = {
             no: tuple(p for p in pids if self._vivo(p)) for no, pids in self._por_no.items()
         }

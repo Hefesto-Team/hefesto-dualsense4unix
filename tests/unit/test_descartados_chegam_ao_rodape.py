@@ -1,31 +1,4 @@
-"""CONFIG-06 (23/08/2026) — o que a gravação descartou CHEGA à tela.
-
-O DEFEITO, medido na árvore de 23/08: ``gravar_maquina_com_descartes``
-(``utils/maquina.py:340``) devolve ``ResultadoDaGravacao(gravou, descartados)``,
-e o handler ``machine.declare`` chamava o embrulho ``gravar_maquina``
-(``utils/maquina.py:335``), que estreita o resultado para ``bool`` e joga a
-lista fora. Nenhum consumidor em ``src/`` — só a bateria de ``utils``. A
-informação existia, atravessava a função e morria ali: a pessoa perdia um campo
-do ``maquina.json`` dela sem uma palavra.
-
-O ARCO QUE ESTA BATERIA VIGIA, elo por elo:
-
-1. o handler devolve ``descartados`` no corpo do SUCESSO, e **só quando há algo
-   a dizer** — lista vazia não entra, porque "descartei zero campos" é ruído;
-2. a chave atravessa o JSON-RPC de verdade (socket, não dublê);
-3. a ponte traduz o nome CRU do schema para o rótulo da seção que o declara — a
-   mesma fronteira e a mesma regra do ``_MOTIVOS_MAQUINA``: a usuária nunca lê
-   identificador de protocolo na barra de status;
-4. o rodapé compõe a frase, e ela sobrevive ao toast do "Aplicar" pelo contrato
-   ADITIVO do A3 (``_recado_da_maquina``) — não por um segundo caminho até a
-   statusbar;
-5. o mapa de rótulos cobre TODO campo de topo do schema, para um campo novo não
-   nascer aparecendo cru na tela.
-
-Bancada: nenhum aparelho, nenhum MAC. O ``config_dir`` é o isolado por
-``_hefesto_fake_env`` (``tests/conftest.py``), e a fixture ``arquivo`` prova a
-cada teste que ele caiu sob o ``tmp_path``.
-"""
+"""CONFIG-06 (23/08/2026) — o que a gravação descartou CHEGA à tela."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -63,21 +36,12 @@ from hefesto_dualsense4unix.utils.maquina import (
 )
 from hefesto_dualsense4unix.utils import xdg_paths
 
-#: O documento em disco que força um descarte: ``teto`` fora do catálogo derruba
-#: o ``orcamento`` sozinho, e a ``mesa`` ao lado dele SOBREVIVE — é a cura de
-#: 23/08 (``_o_que_ainda_vale``) que esta bateria assume de pé.
 DISCO_COM_CAMPO_INVALIDO: dict[str, Any] = {
     "version": MAQUINA_SCHEMA_VERSION,
     "orcamento": {"teto": "turbo"},
     "mesa": {"altura_da_antena": "acima"},
 }
 
-#: O rótulo de tela do campo descartado. LIDO da seção, nunca digitado —
-#: corrigido em 26/08/2026, e o defeito era de FORMA: o comentário já dizia que
-#: este valor É o ``TITULO`` da seção, e mesmo assim a linha abaixo o digitava à
-#: mão. Quando a LEX-1 renomeou as duas seções para o léxico dela ("Conexões" e
-#: "Desempenho"), quatro testes ficaram vermelhos acusando o RENOMEIO, que
-#: estava certo — a régua prendia a palavra em vez de prender o vínculo.
 ROTULO_DO_ORCAMENTO = secao_orcamento.TITULO
 ROTULO_DA_MESA = secao_mesa.TITULO
 
@@ -134,11 +98,6 @@ def _estado() -> ControllerState:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O handler devolve a lista — e cala quando não há nada a dizer
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_o_handler_devolve_os_descartados_no_corpo_do_sucesso(
     arquivo: Path,
@@ -154,7 +113,6 @@ async def test_o_handler_devolve_os_descartados_no_corpo_do_sucesso(
         {"maquina": {"mesa": {"linha_de_visada": "livre"}}}
     )
     assert resposta == {"ok": True, "descartados": ["orcamento"]}
-    # A cura de que esta bateria depende: o estrago parou no campo ruim.
     documento = json.loads(arquivo.read_text(encoding="utf-8"))
     assert documento["mesa"] == {"altura_da_antena": "acima", "linha_de_visada": "livre"}
     assert "orcamento" not in documento
@@ -162,22 +120,10 @@ async def test_o_handler_devolve_os_descartados_no_corpo_do_sucesso(
 
 @pytest.mark.asyncio
 async def test_sem_descarte_o_corpo_e_o_de_sempre(arquivo: Path) -> None:
-    """Lista vazia não vai no corpo — silêncio ali é a resposta certa.
-
-    "Descartei zero campos" é ruído, e a chave presente-e-vazia obrigaria todo
-    consumidor a distinguir ``[]`` de ausente.
-
-    MORDE: devolvendo ``{"ok": True, "descartados": list(...)}`` sempre —
-    reprova aqui com ``{'ok': True, 'descartados': []}``.
-    """
+    """Lista vazia não vai no corpo — silêncio ali é a resposta certa."""
     assert await _Servidor()._handle_machine_declare(
         {"maquina": {"mesa": {"linha_de_visada": "livre"}}}
     ) == {"ok": True}
-
-
-# ---------------------------------------------------------------------------
-# 2 e 3. O fio e a tradução
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -196,19 +142,6 @@ async def test_a_lista_atravessa_o_fio(
     ``machine_declare_detalhado`` — reprova com ``()`` no lugar do rótulo.
     """
     _corromper(arquivo)
-    # O RUNTIME DE MENTIRA TEM DE SER UM RUNTIME, e a especificação XDG pede
-    # `0700`. O `platformdirs` 4.12 (o do CI, 30/09/2026) confere o modo e, num
-    # `run` que o `mkdir` do servidor criou com `0755`, cai para o
-    # `/run/user/<uid>` de verdade: o servidor escutava aqui e a ponte batia
-    # no runtime da máquina, e a régua dizia `(False, None, ())` sobre um fio
-    # que está certo. O 4.2 da mesa não confere, e ali ela passava.
-    #
-    # E O BERÇO É CURTO, como o da régua irmã (test_maquina_a_declaracao_persiste,
-    # 08/09/2026). Medido em 30/09/2026 na suíte da casa: com o TMPDIR da
-    # suíte e o contador `pytest-40`, `<tmp_path>/run/hefesto-dualsense4unix/d.sock`
-    # chegou a 107 caracteres, e o `AF_UNIX` morre com `path too long` a partir
-    # daí (o teto de 108 conta o terminador). O `mkdtemp` na raiz do sistema
-    # deixa a folga em ~70, qualquer que seja o nome do teste ou o contador.
     import shutil
     import tempfile
 
@@ -244,7 +177,6 @@ async def test_a_lista_atravessa_o_fio(
         )
     finally:
         await servidor.stop()
-        # O berço é nosso, então a limpeza também é — o pytest não conhece este.
         shutil.rmtree(berco, ignore_errors=True)
     assert resposta == (True, None, (ROTULO_DO_ORCAMENTO,))
 
@@ -252,12 +184,7 @@ async def test_a_lista_atravessa_o_fio(
 def test_a_ponte_nunca_entrega_identificador_de_protocolo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``orcamento`` vira "Orçamento"; ``mesa`` vira ROTULO_DA_MESA.
-
-    MORDE: devolvendo ``tuple(descartados)`` cru em vez de passar pelo
-    ``_CAMPOS_DA_MAQUINA`` — reprova, e a barra de status passaria a mostrar o
-    nome do campo JSON.
-    """
+    """``orcamento`` vira "Orçamento"; ``mesa`` vira ROTULO_DA_MESA."""
     monkeypatch.setattr(
         ipc_bridge,
         "_safe_call",
@@ -293,12 +220,7 @@ def test_o_embrulho_de_duas_pontas_continua_valendo(
 def test_corpo_torto_do_daemon_nao_derruba_o_aplicar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Daemon velho (sem a chave) e valor torto caem no silêncio, não no traceback.
-
-    É fronteira entre processos: o daemon vivo desta casa é mais velho que o
-    código (install editable), e um "Aplicar" que gravou não pode explodir por
-    causa do aviso.
-    """
+    """Daemon velho (sem a chave) e valor torto caem no silêncio, não no traceback."""
     corpos: list[dict[str, Any]] = [
         {"ok": True},
         {"ok": True, "descartados": "orcamento"},
@@ -314,25 +236,10 @@ def test_corpo_torto_do_daemon_nao_derruba_o_aplicar(
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. A MORDIDA: a frase chega ao rótulo do rodapé
-# ---------------------------------------------------------------------------
-
-
 def test_a_frase_do_descarte_chega_ao_rotulo_do_rodape(
     arquivo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Disco corrompido + declaração nova → o rótulo NOMEIA o que se perdeu.
-
-    O caminho inteiro sem dublê no meio: o ``_safe_call`` da ponte entra no
-    handler DE VERDADE, que grava no disco DE VERDADE, e a resposta volta pela
-    ponte real até a statusbar real. O único dublê é o ``call_async`` da
-    aplicação de perfil, que não é assunto desta bateria.
-
-    MORDE: em qualquer elo do encanamento — o handler voltando a chamar
-    ``gravar_maquina``, a ponte largando a lista, ou o rodapé devolvendo
-    ``"Configurações gravadas."`` sem olhar os descartes.
-    """
+    """Disco corrompido + declaração nova → o rótulo NOMEIA o que se perdeu."""
     _corromper(arquivo)
     servidor = _Servidor()
 
@@ -367,11 +274,7 @@ def test_a_frase_do_descarte_chega_ao_rotulo_do_rodape(
 def test_sem_descarte_o_rodape_nao_inventa_aviso(
     arquivo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Disco são → a frase de sempre, sem uma palavra sobre descarte.
-
-    MORDE: compondo a frase do descarte com lista vazia — reprova aqui, e todo
-    "Aplicar" passaria a dizer "descartou: ." no rodapé.
-    """
+    """Disco são → a frase de sempre, sem uma palavra sobre descarte."""
     servidor = _Servidor()
     monkeypatch.setattr(
         ipc_bridge,
@@ -395,21 +298,8 @@ def test_sem_descarte_o_rodape_nao_inventa_aviso(
     assert "descart" not in texto
 
 
-# ---------------------------------------------------------------------------
-# 5. O portão do mapa de rótulos
-# ---------------------------------------------------------------------------
-
-
 def test_todo_campo_do_schema_tem_rotulo_de_tela() -> None:
-    """Campo novo no schema nasce com rótulo — ou esta bateria reprova.
-
-    Sem este portão, alargar o ``MaquinaConfig`` faria a frase do descarte
-    mostrar o nome cru do campo JSON na barra de status, e ninguém notaria até
-    o dia em que o arquivo de alguém tivesse aquele campo corrompido.
-
-    ``version`` fica de fora de propósito: ele nunca entra na lista de
-    descartados (``_o_que_ainda_vale`` o pula), e não é escolha de ninguém.
-    """
+    """Campo novo no schema nasce com rótulo — ou esta bateria reprova."""
     do_schema = set(MaquinaConfig.model_fields) - {"version"}
     faltando = do_schema - set(ipc_bridge._CAMPOS_DA_MAQUINA)
     assert not faltando, (

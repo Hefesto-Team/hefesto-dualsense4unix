@@ -35,8 +35,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi`, como em
-# `test_footer_actions.py`. `footer_actions` puxa `gui_dialogs`, que é GTK.
 exigir_gi_real("o Aplicar com o Hefesto desligado")
 
 import json
@@ -48,14 +46,8 @@ from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
 from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_maquina
 
-#: A frase que a tela mostrava — e ainda mostra quando nem o disco aceita. É a
-#: evidência do defeito, não texto de produto deste arquivo: a dona única do
-#: texto da aba é a `CONFIGURACOES-O-LEXICO-01`.
 FRASE_DO_DEFEITO = "O Hefesto está desligado — não gravei o que você declarou"
 
-#: Uma declaração com as QUATRO chaves de topo que a aba acumula. Existe assim
-#: de propósito: a porta estreita (`declarar_a_mesa`) gravaria só a primeira e
-#: perderia as outras três em silêncio.
 DECLARACAO_INTEIRA: dict[str, Any] = {
     "mesa": {"altura_da_antena": "acima"},
     "mapa": {
@@ -89,18 +81,8 @@ def daemon_parado(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
     return pedidos
 
 
-# --- 1. A mordida: o disco muda, e a tela para de mentir ----------------------
-
-
 def test_o_que_ela_declarou_desce_ao_disco(daemon_parado: list[Any]) -> None:
-    """Com o Hefesto parado, o "Aplicar" grava — e a releitura devolve tudo.
-
-    **A MORDIDA.** Arranquei o desvio para o disco (as duas linhas
-    ``if not ok and motivo is None`` de ``_gravar_declaracao_de_maquina``) e
-    rodei: o ``maquina.json`` não nasceu, ``gravou`` voltou ``False``, a frase
-    voltou a ser a do defeito e as quatro asserções abaixo reprovaram. Devolvi,
-    e as quatro passaram.
-    """
+    """Com o Hefesto parado, o "Aplicar" grava — e a releitura devolve tudo."""
     alvo = caminho_da_maquina()
     assert not alvo.exists(), "a bateria começa com o disco limpo"
 
@@ -115,13 +97,7 @@ def test_o_que_ela_declarou_desce_ao_disco(daemon_parado: list[Any]) -> None:
 def test_o_documento_inteiro_desce_ao_disco_e_nao_so_a_mesa(
     daemon_parado: list[Any],
 ) -> None:
-    """As quatro chaves de topo sobrevivem — nenhuma se perde no caminho.
-
-    ``lugar_declarado.declarar_a_mesa`` é escopada à seção ``mesa``: mandar por
-    ela a declaração pendente do rodapé gravaria a altura da antena e perderia
-    calado o desenho do gabinete, os controles e o orçamento. Este teste é o que
-    impede essa economia de parecer inofensiva.
-    """
+    """As quatro chaves de topo sobrevivem — nenhuma se perde no caminho."""
     _Rodape(DECLARACAO_INTEIRA)._gravar_declaracao_de_maquina()
 
     gravado = carregar_maquina()
@@ -137,32 +113,16 @@ def test_o_documento_inteiro_desce_ao_disco_e_nao_so_a_mesa(
 def test_a_pendencia_e_limpa_so_quando_a_gravacao_confirma(
     daemon_parado: list[Any],
 ) -> None:
-    """Gravou no disco, então a aba para de marcar "há escolhas por aplicar".
-
-    Fonte única do estado: ``_maquina_pendente``, a mesma que o portão do
-    fechamento da janela consulta. Deixá-la de pé depois de gravar faria o
-    diálogo de saída acusar perda de uma coisa que já está em disco.
-    """
+    """Gravou no disco, então a aba para de marcar "há escolhas por aplicar"."""
     rodape = _Rodape(DECLARACAO_INTEIRA)
     rodape._gravar_declaracao_de_maquina()
     assert rodape._maquina_pendente is None
 
 
-# --- 2. O que o desvio para o disco NÃO pode fazer ---------------------------
-
-
 def test_o_daemon_vivo_que_recusa_nao_e_atropelado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Daemon que RESPONDEU "não" mantém o disco intacto.
-
-    ``motivo`` preenchido quer dizer que o daemon falou. Gravar por trás dele
-    deixaria a memória do processo divergindo do arquivo — duas verdades sobre a
-    mesma coisa, que é o defeito que esta leva inteira existe para matar.
-
-    Mordida: troquei o gatilho por ``if not ok`` (sem o ``motivo is None``). O
-    arquivo nasceu com o daemon vivo dizendo não, e este teste reprovou.
-    """
+    """Daemon que RESPONDEU "não" mantém o disco intacto."""
     recusa = "Não vou sobrescrever o que está lá"
     monkeypatch.setattr(
         footer_actions.ipc_bridge,
@@ -183,12 +143,7 @@ def test_o_daemon_vivo_que_recusa_nao_e_atropelado(
 def test_o_daemon_que_aceitou_grava_sozinho_e_a_janela_nao_grava_de_novo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com a ponte viva e o ``ok``, o disco não é tocado por aqui.
-
-    Quem grava é o handler, do outro lado. Uma segunda escrita pela janela seria
-    o segundo dono do gesto — e ela ainda chegaria DEPOIS, sobrescrevendo o que
-    o daemon acabou de fundir.
-    """
+    """Com a ponte viva e o ``ok``, o disco não é tocado por aqui."""
     monkeypatch.setattr(
         footer_actions.ipc_bridge,
         "machine_declare_detalhado",
@@ -206,12 +161,7 @@ def test_o_daemon_que_aceitou_grava_sozinho_e_a_janela_nao_grava_de_novo(
 def test_disco_que_recusa_volta_a_frase_do_defeito_e_guarda_os_bytes(
     daemon_parado: list[Any],
 ) -> None:
-    """Arquivo de uma versão futura não é lido nem sobrescrito, nem por aqui.
-
-    Escolha de alguém não se destrói para registrar outra. E o rodapé tem de
-    dizer que não gravou, em vez de mentir "gravei" e deixar a declaração dela
-    sumir na próxima abertura.
-    """
+    """Arquivo de uma versão futura não é lido nem sobrescrito, nem por aqui."""
     alvo = caminho_da_maquina()
     alvo.parent.mkdir(parents=True, exist_ok=True)
     alvo.write_text(json.dumps({"version": 99, "mesa": {}}), encoding="utf-8")
@@ -228,28 +178,16 @@ def test_disco_que_recusa_volta_a_frase_do_defeito_e_guarda_os_bytes(
 def test_declaracao_vazia_nao_cria_arquivo_nem_com_o_daemon_parado(
     daemon_parado: list[Any],
 ) -> None:
-    """Sem nada declarado, sai cedo — o desvio novo não muda essa porta.
-
-    Criar um ``maquina.json`` só porque alguém clicou "Aplicar" poria em disco
-    um documento que ela nunca declarou.
-    """
+    """Sem nada declarado, sai cedo — o desvio novo não muda essa porta."""
     assert _Rodape(None)._gravar_declaracao_de_maquina() == (True, None)
     assert not daemon_parado, "nem a ponte é tentada quando não há o que declarar"
     assert not caminho_da_maquina().exists()
 
 
-# --- 3. O caminho novo não reabre a porta do daemon --------------------------
-
-
 def test_o_desvio_para_o_disco_nao_fala_com_o_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A gravação de plano B não passa pela ponte, nem por engano.
-
-    Se ela passasse, o defeito voltaria inteiro no dia em que alguém
-    "reaproveitasse" o caminho do IPC aqui — e todos os testes acima
-    continuariam verdes, porque o dublê da ponte responde.
-    """
+    """A gravação de plano B não passa pela ponte, nem por engano."""
 
     def _explode(*_: object, **__: object) -> None:
         raise AssertionError("o plano B não pode falar com o daemon")

@@ -33,7 +33,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("toasts honestos da mesa cheia 09")
 
 import inspect
@@ -71,7 +70,6 @@ UNIQS: list[str] = [
     c["uniq"] for c in json.loads(FIXTURE.read_text(encoding="utf-8"))["controllers"]
 ]
 NA_MESA, FORA_DA_MESA = UNIQS[0], UNIQS[1]
-#: O rótulo que a aba Status guarda do alvo (R-16 o preserva quando ele cai).
 ROTULO_DO_AUSENTE = "Controle 2 (BT)"
 
 
@@ -103,9 +101,6 @@ class _Host(LightbarActionsMixin):
         self._target_uniq_by_index = conectados
         self._coop_ligado = coop
         self._modo_nativo_ligado = nativo
-        # BG-01 (26/08/2026): o dublê do daemon precisa das MESMAS duas coisas
-        # que o daemon de verdade usa para montar `aplicado_em`/`guardado_em`
-        # — quem está na mesa e se o output está mutado pelo Modo Nativo.
         _MESA_DO_DAEMON["conectados"] = {
             v for v in conectados.values() if isinstance(v, str) and v
         }
@@ -123,32 +118,11 @@ class _Host(LightbarActionsMixin):
         self._toasts.append(msg)
 
 
-#: BG-01 (26/08/2026): o que o DAEMON sabe da mesa, alimentado por `_Host`.
 _MESA_DO_DAEMON: dict[str, Any] = {"conectados": set(), "nativo": False}
 
 
 def _corpo_por_uniq(uniq: str | None) -> dict[str, Any]:
-    """A resposta que o daemon monta para um ``led.set``/``led.player_set``.
-
-    BG-01. Este dublê deixou de dizer só "sim": ele reproduz o mapa que
-    ``ipc_handlers._destinos_por_uniq`` faz do que
-    ``backend_pydualsense.apply_output_for`` devolveu, e são as três palavras
-    que importam aqui:
-
-    * controle na mesa, output livre -> ``"escreveu"`` -> ``aplicado_em``;
-    * controle FORA da mesa (``handle is None``) -> ``"registrado"`` ->
-      ``guardado_em``;
-    * Modo Nativo (``_output_mute``) com o controle NA mesa -> ``"escreveu"``
-      -> ``aplicado_em``: desde 23/09/2026 a luz e o número saem no Nativo
-      (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`,
-      STEAM-NO-FISICO-01). Era ``"registrado"`` (o conserto 1.3), e um dublê
-      que continuasse dizendo guardado seria mais frouxo que o daemon.
-
-    **Sem isto o dublê seria uma régua que só sabe passar**: dizendo sempre
-    ``aplicado_em: [uniq]`` ele afirmaria escrita onde o produto mede
-    registro, e a aba — que agora decide pelo CORPO — repetiria a afirmação.
-    O dublê tem de saber recusar; é a régua da casa.
-    """
+    """A resposta que o daemon monta para um ``led.set``/``led.player_set``."""
     if uniq and uniq in _MESA_DO_DAEMON["conectados"]:
         return {"status": "ok", "aplicado_em": [uniq], "guardado_em": []}
     if uniq:
@@ -205,24 +179,7 @@ class TestACorDaLightbar:
     def test_sem_o_mapa_a_janela_nao_promete_uma_volta_que_nao_conhece(
         self,
     ) -> None:
-        """O ÚNICO "não sei" que sobrou: a janela não tem o atributo.
-
-        Aqui ela de fato não sabe (mixin instanciada sozinha, sem a aba
-        Status).
-
-        **BG-01 (26/08/2026) INVERTEU o que este teste mede, e o nome mudou
-        junto.** Ele nasceu exigindo que a frase NÃO dissesse "guardado" —
-        porque quem a dizia era a heurística da janela, e uma janela sem mapa
-        estaria inventando. Desde a BG-01 quem diz é o DAEMON, que sabe: com o
-        alvo fora da mesa ele responde ``guardado_em: [uniq]``, e repetir a
-        palavra dele não é invenção, é a única resposta honesta.
-
-        O que continua valendo — e é o que a mordida guarda — é a segunda
-        metade da frase: **a janela não pode prometer a VOLTA de um controle
-        que ela não sabe se está lá.** Sem o mapa, o "vai valer quando o
-        Controle 2 voltar" não pode aparecer, porque essa parte é dela e não
-        do daemon.
-        """
+        """O ÚNICO "não sei" que sobrou: a janela não tem o atributo."""
         host = _Host(alvo=FORA_DA_MESA, conectados={})
         del host._target_uniq_by_index
         host._aplicar_cor_no_controle()
@@ -254,7 +211,6 @@ class TestACorDaLightbar:
         assert host._edit_target_uniq == FORA_DA_MESA, "R-16 mantém o alvo"
         host._aplicar_cor_no_controle()
         assert GUARDADO in host._toasts[-1]
-        # ...e o ramo que produz isso está lá, dito com todas as letras.
         fonte = inspect.getsource(
             StatusActionsMixin._refresh_controller_target_combo
         )
@@ -311,9 +267,7 @@ class TestOQuintoGestoDaAba:
         assert "Lightbar apagada" not in toast
 
     def test_em_modo_nativo_diz_apagada(self) -> None:
-        """Era «em Modo Nativo não diz apagada». Desde 23/09/2026 a barra é do
-        Hefesto no Nativo (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`)
-        e apagá-la sai no fio — dizer «guardado» seria a mentira ao contrário."""
+        """Era «em Modo Nativo não diz apagada». Desde 23/09/2026 a barra é do"""
         host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         host.on_lightbar_off(None)
         toast = host._toasts[-1]
@@ -321,24 +275,10 @@ class TestOQuintoGestoDaAba:
         assert "Modo Nativo" not in toast
         assert "Lightbar apagada" in toast
 
-    # A PALAVRA DA TELA MUDOU — 08/09/2026: "mesa" é banida na tela por decisão
-    # dela (06/09) e `textos_de_aplicacao` passou a dizer "não está ligado".
-    # As frases abaixo continuam pingadas PALAVRA POR PALAVRA de propósito (a
-    # soma das pendências é o que este arquivo mede); o que se corrigiu foi só
-    # o termo decidido. UMA delas era pior que vermelha: o
-    # `assert "…" not in toast` de `test_o_coop_nao_governa…` passava à toa,
-    # porque procurava um texto que o produto não diz mais.
     def test_modo_nativo_e_alvo_fora_somam_no_quinto_gesto_tambem(self) -> None:
-        """O gesto novo passa pela mesma soma dos outros — não por uma cópia.
-
-        O "Apagar" foi o último a entrar no vocabulário; provar a soma só nos
-        gestos antigos deixaria justamente o novo livre para voltar à cadeia
-        ``if/elif`` que o conserto veio matar.
-        """
+        """O gesto novo passa pela mesma soma dos outros — não por uma cópia."""
         host = _Host(alvo=FORA_DA_MESA, conectados={0: NA_MESA}, nativo=True)
         host.on_lightbar_off(None)
-        # O Modo Nativo não é pendência da LUZ desde 23/09/2026
-        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): sobra a ausência.
         assert host._toasts[-1] == (
             "Apagar a lightbar — guardado, vai valer quando o Controle 2 voltar."
         )
@@ -350,12 +290,7 @@ class TestOQuintoGestoDaAba:
         assert host._toasts[-1] == "Lightbar apagada"
 
     def test_o_coop_nao_governa_a_cor_e_a_frase_nao_o_cita(self) -> None:
-        """Medido, não suposto: a camada do co-op tem vocabulário de UM campo.
-
-        Somar o co-op à frase do "Apagar" seria inventar uma pendência que o
-        mecanismo não tem — ``set_coop_outputs`` descarta tudo que não é
-        ``player_leds``.
-        """
+        """Medido, não suposto: a camada do co-op tem vocabulário de UM campo."""
         from hefesto_dualsense4unix.core import backend_pydualsense
 
         assert backend_pydualsense._COOP_LAYER_FIELDS == ("player_leds",)
@@ -365,37 +300,7 @@ class TestOQuintoGestoDaAba:
 
 
 class TestAsPendenciasSomam:
-    """CONSERTO 1.5 — duas razões ao mesmo tempo, que é a mesa dela de hoje.
-
-    A cadeia ``if/elif`` parava na primeira condição verdadeira. Com o co-op
-    ligado (o fixture de hoje traz ``coop.enabled=true``) e o alvo mantido
-    fora da mesa pela R-16, o toast prometia *"Vale quando o co-op sair"* — e
-    sair do co-op não faz valer nada, porque o controle continua fora.
-
-    **As SEIS combinações, e por que as quatro primeiras não bastam.** As
-    pendências são três, logo as somas possíveis são quatro (três pares e a
-    trinca). A primeira volta do conserto provou só dois pares — co-op+ausente
-    e nativo+ausente — e a metade que ficou de fora é justamente a que só
-    existe por causa desta cura: *"com duas ou três monta uma só"*. Medido, não
-    suposto: com ``_e()`` devolvendo lixo para três itens E com a
-    ``frase_de_guardado`` descartando o co-op sempre que o Modo Nativo também
-    vale, 796 testes passavam — a cura arrancada e nenhum vermelho. Por isso os
-    dois testes abaixo, e por isso eles fixam a frase INTEIRA: quem some numa
-    soma some em silêncio, e um ``in`` por pendência não vê a ordem trocada nem
-    o separador errado.
-
-    **O que estes testes NÃO resolvem, e é decisão dela** (medido em 14/08, não
-    estimado): a frase da trinca tem 256 caracteres no pior caso — o desenho
-    com os cinco LEDs acesos — e o rótulo da ``Gtk.Statusbar`` é de UMA linha
-    com ``PANGO_ELLIPSIZE_END`` (conferido no widget, não na memória). Na
-    largura padrão da janela (``default-width`` 1180 no `main.glade`) cabem
-    ~183 caracteres: a frase de três pendências é cortada dentro do último
-    motivo e o *"Vale quando…"* inteiro — a parte que diz o que ela precisa
-    fazer — não chega à tela. A de duas pendências cabe raspando (1123 px de
-    1156 px), e não cabe mais quando o aviso do D4 entra na frente. Encurtar é
-    escolha de texto, e texto é dela; o que o teste pode garantir é que
-    nenhuma pendência suma em silêncio.
-    """
+    """CONSERTO 1.5 — duas razões ao mesmo tempo, que é a mesa dela de hoje."""
 
     def test_coop_ligado_e_alvo_fora_promete_as_duas_liberacoes(self) -> None:
         host = _Host(alvo=FORA_DA_MESA, conectados={0: NA_MESA}, coop=True)
@@ -409,9 +314,7 @@ class TestAsPendenciasSomam:
         )
 
     def test_modo_nativo_e_alvo_fora_a_cor_so_espera_o_controle(self) -> None:
-        """A cor no Modo Nativo sai no fio desde 23/09/2026
-        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): da soma antiga
-        («Modo Nativo sair e Controle 2 voltar») sobra só a ausência."""
+        """A cor no Modo Nativo sai no fio desde 23/09/2026"""
         host = _Host(alvo=FORA_DA_MESA, conectados={0: NA_MESA}, nativo=True)
         host._aplicar_cor_no_controle()
         toast = host._toasts[-1]
@@ -420,16 +323,7 @@ class TestAsPendenciasSomam:
         assert "Controle 2 voltar" in toast
 
     def test_os_dois_donos_de_agora_juntos_somam(self) -> None:
-        """co-op E Modo Nativo, com o alvo NA mesa — o par que faltava.
-
-        São as duas pendências que valem mesmo com o controle na mesa, e
-        nenhum teste as punha juntas. Sem esta mordida, quem escrevesse
-        ``if coop and not nativo`` engolia a do co-op sem um vermelho.
-        """
-        # A SOMA mora no dono do vocabulário, e é lá que ela se prova: desde
-        # 23/09/2026 o Modo Nativo não é pendência das luzes
-        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`), e nenhum gesto
-        # desta aba alcança mais o par co-op + Nativo.
+        """co-op E Modo Nativo, com o alvo NA mesa — o par que faltava."""
         from hefesto_dualsense4unix.app.textos_de_aplicacao import frase_de_guardado
 
         assert frase_de_guardado(
@@ -453,18 +347,7 @@ class TestAsPendenciasSomam:
         )
 
     def test_as_tres_pendencias_juntas_prometem_as_tres_liberacoes(self) -> None:
-        """A trinca: co-op ligado, Modo Nativo ligado e o alvo fora da mesa.
-
-        É o caso que só existe por causa deste conserto — e é alcançável na
-        mesa dela: o co-op fica ligado, o Modo Nativo entra quando o jogo pega
-        o `hidraw`, e a R-16 segura o alvo quando o controle cai. Prometer duas
-        das três liberações é a mesma mentira que a soma veio matar, uma casa
-        adiante.
-        """
-        # A trinca se prova no DONO do vocabulário: desde 23/09/2026 o Modo
-        # Nativo não é pendência das luzes
-        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`), e o gesto desta
-        # aba sai com as duas que sobram (conferido no fim).
+        """A trinca: co-op ligado, Modo Nativo ligado e o alvo fora da mesa."""
         from hefesto_dualsense4unix.app.textos_de_aplicacao import frase_de_guardado
 
         toast = frase_de_guardado(
@@ -484,7 +367,6 @@ class TestAsPendenciasSomam:
             "controle é o jogo; o Controle 2 não está ligado. Vale quando o "
             "co-op sair, o Modo Nativo sair e o Controle 2 voltar."
         )
-        # A ordem é a decisão documentada: os donos de AGORA antes da ausência.
         assert (
             toast.index("co-op ligado")
             < toast.index("em Modo Nativo")
@@ -499,8 +381,7 @@ class TestAsPendenciasSomam:
         assert "o Controle 2 voltar" in host._toasts[-1]
 
     def test_uma_pendencia_so_continua_com_a_frase_de_sempre(self) -> None:
-        """Hipótese tem de explicar o que JÁ funcionava: com UMA condição, as
-        frases saem palavra por palavra como saíam."""
+        """Hipótese tem de explicar o que JÁ funcionava: com UMA condição, as"""
         so_coop = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, coop=True)
         so_coop.on_player_leds_preset_p3(None)
         assert so_coop._toasts[-1] == (
@@ -513,8 +394,6 @@ class TestAsPendenciasSomam:
             "Cor (80% de brilho) — guardado, vai valer quando o Controle 2 "
             "voltar."
         )
-        # O Modo Nativo sozinho não segura mais a COR (23/09/2026,
-        # `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): ela sai no fio.
         so_nativo = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         so_nativo._aplicar_cor_no_controle()
         assert so_nativo._toasts[-1] == "Cor enviada ao controle (80% de brilho)"
@@ -574,13 +453,7 @@ class TestOToastDosGatilhos:
 
 
 class TestOModoNativoNaTela:
-    """CONSERTO 1.3 — a terceira condição da tabela de mentiras, na janela.
-
-    O backend deixou de dizer "escreveu" com o output mutado; aqui prova-se que
-    a TELA deixou de dizer "aplicado" nas duas abas que escrevem output. A aba
-    Gatilhos era a que não tinha portão nenhum de Modo Nativo: o toast
-    "Rigido aplicado" saía com zero byte no fio.
-    """
+    """CONSERTO 1.3 — a terceira condição da tabela de mentiras, na janela."""
 
     def test_gatilho_em_modo_nativo_nao_diz_aplicado(self) -> None:
         host = _HostGatilhos(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
@@ -595,17 +468,14 @@ class TestOModoNativoNaTela:
         )
 
     def test_cor_em_modo_nativo_diz_enviada(self) -> None:
-        """Era «não diz enviada»; desde 23/09/2026 a cor SAI no Modo Nativo
-        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`, STEAM-NO-FISICO-01),
-        e o toast diz o que aconteceu."""
+        """Era «não diz enviada»; desde 23/09/2026 a cor SAI no Modo Nativo"""
         host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         host._aplicar_cor_no_controle()
         (toast,) = host._toasts
         assert toast == "Cor enviada ao controle (80% de brilho)"
 
     def test_desenho_em_modo_nativo_diz_atualizado(self) -> None:
-        """O número também é do Hefesto no Modo Nativo desde 23/09/2026
-        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`)."""
+        """O número também é do Hefesto no Modo Nativo desde 23/09/2026"""
         host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         host.on_player_leds_preset_p3(None)
         toast = host._toasts[-1]
@@ -625,11 +495,7 @@ class TestOModoNativoNaTela:
         assert luzes._toasts[-1].startswith("Desenho das luzes atualizado —")
 
     def test_a_janela_le_o_modo_nativo_do_state_full(self) -> None:
-        """O flag tem de ter DONO: a aba Status o publica a cada tique lento.
-
-        Sem esta ponte o gate acima seria letra morta — `_modo_nativo_ligado`
-        ficaria sempre no padrão `False` e o toast voltaria a mentir.
-        """
+        """O flag tem de ter DONO: a aba Status o publica a cada tique lento."""
         from hefesto_dualsense4unix.app.actions.status_actions import (
             StatusActionsMixin,
         )
@@ -639,8 +505,6 @@ class TestOModoNativoNaTela:
         assert host._modo_nativo_ligado is True
         StatusActionsMixin._sync_modo_nativo_manda_no_output(host, {})
         assert host._modo_nativo_ligado is False
-        # ...e que o tique lento a CHAMA (mesmo vigia do import de vocabulário
-        # logo abaixo): uma ponte que ninguém atravessa é o flag no padrão.
         fonte = inspect.getsource(StatusActionsMixin._render_slow_state)
         assert "_sync_modo_nativo_manda_no_output" in fonte
 
@@ -651,10 +515,7 @@ class TestOVocabularioMoraNumLugarSo:
         assert nome_curto_do_alvo(None) == "esse controle"
 
     def test_o_alvo_sem_nome_nao_compoe_portugues_quebrado(self) -> None:
-        """CONSERTO 1.5 — o fallback compunha *"quando o esse controle
-        voltar"*, pt-BR quebrado saindo do módulo cujo motivo de existir é a
-        palavra certa. O nome próprio pede artigo; o de fallback já traz o
-        seu."""
+        """CONSERTO 1.5 — o fallback compunha *"quando o esse controle"""
         assert guardado_ate_o_alvo_voltar("Cor", nome_curto_do_alvo(None)) == (
             "Cor — guardado, vai valer quando esse controle voltar."
         )
@@ -663,14 +524,7 @@ class TestOVocabularioMoraNumLugarSo:
         )
 
     def test_os_modulos_que_o_importam_usam_a_mesma_palavra(self) -> None:
-        """Se alguém escrever "guardado" à mão em outro arquivo, esta conta
-        continua passando — mas o import some, e é o import que se vigia.
-
-        São DOIS módulos, não três (o relatório da entrega dizia "três abas", e
-        o nome antigo deste teste repetia o erro enquanto percorria dois): a
-        aba Rumble não tem toast de "aplicado" para corrigir. A lista aqui é a
-        conta, e a asserção de baixo a mantém honesta.
-        """
+        """Se alguém escrever "guardado" à mão em outro arquivo, esta conta"""
         importadores = {
             caminho.name
             for caminho in Path(lightbar_actions.__file__).parent.parent.rglob(
@@ -683,12 +537,6 @@ class TestOVocabularioMoraNumLugarSo:
         for modulo in (lightbar_actions, triggers_actions):
             fonte = Path(modulo.__file__).read_text(encoding="utf-8")
             assert "textos_de_aplicacao" in fonte, modulo.__name__
-            # BG-01 (26/08/2026): a régua passou a ignorar `"guardado_em"`,
-            # que NÃO é a palavra da tela — é o nome do campo que o daemon
-            # publica (`ipc_handlers._destinos_por_uniq`) e que a aba Lightbar
-            # monta ao somar as N respostas de um envio por MAC. Confundir os
-            # dois faria a régua reprovar quem lê o protocolo direito, que é
-            # pior que régua nenhuma: ensina a não acreditar nela.
             escrita_a_mao = [
                 trecho
                 for trecho in fonte.split(f'"{GUARDADO}')[1:]

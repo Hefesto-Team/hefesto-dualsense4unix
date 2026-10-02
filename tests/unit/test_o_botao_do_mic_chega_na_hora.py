@@ -47,14 +47,10 @@ from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as luz
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MUDO
 
-#: `uapi/linux/hidraw.h:56`: 64 posições por fd, uma sempre livre.
 _VAGAS_DA_FILA = 63
 
-#: As taxas medidas: o …0000ab entregava ~560-720 reports/s pelo rádio na
-#: bancada de 29/09, e o cabo entrega 250/s.
 _TAXA = {"radio": 688.0, "cabo": 250.0}
 
-#: O controle das réguas da luz, na faixa forjada da suíte.
 UM = "aabbcc0000c1"
 
 
@@ -63,18 +59,8 @@ def _throttle(n: int) -> float:
     return float(min(bp.REPORT_THREAD_THROTTLE_SEC * n, bp.REPORT_THREAD_THROTTLE_MAX_SEC))
 
 
-# ---------------------------------------------------------------------------
-# O lado C do hidapi, com a fila do kernel
-# ---------------------------------------------------------------------------
-
-
 class _LeriaParaSempre(BaseException):
-    """Um `hid_read` sem prazo com a fila vazia: no aparelho, ele não voltaria.
-
-    `BaseException` e não `Exception` de propósito: a rede do laço
-    (`except Exception`) engoliria o aviso e o teste leria só um controle
-    desconectado.
-    """
+    """Um `hid_read` sem prazo com a fila vazia: no aparelho, ele não voltaria."""
 
 
 class _Relogio:
@@ -93,12 +79,7 @@ def _report(
     bateria: int = 5,
     audio: bool = False,
 ) -> bytes:
-    """Um report do aparelho: `0x01` do cabo, ou `0x31` do rádio com CRC.
-
-    `audio=True` é o quadro de áudio do rádio (o bit `INPUT_FLAG_AUDIO` ligado,
-    CRC válido): o payload é Opus, e aqui ele é lixo que cairia EM CIMA do
-    botão, do `status[1]` e da bateria se passasse pela porta.
-    """
+    """Um report do aparelho: `0x01` do cabo, ou `0x31` do rádio com CRC."""
     if transporte == "cabo":
         corpo = bytearray(64)
         corpo[0] = prr.INPUT_REPORT_USB
@@ -123,12 +104,7 @@ def _report(
 
 
 class _Aparelho:
-    """O `hid_device` de UM handle: a fila do fd e o modo do `hid_read`.
-
-    O aparelho entrega um report a cada `1/taxa` s do relógio virtual; o que
-    chega com a fila cheia se perde (a política do `hidraw_report_event`). O
-    que cada report diz vem das funções do ensaio, pelo instante dele.
-    """
+    """O `hid_device` de UM handle: a fila do fd e o modo do `hid_read`."""
 
     def __init__(
         self,
@@ -147,14 +123,12 @@ class _Aparelho:
         self.inicio = relogio.t
         self.gerados = 0
         self.fila: deque[tuple[int, float, bytes]] = deque()
-        self.bloqueante = True  # `hidapi.Device(path=...)` nasce com `blocking=True`
+        self.bloqueante = True
         self.fechado = False
         self.descartados = 0
         self.lidos = 0
         self.escritos: list[bytes] = []
-        #: o tamanho da fila a cada leitura, antes de tirar o report
         self.filas_vistas: list[int] = []
-        #: o último report de ESTADO que saiu da fila: (índice, bateria)
         self.ultimo_estado_lido: tuple[int, int] | None = None
         self._botao = botao
         self._mudo = mudo
@@ -186,7 +160,6 @@ class _Aparelho:
 
 def _exigir(dev: Any) -> _Aparelho:
     if dev is None:
-        # A mensagem do cffi quando o `_device` do wrapper já virou `None`.
         raise TypeError(
             "initializer for ctype 'hid_device *' must be a cdata pointer, not NoneType"
         )
@@ -195,12 +168,7 @@ def _exigir(dev: Any) -> _Aparelho:
 
 
 class _CDoHidapi:
-    """O `hidapi.hidapi` de mentira: `hid.c` do Linux, só no que o laço usa.
-
-    `hid_read` passa ao `hid_read_timeout` o prazo -1 no modo bloqueante e 0
-    no outro (`hid.c:1274`); `hid_set_nonblocking` só troca o modo
-    (`hid.c:1277-1283`).
-    """
+    """O `hidapi.hidapi` de mentira: `hid.c` do Linux, só no que o laço usa."""
 
     def __init__(self) -> None:
         self.ffi = hidapi_do_wrapper.ffi
@@ -308,8 +276,6 @@ class _Bancada:
             self._depois_de_dormir.remove(_parar)
 
     def soltar(self) -> None:
-        # O `__del__` do wrapper chama o `hid_close` do lado C DE VERDADE se o
-        # `_device` ainda estiver de pé quando o monkeypatch já tiver saído.
         for dev in self.devices:
             dev._device = None
 
@@ -332,25 +298,12 @@ def _primeiro_com_o_dedo(aparelho: _Aparelho, inicio: float) -> float:
     return aparelho.instante(math.ceil((inicio - aparelho.inicio) * aparelho.taxa - 1 - 1e-9))
 
 
-# ---------------------------------------------------------------------------
-# 1. Do dedo à borda: uma volta, e não 63
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 @pytest.mark.parametrize("transporte", ["radio", "cabo"])
 def test_do_dedo_a_borda_leva_no_maximo_uma_volta(
     bancada: _Bancada, transporte: str, n: int
 ) -> None:
-    """Um aperto em `t0` dá `_mic_mudo_em - t0` ≤ uma volta, em todo `n`.
-
-    Três segundos de aquecimento antes do aperto: com a leitura de um report
-    por volta, a fila enche nesse tempo em todos os casos.
-
-    MORDIDA: `LEITURAS_POR_VOLTA = 1` (a volta de uma leitura) dá 63 voltas —
-    0,55 s, 1,05 s, 1,55 s e 2,08 s no modelo — e reprova; é o
-    `test_a_fila_de_mentira_reproduz_o_defeito` abaixo.
-    """
+    """Um aperto em `t0` dá `_mic_mudo_em - t0` ≤ uma volta, em todo `n`."""
     inicio = bancada.relogio.t + 3.0
     aparelho = _Aparelho(
         bancada.relogio,
@@ -376,13 +329,7 @@ def test_do_dedo_a_borda_leva_no_maximo_uma_volta(
 def test_a_fila_de_mentira_reproduz_o_defeito(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch, transporte: str, n: int
 ) -> None:
-    """O INSTRUMENTO MEDE: com UMA leitura por volta, a borda leva ~63 voltas.
-
-    É o controle positivo da régua 1. Uma fila de mentira que não enchesse, ou
-    que descartasse o report VELHO, daria verde sobre a volta de hoje. Os dois
-    números são os da casa: 0,5 s com um no cabo (547 ms em 04/09) e 2,0 s com
-    os quatro no rádio (2,1 s em 29/09).
-    """
+    """O INSTRUMENTO MEDE: com UMA leitura por volta, a borda leva ~63 voltas."""
     monkeypatch.setattr(bp, "LEITURAS_POR_VOLTA", 1)
     inicio = bancada.relogio.t + 3.0
     aparelho = _Aparelho(
@@ -401,23 +348,11 @@ def test_a_fila_de_mentira_reproduz_o_defeito(
     assert aparelho.descartados > 0, "a fila de mentira nunca descartou nada"
 
 
-# ---------------------------------------------------------------------------
-# 2. O toque curto
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("transporte", ["radio", "cabo"])
 def test_o_toque_curto_entre_duas_voltas_da_uma_borda(
     bancada: _Bancada, transporte: str
 ) -> None:
-    """Três reports com o dedo embaixo, dentro de uma volta: UMA borda.
-
-    O botão e o `status[1]` se contam em cada report, na ordem em que chegaram;
-    a pydualsense só vê o mais novo, e nele o dedo já subiu.
-
-    MORDIDA: a leitura única (um report por volta, com a fila cheia) perde o
-    toque inteiro para o descarte do kernel, e dá zero.
-    """
+    """Três reports com o dedo embaixo, dentro de uma volta: UMA borda."""
     taxa = _TAXA[transporte]
     aparelho = _Aparelho(bancada.relogio, transporte=transporte, taxa=taxa)
     inicio = aparelho.instante(int(2.0 * taxa)) - 1e-6
@@ -429,22 +364,8 @@ def test_o_toque_curto_entre_duas_voltas_da_uma_borda(
     assert h._mic_botao is False, "o report mais novo é o do dedo que subiu"
 
 
-# ---------------------------------------------------------------------------
-# 3. A saída não espera a entrada
-# ---------------------------------------------------------------------------
-
-
 def test_com_a_fila_vazia_a_saida_escreve_em_cada_volta(bancada: _Bancada) -> None:
-    """Dez voltas com o aparelho calado: dez escritas, uma por mudança.
-
-    O `hid_read` sem prazo com a fila vazia não volta; o dublê LEVANTA. A volta
-    que esvazia a fila termina TODA volta numa leitura vazia, então ela só
-    funciona com a leitura sem espera (`_hid_set_nonblocking` depois do
-    `init()`).
-
-    MORDIDA: tirar o `_hid_set_nonblocking` do `sendReport` (a drenagem com a
-    leitura de hoje) levanta `_LeriaParaSempre` na primeira volta.
-    """
+    """Dez voltas com o aparelho calado: dez escritas, uma por mudança."""
     aparelho = _Aparelho(bancada.relogio, transporte="radio", taxa=0.0)
     h = bancada.handle(aparelho, n=4)
     h._suppress_leds = True
@@ -472,15 +393,7 @@ class _GiraEmFalso(BaseException):
 def test_sem_throttle_a_volta_vazia_nao_gira_em_falso(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Com o throttle zero e o aparelho calado, a volta ainda dorme.
-
-    O `if throttle > 0` do laço aceita o zero (o botão do ambiente), e com a
-    leitura bloqueante de antes ele era o laço do upstream, no ritmo do
-    aparelho. Com a leitura sem espera, a volta vazia sem sono gira em falso.
-
-    MORDIDA: tirar a espera da volta vazia (`ESPERA_DA_VOLTA_VAZIA_SEM_
-    THROTTLE_SEC`) faz cem leituras no mesmo instante, e a régua levanta.
-    """
+    """Com o throttle zero e o aparelho calado, a volta ainda dorme."""
     aparelho = _Aparelho(bancada.relogio, transporte="radio", taxa=0.0)
     h = bancada.handle(aparelho, n=1)
     h._throttle_sec = 0.0
@@ -503,22 +416,10 @@ def test_sem_throttle_a_volta_vazia_nao_gira_em_falso(
     assert h.connected is True
 
 
-# ---------------------------------------------------------------------------
-# 4. Um parse por volta, com o report mais novo
-# ---------------------------------------------------------------------------
-
-
 def test_um_parse_por_volta_com_o_report_de_estado_mais_novo(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O `readInput` roda uma vez por volta, e com o report de estado mais NOVO.
-
-    Um quadro de áudio a cada três conta em `_reports_recusados` e não mexe em
-    borda nem em status: o lixo dele tem o botão e o mudo ligados.
-
-    MORDIDAS: `readInput` por report reprova pela contagem; entregar o report
-    mais VELHO reprova pela bateria (cada report tem a sua).
-    """
+    """O `readInput` roda uma vez por volta, e com o report de estado mais NOVO."""
     aparelho = _Aparelho(
         bancada.relogio,
         transporte="radio",
@@ -535,7 +436,6 @@ def test_um_parse_por_volta_com_o_report_de_estado_mais_novo(
         real(h, in_report)
 
     monkeypatch.setattr(h, "readInput", _conta)
-    #: as voltas que tiraram da fila ao menos um report de ESTADO
     com_estado: list[tuple[int, int] | None] = [None]
 
     def _conta_volta() -> None:
@@ -563,11 +463,6 @@ def test_um_parse_por_volta_com_o_report_de_estado_mais_novo(
     )
 
 
-# ---------------------------------------------------------------------------
-# 6. No tempo: os quatro, trinta segundos, um aperto a cada 1,5 s
-# ---------------------------------------------------------------------------
-
-
 _MESA = (("radio", 688.0), ("radio", 560.0), ("radio", 390.0), ("cabo", 250.0))
 
 
@@ -575,14 +470,7 @@ _MESA = (("radio", 688.0), ("radio", 560.0), ("radio", 390.0), ("cabo", 250.0))
 def test_no_tempo_os_quatro_apertos_chegam_numa_volta(
     bancada: _Bancada, jogador: int
 ) -> None:
-    """Trinta segundos de mesa de quatro, um aperto a cada 1,5 s alternando.
-
-    Cada handle tem o seu fd, a sua fila e a sua volta, e nada da volta é
-    comum entre eles; por isso cada jogador roda os seus 30 s no relógio
-    virtual, com o throttle da mesa de quatro. Toda borda chega em ≤ uma
-    volta, nenhuma borda aparece sem aperto, e a fila nunca passa de uma volta
-    de reports.
-    """
+    """Trinta segundos de mesa de quatro, um aperto a cada 1,5 s alternando."""
     transporte, taxa = _MESA[jogador]
     inicio = bancada.relogio.t
     apertos = [inicio + 1.0 + 1.5 * k for k in range(20) if k % 4 == jogador]
@@ -615,11 +503,6 @@ def test_no_tempo_os_quatro_apertos_chegam_numa_volta(
         f"a fila chegou a {max(aparelho.filas_vistas)} reports (uma volta são {teto})"
     )
     assert aparelho.descartados == 0
-
-
-# ---------------------------------------------------------------------------
-# 5. A luz segura a borda
-# ---------------------------------------------------------------------------
 
 
 class _Backend:
@@ -701,14 +584,7 @@ async def _a_borda(
     na_borda: Callable[[], None] | None = None,
     depois: Callable[[], None] | None = None,
 ) -> tuple[list[int | None], list[int | None]]:
-    """A luz de produção antes e depois de UMA borda; devolve as duas escritas.
-
-    `na_borda` é o que muda no aparelho junto do aperto (o kernel virando o
-    bit). `o_ato` roda depois de a luz ter girado VINTE voltas com a borda na
-    mão — o ato atrasado de propósito, que é onde o esquecer-e-reler pintava o
-    estado velho. `depois` é a devolução da posse, com o firmware já
-    concordando.
-    """
+    """A luz de produção antes e depois de UMA borda; devolve as duas escritas."""
     daemon = _Daemon(backend)
     tarefa = asyncio.create_task(luz.luz_do_mic_loop(daemon))
     try:
@@ -738,13 +614,7 @@ async def _a_borda(
 async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_cala(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """(a) Borda `mudo=True`, bit ainda `False`, o ato toma a posse com `True`.
-
-    A luz não escreve ACESA em tique nenhum depois da borda, e termina APAGADA.
-
-    MORDIDA: o esquecer-e-reler de antes (sem `_segura_a_borda`) escreve ACESA
-    no tique seguinte à borda, pelo bit de antes do aperto.
-    """
+    """(a) Borda `mudo=True`, bit ainda `False`, o ato toma a posse com `True`."""
     monkeypatch.setattr(luz, "SEGURA_A_BORDA_S", 30.0)
     backend = _Backend(mudo_no_firmware=False)
 
@@ -767,10 +637,7 @@ async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_cala(
 async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_liga(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """(b) O espelho: borda `mudo=False`, bit ainda `True`, a posse vira `False`.
-
-    MORDIDA: sem `_segura_a_borda`, a luz escreve APAGADA pelo bit velho.
-    """
+    """(b) O espelho: borda `mudo=False`, bit ainda `True`, a posse vira `False`."""
     monkeypatch.setattr(luz, "SEGURA_A_BORDA_S", 30.0)
     backend = _Backend(mudo_no_firmware=True)
 
@@ -794,15 +661,7 @@ async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_liga(
 async def test_a_reancoragem_liga_e_a_luz_nunca_apaga(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """(c) Borda `mudo=True` do primeiro aperto, e o ato LIGA (a reancoragem).
-
-    O kernel vira o bit junto da borda (o toggle cego do `hid-playstation`,
-    firmware `True`), e o ato, com a mesa sem dono, liga: escreve a posse
-    `False`. A luz nunca escreve APAGADA e termina ACESA.
-
-    MORDIDAS: pintar o `mudo` cru da borda escreve APAGADA; e o
-    esquecer-e-reler de antes também, pelo bit que o kernel virou.
-    """
+    """(c) Borda `mudo=True` do primeiro aperto, e o ato LIGA (a reancoragem)."""
     monkeypatch.setattr(luz, "SEGURA_A_BORDA_S", 30.0)
     backend = _Backend(mudo_no_firmware=False)
 
@@ -810,7 +669,7 @@ async def test_a_reancoragem_liga_e_a_luz_nunca_apaga(
         backend.firmware = True
 
     def _o_ato() -> None:
-        backend.posse = False  # o firmware obedece só na volta seguinte
+        backend.posse = False
 
     def _a_devolucao() -> None:
         backend.firmware = False
@@ -833,13 +692,7 @@ async def test_a_reancoragem_liga_e_a_luz_nunca_apaga(
 async def test_o_ato_que_nao_escreve_solta_a_borda_no_teto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """(c) sem escrita: o ato liga e vê «já está» (bit `False`, posse do kernel).
-
-    Nenhuma posse aparece; a luz segura até `SEGURA_A_BORDA_S`, não escreve
-    APAGADA em tique nenhum, e passado o teto reescreve ACESA pelo bit fresco.
-
-    MORDIDA: pintar o `mudo` cru da borda (`True`) escreve APAGADA.
-    """
+    """(c) sem escrita: o ato liga e vê «já está» (bit `False`, posse do kernel)."""
     monkeypatch.setattr(luz, "SEGURA_A_BORDA_S", 0.01)
     backend = _Backend(mudo_no_firmware=False)
 
@@ -851,7 +704,6 @@ async def test_o_ato_que_nao_escreve_solta_a_borda_no_teto(
     assert apos == [luz.ACESA], f"depois do teto, UMA reescrita pelo bit fresco: {apos}"
 
 
-#: O segundo controle das réguas da luz, na faixa forjada da suíte.
 DOIS = "aabbcc0000c2"
 
 
@@ -890,15 +742,7 @@ class _BackendDeDois(_Backend):
 async def test_a_borda_de_um_controle_nao_segura_a_luz_do_outro(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A borda do P1 segura SÓ a luz do P1; a do P2 segue o que muda nele.
-
-    Durante a espera do ato do primeiro, o segundo é calado pela tela (o bit
-    dele vira): a luz do segundo apaga na hora, e a do primeiro não é escrita.
-    Nunca só o P1: a espera é por controle, e cada um tem a sua borda.
-
-    MORDIDA: uma espera comum a todos (a borda de um segurando a mesa)
-    deixa o segundo sem a escrita até o teto.
-    """
+    """A borda do P1 segura SÓ a luz do P1; a do P2 segue o que muda nele."""
     monkeypatch.setattr(luz, "SEGURA_A_BORDA_S", 30.0)
     monkeypatch.setattr(
         sys.modules[luz.MODULO_DE_QUEM_OUVE],

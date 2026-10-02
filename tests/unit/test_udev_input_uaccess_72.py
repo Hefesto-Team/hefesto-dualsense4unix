@@ -31,7 +31,7 @@ classifica o de movimento como ``ID_INPUT_ACCELEROMETER=1`` e o do touchpad como
 cobre só ``SUBSYSTEM=="hidraw"``, e ``scripts/install_udev.sh`` só cria o grupo
 ``hefesto``, nunca o ``input``.
 
-O CUSTO DO SILÊNCIO: ``core/evdev_reader.py:1396`` engole a ``PermissionError``
+O CUSTO DO SILÊNCIO: ``core/evdev_reader.py:1154`` engole a ``PermissionError``
 num ``except Exception: continue``. Sem acesso, o nó some do mapa de descoberta
 e o daemon relata "esse controle não tem sensor". O sintoma da falta de
 permissão é a AUSÊNCIA de dado, que não acusa ninguém — a mesma armadilha do
@@ -66,12 +66,6 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REGRA = REPO_ROOT / "assets" / "72-hefesto-touchpad-motion-uaccess.rules"
 
-#: Quem transforma ``TAG+="uaccess"`` em ACL é a
-#: ``/usr/lib/udev/rules.d/73-seat-late.rules``
-#: (``TAG=="uaccess", ENV{MAJOR}!="", RUN{builtin}+="uaccess"``). Regra numerada
-#: >= 73 roda DEPOIS dela e a TAG morre inerte — já aconteceu duas vezes nesta
-#: casa (a ``71-uhid`` nasceu 79; a ``79-external-controller-leds`` carregava uma
-#: TAG morta que o bloco ONDA-R foi remover).
 LIMITE_UACCESS = 73
 
 
@@ -129,11 +123,7 @@ def test_toda_linha_de_codigo_da_uaccess(linhas: list[str]) -> None:
 
 
 def test_toda_linha_ou_da_acesso_ou_fecha_o_fisico() -> None:
-    """Cada linha de código faz UMA das duas coisas, e nunca as duas.
-
-    A mordida: uma linha nova que não dá nem tira a TAG (um `MODE=` solto, por
-    exemplo) cai aqui, em vez de passar calada pelo filtro do `linhas`.
-    """
+    """Cada linha de código faz UMA das duas coisas, e nunca as duas."""
     for ln in _linhas_de_codigo(REGRA):
         da = 'TAG+="uaccess"' in ln
         tira = 'TAG-="uaccess"' in ln
@@ -158,7 +148,7 @@ def test_touchpad_tem_uaccess(linhas: list[str]) -> None:
     alvo = [ln for ln in linhas if "Touchpad" in ln]
     assert alvo, (
         "nenhuma linha cobre o nó '… Touchpad': o cursor por touchpad e as "
-        "teclas de região morrem em EACCES silencioso (evdev_reader.py:1396)."
+        "teclas de região morrem em EACCES silencioso (evdev_reader.py:1154)."
     )
     for ln in alvo:
         assert 'ATTRS{id/vendor}=="054c"' in ln, (
@@ -167,11 +157,7 @@ def test_touchpad_tem_uaccess(linhas: list[str]) -> None:
 
 
 def test_imu_nintendo_tem_uaccess(linhas: list[str]) -> None:
-    """O `hid-nintendo` publica a IMU num nó "<nome> (IMU)" — mesma lacuna.
-
-    Fonte do formato do nome: ``assets/dkms/hid-nintendo/hid-nintendo.c:2353``
-    (``devm_kasprintf(..., "%s (IMU)", ctlr->input->name)``).
-    """
+    """O `hid-nintendo` publica a IMU num nó "<nome> (IMU)" — mesma lacuna."""
     alvo = [ln for ln in linhas if "IMU" in ln]
     assert alvo, (
         "nenhuma linha cobre o nó '(IMU)' do hid-nintendo: o giroscópio do "
@@ -184,11 +170,7 @@ def test_imu_nintendo_tem_uaccess(linhas: list[str]) -> None:
 
 
 def test_so_event_nunca_js(linhas: list[str]) -> None:
-    """Os ``jsN`` estão ESCONDIDOS de propósito pela 80-motion-joydev-hide.
-
-    Dar acesso a eles seria desfazer a KERNEL-07 pelo outro lado: os "joysticks
-    fantasmas" da API js legada voltariam a aparecer para jogos antigos.
-    """
+    """Os ``jsN`` estão ESCONDIDOS de propósito pela 80-motion-joydev-hide."""
     for ln in linhas:
         assert 'KERNEL=="event*"' in ln, (
             f'linha sem KERNEL=="event*": {ln}\n'
@@ -201,12 +183,7 @@ def test_so_event_nunca_js(linhas: list[str]) -> None:
 
 
 def test_nunca_o_grupo_input() -> None:
-    """A decisão de RESPOSTAS_V1 item 3.3, e a da 71-uhid: grupo `input` jamais.
-
-    Membro de ``input`` lê TODOS os ``/dev/input/event*`` da máquina — o teclado
-    dela inclusive. É uma primitiva de keylogger para resolver um problema de
-    touchpad de controle. O ``uaccess`` dá ACL por SESSÃO, só nos nós nomeados.
-    """
+    """A decisão de RESPOSTAS_V1 item 3.3, e a da 71-uhid: grupo `input` jamais."""
     texto = REGRA.read_text(encoding="utf-8")
     codigo = "\n".join(_linhas_de_codigo(REGRA))
     assert 'GROUP="input"' not in codigo, (
@@ -214,8 +191,6 @@ def test_nunca_o_grupo_input() -> None:
         "docs/history/RESPOSTAS_V1.md item 3.3 e assets/71-uhid.rules"
     )
     assert "usermod" not in codigo, "regra udev não mexe em grupo de usuário"
-    # O porquê tem de estar escrito no arquivo: a próxima pessoa que achar o
-    # grupo mais simples precisa esbarrar na razão antes de trocar.
     assert "keylogger" in texto, (
         "o arquivo não explica por que o grupo 'input' está fora — sem isso a "
         "próxima leva troca uaccess por grupo achando que simplifica."
@@ -223,13 +198,7 @@ def test_nunca_o_grupo_input() -> None:
 
 
 def test_nao_desfaz_a_76_nem_a_78(linhas: list[str]) -> None:
-    """Permissão é uma coisa; classificação é outra.
-
-    A 76 marca ``LIBINPUT_IGNORE_DEVICE`` no touchpad e a 78 tira o
-    ``ID_INPUT_JOYSTICK`` do nó de movimento. Se esta regra mexesse em qualquer
-    das duas propriedades, curaria o acesso e reabriria dois defeitos fechados
-    (cursor engasgado e joystick fantasma na lista do jogo).
-    """
+    """Permissão é uma coisa; classificação é outra."""
     for ln in linhas:
         assert "LIBINPUT_IGNORE_DEVICE" not in ln, (
             f"esta regra não pode tocar a flag da 76: {ln}"
@@ -243,12 +212,7 @@ def test_nao_desfaz_a_76_nem_a_78(linhas: list[str]) -> None:
 
 
 def test_cobre_usb_e_bluetooth_pelo_mesmo_atributo(linhas: list[str]) -> None:
-    """``id/vendor`` existe por USB E por Bluetooth; ``idVendor`` só por USB.
-
-    Ancorar em ``ATTRS{idVendor}`` (o atributo do pai USB) deixaria o controle
-    por Bluetooth de fora em silêncio — e o alvo desta casa são quatro
-    controles por Bluetooth, um por jogador.
-    """
+    """``id/vendor`` existe por USB E por Bluetooth; ``idVendor`` só por USB."""
     for ln in linhas:
         assert "ATTRS{idVendor}" not in ln, (
             f"âncora que só existe por USB — por BT não há pai USB: {ln}"
@@ -257,12 +221,7 @@ def test_cobre_usb_e_bluetooth_pelo_mesmo_atributo(linhas: list[str]) -> None:
 
 
 def test_a_regra_e_instalada_por_todos_os_formatos() -> None:
-    """Paridade: a regra que não viaja é a regra que não existe.
-
-    O ``scripts/check_packaging_parity.sh`` cobra isto por conta própria para
-    toda ``assets/NN-*.rules``; aqui a cobrança é explícita e nominal, para que
-    a falha diga o nome do formato furado sem precisar ler o portão inteiro.
-    """
+    """Paridade: a regra que não viaja é a regra que não existe."""
     alvos = {
         "scripts/install_udev.sh": REGRA.name,
         "scripts/install-host-udev.sh": REGRA.name,
@@ -284,12 +243,7 @@ def test_a_regra_e_instalada_por_todos_os_formatos() -> None:
 
 
 def test_o_build_deb_cobre_pelo_glob_do_prefixo() -> None:
-    """O .deb cobre por glob (``assets/72-*.rules``), não por nome.
-
-    A lista única ``UDEV_RULES_GLOBS`` alimenta os DOIS destinos (o diretório
-    vivo e o espelho ``/usr/share/.../udev-rules``, que o
-    ``install-host-udev.sh`` prefere e exige completo).
-    """
+    """O .deb cobre por glob (``assets/72-*.rules``), não por nome."""
     build = REPO_ROOT / "scripts" / "build_deb.sh"
     if not build.is_file():
         pytest.skip("scripts/build_deb.sh ausente")
@@ -301,18 +255,8 @@ def test_o_build_deb_cobre_pelo_glob_do_prefixo() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O PORTÃO — a mordida do próprio gate, num repo fake
-# ---------------------------------------------------------------------------
-# Mesmo padrão de tests/unit/test_check_packaging_parity.py: pytest +
-# subprocess num repo fake em tmp_path. Aqui o alvo é a seção NOVA
-# ("acesso da sessão aos nós de ENTRADA"), e o contrato é que ela reprove cada
-# forma de arrancar a cura — inclusive as duas que um `grep` ingênuo aprovaria:
-# a regra virar comentário, e a regra ser renumerada para >= 73.
-
 SCRIPT_REL = "scripts/check_packaging_parity.sh"
 
-#: A regra fake, na forma mínima que a seção nova aceita.
 _REGRA_BOA = (
     '# fake\n'
     'ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", '
@@ -419,13 +363,7 @@ class TestOPortaoMorde:
         assert r.returncode == 0, r.stdout
 
     def test_o_estado_anterior_a_09_08_reprova(self, repo_fake: Path) -> None:
-        """O repo COM regras udev e SEM nenhuma que dê acesso à entrada.
-
-        É literalmente o estado do repositório até 09/08/2026: quinze regras,
-        nenhuma tocando ``/dev/input/event*``. O arquivo continua existindo e
-        continua coberto por todo instalador — só não concede nada. É a forma
-        do defeito, e é ela que o portão tem de acusar.
-        """
+        """O repo COM regras udev e SEM nenhuma que dê acesso à entrada."""
         (repo_fake / "assets" / NOME_FAKE).write_text(
             '# fake — regra que existe e não dá acesso nenhum à entrada\n'
             'ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="054c", '
@@ -440,12 +378,7 @@ class TestOPortaoMorde:
     def test_checkout_sem_regra_udev_alguma_fica_silencioso(
         self, repo_fake: Path
     ) -> None:
-        """Limite consciente, no molde dos outros blocos deste portão.
-
-        Fixture mínima de outro teste (sem ``assets/NN-*.rules``) não pode
-        reprovar por uma seção que não é o alvo dela. Fica pinado aqui para que
-        seja decisão, e não acidente de escrita.
-        """
+        """Limite consciente, no molde dos outros blocos deste portão."""
         (repo_fake / "assets" / NOME_FAKE).unlink()
         r = _roda(repo_fake)
         assert r.returncode == 0, r.stdout

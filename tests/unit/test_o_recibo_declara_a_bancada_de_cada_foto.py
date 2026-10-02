@@ -79,18 +79,11 @@ from typing import Any
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: QUEM ESCREVE O RECIBO HOJE. Não puxa GTK — é Playwright sobre HTML —, e por
-#: isso este arquivo não precisa mais do `exigir_gi_real` que o encabeçava.
 SCRIPT = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "olhar.py"
 
 
 def _retrato() -> Any:
-    """Importa o retratista como módulo, sem rodar o `main`.
-
-    Ele faz `sys.path.insert` do próprio diretório para achar o `onde`, então
-    o import basta — nenhum navegador abre, e `playwright` só é importado
-    dentro das funções que fotografam.
-    """
+    """Importa o retratista como módulo, sem rodar o `main`."""
     assert SCRIPT.is_file(), (
         f"{SCRIPT} sumiu. Se o retratista mudou de casa, este portão muda com "
         "ele — sem recibo ninguém separa a foto do produto da foto da bancada."
@@ -104,28 +97,17 @@ def _retrato() -> Any:
 
 
 def _bancada_com_fotos(tmp_path: Path, retrato: Any) -> Path:
-    """Uma pasta com dois PNGs de mentira — o suficiente para gravar recibo.
-
-    Os nomes seguem `PREFIXO_NOVO` porque é por ele que o retratista acha o que
-    somar: um recibo que somasse qualquer `*.png` da pasta acabaria somando
-    imagem que ele não fez.
-    """
+    """Uma pasta com dois PNGs de mentira — o suficiente para gravar recibo."""
     saida = tmp_path / "bancada"
     saida.mkdir()
     (saida / f"{retrato.PREFIXO_NOVO}01-jogar.png").write_bytes(b"\x89PNG-de-mentira-1")
     (saida / f"{retrato.PREFIXO_NOVO}02-controles.png").write_bytes(b"\x89PNG-de-mentira-2")
-    # Uma imagem de outra família na mesma pasta: ela não pode entrar na conta.
     (saida / "outra-imagem.png").write_bytes(b"\x89PNG-de-outra-familia")
     return saida
 
 
 def test_o_recibo_do_publicado_declara_o_produto(tmp_path: Path) -> None:
-    """Rodado sobre o publicado, o recibo tem de dizer que a foto é do produto.
-
-    É a MORDIDA do aceite, virada para a ambiguidade de hoje: a bancada e o
-    produto gravam PNG com o mesmo nome, e a imagem não denuncia de qual das
-    duas ela saiu.
-    """
+    """Rodado sobre o publicado, o recibo tem de dizer que a foto é do produto."""
     retrato = _retrato()
     saida = _bancada_com_fotos(tmp_path, retrato)
 
@@ -150,13 +132,7 @@ def test_o_recibo_do_publicado_declara_o_produto(tmp_path: Path) -> None:
 
 
 def test_o_recibo_conta_so_as_fotos_deste_retratista(tmp_path: Path) -> None:
-    """A soma é das DEZ, não de tudo o que houver na pasta.
-
-    `docs/usage/assets/` pode guardar outra imagem além das `aba-*.png` (a
-    foto social do repositório, por exemplo). Um recibo que somasse todas
-    afirmaria ter refeito o que este retratista não refez, e a próxima pessoa
-    leria a data do ensaio como data de todas.
-    """
+    """A soma é das DEZ, não de tudo o que houver na pasta."""
     retrato = _retrato()
     saida = _bancada_com_fotos(tmp_path, retrato)
 
@@ -171,40 +147,7 @@ def test_o_recibo_conta_so_as_fotos_deste_retratista(tmp_path: Path) -> None:
 
 
 def test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome(tmp_path: Path) -> None:
-    """O autor NOMEADO NO RECIBO GRAVADO é o programa que de fato o escreveu.
-
-    ESTA RÉGUA JÁ FOI FALSA, e a correção é de 08/09/2026. Ela nasceu como
-    troféu do laudo que a escreveu — *"é a mordida do defeito que ACHEI"* — e
-    não mordia onde dizia morder. Quatro medições, com o recibo do disco lido
-    depois de cada uma:
-
-    | o que se punha no lugar do autor | a régua velha dizia |
-    | --- | --- |
-    | `scripts/gui-captura/retratar_abas.py` — O DEFEITO HISTÓRICO | VERDE |
-    | `scripts/retratar_tudo.py` | VERDE |
-    | `src/hefesto_dualsense4unix/interface/olhar.py` | reprovava |
-    | a linha do autor ARRANCADA INTEIRA | VERDE |
-
-    **A CAUSA, e são duas metades que nunca se tocavam:** a primeira chamava
-    `_meu_endereco()` ISOLADA e conferia que ela terminava em `olhar.py`, sem
-    nunca perguntar se o recibo a usava; a segunda varria literais do fonte e só
-    pegava os que casavam `endswith(".py") and "olhar" in s`. Junto, isso pega o
-    autor que se nomeia CERTO e deixa passar exatamente o autor que nomeia um
-    programa apagado — a única forma que o defeito de fato teve. E deixava
-    `_meu_endereco` escrita e nunca ligada, que é o destino contra o qual o
-    `test_o_modo_doc_grava_recibo` logo abaixo foi escrito.
-
-    **A cura:** medir o RECIBO QUE FOI ESCRITO, não a função isolada. Grava-se
-    um recibo de verdade, lê-se o texto do disco, e cobra-se que o autor
-    nomeado exista nesta árvore E seja este mesmo arquivo. A segunda metade
-    fica, porque é ela que impede o endereço CERTO de ser digitado — e um nome
-    certo digitado é só um nome errado esperando o arquivo se mover.
-
-    As quatro mordidas acima reprovam agora, e uma quinta cobre a segunda
-    cobrança sozinha: pôr um programa que EXISTE mas é outro
-    (`interface/onde.py`) passa pelo `is_file()` e morre no `resolve()`, com
-    *"credita 'src/…/onde.py', mas quem o escreveu foi 'src/…/olhar.py'"*.
-    """
+    """O autor NOMEADO NO RECIBO GRAVADO é o programa que de fato o escreveu."""
     retrato = _retrato()
     saida = _bancada_com_fotos(tmp_path, retrato)
 
@@ -237,7 +180,6 @@ def test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome(tmp_path: Path) -> N
         "fotos."
     )
 
-    # E o nome não pode estar digitado em lugar nenhum do fonte.
     arvore = ast.parse(SCRIPT.read_text(encoding="utf-8"))
     docs = {
         id(no.body[0].value)
@@ -263,14 +205,7 @@ def test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome(tmp_path: Path) -> N
 
 
 def test_o_modo_doc_grava_recibo() -> None:
-    """O `--doc` chama a função — senão as réguas acima medem código morto.
-
-    Verificação por AST: dentro de `_todas` tem de haver uma chamada a
-    `_gravar_prova_da_foto`, e ela tem de passar `modo=` e `origem=`. Sem esta
-    régua, `_gravar_prova_da_foto` poderia estar perfeita e nunca ser chamada —
-    que é o defeito mais caro desta casa, e o `_fotografar_o_cabecalho` do
-    retratista velho viveu dez dias exatamente assim.
-    """
+    """O `--doc` chama a função — senão as réguas acima medem código morto."""
     arvore = ast.parse(SCRIPT.read_text(encoding="utf-8"))
     todas = next(
         (

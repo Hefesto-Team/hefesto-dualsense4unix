@@ -1,27 +1,4 @@
-"""LACO-DE-ESCRITA-02 — os dois defeitos do laço de saída, achados por leitura
-de código em 15/08/2026 e descritos em
-`docs/process/sprints/arquivados/2026-08-15-O-LACO-DE-ESCRITA-01-o-suspeito-que-sobrou.md`.
-
-**Defeito A — o contador de sequência do rádio sem lock.** `writeReport` fazia um
-*read-modify-write* de `_bt_seq` sem exclusão mútua, e há mais de uma thread
-escrevendo no mesmo handle (a `report_thread` em regime, e as escritas avulsas de
-lightbar vindas do IPC e do poll loop). Duas threads podiam carimbar o MESMO
-`seq`: o firmware descarta o quadro fora de sequência e o nosso log diz
-"escrito". É defeito só do rádio — o `0x02` do cabo não tem `seq` nem CRC.
-
-**Defeito B — a leitura vazia matando a thread de saída.** Com a leitura sem
-espera, `hidapi.Device.read` devolve `None` quando não há dado; o `readInput` do
-upstream começa com `list(inReport)` e levanta `TypeError`, que o laço não
-capturava. A thread morria e o controle ficava SEM SAÍDA — sem rumble, sem
-lightbar, sem gatilho — sem uma linha estruturada no journal e sem
-`connected = False`.
-
-(Nota de 29/09/2026, O-BOTAO-DO-MIC-CHEGA-NA-HORA-01: esta docstring dizia que
-o handle já nascia não-bloqueante. Não nascia: `hidapi.Device(path=...)` nasce
-com `blocking=True`, e o `hid_read` bloqueante nunca devolve vazio. A leitura
-sem espera nasceu em 29/09, na primeira volta do laço (`_hid_set_nonblocking`),
-e os dublês daqui passaram a ter o modo: um `read` só volta `None` depois dela.)
-"""
+"""LACO-DE-ESCRITA-02 — os dois defeitos do laço de saída, achados por leitura"""
 from __future__ import annotations
 
 import threading
@@ -61,18 +38,10 @@ class _LoggerDeMentira:
         return [campos for _n, evento, campos in self.linhas if evento == nome]
 
 
-# --------------------------------------------------------------------------
-# DEFEITO A — a corrida do `_bt_seq`
-# --------------------------------------------------------------------------
-
-
 def _handle_do_radio() -> bp._PinnedPyDualSense:
     """Um handle com só o que `writeReport` usa (o resto é dublê)."""
     inst = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
     inst._bt_seq = 0
-    # Espelha o que o `__init__` real dá a cada instância — sem isto o teste
-    # passaria pelo default de CLASSE, que serializa por acidente e não pela
-    # cura que se quer provar.
     inst._write_lock = threading.Lock()
     return inst
 
@@ -80,22 +49,7 @@ def _handle_do_radio() -> bp._PinnedPyDualSense:
 def test_escritores_concorrentes_no_radio_nunca_repetem_o_seq(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quatro threads escrevendo no MESMO handle BT produzem quatro `seq`
-    distintos, na ordem em que chegam ao fio.
-
-    A janela da corrida é aberta de propósito: o `stamp_bt_seq` do teste dorme
-    entre LER `_bt_seq` e INCREMENTÁ-LO, que é exatamente onde a segunda thread
-    entrava. Sem o lock em `writeReport`, as quatro leem zero e carimbam zero —
-    três dos quatro quadros são descartados pelo firmware e o log diz "escrito"
-    nos quatro.
-
-    A ordem de chegada ao fio também é asserida, porque `seq` distintos
-    entregues fora de ordem seriam descartados pelo firmware do mesmo jeito.
-    **Mas este teste não é a rede contra a cura pela metade** (lock só no
-    contador, `write` fora): tentei, e ele PASSA nessa variante — a janela que
-    ele abre está dentro da seção crítica dos dois desenhos. Quem morde essa
-    variante é `test_o_write_acontece_com_o_lock_na_mao`, logo abaixo.
-    """
+    """Quatro threads escrevendo no MESMO handle BT produzem quatro `seq`"""
     inst = _handle_do_radio()
     report = list(rep.build_bt_report(bytearray(rep.COMMON_LEN), seq=0))
     assert len(report) == 78 and report[0] == 0x31
@@ -106,7 +60,7 @@ def test_escritores_concorrentes_no_radio_nunca_repetem_o_seq(
     class _DispositivoDeMentira:
         def write(self, dados: bytes) -> None:
             with trava_do_registro:
-                vistos.append(dados[1] >> 4)  # o nibble ALTO de [1] é o seq
+                vistos.append(dados[1] >> 4)
 
     inst.device = _DispositivoDeMentira()
 
@@ -139,15 +93,7 @@ def test_escritores_concorrentes_no_radio_nunca_repetem_o_seq(
 
 
 def test_o_write_acontece_com_o_lock_na_mao() -> None:
-    """O `write` está DENTRO da seção crítica, não só o contador.
-
-    Uma thread só, e a asserção é estrutural em vez de temporal: o dispositivo
-    de mentira confere, de dentro do `write`, que o lock está tomado. É esta a
-    rede contra a cura pela metade — serializar apenas o incremento produz
-    `seq` distintos que podem chegar ao fio FORA DE ORDEM, e report fora de
-    sequência é exatamente o que o firmware descarta. O que precisa ser atômico
-    é o par carimbo+entrega.
-    """
+    """O `write` está DENTRO da seção crítica, não só o contador."""
     inst = _handle_do_radio()
     visto = {"com_o_lock": None}
 
@@ -165,12 +111,7 @@ def test_o_write_acontece_com_o_lock_na_mao() -> None:
 
 
 def test_cada_handle_tem_o_seu_proprio_lock() -> None:
-    """O lock é POR HANDLE, e é isso que impede um `hid_write` pendurado num
-    controle de calar os outros três da mesa.
-
-    O default de CLASSE existe só para os dublês da suíte (construídos com
-    `__new__`); handle de produção não pode cair nele.
-    """
+    """O lock é POR HANDLE, e é isso que impede um `hid_write` pendurado num"""
     a = bp._PinnedPyDualSense(b"/dev/hidraw-teste-a", is_edge=False)
     b = bp._PinnedPyDualSense(b"/dev/hidraw-teste-b", is_edge=False)
 
@@ -180,9 +121,7 @@ def test_cada_handle_tem_o_seu_proprio_lock() -> None:
 
 
 def test_o_cabo_tambem_passa_pelo_lock_e_sai_sem_carimbo() -> None:
-    """O `0x02` não ganha `seq` (não tem campo para ele) mas continua saindo —
-    a serialização não pode ter mudado o que vai ao fio pelo cabo.
-    """
+    """O `0x02` não ganha `seq` (não tem campo para ele) mas continua saindo —"""
     inst = _handle_do_radio()
     enviados: list[bytes] = []
 
@@ -195,32 +134,18 @@ def test_o_cabo_tambem_passa_pelo_lock_e_sai_sem_carimbo() -> None:
     inst.writeReport(usb)
 
     assert enviados == [bytes(usb)]
-    assert inst._bt_seq == 0  # o contador é do rádio, e o cabo não o mexe
-
-
-# --------------------------------------------------------------------------
-# DEFEITO B — a leitura vazia
-# --------------------------------------------------------------------------
+    assert inst._bt_seq == 0
 
 
 class _HidDevice:
-    """O `hid_device` do C, só no que o laço toca: o modo do `hid_read`.
-
-    O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026). `hidapi.Device(path=...)`
-    nasce BLOQUEANTE, e o laço troca o modo na primeira volta
-    (`_hid_set_nonblocking`); antes disso, uma leitura sem dado não volta.
-    """
+    """O `hid_device` do C, só no que o laço toca: o modo do `hid_read`."""
 
     def __init__(self) -> None:
         self.bloqueante = True
 
 
 class _DispositivoDoLaco:
-    """A base dos dispositivos de mentira do laço: o `_device` do wrapper.
-
-    Devolver `None` com o handle no modo bloqueante é o que o aparelho nunca
-    faz: ali o `hid_read` espera o próximo report. O dublê recusa.
-    """
+    """A base dos dispositivos de mentira do laço: o `_device` do wrapper."""
 
     def __init__(self) -> None:
         self._device = _HidDevice()
@@ -267,32 +192,18 @@ def _handle_do_laco() -> bp._PinnedPyDualSense:
 
 
 def _read_input_do_upstream(in_report: Any) -> None:
-    """A PRIMEIRA linha do `readInput` do upstream, e só ela.
-
-    `list(inReport)` é onde o `None` da leitura não-bloqueante vira `TypeError`.
-    O dublê a reproduz literalmente para que arrancar a cura reprove de verdade,
-    e não por causa de um dublê complacente.
-    """
+    """A PRIMEIRA linha do `readInput` do upstream, e só ela."""
     list(in_report)[1:]
 
 
 def test_leitura_vazia_nao_mata_a_thread_e_a_saida_continua(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`read` devolvendo `None` é resposta legítima da leitura não-bloqueante:
-    o ciclo pula a interpretação da ENTRADA e segue direto para a SAÍDA.
-
-    A prova é dupla: a thread chega ao fim dos quatro ciclos (não morreu) e o
-    write OUT aconteceu TAMBÉM nos ciclos mudos — que é o que significa "o
-    controle continua tendo saída".
-    """
+    """`read` devolvendo `None` é resposta legítima da leitura não-bloqueante:"""
     inst = _handle_do_laco()
     inst.conType = None
 
     contas = {"read": 0, "write": 0, "sleep": 0, "parse": 0}
-    # Ciclos 1 e 2 mudos; 3 e 4 com UM report cada. A volta esvazia a fila
-    # (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01): depois do report, o `None` de «não
-    # há mais» fecha a volta.
     respostas: list[bytes | None] = [
         None,
         None,
@@ -317,8 +228,6 @@ def test_leitura_vazia_nao_mata_a_thread_e_a_saida_continua(
         _read_input_do_upstream(in_report)
 
     monkeypatch.setattr(inst, "readInput", _parse)
-    # Report SEMPRE diferente: cada ciclo é um write, então contar writes é
-    # contar ciclos que chegaram à metade de saída.
     monkeypatch.setattr(
         inst, "prepareReport", lambda: [contas["sleep"] & 0xFF] + [0] * 63
     )
@@ -346,14 +255,7 @@ def test_leitura_vazia_nao_mata_a_thread_e_a_saida_continua(
 def test_o_silencio_da_entrada_deixa_rastro_no_journal(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """UMA linha de aviso por episódio de silêncio, e uma de volta quando a
-    entrada fala de novo.
-
-    Uma por episódio, não uma por ciclo: com a mesa cheia são ~31 ciclos por
-    segundo, e um aviso por ciclo afogaria o journal justo quando ele mais
-    precisa ser lido. E não pode ser NENHUMA: a memória desta casa já pagou
-    caro por defeito cujo sintoma é a AUSÊNCIA de dado.
-    """
+    """UMA linha de aviso por episódio de silêncio, e uma de volta quando a"""
     inst = _handle_do_laco()
     inst.conType = None
     inst._pinned_path = b"/dev/hidraw-teste"
@@ -363,14 +265,11 @@ def test_o_silencio_da_entrada_deixa_rastro_no_journal(
 
     relogio = {"t": 1000.0}
     contas = {"read": 0, "sleep": 0}
-    # Seis ciclos mudos (3,0 s de silêncio no relógio de mentira) e o sétimo
-    # com dado — a volta.
     mudos = 6
 
     class _DispositivoDeMentira(_DispositivoDoLaco):
         def read(self, _n: int) -> bytes | None:
             contas["read"] += 1
-            # Seis voltas mudas, e na sétima UM report (e o «não há mais»).
             if contas["read"] == mudos + 1:
                 return _estado_do_cabo()
             self._vazio()
@@ -415,7 +314,6 @@ def test_silencio_curto_nao_polui_o_journal(monkeypatch: pytest.MonkeyPatch) -> 
     class _DispositivoDeMentira(_DispositivoDoLaco):
         def read(self, _n: int) -> bytes | None:
             contas["read"] += 1
-            # Uma volta muda, e depois um report por volta.
             if contas["read"] == 1 or contas["read"] % 2 == 1:
                 self._vazio()
                 return None
@@ -444,15 +342,7 @@ def test_silencio_curto_nao_polui_o_journal(monkeypatch: pytest.MonkeyPatch) -> 
 def test_no_radio_a_saida_espera_a_entrada_que_parou(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No rádio, saída nova não entra num episódio de entrada já muda.
-
-    O primeiro ciclo ainda escreve: o silêncio ainda não é episódio. A partir
-    de `LEITURA_VAZIA_AVISO_SEC` a saída fica devida e não sai. Quando a
-    entrada volta, UMA escrita entrega o estado de agora.
-
-    Mordida: `_a_saida_espera_a_entrada` devolvendo False faz este teste
-    contar quatro escritas — a saída segue martelando o cano mudo.
-    """
+    """No rádio, saída nova não entra num episódio de entrada já muda."""
     from pydualsense.enums import ConnectionType
 
     inst = _handle_do_laco()
@@ -462,8 +352,6 @@ def test_no_radio_a_saida_espera_a_entrada_que_parou(
 
     relogio = {"t": 1000.0}
     contas = {"read": 0, "write": 0, "sleep": 0}
-    # Quatro voltas: a 1ª muda e curta (escreve), as duas seguintes já no
-    # episódio (não escrevem), a 4ª com dado (a devida sai uma vez).
     mudos = 3
 
     class _DispositivoDeMentira(_DispositivoDoLaco):
@@ -489,8 +377,6 @@ def test_no_radio_a_saida_espera_a_entrada_que_parou(
 
     def _sono_de_mentira(_secs: float) -> None:
         contas["sleep"] += 1
-        # Cada volta muda passa de um keepalive (0,5 s). Sem a espera, as
-        # três voltas mudas escrevem; com ela, só a primeira e a de volta.
         relogio["t"] += 1.1 if contas["sleep"] == 1 else 0.6
         if contas["sleep"] >= 4:
             inst.ds_thread = False
@@ -509,14 +395,7 @@ def test_no_radio_a_saida_espera_a_entrada_que_parou(
 def test_excecao_inesperada_no_laco_deixa_linha_antes_de_morrer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A rede: exceção que ninguém previu não pode matar a `report_thread` em
-    silêncio.
-
-    O desfecho é o mesmo do `OSError` (fim de vida do handle), de propósito —
-    seguir o laço depois de uma exceção que não se sabe nomear é girar sem saber
-    em quê, e este laço escreve no aparelho dela. O que muda é que agora fica
-    escrito, e `connected` para de mentir.
-    """
+    """A rede: exceção que ninguém previu não pode matar a `report_thread` em"""
     inst = _handle_do_laco()
     registro = _LoggerDeMentira()
     monkeypatch.setattr(bp, "logger", registro)

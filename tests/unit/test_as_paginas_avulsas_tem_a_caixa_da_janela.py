@@ -1,44 +1,5 @@
 #!/usr/bin/env python3
-"""As três páginas avulsas têm a caixa da janela — AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01.
-
-A palavra dela, 24/09/2026, 02h03, na página da sessão dos desenhos, depois de
-aprovar a Calibrar com a caixa da janela:
-
-- o «Mapa do controle»: *«Sim, segue a caixa da janela»*;
-- o mapa das portas: *«Vira caixa da janela, rolando por dentro»*.
-
-MEDIDO ANTES DA CURA, no Chrome, na bancada (a caixa de cada página contra a
-`.janela` da 02-controles, na mesma vista)::
-
-    vista       a `.janela`          mapa-do-controle `.cx`   mapa-das-portas `.pagina`
-    1212x809    1180 x 777 @ 16,16   1168 x 756 @ 22,22       1180 x 2195, a página rola 1386
-    1918x840    1600 x 808 @ 159,16  1800 x 778 @ 59,22       1180 x 2195, a página rola 1355
-    1212x700    1180 x 668           1153 x 756, rola 100     a página rola 1495
-    1212x480    1180 x 448           1153 x 756, rola 320     a página rola 1715
-
-O QUE ESTA RÉGUA MEDE, e é tudo lido da página RENDERIZADA pela medida do
-retratista (`olhar.MEDIDA_NA_VISTA`), nunca do texto do CSS:
-
-1. a caixa de cada avulsa (`calibrar-sensores`, `mapa-do-controle`,
-   `mapa-das-portas`) tem a largura, a altura, o vão dos lados e a sobra
-   embaixo da `.janela` da 02, ±2 px, em cinco vistas — e o LUGAR dela, lido
-   do retângulo (`LUGAR`): a borda esquerda, o topo e o vão da direita;
-2. a página não rola, nem de lado: quem rola é o `.corpo`, por dentro, e com
-   ele rolado até o fim o último bloco (o rodapé) cabe na caixa;
-3. as três pedem a caixa ao MESMO dono (`caixa_da_janela.moldura`) e a bancada
-   é o que os geradores escrevem hoje.
-
-A MORDIDA: devolva ao `mapa.py` o `.cx{width:1800px;max-width:100%}` e o
-`body{padding:22px}` no lugar da `moldura()`, regere, e o caso da vista dela
-reprova com 1800 x 778 contra 1600 x 808 — os números medidos acima.
-
-A SEGUNDA MORDIDA, e ela nasceu de um verde falso (conferência de 24/09/2026):
-tire do `body` do `mapa.py` o `align-items:center` e regere. A caixa continua
-com 1600 x 808, mas encosta na esquerda — 16,16 na TV dela, contra a `.janela`
-em 159,16. O `vao_dos_lados` da medida do retratista é CONTA, feita da largura
-(`(vista - largura) / 2`), e não a posição: com ele só, a régua dava 33 verdes
-sobre a caixa no lugar errado. Com o `LUGAR`, reprova.
-"""
+"""As três páginas avulsas têm a caixa da janela — AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01."""
 from __future__ import annotations
 
 import os
@@ -55,38 +16,20 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import caixa_da_janela  # o dono da caixa, importado plano como os geradores o importam
-import olhar  # a vista dela e a medida da página têm dono, e ele mora ao lado
+import caixa_da_janela
+import olhar
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 ABA = "02-controles.html"
 AVULSAS = ("calibrar-sensores.html", "mapa-do-controle.html", "mapa-das-portas.html")
 
-#: A folga da régua da Calibrar: arredondamento de subpixel, nada mais.
 FOLGA = 2
 
-#: O PISO DA JANELA DO PRODUTO, o tamanho em que ela nasce. Fica escrito pela
-#: razão que a régua da Calibrar dá (`test_a_calibracao_tem_o_tamanho_do_
-#: programa.PISO`): o dono dele sobe o WebKit ao ser importado. O que a régua
-#: exige não é este número — é a caixa da aba na mesma vista.
 PISO = (1212, 809)
 
-#: As vistas: o piso; a dela maximizada (`olhar.VISTA_DELA`); a do retratista
-#: sem vista (`olhar.LARG`, `olhar.ALT`, a TV inteira); a ladrilhada, abaixo do
-#: piso; e uma BAIXA, em que nenhuma avulsa cabe e o miolo tem de rolar.
 VISTAS = {"piso": PISO, "dela": olhar.VISTA_DELA, "tv-inteira": (olhar.LARG, olhar.ALT),
           "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
 
-#: O FIM SE ALCANÇA: rola o `.corpo` até o fim e pergunta se o último bloco
-#: cabe na caixa. Sem a rolagem por dentro, o que não cabe some cortado pela
-#: borda, calado — a caixa tem `overflow:hidden`.
-#:
-#: O ÚLTIMO BLOCO É O QUE ACABA MAIS EMBAIXO, e não o último do DOM (01/10/2026,
-#: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01): a legenda do mapa subiu
-#: para a linha dos modos pela grade do `.corpo` e continua sendo o último filho.
-#: E o que se cobra é a BORDA DE BAIXO dele dentro da caixa: o último bloco
-#: agora é o palco inteiro, mais alto que a vista, e o topo dele fica acima
-#: da caixa com o `.corpo` rolado até o fim.
 FIM = """() => {
   const c = document.querySelector('.janela') || document.querySelector('.cx')
          || document.querySelector('.pagina');
@@ -102,11 +45,6 @@ FIM = """() => {
           rola_por_dentro: miolo.scrollHeight > miolo.clientHeight};
 }"""
 
-#: ONDE A CAIXA ESTÁ, lido do retângulo — e não deduzido do tamanho. O
-#: `vao_dos_lados` do `olhar.MEDIDA_NA_VISTA` é `(vista - largura) / 2`: uma
-#: caixa do tamanho certo encostada na esquerda passava nele (ver a segunda
-#: mordida, no topo). Aqui a borda esquerda, o topo e o vão da direita vêm do
-#: `getBoundingClientRect`, na aba e em cada avulsa, na mesma vista.
 LUGAR = """() => {
   const c = document.querySelector('.janela') || document.querySelector('.cx')
          || document.querySelector('.pagina');
@@ -133,7 +71,6 @@ def medido() -> dict[str, dict[str, Any]]:
     assert not faltam, (
         f"a bancada não tem {faltam} — o caminho mudou? Uma régua de tamanho "
         f"que não abre página passa sobre tudo.")
-    # O QUE O PRODUTO ESCONDE (a `.nota` da bancada) vem da folha do piloto.
     esconde = "".join(f"{s}{{display:none}}" for s in seletores_escondidos())
 
     fora: dict[str, dict[str, Any]] = {}
@@ -165,12 +102,7 @@ CASOS = [(v, n) for v in VISTAS for n in AVULSAS]
 @pytest.mark.parametrize(("vista", "nome"), CASOS)
 def test_a_caixa_da_avulsa_e_a_da_janela(medido: dict[str, Any], vista: str,
                                          nome: str) -> None:
-    """Tamanho e LUGAR: os da `.janela`, ±2 px.
-
-    Largura, altura, vão dos lados e sobra embaixo vêm da medida do retratista;
-    a borda esquerda, o topo e o vão da direita vêm do retângulo (`LUGAR`),
-    porque o vão dos lados do retratista é conta feita da largura.
-    """
+    """Tamanho e LUGAR: os da `.janela`, ±2 px."""
     aba, avulsa = medido[vista][ABA], medido[vista][nome]
     assert "erro" not in aba and "erro" not in avulsa, (aba, avulsa)
     assert "erro" not in aba["lugar"] and "erro" not in avulsa["lugar"], (aba, avulsa)
@@ -188,11 +120,7 @@ def test_a_caixa_da_avulsa_e_a_da_janela(medido: dict[str, Any], vista: str,
 
 @pytest.mark.parametrize(("vista", "nome"), CASOS)
 def test_a_avulsa_rola_por_dentro(medido: dict[str, Any], vista: str, nome: str) -> None:
-    """A página não rola; o `.corpo` rola, e o rodapé se alcança.
-
-    MORDE na vista `baixa`: tire o `overflow-y:auto` do `.corpo` e o rodapé
-    fica cortado pela borda da caixa, sem rolagem que o traga.
-    """
+    """A página não rola; o `.corpo` rola, e o rodapé se alcança."""
     avulsa = medido[vista][nome]
     assert avulsa["passa_da_dobra"] == 0 and not avulsa["rolagem_lateral"], (
         f"na vista {vista}, {nome} rola a PÁGINA ({avulsa['passa_da_dobra']} px "
@@ -207,11 +135,7 @@ def test_a_avulsa_rola_por_dentro(medido: dict[str, Any], vista: str, nome: str)
 
 
 def test_a_vista_baixa_faz_as_tres_rolarem(medido: dict[str, Any]) -> None:
-    """O CONTROLE DA RÉGUA DE CIMA: na vista baixa as três TÊM de rolar por dentro.
-
-    Sem isto, uma página que parasse de passar da caixa por ter perdido o
-    conteúdo daria verde no «o fim se alcança» — alcançar o fim de nada é fácil.
-    """
+    """O CONTROLE DA RÉGUA DE CIMA: na vista baixa as três TÊM de rolar por dentro."""
     for pagina in AVULSAS:
         assert medido["baixa"][pagina]["fim"]["rola_por_dentro"], (
             f"na vista baixa ({VISTAS['baixa']}) o `.corpo` de {pagina} não rola — "
@@ -219,11 +143,7 @@ def test_a_vista_baixa_faz_as_tres_rolarem(medido: dict[str, Any]) -> None:
 
 
 def test_as_tres_pedem_a_caixa_ao_mesmo_dono() -> None:
-    """Mude o teto da `.janela` no esqueleto e a caixa vai junto; tire-a e ela PARA.
-
-    E as três páginas carregam a folha que o dono escreve HOJE — o «Mapa do
-    controle» ficou em 1800 px por ser cópia de um número que tem dono.
-    """
+    """Mude o teto da `.janela` no esqueleto e a caixa vai junto; tire-a e ela PARA."""
     import calibrar
 
     import onde
@@ -251,12 +171,7 @@ def test_as_tres_pedem_a_caixa_ao_mesmo_dono() -> None:
 
 
 def test_a_bancada_e_o_que_os_geradores_escrevem(tmp_path: pathlib.Path) -> None:
-    """Os dois mockups são o que `mapa.py` e `pagina_do_mapa.py` escrevem hoje.
-
-    As réguas de cima medem os ARQUIVOS; esta diz se eles ficaram para trás do
-    gerador. O `mapa.py` roda com a escrita desviada (`HEFESTO_BANCADA`), e a
-    bancada dela não é tocada.
-    """
+    """Os dois mockups são o que `mapa.py` e `pagina_do_mapa.py` escrevem hoje."""
     import onde
 
     from hefesto_dualsense4unix.interface import pagina_do_mapa

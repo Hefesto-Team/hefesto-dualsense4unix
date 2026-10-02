@@ -1,26 +1,4 @@
-"""MASCARA-01 — a máscara escolhida tem de CHEGAR ao aparelho (19/08/2026).
-
-O defeito medido na madrugada de 18→19/08: ela escolheu Xbox e salvou às 00:36;
-às 00:40 a bandeira viva `gamepad_emulation.flag` foi reescrita com `dualsense`.
-O arquivo de env do jogo registrou a contradição na MESMA linha, sem que nada
-agisse:
-
-    estado: perfil gamepad xbox | native=False emulacao=True mascara=dualsense
-    backends=['uhid']
-
-Duas coisas estavam erradas nessa linha, e cada teste aqui morde uma:
-
-1. o `mascara=` era o do estado GLOBAL, não o do perfil que aquele arquivo
-   materializa — ou seja, o arquivo por appid DESCREVIA um estado que não é o
-   dele. Quem lesse o arquivo do jogo não sabia qual máscara aquele jogo teria;
-2. a divergência era só TEXTO. Não havia evento no journal nem campo no estado
-   publicado, então nem o produto nem a GUI podiam agir sobre ela.
-
-E o terceiro teste morde o arming: `arm_launch_profile` só rodava na
-reconciliação de 1 Hz do `dispatch_gamepad`, que o `_poll_loop` gateia em
-`_gamepad_device is not None` — com a emulação desligada no momento do launch,
-o modo do perfil nunca era armado.
-"""
+"""MASCARA-01 — a máscara escolhida tem de CHEGAR ao aparelho (19/08/2026)."""
 from __future__ import annotations
 
 import asyncio
@@ -63,7 +41,7 @@ class _LoggerEspiao:
         raise AssertionError(f"evento {nome!r} não saiu; saíram {self.nomes()}")
 
 
-APPID = 2497900  # DON'T SCREAM, o jogo da noite
+APPID = 2497900
 
 
 def _perfil_xbox(nome: str = "DONT SCREAM") -> SimpleNamespace:
@@ -108,18 +86,10 @@ def env_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-# --- 1. o arquivo do jogo diz a máscara DAQUELE jogo -------------------------
-
-
 def test_env_do_jogo_materializa_a_mascara_do_perfil(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA: perfil `gamepad_flavor="xbox"` => `mascara=xbox` no env.
-
-    Com a cura arrancada (a linha `estado:` do arquivo por appid copiando o
-    estado GLOBAL) esta asserção reproduz literalmente a contradição de 00:40:
-    "perfil gamepad xbox" e "mascara=dualsense" na mesma linha.
-    """
+    """A MORDIDA: perfil `gamepad_flavor="xbox"` => `mascara=xbox` no env."""
     monkeypatch.setattr(
         le, "_steam_profiles", lambda daemon: [(APPID, _perfil_xbox())]
     )
@@ -129,7 +99,6 @@ def test_env_do_jogo_materializa_a_mascara_do_perfil(
     linha = _linha_de_estado(env_dir / f"steam_app_{APPID}.env")
     assert "mascara=xbox" in linha
     assert "perfil gamepad xbox" in linha
-    # o estado vivo continua na linha — atrás de `vivo:`, que é de quem ele fala
     assert "vivo: native=False emulacao=True mascara=dualsense" in linha
 
 
@@ -149,9 +118,6 @@ def test_env_do_jogo_sem_divergencia_nao_carimba_divergencia(
     assert "mascara=xbox" in linha
     assert "divergente=" not in linha
     assert le.divergencias_publicadas(daemon) == []
-
-
-# --- 2. a divergência vira SINAL (journal + estado publicado) ----------------
 
 
 def test_divergencia_com_o_jogo_em_cena_vira_evento_no_journal(
@@ -201,8 +167,7 @@ def test_divergencia_e_publicada_no_daemon_para_o_state_full(
 def test_jogo_fora_de_cena_e_antecipacao_nao_alarme(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Perfil de jogo FECHADO divergindo do global é o normal — o arquivo por
-    appid ANTECIPA o modo. Alarme só com o jogo em cena."""
+    """Perfil de jogo FECHADO divergindo do global é o normal — o arquivo por"""
     espiao = _LoggerEspiao()
     monkeypatch.setattr(le, "logger", espiao)
     monkeypatch.setattr(
@@ -220,8 +185,7 @@ def test_jogo_fora_de_cena_e_antecipacao_nao_alarme(
 def test_divergencia_repetida_nao_reloga_e_convergencia_loga(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Só TRANSIÇÕES vão ao journal: a materialização roda em toda troca de
-    estado, e um log por passagem viraria ruído."""
+    """Só TRANSIÇÕES vão ao journal: a materialização roda em toda troca de"""
     espiao = _LoggerEspiao()
     monkeypatch.setattr(le, "logger", espiao)
     monkeypatch.setattr(
@@ -254,7 +218,6 @@ def test_divergencia_repetida_nao_reloga_e_convergencia_loga(
             "dualsense",
             "perfil_dualsense_vs_vivo_sem_emulacao",
         ),
-        # perfil nativo/desktop não promete máscara nenhuma
         ("native", None, False, True, "dualsense", None),
         ("desktop", None, False, True, "dualsense", None),
     ],
@@ -334,9 +297,6 @@ def test_state_full_divergencia_fora_de_cena_nao_e_alarme() -> None:
     assert bloco["mascara_divergencias"] == [fora]
 
 
-# --- 3. o arming no launch --------------------------------------------------
-
-
 def _daemon_para_arming(*, applier_aplica: bool) -> SimpleNamespace:
     daemon = _daemon_dualsense_vivo()
 
@@ -344,8 +304,6 @@ def _daemon_para_arming(*, applier_aplica: bool) -> SimpleNamespace:
         daemon.aplicou = (getattr(mode, "gamepad_flavor", None), origin)
         if applier_aplica:
             daemon.config.gamepad_flavor = str(mode.gamepad_flavor)
-        # O contrato mentiroso do produto: True para "aplicou", "já estava" E
-        # "foi bloqueado pelo gate R-04".
         return True
 
     daemon.apply_profile_mode = _applier
@@ -381,9 +339,7 @@ def test_arm_no_launch_aplica_a_mascara_do_perfil(
 def test_arm_recusado_pelo_gate_nao_mente_que_convergiu(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA do item 2: o applier devolve True mesmo quando o gate R-04
-    RECUSA a troca. Sem conferir o aparelho depois, o arming registrava
-    "armado" numa troca que nunca aconteceu."""
+    """A MORDIDA do item 2: o applier devolve True mesmo quando o gate R-04"""
     espiao = _LoggerEspiao()
     monkeypatch.setattr(le, "logger", espiao)
     monkeypatch.setattr(
@@ -395,15 +351,12 @@ def test_arm_recusado_pelo_gate_nao_mente_que_convergiu(
     resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
 
     assert resultado is not None
-    assert resultado["resultado"] is True  # o que o applier disse
-    assert resultado["convergiu"] is False  # o que o aparelho mostra
+    assert resultado["resultado"] is True
+    assert resultado["convergiu"] is False
     assert resultado["divergente"] == "perfil_xbox_vs_vivo_dualsense"
     kw = espiao.por_evento("launch_arm_mascara_nao_convergiu")
     assert kw["mascara_perfil"] == "xbox"
     assert kw["mascara_viva"] == "dualsense"
-
-
-# --- 4. o ping do wrapper arma o launch (ipc_handlers) ----------------------
 
 
 def _daemon_real() -> Any:
@@ -425,13 +378,11 @@ class _HandlerDeLaunch(_Handlers):
 
 
 def _armou_pelo_status(daemon: Any, marker: tuple[int, int] | None) -> list[Any]:
-    """Roda o `daemon.status` (o gate de vida do wrapper) e devolve o que o
-    arming recebeu — lista vazia = não armou."""
+    """Roda o `daemon.status` (o gate de vida do wrapper) e devolve o que o"""
     armados: list[Any] = []
 
     async def _corpo() -> None:
         await _HandlerDeLaunch(daemon, marker)._handle_daemon_status({})
-        # o arming sai FORA da resposta: dois tiques do loop para ele rodar
         await asyncio.sleep(0)
         await asyncio.sleep(0)
 
@@ -449,12 +400,7 @@ def _armou_pelo_status(daemon: Any, marker: tuple[int, int] | None) -> list[Any]
 
 
 def test_ping_do_wrapper_no_launch_arma_o_modo_do_perfil() -> None:
-    """A MORDIDA do arming determinístico: o gate de vida do wrapper
-    (`daemon.status`) é o único ponto da árvore que sabe que um jogo está
-    SUBINDO agora. Sem isto o arming dependia da reconciliação de 1 Hz do
-    `dispatch_gamepad`, que o `_poll_loop` gateia em `_gamepad_device is not
-    None` — com a emulação desligada no launch, o modo do perfil NUNCA era
-    armado."""
+    """A MORDIDA do arming determinístico: o gate de vida do wrapper"""
     daemon = _daemon_real()
     assert _armou_pelo_status(daemon, (APPID, int(time.time()))) == [daemon]
 

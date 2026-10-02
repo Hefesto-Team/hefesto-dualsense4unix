@@ -37,10 +37,6 @@ import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-#: PERFIS-SAO-PERFIS-01 (06/09/2026): a fábrica virou DUAS pastas. A régua
-#: abaixo vale para as duas — um preset que não é semeado hoje pode voltar a
-#: ser lido pelo motor de Estilo de Jogo amanhã, e escrever máscara em perfil
-#: de alguém continua sendo o produto escolhendo por ela.
 _PRESETS_DIRS = (
     _REPO_ROOT / "assets" / "profiles_default",
     _REPO_ROOT / "assets" / "estilos_de_jogo",
@@ -62,10 +58,7 @@ def _preset_de_fabrica(nome: str) -> Path:
 
 
 def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
-    """Todo preset de fábrica com `mode.kind == "gamepad"` ship `flavor: null`.
-
-    Mordida: pôr `"xbox"` (ou `"dualsense"`) de volta em qualquer um dos sete.
-    """
+    """Todo preset de fábrica com `mode.kind == "gamepad"` ship `flavor: null`."""
     ofensores: list[str] = []
     gamepads: list[str] = []
     for path in _presets_de_fabrica():
@@ -77,12 +70,7 @@ def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
         if mode.get("gamepad_flavor") is not None:
             ofensores.append(f"{path.name}: {mode.get('gamepad_flavor')!r}")
 
-    # Régua contra o filtro errado: se o glob ou o `kind` mudarem de forma, a
-    # lista de ofensores fica vazia por AUSÊNCIA de dado e o teste passaria sem
-    # ter olhado nada. Eram SETE presets de jogo em 22/08/2026; a poda de
-    # 26/08 levou `coop_local` e `sackboy_nativo`, e sobraram CINCO — os cinco
     # de gênero (`fps`, `aventura`, `acao`, `corrida`, `esportes`). O piso  # (noqa-acento)
-    # desce com a fábrica, senão vira trava contra o que já aconteceu.
     assert len(gamepads) >= 5, (
         "o portão não achou os presets de jogo — filtro errado, não aprovação. "
         f"achados: {gamepads}"
@@ -94,18 +82,10 @@ def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
 
 
 def test_o_null_do_preset_atravessa_o_esquema_intacto() -> None:
-    """`gamepad_flavor: null` sobrevive à carga — não vira default no caminho.
-
-    Um portão só sobre o JSON passaria com um esquema que preenchesse `xbox` ao
-    ler. Aqui o preset é carregado pelo `Profile` de produção.
-
-    Mordida: dar um default a `ProfileModeConfig.gamepad_flavor`.
-    """
+    """`gamepad_flavor: null` sobrevive à carga — não vira default no caminho."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     # Os três eram `acao`, `coop_local` e `sackboy_nativo`; os dois últimos  # (noqa-acento)
-    # foram podados da fábrica em 26/08/2026 e deram lugar a dois presets de
-    # gênero que continuam shipando `mode: gamepad`.
     for nome in ("acao", "aventura", "fps"):  # (noqa-acento) nomes de arquivo
         bruto = json.loads(_preset_de_fabrica(nome).read_text(encoding="utf-8"))
         perfil = Profile.model_validate(bruto)
@@ -117,23 +97,10 @@ def test_o_null_do_preset_atravessa_o_esquema_intacto() -> None:
 
 
 def test_a_semeadura_nao_reescreve_a_mascara_de_quem_ja_tem_perfil() -> None:
-    """Nenhuma migração one-shot escreve máscara em perfil que já existe.
-
-    É o portão que impede alguém de "consertar" os perfis dela mais tarde. Os
-    quatro que pedem `xbox` no disco dela (Ação, Aventura, Co-op local e
-    Corrida, lidos em 22/08/2026) podem tê-lo ESCOLHIDO: o preset shipava
-    `xbox` E o seletor grava `xbox`, e nada no arquivo separa os dois casos.
-    Uma migração inversa desfaria em silêncio uma escolha real — o defeito
-    desta sprint com o sinal trocado.
-
-    Roda TODAS as migrações que o `_maybe_seed_presets` dispara, na ordem dele,
-    contra um diretório de mentira. Mordida: chamar aqui qualquer função que
-    escreva `gamepad_flavor`.
-    """
+    """Nenhuma migração one-shot escreve máscara em perfil que já existe."""
     from hefesto_dualsense4unix.profiles import loader
 
     d = Path(tempfile.mkdtemp())
-    # Um perfil por caso que importa: máscara dela, máscara oposta, sem opinião.
     casos = {
         "coop_local.json": "xbox",
         "sackboy_nativo.json": "dualsense",
@@ -167,16 +134,7 @@ def test_a_semeadura_nao_reescreve_a_mascara_de_quem_ja_tem_perfil() -> None:
 
 
 def test_a_migracao_que_impunha_xbox_nao_existe_mais() -> None:
-    """A `migrate_game_presets_to_xbox` saiu, e não volta por engano.
-
-    Ela era chamada pelo `_maybe_seed_presets` a cada primeira carga, e trocava
-    `dualsense`->`xbox` no disco de quem ainda não tinha o marker. Manter a
-    função sem chamador seria pior que apagá-la: esta casa já foi mordida pela
-    cura escrita e nunca ligada, e pela cura ligada e nunca notada.
-
-    Mordida: reintroduzir a função (ou qualquer nome novo que escreva máscara
-    em disco a partir da semeadura).
-    """
+    """A `migrate_game_presets_to_xbox` saiu, e não volta por engano."""
     import inspect
 
     from hefesto_dualsense4unix.profiles import loader

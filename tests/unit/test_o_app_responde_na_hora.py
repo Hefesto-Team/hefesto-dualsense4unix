@@ -1,27 +1,4 @@
-"""O APP RESPONDE NA HORA — O-APP-RESPONDE-NA-HORA-01 (02/10/2026).
-
-Ela, em 02/10, sobre onde o atraso pesa:
-
-    «Em todas as abas. Perfis, ao clicar em algum  # noqa-acento: citação literal dela
-    elemento, e alem disso o conexão que nao  # noqa-acento: citação literal dela
-    funcionava nem a pau»
-
-Três custos medidos, e as réguas de cada um, sem tela:
-
-    R1  a Perfis pergunta ao catálogo uma vez por tique (a foto do catálogo)
-    R2  a janela relê só o perfil que mudou, e o «não há jogo» segue em 5 s
-    R3  o laço do serviço responde enquanto o escrevente do lançamento trabalha
-    R4  um pedido a mais, no máximo, e sem o escrevente a escrita é na hora
-    R5  o servidor diz quem o segurou (`ipc_lento`)
-    R6  a pergunta abandonada não roda; o pedido que muda e o `daemon.status` rodam
-    R7  o cliente do IPC não importa o servidor
-
-As de contagem contam o trabalho do PRODUTO com um ``sys.addaudithook``
-(``open``); as de tempo medem a CPU do fio (``time.thread_time``) ou a parede
-do pedido de outro cliente, com o trabalho de CPU de verdade (um laço de conta,
-e não ``sleep``, que solta o GIL e esconderia o caso real). A MORDIDA de cada
-uma está no docstring dela.
-"""
+"""O APP RESPONDE NA HORA — O-APP-RESPONDE-NA-HORA-01 (02/10/2026)."""
 
 from __future__ import annotations
 
@@ -50,12 +27,7 @@ from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-# ---------------------------------------------------------------------------
-# O gancho que conta o trabalho do produto
-# ---------------------------------------------------------------------------
 
-#: Enquanto não é None, o gancho anota o caminho de todo ``open`` do fio que
-#: ligou a conta.
 _CONTA: list[str] | None = None
 _FIO_DA_CONTA: int | None = None
 
@@ -72,7 +44,6 @@ def _gancho(evento: str, args: tuple[Any, ...]) -> None:
     conta.append(str(alvo))
 
 
-# Um gancho de auditoria não se remove: fica um só, barato, por processo.
 if not getattr(sys, "_hefesto_gancho_da_velocidade", False):
     sys.addaudithook(_gancho)
     sys._hefesto_gancho_da_velocidade = True  # type: ignore[attr-defined]
@@ -92,11 +63,6 @@ def contando() -> Iterator[list[str]]:
         _FIO_DA_CONTA = None
 
 
-# ---------------------------------------------------------------------------
-# A casa de mentira: a biblioteca da Steam, o Heroic, os atalhos e os perfis
-# ---------------------------------------------------------------------------
-
-#: O tamanho é o da casa dela (33 jogos da Steam, 29 perfis), com 200 atalhos.
 JOGOS_DA_STEAM = 33
 PERFIS = 30
 ATALHOS = 200
@@ -110,11 +76,7 @@ def _envelhecer(caminho: Path) -> None:
 
 @pytest.fixture
 def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """A casa da régua 1, com o `HOME` e os `XDG_*` da usuária apontados para ela.
-
-    O `XDG_DATA_DIRS` fica o do sistema: sem ele o WebKit da régua 8 perde a
-    base de tipos de arquivo e não abre a página.
-    """
+    """A casa da régua 1, com o `HOME` e os `XDG_*` da usuária apontados para ela."""
     from hefesto_dualsense4unix.profiles import loader
 
     raiz = tmp_path / "casa"
@@ -159,7 +121,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: perfis)
     loader._PERFIS_PELA_ASSINATURA.esquecer()
     loader.desligar_a_leitura_pela_assinatura()
-    while ode.armado():  # nada herdado de outro teste
+    while ode.armado():
         ode.desarmar()
     return SimpleNamespace(raiz=raiz, steamapps=steamapps, perfis=perfis)
 
@@ -174,25 +136,15 @@ def _sob(conta: list[str], raiz: Path, fim: str) -> list[str]:
     return [c for c in conta if c.startswith(str(raiz)) and c.endswith(fim)]
 
 
-# ===========================================================================
-# R1 — a Perfis pergunta ao catálogo uma vez por tique
-# ===========================================================================
 class TestAPerfisPerguntaAoCatalogoUmaVez:
     def test_vinte_pacotes_sem_mudanca_nao_abrem_o_catalogo_por_linha(
         self, casa: SimpleNamespace
     ) -> None:
-        """Da segunda chamada em diante: nenhum `.acf`, e no máximo DOIS
-        `libraryfolders.vdf` por chamada (a foto das ofertas e a dos nomes).
-
-        MORDIDA: devolva o catálogo por linha (cada tradutor perguntando
-        `_ofertas_de_jogos()`/`_nomes_dos_jogos()` de novo, sem a foto) — o
-        `libraryfolders.vdf` volta a abrir uma vez por consulta, dezenas por
-        chamada (66 por chamada nesta casa, medido em 02/10).
-        """
+        """Da segunda chamada em diante: nenhum `.acf`, e no máximo DOIS"""
         from hefesto_dualsense4unix.interface.pacotes import a10_perfis
 
         ctx = _contexto()
-        a10_perfis.pacote(ctx)  # a primeira lê a biblioteca inteira
+        a10_perfis.pacote(ctx)
         por_chamada: list[list[str]] = []
         for _ in range(19):
             with contando() as conta:
@@ -206,13 +158,7 @@ class TestAPerfisPerguntaAoCatalogoUmaVez:
             "`libraryfolders.vdf` por chamada (a foto do tique abre no máximo duas)")
 
     def test_o_jogo_instalado_aparece_na_chamada_seguinte(self, casa: SimpleNamespace) -> None:
-        """A foto é do tique, e nada se guarda entre tiques além do que já se
-        guardava: um `appmanifest` novo está na lista do campo do jogo na
-        chamada seguinte.
-
-        MORDIDA: guarde a foto entre chamadas (um cache de módulo sem a
-        assinatura) — o jogo novo não aparece.
-        """
+        """A foto é do tique, e nada se guarda entre tiques além do que já se"""
         from hefesto_dualsense4unix.interface.pacotes import a10_perfis
 
         ctx = _contexto()
@@ -227,9 +173,6 @@ class TestAPerfisPerguntaAoCatalogoUmaVez:
             "o jogo instalado não apareceu no tique seguinte")
 
 
-# ===========================================================================
-# R2 — a janela relê só o perfil que mudou, e o «não há jogo» segue em 5 s
-# ===========================================================================
 def _o_processo_da_janela() -> Any:
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
@@ -238,15 +181,7 @@ def _o_processo_da_janela() -> Any:
 
 class TestAJanelaReleSoOPerfilQueMudou:
     def test_dez_pacotes_sem_mudanca_nao_abrem_perfil(self, casa: SimpleNamespace) -> None:
-        """Com a leitura pela assinatura ligada como a janela liga, e o dono do
-        evento desarmado: zero aberturas de `.json` de perfil depois da
-        primeira; um perfil regravado por `os.replace` é o único relido, e o
-        nome novo chega ao pacote. Fora da janela, cada carga lê tudo de novo.
-
-        MORDIDA: não ligue a leitura em `_o_processo_da_janela` (ou tire o
-        `_LEITURA_LIGADA_PELO_PROCESSO` do `load_all_profiles`) — uma abertura
-        por perfil, 30 por chamada.
-        """
+        """Com a leitura pela assinatura ligada como a janela liga, e o dono do"""
         from hefesto_dualsense4unix.interface.pacotes import a10_perfis
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
 
@@ -280,14 +215,7 @@ class TestAJanelaReleSoOPerfilQueMudou:
     def test_na_janela_o_nao_ha_jogo_vale_os_cinco_segundos(
         self, casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """O dono do evento não se arma na janela: armado, ele alongaria para
-        60 s o «não há jogo» que a aba do jogo lê
-        (`TETO_DO_NEGATIVO_DE_EXIBICAO_S`), e quem o invalida ao ver outra
-        janela em foco é o autoswitch, que mora no daemon.
-
-        MORDIDA: arme o dono em `_o_processo_da_janela` — o negativo de 0 s
-        ainda vale aos 6 s, e a segunda varredura não acontece.
-        """
+        """O dono do evento não se arma na janela: armado, ele alongaria para"""
         from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
         relogio = [0.0]
@@ -323,9 +251,6 @@ class TestAJanelaReleSoOPerfilQueMudou:
             slo.invalidar_varredura_de_proc()
 
 
-# ===========================================================================
-# O servidor real num laço próprio, e o cliente de mentira
-# ===========================================================================
 def _foto() -> Any:
     """Uma foto do lançamento sem daemon: só a ordem importa às réguas."""
     return launch_env._FotoDoLancamento(
@@ -416,13 +341,7 @@ async def _pergunta_de_mentira(_params: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True}
 
 
-# ===========================================================================
-# R3 — o laço responde enquanto o escrevente trabalha
-# ===========================================================================
-#: O trabalho de fora QUEIMA ao menos isto de CPU em Python (o corpo da
-#: materialização, medido em 02/10: de 316 a 401 ms por chamada, 2.837 ms na pior).
 QUEIMA_S = 1.5
-#: Cada pergunta de outro cliente, durante o trabalho, em até isto de parede.
 TETO_DA_PERGUNTA_MS = 300.0
 
 
@@ -490,20 +409,11 @@ class TestOLacoRespondeEnquantoOEscreventeTrabalha:
             "a devolução ao daemon não voltou ao laço do serviço")
 
 
-# ===========================================================================
-# R4 — um pedido a mais, no máximo; sem o escrevente, na hora
-# ===========================================================================
 class TestUmPedidoAMaisNoMaximo:
     def test_dez_pedidos_com_um_em_curso_viram_uma_escrita_com_a_ultima_foto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Dez pedidos com uma escrita em curso: exatamente UMA escrita depois
-        dela, com a foto do último (o último estado vence).
-
-        MORDIDAS: sem juntar (uma fila em vez do lugar único) — onze escritas;
-        com a primeira foto em vez da última (`if self._pendente is None`) — a
-        segunda escrita leva o estado de antes.
-        """
+        """Dez pedidos com uma escrita em curso: exatamente UMA escrita depois"""
         escritas: list[int] = []
         entrou = threading.Event()
         solta = threading.Event()
@@ -532,9 +442,7 @@ class TestUmPedidoAMaisNoMaximo:
     def test_a_foto_mais_velha_que_a_ultima_escrita_nao_se_escreve(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O fio e a escrita de sempre (o arming) podem se cruzar: a foto mais
-        nova é a que vale. MORDIDA: tire a conferência da ordem em
-        `_escrever_o_lancamento` — a velha sobrescreve a nova."""
+        """O fio e a escrita de sempre (o arming) podem se cruzar: a foto mais"""
         escritas: list[int] = []
         monkeypatch.setattr(launch_env, "_a_parte_de_fora",
                             lambda foto, _d: escritas.append(foto.ordem))
@@ -546,14 +454,7 @@ class TestUmPedidoAMaisNoMaximo:
     def test_sem_o_escrevente_e_fora_do_laco_que_armou_a_escrita_e_na_hora(
         self, sem_escrevente: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem escrevente, a função de sempre: escreve antes de voltar, no fio
-        de quem chamou. Com ele armado, só o pedido feito DENTRO do laço que
-        armou vai ao fio; de fora do laço, ou dentro de `escrita_na_hora()`
-        (o arming do lançamento), a escrita é na hora.
-
-        MORDIDA: tire o `atende_aqui()` de `materialize_launch_env` — o pedido
-        de fora do laço vai ao fio, e a escrita não acontece antes de voltar.
-        """
+        """Sem escrevente, a função de sempre: escreve antes de voltar, no fio"""
         fios: list[int] = []
         monkeypatch.setattr(launch_env, "_foto_do_lancamento",
                             lambda _daemon, *, no_fio: _foto())
@@ -588,8 +489,7 @@ class TestUmPedidoAMaisNoMaximo:
     def test_o_escrevente_de_um_laco_fechado_nao_segura_o_lugar(
         self, sem_escrevente: None
     ) -> None:
-        """O servidor que saiu sem `stop` deixa o escrevente armado com um laço
-        fechado: o próximo `start` arma o seu, e o velho para."""
+        """O servidor que saiu sem `stop` deixa o escrevente armado com um laço"""
         laco_velho = asyncio.new_event_loop()
         velho = launch_env.armar_o_escrevente(lambda acao: acao(), laco_velho)
         laco_velho.close()
@@ -608,16 +508,7 @@ class TestUmPedidoAMaisNoMaximo:
         self, sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
         freestyle: bool,
     ) -> None:
-        """O caminho do serviço de verdade (a foto no laço, `_OQueOFioLe` e a
-        parte de fora no fio) escreve os MESMOS arquivos que a escrita na hora,
-        com os perfis lidos do disco pelo loader real: o `default.env`, o do
-        jogo e o do perfil nativo fora da antecipação, com o Modo Freestyle
-        ligado (a máscara dele em cada jogo) e desligado.
-
-        MORDIDA: faça `_OQueOFioLe` dizer o Freestyle desligado
-        (`_StoreDaFoto(False)`) — a célula `freestyle` reprova com a máscara
-        do jogo no arquivo do fio.
-        """
+        """O caminho do serviço de verdade (a foto no laço, `_OQueOFioLe` e a"""
         from hefesto_dualsense4unix.profiles import loader
         from hefesto_dualsense4unix.profiles.schema import (
             MatchAny,
@@ -656,7 +547,6 @@ class TestUmPedidoAMaisNoMaximo:
                                       freestyle_ligado=freestyle))
 
         def arquivos(pasta: Path) -> dict[str, str]:
-            # a linha `# estado:` termina no relógio da escrita: ele sai da conta
             return {a.name: "\n".join(linha.rsplit(" | ", 1)[0] if linha.startswith("# estado:")
                                       else linha for linha in a.read_text().splitlines())
                     for a in sorted(pasta.glob("*.env"))}
@@ -676,7 +566,7 @@ class TestUmPedidoAMaisNoMaximo:
         try:
             async def pedir() -> None:
                 launch_env.materialize_launch_env(d2)  # type: ignore[arg-type]
-                while escrevente.escritas < 1:  # as devoluções voltam a este laço
+                while escrevente.escritas < 1:
                     await asyncio.sleep(0.01)
                 await asyncio.sleep(0.05)
 
@@ -695,13 +585,7 @@ class TestUmPedidoAMaisNoMaximo:
     def test_o_stop_com_uma_foto_pendente_escreve_e_sai_sem_esperar_o_teto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O serviço que sai com uma foto pendente: ela é escrita, e o fio sai
-        logo depois, sem segurar o `stop` até o teto.
-
-        MORDIDA: devolva o `continue` incondicional depois da escrita em
-        `EscreventeDoLancamento._laco` — o fio volta a esperar um evento já
-        consumido, e o `stop` leva o teto inteiro (aqui, 10 s).
-        """
+        """O serviço que sai com uma foto pendente: ela é escrita, e o fio sai"""
         escritas: list[int] = []
         entrou = threading.Event()
         solta = threading.Event()
@@ -730,14 +614,7 @@ class TestUmPedidoAMaisNoMaximo:
     def test_a_devolucao_de_uma_foto_vencida_nao_pinta_por_cima_da_nova(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O fio põe as devoluções da foto M na fila do laço; antes de a fila
-        andar, o arming escreve (e devolve na hora) a foto N, mais nova. Quando
-        a fila anda, o recibo e as divergências continuam os da N.
-
-        MORDIDA: tire a conferência da ordem do `carimbar` e do `publicar` em
-        `_foto_do_lancamento` — o recibo volta ao da foto velha, e o vigia de
-        1 Hz rematerializa e grita sobre o jogo que acabou de abrir.
-        """
+        """O fio põe as devoluções da foto M na fila do laço; antes de a fila"""
         monkeypatch.setattr(launch_env, "_ULTIMA_ORDEM_ESCRITA", 0)
         daemon = SimpleNamespace(config=SimpleNamespace(gamepad_emulation_enabled=False))
         velha = launch_env._foto_do_lancamento(daemon, no_fio=True)  # type: ignore[arg-type]
@@ -749,11 +626,8 @@ class TestUmPedidoAMaisNoMaximo:
                                 "appid": foto.ordem, "motivo": "m", "em_cena": False,
                                 "profile": "p", "mascara_perfil": "x",
                                 "mascara_viva": "y"}])), devolver(foto.carimbar)))
-        # o fio escreve a velha e põe as devoluções na fila do laço…
         assert launch_env._escrever_o_lancamento(velha, fila.append) is True
-        # …o arming escreve a nova, na hora, antes de a fila andar…
         assert launch_env._escrever_o_lancamento(nova) is True
-        # …e a fila anda.
         for acao in fila:
             acao()
         assert daemon._launch_env_assinatura[1] is True, (
@@ -766,20 +640,7 @@ class TestOVigiaEsperaAEscritaEmVoo:
     def test_a_borda_com_a_escrita_em_voo_nao_vira_regravacao_nem_aviso(
         self, sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A borda de um jogador de co-op escreve (no fio) e arma o sossego de
-        0,6 s; o tique de 1 Hz que vence o sossego chega com a escrita ainda em
-        voo. O vigia espera a escrita pousar: não regrava, e não grita
-        `launch_env_mudou_depois_do_exec` sobre o jogo de pé, que é o que a
-        escrita na hora (o recibo carimbado na borda) sempre fez.
-
-        E a espera acaba: depois de a escrita pousar, a mesa que muda sem borda
-        (mais um físico, nenhum vpad novo) volta a ser julgada e regravada.
-
-        MORDIDAS: tire a espera da escrita em voo de `rematerializar_se_sossegou`
-        — o tique regrava e grita sobre uma mudança que a borda já escreveu;
-        tire a volta do pouso (`self._devolver(pousou)`) do `_laco` do
-        escrevente — a escrita fica em voo para sempre, e o vigia emudece.
-        """
+        """A borda de um jogador de co-op escreve (no fio) e arma o sossego de"""
         eventos: list[str] = []
 
         class _Espiao:
@@ -796,7 +657,6 @@ class TestOVigiaEsperaAEscritaEmVoo:
         import hefesto_dualsense4unix.integrations.cura_por_estrada as cura
 
         monkeypatch.setattr(cura, "curar_todas_as_estradas", lambda: {})
-        # O jogo do wrapper de pé: é com ele que o aviso honesto acorda.
         (tmp_path / "last_run").write_text(
             f"appid=1599660\nepoch={int(time.time())}\npid={os.getpid()}\n",
             encoding="utf-8")
@@ -808,7 +668,6 @@ class TestOVigiaEsperaAEscritaEmVoo:
             _coop_manager=SimpleNamespace(_players=jogadores),
             controller=SimpleNamespace(
                 describe_controllers=lambda: [{"connected": True}] * 2))
-        # Sem o escrevente, na hora: o recibo diz um vpad para dois físicos.
         launch_env.materialize_launch_env(daemon)  # type: ignore[arg-type]
         assert daemon._launch_env_assinatura[3] == ("uhid",)
 
@@ -835,11 +694,10 @@ class TestOVigiaEsperaAEscritaEmVoo:
                 solta.set()
                 while escrevente.escritas < 1:
                     await asyncio.sleep(0.01)
-                await asyncio.sleep(0.1)  # as devoluções voltam a este laço
+                await asyncio.sleep(0.1)
                 launch_env.vigiar_a_mesa(daemon, agora=vencido + 1.0)
                 pousada = launch_env.rematerializar_se_sossegou(daemon, agora=vencido + 1.0)
                 antes_da_mesa_mudar = list(eventos)
-                # O terceiro tique: mais um físico na mesa, sem borda nenhuma.
                 daemon.controller.describe_controllers = lambda: [{"connected": True}] * 3
                 launch_env.vigiar_a_mesa(daemon, agora=vencido + 2.0)
                 julgou = launch_env.rematerializar_se_sossegou(
@@ -872,16 +730,7 @@ class TestOServicoQueSaiTiraOSocket:
     def test_o_stop_com_teto_tira_o_socket_mesmo_com_a_escrita_em_voo(
         self, sem_escrevente: None, pasta_curta: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O `shutdown` do serviço (`daemon/connection.py`) derruba o IPC com
-        teto de 2 s, e as bordas do próprio shutdown (o co-op, o vpad) acabaram
-        de pedir a escrita do lançamento ao fio. Com a escrita mais longa que o
-        teto, o socket sai do disco do mesmo jeito: a espera pelo escrevente
-        vem depois da limpeza do socket, que era tudo o que o `stop` fazia.
-
-        MORDIDA: devolva a espera pelo escrevente para antes da limpeza do
-        socket em `IpcServer.stop` — o teto cancela o `stop` no meio, e o
-        socket fica no disco.
-        """
+        """O `shutdown` do serviço (`daemon/connection.py`) derruba o IPC com"""
         entrou = threading.Event()
         solta = threading.Event()
 
@@ -913,20 +762,13 @@ class TestOServicoQueSaiTiraOSocket:
             "esperando a escrita do lançamento, antes da limpeza")
 
 
-# ===========================================================================
-# R5 — o servidor diz quem o segurou
-# ===========================================================================
 class TestOServidorDizQuemOSegurou:
     def test_o_pedido_de_300_ms_escreve_a_linha_e_o_de_20_nao(self, pasta_curta: Path) -> None:
-        """Uma linha `ipc_lento metodo=<nome> ms=<n>` por pedido acima de
-        100 ms, sem parâmetro nenhum (nenhum endereço vai ao diário).
-
-        MORDIDA: tire a medida do `_dispatch` — nenhuma linha.
-        """
+        """Uma linha `ipc_lento metodo=<nome> ms=<n>` por pedido acima de"""
         servidor = _servidor(pasta_curta, daemon=None)
 
         async def segura(segundos: float) -> dict[str, Any]:
-            time.sleep(segundos)  # segura o laço, como um handler síncrono
+            time.sleep(segundos)
             return {}
 
         servidor._handlers["teste.lento"] = lambda _p: segura(0.3)
@@ -949,9 +791,6 @@ class TestOServidorDizQuemOSegurou:
         assert "aa:bb:cc" not in repr(registros)
 
 
-# ===========================================================================
-# R6 — a pergunta abandonada não roda; o pedido que muda roda
-# ===========================================================================
 class TestAPerguntaAbandonadaNaoRoda:
     def test_o_laco_preso_pula_so_a_pergunta_de_quem_foi_embora(
         self, sem_escrevente: None, pasta_curta: Path
@@ -986,7 +825,6 @@ class TestAPerguntaAbandonadaNaoRoda:
         servidor._wrapper_marker_cached = lambda: (1599660, int(time.time()))
         servidor._armar_launch = armar
         with _NoFio(servidor) as no_fio:
-            # o laço preso: os três pedem e vão embora enquanto ele não anda
             no_fio.laco.call_soon_threadsafe(time.sleep, 0.5)
             time.sleep(0.05)
             for metodo in ("daemon.state_full", "teste.muda", "daemon.status"):
@@ -994,15 +832,14 @@ class TestAPerguntaAbandonadaNaoRoda:
             prazo = time.monotonic() + 5
             while time.monotonic() < prazo and (rodou["muda"] < 1 or rodou["armou"] < 1):
                 time.sleep(0.02)
-            time.sleep(0.2)  # a pergunta, se fosse rodar, já teria rodado
+            time.sleep(0.2)
         assert rodou["muda"] == 1, f"o pedido que muda não rodou: {rodou}"
         assert rodou["armou"] == 1, f"o arming do lançamento não foi agendado: {rodou}"
         assert rodou["pergunta"] == 0, (
             f"a pergunta de quem já foi embora rodou: {rodou}")
 
     def test_quem_so_fechou_a_escrita_ainda_espera_a_resposta(self) -> None:
-        """O `socat` e o `nc -N` fecham só a escrita e esperam a resposta: o
-        `POLLHUP` separa quem foi embora de quem só terminou de pedir."""
+        """O `socat` e o `nc -N` fecham só a escrita e esperam a resposta: o"""
         from hefesto_dualsense4unix.daemon.ipc_server import _o_cliente_ja_foi
 
         def escritor(sock: socket.socket) -> Any:
@@ -1017,18 +854,10 @@ class TestAPerguntaAbandonadaNaoRoda:
             assert _o_cliente_ja_foi(escritor(a)) is True
 
 
-# ===========================================================================
-# R7 — o cliente do IPC não importa o servidor
-# ===========================================================================
 @pytest.mark.parametrize("cliente", ["hefesto_dualsense4unix.cli.ipc_client",
                                      "hefesto_dualsense4unix.app.ipc_bridge"])
 def test_o_cliente_nao_importa_o_servidor(cliente: str) -> None:
-    """A CLI, a bandeja e a janela importam o cliente; o servidor do daemon
-    (e os handlers) não vêm junto.
-
-    MORDIDA: devolva o import das constantes a `daemon.ipc_server` — as duas
-    linhas aparecem no `-X importtime`.
-    """
+    """A CLI, a bandeja e a janela importam o cliente; o servidor do daemon"""
     ambiente = dict(os.environ, PYTHONPATH=str(RAIZ / "src"))
     r = subprocess.run([sys.executable, "-X", "importtime", "-c", f"import {cliente}"],
                        capture_output=True, text=True, timeout=120, env=ambiente,

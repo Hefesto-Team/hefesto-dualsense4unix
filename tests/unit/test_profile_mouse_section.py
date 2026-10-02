@@ -1,15 +1,4 @@
-"""FEAT-POINT-AND-CLICK-01 — seção opcional `mouse` do perfil.
-
-Cobre os três andares da feature:
-  1. Schema: `ProfileMouseConfig` (ranges, defaults, extra=forbid) e os campos
-     aditivos em `Profile` (JSONs v1 sem os campos continuam válidos).
-  2. `ProfileManager.activate`: appliers de mouse/supressão chamados com os
-     valores do perfil; `mouse=None` NÃO toca no estado; falha do applier não
-     aborta a ativação.
-  3. Draft (GUI): `from_profile` popula `MouseDraft` (dirty=False);
-     `to_profile` inclui a seção SOMENTE quando dirty; perfil legado faz
-     round-trip inalterado.
-"""
+"""FEAT-POINT-AND-CLICK-01 — seção opcional `mouse` do perfil."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -62,9 +51,6 @@ def _mk_profile(name: str, **kw: object) -> Profile:
     return Profile(name=name, **defaults)  # type: ignore[arg-type]
 
 
-# --- 1. Schema ---------------------------------------------------------------
-
-
 def test_json_v1_sem_campos_novos_continua_valido() -> None:
     """Aditivo sem bump de versão: JSON antigo valida e ganha defaults."""
     raw = {
@@ -115,9 +101,6 @@ def test_profile_com_secao_mouse_roundtrip_json() -> None:
     assert (p2.mouse.enabled, p2.mouse.speed, p2.mouse.scroll_speed) == (True, 8, 2)
 
 
-# --- 2. ProfileManager.activate ----------------------------------------------
-
-
 class _Spy:
     def __init__(self) -> None:
         self.mouse_calls: list[tuple[bool, int, int]] = []
@@ -132,10 +115,6 @@ class _Spy:
         origin: str = "autoswitch",
         profile: object = None,
     ) -> bool:
-        # R-03: o applier recebe a ORIGEM da ativação ("manual" fura o lock de
-        # gesto manual; automática adia). O dublê só registra o efeito pedido.
-        # O-MOUSE-SEGUE-A-NAVEGACAO-01: e QUEM mandou, como o do modo — é o
-        # applier do daemon que decide se o perfil opina sobre o liga/desliga.
         self.mouse_calls.append((enabled, speed, scroll))
         return True
 
@@ -146,9 +125,6 @@ class _Spy:
         profile: object = None,
         origin: str = "autoswitch",
     ) -> None:
-        # R-02: o applier recebe QUEM mandou, para distinguir "o perfil do
-        # desktop liberou" de "caiu num catch-all". R-03: e de ONDE veio a
-        # ativação.
         self.suppression_calls.append(desired)
 
 
@@ -192,8 +168,7 @@ def test_activate_sem_secao_mouse_nao_toca_no_estado(
 
 
 def test_activate_supressao_sempre_propagada(isolated_profiles_dir: Path) -> None:
-    """O applier de supressão recebe o valor do campo em TODA ativação —
-    inclusive o default False (é assim que trocar de perfil libera)."""
+    """O applier de supressão recebe o valor do campo em TODA ativação —"""
     save_profile(_mk_profile("game", suppress_desktop_emulation=True))
     save_profile(_mk_profile("desktop"))
     spy = _Spy()
@@ -222,9 +197,6 @@ def test_activate_applier_que_levanta_nao_aborta(
     save_profile(_mk_profile("pnc", mouse={"enabled": True}))
 
     def boom(*_a: object, **_kw: object) -> None:
-        # R-03: `**_kw` para o dublê engolir `profile=`/`origin=` e levantar o
-        # RuntimeError do teste — sem isso o que estouraria seria um TypeError
-        # de assinatura, e o teste passaria pelo motivo errado.
         raise RuntimeError("uinput indisponível")
 
     fc = FakeController()
@@ -238,9 +210,6 @@ def test_activate_applier_que_levanta_nao_aborta(
     assert store.active_profile == "pnc"
 
 
-# --- 3. Draft (GUI) ------------------------------------------------------------
-
-
 def test_from_profile_popula_mouse_draft_sem_dirty() -> None:
     profile = _mk_profile(
         "pnc", mouse={"enabled": True, "speed": 8, "scroll_speed": 2}
@@ -249,7 +218,6 @@ def test_from_profile_popula_mouse_draft_sem_dirty() -> None:
     assert draft.mouse.enabled is True
     assert draft.mouse.speed == 8
     assert draft.mouse.scroll_speed == 2
-    # Carga programática NÃO é toque da usuária (BUG-MOUSE-GUI-SYNC-01).
     assert draft.mouse.dirty is False
 
 
@@ -283,17 +251,13 @@ def test_to_profile_sem_dirty_omite_secao_mouse() -> None:
 
 
 def test_roundtrip_perfil_com_mouse_preserva_secao() -> None:
-    """BUG-MOUSE-SAVE-DROPS-SECTION-01: salvar um perfil que JÁ possui seção mouse
-    (ex.: point_and_click) SEM tocar a aba Mouse PRESERVA a seção. Antes,
-    ``to_profile`` só emitia com ``dirty=True`` — o fluxo default de "Salvar
-    Perfil" (nome pré-preenchido do perfil ativo) descartava a seção e matava a
-    feature. ``in_profile`` (setado por ``from_profile``) resolve."""
+    """BUG-MOUSE-SAVE-DROPS-SECTION-01: salvar um perfil que JÁ possui seção mouse"""
     original = _mk_profile(
         "pnc", mouse={"enabled": True, "speed": 8, "scroll_speed": 2}
     )
     draft = DraftConfig.from_profile(original)
     assert draft.mouse.in_profile is True
-    assert draft.mouse.dirty is False  # carga programática, não toque
+    assert draft.mouse.dirty is False
     salvo = draft.to_profile("pnc", priority=10)
     assert salvo.mouse is not None
     assert (salvo.mouse.enabled, salvo.mouse.speed, salvo.mouse.scroll_speed) == (
@@ -304,10 +268,7 @@ def test_roundtrip_perfil_com_mouse_preserva_secao() -> None:
 
 
 def test_to_ipc_dict_gate_e_so_dirty_nao_in_profile() -> None:
-    """A rota IPC (Aplicar) continua gateada SÓ por ``dirty``: um draft carregado
-    de um perfil com mouse (in_profile=True, dirty=False) NÃO emite a seção no
-    ``to_ipc_dict`` — senão o Aplicar desligaria a emulação viva
-    (BUG-MOUSE-GUI-SYNC-01 A2). Persistência (to_profile) preserva; o IPC não."""
+    """A rota IPC (Aplicar) continua gateada SÓ por ``dirty``: um draft carregado"""
     draft = DraftConfig().model_copy(
         update={
             "mouse": MouseDraft(

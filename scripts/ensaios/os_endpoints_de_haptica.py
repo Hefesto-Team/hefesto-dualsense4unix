@@ -110,13 +110,9 @@ from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
     MARCA_DO_ENSAIO as _MARCA_DO_ENSAIO_DO_PRODUTO,
 )
 
-#: O VID/PID que o GE exige NO PROPLIST — não no aparelho.
 VID_SONY = "054c"
 PID_DUALSENSE = "0ce6"
 
-#: O nome tem de carregar as TRÊS agulhas dos patches, e um discriminador por
-#: controle: dois controles com o mesmo nome viram um endpoint só (patch 0186,
-#: `is_shared_sony_mono_backend_name`).
 _MOLDE_DO_NOME = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller_HEFESTO{marca}-00.HiFi__Speaker__sink"
@@ -126,40 +122,21 @@ _AGULHAS = (
     "Wireless_Controller",
     "Speaker__sink",
 )
-#: `PA_NAME_MAX` é 128 com o `\0`; um nome maior é recusado pelo servidor.
 _MAX_NOME = 127
 
 TAXA = 48000
 CANAIS = 4
 
-#: O nó não pode virar a saída padrão da máquina. Mesma razão e mesmo valor do
-#: nó do alto-falante (`alto_falante_bt.PRIORIDADE_SESSAO_DO_SOM`).
 _PRIORIDADE = 0
 
-#: A marca que só o endpoint montado por ESTE ensaio carrega. O ``--desmontar``
-#: derruba só os módulos que a trazem: o produto monta endpoints com o mesmo
-#: molde de nome, e derrubá-los tiraria a háptica de quem joga. O dono é o
-#: produto desde 28/09/2026: a varredura de órfãos dele pula o que traz a
-#: marca, e duas grafias dela divergiriam no dia em que uma mudasse.
 MARCA_DO_ENSAIO = _MARCA_DO_ENSAIO_DO_PRODUTO
 
 
 @dataclass(frozen=True)
 class Ancora:
-    """Um ``usb_device`` de onde o ``winepulse`` tira o ``ContainerId``.
-
-    **O nó declara o FILHO, e o GUID sai do PAI.** O
-    ``udev_device_get_parent_with_subsystem_devtype`` devolve um ancestral,
-    nunca o próprio device: declarar a âncora nua faz o Wine subir ao hub raiz
-    e todos os controles do mesmo barramento casarem com o mesmo container.
-    Medido no jogo em 18/09/2026 — o endpoint saiu com o GUID do `1d6b:0002`.
-    Por isso :attr:`declarado` é a interface (``<bus>-<porta>:1.0``), que é a
-    forma de uma placa de som de verdade: o caminho dela é o do ``sound/card``,
-    cujo pai é o aparelho.
-    """
+    """Um ``usb_device`` de onde o ``winepulse`` tira o ``ContainerId``."""
 
     syspath: str
-    #: O que vai no ``sysfs.path`` do nó: um filho de :attr:`syspath`.
     declarado: str
     vid: int
     pid: int
@@ -169,18 +146,7 @@ class Ancora:
     nome: str
 
     def container_id(self) -> str:
-        """A conta do ``create_usb_dev_container_id`` (pulse.c:597).
-
-        ``Data1 = MAKELONG(vid, pid)`` — e a ordem é essa mesmo: o campo BAIXO
-        é o ``vid``. ``Data4`` são os 8 bytes little-endian do
-        ``USEC_INITIALIZED``.
-
-        **O `& 0xFF` no barramento e no device não é zelo:** na origem os dois
-        são ``uint8_t`` (``create_usb_dev_container_id``), e um `devnum` acima
-        de 255 — que acontece em host cheio — dobra ali. Sem a máscara, esta
-        conta e a do Wine divergiriam exatamente nos casos raros, que são os
-        piores de diagnosticar.
-        """
+        """A conta do ``create_usb_dev_container_id`` (pulse.c:597)."""
         data1 = ((self.pid & 0xFFFF) << 16) | (self.vid & 0xFFFF)
         d4 = (self.usec & 0xFFFFFFFFFFFFFFFF).to_bytes(8, "little")
         bus, dev = self.bus & 0xFF, self.dev & 0xFF
@@ -210,12 +176,7 @@ def _usec(dev: Path, udev_data: Path) -> int:
 def ancoras(
     sysfs: Path = Path("/sys"), udev_data: Path = Path("/run/udev/data")
 ) -> list[Ancora]:
-    """Os ``usb_device`` que servem de âncora, na ordem do barramento.
-
-    **Fora ficam os que têm placa de som**: o ``ContainerId`` de um deles já é o
-    de um endpoint de verdade, e reusá-lo faria dois endpoints dizerem ser o
-    mesmo aparelho.
-    """
+    """Os ``usb_device`` que servem de âncora, na ordem do barramento."""
     raiz = sysfs / "bus" / "usb" / "devices"
     achadas: list[Ancora] = []
     try:
@@ -229,8 +190,6 @@ def ancoras(
             continue
         if any(dev.glob("*/sound/card*")):
             continue
-        # A interface que o nó vai declarar. Sem nenhuma, o aparelho não está
-        # configurado e não serve de âncora: o Wine subiria ao hub raiz.
         interface = next((i for i in sorted(dev.glob(f"{dev.name}:*")) if (i / "uevent").is_file()), None)
         if interface is None:
             continue
@@ -263,12 +222,7 @@ def nome_do_endpoint(marca: str) -> str:
 
 
 def propriedades(ancora: Ancora, marca: str) -> str:
-    """O ``sink_properties=``, ENTRE ASPAS DUPLAS.
-
-    As aspas são a cura conhecida desta casa: sem elas o parser do
-    ``pipewire-pulse`` corta o valor no primeiro espaço e só a primeira
-    propriedade chega — com a régua dando verde por ler o argv, não o nó.
-    """
+    """O ``sink_properties=``, ENTRE ASPAS DUPLAS."""
     campos = (
         "device.bus=usb",
         f"device.vendor.id={VID_SONY}",
@@ -281,9 +235,6 @@ def propriedades(ancora: Ancora, marca: str) -> str:
         MARCA_DO_ENSAIO,
     )
     return 'sink_properties="' + " ".join(campos) + '"'
-
-
-# -- o que o servidor responde ------------------------------------------------
 
 
 def _blocos_de_sinks(saida: str) -> list[str]:
@@ -339,9 +290,6 @@ def _laudo(sink: dict[str, str]) -> list[tuple[bool, str]]:
         (all(a in nome for a in _AGULHAS), "o nome tem as três agulhas dos patches"),
         (bool(sink["sysfs"]), f"sysfs.path presente → ContainerId real  ({sink['sysfs'] or 'AUSENTE: sairia zerado'})"),
     ]
-
-
-# -- os verbos ----------------------------------------------------------------
 
 
 def _default_sink() -> str:
@@ -432,30 +380,17 @@ def status() -> int:
         _dizer(f"  {sink['espec']}")
         for ok, frase in _laudo(sink):
             _dizer(f"  [{'x' if ok else ' '}] {frase}")
-    # O FECHO DO CÍRCULO: o que o curador vai gravar sai da MESMA função que
-    # ele lê — o dono da lista, os lugares e o cabo que nenhum lugar serve. Se
-    # estas linhas não aparecerem, o device KS não sairá — e foi assim que o
-    # erro de um nível na árvore do USB se escondeu.
     for controle in controles_do_registro():
         guids = " · ".join(container_id(controle, d4) for d4 in variantes_de_data4(controle, []))
         _dizer(f"\n  o device KS vai declarar: {guids}")
     return 0 if all(all(ok for ok, _f in _laudo(s)) for s in achados) else 1
 
 
-# -- a gravação por canal -----------------------------------------------------
-
-#: A latência do gravador. **Explícita**, e o número é o dos gravadores desta
-#: casa: sem ela o servidor escolhe um buffer generoso e a leitura chega dois
-#: segundos atrasada (a memória «gravador sem latência atrasa dois segundos»).
 _LATENCIA_MS = 40
 
 
 def rms_por_canal(pcm: bytes, canais: int = CANAIS) -> list[float]:
-    """O RMS de cada canal de um PCM ``float32le`` intercalado. Função pura.
-
-    O resto que não fecha um quadro inteiro (``4 × canais`` bytes) sai: um
-    gravador interrompido no meio de um quadro não pode deslocar os canais.
-    """
+    """O RMS de cada canal de um PCM ``float32le`` intercalado. Função pura."""
     amostras = array.array("f")
     inteiro = len(pcm) - len(pcm) % (4 * canais)
     amostras.frombytes(pcm[:inteiro])
@@ -470,13 +405,7 @@ def rms_por_canal(pcm: bytes, canais: int = CANAIS) -> list[float]:
 
 
 def argv_da_gravacao(nome: str) -> list[str]:
-    """O ``parec`` que lê o monitor de um endpoint, em quatro canais.
-
-    ``parec`` pelo NOME do ``.monitor``, e não o ``pw-record`` pelo nome: o
-    ``pw-record --target=<nome>.monitor`` caiu na fonte padrão em 16/09/2026
-    (SOM-ECO-02, a tabela em ``alto_falante_bt.argv_do_gravador``), e o
-    ``parec`` acertou pelo nome.
-    """
+    """O ``parec`` que lê o monitor de um endpoint, em quatro canais."""
     return [
         "parec", f"--device={nome}.monitor", "--format=float32le", f"--rate={TAXA}",
         f"--channels={CANAIS}", f"--latency-msec={_LATENCIA_MS}", "--raw",
@@ -491,7 +420,7 @@ def gravar(segundos: float) -> dict[str, object]:
     gravadores = []
     for sink in sinks:
         try:
-            proc = subprocess.Popen(  # argv fixo, sem shell
+            proc = subprocess.Popen(
                 argv_da_gravacao(sink["nome"]),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,

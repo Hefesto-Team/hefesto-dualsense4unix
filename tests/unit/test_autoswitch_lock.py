@@ -1,21 +1,4 @@
-"""FEAT-AUTOSWITCH-LOCK-01 → O-FREESTYLE-E-UMA-CAMADA-SO-01 — o Modo Freestyle.
-
-Pedido original da mantenedora (23/07): *"no sackboy a ideia era ficar a seleção
-que eu marquei na interface... deixar na interface a opção de escolha"*, e *"o
-madjack também é o mesmo lance"*. Nasceu como um cadeado da troca AUTOMÁTICA de
-perfil: enquanto ligado, o AutoSwitcher não troca de perfil por foco de janela,
-mas gamepad/co-op/rumble seguem vivos (é o oposto do pause do daemon).
-
-NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Este arquivo cobria a
-LOCK-CEDE-01 (24/07): o cadeado cedia à regra própria de todo jogo, e por isso
-o Freestyle nunca valia em jogo. A decisão dela
-(`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) a revogou: ligado, o Freestyle
-manda em tudo, e nenhum caminho automático passa por cima. A chave passou de
-`autoswitch_locked` a `freestyle_ligado`, e o arquivo de `autoswitch_locked.flag`
-a `freestyle_ligado.flag` (com a migração). As réguas do lançamento, do boot,
-do botão e dos quatro controles moram em `test_o_freestyle_ligado_manda_em_tudo.py`;
-aqui fica o que é do autoswitch, do run-loop, do disco e do boot.
-"""
+"""FEAT-AUTOSWITCH-LOCK-01 → O-FREESTYLE-E-UMA-CAMADA-SO-01 — o Modo Freestyle."""
 
 from __future__ import annotations
 
@@ -38,7 +21,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID_MMJ = 2111190  # Mullet Mad Jack — o jogo do relato
+APPID_MMJ = 2111190
 WM_MMJ = f"steam_app_{APPID_MMJ}"
 
 
@@ -63,8 +46,7 @@ def _switcher(store: StateStore) -> tuple[AutoSwitcher, MagicMock]:
 
 
 def _switcher_real(store: StateStore) -> AutoSwitcher:
-    """AutoSwitcher com ProfileManager REAL — o `select_for_window` de verdade
-    é quem diz se o candidato é a regra do jogo ou um genérico de desktop."""
+    """AutoSwitcher com ProfileManager REAL — o `select_for_window` de verdade"""
     fc = FakeController()
     fc.connect()
     return AutoSwitcher(
@@ -78,7 +60,7 @@ def _perfil_do_jogo() -> Profile:
     return Profile(
         name="madjack",
         match=MatchCriteria(window_class=[WM_MMJ]),
-        priority=0,  # perfil de jogo nasce com prioridade 0 (R-01)
+        priority=0,
     )
 
 
@@ -106,12 +88,7 @@ class TestAutoswitchRespeitaOFreestyle:
     def test_ligado_nao_troca_por_janela_comum(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Nenhuma janela de desktop troca o perfil.
-
-        `Navegação` casa a janela `steam` e é justamente metade do ping-pong do
-        journal de 22-23/07 — com o Freestyle ligado, ela não entra por mais
-        estável que o foco fique.
-        """
+        """Nenhuma janela de desktop troca o perfil."""
         save_profile(_navegacao())
         store = StateStore()
         store.set_freestyle_ligado(True)
@@ -126,12 +103,7 @@ class TestAutoswitchRespeitaOFreestyle:
     def test_ligado_nem_a_regra_propria_do_jogo_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """A LOCK-CEDE-01 revogada: o jogo com perfil PRÓPRIO não entra.
-
-        MORDIDA: devolva ao `_tick` a exceção da regra de jogo (o bloco que
-        deixava `perfil_e_regra_de_jogo` passar com o cadeado) e o `madjack`
-        entra aos 0,6 s.
-        """
+        """A LOCK-CEDE-01 revogada: o jogo com perfil PRÓPRIO não entra."""
         save_profile(_perfil_do_jogo())
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
         store = StateStore()
@@ -166,8 +138,7 @@ class TestAutoswitchRespeitaOFreestyle:
     def test_log_da_parada_uma_vez_por_episodio(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A pergunta é feita a 2 Hz e o Freestyle fica ligado por horas —
-        sem dedup seriam centenas de milhares de linhas no journal."""
+        """A pergunta é feita a 2 Hz e o Freestyle fica ligado por horas —"""
         from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
 
         spy = MagicMock()
@@ -190,8 +161,7 @@ class TestAutoswitchRespeitaOFreestyle:
 
 
 class TestFreestyleNoRunLoop:
-    """O `run()` REAL — a auditoria apontou que a cobertura parava no `_tick`
-    dirigido na mão, e é o run-loop que roda na máquina dela."""
+    """O `run()` REAL — a auditoria apontou que a cobertura parava no `_tick`"""
 
     @pytest.mark.asyncio
     async def test_run_ligado_nao_troca_por_janela_comum(
@@ -247,8 +217,7 @@ class TestFreestyleNoRunLoop:
     async def test_ligar_em_runtime_para_no_tique_seguinte(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Ligar vale na hora (o `_tick` relê o store) — sem reiniciar o daemon
-        nem reabrir a janela."""
+        """Ligar vale na hora (o `_tick` relê o store) — sem reiniciar o daemon"""
         save_profile(_navegacao())
         save_profile(
             Profile(
@@ -297,12 +266,7 @@ class TestPersistencia:
     async def test_boot_retoma_o_freestyle_da_sessao_anterior(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`lifecycle.run` carrega a flag no boot — a escolha dela atravessa
-        reboot, e o perfil que vale ao subir é o Freestyle.
-
-        O Freestyle tem de estar no disco: ligado sem o arquivo, o restauro o
-        desliga (`freestyle_ligado_sem_o_perfil`), porque não há o que mandar.
-        """
+        """`lifecycle.run` carrega a flag no boot — a escolha dela atravessa"""
         from hefesto_dualsense4unix.core.controller import ControllerState
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 
@@ -348,10 +312,6 @@ class TestPersistencia:
             config=config,
         )
         task = asyncio.create_task(daemon.run())
-        # ESPERA A CONDIÇÃO, E NÃO UM RELÓGIO: o boot passou a semear o padrão
-        # do computador uma vez (`o_padrao_do_computador.migrar_uma_vez`, ~25 ms
-        # num lar novo, que a suíte cria a cada teste), e os 60 ms fixos de antes
-        # reprovavam de vez em quando num lote carregado.
         for _ in range(200):
             if daemon.store.active_profile == loader_module.NOME_DO_PADRAO:
                 break
@@ -365,18 +325,7 @@ class TestPersistencia:
 
 
 class TestRotasQueNaoConsultamOFreestyle:
-    """Duas rotas que NÃO consultam o `freestyle_ligado`, de propósito.
-
-    - o ciclo por PS+D-pad é o GESTO dela, no controle, agora: ele ativa com a
-      origem `manual`, e é a ativação à mão que liga ou desliga o modo
-      (`profiles.manager.ligar_o_freestyle`) — o gesto decide, sem um segundo
-      dono no `hotkey`;
-    - `_drenar_modo_pendente` não escolhe perfil: reaplica UMA seção do perfil
-      JÁ ativo que o lock de gesto manual (R-03, outro lock) adiou.
-
-    Os testes abaixo travam a decisão para que ninguém enfie um segundo dono
-    da pergunta nessas rotas sem reabri-la.
-    """
+    """Duas rotas que NÃO consultam o `freestyle_ligado`, de propósito."""
 
     def test_ciclo_por_hotkey_nao_consulta_o_freestyle(self) -> None:
         import inspect

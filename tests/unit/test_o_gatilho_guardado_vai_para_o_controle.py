@@ -38,7 +38,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
@@ -72,12 +71,7 @@ def gesto(pac):
 
 @pytest.fixture
 def disco(monkeypatch):
-    """Um disco de mentira, com um perfil de verdade dentro.
-
-    O `Profile` É O DE VERDADE, e não um dublê: o que esta régua mede é o que
-    vai para o esquema — um dublê aceitaria um `ControllerOverrides` malformado
-    e a régua ficaria verde sobre um perfil que o disco recusaria.
-    """
+    """Um disco de mentira, com um perfil de verdade dentro."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -103,13 +97,7 @@ def _forma(**extra: str) -> dict[str, str]:
 
 
 def test_grava_no_override_do_controle_e_nao_no_global(pac, gesto, disco) -> None:
-    """NASCE-LIGADO-01 (20/09/2026): o guardado é `Pulse` e o intacto é o nascimento.
-
-    `Rigid` virou o NASCIMENTO dos dois lados, e com ele um global escrito por
-    engano ficaria idêntico ao global intacto — a régua daria verde sobre o
-    defeito que existe para pegar. O que se guarda tem de diferir do que se
-    herda, e o "intacto" é lido do esquema em vez de digitado.
-    """
+    """NASCE-LIGADO-01 (20/09/2026): o guardado é `Pulse` e o intacto é o nascimento."""
     from hefesto_dualsense4unix.profiles.schema import TriggersConfig
 
     _estado, gravados = disco
@@ -179,8 +167,6 @@ def test_nada_mudou_nada_grava(pac, gesto, disco) -> None:
     _, gravados = disco
     p = PonteDeMentira()
     gesto(_ctx(pac), {"uniq": UNIQ, "forma": _forma()}, p)
-    # O DUBLÊ DO DISCO NÃO GUARDA O GRAVADO DE VOLTA, então o segundo clique
-    # precisa ler o que o primeiro escreveu — é o que a máquina dela faria.
     estado, _ = disco
     estado["Mortal Kombat"] = gravados[0]
     antes = len(gravados)
@@ -216,11 +202,7 @@ def test_clique_solto_recusa(pac, gesto, disco) -> None:
 
 
 def test_o_botao_pede_a_forma_da_coluna() -> None:
-    """A metade JS da cura: sem `data-hef-forma`, o gesto só sabe recusar.
-
-    E o valor tem de ser `@controle`, não um `id`: as colunas não têm `id` — elas
-    se endereçam por `data-controle`, que é o vocabulário que a mesa já usa.
-    """
+    """A metade JS da cura: sem `data-hef-forma`, o gesto só sabe recusar."""
     from hefesto_dualsense4unix.interface import onde
 
     html = (onde.PUBLICADO / "03-gatilhos.html").read_text(encoding="utf-8")

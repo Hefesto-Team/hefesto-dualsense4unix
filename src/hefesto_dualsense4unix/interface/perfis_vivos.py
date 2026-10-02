@@ -61,18 +61,12 @@ import sys
 import time
 from typing import Any
 
-# A JANELA, AS DUAS PONTES E A GUARDA DE CARGA VÊM DA BIBLIOTECA, e é ela que
-# crava os quatro pinos de `gi.require_version` (com o Gdk DEPOIS do Gtk).
-# Importá-la ANTES de `gi.repository` é o que garante a ordem.
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.app.actions import perfis_web  # noqa: E402
 
-# O RÓTULO DA TABELA «AJUSTE PRÓPRIO» VEM DO DONO — 11/09/2026. Ver
-# `mesa_de_agora`: a junção que o PRODUTO usa mora em `a10_perfis`, e uma cópia
-# aqui seria a terceira gramática do mesmo rótulo.
 from hefesto_dualsense4unix.interface import pacotes  # noqa: E402
 from hefesto_dualsense4unix.interface.pacotes import a10_perfis  # noqa: E402
 from hefesto_dualsense4unix.profiles import simple_match  # noqa: E402
@@ -86,39 +80,21 @@ import onde  # noqa: E402  (o dono das duas pastas: bancada e publicado)
 
 import aba10  # noqa: E402  isort:skip
 
-# O DONO DA PASTA RESPONDE, e o caminho não se soletra — 06/09/2026, costura da
-# ONDA C. Aqui estava `AQUI.parent / "10-perfis.html"`, que era certo enquanto
-# esta bancada morava em `layout/_ferramentas/` e apontava para
-# `hefesto_dualsense4unix/10-perfis.html` desde a mudança para `src/`: um
-# arquivo que não existe. É o gêmeo do defeito que a `ONDA5-07-03` achou na
-# `jogar_vivo.py`, e as duas apagavam o mesmo jeito — "ERRO DE CARGA",
-# `voltas: 0` e `rc=0`.
 PAGINA = onde.PUBLICADO / "10-perfis.html"
 TITULO_ESPERADO = "Hefesto — aba PERFIS"
 
 #: O tique desta aba. A Controles lê o `state_full` a 10 Hz porque desenha
-#: analógico e giroscópio; aqui o dado é perfil em DISCO — ele não muda dez
-#: vezes por segundo, e reler o disco nessa cadência seria pagar I/O por nada.
-#: 500 ms é o mesmo período da faixa "devagar" do produto
-#: (`app/constants.SLOW_POLL_INTERVAL_MS`), e é ele que entra na conta de
-#: orçamento do relato.
 TIQUE_MS = 500
 
-#: O tique RÁPIDO, o mesmo da janela de hoje: é ele que traz o perfil ativo e a
-#: mesa. Quem muda depressa nesta aba é o que vem do daemon, não o disco.
 TIQUE_RAPIDO_MS = 100
 
-#: A cor do plástico quando o aparelho não a respondeu. Mesma saída do piloto da
-#: Controles: a borda neutra do tema é o "não sei" desta linha.
 PLASTICO_DESCONHECIDO = "var(--border-forte)"
 
 _cor_da_zona_real = aba10.cor_da_zona
 
 
 def _cor_da_zona_tolerante(colorway: str, zona: str = "casca-solida") -> str:
-    """`monta.cor_da_zona` PARA a geração quando o colorway não existe — e está
-    certo para o mockup, onde a mesa é escrita à mão. Aqui a mesa vem do
-    aparelho, e "não sei a cor" é resposta legítima."""
+    """`monta.cor_da_zona` PARA a geração quando o colorway não existe — e está"""
     if not colorway:
         return PLASTICO_DESCONHECIDO
     try:
@@ -131,10 +107,6 @@ aba10.cor_da_zona = _cor_da_zona_tolerante
 monta.cor_da_zona = _cor_da_zona_tolerante
 
 
-# ---------------------------------------------------------------------------
-# O JavaScript da ponte — clona o desenho, escreve por TIPO, e conta o que
-# escreveu. Nenhuma linha desta tela é HTML vindo do Python.
-# ---------------------------------------------------------------------------
 BOOTSTRAP = r"""
 window.HEF = (function(){
   const qa = (s,r)=>Array.from((r||document).querySelectorAll(s));
@@ -344,9 +316,6 @@ window.HEF = (function(){
 """
 
 
-# ---------------------------------------------------------------------------
-# De onde vem o dado
-# ---------------------------------------------------------------------------
 def perfis_do_disco() -> list[Any]:
     """Os perfis DELA, em LEITURA. `load_all_profiles` e nada mais."""
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
@@ -355,43 +324,14 @@ def perfis_do_disco() -> list[Any]:
 
 
 def perfis_do_duble(bruto: list[dict[str, Any]]) -> list[Any]:
-    """Perfis inventados, validados pelo MESMO esquema do produto.
-
-    Passar pelo `Profile` do pydantic em vez de por um objeto de mentira é o que
-    garante que o dublê não possa exprimir um perfil que o disco não poderia
-    ter — inclusive na chave de `controllers`, que o esquema canoniza.
-    """
+    """Perfis inventados, validados pelo MESMO esquema do produto."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     return [Profile.model_validate(p) for p in bruto]
 
 
 def mesa_de_agora(state: dict[str, Any] | None) -> list[dict[str, Any]]:
-    """A mesa no formato que o `perfis_web` espera — o MESMO do produto.
-
-    O INSTRUMENTO MENTIA, e a prova é uma foto — 11/09/2026. O `rotulo` saía de
-    `monta.rotulo(c, "curta")`, que devolve MARCAÇÃO: o separador dele é
-    `' <span class="pt">•</span> '`. Quem pinta a tabela «Ajuste próprio»
-    escreve `textContent` — de propósito, porque nome de controle é dado que não
-    atravessa a fronteira como HTML —, então esta bancada mostrava, nas quatro
-    linhas, o texto literal `P1 <span class="pt">•</span> Não sei …`.
-
-    **E O PRODUTO NÃO FAZ ISSO.** O caminho dele é
-    `pacotes/a10_perfis._mesa_com_rotulo`, que usa `_rotulo_curto` — a mesma
-    ordem dela de 26/08 (marca • player • plástico • transporte), em TEXTO. A
-    bancada era a única superfície com o defeito, e quem a olhasse concluiria
-    que a tela dela estava quebrada de um jeito que ela não está. É a assinatura
-    que esta casa já nomeou: *o instrumento respondia sobre outra coisa que não
-    o produto*.
-
-    A CURA É PERGUNTAR AO DONO, e não reescrever a junção aqui: `_rotulo_curto`
-    é quem o produto chama, e a régua `test_o_rotulo_da_guarda_e_o_mesmo_do_monta`
-    já o amarra ao `monta.rotulo` sem a marcação. Uma terceira junção nesta
-    bancada seria a gramática do rótulo com três donos.
-
-    O `plastico` FICA COMO ESTAVA: `cor_da_zona` devolve um hexadecimal, não
-    marcação, e o alvo daquele endereço é `cor`.
-    """
+    """A mesa no formato que o `perfis_web` espera — o MESMO do produto."""
     if not state:
         return []
     mesa = mesa_viva.mesa_do_estado(state, {})
@@ -401,18 +341,12 @@ def mesa_de_agora(state: dict[str, Any] | None) -> list[dict[str, Any]]:
     return mesa
 
 
-# ---------------------------------------------------------------------------
-# A janela
-# ---------------------------------------------------------------------------
 class Janela:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
         self.pronto = False
         self.chaves: tuple = ()
         self.chaves_da_guarda: tuple = ()
-        #: A lista de procedências que o «Funciona em:» está oferecendo. Ela
-        #: muda quando um lançador aparece ou some do disco — e só então o
-        #: `<select>` é remontado. Ver `remontaAmbiente`, no BOOTSTRAP.
         self.ambientes: tuple = ()
         self.custos: list[float] = []
         self.custos_disco: list[float] = []
@@ -422,8 +356,6 @@ class Janela:
         self.rss: list[int] = []
         self.gestos: list[dict[str, Any]] = []
         self.valores: list[int] = []
-        #: O que ela escolheu na lista. Mora SÓ AQUI, na memória desta janela —
-        #: nunca no perfil dela — e some quando a janela fecha.
         self.escolhido: str | None = None
         self.perfis: list[Any] = []
         self.ativo: str | None = None
@@ -444,7 +376,6 @@ class Janela:
         self.ponte = self.tela.ponte
         self.janela = self.tela.janela
 
-    # -- carga -------------------------------------------------------------
     def _saiu_da_aba(self, titulo: str) -> None:
         self.pronto = False
         print(f"[fora da Perfis] {titulo} — o mockup estático; a pintura pausou.")
@@ -467,13 +398,6 @@ class Janela:
             if self.args.prova_gesto:
                 self._marcar_gestos_de_mentira()
             if self.args.arranca_enderecos:
-                # A MORDIDA DO ENDEREÇO: arranca os `data-hef` e vê a pintura
-                # DESABAR. Um endereço a menos não levanta erro nenhum no
-                # WebKit — o `querySelector` devolve `null` e o valor
-                # simplesmente não é escrito. `data-hef-perfil` e
-                # `data-hef-uniq` ficam de fora de propósito: arrancá-los
-                # derruba a pintura inteira de uma vez, e a queda deixaria de
-                # dizer QUAL endereço morreu.
                 GLib.timeout_add(
                     1500,
                     lambda: (
@@ -491,18 +415,7 @@ class Janela:
         self.ponte.perguntar(BOOTSTRAP, pronto)
 
     def _marcar_gestos_de_mentira(self) -> None:
-        """Cliques SINTÉTICOS, para provar o caminho tela → Python → eco.
-
-        `el.click()` percorre o MESMO caminho de eventos do clique do rato: o
-        `addEventListener` do bootstrap é o que responde. Clicar por coordenada
-        é a armadilha que esta casa já pagou duas vezes.
-
-        A ORDEM É A MORDIDA. O "Detectar" e o "Voltar à de ontem" são clicados
-        junto dos que funcionam, e têm de produzir ZERO gestos — eles nascem
-        travados porque não têm motor. Uma régua que só clicasse os vivos não
-        distinguiria "travado" de "sem ouvinte", que é o defeito de origem dos
-        três botões de som da aba Controles.
-        """
+        """Cliques SINTÉTICOS, para provar o caminho tela → Python → eco."""
         roteiro = [
             (1200, "document.querySelectorAll('[data-hef-perfil]')[1].click()"),
             (1500, "document.querySelector('[data-hef-gesto=\"ativar\"]').click()"),
@@ -520,7 +433,6 @@ class Janela:
             antes=(lambda: self.tela.fotografar(foto)) if foto else None,
         )
 
-    # -- as fontes ---------------------------------------------------------
     def _carregar_duble(self) -> dict[str, Any]:
         if self._duble is None:
             self._duble = json.loads(pathlib.Path(self.args.duble).read_text(encoding="utf-8"))
@@ -549,7 +461,6 @@ class Janela:
         self.ativo = str(state.get("active_profile") or "") or None if state else None
         self.mesa = mesa_de_agora(state)
 
-    # -- o tique -----------------------------------------------------------
     def _tique(self) -> bool:
         if not self.pronto:
             return True
@@ -565,36 +476,11 @@ class Janela:
             editado=self._perfil_editado(),
         )
 
-        # «FUNCIONA EM:» FALA A LÍNGUA DA TELA — C4-FUNCIONA-EM, 11/09/2026.
-        #
-        # `perfis_web` serve o vocabulário do PRODUTO («Jogo da Steam», «Jogo
-        # (pela janela)»), e o campo passou a oferecer DE ONDE O JOGO VEM. Quem
-        # traduz é `a10_perfis`, que é o pacote do produto para esta aba — a
-        # cura mora num lugar só, e esta bancada a CHAMA em vez de repeti-la.
-        #
-        # **E ELA PRECISA ESTAR AQUI**, não só no piloto: o primeiro retrato
-        # depois da mudança saiu com o campo EM BRANCO, porque o valor que
-        # chegava (`Jogo da Steam`) não casava com `<option>` nenhuma. Uma
-        # bancada que fotografa a aba com um campo vazio é um instrumento que
-        # responde sobre outra coisa que não o produto.
-        # E A COLUNA JUNTO COM O CAMPO — 11/09/2026, a segunda metade da mesma
-        # cura. Sem ela esta bancada fotografaria a linha dizendo «Só neste
-        # programa» ao lado de um editor que diz «Heroic»: as DUAS afirmações
-        # sobre o mesmo perfil, que é exatamente o defeito que a C4 fechou.
-        # O tradutor é o do produto (`a10_perfis._quando_usar`), nunca uma
-        # segunda gramática escrita aqui.
         pacote["lista"] = a10_perfis._com_a_procedencia(
             list(pacote.get("lista") or []), self.perfis)
 
         editor = dict(pacote.get("editor") or {})
         if editor:
-            # **O PERFIL É O QUE O EDITOR DIZ QUE ABRIU, e não o `editado=` que
-            # se mandou.** Sem escolha na lista, `_perfil_editado()` devolve
-            # `None` e `pacote_da_aba` CAI no perfil ativo — então perguntar
-            # àquele `None` pela regra devolvia "não sei mostrar" sobre um
-            # perfil que a tela estava mostrando inteiro, e o campo abria na
-            # primeira opção da lista. Medido nesta bancada em 11/09/2026: o
-            # «Funciona em:» de um `steam_app_1358160` dizia «Navegação».
             procedencia, recado = a10_perfis._procedencia_e_recado(
                 getattr(self._perfil_do_editor(editor), "match", None),
                 editor.get("ambiente_recado"))
@@ -631,9 +517,6 @@ class Janela:
         self.custos_tela.append(t_tela)
         self.custos.append(t_disco + t_tela)
         self.voltas += 1
-        # UM VAZAMENTO NÃO APARECE NO RELÓGIO — aparece na memória. A remontagem
-        # troca o `innerHTML` do corpo, e um listener não removido por
-        # remontagem seria invisível numa régua de tempo.
         if self.voltas % 20 == 0:
             try:
                 with open("/proc/self/status", encoding="utf-8") as arq:
@@ -646,13 +529,7 @@ class Janela:
         return True
 
     def _perfil_do_editor(self, editor: dict[str, Any]) -> Any:
-        """O perfil que o EDITOR está mostrando, pelo nome que ele próprio traz.
-
-        Irmão do `_perfil_editado`, e existe porque aquele responde outra
-        pergunta: *"em qual linha ela clicou?"* — e sem clique nenhum ele é
-        `None`, enquanto a tela continua mostrando o perfil ativo. Quem sabe
-        qual perfil está na direita é o pacote, e ele diz no `editor["nome"]`.
-        """
+        """O perfil que o EDITOR está mostrando, pelo nome que ele próprio traz."""
         alvo = str(editor.get("nome") or "")
         return next((p for p in self.perfis
                      if str(getattr(p, "name", "")) == alvo), None)
@@ -664,13 +541,11 @@ class Janela:
             (p for p in self.perfis if str(getattr(p, "name", "")) == self.escolhido), None
         )
 
-    # -- a ponte -----------------------------------------------------------
     def _js(self, script: str) -> None:
         self.ponte.rodar(script)
 
     def _gesto(self, o: dict) -> None:
-        """tela → Python, já em JSON. Quem recusa o que não for objeto JSON é a
-        `PonteDaTela`; o que chega aqui é gesto de verdade."""
+        """tela → Python, já em JSON. Quem recusa o que não for objeto JSON é a"""
         self.gestos.append(o)
         gesto = o.get("gesto")
         if gesto == "pintou":
@@ -690,7 +565,6 @@ class Janela:
             print(f"         dono real: {dono}")
             return
 
-    # -- relato ------------------------------------------------------------
     def relato(self) -> str:
         def resumo(nome: str, v: list[float]) -> str:
             if not v:
@@ -716,9 +590,6 @@ class Janela:
                 f"orçamento: {med / TIQUE_MS * 100:.1f}% dos {TIQUE_MS} ms do tique desta aba · "
                 f"{med / TIQUE_RAPIDO_MS * 100:.1f}% dos {TIQUE_RAPIDO_MS} ms do tique rápido"
             )
-        # A RÉGUA POR BLOCO, e ela é o que uma volta só esconde: uma régua de
-        # 29/08 rodou o tique UMA VEZ e não viu uma regressão que só aparecia em
-        # 181 segundos.
         if len(self.custos) >= 60:
             passo = 30
             blocos = []
@@ -762,10 +633,6 @@ def main() -> int:
     Gtk.main()
     print("\n" + j.relato())
 
-    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
-    # mesma guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, pelo mesmo
-    # defeito. O `--sem-ponte` é a exceção e é a MORDIDA: ele desliga a pintura
-    # de propósito, e zero volta ali é o resultado esperado.
     if j.voltas == 0 and not args.sem_ponte:
         print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1

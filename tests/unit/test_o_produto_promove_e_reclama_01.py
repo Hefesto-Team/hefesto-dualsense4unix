@@ -48,7 +48,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 PROMOTOR = "51-hefesto-dualsense-no-default-source.conf"
 
-#: O trecho da função que dá o veredito, isolado do resto do doctor.
 _FUNCAO = "check_wireplumber_source"
 
 
@@ -59,12 +58,7 @@ def _fonte_da_funcao() -> str:
 
 
 def test_o_promotor_no_disco_conta_como_opt_in() -> None:
-    """A cura. Morde ao apagar a guarda do promotor.
-
-    Arranque para ver reprovar: tirar o `if [[ -f ... 51-... ]]` da função. É o
-    estado do produto até 10/08/2026 — e o efeito é o install dela terminar em
-    FALHA por causa da configuração que o próprio install acabou de criar.
-    """
+    """A cura. Morde ao apagar a guarda do promotor."""
     fonte = _fonte_da_funcao()
     assert PROMOTOR in fonte, (
         "a função não olha o promotor — volta a acusar como falha o microfone "
@@ -78,11 +72,7 @@ def test_o_promotor_no_disco_conta_como_opt_in() -> None:
 
 
 def test_a_guarda_por_variavel_de_ambiente_continua_valendo() -> None:
-    """A cura ACRESCENTA um opt-in; não tira o que já existia.
-
-    Quem já exporta `DUALSENSE_MIC_INTENDED=1` (scripts de terceiros, CI,
-    ambientes headless) continua atendido. Não se apaga decisão medida.
-    """
+    """A cura ACRESCENTA um opt-in; não tira o que já existia."""
     fonte = _fonte_da_funcao()
     assert "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED" in fonte
 
@@ -109,17 +99,7 @@ def test_sem_o_promotor_o_alarme_continua() -> None:
 def test_a_guarda_le_o_home_da_chamada_e_nao_um_caminho_cravado(
     tmp_path: Path,
 ) -> None:
-    """O caminho do promotor sai do `HOME` vivo, não de um literal de instalação.
-
-    É a mesma correção que a `conftest` desta casa já registrou para o
-    `storm_doctor` e o `_wp_dropin_dir` em 05/08, a pedido dela: *"preciso que as
-    constantes apontem pros arquivos reais"*. Com `HOME` cravado, o doctor
-    responderia sobre a máquina de quem empacotou, não sobre a dela — e num
-    teste isso vaza para o `~/.config` de verdade.
-
-    Aqui a prova é direta: com um `HOME` de mentira e o promotor DENTRO dele, o
-    texto do veredito tem de citar o promotor.
-    """
+    """O caminho do promotor sai do `HOME` vivo, não de um literal de instalação."""
     fonte = _fonte_da_funcao()
     assert '${HOME}' in fonte, "o caminho do promotor não sai do HOME vivo"
 
@@ -128,8 +108,6 @@ def test_a_guarda_le_o_home_da_chamada_e_nao_um_caminho_cravado(
     (
         falso_home / ".config" / "wireplumber" / "wireplumber.conf.d" / PROMOTOR
     ).write_text("x", encoding="utf-8")
-    # Só a expansão do caminho é exercitada — o doctor inteiro precisaria de
-    # wpctl e de sessão de áudio, que um unitário não tem.
     script = (
         f'HOME="{falso_home}"\n'
         'if [[ -f "${HOME}/.config/wireplumber/wireplumber.conf.d/'

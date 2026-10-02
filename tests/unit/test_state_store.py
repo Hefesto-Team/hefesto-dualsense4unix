@@ -70,7 +70,6 @@ def test_snapshot_e_imutavel_no_lado_consumidor():
     assert snap.active_profile == "driving"
     assert snap.counters == {"trigger.set": 3}
 
-    # Mutações posteriores não afetam snapshot já emitido
     s.bump("trigger.set")
     s.set_active_profile("bow")
     assert snap.counters == {"trigger.set": 3}

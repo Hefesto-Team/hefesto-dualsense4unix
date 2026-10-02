@@ -108,20 +108,10 @@ def _da_central(diario: Path) -> list[str]:
     return [e["o_que"] for e in diario_do_radio.ler(caminhos=[diario]) if e["o_que"] in alvo]
 
 
-# ---------------------------------------------------------------------------
-# 1. o aplicar que falha
-# ---------------------------------------------------------------------------
-
-
 def test_o_aplicar_que_falha_fica_esperando_e_nao_diz_chegou(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """A régua da sprint: *"injete um aplicar que falha, e a régua acusa"*.
-
-    MORDIDA: faça o ``_conferir`` devolver ``True`` sem perguntar — o mover diz
-    «chegou» e escreve «moveu» no diário com o controle fora do quarto, e esta
-    régua reprova.
-    """
+    """A régua da sprint: *"injete um aplicar que falha, e a régua acusa"*."""
     central = _central(dono, mundo, relogio)
 
     feito = _aplicar_que_falha(mundo, relogio, central)
@@ -146,14 +136,8 @@ def test_a_conferencia_espera_os_dez_segundos_e_nao_mais(
 
     central.mover(VERMELHO, QUARTO)
 
-    # 2 s até o gesto, e a conferência inteira — nem um passo a mais.
     conferencia = relogio.agora - antes - 2.0
     assert cr.CONFERIR_S <= conferencia <= cr.CONFERIR_S + cr.PASSO_S
-
-
-# ---------------------------------------------------------------------------
-# 2. o «esperando» se resolve pela vigia
-# ---------------------------------------------------------------------------
 
 
 def test_o_hid_phys_que_confirma_depois_vira_chegou_e_so_entao_a_origem_sai(
@@ -165,7 +149,6 @@ def test_o_hid_phys_que_confirma_depois_vira_chegou_e_so_entao_a_origem_sai(
     assert central.movimento_de(VERMELHO).estado == cr.ESPERANDO
     assert mundo.lapides == [(SALA, VERMELHO)]
 
-    # O controle pega o host novo e conecta no quarto.
     mundo.fisicos[VERMELHO].host = QUARTO
     mundo.apertar_ps(VERMELHO)
     central.vigiar()
@@ -181,16 +164,7 @@ def test_o_hid_phys_que_confirma_depois_vira_chegou_e_so_entao_a_origem_sai(
 def test_o_controle_nao_tem_como_voltar_para_a_origem(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O host que ele guarda ainda é a sala — e a sala não tem mais a chave.
-
-    FATO SUBSTITUÍDO (25/09/2026): era «o controle que volta para a origem não
-    chegou». Com a origem esquecida antes do gesto, ele não volta — nem com o
-    PS, nem sozinho (o passo c2 da lista dela) —, e o «esperando» segue até o
-    prazo.
-
-    MORDIDA: devolva o esquecer para depois do conferir — o PS o leva de volta
-    à sala e esta régua reprova.
-    """
+    """O host que ele guarda ainda é a sala — e a sala não tem mais a chave."""
     central = _central(dono, mundo, relogio)
     _aplicar_que_falha(mundo, relogio, central)
 
@@ -210,7 +184,6 @@ def test_o_esperando_que_passa_do_prazo_nao_chegou(
     central = _central(dono, mundo, relogio)
     feito = _aplicar_que_falha(mundo, relogio, central)
 
-    # O prazo conta do COMEÇO do movimento, não do fim da conferência.
     relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S - 1
     central.vigiar()
     assert central.movimento_de(VERMELHO).estado == cr.ESPERANDO
@@ -219,27 +192,14 @@ def test_o_esperando_que_passa_do_prazo_nao_chegou(
     central.vigiar()
     feito = central.movimento_de(VERMELHO)
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
-    # FATO SUBSTITUÍDO (O-RADIO-CONECTA-ONDE-ELA-MANDA-02, 26/09/2026): aqui se
-    # lia «nenhuma lápide a mais no prazo». O ``Pair`` que deu sem o controle
-    # chegar deixa uma MEIA CHAVE no destino, e desde a 02 a central a tira no
-    # «não chegou» — a do destino, e nenhuma outra.
     assert mundo.lapides == [(SALA, VERMELHO), (QUARTO, VERMELHO)]
     assert mundo.objeto(QUARTO, VERMELHO) is None
-
-
-# ---------------------------------------------------------------------------
-# 3. HID_PHYS sem movimento
-# ---------------------------------------------------------------------------
 
 
 def test_hid_phys_sem_movimento_nao_e_chegada(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O nó está no quarto, e nenhum pacote de movimento chega: não é «chegou».
-
-    MORDIDA: tire a pergunta do movimento do ``_chegou`` — o mover diz «chegou»
-    com o controle mudo, e esta régua reprova.
-    """
+    """O nó está no quarto, e nenhum pacote de movimento chega: não é «chegou»."""
     mundo.fisicos[VERMELHO].hz = 0.0
     central = _central(dono, mundo, relogio)
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
@@ -249,11 +209,6 @@ def test_hid_phys_sem_movimento_nao_e_chegada(
     assert mundo.onde_esta(rm.uniq(VERMELHO)) == QUARTO
     assert feito.estado == cr.ESPERANDO
     assert mundo.lapides == [(SALA, VERMELHO)]
-
-
-# ---------------------------------------------------------------------------
-# 4. o fone confere pelo Connected
-# ---------------------------------------------------------------------------
 
 
 def test_o_fone_confere_pelo_connected_do_destino(
@@ -275,13 +230,7 @@ def test_o_fone_confere_pelo_connected_do_destino(
 def test_o_fone_pareado_que_nao_conecta_no_destino_fica_esperando(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O ``Pair`` do fone diz que deu, e o ``Connect`` no quarto falha: sem o
-    ``Connected`` do destino, não é «chegou». (A sala já saiu antes do gesto —
-    a R1 dela, desde 25/09.)
-
-    MORDIDA: faça o ``_chegou`` do fone responder pelo objeto, sem o
-    ``Connected`` — ele diz «chegou», e esta régua reprova.
-    """
+    """O ``Pair`` do fone diz que deu, e o ``Connect`` no quarto falha: sem o"""
     mundo.pareado(SALA, FONE, classe=rm.CLASSE_DE_FONE)
     dono._fotografar()
     mundo.pair_mente = True
@@ -294,11 +243,6 @@ def test_o_fone_pareado_que_nao_conecta_no_destino_fica_esperando(
     assert mundo.objeto(QUARTO, FONE)["Connected"] is False
     assert (feito.estado, feito.motivo) == (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO)
     assert mundo.lapides == [(SALA, FONE)]
-
-
-# ---------------------------------------------------------------------------
-# 5. não sei, e o que não é do rádio
-# ---------------------------------------------------------------------------
 
 
 def test_sem_bluez_e_nao_sei_e_nada_se_escreve(
@@ -343,19 +287,7 @@ def test_destino_que_nao_esta_na_mesa_nao_abre_janela(
 def test_o_movimento_em_nao_sei_nao_apaga_a_conexao_viva_do_destino(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O kernel diz que ele JÁ está no destino, e o movimento ainda é «não sei».
-
-    O ``SensorHub`` responde ``None`` enquanto o nó de movimento não fecha uma
-    janela — um controle que acabou de reconectar, ou que ninguém perguntou nos
-    últimos 5 s (o TTL da demanda). O mover lia esse «não sei» como «não está
-    lá», tratava a conexão VIVA do destino como a «velha» da R6, esquecia-a pela
-    ponte (com lápide) e abria a janela pedindo PS + Create. Sem o gesto dela,
-    o controle ficava sem bond em adaptador nenhum: a sala já tinha saído no
-    primeiro mover.
-
-    MORDIDA: tire o bloco «o kernel já o diz no destino» do ``_mover_na_trava``
-    — o bond do quarto sai, uma segunda lápide aparece, e esta régua reprova.
-    """
+    """O kernel diz que ele JÁ está no destino, e o movimento ainda é «não sei»."""
     nao_sei = {"agora": False}
 
     def movimento(u: str) -> float | None:
@@ -382,7 +314,6 @@ def test_o_movimento_em_nao_sei_nao_apaga_a_conexao_viva_do_destino(
     assert mundo.onde_esta(rm.uniq(VERMELHO)) == QUARTO
     assert mundo.lapides == [(SALA, VERMELHO)], "uma lápide a mais: o quarto foi esquecido"
     assert mundo.chamadas[chamadas:] == [] and mundo.escritas[escritas:] == []
-    # «Não sei» não é «chegou»: fica esperando, e a vigia resolve quando o número vem.
     assert (de_novo.estado, de_novo.motivo) == (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO)
     nao_sei["agora"] = False
     central.vigiar()
@@ -403,12 +334,7 @@ def _onde_esta_que_quebra(mundo: rm.RadioDeMentira, quebrado: dict[str, bool]) -
 def test_um_erro_no_meio_do_mover_nao_emperra_a_central(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O ``mover`` promete nunca levantar. Uma exceção no meio deixava o
-    movimento «esperando» para sempre: o «Equilibrar» nunca mais propunha nada
-    e o mesmo pedido devolvia o movimento morto até o daemon reiniciar.
-
-    MORDIDA: tire o ``except`` do ``mover`` — a exceção sobe e esta régua reprova.
-    """
+    """O ``mover`` promete nunca levantar. Uma exceção no meio deixava o"""
     quebrado = {"sim": True}
     central = _central(dono, mundo, relogio)
     central._onde_esta = _onde_esta_que_quebra(mundo, quebrado)
@@ -418,7 +344,6 @@ def test_um_erro_no_meio_do_mover_nao_emperra_a_central(
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_FALHOU)
     assert central.em_curso is False, "a central ficou emperrada num «esperando» morto"
     assert mundo.lapides == [] and mundo.objeto(SALA, VERMELHO) is not None
-    # E o próximo pedido anda.
     quebrado["sim"] = False
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
     assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
@@ -427,11 +352,7 @@ def test_um_erro_no_meio_do_mover_nao_emperra_a_central(
 def test_um_erro_na_vigia_nao_segura_o_esperando_alem_do_prazo(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """A vigia roda num fio: uma exceção ali matava o fio e o «esperando» nunca
-    mais chegava ao prazo.
-
-    MORDIDA: tire o ``except`` da ``vigiar`` — a exceção sobe e esta régua reprova.
-    """
+    """A vigia roda num fio: uma exceção ali matava o fio e o «esperando» nunca"""
     quebrado = {"sim": False}
     central = _central(dono, mundo, relogio)
     central._onde_esta = _onde_esta_que_quebra(mundo, quebrado)
@@ -447,19 +368,10 @@ def test_um_erro_na_vigia_nao_segura_o_esperando_alem_do_prazo(
     assert mundo.lapides == [(SALA, VERMELHO)]
 
 
-# ---------------------------------------------------------------------------
-# 6. sem o agente próprio, o piso
-# ---------------------------------------------------------------------------
-
-
 def test_sem_o_agente_proprio_o_piso_atende_o_pair(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O agente próprio não exportou: o ``hefesto-bt-agent`` (o padrão) atende.
-
-    MORDIDA: devolva o ``SEM_AGENTE`` no ``DonoVivo.parear`` — o mover acaba
-    «não chegou» com o piso de pé, e esta régua reprova.
-    """
+    """O agente próprio não exportou: o ``hefesto-bt-agent`` (o padrão) atende."""
     mundo.exportar_da = False
     central = _central(dono, mundo, relogio)
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
@@ -472,17 +384,10 @@ def test_sem_o_agente_proprio_o_piso_atende_o_pair(
     assert mundo.objeto(QUARTO, VERMELHO)["Trusted"] is True
 
 
-# ---------------------------------------------------------------------------
-# 7. o que se publica
-# ---------------------------------------------------------------------------
-
-
 def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
     central = _central(dono, mundo, relogio)
-    # O «não chegou» vem ANTES do «esperando»: com um movimento em curso, nenhum
-    # outro começa — nem para acabar «não chegou» (A-COSTURA-DA-ONDA-2-01, item 1).
     central.mover("aa:bb:cc:00:00:9e", QUARTO)
     _aplicar_que_falha(mundo, relogio, central)
 
@@ -494,19 +399,13 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
     assert estados <= set(cr.ESTADOS)
     assert estados == {cr.ESPERANDO, cr.NAO_CHEGOU}
     for movimento in publicado["movimentos"]:
-        # «classe», «modalias», «icone» e «nome» (25/09/2026): o que a tela
-        # precisa para dizer O QUE está esperando depois de a origem sair (o
-        # «icone» é o tipo do aparelho de baixo consumo, que não tem classe). O
-        # «nome» é o que ELA deu ao aparelho — dado dela, e não texto de tela.
         assert set(movimento) == {
             "aparelho", "destino", "estado", "passo", "motivo", "origens", "e_controle",
             "classe", "modalias", "icone", "nome", "quando",
         }
 
 
-# ---------------------------------------------------------------------------
 # 8. o state_full não espera o rádio
-# ---------------------------------------------------------------------------
 
 
 class _LeitorLento(bd.LeitorDoBluez):
@@ -528,16 +427,7 @@ class _LeitorLento(bd.LeitorDoBluez):
 def test_o_publicar_nao_abre_o_dono_antes_de_ligar(
     diario: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O primeiro ``dono()`` paga o Gio de forma síncrona: o tique não o paga.
-
-    MORDIDA: tire o ``if self._ligada`` do ``publicar`` — o tique abre o dono,
-    e esta régua reprova.
-
-    O dublê GRAVA o pedido em vez de levantar: o ``publicar`` engole exceção
-    (a tela lê isto a cada volta), e uma régua que levanta dentro dele passava
-    com a cura arrancada — a mordida de antes só reprovava arrancando também o
-    ``suppress``.
-    """
+    """O primeiro ``dono()`` paga o Gio de forma síncrona: o tique não o paga."""
     pedidos: list[str] = []
 
     def nao_abra() -> bd.LeitorDoBluez:
@@ -547,19 +437,13 @@ def test_o_publicar_nao_abre_o_dono_antes_de_ligar(
     monkeypatch.setattr(bd, "dono", nao_abra)
     central = cr.CentralDoRadio()
 
-    # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a ``busca`` do «Procurar» vai
-    # junto, ``None`` sem ela.
     assert central.publicar([]) == {"movimentos": [], "em_curso": False, "proposta": None,
                                     "busca": None}
     assert not _esperar(lambda: bool(pedidos), teto=0.3), "o state_full abriu o dono do BlueZ"
 
 
 def test_pelo_caminho_de_reserva_o_tique_nao_espera_a_foto(diario: Path) -> None:
-    """Sem o dono vivo, a foto dos adaptadores se refaz num fio; o tique segue.
-
-    MORDIDA: faça o ``_adaptadores`` sempre esperar — o ``publicar`` fica preso
-    na foto lenta, e esta régua reprova pelo relógio.
-    """
+    """Sem o dono vivo, a foto dos adaptadores se refaz num fio; o tique segue."""
     lento = _LeitorLento()
     central = cr.CentralDoRadio(dono=lento, sysfs={"listar": lambda _p: [], "raiz": "/x"})
     antes = time.monotonic()
@@ -596,7 +480,7 @@ def test_depois_de_ligar_o_tique_nao_reabre_o_dono(
 
     monkeypatch.setattr(bd, "dono", dono_que_abre)
     central = cr.CentralDoRadio(sysfs={"listar": lambda _p: [], "raiz": "/x"})
-    central._ligada = True  # como depois de um ``ligar()`` cujo dono morreu
+    central._ligada = True
 
     central.publicar([])
 
@@ -614,20 +498,10 @@ def _esperar(condicao: Any, teto: float = 3.0) -> bool:
     return bool(condicao())
 
 
-# ---------------------------------------------------------------------------
-# 9. sob a suíte, a ponte de verdade não roda
-# ---------------------------------------------------------------------------
-#
-# As duas saídas da central para a ponte root são `sudo -n` contra a ponte
-# INSTALADA, e o sudoers dela dispensa senha para `esquecer` e `descobrir`. Os
-# dublês abaixo só GRAVAM o pedido: nem com a guarda arrancada nada roda.
-
-
 def test_sob_a_suite_o_esquecer_nao_chama_a_ponte_de_verdade(
     diario: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MORDIDA: tire a guarda da suíte do ``esquecer_pela_ponte`` — o pedido
-    chega ao executor e esta régua reprova."""
+    """MORDIDA: tire a guarda da suíte do ``esquecer_pela_ponte`` — o pedido"""
     pedidos: list[Any] = []
 
     def correr(pedido: Any) -> tuple[int, str]:
@@ -645,11 +519,7 @@ def test_sob_a_suite_o_esquecer_nao_chama_a_ponte_de_verdade(
 def test_sob_a_suite_a_janela_pela_ponte_nao_chama_sudo(
     diario: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Sem o dono vivo, a janela da central é a da ponte (``sudo … descobrir``).
-
-    MORDIDA: tire a guarda do ``_janela_de_busca`` — o ``sudo`` chega ao
-    executor e esta régua reprova.
-    """
+    """Sem o dono vivo, a janela da central é a da ponte (``sudo … descobrir``)."""
     from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 
     pedidos: list[Any] = []

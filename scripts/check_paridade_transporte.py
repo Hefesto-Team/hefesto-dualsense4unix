@@ -354,92 +354,31 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-#: `scripts/` não é pacote, e este portão precisa do `eliminacao.py`, que já sabe
-#: casar `linha_id` do ensaio com `id` do mapa SEPARANDO cabo de rádio. O
-#: `append` (e não `insert(0, …)`) é para um arquivo homônimo em `scripts/` nunca
-#: sombrear módulo da biblioteca padrão. O `eliminacao.py` só importa `csv`,
-#: `collections`, `dataclasses` e `pathlib`, então o portão continua rodando num
-#: runner pelado, sem as dependências do projeto.
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from eliminacao import carrega_por_lado
 
-#: PROMOÇÃO DA REGRA 7. Trocar para True faz a assimetria não declarada
-#: REPROVAR em vez de avisar. Fica False enquanto as colunas `cabo_*`/`radio_*`
-#: estiverem sendo preenchidas: hoje a maior parte das divergências é ausência
-#: de resposta, e reprovar ausência de resposta aqui seria cobrar duas vezes o
-#: que a regra 1 já cobra, castigando quem está justamente preenchendo o mapa.
 ASSIMETRIA_REPROVA = False
 
-#: Os dois lados de cada linha. O par de colunas é descoberto por SUFIXO a
-#: partir do cabeçalho (ver `pares_de_transporte`) — nunca por lista fixa, e
-#: nunca por contagem: o CSV cresce todo dia, e régua com número dentro
-#: apodrece no dia seguinte.
 LADOS = ("cabo", "radio")
 
-#: O nome do lado em prosa. As COLUNAS não levam acento (`radio_aciona` é
-#: identificador), mas o texto que a pessoa lê, sim.
 ROTULO_DO_LADO = {"cabo": "cabo", "radio": "rádio"}
 
-#: PROMOÇÃO DA REGRA 9. Trocar para True faz o `O APARELHO OBEDECEU` sustentado
-#: só por ensaios que NEGAM reprovar em vez de avisar.
-#:
-#: A coluna encomendada aqui em 12/08 — "o dia de promover isto é o dia em que o
-#: caderno ganhar uma coluna que diga o que a FEATURE fez, separada do que o
-#: SUSPEITO provou" — chegou em 13/08/2026: é `resultado_da_feature`. Mas
-#: continua False, e o motivo é uma contagem, não teimosia: ela está preenchida
-#: em 1 dos 77 ensaios. Nos outros 76 quem responde ainda é `resultado`, que
-#: segue sendo texto livre com semântica de suspeito — promover hoje reprovaria
-#: exatamente as afirmações verdadeiras que este arquivo passou uma seção
-#: inteira explicando por que não se deve reprovar. O dia de promover é o dia em
-#: que nenhum grau forte depender mais de `resultado` para ser lido.
 RESULTADO_REPROVA = False
 
-#: PROMOÇÃO DA REGRA 10. Trocar para True faz o degrau mais alto exigir que
-#: alguém do `olho-dela` tenha visto. Fica False porque ela aprovou uma frase —
-#: "grau forte exige ensaio correspondente" — e cobrar QUEM observou é uma
-#: segunda regra, que ninguém pediu. Medido em 12/08/2026: promovê-la hoje
-#: custaria ZERO reprovações novas, então o preço de deixá-la avisando é só o
-#: futuro.
 OLHO_DELA_REPROVA = False
 
 CSV_RELATIVO = "docs/data/mapa-controles.csv"
 ENSAIOS_RELATIVO = "docs/data/ensaios.csv"
-#: O ÚNICO lugar onde o caminho do mapa publicado se escreve: o gerador, o
-#: gancho e as réguas o leem daqui. Quando a página mudou de pasta e este
-#: caminho não a seguiu, o portão continuou VERDE e imprimiu "regra DESLIGADA
-#: neste ambiente: mapa-nao-publicado" — a regra 5 parou de medir e nada
-#: reprovava. Portão que desliga uma regra e segue verde é a mesma família.
 SPECS_RELATIVO = "docs/specs.html"
 PASTA_DE_TESTES = "tests"
 
-#: O dono executável da lista de pontes. Este portão NÃO o importa, e a razão
-#: está no job `mapa-de-canais` do CI: ele é `checkout` + `setup-python` e mais
-#: nada — sem `pip install`. `ponte_escada.py` importa `utils.logging_config`,
-#: que importa `structlog`; um `import` aqui derrubaria o portão inteiro no
-#: runner. Por isso ele é LIDO POR AST, exatamente como `indexar_testes` lê
-#: `tests/` e pelo mesmo motivo escrito lá.
 PONTE_ESCADA_RELATIVO = "src/hefesto_dualsense4unix/integrations/ponte_escada.py"
 
-#: O dono executável da escada de intensidade da vibração, e a régua da regra
-#: 18. Lido POR AST pelo mesmo motivo escrito acima para `ponte_escada.py`: o
-#: job `mapa-de-canais` do CI não instala dependência nenhuma, e `daemon/
-#: subsystems/rumble.py` importa a árvore inteira do daemon.
 RUMBLE_ESCADA_RELATIVO = "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py"
 
-#: O nome do dicionário que manda. Mudou de arquivo uma vez (era `lifecycle.py`)
-#: e o teste que o citava ficou apontando para o lugar errado — por isso a regra
-#: procura o NOME em qualquer parte do arquivo declarado, e se desliga em voz
-#: alta quando não o acha.
 RUMBLE_ESCADA_DICIONARIO = "RUMBLE_POLICY_MULT"
 
-#: Como a tela e o mapa CHAMAM cada degrau -> a chave do dono. "Auto" fica de
-#: fora de propósito: ele não é degrau fixo, é a escala por bateria, e nenhum
-#: número citado ao lado dele seria conferível contra este dicionário.
-#: Escrito ACENTUADO, que é a língua desta casa; quem faz a ponte com a grafia
-#: sem acento — que aparece nas células antigas do CSV — é `sem_acento`, logo
-#: abaixo. Repetir a chave nas duas grafias aqui reprovaria o portão de
-#: acentuação, e com razão.
 ROTULO_DO_DEGRAU_DE_VIBRACAO = {
     "economia": "economia",
     "balanceado": "balanceado",
@@ -447,22 +386,11 @@ ROTULO_DO_DEGRAU_DE_VIBRACAO = {
     "max": "max",
 }
 
-#: `Economia 0,3x`, `Balanceado 1,0x`, `máximo 1,5x` — o degrau pelo nome, o
-#: multiplicador logo depois, e o `x` que diz que é multiplicador e não outra
-#: coisa. Vírgula OU ponto: o CSV é pt-BR, o código é Python, e as duas grafias
-#: já apareceram lado a lado na mesma célula.
-#:
-#: **As DUAS grafias do sinal**, e não é zelo: `docs/process/2026-08-07-PAINEL`
-#: escreve `0,3×` com o sinal de multiplicação (U+00D7) e o CSV escreve `0,3x`
-#: com a letra. Uma régua que só conhecesse a letra ficaria cega para metade da
-#: casa — e cegueira de instrumento passa sempre, calada.
 CITACAO_DE_DEGRAU_DE_VIBRACAO = re.compile(
     r"\b(economia|balanceado|m[áa]ximo|max)\s*[:=]?\s*(\d+[,.]\d+)\s*[x×]",
     re.IGNORECASE,
 )
 
-#: Colunas sem as quais este portão não tem o que medir. A ausência de qualquer
-#: uma é FALHA de integridade, não motivo para o portão se desligar calado.
 COLUNAS_EXIGIDAS = (
     "chave",
     "controle",
@@ -471,69 +399,15 @@ COLUNAS_EXIGIDAS = (
     "provado_em",
     "validade_dias",
     "assimetria_declarada",
-    #: A régua da regra 15. Entra aqui pelo motivo escrito em SUFIXOS_EXIGIDOS
-    #: logo abaixo: regra DURA não se desliga em silêncio. Sem a coluna,
-    #: `linha.get("ponte_alcanca")` devolveria None em todas as linhas e a regra
-    #: passaria a aprovar o mapa inteiro sem dizer uma palavra.
     "ponte_alcanca",
     "id",
 )
 
-#: Sufixos de par `cabo_X`/`radio_X` que as regras usam. Se um deles sumir do
-#: cabeçalho, a regra que depende dele morre — por isso a ausência reprova.
-#:
-#: D-13 (15/08/2026), decisão dela: `confianca` virou `de_onde_sei` e `grau`
-#: virou `ate_onde_foi`. O problema nunca foi a QUANTIDADE de colunas — era que
-#: os dois nomes não diziam o que mediam, e por isso se confundiam. Os domínios
-#: não mudaram uma vírgula. NÃO existe alias: quem escrever o nome velho leva
-#: `integridade` no cabeçalho, que é o que se quer.
-#:
-#:   `de_onde_sei`  — DE ONDE vem a informação (medido, inferido-do-codigo,
-#:                    afirmado-no-doc, incerto);
-#:   `ate_onde_foi` — ATÉ ONDE a prova chegou (MONTOU, SAIU NO FIO,
-#:                    O APARELHO OBEDECEU).
-#:
-#: `ate_onde_foi` entra aqui, e a distinção com as colunas que apenas DESLIGAM a
-#: regra (o `tests/`, o `specs.html`, o próprio caderno de ensaios) é esta: regra
-#: dura não se desliga em silêncio. `cabo_ate_onde_foi` é onde mora a afirmação
-#: mais forte que este mapa sabe fazer; perder a coluna é perder a régua da regra
-#: 6, e o portão tem de gritar em vez de passar.
 SUFIXOS_EXIGIDOS = ("aciona", "de_onde_sei", "canal", "ate_onde_foi")
 
-#: ─────────────────────────────────────────────────────────────────────────
-#: A ESCADA DE `ate_onde_foi`, e este é o ÚNICO dono executável dela.
-#: ─────────────────────────────────────────────────────────────────────────
-#: A prosa e os critérios moram em `docs/method/METODO-DE-ISOLAMENTO.md`
-#: (seção "O que registrar em cada linha do mapa"); o que roda mora aqui, e
-#: mais nada deve repetir a lista. Quem precisa dela IMPORTA daqui:
-#: `scripts/gerar-mapa.py` monta a legenda do `specs.html` a partir de `ESCADA`
-#: em vez de reescrever os degraus à mão, que foi o que ele fazia até
-#: 19/08/2026 — duas listas, e a do HTML já teria envelhecido nesta mesma leva.
-#:
-#: O DEGRAU RESTANTE QUE AINDA É CÓPIA, dito na cara: `bancada.py`, linha ~64,
-#: tem um `GRAUS = [...]` próprio (é o seletor do formulário que grava no CSV).
-#: Ele não foi tocado aqui porque é território de outra frente; enquanto ele não
-#: importar `ESCADA`, o formulário não sabe ESCREVER os dois degraus novos — o
-#: portão os aceita, a bancada não os oferece. A cura é uma linha:
-#: `from check_paridade_transporte import VALORES_DA_ESCADA as GRAUS`.
-#:
-#: 15/08/2026 (D-13, decisão dela): a coluna se chamava `grau`.
-#: 19/08/2026: a escada ganhou a direção de ENTRADA. Até aqui os três degraus
-#: eram TODOS da direção de SAÍDA — produto → aparelho —, e dá para conferir no
-#: dado: `O APARELHO OBEDECEU` só aparece em linha de saída (alto-falante,
-#: rumble, gatilho adaptativo, lightbar). O mapa admitia o buraco por escrito,
-#: em duas linhas suas: `toque.touchpad` ("quem ler `radio_aciona = sim` aqui
-#: está lendo 'o vpad ENTREGA', não 'o jogo REAGE'") e
-#: `movimento.giroscopio.jogo` ("o repasse está íntegro e o jogo não reage: a
-#: falha, se existir, é DEPOIS do vpad, e ninguém a localizou"). Era possível o
-#: mapa inteiro ficar verde enquanto ela não conseguia jogar, porque NENHUMA
-#: célula falava do jogo. O desenho dos dois degraus é o da
-#: `2026-08-19-TRES-PORTOES-01`, seção 7.
 DIRECAO_SAIDA = "saída"
 DIRECAO_ENTRADA = "entrada"
 
-#: QUEM consegue fechar cada degrau. É o campo que decide a severidade das
-#: regras 6, 9, 10 e 13 — não um adjetivo.
 FECHA_A_SUITE = "a suíte, sem aparelho"
 FECHA_A_BANCADA = "a bancada, com o aparelho na mão"
 FECHA_O_INSTRUMENTO = "um instrumento, de fora do jogo"
@@ -542,12 +416,7 @@ FECHA_A_MAO_DELA = "a mão dela, e mais ninguém"
 
 @dataclass(frozen=True)
 class Degrau:
-    """Um degrau de `ate_onde_foi`: o que ele afirma, e o que o fecha.
-
-    `criterio` não é enfeite. Um degrau sem critério escrito vira adjetivo — e
-    adjetivo é exatamente o que este mapa existe para não aceitar. O texto de
-    cada `criterio` diz o que se tem de OBSERVAR, e onde o instrumento mente.
-    """
+    """Um degrau de `ate_onde_foi`: o que ele afirma, e o que o fecha."""
 
     valor: str
     direcao: str
@@ -556,10 +425,6 @@ class Degrau:
     fechado_por: str
 
 
-#: A escada inteira, em ordem. A ordem é a do desenho dela na TRES-PORTOES-01
-#: §7.2: os dois degraus novos vêm DEPOIS de `O APARELHO OBEDECEU`, porque o
-#: caminho é produto → aparelho → vpad → jogo, e cada degrau só faz sentido com
-#: o anterior de pé.
 ESCADA = (
     Degrau(
         valor="MONTOU",
@@ -625,7 +490,6 @@ ESCADA = (
     ),
 )
 
-#: Os valores, na ordem, para quem só precisa da lista (domínio, seletor).
 VALORES_DA_ESCADA = tuple(degrau.valor for degrau in ESCADA)
 DEGRAU_POR_VALOR = {degrau.valor: degrau for degrau in ESCADA}
 
@@ -635,67 +499,26 @@ GRAU_OBEDECEU = "O APARELHO OBEDECEU"
 GRAU_JOGO_RECEBEU = "O JOGO RECEBEU"
 GRAU_JOGO_REAGIU = "O JOGO REAGIU"
 
-#: Os dois degraus da VOLTA. Eles exigem ensaio que DECLARE ter medido a
-#: entrada — ver `ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01`. Sai daqui, e não de uma
-#: lista à mão, para o dia em que a escada ganhar um terceiro degrau de
-#: entrada não deixar este portão para trás.
 GRAUS_DE_ENTRADA: frozenset[str] = frozenset(
     {GRAU_JOGO_RECEBEU, GRAU_JOGO_REAGIU}
 )
 
-#: Os degraus que a suíte NÃO sustenta sozinha — e por isso os que a regra 6
-#: cobra no caderno de bancada. `MONTOU` fica de fora de propósito: montar o
-#: report é o que o pytest já morde sem aparelho, e cobrar ensaio dele seria
-#: pedir bancada para o que não precisa.
-#:
-#: Os dois degraus de ENTRADA entram aqui com a MESMA severidade dos de saída
-#: (FALHA, não aviso). Não há legado que amoleça: eles nascem em 19/08/2026 com
-#: ZERO células no CSV, então nenhuma afirmação verdadeira já escrita pode ser
-#: reprovada por engano — que era a única razão pela qual as regras 9 e 10
-#: começaram como aviso.
 GRAUS_QUE_EXIGEM_ENSAIO = tuple(
     degrau.valor for degrau in ESCADA if degrau.fechado_por != FECHA_A_SUITE
 )
 
-#: Os degraus em que não basta EXISTIR ensaio: o ensaio tem de dizer que a
-#: coisa aconteceu (regra 9). `SAIU NO FIO` fica de fora porque ele afirma
-#: sobre o CANAL, e um ensaio que elimina um suspeito sustenta o canal mesmo
-#: quando o veredicto da feature é `não obedece`.
 GRAUS_QUE_EXIGEM_VEREDICTO = tuple(
     degrau.valor
     for degrau in ESCADA
     if degrau.fechado_por in (FECHA_O_INSTRUMENTO, FECHA_A_MAO_DELA)
 )
 
-#: Os degraus que só a mão dela fecha (regras 10 e 13). `O JOGO RECEBEU` NÃO
-#: está aqui, e a diferença é o que dá sentido a ter dois degraus de entrada em
-#: vez de um: "o jogo abriu o nó" é medível por instrumento; "o jogo reagiu",
-#: não.
 GRAUS_QUE_SO_A_MAO_DELA_FECHA = tuple(
     degrau.valor for degrau in ESCADA if degrau.fechado_por == FECHA_A_MAO_DELA
 )
 
-#: Os degraus nascidos em 19/08/2026, sem uma única célula no CSV. É o que
-#: autoriza a regra 13 a ser DURA enquanto a 10 segue avisando: a regra 10 é
-#: aviso por causa das células que já existiam quando ela chegou, e aqui não
-#: existe nenhuma. Quando `OLHO_DELA_REPROVA` virar True esta distinção some
-#: sozinha, e é para sumir mesmo.
 GRAUS_SEM_LEGADO = frozenset({GRAU_JOGO_RECEBEU, GRAU_JOGO_REAGIU})
 
-#: Domínio de cada coluna. Vazio é SEMPRE aceito, e isso é decisão de desenho:
-#: o próprio `specs.html` declara no rodapé que "vazio aqui é pergunta aberta,
-#: nunca não". Valor novo que não estiver nesta tabela reprova — de propósito.
-#: Acrescentar um valor ao mapa é acrescentá-lo aqui, no mesmo gesto, senão a
-#: régua passa a aprovar o que não sabe ler.
-#:
-#: `aciona`/`aceita` entram aqui embora o pedido só citasse canal/de_onde_sei/
-#: existe: a regra 1 e a 7 leem `aciona`, e um valor novo ali (um "sim?" com
-#: interrogação, por exemplo) desligaria as duas EM SILÊNCIO.
-#:
-#: `ate_onde_foi` entrou em 12/08/2026 pelo mesmo motivo, e ele custou caro: sem
-#: domínio, `O APARELHO OBEDECEU` era escrevível de graça em qualquer linha, e um
-#: degrau escrito com outra tipografia (`o aparelho obedeceu`, minúsculo) passaria
-#: pela regra 6 sem ser visto — a mentira sairia pela porta que a régua não olha.
 DOMINIO_POR_SUFIXO = {
     "aciona": frozenset({"", "sim", "não", "parcial", "desconhecido"}),
     "aceita": frozenset({"", "sim", "não", "parcial", "desconhecido"}),
@@ -705,38 +528,7 @@ DOMINIO_POR_SUFIXO = {
     "de_onde_sei": frozenset(
         {"", "medido", "inferido-do-codigo", "afirmado-no-doc", "incerto"}
     ),
-    #: DERIVADO de `ESCADA`, nunca redigitado: a lista tem UM dono.
     "ate_onde_foi": frozenset({"", *VALORES_DA_ESCADA}),
-    #: `cabo_por_que_nao_aciona`/`radio_por_que_nao_aciona` nasceram em
-    #: 22/08/2026 sem domínio (Z6-05, 24/08/2026 — a família "a casa sabe e o
-    #: produto não faz" com dois dias de idade). `o-aparelho-recusa` é o quinto
-    #: valor, e o único, com `nada-a-acionar`, que nomeia causa FORA do nosso
-    #: código.
-    #:
-    #: EXEMPLO REMOVIDO EM 29/08/2026, e a remoção é a lição. Estas duas
-    #: notas citavam a cor do plástico por rádio (`HANDSHAKE 0x04`, 23/08) como
-    #: O caso canônico de `o-aparelho-recusa`. Em 27/08/2026 a medição derrubou
-    #: aquela leitura: não era o aparelho, era a semente do nosso CRC — e a
-    #: célula virou `divida`. Um exemplo que a medição desmente ensina o valor
-    #: errado a quem lê o portão, então ele sai e nenhum outro entra no lugar:
-    #: o vocabulário se define pelo que a palavra diz, não por um caso que pode
-    #: caducar de novo. Ver `CAUSA_DE_FORA` em
-    #: `src/hefesto_dualsense4unix/app/fala_do_mapa.py`. `divida`,
-    #: `decisao-tomada` e `so-ela-decide` são causa NOSSA: um portão que aceita
-    #: `AFIRMA_NAO_ACIONA` para qualquer uma delas licencia a tela a culpar o
-    #: aparelho pelo que é nosso.
-    #: `nao-medido` NASCEU EM 06/09/2026, e nasceu de um erro de leitura do
-    #: coordenador: ele leu `radio_aciona = não` em `audio.alto_falante` como
-    #: *"o aparelho não faz"* e MANDOU UM AGENTE PARAR. A célula tinha
-    #: `radio_por_que_nao_aciona = divida` na coluna ao lado — o mapa estava
-    #: dizendo a coisa certa e ninguém leu as duas colunas juntas.
-    #:
-    #: Palavra dela no mesmo dia: *"Esse mapa é funcional e real. tá
-    #: desatualizado no sentido de não ter sido medido. foi e tudo funciona."*
-    #: `divida` e `nao-medido` NÃO são a mesma coisa, e a diferença é quem faz o
-    #: próximo passo: `divida` é *sabemos como, não construímos*; `nao-medido` é
-    #: *ninguém olhou para o aparelho* — e uma célula assim não autoriza
-    #: ninguém a afirmar que não funciona.
     "por_que_nao_aciona": frozenset(
         {
             "",
@@ -751,11 +543,6 @@ DOMINIO_POR_SUFIXO = {
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 
-#: Os sufixos que carregam CONTEÚDO de um lado — o que a célula AFIRMA sobre
-#: aquele transporte. Nenhum deles tem domínio (não dá para fechar prosa num
-#: `frozenset`), e é exatamente por isso que a regra 19 existe: ela não lê o que
-#: está escrito, cobra a PROVENIÊNCIA de quem escreveu. Ver a seção "A cegueira
-#: que a regra 19 fecha", na docstring.
 SUFIXOS_DE_CONTEUDO = (
     "offset",
     "report_id",
@@ -766,118 +553,46 @@ SUFIXOS_DE_CONTEUDO = (
     "codigo_ref",
 )
 
-#: ─────────────────────────────────────────────────────────────────────────
-#: A PONTE — por qual caminho a feature chega ao JOGO (regra 15).
-#: ─────────────────────────────────────────────────────────────────────────
-#: `transporte` diz por qual FIO a feature chega ao Hefesto; estas duas dizem
-#: por qual PONTE ela chega ao jogo. São GLOBAIS de propósito, e não um par
-#: `cabo_`/`radio_`: a ponte não é pergunta de fio, e `pares_de_transporte()`
-#: enxerga par por SUFIXO — `cabo_ponte_alcanca` viraria par no ato, e o portão
-#: passaria a cobrar paridade cabo↔rádio de um dado que não fala de transporte.
 COLUNA_DA_PONTE = "ponte_alcanca"
 COLUNA_DA_PONTE_DE_ONDE_SEI = "ponte_de_onde_sei"
 
 #: O canal que SÓ existe sob a máscara DualSense do nosso vpad (`054c:0df2`).
-#: A máscara Xbox é `uinput` (`045e:028e`) e não tem onde pôr nenhuma destas
-#: features — `docs/protocol/pilha-steam-input-xpad-sdl.md` §1.5. É por isso
-#: que a regra 15 mira `uhid` e não o mapa inteiro: aqui a ponte não é um
-#: detalhe da afirmação, é a condição dela existir.
 CANAL_QUE_A_MASCARA_DECIDE = "uhid"
 
-#: ─────────────────────────────────────────────────────────────────────────
-#: A DIREÇÃO DE CADA CANAL — e ela mora aqui porque as DUAS listas moram aqui.
-#: ─────────────────────────────────────────────────────────────────────────
-#: A pergunta é a da `ESCADA`: a cadeia daquele canal termina no APARELHO
-#: (direção de SAÍDA, e o fim dela é `O APARELHO OBEDECEU`) ou dentro do JOGO
-#: (direção de ENTRADA, e o fim dela é `O JOGO REAGIU`)?
-#:
-#: NASCEU EM 09/09/2026, e nasceu de um defeito: `check_ate_onde_a_prova_chegou`
-#: guardava o destino de cada feature DENTRO da mesma tabela em que declarava a
-#: falta dela. Quem declarasse a falta escolhia junto a linha de chegada — e
-#: apagar a declaração MOVIA o destino, medido: arrancar a linha do `sensor`
-#: fazia a régua imprimir *"o destino é O APARELHO OBEDECEU"* para uma feature
-#: cuja prova só termina no jogo. É a família *trava medida contra a própria
-#: saída*. Aqui o destino passa a vir do MAPA (a coluna `*_canal`) e o
-#: vocabulário, de quem já é dono das duas pontas: a `ESCADA` e o domínio de
-#: `canal`, no mesmo arquivo, a poucas linhas um do outro.
-#:
-#: `outro` NÃO ENTRA de propósito, e a ausência é a regra: um canal que não diz
-#: por onde o dado anda não decide destino nenhum, e quem depender da direção
-#: tem de reprovar em vez de escolher o degrau mais barato — que é a mesma
-#: recusa do `SEM_REGISTRO`, que fica ABAIXO de `MONTOU` e não vira "montou".
 DIRECAO_POR_CANAL: dict[str, str] = {
-    "hidraw": DIRECAO_SAIDA,        # o produto escreve no aparelho
-    "sysfs": DIRECAO_SAIDA,         # idem, pelo caminho que o kernel expõe
-    "dbus": DIRECAO_SAIDA,          # o produto pede a outro serviço da máquina
-    "alsa-pipewire": DIRECAO_SAIDA,  # o som para de andar na máquina, não no jogo
-    "evdev": DIRECAO_ENTRADA,       # o que o aparelho manda e o vpad repassa
-    "uhid": DIRECAO_ENTRADA,        # o nó que o processo do jogo abre
+    "hidraw": DIRECAO_SAIDA,
+    "sysfs": DIRECAO_SAIDA,
+    "dbus": DIRECAO_SAIDA,
+    "alsa-pipewire": DIRECAO_SAIDA,
+    "evdev": DIRECAO_ENTRADA,
+    "uhid": DIRECAO_ENTRADA,
 }
 
-#: Os campos de `Ponte`, na ORDEM da assinatura do dataclass
-#: (`Ponte(kind, mascara=None, steam_input=False)`), para o leitor por AST
-#: resolver argumento posicional.
 _CAMPOS_DA_PONTE = ("kind", "mascara", "steam_input")
 
 
-#: O que conta como "afirmação forte": o produto ACIONA aquilo, e alguém MEDIU.
-#: `parcial` fica de fora de propósito — é uma afirmação com ressalva, e a
-#: sprint quer a rede primeiro onde a promessa é inteira.
 ACIONA_FORTE = "sim"
 DE_ONDE_SEI_FORTE = "medido"
 
-#: O valor de `aciona` que exige causa nomeada (regra 16, Z6-05). Uma célula
-#: `aciona = não` MEDIDA sem `por_que_nao_aciona` preenchida é exatamente a
-#: forma do defeito que as colunas órfãs foram feitas para fechar: a régua
-#: sabe que não aciona, mas ninguém disse de quem é a culpa.
 ACIONA_NAO = "não"
 
-#: O que, em `resultado`, conta como "aconteceu". LIDO do caderno em
-#: 12/08/2026 (`obedece`, `não obedece`, `parcial`, `inconclusivo`), não
-#: inventado aqui — e por isso a regra que o usa é AVISO: um valor novo no
-#: caderno não pode virar reprovação sem alguém ter dito o que ele significa.
-#:
-#: 19/08/2026: os dois degraus de ENTRADA reusam este MESMO vocabulário, de
-#: propósito. `obedece` num ensaio de `O JOGO RECEBEU` quer dizer "o jogo abriu
-#: o nó"; num de `O JOGO REAGIU`, "o jogo agiu". Inventar palavra nova para a
-#: direção nova seria criar um segundo vocabulário para a mesma escala — e a
-#: casa já pagou por ter duas listas do mesmo dado.
 RESULTADOS_QUE_SUSTENTAM = frozenset({"obedece"})
 
-#: A coluna do caderno que diz o que a FEATURE fez, quando `resultado` está
-#: respondendo pelo SUSPEITO. Vazia é o padrão e quer dizer "`resultado` também
-#: responde pela feature" — por isso acrescentá-la não mexeu em ensaio nenhum.
 COLUNA_DO_VEREDICTO_DA_FEATURE = "resultado_da_feature"
 
-#: O vocabulário inteiro do caderno, LIDO dele em 12/08/2026 e recontado em
-#: 13/08 (47 `obedece`, 24 `não obedece`, 5 `parcial`, 1 `inconclusivo`, em 77
-#: ensaios). É o domínio da coluna nova: ela responde a MESMA pergunta que
-#: `resultado`, só que sobre a feature, então inventar valor novo ali seria
-#: inventar um segundo vocabulário para a mesma escala.
 RESULTADOS_DO_CADERNO = frozenset(
     {"obedece", "não obedece", "parcial", "inconclusivo"}
 )
 
-#: Quem, em `observado_por`, sustenta os degraus que só a mão dela fecha. A
-#: régua é do METODO-DE-ISOLAMENTO: "só `olho-dela` sustenta *O APARELHO
-#: OBEDECEU*", e desde 19/08/2026 ela vale também para *O JOGO REAGIU*, pelo
-#: motivo escrito no `criterio` daquele degrau — não há instrumento que leia o
-#: estado interno de um jogo sob Proton.
 OBSERVADOR_QUE_SUSTENTA = "olho-dela"
 
-#: Convenção de coleta do pytest (não há `python_files`/`python_functions`
-#: customizados no pyproject.toml desta árvore).
 PREFIXO_DE_ARQUIVO = "test_"
 SUFIXO_DE_ARQUIVO = "_test.py"
 PREFIXO_DE_FUNCAO = "test"
 PREFIXO_DE_CLASSE = "Test"
 
-#: Separadores aceitos quando a célula aponta mais de um teste.
 _SEPARADOR_DE_ALVOS = re.compile(r"[;\n]+")
 
-#: Formatos de data aceitos em `provado_em`. O ISO é o da casa em arquivo de
-#: dado (CHANGELOG, metainfo); o brasileiro entra porque é o que ela escreve em
-#: prosa, e recusá-lo seria transformar tipografia em reprovação.
 _FORMATOS_DE_DATA = ("%Y-%m-%d", "%d/%m/%Y")
 
 FALHA = "FALHA"
@@ -906,23 +621,12 @@ class Achado:
 
 @dataclass
 class ArquivoDeTeste:
-    """O que o pytest coletaria de um arquivo, lido por AST.
-
-    `inertes` e `puladas` são a metade que nasceu em 26/08/2026: coletar não é
-    morder. Um `def test_x(): pass` é coletado, passa sempre, e passa TAMBÉM
-    com a cura arrancada — que é a definição de rede que não existe. As chaves
-    das duas são o nome qualificado como o pytest o escreve, sem o arquivo:
-    `test_y` para função solta, `TestClasse::test_y` para método.
-    """
+    """O que o pytest coletaria de um arquivo, lido por AST."""
 
     funcoes: frozenset[str] = frozenset()
     classes: dict[str, frozenset[str]] = field(default_factory=dict)
-    #: Nomes qualificados cujo corpo não exercita nada (só docstring, `pass`
-    #: ou `...`).
     inertes: frozenset[str] = frozenset()
-    #: Nome qualificado -> o marcador que o desliga SEMPRE.
     puladas: dict[str, str] = field(default_factory=dict)
-    #: O marcador que desliga o módulo inteiro via `pytestmark`, ou "".
     modulo_pulado: str = ""
 
 
@@ -945,20 +649,10 @@ class Resumo:
     graus_fortes_sem_ensaio: int = 0
     graus_de_entrada: int = 0
     ensaios_no_caderno: int = 0
-    #: Os três números da regra 15, e eles existem para responder a pergunta
-    #: "este portão ENXERGA?". Portão que não vê nada passa sempre: se o
-    #: primeiro destes números zerar, a regra parou de olhar — e é para isso
-    #: que ele é impresso no resumo em vez de ficar dentro da função.
     linhas_que_alcancam_por_uhid: int = 0
     linhas_uhid_com_afirmacao_forte: int = 0
     pontes_nao_declaradas: int = 0
-    #: O número que diz se a regra 18 ENXERGA, pelo mesmo motivo dos três de
-    #: cima: se ele zerar, ninguém mais cita a escada de vibração no mapa — e
-    #: uma regra que não acha nada passa sempre, calada.
     citacoes_da_escada_de_vibracao: int = 0
-    #: Os dois números da regra 19, pelo mesmo motivo dos de cima: o primeiro
-    #: diz se ela ENXERGA (zero = ninguém escreve conteúdo de lado no mapa, e a
-    #: regra virou enfeite), o segundo é o que ela cobra.
     celulas_com_conteudo: int = 0
     conteudo_sem_regua: int = 0
 
@@ -982,30 +676,18 @@ def _nome_pontilhado(no: ast.expr) -> str:
 
 
 def corpo_e_inerte(corpo: list[ast.stmt]) -> bool:
-    """True quando o corpo não exercita nada: só docstring, `pass` ou `...`.
-
-    Deliberadamente NÃO tenta julgar se o corpo é *bom* — isso é leitura de
-    gente. Ele responde a única pergunta que uma máquina responde sem mentir:
-    este teste chegaria ao fim sem tocar em nada? Se chega, ele passa também
-    com a cura arrancada.
-    """
+    """True quando o corpo não exercita nada: só docstring, `pass` ou `...`."""
     for no in corpo:
         if isinstance(no, ast.Pass):
             continue
         if isinstance(no, ast.Expr) and isinstance(no.value, ast.Constant):
-            continue  # docstring, ou o `...` de esqueleto
+            continue
         return False
     return True
 
 
 def marcador_que_desliga_sempre(decorador: ast.expr) -> str:
-    """O nome do marcador que desliga o teste SEMPRE, ou "" quando não desliga.
-
-    `skipif` com condição de verdade (`sys.platform == "win32"`) é honesto: o
-    teste morde onde pode morder, e a célula do mapa continua tendo rede em
-    algum lugar. `skipif(True)` e `skip` puro não são condição nenhuma — são um
-    teste desligado com cara de teste.
-    """
+    """O nome do marcador que desliga o teste SEMPRE, ou "" quando não desliga."""
     alvo = decorador.func if isinstance(decorador, ast.Call) else decorador
     nome = _nome_pontilhado(alvo)
     if not nome:
@@ -1054,16 +736,7 @@ def _pytestmark_que_desliga(arvore: ast.Module) -> str:
 
 
 def indexar_testes(raiz: Path) -> dict[str, ArquivoDeTeste]:
-    """Mapeia `caminho relativo -> o que o pytest coletaria`, por AST.
-
-    Ler por AST em vez de importar (ou de rodar `--collect-only`) é deliberado,
-    e o motivo é o mesmo do `validar-referencias-docs.py`: o portão roda num
-    runner sem as dependências do projeto, e qualquer tropeço de importação
-    viraria "nenhum teste existe" — fazendo a regra 2 acusar TODA célula que
-    aponta uma mordida. Um gate que reprova tudo quando tropeça é pior que gate
-    nenhum, então a ausência de `tests/` devolve índice vazio e a regra 2 se
-    desliga sozinha, dizendo isso em voz alta no resumo.
-    """
+    """Mapeia `caminho relativo -> o que o pytest coletaria`, por AST."""
     indice: dict[str, ArquivoDeTeste] = {}
     pasta = raiz / PASTA_DE_TESTES
     if not pasta.is_dir():
@@ -1128,15 +801,7 @@ def alvos_da_celula(texto: str) -> list[str]:
 def motivo_de_o_pytest_nao_coletar(
     alvo: str, indice: dict[str, ArquivoDeTeste], raiz: Path
 ) -> str | None:
-    """Devolve por que o pytest não coletaria este alvo, ou None se coletaria.
-
-    A gramática aceita é a do id de nó do pytest, que é o que se copia da saída
-    da suíte e se cola no terminal:
-        tests/unit/test_x.py
-        tests/unit/test_x.py::test_y
-        tests/unit/test_x.py::test_y[algum-parametro]
-        tests/unit/test_x.py::TestClasse::test_y
-    """
+    """Devolve por que o pytest não coletaria este alvo, ou None se coletaria."""
     caminho, _, resto = alvo.partition("::")
     caminho = caminho.strip()
 
@@ -1179,11 +844,7 @@ def motivo_de_o_pytest_nao_coletar(
 
 
 def testes_cobertos_pelo_alvo(alvo: str, arquivo: ArquivoDeTeste) -> list[str]:
-    """Os nomes qualificados que este alvo manda o pytest rodar.
-
-    Um alvo pode ser o arquivo inteiro, uma classe, ou um teste só — e a
-    pergunta "isto morde?" só se responde sabendo o conjunto que ele cobre.
-    """
+    """Os nomes qualificados que este alvo manda o pytest rodar."""
     resto = alvo.partition("::")[2]
     partes = [parte for parte in resto.split("::") if parte.strip()]
     if partes:
@@ -1209,25 +870,7 @@ def testes_cobertos_pelo_alvo(alvo: str, arquivo: ArquivoDeTeste) -> list[str]:
 def motivo_de_a_mordida_nao_morder(
     alvo: str, indice: dict[str, ArquivoDeTeste], raiz: Path
 ) -> str | None:
-    """Devolve por que este alvo NÃO é rede, ou None quando é.
-
-    Duas perguntas, nesta ordem, e a segunda nasceu em 26/08/2026:
-
-    1. o pytest coleta este alvo? (`motivo_de_o_pytest_nao_coletar`)
-    2. o que ele coleta **exercita alguma coisa**?
-
-    O buraco que a 2 fecha era latente e estrutural: a regra 1 (`sem-mordida`)
-    existe porque a queixa dela é *"tínhamos algo para o cabo e na hora do
-    vamos ver a versão de BT não funcionava"* — a célula que afirma forte
-    precisa de um teste que REPROVE quando aquilo quebrar. Um
-    `def test_x(): pass` satisfazia a regra 2 inteira: ele é coletado, ele
-    passa, e passa **também com a cura arrancada**. O mesmo vale para um
-    `@pytest.mark.skip` incondicional, que sequer roda.
-
-    Medido no dia em que a checagem entrou: nenhum dos alvos citados pelo mapa
-    era vazio ou pulado. A régua não foi escrita para consertar um alvo podre
-    de hoje — foi escrita para que o primeiro não atravesse calado.
-    """
+    """Devolve por que este alvo NÃO é rede, ou None quando é."""
     motivo = motivo_de_o_pytest_nao_coletar(alvo, indice, raiz)
     if motivo is not None:
         return motivo
@@ -1281,12 +924,7 @@ def le_data(texto: str) -> date | None:
 
 
 def pares_de_transporte(cabecalho: list[str]) -> dict[str, tuple[str, str]]:
-    """Descobre os pares `cabo_X`/`radio_X` pelo SUFIXO, lendo o cabeçalho.
-
-    Nunca por lista fixa e nunca por contagem: o mapa ganha colunas e linhas a
-    cada leva, e uma régua com o número de hoje escrito dentro reprova amanhã
-    por ter envelhecido, não por ter achado defeito.
-    """
+    """Descobre os pares `cabo_X`/`radio_X` pelo SUFIXO, lendo o cabeçalho."""
     colunas = set(cabecalho)
     pares: dict[str, tuple[str, str]] = {}
     prefixo = f"{LADOS[0]}_"
@@ -1300,41 +938,8 @@ def pares_de_transporte(cabecalho: list[str]) -> dict[str, tuple[str, str]]:
     return pares
 
 
-#: ─────────────────────────────────────────────────────────────────────────
-#: A PROCEDÊNCIA — *de onde se sabe esta linha* (SPECS-A-PROCEDENCIA-01)
-#: ─────────────────────────────────────────────────────────────────────────
-#: ESTA É A ÚNICA RESPOSTA DA CASA À PERGUNTA "de onde se sabe esta célula", e
-#: ela é função pública de propósito. A `scripts/mesa_de_medicao.py` já monta o
-#: **COMO** de cada célula (`_como_da_celula`, o gesto: canal, report, offset,
-#: comando, código, mordida) e o `tests/unit/test_a_procedencia_da_linha_nao_e_vazia.py`
-#: cobra o **DE ONDE SEI**. São perguntas irmãs sobre as mesmas colunas, e a
-#: regra desta casa é que pergunta com dono se PERGUNTA ao dono: duas leituras
-#: independentes das mesmas colunas divergem calado no dia em que o mapa muda de
-#: forma — foi assim que a régua da palavra vigiou UMA palavra enquanto o portão
-#: vigiava ONZE.
-#:
-#: Ela mora AQUI, e não num módulo novo, porque este arquivo já é o dono das
-#: réguas do mapa: é ele que tem `DOMINIO_POR_SUFIXO`, `SUFIXOS_DE_CONTEUDO` e o
-#: casamento com o caderno de ensaios. Um módulo à parte seria a segunda cópia
-#: das mesmas constantes.
-
-#: Palavra que OCUPA a coluna do ponteiro sem apontar para lugar nenhum. `idem`
-#: quer dizer "o mesmo do lado do cabo" e é legível por gente — mas não por
-#: régua, e não por quem abre só a metade do rádio: a citação não se segue, o
-#: `validar-citacoes-de-linha.py` não a confere, e o `specs.html` publica a
-#: palavra no lugar do endereço. Medido em 06/09/2026: SETE células de
-#: `radio_codigo_ref` diziam `idem`.
-#:
-#: `—` e `não-localizado` NÃO entram aqui, e a diferença é o ponto: essas duas
-#: dizem *"não há endereço"*, que é uma resposta; `idem` diz *"o endereço está
-#: noutro lugar"* sem dizer onde.
 PONTEIRO_QUE_NAO_SE_SEGUE = frozenset({"idem", "idem.", "o mesmo", "mesmo", "ditto"})
 
-#: O que conta como ENDEREÇO seguível numa célula de procedência: `arquivo.ext`
-#: com extensão de código, documento ou planilha. É a mesma forma que o
-#: `scripts/validar-citacoes-de-linha.py` confere quando vem acompanhada de
-#: `:linha`; aqui basta o arquivo, porque uma célula pode apontar um arquivo
-#: inteiro com honestidade (`assets/…rules`, um `.md` de protocolo).
 _ENDERECO = re.compile(
     r"[\w./+-]+\.(?:py|c|h|sh|kt|cpp|md|csv|html|json|xml|glade|rs|toml|rules)\b"
 )
@@ -1342,13 +947,7 @@ _ENDERECO = re.compile(
 
 @dataclass(frozen=True)
 class Procedencia:
-    """De onde se sabe UMA célula — a linha do mapa vista por um transporte.
-
-    `ponteiros` é a lista de `(rótulo, valor)` que se pode SEGUIR: o carimbo da
-    medição, a régua que morde, o endereço no código, a fonte de fora e o ensaio
-    do caderno. Vazia quer dizer que a célula afirma de onde sabe e não diz onde
-    isso está escrito — que é o defeito inteiro desta sprint.
-    """
+    """De onde se sabe UMA célula — a linha do mapa vista por um transporte."""
 
     id: str
     lado: str
@@ -1373,12 +972,7 @@ def procedencia_da_celula(
     lado: str,
     ensaios_por_lado: dict[tuple[str, str], list[dict]] | None = None,
 ) -> Procedencia:
-    """A procedência de `(linha, lado)`, com os ponteiros que se pode seguir.
-
-    `ensaios_por_lado` é o índice de `caderno_de_ensaios()`. Quando vem `None` o
-    caderno simplesmente não entra na conta — o mesmo desligamento em voz alta
-    que a regra 6 já faz —, nunca um `KeyError`.
-    """
+    """A procedência de `(linha, lado)`, com os ponteiros que se pode seguir."""
     ponteiros: list[tuple[str, str]] = []
 
     carimbo_em = _limpo(linha, "provado_em")
@@ -1419,14 +1013,7 @@ def procedencia_da_celula(
 
 
 def ids_publicados(specs: Path) -> str | None:
-    """O texto do `specs.html`, ou None quando não há o que conferir.
-
-    Devolver o texto inteiro e procurar o `id` dentro dele por substring é de
-    propósito: o `id` (`chave@controle`) é distintivo o bastante, e assim a
-    regra não fica refém do formato exato com que o `gerar-mapa.py` serializa o
-    JSON embutido. Se o gerador trocar `json.dumps` por outra coisa, esta regra
-    continua valendo.
-    """
+    """O texto do `specs.html`, ou None quando não há o que conferir."""
     try:
         return specs.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
@@ -1434,18 +1021,7 @@ def ids_publicados(specs: Path) -> str | None:
 
 
 def caderno_de_ensaios(raiz: Path) -> tuple[dict[tuple[str, str], list[dict]] | None, str]:
-    """O caderno de bancada indexado por (`linha_id`, transporte), ou None.
-
-    Devolve `(índice, motivo)`: com `None` no índice, `motivo` diz por que a
-    regra 6 não tem o que ler. A leitura é a do `scripts/eliminacao.py` — reuso
-    deliberado, porque é ele quem já separa cabo de rádio e é ele que o resto da
-    casa usa para julgar suspeito. Duas leituras do mesmo caderno seriam duas
-    réguas para o mesmo dado, e uma delas envelheceria calada.
-
-    Caderno ausente (ou sem as colunas que o casamento exige) DESLIGA a regra em
-    vez de acusar todo mundo: é a mesma decisão do índice de testes por AST logo
-    acima. O desligamento é DITO no resumo, nunca calado.
-    """
+    """O caderno de bancada indexado por (`linha_id`, transporte), ou None."""
     caminho = raiz / ENSAIOS_RELATIVO
     if not caminho.is_file():
         return None, (
@@ -1455,12 +1031,6 @@ def caderno_de_ensaios(raiz: Path) -> tuple[dict[tuple[str, str], list[dict]] | 
     try:
         return carrega_por_lado(caminho), ""
     except (OSError, UnicodeDecodeError, KeyError, csv.Error) as erro:
-        # `csv.Error` entra na lista porque sem ele um caderno MALFORMADO (aspas
-        # abertas, campo gigante) derrubava o portão inteiro com traceback — o
-        # oposto do que esta função promete duas linhas acima, que é desligar a
-        # regra EM VOZ ALTA. Um portão que morre calado por causa do dado que
-        # veio medir é a armadilha da casa: o instrumento mente mais que o
-        # produto.
         return None, (
             f"grau-sem-ensaio ({ENSAIOS_RELATIVO} ilegível para o casamento: "
             f"{erro!r} — o caderno precisa das colunas `linha_id` e `transporte`)"
@@ -1468,16 +1038,7 @@ def caderno_de_ensaios(raiz: Path) -> tuple[dict[tuple[str, str], list[dict]] | 
 
 
 def chave_da_ponte(kind: str, mascara: str | None, steam_input: bool) -> str:
-    """A `Ponte.chave` de `ponte_escada.py`, recalculada aqui — e a única cópia.
-
-    É uma SEGUNDA RÉGUA para o mesmo dado, que é o que esta casa evita. A cópia
-    existe porque a alternativa é pior: importar `ponte_escada` traria
-    `structlog` para dentro de um portão que roda em runner pelado. O preço está
-    pago com uma terceira régua que confere as duas —
-    `tests/unit/test_a_ponte_nao_declarada_01.py` importa a `ESCADA` de verdade
-    e exige que ela devolva EXATAMENTE o que este leitor por AST devolve. Se a
-    fórmula de `chave` mudar lá e não aqui, a suíte reprova.
-    """
+    """A `Ponte.chave` de `ponte_escada.py`, recalculada aqui — e a única cópia."""
     alvo = mascara or "-"
     return f"{kind}/{alvo}{'+steam_input' if steam_input else ''}"
 
@@ -1492,19 +1053,7 @@ def _valor_constante(no: ast.expr, constantes: dict[str, str]) -> object:
 
 
 def dominio_das_pontes(raiz: Path) -> tuple[frozenset[str] | None, str]:
-    """As chaves da `ESCADA` de `ponte_escada.py`, lidas por AST.
-
-    Devolve `(domínio, motivo)`: com `None` no domínio, `motivo` diz por que a
-    conferência se desligou — e o desligamento é DITO no resumo, como o do
-    índice de testes e o do caderno de ensaios. O que NÃO se desliga junto é a
-    regra 15: ela só precisa saber se a célula está vazia, e isso o CSV responde
-    sozinho.
-
-    Nunca uma lista à mão. `ponte_escada.ESCADA` é o dono da escada de pontes
-    (nota `ESCADA-COM-UM-DONO-SO`), e redigitar as quatro chaves aqui seria a
-    segunda cópia que a casa já pagou para não ter — a mesma disciplina com que
-    `bancada.py` importa `ESCADA` para o seletor do caderno.
-    """
+    """As chaves da `ESCADA` de `ponte_escada.py`, lidas por AST."""
     caminho = raiz / PONTE_ESCADA_RELATIVO
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"))
@@ -1543,8 +1092,6 @@ def dominio_das_pontes(raiz: Path) -> tuple[frozenset[str] | None, str]:
         ):
             continue
         valores: dict[str, object] = dict.fromkeys(_CAMPOS_DA_PONTE, None)
-        # `strict=False` de propósito: `Ponte(KIND_NATIVE)` passa UM argumento
-        # posicional para três campos, e é uma chamada legítima da ESCADA.
         for campo, argumento in zip(_CAMPOS_DA_PONTE, no.args, strict=False):
             valores[campo] = _valor_constante(argumento, constantes)
         for palavra in no.keywords:
@@ -1574,13 +1121,7 @@ def dominio_das_pontes(raiz: Path) -> tuple[frozenset[str] | None, str]:
 
 
 def sem_acento(texto: str) -> str:
-    """Tira os acentos: `máximo` com e sem o agudo é a MESMA palavra aqui.
-
-    O CSV tem células escritas sem acentuação nenhuma (as antigas, de antes do
-    portão) e células escritas com. Uma régua que só conhecesse uma das grafias
-    ficaria cega para metade delas — e cegueira de instrumento passa sempre,
-    calada.
-    """
+    """Tira os acentos: `máximo` com e sem o agudo é a MESMA palavra aqui."""
     return "".join(
         letra
         for letra in unicodedata.normalize("NFD", texto)
@@ -1588,22 +1129,13 @@ def sem_acento(texto: str) -> str:
     )
 
 
-#: O índice que a regra 18 consulta: uma cópia de `ROTULO_DO_DEGRAU_DE_VIBRACAO`
-#: com as chaves já sem acento, montada uma vez. Derivada, nunca redigitada — a
-#: segunda cópia à mão é o defeito que este arquivo inteiro existe para não ter.
 _DEGRAU_POR_ROTULO_SEM_ACENTO = {
     sem_acento(rotulo): chave for rotulo, chave in ROTULO_DO_DEGRAU_DE_VIBRACAO.items()
 }
 
 
 def escada_de_vibracao(raiz: Path) -> tuple[dict[str, float] | None, str]:
-    """`RUMBLE_POLICY_MULT`, lido por AST do dono declarado.
-
-    Devolve `(escada, motivo)`, e com `None` na escada o `motivo` diz por que a
-    regra 18 se desligou — em voz alta no resumo, como todas as outras deste
-    arquivo. Ler por AST, e não importar, é a mesma disciplina de
-    `dominio_das_pontes` logo acima, pelo mesmo motivo escrito lá.
-    """
+    """`RUMBLE_POLICY_MULT`, lido por AST do dono declarado."""
     caminho = raiz / RUMBLE_ESCADA_RELATIVO
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"))
@@ -1650,23 +1182,7 @@ def _regra_da_escada_de_vibracao(
     escada: dict[str, float],
     resumo: Resumo,
 ) -> list[Achado]:
-    """Regra 18: número de multiplicador citado em célula tem de bater com o dono.
-
-    **Por que ela existe** (25/08/2026, RUMBLE — POR JOGADOR-01): duas células
-    deste mapa diziam *"o multiplicador de intensidade da GUI (Economia 0,3x /
-    Balanceado 0,7x / máximo 1,0x)"* — a escada de ANTES de 11/08/2026, dia em
-    que ela a trocou para 0,3 / 1,0 / 1,5. Corrigir as duas células sem deixar
-    régua é faxina, e faxina volta: foi exatamente esse o buraco que a
-    AUDITORIA-DE-PERDA-01 mediu em 23/08.
-
-    A régua não guarda número nenhum: ela lê `RUMBLE_POLICY_MULT` do dono e
-    compara. Trocar a escada no código faz esta regra cobrar as células no mesmo
-    commit, que é o comportamento desejado — o mapa não pode ficar contando uma
-    escada que o produto não usa mais.
-
-    O que ela NÃO faz: cobrar que as células CITEM a escada. Célula que não a
-    menciona passa em silêncio; `Auto` fica de fora porque não é degrau fixo.
-    """
+    """Regra 18: número de multiplicador citado em célula tem de bater com o dono."""
     achados: list[Achado] = []
     for coluna, celula in linha.items():
         if not coluna or not celula:
@@ -1690,8 +1206,6 @@ def _regra_da_escada_de_vibracao(
                     "",
                     f"a célula `{coluna}` diz `{casamento.group(0)}`, e "
                     f"`{RUMBLE_ESCADA_DICIONARIO}[{chave!r}]` vale "
-                    # pt-BR na saída, como o resto do mapa: a célula errada e a
-                    # certa têm de se ler lado a lado sem tradução no meio.
                     f"{canonico:.1f}".replace(".", ",")
                     + f"x em {RUMBLE_ESCADA_RELATIVO} — o mapa está contando "
                     "uma escada que o produto não usa",
@@ -1754,21 +1268,14 @@ def censo(
     else:
         resumo.ensaios_no_caderno = sum(len(lista) for lista in ensaios_por_lado.values())
 
-    #: Só a conferência de DOMÍNIO depende da ESCADA. A regra 15 em si continua
-    #: de pé sem ela: para saber se a célula está VAZIA basta o CSV.
     dominio_das_pontes_lido, motivo_sem_escada = dominio_das_pontes(raiz)
     if dominio_das_pontes_lido is None:
         desligadas.append(motivo_sem_escada)
 
-    #: A régua da regra 18 mora no produto, e é lida por AST. Sem o dono não há
-    #: com o que comparar, e a regra se desliga DIZENDO — nunca aprovando calada.
     escada_de_vibracao_canonica, motivo_sem_escada_de_vibracao = escada_de_vibracao(raiz)
     if escada_de_vibracao_canonica is None:
         desligadas.append(motivo_sem_escada_de_vibracao)
 
-    #: A regra 11 é AVISO, e regra mole se DESLIGA quando falta a coluna (a dura
-    #: reprova — ver SUFIXOS_EXIGIDOS). Cobrar `mordida_provada_em` no cabeçalho
-    #: derrubaria toda árvore que ainda não a tem por causa de um aviso.
     tem_coluna_da_mordida = "mordida_provada_em" in cabecalho
     if not tem_coluna_da_mordida:
         desligadas.append(
@@ -1854,10 +1361,6 @@ def censo(
                     "três pontes e o mapa deixa de casar com o produto",
                 )
             )
-        #: A procedência da ponte reusa o domínio de `de_onde_sei`, que já
-        #: existe: a pergunta é a mesma (DE ONDE vem esta informação), e um
-        #: segundo vocabulário para a mesma escala é o defeito que esta casa
-        #: paga duas vezes — uma ao escrever, outra ao ler.
         ponte_de_onde_sei = (linha.get(COLUNA_DA_PONTE_DE_ONDE_SEI) or "").strip()
         if ponte_de_onde_sei not in DOMINIO_POR_SUFIXO["de_onde_sei"]:
             achados.append(
@@ -1884,40 +1387,16 @@ def censo(
                         Achado(FALHA, "mordida-fantasma", numero, ident, "", motivo)
                     )
 
-        # --- as duas células de transporte da linha -------------------------
         mudas_nesta_linha = 0
         graus_fortes_nesta_linha: list[str] = []
-        #: Regra 15: os lados desta linha que entregam ao jogo por `uhid`, e os
-        #: que além disso AFIRMAM forte. Nomeia, nunca só conta.
         lados_por_uhid: list[str] = []
         lados_por_uhid_que_afirmam: list[str] = []
         for lado in LADOS:
             resumo.celulas += 1
             aciona = (linha[f"{lado}_aciona"] or "").strip()
             de_onde_sei = (linha[f"{lado}_de_onde_sei"] or "").strip()
-            # A coluna não é exigida no cabeçalho de todo CSV que passa por
-            # este portão (fixtures antigas de teste não a têm, e não são
-            # fixture de Z6-05): `"por_que_nao_aciona" in pares` é a MESMA
-            # descoberta por sufixo que já guarda a checagem de domínio logo
-            # abaixo — coluna ausente quer dizer "regra 16 desligada nesta
-            # árvore", nunca `KeyError`, e nunca reprovação por engano de um
-            # CSV que não fala desta coluna.
             por_que_nao_aciona = (linha.get(f"{lado}_por_que_nao_aciona") or "").strip()
 
-            # Regra 16 (Z6-05, 24/08/2026): `aciona = não` sem causa nomeada é
-            # a mesma família de "sem-mordida" aplicada à CAUSA em vez de à
-            # REDE — a régua sabe o veredito e cala sobre o motivo.
-            #
-            # ELA VALIA SÓ PARA O `medido` ATÉ 06/09/2026, e era essa metade que
-            # faltava: um `não` de célula NÃO medida era o mais ambíguo de
-            # todos — podia querer dizer *"o aparelho recusa"* ou *"ninguém
-            # olhou"*, e nada obrigava a dizer qual. Foi lendo um desses que o
-            # coordenador mandou um agente PARAR um passo que funciona.
-            #
-            # Agora TODO `não` diz por quê, e para o caso de ninguém ter olhado
-            # existe a palavra que o diz: `nao-medido`. O `de_onde_sei` continua
-            # respondendo OUTRA pergunta — *como se soube* —, e é por isso que
-            # ele saiu da condição em vez de ganhar um segundo valor.
             if (
                 "por_que_nao_aciona" in pares
                 and aciona == ACIONA_NAO
@@ -1940,24 +1419,6 @@ def censo(
                     )
                 )
 
-            # Regra 20 (06/09/2026, SPECS-A-PROCEDENCIA-01): a causa preenchida
-            # num lado que NÃO diz `não`. É a irmã invertida da 16, e ela é
-            # AVISO de propósito: hoje o mapa tem UMA célula assim, e ela é
-            # legítima — `movimento.acelerometro@dualsense` afirma `aciona = sim`
-            # com `so-ela-decide` na coluna do porquê, e a ressalva diz que é
-            # DE PROPÓSITO.
-            #
-            # O defeito que ela pega não é a célula: é a LEITURA dela. Em
-            # 06/09/2026 o coordenador leu uma coluna de causa como veto e
-            # mandou um agente PARAR um passo que funciona (é o mesmo dia e a
-            # mesma origem da palavra `nao-medido`, no bloco da regra 16). Uma
-            # causa ao lado de um `sim` é a forma mais fácil de repetir aquela
-            # leitura, e hoje NENHUMA régua a nomeia — quem for ler a linha
-            # amanhã não tem como saber que ali a causa não é veto.
-            #
-            # AVISO, e não FALHA, porque a célula que ela acha está CERTA: a
-            # regra pede que a decisão apareça no relatório, não que ela saia
-            # do mapa. Promover isto a FALHA seria reprovar a decisão dela.
             if (
                 "por_que_nao_aciona" in pares
                 and por_que_nao_aciona
@@ -1981,11 +1442,6 @@ def censo(
                     )
                 )
 
-            # Regra 19 (31/08/2026): conteúdo escrito num lado cujo
-            # `de_onde_sei` daquele lado está VAZIO. O `s in pares` é a mesma
-            # descoberta por sufixo da regra 16: coluna ausente quer dizer
-            # "esta metade da regra está desligada nesta árvore", nunca
-            # `KeyError` — fixture antiga sem `*_ressalva` não vira reprovação.
             escritas_sem_regua = [
                 sufixo
                 for sufixo in SUFIXOS_DE_CONTEUDO
@@ -2194,8 +1650,6 @@ def _regra_da_validade(
             )
         ]
     if provado and not validade:
-        # Data sem prazo é registro, não promessa. A política de validade é
-        # decisão dela (seção 8 do índice da sprint) e este portão não a inventa.
         return []
 
     data = le_data(provado)
@@ -2283,18 +1737,7 @@ def _regra_da_assimetria(
 
 
 def veredicto_da_feature(ensaio: dict) -> str:
-    """O que a FEATURE fez neste ensaio — a pergunta das regras 9 e 10.
-
-    `resultado_da_feature` quando preenchida; `resultado` quando não. A ordem
-    importa e é o coração da cura de 13/08/2026: `resultado` responde pelo
-    SUSPEITO da linha, e há ensaio em que as duas respostas são OPOSTAS sem que
-    nenhuma delas esteja errada — o `gatilho-lado-nao-esta-invertido` eliminou o
-    suspeito (`não obedece`) na mesma rodada em que o R2 endureceu no aparelho.
-
-    Quem julga o suspeito é `scripts/eliminacao.py`, e ele segue lendo
-    `resultado`: esta função não é uma segunda régua para o mesmo dado, é a
-    régua da OUTRA pergunta.
-    """
+    """O que a FEATURE fez neste ensaio — a pergunta das regras 9 e 10."""
     declarado = (ensaio.get(COLUNA_DO_VEREDICTO_DA_FEATURE) or "").strip()
     return declarado or (ensaio.get("resultado") or "").strip()
 
@@ -2302,14 +1745,7 @@ def veredicto_da_feature(ensaio: dict) -> str:
 def _regra_do_veredicto_da_feature(
     ensaios: list[dict], numero: int, ident: str, lado: str
 ) -> list[Achado]:
-    """Regra 12 — a guarda da coluna nova, e o que a impede de ser uma saída.
-
-    Uma coluna que sobrepõe `resultado` é, sem guarda, o botão de desligar a
-    regra 9: bastaria escrever `obedece` nela. As duas metades desta regra são o
-    preço de apertar esse botão, e as duas são DURAS de propósito — a regra 9 é
-    aviso porque o dado dela é ambíguo; esta é sobre o dado NOVO, que nasce com
-    o significado definido, e aí ambiguidade é defeito.
-    """
+    """Regra 12 — a guarda da coluna nova, e o que a impede de ser uma saída."""
     achados: list[Achado] = []
     for ensaio in ensaios:
         declarado = (ensaio.get(COLUNA_DO_VEREDICTO_DA_FEATURE) or "").strip()
@@ -2363,18 +1799,7 @@ def _regra_do_caderno(
     lado: str,
     resumo: Resumo,
 ) -> list[Achado]:
-    """Regras 6, 9, 10 e 12 — o grau forte contra o caderno de bancada.
-
-    `ensaios` já chega casado por (`linha_id`, transporte): quem casou foi o
-    `eliminacao.carrega_por_lado`, e o transporte importa tanto quanto o `id`.
-    Ensaio de rádio não sustenta afirmação de cabo — a assimetria entre os dois
-    é a regressão que este mapa inteiro existe para pegar, e aceitar um lado
-    pelo outro seria justamente apagá-la.
-
-    Quem responde "a feature obedeceu?" é `veredicto_da_feature`, não a coluna
-    `resultado` crua: ver a seção "A coluna que a casa já tinha encomendado" no
-    cabeçalho deste arquivo.
-    """
+    """Regras 6, 9, 10 e 12 — o grau forte contra o caderno de bancada."""
     rotulo = ROTULO_DO_LADO[lado]
     if not ensaios:
         resumo.graus_fortes_sem_ensaio += 1
@@ -2393,29 +1818,6 @@ def _regra_do_caderno(
             )
         ]
 
-    # ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 (20/08/2026) — O BURACO IRMÃO DO DE 12/08.
-    #
-    # Em 12/08 um agente escreveu a afirmação mais forte da casa numa linha com
-    # ZERO ensaios e o portão passou. As regras 6, 9 e 13 nasceram disso. Só que
-    # a lição foi aprendida para "nenhum ensaio" e NÃO para "o ensaio errado":
-    # o casamento é `(linha_id, transporte)` e nada mais, então uma linha que TEM
-    # ensaios pode ser promovida a QUALQUER degrau — inclusive aos dois de
-    # ENTRADA — sustentada por ensaios que mediram outra coisa.
-    #
-    # REPRODUZIDO À MÃO em 20/08/2026, em cópia descartável: escrevi
-    # `cabo_ate_onde_foi = radio_ate_onde_foi = O JOGO REAGIU` em
-    # `luz.lightbar.cor@dualsense` — cujos oito ensaios falam todos de
-    # `0x08 VALID_FLAG1_RELEASE_LEDS`, que é SAÍDA pura — e o portão devolveu
-    # `exit 0`. O grau que afirma que um JOGO REAGIU passou sustentado por
-    # medições de acender luz.
-    #
-    # A cura é o ensaio DIZER o que mediu. A coluna `degrau` do caderno nasce
-    # vazia nos 177 ensaios existentes, e vazio aqui quer dizer "não declarou" —
-    # nunca "serve para tudo". Por isso a regra vale só para os degraus de
-    # ENTRADA: os de saída continuam sustentados pelo caderno como sempre
-    # estiveram (reprovar afirmação verdadeira é o erro que esta casa já pagou em
-    # 12/08 e 13/08), e a direção que ainda não tem UMA célula preenchida nasce
-    # exigindo declaração explícita — que é exatamente o momento certo de exigir.
     if grau in GRAUS_DE_ENTRADA:
         declararam = [
             ensaio
@@ -2490,23 +1892,7 @@ def _achado_sem_olho_dela(
     lado: str,
     rotulo: str,
 ) -> Achado:
-    """Regras 10 e 13 — o degrau que só a mão dela fecha, sem a mão dela.
-
-    Uma pergunta, duas severidades, e a diferença é LEGADO, não princípio:
-
-      - regra 10 (`grau-sem-olho-dela`, `O APARELHO OBEDECEU`) é AVISO porque
-        quando ela nasceu já havia células escritas por outra régua, e reprovar
-        afirmação verdadeira retroativamente é o defeito que este arquivo passa
-        uma seção inteira explicando por que não se comete. Promoção por
-        `OLHO_DELA_REPROVA`;
-      - regra 13 (`reagiu-sem-olho-dela`, `O JOGO REAGIU`) é FALHA desde o
-        primeiro dia, porque o degrau nasceu em 19/08/2026 com ZERO células no
-        CSV. Não há afirmação antiga para machucar, e deixá-la avisando seria
-        abrir de graça exatamente a porta que a regra 6 fechou em 12/08 — a de
-        escrever a afirmação mais forte do vocabulário sem ninguém ter visto
-        nada. `O JOGO REAGIU` é a afirmação mais forte que este mapa sabe
-        fazer: ela diz que ELA CONSEGUIU JOGAR.
-    """
+    """Regras 10 e 13 — o degrau que só a mão dela fecha, sem a mão dela."""
     if grau in GRAUS_SEM_LEGADO:
         return Achado(
             FALHA,
@@ -2537,13 +1923,7 @@ def _achado_sem_olho_dela(
 def _regra_da_mordida_nao_provada(
     linha: dict[str, str], numero: int, ident: str
 ) -> list[Achado]:
-    """Regra 11 — a coluna que existia e ninguém lia.
-
-    Só cobra onde a promessa é máxima (grau forte) E há teste apontado: cobrar
-    das 293 linhas seria enterrar o relatório em aviso, e a regra da casa é
-    "teste tem de MORDER" — o lugar onde não ter arrancado a cura custa mais
-    caro é justamente embaixo do degrau mais alto.
-    """
+    """Regra 11 — a coluna que existia e ninguém lia."""
     if not (linha.get("teste_que_morde") or "").strip():
         return []
     if (linha.get("mordida_provada_em") or "").strip():
@@ -2563,14 +1943,7 @@ def _regra_da_mordida_nao_provada(
 
 
 def ids_do_csv_em(contra: str, csv_relativo: str, raiz: Path) -> tuple[set[str] | None, str]:
-    """Os `id` do mapa NAQUELA ref, via `git show <ref>:<caminho>`.
-
-    `(None, motivo)` quando a ref não resolve — nunca `(set(), "")`: um clone
-    raso (`fetch-depth: 1`) faz `HEAD~1` inexistir, e devolver conjunto vazio
-    faria a regra 17 gritar que TODO `id` sumiu, ou pior, calar-se achando que
-    não havia nada antes. A distinção importa (Z6-07/P-11): a régua tem de
-    reprovar ALTO quando não consegue medir, nunca sair calada.
-    """
+    """Os `id` do mapa NAQUELA ref, via `git show <ref>:<caminho>`."""
     processo = subprocess.run(
         ["git", "-C", str(raiz), "show", f"{contra}:{csv_relativo}"],
         capture_output=True,
@@ -2589,13 +1962,7 @@ def ids_do_csv_em(contra: str, csv_relativo: str, raiz: Path) -> tuple[set[str] 
 def regra_id_estavel(
     contra: str, csv_relativo: str, raiz: Path, registros_de_hoje: list[dict[str, str]]
 ) -> list[Achado]:
-    """Regra 17 (Z6-07): `id` que desaparece sem virar `id_v1` de outra linha
-    reprova, com nota datada como única saída.
-
-    Nunca compara silenciosamente: se `contra` não resolver (clone raso, ref
-    inexistente), a régua REPROVA nomeando a ref e o motivo — nunca sai 0
-    fingindo que nada mudou.
-    """
+    """Regra 17 (Z6-07): `id` que desaparece sem virar `id_v1` de outra linha"""
     ids_de_ontem, motivo = ids_do_csv_em(contra, csv_relativo, raiz)
     if ids_de_ontem is None:
         return [
@@ -2627,7 +1994,7 @@ def regra_id_estavel(
     achados: list[Achado] = []
     for id_sumido in sumidos:
         if id_sumido in ids_v1_de_hoje:
-            continue  # renomeado com nota — a `id_v1` É a nota datada
+            continue
         achados.append(
             Achado(
                 FALHA,
@@ -2646,34 +2013,10 @@ def regra_id_estavel(
     return achados
 
 
-# ---------------------------------------------------------------------------
-# A porta de entrada das specs, e por que os números dela saem daqui
-# ---------------------------------------------------------------------------
-# `docs/data/LEIA-PRIMEIRO.md` é o caminho barato até o mapa, e ele publica um
-# censo: o tamanho de dez arquivos, quantas colunas o CSV tem, quantos pares
-# `cabo_*`/`radio_*` existem. Tudo isso era DIGITADO À MÃO, e o próprio arquivo
-# já confessava a cura de raiz que ninguém tinha feito.
-#
-# O preço medido em 26/08/2026, antes desta cura: SETE dos dez tamanhos
-# estavam errados (o mapa em 700.602 contra 696.546 publicados; este script em
-# 102.818 contra 85.063), as colunas diziam 47 contra as 49 que o `csv.reader`
-# devolve, os pares diziam 13 contra 14, e o `specs.html` era listado na raiz,
-# de onde saiu em 25/08. Corrigir à mão é pagar o mesmo preço de novo amanhã —
-# foi o que já se fez uma vez, e caducou em três dias.
-#
-# A forma: cada número gerado mora entre marcas HTML no `.md`, que não aparecem
-# na renderização. `--leia-primeiro` confere; `--leia-primeiro --escrever`
-# regrava. Quem cobra o frescor é
-# `tests/unit/test_leia_primeiro_nao_digita_numero_a_mao.py`, na suíte — e não
-# a lista de portões, que tem dono único.
 LEIA_PRIMEIRO_RELATIVO = "docs/data/LEIA-PRIMEIRO.md"
 
-#: `<!--@chave-->valor<!--/-->`. A chave é legível de propósito: quando o
-#: número diverge, a mensagem de erro NOMEIA o que está podre.
 _MARCA_GERADA = re.compile(r"<!--@([A-Za-z0-9:/._-]+)-->(.*?)<!--/-->")
 
-#: A chave `bytes:<caminho>` mede o arquivo. As outras vêm do mapa, ou deste
-#: próprio script.
 _PREFIXO_DE_BYTES = "bytes:"
 
 
@@ -2683,13 +2026,7 @@ def _milhar(numero: int) -> str:
 
 
 def ultima_linha_da_docstring(caminho: Path) -> int:
-    """A linha em que o docstring de módulo fecha, contando a partir de 1.
-
-    O `LEIA-PRIMEIRO.md` manda ler a docstring inteira deste portão e diz até
-    onde ela vai. Esse número muda toda vez que alguém escreve uma regra — e
-    já estava caduco (dizia 249) quando ninguém tinha mexido no arquivo por
-    outro motivo.
-    """
+    """A linha em que o docstring de módulo fecha, contando a partir de 1."""
     arvore = ast.parse(caminho.read_text(encoding="utf-8"))
     primeiro = arvore.body[0] if arvore.body else None
     if (
@@ -2702,36 +2039,15 @@ def ultima_linha_da_docstring(caminho: Path) -> int:
     return 0
 
 
-#: AS PALAVRAS QUE FAZEM UM NÚMERO SER MEDIÇÃO, e não data nem versão. A régua
-#: só acusa quando uma delas está ao lado — assim `31/08/2026` e `A-1..A-25`
-#: passam, e `184 ensaios` não.
 _PALAVRAS_DE_MEDIDA = (
     "linha", "linhas", "coluna", "colunas", "ensaio", "ensaios", "caractere",
     "caracteres", "token", "tokens", "célula", "células", "byte", "bytes",
     "arquivo", "arquivos", "feature", "features",
 )
-#: O NÚMERO COM SEPARADOR DE MILHAR É MEDIÇÃO SOZINHO — ninguém escreve
-#: `1.396.169` sem ter contado alguma coisa.
 _NUMERO_SOLTO = re.compile(
     r"(?<![\d.>-])(\d{1,3}(?:\.\d{3})+)(?![\d.<])"
     r"|(?<![\d>-])(\d{2,})\s+(?:mil\s+)?(" + "|".join(_PALAVRAS_DE_MEDIDA) + r")\b"
 )
-#: OS QUE ESTÃO SOLTOS HOJE — 08/09/2026, declarados, e a declaração diz a
-#: verdade sobre o que ela é.
-#:
-#: **ELES NÃO FORAM CONFERIDOS UM A UM.** São de duas espécies, e as duas foram
-#: lidas antes de declarar: (a) NOTA HISTÓRICA — o parágrafo que conta a
-#: correção de 31/08 cita os números ERRADOS de propósito (*"o mapa em 700.602
-#: contra 696.546 publicados"*), e gerar esses seria apagar o registro; (b)
-#: CUSTO DE EXEMPLO — o documento mostra quanto custa cada filtro (*"custa
-#: 27.828"*), e cada um é a saída de um `grep`/`awk` diferente, medida numa
-#: árvore anterior.
-#:
-#: **A LISTA TEM DE ENCOLHER, e este é o contrato.** A régua nasceu para pegar a
-#: PRÓXIMA, não para catalogar as 43 de hoje: um número novo e solto reprova na
-#: hora, porque não está aqui. Quem marcar um destes com um gerador tira a linha
-#: no mesmo commit — e a espécie (b) toda se resolve com um gerador que rode os
-#: próprios filtros que o documento ensina.
 _MEDIDAS_QUE_NAO_SAO_DAQUI: tuple[str, ...] = (
     '10 colunas',
     '102.818',
@@ -2747,8 +2063,6 @@ _MEDIDAS_QUE_NAO_SAO_DAQUI: tuple[str, ...] = (
     '264 linhas',
     '27.828',
     '3.447',
-    # NOTA HISTÓRICA: o julgamento do juiz medido em 02/09/2026, sobre as
-    # 37 células de grau forte daquela árvore. Gerar apagaria o registro.
     '37 células',
     '30.711',
     '4.750',
@@ -2794,11 +2108,7 @@ def numeros_soltos(texto: str) -> list[tuple[int, str]]:
 
 
 def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
-    """Os números que o `LEIA-PRIMEIRO.md` publica, medidos agora.
-
-    Só as chaves fixas — `bytes:<caminho>` é resolvida na hora, contra o disco,
-    porque a lista de arquivos é do documento e não deste script.
-    """
+    """Os números que o `LEIA-PRIMEIRO.md` publica, medidos agora."""
     caminho_csv = raiz / CSV_RELATIVO
     with caminho_csv.open(encoding="utf-8", newline="") as arquivo:
         leitor = csv.reader(arquivo)
@@ -2814,18 +2124,6 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
     def sem_coluna(nome: str) -> int:
         return sum(1 for ensaio in ensaios if not (ensaio.get(nome) or "").strip())
 
-    # OS NOVE DE 08/09/2026, E OS NOVE ESTAVAM ERRADOS. Eles eram DIGITADOS: a
-    # marcação alcançava a tabela do topo e parava ali, e a §5 e a §6 do
-    # documento seguiram publicando a medição de uma árvore antiga.
-    #
-    # O PIOR ERA O PRIMEIRO, e o documento existe por causa dele: a linha que
-    # diz a quem lê quanto custa abrir o mapa publicava *"661.177 caracteres,
-    # ~165 mil tokens"*, e a medição de agora é 1.396.169 e ~349 mil. **Um aviso
-    # de custo que erra o custo pela METADE convida exatamente a leitura que ele
-    # existe para impedir.**
-    #
-    # `provado_por` publicava 58 linhas contra 77 medidas, e as quatro
-    # contagens erradas; `observado_por`, 177 contra 184.
     with (raiz / CSV_RELATIVO).open(encoding="utf-8", newline="") as arquivo:
         celulas = list(csv.DictReader(arquivo))
     caracteres = sum(len(valor or "") for l in celulas for valor in l.values())
@@ -2841,25 +2139,6 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
     provado = contar(celulas, "provado_por")
     observado = contar(ensaios, "observado_por")
 
-    # OS VINTE E TANTOS DE 21/09/2026 — as seções 2, 3 e 7 do documento.
-    #
-    # O bloco do topo era gerado desde 26/08; o CORPO não. O próprio
-    # `LEIA-PRIMEIRO.md` declarava a dívida — *"o que ainda é digitado à mão: o
-    # `existe`, as duas réguas por valor e as 20 casas do cruzamento (…) gerá-los
-    # pede contadores novos no portão, e é a continuação natural desta cura"*.
-    # Estes são os contadores.
-    #
-    # MEDIDO em 21/09, antes de escrevê-los: das quatro casas de `existe`, as
-    # QUATRO estavam erradas (142/79/68/19 publicados contra 154/90/48/21);
-    # linhas por controle diziam 110/99/99 contra 113/100/100; as duas réguas
-    # por valor erravam nas nove casas; o grau forte dizia 37 contra 48; e o
-    # cruzamento das duas réguas publicava 19 casas erradas de 20 — mais a
-    # multiplicação, que dizia "616 células (313 linhas x 2 lados)" quando
-    # 313 x 2 = 626.
-    #
-    # A ESPÉCIE DO ERRO É SEMPRE A MESMA, e é por isso que gerar resolve: o mapa
-    # CRESCE, e todo número digitado sobre ele nasce com prazo. Nenhum deles
-    # estava errado quando foi escrito.
     def _escada(valor: str) -> str:
         return {
             "": "vazio",
@@ -2885,10 +2164,6 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
     existe = contar(celulas, "existe")
     por_controle = contar(celulas, "controle")
 
-    #: GRAU FORTE é `SAIU NO FIO` ou `O APARELHO OBEDECEU` — a prova que exige
-    #: hardware. AFIRMAÇÃO FORTE é `aciona=sim` com `de_onde_sei=medido`. As
-    #: duas são definições do portão, e o documento as publica: se elas mudarem
-    #: aqui, o texto muda junto, que é o ponto inteiro de gerar.
     grau_forte = sum(1 for _, escada in lados if escada in ("saiu", "obedeceu"))
     afirmacao_forte = sum(
         1
@@ -2898,22 +2173,11 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
         and (linha.get(f"{t}_de_onde_sei") or "").strip() == "medido"
     )
 
-    #: AS DUAS CONTAS DE DIVERGÊNCIA SÃO DIFERENTES, e a diferença já confundiu
-    #: quem lia os dois artefatos lado a lado: o `LEIA-PRIMEIRO` conta
-    #: `cabo_aciona != radio_aciona` e o `specs.html` conta o par
-    #: `(aceita, aciona)` — o segundo é sempre maior. Gerar as DUAS, com nome
-    #: que diz o que cada uma mede, é o que impede a próxima pessoa de concluir
-    #: que um dos dois mente.
     divergem_aciona = [
         linha
         for linha in celulas
         if (linha.get("cabo_aciona") or "") != (linha.get("radio_aciona") or "")
     ]
-    #: A regra é a MESMA de `gerar-mapa.assimetrias`, de propósito, inclusive a
-    #: guarda dos dois lados respondidos (`aceita` não vazio nos dois): dois
-    #: números com o mesmo nome e contas diferentes é o defeito que a lei do
-    #: fato errado existe para matar. Se um dos dois mudar, este teste-irmão
-    #: fica vermelho — `tests/unit/test_leia_primeiro_nao_digita_numero_a_mao.py`.
     divergem_veredicto = sum(
         1
         for linha in celulas
@@ -2994,8 +2258,6 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
         medidas_do_corpo[f"celulas-escada-{nome}"] = _milhar(
             sum(1 for _, escada in lados if escada == nome)
         )
-    # As 20 casas do cruzamento, uma chave cada. O documento publica a tabela
-    # inteira, e uma casa só se conserta sozinha se tiver nome próprio.
     for sei in ("medido", "inferido", "afirmado", "incerto", "vazio"):
         for escada in ("vazio", "montou", "saiu", "obedeceu"):
             medidas_do_corpo[f"cruzamento-{sei}-{escada}"] = _milhar(
@@ -3005,9 +2267,6 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
     return {
         **medidas_do_corpo,
         "caracteres-do-mapa": _milhar(caracteres),
-        #: O DIVISOR É 4, e é a regra de bolso da casa para texto latino. Ele
-        #: não precisa ser exato: precisa não estar errado por um fator de 2,
-        #: que é o que a versão digitada estava.
         "tokens-do-mapa": _milhar(round(caracteres / 4 / 1000)),
         "mapa-com-provado-por": _milhar(sum(provado.values())),
         "mapa-provado-aparelho": _milhar(provado.get("aparelho", 0)),
@@ -3053,12 +2312,7 @@ def valor_gerado(chave: str, fixos: dict[str, str], raiz: Path) -> tuple[str, st
 
 
 def gera_leia_primeiro(texto: str, raiz: Path) -> tuple[str, list[str]]:
-    """Reescreve cada marca com o número medido agora.
-
-    Devolve `(texto novo, problemas)`. Problema é chave que não se resolve —
-    nunca divergência de valor: divergência é o serviço deste gerador, e quem
-    a reporta é quem compara o antes com o depois.
-    """
+    """Reescreve cada marca com o número medido agora."""
     fixos = numeros_do_leia_primeiro(raiz)
     problemas: list[str] = []
 
@@ -3163,14 +2417,8 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
             resumo.graus_fortes,
         ),
         ("     desses, SEM ensaio no caderno", resumo.graus_fortes_sem_ensaio),
-        # A conta que denuncia o buraco de 19/08: enquanto ela for ZERO, o mapa
-        # não tem uma única célula falando do JOGO — e podia estar todo verde
-        # com ela sem conseguir jogar.
         ("     desses, na direção de ENTRADA (o jogo)", resumo.graus_de_entrada),
         ("ensaios lidos do caderno de bancada", resumo.ensaios_no_caderno),
-        # A conta que diz se a regra 15 ENXERGA. Portão que não vê nada passa
-        # sempre: no dia em que o primeiro destes zerar, a regra parou de olhar
-        # — e o resumo grita antes de alguém precisar desconfiar.
         (
             f"linhas que alcançam o jogo por `{CANAL_QUE_A_MASCARA_DECIDE}`",
             resumo.linhas_que_alcancam_por_uhid,
@@ -3187,7 +2435,6 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
             "citações da escada de vibração conferidas contra o dono",
             resumo.citacoes_da_escada_de_vibracao,
         ),
-        # A conta que diz se a regra 19 ENXERGA, pelo mesmo motivo das de cima.
         (
             "células com conteúdo de um lado (offset, evidência, ressalva…)",
             resumo.celulas_com_conteudo,

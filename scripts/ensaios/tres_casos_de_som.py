@@ -54,7 +54,7 @@ Por isso este instrumento toma a posse ANTES de tocar qualquer coisa, e oferece
 
 A ROTA, e o que ainda falta dela
 ---------------------------------
-`common[7]` bits 4-5, e a tabela é de `profiles/schema.py:487-491`:
+`common[7]` bits 4-5, e a tabela é de `profiles/schema.py:255-259`:
 
   0  estéreo -> fone
   1  L -> fone, mono
@@ -113,7 +113,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 TAXA = 48000
 
-#: Os dois timbres. A distância entre eles é o instrumento — ver o docstring.
 SOM_A = ("hmmmmm (grave contínuo, 180 Hz + harmônicos)", 2)
 SOM_B = ("bep bep bep (agudo pulsado, 1300 Hz a 2 Hz)", 4)
 
@@ -145,12 +144,6 @@ def _onda_b(t: float) -> float:
     return 0.38 * math.sin(2 * math.pi * 1300 * t) * pulso
 
 
-#: `LC_ALL=C` NÃO é zelo: o `pactl` TRADUZ os rótulos da saída longa, e nesta
-#: máquina "Name:" sai como "Nome:". A primeira versão deste instrumento não
-#: achava sink nenhum por isso, e dizia "nenhum controle com placa de áudio" —
-#: uma afirmação sobre o APARELHO que na verdade era sobre o idioma do shell.
-#: É a mesma família de "medir contra a biblioteca errada": o instrumento
-#: mentindo com convicção.
 _AMBIENTE_C = {**os.environ, "LC_ALL": "C", "LANG": "C"}
 
 
@@ -160,19 +153,13 @@ def _pactl(*args: str) -> str:
 
 
 def sinks_de_controle() -> dict[str, str]:
-    """MAC mascarado -> nome do sink, casados pelo dispositivo USB em comum.
-
-    É o mesmo casamento que o `audio_por_transporte.py` faz, e ele é o que
-    permite falar de UM controle quando há dois no cabo: o sink e o `hidraw`
-    penduram no mesmo `usbN/X-Y`.
-    """
+    """MAC mascarado -> nome do sink, casados pelo dispositivo USB em comum."""
     fora: dict[str, str] = {}
     for linha in _pactl("list", "sinks", "short").splitlines():
         campos = linha.split("\t")
         if len(campos) < 2 or "DualSense" not in campos[1]:
             continue
         nome = campos[1]
-        # `analog-surround-40` e `...2.analog-surround-40` -> card 2 e 3
         detalhe = _pactl("list", "sinks")
         bloco = detalhe.split(f"Name: {nome}")
         if len(bloco) < 2:

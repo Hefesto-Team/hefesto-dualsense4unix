@@ -58,7 +58,6 @@ class TestOsBotoesDeTrasDoEdge:
     def test_a_pydualsense_le_as_costas_do_edge_do_mesmo_byte_do_ps(
         self, fonte_da_pydualsense: str
     ) -> None:
-        # O bloco `if self.is_edge:` que decodifica L4/R4/L5/R5.
         bloco = re.search(
             r"misc2\s*=\s*states\[(?P<indice>\d+)\](?P<corpo>.*?)# trackpad touch",
             fonte_da_pydualsense,
@@ -66,18 +65,14 @@ class TestOsBotoesDeTrasDoEdge:
         )
         assert bloco is not None, "a decodificação de `misc2` mudou de forma"
 
-        # `misc2` tem de ser o byte 10 do report — payload[9], buttons[2].
         assert bloco.group("indice") == "10", (
             "a pydualsense mudou o índice de `misc2`; o mapa depende dele "
             "para dizer onde o Edge põe os botões de trás"
         )
 
         corpo = bloco.group("corpo")
-        # No MESMO byte estão o PS, o touchpad e o mudo — a prova de que não é
-        # um byte reservado só do Edge.
         for campo in ("self.state.ps", "self.state.touchBtn", "self.state.micBtn"):
             assert campo in corpo, f"{campo} saiu de `misc2`"
-        # E os quatro do Edge, nos bits 4 a 7.
         for campo, mascara in (
             ("L4", "0x10"),
             ("R4", "0x20"),
@@ -93,17 +88,12 @@ class TestOsBotoesDeTrasDoEdge:
     ) -> None:
         """`buttons[3]` existe na struct e ninguém o lê — nem para o Edge."""
         assert "u8 buttons[4];" in fonte_do_driver, "a struct de entrada mudou"
-        # Nenhuma LEITURA de buttons[3] — `->buttons[3]` ou `.buttons[3]`.
-        # (O `u8 buttons[3];` solto é a DECLARAÇÃO da struct do DualShock 4,
-        # que tem três bytes de botão em vez de quatro; não é leitura.)
         assert not re.search(r"[.>]buttons\[3\]", fonte_do_driver), (
             "o driver passou a ler `buttons[3]`; a afirmação de que as costas "
             "do Edge não chegam por evdev nesta máquina caducou"
         )
-        # E os índices que ele REALMENTE lê são só 0, 1 e 2.
         lidos = sorted(set(re.findall(r"[.>]buttons\[(\d)\]", fonte_do_driver)))
         assert lidos == ["0", "1", "2"], f"o driver passou a ler buttons{lidos}"
-        # E o byte que ELES usam (buttons[2]) só tem três máscaras, todas <= bit2.
         mascaras = re.findall(r"#define\s+DS_BUTTONS2_\w+\s+BIT\((\d)\)", fonte_do_driver)
         assert sorted(mascaras) == ["0", "1", "2"], (
             "as máscaras de `buttons[2]` mudaram; se alguma alcançar os bits "
@@ -112,12 +102,7 @@ class TestOsBotoesDeTrasDoEdge:
 
 
 class TestOLimiarDeFirmwareDaVibracaoV2:
-    """A contradição que a leva de energia achou, e que a conferência confirmou.
-
-    O driver desta máquina liga a vibração v2 em 0x0215; a SDL, o SpecialK e o
-    DS5Dongle exigem 0x0224. Os três leem o mesmo campo. Fica em aberto até
-    alguém ler a versão de firmware dos controles dela.
-    """
+    """A contradição que a leva de energia achou, e que a conferência confirmou."""
 
     def test_o_macro_de_versao_monta_o_minor_no_byte_baixo(
         self, fonte_do_driver: str
@@ -143,7 +128,6 @@ class TestOLimiarDeFirmwareDaVibracaoV2:
         assert (maior, menor) == (2, 21), (
             "o limiar do driver mudou; confira contra o 0x0224 de fora"
         )
-        # É esta conta que faz o limiar divergir do 0x0224 das fontes externas.
         assert (maior << 8) | menor == 0x0215
 
     def test_a_versao_de_firmware_sai_do_byte_44(self, fonte_do_driver: str) -> None:
@@ -199,8 +183,7 @@ class TestOCorpoDoReportDeSaida:
     def test_o_envelope_de_radio_tem_tres_bytes_antes_do_corpo(
         self, fonte_do_driver: str
     ) -> None:
-        """A wiki externa mostra DOIS; o driver mostra três, e a medição da casa
-        (`luz.led_microfone`: common[8] = report[11]) confirma os três."""
+        """A wiki externa mostra DOIS; o driver mostra três, e a medição da casa"""
         corpo = re.search(
             r"struct dualsense_output_report_bt \{(.*?)\} __packed;",
             fonte_do_driver,

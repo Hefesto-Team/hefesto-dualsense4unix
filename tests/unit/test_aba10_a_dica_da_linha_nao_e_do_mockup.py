@@ -80,18 +80,6 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, monta, ond
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 
-#: A TABELA POR CONTROLE, e só ela. A fita de chips do topo também nomeia o
-#: modelo num `title`, e ali está CERTO: ela é `monta.fita()`, e o piloto troca
-#: o `outerHTML` dela inteiro a cada tique com a mesa viva. Medir a página toda
-#: acusaria a fita curada e deixaria de separar o que se pinta do que congela.
-#: ERA A TAG LITERAL ATÉ 11/09/2026, e a PERFIS-LIMPA-01 a quebrou sem tocar
-#: numa linha desta régua: a tabela ganhou os atributos da coluna que ela
-#: arrasta (`data-hef`, `data-hef-alvo`, `data-hef-atributo`, `data-tabela`,
-#: `data-larguras`), a string parou de casar, e as CINCO réguas deste arquivo
-#: passaram a reprovar dizendo *"a tabela por controle sumiu"* com a tabela no
-#: lugar de sempre. É a armadilha desta casa pela enésima vez — *a régua
-#: DIGITAVA o que devia LER* —, e a forma de não repetir é ancorar na CLASSE,
-#: que é o que identifica a tabela, e deixar o resto dos atributos livre.
 ABRE = re.compile(r'<table[^>]*class="tab miuda"[^>]*>')
 
 
@@ -114,15 +102,10 @@ def _linhas(html: str) -> list[str]:
     return re.findall(r'<tr data-hef-uniq="[^"]+"[^>]*>', _tabela(html))
 
 
-#: Quem está na mesa do DESENHO e quem é lugar vazio — lido do gerador, nunca
-#: digitado aqui. `monta.MESA` é o dono dos quatro lugares desta tabela.
 NA_MESA = [c["pref"] for c in monta.MESA if c.get("conectado", True)]
 VAZIOS = [c["pref"] for c in monta.MESA if not c.get("conectado", True)]
 
 
-# --------------------------------------------------------------------------
-# 1. A LINHA DE QUEM ESTÁ NA MESA NÃO CARREGA DICA
-# --------------------------------------------------------------------------
 def test_a_linha_de_controle_na_mesa_nao_tem_dica() -> None:
     """MORDIDA: devolva o `title=` ao `<tr>` em `aba10.linha_do_controle`."""
     com_dica = [t for c, t in zip(monta.MESA, _linhas(_bancada()), strict=True)
@@ -133,29 +116,11 @@ def test_a_linha_de_controle_na_mesa_nao_tem_dica() -> None:
         f"sendo o do DESENHO enquanto a célula ao lado já traz o do aparelho.")
 
 
-#: A PUBLICADA AINDA CARREGA A DICA, e isso é ESPERA declarada, não descuido.
-#: O gerador escreve a bancada; quem leva a bancada ao produto é ela, por
-#: `scripts/check_o_desenho_aprovado.py --aprovar` — *"primeiro nunca terminamos
-#: o mockup (…) Vamos concluir lá e depois seguimos pra interface."*
-#:
-#: O teste abaixo é o que impede esta linha de apodrecer: no dia em que a
-#: publicação acontecer ele reprova, e quem publicar troca o `True` por `False`
-#: no mesmo commit — a partir daí a régua cobra a publicada para sempre.
-#: FALSO DESDE 03/09/2026 — ela mandou publicar as dez, e este teste reprovou
-#: no mesmo minuto, que é exatamente o que ele foi feito para fazer. A partir
-#: daqui a régua cobra a PUBLICADA para sempre.
 ESPERA_A_PUBLICACAO = False
 
 
 def test_a_publicada_nao_fica_curada_em_silencio() -> None:
-    """Curar a bancada e deixar a publicada é a correção pela metade que esta
-    casa persegue — e aqui ela seria invisível, porque a régua do mockup não lê
-    `title` e portão nenhum compara as duas nesse ponto.
-
-    MORDIDA (as duas, e é por isso que a igualdade é com `==` e não com `not`):
-        publique a aba e não mexa em `ESPERA_A_PUBLICACAO` -> reprova;
-        troque para `False` antes de publicar -> reprova.
-    """
+    """Curar a bancada e deixar a publicada é a correção pela metade que esta"""
     ainda = [t for c, t in zip(monta.MESA, _linhas(_publicada()), strict=True)
              if c.get("conectado", True) and "title=" in t]
     assert bool(ainda) == ESPERA_A_PUBLICACAO, (
@@ -165,19 +130,8 @@ def test_a_publicada_nao_fica_curada_em_silencio() -> None:
         f"ou ela foi apagada antes da hora.")
 
 
-# --------------------------------------------------------------------------
-# 2. A DICA DO LUGAR VAZIO FICA — a assimetria é decisão
-# --------------------------------------------------------------------------
 def test_o_lugar_vazio_continua_com_a_dica() -> None:
-    """`P3` é um LUGAR, não uma peça: aquela frase não afirma nada sobre
-    aparelho nenhum, então não envelhece quando a mesa muda.
-
-    Sem este teste, "tirar as dicas da tabela" levaria as duas juntas na
-    próxima limpeza, e a resposta a *"por que este lugar vazio continua aqui?"*
-    sairia da tela — que é dado dela, decidido em 31/08/2026.
-
-    MORDIDA: tire o `title` do ramo `else` de `linha_do_controle`.
-    """
+    """`P3` é um LUGAR, não uma peça: aquela frase não afirma nada sobre"""
     assert VAZIOS, "o desenho não tem lugar vazio — esta régua perdeu o objeto"
     sem_dica = [c["pref"] for c, t in zip(monta.MESA, _linhas(_bancada()), strict=True)
                 if not c.get("conectado", True) and "title=" not in t]
@@ -186,19 +140,8 @@ def test_o_lugar_vazio_continua_com_a_dica() -> None:
         f"continua na tabela. Ela não fala de aparelho nenhum: não envelhece.")
 
 
-# --------------------------------------------------------------------------
-# 3. NENHUMA DICA DA TABELA NOMEIA UM MODELO — e são os 28, não os 4
-# --------------------------------------------------------------------------
 def test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa() -> None:
-    """A régua olha TODA dica da tabela por controle, contra os 28 modelos que
-    ela mapeou — não contra os quatro do desenho.
-
-    A diferença é o ponto inteiro: uma régua que procurasse "Cosmic Red" e
-    "Starlight Blue" ficaria verde no dia em que alguém escrevesse
-    `title="Nova Pink"`, e o defeito é o MESMO. Ela mapeou 28; a régua também.
-
-    MORDIDA: ponha `title="Nova Pink"` numa `<td>` de `linha_do_controle`.
-    """
+    """A régua olha TODA dica da tabela por controle, contra os 28 modelos que"""
     modelos = {nome for _, nome in mesa_viva.CORES.values() if nome}
     assert len(modelos) >= 28, (
         f"o mapa das cores encolheu para {len(modelos)} modelos — esta régua "
@@ -212,22 +155,9 @@ def test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa() -> None:
 
 
 def test_o_nome_do_modelo_so_vive_em_elemento_enderecado() -> None:
-    """Onde o modelo APARECE na tabela, ele tem de estar num elemento que o
-    piloto pinta — hoje é um só: `guarda.nome`.
-
-    Este é o teste que sobrevive a uma reescrita da tabela: ele não fala de
-    `<tr>` nem de `title`, fala do FATO — identidade de aparelho só existe
-    nesta página onde há endereço para reescrevê-la.
-    """
+    """Onde o modelo APARECE na tabela, ele tem de estar num elemento que o"""
     modelos = {nome for _, nome in mesa_viva.CORES.values() if nome}
     tabela = _tabela(_bancada())
-    # Os pedaços fora de um `<span data-hef="guarda.nome">…</span>`: se um nome
-    # de modelo aparecer aqui, ele está num lugar que ninguém repinta.
-    #
-    # O `</td>` NA ÂNCORA NÃO É ENFEITE: o rótulo curto traz `<span class="pt">`
-    # em volta de cada separador, e um `.*?</span>` fecharia no PRIMEIRO deles —
-    # `Cosmic Red` vazaria para fora do recorte e a régua acusaria a si mesma.
-    # Custou a primeira execução deste arquivo.
     solto = re.sub(r'<span data-hef="guarda\.nome">.*?</span>\s*</td>', "", tabela,
                    flags=re.DOTALL)
     achados = sorted({m for m in modelos if m in solto})
@@ -237,33 +167,8 @@ def test_o_nome_do_modelo_so_vive_em_elemento_enderecado() -> None:
         f"do mockup sobre o aparelho dela.")
 
 
-# --------------------------------------------------------------------------
-# 4. O TRIPWIRE — o dia em que o piloto souber pintar `title`, revejam a cura
-# --------------------------------------------------------------------------
 def test_alvo_nenhum_do_piloto_escreve_title() -> None:
-    """O `escrever()` não pode ganhar um caminho para `title` FORA da guarda.
-
-    **O CANAL EXISTE — 03/09/2026, fato substituído.** Este bilhete dizia *"não
-    há canal, e ele reprova no dia em que houver"*, e as duas metades caíram no
-    mesmo dia: `atributo_escrevivel` passou a aceitar `title` (era o `fim.html`
-    pedindo `data-hef-atributo="title"` nas vinte páginas e sendo recusado
-    calado), e esta linha **não reprovou** — ela procura `el.title =` e
-    `setAttribute('title')` literais, e o ramo `atributo` escreve
-    `setAttribute(nome, t)` com o nome vindo da página.
-
-    **O QUE ISSO DEIXA PARA A ABA 10:** a dica da linha por controle foi
-    REMOVIDA justamente por não haver canal. Com um, ela pode voltar VIVA — com
-    o modelo e a conta do aparelho —, e não ficar fora por inércia. Ver
-    `aba10.linha_do_controle`; é trabalho de quem tomar aquela aba.
-
-    **O QUE ESTA LINHA AINDA GUARDA, e é por isso que ela fica:** o caminho de
-    fora da guarda. Um `el.title = t` no `escrever()` pintaria `title` sem
-    passar por `atributo_escrevivel`, e aí o nome do atributo deixaria de ser
-    uma decisão da lista curta — que é o que impede um `data-hef-visto` forjado.
-    O canal legítimo é o alvo `atributo` com o nome NA LISTA, e só ele.
-
-    MORDIDA: acrescente `el.title = t;` ao `escrever()` de `hefesto_vivo`.
-    """
+    """O `escrever()` não pode ganhar um caminho para `title` FORA da guarda."""
     fonte = hefesto_vivo.PINTAR if hasattr(hefesto_vivo, "PINTAR") else ""
     for nome in dir(hefesto_vivo):
         valor = getattr(hefesto_vivo, nome)

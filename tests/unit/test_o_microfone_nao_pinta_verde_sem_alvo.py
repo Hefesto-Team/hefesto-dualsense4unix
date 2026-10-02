@@ -46,8 +46,6 @@ PROMOTOR = "51-hefesto-dualsense-no-default-source.conf"
 DISABLE_SRC = "52-hefesto-dualsense-disable-source.conf"
 
 #: Duas placas DualSense, no formato de duas linhas por placa que o
-#: `/proc/asound/cards` usa — copiado da bancada dela de 15/08/2026, sem
-#: nenhum dado de identidade (o `/proc/asound/cards` não traz endereço).
 CARDS_COM_DUALSENSE = """\
  0 [HDMI           ]: HDA-Intel - HDA ATI HDMI
                       HDA ATI HDMI at 0xfe960000 irq 66
@@ -55,7 +53,6 @@ CARDS_COM_DUALSENSE = """\
                       Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0d
 """
 
-#: A mesma máquina com os controles no RÁDIO: nenhuma placa do controle.
 CARDS_SEM_DUALSENSE = """\
  0 [HDMI           ]: HDA-Intel - HDA ATI HDMI
                       HDA ATI HDMI at 0xfe960000 irq 66
@@ -95,17 +92,10 @@ def _tela(
     return obj, rotulo
 
 
-# ---------------------------------------------------------------------------
-# O defeito
-# ---------------------------------------------------------------------------
 def test_sem_placa_do_controle_a_tela_nao_escreve_ligado_em_verde(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O caso exato do defeito: drop-ins no lugar, alvo nenhum.
-
-    ARRANQUE A CURA: apague o ramo `if self._placas_de_microfone() == 0` de
-    `_mic_state` e este caso REPROVA — a tela volta a `MIC_LIGADO` e ao verde.
-    """
+    """O caso exato do defeito: drop-ins no lugar, alvo nenhum."""
     obj, rotulo = _tela(tmp_path, monkeypatch, CARDS_SEM_DUALSENSE)
     obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
 
@@ -139,12 +129,7 @@ def test_com_placa_do_controle_o_verde_volta(
 def test_o_alvo_nao_apaga_o_que_a_nossa_configuracao_ja_sabia(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cards: str, esperado: str
 ) -> None:
-    """O alvo fecha o ramo VERDE, e só ele.
-
-    "Suprimido" é um drop-in que NÓS escrevemos: é verdade com placa e sem
-    placa, e trocá-lo por "sem alvo" seria esconder uma escolha dela atrás de
-    uma ausência de hardware.
-    """
+    """O alvo fecha o ramo VERDE, e só ele."""
     obj, _rotulo = _tela(tmp_path, monkeypatch, cards)
     obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
     obj._wp_dropin_dir().joinpath(DISABLE_SRC).write_text("x", encoding="utf-8")
@@ -161,22 +146,10 @@ def test_sem_promotor_continua_sendo_sem_promotor_mesmo_sem_placa(
     assert "sem prioridade" in rotulo.markup, rotulo.markup
 
 
-# ---------------------------------------------------------------------------
-# A frase — o que ela pode e o que ela NÃO pode dizer
-# ---------------------------------------------------------------------------
 def test_a_frase_nao_conclui_que_o_aparelho_esta_mudo(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A régua mede a ROTA, e a frase não pode falar do APARELHO.
-
-    Medido em 15/08/2026 e escrito no mapa (`assimetria_declarada`): os
-    controles do rádio não têm placa ALSA nenhuma, o que prova que a rota ALSA
-    não existe no rádio — **não** que o aparelho não capte por rádio. Uma frase
-    que conclua "o microfone não funciona" transforma a medição no seu oposto.
-
-    ARRANQUE A CURA: troque a dica por "o microfone deste controle não
-    funciona" e este caso REPROVA.
-    """
+    """A régua mede a ROTA, e a frase não pode falar do APARELHO."""
     obj, rotulo = _tela(tmp_path, monkeypatch, CARDS_SEM_DUALSENSE)
     obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
     obj._refresh_mic_status()
@@ -195,7 +168,6 @@ def test_a_frase_nao_conclui_que_o_aparelho_esta_mudo(
             f"a dica conclui sobre o APARELHO a partir de uma medição de ROTA "
             f"({proibido!r}): {dica!r}"
         )
-    # E diz o que fazer — a régua da casa para toda frase de diagnóstico.
     assert "cabo" in dica and "Atualizar" in dica, dica
 
 

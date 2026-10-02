@@ -1,14 +1,4 @@
-"""REPLICA-03 no vpad uhid — replicação do output do jogo (sem /dev/uhid).
-
-O report 0x02 que o jogo escreve no hidraw do vpad carrega, além do rumble
-(que já tinha passthrough), gatilhos adaptativos, lightbar e player-LEDs.
-Estes testes travam o parser (offsets do `dualsense_output_report_common` do
-kernel / `DS5EffectsState_t` do SDL), a política de posse (só replica na
-sessão UHID_OPEN..UHID_CLOSE, com graça pós-probe), o dedup por valor, o
-rate-limit por categoria e a devolução do perfil no fim da sessão.
-
-Mesma técnica do `test_uhid_gamepad.py`: fd falso via monkeypatch de os.*.
-"""
+"""REPLICA-03 no vpad uhid — replicação do output do jogo (sem /dev/uhid)."""
 from __future__ import annotations
 
 import struct
@@ -80,7 +70,6 @@ def _evento(tipo: int) -> bytes:
     return struct.pack("<I", tipo) + bytes(8)
 
 
-#: Blocos de trigger effect sintéticos (modo + 10 parâmetros), estilo SDL.
 _BLOCO_R = bytes([0x21, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 _BLOCO_L = bytes([0x26, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
 
@@ -204,11 +193,7 @@ class TestParserDoReport:
     def test_player_leds_replicam_e_o_bit_de_fade_e_ignorado(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """flag1 bit 0x10 (kernel: PLAYER_INDICATOR_CONTROL_ENABLE) + [43].
-
-        O 0x20 do byte é o "sem fade" do firmware, não um sexto LED — o kernel
-        também manda `player_leds & 0x1F` do lado de lá.
-        """
+        """flag1 bit 0x10 (kernel: PLAYER_INDICATOR_CONTROL_ENABLE) + [43]."""
         sinks = _Sinks()
         pad, _ = _pad_em_sessao(fake_uhid, **sinks.kwargs())
         fake_uhid.reads.append(
@@ -268,10 +253,10 @@ class TestParserDoReport:
         """Jogo mandando report curto (flags ligados sem payload) não derruba."""
         sinks = _Sinks()
         pad, _ = _pad_em_sessao(fake_uhid, **sinks.kwargs())
-        curto = bytes([0x02, 0x04 | 0x08, 0x04 | 0x10])  # só os flags
+        curto = bytes([0x02, 0x04 | 0x08, 0x04 | 0x10])
         fake_uhid.reads.append(_output_event(curto))
 
-        pad.pump_ff()  # não levanta
+        pad.pump_ff()
 
         assert sinks.triggers == []
         assert sinks.cores == []
@@ -301,9 +286,7 @@ class TestPosseDaSessao:
     def test_graca_pos_probe_filtra_o_output_do_kernel(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """O probe do hid_playstation emite player-LED com a numeração DO KERNEL
-        logo após o START — replicá-lo renumeraria o físico a cada boot de vpad
-        (o P3 que o REPLICA-03 cura). Dentro da graça: descarta."""
+        """O probe do hid_playstation emite player-LED com a numeração DO KERNEL"""
         sinks = _Sinks()
         clock = _Clock()
         pad = UhidDualSense(
@@ -312,14 +295,12 @@ class TestPosseDaSessao:
         pad.start()
         fake_uhid.reads.append(_evento(UHID_START))
         fake_uhid.reads.append(_evento(UHID_OPEN))
-        # Ainda dentro da graça: o "output do probe".
         fake_uhid.reads.append(
             _output_event(_edge_report(flag1=0x10, player_mask=0x15))
         )
         pad.pump_ff()
         assert sinks.players == []
 
-        # Graça vencida: o output do JOGO replica normalmente.
         clock.t = _GAME_REPLICA_GRACE_S + 0.1
         fake_uhid.reads.append(
             _output_event(_edge_report(flag1=0x10, player_mask=0x02))
@@ -399,7 +380,7 @@ class TestDedupERateLimit:
                 _output_event(_edge_report(flag1=0x04, rgb=(7, 7, 7)))
             )
             pad.pump_ff()
-            clock.t += 1.0  # rate-limit fora da equação: o filtro é o dedup
+            clock.t += 1.0
 
         assert sinks.cores == [(7, 7, 7)]
         assert pad.lightbar_replicas == 1
@@ -407,15 +388,13 @@ class TestDedupERateLimit:
     def test_rajada_e_segurada_pelo_rate_limit_e_sai_no_pump_seguinte(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """Mais de ~250 Hz numa categoria: o valor NOVO fica pendente (não é
-        perdido) e é entregue no próximo pump com o intervalo vencido."""
+        """Mais de ~250 Hz numa categoria: o valor NOVO fica pendente (não é"""
         sinks = _Sinks()
         pad, clock = _pad_em_sessao(fake_uhid, **sinks.kwargs())
         fake_uhid.reads.append(
             _output_event(_edge_report(flag1=0x04, rgb=(1, 1, 1)))
         )
         pad.pump_ff()
-        # Mesmo instante: acima do rate — retido.
         fake_uhid.reads.append(
             _output_event(_edge_report(flag1=0x04, rgb=(2, 2, 2)))
         )
@@ -423,7 +402,7 @@ class TestDedupERateLimit:
         assert sinks.cores == [(1, 1, 1)]
 
         clock.t += _REPLICA_MIN_INTERVAL_S * 2
-        pad.pump_ff()  # flush do pendente, sem output novo
+        pad.pump_ff()
 
         assert sinks.cores == [(1, 1, 1), (2, 2, 2)]
 
@@ -450,7 +429,6 @@ class TestDedupERateLimit:
 
         pad.pump_ff()
 
-        # Duas categorias no mesmo instante: nenhuma atrasa a outra.
         assert sinks.triggers == [("right", _BLOCO_R)]
         assert sinks.cores == [(6, 6, 6)]
 
@@ -479,9 +457,9 @@ class TestRobustez:
             )
         )
 
-        pad.pump_ff()  # não propaga
+        pad.pump_ff()
 
-        assert pad.trigger_replicas == 2  # a entrega foi tentada (contada)
+        assert pad.trigger_replicas == 2
 
     def test_sem_sinks_nao_conta_replica(self, fake_uhid: _FakeFd) -> None:
         """Sem sink não há replicação — o contador não pode mentir."""
@@ -513,7 +491,7 @@ class TestRobustez:
         pad.pump_ff()
         fake_uhid.reads.append(_evento(UHID_CLOSE))
 
-        pad.pump_ff()  # não propaga
+        pad.pump_ff()
 
     def test_for_flavor_repassa_os_sinks_novos(self) -> None:
         kwargs = _Sinks().kwargs()

@@ -1,20 +1,4 @@
-"""PONTE-ESCADA-01 — a ponte gravada passa a valer NO LANÇAMENTO.
-
-*"Ela confirma UMA vez qual pegou; o produto grava para sempre."* O lugar em
-que "para sempre" acontece é o `arm_launch_profile`: é ele que arma o modo
-ANTES de o jogo executar (R-04). Este arquivo prova as três metades da divisão
-de poderes que a leva declarou, e cada teste é escrito para MORDER:
-
-- **o perfil manda.** Carimbo discordando do `mode` não troca a máscara dela —
-  grita a divergência e obedece ao perfil;
-- **o carimbo preenche o silêncio.** Perfil sem `mode` era o ramo em que nada
-  era armado; com o `Profile.ponte` carimbado, é ele que arma;
-- **a ponte entregue só é relatada quando a máscara CONVERGIU**, e o arming
-  não carimba nada — quem grava é `profiles/manager.confirmar_ponte`.
-
-A gaveta é UMA (`Profile.ponte`, PONTE-CONFIRMADA-01): estes testes leem o
-carimbo do próprio perfil, e nenhum arquivo de estado paralelo existe.
-"""
+"""PONTE-ESCADA-01 — a ponte gravada passa a valer NO LANÇAMENTO."""
 
 from __future__ import annotations
 
@@ -33,7 +17,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-APPID = 1599660  # Sackboy: A Big Adventure
+APPID = 1599660
 
 
 def _marker(tmp_path: Path, *, appid: int = APPID, epoch: int = 1000) -> Path:
@@ -74,8 +58,6 @@ class _DaemonFalso:
         self, mode: Any, *, profile: Any = None, origin: str = "autoswitch"
     ) -> str:
         self.aplicados.append((mode, profile, origin))
-        # O applier de verdade também MUDA a mesa; sem isto a divergência
-        # nunca fecharia e o teste mediria o dublê, não o produto.
         if getattr(mode, "kind", None) == "gamepad":
             self.config.gamepad_flavor = mode.gamepad_flavor
         return "aplicado"
@@ -127,19 +109,7 @@ class TestOCarimboPreencheOSilencioDoPerfil:
     def test_sem_carimbo_e_sem_modo_a_escada_arma_o_primeiro_degrau(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """SUBSTITUI `test_sem_carimbo_o_ramo_continua_sendo_o_de_antes`.
-
-        NOTA DATADA — 19/08/2026 (PONTE-ESCADA-LACO-01). Este teste afirmava
-        *"perfil sem modo continua sem armar nada"*, e essa afirmação era
-        verdadeira enquanto a escada não tinha chamador: `proximo_degrau` era
-        uma decisão sem ninguém para tomá-la. Não é decisão medida que se
-        apaga — é o retrato de um buraco, e o buraco foi fechado. O ramo
-        "nada a armar" era exatamente onde ela ficava com a máscara que
-        estivesse de pé por acaso.
-
-        O que NÃO mudou, e continua provado abaixo: nada é carimbado no
-        lançamento.
-        """
+        """SUBSTITUI `test_sem_carimbo_o_ramo_continua_sendo_o_de_antes`."""
         _marker(env_dir)
         monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID, _perfil(None))])
         daemon = _DaemonFalso(flavor="xbox")
@@ -174,7 +144,6 @@ class TestOPerfilManda:
         assert resultado is not None
         assert resultado["ponte_do_carimbo"] is False
         assert daemon.aplicados[0][0].gamepad_flavor == "dualsense"
-        # A discordância aparece INTEIRA para quem tem a palavra.
         assert resultado["ponte"] == "gamepad/dualsense"
         assert resultado["ponte_confirmada"] == "gamepad/xbox"
 
@@ -198,7 +167,6 @@ class TestRelatarNaoEConfirmar:
             "que o balde `sem_impedimento_conhecido` existe para não contar"
         )
         assert perfil.ponte is None, "o arming NÃO carimba: quem carimba é o gesto"
-        # E a escada continua tendo para onde ir.
         assert (
             pe.proximo_degrau(ponte_atual=pe.ESCADA[0].ponte) is pe.ESCADA[1]
         )
@@ -215,7 +183,6 @@ class TestRelatarNaoEConfirmar:
             def apply_profile_mode(
                 self, mode: Any, *, profile: Any = None, origin: str = "autoswitch"
             ) -> str:
-                # `bloqueado_por_jogo`: devolve "aplicou" e a mesa NÃO muda.
                 self.aplicados.append((mode, profile, origin))
                 return "bloqueado_por_jogo"
 

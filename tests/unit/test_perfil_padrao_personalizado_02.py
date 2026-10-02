@@ -1,27 +1,4 @@
-"""PERFIL-PADRAO-PERSONALIZADO-01, metade B — abrir no ÚLTIMO perfil ativado.
-
-Palavra dela, 05/09/2026: *"ao abrir o programa ele deve iniciar com o ultimo  noqa-acento
-perfil ativado. **ate eu alterar novamente e ativar outro perfil**"*.
-
-MEDIDO ANTES DE CONSTRUIR, e o veredito é que **já funciona** — o item B não
-pediu código, pediu prova. A prova ao vivo, no daemon dela, em 05/09 às 02:05:
-
-    02:05:00  profile_activated      name=fallback   origin=manual  priority=0
-    02:05:03  Stopped/Started hefesto-dualsense4unix.service
-    02:05:04  profile_activated      name=fallback   origin=system  priority=0
-    02:05:04  last_profile_restored  name=fallback
-    02:05:21  profile_activated      name=meu_perfil origin=manual  priority=1
-    02:05:23  Stopped/Started hefesto-dualsense4unix.service
-    02:05:25  last_profile_restored  name=meu_perfil
-
-O que este arquivo acrescenta é a régua que faltava: a suíte já cobria UM
-gesto manual sobrevivendo ao autoswitch (`test_session_persist.py`), mas **não
-cobria o segundo gesto** — que é a metade da frase dela que diz "até eu alterar
-novamente". E é a metade com defeito possível: `resolve_boot_profile` dá a
-VITÓRIA AO MARKER quando os dois arquivos divergem, então um caminho que
-gravasse só o `session.json` na segunda ativação faria o boot voltar no perfil
-ANTERIOR — com todos os testes de hoje verdes.
-"""
+"""PERFIL-PADRAO-PERSONALIZADO-01, metade B — abrir no ÚLTIMO perfil ativado."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -54,7 +31,6 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         xdg_paths, "profiles_dir", lambda ensure=False: perfis
     )
-    # A semeadura não pode despejar os presets do repositório aqui dentro.
     monkeypatch.setattr(loader_module, "_seed_attempted", True)
     return tmp_path
 
@@ -86,11 +62,7 @@ def _ativa_na_mao(manager: object, nome: str) -> None:
 
 @pytest.mark.asyncio
 async def test_o_ciclo_ativa_a_ativa_b_reinicia_e_volta_em_b(lar: Path) -> None:
-    """A frase dela inteira: ativa A, ativa B, reinicia — tem de voltar em B.
-
-    O que morde aqui é a SEGUNDA ativação. Um produto em que ela só pudesse
-    escolher uma vez passaria em todos os outros testes de sessão desta casa.
-    """
+    """A frase dela inteira: ativa A, ativa B, reinicia — tem de voltar em B."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -108,7 +80,6 @@ async def test_o_ciclo_ativa_a_ativa_b_reinicia_e_volta_em_b(lar: Path) -> None:
     _ativa_na_mao(manager, "Personalizado")
     assert resolve_boot_profile() == "Personalizado"
 
-    # ...até ela alterar novamente e ativar outro perfil.
     _ativa_na_mao(manager, "Sofá")
     assert load_last_profile() == "Sofá"
     assert read_active_marker() == "Sofá"
@@ -117,26 +88,18 @@ async def test_o_ciclo_ativa_a_ativa_b_reinicia_e_volta_em_b(lar: Path) -> None:
         "em resolve_boot_profile, e o boot voltaria no perfil anterior"
     )
 
-    # "Reinicia": um daemon novo, do zero.
     store = StateStore()
     await restore_last_profile(  # type: ignore[arg-type]
         _DaemonDeBoot(controller=controle, store=store)
     )
     assert store.active_profile == "Sofá"
 
-    # E o restore não é gesto novo: a intenção dela continua sendo a dela.
     assert resolve_boot_profile() == "Sofá"
 
 
 @pytest.mark.asyncio
 async def test_o_ciclo_sobrevive_ao_jogo_que_abre_e_fecha(lar: Path) -> None:
-    """O buraco que o item mandou procurar: o auto-switch no meio do ciclo.
-
-    Ela ativa "Sofá" na mão, um jogo abre e o autoswitch troca o perfil, o jogo
-    fecha e o autoswitch volta ao catch-all. Nenhuma dessas trocas é gesto
-    dela, e nenhuma pode reescrever a escolha — o defeito que PERFIL-03 curou
-    era exatamente o autoswitch clobberando o `session.json` a cada janela.
-    """
+    """O buraco que o item mandou procurar: o auto-switch no meio do ciclo."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -165,8 +128,8 @@ async def test_o_ciclo_sobrevive_ao_jogo_que_abre_e_fecha(lar: Path) -> None:
     _ativa_na_mao(manager, "Personalizado")
     _ativa_na_mao(manager, "Sofá")
 
-    manager.activate("Stray", origin="autoswitch")  # o jogo abriu
-    manager.activate("Personalizado", origin="autoswitch")  # o jogo fechou
+    manager.activate("Stray", origin="autoswitch")
+    manager.activate("Personalizado", origin="autoswitch")
 
     assert load_last_profile() == "Sofá"
     assert read_active_marker() == "Sofá"
@@ -180,13 +143,7 @@ async def test_o_ciclo_sobrevive_ao_jogo_que_abre_e_fecha(lar: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_o_perfil_renomeado_continua_voltando_no_boot(lar: Path) -> None:
-    """A metade A e a metade B no MESMO teste — é onde elas se quebram.
-
-    Renomear o perfil padrão sem repontar `session.json`/`active_profile.txt`
-    deixaria o boot procurando `meu_perfil`, que não existe mais: o restore
-    falharia e ela abriria o programa sem perfil nenhum. Este teste roda a
-    migração de verdade, do disco à ativação.
-    """
+    """A metade A e a metade B no MESMO teste — é onde elas se quebram."""
     import json
 
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
@@ -202,7 +159,6 @@ async def test_o_perfil_renomeado_continua_voltando_no_boot(lar: Path) -> None:
     from hefesto_dualsense4unix.testing import FakeController
     from hefesto_dualsense4unix.utils.session import save_last_profile
 
-    # O disco dela ANTES da atualização: o perfil com o nome antigo, ativo.
     save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=1))
     save_last_profile("meu_perfil")
     save_active_marker("meu_perfil")
@@ -214,10 +170,6 @@ async def test_o_perfil_renomeado_continua_voltando_no_boot(lar: Path) -> None:
         (perfis / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
     )["name"] == NOME_DO_PADRAO
 
-    # NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, itens
-    # 6 e 8): o Freestyle só volta no boot com o botão aceso; apagado, a sessão
-    # que o aponta é «sem escolha». A régua liga o botão para medir o que ela
-    # mede: a renomeação não quebra o restauro.
     from hefesto_dualsense4unix.utils.session import save_freestyle_ligado
 
     save_freestyle_ligado(True)

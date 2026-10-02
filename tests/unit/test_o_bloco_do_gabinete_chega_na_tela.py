@@ -1,21 +1,5 @@
 #!/usr/bin/env python3
-"""O `blocos` do pacote atravessa o `normalizar` e chega ao JS.
-
-POR QUE ESTA RÉGUA EXISTE, e o defeito ficou DOIS DIAS vivo e calado:
-`pacotes.normalizar()` tinha um ramo `if isinstance(valor, dict): continue` que
-comia toda chave cujo valor fosse dicionário — e `blocos` é um dicionário de
-`seletor CSS -> HTML pronto`. O `BOOTSTRAP` do piloto sabe consumi-lo desde
-01/09/2026 (`hefesto_vivo.py`, o laço sobre `p.blocos`), e `a08_conexoes.py`
-o emite para trocar o MAPA DO GABINETE dela inteiro.
-
-Resultado medido em 02/09/2026: o mapa do gabinete e a lista de aparelhos da
-aba Conexões nunca chegavam à tela pelo tique, e **nada acusava**. Quatro
-frentes independentes da leva daquele dia o acharam, cada uma pelo seu lado —
-e nenhuma tinha território para curá-lo, porque a cura mora no `__init__.py`.
-
-A RÉGUA MORDE assim: devolva o `continue` cego ao `normalizar` (ou apague o
-bloco que copia `blocos` para a saída) e os três primeiros testes reprovam.
-"""
+"""O `blocos` do pacote atravessa o `normalizar` e chega ao JS."""
 from __future__ import annotations
 
 import re
@@ -60,11 +44,7 @@ def test_o_pacote_da_aba_conexoes_emite_blocos_e_ele_sobrevive() -> None:
 
 
 def test_o_bootstrap_do_piloto_consome_a_chave_com_esse_nome() -> None:
-    """As duas pontas usam a MESMA palavra.
-
-    Sem isto, renomear de um lado só refaz o defeito: o pacote emite, o
-    `normalizar` deixa passar, e o JS procura outra chave.
-    """
+    """As duas pontas usam a MESMA palavra."""
     piloto = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py").read_text(
         encoding="utf-8"
     )
@@ -73,12 +53,7 @@ def test_o_bootstrap_do_piloto_consome_a_chave_com_esse_nome() -> None:
 
 @pytest.mark.parametrize("chave", ["estrutura", "cobertura_detalhada", "qualquer_dict"])
 def test_dict_que_nao_e_blocos_continua_descartado(chave: str) -> None:
-    """A cura é CIRÚRGICA: só o `blocos` atravessa.
-
-    O ramo que descarta dicionário existe por uma razão medida — escrever
-    `[object Object]` numa caixa é pior que não escrever. A cura não pode
-    reabrir isso.
-    """
+    """A cura é CIRÚRGICA: só o `blocos` atravessa."""
     carga = normalizar({chave: {"a": 1}})
     assert chave not in carga
     assert chave not in carga["mesa"]

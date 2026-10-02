@@ -1,27 +1,4 @@
-"""O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026) — gastar menos sem perder feature.
-
-Pedido dela: *«Modo Economia de Bateria (se clica tá setado na economia Low
-Iluminação Fraca, Vibraçao Economia, Gatilho (algum de economia pra mantermos
-as features funcionando mas gastando menos, entende?)»*
-<!-- noqa-acento: citação literal dela -->
-
-O que este arquivo vigia, e a régua que manda sobre todas as outras: **a
-economia que desliga uma feature reprova.** A luz fica mais fraca e não apaga,
-a vibração ganha teto e não some, o gatilho gasta menos motor e mantém o efeito.
-
-1. CADA PEÇA, sozinha: o gatilho de todo modo que a casa conhece (a lista é a
-   das fábricas, nos dois sentidos), a luz e a vibração.
-2. O APARELHO: o backend de verdade com quatro controles (P1 a P4, cabo e
-   rádio), o que cada um recebe com e sem a economia.
-3. A REGRA entre o global e o do controle, e a mesa em «Bateria longa» ligando
-   em todos sem cortar a vibração duas vezes.
-4. ONDE MORA: na declaração da mesa, ao lado do global — a economia do
-   controle atravessa a troca de perfil, e o escritor que a tela manda pelo
-   ``machine.declare`` não apaga o resto do controle.
-
-MORDIDAS (o que arrancar para ver reprovar) — cada teste diz a sua no corpo.
-MAC só da faixa forjada (aa:bb:cc).
-"""
+"""O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026) — gastar menos sem perder feature."""
 from __future__ import annotations
 
 import importlib
@@ -69,13 +46,9 @@ from hefesto_dualsense4unix.utils.maquina import (
 )
 from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
 
-#: As quatro peças da mesa, na faixa forjada. A chave do backend tem os
-#: dois-pontos; a do perfil é o `uniq` normalizado.
 CHAVES = ("AA:BB:CC:00:00:01", "AA:BB:CC:00:00:02", "AA:BB:CC:00:00:03", "AA:BB:CC:00:00:04")
 UNIQS = tuple(c.replace(":", "").lower() for c in CHAVES)
 
-#: Parâmetros válidos de cada modo — todo modo que tem força tem a força ACESA
-#: aqui, para que "a economia apagou" seja visível.
 AMOSTRAS: dict[str, list[Any]] = {
     "Off": [],
     "Rigid": [5, 200],
@@ -117,17 +90,8 @@ def _declarar(teto: str | None = None, economia: tuple[str, ...] = ()) -> Maquin
     return maquina
 
 
-# ---------------------------------------------------------------------------
-# 1. CADA PEÇA — a economia não desliga nada
-# ---------------------------------------------------------------------------
-
-
 def test_todo_modo_de_gatilho_esta_classificado_nos_dois_sentidos() -> None:
-    """Modo novo nas fábricas sem linha aqui reprova; linha sem modo também.
-
-    MORDIDA: tire o ``"Vibration"`` de ``FORCAS_DO_GATILHO`` e veja reprovar
-    nomeando o modo — ele passaria a ir ao aparelho com a força inteira.
-    """
+    """Modo novo nas fábricas sem linha aqui reprova; linha sem modo também."""
     classificados = set(FORCAS_DO_GATILHO) | set(MODOS_DE_GATILHO_SEM_FORCA)
     assert sorted(set(PRESET_FACTORIES) - classificados) == []
     assert sorted(classificados - set(PRESET_FACTORIES)) == []
@@ -136,16 +100,7 @@ def test_todo_modo_de_gatilho_esta_classificado_nos_dois_sentidos() -> None:
 
 @pytest.mark.parametrize("modo", sorted(PRESET_FACTORIES))
 def test_o_gatilho_na_economia_mantem_o_efeito_e_gasta_menos(modo: str) -> None:
-    """O mesmo modo no aparelho, as mesmas zonas acesas, e força menor ou igual.
-
-    É a régua do pedido dela: *«pra mantermos as features funcionando mas
-    gastando menos»*. Força que era maior que zero continua maior que zero —
-    a zona que resistia continua resistindo.
-
-    MORDIDA: faça ``schema._forca_na_economia`` devolver ``0`` e todo modo com
-    força reprova no «apagou»; faça devolver ``valor`` e reprova no «gasta
-    menos».
-    """
+    """O mesmo modo no aparelho, as mesmas zonas acesas, e força menor ou igual."""
     antes = TriggerConfig(mode=modo, params=list(AMOSTRAS[modo]))
     depois = gatilho_na_economia(antes)
     assert depois.mode == antes.mode
@@ -179,10 +134,7 @@ def test_o_gatilho_aninhado_tambem_entra_na_economia() -> None:
 
 
 def test_a_luz_fica_mais_fraca_e_nao_apaga() -> None:
-    """Barra no teto e acesa; luzes de número no Fraco; a cor não é escrita.
-
-    MORDIDA: ponha ``BRILHO_DA_BARRA_NA_ECONOMIA = 0.0`` e o «apagou» reprova.
-    """
+    """Barra no teto e acesa; luzes de número no Fraco; a cor não é escrita."""
     assert 0.0 < BRILHO_DA_BARRA_NA_ECONOMIA < 1.0
     do_perfil = LedsConfig(lightbar=(0, 0, 255), lightbar_brightness=1.0,
                            player_led_brightness="forte")
@@ -194,8 +146,6 @@ def test_a_luz_fica_mais_fraca_e_nao_apaga() -> None:
     assert "lightbar" not in dele.model_fields_set, "a economia escreveu a cor"
     assert "player_leds" not in dele.model_fields_set
 
-    # TETO, nunca troca: quem escolheu menos continua no que escolheu, e o
-    # apagado por escolha dela continua apagado.
     fraca = leds_na_economia(LedsConfig.model_validate({"lightbar_brightness": 0.1}), do_perfil)
     assert fraca is not None and fraca.lightbar_brightness == 0.1
     apagada = leds_na_economia(LedsConfig.model_validate({"lightbar_brightness": 0.0}), do_perfil)
@@ -214,15 +164,7 @@ def _mult(policy: str | None, custom: float | None = None) -> float:
 @pytest.mark.parametrize("da_peca", [None, "balanceado", "max", "economia", "custom"])
 @pytest.mark.parametrize("do_perfil", [None, "economia", "balanceado", "max"])
 def test_a_vibracao_tem_teto_e_nao_some(da_peca: str | None, do_perfil: str | None) -> None:
-    """O que chega ao motor fica no degrau Economia ou abaixo, e nunca em zero.
-
-    A conta é a do produto: o fator por peça é ``mult_da_peca / mult_do_perfil``
-    (``_controllers_to_rumble_scales``), sobre o que a política do perfil já
-    deixou passar.
-
-    MORDIDA: em ``vibracao_na_economia``, devolva ``dela`` sempre — a peça em
-    «Máximo» chega a 150% e reprova no teto.
-    """
+    """O que chega ao motor fica no degrau Economia ou abaixo, e nunca em zero."""
     custom = 0.2 if da_peca == "custom" else None
     dela = (
         None
@@ -254,10 +196,7 @@ def test_as_barras_de_motor_sobrevivem_a_economia() -> None:
 
 
 def test_toda_peca_da_tabela_tem_ponto_de_aplicacao_ou_razao() -> None:
-    """A tabela é o dono do que a economia faz: ponto importável, ou a razão.
-
-    MORDIDA: troque o ponto do «Gatilhos» por ``schema:gatilho_que_nao_existe``.
-    """
+    """A tabela é o dono do que a economia faz: ponto importável, ou a razão."""
     nomes = [p.nome for p in A_ECONOMIA_EM_CADA_PECA]
     assert {"Barra de luz", "Luzes de número", "Vibração", "Gatilhos"} <= set(nomes)
     for peca in A_ECONOMIA_EM_CADA_PECA:
@@ -266,11 +205,6 @@ def test_toda_peca_da_tabela_tem_ponto_de_aplicacao_ou_razao() -> None:
             continue
         modulo, atributo = peca.ponto_de_aplicacao.split(":")
         assert callable(getattr(importlib.import_module(modulo), atributo)), peca.nome
-
-
-# ---------------------------------------------------------------------------
-# 2. O APARELHO — P1 a P4, cabo e rádio
-# ---------------------------------------------------------------------------
 
 
 def _mesa_de_quatro(transporte_do_alvo: str, alvo: int) -> tuple[Any, list[_FakeHandle]]:
@@ -331,15 +265,7 @@ def _perfil_com_gatilho(gatilho: TriggerConfig) -> Profile:
 def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(
     alvo: int, transporte: str
 ) -> None:
-    """O backend de verdade, quatro peças: só a que ligou muda, e nada apaga.
-
-    O perfil NÃO cita a peça: a economia é do controle (declaração da mesa), e
-    vale no perfil que estiver ativo.
-
-    MORDIDA: em ``ProfileManager.apply``, apague a linha
-    ``profile = _perfil_na_economia(...)`` — o alvo recebe o mesmo que os
-    outros e o «gasta menos» reprova.
-    """
+    """O backend de verdade, quatro peças: só a que ligou muda, e nada apaga."""
     inst, handles = _mesa_de_quatro(transporte, alvo)
     sem = _o_que_cada_um_recebe(inst, handles, _perfil())
     gatilhos = _perfil().triggers
@@ -358,42 +284,20 @@ def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(
             assert com[i] == sem[i], f"P{i + 1} mudou sem ter ligado a economia"
     cor_sem, modo_sem, l_sem, r_sem, forte_sem, fraco_sem = sem[alvo]
     cor_com, modo_com, l_com, r_com, forte_com, fraco_com = com[alvo]
-    # A LUZ: mais fraca, acesa, e na mesma cor.
     assert 0 < max(cor_com) < max(cor_sem)
     assert [c > 0 for c in cor_com] == [c > 0 for c in cor_sem]
-    # O GATILHO: o mesmo efeito, com menos força — e EXATAMENTE o da economia.
-    # "Diferente do de antes" sozinho dava verde sobre a força zerada no mesmo
-    # modo (medido na conferência de 25/09/2026); o oráculo é o que morde.
     assert modo_com == modo_sem
     assert l_com != l_sem and r_com != r_sem
     assert (modo_com, l_com, r_com) == (
         oraculo[alvo][0], oraculo[alvo][1], oraculo[alvo][3]
     ), "o aparelho não recebeu o gatilho da economia"
-    # A VIBRAÇÃO: no degrau Economia, e viva.
     assert 0 < forte_com < forte_sem and 0 < fraco_com < fraco_sem
     assert forte_com == round(forte_sem * _mult("economia"))
 
 
 @pytest.mark.parametrize("modo", sorted(PRESET_FACTORIES))
 def test_o_aparelho_recebe_o_gatilho_da_economia_em_todo_modo(modo: str) -> None:
-    """No aparelho, a peça que ligou recebe EXATAMENTE o gatilho da economia.
-
-    O oráculo é o mesmo perfil com o gatilho já passado por
-    :func:`gatilho_na_economia` e sem economia nenhuma — a função que a régua
-    de cada modo prova que mantém o efeito e não apaga a zona. Sem este elo, o
-    caminho até o aparelho (``gatilhos_na_economia``, o mapa por peça, o
-    ``OutputSpec``) podia zerar a força no MESMO modo: o byte do modo ficava
-    igual, a força ficava diferente da de antes, e as duas asserções do teste
-    de quatro peças davam verde sobre o gatilho desligado (medido na
-    conferência de 25/09/2026).
-
-    O alvo é o P3 pelo rádio; a posição e o transporte são do teste de quatro
-    peças acima, que usa o mesmo oráculo de P1 a P4 nos dois — aqui o que
-    varia é o MODO, e cada modo custa três ativações da mesa inteira.
-
-    MORDIDA: em ``gatilhos_na_economia``, devolva o lado com as forças em
-    ``0`` — o alvo recebe o gatilho apagado e reprova em todo modo com força.
-    """
+    """No aparelho, a peça que ligou recebe EXATAMENTE o gatilho da economia."""
     alvo, transporte = 2, "BT"
     lado = TriggerConfig(mode=modo, params=list(AMOSTRAS[modo]))
     perfil = _perfil_com_gatilho(lado)
@@ -415,11 +319,7 @@ def test_o_aparelho_recebe_o_gatilho_da_economia_em_todo_modo(modo: str) -> None
 
 @pytest.mark.parametrize("modo", sorted(PRESET_FACTORIES))
 def test_a_mesa_em_bateria_longa_leva_o_gatilho_da_economia_aos_quatro(modo: str) -> None:
-    """«Bateria longa»: as quatro peças recebem o gatilho da economia, e só ele.
-
-    MORDIDA: em ``gatilhos_do_perfil_na_economia``, zere as forças — as quatro
-    recebem o gatilho apagado e reprovam.
-    """
+    """«Bateria longa»: as quatro peças recebem o gatilho da economia, e só ele."""
     lado = TriggerConfig(mode=modo, params=list(AMOSTRAS[modo]))
     esperado = _gatilhos_no_aparelho(
         _perfil_com_gatilho(gatilho_na_economia(lado)), "BT", 1
@@ -432,17 +332,7 @@ def test_a_mesa_em_bateria_longa_leva_o_gatilho_da_economia_aos_quatro(modo: str
 @pytest.mark.parametrize("transporte", ["USB", "BT"])
 @pytest.mark.parametrize("alvo", [0, 1, 2, 3], ids=["P1", "P2", "P3", "P4"])
 def test_desligar_a_economia_devolve_o_aparelho_ao_de_antes(alvo: int, transporte: str) -> None:
-    """Liga, desliga, e o MESMO aparelho volta ao que recebia antes.
-
-    É o «mais reversível» do padrão dela, medido no backend que fica de pé
-    entre as ativações (não num backend novo a cada uma): a peça que ligou a
-    economia sem estar no perfil entra no mapa por peça, e a ativação seguinte
-    tem de tirá-la de lá — a luz, o gatilho e a vibração dela voltam inteiros.
-
-    MORDIDA: em ``ProfileManager.apply``, troque o ``set_led_scales``,
-    o ``set_rumble_scales`` ou o ``reset_profile_overrides`` por uma fusão que
-    não SUBSTITUI o mapa, e a economia fica presa na peça depois de desligada.
-    """
+    """Liga, desliga, e o MESMO aparelho volta ao que recebia antes."""
     inst, handles = _mesa_de_quatro(transporte, alvo)
     sem = _o_que_cada_um_recebe(inst, handles, _perfil())
     _declarar(economia=(UNIQS[alvo],))
@@ -467,16 +357,8 @@ def test_as_luzes_de_numero_do_controle_vao_ao_fraco() -> None:
     assert UNIQS[0] not in specs
 
 
-# ---------------------------------------------------------------------------
-# 3. A REGRA — a mesa e o controle
-# ---------------------------------------------------------------------------
-
-
 def test_a_regra_entre_a_mesa_e_o_controle() -> None:
-    """Vale se a mesa pedir OU o controle ligar; o controle não desliga a mesa.
-
-    MORDIDA: troque o ``or`` de ``economia_vale`` por ``and``.
-    """
+    """Vale se a mesa pedir OU o controle ligar; o controle não desliga a mesa."""
     assert economia_vale(None, False) is False
     assert economia_vale(False, False) is False
     assert economia_vale(True, False) is True
@@ -488,15 +370,7 @@ def test_a_regra_entre_a_mesa_e_o_controle() -> None:
 
 
 def test_a_mesa_em_bateria_longa_liga_a_economia_em_todos() -> None:
-    """«Bateria longa» na aba Sistema: os quatro gastam menos, e nenhum apaga.
-
-    A chave é a do disco (``economia``), lida pela fonte que o daemon registra
-    — a MESMA do teto de vibração. E a vibração NÃO é cortada de novo aqui: o
-    funil (``core.rumble._effective_mult``) já a corta para a mesa inteira.
-
-    MORDIDA: em ``_perfil_na_economia``, apague o ramo ``if mesa:`` — a luz
-    dos quatro volta inteira e reprova.
-    """
+    """«Bateria longa» na aba Sistema: os quatro gastam menos, e nenhum apaga."""
     inst, handles = _mesa_de_quatro("BT", 1)
     sem = _o_que_cada_um_recebe(inst, handles, _perfil())
     _declarar(teto="economia")
@@ -510,11 +384,7 @@ def test_a_mesa_em_bateria_longa_liga_a_economia_em_todos() -> None:
 
 
 def test_sob_a_mesa_a_peca_nao_fura_o_teto_nem_corta_duas_vezes() -> None:
-    """A peça em «Máximo» perde o que amplifica; a em «Economia» fica.
-
-    Sob a mesa o funil já corta no degrau Economia, então a peça só não pode
-    ter fator acima de 1 — e não pode ganhar um fator a mais abaixo disso.
-    """
+    """A peça em «Máximo» perde o que amplifica; a em «Economia» fica."""
     perfil = _perfil({
         UNIQS[0]: ControllerOverrides(rumble=ControllerRumbleOverride(policy="max")),
         UNIQS[1]: ControllerOverrides(rumble=ControllerRumbleOverride(policy="economia")),
@@ -550,21 +420,8 @@ def test_fonte_da_mesa_que_levanta_nao_derruba_a_ativacao() -> None:
     assert controles_em_economia() == frozenset({UNIQS[2]})
 
 
-# ---------------------------------------------------------------------------
-# 4. ONDE MORA — a declaração da mesa, ao lado do global
-# ---------------------------------------------------------------------------
-
-
 def test_a_economia_do_controle_atravessa_a_troca_de_perfil() -> None:
-    """Ligada no P2, ela vale no perfil do jogo que abrir depois.
-
-    É a razão de ela morar na declaração da mesa e não no perfil: a bateria é
-    do controle. No perfil, a troca automática para o perfil de um jogo a
-    apagaria, e ela teria de ligar de novo em cada jogo.
-
-    MORDIDA: em ``ProfileManager.apply``, passe ``frozenset()`` no lugar de
-    ``controles_em_economia()`` — o P2 volta a gastar tudo e reprova.
-    """
+    """Ligada no P2, ela vale no perfil do jogo que abrir depois."""
     _declarar(economia=(UNIQS[1],))
     outro = Profile(name="um_jogo", match=MatchAny(),
                     leds=LedsConfig(lightbar=(255, 0, 0), lightbar_brightness=1.0))
@@ -576,14 +433,7 @@ def test_a_economia_do_controle_atravessa_a_troca_de_perfil() -> None:
 
 
 def test_o_escritor_liga_desliga_e_nao_apaga_o_resto_do_controle() -> None:
-    """O corpo do ``machine.declare``: liga com ``true``, desliga com ``null``.
-
-    A fusão desce no dicionário, então o microfone e a cor do mesmo controle
-    ficam. E desligar é ``null`` presente (sobrescreve), nunca a chave ausente.
-
-    MORDIDA: faça o desligar omitir a chave — a economia fica ligada no disco
-    e o «desligado» reprova.
-    """
+    """O corpo do ``machine.declare``: liga com ``true``, desliga com ``null``."""
     disco = MaquinaConfig(
         controles={UNIQS[1]: ControleDeclarado(microfone=False, cor="Cobalt Blue")}
     ).model_dump()
@@ -626,15 +476,7 @@ def test_a_economia_atravessa_o_disco() -> None:
 
 
 def test_a_tabela_do_teto_diz_de_cada_peca_o_que_a_economia_faz() -> None:
-    """A «Bateria longa» na tabela do teto: cada linha com ponto diz a SUA frase.
-
-    A luz e os gatilhos ganharam ponto com esta sprint; a célula deles não pode
-    herdar o percentual da vibração (o gatilho vai a metade, não a 30%).
-
-    MORDIDA: em ``secao_orcamento.celula_do_perfil``, devolva
-    ``celula_do_teto(chave)`` para toda linha — o «Gatilhos» passa a dizer
-    «30% da força» e reprova.
-    """
+    """A «Bateria longa» na tabela do teto: cada linha com ponto diz a SUA frase."""
     pytest.importorskip("gi")
     from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
 
@@ -653,15 +495,7 @@ def test_a_tabela_do_teto_diz_de_cada_peca_o_que_a_economia_faz() -> None:
 async def test_o_daemon_registra_a_declaracao_no_boot_e_solta_ao_parar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O daemon vivo responde pela mesa; parado, deixa de responder.
-
-    A medição é DURANTE o laço (capturada antes do ``stop``) e DEPOIS dele —
-    um teste que só olhasse depois do ``stop`` daria verde sobre tudo.
-
-    MORDIDA: em ``Daemon.run``, apague o ``registrar_declaracao_da_mesa(...)``
-    do boot — o «durante» reprova; apague o ``_soltar_a_mesa(None)`` do
-    ``finally`` — o «depois» reprova.
-    """
+    """O daemon vivo responde pela mesa; parado, deixa de responder."""
     import asyncio
 
     from hefesto_dualsense4unix.core.controller import ControllerState
@@ -709,17 +543,7 @@ async def test_o_daemon_registra_a_declaracao_no_boot_e_solta_ao_parar(
 def test_o_daemon_reaplica_o_perfil_so_quando_a_economia_muda(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O clique no botão chega ao aparelho na hora — e só o clique da economia.
-
-    ``machine.declare`` rebinda ``_maquina``; quem rebinda chama
-    ``reaplicar_se_a_economia_mudou`` com a declaração de antes. Mudou a
-    economia (a da mesa OU a de um controle): o perfil corrente é reaplicado.
-    Mudou outra coisa (a cor do plástico): nada. Em Modo Nativo: nada — a
-    saída do nativo reaplica.
-
-    MORDIDA: faça o método devolver ``False`` sem comparar — o «ligou no P2»
-    reprova; tire a guarda do nativo — o último reprova.
-    """
+    """O clique no botão chega ao aparelho na hora — e só o clique da economia."""
     from hefesto_dualsense4unix.core.events import EventBus
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -753,23 +577,14 @@ def test_o_daemon_reaplica_o_perfil_so_quando_a_economia_muda(
 @pytest.mark.parametrize(
     "alvo",
     [
-        "02:fe:00:00:00:01",  # o gamepad virtual — não é peça de plástico
+        "02:fe:00:00:00:01",
         "path:/dev/input/event9",
         "usb-0000:00:14.0-3",
         "",
     ],
 )
 def test_o_escritor_recusa_a_chave_em_que_nao_e_seguro_gravar(alvo: str) -> None:
-    """A chave de peça que grava e o que o disco aceita são perguntas aos DONOS.
-
-    Medido na conferência de 25/09/2026: o escritor normalizava a chave com uma
-    terceira grafia própria, que aceitava o gamepad virtual e o endereço
-    forjado — o primeiro gravaria a economia numa peça que não existe, e o
-    segundo voltaria do ``machine.declare`` como ``declaracao_invalida``.
-
-    MORDIDA: devolva no escritor a normalização própria (tirar tudo que não é
-    hexa e exigir doze) — a do gamepad virtual reprova.
-    """
+    """A chave de peça que grava e o que o disco aceita são perguntas aos DONOS."""
     with pytest.raises(ValueError):
         declaracao_da_economia(alvo, True)
 
@@ -777,16 +592,7 @@ def test_o_escritor_recusa_a_chave_em_que_nao_e_seguro_gravar(alvo: str) -> None
 def test_o_escritor_pergunta_ao_disco_o_que_ele_aceita(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A segunda pergunta é ao ``MaquinaConfig``: o endereço forjado (``02…``).
-
-    O dono da chave de peça só recusa o gamepad virtual; o disco recusa todo
-    endereço que começa por ``02``. Para chegar a essa segunda porta sem
-    escrever um MAC fora da faixa forjada, o dono da chave é trocado por um
-    que deixa passar tudo — e a chave ``02fe…``, que ele deixaria, tem de ser
-    recusada pelo disco.
-
-    MORDIDA: tire do escritor o ``MaquinaConfig.model_validate`` e reprova.
-    """
+    """A segunda pergunta é ao ``MaquinaConfig``: o endereço forjado (``02…``)."""
     from hefesto_dualsense4unix.profiles import manager
 
     monkeypatch.setattr(

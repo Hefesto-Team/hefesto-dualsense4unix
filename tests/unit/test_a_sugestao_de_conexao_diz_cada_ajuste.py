@@ -1,23 +1,4 @@
-"""A SUGESTÃO DE CONEXÃO DIZ CADA AJUSTE — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01.
-
-A queixa dela, olhando a aba sem controle: *«pq sumiu a parte da caixinha no
-canto superior direito?»* — três AJUSTAR à esquerda e a caixa vazia à direita,
-porque o produto só desenhava UMA ordem, e só se ela tinha destino. As decisões
-são a `D-2609-A-SUGESTAO-DE-CONEXAO-DIZ-O-QUE-MOVER` (título e instrução) e a
-`D-2609-A-SUGESTAO-FICA-LARGA-E-COM-TITULO` (a caixa nunca some).
-
-O que cada régua prova, e a mordida que a derruba:
-
-* E1: três AJUSTAR sem destino → três linhas numeradas com o «O que fazer»;
-  zero → «Nada a mudar agora.» — MORDIDA: devolva `monta.NADA_A_DIZER` quando
-  a ordem não tem destino (o `_html_da_ordem` de antes) → reprova;
-* a ordem com destino traz o de→para, e a calada não entra — MORDIDA: tire o
-  `_calada(item)` de `_sugestoes_do_exame` → reprova;
-* a proposta da central é a linha do controle no adaptador errado, em qualquer
-  adaptador e com qualquer número de jogador — MORDIDA: tire a
-  `_sugestao_da_central` do `_html_da_ordem` → reprova;
-* o título mora FORA do campo que o tique repinta, nas duas páginas.
-"""
+"""A SUGESTÃO DE CONEXÃO DIZ CADA AJUSTE — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01."""
 from __future__ import annotations
 
 import pathlib
@@ -58,9 +39,6 @@ def _linhas(html: str) -> list[tuple[str, str]]:
     return re.findall(r'<div class="faca"><span class="n">(\d+)</span>([^<]*)</div>', html)
 
 
-# ---------------------------------------------------------------------------
-# E1 — a cena da imagem 1 dela, e o zero
-# ---------------------------------------------------------------------------
 def test_tres_ajustar_sem_destino_viram_tres_instrucoes() -> None:
     from hefesto_dualsense4unix.integrations.exame_da_mesa import (
         ESTADO_ATENCAO,
@@ -111,15 +89,13 @@ def test_a_ordem_com_destino_traz_o_de_para_e_a_calada_nao_entra(
 
 
 @pytest.mark.parametrize(("caminho", "esperado"), [
-    ("9-1.2", "Entrada 15"),      # o caminho que ela declarou na entrada
-    ("10-1.1.4", "Entrada 9"),    # o lado USB 3 do buraco, que o aparelho 3.0 usa
-    ("9-7", "9-7"),               # fora do mapa: fica o caminho, que é o que se sabe
+    ("9-1.2", "Entrada 15"),
+    ("10-1.1.4", "Entrada 9"),
+    ("9-7", "9-7"),
 ])
 def test_as_duas_pontas_dizem_a_entrada(monkeypatch: pytest.MonkeyPatch, caminho: str,
                                         esperado: str) -> None:
-    """26/09/2026, foto dela: a caixa da esquerda mostrava «4-1.1.4» e a da
-    direita só «2». MORDIDA: volte a caixa da esquerda ao `alvo.caminho`, ou
-    tire o laço dos nós do `mapa_das_portas.porta_de` — reprova."""
+    """26/09/2026, foto dela: a caixa da esquerda mostrava «4-1.1.4» e a da"""
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, MaquinaConfig, PortaDeclarada
 
@@ -128,9 +104,6 @@ def test_as_duas_pontas_dizem_a_entrada(monkeypatch: pytest.MonkeyPatch, caminho
         "9": PortaDeclarada(caminho="9-1.1.4", nos=["9-1.1-port4", "10-1.1-port4"]),
         "15": PortaDeclarada(caminho="9-1.2", nos=["9-1-port2", "10-1-port2"]),
     })
-    # O documento de VERDADE: o dublê só com `mapa` era mais pobre que o produto,
-    # e caiu quando a caixa passou a perguntar o nome da entrada
-    # (O-MAPA-QUE-ELA-CORRIGE-01).
     documento = MaquinaConfig(mapa=mapa)
     monkeypatch.setattr(a08, "_declaracao", lambda recarregar=False: documento)
     vazio = Linha(texto="", selo="")
@@ -142,9 +115,6 @@ def test_as_duas_pontas_dizem_a_entrada(monkeypatch: pytest.MonkeyPatch, caminho
             '<span class="caixa alvo">Entrada 2</span>') in html, html
 
 
-# ---------------------------------------------------------------------------
-# A proposta da central — o controle no adaptador errado
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("jogador", [1, 2, 3, 4])
 @pytest.mark.parametrize("de, para", [("L1", "L2"), ("L2", "L1"), ("L3", "L1")])
 def test_a_proposta_da_central_e_uma_linha_da_caixa(jogador: int, de: str, para: str) -> None:
@@ -176,9 +146,6 @@ def test_sem_proposta_ou_com_proposta_sem_aparelho_nao_ha_linha() -> None:
         assert a08._html_da_ordem([], c) == f'<div class="nada-a-mudar">{a08.NADA_A_MUDAR}</div>'
 
 
-# ---------------------------------------------------------------------------
-# A página — o título fora do campo, e a caixa que nunca some
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("arquivo", PAGINAS, ids=["bancada", "publicada"])
 def test_o_titulo_mora_fora_do_campo_que_o_tique_repinta(arquivo: pathlib.Path) -> None:
     a08 = _a08()
@@ -186,21 +153,13 @@ def test_o_titulo_mora_fora_do_campo_que_o_tique_repinta(arquivo: pathlib.Path) 
     caixa = re.search(r'<div class="sugestao">\s*<div class="ordem-tit">([^<]+)</div>\s*'
                       r'<div class="col-ordem" data-campo="ordem" data-hef-alvo="html">', html)
     assert caixa and caixa.group(1) == a08.TITULO_DA_ORDEM == "Sugestão de Conexão"
-    # as seis regras que escondiam a coluna vazia saíram
     assert ":has(.col-ordem:empty)" not in html
     assert ".duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child)" not in html
     assert ".sugestao .nada-a-mudar{" in html
 
 
 def test_o_lugar_que_o_bluez_ainda_nao_nomeou_nao_entra_na_frase() -> None:
-    """No primeiro tique o BlueZ ainda não disse o adaptador (`sabido` falso) e o
-    lugar não tem nome nem entrada: a frase sairia «Pareie o P2 no adaptador ».
-
-    Achado pela conferência (26/09/2026); o balão da central já esperava o
-    `sabido` (`_molde_do_balao`). Destino sem nome: nenhuma linha. Origem sem
-    nome: a linha sai, sem o de→para. MORDIDA: tire o filtro do `sabido` de
-    `_sugestao_da_central` → reprova.
-    """
+    """No primeiro tique o BlueZ ainda não disse o adaptador (`sabido` falso) e o"""
     a08 = _a08()
     anonimo = {"id": "L2", "nome": "", "entrada": "", "sabido": False}
     esquerda = {"id": "L1", "nome": "Esquerda"}

@@ -1,134 +1,5 @@
 #!/usr/bin/env python3
 """a_folha_do_microfone_por_controle.py — o microfone de cada controle, nos dois transportes, com o pico ao vivo.
-
-A ENCOMENDA É DELA, 09/09/2026, com o produto instalado e os controles na mão:
-
-    *"materializa o teste pensando em dois controles. um com cabo e o da  # (noqa-acento: citação dela)
-     direita via bt. vou desconectar os demais. Faz eles estilo o que  # (noqa-acento: citação dela)
-     fizemos hoje mais cedo. (…) com os controles pra eu poder ver e tal."*  # (noqa-acento: citação literal dela)
-«Estilo o que fizemos hoje mais cedo» é a `a_folha_dos_ensaios.py`, e o que
-esta herda dela é o desenho inteiro: uma TABELA declarativa que se monta em
-tela, **um controle por pergunta**, o martelo a 10 Hz, e nenhuma conclusão —
-as linhas do caderno saem PROPOSTAS no fim.
-
-AS TRÊS PERGUNTAS QUE ESTA FOLHA DECIDE
-----------------------------------------
-1. **MIC-OS-QUATRO-01** — o mic virtual de cada controle sobe e CAPTA, nos dois
-   transportes? Medido na mesa dela em 09/09: existe **UM** nó de quatro
-   controles. A causa é conhecida e não é defeito: `BtMicSubsystem.alvos()`
-   devolve `[]` enquanto ninguém PEDE o canal daquele controle — a ponte sobe
-   **sob demanda**, e quem pede é o botão do microfone. Por isso a linha 2
-   desta folha é esse pedido, num botão: ela aperta e vê o nó nascer na linha
-   de cima; aperta de novo e vê sumir;
-2. **MIC-VOLUME-02** (decisão dela, *"3-c"*) — o byte do aparelho
-   (`common[6]`, teto `0x40`, autorizado por `valid_flag0` bit 6) muda a
-   CAPTURA? Hoje ele é `decisao-tomada` no mapa: ninguém escreve, e ninguém
-   mediu se faz algo. O campo que a tela oferece mexe no ganho da FONTE no
-   PipeWire, que é **outra coisa** — e as duas estão lado a lado aqui, nas
-   linhas 4 e 5, de propósito. *Byte que o aparelho não obedece não ganha
-   campo*, e esta folha é quem decide;
-3. **A TARJA QUE MENTE**, achada em 09/09/2026 — a aba Controles diz *"O
-   sistema não publica um microfone para este controle"* sobre o controle do
-   CABO, que **tem** o nó publicado E placa USB. A frase nasce quando o daemon
-   responde `status: "sem_fonte"` ao `mic.volume.set`
-   (`interface/pacotes/a02_controles.py`, o ramo `TEXTO_MIC_SEM_FONTE`). A
-   linha 1 diz o que o SISTEMA publica; a linha 6 diz o que o DAEMON responde.
-   Se os dois discordarem na frente dela, a causa está achada.
-
-O QUE É DO PRODUTO E O QUE É DAQUI — e a lista importa
--------------------------------------------------------
-Do PRODUTO, sem uma linha de cópia:
-
-* quem é o nó de captura deste controle: `integrations/canal_do_microfone`
-  (`nome_do_canal` = `hefesto_mic_<seis hex do MAC>`) e
-  `integrations/audio_control.fonte_de_captura_do_uniq`, que é a MESMA função
-  que o `mic.volume.set` do daemon chama;
-* o pedido de canal: `mic.canal.set` por `app/ipc_bridge`, o mesmo ato do 🎙 da
-  tela e da borda do botão do plástico (`hotkey.ligar_o_microfone`);
-* o campo da tela: `mic.volume.set`, também por `app/ipc_bridge`;
-* a placa ALSA de cada controle do cabo: `microfone_no_cabo.placas_de_dualsense`
-  (casamento pelo dispositivo USB pai — a única identidade que o cabo tem);
-* o report de saída de cada transporte: `escrita_pelo_broker`.
-
-Daqui, e só isto: o desenho da folha, o martelo, o medidor de pico e a linha
-do caderno.
-
-**O NÓ SE CASA POR ENDEREÇO, NUNCA POR NÚMERO.** Medido nesta mesa em
-09/09/2026, quando o `os_nos_de_som_por_controle` ainda casava o mic virtual pela
-DESCRIÇÃO («Microfone do Controle N»): o mesmo nó `hefesto_mic_<hex6>` foi
-atribuído ao controle do CABO numa corrida e ao do RÁDIO na seguinte, sem nada
-ter mudado no áudio — o N é o número do controle, e ele anda. **O censo foi
-curado em 12/09/2026** (TRES-CONTAS-PARA-UM-NUMERO-01 §6) e hoje os dois casam
-igual, pelo nome de dentro. Aqui a pergunta *"de que controle é este nó"* sempre
-teve UM dono, e é o do produto:
-`fontes_de_captura.sufixo_do_canal_do_mic` / `canal_do_microfone.nome_do_canal`.
-
-A MESA É DE DOIS, E O CABO É O CONTROLE POSITIVO
--------------------------------------------------
-Um controle no CABO e um no RÁDIO. O som pelo cabo FUNCIONA (placa USB própria,
-medido), então pôr os dois lado a lado na mesma folha é o que transforma *"não
-ouvi nada"* em prova: ela aperta o do cabo e o pico sobe; aperta o do rádio, e
-a diferença é o resultado. Sem o positivo ao lado, silêncio no rádio não
-distingue *"o aparelho não aceita"* de *"o meu tom está mudo"*.
-
-A folha **descobre a mesa sozinha** e funciona com dois, com quatro e com um —
-e quando falta o par que ela precisa, DIZ, com todas as letras: *"preciso de um
-no cabo e um no rádio; achei dois no cabo"*. Nenhum endereço se digita.
-
-O MARTELO, e por que ele é obrigatório
----------------------------------------
-O daemon reescreve o `common` a cada report dele. Esta folha bate a 10 Hz nos
-campos que ela ASSUMIR. Se o pico PISCAR entre dois patamares, isso é um
-**sim** — é o daemon e a folha disputando, e disputa só existe se o byte age.
-
-**A posse é POR CONTROLE E POR ENSAIO**: o bit `0x40` do `valid_flag0` só liga
-quando ela liga a chave «Assumir» daquela coluna. Assumir tudo de uma vez briga
-com o daemon em todas as frentes e emborca a medição.
-
-O PICO NÃO GRAVA NADA EM DISCO
--------------------------------
-Ela está com o microfone aberto na própria sala. **A PORTA DE LEITURA é o
-`parec`** — o mesmo leitor que o produto usa para alimentar o canal por
-controle (`canal_do_microfone._ALIMENTADOR`) — lendo a fonte daquele controle
-com `--latency-msec=40`, a saída em `stdout` por PIPE, s16 mono. Cada pedaço
-que chega vira UM número (o pico daquele pedaço) e a amostra é **descartada na
-mesma linha**: não há `open` de escrita, não há `wave`, não há arquivo. E o
-ouvido só abre quando ela aperta «Ouvir o pico» — nenhum microfone nasce ligado
-aqui.
-
-Abrir o ouvido também é MEDIÇÃO, e não só instrumento: a ponte do rádio segue o
-estado da source (`dualsense_bt_audio.ESTADO_COM_OUVINTE`), então um ouvinte é
-o que a faz sair de `SUSPENDED` — o mesmo que o cabo faz de graça.
-
-A MORDIDA
----------
-* arranque o `c[0] |= VALID_FLAG0_MIC_VOLUME` de `common_do_byte` e o pico
-  deixa de responder ao deslizante — a autorização é o que o firmware exige;
-* troque o `6` de `COMMON_MIC_VOLUME` por `5` e a folha passa a mexer no
-  **alto-falante** achando que mede o microfone;
-* case o nó pela DESCRIÇÃO em vez do endereço e a coluna do rádio passa a
-  exibir o nó do cabo — é o defeito medido acima, e `tests/unit/
-  test_a_folha_do_microfone_casa_o_no_por_endereco.py` reprova nos três casos.
-
-Porta: o broker (`comum.abrir_no_hidraw`) para o byte, com o daemon VIVO; o
-socket do daemon (`app/ipc_bridge`) para os dois atos do produto; o `pactl`
-(`LC_ALL=C`, senão o parser diz «NÃO EXISTE» a um nó que está lá) e o `parec`
-para o som.
-
-Escreve no aparelho? **SIM, por duas portas, e só quando ela manda:**
-
-1. `common[6]` + o bit `0x40` do `valid_flag0` — apenas com «Assumir» ligado
-   naquela coluna. **A porta do hidraw só ABRE nesse instante**: até ela ligar
-   a chave, esta folha não escreve um byte sequer, e é por isso que `--listar`
-   e `--oculta` provam o instrumento sem tocar em controle nenhum;
-2. o botão «Pedir o canal», que é o ato do PRODUTO (`mic.canal.set`) — o mesmo
-   do 🎙 da tela, e ele mexe no mudo do firmware por desenho dela.
-
-USO
-    a_folha_do_microfone_por_controle.py --listar      # só lê: a mesa, os nós, o que o produto responde
-    a_folha_do_microfone_por_controle.py               # na tela dela
-    a_folha_do_microfone_por_controle.py --so-ajustes  # só os controles, sem uma linha de prosa
-    a_folha_do_microfone_por_controle.py --oculta      # sem tela, para régua
 """
 
 from __future__ import annotations
@@ -150,17 +21,8 @@ _SRC = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), "src")
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-#: As bandeiras que NÃO abrem janela na sessão viva.
 BANDEIRAS_SEM_TELA = ("--oculta", "--listar")
 
-# O ESCAPE É DECLARADO (TELA-DELA-02): sem `--oculta` nem `--listar` esta folha
-# é DELA e nasce na tela dela — vê-la é o ponto inteiro.
-#
-# **E ele só vale quando este arquivo é o PROGRAMA.** Importá-lo para medir (o
-# teste que morde faz isso) não pode assumir a tela dela de carona: `sys.argv`
-# ali é o do pytest, e um `HEFESTO_NA_TELA=1` plantado no ambiente do processo
-# valeria para todo módulo importado depois. A guarda da suíte já rodou; esta
-# linha não tem o que dizer sobre ela.
 _E_O_PROGRAMA = os.path.basename(sys.argv[0] or "") == os.path.basename(__file__)
 if _E_O_PROGRAMA and not any(b in sys.argv for b in BANDEIRAS_SEM_TELA):
     os.environ["HEFESTO_NA_TELA"] = "1"
@@ -177,10 +39,6 @@ from gi.repository import GLib, Gtk
 
 import hefesto_dualsense4unix.core.ds_output_report as rep
 
-# OS DONOS DA RESPOSTA, IMPORTADOS NO TOPO DE PROPÓSITO. O cabeçalho desta casa
-# imprime o CAMINHO de cada biblioteca que o instrumento usa, e um import
-# preguiçoso dentro da função sai como «NÃO IMPORTADO» — que é exatamente a
-# declaração de procedência deixando de declarar.
 from hefesto_dualsense4unix.integrations.audio_control import fonte_de_captura_do_uniq
 from hefesto_dualsense4unix.integrations.canal_do_microfone import nome_do_canal
 from comum import CABO, RADIO, cabecalho_do_instrumento, pintar_fundo_solido, resumo
@@ -194,43 +52,21 @@ from escrita_pelo_broker import (
 from microfone_no_cabo import placas_de_dualsense
 from os_nos_de_som_por_controle import blocos_longos, pactl
 
-#: O martelo. O daemon reescreve o `common` a cada report dele; ver o cabeçalho.
 HZ = 10.0
 
-#: De quanto em quanto tempo a lista viva de fontes é relida. Dois segundos é o
-#: que faz o nó «nascer» na tela logo depois do botão sem transformar a folha
-#: num laço de `pactl` — a leitura roda FORA da linha do GTK, num trabalhador.
 RELER_A_LISTA_S = 2.0
 
-#: O leitor do pico. É o MESMO do produto (`canal_do_microfone._ALIMENTADOR`):
-#: ele fala nome de `pactl` e escreve cru no `stdout`, que é o que permite ler
-#: o nível sem tocar em disco.
 LEITOR_DO_PICO = "parec"
 
-#: A latência que se pede ao leitor, e ela não é afinação — é conserto. Medida
-#: pelo produto em 06/09/2026: sem ela o `parec` nasce com quase QUATRO segundos
-#: de fragmento, e o primeiro byte só chega aos 1,98 s. Do lado dela, isso são
-#: dois segundos de barra parada que se leem como *"não funcionou"*.
 LATENCIA_DO_PICO_MS = 40
 
-#: Taxa e pedaço da leitura do pico. 4 KiB a 48 kHz mono s16 é ~42 ms: a barra
-#: acorda ~24 vezes por segundo, que é mais do que o olho precisa.
 TAXA_DO_PICO = 48000
 PEDACO_DO_PICO = 4096
 
-#: Quanto a barra CAI por tique quando o som para. Sem queda ela ficaria presa
-#: no último pedaço alto e diria «tem sinal» sobre silêncio; com queda ela conta
-#: o que está acontecendo AGORA. O máximo da sessão fica guardado à parte — é
-#: ele que decide o ensaio, porque o olho não guarda o patamar anterior.
 QUEDA_DA_BARRA = 0.18
 
-#: O que o campo da tela manda. É a escala da FONTE de captura no PipeWire
-#: (0-100), e NÃO os 0-0x40 do byte do aparelho. Estarem juntos na folha e
-#: separados na cabeça é o ponto inteiro do ensaio 3-c.
 VOLUME_DA_FONTE_INICIAL = 100
 
-#: Quanto se espera antes de mandar o `mic.volume.set` que o deslizante pediu.
-#: Um pedido por pixel arrastado encheria o socket do daemon de gestos mortos.
 COALESCE_DO_DESLIZANTE_MS = 250
 
 
@@ -238,19 +74,8 @@ def _agora_ddmm() -> str:
     return time.strftime("%d%m")
 
 
-# ---------------------------------------------------------------------------
-# O byte do aparelho — e SÓ ele
-# ---------------------------------------------------------------------------
 def common_do_byte(valor: int, *, com_bit: bool = True) -> bytearray:
-    """Um `common` de 47 bytes com o volume do microfone, e nada mais.
-
-    O `common` nasce VAZIO de propósito (a lição do `corpo_do_degrau.py`): um
-    common cheio de estado do daemon faria de cada passo uma medição diferente.
-
-    `com_bit=False` é o NEGATIVO do ensaio — o mesmo `--sem-bit` do
-    `o_byte_do_microfone_muda_a_captura.py`. Se o pico subir sem o bit, a
-    autorização não vale nada.
-    """
+    """Um `common` de 47 bytes com o volume do microfone, e nada mais."""
     if not 0 <= valor <= rep.TETO_MIC_VOLUME:
         raise ValueError(f"volume do mic fora de 0..{rep.TETO_MIC_VOLUME:#x}: {valor:#x}")
     c = common_vazio()
@@ -260,15 +85,8 @@ def common_do_byte(valor: int, *, com_bit: bool = True) -> bytearray:
     return c
 
 
-# ---------------------------------------------------------------------------
-# De que controle é este nó — a pergunta tem UM dono, e ele é do produto
-# ---------------------------------------------------------------------------
 def no_do_canal(uniq: str) -> str:
-    """`hefesto_mic_<hex6>` deste controle — "" se ele não tem identidade.
-
-    Não há régua nova aqui: quem responde é `canal_do_microfone.nome_do_canal`,
-    o dono do batismo. Ver o cabeçalho para o que custou casar por NÚMERO.
-    """
+    """`hefesto_mic_<hex6>` deste controle — "" se ele não tem identidade."""
     try:
         return nome_do_canal(uniq) or ""
     except Exception:
@@ -276,15 +94,7 @@ def no_do_canal(uniq: str) -> str:
 
 
 def fonte_do_produto(uniq: str) -> str:
-    """O que o PRODUTO responde a *"qual é o microfone deste controle"*.
-
-    É a mesma função que o `mic.volume.set` do daemon chama
-    (`audio_control.fonte_de_captura_do_uniq`), e por isso ela é a coluna que
-    vale ao lado da resposta do daemon. **Com uma diferença declarada:** o
-    daemon a chama com a MESA (`recado_do_microfone.mesa_de_agora`), que liga a
-    regra 4 (um-para-um); daqui ela vai sem mesa, que é o comportamento de
-    antes de 06/09. Quando as duas colunas discordarem, é aí que se olha.
-    """
+    """O que o PRODUTO responde a *"qual é o microfone deste controle"*."""
     try:
         return fonte_de_captura_do_uniq(uniq) or ""
     except Exception:
@@ -295,11 +105,11 @@ def fonte_do_produto(uniq: str) -> str:
 class LeituraDoSistema:
     """O que a lista VIVA publica para um controle, num instante."""
 
-    canal: str = ""  #: `hefesto_mic_<hex6>`, casado por ENDEREÇO
-    descricao: str = ""  #: o que ela vê na lista de som
-    estado: str = ""  #: SUSPENDED · IDLE · RUNNING
-    placa_usb: str = ""  #: o `alsa_input...` da placa do cabo
-    do_produto: str = ""  #: o que `fonte_de_captura_do_uniq` responde
+    canal: str = ""
+    descricao: str = ""
+    estado: str = ""
+    placa_usb: str = ""
+    do_produto: str = ""
 
     @property
     def publica(self) -> bool:
@@ -351,20 +161,8 @@ def ler_o_sistema(alvos: list[Any]) -> dict[str, LeituraDoSistema]:
     return leituras
 
 
-# ---------------------------------------------------------------------------
-# O pico — leitura de nível que NÃO toca disco
-# ---------------------------------------------------------------------------
 def pico_do_pedaco(pedaco: bytes) -> float:
-    """O pico de um pedaço de s16 little-endian, em 0..1 — e A AMOSTRA MORRE AQUI.
-
-    É a única coisa que sobrevive de cada pedaço que o leitor entrega: um
-    `float`. Não há caminho daqui para disco, e é isso que a régua guarda.
-
-    O ímpar do fim é descartado (`len // 2 * 2`): meio quadro de s16 lido no
-    corte de um pedaço não é uma amostra, e somá-lo produziria um pico
-    inventado. Divide-se por 32768 e não por 32767 porque o mínimo de um s16 é
-    `-32768` — um «aaaa» saturado sairia acima de 1,0 pela outra régua.
-    """
+    """O pico de um pedaço de s16 little-endian, em 0..1 — e A AMOSTRA MORRE AQUI."""
     if not pedaco:
         return 0.0
     amostras = array.array("h")
@@ -375,14 +173,7 @@ def pico_do_pedaco(pedaco: bytes) -> float:
 
 
 class OuvidoDoPico:
-    """Lê o nível de uma fonte e DESCARTA a amostra. Nada vai para disco.
-
-    O `parec` escreve cru no `stdout`; cada pedaço vira um número e morre na
-    mesma linha. Nenhuma porta de disco se abre aqui, e a régua
-    `test_o_codigo_do_ouvido_nao_sabe_escrever_arquivo` percorre a ÁRVORE deste
-    código para garantir que continue assim — ela está com o microfone aberto
-    na própria sala.
-    """
+    """Lê o nível de uma fonte e DESCARTA a amostra. Nada vai para disco."""
 
     def __init__(self, fonte: str) -> None:
         self.fonte = fonte
@@ -444,11 +235,7 @@ class OuvidoDoPico:
                 self.pedacos += 1
 
     def tomar(self) -> float:
-        """O nível do último pedaço, e ele se ZERA na leitura.
-
-        Zerar é o que faz a barra CAIR quando ela para de falar: sem isso o
-        último pedaço alto ficaria pendurado dizendo «tem sinal» sobre silêncio.
-        """
+        """O nível do último pedaço, e ele se ZERA na leitura."""
         with self._trava:
             valor, self._ultimo = self._ultimo, 0.0
             return valor
@@ -476,20 +263,13 @@ class OuvidoDoPico:
         self._thread = None
 
 
-# ---------------------------------------------------------------------------
-# A TABELA — linha nova, não painel novo
-# ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Linha:
-    """Uma linha da folha: o que ela pergunta e com que forma ela pergunta.
-
-    A folha se MONTA daqui. Pergunta nova é LINHA nova — é isso que faz esta
-    folha aguentar o resto da fila do microfone sem virar seis painéis.
-    """
+    """Uma linha da folha: o que ela pergunta e com que forma ela pergunta."""
 
     id: str
     titulo: str
-    forma: str  #: leitura | pedido | pico | byte | campo | resposta
+    forma: str
     pergunta: str
     sprint: str
     linha_do_mapa: str
@@ -571,23 +351,7 @@ def linha_de(id_: str) -> Linha:
 def veredito_da_tarja(
     leitura: LeituraDoSistema, corpo: dict[str, Any] | None, *, perguntou: bool
 ) -> str:
-    """A frase que põe o SISTEMA e o DAEMON lado a lado. Ela não conclui a sprint.
-
-    Três discordâncias possíveis, e as três já aconteceram nesta casa:
-
-    * o sistema publica e o daemon responde `sem_fonte` — é a tarja que mente;
-    * o daemon atende, mas na fonte de OUTRO controle — é o defeito que o
-      `por_uniq` existe para confessar;
-    * ninguém publica nada e o daemon diz `sem_fonte` — aqui os dois CONCORDAM,
-      e a tarja está certa: o que falta é o canal, não a frase.
-
-    **`perguntou` NÃO É DECORAÇÃO, e ele nasceu de um defeito desta folha**,
-    pego ao dirigi-la em 09/09/2026 antes de entregá-la: sem ele, a linha 6
-    dizia *"o daemon não respondeu"* nos primeiros dois segundos, com o daemon
-    de pé e ninguém tendo perguntado nada. *Régua que afirma sobre o que não
-    mediu é a família de defeito mais cara desta casa* — e ela apareceu dentro
-    do instrumento escrito para pegá-la.
-    """
+    """A frase que põe o SISTEMA e o DAEMON lado a lado. Ela não conclui a sprint."""
     if not perguntou:
         return (
             "ninguém perguntou ainda — aperte «Perguntar ao daemon», ou mexa no "
@@ -621,27 +385,13 @@ def veredito_da_tarja(
 def frase_da_resposta_do_daemon(
     leitura: LeituraDoSistema, corpo: dict[str, Any] | None, *, perguntou: bool
 ) -> str:
-    """A linha 6 inteira: a resposta CRUA e, embaixo, o veredito da tarja.
-
-    **CRUA de propósito.** O campo que desmascara a tarja é o `status`, e um
-    resumo bem-intencionado é justamente o que apagaria o `por_uniq` e o
-    `fonte` — os dois que dizem em QUAL microfone o daemon mexeu. Quem lê aqui
-    é ela, com o controle na mão, e o que ela precisa ver é o que o produto
-    respondeu, não o que eu achei da resposta.
-
-    Uma função só porque a linha 6 tem DOIS escritores — o botão «Perguntar ao
-    daemon» e a releitura de 2 s — e dois textos para o mesmo lugar é como
-    esta casa fabrica divergência silenciosa.
-    """
+    """A linha 6 inteira: a resposta CRUA e, embaixo, o veredito da tarja."""
     veredito = veredito_da_tarja(leitura, corpo, perguntou=perguntou)
     if not perguntou:
         return veredito
     return f"CRU: {corpo}\n{veredito}"
 
 
-# ---------------------------------------------------------------------------
-# Um controle na folha
-# ---------------------------------------------------------------------------
 @dataclass
 class ControleNaFolha:
     """Uma coluna: o aparelho, o `common` vivo, a porta, o ouvido e as respostas."""
@@ -655,13 +405,8 @@ class ControleNaFolha:
     ouvido: OuvidoDoPico | None = None
     barra: float = 0.0
     leitura: LeituraDoSistema = field(default_factory=LeituraDoSistema)
-    #: A ÚLTIMA resposta crua de cada ato do produto. Cruas de propósito: é o
-    #: que desmascara a tarja, e resumir apagaria justamente o campo que conta.
     resposta_do_canal: dict[str, Any] | None = None
     resposta_do_volume: dict[str, Any] | None = None
-    #: Alguém já perguntou ao daemon por ESTE controle? `None` de resposta antes
-    #: da pergunta é *"não perguntei"*, e dizer «o daemon não respondeu» ali é
-    #: acusar o produto de um silêncio que ninguém mediu.
     perguntou_ao_daemon: bool = False
     canal_pedido: bool = False
     volume_da_fonte: int = VOLUME_DA_FONTE_INICIAL
@@ -683,14 +428,8 @@ class ControleNaFolha:
             return "CONTROLE POSITIVO — o som pelo cabo funciona (placa USB própria)"
         return "o que se mede CONTRA o positivo do lado"
 
-    # -- a porta, que só abre quando ela assume ----------------------------
     def _garantir_porta(self) -> bool:
-        """Abre o hidraw no primeiro «Assumir». Antes disso, nada é escrito.
-
-        Abrir na construção custaria uma concessão do broker por controle
-        SEMPRE — inclusive em `--listar` e `--oculta`, que existem para provar
-        este instrumento sem tocar em aparelho nenhum.
-        """
+        """Abre o hidraw no primeiro «Assumir». Antes disso, nada é escrito."""
         if self.escritor is not None:
             return not self.erro
         self.escritor = Escritor(self.alvo)
@@ -749,7 +488,6 @@ class ControleNaFolha:
             self.escritor.fechar()
             self.escritor = None
 
-    # -- os atos do PRODUTO -------------------------------------------------
     def pedir_o_canal(self, ligado: bool) -> dict[str, Any] | None:
         """`mic.canal.set` — o mesmo ato do 🎙 da tela. Bloqueia: chame no fundo."""
         from hefesto_dualsense4unix.app import ipc_bridge
@@ -769,7 +507,6 @@ class ControleNaFolha:
         self.perguntou_ao_daemon = True
         return corpo
 
-    # -- o ouvido -----------------------------------------------------------
     def ouvir(self) -> str | None:
         if self.ouvido is not None and self.ouvido.ligado:
             self.ouvido.fechar()
@@ -782,17 +519,8 @@ class ControleNaFolha:
         return motivo
 
 
-# ---------------------------------------------------------------------------
-# A mesa, e a frase quando falta o par
-# ---------------------------------------------------------------------------
 def frase_da_mesa(alvos: list[Any]) -> str:
-    """A mesa que esta folha ENCONTROU — e o que falta, com todas as letras.
-
-    O desenho pede UM no cabo e UM no rádio (o positivo ao lado do que se
-    mede). A folha não recusa a mesa que veio: ela funciona com dois, com
-    quatro e com um. O que ela não faz é deixar quem lê achar que comparou
-    transportes quando comparou um só.
-    """
+    """A mesa que esta folha ENCONTROU — e o que falta, com todas as letras."""
     cabos = sum(1 for a in alvos if a.transporte == CABO)
     radios = sum(1 for a in alvos if a.transporte == RADIO)
     if cabos and radios:
@@ -812,12 +540,7 @@ def frase_da_mesa(alvos: list[Any]) -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# A folha
-# ---------------------------------------------------------------------------
 class Folha:
-    #: O rótulo de cada forma de linha que tem botão. A tabela existe para o
-    #: botão novo nascer aqui, e não espalhado por dez `if`.
     _BOTOES: ClassVar[dict[str, tuple[str, str]]] = {
         "pedido": ("Pedir o canal", "Soltar o canal"),
         "pico": ("Ouvir o pico", "Parar de ouvir"),
@@ -827,8 +550,6 @@ class Folha:
         self.controles = controles
         self.enxuta = enxuta
         self._relendo = False
-        #: UMA NOTA POR (linha, controle). É a lição da folha irmã: uma nota por
-        #: linha fazia o que ela viu NO CABO sair escrito na linha do RÁDIO.
         self.notas: dict[tuple[str, str], Gtk.Entry] = {}
         self.recados: dict[tuple[str, str], Gtk.Label] = {}
         self.barras: list[tuple[Gtk.DrawingArea, ControleNaFolha]] = []
@@ -861,21 +582,11 @@ class Folha:
         GLib.timeout_add(int(1000 / HZ), self._tique)
         GLib.timeout_add(int(RELER_A_LISTA_S * 1000), self._reler_a_lista)
 
-    # ------------------------------------------------------------------ css
     def _fundo_opaco(self) -> None:
-        """Fundo SÓLIDO. A razão é dela: *"o fundo tá muito transparente"*.
-
-        Uma `Gtk.Window` sem widget de fundo herda o do compositor, e sob o
-        COSMIC isso vira uma folha translúcida com o desktop dela atravessando
-        — o pior fundo possível para quem olha uma barra subir.
-        """
-        # O DONO É `comum.pintar_fundo_solido` DESDE 10/09/2026, e a razão está
-        # lá: estas três folhas decidiam o tema por `prefer-dark`, que é False
-        # na máquina dela sob um tema ESCURO — e o rótulo do botão sumia dentro
+        """Fundo SÓLIDO. A razão é dela: *"o fundo tá muito transparente"*."""
         # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal dela)
         pintar_fundo_solido(self.janela)
 
-    # ----------------------------------------------------------------- topo
     def _topo(self) -> Gtk.Widget:
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         caixa.set_margin_top(10)
@@ -930,7 +641,6 @@ class Folha:
         for chave in self.chaves.values():
             chave.set_active(False)
 
-    # ---------------------------------------------------------------- seção
     def _secao(self, linha: Linha) -> Gtk.Widget:
         moldura = Gtk.Frame()
         dentro = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -1005,7 +715,6 @@ class Folha:
             caixa.pack_start(nota, False, False, 4)
         return caixa
 
-    # ------------------------------------------------------------- as formas
     def _corpo_leitura(self, caixa: Gtk.Box, _linha: Linha, controle: ControleNaFolha) -> None:
         papel = Gtk.Label()
         papel.set_markup(f"<small>{GLib.markup_escape_text(controle.papel)}</small>")
@@ -1083,8 +792,6 @@ class Folha:
         escala.set_hexpand(True)
         for valor, texto in ((0, "0 %"), (50, "50 %"), (100, "100 %")):
             escala.add_mark(valor, Gtk.PositionType.BOTTOM, texto)
-        # UM PEDIDO POR PIXEL ARRASTADO encheria o socket do daemon de gestos
-        # mortos: o valor final é o único que importa, e ele vai sozinho.
         pendente: dict[str, int] = {}
 
         def marcar(escala_: Gtk.Scale) -> None:
@@ -1115,7 +822,6 @@ class Folha:
         )
         caixa.pack_start(botao, False, False, 0)
 
-    # ------------------------------------------------------------ os cliques
     def _virar_a_chave(
         self, chave: Gtk.Switch, _p: Any, controle: ControleNaFolha, linha: Linha
     ) -> None:
@@ -1133,7 +839,7 @@ class Folha:
             try:
                 corpo = controle.pedir_o_canal(quero)
                 frase = self._frase_do_pedido(corpo, quero)
-            except Exception as erro:  # o daemon não derruba a folha dela
+            except Exception as erro:
                 corpo, frase = None, f"o pedido falhou: {erro}"
             GLib.idle_add(terminar, frase, corpo is None)
 
@@ -1180,13 +886,7 @@ class Folha:
         controle.barra = 0.0
 
     def _mandar_volume(self, controle: ControleNaFolha, valor: int) -> None:
-        """O `mic.volume.set`, no FUNDO: ele tem teto de 6 s e travaria a folha.
-
-        A RESPOSTA VAI PARA A LINHA 6, venha o pedido do deslizante da linha 5
-        ou do botão da 6. A linha 6 é a que tem esse trabalho, e escrever a
-        resposta em dois lugares diferentes conforme quem pediu deixaria ela
-        procurando o `status` em dois lugares.
-        """
+        """O `mic.volume.set`, no FUNDO: ele tem teto de 6 s e travaria a folha."""
         linha = linha_de("o-daemon-responde")
 
         def no_fundo() -> None:
@@ -1230,7 +930,6 @@ class Folha:
             recado.set_text(texto)
         return False
 
-    # --------------------------------------------------------------- pintura
     def _pintar_barra(self, area: Gtk.DrawingArea, cr: Any, controle: ControleNaFolha) -> bool:
         largura, altura = area.get_allocated_width(), area.get_allocated_height()
         cr.set_source_rgb(0.16, 0.16, 0.16)
@@ -1253,7 +952,6 @@ class Folha:
         cr.show_text(f"agora {nivel:.4f}   máx {maximo:.4f}")
         return False
 
-    # ------------------------------------------------------------------ laço
     def _tique(self) -> bool:
         for controle in self.controles:
             controle.bater()
@@ -1297,8 +995,6 @@ class Folha:
                     controle.leitura = nova
                 self._dizer(linha_de("o-no-existe"), controle, controle.leitura.frase())
                 self._pintar_a_resposta(controle)
-                # O OUVIDO DIZ ONDE ESCUTARIA antes de ser aberto. Um botão que
-                # só explica depois de apertado esconde o «não há o que ouvir».
                 ouvindo = controle.ouvido is not None and controle.ouvido.ligado
                 if not ouvindo:
                     onde = controle.leitura.escolhida
@@ -1315,7 +1011,6 @@ class Folha:
         threading.Thread(target=no_fundo, name="reler-a-lista", daemon=True).start()
         return True
 
-    # -------------------------------------------------------------- o caderno
     def propor(self, linha: Linha) -> None:
         """A folha NÃO conclui: imprime as linhas, e quem coordena as escreve."""
         print(f"\nLINHAS PROPOSTAS — {linha.titulo} (docs/data/ensaios.csv):")
@@ -1361,7 +1056,6 @@ class Folha:
             medido.append(f"mic.canal.set: {controle.resposta_do_canal}")
         return "; ".join(medido) + f"; ela: {dela}"
 
-    # ---------------------------------------------------------------- ciclo
     def _fechar(self, *_: Any) -> None:
         for controle in self.controles:
             controle.fechar()
@@ -1373,9 +1067,6 @@ class Folha:
         Gtk.main()
 
 
-# ---------------------------------------------------------------------------
-# As bandeiras
-# ---------------------------------------------------------------------------
 def _cabecalho() -> str:
     return cabecalho_do_instrumento(
         "a_folha_do_microfone_por_controle",
@@ -1458,8 +1149,6 @@ def main(argv: list[str] | None = None) -> int:
 
     folha = Folha(controles, enxuta="--so-ajustes" in argumentos)
     if "--oculta" in argumentos:
-        # A RÉGUA: monta a folha, bate um tique e propõe. Nada é assumido, logo
-        # `bater()` não escreve, a porta não abre e nenhum microfone liga.
         folha._tique()
         for linha in LINHAS:
             folha.propor(linha)

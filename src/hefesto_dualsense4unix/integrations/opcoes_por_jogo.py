@@ -58,7 +58,7 @@ import time
 from pathlib import Path
 from typing import TypedDict
 
-try:  # importado como módulo do pacote (GUI/daemon/testes)
+try:
     from .steam_launch_options import (
         WRAPPER_PREFIX,
         discover_vdfs,
@@ -82,8 +82,6 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo vigi
 #: Onde a tabela mora, no molde do `jogos_sem_wrapper.txt`.
 TABELA_RELPATH = "hefesto-dualsense4unix/opcoes_por_jogo.txt"
 
-#: O cabeçalho que nasce com o arquivo — ele tem de se explicar sozinho para
-#: quem o abrir num editor, porque é ali que ela escreve.
 CABECALHO = """\
 # As opções de inicialização que você quer em cada jogo da Steam.
 #
@@ -118,17 +116,7 @@ def tabela_path(config_home: Path | None = None) -> Path:
 
 
 def parse(texto: str) -> dict[str, str]:
-    """``{appid: opções}`` de um texto de tabela. Nunca levanta.
-
-    LINHA TORTA É LINHA IGNORADA, e de propósito: um arquivo que ela editou à
-    mão com um erro de digitação não pode derrubar o vigia nem apagar as
-    opções dos OUTROS jogos. O que se perde é uma linha, e o ``--listar`` a
-    mostra faltando.
-
-    O SEPARADOR É TAB, e o espaço vale como tolerância: as opções contêm
-    espaços por natureza (``VKD3D_CONFIG=… %command%``), então só o PRIMEIRO
-    separador conta — o resto da linha é o valor, inteiro.
-    """
+    """``{appid: opções}`` de um texto de tabela. Nunca levanta."""
     achadas: dict[str, str] = {}
     for linha in texto.splitlines():
         crua = linha.strip()
@@ -187,12 +175,7 @@ def tirar(appid: int | str, config_home: Path | None = None) -> bool:
 
 
 def linha_desejada(opcoes: str, *, com_atalho: bool) -> str:
-    """A linha final do vdf: o atalho na frente, as opções dela atrás.
-
-    O ATALHO VEM DO DONO (``steam_launch_options.WRAPPER_PREFIX``) e não é
-    redigitado aqui: ele muda de forma quando o install muda de caminho, e uma
-    segunda cópia envelheceria calada — que é o defeito que esta casa persegue.
-    """
+    """A linha final do vdf: o atalho na frente, as opções dela atrás."""
     limpo = opcoes.strip()
     return f"{WRAPPER_PREFIX} {limpo}" if com_atalho else limpo
 
@@ -205,15 +188,7 @@ def _valor_do_vdf(bruto: str) -> str:
 def definir_opcoes_vdf_text(
     texto: str, desejadas: dict[str, str]
 ) -> tuple[str, list[str], list[tuple[str, str]]]:
-    """Põe ``desejadas`` (``{appid: linha pronta}``) na árvore CANÔNICA do vdf.
-
-    PURA, e é a metade testável: o parse por pilha de linhas é o mesmo do
-    ``read_launch_options_by_appid`` — conteúdo fora do padrão passa intacto,
-    byte a byte. Um app cuja linha JÁ é a desejada é pulado (idempotente), e um
-    app sem a linha ``LaunchOptions`` a GANHA, com a indentação dos vizinhos.
-
-    Devolve ``(texto_novo, aplicados, [(appid, motivo)])``.
-    """
+    """Põe ``desejadas`` (``{appid: linha pronta}``) na árvore CANÔNICA do vdf."""
     linhas = texto.splitlines(keepends=True)
     pilha: list[str] = []
     saida: list[str] = []
@@ -233,9 +208,6 @@ def definir_opcoes_vdf_text(
             continue
         if nu == "{":
             saida.append(linha)
-            # A ÂNCORA É SEM O APPID: `e_a_arvore_canonica` mede o caminho do
-            # PAI (`…/Software/Valve/Steam/apps`), e a pilha aqui já tem o
-            # appid no topo — é o mesmo `stack[:-1]` do escritor irmão.
             if pilha and _APPID.match(pilha[-1]) and e_a_arvore_canonica(pilha[:-1]):
                 appid_atual = pilha[-1]
                 tem_linha = False
@@ -280,14 +252,7 @@ def definir_opcoes_vdf_text(
 
 
 class Relato(TypedDict):
-    """O que ``aplicar`` devolve — e o que o ``--json`` publica.
-
-    É ``TypedDict`` e não dataclass de propósito: quem consome isto é o
-    ``json.dumps`` do ``--json`` e o ``_imprimir`` do vigia, os dois em cima de
-    chaves. A forma TIPADA existe porque a primeira versão era
-    ``dict[str, object]`` e cobrava quatro ``type: ignore`` para somar 1 a um
-    contador — o tipo frouxo não estava protegendo nada.
-    """
+    """O que ``aplicar`` devolve — e o que o ``--json`` publica."""
 
     status: str
     aplicados: list[dict[str, str]]
@@ -303,15 +268,7 @@ def aplicar(
     config_home: Path | None = None,
     dry_run: bool = False,
 ) -> Relato:
-    """Aplica a tabela aos ``localconfig.vdf`` elegíveis. NUNCA levanta.
-
-    Os portões são os mesmos do reparo do atalho, e na mesma ordem: jogo aberto
-    recusa antes de tudo (fechar o vdf debaixo de um jogo vivo é o estrago que
-    não se desfaz), Steam aberta adia. Tabela vazia é ``nada_a_fazer`` — e não
-    um vdf reescrito com o que já estava lá.
-
-    Devolve ``{"status", "aplicados", "pulados", "erros", "vdfs"}``.
-    """
+    """Aplica a tabela aos ``localconfig.vdf`` elegíveis. NUNCA levanta."""
     tabela = ler(config_home)
     relato: Relato = {
         "status": NADA, "aplicados": [], "pulados": [], "erros": [], "vdfs": 0,
@@ -377,8 +334,6 @@ def _imprimir(relato: Relato) -> int:
     for item in relato["erros"]:
         print(f"[opcoes-por-jogo] erro: {item['reason']}", file=sys.stderr)
     print(f"[opcoes-por-jogo] resultado={relato['status']}")
-    # 3 = ADIADO, o mesmo código que a sentinela usa: não é falha, e o `-` da
-    # unidade do vigia existe justamente para não pintar o guard de vermelho.
     if relato["status"] in (ADIADO_JOGO, ADIADO_STEAM):
         return 3
     return 1 if relato["status"] == ERRO else 0

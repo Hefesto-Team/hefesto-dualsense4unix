@@ -1,47 +1,4 @@
-"""diario_do_radio.py — o diário comum e a trava de quem mexe no rádio.
-
-O-DIARIO-DO-RADIO-01 (23/09/2026). Até aqui, três motores mexiam no rádio sem
-se conhecer: o ``bt_health_watchdog.sh`` (root, a cada 2 min: ``Connect``,
-``Trusted``, ``pair`` e ``restart``), o vigia de zumbis do daemon (a cada 5 s:
-derruba o link morto pela ponte privilegiada) e a central que vai nascer (mover,
-parear, equilibrar). Cada um escrevia no próprio log, e nenhum sabia que o outro
-estava no meio de um gesto. O estudo de 23/09 (``arquiteto.md``, bloco «UMA TRAVA
-E UM DIÁRIO») nomeia o risco: o watchdog fazendo ``Connect`` no adaptador antigo
-enquanto a central move o controle.
-
-AS DUAS PEÇAS
--------------
-
-**A trava** é um ``flock`` num arquivo só, :data:`TRAVA_COMUM`. O kernel a solta
-quando o processo morre, então não existe trava presa por quem caiu. Todo motor
-pede a trava COM PRAZO (:func:`trava_do_radio`), e a espera é registrada — quem
-esperou, quanto, e quem estava com ela. Quem não consegue no prazo desiste e diz
-por quê: nenhum motor fica pendurado atrás de outro.
-
-**O diário** é um JSONL de AÇÕES de rádio: quem, o quê, por quê, o antes e o
-depois. É o «registro» da D7 (o anti-storm age sozinho e registra) e a fonte do
-sino da tela: a tela LÊ o diário, não escreve texto próprio. Rotação por tamanho.
-
-DOIS ARQUIVOS, UM DIÁRIO
-------------------------
-
-Quem roda como ela escreve em ``~/.local/state/hefesto-dualsense4unix/`` (o
-:func:`caminho_do_diario`). Quem roda como ROOT — o watchdog e a ponte
-privilegiada — NÃO escreve no lar dela: um processo root escrevendo numa pasta
-que a usuária controla pode ser levado por um link simbólico a sobrescrever
-qualquer arquivo da máquina. O root escreve em :data:`DIARIO_DO_ROOT`, numa
-pasta que só o root escreve e que ela lê; o :func:`ler` junta os dois pela hora.
-O formato é o mesmo, byte a byte — as linhas do root saem do ``_diario`` dos
-scripts, e a régua confere que este leitor as entende.
-
-A SUÍTE NÃO TOCA NA TRAVA DELA
-------------------------------
-
-Com a suíte no ar, a trava e o diário do root caem para dentro do lar de mentira
-do ``tests/conftest.py``: um teste que segurasse a trava comum seguraria o
-watchdog dela junto. Quem precisa de outro caminho passa por argumento, ou pelas
-variáveis :data:`ENV_TRAVA` e :data:`ENV_DIARIO_DO_ROOT`.
-"""
+"""diario_do_radio.py — o diário comum e a trava de quem mexe no rádio."""
 
 from __future__ import annotations
 
@@ -60,50 +17,25 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O nome do arquivo do diário, nos dois lados.
 NOME_DO_DIARIO = "radio-diario.jsonl"
 
-#: O diário dos motores ROOT. A pasta é do install (a mesma do acervo de bonds,
-#: ``/var/lib/hefesto-dualsense4unix/bt-bonds``), escrita só pelo root e lida
-#: por ela.
 DIARIO_DO_ROOT = Path("/var/lib/hefesto-dualsense4unix") / NOME_DO_DIARIO
 
-#: A trava comum. Nasce do ``tmpfiles.d`` do install: o diretório é do root e
-#: não é gravável por ela, e o ARQUIVO tem o grupo dela — assim o root
-#: (watchdog) e ela (daemon) disputam o mesmo arquivo, ela escreve nele quem
-#: está com a trava, e ninguém troca o arquivo por um link para levar a escrita
-#: do root a outro lugar.
 TRAVA_COMUM = Path("/run/hefesto-dualsense4unix/radio.lock")
 
-#: Desvios explícitos — a suíte e quem medir à mão.
 ENV_TRAVA = "HEFESTO_RADIO_TRAVA"
 ENV_DIARIO = "HEFESTO_RADIO_DIARIO"
 ENV_DIARIO_DO_ROOT = "HEFESTO_RADIO_DIARIO_ROOT"
 
-#: Acima disto o arquivo vira ``.1`` e um novo começa. Meio mega é folga de
-#: meses: uma ação de rádio é uma linha de ~300 bytes.
 TAMANHO_MAXIMO = 512 * 1024
 
-#: O prazo padrão de quem pede a trava. O watchdog segura a trava por um tique
-#: inteiro (até ~40 s com o ``pair``); trinta segundos cobrem o caso comum, e
-#: quem não conseguir tenta na próxima volta.
 PRAZO_DA_TRAVA_S = 30.0
 
-#: De quanto em quanto tempo quem espera torna a perguntar. O ``flock`` não tem
-#: prazo em Python, e 50 ms é imperceptível para um gesto de rádio.
 PASSO_DA_ESPERA_S = 0.05
 
-# --- o vocabulário ------------------------------------------------------------
-#
-# O ``o_que`` de uma entrada é texto curto e FIXO para o que mais de um motor
-# escreve: o leitor (o sino, o ``storm_doctor``) procura por estas constantes,
-# e um sinônimo escrito à mão seria uma entrada que ninguém acha.
 
 ESPEROU_A_TRAVA = "esperou a trava"
 DESISTIU_DA_TRAVA = "desistiu da trava"
-#: A ponte de som ou de vibração de um controle. Quem escreve é o governador
-#: (GOVERNADOR-DO-RADIO-01), com ``controle``, ``adaptador`` e ``tipo`` (``som``
-#: ou ``vibracao``); quem lê é o :func:`pontes_de_pe`.
 PONTE_SUBIU = "ponte subiu"
 PONTE_DESCEU = "ponte desceu"
 
@@ -138,15 +70,7 @@ def caminho_do_diario_do_root() -> Path | None:
 
 
 def caminho_da_trava() -> Path:
-    """A trava que este processo vai disputar.
-
-    Em ordem: o desvio explícito; com a suíte no ar, uma trava dentro do lar de
-    mentira; a trava comum, se o install criou a pasta dela; e, sem ela, uma
-    trava na pasta de execução dela — que ainda põe os motores DELA em fila
-    (vigia e central moram no mesmo daemon), mas não enxerga o watchdog root.
-    Esse último caso é dito no diário por quem pega a trava
-    (:func:`a_trava_e_comum`).
-    """
+    """A trava que este processo vai disputar."""
     desvio = os.environ.get(ENV_TRAVA, "").strip()
     if desvio:
         return Path(desvio)
@@ -164,22 +88,12 @@ def a_trava_e_comum(caminho: Path) -> bool:
     return caminho == TRAVA_COMUM
 
 
-# --- o diário -------------------------------------------------------------------
-
-
 def _agora_iso(carimbo: float) -> str:
     return datetime.fromtimestamp(carimbo).astimezone().isoformat(timespec="seconds")
 
 
 def _anexar(caminho: Path, dado: bytes) -> None:
-    """Uma linha no fim do arquivo, com rotação, sem intercalar escritores.
-
-    O ``flock`` aqui é do PRÓPRIO arquivo do diário, e não a trava do rádio: ele
-    só impede que duas escritas se misturem ou que a rotação corte uma linha ao
-    meio. Depois de pegá-lo, confere que o nome ainda aponta para o arquivo que
-    foi aberto — outro escritor pode ter rodado o diário entre o ``open`` e o
-    ``flock``, e escrever no ``.1`` seria escrever no passado.
-    """
+    """Uma linha no fim do arquivo, com rotação, sem intercalar escritores."""
     caminho.parent.mkdir(parents=True, exist_ok=True)
     bandeiras = os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW
     for _ in range(5):
@@ -214,15 +128,7 @@ def registrar(
     agora: float | None = None,
     **campos: Any,
 ) -> dict[str, Any]:
-    """Uma ação de rádio no diário. Devolve a entrada, escrita ou não.
-
-    Nunca levanta por causa do disco: uma ação que JÁ aconteceu não pode ser
-    desfeita porque o diário não gravou. O erro vai para o log do daemon.
-
-    ``campos`` leva o que o leitor filtra — ``adaptador``, ``controle``,
-    ``porta``, ``familia``, ``frase`` (o texto curto do sino) — e nada além de
-    valor que o JSON aceita.
-    """
+    """Uma ação de rádio no diário. Devolve a entrada, escrita ou não."""
     if not quem or not o_que:
         raise ValueError("uma entrada do diário precisa de quem e do quê")
     carimbo = time.time() if agora is None else agora
@@ -279,12 +185,7 @@ def ler(
     desde: float | None = None,
     limite: int | None = None,
 ) -> list[dict[str, Any]]:
-    """As entradas dos dois diários, em ordem de hora. Nunca levanta.
-
-    Linha que não é JSON, ou que não traz ``carimbo`` e ``o_que``, é pulada: o
-    diário é escrito por shell e por Python, e uma linha torta não pode calar o
-    resto. ``caminhos`` entra cru (sem o ``.1``) — é o que a régua usa.
-    """
+    """As entradas dos dois diários, em ordem de hora. Nunca levanta."""
     if caminhos is None:
         fontes = _com_o_girado(caminho_do_diario())
         do_root = caminho_do_diario_do_root()
@@ -306,19 +207,7 @@ def ler(
 def pontes_de_pe(
     entradas: Iterable[dict[str, Any]], instante: float
 ) -> dict[str, set[tuple[str, str]]]:
-    """``{adaptador: {(controle, tipo)}}`` das pontes de pé em ``instante``.
-
-    Reconstrói pelo diário: cada :data:`PONTE_SUBIU` acende, cada
-    :data:`PONTE_DESCEU` apaga, até o instante pedido. Ponte sem adaptador
-    conhecido cai em ``""`` — contada, mas sem casa.
-
-    A PONTE FANTASMA NÃO É ASSUNTO DAQUI (GOVERNADOR-DO-RADIO-02): o daemon que
-    morre sem ``stop()`` não escreve o ``PONTE_DESCEU``, e quem o escreve é o
-    governador do daemon seguinte, no arranque, com o motivo «o daemon
-    reiniciou» (``GovernadorDoRadio.fechar_as_pontes_fantasmas``). Esta dobra
-    fica pura de propósito: a regra do reinício tem UM dono, o único escritor de
-    ponte, e nenhum leitor do diário precisa repeti-la.
-    """
+    """``{adaptador: {(controle, tipo)}}`` das pontes de pé em ``instante``."""
     de_pe: dict[tuple[str, str], str] = {}
     for entrada in entradas:
         if float(entrada.get("carimbo", 0.0)) > instante:
@@ -339,9 +228,6 @@ def pontes_de_pe(
     for chave, adaptador in de_pe.items():
         por_adaptador.setdefault(adaptador, set()).add(chave)
     return por_adaptador
-
-
-# --- a trava --------------------------------------------------------------------
 
 
 class TravaOcupadaError(RuntimeError):
@@ -393,13 +279,7 @@ def trava_do_radio(
     relogio: Callable[[], float] = time.monotonic,
     dormir: Callable[[float], None] = time.sleep,
 ) -> Iterator[float]:
-    """Segura a trava do rádio enquanto o bloco roda. Entrega quanto esperou.
-
-    Primeiro tenta sem esperar. Se outro motor está com ela, espera até
-    ``prazo_s``, perguntando a cada :data:`PASSO_DA_ESPERA_S`, e registra no
-    diário a espera — ou a desistência, que levanta :class:`TravaOcupadaError`. A
-    trava sai sozinha no fim do bloco, e também quando o processo morre.
-    """
+    """Segura a trava do rádio enquanto o bloco roda. Entrega quanto esperou."""
     alvo = caminho or caminho_da_trava()
     fd, escreve = _abrir_a_trava(alvo)
     try:

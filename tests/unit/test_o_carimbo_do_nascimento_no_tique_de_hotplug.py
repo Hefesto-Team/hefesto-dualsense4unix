@@ -1,28 +1,4 @@
-"""SINAL-NO-NASCIMENTO-01 — o carimbo, e as cinco mentiras que ele não pode contar.
-
-A BARRA-MUDA-01 mediu o veredito e ninguém o perguntava na hora em que a conexão
-nasce; então ele só existia enquanto o diário ainda tivesse a linha. Estes testes
-guardam o carimbo, e cada classe corresponde a uma coisa que já custou caro:
-
-1. **o veredito é POR INSTÂNCIA.** Quatro condenadas e duas sãs convivem na
-   bancada de 22/08/2026, e um veredito global apagaria justamente a distinção
-   que a medição produziu;
-2. **perguntar não pode custar diário.** Com tudo carimbado firme, o tique não
-   pede mais nada — é essa a diferença entre "o produto sabe" e "o produto
-   sabia enquanto o journald não rotacionou";
-3. **suspeita não volta atrás, e a sonda ao vivo só AGRAVA.** O diário só ganha
-   linhas; e "alguém segura o nó agora" só fala do nascimento de quem nasceu
-   sob nossos olhos, dentro da janela de 5 s;
-4. **o `hw_version` não é identidade.** Ele é revisão de placa (canônica,
-   MEDIDO 15/08/2026: *"dois controles da mesma cor comprados juntos teriam o
-   mesmo valor"*), e por isso a busca por ele devolve LISTA;
-5. **o Modo Nativo não fabrica "limpa".** Ali o daemon não sonda por regra dela,
-   o diário não ganha a linha, e um veredito de diário devolveria inocência sem
-   ninguém ter olhado.
-
-FIXTURES: os endereços são da faixa sintética ``aa:bb:cc`` da casa. Nenhum
-endereço real entra em arquivo versionado, e há portão que reprova.
-"""
+"""SINAL-NO-NASCIMENTO-01 — o carimbo, e as cinco mentiras que ele não pode contar."""
 
 from __future__ import annotations
 
@@ -36,17 +12,8 @@ from hefesto_dualsense4unix.core.escritor_cru import SentinelaDeEscritorCru
 from hefesto_dualsense4unix.daemon import connection as cx
 from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
 
-# ---------------------------------------------------------------------------
-# A bancada de 22/08/2026, as seis instâncias, com os instantes reais do kernel.
-# Quatro nasceram às 18:05-18:06 com a Steam segurando o nó (barra APAGADA pelo
-# olho dela); duas nasceram às 19:51 com a mesa limpa (ACENDERAM).
-# ---------------------------------------------------------------------------
 _ADAPTADOR = "aa:bb:cc:99:88:77"
 
-#: `(instância, uniq, hw_version, nó, quando, sujo)`. Os pares de `hw_version`
-#: repetem de propósito: a `.0028`/`.0033` e a `.002a`/`.0034` são os dois
-#: controles que ela reconectou, e é essa repetição que prova que o
-#: `hw_version` não serve de identidade.
 _BANCADA: tuple[tuple[str, str, str, str, float, bool], ...] = (
     ("0028", "aa:bb:cc:11:22:01", "0x00000811", "/dev/hidraw6", 64_740.852, True),
     ("0029", "aa:bb:cc:11:22:02", "0x00001111", "/dev/hidraw7", 64_762.210, True),
@@ -108,9 +75,7 @@ def como_o_backend_escreve(uniq: str) -> str:
     return "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
 
 
-#: `{uniq: nó}` — o que o backend diria estar segurando, NA GRAFIA DELE. É o
 #: portão que separa "todo DualSense da máquina" de "os controles que o produto
-#: abriu".
 _MAPA_DA_BANCADA: dict[str, str] = {
     como_o_backend_escreve(uniq): no for _i, uniq, _hw, no, _q, _s in _BANCADA
 }
@@ -141,11 +106,7 @@ class TestOCarimboEPorInstancia:
         assert sas == {"0033", "0034"}
 
     def test_a_pergunta_depois_nao_le_o_diario(self, monkeypatch) -> None:
-        """Carimbado, o veredito é resposta de MEMÓRIA.
-
-        A mordida: `nascimentos_pelo_diario` é trocado por uma bomba. Se alguma
-        consulta ao cartório voltar a ler o diário, este teste estoura.
-        """
+        """Carimbado, o veredito é resposta de MEMÓRIA."""
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar(_instancias_da_bancada(), agora=100.0)
         cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
@@ -192,7 +153,6 @@ class TestSuspeitaNaoVoltaAtras:
         )
         assert cartorio.da_instancia("0028").pede_reconexao is True
 
-        # Agora o diário rotacionou e a instância sumiu dele: `nao_sei`.
         cartorio.carimbar(
             sb.veredito_do_nascimento(instancias=[alvo], nascimentos={}), agora=101.0
         )
@@ -211,13 +171,10 @@ class TestSuspeitaNaoVoltaAtras:
 
 
 class TestASondaAoVivoSoAgrava:
-    """A régua de PRIMEIRA MÃO — o daemon vendo o nó segurado no tique em que a
-    conexão apareceu. Ela existe porque o diário do daemon nem sempre pode ser
-    lido (rodar em primeiro plano, fora da unit), e ali um "não achei a linha"
-    viraria "nasceu limpa"."""
+    """A régua de PRIMEIRA MÃO — o daemon vendo o nó segurado no tique em que a"""
 
     def _limpa(self) -> tuple[sb.Instancia, list[sb.Leitura]]:
-        alvo = _instancia(_BANCADA[4])  # a `.0033`, que nasceu com o nó livre
+        alvo = _instancia(_BANCADA[4])
         return alvo, sb.veredito_do_nascimento(
             instancias=[alvo], nascimentos=_nascimentos_da_bancada()
         )
@@ -225,20 +182,18 @@ class TestASondaAoVivoSoAgrava:
     def test_agrava_quem_nasceu_sob_nossos_olhos_dentro_da_janela(self) -> None:
         alvo, leituras = self._limpa()
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar([], agora=100.0)  # a mesa vazia é a primeira passada
-        cartorio.observar([alvo], agora=101.0)  # ela APARECEU aqui
+        cartorio.observar([], agora=100.0)
+        cartorio.observar([alvo], agora=101.0)
         cartorio.carimbar(
             leituras, agora=101.0, nos_segurados={"/dev/hidraw6"}
         )
         assert cartorio.da_instancia("0033").pede_reconexao is True
 
     def test_nao_agrava_quem_ja_estava_na_mesa(self) -> None:
-        """Numa conexão que já existia antes do daemon, "a Steam segura o nó
-        agora" não diz nada sobre como ela NASCEU — e acusar à toa gasta o gesto
-        do botão PS dela."""
+        """Numa conexão que já existia antes do daemon, "a Steam segura o nó"""
         alvo, leituras = self._limpa()
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar([alvo], agora=100.0)  # primeira passada: já estava aqui
+        cartorio.observar([alvo], agora=100.0)
         cartorio.carimbar(
             leituras, agora=100.0, nos_segurados={"/dev/hidraw6"}
         )
@@ -267,16 +222,13 @@ class TestASondaAoVivoSoAgrava:
 
 
 class TestOHwVersionNaoEIdentidade:
-    """MEDIDO na canônica, 15/08/2026: o `hardware_version` é revisão de placa,
-    e *"dois controles da mesma cor comprados juntos teriam o mesmo valor"*.
-    A bancada de 22/08 tem os quatro valores diferentes **por acaso de lote**."""
+    """MEDIDO na canônica, 15/08/2026: o `hardware_version` é revisão de placa,"""
 
     def test_a_busca_por_hw_version_devolve_lista(self) -> None:
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar(_instancias_da_bancada(), agora=100.0)
         cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
 
-        # A `.0028` (condenada) e a `.0033` (sã) são a MESMA peça de plástico.
         achados = cartorio.do_hw_version("0x00000811")
         assert {c.instancia for c in achados} == {"0028", "0033"}
         assert {c.pede_reconexao for c in achados} == {True, False}, (
@@ -285,9 +237,7 @@ class TestOHwVersionNaoEIdentidade:
         )
 
     def test_o_uniq_e_a_chave_que_a_tela_usa(self) -> None:
-        """O endereço do controle é o que o resto do produto já usa por controle
-        (`nos_hidraw_por_uniq`, `_edit_target_uniq`), e ele é único entre as
-        conexões VIVAS."""
+        """O endereço do controle é o que o resto do produto já usa por controle"""
         vivas = [i for i in _instancias_da_bancada() if i.instancia in {"0029", "002b"}]
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar(vivas, agora=100.0)
@@ -301,9 +251,7 @@ class TestOHwVersionNaoEIdentidade:
 
 
 class TestMeiaReguaNaoAbsolve:
-    """O kernel respondeu e o diário do daemon não: sabe-se QUANDO nasceu e não
-    se sabe QUEM segurava. Antes desta correção o `sujo=False` de fábrica virava
-    "nasceu limpa" — inocência sem ninguém ter olhado."""
+    """O kernel respondeu e o diário do daemon não: sabe-se QUANDO nasceu e não"""
 
     def test_escritor_desconhecido_e_nao_sei(self) -> None:
         alvo = _instancia(_BANCADA[4])
@@ -321,11 +269,6 @@ class TestMeiaReguaNaoAbsolve:
         assert not leitura.pede_reconexao
 
 
-# ---------------------------------------------------------------------------
-# O LADO DO DAEMON — o tique de hotplug carimbando.
-# ---------------------------------------------------------------------------
-
-
 class _ControllerFalso:
     """Só o `nos_hidraw_por_uniq`, que é por onde o carimbo sabe o que é NOSSO."""
 
@@ -337,12 +280,7 @@ class _ControllerFalso:
 
 
 class _DaemonFalso:
-    """O mínimo que `carimbar_o_nascimento` toca. Nada de asyncio de verdade.
-
-    O sentinela é o de VERDADE (`core.escritor_cru.SentinelaDeEscritorCru`) com
-    a sonda de `/proc` trocada — é ele que `sentinela_de_escritor_cru_de`
-    aceita, e um dublê seria substituído por um sentinela vazio sem avisar.
-    """
+    """O mínimo que `carimbar_o_nascimento` toca. Nada de asyncio de verdade."""
 
     def __init__(
         self,
@@ -356,10 +294,6 @@ class _DaemonFalso:
         self.controller = _ControllerFalso(
             segura if segura is not None else _MAPA_DA_BANCADA
         )
-        # ESCRITOR-CRU-03 (19/09/2026): o PID da sonda tem de estar VIVO. A
-        # segunda régua do carimbo (`_nos_segurados_agora`) confere a foto
-        # contra `/proc` em vez de lembrá-la, e um PID inventado era condenação
-        # nascida de dublê — o mesmo defeito que a cura veio curar, ao avesso.
         self._sentinela_de_escritor_cru = SentinelaDeEscritorCru(
             sonda=lambda _alvos: {no: [os.getpid()] for no in nos}
         )
@@ -424,14 +358,10 @@ class TestOTiqueDeHotplugCarimba:
     def test_o_segundo_tique_nao_le_o_diario_de_novo(
         self, bancada_no_sysfs, diario_da_bancada
     ) -> None:
-        """Mesa parada = zero subprocessos. É o que torna o carimbo pagável a
-        cada 30 s."""
+        """Mesa parada = zero subprocessos. É o que torna o carimbo pagável a"""
         daemon = _DaemonFalso()
         _carimbar(daemon, agora=0.0)
         assert len(diario_da_bancada) == 1
-        # As quatro condenadas já nasceram firmes (suspeita não volta atrás);
-        # só as duas sãs voltam ao segundo tique, e a janela de 5 s já fechou
-        # entre um tique de 30 s e o outro. Do terceiro em diante, nada.
         assert _carimbar(daemon, agora=30.0) == 2
         assert _carimbar(daemon, agora=60.0) == 0
         assert _carimbar(daemon, agora=90.0) == 0
@@ -447,8 +377,7 @@ class TestOTiqueDeHotplugCarimba:
         )
 
     def test_o_modo_nativo_nao_fabrica_limpa(self, bancada_no_sysfs, monkeypatch):
-        """Ali o daemon não sonda (regra dela), o diário não ganha a linha, e um
-        veredito de diário devolveria inocência sem ninguém ter olhado."""
+        """Ali o daemon não sonda (regra dela), o diário não ganha a linha, e um"""
 
         def _bomba(**_k: object) -> list[sb.Leitura]:
             raise AssertionError(
@@ -464,9 +393,7 @@ class TestOTiqueDeHotplugCarimba:
         assert cartorio.condenados() == []
 
     def test_o_modo_nativo_nao_agrava_com_foto_velha(self, monkeypatch) -> None:
-        """No Modo Nativo o vigia nem sonda: a foto do sentinela é de antes.
-        Agravar com ela é a mesma desonestidade de absolver com diário
-        incompleto."""
+        """No Modo Nativo o vigia nem sonda: a foto do sentinela é de antes."""
         chegada = _instancia(_BANCADA[4])
         vivas: list[sb.Instancia] = []
         monkeypatch.setattr(cx, "instancias_dualsense", lambda *_a, **_k: list(vivas))
@@ -487,7 +414,7 @@ class TestOTiqueDeHotplugCarimba:
         self, monkeypatch, diario_da_bancada
     ) -> None:
         """O caminho que salva quando o daemon não consegue ler o próprio diário."""
-        chegada = _instancia(_BANCADA[4])  # a `.0033`, limpa pelo diário
+        chegada = _instancia(_BANCADA[4])
         vivas: list[sb.Instancia] = []
         monkeypatch.setattr(cx, "instancias_dualsense", lambda *_a, **_k: list(vivas))
 
@@ -495,7 +422,7 @@ class TestOTiqueDeHotplugCarimba:
             nos=("/dev/hidraw6",),
             segura={como_o_backend_escreve(chegada.uniq): "/dev/hidraw6"},
         )
-        assert _carimbar(daemon, agora=0.0) == 0  # mesa vazia: a primeira passada
+        assert _carimbar(daemon, agora=0.0) == 0
         vivas.append(chegada)
         assert _carimbar(daemon, agora=1.0) == 1
         carimbo = cx.cartorio_do_nascimento_de(daemon).da_instancia("0033")
@@ -509,8 +436,6 @@ class TestOCarimboSoFalaDosControlesDoProduto:
     roda na mesa dela com quatro controles ligados, pagar `journalctl`."""
 
     def test_sem_handle_aberto_nem_o_sysfs_e_lido(self, monkeypatch) -> None:
-        # Contador, e não bomba: `carimbar_o_nascimento` é best-effort de ponta
-        # a ponta e engoliria a exceção, deixando a mordida passar em branco.
         leituras: list[int] = []
 
         def _contar(*_a: object, **_k: object) -> list[sb.Instancia]:
@@ -596,8 +521,7 @@ class TestOEnderecoCasaAsDuasGrafias:
 
 
 class TestOTiqueDeHotplugChamaOCarimbo:
-    """A mordida da FIAÇÃO: sem esta chamada no laço, o módulo volta a ser
-    enfeite — que é o estado em que a BARRA-MUDA-01 o declarou."""
+    """A mordida da FIAÇÃO: sem esta chamada no laço, o módulo volta a ser"""
 
     def test_o_reconnect_loop_chama_carimbar_o_nascimento(self) -> None:
         import inspect
@@ -611,10 +535,7 @@ class TestOTiqueDeHotplugChamaOCarimbo:
 
 
 class TestODiarioENoRecorte:
-    """MEDIDO 22/08/2026 no diário de quinze dias dela: a leitura da unit do
-    daemon custa 5,21 s sem recorte e 0,12 s com o `-S` de seis horas. Cinco
-    segundos por conexão nova sairiam de um dos DOIS workers do executor que o
-    daemon divide com o `read_state` — o padrão que a HANG-01 baniu."""
+    """MEDIDO 22/08/2026 no diário de quinze dias dela: a leitura da unit do"""
 
     def test_a_leitura_do_diario_leva_o_recorte(self, monkeypatch) -> None:
         vistos: list[list[str]] = []

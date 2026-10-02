@@ -1,83 +1,5 @@
 #!/usr/bin/env python3
-"""A QUINTA PERGUNTA — até onde a prova de cada feature da tela CHEGOU.
-
-**A cobrança dela, 08/09/2026:**
-
-    "mas aí me quebra. pq o programa de dias a fio é de brinquedo? uma prova de
-     conceito? por favor. ele tem que funcionar em tudo. tudo realmente. é essa
-     a ideia."
-
-E a resposta que ela recebeu era imprecisa: uma frase só somava faltas de
-custos diferentes — duas horas de trabalho e um bloqueio de transporte ditos
-como se fossem a mesma coisa. **Esta régua existe para que essa frase nunca
-mais precise ser dita de cabeça** (TUDO-FUNCIONA-01).
-
-POR QUE ELA NÃO É A SEXTA CÓPIA DA MESMA PERGUNTA
---------------------------------------------------
-
-As QUATRO perguntas dela — cabo? BT? no perfil? por controle? — já têm dono:
-:mod:`check_cabo_bt_perfil_controle` (CABO-BT-PERFIL-CONTROLE-01). Elas leem
-`*_aciona` do mapa, que responde **"o Hefesto MEXE nisso?"**.
-
-A QUINTA é outra pergunta, e nenhuma régua desta casa a fazia: **até onde a
-PROVA chegou?** É a coluna `*_ate_onde_foi`, a escada de
-:data:`check_paridade_transporte.ESCADA` — e o critério do primeiro degrau diz,
-com estas palavras, o preço de confundir as duas:
-
-    MONTOU — o byte existe na memória do produto e a suíte o lê. Nada saiu do
-    processo. *Tratar MONTOU como `funciona` é a mentira mais cara desta casa.*
-
-O mapa já cruzava as duas réguas **linha a linha**
-(`check_paridade_transporte`, 14 regras). O que ninguém cruzava é a TELA com a
-escada: *isto aqui a tela oferece — até onde foi provado que funciona?*
-
-E é por isso que a dívida tem de morar aqui: **a tela não confessa dívida
-nossa** (ordem dela de 07/09/2026, com portão em
-`scripts/check_a_tela_nao_confessa.py`). Se a tela não pode dizer, e o oferecer
-já é o selo forte, então alguma coisa tem de cobrar que a falta esteja escrita
-com CUSTO e com DONA — senão o selo é desenho fingindo ser produto.
-
-O QUE ESTA RÉGUA LÊ, E O QUE ELA NÃO DIGITA
---------------------------------------------
-
-=====================  =====================================================
-a lista de features    :func:`check_cabo_bt_perfil_controle.gestos_da_tela` e
-                       o `DO_APARELHO` de lá — **um dono só** para "quais são
-                       as features e qual linha do mapa responde por elas"
-o vocabulário da       :data:`check_paridade_transporte.ESCADA` — **um dono
-escada                 só** para os cinco degraus e a direção de cada um
-até onde foi           `docs/data/mapa-controles.csv`, `cabo_ate_onde_foi` e
-                       `radio_ate_onde_foi`, da linha do `dualsense`
-o DESTINO de cada      `docs/data/mapa-controles.csv`, `cabo_canal` e
-feature                `radio_canal`, pela
-                       :data:`check_paridade_transporte.DIRECAO_POR_CANAL`
-=====================  =====================================================
-
-O que se ESCREVE é a falta: custo, dona e razão. *A lista se lê, a razão se
-escreve* — a mesma disciplina do `_NAO_E_PROMESSA` do `casa-sabe`.
-
-O DESTINO NÃO SE ESCREVE, E A LIÇÃO É DE 09/09/2026
-----------------------------------------------------
-
-Esta régua nasceu com o destino de cada feature guardado DENTRO da própria
-`A_PROVA_QUE_FALTA` — a mesma tabela em que se declara a falta. Quem declarava
-a falta escolhia junto a linha de chegada dela, e o preço estava impresso na
-saída: arrancar a declaração do `sensor` fazia a régua responder *"o destino é
-O APARELHO OBEDECEU"* para uma feature cuja prova só termina no jogo. **A trava
-era medida contra a própria saída** — a mesma família do defeito que a casa
-nomeou em 07/09, quando a régua do CSV comparava o arquivo novo com ele mesmo e
-passou enquanto o mapa perdia 50 colunas.
-
-A cura é de endereço, não de texto: o destino vem do **mapa** — a coluna
-`*_canal` da linha —, traduzido pela direção que o dono da `ESCADA` declara. Um
-canal que anda para o aparelho (`hidraw`, `sysfs`, `dbus`, `alsa-pipewire`)
-termina em `O APARELHO OBEDECEU`; um que anda para o jogo (`evdev`, `uhid`)
-termina em `O JOGO REAGIU`. Mexer nesta régua não move mais a linha de chegada
-de coisa alguma; mexer no mapa move — e é para mover mesmo.
-
-    scripts/check_ate_onde_a_prova_chegou.py            # reprova o que falta
-    scripts/check_ate_onde_a_prova_chegou.py --tabela   # o inventário honesto
-"""
+"""A QUINTA PERGUNTA — até onde a prova de cada feature da tela CHEGOU."""
 from __future__ import annotations
 
 import csv
@@ -103,84 +25,26 @@ from check_paridade_transporte import (
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
-#: A PASTA DAS SPRINTS SAIU DO REPOSITÓRIO — 15/09/2026, ordem dela. O que
-#: esta régua cobrava dela era só a EXISTÊNCIA do arquivo da dona; a dona
-#: continua nomeada em `A_PROVA_QUE_FALTA`, e a razão que a nomeia continua
-#: conferida (`a_dona_e_a_sprint`, logo acima). O que se perdeu foi conferir
-#: que o arquivo está no disco — e ele não está no repositório de ninguém.
 
-#: O CONTROLE DESTA CASA — a mesma escolha do portão irmão, e pela mesma razão:
-#: o mapa tem uma linha por (chave, controle), e as do `pro` e do `sn30` dizem
 #: `não` em quase tudo. A tela é dos quatro DualSense (decisão dela de 06/09).
 _O_APARELHO_DELA = "dualsense"
 
-#: SEM DEGRAU REGISTRADO. Não é um degrau da escada: é a ausência dela, e ela
-#: fica ABAIXO de `MONTOU` de propósito — uma célula vazia não afirma nada, e
-#: lê-la como "montou" seria inventar o degrau mais barato.
 SEM_REGISTRO = "—"
 
-#: **O LADO EM QUE NÃO HÁ O QUE PROVAR** — 20/09/2026, com o `ganho-mic`.
-#:
-#: Ele NÃO é um degrau da escada, e por isso não entra em `_ORDEM`: é a
-#: resposta a *"até onde a prova chegou deste lado?"* quando a pergunta não se
-#: aplica, porque a feature não existe neste transporte por APARELHO. Ver
-#: :func:`_nada_a_acionar`, que é quem o decide, e a condição dupla que o
-#: impede de virar porta dos fundos.
-#:
-#: **A DIFERENÇA PARA O `—` É O PONTO INTEIRO:** `—` quer dizer *ninguém
-#: registrou*, e é uma falta; este quer dizer *não há o que registrar*, e é um
-#: fato do aparelho. Colapsar os dois faria a régua cobrar para sempre uma
-#: prova que ninguém pode dar.
 NAO_SE_APLICA = "n/a"
 
-#: A ORDEM, do pior para o melhor. Derivada de `ESCADA`, nunca redigitada: o
-#: dia em que a escada ganhar um sexto degrau, esta régua o herda.
 _ORDEM = (SEM_REGISTRO, *VALORES_DA_ESCADA)
 
-#: O FIM DE CADA DIREÇÃO — o último degrau que a `ESCADA` declara para ela.
-#: DERIVADO, e a derivação é o ponto: a `ESCADA` está em ordem, então o último
-#: de cada direção ganha. Hoje dá `saída → O APARELHO OBEDECEU` e
-#: `entrada → O JOGO REAGIU`; no dia em que a escada ganhar um sexto degrau,
-#: o destino o herda sem ninguém redigitar nada aqui.
-#:
-#: **POR QUE O FIM, e não a entrada da direção:** `O JOGO RECEBEU` diz que o
-#: processo do jogo abriu o nó — não que o jogo fez alguma coisa com o que
-#: recebeu. Parar ali é o mesmo erro que a escada nomeia no primeiro degrau,
-#: um andar acima: *tratar MONTOU como «funciona» é a mentira mais cara desta
-#: casa*. O touchpad é o precedente — o repasse íntegro e o jogo sem reagir,
-#: sem causa desde 16/08/2026.
 _FIM_DA_DIRECAO: dict[str, str] = {
     degrau.direcao: degrau.valor for degrau in ESCADA
 }
 
-#: O VOCABULÁRIO DO CUSTO, e ele é fechado de propósito.
-#:
-#: **A regra que esta sprint deixa:** *nunca some faltas de custos diferentes
-#: numa frase só.* Duas horas de trabalho e um bloqueio de transporte não são
-#: "não funciona" — e dizer que são faz dias de trabalho parecerem uma prova de
-#: conceito. Por isso o relatório imprime AGRUPADO por custo e **nunca soma**.
 CUSTOS = {
     "horas": "conserto de horas — o caminho existe e falta acionar ou registrar",
     "médio": "bancada com ela, ou um campo a criar depois da medição",
     "grande": "bloqueio de transporte, ou um degrau que ninguém sabe fechar",
 }
 
-#: A PROVA QUE FALTA — a feature da tela cuja prova parou antes do destino,
-#: com o CUSTO, a DONA e a razão. **E MAIS NADA.**
-#:
-#: O DESTINO NÃO MORA AQUI, e a ausência é a cura de 09/09/2026. Enquanto ele
-#: morava, esta tabela decidia as duas metades da mesma conta — a falta e a
-#: linha de chegada contra a qual ela é medida —, e apagar uma linha daqui
-#: MUDAVA o destino da feature que ela descrevia. Quem responde onde a escada
-#: de cada feature termina é o MAPA, por :func:`destino_de`; escrever um degrau
-#: nesta tabela não muda a opinião da régua sobre coisa nenhuma.
-#:
-#: **MORDE NOS DOIS SENTIDOS**, como a `A_DIVIDA_CONHECIDA` da irmã:
-#:
-#: * falta NOVA (a prova parou e ninguém declarou) reprova;
-#: * falta que CHEGOU (declarada aqui e a escada já alcança o destino) reprova
-#:   também, pedindo que a linha saia. Sem isso a lista vira propaganda no dia
-#:   seguinte à primeira cura.
 A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     "mira": (
         "médio",
@@ -192,8 +56,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "virar a câmera com o controle na mão dela, e a sensibilidade e o eixo "
         "(yaw ou roll) que só a mão decide. É da MESA-DE-QUATRO-01",
     ),
-    # A INCLINAÇÃO E O TOQUE (NO-MODO-XBOX-TUDO-FUNCIONA-01, E12b, 29/09/2026):
-    # arranjo, como a Mira, e a escada é a da peça que eles leem.
     "inclinacao": (
         "médio",
         "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",
@@ -210,9 +72,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "grava e relê o arranjo por controle; falta o dedo dela mover o cursor e "
         "apertar o direcional, o L1 e o L2 num jogo aberto, que é a prova da sprint",
     ),
-    # O GANHO DA HÁPTICA POR ÁUDIO (O-GANHO-DA-HAPTICA-TEM-DONO-01, publicada na
-    # 05 em 29/09): o ganho grava e chega à placa (cabo) e ao conversor da ponte
-    # (rádio) com régua que morde; o aparelho obedecer é a mão dela.
     "haptica": (
         "médio",
         "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
@@ -283,9 +142,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "falta é o registro do degrau, não o comportamento. É a linha 20 do "
         "roteiro da mesa",
     ),
-    # O 🎙 DA SEÇÃO DO RÁDIO (TRANSPLANTE-DA-SECAO-01, 23/09/2026) é o `mudo` da
-    # 02, chamado (`a08_conexoes.custo_mic`): a escada é a MESMA célula, e a
-    # falta fecha junto com a linha de cima — as duas saem no mesmo dia.
     "custo-mic": (
         "horas",
         "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
@@ -313,24 +169,8 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "`plugged_state` muda, e `plugged_state` só é escrito no ramo USB "
         "(`hid-playstation.c:1647-1661`). É o ensaio 13 do índice do rádio",
     ),
-    # `player` e `auto-cores` SAÍRAM DAQUI EM 09/09/2026, e quem as tirou foi
-    # ELA. As duas paravam na mesma célula — `luz.led_jogador.escrita_hefesto@
-    # dualsense`, escada VAZIA nos dois transportes —, e a pergunta que sobrava
-    # era de procedência, não de comportamento: ela VÊ as lâmpadas acenderem, e
-    # ninguém tinha registrado o degrau. A resposta dela foi «Sobe com o meu
-    # olho», com os quatro na mesa (dois cabo, dois rádio). A célula subiu a
-    # `O APARELHO OBEDECEU` nos dois lados com `provado_por = olho-dela`, os
-    # ensaios `led-jogador-escrita-hefesto-obedece-{cabo,radio}-0909` entraram
-    # no caderno, e a régua cobrou a saída destas duas linhas na mesma corrida —
-    # que é a mordida 2 fazendo o trabalho dela.
 }
 
-#: A DONA QUE A RAZÃO NOMEIA — 13/09/2026, RESTOS-DA-ONDA-TRES-01.
-#:
-#: A razão do `sensor` passou a dizer que o que falta «é da MESA-DE-QUATRO-01»,
-#: e a coluna da dona ficou na SENSORES-NO-JOGO-01, que já estava feita. As duas
-#: metades da mesma linha discordavam, e a régua passava: ela só perguntava se a
-#: dona existia no disco. Quando a razão diz «é da <SPRINT>», a dona é essa.
 _DONA_NA_RAZAO = re.compile(r"[Éé] da ([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d{2})\b")
 
 
@@ -345,18 +185,6 @@ def a_dona_e_a_sprint(dona: str, sprint: str) -> bool:
     forma = rf"\d{{4}}-\d{{2}}-\d{{2}}-{re.escape(sprint)}(?:-|\.md$)"
     return re.match(forma, dona) is not None
 
-#: QUANTAS CÉLULAS DO MAPA INTEIRO JÁ CHEGARAM AO JOGO — medido em 09/09/2026,
-#: nas 311 linhas × 2 transportes: **ZERO**.
-#:
-#: É o item 1 da TUDO-FUNCIONA-01 preso onde ele está. A sprint dizia *"a
-#: coluna que falta no mapa é «chega ao JOGO»"* — e a medição derrubou a
-#: metade da frase que dizia «falta»: a coluna EXISTE desde 19/08 (os degraus
-#: `O JOGO RECEBEU` e `O JOGO REAGIU`), com critério escrito e domínio
-#: guardado. O que falta é a MEDIÇÃO, e ela é zero de 622.
-#:
-#: **O teto não pode sobrar**: no dia em que a primeira célula subir, esta
-#: constante reprova pedindo o número novo — é a cicatriz de 03/09, *régua com
-#: folga acumulada dá verde sobre o defeito seguinte*.
 CELULAS_QUE_CHEGARAM_AO_JOGO = 0
 
 
@@ -370,13 +198,7 @@ def _linhas_do_mapa() -> dict[str, list[dict[str, str]]]:
 
 
 def _degrau(linha: dict[str, str], lado: str) -> str:
-    """O degrau declarado por aquele lado, ou :data:`SEM_REGISTRO`.
-
-    Um valor fora da escada NÃO vira `SEM_REGISTRO` em silêncio — quem guarda
-    o domínio da coluna é o `check_paridade_transporte`, e engolir aqui um
-    degrau com outra tipografia faria esta régua dar verde sobre o que a irmã
-    reprova.
-    """
+    """O degrau declarado por aquele lado, ou :data:`SEM_REGISTRO`."""
     valor = (linha.get(f"{lado}_ate_onde_foi") or "").strip()
     if not valor:
         return SEM_REGISTRO
@@ -419,23 +241,13 @@ def _nada_a_acionar(linha: dict[str, str], lado: str) -> bool:
     """
     aciona = (linha.get(f"{lado}_aciona") or "").strip().lower()
     causa = (linha.get(f"{lado}_por_que_nao_aciona") or "").strip().lower()
-    # AS DUAS GRAFIAS, e a segunda não é descuido: o domínio da coluna é
-    # `não`, mas o CSV já teve a grafia sem acento (medido em 20/09, numa célula de
-    # `radio_aceita`), e uma régua que só conhece a forma certa deixa de
-    # enxergar exatamente a linha que precisa de conserto.
     sem_acento = "n" + "ao"  # noqa-acento: é VALOR de coluna, não texto de tela
     return aciona in ("não", sem_acento) and causa == "nada-a-acionar"
 
 
 def ate_onde_foi(chaves: tuple[str, ...],
                  mapa: dict[str, list[dict[str, str]]]) -> tuple[str, str]:
-    """`(cabo, rádio)` — o degrau de um gesto, pela PIOR das chaves dele.
-
-    Um gesto com dois atos no aparelho só chegou quando os DOIS chegaram: o
-    `auto-cores` governa a paleta e a numeração, e a paleta obedece desde 12/08
-    enquanto a numeração não tem degrau registrado. Responder pela melhor
-    metade é a família do número que envelhece calado.
-    """
+    """`(cabo, rádio)` — o degrau de um gesto, pela PIOR das chaves dele."""
     fora = []
     for lado in ("cabo", "radio"):
         degraus = []
@@ -447,9 +259,6 @@ def ate_onde_foi(chaves: tuple[str, ...],
             degraus.extend(_degrau(linha, lado) for linha in vivas)
             if not minhas:
                 degraus.append(SEM_REGISTRO)
-        # TODAS as chaves deste lado são «nada a acionar»: a pergunta não se
-        # aplica. `_pior([])` devolveria `—`, e a feature cairia para
-        # SEM_REGISTRO com o outro lado já no destino.
         fora.append(NAO_SE_APLICA if minhas and not degraus
                     else _pior(degraus))
     return fora[0], fora[1]
@@ -457,13 +266,7 @@ def ate_onde_foi(chaves: tuple[str, ...],
 
 def _canais(chaves: tuple[str, ...],
             mapa: dict[str, list[dict[str, str]]]) -> list[tuple[str, str]]:
-    """`(id da célula, canal)` de cada lado de cada chave do gesto.
-
-    Chave que não tem linha no mapa, ou lado sem `canal` escrito, levanta
-    `SystemExit` em vez de devolver lista curta: o destino é o que decide se a
-    feature chegou, e adivinhá-lo por ausência de dado é escolher o degrau mais
-    barato — a mesma recusa do :data:`SEM_REGISTRO`.
-    """
+    """`(id da célula, canal)` de cada lado de cada chave do gesto."""
     fora: list[tuple[str, str]] = []
     for chave in chaves:
         minhas = [linha for linha in mapa.get(chave, [])
@@ -487,18 +290,7 @@ def _canais(chaves: tuple[str, ...],
 
 def destino_de(chaves: tuple[str, ...],
                mapa: dict[str, list[dict[str, str]]]) -> str:
-    """Até onde a prova daquela feature TEM de chegar — perguntado ao MAPA.
-
-    A resposta sai de `*_canal` (do mapa) traduzida por
-    :data:`check_paridade_transporte.DIRECAO_POR_CANAL` (do dono da escada), e
-    **nada nesta régua a move**: era esse o defeito de 09/09/2026, quando o
-    destino morava dentro da `A_PROVA_QUE_FALTA` e apagar uma declaração
-    mudava a linha de chegada da feature declarada.
-
-    Gesto com chaves de direções diferentes responde pelo destino mais LONGE,
-    pela mesma razão de :func:`ate_onde_foi` responder pelo pior degrau: uma
-    feature com dois atos só chegou quando o que anda mais longe chegou.
-    """
+    """Até onde a prova daquela feature TEM de chegar — perguntado ao MAPA."""
     destinos = []
     for onde, canal in _canais(chaves, mapa):
         if not canal:
@@ -521,14 +313,7 @@ def destino_de(chaves: tuple[str, ...],
 
 
 def chegou(degrau: str, destino: str) -> bool:
-    """A prova alcançou o destino daquela feature?
-
-    :data:`NAO_SE_APLICA` responde SIM, e não é indulgência: um transporte em
-    que a feature não existe não tem prova a dar, e cobrá-la manteria a
-    feature parada para sempre com o outro lado já no destino. Quem decide que
-    um lado é assim é :func:`_nada_a_acionar`, com condição dupla; aqui só se
-    obedece ao que ela decidiu.
-    """
+    """A prova alcançou o destino daquela feature?"""
     return degrau == NAO_SE_APLICA or _ORDEM.index(degrau) >= _ORDEM.index(destino)
 
 
@@ -550,7 +335,7 @@ def inventario() -> list[tuple[str, str, str, str, str, bool]]:
     for gesto, abas in sorted(gestos_da_tela().items()):
         chaves = DO_APARELHO.get(gesto)
         if chaves is None:
-            continue  # não é feature de aparelho — a irmã responde por ele
+            continue
         cabo, radio = ate_onde_foi(chaves, mapa)
         destino = destino_de(chaves, mapa)
         alcancou = chegou(cabo, destino) and chegou(radio, destino)
@@ -559,13 +344,7 @@ def inventario() -> list[tuple[str, str, str, str, str, bool]]:
 
 
 def _imprimir_o_inventario(linhas: list[tuple[str, str, str, str, str, bool]]) -> None:
-    """A LISTA «o que NÃO funciona», com as CINCO colunas — e não seis réguas.
-
-    O critério de pronto dela de 08/09 pede as quatro colunas (cabo · BT · no
-    perfil · por controle) nesta lista. Elas não são redigitadas aqui: vêm de
-    :func:`check_cabo_bt_perfil_controle.tabela`, que é a dona delas. Esta
-    régua só acrescenta a quinta — *até onde a prova chegou* — e o custo.
-    """
+    """A LISTA «o que NÃO funciona», com as CINCO colunas — e não seis réguas."""
     quatro = {linha[0]: linha for linha in quatro_respostas()}
     print(f"{'gesto':12} {'aba':4} | {'cabo':12} {'rádio':12} {'perfil':15} "
           f"{'ctrl':8} | {'prova cabo':19} {'prova rádio':19} {'chegou':6} "
@@ -593,7 +372,6 @@ def main() -> int:
     if "--tabela" in sys.argv:
         _imprimir_o_inventario(linhas)
 
-    # 1. a declaração que não descreve feature nenhuma da tela
     orfas = sorted(set(A_PROVA_QUE_FALTA) - conhecidos)
     if orfas:
         print(f"VERMELHO: {len(orfas)} falta(s) declarada(s) para gesto que a "
@@ -602,7 +380,6 @@ def main() -> int:
             print(f"  {gesto} — tire a linha de `A_PROVA_QUE_FALTA`")
         return 1
 
-    # 2. o vocabulário do custo, a dona que tem de existir, e a que a razão nomeia
     ruins = []
     for gesto, (custo, dona, razao) in sorted(A_PROVA_QUE_FALTA.items()):
         if custo not in CUSTOS:
@@ -618,7 +395,6 @@ def main() -> int:
         print("\n".join(ruins))
         return 1
 
-    # 3. a prova que parou e ninguém declarou
     paradas = {linha[0]: linha for linha in linhas if not linha[5]}
     novas = {g: l for g, l in paradas.items() if g not in A_PROVA_QUE_FALTA}
     if novas:
@@ -633,7 +409,6 @@ def main() -> int:
               "CUSTO e DONA, ou a prova sobe o degrau no mapa.")
         return 1
 
-    # 4. a falta que CHEGOU, e que vira propaganda se ficar
     chegaram = [g for g in A_PROVA_QUE_FALTA if g not in paradas]
     if chegaram:
         print(f"VERMELHO: {len(chegaram)} falta(s) declarada(s) cuja prova já "
@@ -644,7 +419,6 @@ def main() -> int:
                   f"{dona}")
         return 1
 
-    # 5. o teto do degrau de entrada, que só desce
     no_jogo = celulas_no_jogo(mapa)
     if len(no_jogo) != CELULAS_QUE_CHEGARAM_AO_JOGO:
         print(f"VERMELHO: o mapa tem {len(no_jogo)} célula(s) no degrau de "

@@ -1,24 +1,4 @@
-"""O hub de dois chips mostra quem está nele — e só quem ela plugou.
-
-26/09/2026, foto dela do mapa das conexões: *«dentro do hub identificou errado
-são 4 dispositivos conectados»*. E a pergunta que veio junto: *«se o wifi não
-foi detectado a webcam não seria também né»* — sim, qualquer aparelho USB 3.0.
-
-A causa, medida na bancada dela: a entrada declara o caminho do lado USB 2.0
-(``3-1.1.4``) e os nós dos DOIS lados do buraco (``3-1.1-port4`` e
-``4-1.1-port4``), e o motor casava aparelho com entrada só pelo caminho. O
-Wi-Fi que enumera no lado 3.0 (``4-1.1.4``) caía em «sem entrada», junto com o
-chip de dentro do hub (``3-1.1``, ``4-1.1``) e o gêmeo 3.0 do próprio hub
-(``4-1``) — nenhum dos três é coisa que ela plugou.
-
-TUDO AQUI É DE MENTIRA E DE NINGUÉM: barramentos ``usb9``/``usb10`` e caminhos
-``9-*``/``10-*``. A forma é a do hub dela: um plástico, dois chips, dois
-barramentos.
-
-A MORDIDA: devolva ao ``mesa_do_motor`` a leitura ``{id: id}`` (sem o
-``_leitura_pelas_entradas``) — o Wi-Fi volta a «sem entrada» e os três chips
-voltam a ser aparelho, e as duas réguas reprovam.
-"""
+"""O hub de dois chips mostra quem está nele — e só quem ela plugou."""
 
 from __future__ import annotations
 
@@ -39,8 +19,6 @@ def _aparelho(caminho: str, mbps: float, classe: str, *, hub: bool = False) -> A
     )
 
 
-#: O hub na entrada 3, os dois chips dele, e três aparelhos: o Wi-Fi no lado
-#: 3.0 da entrada 9, o teclado na 11 e o adaptador na 13.
 _CENSO = Censo(
     aparelhos=(
         _aparelho("9-1", 480.0, "09", hub=True),
@@ -85,19 +63,14 @@ def test_os_chips_do_hub_nao_sao_aparelho() -> None:
 
 
 def test_sem_o_mapa_nada_some() -> None:
-    """Quem nunca mapeou continua vendo tudo o que o barramento tem: sem entrada
-    declarada não há como saber qual hub é chip de qual."""
+    """Quem nunca mapeou continua vendo tudo o que o barramento tem: sem entrada"""
     mesa = mapa_das_portas.mesa_do_motor(MapaDaMesa(), _CENSO).mesa
     assert len(mesa.aparelhos) == len(_CENSO.conectados())
     assert all(mesa.leitura[a.id] == a.id for a in mesa.aparelhos)
 
 
 def test_a_entrada_do_aparelho_usb3_nao_esta_livre() -> None:
-    """26/09/2026: a Sugestão mandava o adaptador para a entrada do Wi-Fi.
-
-    A MORDIDA: devolva ao ``portas_livres`` o teste só do caminho declarado
-    (``3-1.1.4`` aqui ``9-1.1.4``) — a 9 volta a sair livre, com o Wi-Fi nela.
-    """
+    """26/09/2026: a Sugestão mandava o adaptador para a entrada do Wi-Fi."""
     assert "9" not in mapa_das_portas.portas_livres(_MAPA, _CENSO)
     assert mapa_das_portas.ocupante_de(_MAPA, "9", _CENSO) == "10-1.1.4"
     assert mapa_das_portas.ocupante_de(_MAPA, "11", _CENSO) == "9-1.1.2"

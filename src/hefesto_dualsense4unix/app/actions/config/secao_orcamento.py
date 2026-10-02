@@ -76,26 +76,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O título como ela o lê na tela.
-#:
-#: **FEITO EM 26/08/2026 (LEX-1).** A `D-PERFIL-DE-DESEMPENHO` mandou renomear
-#: a seção de "Orçamento" para "Desempenho", e o renome tinha DUAS pontas: esta
-#: constante e o rótulo com que o rodapé nomeia o campo descartado. A segunda
-#: ponta deixou de existir antes desta troca: `ipc_bridge._CAMPOS_DA_MAQUINA`
-#: virou DERIVADO (`ipc_bridge._rotulos_dos_campos`, `:812`), que lê o `TITULO`
-#: de cada seção em vez de guardar cópia. Logo esta linha é o gesto inteiro, e o
-#: portão `test_o_titulo_da_secao_e_o_rotulo_do_rodape_sao_a_mesma_palavra`
-#: continua guardando o invariante.
-#:
-#: A chave do disco NÃO acompanha: `maquina.json` continua com `orcamento`, e
-#: renomeá-la apagaria a declaração de quem já a tinha.
 TITULO = "Desempenho"
 
-#: A dica do título. Ela mudou com a `D-PERFIL-DE-DESEMPENHO`: não é mais "um
-#: teto", é um perfil que decide o que fica ligado.
-#: A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. Aqui ela era o
-#: sentido 1 — o CONJUNTO de controles ligados —, e a troca é a mesma que a leva
-#: daquele dia já tinha feito nas outras frases: "todos os controles ligados".
 DICA: str | None = (
     "O que fica ligado em todos os controles, e quanto do rádio isso ocupa. As "
     "abas continuam mandando no que fazem — nenhum ajuste seu é apagado."
@@ -108,20 +90,8 @@ def _lista(itens: list[str]) -> str:
     return f"{', '.join(itens[:-1])} e {itens[-1]}"
 
 
-#: As quatro chaves que o DISCO aceita. São as MESMAS de
-#: `OrcamentoDeclarado.teto` (`utils/maquina.py`), e continuam as quatro mesmo
-#: com a tela oferecendo três perfis: o esquema não muda, porque tirar `"auto"`
-#: do `Literal` faria o `extra="forbid"` do pydantic recusar o DOCUMENTO
-#: INTEIRO de quem já o declarou — o sintoma seria "não consegui gravar", que é
-#: o sintoma errado para a causa certa.
-#:
-#: Gravar o RÓTULO no lugar da chave falha na próxima carga, e falha feio. O
-#: teste `test_as_chaves_sao_as_do_schema` prende esta tupla ao Literal do
-#: schema justamente para que as duas listas não possam divergir.
 CHAVES: tuple[str, ...] = ("economia", "balanceado", "max", "auto")
 
-#: Os três perfis, na ordem da tela. São ids de BOTÃO, nunca de disco — a
-#: tradução para disco é :data:`TETO_POR_PERFIL`.
 PERFIL_TUDO_LIGADO = "tudo_ligado"
 PERFIL_BATERIA_LONGA = "bateria_longa"
 PERFIL_EU_ESCOLHO = "eu_escolho"
@@ -132,49 +102,19 @@ PERFIS: tuple[str, ...] = (
     PERFIL_EU_ESCOLHO,
 )
 
-#: O rótulo de cada perfil — palavra dela, na `D-PERFIL-DE-DESEMPENHO`. UM
-#: dono para as duas abas: o cartão de cada controle na Conexões e o Perfil
 #: Global de Bateria da Sistema leem daqui.
-#:
-#: 26/09/2026 (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`): «Eu escolho» virou
-#: «Personalizado», com o mesmo sentido (cada aba manda), e as três palavras
-#: ganharam a maiúscula que o desenho aprovado da Conexões já escreve.
 ROTULOS_DOS_PERFIS: dict[str, str] = {
-    # Os nomes são dela, 26/09/2026: *«Os nomes dos botões Viram Perfil Máximo.
-    # Perfil Econômico e Personalizado.»* A chave de disco não muda.
     PERFIL_TUDO_LIGADO: "Perfil Máximo",
     PERFIL_BATERIA_LONGA: "Perfil Econômico",
     PERFIL_EU_ESCOLHO: "Personalizado",
 }
 
-#: Perfil da TELA -> chave do DISCO. `None` é a ausência da declaração, que é o
-#: que "Eu escolho" quer dizer: nenhum teto de mesa, cada aba manda na sua.
-#:
-#: `"Tudo ligado"` grava `balanceado` e não `max` porque os dois devolvem o
-#: mesmo teto (`None`) e `balanceado` é o que a aba Rumble já chama de "sem
-#: teto". Gravar `max` prometeria uma diferença que o produto não tem.
 TETO_POR_PERFIL: dict[str, str | None] = {
     PERFIL_TUDO_LIGADO: "balanceado",
     PERFIL_BATERIA_LONGA: "economia",
     PERFIL_EU_ESCOLHO: None,
 }
 
-#: Chave do DISCO -> perfil da TELA. É a migração da
-#: `D-PERFIL-DE-DESEMPENHO`, e ela não perde nada: `economia` é o único que
-#: impunha teto, e `balanceado`/`max`/`auto` devolviam os três o mesmo `None` —
-#: quatro nomes para um comportamento só.
-#:
-#: **A AUSÊNCIA não está aqui, e é de propósito.** A decisão dela lista
-#: "vazio → Tudo ligado" na tabela de migração; mas "vazio" não é um valor a
-#: migrar, é a falta de qualquer declaração. Afundar "Tudo ligado" para quem
-#: nunca declarou faria a tela afirmar uma escolha que ela não fez, e — pior —
-#: mataria o gesto de desfazer: o `SegmentedSelector` é grupo de rádio e
-#: IGNORA o clique no botão já afundado, então quem clicasse "Eu escolho"
-#: (que grava a ausência) veria "Tudo ligado" afundar de novo na remontagem,
-#: sem gesto nenhum para sair dali. É o mesmo defeito que fez o quinto botão
-#: nascer. **PROVISÓRIO — decisão dela:** se ela quiser mesmo o botão afundado
-#: por padrão, o conserto é o esquema ganhar um valor para "cada aba manda", e
-#: aí a ausência deixa de existir.
 PERFIL_POR_TETO: dict[str, str] = {
     "economia": PERFIL_BATERIA_LONGA,
     "balanceado": PERFIL_TUDO_LIGADO,
@@ -182,36 +122,15 @@ PERFIL_POR_TETO: dict[str, str] = {
     "auto": PERFIL_TUDO_LIGADO,
 }
 
-# SEM_TETO MUDOU-SE DE CASA em 01/09/2026 — está em `core.rumble`, ao lado do
-# `teto_do_orcamento` cujo `None` ela traduz, e chega aqui pelo import da linha
-# 64. Este módulo puxa `gi`/`Gtk` (pelo `SegmentedSelector` da linha 63), e uma
-# camada de tela sem GTK que precisasse da palavra tinha de escolher entre
-# arrastar a janela inteira para o processo e digitar a frase de novo. O nome
-# continua respondendo por `secao_orcamento.SEM_TETO`, que é como três réguas e
-# a tabela desta seção o leem.
 
-#: A célula do "Eu escolho": não há teto de mesa, e a aba de origem decide.
 CADA_ABA_MANDA = "Cada aba manda"
 
-#: O que a célula diz de uma linha sem ponto de aplicação. Ela existe porque
-#: uma célula vazia seria lida como "sem teto", e "sem teto" é uma AFIRMAÇÃO
-#: sobre um limite que ninguém tem por onde impor.
 SEM_PONTO_DE_APLICACAO = "Ainda não tem por onde ser limitado"
 
 
 @dataclass(frozen=True)
 class LinhaDoTeto:
-    """Uma coisa que o perfil deveria alcançar, e se ela tem por onde.
-
-    `ponto_de_aplicacao` é `"módulo:atributo"` — o funil por onde o teto passa
-    de verdade —, ou `None` quando não existe nenhum. É `None` que a tabela
-    mostra como :data:`SEM_PONTO_DE_APLICACAO`, e é dele que
-    :func:`alcance_de_hoje` deriva a frase.
-
-    O portão `test_so_a_vibracao_tem_ponto_de_aplicacao_hoje` IMPORTA cada
-    ponto declarado: marcar "Gatilhos" como tendo ponto sem que exista reprova
-    nomeando a linha. É a rede contra a tela prometer teto que ninguém impõe.
-    """
+    """Uma coisa que o perfil deveria alcançar, e se ela tem por onde."""
 
     nome: str
     vem_de: str
@@ -222,18 +141,6 @@ class LinhaDoTeto:
         return bool(self.ponto_de_aplicacao)
 
 
-#: As cinco coisas que o perfil deveria alcançar. Dono único: a tabela e a
-#: frase de apoio saem daqui, e quando uma delas ganhar ponto de aplicação,
-#: mudar o campo muda as duas de uma vez.
-#:
-#: OS GATILHOS E A BARRA DE LUZ GANHARAM O PONTO em 25/09/2026
-#: (O-MODO-ECONOMIA-POR-CONTROLE-01): a «Bateria longa» liga o Modo Economia
-#: em todos os controles, e a ativação do perfil os põe no teto — a luz mais
-#: fraca sem apagar, o gatilho com metade da força no mesmo ponto. O que a
-#: economia faz em cada peça tem dono próprio
-#: (``profiles.schema.A_ECONOMIA_EM_CADA_PECA``); esta tabela só diz que o
-#: teto os alcança. Microfone e giroscópio ficam de fora por decisão escrita
-#: lá.
 LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
     LinhaDoTeto(
         "Vibração",
@@ -254,27 +161,7 @@ LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
     LinhaDoTeto("Giroscópio", "Perfis"),
 )
 
-#: Dica por perfil — cada uma diz o que aquele botão LIGA, e nenhuma promete
-#: efeito que o clique não produz.
-#:
-#: A dica do antigo "Auto" **saiu inteira**, sem nota e sem data: ela dizia
-#: *"A vibração acompanha a bateria: cheia joga inteira, pela metade cai para
-#: 70%, abaixo de 20% cai para 30%"*, e isso é a escada de
-#: `core.rumble._effective_mult` no ramo da política da **aba Rumble** — clicar
-#: naquele botão não ligava a escada, não a desligava e não mudava nada. Fato
-#: errado se substitui (regra dela, 11/08/2026), não se guarda ao lado do
-#: certo.
-#:
-#: A do "Bateria longa" é DERIVADA, e por causa do mesmo defeito. A palavra
-#: dela na `D-PERFIL-DE-DESEMPENHO` era *"vibração com teto de 30% e barra de
-#: luz apagada"* — e a barra de luz **não tem ponto de aplicação nenhum** hoje
-#: (:data:`LINHAS_DO_TETO`), então escrevê-la aqui prometeria de novo o que o
-#: clique não produz. Derivando da tabela, a frase não pode prometer mais do
 #: que a tabela mostra, e o dia em que a barra de luz ganhar esse ponto ela
-#: entra sozinha nas duas.
-#:
-#: GANHOU EM 25/09/2026, e a palavra de 24/08 (*"barra de luz apagada"*) caiu
-#: pela dela de 25/09 para a economia: *«mantermos as features funcionando mas
 #: gastando menos»* — a luz fica mais fraca e não apaga. <!-- noqa-acento: citação literal dela -->
 def _dica_da_bateria_longa() -> str:
     """O que o perfil de bateria faz HOJE, e o que fica como está."""
@@ -292,10 +179,6 @@ def _dica_da_bateria_longa() -> str:
     pendentes = [linha.nome for linha in LINHAS_DO_TETO if not linha.tem_ponto]
     if not pendentes:
         return f"{frase}."
-    # «continuam como estão», e não mais «o teto ainda não os alcança»: desde
-    # 25/09/2026 o que sobra aqui (microfone e giroscópio) fica de fora POR
-    # DECISÃO (`profiles.schema.A_ECONOMIA_EM_CADA_PECA`), não por dívida — e
-    # a tela não confessa dívida que não existe.
     return f"{frase}. {_lista(pendentes)} continuam como estão."
 
 
@@ -305,43 +188,17 @@ DICAS: dict[str, str] = {
         "giroscópio e touchpad."
     ),
     PERFIL_BATERIA_LONGA: _dica_da_bateria_longa(),
-    # A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. "teto de mesa"
-    # era o teto que vale para TODOS os controles — o sentido 1 —, e a leva de
     # 05/09 já tinha trocado a mesma ideia por "o teto geral" em `aba_sistema`.
     PERFIL_EU_ESCOLHO: (
         "Nenhum teto geral: os ajustes de cada aba mandam, um por um."
     ),
 }
 
-#: As dicas dos três botões do CARTÃO de cada controle (aba Conexões). Só a do
-#: «Personalizado» muda: no cartão o «cada aba manda» vale para UM controle.
 DICAS_DO_CARTAO: dict[str, str] = {
     **DICAS,
     PERFIL_EU_ESCOLHO: "Nenhum teto: os ajustes de cada aba mandam neste controle.",
 }
 
-# ---------------------------------------------------------------------------
-# O PERFIL DE CADA CONTROLE — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01, 26/09/2026
-# ---------------------------------------------------------------------------
-# Decisões dela: `D-2609-O-PERFIL-DE-DESEMPENHO-E-POR-CONTROLE` (os três
-# perfis em cada cartão) e `D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`
-# (um dono, o mesmo gesto do daemon). O Perfil Global de Bateria da aba
-# Sistema é o `orcamento.teto` da mesa; o do cartão é
-# `controles[<uniq>].economia` no MESMO `maquina.json`, gravado pelo MESMO
-# `machine.declare`. Quem vence é a regra do `profiles.schema` (o bloco do
-# Modo Economia): a «Bateria Longa» global vale para todos, e fora dela cada
-# controle tem o seu.
-#
-# O DISCO DO CONTROLE TEM TRÊS VALORES, e os três já existiam no esquema
-# (`ControleDeclarado.economia: bool | None`):
-#
-# * ausente (`None`) é «Tudo Ligado»: todo controle nasce com tudo ligado
-#   (ordem dela de 17/09), e é o que o botão velho gravava ao desligar;
-# * `true` é «Bateria Longa»: a economia deste controle;
-# * `false` é «Personalizado»: sem teto próprio, cada aba manda. Na regra do
-#   esquema `false` vale o mesmo que a ausência (o controle não liga a
-#   economia), e é: «Tudo Ligado» e «Personalizado» não põem teto nenhum,
-#   como no global (`balanceado` e `None` devolvem o mesmo teto).
 ECONOMIA_POR_PERFIL: dict[str, bool | None] = {
     PERFIL_TUDO_LIGADO: None,
     PERFIL_BATERIA_LONGA: True,
@@ -372,20 +229,11 @@ def declaracao_do_perfil(uniq: str, perfil: str) -> dict[str, Any]:
     return {"controles": {chave: {"economia": valor} for chave in corpo["controles"]}}
 
 
-#: Cabeçalho da tabela de consequências. DERIVADO dos perfis: uma coluna por
-#: opção oferecida, sempre. Antes eram três colunas para cinco botões, e a
-#: tabela calava justamente sobre os dois que não faziam nada.
 COLUNAS: tuple[str, ...] = ("O que", "Vem de", *(ROTULOS_DOS_PERFIS[p] for p in PERFIS))
 
 
 def alcance_de_hoje() -> str:
-    """A frase de apoio, DERIVADA de :data:`LINHAS_DO_TETO`.
-
-    Ela existe porque a ausência das outras quatro linhas não fala — e
-    silêncio, nesta tela, seria lido como "o teto vale para tudo". Derivar em
-    vez de repetir é a cura de sempre: um dono só. Antes, a frase era um
-    literal ao lado da tabela, e as duas podiam divergir sem ninguém notar.
-    """
+    """A frase de apoio, DERIVADA de :data:`LINHAS_DO_TETO`."""
     com_ponto = [linha.nome for linha in LINHAS_DO_TETO if linha.tem_ponto]
     sem_ponto = [linha.nome for linha in LINHAS_DO_TETO if not linha.tem_ponto]
     alcanca = _lista(com_ponto) if com_ponto else "nada"
@@ -397,35 +245,11 @@ def alcance_de_hoje() -> str:
     )
 
 
-# LEX-2, ITEM 8 — A FRASE DO ALCANCE VIRA A SEGUNDA METADE DA DICA DO TÍTULO.
-#
-# Ela era um `rotulo_de_apoio` no pé da seção e diria a mesma coisa com a mesa
-# vazia e com a mesa cheia: é explicação, e explicação vai para o hover.
-#
-# ANEXADA AQUI, e não lá em cima junto do `TITULO`, porque ela é DERIVADA de
-# `LINHAS_DO_TETO` — `alcance_de_hoje()` só existe depois desta linha do
-# módulo. Derivar em vez de repetir continua sendo a regra: um dono só, e a
-# tabela e a dica não podem divergir.
 DICA = f"{DICA} {alcance_de_hoje()}"
 
 
 def orcamento_em_vigor(host: Any = None) -> str | None:
-    """A chave do orçamento que está GRAVADA — nunca a que espera o "Aplicar".
-
-    É de propósito que ela ignore `host._maquina_pendente`: quem lê esta função
-    é a aba de origem (a linha "limitado a 30% pelo orçamento" da aba Rumble), e
-    aquela linha descreve o que o Hefesto está aplicando AGORA. Mostrar ali a
-    escolha ainda pendente faria a aba Rumble afirmar um limite que o daemon não
-    está impondo, que é a mentira oposta e igualmente cara.
-
-    `host._orcamento_lido` é o ponto de injeção, no molde do `_mesa_leitor` da
-    seção da mesa: é por ele que o retrato das abas alimenta a tela sem tocar o
-    disco dela, e é por ele que o teste roda sem depender do `config_dir()` da
-    máquina em que está.
-
-    Devolve `None` quando ninguém declarou nada — e `None` aqui significa "não
-    sei", nunca "sem teto".
-    """
+    """A chave do orçamento que está GRAVADA — nunca a que espera o "Aplicar"."""
     leitor = getattr(host, "_orcamento_lido", None) if host is not None else None
     if leitor is not None:
         with contextlib.suppress(Exception):
@@ -468,12 +292,7 @@ def orcamento_na_tela(host: Any = None) -> str | None:
 
 
 def perfil_na_tela(host: Any = None) -> str | None:
-    """Qual dos três botões nasce afundado, lendo o que já está no disco.
-
-    `None` quer dizer **nenhum** — e é o caso de quem nunca declarou nada. Ver
-    a nota de :data:`PERFIL_POR_TETO` para o porquê de a ausência não afundar
-    "Tudo ligado".
-    """
+    """Qual dos três botões nasce afundado, lendo o que já está no disco."""
     gravado = orcamento_na_tela(host)
     if not isinstance(gravado, str):
         return None
@@ -481,13 +300,7 @@ def perfil_na_tela(host: Any = None) -> str | None:
 
 
 def celula_do_teto(orcamento: str) -> str:
-    """O que a coluna de um orçamento diz sobre a vibração.
-
-    O número sai de `teto_do_orcamento`, que o deriva de `RUMBLE_POLICY_MULT`.
-    Nenhum percentual desta tela é digitado: um número digitado sobrevive à
-    mudança do degrau que ele descrevia, e aí a tela passa a prometer o que o
-    daemon não faz.
-    """
+    """O que a coluna de um orçamento diz sobre a vibração."""
     teto = teto_do_orcamento(orcamento)
     if teto is None:
         return SEM_TETO
@@ -495,12 +308,7 @@ def celula_do_teto(orcamento: str) -> str:
 
 
 def celula_do_perfil(perfil: str, linha: LinhaDoTeto) -> str:
-    """A célula de um perfil numa linha da tabela.
-
-    Sem ponto de aplicação, a célula diz isso e não "Sem teto": "Sem teto" é
-    uma afirmação sobre um limite, e afirmar limite nenhum onde não existe nem
-    por onde impor é a tela falando do que não sabe.
-    """
+    """A célula de um perfil numa linha da tabela."""
     if not linha.tem_ponto:
         return SEM_PONTO_DE_APLICACAO
     chave = TETO_POR_PERFIL.get(perfil)
@@ -512,14 +320,7 @@ def celula_do_perfil(perfil: str, linha: LinhaDoTeto) -> str:
 
 
 def celula_da_economia(orcamento: str, nome: str) -> str:
-    """O que a coluna de um orçamento diz sobre uma peça que não é a vibração.
-
-    25/09/2026 (O-MODO-ECONOMIA-POR-CONTROLE-01): a luz e os gatilhos ganharam
-    ponto, e o teto deles NÃO é o percentual da vibração — a célula que
-    reusasse `celula_do_teto` diria "30% da força" de um gatilho que vai a
-    metade. A frase sai do dono do que a economia faz em cada peça
-    (`profiles.schema.A_ECONOMIA_EM_CADA_PECA`), casada pelo nome da linha.
-    """
+    """O que a coluna de um orçamento diz sobre uma peça que não é a vibração."""
     from hefesto_dualsense4unix.profiles.schema import (
         A_ECONOMIA_EM_CADA_PECA,
         mesa_em_economia,
@@ -534,54 +335,20 @@ def celula_da_economia(orcamento: str, nome: str) -> str:
 
 
 def montar(host: Any, caixa: Any) -> None:
-    """Monta a seção dentro de `caixa` — a caixa interna da moldura.
-
-    `host` é o `HefestoApp`: dele vêm `_get` (widgets do Glade) e o que os
-    outros mixins já penduraram. `caixa` é um `Gtk.Box` vertical, com as
-    margens da casa já aplicadas.
-
-    Contrato, e ele vale para as cinco: **nunca levantar**. Uma seção que
-    falha ao montar não pode derrubar a aba, e uma aba que falha não pode
-    derrubar a janela. Quem chama já embrulha em `contextlib.suppress`, mas a
-    tolerância começa aqui.
-    """
-    # LEX-2, ITENS 5 E 8 — DOIS PARÁGRAFOS SAÍRAM DA PÁGINA (26/08/2026).
-    #
-    # A `QUANDO_VALE` virou a segunda metade da dica de cada um dos três
-    # perfis (`_fileira_dos_perfis`), que é o botão que ela explica; a
-    # `alcance_de_hoje()` virou a segunda metade da `DICA` do título. As duas
-    # diriam a mesma coisa com a mesa vazia e com a mesa cheia, logo são
-    # EXPLICAÇÃO, e explicação vai para o hover.
+    """Monta a seção dentro de `caixa` — a caixa interna da moldura."""
     caixa.pack_start(_fileira_dos_perfis(host), False, False, 0)
     caixa.pack_start(_bloco_da_conta(host), False, False, 0)
     caixa.pack_start(_tabela_das_consequencias(), False, False, 0)
 
 
 def _fileira_dos_perfis(host: Any) -> Any:
-    """Os três perfis, deitados, com o que já está no disco marcado.
-
-    **Por que a orientação é trocada à mão.** O `SegmentedSelector` sem `wrap`
-    é um `Gtk.Box` VERTICAL (`segmented_selector.py:206`) e empilharia as
-    opções uma sobre a outra; com `wrap=True` ele vira grade de TRÊS colunas
-    fixas (`_WRAP_COLUNAS`). Deitar a caixa é a terceira via, e é a barata: a
-    classe `linked` que o widget já aplica sem `wrap` foi feita para
-    exatamente esta fileira de botões colados, e `set_orientation` é API do
-    próprio `Gtk.Box`. Mexe só nesta instância.
-
-    A marcação inicial vem ANTES do `connect`, e a ordem é a cura: o
-    `set_active_id` EMITE "changed" (espelha o `GtkComboBox`), e com o handler
-    já ligado abrir a janela deixaria uma declaração pendente que ninguém fez —
-    e o próximo "Aplicar" a gravaria como escolha dela.
-    """
+    """Os três perfis, deitados, com o que já está no disco marcado."""
     from gi.repository import Gtk
 
     seletor = SegmentedSelector()
     with contextlib.suppress(Exception):
         seletor.set_orientation(Gtk.Orientation.HORIZONTAL)
     seletor.set_items([(perfil, ROTULOS_DOS_PERFIS[perfil]) for perfil in PERFIS])
-    # A `QUANDO_VALE` ANEXADA à dica de cada perfil (LEX-2, item 5). Nos três, e
-    # não num só: a pessoa lê a dica do botão em que está o cursor, e um perfil
-    # que calasse sobre o "Aplicar" leria como perfil que grava na hora.
     seletor.set_tooltips(
         {perfil: f"{dica} {QUANDO_VALE}" for perfil, dica in DICAS.items()}
     )
@@ -590,8 +357,6 @@ def _fileira_dos_perfis(host: Any) -> Any:
         with contextlib.suppress(Exception):
             seletor.set_active_id(str(perfil))
     else:
-        # Ninguém declarou: nenhum botão afundado. Ver a nota de
-        # `PERFIL_POR_TETO`.
         with contextlib.suppress(Exception):
             seletor.limpar_ativo()
     seletor.set_hexpand(False)
@@ -604,17 +369,7 @@ def _fileira_dos_perfis(host: Any) -> Any:
 
 
 def _ao_escolher(host: Any, seletor: Any) -> None:
-    """Acumula a escolha em `_maquina_pendente`. NÃO grava, NÃO manda IPC.
-
-    A declaração é PARCIAL de propósito: `fundir_declaracao` desce nos
-    dicionários aninhados, então mandar só `{"orcamento": {"teto": ...}}` não
-    apaga o que as outras quatro seções declararam na mesma janela.
-
-    O "Eu escolho" vira `None` ANTES da guarda, e não pode virar depois: `None`
-    presente na declaração é escolha ("voltei a decidir aba por aba") e
-    SOBRESCREVE, enquanto a AUSÊNCIA da chave preserva o que havia — devolver
-    cedo aqui deixaria a escolha antiga no rascunho e no disco.
-    """
+    """Acumula a escolha em `_maquina_pendente`. NÃO grava, NÃO manda IPC."""
     from hefesto_dualsense4unix.utils.maquina import fundir_declaracao
 
     escolha = seletor.get_active_id()
@@ -625,11 +380,6 @@ def _ao_escolher(host: Any, seletor: Any) -> None:
         getattr(host, "_maquina_pendente", None),
         {"orcamento": {"teto": teto}},
     )
-    # A marca "há escolhas por aplicar" no rodapé (23/08/2026). Sem esta chamada
-    # ela só acendia ao trocar de aba ou ao ir para a bandeja — quem declarava e
-    # clicava direto no X via o diálogo de fechamento sem nunca ter visto o aviso.
-    # `getattr` com guarda é o idioma da casa para fiação de aba: hospedeiro de
-    # teste sem rodapé não pode derrubar a declaração.
     marcar = getattr(host, "_marcar_declaracao_por_aplicar", None)
     if marcar is not None:
         with contextlib.suppress(Exception):
@@ -638,18 +388,7 @@ def _ao_escolher(host: Any, seletor: Any) -> None:
 
 
 def _tabela_das_consequencias() -> Any:
-    """A tabela "o que o perfil faz com cada coisa" — as cinco linhas.
-
-    `Gtk.Grid` e não caixas encaixadas porque as colunas têm de alinhar entre
-    as linhas.
-
-    Sem `column_homogeneous`: a coluna "O que" tem uma palavra e a de Bateria
-    longa tem uma frase, e forçar largura igual daria à palavra o tamanho da
-    frase — é a mesma medição que proíbe `set_homogeneous(True)` nas fileiras
-    desta aba (`main.glade:1644-1650`: 459px para a palavra "Auto", e a largura
-    mínima da janela em 1004px numa janela que abre com 1180 e não rola na
-    horizontal).
-    """
+    """A tabela "o que o perfil faz com cada coisa" — as cinco linhas."""
     from gi.repository import Gtk
 
     grade = Gtk.Grid()
@@ -664,12 +403,6 @@ def _tabela_das_consequencias() -> Any:
         grade.attach(_celula(linha.nome), 0, indice, 1, 1)
         grade.attach(_celula(linha.vem_de), 1, indice, 1, 1)
         if not linha.tem_ponto:
-            # A frase vale para os TRÊS perfis, e por isso ocupa as três
-            # colunas de uma vez. Repeti-la três vezes na mesma linha custou
-            # 503px de largura mínima à seção (medido em 25/08/2026: 939px
-            # contra 436px), e a janela abre com 1180 sem rolagem horizontal.
-            # Uma célula que atravessa também LÊ melhor: a informação é sobre a
-            # linha, não sobre cada perfil.
             grade.attach(
                 _celula(SEM_PONTO_DE_APLICACAO), 2, indice, len(PERFIS), 1
             )
@@ -680,12 +413,7 @@ def _tabela_das_consequencias() -> Any:
 
 
 def _celula(texto: str, *, cabecalho: bool = False) -> Any:
-    """Uma célula da tabela: alinhada à esquerda, sem quebra.
-
-    O cabeçalho é esmaecido em vez de negrito: negrito numa linha inteira
-    compete com o título da seção logo acima, e a coluna já se distingue pela
-    posição.
-    """
+    """Uma célula da tabela: alinhada à esquerda, sem quebra."""
     from gi.repository import Gtk
 
     rotulo = Gtk.Label(label=_(texto))
@@ -696,35 +424,18 @@ def _celula(texto: str, *, cabecalho: bool = False) -> Any:
     return rotulo
 
 
-# ---------------------------------------------------------------------------
-# A conta de fatias — a pergunta que decide o produto
-# ---------------------------------------------------------------------------
-
-#: O que a tela diz enquanto não sabe quem está no rádio. **Nunca "Folgada"**:
-#: a cura da B1, medida em 23/08/2026 — com o Hefesto parado as três barras
-#: diziam "Folgada", em verde, "0/1600", byte a byte a tela de um rádio vazio.
-#: Zero pinta verde, e "0/1600" é afirmação numérica sobre o que não se leu.
 SEM_RESPOSTA_DO_DAEMON = (
     "Não sei quem está no rádio — o Hefesto não respondeu. Ligue-o na aba "
     "Sistema para ver a conta."
 )
 
-#: O que a tela diz quando o daemon respondeu e não há ninguém no rádio. É
-#: diferente de não saber, e a diferença é a informação inteira.
 NINGUEM_NO_RADIO = "Nenhum controle no rádio agora — nada ocupando fatia."
 
-#: O cabeçalho do bloco da conta.
 TITULO_DA_CONTA = "Quanto do rádio cada adaptador já gasta"
 
 
 def _bloco_da_conta(host: Any) -> Any:
-    """A conta por adaptador, montada e pendurada no hospedeiro.
-
-    Devolve a caixa; o objeto que a mantém viva e a redesenha fica em
-    `host._config_conta_de_slots`, no mesmo molde do seletor logo acima (solto
-    numa variável local ele é coletado ao fim do `montar`, e o redesenho depois
-    da resposta do daemon cairia no vazio).
-    """
+    """A conta por adaptador, montada e pendurada no hospedeiro."""
     conta = _ContaDeSlots(host)
     host._config_conta_de_slots = conta
     conta.pedir_o_estado()
@@ -759,9 +470,6 @@ class _ContaDeSlots:
         self._host = host
         self._controles: list[dict[str, Any]] = []
         self._com_ponte_de_mic: tuple[str, ...] = ()
-        #: Os adaptadores em modo de busca na última resposta do daemon. Vazio é
-        #: o padrão seguro: ele devolve a escolha de destino ao critério de
-        #: sempre, que é como a seção escolhia antes da RESERVA-DO-RADIO-01.
         self._varrendo: frozenset[str] = frozenset()
         self._respondeu: bool | None = None
         self._pedido_em_voo = False
@@ -769,7 +477,6 @@ class _ContaDeSlots:
         self.caixa.set_margin_top(8)
         self._desenhar()
 
-    # -- leitura ---------------------------------------------------------
 
     def pedir_o_estado(self) -> None:
         """Pede ao daemon quem está no rádio — sem bloquear a thread da tela."""
@@ -782,14 +489,11 @@ class _ContaDeSlots:
             self._aplicar_estado(estado if isinstance(estado, dict) else None)
             return
         if getattr(self._host, "_mesa_leitor", None) is not None:
-            # Bancada do retrato: sem IPC, e a tela diz que não sabe.
             return
         if self._pedido_em_voo:
             return
 
         # O timeout é o MESMO de toda leitura de `daemon.state_full` da casa
-        # (`mode_transition.py:43`, HARM-15: 1,0 s, porque sob hotplug o daemon
-        # passa dos 0,25 s de padrão e a janela o declarava morto estando vivo).
         from hefesto_dualsense4unix.app.actions.mode_transition import (
             STATE_IPC_TIMEOUT_S,
         )
@@ -818,25 +522,7 @@ class _ContaDeSlots:
             )
 
     def _ler_a_varredura(self) -> None:
-        """Quem está varrendo — UMA leitura por resposta do daemon, não por pintura.
-
-        RESERVA-DO-RADIO-01. Mandar um controle para um adaptador em modo de
-        busca é mandá-lo para onde se mede de 32,5% a 43,4% de queda de pacotes
-        (19/09/2026), e até 20/09 nada no produto sabia disso.
-
-        **Ela mora aqui, e não em `_planos`, por medida.** A leitura custou 8,4
-        ms de mediana contra o BlueZ vivo desta bancada; `_planos` é chamado por
-        `falas`, que é chamado por `_desenhar`, e pôr rádio no caminho do desenho
-        é a forma exata do travamento de 15/09/2026. Aqui ela corre uma vez por
-        resposta do daemon, com a `varredura_recente` segurando o resto.
-
-        **Quem injeta leitor não quer que este bloco fale com a máquina.** É a
-        mesma doutrina de `_desempenho_leitor` e `_mesa_leitor`: a suíte e o
-        retrato alimentam a seção justamente para ela não abrir IPC nem
-        subprocesso. Sem esta guarda, cada teste desta seção abriria sete
-        processos contra o `bluetoothd` DELA — a suíte medindo a máquina de quem
-        a roda, que é o defeito que `_desempenho_sysfs` já existe para matar.
-        """
+        """Quem está varrendo — UMA leitura por resposta do daemon, não por pintura."""
         leitor = getattr(self._host, "_desempenho_varredura", None)
         if leitor is not None:
             self._varrendo = frozenset()
@@ -853,10 +539,6 @@ class _ContaDeSlots:
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.integrations import varredura_do_radio
 
-            # `varrendo` vazio cobre os dois casos, e é de propósito: leitura que
-            # não deu chega vazia, e "não sei" nunca vira penalidade contra um
-            # adaptador. Quem precisa distinguir é o `doctor`, que pergunta
-            # direto ao BlueZ.
             self._varrendo = varredura_do_radio.varredura_recente().varrendo
 
     def _aplicar_estado(self, estado: dict[str, Any] | None) -> None:
@@ -893,13 +575,8 @@ class _ContaDeSlots:
                     declaradas[chave] = valor["microfone"]
         return tuple(chave for chave, ligado in declaradas.items() if ligado)
 
-    # -- desenho ---------------------------------------------------------
 
     def _planos(self) -> dict[str, plano_de_radio.PlanoDoAdaptador]:
-        # `_desempenho_sysfs` é o ponto de injeção da VARREDURA, e ele existe
-        # pela mesma razão do `_desempenho_leitor`: quem amarra controle a
-        # adaptador é o `/sys/class/hidraw` desta máquina, e um teste que
-        # dependesse dele mediria a bancada de quem o roda em vez do código.
         sysfs = getattr(self._host, "_desempenho_sysfs", None) or {}
         with contextlib.suppress(Exception):
             return plano_de_radio.plano_por_adaptador(
@@ -912,36 +589,14 @@ class _ContaDeSlots:
         return {}
 
     def _apelidos(self) -> dict[str, str]:
-        """`endereço -> nome dela`, quando o hospedeiro já conhece os dongles.
-
-        Sem dongles conhecidos a tela diz :data:`ADAPTADOR_SEM_NOME`, nunca
-        `hciN`: o índice é a vaga, não o aparelho, e ele inverte entre boots.
-        """
+        """`endereço -> nome dela`, quando o hospedeiro já conhece os dongles."""
         dongles = getattr(self._host, "_config_dongles", None) or ()
         with contextlib.suppress(Exception):
             return plano_de_radio.apelido_por_endereco(tuple(dongles))
         return {}
 
     def _desenhar(self) -> None:
-        """As falas viram rótulos — menos as que a LEX-2 mandou para o hover.
-
-        A `frase_do_preco_por_controle` é a conta de fatias, e ela diria a mesma
-        coisa com a mesa vazia e com a mesa cheia: é EXPLICAÇÃO, e explicação
-        vai para o hover pela regra do léxico desta aba.
-
-        **Ela continua em :meth:`falas`, e isso não é descuido.** A pergunta que
-        a `falas` responde nunca foi "está impresso na página?" — é "o que esta
-        seção DIZ à pessoa?", e é sobre essa lista que o portão das
-        `PALAVRAS_DE_CULPA` varre tudo. Uma fala que muda de rótulo para dica
-        continua sendo fala; tirá-la daqui abriria um buraco no portão do
-        tamanho exato da frase que saiu da página. É a mesma migração que o
-        `_textos` -> `_falas` de
-        `test_a_aba_diz_quando_a_escolha_fica_guardada.py` fez em 25/08.
-
-        A CASA DELA É O TÍTULO DA CONTA, que é a primeira fala e a única que
-        existe nos três estados do bloco (sem resposta, rádio vazio, rádio
-        cheio) — a frase explica a conta inteira, não uma linha dela.
-        """
+        """As falas viram rótulos — menos as que a LEX-2 mandou para o hover."""
         with contextlib.suppress(Exception):
             for filho in list(self.caixa.get_children()):
                 self.caixa.remove(filho)
@@ -956,33 +611,13 @@ class _ContaDeSlots:
                     rotulo.set_tooltip_text(no_hover)
                 primeiro = False
             self.caixa.pack_start(rotulo, False, False, 0)
-        # A MARCA VISUAL É PEDIDA AQUI, E A CHAMADA NÃO É REDUNDANTE.
-        #
-        # `moldura.marcar_afordancias` (`moldura.py:158`) varre a seção uma vez
-        # na montagem e depois se pendura no "add" de cada caixa para alcançar o
-        # que nasce tarde — mas o gancho do "add" agenda a revarredura por
-        # `GLib.idle_add`, que só corre com laço principal vivo. Este bloco é
-        # redesenhado a cada resposta do daemon, e a partir de 26/08/2026 ele
-        # carrega uma dica: sem esta linha,
-        # o rótulo nasce com explicação e sem marca — que é exatamente o defeito
-        # que aquela função cura, e o portão
-        # `test_afordancia_de_dica_na_aba_configuracoes.py::
-        # test_nenhum_rotulo_com_dica_fica_invisivel` o pegou nomeando
-        # "Quanto do rádio cada adaptador já gasta".
-        #
-        # Idempotente: `add_class` numa classe que já está não faz nada.
         with contextlib.suppress(Exception):
             marcar_afordancias(self.caixa)
         with contextlib.suppress(Exception):
             self.caixa.show_all()
 
     def falas(self) -> tuple[str, ...]:
-        """Todo o texto do bloco, na ordem — e é por aqui que o teste o lê.
-
-        Devolver o texto antes de o virar widget é o que deixa o portão das
-        `PALAVRAS_DE_CULPA` varrer TUDO que a seção produz, e não só o que
-        alguém lembrou de olhar.
-        """
+        """Todo o texto do bloco, na ordem — e é por aqui que o teste o lê."""
         linhas: list[str] = [TITULO_DA_CONTA]
         if self._respondeu is not True:
             linhas.append(SEM_RESPOSTA_DO_DAEMON)

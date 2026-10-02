@@ -1,77 +1,4 @@
-"""O mapa de canais não pode guardar VIVO um fato que esta casa já derrubou.
-
-O DEFEITO QUE ESTE ARQUIVO EXISTE PARA PEGAR
---------------------------------------------
-Medido em 02/09/2026, com três historiadores lendo os commits, os 178 ensaios do
-caderno e os estudos: **o mapa carregava quarenta células cuja prosa uma medição
-posterior desta mesma casa já tinha derrubado**, e as duas réguas do arquivo
-estavam VERDES o tempo todo.
-
-Isso não é falha das duas réguas — é o alcance delas. O
-`scripts/check_paridade_transporte.py` cobra que exista teste, que exista ensaio
-e que o valor caia no domínio; o `scripts/validar-caducos.py` cobra um literal
-por vez, e só nas superfícies vivas (README, docs/usage, docs/protocol, src,
-po), onde `docs/data/` não entra. **Nenhuma das duas pergunta se a PROSA ainda é
-verdade.** A classe inteira do defeito passava sem régua.
-
-A FORMA QUE MAIS CUSTOU, e é ela que este portão mede
-------------------------------------------------------
-Não é a célula que diz uma coisa errada — é a célula que diz a coisa errada
-**colada na medição que a derruba**. Dois casos medidos naquele dia:
-
-- `gatilho.adaptativo@dualsense` dizia `NINGUEM MEDIU ISSO` e, na frase
-  seguinte, `A PREVISAO HERDADA FOI MEDIDA, E CAIU — 11/08/2026`. As duas
-  afirmações, na mesma célula, em SEIS células iguais (os dois lados de três
-  linhas irmãs). Quem lesse metade levava a versão derrubada.
-- `luz.lightbar.cor@dualsense` dizia, no `radio_evidencia`, que a reconexão CURA
-  e que a causa é a instância de conexão; a célula vizinha, `radio_ressalva`,
-  dizia que isso NÃO está provado e que o juiz devolve CONFUSO.
-
-**Uma linha que se contradiz é pior que uma linha errada.**
-
-A REGRA, E POR QUE ELA É ESTA
-------------------------------
-A regra da casa é *"não se apaga decisão medida — ela ganha nota datada; MAS
-FATO ERRADO SE SUBSTITUI, e sai de TODOS os lugares onde aparece"*. Substituir,
-nesta casa, é escrito num formato: a célula nomeia a frase que caiu, diz quando
-caiu e quem a derrubou. O mapa já usa esse formato em dezenas de células
-(`SUBSTITUÍDO em 14/08/2026: …`, `FATO ERRADO SUBSTITUÍDO`, `caducou em 19/07`).
-
-Então o contrato deste portão é:
-
-    a frase derrubada só pode aparecer DEPOIS da marca que a enterra,
-    na mesma célula e dentro de uma janela curta.
-
-Sem a marca antes, a frase está VIVA — e é isso que reprova. Com a marca antes,
-ela é citação de registro histórico, que é exatamente o que a casa manda
-preservar.
-
-**A ORDEM É O CONTRATO, e ela custou uma versão deste portão.** A primeira
-tentativa aceitava a marca em qualquer lugar da célula, e a MORDIDA a derrubou
-na hora: com a cura arrancada, `gatilho.adaptativo@dualsense` voltou a dizer
-`NINGUEM MEDIU ISSO. A PREVISAO HERDADA FOI MEDIDA, E CAIU` — a frase morta na
-frente, a marca atrás — e o portão passou VERDE, porque achou o `E CAIU`. É a
-forma exata do defeito que ele existe para pegar, e ele não a via. Quem enterra
-anuncia primeiro e cita depois; quem afirma primeiro está afirmando.
-
-**Por que não apagar a frase de vez e dispensar a marca:** porque o mapa é
-memória externa. Uma frase que sumiu sem rastro volta pela mão de quem não sabe
-que ela já caiu — foi assim que o *"até o power-off físico"* de julho migrou de
-`luz.lightbar.cor` para `luz.lightbar.aviso_de_modo` em 19/08/2026, quatro
-meses depois de falso. Um fato errado parado no repositório **recruta**.
-
-O QUE ESTE PORTÃO NÃO É
-------------------------
-Não é uma régua de verdade universal: ele não sabe se uma frase qualquer é
-verdadeira. Ele guarda uma LISTA NOMEADA de fatos que a bancada desta casa já
-derrubou, cada um com a data e o que o derrubou. **Quem derrubar um fato novo
-acrescenta a linha aqui** — é o mesmo gesto de escrever no `caducos.csv`, e
-custa o mesmo.
-
-Não é redundância do `validar-caducos.py`: aquele varre as superfícies vivas do
-produto atrás de um literal; este varre as 15.400 células do mapa atrás de uma
-frase que precisa vir enterrada. Alvos diferentes, contratos diferentes.
-"""
+"""O mapa de canais não pode guardar VIVO um fato que esta casa já derrubou."""
 
 from __future__ import annotations
 
@@ -85,28 +12,12 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
-#: As marcas com que esta casa ENTERRA um fato. Sair de qualquer uma delas é
-#: sair do formato que o próprio mapa já usa — não é vocabulário inventado
-#: aqui: `SUBSTITUÍDO em 14/08/2026`, `FATO ERRADO SUBSTITUÍDO`,
-#: `caducou em 19/07`, `REFUTADA por medição em 03/08` e `E CAIU — 11/08/2026`
-#: são todas frases que já estavam no CSV antes deste portão existir.
-#:
-#: `CORRIGID` entrou em 02/09/2026, na segunda rodada de curadoria: o mapa já
-#: usava as duas palavras como sinônimas para o mesmo gesto — `CORREÇÃO DE
-#: FATO` é o vocabulário da casa —, e metade das células que a
-#: rodada enterrou tinha sido escrita com ela. Ampliar a lista é o oposto de
-#: afrouxar o portão: sem `CORRIGID` ele reprovaria a célula CURADA e
-#: continuaria cego à podre.
 MARCA_DE_SEPULTAMENTO = re.compile(
     r"SUBSTITU|FATO ERRADO|caduc|REFUTAD|derrubad|CORRIGID|"
     r"E CAIU|caíram|CAIU EM|deixou de valer|SAIU em \d",
     re.IGNORECASE,
 )
 
-#: Quantos caracteres a marca pode ficar ANTES da frase morta. Curto de
-#: propósito: a marca tem de estar na vizinhança da citação, não em outro
-#: parágrafo da mesma célula falando de outro fato — foi assim que a primeira
-#: versão deste portão passou verde com a cura arrancada.
 JANELA = 600
 
 
@@ -201,7 +112,7 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
         quem_derrubou=(
             "o QUEM-É-QUEM-01 publicou `coop.mesa`, uma lista sempre presente "
             "que casa o físico com o vpad — "
-            "src/hefesto_dualsense4unix/daemon/ipc_handlers.py:2820-2827"
+            "src/hefesto_dualsense4unix/daemon/ipc_handlers.py:2140-2147"
         ),
     ),
     Derrubado(
@@ -261,15 +172,6 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
             "scripts/check_paridade_transporte.py"
         ),
     ),
-    # ------------------------------------------------------------------
-    # SEGUNDA RODADA DE CURADORIA — 02/09/2026. Seis historiadores
-    # confrontaram o mapa com o CÓDIGO do produto (a primeira rodada tinha
-    # lido commits, ensaios e estudos). O que muda de fonte muda de forma: a
-    # primeira achou prosa que outra medição derrubou; esta achou prosa que o
-    # próprio `src/` desmente. As oito abaixo são as que RECRUTAM — a frase é
-    # afirmativa, distinta e convincente, e quem a lesse sairia com o
-    # diagnóstico errado.
-    # ------------------------------------------------------------------
     Derrubado(
         nome="a única rota de LED de jogador por rádio é o sysfs",
         padrao=re.compile(
@@ -402,21 +304,14 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
             "mesma linha"
         ),
     ),
-    # ------------------------------------------------------------------
-    # TERCEIRA RODADA — 03/09/2026, a leva que varreu o código atrás de
-    # filtro NOSSO de transporte (*"o que no código tá setado pra funcionar
-    # só via cabo e não BT"*). A área da MESA achou o defeito na forma que
-    # esta casa mais paga: a correção PELA METADE. O endereço certo entrou
-    # numa célula em 02/09 e as três irmãs ficaram com o velho.
-    # ------------------------------------------------------------------
     Derrubado(
-        nome="o `slot_for` mora em `identity.py:543`",
+        nome="o `slot_for` mora em `identity.py:418`",
         padrao=re.compile(r"identity\.py:543"),
         caiu_em="02/09/2026, e só metade saiu",
         quem_derrubou=(
             "`:543` é o comentário de `self._external_present` (presença de "
             "controle EXTERNO, que é outro eixo); o `slot_for` é "
-            "src/hefesto_dualsense4unix/daemon/subsystems/identity.py:668. A "
+            "src/hefesto_dualsense4unix/daemon/subsystems/identity.py:464. A "
             "troca entrou em 02/09 só na `nota` de "
             "`combinacao.slot_jogador.estabilidade@dualsense` e deixou vivas as "
             "duas irmãs (@pro, @sn30) e as DUAS células de código de "
@@ -424,12 +319,6 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
             "`specs.html` publica para quem for procurar o slot no código"
         ),
     ),
-    # ------------------------------------------------------------------
-    # QUARTA RODADA — 28/09/2026, o fecho da leva de 28/09. A
-    # O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01 trocou o gesto do microfone e curou
-    # o código e a referência canônica; o mapa ficou dizendo o gesto velho
-    # em quatro células de três linhas.
-    # ------------------------------------------------------------------
     Derrubado(
         nome="o gesto de eleição do microfone é a virada do bit de mudo",
         padrao=re.compile(
@@ -481,11 +370,7 @@ def _enterrada(valor: str, inicio: int) -> bool:
 
 
 def vivos(caminho: Path | str) -> list[tuple[Derrubado, str, str]]:
-    """As células que afirmam um fato derrubado sem a marca que o enterra.
-
-    Uma ocorrência conta como enterrada quando alguma marca a PRECEDE dentro de
-    `JANELA` caracteres. Basta UMA ocorrência solta para a célula reprovar.
-    """
+    """As células que afirmam um fato derrubado sem a marca que o enterra."""
     achados: list[tuple[Derrubado, str, str]] = []
     for alvo, coluna, valor in celulas(caminho):
         for fato in FATOS_DERRUBADOS:
@@ -524,11 +409,7 @@ def test_a_lista_de_fatos_derrubados_nao_esta_vazia() -> None:
 
 
 def test_a_regua_morde_um_fato_derrubado_solto(tmp_path: Path) -> None:
-    """A MORDIDA: um mapa de mentira com a frase morta SOLTA tem de reprovar.
-
-    Sem isto o portão seria verde por não achar nada, que é a forma exata do
-    instrumento falso que esta casa já pegou cinco vezes num dia só.
-    """
+    """A MORDIDA: um mapa de mentira com a frase morta SOLTA tem de reprovar."""
     mentira = tmp_path / "mapa.csv"
     mentira.write_text(
         "id,radio_detalhe\n"
@@ -545,11 +426,7 @@ def test_a_regua_morde_um_fato_derrubado_solto(tmp_path: Path) -> None:
 def test_a_regua_aceita_a_mesma_frase_quando_ela_vem_enterrada(
     tmp_path: Path,
 ) -> None:
-    """E o contrário: com a marca, a mesma frase é registro, não afirmação.
-
-    É a metade que impede o portão de proibir a memória — apagar a frase de vez
-    é o que faz um fato errado voltar pela mão de quem não soube que ele caiu.
-    """
+    """E o contrário: com a marca, a mesma frase é registro, não afirmação."""
     honesta = tmp_path / "mapa.csv"
     honesta.write_text(
         "id,radio_detalhe\n"
@@ -563,12 +440,7 @@ def test_a_regua_aceita_a_mesma_frase_quando_ela_vem_enterrada(
 
 
 def test_a_marca_depois_da_frase_nao_enterra_nada(tmp_path: Path) -> None:
-    """A ORDEM É O CONTRATO — e foi a mordida que provou que ela precisa ser.
-
-    Este é o caso literal de `gatilho.adaptativo@dualsense` antes da cura de
-    02/09/2026: a frase morta na frente, a refutação atrás. A primeira versão
-    deste portão aceitava isso e ficava verde com a cura arrancada.
-    """
+    """A ORDEM É O CONTRATO — e foi a mordida que provou que ela precisa ser."""
     torta = tmp_path / "mapa.csv"
     torta.write_text(
         "id,cabo_ressalva\n"

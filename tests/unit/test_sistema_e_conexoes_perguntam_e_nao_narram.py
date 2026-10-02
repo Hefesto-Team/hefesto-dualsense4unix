@@ -1,45 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA TELA-CALADA-03 — Sistema e Conexões perguntam, e não narram.
-
-**13/09/2026.** A palavra dela, com a foto do rodapé: *"essas frases de status
-que aparecem no rodapé isso não deveria estar aparecendo"* — *"em todas as abas
-da interface"*.
-
-A RÉGUA QUE SAI DISSO TEM TRÊS METADES:
-
-* a **pergunta** de um gesto em dois tempos FICA — sem ela o segundo clique não
-  tem instrução;
-* o **recibo** depois do gesto SAI — e vai ao diário da janela, não some;
-* o **conteúdo que ela pediu** («Ver detalhes», «Ver plugins») fica.
-
-O QUE CADA BLOCO COBRA
-----------------------
-1. **09, «Aplicar aos jogos da Steam».** O primeiro clique põe a pergunta do dono
-   no painel de registro, e ela sobrevive ao tique; o segundo devolve só os
-   rótulos, e o painel volta ao repouso. Medido antes no piloto oculto: o
-   primeiro clique virava o botão em «Confirma?» e a tela não dizia uma palavra
-   — a pergunta ia por `recado`, e a aba 09 não tem onde um recado pouse.
-2. **09, os outros três segundos cliques** (consertos, Proton, camadas): só os
-   rótulos, painel limpo, recibo do DONO no diário.
-3. **09 com o serviço parado.** O ramo de erro do pacote emite o registro e o
-   exame, e nenhum dos dois é o do desenho — no pacote e NO PIXEL, com a página
-   publicada e o `BOOTSTRAP` do piloto num WebKit oculto.
-4. **08, «A luz não acende».** Durante a espera a instrução fica; quando ela
-   acaba falando, a linha do cartão volta ao nada e a frase vai ao diário.
-
-A MORDIDA — as saídas estão coladas na entrega
-----------------------------------------------
-* devolver a pergunta ao `recado` em `aplicar_aos_jogos` → o bloco 1 reprova;
-* tirar `_limpar_o_painel()` de um segundo clique → o bloco 2 reprova naquele
-  gesto;
-* tirar `REGISTRO` e os dois `exame-*` do ramo de erro → o bloco 3 reprova no
-  pacote e no pixel;
-* devolver a frase do fim em `linha_da_espera` → o bloco 4 reprova.
-
-NADA AQUI SAI DA MÁQUINA DE QUEM RODA: a Steam, o Proton, os scripts, as camadas
-e o rádio são dublês no ponto em que o motor mexeria nela, e todo dublê que tem
-desfecho sabe recusar.
-"""
+"""A RÉGUA DA TELA-CALADA-03 — Sistema e Conexões perguntam, e não narram."""
 from __future__ import annotations
 
 import json
@@ -63,12 +23,9 @@ from hefesto_dualsense4unix.interface.pacotes import Contexto, normalizar
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
-#: Faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
-#: O RESULTADO QUE O DUBLÊ DA STEAM DEVOLVE, e o recibo é calculado a partir
-#: dele pelo DONO — nunca digitado aqui.
 APLICADOS = {"applied": 3, "skipped": 0, "errors": 0}
 
 
@@ -78,11 +35,7 @@ def _ctx() -> Contexto:
 
 
 class PonteDeMentira:
-    """Nenhum destes gestos fala com o daemon; a ponte existe pelo contrato.
-
-    Ela RECUSA tudo e grava o pedido: um gesto que passasse a chamá-la sem
-    ninguém saber apareceria em `chamadas`, e não num verde calado.
-    """
+    """Nenhum destes gestos fala com o daemon; a ponte existe pelo contrato."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []
@@ -143,11 +96,6 @@ def _com_a_steam(monkeypatch: pytest.MonkeyPatch, *, janela: str = "ok") -> dict
     return visto
 
 
-# ---------------------------------------------------------------------------
-# 1 · «Aplicar aos jogos da Steam» pergunta NO PAINEL
-# ---------------------------------------------------------------------------
-
-
 def test_o_primeiro_clique_do_aplicar_poe_a_pergunta_no_painel(monkeypatch) -> None:
     visto = _com_a_steam(monkeypatch)
     carga = a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"),
@@ -169,12 +117,7 @@ def test_o_primeiro_clique_do_aplicar_poe_a_pergunta_no_painel(monkeypatch) -> N
 
 
 def test_a_pergunta_cabe_na_largura_do_painel(monkeypatch) -> None:
-    """A pergunta cabe inteira na largura do painel.
-
-    O painel é `pre-wrap` desde 25/09/2026 (a linha longa do journal dobra em
-    vez de sair pela direita); a pergunta continua cortada à mão para não
-    dobrar no meio de uma palavra.
-    """
+    """A pergunta cabe inteira na largura do painel."""
     _com_a_steam(monkeypatch)
     carga = a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"),
                                   PonteDeMentira())
@@ -201,11 +144,7 @@ def test_o_segundo_clique_do_aplicar_devolve_so_os_rotulos(monkeypatch, capsys) 
 
 
 def test_a_recusa_do_segundo_clique_tambem_tira_a_pergunta(monkeypatch) -> None:
-    """O dublê RECUSA (jogo aberto): o gesto levanta e a pergunta não fica.
-
-    Ela diria "clique de novo para confirmar" sobre um consentimento que o
-    `_confirmado` já consumiu — o próximo clique ARMA de novo, não confirma.
-    """
+    """O dublê RECUSA (jogo aberto): o gesto levanta e a pergunta não fica."""
     visto = _com_a_steam(monkeypatch, janela="jogo_aberto")
     a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"), PonteDeMentira())
     with pytest.raises(RuntimeError) as erro:
@@ -214,12 +153,6 @@ def test_a_recusa_do_segundo_clique_tambem_tira_a_pergunta(monkeypatch) -> None:
     assert str(erro.value) == _daemon.format_steam_janela_recusa("jogo_aberto")
     assert visto["aplicou"] == []
     assert a09._no_painel("repouso") == "repouso"
-
-
-# ---------------------------------------------------------------------------
-# 2 · Os outros três segundos cliques: só os rótulos, painel limpo, recibo no
-#     diário
-# ---------------------------------------------------------------------------
 
 
 def _dubla_consertos(monkeypatch) -> tuple[Any, str]:
@@ -232,20 +165,12 @@ def _dubla_consertos(monkeypatch) -> tuple[Any, str]:
          "steam_input_jogos": ["Um Jogo"]})
 
 
-# O Proton e as camadas SAÍRAM desta régua em 25/09/2026 (A-09-SISTEMA-EM-
-# TRES-SECOES-01): os dois viraram ligáveis de UM clique («Fixar Proton» e
-# «Corrigir Vulkan»), e não há segundo clique cuja pergunta pudesse ficar
-# velha no painel. O recibo deles continua indo ao diário.
-
-
 @pytest.mark.parametrize(("nome", "dublar"), [
     ("refazer-consertos", _dubla_consertos),
 ])
 def test_o_segundo_clique_limpa_o_painel_e_leva_o_recibo_ao_diario(
         monkeypatch, capsys, nome: str, dublar) -> None:
     gesto, recibo = dublar(monkeypatch)
-    # O QUE ESTAVA NO PAINEL ANTES — um «Ver detalhes», digamos. O clique 1 de
-    # dois deles escreve a pergunta por cima; o do Proton só arma.
     a09._PAINEL[0] = "o que estava no painel"
     gesto(_ctx(), _primeiro(nome), PonteDeMentira())
     assert a09._no_painel("repouso") != "repouso", (
@@ -255,11 +180,6 @@ def test_o_segundo_clique_limpa_o_painel_e_leva_o_recibo_ao_diario(
     carga = gesto(_ctx(), _confirma(nome), PonteDeMentira())
 
     assert set(carga) == {"blocos"}, f"{nome}: o segundo clique narrou: {carga}"
-    # O RECIBO QUE FICA NA TELA — 21/09/2026. A queixa dela sobre o Vulkan era
-    # *«clico em confirma e não aparece nada»*, e o recibo desse gesto passou a
-    # ficar no painel (`RECIBO_QUE_FICA_NA_TELA`). A régua pergunta à lista em
-    # vez de cobrar o painel vazio de todos: o que ela proíbe continua sendo a
-    # PERGUNTA do primeiro clique, velha.
     esperado = recibo if nome in a09.RECIBO_QUE_FICA_NA_TELA else "repouso"
     assert a09._no_painel("repouso") == esperado, (
         f"{nome}: a pergunta do primeiro clique ficou no painel, velha")
@@ -268,17 +188,8 @@ def test_o_segundo_clique_limpa_o_painel_e_leva_o_recibo_ao_diario(
         f"{nome}: o recibo do dono não chegou ao diário: {diario!r}")
 
 
-# ---------------------------------------------------------------------------
-# 3 · Serviço parado: nem o registro nem o exame do desenho
-# ---------------------------------------------------------------------------
-
-
 def _camada_levanta(monkeypatch) -> None:
-    """A camada do produto levanta — é o que acontece com o serviço parado.
-
-    `_leitura` é dublada porque ela roda ANTES da camada e pergunta ao systemd
-    de quem roda a régua.
-    """
+    """A camada do produto levanta — é o que acontece com o serviço parado."""
     def _levanta(_leitura: object) -> dict:
         raise RuntimeError("o serviço não respondeu")
 
@@ -332,11 +243,7 @@ ROTEIRO_09 = """
 
 @pytest.fixture(scope="module")
 def no_webkit_09():
-    """A página PUBLICADA num WebKit oculto, com o `BOOTSTRAP` do piloto.
-
-    A carga sai de `a09_sistema.pacote` + `pacotes.normalizar`, a MESMA sequência
-    do piloto — com a camada do produto levantando, que é o serviço parado.
-    """
+    """A página PUBLICADA num WebKit oculto, com o `BOOTSTRAP` do piloto."""
     pagina = _onde.pagina("09-sistema.html", publicado=True)
     if not pagina.is_file():
         pytest.skip("a página publicada da 09 não está no disco")
@@ -364,9 +271,6 @@ def no_webkit_09():
     import hefesto_vivo
 
     saiu: list[str] = []
-    # `Gtk.OffscreenWindow`: sob Xvfb não há gerenciador de janelas, e ela tem
-    # UMA tela — janela de teste não nasce na frente dela. O tamanho é o da
-    # moldura do produto (1180x777), para a largura do painel ser a de verdade.
     janela = Gtk.OffscreenWindow()
     view = WebKit2.WebView()
     view.set_size_request(1180, 777)
@@ -399,8 +303,6 @@ def no_webkit_09():
 
     view.connect("load-changed", carregou)
     view.load_uri(pagina.as_uri())
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do mesmo
-    # processo — por isso ele é removido no `finally`.
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -436,11 +338,6 @@ def test_no_pixel_a_pergunta_cabe_no_painel_sem_rolar_de_lado(no_webkit_09) -> N
         "a instrução do segundo tempo fica fora da vista")
 
 
-# ---------------------------------------------------------------------------
-# 4 · «A luz não acende»: a instrução fica, o fim não fala no cartão
-# ---------------------------------------------------------------------------
-
-
 def test_durante_a_espera_a_instrucao_fica(dono) -> None:
     a08.comecar_a_espera(UNIQ, agora=a08._agora(), sonda=lambda: {CHAVE})
     linha = a08.linha_da_espera(UNIQ)
@@ -449,11 +346,7 @@ def test_durante_a_espera_a_instrucao_fica(dono) -> None:
 
 
 def test_a_espera_que_acaba_falando_nao_fala_no_cartao(dono, capsys) -> None:
-    """`nao_caiu` é o desfecho que FALA — e a frase não chega mais ao cartão.
-
-    O RELÓGIO É CORRIDO NA ESPERA, e não pelo depósito: assim a espera acabada
-    continua lá, e o que se mede é a LINHA — não a poda.
-    """
+    """`nao_caiu` é o desfecho que FALA — e a frase não chega mais ao cartão."""
     dele = a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: {CHAVE})
     dele.correr(float(dono.ESPERA_PELO_PS_S))
     assert not a08.esperando(UNIQ)
@@ -487,9 +380,6 @@ def test_o_cartao_do_controle_que_esperou_recebe_a_contagem_e_depois_nada(
         f"a espera acabou e o cartão continuou dizendo alguma coisa: {depois!r}")
 
 
-# ---------------------------------------------------------------------------
-# O EXAME PERGUNTA A COERÊNCIA DOS PERFIS AO DONO — A-TELA-PERGUNTA-AO-DONO-01
-# ---------------------------------------------------------------------------
 def _achado_grave():
     from hefesto_dualsense4unix.profiles.sanidade import Achado
 
@@ -553,15 +443,7 @@ def test_perfis_coerentes_nao_ganham_linha(perfis) -> None:
 
 
 def test_a_cura_do_terminal_nao_chega_a_tela_dos_perfis(perfis) -> None:
-    """A linha do perfil na 09 é o fato, sem o «— Cura: …» do `doctor`.
-
-    A cura da `sanidade` manda editar JSON, rodar comando e cita sprint pelo
-    nome; a 09 já decidiu que a instrução do `doctor` não vai nem ao texto nem
-    ao `title` da linha (SISTEMA-BOTOES-01, `a09_sistema._linha_do_exame`).
-
-    A MORDIDA: devolva `sanidade.linhas_de_relatorio(achados)` inteiro em
-    `linhas_dos_perfis` e esta reprova com o «Cura:» na linha.
-    """
+    """A linha do perfil na 09 é o fato, sem o «— Cura: …» do `doctor`."""
     linhas = a09.linhas_dos_perfis()
     assert linhas == [("[FAIL]", "'Desktop' vale para QUALQUER janela")], linhas
 
@@ -574,11 +456,7 @@ def test_a_leitura_que_falha_vira_linha_e_nao_derruba_o_exame(perfis) -> None:
 
 
 def test_a_pasta_parada_nao_e_relida(perfis, tmp_path) -> None:
-    """A faixa lenta relê a cada 2 s; o disco só é lido quando a pasta muda.
-
-    A MORDIDA: tire a comparação da assinatura e a segunda leitura pergunta de
-    novo ao dono.
-    """
+    """A faixa lenta relê a cada 2 s; o disco só é lido quando a pasta muda."""
     primeira = a09.linhas_dos_perfis()
     segunda = a09.linhas_dos_perfis()
     assert primeira == segunda and perfis["perguntas"] == 1, perfis

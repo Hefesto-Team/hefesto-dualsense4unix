@@ -1,31 +1,4 @@
-"""A linha inteira abre o perfil, e a coluna se chama «Preferência».
-
-A-LINHA-INTEIRA-ABRE-O-PERFIL-01 (02/10/2026). O pedido dela de 29/09: clicar
-em qualquer célula de uma linha da lista «Perfis salvos» abre aquele perfil no
-editor, e a coluna «Prioridade» passa a se chamar «Preferência» (a resposta 41
-dela: o rótulo do editor muda junto).
-
-O DEFEITO, MEDIDO: o gesto `selecionar` morava no `<td>` do nome. O ouvinte do
-piloto sobe da célula clicada pelo `closest` do seletor dele; da «Prioridade» e
-do «Funciona em» ele não achava gesto nenhum, e o clique não fazia nada, com o
-cursor de mão na linha inteira. E com a coluna no piso de 48 px que ela gravou,
-o cabeçalho saía «Pri…».
-
-AS RÉGUAS (a sprint as numera):
-
-1. toda célula leva ao perfil da linha (WebKit, o seletor LIDO do piloto);
-2. o gesto escolhe pelo nome da linha (`hefPerfil`), não pelo texto colado;
-3. o rótulo cabe na largura dela (`prioridade:48`), e cabe também nos outros
-   dois caminhos do roteiro: o arraste até o piso e a seta da ordem;
-4. uma palavra só: a página, o pacote, os desfechos e o relatório da sanidade.
-
-AS MORDIDAS (medidas na entrega): o gesto de volta ao `<td>` do nome (a 1
-reprova nomeando a coluna); o `selecionar` lendo só o `texto` (a 2); o `PISO`
-fixo de volta no roteiro (a 3 mostra o 80 contra o 48), e na conferência o
-mesmo `PISO` fixo só no arraste e o observador da seta sem o `ajustar` (cada
-um reprova a régua do seu caminho); o «Prioridade:» de volta
-ao rótulo do editor, e à parte o «· prioridade N» do desfecho (a 4).
-"""
+"""A linha inteira abre o perfil, e a coluna se chama «Preferência»."""
 from __future__ import annotations
 
 import json
@@ -51,7 +24,6 @@ from hefesto_dualsense4unix.profiles.schema import Profile
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-#: A PALAVRA QUE SAI DA TELA, em qualquer caixa.
 VELHA = re.compile(r"prioridade", re.IGNORECASE)
 
 
@@ -104,9 +76,6 @@ def _o_que_se_ve(valor: Any) -> list[str]:
     return leitor.pedacos
 
 
-# --------------------------------------------------------------------------
-# o disco do lar de mentira
-# --------------------------------------------------------------------------
 PERFIS = [("Mortal Kombat", 90, "steam_app_1971870"), ("Pragmata", 80, "steam_app_3357650"),
           ("Desktop", 0, None)]
 
@@ -127,9 +96,6 @@ def _ctx() -> Contexto:
                     mesa=[], conectados=[], estados={})
 
 
-# --------------------------------------------------------------------------
-# 2. o gesto escolhe pelo nome da linha
-# --------------------------------------------------------------------------
 def test_o_gesto_escolhe_pelo_nome_da_linha(monkeypatch: pytest.MonkeyPatch) -> None:
     """O clique na `<tr>` traz o nome no `hefPerfil`; o `texto` é a linha colada."""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
@@ -154,9 +120,6 @@ def test_as_duas_fontes_da_linha_poem_o_gesto_na_tr() -> None:
     assert linha.count('data-hef-gesto="selecionar"') == 1, linha
 
 
-# --------------------------------------------------------------------------
-# 4. uma palavra só — o que não precisa de tela
-# --------------------------------------------------------------------------
 def test_o_pacote_da_aba_nao_diz_a_palavra_velha(disco: None) -> None:
     """A carga inteira da aba, lida como tela (texto e dicas)."""
     vistos = [s for s in _o_que_se_ve(a10_perfis.pacote(_ctx())) if VELHA.search(s)]
@@ -214,9 +177,6 @@ def test_o_relatorio_da_sanidade_diz_preferencia(tmp_path: Path) -> None:
     assert not velhas, "o relatório da aba Sistema ainda diz:\n  " + "\n  ".join(velhas)
 
 
-# --------------------------------------------------------------------------
-# 1, 3 e 4 na tela — o WebKit, sob `xvfb-run -a`
-# --------------------------------------------------------------------------
 LER_AS_CELULAS = r"""
 (function(seletor){
   var fora = [];
@@ -321,8 +281,6 @@ def test_o_rotulo_cabe_na_largura_que_ela_gravou(tela: Any) -> None:
         f"{medida['client']}")
 
 
-#: O ARRASTE DA DIVISA, pelos mesmos eventos que o mouse dela dispara: a alça
-#: da «Preferência» vai 600 px para a esquerda, até o `PISO`, e solta.
 ARRASTAR_ATE_O_PISO = r"""
 (function(){
   var t = document.querySelector('table[data-tabela]');
@@ -338,14 +296,7 @@ ARRASTAR_ATE_O_PISO = r"""
 
 
 def test_o_rotulo_cabe_no_arraste_ate_o_piso(tela: Any) -> None:
-    """O piso por rótulo vale no ARRASTE também (o item 4 da cura).
-
-    A régua de cima mede só a largura que volta do disco (`espalhar`); o
-    arraste tem caminho próprio no roteiro (`mousemove`), e sem esta régua ele
-    podia voltar ao `PISO` fixo com as outras verdes.
-    """
-    # A largura de partida vai antes, num passo próprio: o observador do
-    # `data-larguras` responde depois do roteiro, e repintaria por cima do arraste.
+    """O piso por rótulo vale no ARRASTE também (o item 4 da cura)."""
     tela.executar(
         "(function(){document.querySelector('table[data-tabela]')"
         ".setAttribute('data-larguras','nome:380·prioridade:200');return 'ok';})()")
@@ -364,8 +315,6 @@ def test_o_rotulo_cabe_no_arraste_ate_o_piso(tela: Any) -> None:
 
 def test_o_rotulo_cabe_com_a_seta_da_ordem(tela: Any) -> None:
     """A seta da ordem alarga o rótulo, e a coluna estreita cabe de novo."""
-    # Em dois passos: o `data-larguras` primeiro (e o observador dele assenta),
-    # e só depois a seta, que é quem tem de fazer a coluna caber de novo.
     tela.executar(
         "(function(){document.querySelector('table[data-tabela]')"
         ".setAttribute('data-larguras','nome:380·prioridade:48');return 'ok';})()")

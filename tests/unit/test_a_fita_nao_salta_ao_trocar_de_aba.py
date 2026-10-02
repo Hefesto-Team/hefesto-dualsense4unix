@@ -1,37 +1,5 @@
 #!/usr/bin/env python3
-"""A LINHA DO ALVO MEDE O MESMO NAS DEZ ABAS, e em qualquer estado da fita.
-
-O DEFEITO, medido em 11/09/2026 (`AS-DEZ-ABAS-MAXIMIZADAS`, §3.6) e remedido em
-13/09/2026 depois de a faixa de cabeçalho sair: a altura da linha do alvo é a do
-filho mais alto dela. O chip da fita tinha 28 px com borda de 1 e 30 com borda
-de 2. Nas três abas que escolhem controle o chip do plástico tem 2 e a linha
-dava **52**; nas sete de fita inerte ele tem 1 e a linha dava **51**. A barra
-de abas e o quadro desciam 1 px a cada troca de aba.
-
-POR QUE A RÉGUA MEDE QUATRO ESTADOS, e não só a página publicada
-------------------------------------------------------------------
-A cura escrita na sprint (2 px na borda do chip inerte) igualava as páginas
-publicadas — menos a 07, cuja fita nasce só com o «Todos» — e quebrava a regra
-de 08/09 («cinza como os demais», `test_a_fita_inerte_nao_acende_ninguem.py`).
-E a página publicada é só o instante antes do primeiro tique. O piloto repinta
-a fita com o que o daemon diz, e a classe do plástico só entra quando a cor foi
-LIDA — pelo rádio ela nunca é. Medido com CSS injetado nas dez, sem tocar
-arquivo:
-
-    hoje            publicado 51/52 · cor lida 51/52 · sem cor 51 · só «Todos» 51
-    cura da sprint  publicado 51 (07) / 52 · e seis fitas inertes com duas caras
-    cura na causa   52 nas dez, nos quatro estados
-
-Então a régua simula os quatro estados que o produto pinta, e cobra UMA altura:
-entre as dez abas E entre os estados. **Nenhum número está digitado aqui** — as
-abas são comparadas entre si.
-
-A MORDIDA
----------
-Arranque do ``interface/topo.html`` a regra ``.fita .chip{padding-top:…;
-padding-bottom:…}``, regere as dez e publique. Caem os três primeiros casos,
-com a 01, a 02 e a 08 em 52 e as outras sete em 51.
-"""
+"""A LINHA DO ALVO MEDE O MESMO NAS DEZ ABAS, e em qualquer estado da fita."""
 from __future__ import annotations
 
 import pathlib
@@ -42,26 +10,16 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome de PASTA; caminho não leva acento
 
-#: O MESMO MOTOR DAS OUTRAS RÉGUAS DE TELA desta casa, headless: nenhuma janela
-#: nasce na tela dela.
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-#: A VISTA DA JANELA MAXIMIZADA DELA (`scripts/ensaios/a_janela_cabe_no_que_ela_ve.py`).
 VISTA = {"width": 1918, "height": 840}
 
-#: OS ESTADOS QUE O PRODUTO PINTA NA FITA, cada um com o que o provoca.
 ESTADOS = {
-    # o arquivo, antes do primeiro tique — é o que aparece a cada troca de aba
     "como-publicado": "",
-    # o rádio: `monta.fita` e `a09_sistema._um_chip` só põem a classe do
-    # plástico quando a cor foi lida, e pelo rádio ela não é
     "sem-cor-lida": "document.querySelectorAll('.fita .chip.plastico')"
                     ".forEach(c => c.classList.remove('plastico'));",
-    # a fita com um chip só: é assim que a 07 está no arquivo publicado, antes
-    # do primeiro tique
     "so-todos": "document.querySelectorAll('.fita .chip')"
                 ".forEach(c => { if ((c.textContent || '').trim() !== 'Todos') c.remove(); });",
-    # o cabo: todo controle com a cor lida ganha a classe do plástico
     "com-cor-lida": "document.querySelectorAll('.fita .chip')"
                     ".forEach(c => { if ((c.textContent || '').trim() !== 'Todos')"
                     " c.classList.add('plastico'); });",
@@ -92,11 +50,7 @@ def _abas_publicadas() -> list[pathlib.Path]:
 
 @pytest.fixture(scope="module")
 def medido() -> dict[str, dict[str, dict]]:
-    """``{estado: {página: medida}}`` — as dez abas nos quatro estados, no Chrome.
-
-    **RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE.** Menos de dez páginas reprova, e
-    uma fita sem chip nenhum também: comparar alturas de nada dá igualdade.
-    """
+    """``{estado: {página: medida}}`` — as dez abas nos quatro estados, no Chrome."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     paginas = _abas_publicadas()
@@ -133,16 +87,8 @@ def _por_valor(medidas: dict[str, dict], chave: str) -> dict[float, list[str]]:
     return grupos
 
 
-# ---------------------------------------------------------------------------
-# 1. A CAUSA — o chip da fita mede o mesmo com borda de 1 ou de 2
-# ---------------------------------------------------------------------------
 def test_todo_chip_da_fita_tem_a_mesma_altura(medido: dict) -> None:
-    """A espessura da borda não muda a altura do chip, em estado nenhum.
-
-    É a causa medida: a linha segue o filho mais alto, e o chip de borda 2
-    passava 2 px o de borda 1. Com a causa fechada, os outros dois casos são
-    consequência — e este diz ONDE mexer quando não forem.
-    """
+    """A espessura da borda não muda a altura do chip, em estado nenhum."""
     ruins = []
     for estado, medidas in medido.items():
         alturas: dict[float, list[str]] = {}
@@ -158,9 +104,6 @@ def test_todo_chip_da_fita_tem_a_mesma_altura(medido: dict) -> None:
         "segue o filho mais alto e salta junto:\n  " + "\n  ".join(ruins))
 
 
-# ---------------------------------------------------------------------------
-# 2. A QUEIXA — a linha e o miolo não saem do lugar ao trocar de aba
-# ---------------------------------------------------------------------------
 def test_a_linha_do_alvo_mede_o_mesmo_nas_dez(medido: dict) -> None:
     """Em cada estado, as dez abas têm a mesma linha do alvo e o miolo no mesmo `y`."""
     ruins = []
@@ -174,29 +117,15 @@ def test_a_linha_do_alvo_mede_o_mesmo_nas_dez(medido: dict) -> None:
 
 
 def test_a_pintura_nao_move_a_linha_do_alvo(medido: dict) -> None:
-    """Entre o arquivo e o que o tique pinta, a mesma aba não muda de altura.
-
-    A página publicada é só o instante antes do primeiro tique; depois dele a
-    fita tem a cor que o aparelho deu ou não deu. Uma altura por estado seria
-    um salto a cada visita — no instante em que a pintura chega.
-    """
+    """Entre o arquivo e o que o tique pinta, a mesma aba não muda de altura."""
     alturas = {round(r["linha"], 2) for medidas in medido.values() for r in medidas.values()}
     assert len(alturas) == 1, (
         f"a linha do alvo mede {sorted(alturas)} conforme o estado da fita: "
         + "; ".join(f"{e}={sorted(_por_valor(m, 'linha'))}" for e, m in medido.items()))
 
 
-# ---------------------------------------------------------------------------
-# 3. O QUE A CURA NÃO PODE DESFAZER — a fita inerte segue sem espessura própria
-# ---------------------------------------------------------------------------
 def test_a_fita_inerte_segue_com_uma_espessura_so(medido: dict) -> None:
-    """Com a cor lida, o chip do plástico na fita inerte tem a borda dos irmãos.
-
-    É a cura que a sprint escrevia, e ela caiu: 2 px no chip inerte devolve a
-    espessura que ela mandou tirar em 08/09 — *"conseguimos deixar ele cinza
-    como os demais?"* (a régua dela é `test_a_fita_inerte_nao_acende_ninguem.py`,
-    que mede a página como publicada; este caso mede o estado do cabo).
-    """
+    """Com a cor lida, o chip do plástico na fita inerte tem a borda dos irmãos."""
     ruins = []
     for nome, r in medido["com-cor-lida"].items():
         if not r["inerte"]:

@@ -1,23 +1,4 @@
-"""O passo 3f decide pelo BINÁRIO que o systemd executa, e não pela versão.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-5 da
-BLUETOOTHD-NAO-DERRUBA-01, na forma que quem coordena decidiu:
-
-- o portão de antes perguntava `bluetoothd --version` («5.86» no .3 e no .4) e
-  pulava por «já ≥ 5.79»: o .4 — o do hefesto-0002, em que o EAGAIN do socket
-  L2CAP deixa de derrubar a sessão dos controles — nunca chegaria sobre o .3,
-  que é o que roda na máquina dela;
-- e comparar a versão do dpkg também não basta: um 5.86-0ubuntu0.1 OFICIAL
-  passa de qualquer `~hefesto` na ordem do dpkg sem trazer patch nenhum.
-
-A pergunta vai às marcas que cada patch deixa no binário
-(`MARCA_hefesto-NNNN` do `assets/bluez-backport/BASELINE`). As funções são
-recortadas do `install.sh` REAL e rodadas com binários, `dpkg` e `apt-cache` de
-mentira.
-
-A MORDIDA, medida: trocar o laço das marcas pelo `--version ≥ 5.79` de antes
-reprova o caso do .3 e o do oficial; tirar o `dpkg -S`, o do tarball.
-"""
+"""O passo 3f decide pelo BINÁRIO que o systemd executa, e não pela versão."""
 
 from __future__ import annotations
 
@@ -164,13 +145,7 @@ def test_sem_binario(tmp_path: Path) -> None:
 
 
 def test_baseline_sem_marca_e_nao_sei_e_nunca_curado(tmp_path: Path) -> None:
-    """Sem marca nenhuma no dono do fato, não houve pergunta ao binário.
-
-    Conferência da INSTALL-E-UNINSTALL-DO-RADIO-01: o laço vazio deixava
-    `faltam` vazio, e um 5.86 OFICIAL — que passa de qualquer ~hefesto no
-    dpkg — saía «curado» sem ter sido perguntado. A MORDIDA: tirar o
-    `perguntadas -eq 0` faz este caso voltar a dizer «curado».
-    """
+    """Sem marca nenhuma no dono do fato, não houve pergunta ao binário."""
     vazio = tmp_path / "BASELINE-sem-marcas"
     vazio.write_text(
         "# um BASELINE que perdeu as linhas MARCA_\nREVISAO_ULTIMA=4\n", encoding="utf-8"
@@ -243,11 +218,6 @@ def test_a_receita_apontada_e_o_script_que_constroi() -> None:
     assert "scripts/construir_bluez_backport.sh" in _bloco_3f()
 
 
-# ---------------------------------------------------------------------------
-# O doctor faz a mesma pergunta
-# ---------------------------------------------------------------------------
-
-
 def _doctor(tmp_path: Path, marcas: list[str], **extra: str) -> str:
     todas = _marcas()
     binario = tmp_path / "bluetoothd-doctor"
@@ -289,15 +259,7 @@ def test_o_doctor_sem_marca_no_baseline_diz_que_nao_sabe(tmp_path: Path) -> None
 
 
 def test_o_doctor_sem_dpkg_nao_manda_rodar_o_install(tmp_path: Path) -> None:
-    """Numa distro sem dpkg o 3f não existe: mandar rodar o install é mandar
-    repetir o que não entrega. MORDIDA: tirar a guarda do dpkg volta o WARN
-    que manda rodar o install.
-
-    28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B2): o aviso sem dpkg deixou
-    de ser `info` — o defeito é o mesmo fora do Debian, e o silêncio o
-    escondia. O que esta régua guarda continua: ele não manda rodar o install.
-    A régua do aviso é `test_o_bluez_fora_do_dpkg_avisa.py`.
-    """
+    """Numa distro sem dpkg o 3f não existe: mandar rodar o install é mandar"""
     saida = _doctor(tmp_path, ["hefesto-0001"], HEFESTO_DOCTOR_DPKG="dpkg-que-nao-existe")
     assert "install.sh" not in saida and "3f" not in saida, saida
     assert "esta distro não tem dpkg" in saida, saida

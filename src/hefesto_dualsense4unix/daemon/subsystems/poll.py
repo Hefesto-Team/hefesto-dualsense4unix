@@ -1,15 +1,4 @@
-"""Subsystem de poll loop — leitura de estado do controle e publicação de eventos.
-
-Responsabilidades:
-  - Ler estado do IController a cada 1/poll_hz segundos.
-  - Publicar STATE_UPDATE, BATTERY_CHANGE, BUTTON_DOWN, BUTTON_UP no EventBus.
-  - Chamar _reassert_rumble a cada 200ms.
-  - Despachar eventos para mouse e hotkey_manager (via referência no Daemon).
-  - Reconectar automaticamente em caso de falha de leitura.
-
-Nota: este módulo implementa Subsystem mas também expõe BatteryDebouncer
-e as constantes de debounce que são importadas por testes externos.
-"""
+"""Subsystem de poll loop — leitura de estado do controle e publicação de eventos."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -22,15 +11,7 @@ BATTERY_DELTA_THRESHOLD_PCT = 1
 
 
 class BatteryDebouncer:
-    """Debounce de eventos de bateria (V2-17 + ADR-008).
-
-    Dispara se:
-      - nunca disparou (primeiro valor); ou
-      - abs(delta_pct) >= BATTERY_DELTA_THRESHOLD_PCT (e respeita min interval); ou
-      - elapsed_since_last_emit >= BATTERY_DEBOUNCE_SEC.
-
-    Sempre respeita BATTERY_MIN_INTERVAL_SEC entre disparos consecutivos.
-    """
+    """Debounce de eventos de bateria (V2-17 + ADR-008)."""
 
     def __init__(self) -> None:
         self.last_emitted_value: int | None = None
@@ -64,13 +45,6 @@ def evdev_buttons_once(daemon: object) -> frozenset[str]:
     except Exception as exc:
         logger.debug("evdev_snapshot_falhou", err=str(exc))
         return frozenset()
-
-
-# --- os atalhos do PS em qualquer controle (O-MODO-XBOX-NAO-E-QUEDA-02, item 5) --
-#
-# MORA DEPOIS DO `evdev_buttons_once` de propósito: o mapa de canais
-# (`docs/data/mapa-controles.csv`) cita aquela função por linha (`:53-66`), e
-# nada acima dela se mexe — nem os imports, que por isso são locais aqui.
 
 
 def observar_os_atalhos(
@@ -162,20 +136,7 @@ def botoes_de_cada_controle(
 
 
 def quem_segura_os_atalhos(daemon: object) -> str | None:
-    """O MAC de quem fez o gesto em curso — o DONO ÚNICO da pergunta «de quem é o gesto».
-
-    Dentro de um gesto, é o controle que o fez (`hotkey_daemon.quem_faz_o_gesto`,
-    que o `observe(..., de=<MAC>)` põe no contexto do ato): o PS + L3 anda o
-    cartão de quem o faz (`hotkey.build_next_mask_callback`), em qualquer um
-    dos quatro controles (O-MODO-XBOX-NAO-E-QUEDA-02, item 5).
-
-    Fora de um gesto (ou no gesto de um controle sem MAC), a resposta é a do
-    posto: o dono do posto de P1 (`primary_uniq`); na vaga do posto, o
-    próximo da fila que está na mesa — nunca o P1 ausente, cujo vpad parado o
-    jogo perderia ao ser recriado (a R-04). None quando não há de quem
-    perguntar (sem controle, backend sem MAC, ou a vaga sem ninguém sentado
-    no co-op).
-    """
+    """O MAC de quem fez o gesto em curso — o DONO ÚNICO da pergunta «de quem é o gesto»."""
     from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
 
     feito_por = quem_faz_o_gesto()
@@ -278,22 +239,7 @@ def _botoes_passivos(entradas: object, uniq: str) -> frozenset[str]:
 
 
 def _o_proximo_da_fila(daemon: object) -> str | None:
-    """Na vaga do posto de P1: o MAC do próximo da fila na mesa. Fora dela, None.
-
-    **A VAGA É DO BACKEND**, e a pergunta é a MESMA que o `read_state` faz no
-    mesmo tique (`_posto_vago_de`): refazer a conta aqui (o prazo, o jogo com
-    a autoridade, o co-op de pé) seria um segundo dono da vaga.
-
-    **O PRÓXIMO DA FILA** é o jogador sentado no co-op com o MENOR número da
-    lâmpada — `CoopManager.numeros_de_jogador`, a fonte única do número que ele
-    vê no próprio controle, com o vpad de pé ou renascendo; quem saiu e quem
-    não tem MAC não entram. O dono do posto nunca entra na conta — ele é quem
-    está fora. É a resposta do posto fora de um gesto
-    (`D-2409-OS-ATALHOS-NA-ESPERA-FICAM-COM-O-P2`); dentro de um gesto, quem
-    responde é quem o fez.
-
-    Nunca levanta: um co-op que falha aqui responde None.
-    """
+    """Na vaga do posto de P1: o MAC do próximo da fila na mesa. Fora dela, None."""
     if not _o_posto_esta_vago(daemon):
         return None
     coop = getattr(daemon, "_coop_manager", None)
@@ -315,15 +261,7 @@ def _o_proximo_da_fila(daemon: object) -> str | None:
 
 
 class PollSubsystem:
-    """Subsystem que encapsula o poll loop do daemon.
-
-    Não executa o loop diretamente — ele é criado como asyncio.Task pelo Daemon
-    e referenciado em daemon._tasks. A lógica de poll permanece em Daemon._poll_loop
-    por compatibilidade com testes existentes que monkeypatching esse método.
-
-    start() é chamado pelo Daemon.run() mas o loop real é iniciado via
-    asyncio.create_task no Daemon. stop() é noop aqui (o loop para pelo stop_event).
-    """
+    """Subsystem que encapsula o poll loop do daemon."""
 
     name = "poll"
 

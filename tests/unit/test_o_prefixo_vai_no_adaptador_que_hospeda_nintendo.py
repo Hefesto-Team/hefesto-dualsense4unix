@@ -81,14 +81,9 @@ RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "bt_active_mode.sh"
 SCRIPTS_BT = [*sorted(RAIZ.glob("scripts/bt_*.sh")), RAIZ / "scripts" / "doctor.sh"]
 
-#: A OUI do Pro sai do PRODUTO, nunca escrita aqui — mesma guarda de
-#: `test_a_oui_separa_o_clone_do_genuino.py`: forma de MAC em `tests/` só nas
-#: faixas forjadas, e OUI real não é faixa forjada.
 _OUI_PRO = sorted(com_dois_pontos(OUIS_NINTENDO_VISTAS))[0]
-#: Máscara da casa (octetos 4 e 5 zerados) sobre a OUI do produto.
 MAC_PRO = f"{_OUI_PRO}:00:00:53".upper()
 
-#: Faixa sintética da casa para tudo o que não precisa ser real.
 ADAPTADORES = {
     "hci0": "AA:BB:CC:00:00:01",
     "hci1": "AA:BB:CC:00:00:02",
@@ -99,21 +94,14 @@ DUALSENSE = {
     "hci1": ["AA:BB:CC:00:00:12"],
     "hci2": ["AA:BB:CC:00:00:13", "AA:BB:CC:00:00:14"],
 }
-#: O Pro mora no SEGUNDO adaptador — é a bancada dela, e é o caso que o
-#: `head -1` errava.
 HOSPEDEIRO_DO_PRO = "hci1"
 
 NOME_DUALSENSE = "DualSense Wireless Controller"
 NOME_PRO = "Pro Controller"
 
-#: Nomes dela, com acento de propósito: o alias trafega por `busctl`, `sed` e
-#: `printf`, e um UTF-8 mutilado no caminho é um alias que o BlueZ recusa.
 ALIAS_INICIAL = {"hci0": "Sala", "hci1": "Sofá", "hci2": "Quarto"}
 
 
-# ---------------------------------------------------------------------------
-# A bancada de mentira
-# ---------------------------------------------------------------------------
 def _executavel(caminho: Path, corpo: str) -> Path:
     caminho.parent.mkdir(parents=True, exist_ok=True)
     caminho.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
@@ -148,12 +136,9 @@ class Bancada:
         self.sys_bt = tmp / "sys-class-bluetooth"
         self.lib = tmp / "var-lib-bluetooth"
 
-        # sysfs: os três adaptadores + a entrada de CONEXÃO, que o kernel cria
-        # como "hci1:1" e que o filtro `^hci[0-9]+$` tem de descartar.
         for nome in [*ADAPTADORES, "hci1:1"]:
             (self.sys_bt / nome).mkdir(parents=True)
 
-        # árvore de bonds em disco
         for hci, endereco in ADAPTADORES.items():
             for mac in DUALSENSE[hci]:
                 self._bond(endereco, mac, NOME_DUALSENSE)
@@ -173,11 +158,6 @@ class Bancada:
                     nomes[caminho] = NOME_PRO if mac == MAC_PRO else NOME_DUALSENSE
 
         _executavel(self.fakes / "id", "echo 0\n")
-        # O `busctl` de mentira imprime como o de verdade: escapado em C sem o
-        # `--json`, e em UTF-8 com ele (`tests/unit/busctl_de_verdade.py`). Com
-        # o `printf` cru de antes, o acento «de propósito» desta bancada nunca
-        # chegava escapado ao script, e a costura «Nintendo Sof\303\241»
-        # passava aqui (conferência da INSTALL-E-UNINSTALL-DO-RADIO-01).
         impressor = escrever_impressor(self.fakes)
         _executavel(
             self.fakes / "busctl",
@@ -265,15 +245,8 @@ exit 0
         }
 
 
-# ---------------------------------------------------------------------------
-# E2 — o prefixo vai só onde a linhagem mora, e vai em TODOS onde ela mora
-# ---------------------------------------------------------------------------
 def test_so_o_adaptador_que_hospeda_o_pro_recebe_o_prefixo(tmp_path: Path) -> None:
-    """A mordida principal: um acerto em três virava zero acerto.
-
-    As duas asserções são as duas pontas do mesmo defeito, e o `head -1` de
-    ontem reprova nas duas: escreve onde não devia, e não escreve onde devia.
-    """
+    """A mordida principal: um acerto em três virava zero acerto."""
     banca = Bancada(tmp_path)
     banca.rodar()
     escritos = banca.aliases_escritos()
@@ -291,13 +264,7 @@ def test_so_o_adaptador_que_hospeda_o_pro_recebe_o_prefixo(tmp_path: Path) -> No
 
 
 def test_o_bond_em_disco_basta_com_o_bluetoothd_ainda_povoando(tmp_path: Path) -> None:
-    """A fonte que responde ANTES do link — e é a única que responde ali.
-
-    No `ExecStartPost` o `bluetoothd` ainda não publicou os objetos de device, e
-    o Pro nem conectou. O sysfs vivo do `apelido_do_dongle` devolve vazio nesse
-    instante (medido em 22/08/2026: sem o Pro ligado, nenhum nó `hidraw` dele
-    existe). Só o bond em disco sabe onde ele mora.
-    """
+    """A fonte que responde ANTES do link — e é a única que responde ali."""
     banca = Bancada(tmp_path, dbus_ve_devices=False)
     banca.rodar()
     assert banca.aliases_escritos() == {
@@ -306,8 +273,7 @@ def test_o_bond_em_disco_basta_com_o_bluetoothd_ainda_povoando(tmp_path: Path) -
 
 
 def test_com_o_pro_fora_da_mesa_ninguem_e_prefixado(tmp_path: Path) -> None:
-    """O controle negativo. Sem esta linha o teste acima passaria com um
-    script que prefixa todo mundo — que é a outra forma de errar."""
+    """O controle negativo. Sem esta linha o teste acima passaria com um"""
     banca = Bancada(tmp_path, com_pro=False)
     banca.rodar()
     assert banca.aliases_escritos() == {}, banca.aliases_escritos()
@@ -326,13 +292,7 @@ def test_o_prefixo_nao_cresce_a_cada_tique_da_vigia(tmp_path: Path) -> None:
 
 
 def test_bond_de_dongle_que_saiu_da_mesa_nao_derruba_o_resto(tmp_path: Path) -> None:
-    """`/var/lib/bluetooth` guarda o bond de dongle que já foi desplugado.
-
-    O diretório fica lá para sempre — é assim que o bond sobrevive a trocar o
-    dongle de porta. O endereço dele não casa com adaptador nenhum de hoje, e
-    isso não pode nem inventar um alvo nem interromper a varredura antes do
-    adaptador seguinte.
-    """
+    """`/var/lib/bluetooth` guarda o bond de dongle que já foi desplugado."""
     banca = Bancada(tmp_path, dbus_ve_devices=False)
     fantasma = banca.lib / "AA:BB:CC:00:00:99" / MAC_PRO
     fantasma.mkdir(parents=True)
@@ -346,12 +306,7 @@ def test_bond_de_dongle_que_saiu_da_mesa_nao_derruba_o_resto(tmp_path: Path) -> 
 
 
 def test_nome_que_nao_cabe_com_o_prefixo_e_recusado_com_motivo(tmp_path: Path) -> None:
-    """Acima do teto o BlueZ recusa a chamada inteira — e calar é o pior.
-
-    O shell não tem como cortar UTF-8 em fronteira de caractere sem depender de
-    ferramenta que pode não existir no boot, então o script não corta: ele diz
-    que não coube, e diz em qual adaptador.
-    """
+    """Acima do teto o BlueZ recusa a chamada inteira — e calar é o pior."""
     comprido = dict(ALIAS_INICIAL)
     comprido[HOSPEDEIRO_DO_PRO] = "á" * ((TETO_DE_BYTES // 2) + 1)
     banca = Bancada(tmp_path, alias=comprido)
@@ -362,24 +317,14 @@ def test_nome_que_nao_cabe_com_o_prefixo_e_recusado_com_motivo(tmp_path: Path) -
 
 
 def test_o_sniff_default_volta_em_todos_os_adaptadores(tmp_path: Path) -> None:
-    """A operação (2) tem escopo DIFERENTE da (1), e a razão está no script.
-
-    Devolver o default do kernel não escolhe favorecido: o 8BitDo pareia em
-    qualquer adaptador e a probe dele morre em qualquer um que esteja sem
-    SNIFF. E a entrada de conexão `hci1:1` do sysfs não é adaptador — se ela
-    aparecer aqui, o filtro `^hci[0-9]+$` caiu.
-    """
+    """A operação (2) tem escopo DIFERENTE da (1), e a razão está no script."""
     banca = Bancada(tmp_path)
     banca.rodar()
     assert banca.sniff_devolvido_em() == set(ADAPTADORES), banca.sniff_devolvido_em()
 
 
 def test_o_sniff_default_nao_e_mexido_em_quem_ja_o_tem(tmp_path: Path) -> None:
-    """Régua do teste acima: com SNIFF já no default, o registro fica VAZIO.
-
-    Sem este controle, um dublê de `hciconfig` que gravasse sempre faria o
-    teste anterior passar por preguiça do instrumento.
-    """
+    """Régua do teste acima: com SNIFF já no default, o registro fica VAZIO."""
     banca = Bancada(tmp_path, sniff_no_default=True)
     banca.rodar()
     assert banca.sniff_devolvido_em() == set(), banca.sniff_devolvido_em()
@@ -393,9 +338,6 @@ def test_o_diario_nomeia_o_adaptador_que_recebeu_o_prefixo(tmp_path: Path) -> No
     assert f"alias do adaptador {HOSPEDEIRO_DO_PRO} ->" in diario, diario
 
 
-# ---------------------------------------------------------------------------
-# UM DONO SÓ — a regra é do `core/linhagem_nintendo`; o shell é cópia PINADA
-# ---------------------------------------------------------------------------
 def _lista_do_shell(nome: str) -> tuple[str, ...]:
     texto = SCRIPT.read_text(encoding="utf-8")
     achado = re.search(rf"^{nome}=\((.*)\)$", texto, re.M)
@@ -407,12 +349,7 @@ def _lista_do_shell(nome: str) -> tuple[str, ...]:
 
 
 def test_a_regra_da_linhagem_e_a_mesma_do_dono_dela() -> None:
-    """Dois escritores do mesmo alias, e por isso UMA regra só.
-
-    `integrations/apelido_do_dongle.py` escreve o alias pelo lado da GUI; este
-    script escreve pelo lado do root. Se as duas listas divergirem, um desfaz o
-    outro a cada tique da vigia — que é exatamente o ciclo que a sprint mediu.
-    """
+    """Dois escritores do mesmo alias, e por isso UMA regra só."""
     esperadas = com_dois_pontos(OUIS_NINTENDO_VISTAS | OUIS_CLONE)
     assert set(_lista_do_shell("OUIS_LINHAGEM")) == esperadas, (
         "as faixas do shell se separaram de `core/linhagem_nintendo`: "
@@ -425,8 +362,6 @@ def test_a_regra_da_linhagem_e_a_mesma_do_dono_dela() -> None:
 
 def test_o_prefixo_e_o_teto_batem_com_o_outro_escritor() -> None:
     texto = SCRIPT.read_text(encoding="utf-8")
-    # A costura prefixa o nome do lugar OU o alias de hoje (ENTRADA-A-ENTRADA-02):
-    # o que a régua cobra é a CAIXA do prefixo, não o nome da variável.
     assert re.search(rf'"{PREFIXO_NINTENDO} \$\{{[A-Z_]+\}}"', texto), (
         "a caixa do prefixo tem de ser a mesma dos dois lados, ou cada escritor "
         "re-prefixa o que o outro escreveu"
@@ -437,27 +372,14 @@ def test_o_prefixo_e_o_teto_batem_com_o_outro_escritor() -> None:
 
 
 def test_a_regua_da_paridade_enxerga_o_que_promete() -> None:
-    """Contagem independente: as listas lidas não podem estar vazias.
-
-    Duas listas vazias comparadas com duas listas vazias dão verde e não medem
-    nada — é o "portão que não mede o que promete" de 19/08.
-    """
+    """Contagem independente: as listas lidas não podem estar vazias."""
     assert len(_lista_do_shell("OUIS_LINHAGEM")) >= 2
     assert len(_lista_do_shell("NOMES_LINHAGEM")) >= 2
     assert len(com_dois_pontos(OUIS_NINTENDO_VISTAS | OUIS_CLONE)) >= 2
 
 
-# ---------------------------------------------------------------------------
-# O portão da CLASSE — barato, e mata a reincidência em vez do caso
-# ---------------------------------------------------------------------------
-#: `#` só abre comentário no começo da linha ou depois de espaço. Sem isso
-#: `${VAR#prefixo}` viraria "comentário" e o portão ficaria cego no meio da
-#: linha.
 _COMENTARIO = re.compile(r"(?:^|(?<=\s))#.*$")
-#: Um `hciN` LITERAL. A classe de caracteres `hci[0-9]+` das regex do produto
-#: não casa aqui, e é por isso que a régua é `hci` seguido de DÍGITO.
 _HCI_LITERAL = re.compile(r"hci[0-9]")
-#: Uma fonte que devolve N adaptadores.
 _FONTE_PLURAL = re.compile(
     r"(_adaptadores|_bt_adaptadores|/sys/class/bluetooth|busctl\s+tree"
     r"|btmgmt\s+info|hciconfig\s*\|)"
@@ -480,21 +402,7 @@ def _reclamacoes(texto: str, nome: str = "<memória>") -> list[str]:
 
 @pytest.mark.parametrize("arquivo", SCRIPTS_BT, ids=lambda p: p.name)
 def test_nenhum_script_de_bluetooth_fala_por_um_adaptador_so(arquivo: Path) -> None:
-    """`hci0` literal e `head -1` sobre fonte PLURAL.
-
-    O `bt_health_watchdog.sh:158` já carrega a cicatriz por escrito desde 23/07
-    — *"Concatenar 'hci0' fazia a vigia virar no-op MUDO num adaptador hci1"* —
-    e mesmo assim o `hci0` literal seguiu vivo noutros arquivos por um mês.
-    Cicatriz que não vira portão é cicatriz que a casa relê e não aplica.
-
-    ESCOPO: `scripts/bt_*.sh` **e o `doctor.sh`**. A frente que escreveu este
-    portão o declarou só sobre os `bt_*`, porque o `doctor.sh` era território de
-    outra pessoa e um portão que reprova pelo arquivo alheio é um portão que
-    alguém desliga. A razão era certa e caducou no mesmo dia: os dois `head -1`
-    do achado A5 foram curados em 22/08, e o exame agora confere TODOS os
-    adaptadores. Deixar o doctor fora do escopo depois disso seria guardar a
-    porta que já está fechada e deixar aberta a que acabou de fechar.
-    """
+    """`hci0` literal e `head -1` sobre fonte PLURAL."""
     reclamacoes = _reclamacoes(arquivo.read_text(encoding="utf-8"), arquivo.name)
     assert not reclamacoes, (
         "o produto pergunta a UM adaptador e responde pelo rádio inteiro:\n  "

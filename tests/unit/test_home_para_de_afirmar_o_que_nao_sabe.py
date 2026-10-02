@@ -29,10 +29,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_para_de_afirmar_o_que_nao_sabe: importa código da janela GTK")
 
 import ast
@@ -57,16 +53,8 @@ def _payload_medido() -> dict[str, Any]:
     return json.loads(FIXTURE_MEDIDA.read_text(encoding="utf-8"))
 
 
-# ----------------------------------------------------------------------
-# O dublê da aba — o mesmo desenho do `_HomeStub` dos vizinhos
-# ----------------------------------------------------------------------
-
-
 class _Widget:
     def __init__(self, label: str | None = None, **_kw: Any) -> None:
-        # O `label=` do construtor é guardado: `Gtk.Label(label=...)` é como
-        # o `_render_home_controllers` escreve o subtítulo do card, e um
-        # dublê que o jogasse fora mediria uma fileira de cards mudos.
         self.texto = label or ""
         self.visivel = True
         self.active_id: str | None = None
@@ -180,18 +168,9 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
 
 
-# ----------------------------------------------------------------------
-# I4 — a pausa chega à primeira aba
-# ----------------------------------------------------------------------
-
-
 class TestAPausaChegaNaPrimeiraAba:
     def test_a_funcao_pura_so_acende_com_o_true_literal(self) -> None:
-        """Chave ausente ou de outro tipo é "não sei", nunca "está parado".
-
-        Mesma disciplina do `wrapper_used`: um daemon mais velho não afirma que
-        o produto está em pausa, só não sabe dizer.
-        """
+        """Chave ausente ou de outro tipo é "não sei", nunca "está parado"."""
         assert home_actions.texto_da_pausa({"paused": True})
         assert home_actions.texto_da_pausa({"paused": False}) is None
         assert home_actions.texto_da_pausa({}) is None
@@ -201,11 +180,7 @@ class TestAPausaChegaNaPrimeiraAba:
     def test_em_pausa_a_descricao_nao_promete_luz_nem_vibracao(
         self, fake_gtk: None
     ) -> None:
-        """A MORDIDA da I4, literal do §5 da sprint.
-
-        Arranque a consulta a `paused` no `_render_home` (volte a linha para
-        `_MODE_DESCRIPTIONS.get(modo_exibido, "")` seco) e este teste reprova.
-        """
+        """A MORDIDA da I4, literal do §5 da sprint."""
         host = _HomeStub()
         estado = {
             "connected": True,
@@ -253,11 +228,7 @@ class TestAPausaChegaNaPrimeiraAba:
     def test_a_pausa_do_produto_e_lida_do_mesmo_campo_da_aba_emulacao(
         self,
     ) -> None:
-        """Uma fonte só. Duas leituras do mesmo fato não podem discordar.
-
-        A aba Emulação lê `state["paused"]` para escrever "O Hefesto está em
-        pausa"; esta aba tem de ler a MESMA chave, não uma derivada.
-        """
+        """Uma fonte só. Duas leituras do mesmo fato não podem discordar."""
         fonte = (
             RAIZ / "src/hefesto_dualsense4unix/app/actions/emulation_actions.py"
         ).read_text(encoding="utf-8")
@@ -265,19 +236,9 @@ class TestAPausaChegaNaPrimeiraAba:
         assert home_actions.texto_da_pausa({"paused": True}) is not None
 
 
-# ----------------------------------------------------------------------
-# I6 — a ponte não acende sobre mesa vazia
-# ----------------------------------------------------------------------
-
-
 class TestAPonteNaoAcendeSobreMesaVazia:
     def test_o_payload_medido_nao_produz_verde(self) -> None:
-        """A MORDIDA da I6, literal do §5: o payload do §2.1 não pode sair verde.
-
-        Arranque o ramo da mesa vazia em `texto_da_ponte` e este teste reprova
-        — a frase volta a ser `#50fa7b` "pelo Hefesto" com zero controle na
-        casa, que é o que a bancada mediu.
-        """
+        """A MORDIDA da I6, literal do §5: o payload do §2.1 não pode sair verde."""
         frase = home_actions.texto_da_ponte(_payload_medido())
 
         assert "#50fa7b" not in frase, (
@@ -287,12 +248,7 @@ class TestAPonteNaoAcendeSobreMesaVazia:
         assert frase.startswith(home_actions.PONTE_PREFIXO)
 
     def test_a_mesa_vazia_nao_e_a_mesma_frase_de_nenhuma_ponte(self) -> None:
-        """Quarto veredito, e não o terceiro reaproveitado.
-
-        "Nenhuma ponte" é o desktop — não há gamepad de pé. "De pé e vazia" é o
-        gamepad montado sem quem o alimente. Dizer as duas com a mesma frase
-        mandaria a pessoa clicar num botão que já está clicado.
-        """
+        """Quarto veredito, e não o terceiro reaproveitado."""
         vazia = home_actions.texto_da_ponte(_payload_medido())
         desktop = home_actions.texto_da_ponte(
             {
@@ -319,12 +275,7 @@ class TestAPonteNaoAcendeSobreMesaVazia:
         assert "pelo Hefesto" in frase
 
     def test_a_contagem_da_ponte_usa_o_mesmo_filtro_do_frame(self) -> None:
-        """`connected=False` é o card fantasma — e não conta como mesa.
-
-        `describe_controllers` devolve UMA entrada desconectada quando não há
-        controle nenhum. Contar sem filtrar traria o fantasma de volta por
-        outra porta, e a ponte acenderia verde com a mesa vazia de novo.
-        """
+        """`connected=False` é o card fantasma — e não conta como mesa."""
         assert home_actions.controles_na_mesa(_payload_medido()) == 0
         assert (
             home_actions.controles_na_mesa(
@@ -351,35 +302,8 @@ class TestAPonteNaoAcendeSobreMesaVazia:
         assert "direto (Sony)" in nativo
 
 
-# ----------------------------------------------------------------------
-# I6, ramo 2 — a exceção de Steam Input, e a frase que a medição derrubou
-# ----------------------------------------------------------------------
-
-
 class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
-    """25/08/2026 — o ramo que a sprint mandou "registrar e seguir", fechado.
-
-    O ramo 2 de ``texto_da_ponte`` exigia ``excecao_ativa AND vpad_suspenso`` e
-    **nunca** rodou: a `VPAD-SUSPENSO-MORTO-01`/E1 mediu que
-    ``_steam_input_vpad_suspenso`` só anda para ``False`` desde o commit
-    ``d8022ea`` (09/08/2026).
-
-    A saída recomendada para o PAR era trocar a condição por ``excecao_ativa``
-    sozinho, *"sem inventar texto novo"*. **Nesta aba isso publicaria uma frase
-    que a medição derruba**, e é isto que esta classe trava:
-
-    * a frase dizia *"a Steam entrega os botões"*. Desde a
-      `ESCONDER-EM-VEZ-DE-SAIR-01` (09/08/2026, decisão dela) a exceção
-      **esconde o físico** e **mantém o vpad de pé** — na exceção quem alimenta
-      o jogo continua sendo o gamepad do Hefesto;
-    * e há medição em jogo, não só leitura de código:
-      ``docs/protocol/pilha-steam-input-xpad-sdl.md`` §2.4-bis, 11/08/2026, com
-      um appid da allowlist DELA em sessão — **zero espelhos** da Steam, os dois
-      vpads de pé, quatro controles com jogador e vibração, e o aceite dela.
-
-    A mordida desta classe é a saída recomendada: reponha o ramo lendo
-    ``excecao_ativa`` e os dois primeiros testes reprovam.
-    """
+    """25/08/2026 — o ramo que a sprint mandou "registrar e seguir", fechado."""
 
     @staticmethod
     def _mesa_de_um(**delta: Any) -> dict[str, Any]:
@@ -405,13 +329,7 @@ class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
         assert "Steam" not in linha
 
     def test_a_aba_nao_diz_que_a_steam_entrega_os_botoes(self) -> None:
-        """Nem pelo payload impossível de ontem.
-
-        Um daemon velho ainda pode publicar ``vpad_suspenso: true`` — o campo
-        existe no contrato desde 25/07. A aba não pode acreditar nele: a
-        suspensão não acontece mais, e a frase que ela justificava está
-        refutada pela medição de 11/08.
-        """
+        """Nem pelo payload impossível de ontem."""
         linha = home_actions.texto_da_ponte(
             self._mesa_de_um(
                 steam_input={"excecao_ativa": True, "vpad_suspenso": True}
@@ -422,12 +340,7 @@ class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
         assert "pelo Steam Input" not in linha
 
     def test_com_a_excecao_ativa_e_a_mesa_vazia_a_ponte_nao_acende(self) -> None:
-        """A exceção não pode reacender o verde que a I6 apagou.
-
-        Era este o preço de repor o ramo acima da bifurcação da mesa vazia: com
-        zero controle na casa e a exceção ligada, a primeira tela voltaria a
-        pintar um veredito bom sobre uma mesa que não tem ninguém.
-        """
+        """A exceção não pode reacender o verde que a I6 apagou."""
         estado = _payload_medido()
         estado["steam_input"] = {"excecao_ativa": True, "vpad_suspenso": False}
 
@@ -437,21 +350,12 @@ class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
         assert "de pé, e vazia" in linha
 
     def test_a_aba_nao_le_uma_flag_que_so_anda_para_um_lado(self) -> None:
-        """O portão de forma, e ele é o que impede a volta silenciosa.
-
-        Os dois de cima medem o TEXTO; este mede a LEITURA. Sem ele, alguém
-        pode repor a condição com uma frase diferente e a aba volta a decidir
-        por um valor que nenhum caminho de produção consegue escrever — que é
-        o defeito inteiro da `VPAD-SUSPENSO-MORTO-01`, de volta por outra porta.
-        """
+        """O portão de forma, e ele é o que impede a volta silenciosa."""
         arvore = ast.parse(
             (
                 RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
             ).read_text(encoding="utf-8")
         )
-        # A régua pergunta ao CÓDIGO, não ao texto: prosa (docstring) e
-        # comentário PRECISAM poder nomear a flag — é onde a lápide mora. Medido
-        # aqui mesmo: um filtro por linha acusava a própria explicação.
         prosa = {
             id(no.body[0].value)
             for no in ast.walk(arvore)
@@ -477,19 +381,9 @@ class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
         )
 
 
-# ----------------------------------------------------------------------
-# I11 — o cadeado diz quando o mecanismo que ele governa está cego
-# ----------------------------------------------------------------------
-
-
 class TestOCadeadoDizQuandoEstaCego:
     def test_a_funcao_pura_cala_sem_a_chave(self) -> None:
-        """Ausência de chave é "não sei" — nunca "está cego".
-
-        Um daemon mais velho não publica `window_detect_seeing`, e acender o
-        aviso a partir disso seria alarme falso sobre um mecanismo que pode
-        estar perfeito.
-        """
+        """Ausência de chave é "não sei" — nunca "está cego"."""
         assert home_actions.texto_do_cadeado_cego({}) == ""
         assert home_actions.texto_do_cadeado_cego(None) == ""
         assert home_actions.texto_do_cadeado_cego({"window_detect_seeing": True}) == ""
@@ -526,12 +420,7 @@ class TestOCadeadoDizQuandoEstaCego:
         assert host._home_autoswitch_lock_hint.get_visible() is False
 
     def test_o_cadeado_ligado_continua_dizendo_o_que_dizia(self) -> None:
-        """A frase antiga não foi substituída: as duas metades convivem.
-
-        `autoswitch_lock_text` é a voz do que ELA escolheu; a nova é a do que
-        não vai acontecer de qualquer jeito. Perder a primeira trocaria um
-        silêncio por outro.
-        """
+        """A frase antiga não foi substituída: as duas metades convivem."""
         texto = home_actions.autoswitch_lock_text(
             {"freestyle_ligado": True, "active_profile": "pragmata"}
         )
@@ -539,12 +428,7 @@ class TestOCadeadoDizQuandoEstaCego:
         assert "pragmata" in texto
 
     def test_a_frase_do_cadeado_nao_vai_para_o_rodape(self, fake_gtk: None) -> None:
-        """O toast do rodapé segue falando SÓ do cadeado (AVISO-VIVO-01).
-
-        Enfiar a cegueira do detector em `autoswitch_lock_text` faria o rodapé
-        anunciá-la por BORDA toda vez que ela piscasse — ruído sobre um fato que
-        já está escrito na tela, duas linhas acima.
-        """
+        """O toast do rodapé segue falando SÓ do cadeado (AVISO-VIVO-01)."""
         toasts: list[str] = []
         host = _HomeStub()
         host._status_toast = lambda _c, msg: toasts.append(msg)  # type: ignore[method-assign]
@@ -555,11 +439,6 @@ class TestOCadeadoDizQuandoEstaCego:
         assert all(
             home_actions.TEXTO_DETECTOR_CEGO not in msg for msg in toasts
         ), f"a cegueira do detector vazou para o rodapé: {toasts}"
-
-
-# ----------------------------------------------------------------------
-# I3 — "você escolheu" para de acusar sobre gesto que ela não deu
-# ----------------------------------------------------------------------
 
 
 class _Rascunho:
@@ -573,12 +452,7 @@ class TestNinguemEAcusadoDeGestoQueNaoDeu:
     def test_mascara_vinda_do_perfil_nao_diz_voce_escolheu(
         self, fake_gtk: None
     ) -> None:
-        """A MORDIDA da I3, segunda metade do §5.
-
-        `draft` com `xbox` e SEM gesto dela: a frase não pode conter "você
-        escolheu". Arranque a fonte do `_mascara_escolhida_com_fonte` (devolva
-        sempre `FONTE_GESTO_DELA`) e este teste reprova.
-        """
+        """A MORDIDA da I3, segunda metade do §5."""
         host = _HomeStub()
         host.draft = _Rascunho("xbox")  # type: ignore[attr-defined]
 
@@ -635,14 +509,7 @@ class TestNinguemEAcusadoDeGestoQueNaoDeu:
     def test_o_alarme_do_daemon_ganha_leitor_e_nomeia_o_perfil(
         self, fake_gtk: None
     ) -> None:
-        """A MORDIDA da I3, primeira metade do §5.
-
-        `gamepad_emulation.mascara_divergente` é publicado pelo daemon desde a
-        MASCARA-01 e `grep -rn "mascara_divergente" src/` só achava o ESCRITOR.
-        Com o alarme populado, a frase nomeia o perfil do jogo em cena em vez de
-        falar em abstrato. Arranque a leitura (`mascara_divergente_do_daemon`)
-        e a frase volta ao texto genérico.
-        """
+        """A MORDIDA da I3, primeira metade do §5."""
         host = _HomeStub()
 
         host._render_home(

@@ -1,24 +1,4 @@
-"""JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026) — o install script não é jogo vivo.
-
-A Steam roda o avaliador do install script de um jogo ANTES do jogo, e ele
-carrega a mesma agulha do lançamento: ``reaper SteamLaunch AppId=<id>
-Install=1 -- …``. Medido no log da Steam e no journal: o avaliador pôs a
-autoridade de exibição em `game` 4 a 5 s antes do ping do wrapper, e o
-lançamento caiu no ramo `jogo_vivo` (`ponte_escada_nao_arma motivo=jogo_vivo`)
-em 6 de 6 aberturas — sem primeiro degrau, sem `.env` por jogo, sem confirmação
-por silêncio. Os jogos sem install script armaram pelo ping.
-
-Este arquivo trava as duas perguntas separadas:
-
-1. **qual jogo está aberto** (`steam_game_running_appid`, a evidência E4 do
-   sinal de jogo) — o avaliador responde None;
-2. **há algo que fechar a Steam mataria** (`steam_game_running`, o guarda do
-   `steam -shutdown`) — o avaliador responde True.
-
-E o fio inteiro, com dublê: a linha do avaliador → `classify` → a autoridade →
-`arm_launch_profile` → `ponte_tentativa.comecar` com `primeiro_degrau`.
-Arrancar a exclusão devolve `jogo_vivo`, que é a linha do journal.
-"""
+"""JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026) — o install script não é jogo vivo."""
 
 from __future__ import annotations
 
@@ -35,9 +15,6 @@ from hefesto_dualsense4unix.integrations import ponte_tentativa as pt
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
-#: A forma da linha do log da Steam, com o appid como parâmetro: a cura é por
-#: assinatura, e os dois appids abaixo são os dois que rodaram o avaliador nos
-#: logs de 13/09 — nenhum deles é citado pelo produto.
 _AVALIADOR = (
     "~/.steam/debian-installation/ubuntu12_32/reaper SteamLaunch AppId={appid} "
     "Install=1 -- ~/.steam/debian-installation/ubuntu12_32/steam-launch-wrapper "
@@ -77,15 +54,11 @@ def _instalar_proc(monkeypatch: pytest.MonkeyPatch, mapa: dict[str, str]) -> Non
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. As duas perguntas, separadas
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("appid", _APPIDS)
 def test_o_avaliador_segura_a_steam_mas_nao_e_jogo(
     monkeypatch: pytest.MonkeyPatch, appid: int
 ) -> None:
-    """A MORDIDA da agulha. Arranque o `e_avaliador_do_install_script` de
-    `steam_game_running_appid` e o appid volta — a evidência E4 do journal."""
+    """A MORDIDA da agulha. Arranque o `e_avaliador_do_install_script` de"""
     _instalar_proc(monkeypatch, {"100": _AVALIADOR.format(appid=appid)})
 
     assert slo.steam_game_running_appid() is None
@@ -123,9 +96,7 @@ def test_o_jogo_de_verdade_continua_sendo_jogo(monkeypatch: pytest.MonkeyPatch) 
 def test_o_avaliador_nao_esconde_o_jogo_que_convive_com_ele(
     monkeypatch: pytest.MonkeyPatch, mapa: dict[str, str]
 ) -> None:
-    """A varredura devolve UMA cmdline. O jogo vence, qualquer que seja a
-    ordem dos pids. MORDE a preferência da camada 4 de `_steam_launch_cmdline`:
-    sem ela, o avaliador de pid menor esconde o jogo e o appid some."""
+    """A varredura devolve UMA cmdline. O jogo vence, qualquer que seja a"""
     _instalar_proc(monkeypatch, mapa)
 
     assert slo.steam_game_running_appid() == 4235410
@@ -134,12 +105,7 @@ def test_o_avaliador_nao_esconde_o_jogo_que_convive_com_ele(
 def test_a_foto_do_avaliador_nao_esconde_o_jogo_que_nasce_depois(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A varredura tem memória (BG-03): o pid achado é reconfirmado sem varrer.
-
-    Com o avaliador na foto, reconfirmar só ele deixaria o jogo que nasceu ao
-    lado invisível enquanto o avaliador vivesse. MORDE o `foto = None` da camada
-    2: sem ele, a segunda pergunta ainda responde None.
-    """
+    """A varredura tem memória (BG-03): o pid achado é reconfirmado sem varrer."""
     mapa = {"100": _AVALIADOR.format(appid=1599660)}
     _instalar_proc(monkeypatch, mapa)
     assert slo.steam_game_running_appid() is None
@@ -149,9 +115,6 @@ def test_a_foto_do_avaliador_nao_esconde_o_jogo_que_nasce_depois(
     assert slo.steam_game_running_appid() == 1599660
 
 
-# ---------------------------------------------------------------------------
-# 2. O fio inteiro: a linha do avaliador até o primeiro degrau da escada
-# ---------------------------------------------------------------------------
 APPID = 1599660
 EPOCH = 1000
 
@@ -183,11 +146,7 @@ class _DaemonFalso:
 
 
 def _autoridade_do_tique(monkeypatch: pytest.MonkeyPatch, cmdline: str) -> str:
-    """Um tique do sinal de jogo com SÓ esta cmdline viva e o detector são.
-
-    O marker do wrapper ainda não existe: é o instante do journal, 4 a 5 s
-    antes do ping, em que só o avaliador está de pé.
-    """
+    """Um tique do sinal de jogo com SÓ esta cmdline viva e o detector são."""
     with monkeypatch.context() as m:
         _instalar_proc(m, {"100": cmdline})
         appid = slo.steam_game_running_appid()
@@ -238,9 +197,7 @@ def _armar(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, autoridade: str) -> 
 def test_com_o_avaliador_vivo_o_lancamento_arma_o_primeiro_degrau(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A MORDIDA do fio. Arranque a exclusão em `steam_game_running_appid` e a
-    autoridade vira `game`, o `comecar` responde `jogo_vivo` e nada é armado —
-    a linha `ponte_escada_nao_arma motivo=jogo_vivo` das 05:00:20."""
+    """A MORDIDA do fio. Arranque a exclusão em `steam_game_running_appid` e a"""
     autoridade = _autoridade_do_tique(monkeypatch, _AVALIADOR.format(appid=APPID))
 
     resultado, motivos, daemon = _armar(monkeypatch, tmp_path, autoridade)
@@ -258,8 +215,7 @@ def test_com_o_avaliador_vivo_o_lancamento_arma_o_primeiro_degrau(
 def test_contraprova_com_o_jogo_vivo_o_lancamento_nao_arma(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O dublê sabe RECUSAR: com o reaper do JOGO de pé, o mesmo fio dá
-    `jogo_vivo`. Sem esta metade, um `primeiro_degrau` fixo passaria."""
+    """O dublê sabe RECUSAR: com o reaper do JOGO de pé, o mesmo fio dá"""
     autoridade = _autoridade_do_tique(monkeypatch, _JOGO.format(appid=APPID))
     assert autoridade == "game"
 

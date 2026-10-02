@@ -733,8 +733,8 @@
      "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
 
      ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
-     seis lugares (`monta.py:267`, `aba01.py:936`, `aba04.py:832`,
-     `aba05.py:1105`, `aba06.py:1181`, `aba10.py:584`), assim:
+     seis lugares (`monta.py:84`, `aba01.py:650`, `aba04.py:689`,
+     `aba05.py:778`, `aba06.py:1042`, `aba10.py:380`), assim:
      "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
      um controle; um desenho cinza diz."
      O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
@@ -744,11 +744,11 @@
      É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
      cobram a regra e o elemento no publicado
      (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
-     por ÍNDICE — `aba06.py:1186` avisa que "um lugar vazio sem endereço tiraria
+     por ÍNDICE — `aba06.py:1047` avisa que "um lugar vazio sem endereço tiraria
      uma casa da fila e o P4 receberia a cor do P3".
 
      UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
-     gerador E pelo piloto (`hefesto_vivo.py:603`), e reaberta quando o controle
+     gerador E pelo piloto (`hefesto_vivo.py:425`), e reaberta quando o controle
      chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
      aba01/04/05/06/10. */
   [data-conectado="nao"] .ds-svg,
@@ -1603,7 +1603,7 @@
   .vib-estado .est.alerta .sinal{color:var(--orange)}
   /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
      casa, o que ela usa na frase "grava aqui, manda ali"
-     (`rumble_actions.py:628`, com o comentário "a frase explica, não alarma").
+     (`rumble_actions.py:503`, com o comentário "a frase explica, não alarma").
      Ela saía como `diz` — o cinza — e o erro só apareceria na tela no dia em
      que a MIGRA-VIBRACAO-04 ligasse o alvo por controle. `--cyan` é o mesmo
      hexadecimal, já declarado no `topo.html`. */
@@ -3800,7 +3800,7 @@
              sempre e NÃO existia aqui: a tela nova tinha os dois motores, os
              quatro degraus e o "Testar", e nenhuma palavra sobre o que acontece
              com eles. As quatro frases já estavam escritas e ninguém as chamava
-             (`app/actions/rumble_actions.py:186,291,370,459`).
+             (`app/actions/rumble_actions.py:127,291,370,459`).
 
              DEPOIS DA GRADE, e não dentro: as cinco colunas compartilham as
              alturas de linha, e uma linha a mais lá dentro empurraria o "Testar"
@@ -3808,7 +3808,7 @@
              dela desde 30/08.
 
              O `id` É O ENDEREÇO DO BLOCO: o pintor troca o miolo inteiro por
-             `p.blocos` (`hefesto_vivo.py:213`), porque o NÚMERO de linhas muda
+             `p.blocos` (`hefesto_vivo.py:78`), porque o NÚMERO de linhas muda
              com o estado e não há endereço para uma linha que ainda não existe.
              Campo a campo, a linha que não se aplica viraria `—`. -->
         <!-- A FAIXA DEIXOU DE SER LUGAR DE RECADO — 13/09/2026,

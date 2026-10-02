@@ -1,30 +1,4 @@
-"""DIVIDA-DO-PLAYWRIGHT-01 — todo portão declara a biblioteca de que precisa.
-
-O DEFEITO, com nome e data. Dois portões desta casa importam `playwright`:
-
-    scripts/check_pecas_do_dualsense.py
-    scripts/check_cores_do_dualsense.py
-
-e o `pyproject.toml` não o declarava em extra nenhum. Ele vivia na bancada de
-quem escreveu os portões, por instalação à mão. O efeito é o mesmo toda vez, e
-a casa já o descrevia em 29/08/2026: uma árvore criada com
-`pip install -e ".[dev,emulation,cosmic]"` NASCE com dois portões vermelhos, e
-quem chega gasta a manhã concluindo que quebrou alguma coisa.
-
-Não é um caso isolado — é uma FORMA, e a mesma forma já mordeu esta casa em
-outro lugar: `tests/unit/test_o_install_entrega_a_luz_do_mic.py` guarda `src/`
-contra biblioteca de áudio não declarada, com o `playwright` citado no
-cabeçalho como o precedente a não repetir. O que faltava era a régua do outro
-lado da cerca: `scripts/`, onde moram os portões.
-
-ESTE ARQUIVO É ESSA RÉGUA. Ele lê os imports de verdade (AST, nunca `grep`) e
-exige que toda biblioteca de terceiro esteja declarada — ou esteja numa lista
-de exceções com o motivo escrito.
-
-A MORDIDA (feita em 03/09/2026): tirada a linha `playwright>=1.62` do
-`[project.optional-dependencies].dev`, o teste reprovou nomeando os dois
-portões e a biblioteca. Devolvida, voltou verde.
-"""
+"""DIVIDA-DO-PLAYWRIGHT-01 — todo portão declara a biblioteca de que precisa."""
 
 from __future__ import annotations
 
@@ -34,35 +8,22 @@ from pathlib import Path
 
 if sys.version_info >= (3, 11):
     import tomllib
-else:  # o 3.10 da matriz do CI: o pytest traz o `tomli`, o mesmo leitor de antes
-    import tomli as tomllib  # de ele entrar na biblioteca padrão (25/09/2026)
+else:
+    import tomli as tomllib
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPTS = RAIZ / "scripts"
 PYPROJECT = RAIZ / "pyproject.toml"
 
-# `sys.stdlib_module_names` é a lista do PRÓPRIO interpretador que roda o teste
-# — nada digitado à mão, que é como uma régua desta casa envelhece.
 STDLIB = set(sys.stdlib_module_names)
 
 DA_CASA = {"hefesto_dualsense4unix", "tests"}
 
-# O que NÃO precisa estar no `pyproject.toml`, com o motivo. Uma exceção sem
-# motivo é uma dívida escondida atrás de uma lista.
 EXCECOES = {
-    # O PyGObject vem do SISTEMA (`python3-gi`), não do pip: a wheel do pip não
-    # traz o typelib nem os bindings do GTK. Quem garante é o censo
-    # `_DEPS_DE_SISTEMA` do `install.sh`, que o pede como `python-gi` e o
-    # confere pelo EFEITO — e é por isso que o venv desta casa nasce com
-    # `--system-site-packages`.
     "gi": "vem do pacote do sistema (python3-gi); o install.sh o garante no censo",
 }
 
 
-# As pastas que os roteiros desta casa põem no `sys.path` à mão antes de
-# importar um módulo daqui — `scripts/check_cores_do_dualsense.py:188` faz
-# exatamente isso para alcançar o `monta.py` da interface, e o
-# `capture_blueprint.py` para alcançar o `comum.py` dos ensaios.
 PASTAS_DA_CASA = ("scripts", "src", "tests", "layout")
 
 
@@ -85,24 +46,12 @@ MODULOS_DA_CASA = _modulos_da_casa()
 
 
 def _e_modulo_vizinho(nome: str) -> bool:
-    """Um `import comum` num roteiro é o arquivo do lado, não o PyPI.
-
-    A busca é por TODA pasta da casa, e não só por `scripts/`: os roteiros
-    fazem `sys.path.insert` para alcançar módulos de `src/` e de
-    `scripts/ensaios/`, e uma régua que só olhasse o diretório do arquivo
-    chamaria de "dependência não declarada" um arquivo do próprio repositório.
-    """
+    """Um `import comum` num roteiro é o arquivo do lado, não o PyPI."""
     return nome in MODULOS_DA_CASA
 
 
 def _imports_de_terceiros(caminho: Path) -> set[str]:
-    """Os módulos de terceiro que este arquivo importa DE VERDADE.
-
-    Import dentro de `try:` fica de fora: é o padrão do fallback opcional (o
-    `check_version_consistency.py` faz `try: import tomllib / except: import
-    tomli`), e cobrá-lo obrigaria a declarar uma dependência que o arquivo já
-    sabe viver sem.
-    """
+    """Os módulos de terceiro que este arquivo importa DE VERDADE."""
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"))
     except (SyntaxError, UnicodeDecodeError):  # pragma: no cover - outro portão cuida
@@ -119,7 +68,7 @@ def _imports_de_terceiros(caminho: Path) -> set[str]:
         if isinstance(no, ast.Import):
             nomes = [alias.name.split(".")[0] for alias in no.names]
         elif isinstance(no, ast.ImportFrom):
-            if no.level:  # import relativo: é da própria pasta
+            if no.level:
                 continue
             nomes = [(no.module or "").split(".")[0]]
         else:
@@ -143,14 +92,10 @@ def _declaradas_no_pyproject() -> set[str]:
         linhas.extend(extra)
     nomes = set()
     for linha in linhas:
-        # `pydualsense>=0.7.5` -> `pydualsense`; `ruff==0.15.20` -> `ruff`.
         nome = linha.split(";")[0].strip()
         for separador in ("[", ">", "<", "=", "!", "~", " "):
             nome = nome.split(separador)[0]
         if nome:
-            # O nome do PROJETO e o nome do MÓDULO divergem em alguns casos
-            # (`python-uinput` importa `uinput`, `PyYAML` importa `yaml`), então
-            # guardamos as duas grafias normalizadas.
             nomes.add(nome.lower())
             nomes.add(nome.lower().replace("-", "_"))
             nomes.add(nome.lower().removeprefix("python-").replace("-", "_"))
@@ -159,12 +104,7 @@ def _declaradas_no_pyproject() -> set[str]:
 
 
 def test_todo_portao_de_scripts_importa_so_o_que_esta_declarado() -> None:
-    """A régua, sobre `scripts/` inteiro.
-
-    A MORDIDA: acrescente `import requests` a qualquer `scripts/*.py` e isto
-    reprova nomeando o arquivo — que é exatamente o que NÃO aconteceu com o
-    `playwright` durante semanas.
-    """
+    """A régua, sobre `scripts/` inteiro."""
     declaradas = _declaradas_no_pyproject()
     achados: list[str] = []
     for caminho in sorted(SCRIPTS.glob("*.py")):
@@ -186,10 +126,7 @@ def test_todo_portao_de_scripts_importa_so_o_que_esta_declarado() -> None:
 
 
 def test_o_playwright_esta_declarado() -> None:
-    """O caso nomeado, cravado para não voltar.
-
-    A MORDIDA: tire `playwright>=1.62` do `[dev]` e isto reprova.
-    """
+    """O caso nomeado, cravado para não voltar."""
     assert "playwright" in _declaradas_no_pyproject(), (
         "o `playwright` saiu do `pyproject.toml`. Os portões "
         "`check_pecas_do_dualsense` e `check_cores_do_dualsense` o importam, e "
@@ -199,12 +136,7 @@ def test_o_playwright_esta_declarado() -> None:
 
 
 def test_o_playwright_esta_no_dev_e_nao_no_runtime() -> None:
-    """Onde ele mora importa: `[dev]` é gate, `dependencies` é produto.
-
-    A MORDIDA: mova a linha para `dependencies` e isto reprova. O produto NÃO
-    importa playwright em lugar nenhum — pô-lo no runtime cobraria de quem só
-    quer usar o controle o download de uma ferramenta de teste.
-    """
+    """Onde ele mora importa: `[dev]` é gate, `dependencies` é produto."""
     dados = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     projeto = dados["project"]
     runtime = " ".join(projeto.get("dependencies", []))
@@ -222,16 +154,7 @@ def test_o_playwright_esta_no_dev_e_nao_no_runtime() -> None:
 
 
 def test_os_dois_portoes_que_o_usam_abrem_o_chrome_do_sistema() -> None:
-    """Declarar o pacote pip NÃO basta se o portão precisar de um navegador
-    baixado — e é aqui que se vê que não precisa.
-
-    Os dois portões passam `executable_path="/usr/bin/google-chrome"`, então
-    nenhum `playwright install` (≈300 MB de navegadores) entra neste projeto.
-
-    A MORDIDA: tire o `executable_path` de qualquer um dos dois e isto reprova
-    — porque aí a declaração do `pyproject.toml` deixaria de ser suficiente e
-    alguém teria de decidir, conscientemente, baixar os navegadores.
-    """
+    """Declarar o pacote pip NÃO basta se o portão precisar de um navegador"""
     for nome in ("check_pecas_do_dualsense.py", "check_cores_do_dualsense.py"):
         texto = (SCRIPTS / nome).read_text(encoding="utf-8")
         assert 'executable_path="/usr/bin/google-chrome"' in texto, (

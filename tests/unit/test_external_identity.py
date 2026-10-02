@@ -51,7 +51,6 @@ MAC_DS = "aa:bb:cc:00:00:01"
 MAC_DS_B = "aa:bb:cc:00:00:02"
 MAC_DS_C = "aa:bb:cc:00:00:03"
 
-#: Forma CANÔNICA (12-hex, sem separadores) de MAC_A — a key do registro.
 _KEY_A = MAC_A.replace(":", "")
 
 BOOT = "boot-atual"
@@ -94,12 +93,7 @@ def _arquivo(tmp_path: Path) -> Path:
 
 
 def _fila_no_disco(tmp_path: Path, kind: str) -> dict[str, int]:
-    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3).
-
-    Os dois registros gravam UMA fila só (lista de ``{addr, kind, rank}``) em
-    vez dos mapas ``slots``/``externals`` de número absoluto: era essa forma
-    que não conseguia dizer "quem está na mesa é 1..N".
-    """
+    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3)."""
     dados = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
     return {
         str(e["addr"]): int(e["rank"])
@@ -140,23 +134,19 @@ def _gravar_fila(
     )
 
 
-# --- registry: numeração e reserva -------------------------------------------
-
-
 def test_slot_comeca_acima_da_reserva_dos_dualsense() -> None:
     r = ExternalIdentityRegistry()
     assert r.slot_for(MAC_A, reserve=2) == 3
     assert r.slot_for(MAC_B, reserve=2) == 4
-    # Consulta repetida não renumera.
     assert r.slot_for(MAC_A, reserve=2) == 3
 
 
 def test_disconnect_reserva_e_replug_recupera_o_numero() -> None:
     r = ExternalIdentityRegistry()
     assert r.slot_for(MAC_A, reserve=1) == 2
-    r.sync_connected([])  # sumiu (BT dormiu) → slot vira RESERVA
+    r.sync_connected([])
     assert r.peek(MAC_A) == 2, "a reserva mantém o número do uniq"
-    r.sync_connected([MAC_A])  # replug
+    r.sync_connected([MAC_A])
     assert r.slot_for(MAC_A, reserve=1) == 2
 
 
@@ -166,7 +156,6 @@ def test_reserva_maior_depois_nao_renumera_slot_ja_atribuido() -> None:
     r = ExternalIdentityRegistry()
     assert r.slot_for(MAC_A, reserve=1) == 2
     assert r.slot_for(MAC_A, reserve=5) == 2
-    # Externo NOVO respeita a reserva nova.
     assert r.slot_for(MAC_B, reserve=5) == 6
 
 
@@ -188,7 +177,6 @@ def test_dualsense_novo_nao_colide_com_slot_de_externo() -> None:
     assert ext.slot_for(MAC_A, reserve=2) == 3
     # 3º DualSense DEPOIS: menor livre próprio seria 3, mas o 3 é do externo.
     assert ds.slot_for(MAC_DS_C) == 4
-    # Ninguém renumera: os slots já atribuídos permanecem.
     assert ds.slot_for(MAC_DS) == 1
     assert ds.slot_for(MAC_DS_B) == 2
     assert ext.peek(MAC_A) == 3
@@ -202,26 +190,20 @@ def test_peek_e_leitura_pura() -> None:
     assert r.peek("") is None
 
 
-# --- registry: compact (ONDA-U/U2/U10) ---------------------------------------
-
-
 def test_compact_reescreve_so_as_chaves_do_mapping() -> None:
-    """`compact` (`identity.renumber`) — reatribuição EXPLÍCITA, não a lazy.
-
-    Falha-sem: `ExternalIdentityRegistry` no HEAD não tem `compact` nenhum.
-    """
+    """`compact` (`identity.renumber`) — reatribuição EXPLÍCITA, não a lazy."""
     r = ExternalIdentityRegistry()
-    r.slot_for(MAC_A, reserve=0)  # slot 1
-    r.slot_for(MAC_B, reserve=0)  # slot 2
+    r.slot_for(MAC_A, reserve=0)
+    r.slot_for(MAC_B, reserve=0)
     key_a, key_b = MAC_A.replace(":", ""), MAC_B.replace(":", "")
-    r.compact({key_a: 5, "aabbcc00ff00": 9})  # chave fora do registro ignorada
+    r.compact({key_a: 5, "aabbcc00ff00": 9})
     assert r.snapshot() == {key_a: 5, key_b: 2}
 
 
 def test_compact_persiste_no_disco_quando_muda(tmp_path: Path) -> None:
     r = ExternalIdentityRegistry()
     r.slot_for(MAC_A, reserve=0)
-    r.sync_connected([MAC_A])  # save inicial
+    r.sync_connected([MAC_A])
     key_a = MAC_A.replace(":", "")
     r.compact({key_a: 7})
     assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {key_a: 7}
@@ -231,13 +213,10 @@ def test_identidade_sem_mac_e_volatil_nunca_persistida(tmp_path: Path) -> None:
     r = ExternalIdentityRegistry()
     assert r.slot_for("path:/dev/input/event9", reserve=0) == 1
     r.slot_for(MAC_A, reserve=0)
-    r.sync_connected([MAC_A])  # persiste os sujos
+    r.sync_connected([MAC_A])
     assert list(_fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL)) == [
         MAC_A.replace(":", "")
     ]
-
-
-# --- persistência: namespace `externals` no MESMO controllers.json -----------
 
 
 def test_persistencia_atravessa_o_boot_e_so_o_schema_renumera(
@@ -259,14 +238,10 @@ def test_persistencia_atravessa_o_boot_e_so_o_schema_renumera(
 
     novo = ExternalIdentityRegistry()
     novo.load()
-    # NUM-01 precisou o que "preserva o número" quer dizer: o que atravessa o
-    # restart é o LUGAR NA FILA (3). O número exibido é recalculado — com os
     # dois DualSense de volta na mesa ele volta a ser 3; sem nenhum deles
-    # ligado o externo é o jogador 1, que é a cura desta frente.
     assert novo.snapshot() == {_KEY_A: 3}, "restart do daemon preserva o lugar"
     assert novo.slot_for(MAC_A, reserve=2) == 3
 
-    # Reboot da máquina (âncora diferente): o lugar CONTINUA sendo do MAC.
     data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
     data["boot_id"] = "boot-antigo"
     _arquivo(tmp_path).write_text(json.dumps(data), encoding="utf-8")
@@ -274,7 +249,6 @@ def test_persistencia_atravessa_o_boot_e_so_o_schema_renumera(
     outro_boot.load()
     assert outro_boot.snapshot() == {_KEY_A: 3}
 
-    # Só um SCHEMA diferente (outra regra de numeração) descarta.
     data["version"] = 0
     _arquivo(tmp_path).write_text(json.dumps(data), encoding="utf-8")
     frio = ExternalIdentityRegistry()
@@ -297,7 +271,6 @@ def test_schema_antigo_nao_ressuscita_pelo_save_do_outro_lado(
     """
     _gravar_fila(
         tmp_path,
-        # Schema 2 (o que a máquina dela tinha): mapas de NÚMERO ABSOLUTO,
         # com o externo à frente dos DualSense.
         dualsense={MAC_DS.replace(":", ""): 2},
         externos={_KEY_A: 1},
@@ -310,14 +283,13 @@ def test_schema_antigo_nao_ressuscita_pelo_save_do_outro_lado(
     ext.load()
     assert ds.snapshot() == {} and ext.snapshot() == {}, "schema velho recusado"
 
-    ds.sync_connected([MAC_DS])  # 1º save: carimba a versão nova
+    ds.sync_connected([MAC_DS])
     data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
     assert data["version"] == id_mod.CONTROLLERS_SCHEMA_VERSION
     assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {}, (
         "a fila velha do outro registro não pode ser recarimbada"
     )
 
-    # Boot seguinte: só a numeração NOVA sobrevive; o externo numera acima.
     ds2 = id_mod.ControllerIdentityRegistry()
     ds2.load()
     ext2 = ExternalIdentityRegistry()
@@ -351,11 +323,11 @@ def test_namespaces_coexistem_no_mesmo_arquivo(tmp_path: Path) -> None:
     MESMO controllers.json e cada save preserva o namespace do outro."""
     ds = id_mod.ControllerIdentityRegistry()
     ds.slot_for(MAC_DS)
-    ds.sync_connected([MAC_DS])  # grava `slots`
+    ds.sync_connected([MAC_DS])
 
     ext = ExternalIdentityRegistry()
     ext.slot_for(MAC_A, reserve=1)
-    ext.sync_connected([MAC_A])  # grava `externals` preservando `slots`
+    ext.sync_connected([MAC_A])
 
     assert _fila_no_disco(tmp_path, id_mod.KIND_DUALSENSE) == {
         MAC_DS.replace(":", ""): 1
@@ -377,9 +349,6 @@ def test_namespaces_coexistem_no_mesmo_arquivo(tmp_path: Path) -> None:
     }
 
 
-# --- ExternalLedSync: cache por-valor + rate-limit + telemetria ---------------
-
-
 def _entry(uniq: str | None, hidraw: str | None, path: str) -> dict[str, Any]:
     return {
         "name": "Nintendo Co., Ltd. Pro Controller",
@@ -395,24 +364,7 @@ def _entry(uniq: str | None, hidraw: str | None, path: str) -> dict[str, Any]:
 
 @pytest.fixture()
 def led_escritas(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
-    """Captura `apply_player_number` (nunca toca o sysfs real).
-
-    NOTA DATADA — 07/08/2026, E0 da LUGAR-À-MESA-01 (**DECISÃO DELA**: *"calar
-    a luz até a entrega existir"*): em produção o tick **não escreve mais LED
-    nenhum** nos externos — `EXTERNAL_PLAYER_LED_ENABLED` nasceu `False`.
-
-    **Nada abaixo caducou, e nada foi apagado.** Toda a bateria que usa esta
-    fixture mede a MAQUINARIA da luz (cache por-valor, rate-limit, autoridade
-    de exibição, R-24/R-25, telemetria), e essa maquinaria continua viva,
-    correta e inteira — esperando a `E3`. O que mudou foi o INTERRUPTOR, e é
-    por isso que a fixture o liga: sem isso a suíte pararia de vigiar a cura
-    medida da "dois player 1, dois player 2", e a E0 teria custado a leva
-    inteira em vez de uma linha.
-
-    Quem mede o comportamento ENTREGUE (zero escritas) é
-    ``tests/unit/test_lugar_a_mesa_e0_calar_a_luz.py``, que NÃO usa esta
-    fixture e lê o interruptor no valor com que ele é entregue.
-    """
+    """Captura `apply_player_number` (nunca toca o sysfs real)."""
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
     monkeypatch.setattr(ei_mod, "EXTERNAL_PLAYER_LED_ENABLED", True)
@@ -474,8 +426,7 @@ def test_tick_escreve_uma_vez_e_cacheia_por_valor(
 def test_tick_rate_limita_por_dispositivo(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """Escrita que FALHOU (sem regra udev) não entra no cache — o retry
-    respeita o rate-limit mínimo por dispositivo."""
+    """Escrita que FALHOU (sem regra udev) não entra no cache — o retry"""
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
     sync = _sync(monkeypatch, [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")])
@@ -487,26 +438,23 @@ def test_tick_rate_limita_por_dispositivo(
 
     monkeypatch.setattr(leds_mod, "apply_player_number", falha)
     sync.tick(now=0.0)
-    sync.tick(now=LED_MIN_INTERVAL_SEC / 2)  # dentro do rate-limit: nem tenta
+    sync.tick(now=LED_MIN_INTERVAL_SEC / 2)
     assert len(tentativas) == 1
-    sync.tick(now=LED_MIN_INTERVAL_SEC + 0.1)  # fora: retry natural
+    sync.tick(now=LED_MIN_INTERVAL_SEC + 0.1)
     assert len(tentativas) == 2
 
 
 def test_tick_replug_com_hidraw_novo_reescreve(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """Replug (nó hidraw novo) invalida o cache daquele device: o LED renasce
-    apagado no hardware e o tick o reescreve — com o MESMO slot (reserva)."""
+    """Replug (nó hidraw novo) invalida o cache daquele device: o LED renasce"""
     inventario = [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")]
     sync = _sync(monkeypatch, inventario)
     sync.tick(now=0.0)
     assert led_escritas == [("/dev/hidraw6", 1)]
 
-    # some (BT dormiu)...
     monkeypatch.setattr(er_mod, "discover_external_gamepads", lambda: [])
     sync.tick(now=10.0)
-    # ...e volta noutro nó.
     monkeypatch.setattr(
         er_mod,
         "discover_external_gamepads",
@@ -521,8 +469,7 @@ def test_tick_replug_com_hidraw_novo_reescreve(
 def test_tick_telemetria_external_led_written(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """EXT-04 item 3c: cada escrita EFETIVA loga `external_led_written` com
-    slot e uniq (antes era silencioso via contextlib.suppress)."""
+    """EXT-04 item 3c: cada escrita EFETIVA loga `external_led_written` com"""
     eventos: list[tuple[str, dict[str, Any]]] = []
 
     class _SpyLogger:
@@ -559,11 +506,7 @@ def test_externo_sem_mac_gui_bate_com_led_do_tick(
     """
     import hefesto_dualsense4unix.daemon.ipc_handlers as ih_mod
 
-    # A desconectou → slot 1 fica RESERVADO no snapshot; só B conectado.
     ds_snapshot = {"dsa": 1, "dsb": 2}
-    # Hermético (CLONE-01): sem MAC a identidade é o DONO no sysfs — sem este
-    # dublê a subida sairia de um `/dev/input/event261` inexistente e acabaria
-    # varrendo o `/sys` REAL da máquina da mantenedora.
     monkeypatch.setattr(
         er_mod,
         "_evdev_owner_dir",
@@ -573,12 +516,9 @@ def test_externo_sem_mac_gui_bate_com_led_do_tick(
     sync = _sync(monkeypatch, inventario, ds_slots=ds_snapshot)
 
     sync.tick(now=0.0)
-    # LED aceso como player 3 (reserve=max(1,2)=2 → menor livre acima = 3).
     assert led_escritas == [("/dev/hidraw6", 3)]
 
     # IPC: a GUI conta só os DualSense CONECTADOS (1 = B). Sem o fix,
-    # peek(None) → None → posicional 1+0+1=2, divergindo do LED. Com o fix,
-    # peek pela MESMA identidade (`identity_for_entry`) → 3.
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
     inv = ih_mod._external_inventory(
         dualsense_count=1, slot_resolver=sync._registry.peek
@@ -612,8 +552,8 @@ def test_externo_nao_rouba_o_slot_1_dos_dualsense_presentes(
     )
     sync = ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
 
-    ds.sync_connected([MAC_DS, MAC_DS_B])  # tick lento numera quem está na mesa
-    sync.tick(now=0.0)  # só então o tick dos externos pede número
+    ds.sync_connected([MAC_DS, MAC_DS_B])
+    sync.tick(now=0.0)
 
     assert ds.snapshot() == {
         MAC_DS.replace(":", ""): 1,
@@ -623,19 +563,6 @@ def test_externo_nao_rouba_o_slot_1_dos_dualsense_presentes(
     assert led_escritas == [("/dev/hidraw6", 3)], "o LED bate com o número"
 
 
-# --- MODO-01: um controle, DUAS identidades (25/07) --------------------------
-#
-# O 8BitDo Pro se apresenta conforme o MODO em que é ligado: em modo Switch no
-# cabo o `hid-nintendo` degrada (`usb_probe_degrade`) e SINTETIZA um "MAC"
-# `0x02` + VID + PID + bus; em modo PS4 por Bluetooth ele chega pelo
-# `hid-playstation` com o MAC de verdade. Nada liga as duas identidades — OUI,
-# VID/PID e driver são todos diferentes —, então a cura não é adivinhar que é o
-# mesmo plástico: é reconhecer que a sintética não é identidade de aparelho.
-
-#: Endereço SINTETIZADO. Na máquina real o valor é `0x02` + VID + PID + bus do
-#: controle degradado; aqui a FORMA é a mesma (1º octeto `02`) com o resto na
-#: faixa forjada que o gate de anonimato permite — o que está sob teste é o
-#: octeto que marca "administrado localmente", nunca um VID/PID específico.
 MAC_SINTETIZADO = "02:fe:00:20:09:03"
 _KEY_SINTETIZADO = MAC_SINTETIZADO.replace(":", "")
 
@@ -643,12 +570,7 @@ _KEY_SINTETIZADO = MAC_SINTETIZADO.replace(":", "")
 def test_identidade_sintetizada_ganha_numero_mas_nunca_vai_ao_disco(
     tmp_path: Path,
 ) -> None:
-    """O controle degradado no cabo PRECISA de número (o LED acende), mas o
-    endereço sintético não pode virar reserva eterna no `controllers.json`.
-
-    Falha-sem: `_canonical` só olhava a FORMA do MAC, então `02:...` era
-    persistível igual a um MAC de hardware.
-    """
+    """O controle degradado no cabo PRECISA de número (o LED acende), mas o"""
     r = ExternalIdentityRegistry()
     assert r.slot_for(MAC_SINTETIZADO, reserve=2) == 3, "na mesa, tem número"
     r.slot_for(MAC_A, reserve=2)
@@ -686,8 +608,6 @@ def test_load_expulsa_identidade_sintetizada_ja_gravada(tmp_path: Path) -> None:
         MAC_DS_B.replace(":", ""): 2,
     }, "os DualSense certos NÃO são renumerados pela cura"
 
-    # E o disco é limpo pelo PRIMEIRO save (o `load` marca sujo ao descartar):
-    # sem isso o fantasma ficava inerte no arquivo, inofensivo mas inexplicável.
     ext.sync_connected([MAC_A])
     assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {_KEY_A: 3}
     assert _fila_no_disco(tmp_path, id_mod.KIND_DUALSENSE) == {
@@ -697,65 +617,42 @@ def test_load_expulsa_identidade_sintetizada_ja_gravada(tmp_path: Path) -> None:
 
 
 def test_identidade_sintetizada_ausente_solta_o_slot() -> None:
-    """Dentro da MESMA sessão, a identidade do modo que saiu libera o número.
-
-    É o coração do bug medido: a identidade do modo Switch (desconectada)
-    segurava o slot e o 8BitDo CONECTADO por BT ia para o seguinte. A ausência
-    é CONTADA (`VOLATILE_ABSENCE_LIMIT`) — um hiccup de enumeração não pode
-    renumerar ninguém.
-    """
+    """Dentro da MESMA sessão, a identidade do modo que saiu libera o número."""
     r = ExternalIdentityRegistry()
     assert r.slot_for(MAC_SINTETIZADO, reserve=2) == 3
     r.sync_connected([MAC_SINTETIZADO])
 
-    r.sync_connected([])  # 1ª ausência: pode ter sido um `open` que falhou
+    r.sync_connected([])
     assert r.peek(MAC_SINTETIZADO) == 3, "uma ausência só não renumera nada"
 
-    r.sync_connected([])  # 2ª seguida: saiu de verdade
+    r.sync_connected([])
     assert r.snapshot() == {}, "o slot volta para o pote"
 
-    # E o MESMO plástico, agora em modo PS4 por BT, recebe o número livre.
     assert r.slot_for(MAC_B, reserve=2) == 3
 
 
 def test_poda_nao_toca_reserva_de_mac_de_hardware() -> None:
-    """A GUARDA da cura (D2/R-15): controle desligado NÃO perde o número.
-
-    "A config que eu deixo nunca é respeitada" é queixa antiga; a poda vale só
-    para identidade VOLÁTIL, que não identifica aparelho nenhum.
-    """
+    """A GUARDA da cura (D2/R-15): controle desligado NÃO perde o número."""
     relogio = _Relogio()
     r = ExternalIdentityRegistry(clock=relogio)
     assert r.slot_for(MAC_A, reserve=2) == 3
     for _ in range(20):
         r.sync_connected([])
     assert r.snapshot() == {_KEY_A: 3}, "MAC de hardware ausente mantém o lugar"
-    # O-ASSENTO-GUARDADO-NAO-ANDA-01: dentro do prazo o lugar de A fica
-    # guardado e B nasce 4; a régua de baixo mede depois do prazo.
     relogio.passar_o_prazo()
-    # NUM-01: o que ninguém herda é o LUGAR (B entra no 4). O NÚMERO exibido
-    # de B é 3 justamente porque A não está na mesa — antes desta frente o
-    # ausente segurava o número e empurrava o presente para cima, que é o
-    # defeito relatado ("ligo sozinho e sou o player 2").
     assert r.slot_for(MAC_B, reserve=2) == 3
     assert r.snapshot()[MAC_B.replace(":", "")] == 4, "ninguém herda o lugar"
 
 
 def test_dois_aparelhos_do_mesmo_oui_nunca_se_fundem() -> None:
-    """Guarda contra a cura ERRADA: herdar slot por OUI funde dois controles.
-
-    Dois 8BitDo de verdade dividem o OUI. Se a cura fosse "OUI conhecido +
-    entrada antiga desconectada ⇒ herda o slot", os dois acenderiam o MESMO
-    número — a queixa "dois player 1" por outro caminho. A cura desta frente
-    não olha OUI nenhum, e este caso trava isso.
-    """
+    """Guarda contra a cura ERRADA: herdar slot por OUI funde dois controles."""
     relogio = _Relogio()
     r = ExternalIdentityRegistry(clock=relogio)
     assert MAC_A[:8] == MAC_B[:8], "mesma OUI, aparelhos distintos"
     assert r.slot_for(MAC_A, reserve=2) == 3
     r.sync_connected([MAC_A])
-    r.sync_connected([])  # o primeiro dorme
-    relogio.passar_o_prazo()  # e o lugar dele deixou de estar guardado
+    r.sync_connected([])
+    relogio.passar_o_prazo()
     assert r.slot_for(MAC_B, reserve=2) == 3, "B é o 3 porque A não está na mesa"
     assert r.snapshot() == {_KEY_A: 3, MAC_B.replace(":", ""): 4}, (
         "o segundo NÃO herda o lugar 3 do primeiro"
@@ -798,7 +695,7 @@ def test_quatro_controles_e_o_fantasma_do_outro_modo_ninguem_no_slot_5(
     )
     sync = ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
 
-    ds.sync_connected([MAC_DS, MAC_DS_B])  # ordem do poll loop (R-24)
+    ds.sync_connected([MAC_DS, MAC_DS_B])
     sync.tick(now=0.0)
 
     numeros = sorted(ds.snapshot().values()) + sorted(ext.snapshot().values())
@@ -808,7 +705,6 @@ def test_quatro_controles_e_o_fantasma_do_outro_modo_ninguem_no_slot_5(
     assert ext.peek(MAC_B) == 4
     assert led_escritas == [("/dev/hidraw0", 3), ("/dev/hidraw8", 4)]
 
-    # E o arquivo sai curado: o fantasma não volta no próximo boot.
     sync.tick(now=LED_MIN_INTERVAL_SEC * 2)
     assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {
         _KEY_A: 3,
@@ -819,26 +715,7 @@ def test_quatro_controles_e_o_fantasma_do_outro_modo_ninguem_no_slot_5(
 def test_externo_sem_mac_conta_como_conectado(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """`sync_connected` e a atribuição têm que ver a MESMA identidade.
-
-    O tick só mandava as entradas com `uniq` string ao `sync_connected`, então
-    o externo sem MAC (numerado por `path:...`) nunca entrava no conjunto de
-    CONECTADOS que aquele método reescreve inteiro. Duas consequências, e a
-    segunda é nova:
-
-    - o `snapshot_connected` que o "Renumerar agora" lê ficava ERRADO na
-      janela entre o `sync_connected` e o `slot_for` do MESMO tick (os dois
-      tomam o `RLock` separadamente) — o controle presente ia para o fim da
-      fila das reservas;
-    - a poda de identidade volátil (MODO-01) passaria a contar ausência para
-      ele a cada tick, mesmo com ele na mesa.
-
-    CLONE-01: a identidade de um externo SEM MAC deixou de ser o node
-    (`path:...`) e passou a ser o DONO no sysfs (`dev:...`) — a mesma chave com
-    que a enumeração já deduplicava os nodes irmãos. O dublê de
-    `_evdev_owner_dir` mantém o teste hermético (sem ele a subida sairia de um
-    `/dev/input/event261` inexistente e varreria o `/sys` REAL da máquina).
-    """
+    """`sync_connected` e a atribuição têm que ver a MESMA identidade."""
     dono = "/sys/devices/usb1/1-2/1-2:1.0/0003:057E:2009.0004"
     monkeypatch.setattr(er_mod, "_evdev_owner_dir", lambda _p: dono)
     inventario = [_entry(None, "/dev/hidraw6", "/dev/input/event261")]
@@ -863,45 +740,20 @@ def test_tick_enumeracao_quebrada_nao_derruba(
 
     monkeypatch.setattr(er_mod, "discover_external_gamepads", explode)
     sync = ExternalLedSync(SimpleNamespace(), ExternalIdentityRegistry())
-    sync.tick(now=0.0)  # não levanta
+    sync.tick(now=0.0)
     assert led_escritas == []
 
-
-# --- CLONE-01: dois clones degradados são DOIS jogadores (25/07) -------------
-#
-# O DKMS `hid-nintendo` deste projeto (patch 0003, parâmetro `usb_probe_degrade`)
-# FABRICA um endereço quando o controle não responde ao `REQ_DEV_INFO` no cabo:
-# `02` + VID + PID + número do barramento. Não há um bit do APARELHO ali, e o
-# comentário do próprio patch admite: "two identical clones plugged at once
-# would share it". É o caso rotineiro dela — Pro genuíno + 8BitDo em modo
-# Switch, ambos 057e:2009.
-#
-# A enumeração já parou de ENGOLIR o segundo (dedup por dono no sysfs). Esta
-# seção trava o passo seguinte: rio abaixo, os dois precisam receber SLOTS e
-# LEDs DIFERENTES — e um aparelho só, visto por nodes diferentes, continua um.
-#
-# O endereço sintético nunca é escrito como literal (o guarda de anonimato
-# reprova MAC-forma fora das faixas da casa): é DERIVADO da fórmula do kernel,
-# o que de quebra documenta a fórmula aqui.
 
 VID_NINTENDO = 0x057E
 PID_PRO_CONTROLLER = 0x2009
 BUS_USB = 0x03
 
-#: Diretórios das instâncias HID no sysfs — o que separa dois clones idênticos.
-#: O hid-core numera em sequência, então dois aparelhos caem em dirs diferentes
-#: e os nodes irmãos de UM aparelho caem no mesmo.
 DONO_PRO = "/sys/devices/usb1/1-2/1-2:1.0/0003:057E:2009.0001"
 DONO_CLONE = "/sys/devices/usb1/1-6/1-6:1.0/0003:057E:2009.0006"
 
 
 def _uniq_sintetico(vid: int, pid: int, bus: int) -> str:
-    """Reproduz o endereço que o `hid-nintendo` degradado sintetiza.
-
-    Espelho fiel de `joycon_read_mac` no patch 0003: `mac_addr[0] = 0x02`
-    (unicast administrado localmente), `[1..2]` = VID, `[3..4]` = PID e `[5]` =
-    barramento — em maiúsculas, como o `devm_kasprintf` do kernel formata.
-    """
+    """Reproduz o endereço que o `hid-nintendo` degradado sintetiza."""
     octetos = (0x02, vid >> 8, vid & 0xFF, pid >> 8, pid & 0xFF, bus)
     return ":".join(f"{b:02X}" for b in octetos)
 
@@ -916,12 +768,7 @@ def _entry_degradado(path: str, hidraw: str) -> dict[str, Any]:
 
 
 def _donos(monkeypatch: pytest.MonkeyPatch, mapa: dict[str, str]) -> None:
-    """Dublê HERMÉTICO de `_evdev_owner_dir` (node evdev → dir da instância HID).
-
-    Sem ele a subida sairia de um `/dev/input/eventN` inexistente e acabaria
-    varrendo o `/sys` REAL da máquina da mantenedora — que tem controle de
-    verdade plugado enquanto a suíte roda.
-    """
+    """Dublê HERMÉTICO de `_evdev_owner_dir` (node evdev → dir da instância HID)."""
     monkeypatch.setattr(er_mod, "_evdev_owner_dir", lambda p: mapa.get(p))
 
 
@@ -931,7 +778,7 @@ def test_identity_for_entry_e_a_mesma_chave_da_deduplicacao(
     """A FONTE ÚNICA da identidade, nos quatro casos que importam."""
     node_pro = "/dev/input/event30"
     node_clone = "/dev/input/event34"
-    node_irmao = "/dev/input/event31"  # 2º node do MESMO Pro (IMU/touchpad)
+    node_irmao = "/dev/input/event31"
     _donos(
         monkeypatch,
         {node_pro: DONO_PRO, node_irmao: DONO_PRO, node_clone: DONO_CLONE},
@@ -940,18 +787,12 @@ def test_identity_for_entry_e_a_mesma_chave_da_deduplicacao(
     clone = _entry_degradado(node_clone, "/dev/hidraw5")
     irmao = _entry_degradado(node_irmao, "/dev/hidraw2")
 
-    # 1. o endereço sintético NÃO identifica: quem identifica é o dono no sysfs.
     assert pro["uniq"] == clone["uniq"], "premissa: o kernel dá o MESMO endereço"
     assert ei_mod.identity_for_entry(pro) == f"dev:{DONO_PRO}"
     assert ei_mod.identity_for_entry(pro) != ei_mod.identity_for_entry(clone)
-    # 2. nodes irmãos do MESMO aparelho colapsam em UMA identidade.
     assert ei_mod.identity_for_entry(irmao) == ei_mod.identity_for_entry(pro)
-    # 3. MAC de HARDWARE segue mandando — nem olha o dono (é a identidade que
-    #    sobrevive a replug e casa a sessão USB com a Bluetooth do mesmo pad).
     real = _entry(MAC_A, "/dev/hidraw2", node_clone)
     assert ei_mod.identity_for_entry(real) == _KEY_A
-    # 4. campo já carimbado VENCE: é assim que a identidade atravessa o
-    #    JSON-RPC sem a GUI recalcular (e divergir).
     carimbada = {**pro, ei_mod.EXTERNAL_IDENTITY_FIELD: "dev:veio-pronta"}
     assert ei_mod.identity_for_entry(carimbada) == "dev:veio-pronta"
 
@@ -959,13 +800,7 @@ def test_identity_for_entry_e_a_mesma_chave_da_deduplicacao(
 def test_dois_clones_degradados_recebem_slots_e_leds_distintos(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """O sintoma dela: os dois Nintendo-class exibiam o MESMO número de jogador.
-
-    Falha-sem: com a identidade sendo `uniq or path:` o endereço sintético —
-    idêntico nos dois — virava UMA chave só; o registro ficava com uma entrada,
-    o segundo controle herdava o slot do primeiro e os dois LEDs acendiam o
-    mesmo número.
-    """
+    """O sintoma dela: os dois Nintendo-class exibiam o MESMO número de jogador."""
     node_pro = "/dev/input/event30"
     node_clone = "/dev/input/event34"
     _donos(monkeypatch, {node_pro: DONO_PRO, node_clone: DONO_CLONE})
@@ -989,13 +824,7 @@ def test_dois_clones_degradados_recebem_slots_e_leds_distintos(
 def test_clones_degradados_seguem_volateis_e_nunca_vao_ao_disco(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """MODO-01 continua valendo: separar os clones não os torna persistíveis.
-
-    Nenhuma das duas identidades identifica um APARELHO entre boots (o dir da
-    instância HID é do plug de agora), então elas valem pela SESSÃO — o disco
-    fica intocado, e a reserva eterna segue sendo privilégio de MAC de
-    hardware (D2/R-15).
-    """
+    """MODO-01 continua valendo: separar os clones não os torna persistíveis."""
     node_pro = "/dev/input/event30"
     node_clone = "/dev/input/event34"
     _donos(monkeypatch, {node_pro: DONO_PRO, node_clone: DONO_CLONE})
@@ -1045,12 +874,9 @@ def test_dois_clones_degradados_chegam_distintos_na_gui(
         dualsense_count=0, slot_resolver=sync._registry.peek
     )
 
-    # 1. o número que a GUI exibe é, controle a controle, o que o LED acendeu.
     assert [(e["hidraw"], slot_of(e, 0, i)) for i, e in enumerate(inv)] == (
         led_escritas
     )
-    # 2. e os botões do seletor são DOIS botões, cada um casando com o SEU
-    #    controle (`_on_external_clicked` procura a entrada por esta chave).
     chaves = [external_key(e) for e in inv]
     assert len(set(chaves)) == 2
     achado = next(e for e in inv if external_key(e) == chaves[1])
@@ -1060,22 +886,11 @@ def test_dois_clones_degradados_chegam_distintos_na_gui(
 def test_um_aparelho_que_troca_de_node_nao_vira_controle_novo(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """O outro lado da moeda, que a correção não pode quebrar.
-
-    Um controle publica VÁRIOS nodes evdev (gamepad, IMU, touchpad, headset
-    jack) e o vencedor da deduplicação é o de menor número — que muda se um
-    node irmão nasce/morre no meio da sessão. A identidade é o DONO no sysfs
-    justamente por isso: ela não se mexe quando o node se mexe.
-
-    Falha-sem: numerando por `path:<node>`, a troca de node vira aparelho NOVO
-    — slot 2, LED repintado, e o "o número muda sozinho" de volta.
-    """
+    """O outro lado da moeda, que a correção não pode quebrar."""
     dono = DONO_PRO
     primeiro = "/dev/input/event41"
     irmao = "/dev/input/event42"
     _donos(monkeypatch, {primeiro: dono, irmao: dono})
-    # Sem MAC (é o caso do X-input e do firmware sem serial): a identidade não
-    # tem para onde ir a não ser o node — ou o dono.
     sync = _sync(monkeypatch, [_entry(None, "/dev/hidraw2", primeiro)])
     sync.tick(now=0.0)
 
@@ -1090,14 +905,10 @@ def test_um_aparelho_que_troca_de_node_nao_vira_controle_novo(
     assert led_escritas == [("/dev/hidraw2", 1)], "sem renumerar, sem repintar"
 
 
-# --- NUMA-03.4: autoridade de exibição modula o tick --------------------------
-
-
 def test_sem_fiacao_authority_ausente_e_byte_identico_ao_head(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """`daemon` sem `display_authority` (backend velho/FakeController) degrada
-    para 'unknown' — o cache por-valor sozinho decide, IGUAL a HEAD."""
+    """`daemon` sem `display_authority` (backend velho/FakeController) degrada"""
     sync = _sync(monkeypatch, [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")])
     sync.tick(now=0.0)
     assert led_escritas == [("/dev/hidraw6", 1)]
@@ -1108,10 +919,7 @@ def test_sem_fiacao_authority_ausente_e_byte_identico_ao_head(
 def test_daemon_repinta_escritor_estrangeiro_detectado_por_classe_led(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """NUMA-03.4(a): sob 'daemon', o tick RE-LÊ o padrão físico (classe LED,
-    zero subcomando BT) antes do skip por-valor. Um escritor estrangeiro (o
-    'player 1+3' que a Steam pinta, padrão NÃO-canônico) é detectado e
-    repintado DENTRO do rate-limit de 2s."""
+    """NUMA-03.4(a): sob 'daemon', o tick RE-LÊ o padrão físico (classe LED,"""
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
     inst = "0003:057E:2009.000E"
@@ -1143,16 +951,15 @@ def test_daemon_repinta_escritor_estrangeiro_detectado_por_classe_led(
     sync.tick(now=0.0)
     assert led_escritas == [("/dev/hidraw6", 1)]
 
-    # Escritor estrangeiro pinta um padrão com BURACO por fora (1+3 aceso).
     for i, aceso in enumerate(["1", "0", "1", "0"], start=1):
         (leds_root / f"{inst}:green:player-{i}" / "brightness").write_text(
             aceso, encoding="ascii"
         )
 
-    sync.tick(now=0.5)  # detecta, mas dentro do rate-limit: NÃO escreve ainda
+    sync.tick(now=0.5)
     assert led_escritas == [("/dev/hidraw6", 1)], "<2s não repinta"
 
-    sync.tick(now=2.1)  # fora do rate-limit: repinta
+    sync.tick(now=2.1)
     assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw6", 1)]
     repintados = [kw for ev, kw in eventos if ev == "external_led_repintado"]
     assert repintados == [{"uniq": MAC_A, "intruso": -1}]
@@ -1161,8 +968,7 @@ def test_daemon_repinta_escritor_estrangeiro_detectado_por_classe_led(
 def test_daemon_leitura_falha_e_skip_como_hoje(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """Nó sumido/ilegível (BT dormiu) NUNCA vira falso estrangeiro — skip,
-    igual ao comportamento de hoje (veto dos juízes, NUMA-03.1/.4)."""
+    """Nó sumido/ilegível (BT dormiu) NUNCA vira falso estrangeiro — skip,"""
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
     monkeypatch.setattr(leds_mod, "hid_instance_for_hidraw", lambda h: None)
@@ -1180,9 +986,7 @@ def test_daemon_leitura_falha_e_skip_como_hoje(
 def test_authority_game_numera_device_novo_mas_nao_corrige_cacheado(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """NUMA-03.4(b): sob 'game'/'unknown' um device já cacheado NÃO é
-    corrigido (externos não são disputados em jogo) — mas o 8BitDo chegando
-    NO MEIO do jogo (device NOVO) ainda recebe o número 1x."""
+    """NUMA-03.4(b): sob 'game'/'unknown' um device já cacheado NÃO é"""
     sync = _sync(
         monkeypatch,
         [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
@@ -1191,7 +995,6 @@ def test_authority_game_numera_device_novo_mas_nao_corrige_cacheado(
     sync.tick(now=0.0)
     assert led_escritas == [("/dev/hidraw6", 1)]
 
-    # Divergência simulada no cache do device JÁ numerado — não deve mexer.
     sync._last_value[(MAC_A, "/dev/hidraw6")] = 99
 
     monkeypatch.setattr(
@@ -1211,9 +1014,7 @@ def test_authority_game_numera_device_novo_mas_nao_corrige_cacheado(
 def test_queda_game_para_daemon_reacende_incondicionalmente(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """NUMA-03.4(d): a transição `game|unknown -> daemon` re-arma os caches —
-    o tick seguinte reacende os slots do daemon SEM esperar o rate-limit
-    normal (não dá pra confiar no que ficou aceso sem disputa)."""
+    """NUMA-03.4(d): a transição `game|unknown -> daemon` re-arma os caches —"""
     sync = _sync(
         monkeypatch,
         [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
@@ -1222,11 +1023,11 @@ def test_queda_game_para_daemon_reacende_incondicionalmente(
     sync.tick(now=0.0)
     assert led_escritas == [("/dev/hidraw6", 1)]
 
-    sync.tick(now=0.1)  # ainda 'game': cacheado, sem disputa — nada muda
+    sync.tick(now=0.1)
     assert led_escritas == [("/dev/hidraw6", 1)]
 
     sync._daemon.display_authority = "daemon"
-    sync.tick(now=0.2)  # queda -> daemon: re-arm reacende MESMO <2s depois
+    sync.tick(now=0.2)
     assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw6", 1)]
 
 
@@ -1263,13 +1064,7 @@ def test_auto_numbers_off_para_de_escrever_e_limpa_cache(
 def test_auto_colors_off_nao_congela_a_numeracao_dos_externos(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """R-14: desligar a COR não pode calar o número do 8BitDo/Pro Nintendo.
-
-    Falha-sem: com o gate no ``auto_enabled``, o ``fps.json`` dela (salvo com
-    ``auto_player_colors:false`` por um clique de cor em "Todos") deixava o
-    externo sem escrita NENHUMA — e, pior, sem sequer receber slot no
-    registro, porque o ``slot_for`` morava depois do early-return.
-    """
+    """R-14: desligar a COR não pode calar o número do 8BitDo/Pro Nintendo."""
     sync = _sync(
         monkeypatch,
         [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
@@ -1302,12 +1097,8 @@ def test_numeracao_off_ainda_atribui_o_slot(
     assert sync._registry.snapshot() == {_KEY_A: 2}, "mas o slot foi atribuído"
 
 
-# --- fiação do lifecycle: hermeticidade com backend fake ----------------------
-
-
 def test_wire_external_registry_exige_identity_registry() -> None:
-    """Backend fake (identity_registry None) → nada de externos: nenhuma
-    enumeração de /dev/input nem LED em teste/smoke (hermeticidade)."""
+    """Backend fake (identity_registry None) → nada de externos: nenhuma"""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.testing import FakeController
 
@@ -1329,35 +1120,12 @@ async def test_sync_external_leds_e_noop_sem_fiacao() -> None:
         controller=FakeController(transport="usb"),
         config=DaemonConfig(ipc_enabled=False, udp_enabled=False),
     )
-    # Sem executor e sem fiação: precisa ser no-op silencioso.
     await daemon._sync_external_leds()
 
 
-# ---------------------------------------------------------------------------
-# GYRO-02 — ExternalImuEnabler: enable-IMU do Nintendo Pro REAL (FASEADO)
-# ---------------------------------------------------------------------------
-
-#: MAC com OUI forjado (`aa:bb:cc`, mesma faixa de MAC_A/MAC_B). Depois de
-#: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026) ele representa algo mais
-#: forte do que representava: um Pro numa das **81 faixas Nintendo que esta
-#: casa nunca viu**. Nenhum teste monkeypatcha mais faixa nenhuma — o predicado
-#: de produção é exercitado como está.
 MAC_NINTENDO_FAKE = "aa:bb:cc:00:99:01"
 
-#: MAC na faixa do CLONE, com os octetos 4 e 5 zerados pela máscara da casa.
-#: `e4:17:d8` está escrito aqui como LITERAL de propósito: se ele viesse de
-#: `OUIS_CLONE`, este teste iteraria a mesma lista que deveria conferir e não
-#: mediria nada. É a régua independente do módulo.
 MAC_CLONE_8BITDO = "e4:17:d8:00:00:09"
-
-#: NOTA DATADA — 22/08/2026, UMA-FAIXA-NÃO-É-UM-FABRICANTE-01. Aqui existia
-#: `MAC_OUTRA_MARCA = "e8:47:3a:..."` e um `test_oui_errado_zero_escrita` que
-#: exigia ZERO escrita nele. Aquele teste virou FATO ERRADO com a cura, e não
-#: decisão medida a preservar: `e8:47:3a` não é faixa de clone conhecida, e um
-#: Pro nela é um Pro — exigir silêncio ali é exigir exatamente o defeito
-#: (giroscópio em STANDBY em todo aparelho que não é o desta bancada). O que
-#: aquele teste QUERIA medir — "o clone nunca recebe o subcomando" — passou a
-#: ser medido por `MAC_CLONE_8BITDO`, que mede a coisa certa.
 
 
 def _imu_entry(uniq: str | None, hidraw: str | None, *, bus: str = "usb") -> dict[str, Any]:
@@ -1375,19 +1143,7 @@ def _imu_entry(uniq: str | None, hidraw: str | None, *, bus: str = "usb") -> dic
 
 @pytest.fixture()
 def oui_nintendo_forjada() -> str:
-    """A faixa forjada `aabbcc`, e a GUARDA de que ela é exercitada de verdade.
-
-    **Antes de 22/08/2026 esta fixture monkeypatchava `NINTENDO_REAL_OUI`** para
-    `aabbcc`, e é por isso que a suíte inteira nunca enxergou o defeito da
-    UMA-FAIXA-NÃO-É-UM-FABRICANTE-01: com a constante apontada para a faixa da
-    própria fixture, o que se aferia era "a comparação com a constante funciona",
-    nunca "o produto reconhece um Pro". Régua que anda junto com o que ela
-    deveria conferir não mede nada.
-
-    Agora ela não desvia nada — o predicado de PRODUÇÃO decide — e no lugar do
-    desvio afirma o que o desvio escondia: uma faixa que esta casa nunca viu é
-    tratada como Pro genuíno.
-    """
+    """A faixa forjada `aabbcc`, e a GUARDA de que ela é exercitada de verdade."""
     from hefesto_dualsense4unix.core.linhagem_nintendo import e_pro_genuino
 
     assert e_pro_genuino(
@@ -1422,8 +1178,6 @@ class TestExternalImuEnabler:
         inventario = [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")]
         enabler.tick(inventario, now=0.0)
         assert imu_escritas == [("/dev/hidraw5", 0)]
-        # Ticks seguintes (mesmo device, mesmo inventário): sucesso já
-        # aconteceu — nunca reenvia dentro da MESMA adoção.
         enabler.tick(inventario, now=100.0)
         enabler.tick(inventario, now=200.0)
         assert imu_escritas == [("/dev/hidraw5", 0)]
@@ -1431,12 +1185,7 @@ class TestExternalImuEnabler:
     def test_faixa_do_clone_zero_escrita(
         self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
     ) -> None:
-        """A contraprova: mesmo nome, mesmo `057e:2009`, e ainda assim silêncio.
-
-        É esta metade que impede a cura de virar regressão do clone — o 8BitDo
-        em modo Switch mente VID, PID, serial e `HID_NAME`, e a OUI é o único
-        sinal honesto que ele emite.
-        """
+        """A contraprova: mesmo nome, mesmo `057e:2009`, e ainda assim silêncio."""
         enabler = ExternalImuEnabler()
         inventario = [_imu_entry(MAC_CLONE_8BITDO, "/dev/hidraw5", bus="usb")]
         enabler.tick(inventario, now=0.0)
@@ -1486,26 +1235,24 @@ class TestExternalImuEnabler:
 
         enabler.tick(inventario, now=0.0)
         assert len(tentativas) == 1
-        enabler.tick(inventario, now=1.0)  # dentro do backoff: nem tenta
+        enabler.tick(inventario, now=1.0)
         assert len(tentativas) == 1
-        enabler.tick(inventario, now=2.5)  # fora do backoff: 2ª tentativa
+        enabler.tick(inventario, now=2.5)
         assert len(tentativas) == 2
-        # Esgotado (2/2): nunca mais tenta nesta adoção, mesmo esperando.
         enabler.tick(inventario, now=100.0)
         assert len(tentativas) == 2
 
     def test_replug_reinicia_a_adocao(
         self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
     ) -> None:
-        """Device some do inventário (unplug) e volta (replug) → nova
-        adoção → envia de novo (o firmware reinicia a IMU em standby)."""
+        """Device some do inventário (unplug) e volta (replug) → nova"""
         enabler = ExternalImuEnabler()
         inventario = [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")]
         enabler.tick(inventario, now=0.0)
         assert imu_escritas == [("/dev/hidraw5", 0)]
 
-        enabler.tick([], now=10.0)  # sumiu
-        enabler.tick(inventario, now=20.0)  # replug
+        enabler.tick([], now=10.0)
+        enabler.tick(inventario, now=20.0)
         assert imu_escritas == [("/dev/hidraw5", 0), ("/dev/hidraw5", 0)]
 
     def test_telemetria_enviado_e_falhou(
@@ -1556,8 +1303,7 @@ class TestExternalImuEnabler:
     def test_enable_imu_explode_nunca_propaga(
         self, oui_nintendo_forjada: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`enable_imu` levantando (bug/EIO inesperado) não pode derrubar o
-        tick — suppress + warn (mesma disciplina do resto do módulo)."""
+        """`enable_imu` levantando (bug/EIO inesperado) não pode derrubar o"""
         import hefesto_dualsense4unix.core.external_leds as leds_mod
 
         def _explode(hidraw: str, **k: Any) -> bool:
@@ -1567,15 +1313,14 @@ class TestExternalImuEnabler:
         enabler = ExternalImuEnabler()
         enabler.tick(
             [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")], now=0.0
-        )  # não levanta
+        )
 
     def test_tick_enumeracao_vazia_nao_levanta(self, oui_nintendo_forjada: str) -> None:
-        ExternalImuEnabler().tick([], now=0.0)  # não levanta, sem device nenhum
+        ExternalImuEnabler().tick([], now=0.0)
 
 
 class TestExternalLedSyncChamaImuEnabler:
-    """Integração: `ExternalLedSync.tick()` também dispara o enable-IMU,
-    reusando o MESMO inventário — sem enumeração extra de /dev/input."""
+    """Integração: `ExternalLedSync.tick()` também dispara o enable-IMU,"""
 
     def test_tick_do_led_sync_dispara_enable_imu(
         self,
@@ -1590,7 +1335,6 @@ class TestExternalLedSyncChamaImuEnabler:
         )
         sync.tick(now=0.0)
         assert imu_escritas == [("/dev/hidraw5", 0)]
-        # O LED também foi aceso normalmente — o enable-IMU não atrapalha.
         assert led_escritas == [("/dev/hidraw5", 1)]
 
     def test_auto_player_colors_off_nao_bloqueia_o_enable_imu(
@@ -1599,8 +1343,7 @@ class TestExternalLedSyncChamaImuEnabler:
         oui_nintendo_forjada: str,
         imu_escritas: list[tuple[str, int]],
     ) -> None:
-        """`auto_player_colors` OFF para de afirmar LED, mas o enable-IMU (não
-        é sobre cor/número) segue independente."""
+        """`auto_player_colors` OFF para de afirmar LED, mas o enable-IMU (não"""
         sync = _sync(
             monkeypatch,
             [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")],

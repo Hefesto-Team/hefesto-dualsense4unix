@@ -48,7 +48,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, NamedTuple
 
-try:  # importado como módulo do pacote (GUI/daemon/testes)
+try:
     from .steam_launch_options import (
         add_appid_to_steam_input_allowlist,
         parse_steam_input_allowlist,
@@ -65,28 +65,17 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo inst
         steam_running,
     )
 
-#: Nome do manifesto que gravamos DENTRO do diretório extraído — é ele que
-#: torna o passo idempotente/offline-first (dir presente + sha256 do conf
-#: batendo = no-op sem rede).
 MANIFEST_BASENAME = ".hefesto-proton-pin.json"
 
-#: Nome do arquivo de estado local do lock (o "marcador próprio" que o
-#: uninstall lê para saber EXATAMENTE o que reverter).
 LOCK_STATE_BASENAME = "proton-pin-lock.json"
 
-#: Prioridades observadas ao vivo no config.vdf da Steam (2026-07-18): o
-#: default global usa 75 e a entrada por jogo usa 250. Reproduzimos os
-#: valores nativos para o vdf ficar indistinguível de um escolhido na UI.
 _PRIORITY_GLOBAL = "75"
 _PRIORITY_PER_APP = "250"
 
-#: Chaves obrigatórias do proton-pin.conf.
 _REQUIRED_CONF_KEYS = ("name", "url", "sha256")
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
-#: Linha `"name"  "<valor>"` de uma entrada do CompatToolMapping, com os
-#: grupos prefix/suffix para reescrita preservando a formatação original.
 _NAME_LINE_RE = re.compile(
     r'^(?P<prefix>\s*"[Nn]ame"\s+")(?P<value>(?:\\.|[^"\\])*)(?P<suffix>"\s*)$'
 )
@@ -95,49 +84,24 @@ _PAIR_RE = re.compile(
 )
 _KEY_ONLY_RE = re.compile(r'^\s*"(?P<key>(?:\\.|[^"\\])*)"\s*$')
 
-#: Tools de compatibilidade com risco de VAZAMENTO winebus: em Proton ≤ 9 o
-#: hidraw só some com PROTON_ENABLE_HIDRAW (semântica antiga) — o wrapper
-#: emite a semântica NOVA (DISABLE), então jogo em Proton velho = duplicado
-#: de volta. `proton_major` extrai o major dos dois esquemas de nome.
 _GE_NAME_RE = re.compile(r"^GE-Proton(?P<major>\d+)", re.IGNORECASE)
 _VALVE_NAME_RE = re.compile(r"^proton_(?P<digits>\d+)$", re.IGNORECASE)
 
-#: appmanifest cujo "name" casa aqui é ferramenta, não jogo — nunca travar.
 _TOOL_MANIFEST_RE = re.compile(
     r"proton|steam linux runtime|steamworks common|steam runtime",
     re.IGNORECASE,
 )
 
-#: O que SÓ a Steam cria na raiz dela (18/09/2026, INSTALL-UNIVERSAL). Uma pasta
-#: chamada `~/.steam/steam` sem nenhum destes não é uma Steam — e o caso que
-#: isto cura é exatamente esse: o `--ensure` do install, numa máquina em que a
-#: Steam ainda não existia, fazia `mkdir(parents=True)` e CRIAVA a raiz como
-#: diretório real, só com o nosso `compatibilitytools.d` dentro. O lançador
-#: Debian da Steam lê diretório real em `~/.steam/steam` como o layout
-#: histórico e adota `~/.steam` como casa — e o produto inteiro (pino, Steam
-#: Input, wrapper, vigia) passa a mirar uma raiz que a Steam não usa.
 _MARCAS_DE_STEAM = ("steam.sh", "config/config.vdf", "userdata", "steamapps")
 
-#: Os códigos de saída do `--ensure`, e cada um tem UM significado. Até
-#: 18/09/2026 o `1` cobria o checksum E tudo o que saísse como traceback (python
-#: sem `filter=` no tarfile, disco cheio na extração de ~1,5 GB) — e o install
-#: anunciava *"checksum do Proton NÃO bateu"* sobre um disco cheio.
 RC_CHECKSUM = 1
 RC_SEM_REDE_E_SEM_CACHE = 2
 RC_ADIADO = 4
 RC_EXTRACAO_FALHOU = 5
 RC_CONF_ILEGIVEL = 6
-#: A Steam desta máquina mora numa caixa (Flatpak/Snap): nada foi baixado,
-#: porque o Proton extraído no host nunca serviria lá dentro. Até 18/09/2026
-#: isto saía como o `4`, e o install prometia ao lado que *"o vigia extrai do
-#: cache e trava sozinho"* — sobre um cache que ninguém encheu.
 RC_STEAM_NA_CAIXA = 7
 
 #: A EXCEÇÃO NOMEADA ao pino — gêmea do `jogos_sem_wrapper.txt` (mesmo formato:
-#: um appid por linha, `#` comenta). O `--lock --todos` e o `--manter` do vigia
-#: não tocam o que está aqui. Sem este arquivo, um mantenedor que trava a cada
-#: saída da Steam brigaria para sempre com qualquer Proton que ela escolhesse
-#: depois para um jogo que não roda no GE, e a única saída seria desinstalar.
 FORA_DO_PINO_RELPATH = "hefesto-dualsense4unix/jogos_fora_do_pino.txt"
 
 _FORA_DO_PINO_HEADER = """\
@@ -153,18 +117,8 @@ _FORA_DO_PINO_HEADER = """\
 """
 
 
-# --------------------------------------------------------------------------
-# proton-pin.conf
-# --------------------------------------------------------------------------
-
-
 def parse_pin_conf(text: str) -> dict[str, str]:
-    """Parseia o proton-pin.conf (chave=valor, comentários com #).
-
-    Valida o CONTRATO, não só a sintaxe: name/url/sha256 presentes e sha256
-    com cara de sha256 (64 hex). Conf corrompido tem que EXPLODIR aqui —
-    seguir adiante com sha256 vazio extrairia binário não verificado.
-    """
+    """Parseia o proton-pin.conf (chave=valor, comentários com #)."""
     out: dict[str, str] = {}
     for raw in text.splitlines():
         line = raw.strip()
@@ -187,11 +141,7 @@ def parse_pin_conf(text: str) -> dict[str, str]:
 
 
 def default_pin_conf_path() -> Path | None:
-    """Localiza assets/proton-pin.conf subindo a partir deste arquivo.
-
-    Cobre o layout do repositório (src/…/integrations/ → raiz/assets/). Se o
-    pacote estiver instalado longe do repo, o chamador passa `--conf`.
-    """
+    """Localiza assets/proton-pin.conf subindo a partir deste arquivo."""
     here = Path(__file__).resolve()
     for parent in here.parents:
         candidate = parent / "assets" / "proton-pin.conf"
@@ -200,20 +150,8 @@ def default_pin_conf_path() -> Path | None:
     return None
 
 
-# --------------------------------------------------------------------------
-# Descoberta de caminhos da Steam (stdlib, sem platformdirs)
-# --------------------------------------------------------------------------
-
-
 def e_raiz_de_steam(raiz: Path) -> bool:
-    """True se `raiz` é uma Steam de verdade, e não só uma pasta com esse nome.
-
-    Uma Steam deixa marcas que ninguém mais deixa (:data:`_MARCAS_DE_STEAM`):
-    o `steam.sh` do bootstrap, o `config/config.vdf` do primeiro login, as
-    pastas `userdata` e `steamapps`. Uma sobra do nosso `--ensure` não tem
-    nenhuma — e é essa distinção que impede o produto de confundir o próprio
-    lixo com a Steam dela.
-    """
+    """True se `raiz` é uma Steam de verdade, e não só uma pasta com esse nome."""
     try:
         if not raiz.is_dir():
             return False
@@ -223,17 +161,7 @@ def e_raiz_de_steam(raiz: Path) -> bool:
 
 
 def default_steam_root(home: Path | None = None) -> Path:
-    """Raiz da Steam NATIVA (~/.steam/steam, fallback ~/.local/share/Steam).
-
-    Flatpak/Snap ficam DE FORA de propósito: o Proton extraído no host é
-    invisível dentro da sandbox — travar jogos lá num tool inexistente
-    quebraria o launch (mesma regra do wrapper, DEDUP-04).
-
-    A raiz com cara de Steam (:func:`e_raiz_de_steam`) vence a que só existe:
-    com um `~/.steam/steam` vazio de sobra e a Steam de verdade em
-    `~/.local/share/Steam`, é a segunda que manda. Sem nenhuma válida, o
-    comportamento é o de sempre — a primeira que existe, senão a nativa.
-    """
+    """Raiz da Steam NATIVA (~/.steam/steam, fallback ~/.local/share/Steam)."""
     base = home or Path.home()
     primary = base / ".steam/steam"
     fallback = base / ".local/share/Steam"
@@ -247,13 +175,7 @@ def default_steam_root(home: Path | None = None) -> Path:
 
 
 def steam_em_caixa(home: Path | None = None) -> str | None:
-    """``"Flatpak"``/``"Snap"`` quando há uma Steam em sandbox, senão ``None``.
-
-    É a pergunta que separa os dois adiamentos do `--ensure`: com a Steam numa
-    caixa, o Proton extraído no host nunca vai servir, e baixar 563 MB seria
-    desperdício; sem Steam nenhuma, o download adiantado para o cache é o que
-    deixa o vigia instalar o pino sozinho, sem rede, quando ela aparecer.
-    """
+    """``"Flatpak"``/``"Snap"`` quando há uma Steam em sandbox, senão ``None``."""
     base = home or Path.home()
     if (base / ".var/app/com.valvesoftware.Steam/.steam/steam").is_dir():
         return "Flatpak"
@@ -263,19 +185,7 @@ def steam_em_caixa(home: Path | None = None) -> str | None:
 
 
 def raiz_envenenada(home: Path | None = None) -> Path | None:
-    """`~/.steam/steam` quando ele é SOBRA NOSSA, e não uma Steam — ou ``None``.
-
-    A forma medida (18/09/2026, INSTALL-UNIVERSAL): o `--ensure` de antes desta
-    cura, rodado sem Steam na máquina, deixava `~/.steam/steam` como diretório
-    REAL, sem nenhuma marca de Steam, com só o `compatibilitytools.d` dentro —
-    e nele só o que nós extraímos (o manifesto diz `installed_by`) ou o resto
-    de uma extração nossa interrompida. O lançador Debian lê isso como o layout
-    histórico e passa a usar `~/.steam` como casa da Steam.
-
-    A régua é estreita DE PROPÓSITO: qualquer coisa que não seja nossa lá
-    dentro — um Proton de outro instalador, um arquivo solto — devolve
-    ``None``, porque quem recebe a resposta é mandado tirar a pasta do caminho.
-    """
+    """`~/.steam/steam` quando ele é SOBRA NOSSA, e não uma Steam — ou ``None``."""
     base = home or Path.home()
     alvo = base / ".steam/steam"
     try:
@@ -286,7 +196,7 @@ def raiz_envenenada(home: Path | None = None) -> Path | None:
         compat = alvo / "compatibilitytools.d"
         for item in compat.iterdir():
             if item.name.startswith(".") and ".hefesto-extract-" in item.name:
-                continue  # extração nossa interrompida
+                continue
             manifesto = item / MANIFEST_BASENAME
             try:
                 dono = json.loads(manifesto.read_text(encoding="utf-8")).get(
@@ -302,45 +212,16 @@ def raiz_envenenada(home: Path | None = None) -> Path | None:
 
 
 class RaizDaSteamOuRecusa(NamedTuple):
-    """``(raiz, motivo)`` — só um dos dois não é ``None`` (T-09, ONDA0-Z7).
-
-    Espelha o formato de recusa da Z1 (§9.1 da sprint O AMBIENTE PRESUMIDO
-    01): :func:`steam_root_ou_recusa` NUNCA silencia o motivo quando não há
-    raiz. Devolver ``(None, None)`` seria repetir o defeito **F1**
-    ("aplicado" é palavra sem prova) na sua forma negativa — um botão que não
-    pode funcionar e não diz por quê.
-    """
+    """``(raiz, motivo)`` — só um dos dois não é ``None`` (T-09, ONDA0-Z7)."""
 
     raiz: Path | None
     motivo: str | None
 
 
 def steam_root_ou_recusa(home: Path | None = None) -> RaizDaSteamOuRecusa:
-    """:func:`default_steam_root`, mas dizendo POR QUE quando não há onde travar.
-
-    T-09 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). :func:`default_steam_root`
-    CONTINUA excluindo Flatpak/Snap — decisão medida, ver o docstring dela: o
-    Proton que o Hefesto extrai no host é invisível dentro da sandbox, e
-    travar lá quebraria o launch (mesma regra do wrapper, DEDUP-04). O que
-    faltava era a TELA saber dizer por quê: medido em 23/08/2026 (§3.5 da
-    sprint), "Travar Proton validado" cala nos três layouts fora do nativo.
-
-    Devolve ``(raiz, None)`` quando há uma Steam NATIVA de verdade (o
-    diretório existe); ``(None, motivo)`` caso contrário — e o motivo
-    diferencia "achei uma Steam, mas ela está numa caixa" de "não achei
-    Steam nenhuma", porque as duas pedem ações diferentes de quem lê.
-
-    A FRASE é vocabulário de tela — a palavra final é da **Z1**, que já tem
-    o formato de recusa que esta função replica (ver §8 do protocolo de
-    execução desta casa: decisão de produto não se escolhe em silêncio).
-    Quem liga esta função ao botão "Travar Proton validado" é a **Onda 5 ·
-    Emulação** (§10 da sprint) — Z7-C só entrega a primitiva.
-    """
+    """:func:`default_steam_root`, mas dizendo POR QUE quando não há onde travar."""
     base = home or Path.home()
     raiz = default_steam_root(base)
-    # "EXISTE" NÃO BASTA — 18/09/2026. Este teste era `raiz.is_dir()`, e a
-    # sobra do nosso próprio `--ensure` (um `~/.steam/steam` só com o
-    # `compatibilitytools.d`) passava por Steam nativa.
     if e_raiz_de_steam(raiz):
         return RaizDaSteamOuRecusa(raiz, None)
 
@@ -389,12 +270,7 @@ def fora_do_pino_path(home: Path | None = None) -> Path:
 
 
 def ler_jogos_fora_do_pino(path: Path | None = None) -> list[str]:
-    """Os appids que ela NOMEOU como fora do pino. Nunca levanta.
-
-    Arquivo ausente ou ilegível = lista vazia, pela mesma razão do
-    `ler_jogos_sem_wrapper`: o pior caso de uma leitura falha é travar um jogo
-    no pino, e isso se desfaz com `--unlock`.
-    """
+    """Os appids que ela NOMEOU como fora do pino. Nunca levanta."""
     destino = path if path is not None else fora_do_pino_path()
     try:
         return [
@@ -404,27 +280,10 @@ def ler_jogos_fora_do_pino(path: Path | None = None) -> list[str]:
     except (OSError, ValueError):
         return []
 
-# --------------------------------------------------------------------------
-# ensure_pinned_proton — instala a versão pinada (cache → download), nunca
-# extrai binário não verificado
-# --------------------------------------------------------------------------
-
 
 @dataclass(frozen=True)
 class EnsureResult:
-    """Resultado do ensure: `state` é o contrato com o install/doctor.
-
-    Estados: ``already`` (pin já presente e íntegro — no-op offline),
-    ``installed_from_cache``, ``downloaded``, ``checksum_mismatch`` (NADA foi
-    extraído) e ``unavailable`` (sem cache válido e sem downloader/download
-    falhou — o install segue com aviso honesto, nunca trava a máquina).
-
-    18/09/2026: ``em_cache`` (tarball conferido no cache, nada extraído — é o
-    que sobra quando ainda não há Steam nativa onde extrair), ``adiado`` (há
-    tarball conferido, mas a raiz da Steam não existe) e ``extracao_falhou``
-    (o tarball bateu e a extração quebrou: disco cheio, permissão, tar
-    corrompido depois do download). Nenhum dos três é checksum.
-    """
+    """Resultado do ensure: `state` é o contrato com o install/doctor."""
 
     state: str
     detail: str = ""
@@ -440,11 +299,7 @@ def sha256_of_file(path: Path) -> str:
 
 
 def curl_downloader(url: str, dest: Path) -> None:
-    """Downloader padrão do install: curl com resume (-C -) e fail explícito.
-
-    Injetável de propósito: os testes passam um fake; o ensure NUNCA confia
-    no download — o sha256 é conferido depois, sempre.
-    """
+    """Downloader padrão do install: curl com resume (-C -) e fail explícito."""
     proc = subprocess.run(
         ["curl", "-L", "--fail", "-C", "-", "-o", str(dest), url],
         check=False,
@@ -489,27 +344,7 @@ def _escapa_da_raiz(caminho: str) -> bool:
 
 
 def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
-    """A parte LEXICAL do filtro "tar", para o python que não tem filtro.
-
-    O nome absoluto ou com `..`, o nó de dispositivo — e, desde 18/09/2026, o
-    LINK que aponta para fora do destino, que é a outra metade do filtro: o
-    nome do membro pode ser inocente e o alvo do link, não.
-
-    O QUE ELA NÃO PEGA, medido em 18/09/2026: uma CADEIA de links, em que o
-    caminho de um passa por outro (`P/l1 -> ..`, `P/l2 -> l1/..`, e um membro
-    escrito em `P/l2/…`). Cada alvo, lido sozinho, fica dentro; o filtro de
-    verdade resolve o disco e recusa. A conferência daqui não resolve nada.
-    Ela só vale porque o tarball chegou até aqui pelo SHA256 fixado no
-    `proton-pin.conf` — é defesa em profundidade, não a primeira muralha.
-
-    O alvo do link simbólico se mede a partir da PASTA dele, e não pela
-    presença de `..`: o GE-Proton tem links internos legítimos que sobem cinco
-    níveis (o `start.exe` do `default_pfx` cai dentro de `files/lib/wine/`), e
-    recusar todo `..` quebraria a extração justamente no python antigo.
-
-    Levanta `tarfile.TarError`, que o ensure traduz em ``extracao_falhou`` —
-    nunca em checksum.
-    """
+    """A parte LEXICAL do filtro "tar", para o python que não tem filtro."""
     for membro in tar.getmembers():
         nome = membro.name
         if nome.startswith("/") or ".." in Path(nome).parts:
@@ -519,7 +354,7 @@ def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
         if membro.issym():
             alvo = os.path.join(os.path.dirname(nome), membro.linkname)
         elif membro.islnk():
-            alvo = membro.linkname  # o alvo do link físico é outro membro
+            alvo = membro.linkname
         else:
             continue
         if _escapa_da_raiz(alvo):
@@ -532,19 +367,7 @@ def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
 def _extract_verified_tarball(
     tarball: Path, name: str, compat_dir: Path
 ) -> None:
-    """Extrai o tarball JÁ VERIFICADO em compat_dir/<name>/ (tmp + rename).
-
-    `filter="data"` do tarfile bloqueia path traversal/links absolutos. A
-    extração acontece num tmp irmão e só vira o nome final depois de validada
-    (tem `proton` executável) e com o manifesto gravado — crash no meio nunca
-    deixa um dir meio-extraído com o nome bom.
-
-    A RAIZ DA STEAM NÃO NASCE AQUI — 18/09/2026. Isto era
-    `compat_dir.mkdir(parents=True)`, e numa máquina sem Steam o `parents=True`
-    criava `~/.steam/steam` como diretório real: a sobra que o lançador Debian
-    adota como casa (ver :func:`raiz_envenenada`). Agora só o
-    `compatibilitytools.d` pode nascer, e só dentro de uma raiz que já existe.
-    """
+    """Extrai o tarball JÁ VERIFICADO em compat_dir/<name>/ (tmp + rename)."""
     if not compat_dir.parent.is_dir():
         raise FileNotFoundError(
             f"a raiz da Steam ({compat_dir.parent}) não existe — não crio a "
@@ -555,12 +378,6 @@ def _extract_verified_tarball(
     if tmp_root.exists():
         shutil.rmtree(tmp_root)
     try:
-        # O data_filter do Python 3.10 erra o cálculo de symlink relativo e
-        # recusa links internos legítimos do GE-Proton (start.exe em
-        # files/share/default_pfx/... aponta 5 níveis acima, e cai dentro de
-        # files/lib/wine/). O 3.11+ acerta. Como o tarball já passou pelo SHA256
-        # fixado antes de chegar aqui, no 3.10 usamos "tar", que continua
-        # barrando caminho absoluto e path traversal do próprio nome.
         _filtro: Literal["data", "tar"] = (
             "data" if sys.version_info >= (3, 11) else "tar"
         )
@@ -568,12 +385,6 @@ def _extract_verified_tarball(
             if hasattr(tarfile, "data_filter"):
                 tar.extractall(path=tmp_root, filter=_filtro)
             else:
-                # PYTHON SEM `filter=` (anterior ao 3.10.12/3.11.4, que ainda
-                # existe em distro de suporte longo): o `extractall(filter=)`
-                # levantava TypeError, que ninguém capturava, e o install lia o
-                # rc=1 como *"checksum NÃO bateu"*. O tarball já passou pelo
-                # SHA256 fixado; a barreira que o "tar" daria — nome absoluto
-                # ou com `..` — é conferida à mão antes de extrair.
                 _conferir_nomes_do_tar(tar)
                 tar.extractall(path=tmp_root)
         extracted = tmp_root / name
@@ -607,21 +418,7 @@ def ensure_pinned_proton(
     downloader: Callable[[str, Path], None] | None = None,
     verifier: Callable[[Path], str] = sha256_of_file,
 ) -> EnsureResult:
-    """Garante compat_dir/<name>/ íntegro. NUNCA extrai sem o sha256 bater.
-
-    Ordem (offline antes de online, memória da casa):
-    1. Já extraído com o nosso manifesto batendo com o conf → ``already``.
-    2. Já extraído VÁLIDO sem manifesto (instalação pré-existente da usuária,
-       ex.: via ProtonUp) → ``already`` (dado do usuário; não clobberamos).
-    3. Cache local com sha256 batendo → extrai → ``installed_from_cache``.
-    4. `downloader` (se houver) baixa para o cache, sha256 confere → extrai →
-       ``downloaded`` (o tarball FICA no cache p/ reinstalls offline).
-    5. sha256 não bateu (cache E/OU download) → ``checksum_mismatch``, nada
-       extraído. Sem downloader e sem cache → ``unavailable``.
-    6. Tarball conferido e a raiz da Steam (``compat_dir.parent``) ausente →
-       ``adiado``, com o tarball no cache. Extração quebrada →
-       ``extracao_falhou``.
-    """
+    """Garante compat_dir/<name>/ íntegro. NUNCA extrai sem o sha256 bater."""
     name = conf["name"]
     expected = conf["sha256"].lower()
 
@@ -647,9 +444,6 @@ def ensure_pinned_proton(
     try:
         _extract_verified_tarball(tarball, name, compat_dir)
     except (OSError, tarfile.TarError) as exc:
-        # O tarball BATEU com o SHA256: o que falhou foi a escrita (~1,5 GB
-        # extraídos) ou o próprio tar. Nada disso é checksum, e dizer que era
-        # mandava a pessoa apagar um cache bom.
         return EnsureResult("extracao_falhou", f"{exc} (disco cheio?)")
     if obtido.state == "em_cache":
         return EnsureResult("installed_from_cache", str(tarball))
@@ -663,14 +457,7 @@ def _tarball_conferido_no_cache(
     downloader: Callable[[str, Path], None] | None,
     verifier: Callable[[Path], str],
 ) -> tuple[Path | None, EnsureResult]:
-    """O tarball do pino no cache, CONFERIDO — baixando se preciso. Nunca extrai.
-
-    Devolve ``(tarball, resultado)``. Com tarball, ``resultado.state`` é
-    ``em_cache`` (já estava) ou ``baixado``; sem, é ``checksum_mismatch`` ou
-    ``unavailable``. É a metade do ensure que não precisa da Steam, e é por
-    isso que ela mora sozinha: sem Steam nativa, o install ainda adianta o
-    download, e o vigia extrai depois, offline.
-    """
+    """O tarball do pino no cache, CONFERIDO — baixando se preciso. Nunca extrai."""
     name = conf["name"]
     expected = conf["sha256"].lower()
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -689,8 +476,6 @@ def _tarball_conferido_no_cache(
             "unavailable", "sem cache local e sem downloader (offline?)"
         )
 
-    # Download SEMPRE para um tmp; só vira cache com o sha256 conferido — um
-    # cache envenenado nunca nasce daqui.
     partial = cache_dir / f"{name}.tar.gz.hefesto-download"
     try:
         downloader(conf["url"], partial)
@@ -715,17 +500,7 @@ def adiantar_para_o_cache(
     downloader: Callable[[str, Path], None] | None = None,
     verifier: Callable[[Path], str] = sha256_of_file,
 ) -> EnsureResult:
-    """Baixa e confere o tarball SÓ para o cache — não extrai, não toca na Steam.
-
-    O caminho do `--ensure` quando ainda não existe Steam nativa (18/09/2026).
-    Antes, o mesmo `--ensure` extraía assim mesmo e criava `~/.steam/steam`
-    como diretório real (ver :func:`raiz_envenenada`). Agora o download é
-    adiantado — é ele que leva minutos, e com ele no cache o `--manter` do
-    vigia instala o pino sem rede no dia em que a Steam aparecer.
-
-    Estados: ``em_cache`` (conferido; já estava ou acabou de chegar),
-    ``checksum_mismatch`` e ``unavailable``.
-    """
+    """Baixa e confere o tarball SÓ para o cache — não extrai, não toca na Steam."""
     tarball, obtido = _tarball_conferido_no_cache(
         conf, cache_dir=cache_dir, downloader=downloader, verifier=verifier
     )
@@ -734,20 +509,15 @@ def adiantar_para_o_cache(
     return EnsureResult("em_cache", str(tarball))
 
 
-# --------------------------------------------------------------------------
-# CompatToolMapping — parser/reescrita do config.vdf (puro)
-# --------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class _CtmEntry:
     """Uma entrada `"<appid>" { "name" … }` do CompatToolMapping."""
 
     appid: str
-    key_idx: int  # linha `"<appid>"`
-    open_idx: int  # linha `{`
-    close_idx: int  # linha `}`
-    name_idx: int | None  # linha `"name" "…"` (None = entrada sem name)
+    key_idx: int
+    open_idx: int
+    close_idx: int
+    name_idx: int | None
     name_value: str
 
 
@@ -771,12 +541,7 @@ def _vdf_escape(value: str) -> str:
 
 
 def _parse_ctm_layout(lines: list[str]) -> _CtmLayout:
-    """Localiza Software/Valve/Steam/CompatToolMapping por pilha de blocos.
-
-    Mesmo parser por LINHA do `read_launch_options_by_appid` — conteúdo fora
-    do padrão passa intacto byte a byte. O casamento do caminho é por SUFIXO
-    (…/software/valve/steam), tolerante ao nome do bloco raiz.
-    """
+    """Localiza Software/Valve/Steam/CompatToolMapping por pilha de blocos."""
     stack: list[str] = []
     pending: str | None = None
     pending_idx = -1
@@ -853,11 +618,7 @@ def _parse_ctm_layout(lines: list[str]) -> _CtmLayout:
 
 
 def extract_compat_tool_mapping(config_vdf_text: str) -> dict[str, str]:
-    """Mapeia appid → nome do tool no CompatToolMapping (read-only).
-
-    Inclui a chave global `"0"` quando presente. Consumido pelo doctor e
-    pelos testes; nunca escreve nada.
-    """
+    """Mapeia appid → nome do tool no CompatToolMapping (read-only)."""
     lines = config_vdf_text.splitlines(keepends=True)
     layout = _parse_ctm_layout(lines)
     return {
@@ -892,17 +653,7 @@ def _entry_block(appid: str, tool_name: str, indent: str, eol: str) -> str:
 
 
 def e_da_familia_proton(tool_name: str) -> bool:
-    """True se a ferramenta é um Proton (da Valve, GE ou outro) — o que o pino troca.
-
-    A CLASSE DO "TODO JOGO" (18/09/2026, decisão registrada na
-    INSTALL-UNIVERSAL). O pino existe por causa do winebus, e só jogo que
-    atravessa o Wine atravessa o winebus. Uma entrada que aponta para
-    `steamlinuxruntime_*`, `luxtorpeda` ou outra ferramenta que não é Proton é
-    a escolha de rodar NATIVO, e trocá-la pelo GE faria o jogo baixar a versão
-    Windows e mudar os saves de lugar, em silêncio. O critério é o nome, sem
-    diferenciar maiúsculas: `proton_11`, `proton_experimental`,
-    `GE-Proton11-7-x86_64` e `Proton-tkg` são da família; o resto não é.
-    """
+    """True se a ferramenta é um Proton (da Valve, GE ou outro) — o que o pino troca."""
     return "proton" in tool_name.lower()
 
 
@@ -916,106 +667,7 @@ def build_compat_tool_mapping(
     sem_entrada_nova: Collection[str] = (),
     excluir: Collection[str] = (),
 ) -> tuple[str, dict[str, dict[str, str]]]:
-    """Trava o global (`"0"`) + cada appid em `tool_name`, **sem** atropelar escolha.
-
-    Retorna ``(texto_novo, mudanças)`` — mudanças é o registro que o lock
-    persiste para o unlock reverter SÓ o nosso:
-    ``{appid: {"action": "added"|"replaced"|"preservado", "previous_name": "…"}}``.
-    Idempotente: entrada já apontando para `tool_name` não gera mudança; o
-    resto do arquivo passa intacto byte a byte (edição por linha).
-
-    ESCOLHA DELA NÃO SE ATROPELA (19/08/2026). Até aqui, uma entrada que já
-    apontava para OUTRA ferramenta era **substituída** sem perguntar. O preço foi
-    medido na máquina dela: em 14/08/2026 03:04 o lock trocou o Proton de TRÊS
-    jogos que tinham escolha deliberada — o DON'T SCREAM (appid 2497900) saiu de
-    ``proton_11`` para ``GE-Proton10-34``, e nesse Proton o motor Unreal registra
-    ``No Audio Capture implementations found`` e ZERO ``WasapiCapture``: o
-    microfone do jogo, que é a mecânica inteira dele, morreu. Ela zerou o jogo no
-    ``proton_11``; o produto lhe tirou o caminho e não avisou. Os outros 16 jogos
-    da mesma leva eram ``added`` (não tinham nada) e não sofreram.
-
-    Agora o padrão é **preservar**: entrada DE JOGO com nome diferente vira
-    ``action="preservado"``, o arquivo não muda naquela linha, e quem chamou
-    recebe o registro para poder CONTAR o que respeitou. O unlock ignora
-    ``preservado`` de propósito — não há o que reverter onde nada foi escrito.
-
-    A entrada global ``"0"`` NÃO entra nessa guarda: travar o padrão do Steam
-    Play é a função declarada deste recurso, e ela já tem caminho de volta (o
-    ``previous_name`` do ``"0"`` sobrevive a re-locks e o uninstall o restaura).
-    O dano de 14/08 foi por jogo, não no global.
-
-    ``atropelar_escolha_dela=True`` restaura o comportamento antigo. Ele existia
-    para o caso em que ELA pedisse, explicitamente, "troque tudo para o Proton
-    validado" — e aí a palavra seria dela.
-
-    **ELA PEDIU, EM 17/09/2026**, vendo o DON'T SCREAM ficar no ``proton_11``
-    enquanto os outros 24 subiam para o ``GE-Proton11-7-x86_64``: *"mas não era
-    pra todos ficarem sobre o novo proton?"*, e em seguida *"ele e todo o resto
-    de agora em diante."*
-
-    O CLI expõe isso como ``--todos``, e o ``install.sh`` passa a usá-lo. A
-    guarda continua no código, e continua sendo o padrão da função: ela protege
-    quem chamar sem pedir. O que mudou é que o PRODUTO agora pede, porque essa
-    é a ordem dela — e uma exceção, daqui em diante, tem de ser NOMEADA e
-    DATADA por ela, nunca inferida da forma do arquivo.
-
-    **O QUE ELA PRECISA SABER, e está medido aqui embaixo:** o dano de 14/08
-    foi num appid que ela usa (o DON'T SCREAM, cujo jogo inteiro é o microfone)
-    e a queixa foi *"não anda. nem o microfone."*. A sprint que o registrou
-    guarda uma ressalva do próprio autor — *"que a troca de Proton tenha sido o
-    que matou o microfone NÃO está provado pelos logs"* —, e eram TRÊS portões
-    em série, dos quais dois já foram curados. Mais: o microfone dela hoje sai
-    pelo nó ``hefesto_mic_*`` do PipeWire (report ``0x32``, medido em 03/09 e
-    06/09), caminho que não passa pelo Proton. O risco é menor do que era e
-    continua existindo; a volta é ``--unlock``.
-
-    ``pinos_nossos`` — O PINO VELHO NÃO É ESCOLHA DELA (16/09/2026), e esta é a
-    diferença entre preservar e ficar parado. MEDIDO na máquina dela no dia em
-    que o pino subiu de ``GE-Proton10-34`` para ``GE-Proton11-6-x86_64``: o lock
-    respondeu *"locked"*, e **os 25 jogos continuaram no Proton velho**, com
-    ``action="preservado"`` em cada um. Estavam ali porque o PRÓPRIO produto os
-    escreveu — os backups do `config.vdf` mostram as entradas em
-    ``GE-Proton10-34`` crescendo install a install desde 19/07 —, e a guarda de
-    19/08 as leu como decisão dela.
-
-    O efeito, dito por inteiro: **subir o pino nunca alcançava jogo nenhum**. Só
-    o global mudava, e a versão nova ficava instalada sem ser usada por
-    ninguém — que foi exatamente o que o pedido do dia (o som do alto-falante
-    dentro do jogo, que só existe do 11-4 em diante) precisava que NÃO
-    acontecesse.
-
-    A cura é fina de propósito: entrada cujo valor está em ``pinos_nossos`` é
-    NOSSA e migra (``action="migrado"``); entrada com qualquer outro valor
-    continua ``preservado``, e o dano de 14/08 — o ``DON'T SCREAM`` em
-    ``proton_11``, cujo microfone morre no outro Proton — segue impossível. O
-    histórico de pinos vive no registro do lock (``pinos_do_hefesto``) e cresce
-    sozinho a cada subida; ``migrar_de`` no CLI é a semente para a primeira,
-    feita quando o registro ainda não conhecia o pino anterior.
-
-    **O "TODO JOGO" TEM CLASSE — 18/09/2026, INSTALL-UNIVERSAL.** Numa
-    biblioteca que não é a dela, `--todos` passava todo título com versão
-    Linux nativa para a versão Windows pelo Proton, em silêncio (novo download,
-    saves no prefixo). Medido na máquina dela: o 316790 declara
-    `windows,macos,linux` no `appinfo.vdf` e estava forçado no GE desde 19/07.
-    Três regras, e nenhuma remove entrada:
-
-    - entrada EXISTENTE só é trocada com ``atropelar_escolha_dela`` se a
-      ferramenta atual é da família Proton (:func:`e_da_familia_proton`) — ou
-      se é um pino nosso, com ou sem a flag. Ferramenta que não é Proton vira
-      ``preservado``;
-    - entrada NOVA não nasce para quem está em ``sem_entrada_nova`` (o jogo
-      nativo do Linux: quem decide é :func:`jogos_sem_entrada_nova`). O global
-      ``"0"`` já não se aplica a título com versão Linux, então ele fica
-      nativo;
-    - appid em ``excluir`` (a exceção NOMEADA, ``jogos_fora_do_pino.txt``) não
-      é tocado de jeito nenhum — nem entra no registro.
-
-    A entrada que já existe NUNCA é apagada: o 316790 dela fica no GE, porque
-    tirá-lo de lá mudaria os saves de lugar outra vez.
-
-    `config.vdf` sem bloco Software/Valve/Steam = ValueError (arquivo que não
-    é um config.vdf de verdade — melhor explodir que "criar" a árvore).
-    """
+    """Trava o global (`"0"`) + cada appid em `tool_name`, **sem** atropelar escolha."""
     lines = config_vdf_text.splitlines(keepends=True)
     layout = _parse_ctm_layout(lines)
     if layout.steam_open_idx is None or layout.steam_close_idx is None:
@@ -1025,22 +677,6 @@ def build_compat_tool_mapping(
     nativos = {str(a) for a in sem_entrada_nova}
     targets = ["0", *[a for a in appids if a != "0" and a not in excluidos]]
     if atropelar_escolha_dela:
-        # "TODO O RESTO" INCLUI A ENTRADA ÓRFÃ — e ela é o caso que faz a ordem
-        # dela valer "de agora em diante". Medido em 17/09/2026, logo depois do
-        # primeiro `--lock --todos`: três entradas ficaram em `proton_11` e no
-        # `GE-Proton10-34` porque os jogos NÃO ESTÃO INSTALADOS, e `appids` nasce
-        # de `list_installed_appids`. A escolha velha continua no mapa; quando
-        # ela reinstalar, é ELA que a Steam lê, e o jogo nasce fora do pino sem
-        # que ninguém veja.
-        #
-        # Sem `--todos` isto não muda nada: a guarda `preservado` é o padrão da
-        # função, e quem não pede continua protegido.
-        #
-        # A ÓRFÃ ENTRA PELA FERRAMENTA QUE ELA JÁ TEM (18/09/2026). Um jogo
-        # desinstalado pode nem estar no `appinfo.vdf`, mas a entrada dele diz
-        # a classe: apontando para um Proton, ele roda pelo Wine e volta no
-        # pino; apontando para `steamlinuxruntime`, a escolha foi rodar nativo,
-        # e reinstalá-lo forçado no GE seria o defeito da classe errada.
         ja_no_mapa = sorted(
             (
                 a
@@ -1065,14 +701,11 @@ def build_compat_tool_mapping(
             entry = layout.entries.get(appid)
             if entry is None:
                 if appid in nativos:
-                    # Jogo nativo do Linux sem entrada: fica sem — o global
-                    # não o alcança, e é assim que ele segue nativo.
                     continue
                 new_entries.append(_entry_block(appid, tool_name, entry_indent, eol))
                 changes[appid] = {"action": "added", "previous_name": ""}
                 continue
             if entry.name_idx is None:
-                # Entrada sem "name" (fora do padrão) — não arriscar.
                 continue
             if entry.name_value == tool_name:
                 continue
@@ -1081,16 +714,6 @@ def build_compat_tool_mapping(
                 entry.name_value
             )
             if appid != "0" and not troca_pedida and not nossa:
-                # A entrada existe e aponta para OUTRA ferramenta: sem
-                # `--todos`, é escolha dela POR JOGO; com `--todos`, só chega
-                # aqui a ferramenta que não é Proton (a escolha de rodar
-                # nativo). Registra e NÃO escreve.
-                #
-                # A entrada global `"0"` fica de fora desta guarda de propósito:
-                # travar o padrão do Steam Play é a função declarada do recurso,
-                # e ela tem caminho de volta — o `previous_name` do `"0"` sobrevive
-                # a re-locks e o uninstall o restaura. O dano medido em 14/08 foi
-                # POR JOGO (3 appids com escolha própria), não no global.
                 changes[appid] = {
                     "action": "preservado",
                     "previous_name": entry.name_value,
@@ -1099,7 +722,7 @@ def build_compat_tool_mapping(
             body = lines[entry.name_idx].rstrip("\r\n")
             line_eol = lines[entry.name_idx][len(body):]
             m = _NAME_LINE_RE.match(body)
-            if m is None:  # linha fora do formato conhecido — não arriscar
+            if m is None:
                 continue
             replacements[entry.name_idx] = (
                 m.group("prefix")
@@ -1108,10 +731,6 @@ def build_compat_tool_mapping(
                 + line_eol
             )
             changes[appid] = {
-                # `migrado` é `replaced` com a procedência dita: o valor que
-                # saiu era NOSSO, de um pino anterior. Quem conta separa os
-                # baldes, e o unlock trata os dois igual — os dois voltam ao
-                # `previous_name`, que é o que a usuária tinha antes de nós.
                 "action": "migrado" if nossa and appid != "0" else "replaced",
                 "previous_name": entry.name_value,
             }
@@ -1124,7 +743,6 @@ def build_compat_tool_mapping(
             out.append(replacements.get(idx, raw))
         return "".join(out), changes
 
-    # Sem CompatToolMapping: cria o bloco inteiro antes do `}` do Steam.
     block_indent = _indent_of(lines[layout.steam_open_idx]) + "\t"
     eol = _eol_of(lines[layout.steam_open_idx])
     entry_indent = block_indent + "\t"
@@ -1135,11 +753,6 @@ def build_compat_tool_mapping(
         parts.append(_entry_block(appid, tool_name, entry_indent, eol))
         changes[appid] = {"action": "added", "previous_name": ""}
     parts.append(f"{block_indent}}}{eol}")
-    # Marca (na entrada global "0", que sempre existe aqui) que NÓS criamos o
-    # bloco CompatToolMapping inteiro do zero — o unlock usa isso para derrubar
-    # também o wrapper (open/close + "CompatToolMapping") quando todas as
-    # entradas sobreviventes forem revertidas por nós, em vez de deixar um
-    # `CompatToolMapping {}` vazio residual (uninstall simétrico, PLAT-01).
     changes["0"]["ctm_created"] = "1"
     out = []
     for idx, raw in enumerate(lines):
@@ -1155,13 +768,7 @@ def remove_compat_tool_mapping(
     tool_name: str,
     changes: dict[str, dict[str, str]],
 ) -> tuple[str, int]:
-    """Reverte SÓ as mudanças registradas pelo lock. Retorna (texto, nº).
-
-    Regra de ouro do uninstall simétrico: entrada cujo nome atual NÃO é mais
-    `tool_name` foi mudada pela usuária depois do lock — fica intacta (ela
-    assumiu o controle). ``added`` remove o bloco inteiro; ``replaced``
-    restaura o nome anterior.
-    """
+    """Reverte SÓ as mudanças registradas pelo lock. Retorna (texto, nº)."""
     lines = config_vdf_text.splitlines(keepends=True)
     layout = _parse_ctm_layout(lines)
     drop: set[int] = set()
@@ -1172,7 +779,7 @@ def remove_compat_tool_mapping(
         if entry is None or entry.name_idx is None:
             continue
         if entry.name_value != tool_name:
-            continue  # a usuária mudou depois do lock — dela agora
+            continue
         if change.get("action") == "added":
             drop.update(range(entry.key_idx, entry.close_idx + 1))
             reverted += 1
@@ -1189,14 +796,6 @@ def remove_compat_tool_mapping(
                 + line_eol
             )
             reverted += 1
-    # Uninstall simétrico (achado #7): se NÓS criamos o bloco inteiro
-    # (flag `ctm_created` na entrada global "0") e TODAS as entradas
-    # sobreviventes do CTM serão derrubadas por nós, remove também o wrapper
-    # vazio (open/close + a linha `"CompatToolMapping"`) — senão sobra um
-    # `CompatToolMapping {}` residual no config.vdf. Se a usuária assumiu
-    # alguma entrada (name != tool_name, já pulada acima), o key_idx dela NÃO
-    # está em `drop`, o bloco não fica vazio e o wrapper é preservado intacto
-    # (o caso com CTM pré-existente nunca marca a flag, logo segue inalterado).
     ctm_created = changes.get("0", {}).get("ctm_created") == "1"
     if (
         ctm_created
@@ -1211,7 +810,7 @@ def remove_compat_tool_mapping(
         while j >= 0 and not lines[j].strip():
             j -= 1
         if j >= 0:
-            drop.add(j)  # a linha `"CompatToolMapping"`
+            drop.add(j)
     if not drop and not replacements:
         return config_vdf_text, 0
     out = [
@@ -1220,11 +819,6 @@ def remove_compat_tool_mapping(
         if idx not in drop
     ]
     return "".join(out), reverted
-
-
-# --------------------------------------------------------------------------
-# lock/unlock — funções de ARQUIVO (gate Steam fechada, backup, tmp+replace)
-# --------------------------------------------------------------------------
 
 
 def _write_vdf_with_backup(vdf: Path, new_text: str) -> Path:
@@ -1344,8 +938,6 @@ def lock_games_to_pinned_proton(
         return result
 
 
-#: Quanto uma trava espera a outra, em segundos — 18/09/2026. O corpo do lock
-#: leva menos de um segundo (ler, decidir, gravar). Quem segura a trava por mais
 #: que isto está preso, e esperar para sempre prenderia junto quem espera: o
 #: vigia é um oneshot sem prazo (o `.timer` e o `.path` não o disparam de novo
 #: enquanto ele não sai, e com ele param o Steam Input e a sentinela), e o
@@ -1359,19 +951,7 @@ class _TravaOcupadaError(Exception):
 
 @contextlib.contextmanager
 def _uma_trava_por_vez(state: Path, *, ativa: bool) -> Iterator[None]:
-    """Um `flock` exclusivo em volta de ler-mudar-gravar o `config.vdf`.
-
-    POR QUE AGORA (18/09/2026): o lock passou a ter três donos que podem rodar
-    juntos — o install, o botão da aba Sistema e o `--manter` do vigia, que
-    dispara justamente quando a Steam sai (e o install a fecha). Dois
-    processos escrevendo o mesmo `config.vdf.hefesto-tmp` ao mesmo tempo
-    podiam trocar o arquivo da Steam por um meio escrito. A trava fica ao lado
-    do registro, que é arquivo nosso. Sem `fcntl` (fora do Linux), segue sem.
-
-    A ESPERA TEM PRAZO (:data:`_PACIENCIA_DA_TRAVA_S`): passado dele, levanta
-    :class:`_TravaOcupadaError`, e quem chama devolve ``recusado`` — o mesmo
-    desfecho da Steam aberta, que o vigia tenta de novo na próxima volta.
-    """
+    """Um `flock` exclusivo em volta de ler-mudar-gravar o `config.vdf`."""
     if not ativa:
         yield
         return
@@ -1418,9 +998,6 @@ def _lock_dentro_da_trava(
     sem_entrada_de: Callable[[Sequence[str]], Collection[str]] | None,
 ) -> dict[str, object]:
     """O corpo do lock, já com a trava na mão (ver `lock_games_to_pinned_proton`)."""
-    # OS PINOS QUE JÁ FORAM NOSSOS: o histórico do registro mais o que o
-    # chamador semeia. O `tool_name` de hoje entra por completude — se ele
-    # aparecer numa entrada, ela já está certa e nem chega ao ramo da migração.
     pinos_nossos = tuple(
         dict.fromkeys([*_pinos_ja_usados(state), *migrar_de, tool_name])
     )
@@ -1454,14 +1031,6 @@ def _lock_dentro_da_trava(
         result["reason"] = "dry_run"
         return result
     try:
-        # Registro ANTES do vdf: se a persistência do estado falhar (OSError),
-        # o config.vdf continua INTACTO (não pinado) e o lock volta com "erro"
-        # — falha segura. A ordem inversa deixava o Proton pinado no vdf sem
-        # registro, e como re-lock é idempotente (noop, nunca regrava estado)
-        # o unlock/uninstall NUNCA mais conseguiria reverter. Se, ao contrário,
-        # o estado for gravado mas a escrita do vdf falhar, o vdf fica original
-        # e o unlock apenas não acha o que reverter (reverted=0) e limpa o
-        # estado — a direção segura da invariante.
         _merge_lock_state(
             state, tool_name=tool_name, changes=changes, pinos_nossos=pinos_nossos
         )
@@ -1474,13 +1043,7 @@ def _lock_dentro_da_trava(
 
 
 def _pinos_ja_usados(state_path: Path) -> tuple[str, ...]:
-    """Os Protons que ESTE produto já pinou, na ordem em que apareceram.
-
-    É a memória que faz a subida de pino alcançar os jogos (ver
-    `build_compat_tool_mapping`): o que está aqui é nosso, não é escolha dela.
-    Registro ilegível ou antigo (sem a chave) devolve vazio — e aí o lock se
-    comporta como antes, preservando tudo. Falha para o lado seguro.
-    """
+    """Os Protons que ESTE produto já pinou, na ordem em que apareceram."""
     try:
         data = json.loads(state_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -1489,8 +1052,6 @@ def _pinos_ja_usados(state_path: Path) -> tuple[str, ...]:
     conhecidos = [p for p in pinos if isinstance(p, str)] if isinstance(pinos, list) else []
     atual = data.get("tool_name")
     if isinstance(atual, str) and atual and atual not in conhecidos:
-        # Registro anterior à chave: o `tool_name` gravado por ele É um pino
-        # nosso, e ignorá-lo repetiria o defeito de 16/09 na próxima subida.
         conhecidos.append(atual)
     return tuple(dict.fromkeys(conhecidos))
 
@@ -1499,27 +1060,7 @@ def _fundir_marcas(
     agora: dict[str, dict[str, str]],
     antes: dict[str, dict[str, str]],
 ) -> dict[str, dict[str, str]]:
-    """Funde as marcas do lock POR CAMPO, porque cada campo tem dono diferente.
-
-    O DEFEITO que isto cura, medido em 16/09/2026: a fusão era por ENTRADA
-    (``merged.update(existing)``), e o registro da corrida anterior vencia
-    inteiro. Depois de 24 jogos migrarem de verdade para o pino novo, o registro
-    ainda dizia ``preservado`` para os 24 — a marca da corrida que falhara.
-    **Um registro que descreve a corrida errada não desfaz coisa nenhuma.**
-
-    Quem é dono de quê:
-
-    ``action``
-        a corrida de AGORA. É o que acabou de acontecer com o appid.
-    ``previous_name``
-        a corrida MAIS ANTIGA que o conheceu. É o valor pré-hefesto — o que
-        estava lá antes de este produto encostar — e é ele que desfaz TUDO.
-    ``veio_de``
-        a corrida de AGORA, e só quando ela escreveu. É de onde o appid saiu
-        NESTA subida, e é ele que desfaz UMA subida. Ausente quer dizer "esta
-        corrida não mexeu"; vazio quer dizer "a entrada não existia".
-    """
-    #: As ações que ESCREVERAM no `config.vdf` — as únicas com o que desfazer.
+    """Funde as marcas do lock POR CAMPO, porque cada campo tem dono diferente."""
     escreveram = ("added", "replaced", "migrado")
     fundidas: dict[str, dict[str, str]] = {}
     for appid in {*agora, *antes}:
@@ -1550,10 +1091,6 @@ def _merge_lock_state(
     existing: dict[str, dict[str, str]] = {}
     try:
         data = json.loads(state_path.read_text(encoding="utf-8"))
-        # Lê-se o registro ANTERIOR mesmo quando ele é de outro pino: o
-        # `previous_name` pré-hefesto pertence ao APPID, não à versão do Proton.
-        # Enquanto a leitura exigia `tool_name` igual, toda subida de pino
-        # apagava a única pista de como devolver o jogo ao estado de antes.
         if isinstance(data.get("changes"), dict):
             existing = data["changes"]
     except (OSError, ValueError):
@@ -1562,8 +1099,6 @@ def _merge_lock_state(
     state_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "tool_name": tool_name,
-        # O histórico NUNCA encolhe: é ele que permite a próxima subida de pino
-        # reconhecer o trabalho desta.
         "pinos_do_hefesto": list(
             dict.fromkeys([*_pinos_ja_usados(state_path), *pinos_nossos, tool_name])
         ),
@@ -1633,15 +1168,6 @@ def lock_proton_for_all_games(
     )
     changes = result.get("changes")
     if isinstance(changes, dict):
-        # `preservado` NÃO é travado: é jogo em que ela já tinha escolhido, e o
-        # produto respeitou. Contar os dois juntos diria "travei 19" numa leva em
-        # que 3 ficaram intactos de propósito — e foi assim que o atropelo de
-        # 14/08 passou despercebido. Cada balde conta o que ele é.
-        # `migrado` conta à parte pela mesma razão do `preservado`: ele é o
-        # jogo que estava num pino NOSSO antigo e passou para o de hoje. Somá-lo
-        # ao `locked` esconderia justamente o número que prova que a subida de
-        # pino chegou aos jogos — e foi a ausência desse número que deixou o
-        # defeito de 16/09 invisível.
         locked = sum(
             1 for c in changes.values()
             if isinstance(c, dict) and c.get("action") not in ("preservado", "migrado")
@@ -1659,14 +1185,6 @@ def lock_proton_for_all_games(
         migrados = 0
         preservados = 0
     status = result.get("status")
-    # T-04 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026): `status` e `reason` passam
-    # para fora. Antes só sobrevivia `errors = 1 if status == "erro" else 0`, e
-    # RECUSA não é erro para essa contagem — então uma recusa chegava à tela
-    # como `{locked:0, skipped:0, errors:0}`, indistinguível de "não havia
-    # nada a fazer". `format_proton_lock_result` caía no ramo `elif errors ==
-    # 0` e comemorava *"os jogos já estão no Proton validado"* logo depois de
-    # o gate ter recusado por causa de um jogo aberto. A verdade já estava
-    # calculada aqui dentro; a ponte é que a jogava fora.
     return {
         "locked": locked,
         "migrated": migrados,
@@ -1686,12 +1204,7 @@ def unlock_games_from_pinned_proton(
     home: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, object]:
-    """Uninstall simétrico: reverte SÓ o que o registro do lock diz ser nosso.
-
-    Sem registro = ``noop`` (nunca escrevemos nada — não tocar no vdf).
-    Sucesso remove o arquivo de estado; o Proton extraído FICA (dado do
-    usuário — documentado no conf e no relatório do uninstall).
-    """
+    """Uninstall simétrico: reverte SÓ o que o registro do lock diz ser nosso."""
     vdf = config_vdf if config_vdf is not None else default_config_vdf(home)
     state = state_path if state_path is not None else default_lock_state_path(home)
     result: dict[str, object] = {
@@ -1752,7 +1265,6 @@ def unlock_games_from_pinned_proton(
         result["reason"] = "outra_trava_em_curso"
         return result
     if not dry_run:
-        # O arquivo da trava sai junto com o registro: o uninstall é simétrico.
         with contextlib.suppress(OSError):
             state.with_name(state.name + ".trava").unlink(missing_ok=True)
     result["status"] = "unlocked"
@@ -1767,25 +1279,7 @@ def destravar_um_jogo(
     home: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, object]:
-    """O `unlock` para UM jogo: devolve ESTE appid ao Proton que tinha antes.
-
-    NASCEU EM 21/09/2026 para a lista de exclusão
-    (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E2). O
-    `jogos_fora_do_pino.txt` só tirava o jogo do PRÓXIMO lock, e o único
-    desfazer que existia, :func:`unlock_games_from_pinned_proton`, é o do
-    desinstalar: devolve TODOS. O vigia chama esta função pelo
-    :func:`destravar_os_de_fora`, e a lista de exclusão, na hora do clique.
-
-    A REGRA É A MESMA DO DESINSTALAR, recortada para um appid: reverte só o que
-    o registro diz ser nosso, e **se ela trocou o Proton do jogo depois do
-    pino, a escolha é dela e fica** (`remove_compat_tool_mapping` pula a
-    entrada cujo nome não é mais o nosso). O registro perde só a linha deste
-    jogo; o resto dele — os outros jogos e o histórico dos pinos — fica.
-
-    Status em ``status``: ``"destravado"`` | ``"noop"`` (``reason``:
-    ``nao_era_nosso``, ``sem_estado``) | ``"recusado"`` (Steam aberta, outra
-    trava) | ``"erro"``. Nunca levanta.
-    """
+    """O `unlock` para UM jogo: devolve ESTE appid ao Proton que tinha antes."""
     alvo = str(appid).strip()
     vdf = config_vdf if config_vdf is not None else default_config_vdf(home)
     state = state_path if state_path is not None else default_lock_state_path(home)
@@ -1834,10 +1328,6 @@ def destravar_um_jogo(
             try:
                 if reverted:
                     result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
-                # A LINHA SAI DO REGISTRO MESMO QUANDO NADA FOI REVERTIDO: o
-                # `reverted == 0` quer dizer que ela já tinha trocado o Proton
-                # do jogo — a entrada deixou de ser nossa, e guardá-la faria um
-                # desinstalar futuro tentar desfazer o que não é mais nosso.
                 restante = {k: v for k, v in changes.items() if k != alvo}
                 tmp = state.with_name(state.name + ".tmp")
                 tmp.write_text(
@@ -1864,18 +1354,7 @@ def destravar_os_de_fora(
     home: Path | None = None,
     fora: Sequence[str] | None = None,
 ) -> list[str]:
-    """Tira do NOSSO pino os jogos de `jogos_fora_do_pino.txt`. Nunca levanta.
-
-    21/09/2026 (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E2). A lista
-    fazia o jogo ser PULADO pelo lock, e um jogo que já estava no pino ao
-    entrar nela continuava lá — o cabeçalho do arquivo promete *"o Proton que
-    você escolher para eles fica como está"*, e o que ficava era o nosso. Cada
-    jogo passa por :func:`destravar_um_jogo`, com a regra dele: só sai o que o
-    registro diz ser nosso, e a escolha dela depois do pino fica.
-
-    Devolve os appids destravados. Os recusados (Steam aberta) ficam para o
-    próximo ciclo do vigia, que é quem chama isto.
-    """
+    """Tira do NOSSO pino os jogos de `jogos_fora_do_pino.txt`. Nunca levanta."""
     nomes = list(fora) if fora is not None else ler_jogos_fora_do_pino(
         fora_do_pino_path(home)
     )
@@ -1889,19 +1368,8 @@ def destravar_os_de_fora(
     return destravados
 
 
-# --------------------------------------------------------------------------
-# Doctor helper (puro) + inventário de jogos instalados
-# --------------------------------------------------------------------------
-
-
 def proton_major(tool_name: str) -> int | None:
-    """Major do Proton a partir do nome do tool (GE e Valve); None = ignoto.
-
-    `GE-Proton10-34` → 10; `proton_9` → 9; `proton_63` → 6 (era 6.3);
-    `proton_513` → 5; `proton_10`/`proton_11` → 10/11 (a partir do 10 a Valve
-    para de colar minor no sufixo). `proton_experimental`, runtimes e tools
-    customizados → None (não afirmamos o que não sabemos).
-    """
+    """Major do Proton a partir do nome do tool (GE e Valve); None = ignoto."""
     m = _GE_NAME_RE.match(tool_name)
     if m is not None:
         return int(m.group("major"))
@@ -1910,21 +1378,14 @@ def proton_major(tool_name: str) -> int | None:
         return None
     digits = m.group("digits")
     if len(digits) == 1:
-        return int(digits)  # proton_7/8/9
+        return int(digits)
     if len(digits) == 2 and digits[0] in "12":
-        return int(digits)  # proton_10, proton_11, … (major puro a partir do 10)
-    # Nomes antigos com minor colado: proton_316→3.16, proton_42→4.2,
-    # proton_411→4.11, proton_513→5.13, proton_63→6.3.
+        return int(digits)
     return int(digits[0])
 
 
 def list_installed_appids(home: Path | None = None) -> list[str]:
-    """appids dos JOGOS instalados (appmanifest_*.acf de todas as libraries).
-
-    Ferramentas (Proton, Steam Linux Runtime, redistributables) ficam de fora
-    pelo "name" do manifest — travar o Proton-ferramenta em outro Proton não
-    faz sentido. Best-effort read-only: manifest ilegível é pulado.
-    """
+    """appids dos JOGOS instalados (appmanifest_*.acf de todas as libraries)."""
     out: set[str] = set()
     for library in _pastas_de_biblioteca(home):
         for manifest in sorted(library.glob("appmanifest_*.acf")):
@@ -1964,19 +1425,8 @@ def _pastas_de_biblioteca(home: Path | None = None) -> list[Path]:
     return library_dirs
 
 
-# --------------------------------------------------------------------------
-# appinfo.vdf — a plataforma de cada jogo, lida do cache binário da Steam
-# --------------------------------------------------------------------------
-
-#: `appcache/appinfo.vdf` v28 e v29 (a v29 guarda as CHAVES numa tabela de
-#: strings no fim do arquivo; os valores continuam inline). Formato de
-#: SteamDatabase/SteamAppInfo. Versão desconhecida = ilegível, e quem chama cai
-#: na reserva do `compatdata`.
 _APPINFO_MAGICS = {0x07564428: 28, 0x07564429: 29}
 
-#: Da entrada de cada app, o que vem antes do VDF binário: infoState (4),
-#: lastUpdated (4), picsToken (8), SHA1 do texto (20), changeNumber (4) e SHA1
-#: do binário (20). O `size` da entrada conta a partir do infoState.
 _APPINFO_CABECALHO_DA_ENTRADA = 60
 
 
@@ -1988,12 +1438,7 @@ def _ler_cstring(buf: bytes, pos: int) -> tuple[str, int]:
 def _ler_vdf_binario(
     buf: bytes, pos: int, chaves: list[str] | None, profundidade: int = 0
 ) -> tuple[dict[str, object], int]:
-    """Um mapa do KeyValues binário da Steam, a partir de `pos`, até o `0x08`.
-
-    ``chaves`` é a tabela de strings da v29 (a chave é um índice u32); na v28 é
-    ``None`` e a chave vem inline. Só string e inteiro viram valor — o resto é
-    pulado pelo tamanho, porque ninguém aqui precisa dele.
-    """
+    """Um mapa do KeyValues binário da Steam, a partir de `pos`, até o `0x08`."""
     if profundidade > 64:
         raise ValueError("appinfo.vdf aninhado demais")
     out: dict[str, object] = {}
@@ -2021,11 +1466,6 @@ def _ler_vdf_binario(
         elif tipo in (0x07, 0x0A):
             valor, pos = None, pos + 8
         elif tipo == 0x05:
-            # A string LARGA (UTF-16) termina em dois zeros. O laço era
-            # `while buf[fim:fim + 2] != b"\0\0"`, e numa entrada sem esse fim
-            # ele não parava nunca: além do fim do buffer a fatia é `b""`, que
-            # nunca é igual a dois zeros (18/09/2026). O vigia roda isto DENTRO
-            # da trava do `config.vdf`, e ficava preso para sempre com ela.
             fim = pos
             while True:
                 if fim + 2 > len(buf):
@@ -2053,17 +1493,7 @@ def _chave(mapa: object, nome: str) -> object:
 def oslist_do_appinfo(
     appinfo: Path, appids: Collection[str]
 ) -> dict[str, str] | None:
-    """O `common/oslist` de cada appid pedido, lido do `appinfo.vdf` binário.
-
-    ``None`` quando o arquivo não existe, não se lê ou é de uma versão que
-    este leitor não conhece — e aí quem chama não pode concluir nada dele. App
-    que não está no cache simplesmente não aparece no dicionário; app que está
-    e não declara `oslist` aparece com ``""``.
-
-    Lê só o cabeçalho de cada entrada e pula as que não interessam pelo
-    tamanho: o vigia chama isto, e um `appinfo.vdf` de biblioteca grande tem
-    dezenas de MB. Stdlib pura, como o resto do módulo.
-    """
+    """O `common/oslist` de cada appid pedido, lido do `appinfo.vdf` binário."""
     procurados = {str(a) for a in appids}
     if not procurados:
         return {}
@@ -2120,21 +1550,7 @@ def _declara_linux(oslist: str) -> bool:
 def jogos_sem_entrada_nova(
     appids: Sequence[str], *, home: Path | None = None
 ) -> set[str]:
-    """Dos `appids`, os que NÃO ganham entrada nova por jogo no pino.
-
-    A CLASSE DO "TODO JOGO" — 18/09/2026, decisão registrada na
-    INSTALL-UNIVERSAL, e ela se afasta da letra de propósito: o pino existe por
-    causa do winebus, e jogo nativo não atravessa o Wine. Travá-lo no GE fazia
-    a Steam baixar a versão Windows e guardar os saves no prefixo, em silêncio.
-
-    A fonte é o `common/oslist` do `appcache/appinfo.vdf` (:func:`oslist_do_appinfo`):
-    declara `linux` → nativo. Quando o appinfo não diz — ilegível, versão nova,
-    ou o app fora do cache —, a reserva é a pegada do Proton: existe
-    `steamapps/compatdata/<appid>` em alguma biblioteca? Então ele já rodou pelo
-    Proton e ganha a entrada. Sem nenhuma das duas provas, fica sem entrada: o
-    global `"0"` já cobre todo título SEM versão Linux, inclusive os que forem
-    instalados depois.
-    """
+    """Dos `appids`, os que NÃO ganham entrada nova por jogo no pino."""
     raiz = default_steam_root(home)
     oslist = oslist_do_appinfo(raiz / "appcache" / "appinfo.vdf", appids)
     compatdatas = [lib / "compatdata" for lib in _pastas_de_biblioteca(home)]
@@ -2150,17 +1566,8 @@ def jogos_sem_entrada_nova(
     return nativos
 
 
-# --------------------------------------------------------------------------
-# As versões que sobram (O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01)
-# --------------------------------------------------------------------------
-# Ao abrir, o cliente da Steam roda `proton run …/d3ddriverquery64.exe` duas
-# vezes por versão em `compatibilitytools.d`, todas no mesmo `compatdata/0`, e
-# cada uma regrava o prefixo da anterior. Medido em 01/10 com cinco GE-Proton:
-# dez rodadas, ~2,5 min, e trancos de até 2,7 s no jogo aberto nessa janela.
-# Os 30 jogos dela usavam um só. Ela: «Nosso botao de fixar o proton deveria
 # desinstalar as outras versoes nao usadas». (noqa-acento: citação literal dela)
 
-#: O nome interno de uma ferramenta, a chave logo abaixo de `"compat_tools"`.
 _NOME_INTERNO_RE = re.compile(r'"(?P<nome>(?:\\.|[^"\\])+)"[^\n{]*\n\s*\{')
 
 
@@ -2174,11 +1581,7 @@ class VersaoQueSobra:
 
 
 def nomes_internos(pasta: Path) -> tuple[str, ...]:
-    """Os nomes que a Steam lê no `compatibilitytool.vdf` da pasta.
-
-    É por eles, e não pelo nome da pasta, que o `CompatToolMapping` aponta.
-    Sem o arquivo legível, o nome da pasta: o lado que preserva.
-    """
+    """Os nomes que a Steam lê no `compatibilitytool.vdf` da pasta."""
     try:
         texto = (pasta / "compatibilitytool.vdf").read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -2231,15 +1634,7 @@ def versoes_que_sobram(
     *,
     pino: str | None = None,
 ) -> list[VersaoQueSobra]:
-    """As versões do Proton em `compatibilitytools.d` que ninguém usa.
-
-    «Usada» é o pino e todo nome do `CompatToolMapping`, inclusive a chave
-    global `"0"`, o jogo que ela tirou do pino e o jogo desinstalado (a entrada
-    fica, e o jogo reinstalado volta com a versão dele). Só a família Proton:
-    outra ferramenta (luxtorpeda, Boxtron) é escolha de rodar nativo. Nunca
-    levanta: sem a raiz da Steam, sem o pino ou sem o `config.vdf` legível,
-    a resposta é vazia, que é o lado que não apaga nada.
-    """
+    """As versões do Proton em `compatibilitytools.d` que ninguém usa."""
     raiz, _recusa = steam_root_ou_recusa(home)
     if raiz is None:
         return []
@@ -2285,11 +1680,7 @@ def _em_uso(pasta: Path) -> bool:
 
 
 def _para_a_lixeira(pasta: Path) -> str | None:
-    """Manda a pasta para a lixeira do usuário. `None` deu certo; senão, o motivo.
-
-    Nunca apaga: sem `gio`, recusa. Um clique que perde 1,5 GB sem volta pede
-    mais do que uma frase.
-    """
+    """Manda a pasta para a lixeira do usuário. `None` deu certo; senão, o motivo."""
     gio = shutil.which("gio")
     if gio is None:
         return "sem lixeira nesta máquina (falta o gio)"
@@ -2306,12 +1697,7 @@ def desinstalar_as_que_sobram(
     lixeira: Callable[[Path], str | None] = _para_a_lixeira,
     em_uso: Callable[[Path], bool] = _em_uso,
 ) -> tuple[list[VersaoQueSobra], dict[str, str]]:
-    """Manda cada sobra para a lixeira. Devolve as que saíram e as recusadas.
-
-    Recusa a pasta que um processo vivo está usando (a fila da Steam, logo
-    depois de ela abrir) e a que deixou de estar dentro de
-    `compatibilitytools.d`. Nunca levanta.
-    """
+    """Manda cada sobra para a lixeira. Devolve as que saíram e as recusadas."""
     saiu: list[VersaoQueSobra] = []
     recusadas: dict[str, str] = {}
     for sobra in sobras:
@@ -2339,19 +1725,7 @@ def proton_pin_report(
     config_vdf_text: str,
     installed_appids: Sequence[str] | None = None,
 ) -> dict[str, object]:
-    """Struct do doctor (puro — quem lê arquivos é a lane de wiring).
-
-    Chaves:
-    - ``pinned_name``/``pinned_present``/``pinned_manifest_ok``: a versão do
-      conf existe em compatibilitytools.d? com o nosso manifesto batendo?
-    - ``global_tool``/``global_is_pinned``: o default global (`"0"`).
-    - ``mapping``: appid → tool (como está no vdf).
-    - ``games_off_pin``: appids (dos instalados, se fornecidos, senão do
-      próprio mapping) cujo tool EFETIVO não é o pinado.
-    - ``games_leaky_proton``: ``[(appid, tool)]`` com Proton major ≤ 9 —
-      risco REAL de vazamento winebus (PROTON_DISABLE_HIDRAW é semântica do
-      10+; no ≤ 9 o físico volta a vazar duplicado).
-    """
+    """Struct do doctor (puro — quem lê arquivos é a lane de wiring)."""
     name = conf["name"]
     present = pinned_proton_installed(name, compat_dir)
     manifest_ok = _read_manifest_sha256(name, compat_dir) == conf["sha256"].lower()
@@ -2379,11 +1753,6 @@ def proton_pin_report(
         "games_off_pin": off_pin,
         "games_leaky_proton": leaky,
     }
-
-
-# --------------------------------------------------------------------------
-# CLI (o install/uninstall/doctor chamam este arquivo como script avulso)
-# --------------------------------------------------------------------------
 
 
 def _load_conf(path: Path | None) -> dict[str, str]:
@@ -2432,12 +1801,7 @@ def _rc_do_ensure(result: EnsureResult) -> int:
 
 
 def _avisar_da_raiz_envenenada() -> None:
-    """Diz, no log do install e do vigia, onde está a sobra que cega a Steam.
-
-    A máquina que já passou pelo `--ensure` de antes desta cura continua com o
-    `~/.steam/steam` falso, e reinstalar não o tira: sem esta linha, o install
-    diria só "não há Steam nativa" numa máquina que TEM Steam — em `~/.steam`.
-    """
+    """Diz, no log do install e do vigia, onde está a sobra que cega a Steam."""
     sobra = raiz_envenenada()
     if sobra is not None:
         print(
@@ -2455,15 +1819,8 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
     cache = args.cache_dir if args.cache_dir else default_cache_dir()
     downloader = None if args.offline else curl_downloader
     if args.compat_dir:
-        # Destino explícito: quem o passou responde pela raiz. A segunda
-        # muralha continua valendo — o `_extract_verified_tarball` não cria a
-        # pasta de cima.
         compat = args.compat_dir
     else:
-        # A PERGUNTA QUE O 11c NÃO FAZIA — 18/09/2026: existe Steam nativa?
-        # Sem ela, o ensure antigo baixava 563 MB, extraía, e o
-        # `mkdir(parents=True)` deixava `~/.steam/steam` como diretório real —
-        # a sobra que estraga a primeira execução da Steam.
         raiz, motivo = steam_root_ou_recusa()
         if raiz is None:
             _avisar_da_raiz_envenenada()
@@ -2497,25 +1854,7 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
 
 
 def _cmd_manter(args: argparse.Namespace) -> int:
-    """O que o vigia da Steam roda: repõe o pino sem rede, e trava todo jogo.
-
-    692cf5343 + 7b27bb58d, a metade que faltava (18/09/2026). A trava `--todos`
-    só acontecia no passo 11c do install, e só com a Steam fechada — e NADA
-    tentava de novo. Este é o terceiro passo do vigia (o `.path` dispara quando
-    a Steam sai, o `.timer` a cada 30 min), na carona do Steam Input e do
-    wrapper: o instante em que a Steam acaba de sair é o único em que uma
-    edição do `config.vdf` sobrevive.
-
-    Nunca baixa (é `--offline`: o tarball vem do cache que o install adiantou),
-    nunca abre nem fecha a Steam (o portão do lock ADIA com ela ou um jogo
-    abertos, rc 3), e respeita o `jogos_fora_do_pino.txt`. Sem Steam nativa,
-    não há o que manter: sai 0.
-
-    A EXTRAÇÃO TAMBÉM ESPERA A STEAM FECHAR (18/09/2026). Ela vinha antes do
-    portão, e o `.timer` de meia hora podia descompactar ~1,5 GB no meio de uma
-    partida. Com a Steam aberta a trava adiaria de qualquer jeito, então
-    extrair agora não adianta nada: as duas acontecem juntas na saída dela.
-    """
+    """O que o vigia da Steam roda: repõe o pino sem rede, e trava todo jogo."""
     conf = _conf_ou_rc(args)
     if isinstance(conf, int):
         return conf
@@ -2528,12 +1867,6 @@ def _cmd_manter(args: argparse.Namespace) -> int:
     compat = args.compat_dir if args.compat_dir else raiz / "compatibilitytools.d"
     if not pinned_proton_installed(name, compat):
         cache = args.cache_dir if args.cache_dir else default_cache_dir()
-        # SEM TARBALL NO CACHE, NÃO HÁ O QUE EXTRAIR — 18/09/2026. O portão
-        # vinha antes, e com a Steam aberta o `--fix` mandava fechá-la para, na
-        # volta, ouvir que o tarball não estava no cache: o conselho chegava em
-        # dois saltos, sobre uma extração que nunca ia acontecer. Aqui só se
-        # olha se o arquivo EXISTE; o SHA256 continua sendo conferido pelo
-        # ensure, depois do portão.
         if not (cache / f"{name}.tar.gz").is_file():
             print(f"[proton-pin] manter: {name} ainda não está em {compat}, e o "
                   f"tarball não está no cache ({cache})")
@@ -2555,7 +1888,6 @@ def _cmd_manter(args: argparse.Namespace) -> int:
             return _rc_do_ensure(result)
     vdf = args.config_vdf if args.config_vdf else raiz / "config" / "config.vdf"
     if not vdf.is_file():
-        # Steam instalada que nunca entrou numa conta: ainda não há onde travar.
         print(f"[proton-pin] manter: {vdf} ainda não existe — nada a travar")
         return 0
     appids = list_installed_appids()
@@ -2573,9 +1905,6 @@ def _cmd_manter(args: argparse.Namespace) -> int:
         mirados=len(appids),
         prefixo="manter",
     )
-    # O AVESSO, no mesmo ciclo (21/09/2026): o lock PULA quem está fora do
-    # pino, e este passo tira dele quem já estava — é o que faz a lista de
-    # exclusão do Hefesto valer no disco sem ninguém apertar mais nada.
     for appid in destravar_os_de_fora(config_vdf=vdf, state_path=args.state):
         print(f"[proton-pin] manter: {appid} saiu do pino (jogos_fora_do_pino.txt)")
     return rc
@@ -2594,12 +1923,8 @@ def _cmd_lock(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
         migrar_de=migrar_de,
         todos=args.todos,
-        # A exceção nomeada vale para todo caminho que trava; `--appids`
-        # explícito é a escolha de quem chamou, e ali a classe não se infere.
         excluir=ler_jogos_fora_do_pino(),
         sem_entrada_de=None if explicitos else jogos_sem_entrada_nova,
-        # Sem o pino, o `--lock` recusa (rc 4) — o install só chega aqui com
-        # ele pronto, mas quem roda a linha à mão, não.
         compat_dir=args.compat_dir if args.compat_dir else default_compat_dir(),
     )
     return _travar_e_contar(result, mirados=len(appids), prefixo="lock")
@@ -2609,12 +1934,6 @@ def _travar_e_contar(
     result: dict[str, object], *, mirados: int | None, prefixo: str
 ) -> int:
     """Imprime o que o lock FEZ, balde por balde, e devolve o rc do CLI."""
-    # A LINHA DIZ O QUE ACONTECEU, NÃO O QUE FOI MIRADO — 16/09/2026. Ela
-    # imprimia `len(appids)`, o tamanho do ALVO: no dia em que o pino subiu,
-    # anunciou *"locked — 25 jogos + default global"* enquanto os 25 ficavam
-    # onde estavam (`action="preservado"`) e só o global mudava. É a família de
-    # defeito que esta casa persegue há meses: o instrumento dizendo o que não
-    # fez. Agora cada balde sai com o seu nome, e `0` aparece quando é 0.
     mudancas = result.get("changes")
     mudancas = mudancas if isinstance(mudancas, dict) else {}
     baldes: dict[str, int] = {}
@@ -2635,8 +1954,6 @@ def _travar_e_contar(
         + f" em {result['vdf']}"
     )
     if result["reason"] == "pino_ausente":
-        # 18/09/2026: travar aqui apontaria cada jogo para uma ferramenta que
-        # não existe. É espera, não falha — o mesmo `4` do adiamento.
         print(
             f"[proton-pin] o Proton pinado não está instalado ({result.get('pino')}) "
             "— nada foi travado: apontar os jogos para uma ferramenta que não "
@@ -2658,8 +1975,6 @@ def _travar_e_contar(
             )
         return 3
     if result["reason"] == "config_vdf_ausente":
-        # Steam instalada que nunca entrou numa conta: não há falha, há espera.
-        # O install dizia "trava do Proton falhou" numa máquina recém-montada.
         print(
             "[proton-pin] a Steam ainda não tem config.vdf (nunca entrou numa "
             "conta) — a trava espera; o vigia da Steam trava quando ela sair."
@@ -2693,11 +2008,7 @@ def nomear_fora_do_pino(appid: int | str, *, nota: str = "") -> str:
 
 
 def devolver_ao_pino(appid: int | str) -> str:
-    """O avesso de :func:`nomear_fora_do_pino`. Nunca levanta.
-
-    Status: ``"removido"`` | ``"nao_estava"`` | ``"appid_invalido"`` |
-    ``"erro"``.
-    """
+    """O avesso de :func:`nomear_fora_do_pino`. Nunca levanta."""
     return remove_appid_from_steam_input_allowlist(appid, path=fora_do_pino_path())
 
 
@@ -2856,9 +2167,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[proton-pin] ERRO: {exc}")
         return 1
     except OSError as exc:
-        # Disco cheio ou permissão fora dos lugares que já dizem o próprio
-        # desfecho: o rc 1 é do checksum e da falha genérica do lock, e o
-        # install não pode ler um disco cheio como "checksum não bateu".
         print(f"[proton-pin] ERRO de disco: {exc}")
         return RC_EXTRACAO_FALHOU
 

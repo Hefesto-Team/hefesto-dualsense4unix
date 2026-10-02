@@ -485,14 +485,14 @@ modules:
       # passar a levá-los". Este é o depois.
       #
       # Quem consome cada um (medido em `src/`, não citado de memória):
-      #   doctor.sh                          cli/cmd_doctor.py:38 (o exame)
+      #   doctor.sh                          cli/cmd_doctor.py:32 (o exame)
       #   bluez_config.sh                    doctor.sh:2484 — dono único da
       #                                      config do BlueZ; quem leva o
       #                                      doctor leva ele (regra de PAR)
-      #   disable_steam_input.sh             daemon_actions.py:1216 e :1604
-      #   fix_wireplumber_default_source.sh  daemon_actions.py:1217,
-      #                                      emulation_actions.py:1201 (mic)
-      #   install_snd_quirk.sh               cli/cmd_doctor.py:186 (--fix)
+      #   disable_steam_input.sh             daemon_actions.py:913 e :1604
+      #   fix_wireplumber_default_source.sh  daemon_actions.py:914,
+      #                                      emulation_actions.py:712 (mic)
+      #   install_snd_quirk.sh               cli/cmd_doctor.py:145 (--fix)
       #
       # Portão: a seção "scripts do produto" de
       # `scripts/check_packaging_parity.sh`.

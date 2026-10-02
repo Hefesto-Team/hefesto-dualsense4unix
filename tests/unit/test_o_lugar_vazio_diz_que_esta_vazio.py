@@ -1,27 +1,4 @@
-"""Lugar vazio diz `P2 • Desconectado`, e não um travessão mudo.
-
-MEDIDO NA TELA EM 05/09/2026, fotografando a aba Vibração com UM controle na
-bancada: três colunas igualmente vazias, e só uma delas calada.
-
-===========  ==========================  ===================================
-coluna       o que aparecia              por quê
-===========  ==========================  ===================================
-P2           ``—``                       TEM endereço (``data-hef=
-                                         "identidade"``), então o piloto
-                                         escrevia o travessão por cima
-P3, P4       ``P3 • Desconectado``       são DESENHO — ninguém escreve nelas,
-                                         e a frase do gerador sobrevivia
-===========  ==========================  ===================================
-
-O TRAVESSÃO CONTINUA CERTO PARA O RESTO DA COLUNA. *"Isto eu não sei"* é a
-resposta honesta para o volume de um controle que não está aqui. Mas a
-IDENTIDADE do lugar não é desconhecida: o lugar é o P2, e ele está
-desconectado. Isso se sabe — e a tela já sabia dizer em dois dos quatro.
-
-A MORDIDA: apague o `if IDENTIDADE_DO_LUGAR in chaves:` de
-`pacotes.apagar_os_lugares_sem_dono` e :func:`test_o_lugar_sem_ninguem_se_nomeia` reprova —
-o travessão volta a cobrir a identidade.
-"""
+"""Lugar vazio diz `P2 • Desconectado`, e não um travessão mudo."""
 
 from __future__ import annotations
 
@@ -40,8 +17,6 @@ from hefesto_dualsense4unix.interface.pacotes import (
     TRAVESSAO,
 )
 
-#: UMA COLUNA DE VERDADE, com a identidade e mais dois campos quaisquer. Os
-#: dois "quaisquer" existem para provar que a cura NÃO os alcança.
 COLUNA_VIVA = {IDENTIDADE_DO_LUGAR: "P1 • Cosmic Red",
                "forca": "balanceado", "motor-forte": "100"}
 
@@ -63,11 +38,7 @@ def test_o_lugar_sem_ninguem_se_nomeia(pref: str) -> None:
 
 @pytest.mark.parametrize("campo", ["forca", "motor-forte"])
 def test_o_resto_da_coluna_continua_travessao(campo: str) -> None:
-    """A cura não pode virar "inventar valor para quem não está aqui".
-
-    O travessão é a resposta honesta para o que NÃO se sabe. Só a identidade
-    do lugar sai da regra, porque só ela é conhecida.
-    """
+    """A cura não pode virar "inventar valor para quem não está aqui"."""
     carga = pacotes.apagar_os_lugares_sem_dono(_carga_com_um_controle(), com_dono=("p1",))
     assert carga["colunas"]["p2"][campo] == TRAVESSAO
 
@@ -79,24 +50,14 @@ def test_o_lugar_ocupado_nao_e_tocado() -> None:
 
 
 def test_aba_sem_a_chave_nao_ganha_chave_nova() -> None:
-    """`chaves` é a união do que a PRÓPRIA carga trouxe — nada nasce aqui.
-
-    Uma aba que não emite `identidade` não pode passar a emitir por causa
-    desta cura: o piloto escreveria num endereço que a página não tem, e o
-    contador de campos pintados mentiria para cima.
-    """
+    """`chaves` é a união do que a PRÓPRIA carga trouxe — nada nasce aqui."""
     carga = {"colunas": {"p1": {"forca": "balanceado"}}}
     saida = pacotes.apagar_os_lugares_sem_dono(carga, com_dono=("p1",))
     assert IDENTIDADE_DO_LUGAR not in saida["colunas"]["p2"]
 
 
 def test_a_frase_e_a_mesma_do_desenho() -> None:
-    """A palavra tem UM dono — senão a casa fica com duas versões dela.
-
-    O gerador da aba 05 escreve `P{j} • Desconectado` nas colunas que são
-    desenho puro (P3 e P4). Se as duas frases divergirem, a tela mostra as
-    duas lado a lado e ninguém vê.
-    """
+    """A palavra tem UM dono — senão a casa fica com duas versões dela."""
     from pathlib import Path
     raiz = Path(__file__).resolve().parents[2]
     fonte = (raiz / "src/hefesto_dualsense4unix/interface/aba05.py").read_text(

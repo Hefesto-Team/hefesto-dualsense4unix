@@ -15,7 +15,6 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 def test_vpad_product_e_edge_distinto_do_fisico():
     assert uhid.VPAD_PRODUCT == 0x0DF2
     assert uhid.DUALSENSE_PRODUCT == 0x0CE6
-    # o coração da cura: o PID do vpad NÃO pode colidir com o do físico
     assert uhid.VPAD_PRODUCT != uhid.DUALSENSE_PRODUCT
 
 
@@ -34,28 +33,21 @@ def test_create2_event_encoda_vid_pid_edge():
 
 
 def test_product_e_campo_overridavel():
-    """`product` é campo do dataclass — permite forjar outro PID em teste/futuro
-    (ex.: se um dia o físico for um Edge, o vpad pode virar 0x0ce6)."""
+    """`product` é campo do dataclass — permite forjar outro PID em teste/futuro"""
     pad = uhid.UhidDualSense(player=2, product=0x0CE6)
     event = pad._create2_event(b"\x00" * 8)
     assert struct.unpack("<I", event[268:272])[0] == 0x0CE6
 
 
 def test_backend_property_distingue_os_dois_vpads():
-    """As envs materializadas para o wrapper de launch decidem pelo backend —
-    uhid tem hidraw (IGNORE_DEVICES é seguro); uinput no flavor dualsense é o
-    fallback degradado: também é Edge 0x0df2 (VPAD-04), mas sem hidraw o
-    mapeamento SDL nunca foi validado e o `launch_env.compose_env` fica
-    conservador (sem IGNORE_DEVICES — DEDUP-04)."""
+    """As envs materializadas para o wrapper de launch decidem pelo backend —"""
     assert uhid.UhidDualSense(player=1).backend == "uhid"
     assert UinputGamepad.for_flavor("xbox").backend == "uinput"
     assert UinputGamepad.for_flavor("dualsense").backend == "uinput"
 
 
 def test_os_dois_backends_apresentam_o_mesmo_edge():
-    """VPAD-04/VPAD-06: uhid E uinput usam o MESMO PID Edge — se as constantes
-    divergirem, um dos caminhos volta a colidir (ou vira um TERCEIRO device
-    que nenhuma launch option conhece)."""
+    """VPAD-04/VPAD-06: uhid E uinput usam o MESMO PID Edge — se as constantes"""
     from hefesto_dualsense4unix.integrations.uinput_gamepad import (
         DUALSENSE_EDGE_PRODUCT,
         FLAVORS,

@@ -129,9 +129,6 @@ def _bind(tmp_path: Path) -> str:
     return (tmp_path / "usb" / "drivers" / "usbhid" / "bind").read_text(encoding="utf-8")
 
 
-# --- o gesto -----------------------------------------------------------------
-
-
 def test_religa_a_hid_do_controle_sony(tmp_path: Path) -> None:
     """A interface HID órfã de um DualSense vai para o ``bind`` do ``usbhid``."""
     usb = _bancada(tmp_path)
@@ -141,8 +138,6 @@ def test_religa_a_hid_do_controle_sony(tmp_path: Path) -> None:
     r = _roda(tmp_path)
     assert r.returncode == 0, r.stderr
     assert _bind(tmp_path) == INTERFACE, "o religar escreve a INTERFACE, não o aparelho"
-    # O /sys de mentira não tem kernel: a probe não acontece, e o script diz
-    # que não pegou — nunca "RELIGADO" sobre uma HID que continua sem driver.
     assert "NÃO pegou (tentativa 1/3)" in r.stdout, r.stdout
     assert "RELIGADO" not in r.stdout
 
@@ -154,9 +149,6 @@ def test_dry_run_diz_o_que_faria_e_nao_escreve(tmp_path: Path) -> None:
     r = _roda(tmp_path, "--dry-run")
     assert f"faria: echo '{INTERFACE}' > " in r.stdout, r.stdout
     assert _bind(tmp_path) == ""
-
-
-# --- o escopo ----------------------------------------------------------------
 
 
 def test_a_interface_com_driver_nao_e_tocada(tmp_path: Path) -> None:
@@ -204,9 +196,6 @@ def test_o_vid_em_maiusculas_tambem_e_sony(tmp_path: Path) -> None:
     assert _bind(tmp_path) == INTERFACE
 
 
-# --- o teto, e o orçamento que recomeça ----------------------------------------
-
-
 def test_para_apos_o_teto_e_desiste_uma_vez_so(tmp_path: Path) -> None:
     usb = _bancada(tmp_path)
     _aparelho(usb, PORTA)
@@ -245,20 +234,8 @@ def test_o_contador_do_encaixe_que_saiu_e_limpo(tmp_path: Path) -> None:
     assert not vivo.exists(), "o contador do encaixe anterior ficou para trás"
 
 
-# --- a árvore desviada não lê a real --------------------------------------------
-
-
 def test_a_arvore_de_25_07_nao_varre_o_cabo_de_quem_roda(tmp_path: Path) -> None:
-    """Quem desvia só o HID (as réguas de 25/07) não ganha a varredura do cabo.
-
-    Sem a guarda, o script leria o ``/sys/bus/usb`` da máquina que roda a
-    suíte. **A mordida é pelo TEXTO, e está escrito aqui de propósito:** o
-    ``/sys`` de quem roda não tem controle sem HID, então arrancar a guarda não
-    muda nenhuma saída que uma régua possa ler — e uma régua que dependesse de
-    haver um órfão na máquina dela mediria a máquina, não o produto. O que a
-    parte de comportamento cobra é o outro lado: com só o HID desviado, a
-    passada fecha limpa e o ``bind`` de mentira não é tocado.
-    """
+    """Quem desvia só o HID (as réguas de 25/07) não ganha a varredura do cabo."""
     usb = _bancada(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, INTERFACE)
@@ -279,15 +256,8 @@ def test_a_arvore_de_25_07_nao_varre_o_cabo_de_quem_roda(tmp_path: Path) -> None
     assert "nenhum device HID órfão" in r.stdout, r.stdout
 
 
-# --- o caminho root que já existe ----------------------------------------------
-
-
 def test_o_religar_anda_pelo_caminho_root_que_ja_existe() -> None:
-    """O watchdog roda o script a cada tique; o install o instala; o uninstall o tira.
-
-    É por isso que o religar do cabo não pede nada novo ao install: ele mora num
-    script que já é instalado, já roda como root e já sai no uninstall.
-    """
+    """O watchdog roda o script a cada tique; o install o instala; o uninstall o tira."""
     watchdog = WATCHDOG.read_text(encoding="utf-8")
     assert '"${_s}" --quiet || true' in watchdog
     assert "bt_rebind_orphans.sh" in watchdog
@@ -295,9 +265,6 @@ def test_o_religar_anda_pelo_caminho_root_que_ja_existe() -> None:
     assert "/usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh" in (
         UNINSTALL.read_text(encoding="utf-8")
     )
-
-
-# --- o tique sem rádio -----------------------------------------------------------
 
 
 def _codigo_do_watchdog() -> list[str]:
@@ -321,18 +288,7 @@ def _as_guardas_do_radio() -> list[str]:
 
 @pytest.mark.parametrize("falta", ["o busctl", "o bluetooth.service"])
 def test_sem_radio_o_tique_ainda_religa_o_cabo(tmp_path: Path, falta: str) -> None:
-    """Numa máquina sem Bluetooth, o tique ainda chama a vigia que religa o cabo.
-
-    Achado da conferência (24/09): as duas guardas do watchdog (``busctl``
-    ausente, ``bluetooth.service`` inativo — o estado de todo computador sem
-    adaptador) saíam com ``exit 0`` ANTES da vigia 4. O ramo do cabo morava num
-    script que, nessa máquina, nunca rodava — a cura só valia para quem tem
-    rádio, e a matriz dela diz que nenhuma decisão é só de um transporte.
-
-    Roda as guardas DO FONTE, com a vigia trocada por um eco: o tique de
-    verdade chamaria o ``bt_active_mode.sh`` instalado e falaria com o rádio
-    dela, e isso nenhuma régua faz.
-    """
+    """Numa máquina sem Bluetooth, o tique ainda chama a vigia que religa o cabo."""
     roteiro = textwrap.dedent(
         """
         set -euo pipefail
@@ -349,7 +305,7 @@ def test_sem_radio_o_tique_ainda_religa_o_cabo(tmp_path: Path, falta: str) -> No
         capture_output=True,
         text=True,
         check=False,
-        env={"PATH": str(tmp_path)},  # vazio: sem busctl, sem systemctl de verdade
+        env={"PATH": str(tmp_path)},
     )
     assert r.returncode == 0, r.stderr
     assert "PASSOU-DAS-GUARDAS" not in r.stdout, "controle: a guarda tinha de fechar o tique"
@@ -381,8 +337,7 @@ def test_com_radio_as_guardas_deixam_o_tique_seguir(tmp_path: Path) -> None:
 
 
 def test_a_vigia_existe_antes_das_guardas_e_roda_depois_delas() -> None:
-    """A função nasce ANTES das guardas (senão a guarda chamaria um nome que não
-    existe), e a chamada de sempre continua depois delas, para a máquina com rádio."""
+    """A função nasce ANTES das guardas (senão a guarda chamaria um nome que não"""
     codigo = _codigo_do_watchdog()
     definicao = codigo.index("vigia_rebind_orfaos() {")
     guardas = [i for i, linha in enumerate(codigo) if linha in _as_guardas_do_radio()]
@@ -391,9 +346,6 @@ def test_a_vigia_existe_antes_das_guardas_e_roda_depois_delas() -> None:
     assert chamadas and min(chamadas) > max(guardas), (
         "o tique da máquina com rádio perdeu a chamada da vigia 4"
     )
-
-
-# --- os dois leitores da mesma órfã ----------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -416,13 +368,7 @@ def test_o_doctor_e_o_religar_leem_a_mesma_orfa(
     com_driver: bool,
     authorized: str | None,
 ) -> None:
-    """O mesmo ``/sys`` de mentira, os dois leitores reais, a mesma resposta.
-
-    O doctor diz «o Hefesto tenta religá-lo sozinho» quando o
-    ``exame_da_mesa`` acha a HID órfã; quem religa é este script. Se os dois
-    discordarem, a linha promete uma cura que não vem — o mesmo cuidado que a
-    CONTROLE-QUE-NAO-ENTROU-01 tem com o órfão do rádio.
-    """
+    """O mesmo ``/sys`` de mentira, os dois leitores reais, a mesma resposta."""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import aparelho_da_porta
 
     usb = _bancada(tmp_path)

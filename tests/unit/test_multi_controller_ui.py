@@ -16,11 +16,6 @@ def _state(*controllers: dict[str, Any]) -> dict[str, Any]:
     return {"connected": True, "transport": "bt", "controllers": list(controllers)}
 
 
-# --------------------------------------------------------------------------
-# Tray — _controllers_suffix
-# --------------------------------------------------------------------------
-
-
 def _make_tray(on_state: Any) -> Any:
     from hefesto_dualsense4unix.app.tray import AppTray
 
@@ -84,11 +79,6 @@ def test_tray_suffix_estado_none() -> None:
     assert tray._controllers_suffix() == ""
 
 
-# --------------------------------------------------------------------------
-# Aba Status — helpers estáticos
-# --------------------------------------------------------------------------
-
-
 def test_status_connected_controllers_filtra_e_ordena() -> None:
     from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 
@@ -115,11 +105,6 @@ def test_status_controllers_transports_label() -> None:
         {"connected": True, "transport": "usb"},
     ]
     assert StatusActionsMixin._controllers_transports(conectados) == "BT + USB"
-
-
-# --------------------------------------------------------------------------
-# Seletor de alvo — botões segmentados (sem popup; imune ao bug do cosmic-comp)
-# --------------------------------------------------------------------------
 
 
 class _FakeBox:
@@ -154,7 +139,6 @@ def _mixin_with_selector(monkeypatch: Any) -> tuple[Any, list[Any], list[int]]:
     obj._target_buttons = []
     rebuilds: list[Any] = []
     actives: list[int] = []
-    # Evita criar GtkRadioButton de verdade (precisaria de display).
     monkeypatch.setattr(
         StatusActionsMixin,
         "_rebuild_target_buttons",
@@ -177,14 +161,14 @@ def test_seletor_idempotente_nao_reconstroi(monkeypatch: Any) -> None:
     )
     state["output_target_index"] = None
 
-    obj._refresh_controller_target_combo(state)  # 1ª: reconstrói + mostra
+    obj._refresh_controller_target_combo(state)
     assert len(rebuilds) == 1
     assert obj._target_combo.shown == 1
 
     for _ in range(5):
         obj._refresh_controller_target_combo(state)
-    assert len(rebuilds) == 1  # não reconstruiu de novo
-    assert obj._target_combo.shown == 1  # não re-mostrou
+    assert len(rebuilds) == 1
+    assert obj._target_combo.shown == 1
 
 
 def test_short_target_label() -> None:
@@ -192,26 +176,18 @@ def test_short_target_label() -> None:
 
     f = StatusActionsMixin._short_target_label
     assert f("Todos os controles") == "Todos"
-    # O chip do seletor mostra a marca 'Sony' + número (consistente com o botão
-    # do externo '8BitDo 3 · BT'); o 'Controle N' canônico segue no tooltip/badge.
     assert f("Controle 1 — BT") == "Sony 1 · BT"
     assert f("Controle 2 — USB") == "Sony 2 · USB"
 
 
 def test_render_pausa_enquanto_popup_aberto(monkeypatch: Any) -> None:
-    """Com um popup aberto (grab GTK ativo), os renders NÃO tocam widgets.
-
-    É o que impede o re-layout a 10 Hz (sticks tremendo) de fechar o popup
-    (BUG-COMBO-POPUP-FLICKER-02).
-    """
+    """Com um popup aberto (grab GTK ativo), os renders NÃO tocam widgets."""
     from hefesto_dualsense4unix.app.actions import status_actions as sa
 
     obj = sa.StatusActionsMixin.__new__(sa.StatusActionsMixin)
     toques: list[str] = []
     obj._get = lambda name: toques.append(name) or None  # type: ignore[attr-defined,assignment]
 
-    # Popup aberto → _popup_is_open() True → render retorna sem tocar nada.
-    # (mockamos o helper direto p/ não depender do estado global do Gtk nos testes)
     monkeypatch.setattr(sa.StatusActionsMixin, "_popup_is_open", staticmethod(lambda: True))
     obj._render_live_state({"connected": True})
     obj._render_slow_state({"connected": True})
@@ -247,6 +223,5 @@ def test_seletor_some_sem_nenhum_controle(monkeypatch: Any) -> None:
     obj._refresh_controller_target_combo(state)
     assert obj._target_combo.hidden == 1
     assert obj._target_combo_visible is False
-    # Repetir não re-esconde (idempotente).
     obj._refresh_controller_target_combo(state)
     assert obj._target_combo.hidden == 1

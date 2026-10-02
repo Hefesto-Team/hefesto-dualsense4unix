@@ -115,14 +115,7 @@ def led(
         help="Luminosidade 0-100%% (depende de FEAT-LED-BRIGHTNESS-01 no daemon).",
     ),
 ) -> None:
-    """Define a cor (e, opcionalmente, luminosidade) da lightbar.
-
-    - Sem daemon rodando: aplica direto no hardware (brightness escala
-      linearmente o RGB como aproximação — 100%% = cor pura, 0%% = apagado).
-    - Com daemon rodando: envia `led.set` via IPC. Quando FEAT-LED-BRIGHTNESS-01
-      estiver mergeada, o daemon honrará o parâmetro `brightness` sem
-      distorcer o RGB.
-    """
+    """Define a cor (e, opcionalmente, luminosidade) da lightbar."""
     from hefesto_dualsense4unix.cli.cmd_test import cmd_led
 
     cmd_led(color=color, brightness=brightness)
@@ -168,30 +161,7 @@ def player_leds(
         ..., help="'off' suprime a escrita do LED de jogador; 'on' devolve."
     ),
 ) -> None:
-    """Liga/desliga a escrita do LED de JOGADOR — instrumento de eliminação.
-
-    LIGHTBAR-ISOLAR-OS-PLAYERS-01 (08/08/2026). Serve a UMA pergunta: **é a
-    escrita do LED de jogador que derruba o claim da lightbar quando o controle
-    acaba de conectar?**
-
-    O que aponta para lá: o report que DEVOLVE a barra (0x08) apaga os players
-    — as duas coisas vivem na mesma máquina de estados do firmware —, e a barra
-    apaga justamente quando o controle acaba de conectar, que é quando o
-    priming escreve os players.
-
-    Como medir, e a ordem importa:
-
-        1. `player-leds off`  (com o controle ligado — não reinicie nada)
-        2. desligue e religue o controle
-        3. olhe a barra: acendeu?
-        4. `player-leds on` para devolver o produto ao normal
-
-    Se a barra sobreviver com os players suprimidos, a escrita deles é a causa.
-    Se apagar do mesmo jeito, a causa é a conexão em si e este caminho está
-    inocente — e as duas respostas valem, porque as duas eliminam uma variável.
-
-    Não persiste: um restart do daemon devolve o comportamento normal.
-    """
+    """Liga/desliga a escrita do LED de JOGADOR — instrumento de eliminação."""
     from hefesto_dualsense4unix.cli.cmd_lightbar_reset import cmd_player_leds
 
     cmd_player_leds(acao=acao)
@@ -269,21 +239,7 @@ def speaker(
         "", "--uniq", help="MAC normalizado do controle (omitido = o primário)."
     ),
 ) -> None:
-    """Volume, mudo e DEVOLUÇÃO da posse do alto-falante do controle (SOM-02).
-
-    O volume mora no firmware do controle e ele NÃO o devolve: a única forma de
-    saber o valor é termos sido nós a mandá-lo. Por isso a primeira escrita
-    assume a posse dos bytes de volume — a partir dela o hefesto manda o volume
-    do alto-falante E do fone em todo report, até `speaker release` ou até o
-    controle desconectar.
-
-    `speaker release` é a saída sem a janela, o irmão do `mic release`: ele
-    devolve o CONTROLE, não o valor. Ninguém pode saber qual era o volume antes
-    de nós, então o firmware fica com o último número que mandamos.
-
-    `speaker mute` exige um volume conhecido — mudo como primeira escrita
-    trancaria o alto-falante em zero e o próprio mudo não o soltaria.
-    """
+    """Volume, mudo e DEVOLUÇÃO da posse do alto-falante do controle (SOM-02)."""
     from hefesto_dualsense4unix.cli.cmd_speaker import speaker_cmd
 
     speaker_cmd(action, value=value, uniq=uniq or None)
@@ -352,11 +308,7 @@ def daemon_install_service(
         help="Habilitar auto-start no boot (WantedBy=default.target).",
     ),
 ) -> None:
-    """Copia a unit systemd --user `hefesto-dualsense4unix.service`.
-
-    Por padrão NÃO habilita auto-start (opt-in explícito via `--enable`).
-    Ver BUG-MULTI-INSTANCE-01.
-    """
+    """Copia a unit systemd --user `hefesto-dualsense4unix.service`."""
     from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
 
     installer = ServiceInstaller()
@@ -467,9 +419,6 @@ def daemon_enable() -> None:
     typer.echo("auto-start habilitado e daemon iniciado")
 
 
-# O comando do básico mora no FIM do arquivo de propósito: comentários de
-# outras posses citam linhas daqui (`cli/app.py:<n>`), e um bloco novo no meio
-# as envelheceria todas de uma vez.
 @app.command(
     "basico",  # (noqa-acento: o nome do subcomando é o do protocolo)
     context_settings={
@@ -479,11 +428,7 @@ def daemon_enable() -> None:
     },
 )
 def basico(ctx: typer.Context) -> None:
-    """O protocolo do básico, medido: retrato, sessão, eixos, entrada, saídas, som.
-
-    Os argumentos vão inteiros para `scripts/o_basico.py` (inclusive o
-    `--help`). Sai 0 verde, 1 vermelho, 2 recusado e 3 «não sei».
-    """
+    """O protocolo do básico, medido: retrato, sessão, eixos, entrada, saídas, som."""
     from hefesto_dualsense4unix.cli.cmd_basico import basico_cmd
 
     raise typer.Exit(basico_cmd(list(ctx.args)))
@@ -491,9 +436,6 @@ def basico(ctx: typer.Context) -> None:
 
 def main() -> None:
     """Entry point declarado em pyproject.toml [project.scripts]."""
-    # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES do
-    # Typer parsear argv para que `--help` e mensagens de erro do nosso
-    # callback global respeitem `LANG=en_US.UTF-8` quando o usuário pedir.
     from hefesto_dualsense4unix.utils.i18n import init_locale
 
     init_locale()

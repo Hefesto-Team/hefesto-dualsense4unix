@@ -51,18 +51,11 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: A MESA DUBLÊ, na faixa sintética da casa. Nada de MAC real em arquivo
-#: versionado — há dois portões, e eles não perdoam.
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 
-#: O `uniq` NORMALIZADO, escrito à mão: a régua confere o VALOR que o produto
-#: usa, e importar a mesma função dos dois lados faria os dois errarem juntos.
 CHAVE_P1 = "aabbcc000001"
 
-#: AS TRÊS FRASES DE PROVA. Únicas de propósito: a leitura procura cada uma no
-#: TEXTO INTEIRO do documento, e não só nos nós de recado — uma frase que
-#: chegasse à tela por outro caminho também reprova.
 FRASES = {
     "reconectar": "regua-calada: os controles voltaram na ordem de antes",
     "mic": "regua-calada: o microfone ligou e o canal está mudo",
@@ -75,12 +68,8 @@ PAGINA_03 = "03-gatilhos.html"
 MIC_P1 = '[data-controle="p1"] [data-mudo="alto-falante"]'
 RECONECTAR = 'button[data-gesto="reconectar"]'
 
-#: QUANTO SE ESPERA DEPOIS DE A PÁGINA FICAR PRONTA: uma dúzia de tiques de
-#: 100 ms, para a leitura ver o que a PINTURA põe, e não só o instante do clique.
 ASSENTAR_MS = 1200
 
-#: QUANTO SE ESPERA DEPOIS DO CLIQUE: o gesto é instantâneo, e 700 ms cobrem a
-#: pintura na hora e seis tiques por cima dela.
 DEPOIS_DO_CLIQUE_MS = 700
 
 
@@ -131,8 +120,6 @@ CLICAR = r"""
 """
 
 
-#: O PERFIL ATIVO NO DISCO — mesma razão das réguas irmãs: a pintura da 02 lê o
-#: perfil ativo, e um anotador sem arquivo mediria outro caminho.
 @pytest.fixture(scope="module", autouse=True)
 def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.profiles import loader
@@ -161,9 +148,6 @@ def medido() -> dict:
 
     import hefesto_vivo as hv
 
-    # OS DUBLÊS SÃO DEVOLVIDOS NO FIM: `mesa_viva` e o registro `GESTOS` são
-    # módulos compartilhados do produto, e deixá-los sujos entrega uma mesa de
-    # mentira a todo vizinho que abrir um `Piloto` depois, no mesmo processo.
     chave_01 = (PAGINA_01, "reconectar")
     chave_02 = (PAGINA_02, "mudo")
     guardado_gestos = {k: hv.pacotes.GESTOS.get(k) for k in (chave_01, chave_02)}
@@ -214,12 +198,7 @@ def medido() -> dict:
         return list(piloto.desfechos.get(f"{chave[0]}:{chave[1]}", ()))
 
     def abrir(pagina: str, depois) -> bool:
-        """Navega e só segue quando a página NOVA está pronta e assentou.
-
-        A aba que o piloto guarda muda no fim da carga, e `pronto` cai e volta
-        na instalação: esperar pelos dois é o que impede a leitura de medir a
-        aba anterior.
-        """
+        """Navega e só segue quando a página NOVA está pronta e assentou."""
         piloto._ir(pagina)
 
         def espera() -> bool:
@@ -231,7 +210,6 @@ def medido() -> dict:
         GLib.timeout_add(200, espera)
         return False
 
-    # ---- 1. a 01: o «Reconectar» volta com recado -----------------------
     def na_01() -> bool:
         if piloto.pagina != PAGINA_01 or not piloto.pronto:
             return True
@@ -243,13 +221,10 @@ def medido() -> dict:
     def leu_a_01() -> bool:
         ler_a_tela("01-depois")
         fora["01-desfecho"] = desfecho(chave_01)
-        # O DEPÓSITO SAIU EM 13/09/2026 (FRASES-E-DICAS-01): lido pelo nome, a
-        # ausência dele é o mesmo que um depósito vazio.
         fora["01-deposito"] = sorted(getattr(piloto, "_recados", {}))
         GLib.timeout_add(300, lambda: abrir(PAGINA_02, na_02))
         return False
 
-    # ---- 2. a 02: sucesso com recado no cartão, depois a recusa ----------
     def na_02() -> bool:
         ler_a_tela("02-antes")
         clicar(MIC_P1, "02-clique-sucesso")
@@ -275,14 +250,12 @@ def medido() -> dict:
         GLib.timeout_add(300, lambda: abrir(PAGINA_03, na_03))
         return False
 
-    # ---- 3. a 03: o cartão do MESMO controle, e a recusa não vem ---------
     def na_03() -> bool:
         ler_a_tela("03-depois-de-navegar")
         fora["03-deposito"] = sorted(getattr(piloto, "_recados", {}))
         GLib.timeout_add(300, lambda: abrir(PAGINA_02, de_volta_na_02))
         return False
 
-    # ---- 4. de volta à 02, dentro dos 30 s -------------------------------
     def de_volta_na_02() -> bool:
         ler_a_tela("02-de-volta")
         GLib.timeout_add(400, fim)
@@ -295,19 +268,8 @@ def medido() -> dict:
 
     GLib.timeout_add(400, lambda: piloto._ir(args.abre))
     GLib.timeout_add(2000, na_01)
-    # O RELÓGIO DE SEGURANÇA GUARDA O SEU `id` e é desarmado no `finally`: um
-    # `timeout_add` pendente depois da fixture dispara DENTRO do laço do PRÓXIMO
-    # teste de GUI do mesmo processo.
     guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
-        # O DIÁRIO DA JANELA É O `stderr` DO PROCESSO, e é para lá que o relato
-        # do sucesso vai. O `redirect_stderr` troca `sys.stderr` enquanto o laço
-        # roda — o `print(..., file=sys.stderr)` do piloto resolve o nome na hora
-        # da chamada, então cai aqui.
-        #
-        # O LAÇO REENTRA ATÉ O ÚLTIMO PASSO: um `Gtk.main_quit` pendente de outro
-        # teste de GUI do mesmo processo cai dentro deste `Gtk.main()` e o
-        # encerra no meio (ver `test_o_recado_de_sucesso_pousa_no_cartao`).
         limite = _time.monotonic() + 60.0
         with contextlib.redirect_stderr(diario):
             while "diario" not in fora and _time.monotonic() < limite:
@@ -335,9 +297,6 @@ def _leitura(medido: dict, rotulo: str) -> dict:
     return leitura
 
 
-# --------------------------------------------------------------------------
-# 0. os cliques aconteceram e os gestos deram o desfecho pedido
-# --------------------------------------------------------------------------
 def test_os_tres_gestos_chegaram_ao_desfecho_pedido(medido: dict) -> None:
     """Sem isto, as réguas abaixo passariam sobre cliques que nunca saíram."""
     assert medido["01-clique"] == "cliquei", medido["01-clique"]
@@ -350,21 +309,8 @@ def test_os_tres_gestos_chegaram_ao_desfecho_pedido(medido: dict) -> None:
         medido["02-desfecho-recusa"])
 
 
-# --------------------------------------------------------------------------
-# 1. o sucesso não deposita — nem faixa, nem cartão
-# --------------------------------------------------------------------------
 def test_o_recibo_do_reconectar_nao_escreve_na_faixa_da_01(medido: dict) -> None:
-    """O «Reconectar» deu certo e a 01 inteira fica muda — faixa e cartão.
-
-    A FAIXA SAIU DA PÁGINA — 13/09/2026, na costura com a
-    JOGAR-A-FAIXA-QUE-PULA-01: o nó `recibo-do-reconectar` empurrava o botão, e
-    a página deixou de declarar lugar de recado. Esta régua exigia a faixa como
-    prova de que a medição valia; sem ela, um sucesso depositado cai no
-    FALLBACK do `pintar_recados` — o cartão do P1 —, e por isso a leitura
-    `recados` varre o documento inteiro, não só a faixa. A prova de que ainda
-    mede é a mordida: devolver o `_depositar` do sucesso põe o recibo no cartão
-    e reprova aqui e no depósito.
-    """
+    """O «Reconectar» deu certo e a 01 inteira fica muda — faixa e cartão."""
     depois = _leitura(medido, "01-depois")
     assert depois["aba"] == PAGINA_01, depois["aba"]
     assert depois["faixas"] == 0, (
@@ -400,16 +346,8 @@ def test_a_frase_do_sucesso_vai_ao_diario(medido: dict) -> None:
             f"Diário: {diario[-800:]!r}")
 
 
-# --------------------------------------------------------------------------
-# 2. a recusa fica — e só na página em que nasceu
-# --------------------------------------------------------------------------
 def test_a_recusa_nao_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
-    """ERA `test_a_recusa_continua_no_cartao_de_quem_foi_clicado` — 13/09/2026.
-
-    A recusa era o único aviso na tela de que o clique NÃO valeu, e ficava 30 s
-    no cartão. Pela FRASES-E-DICAS-01 ela saiu da tela: quem avisa é a piscada
-    de recusa no botão (`test_a_recusa_pisca_no_botao`), e a frase vai ao diário.
-    """
+    """ERA `test_a_recusa_continua_no_cartao_de_quem_foi_clicado` — 13/09/2026."""
     leitura = _leitura(medido, "02-com-a-recusa")
     assert leitura["recados"] == [], leitura["recados"]
     assert not leitura["vistas"]["recusa"], (
@@ -417,13 +355,7 @@ def test_a_recusa_nao_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
 
 
 def test_a_recusa_nao_segue_para_a_aba_seguinte(medido: dict) -> None:
-    """A 03 tem o cartão do MESMO controle — e a recusa da 02 não pousa nele.
-
-    As duas primeiras asserções dão dente à terceira: a página é a 03 e o cartão
-    do p1 está nela. ATÉ 13/09/2026 a terceira exigia a recusa no depósito, para
-    o zero provar o filtro de página; desde a FRASES-E-DICAS-01 o depósito não
-    existe, e o zero prova mais que o filtro — a recusa não vai a aba nenhuma.
-    """
+    """A 03 tem o cartão do MESMO controle — e a recusa da 02 não pousa nele."""
     leitura = _leitura(medido, "03-depois-de-navegar")
     assert leitura["aba"] == PAGINA_03, leitura["aba"]
     assert leitura["tem_p1"], "a 03 sem o cartão do p1 — a régua passaria sobre nada"
@@ -436,27 +368,14 @@ def test_a_recusa_nao_segue_para_a_aba_seguinte(medido: dict) -> None:
 
 
 def test_a_recusa_nao_volta_quando_ela_volta_a_pagina(medido: dict) -> None:
-    """ERA `test_a_recusa_volta_quando_ela_volta_a_pagina` — 13/09/2026.
-
-    Dentro dos 30 s dela, a recusa continuava sendo daquela página, e quem
-    voltava à 02 a reencontrava no cartão do p1. Desde a FRASES-E-DICAS-01 não
-    há recusa guardada a reencontrar.
-    """
+    """ERA `test_a_recusa_volta_quando_ela_volta_a_pagina` — 13/09/2026."""
     leitura = _leitura(medido, "02-de-volta")
     assert leitura["aba"] == PAGINA_02, leitura["aba"]
     assert leitura["recados"] == [], leitura["recados"]
 
 
-# --------------------------------------------------------------------------
-# 3. as duas metades sem janela — o canal e o rodapé
-# --------------------------------------------------------------------------
 class _PilotoQueAnota:
-    """Os dois vizinhos que `_deu_certo_dizendo` chama, anotando o que recebem.
-
-    O `_depositar` daqui NÃO pinta nada — ele só registra. É o que torna a
-    mordida binária: devolver o depósito do sucesso faz esta lista deixar de
-    ser vazia.
-    """
+    """Os dois vizinhos que `_deu_certo_dizendo` chama, anotando o que recebem."""
 
     def __init__(self) -> None:
         self.depositos: list[tuple] = []
@@ -482,7 +401,6 @@ def test_o_gesto_que_deu_certo_nao_deposita_e_relata(capsys) -> None:
     assert anotador.depositos == [], (
         f"o sucesso foi depositado: {anotador.depositos!r} — é a porta do cartão e "
         f"da faixa que ela mandou fechar")
-    # O `recado` continua SAINDO da carga antes da pintura: ele não é endereço.
     assert anotador.respostas == [{"colunas": {"p1": {"x": "1"}}}], anotador.respostas
     assert f"[relato] {PAGINA_02} · mudo: a frase do dono" in capsys.readouterr().err
 

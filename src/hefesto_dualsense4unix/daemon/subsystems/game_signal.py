@@ -1,46 +1,4 @@
-"""NUMA-01 — sinal de 3 estados "jogo real ativo": `game` / `daemon` / `unknown`.
-
-Núcleo do gate de posse de EXIBIÇÃO da Onda N (síntese em
-`docs/process/sprints/2026-07-19-sprint-numeracao-una.md`). Antes deste
-sinal, "sessão uhid aberta" era tratada como "jogo" — e o cliente Steam
-TAMBÉM abre sessão uhid nos vpads (incidente de 14:42: o cliente sem NENHUM
-jogo rodando escreveu lightbar/player_leds e o reassert do backend passou a
-DEFENDER a cor do cliente). O sinal daqui vira o provider que
-`backend_pydualsense.set_game_authority_provider` consulta (NUMA-02/03, já
-no tree e dormentes até este módulo ser fiado pelo lifecycle).
-
-Duas peças:
-
-- `classify(...)` — função PURA, tabela-verdade, SEM estado e SEM I/O: dado
-  um instantâneo de evidências já resolvidas, devolve o veredito CRU do
-  tick. Testável isoladamente (branch a branch).
-- `GameSignal` — casca com estado: aplica a histerese de 30s na QUEDA para
-  `daemon` (subir para `game` — ou cair para `unknown`, fail-safe — é
-  sempre imediato, ≤1 tick) e emite telemetria INFO
-  `game_signal_transition {de, para, evidencia}` a cada mudança real de
-  autoridade. `time_fn` injetado (convenção do módulo — mesmo padrão de
-  `integrations.uhid_gamepad.time_fn`), monotonic por default.
-
-Vetos permanentes (unânimes dos 3 juízes da síntese, NUNCA violar):
-  - "sessão uhid aberta" (`session_open`) JAMAIS é evidência de jogo — ela
-    só entra em `GameSignal.evaluate` para modular a histerese da queda
-    (sem sessão aberta não há réplica de exibição a proteger, então a queda
-    dispensa espera).
-  - `window_detect_last_class` (o STICKY do autoswitch) JAMAIS é evidência
-    — prenderia a autoridade em `game` para sempre após o jogo fechar.
-    Usamos `window_class_current` (a leitura CRUA do tick) e a IDADE de
-    `game_window_seen_at` (que DECAI — ver `classify`), nunca o sticky.
-  - A evidência E4 (processo do jogo vivo) entra por `appid_de_jogo_vivo`, e
-    entra JUSTAMENTE porque não é sticky: a varredura da casa reconfirma o
-    pid a cada pergunta e **nunca devolve um positivo velho** (BG-03,
-    `steam_launch_options._steam_launch_cmdline`). Ler um campo de store que
-    guarda a última resposta boa violaria o veto acima — o valor não decairia
-    e prenderia a autoridade em `game` para sempre.
-  - Fail-safe sempre assimétrico para o lado do jogo: qualquer ambiguidade
-    (detector não-saudável, I/O ilegível, exceção no cômputo) vira
-    `unknown`, nunca `daemon` — bloquear réplica/repintar exige evidência
-    POSITIVA de não-jogo.
-"""
+"""NUMA-01 — sinal de 3 estados "jogo real ativo": `game` / `daemon` / `unknown`."""
 from __future__ import annotations
 
 import time
@@ -57,14 +15,6 @@ logger = get_logger(__name__)
 
 Authority = Literal["game", "daemon", "unknown"]
 
-#: Histerese da queda `*→daemon` (síntese da Onda N, NUMA-01): 30s contínuos
-#: sem NENHUMA evidência de jogo antes de honrar a queda — cobre alt-tab
-#: curto sem derrubar a posse (o merge-gate do NUMA-02 torna a volta barata:
-#: a camada GAME persiste e o reassert re-honra sozinho). O MESMO valor
-#: também tolera, em `classify`, um hiccup momentâneo do detector de janela
-#: (leitura "unknown" isolada) sem cair no sticky vetado — a idade de
-#: `game_window_seen_at` decai neste teto, diferente do
-#: `window_detect_last_class`, que NUNCA decai.
 HYSTERESIS_SEC: float = 30.0
 
 
@@ -173,16 +123,7 @@ def classify(
 
 
 class GameSignal:
-    """Casca com histerese (30s) + telemetria de transição sobre `classify`.
-
-    `classify()` é pura e memoryless; esta casca decide QUANDO honrar uma
-    queda para `daemon`. Subir para `game` (evidência positiva) e cair para
-    `unknown` (fail-safe) são SEMPRE imediatos — só a queda `*→daemon`
-    espera. `time_fn` injetado, monotonic por convenção (não confundir com
-    o `now` epoch que `classify` usa para o marker do wrapper — são
-    relógios independentes, um para a histerese local, outro para a
-    freshness do arquivo).
-    """
+    """Casca com histerese (30s) + telemetria de transição sobre `classify`."""
 
     def __init__(
         self,
@@ -201,15 +142,7 @@ class GameSignal:
         return self._authority
 
     def evaluate(self, raw: Authority, *, session_open: bool) -> Authority:
-        """Aplica a histerese sobre um veredito CRU de `classify()` (1 tick).
-
-        `raw='game'`/`raw='unknown'`: honra IMEDIATO (subir nunca espera;
-        `unknown` é fail-safe — represar seria pior que hoje). Só
-        `raw='daemon'` passa pela histerese: sem sessão uhid aberta
-        (`session_open=False`) não há réplica de exibição a proteger e a
-        queda é imediata; com sessão aberta, exige `hysteresis_sec`
-        contínuos de `raw='daemon'` antes de honrar.
-        """
+        """Aplica a histerese sobre um veredito CRU de `classify()` (1 tick)."""
         if raw != "daemon":
             self._non_game_since = None
             self._transition(raw, evidencia=raw)
@@ -226,12 +159,7 @@ class GameSignal:
         return self._authority
 
     def mark_degraded(self, motivo: str) -> Authority:
-        """Força `unknown` (fail-safe) e loga a causa — leitura de I/O falhou.
-
-        Chamado pelo lifecycle quando o gather de evidências (marker/perfil/
-        disco) levanta exceção: NUNCA propaga o erro, sempre degrada para o
-        lado seguro (jogo vence, daemon não disputa).
-        """
+        """Força `unknown` (fail-safe) e loga a causa — leitura de I/O falhou."""
         self._non_game_since = None
         self._transition("unknown", evidencia=f"degradado:{motivo}")
         return self._authority

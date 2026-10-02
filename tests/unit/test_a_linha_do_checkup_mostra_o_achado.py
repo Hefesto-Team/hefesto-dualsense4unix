@@ -99,35 +99,23 @@ def _item(**troca):
     return Item(**base)
 
 
-# --- a frase: o achado, nunca o nome do exame ------------------------------
-
-
 def test_a_frase_da_linha_e_a_medicao_e_nao_o_rotulo():
     """O que vai para `data-campo="achado"` é o `porque` do `Item`."""
     it = _item()
     linha = a08._linha(it)
     assert linha["porque"] == it.porque
-    # O rótulo continua existindo — ele é a primeira metade do `?` —, mas não
-    # é ele que a linha mostra.
     assert linha["titulo"] == it.rotulo
     assert linha["porque"] != linha["titulo"]
 
 
 def test_o_pacote_emite_o_porque_na_chave_achado():
-    """A ponta que a foto mostra: a chave `achado` lê `porque`, não `titulo`.
-
-    Lida do FONTE porque `pacote()` precisa do daemon e do sysfs desta máquina.
-    O que se trava aqui é a decisão, e ela é uma linha só.
-    """
+    """A ponta que a foto mostra: a chave `achado` lê `porque`, não `titulo`."""
     fonte = PACOTE.read_text(encoding="utf-8")
     assert re.search(r'"achado":\s*\[i\["porque"\] for i in itens\]', fonte), (
         "a chave `achado` do pacote deixou de emitir o `porque` do exame — a "
         "linha do Check-up volta a mostrar o NOME da conferência no lugar do "
         "que ela achou (o comentário da chave `achado` no pacote diz por quê)"
     )
-
-
-# --- o selo: as três palavras do produto, não duas -------------------------
 
 
 @pytest.mark.parametrize(
@@ -147,13 +135,7 @@ def test_o_selo_sai_do_mapa_do_produto(estado, palavra, classe):
 
 
 def test_o_nao_sei_nao_vira_um_alarme():
-    """A regressão que o selo binário produzia, nomeada.
-
-    "Não deu para olhar" é o oposto de "há algo a ajustar". Com a regra antiga
-    (`"AJUSTAR" if grave else "CERTO"`) o `nao_sei` caía em "AJUSTAR", porque
-    ele não é `certo` — e a tela passava a afirmar um problema que ninguém
-    mediu.
-    """
+    """A regressão que o selo binário produzia, nomeada."""
     assert a08._linha(_item(estado="nao_sei"))["selo"] != "AJUSTAR"
 
 
@@ -180,7 +162,6 @@ def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
         "o pacote parou de distinguir `problema` de `atencao` no que manda "  # (noqa-acento) chave
         "para a tela — sem isso a cor do quarto selo não tem em que se apoiar"
     )
-    # A PALAVRA AINDA É A MESMA, e isso é ESPERA DELA, não descuido.
     assert quebrado["selo"] == so_podia_melhorar["selo"] == "AJUSTAR"
 
 
@@ -217,8 +198,6 @@ def test_o_pacote_emite_o_estado_de_cada_selo():
     `ENDERECO_DO_ESTADO`; troque o endereço do `problema`; ou devolva o estado
     cru a todos os endereços (`[i["estado"] for i in itens]`).
     """
-    # Uma linha de cada estado, na ordem — é o que a mesa dela produz quando um
-    # exame acha problema e os outros passam.
     estados = ["certo", "atencao", "problema", "nao_sei"]  # (noqa-acento) chaves
     itens = [a08._linha(_item(estado=e)) for e in estados]
     saida = a08._selos_por_estado(itens)
@@ -232,9 +211,6 @@ def test_o_pacote_emite_o_estado_de_cada_selo():
         "(`.selo.grave`) em vez de substituir; mudá-lo de endereço quebra a "
         "única metade que já funcionava"
     )
-    # CADA ENDEREÇO SÓ RESPONDE À SUA PERGUNTA: na posição do seu estado vai o
-    # nome dele; em toda outra posição vai o vazio, que é o `não` desta
-    # pergunta — e o `escrever()` do piloto o traduz em apagar a cor.
     for estado, endereco in a08.ENDERECO_DO_ESTADO.items():
         esperado = [e if e == estado else "" for e in estados]
         assert saida[endereco] == esperado, (
@@ -247,12 +223,7 @@ def test_o_pacote_emite_o_estado_de_cada_selo():
 
 
 def test_a_bancada_acende_o_quarto_selo_pelo_estado():
-    """As cinco pílulas do Check-up sabem virar `grave` quando o estado é `problema`.
-
-    O endereço é do DESENHO — é ele que traduz estado em cor. `data-hef-quando`
-    lê o estado do exame, e não a classe CSS: o pacote emite o estado cru
-    justamente para não pôr a folha de estilo dentro do Python.
-    """
+    """As cinco pílulas do Check-up sabem virar `grave` quando o estado é `problema`."""
     html = BANCADA.read_text(encoding="utf-8")
     endereco = ('data-campo="selo-estado" data-hef-alvo="classe" '
                 'data-hef-classe="grave" data-hef-quando="problema"')
@@ -260,8 +231,6 @@ def test_a_bancada_acende_o_quarto_selo_pelo_estado():
         "as cinco pílulas do Check-up perderam o endereço do quarto selo — "
         "regere com `python src/hefesto_dualsense4unix/interface/aba08.py`"
     )
-    # A PALAVRA CONTINUA NO SEU PRÓPRIO ENDEREÇO, e num elemento à parte: um
-    # `data-campo` por nó, e o selo tem dois dados (a palavra e a cor).
     assert html.count('<span data-campo="selo">') == 5
 
 
@@ -289,9 +258,6 @@ def test_o_gerador_e_quem_escreve_o_endereco_do_quarto_selo():
     assert ".selo.grave{background:var(--red);color:var(--app-bg)}" in fonte
 
 
-# --- o `?`: a montagem do produto, em HTML ---------------------------------
-
-
 def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
     """O `?` traz o "por que importa" e a cura — as duas frases do produto."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import (
@@ -306,13 +272,7 @@ def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
 
 
 def test_a_dica_nao_repete_a_medicao_que_a_linha_ja_mostra():
-    """Decisão dela, 02/09/2026 — e é a metade do meio que sai.
-
-    A linha ao lado mostra o `porque` (ver `achado`, acima). Repeti-lo no `?`
-    fazia a pessoa ler a mesma frase duas vezes: uma na tela, outra ao parar o
-    ponteiro. Na versão GTK a dica era o único lugar onde a medição cabia,
-    porque lá a linha mostra o RÓTULO — aqui ela não é mais.
-    """
+    """Decisão dela, 02/09/2026 — e é a metade do meio que sai."""
     it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento) id
     linha = a08._linha(it)
     assert linha["porque"] == it.porque, "a linha continua mostrando a medição"
@@ -323,13 +283,7 @@ def test_a_dica_nao_repete_a_medicao_que_a_linha_ja_mostra():
 
 
 def test_o_dono_da_dica_continua_inteiro_para_a_janela_gtk():
-    """Curar no dono apagaria a medição da janela estável, onde ela é única.
-
-    `secao_exame._dica_do_item` é chamado pelo `PainelDoExame`, e ali a linha
-    mostra `item.rotulo` — o NOME da conferência. Tirar o `porque` DE LÁ deixaria
-    a janela GTK sem um caminho para a medição. Por isso quem pede a metade é
-    este pacote, e não o dono que muda.
-    """
+    """Curar no dono apagaria a medição da janela estável, onde ela é única."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import _dica_do_item
 
     it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento) id
@@ -347,13 +301,7 @@ def test_a_dica_quebra_linha_em_html_e_nao_em_texto():
 
 
 def test_a_dica_escapa_o_que_viesse_do_exame():
-    """Alvo `html` sem escape é marcação vinda do sistema entrando na tela.
-
-    A CURA É A METADE QUE VEM DO SISTEMA — ela nomeia porta, nó e comando
-    (`exame_da_mesa`), e é por ela que um `&` ou um `<` entraria. Este teste
-    usava o `porque` até 02/09/2026; ele saiu da dica (decisão dela, ver
-    acima) e o caminho de escape passou a ser este.
-    """
+    """Alvo `html` sem escape é marcação vinda do sistema entrando na tela."""
     dica = a08._linha(_item(cura="use a & b < c"))["dica"]
     assert "&amp;" in dica
     assert "&lt;" in dica
@@ -364,9 +312,6 @@ def test_uma_linha_sem_cura_nao_inventa_o_que_fazer():
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
 
     assert PREFIXO_DA_CURA not in a08._linha(_item())["dica"]
-
-
-# --- os endereços novos, na BANCADA (publicar é ato dela) ------------------
 
 
 def test_o_desenho_da_bancada_endereca_o_ponto_de_interrogacao():
@@ -390,19 +335,11 @@ def test_o_pacote_emite_a_dica_da_linha():
     assert '"achado-explica": [i["dica"] for i in itens]' in fonte
 
 
-# --- o carimbo saiu ------------------------------------------------------
-
-
 def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():
-    """26/09/2026, pedido dela: *«vamos remover essas infos que aparecem no
-    canto superior de Gestão de controles também»*. O «Examinado …» e o
-    «4 controles • 4 BT» não voltam — nem no desenho, nem no pacote.
-    (noqa-acento: citação literal dela)"""
+    """26/09/2026, pedido dela: *«vamos remover essas infos que aparecem no"""
     html = BANCADA.read_text(encoding="utf-8")
     assert 'data-campo="examinado"' not in html
     assert 'data-campo="conta-gestao"' not in html
-    # O que não pode voltar é o `<span class="conta">` do canto — no cabeçalho
-    # da Gestão; a seção do rádio tem a contagem dela, e ela fica.
     for texto in (html, GERADOR.read_text(encoding="utf-8")):
         inicio = texto.index('for="cx8-2">Gestão de Controles</label>')
         topo = texto[inicio:texto.index('class="quadro-corpo"', inicio)]
@@ -412,21 +349,12 @@ def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():
     assert not hasattr(a08, "_carimbo_do_exame")
 
 
-# --- a chave do `maquina.json`: uma conta só ------------------------------
-
-
 @pytest.mark.parametrize(
     "entrada",
     ["aa:bb:cc:00:00:22", "AA-BB-CC-00-00-22", "  aabbcc000022  ", "aabbcc000022", ""],
 )
 def test_a_chave_do_maquina_json_e_a_do_produto(entrada):
-    """`_so_hex` é embrulho de `core.sysfs_leds.norm_mac`, e não a segunda conta.
-
-    O embrulho existe por UMA razão: `norm_mac` devolve `None` quando não há
-    hexa nenhum, e as três chamadas desta aba usam o resultado como chave de
-    dicionário e como pedaço de frase — um `None` viraria a chave `None` ou a
-    palavra "None" no texto.
-    """
+    """`_so_hex` é embrulho de `core.sysfs_leds.norm_mac`, e não a segunda conta."""
     assert a08._so_hex(entrada) == (norm_mac(entrada) or "")
 
 
@@ -447,11 +375,6 @@ def test_nao_sobrou_uma_segunda_conta_de_normalizacao_neste_arquivo():
 
 
 def test_o_dataclass_do_exame_ainda_tem_os_campos_que_a_tela_le():
-    """Se o `Item` mudar de forma, a tela some sem uma linha de erro.
-
-    É a armadilha que esta casa já pagou: um `getattr` com reserva não levanta,
-    e o que sai parece dado — foi assim que o `repr` de um objeto Python foi
-    parar na tela dela em 01/09.
-    """
+    """Se o `Item` mudar de forma, a tela some sem uma linha de erro."""
     campos = {c.name for c in dataclasses.fields(Item)}
     assert {"chave", "rotulo", "estado", "porque", "cura"} <= campos

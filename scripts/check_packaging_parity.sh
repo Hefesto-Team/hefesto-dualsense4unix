@@ -1549,7 +1549,7 @@ else
 
     #: A DÍVIDA DECLARADA — `arquivo:razão com data`. Molde de
     #: `INSTALL_OPTIONAL_RULES` acima e de `_SEM_ESCRITOR_HOJE`
-    #: (tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py:129): declarar é
+    #: (tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py:86): declarar é
     #: honesto, e este portão não castiga honestidade — só não deixa a lápide
     #: envelhecer calada (a conferência está logo abaixo do laço, e uma entrada que
     #: já ganhou dono REPROVA até alguém apagá-la).
@@ -1667,7 +1667,7 @@ fi
 # é derivado do lugar do próprio arquivo (`scripts/doctor.sh:60`), no layout do
 # .deb aquilo apontava para `/usr/share/hefesto-dualsense4unix/scripts/
 # install_udev.sh`, que não existe — e `hefesto-dualsense4unix doctor --fix`
-# (que ACHA o doctor no .deb, `cli/cmd_doctor.py:26`) respondia "falha ao
+# (que ACHA o doctor no .deb, `cli/cmd_doctor.py:20`) respondia "falha ao
 # reaplicar udev" na máquina de quem instalou pelo pacote. O irmão certo para
 # aquele layout já viajava no mesmo pacote: `install-host-udev.sh`, cuja forma 3
 # no cabeçalho é literalmente "Direto de um .deb instalado".
@@ -1815,10 +1815,10 @@ fi
 # fazer com ele.
 #
 # O LIMITE, dito de frente: caminho montado em variável não é visto
-# (`cli/cmd_mic.py:93` é `Path(".../scripts") / _SCRIPT_NAME`). É o mesmo
+# (`cli/cmd_mic.py:81` é `Path(".../scripts") / _SCRIPT_NAME`). É o mesmo
 # limite que a seção "irmão sem carona" declara, e pela mesma razão — portão
 # não adivinha o valor de uma variável. Aqui ele não abre buraco: o mesmo
-# script aparece por nome literal em `emulation_actions.py:1201`. Duas réguas
+# script aparece por nome literal em `emulation_actions.py:712`. Duas réguas
 # independentes é o que revela.
 echo "== scripts do produto (o que a janela e o doctor EXECUTAM) × os empacotamentos =="
 if [[ ! -d src/hefesto_dualsense4unix || ! -d scripts ]]; then

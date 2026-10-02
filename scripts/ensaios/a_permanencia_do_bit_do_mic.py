@@ -9,7 +9,7 @@ com endereço, e é nossa:
 1. com o mic no ar, o firmware **oscila** o bit `MicMuted` a ~16,7 Hz — isso a
    casa já mediu e registrou em `integrations/dualsense_bt_audio.py`
    (``~100 transições em 6 s``; sem o `0x32`, ZERO em 1183 reports);
-2. `daemon/subsystems/mic_da_mesa.py:143` engole as transições do primeiro
+2. `daemon/subsystems/mic_da_mesa.py:134` engole as transições do primeiro
    segundo como repique (``MIC_SOSSEGO_S = 1.0``);
 3. **a primeira depois de 1,0 s é ACEITA** e lida como o dedo dela no botão;
 4. o daemon desliga o microfone — e sem o `0x32` o firmware para de oscilar,
@@ -80,37 +80,23 @@ from comum import (
     resumo,
 )
 
-#: O botão e o `status[1]` do MESMO report, pelo extrator do produto.
 from hefesto_dualsense4unix.core.physical_report_reader import (
     extract_estado_do_mic,
 )
 
-#: O byte de status e o bit, do dono único da metade de ENTRADA.
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     STATUS_MIC_MUDO,
 )
 
-#: Onde o `status1` mora no report `0x31` de ENTRADA por rádio. O número vem do
-#: `hid-playstation` e do dono desta casa — não é digitado por adivinhação.
 OFFSET_STATUS = 55
 
-#: Um report de entrada por rádio cabe folgado nisto.
 TAMANHO_DA_LEITURA = 600
 
-#: Quanto tempo depois do dedo uma virada do bit de mudo ainda é do aperto. Um
-#: aperto move o bit até duas vezes: o kernel escreve logo depois de ler o
-#: report, e o ato do daemon pode escrever de novo até confirmar — o teto dele
-#: é `hotkey.CONFIRMACAO_DO_MUDO_S`, três segundos. O que vira fora disso, com
-#: o botão parado, foi escrito por outro.
 JANELA_DO_DEDO_S = 3.0
 
 
 class QuemVirou:
-    """Os apertos e as viradas do bit de mudo SEM a mão, com a hora de cada um.
-
-    Lê só reports de ESTADO íntegros (`extract_estado_do_mic`): o quadro de
-    áudio do rádio e o report com CRC ruim não dizem nada sobre o dedo.
-    """
+    """Os apertos e as viradas do bit de mudo SEM a mão, com a hora de cada um."""
 
     def __init__(self) -> None:
         self.apertos: list[str] = []
@@ -192,7 +178,7 @@ def descrever(nome: str, amostras: list[float]) -> list[str]:
     ]
 
 
-def o_controle_no_radio(no: str | None = None):  # o tipo é o `Aparelho` de `comum`
+def o_controle_no_radio(no: str | None = None):
     """O DualSense do rádio. Um só, ou o `no` que ela disse: o bit é de um."""
     reais = [a for a in fisicos(descobrir_aparelhos()) if a.transporte == RADIO]
     if no:
@@ -235,8 +221,6 @@ def main() -> int:
         print(resumo("leitura pura — nenhum nó aberto nesta corrida."))
         return 0
 
-    # O CAMINHO, não o `Aparelho` — `abrir_no_hidraw` recebe `str` e devolve um
-    # `NoAberto` que carrega o fd E a porta usada.
     no = abrir_no_hidraw(f"/dev/{alvo.hidraw}", escrita=False)
     if no.fd is None:
         print(resumo(f"não abri o nó: {no.linha_de_relatorio}"))
@@ -276,30 +260,14 @@ def main() -> int:
             "e a segunda resposta valeria tanto quanto a primeira."))
         return 2
 
-    # O MÁXIMO NÃO É O ALVO — CURA DE 10/09/2026, na primeira corrida de
-    # verdade. Este resumo dizia "a janela tem de ficar acima do MÁXIMO" e
-    # sugeriu **23,4 segundos**, um número absurdo. A causa: o máximo mede o
-    # bit PARADO (o microfone desligado, o valor estável por 11,7 s) e não o
-    # gating. Misturar repouso com oscilação num percentil só é medir duas
-    # populações como se fossem uma.
-    #
-    # O que decide é: **com a janela X, quantas permanências do GATING
-    # sobreviveriam e virariam borda falsa?** É essa a pergunta, e o número
-    # abaixo a responde diretamente para cada candidata.
     ms = sorted(v * 1000.0 for v in todas)
     print("\nQUANTAS PERMANÊNCIAS SOBREVIVEM A CADA JANELA:")
     print("  (cada sobrevivente é uma BORDA FALSA em potencial)")
-    # O produto não usa janela nenhuma desde 28/09/2026: conta o botão. A
-    # tabela fica pela pergunta de 10/09, que ainda mede o gating do driver.
     for janela_ms in (50, 100, 150, 200, 250, 300, 400, 500):
         passam = sum(1 for v in ms if v >= janela_ms)
         print(f"    {janela_ms:>4} ms: {passam:>5} de {len(ms)} "
               f"({100.0 * passam / len(ms):5.2f}%)")
 
-    # O CASO FELIZ QUEBRAVA ESTE RESUMO — cura de 10/09/2026, na corrida que
-    # PROVOU a cura do driver. Sem gating não há permanência curta, e
-    # `statistics.median([])` levanta. O instrumento morria exatamente na
-    # corrida que ele existe para celebrar: um `Traceback` no lugar do número.
     curtas = [v for v in ms if v < 1000.0]
     if not curtas:
         print(resumo(

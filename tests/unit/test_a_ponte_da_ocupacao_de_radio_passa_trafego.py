@@ -30,7 +30,6 @@ import pytest
 
 MODULO = "hefesto_dualsense4unix.interface.pacotes.a08_conexoes"
 
-#: O que saiu da aba 08, e não volta sem reabrir esta régua.
 A_CONTA_DA_TELA = ("Ocupacao", "palavra_da_ocupacao", "SLOTS_POR_RELATORIO",
                    "ocupacao_por_adaptador")
 

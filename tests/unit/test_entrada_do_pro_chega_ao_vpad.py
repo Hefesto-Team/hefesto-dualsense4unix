@@ -47,38 +47,28 @@ from evdev import AbsInfo, ecodes
 
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
-#: A faixa do hat, como o `hid-nintendo` a publica para o Pro (-1, 0, +1).
 FAIXA_HAT = AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)
-#: Os analógicos do Pro têm sinal (medido em 06/08/2026 na mesa dela).
 FAIXA_PRO = AbsInfo(value=0, min=-32767, max=32767, fuzz=250, flat=500, resolution=0)
 
-#: Os treze botões DIGITAIS do Pro, na ordem em que a linha `entrada.botoes@pro`
-#: os lista, e o nome canônico que a casa dá a cada um. O par vem do
-#: `BUTTON_MAP`; a lista existe para que APAGAR uma entrada do mapa reprove aqui
-#: com o nome do botão, em vez de passar por comparação de conjunto vazio.
 BOTOES_DO_PRO: tuple[tuple[str, str], ...] = (
-    ("BTN_SOUTH", "cross"),  # B do Pro
-    ("BTN_EAST", "circle"),  # A
-    ("BTN_NORTH", "triangle"),  # X
-    ("BTN_WEST", "square"),  # Y
-    ("BTN_TL", "l1"),  # L
-    ("BTN_TR", "r1"),  # R
-    ("BTN_TL2", "l2_btn"),  # ZL — digital no Pro
-    ("BTN_TR2", "r2_btn"),  # ZR — digital no Pro
-    ("BTN_SELECT", "create"),  # o botão de "menos" do Pro
-    ("BTN_START", "options"),  # o botão de "mais" do Pro
-    ("BTN_MODE", "ps"),  # Home
+    ("BTN_SOUTH", "cross"),
+    ("BTN_EAST", "circle"),
+    ("BTN_NORTH", "triangle"),
+    ("BTN_WEST", "square"),
+    ("BTN_TL", "l1"),
+    ("BTN_TR", "r1"),
+    ("BTN_TL2", "l2_btn"),
+    ("BTN_TR2", "r2_btn"),
+    ("BTN_SELECT", "create"),
+    ("BTN_START", "options"),
+    ("BTN_MODE", "ps"),
     ("BTN_THUMBL", "l3"),
     ("BTN_THUMBR", "r3"),
 )
 
 
 def _caps_pro() -> dict[int, Any]:
-    """Caps do Pro: os treze botões, os quatro eixos com sinal e o hat.
-
-    Sem `ABS_Z`/`ABS_RZ` — o ZL/ZR do Pro é botão, não eixo (a linha
-    `gatilho.analogico@pro` do mapa é sobre exatamente isso).
-    """
+    """Caps do Pro: os treze botões, os quatro eixos com sinal e o hat."""
     return {
         ecodes.EV_KEY: [getattr(ecodes, nome) for nome, _ in BOTOES_DO_PRO],
         ecodes.EV_ABS: [
@@ -109,12 +99,7 @@ def _reader_do_pro() -> EvdevReader:
 
 
 def test_cada_botao_digital_do_pro_vira_o_nome_canonico_da_casa() -> None:
-    """Apertar e soltar os treze, um a um, pelo caminho real do reader.
-
-    MORDIDA: apague qualquer linha de `EvdevReader.BUTTON_MAP` e este teste
-    reprova nomeando o botão — `_keycode_name` passa a devolver `None` e o
-    aperto vira silêncio (o nó evdev continua respondendo; quem some é o dado).
-    """
+    """Apertar e soltar os treze, um a um, pelo caminho real do reader."""
     reader = _reader_do_pro()
     for evdev_nome, nome_da_casa in BOTOES_DO_PRO:
         code = getattr(ecodes, evdev_nome)
@@ -131,12 +116,7 @@ def test_cada_botao_digital_do_pro_vira_o_nome_canonico_da_casa() -> None:
 
 
 def test_o_dpad_do_pro_vem_do_hat_e_nao_de_botao() -> None:
-    """As quatro direções chegam por `ABS_HAT0X`/`ABS_HAT0Y`, os dois sentidos.
-
-    MORDIDA: apague o corpo de `_refresh_dpad_buttons` (ou o ramo `ABS_HAT0*` de
-    `_handle_abs`) e este teste reprova nas quatro direções. No Pro o D-pad
-    inteiro depende disto: ele não publica `BTN_DPAD_*`.
-    """
+    """As quatro direções chegam por `ABS_HAT0X`/`ABS_HAT0Y`, os dois sentidos."""
     reader = _reader_do_pro()
     casos = (
         (ecodes.ABS_HAT0Y, -1, "dpad_up"),
@@ -157,8 +137,7 @@ def test_o_dpad_do_pro_vem_do_hat_e_nao_de_botao() -> None:
 
 
 def test_o_hat_solta_a_direcao_oposta_em_vez_de_somar() -> None:
-    """Ir de esquerda para direita sem passar pelo centro não pode deixar as
-    DUAS pressionadas — no hat isso é um evento só, não dois botões."""
+    """Ir de esquerda para direita sem passar pelo centro não pode deixar as"""
     reader = _reader_do_pro()
     reader._handle_abs(ecodes.ABS_HAT0X, -1, ecodes)
     reader._handle_abs(ecodes.ABS_HAT0X, 1, ecodes)

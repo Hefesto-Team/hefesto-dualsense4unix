@@ -1,31 +1,4 @@
-"""PONTE-CONFIRMADA-01 (19/08/2026) — o perfil guarda a ponte que FUNCIONOU.
-
-O perfil já guardava a ponte: ela é a tupla ``(mode.kind, mode.gamepad_flavor,
-está na allowlist do Steam Input)``. O que ele NÃO guardava é a resposta da
-pergunta que decide tudo — *"esta combinação foi CONFIRMADA neste jogo, ou é só
-o que estava no arquivo quando ninguém sabia?"*.
-
-Sem essa distinção o produto não separa **"nunca tentei"** de **"tentei e
-funciona"**, e a escada de pontes nunca para: ela rodaria de novo a cada
-abertura de cada jogo, arrancando o controle da mão dela a cada degrau (R-04,
-medido em 23/07 — recriar o vpad com o jogo aberto tira o controle do jogo).
-
-Este arquivo trava as quatro metades da frente:
-
-1. o carimbo existe, e a borda recusa carimbo incoerente;
-2. **a migração não mente** — os 18 perfis do disco dela continuam dizendo
-   "ainda não sei", e um perfil que já traz ``gamepad_flavor="dualsense"`` NÃO
-   vira confirmado por existir. É o defeito mais silencioso possível: confundir
-   os dois faria a escada nunca rodar em jogo nenhum;
-3. o prontuário SABE a ponte e a devolve no veredito — sem afrouxar o
-   ``sem_impedimento_conhecido``, que continua recusando dizer "funciona";
-4. a leitura é ÚNICA: as duas réguas (o manager, com pydantic; o prontuário,
-   stdlib puro) respondem a mesma coisa sobre a mesma pasta.
-
-Hermético: a fixture ``_hefesto_fake_env`` do ``conftest`` isola
-``XDG_CONFIG_HOME`` num tmp por teste, e é o MESMO diretório que o
-``save_profile`` escreve e que o prontuário lê.
-"""
+"""PONTE-CONFIRMADA-01 (19/08/2026) — o perfil guarda a ponte que FUNCIONOU."""
 from __future__ import annotations
 
 import json
@@ -57,11 +30,7 @@ _SACKBOY = "1599660"
 
 
 def _evidencia() -> object:
-    """Um executável lido — sem isto o prontuário nomeia `SEM_EXECUTAVEL`.
-
-    A ficha só chega ao veredito da ponte quando o disco deixou ler o jogo, e
-    é assim de propósito: cegueira do instrumento vence carimbo.
-    """
+    """Um executável lido — sem isto o prontuário nomeia `SEM_EXECUTAVEL`."""
     from hefesto_dualsense4unix.integrations.api_de_entrada import Evidencia, Familia
 
     return Evidencia(
@@ -87,9 +56,6 @@ def _perfil_de_jogo(
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O carimbo, e a borda que recusa carimbo incoerente
-# ---------------------------------------------------------------------------
 class TestOCarimbo:
     def test_a_ponte_e_a_tupla_de_sempre_mais_o_quando(self) -> None:
         """Nenhuma palavra nova: os três termos têm os nomes que já tinham."""
@@ -101,17 +67,11 @@ class TestOCarimbo:
             "dualsense",
             False,
         )
-        # E o carimbo: quando, e como.
         assert ponte.confirmada_em.startswith("20")
         assert ponte.confirmada_por == CONFIRMADA_POR_GESTO
 
     def test_os_tres_modos_de_confirmar_sao_os_da_escada(self) -> None:
-        """O esquema tem de saber guardar toda confirmação que o produto produz.
-
-        Um campo que não soubesse representar o ``silencio`` obrigaria a escada
-        a manter uma segunda gaveta para o mesmo fato — e duas gavetas para o
-        mesmo fato é como se cria a discordância que ninguém vê.
-        """
+        """O esquema tem de saber guardar toda confirmação que o produto produz."""
         for por in (
             CONFIRMADA_POR_GESTO,
             CONFIRMADA_POR_SILENCIO,
@@ -136,19 +96,13 @@ class TestOCarimbo:
         )
         mode = ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense")
         assert ponte.mesma_ponte(mode, na_allowlist=True)
-        # O terceiro termo sozinho já muda a ponte.
         assert not ponte.mesma_ponte(mode, na_allowlist=False)
-        # E máscara diferente também.
         assert not ponte.mesma_ponte(
             ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox"), na_allowlist=True
         )
-        # Perfil sem opinião nunca é igual a uma ponte confirmada.
         assert not ponte.mesma_ponte(None, na_allowlist=True)
 
 
-# ---------------------------------------------------------------------------
-# 2. A MIGRAÇÃO NÃO MENTE — "ainda não sei" continua sendo "ainda não sei"
-# ---------------------------------------------------------------------------
 class TestMigracaoSemPerda:
     def test_perfil_antigo_carrega_e_vale(self) -> None:
         """Aditivo de verdade: o arquivo de ontem abre hoje, inteiro."""
@@ -171,27 +125,14 @@ class TestMigracaoSemPerda:
         assert perfil.ponte is None
 
     def test_gamepad_flavor_no_arquivo_nao_e_ponte_confirmada(self) -> None:
-        """A MORDIDA da frente: existir não é ter sido confirmado.
-
-        Os 18 perfis do disco dela trazem `mode` preenchido. Se `mode` valesse
-        como carimbo, a escada nunca rodaria em jogo NENHUM — todos já
-        nasceriam "resolvidos", e o defeito seria invisível: nada quebra, nada
-        aparece no journal, e a pergunta que ela pediu (*"tenta em ordem e
-        confirma uma vez"*) simplesmente nunca seria feita.
-        """
+        """A MORDIDA da frente: existir não é ter sido confirmado."""
         save_profile(_perfil_de_jogo("Dont Scream", _DONT_SCREAM))
         assert ponte_confirmada_do_appid(_DONT_SCREAM) is None
-        # E o prontuário concorda: sem carimbo, sem balde de ponte.
         ficha = pdj.Prontuario(appid=_DONT_SCREAM, nome="DON'T SCREAM")
         assert ficha.ponte_confirmada is False
 
     def test_o_save_de_um_perfil_sem_ponte_nao_acrescenta_a_chave(self) -> None:
-        """Downgrade: `extra="forbid"` recusa o perfil INTEIRO por uma chave nova.
-
-        Gravar `"ponte": null` em todo save transformaria "voltar uma versão"
-        em "todos os perfis quebrados" — a mesma cura medida do `rota` e do
-        `controllers`.
-        """
+        """Downgrade: `extra="forbid"` recusa o perfil INTEIRO por uma chave nova."""
         caminho = save_profile(_perfil_de_jogo("Sackboy", _SACKBOY))
         no_disco = json.loads(Path(caminho).read_text(encoding="utf-8"))
         assert "ponte" not in no_disco
@@ -211,9 +152,6 @@ class TestMigracaoSemPerda:
         assert de_volta.ponte.confirmada_por == CONFIRMADA_POR_ESCOLHA
 
 
-# ---------------------------------------------------------------------------
-# 3. A leitura ÚNICA, por appid — e o empate resolvido igual dos dois lados
-# ---------------------------------------------------------------------------
 class TestQualEAPonteDesteAppid:
     def test_pergunta_pelo_appid_em_qualquer_das_tres_formas(self) -> None:
         """`2054970`, `"2054970"` e `"steam_app_2054970"` são o mesmo jogo."""
@@ -234,12 +172,7 @@ class TestQualEAPonteDesteAppid:
         assert ponte_confirmada_do_appid("999999") is None
 
     def test_no_empate_vence_quem_sabe_a_ponte(self) -> None:
-        """Duas fichas do mesmo jogo é real no disco dela (pragmata/pragmata2).
-
-        Entre um perfil que sabe a ponte e outro que não sabe, a resposta
-        honesta é a de quem sabe — o contrário faria a escada rodar de novo num
-        jogo já resolvido.
-        """
+        """Duas fichas do mesmo jogo é real no disco dela (pragmata/pragmata2)."""
         save_profile(_perfil_de_jogo("Pragmata", "3357650", prioridade=99))
         save_profile(
             carimbar_ponte(
@@ -249,9 +182,6 @@ class TestQualEAPonteDesteAppid:
         )
         vencedor = perfil_do_appid("3357650")
         assert vencedor is not None and vencedor.name == "Pragmata2"
-        # E as TRÊS leituras têm de responder o mesmo empate. Uma varredura
-        # própria em cada uma responderia pela ordem de carga dos arquivos, e a
-        # janela mostraria uma ponte enquanto o launch armava outra.
         assert pontes_confirmadas()["3357650"]["kind"] == "native"
         assert pdj.pontes_confirmadas()["3357650"].kind == "native"
 
@@ -270,17 +200,10 @@ class TestQualEAPonteDesteAppid:
         assert set(publicado) == {_DONT_SCREAM}
         assert publicado[_DONT_SCREAM]["gamepad_flavor"] == "dualsense"
         assert publicado[_DONT_SCREAM]["steam_input"] is True
-        # JSON de verdade: o estado viaja pelo socket.
         json.dumps(publicado)
 
     def test_as_duas_reguas_leem_a_mesma_pasta_e_concordam(self) -> None:
-        """PORTÃO das cópias: pydantic de um lado, stdlib do outro.
-
-        O prontuário NÃO pode importar o esquema (ele roda como script solto no
-        `python3` do sistema, sem venv e sem pydantic — o `doctor.sh` o chama
-        assim), então a leitura do carimbo existe duas vezes. O que impede as
-        duas de divergirem é este teste, e não a disciplina de quem edita.
-        """
+        """PORTÃO das cópias: pydantic de um lado, stdlib do outro."""
         save_profile(
             carimbar_ponte(
                 _perfil_de_jogo("Dont Scream", _DONT_SCREAM),
@@ -315,9 +238,6 @@ class TestQualEAPonteDesteAppid:
         assert set(pdj.pontes_confirmadas()) == {_DONT_SCREAM}
 
 
-# ---------------------------------------------------------------------------
-# 4. O PRONTUÁRIO sabe a ponte — e continua recusando dizer "funciona"
-# ---------------------------------------------------------------------------
 class TestOProntuarioSabeAPonte:
     def test_o_carimbo_aparece_no_veredito_e_no_dicionario(self) -> None:
         ficha = pdj.Prontuario(
@@ -346,7 +266,6 @@ class TestOProntuarioSabeAPonte:
         assert pdj.SEM_IMPEDIMENTO == "sem_impedimento_conhecido"
         assert "funciona" not in pdj.PONTE_CONFIRMADA
         assert "pronto" not in pdj.PONTE_CONFIRMADA
-        # Jogo sem carimbo e sem estorvo continua no balde da ausência-de-motivo.
         from hefesto_dualsense4unix.integrations.api_de_entrada import (
             Evidencia,
             Familia,
@@ -366,11 +285,7 @@ class TestOProntuarioSabeAPonte:
         assert ficha.veredito == pdj.SEM_IMPEDIMENTO
 
     def test_carimbo_nao_apaga_estorvo(self) -> None:
-        """Ponte confirmada com o wrapper fora da linha continua IMPEDIDO.
-
-        A ponte que funcionou não está de pé — dizer o contrário seria
-        exatamente a promessa que este módulo existe para não fazer.
-        """
+        """Ponte confirmada com o wrapper fora da linha continua IMPEDIDO."""
         ficha = pdj.Prontuario(
             appid=_DONT_SCREAM,
             nome="DON'T SCREAM",

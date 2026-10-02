@@ -52,8 +52,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`. `importorskip("gi")`
-# aceitaria o stub que outro arquivo planta em sys.modules.
 exigir_gi_real("afordância das dicas da aba Configurações")
 
 from collections.abc import Iterator
@@ -74,14 +72,6 @@ from hefesto_dualsense4unix.app.actions.config.moldura import (
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
 from hefesto_dualsense4unix.app.constants import GUI_DIR
 
-#: Piso de alvos que a régua tem de encontrar na aba montada.
-#:
-#: DE ONDE VEM O NÚMERO: a aba mediu 25 rótulos com dica na bancada de
-#: 23/08/2026 (2 controles, 3 adaptadores). Boa parte deles é por aparelho — uma
-#: bancada mais magra monta menos linhas —, então o piso fica BEM abaixo do
-#: medido, em 12. Ele não existe para conferir a contagem: existe para que um
-#: dia em que a régua pare de achar qualquer coisa reprove, em vez de passar
-#: verde afirmando o vazio.
 NUNCA_MENOS_QUE = 12
 
 
@@ -97,11 +87,7 @@ pytestmark = pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utili
 
 @pytest.fixture(scope="module")
 def _folha_na_tela() -> Iterator[None]:
-    """A `theme.css` de verdade, aplicada pela tela, e desfeita no fim.
-
-    Sem a restauração a folha vazaria para os outros arquivos da mesma sessão do
-    pytest.
-    """
+    """A `theme.css` de verdade, aplicada pela tela, e desfeita no fim."""
     tela = Gdk.Screen.get_default()
     provider = Gtk.CssProvider()
     provider.load_from_data((GUI_DIR / "theme.css").read_bytes())
@@ -131,16 +117,7 @@ def _girar(vezes: int = 5000) -> None:
 
 @pytest.fixture(scope="module")
 def aba_montada(_folha_na_tela: None) -> Any:
-    """A aba de VERDADE, montada pelo mixin, numa janela mostrada.
-
-    06/09/2026 (`GTK-3`): o `scroll_tab_config_box` do `gui/main.glade` era o
-    embrulho, e o XML foi apagado. O berço passou a ser
-    `tests/unit/aba_config_sem_a_janela.py` dentro de um `Gtk.ScrolledWindow`
-    feito aqui — as marcas de afordância que este arquivo mede são postas pelo
-    MOTOR (`app/actions/config/`), e nenhuma delas vinha do embrulho. A largura
-    de 1180 px continua sendo a da tela do produto: é a mesma que a `.janela`
-    do HTML publicado declara.
-    """
+    """A aba de VERDADE, montada pelo mixin, numa janela mostrada."""
     caixa = aba_config_montada()
     rolagem = Gtk.ScrolledWindow()
     rolagem.add(caixa)
@@ -162,13 +139,7 @@ def _classes(widget: Any) -> set[str]:
 
 
 def _precisa_de_marca(widget: Any) -> bool:
-    """A régua deste arquivo, escrita sem olhar para a da produção.
-
-    Um rótulo que esconde explicação e não é um controle. Botão, caixa de marcar
-    e segmento do orçamento ficam de fora porque já se anunciam clicáveis — e
-    ficam de fora aqui pelo MESMO motivo que na produção, mas por um caminho
-    escrito à parte.
-    """
+    """A régua deste arquivo, escrita sem olhar para a da produção."""
     return (
         isinstance(widget, Gtk.Label)
         and _tem_dica(widget)
@@ -177,13 +148,7 @@ def _precisa_de_marca(widget: Any) -> bool:
 
 
 def _marcado(widget: Any) -> bool:
-    """Tem marca própria, ou tem um `?` ao lado que fala por ele.
-
-    O cabeçalho de seção é o segundo caso: a dica mora no título, e a marca é o
-    `?` irmão. Exigir a marca no próprio título transformaria o teste numa
-    afirmação sobre qual das duas afordâncias foi escolhida — e as duas são
-    válidas, foi o inventário que repartiu.
-    """
+    """Tem marca própria, ou tem um `?` ao lado que fala por ele."""
     if _classes(widget) & {CLASSE_TEM_DICA, CLASSE_AJUDA}:
         return True
     pai = widget.get_parent()
@@ -219,13 +184,7 @@ def test_nenhum_rotulo_com_dica_fica_invisivel(aba_montada: Any) -> None:
 
 
 def test_todo_titulo_de_secao_com_dica_ganha_a_marca() -> None:
-    """O título que esconde dica é sublinhado; o que não esconde, não.
-
-    Conta contra `SECOES_DA_ABA`, que é a fonte de quantas seções há e de quais
-    declaram `DICA`. Hoje são quatro de cinco: "A janela" tem `DICA = None`, e
-    marca que abre vazio é pior que marca nenhuma — ensina a pessoa a não
-    confiar na marca.
-    """
+    """O título que esconde dica é sublinhado; o que não esconde, não."""
     from hefesto_dualsense4unix.app.actions.config.moldura import moldura_de_secao
 
     esperadas = [s for s in SECOES_DA_ABA if getattr(s, "DICA", None)]
@@ -246,15 +205,7 @@ def test_todo_titulo_de_secao_com_dica_ganha_a_marca() -> None:
 
 
 def test_o_titulo_de_secao_continua_um_rotulo_com_texto() -> None:
-    """A regressão de 23/08/2026, e ela custou 13 testes de outras frentes.
-
-    O desenho que punha o `?` ao lado do título trocava o `label_widget` do
-    frame por um `Gtk.Box`, e SEIS arquivos de teste acham a seção fazendo
-    `frame.get_label_widget().get_text()`. O sintoma foi
-    `'Box' object has no attribute 'get_text'`, treze vezes.
-
-    Este teste é o que impede a troca de voltar sem que alguém veja o preço.
-    """
+    """A regressão de 23/08/2026, e ela custou 13 testes de outras frentes."""
     from hefesto_dualsense4unix.app.actions.config.moldura import moldura_de_secao
 
     for secao in SECOES_DA_ABA:
@@ -273,13 +224,7 @@ def test_o_titulo_de_secao_continua_um_rotulo_com_texto() -> None:
 
 
 def test_o_ponto_de_interrogacao_da_mesa_converge(aba_montada: Any) -> None:
-    """O `?` que `secao_mesa` já montava à mão ganha o MESMO círculo.
-
-    `secao_mesa._subcabecalho` desenhava um `?` antes de esta cura existir. Se
-    ele ficasse de fora, a aba teria duas gramáticas para a mesma ideia — um `?`
-    em círculo nos títulos e um `?` solto no sub-cabeçalho. A varredura o acha
-    pelo texto, e é por isso que ela não precisou editar `secao_mesa.py`.
-    """
+    """O `?` que `secao_mesa` já montava à mão ganha o MESMO círculo."""
     glifos = [
         w
         for w in _descer(aba_montada)
@@ -294,13 +239,7 @@ def test_o_ponto_de_interrogacao_da_mesa_converge(aba_montada: Any) -> None:
 
 
 def test_o_sublinhado_chega_pontilhado_no_widget(_folha_na_tela: None) -> None:
-    """A folha faz a marca EXISTIR na tela, não só passar pelo parser.
-
-    Esta é a metade da mordida que a contagem de classes não cobre: com a regra
-    CSS apagada, escrita para outro seletor, ou escrita com o
-    `text-decoration-style: dotted` que o GTK3 recusa, todo teste acima continua
-    verde e a tela continua sem marca nenhuma.
-    """
+    """A folha faz a marca EXISTIR na tela, não só passar pelo parser."""
     janela = Gtk.OffscreenWindow()
     janela.get_style_context().add_class("hefesto-dualsense4unix-window")
     caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -327,12 +266,10 @@ def test_o_sublinhado_chega_pontilhado_no_widget(_folha_na_tela: None) -> None:
         f"a borda inferior saiu `{estilo.value_nick}`, não `dotted` — a marca do "
         "inventário é o sublinhado PONTILHADO"
     )
-    # O rótulo sem a classe continua limpo: a regra não vaza para a aba inteira.
     assert nu.get_style_context().get_border(estado).bottom == 0, (
         "rótulo SEM a classe também ganhou borda — o seletor está largo demais e "
         "a marca deixa de significar 'aqui há explicação'"
     )
-    # E a marca custa altura, que é o preço declarado desta cura.
     assert marcado.get_allocation().height > nu.get_allocation().height, (
         "a marca não mudou a altura do rótulo, sinal de que não está sendo "
         "desenhada"

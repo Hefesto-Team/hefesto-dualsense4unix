@@ -1,20 +1,4 @@
-"""Testes do portão que reprova documento citando arquivo inexistente.
-
-Sprint PORTÃO-VIVO-01, bloco F. A exigência escrita lá é literal:
-
-    "Prova de que morde: ele tem de reprovar HOJE, sem nenhuma alteração
-     [...]. Se passar no repositório como está, está cego."
-
-Por isso o primeiro teste é o único da suíte que roda contra a árvore REAL:
-ele exige que `docs/adr/011-glyphs-vs-emojis.md` continue sendo pego enquanto
-afirmar que um hook chamado guardian existe. Se alguém enfraquecer o
-validador -- por exemplo parando de cobrar nome de arquivo solto, sem barra --
-esse teste cai na hora, que é exatamente o ponto.
-
-Os demais testes usam repositório falso em tmp_path e existem para provar o
-outro lado da moeda: o portão precisa dar VERDE no caso legítimo. Um gate que
-reprova tudo é tão inútil quanto um que não reprova nada.
-"""
+"""Testes do portão que reprova documento citando arquivo inexistente."""
 from __future__ import annotations
 
 import subprocess
@@ -26,31 +10,10 @@ import pytest
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "validar-referencias-docs.py"
 
-#: O documento e a linha que a sprint nomeia como prova.
 ADR_GLIFOS = "docs/adr/011-glyphs-vs-emojis.md"
 LINHA_DA_PROVA = 18
 NOME_FANTASMA = "guardian.py"
 
-#: O ARQUIVO ANINHADO DO REPOSITÓRIO DE MENTIRA, citado pelo SUFIXO — é com ele
-#: que as duas réguas da leniência de sufixo medem, a positiva e a negativa.
-#:
-#: **ELE ERA `gui/main.glade`, E O NOME APODRECEU — medido em 11/09/2026.** Em
-#: 06/09 a janela GTK saiu inteira (`f5311616`, decisão `D-0609-GTK-LEVA-INTEIRA`)
-#: e o `src/hefesto_dualsense4unix/gui/main.glade` foi APAGADO; o validador
-#: passou a isentar as 783 citações dos quatro artefatos aposentados, por nome.
-#: A partir daí o nome que estas duas réguas usavam era isento **antes** de
-#: qualquer regra de sufixo ser aplicada:
-#:
-#: * a régua POSITIVA (`test_caminho_encurtado_casa_por_sufixo`) continuou
-#:   VERDE — mas pela isenção, não pela leniência. Um instrumento falso;
-#: * a régua NEGATIVA (`test_link_que_sobe_nao_ganha_a_leniencia_de_sufixo`)
-#:   ficou VERMELHA, e foi ela que revelou as duas.
-#:
-#: **O PAR É A GUARDA, e foi ele que funcionou:** uma isenção não consegue
-#: fazer as duas passarem — ela derruba a negativa no mesmo gesto em que
-#: adoça a positiva. Por isso o nome de mentira daqui não imita nenhum
-#: caminho real: um nome que o produto não tem não pode ser aposentado nem
-#: declarado externo pelas costas destas réguas.
 ARQUIVO_ANINHADO = "gui/janela-de-mentira.glade"
 
 
@@ -65,8 +28,6 @@ def rodar(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-#: Regras 2 e 3 (DOC-VERDADE-02, E10). A variável real e a inventada; o método
-#: real e o inventado.
 ENV_REAL = "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED"
 ENV_FANTASMA = "HEFESTO_PLUGINS_ENABLED"
 METODO_REAL = "profile.switch"
@@ -75,12 +36,7 @@ METODO_FANTASMA = "profile.trocar"
 
 @pytest.fixture
 def repo_falso(tmp_path: Path) -> Path:
-    """Repositório mínimo: um arquivo real e uma pasta docs/ vazia.
-
-    Desde a DOC-VERDADE-02 ele também carrega o mínimo que as regras 2 e 3
-    precisam para não se desligarem sozinhas: um módulo com o literal de uma
-    variável de ambiente e um `ipc_server.py` com o dicionário `_handlers`.
-    """
+    """Repositório mínimo: um arquivo real e uma pasta docs/ vazia."""
     (tmp_path / "docs").mkdir()
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "existe_de_verdade.sh").write_text(
@@ -119,28 +75,8 @@ def escrever_doc(raiz: Path, nome: str, texto: str) -> Path:
     return caminho
 
 
-# ---------------------------------------------------------------------------
-# A prova da sprint: reprovar HOJE, na árvore real, sem alterar nada.
-# ---------------------------------------------------------------------------
-
-
 def test_hook_fantasma_citado_por_um_adr_reprova(repo_falso: Path) -> None:
-    """A forma exata do defeito que fez este portão nascer.
-
-    Até 27/07/2026 este teste apontava para o ADR-011 da árvore real, que
-    afirmava que ``guardian.py`` cobria os emojis proibidos -- um arquivo que
-    nunca existiu. O portão passou a existir, o ADR foi corrigido no mesmo dia
-    (passou a citar ``scripts/validar-glifos.py``, que existe), e o teste
-    reprovou -- porque **exigia que o defeito continuasse lá**.
-
-    Isso é teste-muralha: ele travava o defeito e proibia a correção. Esta casa
-    já tem dívida registrada dessa classe, e a lição vale mais que o caso: um
-    portão que precisa de sujeira na árvore para provar que funciona deixa de
-    provar no instante em que alguém limpa.
-
-    A forma do caso original está preservada aqui, em caixa própria: nome de
-    arquivo **solto**, sem barra, dentro de uma frase afirmativa.
-    """
+    """A forma exata do defeito que fez este portão nascer."""
     escrever_doc(
         repo_falso,
         "adr-de-mentira.md",
@@ -162,11 +98,7 @@ def test_hook_fantasma_citado_por_um_adr_reprova(repo_falso: Path) -> None:
 
 
 def test_a_arvore_real_esta_limpa() -> None:
-    """Regressão: o defeito que originou o portão não volta.
-
-    Este é o teste que substitui a muralha. Ele trava o **zero**, não a
-    sujeira -- e por isso continua fazendo sentido depois da correção.
-    """
+    """Regressão: o defeito que originou o portão não volta."""
     assert not list(RAIZ_REAL.rglob(NOME_FANTASMA)), (
         f"{NOME_FANTASMA} passou a existir na árvore; a premissa mudou"
     )
@@ -176,11 +108,6 @@ def test_a_arvore_real_esta_limpa() -> None:
     assert proc.returncode == 0, (
         "há referência morta em docs/:\n" f"{proc.stdout}{proc.stderr}"
     )
-
-
-# ---------------------------------------------------------------------------
-# O outro lado: o portão precisa dar verde no caso legítimo.
-# ---------------------------------------------------------------------------
 
 
 def test_documento_que_so_cita_arquivo_existente_passa(repo_falso: Path) -> None:
@@ -195,15 +122,7 @@ def test_documento_que_so_cita_arquivo_existente_passa(repo_falso: Path) -> None
 
 
 def test_caminho_encurtado_casa_por_sufixo(repo_falso: Path) -> None:
-    """A casa cita o caminho ENCURTADO e nunca o completo -- e isso vale.
-
-    Sem a regra de sufixo, este teste vira vermelho e o gate produz dezenas de
-    falsos positivos por documento.
-
-    O NOME DO ARQUIVO É :data:`ARQUIVO_ANINHADO`, e a razão de ele não ser mais
-    `gui/main.glade` está escrita lá: o nome velho virou isenção, e esta régua
-    passou a dar verde sobre a isenção em vez de sobre a leniência.
-    """
+    """A casa cita o caminho ENCURTADO e nunca o completo -- e isso vale."""
     escrever_doc(
         repo_falso, "curto.md", f"A janela mora em `{ARQUIVO_ANINHADO}`.\n"
     )
@@ -236,11 +155,6 @@ def test_comando_de_terminal_em_bloco_cercado_nao_e_cobrado(
     proc = rodar("--root", str(repo_falso), "--all")
 
     assert proc.returncode == 0, proc.stdout
-
-
-# ---------------------------------------------------------------------------
-# E o portão precisa MORDER no repositório falso também.
-# ---------------------------------------------------------------------------
 
 
 def test_nome_solto_inexistente_reprova(repo_falso: Path) -> None:
@@ -281,22 +195,6 @@ def test_caminho_com_barra_inexistente_reprova(repo_falso: Path) -> None:
     assert "scripts/nunca_existiu.sh" in proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# Link que SOBE (`../`) -- a cegueira curada em 07/08/2026.
-#
-# Até essa data `candidatos_da_linha` descartava TODO token com `..`, e os 246
-# links `../` desta árvore podiam apodrecer em silêncio. MEDIDO: trocado o alvo
-# do link do LUGAR-À-MESA-01 em `docs/usage/modos.md` por um nome inexistente,
-# o portão respondeu "OK: 1 documento(s) sem referência morta", saída 0.
-#
-# A exclusão tinha motivo, e ele também foi medido: dos 249 tokens com `..` na
-# árvore, três eram RETICÊNCIA DE ELISÃO. Os testes abaixo vêm em par -- a
-# mordida nova e a proteção velha -- porque curar um cegando o outro seria
-# trocar de defeito, não corrigir.
-# ---------------------------------------------------------------------------
-
-#: A forma exata dos seis links que a leva de 07/08 acrescentou: de
-#: `docs/usage/` para `docs/process/sprints/`.
 SPRINT_REAL = "2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md"
 
 
@@ -308,21 +206,7 @@ def _com_sprint(raiz: Path) -> None:
 
 
 def test_link_que_sobe_para_arquivo_inexistente_reprova(repo_falso: Path) -> None:
-    """A MORDIDA da cura: `../` para nome inventado tem de reprovar.
-
-    Este é o teste que, arrancada a cura (devolvido o `".."` à linha de
-    filtros de `candidatos_da_linha`), volta a passar com saída 0 -- que é
-    exatamente o defeito medido na árvore real.
-
-    O ALVO DO EXEMPLO MUDOU EM 20/09/2026, e a régua não afrouxou. Ele subia
-    para `../process/`, que é `FORA_DO_GIT` desde 15/09 -- a pasta não viaja
-    no clone, e citação a ela não se confere. Este teste passava porque a
-    isenção era medida no TEXTO CRU e `../process/` não começa com
-    `docs/process/`; ou seja, ele media  (noqa-acento: verbo medir, imperfeito)
-    um buraco da isenção, não a cegueira
-    ao caminho que sobe. Com a isenção passando a valer no caminho RESOLVIDO,
-    o exemplo tinha de mudar de pasta para continuar medindo o que promete.
-    """
+    """A MORDIDA da cura: `../` para nome inventado tem de reprovar."""
     _com_sprint(repo_falso)
     escrever_doc(
         repo_falso,
@@ -341,16 +225,7 @@ def test_link_que_sobe_para_arquivo_inexistente_reprova(repo_falso: Path) -> Non
 
 
 def test_link_que_sobe_para_o_processo_e_isento(repo_falso: Path) -> None:
-    """E a outra metade, que é a cura de 20/09/2026.
-
-    `docs/process/` é `FORA_DO_GIT` desde 15/09: o arquivo existe no disco
-    dela e não viaja no git, e a citação continua certa. A isenção era medida
-    no texto cru, e o texto cru de um link escrito de dentro de `docs/` é
-    `../process/…` -- que não casava. Na árvore DELA isso nunca apareceu,
-    porque o arquivo está lá e o link resolve; num clone limpo, as 12
-    citações de `docs/usage/` viravam referência morta e derrubavam o portão
-    inteiro. A régua media a máquina, não o documento.  (noqa-acento: verbo medir, imperfeito)
-    """
+    """E a outra metade, que é a cura de 20/09/2026."""
     escrever_doc(
         repo_falso,
         "modos.md",
@@ -406,11 +281,7 @@ def test_subida_dupla_para_arquivo_inexistente_reprova(repo_falso: Path) -> None
 
 
 def test_link_que_sobe_alto_demais_e_sai_da_arvore_reprova(repo_falso: Path) -> None:
-    """Subir acima da raiz do repositório é sempre link morto para quem clona.
-
-    Sem esta cobrança a cura teria criado uma cegueira nova no lugar da velha:
-    bastaria um `../` a mais para o token escapar de toda verificação.
-    """
+    """Subir acima da raiz do repositório é sempre link morto para quem clona."""
     escrever_doc(
         repo_falso,
         "fugitivo.md",
@@ -426,19 +297,7 @@ def test_link_que_sobe_alto_demais_e_sai_da_arvore_reprova(repo_falso: Path) -> 
 
 
 def test_link_que_sobe_nao_ganha_a_leniencia_de_sufixo(repo_falso: Path) -> None:
-    """Um `../` errado não casa com o mesmo sufixo morando em outro lugar.
-
-    A leniência de sufixo existe para o caminho ENCURTADO
-    (:data:`ARQUIVO_ANINHADO`), que não afirma posição. `../` afirma: ou o
-    arquivo está exatamente ali, ou o link está quebrado. Sem este teste, a
-    cura poderia ser "aceita qualquer coisa que exista em algum canto", que é
-    aceitar quase tudo.
-
-    **FOI ESTA RÉGUA QUE PEGOU A IRMÃ, em 11/09/2026**, e por construção: uma
-    isenção por nome adoça a régua positiva e derruba esta, porque as duas
-    esperam vereditos OPOSTOS sobre o mesmo nome. O par é a guarda; nenhuma
-    das duas sozinha seria.
-    """
+    """Um `../` errado não casa com o mesmo sufixo morando em outro lugar."""
     escrever_doc(
         repo_falso, "posicao.md", f"A janela mora em `../{ARQUIVO_ANINHADO}`.\n"
     )
@@ -452,16 +311,7 @@ def test_link_que_sobe_nao_ganha_a_leniencia_de_sufixo(repo_falso: Path) -> None
 
 
 def test_reticencia_de_elisao_continua_descartada(repo_falso: Path) -> None:
-    """A proteção que a exclusão de `..` de fato prestava, medida na árvore.
-
-    As três formas abaixo são literais dos documentos reais em 07/08/2026:
-    `docs/protocol/trigger-modes.md:34`,
-    `docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-...md:1177` e
-    `docs/process/estudos/2026-08-05-o-sistema-de-perfis-...md:1181`. Nenhuma é
-    caminho: é o autor elidindo o meio com reticência. Se este teste ficar
-    vermelho, a cura do `../` trocou uma cegueira por uma chuva de falso
-    positivo -- e o cabeçalho do portão avisa que isso o torna inútil.
-    """
+    """A proteção que a exclusão de `..` de fato prestava, medida na árvore."""
     escrever_doc(
         repo_falso,
         "reticencia.md",
@@ -480,11 +330,7 @@ def test_reticencia_de_elisao_continua_descartada(repo_falso: Path) -> None:
 
 
 def test_dois_pontos_no_meio_do_caminho_continua_descartado(repo_falso: Path) -> None:
-    """`docs/../scripts/x.sh` não é forma desta casa e segue fora.
-
-    A cura foi deliberadamente estreita: só prefixo de subida BEM FORMADO. Um
-    `..` no meio continua descartado, como sempre esteve.
-    """
+    """`docs/../scripts/x.sh` não é forma desta casa e segue fora."""
     escrever_doc(
         repo_falso,
         "meio.md",
@@ -493,11 +339,6 @@ def test_dois_pontos_no_meio_do_caminho_continua_descartado(repo_falso: Path) ->
     proc = rodar("--root", str(repo_falso), "--all")
 
     assert proc.returncode == 0, proc.stdout
-
-
-# ---------------------------------------------------------------------------
-# Escapes -- para o portão não ser impossível de satisfazer.
-# ---------------------------------------------------------------------------
 
 
 def test_marcador_de_isencao_silencia_a_linha(repo_falso: Path) -> None:
@@ -536,14 +377,6 @@ def test_caminho_absoluto_do_sistema_nao_e_cobrado(repo_falso: Path) -> None:
     assert proc.returncode == 0, proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# Regra 2 -- VARIÁVEL DE AMBIENTE (DOC-VERDADE-02, entrega E10).
-#
-# O buraco que deixou o ADR-017 ensinar `HEFESTO_PLUGINS_ENABLED` por meses:
-# variável de ambiente não é arquivo, e a regra 1 era cega a ela.
-# ---------------------------------------------------------------------------
-
-
 def test_variavel_de_ambiente_inexistente_reprova(repo_falso: Path) -> None:
     """A mordida escrita na sprint, parte 1."""
     escrever_doc(
@@ -570,12 +403,7 @@ def test_variavel_de_ambiente_real_passa(repo_falso: Path) -> None:
 
 
 def test_documento_nao_alimenta_o_indice_de_variaveis(repo_falso: Path) -> None:
-    """Um documento não pode se autoautorizar citando a própria invenção.
-
-    Se `docs/` entrasse no índice de literais, bastaria a variável aparecer
-    duas vezes no mesmo documento para a regra 2 virar tautologia. Este teste
-    trava a construção que impede isso.
-    """
+    """Um documento não pode se autoautorizar citando a própria invenção."""
     escrever_doc(
         repo_falso,
         "autoritaria.md",
@@ -588,12 +416,7 @@ def test_documento_nao_alimenta_o_indice_de_variaveis(repo_falso: Path) -> None:
 
 
 def test_docs_process_fica_fora_da_regra_de_variavel(repo_falso: Path) -> None:
-    """Sprint PROPÕE — e propor o que não existe é o trabalho dela.
-
-    A própria DOC-VERDADE-02 cita 16 vezes as três variáveis mortas que mandou
-    matar. Cobrar de `docs/process/` seria cobrar o diagnóstico de conter o
-    diagnosticado.
-    """
+    """Sprint PROPÕE — e propor o que não existe é o trabalho dela."""
     pasta = repo_falso / "docs" / "process" / "sprints"
     pasta.mkdir(parents=True)
     (pasta / "2026-01-01-PROPOSTA-01.md").write_text(
@@ -603,11 +426,6 @@ def test_docs_process_fica_fora_da_regra_de_variavel(repo_falso: Path) -> None:
     proc = rodar("--root", str(repo_falso), "--all")
 
     assert proc.returncode == 0, proc.stdout
-
-
-# ---------------------------------------------------------------------------
-# Regra 3 -- MÉTODO DE IPC (DOC-VERDADE-02, entrega E10).
-# ---------------------------------------------------------------------------
 
 
 def test_metodo_de_ipc_inexistente_reprova(repo_falso: Path) -> None:
@@ -634,12 +452,7 @@ def test_metodo_de_ipc_real_passa(repo_falso: Path) -> None:
 def test_renomear_metodo_no_codigo_sem_tocar_o_documento_reprova(
     repo_falso: Path,
 ) -> None:
-    """O cenário REAL da regra 3, e o motivo de ela existir.
-
-    A tabela do protocolo é digitada à mão; o registro é um `dict`. Renomear no
-    `ipc_server.py` e esquecer o documento é a forma exata como a tabela
-    envelheceu de 10-de-33 para 10-de-34.
-    """
+    """O cenário REAL da regra 3, e o motivo de ela existir."""
     escrever_doc(repo_falso, "protocolo.md", f"Chame `{METODO_REAL}`.\n")
     assert rodar("--root", str(repo_falso), "--all").returncode == 0
 
@@ -658,11 +471,7 @@ def test_renomear_metodo_no_codigo_sem_tocar_o_documento_reprova(
 
 
 def test_token_que_nao_e_espaco_de_nomes_do_ipc_passa(repo_falso: Path) -> None:
-    """`ctx.controller` não é IPC — `ctx` não está no `_handlers`.
-
-    É o filtro que impede a regra 3 de virar chuva de falso positivo sobre
-    atributo de objeto, que é o que mais aparece em documentação técnica.
-    """
+    """`ctx.controller` não é IPC — `ctx` não está no `_handlers`."""
     escrever_doc(
         repo_falso,
         "atributos.md",
@@ -674,12 +483,7 @@ def test_token_que_nao_e_espaco_de_nomes_do_ipc_passa(repo_falso: Path) -> None:
 
 
 def test_nome_de_arquivo_com_cara_de_metodo_passa(repo_falso: Path) -> None:
-    """`daemon.pid`, `daemon.toml` e `daemon.log` não são métodos de IPC.
-
-    Os três têm espaço de nomes válido (`daemon.`) e cairiam na regra 3 sem o
-    filtro de extensão. `daemon.pid` é o caso medido na árvore real, em
-    `docs/protocol/ipc-unix-socket.md`.
-    """
+    """`daemon.pid`, `daemon.toml` e `daemon.log` não são métodos de IPC."""
     escrever_doc(
         repo_falso,
         "arquivos.md",
@@ -690,19 +494,8 @@ def test_nome_de_arquivo_com_cara_de_metodo_passa(repo_falso: Path) -> None:
     assert proc.returncode == 0, proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# O escape novo: a nota de verificação datada isenta o documento.
-# ---------------------------------------------------------------------------
-
-
 def test_nota_de_verificacao_isenta_o_documento(repo_falso: Path) -> None:
-    """O padrão de ADR desta casa não pode ser punido pelo portão.
-
-    Não se reescreve a decisão original: acrescenta-se a nota datada dizendo o
-    que caducou — e a nota PRECISA nomear o valor errado, que é a informação
-    inteira dela. Sem esta isenção o portão reprovaria justamente quem fez a
-    correção certa, e um gate que castiga a honestidade é pior que gate nenhum.
-    """
+    """O padrão de ADR desta casa não pode ser punido pelo portão."""
     pasta = repo_falso / "docs" / "adr"
     pasta.mkdir(parents=True)
     (pasta / "099-decisao.md").write_text(
@@ -724,10 +517,7 @@ def test_nota_de_verificacao_isenta_o_documento(repo_falso: Path) -> None:
 
 
 def test_sem_a_nota_o_mesmo_adr_reprova(repo_falso: Path) -> None:
-    """A contraprova da isenção anterior: arrancada a nota, o portão morde.
-
-    Sem este par, a isenção poderia ser larga demais e ninguém notaria.
-    """
+    """A contraprova da isenção anterior: arrancada a nota, o portão morde."""
     pasta = repo_falso / "docs" / "adr"
     pasta.mkdir(parents=True)
     (pasta / "099-decisao.md").write_text(
@@ -746,11 +536,7 @@ def test_sem_a_nota_o_mesmo_adr_reprova(repo_falso: Path) -> None:
 
 
 def test_a_nota_isenta_so_o_nome_que_ela_cita(repo_falso: Path) -> None:
-    """A isenção é por TOKEN, não por documento inteiro.
-
-    Um ADR com nota datada não fica com salvo-conduto para inventar outros
-    nomes — só os que a nota assume como caducados passam.
-    """
+    """A isenção é por TOKEN, não por documento inteiro."""
     pasta = repo_falso / "docs" / "adr"
     pasta.mkdir(parents=True)
     (pasta / "099-decisao.md").write_text(
@@ -774,27 +560,13 @@ def test_a_nota_isenta_so_o_nome_que_ela_cita(repo_falso: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Desligamento seguro: sem índice, a regra não acusa TUDO.
-# ---------------------------------------------------------------------------
-
-
 def test_sem_ipc_server_a_regra_de_metodo_se_desliga(repo_falso: Path) -> None:
-    """Um portão que reprova tudo quando tropeça é pior que portão nenhum.
-
-    Sem o `ipc_server.py` não há como distinguir método morto de método novo;
-    a regra 3 se cala em vez de acusar todo token com ponto no meio.
-    """
+    """Um portão que reprova tudo quando tropeça é pior que portão nenhum."""
     (repo_falso / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_server.py").unlink()
     escrever_doc(repo_falso, "ipc.md", f"Chame `{METODO_FANTASMA}`.\n")
     proc = rodar("--root", str(repo_falso), "--all")
 
     assert proc.returncode == 0, proc.stdout
-
-
-# ---------------------------------------------------------------------------
-# O README entrou na varredura com a DOC-VERDADE-02.
-# ---------------------------------------------------------------------------
 
 
 def test_readme_entra_na_varredura(repo_falso: Path) -> None:
@@ -808,31 +580,8 @@ def test_readme_entra_na_varredura(repo_falso: Path) -> None:
     assert "README.md:1" in proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# AUDITORIA-DE-PERDA-01/E3 (24/08/2026) -- o link com o basename certo e a
-# pasta errada, que casava por SUFIXO sem nunca chegar à resolução relativa.
-#
-# O DEFEITO MEDIDO: a checagem `in sufixos` sobre o alvo bruto do link
-# rodava ANTES da resolução contra a pasta do documento. Um
-# `[texto](sprints/real.md)` virado `[texto](real.md)` -- a pasta some, o
-# basename sobra -- casava por sufixo
-# com o arquivo real em QUALQUER canto da árvore, porque o basename sozinho
-# JÁ é um dos sufixos gerados por `indexar()`. A resolução relativa (que
-# pegaria o erro) nunca era alcançada.
-# ---------------------------------------------------------------------------
-
-
 def test_link_com_basename_certo_e_pasta_errada_reprova(repo_falso: Path) -> None:
-    """A MORDIDA da cura E3: a forma exata do defeito plantado na auditoria.
-
-    O arquivo real mora em `docs/process/sprints/`; quem cita está em
-    `docs/usage/` e escreve o link SEM a pasta -- por convenção de link
-    markdown, isso afirma "ao lado de quem cita", que é falso aqui.
-
-    Antes da E3 isto passava calado: o basename sozinho já é um sufixo do
-    caminho real, e a checagem `in sufixos` rodava antes de qualquer
-    resolução contra a pasta de `citante.md`.
-    """
+    """A MORDIDA da cura E3: a forma exata do defeito plantado na auditoria."""
     pasta = repo_falso / "docs" / "process" / "sprints"
     pasta.mkdir(parents=True)
     (pasta / "real.md").write_text("# Sprint\n", encoding="utf-8")
@@ -867,11 +616,7 @@ def test_link_com_basename_e_a_pasta_certa_passa(repo_falso: Path) -> None:
 def test_nome_solto_entre_crases_continua_leniente_de_qualquer_pasta(
     repo_falso: Path,
 ) -> None:
-    """A E3 não pode fechar a convenção que `test_caminho_encurtado_casa_por_sufixo`
-    já prova para caminho com barra -- aqui é a MESMA convenção sem barra
-    nenhuma: nome solto entre crases (`.py`/`.sh`) é citado sem posição, o
-    tempo todo, desta casa. Só o link markdown afirma posição.
-    """
+    """A E3 não pode fechar a convenção que `test_caminho_encurtado_casa_por_sufixo`"""
     fundo = repo_falso / "src" / "pacote" / "fundo"
     fundo.mkdir(parents=True)
     (fundo / "remoto.py").write_text("# módulo\n", encoding="utf-8")

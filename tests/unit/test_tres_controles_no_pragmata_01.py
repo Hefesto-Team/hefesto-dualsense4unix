@@ -59,11 +59,9 @@ from hefesto_dualsense4unix.daemon.launch_env import (
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 _DISABLE = "PROTON_DISABLE_HIDRAW"
 
-#: O espelho virtual da Valve, no formato que o SDL lê.
 _ESPELHO = "0x28de/0x11ff"
 #: O DualSense físico dela.
 _FISICO = "0x054c/0x0ce6"
-#: O nosso vpad. NUNCA pode ser escondido — é ele que entrega o controle.
 _NOSSO_VPAD = "0x054c/0x0df2"
 
 
@@ -78,22 +76,9 @@ def _env(**kw: object) -> dict[str, str]:
     return compose_env(**base)  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
-# A cura
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("flavor", ["dualsense", "xbox"])
 def test_o_espelho_do_steam_input_e_escondido_do_jogo(flavor: str) -> None:
-    """O caso dela, nas DUAS máscaras. Morde em `PAR_STEAM_INPUT_VIRTUAL`.
-
-    Arranque para ver reprovar: tirar o par da lista do `_IGNORE_VALUE`. É
-    exatamente o estado do produto até 10/08/2026 — e o resultado é o que ela
-    relatou, com o jogo vendo três controles.
-
-    Nas duas máscaras porque o Steam Input cria o espelho igual: ele enxerga o
-    nosso vpad, não a nossa máscara.
-    """
+    """O caso dela, nas DUAS máscaras. Morde em `PAR_STEAM_INPUT_VIRTUAL`."""
     backends = ["uhid"] if flavor == "dualsense" else ["uinput"]
     env = _env(flavor=flavor, backends=backends)
     assert _ESPELHO in env[_IGNORE].split(",")
@@ -105,36 +90,17 @@ def test_o_fisico_continua_escondido_junto() -> None:
 
 
 def test_o_nosso_vpad_nunca_entra_em_lista_nenhuma() -> None:
-    """O contraponto que impede a cura de virar o defeito oposto.
-
-    Esconder o `0df2` deixaria o jogo com ZERO controles — e a assimetria desta
-    casa manda errar para o lado do duplicado, jamais para o do controle sumido.
-    Vale para as duas variáveis: o `PROTON_DISABLE_HIDRAW` nega hidraw, e sem
-    hidraw o vpad Edge perde rumble, gatilhos e lightbar do jogo.
-    """
+    """O contraponto que impede a cura de virar o defeito oposto."""
     env = _env()
     assert _NOSSO_VPAD not in env[_IGNORE].lower()
     assert _NOSSO_VPAD not in env[_DISABLE].lower()
 
 
 def test_o_disable_hidraw_nao_ganhou_o_espelho() -> None:
-    """Só o IGNORE cresceu, e a diferença é de mecanismo, não de descuido.
-
-    O `PROTON_DISABLE_HIDRAW` faz o winebus NEGAR hidraw; o espelho da Valve não
-    é um aparelho HID que o Proton entregue, é um evdev virtual. Pôr o par lá
-    seria ruído numa variável cujo comentário no código diz, com todas as
-    letras, que só o físico entra.
-
-    Morde: acrescentar o par ao `_DISABLE_HIDRAW_VALUE` faz este teste reprovar.
-    """
+    """Só o IGNORE cresceu, e a diferença é de mecanismo, não de descuido."""
     env = _env()
     assert env[_DISABLE].lower() == _FISICO
     assert "0x28de" not in env[_DISABLE].lower()
-
-
-# ---------------------------------------------------------------------------
-# Os portões que a cura NÃO pode furar
-# ---------------------------------------------------------------------------
 
 
 def test_sem_cobertura_o_espelho_tambem_nao_e_escondido() -> None:
@@ -163,39 +129,14 @@ def test_com_a_emulacao_desligada_nao_se_esconde_nada() -> None:
     assert _IGNORE not in _env(backends=[])
 
 
-# ---------------------------------------------------------------------------
-# A saída que foi RECUSADA, e o motivo dela por escrito
-# ---------------------------------------------------------------------------
-
-
 def test_o_except_mataria_os_externos_dela() -> None:
-    """Por que não `SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT`.
-
-    A variável existe e resolveria em uma linha ("aceite só o nosso vpad"). Este
-    teste TRAVA a decisão de não usá-la, porque ela reaparece como ideia boa
-    toda vez que alguém reencontra o problema.
-
-    O motivo é a exigência dela: *"deve ser universal, caso eu tenha 4 novos
-    dual sense ou novos pro controler ou 8bitdo"*. Um Pro Controller ou um
-    8BitDo chegam ao jogo POR SI — o Hefesto os numera e acende o LED, mas não
-    os adota —, então um `_EXCEPT` com o nosso VID/PID os apagaria da mesa.
-
-    Se um dia o produto ADOTAR os externos com vpad próprio (a `E4` da
-    LUGAR-À-MESA-01), esta decisão caduca e este teste ganha uma nota datada.
-    """
+    """Por que não `SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT`."""
     env = _env()
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT" not in env
 
 
 def test_o_par_da_valve_nao_e_o_steam_controller_fisico_dela() -> None:
-    """`28de:11ff` é o espelho virtual; o aparelho físico da Valve é outro PID.
-
-    Sem esta separação a cura esconderia um controle de verdade — o erro exato
-    que o `test_par_fora_da_faixa` da bateria irmã existe para evitar. O
-    `28de:1142` já está nomeado como "Steam Controller" em
-    `app/actions/external_controllers.py`, e nenhum dos dois pares físicos entra
-    aqui.
-    """
+    """`28de:11ff` é o espelho virtual; o aparelho físico da Valve é outro PID."""
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         _TYPE_BY_VIDPID,
     )

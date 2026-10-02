@@ -1,16 +1,4 @@
-"""O install confere que o root tem as três ferramentas do nome do lugar.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-14: o
-`bt_active_mode.sh` — recopiado pelo laço da resiliência — roda como root pelo
-systemd e dá a cada adaptador o nome do lugar dele. Para isso acha a casa pelo
-`getent`, lê o `maquina.json` pelo `python3` e o lugar pelo `udevadm`. Sem
-qualquer uma, o alias fica como está, calado. Na máquina dela as três estão em
-/usr/bin (conferido em 23/09); numa distro enxuta, o install passa a dizer.
-
-A MORDIDA, medida: fazer a função ignorar o PATH que recebe (procurar sempre
-no do sistema) reprova o caso da ferramenta ausente; tirar a chamada do
-`install_bt_resilience_host`, o último.
-"""
+"""O install confere que o root tem as três ferramentas do nome do lugar."""
 
 from __future__ import annotations
 

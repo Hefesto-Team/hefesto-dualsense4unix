@@ -17,7 +17,7 @@ O PROBLEMA QUE ELE RESOLVE, e ele tinha TRÊS lados:
 3. **E as cópias já divergiam.** Medido no dia em que este módulo nasceu: a tela
    dizia que as três regiões do touchpad fazem *Botão esquerdo · Botão direito ·
    F11*, e o produto faz *Backspace · Enter · Delete*
-   (`keyboard_mappings.py:60-62`). Três linhas de vinte e uma, erradas desde que
+   (`keyboard_mappings.py:50-52`). Três linhas de vinte e uma, erradas desde que
    foram escritas, porque nada as comparava.
 
 O CONTRATO, e ele é de uma linha: **um botão faz UMA ação**, e a ação é um
@@ -48,34 +48,11 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
 )
 
 #: OS DOIS EIXOS DOS ANALÓGICOS, que são LINHA na tela e não são botão em lugar
-#: nenhum do produto. Eles existem aqui porque a tela oferece trocar o que cada
-#: um faz — e porque, sem eles, "L3 · direção" seria a única linha da tabela sem
-#: endereço, o que já bastou para uma tela inteira ficar sem dono nesta casa.
 EIXO_ESQUERDO = "l3_direcao"
 EIXO_DIREITO = "r3_direcao"
 
-#: O BOTÃO PS, e ele é o único desta lista cujo ATENDENTE não é device nenhum:
-#: quem o serve é o callback do `ps_solo`
-#: (`daemon/subsystems/hotkey.build_ps_solo_callback`). O nome que a tela mostra
-#: para ele é "Botão PS", e ele vem do dono
-#: (`app/actions/input_actions._BUTTON_LABELS`), não de uma digitação daqui.
 BOTAO_PS = "ps"
 
-#: AS VINTE E DUAS LINHAS, na ordem em que a tela as mostra. A ordem é dela
-#: (27/08/2026, *"cada linha seria um dos botões do controle"*), e é a mesma nas
-#: duas telas de botões da aba Navegação.
-#:
-#: O PS ENTROU EM 06/09/2026 (ONDA5-06-01), por decisão dela na 06-Q3: *"O PS
-#: ganha a mesma lista das outras 21 linhas; se você der uma tecla a ele, ele
-#: passa a digitar SEM parar de abrir a Steam"*. Ele fica **depois do `create` e
-#: antes das três regiões do touchpad**, que é a ordem do aparelho.
-#:
-#: ISTO REVERTE a decisão de 04/09 (*"fica fora, e a razão vira dica"*), e a
-#: reversão é dela. A régua que guardava a decisão anterior
-#: (`tests/unit/test_a_aba_06_navegacao_fecha_as_linhas.py`,
-#: `test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora`) mede o mundo de
-#: ontem a partir deste commit; quem a aposenta é a frente da TELA (ONDA5-06-02),
-#: junto com o parágrafo do `?` que ela guarda.
 BOTOES: tuple[str, ...] = (
     "cross", "circle", "square", "triangle",
     "l1", "r1", "l2", "r2",
@@ -85,38 +62,19 @@ BOTOES: tuple[str, ...] = (
     "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
 )
 
-#: OS TOKENS QUE NÃO SÃO TECLA NEM BOTÃO DE MOUSE — papéis e comandos. Todos na
-#: forma `__NOME__`, a mesma que `keyboard_mappings.is_virtual_token` reconhece,
-#: para que nenhum deles possa ser confundido com um `KEY_*` de verdade.
 TOKEN_CURSOR = "__CURSOR__"
 TOKEN_ROLAGEM = "__ROLAGEM__"
 TOKEN_STEAM = "__STEAM__"
 TOKEN_SAIR_DO_JOGO = "__SAIR_DO_JOGO__"
 TOKEN_PROGRAMA = "__PROGRAMA__"
 TOKEN_NADA = "__NADA__"
-#: O DE FÁBRICA DA LINHA DO PS, e ele é só dela: nenhuma tecla. A LINHA DO PS SÓ
-#: DIGITA desde 01/10/2026 (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
-#: `D-0110-A-LINHA-DO-PS-SO-DIGITA`, por delegação, a validar por ela): o que o
-#: toque no PS faz no computador é o ⑥ da tabela dos gestos, um dono só
-#: (`D-2909-OS-GESTOS-SAO-DA-MAQUINA`). «Abrir a Steam» e «— Nada —» saíram da
-#: lista dele (:func:`por_grupo`), e a tecla acontece junto com o ⑥.
 TOKEN_SEM_TECLA = "__SEM_TECLA__"
 
-#: OS GRUPOS SÃO AS PALAVRAS DELA, da fala de 27/08/2026: *"no lado direito
-#: teríamos Função do teclado, Executar Comando, Mouse"*. A tela os usa como
-#: `<optgroup>`, e a ordem daqui é a ordem de lá.
 GRUPO_MOUSE = "Mouse"
 GRUPO_TECLADO = "Função do teclado"
 GRUPO_COMANDO = "Executar Comando"
 GRUPO_NENHUM = ""
 
-#: TOKEN -> (grupo, rótulo). É a lista que a tela oferece em CADA linha, e o
-#: rótulo é o texto que ela lê — não há segunda lista do outro lado.
-#:
-#: `Backspace` e `Delete` entraram em 01/09/2026 por MEDIÇÃO, não por gosto: o
-#: produto já os emite nas regiões esquerda e direita do touchpad
-#: (`keyboard_mappings.py:60,62`) e a lista da tela não os tinha — logo a tela
-#: não conseguia dizer a verdade sobre três das suas vinte e uma linhas.
 ACOES: dict[str, tuple[str, str]] = {
     "BTN_LEFT": (GRUPO_MOUSE, "Botão esquerdo"),
     "BTN_RIGHT": (GRUPO_MOUSE, "Botão direito"),
@@ -139,11 +97,6 @@ ACOES: dict[str, tuple[str, str]] = {
     "KEY_SYSRQ": (GRUPO_TECLADO, "PrintScreen"),
     "KEY_F11": (GRUPO_TECLADO, "F11"),
 
-    # O ALTERNADOR VEM PRIMEIRO porque é o de fábrica do L3 desde 02/09/2026.
-    # O rótulo ESPERA A PALAVRA DELA: ela decidiu o comportamento
-    # (*"abrir o teclado virtual e fechar o teclado virtual caso apertado
-    # novamente"*), não o texto. Este é a leitura direta da frase dela e segue
-    # a forma dos dois vizinhos.
     TOKEN_TOGGLE_OSK: (GRUPO_COMANDO, "Abrir e fechar o teclado na tela"),
     TOKEN_OPEN_OSK: (GRUPO_COMANDO, "Abrir o teclado na tela"),
     TOKEN_CLOSE_OSK: (GRUPO_COMANDO, "Fechar o teclado na tela"),
@@ -157,31 +110,17 @@ ACOES: dict[str, tuple[str, str]] = {
 
 
 def o_ps_aceita(token: str) -> bool:
-    """O token cabe na linha do PS? Tecla (combos com ``+``), o teclado na tela, ou nada.
-
-    É a mesma pergunta que o daemon faz antes de digitar
-    (`daemon/subsystems/hotkey._o_ps_digita`): a linha só oferece o que o PS
-    sabe entregar.
-    """
+    """O token cabe na linha do PS? Tecla (combos com ``+``), o teclado na tela, ou nada."""
     if token == TOKEN_SEM_TECLA:
         return True
     teclado_na_tela = {TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK, TOKEN_CLOSE_OSK}
     return all(p.startswith("KEY_") or p in teclado_na_tela for p in token.split("+"))
 
-#: OS TRÊS QUE A TELA OFERECE E O PRODUTO AINDA NÃO ATENDE. Eles ficam na lista
 #: de propósito — tirá-los da tela seria apagar uma promessa que ela aprovou —,
-#: mas quem os grava tem de saber que hoje eles não acendem nada. O
-#: `resolver()` os devolve na terceira sacola, que é como quem chama fica
-#: sabendo em vez de descobrir pelo silêncio.
-#:
-#: `__PROGRAMA__` é o mais fundo dos três: ele precisa de um CAMINHO junto, e
-#: campo para esse caminho não existe em perfil nenhum.
 SEM_ATENDENTE: frozenset[str] = frozenset(
     {TOKEN_STEAM, TOKEN_SAIR_DO_JOGO, TOKEN_PROGRAMA})
 
 
-#: A ORDEM DOS GRUPOS NA TELA, que é a ordem da fala dela. O `<optgroup>` sai
-#: daqui, e não de uma segunda lista no gerador.
 ORDEM_DOS_GRUPOS: tuple[str, ...] = (
     GRUPO_MOUSE, GRUPO_TECLADO, GRUPO_COMANDO, GRUPO_NENHUM)
 
@@ -223,9 +162,6 @@ def token_do_rotulo(texto: str) -> str | None:
     return _POR_ROTULO.get(texto.strip())
 
 
-#: O REVERSO, montado UMA vez. O `assert` não é zelo: dois tokens com o mesmo
-#: rótulo fariam o caminho de volta escolher um deles ao acaso, e o botão
-#: gravaria outra coisa que não a que ela leu na tela.
 _POR_ROTULO: dict[str, str] = {rotulo: token for token, (_g, rotulo) in ACOES.items()}
 if len(_POR_ROTULO) != len(ACOES):  # pragma: no cover — defeito de escrita
     _repetidos = sorted({r for r in (v[1] for v in ACOES.values())
@@ -250,25 +186,7 @@ def _do_teclado(botao: str) -> str | None:
 
 
 def acao_do_ps(escolhas: dict[str, str] | None) -> str | None:
-    """O token que o PERFIL deu ao botão PS — `None` quando ele não disse nada.
-
-    A QUARTA SAÍDA, e ela é porta PRÓPRIA e não uma quarta posição na tupla do
-    :func:`resolver`. A razão é medida: três chamadores desempacotam três
-    sacolas (`profiles/manager.py` e duas vezes
-    `interface/pacotes/a06_navegacao.py`), e devolver quatro valores viraria
-    `ValueError: too many values to unpack` na aba que ela abre — o produto
-    quebrado hoje para servir a frente da tela que roda depois. Uma porta nova
-    não quebra ninguém e diz a mesma coisa.
-
-    E O DESTINO É OUTRO, que é o que justifica a porta: as três sacolas do
-    `resolver()` vão para DEVICES (`UinputMouseDevice`, `UinputKeyboardDevice`);
-    o PS não tem device — quem o atende é o callback do `ps_solo`, e o PS nunca
-    chega à emulação (`integrations/hotkey_daemon.py`, o latch do combo, subtrai
-    o PS de `emu_buttons` enquanto ele estiver pressionado).
-
-    `None` NÃO é `__NADA__`: `None` é "o perfil não opinou, vale o degrau da
-    máquina"; `__NADA__` é ela dizendo que este botão não faz nada.
-    """
+    """O token que o PERFIL deu ao botão PS — `None` quando ele não disse nada."""
     if not escolhas:
         return None
     token = escolhas.get(BOTAO_PS)
@@ -291,7 +209,7 @@ def padrao() -> dict[str, str]:
 
     O CASO QUE TORNA ISSO VISÍVEL É O `r3`: o mouse o quer como Botão do meio e
     o teclado como "Fechar o teclado na tela", e o produto faz **os dois**. O
-    comentário de `keyboard_mappings.py:47-52` já registrava a colisão e dizia
+    comentário de `keyboard_mappings.py:37-42` já registrava a colisão e dizia
     que ela é resolvida "por quem habilita mouse+teclado juntos". A tela mostra
     o do mouse; a colisão continua no produto, e continua escrita lá.
     """
@@ -306,20 +224,11 @@ def padrao() -> dict[str, str]:
         else:
             do_teclado = _do_teclado(botao)
             fora[botao] = do_teclado if do_teclado else TOKEN_NADA
-    # OS DOIS GATILHOS NÃO TÊM MAPA PRÓPRIO — o produto os INJETA como `cross` e
-    # `triangle` acima do limiar (`uinput_mouse._resolve_emulated_set`), então o
-    # que eles fazem é o que aqueles fazem. Derivar daqui, e não digitar, é o que
-    # faz esta tabela acompanhar uma troca lá.
     fora["l2"] = fora["cross"]
     fora["r2"] = fora["triangle"]
-    # OS DOIS EIXOS são papel, não tecla: o esquerdo move o cursor e o direito
-    # rola. Está em `dispatch()` — `_emit_move(lx, ly)` e `_emit_scroll(rx, ry)`.
     fora[EIXO_ESQUERDO] = TOKEN_CURSOR
     fora[EIXO_DIREITO] = TOKEN_ROLAGEM
-    # O PS NÃO ESTÁ EM NENHUM DOS QUATRO MAPAS — medido: nem `BUTTON_TO_UINPUT`,
     # nem `DPAD_TO_KEY`, nem `EDGE_KEY_MAP`, nem `DEFAULT_BUTTON_BINDINGS`. A
-    # LINHA DELE SÓ DIGITA desde 01/10/2026 (:data:`TOKEN_SEM_TECLA`): o de
-    # fábrica dela é nenhuma tecla, e o ato do computador é o ⑥ dos gestos.
     fora[BOTAO_PS] = TOKEN_SEM_TECLA
     return fora
 
@@ -336,7 +245,7 @@ def _dominio_do_teclado() -> frozenset[str]:
     digitar a lista é o que faz o `r3` ficar de FORA sozinho. O `r3` está nos
     dois lados (`BUTTON_TO_UINPUT` diz `BTN_MIDDLE`, `DEFAULT_BUTTON_BINDINGS`
     diz "fechar o teclado na tela") e o produto faz **os dois** — é a colisão
-    que `keyboard_mappings.py:56-62` registra. Digitar a lista aqui faria a
+    que `keyboard_mappings.py:46-52` registra. Digitar a lista aqui faria a
     camada de atalhos apagar o Botão do meio dele, que é regressão em botão que
     ela usa.
     """
@@ -347,9 +256,6 @@ def _dominio_do_teclado() -> frozenset[str]:
         and base.get(botao) == do_teclado)
 
 
-#: O domínio de `key_bindings`, montado UMA vez. Hoje ele é
-#: `{options, create, l1, r1, l3, touchpad_left_press, touchpad_middle_press,
-#: touchpad_right_press}` — oito dos vinte e dois botões.
 DOMINIO_DO_TECLADO: frozenset[str] = _dominio_do_teclado()
 
 
@@ -373,7 +279,7 @@ def tabela_efetiva(
     uma palavra, e com os dois campos continuando a aparecer no arquivo.
 
     O `None` É "NÃO OPINOU" E O `{}` É "ESVAZIEI", e a diferença é a mesma do
-    esquema (`profiles/schema.py:1814-1816`) e a mesma que
+    esquema (`profiles/schema.py:1212-1214`) e a mesma que
     `profiles/manager.resolve_key_bindings` aplica ao device: `None` herda
     `DEFAULT_BUTTON_BINDINGS` inteiro — que é exatamente o que o de fábrica já
     deriva, logo não há nada a fazer —, e um dict, mesmo vazio, é a lista
@@ -381,7 +287,7 @@ def tabela_efetiva(
     `— Nada —`.
 
     ELA NÃO MESCLA COM O DE FÁBRICA, e isso é medido, não escolhido:
-    `resolve_key_bindings` (`profiles/manager.py:3223`) devolve só as chaves do
+    `resolve_key_bindings` (`profiles/manager.py:1890`) devolve só as chaves do
     dict, e é ele quem alimenta o device no `apply_keyboard`. Mesclar aqui faria
     esta tabela discordar do device que ela mesma vai reescrever um método
     depois — que é o defeito que esta camada existe para fechar.
@@ -477,30 +383,12 @@ def resolver(
     do_teclado: dict[str, tuple[str, ...]] = {}
     sem_dono: list[str] = []
 
-    # OS DOIS GATILHOS SÃO ESPELHO, e não linha própria — descoberto pela régua
-    # em 01/09/2026, no dia em que este módulo nasceu. `_resolve_emulated_set`
-    # (`uinput_mouse.py:377`) troca L2 por `cross` e R2 por `triangle` ANTES de
-    # qualquer mapa ser consultado: quando o dedo aperta o L2, o que chega ao
-    # `_emit_buttons` já se chama `cross`.
-    #
-    # LOGO: uma escolha para o L2 que seja IGUAL à do cross não precisa de nada
-    # — ela já acontece. Uma DIFERENTE não tem como acontecer, e vai para a
-    # terceira sacola. Pô-la no mapa faria uma entrada que nunca casa, e a tela
-    # mostraria a escolha guardada de um botão que continua fazendo outra coisa.
     for gatilho, espelho in (("l2", "cross"), ("r2", "triangle")):
         if tabela.get(gatilho) != tabela.get(espelho):
             sem_dono.append(gatilho)
         tabela.pop(gatilho, None)
 
-    # O PS SAI DAS TRÊS SACOLAS, e não por falta de dono — por ter um dono que
-    # não é device (ONDA5-06-01). Sem esta linha o de fábrica dele (`__STEAM__`,
-    # que está em `SEM_ATENDENTE`) o jogaria na TERCEIRA sacola, e a tira da aba
-    # escreveria na tela dela que o botão que abre a Steam "não acende nada
-    # hoje" — enquanto `profiles/manager.py` registraria o mesmo no journal como
     # `button_actions_sem_atendente`.
-    #
-    # `SEM_ATENDENTE` CONTINUA VALENDO PARA OS OUTROS VINTE E UM. Para eles nada
-    # mudou, e mudar seria a segunda cura escondida dentro da primeira.
     tabela.pop(BOTAO_PS, None)
 
     for botao, token in tabela.items():
@@ -513,9 +401,6 @@ def resolver(
         elif token.startswith("BTN_"):
             do_mouse[botao] = token
         elif token in (TOKEN_CURSOR, TOKEN_ROLAGEM):
-            # PAPEL PEDIDO A UM BOTÃO. A tela deixa escolher, e o produto não
-            # tem como dar movimento de cursor a um botão que só sabe ir e
-            # voltar. Vai para a terceira sacola pelo mesmo motivo dos comandos.
             sem_dono.append(botao)
         else:
             do_teclado[botao] = tuple(token.split("+"))
@@ -523,23 +408,11 @@ def resolver(
 
 
 def rotulo(token: str) -> str:
-    """O texto que a tela mostra para aquele token, ou o token cru se ele sumir.
-
-    O CRU É PROPOSITAL: um token que perdeu o rótulo é um defeito a ver, e um
-    travessão no lugar dele o esconderia.
-    """
+    """O texto que a tela mostra para aquele token, ou o token cru se ele sumir."""
     par = ACOES.get(token)
     return par[1] if par else token
 
 
-#: O NOME PRIVADO CONTINUA RESPONDENDO — 06/09/2026, e o alias é a metade
-#: barata de uma renomeação. `tabela_efetiva` deixou de ser privada porque tinha
-#: chamador de fora havia semanas: `interface/pacotes/a06_navegacao.py:1199` a
-#: chama para montar as linhas dos botões, e a alternativa — remontar as três
-#: camadas dentro da aba — é a SEGUNDA VERDADE que esta casa persegue. Um
-#: privado com chamador de fora não é encapsulamento, é um contrato não
-#: declarado. O alias fica enquanto houver prosa e teste citando o nome velho, e
-#: sai quando a última citação sair.
 _tabela_efetiva = tabela_efetiva
 
 __all__ = [

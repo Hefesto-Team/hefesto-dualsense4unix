@@ -114,8 +114,6 @@ async def test_profile_switch_grava_active_marker(running_server: Any) -> None:
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("profile.switch", {"name": "shooter"})
 
-    # R-03: campos aditivos na resposta (`mode_aplicado`/`secoes`) — o marker,
-    # que é o que este teste garante, não mudou.
     assert result["active_profile"] == "shooter"
     assert marker.exists()
     assert marker.read_text(encoding="utf-8").strip() == "shooter"
@@ -123,11 +121,7 @@ async def test_profile_switch_grava_active_marker(running_server: Any) -> None:
 
 @pytest.mark.asyncio
 async def test_profile_switch_falha_nao_toca_marker(running_server: Any) -> None:
-    """Perfil inexistente → IPC erro; marker NÃO é tocado.
-
-    Atomicidade do conjunto: se `manager.activate` levantar, o marker
-    permanece no estado anterior (ou ausente).
-    """
+    """Perfil inexistente → IPC erro; marker NÃO é tocado."""
     _server, socket_path, _fc, _store, tmp_root = running_server
     marker = tmp_root / "config" / "active_profile.txt"
     assert not marker.exists()
@@ -161,6 +155,5 @@ async def test_profile_switch_arma_lock_manual(running_server: Any) -> None:
 
     now = time.monotonic()
     assert store.manual_profile_lock_active(now) is True
-    # O tempo sozinho não solta: nem passados os 30 s de antes, nem uma hora.
     assert store.manual_profile_lock_active(now + MANUAL_PROFILE_LOCK_SEC + 1) is True
     assert store.manual_profile_lock_active(now + 3600.0) is True

@@ -55,32 +55,16 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: A FORMA que promete vigiar. Um arquivo com um destes nomes afirma, no
-#: próprio nome, que reprova alguma coisa — e um vigia que ninguém chama é
-#: pior que vigia nenhum, porque a casa acredita estar coberta.
 _FORMAS_DE_PORTAO = ("check_", "validar-", "portao_")
 
-#: Toda dívida declarada carrega data. Sem data ninguém sabe se ela envelheceu.
 _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 
 #: O mesmo piso do `portao_a_casa_sabe_e_o_produto_nao_faz`: abaixo disto a
-#: razão não cabe o endereço de onde o caminho se perde nem a linha exata que
-#: fecharia a dívida, e vira "porque sim" com mais letras.
 _RAZAO_MINIMA = 120
 
-#: As linhas da tabela de `portoes.sh` — e SÓ elas. As camadas são a primeira
-#: coluna; ver o cabeçalho `A TABELA` daquele arquivo.
 _CAMADAS = ("rapido|", "completo|", "suite|")
 
 
-# ===========================================================================
-# A dívida declarada — portão que existe e que nada roda ainda
-# ===========================================================================
-
-#: Portão no disco, sem chamador automático, com o motivo e o que o fecha.
-#: Declarar é honesto e este portão não castiga honestidade: ele só não deixa a
-#: dívida envelhecer calada. No dia em que o chamador nascer, a entrada REPROVA
-#: e tem de ser apagada (`test_nenhuma_divida_sobreviveu_a_propria_cura`).
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
     # fica: é o portão do MERGE, por desenho: pergunta ao daemon vivo da mesa dela
     "scripts/check_a_conferencia_dela.py": (
@@ -159,18 +143,8 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
 }
 
 
-# ===========================================================================
-# A varredura
-# ===========================================================================
-
-
 def portoes_no_disco(raiz: Path | None = None) -> set[str]:
-    """Todo arquivo de `scripts/` cujo NOME promete vigiar.
-
-    Pelo nome, e não por conteúdo, de propósito: é o nome que faz a casa
-    acreditar que está coberta. Um `check_*.py` que não reprova nada é outro
-    defeito, e não é este.
-    """
+    """Todo arquivo de `scripts/` cujo NOME promete vigiar."""
     base = RAIZ if raiz is None else raiz
     alvo = base / "scripts"
     achados: set[str] = set()
@@ -192,18 +166,7 @@ def portoes_no_disco(raiz: Path | None = None) -> set[str]:
 
 @functools.lru_cache(maxsize=4)
 def _nao_versionados(base: Path) -> frozenset[str]:
-    """Os `scripts/` que estão no DISCO e não no git.
-
-    MEDIDO EM 15/09/2026: `check_colisao_de_sprints.py` saiu do repositório com
-    o resto dos arquivos de processo (ordem dela) e CONTINUOU no disco dela,
-    que é o ponto de `git rm --cached`. A varredura o via, não achava chamador
-    e reprovava — cobrando um chamador para um arquivo que o repositório já não
-    tem.
-
-    A REGRA QUE ISSO DEIXA: portão desta casa é o que VIAJA. Um script que só
-    existe na máquina de quem o escreveu não protege ninguém, e cobrar dele um
-    chamador é cobrar do que não é nosso.
-    """
+    """Os `scripts/` que estão no DISCO e não no git."""
     saida = subprocess.run(
         ["git", "-C", str(base), "ls-files", "--", "scripts"],
         capture_output=True, text=True, check=False,
@@ -220,12 +183,7 @@ def _nao_versionados(base: Path) -> frozenset[str]:
 
 
 def _linhas_que_rodam(raiz: Path) -> list[str]:
-    """Toda linha de todo runner desta casa, sem comentário.
-
-    Comentário fora porque menção em comentário é justamente a forma que
-    engana: o `check_faixa_sintetica.py` esteve citado em prosa por dois anos
-    sem nunca rodar.
-    """
+    """Toda linha de todo runner desta casa, sem comentário."""
     linhas: list[str] = []
 
     tabela = raiz / "scripts" / "portoes.sh"
@@ -266,11 +224,6 @@ def portoes_sem_chamador(raiz: Path | None = None) -> set[str]:
     }
 
 
-# ===========================================================================
-# As réguas
-# ===========================================================================
-
-
 class TestTodoPortaoTemChamador:
     """Um vigia que ninguém chama não vigia — e a casa acredita que sim."""
 
@@ -303,12 +256,7 @@ class TestTodoPortaoTemChamador:
         )
 
     def test_nenhuma_divida_sobreviveu_a_propria_cura(self) -> None:
-        """O dia em que o chamador nasce é o dia de apagar a entrada.
-
-        Sem isto, `_SEM_CHAMADOR_HOJE` viraria o lugar onde a pergunta deste
-        arquivo se esconde: bastaria declarar tudo, uma vez, e o portão calaria
-        para sempre. É o mesmo `xfail(strict=True)` do molde da casa.
-        """
+        """O dia em que o chamador nasce é o dia de apagar a entrada."""
         soltos = portoes_sem_chamador()
         curados = sorted(set(_SEM_CHAMADOR_HOJE) - soltos)
         assert not curados, (
@@ -403,14 +351,7 @@ class TestOPortaoMorde:
     def test_a_declaracao_de_divergencia_nao_conta_como_chamador(
         self, tmp_path: Path
     ) -> None:
-        """A linha que separa esta régua da do `portoes.sh ↔ ci.yml`.
-
-        MEDIDO: `FORA-DO-LOCAL`/`FORA-DO-CI` declaram uma DIFERENÇA entre as
-        duas listas, não uma execução. Se contassem como chamador, bastaria
-        declarar um portão divergente para ele nunca mais rodar em lugar
-        nenhum e esta régua calar — que é a pergunta do outro portão respondida
-        no lugar da desta.
-        """
+        """A linha que separa esta régua da do `portoes.sh ↔ ci.yml`."""
         casa = self._arvore_de_mentira(tmp_path)
         (casa / "scripts" / "check_inventado.py").write_text("# vigia\n", encoding="utf-8")
         tabela = casa / "scripts" / "portoes.sh"
@@ -447,13 +388,7 @@ class TestOPortaoMorde:
         )
 
     def test_a_varredura_enxerga_os_portoes_que_ja_se_conhece(self) -> None:
-        """A régua conferida contra a árvore de verdade, e não contra si mesma.
-
-        Se a descoberta quebrar (uma mudança de forma de nome, uma pasta que
-        deixou de ser varrida), este caso cai — e sem ele o portão devolveria
-        "nenhum órfão" por não ter olhado para lugar nenhum, que é o pior
-        desfecho possível.
-        """
+        """A régua conferida contra a árvore de verdade, e não contra si mesma."""
         disco = portoes_no_disco()
         assert len(disco) >= 15, (
             f"a varredura achou só {len(disco)} portão(ões) em `scripts/`; "
@@ -467,12 +402,7 @@ class TestOPortaoMorde:
             assert conhecido in disco, f"a varredura perdeu {conhecido}"
 
     def test_a_regua_sabe_recusar_uma_arvore_vazia(self, tmp_path: Path) -> None:
-        """Dublê que só sabe passar não é dublê.
-
-        Uma casa sem `scripts/` tem de dar conjunto vazio, e não estourar — é o
-        que garante que a régua está lendo o disco que lhe deram, e não o desta
-        árvore por baixo do pano.
-        """
+        """Dublê que só sabe passar não é dublê."""
         assert portoes_no_disco(tmp_path) == set()
         assert portoes_sem_chamador(tmp_path) == set()
 

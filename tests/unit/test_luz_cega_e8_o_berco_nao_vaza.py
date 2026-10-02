@@ -41,12 +41,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
-import check_faixa_sintetica  # import DEPOIS do sys.path acima, de propósito
+import check_faixa_sintetica
 
-#: As chamadas que resolvem um caminho do `$HOME` e por isso NÃO podem virar
-#: constante de módulo. As seis primeiras são o `utils/xdg_paths`; as duas
-#: últimas são o caminho de fora dele, que o BERÇO-DE-TMP-01 (24/08) mediu
-#: escapando pela cauda do `$HOME`.
 _RESOLVEM_O_LAR = frozenset({
     "config_dir",
     "data_dir",
@@ -78,7 +74,7 @@ def _constantes_congeladas(caminho: Path) -> list[str]:
     except (OSError, SyntaxError):  # pragma: no cover — árvore quebrada é outro portão
         return []
     achados: list[str] = []
-    for no in arvore.body:  # SÓ o nível do módulo: dentro de função é o certo
+    for no in arvore.body:
         if not isinstance(no, (ast.Assign, ast.AnnAssign)):
             continue
         valor = no.value
@@ -181,9 +177,6 @@ class TestAReguaDaFaixaSabeRecusarEAceitar:
         )
 
     def test_aceita_a_mesa_so_com_endereco_de_verdade(self, tmp_path: Path) -> None:
-        # OUI de fabricante com a máscara da casa (octetos 4 e 5 zerados) —
-        # a única forma de "endereço que parece real" que o portão de
-        # anonimato de fixtures aceita em `tests/`.
         self._mesa(tmp_path, ["e417d80000a1", "e417d80000b2"])
         assert check_faixa_sintetica.enderecos(tmp_path) == set()
 
@@ -238,24 +231,7 @@ class TestOPortaoDaArvoreVersionada:
 
 
 class TestAReguaEnxergaBackup:
-    """Todo backup carrega sufixo próprio, e era essa a classe que escapava.
-
-    PONTO CEGO MEDIDO em 25/08/2026, e a forma como ele apareceu é o próprio
-    argumento: quem coordenava fez um backup do `controllers.json` VIVO dela
-    antes de limpar os quatro endereços de fixture, salvou-o ao lado do
-    original como `controllers.json.antes-de-tirar-fixtures-20260825` — e a
-    régua devolveu VERDE sobre um arquivo com os quatro endereços dentro.
-
-    `Path.suffix` devolve só o ÚLTIMO sufixo. `.bak`, `.old`, `.orig`,
-    `.2026-08-25`, `.antes-de-X`: **backup era exatamente o que esta régua não
-    conseguia ver.** É a pior forma de ponto cego — some justamente onde alguém
-    guardou uma cópia do estado que a régua existe para vigiar, e a cópia é o
-    que sobrevive a uma limpeza.
-
-    A MORDIDA: troque `_vale_varrer(caminho)` por
-    `caminho.suffix.lower() in _EXTENSOES_VARRIDAS` em `achados()` e
-    `test_o_backup_do_controllers_nao_escapa` reprova.
-    """
+    """Todo backup carrega sufixo próprio, e era essa a classe que escapava."""
 
     def test_o_backup_do_controllers_nao_escapa(self, tmp_path: Path) -> None:
         alvo = tmp_path / "controllers.json.antes-de-tirar-fixtures-20260825"
@@ -291,10 +267,6 @@ class TestAReguaEnxergaBackup:
         assert check_faixa_sintetica._vale_varrer(Path(nome)) is esperado, porque
 
     def test_a_regua_continua_recusando_binario(self, tmp_path: Path) -> None:
-        """A cura não pode ter aberto a porta para tudo.
-
-        Sem esta guarda passaria um "conserto" que varresse todo arquivo — e a
-        régua começaria a ler PNG e a acusar coincidência de bytes.
-        """
+        """A cura não pode ter aberto a porta para tudo."""
         (tmp_path / "captura.png").write_bytes(b"\x89PNG\r\n\x1a\naabbcc000001")
         assert check_faixa_sintetica.achados(tmp_path) == []

@@ -55,9 +55,6 @@ def _backend_com(handles: dict[str, str]) -> tuple[Any, dict[str, _NoDeSysfs]]:
 
     b._io_lock = threading.RLock()
     b._output_mute = False
-    # UM OBJETO POR CHAVE, e não `dict.fromkeys(..., object())`: aquele dá o
-    # MESMO objeto a todos, e o dublê do transporte devolvia sempre o primeiro
-    # — o teste reprovava a cura por defeito próprio.
     class _Handle:
         def __init__(self, transporte: str) -> None:
             self.transporte = transporte
@@ -96,9 +93,7 @@ def test_sem_ninguem_no_cabo_e_no_op() -> None:
 
 
 def test_modo_nativo_pinta_o_cabo_tambem() -> None:
-    """Era «no Modo Nativo o dono do LED é o jogo» — no-op. Caducou em
-    23/09/2026: `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`
-    (STEAM-NO-FISICO-01), a luz e o número são do Hefesto no Nativo."""
+    """Era «no Modo Nativo o dono do LED é o jogo» — no-op. Caducou em"""
     b, nos = _backend_com({"p1": "usb"})
     b._output_mute = True
     assert b.repintar_o_cabo_por_sysfs() != {}
@@ -117,12 +112,7 @@ def _daemon_com(numeros: dict[str, int]) -> Any:
 
 
 def test_a_numeracao_arma_o_gatilho_e_a_primeira_volta_nao(monkeypatch) -> None:
-    """Muda o número → arma. Primeira volta e número igual → não arma.
-
-    A primeira volta não pode armar: sem numeração anterior não há mudança a
-    afirmar, e armar ali faria TODA partida do daemon repintar por nada — a
-    adoção já pinta.
-    """
+    """Muda o número → arma. Primeira volta e número igual → não arma."""
     import hefesto_dualsense4unix.daemon.connection as conn
 
     armados: list[dict[str, Any]] = []
@@ -135,11 +125,9 @@ def test_a_numeracao_arma_o_gatilho_e_a_primeira_volta_nao(monkeypatch) -> None:
     assert armar_gatilho_da_cor_por_numeracao(d) is False, "a primeira volta armou"
     assert armados == []
 
-    # mesma mesa, mesmos números: nada acontece
     assert armar_gatilho_da_cor_por_numeracao(d) is False
     assert armados == []
 
-    # alguém chega e TODO MUNDO se desloca — é aqui que a barra ficava velha
     d.identity_registry = SimpleNamespace(
         numeros_da_mesa=lambda: {"aa": 1, "cc": 2, "bb": 3})
     assert armar_gatilho_da_cor_por_numeracao(d) is True, (
@@ -148,13 +136,7 @@ def test_a_numeracao_arma_o_gatilho_e_a_primeira_volta_nao(monkeypatch) -> None:
 
 
 def test_chegada_que_nao_muda_numero_nao_repinta(monkeypatch) -> None:
-    """Cair e voltar no MESMO lugar não é motivo para repintar.
-
-    É a diferença entre armar pela CAUSA e armar pelo RESULTADO: o
-    `armar_gatilho_da_cor` arma por conexão nova e este arma por número
-    diferente. Um controle que volta ao próprio lugar passa pelo primeiro e
-    não pode passar por este.
-    """
+    """Cair e voltar no MESMO lugar não é motivo para repintar."""
     import hefesto_dualsense4unix.daemon.connection as conn
 
     armados: list[Any] = []
@@ -163,8 +145,8 @@ def test_chegada_que_nao_muda_numero_nao_repinta(monkeypatch) -> None:
                         lambda d, nome, **kw: armados.append(nome))
 
     d = _daemon_com({"aa": 1, "bb": 2})
-    armar_gatilho_da_cor_por_numeracao(d)          # primeira volta: guarda
-    armar_gatilho_da_cor_por_numeracao(d)          # nada mudou
+    armar_gatilho_da_cor_por_numeracao(d)
+    armar_gatilho_da_cor_por_numeracao(d)
     assert armados == []
 
 
@@ -174,7 +156,6 @@ def test_daemon_sem_registro_de_identidade_nunca_arma() -> None:
     assert armar_gatilho_da_cor_por_numeracao(d) is False
     d.identity_registry = SimpleNamespace()
     assert armar_gatilho_da_cor_por_numeracao(d) is False
-    # e um registro que LEVANTA não pode derrubar o laço
     def _explode() -> dict[str, int]:
         raise RuntimeError("o registro caiu")
     d.identity_registry = SimpleNamespace(numeros_da_mesa=_explode)

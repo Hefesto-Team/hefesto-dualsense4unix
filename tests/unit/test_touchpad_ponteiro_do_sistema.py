@@ -67,11 +67,7 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense, play
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REGRA = REPO_ROOT / "assets" / "76-dualsense-touchpad-libinput-ignore.rules"
 
-#: Nomes REAIS dos nós de touchpad FÍSICO. O primeiro foi lido em
-#: ``/sys/class/input/input1788/name`` na máquina dela em 09/08/2026, com o
 #: DualSense plugado; o segundo é como o BlueZ nomeia o mesmo aparelho (sem o
-#: prefixo do fabricante), medido em 21/07 e registrado no cabeçalho da regra.
-#: Nenhum deles pode casar a regra — é o pedido dela inteiro.
 NOMES_FISICOS = (
     "Sony Interactive Entertainment DualSense Wireless Controller Touchpad",
     "DualSense Wireless Controller Touchpad",
@@ -79,19 +75,11 @@ NOMES_FISICOS = (
     "Sony Interactive Entertainment Wireless Controller Touchpad",
 )
 
-#: MAC de um controle FÍSICO qualquer, na faixa forjada que o
-#: `test_anonimato_de_fixtures` permite. O que importa dele é uma coisa só: não
-#: começar em ``02:fe``, o prefixo com que o `player_mac` marca os vpads.
 MAC_FISICO = "aa:bb:cc:00:11:f0"
 
 
 def _linhas_de_codigo(path: Path) -> list[str]:
-    """Só linha de CÓDIGO: o comentário que EXPLICA a regra não prova nada.
-
-    O cabeçalho desta regra CITA o curinga antigo (é o histórico que a casa não
-    apaga) — um teste que olhasse o arquivo inteiro passaria com a cura
-    arrancada e reprovaria com ela no lugar, os dois errados.
-    """
+    """Só linha de CÓDIGO: o comentário que EXPLICA a regra não prova nada."""
     return [
         ln.strip()
         for ln in path.read_text(encoding="utf-8").splitlines()
@@ -100,12 +88,7 @@ def _linhas_de_codigo(path: Path) -> list[str]:
 
 
 def _casa(linha: str, *, name: str, uniq: str) -> bool:
-    """Simula o casamento de UMA linha de regra udev contra um nó de entrada.
-
-    Só o que estas linhas usam: ``ATTRS{name}`` e ``ATTRS{uniq}``, com o glob do
-    udev (mesma família do ``fnmatch``). Uma linha sem nenhum ``ATTRS{}`` casaria
-    tudo e é tratada como não-casamento para não mascarar um erro de escrita.
-    """
+    """Simula o casamento de UMA linha de regra udev contra um nó de entrada."""
     atributos = dict(re.findall(r'ATTRS\{(\w+)\}=="([^"]*)"', linha))
     if not atributos:
         return False
@@ -131,9 +114,6 @@ def linhas() -> list[str]:
     return _linhas_de_codigo(REGRA)
 
 
-# --- a regra: quem fica de fora do libinput, e quem volta ------------------
-
-
 def test_o_touchpad_fisico_nao_e_mais_ignorado(linhas: list[str]) -> None:
     """O pedido dela, em uma asserção: o touchpad físico é do SISTEMA.
 
@@ -148,15 +128,11 @@ def test_o_touchpad_fisico_nao_e_mais_ignorado(linhas: list[str]) -> None:
 
 
 def test_o_touchpad_do_vpad_continua_fora(linhas: list[str]) -> None:
-    """O toque em DOBRO (21/07) morava aqui, e não pode voltar.
-
-    O espelho de report copia os touch points do físico para o vpad; se os DOIS
-    nós forem ponteiros do libinput, um dedo move o cursor duas vezes.
-    """
+    """O toque em DOBRO (21/07) morava aqui, e não pode voltar."""
     nomes_vpad = (
-        "DualSense Wireless Controller (Hefesto P1) Touchpad",  # atual
+        "DualSense Wireless Controller (Hefesto P1) Touchpad",
         "DualSense Wireless Controller (Hefesto P4) Touchpad",
-        "Hefesto Virtual DualSense P1 Touchpad",  # legado (até 08/2026)
+        "Hefesto Virtual DualSense P1 Touchpad",
     )
     for nome in nomes_vpad:
         assert _ignora(linhas, name=nome, uniq=player_mac(1)), (
@@ -166,12 +142,7 @@ def test_o_touchpad_do_vpad_continua_fora(linhas: list[str]) -> None:
 
 
 def test_o_vpad_e_pego_pelo_mac_forjado_mesmo_sem_o_nome(linhas: list[str]) -> None:
-    """A segunda âncora existe porque a primeira já furou uma vez.
-
-    O nome do vpad mudou em 08/2026 (BT-E-VPAD-01) e foi uma renomeação que
-    furou o match exato de 26/06. O MAC ``02:fe:…`` é forjado por
-    ``player_mac`` na faixa localmente administrada e não colide com hardware.
-    """
+    """A segunda âncora existe porque a primeira já furou uma vez."""
     for jogador in (1, 2, 3, 4):
         assert _ignora(
             linhas,
@@ -181,12 +152,7 @@ def test_o_vpad_e_pego_pelo_mac_forjado_mesmo_sem_o_nome(linhas: list[str]) -> N
 
 
 def test_a_regra_casa_o_nome_que_o_vpad_publica_hoje(linhas: list[str]) -> None:
-    """Trava a regra no CÓDIGO: renomear o vpad sem mexer aqui reprova.
-
-    O nome do nó auxiliar é ``<nome do hid_device> Touchpad`` — o sufixo vem do
-    ``ps_allocate_input_dev`` do ``hid-playstation.c``, e o nome vem da
-    propriedade ``name`` do vpad.
-    """
+    """Trava a regra no CÓDIGO: renomear o vpad sem mexer aqui reprova."""
     pad = UhidDualSense(player=1, blueprint={"descriptor": b"", "features": {}})
     assert _ignora(linhas, name=f"{pad.name} Touchpad", uniq=pad.mac), (
         f"o vpad publica '{pad.name}' e a regra não o pega: o toque em dobro "
@@ -195,12 +161,7 @@ def test_a_regra_casa_o_nome_que_o_vpad_publica_hoje(linhas: list[str]) -> None:
 
 
 def test_nenhuma_linha_usa_attrs_phys(linhas: list[str]) -> None:
-    """``phys`` sai VAZIO nos nós do hid_playstation — âncora que não ancora.
-
-    Medido em 09/08/2026 em ``/sys/class/input/input*/phys`` com o controle dela
-    plugado: os quatro nós (gamepad, movimento, touchpad, jack) têm ``phys``
-    vazio, porque o ``ps_allocate_input_dev`` não copia o do ``hid_device``.
-    """
+    """``phys`` sai VAZIO nos nós do hid_playstation — âncora que não ancora."""
     for ln in linhas:
         assert "ATTRS{phys}" not in ln, (
             f"âncora em atributo VAZIO nos nós do hid_playstation: {ln}"
@@ -241,19 +202,12 @@ def test_a_regra_e_instalada_por_todos_os_formatos() -> None:
     assert not faltando, f"{REGRA.name} não é instalada por: {faltando}"
 
 
-# --- o gate de runtime: quem é o dono do dedo -----------------------------
-
-
 class TestLibinputIgnoraDevice:
     """A leitura da base do udev — o único fato que o gate consulta."""
 
     @staticmethod
     def _montar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, corpo: str | None):
-        """Um "nó" e a entrada dele na base do udev, em diretório temporário.
-
-        O "nó" é um arquivo comum: ``os.stat`` devolve ``st_rdev == 0``, então o
-        arquivo procurado é ``c0:0`` — determinístico e sem tocar ``/dev``.
-        """
+        """Um "nó" e a entrada dele na base do udev, em diretório temporário."""
         from hefesto_dualsense4unix.core import evdev_reader
 
         monkeypatch.setattr(evdev_reader, "UDEV_DB_DIR", tmp_path)
@@ -266,7 +220,6 @@ class TestLibinputIgnoraDevice:
     def test_marcado_com_1(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Corpo copiado da forma real de /run/udev/data/c13:68 (09/08/2026).
         no = self._montar(
             tmp_path,
             monkeypatch,
@@ -289,11 +242,7 @@ class TestLibinputIgnoraDevice:
     def test_sem_base_do_udev_o_sistema_e_o_dono(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem base, nenhuma regra foi aplicada ao nó — o libinput o enxerga.
-
-        É a resposta fisicamente correta E a conservadora: o pior caso dela é o
-        hefesto não mover o cursor, nunca movê-lo em dobro.
-        """
+        """Sem base, nenhuma regra foi aplicada ao nó — o libinput o enxerga."""
         no = self._montar(tmp_path, monkeypatch, None)
         assert libinput_ignora_device(no) is False
 
@@ -331,11 +280,7 @@ class TestTouchpadReaderDonoDoCursor:
         assert reader.consume_motion() == (50, 0)
 
     def test_nao_acumula_movimento_quando_o_sistema_e_o_ponteiro(self) -> None:
-        """O dente do "cursor engasgado" (26/06), agora em runtime.
-
-        Com o touchpad físico de volta ao libinput, acumular aqui faria o mesmo
-        dedo mover o cursor por dois caminhos.
-        """
+        """O dente do "cursor engasgado" (26/06), agora em runtime."""
         reader = self._reader()
         reader._ponteiro_do_sistema = True
         self._dedo(reader, 100)
@@ -362,11 +307,9 @@ class TestTouchpadReaderDonoDoCursor:
         no.write_text("", encoding="utf-8")
 
         reader = self._reader()
-        # Sem a flag no nó: o sistema é o ponteiro.
         reader._on_device_opened(_DevFalso(str(no)))
         assert reader.ponteiro_do_sistema is True
 
-        # Com a flag (quem mantiver o curinga antigo): o hefesto volta a ser.
         (tmp_path / "c0:0").write_text("E:LIBINPUT_IGNORE_DEVICE=1\n", encoding="utf-8")
         reader._on_device_opened(_DevFalso(str(no)))
         assert reader.ponteiro_do_sistema is False
@@ -415,12 +358,7 @@ class TestCliqueDoTouchpad:
         assert combinado == frozenset({"cross", "touchpad_left_press"})
 
     def test_o_clique_nao_vira_tecla_quando_o_sistema_e_o_ponteiro(self) -> None:
-        """Sem este dente, um clique dispara o botão do mouse E um KEY_BACKSPACE.
-
-        Os bindings default das três regiões são
-        ``KEY_BACKSPACE``/``KEY_ENTER``/``KEY_DELETE``
-        (``core/keyboard_mappings.py``) — apagar texto sem pedir é o custo.
-        """
+        """Sem este dente, um clique dispara o botão do mouse E um KEY_BACKSPACE."""
         daemon = _DaemonFalso(_ReaderFalso(ponteiro_do_sistema=True))
         combinado = _combine_with_touchpad(daemon, frozenset({"cross"}))
         assert combinado == frozenset({"cross"})

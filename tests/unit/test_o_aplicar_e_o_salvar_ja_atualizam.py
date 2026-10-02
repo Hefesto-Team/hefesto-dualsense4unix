@@ -58,10 +58,8 @@ from tests.unit import bluez_de_mentira as bm
 NOME = "Auditoria"
 OUTRO = "Outro perfil"
 
-#: A VOLTA, na ordem em que a ponte a vê (o rádio não passa pela ponte).
 A_VOLTA = ["launch_env.refresh", "coop.sync", "identity.renumber"]
 
-#: Os controles da mesa, com endereço da faixa sintética da casa.
 NA_MESA = "aa:bb:cc:00:00:01"
 
 
@@ -135,9 +133,6 @@ def _importar(tmp_path: Path) -> list[str]:
     return p.chamadas
 
 
-# --------------------------------------------------------------------------
-# 1. os botões dão a volta
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("botao", ["aplicar", "salvar"])
 def test_os_dois_botoes_terminam_com_a_volta(botao: str, tocados: list[str]) -> None:
     """A sequência termina em `launch_env.refresh`, `coop.sync` e `identity.renumber`.
@@ -153,9 +148,6 @@ def test_os_dois_botoes_terminam_com_a_volta(botao: str, tocados: list[str]) -> 
         f"o «{botao}» não começou pelo ato dele: {p.chamadas}")
 
 
-# --------------------------------------------------------------------------
-# 2. o Salvar reaplica o perfil que vale, pelo funil
-# --------------------------------------------------------------------------
 def test_o_salvar_reaplica_o_perfil_que_vale_antes_da_volta(tocados: list[str]) -> None:
     """O Salvar passa pelo `gravar_e_reaplicar`: disco, reaplicar, aviso, e a volta."""
     p = PonteDoRodape()
@@ -175,9 +167,6 @@ def test_o_funil_nao_reaplica_o_perfil_que_nao_vale() -> None:
     assert p.chamadas == ["launch_env.refresh"], p.chamadas
 
 
-# --------------------------------------------------------------------------
-# 3. a volta não para os atalhos
-# --------------------------------------------------------------------------
 def test_a_volta_nunca_pede_o_daemon_reload(tmp_path: Path, tocados: list[str]) -> None:
     """O `daemon.reload` para e sobe o leitor dos atalhos: nenhum dos três o pede."""
     pedidos: dict[str, list[str]] = {}
@@ -191,15 +180,8 @@ def test_a_volta_nunca_pede_o_daemon_reload(tmp_path: Path, tocados: list[str]) 
         assert "launch_env.refresh" in chamadas, f"o «{botao}» não avisou o lançamento"
 
 
-# --------------------------------------------------------------------------
-# 4. o rádio só vê o elo morto
-# --------------------------------------------------------------------------
 def test_a_volta_so_chama_o_elo_morto(tocados: list[str]) -> None:
-    """Dos três de fora, só o que o BlueZ diz `Connected`; o da mesa nunca.
-
-    O desconectado e o que não respondeu ficam: o `Connect` de até 12 s não
-    traz quem está desligado.
-    """
+    """Dos três de fora, só o que o BlueZ diz `Connected`; o da mesa nunca."""
     perfil.a_volta_do_perfil(_ctx(), PonteDoRodape())
     assert tocados == ["aa:bb:cc:00:00:0a"], f"a volta chamou {tocados}"
 
@@ -237,11 +219,7 @@ def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> bm.Barramento
 def test_o_connected_com_hid_vivo_nao_cai_na_volta(
     barramento: bm.BarramentoDeMentira,
 ) -> None:
-    """A seção de 02/10: o elo morto se pergunta ao kernel.
-
-    Os dois o BlueZ diz `Connected`; o kernel tem o HID de um. Só o outro cai e
-    é chamado de volta.
-    """
+    """A seção de 02/10: o elo morto se pergunta ao kernel."""
     perfil.a_volta_do_perfil(_ctx(), PonteDoRodape())
     quedas = [c for c, _i, m, _a, _t in barramento.chamadas if m == "Disconnect"]
     assert quedas == [bm.no_de("aa:bb:cc:00:00:44")], f"a volta derrubou {quedas}"
@@ -249,9 +227,6 @@ def test_o_connected_com_hid_vivo_nao_cai_na_volta(
     assert vivo == [], f"o controle com HID vivo foi mexido: {vivo}"
 
 
-# --------------------------------------------------------------------------
-# 5. uma cópia só
-# --------------------------------------------------------------------------
 def test_o_reconectar_e_a_volta_chegam_ao_mesmo_dono(
     monkeypatch: pytest.MonkeyPatch, tocados: list[str],
 ) -> None:
@@ -272,9 +247,6 @@ def test_o_reconectar_e_a_volta_chegam_ao_mesmo_dono(
     assert por_quem == ["dono", "dono"], "a volta do «Salvar» não chegou ao dono"
 
 
-# --------------------------------------------------------------------------
-# 6. a volta que falha não derruba o botão
-# --------------------------------------------------------------------------
 class _PonteQueFalhaNaVolta(PonteDoRodape):
     """O `coop.sync` levanta, como a ponte real quando o daemon não atende."""
 
@@ -293,7 +265,7 @@ def test_a_volta_que_falha_nao_derruba_o_salvar(
     """O Salvar volta sem levantar, o disco tem o perfil, e o diário diz o passo."""
     arquivo = loader.arquivo_do_perfil(NOME)
     assert arquivo is not None
-    arquivo.write_text(json.dumps(_o_arquivo()), encoding="utf-8")  # numa linha só
+    arquivo.write_text(json.dumps(_o_arquivo()), encoding="utf-8")
     assert rodape.salvar(_ctx(), {}, _PonteQueFalhaNaVolta()) is None
     assert arquivo.read_text(encoding="utf-8").count("\n") > 1, "o Salvar não gravou"
     diario = capsys.readouterr().err
@@ -307,9 +279,6 @@ def test_a_volta_que_falha_nao_derruba_o_aplicar(tocados: list[str]) -> None:
     assert p.chamadas[0] == "profile.reaplicar"
 
 
-# --------------------------------------------------------------------------
-# 7. o Importar dá a mesma volta
-# --------------------------------------------------------------------------
 def test_o_importar_termina_com_a_volta(tmp_path: Path, tocados: list[str]) -> None:
     """A resposta 44 dela: todo botão do rodapé que grava perfil termina igual."""
     chamadas = _importar(tmp_path)
@@ -318,15 +287,8 @@ def test_o_importar_termina_com_a_volta(tmp_path: Path, tocados: list[str]) -> N
     assert tocados == ["aa:bb:cc:00:00:0a"]
 
 
-# --------------------------------------------------------------------------
-# a declaração do rodapé confere com a ponte e com o daemon
-# --------------------------------------------------------------------------
 def test_o_rodape_declara_o_que_a_volta_usa() -> None:
-    """`PONTE` e `METODOS` do rodapé: a ponte tem as funções, o daemon os métodos.
-
-    A régua irmã (`test_os_botoes_tem_dono.py`) varre só os `aNN_*.py`; o
-    rodapé é das dez abas e fica de fora dela.
-    """
+    """`PONTE` e `METODOS` do rodapé: a ponte tem as funções, o daemon os métodos."""
     from tests.unit import inventario_do_daemon as daemon
 
     assert {"chamar", "resultado"} <= rodape.PONTE

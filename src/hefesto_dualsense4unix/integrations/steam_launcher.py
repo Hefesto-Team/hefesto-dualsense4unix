@@ -1,30 +1,4 @@
-"""Abrir ou focar a Steam a partir de botao PS solo (FEAT-HOTKEY-STEAM-01).
-
-Contrato:
-  - `open_or_focus_steam()` e idempotente e nunca levanta: loga falha e segue.
-  - Se o binário `steam` não existir no PATH, loga warning uma vez e retorna
-    imediatamente nas chamadas subsequentes ate que o processo do daemon
-    seja reiniciado. Evita poluir log com tentativas repetidas.
-  - Se `pgrep -x steam` localiza o cliente e ele é DESTE lar, usa `wmctrl -lx`
-    para achar a janela com WM_CLASS casando `steam.Steam` e chama `wmctrl
-    -ia <id>`; sem janela (a Steam na bandeja) ou sem `wmctrl`, o `steam`
-    repassa o pedido à Steam deste lar, que se mostra.
-  - Se a Steam de pé é de OUTRO lar (outro `HOME`: a suíte, o `sudo`), nada
-    se abre: um segundo `steam` por cima dela disputaria o barramento da
-    sessão com a dela (medido em 29/09, 17 trocas do serviço em 33 s).
-  - Se o processo não esta rodando, abre `steam` por `fora_do_servico.abrir`
-    (STEAM-FORA-DO-SERVICO-01): de dentro do serviço do daemon, numa unidade
-    própria do gerenciador de usuário (nice 0, oom do gerenciador, e viva
-    depois de um restart do serviço); de fora dele, ou sem systemd de
-    usuário, o `Popen(start_new_session=True, stdin/out/err=DEVNULL)` de
-    sempre. Nos dois, com o ambiente de `ambiente_do_jogo.ambiente_limpo`
-    (AMBIENTE-DO-JOGO-01).
-  - NUNCA usa `shell=True`.
-  - Execução em thread worker e responsabilidade do chamador; a função em si
-    faz chamadas subprocess sincronas de curta duracao (pgrep/wmctrl, e o
-    `systemd-run`, medido em 6 a 20 ms e com o mesmo teto de 2 s) e não
-    espera a Steam.
-"""
+"""Abrir ou focar a Steam a partir de botao PS solo (FEAT-HOTKEY-STEAM-01)."""
 from __future__ import annotations
 
 import os
@@ -66,9 +40,7 @@ def _warn_steam_missing_once() -> None:
 
 
 def _steam_de_outro_lar() -> bool:
-    """A Steam de pé é toda de outro `HOME`? Quem responde é o dono da pergunta
-    (`steam_launch_options`, pelo `/proc`). Nenhuma lida, ou um lar que não se
-    lê, é «não se sabe», e «não se sabe» não é «de outro lar»."""
+    """A Steam de pé é toda de outro `HOME`? Quem responde é o dono da pergunta"""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     todas = slo.processos_da_steam()
@@ -78,10 +50,7 @@ def _steam_de_outro_lar() -> bool:
 def _steam_running(
     pgrep_runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
 ) -> bool:
-    """Há um cliente da Steam (`pgrep -x steam`) de pé? Nunca levanta.
-
-    Diz SE há; DE QUEM é, pergunta-se depois (:func:`_steam_de_outro_lar`).
-    """
+    """Há um cliente da Steam (`pgrep -x steam`) de pé? Nunca levanta."""
     runner = pgrep_runner or _default_pgrep
     try:
         proc = runner([PGREP_BINARY, "-x", STEAM_BINARY])
@@ -101,10 +70,7 @@ def _default_pgrep(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 def _focus_steam_window(
     wmctrl_runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
 ) -> bool:
-    """Traz a janela Steam para foreground via `wmctrl -lx`.
-
-    Retorna True se alguma janela foi focada, False caso contrario.
-    """
+    """Traz a janela Steam para foreground via `wmctrl -lx`."""
     runner = wmctrl_runner or _default_wmctrl
     if shutil.which(WMCTRL_BINARY) is None:
         logger.warning("wmctrl_binary_not_found")
@@ -120,7 +86,6 @@ def _focus_steam_window(
 
     target_wid: str | None = None
     for raw_line in (listing.stdout or "").splitlines():
-        # Formato: <wid> <desktop> <wm_class> <host> <title...>
         parts = raw_line.split(None, 4)
         if len(parts) < 3:
             continue
@@ -155,22 +120,7 @@ def _spawn_steam(
     contexto: fora_do_servico.Contexto | None = None,
     executar: fora_do_servico.Executar | None = None,
 ) -> bool:
-    """Dispara a Steam FORA do serviço do Hefesto, desprendida de quem chama.
-
-    STEAM-FORA-DO-SERVICO-01 (26/09/2026): o botão PS abria a Steam por
-    `Popen` de dentro do daemon, e a Steam e o jogo nasciam no cgroup
-    `hefesto-dualsense4unix.service`, com o nice 5 e o oom 200 dele — e
-    morriam no restart do serviço. Quem decide a forma é
-    `fora_do_servico.abrir`: de dentro de um serviço, uma unidade própria do
-    gerenciador de usuário; de um lugar que já é da pessoa, ou sem systemd de
-    usuário, o `Popen` de sempre (`start_new_session=True`).
-
-    AMBIENTE-DO-JOGO-01 (18/09/2026): o `ambiente_limpo` entra porque o
-    daemon também sobe fora da unit — pelo terminal de quem desenvolve, ou
-    pelo `Popen` da janela quando o `systemctl` falta —, e a Steam que nasce
-    daqui é a que todo jogo da sessão herda. Pela unidade ele vai por
-    `--setenv`.
-    """
+    """Dispara a Steam FORA do serviço do Hefesto, desprendida de quem chama."""
     runner = popen_runner or _default_popen
     try:
         abertura = fora_do_servico.abrir(
@@ -198,8 +148,6 @@ def _spawn_steam(
 
 
 def _default_popen(cmd: list[str], **kwargs: Any) -> subprocess.Popen[bytes]:
-    # kwargs aceita stdin/stdout/stderr/start_new_session/env — tipagem livre para
-    # permitir injecao de fakes nos testes sem duplicar a assinatura.
     return subprocess.Popen(cmd, **kwargs)
 
 
@@ -212,12 +160,7 @@ def open_or_focus_steam(
     contexto: fora_do_servico.Contexto | None = None,
     executar: fora_do_servico.Executar | None = None,
 ) -> bool:
-    """Ponto de entrada publico. Nunca levanta.
-
-    Retorna True se a tentativa foi bem-sucedida (focus ou spawn). False
-    caso contrario. Parametros opcionais permitem injetar fakes em testes;
-    `contexto` e `executar` vão a `fora_do_servico.abrir`.
-    """
+    """Ponto de entrada publico. Nunca levanta."""
     which_fn = which or shutil.which
     if which_fn(STEAM_BINARY) is None:
         _warn_steam_missing_once()
@@ -225,10 +168,6 @@ def open_or_focus_steam(
 
     try:
         if _steam_running(pgrep_runner=pgrep_runner):
-            # A STEAM DE OUTRO LAR NÃO É ABERTA NEM FOCADA (01/10/2026,
-            # A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01): um `steam` com
-            # este `HOME` por cima dela nasce como segunda Steam. Com o
-            # `pgrep_runner` da régua, o lar não entra na conta.
             if pgrep_runner is None and _steam_de_outro_lar():
                 logger.info("ps_button_action_steam", outcome="steam_de_outro_lar")
                 return False
@@ -236,7 +175,6 @@ def open_or_focus_steam(
             if focused:
                 logger.info("ps_button_action_steam", outcome="focused")
                 return True
-            # Processo existe mas janela não achada: fallback para spawn.
             logger.info("ps_button_action_steam", outcome="refocus_fallback_spawn")
             return _spawn_steam(
                 popen_runner=popen_runner, contexto=contexto, executar=executar
@@ -247,7 +185,7 @@ def open_or_focus_steam(
         if spawned:
             logger.info("ps_button_action_steam", outcome="spawned")
         return spawned
-    except Exception as exc:  # salvaguarda: nunca propagar
+    except Exception as exc:
         logger.warning("open_or_focus_steam_unexpected", err=str(exc))
         return False
 

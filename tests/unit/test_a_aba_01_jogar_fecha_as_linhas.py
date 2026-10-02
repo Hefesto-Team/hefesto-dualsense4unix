@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-"""As duas decisões da aba Jogar que a ONDA2-01 fecha, e a que ela NÃO fecha.
-
-04/09/2026. As quatro decisões desta aba estão em
-`docs/process/sprints/2026-09-04-ONDA2-01-JOGAR-01-*.md`, e destas quatro:
-
-* **[02] o "Player N" esmaecido** — fecha aqui. A palavra FICA (a D-04 dela
-  venceu a minha recomendação); o que sai é o cartão AFIRMAR um jogador que o
-  jogo ainda não recebeu;
-* **[03] o cadeado da troca automática** — fecha aqui. A coluna Atenção já
-  EXPLICA o cadeado desde 03/09 e nenhuma das dez abas oferece onde ligá-lo;
-* **[04] mesa com mais de quatro** — morreu no conflito C-7 (a D-07 já carrega o
-  ``+N``), e a `test_a01_a_mesa_vazia_fala.py` já a mede;
-* **[01] as duas frases órfãs** — **fechou pela METADE, e a outra metade é
-  decisão dela.** A ponte já entra na coluna Atenção
-  (`test_a01_a_ponte_entra_na_coluna.py`). O aviso do Modo Nativo **não entra**,
-  e esta régua é quem guarda o porquê: ver
-  :func:`test_o_aviso_do_nativo_continua_fora_por_decisao_dela`.
-
-A MORDIDA DE CADA UMA está no docstring dela, e as duas saídas — a reprovação e
-a passagem — estão coladas em `docs/process/agentes/2026-09-04/ONDA2-01.md`.
-"""
+"""As duas decisões da aba Jogar que a ONDA2-01 fecha, e a que ela NÃO fecha."""
 from __future__ import annotations
 
 import pathlib
@@ -45,8 +25,6 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import TRAVESSAO, Contexto
 from pacotes import a01_jogar as aba
 
-#: O estado de um daemon vivo, no modo jogo — o mesmo esqueleto que as outras
-#: réguas desta aba usam.
 VIVO: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
@@ -54,20 +32,12 @@ VIVO: dict[str, Any] = {
     "paused": False,
 }
 
-#: MACs da faixa FORJADA da casa (`aa:bb:cc`) — há dois portões de anonimato
-#: nesta árvore, e o de fixture cobra justamente a faixa.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
 
 def _pagina() -> str:
-    """O HTML da BANCADA — o desenho de HOJE, nunca o publicado.
-
-    Apontar para o publicado daria **verde sobre a página congelada**, que é a
-    armadilha mais cara do `COMO-OLHAR-A-TELA.md` e reincidiu quatro vezes só em
-    31/08. O `onde.pagina()` já tem esse padrão; esta função existe para deixar
-    a escolha escrita onde ela se lê.
-    """
+    """O HTML da BANCADA — o desenho de HOJE, nunca o publicado."""
     return onde.pagina("01-jogar.html").read_text()
 
 
@@ -76,9 +46,6 @@ def _ctx(controles: list[dict[str, Any]], **estado: Any) -> Contexto:
                     mesa=[], conectados=controles, estados={})
 
 
-# ---------------------------------------------------------------------------
-# [02] O "PLAYER N" ESMAECIDO ENQUANTO ESPERA
-# ---------------------------------------------------------------------------
 def test_o_numero_esmaece_so_enquanto_o_jogo_nao_recebeu() -> None:
     """O dano que a decisão [02] mata, com a medição que o revelou.
 
@@ -109,16 +76,7 @@ def test_o_numero_esmaece_so_enquanto_o_jogo_nao_recebeu() -> None:
 
 
 def test_o_esmaecido_nao_toca_a_palavra() -> None:
-    """A D-04 dela venceu a minha recomendação, e ela vale.
-
-    *"Player N, como está hoje."* — e é a gramática que ela fixou em 26/08
-    (marca • player • plástico • transporte). A decisão [02] escolheu a opção
-    que **guarda a palavra e o desenho** e mata só a afirmação.
-
-    A MORDIDA: troque o `f"Player {…}"` do `pacote()` por `f"Controle {…}"` e
-    esta régua reprova — que é ela defendendo uma decisão DELA contra uma
-    "melhora" que ninguém pediu.
-    """
+    """A D-04 dela venceu a minha recomendação, e ela vale."""
     esperando = {"uniq": P2, "connected": True, "player_slot": 2, "player": None}
     cartao = aba.pacote(_ctx([esperando]))["cartoes"][P2]
 
@@ -149,21 +107,7 @@ def test_sem_numero_nenhum_nao_ha_o_que_esmaecer() -> None:
 
 
 def test_a_pagina_tem_os_dois_elementos_do_esmaecido() -> None:
-    """A classe e o texto em elementos SEPARADOS, e o de dentro é FOLHA.
-
-    `escrever()` num elemento com filho apaga os filhos e força layout — a
-    armadilha medida do piloto da Controles. Por isso o `<b>` leva a CLASSE
-    (`jogador-espera`, alvo `classe`) e o `<span>` de dentro leva o TEXTO.
-
-    NOS QUATRO LUGARES DESDE 07/09/2026 (QUATRO-NA-MESA-01). A conta era DOIS,
-    e dois era o defeito: o lugar vazio saía sem endereço nenhum, e o "Player 3"
-    que o daemon publicava quando o terceiro controle chegava não tinha onde
-    pousar. O travessão continua sendo o texto de repouso — o que muda é a
-    ESTRUTURA que o gerador emite, nunca a `monta.MESA`.
-
-    A MORDIDA: ponha os dois `data-campo` no mesmo `<b>` e o gerador REPROVA
-    antes desta régua — `aba01._conferir` §10 mede as duas coisas.
-    """
+    """A classe e o texto em elementos SEPARADOS, e o de dentro é FOLHA."""
     doc = _pagina()
     lugares = len(monta.MESA)
 
@@ -175,9 +119,6 @@ def test_a_pagina_tem_os_dois_elementos_do_esmaecido() -> None:
     assert 'class="espera"' not in doc, (
         "um cartão nasce esmaecido: a cena que ela aprovou tem os dois "
         "controles recebidos pelo jogo")
-    # E O LUGAR VAZIO CONTINUA MOSTRANDO SÓ O TRAVESSÃO. O endereço entrou; o
-    # texto não. Sem esta linha a régua acima passaria com o desenho dizendo
-    # "Player 3" num lugar onde não há controle nenhum.
     vazios = doc.split('class="cartao off"')[1:]
     assert len(vazios) == lugares - len(monta.CONECTADOS), (
         "a cena que ela aprovou deixou de ter dois lugares vazios")
@@ -190,23 +131,8 @@ def test_a_pagina_tem_os_dois_elementos_do_esmaecido() -> None:
             "um lugar vazio deixou de mostrar o travessão na identidade")
 
 
-# ---------------------------------------------------------------------------
-# [03] O CADEADO DA TROCA AUTOMÁTICA
-# ---------------------------------------------------------------------------
 def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
-    """A trava mostra o estado do daemon, não o último clique.
-
-    A LÍNGUA MUDOU EM 19/09/2026 (`TRAVA-PILULA-01`) e esta régua foi atrás:
-    até ali ela media ``"sim"``/``""``,  (noqa-acento: verbo medir, imperfeito)
-    o par do alvo `marcado`. A trava virou
-    `<button class="cadeado">` com o alvo `classe`, e as palavras passaram a ser
-    as TRÊS do interruptor, cujo dono é o próprio pacote — por isso elas são
-    LIDAS daqui, e não digitadas.
-
-    A MORDIDA: troque `state.get("freestyle_ligado") is True` por `False` e
-    esta régua reprova nas duas direções — a trava acesa com o perfil solto, e
-    apagada com ele preso.
-    """
+    """A trava mostra o estado do daemon, não o último clique."""
     assert aba._cadeado({**VIVO, "freestyle_ligado": True}) == aba.CADEADO_LIGADO
     assert (aba._cadeado({**VIVO, "freestyle_ligado": False})
             == aba.CADEADO_DESLIGADO)
@@ -216,18 +142,7 @@ def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
 
 
 def test_sem_daemon_a_caixa_nao_afirma_uma_escolha_dela() -> None:
-    """Sem estado, a trava fica no TRAVESSÃO — nem acesa, nem apagada.
-
-    **O TERCEIRO ESTADO DEIXOU DE SER MENTIRA EM 19/09**, e é a metade que a
-    pílula ganhou sobre a caixa: um checkbox tem dois estados e o produto tem
-    três. Até ali isto devolvia `""`, que o alvo `marcado` pintava como
-    DESMARCADO — a tela dizia *destravado* sobre um estado que ninguém leu. O
-    travessão não casa com o `data-hef-quando`, logo classe nenhuma acende, e a
-    tela não afirma nada. É o mesmo "não sei" do resto da aba.
-
-    E SÓ O ``True`` LITERAL LIGA — a mesma disciplina do `wrapper_used`: um
-    daemon antigo, sem a chave, não pode acender a trava.
-    """
+    """Sem estado, a trava fica no TRAVESSÃO — nem acesa, nem apagada."""
     assert aba._cadeado({}) == TRAVESSAO
     assert aba._cadeado({**VIVO}) == TRAVESSAO, "daemon sem a chave acendeu a trava"
     assert aba._cadeado({**VIVO, "freestyle_ligado": "sim"}) == TRAVESSAO, (
@@ -238,29 +153,11 @@ def test_sem_daemon_a_caixa_nao_afirma_uma_escolha_dela() -> None:
         "existe para não fazer")
 
 
-#: O SENTINELA DO DUBLÊ: *responda o que o serviço responderia*.
 _ECOA = object()
 
 
 class _PonteDeMentira:
-    """Guarda o que foi chamado — e responde ao cadeado como o serviço responde.
-
-    O `__getattr__` responde por QUALQUER nome, e isso é de propósito: o dublê
-    não pode virar uma segunda lista das funções da ponte, que envelheceria em
-    silêncio.
-
-    **MAS O `freestyle_set` GANHOU RESPOSTA PRÓPRIA — 06/09/2026, e a
-    razão é a forma de defeito que esta casa mediu três vezes em 05/09: *o dublê
-    era mais frouxo que a função real*.** O `__getattr__` devolvia `True` para
-    tudo; `ipc_bridge.freestyle_set` devolve **o estado que ficou
-    valendo** — logo um `True` sobre um pedido de DESTRAVAR era o dublê
-    afirmando o contrário do que foi pedido, e um dublê assim não tem como
-    revelar o gesto que ignora a resposta.
-
-    `cadeado=` troca essa resposta, e é por ela que as duas metades do desfecho
-    entram na régua: `None` é *o serviço não respondeu* e uma exceção é *a ponte
-    levantou*.
-    """
+    """Guarda o que foi chamado — e responde ao cadeado como o serviço responde."""
 
     def __init__(self, cadeado: Any = _ECOA) -> None:
         self.chamadas: list[tuple[str, tuple, dict]] = []
@@ -270,9 +167,6 @@ class _PonteDeMentira:
         self.chamadas.append(("freestyle_set", (), {"ligado": ligado}))
         if isinstance(self.cadeado, BaseException):
             raise self.cadeado
-        # O ECO É O QUE O DAEMON FAZ, e não uma gentileza do dublê:
-        # `_handle_freestyle_set` usa o `ligado` quando ele vem no pedido — o
-        # toggle é só para quem não manda valor.
         return bool(ligado) if self.cadeado is _ECOA else self.cadeado
 
     def __getattr__(self, nome: str):
@@ -283,17 +177,7 @@ class _PonteDeMentira:
 
 
 def test_o_cadeado_manda_o_valor_absoluto_e_nunca_um_toggle() -> None:
-    """O clique manda a escolha DELA, não um "inverta o que você tiver".
-
-    **É a metade que decide, e a razão é medida:** um clique chega DUAS vezes ao
-    ouvinte único do piloto — ele está em `click` **e** em `change`
-    (`hefesto_vivo.BOOTSTRAP`), e um `<input type="checkbox">` dispara os dois.
-    Com `ligado=None` (o toggle que a ponte aceita) os dois se cancelariam: ela
-    clicaria e NADA aconteceria, que é a queixa dela em estado puro.
-
-    A MORDIDA: troque `ligado=…` por `ligado=None` e esta régua reprova dizendo
-    que o gesto mandou um toggle.
-    """
+    """O clique manda a escolha DELA, não um "inverta o que você tiver"."""
     for guardado, pedido in ((False, True), (True, False)):
         p = _PonteDeMentira()
         aba.cadeado(_ctx([], freestyle_ligado=guardado),
@@ -309,28 +193,7 @@ def test_o_cadeado_manda_o_valor_absoluto_e_nunca_um_toggle() -> None:
 
 
 def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
-    """O ouvinte do piloto está em dois eventos; só um pode virar escrita.
-
-    `freestyle.set` grava pelo `profiles.manager.ligar_o_freestyle` —
-    é disco dela. Duas entregas do mesmo gesto seriam duas gravações e duas
-    linhas de log para um ato só.
-
-    **A RÉGUA TROCOU DE LADO EM 19/09/2026, e o que ela mede não mudou.** Até
-    ali o escolhido era o `change`, e a razão estava certa PARA UMA CAIXA: um
-    `<input type="checkbox">` dispara `click` **e** `change`, e o `change` era o
-    único que só saía quando a caixa de fato mudava. A trava virou
-    `<button class="cadeado">` (`TRAVA-PILULA-01`) e **um `<button>` não emite
-    `change`** — deixar o filtro lá faria o gesto voltar cedo em todo clique: a
-    tela pisca e o disco não muda. O produto trocou o filtro para `click`, com a
-    razão escrita ao lado; aqui o `change` passa a ser o lado que NÃO grava.
-
-    Quem prova no motor que a trava emite `click` e nunca `change` é a
-    `test_o_clique_no_rotulo_chega_ao_dono_do_gesto`
-    (`tests/unit/test_o_cadeado_mora_no_canto_do_bloco.py`).
-
-    A MORDIDA: apague a linha `if str(o.get("evento") …) != "click": return` e
-    esta régua reprova dizendo que o `change` também gravou.
-    """
+    """O ouvinte do piloto está em dois eventos; só um pode virar escrita."""
     p = _PonteDeMentira()
     ctx = _ctx([], freestyle_ligado=False)
     aba.cadeado(ctx, {"evento": "change"}, p)
@@ -343,43 +206,18 @@ def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
         "o `click` NÃO gravou — e é o único evento que um `<button>` emite. O "
         "filtro ficou no `change`, e a trava virou enfeite")
 
-    # E UM RECADO SEM `evento` CONTINUA VALENDO: a régua dos botões monta o
-    # clique à mão, e um gesto que só funcionasse com a chave presente estaria
-    # medindo o instrumento, não o produto.
     aba.cadeado(ctx, {}, p)
     assert len(p.chamadas) == 2, (
         "um clique sem `evento` foi engolido — o padrão tem de ser `click`")
 
 
 def test_o_cadeado_confirma_em_verde() -> None:
-    """O gesto PEDE o verde voltando calado — e só quando o serviço confirmou.
-
-    **O MECANISMO É O DO PILOTO, e esta régua mede o desfecho que este gesto
-    devolve a ele, não o texto do código.** `hefesto_vivo._gesto` anota
-    ``"aplicou"`` no ramo sem exceção, e o `finally` leva esse desfecho ao pouso
-    (`_pousou(voo, certo)`), que acende `hef-deu-certo` por `MS_DA_PISCADA`. Um
-    gesto que volta sem levantar JÁ pediu o verde; um que levanta não pede.
-    Quem mede a piscada no DOM, com o WebKit e a página publicada, é a
-    :func:`test_o_verde_do_cadeado_no_webkit_e_do_servico`, logo abaixo.
-
-    **A MORDIDA — e ela é a que importa:** faça a ponte devolver `None` (o
-    serviço parado) e esta régua reprova, porque o gesto voltou calado e o piloto
-    vai acender o verde sobre uma escrita que não aconteceu. Era o estado do
-    produto até 06/09/2026: a resposta da ponte ia para o lixo.
-
-    A SEGUNDA MORDIDA: embrulhe a chamada num `try/except` e o caminho da ponte
-    que LEVANTA passa a pedir o verde do mesmo jeito — a régua reprova nas duas
-    metades de baixo.
-    """
-    # 1. O SERVIÇO CONFIRMOU: volta calado, e é isso que acende o verde.
+    """O gesto PEDE o verde voltando calado — e só quando o serviço confirmou."""
     p = _PonteDeMentira()
     assert aba.cadeado(_ctx([], freestyle_ligado=False),
                        {"evento": "click"}, p) is None
     assert p.chamadas, "o cadeado não chamou NADA"
 
-    # 2. O SERVIÇO NÃO RESPONDEU (`None`): o verde não pode acender, e a frase
-    #    vai para a tela dela — `RuntimeError` é o contrato do piloto para
-    #    *"o produto recusou, e a frase VAI PARA A TELA"*.
     p = _PonteDeMentira(cadeado=None)
     with pytest.raises(RuntimeError) as caiu:
         aba.cadeado(_ctx([], freestyle_ligado=False), {"evento": "click"}, p)
@@ -388,35 +226,17 @@ def test_o_cadeado_confirma_em_verde() -> None:
         f"texto de tela novo é palavra dela")
     assert p.chamadas, "o gesto recusou sem sequer tentar escrever"
 
-    # 3. A PONTE LEVANTOU: o gesto deixa subir. Um `try/except` aqui trocaria a
-    #    recusa por uma piscada verde sobre nada.
     p = _PonteDeMentira(cadeado=RuntimeError("o socket recusou"))
     with pytest.raises(RuntimeError):
         aba.cadeado(_ctx([], freestyle_ligado=True), {"evento": "click"}, p)
 
 
 def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
-    """O rótulo e a dica são da janela antiga, palavra por palavra.
-
-    **A RÉGUA LÊ, NÃO DIGITA** — esta casa pagou onze vezes em 26/08 por réguas
-    que digitavam o que deviam ler. O dono das duas frases é o `Gtk.CheckButton`
-    de `home_actions._build_home`, e ele não pode ser lido em tempo de execução
-    sem montar a GTK dentro do pacote das dez abas. Então o pacote DECLARA e
-    esta régua confere contra o fonte: no dia em que a janela antiga trocar a
-    palavra, a tela nova não fica falando sozinha.
-
-    A MORDIDA: mude uma letra de `CADEADO_ROTULO` e esta régua reprova.
-    """
+    """O rótulo e a dica são da janela antiga, palavra por palavra."""
     import re
 
     fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
              ).read_text()
-    # OS LITERAIS ADJACENTES SÃO COLADOS ANTES DE MEDIR — o rótulo e a dica
-    # viajam quebrados em três pedaços no fonte da GTK, e uma régua que
-    # procurasse a frase inteira reprovaria a cada reformatação em vez de a cada
-    # mudança de PALAVRA. É a mesma cirurgia que o `_conferir` faz ao tirar os
-    # comentários HTML antes de contar: medir o que a tela diz, não como o
-    # arquivo está quebrado.
     colado = re.sub(r'"\s*\n\s*"', "", fonte)
 
     assert f'label="{aba.CADEADO_ROTULO}"' in colado, (
@@ -427,9 +247,6 @@ def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
         "a dica do cadeado se afastou da da janela antiga. As duas dizem a "
         "mesma coisa para a mesma pessoa; duas versões vivas é o defeito que a "
         "regra do fato-errado existe para matar")
-    # A TERCEIRA FRASE — 06/09/2026, e ela nasceu com o mesmo dono. Quando o
-    # serviço não responde, o gesto recusa DIZENDO, e o que ele diz é o que o
-    # `_on_home_autoswitch_lock_toggled` já dizia no `resultado is None`.
     assert aba.CADEADO_RECUSA in colado, (
         f"a recusa do cadeado ({aba.CADEADO_RECUSA!r}) não é a frase que a "
         f"janela antiga põe na tela quando o `freestyle_set` volta "
@@ -439,21 +256,7 @@ def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
 
 
 def test_o_cadeado_esta_na_pagina_com_os_dois_lados() -> None:
-    """Endereço de pintura E endereço de clique — um sem o outro é meio botão.
-
-    Sem o `data-campo`, a trava deixa mudar e não mostra o que o daemon
-    guardou; sem o `data-gesto`, ela muda de cor e não muda nada no produto —
-    que é o defeito que o `BOTOES_SEM_DONO` desta aba existe para nomear.
-
-    **O ALVO É `classe` DESDE 19/09** (`TRAVA-PILULA-01`): a trava virou
-    `<button>`, e o alvo `marcado` — o único que escreve `el.checked` — deixou
-    de ter onde escrever. A palavra do `data-hef-quando` sai do DONO
-    (`aba.CADEADO_LIGADO`), nunca digitada aqui: no dia em que a língua do
-    interruptor mudar de novo, esta régua vai junto sozinha.
-
-    A MORDIDA: tire um dos dois do gerador e ele REPROVA antes desta régua
-    (`aba01._conferir` §11).
-    """
+    """Endereço de pintura E endereço de clique — um sem o outro é meio botão."""
     doc = _pagina()
 
     assert doc.count('data-campo="cadeado" data-hef-alvo="classe"') == 1
@@ -469,28 +272,7 @@ def test_o_cadeado_esta_na_pagina_com_os_dois_lados() -> None:
 
 
 def test_o_cadeado_esta_publicado() -> None:
-    """A caixa está na página que o PRODUTO abre — medido no arquivo, não na prosa.
-
-    **O FATO QUE ESTA RÉGUA SUBSTITUI.** O fecho do gesto dizia que a caixa só
-    existia no desenho da bancada e que o piloto abre o publicado — era verdade
-    quando foi escrito e deixou de ser. A conclusão daquela frase (*o
-    `--prova-gesto` não clica esta caixa*) continua de pé por OUTRO motivo, que
-    é `PERIGOSOS`, e é esse motivo que o fonte tem de carregar.
-
-    **A RÉGUA LÊ O ARQUIVO PUBLICADO, e é o que a impede de envelhecer igual à
-    frase que ela veio corrigir.** `onde.pagina(…, publicado=True)` é o dono do
-    caminho — o mesmo que o piloto abre nos seis caminhos dele —, e o número da
-    linha sai da leitura, nunca digitado aqui.
-
-    E A SEGUNDA METADE COBRA A PROSA CONTRA O FATO: com a caixa publicada, o
-    docstring deste gesto não tem por que mandar ninguém procurá-la na bancada.
-    A palavra é o sentinela, e não a frase inteira, pela lição de 05/09 — *citar
-    literalmente o padrão que se vigia é como o aviso vira o defeito que ele
-    descreve*: qualquer reformulação da afirmação morta reprova do mesmo jeito.
-
-    A MORDIDA: ponha a frase velha de volta no fecho de :func:`a01_jogar.cadeado`
-    e esta régua reprova nomeando a linha em que a caixa está publicada.
-    """
+    """A caixa está na página que o PRODUTO abre — medido no arquivo, não na prosa."""
     import inspect
 
     alvo = onde.pagina("01-jogar.html", publicado=True)
@@ -580,9 +362,6 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
     assert medido["ligado"] and medido["desligado"], (
         "a régua não achou o cadeado nem as duas seções — seletor que casa ZERO "
         "elemento é ERRO, nunca medida")
-    # A PROVA DE QUE A RÉGUA NÃO É VÁCUA: o interruptor de fato trocou as seções.
-    # Sem esta linha, um CSS que deixasse as duas visíveis daria verde sobre uma
-    # tela que não muda.
     assert medido["ligado"]["ligado"] and not medido["ligado"]["desligado"], (
         "o interruptor não trocou as seções — a régua está medindo o próprio "
         "instrumento")
@@ -593,9 +372,6 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
         "o cadeado sumiu com o Hefesto DESLIGADO — ele foi aninhado dentro de "
         "uma seção do interruptor, e a troca automática de perfil vale nos dois")
 
-    # E O ESMAECIDO É COR NA TELA, não uma classe no atributo. Um `data-campo`
-    # certo com a regra de folha faltando acende a classe e não muda um pixel —
-    # e nenhuma contagem de endereço vê isso. Por isso a medida é `color`.
     assert medido["cor"]["antes"] == medido["cor"]["p1"], (
         "os dois cartões já nascem com cores diferentes — a régua está medindo "
         "outra coisa")
@@ -607,72 +383,10 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
         f"dela é 'Player N, como está hoje' — o esmaecido só muda a cor")
 
 
-# ---------------------------------------------------------------------------
-# [01] A METADE QUE NÃO FECHA, e é decisão DELA
-# ---------------------------------------------------------------------------
 def test_o_aviso_do_nativo_continua_fora_por_decisao_dela() -> None:
-    """A decisão [01] pede uma frase que ELA MANDOU TIRAR — e ela ganha.
-
-    A decisão [01] desta sprint é *"na coluna Atenção, só má notícia: o aviso do
-    Modo Nativo enquanto ele vigora"*, e a frase que a lista da aba nomeia é a
-    do `_MODE_DESCRIPTIONS["native"]`: *"Alguns jogos derrubam o controle no
-    meio da partida neste modo"*.
-
-    **ESSA FRASE SAIU DESTA ABA POR ORDEM DELA, em 31/08/2026**, e o gerador tem
-    régua para ela desde então (`aba01._conferir` §6-bis): *"NENHUM ALARME SEM
-    MEDIÇÃO. Ela, 31/08: 'qualquer coisa fora isso tá incorreta' — a regra do
-    Nativo é só 'Desligado põe o Nativo online'."* Ensaio nenhum deste
-    repositório mede quantos jogos derrubam o controle no Modo Nativo.
-
-    **É UM OITAVO CONFLITO**, da mesma família dos sete que o
-    `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` §1 nomeia: a lista
-    desta aba nasceu no mesmo dia que as dezesseis decisões dela e reconciliou
-    contra ELAS — não contra as de 31/08, que vivem numa régua de gerador. A
-    regra do próprio documento decide: *"Onde contradiz, ela ganha."*
-
-    E A SEGUNDA METADE DA DECISÃO [01] FECHOU: a linha "Ponte com o jogo" entra
-    na coluna Atenção nos dois desfechos ruins, e quem a mede é
-    `test_a01_a_ponte_entra_na_coluna.py`.
-
-    ESTA RÉGUA É UMA LÁPIDE COM MEDIÇÃO. Ela reprova no dia em que alguém puser
-    a frase na coluna sem passar pelo olho dela — inclusive por baixo do
-    gerador, que é o caminho que a régua §6-bis **não** cobre: o `_conferir` lê
-    o HTML estático, e a coluna Atenção é escrita em tempo de execução.
-
-    ---
-
-    **A LÁPIDE FOI RELIDA — 06/09/2026, ONDA5-01-02, e ela tinha DUAS metades.**
-
-    A primeira exigia que a frase CONTINUASSE viva em `_MODE_DESCRIPTIONS`, e a
-    razão escrita era *"se a frase sumir de lá, esta lápide perde o objeto"*.
-    Foi essa linha que **prendeu a profecia na janela antiga por uma semana**: a
-    frase já não tinha defensor nenhum, e mesmo assim uma régua desta casa
-    reprovava quem a tirasse. Ela cai, com as três datas:
-
-    * **31/08/2026** — *"qualquer coisa fora isso tá incorreta"*: o texto do
-      Nativo encolheu na interface nova e a janela antiga não foi junto;
-    * **04/09/2026** — a leitura de PO do oitavo conflito: a tela diz o ESTADO
-      MEDIDO, nunca a consequência que ninguém mediu;
-    * **05/09/2026** — *"Não me lembro disso acontecer. **E não deveria.** Mas
-      caso ocorra na coluna atenção"*. É a releitura, e ela é dela.
-
-    A segunda metade — *a frase não entra na coluna Atenção por caminho nenhum*
-    — **fica, e fica mais forte**: o que a coluna diz hoje sobre o mesmo assunto
-    é a linha medida da ONDA5-01-01, e a profecia continua de fora. O objeto da
-    lápide deixou de ser a janela antiga e passou a ser a coluna.
-
-    E A JANELA ANTIGA NÃO FICOU MUDA: a chave `"native"` continua existindo,
-    encolhida e IGUAL à da interface nova — apagá-la escreveria string vazia na
-    tela, que é trocar uma frase errada por nenhuma. Quem guarda o fonte agora é
-    `test_a_frase_que_ela_baniu_nao_chega_a_tela::test_nenhuma_banida_vive_no_fonte`,
-    a terceira guarda, que nasceu no mesmo dia por causa desta lápide.
-    """
+    """A decisão [01] pede uma frase que ELA MANDOU TIRAR — e ela ganha."""
     from hefesto_dualsense4unix.app.actions import home_actions
 
-    # A METADE QUE CAIU VIRA O SEU CONTRÁRIO: a janela antiga passou a dizer o
-    # que a interface nova diz, palavra por palavra. Sem esta linha o passo 1
-    # poderia ter apagado a chave — e `_MODE_DESCRIPTIONS.get(..., "")` escreve
-    # string VAZIA, que é o defeito que a §5.4 da sprint nomeia.
     nativo = home_actions._MODE_DESCRIPTIONS["native"]
     assert nativo == (
         "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o "
@@ -681,8 +395,6 @@ def test_o_aviso_do_nativo_continua_fora_por_decisao_dela() -> None:
         f"nova ({nativo!r}). Desde 06/09 as duas dizem a MESMA coisa, que é a "
         f"regra de 31/08 dela: 'Desligado põe o Nativo online', e nada além")
 
-    # E ELE NÃO CHEGA À COLUNA POR NENHUM CAMINHO — nem no Modo Nativo, que é
-    # exatamente o estado em que a decisão [01] o pediria.
     ctx = _ctx([], native_mode=True,
                gamepad_emulation={"enabled": False, "flavor": "dualsense"})
     textos = [str(a.get("texto") or "") for a in aba._avisos(ctx)]
@@ -693,9 +405,6 @@ def test_o_aviso_do_nativo_continua_fora_por_decisao_dela() -> None:
         "Se a decisão mudou, ela muda com o olho DELA, não por baixo do gerador")
 
 
-# ---------------------------------------------------------------------------
-# JOGAR-O-QUE-FALTA-01 — as quatro linhas de 06/09/2026
-# ---------------------------------------------------------------------------
 def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
     """Passo 3 — dois controles, um primário; troque e o marcador muda de cartão.
 
@@ -725,9 +434,6 @@ def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
     assert aba._e_o_primario({**c1, "is_primary": False}) == ""
     assert aba._e_o_primario({**c2, "is_primary": True}) == "1"
 
-    # E O PACOTE NÃO EMITE `alvo`: quem escolhe o alvo de edição da fita é o
-    # piloto (`hefesto_vivo`, `carga["alvo"]`), e um pacote que o emitisse aqui
-    # seria o segundo dono de uma escolha DELA.
     fora = aba.pacote(_ctx([c1, c2]))
     for uniq, campos in (fora["cartoes"] or {}).items():
         assert "alvo" not in campos, (
@@ -736,14 +442,7 @@ def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
 
 
 def test_so_o_true_literal_acende_o_marcador() -> None:
-    """Chave ausente não é "não é o primário" — é *não sei*, e não se afirma.
-
-    Mesma disciplina do `_cadeado` e do `wrapper_used`: um daemon antigo (sem a
-    chave) ou um payload de outro tipo não podem acender uma palavra sobre um
-    controle.
-
-    A MORDIDA: troque `is True` por um `bool(...)` e as três últimas reprovam.
-    """
+    """Chave ausente não é "não é o primário" — é *não sei*, e não se afirma."""
     assert aba._e_o_primario({}) == "", "sem a chave, o cartão afirmou"
     assert aba._e_o_primario({"is_primary": None}) == ""
     assert aba._e_o_primario({"is_primary": 1}) == "", "um `1` inteiro acendeu"
@@ -766,32 +465,9 @@ def test_a_palavra_do_primario_e_a_que_ela_ja_leu() -> None:
         f"devia ser texto que ela já leu")
 
 
-# O PASSO 4 SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01. A régua que cobrava a
-# marca da emulação degradada no cartão virou a que cobra a AUSÊNCIA dela, em
-# `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`.
-
-
 def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
-    """Passo 5 — com o estado vazio a coluna DIZ, e nada mais é afirmado.
-
-    Linha 38 do CSV, e é o passo que mais vale: *"o tique imprime `[daemon mudo]`
-    no stderr e retorna sem pintar nada — a tela fica com os últimos valores"*.
-
-    **A OMISSÃO ERA A MENTIRA, e ela tinha número:** medido antes desta cura, com
-    o estado vazio, a coluna emitia ``atencao-conta = "nenhum aviso"`` e seis
-    linhas em branco. *"Nenhum aviso"* é uma AFIRMAÇÃO — quer dizer "perguntei e
-    não há nada".
-
-    A MORDIDA: troque `_aviso_do_servico_calado` por `return None` e esta régua
-    reprova nas duas primeiras afirmações.
-    """
+    """Passo 5 — com o estado vazio a coluna DIZ, e nada mais é afirmado."""
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
-    # DUAS LEITURAS, E AS DUAS SÃO DA MESMA CURA — 07/09/2026. A coluna Atenção
-    # saiu da Jogar por ordem dela, então o canal deixou de viajar no `pacote()`
-    # e passou a ter porta própria (`coluna_de_atencao`). O que a régua mede não
-    # mudou: a coluna DIZ, e a página para de afirmar.
-    # 28/09/2026: o canal inteiro é `_avisos`; `coluna_de_atencao` passou a ser
-    # a lista da aba Sistema, que deixa o serviço calado com o Status dela.
     canal = aba._avisos(ctx)
     fora = aba.pacote(ctx)
 
@@ -801,13 +477,8 @@ def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
         "estado que ninguém leu")
     assert canal[selos.index(aba.SELO_DO_SERVICO)]["texto"] == aba.SERVICO_CALADO
 
-    # E NADA MAIS É AFIRMADO: as outras respostas da aba continuam mudas.
     assert fora["hef-posicao"] == "", "o interruptor acendeu sem estado"
     assert fora["modo-aceso"] == "", "um chip da fileira acendeu sem estado"
-    # O CADEADO FICA NO TRAVESSÃO desde 19/09 (`TRAVA-PILULA-01`): a trava virou
-    # pílula, e com o alvo `classe` o "não sei" é um valor que não casa com o
-    # `data-hef-quando` de ninguém. Vazio aqui seria a mesma coisa — mas o dono
-    # devolve o travessão, e a régua pergunta ao dono.
     assert fora["cadeado"] == TRAVESSAO, "o cadeado afirmou uma escolha dela"
     assert fora["mesa-frase"] == "", (
         "a frase da mesa vazia apareceu — 'nenhum controle na mesa' sobre um "
@@ -816,15 +487,7 @@ def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
 
 
 def test_com_o_servico_vivo_a_linha_do_servico_nao_existe() -> None:
-    """E ela SOME sozinha quando o serviço volta — sem clique nenhum.
-
-    É a outra metade da promessa que a própria frase faz (*"ela volta sozinha
-    quando o serviço responder"*). Uma linha que ficasse acesa com o daemon vivo
-    seria pior que o silêncio que ela veio curar.
-
-    A MORDIDA: troque a guarda por `return {...}` incondicional e esta régua
-    reprova.
-    """
+    """E ela SOME sozinha quando o serviço volta — sem clique nenhum."""
     c1 = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
           "is_primary": True, "transport": "usb"}
     fora = aba._avisos(_ctx([c1]))
@@ -833,15 +496,7 @@ def test_com_o_servico_vivo_a_linha_do_servico_nao_existe() -> None:
 
 
 def test_o_selo_do_servico_abre_a_escada_da_gravidade() -> None:
-    """Com o serviço calado, TODA outra linha descreveria o que ninguém leu.
-
-    O critério da escada é *o que invalida o quê*, e está escrito na tupla. A
-    ``PAUSA`` já vinha primeiro por isso; o serviço calado é um degrau acima —
-    com ele, nem a pausa se sabe.
-
-    A MORDIDA: tire ``SERVIÇO`` de `ORDEM_DA_GRAVIDADE` e ele cai para DEPOIS de
-    tudo (`posto.get(..., fim)`), abaixo de notícias menos graves.
-    """
+    """Com o serviço calado, TODA outra linha descreveria o que ninguém leu."""
     assert aba.ORDEM_DA_GRAVIDADE[0] == aba.SELO_DO_SERVICO, (
         "o selo do serviço saiu da frente da escada")
     selos = [a["selo"] for a in aba._em_ordem([
@@ -870,35 +525,13 @@ def test_a_frase_do_servico_e_a_que_ela_ja_leu() -> None:
 
 
 def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
-    """As palavras proibidas do glossário não entram em texto de tela.
-
-    `uinput`, `hidraw`, `vpad`, `evdev`, `MAC`, `uniq` e "mesa" são proibidos, e
-    a régua olha as frases que ESTA aba escreve. A da ponte entra aqui porque é
-    a que a sprint manda medir: *"três dublês, três pontes, três frases; nenhuma
-    com palavra proibida"*.
-
-    **A MARCA DA DEGRADAÇÃO É A EXCEÇÃO DECLARADA, e não um esquecimento:** ela
-    não é texto de tela em linha — é `title`, a DICA, que é onde o glossário põe
-    a explicação (§3), e a frase inteira é do dono na janela GTK. A mesma
-    escolha do cartão da aba 02, que a publica desde 04/09.
-
-    A MORDIDA: escreva `uinput` em `SERVICO_CALADO` e esta régua reprova.
-    """
+    """As palavras proibidas do glossário não entram em texto de tela."""
     from hefesto_dualsense4unix.app.actions import home_actions
 
-    #: AS PALAVRAS DE MÁQUINA — as quatro que a sprint nomeia, mais o `uniq`.
     de_maquina = ("uinput", "hidraw", "vpad", "evdev", "uniq")
-    #: AS FRASES DESTA POSSE.
     minhas = [aba.SERVICO_CALADO, aba.SERVICO_DESLIGADO, aba.PRIMARIO_DICA,
               aba.MARCA_DO_PRIMARIO]
-    #: AS CINCO PONTES, uma por dublê — as duas primeiras chegam à coluna
-    #: Atenção (má notícia), as três últimas não, e as cinco passam por aqui.
     #: O MARKUP FICA, e não é descuido: quem o tira é `gui.aba_sistema.sem_markup`,
-    #: e a janela GTK está sendo aposentada (D-0609-GTK-LEVA-INTEIRA) — uma
-    #: citação nova para ela reprova no portão `nada-aponta-para-a-janela`. Para
-    #: esta medida o markup não atrapalha: `<span foreground="#50fa7b">` não tem
-    #: palavra de máquina nenhuma, e o que se procura é a palavra DENTRO da
-    #: frase. Quem tira o markup de verdade, no produto, é `_aviso_da_ponte`.
     da_ponte = [
         home_actions.texto_da_ponte(cena)
         for cena in (
@@ -925,19 +558,6 @@ def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
                 f"a palavra {palavra!r} chegou a texto de tela: {frase!r}. O "
                 f"glossário (`docs/A-LINGUA-DESTA-CASA`) a proíbe")
 
-    # A PALAVRA "mesa" É MEDIDA SÓ NAS FRASES DESTA POSSE, e a razão é um ACHADO
-    # que esta régua fez e não pode curar — está no relato desta sprint:
-    #
-    #     home_actions.py:1342  "…não há nenhum controle na mesa para alimentá-lo"
-    #     home_actions.py:1697  f"{total} controles na mesa: …"
-    #
-    # A primeira é a ponte *"de pé, e vazia"*, e ela CHEGA à coluna Atenção
-    # desta aba desde 04/09 — logo a palavra banida está na tela dela hoje. Quem
-    # tira a palavra é a `A-PALAVRA-MESA-SAI-01`, e ela **não alcança**:
-    # `src/hefesto_dualsense4unix/app/` está no `nao_toca` daquele frontmatter, e
-    # ela roda DEPOIS desta. Medir aqui as frases de outra posse deixaria esta
-    # régua vermelha por um defeito que ela não pode fechar — e régua vermelha
-    # por dívida alheia é a que alguém desliga.
     for frase in minhas:
         assert " mesa " not in f" {frase.lower()} ", (
             f'a palavra "mesa" entrou numa frase desta aba: {frase!r}. Decisão '
@@ -1010,8 +630,6 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
     assert lido == "gamepad", (
         f"a aba 10 continua vendo {lido!r} depois de o daemon gravar o «Xbox» — "
         f"a escolha dela não atravessou as duas telas")
-    # O CAMINHO, e a máscara intocada — MODO-DE-CONEXAO-01, 13/09/2026: o modo
-    # não escreve a máscara (§D.1 daquela sprint).
     modo = loader.load_profile(nome).mode
     assert modo is not None and modo.caminho == "xbox", (
         f"o caminho não entrou na seção `mode`: {modo!r}")
@@ -1086,33 +704,15 @@ def test_sem_perfil_ativo_nao_se_inventa_um() -> None:
 
 
 def test_a_secao_do_modo_e_a_regra_do_dono() -> None:
-    """A máscara não é do modo, e não é inventada fora dele.
-
-    O dono é `manager.secao_do_modo_com_o_caminho`, o mesmo que o escritor do
-    daemon usa. A cicatriz é ESCOLHA-DELA-VENCE-01/E1: havia um ``or "xbox"`` no
-    Salvar da janela estável, e bastava salvar um perfil para ele passar a
-    EXIGIR Xbox.
-
-    O `"none"` que removia a seção saiu com `perfil.secao_do_modo`
-    (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): nenhum gesto do produto o
-    passava, e o dono não tem esse par.
-
-    A MORDIDA: devolva a poda (`campos["gamepad_flavor"] = None` no ramo que
-    não é gamepad do dono) e a primeira afirmação reprova.
-    """
+    """A máscara não é do modo, e não é inventada fora dele."""
     from hefesto_dualsense4unix.profiles.manager import secao_do_modo_com_o_caminho
     from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
     antes = ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
-    # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026 (na validação).
-    # ANTES: fora do modo jogo a máscara era zerada ("JSON limpo, sem sobras").
-    # AGORA: a máscara não é do modo — com o PS + R3 gravando a cada aperto, a
-    # volta pela Navegação apagava a máscara padrão do perfil em silêncio.
     fora = secao_do_modo_com_o_caminho(antes, kind="native")
     assert fora.kind == "native" and fora.gamepad_flavor == "xbox", (
         "o modo apagou a máscara padrão do perfil — a máscara não é do modo")
 
-    # E DENTRO DELE, SEM ESCOLHA, O DISCO É PRESERVADO.
     fica = secao_do_modo_com_o_caminho(antes, kind="gamepad")
     assert fica.gamepad_flavor == "xbox", (
         "a máscara do disco foi apagada por um clique que não a escolheu — é a "
@@ -1128,24 +728,6 @@ def _painel_do_produto() -> Any:
     return painel
 
 
-# ---------------------------------------------------------------------------
-# O VERDE DO CADEADO, MEDIDO NO DOM — o piloto do produto, a página publicada
-# ---------------------------------------------------------------------------
-#
-# POR QUE ESTA RÉGUA ABRE UM WebKit DE VERDADE: porque a forma de defeito mais
-# cara desta casa é *alguém curar o caminho e provar a cura num caminho que ela
-# não usa*. As três medições acima provam o desfecho que o gesto DEVOLVE; esta
-# prova o pixel — a caixa que ela clica, na página que o produto renderiza, com
-# o `BOOTSTRAP` vivo e o pouso do piloto decidindo a cor.
-#
-# E ELA NÃO TOCA NO DISCO DELA. O dublê entra em `hefesto_vivo.ponte`, um degrau
-# ANTES do socket: nenhum `freestyle.set` sai, nenhum
-# `save_freestyle_ligado` roda. É o que torna medível um gesto que está em
-# `PERIGOSOS` — a régua de clique do piloto continua, e deve continuar, sem
-# clicar esta caixa.
-
-#: A MESA DUBLÊ desta medição. `freestyle_ligado: False` é o que faz o clique
-#: pedir `ligado=True` — a mesma direção da prova declarada em `PROVAS`.
 _ESTADO_DO_WEBKIT: dict[str, Any] = {
     "active_profile": "regua",
     "gamepad_emulation": {"flavor": "dualsense"},
@@ -1156,10 +738,6 @@ _ESTADO_DO_WEBKIT: dict[str, Any] = {
     ],
 }
 
-#: A LEITURA. A cor vem do CSSOM e não da classe, pela mesma razão da régua do
-#: recado: a classe diz que a regra foi ESCRITA, o CSSOM diz que ela PEGOU — a
-#: piscada é `outline`, e um `!important` arrancado a deixaria muda justamente
-#: nos campos que declaram cor própria.
 _LER_O_CADEADO = r"""
 (function(){
   const c = document.querySelector('[data-gesto="cadeado"]');
@@ -1175,31 +753,6 @@ _LER_O_CADEADO = r"""
 })()
 """
 
-#: O EVENTO É `click`, E NÃO `change` — 19/09/2026. Um `<button>` NÃO emite
-#: `change`: só `<input>`, `<select>` e `<textarea>` emitem. O handler
-#: (`pacotes/a01_jogar.cadeado`) já filtrava por `click` desde aquele dia, com
-#: a razão escrita ao lado; estas réguas ficaram mandando `change` e reprovaram
-#: com «o cadeado não chamou NADA» sobre um produto que funcionava.
-#:
-#: Quem curou o produto não levou as réguas junto, e o preço foi oito réguas
-#: vermelhas por um dia. É a segunda metade do mesmo defeito do seletor logo
-#: abaixo: o cadeado virou `<button>` e a língua dele mudou inteira — a tag no
-#: seletor E o nome do evento.
-#:
-#: O CLIQUE, no cadeado do produto. Clicar por coordenada é a armadilha que
-#: esta casa já pagou duas vezes.
-#:
-#: O SELETOR NÃO DIZ A TAG, e a razão é de 20/09/2026: ele dizia
-#: `input[data-gesto="cadeado"]` desde 06/09, e em 19/09 o cadeado virou
-#: `<button>` (`3bf938e46`, a trava do perfil virando a pílula do
-#: Giroscópio). Dez réguas passaram a reprovar com o produto intacto,
-#: dizendo «NAO ACHEI A CAIXA» sobre um cadeado que estava lá.
-#:
-#: O endereço deste elemento é o `data-gesto`, que é contrato com o
-#: gerador; a tag é decisão de desenho e pode mudar de novo amanhã. Uma
-#: régua que digita a tag mede a FORMA, não o endereço — é a mesma lição
-#: que esta casa já escreveu para o nó de áudio: propriedade de posse,
-#: nunca o rótulo.
 _CLICAR_NO_CADEADO = r"""
 (function(){
   const c = document.querySelector('[data-gesto="cadeado"]');
@@ -1227,16 +780,11 @@ def no_webkit() -> dict:
 
     import hefesto_vivo as hv
 
-    # OS DUBLÊS SÃO DEVOLVIDOS NO FIM: `mesa_viva` e `pacotes.ponte` são módulos
-    # COMPARTILHADOS do produto, e deixá-los sujos entrega uma mesa de mentira a
-    # todo vizinho que abrir um `Piloto` depois, no mesmo processo.
     guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.freestyle_set)
     da_piscada_ms = int(hv.MS_DA_PISCADA)
     hv.mesa_viva.estado_do_daemon = (  # type: ignore[assignment]
         lambda *a, **k: _ESTADO_DO_WEBKIT)
 
-    # O QUE A PONTE RESPONDE, trocado a cada etapa. O primeiro é o ECO do
-    # serviço vivo (`_handle_freestyle_set` responde o `ligado` pedido).
     resposta: dict[str, Any] = {"como": "eco"}
 
     def _ponte_do_cadeado(ligado: Any = None) -> Any:
@@ -1268,9 +816,6 @@ def no_webkit() -> dict:
         return _leu
 
     def comeco() -> bool:
-        # A PÁGINA TEM DE ESTAR PRONTA, e não "já deve ter carregado": sem o
-        # bootstrap o `el.click()` acha a caixa sem ouvinte que responda — o
-        # clique some, calado, e a régua fica verde sobre nada.
         if not piloto.pronto:
             return True
         piloto.ponte.perguntar(_LER_O_CADEADO, ler("antes"))
@@ -1289,8 +834,6 @@ def no_webkit() -> dict:
         return False
 
     def sem_resposta() -> bool:
-        # O SERVIÇO PARADO: a ponte devolve `None`, e é o caminho que fazia a
-        # tela piscar verde sobre uma escrita que não aconteceu.
         resposta["como"] = "none"
         piloto.ponte.perguntar(_CLICAR_NO_CADEADO, anotar("clique-2"))
         GLib.timeout_add(700, leu_sem_resposta)
@@ -1298,10 +841,6 @@ def no_webkit() -> dict:
 
     def leu_sem_resposta() -> bool:
         piloto.ponte.perguntar(_LER_O_CADEADO, ler("sem-resposta"))
-        # O DESFECHO É LIDO AQUI, e não no fim — a chave é `página:gesto`, e a
-        # recusa seguinte escreveria por cima desta. Até 13/09/2026 aqui se lia
-        # o depósito de recados do piloto, que saiu com a FRASES-E-DICAS-01: a
-        # recusa não vai mais à tela, e a frase fica no `desfechos` e no diário.
         fora["desfecho-sem-resposta"] = list(
             piloto.desfechos.get("01-jogar.html:cadeado", ()))
         GLib.timeout_add(da_piscada_ms + 500, levanta)
@@ -1325,14 +864,8 @@ def no_webkit() -> dict:
 
     GLib.timeout_add(400, lambda: piloto._ir(args.abre))
     GLib.timeout_add(1500, comeco)
-    # O RELÓGIO DE SEGURANÇA É DESARMADO NO `finally`: um `timeout_add` pendente
-    # depois da fixture dispara DENTRO do laço do PRÓXIMO teste de GUI do mesmo
-    # processo. Já matou onze medições de um vizinho.
     guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
-        # O LAÇO REENTRA ATÉ O ROTEIRO ACABAR, e a condição é o ÚLTIMO passo: um
-        # `Gtk.main_quit` pendente de outro teste de GUI do mesmo processo cai
-        # dentro deste `Gtk.main()` e o encerra no meio.
         limite = _time.monotonic() + 60.0
         while "desfechos" not in fora and _time.monotonic() < limite:
             Gtk.main()
@@ -1350,32 +883,11 @@ def no_webkit() -> dict:
 
 
 def test_o_verde_do_cadeado_no_webkit_e_do_servico(no_webkit: dict) -> None:
-    """A piscada acende quando o serviço confirmou — e SÓ então.
-
-    **As três metades, no mesmo DOM e no mesmo minuto:**
-
-    ==========================  ==============================================
-    a ponte responde            a caixa
-    ==========================  ==============================================
-    o estado que ficou valendo  pisca VERDE por `MS_DA_PISCADA` e volta sozinha
-    `None` (serviço parado)     **não pisca** — e a frase vai para a tela
-    levanta                     **não pisca**
-    ==========================  ==============================================
-
-    A MORDIDA QUE IMPORTA é a linha do meio, e ela é a que separa *o produto
-    confirmou* de *a tela pintou sozinha*: arranque o `is None` do gesto e a
-    caixa pisca verde no exato clique em que nada foi guardado — com o
-    desmarcar chegando 100 ms depois, pelo tique.
-
-    A COR VEM DO CSSOM: a classe diz que a regra foi escrita, o `outlineColor`
-    diz que ela pegou.
-    """
+    """A piscada acende quando o serviço confirmou — e SÓ então."""
     assert no_webkit["clique-1"] == "cliquei", no_webkit["clique-1"]
     antes, certo = no_webkit["antes"], no_webkit["confirmou"]
     assert antes["achou"], "a caixa do cadeado não está na página que o piloto abriu"
 
-    # A LINHA DE BASE: sem ela, uma caixa que já nascesse verde daria o mesmo
-    # verde depois do clique.
     assert not antes["verde"], "a caixa já estava piscando ANTES do clique"
 
     assert certo["verde"], (
@@ -1387,39 +899,17 @@ def test_o_verde_do_cadeado_no_webkit_e_do_servico(no_webkit: dict) -> None:
         f"{certo['contorno_larg']!r}. É a diferença entre a régua verde e o "
         f"olho dela vendo alguma coisa")
 
-    # E ELA VOLTA SOZINHA. Um campo verde para sempre afirmaria um clique de dez
-    # minutos atrás — a mesma doença do botão que fica em voo.
     assert not no_webkit["depois-da-piscada"]["verde"], (
         f"a piscada não apagou depois de {no_webkit['piscada_ms']} ms")
 
 
 def test_o_cadeado_nao_pisca_sobre_o_que_nao_foi_guardado(no_webkit: dict) -> None:
-    """O serviço não respondeu — e a tela NÃO pode dizer que guardou.
-
-    **É a metade que esta sprint existe para fechar.** Até 06/09/2026 a resposta
-    de `freestyle_set` ia para o lixo: com o serviço parado o gesto voltava
-    calado, o piloto anotava `"aplicou"` e a caixa piscava VERDE — e desmarcava
-    no tique seguinte, porque `_cadeado` sem `freestyle_ligado` devolve `""`. A
-    tela dizia *guardei* e *não está guardado* com 100 ms entre as duas.
-
-    A MORDIDA: devolva o corpo do gesto ao `p.freestyle_set(...)` sem
-    guarda e esta régua reprova na primeira asserção.
-
-    A SEGUNDA: embrulhe a chamada num `try/except` e a última asserção reprova —
-    a ponte que LEVANTA passaria a pedir o verde do mesmo jeito.
-    """
+    """O serviço não respondeu — e a tela NÃO pode dizer que guardou."""
     assert no_webkit["clique-2"] == "cliquei", no_webkit["clique-2"]
     assert not no_webkit["sem-resposta"]["verde"], (
         "a caixa piscou VERDE com o serviço sem responder — o verde é o recibo "
         "de uma escrita que não aconteceu")
 
-    # E A RECUSA FALA — NO DIÁRIO, desde 13/09/2026. `RuntimeError` é o
-    # contrato do piloto para *o produto recusou*. Até a FRASES-E-DICAS-01 a
-    # frase ia ao cartão do controle que a fita escolhia, e esta régua a lia no
-    # depósito de recados; ela saiu da tela (o índice da leva,
-    # `2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19), e a caixa
-    # responde pela piscada de recusa. O desfecho é lido NO INSTANTE desta
-    # etapa porque a chave é uma só: a recusa seguinte escreveria por cima.
     classe, frase = no_webkit["desfecho-sem-resposta"]
     assert classe == "recusou dizendo" and aba.CADEADO_RECUSA in frase, (
         f"o gesto não recusou com a frase do dono — o desfecho foi "

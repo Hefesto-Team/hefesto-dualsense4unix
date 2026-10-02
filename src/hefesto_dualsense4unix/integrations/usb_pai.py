@@ -54,12 +54,8 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable, Mapping
 
-#: Onde o sysfs está montado. O ``pactl`` publica ``sysfs.path`` como caminho
-#: RELATIVO a esta raiz (``/devices/...``), e é aqui que ele vira absoluto.
 RAIZ_SYSFS = "/sys"
 
-#: Onde o kernel lista os nós hidraw. Cada um tem ``device/uevent`` com o
-#: ``HID_UNIQ`` — o mesmo identificador que a janela usa por controle.
 RAIZ_HIDRAW = "/sys/class/hidraw"
 
 _MARCA_UNIQ = "HID_UNIQ="

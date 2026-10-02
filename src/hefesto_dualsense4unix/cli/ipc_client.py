@@ -1,13 +1,4 @@
-"""Cliente JSON-RPC 2.0 sobre Unix socket para falar com o daemon.
-
-Uso típico de CLI/TUI:
-    async with IpcClient.connect() as client:
-        status = await client.call("daemon.status")
-
-Uso com timeout (recomendado na GUI):
-    async with IpcClient.connect(timeout=0.25) as client:
-        status = await client.call("daemon.status", timeout=1.0)
-"""
+"""Cliente JSON-RPC 2.0 sobre Unix socket para falar com o daemon."""
 from __future__ import annotations
 
 import asyncio
@@ -24,8 +15,6 @@ from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
 _LOG = logging.getLogger(__name__)
 
-# Prazo máximo (segundos) para o fechamento da conexão. Fechar é higiene, não
-# é o resultado da chamada: se o prazo estourar, registramos em log e seguimos.
 _CLOSE_TIMEOUT_S = 2.0
 
 
@@ -49,17 +38,7 @@ class IpcClient:
         socket_path: Path | None = None,
         timeout: float | None = None,
     ) -> AsyncIterator[IpcClient]:
-        """Conecta ao socket Unix do daemon.
-
-        Parameters
-        ----------
-        socket_path:
-            Caminho alternativo ao socket (padrão: `ipc_socket_path()`).
-        timeout:
-            Tempo máximo (segundos) para estabelecer a conexão. `None`
-            significa sem limite. Em caso de `TimeoutError`, levanta
-            `IpcError(-1, "conexão timeout")`.
-        """
+        """Conecta ao socket Unix do daemon."""
         path = socket_path or ipc_socket_path()
         try:
             if timeout is not None:
@@ -78,19 +57,7 @@ class IpcClient:
             await client.close()
 
     async def close(self, timeout: float | None = None) -> None:
-        """Fecha a conexão sem nunca ficar presa.
-
-        `writer.wait_closed()` pode não retornar nunca quando há escrita
-        pendente que o servidor não drena. Como fechar é higiene, e não o
-        resultado da chamada, o estouro do prazo vira registro em log em vez
-        de exceção que sobe para quem chamou.
-
-        Parameters
-        ----------
-        timeout:
-            Prazo máximo (segundos) para o fechamento. `None` usa o padrão
-            `_CLOSE_TIMEOUT_S`.
-        """
+        """Fecha a conexão sem nunca ficar presa."""
         prazo = _CLOSE_TIMEOUT_S if timeout is None else timeout
         with contextlib.suppress(Exception):
             self.writer.close()
@@ -101,7 +68,7 @@ class IpcClient:
                 "fechamento do IPC excedeu %.2fs; seguindo sem esperar",
                 prazo,
             )
-        except Exception as exc:  # fechar nunca pode subir erro para quem chamou
+        except Exception as exc:
             _LOG.debug("erro ignorado ao fechar o IPC: %s", exc)
 
     async def call(
@@ -110,19 +77,7 @@ class IpcClient:
         params: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """Envia RPC e aguarda resposta.
-
-        Parameters
-        ----------
-        method:
-            Nome do método JSON-RPC (ex.: ``"daemon.status"``).
-        params:
-            Parâmetros da chamada (dicionário). `None` equivale a ``{}``.
-        timeout:
-            Tempo máximo (segundos) para o envio (drain) e para receber a
-            resposta, aplicado a cada etapa. `None` sem limite.
-            `TimeoutError` vira `IpcError(-1, "conexão timeout")`.
-        """
+        """Envia RPC e aguarda resposta."""
         self._next_id += 1
         request = {
             "jsonrpc": PROTOCOL_VERSION,
@@ -155,4 +110,3 @@ class IpcClient:
 
 __all__ = ["IpcClient", "IpcError"]
 
-# "O obstáculo é o caminho." — Marco Aurélio

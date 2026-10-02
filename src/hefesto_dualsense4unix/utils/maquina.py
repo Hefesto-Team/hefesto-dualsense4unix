@@ -1,74 +1,4 @@
-"""``maquina.json`` — o que a MESA é, declarado por quem a montou.
-
-A aba Configurações pergunta o que o Hefesto **não tem como medir**: se a antena
-está acima ou abaixo da linha das cabeças, se há gente na frente dela, o que é
-aquele rádio vizinho, em que modo a chave física do controle genérico foi posta,
-qual a cor do plástico quando a leitura do firmware falha. Nada disso muda com o
-jogo aberto — logo não é configuração de PERFIL, e não cabe em ``profiles/``.
-
-Este módulo é vizinho de ``utils/session.py`` de propósito: é a camada que GUI,
-daemon e CLI importam sem inverter dependência. Não em ``daemon/`` (a GUI
-passaria a importar daemon) nem em ``core/`` (que é hardware).
-
-O ARQUIVO É PRÓPRIO, E NÃO É UM BUMP DO ``controllers.json``
-------------------------------------------------------------
-
-Os quatro fatos MEDIDOS em 07/08/2026 que fecham aquela porta estão no cabeçalho
-de ``daemon/subsystems/external_mask.py`` e valem inteiros aqui: ``identity.load``
-descarta a fila quando a versão do arquivo difere; o save do outro lado só
-aproveita entradas de versão igual; o payload é montado do zero, então chave de
-topo escrita por outro morre no primeiro save; e ``merged_order_payload`` devolve
-exatamente ``{addr, kind, rank}``, então campo novo POR ENTRADA morre nos dois
-escritores. Logo: **arquivo próprio**, **versão própria**, sem migração e sem
-renumerar a mesa de ninguém.
-
-E a lição do terceiro fato é aplicada contra nós mesmos: :func:`gravar_maquina`
-é read-modify-write e **preserva o que não entende** (chave de topo que uma
-versão futura tenha escrito). Um arquivo cuja ``version`` não é a nossa **não é
-lido nem sobrescrito** — recusar a gravar é mais barato que destruir a escolha de
-alguém, e é por isso que a recusa por versão volta para a tela em vez de virar
-exceção.
-
-TODO CAMPO NASCE EM "NÃO SEI"
------------------------------
-
-``None`` (e dicionário vazio) é o único jeito de dizer "ninguém declarou".
-Nenhum campo tem um valor de catálogo para isso — um valor que significa "sem
-valor" é a porta pela qual o default entra disfarçado de escolha da pessoa (a
-regra é de ``external_mask.mascaras_validas``, e vale aqui palavra por palavra).
-
-O QUE FICA DE FORA, E DE QUEM É
--------------------------------
-
-Três campos do desenho da aba **não** moram aqui, porque já têm dono, e gravá-los
-também neste arquivo criaria dois donos do mesmo valor — a classe de defeito que a
-ABAS-01 curou:
-
-* **número de jogador** → ``controllers.json``, pelo ``identity.number.set``
-  (``daemon/ipc_handlers.py:1604``);
-* **máscara por aparelho** → ``controller_masks.json``
-  (``daemon/subsystems/external_mask.py:175``);
-* **tamanho do texto** → ``gui_preferences.json`` (``app/theme.py:39-40``).
-
-Nomes dos campos em português, com uma exceção: ``version``, em inglês por
-paridade com os dois irmãos em ``config_dir()`` — é o campo que os três leem
-pelo mesmo nome.
-
-E em português **sem acento por construção**, não por descuido: o nome do campo
-vira chave JSON e string literal em toda seção da aba, e o portão de acentuação
-reprova palavra acentuada escrita sem acento DENTRO de string (código puro ele
-mascara). Por isso ``teto`` no lugar de "política" e ``apelido`` no lugar de
-"descrição": o preço da alternativa seria um ``noqa-acento`` por linha, em cinco
-sprints. Ao acrescentar campo, escolha uma palavra que não peça acento.
-
-O QUE AINDA NÃO TEM ESCRITOR (22/08/2026)
------------------------------------------
-
-``MesaDeclarada.radios`` nasce sem quem o preencha: a chave é o ``vid:pid`` que a
-enumeração de rádios vizinhos produz, e essa enumeração é de outra frente da
-mesma leva. O campo existe desde já porque o schema é o que as quatro frentes
-seguintes importam — não porque alguém já grave nele.
-"""
+"""``maquina.json`` — o que a MESA é, declarado por quem a montou."""
 from __future__ import annotations
 
 import contextlib
@@ -104,11 +34,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-# A GRAFIA DO LUGAR mora em ``utils/lugar.py`` desde a ENTRADA-A-ENTRADA-02
-# (23/09/2026): lá ela é só biblioteca padrão, e o doctor a chama pelo
-# ``python3`` do sistema. Este módulo a REEXPORTA (o ``as`` repetido é a
-# reexportação explícita), e todo leitor que já perguntava aqui continua
-# perguntando — o dono é um só.
 from hefesto_dualsense4unix.utils.lugar import (
     FORMA_DO_CAMINHO,
     FORMA_DO_NO,
@@ -129,116 +54,46 @@ from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
 
 logger = get_logger(__name__)
 
-#: Arquivo PRÓPRIO em ``config_dir()``, irmão do ``controllers.json`` e do
-#: ``controller_masks.json``. Nunca o mesmo arquivo — ver o cabeçalho.
 _MAQUINA_FILE = "maquina.json"
 
-#: Cópia dos bytes que o schema recusou, escrita ANTES de reescrever o arquivo.
-#: Sem ela o valor recusado some sem rastro, e não há como devolver à mão o que
-#: uma versão futura (ou o editor dela) tinha gravado.
 _MAQUINA_INVALIDO_SUFIXO = ".invalido"
 
-#: Versão PRÓPRIA deste esquema, independente das outras duas que vivem em
-#: ``config_dir()``. Separar as versões é o ponto: a declaração da mesa pode
-#: evoluir sem descartar a fila de controles, e a fila pode evoluir sem apagar o
-#: que ela declarou sobre a mesa.
-#: 1 = CONFIG-03 (22/08/2026): mesa, controles, orçamento e ambiente.
 MAQUINA_SCHEMA_VERSION = 1
 
-#: O único campo em inglês do documento — ver o cabeçalho.
 VERSION_FIELD = "version"
 
-#: Lock de MÓDULO em volta do span leitura→``os.replace``, no espírito do
-#: ``MASKS_FILE_LOCK``. O escritor de hoje é um só (o handler ``machine.declare``),
-#: mas ele roda em ``asyncio.to_thread`` e dois pedidos em sequência curta caem em
-#: threads diferentes: sem o lock, o read-modify-write de um perderia o do outro.
 MAQUINA_FILE_LOCK = threading.Lock()
 
-#: A chave de ``controles`` é a SAÍDA de ``ExternalIdentityRegistry._canonical``
-#: (``daemon/subsystems/external_identity.py:473``): doze hex MINÚSCULOS, sem
-#: separador. Casar com a entrada ``_MAC_RE`` (``:106-108``, que aceita
-#: ``aa:bb:cc:...`` também) faria o daemon gravar ``aabbcc001122`` e o schema
-#: exigir outra coisa.
 _CHAVE_DE_CONTROLE = re.compile(r"^[0-9a-f]{12}$")
 
-#: Primeiro octeto do endereço que o ``usb_probe_degrade`` do nosso DKMS FORJA
-#: quando não há MAC (``external_identity.py:110-138``): ``02`` mais VID, PID e
-#: bus. Dois clones do mesmo modelo recebem o MESMO endereço — persistir isso
-#: gravaria em disco uma FUSÃO de dois aparelhos. O critério é o octeto ``02``
-#: EXATO, nunca "o bit 0x02 ligado": os BLE random-static (1º octeto ≥ 0xC0) e a
-#: faixa de teste ``aa:bb:cc:*`` têm esse bit sem serem síntese nossa.
 _OCTETO_SINTETIZADO = "02"
 
-#: A chave de ``radios`` é ``vid:pid`` em hex minúsculo — a identidade que o
-#: barramento USB dá ao aparelho, e a única estável entre boots (``hciN`` e o
-#: número da porta invertem). ``extra="forbid"`` não protege chave de
-#: DICIONÁRIO: sem este validador o disco aceitaria ``{"Fone da TV": {...}}`` e a
 #: próxima versão herdaria lixo.
 _CHAVE_DE_RADIO = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
 
-#: O caminho de barramento na palavra do kernel — ``3-1.1.4`` é o barramento
-#: mais a cadeia de portas até o aparelho, e é o nome do diretório em
-#: ``/sys/bus/usb/devices``. Ele NÃO se guarda (o número do barramento muda
-#: entre boots; ver ``PortaDeclarada``), mas quem declara pelo caminho ainda
-#: é entendido, e a forma se confere antes de virar nó: chave sem validador
-#: herda lixo.
 _CAMINHO_DE_BARRAMENTO = FORMA_DO_CAMINHO
 
-#: O número que ELA escreveu no gabinete: até três dígitos, e uma letra
-#: opcional para a entrada que nasce de uma extensão (``15a``). Sem o teto, um
-#: arquivo torto vira uma grade de mil quadrados na tela.
 _NUMERO_DE_ENTRADA = re.compile(r"^[0-9]{1,3}[a-z]?$")
 
-#: Tetos do desenho, pelo mesmo motivo. Oito faces e 64 entradas cobrem com
-#: folga o gabinete mais cheio desta casa (três faces, quinze entradas) e o
-#: notebook de duas ou três entradas que é o alvo declarado.
 _MAXIMO_DE_FACES = 8
 _MAXIMO_DE_ENTRADAS = 64
 
-#: O nome de kernel de um NÓ DE ENTRADA — ``usb1-port5`` (entrada de hub-raiz)
-#: ou ``3-1-port2`` (entrada de hub comum). É a MESMA forma de
-#: ``integrations/entradas_do_gabinete._NO_DE_ENTRADA``, e é de propósito que
-#: seja outra coisa que o ``_CAMINHO_DE_BARRAMENTO``: o caminho nomeia o
-#: APARELHO (``3-1.2``) e some quando ele sai; o nó nomeia o BURACO e responde
-#: com o buraco vazio.
 _NO_DE_ENTRADA = FORMA_DO_NO
 
-#: Teto de nós por entrada. MEDIDO em 25/08/2026 nesta bancada: o ``peer`` do
-#: kernel é recíproco e sempre de DOIS — 38 nós, 19 pares, nenhuma cadeia de
-#: três. O teto é 4 e não 2 de propósito: um teto colado na medição de uma placa
-#: faria a gravação INTEIRA ser recusada numa placa que publique mais, e o
-#: sintoma na tela seria "não consegui gravar" em vez de "valor inválido" — a
-#: mesma armadilha que ``secao_mesa._ao_declarar`` documenta.
 _MAXIMO_DE_NOS_POR_ENTRADA = 4
 
 #: A chave de ``ordens_dispensadas`` é o slug da regra que produziu a ordem
-#: (``radio_largo_no_mesmo_hub``), que é a mesma chave de teste do catálogo em
-#: ``integrations/ordens_da_mesa.py``. ASCII com sublinhado, nunca o texto de
-#: tela: o texto tem dono e muda, a chave é contrato.
 _CHAVE_DE_ORDEM = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 
-#: Só a data, nunca a hora. A hora não muda nenhuma decisão do produto e é um
-#: dado a mais sobre a rotina dela num arquivo que ela cola em relato de defeito.
 _DATA_ISO = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 
-#: Teto da assinatura de arranjo. Seis pares de caminho de barramento já é uma
-#: mesa mais cheia que qualquer uma desta casa.
 _MAXIMO_DO_ARRANJO = 256
 
-#: Doze hex seguidos é a forma em que serial e endereço de rádio aparecem. A
-#: assinatura de arranjo é caminho de barramento (``4-1.1.2``) e nunca chega
-#: perto disso — ver ``OrdemDispensada._assinatura_sem_identidade``.
 _DOZE_HEX = re.compile(r"[0-9a-fA-F]{12}")
 
 
-
 class RadioDeclarado(BaseModel):
-    """Um aparelho vizinho que divide a faixa de 2,4 GHz com os controles.
-
-    O Hefesto encontra o aparelho no barramento e não sabe para que ele serve —
-    ``tipo`` é a resposta que só a pessoa tem. ``apelido`` é o texto livre do
-    "Outro" ("Fone sem fio da TV"), e vale para qualquer tipo.
-    """
+    """Um aparelho vizinho que divide a faixa de 2,4 GHz com os controles."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -249,19 +104,7 @@ class RadioDeclarado(BaseModel):
 
 
 class OrdemDispensada(BaseModel):
-    """Uma recomendação que ela mandou calar — e o arranjo em que ela calou.
-
-    ``arranjo`` é o que faz a dispensa ser sobre um FATO, e não sobre uma
-    palavra. Ela vale para a mesa que ela viu; se ela mudar os cabos e a mesma
-    regra disparar com arranjo novo, é fato novo e a ordem volta. Chavear a
-    dispensa só pelo nome da regra faria a decisão de ontem calar uma medição de
-    hoje.
-
-    A assinatura carrega caminho de barramento (``4-1.1.2|3-1.1.4``) e nada
-    mais: nunca serial, nunca endereço. Ela precisa mudar quando os CABOS mudam,
-    e o número da entrada é o desenho dela, que muda sem nenhum cabo sair do
-    lugar.
-    """
+    """Uma recomendação que ela mandou calar — e o arranjo em que ela calou."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -279,12 +122,7 @@ class OrdemDispensada(BaseModel):
     @field_validator("arranjo")
     @classmethod
     def _assinatura_sem_identidade(cls, valor: str) -> str:
-        """Teto de tamanho, e nenhuma sequência com cara de endereço.
-
-        ``check_anonymity.sh`` diz por escrito que o serial identifica a unidade
-        dela tão bem quanto o MAC, e este arquivo é gravado no ``$HOME`` dela e
-        lido pelo ``doctor.sh --censo``, que ela cola em relato de defeito.
-        """
+        """Teto de tamanho, e nenhuma sequência com cara de endereço."""
         if len(valor) > _MAXIMO_DO_ARRANJO:
             raise ValueError("assinatura de arranjo longa demais")
         if _DOZE_HEX.search(valor):
@@ -320,12 +158,7 @@ class MesaDeclarada(BaseModel):
     def _chave_de_ordem_e_o_slug_da_regra(
         cls, valor: dict[str, OrdemDispensada]
     ) -> dict[str, OrdemDispensada]:
-        """A chave é o slug da regra, e ``extra="forbid"`` não protege chave.
-
-        Mesma lição do ``_chave_de_radio_e_vid_pid``: sem este validador o disco
-        aceitaria ``{"aquela recomendação chata": {...}}`` e a próxima versão
-        herdaria lixo que nenhuma regra reclama.
-        """
+        """A chave é o slug da regra, e ``extra="forbid"`` não protege chave."""
         for chave in valor:
             if not _CHAVE_DE_ORDEM.match(chave):
                 raise ValueError(
@@ -348,58 +181,13 @@ class MesaDeclarada(BaseModel):
 
 
 class FaceDeclarada(BaseModel):
-    """Um conjunto de entradas que a pessoa enxerga JUNTO — "Frente", "Hub".
-
-    A ordem da lista é a ordem do desenho: os quadrados saem na tela na ordem
-    em que os números estão aqui, e reordenar se faz apagando e pondo de novo.
-
-    **Nenhuma face nasce sozinha.** O produto nunca cria "Frente" e "Traseira"
-    por conta própria: um notebook declara "Esquerda" e "Direita", e ponto.
-    Face inventada é a presunção que a ``ONDA0-Z7 · O AMBIENTE PRESUMIDO``
-    existe para caçar.
-
-    A entrada que nasce de uma extensão (a ``15a``) **não entra nesta lista**:
-    ela desenha dentro do quadrado da entrada que a hospeda, e pô-la na fileira
-    faria a fileira de sete do hub virar oito — o desenho deixaria de bater com
-    o metal.
-
-    ``perto`` E ``alto`` SÃO O FATO FÍSICO, E SÓ ELA O TEM
-    ------------------------------------------------------
-
-    O motor do arranjo (``integrations/arranjo_da_mesa``) lê os dois em
-    ``Face.perto`` e ``Face.alto``, e até 25/08/2026 **nenhum dos dois tinha
-    fonte**: o esquema não tinha onde guardá-los, então toda face nascia
-    ``perto=False`` e ``alto=False`` e o bônus de +20 do teclado ("na frente,
-    que é a mais perto de você") nunca podia disparar. Juízo montado sobre um
-    fato que nunca chega é juízo otimista demais, e isso é pior que juízo
-    nenhum.
-
-    Os dois são **fato dela**, nunca leitura: o ``/sys`` desta bancada responde
-    ``panel=right``, ``horizontal_position=left`` e ``vertical_position=lower``
-    — idênticos — para ``usb1-port3`` e ``usb1-port6``, que ficam em faces
-    DIFERENTES do metal, e a ACPI desta placa nunca diz "front" nem "back".
-    Nenhuma leitura chega perto de saber se a face está virada para a pessoa ou
-    se ela está acima da linha das cabeças.
-
-    ``False`` não é "não sei", é "não": uma face que ela não marcou não ganha
-    bônus nenhum, que é exatamente o que acontecia antes destes campos
-    existirem. São ``bool`` e não ``bool | None`` de propósito — "não sei se a
-    frente é a frente" não é uma resposta que mude alguma coisa, e um terceiro
-    estado sem consumidor é campo que a próxima pessoa tem de decifrar.
-
-    ``_podar`` **não** tira o ``False`` (ele tira ``None``, ``{}`` e ``[]``),
-    então uma face declarada carrega os dois campos no disco. É barato e é
-    verdade: o arquivo diz que a pergunta foi feita e a resposta foi "não".
-    """
+    """Um conjunto de entradas que a pessoa enxerga JUNTO — "Frente", "Hub"."""
 
     model_config = ConfigDict(extra="forbid")
 
     nome: str = ""
     portas: list[str] = Field(default_factory=list)
-    #: Esta é a face virada para quem está sentado — a "frente do gabinete".
     perto: bool = False
-    #: Esta face fica no alto (o hub em cima do rack), com a antena de quem
-    #: mora nela acima da linha das cabeças.
     alto: bool = False
 
     @field_validator("portas")
@@ -479,52 +267,18 @@ class PortaDeclarada(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: O LUGAR DO BURACO (``pci-…-usb-0:4.1.4``) — a identidade que sobrevive
-    #: ao boot. ``None`` = nenhum Mapear passou por ela ainda (a entrada que ela
-    #: desenhou e não mostrou com o controle); aí quem acha o buraco dela são
-    #: os ``nos``, que valem só neste boot.
     lugar: str | None = None
     filha_de: str | None = None
     nos: list[str] = Field(default_factory=list)
-    #: O QUE ELA DISSE QUE TEM NA ENTRADA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
-    #: 26/09/2026, o editor do mapa das conexões. ``None`` é «Direto», o que o
-    #: produto já supunha; o hub e o extensor são o que ela sabe e o desenho não
-    #: tinha como perguntar (o extensor passivo nem aparece no ``/sys``).
     liga: Literal["hub", "extensor"] | None = None
-    #: A VELOCIDADE QUE ELA DISSE (2 = USB 2.0, 3 = USB 3.0). Vence o par
-    #: SuperSpeed que o firmware da placa publica (``peer``): o ``peer`` diz que
-    #: o controlador tem as vias, não que o conector as ligou. MEDIDO na mesa em
-    #: que isto nasceu (26/09/2026, com ela olhando o gabinete): as duas USB 2.0
-    #: pretas de trás têm ``peer``, e a frente, que o gabinete chama de 3.0, está
-    #: num conector 2.0 da placa. Quem responde com as duas é
-    #: ``mapa_das_portas._rapido_do_no``.
     usb: Literal[2, 3] | None = None
-    #: O NOME QUE ELA DEU À ENTRADA — O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026
-    #: (D-2609-O-NOME-E-DA-POSICAO). O nome é da POSIÇÃO: numa troca de duas
-    #: entradas ele fica com o número. Até 24 caracteres (o que cabe no plugue
-    #: do mapa). Quem o lê é ``entrada_a_entrada.nome_da_entrada``, e quem o
     #: escreve na tela é ``utils/rotulo_da_entrada``. É o único lugar do nome
-    #: desde 28/09/2026: o que morava em ``lugares[<lugar>].nome`` veio para cá
-    #: na migração (:func:`migrar_o_documento`).
     nome: str | None = None
 
     @model_validator(mode="before")
     @classmethod
     def _o_caminho_vira_o_buraco(cls, valor: Any) -> Any:
-        """``caminho`` é palavra de quem ESCREVE, e vira o nó do buraco.
-
-        Quem ainda declara pelo caminho do aparelho (o rascunho do mapa da aba
-        Conexões, ``app/widgets/mapa_da_mesa.LogicaDoMapa``) continua sendo
-        entendido, sem que o caminho vá ao disco:
-
-        * o caminho do mesmo buraco (um dos lados dos ``nos``) não muda nada —
-          é a volta do que :attr:`caminho` devolveu;
-        * outro caminho é «este aparelho está nesta entrada»: o buraco passa a
-          ser o dele (``nos`` com o nó dele), e o ``lugar`` de antes sai, porque
-          já não é o buraco desta entrada;
-        * ``None`` é o «tirar» do rascunho: os nós saem. O ``lugar`` fica — era
-          assim quando a amarra morava em ``lugares``, e o Mapear é quem a muda.
-        """
+        """``caminho`` é palavra de quem ESCREVE, e vira o nó do buraco."""
         if not isinstance(valor, Mapping) or "caminho" not in valor:
             return valor
         corpo = dict(valor)
@@ -561,8 +315,7 @@ class PortaDeclarada(BaseModel):
     @field_validator("lugar")
     @classmethod
     def _lugar_e_o_do_metal(cls, valor: str | None) -> str | None:
-        """O lugar de uma ENTRADA, com a cadeia de portas: ``pci-X`` sozinho é o
-        adaptador que não pendura em entrada nenhuma."""
+        """O lugar de uma ENTRADA, com a cadeia de portas: ``pci-X`` sozinho é o"""
         if valor is None:
             return None
         partes = partes_do_lugar(valor)
@@ -616,40 +369,15 @@ class PortaDeclarada(BaseModel):
         return valor
 
 
-#: Os campos CALCULADOS de uma entrada (:attr:`PortaDeclarada.caminho`): são da
-#: leitura, e nenhuma gravação os escreve. Quem grava os tira pelo ``exclude``
-#: do ``model_dump``, que todo pydantic 2 entende. O ``exclude_computed_fields``
-#: só nasceu no pydantic 2.12, e o ``pyproject.toml`` e os pacotes (Fedora,
-#: Nix) pedem ``pydantic>=2.0``: com ele, numa máquina com o 2.11, toda
-#: gravação do ``maquina.json`` levantava ``TypeError``.
 CALCULADOS_DA_ENTRADA: frozenset[str] = frozenset(PortaDeclarada.model_computed_fields)
 
-#: O mesmo, para o documento inteiro: os calculados de cada entrada do mapa.
 _SEM_OS_CALCULADOS: dict[str, Any] = {
     "mapa": {"portas": {"__all__": set(CALCULADOS_DA_ENTRADA)}}
 }
 
 
 class MapaDaMesa(BaseModel):
-    """O gabinete dela, desenhado por ela — o que ``/sys`` não tem como saber.
-
-    MEDIDO em 24 e 25/08/2026, e é a prova de que o mapa tem de ser DECLARADO:
-    as duas entradas da frente do gabinete desta bancada (``usb1-port3`` e
-    ``usb1-port6``) respondem ``panel=right``, ``horizontal_position=left`` e
-    ``vertical_position=lower`` — idênticos —, e a ACPI desta placa nunca diz
-    "front" nem "back". Deduzir o mapa daria duas entradas iguais para dois
-    buracos que ficam em faces diferentes do metal.
-
-    **Um dono para cada fato.** A face lista os números; a entrada guarda o
-    buraco (o lugar e os nós). A face não repete o lugar e a entrada não repete
-    a face — essa duplicação é a classe de defeito que a ``ABAS-01`` curou.
-
-    ``fora`` são os LUGARES que ela disse não alcançar (o «Não alcanço» da fase
-    em pé do Mapear: *"o Hefesto não volta a perguntar"*). Não são entradas —
-    ninguém numera o conector que ela não alcança —, e por isso não moram em
-    ``portas``. Moravam em ``lugares[L].fora`` até 28/09/2026. O cabo que entra
-    num deles depois prova o contrário, e o Mapear o tira da lista.
-    """
+    """O gabinete dela, desenhado por ela — o que ``/sys`` não tem como saber."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -711,8 +439,6 @@ class MapaDaMesa(BaseModel):
         return self
 
 
-#: Quantos adaptadores a ordem que ela arrasta alcança — um teto de sanidade,
-#: muito acima de qualquer mesa (a dela tem três).
 _TETO_DA_ORDEM_DOS_ADAPTADORES = 63
 
 
@@ -743,8 +469,6 @@ class AdaptadorDeclarado(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nome: str | None = None
-    #: A posição da caixa dele, de cima para baixo (0 é a de cima); ``None`` =
-    #: ela nunca o arrastou, e ele vem depois dos que ela arrastou.
     ordem: int | None = Field(default=None, ge=0, le=_TETO_DA_ORDEM_DOS_ADAPTADORES)
 
 
@@ -802,51 +526,15 @@ class ControleDeclarado(BaseModel):
     botoes: Literal["xbox", "nintendo"] | None = None
     cor: str | None = None
     microfone: bool | None = None
-    #: O MODO ECONOMIA DE BATERIA deste controle — O-MODO-ECONOMIA-POR-
-    #: CONTROLE-01 (25/09/2026), o botão da linha do controle. ``True`` liga;
-    #: ``None`` e ``False`` não ligam por este controle (a «Bateria longa» do
-    #: ``orcamento`` liga em todos). Mora aqui, e não no perfil, pela razão do
-    #: ``microfone`` logo acima: a bateria é do controle, e uma economia que
-    #: some ao trocar de jogo é a surpresa. O dono do que ela FAZ e de quem
-    #: vence é ``profiles.schema`` (``economia_vale``,
-    #: ``A_ECONOMIA_EM_CADA_PECA``); o escritor é
-    #: ``profiles.schema.declaracao_da_economia``.
     economia: bool | None = None
-    #: O MUDO DO MICROFONE deste controle — O-MUDO-E-DO-CONTROLE-01
-    #: (28/09/2026), resposta 9 dela na noite de 27/09: *o mudo do microfone
-    #: é do controle, e vale em todo jogo*. ``True`` = ela calou; ``False`` =
-    #: ela ligou; ``None`` = nunca disse, e o microfone nasce no ar (a ordem de
-    #: 18/09, a mesma do ``microfone`` acima). Mora aqui, e não no perfil, pela
-    #: razão da ``economia``: um silêncio que some ao trocar de jogo é a
-    #: surpresa, e o preço dela é de privacidade. É o único registro do mudo:
-    #: o perfil deixou de guardá-lo (a migração é
-    #: ``profiles.loader.o_mudo_do_microfone_vai_para_o_controle``), e a
-    #: sessão do daemon deixou de lembrá-lo. Quem grava é o ato do microfone
-    #: (``daemon/subsystems/hotkey._o_disco_guarda_o_ato``: o botão do
-    #: plástico e o 🎙 da tela); quem lê é a reconexão e o nascimento
-    #: (``profiles.manager.ProfileManager.o_controle_pede_silencio``).
     microfone_mudo: bool | None = None
-    #: O NOME QUE ELA DEU ao controle — O-RADIO-CONECTA-ONDE-ELA-MANDA-02
-    #: (26/09/2026), o item 4 da lista dela da madrugada: *«quando eu conectar
-    #: os dispositivos bt novamente eu quero que o nome deles sejam lidos
-    #: novamente»*. O BlueZ guarda o nome (o ``Alias``) POR OBJETO, um por
-    #: adaptador, e o objeto morre com a chave: esquecida a última, o
-    #: ``Pair`` seguinte nascia com o nome de fábrica. Aqui ele mora pelo
-    #: endereço do controle, e não depende de chave nenhuma. Quem grava e quem
-    #: reaplica é a central do rádio (``integrations/central_do_radio.py``,
-    #: ``cuidar_dos_nomes`` e ``_dar_o_nome``); o ``Alias`` é a projeção.
-    #: ``None`` = ela não deu nome (vale o de fábrica, e a tela diz «Player N»).
     #: <!-- noqa-acento: citação literal dela -->
     nome: str | None = None
 
     @field_validator("nome")
     @classmethod
     def _nome_aparado_e_do_tamanho_do_alias(cls, valor: str | None) -> str | None:
-        """Espaço em volta sai; nome vazio é ``None`` — "ela não deu nome".
-
-        O teto é o do ``Alias`` do BlueZ (:data:`_MAXIMO_DO_NOME_DO_CONTROLE`,
-        em BYTES): um nome que o BlueZ não guardaria não é um nome a reaplicar.
-        """
+        """Espaço em volta sai; nome vazio é ``None`` — "ela não deu nome"."""
         if valor is None:
             return None
         limpo = valor.strip()
@@ -860,58 +548,16 @@ class ControleDeclarado(BaseModel):
         return limpo
 
 
-#: O teto do nome de um controle, em BYTES: o do nome de um aparelho
-#: Bluetooth (248, o ``Remote Name`` do HCI), que é onde o ``Alias`` o
-#: projeta (O-RADIO-CONECTA-ONDE-ELA-MANDA-02).
 _MAXIMO_DO_NOME_DO_CONTROLE = 248
 
 
-
-#: A CHAVE DE UM LANÇADOR DECLARADO, e a forma é estreita porque ela vira
-#: ATRIBUTO DE HTML: o desenho da aba Lançadores prefixa os endereços do cartão
-#: com ela (``data-lancador="x"``, ``data-campo="x-selo"``). Uma chave com aspas
-#: ou espaço quebraria a marcação do cartão; uma com maiúscula faria
-#: ``Retroarch`` e ``retroarch`` serem dois cartões que dizem o mesmo.
 _CHAVE_DE_LANCADOR = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 
-#: O TETO DA LISTA DELA. Não é medo de disco — é a mesma razão do
-#: ``_MAXIMO_DO_ARRANJO``: um documento que cresce sem teto é um documento que
-#: um laço com defeito enche calado, e o sintoma seria a aba inteira lenta.
-#: Trinta e dois lançadores é muitas vezes mais do que a soma de tudo o que esta
-#: casa conhece de fábrica.
 _MAXIMO_DE_LANCADORES = 32
 
 
 class LancadorDeclarado(BaseModel):
-    """Um lançador ou emulador que ELA acrescentou — ou onde um de fábrica está.
-
-    PEDIDO DELA, 08/09/2026: *"Pensei em outro botão pra Adicionar novo Emulador
-    Ou novo lançador algo assim, pra devs mais experimentais e permitir que o
-    user adicione algo novo"*.
-
-    ELE MORA AQUI, e não num arquivo próprio, pela razão do cabeçalho deste
-    módulo: ``maquina.json`` é o lugar do que o Hefesto **não tem como medir**.
-    Que o Ryujinx dela está em ``/opt`` é exatamente isso — nenhuma varredura
-    adivinha um caminho que ninguém publicou.
-
-    OS TRÊS CAMPOS SÃO OS TRÊS QUE O PROCURADOR JÁ USA
-    (``interface/desenho_dos_lancadores.SemCenso``): ``rotulo`` é o nome do
-    cartão, ``atalhos`` são os ``stem`` de ``.desktop`` e ``comandos`` é o que
-    procurar no ``PATH``. **Serem os mesmos é o ponto inteiro:** o declarado e o
-    embutido passam pelo MESMO procurador, e um segundo caminho de busca seria a
-    assimetria que produz duas respostas para a mesma pergunta.
-
-    ``comandos`` ACEITA CAMINHO INTEIRO, e isso não é frouxidão: ``shutil.which``
-    devolve o próprio caminho quando ele contém uma barra e é executável, então
-    ``/home/…/Heroic.AppImage`` já é achado pelo procurador que existe, sem uma
-    linha nova. É o caso que a frase do cartão ausente nomeia — *"um AppImage
-    solto, por exemplo"*.
-
-    NÃO GUARDA COMO ABRIR, e a ausência é decisão: abrir um ``.desktop`` exige
-    ler o ``Exec=`` com os códigos de campo, e isso é capacidade nova. O que
-    este registro compra é o cartão ACENDER e o perfil casar pelo processo — que
-    é o que a aba promete.
-    """
+    """Um lançador ou emulador que ELA acrescentou — ou onde um de fábrica está."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -938,10 +584,6 @@ class LancadorDeclarado(BaseModel):
     @field_validator("atalhos", "comandos")
     @classmethod
     def _nada_de_agulha_vazia(cls, valor: tuple[str, ...]) -> tuple[str, ...]:
-        # UMA AGULHA VAZIA ACHA TUDO OU NADA, e as duas são erro: `pasta /
-        # ".desktop"` é um arquivo que pode existir, e `shutil.which("")`
-        # devolve `None` calado. Gravar o vazio é gravar uma busca que ninguém
-        # consegue depurar depois.
         limpas = tuple(dict.fromkeys(x.strip() for x in valor if x.strip()))
         if len(limpas) > 16:
             raise ValueError(
@@ -953,22 +595,7 @@ class LancadorDeclarado(BaseModel):
 
     @model_validator(mode="after")
     def _sem_agulha_nao_ha_o_que_procurar(self) -> LancadorDeclarado:
-        """Um lançador sem ``atalhos`` **e** sem ``comandos`` é INACHÁVEL.
-
-        A GUARDA NASCEU DE UMA MEDIÇÃO, e ela é do dia em que este campo nasceu:
-        ``{"rotulo": "X", "comandos": ["", "  "]}`` passava. O validador de cima
-        apara o vazio, sobrava a tupla vazia, e o documento gravava um lançador
-        que a busca **nunca** acharia — um cartão «NÃO LOCALIZADO» permanente
-        sobre uma coisa que ela mesma declarou. É a definição do cartão que
-        mente, chegando pelo lado do disco.
-
-        **HÁ DUAS GUARDAS PARA ISTO, E ELAS SÃO DIFERENTES DE PROPÓSITO.** O
-        gesto da tela recusa antes de escrever, e recusa MAIS: ele confere que o
-        que ela digitou EXISTE no disco agora (``a07_lancadores.onde_isso_esta``).
-        Esta aqui é a de FORMA — ela alcança o que aquela não pode alcançar: um
-        ``maquina.json`` escrito à mão, ou uma versão futura com outro gesto.
-        Duas réguas independentes é regra desta casa.
-        """
+        """Um lançador sem ``atalhos`` **e** sem ``comandos`` é INACHÁVEL."""
         if not self.atalhos and not self.comandos:
             raise ValueError(
                 f"o lançador {self.rotulo!r} não diz onde procurar: sem um "
@@ -982,8 +609,8 @@ class OrcamentoDeclarado(BaseModel):
     """O teto da mesa inteira — as abas seguem mandando, só não passam daqui.
 
     A chave é ``max``, nunca o rótulo ``"Máximo"``: o valor é o mesmo de
-    ``profiles/schema.py:384``, e o rótulo de tela sai de ``_POLICY_LABEL``
-    (``app/actions/rumble_actions.py:89-94``). Gravar o rótulo faria o
+    ``profiles/schema.py:193``, e o rótulo de tela sai de ``_POLICY_LABEL``
+    (``app/actions/rumble_actions.py:68-73``). Gravar o rótulo faria o
     ``extra="forbid"`` recusar o DOCUMENTO INTEIRO, e o sintoma na tela seria
     "não consegui gravar", não "valor inválido".
     """
@@ -1012,12 +639,7 @@ class GestoDeclarado(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _so_o_script_guarda_caminho(cls, valor: Any) -> Any:
-        """Trocar o script por outro ato larga o caminho.
-
-        A gravação FUNDE dicionário com dicionário (:func:`fundir_declaracao`):
-        declarar ``{"faz": "nada"}`` sobre um gesto que rodava um script
-        deixaria o caminho velho ao lado de um ato que não o usa.
-        """
+        """Trocar o script por outro ato larga o caminho."""
         from hefesto_dualsense4unix.core.acoes_do_gesto import SCRIPT
 
         if isinstance(valor, Mapping) and valor.get("faz") != SCRIPT and "script" in valor:
@@ -1044,28 +666,13 @@ class GestoDeclarado(BaseModel):
         return self
 
 
-# ---------------------------------------------------------------------------
-# O padrão do computador (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01)
-# ---------------------------------------------------------------------------
-#
-# O som, os sensores, a luz, a vibração, o mouse e o teclado têm um valor do
-# computador, um por controle e um para todo controle, e o perfil do jogo só
-# sobrepõe (`D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE`). As seções são os
-# MESMOS modelos do perfil, nunca uma segunda cópia; quem decide o que é de quem,
-# quem monta a vista e quem grava é ``profiles/o_padrao_do_computador.py``.
-
-#: As seções de cada controle que o computador guarda. As outras do
-#: ``ControllerOverrides`` (gatilhos, máscara, mira) são do jogo.
 SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
     "leds", "speaker", "mic", "rumble", "sensores",
 )
 
 
 class MouseDoComputador(BaseModel):
-    """As duas velocidades do mouse emulado. O liga e desliga é do jogo.
-
-    A faixa é a do ``ProfileMouseConfig``, conferida por ele (um dono só).
-    """
+    """As duas velocidades do mouse emulado. O liga e desliga é do jogo."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -1108,17 +715,7 @@ class ComputadorGlobal(BaseModel):
 
 
 class ComputadorDeclarado(BaseModel):
-    """O padrão do computador: ``global`` e cada controle pela identidade.
-
-    Nasce vazio («ninguém declarou»). ``migrado`` é a marca da migração de
-    ``profiles/o_padrao_do_computador.migrar_uma_vez``: ela roda uma vez, e o
-    «Restaurar de fábrica» esvazia o resto sem apagar a marca.
-
-    O DISCO GUARDA SÓ O QUE FOI DECLARADO (o serializador abaixo): cada seção
-    sai com ``exclude_unset``. Um campo que ninguém declarou não pode ir ao
-    arquivo com o valor de fábrica, senão o brilho de fábrica de UM controle
-    passaria a vencer o brilho que ela deu ao computador inteiro.
-    """
+    """O padrão do computador: ``global`` e cada controle pela identidade."""
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -1188,52 +785,13 @@ class MaquinaConfig(BaseModel):
     mesa: MesaDeclarada = Field(default_factory=MesaDeclarada)
     controles: dict[str, ControleDeclarado] = Field(default_factory=dict)
     orcamento: OrcamentoDeclarado = Field(default_factory=OrcamentoDeclarado)
-    # CONEXÕES · MAPA 2D 01 (25/08/2026): o gabinete dela, e a ``version``
-    # NÃO sobe. Campo novo sem bump É a migração, e o caminho já estava
-    # construído nos dois sentidos: arquivo antigo lido por código novo cai no
-    # ``default_factory`` e nada se perde; arquivo novo lido por código antigo
-    # tem ``mapa`` tirado da validação por ``_so_o_que_o_schema_conhece`` e
-    # copiado VERBATIM de volta ao disco por ``gravar_maquina_com_descartes``.
-    # Subir para ``2`` faria, em toda máquina que já declarou, a leitura
-    # devolver "não sei" em mesa, controles e orçamento, e a gravação dizer
-    # "não gravei" para sempre. Não há passo de migração a escrever.
     mapa: MapaDaMesa = Field(default_factory=MapaDaMesa)
-    # LANÇADORES-DELA-01 (08/09/2026): o que ela acrescentou à aba Lançadores.
-    # A ``version`` NÃO sobe, e a razão é a mesma escrita para o ``mapa`` logo
-    # acima — campo novo sem bump É a migração, e o caminho já está construído
-    # nos dois sentidos.
     lancadores: dict[str, LancadorDeclarado] = Field(default_factory=dict)
-    # NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): ``lugares``
-    # saiu do esquema. Ele nasceu na ENTRADA-A-ENTRADA-01 (23/09/2026) como
-    # campo de TOPO, e não dentro de ``mapa.portas``, por uma razão de volta de
-    # versão: o código de então recusava o ``mapa`` INTEIRO por um campo que não
-    # conhecesse dentro da entrada. Essa razão caducou em 26/09/2026, quando o
-    # resgate passou a descer na entrada (``_o_mapa_que_ainda_vale``: o código
-    # de ontem perde só o campo que não conhece). O preço do topo era a entrada
-    # em dois registros; o ``lugar`` mora na entrada agora
-    # (``PortaDeclarada.lugar``), e :func:`migrar_o_documento` leva o que havia.
-    # D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026): o nome de cada adaptador
-    # Bluetooth, pela chave do endereço (doze hex minúsculos, a grafia de
-    # ``controles``). De topo: é do aparelho, e não de uma entrada.
     adaptadores: dict[str, AdaptadorDeclarado] = Field(default_factory=dict)
-    # OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026): o que cada um dos
     # seis gestos do controle faz, pela chave de ``core/acoes_do_gesto.GESTOS``.
-    # Da máquina e não do perfil (``D-2909-OS-GESTOS-SAO-DA-MAQUINA``). Vazio =
     # ninguém declarou, e vale ``acoes_do_gesto.PADRAO``; ``{"gestos": {g:
-    # None}}`` devolve o gesto ao de fábrica.
     gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
-    # O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (02/10/2026): o padrão do
-    # computador (``ComputadorDeclarado``). O nome é ``computador`` e não
-    # «padrão»: a chave vai a string em toda tela, e a regra do cabeçalho pede
-    # palavra sem acento. A ``version`` não sobe, pela razão do ``mapa``.
     computador: ComputadorDeclarado = Field(default_factory=ComputadorDeclarado)
-    # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
-    # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
-    # correção de ambiente é ``gravar_correcao_de_ambiente``
-    # (``app/ambiente.py:101``), e sempre gravou em ``gui_preferences.json``,
-    # nunca aqui. Manter os dois seria dar ao mesmo fato um segundo dono
-    # possível, a classe de defeito que a ABAS-01 curou (ver o cabeçalho deste
-    # módulo). O campo não é reaproveitado por outro: sai, e não volta.
 
     @field_validator("controles")
     @classmethod
@@ -1256,33 +814,7 @@ class MaquinaConfig(BaseModel):
     @field_validator("lancadores", mode="before")
     @classmethod
     def _o_none_e_o_esquecimento(cls, valor: Any) -> Any:
-        """``{"lancadores": {"x": None}}`` **APAGA** o ``x``. É o único desfazer.
-
-        POR QUE ELE PRECISOU EXISTIR, e a alternativa era pior: ``machine.declare``
-        não tem verbo de remoção, e :func:`fundir_declaracao` desce nos
-        dicionários aninhados — mandar a lista MENOS uma chave não tira chave
-        nenhuma, ela sobrevive do lado do disco. Sem um desfazer, um lançador que
-        ela acrescentou por engano ficaria no cartão dela para sempre, e a aba
-        Conexões já pagou esse preço uma vez (ver ``_DISPENSADAS``, em
-        ``a08_conexoes``: *"o arranjo vazio é o desfazer"*).
-
-        A LÍNGUA É A QUE O ARQUIVO JÁ FALA, e por isso não é vocabulário novo:
-        :func:`fundir_declaracao` declara que ``None`` na declaração *"é uma
-        escolha e SOBRESCREVE"*, e :func:`_podar` declara que ``None`` e chave
-        ausente *"querem dizer a MESMA coisa aqui"*. Este validador é só o
-        terceiro passo dessa mesma frase — o ``None`` chega pela fusão, some na
-        validação, e o documento gravado não tem a chave.
-
-        **A ALTERNATIVA QUE NÃO SE FEZ** era tipar o campo como
-        ``dict[str, LancadorDeclarado | None]``. Ela funcionaria e cobraria o
-        preço em outro lugar: TODO leitor passaria a ter de peneirar o ``None``,
-        e o primeiro que esquecesse desenharia um cartão a partir do nada. O
-        ``None`` é vocabulário da ESCRITA; quem lê nunca deve vê-lo.
-
-        Uma segunda porta continua sendo uma segunda porta, então este é o único
-        lugar em que a palavra existe — e a mordida está em
-        ``test_o_lancador_declarado_entra_no_cartao``.
-        """
+        """``{"lancadores": {"x": None}}`` **APAGA** o ``x``. É o único desfazer."""
         if not isinstance(valor, Mapping):
             return valor
         vivos = {k: v for k, v in valor.items() if v is not None}
@@ -1335,24 +867,6 @@ class MaquinaConfig(BaseModel):
         return vivos
 
 
-# ---------------------------------------------------------------------------
-# A entrada e o lugar — um registro só (A-ENTRADA-TEM-UM-REGISTRO-SO-01)
-# ---------------------------------------------------------------------------
-#
-# Há DUAS chaves de porta nesta casa, e desde 28/09/2026 a entrada guarda uma
-# só: o LUGAR (``pci-…-usb-0:4.1.4``, o metal). O caminho de barramento
-# (``3-4.1.4``) carrega o número do barramento deste boot, e se calcula na
-# leitura, pelos controladores de agora. As funções abaixo são as perguntas que
-# todo leitor faz; uma segunda montagem da mesma resposta é como se produzem
-# duas palavras que quase batem.
-#
-# AS QUATRO DA GRAFIA (``lugar_de``, ``partes_do_lugar``, ``lugar_do_caminho``
-# e ``caminhos_do_lugar``) moram em ``utils/lugar.py`` e são reexportadas no
-# topo deste arquivo: o ``bluez_dbus`` e o ``mesa_de_radio`` as chamam pelo
-# ``python3`` do sistema, que tem pydantic 1.10, e este arquivo não importa ali
-# (ENTRADA-A-ENTRADA-02). Aqui ficam as que leem o documento.
-
-
 def entradas_do_mapa(mapa: MapaDaMesa) -> frozenset[str]:
     """Todo número de entrada do desenho — das faces e das entradas avulsas."""
     numeros = {numero for face in mapa.faces for numero in face.portas}
@@ -1361,14 +875,7 @@ def entradas_do_mapa(mapa: MapaDaMesa) -> frozenset[str]:
 
 
 def entrada_do_lugar(maquina: MaquinaConfig, lugar: str) -> str | None:
-    """O número DELA para este lugar — ``None`` quando nenhuma entrada o guarda.
-
-    Duas entradas guardando o mesmo lugar só acontece com o arquivo editado à
-    mão, e aí a resposta é "não sei", nunca uma das duas no chute. As três
-    conferências que a amarra de ``lugares`` pedia (a entrada fora do desenho,
-    dois lugares dizendo a mesma entrada, o caminho que deixou de ser do lugar)
-    não existem mais: não há dois registros para discordar.
-    """
+    """O número DELA para este lugar — ``None`` quando nenhuma entrada o guarda."""
     if not lugar:
         return None
     achadas = [numero for numero, porta in maquina.mapa.portas.items() if porta.lugar == lugar]
@@ -1386,12 +893,7 @@ def lugar_da_entrada(maquina: MaquinaConfig, numero: str) -> str | None:
 def caminho_da_porta(
     porta: PortaDeclarada, controladores: Mapping[int, str] | None = None
 ) -> str:
-    """O caminho do aparelho 2.0 nesta entrada NESTE boot — ``""`` quando não se sabe.
-
-    Com o lugar e os controladores de agora, o do lado 2.0 do lugar (o
-    barramento menor do controlador): é o que responde depois de um boot que
-    trocou a ordem dos barramentos. Sem eles, o que os nós dizem.
-    """
+    """O caminho do aparelho 2.0 nesta entrada NESTE boot — ``""`` quando não se sabe."""
     if porta.lugar and controladores:
         do_lugar = caminhos_do_lugar(porta.lugar, controladores)
         if do_lugar:
@@ -1402,14 +904,7 @@ def caminho_da_porta(
 def caminhos_da_porta(
     porta: PortaDeclarada, controladores: Mapping[int, str] | None = None
 ) -> tuple[str, ...]:
-    """Os caminhos em que um aparelho desta entrada pode estar agora.
-
-    O do lado 2.0 (:func:`caminho_da_porta`) e os dos nós — o lado 3.x de um
-    buraco USB 3 nem sempre tem a cadeia de portas do lado 2.0 (medido em
-    23/09: ``usb1-port6`` é o par de ``usb2-port2``). Os nós só valem quando
-    são DESTE boot: com o lugar traduzido para outro caminho, eles são de outro
-    boot, e apontariam o buraco vizinho.
-    """
+    """Os caminhos em que um aparelho desta entrada pode estar agora."""
     principal = caminho_da_porta(porta, controladores)
     pelos_nos = [c for c in (caminho_do_no(no) for no in porta.nos) if c]
     if principal and principal != caminho_do_lado_20(porta.nos):
@@ -1417,14 +912,6 @@ def caminhos_da_porta(
     return tuple(dict.fromkeys([c for c in (principal, *pelos_nos) if c]))
 
 
-# ---------------------------------------------------------------------------
-# A migração dos dois registros para um (A-ENTRADA-TEM-UM-REGISTRO-SO-01)
-# ---------------------------------------------------------------------------
-
-#: O sufixo da cópia do ``maquina.json`` de ANTES da migração, escrita uma vez,
-#: antes da primeira gravação migrada. É a cautela das cópias que a casa fez à
-#: mão em 26/09 (``maquina.json.antes-do-reparo-2609``): desfazer a migração é
-#: devolver este arquivo.
 _ANTES_DA_MIGRACAO_SUFIXO = ".com-os-lugares"
 
 
@@ -1593,12 +1080,7 @@ def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> 
 
 
 def _o_caminho_vira_no(numero: str, porta: dict[str, Any]) -> None:
-    """O passo 6 de :func:`migrar_o_documento`, numa entrada.
-
-    O caminho de forma torta FICA: quem o recusa é o esquema, com o resgate
-    campo-a-campo de sempre (e a cópia ``.invalido``) — a migração não apaga
-    calada o que não entende.
-    """
+    """O passo 6 de :func:`migrar_o_documento`, numa entrada."""
     caminho = porta.get("caminho")
     if caminho is None:
         porta.pop("caminho")
@@ -1620,7 +1102,7 @@ def caminho_da_maquina() -> Path:
     """Path do ``maquina.json`` — import LAZY de ``config_dir``.
 
     Lazy porque resolver ``config_dir()`` no topo do módulo mata o monkeypatch da
-    bateria: ``app/gui_prefs.py:21`` é a cicatriz exata dessa escolha, e é por ela
+    bateria: ``app/gui_prefs.py:13`` é a cicatriz exata dessa escolha, e é por ela
     que aquele módulo é inisolável em teste.
     """
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -1631,20 +1113,7 @@ def caminho_da_maquina() -> Path:
 def fundir_declaracao(
     base: Mapping[str, Any] | None, declaracao: Mapping[str, Any]
 ) -> dict[str, Any]:
-    """``base`` com ``declaracao`` por cima, fundindo dicionário com dicionário.
-
-    É o primitivo de que as seções da aba precisam e o mesmo que
-    :func:`gravar_maquina` usa contra o disco. Duas propriedades importam:
-
-    * a fusão desce nos dicionários aninhados, então declarar
-      ``{"mesa": {"altura_da_antena": "acima"}}`` **não apaga** a
-      ``linha_de_visada`` que já estava lá — nem o orçamento, nem os controles;
-    * ``None`` presente na declaração é uma escolha ("voltei para 'Não sei'") e
-      SOBRESCREVE. Só a AUSÊNCIA da chave preserva o que havia.
-
-    Sem a primeira, cada seção da aba precisaria mandar o documento inteiro e a
-    última a gravar apagaria o que as outras quatro tinham declarado.
-    """
+    """``base`` com ``declaracao`` por cima, fundindo dicionário com dicionário."""
     fundido: dict[str, Any] = _copia_funda(base or {})
     for chave, valor in declaracao.items():
         anterior = fundido.get(chave)
@@ -1656,27 +1125,7 @@ def fundir_declaracao(
 
 
 def carregar_maquina() -> MaquinaConfig:
-    """A declaração do disco. **Nunca levanta** — no pior caso, tudo em "não sei".
-
-    Ausente, ilegível, truncado, não-objeto ou de versão que não é a nossa:
-    devolve o documento vazio, com ``logger.debug``. Esta invariante é
-    carregada por dois chamadores que não podem cair — o boot do daemon e a
-    montagem da aba —, e por isso ela é asserção da bateria, não sorte.
-
-    Um CAMPO que o schema recusa (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026) NÃO
-    esvazia o documento inteiro: o resgate é o mesmo campo-a-campo de
-    :func:`_o_que_ainda_vale`, que ``gravar_maquina_com_descartes`` já usa
-    desde `9848c41`. Sem isto, um `maquina.json` escrito por uma versão futura
-    (ou por um esquema que perdeu um campo, como `ambiente` nesta mesma
-    sprint) perderia mesa, controles e orçamento na LEITURA — o mesmo defeito
-    que `9848c41` curou, só que do outro lado do arquivo.
-
-    A MIGRAÇÃO DOS DOIS REGISTROS RODA AQUI, INTEIRA, NA PRIMEIRA LEITURA
-    (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): um arquivo com ``lugares``
-    ou com ``caminho`` nas entradas é migrado (:func:`migrar_o_documento`) e
-    regravado, com a cópia de antes ao lado. A de 26/09 era preguiçosa («sai de
-    lá na primeira gravação») e não tinha rodado no arquivo dela um dia depois.
-    """
+    """A declaração do disco. **Nunca levanta** — no pior caso, tudo em "não sei"."""
     try:
         bruto = _ler_documento()
         if bruto is None:
@@ -1688,11 +1137,11 @@ def carregar_maquina() -> MaquinaConfig:
         return MaquinaConfig.model_validate(_so_o_que_o_schema_conhece(bruto))
     except ValidationError as exc:
         logger.debug("maquina_documento_invalido_campo_a_campo", err=str(exc))
-        if bruto is None:  # defensivo — inatingível: só o validate acima levanta
+        if bruto is None:
             return MaquinaConfig()
         try:
             atual, descartados = _o_que_ainda_vale(bruto)
-        except Exception as exc2:  # defensivo — resgate não pode derrubar a leitura
+        except Exception as exc2:
             logger.debug("maquina_resgate_campo_a_campo_falhou", err=str(exc2))
             return MaquinaConfig()
         if descartados:
@@ -1700,20 +1149,13 @@ def carregar_maquina() -> MaquinaConfig:
                 "maquina_load_descartou_campos", descartados=list(descartados)
             )
         return atual
-    except Exception as exc:  # defensivo — a leitura jamais derruba quem chama
+    except Exception as exc:
         logger.debug("maquina_load_falhou", err=str(exc))
     return MaquinaConfig()
 
 
 class ResultadoDaGravacao(NamedTuple):
-    """O que a gravação fez — ``gravou`` e o que ela teve de deixar para trás.
-
-    ``descartados`` são os campos de TOPO que estavam em disco com valor que o
-    schema recusa: eles não voltam ao arquivo, e quem chama é o único que pode
-    dizer isso na tela. O consumidor natural é o ``machine.declare``
-    (``daemon/ipc_handlers.py``), que devolveria a lista pela ponte para a aba
-    Configurações avisar "não consegui reaproveitar X" em vez de apagar calado.
-    """
+    """O que a gravação fez — ``gravou`` e o que ela teve de deixar para trás."""
 
     gravou: bool
     descartados: tuple[str, ...]
@@ -1725,67 +1167,21 @@ def gravar_maquina(declaracao: Mapping[str, Any]) -> bool:
 
 
 def gravar_o_computador(computador: Mapping[str, Any]) -> bool:
-    """Troca o padrão do computador INTEIRO pelo ``computador`` dado.
-
-    O único escritor é ``profiles/o_padrao_do_computador``, que lê, muda e
-    manda o documento todo: assim um campo tirado de uma seção sai do disco.
-    """
+    """Troca o padrão do computador INTEIRO pelo ``computador`` dado."""
     return gravar_maquina_com_descartes(
         {"computador": dict(computador)}, substituir=("computador",)
     ).gravou
 
 
 def gravar_rascunho_da_mesa(declaracao: Mapping[str, Any]) -> bool:
-    """Grava a seção ``mesa`` como RASCUNHO — sem o gesto de "Aplicar" atrás.
-
-    T-07 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). Hoje o único
-    escritor de ``maquina.json`` é o botão "Aplicar" do rodapé
-    (``app/actions/footer_actions.py``, via ``machine.declare``) — declarar a
-    mesa e fechar o programa sem clicar nele perde tudo, sem aviso (medido em
-    §3.7 da sprint). Esta função é a PRIMITIVA que a Onda 1 · Configurações
-    (CONFIG-03) vai pendurar no gesto de declarar: mesma gravação atômica,
-    mesmo lock (``MAQUINA_FILE_LOCK``), mesma preservação do que não entende —
-    tudo herdado de :func:`gravar_maquina_com_descartes`, sem duplicar nada.
-
-    Escopada à seção ``mesa`` de propósito: o chamador (uma seção da aba) não
-    precisa conhecer o envelope do documento inteiro, só os campos de
-    :class:`MesaDeclarada` que ela mesma editou. Um rascunho **nunca inventa**
-    valor de catálogo — campo ausente de ``declaracao`` continua sem valor,
-    porque :func:`fundir_declaracao` só sobrescreve o que veio.
-
-    Z7-B **não chama** esta função de lugar nenhum: quem liga o gesto de
-    declarar a ela é a Onda 1, em ``footer_actions.py`` ou vizinho — ver §10 da
-    sprint.
-    """
+    """Grava a seção ``mesa`` como RASCUNHO — sem o gesto de "Aplicar" atrás."""
     return gravar_maquina({"mesa": dict(declaracao)})
 
 
 def gravar_maquina_com_descartes(
     declaracao: Mapping[str, Any], *, substituir: Sequence[str] = ()
 ) -> ResultadoDaGravacao:
-    """Funde a declaração PARCIAL no documento do disco.
-
-    ``substituir`` lista os campos de topo que a declaração TROCA inteiros, em
-    vez de fundir. É o caminho de quem precisa tirar um campo de dentro de uma
-    seção (o «Voltar ao padrão» do computador): a fusão desce nos dicionários e
-    não sabe apagar uma chave que a declaração não traz.
-
-    ``gravou=False`` significa uma coisa só: **o arquivo em disco tem uma
-    ``version`` que não é a nossa**, e então nada é lido nem escrito — os bytes
-    ficam intactos. Escolha de alguém não se destrói para registrar outra, e uma
-    versão futura é escolha de alguém.
-
-    Levanta ``ValueError`` (``ValidationError`` herda dele) quando a declaração
-    não passa no schema e ``OSError`` quando a escrita falha; quem chama traduz
-    as duas para recusa com motivo, que é o contrato do ``machine.declare``.
-
-    O que sobrevive a esta escrita: chave de TOPO que uma versão futura tenha
-    escrito, copiada verbatim. O que NÃO sobrevive: o CAMPO cujo valor o schema
-    recusa — um valor inválido não é escolha de ninguém, é corrupção, e
-    preservá-lo travaria toda gravação futura deste arquivo para sempre. O
-    estrago para no campo ruim (:func:`_o_que_ainda_vale`): antes, um único
-    ``ambiente`` fora do catálogo levava junto mesa, controles e orçamento.
-    """
+    """Funde a declaração PARCIAL no documento do disco."""
     MaquinaConfig.model_validate(dict(declaracao))
     with MAQUINA_FILE_LOCK:
         bruto = _ler_documento() or {}
@@ -1811,10 +1207,6 @@ def gravar_maquina_com_descartes(
                 err=str(exc),
                 descartados=list(descartados),
             )
-        # SEM OS CAMPOS CALCULADOS (``PortaDeclarada.caminho``): eles são da
-        # leitura, e um calculado que voltasse pela fusão seria lido como uma
-        # declaração — e iria ao disco. (Pelo ``exclude``: ver
-        # :data:`CALCULADOS_DA_ENTRADA`.)
         base = atual.model_dump(mode="json", exclude=_SEM_OS_CALCULADOS)
         for campo in substituir:
             base.pop(campo, None)
@@ -1833,18 +1225,8 @@ def gravar_maquina_com_descartes(
     return ResultadoDaGravacao(True, descartados)
 
 
-# ---------------------------------------------------------------------------
-# O nome que ela deu a um controle (O-RADIO-CONECTA-ONDE-ELA-MANDA-02)
-# ---------------------------------------------------------------------------
-
-
 def chave_do_controle(endereco: object) -> str | None:
-    """``aa:bb:…`` ou doze hex → a chave de ``controles`` (doze hex minúsculos).
-
-    ``None`` quando o endereço não tem forma, ou quando é SINTETIZADO (o
-    ``02`` do nosso DKMS, ver :data:`_OCTETO_SINTETIZADO`): o schema o recusa,
-    e gravar o nome ali fundiria dois clones.
-    """
+    """``aa:bb:…`` ou doze hex → a chave de ``controles`` (doze hex minúsculos)."""
     if not isinstance(endereco, str):
         return None
     chave = endereco.strip().lower().replace(":", "").replace("-", "")
@@ -1871,11 +1253,7 @@ def nome_dado_ao_adaptador(maquina: MaquinaConfig | None, endereco: object) -> s
 
 
 def ordem_dos_adaptadores(maquina: MaquinaConfig | None) -> list[str]:
-    """As chaves dos adaptadores na ordem que ela arrastou, de cima para baixo.
-
-    Vazio = ela nunca arrastou (ou o documento ainda não foi lido). Quem não
-    está na lista vem depois, na ordem de sempre — é a tela quem decide.
-    """
+    """As chaves dos adaptadores na ordem que ela arrastou, de cima para baixo."""
     if maquina is None:
         return []
     postos = [
@@ -1887,14 +1265,7 @@ def ordem_dos_adaptadores(maquina: MaquinaConfig | None) -> list[str]:
 
 
 def guardar_ordem_dos_adaptadores(enderecos: Sequence[str]) -> list[str]:
-    """Grava a ordem que ela arrastou, pelo ENDEREÇO de cada adaptador.
-
-    Devolve a ordem que ficou (as chaves, sem repetidas), ou ``[]`` quando o
-    disco recusou. Quem não veio na lista nova mas estava na velha (um
-    adaptador fora da máquina agora) fica no fim, na ordem de antes: tirar o
-    dongle não apaga o lugar dele na fila. O nome de cada um fica como estava
-    (a fusão de :func:`gravar_maquina` desce no dicionário).
-    """
+    """Grava a ordem que ela arrastou, pelo ENDEREÇO de cada adaptador."""
     novas: list[str] = []
     for endereco in enderecos:
         chave = chave_do_adaptador(endereco)
@@ -1925,14 +1296,7 @@ def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:
 
 
 def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
-    """Grava (ou, com ``None``/vazio, esquece) o nome que ela deu. **Nunca levanta.**
-
-    A fusão de :func:`gravar_maquina` desce nos dicionários: o ``microfone``, a
-    ``economia`` e a ``cor`` do mesmo controle ficam como estavam. ``False`` =
-    não gravou (endereço sem forma ou sintetizado, nome que o schema recusa,
-    disco que recusa, versão estranha) — o ``Alias`` do BlueZ continua sendo o
-    nome, e a próxima volta de quem chama tenta de novo.
-    """
+    """Grava (ou, com ``None``/vazio, esquece) o nome que ela deu. **Nunca levanta.**"""
     chave = chave_do_controle(endereco)
     if chave is None:
         return False
@@ -1944,21 +1308,10 @@ def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
         return False
 
 
-# ---------------------------------------------------------------------------
-# O mudo do microfone de cada controle (O-MUDO-E-DO-CONTROLE-01)
-# ---------------------------------------------------------------------------
-
-
 def mudo_do_microfone(
     endereco: object, maquina: MaquinaConfig | None = None
 ) -> bool | None:
-    """O mudo que ela deixou no microfone DESTE controle. **Nunca levanta.**
-
-    ``True`` = calado; ``False`` = no ar; ``None`` = ela nunca disse (ou o
-    endereço não tem forma de controle), e o microfone nasce no ar. Sem
-    ``maquina``, lê o disco agora: quem pergunta é a conexão de um controle, e
-    a resposta tem de ser a de agora, não a do boot.
-    """
+    """O mudo que ela deixou no microfone DESTE controle. **Nunca levanta.**"""
     chave = chave_do_controle(endereco)
     if chave is None:
         return None
@@ -1970,17 +1323,7 @@ def mudo_do_microfone(
 
 
 def gravar_o_mudo_do_microfone(endereco: object, mudo: bool) -> bool:
-    """Grava o mudo do microfone deste controle. **Nunca levanta.**
-
-    ``True`` = o disco diz ``mudo`` agora (gravou, ou já dizia). ``False`` =
-    não gravou: endereço sem forma de controle ou sintetizado (o vpad, o
-    ``02`` do DKMS), disco que recusa, versão estranha. A fusão de
-    :func:`gravar_maquina` desce no dicionário: o ``microfone``, a
-    ``economia``, a ``cor`` e o ``nome`` do mesmo controle ficam como estavam.
-
-    NADA MUDOU = NADA GRAVA: apertar o botão duas vezes para o mesmo lado não
-    reescreve o arquivo.
-    """
+    """Grava o mudo do microfone deste controle. **Nunca levanta.**"""
     chave = chave_do_controle(endereco)
     if chave is None:
         return False
@@ -1993,11 +1336,6 @@ def gravar_o_mudo_do_microfone(endereco: object, mudo: bool) -> bool:
         return False
 
 
-# ---------------------------------------------------------------------------
-# Interno
-# ---------------------------------------------------------------------------
-
-
 def _copia_funda(no: Any) -> Any:
     """Cópia dos dicionários aninhados, para a fusão nunca escrever no de origem."""
     if isinstance(no, Mapping):
@@ -2006,12 +1344,7 @@ def _copia_funda(no: Any) -> Any:
 
 
 def _so_o_que_o_schema_conhece(bruto: Mapping[str, Any]) -> dict[str, Any]:
-    """O documento sem as chaves de topo que uma versão futura acrescentou.
-
-    Elas são preservadas no disco (ver :func:`gravar_maquina`), mas não podem
-    entrar na validação: ``extra="forbid"`` recusa o DOCUMENTO INTEIRO, e uma
-    chave que não conhecemos derrubaria a leitura de tudo o que conhecemos.
-    """
+    """O documento sem as chaves de topo que uma versão futura acrescentou."""
     return {
         campo: valor
         for campo, valor in bruto.items()
@@ -2020,13 +1353,7 @@ def _so_o_que_o_schema_conhece(bruto: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _o_que_ainda_vale(bruto: Mapping[str, Any]) -> tuple[MaquinaConfig, tuple[str, ...]]:
-    """O documento sem os CAMPOS que o schema recusa — o resto sobrevive.
-
-    Cada campo de topo é validado sozinho, então a corrupção fica presa à sua
-    subárvore: o caminho realista para chegar aqui não é edição à mão, é uma
-    versão futura alargar um ``Literal`` e alguém voltar de versão, e nesse dia o
-    documento inteiro sumia porque UM campo tinha um valor novo demais.
-    """
+    """O documento sem os CAMPOS que o schema recusa — o resto sobrevive."""
     salvo = _so_o_que_o_schema_conhece(bruto)
     descartados = tuple(
         campo
@@ -2050,20 +1377,6 @@ def _campo_isolado_passa(campo: str, valor: Any) -> bool:
     except ValidationError:
         return False
     return True
-
-
-# ---------------------------------------------------------------------------
-# O resgate por dentro do ``mapa`` — O-MAPA-QUE-ELA-CORRIGE-01, passo 1
-# ---------------------------------------------------------------------------
-#
-# MEDIDO em 26/09/2026: um campo desconhecido em ``mapa.portas["3"]`` (o que um
-# código mais velho vê quando o novo grava ``nome``, ``liga`` ou ``usb``) fazia o
-# resgate de cima descartar o ``mapa`` INTEIRO — 0 entradas e 0 faces, porque
-# ``PortaDeclarada`` é ``extra="forbid"``. O resgate agora desce um nível: cada
-# entrada e cada face são validadas sozinhas, e sai só o que não passa (o campo
-# torto sai da entrada; a entrada que ainda assim não passa, ou fica vazia,
-# sai). Isso protege do PRÓXIMO campo em diante; o código velho que já está na
-# máquina de alguém continua com o resgate velho.
 
 
 def _nada_se_resgata(_valor: Any) -> Any:
@@ -2136,18 +1449,12 @@ def _o_mapa_que_ainda_vale(mapa: Any) -> dict[str, Any] | None:
     return saida
 
 
-#: Os campos de topo que o resgate sabe abrir. Os outros continuam saindo
-#: inteiros, como sempre saíram.
 _O_RESGATE_POR_DENTRO: dict[str, Callable[[Any], Any]] = {
     "mapa": _o_mapa_que_ainda_vale,
-    # Um gesto com o ato de uma versão mais nova sai sozinho; os outros cinco
-    # continuam fazendo o que ela escolheu (OS-GESTOS-DO-CONTROLE-01).
     "gestos": lambda gestos: (
         {k: v for k, v in gestos.items() if _campo_isolado_passa("gestos", {k: v})}
         if isinstance(gestos, Mapping) else None
     ),
-    # Uma seção torta do computador sai sozinha; o resto do que ela ajustou
-    # continua valendo (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01).
     "computador": lambda computador: _o_computador_que_ainda_vale(computador),
 }
 
@@ -2173,13 +1480,7 @@ def _o_computador_que_ainda_vale(computador: Any) -> dict[str, Any] | None:
 
 
 def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
-    """:func:`migrar_o_documento` na leitura, e o arquivo regravado migrado.
-
-    **Nunca levanta**, como a leitura que a chama: o disco que recusa a escrita
-    deixa a migração só na memória, e a próxima leitura tenta de novo. Sob a
-    trava das gravações, relendo o disco dentro dela — um gesto gravado entre a
-    leitura e a trava não se perde.
-    """
+    """:func:`migrar_o_documento` na leitura, e o arquivo regravado migrado."""
     migrado = migrar_o_documento(bruto)
     if migrado == bruto:
         return bruto
@@ -2193,17 +1494,13 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
                 _guardar_a_copia_de_antes_da_migracao()
                 _escrever(migrado)
                 logger.info("maquina_migrada_para_um_registro_por_entrada")
-    except Exception as exc:  # defensivo — a leitura jamais derruba quem chama
+    except Exception as exc:
         logger.warning("maquina_migracao_nao_gravou", err=str(exc)[:200])
     return migrado
 
 
 def _guardar_a_copia_de_antes_da_migracao() -> None:
-    """Copia o arquivo de antes da migração para ``maquina.json.com-os-lugares``.
-
-    UMA vez: a cópia que já existe é a do primeiro arquivo, e é essa que
-    desfaz. Chamada sob a trava, antes de escrever o migrado.
-    """
+    """Copia o arquivo de antes da migração para ``maquina.json.com-os-lugares``."""
     origem = caminho_da_maquina()
     alvo = origem.parent / (origem.name + _ANTES_DA_MIGRACAO_SUFIXO)
     with contextlib.suppress(OSError):
@@ -2212,11 +1509,7 @@ def _guardar_a_copia_de_antes_da_migracao() -> None:
 
 
 def _guardar_os_bytes_recusados() -> None:
-    """Copia o documento recusado para ``maquina.json.invalido``.
-
-    O campo recusado não volta ao arquivo; sem esta cópia ele é irrecuperável, e
-    devolver à mão um valor que ninguém mais tem é impossível.
-    """
+    """Copia o documento recusado para ``maquina.json.invalido``."""
     origem = caminho_da_maquina()
     with contextlib.suppress(OSError):
         alvo = origem.parent / (origem.name + _MAQUINA_INVALIDO_SUFIXO)
@@ -2224,18 +1517,7 @@ def _guardar_os_bytes_recusados() -> None:
 
 
 def _podar(no: Any) -> Any:
-    """Tira do documento o que é silêncio: ``None``, dicionário e lista vazios.
-
-    ``None`` e chave ausente querem dizer a MESMA coisa aqui ("não sei"), então
-    escrever os dois é escrever duas vezes. O arquivo que ela abre no editor tem
-    o tamanho do que ela declarou, não o tamanho do schema.
-
-    A lista vazia entrou em 25/08/2026, com ``MapaDaMesa.faces``, e pelo mesmo
-    motivo: sem ela, quem NUNCA desenhou a mesa passaria a carregar um
-    ``"mapa": {"faces": []}`` em disco — silêncio escrito por extenso, que é o
-    que esta função existe para não deixar acontecer. Nenhum outro campo do
-    documento é lista, então a regra nova não alcança nada que já estivesse lá.
-    """
+    """Tira do documento o que é silêncio: ``None``, dicionário e lista vazios."""
     if not isinstance(no, dict):
         return no
     podado: dict[str, Any] = {}
@@ -2248,11 +1530,7 @@ def _podar(no: Any) -> Any:
 
 
 def _ler_documento() -> dict[str, Any] | None:
-    """O JSON do disco quando ele é um objeto; ``None`` em qualquer outro caso.
-
-    ``None`` autoriza a escrita: não há escolha de ninguém a destruir num arquivo
-    que já não diz nada. Quem barra a escrita é a VERSÃO, checada por quem chama.
-    """
+    """O JSON do disco quando ele é um objeto; ``None`` em qualquer outro caso."""
     try:
         with caminho_da_maquina().open(encoding="utf-8") as fh:
             bruto = json.load(fh)

@@ -1,37 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA A-ABA-GATILHOS-DIZ-O-QUE-VAI-AO-CONTROLE-01: a coluna diz o que o controle recebe.
-
-O DEFEITO, achado na conferência da O-MODO-FREESTYLE-03 e medido pelo clique no
-piloto (24/09/2026): com um perfil de jogo sem a seção `triggers`, a aba 03
-dizia «Desligado» nos dois lados dos quatro controles, e o daemon mandava a
-eles o nascimento do esquema — «Rígido». O `or {}` da pintura virava `Off`; o
-esquema lê a mesma ausência como `TriggersConfig()` (NASCE-LIGADO-01). E a
-mentira passava da tela para o disco: o «Guardar» lê a coluna, e gravou `Off`
-nos dois lados do override do P2.
-
-A MEDIÇÃO ACHOU UMA SEGUNDA, da mesma família: o override de um controle era
-procurado pelo `uniq` cru. O esquema aceita a chave em qualquer grafia e a
-canoniza ao carregar, então o daemon aplicava um override que a aba não via.
-
-O ORÁCULO É O DAEMON, e não um número digitado. O perfil vai para o disco de
-mentira que o `conftest` já isola, é carregado pelo `loader` real e aplicado
-pelo `ProfileManager.apply` real sobre um backend que só grava as duas camadas
-que recebe. O efeito de cada controle é o merge por campo do backend. A coluna
-CASA quando `build_from_name(modo da coluna, ajustes da coluna)` é o MESMO
-`TriggerEffect` que vai ao controle.
-
-A MATRIZ: P1 a P4, dois no USB e dois no BT; o `uniq` na grafia do daemon real
-(doze hexa) e na da régua da casa (`aa:bb:…`); a fita em «Todos» e num controle
-só; perfil de jogo, «Todos» e manual; o L2 e o R2; o perfil que traz só um
-lado; o override de um controle só, com a chave canônica e com a editada à mão;
-e o `Off` ESCRITO, que tem de continuar `Off`.
-
-A MORDIDA, arrancada antes deste arquivo entrar: com
-`_o_lado_que_o_perfil_cala` devolvendo `{}`, os casos sem seção reprovam com
-«Desligado»; com `_chave_no_perfil` devolvendo o `uniq` cru, o override de
-chave editada à mão reprova; com o perfil nenhum devolvendo o nascimento, a
-régua do perfil nenhum reprova.
-"""
+"""A RÉGUA DA A-ABA-GATILHOS-DIZ-O-QUE-VAI-AO-CONTROLE-01: a coluna diz o que o controle recebe."""
 from __future__ import annotations
 
 import json
@@ -50,20 +18,15 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 PAGINA = "03-gatilhos.html"
 LADOS = {"e": "left", "d": "right"}
 
-#: A MESA DA MATRIZ: P1 e P2 no USB, P3 e P4 no BT. MACs da faixa sintética da
-#: casa — há dois portões de anonimato nesta árvore e eles não perdoam.
 MACS = {1: "aa:bb:cc:00:00:01", 2: "aa:bb:cc:00:00:02",
         3: "aa:bb:cc:00:00:03", 4: "aa:bb:cc:00:00:04"}
 TRANSPORTE = {1: "usb", 2: "usb", 3: "bt", 4: "bt"}
 
-#: O JOGO, O «TODOS» E O MANUAL — as três regras de casamento que a aba Perfis
-#: oferece. Nenhuma das três traz a seção `triggers`.
 JOGO = {"type": "criteria", "window_class": ["steam_app_1599660"]}
 TODOS = {"type": "any"}
 MANUAL = {"type": "manual"}
 
 
-#: O fixture `disco`: grava o perfil da matriz e devolve o nome dele.
 Disco = Callable[[str], str]
 
 
@@ -71,9 +34,6 @@ def _perfil(nome: str, match: dict[str, Any], **resto: Any) -> dict[str, Any]:
     return {"name": nome, "version": 1, "priority": 50, "match": match, **resto}
 
 
-#: OS PERFIS DA MATRIZ, na forma do disco. Os modos que não são o nascimento
-#: estão escritos por extenso DE PROPÓSITO: eles são o que o perfil DIZ, e o
-#: oráculo não é esta tabela — é o daemon lendo o arquivo.
 PERFIS = {
     "jogo-sem-secao": _perfil("Sackboy", JOGO),
     "todos-sem-secao": _perfil("Qualquer Janela", TODOS),
@@ -82,9 +42,6 @@ PERFIS = {
         "left": {"mode": "PulseA", "params": [2, 7, 180]}}),
     "so-o-r2": _perfil("R2 Escrito", JOGO, triggers={
         "right": {"mode": "Vibration", "params": [3, 8, 20]}}),
-    # O P3 é dono do R2 (chave canônica) e o P4 de um L2 `Off` ESCRITO, com a
-    # chave na grafia de quem edita o JSON à mão — o esquema a canoniza ao
-    # carregar, e o daemon aplica o override.
     "um-controle-so": _perfil("Meio", MANUAL, triggers={
         "left": {"mode": "PulseA", "params": [2, 7, 180]}},
         controllers={
@@ -128,11 +85,7 @@ def _rascunho_limpo() -> Iterator[None]:
 
 @pytest.fixture
 def disco() -> Disco:
-    """A pasta de perfis do lar de mentira que o `conftest` já isola.
-
-    É a MESMA para os dois leitores: `pacotes.perfil.pasta()` e o `loader`
-    perguntam a `xdg_paths.profiles_dir()` na chamada.
-    """
+    """A pasta de perfis do lar de mentira que o `conftest` já isola."""
     from hefesto_dualsense4unix.profiles.slug import slugify
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
@@ -162,11 +115,7 @@ def _ctx(nome: str | None, grafia: str = "doze-hexa",
 
 
 class _Camadas:
-    """O backend de mentira: grava as duas camadas que a ativação publica.
-
-    `efetivo` é o `_merge_desired` do backend real, reduzido ao gatilho: o campo
-    do override quando não-None, senão o do padrão — nunca resolução por objeto.
-    """
+    """O backend de mentira: grava as duas camadas que a ativação publica."""
 
     def __init__(self) -> None:
         from hefesto_dualsense4unix.core.controller import OutputSpec
@@ -209,12 +158,7 @@ def _o_que_o_daemon_manda(nome: str) -> _Camadas:
 
 def _o_que_a_coluna_diz(r: dict[str, Any], uniq: str, pref: str,
                         sig: str) -> tuple[str, str, list[int]]:
-    """`(rótulo, modo, ajustes)` de um lado, lidos do que a página recebe.
-
-    O modo é o `modo-chave-<lado>` que pousa no `<select>`; os ajustes são os
-    `aj-val-<lado>-<i>` da caixa que o bloco troca — a mesma leitura que o
-    piloto faz para o «Guardar».
-    """
+    """`(rótulo, modo, ajustes)` de um lado, lidos do que a página recebe."""
     col = r["colunas"][uniq]
     caixa = r["blocos"][f'[data-controle="{pref}"] .ajustes.{sig}']
     ajustes = [int(v) for v in re.findall(
@@ -261,13 +205,7 @@ def test_a_coluna_diz_o_que_o_controle_recebe(disco: Disco, caso: str, grafia: s
 
 def test_o_nascimento_e_perguntado_ao_esquema(disco: Disco,
                                               monkeypatch: pytest.MonkeyPatch) -> None:
-    """Se o nascimento mudar no esquema, a aba muda junto — ela não o digita.
-
-    O nascimento é trocado para `Feedback [5, 4]` no dono
-    (`schema.MODO_DE_NASCIMENTO_DO_GATILHO`), e o oráculo o lê de lá também.
-    Uma aba com `Rigid` ou `[5, 200]` escrito à mão reprova aqui mesmo com a
-    régua de cima verde.
-    """
+    """Se o nascimento mudar no esquema, a aba muda junto — ela não o digita."""
     from hefesto_dualsense4unix.profiles import schema
 
     monkeypatch.setattr(schema, "MODO_DE_NASCIMENTO_DO_GATILHO", "Feedback")
@@ -281,12 +219,7 @@ def test_o_nascimento_e_perguntado_ao_esquema(disco: Disco,
 
 
 def test_o_efeito_pronto_le_o_mesmo_modo_da_coluna(disco: Disco) -> None:
-    """`_modo_de_agora` é quem escolhe a lista do «Efeito pronto» nos gestos.
-
-    Ele tinha a ordem escrita por conta própria, e com ela os dois defeitos da
-    pintura. Agora ele e a coluna perguntam à mesma função — e têm de dizer o
-    mesmo modo, lado a lado, nos quatro controles.
-    """
+    """`_modo_de_agora` é quem escolhe a lista do «Efeito pronto» nos gestos."""
     from pacotes import a03_gatilhos, pacote_da_pagina
 
     for caso in ("jogo-sem-secao", "so-o-l2", "um-controle-so"):
@@ -314,15 +247,7 @@ class _Ponte:
 
 
 def test_o_guardar_nao_troca_o_gatilho_do_controle_por_off(disco: Disco) -> None:
-    """O «Guardar» lê a COLUNA — e a coluna que mentia gravava a mentira.
-
-    Medido no piloto antes da cura: com o Sackboy ativo, o «Guardar» do P2
-    gravou `Off` nos dois lados do override dele, e na ativação seguinte o P2
-    perdia o gatilho que o perfil dava. Aqui a coluna é recolhida como o piloto
-    a recolhe (o `modo-chave-*` e os `aj-val-*`), o gesto grava no disco de
-    verdade, e o daemon relê o arquivo: o P2 tem de continuar recebendo o que
-    recebia.
-    """
+    """O «Guardar» lê a COLUNA — e a coluna que mentia gravava a mentira."""
     from pacotes import gesto_da_pagina, pacote_da_pagina
 
     nome = disco("jogo-sem-secao")
@@ -372,15 +297,7 @@ class _PonteDoBroadcast(_Ponte):
 
 
 def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco: Disco) -> None:
-    """O «Em todos» também lê a COLUNA, e o alcance dele é a mesa inteira.
-
-    Ele recolhe os dois lados da coluna, manda os dois em broadcast e grava os
-    dois na seção global. Com a coluna dizendo «Desligado» no lado que o perfil
-    cala, trocar só o L2 do P1 tirava o «Rígido» de nascimento do R2 dos QUATRO
-    controles, no aparelho e no perfil. Aqui ela troca só o L2, a coluna é
-    recolhida como o piloto a recolhe, e o R2 que sai no fio e o que o daemon
-    relê do disco têm de ser o que eram.
-    """
+    """O «Em todos» também lê a COLUNA, e o alcance dele é a mesa inteira."""
     from pacotes import gesto_da_pagina, pacote_da_pagina
     from pacotes.a03_gatilhos import GESTO_DE_TODOS
 
@@ -391,8 +308,6 @@ def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco: Disco) -> None:
     r = pacote_da_pagina(PAGINA, ctx)
     assert r is not None
     uniq = str(next(c for c in ctx.conectados if c["player"] == 1)["uniq"])
-    # O MODO NOVO NÃO É O NASCIMENTO: com ele o gesto não teria o que gravar, e
-    # a régua mediria um clique que o produto, com razão, ignora.
     novo = "Pulse"
     assert TriggersConfig().left.mode != novo
     forma: dict[str, str] = {"nome-do-efeito": ""}
@@ -400,7 +315,6 @@ def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco: Disco) -> None:
         _rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, "p1", sig)
         forma[f"modo-chave-{sig}"] = modo
         forma.update({f"aj-val-{sig}-{i}": str(v) for i, v in enumerate(ajustes)})
-    # ELA TROCA SÓ O L2: a caixa dele passa a ser a do modo novo, nos padrões.
     forma = {k: v for k, v in forma.items() if not k.startswith("aj-val-e-")}
     forma["modo-chave-e"] = novo
     antes = _o_que_o_daemon_manda(nome)
@@ -426,13 +340,7 @@ def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco: Disco) -> None:
 
 
 def test_sem_perfil_nenhum_a_coluna_nao_inventa_o_nascimento() -> None:
-    """Sem perfil valendo, nenhum perfil mandou gatilho, e a coluna não inventa um.
-
-    O nascimento é o que o esquema põe no perfil que CALA a seção; sem perfil
-    não há seção calada, e o daemon não escreveu gatilho nenhum. Com o daemon
-    respondendo `active_profile: null` e o disco sem marcador, os oito lados
-    dizem o estado sem efeito, e não o «Rígido» que só um perfil manda.
-    """
+    """Sem perfil valendo, nenhum perfil mandou gatilho, e a coluna não inventa um."""
     from pacotes import pacote_da_pagina
 
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name

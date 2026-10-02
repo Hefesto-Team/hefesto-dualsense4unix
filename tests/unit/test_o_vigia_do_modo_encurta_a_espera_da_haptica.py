@@ -43,11 +43,6 @@ P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 
 
-# ---------------------------------------------------------------------------
-# A forma plural — uma passada para todos
-# ---------------------------------------------------------------------------
-
-
 def _pactl_de_mentira(sinks: str, entradas: str) -> Any:
     chamadas: list[list[str]] = []
 
@@ -89,11 +84,6 @@ def test_a_forma_singular_continua_valendo() -> None:
     assert bt.sink_esta_tocando("hef_p1", lambda _c: None, na_duvida=False) is False
 
 
-# ---------------------------------------------------------------------------
-# A volta acorda quando o que ela leu mudou — e só então
-# ---------------------------------------------------------------------------
-
-
 class _Endpoint:
     def __init__(self, nome: str) -> None:
         self.nome = nome
@@ -102,10 +92,7 @@ class _Endpoint:
 def _subsystem(
     *, endpoints: dict[str, str], no_radio: set[str] | None = None, viu: set[str] | None
 ) -> Any:
-    """O subsystem montado por `__new__`: o que ele lê mora no corpo da classe.
-
-    ``viu`` é o que a última volta leu quando começou (``None`` = não soube).
-    """
+    """O subsystem montado por `__new__`: o que ele lê mora no corpo da classe."""
     quem = object.__new__(af.AltoFalanteSubsystem)
     quem._endpoints = {u: _Endpoint(n) for u, n in endpoints.items()}  # type: ignore[attr-defined]
     quem._no_radio = frozenset(no_radio if no_radio is not None else endpoints)  # type: ignore[attr-defined]
@@ -119,15 +106,7 @@ def _som(uniq: str) -> str:
 
 
 def _com_tocando(monkeypatch: pytest.MonkeyPatch, resposta: object) -> None:
-    """O servidor de som de mentira — **e ele só responde sobre o que foi
-    PERGUNTADO**.
-
-    RADIO-AFOGADO-01, 22/09/2026, e isto foi achado pela mordida: até aqui o
-    dublê devolvia a resposta inteira ignorando os nomes recebidos, e por isso
-    era mais FROUXO que o produto. Com ele, arrancar `nome_do_sink` da pergunta
-    deixava as réguas VERDES — a régua do alto-falante passava sobre uma
-    pergunta que nunca fora feita.
-    """
+    """O servidor de som de mentira — **e ele só responde sobre o que foi"""
 
     def falso(nomes: Any) -> Any:
         if isinstance(resposta, Exception):
@@ -150,14 +129,7 @@ def test_o_jogo_que_comeca_a_tocar_acorda_a_volta(
 
 
 def test_o_som_que_comeca_acorda_a_volta(monkeypatch: pytest.MonkeyPatch) -> None:
-    """RADIO-AFOGADO-01, 22/09/2026 — o nó de som também é entrada da volta.
-
-    A ponte do som só existe com fluxo; sem esta linha, o primeiro som de cada
-    partida espera a volta INTEIRA (`RECONCILIA_S`, 5 s).
-
-    MORDIDA: tire `nome_do_sink` da pergunta de `_o_que_a_mesa_do_som_diz` — o
-    alto-falante some da passada, nada muda, e a volta não acorda.
-    """
+    """RADIO-AFOGADO-01, 22/09/2026 — o nó de som também é entrada da volta."""
     quem = _subsystem(endpoints={P1: "hef_p1"}, viu=set())
     _com_tocando(monkeypatch, {_som(P1)})
     assert quem._a_mesa_do_som_mudou() is True
@@ -192,11 +164,7 @@ def test_o_jogo_que_fecha_tambem_acorda(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_nada_mudou_nao_acorda(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Acordar sem mudança devolveria a tempestade que a sprint do vigia vetou.
-
-    E é o caso que o vigia errava: a ponte que NÃO PÔDE virar háptica (sem
-    fonte, sem vaga) — a entrada não mudou, e a volta não acorda.
-    """
+    """Acordar sem mudança devolveria a tempestade que a sprint do vigia vetou."""
     quem = _subsystem(endpoints={P1: "hef_p1", P2: "hef_p2"}, viu={"hef_p1", _som(P2)})
     _com_tocando(monkeypatch, {"hef_p1", _som(P2)})
     assert quem._a_mesa_do_som_mudou() is False

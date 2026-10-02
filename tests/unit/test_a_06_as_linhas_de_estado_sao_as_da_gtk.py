@@ -68,14 +68,8 @@ FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "cosmic-red", "mascara": "DualSense"}]
 
-#: As três linhas, e o nome de cada uma no desenho.
 AS_TRES = ("rato-estado", "teclado-bloqueio", "teclado-osk")
 
-#: "Não há o que dizer", dito de um jeito que a tela sabe APAGAR. O
-#: `escrever()` do piloto troca vazio por `—` (`hefesto_vivo.py:141`), então uma
-#: frase vazia viraria um travessão solto embaixo do interruptor — visto na
-#: primeira foto de 03/09. O marcador vem do pacote para a régua não digitar a
-#: segunda verdade sobre a forma dele.
 from pacotes import a06_navegacao as _mod
 
 NADA_A_DIZER = _mod.NADA_A_DIZER
@@ -101,15 +95,7 @@ def bancada() -> str:
 
 
 def test_as_tres_linhas_tem_lugar_no_desenho(bancada: str) -> None:
-    """Sem lugar, a frase do produto continua indo para o vazio.
-
-    LUGAR, E NÃO A TIRA — 07/09/2026. Duas das três continuam na tira de
-    `.estados`; `teclado-osk` mudou de endereço na PÁGINA (foi para o `?` da
-    "Função do teclado", por ordem dela: *"navegacao tem essas 3 frases aqui na
-    parte de baixo que quebram o layout"*). O que esta régua cobra é o que
-    sempre cobrou — que a frase do produto tenha ONDE cair, com o alvo `html` —,
-    e por isso ela não pergunta em que `<div>` o endereço está.
-    """
+    """Sem lugar, a frase do produto continua indo para o vazio."""
     for campo in AS_TRES:
         assert f'data-campo="{campo}" data-hef-alvo="html"' in bancada, (
             f"a linha `{campo}` não tem endereço na bancada. O alvo é `html` "
@@ -150,16 +136,7 @@ def test_o_mouse_pronto_diz_a_frase_da_gtk() -> None:
 
 
 def test_a_frase_do_pronto_e_a_mesma_que_a_gtk_escreve() -> None:
-    """A cópia declarada não pode divergir calada.
-
-    Ela é um literal dentro de `_refresh_mouse_view` — método de mixin GTK, que
-    escreve num widget e não dá para importar. Então esta linha lê o FONTE e
-    exige que a frase ainda esteja lá.
-
-    NÃO É ASSEIO: no dia em que alguém melhorar o texto da GTK, a tela nova
-    passaria a dizer outra coisa sobre o MESMO estado, e as duas janelas do
-    mesmo produto discordariam sem ninguém acusar.
-    """
+    """A cópia declarada não pode divergir calada."""
     from pacotes import a06_navegacao as mod
 
     fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/mouse_actions.py"
@@ -172,12 +149,7 @@ def test_a_frase_do_pronto_e_a_mesma_que_a_gtk_escreve() -> None:
 
 @pytest.mark.parametrize("bloqueio", sorted(BLOQUEIO_DO_MOUSE_EM_PORTUGUES))
 def test_o_motivo_do_bloqueio_e_a_tabela_do_produto(bloqueio: str) -> None:
-    """Cada motivo do daemon vira a frase que a GTK já traduzia.
-
-    `desligada` é o único que NÃO vira linha, e é a hierarquia da GTK: sem
-    device porque ela desligou não é defeito nenhum, e mandá-la consertar um
-    interruptor que ela mesma baixou seria alarme falso.
-    """
+    """Cada motivo do daemon vira a frase que a GTK já traduzia."""
     linha = _mesa({"enabled": True, "device_ativo": False, "bloqueio": bloqueio})
     texto = _SO_TEXTO.sub("", linha["rato-estado"])
     if bloqueio == "desligada":
@@ -222,12 +194,7 @@ def test_a_linha_do_teclado_e_a_funcao_do_produto(bloco: dict) -> None:
 
 @pytest.mark.parametrize("osk", [True, False, None])
 def test_a_linha_do_teclado_na_tela_e_a_funcao_do_produto(osk: bool | None) -> None:
-    """`None` devolve `""` — não se afirma sobre uma máquina que ninguém olhou.
-
-    O tri-estado é do produto, e é a razão de a função existir: a frase de "não
-    tem" manda instalar um pacote, e dizê-la porque ninguém respondeu mandaria
-    ela instalar o que talvez já esteja lá.
-    """
+    """`None` devolve `""` — não se afirma sobre uma máquina que ninguém olhou."""
     linha = _mesa(tecla={"enabled": True, "osk_disponivel": osk})
     esperado = frase_do_teclado_na_tela(osk) or NADA_A_DIZER
     assert linha["teclado-osk"] == esperado, (
@@ -235,14 +202,9 @@ def test_a_linha_do_teclado_na_tela_e_a_funcao_do_produto(osk: bool | None) -> N
 
 
 def test_com_o_daemon_mudo_o_mouse_nao_afirma_nada() -> None:
-    """Sem bloco, sem linha — a régua da tela vazia é a regra dela.
-
-    *"se não tá mostrando agora, não tem info pra mostrar no produto; mas
-    quando tiver, aparece a info correta"* (30/08/2026).
-    """
+    """Sem bloco, sem linha — a régua da tela vazia é a regra dela."""
     mesa = _mesa(None, None)
     assert mesa["rato-estado"] == NADA_A_DIZER
     assert mesa["teclado-osk"] == NADA_A_DIZER
 
 
-# "O homem é a medida de todas as coisas." — Protágoras

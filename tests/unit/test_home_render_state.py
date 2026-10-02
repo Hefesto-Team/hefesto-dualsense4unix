@@ -1,25 +1,8 @@
-"""`_render_home` vs o estado do daemon — os dois jeitos que a aba Início mentia.
-
-HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada com
-``connected=False`` quando não há controle nenhum. A aba Status
-(`_connected_controllers`) e o applet filtravam por ``connected``; a Início não
-— e inventava um card "Controle 1 — P1 · ?" com o cabo na mesa.
-
-HARM-15: o refresh chamava `call_async` SEM ``timeout_s``, caindo no default de
-0,25 s — resposta mais lenta do daemon (hotplug, co-op subindo) ia para o
-`_fail` e pintava a aba de "Daemon desligado" com o daemon VIVO.
-
-Ambos herméticos: Gtk fake em ``sys.modules`` (o render importa
-``gi.repository`` dentro da função) e `call_async` monkeypatchado.
-"""
+"""`_render_home` vs o estado do daemon — os dois jeitos que a aba Início mentia."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_render_state: importa código da janela GTK")
 
 import sys
@@ -53,9 +36,6 @@ class _FakeWidget:
         self.style = _StyleCtx()
         self.sensitive = True
         self.visible = True
-        # AUTO-01.3: o seletor de máscara precisa GUARDAR o que o render pediu —
-        # o `set_active_id` era um no-op e "a aba não reescreve o seletor" não
-        # tinha como ser observado.
         self.active_id: str | None = None
 
     def get_style_context(self) -> _StyleCtx:
@@ -113,19 +93,9 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    # PONTE-NA-TELA-01: a linha da ponte e o aviso de divergência de máscara
-    # também são reconciliados pelo `_render_home` (cobertos por inteiro em
-    # `test_home_ponte_e_divergencia.py`; aqui o dublê só precisa deles de pé).
     _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
     _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
-    # I3 (25/08/2026): o render passou a perguntar TAMBÉM de onde a máscara
-    # veio (gesto dela x perfil). O dublê empresta o método do mixin, como
-    # empresta os outros — reimplementá-lo aqui mediria o dublê.
     _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
-    # NOTA DATADA: até 06/08/2026 o dublê também emprestava o
-    # `_render_coop_prep` (AUTO-01.2, 25/07). O botão "Preparar co-op" saiu da
-    # aba por decisão dela — `TestOBotaoDeCoopSaiuDaAbaInicio`, no fim deste
-    # arquivo, é a lápide que mede a ausência dele.
     _refresh_home_tab = HomeActionsMixin._refresh_home_tab
 
     def __init__(self) -> None:
@@ -140,20 +110,15 @@ class _HomeStub:
         self._home_origin_label = _FakeWidget()
         self._home_session_label = _FakeWidget()
         self._home_gamepad_opts = _FakeWidget()
-        # UX-03: banner de degradação do vpad (novo caminho do _render_home).
         self._home_vpad_banner = _FakeWidget()
-        # GUI-05 item 3: banner "jogo sem wrapper" (honestidade do dedup).
         self._home_wrapper_banner = _FakeWidget()
-        # ONDA-U (U1): botão único de energia (toggle in-place).
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
-        # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): botão
         # "Reconciliar jogadores" + aviso de jogo aberto. (Até 06/08/2026 este
         # par se chamava `_home_renumber_btn`/`_home_renumber_hint`, quando o
         # botão só sabia renumerar.)
         self._home_reconciliar_btn = _FakeWidget()
         self._home_reconciliar_hint = _FakeWidget()
-        # PONTE-NA-TELA-01: linha "Ponte com o jogo" + banner da divergência.
         self._home_ponte_label = _FakeWidget()
         self._home_divergencia_banner = _FakeWidget()
         self._home_flavor_pedido: str | None = None
@@ -216,9 +181,6 @@ class TestCardFantasma:
 
         cards = host._home_controllers_box.get_children()
         assert len(cards) == 1
-        # A I9 (25/08/2026) mandava o card dizer `cabo`/`rádio`, e CAIU em
-        # 21/09/2026 por decisão dela: a tela voltou a dizer `USB`/`BT`, e o
-        # `cabo`/`rádio` ficou só no mapa de canais.
         assert any("USB" in label for label in _card_labels(host))
 
     def test_controles_conectados_seguem_renderizando(self, fake_gtk: None) -> None:
@@ -260,22 +222,13 @@ class TestBannerJogoSemWrapper:
         banner = host._home_wrapper_banner
         assert banner.visible is True
         assert banner.get_text() == home_actions.WRAPPER_MISSING_TEXT
-        # A REDAÇÃO TEM UM DONO, E A RÉGUA DELA TAMBÉM — 06/09/2026,
-        # ONDA5-07-03. Estas duas linhas exigiam os literais "hefesto-launch" e
-        # "aba Sistema", que saíram da frase por decisão dela (`07-Q2`: *"O
-        # produto aplica ela"*). Era a SEGUNDA cópia da mesma régua, e uma
-        # segunda cópia só existe para reprovar quem escreve certo: o que esta
-        # aba tem de provar é que o banner mostra **o texto do dono**, e é o
-        # `assert` acima que prova isso. Quem cobra a redação é
-        # `tests/unit/test_wrapper_banner.py`, num arquivo só.
         assert "atalho de inicialização" in banner.get_text()
 
     @pytest.mark.parametrize("valor", [True, None, "false", 0])
     def test_qualquer_coisa_que_nao_seja_false_literal_apaga(
         self, fake_gtk: None, valor: object
     ) -> None:
-        """True = caso bom; None/ausente = sem jogo (ou daemon antigo sem o
-        campo); tipos tortos NÃO acendem (nunca alarme falso)."""
+        """True = caso bom; None/ausente = sem jogo (ou daemon antigo sem o"""
         host = _HomeStub()
 
         host._render_home(self._estado(valor))
@@ -284,7 +237,7 @@ class TestBannerJogoSemWrapper:
 
     def test_offline_apaga_o_banner(self, fake_gtk: None) -> None:
         host = _HomeStub()
-        host._home_wrapper_banner.visible = True  # sobra de um render anterior
+        host._home_wrapper_banner.visible = True
 
         host._render_home(None)
 
@@ -317,22 +270,13 @@ class TestRefreshTimeout:
 
 
 def test_glossario_manda_ligar_nesta_propria_aba() -> None:
-    """ONDA-U (U1): a Início GANHOU o botão de ligar — toggle in-place.
-
-    Antes o glossário mandava pra aba Sistema, que era onde o único botão
-    de religar morava. Com o toggle in-place (o mesmo botão vira "Ligar o
-    Hefesto" aqui mesmo), o texto que ainda mandasse pra outra aba seria uma
-    mentira nova — quem seguisse o glossário procuraria em um lugar que não
-    tem mais nada de especial.
-    """
+    """ONDA-U (U1): a Início GANHOU o botão de ligar — toggle in-place."""
     assert "nesta aba" in home_actions._GLOSSARY
     assert "aba Sistema" not in home_actions._GLOSSARY
 
 
 class TestTogglePowerInPlace:
-    """U1: o botão "Desligar Hefesto" vira "Ligar o Hefesto" quando offline —
-    toggle in-place, sem mandar a usuária pra aba Sistema (falha-sem: no HEAD
-    o `_render_home` offline não tocava `_home_shutdown_btn` nenhuma vez)."""
+    """U1: o botão "Desligar Hefesto" vira "Ligar o Hefesto" quando offline —"""
 
     def test_offline_troca_rotulo_e_estilo_para_ligar(self, fake_gtk: None) -> None:
         host = _HomeStub()
@@ -347,7 +291,7 @@ class TestTogglePowerInPlace:
 
     def test_online_devolve_rotulo_e_estilo_de_desligar(self, fake_gtk: None) -> None:
         host = _HomeStub()
-        host._render_home(None)  # primeiro offline, simula a reconexão
+        host._render_home(None)
 
         host._render_home(_state([]))
 
@@ -366,9 +310,7 @@ class TestTogglePowerInPlace:
 
 
 class TestPowerClickDispatcher:
-    """U1: `_on_home_power_clicked` decide entre ligar (reusa
-    `on_daemon_start`) e o fluxo de desligar existente, pelo estado
-    `_home_offline` mantido pelo `_render_home`."""
+    """U1: `_on_home_power_clicked` decide entre ligar (reusa"""
 
     def test_offline_chama_on_daemon_start_com_o_botao(self) -> None:
         host = _HomeStub()
@@ -396,8 +338,7 @@ class TestPowerClickDispatcher:
         assert shutdown_calls == [button]
 
     def test_offline_sem_on_daemon_start_nao_quebra(self) -> None:
-        """getattr defensivo: se o mixin de daemon não estiver composto (não
-        deveria acontecer fora de teste isolado), o clique não estoura."""
+        """getattr defensivo: se o mixin de daemon não estiver composto (não"""
         host = _HomeStub()
         host._home_offline = True
 
@@ -405,17 +346,7 @@ class TestPowerClickDispatcher:
 
 
 class TestReconciliarButtonGate:
-    """COOP-SEM-INTERRUPTOR-01 (06/08) — "Reconciliar jogadores" fica DE PÉ com
-    jogo aberto; o aviso passou a explicar, não a bloquear.
-
-    NOTA DATADA: até 06/08/2026 esta classe se chamava ``TestRenumberButtonGate``
-    e travava o oposto (``sensitive is False`` com jogo aberto). Estava certa
-    enquanto o botão só renumerava — o daemon recusa renumerar em partida, e
-    mostrar um botão que só sabe falhar seria pior. Deixou de estar quando o
-    botão herdou a reconciliação do co-op: o jogador que cai e some é um defeito
-    DE PARTIDA ABERTA, e desabilitar ali esconderia o gesto na hora exata em que
-    ela precisa dele.
-    """
+    """COOP-SEM-INTERRUPTOR-01 (06/08) — "Reconciliar jogadores" fica DE PÉ com"""
 
     def test_offline_desabilita_sem_aviso(self, fake_gtk: None) -> None:
         host = _HomeStub()
@@ -428,7 +359,7 @@ class TestReconciliarButtonGate:
     def test_online_sem_jogo_habilita(self, fake_gtk: None) -> None:
         host = _HomeStub()
 
-        host._render_home(_state([]))  # sem game_signal = sem jogo
+        host._render_home(_state([]))
 
         assert host._home_reconciliar_btn.sensitive is True
         assert host._home_reconciliar_hint.get_text() == ""
@@ -461,15 +392,7 @@ class TestReconciliarButtonGate:
 
 
 class TestReconciliarClickHandler:
-    """COOP-SEM-INTERRUPTOR-01, entrega 5: um clique = ``coop.sync`` e depois
-    ``identity.renumber``, encadeados, com UM toast que conta os dois.
-
-    NOTA DATADA: até 06/08/2026 o gesto era ``identity.renumber`` sozinho
-    (``TestRenumberClickHandler``). O ``coop.sync`` entrou porque o botão
-    "Preparar co-op" saiu da tela levando consigo o único ciclo FORÇADO do co-op
-    ao alcance dela — o gesto de recuperação do jogador que nasce e morre em
-    dois segundos.
-    """
+    """COOP-SEM-INTERRUPTOR-01, entrega 5: um clique = ``coop.sync`` e depois"""
 
     def _stub_com_toasts(self) -> _HomeStub:
         host = _HomeStub()
@@ -520,7 +443,7 @@ class TestReconciliarClickHandler:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Encadeado, não paralelo: sem resposta do sync, o acabamento não sai."""
-        chamadas = self._encadeia(monkeypatch, {})  # ninguém responde
+        chamadas = self._encadeia(monkeypatch, {})
 
         HomeActionsMixin._on_home_reconciliar_clicked(  # type: ignore[arg-type]
             self._stub_com_toasts(), object()
@@ -654,14 +577,7 @@ class TestReconciliarToast:
 
 
 class TestMascaraTemUmDonoSo:
-    """AUTO-01.3 — a janela ECOA a máscara do daemon; nunca escolhe por ela.
-
-    O `_render_home` tinha ``flavor = gamepad.get("flavor") or "xbox"``: um
-    SEGUNDO dono do valor. Com o campo ausente no payload, a aba passava a
-    exibir Xbox e — pior — o clique seguinte MANDAVA Xbox, trocando a máscara
-    vigente do daemon por causa de um payload incompleto. A máscara decide se o
-    jogo reconhece o controle.
-    """
+    """AUTO-01.3 — a janela ECOA a máscara do daemon; nunca escolhe por ela."""
 
     def test_reflete_a_mascara_que_o_daemon_reporta(self, fake_gtk: None) -> None:
         host = _HomeStub()

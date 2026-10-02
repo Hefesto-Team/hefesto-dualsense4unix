@@ -1,40 +1,5 @@
 #!/usr/bin/env python3
-"""O X DO VIZINHO É QUADRADO — medido no WebKit, na página que o produto abre.
-
-DICA-DA-COR-01, 13/09/2026. A `COR-X-01` fechou em 09/09 com o X que ela pediu
-e a conferência mediu a COR do `::after` (preto, com contorno branco). A LARGURA
-ficou de fora — e é ela que decide se um X parece um X.
-
-O DEFEITO, MEDIDO NESTA RÉGUA ANTES DA CURA: o `::after` do tom tomado era
-recuado 5 px dos quatro lados da pílula, e a pílula é a coisa mais estreita da
-aba Iluminação. Com dois controles pintados pelo pacote da aba:
-
-    vista 1212x809 (a janela como abre)  pílula 16,5 x 26  X  4,5 x 14
-    vista 1918x840 (a TV dela)           pílula 26,1 x 26  X 14,0 x 14
-
-Na janela como ela abre o X era uma TIRA vertical de 4,5 px — a foto ampliada
-da entrega mostra um «I», não um X.
-
-POR QUE A RÉGUA OLHA A GEOMETRIA, e não a folha: uma régua que conferisse o
-texto do CSS passaria verde sobre qualquer outra forma de amarrar o X à pílula,
-e foi exatamente olhando a folha que a conferência de 09/09 deu verde sobre um
-X de 4 px. Aqui a pergunta vai ao motor que ela usa (`WebKit2.WebView`), com a
-página PUBLICADA, o `BOOTSTRAP` do piloto e a carga que
-`a04_iluminacao.pacote` emite — nunca HTML digitado aqui.
-
-AS DUAS VISTAS SÃO IMPORTADAS, nunca digitadas: `ponte_da_tela.TAMANHO_OCULTA`
-é o miolo da janela do produto ao abrir, e `olhar.VISTA_DELA` é a vista
-maximizada da máquina dela, com cada parcela medida no dono.
-
-A MORDIDA, medida e colada na entrega
-(a entrega de 13/09/2026 da `DICA-DA-COR-01`): devolva o recuo de
-5 px ao `.guia .tom.tomado::after` em `aba04.CSS`, regere a 04 e
-`scripts/check_o_desenho_aprovado.py --publicar 04` → reprovam quatro casos:
-`test_o_x_e_quadrado` e `test_o_x_tem_corpo` na vista da janela (4,5 x 14), e
-`test_o_x_cabe_no_teto_e_na_pilula` nas duas (14 px de altura). Na vista dela
-o X recuado sai 14,05 x 14 — QUASE quadrado —, e é por isso que a régua tem
-teto: sem ele, a TV dela passaria verde sobre a mesma folha que faz a tira.
-"""
+"""O X DO VIZINHO É QUADRADO — medido no WebKit, na página que o produto abre."""
 from __future__ import annotations
 
 import json
@@ -64,25 +29,14 @@ from hefesto_dualsense4unix.interface.olhar import VISTA_DELA
 
 PAGINA = "04-iluminacao.html"
 
-#: DOIS CONTROLES, na faixa SINTÉTICA da casa: com dois ligados e cores
-#: diferentes, cada coluna ganha o X na cor da outra. Nada de endereço real em
-#: arquivo versionado — há dois portões.
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
 
-#: As vistas medidas, pelo nome com que a régua reprova.
 VISTAS = {"janela": TAMANHO_OCULTA, "dela": VISTA_DELA}
 
-#: O TETO É O DESENHO: 12 px, o tamanho que a entrega de 10/09 mediu como X
-#: legível na TV dela. O PISO é o da sprint (§4: *"quadrado e ≥ 8 px nas
-#: duas"*). A folga é só o arredondamento do motor.
 TETO_DO_X = 12.0
 PISO_DO_X = 8.0
 FOLGA = 0.5
 
-#: A GEOMETRIA DE CADA X, lida do motor. `dentro` é a caixa em que o `::after`
-#: se posiciona (a pílula menos a borda); `canto` é o canto de cima à esquerda
-#: do X já com o `transform` aplicado — é o que permite medir o centro sem
-#: confiar em como a folha escolheu centrar.
 MEDIDA = r"""
 (function(){
   var de = document.documentElement;
@@ -113,12 +67,7 @@ MEDIDA = r"""
 
 
 def _carga() -> dict:
-    """A carga do tique, montada pelo PACOTE da aba e traduzida como o piloto traduz.
-
-    As cores de luz são dois tons da própria guia (`tons_da_guia`), para que o X
-    caia numa casa da fileira; `normalizar` é o despachante que troca `uniq` por
-    lugar, o mesmo que `Piloto._tique` chama.
-    """
+    """A carga do tique, montada pelo PACOTE da aba e traduzida como o piloto traduz."""
     import pacotes
     from pacotes import a04_iluminacao as a04
 
@@ -184,9 +133,6 @@ def _medir_na_vista(tamanho: tuple[int, int], pintar: str) -> dict:
 
     view.connect("load-changed", carregou)
     view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE DE GUI do mesmo
-    # processo: a guarda sai no `finally`, a mesma cura de
-    # `test_o_aviso_da_vibracao_cabe_na_aba`.
     guarda = GLib.timeout_add(20000, Gtk.main_quit)
     try:
         Gtk.main()

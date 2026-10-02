@@ -33,9 +33,7 @@ _GESTOS = (
     _RAIZ / "docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md",
 )
 
-#: O rótulo citado entre aspas, com o número do jogador (ou o N genérico).
 _CITADO = re.compile(r"«((Alto-falante|Microfone) do Controle ([1-4N]))([^»]*)»")
-#: Quem cita pelo COMEÇO não depende da forma — e é a leitura certa para contar.
 _PELO_COMECO = re.compile(r"(começa com|começam com|outra com) $")
 
 

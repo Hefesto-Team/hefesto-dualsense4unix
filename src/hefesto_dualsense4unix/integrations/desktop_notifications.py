@@ -1,20 +1,4 @@
-"""Notificações desktop via `org.freedesktop.Notifications` (jeepney).
-
-Cobre eventos onde feedback ao usuário é desejável fora do tray ou da janela
-GUI (ex: controle conectado/desconectado, bateria baixa, mudança de perfil
-quando o tray icon não está renderizado).
-
-Implementação síncrona com `jeepney` (puro Python, sem deps nativas). Se a
-biblioteca não está disponível, `notify()` retorna `False` silenciosamente —
-não causa traceback.
-
-Em COSMIC 1.0+, o daemon `cosmic-notifications` implementa o spec normalmente.
-Em GNOME, KDE, Sway/Mako, qualquer compositor com notification daemon funciona.
-
-FEAT-COSMIC-TRAY-FALLBACK-01 (v3.1.0): notificações são o canal primário de
-feedback ao usuário em sessões COSMIC onde o tray icon não renderiza
-(bug cosmic-applets#1009 + StatusNotifierWatcher race conditions).
-"""
+"""Notificações desktop via `org.freedesktop.Notifications` (jeepney)."""
 from __future__ import annotations
 
 import contextlib
@@ -33,33 +17,17 @@ _NOTIFICATIONS_IFACE = "org.freedesktop.Notifications"
 
 _DBUS_TIMEOUT_SECONDS = 2.0
 
-# Cache do "já avisado uma vez" — algumas mensagens são logadas a cada
-# transição de estado e não devem inundar o usuário.
 _announced_once: set[str] = set()
 
-#: Intervalo mínimo entre emissões consecutivas do MESMO `throttle_key`
-#: (BUG-NOTIFY-CONTROLLER-FLAP-SPAM-01). Se o controle ficar oscilando entre
-#: CONNECTED/DISCONNECTED (kernel hid_playstation re-bind, autosuspend,
-#: cabo USB ruim), o reconnect_loop publica eventos a cada 5s e o poll_loop
-#: chama `reconnect()` no read_state fail — cada evento dispara
-#: notify_controller_(connected|disconnected). Sem throttle, o usuário recebe
-#: rajada visual. 30s suprime o flap; eventos legítimos (plug/unplug
-#: deliberado) raramente acontecem em <30s.
 _THROTTLE_MIN_INTERVAL_SEC: float = float(
     os.environ.get("HEFESTO_DUALSENSE4UNIX_NOTIFY_THROTTLE_SEC", "30")
 )
 
-#: Última emissão por throttle_key (monotonic time). Compartilhado pelas
-#: funções `notify_*` que passam `throttle_key`.
 _last_emit_at: dict[str, float] = {}
 
 
 def _throttle_passes(throttle_key: str) -> bool:
-    """True se a chave NÃO foi emitida nos últimos `_THROTTLE_MIN_INTERVAL_SEC`.
-
-    Atualiza o timestamp na chave em caso de sucesso (idempotente para
-    chamadores que só consultam — eles devem retornar False sem chamar isto).
-    """
+    """True se a chave NÃO foi emitida nos últimos `_THROTTLE_MIN_INTERVAL_SEC`."""
     now = time.monotonic()
     last = _last_emit_at.get(throttle_key, 0.0)
     if now - last < _THROTTLE_MIN_INTERVAL_SEC:
@@ -83,30 +51,7 @@ def notify(
     once_key: str | None = None,
     actions: list[tuple[str, str]] | None = None,
 ) -> bool:
-    """Emite uma notification D-Bus padrão freedesktop.
-
-    Retorna `True` em sucesso, `False` em qualquer falha (jeepney ausente,
-    daemon não responde, exceção D-Bus, a suíte no ar). Não levanta.
-
-    Args:
-        summary: Título da notificação (linha 1, negrito no GNOME/COSMIC).
-        body: Corpo da notificação (linhas 2+).
-        app_name: Nome do aplicativo emissor. Usado para agrupamento.
-        icon: Nome icon-theme freedesktop ou path absoluto.
-        timeout_ms: Duração antes de auto-fechar (ignorado se usuário
-            configurou notificações persistentes).
-        once_key: Se fornecido, só emite uma vez por execução do daemon
-            (chave deduplicação). Útil para avisos como "tray indisponível".
-        actions: Lista de `(key, label)` para botões clicáveis na
-            notification (FEAT-NOTIFY-ACTION-OPEN-01, v3.3.0). O servidor
-            emite `org.freedesktop.Notifications::ActionInvoked` com `key`
-            quando o usuário clica. Use `("default", "Abrir")` para
-            ação implícita ao clicar no corpo. Listener é responsabilidade
-            do caller (ex.: `app/app.py` escuta e chama `window.present()`).
-
-    Returns:
-        bool: True se a notification foi entregue ao bus.
-    """
+    """Emite uma notification D-Bus padrão freedesktop."""
     if _a_suite_esta_rodando() or (once_key is not None and once_key in _announced_once):
         return False
 
@@ -123,15 +68,10 @@ def notify(
         interface=_NOTIFICATIONS_IFACE,
     )
 
-    # FEAT-NOTIFY-ACTION-OPEN-01: actions é list[str] alternando key, label,
-    # key, label... (spec freedesktop). Lista vazia = sem botões.
     actions_flat: list[str] = []
     for key, label in actions or []:
         actions_flat.extend([str(key), str(label)])
 
-    # Signature: susssasa{sv}i
-    #   app_name (s), replaces_id (u=0), icon (s), summary (s), body (s),
-    #   actions (as), hints (a{sv}={}), timeout (i)
     msg = new_method_call(
         addr,
         "Notify",
@@ -168,18 +108,7 @@ def reset_once_cache() -> None:
 
 
 def statusnotifierwatcher_available() -> bool:
-    """Verifica via D-Bus se algum watcher de StatusNotifier está registrado.
-
-    Em COSMIC 1.0.6+, é o próprio `cosmic-applet-status-area` que reivindica
-    `org.kde.StatusNotifierWatcher`. Em GNOME com `appindicator` extension,
-    é o `gnome-shell`. Em KDE/Sway, varia.
-
-    Se o watcher não está presente, criar um Indicator vai não-fazer-nada
-    (sem janela de erro, mas ícone também não aparece).
-
-    Retorna `True` se o nome bem-conhecido `org.kde.StatusNotifierWatcher`
-    está disponível na sessão D-Bus.
-    """
+    """Verifica via D-Bus se algum watcher de StatusNotifier está registrado."""
     try:
         from jeepney import DBusAddress, new_method_call
         from jeepney.io.blocking import open_dbus_connection
@@ -208,38 +137,17 @@ def statusnotifierwatcher_available() -> bool:
                 conn.close()
 
 
-# ---------------------------------------------------------------------------
-# FEAT-COSMIC-NOTIFICATIONS-01 — helpers de evento canonico (opt-in)
-#
-# Notifications de eventos sao opt-in via env var
-# `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, as funções
-# `notify_*` retornam False imediatamente (zero overhead, zero ruido).
-#
-# Eventos cobertos:
-#   notify_controller_connected(transport)
-#   notify_controller_disconnected(reason)
-#   notify_battery_low(pct)
-#   notify_profile_activated(name)
-# ---------------------------------------------------------------------------
-
 _ENV_NOTIFICATIONS_ENABLED = "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS"
 
 
 def _notifications_enabled() -> bool:
-    """Lê env var no momento da chamada (re-avalia a cada notify).
-
-    Permite ao usuário habilitar/desabilitar sem reiniciar o daemon — embora,
-    na prática, a env e fixada antes do daemon subir.
-    """
+    """Lê env var no momento da chamada (re-avalia a cada notify)."""
     return os.environ.get(_ENV_NOTIFICATIONS_ENABLED, "").strip() in ("1", "true", "yes")
 
 
 def notify_controller_connected(transport: str) -> bool:
     if not _notifications_enabled():
         return False
-    # BUG-NOTIFY-CONTROLLER-FLAP-SPAM-01: throttle de 30s para evitar rajada
-    # quando reconnect_loop e poll_loop alternam estado em <5s (flap por
-    # hid_playstation re-bind ou autosuspend).
     if not _throttle_passes("controller_connected"):
         return False
     tr_label = {"usb": "USB", "bt": "Bluetooth"}.get(transport.lower(), transport)
@@ -254,8 +162,6 @@ def notify_controller_connected(transport: str) -> bool:
 def notify_controller_disconnected(reason: str = "") -> bool:
     if not _notifications_enabled():
         return False
-    # BUG-NOTIFY-CONTROLLER-FLAP-SPAM-01: mesmo throttle do connected; uma
-    # transição vira no máximo 1 notify a cada 30s.
     if not _throttle_passes("controller_disconnected"):
         return False
     body = "DualSense desconectado." if not reason else f"DualSense desconectado ({reason})."
@@ -264,8 +170,6 @@ def notify_controller_disconnected(reason: str = "") -> bool:
         body=body,
         icon="input-gaming",
         timeout_ms=3000,
-        # FEAT-NOTIFY-ACTION-OPEN-01: usuário sem tray clica para restaurar
-        # janela principal. Listener em app/app.py.
         actions=[("open", "Abrir Hefesto")],
     )
 
@@ -287,8 +191,7 @@ def notify_battery_low(pct: int, threshold: int = 15) -> bool:
 
 
 def notify_battery_recovered(pct: int, threshold: int = 30) -> None:
-    """Reseta o cache de battery_low quando bateria volta a subir acima do
-    threshold de recuperacao — permite emitir notify de novo na próxima queda."""
+    """Reseta o cache de battery_low quando bateria volta a subir acima do"""
     if pct >= threshold:
         _announced_once.discard(f"battery_low_below_{threshold - 15}")
         _announced_once.discard("battery_low_below_15")
@@ -306,8 +209,7 @@ def notify_profile_activated(name: str) -> bool:
 
 
 def notify_config_errors(invalid: list[tuple[str, str]]) -> bool:
-    """Avisa, uma vez por boot, que há perfis com configuração inválida
-    (FEAT-CONFIG-AUDIT-BOOT-01). `invalid` = [(nome, erro)]."""
+    """Avisa, uma vez por boot, que há perfis com configuração inválida"""
     if not _notifications_enabled() or not invalid:
         return False
     names = ", ".join(name for name, _err in invalid[:3])
@@ -325,8 +227,7 @@ def notify_config_errors(invalid: list[tuple[str, str]]) -> bool:
 
 
 def notify_system_warnings(warnings: list[str]) -> bool:
-    """Avisa uma vez por boot sobre problemas de infra detectados
-    (FEAT-SYSTEM-AUTOREPAIR-BOOT-01). Nunca roda reparo — só sugere o comando."""
+    """Avisa uma vez por boot sobre problemas de infra detectados"""
     if not _notifications_enabled() or not warnings:
         return False
     body = "; ".join(warnings[:2]) + ("…" if len(warnings) > 2 else "")
@@ -340,14 +241,7 @@ def notify_system_warnings(warnings: list[str]) -> bool:
 
 
 def notify_emulation_suppressed(suppressed: bool) -> bool:
-    """Avisa que o modo jogo foi ligado/desligado (emulação de mouse/teclado).
-
-    FEAT-EMULATION-GAMEMODE-LONGPRESS-01. Diferente dos eventos automáticos,
-    este é feedback de uma ação DELIBERADA do usuário (long-press do PS), então
-    notifica SEMPRE — independente do opt-in
-    `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS`. Sem feedback visível, o
-    usuário não saberia se o gesto pegou.
-    """
+    """Avisa que o modo jogo foi ligado/desligado (emulação de mouse/teclado)."""
     if suppressed:
         summary = "Modo jogo ligado"
         body = "Emulação de mouse/teclado desativada. Segure o PS de novo para reativar."
@@ -358,32 +252,7 @@ def notify_emulation_suppressed(suppressed: bool) -> bool:
 
 
 def notify_teclado_na_tela_ausente(candidatos: list[str]) -> bool:
-    """Avisa que o "teclado na tela" (L3/R3) não tem programa para abrir.
-
-    TECLADO-QUE-NAO-DIGITA-01 (09/08/2026). Nenhum atalho de fábrica do teclado
-    emulado digita uma LETRA — o único caminho do produto para ESCREVER texto
-    com o controle é o teclado na tela em L3 (`__TOGGLE_OSK__`, o default de l3
-    em `core/keyboard_mappings.py`), e ele depende de um programa externo
-    (`onboard` ou `wvkbd-mobintl`). Medido na máquina dela em 09/08: nenhum dos
-    dois existia. Apertar L3 não fazia absolutamente nada, e o único registro
-    era um `warning` no journal — que ela não lê.
-
-    FATO SUBSTITUÍDO — 02/09/2026. Esta linha dizia que o programa externo é
-    algo *"que nenhum instalador, empacotamento ou doctor desta casa instala,
-    declara ou confere"*. Falso desde 10/08: `scripts/install_osk.sh` instala
-    (chamado dos DOIS lados da cerca do `install.sh` por `install_osk_host`),
-    os cinco empacotamentos declaram, o `scripts/doctor.sh` confere e o
-    `scripts/check_packaging_parity.sh` cobra os três. Medido nesta máquina em
-    02/09: `install_osk.sh --status` devolve `instalado=wvkbd-mobintl`,
-    `casa=sim`. ESTE AVISO CONTINUA VALENDO — ele é o que sobra quando a
-    instalação não pôde acontecer (sem sudo, sem rede, distro sem o pacote, ou
-    `--no-osk`), e é por isso que ele não sai junto com o fato velho.
-
-    Notifica SEMPRE, sem o opt-in `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS`,
-    pelo mesmo motivo já declarado em `notify_emulation_suppressed`: é a resposta
-    a um gesto DELIBERADO dela (apertou L3 agora), e sem resposta visível o gesto
-    parece um produto quebrado. `once_key` evita repetir a cada aperto.
-    """
+    """Avisa que o "teclado na tela" (L3/R3) não tem programa para abrir."""
     lista = " ou ".join(candidatos) if candidatos else "onboard"
     return notify(
         summary="Teclado na tela não instalado",
@@ -398,47 +267,12 @@ def notify_teclado_na_tela_ausente(candidatos: list[str]) -> bool:
     )
 
 
-#: O TEXTO É PALAVRA DELA — `D-0609-A-FRASE-DO-TECLADO-NA-TELA`, decidida por
-#: delegação em 06/09/2026 (`docs/data/decisoes-dela.csv`). Duas frases, sem
-#: termo da casa: a primeira diz O QUE abriu e POR QUE, a segunda diz O QUE
-#: FAZER — que é a regra de diagnóstico desta casa. **Não reescreva sem passar
-#: por ela**: texto de tela é decisão dela, e este passou pela PROVA-DE-TELA-01.
-#:
-#: Ficam separados em constante porque a régua
-#: `tests/unit/test_o_teclado_avisa_como_sair.py` lê o TEXTO PUBLICADO em vez de
-#: redigitar a frase — uma régua que digitasse mediria a própria digitação, que
-#: é a forma exata do defeito "a régua digita o que devia LER".
 _OSK_ABERTO_TITULO = "Teclado na tela aberto pelo L3."
 _OSK_ABERTO_CORPO = "Para fechar, aperte R3."
 
 
 def notify_teclado_na_tela_aberto() -> bool:
-    """Avisa que o teclado na tela ACABOU de abrir, e ensina como fechá-lo.
-
-    O-TECLADO-QUE-NAO-DIZ-COMO-SAIR-01. O defeito medido no relógio dela em
-    30/08/2026: o teclado abriu às 00:29:23 por um clique no analógico esquerdo,
-    ela perguntou *"pq tem um teclado virtual aberto?"* às 00:49 — **vinte
-    minutos**, e nesse intervalo a tela não disse nada sobre o que tinha aberto
-    nem sobre como sair. O gesto de saída existia só em `docs/usage/hotkeys.md`,
-    que ninguém lê com o teclado tapando a barra de tarefas.
-
-    O produto funcionou como desenhado; o que faltava era ele DIZER. Esta é a
-    frase que faltava.
-
-    **Notifica SEMPRE**, sem o opt-in `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS`
-    e sem `once_key`, e as duas metades são deliberadas:
-
-    - o opt-in fica de fora pelo mesmo motivo já declarado em
-      `notify_emulation_suppressed` e em `notify_teclado_na_tela_ausente` — é a
-      resposta a um gesto DELIBERADO dela (clicou o analógico agora), e gesto
-      sem resposta visível parece produto quebrado;
-    - o `once_key` fica de fora porque a segunda abertura acidental precisa da
-      frase tanto quanto a primeira; um aviso "uma vez por daemon" devolveria o
-      silêncio de 20 minutos na segunda vez. Não vira rajada porque quem chama é
-      o `open()` **depois** do guarda de "já aberto"
-      (`daemon/subsystems/keyboard.py`): só há aviso onde houve transição de
-      fechado para aberto, e cada transição é um clique dela.
-    """
+    """Avisa que o teclado na tela ACABOU de abrir, e ensina como fechá-lo."""
     return notify(
         summary=_OSK_ABERTO_TITULO,
         body=_OSK_ABERTO_CORPO,
@@ -466,33 +300,6 @@ __all__ = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — com a suíte no ar, nenhum aviso sai.
-# ---------------------------------------------------------------------------
-#
-# Ela, 25/09/2026, com a foto: três «Teclado na tela aberto pelo L3.»
-# empilhados na tela dela às 20h18, com o daemon dela calado (o diário dele
-# registra todo aviso que manda). Era a SUÍTE, e desde 06/09: medido num
-# barramento de mentira, o lote do teclado e do hotkey manda 22 `Notify` —
-# 20 do teclado na tela, de três arquivos que apertam o L3, e 2 do modo jogo,
-# de um quarto; nenhum dublava o aviso. A suíte já desviava a janela
-# (TELA-DELA-01) e o rádio (`bluez_dbus.a_suite_esta_rodando`); o aviso era a
-# porta que sobrava.
-#
-# A trava mora AQUI, e não em cada teste, porque por aqui passam todos os
-# chamadores — inclusive quem copiou a referência com `from … import notify`
-# (a bandeja), que um dublê posto no módulo não alcança. A pergunta é a mesma
-# do rádio: `PYTEST_CURRENT_TEST` (que o processo filho de um teste herda) ou
-# o `pytest` carregado. Em produção nenhum dos dois existe.
-#
-# Fica no fim do módulo de propósito: acrescentar linhas no meio empurraria as
-# citações `desktop_notifications.py:<linha>` que a aba Sistema e a janela
-# fazem, e a cura não tem nada a dizer a elas.
-
-#: O ESCAPE. Um teste que PRECISA atravessar o `notify` inteiro declara
-#: ``HEFESTO_AVISO_DE_VERDADE=1`` com `monkeypatch` — e dubla o barramento,
-#: como o `tests/unit/test_desktop_notifications.py`. O `tests/conftest.py`
-#: tira a chave do ambiente herdado: ela só vale escrita dentro do teste.
 AVISO_DE_VERDADE_NA_SUITE = "HEFESTO_AVISO_DE_VERDADE"
 
 

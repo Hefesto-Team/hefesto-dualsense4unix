@@ -1,17 +1,4 @@
-"""Aba Sistema: o Hefesto está funcionando? liga sozinho? está saudável?
-
-LEIGO-03: a aba se chamava "Daemon" e mostrava a unit do systemd, a saída crua
-de `systemctl status` e toasts com `rc=N`. O mecanismo continua igual — quem
-manda no serviço ainda é o systemd `--user`; o que mudou é que ele não é mais
-assunto de quem usa. Os nomes técnicos (`SERVICE_NORMAL`, rc, stderr) vivem no
-código e no log; a tela responde às três perguntas do título, e o detalhe
-técnico fica no painel "Detalhes técnicos" para quem for relatar um problema.
-
-SIMPLIFY-UNIT-01: unit única `hefesto-dualsense4unix.service`. Sem dropdown de seleção.
-BUG-DAEMON-STATUS-MISMATCH-01: `_daemon_status()` cruza 3 fontes (systemd
-  is-active, is-enabled, pid file) para apresentar label PT-BR fiel ao estado
-  real. Evita mostrar "failed" quando o daemon está vivo fora do systemd.
-"""
+"""Aba Sistema: o Hefesto está funcionando? liga sozinho? está saudável?"""
 # ruff: noqa: E402
 from __future__ import annotations
 
@@ -43,24 +30,14 @@ from hefesto_dualsense4unix.utils.repo_files import (
 
 logger = get_logger(__name__)
 
-# Tipo canônico para o estado do daemon (BUG-DAEMON-STATUS-MISMATCH-01).
 DaemonStatus = Literal["online_systemd", "online_avulso", "iniciando", "offline"]
 
-#: LEIGO-03: o toast dizia "systemctl start hefesto-...service → rc=0" — o
-#: comando cru e um código que só um dev distingue (rc=0 é sucesso, rc=1 é
-#: falha, e os dois "pareciam" iguais na barra de status). Cada ação diz o que
-#: MUDOU para quem usa; o rc vai para o log.
 _SYSTEMCTL_OK_MSG: dict[str, str] = {
     "start": "Pronto — Hefesto ligado.",
     "stop": "Hefesto desligado.",
     "enable": "Pronto — o Hefesto vai ligar sozinho com o computador.",
     "disable": "Pronto — o Hefesto não vai mais ligar sozinho.",
 }
-#: AS DUAS FRASES DO "Corrigir modo de execução", e elas saíram de dentro do
-#: `_on_migrate_done` em 06/09/2026 — a interface nova tem o mesmo botão e
-#: precisa das MESMAS palavras. Digitadas duas vezes, elas se afastam no
-#: primeiro dia em que alguém mexe numa das duas; é a mesma lição do
-#: `_STEAM_READY_CORPO`, que já tinha sido aprendida nesta casa.
 MIGRAR_DEU_CERTO = (
     "Pronto — o Hefesto agora liga sozinho e volta sozinho se travar."
 )
@@ -76,15 +53,7 @@ _SYSTEMCTL_FAIL_MSG: dict[str, str] = {
 }
 
 
-#: JANELA-CEGA-01: os dez motivos de leitura cega do detector de janela,
-#: traduzidos. As chaves são o vocabulário publicado em
-#: `window_detect_reason` — as constantes moram em
-#: `integrations/window_backends/xlib.py` (as seis do X11),
-#: `integrations/window_backends/null.py` e `integrations/window_detect.py`.
-#: Cada frase diz o que ACONTECEU com a janela dela, não o nome do mecanismo.
 MOTIVO_DA_CEGUEIRA_EM_PORTUGUES: dict[str, str] = {
-    # O caso desta máquina: em COSMIC/Wayland o detector só vê janelas abertas
-    # pelo XWayland, e a janela da frente costuma ser nativa do Wayland.
     "sem_foco_x": (
         "a janela da frente é nativa do Wayland, e o Hefesto só enxerga as que "
         "passam pelo XWayland"
@@ -106,8 +75,6 @@ MOTIVO_DA_CEGUEIRA_EM_PORTUGUES: dict[str, str] = {
     "backend_sem_motivo": "não sei dizer o motivo",
 }
 
-#: Nome do backend -> como ela chamaria a coisa. "xlib"/"portal"/"wlrctl"/"null"
-#: são os valores publicados em `window_detect_backend`.
 _BACKEND_EM_PORTUGUES: dict[str, str] = {
     "xlib": "pelo XWayland",
     "portal": "pelo portal do sistema",
@@ -115,20 +82,11 @@ _BACKEND_EM_PORTUGUES: dict[str, str] = {
     "null": "por nenhum caminho",
 }
 
-#: O texto que abre a linha. Fica junto do valor porque a aba Sistema não tem
-#: folga de altura para um rótulo de título só dele (medido: 30px de custo,
-#: contra 74px de folga na aba).
 _PREFIXO_DETECCAO = "<b>Trocar de perfil ao abrir o jogo:</b> "
 
 
 def _escapar_markup(texto: str) -> str:
-    """Escapa `&`, `<` e `>` para o rótulo com `use-markup`.
-
-    Vale para QUALQUER coisa que venha do daemon: a wm_class e o motivo são
-    strings de fora, e um `&` numa delas fecha o parser do Pango — o rótulo
-    fica em branco e a linha honesta desaparece justamente quando o nome da
-    janela é estranho. Mesma escapada que `_refresh_storm_diag` já faz.
-    """
+    """Escapa `&`, `<` e `>` para o rótulo com `use-markup`."""
     return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
@@ -161,21 +119,6 @@ def descrever_deteccao_de_janela(state: object) -> str:
         )
     vendo = bool(state.get("window_detect_seeing"))
     if vendo:
-        # A FRASE DIZ "AGORA", ENTÃO SÓ A CLASSE DE AGORA PODE ENTRAR NELA —
-        # 05/09/2026. Aqui havia um recuo para `window_detect_last_class`
-        # quando a atual vinha vazia ou `unknown`, e o docstring acima já
-        # avisava, na linha de cima, que esse campo é STICKY: ele guarda a
-        # última classe vista e nunca se apaga.
-        #
-        # O RESULTADO MEDIDO, no retrato de 05/09 às 05:11: o cartão dizia
-        # *"funcionando (na frente agora: pragmata.exe)"* com o jogo FECHADO
-        # havia horas — nenhum processo de Steam, Proton ou Wine vivo na
-        # máquina. É a mesma família do que ela pegou em 03/09, quando o
-        # `doctor` contava eventos de 24 dias atrás no presente.
-        #
-        # Sem classe de agora a frase fica sem o parêntese, e continua
-        # verdadeira: a detecção FUNCIONA, e a janela da frente é uma que o
-        # backend não sabe classificar.
         classe = state.get("window_detect_current_class")
         onde = (
             f" (na frente agora: {_escapar_markup(classe)})"
@@ -193,15 +136,9 @@ def descrever_deteccao_de_janela(state: object) -> str:
         else None
     )
     if frase is None and isinstance(motivo, str) and motivo:
-        # Motivo novo, vindo de um daemon mais novo que esta janela: dizer o
-        # código cru é feio e honesto; inventar explicação é o defeito antigo.
         frase = f"motivo: {_escapar_markup(motivo)}"
     if frase is None:
         frase = MOTIVO_DA_CEGUEIRA_EM_PORTUGUES["backend_sem_motivo"]
-    # O "por onde o Hefesto procura" só entra quando o motivo NÃO nomeia o
-    # caminho: "a janela da frente é nativa do Wayland, e o Hefesto só enxerga
-    # as que passam pelo XWayland. O Hefesto procura pelo XWayland." dizia a
-    # mesma coisa duas vezes na frase que ela mais vai ler.
     caminho = _BACKEND_EM_PORTUGUES.get(backend, f"por {_escapar_markup(backend)}")
     nome_do_caminho = caminho.split(" ", 1)[-1]
     onde_procura = (
@@ -276,24 +213,7 @@ def build_consentimento_dialog(
     on_response: Any,
     destrutivo: int | None = None,
 ) -> Gtk.MessageDialog:
-    """O construtor de diálogo de consentimento — um dono do widget, N políticas.
-
-    RELANCAR-01 (08/08/2026): extraído de `build_steam_close_consent_dialog`,
-    que passou a ser uma casca sobre ele. O motivo de extrair em vez de copiar é
-    o mesmo que fez o original existir: consentimento pesado não pode divergir
-    entre botões. Duas cópias divergem no primeiro conserto.
-
-    `botoes` é `[(rótulo, resposta), ...]`, na ordem em que entram — a resposta
-    de cancelar deve vir primeiro, e é ela o `set_default_response` (a tecla Esc
-    e o Enter distraído caem no que não faz nada).
-
-    `destrutivo` marca UMA resposta com a classe `destructive-action`, a mesma do
-    botão "Desligar Hefesto": é o que separa visualmente o botão que toca no
-    processo dela dos que não tocam.
-
-    Temado e NÃO-bloqueante (`connect("response")`, nunca `run()`) — há portão
-    AST que reprova o contrário.
-    """
+    """O construtor de diálogo de consentimento — um dono do widget, N políticas."""
     dialog = Gtk.MessageDialog(
         transient_for=parent,
         flags=0,
@@ -323,23 +243,7 @@ def build_steam_close_consent_dialog(
     rotulo_ok: str,
     on_response: Any,
 ) -> Gtk.MessageDialog:
-    """Diálogo ÚNICO de "posso fechar a Steam?" — HONESTIDADE-STEAM-01.
-
-    Existe UM lugar que pede este consentimento porque a consequência é
-    pesada e não pode divergir entre botões: `stop_steam()` manda
-    `steam -shutdown` e, se a Steam não sair em 30 s, ESCALA para
-    `pkill -TERM` e depois `-KILL`. Matar processo da usuária às costas dela
-    é exatamente o que a auditoria proíbe — daí o sim explícito ser
-    pré-requisito de todo caminho que fecha a Steam (aba Sistema E aba
-    Emulação; a de Emulação importa esta função em vez de duplicar o texto).
-
-    Temado e NÃO-bloqueante (`connect("response")`, nunca `run()`), padrão de
-    `_build_proton_lock_confirm_dialog`/`gui_dialogs._apply_app_theme`.
-    """
-    # RELANCAR-01: o widget passou a ser construído por
-    # `build_consentimento_dialog`; esta função continua sendo o ÚNICO lugar que
-    # define a POLÍTICA de "posso fechar a Steam?" — os dois botões, o rótulo e
-    # o default. Quem chamava não muda uma linha.
+    """Diálogo ÚNICO de "posso fechar a Steam?" — HONESTIDADE-STEAM-01."""
     return build_consentimento_dialog(
         parent,
         titulo=titulo,
@@ -395,28 +299,7 @@ def format_steam_janela_recusa(janela: object) -> str | None:
 def _frase_steam_input(
     rc: int, tag: str | None, jogos: Sequence[str] | None = None
 ) -> str:
-    """Meia-frase sobre o desligar do Steam Input, a partir de rc + tag.
-
-    Fonte da tag: a linha `[steam-input] resultado=<tag>` que o
-    `disable_steam_input.sh` passou a emitir (HONESTIDADE-STEAM-01). Sem ela
-    (script de instalação antiga) o texto DIZ que não houve confirmação, em
-    vez de fingir que houve.
-
-    `jogos` são os rótulos (`rotulo_do_jogo`) dos jogos que estavam com Steam
-    Input ligado FORA da allowlist ANTES da execução — medidos por quem chama,
-    porque o script não relata appid nenhum na saída. `None` = ninguém mediu.
-
-    D-33 (05/08/2026): o ramo `aplicado` dizia *"a Steam não sequestra mais o
-    seu controle"*. Duas mentiras numa frase de sete palavras: nada dizia QUAL
-    jogo tinha sido mexido, e "sequestra" descreve como roubo o gesto que ela
-    mesma fez na janela da Steam. O que aconteceu de fato é que o Hefesto
-    desligou a entrada da Steam num jogo — e a frase agora diz isso, com nome.
-
-    MODO-SIMPLES (mantido): nenhuma destas meias-frases pronuncia o jargão
-    "Steam Input". Elas são coladas depois de ``"Controle: "`` no botão
-    "Deixar tudo pronto", cujo ponto inteiro é a usuária não precisar aprender
-    o vocabulário da Steam para usar o controle dela.
-    """
+    """Meia-frase sobre o desligar do Steam Input, a partir de rc + tag."""
     if tag == "recusado-jogo-aberto":
         return "NÃO mudou — havia um jogo aberto."
     if tag == "adiado-steam-aberta":
@@ -435,9 +318,6 @@ def _frase_steam_input(
                 f"pelo Hefesto, porque {sujeito} na sua lista de exceções."
             )
         if jogos is not None:
-            # Medido e vazio: só a chave GLOBAL da Steam foi desligada — não
-            # havia jogo fora da lista de exceções, e dizer o contrário seria
-            # inventar um jogo.
             return (
                 "desliguei o ajuste geral da Steam que assume o controle em "
                 "todo jogo; nenhum jogo da sua lista de exceções foi tocado."
@@ -449,34 +329,15 @@ def _frase_steam_input(
     return "a correção rodou sem erro (versão antiga do script, sem confirmação)."
 
 
-#: T-14 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026) — de quem é cada gesto da aba
-#: Sistema: da **receita do jogo** (cabe num perfil) ou da **máquina** (não
-#: cabe em perfil nenhum).
-#:
-#: A pergunta não é acadêmica. `profiles/schema.py` não tem HOJE um único
-#: campo alimentado por esta aba; o único ponto de contato é
-#: `PonteConfirmada.steam_input`, que é CARIMBO e não escolha. Se o lado "do
-#: jogo" entrar no perfil, esta aba vira parte da receita do jogo — e essa é
-#: uma decisão de produto, dela.
-#:
-#: **Esta tabela não decide isso.** Ela declara o que o código de HOJE já
-#: faz, que é uma pergunta com resposta verificável: o estado daquele gesto é
-#: gravado por jogo, ou uma vez para a máquina inteira? A leitura de cada
-#: linha está no comentário ao lado, e é o que ela vai conferir.
-#:
-#: `DO_JOGO` = o estado é escrito por appid ou por prefixo do jogo.
-#: `DA_MAQUINA` = o estado é escrito uma vez e vale para tudo.
 DO_JOGO = "jogo"
 DA_MAQUINA = "maquina"
 
 DONO_DO_GESTO: dict[str, tuple[str, str]] = {
-    # --- systemd: uma unidade, uma máquina --------------------------------
     "daemon_start_button": (DA_MAQUINA, "systemctl --user start"),
     "daemon_stop_button": (DA_MAQUINA, "systemctl --user stop"),
     "btn_restart_daemon": (DA_MAQUINA, "systemctl --user restart"),
     "btn_migrate_to_systemd": (DA_MAQUINA, "instala/migra a unidade do usuário"),
     "daemon_autostart_switch": (DA_MAQUINA, "systemctl --user enable/disable"),
-    # --- só leem: não gravam estado em lugar nenhum -----------------------
     "daemon_refresh_button": (DA_MAQUINA, "só relê o estado; não grava nada"),
     "daemon_logs_button": (DA_MAQUINA, "só lê o journal; não grava nada"),
     "btn_storm_copy_launch": (
@@ -484,13 +345,11 @@ DONO_DO_GESTO: dict[str, tuple[str, str]] = {
         "copia uma CONSTANTE para a área de transferência — a opção de "
         "inicialização é idêntica em qualquer máscara/backend (DEDUP-04/UX-05)",
     ),
-    # --- áudio e ambiente: valem para o computador ------------------------
     "btn_storm_fix_safe": (
         DA_MAQUINA,
         "drop-in do WirePlumber + quirk anti-storm do módulo de som — "
         "arquivos de configuração do sistema, sem appid nenhum",
     ),
-    # --- o que é escrito POR JOGO ----------------------------------------
     "btn_steam_game_broken": (
         DO_JOGO,
         "grava UM appid em steam_input_apps.txt — é o gesto mais claramente "
@@ -524,30 +383,11 @@ DONO_DO_GESTO: dict[str, tuple[str, str]] = {
 }
 
 
-#: Onde os scripts que os botões desta aba rodam podem estar instalados.
-#:
-#: **BG-BASES-01 (26/08/2026): a lista à mão morreu.** Ela tinha quatro bases
-#: e `utils/repo_files.bases_de_instalacao()` tem seis — faltavam
-#: `sys.prefix/share/…` (AppImage, venv, Nix) e o `share/` do usuário. Este
-#: nome sobreviveu **derivado**, nunca escrito à mão: é o que os testes de
-#: 25/08 monkeypatcham para plantar um layout de mentira, e é o que
-#: `_find_repo_file` e `esta_instalacao_e_um_checkout` consultam.
-#:
-#: Ele congela no import, e isso é aceitável: `sys.prefix` e `XDG_DATA_HOME`
-#: não mudam no meio de um processo. Quem precisa da resolução FRESCA (o
-#: teste que monta um Flatpak de mentira trocando `sys.prefix`) chama
-#: `bases_de_instalacao()` direto — é para isso que ela é função.
 BASES_DE_INSTALACAO: tuple[Path, ...] = bases_de_instalacao()
 
 
 def esta_instalacao_e_um_checkout() -> bool:
-    """Há um `install.sh` ao lado deste código?
-
-    A resposta mora em `utils/repo_files`; aqui fica só o nome, porque três
-    frases de tela fora do `app/` também precisam dela (uma delas em
-    `integrations/`, que não pode importar de `app/`). Consulta
-    `BASES_DE_INSTALACAO` deste módulo para honrar quem a monkeypatcha.
-    """
+    """Há um `install.sh` ao lado deste código?"""
     return repo_files.esta_instalacao_e_um_checkout(BASES_DE_INSTALACAO)
 
 
@@ -574,12 +414,7 @@ def como_atualizar_esta_instalacao() -> str:
 
 
 def frase_sem_o_proton_pinado() -> str:
-    """A frase de quando o Proton pinado não está nesta máquina.
-
-    Dona única desde 18/09/2026: o worker, a recusa ``pino_ausente`` e a aba
-    Sistema diziam o mesmo texto em três cópias, e a recusa nova caía na
-    frase sem motivo ("a Steam recusou") — uma causa falsa.
-    """
+    """A frase de quando o Proton pinado não está nesta máquina."""
     return (
         "Esta instalação ainda não tem o Proton pinado — "
         f"{como_atualizar_esta_instalacao()}."
@@ -593,13 +428,7 @@ def format_steam_ready_result(
     script_ok: bool = True,
     wrapper_ok: bool = True,
 ) -> str:
-    """Toast do botão "Deixar tudo pronto" — pura, o miolo testável.
-
-    Junta os dois passos que a usuária não deveria precisar distinguir
-    ("tem jogos que precisam ativar entrada steam, outros que precisam de
-    comandos de inicialização — é uma confusão real") num relato único, e
-    reporta cada perna pelo que ela DE FATO fez.
-    """
+    """Toast do botão "Deixar tudo pronto" — pura, o miolo testável."""
     recusa = format_steam_janela_recusa(janela)
     if recusa is not None:
         return recusa
@@ -653,27 +482,14 @@ def _tag_do_script(saida: object) -> str | None:
 
 
 def _jogos_do_relatorio(bruto: object) -> list[str] | None:
-    """Rótulos de jogo guardados no relatório do worker, ou `None`.
-
-    `None` significa "ninguém mediu" (relatório antigo, medição falhou) — e o
-    formatter então evita nomear jogo nenhum em vez de chutar.
-    """
+    """Rótulos de jogo guardados no relatório do worker, ou `None`."""
     if isinstance(bruto, list) and all(isinstance(x, str) for x in bruto):
         return list(bruto)
     return None
 
 
 def medir_jogos_com_steam_input() -> list[str] | None:
-    """Rótulos dos jogos com Steam Input ligado FORA da allowlist, AGORA.
-
-    D-33: o `disable_steam_input.sh` não diz na saída QUAIS appids mexeu — ele
-    só emite `resultado=<tag>`. Quem sabe é o `localconfig.vdf`, e só ANTES da
-    execução (depois já foi zerado). Por isso os dois workers medem primeiro e
-    guardam o resultado no relatório.
-
-    `None` = não deu para medir; lista vazia = medido, e não havia jogo fora da
-    lista de exceções (o caso da chave GLOBAL da Steam).
-    """
+    """Rótulos dos jogos com Steam Input ligado FORA da allowlist, AGORA."""
     try:
         from hefesto_dualsense4unix.app.actions.emulation_actions import (
             EmulationActionsMixin,
@@ -691,11 +507,8 @@ def medir_jogos_com_steam_input() -> list[str] | None:
         return None
 
 
-#: STEAM-INPUT-01/E7 — o vigia que reaplica o Steam Input OFF a cada 30min.
 GUARDA_STEAM_INPUT_TIMER = "hefesto-steam-input-guard.timer"
 
-#: As propriedades que dizem se o vigia está VIVO. `NextElapse*` é a única que
-#: responde pelo EFEITO; ver `interpretar_guarda_do_steam_input`.
 _GUARDA_PROPRIEDADES = (
     "LoadState",
     "UnitFileState",
@@ -705,43 +518,11 @@ _GUARDA_PROPRIEDADES = (
     "NextElapseUSecRealtime",
 )
 
-#: `systemctl enable` deixa a unidade num destes estados. Fora deles, o vigia
-#: está desligado por escolha de alguém — e escolha não é achado.
 _GUARDA_HABILITADO = frozenset({"enabled", "enabled-runtime"})
 
 
 def interpretar_guarda_do_steam_input(saida: object) -> tuple[str, str] | None:
-    """Achado do cartão "Saúde do sistema" sobre o vigia — ou `None` para calar.
-
-    Decisão dela, 22/08/2026, literal: *"o guarda morto entra como achado do
-    cartão 'Saúde do sistema', que já existe e já emite avisos, em vez de uma
-    linha permanente dizendo 'tudo bem' 99% do tempo"*. Por isso o retorno é
-    `None` no caso saudável: o cartão só ganha linha quando há problema.
-
-    ELO-MUDO-01 — por que a régua NÃO pode ser `ActiveState` nem `is-active`.
-    Medido nesta bancada em 22/08/2026 (systemd 255), reproduzindo o defeito de
-    26/07, o cadáver do vigia responde assim:
-
-        ActiveState=active                  <- diz "vivo"
-        SubState=elapsed
-        NextElapseUSecMonotonic=infinity    <- nunca mais dispara
-
-    Um check por `ActiveState` daria `[ OK ]` sobre um guarda que passou cinco
-    horas sem rodar. Quem responde pelo efeito é `NextElapse*`: sem próximo
-    disparo, não há rede de segurança.
-
-    `None` também quando não dá para medir (sem `systemctl`, sem sessão), quando
-    a unidade não existe (máquina que ainda não passou pelo install) e quando ela está
-    DESABILITADA — escolha não é achado. `docs/usage/troubleshooting-8bitdo.md`
-    ensina `systemctl --user disable --now` nas duas unidades do vigia para
-    segurar o gyro do 8BitDo; sem esta guarda o cartão passaria a resmungar
-    para sempre sobre um gesto documentado.
-
-    Medido em 22/08/2026: "parado mas habilitado" e "desligado de propósito"
-    respondem IGUAL em tudo — `ActiveState=inactive`, `SubState=dead`,
-    `NextElapseUSecMonotonic=infinity`. `UnitFileState` (`enabled` vs. `disabled`)
-    é o único campo que os separa.
-    """
+    """Achado do cartão "Saúde do sistema" sobre o vigia — ou `None` para calar."""
     if not isinstance(saida, str) or not saida.strip():
         return None
     campos: dict[str, str] = {}
@@ -770,13 +551,7 @@ def interpretar_guarda_do_steam_input(saida: object) -> tuple[str, str] | None:
         motivo = "está habilitada, mas não está rodando"
     else:
         motivo = "consta ligada, mas não tem próximo disparo"
-    # BG-SAUDE-01 (26/08/2026): esta linha é a 13ª do MESMO cartão, e tinha os
     # dois defeitos das outras doze juntos — dizia "Conserto:" onde as outras
-    # doze passaram a dizer "O que fazer:" (duas palavras para o mesmo papel na
-    # mesma tela), e cravava o instalador, que não existe em cinco dos seis
-    # formatos. A barra ausente a escondia da varredura sintática da
-    # BG-INSTALL-01 — ponto cego FECHADO em 20/09/2026 pela
-    # O-INSTALADOR-SEM-A-BARRA-01: a régua pega o nome em qualquer forma.
     return (
         storm_doctor.WARN,
         "Steam Input: a rede de segurança "
@@ -840,8 +615,6 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
         return None
     divergentes = [j for j in jogos if getattr(j, "ponte_divergente", False)]
     if not divergentes:
-        # Alinhado é silêncio. Um "[ OK ] nenhuma divergência" a mais no
-        # cartão empurra para baixo o que importa e treina a pessoa a não ler.
         return None
     nomes = ", ".join(str(getattr(j, "nome", "?")) for j in divergentes[:3])
     resto = f" e mais {len(divergentes) - 3}" if len(divergentes) > 3 else ""
@@ -849,22 +622,13 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
         "[WARN]",
         f"Ponte confirmada que não bate com a lista de hoje: {nomes}{resto} — "
         "o jogo foi marcado (ou desmarcado) depois que a ponte pegou. "
-        # BG-SAUDE-01 (26/08/2026): o gesto já estava escrito; o que faltava
-        # era estar no MESMO lugar da frase que as outras treze linhas deste
-        # cartão, para a pessoa não ter de caçá-lo em cada uma.
         f"{PREFIXO_DA_CURA}abra o perfil dele na aba Perfis e "
         "confira a caixinha do Steam Input.",
     )
 
 
 def medir_prontuario_dos_jogos() -> tuple[str, str] | None:
-    """Levanta o censo do disco e devolve a linha do cartão, ou ``None``.
-
-    T-10. Best-effort de ponta a ponta: sem Steam instalada, sem perfis, ou
-    com qualquer erro de leitura, o cartão fica calado — nunca inventa
-    achado, e nunca deixa o resto do cartão de fora por causa de uma
-    biblioteca que não existe naquela máquina.
-    """
+    """Levanta o censo do disco e devolve a linha do cartão, ou ``None``."""
     try:
         from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
 
@@ -876,14 +640,7 @@ def medir_prontuario_dos_jogos() -> tuple[str, str] | None:
 
 
 def format_fix_safe_result(relatorio: object) -> str:
-    """Toast do botão "Aplicar correções" (sem senha) — pura, testável.
-
-    HONESTIDADE-STEAM-01. A versão anterior dizia "Correções aplicadas (sem
-    senha)" SEMPRE — inclusive quando o `--apply-quiet` tinha adiado tudo por
-    causa da Steam aberta (o caminho mais comum, já que a usuária clica no
-    Hefesto justamente enquanto joga). O relato agora separa o que rodou do
-    que foi adiado, e nomeia o botão que resolve o adiamento.
-    """
+    """Toast do botão "Aplicar correções" (sem senha) — pura, testável."""
     if not isinstance(relatorio, dict):
         return (
             "Não consegui aplicar as correções — resposta inesperada; veja "
@@ -951,29 +708,8 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
         return (
             "Não consegui anotar este jogo — veja os 'Detalhes técnicos'."
         )
-    # STEAM-INPUT-01 (entrega 1): aqui morava a única frase do produto que
-    # ENSINAVA o gesto de ligar a entrada da Steam pela janela da própria Steam
-    # (menu do jogo, aba do controle, "Ativar" — "agora o Hefesto respeita essa
-    # escolha em vez de desfazê-la"). Ela só era verdadeira para um appid JÁ na
-    # allowlist; como regra geral é falsa, e foi assim que ela a leu: a
     # DUPLO-REGISTRO-01 mediu o Pragmata com `UseSteamControllerConfig "2"` no
-    # `localconfig.vdf` e AUSENTE do `steam_input_apps.txt` — o segundo
-    # cadastro, o único que o Hefesto consulta. Ligar pela Steam não escreve na
-    # allowlist, e o guarda (`scripts/disable_steam_input.sh`) zera o per-app de
-    # quem está fora dela. O texto novo responde à mesma pergunta legítima ("e
-    # se não funcionar?") sem mandar ninguém à Steam e sem prometer o que o
-    # clique não faz: ele NÃO liga a entrada da Steam em lugar nenhum — só
-    # entrega a ENTRADA daquele jogo (ungrab + restore do broker + vpad
-    # suspenso, em `daemon/subsystems/gamepad.py`), e é isso que faz o jogo
     # enxergar o DualSense físico direto. A saída — cor, gatilhos, vibração —
-    # não passa por nenhum desses portões: os oito chamadores de
-    # `steam_input_excecao_ativa` estão todos em `gamepad.py`, nenhum em
-    # `core/` (MEDIDO por grep, 06/08).
-    #
-    # S4 (28/08/2026): as três frases abaixo diziam que o jogo "passa a
-    # enxergar o controle físico direto" e "recebe o controle direto pela
-    # Steam". Era o mecanismo de ANTES de 09/08 — hoje é o INVERSO, e a
-    # razão está na NOTA DATADA da docstring.
     resto = (
         " Feche e abra o jogo de novo: nele os controles físicos ficam "
         "escondidos e o jogo passa a ver só os do Hefesto — você não precisa "
@@ -993,11 +729,6 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     )
 
 
-#: T-04 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026): os dois motivos que o
-#: `proton_pin._steam_gate` sabe devolver, na LÍNGUA que esta aba já fala.
-#: As frases são as mesmas de `_frase_steam_input` — o vocabulário de recusa
-#: da aba Sistema é um só, e cada botão que inventasse o seu ensinaria a
-#: usuária a decifrar duas maneiras de dizer a mesma coisa.
 _RECUSAS_DO_PROTON: dict[str, str] = {
     "jogo_da_steam_aberto": (
         "NÃO travei nada — havia um jogo aberto. Feche o jogo e clique de novo."
@@ -1012,19 +743,7 @@ _RECUSAS_DO_PROTON: dict[str, str] = {
         "novo em seguida."
     ),
 }
-# `config_vdf_ausente` também é um `reason` do `lock_games_to_pinned_proton`,
-# mas volta com `status="erro"` (não `"recusado"`) e por isso nunca chega
-# aqui. Uma entrada para ele seria a família F2 — linha que ninguém alcança.
-#
-# `outra_trava_em_curso` e `pino_ausente` CHEGAM, desde 18/09/2026 (o flock
-# do `config.vdf` e a guarda do pino, INSTALL-UNIVERSAL), e caíam na frase sem
-# motivo — que diz "a Steam recusou" sobre duas causas que não são a Steam. O
-# `pino_ausente` não mora no dicionário porque a frase dele já existe e depende
-# da instalação: é a do `_proton_lock_worker` quando falta o motor.
 
-#: A frase de recusa quando o motivo não está no mapa acima. Ela diz o que
-#: aconteceu (não travou) SEM inventar a causa — "não sei por quê" dito é
-#: melhor do que uma causa adivinhada, e o motivo cru vai para os Detalhes.
 _RECUSA_DO_PROTON_SEM_MOTIVO = (
     "NÃO travei nada — a Steam recusou a mudança; veja os "
     "'Detalhes técnicos'."
@@ -1112,29 +831,18 @@ class DaemonActionsMixin(WidgetAccessMixin):
     """Controla a aba Sistema (o `daemon_box` do Glade)."""
 
     _daemon_autostart_guard: bool = False
-    # Contador anti-loop de tentativas de autostart por sessão da GUI.
-    # Máximo 2 tentativas: após a segunda falha, o helper vira no-op até
-    # a próxima reabertura do processo (BUG-DAEMON-AUTOSTART-01).
     _daemon_autostart_attempts: int = 0
 
     def install_daemon_tab(self) -> None:
         self._daemon_autostart_guard = False
         # Inicializa contador anti-loop por instância (bootstrap da GUI).
         self._daemon_autostart_attempts = 0
-        # BUG-GUI-DAEMON-STATUS-INITIAL-01: o refresh da view chama
-        # `systemctl is-active/is-enabled/status` — cada um com timeout 5 s.
-        # Em bootstrap, rodar síncrono bloquearia a thread GTK por até 15 s
-        # em sistemas onde systemctl trava (ex.: usuário sem unit instalada
-        # combinado com journal lento). Descarregamos em thread worker e
-        # atualizamos a view via `GLib.idle_add` quando os dados chegam. O
-        # label default do Glade ("—" neutro) mostra o estado "Consultando"
-        # até o resultado pintar — em vez do falso-negativo "Offline".
         self._set_daemon_status_consulting()
         self._refresh_daemon_view_async()
         self._sync_restart_daemon_button_sensitivity()
-        self._refresh_storm_diag()  # FEAT-DSX-UNIFY-01
+        self._refresh_storm_diag()
         self._refresh_window_detect_diag()  # JANELA-CEGA-01
-        self._wire_steam_simple_buttons()  # FEAT-STEAM-SIMPLES-01
+        self._wire_steam_simple_buttons()
 
     def _wire_steam_simple_buttons(self) -> None:
         """Liga os dois botões do modo simples em CÓDIGO, não pelo Glade.
@@ -1159,7 +867,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             with contextlib.suppress(Exception):
                 botao.connect("clicked", handler)
 
-    # --- anti-storm / sistema (FEAT-DSX-UNIFY-01) ------------------------
 
     def _find_repo_file(self, relpath: str) -> Path | None:
         """Localiza um arquivo do repo (ex.: scripts/install_snd_quirk.sh).
@@ -1177,12 +884,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
             try:
                 from hefesto_dualsense4unix.integrations import storm_doctor
 
-                # MESA-CHEIA-11/E3: o check de áudio agora CONTA, e o
-                # denominador é quantos controles estão no cabo AGORA — sem
                 # ele, um DualSense com áudio responderia pelos quatro. O
                 # state_full é best-effort: daemon offline devolve None e o
                 # check volta a responder presente/ausente (nunca alarme falso
-                # por payload ausente).
                 no_cabo: int | None = None
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.app.ipc_bridge import (
@@ -1195,17 +899,10 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 logger.warning("storm_diag_falhou", erro=str(exc))
                 return
 
-            # STEAM-INPUT-01/E7: o vigia morto vira achado DESTE cartão, e só
-            # quando está morto — decisão dela em 22/08/2026. `None` = calado.
             with contextlib.suppress(Exception):
                 achado = medir_guarda_do_steam_input()
                 if achado is not None:
                     rows = [*rows, achado]
-            # T-10 (25/08/2026): o prontuário dos jogos passa a ter UM
-            # chamador de produção, e é este — mesmo molde do vigia acima,
-            # mesma regra dela: só fala quando há divergência. Ele roda AQUI,
-            # dentro do worker, porque lê os manifestos da Steam e os perfis
-            # do disco (~1 s na máquina dela) e travaria a linha do GTK.
             with contextlib.suppress(Exception):
                 achado = medir_prontuario_dos_jogos()
                 if achado is not None:
@@ -1232,9 +929,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
         label = self._get("storm_diag_label")
         if label is not None:
             label.set_markup(markup)
-        return False  # GLib.idle_add: não repete
+        return False
 
-    # --- detector de janela (JANELA-CEGA-01, a linha honesta) --------------
 
     def _refresh_window_detect_diag(self) -> None:
         """Pinta a linha "Trocar de perfil ao abrir o jogo" com o estado do daemon.
@@ -1273,7 +969,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 {},
                 on_success=_pintar,
                 on_failure=lambda _exc: _pintar(None),
-                # HARM-15: sem a folga a linha se pinta de "não consegui ler" com
                 # o daemon VIVO sempre que o `state_full` passa dos 0,25s default.
                 timeout_s=STATE_IPC_TIMEOUT_S,
             )
@@ -1281,14 +976,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             logger.debug("window_detect_diag_indisponivel", err=str(exc))
 
     def on_storm_fix_safe(self, _btn: object) -> None:
-        """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber.
-
-        HONESTIDADE-STEAM-01: este botão NÃO fecha a Steam (é o botão do "sem
-        senha, sem susto") — o `--apply-quiet` continua adiando quando ela
-        está viva. O que mudou é que o toast passou a DIZER que adiou, em vez
-        de anunciar "Correções aplicadas" sobre um no-op, e a apontar o botão
-        que resolve ("Deixar tudo pronto", que pede permissão para fechar).
-        """
+        """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber."""
         self._toast_daemon("Aplicando correções (não pede senha)…")
 
         def _worker() -> None:
@@ -1296,21 +984,11 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 "ran": 0,
                 "missing": 0,
                 "steam_input": None,
-                # D-33: medido ANTES de rodar — depois os appids já foram
-                # zerados no vdf e não haveria mais como nomear o jogo.
                 "steam_input_jogos": medir_jogos_com_steam_input(),
             }
             for relpath, args in (
                 ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
                 ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
-                # BUG-C: o quirk anti-storm NÃO entra aqui de propósito. Escrevê-lo
-                # a quente era `sudo tee` no /sys/module/snd_usb_audio/parameters/
-                # quirk_flags (param de MÓDULO, root-only, fora do alcance do
-                # uaccess) — o ÚNICO sudo em runtime da GUI, e sem ticket cacheado
-                # falhava calado enquanto o botão dizia "não pede senha" (mentira).
-                # A versão persistente (/etc/modprobe.d) é default no install e pega
-                # no próximo replug do controle; o toast instrui isso. Assim o botão
-                # roda 100% sem senha (os dois scripts acima são user-space).
             ):
                 script = self._find_repo_file(relpath)
                 if script is None:
@@ -1326,17 +1004,11 @@ class DaemonActionsMixin(WidgetAccessMixin):
                     )
                     relatorio["ran"] += 1
                     if "disable_steam_input" in relpath:
-                        # rc + saída CRUA: o veredito honesto sai da tag
-                        # `resultado=` que o script emite, não do rc (o
-                        # "adiei" e o "apliquei" saem 0 os dois).
                         relatorio["steam_input"] = (
                             proc.returncode,
                             (proc.stdout or "") + (proc.stderr or ""),
                         )
             GLib.idle_add(self._refresh_storm_diag)
-            # M9 (auditoria): toast FINAL — antes a statusbar congelava em
-            # "Reaplicando..." para sempre. Distingue "rodou" de "scripts não
-            # encontrados" (H3/M10 — instalação de pacote sem os scripts).
             GLib.idle_add(self._toast_daemon, format_fix_safe_result(relatorio))
 
         _get_executor().submit(_worker)
@@ -1363,7 +1035,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         compatibilidade com quem consulta o estado antes de copiar — são
         deliberadamente IGNORADOS.
         """
-        del flavor, backend  # a string é constante — decisão é do wrapper
+        del flavor, backend
         from hefesto_dualsense4unix.integrations.steam_launch_options import (
             WRAPPER_LAUNCH,
         )
@@ -1381,15 +1053,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return wrapper.is_file() and os.access(wrapper, os.X_OK)
 
     def on_storm_copy_launch(self, _btn: object) -> None:
-        """Copia a Opção de Inicialização da Steam — a chamada do wrapper.
-
-        DEDUP-04/UX-05: a string é CONSTANTE (idêntica em qualquer máscara/
-        backend) — o wrapper `hefesto-launch` decide as envs na hora do
-        launch consultando o daemon via IPC, e degrada sozinho quando o
-        daemon está morto/degradado (nenhuma env => físico visível => o jogo
-        sempre abre com controle). Fallback honesto: com o wrapper ainda não
-        instalado, a string continua abrindo o jogo — só não desduplica.
-        """
+        """Copia a Opção de Inicialização da Steam — a chamada do wrapper."""
         launch, extra = self.compose_launch("", "")
         copied = False
         with contextlib.suppress(Exception):
@@ -1408,10 +1072,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 "install completar."
             )
         if copied:
-            # A string termina em `%command%`. Se o jogo JÁ tem opções, o certo
-            # é o botão 'Aplicar aos jogos da Steam' (funde sozinho, removendo
-            # as opções antigas do Hefesto); manualmente: manter as opções do
-            # usuário ENTRE `hefesto-launch` e o `%command%` final, com UM só
             # `%command%` na linha.
             self._toast_daemon(
                 "Copiado! Cole em: Steam → jogo → Propriedades → Opções de "
@@ -1435,17 +1095,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         dialog = self._build_steam_apply_confirm_dialog()
         dialog.show_all()
 
-    #: O CORPO DA PERGUNTA DO "Aplicar aos jogos da Steam", e ele saiu de dentro
-    #: do diálogo em 06/09/2026 pela MESMA razão do `_STEAM_READY_CORPO` logo
-    #: abaixo: a interface nova pergunta a mesma coisa em dois cliques, e uma
-    #: frase digitada duas vezes se afasta no primeiro dia em que alguém mexe
-    #: numa das duas. Quem consome a outra ponta é
-    #: `interface/pacotes/a09_sistema.aplicar_aos_jogos`.
     _STEAM_APPLY_CORPO = (
-        # O ATO DE HOJE (A-PERGUNTA-DO-APLICAR-DIZ-TODO-LANCADOR-01, 02/10/2026): os outros
-        # lançadores primeiro, sem fechar nada, e a Steam depois. Neles vale ao abrir de novo: o
-        # Heroic 2.22.3 guarda o config.json na memória (`getSettings`), e a caixa do Flatpak
-        # vale no `flatpak run`. Backup só na Steam (`caminho_do_registro`). A validar por ela.
         "O Hefesto entra nos jogos da Steam, do Heroic, do Lutris e dos emuladores. "
         "As opções que você já tem nos jogos são preservadas: na Steam fica um "
         "backup ao lado de cada arquivo, e nos outros eu anoto o que pus, para "
@@ -1466,7 +1116,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             buttons=Gtk.ButtonsType.NONE,
             text="Aplicar o hefesto-launch aos jogos da Steam?",
         )
-        # GUI-05/P5: classe de tema (precedente gui_dialogs._apply_app_theme).
         with contextlib.suppress(Exception):
             dialog.get_style_context().add_class(
                 "hefesto-dualsense4unix-window"
@@ -1530,7 +1179,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                     )
                     return
                 if slo.steam_running():
-                    # Consentimento SEMPRE na thread GTK (diálogo é widget).
                     GLib.idle_add(
                         self._pedir_para_fechar_a_steam,
                         self._steam_apply_launch_fechando,
@@ -1552,10 +1200,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 )
             except Exception as exc:
                 logger.warning("steam_apply_launch_falhou", erro=str(exc))
-                # T-08: este erro nasce no processo da JANELA — o log dele vai
-                # para o stderr da GUI e NUNCA entra na unidade do daemon, que
-                # é o que o painel mostrava. Sem esta linha, a frase abaixo
-                # manda a pessoa a um painel onde o motivo não pode estar.
                 GLib.idle_add(
                     self._detalhe_tecnico,
                     traceback.format_exc(),
@@ -1575,11 +1219,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         titulo: str = "Posso fechar a Steam por uns 20 segundos?",
         rotulo_ok: str = "Fechar e continuar",
     ) -> bool:
-        """Mostra o consentimento e, com o sim, roda `prosseguir()` em worker.
-
-        Sempre chamado via `GLib.idle_add` a partir do worker (widget só na
-        thread GTK). Retorna False para o idle_add não reagendar.
-        """
+        """Mostra o consentimento e, com o sim, roda `prosseguir()` em worker."""
 
         def _resposta(dialog: Any, response: int) -> None:
             with contextlib.suppress(Exception):
@@ -1627,21 +1267,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
             )
 
     # --- Modo simples: dois botões que escondem os conceitos --------------
-    # FEAT-STEAM-SIMPLES-01 (25/07). Pedido literal da usuária final: "tem
-    # jogos que precisamos ativar entrada steam, outros que temos que colocar
-    # comandos de inicialização — é uma confusão real". Os dois mecanismos
     # continuam existindo; o que sai da tela é a ESCOLHA entre eles.
-    #
-    #   "Deixar tudo pronto"     -> encadeia disable_steam_input + wrapper em
-    #                               todos os jogos, com UM consentimento só.
-    #   "Este jogo não funciona" -> marca o jogo ativo na allowlist do Steam
-    #                               Input: o Hefesto entrega a ENTRADA DELE
     #                               (e só ela — ver `format_game_broken_result`).
-    #
-    # Nenhum dos dois pronuncia "Steam Input" nem "opção de inicialização".
 
-    #: Corpo do diálogo do "Deixar tudo pronto". Um consentimento só (o de
-    #: fechar a Steam) porque é a única consequência que a usuária sente.
     _STEAM_READY_CORPO = (
         "Eu ajusto de uma vez as duas coisas que costumam brigar com o "
         "controle: quem entrega o controle para o jogo e como cada jogo é "
@@ -1700,9 +1328,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                     saida: dict[str, Any] = {
                         "script": None,
                         "wrapper": None,
-                        # D-33: a medição acontece DENTRO da janela de Steam
-                        # fechada e ANTES do script — é o último instante em
-                        # que o vdf ainda diz de qual jogo estamos falando.
                         "steam_input_jogos": medir_jogos_com_steam_input(),
                     }
                     if script is not None:
@@ -1784,16 +1409,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return None
 
     def on_steam_game_broken(self, _btn: object = None) -> None:
-        """Botão "Este jogo não funciona" — troca a estratégia DESTE jogo.
-
-        Sem diálogo de confirmação de propósito: a ação não fecha nada, não
-        edita arquivo da Steam e é reversível (uma linha num txt nosso, e
-        desde 07/08 a caixinha do editor de perfil também a desfaz). O que
-        ela custa é o Hefesto entregar a ENTRADA daquele jogo — que é
-        justamente o que a usuária está pedindo ao clicar. A saída fica: em
-        06/08 os gatilhos dela seguraram e a cor dela ficou com o jogo
-        marcado aberto (`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*).
-        """
+        """Botão "Este jogo não funciona" — troca a estratégia DESTE jogo."""
         self._toast_daemon("Procurando qual jogo é…")
 
         def _worker() -> None:
@@ -1860,15 +1476,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return False
 
     def on_proton_lock(self, _btn: object) -> None:
-        """Botão "Travar Proton validado" (PLAT-01, aba Sistema).
-
-        Aponta o `CompatToolMapping` do config.vdf da Steam para a versão de
-        Proton que o Hefesto validou (a semântica do winebus MUDOU entre
-        Proton 9→10 — travar imuniza contra upgrade que mude comportamento).
-        Por mexer no arquivo global da Steam, pede confirmação num diálogo
-        TEMADO e NÃO-bloqueante (padrão do "Aplicar aos jogos da Steam":
-        `connect("response")`, nunca `run()`).
-        """
+        """Botão "Travar Proton validado" (PLAT-01, aba Sistema)."""
         dialog = self._build_proton_lock_confirm_dialog()
         dialog.show_all()
 
@@ -1882,7 +1490,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             buttons=Gtk.ButtonsType.NONE,
             text="Travar os jogos no Proton validado?",
         )
-        # GUI-05/P5: classe de tema (precedente gui_dialogs._apply_app_theme).
         with contextlib.suppress(Exception):
             dialog.get_style_context().add_class(
                 "hefesto-dualsense4unix-window"
@@ -1958,7 +1565,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                         "perdida.",
                     )
                     return
-                result = lock_fn(todos=True)  # ordem de 17/09, ver `refazer_proton`
+                result = lock_fn(todos=True)
                 GLib.idle_add(
                     self._toast_daemon, format_proton_lock_result(result)
                 )
@@ -1973,12 +1580,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         _get_executor().submit(_worker)
 
     def _set_daemon_status_consulting(self) -> None:
-        """Mostra o estado transitório "Consultando..." no label da aba Sistema.
-
-        Usado no bootstrap da aba, antes do primeiro `_refresh_daemon_view_async`
-        retornar. Evita falso-negativo "Offline" em cenário onde o daemon está
-        ativo mas `systemctl` ainda não respondeu (BUG-GUI-DAEMON-STATUS-INITIAL-01).
-        """
+        """Mostra o estado transitório "Consultando..." no label da aba Sistema."""
         label = self._get("daemon_status_label")
         if label is None:
             return
@@ -1986,14 +1588,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         label.set_tooltip_text("Verificando se o Hefesto está rodando. Aguarde.")
 
     def _refresh_daemon_view_async(self) -> None:
-        """Dispara `_refresh_daemon_view` em thread worker, sem bloquear o GTK.
-
-        BUG-GUI-DAEMON-STATUS-INITIAL-01: a versão síncrona chama 3 subprocess
-        `systemctl ...` com timeout 5 s cada. No bootstrap da GUI isso pode
-        atrasar o primeiro frame visível — o usuário vê o label default antes
-        do refresh terminar. Em thread worker, a UI renderiza imediatamente e
-        o label é pintado quando `systemctl` retorna (tipicamente < 200 ms).
-        """
+        """Dispara `_refresh_daemon_view` em thread worker, sem bloquear o GTK."""
         def _worker() -> None:
             try:
                 status = self._daemon_status()
@@ -2009,12 +1604,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
     def _apply_daemon_view(
         self, status: DaemonStatus, enabled: str, text: str
     ) -> bool:
-        """Aplica o resultado do refresh assíncrono na thread GTK.
-
-        Espelha `_refresh_daemon_view` mas sem reexecutar subprocess — recebe
-        os valores já consultados em thread worker. Retorna `False` para que
-        `GLib.idle_add` não reagende.
-        """
+        """Aplica o resultado do refresh assíncrono na thread GTK."""
         self._set_daemon_status_markup(status, enabled)
 
         self._daemon_autostart_guard = True
@@ -2032,36 +1622,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._aplicar_sensibilidade_ligar_desligar(status)
 
         self._set_daemon_text(text)
-        return False  # não repetir via GLib
+        return False
 
-    #: T-06 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026): em que estados cada botão
-    #: tem trabalho a fazer. `online_avulso` conta como LIGADO de propósito —
-    #: há um daemon vivo para desligar, mesmo que fora do systemd; e
-    #: `iniciando` conta como ligado porque a unidade já está `active` e um
-    #: "Ligar" ali é o clique que não faz nada.
     _ESTADOS_COM_DAEMON_DE_PE: ClassVar[frozenset[str]] = frozenset(
         {"online_systemd", "online_avulso", "iniciando"}
     )
 
     def _aplicar_sensibilidade_ligar_desligar(self, status: DaemonStatus) -> None:
-        """Cinza o botão que não tem o que fazer neste estado.
-
-        Medido em 23/08: `grep -n "set_sensitive" daemon_actions.py` devolvia
-        DUAS linhas, as duas do botão de reiniciar. `daemon_start_button` e
-        `daemon_stop_button` nunca recebiam `set_sensitive` — ficavam
-        clicáveis nos quatro estados da matriz, inclusive "Ligar" com o daemon
-        já de pé e "Desligar" com ele já parado.
-
-        O preço não é estético. O clique inútil dispara `systemctl` de
-        verdade, o toast responde "Pronto." (rc=0 — `systemctl start` numa
-        unidade já ativa é sucesso), e a tela confirma um trabalho que não
-        houve. É a família do "anuncia o que acabou de recusar", pela porta
-        de trás.
-
-        O tooltip diz POR QUE está cinza: botão cinza sem explicação manda a
-        pessoa procurar defeito onde não há (regra desta casa — toda frase de
-        diagnóstico diz o quê, por quê e o que fazer).
-        """
+        """Cinza o botão que não tem o que fazer neste estado."""
         de_pe = status in self._ESTADOS_COM_DAEMON_DE_PE
 
         btn_start = self._get("daemon_start_button")
@@ -2124,9 +1692,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 logger.debug("autostart_daemon_ja_ativo")
                 return
 
-            # BUG-MULTI-INSTANCE-01: se o pid file do daemon aponta para um
-            # processo vivo (ex.: daemon rodando fora do systemd via CLI),
-            # não disparar systemctl start — evita spawn duplicado.
             if self._daemon_pid_alive():
                 logger.debug("autostart_daemon_vivo_via_pid_file")
                 return
@@ -2151,11 +1716,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         _get_executor().submit(_worker)
 
     def _daemon_pid_alive(self) -> bool:
-        """Retorna True se o pid file do daemon aponta para processo vivo.
-
-        Usado pelo `ensure_daemon_running` para não duplicar spawn quando
-        o daemon foi lançado fora do systemd (BUG-MULTI-INSTANCE-01).
-        """
+        """Retorna True se o pid file do daemon aponta para processo vivo."""
         try:
             from hefesto_dualsense4unix.utils.single_instance import is_alive
             from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
@@ -2224,12 +1785,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             except (FileNotFoundError, subprocess.SubprocessError) as exc:
                 logger.info("systemctl_indisponivel_usando_popen", erro=str(exc))
 
-        # A CHAVE (29/08/2026): este fallback é o furo que `systemctl mask`
-        # NÃO tapa — ele sobe o daemon sem passar por systemd, então uma unit
-        # mascarada não o alcança. Medido em 29/08, contra o esperado. Com a
-        # chave posta, o botão para AQUI e diz por quê, em vez de subir um
-        # daemon que a própria máquina já vai recusar dois passos adiante
-        # (`daemon/main.py:run_daemon`). Ver `utils/chave.py`.
         from hefesto_dualsense4unix.utils import chave as _chave
 
         _motivo = _chave.motivo_do_desligamento()
@@ -2237,8 +1792,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             logger.warning("daemon_nao_subiu_chave_posta", motivo=_motivo)
             return -1
 
-        # Fallback: spawn do daemon como child via Popen.
-        # Slot self._daemon_popen é cleanado em _shutdown_backend.
         try:
             existing = getattr(self, "_daemon_popen", None)
             if existing is not None and existing.poll() is None:
@@ -2254,7 +1807,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             )
             self._daemon_popen = popen
             logger.info("daemon_popen_iniciado", pid=popen.pid, sandbox=is_sandbox)
-            # Probe rápido — daemon deve estar vivo após 500ms.
             import time
             time.sleep(0.5)
             if popen.poll() is None:
@@ -2288,11 +1840,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 f"{como_atualizar_esta_instalacao()}."
             )
 
-    # --- handlers ---
 
     def on_daemon_start(self, _btn: Gtk.Button) -> None:
-        # FEAT-GUI-HOME-TAB-01: "Iniciar" é gesto explícito — desarma o
-        # "Desligar Hefesto" da aba Início (o autostart volta a valer).
         self._user_stopped_daemon = False
         self._run_systemctl_async("start")
 
@@ -2315,46 +1864,22 @@ class DaemonActionsMixin(WidgetAccessMixin):
         """
         self._run_systemctl_async("stop")
 
-    # on_daemon_restart removido (T5): o botão "Reiniciar" redundante saiu do glade;
-    # o caminho único de restart é on_daemon_service_restart (btn_restart_daemon),
     # que trata erro com diálogo não-bloqueante e tem regra de sensibilidade própria.
 
     def _refresh_daemon_tab_on_show(self) -> None:
-        """Reconcilia a aba Sistema ao ser exibida (M7): status do daemon + o
-        cartão anti-storm (que antes só era populado no bootstrap da aba)."""
+        """Reconcilia a aba Sistema ao ser exibida (M7): status do daemon + o"""
         self._refresh_daemon_view_async()
         self._refresh_storm_diag()
-        # JANELA-CEGA-01: o detector CEGA e VOLTA a ver conforme a janela em
-        # foco (`window_detect_seeing` decai e volta), então esta linha tem de
-        # ser relida ao entrar na aba — senão ela mostra a foto do bootstrap.
         self._refresh_window_detect_diag()
 
     def on_daemon_refresh(self, _btn: Gtk.Button) -> None:
-        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
-        # M7 (auditoria): o cartão anti-storm também é reavaliado no "Atualizar" —
-        # antes só rodava no bootstrap da aba e ao clicar "Reaplicar fixes
-        # seguros", então o diagnóstico ficava stale a sessão inteira (ex.: a
-        # usuária instala a cura por fora e o WARN nunca somia).
+        self._refresh_daemon_view_async()
         self._refresh_storm_diag()
-        self._refresh_window_detect_diag()  # JANELA-CEGA-01
+        self._refresh_window_detect_diag()
         self._sync_restart_daemon_button_sensitivity()
 
     def on_daemon_service_restart(self, _btn: Gtk.Button) -> None:
-        """Handler do botão 'Reiniciar daemon' (UX-RECONNECT-01).
-
-        Executa `systemctl --user restart hefesto-dualsense4unix.service` em
-        thread worker (BUG-GUI-SYSTEMCTL-SYNC-NA-THREAD-GTK-01). Antes rodava
-        `subprocess.run` síncrono com `timeout=10s` na thread GTK — bloqueava
-        toda a UI por até 10s e, se `systemctl` entrasse em D-state (journal
-        lento, dbus congestionado), o sinal de kill também era ignorado pelo
-        GLib mainloop. Agora o worker faz o subprocess e devolve resultado via
-        `GLib.idle_add`. Cobre ausência de systemd e falha do unit exibindo
-        MessageDialog não-bloqueante (response handler em vez de `dialog.run()`).
-        """
-        # BG-07c (26/08/2026): dizia "Reiniciando daemon...". O botão que dispara
-        # este recibo se chama "Reiniciar o Hefesto" (`gui/main.glade:2805`) e o
-        # recibo de sucesso, doze linhas abaixo, já diz "Hefesto reiniciado." —
-        # era a linha do meio que falava a língua do sistema.
+        """Handler do botão 'Reiniciar daemon' (UX-RECONNECT-01)."""
         self._toast_daemon("Reiniciando o Hefesto…")
 
         def _worker() -> None:
@@ -2407,9 +1932,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 rc=rc,
                 stderr=stderr_clean,
             )
-            # LEIGO-03: o diálogo mostrava "systemctl restart ...service falhou
-            # (rc=1)" + o stderr cru. O motivo técnico continua existindo — no
-            # log, onde serve para quem for depurar.
             self._show_restart_error(
                 "O Hefesto não reiniciou. Tente 'Desligar o Hefesto' e "
                 "'Ligar o Hefesto'; os 'Detalhes técnicos' aqui embaixo "
@@ -2418,7 +1940,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             return False
         logger.info("daemon_restart_ok", unit=SERVICE_NORMAL)
         self._toast_daemon("Hefesto reiniciado.")
-        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
+        self._refresh_daemon_view_async()
         return False
 
     def _show_restart_error(self, message: str) -> None:
@@ -2440,7 +1962,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             buttons=Gtk.ButtonsType.CLOSE,
             text="Não foi possível reiniciar o Hefesto",
         )
-        # GUI-05/P5: classe de tema (precedente gui_dialogs._apply_app_theme).
         with contextlib.suppress(Exception):
             dialog.get_style_context().add_class(
                 "hefesto-dualsense4unix-window"
@@ -2450,8 +1971,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         dialog.show_all()
 
     def on_daemon_view_logs(self, _btn: Gtk.Button) -> None:
-        # BUG-DAEMON-VIEW-SYNC-FREEZE-01: journalctl tem timeout de 5s — rodar
-        # síncrono congelaria a thread GTK. Worker + repinta via GLib.idle_add.
         self._set_daemon_text("Consultando logs...")
 
         def _worker() -> None:
@@ -2469,19 +1988,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._run_systemctl_async(action)
         return False
 
-    # --- handlers do botão "Migrar para systemd" ---
 
     def on_daemon_migrate_to_systemd(self, _btn: Gtk.Button) -> None:
-        """Handler do botão 'Migrar para systemd' (BUG-DAEMON-STATUS-MISMATCH-01).
-
-        Visível apenas quando o daemon está no estado `online_avulso`.
-        Sequência:
-          1. Lê pid do arquivo do daemon.
-          2. Envia SIGTERM ao processo avulso (grace via single_instance).
-          3. Dispara `systemctl --user start hefesto-dualsense4unix.service`.
-          4. Atualiza a view.
-        Executado em thread worker para não bloquear a thread GTK.
-        """
+        """Handler do botão 'Migrar para systemd' (BUG-DAEMON-STATUS-MISMATCH-01)."""
         def _worker() -> None:
             pid = self._read_daemon_pid()
             if pid is not None:
@@ -2523,10 +2032,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
         else:
             logger.warning("daemon_migrate_falhou", unit=SERVICE_NORMAL, rc=rc)
             self._toast_daemon(MIGRAR_NAO_DEU)
-        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
+        self._refresh_daemon_view_async()
         return False
 
-    # --- helpers ---
 
     def _read_daemon_pid(self) -> int | None:
         """Lê o PID do arquivo de pid do daemon; retorna None se ausente/inválido."""
@@ -2582,12 +2090,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return "offline"
 
     def _refresh_daemon_view(self) -> None:
-        """Atualiza a aba Sistema com base no estado canônico do daemon.
-
-        Consulta `_daemon_status()` (3 fontes) e pinta o label com cor e
-        tooltip PT-BR amigável. Também atualiza o switch auto-start e o
-        botão "Migrar para systemd" (visível apenas em `online_avulso`).
-        """
+        """Atualiza a aba Sistema com base no estado canônico do daemon."""
         status = self._daemon_status()
         enabled = self._systemctl_oneline(["is-enabled", SERVICE_NORMAL])
         self._set_daemon_status_markup(status, enabled)
@@ -2600,7 +2103,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         finally:
             self._daemon_autostart_guard = False
 
-        # Botão "Migrar para systemd" visível apenas em estado online_avulso.
         btn_migrate = self._get("btn_migrate_to_systemd")
         if btn_migrate is not None:
             btn_migrate.set_visible(status == "online_avulso")
@@ -2609,13 +2111,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._set_daemon_text(text)
 
     def _run_systemctl_async(self, action: str) -> None:
-        """Executa systemctl em thread worker para não bloquear a thread GTK.
-
-        Para start/restart, primeiro faz reset-failed para limpar
-        StartLimitBurst-hit caso o usuário tenha clicado várias vezes ou o
-        kill rigoroso da GUI tenha disparado auto-restart no systemd. Sem
-        isso, restart imediato falha com 'start-limit-hit'.
-        """
+        """Executa systemctl em thread worker para não bloquear a thread GTK."""
         unit = SERVICE_NORMAL
 
         def _worker() -> None:
@@ -2623,9 +2119,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 self._invoke_systemctl(["reset-failed", unit], check=False)
             result = self._invoke_systemctl([action, unit], capture=True)
             rc = result.returncode if result is not None else -1
-            # T-08: a saída CRUA do systemctl atravessa até o callback. Antes
-            # só o `rc` chegava — o toast mandava "veja os 'Detalhes
-            # técnicos'" e o motivo tinha sido descartado uma linha acima.
             erro = (getattr(result, "stderr", "") or "") if result is not None else ""
             GLib.idle_add(self._on_systemctl_done, action, unit, rc, erro)
 
@@ -2636,18 +2129,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
     ) -> bool:
         """Callback pós-systemctl — executa na thread principal GTK."""
         if rc == 0:
-            # T-06: o "Desligar" desta aba passa a valer tanto quanto o da
-            # Início — `ensure_daemon_running` consulta este flag e, sem ele,
-            # ressuscitava o daemon na próxima abertura da janela. Armado só
-            # com `rc == 0`, pela lição da BUG-HOME-SHUTDOWN-FALSE-OK-01: com
-            # rc != 0 nada foi desligado, e armar seria mentir para o
-            # autostart. E "Ligar" o desarma (`on_daemon_start`), que é o
-            # gesto explícito de volta.
             if action == "stop":
                 self._user_stopped_daemon = True
-            # T-08: deu certo — o detalhe do erro anterior sai da tela. Erro
-            # velho ao lado de sucesso novo faz diagnosticar defeito que já
-            # não existe.
             self._limpar_detalhe_tecnico()
             self._toast_daemon(
                 _SYSTEMCTL_OK_MSG.get(action, "Pronto.")
@@ -2655,8 +2138,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         else:
             logger.warning("systemctl_acao_falhou", acao=action, unit=unit, rc=rc)
             falha = _SYSTEMCTL_FAIL_MSG.get(action, "Não consegui")
-            # T-08: o detalhe entra ANTES do toast. Quando a pessoa lê a frase
-            # e olha para baixo, o motivo já está lá.
             self._detalhe_tecnico(
                 detalhe or f"systemctl {action} {unit} devolveu rc={rc}",
                 assunto=f"systemctl {action}",
@@ -2664,27 +2145,17 @@ class DaemonActionsMixin(WidgetAccessMixin):
             self._toast_daemon(
                 f"{falha} — veja 'Detalhes técnicos' aqui embaixo."
             )
-        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
-        return False  # não repetir via GLib
+        self._refresh_daemon_view_async()
+        return False
 
     def _set_daemon_status_markup(
         self, status: DaemonStatus, enabled: str
     ) -> None:
-        """Pinta o label de status com cor e tooltip PT-BR conforme estado canônico.
-
-        Cores:
-          verde (#50fa7b)  — online_systemd
-          laranja (#ffb86c) — online_avulso, iniciando
-          vermelho (#ff5555) — offline
-        """
+        """Pinta o label de status com cor e tooltip PT-BR conforme estado canônico."""
         label = self._get("daemon_status_label")
         if label is None:
             return
 
-        # LEIGO-03: o estado interno continua o mesmo (a matriz de 3 fontes é
-        # que dá a verdade); o que muda é a leitura. Quem usa pergunta três
-        # coisas — está funcionando? liga sozinho? preciso fazer algo? —, e não
-        # o que o systemd acha da unit.
         status_map: dict[DaemonStatus, tuple[str, str, str]] = {
             "online_systemd": (
                 "#50fa7b",
@@ -2719,44 +2190,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
         label.set_tooltip_text(tooltip)
 
     def _set_daemon_text(self, text: str) -> None:
-        """Troca o CORPO do painel — o `systemctl status` e afins.
-
-        T-08 (25/08/2026): virou "corpo", e não "o painel inteiro", porque o
-        detalhe de um erro tem de SOBREVIVER ao refresh que vem logo depois.
-        Ver `_detalhe_tecnico`.
-        """
+        """Troca o CORPO do painel — o `systemctl status` e afins."""
         self._texto_base_do_painel = text
         self._pintar_painel_tecnico()
 
     def _detalhe_tecnico(self, texto: object, *, assunto: str = "") -> bool:
-        """Põe a saída CRUA de uma falha no painel "Detalhes técnicos".
-
-        T-08 (SISTEMA-O-VIGIA-VIVO-01). Quinze frases desta aba mandam a
-        pessoa *"ver os 'Detalhes técnicos'"*. **Três** tinham o detalhe
-        naquele painel — as de `systemctl`. As outras nascem no processo da
-        JANELA, cujo log vai para o `stderr` dela e não entra na unidade do
-        daemon; o painel mostrava `systemctl status` do daemon enquanto o erro
-        acontecia noutro processo. A frase não mentia sobre o que houve; ela
-        mandava para um lugar onde a resposta nunca ia estar.
-
-        Parar de citar o painel seria pior: ele já promete pelo nome, e é o
-        único lugar da janela onde cabe saída crua.
-
-        **O detalhe é guardado, não pintado por cima.** Foi o primeiro desenho
-        e ele não funcionava: `_on_systemctl_done` chama
-        `_refresh_daemon_view_async()` logo depois do toast, e o refresh
-        reescrevia o painel com o `systemctl status` — o detalhe durava
-        segundos. Agora `_set_daemon_text` troca só o CORPO, este método
-        guarda o RODAPÉ, e `_pintar_painel_tecnico` junta os dois.
-
-        Seguro para chamar da thread GTK; de um worker, use
-        `GLib.idle_add(self._detalhe_tecnico, texto)`. Devolve `False` para
-        `GLib.idle_add` não reagendar.
-        """
+        """Põe a saída CRUA de uma falha no painel "Detalhes técnicos"."""
         bruto = "" if texto is None else str(texto).strip()
         if not bruto:
-            # Sem saída crua não há detalhe — e um cabeçalho vazio prometendo
-            # detalhe é a mesma mentira, só que menor.
             return False
         cabecalho = f"--- {assunto} ---" if assunto else "--- detalhe do erro ---"
         self._ultimo_detalhe_tecnico = f"{cabecalho}\n{bruto}"
@@ -2764,23 +2205,12 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return False
 
     def _limpar_detalhe_tecnico(self) -> None:
-        """Apaga o rodapé de erro — chamado quando a ação seguinte dá certo.
-
-        Detalhe de erro que fica depois de o problema passar faz a pessoa
-        diagnosticar um defeito que já não existe.
-        """
+        """Apaga o rodapé de erro — chamado quando a ação seguinte dá certo."""
         self._ultimo_detalhe_tecnico = ""
         self._pintar_painel_tecnico()
 
     def _pintar_painel_tecnico(self) -> None:
-        """Corpo + rodapé, sem escapes ANSI, rolado até o fim.
-
-        Nunca levanta. Este método roda no CAMINHO DE ERRO — é chamado
-        justamente quando alguma coisa já falhou —, e uma exceção aqui
-        engoliria o toast que vinha depois: a pessoa veria a falha original
-        sumir sem nenhuma mensagem. Sem painel (janela ainda montando,
-        instância parcial), não há o que pintar, e isso não é um erro.
-        """
+        """Corpo + rodapé, sem escapes ANSI, rolado até o fim."""
         try:
             view: Gtk.TextView = self._get("daemon_status_text")
         except Exception:
@@ -2794,11 +2224,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         buf: Gtk.TextBuffer = view.get_buffer()
         text = re.sub(r"\x1b\[[0-9;]*m", "", text)
         buf.set_text(text)
-        # UI-DAEMON-LOG-AUTOSCROLL-01: rola até o fim com alinhamento explícito
-        # (use_align=True, yalign=1.0) e novamente no próximo idle do GTK — o
-        # primeiro scroll roda antes do TextView relayoutar o texto novo, então
-        # sem o defer o fim do log fica fora do viewport quando o conteúdo
-        # cresce.
         self._scroll_textview_to_end(view)
         GLib.idle_add(self._scroll_textview_to_end, view)
 
@@ -2807,7 +2232,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         buf = view.get_buffer()
         end_iter = buf.get_end_iter()
         view.scroll_to_iter(end_iter, 0.0, True, 0.0, 1.0)
-        return False  # one-shot quando chamado via GLib.idle_add
+        return False
 
     def _systemctl_oneline(self, args: list[str]) -> str:
         result = self._invoke_systemctl(args, capture=True, check=False)
@@ -2816,10 +2241,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return (result.stdout or "").strip().splitlines()[:1][0] if result.stdout.strip() else ""
 
     def _systemctl_status_text(self, unit: str) -> str:
-        # `-n 0` — SISTEMA-BOTOES-01, 13/09/2026: sem ele o `status` emenda as
-        # últimas linhas do diário do daemon, com o `uniq=` inteiro do
-        # controle, e o painel em repouso da aba Sistema as mostrava sem
-        # ninguém clicar. As linhas do diário são do «Ver detalhes».
         result = self._invoke_systemctl(
             ["status", unit, "--no-pager", "-n", "0"], capture=True, check=False
         )

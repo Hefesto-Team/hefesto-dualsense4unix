@@ -1,25 +1,4 @@
-"""OS-QUATRO-NO-AR-01 — os quatro microfones ficam no ar ao mesmo tempo.
-
-A pergunta de 13/09/2026 era *"com dois controles ligados, quer os dois
-microfones funcionando ao mesmo tempo, cada um no seu canal?"*, e a resposta
-dela está citada no topo da sprint: sim, para os quatro. O desenho do §1 é de
-quem coordena, por delegação:
-
-    no ar              por controle, os quatro juntos
-    fonte padrão       uma só — o último que ela ligou e continua no ar
-
-**O QUE ESTA RÉGUA MEDE é o ato de verdade** (`hotkey.ligar_o_microfone`, a
-função única do 🎙 da tela e do botão do plástico), com o `EleitorDeMicrofone`
-DO PRODUTO, o registro da palavra DO PRODUTO e o `BtMicSubsystem` DO PRODUTO.
-Dublê só nas bordas: o `pactl` (`eleicao_de_microfone._rodar`), o backend do
-controle e as pontes de rádio.
-
-**NENHUM TESTE DAQUI FALA COM O MUNDO.** A fixture `_ninguem_roda_processo`
-troca `subprocess.run` e `subprocess.Popen` por uma recusa: um `pactl` que
-escapasse do dublê reprova o teste em vez de chegar ao servidor de som dela.
-
-Os endereços são da faixa sintética da casa, com os octetos 4 e 5 zerados.
-"""
+"""OS-QUATRO-NO-AR-01 — os quatro microfones ficam no ar ao mesmo tempo."""
 
 from __future__ import annotations
 
@@ -43,7 +22,6 @@ P2 = "aa:bb:cc:00:00:b7"
 P3 = "aa:bb:cc:00:00:c3"
 P4 = "aa:bb:cc:00:00:d9"
 
-#: A mesa dela: dois no rádio, dois no cabo.
 MESA_DELA: tuple[tuple[str, str], ...] = (
     (P1, "bluetooth"),
     (P2, "usb"),
@@ -51,7 +29,6 @@ MESA_DELA: tuple[tuple[str, str], ...] = (
     (P4, "bluetooth"),
 )
 
-#: O microfone da máquina — para onde o padrão volta quando ninguém está no ar.
 PLACA = "alsa_input.pci-0000_00_1f.3.analog-stereo"
 TERCEIRO = "alsa_input.um_terceiro_que_o_wireplumber_escolheu"
 
@@ -63,11 +40,6 @@ def _n(uniq: str) -> str:
 def _canal(uniq: str) -> str:
     """O nó por controle, com a mesma grafia que `canal_do_microfone` publica."""
     return f"hefesto_mic_{_n(uniq)[-6:]}"
-
-
-# ---------------------------------------------------------------------------
-# As bordas dubladas
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture(autouse=True)
@@ -85,12 +57,7 @@ def _ninguem_roda_processo(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 class _PipeWire:
-    """O `pactl` que a eleição vê. O eleitor por cima dele é o do produto.
-
-    Ele SABE RECUSAR nos três jeitos que importam aqui: o WirePlumber
-    reelegendo um terceiro por cima (`reeleger_para`), o canal de um controle
-    sumindo (`publicados`) e o servidor que não responde (`responde`).
-    """
+    """O `pactl` que a eleição vê. O eleitor por cima dele é o do produto."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self.publicados: dict[str, str] = {_n(u): _canal(u) for u, _ in MESA_DELA}
@@ -106,7 +73,6 @@ class _PipeWire:
         monkeypatch.setattr(ele, "SETTLE_PASSO_S", 0.0)
         monkeypatch.setattr(ele, "ESPERA_DO_CANAL_PASSOS", 1)
         monkeypatch.setattr(ele, "ESPERA_DO_CANAL_PASSO_S", 0.0)
-        # O que o laço do canal lê a cada dois segundos, pelos mesmos donos.
         monkeypatch.setattr(
             audio_control, "fonte_de_captura_do_uniq", self._fonte_do_uniq
         )
@@ -114,19 +80,7 @@ class _PipeWire:
         monkeypatch.setattr(hotkey, "_fonte_esta_muda", lambda _fonte: False)
 
     def _outra_captura(self) -> str | None:
-        """O que `--outra-captura-elegivel` responde sobre ESTA lista.
-
-        A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01 (29/09/2026). O dublê era
-        `melhor_fonte_elegivel -> PLACA`, uma constante: a pergunta do install
-        responde o PRIMEIRO canal de controle na mesa dela, e um dublê que
-        responde sempre a placa é mais frouxo que o produto. Agora ele sai da
-        lista, com a regra do script: o primeiro nó que não é controle nenhum
-        (nem canal `hefesto_mic_`, nem «dualsense», nem monitor). Aqui a porta
-        de todos se sustenta (`fonte_se_sustenta` acima), então é a placa; na
-        mesa dela, sem porta usável na placa, seria nenhum — e esse caso é
-        medido em `test_a_volta_do_microfone_nao_elege_controle.py`, contra o
-        script de verdade.
-        """
+        """O que `--outra-captura-elegivel` responde sobre ESTA lista."""
         for nome in [PLACA, *self.publicados.values()]:
             baixa = nome.lower()
             if (
@@ -264,12 +218,7 @@ def _apertar(m: Any, uniq: str, *, ligado: bool) -> Any:
 
 
 def _voltas_do_canal(m: Any, voltas: int) -> None:
-    """Roda o `canal_do_microfone_loop` DE PRODUÇÃO por `voltas` varreduras.
-
-    A parada entra pelo `_uniqs_conectados` da volta seguinte, e devolvendo a
-    mesa inteira: o laço sai no primeiro `_is_stopping()` do `for`, sem limpar
-    as leituras que a última volta deixou.
-    """
+    """Roda o `canal_do_microfone_loop` DE PRODUÇÃO por `voltas` varreduras."""
     reais = hotkey._uniqs_conectados
     contagem = {"n": 0}
 
@@ -290,18 +239,8 @@ def _eleito(m: Any) -> str | None:
     return m.daemon._eleitor_de_microfone.eleito
 
 
-# ---------------------------------------------------------------------------
-# 1. Ligar o segundo não desliga o primeiro
-# ---------------------------------------------------------------------------
-
-
 def test_liga_um_liga_outro_e_os_dois_ficam_no_ar(mesa: Any) -> None:
-    """Liga A, liga B: A e B no ar, as duas luzes acesas, o padrão é B.
-
-    MORDIDA: em `hotkey._apagar_a_luz_de_quem_perdeu_o_canal`, tire a guarda
-    `_no_ar_da_sessao(daemon).esta(dono_antes)` — que é devolver o
-    `esquecer_a_palavra` na perda do padrão — e A sai do ar com a luz apagada.
-    """
+    """Liga A, liga B: A e B no ar, as duas luzes acesas, o padrão é B."""
     assert _apertar(mesa, P1, ligado=True).feito
     assert _apertar(mesa, P4, ligado=True).feito
 
@@ -319,11 +258,7 @@ def test_liga_um_liga_outro_e_os_dois_ficam_no_ar(mesa: Any) -> None:
 def test_os_quatro_da_mesa_dela_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Os quatro no ar, e o `_loop` do supervisor entrega o SIM às duas pontes.
-
-    MORDIDA: a mesma da régua de cima. Com o esquecimento de volta, só o
-    último fica com a palavra — e só uma ponte de rádio recebe `True`.
-    """
+    """Os quatro no ar, e o `_loop` do supervisor entrega o SIM às duas pontes."""
     for uniq, _ in MESA_DELA:
         assert _apertar(mesa, uniq, ligado=True).feito, uniq
 
@@ -336,7 +271,6 @@ def test_os_quatro_da_mesa_dela_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
         bt, "nos_dualsense_bluetooth",
         lambda: [SimpleNamespace(uniq=u, caminho=c) for u, c in radio],
     )
-    # O canal do cabo carrega módulo no servidor de som: fica fora desta régua.
     monkeypatch.setattr(mesa.sub, "_reconciliar_o_cabo", lambda _nos: None)
     mesa.sub._registro.novidade.set()
     mesa.sub._loop()
@@ -352,18 +286,8 @@ def test_os_quatro_da_mesa_dela_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. Desligar
-# ---------------------------------------------------------------------------
-
-
 def test_desligar_o_padrao_passa_o_padrao_ao_ultimo_que_continua_no_ar(mesa: Any) -> None:
-    """Liga A, B e C; desliga C (o padrão): o padrão é B, e A e B seguem no ar.
-
-    MORDIDA: em `EleitorDeMicrofone.passar_o_padrao`, pule os candidatos (o
-    passo «quem está no ar») e vá direto ao `devolver_o_microfone` — o padrão
-    cai na placa da máquina com dois microfones no ar.
-    """
+    """Liga A, B e C; desliga C (o padrão): o padrão é B, e A e B seguem no ar."""
     for uniq in (P1, P2, P3):
         assert _apertar(mesa, uniq, ligado=True).feito
     ato = _apertar(mesa, P3, ligado=False)
@@ -379,14 +303,7 @@ def test_desligar_o_padrao_passa_o_padrao_ao_ultimo_que_continua_no_ar(mesa: Any
 
 
 def test_desligar_quem_nao_e_o_padrao_tira_so_ele_do_ar(mesa: Any) -> None:
-    """Liga A e B; desliga A: A sai, B continua no ar e continua o padrão.
-
-    Não é recusa: A estava no ar, e o botão dele o tira do ar. O padrão do
-    sistema não é tocado — nenhum `set-default-source` sai deste toque.
-
-    MORDIDA: devolva o ramo `fora_do_padrao` de `_eleger_ou_devolver` à recusa
-    de quem não elegeu, e o ato de A volta com `canal_no_sistema.feita=False`.
-    """
+    """Liga A e B; desliga A: A sai, B continua no ar e continua o padrão."""
     _apertar(mesa, P1, ligado=True)
     _apertar(mesa, P4, ligado=True)
     escritas = list(mesa.pipewire.escritas)
@@ -408,12 +325,7 @@ def test_desligar_quem_nao_e_o_padrao_tira_so_ele_do_ar(mesa: Any) -> None:
 def test_desligar_todos_o_padrao_volta_para_a_maquina(
     mesa: Any, ordem: tuple[str, str]
 ) -> None:
-    """Desliga todos: o padrão volta ao microfone da máquina, como hoje.
-
-    MORDIDA: a mesma da passagem do padrão. Com ela arrancada, desligar P4
-    primeiro já devolve à placa e deixa P1 no ar SEM ser o padrão — e o toque
-    seguinte de P1 vira recusa.
-    """
+    """Desliga todos: o padrão volta ao microfone da máquina, como hoje."""
     _apertar(mesa, P1, ligado=True)
     _apertar(mesa, P4, ligado=True)
     primeiro, segundo = ordem
@@ -430,21 +342,8 @@ def test_desligar_todos_o_padrao_volta_para_a_maquina(
     assert mesa.backend.leds == {_n(P1): False, _n(P4): False}
 
 
-# ---------------------------------------------------------------------------
-# 3. Perder o padrão não é sair do ar
-# ---------------------------------------------------------------------------
-
-
 def test_perder_o_padrao_para_um_terceiro_nao_tira_do_ar(mesa: Any) -> None:
-    """A no ar; B liga, a escrita passa e o WirePlumber reelege um TERCEIRO.
-
-    Ninguém da mesa ficou com o padrão (a posse cai, pela régua do ativo
-    relido), mas o canal de A continua no ar — a luz dele não apaga e a
-    palavra dele fica. O ato de B foi recusado: a palavra dele é desfeita e
-    ele não entra no ar.
-
-    MORDIDA: a guarda de `_apagar_a_luz_de_quem_perdeu_o_canal`.
-    """
+    """A no ar; B liga, a escrita passa e o WirePlumber reelege um TERCEIRO."""
     _apertar(mesa, P1, ligado=True)
     mesa.pipewire.reeleger_para = TERCEIRO
 
@@ -458,11 +357,7 @@ def test_perder_o_padrao_para_um_terceiro_nao_tira_do_ar(mesa: Any) -> None:
 
 
 def test_o_mesmo_controle_em_duas_grafias_e_um_controle_so(mesa: Any) -> None:
-    """A tela manda `aa:bb:…`; o plástico, `aabb…`. É o mesmo controle.
-
-    MORDIDA: compare `eleitor.eleito != uniq` cru em `_eleger_ou_devolver`, e o
-    eleito que desliga pelo plástico recebe a recusa de quem não elegeu.
-    """
+    """A tela manda `aa:bb:…`; o plástico, `aabb…`. É o mesmo controle."""
     _apertar(mesa, P1, ligado=True)
     ato = _apertar(mesa, _n(P1), ligado=False)
 
@@ -472,24 +367,8 @@ def test_o_mesmo_controle_em_duas_grafias_e_um_controle_so(mesa: Any) -> None:
     assert hotkey._no_ar_da_sessao(mesa.daemon).todos() == []
 
 
-# ---------------------------------------------------------------------------
-# 4. O canal de um cai de verdade
-# ---------------------------------------------------------------------------
-
-
 def test_a_ponte_de_um_cai_a_luz_dele_apaga_e_o_outro_nao_e_tocado(mesa: Any) -> None:
-    """A e B no ar; o canal de A some. A luz de A apaga, e B não é tocado.
-
-    UMA leitura sem canal não basta — é a janela da reconexão de rádio, em que
-    a ponte velha cai e a nova sobe. DUAS seguidas, sim.
-
-    MORDIDA: tire `await _conferir_quem_saiu_do_ar(daemon, uniqs)` do
-    `canal_do_microfone_loop`, e A fica no ar para sempre sem canal.
-
-    A PRIMEIRA VOLTA VÊ O CANAL DE PÉ — 22/09/2026: só some o canal que já
-    subiu (`MicrofonesNoAr.anotar_leitura`). No produto o laço lê a cada dois
-    segundos, então um canal que existe é visto antes de cair.
-    """
+    """A e B no ar; o canal de A some. A luz de A apaga, e B não é tocado."""
     _apertar(mesa, P1, ligado=True)
     _apertar(mesa, P4, ligado=True)
     _voltas_do_canal(mesa, 1)
@@ -550,14 +429,7 @@ def test_quem_nasce_antes_do_canal_nao_sai_do_ar_esperando_por_ele(mesa: Any) ->
 
 
 def test_nao_saber_se_o_canal_existe_nunca_tira_do_ar(mesa: Any) -> None:
-    """O servidor de som parou de responder: ninguém sai do ar por isso.
-
-    Foi o que aconteceu por 47 minutos em 13/09/2026 (MIC-O-CANAL-DO-OUTRO-01).
-    *"Não sei"* nunca vira *"saiu"*.
-
-    MORDIDA: faça `eleicao_de_microfone.canal_publicado` devolver `False` com
-    `rc != 0`, e os dois saem do ar em duas voltas.
-    """
+    """O servidor de som parou de responder: ninguém sai do ar por isso."""
     _apertar(mesa, P1, ligado=True)
     _apertar(mesa, P4, ligado=True)
     mesa.pipewire.responde = False
@@ -569,22 +441,8 @@ def test_nao_saber_se_o_canal_existe_nunca_tira_do_ar(mesa: Any) -> None:
     assert mesa.backend.leds == {_n(P1): True, _n(P4): True}
 
 
-# ---------------------------------------------------------------------------
-# 5. A aba Controles mostra cada microfone no ar
-# ---------------------------------------------------------------------------
-
-
 def test_a_aba_controles_mostra_cada_microfone_no_ar(mesa: Any) -> None:
-    """Dois no ar, um deles padrão: o selo de OS DOIS diz ATIVO.
-
-    O caminho é o do produto inteiro: o laço do canal lê, o `_merge_audio` do
-    IPC publica o bloco `audio`, e `a02_controles.selo_composto` pinta.
-
-    ANTES DESTA SPRINT o selo de A dizia MUDO — `canal_ativo` só era
-    verdadeiro para o padrão do sistema, e A estava no ar no canal dele.
-
-    MORDIDA: tire o `lido["canal_ativo"] = True` de `hotkey._ler_o_canal_deste`.
-    """
+    """Dois no ar, um deles padrão: o selo de OS DOIS diz ATIVO."""
     raiz = pathlib.Path(__file__).resolve().parents[2]
     interface = raiz / "src" / "hefesto_dualsense4unix" / "interface"
     if str(interface) not in sys.path:

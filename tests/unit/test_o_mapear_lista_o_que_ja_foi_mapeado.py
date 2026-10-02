@@ -1,35 +1,4 @@
-"""O Mapear lista o que já foi mapeado — O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01.
-
-O pedido dela, 29/09/2026 (fotos 8 e 9 da lista das ~17h15): *«Já mapeamos
-antes não aparece aqui a lista com rolagem a direita. O Num Hub nenhum em 7
-dias começam sem letras maiusculas.»* E a frase do «Entrada encontrada» virou a
-que ela ditou. <!-- noqa-acento: citação literal dela -->
-
-O QUE ESTA RÉGUA COBRA, com disco e ``/sys`` sintéticos (faixa forjada
-``0000:0a:00.0``, nada da máquina dela):
-
-1. a lista «Já mapeadas» mostra TODA entrada numerada — com nome ou sem —, na
-   ordem das faces, e «Nenhuma ainda.» só sem entrada numerada nenhuma;
-2. a conta embaixo é a da MESMA lista, e não o ``feitas`` da sessão;
-3. no WebKitGTK (o motor dela), a lista com 15 entradas rola por dentro e não
-   empurra o diálogo: a coluna da direita acaba onde a da esquerda acaba;
-4. cada valor medido começa com maiúscula ou algarismo, e a frase é a dela;
-5. o Salvar com os dois campos vazios numera a porta sem número, não mexe na
-   numerada, e não apaga o nome de quem tem.
-
-AS MORDIDAS (arranque a cura, veja reprovar, devolva):
-
-* 1 — devolva o filtro ``p.get("nome")`` a ``_mapeadas``;
-* 2 — devolva a conta ao ``feitas`` da foto;
-* 3 — tire as duas metades da folha no ``aba08.py`` (o ``height:0;min-height:100%``
-  da ``.mp-dir`` e o ``flex:1 1 0;min-height:0;overflow-y:auto`` da ``.mp-lista``)
-  e regere a bancada: o diálogo vai de 397 a 596 px com as 15. No WebKit cada
-  metade sozinha segura o diálogo (medido em 01/10/2026); no Chrome da medida
-  da sprint, só o ``height:0`` segurava, e por isso as duas ficam;
-* 4 — devolva o «num hub» minúsculo;
-* 5 — devolva o ``raise ValueError("nada a gravar…")`` do ``gravar`` (os dois
-  primeiros casos reprovam), ou mande ``nome=""`` pelo gesto (o terceiro).
-"""
+"""O Mapear lista o que já foi mapeado — O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01."""
 from __future__ import annotations
 
 import json
@@ -56,16 +25,12 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-#: A frase que ela ditou em 29/09, com «porta» → «entrada» (D-A-PALAVRA-ENTRADA)
-#: e o nome do botão da 08. Escrita aqui como constante do pedido, e não lida do
-#: dono: a régua que lê a frase do dono passaria com qualquer frase.
 FRASE_DELA = (
     "Conecte um DualSense em cada entrada USB do seu dispositivo. Nomeie a entrada "
     "(ou deixe vazia para ela ser enumerada). Ao final, valide e, caso necessário, "
     "faça os ajustes na entrada no botão Mapa das Conexões."
 )
 
-#: A faixa sintética da casa.
 PCI = "0000:0a:00.0"
 
 
@@ -98,9 +63,6 @@ def _tres_numeradas(disco: pathlib.Path) -> list[dict[str, Any]]:
     return [p.como_dicionario() for p in mapa.portas]
 
 
-# ---------------------------------------------------------------------------
-# 1. a lista é das numeradas
-# ---------------------------------------------------------------------------
 def test_a_lista_mostra_as_numeradas_sem_nome(disco: pathlib.Path) -> None:
     """MORDIDA: devolva o filtro ``p.get("nome")`` → só a 1 aparece e reprova."""
     portas = _tres_numeradas(disco)
@@ -119,9 +81,6 @@ def test_a_lista_mostra_as_numeradas_sem_nome(disco: pathlib.Path) -> None:
     ) == '<li class="vazio">Nenhuma ainda.</li>', "a porta sem número ainda não é mapeada"
 
 
-# ---------------------------------------------------------------------------
-# 2. a conta é a da lista
-# ---------------------------------------------------------------------------
 def test_a_conta_e_a_da_lista_e_nao_a_da_sessao(disco: pathlib.Path) -> None:
     """MORDIDA: devolva a conta ao ``feitas`` da foto → «Nenhuma entrada salva ainda.»."""
     portas = _tres_numeradas(disco)
@@ -135,9 +94,6 @@ def test_a_conta_e_a_da_lista_e_nao_a_da_sessao(disco: pathlib.Path) -> None:
     assert "nenhuma" not in vazio["mapear-conta"].lower()
 
 
-# ---------------------------------------------------------------------------
-# 4. as maiúsculas e a frase
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("porta", [
     {"rotulo": "Entrada 9", "usb": "2.0", "hub": "3-1", "hub_produto": "USB2.1 Hub", "storm": 0},
     {"rotulo": "Entrada 1", "usb": "3.0", "hub": "", "storm": 3},
@@ -165,39 +121,25 @@ def test_a_frase_da_entrada_encontrada_e_a_dela() -> None:
 
 
 def test_a_dica_do_mapear_nao_desdiz_a_frase() -> None:
-    """A dica «?» do diálogo mandava «dê um nome e o lugar, e salve» ao lado da
-    frase dela, que diz que o nome é opcional, e chamava a Gestão de Controles
-    pelo nome velho, «Check-up» (conferência, 02/10/2026).
-
-    MORDIDA: devolva a dica de antes no ``TELA_MAPEAR_PORTAS`` e regere → reprova.
-    Ou devolva o «e dê nome e lugar a cada uma» à dica do botão que abre o
-    diálogo (``aba08.py``, o ``href="#mapear-portas"``) e regere → reprova.
-    """
+    """A dica «?» do diálogo mandava «dê um nome e o lugar, e salve» ao lado da"""
     bancada = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
     inicio = bancada.index('id="mapear-portas"')
     topo = bancada[inicio:bancada.index('id="mp-forma"', inicio)]
     dica = topo[topo.index('class="dica">'):]
     assert "opcionais" in dica, f"a dica do Mapear ainda manda dar nome e lugar: {dica[:300]}"
     assert "Check-up" not in dica and "Gestão de Controles" in dica, dica[:300]
-    # O BOTÃO QUE ABRE O DIÁLOGO dizia o mesmo na dica dele, «e dê nome e lugar a cada
-    # uma» (conferência final, 02/10/2026): a correção que fica num lugar só deixa as
-    # duas versões vivas.
     botao = bancada[bancada.index('href="#mapear-portas"'):]
     botao = botao[:botao.index(">")]
     assert "dê nome e lugar" not in botao and "opcionais" in botao, botao
 
 
-# ---------------------------------------------------------------------------
-# 5. o Salvar vazio numera, e não apaga
-# ---------------------------------------------------------------------------
 def _fluxo(gabinete: Gabinete) -> ee.MapearAsPortas:
     return ee.MapearAsPortas(ler=gabinete.ler, entradas=gabinete.entradas, storm={},
                              adaptadores=lambda: (Adaptador(interface="hci9"),))
 
 
 def _salvar_vazio(fluxo: ee.MapearAsPortas, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O clique dela no «Salvar e ir para a próxima», com os dois campos vazios,
-    pelo tratador do gesto `mapear-gravar` da aba."""
+    """O clique dela no «Salvar e ir para a próxima», com os dois campos vazios,"""
     monkeypatch.setattr(pac, "_o_mapa", lambda: fluxo)
     pac.mapear_gravar(None, {"forma": {"nome": "", "lugar": ""}}, None)
 
@@ -205,13 +147,7 @@ def _salvar_vazio(fluxo: ee.MapearAsPortas, monkeypatch: pytest.MonkeyPatch) -> 
 def test_o_salvar_vazio_numera_a_porta_sem_numero(
     tmp_path: pathlib.Path, disco: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A porta sem número nasce numerada, sem nome e fora de toda face; um
-    segundo Salvar vazio nela (numerada e sem face) não tem o que gravar.
-
-    MORDIDA: devolva o ``raise`` do ``gravar`` → o gesto levanta e reprova;
-    tire o retorno «não gravou» de ``_gravar_a_porta`` → a ``Gravacao`` diz
-    que gravou sem ter escrito nada, e reprova.
-    """
+    """A porta sem número nasce numerada, sem nome e fora de toda face; um"""
     _escrever(disco, [{"nome": ee.FACE_FRENTE, "portas": ["1"]}],
               {"1": {"lugar": lugar_de(PCI_A, "1"), "nos": ["usb1-port1"], "nome": "Frente"}})
     gabinete = Gabinete(tmp_path / "sys", BOOT_1)
@@ -244,13 +180,7 @@ def test_o_salvar_vazio_na_numerada_nao_muda_o_que_ela_disse(
     tmp_path: pathlib.Path, disco: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
     nome: str | None,
 ) -> None:
-    """A entrada numerada, com face, com o cabo nela: o Salvar vazio é a
-    revisita que o «só o nome» já era — o cabo prova o buraco de novo, e o
-    número, o nome e a face ficam. Lido do ``maquina.json`` antes e depois.
-
-    MORDIDA: devolva o ``raise`` do ``gravar`` (os dois casos levantam) ou
-    mande ``nome=""`` pelo gesto (o caso com nome perde o nome no disco).
-    """
+    """A entrada numerada, com face, com o cabo nela: o Salvar vazio é a"""
     entrada: dict[str, Any] = {"lugar": lugar_de(PCI_A, "5"), "nos": ["usb1-port5"]}
     if nome:
         entrada["nome"] = nome
@@ -272,12 +202,6 @@ def test_o_salvar_vazio_na_numerada_nao_muda_o_que_ela_disse(
     assert depois["portas"]["1"]["lugar"] == antes["portas"]["1"]["lugar"]
 
 
-# ---------------------------------------------------------------------------
-# 3. no motor dela: a lista rola e não empurra o diálogo
-# ---------------------------------------------------------------------------
-
-#: O roteiro no WebKit: pinta os campos do Mapear com o que o pacote devolve e
-#: mede o diálogo. Os campos chegam por ``window.__campos`` (JSON).
 ROTEIRO = r"""
 (function(){
   const out = {};
@@ -330,7 +254,6 @@ def no_webkit() -> dict[str, Any]:
     roteiro = (ROTEIRO.replace("__CAMPOS_UMA__", json.dumps(_campos(1)))
                .replace("__CAMPOS_QUINZE__", json.dumps(_campos(15))))
     saiu: list[str] = []
-    # Offscreen: sob Xvfb não há gerenciador de janelas, e ela tem UMA tela.
     janela = Gtk.OffscreenWindow()
     view = WebKit2.WebView()
     view.set_size_request(1600, 855)
@@ -362,8 +285,7 @@ def no_webkit() -> dict[str, Any]:
 
 
 def test_a_lista_rola_e_nao_empurra_o_dialogo(no_webkit: dict[str, Any]) -> None:
-    """MORDIDA: tire as duas metades da folha (ver o cabeçalho) e regere → com as
-    15 o diálogo passa de 397 para 596 px, e a lista não rola."""
+    """MORDIDA: tire as duas metades da folha (ver o cabeçalho) e regere → com as"""
     uma, quinze = no_webkit["uma"], no_webkit["quinze"]
     assert "falta" not in no_webkit, f"a bancada não tem onde pintar {no_webkit.get('falta')}"
     assert uma["visivel"] != "none", "o «Mapear Entradas» não abriu pela âncora"

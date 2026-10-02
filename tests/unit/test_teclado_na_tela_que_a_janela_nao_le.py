@@ -40,9 +40,6 @@ from hefesto_dualsense4unix.app.actions.input_actions import (
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
 
-# --- a função pura ------------------------------------------------------
-
-
 def test_sem_resposta_a_legenda_fica_como_estava() -> None:
     assert frase_do_teclado_na_tela(None) == "", (
         "a janela passou a afirmar sobre uma máquina que ninguém olhou"
@@ -77,9 +74,6 @@ def test_os_tres_estados_sao_frases_diferentes() -> None:
         "dois estados com o mesmo texto — a tela deixa de distinguir "
         f"não sei / tem / não tem: {frases}"
     )
-
-
-# --- o caminho vivo -----------------------------------------------------
 
 
 class _FakeLabel:
@@ -158,7 +152,7 @@ def test_a_lista_de_atalhos_nao_e_reconstruida(
     aba = _Aba()
     aba._refresh_key_bindings_from_draft()
     antes = [list(row) for row in aba._key_bindings_store.rows]
-    aba._key_bindings_store.rows[0][1] = "KEY_Z"  # edição em curso
+    aba._key_bindings_store.rows[0][1] = "KEY_Z"
 
     _responder(
         monkeypatch,

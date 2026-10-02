@@ -1,26 +1,4 @@
-"""ENGASGO-VULKAN-01 (lado GUI) — o botão "Tirar a sobreposição Vulkan".
-
-O botão fica na fileira Avançado da aba Sistema, ao lado do "Travar Proton
-validado": mesma natureza (mexe no que a Steam guarda por jogo) e mesmo alcance
-(todos os jogos). O que este arquivo garante:
-
-- o botão EXISTE na página que o produto serve, com rótulo e dica, e o handler
-  está registrado no dono de hoje — sem isso a cura fica escrita e nunca ligada,
-  o defeito mais caro desta casa. **A ROTA MUDOU EM 06/09/2026**: até aqui esta
-  régua lia o mapa de handlers de `app/app.py`, e a `GTK-3` apagou o arquivo com
-  a janela inteira. O clique de hoje entra por `data-gesto="procurar-camadas"` na
-  página 09 e sai no `@gesto` de `interface/pacotes/a09_sistema.py`, que chama o
-  MESMO motor de `emulation_actions` que as classes abaixo exercitam;
-- o diálogo é o RELATÓRIO (ELO-MUDO-01): diz jogo por jogo o que achou, e
-  distingue "ligada" de "pendurada mas o arquivo não está no disco" — que é o
-  estado real em que a máquina dela estava;
-- "Devolver" só aparece quando há o que devolver, e "Tirar" só quando há o que
-  tirar. Botão que não faz nada ensina que a tela é enfeite;
-- com jogo aberto o worker RECUSA e não toca em arquivo nenhum.
-
-Padrão `_install_gi_stubs` do `test_proton_lock_button.py` (GATE-SKIP-MASK-01):
-com o gi real presente, nada é stubado.
-"""
+"""ENGASGO-VULKAN-01 (lado GUI) — o botão "Tirar a sobreposição Vulkan"."""
 from __future__ import annotations
 
 import ast
@@ -38,13 +16,6 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: O NOME DO BOTÃO, ESCRITO UMA VEZ SÓ NESTE ARQUIVO. Ele é a palavra dela:
-#: em 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01) ela o renomeou para
-#: «Corrigir Vulkan» e o fez LIGÁVEL (a pílula do Modo Freestyle), no lugar do
-#: «Tirar a sobreposição Vulkan»; o gesto passou a ser `corrigir-vulkan`. O
-#: verbo promete conserto, e quem guarda a honestidade desde então é a DICA
-#: (`test_a_dica_nao_promete_cura_de_engasgo`); trocar o rótulo é pergunta da
-#: sessão dos desenhos (`docs/data/decisoes-dela.csv`).
 ROTULO = "Corrigir Vulkan"
 
 
@@ -115,17 +86,9 @@ _CV_MODNAME = "hefesto_dualsense4unix.integrations.camadas_vulkan"
 _SLO_MODNAME = "hefesto_dualsense4unix.integrations.steam_launch_options"
 
 
-#: O ENDEREÇO DO BOTÃO, e ele é o mesmo dos dois lados: a página o carrega em
-#: `data-gesto=`, o dono o declara em `@gesto(...)`. Escrito uma vez só.
 PAGINA = "09-sistema.html"
 GESTO = "corrigir-vulkan"
 
-#: O DONO DE HOJE. Até 06/09/2026 quem atendia o clique era
-#: `app/app.py`, o mapa de handlers da janela GTK — e a `GTK-3`
-#: (`D-0609-GTK-LEVA-INTEIRA`) apagou o arquivo do disco. O ato não morreu com
-#: ela: `emulation_actions` continua sendo o motor (as duas frases puras e o
-#: `_camadas_worker` abaixo), e quem entrega o clique a ele agora é o registro
-#: `@gesto` da aba 09.
 DONO = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "pacotes"
     / "a09_sistema.py"
@@ -137,21 +100,7 @@ PAGINA_SERVIDA = (
 
 
 def _registros_de_gesto(fonte: Path) -> dict[tuple[str, str], str]:
-    """`(página, nome) → nome da função`, lidos da ÁRVORE, não do texto.
-
-    POR QUE `ast` E NÃO `in fonte`, e a cicatriz é desta mesma sprint: em
-    23/08/2026 `test_o_install_materializa_o_curador_sem_flag` era `grep` no
-    `install.sh` e **passava** com o bloco inteiro trancado atrás de um
-    `if false` — a linha continuava escrita e inalcançável. Uma busca por texto
-    dá o mesmo verde para uma linha viva, uma linha comentada e uma linha citada
-    dentro de um docstring.
-
-    E AQUI ELA DARIA, medido em 06/09/2026: com o decorador APAGADO do
-    `a09_sistema.py`, `grep -c '"procurar-camadas"'` no mesmo arquivo ainda
-    responde **2** — a literal sobrevive num comentário e na chamada
-    `_confirmado(o, "procurar-camadas")`. A árvore só enxerga o decorador que o
-    interpretador vai executar.
-    """
+    """`(página, nome) → nome da função`, lidos da ÁRVORE, não do texto."""
     achados: dict[tuple[str, str], str] = {}
     for no in ast.walk(ast.parse(fonte.read_text(encoding="utf-8"))):
         if not isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -173,12 +122,7 @@ def _registros_de_gesto(fonte: Path) -> dict[tuple[str, str], str]:
 
 
 def test_o_botao_existe_na_pagina_que_o_produto_serve() -> None:
-    """O primeiro elo: sem o endereço na página, não há clique a entregar.
-
-    A página servida é a que o `WebKit2.WebView` carrega — e o rótulo dela vem
-    do gerador (`interface/aba09.py`), nunca deste arquivo. Aqui só se cobra
-    que os dois digam a mesma palavra.
-    """
+    """O primeiro elo: sem o endereço na página, não há clique a entregar."""
     pagina = PAGINA_SERVIDA.read_text(encoding="utf-8")
     linhas = [ln for ln in pagina.splitlines() if f'data-gesto="{GESTO}"' in ln]
     assert linhas, (
@@ -194,18 +138,7 @@ def test_o_botao_existe_na_pagina_que_o_produto_serve() -> None:
 
 
 def _as_duas_paginas() -> list[Path]:
-    """O desenho (o que ela aprova) e o publicado (o que a tela carrega).
-
-    Os caminhos têm dono (`interface/onde`); a régua mede as duas porque a
-    promessa de 25/09 estava nas duas, e curar uma só deixaria a outra viva.
-
-    O PUBLICADO SÓ ENTRA QUANDO A ABA NÃO ESTÁ EM TRABALHO — 28/09/2026. Com a
-    09 declarada em `mockup/DIVERGENCIAS.md`, o publicado está atrás do desenho
-    de propósito (a direção é `mockup/` → produto, decisão dela de 31/08), e a
-    régua mede só a bancada. Quem diz o que está declarado é o dono do contrato
-    (`scripts/check_o_desenho_aprovado.declaradas`), e a régua se rearma sozinha
-    no dia em que a aba for publicada.
-    """
+    """O desenho (o que ela aprova) e o publicado (o que a tela carrega)."""
     import importlib.util
 
     from hefesto_dualsense4unix.interface import onde
@@ -222,20 +155,7 @@ def _as_duas_paginas() -> list[Path]:
 
 
 def test_a_dica_nao_promete_cura_de_engasgo() -> None:
-    """ARRANQUE a troca da dica em `interface/aba09.py` e este teste reprova.
-
-    De 25/09 (`8fe83895b`) a 26/09/2026 a dica dizia *«Tira dos jogos a
-    sobreposição Vulkan que engasga a imagem»* — e é falso: o A/B de 23/08
-    mediu a camada desligada PIOR, e o `vulkan-1` do Wine nem a lê. Em 26/09
-    ela passou a dizer que o botão «não cura engasgo», e ela chamou isso de
-    pichação: *«ou seja não resolveu e meteu uma placa falando que não
-    presta.»* <!-- noqa-acento: citação literal dela -->
-
-    **28/09/2026 — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01** (a decisão
-    dela de 27/09 entra no `docs/data/decisoes-dela.csv` no fecho): o botão tira
-    do jogo as duas camadas da Steam, e a dica diz o ato e o preço, sem falar
-    de engasgo — nem para prometer, nem para negar.
-    """
+    """ARRANQUE a troca da dica em `interface/aba09.py` e este teste reprova."""
     for pagina in _as_duas_paginas():
         linha = next((ln for ln in pagina.read_text(encoding="utf-8").splitlines()
                       if f'data-gesto="{GESTO}"' in ln), "")
@@ -250,24 +170,13 @@ def test_a_dica_nao_promete_cura_de_engasgo() -> None:
                 f"({pichacao!r}): {dica!r}")
 
 
-#: Uma linha do EXAME na marcação do produto (`a09_sistema._linha_do_exame`): o
-#: selo, a palavra do selo e a frase inteira no `title`. As do Status levam
-#: `data-id`, e por isso não casam aqui.
 _LINHA_DO_EXAME = re.compile(
     r'<div class="saude"><span class="selo (?P<cls>\w+)"><span class="sg">[^<]*'
     r'</span>(?P<selo>[^<]*)</span><span class="txt" title="(?P<frase>[^"]*)">')
 
 
 def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
-    """ARRANQUE o `frase_do_estado` do gerador e este teste reprova.
-
-    Até 26/09/2026 o desenho trazia *«✓ OK · Nenhuma sobreposição picotando o
-    jogo»*: uma linha que a tela viva só mostrava antes da primeira pintura (o
-    exame é repintado com `a09_sistema.linha_da_sobreposicao_vulkan`). A cena
-    tem de mostrar a frase do dono (`camadas_vulkan.frase_do_estado`), com o
-    selo NOTA do produto, e a MESMA escolha que a pílula da cena diz — desde
-    28/09, a que chega ao jogo (`a09_sistema.vulkan_corrigido`).
-    """
+    """ARRANQUE o `frase_do_estado` do gerador e este teste reprova."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     for pagina in _as_duas_paginas():
@@ -307,13 +216,7 @@ def test_o_handler_esta_registrado_no_dono_de_hoje() -> None:
 
 
 def test_o_registro_vivo_entrega_o_clique_a_esse_handler() -> None:
-    """A outra metade, e ela morde sozinha: o decorador tem de ter RODADO.
-
-    A árvore acima prova que a linha está escrita no dono. Ela não prova que o
-    módulo é alcançado pelo carregador — um `a09_sistema.py` fora do
-    `_carregar_tudo()` passaria no teste anterior e continuaria com o botão
-    mudo. Quem responde isso é o registro depois do import.
-    """
+    """A outra metade, e ela morde sozinha: o decorador tem de ter RODADO."""
     from hefesto_dualsense4unix.interface import pacotes
 
     atende = pacotes.gesto_da_pagina(PAGINA, GESTO)
@@ -326,11 +229,6 @@ def test_o_registro_vivo_entrega_o_clique_a_esse_handler() -> None:
     assert atende.__module__.endswith("a09_sistema"), (
         f"o clique de `{GESTO}` foi parar em {atende.__module__} — o motor "
         "mora na aba 09.")
-
-
-# ---------------------------------------------------------------------------
-# frase_do_censo — o diálogo É o relatório
-# ---------------------------------------------------------------------------
 
 
 def _camada(
@@ -361,13 +259,7 @@ class TestFraseDoCenso:
         assert (tem_sobra, tem_devolucao) == (False, False)
 
     def test_sem_biblioteca_nao_finge_que_olhou(self) -> None:
-        """"Não achei nada" e "não consegui olhar" NÃO podem dar a mesma frase.
-
-        Armadilha número um desta casa: os dois casos devolvem lista vazia, e
-        dizer o primeiro quando o certo é o segundo faz a pessoa parar de
-        procurar com o problema ainda lá. Medido em 23/08/2026 na CLI avulsa,
-        que respondia exatamente essa mentira.
-        """
+        """"Não achei nada" e "não consegui olhar" NÃO podem dar a mesma frase."""
         texto, tem_sobra, tem_devolucao = frase_do_censo([], bibliotecas=0)
         assert (tem_sobra, tem_devolucao) == (False, False)
         assert "não consegui abrir a lista" in texto.lower()
@@ -415,14 +307,7 @@ class TestFraseDoCenso:
         assert (tem_sobra, tem_devolucao) == (False, True)
 
     def test_o_rodape_nao_poe_a_camada_na_frente_do_quadro(self) -> None:
-        """ARRANQUE o rodapé de 26/09/2026 e este teste reprova.
-
-        Até 26/09 ele dizia que o que está ligado *«entra na frente de cada
-        quadro que o jogo desenha»*, e nomeava o Sackboy. O `vulkan-1` do Wine
-        devolve zero camadas e o vkd3d-proton chama o `winevulkan` direto
-        (`integrations/camadas_vulkan.py`): a camada só é lida por jogo que
-        traga o próprio Vulkan do Windows. A frase é a da dica do ligável.
-        """
+        """ARRANQUE o rodapé de 26/09/2026 e este teste reprova."""
         texto, tem_sobra, _ = frase_do_censo(
             [_prefixo("Jogo (1)", _camada("EOSOverlayVkLayer-Win64.json"))]
         )
@@ -430,11 +315,6 @@ class TestFraseDoCenso:
         assert "não cura engasgo" in texto, texto
         for velho in ("frente de cada quadro", "Sackboy", "resolve"):
             assert velho not in texto, (velho, texto)
-
-
-# ---------------------------------------------------------------------------
-# frase_do_resultado — silêncio não é resposta
-# ---------------------------------------------------------------------------
 
 
 def _resultado(**kw: Any) -> Any:
@@ -471,25 +351,6 @@ class TestFraseDoResultado:
     def test_erro_nao_e_engolido(self) -> None:
         msg = frase_do_resultado([_resultado(erro="disco cheio")], devolver=False)
         assert "disco cheio" in msg
-
-
-# ---------------------------------------------------------------------------
-# O worker: recusa com jogo aberto, e o clique é gesto explícito (forcar)
-#
-# LEIA ISTO ANTES DE ACREDITAR QUE ESTA SEÇÃO MEDE O PRODUTO DE HOJE.
-# `EmulationActionsMixin._camadas_worker` era o que o botão do glade acionava,
-# e desde a `GTK-3` **nada o chama**: o único chamador era
-# `on_camadas_engasgo`, ligado pelo mapa de handlers de `app/app.py`, e os dois
-# saíram do disco com a janela. O caminho vivo é
-# `a09_sistema.procurar_camadas`, que chama `camadas_vulkan.curar_todos`
-# direto e tem o SEU próprio portão de jogo aberto — coberto por
-# `test_a_09_sistema_fecha_a_paridade.py::test_as_camadas_recusam_com_jogo_aberto`.
-# Os quatro nós abaixo continuam de pé porque o dublê e as duas frases puras
-# ainda são de `emulation_actions`, e porque apagar régua de código vivo por
-# suspeita é como se perde cobertura de graça — mas quem for cobrar a recusa do
-# PRODUTO cobra lá, não aqui. `emulation_actions.py` não é da posse desta
-# sprint; a órfã está relatada na entrega.
-# ---------------------------------------------------------------------------
 
 
 class _Stub(EmulationActionsMixin):
@@ -534,16 +395,10 @@ def modulos_falsos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     monkeypatch.setitem(sys.modules, _CV_MODNAME, cv)
     monkeypatch.setitem(sys.modules, _SLO_MODNAME, slo)
-    # `from pacote import módulo` resolve pelo ATRIBUTO do pacote quando ele já
-    # foi importado uma vez — trocar só o `sys.modules` deixaria o worker
-    # falando com o módulo de verdade e este teste mexeria nos jogos DELA.
     import hefesto_dualsense4unix.integrations as pacote
 
     monkeypatch.setattr(pacote, "camadas_vulkan", cv, raising=False)
     monkeypatch.setattr(pacote, "steam_launch_options", slo, raising=False)
-    # A LISTA DE EXCLUSÃO (21/09/2026): o jogo que ela excluiu do Hefesto fica
-    # fora da cura, e o clique manda a lista ao dono das camadas. Um dublê com
-    # um jogo, para a régua ver o jogo chegar — e nunca a lista DELA.
     from hefesto_dualsense4unix.integrations import lista_de_exclusao
 
     monkeypatch.setattr(lista_de_exclusao, "appids", lambda *a, **kw: ["1599660"])

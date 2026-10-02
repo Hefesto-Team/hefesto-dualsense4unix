@@ -1,74 +1,4 @@
-"""QUEM-E-QUEM-03 (29/08/2026) — as features têm dono, e a conta sai da mão.
-
-O DEFEITO, NUMA FRASE
-----------------------
-A conta das features por controle está escrita **à mão** dentro do código, no
-comentário logo acima dos campos de ``ControllerOverrides``
-(``profiles/schema.py``), e nada obriga esse número a acompanhar a lista de
-campos abaixo dele. No dia em que alguém acrescentar um campo sem mexer no
-comentário, a tabela em que a próxima pessoa vai confiar vira ficção.
-
-**E ISSO JÁ ACONTECEU DUAS VEZES, entre o enunciado desta sprint e a execução
-dela.** O comentário dizia ``QUATRO`` em 29/08; o ``mic`` entrou em 03/09
-(MIC-QUINTO-AJUSTE-01) e o ``sensores`` em 04/09 (SENSOR-DE-VERDADE-01). As
-duas vezes a conta foi corrigida **à mão**, e as duas vezes ela podia não ter
-sido. Este arquivo é o que faz a conta parar de depender de alguém lembrar.
-
-O QUE ESTE PORTÃO É, E O QUE ELE NÃO É
----------------------------------------
-Ele é o **CENSO**: as DEZ features que a tela oferece por controle, e, para
-cada uma, onde ela mora hoje (por controle · global · ausente), o que
-``None`` significa, quem responde no lugar, e **a sprint dona da entrega**. Ele
-compara o censo com ``ControllerOverrides.model_fields`` nos DOIS sentidos.
-
-Ele **não** é o irmão ``test_perfil_por_controle_o_campo_espera_o_caminho``,
-que pergunta outra coisa: *quem LÊ este campo por peça*. Aquele é o eixo
-campo → consumidor; este é o eixo feature-da-tela → endereço no perfil → dono.
-Um campo pode ter consumidor e mesmo assim sumir do censo; foi por um buraco
-desse tamanho que a lista de portões virou duas (``portoes.sh``, 25/08).
-
-**Nenhuma linha de produto.** A ``posse`` desta sprint é só este arquivo:
-``profiles/schema.py`` é disputado por treze sprints, e o censo não precisa de
-uma linha dele. Quem acrescentar o sétimo campo passa por aqui — agora com um
-vermelho apontando o caminho, em vez do silêncio.
-
-A LINHA SEM DONO, e ela fica sem dono de propósito
----------------------------------------------------
-Nove das dez têm dono. O **touchpad** não tem, e não é esquecimento: nenhuma
-tela aprovada oferece interruptor para ele (na aba Controles ele é leitura
-viva, e as 27 menções da página são glifo e moldura, nenhuma é interruptor), e
-o mapa de canais fecha o outro lado — ``toque.touchpad.escrita`` tem
-``existe=nao-tem``: **o aparelho não tem por onde receber uma escrita de
-touchpad**. Inventar o campo aqui seria feature nova.
-
-Por isso o censo tem DEZ linhas e a do touchpad diz ``dono=None`` com o motivo. Uma
-tabela que some quando ninguém olha é o esquecimento que este arquivo existe
-para impedir — então feature sem dono **passa** e é impressa. Ausência de dono
-é fato do projeto, não defeito do código; o portão a torna visível, não ilegal.
-
-**A PERGUNTA QUE VAI À MESA DELA**, e está escrita aqui para ter endereço: o
-touchpad de cada controle guarda alguma coisa no perfil do jogo — ligado /
-desligado, ou sensibilidade —, ou é **só leitura** e o perfil não tem nada a
-lembrar dele?
-
-UNIVERSAL POR CONSTRUÇÃO
--------------------------
-Nenhum MAC, nenhum aparelho, nenhum arquivo dela: o portão lê a definição dos
-modelos e a fonte do próprio módulo, e um modelo é o mesmo em qualquer bancada
-do mundo. O ``uniq`` sintético do teste da parcialidade vem da faixa da casa.
-
-MORDIDAS (o que arrancar para ver reprovar)
---------------------------------------------
-1. acrescente um campo a ``ControllerOverrides`` sem tocar no censo — reprova
-   nomeando o campo, **e** o teste da conta reprova dizendo OITO contra NOVE;
-2. remova ``speaker`` do censo — reprova no outro sentido;
-3. apague a frase de ``sem_opiniao`` de um campo presente — reprova;
-4. troque a prova da parcialidade por um ``model_dump()`` denso — os campos não
-   escritos aparecem, que é em letra a regressão R-20 de 23/07;
-5. dê um dono falso ao touchpad, ou apague a linha dele — reprova pelas duas
-   pontas (a contagem de dez, e a identidade da única sem dono);
-6. troque ``OITO`` por ``SETE`` no comentário de ``schema.py`` — reprova.
-"""
+"""QUEM-E-QUEM-03 (29/08/2026) — as features têm dono, e a conta sai da mão."""
 from __future__ import annotations
 
 import inspect
@@ -85,11 +15,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-# ---------------------------------------------------------------------------
-# O CENSO — dez linhas, e a do touchpad é a que não pode sumir
-# ---------------------------------------------------------------------------
 
-#: Onde a feature mora HOJE. Não é opinião sobre onde ela deveria morar.
 NIVEIS = ("por-controle", "global", "ausente")
 
 
@@ -97,34 +23,17 @@ NIVEIS = ("por-controle", "global", "ausente")
 class LinhaDoCenso:
     """Uma das dez features que a tela oferece por controle."""
 
-    #: o nome na língua da casa (docs/A-LINGUA-DESTA-CASA...), não o do código.
     feature: str
-    #: `por-controle` · `global` · `ausente` — onde ela mora no perfil hoje.
     nivel: str
-    #: o campo de `ControllerOverrides` que a carrega, ou `None` se não há.
     campo: str | None
-    #: quando duas features dividem um campo, o campo de dentro. Senão `None`.
     subcampo: str | None
-    #: o que `None` significa NESTE campo. Vazio só é aceito em `ausente`.
     sem_opiniao: str
-    #: quem responde no lugar quando esta peça não opinou.
     quem_responde: str
-    #: a sprint que entregou (ou entrega) o caminho. `None` = ninguém, e é fato.
     dono: str | None
-    #: a chave de `docs/data/mapa-controles.csv` que descreve o canal.
     chave_do_mapa: str
-    #: para o que está fora do perfil: onde mora, e por que mora lá.
     mora_em: str
 
 
-#: DEZ LINHAS. A tela oferece dez ajustes por controle desde 24/09/2026 — o
-#: décimo é o chip «Mira Virtual» que ela pediu no cartão de cada controle
-#: (A-MIRA-POR-MOVIMENTO-NA-TELA-01), desenhado no mockup e à espera da sessão
-#: dela. O perfil carrega OITO deles: a `mascara` entrou em 08/09/2026 com a
-#: decisão dela (MASCARA-NO-PERFIL-01: *"pode entrar sim"*) e o `movimento` em
-#: 24/09/2026, com o chip. As duas restantes estão declaradas onde estão, com a
-#: razão medida — que é o que impede a tabela de virar ficção quando alguém
-#: olhar daqui a um mês.
 CENSO: tuple[LinhaDoCenso, ...] = (
     LinhaDoCenso(
         feature="barra de luz",
@@ -267,19 +176,9 @@ CENSO: tuple[LinhaDoCenso, ...] = (
     ),
 )
 
-#: A feature sem dono é UMA, e é esta. Escrito à parte de propósito: se um dia
-#: alguém apagar a linha do censo, a contagem reprova por dez; se alguém lhe
-#: der um dono falso, esta constante reprova por identidade.
 FEATURE_SEM_DONO = "touchpad"
 
-#: Quantas a TELA oferece por controle. É o segundo número do comentário de
-#: `ControllerOverrides`, e o tamanho do censo.
 FEATURES_NA_TELA = 10
-
-
-# ---------------------------------------------------------------------------
-# AS CONTAS — funções puras, para a régua saber recusar (§4 do protocolo)
-# ---------------------------------------------------------------------------
 
 
 def campos_declarados_por_controle(censo: tuple[LinhaDoCenso, ...]) -> set[str]:
@@ -307,11 +206,7 @@ def features_sem_dono(censo: tuple[LinhaDoCenso, ...]) -> list[str]:
 
 
 def test_a_regua_sabe_recusar() -> None:
-    """As quatro contas, exercitadas com um censo sintético.
-
-    Sem isto, um erro nas funções puras faria todos os testes abaixo passarem em
-    silêncio para sempre. Régua que só sabe passar não é régua.
-    """
+    """As quatro contas, exercitadas com um censo sintético."""
     inventado = LinhaDoCenso(
         feature="inventada",
         nivel="por-controle",
@@ -326,28 +221,14 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = (CENSO[0], inventado)
 
     assert campos_declarados_por_controle(sintetico) == {"leds", "inventado"}
-    # um campo real que o censo sintético não conhece:
     assert campos_fora_do_censo({"leds", "rumble"}, sintetico) == ["rumble"]
-    # e um que o censo promete e o modelo não tem:
     assert declarados_sem_campo({"leds"}, sintetico) == ["inventado"]
     assert features_sem_dono(sintetico) == ["inventada"]
-    # e o censo de verdade, pelo contrário, não tem campo prometido a menos:
     assert declarados_sem_campo(set(ControllerOverrides.model_fields), CENSO) == []
 
 
-# ---------------------------------------------------------------------------
-# 1. O CENSO BATE COM OS CAMPOS DE HOJE — nos dois sentidos
-# ---------------------------------------------------------------------------
-
-
 def test_o_censo_cobre_o_esquema_nos_dois_sentidos() -> None:
-    """Campo fora do censo reprova; feature declarada sem campo reprova.
-
-    MORDIDA: acrescente ``sensors: bool | None = None`` a
-    ``ControllerOverrides`` sem tocar no censo — a primeira asserção o aponta
-    pelo nome. É a sprint seguinte batendo no portão, que é para isso que ele
-    existe.
-    """
+    """Campo fora do censo reprova; feature declarada sem campo reprova."""
     campos = set(ControllerOverrides.model_fields)
 
     fora = campos_fora_do_censo(campos, CENSO)
@@ -381,12 +262,7 @@ def test_o_censo_tem_uma_linha_por_feature_e_nenhuma_repetida() -> None:
 
 
 def test_o_subcampo_declarado_existe_no_modelo_de_dentro() -> None:
-    """Duas features dividem `sensores`; cada uma aponta o campo de dentro.
-
-    MORDIDA: troque ``giroscopio`` por ``giro`` na linha do giroscópio e veja
-    reprovar. Sem isto, o censo poderia declarar um subcampo que não existe e
-    ninguém saberia — que é a forma exata do defeito que ele veio curar.
-    """
+    """Duas features dividem `sensores`; cada uma aponta o campo de dentro."""
     de_dentro = {
         "sensores": ControllerSensoresOverride,
         "mic": ControllerMicOverride,
@@ -413,12 +289,6 @@ def test_o_subcampo_declarado_existe_no_modelo_de_dentro() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. A CONTA SAI DA MÃO — o comentário do esquema deixa de poder mentir
-# ---------------------------------------------------------------------------
-
-#: Só os numerais que a conta pode assumir. Escrito à mão de propósito: um
-#: `int(...)` sobre a palavra não existe, e uma tabela curta é auditável.
 _NUMERAIS = {
     "TRÊS": 3,
     "QUATRO": 4,
@@ -430,10 +300,6 @@ _NUMERAIS = {
     "DEZ": 10,
 }
 
-#: A forma da frase da conta. Montado por partes de propósito: uma sprint de
-#: 05/09 escreveu um comentário para AVISAR sobre um padrão, CITOU o padrão
-#: literalmente, e virou a primeira ocorrência que seis réguas casavam. Aqui a
-#: régua ainda exige ocorrência ÚNICA, que é a outra metade da cura.
 _FORMA_DA_CONTA = re.compile(
     r"#\s*SÃO\s+([^\W\d_]+),\s*e a tela oferece\s+([^\W\d_]+)",
     re.IGNORECASE,
@@ -441,28 +307,13 @@ _FORMA_DA_CONTA = re.compile(
 
 
 def _contas_do_comentario() -> list[tuple[str, str]]:
-    """As contas escritas à mão no corpo de `ControllerOverrides`.
-
-    Lê a FONTE do módulo de produto, nunca uma cópia digitada aqui — que é a
-    diferença entre uma régua e um segundo lugar onde o mesmo número mora.
-    """
+    """As contas escritas à mão no corpo de `ControllerOverrides`."""
     fonte = inspect.getsource(ControllerOverrides)
-    # Maiúsculas por conta da casa: hoje o comentário escreve `SÃO OITO` em
-    # caixa alta e `dez` em minúscula, e nenhuma das duas grafias é contrato.
     return [(a.upper(), b.upper()) for a, b in _FORMA_DA_CONTA.findall(fonte)]
 
 
 def test_a_conta_escrita_no_esquema_acompanha_os_campos() -> None:
-    """O comentário `SÃO <n>` bate com quantos campos a classe realmente tem.
-
-    **É O DEFEITO QUE ABRE ESTA SPRINT.** A conta estava escrita à mão, dizia
-    QUATRO em 29/08, e passou a SEIS em 04/09 — as duas correções feitas por
-    alguém lembrar. A partir daqui, quem acrescentar o sétimo campo sem mexer
-    no comentário leva vermelho com os dois números na mensagem.
-
-    MORDIDA: troque ``OITO`` por ``SETE`` em ``profiles/schema.py`` e veja
-    reprovar dizendo `o comentário diz 7 e a classe tem 8 campos`.
-    """
+    """O comentário `SÃO <n>` bate com quantos campos a classe realmente tem."""
     contas = _contas_do_comentario()
     assert len(contas) == 1, (
         f"esperava UMA conta no corpo de ControllerOverrides e achei "
@@ -497,23 +348,11 @@ def test_a_conta_escrita_no_esquema_acompanha_os_campos() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. "SEM OPINIÃO" É DECLARADO, NUNCA EM BRANCO
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "linha", [pytest.param(linha, id=linha.feature) for linha in CENSO]
 )
 def test_sem_opiniao_e_declarado_em_toda_feature_presente(linha: LinhaDoCenso) -> None:
-    """Campo que existe diz o que `None` significa NELE, e quem responde.
-
-    "Sem opinião" não é uma frase só — o que muda de campo para campo é *quem é
-    a máquina* que responde no lugar. O censo obriga a escrever isso.
-
-    MORDIDA: apague a frase de ``sem_opiniao`` de qualquer campo presente e veja
-    reprovar nomeando a feature.
-    """
+    """Campo que existe diz o que `None` significa NELE, e quem responde."""
     assert linha.quem_responde.strip(), (
         f"{linha.feature}: ninguém foi declarado para responder no lugar dela"
     )
@@ -542,24 +381,10 @@ def test_sem_opiniao_e_declarado_em_toda_feature_presente(linha: LinhaDoCenso) -
     assert linha.campo is not None, f"{linha.feature}: nível {linha.nivel} sem campo"
 
 
-# ---------------------------------------------------------------------------
-# 4. A PARCIALIDADE VALE DENTRO DA SEÇÃO — a regressão R-20, em letra
-# ---------------------------------------------------------------------------
-
-
 def test_a_parcialidade_vale_dentro_da_secao() -> None:
-    """Só o que foi escrito à mão entra; o resto herda o global.
-
-    R-20 (auditoria de 23/07/2026): ajustar o BRILHO de um controle matava a COR
-    do slot dele, porque o override materializava campos que ninguém escrevera.
-    É esta a diferença entre *"sem opinião"* e *"opinião igual ao default"*.
-
-    MORDIDA: troque `model_fields_set` por um ``model_dump()`` denso e veja os
-    campos não escritos aparecerem — que é, em letra, a regressão.
-    """
+    """Só o que foi escrito à mão entra; o resto herda o global."""
     override = ControllerOverrides(leds=LedsConfig(lightbar_brightness=0.5))
 
-    # ENTRE seções: só `leds` foi escrito; as outras cinco são `None`.
     assert override.model_fields_set == {"leds"}
     for campo in ControllerOverrides.model_fields:
         if campo != "leds":
@@ -568,7 +393,6 @@ def test_a_parcialidade_vale_dentro_da_secao() -> None:
                 "camada de fora"
             )
 
-    # DENTRO da seção: só `brightness` foi escrito.
     assert override.leds is not None
     assert override.leds.model_fields_set == {"lightbar_brightness"}, (
         "o override de brilho materializou outros campos de LedsConfig: "
@@ -576,7 +400,6 @@ def test_a_parcialidade_vale_dentro_da_secao() -> None:
         "morreria junto com o ajuste do brilho"
     )
 
-    # E a mesma parcialidade sobrevive ao disco, que é onde ela precisa valer.
     perfil = Profile.model_validate(
         {
             "name": "uma_peca_so",
@@ -590,22 +413,10 @@ def test_a_parcialidade_vale_dentro_da_secao() -> None:
     assert guardado.leds.model_fields_set == {"lightbar_brightness"}
 
 
-# ---------------------------------------------------------------------------
-# 5. A LINHA SEM DONO É NOMEADA, NÃO SILENCIOSA
-# ---------------------------------------------------------------------------
-
-
 def test_existe_exatamente_uma_feature_sem_dono_e_ela_e_o_touchpad(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Feature sem dono PASSA — e sai impressa, com o motivo.
-
-    Ausência de dono é fato do projeto, não defeito do código: o portão a torna
-    visível, não ilegal. O que ele proíbe é ela sumir em silêncio.
-
-    MORDIDA: dê um dono falso ao touchpad e veja reprovar por contagem; apague a
-    linha dele do censo e veja reprovar pelas dez.
-    """
+    """Feature sem dono PASSA — e sai impressa, com o motivo."""
     sem_dono = features_sem_dono(CENSO)
     assert sem_dono == [FEATURE_SEM_DONO], (
         f"esperava exatamente uma feature sem dono ({FEATURE_SEM_DONO!r}) e "

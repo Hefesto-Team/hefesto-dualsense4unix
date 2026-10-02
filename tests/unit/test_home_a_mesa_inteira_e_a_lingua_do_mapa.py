@@ -38,10 +38,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_home_a_mesa_inteira_e_a_lingua_do_mapa: importa código da janela GTK")
 
 import json
@@ -59,9 +55,6 @@ from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 RAIZ = Path(__file__).resolve().parents[2]
 FIXTURE_EXTERNOS = RAIZ / "tests" / "fixtures" / "inventario_externos.json"
 
-#: O 8BitDo em modo Switch por rádio, do inventário VERSIONADO. Lido do disco e
-#: não escrito aqui: endereço digitado num teste é endereço que o portão de
-#: anonimato de fixtures não confere.
 def _um_externo() -> dict[str, Any]:
     bruto = json.loads(FIXTURE_EXTERNOS.read_text(encoding="utf-8"))
     return dict(bruto["external"][0])
@@ -69,9 +62,6 @@ def _um_externo() -> dict[str, Any]:
 
 class _Widget:
     def __init__(self, label: str | None = None, **_kw: Any) -> None:
-        # O `label=` do construtor é guardado: `Gtk.Label(label=...)` é como
-        # o `_render_home_controllers` escreve o subtítulo do card, e um
-        # dublê que o jogasse fora mediria uma fileira de cards mudos.
         self.texto = label or ""
         self.visivel = True
         self.filhos: list[Any] = []
@@ -112,9 +102,6 @@ class _Widget:
         pass
 
     def set_tooltip_text(self, v: str) -> None:
-        # O hover é METADE do aviso de grab (I9): a linha diz o que acontece
-        # com ela, o tooltip diz por quê e o que fazer. Um dublê que jogasse o
-        # tooltip fora mediria só metade da frase.
         self.dica = v
 
     def set_margin_end(self, _v: int) -> None:
@@ -226,18 +213,9 @@ def _textos_dos_cards(host: _HomeStub) -> list[str]:
     ]
 
 
-# ----------------------------------------------------------------------
-# I5 — a conta da mesa
-# ----------------------------------------------------------------------
-
-
 class TestAContaDaMesaContaQuemEstaNaMesa:
     def test_dois_dualsense_e_um_externo_nao_dizem_dois_controles(self) -> None:
-        """A MORDIDA da I5, primeira metade do §5.
-
-        Arranque o ramo dos externos em `_format_players_hint` e a frase volta
-        a ser "2 controles = 2 jogadores" com três aparelhos na mesa.
-        """
+        """A MORDIDA da I5, primeira metade do §5."""
         frase = home_actions._format_players_hint(
             _dois_dualsense(), [_um_externo()]
         )
@@ -248,13 +226,7 @@ class TestAContaDaMesaContaQuemEstaNaMesa:
         assert frase.startswith("3 controles")
 
     def test_a_frase_nao_promete_que_o_externo_e_um_jogador(self) -> None:
-        """O §6 da sprint proíbe, e a proibição tem lastro no mapa de canais.
-
-        ``plataforma.vpad@sn30`` está em ``existe: desconhecido`` — ninguém
-        mediu se um externo por rádio entra na conta de jogadores. A frase diz
-        quantos estão na mesa e quais o Hefesto adotou; nunca que o 8BitDo é o
-        jogador 3.
-        """
+        """O §6 da sprint proíbe, e a proibição tem lastro no mapa de canais."""
         frase = home_actions._format_players_hint(
             _dois_dualsense(), [_um_externo()]
         )
@@ -300,11 +272,7 @@ class TestAContaDaMesaContaQuemEstaNaMesa:
     def test_um_externo_sozinho_tira_a_aba_do_nenhum_controle(
         self, fake_gtk: None
     ) -> None:
-        """Só o 8BitDo na mesa deixou de ser "Nenhum controle conectado.".
-
-        É a metade mais enganosa do defeito: com um controle ligado e aceso, a
-        primeira tela dizia que não havia nenhum.
-        """
+        """Só o 8BitDo na mesa deixou de ser "Nenhum controle conectado."."""
         host = _HomeStub()
         estado = _estado_da_mesa_mista()
         estado["controllers"] = []
@@ -360,30 +328,13 @@ class TestAContaDaMesaContaQuemEstaNaMesa:
         )
 
 
-# ----------------------------------------------------------------------
-# I9 — a língua do mapa de canais
-# ----------------------------------------------------------------------
-
-#: O que o mapa de canais fala. É o PORTÃO
-#: (`scripts/check_paridade_transporte.py` cruza CSV, testes e specs), e por
-#: isso é ele quem manda no vocabulário DO DADO.
-#:
-#: **A TELA DEIXOU DE SEGUIR O MAPA EM 21/09/2026, e foi ela quem separou os
-#: dois.** Com a janela aberta na frente dela: *"USB e BT é muito bom"*,
 #: *"Melhor que cabo e bt"*. <!-- noqa-acento: citação literal dela -->
-#: O CSV continua dizendo `cabo`/`rádio` — é dado, e é o que as 313 linhas do
-#: mapa usam. Quem responde pela TELA é `home_actions.palavra_do_transporte`,
-#: e daqui para baixo as réguas da tela PERGUNTAM a ele.
 _LINGUA_DO_MAPA = ("cabo", "rádio")
 
 
 class TestOCardFalaALinguaDoMapa:
     def test_o_mapa_de_canais_fala_cabo_e_radio(self) -> None:
-        """A premissa: o dono do vocabulário é o CSV, e ele diz isto.
-
-        Sem esta conferência a normalização abaixo seria uma preferência de
-        quem escreveu, e não a língua da casa.
-        """
+        """A premissa: o dono do vocabulário é o CSV, e ele diz isto."""
         csv = (RAIZ / "docs/data/mapa-controles.csv").read_text(encoding="utf-8")
         for palavra in _LINGUA_DO_MAPA:
             assert palavra in csv, (
@@ -392,14 +343,7 @@ class TestOCardFalaALinguaDoMapa:
             )
 
     def test_o_dicionario_normaliza_os_seis_crus_em_duas_palavras(self) -> None:
-        """A MORDIDA do dono: seis grafias entram, DUAS palavras saem.
-
-        A palavra é a dela, de 21/09/2026: `USB` e `BT`. Aqui ela é DIGITADA
-        de propósito — este é o oráculo do dicionário, e um oráculo que
-        perguntasse ao próprio dono não mediria nada. O que a régua garante é
-        a NORMALIZAÇÃO: `bluetooth`, `radio` e `rádio` não podem chegar
-        crus à tela, que era o defeito de forma da I9.
-        """
+        """A MORDIDA do dono: seis grafias entram, DUAS palavras saem."""
         assert home_actions.palavra_do_transporte("usb") == "USB"
         assert home_actions.palavra_do_transporte("USB") == "USB"
         assert home_actions.palavra_do_transporte("cabo") == "USB"
@@ -408,12 +352,7 @@ class TestOCardFalaALinguaDoMapa:
         assert home_actions.palavra_do_transporte("rádio") == "BT"
 
     def test_transporte_desconhecido_aparece_cru_em_vez_de_sumir(self) -> None:
-        """Um transporte novo tem de chegar aos olhos de alguém.
-
-        Escondê-lo atrás de "não sei" faria um daemon mais novo passar
-        despercebido — e a tela mentiria por omissão, que é o defeito de forma
-        desta onda inteira.
-        """
+        """Um transporte novo tem de chegar aos olhos de alguém."""
         assert home_actions.palavra_do_transporte("thunderbolt") == "thunderbolt"
 
     def test_ausencia_de_transporte_nao_vira_interrogacao(self) -> None:
@@ -433,8 +372,6 @@ class TestOCardFalaALinguaDoMapa:
         host._render_home(_estado_da_mesa_mista())
 
         textos = " | ".join(_textos_dos_cards(host))
-        # `Bluetooth` NÃO — a normalização é o que a I9 deixou de pé: o cru do
-        # daemon não chega à tela, só a palavra do dono chega.
         assert "Bluetooth" not in textos
         assert home_actions.palavra_do_transporte("usb") in textos
         assert home_actions.palavra_do_transporte("bt") in textos
@@ -451,11 +388,7 @@ class TestOCardFalaALinguaDoMapa:
         ),
     )
     def test_as_quatro_superficies_dizem_as_mesmas_palavras(self) -> None:
-        """O contrato inteiro da I9: um vocabulário só, o do mapa.
-
-        Enquanto reprovar, a janela continua dizendo o mesmo fato com quatro
-        conjuntos de palavras — e quem lê conclui que são quatro fatos.
-        """
+        """O contrato inteiro da I9: um vocabulário só, o do mapa."""
         from hefesto_dualsense4unix.app.actions.external_controllers import (
             transport_label,
         )
@@ -473,37 +406,8 @@ class TestOCardFalaALinguaDoMapa:
         assert dialetos["Início"] == dialetos["externos"], dialetos
 
 
-# ----------------------------------------------------------------------
-# I9, segunda metade — o aviso de duplicação fala com ELA
-# ----------------------------------------------------------------------
-
-
 class TestOAvisoDeGrabFalaComEla:
-    """25/08/2026 — a metade da I9 que a ``ESCONDE-SÓ-O-HIDRAW-01`` destravou.
-
-    A linha dizia *"Grab falhou — input pode dobrar no jogo"*. `grab` é o nome
-    da chamada de sistema (`EVIOCGRAB`) e `input` é o que ela chama de botão:
-    a frase contava o que aconteceu com o KERNEL numa tela para quem quer
-    jogar. Ela não podia ser trocada antes porque a consequência — *o jogo
-    continua vendo o físico?* — não estava medida.
-
-    **Agora está**, e nos dois pedaços de que a frase precisa:
-
-    * o QUE ACONTECE — `ESCONDE-SÓ-O-HIDRAW-01`, medido nesta bancada em
-      25/08/2026: o `hide` do broker age em `/dev/hidraw*` e o mesmo controle
-      mora em três superfícies; `event*` e `js*` seguem alcançáveis por
-      qualquer processo dela. O `EVIOCGRAB` é o que impede o físico de produzir
-      entrada nessas duas, então com ele recusado quem enumerar `/dev/input`
-      acha o controle dobrado;
-    * o QUE FAZER — `GRAB-DOBRADO-01`, medido em 15/08/2026: as quatro recusas
-      do journal são `Errno 16` (outro leitor já tem o dispositivo), o daemon
-      retoma sozinho a cada 2 s (`GRAB_RECONCILE_SEC`), e o que curou naquele
-      dia foi reiniciar o Hefesto.
-
-    A REDAÇÃO continua sendo dela (PROVA-DE-TELA-01). O que esta classe mede é
-    o que a frase não pode fazer: falar a língua do kernel, acender fora do
-    caso, ou acusar um culpado que a medição não nomeou.
-    """
+    """25/08/2026 — a metade da I9 que a ``ESCONDE-SÓ-O-HIDRAW-01`` destravou."""
 
     def test_a_linha_nao_fala_a_lingua_do_kernel(self) -> None:
         """A MORDIDA: devolva o texto antigo e este teste reprova."""
@@ -520,13 +424,7 @@ class TestOAvisoDeGrabFalaComEla:
         assert "duas vezes" in linha
 
     def test_o_porque_diz_o_que_fazer_e_nao_acusa_ninguem(self) -> None:
-        """Diagnóstico desta casa diz o quê, por quê e o que fazer.
-
-        E não nomeia culpado: a `GRAB-DOBRADO-01` mediu que OUTRO leitor tem o
-        dispositivo (`Errno 16`), e registrou por escrito que **quem** não está
-        provado — a Steam é candidata sem prova. Uma tela que a acusasse
-        mandaria ela fechar o programa por onde ela joga.
-        """
+        """Diagnóstico desta casa diz o quê, por quê e o que fazer."""
         _linha, porque = home_actions.aviso_de_grab(
             "failed", is_primary=True, gamepad_on=True
         )
@@ -540,11 +438,7 @@ class TestOAvisoDeGrabFalaComEla:
         )
 
     def test_so_acende_no_primario_com_gamepad_de_pe_e_recusa(self) -> None:
-        """A condição é a que já estava certa — e agora é testável sem GTK.
-
-        `pending` é o estado de quem ainda não abriu o dispositivo: acender ali
-        seria alarme na partida inteira de quem acabou de ligar o controle.
-        """
+        """A condição é a que já estava certa — e agora é testável sem GTK."""
         assert home_actions.aviso_de_grab(
             "failed", is_primary=True, gamepad_on=True
         ) is not None

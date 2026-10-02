@@ -69,18 +69,13 @@ from tests.unit.busctl_de_verdade import escrever_impressor
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 PAGINA = SRC / "interface" / "paginas" / "08-conexoes.html"  # (noqa-acento) nome de PASTA
-#: A chave da foto do laço para a última gravação — chave de máquina, ASCII
-#: por contrato (a mesma regra do ``"especie"`` do ``PortaVista``).
 ULTIMA = "ultima"  # (noqa-acento) chave de máquina
 
 PCI_A = "0000:0a:00.0"
 PCI_B = "0000:0b:00.0"
 
-#: O primeiro boot: ``usb1``/``usb2`` no A, ``usb3``/``usb4`` no B.
 BOOT_1 = {1: PCI_A, 2: PCI_A, 3: PCI_B, 4: PCI_B}
-#: O segundo boot: os dois controladores subiram na ordem inversa.
 BOOT_2 = {1: PCI_B, 2: PCI_B, 3: PCI_A, 4: PCI_A}
-#: Os barramentos 3.x — os pares; os ímpares são o lado 2.0.
 RAPIDOS = frozenset({2, 4})
 
 DUALSENSE = ("054c", "0ce6", ("03", "00", "00"))
@@ -90,31 +85,12 @@ CAMERA = ("046d", "0825", ("0e", "01", "00"))
 DONGLE_BT = ("2357", "0604", ("e0", "01", "01"))
 HUB = ("05e3", "0610", ("09", "00", "00"))
 
-#: Quantas entradas cada hub-raiz publica: o 2.0 tem seis, o 3.x tem quatro, e
-#: as quatro primeiras de cada controlador são o mesmo buraco (``peer``).
 PORTAS_DO_RAIZ_20 = 6
 PORTAS_DO_RAIZ_3X = 4
 
 
-# ---------------------------------------------------------------------------
-# O /sys de mentira — com os nós de entrada, lido pelos leitores de verdade
-# ---------------------------------------------------------------------------
-
-
 class Gabinete:
-    """Uma árvore ``/sys/bus/usb/devices`` com dois controladores xHCI.
-
-    Cada controlador publica DOIS barramentos (o 2.0 e o 3.x), e cada hub
-    publica os NÓS de entrada dele, com o buraco vazio ou cheio — é o que a
-    fase em pé conta. ``encaixe`` dá o ``connect_type`` de um nó; o padrão é
-    ``hotplug``.
-
-    ``deslocamento`` é a mesa DELA: no ``0000:02:00.0`` o par de
-    ``usb2-port1`` é ``usb1-port5`` (medido no ``peer`` em 23/09), e não
-    ``usb1-port1``. Com ``deslocamento=2``, a entrada ``n`` da raiz 3.x é o
-    par da ``n + 2`` da raiz 2.0 — e os dois lados do buraco têm ``devpath``
-    diferente.
-    """
+    """Uma árvore ``/sys/bus/usb/devices`` com dois controladores xHCI."""
 
     def __init__(
         self,
@@ -150,7 +126,6 @@ class Gabinete:
                 for n in range(1, PORTAS_DO_RAIZ_3X + 1):
                     self._parear(f"usb{bus - 1}-port{n + deslocamento}", f"usb{bus}-port{n}")
 
-    # -- a árvore ------------------------------------------------------------
 
     def _aparelho(
         self,
@@ -206,15 +181,11 @@ class Gabinete:
         hub, _, degrau = devpath.rpartition(".")
         return f"{bus}-{hub}-port{degrau}" if hub else f"usb{bus}-port{devpath}"
 
-    # -- os gestos da mão dela -----------------------------------------------
 
     def plugar(
         self, bus: int, devpath: str, aparelho: tuple[Any, ...], *, portas: int = 0
     ) -> str:
-        """Encaixa um aparelho em ``bus-devpath`` e devolve o nome do kernel.
-
-        Um hub (``portas`` > 0) publica os nós de entrada dele, vazios.
-        """
+        """Encaixa um aparelho em ``bus-devpath`` e devolve o nome do kernel."""
         vid, pid, classe = aparelho
         nome = f"{bus}-{devpath}"
         pai = (
@@ -259,7 +230,6 @@ class Gabinete:
         (buraco / "state").write_text("not attached\n", encoding="utf-8")
         (buraco / "device").unlink()
 
-    # -- os leitores de verdade ----------------------------------------------
 
     def ler(self) -> Censo:
         return ler_o_barramento(raiz_usb=str(self.lista))
@@ -285,17 +255,9 @@ def _lugar(pci: str, devpath: str) -> str:
     return maquina.lugar_de(pci, devpath)
 
 
-# ---------------------------------------------------------------------------
-# As três telas, LIDAS da página publicada
-# ---------------------------------------------------------------------------
-
 _TELA = re.compile(
     r'<div class="tela-nova" id="(mapear-entrada-a-entrada[^"]*)">(.*?)\n</div>', re.S
 )
-# DESDE 23/09/2026 (TRANSPLANTE-DA-SECAO-01) a página FIA as três telas: cada
-# botão carrega o `data-gesto` que o pacote ouve, e as faces viraram `<button>`
-# porque a face vai no `value` — o ouvinte do piloto manda `el.value` como
-# `valor`, e uma âncora não tem `value`. Os outros continuam `<a>`.
 _BOTAO = re.compile(r'<(?:a|button) class="(?:btn[^"]*|tn-x)"[^>]*>(.*?)</(?:a|button)>', re.S)
 _GESTO_DA_TAG = re.compile(
     r'<(?:a|button) class="(?:btn[^"]*|tn-x)"[^>]*?data-gesto="([^"]+)"[^>]*>(.*?)</(?:a|button)>',
@@ -317,8 +279,6 @@ def _botoes(tela: str) -> list[str]:
     return [_texto(rotulo) for rotulo in _BOTAO.findall(tela)]
 
 
-#: Cada botão das três telas e o gesto do motor que ele chama — o contrato com a
-#: TRANSPLANTE, que fia a página. Um botão novo na página sem gesto aqui reprova.
 GESTO_DO_BOTAO: dict[str, tuple[str, tuple[Any, ...]]] = {
     ee.FACE_FRENTE: ("responder", (ee.FACE_FRENTE,)),
     ee.FACE_ATRAS: ("responder", (ee.FACE_ATRAS,)),
@@ -329,16 +289,12 @@ GESTO_DO_BOTAO: dict[str, tuple[str, tuple[Any, ...]]] = {
     "Vou mostrar agora": ("levantar", ()),
     "Deixar para quando eu precisar": ("parar", ()),
     "Não alcanço": ("nao_alcanco", ()),
-    "\N{MULTIPLICATION SIGN}": ("parar", ()),  # o fechar do topo de cada tela
+    "\N{MULTIPLICATION SIGN}": ("parar", ()),
 }
 
 
 def test_as_tres_telas_da_pagina_sao_as_tres_fases_do_motor() -> None:
-    """Cada fase do motor diz qual tela a pinta, e as três são as da página.
-
-    MORDIDA: troque um valor de ``ee.TELAS`` — a fase aponta uma âncora que a
-    página não tem, e reprova.
-    """
+    """Cada fase do motor diz qual tela a pinta, e as três são as da página."""
     assert set(ee.TELAS.values()) == set(_as_tres_telas())
     assert ee.TELAS[ee.SENTADA] == "mapear-entrada-a-entrada"
     assert ee.TELAS[ee.FIM].endswith("-fim")
@@ -347,12 +303,7 @@ def test_as_tres_telas_da_pagina_sao_as_tres_fases_do_motor() -> None:
 
 
 def test_cada_botao_das_tres_telas_tem_gesto_no_motor() -> None:
-    """Todo botão das três telas chega a um gesto que EXISTE no motor.
-
-    MORDIDA: apague ``LacoDaEntrada.nao_alcanco`` (ou ``levantar``) — o botão
-    da página aponta um gesto que o motor não tem. E um botão novo na página
-    sem gesto aqui também reprova.
-    """
+    """Todo botão das três telas chega a um gesto que EXISTE no motor."""
     vistos: set[str] = set()
     for ancora, tela in _as_tres_telas().items():
         for rotulo in _botoes(tela):
@@ -383,15 +334,7 @@ class _LacoQueAnota:
 def test_cada_botao_da_pagina_chama_o_metodo_que_o_contrato_diz(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O fio que a TRANSPLANTE pôs: o `data-gesto` de cada botão, CLICADO no
-    pacote, chama o método do motor que o contrato diz — com a face certa.
-
-    Sem isto, «Já chega por hoje» poderia chamar `pular` e o teste de cima não
-    veria: ele só confere que o RÓTULO está no contrato.
-
-    MORDIDA: troque, no gerador, o `data-gesto` do «Não sei onde fica» por
-    `entrada-parar` e regere — reprova nomeando o botão.
-    """
+    """O fio que a TRANSPLANTE pôs: o `data-gesto` de cada botão, CLICADO no"""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
@@ -411,15 +354,9 @@ def test_cada_botao_da_pagina_chama_o_metodo_que_o_contrato_diz(
                 f"{GESTO_DO_BOTAO[rotulo]}")
 
 
-# ---------------------------------------------------------------------------
-# 1. as duas fases e o contador
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture()
 def mesa(tmp_path: Path) -> Gabinete:
-    """A mesa: câmera na 3-5 e teclado na 1-3, e um hub USB 3 na porta 4 do B
-    (os dois lados, 3-4 e 4-4) com o mouse na 3-4.1."""
+    """A mesa: câmera na 3-5 e teclado na 1-3, e um hub USB 3 na porta 4 do B"""
     gabinete = Gabinete(tmp_path / "sys", BOOT_1)
     gabinete.plugar(1, "3", TECLADO)
     gabinete.plugar(3, "5", CAMERA)
@@ -432,14 +369,7 @@ def mesa(tmp_path: Path) -> Gabinete:
 def test_a_fase_sentada_pergunta_o_que_esta_plugado_e_o_hub_leva_o_que_pende(
     mesa: Gabinete, disco: Path
 ) -> None:
-    """A tela sentada: «Onde fica esta entrada?», o aparelho como «espécie ·
-    caminho», e «entrada N de M · sem sair da cadeira». Um toque no HUB vale
-    para o que pende dele — os dois lados do hub são uma pergunta só.
-
-    MORDIDA: devolva a cada aparelho a pergunta própria (``pendentes`` vazio
-    em ``_perguntas_sentadas``) — o total passa de 3 para 4, e o mouse vira
-    pergunta.
-    """
+    """A tela sentada: «Onde fica esta entrada?», o aparelho como «espécie ·"""
     laco = _laco(mesa)
     foto = laco.comecar()
     assert foto["estado"] == ee.SENTADA and foto["tela"] == ee.TELAS[ee.SENTADA]
@@ -476,12 +406,7 @@ def test_a_fase_sentada_pergunta_o_que_esta_plugado_e_o_hub_leva_o_que_pende(
 
 
 def test_quem_ja_tem_lugar_para_tudo_abre_direto_no_fim(mesa: Gabinete, disco: Path) -> None:
-    """*"Quem já tem lugar para tudo abre a janela direto aqui."* — e o laço
-    novo não pergunta o que ela já respondeu.
-
-    MORDIDA: tire a conferência de ``porta.entrada`` em ``_perguntas_sentadas``
-    — o segundo laço volta a perguntar tudo.
-    """
+    """*"Quem já tem lugar para tudo abre a janela direto aqui."* — e o laço"""
     laco = _laco(mesa)
     laco.comecar()
     while laco.estado()["estado"] == ee.SENTADA:
@@ -492,11 +417,7 @@ def test_quem_ja_tem_lugar_para_tudo_abre_direto_no_fim(mesa: Gabinete, disco: P
 def test_nao_sei_onde_fica_pula_sem_gravar_e_sem_perguntar_de_novo(
     mesa: Gabinete, disco: Path
 ) -> None:
-    """«Pula esta entrada, sem gravar nada e sem perguntar de novo.»
-
-    MORDIDA: não guardar o lugar pulado — o tique seguinte devolve o teclado
-    como a pergunta da vez.
-    """
+    """«Pula esta entrada, sem gravar nada e sem perguntar de novo.»"""
     laco = _laco(mesa)
     laco.comecar()
     foto = laco.pular()
@@ -523,19 +444,13 @@ def test_a_pergunta_da_vez_nao_muda_quando_chega_aparelho_e_o_que_sai_sai(
     assert laco.olhar()["total"] == 3, "a câmera saiu e continuou na conta"
     mesa.tirar("1-3")
     with pytest.raises(RuntimeError):
-        laco.responder(ee.FACE_FRENTE)  # o teclado saiu entre o tique e o toque
+        laco.responder(ee.FACE_FRENTE)
     assert laco.estado()["pergunta"]["caminho"] == "3-4"
     assert not disco.exists()
 
 
 def test_o_atalho_do_cartao_poe_a_pergunta_dele_primeiro(mesa: Gabinete, disco: Path) -> None:
-    """O «Onde fica?» do cartão do ``mapa-do-radio.html`` abre a mesma âncora
-    com o lugar da dúvida: a pergunta que o cobre vem primeiro — e a do mouse
-    é a do hub, que o leva junto.
-
-    MORDIDA: ignorar o ``lugar`` de ``comecar`` — a pergunta da vez é o
-    teclado.
-    """
+    """O «Onde fica?» do cartão do ``mapa-do-radio.html`` abre a mesma âncora"""
     laco = _laco(mesa)
     foto = laco.comecar(_lugar(PCI_B, "4.1"))
     assert foto["pergunta"]["caminho"] == "3-4", foto["pergunta"]
@@ -543,8 +458,7 @@ def test_o_atalho_do_cartao_poe_a_pergunta_dele_primeiro(mesa: Gabinete, disco: 
 
 @pytest.fixture()
 def vazia(tmp_path: Path) -> Gabinete:
-    """Nada plugado: seis buracos no controlador A (quatro deles 3.x) e seis
-    no B. O B tem dois internos: ``usb3-port5`` e ``usb3-port6``."""
+    """Nada plugado: seis buracos no controlador A (quatro deles 3.x) e seis"""
     return Gabinete(
         tmp_path / "sys",
         BOOT_1,
@@ -563,12 +477,7 @@ def _em_pe(gabinete: Gabinete, **extra: Any) -> ee.LacoDaEntrada:
 def test_a_fase_em_pe_conta_as_vazias_e_grava_atras_do_gabinete(
     vazia: Gabinete, disco: Path
 ) -> None:
-    """A tela em pé: «entrada N de M», e a face não se pergunta — «Atrás do
-    gabinete». O buraco USB 3 (dois nós, ``peer``) conta UMA vez.
-
-    MORDIDA: contar nós em vez de buracos (``vazias`` por nó) — o total vira
-    20; ou gravar a face perguntada em vez da fixa.
-    """
+    """A tela em pé: «entrada N de M», e a face não se pergunta — «Atrás do"""
     laco = _em_pe(vazia)
     foto = laco.estado()
     assert foto["tela"] == ee.TELAS[ee.EM_PE] and foto["face"] == ee.FACE_ATRAS
@@ -603,31 +512,25 @@ def test_a_entrada_aprendida_de_pe_e_conhecida_pelo_lugar_noutro_boot(
     """
     boot = Gabinete(tmp_path / "boot1", BOOT_1)
     laco = _em_pe(boot)
-    boot.plugar(1, "2", DUALSENSE)  # a porta 2 do controlador A
+    boot.plugar(1, "2", DUALSENSE)
     numero = laco.olhar()[ULTIMA]["entrada"]
     assert carregar_maquina().mapa.portas[numero].nos == ["usb1-port2", "usb2-port2"]
 
     depois = Gabinete(tmp_path / "boot2", BOOT_2)
     novo = _em_pe(depois)
     assert novo.estado()["total"] == 11
-    depois.plugar(3, "2", DUALSENSE)  # a porta 2 do A, agora no barramento 3
+    depois.plugar(3, "2", DUALSENSE)
     assert novo.olhar()[ULTIMA] is None, "a entrada aprendida foi aprendida de novo"
     depois.tirar("3-2")
     novo.olhar()
-    depois.plugar(1, "2", DUALSENSE)  # a porta 2 do B, com os nós que a do A tinha
+    depois.plugar(1, "2", DUALSENSE)
     foto = novo.olhar()
     assert foto[ULTIMA] is not None and foto[ULTIMA]["gravou"], "a vaga do B sumiu da conta"
     assert foto[ULTIMA]["lugar"] == _lugar(PCI_B, "2")
 
 
 def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
-    """«Tira esta entrada da conta de vez: não vira dívida, não vira aviso, e o
-    Hefesto não volta a perguntar. Ela diminui o TOTAL do contador, não o
-    feito.» — e o primeiro a sair é o que o kernel não diz ser de fora.
-
-    MORDIDA: guardar o «Não alcanço» só na memória do laço — a cerimônia de
-    amanhã volta a contar 12.
-    """
+    """«Tira esta entrada da conta de vez: não vira dívida, não vira aviso, e o"""
     laco = _em_pe(vazia)
     foto = laco.nao_alcanco()
     assert (foto["passo"], foto["total"]) == (1, 11), foto
@@ -637,7 +540,7 @@ def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
     amanha = _em_pe(vazia)
     assert amanha.estado()["total"] == 11, "o Hefesto voltou a perguntar"
 
-    vazia.plugar(3, "5", DUALSENSE)  # ela alcançou, afinal: a leitura vence
+    vazia.plugar(3, "5", DUALSENSE)
     foto = amanha.olhar()
     assert foto[ULTIMA]["gravou"], foto
     documento = carregar_maquina()
@@ -668,24 +571,20 @@ def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
     )
     laco = _em_pe(deslocada)
     total = laco.estado()["total"]
-    ds = deslocada.plugar(1, "4", DUALSENSE)  # usb1-port4, o par de usb2-port2
+    ds = deslocada.plugar(1, "4", DUALSENSE)
     foto = laco.olhar()
     assert foto[ULTIMA]["gravou"] and foto[ULTIMA]["lugar"] == _lugar(PCI_A, "4"), foto
     deslocada.tirar(ds)
     assert laco.olhar()["total"] == total, "a entrada aprendida voltou para a conta"
 
-    foto = laco.nao_alcanco()  # o primeiro a sair: usb1-port3 + usb2-port1
+    foto = laco.nao_alcanco()
     assert foto[ULTIMA]["gravou"], foto[ULTIMA]
     assert _lugar(PCI_A, "3") in carregar_maquina().mapa.fora
     assert _em_pe(deslocada).estado()["total"] == total - 2, "o Hefesto voltou a perguntar"
 
 
 def test_o_contador_em_pe_e_refeito_pela_leitura_de_agora(vazia: Gabinete, disco: Path) -> None:
-    """*"O total encolhe — ele é recalculado pela leitura de agora."*
-
-    MORDIDA: congelar as vagas no ``levantar`` — o teclado encaixado numa vaga
-    continua contando.
-    """
+    """*"O total encolhe — ele é recalculado pela leitura de agora."*"""
     laco = _em_pe(vazia)
     teclado = vazia.plugar(1, "5", TECLADO)
     assert laco.olhar()["total"] == 11
@@ -698,15 +597,7 @@ def test_o_contador_em_pe_e_refeito_pela_leitura_de_agora(vazia: Gabinete, disco
 def test_o_tique_que_nao_leu_nao_anda_o_laco(
     mesa: Gabinete, tmp_path: Path, disco: Path
 ) -> None:
-    """``ler_o_barramento`` devolve ``Censo()`` quando o ``/sys`` não se deixa
-    ler, e ``listar_entradas`` devolve ``()``: é "não sei", nunca "não há
-    aparelho" nem "não há vaga". Um tique assim não muda a fase — sem a
-    guarda, a tela sentada pulava para «Acabou a parte sem levantar.» e a em
-    pé também, por um tique que não viu nada.
-
-    MORDIDA: tire ``_nao_sei`` do ``olhar`` (ou do ``responder``) — a fase
-    vai ao fim, ou a pergunta da vez some.
-    """
+    """``ler_o_barramento`` devolve ``Censo()`` quando o ``/sys`` não se deixa"""
     cego = {"cego": False}
 
     def ler() -> Censo:
@@ -772,13 +663,8 @@ def test_ja_chega_por_hoje_fecha_em_qualquer_fase(mesa: Gabinete, disco: Path) -
             ULTIMA: None,
         }
     with pytest.raises(RuntimeError):
-        laco.levantar()  # «Vou mostrar agora» só existe no fim
-    json.dumps(laco.comecar())  # vai pela ponte do piloto: tem de ser JSON
-
-
-# ---------------------------------------------------------------------------
-# As três telas CLICADAS, botão por botão, com o motor de mentira
-# ---------------------------------------------------------------------------
+        laco.levantar()
+    json.dumps(laco.comecar())
 
 
 def _clicar(laco: ee.LacoDaEntrada, rotulo: str) -> Any:
@@ -789,14 +675,7 @@ def _clicar(laco: ee.LacoDaEntrada, rotulo: str) -> Any:
 def test_as_tres_telas_clicadas_cada_botao_chega_ao_motor(
     tmp_path: Path, disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Os botões de CADA tela, lidos da página, clicados na tela que os mostra,
-    com o BlueZ de mentira da MOVER-01 no lugar do dono — e cada um muda o
-    motor como a dica dele promete. Nada fala com o BlueZ: o ``Alias`` é do
-    ``bt_active_mode.sh`` (item 6).
-
-    MORDIDA: faça o «Não alcanço» não mexer no total, ou o «Vou mostrar
-    agora» não sair do fim — reprova nomeando o botão.
-    """
+    """Os botões de CADA tela, lidos da página, clicados na tela que os mostra,"""
     radio = rm.RadioDeMentira()
     vivo = bd.DonoVivo(radio, lugares=lambda: {})
     assert vivo.ligar()
@@ -821,7 +700,7 @@ def test_as_tres_telas_clicadas_cada_botao_chega_ao_motor(
         if rotulo in ee.FACES:
             assert resposta.gravou and depois["feitas"] == antes[2] + 1, rotulo
             laco.parar()
-            disco.unlink()  # a próxima face começa da mesa sem desenho
+            disco.unlink()
         elif GESTO_DO_BOTAO[rotulo][0] == "pular":
             assert depois["passo"] == antes[0] + 1, rotulo
         else:
@@ -857,18 +736,11 @@ def test_as_tres_telas_clicadas_cada_botao_chega_ao_motor(
     assert radio.chamadas[chamadas:] == [], "a cerimônia chamou o BlueZ"
 
 
-# ---------------------------------------------------------------------------
 # 2. só o DualSense marca uma porta
-# ---------------------------------------------------------------------------
 
 
 def test_so_o_dualsense_marca_uma_porta(vazia: Gabinete, disco: Path) -> None:
-    """Palavra dela na R9: *«usarmos um dualsense e o USB pra sairmos de porta
-    em porta»*. <!-- noqa-acento: citação literal dela -->
-
-    MORDIDA: aceitar qualquer aparelho em ``_o_dualsense_no_furo`` — o dongle
-    encaixado numa vaga vira entrada «Atrás do gabinete».
-    """
+    """Palavra dela na R9: *«usarmos um dualsense e o USB pra sairmos de porta"""
     laco = _em_pe(vazia)
     dongle = vazia.plugar(1, "2", DONGLE_BT)
     foto = laco.olhar()
@@ -882,29 +754,18 @@ def test_so_o_dualsense_marca_uma_porta(vazia: Gabinete, disco: Path) -> None:
 def test_a_re_enumeracao_do_dongle_nao_vira_a_porta_que_ela_plugou(
     tmp_path: Path, disco: Path
 ) -> None:
-    """O ``-71`` e o reset de porta da ponte root: o dongle SOME e VOLTA na
-    mesma porta, sem mão nenhuma. O buraco fica vazio por um tique — e volta
-    com um aparelho dentro.
-
-    MORDIDA: a mesma — aceitar qualquer aparelho grava a porta do dongle como
-    «Atrás do gabinete».
-    """
+    """O ``-71`` e o reset de porta da ponte root: o dongle SOME e VOLTA na"""
     gabinete = Gabinete(tmp_path / "sys", BOOT_1)
     dongle = gabinete.plugar(3, "1", DONGLE_BT)
     laco = _laco(gabinete)
     laco.comecar()
-    laco.pular()  # «Não sei onde fica» para o dongle
+    laco.pular()
     laco.levantar()
     gabinete.tirar(dongle)
     laco.olhar()
     gabinete.plugar(3, "1", DONGLE_BT)
     assert laco.olhar()[ULTIMA] is None
     assert not disco.exists()
-
-
-# ---------------------------------------------------------------------------
-# 3. a amarra pelo ID_PATH inteiro
-# ---------------------------------------------------------------------------
 
 
 def _documento_de_antes(caminho_no_mapa: str, testemunha: str | None) -> MaquinaConfig:
@@ -926,28 +787,13 @@ def _documento_de_antes(caminho_no_mapa: str, testemunha: str | None) -> Maquina
 
 
 def test_a_amarra_confere_o_id_path_inteiro_e_nao_so_o_devpath() -> None:
-    """A porta 4 do controlador A e a porta 4 do B têm o MESMO ``devpath``.
-
-    Ela mapeou a porta 4 do B como Entrada 1 (``3-4`` no primeiro boot). A
-    outra janela, depois, pôs a Entrada 1 na porta 4 do A (``1-4``, o mesmo
-    boot). A amarra do B tem de cair.
-
-    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): a conferência
-    da amarra saiu da leitura (``entrada_do_lugar``) para a migração, que a
-    faz uma vez; depois dela a entrada guarda o lugar, e o caminho de cada
-    boot sai dele.
-
-    MORDIDA: faça a migração aceitar a amarra pelo ``devpath`` sozinho — a
-    amarra do B sobrevive, e a porta 4 do B continua dizendo ser a Entrada 1
-    que o desenho pôs no A.
-    """
+    """A porta 4 do controlador A e a porta 4 do B têm o MESMO ``devpath``."""
     lugar = _lugar(PCI_B, "4")
     movido = _documento_de_antes("1-4", testemunha="3-4")
     assert maquina.entrada_do_lugar(movido, lugar) is None
     sem_testemunha = _documento_de_antes("1-4", testemunha=None)
     assert maquina.entrada_do_lugar(sem_testemunha, lugar) is None, "sem testemunha, «não sei»"
 
-    # A testemunha: o desenho não mudou desde a amarra, em QUALQUER boot.
     intacto = _documento_de_antes("3-4", testemunha="3-4")
     assert maquina.entrada_do_lugar(intacto, lugar) == "1"
     porta = intacto.mapa.portas["1"]
@@ -958,13 +804,7 @@ def test_a_amarra_confere_o_id_path_inteiro_e_nao_so_o_devpath() -> None:
 def test_o_motor_grava_a_testemunha_e_o_nome_sobrevive_ao_boot_que_troca_os_barramentos(
     tmp_path: Path, disco: Path
 ) -> None:
-    """Mapeada no primeiro boot, a porta 4 do B continua a Entrada dela no
-    segundo, quando o caminho gravado (``3-4``) virou o da porta 4 do A.
-
-    MORDIDA: não gravar o ``lugar`` na entrada (``_gravar_as_portas``) — no
-    segundo boot só os nós do primeiro respondem, que dizem A, e a porta
-    perde o número.
-    """
+    """Mapeada no primeiro boot, a porta 4 do B continua a Entrada dela no"""
     boot = Gabinete(tmp_path / "boot1", BOOT_1)
     boot.plugar(3, "4", DUALSENSE)
     laco = _laco(boot)
@@ -973,7 +813,7 @@ def test_o_motor_grava_a_testemunha_e_o_nome_sobrevive_ao_boot_que_troca_os_barr
     assert carregar_maquina().mapa.portas[numero].lugar == _lugar(PCI_B, "4")
 
     depois = Gabinete(tmp_path / "boot2", BOOT_2)
-    depois.plugar(1, "4", DUALSENSE)  # a porta 4 do B, agora no barramento 1
+    depois.plugar(1, "4", DUALSENSE)
     novo = _laco(depois)
     foto = novo.comecar()
     assert foto["estado"] == ee.FIM, "a porta mapeada voltou a ser pergunta"
@@ -981,20 +821,8 @@ def test_o_motor_grava_a_testemunha_e_o_nome_sobrevive_ao_boot_que_troca_os_barr
     assert ee.nome_do_lugar(_lugar(PCI_A, "4"), controladores=BOOT_2) is None
 
 
-# ---------------------------------------------------------------------------
-# 4. as quatro faces são as do produto
-# ---------------------------------------------------------------------------
-
-
 def test_as_quatro_faces_sao_as_do_produto_e_da_tela_aprovada() -> None:
-    """Uma língua só para a mesma pergunta: os quatro botões da tela sentada,
-    na ordem, são as quatro faces do motor, e a face fixa da fase em pé é a
-    que a dica da tela em pé nomeia. «Traseira» (do ``mapa-do-radio.html``)
-    não é resposta.
-
-    MORDIDA: troque ``FACE_ATRAS`` por «Traseira» — a tela sentada e a dica em
-    pé deixam de bater.
-    """
+    """Uma língua só para a mesma pergunta: os quatro botões da tela sentada,"""
     telas = _as_tres_telas()
     faces_da_tela = [
         r for r in _botoes(telas[ee.TELAS[ee.SENTADA]]) if GESTO_DO_BOTAO[r][0] == "responder"
@@ -1008,22 +836,8 @@ def test_as_quatro_faces_sao_as_do_produto_e_da_tela_aprovada() -> None:
         ee.LacoDaEntrada().responder("Traseira")
 
 
-# ---------------------------------------------------------------------------
-# 5. a grafia do lugar vive sem pydantic — também na CHAMADA
-# ---------------------------------------------------------------------------
-
-
 def test_a_grafia_do_lugar_responde_sem_pydantic_na_chamada() -> None:
-    """Pelo ``python3`` do sistema (o recurso do doctor, pydantic 1.10) a
-    CHAMADA de ``bluez_dbus.lugar_de`` levantava ``ImportError``
-    (``field_validator``): o import tardio só adiava o erro, e todo adaptador
-    ficava sem lugar, calado. Aqui o pydantic some do processo inteiro, e as
-    duas chamadas do caminho do doctor têm de responder o lugar.
-
-    MORDIDA: devolva ao ``bluez_dbus.lugar_de`` (ou ao
-    ``mesa_de_radio._lugar``) o ``from …utils.maquina import lugar_de`` — o
-    ``ImportError`` volta, e a régua reprova nomeando a chamada.
-    """
+    """Pelo ``python3`` do sistema (o recurso do doctor, pydantic 1.10) a"""
     codigo = (
         "import sys\n"
         "sys.modules['pydantic'] = None\n"
@@ -1052,18 +866,8 @@ def test_a_grafia_do_lugar_responde_sem_pydantic_na_chamada() -> None:
     ], feito.stdout
 
 
-# ---------------------------------------------------------------------------
-# 6. um escritor do Alias
-# ---------------------------------------------------------------------------
-
-
 def test_o_motor_nao_escreve_no_bluez() -> None:
-    """O ``Alias`` tem UM escritor, o ``bt_active_mode.sh``
-    (``D-COSTURA-BLUEZ``): o motor não importa nada que escreva no BlueZ.
-
-    MORDIDA: devolva o ``projetar_o_nome`` (o ``apelido_do_dongle`` ou o
-    ``bluez_dbus``) ao motor — o import reprova aqui.
-    """
+    """O ``Alias`` tem UM escritor, o ``bt_active_mode.sh``"""
     arvore = ast.parse((SRC / "integrations" / "entrada_a_entrada.py").read_text(encoding="utf-8"))
     importados = {
         (no.module or "") + "." + nome.name
@@ -1103,11 +907,8 @@ def test_o_nome_do_adaptador_mora_no_endereco_e_nao_toca_a_entrada(disco: Path) 
     assert documento.mapa.portas["15"].nome == "Sofá"
 
 
-# -- o script ----------------------------------------------------------------
-
 SCRIPT = RAIZ / "scripts" / "bt_active_mode.sh"
 ADAPTADORES = {"hci0": "AA:BB:CC:00:00:01", "hci1": "AA:BB:CC:00:00:02"}
-#: O ``ID_PATH`` que o udev publica para o aparelho USB de cada adaptador.
 ID_PATH = {"hci0": _lugar(PCI_B, "4.1.4"), "hci1": _lugar(PCI_A, "3")}
 
 
@@ -1118,15 +919,7 @@ def _executavel(caminho: Path, corpo: str) -> None:
 
 
 class Bancada:
-    """Dois adaptadores e um ``maquina.json``: o que o script lê e o que escreve.
-
-    ``busctl``, ``udevadm``, ``hciconfig``, ``hcitool`` e ``id`` são dublês num
-    ``PATH`` montado à mão; ``HEFESTO_SYS_BLUETOOTH``, ``HEFESTO_BT_LIB`` e
-    ``HEFESTO_MAQUINA_JSON`` desviam as três raízes. Nenhum adaptador vivo é
-    lido, e nenhum é renomeado. ``adaptadores`` é ``{hciN: nome}`` e vai ao
-    disco pela chave do endereço; o ``udevadm`` de mentira fica para a régua
-    de que o nome da ENTRADA não chega ao adaptador.
-    """
+    """Dois adaptadores e um ``maquina.json``: o que o script lê e o que escreve."""
 
     def __init__(
         self,
@@ -1167,11 +960,6 @@ class Bancada:
             "exit 0\n",
         )
         _executavel(self.fakes / "id", "echo 0\n")
-        # O `busctl` de mentira imprime como o de verdade: escapado em C sem o
-        # `--json`, e em UTF-8 com ele (`tests/unit/busctl_de_verdade.py`). Com
-        # o `printf` cru de antes, «Sofá» nunca chegava escapado ao script, e a
-        # reescrita do nome a cada tique passava aqui (conferência da
-        # INSTALL-E-UNINSTALL-DO-RADIO-01).
         impressor = escrever_impressor(self.fakes)
         dos_alias = " ".join(f'["/org/bluez/{h}"]="{a}"' for h, a in alias.items())
         endereco = " ".join(f'["/org/bluez/{h}"]="{e}"' for h, e in ADAPTADORES.items())
@@ -1231,11 +1019,7 @@ exit 0
 
 
 def test_o_nome_do_adaptador_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
-    """UM escritor: o ``bt_active_mode.sh`` lê o nome do adaptador no
-    ``maquina.json``, pelo ENDEREÇO dele, e o escreve no ``Alias``.
-
-    MORDIDA: arranque do script o bloco do nome — o ``Alias`` não muda.
-    """
+    """UM escritor: o ``bt_active_mode.sh`` lê o nome do adaptador no"""
     banca = Bancada(
         tmp_path, alias={"hci0": "Sala", "hci1": "Quarto"}, adaptadores={"hci0": "Sofá"}
     )
@@ -1245,14 +1029,7 @@ def test_o_nome_do_adaptador_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
 
 
 def test_o_nome_da_entrada_nao_chega_ao_adaptador(tmp_path: Path) -> None:
-    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026), pedido dela: *«temos o
-    nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
-    A entrada que ela numerou no Mapear virava o nome do adaptador plugado
-    nela (a D3), e a tela mostrava adaptadores «15» e «13».
-
-    MORDIDA: devolva ao script a leitura de ``lugares[<ID_PATH>].nome`` — o
-    ``udevadm`` de mentira resolve o lugar, e o ``hci0`` vira «15».
-    """
+    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026), pedido dela: *«temos o"""
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},
@@ -1264,13 +1041,7 @@ def test_o_nome_da_entrada_nao_chega_ao_adaptador(tmp_path: Path) -> None:
 
 
 def test_o_nome_do_lugar_leva_o_prefixo_onde_a_linhagem_mora(tmp_path: Path) -> None:
-    """O adaptador que hospeda um Pro Controller recebe o nome COSTURADO — o Pro
-    cai sob carga sem o prefixo, e é por isso que o nome passa pelo mesmo
-    escritor da costura.
-
-    MORDIDA: escrever o nome cru (sem olhar a linhagem) — o ``hci1`` sai
-    «Quarto novo», e o Pro volta ao sniff frágil.
-    """
+    """O adaptador que hospeda um Pro Controller recebe o nome COSTURADO — o Pro"""
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},
@@ -1284,11 +1055,7 @@ def test_o_nome_do_lugar_leva_o_prefixo_onde_a_linhagem_mora(tmp_path: Path) -> 
 
 
 def test_o_script_nao_reescreve_o_nome_que_ja_esta_la(tmp_path: Path) -> None:
-    """O watchdog roda a cada 2 min: nome que já está no ``Alias`` não se
-    reescreve, e adaptador sem nome não mexe no ``Alias`` dela.
-
-    MORDIDA: escrever sem comparar — o ``Alias`` é reescrito a cada tique.
-    """
+    """O watchdog roda a cada 2 min: nome que já está no ``Alias`` não se"""
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sofá", "hci1": "Quarto"},
@@ -1299,18 +1066,7 @@ def test_o_script_nao_reescreve_o_nome_que_ja_esta_la(tmp_path: Path) -> None:
 
 
 def test_sob_sudo_o_gancho_do_maquina_json_morre(tmp_path: Path) -> None:
-    """O script é root e lê o arquivo que ``HEFESTO_MAQUINA_JSON`` aponta — sem a
-    conferência de dono, que só vale para a casa achada pelo ``getent``. Sob
-    ``sudo`` o gancho morre junto com os outros dois de caminho: o
-    ``env_reset`` já o apagaria, e o ``unset`` é o cinto para a máquina que o
-    desligou.
-
-    Roda SÓ o prólogo do script (até a primeira raiz lida), com uma sonda no
-    fim: nenhum adaptador, nenhum ``/sys`` e nenhum ``busctl`` entram aqui.
-
-    MORDIDA: tire ``HEFESTO_MAQUINA_JSON`` do ``unset`` do bloco do ``SUDO_UID``
-    — sob sudo o gancho sobrevive e a sonda o imprime.
-    """
+    """O script é root e lê o arquivo que ``HEFESTO_MAQUINA_JSON`` aponta — sem a"""
     prologo, marca, _ = SCRIPT.read_text(encoding="utf-8").partition("\nSYS_BLUETOOTH=")
     assert marca and "SUDO_UID" in prologo, "o prólogo do script mudou de forma"
     sonda = prologo + '\nprintf "%s" "${HEFESTO_MAQUINA_JSON-morto}"\n'
@@ -1333,17 +1089,11 @@ def test_sob_sudo_o_gancho_do_maquina_json_morre(tmp_path: Path) -> None:
 
     assert rodar(SUDO_UID="1000") == "morto", "o gancho do maquina.json sobreviveu ao sudo"
     assert rodar(SUDO_USER="ela") == "morto"
-    #: A régua da sonda: sem sudo, o MESMO gancho chega. Sem esta metade, a de
-    #: cima passaria com a sonda quebrada.
     assert rodar() == str(tmp_path / "maquina.json")
 
 
 def test_sob_a_suite_o_script_nao_le_o_maquina_json_dela(tmp_path: Path) -> None:
-    """Com os ganchos de teste e sem ``HEFESTO_MAQUINA_JSON``, o script não
-    procura a casa de ninguém: um teste não lê o ``maquina.json`` DELA.
-
-    MORDIDA: procurar pelas casas do ``getent`` também sob os ganchos.
-    """
+    """Com os ganchos de teste e sem ``HEFESTO_MAQUINA_JSON``, o script não"""
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},

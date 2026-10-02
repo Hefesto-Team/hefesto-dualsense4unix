@@ -11,7 +11,7 @@ dizem o que aconteceu com a máquina dela, nunca o nome do backend/protocolo.
 As três:
 
 * :func:`descrever_teclado_na_tela` — lê ``osk_disponivel``. Publicada por
-  ``daemon/ipc_handlers.py:2490`` desde 10/08/2026 (TECLADO-QUE-NAO-DIGITA-01)
+  ``daemon/ipc_handlers.py:1861`` desde 10/08/2026 (TECLADO-QUE-NAO-DIGITA-01)
   e **zero leitores em `app/`** até aqui (medido em §3.6 da sprint) — é a
   chave órfã que o portão de completude, em
   ``tests/unit/test_ambiente_presumido_01_o_que_a_maquina_nao_tem.py``, existe
@@ -68,21 +68,11 @@ def descrever_teclado_na_tela(state: object) -> str:
             "Teclado na tela: nenhum programa encontrado — o L3 não tem o que "
             "abrir nesta máquina."
         )
-    # Publicado, mas num tipo que não é bool (mock de teste, payload futuro
-    # com outro contrato): mesma honestidade do caso ausente.
     return "Teclado na tela: não consegui ler — resposta inesperada do Hefesto."
 
 
 def descrever_display_grafico(state: object) -> str:
-    """O Hefesto enxerga QUALQUER janela nesta máquina, agora?
-
-    Lê ``window_detect_backend`` e ``window_detect_reason``
-    (``daemon/ipc_handlers.py:_window_detect_payload``). Fala do MECANISMO —
-    complementa ``daemon_actions.descrever_deteccao_de_janela``, que fala da
-    PROMESSA (troca de perfil por jogo); esta função não repete aquela
-    frase, e não lê ``window_detect_healthy`` (o trinco de mão única cuja
-    presunção o T-01 desta mesma sprint corrigiu na origem — não aqui).
-    """
+    """O Hefesto enxerga QUALQUER janela nesta máquina, agora?"""
     if not isinstance(state, dict) or "window_detect_backend" not in state:
         return "Detector de janela: não consegui ler — o serviço pode estar desligado."
     backend = state.get("window_detect_backend")

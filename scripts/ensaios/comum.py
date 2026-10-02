@@ -61,20 +61,10 @@ _SRC = os.path.join(os.path.dirname(_SCRIPTS), "src")
 if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)
 if os.path.isdir(_SRC) and _SRC not in sys.path:
-    # Para o checkout sem instalação: o cliente do broker mora no pacote, e é
-    # ele — um só, nunca uma cópia — que abre hidraw para todo instrumento.
     sys.path.insert(0, _SRC)
 
 from identidade_do_vpad import campos_do_uevent, e_vpad_do_hefesto
 
-#: Por que o import da porta é tolerante: `quem_e_quem.py` e
-#: `audio_por_transporte.py` não abrem hidraw nenhum, e não seria razoável que
-#: eles morressem por falta de uma dependência que não usam. Quem PRECISA da
-#: porta chama `abrir_no_hidraw`, e ali a falta vira erro barulhento — nunca um
-#: `open()` direto de contrabando, que é o defeito que esta leva fechou.
-#: Os nomes REEXPORTADOS aqui existem para que nenhum instrumento precise
-#: conhecer o caminho do cliente: `from comum import abrir_no_hidraw,
-#: estado_do_grab, leitura_de_zero` e pronto. Um só cliente, um só import.
 try:
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
         GRAB_DE_TERCEIRO,  # noqa: F401 - reexportado para os instrumentos
@@ -99,8 +89,6 @@ except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
 VERSAO_DOS_INSTRUMENTOS = "2026-08-15"
 
 # O DualSense de fábrica. O `0x0DF2` (DualSense Edge) fica DE FORA de propósito:
-# é o PID que o vpad deste produto forja, e aceitá-lo aqui reabriria o buraco
-# que a VPAD-NO-ESPELHO-01 fechou em 12/08/2026.
 VID_SONY = 0x054C
 PID_DUALSENSE = 0x0CE6
 
@@ -110,12 +98,7 @@ BUS_BLUETOOTH = 0x0005
 CABO = "cabo"
 RADIO = "rádio"
 
-# O vpad NÃO tem transporte, e chamar o dele de "cabo" já falseou uma tabela.
-# Ele forja `BUS_USB` no `UHID_CREATE2` de propósito — é o que o faz passar por
 # DualSense Edge no cabo — então a leitura ingênua do barramento o classifica
-# como cabo e ele entra na média do transporte cabo. Medido em 15/08/2026: com
-# a mesa 2+2, a média de giro "do cabo" saiu de dois físicos MAIS dois vpads.
-# Um vpad não fala com aparelho nenhum: ele é a SAÍDA do produto.
 VPAD = "vpad (sem transporte)"
 
 
@@ -163,20 +146,8 @@ def ler_texto(caminho: str) -> str:
         return ""
 
 
-# ---------------------------------------------------------------------------
-# Descoberta da mesa
-# ---------------------------------------------------------------------------
-
-
 def _transporte_do_hid_id(hid_id: str) -> str:
-    """`cabo` ou `rádio` a partir do campo `HID_ID` do `uevent` do pai HID.
-
-    O `HID_ID` é `BARRAMENTO:VENDOR:PRODUCT` em hex. O barramento é o veredito:
-    `0005` é Bluetooth (rádio), `0003` é USB (cabo). **Topologia de sysfs NÃO
-    serve** — com BlueZ >= 5.73 os controles de rádio moram sob
-    `/devices/virtual/misc/uhid/`, no mesmo lugar do nosso vpad. Essa armadilha
-    já foi paga em 11/08/2026.
-    """
+    """`cabo` ou `rádio` a partir do campo `HID_ID` do `uevent` do pai HID."""
     partes = hid_id.split(":")
     if not partes:
         return "?"
@@ -270,24 +241,11 @@ def vpads(aparelhos: list[Aparelho]) -> list[Aparelho]:
     return [a for a in aparelhos if a.e_vpad]
 
 
-# ---------------------------------------------------------------------------
-# O descritor de report: os tamanhos vêm DAQUI, nunca de chute
-# ---------------------------------------------------------------------------
-
 _TAMANHO_DO_ITEM = {0: 0, 1: 1, 2: 2, 3: 4}
 
 
 def tamanhos_do_descritor(dir_device: str) -> dict[str, dict[int, int]]:
-    """Os tamanhos em bytes de cada report FEATURE/OUTPUT/INPUT declarado.
-
-    Lê `report_descriptor` do próprio aparelho e o interpreta. Isso importa: a
-    lista de 17 feature reports desta casa foi conferida contra ESTE parser em
-    15/08/2026 e bate item a item, incluindo o `0xf6` de 547 bytes — nenhum
-    número aqui é copiado de documentação.
-
-    O tamanho devolvido é **payload + 1**, o byte do report id, que é o que se
-    passa ao `HIDIOCGFEATURE`.
-    """
+    """Os tamanhos em bytes de cada report FEATURE/OUTPUT/INPUT declarado."""
     bruto = b""
     try:
         with open(os.path.join(dir_device, "report_descriptor"), "rb") as arquivo:
@@ -309,13 +267,13 @@ def tamanhos_do_descritor(dir_device: str) -> dict[str, dict[int, int]]:
         valor = int.from_bytes(bruto[indice : indice + largura], "little") if largura else 0
         indice += largura
         etiqueta = prefixo & 0xFC
-        if etiqueta == 0x84:  # Report ID (global)
+        if etiqueta == 0x84:
             report_id = valor
-        elif etiqueta == 0x74:  # Report Size
+        elif etiqueta == 0x74:
             tamanho_do_campo = valor
-        elif etiqueta == 0x94:  # Report Count
+        elif etiqueta == 0x94:
             quantidade = valor
-        elif etiqueta in onde:  # Input / Output / Feature (main)
+        elif etiqueta in onde:
             acumulado = bits[onde[etiqueta]]
             acumulado[report_id] = acumulado.get(report_id, 0) + tamanho_do_campo * quantidade
 
@@ -325,21 +283,8 @@ def tamanhos_do_descritor(dir_device: str) -> dict[str, dict[int, int]]:
     }
 
 
-# ---------------------------------------------------------------------------
-# O daemon, e por que ele importa
-# ---------------------------------------------------------------------------
-
-
 def estado_do_daemon() -> EstadoDoDaemon:
-    """Descobre se o daemon do Hefesto está vivo, e se o broker está no caminho.
-
-    Não é curiosidade. O `hefesto-hidraw-broker` **esconde o hidraw do controle
-    físico** (tira a ACL do uaccess e deixa o nó em `0600 root:root`) para que o
-    jogo não o abra. Com o daemon vivo, um instrumento de leitura de feature
-    report leva `PermissionError` — e um instrumento que não checasse isso
-    reportaria "controle não respondeu", que é uma frase falsa sobre o aparelho
-    quando o problema é o produto fazendo o que promete.
-    """
+    """Descobre se o daemon do Hefesto está vivo, e se o broker está no caminho."""
     estado = EstadoDoDaemon()
 
     if shutil.which("systemctl"):
@@ -399,16 +344,7 @@ def diagnostico_de_acesso(caminho: str) -> str:
 
 
 def abrir_no_hidraw(caminho: str, *, escrita: bool = True) -> NoAberto:
-    """Abre um hidraw pela porta do broker, com queda declarada para `open()`.
-
-    **É o ÚNICO jeito de um instrumento desta casa abrir hidraw.** Não há
-    segunda rota, e é de propósito: a rota que existia — `os.open` direto —
-    colhia `EACCES` na mesa 2+2 e mandava a próxima pessoa consertar a regra
-    udev, que estava certa o tempo todo.
-
-    Devolve um `NoAberto`, que carrega o fd E a porta usada. Quem imprime
-    relatório imprime `no.linha_de_relatorio`; quem só mede usa `no.fd`.
-    """
+    """Abre um hidraw pela porta do broker, com queda declarada para `open()`."""
     if PORTA_IMPORTAVEL:
         raise SystemExit(
             "ERRO: o cliente do broker não é importável neste interpretador "
@@ -419,11 +355,6 @@ def abrir_no_hidraw(caminho: str, *, escrita: bool = True) -> NoAberto:
             "    .venv/bin/python scripts/ensaios/<instrumento>.py"
         )
     return abrir_hidraw(caminho, escrita=escrita)
-
-
-# ---------------------------------------------------------------------------
-# Saída para humano
-# ---------------------------------------------------------------------------
 
 
 def _largura(texto: str) -> int:
@@ -447,14 +378,7 @@ def tabela(cabecalho: list[str], linhas: list[list[str]]) -> str:
 
 
 def _procedencia(modulo_nome: str) -> str:
-    """De qual ARQUIVO veio o módulo — não o nome dele.
-
-    O nome não distingue nada: o `python3` do sistema e o `.venv/bin/python`
-    deste projeto trazem `evdev` diferentes, e foi exatamente esse tipo de
-    confusão que produziu alarme falso três vezes aqui. Módulo embutido no
-    interpretador não tem `__file__`, e dizer isso é mais honesto que dizer
-    "não importado".
-    """
+    """De qual ARQUIVO veio o módulo — não o nome dele."""
     modulo = sys.modules.get(modulo_nome)
     if modulo is None:
         return "NÃO IMPORTADO"
@@ -467,12 +391,7 @@ def _procedencia(modulo_nome: str) -> str:
 
 
 def declaracao_da_porta() -> str:
-    """A linha `porta ...` do cabeçalho — a mesma frase em toda a casa.
-
-    Sem cliente importável ela NÃO some: vira a confissão de que este
-    instrumento não pôde nem perguntar por onde mediria. Um cabeçalho calado
-    sobre a porta é exatamente o que a mordida 2 existe para impedir.
-    """
+    """A linha `porta ...` do cabeçalho — a mesma frase em toda a casa."""
     if PORTA_IMPORTAVEL:
         return (
             "porta ............ NÃO SEI — o cliente do broker não é importável "
@@ -490,17 +409,7 @@ def cabecalho_do_instrumento(
     daemon_precisa_parar: bool = False,
     nos_evdev: list[str] | None = None,
 ) -> str:
-    """O bloco que todo instrumento desta pasta imprime ANTES de medir.
-
-    Ele responde, sem que ninguém precise perguntar, as coisas que já
-    produziram medição falsa nesta casa: qual biblioteca, de qual arquivo, se o
-    daemon está no caminho, se algo foi escrito no aparelho — e, desde
-    15/08/2026, **por qual porta** se mede e **se o evdev está grabado**.
-
-    `nos_evdev` é a lista de `/dev/input/eventN` que o instrumento vai ler. Só
-    quem lê evdev passa: para os outros, o grab não é uma pergunta, e inventar
-    uma resposta seria ruído.
-    """
+    """O bloco que todo instrumento desta pasta imprime ANTES de medir."""
     estado = estado_do_daemon()
     linhas = [
         "=" * 78,
@@ -552,12 +461,7 @@ def resumo(texto: str) -> str:
 
 
 def censo_da_mesa(aparelhos: list[Aparelho]) -> str:
-    """A frase honesta sobre a mesa que este instrumento ENCONTROU.
-
-    Importa que ela seja honesta porque a mesa 2+2 é o desenho do ensaio, e um
-    instrumento que rodasse com quatro no rádio e não dissesse nada deixaria
-    quem lê achar que comparou transportes quando comparou um só.
-    """
+    """A frase honesta sobre a mesa que este instrumento ENCONTROU."""
     reais = fisicos(aparelhos)
     por_transporte: dict[str, int] = {}
     for a in reais:
@@ -574,37 +478,11 @@ def censo_da_mesa(aparelhos: list[Aparelho]) -> str:
     return f"mesa com {len(reais)} controle(s): {desenho} — os dois transportes presentes."
 
 
-# ---------------------------------------------------------------------------
-# O TEMA DA FOLHA — e ele se decide pela LETRA, não pelo sinalizador
-# ---------------------------------------------------------------------------
-#
-# MEDIDO EM 10/09/2026, com ela na bancada e as duas folhas na tela:
 # *"fora que nao deu pra ler nada nos botoes"*.  # noqa-acento: citação literal dela
-#
-# A CAUSA, e ela some se alguém olhar só o nome da propriedade: as três folhas
-# decidiam claro-ou-escuro por `gtk-application-prefer-dark-theme`. Na máquina
-# dela esse sinalizador é **False** e o tema é **`adw-gtk3-dark`** — escuro. As
-# folhas pintavam a janela de CLARO e o GTK continuava pintando `button` e
-# `entry` pelo tema ESCURO, com a letra BRANCA. Branco sobre claro é o que ela
-# não conseguiu ler; e o rótulo do botão era justamente o que dizia o que fazer.
-#
-# `prefer-dark` é um PEDIDO do aplicativo ao tema, não uma descrição do tema.
-# O produto o liga por conta própria (`app/theme.py:399`) e por isso nunca viu
-# este defeito; um instrumento que não o liga lê `False` num desktop escuro.
-#
-# A RÉGUA QUE SOBRA é a cor que o tema ESCREVE: se a letra do botão é clara, o
-# tema é escuro, e o fundo tem de acompanhá-la. Isso se mede sem abrir janela
-# nenhuma na tela dela — `Gtk.OffscreenWindow`, sem `show()` — e não depende de
-# o tema ter a palavra «dark» no nome.
 
 
 def o_tema_e_escuro() -> bool:
-    """Escuro pelo que o tema PINTA, e não pelo sinalizador que ninguém liga.
-
-    A medição é a luminância da cor da LETRA de um `Gtk.Button` do tema: acima
-    de 0,5 o tema escreve claro, logo o fundo dele é escuro. O nome do tema e o
-    `prefer-dark` ficam como reforço, para o caso de o estilo não resolver.
-    """
+    """Escuro pelo que o tema PINTA, e não pelo sinalizador que ninguém liga."""
     import gi
 
     gi.require_version("Gtk", "3.0")
@@ -618,9 +496,6 @@ def o_tema_e_escuro() -> bool:
         if "dark" in nome.lower():
             return True
 
-    # A MEDIÇÃO, e ela é a que alcança o tema escuro sem «dark» no nome.
-    # `OffscreenWindow` de propósito: TELA-DELA-02 — instrumento não abre janela
-    # na tela dela, e aqui não há nada a mostrar.
     janela = Gtk.OffscreenWindow()
     botao = Gtk.Button(label="x")
     janela.add(botao)
@@ -633,17 +508,7 @@ def o_tema_e_escuro() -> bool:
 
 
 def pintar_fundo_solido(janela: object) -> None:
-    """Um fundo SÓLIDO e LEGÍVEL para a folha — razão dela: *"o fundo tá muito transparente"*.
-
-    Sem isto a `Gtk.Window` herda o fundo do compositor, e sob o COSMIC vira uma
-    folha translúcida com o desktop dela atravessando.
-
-    **E ele pinta `button`, `entry` e `combobox` de propósito.** A versão que
-    pintava só `window`/`frame`/`scrolledwindow` deixava esses três com as cores
-    do tema do sistema; quando o instrumento erra o tema, o rótulo do botão some
-    dentro do próprio botão. Declarar os três é o que faz a folha ser legível
-    mesmo que a detecção acima um dia se engane.
-    """
+    """Um fundo SÓLIDO e LEGÍVEL para a folha — razão dela: *"o fundo tá muito transparente"*."""
     import gi
 
     gi.require_version("Gtk", "3.0")

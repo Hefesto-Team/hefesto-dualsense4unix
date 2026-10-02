@@ -1,39 +1,9 @@
-"""LIGHTBAR — COR DE CADA UM-01 (Onda 7): os seis casos que a aba não tinha.
-
-**Por que este arquivo existe (L11).** Dezesseis arquivos de `tests/unit`
-exercem a aba Lightbar, e em 24/08/2026 **nenhum** cobria os seis casos que são
-os seis consertos desta onda. Cada teste aqui nomeia a tarefa que ele guarda e
-diz, na docstring, o que se vê quando a cura é ARRANCADA — que é a única forma
-de distinguir uma régua de uma que só sabe passar.
-
-Os seis casos, na ordem em que aparecem abaixo:
-
-1. **L1** — mesa desconhecida com a fita ainda dizendo "Controle 2": a cor
-   RECUSA, e ``auto_player_colors`` sobrevive no perfil dela;
-2. **L2** — host **sem** o ``LightbarActionsMixin``: os Gatilhos falham alto em
-   vez de escrever nos quatro controles em silêncio;
-3. **L3** — o ÚLTIMO override por controle limpo: a seção ``controllers`` viaja
-   VAZIA em vez de sumir do payload;
-4. **L4** — envio recusado: o rótulo do desenho **não** afirma o desenho novo;
-5. **L6** — ``lightbar_source: "desconhecida"``: o rótulo da barra não nomeia
-   cor nenhuma nem usa a palavra "aceso";
-6. **L7** — fita em INGLÊS com o número do alvo conhecido: a prévia mostra a
-   cor da paleta, não a manual.
-
-**Os três primeiros guardam cura de OUTRA frente** (L1/L2 saíram na ONDA0-Z2,
-L3 na ONDA0-Z4) e estão aqui de propósito: a sprint desta aba é quem paga o
-preço quando qualquer uma delas cair, e um portão que mora só na sprint que o
-criou não protege quem depende dele.
-"""
+"""LIGHTBAR — COR DE CADA UM-01 (Onda 7): os seis casos que a aba não tinha."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("lightbar onda7 as mordidas")
 
 from typing import Any
@@ -42,8 +12,6 @@ import pytest
 
 gi = pytest.importorskip("gi")
 
-# BUG-TEST-GDK-VERSION-PIN-01: pina Gdk/Gtk 3.0 ANTES de importar módulos da
-# GUI — sem isso o gi pode carregar Gdk 4.0 e envenenar o processo inteiro.
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
@@ -53,19 +21,12 @@ from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsM
 from hefesto_dualsense4unix.app.actions.triggers_actions import TriggersActionsMixin
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 
-#: MACs forjados na faixa da casa (portão de anonimato).
 UNIQ_1 = "aa:bb:cc:00:00:01"
 UNIQ_2 = "aa:bb:cc:00:00:02"
 
 ROXO = (129, 61, 156)
 
-#: O desenho canônico do jogador 2 — a MESMA tabela que o daemon usa.
 P2 = (False, True, False, True, False)
-
-
-# ---------------------------------------------------------------------------
-# Dublês
-# ---------------------------------------------------------------------------
 
 
 class _Rotulo:
@@ -119,12 +80,7 @@ class _BotaoDeCor:
 
 
 def _aceitou(uniq: str | None) -> dict[str, Any]:
-    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU em ``uniq``.
-
-    BG-01 (26/08/2026): a aba lê o CORPO do daemon, não mais o ``bool`` da
-    ponte estreita. O que estes testes julgam segue sendo a RECUSA e o
-    ENDEREÇO — o corpo aqui é só o "sim" do daemon.
-    """
+    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU em ``uniq``."""
     return {
         "status": "ok",
         "aplicado_em": [uniq] if uniq else [],
@@ -147,8 +103,6 @@ class _HostLightbar(LightbarActionsMixin):
     ) -> None:
         self.draft = draft
         if com_alvo:
-            # A EXISTÊNCIA do atributo é o que separa "escolheu Todos" de
-            # "ninguém escolheu nada" (`app/alvo_de_edicao.py`).
             self._edit_target_uniq = alvo
         if rotulo_do_alvo is not None:
             self._edit_target_label = rotulo_do_alvo
@@ -181,20 +135,11 @@ class _HostLightbar(LightbarActionsMixin):
 
 
 class _HostSoGatilhos(TriggersActionsMixin):
-    """Host com os Gatilhos e **sem** o mixin da Lightbar montado (L2).
-
-    É o cenário que a M12 mediu: sumindo o mixin da Lightbar da MRO — um
-    refactor de outra aba basta —, os Gatilhos passavam a escrever nos quatro
-    controles em silêncio, porque liam o alvo por
-    ``getattr(self, "_edit_uniq", lambda: None)()`` e o default do ``getattr``
-    respondia "escreva global".
-    """
+    """Host com os Gatilhos e **sem** o mixin da Lightbar montado (L2)."""
 
     def __init__(self) -> None:
         self._widgets: dict[str, Any] = {}
         self._toasts: list[tuple[str, bool, str | None]] = []
-        # Os dois combos de modo do host real; vazios aqui — o caminho do
-        # "Desligar" só os usa para voltar o seletor a "Off".
         self._trigger_mode: dict[str, Any] = {}
 
     def _get(self, widget_id: str) -> Any:
@@ -213,11 +158,6 @@ class _HostSoGatilhos(TriggersActionsMixin):
         spec: Any = None,
         corpo: dict[str, Any] | None = None,
     ) -> None:
-        # `corpo` entrou na assinatura real em 25/08/2026 (ELO-MUDO-01/T3): o
-        # caminho de SUCESSO do `_reset_trigger` o passa. O dublê tem de
-        # aceitá-lo, senão a mordida deste arquivo morre de `TypeError` em vez
-        # de reprovar dizendo que o gatilho foi escrito às cegas — que é a
-        # diferença entre uma régua que mede e um erro que se lê como bug.
         self._toasts.append((side, ok, motivo))
 
     def _cancelar_live_preview(self, _side: str) -> None:
@@ -243,11 +183,6 @@ def _perfil(auto: bool = True) -> Profile:
 
 def _draft(auto: bool = True) -> draft_mod.DraftConfig:
     return draft_mod.DraftConfig.from_profile(_perfil(auto))
-
-
-# ---------------------------------------------------------------------------
-# 1 · L1 — mesa desconhecida: a cor RECUSA em vez de degradar
-# ---------------------------------------------------------------------------
 
 
 def test_mesa_desconhecida_a_cor_recusa_e_a_paleta_sobrevive(
@@ -280,7 +215,7 @@ def test_mesa_desconhecida_a_cor_recusa_e_a_paleta_sobrevive(
     host = _HostLightbar(
         _draft(auto=True),
         conectados={},
-        com_alvo=False,  # a janela ESQUECEU o alvo: estado DESCONHECIDO
+        com_alvo=False,
         rotulo_do_alvo="Controle 2 (BT)",
     )
 
@@ -291,11 +226,6 @@ def test_mesa_desconhecida_a_cor_recusa_e_a_paleta_sobrevive(
     )
     assert host._toasts, "a recusa tem de chegar à tela"
     assert "Nada foi alterado" in host._toasts[-1]
-
-
-# ---------------------------------------------------------------------------
-# 2 · L2 — os Gatilhos sem o mixin da Lightbar falham ALTO
-# ---------------------------------------------------------------------------
 
 
 def test_gatilhos_sem_o_mixin_da_lightbar_recusam_em_vez_de_escrever_global(
@@ -348,25 +278,8 @@ def test_gatilhos_sem_o_mixin_da_lightbar_recusam_em_vez_de_escrever_global(
     assert motivo and "Nada foi alterado" in motivo
 
 
-# ---------------------------------------------------------------------------
-# 3 · L3 — o ÚLTIMO override limpo viaja como seção VAZIA
-# ---------------------------------------------------------------------------
-
-
 def test_o_ultimo_override_limpo_viaja_como_secao_vazia() -> None:
-    """L3 — o "Voltar ao automático" que não chegava ao daemon.
-
-    A cadeia medida: o override esvazia → ``_controllers_to_ipc`` devolvia
-    ``None`` → ``to_ipc_dict`` emitia ``"controllers": None`` → o applier saía
-    na primeira linha (``if raw is None: return``) → ``reset_output_overrides``
-    **não** rodava, e a cor antiga seguia viva no controle. Com DOIS overrides
-    limpar um funcionava (a seção viaja com o que sobrou); o buraco era só o
-    ÚLTIMO — invisível em teste com dois dublês, certeiro para quem tem um
-    controle.
-
-    **Com a cura arrancada** (a distinção entre "nunca teve override" e "tinha
-    e não tem mais") a primeira asserção volta a ver ``None``.
-    """
+    """L3 — o "Voltar ao automático" que não chegava ao daemon."""
     draft = _draft()
     com_override = draft.with_controller_leds(
         UNIQ_1, draft.leds.model_copy(update={"lightbar_rgb": (255, 0, 0)})
@@ -382,30 +295,13 @@ def test_o_ultimo_override_limpo_viaja_como_secao_vazia() -> None:
         "chamar `reset_output_overrides`, e a cor antiga fica no controle"
     )
 
-    # A recíproca, que é o que separa a cura de uma gambiarra: quem NUNCA teve
-    # override continua sem a chave, e o daemon antigo segue ignorando-a.
     assert _draft().to_ipc_dict()["controllers"] is None
-
-
-# ---------------------------------------------------------------------------
-# 4 · L4 — envio recusado: o rótulo NÃO afirma o desenho
-# ---------------------------------------------------------------------------
 
 
 def test_envio_recusado_o_rotulo_nao_afirma_o_desenho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """L4 — duas afirmações contraditórias, na mesma aba, do mesmo clique.
-
-    ``_set_player_leds`` persistia, enviava, mostrava o toast com o resultado e
-    então chamava ``_atualizar_estado_das_luzes`` **sem olhar o ``ok``**. Com a
-    mesa vazia o envio recusa (``_AVISO_SEM_DESTINATARIO``), o toast diz que
-    não deu — e o rótulo três centímetros acima passava a anunciar o desenho do
-    P2 como se estivesse valendo.
-
-    **Com a cura arrancada** (o ``if ok:`` que guarda a atualização do rótulo)
-    a segunda asserção reprova: o rótulo volta a dizer "P2".
-    """
+    """L4 — duas afirmações contraditórias, na mesma aba, do mesmo clique."""
     monkeypatch.setattr(
         lightbar_actions,
         "player_leds_set_detalhado",
@@ -413,7 +309,7 @@ def test_envio_recusado_o_rotulo_nao_afirma_o_desenho(
     )
     host = _HostLightbar(
         _draft(auto=False),
-        conectados={},  # "Todos" DELIBERADO, e a mesa está vazia
+        conectados={},
         alvo=None,
     )
     antes = host.rotulo_do_desenho.texto
@@ -421,10 +317,6 @@ def test_envio_recusado_o_rotulo_nao_afirma_o_desenho(
     host.on_player_leds_preset_p2(None)
 
     assert host._toasts, "o toast do resultado continua saindo"
-    # A RÉGUA PERGUNTA AO DONO (08/09/2026): esta linha DIGITAVA "estão na
-    # mesa" e reprovava a MELHORA — "mesa" é palavra banida na tela por
-    # decisão dela (06/09), e o produto já diz "estão ligados". Digitar a
-    # frase da tela põe um segundo dono nela; ler a constante não.
     assert lightbar_actions._AVISO_SEM_DESTINATARIO in host._toasts[-1]
     assert "P2" not in host.rotulo_do_desenho.texto, (
         "o rótulo anunciava um desenho que o produto acabou de declarar que "
@@ -433,11 +325,6 @@ def test_envio_recusado_o_rotulo_nao_afirma_o_desenho(
     assert host.rotulo_do_desenho.texto == antes, (
         "na recusa o rótulo MANTÉM o último desenho que de fato mandamos"
     )
-
-
-# ---------------------------------------------------------------------------
-# 5 · L6 — o que o daemon sabe da barra chega à aba da cor
-# ---------------------------------------------------------------------------
 
 
 def _state(**campos: Any) -> dict[str, Any]:
@@ -458,16 +345,7 @@ def _state(**campos: Any) -> dict[str, Any]:
 def test_fonte_desconhecida_o_rotulo_nao_nomeia_cor_nem_diz_aceso(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """L6 — a aba da barra era a única do produto que não lia a barra.
-
-    ``lightbar_source == "desconhecida"`` quer dizer que ninguém sabe o que a
-    lâmpada está fazendo: o ``0,0,0`` do sysfs sem escrita nossa pode ser o
-    azul-do-kernel brilhando neste exato instante. A aba diz "cor
-    desconhecida" e nada além.
-
-    **Com a cura arrancada** (o leitor ``_atualizar_estado_da_barra``) o
-    rótulo fica no texto de espera e a asserção reprova.
-    """
+    """L6 — a aba da barra era a única do produto que não lia a barra."""
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
         "daemon_state_full",
@@ -488,17 +366,7 @@ def test_fonte_desconhecida_o_rotulo_nao_nomeia_cor_nem_diz_aceso(
 def test_a_disputa_da_steam_aparece_na_aba_da_cor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """L6 — a entrega que faltava da ESCRITOR-CRU-01.
-
-    ``lightbar_disputada`` tinha um leitor só em toda a ``app/``, e era o card
-    do controle — que mora na Status, na Início e na "No jogo". Quem estava na
-    aba da COR era justamente quem não era avisado de que a Steam segura o
-    ``hidraw`` deste controle.
-
-    A frase é a MESMA do card (``ROTULO_LIGHTBAR_SEGURADA``), importada, nunca
-    recopiada: duas semânticas para o mesmo campo seria o defeito F5 nascendo
-    dentro da cura.
-    """
+    """L6 — a entrega que faltava da ESCRITOR-CRU-01."""
     from hefesto_dualsense4unix.app.widgets.controller_card import (
         ROTULO_LIGHTBAR_SEGURADA,
     )
@@ -519,11 +387,7 @@ def test_a_disputa_da_steam_aparece_na_aba_da_cor(
 def test_sem_aviso_a_dar_o_rotulo_da_barra_some(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """L6 — um "está tudo normal" não vira linha de tela.
-
-    Cor conhecida e acesa: a prévia ao lado já diz. Aviso sem conteúdo é
-    ruído, e a aba mais vazia do produto não precisa de mais uma linha morta.
-    """
+    """L6 — um "está tudo normal" não vira linha de tela."""
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge, "daemon_state_full", lambda: _state()
     )
@@ -538,11 +402,7 @@ def test_sem_aviso_a_dar_o_rotulo_da_barra_some(
 def test_alvo_em_todos_nao_inventa_estado_de_barra(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """L6 — sem alvo por controle não há barra sobre a qual falar.
-
-    Em "Todos" o rótulo some em vez de escolher um controle qualquer para
-    representar os outros — escolher seria inventar.
-    """
+    """L6 — sem alvo por controle não há barra sobre a qual falar."""
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
         "daemon_state_full",
@@ -573,25 +433,10 @@ def test_daemon_mudo_nao_derruba_a_aba(monkeypatch: pytest.MonkeyPatch) -> None:
     assert host.rotulo_da_barra.visivel is False
 
 
-# ---------------------------------------------------------------------------
-# 6 · L7 — a prévia não depende do idioma da fita
-# ---------------------------------------------------------------------------
-
-
 def test_a_previa_da_paleta_sobrevive_a_traducao_da_interface(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """L7 — o defeito de 17/07 ressuscitado por um idioma.
-
-    A cura de 17/07 descobria o número do controle com uma expressão regular
-    sobre o TEXTO do rótulo do cabeçalho (``re.search(r"Controle\\s+(\\d+)")``),
-    e esse rótulo é ``translatable="yes"``. Em inglês ele vira "Controller 2",
-    a busca falha, e a prévia volta a mostrar a cor MANUAL — o defeito exato
-    que a cura existia para matar.
-
-    **Com a cura arrancada** (a leitura de ``_edit_target_slot``) a prévia
-    volta ao roxo manual e a asserção reprova.
-    """
+    """L7 — o defeito de 17/07 ressuscitado por um idioma."""
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
     monkeypatch.setattr(
@@ -609,11 +454,6 @@ def test_a_previa_da_paleta_sobrevive_a_traducao_da_interface(
 
     assert host._current_rgb == player_slot_color(2)
     assert host._current_rgb != ROXO, "a prévia voltou a mostrar a cor manual"
-
-
-# ---------------------------------------------------------------------------
-# 7 · L9 — os presets saem da tabela canônica, não de literais copiados
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4])

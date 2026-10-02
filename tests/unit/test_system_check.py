@@ -52,8 +52,8 @@ def test_wireplumber_hijack_detecta_dualsense(
 def test_system_warnings_vazio_quando_tudo_ok(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(system_check, "_UDEV_RULES", ())  # sem regras
-    monkeypatch.setenv("HOME", str(tmp_path))  # sem default-nodes
+    monkeypatch.setattr(system_check, "_UDEV_RULES", ())
+    monkeypatch.setenv("HOME", str(tmp_path))
     assert system_check.system_warnings() == []
 
 
@@ -66,14 +66,7 @@ def _default_nodes(lar: Path, corpo: str) -> None:
 def test_fonte_configurada_le_a_chave_exata_e_nao_a_pilha(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A escolha de agora é a chave SEM sufixo; `.0`, `.1` são o que foi antes.
-
-    Quem lê é o nascimento do microfone (`hotkey._a_escolha_gravada_e_de_
-    outro_controle`): ler a pilha como escolha faria a partida do daemon
-    respeitar o microfone que ela já trocou. A pilha vem ANTES no arquivo de
-    propósito — um leitor que pegasse a primeira linha com o prefixo cairia
-    nela.
-    """
+    """A escolha de agora é a chave SEM sufixo; `.0`, `.1` são o que foi antes."""
     monkeypatch.setenv("HOME", str(tmp_path))
     _default_nodes(
         tmp_path,

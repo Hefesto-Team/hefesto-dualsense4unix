@@ -1,16 +1,4 @@
-"""Loader de plugins — importa arquivos .py arbitrarios de um diretório.
-
-Usa importlib.util para carregar cada arquivo como módulo independente,
-sem adicionar o diretório ao sys.path de forma permanente. Cada arquivo
-deve conter exatamente uma subclasse de Plugin (a primeira encontrada
-e instanciada).
-
-Comportamento de falha:
-  - ImportError / SyntaxError no arquivo: skip com log warning.
-  - Nenhuma subclasse de Plugin encontrada: skip com log warning.
-  - Multiplas subclasses no mesmo arquivo: a primeira e usada.
-  - Excecao no construtor (__init__): skip com log warning.
-"""
+"""Loader de plugins — importa arquivos .py arbitrarios de um diretório."""
 from __future__ import annotations
 
 import importlib.util
@@ -28,15 +16,7 @@ logger = get_logger(__name__)
 
 
 def load_plugins_from_dir(path: Path) -> list[Plugin]:
-    """Carrega plugins de todos os arquivos .py em `path`.
-
-    Args:
-        path: diretório com arquivos .py de plugins.
-
-    Returns:
-        Lista de instancias de Plugin carregadas com sucesso.
-        Arquivos invalidos sao ignorados (log warning).
-    """
+    """Carrega plugins de todos os arquivos .py em `path`."""
     if not path.exists():
         logger.info("plugins_dir_nao_existe", path=str(path))
         return []
@@ -82,7 +62,6 @@ def _carregar_arquivo(arquivo: Path) -> Plugin | None:
         )
         return None
 
-    # Encontrar a primeira subclasse concreta de Plugin no módulo.
     classes = [
         obj
         for _, obj in inspect.getmembers(módulo, inspect.isclass)

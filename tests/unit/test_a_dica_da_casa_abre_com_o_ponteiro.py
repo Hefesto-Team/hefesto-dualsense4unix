@@ -1,43 +1,4 @@
-"""TOOLTIP-C1 — a dica ABRINDO, medida com um ponteiro de verdade.
-
-A QUEIXA DELA, 11/09/2026, com o produto instalado na frente:
-
-    *"em todos os tooltips somem os textos e eles não mostram ou mostram e*
-    *saem direto. em todas as paginas isso ocorre."*  # noqa-acento: citação literal dela
-
-**POR QUE NENHUMA RÉGUA DESTA CASA TINHA VISTO ISSO**, e é o ponto inteiro
-deste arquivo: as réguas de dica que existiam mediam o **DOM** — *o atributo
-`title` está lá?* — e o atributo sempre esteve. O que ela relatou não é a
-ausência do atributo: é a **dica não abrir**. São perguntas diferentes, e a
-segunda exige três coisas que nenhuma régua daqui fazia:
-
-1. uma **janela de verdade** (não `Gtk.OffscreenWindow`: offscreen não tem
-   ponteiro, e sem ponteiro não há dica);
-2. um **ponteiro dirigido** até o elemento, como a mão dela;
-3. o **tempo passando** — meio segundo é o mínimo para qualquer dica, e uma
-   régua que lê o DOM uma vez mede um instante.
-
-A TELA DELA NÃO PAGA ISTO: o `tests/conftest.py` sobe um ``Xvfb`` próprio e
-tira o `WAYLAND_DISPLAY` do caminho (TELA-DELA-01). A janela deste arquivo
-nasce lá dentro, e a guarda abaixo recusa correr se não for o caso.
-
-O QUE A CURA FEZ, e o que esta régua prende
--------------------------------------------
-A dica saiu do **popup do sistema** (uma janela que o compositor dela desenha,
-posiciona e pinta) e passou a ser um elemento **da página** — a
-``hefesto_vivo.DICA_DA_CASA``. O porquê, com as quatro hipóteses medidas uma a
-uma, está no bloco daquela constante.
-
-As três medidas desta régua, e cada uma morde num lugar:
-
-* **com a camada, mão parada** — a dica abre e fica;
-* **com a camada, mão tremendo** — a dica abre. Medido nesta bancada em
-  11/09/2026, o popup do sistema abriu **0 de 200 amostras em 80 s** com o
-  ponteiro tremendo 1 px a cada 150 ms: o GTK reinicia a contagem de meio
-  segundo a cada evento de movimento, e a mão que treme nunca chega lá;
-* **sem a camada (A MORDIDA)** — a dica da casa não existe, e quem aparece é o
-  popup do sistema. Se esta última passar, a régua não está medindo a cura.
-"""
+"""TOOLTIP-C1 — a dica ABRINDO, medida com um ponteiro de verdade."""
 
 from __future__ import annotations
 
@@ -48,23 +9,12 @@ import os
 
 import pytest
 
-#: Onde se mede. A ``03-gatilhos`` é a aba com mais dicas das dez (195 `title`
-#: no arquivo publicado) e nenhuma delas depende de um controle na mesa — a
-#: régua não pode precisar de aparelho para medir uma dica.
 PAGINA = "03-gatilhos.html"
 
-#: O tamanho mínimo de um alvo para o ponteiro poder pousar nele com folga. Um
-#: elemento de 2 px casa por acaso com o vizinho, e a medição passaria a ser
-#: sobre outra dica — a armadilha que esta casa chama de *instrumento
-#: respondendo sobre outra coisa*.
 ALVO_MINIMO = (24, 14)
 
-#: Meio segundo da dica + folga de laço. Abaixo disto a régua mede o ATRASO, e
-#: não a dica.
 MS_ATE_LER = 2200
 
-#: Quanto o laço do GTK pode demorar antes de a régua desistir. Generoso de
-#: propósito: uma régua que estoura sozinha vira vermelho de infraestrutura.
 MS_DE_GUARDA = 30000
 
 
@@ -121,11 +71,7 @@ _JS_ESTADO = """(function(){
 
 
 def _popup_do_sistema_aberto(gtk: Any) -> bool:
-    """Há uma janela de dica do GTK na tela AGORA?
-
-    É o outro lado da medida, e sem ele a régua não saberia dizer QUEM está
-    mostrando a frase — a página ou o toolkit.
-    """
+    """Há uma janela de dica do GTK na tela AGORA?"""
     for w in gtk.Window.list_toplevels():
         if "Tooltip" in type(w).__name__ and w.get_visible() and w.get_mapped():
             return True
@@ -201,9 +147,6 @@ def _medir(*, com_camada: bool, tremer: bool) -> dict[str, Any]:
         raiz = janela.get_window().get_root_coords(int(c[-2]), int(c[-1]))
         px, py = int(raiz[-2]), int(raiz[-1])
         fora["px"], fora["py"] = px, py
-        # LONGE PRIMEIRO, e depois em três passos: uma dica só nasce de uma
-        # CHEGADA. Pousar o ponteiro já em cima não gera o movimento que
-        # qualquer dica — a do sistema ou a da casa — espera.
         ponteiro.warp(tela, max(px - 300, 4), max(py - 140, 4))
         for i, ms in enumerate((250, 320, 390)):
             f = (i + 1) / 3.0
@@ -231,15 +174,10 @@ def _medir(*, com_camada: bool, tremer: bool) -> dict[str, Any]:
             v.evaluate_javascript(hefesto_vivo.DICA_DA_CASA, -1, None, None,
                                   None, pronto)
         else:
-            # A MORDIDA: a página fica como estava antes desta sprint — com o
-            # popup do sistema e nada mais.
             v.evaluate_javascript("'sem camada'", -1, None, None, None, pronto)
 
     view.connect("load-changed", carregou)
     view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
-    # O `timeout_add` PENDENTE DE OUTRO TESTE mata este laço com um `main_quit`
-    # armado lá atrás — já custou onze medições nesta casa. A guarda própria é
-    # removida no `finally`.
     guarda = GLib.timeout_add(MS_DE_GUARDA, Gtk.main_quit)
     try:
         Gtk.main()
@@ -309,12 +247,7 @@ def test_a_dica_nao_atravessa_a_janela(com_a_mao_parada: dict[str, Any]) -> None
 
 
 def test_o_popup_do_sistema_nao_aparece_junto(com_a_mao_parada: dict[str, Any]) -> None:
-    """Os dois na tela seria pior que um só — e foi a primeira forma da cura.
-
-    MEDIDO em 11/09/2026: tirar o `title` no `mousemove` é tarde, porque o
-    WebKit já resolveu a dica no mesmo evento. Com a colheita na carga, não
-    sobra `title` nenhum no DOM vivo e o popup do sistema não tem do que nascer.
-    """
+    """Os dois na tela seria pior que um só — e foi a primeira forma da cura."""
     m = com_a_mao_parada
     assert not m["erro"], m["erro"]
     assert m["estado"]["sobrou_title"] == 0, (
@@ -326,13 +259,7 @@ def test_o_popup_do_sistema_nao_aparece_junto(com_a_mao_parada: dict[str, Any]) 
 
 
 def test_a_dica_abre_com_a_mao_tremendo(com_a_mao_tremendo: dict[str, Any]) -> None:
-    """A metade que o popup do sistema NUNCA entregou.
-
-    Medido nesta bancada em 11/09/2026: com o ponteiro tremendo 1 px a cada
-    150 ms, a dica nativa abriu **0 de 200 amostras em 80 s**. O GTK reinicia a
-    contagem de meio segundo a cada evento de movimento; a dica da casa conta a
-    partir da ENTRADA no elemento e só zera quando o elemento MUDA.
-    """
+    """A metade que o popup do sistema NUNCA entregou."""
     m = com_a_mao_tremendo
     assert not m["erro"], m["erro"]
     assert m["estado"]["aberta"], (
@@ -341,11 +268,7 @@ def test_a_dica_abre_com_a_mao_tremendo(com_a_mao_tremendo: dict[str, Any]) -> N
 
 
 def test_a_mordida_sem_a_camada_nao_ha_dica_da_casa(sem_a_camada: dict[str, Any]) -> None:
-    """A MORDIDA. Sem a camada, a página volta a depender do popup do sistema.
-
-    Se este teste passar com a cura arrancada, a régua não mede a cura — mede
-    outra coisa, que é a família de defeito que esta casa nomeou em 04/09.
-    """
+    """A MORDIDA. Sem a camada, a página volta a depender do popup do sistema."""
     m = sem_a_camada
     assert not m["erro"], m["erro"]
     estado = m["estado"]
@@ -357,17 +280,6 @@ def test_a_mordida_sem_a_camada_nao_ha_dica_da_casa(sem_a_camada: dict[str, Any]
         "sistema vive, e é ele que a colheita tira")
 
 
-# ---------------------------------------------------------------------------
-# O ENDEREÇO `atributo/title` CONTINUA PINTANDO — e agora pinta na dica
-# ---------------------------------------------------------------------------
-#
-# A colheita tira o `title` do DOM vivo. Sem o par de curas do `escrever()` e do
-# `LER_CAMPOS`, o produto continuaria escrevendo `title` — e cada escrita
-# ressuscitaria o popup do compositor NO MEIO da dica aberta. Estas duas medidas
-# não precisam de ponteiro: `Gtk.OffscreenWindow` basta, e custa um segundo.
-
-#: Um endereço da ``03-gatilhos`` cujo alvo é ``atributo`` e cujo atributo é
-#: ``title`` — é por ele que o produto explica o modo do gatilho.
 CAMPO_DE_DICA = "dica-modo-e"
 
 _FRASE_DA_REGUA = "A RÉGUA ESCREVEU ESTA DICA"
@@ -475,16 +387,8 @@ def test_o_produto_pinta_a_dica_e_nao_ressuscita_o_title(
         f"do compositor por cima da dica da casa: {pintado}")
 
 
-# ---------------------------------------------------------------------------
-# A FIAÇÃO — porque uma camada que ninguém instala é uma camada que não existe
-# ---------------------------------------------------------------------------
-
 def test_o_piloto_instala_a_camada_a_cada_carga() -> None:
-    """`window.__hefDica` morre com o documento; a instalação é por CARGA.
-
-    Instalar uma vez e navegar deixaria as outras nove abas com o popup do
-    sistema de volta — que é o *"em todas as paginas"* dela.  # noqa-acento: citação literal dela
-    """
+    """`window.__hefDica` morre com o documento; a instalação é por CARGA."""
     from pathlib import Path
 
     fonte = Path(__file__).resolve().parents[2] / (

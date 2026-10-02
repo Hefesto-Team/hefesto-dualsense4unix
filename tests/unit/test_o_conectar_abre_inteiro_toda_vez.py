@@ -1,21 +1,4 @@
-"""O «Conectar» abre inteiro toda vez — O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01.
-
-A queixa dela, de 30/09/2026:
-*«lista do painel que nao atualizava»* <!-- noqa-acento: citação literal dela -->
-— e só fechar e abrir o painel do «+ Conectar» a trazia de volta. Medido na bancada: o
-molde do «Conectar» mudava a cada leitura do BlueZ (3 s), porque o sinal de
-quem está perto mora nele, e o painel aberto se esvaziava e se enchia de novo;
-a lista se reordenava pelo sinal; a varredura e a busca refaziam a sala
-inteira; e a lista era de todo adaptador, com o sinal do último que o BlueZ
-listou. <!-- noqa-acento: citação literal dela -->
-
-As réguas 1 a 5 medem o pacote pela cena de mentira (o BlueZ de mentira, o
-``maquina.json`` de mentira); a 6, o pintor da página no WebKit; a 7, a linha
-``[08 lento]`` pelo ``stderr``. A 8 (a vigia do laço do serviço) mora em
-``test_o_laco_parado_se_denuncia.py``.
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""O «Conectar» abre inteiro toda vez — O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01."""
 
 from __future__ import annotations
 
@@ -30,7 +13,6 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import VERMELHO
 
 PCI = "0000:00:14.0"
-#: Esquerda (hci0), Direita (hci1) e Centro (hci2).
 ADAPTADORES = ("aa:bb:cc:00:00:09", "aa:bb:cc:00:00:15", "aa:bb:cc:00:00:21")
 LUGARES = (f"pci-{PCI}-usb-0:1.2", f"pci-{PCI}-usb-0:4.1.4", f"pci-{PCI}-usb-0:4.1.3")
 NOMES = ("Esquerda", "Direita", "Centro")
@@ -79,7 +61,7 @@ def _ler(a08: Any, monkeypatch: pytest.MonkeyPatch, aparelhos: tuple[Any, ...] =
     lidos = tuple(AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", ADAPTADORES[i].upper(),
                                    lugar=LUGARES[i], varrendo=varrendo[i])
                   for i in range(3))
-    a08._FUNDO.clear()  # a leitura de antes não vale: o tique lê esta
+    a08._FUNDO.clear()
     monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, aparelhos))
 
 
@@ -91,10 +73,7 @@ def _busca(adaptador: int, *, passo: str = "gesto", aparelho: str = "",
 
 
 def _campos(a08: Any, *movimentos: dict[str, Any], busca: int | None = None) -> dict[str, Any]:
-    """Um tique da seção, com o que a central publicou. ``busca``: o adaptador
-    ``hci{busca}`` com a janela do «Procurar» aberta — o campo ``busca`` que a
-    central publica desde a O-CONECTAR-E-UM-INTERRUPTOR-01, e que é o que a
-    pílula, o chip e a ordem da lista leem."""
+    """Um tique da seção, com o que a central publicou. ``busca``: o adaptador"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     publicada = None if busca is None else {
@@ -141,18 +120,8 @@ def _cartao(sala: str, adaptador: int) -> str:
     return achado.group(1)
 
 
-# ---------------------------------------------------------------------------
-# 1. o sinal muda o número, não a linha
-# ---------------------------------------------------------------------------
-
-
 def test_o_sinal_muda_o_numero_e_nao_a_linha(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A pulseira e a balança com sinais que se cruzam (-60 e -70, depois -70 e
-    -60): as linhas ficam na mesma ordem, e o número de cada uma é o dela.
-
-    MORDIDA: volte a lista ordenada pelo sinal (``key=-forca`` no
-    ``_perto``) — a ordem inverte na segunda leitura.
-    """
+    """A pulseira e a balança com sinais que se cruzam (-60 e -70, depois -70 e"""
     _chip(a08, 0)
     _ler(a08, monkeypatch, (_visto(0, PULSEIRA, -60), _visto(0, BALANCA, -70)))
     antes = _linhas(_campos(a08))
@@ -164,22 +133,9 @@ def test_o_sinal_muda_o_numero_e_nao_a_linha(a08: Any, monkeypatch: pytest.Monke
     assert dict(depois) == {_id(PULSEIRA): -70, _id(BALANCA): -60}
 
 
-# ---------------------------------------------------------------------------
-# 2. a lista não anda, e recomeça com a busca
-# ---------------------------------------------------------------------------
-
-
 def test_a_lista_nao_anda_e_recomeca_com_a_busca(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A, B e C chegam nessa ordem, com sinais que se invertem a cada leitura:
-    a ordem é A, B, C nas cinco. A busca acaba — outro programa continua
-    procurando, e os três seguem à vista —, outra começa, e C é o mais forte
-    na primeira leitura dela: C vem antes.
-
-    MORDIDAS, uma por vez: volte o ``key=-forca`` (a ordem anda na segunda
-    leitura); tire o esquecer do fim da busca no ``_na_ordem_da_chegada`` (a
-    ordem da busca anterior vaza: C fica no fim).
-    """
+    """A, B e C chegam nessa ordem, com sinais que se invertem a cada leitura:"""
     _chip(a08, 0)
     primeira = _busca(0, ha_s=30.0)
     leituras = (
@@ -196,31 +152,14 @@ def test_a_lista_nao_anda_e_recomeca_com_a_busca(
 
     todos = tuple(_visto(0, quem, rssi) for quem, rssi in ((A, -70), (B, -60), (C, -40)))
     _ler(a08, monkeypatch, todos)
-    _campos(a08)  # a busca acabou; outro programa procura, e os três seguem à vista
+    _campos(a08)
     segunda = _busca(0, ha_s=1.0)
     assert [a for a, _ in _linhas(_campos(a08, segunda, busca=0))] == [_id(C), _id(B), _id(A)]
 
 
-# ---------------------------------------------------------------------------
-# 3. a busca e a varredura não trocam a sala
-# ---------------------------------------------------------------------------
-
-
 def test_a_busca_e_a_varredura_nao_trocam_a_sala(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A Esquerda passa a varrer e para; uma busca começa e acaba nela: a
-    ``radio-sala`` é a mesma nos cinco tiques, e quem muda são as listas, só
-    na posição da Esquerda — e o ``radio-ocupado``.
-
-    MORDIDAS, uma por vez: devolva a marca da varredura ao cabeçalho só quando
-    ela varre (a sala muda, e a lista ``radio-varrendo`` perde o par); tire o
-    ``ocupado`` do ``_sem_o_que_pisca`` (a sala muda com a busca); troque o
-    ``_sala_estavel`` pelo ``html_da_sala`` (a sala muda a cada tique).
-
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca do quarto tique é a que a
-    central PUBLICA (``busca``), com o movimento sem aparelho — a pílula lê a
-    busca, e não a idade do movimento. O pedido é o mesmo.
-    """
+    """A Esquerda passa a varrer e para; uma busca começa e acaba nela: a"""
     _chip(a08, 0)
     tiques = []
     for varrendo, movimentos, busca in (
@@ -243,35 +182,21 @@ def test_a_busca_e_a_varredura_nao_trocam_a_sala(
     assert [t["radio-conectando"] for t in tiques] == [
         ["", "", ""], ["", "", ""], ["", "", ""], ["sim", "", ""], ["", "", ""]]
     assert [t["radio-ocupado"] for t in tiques] == ["", "", "", "sim", ""]
-    # o «Trazer para cá» apaga pela lista, e não pela sala
     assert re.search(r'<button class="soltar[^"]*"[^>]*data-campo="radio-ocupado"', sala)
 
 
 def test_quem_espera_num_mover_continua_na_sala(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O controle que ela moveu para a Direita, esperando o gesto, é conteúdo
-    da caixa: a classe ``esperando`` do cartão dele fica no HTML da sala."""
+    """O controle que ela moveu para a Direita, esperando o gesto, é conteúdo"""
     _ler(a08, monkeypatch)
     campos = _campos(a08, _busca(1, aparelho=rm.uniq(VERMELHO)))
     assert "esperando" in _cartao(campos["radio-sala"], 1).split()
     assert "esperando" not in _cartao(campos["radio-sala"], 0).split()
 
 
-# ---------------------------------------------------------------------------
-# 4. a lista é do chip aceso, com o sinal dele
-# ---------------------------------------------------------------------------
-
-
 def test_a_lista_e_do_chip_aceso_com_o_sinal_dele(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A pulseira vista só pela Esquerda fica fora da lista do Centro, e
-    dentro da dela, com o sinal dela. A balança vista pela Esquerda a -50 e pelo
-    Centro a -80 diz -50 com o chip na Esquerda, e -80 com o chip no Centro.
-
-    MORDIDAS, uma por vez: tire o filtro do adaptador no ``_moldes_de_painel``
-    (a pulseira aparece no Centro); guarde no ``_perto`` uma linha por
-    endereço só (o adaptador que o BlueZ listou por último fica com a balança).
-    """
+    """A pulseira vista só pela Esquerda fica fora da lista do Centro, e"""
     _ler(a08, monkeypatch, (_visto(0, PULSEIRA, -60), _visto(0, BALANCA, -50),
                             _visto(2, BALANCA, -80)))
     _chip(a08, 2)
@@ -284,36 +209,17 @@ def test_a_lista_e_do_chip_aceso_com_o_sinal_dele(
 
 
 def test_o_desenho_tem_os_achados_no_painel_do_destino_dele() -> None:
-    """A cena do desenho (``aba08``) dá a cada achado o adaptador do destino do
-    «Conectar» dela: o molde do desenho não fica com a lista vazia."""
+    """A cena do desenho (``aba08``) dá a cada achado o adaptador do destino do"""
     from hefesto_dualsense4unix.interface import aba08
 
     linhas = _linhas({"radio-moldes": aba08.CAMPOS_DO_RADIO["radio-moldes"]})
     assert len(linhas) == len(aba08.CENA_DO_RADIO["perto"]) >= 3
 
 
-# ---------------------------------------------------------------------------
-# 5. o chip diz que agora não, e só o que pediria ao rádio
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("passo", ["pareando", "conferindo"])
 def test_depois_do_gesto_o_chip_de_outro_adaptador_diz_que_agora_nao(
         a08: Any, monkeypatch: pytest.MonkeyPatch, passo: str) -> None:
-    """Com a busca na Esquerda e o controle já pareando ou conferindo, a
-    central recusa a busca noutro adaptador (``PASSOS_EM_QUE_O_DESTINO_MUDA``):
-    os chips da Direita e do Centro nascem sem gesto, com ``aria-disabled`` e a
-    dica; o da Esquerda fica aceso, com o gesto.
-
-    MORDIDAS, uma por vez: ignore o passo (o chip apaga no ``gesto``, que é
-    quando a central aceita); apague todo chip com movimento, sem olhar se ele
-    pediria ao rádio (o da Esquerda apaga).
-
-    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: depois do clique dela no «Parear»
-    (O-PAREAR-ESPERA-O-CLIQUE-01) o movimento já tem o aparelho que ela
-    escolheu, e a busca saiu do publicado — o «onde espera» é a linha dele.
-    O pedido é o mesmo.
-    """
+    """Com a busca na Esquerda e o controle já pareando ou conferindo, a"""
     _ler(a08, monkeypatch)
     chips = _chips(_campos(a08, _busca(0, passo=passo, aparelho=rm.uniq(VERMELHO))))
     esquerda, direita, centro = (chips[_id(e)] for e in ADAPTADORES)
@@ -339,12 +245,7 @@ def test_no_gesto_todo_chip_pede_ao_radio(a08: Any, monkeypatch: pytest.MonkeyPa
 
 def test_o_chip_de_um_mover_conferindo_tambem_diz_que_agora_nao(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O chip de outro adaptador com um «Mover» de pé TAMBÉM pede ao rádio: o
-    ``escolher_adaptador`` pergunta à central sempre que há quem espere noutro
-    adaptador (``_onde_espera`` diz o destino do «Mover»), e a central leva o
-    «Mover» junto só antes do aparelho (``_mudar_o_destino``: *um «Mover» segue
-    «Mover» do mesmo controle*). Conferindo, ela recusa — e o chip diz que
-    agora não; no gesto, todos pedem."""
+    """O chip de outro adaptador com um «Mover» de pé TAMBÉM pede ao rádio: o"""
     _ler(a08, monkeypatch)
     quem = rm.uniq(VERMELHO)
     conferindo = _chips(_campos(a08, _busca(1, passo="conferindo", aparelho=quem)))
@@ -355,15 +256,7 @@ def test_o_chip_de_um_mover_conferindo_tambem_diz_que_agora_nao(
     assert all("aria-disabled" not in c for c in no_gesto.values())
 
 
-# ---------------------------------------------------------------------------
-# 6. o painel se remenda no WebKit
-# ---------------------------------------------------------------------------
-
-#: O roteiro, em passos: cada um roda depois de o anterior terminar, e o
-#: observador da página (``MutationObserver``) roda entre eles — como roda
-#: entre dois tiques do piloto. Cada passo devolve o que mediu.
 PASSOS_DO_PAINEL = (
-    # 0. abre o «Conectar» pelo botão (sem piloto: o desenho no navegador)
     r"""(function(){
       document.getElementById('rd-b-conectar').click();
       const no = document.querySelector('#rd-painel-corpo .achado[data-alvo="D3"] button');
@@ -371,7 +264,6 @@ PASSOS_DO_PAINEL = (
       const painel = document.getElementById('rd-painel');
       return JSON.stringify({aberto: painel.classList.contains('aberto'), tem: !!no});
     })()""",
-    # 1. o mesmo molde, com o sinal da pulseira mudado — pelo caminho do pintor
     r"""(function(){
       const caixa = document.querySelector('.moldes[data-campo="radio-moldes"]');
       const t = document.createElement('div'); t.innerHTML = caixa.innerHTML;
@@ -380,7 +272,6 @@ PASSOS_DO_PAINEL = (
       caixa.innerHTML = t.innerHTML;
       return '{}';
     })()""",
-    # 2. mede; e o molde sem a balança, que estava antes da pulseira
     r"""(function(){
       const linha = document.querySelector('#rd-painel-corpo .achado[data-alvo="D3"]');
       const fora = {mesmo: linha.querySelector('button') === window.__r6.no,
@@ -392,7 +283,6 @@ PASSOS_DO_PAINEL = (
       caixa.innerHTML = t.innerHTML;
       return JSON.stringify(fora);
     })()""",
-    # 3. mede; e o molde com o título mudado
     r"""(function(){
       const linha = document.querySelector('#rd-painel-corpo .achado[data-alvo="D3"]');
       const fora = {mesmo: !!linha && linha.querySelector('button') === window.__r6.no,
@@ -406,7 +296,6 @@ PASSOS_DO_PAINEL = (
       caixa.innerHTML = t.innerHTML;
       return JSON.stringify(fora);
     })()""",
-    # 4. mede
     r"""(function(){
       const linha = document.querySelector('#rd-painel-corpo .achado[data-alvo="D3"]');
       return JSON.stringify({
@@ -419,8 +308,7 @@ PASSOS_DO_PAINEL = (
 
 @pytest.fixture(scope="module")
 def painel_no_webkit() -> list[dict[str, Any]]:
-    """A bancada da 08 num WebKit offscreen — o motor que ela usa —, com os
-    passos do :data:`PASSOS_DO_PAINEL`, um depois do outro."""
+    """A bancada da 08 num WebKit offscreen — o motor que ela usa —, com os"""
     import json
 
     from hefesto_dualsense4unix.interface import onde
@@ -436,7 +324,6 @@ def painel_no_webkit() -> list[dict[str, Any]]:
     if not Gtk.init_check(None)[0]:
         pytest.skip("sem sessão gráfica — o WebKit não abre")
     saiu: list[str] = []
-    # Offscreen: sob Xvfb não há gerenciador de janelas, e ela tem UMA tela.
     janela = Gtk.OffscreenWindow()
     view = WebKit2.WebView()
     janela.add(view)
@@ -455,7 +342,6 @@ def painel_no_webkit() -> list[dict[str, Any]]:
             saiu.append(f"ERRO {e}")
             Gtk.main_quit()
             return
-        # o passo seguinte num laço depois deste: o observador roda entre eles
         GLib.timeout_add(50, lambda: proximo(v) and False)
 
     def carregou(v: Any, evento: Any) -> None:
@@ -470,11 +356,6 @@ def painel_no_webkit() -> list[dict[str, Any]]:
     finally:
         GLib.source_remove(guarda)
         janela.destroy()
-        # O LIXO DO WEBKIT SE RECOLHE NO FIO DO GTK, aqui: o `connect` deixa um
-        # ciclo (a vista, o tratador e o fecho dele), e a coleta que o achasse
-        # num fio da central de um teste seguinte finalizaria a vista fora do
-        # fio dela — e o processo da suíte morre com «Fatal Python error:
-        # Aborted» (medido em 02/10/2026 num lote de vizinhos da 08).
         view = janela = None
         gc.collect()
         while Gtk.events_pending():
@@ -486,13 +367,7 @@ def painel_no_webkit() -> list[dict[str, Any]]:
 
 
 def test_o_painel_aberto_se_remenda_no_webkit(painel_no_webkit: list[dict[str, Any]]) -> None:
-    """O painel do «Conectar» aberto segue o molde novo SEM refazer as linhas:
-    o «Parear» da pulseira é o MESMO nó depois do sinal mudado, depois da
-    balança (que vinha antes dela) sair, e depois do título mudado.
-
-    MORDIDA: volte o ``corpo.innerHTML = ''`` no ``seguirOPainel`` (o
-    ``encherOPainel`` no lugar do ``remendar``) — o nó é outro a cada molde.
-    """
+    """O painel do «Conectar» aberto segue o molde novo SEM refazer as linhas:"""
     aberto, _, sinal, sem_balanca, titulo = painel_no_webkit
     assert aberto == {"aberto": True, "tem": True}
     assert sinal == {"mesmo": True, "forca": "-61 dBm"}
@@ -501,20 +376,9 @@ def test_o_painel_aberto_se_remenda_no_webkit(painel_no_webkit: list[dict[str, A
     assert titulo == {"mesmo": True, "titulo": "Conectar", "aberto": True}
 
 
-# ---------------------------------------------------------------------------
-# 7. a linha da 08 diz a parte
-# ---------------------------------------------------------------------------
-
-
 def test_a_linha_da_08_diz_a_parte_em_que_o_tique_gastou(
         a08: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
-    """Um mapa de mentira que dorme 120 ms: a linha ``[08 lento]`` diz o mapa
-    acima de 100 ms, a CPU abaixo de 20 (o sono não é CPU), e as outras partes
-    abaixo de 20.
-
-    MORDIDAS, uma por vez: tire a medida do mapa (o tempo vai para o
-    ``resto``); troque o ``thread_time`` pelo relógio de parede (a CPU diz 120).
-    """
+    """Um mapa de mentira que dorme 120 ms: a linha ``[08 lento]`` diz o mapa"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     def mapa_lento() -> str:

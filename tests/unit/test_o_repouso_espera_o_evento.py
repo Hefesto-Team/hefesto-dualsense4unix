@@ -1,18 +1,4 @@
-"""O repouso espera o evento (O-REPOUSO-ESPERA-O-EVENTO-01, 29/09/2026).
-
-A sonda S.4 da bancada de 29/09 contou 491 ``open`` por segundo no daemon
-parado, com os quatro controles no rádio e sem jogo: varreduras que rodavam
-por RELÓGIO para responder perguntas cuja resposta só muda num EVENTO. A cura
-é um dono do evento (``core/o_dono_do_evento.py``) e o cache de cada resposta
-preso a ele.
-
-Todas as réguas contam o trabalho do PRODUTO com um ``sys.addaudithook`` nos
-eventos ``open``, ``os.listdir`` e ``os.scandir`` da biblioteca padrão (o
-``open`` sozinho não vê uma listagem, e a ``glob`` lista por ``os.scandir``),
-numa pasta de mentira (``tmp_path``, onde o ``inotify`` funciona), com o dono
-ARMADO nas raízes de mentira por um fixture que desarma no teardown. Nenhuma
-conta a própria saída: a conta vem do gancho, e o relógio é injetado.
-"""
+"""O repouso espera o evento (O-REPOUSO-ESPERA-O-EVENTO-01, 29/09/2026)."""
 
 from __future__ import annotations
 
@@ -32,12 +18,7 @@ import pytest
 from hefesto_dualsense4unix.core import o_dono_do_evento as ode
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 
-# ---------------------------------------------------------------------------
-# O gancho que conta o trabalho do produto
-# ---------------------------------------------------------------------------
 
-#: Enquanto não é None, o gancho anota ``(evento, caminho)`` de todo ``open``,
-#: ``os.listdir`` e ``os.scandir`` do fio que ligou a conta.
 _CONTA: list[tuple[str, str]] | None = None
 _FIO_DA_CONTA: int | None = None
 _EVENTOS_CONTADOS = frozenset({"open", "os.listdir", "os.scandir"})
@@ -55,7 +36,6 @@ def _gancho(evento: str, args: tuple[Any, ...]) -> None:
     conta.append((evento, str(alvo)))
 
 
-# Um gancho de auditoria não se remove: fica um só, barato, por processo.
 if not getattr(sys, "_hefesto_gancho_do_repouso", False):
     sys.addaudithook(_gancho)
     sys._hefesto_gancho_do_repouso = True  # type: ignore[attr-defined]
@@ -85,18 +65,13 @@ def _sob(conta: list[tuple[str, str]], raiz: Path | str, *eventos: str) -> list[
     ]
 
 
-# ---------------------------------------------------------------------------
-# O dono armado nas raízes de mentira
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def raizes(tmp_path: Path) -> Iterator[tuple[Path, Path]]:
     """``(entradas, nós)`` de mentira, com o dono do processo armado nelas."""
     nos = tmp_path / "dev"
     entradas = nos / "input"
     entradas.mkdir(parents=True)
-    while ode.armado():  # nada herdado de outro teste
+    while ode.armado():
         ode.desarmar()
     assert ode.armar(entradas=str(entradas), nos=str(nos)), "o inotify não armou"
     try:
@@ -114,11 +89,6 @@ class _LibcQueFalha:
 
     def inotify_add_watch(self, _fd: int, _raiz: bytes, _mascara: int) -> int:
         return -1
-
-
-# ---------------------------------------------------------------------------
-# Régua 1 — o dono do evento
-# ---------------------------------------------------------------------------
 
 
 class TestODonoDoEvento:
@@ -182,7 +152,7 @@ class TestODonoDoEvento:
     ) -> None:
         entradas, _nos = raizes
         watch = InputDirWatch(root=str(entradas))
-        assert watch.poll() is True  # a primeira é «mudou», como sempre foi
+        assert watch.poll() is True
         with contando() as conta:
             mudou = [watch.poll() for _ in range(100)]
         assert not any(mudou)
@@ -214,7 +184,6 @@ class TestODonoDoEvento:
         dono = ode.DonoDoEvento(entradas=str(entradas), nos=str(nos), ler=ler)
         assert dono.armar(), "o inotify não armou"
         try:
-            # A primeira ficha já drena o overflow: as duas raízes, os três tipos.
             ficha = dono.ficha(
                 (str(entradas), ode.NOMES),
                 (str(entradas), ode.PERMISSOES),
@@ -306,11 +275,6 @@ class TestODonoDoEvento:
         )
 
 
-# ---------------------------------------------------------------------------
-# O daemon de bancada do reconnect_loop
-# ---------------------------------------------------------------------------
-
-
 class _ControleQueContaOArme:
     """Sempre online; anota se o dono estava armado a cada `connect()`."""
 
@@ -371,11 +335,6 @@ async def _rodar_uma_volta(daemon: _DaemonDeBancada, *, watch: Any = None) -> No
     await asyncio.wait_for(reconnect_loop(daemon, input_watch=watch), timeout=5.0)  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
-# Régua 4 — o adaptador pela geração do hidraw
-# ---------------------------------------------------------------------------
-
-#: Quatro controles no rádio (faixa forjada), dois adaptadores forjados.
 _UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
 _ADAPTADOR_A = "02:fe:00:00:00:0a"
 _ADAPTADOR_B = "02:fe:00:00:00:0b"
@@ -433,8 +392,6 @@ class TestOAdaptadorPelaGeracaoDoHidraw:
                 _UNIQS[3]: _ADAPTADOR_B,
             }
 
-            # O controle 1 sai do adaptador A e volta pelo B: o nó dele some e
-            # nasce outro (o hidraw12), com o HID_PHYS novo.
             (dev / "hidraw0").unlink()
             (sysfs / "hidraw0" / "device" / "uevent").unlink()
             (sysfs / "hidraw0" / "device").rmdir()
@@ -508,13 +465,8 @@ class TestOAdaptadorPelaGeracaoDoHidraw:
             rm._esquecer_o_mapa()
 
 
-# ---------------------------------------------------------------------------
-# Régua 3 — a descoberta pela geração, na origem
-# ---------------------------------------------------------------------------
-
-#: O bitmap `capabilities/key` do nó de gamepad (BTN_SOUTH..BTN_THUMBR).
 _TECLAS_DE_GAMEPAD = "7fdb000000000000 0 0 0 0"
-_EXTERNO = (0x2DC8, 0x6012)  # vendor/product forjados de um externo
+_EXTERNO = (0x2DC8, 0x6012)
 
 
 class _MesaDeEntrada:
@@ -636,11 +588,10 @@ class TestADescobertaPelaGeracao:
                 externos = er.discover_external_gamepads()
                 dualsense = er.discover_dualsense_evdevs()
                 primeiro = er.find_dualsense_evdev()
-        # Duas chaves: (com_sysfs, externos) e (sem sysfs, as duas espécies).
         assert mesa_de_entrada.listagens == 2, (
             f"{mesa_de_entrada.listagens} descobertas em 30 chamadas sem evento"
         )
-        assert len(mesa_de_entrada.aberturas) == 2  # o externo, uma vez por chave
+        assert len(mesa_de_entrada.aberturas) == 2
         leituras_de_id = [c for c in _sob(conta, mesa_de_entrada.sys, "open") if "/id/" in c]
         assert leituras_de_id, "a primeira volta tem de ler o sysfs"
         assert [e["uniq"] for e in externos] == ["aa:bb:cc:00:02:01"]
@@ -691,8 +642,8 @@ class TestADescobertaPelaGeracao:
         segunda = er.discover_external_gamepads()
         assert len(segunda) == 1 and "holders" not in segunda[0]
 
-        er.discover_gamepads(com_sysfs=False)  # a volta que guarda
-        gps = er.discover_gamepads(com_sysfs=False)  # a que devolve o guardado
+        er.discover_gamepads(com_sysfs=False)
+        gps = er.discover_gamepads(com_sysfs=False)
         gps[0].eixos[0] = er.EixoAbsoluto(minimo=1, maximo=2)
         gps.clear()
         de_novo = er.discover_gamepads(com_sysfs=False)
@@ -725,11 +676,6 @@ class TestADescobertaPelaGeracao:
         assert mesa_de_entrada.listagens == 10
 
 
-# ---------------------------------------------------------------------------
-# Régua 7 — os arquivos da casa pela assinatura do stat
-# ---------------------------------------------------------------------------
-
-
 def _envelhecer(caminho: Path, segundos: float = 100.0) -> None:
     """O arquivo gravado há `segundos`: fora da janela do recém-gravado."""
     import time
@@ -759,7 +705,7 @@ class TestALeituraPelaAssinatura:
     def test_a_gravacao_no_mesmo_segundo_e_vista(self, tmp_path: Path) -> None:
         """O `mtime` em nanossegundos: a segunda gravação no mesmo segundo muda a assinatura."""
         base = 1_900_000_000
-        relogio = [float(base + 100)]  # a leitura é bem depois: nada é recém-gravado
+        relogio = [float(base + 100)]
         arquivo = tmp_path / "perfil.json"
         leitor = self._leitor(relogio)
         arquivo.write_text("AAAA")
@@ -767,7 +713,7 @@ class TestALeituraPelaAssinatura:
         assert leitor.ler(arquivo) == "AAAA"
         assert leitor.ler(arquivo) == "AAAA"
         assert len(leitor.lidos) == 1
-        with arquivo.open("r+") as fh:  # no lugar: o mesmo inode
+        with arquivo.open("r+") as fh:
             fh.write("BBBB")
         os.utime(arquivo, ns=(base * 10**9 + 500_000_000, base * 10**9 + 500_000_000))
         assert leitor.ler(arquivo) == "BBBB", "a gravação no mesmo segundo não foi vista"
@@ -776,7 +722,7 @@ class TestALeituraPelaAssinatura:
         """Duas gravações do mesmo tamanho com o MESMO `mtime_ns`: a regra do «racy»."""
         base = 1_900_000_000
         mtime = base * 10**9
-        relogio = [float(base) + 0.5]  # lida meio segundo depois de gravada
+        relogio = [float(base) + 0.5]
         arquivo = tmp_path / "last_run"
         leitor = self._leitor(relogio)
         arquivo.write_text("appid=1\n")
@@ -784,10 +730,10 @@ class TestALeituraPelaAssinatura:
         assert leitor.ler(arquivo) == "appid=1\n"
         with arquivo.open("r+") as fh:
             fh.write("appid=2\n")
-        os.utime(arquivo, ns=(mtime, mtime))  # a mesma assinatura, byte a byte
+        os.utime(arquivo, ns=(mtime, mtime))
         assert leitor.ler(arquivo) == "appid=2\n", "a segunda gravação do mesmo tamanho sumiu"
         relogio[0] = float(base) + 10.0
-        leitor.ler(arquivo)  # esta leitura já é confiável
+        leitor.ler(arquivo)
         antes = len(leitor.lidos)
         for _ in range(10):
             assert leitor.ler(arquivo) == "appid=2\n"
@@ -806,7 +752,7 @@ class TestALeituraPelaAssinatura:
 
         def decodificar(caminho: Path) -> str:
             texto = caminho.read_text()
-            if trocar[0]:  # o lançamento regrava o marker logo depois da leitura
+            if trocar[0]:
                 trocar[0] = False
                 novo = tmp_path / "last_run.novo"
                 novo.write_text("appid=2\n")
@@ -884,7 +830,7 @@ class TestOsArquivosDaCasa:
         assert len(_jsons(conta, perfis)) == 12, "os perfis foram relidos sem mudar"
         travas = [c for c in _sob(conta, perfis, "open") if c.endswith(".lock")]
         assert len(travas) == 12, "o FileLock abriu sem haver leitura"
-        assert len(_sob(conta, perfis, "os.scandir", "os.listdir")) == 10  # uma por carga
+        assert len(_sob(conta, perfis, "os.scandir", "os.listdir")) == 10
         assert all([p.name for p in c] == [p.name for p in cargas[0]] for c in cargas)
 
     def test_so_os_perfis_gravados_sao_relidos(self, perfis: Path) -> None:
@@ -892,10 +838,10 @@ class TestOsArquivosDaCasa:
 
         antes = {p.name: p for p in load_all_profiles()}
         mudado = antes["perfil03"].model_copy(update={"priority": 7})
-        save_profile(mudado)  # a gravação atômica, `os.replace`
+        save_profile(mudado)
         no_lugar = perfis / "perfil07.json"
         texto = no_lugar.read_text().replace('"jogo07"', '"jogo77"')
-        no_lugar.write_text(texto)  # a gravação no lugar, mesmo inode
+        no_lugar.write_text(texto)
         with contando() as conta:
             depois = {p.name: p for p in load_all_profiles()}
         relidos = sorted(Path(c).name for c in _jsons(conta, perfis))
@@ -952,10 +898,6 @@ class TestOsArquivosDaCasa:
         assert launch_env.read_last_run_marker(tmp_path) == (2497900, 1900000100)
 
 
-# ---------------------------------------------------------------------------
-# Régua 5 — o negativo de /proc vale até o evento, só na pergunta de exibição
-# ---------------------------------------------------------------------------
-
 _REAPER = (
     "/home/quem/.steam/ubuntu12_32/reaper SteamLaunch AppId=1599660 -- "
     "/.../proton waitforexitandrun /.../Jogo.exe"
@@ -981,7 +923,7 @@ class _ProcDeMentira:
                 return [*self.mapa, "self", "cpuinfo"]
             return listar_de_verdade(caminho)
 
-        monkeypatch.setattr(os, "listdir", listar)  # o `os` que o módulo usa
+        monkeypatch.setattr(os, "listdir", listar)
         monkeypatch.setattr(slo, "_cmdline_of", lambda pid: self.mapa.get(str(pid), ""))
         monkeypatch.setattr(launch_env, "launch_env_dir", lambda: self.lancamento)
         monkeypatch.setattr(slo, "_agora", lambda: _RELOGIO_DA_FOTO[0])
@@ -1065,8 +1007,8 @@ class TestONegativoDeProc:
         """O jogo que nasce aos 10 s: a recusa o vê aos 16 s; a exibição, sozinha, no teto."""
 
         assert _exibir(0.0) is None
-        proc_de_mentira.mapa["200"] = _REAPER  # o jogo nasce aos 10 s, fora do lançador
-        assert _exibir(12.0) is None  # o preço declarado
+        proc_de_mentira.mapa["200"] = _REAPER
+        assert _exibir(12.0) is None
         assert _recusar(16.0) is True, (
             "a pergunta de quem pensa em fechar a Steam leu o negativo longo"
         )
@@ -1089,15 +1031,12 @@ class TestONegativoDeProc:
 
         from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 
-        # Pelo `_tick` do autoswitch, o caminho do produto, e não pela função
-        # auxiliar: a régua que chama o auxiliar direto passa com o tique que
-        # nunca o chama (medido na conferência).
         sw = AutoSwitcher(manager=MagicMock(), window_reader=lambda: {})
         sw._tick({"wm_class": "firefox", "pid": 10}, 0.0)
         _exibir(0.0)
         sw._tick({"wm_class": "firefox", "pid": 10}, 4.0)
         _exibir(4.0)
-        sw._tick({"wm_class": "", "pid": 0}, 6.0)  # cega
+        sw._tick({"wm_class": "", "pid": 0}, 6.0)
         _exibir(6.0)
         assert proc_de_mentira.varreduras == 1
         proc_de_mentira.mapa["200"] = _REAPER
@@ -1115,10 +1054,6 @@ class TestONegativoDeProc:
         assert proc_de_mentira.varreduras == 10
 
 
-# ---------------------------------------------------------------------------
-# Régua 6 — a volta de 30 s pelo evento
-# ---------------------------------------------------------------------------
-
 _QUATRO = ("aabbcc000001", "aabbcc000002", "aabbcc000003", "aabbcc000004")
 
 
@@ -1131,7 +1066,7 @@ class _BrokerDeMentira:
     def hide(self, no: str) -> None:
         import time
 
-        time.sleep(0.02)  # passa do tique do relógio do sistema de arquivos
+        time.sleep(0.02)
         os.chmod(no, 0o000)
         self.hides.append(no)
 
@@ -1172,7 +1107,7 @@ class _DaemonDoRepouso:
         )
         self._stop_event: asyncio.Event | None = None
         self._nativo = nativo
-        self._gamepad_device = object()  # o vpad do P1, vivo
+        self._gamepad_device = object()
         self._coop_manager = SimpleNamespace(
             _players={u: SimpleNamespace(vpad=object()) for u in _QUATRO[1:]}
         )
@@ -1196,11 +1131,7 @@ class _DaemonDoRepouso:
 
 
 class _VoltaDeMentira:
-    """O relógio de mentira do laço: cada espera avança o relógio sem dormir.
-
-    `agenda` são os eventos de fora, cada um no seu segundo; as voltas anotam o
-    segundo de cada `connect()`, de cada rehide e de cada sonda forçada.
-    """
+    """O relógio de mentira do laço: cada espera avança o relógio sem dormir."""
 
     def __init__(
         self,
@@ -1358,13 +1289,7 @@ class TestAVoltaPeloEvento:
     def test_a_acl_devolvida_ao_no_de_entrada_roda_o_rehide(
         self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O `udevadm trigger` de `input` devolve a ACL só aos nós de entrada.
-
-        O rehide esconde o `hidraw` E os nós de entrada do físico (o
-        `fechar_entradas` do broker), e a firma do `hidraw` não muda quando só o
-        nó de entrada volta a abrir. É o `IN_ATTRIB` de `/dev/input` (a geração
-        de permissões, anotada depois da rodada) que acorda a volta.
-        """
+        """O `udevadm trigger` de `input` devolve a ACL só aos nós de entrada."""
         entradas, dev = mesa_do_rádio
         no_de_entrada = entradas / "event7"
         no_de_entrada.write_text("")
@@ -1417,9 +1342,7 @@ class TestAVoltaPeloEvento:
         assert len(volta.connects) == 10
 
 
-# ---------------------------------------------------------------------------
 # Régua 2 — o nó do vpad pela geração (a família 1, o `state_full`)
-# ---------------------------------------------------------------------------
 
 import time
 
@@ -1432,8 +1355,6 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
 )
 from hefesto_dualsense4unix.integrations.uinput_gamepad import XBOX360_NAME
 
-#: A mesa de 29/09: 54 nós de entrada, quatro deles por vpad `uhid` (o
-#: touchpad, os sensores, o gamepad e o «Headset Jack», com o mesmo `uniq`).
 _NOS_NA_MESA = 54
 _NOS_POR_VPAD = (" Touchpad", " Motion Sensors", "", " Headset Jack")
 
@@ -1443,12 +1364,7 @@ def _nome_do_vpad(jogador: int) -> str:
 
 
 class _MesaDoVpad:
-    """`/sys/class/input` e `/dev` de mentira, no formato do kernel.
-
-    `/sys/class/input/eventN/device` aponta para `<HID>/input/inputM`, e o
-    `hidraw` do vpad mora em `<HID>/hidraw/`, com o nó em `/dev`. O `/dev` é
-    o mesmo que o dono do evento olha (o fixture `raizes`).
-    """
+    """`/sys/class/input` e `/dev` de mentira, no formato do kernel."""
 
     def __init__(self, tmp_path: Path, entradas: Path, nos: Path) -> None:
         self.class_input = tmp_path / "sys" / "class" / "input"
@@ -1580,11 +1496,7 @@ class TestONoDoVpadPelaGeracao:
     def test_quarenta_perguntas_em_120_s_varrem_uma_vez_por_vpad(
         self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
     ) -> None:
-        """A sonda de 29/09: 80 varreduras e 4.320 `uniq` por minuto, por relógio.
-
-        MORDIDA: devolva o TTL de 2 s ao caminho armado, e as 40 perguntas dos
-        quatro vpads fazem 160 varreduras.
-        """
+        """A sonda de 29/09: 80 varreduras e 4.320 `uniq` por minuto, por relógio."""
         h = _SoOCache()
         with contando() as conta:
             blocos = _a_bandeja_pergunta(h, relogio, 40)
@@ -1621,11 +1533,7 @@ class TestONoDoVpadPelaGeracao:
     def test_o_hidraw_que_nasce_depois_da_entrada_chega_na_pergunta_seguinte(
         self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
     ) -> None:
-        """O `hid_connect` registra a entrada antes do hidraw.
-
-        MORDIDA: tire a geração dos `hidraw*` de `/dev` da ficha, e o vpad fica
-        com `hidraw: None` até o próximo nó de entrada.
-        """
+        """O `hid_connect` registra a entrada antes do hidraw."""
         h = _SoOCache()
         _a_bandeja_pergunta(h, relogio, 1)
         dir_hid = mesa_do_vpad.vpad(5, hidraw=None)
@@ -1640,12 +1548,7 @@ class TestONoDoVpadPelaGeracao:
         self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio, tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """O dono olha um `/dev`, e a varredura usa outro: nada se prende.
-
-        MORDIDA: pergunte ao dono pelas raízes DELE (`dono.raiz_das_entradas`),
-        e não pelas da varredura, e o vpad que nasce no `/dev` que o dono não
-        olha fica «desconhecido» para sempre.
-        """
+        """O dono olha um `/dev`, e a varredura usa outro: nada se prende."""
         outro_dev = tmp_path / "outro" / "dev"
         (outro_dev / "input").mkdir(parents=True)
         outra = _MesaDoVpad(tmp_path / "outro", outro_dev / "input", outro_dev)
@@ -1662,14 +1565,7 @@ class TestONoDoVpadPelaGeracao:
         self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """A ficha se anota ANTES da varredura (`DonoDoEvento.ficha`).
-
-        O hidraw do P5 nasce enquanto a primeira pergunta ainda varre (depois
-        de ela ter lido a pasta `hidraw/`). Com a ficha de antes, o evento a
-        muda, e a pergunta seguinte varre de novo e acha o nó.
-        MORDIDA: anote a ficha DEPOIS do `resolver_no_do_vpad`, e o P5 fica com
-        `hidraw: None` até o próximo nó nascer.
-        """
+        """A ficha se anota ANTES da varredura (`DonoDoEvento.ficha`)."""
         h = _SoOCache()
         dir_hid = mesa_do_vpad.vpad(5, hidraw=None)
         real = no_mod.resolver_no_do_vpad
@@ -1690,14 +1586,7 @@ class TestONoDoVpadPelaGeracao:
     def test_o_pad_do_xbox_casa_pelo_nome_e_o_segundo_desfaz_a_resposta(
         self, mesa_do_vpad: _MesaDoVpad, relogio: _Relogio
     ) -> None:
-        """O modo Xbox: o pad `uinput` não tem `uniq`, e casa pelo nome.
-
-        Uma varredura em 40 perguntas. Quando o pad do P2 nasce com o MESMO
-        nome, a pergunta seguinte do P1 é «não sei» (nada diz qual nó é de
-        quem), e não o nó guardado.
-        MORDIDA: tire a geração de `/dev/input` da ficha, e o P1 segue com o nó
-        guardado depois que o P2 nasceu.
-        """
+        """O modo Xbox: o pad `uinput` não tem `uniq`, e casa pelo nome."""
         h = _SoOCache()
         evento = mesa_do_vpad.uinput(XBOX360_NAME)
         blocos: list[dict[str, Any]] = []

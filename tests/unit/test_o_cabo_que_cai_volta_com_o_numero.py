@@ -1,80 +1,4 @@
-"""O controle que cai por -71 volta com o MESMO número — STORM-USB-02, 24/09/2026.
-
-A palavra dela de 23/09 é «nomear e religar»: o controle que cai por ``-71``
-volta sozinho, **com o mesmo número de jogador**. O religar existia desde a
-STORM-USB-01, no tique do watchdog root (``OnUnitActiveSec`` de 2 min; medido
-no journal dela, mediana de 120 s entre dois tiques), e o lugar guardado de
-quem sai vale 30 s (``identity.prazo_do_lugar_guardado``): religado no tique, o
-controle voltava depois do prazo e os outros já tinham trocado de número. A
-cura é o religar NA HORA do aviso do kernel.
-
-A PROVA É A CORRENTE INTEIRA, DE VERDADE, CONTRA UM ``/sys`` DE MENTIRA::
-
-    a linha do kernel ─► storm_watch.sh (classify | anotar) ─► o sudo de mentira
-      ─► bt_ponte_privilegiada.sh religar-orfaos ─► bt_rebind_orphans.sh --evento
-      ─► o ``bind`` ─► o kernel de mentira liga o driver
-      ─► o registro de identidade REAL, com o relógio de mentira
-
-Os três dublês, e por que nenhum é mais frouxo que o de verdade:
-
-* **o /sys** — pastas e um arquivo ``bind`` por driver, como as réguas da 01;
-* **o sudo** — aceita SÓ as linhas que a regra do sudoers aceita, lidas da
-  saída do ``regra-sudo`` da ponte (o caminho instalado trocado pelo da
-  árvore): sem a linha do verbo na regra, ele recusa e o controle não volta. O
-  que ele NÃO faz, de propósito, é apagar o ambiente — o ``/sys`` de mentira
-  chega à ponte pelos ganchos, que o sudo de verdade apagaria (e que a ponte e
-  o religar apagam sob ``SUDO_UID``: a régua disso é a
-  ``test_os_ganchos_de_teste_morrem_sob_sudo.py``). E ele recusa rodar sem
-  os ganchos apontando para a mesa de mentira: é a guarda que sai. A única
-  coisa que ele tem a mais é uma PAUSA pedida pela régua depois da N-ésima
-  passada (o trabalho fica parado com a trava na mão), que é onde ela põe o
-  aviso de outro controle no meio do trabalho sem depender do relógio;
-* **o kernel** — o ``bind`` do kernel é SÍNCRONO (``bind_store`` →
-  ``device_driver_attach`` → a probe): o link ``driver`` existe quando a
-  escrita volta, e é isso que o religar confere na linha seguinte. Um arquivo
-  comum não faz isso; por isso o kernel de mentira mora no ``printf`` do shell
-  que escreve (``BASH_ENV``, só no que o sudo de mentira roda). A escrita
-  falha, como no kernel, quando o aparelho não existe, já tem driver, não é do
-  driver, ou a probe cai de novo (o arquivo ``probe-falha`` do nó).
-
-O TEMPO. A corrente roda com as esperas em zero, e a régua soma as de verdade
-no relógio do registro — todas LIDAS do produto: as esperas do
-``storm_watch.sh``, o hotplug do daemon, o prazo do lugar guardado e o tique do
-watchdog. Os dois números que não são do produto são medidas, e estão escritos
-abaixo com a origem (:data:`ATRASO_DO_KERNEL`, :data:`CADEIA`).
-
-AS MORDIDAS (arranque a cura, veja reprovar, devolva):
-
-* :func:`test_o_cabo_que_perde_a_hid_volta_com_o_numero` e
-  :func:`test_o_adaptador_que_cai_derruba_os_dois_e_cada_um_volta_com_o_seu`
-  — tire a chamada do ``religar_em_fundo`` no ``anotar`` (ou a linha do
-  ``religar-orfaos`` da regra do sudo) e as duas reprovam PELO NÚMERO: o
-  controle voltaria no tique, e o P3 vira P2 enquanto o P2 está fora;
-* :func:`test_as_esperas_cabem_no_lugar_guardado` — suba a primeira espera
-  do ``storm_watch.sh`` para 4 s e ela reprova;
-* :func:`test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele` —
-  ponha ``RELIGAR_VOLTAS=1``, tire o byte do pedido ou esvazie o arquivo da
-  trava no fim da volta (e não antes da primeira passada), e o P1 que perde a
-  HID depois da última passada do trabalho do P2 fica sem driver até o tique;
-* :func:`test_o_lugar_do_vigia_e_o_do_dono` — faça o ``lugar_da_porta`` pegar
-  o PRIMEIRO controlador do caminho, e não o último;
-* :func:`test_so_a_probe_perdida_chama_o_religar` — tire o ``0005`` da forma
-  do ``[PROBE-PERDIDA]`` (o vpad do ``-17`` passaria a chamar o religar);
-* :func:`test_o_aviso_tem_orcamento_proprio_e_esgota_calado` — tire o
-  ``PREFIXO`` do contador (o aviso comeria as três do tique);
-* :func:`test_quem_religa_limpa_os_dois_contadores` — volte o ``rm`` a apagar
-  só o contador da passada;
-* :func:`test_o_minus_71_de_outro_boot_e_lido_pelo_lugar` — tire a tradução
-  do ``_porta_de_hoje`` e o -71 de ontem cai na entrada errada;
-* :func:`test_como_root_a_ponte_so_roda_o_religar_que_e_so_do_root` — tire a
-  guarda de dono (ou a de modo) do ``_o_religar`` e o religar gravável por
-  outra conta passa a rodar como root.
-
-Nada aqui toca o aparelho dela: nenhum ``/sys`` de verdade, nenhum sudo de
-verdade, nenhum journal (o log do religar vai para um arquivo do ``tmp_path``).
-Endereços forjados: MAC na faixa ``aa:bb:cc``, controladores PCI ``0000:0a`` e
-``0000:0b``.
-"""
+"""O controle que cai por -71 volta com o MESMO número — STORM-USB-02, 24/09/2026."""
 
 from __future__ import annotations
 
@@ -110,9 +34,6 @@ TIMER_DO_WATCHDOG = REPO / "assets" / "systemd" / "hefesto-bt-health-watchdog.ti
 UNIT_DO_VIGIA = REPO / "assets" / "hefesto-dualsense4unix-storm-watch.service"
 
 
-# --- os números: do produto, lidos; e as duas medidas ----------------------
-
-
 def _esperas() -> tuple[float, ...]:
     """As esperas do religar, do ``storm_watch.sh`` — nunca digitadas aqui."""
     casado = re.search(
@@ -144,42 +65,19 @@ ESPERAS = _esperas()
 POLL = float(RECONNECT_HOTPLUG_POLL_INTERVAL_SEC)
 TIQUE = _tique_do_watchdog()
 
-#: Da queda à linha do kernel que chama o religar. MEDIDO no journal dela em
-#: 24/09 (só leitura, 27 boots): no cabo, a linha da HID perdida chegou 23 s e
-#: 30 s depois da re-enumeração — as duas únicas da história dela —, porque a
 #: HID é a ÚLTIMA interface do DualSense a subir: o áudio vem antes, e só ele
-#: leva 15 s de mediana nas 43 enumerações que deram certo. A régua usa a
-#: menor; a de 30 s passa do prazo mesmo com o religar na hora, e está escrita
-#: no relatório como o limite desta cura.
-#:
-#: DUAS RESSALVAS, DECLARADAS (a conferência, 24/09/2026). O número é contado
-#: da RE-ENUMERAÇÃO, e não da queda — antes dela o kernel ainda tenta o
-#: endereço —, então é o melhor caso do cabo, não o típico. E no RÁDIO ninguém
-#: mediu o tempo da queda do adaptador até a probe perdida de quem reconecta: a
-#: régua do adaptador usa este mesmo número como palpite, e a prova de verdade é
-#: a célula ``mapa-plataforma.religar-radio`` da bancada.
 ATRASO_DO_KERNEL = 23.0
 
-#: O sudo, a ponte, o religar e a probe do ``hid-playstation`` que o ``bind``
-#: dispara: décimos de segundo. Um segundo é folga — a corrente de mentira é
-#: medida em cada caso e só precisa não esperar nada (:func:`Bancada.aviso`).
 CADEIA = 1.0
 
-#: O instante antes de o daemon ver o controle de volta.
 QUASE = 0.001
 
 
-# --- a bancada: o /sys de mentira, o sudo de mentira e o kernel de mentira --
-
 PCI_DO_HUB = "0000:0a:00.0"
 PCI_DO_RADIO = "0000:0b:00.0"
-#: A ponte PCI de cima: o caminho real tem mais de um endereço, e o controlador
-#: é o ÚLTIMO (é o que a mordida do lugar precisa para morder).
 PONTE_PCI = "0000:00:08.1"
 
 P1, P2, P3, P4 = "aabbcc000001", "aabbcc000002", "aabbcc000003", "aabbcc000004"
-#: A bancada dela: o P1 e o P2 no cabo (um atrás do hub de 4 entradas, outro
-#: direto nele), o P3 e o P4 no rádio de um adaptador USB.
 NO_CABO = {P1: "3-4.1.3", P2: "3-4.4"}
 NO_RADIO = {P3: "0005:054C:0CE6.0003", P4: "0005:054C:0CE6.0004"}
 ADAPTADOR = "1-4"
@@ -278,13 +176,7 @@ def _regra_do_sudo() -> str:
 
 
 def _linhas_permitidas(regra: str, ponte: Path) -> list[str]:
-    """As linhas SEM curinga da regra, com o caminho instalado trocado pelo da árvore.
-
-    As de curinga (os segundos do ``descobrir``, as únicas desde que o
-    endereço foi para o stdin, em 29/09/2026) ficam de fora: o sudo de mentira
-    não as aceita, o que é MAIS estrito que o de verdade — e o verbo desta
-    sprint não tem argumento a casar.
-    """
+    """As linhas SEM curinga da regra, com o caminho instalado trocado pelo da árvore."""
     alvo = _alvo_instalado()
     permitidas = []
     for linha in regra.splitlines():
@@ -337,7 +229,6 @@ class Bancada:
             encoding="utf-8",
         )
         self.esperas = esperas
-        #: nó do /sys (relativo à raiz) → o controle
         self.quem: dict[str, str] = {}
         self.devnum = 20
         self._hub_raiz(1, PCI_DO_RADIO, "0000:00:02.1")
@@ -351,7 +242,6 @@ class Bancada:
         for uniq, no in NO_RADIO.items():
             self._controle_no_radio(uniq, no, com_driver=True)
 
-    # -- o /sys ---------------------------------------------------------------
 
     def _hub_raiz(self, bus: int, pci: str, ponte_pci: str) -> None:
         alvo = self.raiz / "devices" / "pci0000:00" / ponte_pci / pci / f"usb{bus}"
@@ -394,7 +284,6 @@ class Bancada:
             if (self.raiz / no / "driver").exists()
         }
 
-    # -- as quedas ------------------------------------------------------------
 
     def cai_o_cabo(self, uniq: str, *, probe_falha: int = 0) -> list[str]:
         """O -71: o aparelho re-enumera (outro ``devnum``) e a HID fica sem driver."""
@@ -437,7 +326,6 @@ class Bancada:
     def no_de(self, uniq: str) -> str:
         return next(Path(no).name for no, dono in self.quem.items() if dono == uniq)
 
-    # -- a corrente -----------------------------------------------------------
 
     def ambiente(self) -> dict[str, str]:
         return {
@@ -487,8 +375,6 @@ class Bancada:
         )
         duracao = time.monotonic() - inicio
         assert feito.returncode == 0, feito.stderr
-        # Com as esperas em zero a corrente não espera nada: se esperasse, o
-        # gancho das esperas teria parado de valer, e o tempo da régua mentiria.
         assert duracao < sum(ESPERAS), f"a corrente esperou {duracao:.1f} s com as esperas em zero"
         return feito.stdout.splitlines()
 
@@ -576,27 +462,17 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _volta(bancada: Bancada, uniq: str) -> float:
-    """Segundos entre a linha do kernel e o daemon ver o controle de volta.
-
-    Pela passada do aviso que o religou; sem ela, pelo tique do watchdog — a
-    espera mediana até o próximo tique é metade do intervalo dele.
-    """
+    """Segundos entre a linha do kernel e o daemon ver o controle de volta."""
     passada = bancada.passada_que_religou(uniq)
     if passada is None:
         return TIQUE / 2 + POLL
     return sum(ESPERAS[: passada + 1]) + CADEIA + POLL
 
 
-# --- a prova: o cabo, o rádio, e o número ------------------------------------
-
-
 @pytest.mark.usefixtures("config_isolado")
 @pytest.mark.parametrize("quem", [P1, P2], ids=["p1-atras-do-hub", "p2-direto-no-hub"])
 def test_o_cabo_que_perde_a_hid_volta_com_o_numero(tmp_path: Path, quem: str) -> None:
-    """O -71 no cabo: a HID fica sem driver, o aviso religa, e ninguém anda.
-
-    Nunca só o P1: os dois do cabo, um atrás do hub e outro direto nele.
-    """
+    """O -71 no cabo: a HID fica sem driver, o aviso religa, e ninguém anda."""
     bancada = Bancada(tmp_path)
     mesa = Mesa()
     antes = mesa.tela()
@@ -611,7 +487,6 @@ def test_o_cabo_que_perde_a_hid_volta_com_o_numero(tmp_path: Path, quem: str) ->
     lugar = f"pci-{PCI_DO_HUB}-usb-0:{NO_CABO[quem].partition('-')[2]}"
     assert all(linha.endswith(f" · lugar {lugar}") for linha in anotadas), anotadas
 
-    # A régua mede PELO NÚMERO: sem o religar na hora, a volta é a do tique.
     volta = _volta(bancada, quem)
     mesa.em(ATRASO_DO_KERNEL + volta - QUASE)
     mesa.ve(bancada.ligados() - {quem})
@@ -634,12 +509,7 @@ def test_o_cabo_que_perde_a_hid_volta_com_o_numero(tmp_path: Path, quem: str) ->
 def test_o_adaptador_que_cai_derruba_os_dois_e_cada_um_volta_com_o_seu(
     tmp_path: Path, orfaos: tuple[str, ...]
 ) -> None:
-    """O -71 no adaptador: os dois do rádio caem, voltam, e cada um fica com o seu.
-
-    Os dois reconectam juntos, e quem perde a probe na disputa (a de 25/07) é
-    religado pelo aviso. Quem reconecta limpo volta primeiro — e volta com o
-    número DELE, não com o do que ainda está fora.
-    """
+    """O -71 no adaptador: os dois do rádio caem, voltam, e cada um fica com o seu."""
     bancada = Bancada(tmp_path)
     mesa = Mesa()
     antes = mesa.tela()
@@ -674,11 +544,7 @@ def test_o_adaptador_que_cai_derruba_os_dois_e_cada_um_volta_com_o_seu(
 
 
 def test_as_esperas_cabem_no_lugar_guardado() -> None:
-    """A primeira passada, a corrente e o hotplug cabem no prazo depois do kernel.
-
-    E são tantas esperas quanto o teto do aviso no religar: uma a mais seria
-    uma chamada que o contador recusa; uma a menos, uma tentativa jogada fora.
-    """
+    """A primeira passada, a corrente e o hotplug cabem no prazo depois do kernel."""
     prazo = prazo_do_lugar_guardado()
     assert len(ESPERAS) == _teto_do_religar()
     assert ATRASO_DO_KERNEL + ESPERAS[0] + CADEIA + POLL < prazo, (
@@ -686,11 +552,7 @@ def test_as_esperas_cabem_no_lugar_guardado() -> None:
         "já não devolve o controle dentro do prazo"
     )
     assert sum(ESPERAS) + CADEIA + POLL < prazo, "a última passada cai fora do prazo"
-    # E o porquê da cura: pelo tique, a espera mediana sozinha passa do prazo.
     assert prazo < TIQUE / 2 + POLL
-
-
-# --- a corrente, peça por peça ------------------------------------------------
 
 
 def test_a_probe_que_cai_de_novo_tem_a_segunda_passada(tmp_path: Path) -> None:
@@ -706,10 +568,7 @@ def test_a_probe_que_cai_de_novo_tem_a_segunda_passada(tmp_path: Path) -> None:
 
 
 def test_sem_a_regra_do_sudo_nada_muda(tmp_path: Path) -> None:
-    """O install sem senha, o Flatpak: o sudo recusa o ``-l`` e a corrente para ali.
-
-    A linha segue para o log do mesmo jeito, e o tique continua religando.
-    """
+    """O install sem senha, o Flatpak: o sudo recusa o ``-l`` e a corrente para ali."""
     bancada = Bancada(tmp_path, regras=False)
     linha = bancada.cai_o_cabo(P2)[1]
     anotadas = bancada.aviso([linha])
@@ -727,17 +586,7 @@ def test_uma_rajada_e_um_trabalho_so(tmp_path: Path) -> None:
 
 
 def test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele(tmp_path: Path) -> None:
-    """Nunca só o primeiro: o P1 perde a HID quando o trabalho do P2 já passou.
-
-    Os controles de um adaptador que caiu reconectam cada um no seu tempo, e no
-    cabo cada entrada falha na sua hora. O aviso do P1 chega com a trava na mão
-    do trabalho do P2, DEPOIS da última passada dele: absorvido sem mais nada,
-    o P1 esperaria o tique — e sairia do lugar guardado. O pedido que ele deixa
-    no arquivo da trava dá ao trabalho mais uma volta inteira.
-
-    A MORDIDA: tire a segunda volta do ``religar_em_fundo`` (o ``while``) e o
-    P1 fica sem driver.
-    """
+    """Nunca só o primeiro: o P1 perde a HID quando o trabalho do P2 já passou."""
     bancada = Bancada(tmp_path)
     pausa = tmp_path / "pausa"
     env = {
@@ -766,7 +615,6 @@ def test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele(tmp_path: 
             time.sleep(0.02)
         assert P2 in bancada.ligados(), " | ".join(bancada.frases())
 
-        # O P1 cai AGORA, com o trabalho do P2 de pé e a trava na mão dele.
         do_p1 = bancada.classificar(bancada.cai_o_cabo(P1))
         feito = subprocess.run(
             ["bash", str(VIGIA), "--test-anotar", str(bancada.trava)],
@@ -811,7 +659,6 @@ def test_so_a_probe_perdida_chama_o_religar(tmp_path: Path, mensagem: str) -> No
         "usb 3-4.4: device descriptor read/64, error -71",
         "usb 3-4.4: device not accepting address 12, error -71",
         "usb 3-4-port4: unable to enumerate USB device",
-        # O vpad do próprio Hefesto no barramento 0003, com o MAC repetido.
         "playstation 0003:054C:0CE6.0011: probe with driver playstation failed with error -17",
         "Bluetooth: hci0: command 0x0c03 tx timeout",
     ],
@@ -859,8 +706,6 @@ def test_a_linha_que_ja_tem_lugar_nao_ganha_outro(tmp_path: Path) -> None:
     assert feito.stdout.splitlines() == [ja]
 
 
-# --- o lugar: a cópia do vigia contra o dono ---------------------------------
-
 MENSAGENS_DO_LUGAR = (
     "usb 3-4.1.3: device descriptor read/64, error -71",
     "usbhid 3-4.4:1.3: can't add hid device: -71",
@@ -876,13 +721,7 @@ MENSAGENS_DO_LUGAR = (
 
 
 def test_o_lugar_do_vigia_e_o_do_dono(tmp_path: Path) -> None:
-    """DUAS CÓPIAS, UMA FORMA: a porta e o lugar do bash contra os do Python.
-
-    O vigia não carrega o Python do produto (roda no ``bash`` da unit); a
-    grafia do lugar é do ``utils/lugar``, a porta é do ``exame_da_mesa``, e o
-    controlador é o do ``mesa_de_radio``. As cinco formas da linha, mais um
-    barramento que este ``/sys`` não tem e três linhas que não são de porta.
-    """
+    """DUAS CÓPIAS, UMA FORMA: a porta e o lugar do bash contra os do Python."""
     bancada = Bancada(tmp_path)
     feito = subprocess.run(
         ["bash", str(VIGIA), "--test-lugar"],
@@ -906,11 +745,7 @@ def test_o_lugar_do_vigia_e_o_do_dono(tmp_path: Path) -> None:
 
 
 def test_o_minus_71_de_outro_boot_e_lido_pelo_lugar(tmp_path: Path) -> None:
-    """O -71 de ontem cai na entrada certa hoje, mesmo que a ordem dos xHCI mude.
-
-    Ontem o hub pendurava no barramento 3 (``3-4.4``); hoje o mesmo controlador
-    subiu como barramento 1. O lugar gravado na linha diz qual entrada é.
-    """
+    """O -71 de ontem cai na entrada certa hoje, mesmo que a ordem dos xHCI mude."""
     raiz = tmp_path / "sys" / "bus" / "usb" / "devices"
     raiz.mkdir(parents=True)
     for bus, pci in ((1, PCI_DO_HUB), (2, PCI_DO_HUB), (3, PCI_DO_RADIO), (4, PCI_DO_RADIO)):
@@ -921,7 +756,6 @@ def test_o_minus_71_de_outro_boot_e_lido_pelo_lugar(tmp_path: Path) -> None:
     linhas = [
         f"2026-09-23T21:00:00-03:00 [USB-71] usbhid 3-4.4:1.3: can't add hid device: -71"
         f" · lugar pci-{PCI_DO_HUB}-usb-0:4.4",
-        # A linha de antes de 24/09 não tem lugar: vale o caminho do log.
         "2026-09-23T21:05:00-03:00 [USB-71] usb 3-2: device descriptor read/64, error -71",
     ]
     laudo = storm_por_porta(
@@ -932,12 +766,7 @@ def test_o_minus_71_de_outro_boot_e_lido_pelo_lugar(tmp_path: Path) -> None:
 
 
 def test_dos_dois_lados_da_entrada_usb3_fica_o_que_tem_aparelho(tmp_path: Path) -> None:
-    """O lugar é o mesmo nos lados 2.0 e 3.x de uma entrada; o caminho de hoje é
-    o do lado que tem aparelho agora — e, sem nenhum, o 2.0.
-
-    A MORDIDA: tire a preferência por quem está presente no ``_porta_de_hoje`` e
-    o -71 de ontem cai no lado 2.0 vazio, com o aparelho de hoje no 3.x.
-    """
+    """O lugar é o mesmo nos lados 2.0 e 3.x de uma entrada; o caminho de hoje é"""
     raiz = tmp_path / "sys" / "bus" / "usb" / "devices"
     raiz.mkdir(parents=True)
     for bus, pci in ((1, PCI_DO_HUB), (2, PCI_DO_HUB), (3, PCI_DO_RADIO), (4, PCI_DO_RADIO)):
@@ -958,9 +787,6 @@ def test_dos_dois_lados_da_entrada_usb3_fica_o_que_tem_aparelho(tmp_path: Path) 
     assert porta_do_laudo() == ["1-4"], "sem aparelho em nenhum dos lados, vale o 2.0"
     (raiz / "2-4").mkdir()
     assert porta_do_laudo() == ["2-4"], "o aparelho de hoje está no lado 3.x"
-
-
-# --- a ponte: o verbo novo ------------------------------------------------------
 
 
 def _ponte(
@@ -1018,8 +844,6 @@ def test_sem_o_religar_ao_lado_a_ponte_recusa(tmp_path: Path) -> None:
     assert "não está ao lado desta ponte" in feito.stderr
 
 
-#: O root de mentira: o ``id -u`` diz 0, e o ``stat -c %u`` diz o dono que a
-#: régua pede (``HEFESTO_TESTE_DONO``); o resto vai para os de verdade.
 ID_DE_MENTIRA = (
     "#!/usr/bin/env bash\n"
     '[[ "${1:-}" == "-u" ]] && { echo 0; exit 0; }\n'
@@ -1042,17 +866,7 @@ STAT_DE_MENTIRA = (
 def test_como_root_a_ponte_so_roda_o_religar_que_e_so_do_root(
     tmp_path: Path, dono: str, modo: int, roda: bool
 ) -> None:
-    """A regra do sudo abre o verbo sem senha, e o que ele RODA é o arquivo ao lado.
-
-    Um religar que outra conta pode gravar seria root para quem o gravasse: como
-    root, a ponte só o roda se ele for do root e ninguém mais puder escrever
-    nele. O root aqui é de mentira (o ``id`` e o ``stat`` no PATH), e o par
-    ponte-religar é uma cópia com o modo que a régua pede — o do disco é da conta
-    de quem roda a suíte.
-
-    A MORDIDA: tire a guarda de dono e de modo do ``_o_religar`` e as três
-    recusas viram religar.
-    """
+    """A regra do sudo abre o verbo sem senha, e o que ele RODA é o arquivo ao lado."""
     bancada = Bancada(tmp_path)
     bancada.cai_o_cabo(P2)
     lib = tmp_path / "lib"
@@ -1102,11 +916,7 @@ def test_a_regra_do_sudo_tem_o_verbo_sem_argumento() -> None:
 
 
 def test_o_vigia_chama_a_ponte_onde_o_install_a_poe() -> None:
-    """O caminho que o kernel-watch chama é o da regra, e o religar mora ao lado.
-
-    O verbo roda o ``bt_rebind_orphans.sh`` do MESMO diretório da ponte; é a
-    camada do install que põe os dois lá.
-    """
+    """O caminho que o kernel-watch chama é o da regra, e o religar mora ao lado."""
     alvo = _alvo_instalado()
     casado = re.search(r"HEFESTO_KERNELWATCH_PONTE:-([^}]+)\}", VIGIA.read_text(encoding="utf-8"))
     assert casado and casado.group(1) == alvo
@@ -1122,12 +932,7 @@ def test_o_vigia_chama_a_ponte_onde_o_install_a_poe() -> None:
 
 
 def test_a_unit_do_vigia_deixa_o_sudo_funcionar() -> None:
-    """Nada na unit do kernel-watch que implique ``NoNewPrivileges``.
-
-    Numa unit de usuário, estas opções só se aplicam com ``NoNewPrivileges``
-    ligado, e com ele o sudo (setuid) morre calado: o religar voltaria ao tique
-    sem uma linha de aviso.
-    """
+    """Nada na unit do kernel-watch que implique ``NoNewPrivileges``."""
     texto = UNIT_DO_VIGIA.read_text(encoding="utf-8")
     proibidas = (
         "NoNewPrivileges", "SystemCallFilter", "SystemCallArchitectures", "RestrictAddressFamilies",
@@ -1139,18 +944,11 @@ def test_a_unit_do_vigia_deixa_o_sudo_funcionar() -> None:
 
 
 def test_o_servico_passa_pelo_anotar() -> None:
-    """O serviço de verdade põe o ``anotar`` depois do ``classify``, com a trava volátil.
-
-    A trava mora no diretório de execução (que o uninstall apaga inteiro), e
-    não no estado: um arquivo que sobrasse ali seguraria o ``rmdir`` do estado.
-    """
+    """O serviço de verdade põe o ``anotar`` depois do ``classify``, com a trava volátil."""
     texto = VIGIA.read_text(encoding="utf-8")
     assert '| classify | anotar "${TRAVA_DO_RELIGAR}" >>"${LOG}"' in texto
     volatil = 'TRAVA_DO_RELIGAR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix"'
     assert volatil in texto
-
-
-# --- o religar: o orçamento do aviso -------------------------------------------
 
 
 def _religar(

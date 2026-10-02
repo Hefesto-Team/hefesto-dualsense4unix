@@ -31,9 +31,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: O perfil de mentira, com a forma EXATA do disco dela — medida em 01/09/2026
-#: no perfil "Ação". Os dois lados de propósito diferentes: um escalar
-#: (`Rigid`) e um que a tela mostra com três ajustes (`Vibration`).
 PERFIL = {
     "name": "Régua", "version": 1, "priority": 50,
     "match": {"type": "manual"},
@@ -46,9 +43,7 @@ PERFIL = {
     "rumble": {"passthrough": True},
 }
 
-#: A CURVA é a segunda forma que o disco guarda, e ela quebrou o pacote na
 #: primeira execução: `MultiPositionFeedback` grava `[[1], [2], ...]`, dez
-#: posições em listas de um. `[1] - 0` não é uma subtração que exista.
 PERFIL_CURVA = {
     **PERFIL, "name": "Curva",
     "triggers": {
@@ -58,12 +53,9 @@ PERFIL_CURVA = {
     },
 }
 
-#: A mesa, na língua do DESENHO — `pref`, `jogador`, `nome`, `via`.
 MESA = [{"pref": "p1", "jogador": 1, "uniq": "aa:bb:cc:00:00:01", "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense", "alvo": True}]
 
-#: Um controle com a forma do que o daemon devolve. MAC da faixa sintética da
-#: casa — há dois portões de anonimato nesta árvore e eles não perdoam.
 FALSO = {
     "uniq": "aa:bb:cc:00:00:01", "player": 1, "connected": True, "is_primary": True,
     "battery_pct": 95, "transport": "usb", "vpad_backend": "uhid",
@@ -76,12 +68,7 @@ FALSO = {
 
 @pytest.fixture
 def com_perfis(tmp_path, monkeypatch):
-    """Grava os perfis num lar de mentira e aponta o leitor para lá.
-
-    O `conftest.py` desta casa já desvia `HOME` e os quatro `XDG_*`; o que falta
-    é a pasta existir com os arquivos dentro, e é o que esta fixture faz. Nada
-    aqui toca o disco dela.
-    """
+    """Grava os perfis num lar de mentira e aponta o leitor para lá."""
     from pacotes import perfil
 
     pasta = tmp_path / "profiles"
@@ -99,22 +86,13 @@ def ctx_com(com_perfis):
     from pacotes import Contexto
 
     def montar(nome: str) -> Contexto:
-        # A MESA TEM OUTRA FORMA QUE O CONTROLE: `pref`/`jogador`/`nome`/`via`
-        # (a língua do desenho) contra `player`/`transport` (a do daemon).
-        # Passar o controle como mesa dá `KeyError: 'jogador'` dentro da camada
-        # do produto, e só na suíte completa.
         return Contexto(state={"active_profile": nome, "rumble_policy": "balanceado"},
                         mesa=MESA, conectados=[FALSO], estados={})
     return montar
 
 
 def test_o_leitor_acha_os_perfis(com_perfis):
-    """Zero perfis com dois no disco é ERRO, não silêncio.
-
-    Esta régua nasceu de um zero exatamente assim: a primeira versão do
-    `perfil.py` cacheava a pasta com `@lru_cache`, o primeiro chamador não tinha
-    `HEFESTO_VARIANTE` posta, e `lista()` devolveu **0 com 33 perfis no disco**.
-    """
+    """Zero perfis com dois no disco é ERRO, não silêncio."""
     from pacotes import perfil
 
     achados = perfil.lista()
@@ -139,13 +117,6 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
     assert col["modo-e-chave" if "modo-e-chave" in col else "modo-chave-e"] == "Rigid"
     assert col["modo-d"] == "Vibração"
 
-    # OS AJUSTES, com os valores DELA — não os padrões do preset.
-    #
-    # ELES CHEGAM DENTRO DE UM BLOCO desde 02/09/2026, e a mudança é a decisão
-    # 2 dela: *"os ajustes viram lista e a caixa acompanha o modo"*. O número de
-    # barras é o do MODO — de zero (`Off`) a onze (`MultiPositionVibration`) — e
-    # não há endereço de pintura para um filho que ainda não existe, então a
-    # caixa é trocada inteira. Cobrar `col["aj-val-e-1"]` aqui reprovaria a cura.
     caixa_e = r["blocos"]['[data-controle="p1"] .ajustes.e']
     assert '<span class="num" data-campo="aj-val-e-1">180</span>' in caixa_e, (
         f"a Força do L2 não chegou com o 180 que o perfil guarda. Um padrão do "
@@ -156,10 +127,6 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
     assert valores_d == ["3", "8", "20"], (
         f"o R2 do perfil guarda [3, 8, 20] e a caixa trouxe {valores_d}")
 
-    #: A PORCENTAGEM É DA FAIXA DAQUELE AJUSTE. `force` vai a 255 e `position`
-    #: a 9; dividir os dois por 255 pintaria a barra da posição sempre no chão.
-    #: Ela viaja no `style` do próprio bloco: a caixa é trocada inteira, então a
-    #: largura chega com ela em vez de esperar uma segunda pintura.
     assert f'style="width:{round(180 / 255 * 100)}%"' in caixa_e, (
         f"a barra da Força não veio na porcentagem da FAIXA dela:\n{caixa_e}")
 
@@ -183,20 +150,12 @@ def test_o_brilho_do_perfil_chega_em_porcentagem(ctx_com):
 
     r = pacote_da_pagina("04-iluminacao.html", ctx_com("régua"))
     col = next(iter(r["colunas"].values()))
-    #: A RÉGUA COBRAVA O CONTRÁRIO DO QUE O NOME DELA PROMETE, e foi assim até
-    #: 02/09/2026: o título diz *"vira 70% na tela"* e a linha exigia `0.7`. A
-    #: tela obedeceu à linha e não ao título — a foto de 02/09 mostra `1` ao
-    #: lado da barra de brilho, nas duas colunas, que é o `1.0` do disco escrito
-    #: cru. O `%` é da TELA (o desenho escreve `82%` nesta caixa) e a conversão
-    #: mora no pacote, porque o JS não sabe se um número é porcentagem.
     assert col["brilho"] == "70%", (
         f"o brilho saiu {col.get('brilho')!r}. `leds.lightbar_brightness` está "
         f"no schema com faixa declarada e preenchido nos 33 perfis dela; "
         f"`—` aqui é o travessão de volta, e `0.7` é o disco cru na tela.")
     assert col["brilho-pct"] == 70, "o disco guarda 0..1 e a barra pede 0..100"
 
-    #: A COR CONTINUA VINDO DO DAEMON, não do perfil: o brilho é o que está
-    #: SALVO, a cor é o que está ACESO, e quando discordam manda o vivo.
     assert col["hex"] == "#0000FF", (
         "o hex veio do perfil (255,80,0) em vez do daemon (0,0,255). O vivo "
         "vence o salvo para a cor — é o contrário do brilho, de propósito.")
@@ -206,7 +165,7 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
     """O saldo da cura, e ele é a régua contra a recaída.
 
     Era 17 órfãos; em 01/09 ficou UM — `plugins`, que não é erro de ninguém: a
-    `gui/aba_sistema.py:95` já tinha medido que o IPC `plugin.list` existe e que
+    `gui/aba_sistema.py:68` já tinha medido que o IPC `plugin.list` existe e que
     **só a CLI o chama**. Um número maior que este é alguém tendo voltado a
     escrever travessão em cima de dado que existe.
 
@@ -271,75 +230,10 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         if n:
             orfaos[pagina] = sorted(r.get("sem_dono") or {})
     assert orfaos == {
-        # OS DOIS `forca:*` ENTRARAM À TARDE DE 03/09/2026, e nasceram de uma
-        # decisão dela — *"construir por controle"*. Nenhum é travessão sobre
-        # dado que existe; os dois foram perguntados ao esquema, ao IPC e ao
-        # produto antes de entrarem, e o que sobra em cada um é UMA FRASE DELA:
-        #
-        #   `forca:auto-da-mesa`    pôr a MESA em `Auto` perdeu o botão nesta
-        #                           aba, porque `ControllerRumbleOverride`
-        #                           RECUSA `auto` por unidade (ele escala pela
-        #                           bateria do controle PRIMÁRIO) e
         #                           `draft_config.with_controller_rumble`
-        #                           traduz o clique em "limpa o override e
-        #                           devolve a peça ao global". Um caminho novo
-        #                           para o degrau da mesa é desenho dela.
-        #
-        # E `barra:forca` SAIU no mesmo dia, curada: a barra "Personalizado"
-        # virou `<input type=range>` e grava (`a05_vibracao.intensidade`).
-        #
-        # `forca:global-em-auto` SAIU EM 04/09/2026, curado. Ele dizia *"a
-        # escolha dela fica gravada e não chega ao motor; o que falta é a tela
-        # AVISAR"* — e a tela avisa em dois tempos: no clique
         # (`a05_vibracao._aplicar_a_forca`, frase no cartão daquele controle) e
-        # no TEMPO (`a05_vibracao._ressalva_da_mesa`, linha no `#vib-estado`
-        # enquanto a mesa estiver em `Auto` com alguma peça a perder). A prova
-        # está em `test_a05_a_vibracao_aplica_e_fala.py`.
-        # **DE CINCO PARA TRÊS — 05/09/2026, e a régua ENVELHECEU DE NOVO:**
-        # os dois que saíram de `05-vibracao.html` saíram porque foram
-        # CURADOS, e a cura de cada um está escrita no `SEM_DONO` do pacote,
-        # que é o que esta régua exige de quem tira um da lista.
-        #
-        #   `barra:motor`         fechou em 04/09 pelas DUAS metades no mesmo
-        #                         dia: a decisão dela (*"os slcers do botão
-        #                         esquerdo e direito (forte e fraco) se
-        #                         multiplicam"*) fez a barra ser POLÍTICA e não
-        #                         comando — `efetivo(motor) = degrau x
-        #                         barra(motor)` —, e o método que grava um
-        #                         motor sem o outro nasceu junto
-        #                         (`rumble.motores.set`). Desenho em
-        #                         `aba05._barra_de_motor`, gesto em
-        #                         `a05_vibracao.motor`.
-        #
-        #   `forca:auto-da-mesa`  fechou DUAS vezes, e a segunda é a que vale:
-        #                         em 05/09 a linha de mesa SAIU inteira, e o
-        #                         `Auto` com ela, por decisão dela — *"não é
-        #                         pra ter mesa em nada da interface (…) segue
-        #                         os três modos sempre"*. Um órfão sobre um
-        #                         botão que não existe mais não é dívida: é
-        #                         fantasma.
-        #   `lado:ligado`        saiu em 14/09/2026, CURADO — o botão ganhou
-        #                         `data-gesto` e o valor que o acende, e a aba
-        #                         05 ficou SEM NENHUM órfão. É a primeira das
-        #                         dez a chegar a zero.
-        # **`heroic` SAIU EM 09/09/2026, CURADO** — `LANCADORES-ZERO-01`. Ele
-        # dizia *"o produto procura os seis e sabe dizer se estão aqui, mas não
-        # LÊ a biblioteca de nenhum deles"*, e as três afirmações caíram na
-        # mesma leva: `integrations/censo_dos_lancadores` abre os cinco
-        # catálogos, o selo do achado é `LOCALIZADO`, e a linha de baixo diz a
-        # contagem. A cura está escrita no `SEM_DONO` do pacote
-        # (`a07_lancadores`), que é o que esta régua exige de quem tira um da
-        # lista — sem isso a dívida vira fantasma.
         "07-lancadores.html": ["criar-perfil"],
         "09-sistema.html": ["plugins"],
-        # A PÁGINA DA CALIBRAÇÃO ENTROU EM 11/09/2026, com a F3-CALIBRAR, e o
-        # órfão dela é o botão «Começar». Foi perguntado antes de entrar, que é
-        # o que esta régua exige: **o daemon não tem método de calibração** —
-        # não é a tela que esqueceu de ligar o fio, é que não há a que ligar. O
-        # resto da página fechou (os cartões passaram a mostrar os controles de
-        # quem abre, com a leitura de cada um), e o `Começar` fica com a razão
-        # escrita na §5 da sprint, que é sprint própria e pede o aparelho na
-        # mesa.
         "calibrar-sensores.html": ["calibrar"],
     }, (
         f"os órfãos mudaram: {orfaos}. Cada um aqui é um valor que a tela mostra "

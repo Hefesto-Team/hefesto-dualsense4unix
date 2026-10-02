@@ -72,16 +72,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-#: Onde o estado canônico mora na instância da janela.
 ATRIBUTO_CANONICO = "_alvo_de_edicao"
-#: Os atributos legados que só os DUBLÊS DE TESTE ainda escrevem direto
-#: (Z2, 24/08/2026 — os sete leitores de produção migraram todos).
 ATRIBUTO_LEGADO_UNIQ = "_edit_target_uniq"
 ATRIBUTO_LEGADO_LABEL = "_edit_target_label"
 
-# Os motivos de não saber. São diferentes na tela porque são diferentes no
-# mundo — a mesma razão pela qual o módulo do vocabulário do "guardado" guarda
-# três motivos em vez de um.
 MOTIVO_SEM_ESTADO = "a janela ainda não leu o estado do Hefesto"
 MOTIVO_MESA_VAZIA = "não há controle ligado"
 MOTIVO_DAEMON_DESLIGADO = "o Hefesto está desligado"
@@ -90,11 +84,8 @@ MOTIVO_DAEMON_DESLIGADO = "o Hefesto está desligado"
 class EstadoDoAlvo(Enum):
     """Os três estados que o ``None`` de antes confundia em um."""
 
-    #: Ninguém escolheu nada e a janela não sabe — NÃO é ordem de escrever.
     DESCONHECIDO = "desconhecido"
-    #: Ela escolheu "Todos" (ou um alvo sem endereço fixo): escrita global.
     TODOS = "todos"
-    #: Ela escolheu um controle com endereço estável: escrita no override.
     CONTROLE = "controle"
 
 
@@ -125,12 +116,7 @@ class AlvoDeEdicao:
         return not self.desconhecido
 
     def recusa(self) -> str | None:
-        """A frase da recusa; ``None`` quando há alvo e a escrita segue.
-
-        Diz o que NÃO aconteceu e por quê — nem promete o que não fez, nem
-        manda a pessoa fazer o impossível (com a mesa vazia não há controle
-        para escolher no cabeçalho).
-        """
+        """A frase da recusa; ``None`` quando há alvo e a escrita segue."""
         if not self.desconhecido:
             return None
         return (
@@ -143,16 +129,10 @@ ALVO_DESCONHECIDO = AlvoDeEdicao(EstadoDoAlvo.DESCONHECIDO, motivo=MOTIVO_SEM_ES
 
 
 def alvo_de_edicao(host: Any) -> AlvoDeEdicao:
-    """O alvo de edição da janela ``host`` — nunca ``None``, nunca um chute.
-
-    Sem estado nenhum a resposta é ``DESCONHECIDO``, e é essa a diferença que
-    o atributo com default de classe apagava: ele respondia "global".
-    """
+    """O alvo de edição da janela ``host`` — nunca ``None``, nunca um chute."""
     atual = getattr(host, ATRIBUTO_CANONICO, None)
     if isinstance(atual, AlvoDeEdicao):
         return atual
-    # Ponte para quem ainda escreve o atributo antigo direto. A EXISTÊNCIA do
-    # atributo é o sinal: presente = alguém decidiu; ausente = ninguém decidiu.
     if not hasattr(host, ATRIBUTO_LEGADO_UNIQ):
         return ALVO_DESCONHECIDO
     uniq = getattr(host, ATRIBUTO_LEGADO_UNIQ, None)
@@ -163,11 +143,7 @@ def alvo_de_edicao(host: Any) -> AlvoDeEdicao:
 
 
 def definir_alvo(host: Any, uniq: str | None, label: str | None) -> AlvoDeEdicao:
-    """Grava o alvo escolhido: ``uniq`` preenchido = controle; vazio = "Todos".
-
-    Espelha os atributos legados para que os dublês de teste que ainda os
-    leem direto vejam exatamente o que veriam antes.
-    """
+    """Grava o alvo escolhido: ``uniq`` preenchido = controle; vazio = "Todos"."""
     if isinstance(uniq, str) and uniq:
         alvo = AlvoDeEdicao(EstadoDoAlvo.CONTROLE, uniq=uniq, label=label)
     else:
@@ -177,12 +153,7 @@ def definir_alvo(host: Any, uniq: str | None, label: str | None) -> AlvoDeEdicao
 
 
 def esquecer_alvo(host: Any, motivo: str) -> AlvoDeEdicao:
-    """Declara que a janela NÃO sabe qual é o alvo, e por quê.
-
-    Apaga os atributos legados da instância: os dublês de teste que ainda os
-    leem direto voltam ao ``None`` de hoje (mesmo comportamento, sem colisão
-    com outras frentes), e quem já pergunta a este módulo recebe a verdade.
-    """
+    """Declara que a janela NÃO sabe qual é o alvo, e por quê."""
     alvo = AlvoDeEdicao(EstadoDoAlvo.DESCONHECIDO, motivo=motivo)
     _gravar(host, alvo)
     return alvo

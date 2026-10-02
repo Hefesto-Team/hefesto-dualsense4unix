@@ -1,27 +1,4 @@
-"""O `DraftConfig` sabe escrever as SEIS seções por controle do esquema.
-
-MEDIDO EM 05/09/2026, atrás do pedido dela — *"pra cada perfil e dentro dele
-cada config pra cada controle"*. O ``ControllerOverrides`` do esquema tem seis
-seções (``leds``, ``triggers``, ``rumble``, ``speaker``, ``mic``, ``sensores``)
-e o rascunho sabia escrever **quatro**: ``with_controller_mic`` e
-``with_controller_sensores`` tinham ZERO ocorrências em ``src/`` e em
-``tests/``. As duas seções só atravessavam pelo passthrough byte-idêntico de
-``source_controllers`` — o que basta para não PERDER o que já estava no disco,
-e não basta para GRAVAR o que ela acabou de escolher no card daquela peça.
-
-ESTA RÉGUA MORDE NOS DOIS SENTIDOS:
-
-* pela LISTA — o esquema é a fonte, e uma sétima seção que nasça lá reprova
-  aqui até ganhar escritor. É o oposto de uma lista à mão, que envelhece calada
-  (foi assim que estas duas ficaram quatro dias sem ninguém ver);
-* pelo COMPORTAMENTO — cada escritor grava o que ela mexeu, não grava o que
-  repete o global, e limpa quando ela desiste.
-
-A MORDIDA: apague ``with_controller_mic`` do ``draft_config.py`` e
-:func:`test_as_seis_secoes_do_esquema_tem_escritor` reprova nomeando a seção
-órfã; troque o ``!=`` do global por um ``==`` e
-:func:`test_valor_igual_ao_global_nao_vira_override` reprova.
-"""
+"""O `DraftConfig` sabe escrever as SEIS seções por controle do esquema."""
 
 from __future__ import annotations
 
@@ -30,13 +7,8 @@ import pytest
 from hefesto_dualsense4unix.app.draft_config import DraftConfig, MicDraft
 from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
-#: O ENDEREÇO DE RÁDIO DA BANCADA, com a máscara da casa (octetos 4 e 5
-#: zerados) e sem os dois-pontos — a forma em que o daemon publica o `uniq`.
 UNIQ = "aabbcc0000ff"
 
-#: AS SEÇÕES QUE NÃO TÊM ESCRITOR POR DESENHO, com a razão. Vazio hoje, e o
-#: dict existe para que uma exceção futura seja DECLARADA em vez de a régua
-#: ser afrouxada — que é o defeito que esta casa mediu mais vezes.
 SEM_ESCRITOR: dict[str, str] = {}
 
 
@@ -58,13 +30,7 @@ def test_as_seis_secoes_do_esquema_tem_escritor() -> None:
 
 
 def test_o_mic_grava_os_dois_campos_daquela_peca() -> None:
-    """``volume`` e ``gain`` viram override DELA, e não do vizinho.
-
-    O ``muted`` NÃO: desde a O-MUDO-E-DO-CONTROLE-01 (28/09/2026) o mudo é do
-    controle e mora no ``maquina.json``, com um escritor só (o ato do
-    microfone, no daemon). MORDIDA: devolver o ramo do ``muted`` ao
-    ``with_controller_mic``.
-    """
+    """``volume`` e ``gain`` viram override DELA, e não do vizinho."""
     d = DraftConfig.default().with_controller_mic(
         UNIQ, MicDraft(muted=True, volume=40, gain=30))
     secao = d.controller_override(UNIQ).mic
@@ -74,12 +40,7 @@ def test_o_mic_grava_os_dois_campos_daquela_peca() -> None:
 
 
 def test_o_mic_nao_grava_o_botao_do_sistema() -> None:
-    """``button_toggles_system`` fica FORA — não tem caminho por unidade.
-
-    O ``hotkey.mic_button_loop`` consulta o ``DaemonConfig``, que é um por
-    máquina. Gravá-lo por peça faria a coluna "Ajuste próprio" acender sobre
-    um valor que nada aplica.
-    """
+    """``button_toggles_system`` fica FORA — não tem caminho por unidade."""
     d = DraftConfig.default().with_controller_mic(
         UNIQ, MicDraft(volume=40, button_toggles_system=True))
     secao = d.controller_override(UNIQ).mic
@@ -87,14 +48,7 @@ def test_o_mic_nao_grava_o_botao_do_sistema() -> None:
 
 
 def test_valor_igual_ao_global_nao_vira_override() -> None:
-    """Repetir o global não cria override — seria dívida que reaparece sozinha.
-
-    O GLOBAL PRECISA TER NÚMERO, e a régua já deu verde sobre a cura arrancada
-    por não ter: no `DraftConfig.default()` o mic é todo `None`, então o
-    caminho "igual ao global" nem era alcançado — o guarda de *sem opinião*
-    saía antes. Uma régua desta família só mede alguma coisa com os dois lados
-    preenchidos.
-    """
+    """Repetir o global não cria override — seria dívida que reaparece sozinha."""
     base = DraftConfig.default().model_copy(
         update={"mic": MicDraft(volume=55, muted=True)})
     d = base.with_controller_mic(UNIQ, MicDraft(
@@ -127,11 +81,7 @@ def test_os_sensores_gravam_um_sem_tocar_no_outro(campo: str) -> None:
 
 
 def test_sem_opiniao_limpa_a_secao_de_sensores() -> None:
-    """Os dois ``None`` são o caminho de volta ao default LIGADO.
-
-    ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08/2026): um perfil que não pediu
-    nada não pode desligar o sensor dela por omissão.
-    """
+    """Os dois ``None`` são o caminho de volta ao default LIGADO."""
     d = DraftConfig.default().with_controller_sensores(UNIQ, giroscopio=False)
     assert d.controller_override(UNIQ).sensores is not None
     limpo = d.with_controller_sensores(UNIQ)

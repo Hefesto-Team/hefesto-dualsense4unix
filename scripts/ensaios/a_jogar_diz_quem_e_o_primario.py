@@ -53,8 +53,6 @@ import tempfile
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-# O LAR DE MENTIRA VEM ANTES DE TUDO: `profiles_dir()` resolve o caminho no
-# primeiro uso, e um import antes desta linha o prenderia na pasta DELA.
 _LAR = pathlib.Path(tempfile.mkdtemp(prefix="ensaio-jogar-"))
 os.environ["HOME"] = str(_LAR)
 for _x in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"):
@@ -65,7 +63,6 @@ os.environ["HEFESTO_CARONA_WRAPPER"] = "0"
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
 from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
@@ -90,12 +87,9 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 ABA = "01-jogar.html"
 PERFIL = "Ensaio da Jogar"
 
-#: OS DOIS ENDEREÇOS SÃO MASCARADOS — octetos 4 e 5 zerados, a máscara da casa.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
-#: QUANTAS VOLTAS A MEDIDA NO TEMPO DÁ. 100 é o mesmo número do
-#: `--conta-mutacoes` do piloto.
 VOLTAS_NO_TEMPO = 100
 
 
@@ -218,13 +212,7 @@ def _modo_no_disco() -> object:
 
 
 def _modo_pela_aba_dez() -> object:
-    """O MESMO valor, lido pelo caminho da aba **Perfis** — a mordida do Passo 1.
-
-    `perfis_web._pacote_do_editor` é o que a aba 10 mostra no quadro «Modo»
-    (PERFIL-MODO-01). Ler por aqui é o que separa *"gravou num arquivo"* de
-    *"a outra tela vê"* — e é o que a sprint pede com todas as letras: *"clique
-    o modo na 01 e leia o valor na 10"*.
-    """
+    """O MESMO valor, lido pelo caminho da aba **Perfis** — a mordida do Passo 1."""
     return perfis_web._pacote_do_editor(load_profile(PERFIL)).get("modo")
 
 
@@ -233,29 +221,13 @@ def _uma_volta(*, publicado: bool, foto: str = "",
     """Abre a página, pinta as cenas, clica, e devolve o que a tela mostrou."""
     args = argparse.Namespace(**BANDEIRAS, abre=ABA)
     piloto = hefesto_vivo.Piloto(args)
-    # A PONTE QUE O GESTO RECEBE É O **MÓDULO** `pacotes.ponte`, importado no
-    # topo do piloto (`hefesto_vivo.py:85`), e ele chega ao gesto pelo terceiro
-    # argumento do despachante — ver `hefesto_vivo._gesto`, no `trabalhar()`.
-    # Trocá-lo aqui é o que impede um clique de ensaio de sair pelo socket dela.
     dubie = PonteDeMentira()
     hefesto_vivo.ponte = dubie  # type: ignore[assignment]
     saida: dict[str, object] = {"cliques": []}
 
-    # O ESTADO VEM DA CENA, e não do socket: o daemon dela não é tocado. Trocar
-    # a função dona é o que faz o `_tique` REAL rodar — o mesmo caminho do
-    # produto, e não uma segunda montagem da carga.
     cenas: dict[str, object] = {"agora": cena()}
 
     def _do_duble(**_kw: object) -> dict[str, object]:
-        # AS DUAS MANEIRAS DE O SERVIÇO CALAR, e a diferença é o passo 5 inteiro:
-        #
-        #   `{}`   o estado VAZIO chega ao pacote — é o dublê que a sprint pede,
-        #          e é a metade desta posse: a aba diz e para de afirmar;
-        #   `None` `estado_do_daemon` LEVANTA, que é o que o socket fechado faz
-        #          de verdade — e aí o `_tique` do piloto imprime `[daemon mudo]`
-        #          e RETORNA SEM CHAMAR O PACOTE. É a metade que não é desta
-        #          posse (`hefesto_vivo.py` é `nao_toca`), e este ramo existe
-        #          para MEDIR que ela falta, em vez de afirmar que falta.
         atual = cenas["agora"]
         if atual is None:
             raise mesa_viva.DaemonMudo("dublê: o serviço não respondeu")
@@ -326,7 +298,6 @@ def _uma_volta(*, publicado: bool, foto: str = "",
 
     t = 400
     GLib.timeout_add(t, abrir)
-    # A CENA 1 — o P1 é o primário e o gamepad virtual dele degradou.
     for _ in range(3):
         t += 500
         GLib.timeout_add(t, _tique)
@@ -334,7 +305,6 @@ def _uma_volta(*, publicado: bool, foto: str = "",
     GLib.timeout_add(t, _ler("p1-primario"))
     t += 500
     GLib.timeout_add(t, _foto(foto))
-    # A CENA 2 — o primário PASSA para o P2. O marcador tem de andar.
     t += 500
     GLib.timeout_add(t, _por("p2", cena(primario=P2)))
     for _ in range(3):
@@ -342,7 +312,6 @@ def _uma_volta(*, publicado: bool, foto: str = "",
         GLib.timeout_add(t, _tique)
     t += 700
     GLib.timeout_add(t, _ler("p2-primario"))
-    # A CENA 3 — o backend continua `uinput` e o MOTIVO some; o cartão não muda.
     t += 500
     GLib.timeout_add(t, _por("sem-motivo", cena(motivo=None)))
     for _ in range(3):
@@ -350,20 +319,13 @@ def _uma_volta(*, publicado: bool, foto: str = "",
         GLib.timeout_add(t, _tique)
     t += 700
     GLib.timeout_add(t, _ler("sem-motivo"))
-    # A MEDIDA NO TEMPO, com a mesa parada — antes de qualquer clique.
     t += 500
     GLib.timeout_add(t, _no_tempo)
-    # O CLIQUE — o chip Xbox, que grava no perfil ativo.
     if fazer_o_clique:
         t += 900
         GLib.timeout_add(t, _clicar)
         t += 1500
         GLib.timeout_add(t, _ler_o_perfil)
-    # A CENA 4 — o socket FECHA e `estado_do_daemon` LEVANTA, que é o caminho
-    # REAL de hoje. O piloto sai do tique sem chamar o pacote, e a tela FICA
-    # COM OS ÚLTIMOS VALORES: dois controles afirmados, nenhuma palavra de que
-    # ninguém respondeu. É o RELATO desta sprint, medido em vez de afirmado —
-    # e vem ANTES da cena 5 de propósito, com a mesa cheia na tela.
     t += 500
     GLib.timeout_add(t, _por("levanta", None))
     for _ in range(3):
@@ -371,9 +333,6 @@ def _uma_volta(*, publicado: bool, foto: str = "",
         GLib.timeout_add(t, _tique)
     t += 700
     GLib.timeout_add(t, _ler("socket-fechado"))
-    # A CENA 5 — o estado VAZIO chega ao pacote. A coluna tem de DIZER, e os
-    # cartões, PARAR DE AFIRMAR. É o dublê que a sprint pede, e é a metade
-    # desta posse.
     t += 500
     GLib.timeout_add(t, _por("calado", {}))
     for _ in range(3):

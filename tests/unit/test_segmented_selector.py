@@ -1,16 +1,4 @@
-"""Testes do SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01).
-
-O widget substitui o GtkComboBox na COSMIC (popup fechado no clique pelo
-cosmic-comp). A lógica por-ID vive em ``_SegmentedLogic`` (puro Python, sem GTK)
-e é testada via uma subclasse com hooks fake — sem display, sem GtkRadioButton
-real (a "mock de display" que o spec pede). Um smoke opcional exercita o widget
-real quando há GTK + display utilizável (``Gtk.init_check``).
-
-Semânticas cobertas (espelham o GtkComboBoxText):
-  - set_items: idempotente; preserva o id ativo se ainda existir, senão limpa.
-  - set_active_id: ativa o botão e EMITE "changed" — só quando o id muda.
-  - get_active_id: reflete o ativo (ou None).
-"""
+"""Testes do SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01)."""
 from __future__ import annotations
 
 from typing import Any
@@ -49,21 +37,11 @@ class _FakeSeg(_SegmentedLogic):
             cb(self)
 
 
-# ---------------------------------------------------------------------------
-# _index_of (lógica pura)
-# ---------------------------------------------------------------------------
-
-
 def test_index_of_encontra_e_falta() -> None:
     items = [("a", "A"), ("b", "B"), ("c", "C")]
     assert _SegmentedLogic._index_of(items, "b") == 1
     assert _SegmentedLogic._index_of(items, "z") is None
     assert _SegmentedLogic._index_of(items, None) is None
-
-
-# ---------------------------------------------------------------------------
-# set_items
-# ---------------------------------------------------------------------------
 
 
 def test_set_items_constroi_sem_ativo() -> None:
@@ -77,7 +55,7 @@ def test_set_items_idempotente_nao_reconstroi() -> None:
     seg = _FakeSeg()
     itens = [("a", "A"), ("b", "B")]
     seg.set_items(itens)
-    seg.set_items(list(itens))  # iguais → no-op
+    seg.set_items(list(itens))
     assert len(seg.rebuilds) == 1
 
 
@@ -86,7 +64,6 @@ def test_set_items_preserva_ativo_se_existir() -> None:
     seg.set_items([("a", "A"), ("b", "B"), ("c", "C")])
     seg.set_active_id("b")
     assert seg.get_active_id() == "b"
-    # Nova lista que ainda contém "b" → ativo preservado.
     seg.set_items([("a", "A"), ("b", "B")])
     assert seg.get_active_id() == "b"
 
@@ -95,7 +72,7 @@ def test_set_items_limpa_ativo_se_sumir() -> None:
     seg = _FakeSeg()
     seg.set_items([("a", "A"), ("b", "B")])
     seg.set_active_id("b")
-    seg.set_items([("x", "X"), ("y", "Y")])  # "b" sumiu
+    seg.set_items([("x", "X"), ("y", "Y")])
     assert seg.get_active_id() is None
 
 
@@ -104,14 +81,8 @@ def test_set_items_nao_emite_changed() -> None:
     seg.set_items([("a", "A"), ("b", "B")])
     seg.set_active_id("a")
     seg.changed_events.clear()
-    # Trocar itens preservando o ativo NÃO deve emitir "changed".
     seg.set_items([("a", "A"), ("b", "B"), ("c", "C")])
     assert seg.changed_events == []
-
-
-# ---------------------------------------------------------------------------
-# set_active_id / get_active_id / changed
-# ---------------------------------------------------------------------------
 
 
 def test_set_active_id_emite_changed_uma_vez() -> None:
@@ -128,7 +99,7 @@ def test_set_active_id_mesmo_id_nao_emite() -> None:
     seg.set_items([("a", "A"), ("b", "B")])
     seg.set_active_id("b")
     seg.changed_events.clear()
-    seg.set_active_id("b")  # já é o ativo → no-op (como o GtkComboBox)
+    seg.set_active_id("b")
     assert seg.changed_events == []
 
 
@@ -148,11 +119,6 @@ def test_connect_handler_recebe_o_widget() -> None:
     seg.set_active_id("a")
     assert recebidos == [seg]
     assert recebidos[0].get_active_id() == "a"
-
-
-# ---------------------------------------------------------------------------
-# Smoke do widget REAL (precisa de GTK + display utilizável)
-# ---------------------------------------------------------------------------
 
 
 def _gtk_pronto() -> bool:
@@ -176,25 +142,18 @@ def test_widget_real_smoke(wrap: bool) -> None:
     sel.connect("changed", lambda w: ev.append(w.get_active_id()))
     sel.set_items([("off", "Off"), ("rigid", "Rigid"), ("custom", "Custom")])
     assert sel.get_active_id() is None
-    # FIX #4 (None-state visual): NENHUM botão visível ativo — o founder oculto
-    # do grupo segura o estado inicial, casando o visual com get_active_id()==None.
-    # Sem isto, o 1º botão nasceria ativo e o item default ficaria inalcançável
-    # por clique (clicar um rádio já-ativo não dispara "toggled").
     assert sum(b.get_active() for b in sel._buttons) == 0
 
     sel.set_active_id("custom")
     assert sel.get_active_id() == "custom"
     assert ev == ["custom"]
-    # Exatamente um GtkRadioButton ativo.
     assert sum(b.get_active() for b in sel._buttons) == 1
 
-    # id repetido/inexistente não reemite.
     sel.set_active_id("custom")
     sel.set_active_id("nao_existe")
     assert ev == ["custom"]
 
-    # Clique do usuário (imune ao bug do cosmic-comp) emite "changed".
-    sel._buttons[1].clicked()  # "rigid"
+    sel._buttons[1].clicked()
     assert sel.get_active_id() == "rigid"
     assert ev == ["custom", "rigid"]
     assert sum(b.get_active() for b in sel._buttons) == 1
@@ -202,18 +161,7 @@ def test_widget_real_smoke(wrap: bool) -> None:
 
 @pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utilizável")
 def test_wrap_dispoe_em_grade_de_3_colunas_e_nao_empilha() -> None:
-    """S3: o modo ``wrap`` não pode reportar a altura de tudo empilhado.
-
-    Havia um ``GtkFlowBox`` dentro de um ``GtkScrolledWindow``. O FlowBox escolhe
-    o número de colunas pela largura que RECEBE, e o ScrolledWindow lhe oferecia
-    a largura mínima — a de um botão. Ele então reportava a altura dos 19 modos
-    EM COLUNA ÚNICA (606px medidos), e o mesmo valor para qualquer largura de
-    janela. Como o ``GtkNotebook`` adota o maior mínimo entre as páginas, esse
-    número virava o piso da aba inteira e a barra de rolagem era inevitável.
-
-    O contrato agora: grade de 3 colunas, altura proporcional ao número de
-    linhas e sensível à largura disponível.
-    """
+    """S3: o modo ``wrap`` não pode reportar a altura de tudo empilhado."""
     import gi
 
     gi.require_version("Gtk", "3.0")
@@ -227,7 +175,6 @@ def test_wrap_dispoe_em_grade_de_3_colunas_e_nao_empilha() -> None:
         "o modo wrap precisa de um container que NÃO renegocie colunas pela "
         "largura recebida (era GtkFlowBox, que empilhava tudo)"
     )
-    # 19 itens em 3 colunas: colunas 0..2 e linhas 0..6.
     posicoes = {
         (
             sel._container.child_get_property(b, "left-attach"),

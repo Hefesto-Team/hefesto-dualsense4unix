@@ -118,7 +118,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-try:  # importado como módulo do pacote (GUI/daemon/testes)
+try:
     from .steam_launch_options import (
         WRAPPER_PREFIX,
         apply_wrapper_to_all_games,
@@ -149,25 +149,12 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo doct
         tirar_o_atalho_dos_jogos,
     )
 
-#: Registro dos appids já vistos COM o wrapper. É o que separa "perdeu" de
-#: "nunca teve" — e a razão de ele viver em estado local, e não dentro do vdf,
-#: é a mesma do `proton-pin-lock.json`: marcador dentro do vdf não sobrevive à
-#: Steam, que regrava o arquivo ao sair.
 REGISTRO_BASENAME = "wrapper-visto.json"
 
-#: Motivo de um jogo estar sem o wrapper.
-MOTIVO_REGRESSAO = "regressao"       #: já teve o wrapper e PERDEU (o Pragmata)
-MOTIVO_NOVO = "novo"                 #: nunca teve (jogo novo na biblioteca)
-MOTIVO_ESTENDIDO = "ignore_estendido"  #: o nosso par está lá e não sei tirar
-#: ELE DEIXOU DE SER O CASO COMUM — ONDA5-07-01, 06/09/2026. Até aqui ele
-#: nomeava toda linha com a lista de IGNORE estendida à mão, e a decisão dela
-#: (07-Q1) foi *"Deve aplicar automaticamente como era no gtk"*: a lista
-#: estendida passou a ser SUBTRAÍDA por `steam_launch_options.subtrair_nosso_ignore`
-#: e cai no reparo como qualquer outra. O que sobra aqui é o resto honesto — a
-#: forma que a subtração não sabe desmontar —, e é para ela que a frase de
-#: reparo manual continua existindo.
+MOTIVO_REGRESSAO = "regressao"
+MOTIVO_NOVO = "novo"
+MOTIVO_ESTENDIDO = "ignore_estendido"
 
-#: Status de `reparar_ou_adiar`.
 REPARO_NADA = "nada_a_fazer"
 REPARO_FEITO = "reparado"
 REPARO_ADIADO_JOGO = "adiado_jogo_aberto"
@@ -181,7 +168,6 @@ class JogoSemWrapper:
 
     appid: str
     rotulo: str
-    #: A LaunchOptions atual, crua. `None` = o jogo nem tem a linha.
     opcoes: str | None
     motivo: str
     vdf: str
@@ -195,10 +181,7 @@ class Censo:
     faltantes: list[JogoSemWrapper] = field(default_factory=list)
     #: appids que ela recusou explicitamente (`jogos_sem_wrapper.txt`).
     recusados: list[str] = field(default_factory=list)
-    #: os recusados que AINDA carregam o wrapper — o reparo os tira
-    #: (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026).
     recusados_com_wrapper: list[str] = field(default_factory=list)
-    #: vdfs pulados por inteiro (Flatpak/Snap: o wrapper do host é invisível).
     sandbox: list[str] = field(default_factory=list)
     erros: list[str] = field(default_factory=list)
     steam_aberta: bool = False
@@ -216,12 +199,7 @@ class Censo:
 
     @property
     def intocaveis(self) -> list[JogoSemWrapper]:
-        """Linhas que carregam o nosso par numa forma que não sei desmontar.
-
-        AS DUAS CATEGORIAS CONTINUAM EXISTINDO; o que mudou em 06/09/2026 é
-        QUEM cai em cada uma. A lista estendida à mão — que era a razão inteira
-        desta propriedade — passou para a de baixo.
-        """
+        """Linhas que carregam o nosso par numa forma que não sei desmontar."""
         return [j for j in self.faltantes if j.motivo == MOTIVO_ESTENDIDO]
 
     @property
@@ -261,12 +239,7 @@ def caminho_do_registro(home: Path | None = None) -> Path:
 
 
 def ler_registro(path: Path | None = None, home: Path | None = None) -> dict[str, str]:
-    """AppIDs já vistos com o wrapper → epoch da última vez. Nunca levanta.
-
-    Registro ausente/corrompido = vazio, e vazio é o lado SEGURO: sem memória,
-    toda ausência vira ``novo`` — o produto ainda repara, só não promete que
-    "isto funcionava antes". Alegar regressão sem base seria pior que calar.
-    """
+    """AppIDs já vistos com o wrapper → epoch da última vez. Nunca levanta."""
     destino = path if path is not None else caminho_do_registro(home)
     try:
         dados = json.loads(destino.read_text(encoding="utf-8"))
@@ -287,16 +260,7 @@ def ler_registro(path: Path | None = None, home: Path | None = None) -> dict[str
 def gravar_registro(
     appids: Sequence[str], path: Path | None = None, home: Path | None = None
 ) -> bool:
-    """Anota que estes appids foram vistos COM o wrapper. Best-effort.
-
-    Só ACRESCENTA: um appid some do registro apenas se o arquivo for apagado.
-    Isso é deliberado — um jogo desinstalado e reinstalado depois continua
-    sabendo que já teve o wrapper, e uma leitura de vdf que falhou no meio não
-    apaga a memória de nada.
-
-    Escrita atômica (tmp + replace) porque o censo pode rodar em paralelo com
-    a GUI e com o doctor; meio arquivo lido viraria registro vazio.
-    """
+    """Anota que estes appids foram vistos COM o wrapper. Best-effort."""
     destino = path if path is not None else caminho_do_registro(home)
     atual = ler_registro(destino)
     agora = str(int(time.time()))
@@ -329,28 +293,7 @@ def censo_do_wrapper(
     recusados: Sequence[str] | None = None,
     anotar: bool = True,
 ) -> Censo:
-    """Quem tem e quem não tem a chamada do wrapper. **Nunca escreve no vdf.**
-
-    Read-only sobre o `localconfig.vdf`, portanto seguro **com a Steam
-    aberta** — que é a condição em que ela está quando o problema aparece, e a
-    razão de a detecção ser uma camada separada do reparo.
-
-    `anotar=True` atualiza o registro com quem está com o wrapper AGORA; é o
-    que dá memória à distinção regressão/novo. Passe `anotar=False` para uma
-    consulta que não deixa rastro (o `--censo` do doctor não precisa dela).
-
-    Guardas contra alarme falso — o instrumento aqui mente mais fácil que o
-    produto, e um aviso "seu jogo vai quebrar" que não é verdade custa a
-    confiança dela:
-
-    - vdf ilegível ou não-UTF-8 vira ERRO por-vdf, não uma biblioteca inteira
-      de "faltantes";
-    - vdf que parseia para ZERO apps é tratado como erro, não como "nenhum
-      jogo tem wrapper": é o retrato de uma leitura pega no meio de a Steam
-      regravar o arquivo;
-    - vdf de Flatpak/Snap é pulado inteiro (lá o wrapper do host é invisível,
-      então "não tem wrapper" é o estado CERTO, não um defeito).
-    """
+    """Quem tem e quem não tem a chamada do wrapper. **Nunca escreve no vdf.**"""
     fora = list(recusados if recusados is not None else ler_jogos_sem_wrapper())
     fora_set = {str(a).strip() for a in fora}
     com_wrapper: list[str] = []
@@ -379,8 +322,6 @@ def censo_do_wrapper(
             continue
         for appid, valor in sorted(apps.items()):
             if appid in fora_set:
-                # A lista dela diz "sem o atalho" — e um jogo que já o tinha
-                # ao entrar nela continuaria com ele se o censo só PULASSE.
                 if valor is not None and WRAPPER_PREFIX in valor:
                     recusados_com_wrapper.append(appid)
                 continue
@@ -418,12 +359,6 @@ def censo_do_wrapper(
     )
 
 
-#: O QUE A REGRESSÃO AVISA, e é a metade que a tira de duas linhas não comporta.
-#:
-#: Ele fica em constante própria — e não solto dentro da `f-string` — porque
-#: desde 06/09 há DUAS formas da mesma notícia, e esta é a única diferença entre
-#: elas. Um literal repetido nas duas seria a segunda escrita do mesmo aviso, e
-#: a primeira a envelhecer sozinha.
 AVISO_DA_REGRESSAO = (
     "Sem elas, no Bluetooth o jogo tende a não enxergar controle nenhum — "
     "mesmo com o controle vivo, a luz acesa e o perfil aplicado. "
@@ -431,39 +366,12 @@ AVISO_DA_REGRESSAO = (
 
 
 def frase_do_aviso(censo: Censo) -> str:
-    """A frase que vai para a TELA (GUI e doctor). `""` = nada a dizer.
-
-    Regra dela, 09/08: tudo tem que chegar na interface. E a frase precisa
-    nomear o JOGO — "1 jogo com problema" é o tipo de aviso que não ajuda
-    ninguém a agir.
-
-    A regressão vem primeiro e sozinha quando existe: é a única categoria em
-    que algo PAROU de funcionar, e é a que explica o sintoma confuso (controle
-    vivo, perfil aceso, jogo cego). Jogo novo é rotina de biblioteca, não
-    susto, e por isso ganha uma frase mais fria.
-    """
+    """A frase que vai para a TELA (GUI e doctor). `""` = nada a dizer."""
     return _frase_do_aviso(censo, com_o_aviso=True)
 
 
 def frase_do_aviso_curta(censo: Censo) -> str:
-    """A MESMA notícia sem o aviso — decisão 10-Q5 dela, 06/09/2026.
-
-    *"A tira passa a dizer só a metade curta e o aviso sai do texto."* A tira do
-    desfecho da aba Perfis tem DUAS linhas (`aba10.CSS`, `.desfecho`), e a frase
-    da regressão vem grudada na frase de ativação do perfil: as duas juntas
-    passam do que cabe, e o que a reticência come é sempre o FIM — que é onde
-    mora o *"vou repor assim que…"*.
-
-    `""` QUER DIZER "não há metade curta": ou a notícia já cabe (jogo novo,
-    lista de IGNORE estendida à mão), ou não há notícia nenhuma. Quem chama cai
-    na `frase_do_aviso`, e é isso que `carona_do_wrapper.ResultadoDaCarona`
-    escreve no contrato do campo `frase_curta`.
-
-    **O AVISO NÃO SAI DO PRODUTO — sai desta tira.** Ele continua inteiro no
-    toast da janela GTK e no CORPO do cartão da Steam da aba Lançadores
-    (`a07_lancadores.noticia`), que é o lugar onde a recusa também aparece. Um
-    cartão tem corpo; uma tira tem duas linhas.
-    """
+    """A MESMA notícia sem o aviso — decisão 10-Q5 dela, 06/09/2026."""
     if not censo.regressoes:
         return ""
     return _frase_do_aviso(censo, com_o_aviso=False)
@@ -490,10 +398,6 @@ def _frase_do_aviso(censo: Censo, *, com_o_aviso: bool) -> str:
             f"Steam: {nomes}. " + _como_reparar(censo)
         )
     if censo.intocaveis:
-        # ESTA FRASE DEIXOU DE ACENDER NO CASO COMUM — 06/09/2026 — e ela NÃO
-        # sai: é a frase certa para a linha que ainda sobrar, e o dia em que
-        # sobrar uma é o dia em que ela é a única coisa honesta na tela. O que
-        # mudou é a frequência, não a verdade.
         nomes = juntar_rotulos([j.rotulo for j in censo.intocaveis])
         return (
             f"Opções de Inicialização com a lista de IGNORE estendida à mão em "
@@ -554,9 +458,7 @@ def reparar_ou_adiar(
         return REPARO_ADIADO_JOGO, censo, None
     if censo.steam_aberta:
         return REPARO_ADIADO_STEAM, censo, None
-    # O AVESSO DO REPARO, com os mesmos portões — 21/09/2026: o jogo que ela
     # pôs em `jogos_sem_wrapper.txt` (à mão ou pela lista de exclusão do
-    # Hefesto) sai sem o atalho. Antes o censo só o pulava, e o que ele já
     # tinha ficava.
     tirado: dict[str, list[dict[str, str]]] = {"removed": [], "errors": []}
     if censo.recusados_com_wrapper:
@@ -584,11 +486,6 @@ def reparar_ou_adiar(
             [item["appid"] for item in resultado["applied"]], registro, home
         )
     return REPARO_FEITO, censo, resultado
-
-
-# --------------------------------------------------------------------------
-# CLI — o doctor.sh consome `--censo` (JSON); `--relatorio` é para gente.
-# --------------------------------------------------------------------------
 
 
 def _imprimir_relatorio(censo: Censo) -> int:
@@ -656,7 +553,6 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.nao_quero or args.quero:
-        # Import tardio pelo mesmo motivo do topo: modo avulso sem o pacote.
         try:
             from .steam_launch_options import (
                 desmarcar_jogo_sem_wrapper,
@@ -683,7 +579,6 @@ def main(argv: list[str] | None = None) -> int:
         status, censo, _ = reparar_ou_adiar(vdfs=args.vdf, dry_run=args.dry_run)
         _imprimir_relatorio(censo)
         print(f"[sentinela-wrapper] reparo: {status}")
-        # 3 = adiado (nada foi tocado), igual ao rc de recusa do vizinho.
         if status in (REPARO_ADIADO_JOGO, REPARO_ADIADO_STEAM):
             return 3
         return 1 if status == REPARO_ERRO else 0

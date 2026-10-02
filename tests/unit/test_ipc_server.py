@@ -98,10 +98,6 @@ async def test_profile_switch_ativa_e_retorna_nome(running_server):
     server, socket_path, fc = running_server
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("profile.switch", {"name": "shooter"})
-    # R-03 (auditoria 23/07): a resposta ganhou campos ADITIVOS
-    # (`mode_aplicado`/`secoes`) — antes ela dizia só o nome, mesmo quando o
-    # lock de gesto manual tinha descartado o modo do perfil. Asserção deixa de
-    # ser de igualdade para não congelar o contrato aditivo.
     assert result["active_profile"] == "shooter"
     assert result["mode_aplicado"] is True
     assert server.store.active_profile == "shooter"
@@ -125,11 +121,6 @@ async def test_profile_switch_inexistente(running_server):
 async def test_trigger_set_e_reset(running_server):
     _server, socket_path, fc = running_server
     async with IpcClient.connect(socket_path) as client:
-        # MESA-CHEIA-09 (E2): a resposta deixou de ser `{"status": "ok"}` seca
-        # e passou a dizer O QUE FEZ, como o `led.set` do mesmo arquivo já
-        # dizia. Aqui o pedido é sem `uniq` (rota clássica, broadcast): as duas
-        # listas vazias querem dizer "escrita global sem registro por
-        # controle" — não "não escreveu".
         esperado = {"status": "ok", "aplicado_em": [], "guardado_em": []}
         assert await client.call(
             "trigger.set",
@@ -137,10 +128,10 @@ async def test_trigger_set_e_reset(running_server):
         ) == esperado
 
         assert await client.call("trigger.reset", {"side": "right"}) == esperado
-        assert await client.call("trigger.reset") == esperado  # both
+        assert await client.call("trigger.reset") == esperado
 
     triggers = [c for c in fc.commands if c.kind == "set_trigger"]
-    assert len(triggers) >= 4  # 1 set + 1 reset + 2 reset both
+    assert len(triggers) >= 4
 
 
 @pytest.mark.asyncio
@@ -195,7 +186,6 @@ async def test_daemon_reload_sem_daemon_retorna_erro(running_server):
     async with IpcClient.connect(socket_path) as client:
         with pytest.raises(IpcError) as exc:
             await client.call("daemon.reload")
-    # Handler levanta ValueError("daemon não disponível...") -> CODE_INVALID_PARAMS.
     assert exc.value.code == CODE_INVALID_PARAMS
 
 
@@ -230,9 +220,6 @@ async def test_socket_permissao_0600(running_server):
 
     mode = stat.S_IMODE(socket_path.stat().st_mode)
     assert mode == 0o600
-
-
-# --- BUG-IPC-01: detecção de socket vivo vs. resto-morto -----------------
 
 
 def _make_server(tmp_path: Path, socket_name: str = "hefesto-dualsense4unix.sock") -> IpcServer:
@@ -282,7 +269,6 @@ async def test_start_falha_quando_outro_daemon_escuta(
     try:
         with pytest.raises(RuntimeError, match="socket ocupado"):
             await server_b.start()
-        # Socket do primeiro permanece intacto (mesmo inode).
         assert server_a.socket_path.exists()
         assert server_a.socket_path.stat().st_ino == inode_original
     finally:
@@ -295,20 +281,15 @@ async def test_start_remove_socket_resto_morto(
 ):
     """Caso (c): arquivo-resto sem listener -> unlink e recria."""
     stale = tmp_path / "resto.sock"
-    # Cria socket AF_UNIX sem listen() -> connect recebe ConnectionRefusedError.
     sck = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
     sck.bind(str(stale))
-    sck.close()  # deixa o nó no filesystem, mas não há listener
+    sck.close()
     assert stale.exists()
 
     server = _make_server(tmp_path, "resto.sock")
     try:
         await server.start()
         assert server.socket_path.exists()
-        # Prova empírica de que o listener está ativo agora (antes não estava):
-        # um connect síncrono deve ter sucesso. O ext4 pode reusar o inode do
-        # arquivo órfão, por isso comparar inode é frágil — connect é o teste
-        # canônico de "socket vivo".
         probe = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
         probe.settimeout(0.5)
         try:
@@ -340,19 +321,14 @@ async def test_stop_preserva_socket_recriado_por_outro(
     server = _make_server(tmp_path, "compartilhado.sock")
     await server.start()
 
-    # Simula outro daemon recriando o socket: apaga o atual e recria novo nó.
     server.socket_path.unlink()
     server.socket_path.touch()
     novo_inode = server.socket_path.stat().st_ino
 
     await server.stop()
-    # Como o inode atual diverge do registrado, stop não apagou.
     assert server.socket_path.exists()
     assert server.socket_path.stat().st_ino == novo_inode
     server.socket_path.unlink()
-
-
-# --- AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01 -----------------------------
 
 
 @pytest.mark.asyncio
@@ -403,15 +379,11 @@ async def test_apply_draft_rumble_aplica_policy(
     )
 
     assert "rumble" in resultado["applied"]
-    # Valores efetivos (200 * 0.3 = 60) enviados ao hardware.
     controller.set_rumble.assert_called_once_with(weak=60, strong=60)
-    # Valores brutos persistidos para re-asserção do poll loop.
     assert fake_daemon.config.rumble_active == (200, 200)
 
 
-# ---------------------------------------------------------------------------
 # AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01 — boundary do handler profile.switch
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -425,11 +397,9 @@ async def test_profile_switch_rejeita_path_traversal_sem_leak(running_server):
             await client.call("profile.switch", {"name": "../../etc/passwd"})
     assert exc_info.value.code == CODE_INVALID_PARAMS
     msg = str(exc_info.value)
-    # Não pode vazar path absoluto do sistema (home, etc, tmp_path, root).
     assert "/etc/passwd" not in msg
     assert "/home/" not in msg
     assert "/tmp/" not in msg
-    # Deve indicar que é problema de identifier/caractere proibido.
     assert "proibido" in msg or "identifier" in msg or ".." in msg
 
 
@@ -445,15 +415,9 @@ async def test_profile_switch_rejeita_path_absoluto_sem_leak(running_server):
     assert "/etc/passwd" not in msg
 
 
-# ---------------------------------------------------------------------------
-# FEAT-IPC-REQUEST-VALIDATION-01 — resiliência do dispatcher a clientes bugados
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_params_nao_objeto_retorna_invalid_params(running_server):
-    """Cliente que envia `params` não-objeto (lista) recebe INVALID_PARAMS limpo,
-    sem derrubar o servidor."""
+    """Cliente que envia `params` não-objeto (lista) recebe INVALID_PARAMS limpo,"""
     _server, socket_path, _ = running_server
     reader, writer = await asyncio.open_unix_connection(str(socket_path))
     try:
@@ -474,8 +438,7 @@ async def test_params_nao_objeto_retorna_invalid_params(running_server):
 async def test_excecao_inesperada_vira_internal_sem_derrubar(
     running_server, monkeypatch: pytest.MonkeyPatch
 ):
-    """Um handler que levanta exceção inesperada retorna INTERNAL (não vaza
-    stack ao cliente) e o servidor SOBREVIVE — a chamada seguinte funciona."""
+    """Um handler que levanta exceção inesperada retorna INTERNAL (não vaza"""
     server, socket_path, _ = running_server
 
     async def _boom(_params: object) -> object:
@@ -486,13 +449,9 @@ async def test_excecao_inesperada_vira_internal_sem_derrubar(
         with pytest.raises(IpcError) as exc:
             await client.call("daemon.status")
     assert exc.value.code == CODE_INTERNAL
-    # Servidor não morreu: outro método (não-patchado) ainda responde.
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("profile.list")
     assert "profiles" in result
-
-
-# --- FEAT-EMULATION-GAMEMODE-LONGPRESS-01 — handler daemon.emulation.suppress ---
 
 
 @pytest.mark.asyncio
@@ -521,15 +480,12 @@ async def test_emulation_suppress_toggle_set_e_validacao(tmp_path: Path) -> None
         daemon=fake_daemon,
     )
 
-    # Toggle (sem param): False -> True.
     r1 = await server._handle_emulation_suppress({})
     assert r1 == {"status": "ok", "emulation_suppressed": True}
     assert fake_daemon._emulation_suppressed is True
 
-    # Set explícito False.
     r2 = await server._handle_emulation_suppress({"suppressed": False})
     assert r2 == {"status": "ok", "emulation_suppressed": False}
 
-    # Tipo inválido -> ValueError (vira INVALID_PARAMS no dispatch).
     with pytest.raises(ValueError, match="suppressed"):
         await server._handle_emulation_suppress({"suppressed": "nao_e_bool"})

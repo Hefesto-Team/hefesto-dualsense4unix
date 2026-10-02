@@ -65,8 +65,6 @@ from typing import Any, ClassVar
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-# O `monta.py` importa os irmãos pelo nome curto (`import onde`), como o gerador
-# roda: a pasta da interface entra no caminho junto com o `src/`.
 
 from tests.conftest import exigir_gi_real
 
@@ -80,23 +78,15 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte as palavra,
 )
 
-#: A BANCADA, e não o publicado: é onde o desenho de hoje está. Quem coordena
-#: publica depois, e o publicado é cópia byte a byte dela.
 BANCADA = RAIZ / "mockup/08-conexoes.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 PAGINA = "08-conexoes.html"
 
-#: Os quatro lugares da tela, na ordem dos `<input>` do acordeão.
 LUGARES = ("p1", "p2", "p3", "p4")
 
-#: O transporte de cada jogador nas cenas. Os dois aparecem, e o número NÃO
-#: decide o transporte: o destaque não pode depender dele.
 TRANSPORTE = {1: "usb", 2: "bt", 3: "bt", 4: "usb"}
 
 
-# ---------------------------------------------------------------------------
-# As cenas — toda mesa possível, e todo alvo de cada uma
-# ---------------------------------------------------------------------------
 def _estado(jogadores: tuple[int, ...], alvo: int | str) -> dict[str, Any]:
     """O `state_full` que o daemon publicaria, com o alvo de saída guardado.
 
@@ -148,11 +138,6 @@ def _cenas() -> list[dict[str, Any]]:
     return cenas
 
 
-#: O ROTEIRO INTEIRO NUMA IDA SÓ ao motor. Ele abre o quadro da Gestão, pinta
-#: cada cena com o pintor do piloto e lê o PESO computado de cada chip (o
-#: destaque é `font-weight:600`) e a SOMBRA computada de cada cartão (a borda
-#: roxa do cartão marcado; `none` nos outros). Depois troca as regras da fita
-#: pelas de antes e roda as cenas da mordida.
 ROTEIRO = r"""
 (function(){
   const quadro = document.getElementById('cx8-1');
@@ -189,12 +174,7 @@ ROTEIRO = r"""
 
 
 def _regras_por_posicao() -> str:
-    """As regras da fita como o gerador as escrevia ATÉ esta sprint.
-
-    É a cura ARRANCADA, escrita aqui para a mordida rodar em vez de morar num
-    comentário: um estado por conectado do desenho (`todos`, `p1`, `p2`) e o
-    chip achado pelo `:nth-child(2 + i)`.
-    """
+    """As regras da fita como o gerador as escrevia ATÉ esta sprint."""
     fora = []
     for i, estado in enumerate(("todos", "p1", "p2")):
         fora.append(f"body:has(#gc-{estado}:checked) .fita .chip:nth-child({2 + i})"
@@ -247,7 +227,6 @@ def medido() -> dict[str, Any]:
         pytest.skip("sem sessão gráfica — o WebKit não abre")
 
     cenas = _cenas()
-    # A MORDIDA: as duas cenas que a prova do piloto mediu, com as regras de antes.
     mordida = [c for c in cenas if c["nome"] in (
         "mesa p2+p3, aberto 2", "mesa p1+p2+p4, aberto 4")]
     assert len(mordida) == 2, "as cenas da mordida sumiram — a régua ficou cega"
@@ -283,8 +262,6 @@ def medido() -> dict[str, Any]:
 
     view.connect("load-changed", carregou)
     view.load_uri(BANCADA.as_uri())
-    # O RELÓGIO DE SEGURANÇA É DESARMADO: um `timeout_add` pendente dispara no
-    # laço do PRÓXIMO teste de GUI do mesmo processo (já matou medições vizinhas).
     guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -298,34 +275,18 @@ def medido() -> dict[str, Any]:
             "lido_na_mordida": lido["mordida"]}
 
 
-# ---------------------------------------------------------------------------
-# 1. O chip aceso é o do jogador aberto — em toda mesa, com qualquer lugar vazio
-# ---------------------------------------------------------------------------
 def test_o_chip_aceso_e_o_do_jogador_aberto_em_toda_mesa(medido: dict[str, Any]) -> None:
-    """As 47 cenas: cada mesa não vazia dos quatro lugares, com cada alvo dela.
-
-    Entre elas, as duas da prova do piloto: o P1 fora (P2 no USB, P3 no BT) e o
-    P3 fora (P1, P2 e P4). Com UM controle só não há chip «Todos», e o dele é
-    o todos (`monta.escolha_da_fita`).
-
-    MORDIDA: devolva a regra por posição ao `aba08.py` e regere a 08 — reprova
-    em «mesa p2+p3, aberto 2» com a fita acendendo o P3.
-    """
+    """As 47 cenas: cada mesa não vazia dos quatro lugares, com cada alvo dela."""
     queixas = [q for c, lida in zip(medido["cenas"], medido["lido"], strict=True)
                if (q := _confere(c, lida))]
     assert not queixas, "\n".join(queixas)
 
 
-#: O defeito como a prova do piloto o MEDIU em 24/09, na 08 publicada: com o P1
-#: fora, o P2 aberto acendia o P3; com o P3 fora, o P4 aberto não acendia nada.
 DEFEITO_MEDIDO = {"mesa p2+p3, aberto 2": ["p3"], "mesa p1+p2+p4, aberto 4": []}
 
 
 def test_a_regua_morde_a_regra_por_posicao(medido: dict[str, Any]) -> None:
-    """A cura arrancada, na mesma ida ao motor: com as regras de antes, as duas
-    cenas da prova do piloto reproduzem O MESMO defeito que o piloto mediu — e
-    não um defeito qualquer, que um pintor quebrado também daria. O acordeão
-    continua certo (as regras dele ficam), e isso prova que a cena foi pintada."""
+    """A cura arrancada, na mesma ida ao motor: com as regras de antes, as duas"""
     for cena, lida in zip(medido["mordida"], medido["lido_na_mordida"], strict=True):
         acesos = [p for p, peso in lida["chips"] if int(float(peso or 0)) >= 600]
         assert acesos == DEFEITO_MEDIDO[cena["nome"]], (
@@ -336,20 +297,13 @@ def test_a_regua_morde_a_regra_por_posicao(medido: dict[str, Any]) -> None:
         assert _confere(cena, lida), f"{cena['nome']}: a conferência não acusou o defeito"
 
 
-# ---------------------------------------------------------------------------
-# 2. O texto da página: as regras são do jogador, e dos quatro
-# ---------------------------------------------------------------------------
 def _css_da_pagina() -> str:
     x = BANCADA.read_text(encoding="utf-8")
     return "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", x, flags=re.S))
 
 
 def test_a_pagina_acha_o_chip_pelo_jogador_e_nunca_pela_posicao() -> None:
-    """Sem WebKit também morde: a folha da 08 não conta filho da fita, e cada um
-    dos cinco estados tem a regra do SEU chip e, cada lugar, a do seu corpo.
-
-    MORDIDA: a mesma da régua do WebKit — reprova no primeiro `:nth-child`.
-    """
+    """Sem WebKit também morde: a folha da 08 não conta filho da fita, e cada um"""
     css = _css_da_pagina()
     posicao = re.search(r"\.fita \.chip[^{]*:nth-child", css)
     assert not posicao, f"a folha da 08 voltou a achar o chip pela posição: {posicao.group(0)!r}"
@@ -362,35 +316,22 @@ def test_a_pagina_acha_o_chip_pelo_jogador_e_nunca_pela_posicao() -> None:
             f"mesa, escolhê-lo não marcaria nada")
 
 
-# ---------------------------------------------------------------------------
-# 3. A 08 fala USB/BT onde nomeia o transporte
-# ---------------------------------------------------------------------------
-#: As palavras da língua do MAPA (`cabo`/`rádio`), que a tela não diz como
-#: transporte — menos a que o dono disser, se um dia ela voltar a ser a de tela.
 _DO_MAPA = {"cabo", "rádio"} - {palavra("usb").lower(), palavra("bt").lower()}
 _TRANSPORTE_NA_FRASE = re.compile(
     r"\b(?:no|na|pelo|pela|do|da|por|em)\s+(" + "|".join(sorted(_DO_MAPA)) + r")\b",
     re.I) if _DO_MAPA else None
 
-#: ONDE O RÁDIO É O RECURSO, e não o transporte — a regra da sprint: «turno de
-#: rádio» fica quando nomeia o custo. Cada uma com o dono dela.
 O_RADIO_E_O_RECURSO = (
-    "falando no rádio",   # o `?` do Check-up: quem mais fala na faixa (aba08)
-    "pesa no rádio",      # «Barra de luz: não pesa no rádio» (a08_conexoes)
-    "ruído no rádio",     # «Entrada USB 3.0: faz ruído no rádio» (a08_conexoes)
+    "falando no rádio",
+    "pesa no rádio",
+    "ruído no rádio",
 )
 
-#: A FRASE QUE NÃO É DESTA SPRINT, e a razão é de POSSE: ela mora no
-#: `topo.html`, o esqueleto das dez abas, e mudar uma palavra ali é regerar as
-#: dez — com outras frentes nas abas delas. Está no «pendente» do relatório.
-#: Não é tolerância: :func:`test_a_frase_de_fora_da_posse_continua_la` exige que
-#: ela continue lá, então quem a curar tem de tirá-la daqui.
 DE_OUTRA_POSSE = ("em outra porta ou no rádio",)
 
 
 class _TextoDeTela(HTMLParser):
-    """O que chega ao olho: texto e as quatro dicas, sem comentário, `<script>`,
-    `<style>` e a legenda do mockup (`.nota`, que o produto esconde)."""
+    """O que chega ao olho: texto e as quatro dicas, sem comentário, `<script>`,"""
 
     ATRIBUTOS = ("title", "aria-label", "placeholder", "data-hef-dica")
     VAZIOS: ClassVar[frozenset[str]] = frozenset({
@@ -447,12 +388,7 @@ def _transporte_na_lingua_do_mapa(frase: str) -> list[str]:
 
 
 def test_a_pagina_nao_nomeia_o_transporte_na_lingua_do_mapa() -> None:
-    """Toda frase de tela da 08 gerada — texto, `title`, `aria-label` — diz o
-    transporte com a palavra do dono.
-
-    MORDIDA: devolva *"Só funciona com o controle no rádio"* ao
-    `aba08.LUZ_NO_CABO` e regere a 08 — reprova nomeando a frase.
-    """
+    """Toda frase de tela da 08 gerada — texto, `title`, `aria-label` — diz o"""
     achados = [f"{trechos} em {frase[:110]!r}" for frase in _frases_da_pagina()
                if (trechos := _transporte_na_lingua_do_mapa(frase))]
     assert not achados, "a 08 ainda nomeia o transporte na língua do mapa:\n" + "\n".join(achados)
@@ -468,12 +404,7 @@ def test_a_frase_de_fora_da_posse_continua_la() -> None:
 
 
 def test_a_linha_do_radio_diz_a_palavra_do_dono() -> None:
-    """«Pelo BT, som ou vibração, um por vez» — a linha de cada controle na
-    seção do rádio, como a página a mostra.
-
-    MORDIDA: devolva «Pelo rádio» ao `a08_conexoes._linha_do_controle` e regere
-    a 08 — reprova.
-    """
+    """«Pelo BT, som ou vibração, um por vez» — a linha de cada controle na"""
     alvo = f"Pelo {palavra('bt')}, som ou vibração, um por vez."
     assert any(alvo in f for f in _frases_da_pagina()), (
         f"nenhuma linha da seção do rádio diz {alvo!r}")
@@ -491,12 +422,7 @@ def a08() -> Any:
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_a_dica_da_luz_que_a_08_pinta_fala_usb_e_bt(a08: Any, via: str) -> None:
-    """O `title` do «A luz não acende» é repintado a cada tique pelo dono
-    (`secao_controles.dica_do_botao`), por cima do que o desenho escreveu.
-
-    MORDIDA: devolva *"Só vale no rádio. Pelo cabo…"* ao
-    `secao_controles.DICA_NO_CABO` — reprova no USB.
-    """
+    """O `title` do «A luz não acende» é repintado a cada tique pelo dono"""
     dica = a08.dica_da_luz(via)
     assert palavra("bt") in dica, (
         f"a dica da luz no {palavra(via)} não diz {palavra('bt')!r}: {dica!r}")
@@ -517,11 +443,7 @@ def test_a_dica_do_microfone_no_bt_conta_o_custo_na_palavra_do_dono(a08: Any) ->
 
 
 def test_o_exame_diz_o_pareamento_na_palavra_do_dono() -> None:
-    """«Nenhum controle pareado por BT» — o `?` de uma linha do Check-up.
-
-    MORDIDA: devolva «pareado por rádio» ao `exame_da_mesa.pareamentos` —
-    reprova.
-    """
+    """«Nenhum controle pareado por BT» — o `?` de uma linha do Check-up."""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import pareamentos
 
     def busctl(argv: list[str]) -> str:
@@ -532,9 +454,6 @@ def test_o_exame_diz_o_pareamento_na_palavra_do_dono() -> None:
     assert not _transporte_na_lingua_do_mapa(item.porque), item.porque
 
 
-#: UM PRO CONTROLLER NO BT, na forma que o daemon publica em `external`
-#: (`ipc_handlers._handle_controller_list`). O endereço é da faixa SINTÉTICA
-#: da casa (`aa:bb:cc`), nunca de aparelho real.
 _PRO_NO_BT: dict[str, Any] = {
     "name": "Pro Controller", "vid": "057e", "pid": "2009", "bus": "bluetooth",
     "uniq": "aa:bb:cc:00:00:5b", "driver": "hid-nintendo", "player_slot": 4,
@@ -562,16 +481,7 @@ def test_o_aviso_do_externo_na_08_diz_a_palavra_do_dono(a08: Any) -> None:
 
 
 def test_a_dica_do_cartao_nao_conta_os_controles_do_desenho() -> None:
-    """A dica do número do cartão vale em qualquer mesa: sem número de controles.
-
-    ERA A DA SETA ▴ do acordeão, que dizia «os {len(CONECTADOS)} abrem juntos»
-    — os DOIS do desenho — num `title` estático que o piloto não repinta. O
-    acordeão saiu em 26/09/2026 (os cartões), e a regra fica para a dica que
-    sobrou: o `title` do «P N» e do aparelho.
-
-    MORDIDA: ponha `len(CONECTADOS)` na `dica_linha` do `aba08.linha_do_controle`
-    e regere a 08 — reprova.
-    """
+    """A dica do número do cartão vale em qualquer mesa: sem número de controles."""
     x = BANCADA.read_text(encoding="utf-8")
     dicas = re.findall(r'<label class="gc-(?:num|abre)"[^>]*?title="([^"]*)"', x)
     assert len(dicas) == 2 * len(LUGARES), (
@@ -581,15 +491,11 @@ def test_a_dica_do_cartao_nao_conta_os_controles_do_desenho() -> None:
     assert not com_numero, f"a dica do cartão conta os controles do desenho: {com_numero}"
 
 
-# ---------------------------------------------------------------------------
-# 4. O som sai pelo rádio desde 10/09 — e os dois cabeçalhos dizem isso
-# ---------------------------------------------------------------------------
 _CABECALHOS = (
     "src/hefesto_dualsense4unix/integrations/alto_falante_bt.py",
     "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py",
 )
 
-#: O que os cabeçalhos diziam antes de 10/09 e deixou de ser verdade. Minúsculas.
 _O_QUE_NEGAVA = (
     "não escreve no aparelho.**",
     "quem escreve é o ensaio",
@@ -600,11 +506,7 @@ _O_QUE_NEGAVA = (
 
 @pytest.mark.parametrize("relativo", _CABECALHOS)
 def test_o_cabecalho_nao_nega_o_som_pelo_radio(relativo: str) -> None:
-    """O cabeçalho diz quem escreve o `0x35` e não nega que ele toque.
-
-    MORDIDA: devolva *"**não escreve no aparelho.** Ele MONTA bytes; quem
-    escreve é o ensaio"* ao cabeçalho do `alto_falante_bt.py` — reprova.
-    """
+    """O cabeçalho diz quem escreve o `0x35` e não nega que ele toque."""
     doc = ast.get_docstring(ast.parse((RAIZ / relativo).read_text(encoding="utf-8"))) or ""
     baixa = " ".join(doc.lower().split())
     negou = [f for f in _O_QUE_NEGAVA if f in baixa]
@@ -613,12 +515,6 @@ def test_o_cabecalho_nao_nega_o_som_pelo_radio(relativo: str) -> None:
         f"o cabeçalho de {relativo} não diz quem escreve o som no rádio, nem o degrau")
 
 
-#: OS OUTROS QUE NEGAVAM, MEDIDOS POR GREP DA FRASE — a sprint nomeava três
-#: textos, e o grep achou mais quatro com a mesma negação: o cabeçalho da régua
-#: do som, o da bomba (07/09), o do byte `[2]` (08/09) e o do ensaio (06/09).
-#: Os quatro nasceram antes da orelha dela e citavam a proibição que o mapa
-#: trocou pelo `0x35` em 10/09; o do byte `[2]` dizia ainda que ela estava
-#: transcrita no cabeçalho do `alto_falante_bt.py`, que esta sprint curou.
 _OS_QUE_CITAVAM_A_PROIBICAO = (
     "tests/unit/test_o_som_que_sai_do_sink_ao_byte.py",
     "tests/unit/test_a_bomba_do_som_no_radio.py",
@@ -626,7 +522,6 @@ _OS_QUE_CITAVAM_A_PROIBICAO = (
     "scripts/ensaios/o_som_que_sai.py",
 )
 
-#: A proibição de antes de 10/09, e o que ela concluía. Minúsculas.
 _A_PROIBICAO_QUE_CAIU = (
     "mandou um byte de áudio por rádio",
     "não escrever, em lugar nenhum",
@@ -647,18 +542,12 @@ def _docstrings_de(relativo: str) -> dict[str, str]:
 
 @pytest.mark.parametrize("relativo", _OS_QUE_CITAVAM_A_PROIBICAO)
 def test_o_texto_nao_cita_a_proibicao_que_caiu(relativo: str) -> None:
-    """O som saiu pelo rádio em 10/09, e o texto o conta pelo degrau: o `0x35`.
-
-    MORDIDA: devolva *"ninguém desta casa mandou um byte de áudio por rádio"* ao
-    cabeçalho de `test_o_som_que_sai_do_sink_ao_byte.py` — reprova.
-    """
+    """O som saiu pelo rádio em 10/09, e o texto o conta pelo degrau: o `0x35`."""
     docs = _docstrings_de(relativo)
     if relativo.endswith("test_o_som_que_sai_do_sink_ao_byte.py"):
         assert "TestNadaAquiAfirmaQueSomSaiu" in docs, (
             "a classe TestNadaAquiAfirmaQueSomSaiu sumiu — a régua ficou cega")
     for quem, doc in docs.items():
-        # A QUEBRA DE LINHA NÃO ESCONDE A FRASE: «Não funciona, e» numa linha e
-        # «não há ponte» na seguinte é a mesma frase.
         corrido = " ".join(doc.lower().split())
         ainda = [f for f in _A_PROIBICAO_QUE_CAIU if f in corrido]
         assert not ainda, f"{quem} de {relativo} ainda cita a proibição que caiu: {ainda}"

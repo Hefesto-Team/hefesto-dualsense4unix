@@ -1,10 +1,4 @@
-"""Testes de LED control.
-
-O bloco do rumble com throttle (`RumbleEngine`) saiu em 28/09/2026 junto com a
-classe, que o daemon nunca construiu: a vibração passa pelo funil vivo
-(`core.rumble._effective_mult`, pelas três rotas que o chamam), e as réguas
-dele estão em `test_rumble_policy.py` e `test_subsystem_rumble.py`.
-"""
+"""Testes de LED control."""
 from __future__ import annotations
 
 import pytest
@@ -62,14 +56,11 @@ class TestApplyLedSettings:
         """
         fc = FakeController()
         fc.connect()
-        # Simular usuário mutou o mic previamente (botão físico / IPC).
         fc.set_mic_led(True)
         assert fc.mic_led_history == [True]
 
-        # Aplicar settings sem mic_led explícito — default False.
         apply_led_settings(fc, LedSettings(lightbar=(0, 0, 0)))
 
-        # Histórico inalterado: o apply NÃO tocou o mic LED.
         assert fc.mic_led_history == [True]
         mic_cmds = [c for c in fc.commands if c.kind == "set_mic_led"]
         assert len(mic_cmds) == 1, (
@@ -77,21 +68,13 @@ class TestApplyLedSettings:
         )
 
     def test_apply_led_settings_ignora_mic_led_do_settings(self):
-        """Mesmo quando caller passa mic_led=True explícito, o apply ignora.
-
-        Garante que `LedSettings.mic_led` virou campo no-op (documentado no
-        módulo). Callers antigos que passavam `mic_led=...` não regridem o
-        estado runtime.
-        """
+        """Mesmo quando caller passa mic_led=True explícito, o apply ignora."""
         fc = FakeController()
         fc.connect()
         fc.set_mic_led(True)
 
-        # Caller antigo instancia com mic_led=False — comportamento anterior
-        # apagaria o LED. Pós-fix: ignorado.
         apply_led_settings(fc, LedSettings(lightbar=(255, 0, 0), mic_led=False))
 
-        # Nenhuma chamada adicional de set_mic_led.
         assert fc.mic_led_history == [True]
 
     def test_apply_led_settings_propaga_player_leds_todos_acesos(self):
@@ -127,10 +110,7 @@ class TestApplyLedSettings:
         assert fc.last_player_leds == bits
 
     def test_apply_led_settings_default_propaga_player_leds_zerado(self):
-        """Default de LedSettings (sem passar player_leds) ainda chama set_player_leds
-        com o zerado — mantém o hardware consistente com o perfil recém-carregado
-        em vez de preservar a configuração do último toggle manual.
-        """
+        """Default de LedSettings (sem passar player_leds) ainda chama set_player_leds"""
         fc = FakeController()
         fc.connect()
         apply_led_settings(fc, LedSettings(lightbar=(255, 255, 255)))

@@ -1,50 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO TECLADO ÓRFÃO — quem fecha o que o daemon abriu.
-
-O DEFEITO, NUMA FRASE (medido em 30/08/2026, remedido em 06/09): o daemon abre
-o teclado na tela e para sem fechá-lo; o daemon seguinte não sabe que aquele
-teclado existe, então o R3 dela não fecha nada e o L3 empilha um segundo por
-cima do primeiro. São TRÊS defeitos independentes, e por isso três arrancadas:
-
-  1. `shutdown` (`daemon/connection.py`) fechava o `_keyboard_device` e passava
-     direto pelo `_osk_controller`;
-  2. `close()` voltava na primeira linha com `self._process is None`, e um
-     `_OSKController` recém-criado tem SEMPRE None — o R3 era no-op silencioso;
-  3. o guarda do `open()` perguntava pelo mesmo atributo, que não conhece o
-     órfão — o L3 empilhava.
-
-## POR QUE ESTA RÉGUA USA PROCESSO DE VERDADE, e qual
-
-Ela abre `sleep`, e isso é a medição do §1 da sprint repetida: **o que se mede
-é o CICLO DE VIDA DO PROCESSO, não a janela.** O `sleep` faz o papel do
-`wvkbd-mobintl` pelo caminho declarado do produto — `_OSK_SPAWN_ARGS` mais o
-cache `_resolved_bin`/`_resolved_checked`/`_resolved_em` do `_resolve`, os
-mesmos três atributos que o §4 da sprint manda dublar.
-
-**Nada de janela de verdade, e o motivo é a tela dela**: o teclado na tela é
-`layer-shell` e aparece por cima de TODOS os workspaces, o dela inclusive. Um
-`wvkbd` de verdade nesta régua nasceria na frente dela.
-
-O que fica REAL é justamente o que decide: o PID é do kernel, o
-`/proc/<pid>/comm` é o do kernel, e o `SIGTERM` mata de verdade. Uma régua que
-dublasse o `/proc` mediria o dublê — e a adoção conservadora, que é o que separa
-esta cura de um `pkill wvkbd`, seria exatamente o que ficaria sem prova.
-
-## AS PROVAS DE QUE A ADOÇÃO NÃO PEGA O QUE NÃO É DELA
-
-Elas não são cortesia: `pkill wvkbd` fecharia o teclado que o COSMIC ou a mão
-dela abriu, e isso é estrago, não cura. São TRÊS formas de "o PID existe"
-mentir, e cada uma tem caso próprio:
-
-  - PID no arquivo que já morreu → nada é adotado, nada estoura, o L3 abre
-    normal;
-  - PID VIVO cujo `/proc/<pid>/comm` não é o binário do teclado (um PID
-    reciclado pelo kernel) → não é adotado, **e** o R3 não mata o processo
-    alheio. As duas metades são casos separados de propósito: num teste só, a
-    asserção da recusa dispara primeiro e o estrago nunca chega a ser medido;
-  - PID de um DEFUNTO por colher (`Z` no `/proc/<pid>/stat`) → `/proc` e `comm`
-    passariam nas três perguntas, e não há teclado na tela nenhum.
-"""
+"""A RÉGUA DO TECLADO ÓRFÃO — quem fecha o que o daemon abriu."""
 from __future__ import annotations
 
 import contextlib
@@ -66,37 +21,19 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
 from hefesto_dualsense4unix.daemon.subsystems import keyboard as subsistema
 from hefesto_dualsense4unix.daemon.subsystems.keyboard import _OSKController
 
-#: O dublê do binário do teclado na tela. `sleep` porque ele existe em qualquer
-#: máquina que rode esta suíte, morre com `SIGTERM` sem reclamar e — o que
-#: importa — tem um `/proc/<pid>/comm` de verdade para a adoção conferir.
 _DUBLE = "sleep"
-#: Longo o bastante para que a morte medida seja sempre a que a régua causou.
 _DUBLE_ARGV = [_DUBLE, "600"]
 
 
 def _vivo(pid: int) -> bool:
-    """O PID existe E ainda roda? Pergunta ao kernel, não a um atributo Python.
-
-    O ZUMBI NÃO CONTA, e essa distinção quase deixou esta régua mentir ao
-    contrário: um filho que recebeu `SIGTERM` e cujo pai ainda não chamou `wait`
-    mantém `/proc/<pid>` inteiro. Como o pai destes processos é o próprio pytest,
-    um `Path("/proc/<pid>").exists()` ingênuo dava "VIVO" para todo teclado que a
-    cura tinha acabado de fechar corretamente.
-    """
+    """O PID existe E ainda roda? Pergunta ao kernel, não a um atributo Python."""
     if not Path(f"/proc/{pid}").exists():
         return False
-    # O produto responde a mesma pergunta, e a régua pergunta a ELE — assim as
-    # duas nunca divergem sobre o que é "morto".
     return not subsistema._pid_e_zumbi(pid)
 
 
 def _comm_real(pid: int) -> str | None:
-    """O `/proc/<pid>/comm` lido pela régua, sem passar pelo produto.
-
-    Existe para o arranjo do caso do PID reciclado se conferir a si mesmo: se o
-    processo alheio tivesse por acaso o mesmo `comm` do dublê, o caso mediria
-    outra coisa e ninguém veria.
-    """
+    """O `/proc/<pid>/comm` lido pela régua, sem passar pelo produto."""
     try:
         return Path(f"/proc/{pid}/comm").read_text(encoding="utf-8").strip()
     except OSError:
@@ -104,14 +41,7 @@ def _comm_real(pid: int) -> str | None:
 
 
 def _esperar_morrer(pid: int, *, segundos: float = 5.0) -> bool:
-    """O `SIGTERM` é assíncrono: espera o kernel derrubar o processo.
-
-    Colhe o corpo pelo caminho (`waitpid` com `WNOHANG`) para a tabela de
-    processos de quem roda a suíte não encher de defuntos.
-
-    Sem esta espera a régua ficaria intermitente — e um teste de ciclo de vida
-    intermitente é pior que nenhum, porque ensina a ignorar o vermelho.
-    """
+    """O `SIGTERM` é assíncrono: espera o kernel derrubar o processo."""
     limite = time.monotonic() + segundos
     while True:
         with contextlib.suppress(ChildProcessError, OSError):
@@ -127,14 +57,8 @@ def _esperar_morrer(pid: int, *, segundos: float = 5.0) -> bool:
 def mesa(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> Iterator[dict[str, Any]]:
-    """Um teclado na tela dublado por `sleep`, e um `XDG_RUNTIME_DIR` só desta régua.
-
-    O `XDG_RUNTIME_DIR` próprio importa: o arquivo de sessão é o fio entre dois
-    daemons, e um teste que o herdasse do anterior mediria o teclado do vizinho.
-    """
+    """Um teclado na tela dublado por `sleep`, e um `XDG_RUNTIME_DIR` só desta régua."""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    # Os TRÊS atributos do cache do `_resolve` que a sprint manda dublar vêm
-    # pelo caminho declarado: o candidato único é o dublê, e o `which` o acha.
     monkeypatch.setattr(subsistema, "_OSK_CANDIDATES", (_DUBLE,))
     monkeypatch.setattr(subsistema, "_osk_candidatos", lambda: (_DUBLE,))
     monkeypatch.setattr(subsistema, "_OSK_SPAWN_ARGS", {_DUBLE: list(_DUBLE_ARGV)})
@@ -159,8 +83,6 @@ def mesa(
     try:
         yield estado
     finally:
-        # Nenhum `sleep` desta régua atravessa para a máquina de quem a rodou —
-        # nem quando um caso reprova no meio.
         for pid in nascidos:
             with contextlib.suppress(ProcessLookupError, PermissionError):
                 os.kill(pid, signal.SIGKILL)
@@ -170,33 +92,15 @@ def mesa(
 
 
 def _arquivo_de_sessao(_runtime: Path) -> Path:
-    """O caminho do arquivo de sessão, PERGUNTADO ao produto.
-
-    Não se remonta o caminho à mão aqui: o `runtime_dir` conhece o slug da
-    identidade e o fallback para o `cache_dir` quando não há `XDG_RUNTIME_DIR`.
-    Uma régua que digitasse o caminho mediria a própria digitação — é a forma
-    exata do "a régua digita o que devia LER".
-    """
+    """O caminho do arquivo de sessão, PERGUNTADO ao produto."""
     return subsistema._sessao_do_teclado()
-
-
-# ---------------------------------------------------------------------------
-# (1) o `shutdown` fecha o teclado que o daemon abriu
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_o_shutdown_do_daemon_fecha_o_teclado_na_tela(
     mesa: dict[str, Any],
 ) -> None:
-    """O daemon PARA e o teclado morre junto.
-
-    A MORDIDA: arranque o bloco `osk.close()` do `shutdown`
-    (`daemon/connection.py`, ao lado do `_keyboard_device`) — este caso reprova
-    dizendo que o processo continua VIVO depois do `shutdown`, que é a linha
-    exata do §1 da sprint (`o daemon PARA (shutdown) : VIVO <- ficou na tela
-    dela`).
-    """
+    """O daemon PARA e o teclado morre junto."""
     from hefesto_dualsense4unix.core.controller import ControllerState
     from hefesto_dualsense4unix.core.events import EventBus
     from hefesto_dualsense4unix.daemon.connection import shutdown
@@ -234,27 +138,13 @@ async def test_o_shutdown_do_daemon_fecha_o_teclado_na_tela(
         "daemon — o slot tem de zerar como o dos outros subsystems")
 
 
-# ---------------------------------------------------------------------------
-# (2) o daemon NOVO adota o órfão, e o R3 fecha
-# ---------------------------------------------------------------------------
-
-
 def test_o_daemon_novo_adota_o_orfao_e_o_r3_fecha(mesa: dict[str, Any]) -> None:
-    """Ela aperta R3 depois de o daemon reiniciar — e o teclado FECHA.
-
-    O controlador do daemon novo é outro objeto, com `_process is None`. Ele só
-    sabe do teclado pelo arquivo de sessão.
-
-    A MORDIDA: arranque a leitura do arquivo de sessão (faça `_adotar_orfao`
-    devolver None, ou devolva `close()` ao `if proc is None: return` do começo)
-    — este caso reprova dizendo que o R3 virou no-op e o processo continua VIVO.
-    """
+    """Ela aperta R3 depois de o daemon reiniciar — e o teclado FECHA."""
     antigo = _OSKController()
     antigo.open()
     pid = mesa["nascidos"][0]
     assert _vivo(pid)
 
-    # O daemon parou sem fechar (o defeito (1)) — e nasce um daemon NOVO.
     novo = _OSKController()
     assert novo._process is None, "o controlador novo tem de nascer sem processo"
     assert novo.aberto() is True, (
@@ -274,20 +164,10 @@ def test_o_daemon_novo_adota_o_orfao_e_o_r3_fecha(mesa: dict[str, Any]) -> None:
         "PID seguinte que o kernel reciclar herdaria essa anotação")
 
 
-# ---------------------------------------------------------------------------
-# (3) o L3 do daemon novo NÃO empilha
-# ---------------------------------------------------------------------------
-
-
 def test_o_l3_do_daemon_novo_nao_empilha_um_segundo_teclado(
     mesa: dict[str, Any],
 ) -> None:
-    """Um teclado na tela, um só — mesmo com o daemon trocado no meio.
-
-    A MORDIDA: a mesma da (2). Sem a leitura do arquivo de sessão, o guarda do
-    `open()` pergunta a um `self._process` que nasce None e este caso reprova
-    com DOIS PIDs vivos onde devia haver um.
-    """
+    """Um teclado na tela, um só — mesmo com o daemon trocado no meio."""
     antigo = _OSKController()
     antigo.open()
     pid = mesa["nascidos"][0]
@@ -301,31 +181,19 @@ def test_o_l3_do_daemon_novo_nao_empilha_um_segundo_teclado(
         f"pids {mesa['nascidos']!r}. É o defeito (3) da sprint, e a docstring do "
         "controlador já prometia o contrário ('evita stack de janelas "
         "sobrepostas'): a promessa valia dentro de um daemon só")
-    # E o alternador continua alternando: o toque seguinte FECHA o órfão.
     novo.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     assert novo.esperar_os_toques(5.0)
     assert _esperar_morrer(pid), (
         "o segundo toque do L3 no daemon novo não fechou o teclado adotado")
 
 
-# ---------------------------------------------------------------------------
-# AS DUAS PROVAS DE QUE A ADOÇÃO NÃO PEGA O QUE NÃO É DELA
-# ---------------------------------------------------------------------------
-
-
 def test_pid_que_ja_morreu_nao_e_adotado_e_o_l3_abre_normal(
     mesa: dict[str, Any],
 ) -> None:
-    """Arquivo apontando para um defunto: nada é adotado, nada estoura.
-
-    Sem esta prova, uma adoção que confiasse no arquivo faria o L3 achar que já
-    há teclado aberto e nunca mais abrir — o produto pararia de responder ao
-    botão para sempre, e a causa estaria num arquivo que ninguém olha.
-    """
+    """Arquivo apontando para um defunto: nada é adotado, nada estoura."""
     antigo = _OSKController()
     antigo.open()
     pid = mesa["nascidos"][0]
-    # Mata pelo lado de fora, SEM passar pelo produto — o arquivo continua lá.
     os.kill(pid, signal.SIGKILL)
     os.waitpid(pid, 0)
     assert _esperar_morrer(pid)
@@ -346,23 +214,11 @@ def test_pid_que_ja_morreu_nao_e_adotado_e_o_l3_abre_normal(
 def test_o_defunto_por_colher_nao_conta_como_teclado_na_tela(
     mesa: dict[str, Any],
 ) -> None:
-    """Um zumbi tem `/proc` e `comm` intactos — e não desenha teclado nenhum.
-
-    A TERCEIRA FORMA DE "O PID EXISTE" MENTIR, depois do PID morto e do PID
-    reciclado: o processo já morreu e ninguém chamou `wait`. As três perguntas
-    da adoção passariam todas — o número está no arquivo, `/proc/<pid>` abre, e
-    o `comm` é o do binário certo — e o produto concluiria que há teclado aberto
-    onde não há mais nada na tela. O L3 dela nunca mais abriria nenhum.
-
-    A MORDIDA: arranque o `or _pid_e_zumbi(pid)` do `_adotar_orfao` — este caso
-    reprova dizendo que o daemon novo achou teclado aberto num defunto.
-    """
+    """Um zumbi tem `/proc` e `comm` intactos — e não desenha teclado nenhum."""
     antigo = _OSKController()
     antigo.open()
     pid = mesa["nascidos"][0]
 
-    # Mata e NÃO colhe: nada de `waitpid` e nada de `poll()` no `Popen` antigo
-    # (o `poll` colhe por dentro, e o zumbi sumiria antes de ser medido).
     os.kill(pid, signal.SIGTERM)
     limite = time.monotonic() + 5.0
     while time.monotonic() < limite and not subsistema._pid_e_zumbi(pid):
@@ -384,21 +240,7 @@ def test_o_defunto_por_colher_nao_conta_como_teclado_na_tela(
 
 
 def _pid_reciclado(mesa: dict[str, Any]) -> subprocess.Popen[bytes]:
-    """Arma o caso do PID reciclado: um processo ALHEIO com o nosso número anotado.
-
-    O alheio é um `cat` bloqueado na leitura do próprio cano — vivo, real, e com
-    um `/proc/<pid>/comm` que não é o do teclado.
-
-    O BINÁRIO ANOTADO TEM DE SER UM CANDIDATO CONHECIDO, e esta linha é a
-    cicatriz de uma medição falsa desta mesma régua: a primeira versão anotava
-    `wvkbd-mobintl`, que a `mesa` tinha acabado de tirar do `_OSK_CANDIDATES`
-    para pôr o dublê no lugar. A adoção recusava pelo guarda do binário
-    DESCONHECIDO e nunca chegava à comparação de `comm` — os dois casos abaixo
-    passavam VERDES com a conferência do `/proc` inteiramente arrancada, medido
-    em 06/09/2026. Anota-se o dublê, então, e a divergência que sobra é
-    exatamente a que se quer medir: mesmo nome de binário no arquivo, processo
-    vivo de OUTRO nome no `/proc`.
-    """
+    """Arma o caso do PID reciclado: um processo ALHEIO com o nosso número anotado."""
     alheio = subprocess.Popen(
         ["cat"],
         stdin=subprocess.PIPE,
@@ -421,11 +263,7 @@ def _pid_reciclado(mesa: dict[str, Any]) -> subprocess.Popen[bytes]:
 
 
 def test_pid_reciclado_pelo_kernel_nao_e_adotado(mesa: dict[str, Any]) -> None:
-    """O PID vive, mas o `/proc/<pid>/comm` NÃO é o nosso binário: não é nosso.
-
-    O kernel recicla PIDs; o número anotado pode ter virado o editor dela, o
-    navegador, o compositor.
-    """
+    """O PID vive, mas o `/proc/<pid>/comm` NÃO é o nosso binário: não é nosso."""
     alheio = _pid_reciclado(mesa)
     try:
         assert _OSKController().aberto() is False, (
@@ -439,22 +277,11 @@ def test_pid_reciclado_pelo_kernel_nao_e_adotado(mesa: dict[str, Any]) -> None:
 def test_o_r3_nao_mata_o_processo_alheio_do_pid_reciclado(
     mesa: dict[str, Any],
 ) -> None:
-    """ESTE É O CASO QUE SEPARA A CURA DE UM `pkill wvkbd`.
-
-    Fechar por número sem conferir o `comm` mataria programa alheio — e o
-    sintoma para ela seria uma janela sumindo quando ela aperta R3.
-
-    Ele é irmão do de cima e mede a metade SEGUINTE de propósito: lá a adoção
-    recusa, aqui o R3 chega a agir e tem de não encostar no processo. Num teste
-    só, a asserção da recusa dispara primeiro e o estrago nunca chega a ser
-    medido — que é como uma cura pela metade atravessaria o vermelho.
-    """
+    """ESTE É O CASO QUE SEPARA A CURA DE UM `pkill wvkbd`."""
     alheio = _pid_reciclado(mesa)
     try:
         controlador = _OSKController()
         controlador.dispatch_token(TOKEN_CLOSE_OSK, "press")
-        # O R3 corre no fio do teclado: sem esperar, o `_vivo` abaixo mediria
-        # o instante ANTES do toque, e passaria com qualquer `close()`.
         assert controlador.esperar_os_toques(5.0)
         assert _vivo(alheio.pid), (
             f"o R3 MATOU UM PROCESSO ALHEIO (pid={alheio.pid}) — é o estrago "
@@ -466,12 +293,7 @@ def test_o_r3_nao_mata_o_processo_alheio_do_pid_reciclado(
 
 
 def test_o_arquivo_de_sessao_guarda_pid_e_binario(mesa: dict[str, Any]) -> None:
-    """O que o `open()` anota é o PID e o NOME do binário que ELE spawnou.
-
-    O nome gravado é o que o produto MANDOU abrir — não o que o `/proc` diz. É a
-    comparação entre os dois que a adoção faz, e ela só tem sentido se as duas
-    pontas vierem de origens diferentes.
-    """
+    """O que o `open()` anota é o PID e o NOME do binário que ELE spawnou."""
     ctrl = _OSKController()
     ctrl.open()
 

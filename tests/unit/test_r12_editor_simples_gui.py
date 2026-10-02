@@ -1,20 +1,4 @@
-"""R-12 (auditoria 23/07) — fiação da opção "Jogo da Steam" no editor simples.
-
-O contrato de dados está em `test_r12_editor_simples_jogo_steam.py`; aqui é o
-caminho que a usuária percorre de verdade na aba Perfis:
-
-- escolher "Jogo da Steam" mostra o campo livre e pede o NÚMERO (o mesmo widget
-  serve "Jogo específico", que pede o nome do programa — sem trocar a dica, o
-  rótulo do glade ("Nome do jogo:") é ambíguo para os dois);
-- salvar produz `window_class=["steam_app_<id>"]`;
-- reabrir o perfil volta para o editor SIMPLES com o appid no campo (sem o
-  round-trip, ela cairia no editor avançado a cada visita);
-- campo vazio NÃO degrada em silêncio: o save é recusado com frase de gente.
-
-Hermético: stubs de `gi.repository` quando falta PyGObject (padrão de
-`test_profiles_editor_mode.py`), widgets fake com a API por-ID do
-SegmentedSelector, nenhum GTK real construído.
-"""
+"""R-12 (auditoria 23/07) — fiação da opção "Jogo da Steam" no editor simples."""
 from __future__ import annotations
 
 import sys
@@ -25,9 +9,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o
-# stub que outro arquivo de teste planta em sys.modules — e por isso
-# deixava este módulo rodar contra um GTK de mentira.
 exigir_gi_real("R12 (editor simples)")
 
 
@@ -127,15 +108,7 @@ class _FakeSwitch:
 
 
 class _FakeBox:
-    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
-
-    CAMPO-QUE-NAO-NASCIA-01: o box nasce no glade com ``no-show-all=True``, e o
-    dublê nasce igual — senão ele responde "mostrei" a um ``show_all()`` que o
-    GTK de verdade ignoraria. ``show()`` para NA CAIXA (`filhos_visiveis`
-    continua falso); só ``show_all()`` com o ``no_show_all`` desarmado desce nos
-    filhos. Quem quiser afirmar que ela tem ONDE DIGITAR mede com GTK real em
-    ``test_campo_que_nao_nascia_01_o_jogo_da_steam_sem_onde_digitar.py``.
-    """
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK."""
 
     def __init__(self) -> None:
         self.visivel = False
@@ -210,7 +183,6 @@ class _Editor(pa.ProfilesActionsMixin):
         return None
 
     def _prefill_steam_appid(self) -> None:
-        # A busca do appid fala IPC; aqui só registramos que foi disparada.
         self.prefills += 1
 
     def _reload_profiles_store(self, **_kw: Any) -> None:
@@ -233,11 +205,6 @@ class TestSeletorAplicaA:
         ed._aplica_a.set_active_id("steam_game")
         assert ed._get("profile_game_entry_box").visivel
         entry = ed._get("profile_simple_custom_name")
-        # JOGO-QUE-SE-DIZ-01 (13/08/2026): a dica passou a listar as TRÊS
-        # formas que o campo entende (nome, endereço da loja, número). O que
-        # este teste guarda é o mesmo de antes — a dica da Steam fala do
-        # NÚMERO, a de "Jogo específico" fala do programa — e por isso a
-        # asserção virou "contém".
         assert "1599660" in entry.placeholder, entry.placeholder
         assert "endereço da loja" in entry.placeholder, entry.placeholder
         assert "Steam" in entry.tooltip
@@ -286,9 +253,6 @@ class TestSalvarPerfilDoJogo:
         assert ed.toasts and "número do jogo na Steam" in ed.toasts[-1], (
             "o toast tem de dizer O QUE falta, não 'Revise os campos do perfil'"
         )
-        # Este toast é o canal que sobrou para a frase de gente do R-12: o
-        # preview JSON ("Detalhes técnicos") que também a exibia saiu no
-        # redesign 1.0.0.
 
 
 class TestRoundTripNoEditor:
@@ -307,9 +271,7 @@ class TestRoundTripNoEditor:
         assert ed._mode_advanced is False
 
     def test_salvar_de_novo_nao_duplica_o_prefixo(self) -> None:
-        """O campo guarda o NÚMERO: se `_populate_editor` devolvesse a
-        `wm_class` inteira, o Salvar seguinte gravaria
-        `steam_app_steam_app_2111190` e o perfil nunca mais casaria."""
+        """O campo guarda o NÚMERO: se `_populate_editor` devolvesse a"""
         ed = _Editor()
         perfil = Profile(
             name="MadJack",

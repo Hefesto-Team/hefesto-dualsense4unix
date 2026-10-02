@@ -46,11 +46,6 @@ SPEC = RAIZ / "packaging" / "fedora" / "hefesto-dualsense4unix.spec"
 NIX = RAIZ / "packaging" / "nix" / "package.nix"
 
 
-# ---------------------------------------------------------------------------
-# Dublês — o mínimo para exercer o reconciliador sem daemon nenhum de pé
-# ---------------------------------------------------------------------------
-
-
 class ControllerDeMentira:
     """Só o `nos_hidraw_por_uniq`, que é a única coisa que o laço pergunta."""
 
@@ -86,34 +81,20 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> Any:
         cli, "broker_call_nonblocking", lambda _d, chamada: chamada()
     )
     daemon = mod.Daemon.__new__(mod.Daemon)
-    # Por default o nó responde: assim o terceiro ato (REAFIRMAR) só aparece
-    # quando o teste disser que o nó renasceu fechado.
     monkeypatch.setattr(mod.Daemon, "_no_de_fisico_esta_aberto", staticmethod(lambda _n: True))
     return daemon, atos, mod
-
-
-# ---------------------------------------------------------------------------
-# 1. BLOQUEANTE — o Modo Nativo tem de sobreviver a REINICIAR o daemon
-# ---------------------------------------------------------------------------
 
 
 class TestSobreviveAReiniciar:
     def test_o_modo_lido_do_disco_expoe_sem_ninguem_chamar_set_native_mode(
         self, bancada: Any
     ) -> None:
-        """A MORDIDA do bloqueante 1, e ela reproduz o boot LITERALMENTE.
-
-        `start()` faz `self._native_mode, _ = load_native_mode()` e nada mais:
-        `set_native_mode` NÃO roda, e não adianta chamá-lo (early-return de
-        idempotência). Aqui o daemon nasce com `_native_mode = True` e NINGUÉM
-        chama o gesto — só o tique. Se a exposição continuar amarrada ao
-        gesto, a lista de atos sai vazia e o jogo leva `EACCES`.
-        """
+        """A MORDIDA do bloqueante 1, e ela reproduz o boot LITERALMENTE."""
         daemon, atos, _mod = bancada
         daemon.controller = ControllerDeMentira(
             {"aabbcc000001": "/dev/hidraw3", "aabbcc000002": "/dev/hidraw7"}
         )
-        daemon._native_mode = True  # foi isto que o boot leu do disco
+        daemon._native_mode = True
 
         daemon._reconciliar_exposicao_do_modo_nativo()
 
@@ -130,12 +111,7 @@ class TestSobreviveAReiniciar:
         assert atos == []
 
     def test_o_poll_loop_reconcilia_a_exposicao_do_modo_nativo(self) -> None:
-        """Arranque a chamada do laço e este teste reprova.
-
-        «A casa sabe e o produto não faz» é o defeito mais caro daqui: a cura
-        escrita e nunca chamada. Sem esta régua, apagar a linha do `_poll_loop`
-        devolveria os bloqueantes 1 e 2 inteiros com a suíte toda verde.
-        """
+        """Arranque a chamada do laço e este teste reprova."""
         arvore = ast.parse(LIFECYCLE.read_text(encoding="utf-8"), filename=str(LIFECYCLE))
         laco = next(
             no
@@ -150,11 +126,6 @@ class TestSobreviveAReiniciar:
         assert "_reconciliar_exposicao_do_modo_nativo" in chamadas
 
 
-# ---------------------------------------------------------------------------
-# 2. BLOQUEANTE — o Modo Nativo tem de sobreviver a um REPLUG
-# ---------------------------------------------------------------------------
-
-
 class TestSobreviveAReplug:
     def test_o_no_que_saiu_e_solto_e_o_que_entrou_e_exposto(
         self, bancada: Any
@@ -166,7 +137,6 @@ class TestSobreviveAReplug:
         daemon._reconciliar_exposicao_do_modo_nativo()
         atos.clear()
 
-        # O controle some e volta como outro nó — cabo↔rádio, hub, ou dormiu.
         daemon.controller.nos = {"aabbcc000001": "/dev/hidraw9"}
         daemon._reconciliar_exposicao_do_modo_nativo()
 
@@ -175,13 +145,7 @@ class TestSobreviveAReplug:
     def test_o_no_que_renasceu_fechado_com_o_mesmo_numero_e_reafirmado(
         self, bancada: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A METADE QUE QUASE ESCAPOU, e é a que nenhuma contabilidade pega.
-
-        Replug que devolve o MESMO `/dev/hidrawN`: o conjunto de nós não muda,
-        o broker continua com a lease, e o nó está `0600 root` porque a regra
-        udev o refez. Só quem PERGUNTA AO APARELHO vê — e é o que o
-        `_no_de_fisico_esta_aberto` faz.
-        """
+        """A METADE QUE QUASE ESCAPOU, e é a que nenhuma contabilidade pega."""
         daemon, atos, mod = bancada
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = True
@@ -196,12 +160,7 @@ class TestSobreviveAReplug:
         assert atos == [("expor", "/dev/hidraw3")]
 
     def test_o_no_que_continua_aberto_nao_vira_pedido(self, bancada: Any) -> None:
-        """O irmão que mede o contrário — sem ele a régua acima daria verde sempre.
-
-        Com tudo em ordem o tique custa um `os.access` por controle e ZERO
-        pedidos. Uma reafirmação a cada 2 s voltaria a encher o journal como o
-        `hidraw_broker_hidden` de 15/08 (717 linhas em 2 h 51).
-        """
+        """O irmão que mede o contrário — sem ele a régua acima daria verde sempre."""
         daemon, atos, _mod = bancada
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = True
@@ -213,11 +172,7 @@ class TestSobreviveAReplug:
         assert atos == []
 
     def test_o_controle_que_sai_da_mesa_solta_a_lease(self, bancada: Any) -> None:
-        """Com zero controles o alvo é vazio, e a lease não pode sobrar.
-
-        É por isto que o tique roda ANTES do gate de conexão do `_poll_loop`:
-        depois dele, um daemon sem controle nenhum nunca chegaria aqui.
-        """
+        """Com zero controles o alvo é vazio, e a lease não pode sobrar."""
         daemon, atos, _mod = bancada
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = True
@@ -232,14 +187,7 @@ class TestSobreviveAReplug:
     def test_o_with_transitorio_nao_fecha_o_no_do_modo_nativo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A lease do broker é por CONEXÃO — e as duas saem do mesmo cliente.
-
-        O `with` do `_open_one` (o `hidapi.Device(path=…)`, que não aceita fd)
-        e o pedido do Modo Nativo compartilham `conn_id`. O `unexpose` do
-        `finally` acharia o nó no `held`, veria `refcount == 1` e mandaria o nó
-        para o REPOUSO — fechando, no meio do Modo Nativo, o nó que o jogo
-        está usando.
-        """
+        """A lease do broker é por CONEXÃO — e as duas saem do mesmo cliente."""
         from hefesto_dualsense4unix.integrations import hidraw_broker_client as cli
 
         atos: list[tuple[str, str]] = []
@@ -248,10 +196,6 @@ class TestSobreviveAReplug:
             def no_exposto_pelo_modo_nativo(self, path: str) -> bool:
                 return path == "/dev/hidraw3"
 
-        # O `exposicao` é o do PRODUTO, e tem de ser: um dublê que reimplemente
-        # o `with` nasce mais frouxo que o original e esconde exatamente o que
-        # esta régua mede (o `desexpor` do `finally`). Só as duas pontas de
-        # socket são desviadas.
         cliente = cli.HidrawBrokerClient(socket_path="/dev/null/nao-existe")
         cliente.expor = lambda no: atos.append(("expor", no)) or True  # type: ignore[method-assign]
         cliente.desexpor = lambda no: atos.append(("desexpor", no)) or True  # type: ignore[method-assign]
@@ -260,16 +204,11 @@ class TestSobreviveAReplug:
 
         with fabrica("/dev/hidraw3") as aberto:
             assert aberto is True
-        assert atos == []  # nem expor (já está) nem desexpor (não foi ele)
+        assert atos == []
 
         with fabrica("/dev/hidraw9"):
             pass
         assert atos == [("expor", "/dev/hidraw9"), ("desexpor", "/dev/hidraw9")]
-
-
-# ---------------------------------------------------------------------------
-# 3. BLOQUEANTE — os pacotes de distro não podem fechar o nó sem levar a porta
-# ---------------------------------------------------------------------------
 
 
 def _linhas_efetivas(texto: str) -> list[str]:
@@ -301,8 +240,6 @@ class TestOsPacotesNaoFechamSemPorta:
         ]
         assert len(abertas) == 2, abertas
         assert all('MODE="0660"' in linha for linha in abertas)
-        # STEAM-NO-FISICO-01 (24/09/2026): o Edge físico fecha junto, e a
-        # variante aberta o reabre junto — as duas linhas físicas do 0df2.
         edge = [
             linha
             for linha in linhas
@@ -312,13 +249,7 @@ class TestOsPacotesNaoFechamSemPorta:
         assert all('TAG+="uaccess"' in linha for linha in edge)
 
     def test_o_asset_versionado_continua_fechado(self) -> None:
-        """A decisão dela não mudou: o default é o nó nascer fechado.
-
-        O irmão da régua acima. Sem ele, alguém «consertaria» o bloqueante 3
-        reabrindo o asset — e a cura inteira sairia com a suíte verde. São
-        QUATRO desde a STEAM-NO-FISICO-01: o standard e o Edge, cada um pelo
-        cabo e pelo rádio.
-        """
+        """A decisão dela não mudou: o default é o nó nascer fechado."""
         linhas = _linhas_efetivas(REGRA.read_text(encoding="utf-8"))
         fechadas = [linha for linha in linhas if 'TAG-="uaccess"' in linha]
         assert len(fechadas) == 4, fechadas
@@ -327,11 +258,7 @@ class TestOsPacotesNaoFechamSemPorta:
     def test_a_transformacao_recusa_um_asset_que_ela_nao_alcanca(
         self, tmp_path: Path
     ) -> None:
-        """Guarda 2: `sed` que casa ZERO vezes passaria calado pela guarda 1.
-
-        O que sairia seria uma regra que não dá acesso a ninguém — o mesmo
-        defeito com outra roupa.
-        """
+        """Guarda 2: `sed` que casa ZERO vezes passaria calado pela guarda 1."""
         origem = tmp_path / "renomeada.rules"
         origem.write_text(
             'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idProduct}=="0aaa", MODE="0600"\n',
@@ -374,12 +301,7 @@ class TestOsPacotesNaoFechamSemPorta:
         )
 
     def test_o_helper_so_fecha_o_no_quando_instala_o_broker(self) -> None:
-        """As duas metades viajam juntas, ou nenhuma viaja.
-
-        O `install-host-udev.sh` é o único caminho de pacote que INSTALA o
-        broker — e só quando consegue resolver o uid da sessão. Quando não
-        consegue (`BROKER_INSTALL_OK` 0), a regra do nó tem de ir aberta.
-        """
+        """As duas metades viajam juntas, ou nenhuma viaja."""
         texto = INSTALL_HOST.read_text(encoding="utf-8")
         assert "REGRA_DO_NO_SRC" in texto
         assert 'if [[ "${BROKER_INSTALL_OK}" -ne 1 ]]; then' in texto
@@ -393,24 +315,9 @@ class TestOsPacotesNaoFechamSemPorta:
         )
 
 
-# ---------------------------------------------------------------------------
-# 4. MENOR — quem só sabe `open(path)` entra pela porta do broker
-# ---------------------------------------------------------------------------
-
-
 class TestOCapturadorEntraPelaPorta:
     def test_capture_dualsense_blueprint_nao_abre_por_os_open(self) -> None:
-        """Com o nó nascendo fechado, `os.open(path)` colhe EACCES e devolve None.
-
-        E o sintoma que sobra («o controle não respondeu features») aponta para
-        o aparelho errado. A irmã `scripts/capture_blueprint.py` já entrava
-        pela porta do broker desde 15/08/2026; esta ficou para trás.
-
-        A RÉGUA É DE AST, e o motivo é uma armadilha desta casa: o comentário
-        que EXPLICA por que `os.open` saiu daqui contém a própria sequência, e
-        uma régua de texto reprovaria justamente por causa da explicação —
-        *o aviso vira o defeito que ele descreve*, pela quarta vez.
-        """
+        """Com o nó nascendo fechado, `os.open(path)` colhe EACCES e devolve None."""
         fonte = (
             RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "uhid_gamepad.py"
         ).read_text(encoding="utf-8")
@@ -439,12 +346,7 @@ class TestOCapturadorEntraPelaPorta:
     def test_ela_usa_o_fd_que_a_porta_devolveu(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """Prova de COMPORTAMENTO, não de texto: o fd vem do `NoAberto`.
-
-        Um `abrir_hidraw` que fosse chamado e ignorado passaria na régua de
-        cima. Aqui o sysfs é de mentira, a porta é de mentira, e o
-        `HIDIOCGFEATURE` é dublê — o que se mede é de onde saiu o fd.
-        """
+        """Prova de COMPORTAMENTO, não de texto: o fd vem do `NoAberto`."""
         from hefesto_dualsense4unix.integrations import hidraw_broker_client as cli
         from hefesto_dualsense4unix.integrations import uhid_gamepad as ug
 

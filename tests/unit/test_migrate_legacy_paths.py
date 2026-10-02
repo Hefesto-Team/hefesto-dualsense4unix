@@ -1,9 +1,4 @@
-"""Testes da migração de caminhos XDG legados (curto → longo).
-
-Cobre CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: copia perfis/sessão/prefs do
-layout antigo `~/.config/hefesto` para `~/.config/hefesto-dualsense4unix` sem
-sobrescrever nada e de forma idempotente.
-"""
+"""Testes da migração de caminhos XDG legados (curto → longo)."""
 from __future__ import annotations
 
 import json

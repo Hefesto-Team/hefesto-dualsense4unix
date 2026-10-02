@@ -1,43 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""O CAMINHO DE VOLTA: lê o SVG que ela arrumou e traz para o mapa.
-
-Ela, 27/08/2026: "ou converter o controle inteiro pra svg que arrumo agora",
-"com os nomes de cada elemento descritos nas layers e objetos".
-
-Como funciona o ciclo:
-    _ferramentas/exportar.py   ->  ~/Imagens/dualsense-para-editar.svg
-    (ela arruma no editor e salva por cima)
-    _ferramentas/importar.py   ->  ds_limpo.svg + dualsense.svg + o CSV
-    _ferramentas/mapa.py       ->  mapa-do-controle.html
-
-O que ele traz de volta: a GEOMETRIA de cada peça, pelo `id` do grupo. É por isso
-que os ids não podem ser renomeados no editor — o nome que aparece na árvore é o
-<title>, e esse ela muda à vontade.
-
-O que ele NÃO traz: cor, estilo e a folha do mapa, que continuam sendo da casa.
-
-    python3 importar.py            confere e mostra o que mudou, sem gravar
-    python3 importar.py --gravar   grava
-"""
+"""O CAMINHO DE VOLTA: lê o SVG que ela arrumou e traz para o mapa."""
 import csv, io, pathlib, re, subprocess, sys
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
-# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
-# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
-# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
-# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
-# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
-# segunda árvore de trabalhar sem tocar na primeira.
-# A RAIZ TEM DONO, e é o `onde.py`. Era `parents[2]` — o que, desde a mudança
-# da interface para dentro do pacote em 01/09/2026, dá a pasta `src/` e faz
-# toda leitura de `docs/data/` procurar em `src/docs/data/`.
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
 from onde import RAIZ as R  # noqa: E402
 
-#: O `docs/data/` do repositório. Dono único, para não voltar a ser montado
-#: à mão a partir de um contador de níveis.
 DADOS_DO_REPO = R / "docs/data"
 LIMPO = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
 PROD = R / "assets/control-svg/dualsense.svg"
@@ -45,15 +14,7 @@ CSV = DADOS_DO_REPO / "pecas-do-dualsense.csv"
 
 
 def svg_editado() -> pathlib.Path:
-    """A OUTRA PONTA DO MESMO CAMINHO — casa com `exportar.svg_para_editar()`.
-
-    FUNÇÃO e não constante pela razão medida na gêmea, que vale inteira aqui:
-    constante de módulo resolve o `$HOME` na IMPORTAÇÃO, e na suíte a
-    importação acontece na COLETA, antes de o `conftest` desviar o lar.
-
-    O docstring deste arquivo já dizia `~/Imagens/dualsense-para-editar.svg`
-    desde que ele nasceu; era o CÓDIGO que cravava o `/home/` de uma pessoa só.
-    """
+    """A OUTRA PONTA DO MESMO CAMINHO — casa com `exportar.svg_para_editar()`."""
     return pathlib.Path.home() / "Imagens" / "dualsense-para-editar.svg"
 
 
@@ -62,7 +23,6 @@ def grupos(texto):
     fora = {}
     for m in re.finditer(r'<g\b[^>]*\bid="([^"]+)"[^>]*>', texto):
         pid = m.group(1)
-        # os `glifo-*` ENTRAM: eles são o trabalho dela tanto quanto as peças.
         if pid.startswith("grupo-") or pid == "fundo":
             continue
         i = m.start()
@@ -179,9 +139,6 @@ def main():
     if not svg_editado().exists():
         sys.exit(f"não achei {svg_editado()} — rode o exportar.py primeiro")
 
-    # O ARQUIVO TEM DE SER XML VÁLIDO. Um atributo duplicado fez o parser abortar
-    # no meio e os 18 glifos sumirem da tela dela — e o importador anterior teria
-    # gravado o estrago sem reclamar.
     import xml.etree.ElementTree as ET
     try:
         ET.parse(svg_editado())
@@ -209,23 +166,14 @@ def main():
         print("\n(nada foi gravado — rode com --gravar)")
         return
 
-    # A OPACIDADE DAS FEATURES É DA FOLHA, não do arquivo. O exportador as mostra
-    # a 35% para ela ver onde estão; se esse valor voltar como `style` inline, ele
-    # vence o CSS e a peça fica visível no mapa em repouso — foi assim que o motor
-    # direito apareceu tracejado por cima da empunhadura. Limpo na entrada.
     for pid in [k for k in novo if k.startswith("feat-")]:
         novo[pid] = re.sub(r'\s(opacity="[^"]*"|style="[^"]*opacity[^"]*")', "",
                            novo[pid], count=1)
 
-    # 1. a geometria volta para os dois SVGs
     for alvo in (LIMPO, PROD):
         s = alvo.read_text()
         for pid, bloco in novo.items():
             if pid not in velho:
-                # O QUE É NOVO ENTRA. Os grupos `glifo-*` nunca estiveram no
-                # ds_limpo — eles nasceram no arquivo de edição —, e por isso o
-                # importador os pulava: as três horas dela paravam nas peças e os
-                # símbolos voltavam a ser redesenhados pelo gerador.
                 if pid.startswith("glifo-"):
                     s = s.replace("</svg>", "  " + bloco + "\n</svg>", 1)
                 continue
@@ -243,15 +191,6 @@ def main():
         print(f"  ok  {alvo.name}")
     subprocess.run(["cp", str(LIMPO), "/tmp/ds_limpo.svg"], check=True)
 
-    # 2. A POSIÇÃO DOS GLIFOS volta como transform literal.
-    # Ela: "sumiu os glifos preciso deles lá". Agora que eles vão no arquivo de
-    # edição, o que ela fizer com cada um — mover, girar, redimensionar — vira uma
-    # matriz, e o mapa passa a aplicá-la em vez de calcular a posição. Quem manda
-    # na posição do glifo deixa de ser a conta e passa a ser ela.
-    # A MATRIZ ACUMULADA, medida no navegador — não o atributo `transform` do
-    # grupo. Um glifo dentro de um grupo espelhado ou transladado tem a posição
-    # dele decidida pela CADEIA inteira; lendo só o atributo, os rótulos dos ombros
-    # e as setas do d-pad caíram fora do desenho.
     _glifos = medir_matriz(svg_editado())
     t = CSV.read_text()
     for pid, cx in cx_novo.items():
@@ -265,12 +204,6 @@ def main():
     CSV.write_text(t)
     print(f"  ok  {CSV.name}")
 
-    # AS ZONAS DE COR VOLTAM POR CIMA. O bloco `<g>` que ela salvou do editor
-    # substitui o do disco INTEIRO — e com ele vai embora o `class="z-<zona>"`
-    # que o gerador de cores escreveu. Sem esta chamada, o ciclo dela apaga a
-    # cor do desenho a cada volta, em silêncio: o SVG continua desenhando, só
-    # que todo modelo passa a pintar igual. O gerador não toca em geometria; ele
-    # só reaplica as classes e a folha.
     subprocess.run([sys.executable, str(R / "scripts/gerar_cores_do_dualsense.py")],
                    check=True)
 

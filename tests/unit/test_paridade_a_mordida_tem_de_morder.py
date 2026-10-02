@@ -1,30 +1,4 @@
-"""A regra 2 do censo do mapa deixou de confundir COLETAR com MORDER.
-
-O buraco, medido em 26/08/2026 e latente desde 11/08: a regra 1 (`sem-mordida`)
-existe porque a queixa dela é literal — *"tínhamos algo para o cabo e na hora do
-vamos ver a versão de BT não funcionava"* — e ela cobra que toda célula com
-`aciona = sim` + `de_onde_sei = medido` aponte um teste que REPROVE quando
-aquela feature quebrar naquele transporte. A regra 2 conferia se o alvo era
-COLETÁVEL: caminho sob `tests/`, arquivo no disco, nome no índice por AST. Em
-nenhum ramo ela olhava o CORPO.
-
-Logo um `def test_x(): pass` satisfazia as duas regras de uma vez — e ele passa
-**também com a cura arrancada**, que é a definição exata da rede que não existe.
-Um `@pytest.mark.skip` incondicional é pior: nem roda.
-
-Nenhum dos alvos que o mapa cita hoje é vazio ou pulado — `test_a_arvore_real_
-nao_tem_alvo_podre` confere isso contra o mapa de verdade. A régua não nasceu
-para consertar um alvo podre de hoje: nasceu para que o primeiro não atravesse
-calado.
-
-PROVA DE QUE MORDE (arrancar, ver reprovar, devolver) — 26/08/2026, colada em
-`docs/process/agentes/2026-08-26/LEVA-4-D.md`. Cura arrancada: no `censo`, a
-chamada a `motivo_de_a_mordida_nao_morder` trocada de volta por
-`motivo_de_o_pytest_nao_coletar` — a régua volta a só perguntar se o pytest
-COLETA. Reprovaram os DOZE casos deste arquivo que exigem reprovação; os do
-`test_check_paridade_transporte.py`, rodados junto, ficaram todos verdes (a
-cura arrancada não é regressão das outras regras). Cura devolvida: 58 passados.
-"""
+"""A regra 2 do censo do mapa deixou de confundir COLETAR com MORDER."""
 from __future__ import annotations
 
 import csv
@@ -34,15 +8,11 @@ from pathlib import Path
 
 import pytest
 
-# O caminho do `specs.html` tem um dono só; esta folha o pede ao irmão.
 from tests.unit.test_check_paridade_transporte import _specs_de
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "check_paridade_transporte.py"
 
-#: O mínimo que o portão exige no cabeçalho. Não é o cabeçalho real de propósito:
-#: o portão descobre os pares lendo o arquivo, e copiar as colunas de hoje seria
-#: fixar uma contagem que muda toda leva.
 CABECALHO = [
     "chave",
     "controle",
@@ -107,9 +77,6 @@ def rodar(caminho_csv: Path, raiz: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-# --------------------------------------------------------------------------
-# O caso da ordem: corpo vazio não é mordida
-# --------------------------------------------------------------------------
 def test_corpo_vazio_nao_e_mordida(tmp_path: Path) -> None:
     """`def test_x(): pass` é coletado, passa sempre, e passa com a cura fora."""
     fonte = (
@@ -171,12 +138,7 @@ def test_skip_incondicional_nao_e_mordida(tmp_path: Path, decorador: str) -> Non
 
 
 def test_skipif_com_condicao_de_verdade_continua_valendo(tmp_path: Path) -> None:
-    """`skipif(sys.platform == ...)` é honestidade, não teste desligado.
-
-    O contrapeso desta régua: uma que reprovasse todo `skipif` empurraria quem
-    escreve teste condicional a esconder a condição, que é o oposto do que esta
-    casa quer.
-    """
+    """`skipif(sys.platform == ...)` é honestidade, não teste desligado."""
     fonte = (
         "import sys\n\nimport pytest\n\n\n"
         '@pytest.mark.skipif(sys.platform == "win32", reason="não há uinput lá")\n'
@@ -249,10 +211,6 @@ def test_arquivo_sem_teste_nenhum_nao_e_mordida(tmp_path: Path) -> None:
     assert "não cobre um teste sequer" in processo.stdout
 
 
-# --------------------------------------------------------------------------
-# O contrapeso: um portão que reprova tudo é tão inútil quanto um que não
-# reprova nada.
-# --------------------------------------------------------------------------
 def test_teste_de_verdade_continua_passando(tmp_path: Path) -> None:
     fonte = (
         "def test_a_lightbar_acende():\n"
@@ -266,13 +224,7 @@ def test_teste_de_verdade_continua_passando(tmp_path: Path) -> None:
 
 
 def test_a_arvore_real_nao_tem_alvo_podre() -> None:
-    """A régua contra a árvore de verdade: nenhum alvo do mapa é vazio ou pulado.
-
-    Foi assim que se soube, no dia em que a checagem entrou, que o buraco era
-    LATENTE — a mudança não devia reprovar nada, e não reprovou. Se este teste
-    ficar vermelho, alguém apontou uma célula forte para um teste que não
-    exercita nada, e a mensagem nomeia qual.
-    """
+    """A régua contra a árvore de verdade: nenhum alvo do mapa é vazio ou pulado."""
     processo = subprocess.run(
         [sys.executable, str(SCRIPT), "--raiz", str(RAIZ_REAL)],
         capture_output=True,

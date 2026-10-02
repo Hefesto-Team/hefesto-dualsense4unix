@@ -58,10 +58,6 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: O daemon dela em 02/09/2026 às 04:20, nas quatro chaves que esta faixa lê.
-#: AJUSTADO — MODO-DE-CONEXAO-01, 13/09/2026: o daemon publica o CAMINHO, e é com
-#: ele que o chip de modo se reconcilia. O `backend` `uhid` já respondia por si
-#: (`painel.caminho_vivo`); o `uinput` sozinho não separa o Xbox escolhido do
 #: DualSense degradado, e por isso o estado Xbox traz o campo.
 VIVO_DUALSENSE: dict[str, Any] = {
     "connected": True,
@@ -104,27 +100,12 @@ def _mesa_limpa() -> Any:
 
 
 def faixa(state: dict[str, Any]) -> tuple[str, str]:
-    """A pendência como a DONA a mede — `_faixa_do_pendente`.
-
-    CONTRATO TROCADO — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.2. Até hoje
-    este ajudante lia `pendente` e `pendente-alvo` do `pacote()`, que eram a
-    frase na tela. A frase saiu da tela e vai ao diário da janela
-    (`_relatar_a_pendencia`); a regra de QUANDO há pendência não mudou, e é ela
-    que as réguas abaixo medem. Quem cobra a tela vazia é
-    `test_o_reconectar_nao_muda_de_lugar.py`.
-    """
+    """A pendência como a DONA a mede — `_faixa_do_pendente`."""
     return aba._faixa_do_pendente(state)
 
 
-# ---------------------------------------------------------------------------
-# 1. Os dois endereços existem nos dois lados
-# ---------------------------------------------------------------------------
 def test_a_pagina_publicada_tem_os_dois_enderecos() -> None:
     """Sem eles na página, pintar é escrever num `querySelector` que dá `null`."""
-    # O CAMINHO TEM DONO: `onde.pagina(..., publicado=True)` é quem sabe onde
-    # o produto RENDERIZA. Montá-lo à mão aqui seria a segunda cópia dele — e
-    # apontar para a bancada daria verde sobre a página que ela ainda não
-    # publicou, que é a armadilha do `COMO-OLHAR-A-TELA.md`.
     corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
     for endereco in ("pendente", "pendente-alvo"):
         assert f'data-campo="{endereco}"' in corpo, (
@@ -133,11 +114,7 @@ def test_a_pagina_publicada_tem_os_dois_enderecos() -> None:
 
 
 def test_o_pacote_emite_os_dois_em_todo_estado() -> None:
-    """Emitir só quando HÁ pendência deixaria a frase cravada viva na tela.
-
-    É a forma exata do defeito: o `escrever` do piloto só apaga um texto
-    escrevendo outro por cima. Uma chave ausente não apaga nada.
-    """
+    """Emitir só quando HÁ pendência deixaria a frase cravada viva na tela."""
     for state in (VIVO_DUALSENSE, VIVO_XBOX, VIVO_NATIVO, {}):
         fora = aba.pacote(Contexto(state=state, mesa=[], conectados=[], estados={}))
         assert "pendente" in fora and "pendente-alvo" in fora, (
@@ -149,9 +126,6 @@ def test_sem_pedido_nenhum_a_faixa_sai_vazia() -> None:
     assert faixa(VIVO_DUALSENSE) == ("", "")
 
 
-# ---------------------------------------------------------------------------
-# 2. A pendência nasce, e morre quando o daemon alcança
-# ---------------------------------------------------------------------------
 def test_o_pedido_que_o_daemon_nao_alcancou_aparece_na_faixa() -> None:
     ctx = Contexto(state=VIVO_DUALSENSE, mesa=[], conectados=[], estados={})
     aba.modo_xbox(ctx, {"texto": "Xbox"}, PonteDeMentira())
@@ -161,10 +135,7 @@ def test_o_pedido_que_o_daemon_nao_alcancou_aparece_na_faixa() -> None:
 
 
 def test_a_faixa_apaga_sozinha_quando_o_daemon_alcanca() -> None:
-    """A regra é `reconciliar_pendente`: *"só existe enquanto DIVERGE do vigente"*.
-
-    Sem ela a tela prometeria para sempre uma mudança que já aconteceu.
-    """
+    """A regra é `reconciliar_pendente`: *"só existe enquanto DIVERGE do vigente"*."""
     ctx = Contexto(state=VIVO_DUALSENSE, mesa=[], conectados=[], estados={})
     aba.modo_xbox(ctx, {"texto": "Xbox"}, PonteDeMentira())
     assert faixa(VIVO_DUALSENSE) != ("", "")
@@ -173,11 +144,7 @@ def test_a_faixa_apaga_sozinha_quando_o_daemon_alcanca() -> None:
 
 
 def test_clicar_no_que_ja_esta_valendo_nao_cria_pendencia() -> None:
-    """É o caso dos DOIS gestos desta aba na lista dos dezesseis.
-
-    A prova do aparelho clica a posição **Ligado** com o daemon já em `gamepad`:
-    o gesto aplica, nada muda, e a faixa não pode anunciar mudança nenhuma.
-    """
+    """É o caso dos DOIS gestos desta aba na lista dos dezesseis."""
     ctx = Contexto(state=VIVO_DUALSENSE, mesa=[], conectados=[], estados={})
     aba.hefesto(ctx, {"modo": "gamepad", "texto": "Ligado"}, PonteDeMentira())
     assert faixa(VIVO_DUALSENSE) == ("", "")
@@ -195,15 +162,8 @@ def test_o_daemon_calado_nao_apaga_a_escolha_dela() -> None:
     assert faixa({}) == faixa(VIVO_DUALSENSE) != ("", "")
 
 
-# ---------------------------------------------------------------------------
-# 3. Nada se reescreve: a frase e o rótulo têm dono
-# ---------------------------------------------------------------------------
 def test_a_frase_e_a_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
-    """Troca `relancar.texto_do_pendente` e cobra que o pacote a siga.
-
-    Uma frase digitada aqui passaria neste teste com a função original intacta —
-    e é por isso que a régua a TROCA em vez de comparar textos.
-    """
+    """Troca `relancar.texto_do_pendente` e cobra que o pacote a siga."""
     from hefesto_dualsense4unix.app.actions import relancar
 
     monkeypatch.setattr(relancar, "texto_do_pendente",
@@ -216,11 +176,7 @@ def test_a_frase_e_a_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
 
 
 def test_a_maiuscula_do_comeco_e_regra_dela() -> None:
-    """28/08/2026: *"o `●` que vem antes é MARCADOR, não palavra"*.
-
-    A janela estável escreve a mesma frase em minúscula porque lá ela é um
-    rótulo entre outros; aqui é a linha inteira, isolada na caixa tracejada.
-    """
+    """28/08/2026: *"o `●` que vem antes é MARCADOR, não palavra"*."""
     from hefesto_dualsense4unix.app.actions.relancar import MARCADOR_PENDENTE
 
     ctx = Contexto(state=VIVO_DUALSENSE, mesa=[], conectados=[], estados={})
@@ -280,9 +236,6 @@ def test_gesto_que_levanta_nao_deixa_pendencia() -> None:
     assert faixa(VIVO_DUALSENSE) == ("", "")
 
 
-# ---------------------------------------------------------------------------
-# 4. Os dois da lista dos dezesseis, classificados
-# ---------------------------------------------------------------------------
 def test_esta_aba_nao_declara_sem_eco_e_diz_por_que() -> None:
     """`SEM_ECO` é *"o daemon não publica este assunto"* — não é o caso aqui.
 
@@ -300,16 +253,8 @@ def test_esta_aba_nao_declara_sem_eco_e_diz_por_que() -> None:
         assert len(motivo) > 60, f"a classificação de {nome!r} não diz o que mediu"
 
 
-# ---------------------------------------------------------------------------
-# 5. O desenho continua sendo o dela
-# ---------------------------------------------------------------------------
 def test_o_gerador_nao_crava_a_frase_que_o_produto_agora_escreve() -> None:
-    """O alvo cravado tem de continuar SAINDO do chip aceso, não digitado.
-
-    Trocar o TEXTO da faixa é decisão dela; o que esta régua impede é alguém
-    digitar uma segunda cópia do alvo no gerador e recriar a contradição de
-    31/08 (a faixa anunciando um modo e o chip mostrando outro).
-    """
+    """O alvo cravado tem de continuar SAINDO do chip aceso, não digitado."""
     fonte = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
     achado = re.search(r'data-campo=\\"pendente-alvo\\">\{(\w+)\}', fonte)
     assert achado, "o gerador deixou de interpolar o alvo da faixa"

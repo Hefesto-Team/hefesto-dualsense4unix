@@ -1,10 +1,4 @@
-"""Testes do UinputGamepad (W6.3 + FEAT-VPAD-FF-PASSTHROUGH-01).
-
-O backend migrou de python-uinput para python-evdev (necessário para o
-force-feedback); os fakes aqui simulam o módulo `evdev` (UInput/ecodes/
-AbsInfo) — sem hardware, sem /dev/uinput. O protocolo de FF em si é coberto
-em `test_vpad_ff_passthrough.py`; aqui ficam criação/forwarding/teardown.
-"""
+"""Testes do UinputGamepad (W6.3 + FEAT-VPAD-FF-PASSTHROUGH-01)."""
 from __future__ import annotations
 
 import sys
@@ -113,12 +107,7 @@ def _install_fake_evdev(monkeypatch: pytest.MonkeyPatch) -> type[_FakeUInput]:
 def test_constantes_xbox360() -> None:
     assert XBOX360_VENDOR == 0x045E
     assert XBOX360_PRODUCT == 0x028E
-    # A GRAFIA AQUI É A VELHA DE PROPÓSITO — `F6-O-NOME-TEM-UM-DONO`, 11/09/2026.
     # O nome do produto em TEXTO virou `DualSense4Unix`, com o `S` do DualSense;
-    # o nome deste nó NÃO, porque o kernel o publica e alguém de fora casa por
-    # ele: jogos sob Proton por substring, e o compositor guarda configuração por
-    # nome de dispositivo. Trocar a caixa não dá erro — apaga a amarração que a
-    # pessoa já salvou, calado. `scripts/check_a_grafia_do_nome.py` isenta a forma.
     assert "(Hefesto - Dualsense4Unix virtual)" in DEVICE_NAME
 
 
@@ -128,8 +117,6 @@ def test_button_map_cobre_face_buttons() -> None:
 
 
 def test_start_sem_evdev_retorna_false(monkeypatch: pytest.MonkeyPatch) -> None:
-    # sys.modules["evdev"] = None faz o import levantar ImportError (padrão
-    # CPython para "import halted") — simula ambiente sem a lib.
     monkeypatch.setitem(sys.modules, "evdev", None)
     gp = UinputGamepad()
     assert gp.start() is False
@@ -144,7 +131,6 @@ def test_start_com_evdev_mockado(monkeypatch: pytest.MonkeyPatch) -> None:
     assert gp.is_active() is True
     assert len(fake.instances) == 1
     dev = fake.instances[0]
-    # Máscara + FF anunciados na criação.
     assert dev.kwargs["vendor"] == XBOX360_VENDOR
     assert dev.kwargs["product"] == XBOX360_PRODUCT
     assert dev.kwargs["version"] == DEVICE_VERSION
@@ -196,7 +182,7 @@ def test_forward_analog_delta_nao_reemite_parado(monkeypatch: pytest.MonkeyPatch
     gp.forward_analog(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
     writes_before = len(dev.writes)
     gp.forward_analog(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
-    assert len(dev.writes) == writes_before  # tick parado = zero writes
+    assert len(dev.writes) == writes_before
 
 
 def test_forward_buttons_press_e_release(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -210,7 +196,7 @@ def test_forward_buttons_press_e_release(monkeypatch: pytest.MonkeyPatch) -> Non
     assert {w[1] for w in presses} == {_EC.BTN_A, _EC.BTN_B}
 
     dev.writes.clear()
-    gp.forward_buttons(frozenset({"cross"}))  # solta circle, mantém cross
+    gp.forward_buttons(frozenset({"cross"}))
     releases = [w for w in dev.writes if w[0] == _EC.EV_KEY and w[2] == 0]
     assert {w[1] for w in releases} == {_EC.BTN_B}
 
@@ -227,7 +213,7 @@ def test_forward_buttons_dpad_atualiza_hat(monkeypatch: pytest.MonkeyPatch) -> N
     dev.writes.clear()
     gp.forward_buttons(frozenset({"dpad_right"}))
     assert (_EC.EV_ABS, _EC.ABS_HAT0X, 1) in dev.writes
-    assert (_EC.EV_ABS, _EC.ABS_HAT0Y, 0) in dev.writes  # HAT0Y voltou a 0
+    assert (_EC.EV_ABS, _EC.ABS_HAT0Y, 0) in dev.writes
 
 
 def test_dpad_vector_estatico() -> None:
@@ -239,24 +225,8 @@ def test_dpad_vector_estatico() -> None:
     assert UinputGamepad._dpad_vector(frozenset({"dpad_up", "dpad_right"})) == (1, -1)
 
 
-# ---------------------------------------------------------------------------
-# O `stop()` fecha o nó UMA vez — NO-MODO-XBOX-TUDO-FUNCIONA-01, onda 3
-# ---------------------------------------------------------------------------
-#
-# O irmão `uhid` foi curado em 28/09/2026 (A-ENTRADA-DE-CADA-JOGADOR-CHEGA-
-# INTEIRA-01): dois `stop()` juntos fechavam o despertador duas vezes, e o
-# `fio.start()` que falhava deixava o nó no kernel sem dono. O pad do modo Xbox
-# tinha as duas formas do mesmo defeito, e estas duas réguas mordem cada uma.
-
-
 def test_dois_stop_juntos_fecham_o_no_uma_vez(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A interface troca o modo enquanto o laço derruba o pad: um `close()` só.
-
-    O `close()` do python-evdev confere o `fd` e só depois o zera; o segundo
-    `stop()` que entra nesse meio fecha um número que outra thread pode já ter
-    reaproveitado. MORDIDA: devolva o `self._device.close()` lido do atributo
-    (sem o `dict.pop`) e o segundo `stop()` chama o `close()` de novo.
-    """
+    """A interface troca o modo enquanto o laço derruba o pad: um `close()` só."""
     import threading
 
     fake = _install_fake_evdev(monkeypatch)
@@ -290,12 +260,7 @@ def test_dois_stop_juntos_fecham_o_no_uma_vez(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_sem_fio_novo_o_pad_nasce_e_o_tique_atende(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com o processo no teto de fios, o pad nasce e a vibração vai pelo tique.
-
-    MORDIDA: tire o `try` em volta do `fio.start()` e o `start()` levanta com o
-    nó já criado no kernel — um controle a mais que o jogo vê e ninguém
-    alimenta, e que ninguém fecharia.
-    """
+    """Com o processo no teto de fios, o pad nasce e a vibração vai pelo tique."""
     import threading
 
     fake = _install_fake_evdev(monkeypatch)

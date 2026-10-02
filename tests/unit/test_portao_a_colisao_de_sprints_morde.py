@@ -1,29 +1,4 @@
-"""O PORTÃO DA COLISÃO DE SPRINTS — e ele tem de acusar o que a MÃO achou.
-
-Em 23/08/2026 quatro colisões de posse passaram sem ser declaradas, e só
-apareceram no conferente humano depois de tudo escrito. A mais cara não é
-nenhuma das quatro: é ``PAREAMENTO-01 x Z6``, que mandam **criar os mesmos
-quatro módulos** -- e naquele dia esses módulos **não existiam no disco**, então
-nenhum ``grep`` na árvore os acharia. Onze mais seis agentes para a mesma obra.
-(Os quatro passaram a existir em 24/08, quando a Z6 fechou; por isso o dublê
-deste teste usa caminhos fictícios -- ver a nota datada em ``_OS_QUATRO``.)
-
-O QUE ESTE PORTÃO COBRA, e é o teste do desenho e não do código:
-
-  - o par que a mão achou é acusado, e nomeando os arquivos;
-  - **arrancar o campo ``cria:`` faz o par PAREAMENTO x Z6 DESAPARECER** -- é a
-    mordida que prova qual é o campo caro (``test_sem_o_campo_cria_a_duplicata
-    _some``);
-  - colisão **declarada** (``depois_de`` ou ``nao_toca``) não é acusada: a régua
-    separa descuido de decisão, senão vira ruído e alguém a desliga;
-  - **citação não é posse**: uma sprint que só MENCIONA um arquivo no corpo não
-    o reivindica. Uma régua ingênua leria a coluna "NÃO toca" da Z7 como
-    reivindicação de ``daemon_actions.py`` e acusaria quem fez a coisa certa.
-
-E ele **nasce reprovando ZERO** contra a árvore de verdade, de propósito: sprint
-sem frontmatter entra na lista de DÍVIDA, não numa reprovação. Portão que reprova
-vinte e três de uma vez é portão que alguém desliga na segunda-feira.
-"""
+"""O PORTÃO DA COLISÃO DE SPRINTS — e ele tem de acusar o que a MÃO achou."""
 
 from __future__ import annotations
 
@@ -40,21 +15,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "check_colisao_de_sprints.py"
 SPRINTS = RAIZ / "docs" / "process" / "sprints"
 
-# ESTA RÉGUA É VERSIONADA E OS DOIS ALVOS DELA NÃO SÃO (20/09/2026).
-#
-# `scripts/check_colisao_de_sprints.py` e `docs/process/` saíram do repositório
-# com o despacho e a costura de leva, e as réguas cujo insumo saiu junto
-# ficaram. Logo, num clone limpo ou numa árvore de agente recém-criada, o
-# `exec_module` abaixo levantava `FileNotFoundError` **na COLETA**, e pytest
-# devolvia `Interrupted: 1 error during collection`: o LOTE INTEIRO morria, e
-# `no tests ran` lê-se como limpo. É a mesma família do `release.yml` que cai
-# no clone limpo — e por isso a guarda saiu daqui e virou UM marcador só, no
-# `tests/conftest.py` (INSUMO-FORA-DO-GIT-01).
-#
-# O que o marcador acrescenta ao `if` que estava escrito aqui à mão: ele lê a
-# linha do `.gitignore` do ARQUIVO em vez de a citar de cor, e recusa pular
-# quando a ausência não está explicada lá — sumiço sem regra é defeito, e
-# defeito não se esconde atrás de `skip`.
 exigir_insumo_fora_do_git(
     "scripts/check_colisao_de_sprints.py",
     "docs/process/sprints",
@@ -66,15 +26,6 @@ colisao = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(colisao)
 
 
-# Os quatro módulos do par PAREAMENTO x Z6.
-#
-# NOTA DATADA — 25/08/2026: quando a INFRA-DE-EXECUCAO-01 os mediu, em 24/08,
-# os quatro NÃO existiam, e era esse o ponto. **Hoje os quatro existem**: a Z6
-# fechou e os criou. O par continua valendo como o caso a reproduzir, mas o
-# dublê deste teste NÃO pode usar os caminhos reais, ou a prova de "nenhum grep
-# acharia" deixa de provar coisa alguma. Por isso os caminhos abaixo são
-# deliberadamente fictícios -- e há uma guarda que reprova se algum dia
-# passarem a existir.
 _OS_QUATRO = [
     "scripts/gerar-fatos-de-tela-que-ninguem-escreveu.py",
     "src/hefesto_dualsense4unix/app/fatos_do_mapa_que_ninguem_escreveu.py",
@@ -106,11 +57,6 @@ def _confere(**sprints: str) -> list[str]:
         assert dados is not None, f"o dublê {nome} não foi lido como frontmatter"
         anotadas[Path(nome)] = dados
     return colisao.confere(anotadas)
-
-
-# ---------------------------------------------------------------------------
-# Os pares que a mão achou
-# ---------------------------------------------------------------------------
 
 
 def test_acusa_o_par_que_reivindica_os_mesmos_arquivos() -> None:
@@ -168,11 +114,6 @@ def test_sem_o_campo_cria_a_duplicata_some() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# O que NÃO é colisão, e é aqui que uma régua ingênua vira ruído
-# ---------------------------------------------------------------------------
-
-
 def test_colisao_serializada_por_depois_de_nao_e_acusada() -> None:
     queixas = _confere(
         z2=_sprint("ONDA0-Z2", posse={"A": ["src/app/x.py"]}),
@@ -221,11 +162,6 @@ def test_a_sprint_que_se_contradiz_e_acusada() -> None:
     assert queixas == [], "nao_toca vence: o arquivo sai da reivindicação, sem contradição"
 
 
-# ---------------------------------------------------------------------------
-# O analisador recusa o que não entende — nunca adivinha
-# ---------------------------------------------------------------------------
-
-
 def test_sprint_sem_frontmatter_nao_e_erro_e_vira_divida() -> None:
     assert colisao.le_frontmatter("# uma sprint qualquer\n", "x.md") is None
 
@@ -240,11 +176,6 @@ def test_campo_desconhecido_e_recusado_dizendo_a_linha() -> None:
 def test_frontmatter_que_nunca_fecha_e_recusado() -> None:
     with pytest.raises(colisao.FormatoInvalido):
         colisao.le_frontmatter("---\nsprint: X\n", "x.md")
-
-
-# ---------------------------------------------------------------------------
-# `estado:` — só o que está aberta disputa posse e se despacha (06/09/2026)
-# ---------------------------------------------------------------------------
 
 
 def _com_estado(texto: str, estado: str) -> str:
@@ -263,8 +194,7 @@ def test_sem_estado_e_aberta_por_padrao() -> None:
 
 
 def test_sprint_feita_nao_disputa_posse() -> None:
-    """Duas sprints no mesmo arquivo: com as duas abertas o portão grita; com
-    uma delas `feita`, cala — trabalho que já aconteceu não colide."""
+    """Duas sprints no mesmo arquivo: com as duas abertas o portão grita; com"""
     abertas = _confere(
         a=_sprint("A-01", posse={"A": ["src/x.py"]}),
         b=_sprint("B-01", posse={"B": ["src/x.py"]}),
@@ -278,19 +208,7 @@ def test_sprint_feita_nao_disputa_posse() -> None:
 
 
 def test_espera_ela_nao_se_despacha_e_nao_disputa(tmp_path) -> None:
-    """`espera-ela`: o código fechou, o gesto dela não — e a fila tem de dizer isso.
-
-    Nasceu em 21/09/2026, de a fila MENTIR: das 25 sprints `aberta`, seis
-    tinham o código no `dev`, instalado e empurrado, e o que faltava era o
-    gesto dela. Com quatro estados elas só tinham dois lugares para morar, e
-    os dois mentiam — `aberta` mandava agente refazer o pronto, `feita`
-    derrubaria a sprint em `arquivados/` levando junto o único gesto que
-    ainda falta.
-
-    A mordida cobre as três propriedades que o estado novo promete, e cada
-    `assert` aqui quebra se alguém tirar uma delas: não se despacha, não
-    disputa posse, e sai na lista própria — nunca na dos abertos.
-    """
+    """`espera-ela`: o código fechou, o gesto dela não — e a fila tem de dizer isso."""
     (tmp_path / "2026-09-21-ESPERA-01.md").write_text(
         _com_estado(_sprint("ESPERA-01", posse={"A": ["src/x.py"]}), "espera-ela"),
         encoding="utf-8",
@@ -309,8 +227,6 @@ def test_espera_ela_nao_se_despacha_e_nao_disputa(tmp_path) -> None:
     r = subprocess.run([*base, "--espera-ela"], capture_output=True, text=True)
     assert "ESPERA-01" in r.stdout and "VIVA-01" not in r.stdout
 
-    # As duas reivindicam `src/x.py`; com uma em `espera-ela` não há disputa,
-    # porque a entrega de código dela já aconteceu.
     sem_disputa = _confere(
         a=_com_estado(_sprint("A-01", posse={"A": ["src/x.py"]}), "espera-ela"),
         b=_sprint("B-01", posse={"B": ["src/x.py"]}),
@@ -319,13 +235,7 @@ def test_espera_ela_nao_se_despacha_e_nao_disputa(tmp_path) -> None:
 
 
 def test_espera_ela_nao_desce_para_arquivados() -> None:
-    """Ela fica na pasta viva: é lá que a pauta da sessão com ela se lê.
-
-    O `mover-sprints-fechadas.py` desce `feita`, `absorvida` e `caducou`. Se
-    alguém acrescentar `espera-ela` àquela tupla, a sprint some da fila viva e
-    o gesto que falta vira invisível — que é metade do defeito que o estado
-    novo veio curar.
-    """
+    """Ela fica na pasta viva: é lá que a pauta da sessão com ela se lê."""
     movedor = SCRIPT.parent / "mover-sprints-fechadas.py"
     fonte = movedor.read_text(encoding="utf-8")
     linha = next(ln for ln in fonte.splitlines() if ln.startswith("FECHADOS"))
@@ -352,11 +262,6 @@ def test_exigir_recusa_sprint_que_nao_esta_aberta(tmp_path) -> None:
     assert "VIVA-01" in r.stdout and "FEITA-01" not in r.stdout
 
 
-# ---------------------------------------------------------------------------
-# Contra a árvore de verdade
-# ---------------------------------------------------------------------------
-
-
 def test_nasce_reprovando_zero_na_arvore_de_verdade() -> None:
     r = subprocess.run(
         [sys.executable, str(SCRIPT)], cwd=RAIZ, capture_output=True, text=True
@@ -369,12 +274,7 @@ def test_nasce_reprovando_zero_na_arvore_de_verdade() -> None:
 
 
 def test_exigir_recusa_sprint_sem_frontmatter_e_aceita_a_que_tem(tmp_path) -> None:
-    """É o que o despachante chama para não deixar agente nascer sem posse.
-
-    Numa pasta própria: a árvore de verdade muda de estado (a sprint que este
-    teste citava, INFRA-DE-EXECUCAO-01, virou `estado: feita` em 06/09/2026, e
-    feita não se despacha).
-    """
+    """É o que o despachante chama para não deixar agente nascer sem posse."""
     (tmp_path / "2026-09-06-COM-POSSE-01.md").write_text(
         _sprint("COM-POSSE-01", posse={"A": ["src/x.py"]}), encoding="utf-8"
     )
@@ -399,22 +299,7 @@ def test_exigir_recusa_sprint_sem_frontmatter_e_aceita_a_que_tem(tmp_path) -> No
 
 
 def test_o_comentario_inline_nao_gruda_no_caminho() -> None:
-    """Um `# dona: A` no fim da linha cegava o portão INTEIRO.
-
-    MEDIDO em 25/08/2026. A linha de comentário SOZINHA já era pulada; a
-    anotação no fim de um caminho, não — o caminho entrava no conjunto com o
-    comentário grudado, e por isso **nunca casava com o mesmo arquivo declarado
-    por outra sprint**.
-
-    O estrago não era hipotético: a `CONFIGURACOES-O-LEXICO-01` anota assim
-    exatamente os quatro caminhos que ela CEDE — que são, por definição, os
-    disputados. O portão devolvia *"nenhuma colisão não declarada"* enquanto
-    duas sprints reivindicavam `secao_mesa.py`, e quem coordenava usou esse
-    verde para autorizar uma leva.
-
-    É o defeito que esta casa chama de *o instrumento mente mais que o
-    produto*: a régua desliga sozinha exatamente quando alguém documenta bem.
-    """
+    """Um `# dona: A` no fim da linha cegava o portão INTEIRO."""
     dados = colisao.le_frontmatter(
         _sprint(
             "COM-COMENTARIO",
@@ -445,12 +330,7 @@ def test_a_colisao_com_comentario_inline_e_acusada() -> None:
 
 
 def test_o_hash_colado_no_caminho_sobrevive() -> None:
-    """A cura não pode ter começado a cortar caminho legítimo.
-
-    Nome de arquivo com `#` colado é esquisito e legal. Exigir o espaço antes
-    do `#` é o que separa "anotação" de "parte do nome" — sem esta guarda, o
-    conserto trocaria um erro de leitura por outro, mais silencioso.
-    """
+    """A cura não pode ter começado a cortar caminho legítimo."""
     dados = colisao.le_frontmatter(
         _sprint("HASH", posse={"A1": ["src/rel#1.py"]}), "HASH"
     )

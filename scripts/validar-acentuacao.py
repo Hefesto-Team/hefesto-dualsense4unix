@@ -30,21 +30,17 @@ import subprocess
 import sys
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Dicionário de palavras-risco. Montado via concatenação para que o próprio
-# script jamais seja identificado como violação quando varrido contra si.
-# ---------------------------------------------------------------------------
-A = "á"  # a agudo
-E = "é"  # e agudo
-I_ = "í"  # i agudo
-O_ = "ó"  # o agudo
-U = "ú"  # u agudo
-AT = "ã"  # a til
-OT = "õ"  # o til
-AC = "â"  # a circ
-EC = "ê"  # e circ
-OC = "ô"  # o circ
-CC = "ç"  # c cedilha
+A = "á"
+E = "é"
+I_ = "í"
+O_ = "ó"
+U = "ú"
+AT = "ã"
+OT = "õ"
+AC = "â"
+EC = "ê"
+OC = "ô"
+CC = "ç"
 
 
 def _par(errada: str, correta: str) -> tuple[str, str]:
@@ -52,7 +48,6 @@ def _par(errada: str, correta: str) -> tuple[str, str]:
 
 
 _PARES: list[tuple[str, str]] = [
-    # -ção / -ções (40+ pares)
     _par("a" + "cao", "a" + CC + AT + "o"),
     _par("a" + "coes", "a" + CC + OT + "es"),
     _par("n" + "ao", "n" + AT + "o"),
@@ -225,7 +220,6 @@ _PARES: list[tuple[str, str]] = [
     _par("nomeac" + "ao", "nomea" + CC + AT + "o"),
     _par("situac" + "ao", "situa" + CC + AT + "o"),
     _par("situac" + "oes", "situa" + CC + OT + "es"),
-    # -tório / -tória
     _par("diretor" + "io", "diret" + O_ + "rio"),
     _par("diretor" + "ios", "diret" + O_ + "rios"),
     _par("reposit" + "orio", "reposit" + O_ + "rio"),
@@ -235,7 +229,6 @@ _PARES: list[tuple[str, str]] = [
     _par("obrig" + "atorio", "obrig" + "at" + O_ + "rio"),
     _par("obrig" + "atorios", "obrig" + "at" + O_ + "rios"),
     _par("trans" + "itorio", "trans" + "it" + O_ + "rio"),
-    # acentos tônicos gerais
     _par("crit" + "ico", "cr" + I_ + "tico"),
     _par("crit" + "ica", "cr" + I_ + "tica"),
     _par("crit" + "icos", "cr" + I_ + "ticos"),
@@ -309,12 +302,9 @@ _PARES: list[tuple[str, str]] = [
     _par("m" + "usica", "m" + U + "sica"),
     _par("m" + "usicas", "m" + U + "sicas"),
     _par("f" + "acil", "f" + "á" + "cil"),
-    # nota: adverbios em -mente perdem o acento do radical ("facilmente" e nao
-    # "fácilmente"); par removido por ser falso-positivo universal.
     _par("dif" + "icil", "dif" + I_ + "cil"),
     _par("dif" + "iceis", "dif" + I_ + "ceis"),
     _par("impr" + "essao", "impr" + "ess" + AT + "o"),
-    # outras comuns
     _par("conte" + "udo", "conte" + U + "do"),
     _par("conte" + "udos", "conte" + U + "dos"),
     _par("depend" + "encia", "depend" + EC + "ncia"),
@@ -376,12 +366,8 @@ _PARES: list[tuple[str, str]] = [
     _par("gr" + "afico", "gr" + "á" + "fico"),
     _par("gr" + "aficos", "gr" + "á" + "ficos"),
     _par("est" + "rategia", "est" + "rat" + E + "gia"),
-    # Palavras já corretas sem acento — não adicionar a _PARES: menor, depois,
-    # categoria, prioridade. O dedup da linha 389 rejeita pares com
-    # errada == correta, então entradas sentinel apenas poluem _PARES.
 ]
 
-# Dedup preservando ordem
 _vistos: set[str] = set()
 _CORRECOES: dict[str, str] = {}
 for errada, correta in _PARES:
@@ -390,9 +376,6 @@ for errada, correta in _PARES:
         _vistos.add(key)
         _CORRECOES[errada] = correta
 
-# ---------------------------------------------------------------------------
-# Whitelist de paths: match por regex contra o path relativo à raiz do repo.
-# ---------------------------------------------------------------------------
 WHITELIST_PATTERNS: list[str] = [
     r"^VALIDATOR_BRIEF\.md$",
     r"^LICENSE$",
@@ -401,18 +384,9 @@ WHITELIST_PATTERNS: list[str] = [
     r"^tests/fixtures/.*",
     r"^docs/history/.*",
     r"^docs/research/.*",
-    # AS DUAS ISENÇÕES DE `docs/process/` SAÍRAM EM 15/09/2026, com a pasta.
-    # Elas existiam porque ali morava texto CITADO — o que foi dito, como foi
-    # dito — e corrigir a grafia de uma citação é falsificá-la. A pasta deixou
-    # de ser versionada por ordem dela, e este validador varre a árvore
-    # versionada: isenção sem alvo é paisagem.
     r"^scripts/validar-acentuacao\.py$",
     r"^scripts/check_anonymity\.sh$",
-    # O teste do validador usa fixtures com texto sem acento propositalmente.
     r"^tests/unit/test_validar_acentuacao\.py$",
-    # Idem: o teste da alternância de UMA passada compara as duas
-    # implementações sobre textos que TÊM de estar errados para haver o que
-    # comparar. Sem esta linha o portão acusa a própria régua que o mede.
     r"^tests/unit/test_acentuacao_uma_passada_so\.py$",
     r"\.json$",
     r"\.lock$",
@@ -440,37 +414,17 @@ EXTENSOES_ALVO = (
     ".cfg", ".ini", ".txt", ".csv",
 )
 
-# `.csv` entrou em 11/08/2026, e o motivo importa: `docs/data/mapa-controles.csv`
-# deixou de ser tabela de números e virou 291 linhas de PROSA em português —
-# evidências, ressalvas, notas de medição. O portão não o via, e as células
-# novas nasceram sem acento nenhum (69 violações na primeira varredura).
-#
-# ARMADILHA, paga na hora: uma substituição cega de `nao` por `não` também
-# reescreve os VALORES DE DOMÍNIO — `nao-tem` virou `não-tem` e
-# `inferido-do-codigo` virou `inferido-do-código`, e o censo do mapa saltou de
-# 15 para 368 reprovações de integridade. Valor de domínio é chave, não texto:
-# ele nunca leva acento. Quem for acentuar em massa um `.csv` deste projeto
-# corrige a PROSA e deixa as colunas de enumeração em paz
-# (`existe`, `*_aceita`, `*_aciona`, `*_canal`, `*_de_onde_sei`, `*_ate_onde_foi`).
-
 
 def is_whitelisted(rel_path: str) -> bool:
     rel = rel_path.replace("\\", "/")
     return any(pat.search(rel) for pat in _WHITELIST_RE)
 
 
-# Token: letras ASCII/unicode. Casa `acao`, `Funcao`, mas não `ACAO`
-# (UPPERCASE_SNAKE) nem `foo_acao_bar` (pedaço de identificador snake_case).
-# Regex por palavra: boundary `(?<!\w)` ... `(?!\w)` com heurísticas extras.
 _IDENT_CHAR = re.compile(r"[A-Za-z0-9_]")
 
 
 def _is_uppercase_snake_token(line: str, start: int, end: int) -> bool:
-    """Verifica se a palavra casada faz parte de um identificador em UPPERCASE_SNAKE.
-
-    Captura token contíguo de ``[A-Za-z0-9_]`` ao redor. Se todas as letras do
-    token forem maiúsculas (ignora dígitos/underscores), é UPPERCASE_SNAKE.
-    """
+    """Verifica se a palavra casada faz parte de um identificador em UPPERCASE_SNAKE."""
     i = start
     while i > 0 and _IDENT_CHAR.match(line[i - 1]):
         i -= 1
@@ -485,43 +439,17 @@ def _is_uppercase_snake_token(line: str, start: int, end: int) -> bool:
 
 
 def _esta_em_identificador_snake(line: str, start: int, end: int) -> bool:
-    """Detecta se a palavra está dentro de identificador snake_case maior.
-
-    Ex.: ``_nao_``, ``foo_acao_bar``, ``minha.funcao_util`` — nesses casos a
-    palavra-risco é pedaço de um nome, não texto PT-BR. Skip.
-    """
+    """Detecta se a palavra está dentro de identificador snake_case maior."""
     antes = line[start - 1] if start > 0 else ""
     depois = line[end] if end < len(line) else ""
-    # `@` entrou em 25/08/2026: é a marca de token de OUTRA LINGUAGEM dentro de
-    # um arquivo desta casa — `@media` do CSS, `@property`, `@pytest.mark`. A
-    # régua acusava `@media` como "média" mal acentuada em todo gerador de HTML
-    # que tem uma consulta de mídia, e o CSS não tem como escrever de outro
-    # jeito: é palavra-chave da linguagem, não português.
     sep = {"_", ".", "-", "$", "{", "=", "/", "@"}
-    # PONTO FINAL DE FRASE NÃO É `foo.bar` (31/08/2026). O `.` entrou nesta lista
-    # para não acusar `minha.funcao_util`, mas ele também termina frase — e a
-    # regra, como estava, apagava do portão TODA palavra-risco no fim de um
-    # período. Medido nesta árvore: 27 erros de acentuação REAIS, em
-    # `.github/workflows/`, `docs/adr/`, `docs/data/*.csv`, `scripts/`,
-    # `src/plugin_api/`, `tests/` e `uninstall.sh`, invisíveis por isso.
-    #
-    # O `.` só separa identificador quando encosta em identificador do OUTRO
-    # lado. `foo.acao` continua pulado; `uma acao.` volta a ser cobrada.
     depois2 = line[end + 1] if end + 1 < len(line) else ""
     if depois == "." and not _IDENT_CHAR.match(depois2 or " "):
         depois = ""
     if antes in sep or depois in sep:
         return True
-    # VALOR DE ATRIBUTO HTML/CSS — `data-voto="nao"`, `type="acao"`. O valor é
-    # um token que o JavaScript compara byte a byte; acentuá-lo quebraria o
-    # código sem melhorar português nenhum, porque ninguém o LÊ na tela.
-    #
-    # Casa só o par ATRIBUTO=VALOR (com o `=` colado nas aspas), e não qualquer
-    # texto entre aspas: prosa citada continua sendo cobrada, que é o que este
-    # portão existe para fazer.
     if antes in {'"', "'"} and start >= 2 and line[start - 2] == "=":
         return True
-    # def foo(), class Bar, alias baz, function qux
     prefix = line[:start].rstrip()
     for kw in ("def ", "class ", "alias ", "function ", "local "):
         if prefix.endswith(kw.strip()):
@@ -538,48 +466,11 @@ def _compila_pattern(errada: str) -> re.Pattern[str]:
 
 _PATTERNS: dict[str, re.Pattern[str]] = {e: _compila_pattern(e) for e in _CORRECOES}
 
-#: UMA passada em vez de 314, e é a causa raiz do custo deste portão.
-#:
-#: MEDIDO em 23/08/2026: o laço de `varre_arquivo` compilava 314 regex e passava
-#: TODAS elas por CADA linha de 27,9 MB de árvore — 157,5 s de um orçamento de
-#: 181 s, ou **87% do custo de todos os portões não-pytest juntos**. Um portão
-#: que cobra dois minutos e meio é um portão que a pessoa aprende a pular, e
-#: portão pulado protege menos que portão nenhum.
-#:
-#: A alternância única faz o motor de regex percorrer a linha UMA vez. O ganho
-#: não é de constante: é de ordem — 314 passadas viram 1.
-#:
-#: **Por que isto é seguro:** os 314 padrões têm forma idêntica
-#: (`(?<![A-Za-z0-9_])PALAVRA(?![A-Za-z0-9_])`, `IGNORECASE`), então a união
-#: deles é exatamente a alternância. As palavras são ordenadas da MAIS LONGA
-#: para a mais curta porque a alternância do Python é *first-match*: sem isso,
-#: `acao` casaria antes de `acaoes` e o achado sairia truncado.
-#:
-#: A resposta continua vindo do `_CORRECOES` — a alternância só diz ONDE olhar;
-#: a palavra certa é buscada no dicionário, como antes. Um teste de igualdade
-#: exata contra a implementação antiga é o aceite.
-#: **A alternância é RECOMPILADA quando `_CORRECOES` muda**, e isso não é zelo.
-#:
-#: A primeira versão compilava uma vez, na importação, e ficava CEGA a qualquer
-#: mudança do dicionário. A defesa de glifos ADR-011 tem um teste que injeta um
-#: par malicioso em `_CORRECOES` em tempo de execução para provar que o
-#: post-pass reverte — e ele reprovou, porque a alternância não enxergava o par
-#: injetado. **O teste estava certo e o conserto estava errado.**
-#:
-#: A chave do cache é `(id, len)`: pega tanto o dicionário SUBSTITUÍDO quanto a
-#: chave ACRESCENTADA. Não pega valor trocado sem mudar de tamanho — e não
-#: precisa: a alternância olha só as CHAVES, e o valor certo continua vindo do
-#: dicionário na hora de reportar.
 _cache_alternancia: tuple[tuple[int, int], re.Pattern[str]] | None = None
 
 
 def _alternancia() -> re.Pattern[str]:
-    """Um único padrão com as 314 palavras, em vez de 314 padrões por linha.
-
-    Ordenada da MAIS LONGA para a mais curta porque a alternância do Python é
-    *first-match*: sem isso um prefixo casaria antes do termo inteiro e o achado
-    sairia truncado.
-    """
+    """Um único padrão com as 314 palavras, em vez de 314 padrões por linha."""
     global _cache_alternancia
     chave = (id(_CORRECOES), len(_CORRECOES))
     if _cache_alternancia is not None and _cache_alternancia[0] == chave:
@@ -594,15 +485,11 @@ def _alternancia() -> re.Pattern[str]:
     return pat
 
 
-# BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02: whitelist Unicode conforme ADR-011.
-# Qualquer substituição que removesse caractere dentro destes ranges é
-# rejeitada, mesmo que venha de par adicionado por engano em _PARES.
-# Defense-in-depth contra a regressão reproduzida 2x (V2.1 + V2.2 pós-release).
 UNICODE_ALLOWED_RANGES: tuple[tuple[int, int], ...] = (
-    (0x2190, 0x21FF),  # Arrows
-    (0x2500, 0x257F),  # Box Drawing
-    (0x2580, 0x259F),  # Block Elements
-    (0x25A0, 0x25FF),  # Geometric Shapes (inclui BLACK CIRCLE, WHITE CIRCLE)
+    (0x2190, 0x21FF),
+    (0x2500, 0x257F),
+    (0x2580, 0x259F),
+    (0x25A0, 0x25FF),
 )
 
 
@@ -617,12 +504,7 @@ def _contem_glyph_protegido(texto: str) -> bool:
 
 
 def _linhas_markdown_codigo(linhas: list[str]) -> set[int]:
-    """Retorna índices (0-based) de linhas dentro de fenced code block ou indentado 4+.
-
-    Fenced: linhas entre pares de ``` ou ~~~. A própria linha do fence entra
-    no set (pula).
-    Indentado: bloco precedido por linha vazia + 4 espaços de indent.
-    """
+    """Retorna índices (0-based) de linhas dentro de fenced code block ou indentado 4+."""
     dentro_fenced = False
     fence_set: set[int] = set()
     for idx, ln in enumerate(linhas):
@@ -633,8 +515,6 @@ def _linhas_markdown_codigo(linhas: list[str]) -> set[int]:
             continue
         if dentro_fenced:
             fence_set.add(idx)
-    # Bloco indentado: linha com 4+ espaços precedida por linha vazia. Marca
-    # sequência contígua.
     indent_set: set[int] = set()
     prev_vazia = True
     bloco_ativo = False
@@ -657,27 +537,14 @@ _INLINE_CODE_MD = re.compile(r"`[^`\n]+`")
 
 
 def _mascara_inline_code_md(linha: str) -> str:
-    """Em markdown, substitui conteúdo de `...` por espaços de mesmo tamanho.
-
-    Preserva offsets para casamento de regex funcionar; o match dentro do
-    trecho mascarado simplesmente não ocorre porque virou espaços.
-    """
+    """Em markdown, substitui conteúdo de `...` por espaços de mesmo tamanho."""
     def _sub(m: re.Match[str]) -> str:
         return " " * len(m.group())
     return _INLINE_CODE_MD.sub(_sub, linha)
 
 
 def _mascara_chaves_da_fstring(literal: str) -> str:
-    """No 3.10 e no 3.11, apaga o CÓDIGO das chaves de uma f-string.
-
-    Recebe o `STRING` inteiro (prefixo e aspas incluídos) e devolve outro do
-    mesmo tamanho, com as quebras de linha no lugar, onde sobra só o que o
-    `tokenize` do 3.12 entrega como texto: o miolo literal, a especificação de
-    formato depois do `:` e as strings de DENTRO da expressão. O prefixo, as
-    aspas de fora, o nome de variável, as chaves e os operadores viram espaço.
-    Se o literal não é
-    f-string, devolve o PRÓPRIO objeto, e quem chama usa isso para saber.
-    """
+    """No 3.10 e no 3.11, apaga o CÓDIGO das chaves de uma f-string."""
     i = 0
     while i < len(literal) and literal[i] not in "'\"":
         i += 1
@@ -703,7 +570,7 @@ def _mascara_chaves_da_fstring(literal: str) -> str:
         while comeco > 0 and j - comeco < 2 and literal[comeco - 1] in "rRbBuUfF":
             comeco -= 1
         if comeco > 0 and (literal[comeco - 1].isalnum() or literal[comeco - 1] == "_"):
-            comeco = j  # `if"a"`: as letras eram palavra-chave, não prefixo
+            comeco = j
         q = literal[j : j + 3] if literal[j : j + 3] in ('"""', "'''") else literal[j]
         k = j + len(q)
         while k < fim and not literal.startswith(q, k):
@@ -712,7 +579,7 @@ def _mascara_chaves_da_fstring(literal: str) -> str:
         if "f" in literal[comeco:j].lower():
             saida[comeco:k] = _mascara_chaves_da_fstring(literal[comeco:k])
         else:
-            saida[comeco:j] = literal[comeco:j]  # o prefixo é do `STRING`: fica
+            saida[comeco:j] = literal[comeco:j]
         return k
 
     def especificacao(j: int) -> int:
@@ -754,15 +621,12 @@ def _mascara_chaves_da_fstring(literal: str) -> str:
         apagar(codigo, fim)
         return fim
 
-    # O prefixo e as aspas de fora não são texto no 3.12 (`FSTRING_START` e
-    # `FSTRING_END`), e aqui também não.
     apagar(0, ini)
     apagar(fim, len(literal))
     k = ini
     while k < fim:
         c = literal[k]
         if c == "\\" and not cru:
-            # `\N{NOME}` é escape de caractere, não campo.
             if literal[k + 1 : k + 3] == "N{":
                 fecha = literal.find("}", k + 3, fim)
                 k = fim if fecha < 0 else fecha + 1
@@ -774,7 +638,7 @@ def _mascara_chaves_da_fstring(literal: str) -> str:
             k = campo(k + 1)
             continue
         if c in "{}" and literal[k + 1 : k + 2] == c:
-            apagar(k + 1, k + 2)  # `{{` é uma chave de texto só, como no 3.12
+            apagar(k + 1, k + 2)
             k += 2
             continue
         k += 1
@@ -798,53 +662,7 @@ def _sobrepor(
 
 
 def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
-    """Em ``.py``, apaga tudo que NÃO é comentário/string antes da varredura.
-
-    BUG-VALIDAR-ACENTUACAO-IDENTIFICADOR-PY-01: o validador cobrava acento de
-    NOMES DE VARIÁVEL. `producao`, `modulo`, `sessao`, `padrao`, `conteudo`,
-    `acao` — em Python identificador não leva acento, então a "correção"
-    pedida ia da má prática ao erro de sintaxe em alguns casos. Resultado: o
-    gate ficou vermelho de forma permanente, com dezenas de apontamentos que
-    ninguém podia atender, e um gate que sempre reprova deixa de ser lido.
-
-    As heurísticas que já existiam (`_esta_em_identificador_snake`,
-    `_is_uppercase_snake_token`) cobriam só parte: pegavam `foo_acao_bar` e
-    `def acao(`, mas não `producao: None`, `for modulo in ...` nem
-    `sessao = ...`. Em vez de empilhar mais casos especiais, a regra passa a
-    ser a que sempre foi a intenção: **acentuação é sobre TEXTO**, e num
-    arquivo Python o texto mora em comentário, docstring e literal de string.
-    O `tokenize` do próprio Python responde isso com exatidão, sem adivinhar.
-
-    Arquivo que não tokeniza (sintaxe inválida, encoding exótico) volta
-    inteiro para a varredura antiga — degradar para o comportamento anterior
-    é preferível a deixar de checar o arquivo.
-
-    PORTÃO-VIVO-01 Bloco A: a partir do Python 3.12 (PEP 701) o `tokenize`
-    deixou de devolver a f-string como um `STRING` único e passou a emitir
-    `FSTRING_START` / `FSTRING_MIDDLE` / `FSTRING_END`. Como o filtro só
-    aceitava `COMMENT` e `STRING`, **todo o texto de f-string virava espaço**
-    e o gate ficava cego justamente na forma de string mais usada no projeto.
-    Pior: o CI pinava 3.11, onde f-string ainda é `STRING` — a máquina dela
-    ficava verde e a `main` vermelha pelo mesmo arquivo.
-
-    O token aceito é o `FSTRING_MIDDLE`, e só ele, porque ele é exatamente a
-    parte **textual**: o que está dentro das chaves sai como `NAME`/`OP` e
-    continua mascarado. Aceitar `FSTRING_START`/`FSTRING_END` traria só as
-    aspas, e aceitar o miolo das chaves ressuscitaria o falso positivo em nome
-    de variável que este mascaramento existe para matar (`f"{producao}"` não
-    pode virar apontamento). Os nomes são buscados com `getattr` porque no
-    3.11 esses atributos não existem — assumi-los quebraria o gate na versão
-    que o CI ainda usa.
-
-    A MESMA RESPOSTA NAS TRÊS VERSÕES — 25/09/2026. A metade de cima curou o
-    3.12 e deixou a assimetria no sentido contrário: no 3.10 e no 3.11 a
-    f-string inteira é UM `STRING`, com as chaves dentro, e o gate lia o nome
-    de variável que o 3.12 já mascarava. Medido na corrida `36119169814` do
-    CI: 43 apontamentos no 3.10 e no 3.11, zero no 3.12, e os 43 eram nome de
-    variável entre chaves (`f"{len(unicos)}"`). Sem `FSTRING_MIDDLE`, a
-    f-string passa por `_mascara_chaves_da_fstring`, que apaga o código das
-    chaves e guarda o que o 3.12 chama de texto.
-    """
+    """Em ``.py``, apaga tudo que NÃO é comentário/string antes da varredura."""
     import io
     import tokenize
 
@@ -858,8 +676,6 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
     if fstring_middle is not None:
         tipos_texto.add(fstring_middle)
 
-    # Começa tudo em branco e devolve só os trechos de texto, preservando as
-    # colunas — as heurísticas seguintes usam os índices da linha original.
     mascarado = [" " * len(linha) for linha in linhas]
     for tok in tokens:
         if tok.type not in tipos_texto:
@@ -876,9 +692,6 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
                 continue
             original = linhas[i]
             inicio = col_ini if n == lin_ini else 0
-            # `fim` importa: numa linha como `assert "x" not in codigo`, a
-            # string ocupa só um pedaço e `codigo` é identificador. Copiar até
-            # o fim da linha traria o código junto de volta.
             fim = col_fim if n == lin_fim else len(original)
             fim = min(fim, len(original))
             mascarado[i] = (
@@ -912,8 +725,6 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
     eh_markdown = path.suffix.lower() == ".md"
     if eh_markdown:
         pular_idx = _linhas_markdown_codigo(linhas)
-    # BUG-VALIDAR-ACENTUACAO-IDENTIFICADOR-PY-01: em .py, só comentário e
-    # string são texto — o resto é código e não leva acento.
     eh_python = path.suffix.lower() == ".py"
     linhas_texto = _mascara_codigo_python(conteudo, linhas) if eh_python else linhas
 
@@ -933,13 +744,10 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
             correta = _CORRECOES.get(m.group().lower())
             if correta is None:
                 continue
-            # Skip UPPERCASE_SNAKE (IDs tipo CHORE-ACAO-01).
             if _is_uppercase_snake_token(linha_busca, m.start(), m.end()):
                 continue
-            # Skip identificador snake_case maior.
             if _esta_em_identificador_snake(linha_busca, m.start(), m.end()):
                 continue
-            # Skip se a palavra "correta" já é igual (sentinel).
             if m.group().lower() == correta.lower():
                 continue
             violacoes.append((idx + 1, m.group(), correta, linha.strip()))
@@ -947,13 +755,7 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
 
 
 def corrigir_arquivo(path: Path, raiz: Path) -> int:
-    """Aplica substituições in-place no arquivo, respeitando os mesmos skips.
-
-    Retorna número de substituições aplicadas. Preserva offsets reais no arquivo
-    real (não usa a versão mascarada de markdown para escrever), mas detecta
-    ocorrências usando a mesma versão mascarada que ``checar_arquivo`` usa,
-    para não mexer em inline-code ou fenced-code.
-    """
+    """Aplica substituições in-place no arquivo, respeitando os mesmos skips."""
     try:
         rel = str(path.resolve().relative_to(raiz))
     except ValueError:
@@ -971,9 +773,7 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
         return 0
 
     linhas = conteudo.splitlines(keepends=True)
-    # .splitlines(keepends=True) preserva separadores (\n, \r\n) por linha.
     eh_markdown = path.suffix.lower() == ".md"
-    # Para calcular pular_idx precisamos da versão sem keepends.
     linhas_sem_sep = conteudo.splitlines()
     pular_idx: set[int] = set()
     if eh_markdown:
@@ -982,7 +782,6 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
     total_subs = 0
     novas_linhas: list[str] = []
     for idx, linha_com_sep in enumerate(linhas):
-        # Separa conteúdo e terminador para editar só o conteúdo.
         if linha_com_sep.endswith("\r\n"):
             sep = "\r\n"
             linha = linha_com_sep[:-2]
@@ -1000,24 +799,13 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
             novas_linhas.append(linha_com_sep)
             continue
 
-        # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03 pre-pass: linhas com glyph
-        # protegido nao sao corrigidas. Defense-in-depth — mesmo que o filtro
-        # camada 1 (`subs` filtrado abaixo) falhe (regex avancado, par ad-hoc,
-        # normalizacao Unicode externa), a linha sai intocada para
-        # `novas_linhas`. Custo de falso negativo (palavra sem acento na linha
-        # do glyph) e infinitamente menor que o custo da regressao reportada
-        # 3x: arquivos com strip silencioso de "□↑↓←→".
         if _contem_glyph_protegido(linha):
             novas_linhas.append(linha_com_sep)
             continue
 
         linha_busca = _mascara_inline_code_md(linha) if eh_markdown else linha
 
-        # Coleta todas as substituições válidas (ordem reversa para preservar offsets).
-        subs: list[tuple[int, int, str]] = []  # (start, end, replacement)
-        # UMA passada, como no `checar_arquivo` — ver a nota do `_alternancia()`.
-        # O `--fix` tinha o MESMO laço de 314 passadas, e curar só a metade que
-        # confere deixaria o `--fix` custando o que o portão deixou de custar.
+        subs: list[tuple[int, int, str]] = []
         for m in _alternancia().finditer(linha_busca):
             correta = _CORRECOES.get(m.group().lower())
             if correta is None:
@@ -1028,7 +816,6 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
                 continue
             if m.group().lower() == correta.lower():
                 continue
-            # Preserva capitalização do original (first-letter).
             original = m.group()
             rep = (
                 correta[:1].upper() + correta[1:]
@@ -1037,10 +824,6 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
             )
             subs.append((m.start(), m.end(), rep))
 
-        # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02 camada 1: rejeita qualquer
-        # substituição cuja faixa original contém glyph protegido por ADR-011.
-        # Aplica em modo --fix estritamente — se um par mal-formado em _PARES
-        # colocasse "" como "errada", este filtro impede remoção silenciosa.
         if subs:
             filtrados = [
                 (s, e, r) for s, e, r in subs
@@ -1058,7 +841,6 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
             subs = filtrados
 
         if subs:
-            # Ordena por start e rejeita sobreposições (primeira casada vence).
             subs.sort(key=lambda t: t[0])
             aceitas: list[tuple[int, int, str]] = []
             ultimo_end = -1
@@ -1066,17 +848,9 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
                 if s >= ultimo_end:
                     aceitas.append((s, e, r))
                     ultimo_end = e
-            # Aplica de trás para frente.
             nova = linha
             for s, e, r in reversed(aceitas):
                 nova = nova[:s] + r + nova[e:]
-            # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03 post-pass: paranoia.
-            # Mesmo apos pre-pass + filtro camada 1, se algum codepoint
-            # protegido sumiu apos a substituicao, reverte a linha e loga.
-            # Em condicoes normais o pre-pass ja teria pulado a linha; este
-            # ramo so dispara se par malicioso introduzir match que casa
-            # apos a edicao mas nao casava antes — caso teorico, cinto e
-            # suspensorio.
             if _contem_glyph_protegido(linha) and not _contem_glyph_protegido(nova):
                 perdidos = sorted(
                     {c for c in linha if is_protected_codepoint(ord(c))} - set(nova)
@@ -1099,15 +873,7 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
 
 
 def listar_arquivos_git(raiz: Path) -> list[Path]:
-    """Lista os arquivos que o modo ``--all`` deve varrer.
-
-    PORTÃO-VIVO-01 Bloco A (bônus): `git ls-files -z` puro lista só o índice,
-    então `--all` era **cego a arquivo novo** ainda não adicionado — dava verde
-    exatamente no arquivo que ninguém revisou. `--others --exclude-standard`
-    traz o não rastreado sem trazer o ignorado, e `--cached` mantém explícito o
-    que já era varrido. Duplicata não ocorre: um caminho é `cached` ou `other`,
-    nunca os dois.
-    """
+    """Lista os arquivos que o modo ``--all`` deve varrer."""
     try:
         out = subprocess.check_output(
             [
@@ -1186,14 +952,6 @@ def main() -> int:
 
     raiz = descobrir_raiz()
 
-    # GATE-ACENTO-MULTIARQUIVO-01: o `pre-commit` apenda TODOS os nomes de
-    # arquivo staged ao entry do hook. Enquanto `--check-file` aceitava um
-    # valor só, o argparse consumia o primeiro nome e jogava os demais no
-    # positional `paths`, que este bloco descartava em silêncio — com N
-    # arquivos staged, N-1 passavam sem checagem alguma. Agora `--check-file`
-    # aceita N caminhos E os positionais são somados aos alvos: nada que chega
-    # pela linha de comando fica sem ser lido, e basta um arquivo reprovar para
-    # o gate reprovar.
     recebidos: list[Path] = [Path(p) for p in (args.check_file or [])]
     recebidos.extend(args.paths)
 

@@ -1,46 +1,4 @@
-"""A-TELA-NOVA-ENTRA-NA-RÉGUA-DO-MAPA-01 — a régua da fala de tela varria só `app/`.
-
-O DEFEITO, MEDIDO EM 06/09/2026
-================================
-``scripts/validar-fala-de-tela.py`` existe para impedir que a tela afirme o que
-``docs/data/mapa-controles.csv`` não sustenta. Ela conhecia **uma** raiz —
-``src/hefesto_dualsense4unix/app`` — e a tela nova mora em
-``src/hefesto_dualsense4unix/interface``. Das 170 frases de transporte que o
-``--censo-de-transporte`` conta hoje, **123 estavam fora do alcance**, contra 47
-dentro: a maior parte do texto de transporte da casa estava fora da régua que
-existe para ele.
-
-Não foi decisão. A régua é de 24/08/2026 e a tela nova nasceu depois — ela
-mediu o mundo em que a única tela era `app/`. A pergunta que desenterrou isto é
-dela: *"olharam o mapa dos controles e o csv que alimenta o specs.html?"*, e na
-sequência *"se coisas assim aconteceram antes não so nessas duas sprints. entao
-tem coisa errada."*  <!-- noqa-acento: citação literal dela -->
-
-E ELA TERMINAVA VERDE DIZENDO QUE QUASE NÃO MEDIU
-==================================================
-``rc=0`` imprimindo *"A RÉGUA QUASE NÃO MEDIU: 1 `Fala` declarada(s) … contra
-as 308 célula(s)"*. É a forma que a casa nomeou em 04/09/2026: **o instrumento
-sabe do próprio risco e AVISA em vez de RESOLVER**. O que resolve é o piso:
-o conjunto medido não pode ENCOLHER. Não enchê-lo continua verde; esvaziá-lo,
-não.
-
-O QUE ESTA RÉGUA NÃO FAZ, E É DECISÃO DELA
-===========================================
-Ela INFORMA; não VETA. Palavra dela, 06/09/2026, sobre o mapa: *"Esse mapa é
-funcional e real. tá desatualizado no sentido de não ter sido medido. foi e
-tudo funciona."* Uma célula em ``aciona=não`` quer dizer *ninguém escreveu a
-medição de volta*, não *o aparelho não faz* — e uma régua que reprovasse a tela
-por causa disso transformaria mapa atrasado em freio. Nenhuma asserção deste
-arquivo reprova frase de tela por causa de célula atrasada.
-<!-- noqa-acento: citação literal dela -->
-
-AS DUAS LISTAS LITERAIS DESTE ARQUIVO NÃO SÃO LIDAS DO ROTEIRO
-===============================================================
-``RAIZES_ATE_HOJE`` e ``PISO_ATE_HOJE`` são escritas à mão AQUI. É a lição que
-a ADR-016 pagou por um mês e que ``test_o_mapa_separa_divida_de_decisao.py``
-deixou escrita: um teto lido da própria fonte passa sempre. Encolher o alcance
-ou baixar o piso passa a exigir editar este arquivo, e isso aparece no diff.
-"""
+"""A-TELA-NOVA-ENTRA-NA-RÉGUA-DO-MAPA-01 — a régua da fala de tela varria só `app/`."""
 from __future__ import annotations
 
 import ast
@@ -56,28 +14,16 @@ from tests.unit.test_validar_fala_de_tela import FATOS_BASE, monta_arvore
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT_REAL = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 
-#: As raízes de tela de HOJE, à mão. O conjunto SÓ CRESCE: perder uma é perder
-#: alcance em silêncio, que é o defeito de 24/08 a 06/09 medido acima.
 RAIZES_ATE_HOJE: tuple[str, ...] = (
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/interface",
 )
 
-#: O piso de HOJE, à mão. Ele SOBE quando a casa declarar mais — nunca desce
-#: sem uma linha datada aqui dizendo o que foi retirado e por quem.
 PISO_ATE_HOJE: dict[str, int] = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 0}
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# o roteiro, lido por AST e carregado por caminho
-# ─────────────────────────────────────────────────────────────────────────
 def _modulo_do_portao() -> ModuleType:
-    """O roteiro carregado como módulo — para exercer as funções puras.
-
-    Carregado por caminho de arquivo (nunca importado como pacote): ele mora em
-    `scripts/`, que não é pacote, e é assim que `gerar-mapa.py` e
-    `gerar-painel.py` já o carregam.
-    """
+    """O roteiro carregado como módulo — para exercer as funções puras."""
     spec = importlib.util.spec_from_file_location("validar_fala_de_tela_sob_teste", SCRIPT_REAL)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
@@ -87,13 +33,7 @@ def _modulo_do_portao() -> ModuleType:
 
 
 def _constante_por_ast(nome: str) -> object:
-    """Uma constante de módulo do roteiro, lida por AST.
-
-    Por AST e não por import de propósito, como a catraca de
-    ``test_abas_promovidas_so_crescem_p09.py``: a forma tem de ser literal, e
-    qualquer coisa calculada em tempo de execução reprova em voz alta em vez de
-    entregar um valor que ninguém consegue conferir lendo o arquivo.
-    """
+    """Uma constante de módulo do roteiro, lida por AST."""
     arvore = ast.parse(SCRIPT_REAL.read_text(encoding="utf-8"), filename=str(SCRIPT_REAL))
     for no in arvore.body:
         alvo: str | None = None
@@ -111,9 +51,6 @@ def _constante_por_ast(nome: str) -> object:
         try:
             return ast.literal_eval(valor)
         except (ValueError, TypeError, SyntaxError):
-            # `RAIZES_DE_TELA` cita `APP_RELATIVO`/`INTERFACE_RELATIVO`, que são
-            # nomes: resolve-os pelo módulo, mas só depois de exigir que a forma
-            # seja uma tupla/lista de nomes ou literais.
             assert isinstance(valor, (ast.Tuple, ast.List)), (
                 f"{nome} deixou de ser uma tupla literal no roteiro"
             )
@@ -128,9 +65,6 @@ def _constante_por_ast(nome: str) -> object:
     raise AssertionError(f"o roteiro perdeu `{nome}`")
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# as catracas — as duas listas só crescem
-# ─────────────────────────────────────────────────────────────────────────
 def test_o_alcance_da_regua_so_cresce() -> None:
     """`RAIZES_DE_TELA` é superconjunto do literal deste arquivo."""
     no_roteiro = tuple(_constante_por_ast("RAIZES_DE_TELA"))  # type: ignore[call-overload]
@@ -160,16 +94,8 @@ def test_o_piso_da_regua_so_sobe() -> None:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# o miolo do veredito, exercido com números sintéticos
-# ─────────────────────────────────────────────────────────────────────────
 def test_o_piso_compara_e_nao_tem_a_resposta_cravada() -> None:
-    """A régua muda de resposta quando o conjunto muda — os quatro casos.
-
-    Sem isto ela poderia estar acertando por ter a resposta escrita, e não por
-    comparar (o molde de `tem_lastro_nos_dois`, em
-    `test_a_aba_emulacao_nao_promete_transporte_sem_lastro.py`).
-    """
+    """A régua muda de resposta quando o conjunto muda — os quatro casos."""
     valida = _modulo_do_portao().valida_piso_da_regua
     piso = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 1}
 
@@ -188,13 +114,7 @@ def test_o_piso_compara_e_nao_tem_a_resposta_cravada() -> None:
 
 
 def test_a_arvore_de_mentira_nao_e_o_produto_e_a_de_verdade_e() -> None:
-    """O piso vale para o produto — e a pergunta nunca se desliga calada.
-
-    A ponta que importa é a SEGUNDA asserção: se `e_a_arvore_do_produto`
-    apodrecer para sempre-falso (uma raiz renomeada, o mapa movido de lugar),
-    o piso deixaria de valer no único lugar onde ele existe para valer, e o
-    portão seguiria verde. Aqui isso reprova.
-    """
+    """O piso vale para o produto — e a pergunta nunca se desliga calada."""
     modulo = _modulo_do_portao()
     e_produto, por_que = modulo.e_a_arvore_do_produto(RAIZ_REAL)
     assert e_produto, (
@@ -206,12 +126,6 @@ def test_a_arvore_de_mentira_nao_e_o_produto_e_a_de_verdade_e() -> None:
     assert not fora and razao, "uma pasta qualquer passou por árvore do produto"
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# a árvore de mentira que É um produto — para as mordidas do piso
-# ─────────────────────────────────────────────────────────────────────────
-#: A frase de tela das abas de mentira. Sem palavra de transporte de propósito:
-#: as mordidas do piso medem o PISO, e uma frase de transporte solta traria
-#: junto a reprovação de `valida_abas_promovidas`, misturando dois vereditos.
 _ABA_SEM_TRANSPORTE = '''\
 """Uma aba de mentira."""
 from __future__ import annotations
@@ -245,12 +159,7 @@ def _portao_com(
     piso: dict[str, int] | None = None,
     raizes: tuple[str, ...] | None = None,
 ) -> Path:
-    """O roteiro real copiado para `raiz/scripts/`, com as linhas trocadas.
-
-    Cada troca AFIRMA que casou: uma substituição que não casa devolveria o
-    roteiro intacto, e a mordida passaria sem morder nada. Instrumento que
-    falha calado é pior que instrumento nenhum.
-    """
+    """O roteiro real copiado para `raiz/scripts/`, com as linhas trocadas."""
     fonte = SCRIPT_REAL.read_text(encoding="utf-8")
     trocas = {
         "ABAS_COM_FALA_DECLARADA: frozenset[str] = frozenset()": (
@@ -289,9 +198,6 @@ def _roda(portao: Path, raiz: Path, *args: str) -> subprocess.CompletedProcess[s
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# A MORDIDA DO PASSO 1 — devolver a raiz única cega a régua
-# ─────────────────────────────────────────────────────────────────────────
 def _censo_por_raiz(saida: str) -> dict[str, int]:
     """`{raiz: frases}` lido do rodapé do `--censo-de-transporte`."""
     contas: dict[str, int] = {}
@@ -305,15 +211,7 @@ def _censo_por_raiz(saida: str) -> dict[str, int]:
 
 
 def test_a_regua_ve_a_tela_nova_e_cega_de_novo_com_a_raiz_unica(tmp_path: Path) -> None:
-    """A MORDIDA: arranque `interface/` de `RAIZES_DE_TELA` e conte o que sumiu.
-
-    Sobre a árvore de VERDADE — é o alcance dela que a sprint veio devolver, e
-    medi-lo numa árvore de mentira provaria só que o laço tem duas voltas.
-    """
-    # O QUANTO se perde é medido, nunca digitado: um roteiro com as raízes
-    # deste arquivo forçadas diz o que a régua DEVERIA ver, e o roteiro real
-    # diz o que ela vê. Um número literal aqui envelheceria e puniria quem
-    # curasse uma frase.
+    """A MORDIDA: arranque `interface/` de `RAIZES_DE_TELA` e conte o que sumiu."""
     forcado = _portao_com(tmp_path / "forcado", raizes=RAIZES_ATE_HOJE)
     deveria = _censo_por_raiz(_roda(forcado, RAIZ_REAL, "--censo-de-transporte").stdout)
 
@@ -350,11 +248,7 @@ def test_a_regua_ve_a_tela_nova_e_cega_de_novo_com_a_raiz_unica(tmp_path: Path) 
 
 
 def test_a_raiz_unica_reprova_pelo_piso_do_alcance(tmp_path: Path) -> None:
-    """A outra ponta da mesma mordida: encurtar `RAIZES_DE_TELA` é `rc=1`.
-
-    O censo acima mostra o que se PERDE; este mostra que a perda não passa
-    calada. Sem ele, alguém podia tirar a raiz e o portão seguir verde.
-    """
+    """A outra ponta da mesma mordida: encurtar `RAIZES_DE_TELA` é `rc=1`."""
     raiz = _produto_de_mentira(tmp_path, {})
     portao = _portao_com(
         raiz,
@@ -368,12 +262,7 @@ def test_a_raiz_unica_reprova_pelo_piso_do_alcance(tmp_path: Path) -> None:
 
 
 def test_a_fala_declarada_na_tela_nova_e_vista(tmp_path: Path) -> None:
-    """O outro lado do alcance: uma `Fala` em `interface/` passa a contar.
-
-    `interface/` não tem nenhuma hoje — 06/09/2026 —, e é por isso que este
-    caso planta uma. Sem ele, o alcance novo estaria provado só pelo censo, e o
-    censo não é o que o `--all` compara contra o mapa.
-    """
+    """O outro lado do alcance: uma `Fala` em `interface/` passa a contar."""
     declarada = '''\
 """Uma tela nova de mentira."""
 from __future__ import annotations
@@ -395,9 +284,6 @@ DICA = Fala(
     assert "1 `Fala` declarada(s)" in processo.stdout, processo.stdout
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# AS MORDIDAS DO PASSO 2 — o piso das abas promovidas
-# ─────────────────────────────────────────────────────────────────────────
 def test_despromover_uma_aba_reprova_dizendo_o_piso(tmp_path: Path) -> None:
     """A MORDIDA: duas abas promovidas, o piso em 2, uma sai — `rc=1`."""
     raiz = _produto_de_mentira(tmp_path, {})
@@ -415,13 +301,7 @@ def test_despromover_uma_aba_reprova_dizendo_o_piso(tmp_path: Path) -> None:
 
 
 def test_promover_mais_uma_aba_passa_e_o_piso_nao_pune(tmp_path: Path) -> None:
-    """A SEGUNDA MORDIDA: acrescentar uma aba PASSA.
-
-    É a metade que decide. Um piso comparado por igualdade reprovaria quem
-    melhora — o defeito que onze réguas desta casa já tiveram em 26/08, todas
-    pela mesma forma: digitavam o que deviam ler. Sem este caso, o de cima
-    passaria também numa régua que reprova qualquer conjunto diferente de 2.
-    """
+    """A SEGUNDA MORDIDA: acrescentar uma aba PASSA."""
     raiz = _produto_de_mentira(tmp_path, {})
     portao = _portao_com(
         raiz,
@@ -440,12 +320,7 @@ def test_promover_mais_uma_aba_passa_e_o_piso_nao_pune(tmp_path: Path) -> None:
 
 
 def test_a_aba_promovida_pode_morar_na_tela_nova(tmp_path: Path) -> None:
-    """`ARQUIVOS_DA_ABA` passa a achar o arquivo em QUALQUER raiz de tela.
-
-    Sem isto, promover uma aba que já migrou para `interface/` reprovaria com
-    "não existe" — o portão vermelho por uma mudança de casa que não mudou uma
-    palavra da tela.
-    """
+    """`ARQUIVOS_DA_ABA` passa a achar o arquivo em QUALQUER raiz de tela."""
     raiz = _produto_de_mentira(tmp_path, {"aba_conexoes.py": _ABA_SEM_TRANSPORTE})
     portao = _portao_com(
         raiz,
@@ -467,15 +342,8 @@ def test_a_aba_promovida_pode_morar_na_tela_nova(tmp_path: Path) -> None:
     assert "não existe" in ausente.stdout, ausente.stdout
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# a árvore de verdade, hoje
-# ─────────────────────────────────────────────────────────────────────────
 def test_o_portao_de_hoje_esta_no_piso_e_diz_qual_e() -> None:
-    """O produto de hoje passa, e a frase de sucesso NOMEIA o piso.
-
-    O verde de hoje é o piso, não uma promessa — e quem lê o `portoes.sh` tem
-    de conseguir ver contra o que ele está sendo medido sem abrir o roteiro.
-    """
+    """O produto de hoje passa, e a frase de sucesso NOMEIA o piso."""
     processo = subprocess.run(
         [sys.executable, str(SCRIPT_REAL), "--all"],
         cwd=RAIZ_REAL,

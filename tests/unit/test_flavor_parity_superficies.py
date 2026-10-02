@@ -61,13 +61,7 @@ def test_o_default_e_o_que_vibra() -> None:
 
 
 def test_ninguem_em_python_redefine_o_default() -> None:
-    """Um dono só: os outros módulos REEXPORTAM, não redefinem.
-
-    O `mode_transition` (HARM-01) nasceu com um `DEFAULT_FLAVOR = "xbox"` próprio
-    — um segundo dono do valor, dentro do módulo criado justamente para acabar
-    com os segundos donos. Reexportar mantém o import ergonômico sem duplicar a
-    decisão.
-    """
+    """Um dono só: os outros módulos REEXPORTAM, não redefinem."""
     raiz = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
     donos = [
         py.relative_to(raiz).as_posix()

@@ -121,26 +121,12 @@ from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 logger = get_logger(__name__)
 
 # A versão do protocolo, os códigos de erro e o teto do payload moram em
-# `protocolo_do_ipc` desde 02/10/2026 (O-APP-RESPONDE-NA-HORA-01): os clientes
-# os leem de lá sem importar este servidor (e com ele os handlers inteiros).
-# Daqui eles são reexportados (o `__all__` do fim), e quem os importa deste
-# módulo segue igual.
 
 #: O-APP-RESPONDE-NA-HORA-01 (02/10/2026): o pedido que passa deste teto vai ao
-#: diário (`ipc_lento metodo=<nome> ms=<n>`). É o instrumento abaixo da vigia
 #: do laço (10 s): a materialização segurava o laço de 0,4 a 2,8 s por gesto, e
-#: ninguém dizia quem.
 TETO_DO_PEDIDO_MS = 100.0
 
-#: A LISTA FECHADA das perguntas que não rodam quando o cliente já fechou a
-#: conexão (O-APP-RESPONDE-NA-HORA-01). Cada uma provada sem efeito no handler
 #: (02/10/2026): o `state_full` e o `controller.list` só leem (contadores e
-#: caches em memória, nenhum agendamento, nada no disco); o `profile.list`
-#: carrega os perfis, e a única escrita possível ali é a semeadura preguiçosa
-#: do `load_all_profiles`, que não é do pedido e que a carga seguinte faz. O
-#: `daemon.status` fica FORA: ele agenda o arming do lançamento
-#: (`_agendar_arming_do_launch`), e o wrapper que desiste em 1 s ainda precisa
-#: dele.
 PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
     {"daemon.state_full", "controller.list", "profile.list"}
 )
@@ -149,9 +135,7 @@ PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
 Handler = Callable[[dict[str, Any]], Awaitable[Any]]
 
 
-# Compat: módulo re-exporta `_apply_rumble_policy` para testes ou chamadas
 # legadas que ainda façam `from hefesto_dualsense4unix.daemon.ipc_server import _apply_rumble_policy`.  # noqa: E501
-# Código novo deve importar de `hefesto_dualsense4unix.daemon.ipc_rumble_policy`.
 _apply_rumble_policy = apply_rumble_policy
 
 
@@ -161,15 +145,12 @@ class IpcServer(IpcHandlersMixin):
     store: StateStore
     profile_manager: ProfileManager
     socket_path: Path = field(default_factory=ipc_socket_path)
-    # FEAT-MOUSE-01: ref opcional ao Daemon dono para habilitar/desabilitar
-    # subsistemas dinamicamente (mouse emulation). Mantida como Any pra evitar
     # import circular; o Daemon faz o binding em _start_ipc.
     daemon: Any = None
 
     _handlers: dict[str, Handler] = field(default_factory=dict)
     _server: asyncio.base_events.Server | None = None
     _socket_inode: int | None = None
-    #: O escrevente do lançamento que ESTE servidor armou (O-APP-RESPONDE-NA-HORA-01).
     _escrevente: Any = None
 
     def __post_init__(self) -> None:
@@ -177,20 +158,11 @@ class IpcServer(IpcHandlersMixin):
             "profile.switch": self._handle_profile_switch,
             "profile.list": self._handle_profile_list,
             "profile.apply_draft": self._handle_profile_apply_draft,
-            # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar»
-            # do rodapé, a cadeia da ativação sem os efeitos da escolha.
             "profile.reaplicar": self._handle_profile_reaplicar,
             "trigger.set": self._handle_trigger_set,
             "trigger.reset": self._handle_trigger_reset,
             "led.set": self._handle_led_set,
-            # A-TRAVA-DO-LED-NÃO-SOLTA-01 (06/09/2026): o PAR do `led.set`.
-            # `led.set` e `led.player_set` armam a trava manual da categoria
-            # "led" e, até esta linha, NADA em `src/` a soltava — enquanto ela
-            # está armada o `AutoSwitcher` não reaplica perfil por troca de
             # janela. `trigger` tinha o `trigger.reset`, `rumble` tinha o
-            # `rumble.passthrough`; a luz não tinha porta de volta. Quem chama
-            # é o botão "Automático" da aba Iluminação, no fim do gesto —
-            # depois da escrita da cor do slot, que é quem re-armaria.
             "led.auto_release": self._handle_led_auto_release,
             "rumble.set": self._handle_rumble_set,
             "rumble.stop": self._handle_rumble_stop,
@@ -198,12 +170,6 @@ class IpcServer(IpcHandlersMixin):
             "rumble.policy_set": self._handle_rumble_policy_set,
             "rumble.policy_custom": self._handle_rumble_policy_custom,
             "rumble.motores.set": self._handle_rumble_motores_set,
-            # SENSOR-DE-VERDADE-01 (04/09/2026): o giroscópio e o acelerômetro
-            # daquela peça, cada um por si, em Nativo e em Virtual, com ou sem
-            # máscara — decisão dela, contra a minha recomendação de virar
-            # leitura. O método diz na resposta QUAL metade do interruptor
-            # pegou, porque a medição achou um caminho (o hidraw do físico, em
-            # Nativo) em que o daemon não escreve byte nenhum.
             "sensor.set": self._handle_sensor_set,
             "daemon.status": self._handle_daemon_status,
             "daemon.state_full": self._handle_daemon_state_full,
@@ -215,135 +181,44 @@ class IpcServer(IpcHandlersMixin):
             "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
             "launch_env.refresh": self._handle_launch_env_refresh,
-            # LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026): instrumento de
-            # medição, não caminho automático. Manda o Reset LED state
-            # (0x08) sob demanda pelo handle que o daemon já tem aberto —
-            # é o que separa "o 0x08 trava a barra" de "o 0x08 trava a
-            # barra QUANDO mandado em cima da conexão" — o que a
-            # LIGHTBAR-BT-CULPADO-01 (03/08) mediu: 7/7 dentro da janela
             # de ~3,4 s, e o controle negativo, fora dela, não travou.
-            # Aqui se lia também "a medição de 08/08 (5 dias sem 0x08,
-            # barra morta)": era FALSA e caiu em 11/08 — sem 0x08 a barra
-            # ACENDEU no rádio quatro vezes nesses cinco dias (ensaios
-            # `lightbar-bt-aceso-*` em `docs/data/ensaios.csv`; correção
-            # inteira no docstring de `cli/cmd_lightbar_reset.py`).
             "lightbar.reset": self._handle_lightbar_reset,
-            # LIGHTBAR-ISOLAR-OS-PLAYERS-01: o outro instrumento da mesma
-            # medição — desliga a escrita do LED de JOGADOR ao vivo, para
-            # ela reconectar o controle e ver se a barra sobrevive.
             "debug.player_leds": self._handle_debug_player_leds,
             # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
-            # bytes de volume do report — ver `_handle_speaker_set`). Desde a
-            # SOM-02 (E3) o MESMO método também DEVOLVE a posse, por
-            # `release: true` — a saída que faltava, e sem a qual o primeiro
-            # uso do volume sequestrava o alto-falante até a desconexão.
             "speaker.set": self._handle_speaker_set,
-            # MIC-USB-01: mudo do microfone no FIRMWARE do controle — a
-            # CAMADA 3 das três que deixavam o mic mudo. As camadas 1 e 2
-            # (mute persistido por rota e perfil iec958, que capta) são do
-            # WirePlumber e moram no `doctor --fix`; esta é a única do
-            # controle, e até 25/07 só o botão físico a alcançava.
             "mic.set": self._handle_mic_set,
-            # MICROFONE-UM-ATO-01 (04/09/2026): o ATO INTEIRO — o canal de
-            # captura deste controle eleito no sistema E o mudo do firmware,
-            # num pedido só. Conceito dela: *"o botão é pra ligar o microfone
-            # e ele ser ouvido no canal específico dele"*. O `mic.set` acima
-            # continua existindo porque é a porta de emergência da POSSE
-            # (`muted: null` devolve o byte ao kernel); o ato não a substitui.
             "mic.canal.set": self._handle_mic_canal_set,
-            # MIC-DA-MESA-ELEICAO-01: o LED do botão de mudo, que é campo
-            # SEPARADO do mudo (`common[8]`, autorizado pelo
-            # `MIC_MUTE_LED_CONTROL_ENABLE`). `aceso: null` DEVOLVE a
-            # posse ao kernel — a única saída sem derrubar o controle, e
-            # até aqui ela não tinha um único chamador de produção.
             "mic.led.set": self._handle_mic_led_set,
-            # MIC-VOLUME-01: camada 1 (ganho da fonte no sistema),
-            # separada do `mic.set`, que é camada 3 (mudo do firmware).
             "mic.volume.set": self._handle_mic_volume_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
-            # POINT-AND-CLICK-01 (17/09/2026): o terceiro passo da entrada no
             # modo Navegação. Ele SUBSTITUI o `mouse.emulation.restore` no
-            # plano — aquele lia a flag de sessão da máquina; este lê o PERFIL
-            # ATIVO, que é onde a aba Navegação grava. O método velho continua
-            # de pé no socket; o arranjo deixou de recuar para ele em 29/09/2026
-            # (O-MOUSE-SEGUE-A-NAVEGACAO-01): sem a seção `mouse`, a entrada
-            # liga o mouse com as velocidades da flag de sessão.
             "desktop.arranjo.apply": self._handle_desktop_arranjo_apply,
-            # EMULACAO-NO-JOGO-01: o interruptor que o teclado emulado nunca
-            # teve. Sem ele, "desliguei o modo mouse teclado" desligava só o
-            # mouse e o R1 seguia trocando de aplicativo dentro do jogo.
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
-            # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o «Status do Modo» liga
-            # mouse e teclado e grava o perfil pelo dono, no daemon; a janela
-            # deixou de escrever o liga/desliga.
             "desktop.status.set": self._handle_desktop_status_set,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
-            # A MÁSCARA DE UM APARELHO (MASCARA-NA-TELA-01, 03/09/2026):
-            # `emulation.set` é a da SESSÃO e vale para quem não escolheu;
-            # esta grava a escolha daquele controle no `external_mask`.
             "gamepad.mask.set": self._handle_gamepad_mask_set,
             "coop.set": self._handle_coop_set,
-            # COOP-SEM-INTERRUPTOR-01 (06/08): o ciclo cheio de reconciliação
-            # ganhou dono próprio — é o gesto de recuperação do jogador que
-            # nasce e morre em dois segundos, e ele NÃO liga nem desliga nada.
             "coop.sync": self._handle_coop_sync,
             "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
-            # O-BRILHO-DAS-LUZES-DE-NUMERO-01 (24/09/2026): Fraco, Médio ou
-            # Forte nas cinco luzes de número, decisão dela.
             "led.player_brightness_set": self._handle_led_player_brightness_set,
-            # ONDA-U (U2/U10): renumeração explícita gated por sessão vazia.
             "identity.renumber": self._handle_identity_renumber,
-            # PLAYER-01 (25/07): atribuir o NÚMERO EXIBIDO de UM controle. Era
-            # o comando que faltava — só existia o renumber, que compacta todo
-            # mundo; não havia como dizer "este é o 2".
             "identity.number.set": self._handle_identity_number_set,
-            # CONFIG-03 (22/08/2026): grava o que ela DECLAROU sobre a mesa —
-            # o que o Hefesto não tem como medir. Método próprio porque
             # `daemon.reload` LEVANTA em chave que não é campo do `DaemonConfig`.
             "machine.declare": self._handle_machine_declare,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,
-            # GOVERNADOR-DO-RADIO-01 (23/09/2026): a resposta dela à pergunta
-            # da terceira ponte num adaptador cheio (R3) — «Ligar aqui», e a
-            # ponte sobe marcada «além do limite» (R4). Nada é desligado.
             "radio.ponte.ligar_aqui": self._handle_radio_ponte_ligar_aqui,
-            # MOVER-UM-POR-VEZ-01 (23/09/2026): mover UM aparelho para UM
-            # adaptador, ou — sem `aparelho` — o «Conectar» no destino da D8.
-            # Volta em até ~6 s: «esperando», ou a recusa que faz o botão tremer.
             "radio.mover": self._handle_radio_mover,
-            # A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): o chip «Mira
-            # Virtual» de cada controle e os dois deslizantes da Calibrar.
             "mira.set": self._handle_mira_set,
-            # A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (02/10/2026):
-            # o botão «Háptica» da aba Vibração, ligado até o «Parar».
             "haptica.testar": self._handle_haptica_testar,
-            # O-CONECTAR-E-UM-INTERRUPTOR-01 (30/09/2026): o «Procurar» da aba
-            # Conexões — liga e desliga a busca do rádio, com valor absoluto.
             "radio.busca.set": self._handle_radio_busca_set,
-            # ESQUECER-E-LIMPAR-AS-CONEXOES-01 (30/09/2026): o X do «Não
-            # Conectou» tira a linha na central, e não só na janela.
             "radio.dispensar": self._handle_radio_dispensar,
         }
 
     async def start(self) -> None:
-        """Inicia o servidor.
-
-        Antes de apagar qualquer arquivo no `socket_path`, executa um probe
-        `AF_UNIX`/`SOCK_STREAM` com `connect()` e timeout de 0.1s para detectar
-        se outro daemon já escuta no mesmo path:
-
-        - Sucesso no `connect` -> socket vivo, outro daemon ativo.
-          Levanta `RuntimeError` e NÃO toca o filesystem.
-        - `ConnectionRefusedError` -> socket-resto (arquivo sem listener).
-          Aplica `unlink()` e cria o listener novo.
-        - `FileNotFoundError` -> path livre. Cria o listener direto.
-
-        Registra o inode do socket recém-criado para permitir `stop()` verificar
-        a propriedade antes de `unlink()` — evita apagar socket que outro
-        processo tenha (re)criado no mesmo path após nosso bind.
-        """
+        """Inicia o servidor."""
         self.socket_path.parent.mkdir(parents=True, exist_ok=True)
         self._probe_socket_and_cleanup()
 
@@ -354,24 +229,16 @@ class IpcServer(IpcHandlersMixin):
         with contextlib.suppress(FileNotFoundError):
             self._socket_inode = self.socket_path.stat().st_ino
         logger.info("ipc_server_listening", path=str(self.socket_path))
-        # O-APP-RESPONDE-NA-HORA-01 (02/10/2026): o trabalho do lançamento sai
-        # do laço. Só os pedidos feitos DENTRO deste laço vão ao escrevente; os
-        # de outro fio ou de outro laço (a CLI, os instrumentos) escrevem na hora.
         laco = asyncio.get_running_loop()
 
         def devolver(acao: Callable[[], None]) -> None:
-            # O laço fechado é o serviço saindo: a devolução não tem mais dono.
             with contextlib.suppress(RuntimeError):
                 laco.call_soon_threadsafe(acao)
 
         self._escrevente = launch_env.armar_o_escrevente(devolver, laco)
 
     def _probe_socket_and_cleanup(self) -> None:
-        """Probe ativo para distinguir socket vivo de resto-morto.
-
-        Lógica canônica (meta-regra 9.3, soberania de subsistema): jamais
-        apagar recurso de outro daemon. Se o probe conectar, recusamos o start.
-        """
+        """Probe ativo para distinguir socket vivo de resto-morto."""
         if not self.socket_path.exists():
             return
 
@@ -380,7 +247,6 @@ class IpcServer(IpcHandlersMixin):
         try:
             probe.connect(str(self.socket_path))
         except (ConnectionRefusedError, FileNotFoundError):
-            # Socket-resto: arquivo sem listener. Seguro apagar.
             with contextlib.suppress(FileNotFoundError):
                 self.socket_path.unlink()
             logger.info(
@@ -388,8 +254,6 @@ class IpcServer(IpcHandlersMixin):
             )
             return
         except OSError as exc:
-            # Path existe mas não é socket válido (ex.: arquivo regular).
-            # Fallback conservador: remove e segue.
             with contextlib.suppress(FileNotFoundError):
                 self.socket_path.unlink()
             logger.warning(
@@ -407,24 +271,13 @@ class IpcServer(IpcHandlersMixin):
                 probe.close()
 
     async def stop(self) -> None:
-        """Encerra o servidor e remove o socket apenas se ainda formos o owner.
-
-        Compara `st_ino` atual do path com o inode registrado em `start()`.
-        Se divergir (outro daemon recriou o socket nesse path no meio-tempo),
-        o `unlink()` é abortado. Atende meta-regra 9.3 (soberania de subsistema).
-        """
+        """Encerra o servidor e remove o socket apenas se ainda formos o owner."""
         if self._server is not None:
             self._server.close()
             with contextlib.suppress(Exception):
                 await self._server.wait_closed()
             self._server = None
         self._tirar_o_socket()
-        # O-APP-RESPONDE-NA-HORA-01: as próximas materializações são na hora, e
-        # a pendente é escrita antes de o serviço sair (fora do laço). DEPOIS do
-        # socket, e é de propósito: o `shutdown` (`daemon/connection.py`) chama
-        # este `stop` com teto de 2 s, e as bordas do próprio shutdown (o co-op,
-        # o vpad) acabaram de pedir a escrita ao fio. A espera que estoura o
-        # teto cancela só ela, e a escrita segue no fio.
         escrevente, self._escrevente = self._escrevente, None
         if escrevente is not None:
             with contextlib.suppress(Exception):
@@ -466,19 +319,6 @@ class IpcServer(IpcHandlersMixin):
                     writer.write(response + b"\n")
                     await writer.drain()
         except (ConnectionError, asyncio.IncompleteReadError) as exc:
-            # BUG-IPC-DISCONNECT-STORM-01: cliente que fecha a conexão antes do
-            # daemon terminar de responder é cenário NORMAL — não um erro. A GUI
-            # e o applet COSMIC usam timeout curto (0.25s) e fecham o socket assim
-            # que ele estoura; o `writer.drain()` acima então levanta
-            # BrokenPipeError/ConnectionResetError (ambos subclasses de
-            # ConnectionError). Antes logávamos com exc_info=True e o
-            # ConsoleRenderer renderizava o traceback rico COM locals — todo o
-            # grafo do daemon (StateStore, Server, handlers, AutoSwitcher...). A
-            # ~5 conexões/s de GUI+applet isso fritava 100% de uma CPU e despejava
-            # ~950 linhas/s no journal, criando uma ESPIRAL: daemon lento ->
-            # mais timeouts no cliente -> mais disconnects -> mais tracebacks. O
-            # daemon ficava vivo porém inresponsivo e a interface inteira parava
-            # de "aplicar". Log em debug, sem traceback.
             logger.debug("ipc_client_disconnect", err=str(exc))
         except Exception as exc:
             logger.warning("ipc_client_error", err=str(exc), exc_info=True)
@@ -519,10 +359,6 @@ class IpcServer(IpcHandlersMixin):
         if handler is None:
             return _json_rpc_error(req_id, CODE_METHOD_NOT_FOUND, f"método desconhecido: {method}")
 
-        # O-APP-RESPONDE-NA-HORA-01: depois de um laço preso, a fila tem as
-        # perguntas de quem já desistiu (o cliente estourou o teto e fechou).
-        # Responder a quem foi embora é o serviço gastando a volta à toa. Só a
-        # lista fechada de perguntas sem efeito; todo o resto roda, como antes.
         if (
             method in PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS
             and abandonado is not None
@@ -539,10 +375,6 @@ class IpcServer(IpcHandlersMixin):
         except ValueError as exc:
             return _json_rpc_error(req_id, CODE_INVALID_PARAMS, str(exc))
         except Exception as exc:
-            # AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01: `str(exc)` podia vazar
-            # path absoluto, valores internos e payload reconstituído via
-            # ValidationError/OSError. Mensagem genérica com nome da classe;
-            # detalhe integral fica nos logs (logger.exception abaixo).
             logger.exception("ipc_handler_error", method=method)
             return _json_rpc_error(
                 req_id,
@@ -550,9 +382,6 @@ class IpcServer(IpcHandlersMixin):
                 f"erro interno ({type(exc).__name__})",
             )
         finally:
-            # O-APP-RESPONDE-NA-HORA-01: o servidor diz quem o segurou. Uma
-            # linha por pedido acima do teto, só com o nome do método e o
-            # tempo: nenhum parâmetro vai ao diário (nenhum endereço).
             ms = (time.perf_counter() - t0) * 1000
             if ms > TETO_DO_PEDIDO_MS:
                 logger.info("ipc_lento", metodo=method, ms=round(ms))
@@ -563,12 +392,7 @@ class IpcServer(IpcHandlersMixin):
 
 
 def _o_cliente_ja_foi(writer: asyncio.StreamWriter) -> bool:
-    """O cliente FECHOU a conexão? (O-APP-RESPONDE-NA-HORA-01)
-
-    É o `POLLHUP` do socket, e não o fim da leitura: quem só fecha a escrita
-    (o `socat`, o `nc -N`) ainda espera a resposta, e o `at_eof` não separa os
-    dois. Sem socket legível, a resposta é «ainda está aqui».
-    """
+    """O cliente FECHOU a conexão? (O-APP-RESPONDE-NA-HORA-01)"""
     sock = writer.get_extra_info("socket")
     try:
         fd = sock.fileno() if sock is not None else -1

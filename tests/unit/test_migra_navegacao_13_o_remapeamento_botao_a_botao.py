@@ -51,15 +51,8 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 NOME = "Régua da Troca"
 
 
-# ---------------------------------------------------------------------------
-# 1. O MOTOR
-# ---------------------------------------------------------------------------
 def test_a_troca_dupla_vale_nos_dois_sentidos() -> None:
-    """`{✕: ○, ○: ✕}` — apertar ✕ o jogo vê ○, e apertar ○ o jogo vê ✕.
-
-    É o erro clássico de permutação aplicada em ordem: a segunda troca leria o
-    resultado da primeira e o botão voltaria a si mesmo. Só a troca DUPLA o vê.
-    """
+    """`{✕: ○, ○: ✕}` — apertar ✕ o jogo vê ○, e apertar ○ o jogo vê ✕."""
     mapa = remap.resolver({"cross": "circle", "circle": "cross"})
     assert remap.traduzir(frozenset({"cross"}), 0, 0, mapa)[0] == {"circle"}
     assert remap.traduzir(frozenset({"circle"}), 0, 0, mapa)[0] == {"cross"}, (
@@ -143,9 +136,6 @@ def test_a_lista_do_motor_e_a_do_produto_e_a_do_leitor() -> None:
         "linha trocaria um nome que o jogo nunca recebe")
 
 
-# ---------------------------------------------------------------------------
-# 2. O CAMINHO QUENTE — os dois `forward_buttons`
-# ---------------------------------------------------------------------------
 class _Device:
     """O gamepad virtual de mentira: guarda o que o jogo receberia."""
 
@@ -168,7 +158,6 @@ def _despachar_o_primario(monkeypatch: pytest.MonkeyPatch, store: Any,
                           apertados: frozenset[str]) -> _Device:
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
-    # A reconciliação de launch e o aviso de modo não são o que se mede aqui.
     monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: None)
     monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
     dev = _Device()
@@ -178,13 +167,7 @@ def _despachar_o_primario(monkeypatch: pytest.MonkeyPatch, store: Any,
 
 
 def test_o_primario_passa_pela_troca(monkeypatch: pytest.MonkeyPatch) -> None:
-    """✕→○ ativo: o jogo recebe ○ — e o conjunto que o laço tem continua ✕.
-
-    O MESMO objeto `buttons_pressed` segue, no laço do daemon, para o PS, os
-    gestos, o atalho e o teclado emulado. Ele ser intocado é a metade da prova
-    de que eles continuam vendo o ✕; a outra é
-    :func:`test_a_troca_mora_em_dois_lugares_so`.
-    """
+    """✕→○ ativo: o jogo recebe ○ — e o conjunto que o laço tem continua ✕."""
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
     remap.definir_ativo(store, {"cross": "circle"})
     apertados = frozenset({"cross"})
@@ -203,7 +186,6 @@ def test_sem_troca_o_jogo_recebe_o_mesmo_objeto(monkeypatch: pytest.MonkeyPatch)
         apertados = frozenset({"cross", "l1"})
         dev = _despachar_o_primario(monkeypatch, store, apertados)
         assert dev.buttons[-1] is apertados
-    # E UM MOCK QUE RESPONDE QUALQUER ATRIBUTO não liga troca nenhuma.
     from unittest.mock import MagicMock
 
     assert remap.ativo(MagicMock()) is None
@@ -265,21 +247,13 @@ def _chamadas_da_traducao() -> set[tuple[str, str]]:
 
 
 def test_a_troca_mora_em_dois_lugares_so() -> None:
-    """Só os dois `forward_buttons` traduzem — o PS e o atalho veem o original.
-
-    Se a tradução aparecesse no leitor de evdev, no teclado, no mouse ou no
-    `hotkey`, a troca passaria a valer para o desktop e para os cinco gestos —
-    e o PS trocado levaria a saída de emergência junto.
-    """
+    """Só os dois `forward_buttons` traduzem — o PS e o atalho veem o original."""
     assert _chamadas_da_traducao() == {
         ("hefesto_dualsense4unix/daemon/subsystems/gamepad.py", "dispatch_gamepad"),
         ("hefesto_dualsense4unix/daemon/subsystems/coop.py", "forward_all"),
     }
 
 
-# ---------------------------------------------------------------------------
-# 3. O PERFIL, A ATIVAÇÃO E O SALVAR
-# ---------------------------------------------------------------------------
 def _perfil(**campos: Any) -> Any:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -343,9 +317,6 @@ def test_o_salvar_da_aba_perfis_nao_apaga_a_troca() -> None:
     assert rascunho.to_profile("Outro Nome").remapeamento == {"cross": "circle"}
 
 
-# ---------------------------------------------------------------------------
-# 4. A TELA — os quatro gestos, a pintura e a página publicada
-# ---------------------------------------------------------------------------
 class _PonteMuda:
     """Aceita tudo e não fala com daemon nenhum — mesma do irmão da 06."""
 
@@ -412,11 +383,7 @@ def _forma(**trocas: str) -> dict[str, str]:
 def test_o_x_passa_a_ser_bolinha_da_tela_ao_jogo(
     aba: Any, ctx: Any, disco: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A mordida da ROTA CORRIGIDA, de ponta a ponta, com dublê nos dois pontos.
-
-    A tela manda «✕ passa a ser ○» → o "Guardar" grava → a ativação deposita →
-    o `forward_buttons` do primário e o do co-op recebem ○.
-    """
+    """A mordida da ROTA CORRIGIDA, de ponta a ponta, com dublê nos dois pontos."""
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
@@ -546,14 +513,9 @@ def test_a_pagina_publicada_da_endereco_as_linhas(aba: Any) -> None:
     tela = _tela_publicada()
     listas = re.findall(r"<select([^>]*)>(.*?)</select>", tela, re.S)
     assert len(listas) == len(BOTOES)
-    # A ORDEM É DO DESENHO (o touchpad sai esquerdo, direito, central) e o
-    # conjunto é do produto — por isso a conta é por conjunto e sem repetição.
     linhas = [re.search(r'data-linha="([^"]+)"', a).group(1)  # type: ignore[union-attr]
               for a, _ in listas]
     assert len(set(linhas)) == len(linhas) and set(linhas) == set(BOTOES)
-    # SÓ AS DEZESSEIS QUE A TROCA ALCANÇA FALAM — 13/09/2026, F1-REMAPEAR-02. As
-    # seis de fora nascem apagadas e sem gesto; quem as confere é
-    # `test_as_seis_linhas_fora_da_troca_ficam_apagadas.py`.
     falando = [linha for (a, _), linha in zip(listas, linhas, strict=True)
                if 'data-gesto="linha-de-troca"' in a]
     assert sorted(falando) == sorted(remap.REMAPEAVEIS), falando
@@ -581,13 +543,7 @@ def _bootstrap() -> str:
 def test_o_clique_na_pagina_publicada_chega_ao_disco(
     aba: Any, ctx: Any, disco: Any,
 ) -> None:
-    """A página publicada num Chrome, com o BOOTSTRAP do piloto: o clique real.
-
-    Escolher ○ na linha do ✕ manda `linha-de-troca`; o "Guardar" manda a
-    `forma` com as 22 linhas; e essa forma, entregue ao gesto, grava
-    `{"cross": "circle"}`. O Chrome mede o contrato do bootstrap; o WebKitGTK é
-    o motor do produto, e a prova nele é de quem roda o piloto.
-    """
+    """A página publicada num Chrome, com o BOOTSTRAP do piloto: o clique real."""
     from playwright.sync_api import sync_playwright
 
     from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES

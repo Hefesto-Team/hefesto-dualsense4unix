@@ -23,9 +23,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     TriggersConfig,
 )
 
-#: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica mora em DUAS casas —
-#: `profiles_default/` (o que a semeadura copia, hoje só o `personalizado`) e
-#: `estilos_de_jogo/` (os oito gêneros, que por decisão dela não são perfil).
 _CASAS_DE_FABRICA = (
     Path(__file__).resolve().parents[2] / "assets" / "profiles_default",
     Path(__file__).resolve().parents[2] / "assets" / "estilos_de_jogo",
@@ -135,8 +132,7 @@ def test_json_gerado_eh_valido(isolated_profiles_dir: Path):
 
 def test_lock_file_e_criado(isolated_profiles_dir: Path):
     save_profile(_mk_profile("y"))
-    # .lock é criado adjacente ao arquivo
-    assert any(isolated_profiles_dir.glob("y.json.lock*")) or True  # lock fd ephemera
+    assert any(isolated_profiles_dir.glob("y.json.lock*")) or True
 
 
 def test_overwrite_preserva_integridade(isolated_profiles_dir: Path):
@@ -159,7 +155,6 @@ def test_save_profile_usa_slug(isolated_profiles_dir: Path):
     path = save_profile(profile)
     assert path.name == "acao.json"
     assert path.exists()
-    # Garante que não foi gravado com filename acentuado.
     assert not (isolated_profiles_dir / "Ação.json").exists()
 
 
@@ -189,7 +184,6 @@ def test_load_profile_por_display(isolated_profiles_dir: Path):
 
 def test_load_profile_fallback_scan(isolated_profiles_dir: Path):
     """Arquivo com filename arbitrário e name='Ação' é achado via scan."""
-    # Grava manualmente com filename divergente do slug.
     profile = Profile(
         name="Ação",
         match=MatchCriteria(window_class=["acao_class"]),
@@ -234,7 +228,6 @@ def test_loader_aventura_nested_params(isolated_profiles_dir: Path):
     assert profile.triggers.right.mode == "MultiPositionFeedback"
     assert profile.triggers.left.is_nested is True
     assert profile.triggers.right.is_nested is True
-    # 10 sublistas expected (matriz de decisão do spec)
     assert len(profile.triggers.left.params) == 10
     assert len(profile.triggers.right.params) == 10
 
@@ -248,18 +241,11 @@ def test_loader_corrida_nested_params(isolated_profiles_dir: Path):
 
     profile = load_profile("corrida")
     assert profile.name == "Corrida"
-    # left permanece Resistance (decisão explícita da matriz)
     assert profile.triggers.left.mode == "Resistance"
     assert profile.triggers.left.is_nested is False
-    # right migrou para MultiPositionVibration com aninhado
     assert profile.triggers.right.mode == "MultiPositionVibration"
     assert profile.triggers.right.is_nested is True
     assert len(profile.triggers.right.params) == 10
-
-
-# ---------------------------------------------------------------------------
-# AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01 — sanitização de identifier
-# ---------------------------------------------------------------------------
 
 
 def test_load_profile_rejeita_path_absoluto(isolated_profiles_dir: Path):
@@ -300,11 +286,6 @@ def test_load_profile_aceita_slug_legitimo(isolated_profiles_dir: Path):
     assert loaded.name == "shooter_pro"
 
 
-# ---------------------------------------------------------------------------
-# PROFILE-LOADER-UX-01 — mensagens de erro acionáveis para perfis inválidos
-# ---------------------------------------------------------------------------
-
-
 def test_load_all_profiles_pula_json_malformado_e_loga_warning(
     isolated_profiles_dir: Path,
 ) -> None:
@@ -333,7 +314,6 @@ def test_load_all_profiles_pula_schema_invalido_e_loga(
 
     save_profile(_mk_profile("ok"))
     schema_invalido = isolated_profiles_dir / "schema_invalido.json"
-    # Sem campo obrigatório `name`; Pydantic levanta ValidationError.
     schema_invalido.write_text(
         json.dumps({"priority": 5, "match": {"type": "any"}}),
         encoding="utf-8",
@@ -357,7 +337,6 @@ def test_load_profile_scan_pula_invalido_e_acha_o_valido(
 
     quebrado = isolated_profiles_dir / "aaa-quebrado.json"
     quebrado.write_text("{[}", encoding="utf-8")
-    # Filename arbitrário com name='Ação' que precisa scan para ser achado.
     payload = Profile(
         name="Ação",
         match=MatchCriteria(window_class=["acao_class"]),
@@ -374,19 +353,11 @@ def test_load_profile_scan_pula_invalido_e_acha_o_valido(
     assert any("aaa-quebrado.json" in str(rec.get("path", "")) for rec in eventos)
 
 
-# ---------------------------------------------------------------------------
-# PERFIL-02 (sprint 2026-07-16-perfis-por-controle): serialização que OMITE
-# o mapa `controllers` quando None/vazio — requisito de compatibilidade
-# ---------------------------------------------------------------------------
-
-#: MAC forjado da faixa permitida (test_anonimato_de_fixtures.py).
 _MAC_BT = "aabbcc000002"
 
 
 def test_save_omite_controllers_quando_none(isolated_profiles_dir: Path):
-    """Perfil sem opinião por-controle NÃO grava `"controllers": null` — sem a
-    omissão, binário antigo (extra="forbid") rejeitaria TODO perfil salvo pelo
-    novo no downgrade."""
+    """Perfil sem opinião por-controle NÃO grava `"controllers": null` — sem a"""
     path = save_profile(_mk_profile("sem_mapa"))
     data = json.loads(path.read_text(encoding="utf-8"))
     assert "controllers" not in data
@@ -420,11 +391,7 @@ def test_save_persiste_controllers_preenchido(isolated_profiles_dir: Path):
 
 
 def test_save_preserva_override_parcial_escrito_a_mao(isolated_profiles_dir: Path):
-    """Fix do review (2026-07-16, MED): entrada PARCIAL escrita à mão (só
-    `lightbar`) continua parcial após save→load→save. O dump denso marcava os
-    defaults do schema como explícitos no próximo load e a ativação pisava o
-    global do controle (player-LEDs apagados, brilho 1.0) — a
-    resolução-por-objeto refutada pelo sprint doc, via serialização."""
+    """Fix do review (2026-07-16, MED): entrada PARCIAL escrita à mão (só"""
     raw = _mk_profile("parcial").model_dump(mode="json")
     raw["controllers"] = {_MAC_BT: {"leds": {"lightbar": [0, 255, 0]}}}
     profile = Profile.model_validate(raw)
@@ -433,7 +400,6 @@ def test_save_preserva_override_parcial_escrito_a_mao(isolated_profiles_dir: Pat
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["controllers"][_MAC_BT] == {"leds": {"lightbar": [0, 255, 0]}}
 
-    # O ciclo completo load→save também não densifica.
     save_profile(load_profile("parcial"))
     data2 = json.loads(path.read_text(encoding="utf-8"))
     assert data2["controllers"][_MAC_BT] == {"leds": {"lightbar": [0, 255, 0]}}
@@ -442,9 +408,7 @@ def test_save_preserva_override_parcial_escrito_a_mao(isolated_profiles_dir: Pat
 def test_perfil_antigo_roundtrip_load_save_nao_introduz_a_chave(
     isolated_profiles_dir: Path,
 ):
-    """Aceite 2 do sprint: perfil ANTIGO (JSON sem o campo, como os da usuária:
-    vitoria/sackboy_nativo/navegacao) passa por load→save e o arquivo fica
-    BYTE-IDÊNTICO — em particular, sem ganhar `controllers`."""
+    """Aceite 2 do sprint: perfil ANTIGO (JSON sem o campo, como os da usuária:"""
     path = save_profile(_mk_profile("antigo"))
     antes = path.read_bytes()
     assert b"controllers" not in antes
@@ -455,8 +419,7 @@ def test_perfil_antigo_roundtrip_load_save_nao_introduz_a_chave(
 
 
 def test_perfil_antigo_carrega_sem_warning(isolated_profiles_dir: Path):
-    """Migração silenciosa: perfil v1 mínimo (escrito à mão, sem NENHUM campo
-    novo) carrega sem erro e sem `profile_invalid` no log."""
+    """Migração silenciosa: perfil v1 mínimo (escrito à mão, sem NENHUM campo"""
     import structlog
 
     legado = isolated_profiles_dir / "legado.json"
@@ -477,8 +440,7 @@ def test_perfil_antigo_carrega_sem_warning(isolated_profiles_dir: Path):
 def test_perfil_com_mapa_invalido_vira_warning_nao_crash(
     isolated_profiles_dir: Path,
 ):
-    """Key degenerada no disco (JSON editado à mão) segue o contrato do
-    loader: warning `profile_invalid` e os demais perfis carregam."""
+    """Key degenerada no disco (JSON editado à mão) segue o contrato do"""
     import structlog
 
     save_profile(_mk_profile("valido"))
@@ -512,36 +474,12 @@ def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
 
     profiles = load_all_profiles()
     names = sorted(p.name for p in profiles)
-    # Ao menos fallback + algum outro
     assert "fallback" in names
     assert len(names) >= 2
 
 
-# ---------------------------------------------------------------------------
-# A MIGRAÇÃO APOSENTADA NÃO É MUDA (26/08/2026)
-# ---------------------------------------------------------------------------
-# A poda da fábrica apagou `assets/profiles_default/coop_local.json`, e é dele
-# que `migrate_coop_local_match` e o ramo `coop_local` de
-# `migrate_modo_jogo_nos_presets` copiam `match` e `priority`. Sem o asset,
-# `_seed_source_file` devolve `None` — e o código ANTIGO fazia `continue`.
-#
-# O custo desse `continue`: quem tem um `coop_local` velho no disco (o de
-# 14/07, com `criteria` de campos todos vazios) fica preso com um perfil que o
-# autoswitch NUNCA escolhe, para sempre, e nada em lugar nenhum diz por quê.
-# É a forma exata do defeito que esta casa chama de "a casa sabe e o produto
-# não faz", com o agravante de o silêncio ser total.
-#
-# A cura não é adivinhar o regex perdido — escrever `match` de memória em
-# perfil de alguém é o produto escolhendo por ela. A cura é RELATAR.
-
-
 class TestAMigracaoAposentadaNaoEMuda:
-    """MORDE: trocar o relato por um `continue` no `_seed_source_file` ausente.
-
-    Arrancando a cura (as duas chamadas a `_relatar_migracao_aposentada`), as
-    duas migrações voltam a ser no-op silencioso e os dois testes abaixo
-    reprovam nomeando o caminho calado.
-    """
+    """MORDE: trocar o relato por um `continue` no `_seed_source_file` ausente."""
 
     @staticmethod
     def _coop_local_de_fabrica_velho(destino: Path) -> Path:
@@ -572,8 +510,6 @@ class TestAMigracaoAposentadaNaoEMuda:
         caminho = self._coop_local_de_fabrica_velho(destino)
         antes = caminho.read_text(encoding="utf-8")
 
-        # Nenhum diretório-fonte existe: é o estado de quem instalou a versão
-        # podada e ainda tem o preset velho no disco.
         monkeypatch.setattr(
             loader_module, "_DEFAULT_SEED_SOURCE_DIRS", (tmp_path / "sem_assets",)
         )
@@ -605,11 +541,7 @@ class TestAMigracaoAposentadaNaoEMuda:
     def test_o_ramo_do_modo_jogo_tambem_relata(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A irmã: `migrate_modo_jogo_nos_presets` tem o mesmo ramo aposentado.
-
-        Consertar uma e esquecer a outra deixaria metade do silêncio de pé —
-        é o defeito "corrigir pela metade" que esta casa já pagou.
-        """
+        """A irmã: `migrate_modo_jogo_nos_presets` tem o mesmo ramo aposentado."""
         import structlog.testing
 
         destino = tmp_path / "profiles"
@@ -637,13 +569,7 @@ class TestAMigracaoAposentadaNaoEMuda:
     def test_com_asset_presente_a_migracao_continua_migrando(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Guarda do instrumento: régua que só sabe acusar não é régua.
-
-        Se `migrate_coop_local_match` tivesse sido esvaziada em vez de
-        aposentada, os dois testes acima passariam igual — e quem ainda tem o
-        asset (uma instalação antiga, um `.deb` velho, o `/usr/share` de outra
-        versão) perderia a migração de verdade sem ninguém notar.
-        """
+        """Guarda do instrumento: régua que só sabe acusar não é régua."""
         destino = tmp_path / "profiles"
         destino.mkdir()
         caminho = self._coop_local_de_fabrica_velho(destino)

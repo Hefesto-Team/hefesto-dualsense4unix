@@ -1,24 +1,4 @@
-"""O `doctor` diz o ACHADO do exame, não a etiqueta — e no endereço que existe.
-
-`EXAME-DA-MESA-03` — 19/09/2026.
-
-**O QUE ELE FAZIA:** juntava `i["rotulo"]` de cada item. Toda ordem de serviço
-nasce com o MESMO rótulo constante (`ordens_da_mesa.ROTULO_DA_ORDEM`), então
-três ordens abertas viravam três cópias de *"Mudança recomendada"* — o terminal
-dizendo a mesma palavra N vezes, sem um endereço sequer.
-
-**A PROVA DA CAUSA É UMA MORDIDA:** trocar o `porque` de uma ordem deixava a
-linha do doctor **byte-idêntica**. É o que `test_dois_achados_diferentes_dao_
-duas_linhas_diferentes` trava.
-
-**E É O SEGUNDO CHAMADOR DE UMA CURA DE 02/09**, quando a TELA passou a
-publicar `porque` como `achado`. O doctor ficou para trás — a assinatura desta
-casa: *quando a cura conhece a causa, ela cobre TODOS os chamadores*.
-
-A RÉGUA MEDE O SNIPPET PYTHON EMBUTIDO NO `doctor.sh`, lido do fonte. Não roda
-o doctor inteiro de propósito: ele toca `busctl`, `pactl` e o socket do daemon
-VIVO dela, e ela está usando a máquina.
-"""
+"""O `doctor` diz o ACHADO do exame, não a etiqueta — e no endereço que existe."""
 from __future__ import annotations
 
 import json
@@ -33,27 +13,10 @@ DOCTOR = RAIZ / "scripts/doctor.sh"
 
 
 def _snippet_do_exame() -> str:
-    """O python embutido no `check_exame_da_mesa`, lido do fonte do doctor.
-
-    LIDO E NÃO COPIADO: uma cópia aqui envelheceria sozinha, e a régua passaria
-    a medir um programa que o doctor não roda mais — que é a forma exata do
-    defeito que esta casa chama de *instrumento apontando para outra coisa*.
-    """
+    """O python embutido no `check_exame_da_mesa`, lido do fonte do doctor."""
     fonte = DOCTOR.read_text(encoding="utf-8")
-    # ANCORADO NA FUNÇÃO, E NÃO NA FORMA — STORM-USB-01, 20/09/2026.
-    #
-    # Esta busca começava no ARQUIVO inteiro e pegava o primeiro `| "${py}" -c`
-    # que encontrasse. No dia em que o `_o_endereco_do_storm` nasceu — acima do
-    # `check_exame_da_mesa`, com a MESMA forma de chamada — a régua passou a
-    # medir o python errado e reprovou em quatro casos, acusando o doctor de um
-    # defeito que ele não tinha. O `assert` abaixo prometia justamente que isso
-    # não aconteceria "verde sobre nada"; ele não previa o verde sobre OUTRA
-    # coisa, que é o mesmo instrumento apontado para o lugar errado.
-    #
-    # A cura é a promessa do próprio docstring: procurar DENTRO da função.
     inicio = fonte.index("check_exame_da_mesa() {")
     fim = fonte.index("\n}\n", inicio)
-    # O SEGUNDO `py -c` do bloco: o primeiro roda `--censo`, o segundo resume.
     m = re.search(r'\| *"\$\{py\}" -c \'\n(.*?)\n\' 2>/dev/null\)"',
                   fonte[inicio:fim], re.S)
     assert m, ("não achei o python do `check_exame_da_mesa` no `doctor.sh` — "
@@ -62,7 +25,6 @@ def _snippet_do_exame() -> str:
 
 
 def _rodar(censo: dict) -> str:
-    # O INTERPRETADOR É O DESTA VENV, não entrada livre.
     r = subprocess.run(
         [sys.executable, "-c", _snippet_do_exame()],
         input=json.dumps(censo), capture_output=True, text=True, check=False)
@@ -71,17 +33,7 @@ def _rodar(censo: dict) -> str:
 
 
 def _censo(*porques: str) -> dict:
-    """Um censo de mentira com N ordens — todas com o MESMO rótulo.
-
-    O rótulo repetido é o ponto: é assim que o exame real devolve as ordens, e
-    é o que fazia o doctor dizer a mesma palavra N vezes.
-
-    OS DOIS ESCAPES DE ACENTO ABAIXO são a MESMA razão, e ela é a terceira
-    classe do `test_todo_escape_de_acento_presta_contas`: o valor do
-    `veredito` e o do `estado` são literais do JSON que o exame põe no fio,
-    ASCII dos dois lados. Acentuá-los aqui faria a fixture parar de casar com
-    o produto — o dublê ficaria mais bonito e mais pobre que o que se mede.
-    """
+    """Um censo de mentira com N ordens — todas com o MESMO rótulo."""
     return {"veredito": "atencao",  # (noqa-acento): valor do JSON, ASCII
             "itens": [{"chave": f"r{i}", "estado": "atencao",  # (noqa-acento): valor do JSON
                        "rotulo": "Mudança recomendada", "porque": p}
@@ -100,11 +52,7 @@ def test_a_linha_traz_o_achado_e_nao_so_a_etiqueta() -> None:
 
 
 def test_dois_achados_diferentes_dao_duas_linhas_diferentes() -> None:
-    """A MORDIDA QUE PROVOU A CAUSA, virada régua.
-
-    Com o código de antes, estas duas saídas eram BYTE-IDÊNTICAS: os dois itens
-    tinham o mesmo `rotulo`, e o `porque` nunca era lido.
-    """
+    """A MORDIDA QUE PROVOU A CAUSA, virada régua."""
     a = _rodar(_censo("o teclado depende do hub"))
     b = _rodar(_censo("dois rádios em entradas vizinhas"))
     assert a != b, (
@@ -131,19 +79,11 @@ def test_o_certo_nao_vira_linha() -> None:
 
 
 def test_o_doctor_aponta_para_uma_aba_que_existe() -> None:
-    """*"aba Configurações"* não existe em lugar nenhum do produto.
-
-    As dez abas são `01-jogar` a `10-perfis`. O exame mora na seção **Check-up**
-    da aba **Conexões**. Quem lesse o terminal procuraria uma aba que não está
-    lá — e a tela é para qualquer pessoa, não só para quem conhece a história
-    da janela GTK que tinha esse nome.
-    """
+    """*"aba Configurações"* não existe em lugar nenhum do produto."""
     bloco = re.search(r"check_exame_da_mesa\(\)\s*\{(.*?)\n\}",
                       DOCTOR.read_text(encoding="utf-8"), re.S)
     assert bloco, "não achei o `check_exame_da_mesa` no doctor"
     corpo = bloco.group(1)
-    # O COMENTÁRIO QUE EXPLICA O ERRO CITA A PALAVRA, e não pode contar como
-    # ocorrência — é a armadilha de prosa que esta casa já pagou cinco vezes.
     sem_comentario = "\n".join(
         x for x in corpo.splitlines() if not x.lstrip().startswith("#"))
     assert "aba Configurações" not in sem_comentario, (

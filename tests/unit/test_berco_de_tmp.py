@@ -1,21 +1,4 @@
-"""BERCO-DE-TMP-01 — a suíte devolve o ``/tmp`` como encontrou?
-
-O PORQUÊ, MEDIDO em 07/08/2026 com retrato do disco antes e depois de uma suíte
-inteira: o CANARIO-FS-01 ficou CALADO (a suíte não escreveu no ``$HOME``), e
-mesmo assim a execução deixou **16 entradas novas em `/tmp`** — 9 de
-`tempfile.mkdtemp()` sem limpeza nos testes de migração de perfil, 6 de `mktemp`
-de shell dentro de script sob teste, 1 da libpulse. O acumulado do dia: 906
-diretórios `tmp<8>`, 892 deles ainda com os arquivos que só aqueles testes
-escrevem.
-
-A cura é o BERÇO: a sessão desvia `tempfile` e `TMPDIR` para
-``/tmp/hefesto-berco-<pid>`` e leva o diretório inteiro embora no fim.
-
-Estes testes provam as DUAS metades do contrato, e a segunda importa mais que a
-primeira: o berço leva o que nasceu dentro dele, **e não encosta em nada que
-esteja do lado de fora** — porque do lado de fora está o `/tmp` de uma máquina
-viva, com arquivo dela no meio.
-"""
+"""BERCO-DE-TMP-01 — a suíte devolve o ``/tmp`` como encontrou?"""
 
 from __future__ import annotations
 
@@ -41,18 +24,13 @@ class _SessaoFalsa:
 
 @pytest.fixture
 def sessao() -> _SessaoFalsa:
-    """A MESMA Session arma e varre — é o que acontece numa sessão de verdade,
-    e é o que a guarda `_SESSAO_REAL` exige."""
+    """A MESMA Session arma e varre — é o que acontece numa sessão de verdade,"""
     return _SessaoFalsa()
 
 
 @pytest.fixture
 def tmp_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Um ``/tmp`` de mentira, com o estado do berço zerado e restaurável.
-
-    Sem isto os testes daqui roubariam o berço da sessão VIVA que os está
-    rodando — e o `sessionfinish` de verdade acharia que já tinha varrido.
-    """
+    """Um ``/tmp`` de mentira, com o estado do berço zerado e restaurável."""
     falso = tmp_path / "tmp"
     falso.mkdir()
     monkeypatch.setattr(berco_mod, "_BERCO", [])
@@ -70,21 +48,10 @@ def tmp_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _pid_morto() -> int:
-    """Um pid que existiu e já foi ceifado.
-
-    O Linux distribui pids de forma monotônica; reciclar um pid entre o `wait`
-    e a linha seguinte exigiria dar a volta no `pid_max` inteiro em
-    microssegundos. Ainda assim o teste CONFERE antes de usar, porque um teste
-    que depende de sorte não é teste.
-    """
+    """Um pid que existiu e já foi ceifado."""
     proc = subprocess.Popen([sys.executable, "-c", ""])
     proc.wait()
     return proc.pid
-
-
-# ---------------------------------------------------------------------------
-# O berço nasce, e tudo passa a nascer dentro dele
-# ---------------------------------------------------------------------------
 
 
 def test_o_berco_leva_o_pid_da_sessao_no_nome(tmp_falso: Path) -> None:
@@ -98,8 +65,7 @@ def test_o_berco_leva_o_pid_da_sessao_no_nome(tmp_falso: Path) -> None:
 
 
 def test_tempfile_passa_a_nascer_dentro_do_berco(tmp_falso: Path) -> None:
-    """A MORDIDA: arranque o `tempfile.tempdir = ...` de `_armar_berco` e o
-    diretório volta a nascer solto no `/tmp`, que é o defeito de 07/08."""
+    """A MORDIDA: arranque o `tempfile.tempdir = ...` de `_armar_berco` e o"""
     berco_mod._armar_berco(_SessaoFalsa())
     nosso = berco_mod.berco()
     assert nosso is not None
@@ -111,18 +77,12 @@ def test_tempfile_passa_a_nascer_dentro_do_berco(tmp_falso: Path) -> None:
 
 
 def test_o_tmpdir_do_ambiente_tambem_aponta_para_o_berco(tmp_falso: Path) -> None:
-    """Os 6 `tmp.<10>` medidos vieram de `mktemp` de SHELL, num subprocesso —
-    só o `TMPDIR` do ambiente os alcança."""
+    """Os 6 `tmp.<10>` medidos vieram de `mktemp` de SHELL, num subprocesso —"""
     berco_mod._armar_berco(_SessaoFalsa())
     nosso = berco_mod.berco()
     assert nosso is not None
     for var in ("TMPDIR", "TMP", "TEMP"):
         assert os.environ[var] == str(nosso)
-
-
-# ---------------------------------------------------------------------------
-# A varredura: leva o que é dela, e SÓ o que é dela
-# ---------------------------------------------------------------------------
 
 
 def test_a_varredura_leva_o_berco_inteiro(
@@ -144,12 +104,7 @@ def test_a_varredura_leva_o_berco_inteiro(
 def test_arquivo_real_dela_ao_lado_do_berco_nao_e_tocado(
     tmp_falso: Path, sessao: _SessaoFalsa
 ) -> None:
-    """O CASO PERIGOSO, e o que decide se este mecanismo pode existir.
-
-    No `/tmp` de uma máquina viva há screenshot dela, buffer de clipboard,
-    socket do PipeWire. A varredura só pode remover o que nasceu no berço —
-    nunca o vizinho, por mais que o vizinho pareça temporário.
-    """
+    """O CASO PERIGOSO, e o que decide se este mecanismo pode existir."""
     berco_mod._armar_berco(sessao)
     nosso = berco_mod.berco()
     assert nosso is not None
@@ -189,8 +144,7 @@ def test_sessao_verde_e_sem_resto_nao_imprime_nada(
 def test_sessao_vermelha_preserva_o_berco(
     tmp_falso: Path, sessao: _SessaoFalsa, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Quando a suíte cai, o que ela deixou pode ser prova. Guardar é barato:
-    a próxima sessão varre pelo pid morto."""
+    """Quando a suíte cai, o que ela deixou pode ser prova. Guardar é barato:"""
     berco_mod._armar_berco(sessao)
     nosso = berco_mod.berco()
     assert nosso is not None
@@ -207,8 +161,7 @@ def test_sessao_vermelha_preserva_o_berco(
 def test_a_conta_do_que_a_suite_deixaria_sai_no_relato(
     tmp_falso: Path, sessao: _SessaoFalsa, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Varrer em silêncio esconderia o defeito de origem. O relato é o que
-    permite alguém consertar o teste que vaza."""
+    """Varrer em silêncio esconderia o defeito de origem. O relato é o que"""
     berco_mod._armar_berco(sessao)
     nosso = berco_mod.berco()
     assert nosso is not None
@@ -223,11 +176,6 @@ def test_a_conta_do_que_a_suite_deixaria_sai_no_relato(
     assert "vazamento0" in saida
 
 
-# ---------------------------------------------------------------------------
-# Berços de sessões mortas — e NUNCA os de sessão viva
-# ---------------------------------------------------------------------------
-
-
 def test_pid_vivo_responde_a_verdade() -> None:
     assert berco_mod._pid_vivo(os.getpid())
     morto = _pid_morto()
@@ -235,8 +183,7 @@ def test_pid_vivo_responde_a_verdade() -> None:
 
 
 def test_berco_de_sessao_viva_nunca_entra_na_varredura(tmp_falso: Path) -> None:
-    """A regra que impede o pior acidente possível: duas suítes rodam ao mesmo
-    tempo nesta máquina, e uma não pode apagar o `/tmp` da outra."""
+    """A regra que impede o pior acidente possível: duas suítes rodam ao mesmo"""
     vivo = tmp_falso / f"hefesto-berco-{os.getpid()}"
     vivo.mkdir()
 
@@ -244,9 +191,7 @@ def test_berco_de_sessao_viva_nunca_entra_na_varredura(tmp_falso: Path) -> None:
 
 
 def test_berco_de_sessao_morta_e_varrido_na_proxima(tmp_falso: Path) -> None:
-    """Sessão morta a `kill` não roda `sessionfinish` — sem esta regra o berço
-    dela ficaria para sempre, que é como os 3 `hefesto-arvore-congelada-*`
-    chegaram ao `/tmp` dela."""
+    """Sessão morta a `kill` não roda `sessionfinish` — sem esta regra o berço"""
     morto = _pid_morto()
     orfao = tmp_falso / f"hefesto-berco-{morto}"
     orfao.mkdir()
@@ -275,16 +220,14 @@ def test_berco_de_sessao_morta_e_varrido_na_proxima(tmp_falso: Path) -> None:
     ],
 )
 def test_nome_que_nao_e_berco_nunca_e_alvo(tmp_falso: Path, nome: str) -> None:
-    """O sufixo tem de ser dígito PURO. Um `hefesto-berco-de-outra-coisa` é
-    diretório de alguém, e a dúvida sempre se resolve para 'não mexa'."""
+    """O sufixo tem de ser dígito PURO. Um `hefesto-berco-de-outra-coisa` é"""
     assert berco_mod._pid_do_berco(nome) is None
     (tmp_falso / nome).mkdir()
     assert berco_mod._bercos_orfaos(tmp_falso) == []
 
 
 def test_link_simbolico_nunca_e_seguido(tmp_falso: Path, tmp_path: Path) -> None:
-    """Um link chamado `hefesto-berco-<pid morto>` apontando para a config dela
-    não pode virar alvo: o alvo dele não nasceu de teste nenhum."""
+    """Um link chamado `hefesto-berco-<pid morto>` apontando para a config dela"""
     de_verdade = tmp_path / "config-dela"
     de_verdade.mkdir()
     (de_verdade / "perfil.json").write_text("{}", encoding="utf-8")
@@ -296,11 +239,6 @@ def test_link_simbolico_nunca_e_seguido(tmp_falso: Path, tmp_path: Path) -> None
     berco_mod._armar_berco(_SessaoFalsa())
 
     assert (de_verdade / "perfil.json").exists()
-
-
-# ---------------------------------------------------------------------------
-# A escotilha, e o que fica FORA do berço de propósito
-# ---------------------------------------------------------------------------
 
 
 def test_escotilha_desliga_o_berco(
@@ -317,12 +255,7 @@ def test_escotilha_desliga_o_berco(
 def test_aviso_do_que_nasceu_fora_do_berco(
     tmp_falso: Path, sessao: _SessaoFalsa, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A classe que o berço NÃO alcança: caminho fixo escrito à mão num teste,
-    que ignora `TMPDIR` por construção. Foi assim que
-    `hefesto_teste_pactl_chamadas.txt` apareceu na medição de 07/08.
-
-    É AVISO e não portão, porque a máquina dela também escreve em `/tmp`.
-    """
+    """A classe que o berço NÃO alcança: caminho fixo escrito à mão num teste,"""
     berco_mod._armar_berco(sessao)
     (tmp_falso / "hefesto_teste_caminho_fixo.txt").write_text("x", encoding="utf-8")
     capsys.readouterr()
@@ -338,11 +271,6 @@ def test_aviso_do_que_nasceu_fora_do_berco(
     )
 
 
-# ---------------------------------------------------------------------------
-# Contra a sessão VIVA que está rodando este arquivo
-# ---------------------------------------------------------------------------
-
-
 def _berco_vivo() -> Path:
     nosso = berco_mod.berco()
     if nosso is None:
@@ -351,36 +279,20 @@ def _berco_vivo() -> Path:
 
 
 def test_o_basetemp_do_pytest_fica_fora_do_berco(tmp_path: Path) -> None:
-    """Decisão medida, não descuido: o `sun_path` de um `AF_UNIX` tem ~108
-    bytes, e há teste desta casa cujo socket sob `tmp_path` já bate em 95.
-    Empurrar `tmp_path` para dentro do berço somaria os bytes do berço a todos
-    eles. Além disso o pytest já guarda as 3 últimas execuções, que é o que se
-    olha quando um teste cai."""
+    """Decisão medida, não descuido: o `sun_path` de um `AF_UNIX` tem ~108"""
     nosso = _berco_vivo()
     assert nosso not in tmp_path.parents
 
 
 def test_a_arvore_congelada_nasce_dentro_do_berco() -> None:
-    """Os 3 `hefesto-arvore-congelada-*` achados no `/tmp` dela em 07/08 são
-    sessões mortas cujo `atexit` nunca rodou. Dentro do berço, a varredura da
-    sessão seguinte os alcança mesmo assim."""
+    """Os 3 `hefesto-arvore-congelada-*` achados no `/tmp` dela em 07/08 são"""
     nosso = _berco_vivo()
     congelada = berco_mod.arvore_congelada()
     assert nosso in congelada.parents
 
 
 def test_sessao_de_mentira_nao_varre_o_berco_da_sessao_viva() -> None:
-    """O defeito medido em 07/08, na primeira integração deste berço.
-
-    Nove testes do `test_conftest_canario_fs.py` chamam `pytest_sessionfinish`
-    com uma Session de MENTIRA, de propósito, para provar que o canário
-    reprova. A primeira dessas chamadas varria o berço da sessão VIVA no meio
-    dela e devolvia `tempfile.tempdir` para o `/tmp` real: a suíte voltava, em
-    silêncio, ao comportamento que este berço veio curar.
-
-    MORDIDA: tirar o `if _SESSAO_REAL and id(session) not in _SESSAO_REAL` de
-    `_varrer_berco` faz este teste apagar o próprio berço e reprovar.
-    """
+    """O defeito medido em 07/08, na primeira integração deste berço."""
     nosso = _berco_vivo()
 
     berco_mod.pytest_sessionfinish(_SessaoFalsa(), 0)
@@ -391,9 +303,7 @@ def test_sessao_de_mentira_nao_varre_o_berco_da_sessao_viva() -> None:
 
 
 def test_o_home_dela_nao_e_assunto_deste_mecanismo() -> None:
-    """Contrato declarado: o berço mexe em `/tmp`, e o `$HOME` fica com o
-    CANARIO-FS-01 (prevenir e DETECTAR). Restaurar arquivo em `$HOME` seria
-    desfazer escrita da daemon VIVA dela — o dano maior."""
+    """Contrato declarado: o berço mexe em `/tmp`, e o `$HOME` fica com o"""
     nosso = _berco_vivo()
     lar = Path(os.path.expanduser("~")).resolve()
     assert lar not in nosso.parents
@@ -401,12 +311,7 @@ def test_o_home_dela_nao_e_assunto_deste_mecanismo() -> None:
 
 
 def test_a_suite_viva_nao_deixou_alvo_de_faxina_no_tmp_real() -> None:
-    """O portão de verdade desta leva: com o berço armado, uma sessão desta
-    suíte não pode mais criar `tmp<8>` assinado no `/tmp` real.
-
-    Roda a faxina em modo relato contra a raiz real e exige que nenhum alvo
-    tenha nascido DEPOIS do início desta sessão.
-    """
+    """O portão de verdade desta leva: com o berço armado, uma sessão desta"""
     nosso = _berco_vivo()
     faxina = _carregar_faxina()
     raiz = nosso.parent
@@ -421,12 +326,7 @@ def test_a_suite_viva_nao_deixou_alvo_de_faxina_no_tmp_real() -> None:
 
 
 def _carregar_faxina() -> Any:
-    """Importa `scripts/faxina-de-testes.py`, que tem hífen no nome.
-
-    O módulo PRECISA entrar em `sys.modules` antes do `exec_module`: ele usa
-    `from __future__ import annotations` com `@dataclass`, e o `dataclasses`
-    resolve a anotação em texto procurando o módulo pelo nome.
-    """
+    """Importa `scripts/faxina-de-testes.py`, que tem hífen no nome."""
     import importlib.util
 
     ja = sys.modules.get("faxina_de_testes")

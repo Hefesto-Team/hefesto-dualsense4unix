@@ -1,33 +1,4 @@
-"""CARONA-NO-GUARD-01 (16/08/2026) — o vigia já acordava na hora certa.
-
-**O pedido dela**, ao sair para dormir em 15/08: *"pensa no qol do user,
-automação de interface e pensa em aplicar cada uma das descobertas de forma
-universal"*. E antes, sobre a cura do wrapper: *"nem precisa ter um botão na
-gui, mas ele se auto corrigir"*.
-
-**O problema que sobrava.** A Steam guarda UMA linha de `LaunchOptions` por
-jogo, e qualquer coisa escrita nela substitui o wrapper em silêncio. Medido duas
-vezes no PRAGMATA — a segunda às 05h de 16/08/2026, com a cura já escrita e o
-jogo dela quebrado assim mesmo. Repor não resolve sozinho: **a Steam regrava o
-`localconfig.vdf` ao SAIR e engole qualquer edição feita com ela viva.** Havia
-cura e havia gatilho na GUI, e mesmo assim existia uma janela em que ninguém
-repunha nada — a janela em que ela está jogando, que é o tempo todo.
-
-**A descoberta.** O gatilho perfeito já existia e estava LIGADO nesta máquina:
-`hefesto-steam-input-guard.path` vigia `~/.steam/steam/userdata` desde o
-FEAT-STEAM-INPUT-SELF-HEAL-01, e acorda exatamente quando a Steam grava o vdf —
-isto é, no instante em que ela ACABOU DE SAIR. Era só a sentinela do wrapper
-pegar carona no mesmo `.service`. Nada de unit novo, nada de timer novo, nada
-de botão: a casa já sabia acordar na hora certa e não estava usando isso.
-
-É a contraparte feliz do defeito mais caro daqui ("a casa sabe e o produto não
-faz"): dessa vez a casa sabia, e passou a fazer.
-
-**O que este arquivo trava.** Que o segundo `ExecStart` não suma; que ele seja
-tolerante a falha (`-`), porque ADIAR é o caso comum e não é erro; que o
-`install.sh` renderize o placeholder novo; e que o passo do Steam Input continue
-sendo o primeiro.
-"""
+"""CARONA-NO-GUARD-01 (16/08/2026) — o vigia já acordava na hora certa."""
 from __future__ import annotations
 
 import re
@@ -60,14 +31,7 @@ def execstarts(service: str) -> list[str]:
 
 class TestOSegundoPasso:
     def test_o_guard_repoe_o_wrapper(self, execstarts: list[str]) -> None:
-        """A MORDIDA. Sem este passo, o Pragmata volta a ficar quebrado calado.
-
-        `>= 2` e não `== 2` desde 18/09/2026: o vigia ganhou um TERCEIRO passo
-        (o `--manter` do Proton pinado), e quem o cobra é
-        `test_o_pino_chega_a_qualquer_computador.py`. O que esta régua tranca
-        continua sendo o SEGUNDO — tirá-lo põe o `--manter` na posição dele, e
-        o `__SENTINELA__` some de `execstarts[1]`.
-        """
+        """A MORDIDA. Sem este passo, o Pragmata volta a ficar quebrado calado."""
         assert len(execstarts) >= 2, execstarts
         assert "__SENTINELA__" in execstarts[1]
         assert "--reparar" in execstarts[1]
@@ -78,13 +42,7 @@ class TestOSegundoPasso:
         assert "--apply-quiet" in execstarts[0]
 
     def test_adiar_nao_pode_derrubar_o_guard(self, service: str) -> None:
-        """O `-` é o que separa "adiei" de "quebrei".
-
-        `--reparar` sai com 3 quando a Steam ou um jogo estão abertos — o caso
-        COMUM. Sem o `-`, o guard entraria em `failed` toda vez que ela
-        estivesse jogando, e um serviço cronicamente vermelho é um serviço que
-        ninguém mais lê.
-        """
+        """O `-` é o que separa "adiei" de "quebrei"."""
         assert re.search(r"^ExecStart=-/usr/bin/env python3 __SENTINELA__", service, re.M)
 
     def test_roda_no_python3_do_sistema(self, execstarts: list[str]) -> None:
@@ -133,12 +91,7 @@ class TestOInstallRenderizaOsDois:
         assert trecho.count("-e ") >= 2
 
     def test_a_cura_entra_sem_flag(self, instalador: str) -> None:
-        """Regra dela, 08/08: nada à mão, nada opt-in.
-
-        Nenhum opt-out tira o guard inteiro: desde 18/09/2026 o
-        `--keep-steam-input` (a escolha de manter o Steam Input) apaga só a
-        linha do Steam Input da unidade, e o atalho continua sendo reposto.
-        """
+        """Regra dela, 08/08: nada à mão, nada opt-in."""
         pedaco = instalador.split("SENTINELA_PY=", 1)[1][:400]
         assert "--enable" not in pedaco
         assert "--with-wrapper" not in pedaco

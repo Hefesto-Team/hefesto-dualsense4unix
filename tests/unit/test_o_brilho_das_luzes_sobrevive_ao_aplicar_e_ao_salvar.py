@@ -63,17 +63,12 @@ from tests.unit import test_a_barra_nao_escurece_ao_reaplicar as barra
 from tests.unit import test_a_marca_da_cor_nao_some as marca
 from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
 
-# O caminho de `pacotes` é posto pela mesa da A-MARCA, importada acima.
 import pacotes
 from pacotes import a04_iluminacao, rodape
 
-#: O CLIQUE DOS BOTÕES DO RODAPÉ, como o piloto os manda — com a aba de onde
-#: veio, que todo clique carrega (o «Salvar» é o mesmo em toda aba desde 27/09).
 CLIQUE = {"tipo": "button", "evento": "click",
           "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
-#: O global do perfil em cada caso: uma palavra DIFERENTE da clicada, senão o
-#: Fraco clicado sobre o Fraco do perfil passaria sem a cura.
 OUTRA = {"fraco": "forte", "medio": "fraco", "forte": "medio"}  # (noqa-acento) chaves ASCII
 
 
@@ -89,7 +84,6 @@ class _PonteDaAba(viva._Ponte):
         self.mesa.rodar(self.mesa.server._handle_profile_switch({"name": nome}))
         return True
 
-    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
     def profile_reaplicar(self, nome: str) -> bool:
         self.mesa.rodar(self.mesa.server._handle_profile_reaplicar({"name": nome}))
         return True
@@ -122,26 +116,14 @@ def mesa_de(tmp_path, monkeypatch):
 
 
 class _PonteDoRodape(barra._PonteDoRodape):
-    """A ponte do rodapé, que guarda o rascunho que o «Aplicar» leva ao handler REAL.
-
-    O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 (26/09/2026): o «Aplicar» é UMA
-    viagem só, e a palavra de cada controle vai no rascunho. A porta da pílula
-    (`led.player_brightness_set`), que era a segunda viagem, é recusada como a
-    da A-BARRA recusa o resto: um dublê que aceita tudo mede menos que o
-    produto.
-    """
+    """A ponte do rodapé, que guarda o rascunho que o «Aplicar» leva ao handler REAL."""
 
     def __init__(self, mesa: Any) -> None:
         super().__init__(mesa)
         self.rascunhos: list[dict[str, Any]] = []
 
     def profile_reaplicar(self, nome: str) -> Any:
-        """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda o nome.
-
-        O que se guarda é o perfil que o daemon lê do disco, na forma do
-        rascunho (o mesmo `DraftConfig.from_profile(...).to_ipc_dict()` que o
-        rodapé mandava até 01/10/2026), lido no instante do clique.
-        """
+        """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda o nome."""
         self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
         return super().profile_reaplicar(nome)
 
@@ -193,19 +175,12 @@ def _global_no_disco() -> str:
     return str(load_profile(NOME).leds.player_led_brightness)
 
 
-# ---------------------------------------------------------------------------
-# 1. E1 — a pílula atravessa o «Aplicar», o «Salvar» e o perfil reaplicado
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("palavra", ["fraco", "medio", "forte"])  # (noqa-acento) chave ASCII
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("n", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
 def test_a_pilula_sobrevive_ao_aplicar_ao_salvar_e_ao_perfil_reaplicado(
         mesa_de, n: int, via: str, palavra: str) -> None:
-    """Clique → «Aplicar» → «Salvar» → perfil reaplicado: a palavra dela em todos.
-
-    Em cada passo, o merge (o que o daemon manda), o que saiu ao aparelho, a
-    pílula acesa na coluna dele e o disco. Os outros três seguem no global.
-    """
+    """Clique → «Aplicar» → «Salvar» → perfil reaplicado: a palavra dela em todos."""
     mesa = mesa_de("todos", via)
     global_ = OUTRA[palavra]
     _o_global_das_luzes(mesa, global_)
@@ -242,11 +217,7 @@ def test_a_pilula_sobrevive_ao_aplicar_ao_salvar_e_ao_perfil_reaplicado(
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_o_aplicar_leva_a_palavra_de_cada_um_e_nao_escreve_em_quem_nao_escolheu(
         mesa_de, via: str) -> None:
-    """Dois controles com palavras próprias, dois no global: cada um no seu.
-
-    O controle que não escreveu o campo não ganha opinião no «Aplicar» — ele
-    herda o global que a ativação deixou, e a troca de perfil segue mandando.
-    """
+    """Dois controles com palavras próprias, dois no global: cada um no seu."""
     mesa = mesa_de("todos", via)
     _o_global_das_luzes(mesa, "medio")  # (noqa-acento) chave ASCII
     mesa.clicar_na_pilula(2, "forte")
@@ -260,26 +231,12 @@ def test_o_aplicar_leva_a_palavra_de_cada_um_e_nao_escreve_em_quem_nao_escolheu(
             "player_led_brightness" not in mesa.disco(NOME, n).model_fields_set)
 
 
-# ---------------------------------------------------------------------------
-# 2. E2 — a varredura da classe: todo gesto da aba 04 que grava no perfil
-# ---------------------------------------------------------------------------
 def _gestos_que_gravam() -> list[str]:
-    """Os gestos da aba 04 que declaram `grava=` — lidos, não digitados.
-
-    TODA porta, e não só a `save_profile`: o interruptor «Cores automáticas»
-    declara `grava="gravar_e_reaplicar"` e grava a cor de cada controle COM o
-    número dela, que é a outra metade da classe que o «Salvar» perdia. Um
-    filtro pela porta deixava de fora um gesto que grava no mesmo perfil.
-    """
+    """Os gestos da aba 04 que declaram `grava=` — lidos, não digitados."""
     return sorted(nome for (pagina, nome) in pacotes.GESTOS_QUE_MEXEM
                   if pagina == a04_iluminacao.PAGINA)
 
 
-#: COMO A TELA CLICA CADA UM na coluna de um controle. A lista de QUEM entra é
-#: a de cima; esta tabela só diz o clique — um gesto novo que grava e não está
-#: aqui reprova nomeando (`test_a_varredura_conhece_todo_gesto_que_grava`).
-#: O `auto-cores` é da aba inteira: o `uniq` do clique não o endereça, e a
-#: coluna medida é a do controle cuja cor ele gravou.
 CLIQUES: dict[str, dict[str, Any]] = {
     "cor": {"hex": "8000FF"},
     "reenviar": {"texto": "#12AB34"},
@@ -289,7 +246,6 @@ CLIQUES: dict[str, dict[str, Any]] = {
     "auto-cores": {"tipo": "input", "evento": "change"},
 }
 
-#: O QUE A COLUNA PINTA do gesto — a tela que ela olha depois de cada botão.
 PINTADO = ("brilho", "brilho-pct", "hex", "brilho-luzes")
 
 
@@ -308,11 +264,7 @@ def _o_que_a_tela_mostra(mesa: Any, n: int) -> dict[str, Any]:
 
 
 def _o_disco(mesa: Any, n: int) -> dict[str, Any]:
-    """Os campos escritos na luz do P<n>, e os dois globais da aba que a coluna lê.
-
-    O interruptor «Cores automáticas» é da aba inteira: no P2, que já tinha a
-    cor gravada com o número, o que ele muda no disco é o global.
-    """
+    """Os campos escritos na luz do P<n>, e os dois globais da aba que a coluna lê."""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     globais = load_profile(NOME).leds
@@ -329,12 +281,7 @@ def _o_disco(mesa: Any, n: int) -> dict[str, Any]:
 @pytest.mark.parametrize("gesto", _gestos_que_gravam())
 def test_todo_gesto_que_grava_atravessa_o_aplicar_e_o_salvar(
         mesa_de, gesto: str, n: int, via: str) -> None:
-    """O que a coluna mostra depois do clique é o que ela mostra depois dos botões.
-
-    E o que estava no disco depois do clique continua lá depois do «Salvar»
-    (o «Salvar» pode ACRESCENTAR campo, e não trocar nem tirar), e volta quando
-    o perfil é reaplicado.
-    """
+    """O que a coluna mostra depois do clique é o que ela mostra depois dos botões."""
     mesa = mesa_de("todos", via)
     antes = _o_disco(mesa, n)
     fn = pacotes.gesto_da_pagina(a04_iluminacao.PAGINA, gesto)
@@ -422,16 +369,7 @@ def test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco(mesa_de, via: str) -> N
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo(mesa_de, via: str) -> None:
-    """O daemon calado: o «Aplicar» recusa com a frase do motor, com ou sem a palavra.
-
-    A frase é a que a pílula já usa (`a04_iluminacao.sem_resposta_do_daemon`):
-    nada de recado novo. Até a O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 só
-    recusava quem tinha a palavra das luzes, pela segunda viagem; o perfil sem
-    ela piscava verde com o daemon desligado.
-
-    **A MORDIDA:** tire o `is None` do `rodape.aplicar` e o «Aplicar» pisca
-    verde sem ter chegado a lugar nenhum.
-    """
+    """O daemon calado: o «Aplicar» recusa com a frase do motor, com ou sem a palavra."""
     import re
 
     class _Calada(_PonteDoRodape):
@@ -453,9 +391,6 @@ def test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo(mesa_de, via: str) -> N
     assert calada.luzes == [{"brilho": "forte", "uniq": UNIQS[1]}], calada.luzes
 
 
-# ---------------------------------------------------------------------------
-# 3. A economia de bateria vence a palavra dela, como na ativação
-# ---------------------------------------------------------------------------
 @pytest.fixture
 def economia() -> Iterator[Any]:
     """Liga a economia pelo `maquina.json` do lar de mentira — o daemon e a tela o leem."""
@@ -474,13 +409,7 @@ def economia() -> Iterator[Any]:
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_na_bateria_longa_o_aplicar_nao_tira_as_luzes_do_fraco(
         mesa_de, economia, via: str) -> None:
-    """A mesa em «Bateria longa»: o Forte do disco não volta pelo «Aplicar».
-
-    A ativação põe as luzes de todos no Fraco (`leds_na_economia`), e o
-    «Aplicar» não pode ser a porta que escapa dela. O rascunho leva o Forte
-    dela — é o que o disco guarda —, e o teto é posto do outro lado
-    (`DraftApplier._com_o_teto_da_economia`, O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01).
-    """
+    """A mesa em «Bateria longa»: o Forte do disco não volta pelo «Aplicar»."""
     fraco, forte = BRILHOS_DAS_LUZES["fraco"], BRILHOS_DAS_LUZES["forte"]
     mesa = mesa_de("todos", via)
     mesa.clicar_na_pilula(2, "forte")
@@ -496,12 +425,7 @@ def test_na_bateria_longa_o_aplicar_nao_tira_as_luzes_do_fraco(
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_a_economia_de_um_controle_so_nao_recebe_a_palavra_e_o_vizinho_recebe(
         mesa_de, economia, via: str) -> None:
-    """A economia ligada só no P2: o aparelho do P4 no Forte, e o do P2 no Fraco.
-
-    O rascunho leva o Forte dos dois — é o que o disco guarda —, e o teto do
-    P2 é posto do outro lado, pelo mesmo dono da ativação
-    (O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01).
-    """
+    """A economia ligada só no P2: o aparelho do P4 no Forte, e o do P2 no Fraco."""
     from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
 
     fraco, forte = BRILHOS_DAS_LUZES["fraco"], BRILHOS_DAS_LUZES["forte"]

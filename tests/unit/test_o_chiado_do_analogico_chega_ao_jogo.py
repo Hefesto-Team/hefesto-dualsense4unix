@@ -31,7 +31,6 @@ import pytest
 
 from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
-#: O `rx` do P1 na bancada de 29/09: 131↔132, parado na mesa.
 _CHIADO_DO_P1 = [131, 132] * 5
 
 _UNIQ = "aa:bb:cc:00:00:01"
@@ -80,8 +79,6 @@ def _daemon(pad: Any, arranjo: Any) -> SimpleNamespace:
     return daemon
 
 
-#: Sem arranjo (o perfil sem a Mira) e com a Mira ligada e o giro parado (o
-#: Freestyle da bancada): nos dois, o analógico chega ao jogo como veio.
 _ARRANJOS = [
     pytest.param(None, id="sem-a-mira"),
     pytest.param(
@@ -97,18 +94,10 @@ def _registro_com_giro(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(REGISTRO, "estado", lambda uniq: SimpleNamespace(giroscopio=True))
 
 
-# ---------------------------------------------------------------------------
-# 1. O P1: `dispatch_gamepad`
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.usefixtures("_registro_com_giro")
 @pytest.mark.parametrize("arranjo", _ARRANJOS)
 def test_o_p1_entrega_cada_troca_do_chiado(monkeypatch: pytest.MonkeyPatch, arranjo: Any) -> None:
-    """Dez tiques com o `rx` trocando 131↔132: o pad recebe os dez, na ordem.
-
-    Mordida: uma histerese de 1 LSB antes do `device.forward_analog` do
-    `dispatch_gamepad` segura o 132 e esta régua reprova."""
+    """Dez tiques com o `rx` trocando 131↔132: o pad recebe os dez, na ordem."""
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
     monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: None)
@@ -125,11 +114,6 @@ def test_o_p1_entrega_cada_troca_do_chiado(monkeypatch: pytest.MonkeyPatch, arra
     assert {kw["lx"] for kw in pad.analog} == {127}
 
 
-# ---------------------------------------------------------------------------
-# 2. Os jogadores 2 a 4: `coop.forward_all`
-# ---------------------------------------------------------------------------
-
-
 class _LeitorQueTroca:
     """O leitor de um jogador: cada tique devolve o valor seguinte do eixo."""
 
@@ -143,8 +127,6 @@ class _LeitorQueTroca:
         return SimpleNamespace(**eixos, l2_raw=0, r2_raw=0, buttons_pressed=frozenset())
 
 
-#: A medida de 29/09 por jogador: o eixo e os dois valores entre os quais ele
-#: trocou (P2 `lx` 125↔126, P3 `rx` 128↔129, P4 `ry` 124↔125).
 _CHIADO_POR_JOGADOR = {
     _P2: ("lx", [125, 126] * 4),
     _P3: ("rx", [128, 128, 129, 128, 128, 128, 129, 128]),
@@ -157,10 +139,7 @@ _CHIADO_POR_JOGADOR = {
 def test_os_jogadores_2_a_4_entregam_cada_um_o_seu_chiado(
     monkeypatch: pytest.MonkeyPatch, arranjo: Any
 ) -> None:
-    """Cada pad recebe as trocas do SEU jogador, tique a tique.
-
-    Mordida: uma histerese de 1 LSB antes do `player.vpad.forward_analog` do
-    `forward_all` segura as trocas e esta régua reprova."""
+    """Cada pad recebe as trocas do SEU jogador, tique a tique."""
     from hefesto_dualsense4unix.daemon.subsystems import coop as co
     from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
 
@@ -185,11 +164,6 @@ def test_os_jogadores_2_a_4_entregam_cada_um_o_seu_chiado(
         assert [kw[eixo] for kw in pads[uniq].analog] == valores, uniq
 
 
-# ---------------------------------------------------------------------------
-# 3. O pad `uinput`: as máscaras Xbox e Nintendo
-# ---------------------------------------------------------------------------
-
-
 class _Gravador:
     """O nó `uinput` de mentira: guarda cada `write` e cada `syn`."""
 
@@ -206,10 +180,7 @@ class _Gravador:
 
 @pytest.mark.parametrize("mascara", ["xbox", "nintendo"])
 def test_o_pad_uinput_escreve_cada_troca(mascara: str) -> None:
-    """131→132→131 dá três escritas de `ABS_RX` e três SYN.
-
-    A primeira é a do nó recém-nascido (todo eixo sai uma vez); as duas
-    seguintes são o chiado, e nenhuma delas é engolida."""
+    """131→132→131 dá três escritas de `ABS_RX` e três SYN."""
     ecodes = pytest.importorskip("evdev").ecodes
     from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 
@@ -228,11 +199,8 @@ def test_o_pad_uinput_escreve_cada_troca(mascara: str) -> None:
     assert gravador.syns == 3, "valor repetido não escreve nada"
 
 
-# ---------------------------------------------------------------------------
 # 4. O pad `uhid`: o DualSense, nos dois relógios
-# ---------------------------------------------------------------------------
 
-#: O byte do `RX` no report `0x01`: o id do report, e o corpo começa em `lx`.
 _BYTE_DO_RX = 1 + 2
 
 
@@ -271,8 +239,7 @@ def test_o_pad_uhid_leva_cada_troca_num_report(_uhid: tuple[Any, list[bytes]]) -
 def test_com_o_movimento_no_ar_a_troca_sai_no_report_seguinte_do_leitor(
     _uhid: tuple[Any, list[bytes]],
 ) -> None:
-    """Com o `_motion_streaming`, o relógio é o do físico: o tique só guarda,
-    e a troca pega carona no report seguinte do leitor, sem report a mais."""
+    """Com o `_motion_streaming`, o relógio é o do físico: o tique só guarda,"""
     from hefesto_dualsense4unix.integrations import uhid_gamepad
 
     pad, reports = _uhid

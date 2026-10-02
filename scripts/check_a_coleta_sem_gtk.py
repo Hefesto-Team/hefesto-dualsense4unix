@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-"""A coleta sem GTK, em casa — o espelho do «Censo de coleta» do lint-test.
-
-VERDE-NAO-E-PROVA-01 (27/09/2026). O CI do `dev` ficou vermelho em oito
-corridas seguidas desde 26/09 14h27: cinco módulos de teste importavam a
-interface sem `exigir_gi_real()` (`tests/conftest.py`), e o job do lint-test,
-que não tem GTK, não conseguia coletá-los. O `portoes.sh` local dava verde,
-porque esta máquina TEM o GTK: o defeito só existia sem ele.
-
-Este portão roda a mesma coleta do CI (`pytest tests --collect-only -q
---continue-on-collection-errors`) com o `gi` e o `cairo` bloqueados no
-`sys.meta_path`, que é como o passo do CI mediu o próprio ambiente
-(PISO-DA-COLETA-02, no `ci.yml`), e reprova por qualquer `ERROR` de coleta.
-O piso de encolhimento continua só no CI.
-"""
+"""A coleta sem GTK, em casa — o espelho do «Censo de coleta» do lint-test."""
 
 from __future__ import annotations
 

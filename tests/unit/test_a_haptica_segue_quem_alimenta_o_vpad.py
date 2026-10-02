@@ -115,12 +115,8 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
     config_isolado,
 )
 
-#: O pid do jogo no ``/proc`` de mentira.
 _PID_DO_JOGO = 4242
-#: Onde começam os ``eventN`` dos vpads — longe dos da mesa (``event30``…).
 _PRIMEIRO_EVENTO_DE_VPAD = 500
-#: Os dois jogos que a régua abre: um de um jogador (lê o jogador 1 do jogo)
-#: e um co-op (lê todos). O de um jogador é o que separa a MÃO ERRADA.
 JOGOS = ("um-jogador", "todos")
 
 
@@ -134,11 +130,6 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
 def com_dois_pontos(uniq: str) -> str:
     """``aabbcc000001`` → ``aa:bb:cc:00:00:01``: a grafia do ``HID_UNIQ`` no sysfs."""
     return ":".join(uniq[i : i + 2] for i in range(0, 12, 2))
-
-
-# ---------------------------------------------------------------------------
-# O jogo visto de fora: o /proc e o /sys/class/input que a bancada tem de pé
-# ---------------------------------------------------------------------------
 
 
 def vpads_vivos(bancada: MesaHonesta) -> list[Any]:
@@ -160,14 +151,7 @@ def montar_o_mundo(
     *,
     fisicos_abertos: tuple[str, ...] = (),
 ) -> tuple[pathlib.Path, pathlib.Path]:
-    """``/proc`` e ``/sys/class/input`` de mentira, do que está de pé na bancada.
-
-    Cada controle da mesa publica o nó dele com o ``uniq`` na grafia do sysfs;
-    cada vpad vivo publica o dele com o MAC que VESTE (o que o kernel
-    republica do 0x09) — o ``uinput`` não tem ``uniq``, e o nó sai vazio, como
-    no kernel. O jogo é um processo com a variável do Proton e um descritor
-    para cada nó que ele lê.
-    """
+    """``/proc`` e ``/sys/class/input`` de mentira, do que está de pé na bancada."""
     entrada = raiz / "input"
     proc = raiz / "proc"
     dev = raiz / "dev" / "input"
@@ -196,12 +180,7 @@ def montar_o_mundo(
 
 
 def quem_dirige(bancada: MesaHonesta, vpad: Any) -> str | None:
-    """Quem ALIMENTA ``vpad`` agora, medido no MUNDO e não na anotação do co-op.
-
-    O posto: o carimbo que o leitor do P1 põe no estado (as duas metades,
-    ``read_state`` e ``evdev_buttons_once``). Um secundário: o dono do nó que
-    o leitor dele segura com o grab — o plástico de verdade, na mesa.
-    """
+    """Quem ALIMENTA ``vpad`` agora, medido no MUNDO e não na anotação do co-op."""
     if vpad is bancada.daemon._gamepad_device:
         return bancada.dono_do_vpad_do_p1()
     dono_do_no = {node: uniq for uniq, node in bancada.mesa.nodes.items()}
@@ -250,21 +229,8 @@ def o_subsystem_responde(
     return sub._quem_o_jogo_le(os_controles(bancada))
 
 
-# ---------------------------------------------------------------------------
-# Os cenários: quem o posto carrega, de onde ele nasceu, e quem voltou
-# ---------------------------------------------------------------------------
-
-
 def levar_o_posto(bancada: MesaHonesta, quem: int, *, nasceu: str, volta: bool) -> None:
-    """O posto passa a ser dirigido por ``UNIQS[quem]``.
-
-    ``nasceu="p1"`` é a troca de máscara com o jogo aberto (o gesto dela, que a
-    R-04 nunca barra): o posto renasce com a identidade do P1. Os que vêm antes
-    de ``quem`` saem e o prazo de cada um vence (a NUM-01 passa o posto
-    adiante); com ``volta``, eles voltam depois do prazo, cada um no vpad
-    próprio — o P1 com o MAC seguinte do aparelho quando o posto já veste o
-    dele.
-    """
+    """O posto passa a ser dirigido por ``UNIQS[quem]``."""
     if nasceu == "p1":
         trocar_a_mascara_do_p1(bancada)
     saidos = list(UNIQS[:quem])
@@ -281,7 +247,6 @@ def levar_o_posto(bancada: MesaHonesta, quem: int, *, nasceu: str, volta: bool) 
     assert bancada.dono_do_vpad_do_p1() == UNIQS[quem], "a bancada não levou o posto"
 
 
-#: Os transportes de cada tamanho de mesa: com UM controle, a mista é o cabo.
 def _transportes(n: int) -> tuple[str, ...]:
     return ("usb", "bt") if n == 1 else tuple(TRANSPORTES)
 
@@ -296,8 +261,6 @@ CENARIOS = [
         id=f"{n}-controles-{t}-posto-com-p{quem + 1}-nasceu-{nasceu}"
         + ("-volta-tardia" if volta else ""),
     )
-    # UM controle é o caso de quase todo mundo, e o posto do boot (o piso,
-    # sem identidade) era o que a forja nunca achava (conferência, 25/09).
     for n in (1, 2, 3, 4)
     for t in _transportes(n)
     for quem in range(n)
@@ -362,14 +325,7 @@ class TestOJogoLeQuemDirigeOPosto:
         quem: int,
         nasceu: str,
     ) -> None:
-        """Sem co-op há um vpad só, e quem o alimenta é o primário de agora.
-
-        O co-op desligado é a mesa de quem joga sozinho com os controles da
-        casa ligados: o manager existe (o laço o cria de qualquer jeito), não
-        há secundário nenhum, e o posto troca de mão quando o primário sai e o
-        prazo vence. A forja errava todos os postos do boot e todos os que
-        trocaram de mão (conferência, 25/09).
-        """
+        """Sem co-op há um vpad só, e quem o alimenta é o primário de agora."""
         relogio = Relogio()
         bancada = MesaHonesta(
             monkeypatch, kernel=kernel, relogio=relogio, tempo=relogio, coop=False
@@ -400,11 +356,7 @@ class TestOJogoLeQuemDirigeOPosto:
         quantos: int,
         transporte: str,
     ) -> None:
-        """O P1 fora dentro do prazo: o posto espera por ele, parado — ninguém o dirige.
-
-        O jogo de um jogador lê só o posto, e ninguém vibra; o que lê todos
-        acende quem ficou, cada um no próprio vpad (O-ASSENTO-GUARDADO-NAO-ANDA-02).
-        """
+        """O P1 fora dentro do prazo: o posto espera por ele, parado — ninguém o dirige."""
         bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
         bancada.mesa.levantar(P1)
         for _ in range(int(VINTE_SEGUNDOS / 2.0)):
@@ -420,18 +372,8 @@ class TestOJogoLeQuemDirigeOPosto:
             assert o_subsystem_responde(bancada, monkeypatch, proc, entrada) == esperado
 
 
-# ---------------------------------------------------------------------------
-# A prova da sprint: o P2 dirige o posto nascido do P1, e o P1 voltou tarde
-# ---------------------------------------------------------------------------
-
-
 def _as_pontes_de_mentira(monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
-    """A fiação do ``_casar_as_pontes`` com dublês — e o jogo tocando em TODO endpoint.
-
-    Os dublês são os da régua da troca de modo (HAPTICA-POR-RADIO-01): nenhuma
-    ponte escreve no aparelho, nenhum endpoint vai ao servidor de som. O gate
-    (``_quem_o_jogo_le``) NÃO é dublado: é ele que esta régua mede.
-    """
+    """A fiação do ``_casar_as_pontes`` com dublês — e o jogo tocando em TODO endpoint."""
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
@@ -442,8 +384,6 @@ def _as_pontes_de_mentira(monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
     tocando: dict[str, bool] = {}
 
     def _tocando(nome: str, *_a: Any, **_k: Any) -> bool:
-        # O pior caso de 20/09: o jogo tem o canal de TODO endpoint de háptica
-        # aberto. O alto-falante (o nó do som) está calado.
         return nome.startswith("endpoint::") or tocando.get(nome, False)
 
     monkeypatch.setattr(
@@ -451,10 +391,6 @@ def _as_pontes_de_mentira(monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
     )
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(af, "sink_esta_tocando", _tocando)
-    # O DONO DOS FLUXOS É O JOGO (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01,
-    # 28/09/2026): a partida abre pelo cliente que toca nos endpoints, e ele
-    # segue conectado enquanto o jogo vive. O dublê responde SÓ sobre os nós
-    # perguntados que tocam, como `_tocando`.
     monkeypatch.setattr(
         af,
         "donos_dos_fluxos",
@@ -479,14 +415,7 @@ def quem_vibra(
     proc: pathlib.Path,
     entrada: pathlib.Path,
 ) -> set[str]:
-    """Os controles no rádio cuja ponte subiu em modo HÁPTICA, com a mão no posto.
-
-    A primeira volta abre a partida (o fluxo do jogo nos endpoints). Depois, a
-    mão no controle do posto, marcada como o laço do daemon marca
-    (``anotar_o_primario``, que pergunta ``primary_uniq`` ao backend da
-    bancada); e a segunda volta decide. O evdev não vota
-    (A-HAPTICA-QUEM-JOGA-02).
-    """
+    """Os controles no rádio cuja ponte subiu em modo HÁPTICA, com a mão no posto."""
     from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import anotar_o_primario
 
     _as_pontes_de_mentira(monkeypatch)
@@ -522,14 +451,7 @@ class TestAProvaDaSprint:
         quantos: int,
         transporte: str,
     ) -> None:
-        """A régua da sprint. A mordida é a forja: ela devolvia o P1.
-
-        O posto renasceu com o P1 (a troca de máscara); o P1 saiu, o prazo
-        venceu, o P2 assumiu o posto, e o P1 voltou tarde num vpad próprio. O
-        jogo de um jogador lê o posto, e tem o canal de háptica de todo
-        controle no rádio aberto. Vibra o P2 — se está no rádio; no cabo a
-        háptica é a placa de som dele, e nenhuma ponte sobe.
-        """
+        """A régua da sprint. A mordida é a forja: ela devolvia o P1."""
         bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
         levar_o_posto(bancada, 1, nasceu="p1", volta=True)
         assert bancada.daemon._gamepad_device.mac == vpad_mac(P1, 1)
@@ -552,9 +474,7 @@ class TestAProvaDaSprint:
         assert com_dois_pontos(P1) not in vibram, "a mão do P1 vibrou pelo posto que o P2 dirige"
 
 
-# ---------------------------------------------------------------------------
 # As máscaras: DualSense (acima), Nativo e Xbox — nestas duas, nada muda
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -569,12 +489,7 @@ class TestAsOutrasMascaras:
         tmp_path: pathlib.Path,
         transporte: str,
     ) -> None:
-        """O jogo abre o P2 e o P3 direto: é isso que vibra, com co-op ou sem.
-
-        E um co-op que respondesse outra coisa para cada vpad não mudaria nada:
-        o físico casa pelo ``uniq`` dele, e o tradutor só é consultado para o
-        que não é físico.
-        """
+        """O jogo abre o P2 e o P3 direto: é isso que vibra, com co-op ou sem."""
         bancada = montar_honesto(monkeypatch, kernel, 4, transporte)
         proc, entrada = montar_o_mundo(bancada, tmp_path, [], fisicos_abertos=(P2, P3))
         esperado = {com_dois_pontos(P2), com_dois_pontos(P3)}
@@ -583,7 +498,6 @@ class TestAsOutrasMascaras:
         assert (
             o_subsystem_responde(bancada, monkeypatch, proc, entrada, daemon=sem_coop) == esperado
         )
-        # O co-op hostil diz que TUDO — os vpads e os próprios físicos — é do P1.
         tudo_do_p1 = {v.mac: P1 for v in vpads_vivos(bancada)}
         tudo_do_p1.update({com_dois_pontos(u): P1 for u in bancada.mesa.nodes})
         hostil = SimpleNamespace(
@@ -604,15 +518,7 @@ class TestAsOutrasMascaras:
         quantos: int,
         transporte: str,
     ) -> None:
-        """O Modo Nativo DE VERDADE: o posto desce, o co-op suspende, e vpad nenhum fica.
-
-        A régua de cima mede o casamento pelo físico com os vpads ainda de pé;
-        esta põe a bancada no estado do Modo Nativo (``set_native_mode`` desliga
-        a emulação: ``_gamepad_device`` None, e o co-op, que exige o posto,
-        desmonta os secundários) e confere que o co-op não tem vpad a responder
-        e que vibra exatamente o físico que o jogo abriu — cada um, de um a
-        quatro.
-        """
+        """O Modo Nativo DE VERDADE: o posto desce, o co-op suspende, e vpad nenhum fica."""
         bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
         bancada.daemon._gamepad_device.stop()
         bancada.vpad_do_p1 = bancada.daemon._gamepad_device = None
@@ -659,11 +565,6 @@ class TestAsOutrasMascaras:
         assert bancada.coop.quem_alimenta_cada_vpad() == {}
         proc, entrada = montar_o_mundo(bancada, tmp_path, abertos)
         assert o_subsystem_responde(bancada, monkeypatch, proc, entrada) == set()
-
-
-# ---------------------------------------------------------------------------
-# O dono da resposta: o acessor do co-op e o tradutor
-# ---------------------------------------------------------------------------
 
 
 class _Vpad:
@@ -720,7 +621,7 @@ class TestQuemAlimentaCadaVpad:
     def test_sem_mac_e_sem_identidade_de_aparelho_nao_ha_o_que_casar(self) -> None:
         jogadores = {
             "path:/dev/input/event9": _jogador("path:/dev/input/event9", _Vpad(vpad_mac(P3, 3))),
-            P2: _jogador(P2, _Vpad(None)),  # o uinput da máscara Xbox
+            P2: _jogador(P2, _Vpad(None)),
         }
         coop = _coop(None, _Vpad(player_mac(1)), jogadores)
         assert coop.quem_alimenta_cada_vpad() == {}
@@ -737,13 +638,7 @@ class TestQuemAlimentaCadaVpad:
         assert coop.quem_alimenta_cada_vpad() == {vpad_mac(P1, 1): P1}
 
     def test_a_mesa_que_muda_no_meio_da_pergunta_nao_derruba_a_resposta(self) -> None:
-        """Quem pergunta roda fora do laço: o laço pode sentar alguém no meio.
-
-        O vpad do P2, ao dizer o MAC, senta o P3 — o que o ``forward_all``
-        faria, na outra thread, entre dois passos da pergunta. Andar na lista
-        viva levantaria «dictionary changed size during iteration», e a volta
-        do alto-falante calaria a háptica da mesa inteira.
-        """
+        """Quem pergunta roda fora do laço: o laço pode sentar alguém no meio."""
         jogadores: dict[str, _SecondaryPlayer] = {}
 
         class _VpadDoP2:
@@ -782,13 +677,7 @@ class TestOTradutor:
     def test_a_pergunta_que_falha_diz_por_que_e_nao_traduz_ninguem(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
     ) -> None:
-        """Na dúvida, o vpad não se traduz — e o diário diz a razão.
-
-        Desde a A-HAPTICA-QUEM-JOGA-02 (26/09/2026) a pergunta tem ``try``
-        próprio e a varredura segue sem tradutor (é dela que sai o retrato da
-        partida); o ``/proc`` aqui é de mentira e vazio, para a régua não medir
-        a máquina.
-        """
+        """Na dúvida, o vpad não se traduz — e o diário diz a razão."""
         monkeypatch.setattr(
             qjl,
             "quem_o_jogo_le",

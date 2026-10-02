@@ -54,9 +54,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -79,21 +76,14 @@ ABA = "01-jogar.html"
 
 #: O CHIP CLICADO. **Xbox 360** e não DualSense, e a escolha é medida: o cartão
 #: do P1 já nasce com o DualSense aceso no desenho, então clicar nele deixaria o
-#: ensaio sem como distinguir "o clique chegou" de "já estava assim".
 CHIP = "Xbox 360"
 
-#: OS LUGARES, do dono deles. `monta.MESA` é a mesa do desenho — quatro —, e
-#: cravar `["p1", "p2", "p3", "p4"]` aqui seria a régua digitando o que devia
-#: perguntar: no dia em que a mesa mudar de tamanho, este ensaio a segue.
 def _lugares() -> list[str]:
     import monta
 
     return [str(c.get("uniq") or c["pref"]) for c in monta.MESA]
 
 
-#: O CLIQUE, num JS só por cartão. `.click()` do DOM e não um evento sintético:
-#: é o mesmo caminho do dedo dela, e é o único que passa pelo ouvinte delegado
-#: do piloto (`document.addEventListener('click', …, true)`).
 CLIQUE = r"""
 (function(){
   const cartao = document.querySelector('[data-controle="__ONDE__"]');
@@ -136,7 +126,6 @@ def main() -> int:
     if not opcoes.publicado:
         _desviar_para_a_bancada(lixo)
 
-    # O GRAVADOR, POSTO ANTES DO PRIMEIRO CLIQUE. Sem ele o gesto despacharia
     # `gamepad.mask.set` no daemon DELA, que está vivo e com controle na mesa.
     ipcs: list[tuple[str, dict]] = []
     ponte.chamar = lambda metodo, timeout=None, **params: (  # type: ignore[assignment]
@@ -154,10 +143,6 @@ def main() -> int:
                 return False
             return True
         onde_ = fila.pop(0)
-        # O DESFECHO ANTERIOR SAI DA MESA antes do clique: `desfechos` é
-        # `{pagina:gesto}`, e os quatro cliques são o MESMO gesto. Sem esta
-        # linha o quarto cartão herdaria a resposta do terceiro, e um chip mudo
-        # passaria por respondido — que é exatamente o defeito medido aqui.
         piloto.desfechos.pop(f"{ABA}:mascara", None)
         antes = len(ipcs)
 
@@ -173,9 +158,6 @@ def main() -> int:
                 GLib.timeout_add(200, proximo)
                 return False
 
-            # UM SEGUNDO ANTES DE COLHER: o gesto roda em THREAD (o piloto não
-            # congela a janela por um IPC), então ler `desfechos` no mesmo laço
-            # do clique leria o de antes.
             GLib.timeout_add(1000, colher)
 
         piloto.ponte.perguntar(CLIQUE.replace("__ONDE__", onde_), clicou)
@@ -208,9 +190,6 @@ def main() -> int:
               f"conectado={dom['conectado']!r:6s} → {a['desfecho']} · IPC {ipc}")
         if a["frase"]:
             print(f"                      “{a['frase'].split(': ', 1)[-1]}”")
-        # O CRITÉRIO É "RESPONDEU", e não "aplicou": num lugar VAZIO a resposta
-        # certa é a frase que diz que não há controle ali. Cobrar `aplicou` nos
-        # quatro exigiria quatro controles na mesa dela para o ensaio passar.
         if a["desfecho"] == "SEM RESPOSTA":
             mudos.append(a["onde"])
 

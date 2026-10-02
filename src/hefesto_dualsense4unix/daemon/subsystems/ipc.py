@@ -1,12 +1,4 @@
-"""Subsystem IPC — wrapper do IpcServer para o orquestrador.
-
-Expõe start_ipc() como função utilitária e implementa o protocolo
-Subsystem para integração com o registry.
-
-O DESLIGAR TEM UM DONO SÓ, e é o `shutdown` de `daemon/connection.py`: ele
-derruba o servidor de IPC em linha, com teto de 2 s. A utilitária `stop_ipc`,
-que fazia o mesmo sem o teto e só a suíte chamava, saiu em 28/09/2026.
-"""
+"""Subsystem IPC — wrapper do IpcServer para o orquestrador."""
 from __future__ import annotations
 
 import contextlib
@@ -33,14 +25,7 @@ class IpcSubsystem:
         from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
         from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-        # Daemon é o próprio ctx se tiver atributo daemon; fallback é None.
         daemon = getattr(ctx, "daemon", None)
-        # A-FÁBRICA-COM-UM-CLIENTE-01 (22/08/2026): a lista de appliers vem da
-        # FÁBRICA, não de sete linhas repetidas aqui. Applier ausente não
-        # levanta — a seção é ignorada em silêncio, e foi assim que a rota da
-        # saída do Modo Nativo passou semanas sem o `rumble.passthrough`. O
-        # `controller`/`store` vêm por fora porque esta rota sobe pelo
-        # `DaemonContext`, e o `daemon` pode ser `None`.
         manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
         self._server = IpcServer(
             controller=ctx.controller,
@@ -64,17 +49,10 @@ class IpcSubsystem:
 
 
 async def start_ipc(daemon: DaemonProtocol) -> None:
-    """Função utilitária: inicia o IpcServer usando o Daemon diretamente.
-
-    Mantida para compatibilidade com código que chame start_ipc(daemon)
-    em vez de usar o subsystem registry.
-    """
+    """Função utilitária: inicia o IpcServer usando o Daemon diretamente."""
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
     from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-    # A-FÁBRICA-COM-UM-CLIENTE-01: idem `IpcSubsystem.start` — as DUAS rotas de
-    # subida do IPC tiram a lista de appliers da mesma fábrica, e é isso que
-    # impede uma delas de derivar da outra em silêncio.
     manager = gerente_do_daemon(daemon, store=daemon.store)
     daemon._ipc_server = IpcServer(
         controller=daemon.controller,

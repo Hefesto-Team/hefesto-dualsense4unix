@@ -1,21 +1,4 @@
-"""Onda T — assinaturas novas do hid-nintendo no doctor.sh + storm_watch.sh.
-
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md
-(§Doctor / kernel-watch). Premissa 7 do estudo: DUAS assinaturas que hoje
-não tinham check — a morte por PROBE (`Failed to get joycon info; ret=-110`
-→ `probe - fail = -110`, a morte "invisível" medida 3x) e o "exceeded"
-DENSO sem cascata de timeouts (jitter/contenda, não rádio morto).
-
-Cobertura (falha-sem/passa-com, sem journal real — funções extraídas rodam
-em bash com stub de journalctl/entrada sintética):
-- check_hefesto_hid_nintendo_dkms definido, chamado no main e READ-ONLY;
-- detecção do módulo patchado por parameters/ + modinfo -F filename
-  (NUNCA srcversion — armadilha documentada no estudo);
-- as duas assinaturas disparam warn com as entradas certas e ficam em
-  silêncio com journal limpo;
-- storm_watch: GREP_UNION ganhou os padrões de probe e a tag nova
-  [JOYCON-PROBE], com [JOYCON] intacto (a string do exceeded não mudou).
-"""
+"""Onda T — assinaturas novas do hid-nintendo no doctor.sh + storm_watch.sh."""
 
 from __future__ import annotations
 
@@ -107,9 +90,6 @@ class TestWiringDoCheck:
 class TestCheckReadOnlyEDeteccao:
     def test_check_e_read_only_nunca_instala_nem_recarrega(self) -> None:
         corpo = _sem_comentarios(_extrai_funcao_bash(DOCTOR, "check_hefesto_hid_nintendo_dkms"))
-        # `sudo apt install dkms`/`./install.sh` nas MENSAGENS são dicas de
-        # cura legítimas — o proibido é o doctor EXECUTAR dkms install/build/
-        # add/remove ou recarregar módulo.
         assert not re.search(r"\bdkms (install|build|add|remove)\b", corpo), (
             "doctor diagnostica; instalar/remover é do install.sh/uninstall.sh"
         )
@@ -126,16 +106,6 @@ class TestCheckReadOnlyEDeteccao:
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_hid_nintendo_dkms")
         assert "modinfo -F filename hid_nintendo" in corpo
         assert "*/updates/dkms/*" in corpo
-        # Nos comentários a armadilha pode (e deve) ser citada — o proibido
-        # é o CÓDIGO consultar srcversion como critério de proveniência.
-        #
-        # FATO SUBSTITUÍDO (28/09/2026, O-PRODUTO-EM-QUALQUER-MAQUINA-01): esta
-        # régua proibia o srcversion no doctor inteiro. A armadilha medida é
-        # in-tree contra out-of-tree (o BASELINE do hid-playstation repetiu o
-        # controle nos dois kernels); entre dois builds FORA da árvore do mesmo
-        # .c ele se repete (medido no mesmo dia). As duas funções abaixo
-        # perguntam exatamente isso — o módulo carregado é o que está em
-        # updates/dkms? é o 0003 de antes da marca? — e só elas podem citá-lo.
         fora_das_duas = DOCTOR
         for nome in ("_modulo_pede_reinicio", "_hid_playstation_carregado_guarda_o_audio"):
             fora_das_duas = fora_das_duas.replace(_extrai_funcao_bash(DOCTOR, nome), "")
@@ -152,11 +122,6 @@ class TestCheckReadOnlyEDeteccao:
         )
 
     def test_mensagem_nunca_promete_replug_para_modulo_carregado(self) -> None:
-        # Achado #6 do corretor: 'próximo boot/replug' contradiz o próprio
-        # desenho da onda — replug NÃO troca módulo carregado (re-liga no
-        # driver residente); prometer replug induz exatamente a ação manual
-        # perigosa (modprobe -r com Pro/8BitDo conectados) que o fail-safe
-        # quer evitar. install.sh já dizia a verdade; o doctor divergia.
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_hid_nintendo_dkms")
         assert "boot/replug" not in corpo, (
             "replug NÃO ativa o patchado com o in-tree carregado — só boot"
@@ -166,8 +131,6 @@ class TestCheckReadOnlyEDeteccao:
         )
 
     def test_remediacao_acionavel_tambem_sem_checkout(self) -> None:
-        # Achado #9 do corretor: 'rode ./install.sh' era a única remediação
-        # — inacionável p/ quem instalou por pacote (.deb/rpm/arch).
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_hid_nintendo_dkms")
         assert "install-host-udev.sh" in corpo, (
             "usuário de pacote precisa de um caminho de cura que ele TEM"
@@ -236,8 +199,6 @@ class TestAssinaturaMortePorProbe:
         assert "WARN" not in resultado.stdout
 
     def test_so_info_fail_sem_probe_fail_nao_dispara(self, tmp_path: Path) -> None:
-        # As DUAS pontas da assinatura são exigidas (evita falso-positivo em
-        # timeout transitório que o probe sobreviveu).
         jornal = (
             f"jul 20 11:56:41 meow kernel: nintendo {INSTANCIA}: "
             "Failed to get joycon info; ret=-110\n"
@@ -246,8 +207,6 @@ class TestAssinaturaMortePorProbe:
         assert "WARN" not in resultado.stdout
 
     def test_usa_transport_kernel_nunca_journalctl_k(self) -> None:
-        # Armadilha do sprint T0: `journalctl -k` implica -b e já confundiu
-        # um diagnóstico — os checks NOVOS usam _TRANSPORT=kernel explícito.
         for nome in (
             "_check_hid_nintendo_probe_death_signature",
             "_check_hid_nintendo_exceeded_dense_signature",
@@ -284,8 +243,6 @@ class TestAssinaturaExceededDenso:
         assert resultado.stdout.strip() == f"{INSTANCIA} 6 2"
 
     def test_cascata_terminal_nao_e_deste_check(self, tmp_path: Path) -> None:
-        # 12 timeouts culminando em 1 exceeded = rádio morto (check antigo);
-        # aqui fica em silêncio (gate exceeded >= 5 E timeouts < exceeded).
         resultado = self._roda_scan(tmp_path, self._linhas(INSTANCIA, 1, 12))
         assert resultado.stdout.strip() == ""
 

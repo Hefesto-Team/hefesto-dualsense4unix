@@ -133,64 +133,34 @@ from comum import (
     tamanhos_do_descritor,
 )
 
-# A MÁSCARA TEM UM DONO NO PRODUTO desde 28/09/2026 (O-REGISTRO-COPIADO-NAO-
-# ENTREGA-O-ENDERECO-01): o `comum` acima já pôs o `src/` no caminho. O número
-# de caracteres públicos do serial nasceu aqui e passou ao dono.
 from hefesto_dualsense4unix.core.formas_do_endereco import (
     CARACTERES_PUBLICOS_DO_SERIAL,
 )
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as _mascarar_pelo_dono
 
-# ---------------------------------------------------------------------------
-# Os números, todos com procedência, nenhum chutado
-# ---------------------------------------------------------------------------
 
-#: O comando de fábrica (escrita) e a resposta (leitura). `dualshock-tools`,
-#: `ds5-controller.js`: `sendFeatureReport(128, ...)` / `receiveFeatureReport(129)`.
 FEATURE_COMANDO = 0x80
 FEATURE_RESPOSTA = 0x81
 
-#: A âncora de sanidade: informação de firmware, constante por unidade. Lida
-#: antes e depois de toda escrita, e comparada byte a byte.
 FEATURE_FIRMWARE = 0x20
 
-#: O par que pede o serial de fábrica. É O ÚNICO par que este arquivo conhece,
-#: e a trava de `conferir_payload` existe para que continue sendo.
 BASE_DO_SERIAL = 1
 NUM_DO_SERIAL = 19
 
-#: 17 caracteres ASCII, o mesmo serial impresso na traseira do controle.
 TAMANHO_DO_SERIAL = 17
 
-#: Onde a cor mora dentro dele: caracteres 5 e 6 (base zero: 4 e 5).
 FATIA_DA_COR = slice(4, 6)
 
-#: O byte que o firmware devolve em `buf[3]` quando a resposta é boa.
 MARCA_DE_RESPOSTA_BOA = 2
 
-#: A família por onde o FIRMWARE é atualizado. Decisão dela na D-32: ler tudo,
-#: nunca escrever. Aqui ela nem chega perto de uma escrita — há trava.
 FAMILIA_DO_FIRMWARE = range(0xF0, 0xF8)
 
-#: Os pares da MESMA família `0x80` que destroem o controle. Não estão aqui
-#: para serem usados: estão para que a trava tenha o que reconhecer, e para
-#: que quem ler este arquivo veja o tamanho do precipício ao lado da trilha.
 PARES_QUE_DESTROEM = {
     (1, 1): "RESETA o controle",
     (3, 2): "destrava a NVS para escrita",
     (12, 1): "GRAVA calibração de stick na memória não-volátil",
 }
 
-#: A tabela de cores é o MAPA DELA, `docs/data/cores-do-dualsense.csv` — lido,
-#: e não copiado. O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026: aqui
-#: morava uma cópia DIGITADA de 21 códigos, gêmea da do produto, e o mapa tem
-#: 28; os sete do meio (13, 14, 15, ZC, ZD, ZE, ZF) saíam «DESCONHECIDA» do
-#: instrumento e «Não sei» da tela. O CSV está em todo checkout, então ler
-#: daqui continua rodando sem o pacote instalado — que era a razão da cópia.
-#: A procedência dos códigos é a de sempre (`dualshock-tools`,
-#: `ds5-controller.js`, confirmada pelo mantenedor na issue #210, e
-#: `nsfm/dualsense-ts` e `TechAntohere/Senshi`), e o grau de cada hexa está na
-#: coluna `grau` do CSV.
 _TABELA_DAS_CORES = os.path.join(
     os.path.dirname(os.path.dirname(_AQUI)), "docs", "data", "cores-do-dualsense.csv"
 )
@@ -215,52 +185,20 @@ def _ler_as_cores(caminho: str = _TABELA_DAS_CORES) -> dict[str, str]:
 
 CORES = _ler_as_cores()
 
-#: Semente do CRC-32 dos feature reports por Bluetooth. `PS_FEATURE_CRC32_SEED`
-#: do `hid-playstation`, e `core/ds_output_report.py::BT_FEATURE_CRC_SEED`.
-#: Escrita aqui, e não importada, para que este instrumento rode num checkout
-#: sem o pacote instalado.
 SEMENTE_FEATURE_BT = 0xA3
 
-#: A semente do CRC-32 no sentido de ESCRITA de feature por Bluetooth.
-#:
-#: DE ONDE VEM, e por que ela não é a de cima. As sementes deste CRC são o
-#: **byte de cabeçalho da transação HIDP**, e há um por sentido:
-#:
-#:     0xA1 = HIDP_TRANS_DATA      (0xA0) | RTYPE_INPUT   (0x01)
-#:     0xA2 = HIDP_TRANS_DATA      (0xA0) | RTYPE_OUTPUT  (0x02)
-#:     0xA3 = HIDP_TRANS_DATA      (0xA0) | RTYPE_FEATURE (0x03)
-#:     0x53 = HIDP_TRANS_SET_REPORT(0x50) | RTYPE_FEATURE (0x03)   <-- esta
-#:
-#: O `0xA3` é o do feature que CHEGA (a resposta do `0x81`, que esta casa já
-#: valida). Um `SET_FEATURE` não é `DATA`, é `SET_REPORT` — cabeçalho outro,
-#: semente outra.
-#:
-#: POR QUE ISTO EXISTE (27/08/2026): o ensaio de 23/08 concluiu "o firmware
-#: recusa por rádio" a partir de uma tentativa assinada com `0xA3`. O galho
-#: ficou escrito no cabeçalho deste arquivo — "as duas caudas tentadas são
-#: ambas inválidas para um firmware que valide CRC no sentido de ESCRITA" —
-#: e listou `0xA2`, `0xA1` e buffer curto como o que faltava tentar.
-#: **Nenhum dos três é o certo.** Se o `0x53` passar, a conclusão de 23/08 cai:
-#: o `ERR_INVALID_PARAMETER` era CRC errado, não firmware fechando a porta.
 SEMENTE_SET_FEATURE_BT = 0x53
 
-#: As sementes que este instrumento aceita em `--semente`, por nome.
 SEMENTES = {
-    "set-feature": SEMENTE_SET_FEATURE_BT,  # 0x53 — HIDP SET_REPORT|FEATURE
-    "feature": SEMENTE_FEATURE_BT,          # 0xA3 — HIDP DATA|FEATURE (a de 23/08)
-    "output": 0xA2,                         # HIDP DATA|OUTPUT
-    "input": 0xA1,                          # HIDP DATA|INPUT
+    "set-feature": SEMENTE_SET_FEATURE_BT,
+    "feature": SEMENTE_FEATURE_BT,
+    "output": 0xA2,
+    "input": 0xA1,
 }
 
 
 def conferir_a_semente() -> str:
-    """A semente daqui é a MESMA do pacote? Confere, e diz de onde.
-
-    Duas cópias do mesmo número são duas réguas, e esta casa já pagou três
-    vezes por medir contra a régua errada. A cópia existe por um motivo bom
-    (rodar sem o pacote instalado), então o preço dela é este confronto — que
-    roda antes de o número ser usado, e não numa suíte que ninguém executou.
-    """
+    """A semente daqui é a MESMA do pacote? Confere, e diz de onde."""
     try:
         from hefesto_dualsense4unix.core.ds_output_report import BT_FEATURE_CRC_SEED
     except ImportError as erro:
@@ -276,20 +214,14 @@ def conferir_a_semente() -> str:
         "core/ds_output_report.py::BT_FEATURE_CRC_SEED"
     )
 
-# HIDIOCGFEATURE / HIDIOCSFEATURE: _IOC(WRITE|READ, 'H', 0x07/0x06, tamanho).
-# Montados à mão, como em `censo_features.py`: nenhuma dependência nova, e o
-# número mágico visível em vez de escondido atrás de uma biblioteca.
 _IOC_ESCRITA_E_LEITURA = 3
 _IOC_TIPO_HID = ord("H")
 _IOC_NR_GETFEATURE = 0x07
 _IOC_NR_SETFEATURE = 0x06
 
 #: Quanto se espera por um report de entrada na prova de vida. O DualSense no
-#: cabo emite a ~250 Hz; um segundo é folga de trinta vezes.
 SEGUNDOS_DE_ESPERA = 1.0
 
-#: Quantos reports de entrada bastam para dizer "está vivo". Três, e não um,
-#: porque um report pode ser o que já estava no buffer do `hidraw`.
 REPORTS_QUE_PROVAM_VIDA = 3
 
 
@@ -311,28 +243,12 @@ def _hidiocsfeature(tamanho: int) -> int:
     )
 
 
-# ---------------------------------------------------------------------------
-# A TRAVA. Tudo que escreve passa por aqui, e nada passa por aqui duas vezes
-# ---------------------------------------------------------------------------
-
-
 class PayloadRecusadoError(Exception):
     """O payload não é o que este arquivo autoriza. Nada foi ao aparelho."""
 
 
 def montar_payload(tamanho: int) -> bytearray:
-    """O ÚNICO payload que este instrumento sabe montar: `80 01 13 00 ... 00`.
-
-    Sem parâmetro de propósito. Uma função que aceitasse `base` e `num` seria
-    uma função que aceita `[1, 1]` — o reset — e a distância entre "aceita" e
-    "recebeu por engano" é um dedo. Aqui não há como pedir outra coisa.
-
-    O resto do buffer vai zerado até o tamanho que o DESCRITOR DO APARELHO
-    declara para o `0x80` (64 bytes nestes quatro controles, conferido pelo
-    parser de `comum.py`). Report de feature tem comprimento fixo no HID; um
-    `SET_FEATURE` curto pode voltar em stall, e o caminho provado no navegador
-    envia o report inteiro.
-    """
+    """O ÚNICO payload que este instrumento sabe montar: `80 01 13 00 ... 00`."""
     buffer = bytearray(tamanho)
     buffer[0] = FEATURE_COMANDO
     buffer[1] = BASE_DO_SERIAL
@@ -341,11 +257,7 @@ def montar_payload(tamanho: int) -> bytearray:
 
 
 def conferir_payload(buffer: bytes | bytearray) -> None:
-    """Confere byte a byte, e levanta se qualquer um estiver fora do lugar.
-
-    Chamada imediatamente antes do `ioctl`, nunca antes disso — entre a
-    conferência e a escrita não pode caber linha nenhuma que toque no buffer.
-    """
+    """Confere byte a byte, e levanta se qualquer um estiver fora do lugar."""
     if len(buffer) < 3:
         raise PayloadRecusadoError(f"payload curto demais: {len(buffer)} bytes")
     if buffer[0] != FEATURE_COMANDO:
@@ -373,12 +285,7 @@ def conferir_payload(buffer: bytes | bytearray) -> None:
 
 
 def recusar_familia_do_firmware(report_id: int) -> None:
-    """Trava da D-32: nada da família `0xF0`-`0xF7` sai daqui, nunca.
-
-    Não é uma trava contra engano meu — é contra engano de quem editar este
-    arquivo depois. A família por onde o firmware é atualizado não pode virar
-    alvo de escrita por uma linha distraída.
-    """
+    """Trava da D-32: nada da família `0xF0`-`0xF7` sai daqui, nunca."""
     if report_id in FAMILIA_DO_FIRMWARE:
         raise PayloadRecusadoError(
             f"0x{report_id:02x} está na família do FIRMWARE (0xf0-0xf7). "
@@ -387,13 +294,7 @@ def recusar_familia_do_firmware(report_id: int) -> None:
 
 
 def sem_o_serial(dados: bytes | bytearray) -> bytes:
-    """A resposta `0x81` com o número de série trocado por `#`, para o hex dump.
-
-    O que o dump precisa mostrar é o ENQUADRAMENTO — `81 01 13 02` e então
-    ASCII —, não o número da unidade dela. Mascarar aqui, e não só no texto
-    decodificado, é o que impede o serial de vazar em hexadecimal num arquivo
-    versionado: `4d 36 35 ...` é o serial tanto quanto `M65...`.
-    """
+    """A resposta `0x81` com o número de série trocado por `#`, para o hex dump."""
     saida = bytearray(dados)
     inicio = 4 + CARACTERES_PUBLICOS_DO_SERIAL
     fim = 4 + TAMANHO_DO_SERIAL
@@ -412,62 +313,17 @@ def em_hexadecimal(dados: bytes | bytearray, *, por_linha: int = 16) -> str:
 
 
 def mascarar(mac: str) -> str:
-    """`aa:bb:cc:dd:ee:ff` -> `aa:bb:cc:00:00:ff` — a máscara da casa.
-
-    Octetos 4 e 5 zerados: preserva o fabricante e apaga o aparelho dela. Há
-    portão que reprova MAC real em arquivo versionado, e a saída bruta deste
-    ensaio É versionada.
-
-    O exemplo acima é forjado de propósito. Ele já foi escrito com o endereço
-    REAL de um dos controles da bancada — a docstring da função que mascara era,
-    ela mesma, o vazamento, e passou verde porque o portão não conhecia aquele
-    OUI (15/08/2026; ver a nota datada em `tests/unit/test_docs_mac_anonimato.py`).
-
-    Quem mascara é o dono no produto (`core/formas_do_endereco`), desde
-    28/09/2026.
-    """
+    """`aa:bb:cc:dd:ee:ff` -> `aa:bb:cc:00:00:ff` — a máscara da casa."""
     return _mascarar_pelo_dono(mac)
-
-
-# QUANTOS CARACTERES DO SERIAL SOBREVIVEM NO ARQUIVO: seis, os quatro de
-# modelo/planta, que são compartilhados por lote e não identificam unidade
-# nenhuma, MAIS os dois da cor, que são o objeto inteiro deste ensaio. Os onze
-# restantes são o número de série da unidade dela. O número mora no dono
-# (`CARACTERES_PUBLICOS_DO_SERIAL`, importado no topo).
 
 
 def mascarar_serial(serial: str) -> str:
     """`AB1C05D1234567890` -> `AB1C05###########` — a mesma lógica da do MAC.  # serial-de-mentira: prefixo forjado
-
-    O exemplo é forjado; os dois caracteres da cor (`05`) estão na posição real.
-    Ele já foi escrito com o serial VERDADEIRO de um dos controles da bancada —
-    a docstring da função que mascara serial era, ela mesma, o vazamento, e o
-    `check_anonymity.sh` passava verde porque varre a forma de um MAC, não a de
-    um serial (15/08/2026).
-
-    O serial de fábrica identifica a unidade dela tão bem quanto o MAC, e a
-    regra desta casa é sobre arquivo versionado, não sobre a palavra "MAC". A
-    máscara preserva exatamente o que o ensaio quer provar — os caracteres 5 e
-    6, onde a cor mora — e apaga o resto.
-
-    Na TELA o serial sai inteiro (é dela, é a máquina dela). No ARQUIVO, nunca:
-    é o mesmo desenho de `imu_no_cabo.py`, onde o CSV mascara sempre, mesmo com
-    `--sem-mascara` pedido para a tela.
-
-    Quem mascara é o dono no produto, com o serial como conhecido. O dono só
-    aceita como serial o que é alfanumérico e tem algarismo; um valor que ele
-    recusa (uma leitura corrompida, com `\ufffd` do `errors="replace"`) sai
-    inteiro em `#`, e nunca cru num arquivo versionado.
     """
     mascarado = _mascarar_pelo_dono(serial, conhecidos=[serial])
     if mascarado == serial and len(serial) > CARACTERES_PUBLICOS_DO_SERIAL:
         return "#" * len(serial)
     return mascarado
-
-
-# ---------------------------------------------------------------------------
-# A conversa com o aparelho
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -501,18 +357,7 @@ class Prova:
 
 
 def estado_da_lightbar(aparelho: Aparelho) -> str:
-    """`brightness` e `multi_intensity` da lightbar, lidos do sysfs — só leitura.
-
-    Entrou aqui em 15/08/2026 por causa de OUTRA investigação: um dos controles
-    de rádio está com a lightbar travada (apagada, ignorando escrita do
-    kernel), e três frentes a medem ao vivo. Um ensaio que escreve na família
-    de fábrica ao lado disso tem de poder dizer *"não fui eu"* — ou, se for,
-    dizer que foi. Sem medida antes e depois, essa frase não teria valor
-    nenhum.
-
-    Nada aqui ESCREVE no LED, e nada aqui desliga controle: o power-off cura a
-    lightbar travada e destruiria a evidência das outras frentes.
-    """
+    """`brightness` e `multi_intensity` da lightbar, lidos do sysfs — só leitura."""
     raiz = os.path.join(aparelho.dir_device, "leds")
     if not os.path.isdir(raiz):
         return "sem nó de led no sysfs"
@@ -527,12 +372,7 @@ def estado_da_lightbar(aparelho: Aparelho) -> str:
 
 
 def pedir_feature(fd: int, report_id: int, tamanho: int, *, tentativas: int = 4) -> Resposta:
-    """`GET_FEATURE` com validação de id e retry — leitura pura, sempre.
-
-    A validação de id não é zelo: em 15/08/2026 esta casa mediu um pedido de
-    `0x20` voltar com `0x80` no byte 0. Resposta TROCADA não é erro do ioctl, e
-    aceitá-la aqui seria decodificar o serial a partir de outro report.
-    """
+    """`GET_FEATURE` com validação de id e retry — leitura pura, sempre."""
     resposta = Resposta(report_id)
     inicio = time.monotonic()
     for _ in range(tentativas):
@@ -570,31 +410,11 @@ def mandar_o_comando(
     bytes_de_crc: int = 0,
     semente: int = SEMENTE_FEATURE_BT,
 ) -> str:
-    """A ÚNICA escrita deste arquivo. Confere, e só então solta.
-
-    Devolve "" no sucesso, ou a frase da falha. Entre a conferência e o `ioctl`
-    não há linha que toque no buffer — é de propósito, e mexer nisso é mexer na
-    trava.
-
-    `bytes_de_crc` diz quantos bytes do FIM são CRC, e não comando. Nasceu em
-    15/08/2026 de a trava ter mordido o próprio envelope de rádio: os quatro
-    bytes de CRC caíram no teste de "tem de estar zerado" e a escrita foi
-    recusada — corretamente, porque a trava não sabia deles. **Nenhum byte
-    chegou ao aparelho**, que é exatamente o que se quer de uma trava que erra.
-
-    A correção não afrouxa nada: o miolo continua conferido byte a byte, e o
-    rabo de CRC passa a ser conferido TAMBÉM — recalculado aqui e comparado.
-    Um rabo corrompido agora reprova, coisa que antes desta linha nem existia.
-    """
+    """A ÚNICA escrita deste arquivo. Confere, e só então solta."""
     recusar_familia_do_firmware(payload[0])
     if bytes_de_crc:
         miolo = payload[: len(payload) - bytes_de_crc]
         conferir_payload(miolo)
-        # A semente vem de QUEM MONTOU o envelope, e a conferência continua
-        # sendo uma segunda régua: ela recalcula o CRC do zero e compara. Em
-        # 27/08 esta linha mordeu de verdade — o `--semente set-feature`
-        # passou por aqui com o CRC de 0x53 e a trava, ainda fixa em 0xA3,
-        # recusou a escrita. Nenhum byte chegou ao aparelho.
         esperado = zlib.crc32(bytes([semente]) + bytes(miolo)) & 0xFFFFFFFF
         veio = int.from_bytes(payload[len(payload) - bytes_de_crc :], "little")
         if veio != esperado:
@@ -614,16 +434,7 @@ def mandar_o_comando(
 
 
 def provar_que_vive(fd: int, aparelho: Aparelho, tamanho_do_firmware: int) -> Prova:
-    """Três perguntas ao aparelho, e nenhuma opinião: ele responde, ou não.
-
-    1. O feature `0x20` (informação de firmware) volta? Ele é constante por
-       unidade, então serve de impressão digital antes e depois.
-    2. O `hardware_version` que o `hid_playstation` publica no sysfs continua o
-       mesmo? É de graça, não disputa nada com o daemon.
-    3. Ele ainda EMITE? Um controle que responde a feature e não emite report
-       de entrada não está são — e a diferença entre "não emitiu" e "não pude
-       ler" é a armadilha que `comum.py` documenta.
-    """
+    """Três perguntas ao aparelho, e nenhuma opinião: ele responde, ou não."""
     prova = Prova()
     resposta = pedir_feature(fd, FEATURE_FIRMWARE, tamanho_do_firmware)
     if resposta.ok:
@@ -655,11 +466,6 @@ def provar_que_vive(fd: int, aparelho: Aparelho, tamanho_do_firmware: int) -> Pr
     return prova
 
 
-# ---------------------------------------------------------------------------
-# A decodificação do serial
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Serial:
     """O que se conseguiu tirar do `0x81`, e o que faltou."""
@@ -676,13 +482,7 @@ class Serial:
 
 
 def decodificar(dados: bytes) -> Serial:
-    """`buf[1]=1, buf[2]=19, buf[3]=2` e então 17 caracteres ASCII.
-
-    Os três primeiros bytes são o eco do que se pediu, e o `dualshock-tools`
-    trata qualquer divergência como erro — não como "veio outra coisa, vamos
-    tentar ler assim mesmo". Aqui é igual: sem o eco certo, o que vem depois
-    não é o serial, e decodificá-lo produziria uma cor inventada.
-    """
+    """`buf[1]=1, buf[2]=19, buf[3]=2` e então 17 caracteres ASCII."""
     serial = Serial(bruto=dados)
     if len(dados) < 4 + TAMANHO_DO_SERIAL:
         serial.erro = f"resposta curta: {len(dados)} bytes"
@@ -704,11 +504,6 @@ def decodificar(dados: bytes) -> Serial:
     if not serial.nome_da_cor:
         serial.nome_da_cor = f"DESCONHECIDA (código {codigo!r})"
     return serial
-
-
-# ---------------------------------------------------------------------------
-# O DESENHO DO RÁDIO — escrito, conferível, e NÃO exercido
-# ---------------------------------------------------------------------------
 
 
 def envelope_de_radio(
@@ -765,11 +560,6 @@ def envelope_de_radio(
     return envelope
 
 
-# ---------------------------------------------------------------------------
-# A execução
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Medida:
     """Tudo que uma execução apurou sobre UM controle."""
@@ -796,22 +586,7 @@ class Medida:
 
 
 def escolher_alvo(alvos: list[Aparelho], pedido: str, *, exigir_mac: str = "") -> Aparelho:
-    """UM alvo, nomeado. Não existe modo "todos", e isso é a trava número 4.
-
-    `exigir_mac` é a trava número 7, e nasceu em 15/08/2026 de uma ordem dela
-    repassada pela coordenação: *confirme pelo `HID_UNIQ`, não pela cor do LED
-    — isso já apontou o aparelho errado hoje*.
-
-    O número do nó **não identifica controle**: `descobrir_aparelhos()` avisa
-    que os nós renumeram, e nesta casa já houve controle que sumiu e voltou com
-    outro `eventN` entre duas chamadas com segundos de diferença. Entre eu
-    conferir `hidraw8` na tela e a escrita sair, o `hidraw8` pode ser outro
-    aparelho. O MAC não muda, então é por ele que se tranca.
-
-    Isso importa MAIS que o normal agora: um dos controles de rádio está com a
-    lightbar travada e é objeto de outra investigação ao vivo. Escrever no
-    aparelho errado não estragaria só este ensaio.
-    """
+    """UM alvo, nomeado. Não existe modo "todos", e isso é a trava número 4."""
     nome = pedido.strip().removeprefix("/dev/")
     for aparelho in alvos:
         if aparelho.hidraw != nome:
@@ -872,9 +647,6 @@ def medir(
             "(envelope BT, DESENHO)"
         )
 
-    # No rádio os 4 últimos bytes são o CRC, e conferi-los contra "tem de estar
-    # zerado" acusaria o próprio envelope. O que a trava confere é o COMANDO —
-    # e o comando é o mesmo nos dois transportes.
     comando = payload[: len(payload) - 4] if leva_crc else payload
     try:
         conferir_payload(comando)
@@ -987,16 +759,7 @@ def imprimir_veredito(medida: Medida) -> None:
 
 
 def nos_de_evdev(aparelho: Aparelho) -> list[str]:
-    """Os `/dev/input/eventN` deste controle — só para DECLARAR o grab.
-
-    Este instrumento não lê evdev: ele fala `hidraw` por ioctl, e o
-    `EVIOCGRAB` do co-op não atrapalha nem ajuda o que ele mede. A declaração
-    entra no cabeçalho mesmo assim, porque a regra da casa é que o relatório
-    diga o estado do grab — e "não me afeta" só é uma afirmação verificável se
-    o estado estiver escrito ao lado dela.
-
-    Resolvido a cada chamada: os números de nó NÃO são estáveis.
-    """
+    """Os `/dev/input/eventN` deste controle — só para DECLARAR o grab."""
     raiz = os.path.join(aparelho.dir_device, "input")
     achados: list[str] = []
     if not os.path.isdir(raiz):
@@ -1027,14 +790,7 @@ def listar(alvos: list[Aparelho], *, sem_mascara: bool) -> None:
 
 
 class Transcrito:
-    """Copia para a tela e guarda, para que o arquivo saia MASCARADO.
-
-    O precedente é o CSV de `imu_no_cabo.py`: a tela é dela e pode ver o
-    aparelho dela inteiro; o arquivo é versionado e nunca vê. Guardar o texto e
-    mascarar na hora de gravar é o que garante que as duas coisas não se
-    confundam — e a gravação acontece no fim, com a lista de seriais já
-    completa.
-    """
+    """Copia para a tela e guarda, para que o arquivo saia MASCARADO."""
 
     def __init__(self, saida: object) -> None:
         self.saida = saida

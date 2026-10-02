@@ -79,10 +79,8 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 )
 from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
 
-# --- a mesa dela, mascarada -------------------------------------------------
 
 #: Os quatro DualSense, na ordem da FILA GRAVADA do `controllers.json` dela
-#: (rank 1..4). O primeiro é o que caiu e voltou.
 KEYS = (
     "AA:BB:CC:00:00:01",
     "AA:BB:CC:00:00:02",
@@ -109,11 +107,7 @@ class Relogio:
 
 
 def passar_o_prazo(relogio: Relogio) -> None:
-    """O lugar de quem saiu deixa de estar guardado (O-ASSENTO-GUARDADO-NAO-ANDA-01).
-
-    Dentro do prazo ninguém anda; as réguas daqui medem a mesa DEPOIS dele,
-    quando a NUM-01 volta e a contagem fecha sem o ausente.
-    """
+    """O lugar de quem saiu deixa de estar guardado (O-ASSENTO-GUARDADO-NAO-ANDA-01)."""
     relogio.avancar(id_mod.prazo_do_lugar_guardado() + 1.0)
 
 
@@ -133,13 +127,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def mesa_de_quatro(relogio: Relogio) -> ControllerIdentityRegistry:
-    """Os quatro na mesa, cada um na sua ONDA — a fila do momento é 1, 2, 3, 4.
-
-    Um de cada vez, com intervalo maior que `JANELA_DE_ONDA_SEC`, porque é
-    assim que ela pareia: um controle, depois o outro. Com todos na mesma onda
-    o desempate seria o gravado, e o cenário do defeito ficaria indistinguível
-    de um empate — que é outro caso, e não é este.
-    """
+    """Os quatro na mesa, cada um na sua ONDA — a fila do momento é 1, 2, 3, 4."""
     reg = ControllerIdentityRegistry(clock=relogio)
     na_mesa: list[str] = []
     for uniq in UNIQS:
@@ -161,59 +149,28 @@ def backend_com_os_quatro() -> tuple[PyDualSenseController, dict[str, _FakeHandl
 def o_link_caiu_e_voltou(
     reg: ControllerIdentityRegistry, inst: PyDualSenseController
 ) -> None:
-    """A cena de 15:36, em duas linhas.
-
-    O batimento vê TRÊS controles (o primeiro da fila caiu do rádio) e o
-    handle do que caiu volta logo depois — antes do batimento seguinte, e
-    por isso NO FIM do dict de handles, que é a ordem em que o lote resolve.
-    """
+    """A cena de 15:36, em duas linhas."""
     reg.sync_connected([SEGUNDO, TERCEIRO, QUARTO])
     voltou = inst._handles.pop(KEYS[0])
     inst._handles[KEYS[0]] = voltou
 
 
 def o_tique_viu_todos(reg: ControllerIdentityRegistry) -> None:
-    """O batimento seguinte do `lifecycle`, com os quatro de volta na mesa.
-
-    QUATRO-NA-MESA-01 §1 (06/09/2026): readmitir passou a ser ato do TIQUE.
-    A leitura de cor não readmite mais ninguém — era ela o segundo escritor
-    de `_connected`, e é ela que fazia o número dos OUTROS piscar 10x por
-    segundo enquanto um controle bouncava no rádio.
-    """
+    """O batimento seguinte do `lifecycle`, com os quatro de volta na mesa."""
     reg.sync_connected(list(UNIQS))
 
 
 def padroes_do_lote(
     inst: PyDualSenseController,
 ) -> dict[str, tuple[bool, bool, bool, bool, bool] | None]:
-    """O lote de escrita, como o backend o monta: uma passada, todas as chaves.
-
-    É a forma EXATA de `enviar_gatilho_da_cor` e de `reassert_resolved_outputs`
-    — a lista inteira resolvida sob o mesmo lock, antes de qualquer byte sair.
-    """
+    """O lote de escrita, como o backend o monta: uma passada, todas as chaves."""
     return {
         key: inst._merged_desired_for_key(key).player_leds for key in inst._handles
     }
 
 
 class TestOLoteNaoNumeraComAMesaPelaMetade:
-    """A causa raiz: a mesa não pode se mexer entre o 1º e o 4º do lote.
-
-    **QUATRO-NA-MESA-01 §1, 06/09/2026 — o dono da READMISSÃO mudou, e as
-    asserções daqui foram remedidas por isso.** Até esta data quem punha o
-    controle de volta na mesa era a própria LEITURA de cor (o
-    ``slot_for(assign=True)`` de dentro do provider), e era ela que fechava o
-    buraco do "ninguém no 4" dentro do próprio lote. Só que essa mesma
-    autoadmissão é o defeito 1 desta sprint: o tique de 2 s tirava, a leitura
-    a 10 Hz devolvia, e o número dos OUTROS ia e voltava sem parar — *"quando
-    um controle pisca, os outros trocam de cor e de número sozinhos"*.
-
-    O que a cura preserva, e é a queixa dela inteira: **nenhum número se
-    repete, em instante nenhum.** O que ela troca é o preenchimento do
-    buraco: quem voltou fica **sem opinião** (``None`` — o contrato que o
-    ``numero_da_lampada`` já publicava desde 27/08) até o TIQUE vê-lo, e aí
-    a mesa fecha 1..4. Um buraco de ≤2 s no lugar de um pisca-pisca contínuo.
-    """
+    """A causa raiz: a mesa não pode se mexer entre o 1º e o 4º do lote."""
 
     def test_quatro_controles_quatro_numeros(
         self, config_isolado: Path
@@ -226,17 +183,13 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
         o_link_caiu_e_voltou(reg, inst)
         padroes = padroes_do_lote(inst)
 
-        # A queixa dela, em uma linha: nenhum número pode se repetir.
         numerados = [v for v in padroes.values() if v is not None]
         assert len(set(numerados)) == len(numerados), (
             "dois controles no mesmo jogador: "
             f"{ {k: v for k, v in padroes.items()} }"
         )
-        # E quem voltou não inventa número enquanto o tique não o vê: sem
-        # opinião é o que impede o número dele de colidir com o de um presente.
         assert padroes[KEYS[0]] is None
 
-        # O tique passa (≤2 s) e a mesa fecha 1..4 — sem buraco e sem colisão.
         o_tique_viu_todos(reg)
         padroes = padroes_do_lote(inst)
         assert set(padroes.values()) == {player_led_pattern(n) for n in (1, 2, 3, 4)}
@@ -244,12 +197,7 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
     def test_quem_voltou_recupera_o_numero_que_era_dele(
         self, config_isolado: Path
     ) -> None:
-        """Não basta não colidir: quem voltou é o 1º da fila e volta ao 1 (D2).
-
-        Sem esta metade, "não repetir" seria satisfeito por qualquer permuta —
-        inclusive mandando quem voltou para o fim da fila, que é o defeito de
-        ORDEM DE WAKE que o R-15 arrancou em 23/07.
-        """
+        """Não basta não colidir: quem voltou é o 1º da fila e volta ao 1 (D2)."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         inst, _ = backend_com_os_quatro()
@@ -265,12 +213,7 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
         assert padroes[KEYS[3]] == player_led_pattern(4)
 
     def test_a_cor_tambem_sai_de_uma_mesa_so(self, config_isolado: Path) -> None:
-        """A colisão não é só do número: a cor sai do MESMO slot (COR-03).
-
-        No journal dela a cor escapou porque vinha de um override por-uniq do
-        perfil; com a paleta automática ligada, dois controles ficariam da
-        mesma cor pelo mesmo caminho.
-        """
+        """A colisão não é só do número: a cor sai do MESMO slot (COR-03)."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         inst, _ = backend_com_os_quatro()
@@ -279,9 +222,6 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
         o_link_caiu_e_voltou(reg, inst)
         cores = [inst._merged_desired_for_key(key).led for key in inst._handles]
 
-        # Na janela, quem voltou não tem cor automática (None = sem opinião);
-        # os TRÊS que o tique viu têm três cores distintas. Contar o `None`
-        # como uma quarta cor faria este teste passar sem medir nada.
         pintadas = [c for c in cores if c is not None]
         assert len(pintadas) == 3
         assert len(set(pintadas)) == 3, f"duas lightbars da mesma cor: {cores}"
@@ -292,15 +232,7 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
 
 
 class TestAMesaEApresentadaNaOrdemDosHandles:
-    """A cura não pode apresentar a mesa em ordem de HASH (R-24).
-
-    Cicatriz da própria entrega: a primeira versão de `_assentar_mesa_locked`
-    percorria o `frozenset` que usa para saber SE a mesa mudou. Dois controles
-    VIRGENS (sem lugar na fila) passaram a receber lugar em ordem de hash, e o
-    segundo da mesa nasceu Controle 1 — o defeito que o R-24 já tinha pago no
-    `_sync_identity_registry`, com a mesma frase: *"nunca passar um `set`, que
-    numeraria por hash"*.
-    """
+    """A cura não pode apresentar a mesa em ordem de HASH (R-24)."""
 
     def test_o_primario_ganha_o_primeiro_lugar_da_fila(
         self, config_isolado: Path
@@ -310,7 +242,6 @@ class TestAMesaEApresentadaNaOrdemDosHandles:
         inst, _ = backend_com_os_quatro()
         inst.set_auto_output_provider(make_auto_output_provider(reg))
 
-        # Ninguém tem lugar ainda: quem numera é a apresentação da mesa.
         inst._merged_desired_for_key(KEYS[0])
 
         assert reg.snapshot() == {u: i + 1 for i, u in enumerate(UNIQS)}
@@ -327,22 +258,13 @@ class TestAusenteNaoAcendeNumero:
         reg.sync_connected([SEGUNDO, TERCEIRO, QUARTO])
         passar_o_prazo(relogio)
 
-        # Quem está na mesa acende 1..3 — a contagem fecha sem o ausente.
         assert reg.numero_da_lampada(SEGUNDO, assign=False) == 1
         assert reg.numero_da_lampada(TERCEIRO, assign=False) == 2
         assert reg.numero_da_lampada(QUARTO, assign=False) == 3
-        # E o ausente não acende NADA. Era aqui que ele acendia 1 — o mesmo
-        # 1 que o segundo da fila já estava acendendo.
         assert reg.numero_da_lampada(CAIU_E_VOLTOU, assign=False) is None
 
     def test_a_pergunta_continua_respondida(self, config_isolado: Path) -> None:
-        """`slot_for` NÃO muda: o rótulo do ausente continua sendo o dele.
-
-        As duas respostas são verdadeiras, cada uma no seu domínio — o defeito
-        era a lâmpada ler a do outro. Se `slot_for` também passasse a devolver
-        None, a GUI perderia o "Controle 1" de um controle que só está
-        desligado, que é decisão medida (NUM-01/D2) e não se apaga.
-        """
+        """`slot_for` NÃO muda: o rótulo do ausente continua sendo o dele."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.sync_connected([SEGUNDO, TERCEIRO, QUARTO])
@@ -352,11 +274,7 @@ class TestAusenteNaoAcendeNumero:
     def test_com_assign_a_atribuicao_acontece_do_mesmo_jeito(
         self, config_isolado: Path
     ) -> None:
-        """R-14 §1: atribuir lugar é IDENTIDADE, e continua acontecendo aqui.
-
-        Sem isto, o piso que os externos leem (`_ds_reserve`) voltaria a
-        mentir — o defeito "não existe Controle 1" da auditoria de 25/07.
-        """
+        """R-14 §1: atribuir lugar é IDENTIDADE, e continua acontecendo aqui."""
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         novo = "aabbcc0000fe"

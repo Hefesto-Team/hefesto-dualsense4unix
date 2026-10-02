@@ -18,7 +18,7 @@ aqui NÃO o liga**: a lista e o `run()` têm de andar juntos, e o teste
 `tests/unit/test_bt_mic_subsystem_registrado.py` trava exatamente isso.
 
 SÃO **TRÊS** LUGARES, E ESTE AVISO DIZIA DOIS (medido em 07/09/2026). O
-desligamento não passa pela lista tampouco: `daemon/connection.py:1770,1815`
+desligamento não passa pela lista tampouco: `daemon/connection.py:1102,1815`
 chama `_stop_bt_mic` e `_stop_metrics` **pelo nome**. Quem seguir a receita de
 duas metades sobe o subsystem e nunca o para — e, no caso do som, o nó fica na
 lista de saída dela depois de o daemon morrer. A receita completa é: a lista
@@ -60,9 +60,9 @@ olhando a mesa e chamando `sudo` com o daemon já morto.
 
 POR QUE `HotkeySubsystem` NÃO ESTÁ NA LISTA — e não é esquecimento:
 
-* `HotkeySubsystem` (`hotkey.py:3604`) é uma **lápide, não um órfão**: os dois
+* `HotkeySubsystem` (`hotkey.py:2207`) é uma **lápide, não um órfão**: os dois
   métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
-  sempre, por FUNÇÃO — `lifecycle.py:1098` (`start_hotkey_manager`) e `:1100`
+  sempre, por FUNÇÃO — `lifecycle.py:597` (`start_hotkey_manager`) e `:1100`
   (`start_mic_hotkey`). Registrá-lo não acende nada; só acrescenta duas linhas
   de log e a impressão falsa de que o registry é quem manda.
 """
@@ -84,14 +84,6 @@ from hefesto_dualsense4unix.daemon.subsystems.poll import PollSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.rumble import RumbleSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.udp import UdpSubsystem
 
-# Registry canônico — ordem de inserção = ordem de start/stop.
-# stop ocorre na ordem inversa (implementado em lifecycle.py).
-# MetricsSubsystem é o último a subir e o primeiro a parar (ordem inversa).
-# PluginsSubsystem sobe antes de Metrics (acesso a controller).
-# BtMicSubsystem entra ANTES do Plugins: ele não depende de nada do daemon
-# (descobre os controles pelo sysfs por conta própria) e, na ordem inversa,
-# parar antes do IPC/poll garante que as pontes de áudio — e portanto o
-# microfone de cada controle — sejam DESLIGADAS cedo no shutdown.
 SUBSYSTEM_REGISTRY: list[type[Subsystem]] = [
     PollSubsystem,
     IpcSubsystem,

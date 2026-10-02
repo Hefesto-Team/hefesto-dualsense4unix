@@ -64,12 +64,6 @@ def _carregar():
 
 PORTA = _carregar()
 
-#: O FORJADO CANÔNICO DESTA CASA, e ele é reusado de propósito: já vive na
-#: lista `ruido` de ``test_docs_mac_anonimato.py`` desde 15/08/2026, e inventar
-#: um segundo obrigaria a manter DUAS listas de isenção para a mesma regra.
-#:
-#: Ele tem a forma de um serial de aparelho — dezessete caracteres, maiúsculas e
-#: dígitos —, mas o prefixo `ZZ9Y` não sai de fábrica nenhuma.
 FORJADO_COM_A_FORMA = "ZZ9Y02Q0000000000"  # serial-de-mentira: o forjado da casa
 
 
@@ -88,12 +82,7 @@ def test_um_serial_com_a_forma_e_acusado(tmp_path: pathlib.Path) -> None:
 
 
 def test_o_acusado_nao_e_reimpresso_inteiro_na_mensagem(tmp_path: pathlib.Path) -> None:
-    """A mensagem do portão não pode reimprimir o serial inteiro.
-
-    Um portão de anonimato que ECOA o segredo na reprovação vaza pelo log do
-    CI, que é público. Ele diz os seis primeiros — os mesmos que a máscara
-    deixa à mostra — e o tamanho.
-    """
+    """A mensagem do portão não pode reimprimir o serial inteiro."""
     achados = _acusa(f'SERIAL = "{FORJADO_COM_A_FORMA}"\n', tmp_path)
     junto = " ".join(achados)
     assert FORJADO_COM_A_FORMA not in junto, (
@@ -119,12 +108,7 @@ def test_a_marca_de_mentira_isenta_a_linha(tmp_path: pathlib.Path) -> None:
 
 
 def test_a_marca_na_linha_de_baixo_nao_isenta(tmp_path: pathlib.Path) -> None:
-    """A varredura é por LINHA, e a marca fora dela não alcança nada.
-
-    Sem esta prova a convenção seria só uma frase no docstring — e a primeira
-    pessoa que a escrevesse na linha de baixo teria um portão vermelho e
-    nenhuma pista do porquê.
-    """
+    """A varredura é por LINHA, e a marca fora dela não alcança nada."""
     texto = (f'S = "{FORJADO_COM_A_FORMA}"\n'
              "# serial-de-mentira: escrito no lugar errado\n")
     assert _acusa(texto, tmp_path), (
@@ -139,23 +123,14 @@ def test_a_marca_na_linha_de_baixo_nao_isenta(tmp_path: pathlib.Path) -> None:
 ])
 def test_o_que_nao_e_serial_nao_reprova(token: str, porque: str,
                                         tmp_path: pathlib.Path) -> None:
-    """Um portão que acusa o que não é o defeito é um portão que alguém desliga.
-
-    Os três vêm da árvore de verdade — o terceiro apareceu na varredura de
-    calibração, num fixture de log.
-    """
+    """Um portão que acusa o que não é o defeito é um portão que alguém desliga."""
     assert not _acusa(f'X = "{token}"\n', tmp_path), (
         f"o portão acusou o que não é serial: {porque}")
 
 
 def test_o_hexadecimal_sem_a_fileira_de_zeros_continua_acusado(
         tmp_path: pathlib.Path) -> None:
-    """A isenção do endereço de memória exige as DUAS condições.
-
-    Só-hexadecimal **e** uma fileira de seis zeros. Aceitar qualquer coisa
-    hexadecimal abriria a porta larga: um serial que por acaso só use A-F
-    passaria, e é justamente o caso que a isenção não pode cobrir.
-    """
+    """A isenção do endereço de memória exige as DUAS condições."""
     # serial-de-mentira: o valor abaixo é o caso-limite deste próprio teste
     assert _acusa('X = "ABCDEF1234567890"\n', tmp_path), (  # serial-de-mentira
         "um token só-hexadecimal SEM fileira de zeros foi isentado — a "
@@ -163,11 +138,7 @@ def test_o_hexadecimal_sem_a_fileira_de_zeros_continua_acusado(
 
 
 def test_a_arvore_de_hoje_esta_limpa() -> None:
-    """E o portão roda sobre a árvore de verdade, sem achar nada.
-
-    É a metade que impede a régua de passar por vacuidade: as provas acima
-    medem arquivos de mentira, e esta mede o repositório.
-    """
+    """E o portão roda sobre a árvore de verdade, sem achar nada."""
     violacoes: list[str] = []
     for caminho in PORTA.arquivos_versionados():
         violacoes.extend(PORTA.acusa(caminho))

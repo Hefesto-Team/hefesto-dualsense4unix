@@ -66,8 +66,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "ens
 from comum import PORTA_DIRETA, declaracao_da_porta, porta_provavel
 
 DEFAULT_SAMPLE_HZ = 30
-STEP_TIMEOUT_SEC = 12.0      # tempo máximo pra cada passo do modo guiado
-STEP_CONFIRM_DELAY = 0.5     # mantém o estado por esse tempo antes de avançar
+STEP_TIMEOUT_SEC = 12.0
+STEP_CONFIRM_DELAY = 0.5
 
 
 @dataclass
@@ -76,7 +76,6 @@ class GuidedStep:
 
     name: str
     instruction: str
-    # check(state, snap) -> bool: retorna True quando a ação esperada aconteceu
     check: callable
     hold_sec: float = 0.6
     cooldown_sec: float = 0.4
@@ -118,7 +117,6 @@ def _build_default_guided_script() -> list[GuidedStep]:
         GuidedStep("idle", "Controle em REPOUSO (solte tudo).",
                    lambda s, snap: True, hold_sec=1.5, cooldown_sec=0.1),
 
-        # Gatilhos analógicos
         GuidedStep("r2_full", "Segure R2 ATE O FIM (pressao maxima).",
                    need_trigger("right", 220)),
         GuidedStep("r2_release", "Solte R2 completamente.",
@@ -132,7 +130,6 @@ def _build_default_guided_script() -> list[GuidedStep]:
         GuidedStep("r2_release_2", "Solte R2.",
                    need_trigger_zero("right")),
 
-        # Face buttons
         GuidedStep("cross_press", "Aperte X (cross).", need_button("cross")),
         GuidedStep("cross_release", "Solte X.", need_release("cross")),
         GuidedStep("circle_press", "Aperte O (circle).", need_button("circle")),
@@ -142,13 +139,11 @@ def _build_default_guided_script() -> list[GuidedStep]:
         GuidedStep("triangle_press", "Aperte Triangulo.", need_button("triangle")),
         GuidedStep("triangle_release", "Solte Triangulo.", need_release("triangle")),
 
-        # Shoulders
         GuidedStep("l1_press", "Aperte L1.", need_button("l1")),
         GuidedStep("l1_release", "Solte L1.", need_release("l1")),
         GuidedStep("r1_press", "Aperte R1.", need_button("r1")),
         GuidedStep("r1_release", "Solte R1.", need_release("r1")),
 
-        # D-pad
         GuidedStep("dpad_up", "D-pad PARA CIMA.", need_button("dpad_up")),
         GuidedStep("dpad_release_u", "Solte o D-pad.", need_release("dpad_up")),
         GuidedStep("dpad_down", "D-pad PARA BAIXO.", need_button("dpad_down")),
@@ -158,7 +153,6 @@ def _build_default_guided_script() -> list[GuidedStep]:
         GuidedStep("dpad_right", "D-pad PARA DIREITA.", need_button("dpad_right")),
         GuidedStep("dpad_release_r", "Solte o D-pad.", need_release("dpad_right")),
 
-        # System buttons
         GuidedStep("options_press", "Aperte Options (ou Start).", need_button("options")),
         GuidedStep("options_release", "Solte Options.", need_release("options")),
         GuidedStep("create_press", "Aperte Create (ou Select).", need_button("create")),
@@ -166,7 +160,6 @@ def _build_default_guided_script() -> list[GuidedStep]:
         GuidedStep("ps_press", "Aperte o botao PS.", need_button("ps")),
         GuidedStep("ps_release", "Solte PS.", need_release("ps")),
 
-        # Stick clicks
         GuidedStep("l3_press", "Clique L3 (pressione o stick esquerdo).",
                    need_button("l3")),
         GuidedStep("l3_release", "Solte L3.", need_release("l3")),
@@ -174,7 +167,6 @@ def _build_default_guided_script() -> list[GuidedStep]:
                    need_button("r3")),
         GuidedStep("r3_release", "Solte R3.", need_release("r3")),
 
-        # Sticks analógicos
         GuidedStep("lstick_left", "Stick ESQUERDO pra ESQUERDA (ate o limite).",
                    need_stick("left", "x", 20)),
         GuidedStep("lstick_right", "Stick ESQUERDO pra DIREITA (ate o limite).",
@@ -311,23 +303,16 @@ def _guided_loop(session: CaptureSession, sample_hz: int) -> None:
             if sleep_for > 0:
                 time.sleep(sleep_for)
 
-        # cooldown entre passos pra o user relaxar o gesto
         cooldown_end = time.monotonic() + step.cooldown_sec
         while time.monotonic() < cooldown_end:
             session.tick_record()
             time.sleep(period)
 
-        _ = detected  # telemetria silenciosa por enquanto
+        _ = detected
 
 
 def daemon_esta_vivo() -> bool:
-    """Diz se há daemon atendendo no socket de IPC, AGORA.
-
-    Arquivo de socket no disco não é prova: um daemon morto de forma feia
-    deixa o nó para trás. O que responde é a conexão, então é ela que se
-    tenta. Qualquer falha de import ou de caminho vira "não sei dizer" e o
-    gravador segue — recusar por não conseguir perguntar seria pior.
-    """
+    """Diz se há daemon atendendo no socket de IPC, AGORA."""
     try:
         from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
     except ImportError:
@@ -341,18 +326,11 @@ def daemon_esta_vivo() -> bool:
     return False
 
 
-#: Prefixo de `HID_ID` no uevent do sysfs, por transporte. O primeiro campo é
-#: o barramento: 0x0003 = USB, 0x0005 = Bluetooth.
 _BUS_POR_TRANSPORTE = {"usb": "0003", "bt": "0005"}
 
 
 def transporte_do_hidraw(path: bytes | str) -> str | None:
-    """Diz o transporte de um `/dev/hidrawN` lendo o `HID_ID` do sysfs.
-
-    É a única fonte que não depende de o handle já estar aberto, e é por isso
-    que ela serve para ESCOLHER o aparelho em vez de descobrir tarde demais
-    qual foi escolhido.
-    """
+    """Diz o transporte de um `/dev/hidrawN` lendo o `HID_ID` do sysfs."""
     nome = Path(path.decode("utf-8", "replace") if isinstance(path, bytes) else path).name
     uevent = Path("/sys/class/hidraw") / nome / "device" / "uevent"
     try:
@@ -413,10 +391,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 5
 
-    # A DECLARAÇÃO ANTES DA MEDIÇÃO. A porta deste instrumento é sempre o
-    # `open()` da hidapi (é o backend do produto que abre, não ele), mas se o
-    # broker está de pé isso quer dizer que o físico PODE estar escondido — e
-    # aí o erro que vem a seguir é de permissão, não de aparelho ausente.
     porta_do_broker, motivo_do_broker = porta_provavel()
     print("biblioteca ....... pydualsense/hidapi (PyDualSenseController do produto)")
     print(f"porta ............ {PORTA_DIRETA} — quem abre é o backend do produto, pela hidapi")
@@ -456,12 +430,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"erro: connect falhou — verifique udev rules e device. {exc}", file=sys.stderr)
         return 4
 
-    evdev = controller._evdev  # Reutiliza o reader pra extrair buttons
+    evdev = controller._evdev
 
     reported_transport = controller.get_transport()
     if reported_transport != args.transport:
-        # Cinto e suspensório: o filtro acima já deveria ter garantido isto.
-        # Se ainda assim divergir, ABORTA — um aviso já provou não bastar.
         print(
             f"erro: pedi {args.transport} e o aparelho aberto reporta "
             f"{reported_transport}. Abortando para não gravar fixture errada.",
@@ -479,12 +451,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": "guided" if args.guided else "free",
         "duration_target_sec": args.duration if not args.guided else None,
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        # Viaja com a captura de propósito: quem replayar isto daqui a meses
-        # precisa saber se havia um segundo dono do hidraw na hora da gravação.
         "daemon_vivo_na_gravacao": daemon_vivo,
-        # E por qual PORTA se gravou. Duas fixtures do mesmo controle gravadas
-        # por portas diferentes não são comparáveis, e sem este campo ninguém
-        # descobriria isso meses depois.
         "porta_da_gravacao": PORTA_DIRETA,
         "broker_no_caminho": motivo_do_broker,
     }
@@ -539,4 +506,3 @@ def main(argv: list[str] | None = None) -> int:
 if __name__ == "__main__":
     sys.exit(main())
 
-# "Tudo que e grande comeca pequeno, com disciplina." — Epicteto

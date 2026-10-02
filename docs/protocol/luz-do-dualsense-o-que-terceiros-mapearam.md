@@ -67,7 +67,7 @@ fade ou instantânea, e três fontes dizem a mesma coisa com palavras diferentes
 driver acende ENTRA COM FADE.**
 
 Isso tem consequência aqui: o produto instala uma graça de 0,5 s antes de
-replicar o LED de jogador (`integrations/uhid_gamepad.py:380`). Quem for
+replicar o LED de jogador (`integrations/uhid_gamepad.py:168`). Quem for
 cronometrar essa graça tem de contar o fade do driver, que a graça não espera.
 
 Os bits 6 e 7 do mesmo byte continuam sem nome — a wiki os declara

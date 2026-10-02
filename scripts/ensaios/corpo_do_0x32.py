@@ -1,84 +1,5 @@
 #!/usr/bin/env python3
-"""corpo_do_0x32.py — o corpo do output `0x32` é um contêiner TLV ou o `common`?
-
-A PERGUNTA (E-1 da A-PONTE-UNIVERSAL-01)
------------------------------------------
-O produto já monta, em regime, o pedido de microfone por rádio
-(`integrations/dualsense_bt_audio.py:241-257`)::
-
-    pkt[2] = BLOCO_AUDIO_CONTROL | BLOCO_PRESENTE   # 0x11 | 0x80 = 0x91
-    pkt[3] = 1                                      # "comprimento do bloco"
-    pkt[4] = 0b011 (LIGAR) | 0b010 (DESLIGAR)       # "valor do bloco"
-
-Há duas leituras possíveis desses três bytes, e elas divergem:
-
-* **TLV** — `[2]` é tag, `[3]` é comprimento, `[4]` é valor. O bit0 do valor é o
-  liga/desliga do microfone. O pacote de DESLIGAR (`0b010`, bit0 = 0) **MUTA**.
-* **`common` de 47 bytes** — o envelope de rádio é `[0]` id, `[1]` nibble de
-  sequência, `[2]` tag, e o `common` começa em `[3]`. Então `[3]` é
-  `valid_flag0` e `[4]` é `valid_flag1`. O pacote de DESLIGAR vira
-  `valid_flag1 = 0x02` (`POWER_SAVE_CONTROL_ENABLE`) com `common[9] = 0x00`,
-  que é literalmente **DESMUTAR**.
-
-As duas leituras preveem o MESMO para o pacote de LIGAR — é por isso que o WAV
-de 25/07 nunca decidiu nada. **Para o pacote de DESLIGAR elas preveem o
-OPOSTO**, e o veredito é um bit do próprio aparelho: `report[55] & 0x04`
-(`INPUT_OFFSET_AUDIO_STATUS = 55`, `STATUS_MIC_MUDO = 0x04`).
-
-O QUE ESTE INSTRUMENTO ESCREVE NO APARELHO: **NADA**
------------------------------------------------------
-Nem um byte. Ele abre o hidraw **em leitura** pela porta do broker e conta bits.
-Toda escrita é do PRODUTO, em regime, pela CLI que ele já entrega:
-
-* ``hefesto-dualsense4unix mic mute|unmute|release --uniq <mac>`` — mexe no mudo
-  do FIRMWARE pelo caminho do `0x31` (`common[9]`, `POWER_SAVE_MIC_MUTE`). É o
-  **controle positivo**, e é ele que ARMA o aparelho no estado MUDO.
-* ``hefesto-dualsense4unix mic bt`` — sobe a ponte, que escreve o `0x32` de
-  LIGAR ao subir (`iniciar()`, `:898`) e o de DESLIGAR ao parar
-  (`parar()`, `:917`). É o único caminho por onde o `0x32` sai nesta corrida.
-
-POR QUE ARMAR MUDO ANTES (e este é o ponto que decide o ensaio)
-----------------------------------------------------------------
-Se o ensaio começasse com o microfone ATIVO, a previsão do `common` para o
-pacote de DESLIGAR ("desmuta") seria indistinguível de "o pacote não fez nada" —
-e "não fez nada" também é o que se vê quando o firmware descarta o report. O
-ensaio não teria controle positivo do próprio `0x32`.
-
-Armando MUDO, a corrida ganha dois degraus:
-
-1. o `0x32` de **LIGAR** tem de LIMPAR o mudo. Se limpar, está provado que o
-   `0x32` chega e é obedecido — **controle positivo do próprio report medido**;
-2. só então o `0x32` de **DESLIGAR** decide: se o mudo VOLTAR, é TLV; se ficar
-   limpo, é o `common`.
-
-O `release` entre o armar e o medir não é detalhe: com posse do registrador o
-daemon manda `POWER_SAVE_CONTROL_ENABLE` com `common[9]` a 60 Hz e escreveria
-por cima do que o `0x32` fizesse (AUDIO-OWNER-01,
-`core/backend_pydualsense.py:1106`, `:1150`). O `release` devolve a posse ao
-kernel, o bit de autorização CAI, e o firmware conserva o mudo que recebeu — o
-que este instrumento **verifica**, numa janela própria, antes de medir.
-
-CONTROLE NEGATIVO — dois, na mesma corrida
--------------------------------------------
-1. **o byte vizinho**: `report[54]` (o `status[0]`, bateria) não pode se mover
-   nas mesmas janelas em que o `[55]` se move. Se os dois andarem juntos, o que
-   mudou foi a leitura, não o microfone;
-2. **a janela sem comando**: uma basal em que nenhum comando é dado e o bit tem
-   de ficar parado. Um bit que oscila sozinho não decide nada.
-
-CONFUNDIMENTO: **IMUNE**
--------------------------
-O veredito é um bit do próprio aparelho mudando (ou não) em resposta ao próprio
-produto. Não há comparação entre braços da mesa, então a troca de braços de
-15/08 não entra na conta.
-
-QUANTAS UNIDADES
------------------
-O `0x32` **só existe no rádio**: por cabo o descritor declara um único OUTPUT, o
-`0x02` de 47 B (medido em 11/08/2026). Este ensaio, portanto, só pode falar das
-unidades que estiverem no rádio AGORA — e ele diz quantas são, pelo
-`hardware_version` de cada uma, em vez de fingir que mediu quatro.
-"""
+"""corpo_do_0x32.py — o corpo do output `0x32` é um contêiner TLV ou o `common`?"""
 
 from __future__ import annotations
 
@@ -108,18 +29,13 @@ from comum import (
     tabela,
 )
 
-# ---------------------------------------------------------------------------
-# O que se lê do report de INPUT por rádio. Os nomes e os números são os do
-# produto (`integrations/dualsense_bt_audio.py`), importados quando dá — e
-# repetidos aqui com a fonte declarada quando o pacote não está no caminho.
-# ---------------------------------------------------------------------------
 
 INPUT_REPORT_BT = 0x31
 INPUT_REPORT_BT_SIZE = 78
 INPUT_FLAG_HID = 0x01
 INPUT_FLAG_AUDIO = 0x02
 INPUT_OFFSET_AUDIO_STATUS = 55
-INPUT_OFFSET_VIZINHO = 54  # `status[0]`, bateria — o controle negativo
+INPUT_OFFSET_VIZINHO = 54
 STATUS_MIC_MUDO = 0x04
 
 _FONTE_DAS_CONSTANTES = "repetidas neste arquivo"
@@ -136,18 +52,12 @@ try:  # pragma: no cover - depende do interpretador
 except Exception:  # pragma: no cover - fora do venv do projeto
     pass
 
-#: O executável do produto. É ele quem escreve; este arquivo não.
 _CLI = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), ".venv", "bin",
                     "hefesto-dualsense4unix")
 
 
 def mascarar_mac(mac: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados (`OUI:00:00:NN`).
-
-    O OUI fica porque é público e é ele que explica o achado; o sufixo é o que
-    identifica o aparelho dela, e esse sai. Há portão que reprova MAC real em
-    arquivo versionado, e a saída bruta deste instrumento é versionada.
-    """
+    """A máscara da casa: octetos 4 e 5 zerados (`OUI:00:00:NN`)."""
     partes = mac.split(":")
     if len(partes) != 6:
         return mac
@@ -155,11 +65,7 @@ def mascarar_mac(mac: str) -> str:
 
 
 def hardware_version(dir_device: str) -> str:
-    """O `hardware_version` do sysfs — a identidade que ela pediu que eu use.
-
-    Não é o MAC e não é o número do `hidraw`: os dois mudam entre sessões e o
-    segundo mudou HOJE, na troca de braços. O `hardware_version` é da unidade.
-    """
+    """O `hardware_version` do sysfs — a identidade que ela pediu que eu use."""
     for nome in ("hardware_version", "device/hardware_version"):
         caminho = os.path.join(dir_device, nome)
         try:
@@ -168,11 +74,6 @@ def hardware_version(dir_device: str) -> str:
         except OSError:
             continue
     return "?"
-
-
-# ---------------------------------------------------------------------------
-# A leitura: uma thread, um `select` sobre todos os nós, nenhuma escrita
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -199,12 +100,7 @@ class Unidade:
 
 
 class Leitor:
-    """Lê os nós em uma thread e carimba cada report com o relógio da corrida.
-
-    Uma thread só, e um `select` sobre todos os fds: dois leitores com dois
-    relógios já produziram, nesta casa, uma tabela em que a mesma janela tinha
-    duas durações.
-    """
+    """Lê os nós em uma thread e carimba cada report com o relógio da corrida."""
 
     def __init__(self, unidades: list[Unidade]) -> None:
         self._unidades = unidades
@@ -260,15 +156,10 @@ class Leitor:
                 )
 
 
-# ---------------------------------------------------------------------------
-# As fases: cada uma é uma janela de tempo com um nome e, talvez, um comando
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Fase:
     nome: str
-    comando: str  # o que o PRODUTO escreveu nesta fase (vazio = nada)
+    comando: str
     inicio: float
     fim: float = 0.0
     saida: str = ""
@@ -340,11 +231,6 @@ def _hex_contado(valores: dict[int, int]) -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# A corrida
-# ---------------------------------------------------------------------------
-
-
 class Corrida:
     def __init__(self, leitor: Leitor, unidades: list[Unidade], *,
                  verboso: bool) -> None:
@@ -361,12 +247,7 @@ class Corrida:
 
     def fase(self, nome: str, duracao: float, *, comando: list[str] | None = None,
              ) -> Fase:
-        """Abre uma janela, roda o comando do PRODUTO (se houver), espera, fecha.
-
-        A janela começa DEPOIS do comando de propósito: o que interessa é o
-        estado que o aparelho passou a declarar, e incluir o instante da
-        escrita na janela misturaria o antes com o depois.
-        """
+        """Abre uma janela, roda o comando do PRODUTO (se houver), espera, fecha."""
         saida = ""
         rotulo = " ".join(comando) if comando else ""
         if comando:
@@ -388,12 +269,7 @@ class Corrida:
 
 def ciclo_da_ponte(corrida: Corrida, braco: str, janela: float, *,
                    silencioso: bool) -> tuple[Fase, Fase, str]:
-    """Sobe a ponte do produto, observa, manda SIGTERM, observa de novo.
-
-    Quem escreve o `0x32` é a ponte, não este arquivo: `iniciar()` manda o
-    LIGAR (`dualsense_bt_audio.py:898`) e `parar()` manda o DESLIGAR (`:917`).
-    O SIGTERM é o MESMO caminho do Ctrl-C que a CLI documenta.
-    """
+    """Sobe a ponte do produto, observa, manda SIGTERM, observa de novo."""
     ponte = subprocess.Popen(
         [_CLI, "mic", "bt"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True,
@@ -499,10 +375,8 @@ def main() -> int:
     corrida = Corrida(leitor, unidades, verboso=not args.silencioso)
     macs = [u.aparelho.mac for u in unidades]
 
-    # --- 1. basal: nenhum comando. O bit tem de ficar parado. --------------
     f_basal = corrida.fase("basal (nenhum comando)", args.basal)
 
-    # --- 2. controle positivo, unidade a unidade ---------------------------
     positivos: dict[str, tuple[Fase, Fase]] = {}
     for mac in macs:
         f_mute = corrida.fase(
@@ -516,11 +390,6 @@ def main() -> int:
             comando=[_CLI, "mic", "release", "--uniq", mac])
         positivos[mac] = (f_mute, f_unmute)
 
-    # --- 3. BRAÇO A: armado MUDO -------------------------------------------
-    # Armar MUDO e SOLTAR o registrador. O `release` não é detalhe: com posse,
-    # o daemon manda `POWER_SAVE_CONTROL_ENABLE` a 60 Hz e escreveria por cima
-    # do que o 0x32 fizesse. Sem posse, o firmware conserva o mudo — e é isso
-    # que a janela seguinte VERIFICA antes de qualquer medição.
     for mac in macs:
         corrida.fase(f"armar MUDO em {mascarar_mac(mac)}", 2.0,
                      comando=[_CLI, "mic", "mute", "--uniq", mac])
@@ -533,11 +402,6 @@ def main() -> int:
     f_ligar_a, f_desligar_a, saida_ponte_a = ciclo_da_ponte(
         corrida, "BRAÇO A (armado MUDO)", args.janela, silencioso=args.silencioso)
 
-    # --- 4. BRAÇO B: armado ATIVO ------------------------------------------
-    # O mesmo ciclo com o microfone DESMUTADO na largada. É aqui que a previsão
-    # POSITIVA do TLV é falsificável: sob TLV o pacote de DESLIGAR (bit0 = 0)
-    # tem de MUTAR; sob o `common` ele desmuta, e desmutar quem já está ativo é
-    # não fazer nada.
     for mac in macs:
         corrida.fase(f"armar ATIVO em {mascarar_mac(mac)}", 2.0,
                      comando=[_CLI, "mic", "unmute", "--uniq", mac])
@@ -552,7 +416,6 @@ def main() -> int:
     saida_ponte = ("--- BRAÇO A ---\n" + saida_ponte_a
                    + "\n--- BRAÇO B ---\n" + saida_ponte_b)
 
-    # --- 5. deixar a mesa como estava --------------------------------------
     for mac in macs:
         corrida.fase(f"restaurar: unmute em {mascarar_mac(mac)}", 1.5,
                      comando=[_CLI, "mic", "unmute", "--uniq", mac])
@@ -562,7 +425,6 @@ def main() -> int:
 
     leitor.parar()
 
-    # --- 6. o que a corrida viu --------------------------------------------
     diga()
     diga("A LINHA DO TEMPO — cada fase, o que o produto escreveu, e o que o "
          "aparelho passou a declarar")
@@ -597,7 +459,6 @@ def main() -> int:
         if not linha.startswith("2026-") or "bt_mic_pedido" in linha:
             diga(f"      {linha}")
 
-    # --- 7. o veredito, unidade a unidade ----------------------------------
     diga()
     diga("O VEREDITO, UNIDADE A UNIDADE")
     veredito_linhas: list[list[str]] = []
@@ -624,19 +485,12 @@ def main() -> int:
         armado_ok = r_armado.mudo_no_inicio is True and r_armado.mudo_no_fim is True
         ativo_ok = r_ativo.mudo_no_fim is False
 
-        # O CONTROLE POSITIVO DO PRÓPRIO 0x32, e é ele que separa "o firmware
-        # não obedeceu" de "o report nem chegou": a basal não tem UM report de
-        # áudio, e a janela do LIGAR tem centenas. O aparelho só começa a
-        # mandar áudio porque recebeu e obedeceu ao 0x32.
         audio_na_basal = r_basal.audio
         audio_chegou = (r_ligar_a.audio > 0 or r_ligar_b.audio > 0)
         audio_parou = (r_desligar_a.audio == 0 and r_desligar_b.audio == 0)
 
-        # BRAÇO A (armado MUDO): o `common` prevê DESMUTAR nos DOIS pacotes
-        # (valid_flag1 0x03 e 0x02, ambos com common[9] = 0x00).
         a_desmutou = (r_ligar_a.mudo_no_fim is False
                       or r_desligar_a.mudo_no_fim is False)
-        # BRAÇO B (armado ATIVO): o TLV prevê MUTAR no pacote de DESLIGAR.
         b_mutou = r_desligar_b.mudo_no_fim is True
 
         if not basal_ok:

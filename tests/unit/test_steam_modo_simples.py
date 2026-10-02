@@ -1,30 +1,8 @@
-"""FEAT-STEAM-SIMPLES-01 — dois botões que escondem os dois mecanismos.
-
-Pedido literal da usuária final (25/07): "tem jogos que precisamos ativar
-entrada steam, outros que temos que colocar comandos de inicialização — é uma
-confusão real". Os dois mecanismos continuam existindo; o que sai da tela é a
-ESCOLHA entre eles.
-
-  "Deixar tudo pronto"     → encadeia o desligar do Steam Input + a aplicação
-                             do wrapper em todos os jogos, com UM consentimento
-                             só (o de fechar a Steam) e UMA janela de Steam
-                             fechada para as duas edições.
-  "Este jogo não funciona" → resolve o appid do jogo ativo, grava na allowlist
-                             `steam_input_apps.txt` e manda o daemon
-                             rematerializar as envs de launch.
-
-Este arquivo também trava a honestidade do "Aplicar correções" (sem senha):
-ele NÃO fecha a Steam, então quando o `--apply-quiet` adia, o toast tem de
-DIZER que adiou — era ele que anunciava "Correções aplicadas" sobre um no-op.
-"""
+"""FEAT-STEAM-SIMPLES-01 — dois botões que escondem os dois mecanismos."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_steam_modo_simples: importa código da janela GTK")
 
 from pathlib import Path
@@ -42,11 +20,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
     format_steam_ready_result,
 )
 from tests.conftest import skip_sem_gtk_response
-
-
-# ---------------------------------------------------------------------------
-# Formatters puros
-# ---------------------------------------------------------------------------
 
 
 class TestFormatSteamJanelaRecusa:
@@ -81,17 +54,7 @@ class TestFormatFixSafe:
         assert "Deixar tudo pronto" in msg
 
     def test_aplicado_relata_o_que_mudou(self) -> None:
-        """NOTA DATADA (05/08/2026, D-33): este teste exigia a frase literal
-        "a Steam não sequestra mais o seu controle".
-
-        A frase caducou por dois motivos MEDIDOS, não por gosto: (1) ela não
-        dizia de qual JOGO falava — a queixa dela é exatamente "não faço ideia
-        de quando é pra ativar os controles Steam e quando não"; (2) chamava de
-        sequestro o gesto que ela mesma fez na janela da Steam. O que continua
-        travado aqui é o que a decisão original protegia: o toast RELATA a
-        mudança (não fica mudo) e não manda clicar no "Deixar tudo pronto"
-        quando não há nada adiado.
-        """
+        """NOTA DATADA (05/08/2026, D-33): este teste exigia a frase literal"""
         msg = format_fix_safe_result(
             {
                 "ran": 2,
@@ -163,8 +126,7 @@ class TestFormatSteamReady:
         assert "Não consegui deixar tudo pronto" in msg
 
     def test_nao_pronuncia_os_conceitos_que_confundem(self) -> None:
-        """A usuária final não deve ler "Steam Input" nem "opção de
-        inicialização" no caminho feliz — é o ponto do botão."""
+        """A usuária final não deve ler "Steam Input" nem "opção de"""
         msg = format_steam_ready_result(janela="ok", dados=self._dados())
         assert "Steam Input" not in msg
         assert "inicialização" not in msg
@@ -194,25 +156,13 @@ class TestFormatGameBroken:
             assert "inicialização" not in msg
 
     def test_nao_promete_o_que_ela_mediu_ao_contrario(self) -> None:
-        """NOTA DATADA — 07/08/2026: o toast dizia "o Hefesto sai da frente".
-
-        `CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, 06/08, grau MEDIDO: com
-        o jogo marcado o Hefesto entrega a ENTRADA (acaba o controle dobrado) e
-        MANTÉM A SAÍDA — os gatilhos dela seguraram e a cor dela ficou, com o
-        Mullet Mad Jack aberto. Quem lia "sai da frente" esperava perder cor e
-        gatilho, que é o que acontece **fora** da lista.
-        """
+        """NOTA DATADA — 07/08/2026: o toast dizia "o Hefesto sai da frente"."""
         for status in ("adicionado", "ja_estava"):
             msg = format_game_broken_result(status=status, appid=2111190)
             assert "sai da frente" not in msg
             assert "dobrado" in msg, "o defeito que a marca cura é o dobrado"
         adicionado = format_game_broken_result(status="adicionado", appid=2111190)
         assert "gatilhos continuam valendo" in adicionado
-
-
-# ---------------------------------------------------------------------------
-# Fluxo dos handlers
-# ---------------------------------------------------------------------------
 
 
 class _Stub(DaemonActionsMixin):
@@ -306,11 +256,7 @@ class TestFixSafeHandler:
     def test_o_nome_do_jogo_atravessa_o_worker_ate_o_toast(
         self, sincrono: None, slo_fake: dict[str, Any], monkeypatch
     ) -> None:
-        """D-33: a medição é feita pelo WORKER, antes de rodar o script.
-
-        O formatter sozinho estar certo não basta — se o worker não medir, o
-        toast volta a ser genérico. Este teste é o fio entre os dois.
-        """
+        """D-33: a medição é feita pelo WORKER, antes de rodar o script."""
         monkeypatch.setattr(
             _Stub, "_find_repo_file", lambda _self, rel: Path("/fake") / rel
         )
@@ -346,8 +292,7 @@ class TestDeixarTudoPronto:
     def test_uma_janela_so_para_as_duas_edicoes(
         self, sincrono: None, slo_fake: dict[str, Any], monkeypatch
     ) -> None:
-        """Fecha UMA vez, roda as duas correções, reabre UMA vez — duas
-        janelas separadas seriam duas chances de a Steam pisar a edição."""
+        """Fecha UMA vez, roda as duas correções, reabre UMA vez — duas"""
         slo_fake["steam"] = True
         monkeypatch.setattr(
             _Stub, "_find_repo_file", lambda _self, rel: Path("/fake") / rel
@@ -366,12 +311,7 @@ class TestDeixarTudoPronto:
     def test_mede_o_jogo_dentro_da_janela_de_steam_fechada(
         self, sincrono: None, slo_fake: dict[str, Any], monkeypatch
     ) -> None:
-        """D-33: medir DEPOIS do script não adianta — o vdf já foi zerado.
-
-        A ordem que este teste trava: a medição acontece dentro da janela de
-        Steam fechada e ANTES da chamada do script, e o rótulo medido chega ao
-        toast.
-        """
+        """D-33: medir DEPOIS do script não adianta — o vdf já foi zerado."""
         slo_fake["steam"] = True
         ordem: list[str] = []
         monkeypatch.setattr(
@@ -425,7 +365,7 @@ class TestDeixarTudoPronto:
 
         assert slo_fake["runs"] == []
         assert "install.sh" in stub.toasts[-1]
-        assert "2 jogo(s)" in stub.toasts[-1]  # o wrapper rodou mesmo assim
+        assert "2 jogo(s)" in stub.toasts[-1]
 
     @skip_sem_gtk_response
     def test_cancelar_a_confirmacao_nao_faz_nada(
@@ -477,7 +417,6 @@ class TestDeixarTudoPronto:
         assert "20 segundos" in capturado["corpo"]
         assert "Pause os downloads" in capturado["corpo"]
         assert "jogo estiver aberto" in capturado["corpo"]
-        # Nenhum jargão na cara da usuária.
         assert "Steam Input" not in capturado["corpo"]
         assert "inicialização" not in capturado["corpo"]
 
@@ -546,12 +485,7 @@ class TestEsteJogoNaoFunciona:
 
 
 class TestResolucaoDoAppid:
-    """Ordem das evidências: sessão viva > última janela útil > último launch.
-
-    A ordem NÃO é cosmética: para clicar no Hefesto a usuária SAI do jogo, e o
-    caso mais comum do botão é o jogo que ela já fechou porque não funcionou —
-    por isso o marker `last_run` cru é fallback legítimo, e não lixo.
-    """
+    """Ordem das evidências: sessão viva > última janela útil > último launch."""
 
     def _patch_launch_env(self, monkeypatch, *, sessao, marker):
         from hefesto_dualsense4unix.daemon import launch_env
@@ -593,8 +527,7 @@ class TestResolucaoDoAppid:
         assert DaemonActionsMixin._appid_do_jogo_ativo() is None
 
     def test_daemon_offline_nao_derruba_a_resolucao(self, monkeypatch) -> None:
-        """A GUI abre com o daemon morto o tempo todo — o IPC que estoura não
-        pode custar o fallback do marker."""
+        """A GUI abre com o daemon morto o tempo todo — o IPC que estoura não"""
         from hefesto_dualsense4unix.app import ipc_bridge
 
         self._patch_launch_env(monkeypatch, sessao=None, marker=(777, 1))
@@ -604,11 +537,6 @@ class TestResolucaoDoAppid:
 
         monkeypatch.setattr(ipc_bridge, "daemon_state_full", _explode)
         assert DaemonActionsMixin._appid_do_jogo_ativo() == 777
-
-
-# ---------------------------------------------------------------------------
-# Glade: os botões existem e são ligados em CÓDIGO (não por <signal> morto)
-# ---------------------------------------------------------------------------
 
 
 class TestGladeEWiring:
@@ -634,4 +562,4 @@ class TestGladeEWiring:
             def _get(self, _widget_id: str):  # type: ignore[override]
                 return None
 
-        _StubSemWidget()._wire_steam_simple_buttons()  # não levanta
+        _StubSemWidget()._wire_steam_simple_buttons()

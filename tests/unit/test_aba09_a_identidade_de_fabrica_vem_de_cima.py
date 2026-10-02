@@ -54,16 +54,8 @@ from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
 RAIZ = pathlib.Path(onde.RAIZ)
 
-#: O SERIAL É FORJADO, e a forma importa. Ele identifica a unidade tão bem
-#: quanto um MAC, então nenhum caractere aqui pode casar com o padrão real: o
-#: prefixo leva `Z` onde o de verdade exige dígito. Dezessete caracteres, que é
-#: o comprimento do real — um curto deixaria verde uma régua que mede o texto
-#: inteiro.
 SERIAL_FORJADO = "ZZZ9ZZ###########"
 
-#: A MESA DELA — os dois controles, os dois com a cor LIDA. É o caso que separa
-#: a cura do defeito: o do rádio não tem serial e portanto não tem `modelo`,
-#: mas a mesa sabe o nome dele.
 MESA_DELA = [
     {"pref": "p1", "uniq": "aa11", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb", "alvo": True},
@@ -71,33 +63,22 @@ MESA_DELA = [
      "nome": "Galactic Purple", "via": "BT", "transporte": "bt", "alvo": False},
 ]
 
-#: O QUE O DAEMON PUBLICA sobre os mesmos dois. Copiado da sonda de 03/09: o do
-#: rádio vem com `serial` e `modelo` nulos, e é assim para todo controle no
-#: rádio de toda mesa — não é peculiaridade da dela.
 NO_CABO = {"uniq": "aa11", "connected": True, "transport": "usb",
            "player_slot": 1, "player": None,
            "serial": SERIAL_FORJADO, "modelo": "White"}
 NO_RADIO = {"uniq": "bb22", "connected": True, "transport": "bt",
             "player_slot": 2, "player": None, "serial": None, "modelo": None}
 
-#: OS NOMES DO DESENHO. Nenhum é controle dela; são por eles que se reconhece o
-#: mockup falando pela máquina.
 DO_MOCKUP = ("Cosmic Red", "Starlight Blue")
 
 
 class JanelaDeMentira:
-    """O dublê do `DaemonActionsMixin` — e ele NÃO fala com o systemd.
-
-    Sem ele, `_repouso_do_painel` roda `systemctl status` de verdade na máquina
-    de quem executa a régua.
-    """
+    """O dublê do `DaemonActionsMixin` — e ele NÃO fala com o systemd."""
 
     def _systemctl_status_text(self, unit: str) -> str:
         return "● unidade ativa"
 
 
-#: O DIÁRIO DE MENTIRA — desde 25/09/2026 o painel termina com o registro do
-#: serviço (`a09_sistema._diario`), e a régua não pode ler o `journalctl` DELA.
 DIARIO_DE_MENTIRA = "set 25 21:00:00 daemon pronto"
 
 
@@ -109,18 +90,8 @@ def a09(monkeypatch):
     a09_sistema._JANELA_ANTIGA.clear()
 
 
-# ---------------------------------------------------------------------------
-# 1. O CONTROLE DO RÁDIO GANHA NOME — o defeito que ela veria na mesa dela
-# ---------------------------------------------------------------------------
 def test_o_controle_do_radio_e_nomeado_pela_mesa() -> None:
-    """Sem serial e sem `modelo`, o nome vem da fita — que o leu pelo broker.
-
-    **A MORDIDA:** devolva `str(c.get("modelo") or "")` em `_nome_do_plastico`.
-    Executada em 03/09/2026:
-
-        AssertionError: o controle do rádio ficou anônimo no painel técnico
-        enquanto a fita, dois centímetros acima, o chama de `Galactic Purple`
-    """
+    """Sem serial e sem `modelo`, o nome vem da fita — que o leu pelo broker."""
     linha = a09_sistema._linha_de_identidade(NO_RADIO, MESA_DELA)
     assert "Galactic Purple" in linha, (
         "o controle do rádio ficou anônimo no painel técnico enquanto a fita, "
@@ -141,12 +112,7 @@ def test_o_controle_do_cabo_continua_nomeado() -> None:
 
 
 def test_o_nome_e_o_mesmo_que_a_fita_escreve() -> None:
-    """Duas escritas, uma verdade. É a lei dela, e é o que a foto mostrava rompido.
-
-    A régua compara o painel com o chip da fita da MESMA aba, montados pela
-    mesma mesa — se algum dos dois passar a ter tabela própria, os textos se
-    afastam e isto reprova.
-    """
+    """Duas escritas, uma verdade. É a lei dela, e é o que a foto mostrava rompido."""
     fita = a09_sistema._html_da_fita(MESA_DELA)
     for controle, item in ((NO_CABO, MESA_DELA[0]), (NO_RADIO, MESA_DELA[1])):
         nome = item["nome"]
@@ -157,29 +123,15 @@ def test_o_nome_e_o_mesmo_que_a_fita_escreve() -> None:
 
 
 def test_nenhum_nome_do_desenho_entra_na_linha() -> None:
-    """Nem por queda, nem por padrão: o mockup não fala pelo painel.
-
-    A mesa aqui é a DELA; se a linha trouxesse `Cosmic Red` seria porque alguém
-    escreveu um nome em vez de ler um.
-    """
+    """Nem por queda, nem por padrão: o mockup não fala pelo painel."""
     texto = "\n".join(a09_sistema._linha_de_identidade(c, MESA_DELA)
                       for c in (NO_CABO, NO_RADIO))
     for agulha in DO_MOCKUP:
         assert agulha not in texto, f"o mockup falou pela máquina: {agulha}"
 
 
-# ---------------------------------------------------------------------------
-# 2. SEM LEITURA, SEM NOME — a regra dela, e os dois jeitos de quebrá-la
-# ---------------------------------------------------------------------------
 def test_o_nao_sei_da_mesa_nao_vira_nome() -> None:
-    """`Não sei` é a AUSÊNCIA de leitura, não uma leitura.
-
-    Escrevê-lo poria `P2 · Não sei · BT` onde cabe `P2 · BT`.
-
-    A PALAVRA SE PERGUNTA À DONA — 21/09/2026. Esta régua digitava `rádio`, e
-    a decisão dela daquele dia (a I9 revogada: a tela diz `USB`/`BT`) a deixou
-    vermelha sem que nada estivesse errado: régua de dono mede DONO.
-    """
+    """`Não sei` é a AUSÊNCIA de leitura, não uma leitura."""
     mesa = [{"uniq": "bb22", "jogador": 2, "nome": pacotes.NOME_SEM_LEITURA}]
     linha = a09_sistema._linha_de_identidade(NO_RADIO, mesa)
     via = a09_sistema.palavra_do_transporte(NO_RADIO["transport"])
@@ -219,9 +171,6 @@ def test_o_travessao_nao_vira_nome_do_aparelho() -> None:
     assert pacotes.TRAVESSAO not in linha, linha
 
 
-# ---------------------------------------------------------------------------
-# 3. O NÚMERO DO JOGADOR TEM UM DONO SÓ
-# ---------------------------------------------------------------------------
 def test_o_numero_sai_do_player_slot_e_nao_do_player() -> None:
     """A ordem é a da GTK — `player_slot` na frente, e nunca a posição.
 
@@ -241,48 +190,25 @@ def test_o_numero_sai_do_player_slot_e_nao_do_player() -> None:
 
 
 def test_sem_numero_a_linha_nao_inventa_um() -> None:
-    """`jogador_de` devolve `None` em vez de numerar por ordem de chegada.
-
-    *"Melhor calar que numerar por ordem de chegada"* — e um `P?` na tela seria
-    pior que o silêncio: ele parece um número que ninguém leu direito.
-    """
+    """`jogador_de` devolve `None` em vez de numerar por ordem de chegada."""
     sem_slot = {"uniq": "dd44", "connected": True, "transport": "bt"}
     linha = a09_sistema._linha_de_identidade(sem_slot, [])
     assert "P?" not in linha and not linha.startswith("P"), linha
 
 
-# ---------------------------------------------------------------------------
-# 4. A MESA CHEGA AO PAINEL — o caminho inteiro, e não só a função da ponta
-# ---------------------------------------------------------------------------
 def test_a_mesa_atravessa_a_faixa_lenta_ate_o_painel(a09) -> None:
-    """O painel é montado na faixa lenta, e ela tinha de aprender a mesa.
-
-    Sem este teste a cura ficaria numa função que ninguém alimenta: o
-    `_repouso_do_painel` é chamado por `_ler_a_faixa_lenta`, três camadas
-    abaixo do `pacote(ctx)` que tem o `ctx.mesa` na mão.
-
-    **A MORDIDA:** tire o `mesa=mesa` do `_ler_a_faixa_lenta`. Executada em
-    03/09/2026: o painel volta a chamar o controle do rádio de nada.
-    """
+    """O painel é montado na faixa lenta, e ela tinha de aprender a mesa."""
     estado = {"controllers": [NO_CABO, NO_RADIO]}
     painel = a09._repouso_do_painel(estado, MESA_DELA)
     assert a09.ROTULO_DA_IDENTIDADE in painel
     assert "Galactic Purple" in painel, painel
-    # ELE DEIXOU DE SER O FIM DO PAINEL em 25/09/2026, por ordem dela: o fim é
-    # o registro vivo do serviço (A-09-SISTEMA-EM-TRES-SECOES-01), e a
-    # identidade fica logo acima dele — no «Copiar» e a uma rolada.
     linhas = [ln.strip() for ln in painel.splitlines()]
     assert any(ln.startswith("P2 · Galactic Purple") for ln in linhas), painel
     assert linhas[-1] == DIARIO_DE_MENTIRA, painel
 
 
 def test_a_faixa_lenta_aceita_a_mesa_e_a_repassa(a09, monkeypatch) -> None:
-    """`_ler_a_faixa_lenta(state, mesa=…)` entrega a mesa ao painel.
-
-    A régua não mede a assinatura — mede o TEXTO que sai. Uma assinatura que
-    aceitasse `mesa` e a jogasse fora passaria num teste de forma e reprova
-    aqui.
-    """
+    """`_ler_a_faixa_lenta(state, mesa=…)` entrega a mesa ao painel."""
     monkeypatch.setattr(a09, "_autostart", lambda: "enabled")
     monkeypatch.setattr(a09, "_achados", lambda *_a, **_k: [])
     monkeypatch.setattr(a09, "_perfil_da_bateria", lambda: None)
@@ -292,21 +218,8 @@ def test_a_faixa_lenta_aceita_a_mesa_e_a_repassa(a09, monkeypatch) -> None:
     assert "Galactic Purple" in painel, painel
 
 
-# ---------------------------------------------------------------------------
-# 5. NENHUMA TABELA DE COR NOVA — a regra que o enunciado desta leva repete
-# ---------------------------------------------------------------------------
 def _textos_de_codigo(fonte: pathlib.Path) -> list[tuple[int, str]]:
-    """As strings que o módulo pode ESCREVER — sem comentário e sem docstring.
-
-    A separação é por AST e não por linha, e a diferença é o que faz a régua
-    valer: comentário não entra na árvore nenhuma, e docstring é a PRIMEIRA
-    sentença de um módulo, classe ou função. O que sobra é literal de código —
-    o único lugar de onde um nome digitado alcançaria a tela.
-
-    Filtrar por "a linha começa com `#`" não serviria: a prosa que conta o
-    defeito de 03/09 tem seis linhas de docstring e nenhuma delas começa com
-    aspas.
-    """
+    """As strings que o módulo pode ESCREVER — sem comentário e sem docstring."""
     arvore = ast.parse(fonte.read_text(encoding="utf-8"))
     docs = set()
     for no in ast.walk(arvore):
@@ -324,17 +237,7 @@ def _textos_de_codigo(fonte: pathlib.Path) -> list[tuple[int, str]]:
 
 
 def test_o_pacote_nao_guarda_uma_segunda_tabela_de_nomes() -> None:
-    """Ela mapeou 28 modelos em CSV; um nome digitado aqui seria o de número 29.
-
-    *"eu mapeei as cores, glifos, controles, id e tudo mais. é pro projeto usar
-    esse meu trabalho"* — e a única cópia legítima de um nome de colorway neste
-    arquivo é a PROSA que conta o defeito. Prosa não chega à tela.
-
-    **A MORDIDA:** escreva `nome = "Cosmic Red"` dentro de qualquer função do
-    pacote. Executada em 03/09/2026:
-
-        AssertionError: nome de colorway digitado no código do pacote
-    """
+    """Ela mapeou 28 modelos em CSV; um nome digitado aqui seria o de número 29."""
     fonte = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py"
     culpadas = [f"{linha}: {texto!r}" for linha, texto in _textos_de_codigo(fonte)
                 for nome in ("Cosmic Red", "Starlight Blue", "Galactic Purple",

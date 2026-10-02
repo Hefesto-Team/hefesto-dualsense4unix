@@ -1,26 +1,4 @@
-"""BUG-INSTALL-ATROPELA-O-NAO-DO-AUTOSTART-01 + BUG-INSTALL-HELP-TRUNCADO-01.
-
-Dois defeitos medidos em 29/07/2026 no `install.sh`:
-
-(A) o passo 7a (unit do daemon) copiava, habilitava e reiniciava a unit do
-    daemon SEM olhar nem `--no-systemd` nem a resposta ao prompt do passo 6.
-    Os dois passos escrevem o MESMO arquivo, então o "não" dela era atropelado
-    três linhas depois de o passo 6 dizer "pulado"/"auto-start desativado".
-    Aqui o passo 7a e EXECUTADO de verdade (bloco extraido, bash real, stub de
-    systemctl, HOME em tmp) nos quatro cenarios: default, `--no-systemd`,
-    resposta "não" com daemon parado e resposta "não" com daemon no ar.
-    Cuidado histórico: esta casa ja teve o bug OPOSTO
-    (BUG-INSTALL-NAO-INSTALA-A-UNIT-DO-DAEMON-01), por isso o cenario default
-    exige copia + enable + restart.
-
-(B) o `--help` imprimia uma faixa FIXA do cabecalho (`sed -n '2,128p'`) que
-    envelheceu: a flag real `--force-xwayland` ficava invisivel. Aqui o
-    comando de ajuda e extraido do próprio script e EXECUTADO contra o
-    install.sh, exigindo que TODA flag documentada no cabecalho apareca.
-
-Molde: tests/unit/test_install_dkms_default.py e test_install_headless.py
-(leem o texto do install.sh; execução real de trechos extraidos).
-"""
+"""BUG-INSTALL-ATROPELA-O-NAO-DO-AUTOSTART-01 + BUG-INSTALL-HELP-TRUNCADO-01."""
 
 from __future__ import annotations
 
@@ -47,8 +25,7 @@ def _sem_comentarios(texto: str) -> str:
 
 
 def _bloco_passo(marcador: str) -> str:
-    """Texto de um passo do install.sh: do `step "N/11"` ate a linha de regua
-    (`# ---...`) que abre o passo seguinte."""
+    """Texto de um passo do install.sh: do `step "N/11"` ate a linha de regua"""
     inicio = INSTALL.index(marcador)
     fim = re.search(r"^# -{10,}", INSTALL[inicio:], re.MULTILINE)
     assert fim is not None, f"fim do bloco {marcador} não encontrado"
@@ -59,26 +36,7 @@ BLOCO_7A = _bloco_passo('step "7a/11"')
 
 
 def _constantes_do_install() -> str:
-    """As constantes literais de coluna 0 do install.sh, LIDAS do install.sh.
-
-    O install.sh escreve o contrato destas réguas com todas as letras (na régua
-    do `--dry-run`): *"dezenas de testes desta casa EXTRAEM um bloco deste
-    arquivo (do `step "N/11"` até a régua seguinte) e o EXECUTAM num bash com
-    preâmbulo mínimo"*. Preâmbulo mínimo, sob `set -u`, é um shell que só tem o
-    que a régua injetou — e em 01/09/2026 o passo 7a passou a ler a chave do
-    Hefesto (`${XDG_CONFIG_HOME}/${APP_ID}/DESLIGADO-pela-chave.flag`, commit
-    76195576) sem que este preâmbulo fosse junto. O bloco morria com
-    `APP_ID: variável não associada` e os três cenários reprovavam A CURA, não
-    o defeito que eles existem para pegar.
-
-    O valor é LIDO, nunca digitado: cravar `hefesto-dualsense4unix` aqui criaria
-    um segundo dono para o nome do aplicativo. E lê TODAS as constantes desse
-    formato, não só a que faltou hoje — assim a próxima constante que um passo
-    usar não derruba a régua de novo.
-
-    Sai sem `readonly` de propósito: o preâmbulo do harness vem depois e precisa
-    poder sobrescrever o que descreve o cenário sob teste.
-    """
+    """As constantes literais de coluna 0 do install.sh, LIDAS do install.sh."""
     achados = re.findall(r'^readonly ([A-Z_][A-Z0-9_]*)="([^"$`]*)"$', INSTALL, re.MULTILINE)
     assert achados, "nenhuma constante literal em coluna 0 no install.sh"
     return "".join(f"{nome}='{valor}'\n" for nome, valor in achados)
@@ -119,11 +77,6 @@ def _roda_passo_7a(
     env = dict(os.environ)
     env["PATH"] = f"{stubs}:{env.get('PATH', '/usr/bin:/bin')}"
     env["HOME"] = str(casa)
-    # O XDG_CONFIG_HOME vai para dentro do tmp junto com o HOME: desde 01/09 o
-    # passo 7a procura a chave do Hefesto em `${XDG_CONFIG_HOME}/${APP_ID}/`, e
-    # sem esta linha o cenário dependeria do que houvesse na config de quem roda
-    # a suíte — uma chave posta lá zeraria `enable_daemon` e faria o cenário
-    # default reprovar por motivo nenhum.
     env["XDG_CONFIG_HOME"] = str(casa / ".config")
     resultado = subprocess.run(
         [BASH, "-c", script],
@@ -144,8 +97,6 @@ class TestPasso7aObedece:
     """(A) — o passo 7a honra --no-systemd e a resposta do passo 6."""
 
     def test_default_sem_flag_copia_habilita_e_sobe(self, tmp_path: Path) -> None:
-        # Guarda contra o bug OPOSTO (install NUNCA instalava a unit do daemon):
-        # sem flag e com "sim" no passo 6, tudo continua acontecendo.
         r = _roda_passo_7a(tmp_path, skip_systemd=0, enable_daemon=1, daemon_ativo=False)
         assert r.returncode == 0, r.stderr
         assert r.unit_target.exists(), "unit do daemon não foi copiada no default"
@@ -168,7 +119,6 @@ class TestPasso7aObedece:
     def test_resposta_nao_copia_mas_nao_habilita_nem_inicia(self, tmp_path: Path) -> None:
         r = _roda_passo_7a(tmp_path, skip_systemd=0, enable_daemon=0, daemon_ativo=False)
         assert r.returncode == 0, r.stderr
-        # A unit CONTINUA sendo copiada (simetria com o uninstall, que a remove).
         assert r.unit_target.exists(), "a unit precisa ser copiada mesmo sem auto-start"
         assert f"enable {UNIT}" not in r.log_systemctl, (
             'ela respondeu "não" ao auto-start no boot e o passo 7a habilitou'
@@ -180,8 +130,6 @@ class TestPasso7aObedece:
         assert "auto-start NÃO habilitado" in r.stdout
 
     def test_resposta_nao_com_daemon_no_ar_so_reinicia(self, tmp_path: Path) -> None:
-        # Reinstalacao por cima: o daemon em memoria e o binário ANTIGO. Trocar
-        # o binário e legitimo; habilitar no boot, não.
         r = _roda_passo_7a(tmp_path, skip_systemd=0, enable_daemon=0, daemon_ativo=True)
         assert r.returncode == 0, r.stderr
         assert f"restart {UNIT}" in r.log_systemctl
@@ -193,8 +141,6 @@ class TestPasso7aContratoDeTexto:
     """(A) — o gate precisa existir no texto, antes de qualquer ação."""
 
     def test_enable_daemon_nasce_fora_do_if_do_passo_6(self) -> None:
-        # Sob `set -u`, se `enable_daemon` so existisse dentro do ramo `else` do
-        # passo 6, o passo 7a mataria o install com --no-systemd.
         assert re.search(r"^enable_daemon=0$", INSTALL, re.MULTILINE), (
             "enable_daemon precisa nascer em coluna 0 (fora do if do passo 6)"
         )
@@ -211,12 +157,6 @@ class TestPasso7aContratoDeTexto:
         assert codigo.index('"${enable_daemon}"') < primeiro_enable
 
     def test_cabecalho_nao_mente_mais_sobre_o_default(self) -> None:
-        # POR SÍMBOLO, NUNCA POR ARITMÉTICA (20/09/2026). Esta linha dizia
-        # `[:200]`, e commit a commit a frase vivia na linha 200 exata desde
-        # 19/09: a documentação da flag `--no-fechar-o-no` somou nove linhas ao
-        # cabeçalho e a empurrou para a 209. A frase nunca saiu do cabeçalho —
-        # o que olhava um número mágico era a régua. O cabeçalho tem fim
-        # objetivo: a primeira linha que não começa por `#`.
         linhas = INSTALL.splitlines()
         fim = next(
             (
@@ -271,7 +211,6 @@ class TestHelpCompleto:
         assert "Reexecutável (idempotente)." in r.stdout, (
             "o --help não chega a última linha do cabecalho"
         )
-        # E não passa dele: a primeira linha de código não pode sair no help.
         assert "set -euo pipefail" not in r.stdout
 
     @pytest.mark.parametrize("flag", ["--force-xwayland", "--no-snd-quirk"])
@@ -310,8 +249,6 @@ class TestFlagSugeridaExiste:
         )
 
     def test_parser_do_install_realmente_nao_conhece_a_flag(self) -> None:
-        # A prova de que a sugestao antiga era veneno: o parser de flags não tem
-        # case para ela, entao ela cai no `*)` que aborta com código 2.
         inicio = INSTALL.index('for arg in "$@"; do')
         parser = _sem_comentarios(INSTALL[inicio : INSTALL.index("\ndone\n", inicio)])
         assert "--disable-usb-audio" not in parser
@@ -322,22 +259,7 @@ class TestDocumentacaoHonesta:
     """(D) — docs/usage/instalacao.md não pode mentir nos pontos medidos."""
 
     def test_aponta_a_versao_corrente_e_nao_a_branch_antiga(self) -> None:
-        """A tag citada sai do `pyproject.toml`, não de um número escrito aqui.
-
-        Este teste já foi a muralha que ele existe para impedir: travava
-        `git checkout v0.3.0` como texto, então corrigir a página para a
-        release nova REPROVAVA — e o defeito que ele deveria pegar (a página
-        ficar uma release atrás) era exatamente o que ele protegia. Derivar a
-        versão da fonte única inverte isso.
-
-        Mordida: devolver `v0.3.0` à página, ou publicar a 0.5.0 sem tocar
-        nela, reprova aqui.
-
-        A página instala pelo ramo padrão, como o README (a tag da 0.9.4.5 é de
-        antes da interface das dez abas). Por isso o `git checkout` deixou de
-        ser obrigatório: o que se cobra é a frase da versão e, se um `git
-        checkout v<tag>` voltar, que a tag seja a da versão canônica.
-        """
+        """A tag citada sai do `pyproject.toml`, não de um número escrito aqui."""
         versao = re.search(
             r'^version\s*=\s*"([^"]+)"',
             (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"),
@@ -366,21 +288,6 @@ class TestDocumentacaoHonesta:
         for termo in ("5.86", "bt-agent", "hefesto-bt-health-watchdog.timer", "bt-bonds"):
             assert termo in DOC, f"cura de BT default ausente da página: {termo}"
 
-
-# ---------------------------------------------------------------------------
-# O QUE O INSTALADOR IMPRIME FALA COM QUEM INSTALA (28/09/2026)
-#
-# O título de cada passo, os avisos, o que o ensaio «faria», o log do
-# desinstalador e a frase de cada dependência da tabela chegam a quem instala.
-# O ID da tarefa que fez cada mudança, a «Onda» e «esta casa» não dizem nada a
-# essa pessoa: o `git log` já os guarda. Os comentários ficam de fora; a frase
-# que só o `--help` imprime é conferida pelo cabeçalho. O «dela» não entra
-# aqui porque a Steam também é «ela» nas mensagens, e «casa» sozinha também não,
-# porque é o verbo («se XDG_CURRENT_DESKTOP casa»).
-#
-# A MORDIDA: devolver o `(LUZ-DO-MIC-01)` à frase do `pactl` na tabela de
-# dependências, ou o `(Onda T)` ao log do desinstalador, reprova aqui.
-# ---------------------------------------------------------------------------
 
 _O_QUE_IMPRIME = re.compile(
     r"""^\s*(?:step|warn|die|info|ok|log|_faria|_faria_root|_nao_faria|printf|echo)\b

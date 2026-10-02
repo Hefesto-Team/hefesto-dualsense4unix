@@ -33,17 +33,11 @@ import pytest
 
 from tests.conftest import arvore_congelada
 
-#: Código de saída que o gravador reserva para "o daemon está de pé".
 RECUSA_POR_DAEMON_VIVO = 5
 
 
 def _carregar_o_gravador():
-    """Importa o script pelo caminho, registrando-o em `sys.modules`.
-
-    O registro não é detalhe: sem ele o `@dataclass` do módulo estoura em
-    `_is_type`, porque `dataclasses` procura o módulo do dono pelo nome e
-    encontra `None`. Custou uma medição confusa para descobrir.
-    """
+    """Importa o script pelo caminho, registrando-o em `sys.modules`."""
     caminho = arvore_congelada() / "scripts" / "record_hid_capture.py"
     spec = importlib.util.spec_from_file_location("record_hid_capture", caminho)
     assert spec is not None and spec.loader is not None
@@ -67,14 +61,7 @@ def _socket_de_ipc(runtime_dir: Path) -> Path:
 
 @pytest.fixture
 def runtime_curto() -> Iterator[Path]:
-    """Um `XDG_RUNTIME_DIR` que caiba num caminho de socket AF_UNIX.
-
-    O limite do kernel é 108 bytes, e o `tmp_path` do pytest sozinho já passa
-    disso quando somado ao nome do socket. O berço de tmp da casa
-    (BERCO-DE-TMP-01) é curto, e esta fixture VARRE o que criou — deixar o
-    diretório para o berço varrer só funciona em sessão verde, e foi assim
-    que 906 diretórios se acumularam antes.
-    """
+    """Um `XDG_RUNTIME_DIR` que caiba num caminho de socket AF_UNIX."""
     import shutil
     import tempfile
 
@@ -119,8 +106,6 @@ def test_recusa_e_nao_grava_com_o_socket_de_pe(tmp_path, monkeypatch, runtime_cu
         f"saiu {processo.returncode}, stderr={processo.stderr!r}"
     )
     assert "daemon está de pé" in processo.stderr
-    # A recusa tem de ENSINAR: sem o comando de parar e o de trazer de volta,
-    # ela vira obstáculo em vez de guarda.
     assert "systemctl --user stop hefesto-dualsense4unix.service" in processo.stderr
     assert "systemctl --user start hefesto-dualsense4unix.service" in processo.stderr
     assert not saida.exists(), "recusou e mesmo assim criou o arquivo de saída"
@@ -133,29 +118,20 @@ def test_sem_ninguem_atendendo_o_guarda_nao_dispara():
 
 
 def test_arquivo_de_socket_orfao_nao_conta_como_daemon(monkeypatch, runtime_curto):
-    """Nó no disco não é prova: um daemon morto de forma feia deixa o arquivo.
-
-    Quem responde é a conexão. Este caso é o que separa "existe socket" de
-    "existe daemon", e é a razão de o guarda tentar conectar em vez de olhar
-    o disco.
-    """
+    """Nó no disco não é prova: um daemon morto de forma feia deixa o arquivo."""
     runtime = runtime_curto
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
 
     orfao = _socket_de_ipc(runtime)
     orfao.parent.mkdir(parents=True, exist_ok=True)
-    orfao.touch()  # arquivo comum, ninguém escutando
+    orfao.touch()
 
     modulo = _carregar_o_gravador()
     assert modulo.daemon_esta_vivo() is False
 
 
 def test_a_flag_de_escape_existe_e_carimba_a_captura():
-    """`--com-o-daemon-vivo` desarma a recusa, e o header registra a ressalva.
-
-    Um guarda sem escape vira obstáculo; um escape sem carimbo vira mentira
-    silenciosa daqui a três meses. As duas coisas andam juntas.
-    """
+    """`--com-o-daemon-vivo` desarma a recusa, e o header registra a ressalva."""
     fonte = (arvore_congelada() / "scripts" / "record_hid_capture.py").read_text(
         encoding="utf-8"
     )
@@ -168,12 +144,7 @@ def test_a_flag_de_escape_existe_e_carimba_a_captura():
 
 @pytest.mark.parametrize("comando_do_adr", ["--script"])
 def test_o_adr_008_cita_uma_flag_que_nao_existe(comando_do_adr):
-    """Lápide: o ADR-008 manda gravar com `--script`, e o gravador não tem isso.
-
-    Fica como teste para que a nota datada do ADR não seja desfeita por
-    engano — se um dia a flag passar a existir, este caso reprova e alguém
-    relê a nota em vez de deixar as duas versões brigando em silêncio.
-    """
+    """Lápide: o ADR-008 manda gravar com `--script`, e o gravador não tem isso."""
     fonte = (arvore_congelada() / "scripts" / "record_hid_capture.py").read_text(
         encoding="utf-8"
     )

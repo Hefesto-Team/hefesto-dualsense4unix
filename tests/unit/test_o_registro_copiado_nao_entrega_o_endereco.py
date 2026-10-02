@@ -1,22 +1,4 @@
-"""O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01 — a régua do dono das formas do endereço.
-
-O dono é ``core/formas_do_endereco.py``. Esta régua mede o que ELE faz: as
-seis formas, as duas ordens de byte, os separadores, o virtual derivado, o
-serial, e o que não pode ser corrompido (o carimbo, o PID, o UUID, o despejo).
-E mede os que o chamam (onda 2): os seis mascaradores do produto e o
-``_id_visivel`` (régua 3), o diário (4), o «Copiar» (5), o ensaio do touchpad
-num clone limpo (6) e as três réguas de forma (7).
-
-**Nenhum endereço aparece literal aqui**: os portões de anonimato varrem
-``tests/``. O endereço é montado em tempo de execução, na faixa das fixtures
-(``aa:bb:cc``), com os octetos 4 e 5 só de algarismos, para que o par forme
-um MM:SS válido: é o carimbo que a contraprova da
-O-ENDERECO-NUNCA-CHEGA-A-CONVERSA-01 viu corrompido. O detector de janelas é
-desta régua e não do dono: duas réguas independentes é o que revela.
-
-As mordidas estão escritas como teste (``test_mordida_*``): cada uma arranca
-uma parte do dono e confere que a régua reprova.
-"""
+"""O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01 — a régua do dono das formas do endereço."""
 from __future__ import annotations
 
 import ast
@@ -58,10 +40,7 @@ def _cache_limpo() -> Iterator[None]:
 
 
 def _janelas_que_sobram(texto: str, octetos: tuple[str, ...] = OCTETOS) -> list[str]:
-    """Os pedaços com o octeto 4 ou o 5 que sobraram, medidos aqui, sem o dono.
-
-    Por substring e sem alinhar: mais estrito que o dono.
-    """
+    """Os pedaços com o octeto 4 ou o 5 que sobraram, medidos aqui, sem o dono."""
     baixo = texto.lower()
     achados = []
     for inicio in (1, 2, 3):
@@ -250,16 +229,8 @@ def test_conhecido_que_nao_e_endereco_nem_serial_e_ignorado() -> None:
     )
 
 
-# --- o que não é endereço fica -------------------------------------------------------
-
-
 def _linhas_que_nao_sao_endereco() -> dict[str, str]:
-    """As cinco da contraprova, o `dev:`, o caminho de /sys e as duas do diário de 27/09.
-
-    Montadas, nunca literais. As duas do diário (o appid da Steam e o carimbo de
-    versão do perfil) têm seis algarismos depois do ``_``: a forma 3 as lia como
-    sufixo de nó.
-    """
+    """As cinco da contraprova, o `dev:`, o caminho de /sys e as duas do diário de 27/09."""
     uuid = "-".join(("1f0e2d3c", "4b5a", "6978", "8796", "a5b4c3" + "d2e1f0"))
     par = OCTETOS[3], OCTETOS[4]
     return {
@@ -295,9 +266,6 @@ def test_o_que_nao_e_endereco_fica(nome: str) -> None:
     assert dono.mascarar(linha, conhecidos=[ENDERECO]) == linha
 
 
-# --- mascarar_endereco -------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "grafia",
     [
@@ -322,12 +290,12 @@ def test_mascarar_endereco_em_cada_grafia(grafia: str) -> None:
         "",
         "dev:0005:054C:0CE6.0003",
         "path:/dev/hidraw3",
-        "x" + "".join(OCTETOS),  # a peneira faria doze hex daqui
+        "x" + "".join(OCTETOS),
         ENDERECO + "/",
         "".join(OCTETOS)[:-1],
         "".join(OCTETOS) + "0",
-        " ".join(OCTETOS),  # o espaço não é da forma
-        ":".join(OCTETOS[:3]) + "-" + "-".join(OCTETOS[3:]),  # dois separadores
+        " ".join(OCTETOS),
+        ":".join(OCTETOS[:3]) + "-" + "-".join(OCTETOS[3:]),
         f"hefesto-ponte-{SUFIXO}-sink",
     ],
 )
@@ -344,9 +312,6 @@ def test_mascarar_endereco_e_o_virtual() -> None:
     numerado = ":".join(("02", "fe", "00", "00", "03", "01"))
     assert dono.mascarar_endereco(numerado) == ":".join(("02", "fe", "00", "00", "00", "01"))
     assert dono.mascarar_endereco(":".join(MASCARADO)) == ":".join(MASCARADO)
-
-
-# --- formas_do_endereco -------------------------------------------------------------------
 
 
 def _pedacos_esperados(octetos: tuple[str, ...]) -> set[str]:
@@ -366,7 +331,7 @@ def test_formas_do_endereco_sao_as_janelas_nas_duas_ordens_e_em_todo_separador()
     pedacos = dono.formas_do_endereco(OCTETOS)
     assert pedacos == _pedacos_esperados(OCTETOS)
     assert len(pedacos) == 3 * 2 * len(SEPARADORES) * 2
-    assert "aabbcc" not in pedacos  # o fabricante não é escondido
+    assert "aabbcc" not in pedacos
     assert dono.formas_do_endereco(ENDERECO) == pedacos
     assert dono.formas_do_endereco("".join(OCTETOS).upper()) == pedacos
 
@@ -389,9 +354,6 @@ def test_formas_do_endereco_sem_o_que_a_mascara_ja_zerou() -> None:
 )
 def test_formas_do_endereco_de_um_nao_endereco_e_vazio(valor: Any) -> None:
     assert dono.formas_do_endereco(valor) == frozenset()
-
-
-# --- o serial -----------------------------------------------------------------------------
 
 
 def _serial_forjado_na_forma_real() -> str:
@@ -447,9 +409,6 @@ def test_o_serial_tem_um_dono_e_as_copias_nao_divergem(caminho: str, nome: str) 
     assert valor in ("dono", getattr(dono, nome)), (caminho, nome)
 
 
-# --- o dono não puxa o diário -------------------------------------------------------------
-
-
 _BIBLIOTECA_PADRAO_DO_DONO = {"__future__", "collections.abc", "dataclasses", "functools", "re"}
 
 
@@ -476,9 +435,6 @@ def test_importar_o_dono_nao_puxa_o_diario_nem_o_vpad() -> None:
         env=os.environ.copy(), check=True,
     ).stdout.strip()
     assert saida == "[]", saida
-
-
-# --- as mordidas --------------------------------------------------------------------------
 
 
 def _nunca() -> re.Pattern[str]:
@@ -595,11 +551,6 @@ def test_mordida_a_peneira_inventa_endereco(monkeypatch: pytest.MonkeyPatch) -> 
     assert dono.mascarar_endereco("x" + "".join(OCTETOS)) is not None
 
 
-# --- régua 3: um dono -----------------------------------------------------------------------
-#
-# Os seis mascaradores do produto e o `_id_visivel` da aba Perfis chamam o dono. Cada um
-# guarda a grafia que devolvia; nenhum devolve o cru.
-
 _OS_QUE_CHAMAM_O_DONO = {
     "battery_journal.mascarar_endereco": (
         "src/hefesto_dualsense4unix/daemon/battery_journal.py", "mascarar_endereco"),
@@ -622,11 +573,7 @@ _API_DO_DONO = {"mascarar", "mascarar_endereco"}
 
 
 def _o_corpo_chama_o_dono(fonte: str, nome: str) -> tuple[bool, list[str]]:
-    """(o corpo de ``nome`` chama o dono?, as contas próprias que ele ainda tem).
-
-    Conta própria é o que a máscara de antes fazia à mão: ``re``, ``split``, a
-    fatia de octeto e a peneira dos dígitos hex.
-    """
+    """(o corpo de ``nome`` chama o dono?, as contas próprias que ele ainda tem)."""
     arvore = ast.parse(fonte)
     apelidos: set[str] = set()
     nomes: set[str] = set()
@@ -702,7 +649,6 @@ def _sem_o_diario() -> list[str]:
     return sorted(n for n in _OS_QUE_CHAMAM_O_DONO if not n.startswith("a09_sistema"))
 
 
-#: A grafia que cada um devolvia, e que guarda: o que sai de um endereço de entrada.
 _A_GRAFIA_DE_CADA_UM: dict[str, Callable[[str], str]] = {
     "battery_journal.mascarar_endereco": lambda _grafia: ":".join(MASCARADO),
     "gesto_de_reconexao.mascarar": lambda _grafia: ":".join(MASCARADO),
@@ -745,7 +691,6 @@ def test_cada_um_tira_o_hash_do_virtual(nome: str) -> None:
         assert _hash_que_sobra(str(mascarar(virtual)), virtual) == [], nome
 
 
-#: O corpo do `sinal_da_barra.mascarar` até 28/09/2026: só dois-pontos, e o resto cru.
 _O_CORPO_DE_ANTES = textwrap.dedent('''
     def mascarar(mac: str) -> str:
         partes = mac.split(":")
@@ -782,9 +727,6 @@ def test_o_serial_que_o_dono_recusa_sai_todo_em_cerquilha(monkeypatch: pytest.Mo
     assert cor.mascarar_serial(serial) == serial[:publicos] + "#" * (len(serial) - publicos)
     corrompido = serial[:publicos] + "\ufffd" + serial[publicos + 1:]
     assert cor.mascarar_serial(corrompido) == "#" * len(corrompido)
-
-
-# --- régua 4: o diário nasce mascarado ------------------------------------------------------
 
 
 class _TerminalDeMentira(io.StringIO):
@@ -917,10 +859,6 @@ def test_um_defeito_no_dono_nao_derruba_o_log(monkeypatch: pytest.MonkeyPatch) -
     assert _janelas_que_sobram(saida) == []
 
 
-# --- régua 5: o «Copiar» -------------------------------------------------------------------
-
-#: Um segundo endereço, que só o `maquina.json` conhece: o despejo invertido dele no painel
-#: só sai mascarado se o «Copiar» levar as chaves dela como conhecidas.
 _SO_DA_MAQUINA = ("aa", "bb", "cc", "21", "43", "5d")
 
 
@@ -1038,8 +976,6 @@ def test_mordida_o_copiar_sem_o_maquina_json_deixa_o_despejo_dele(
     assert _janelas_que_sobram(texto, _SO_DA_MAQUINA) != []
 
 
-# --- régua 6: o ensaio do touchpad abre num clone limpo -------------------------------------
-
 _ENSAIO_DO_TOUCHPAD = RAIZ / "scripts/ensaios/o_touchpad_chega_na_tela_de_baixo.py"
 _PASTAS_LOCAIS = ("scripts/ensaios", "scripts")
 
@@ -1053,16 +989,7 @@ def _versionados() -> set[str]:
 
 
 def _imports_que_nao_resolvem(fonte: str, versionados: set[str], vistos: set[str]) -> list[str]:
-    """Os imports que um clone limpo não resolve, seguindo os módulos locais que ele traz.
-
-    Resolve: a biblioteca padrão, o pacote, um módulo de `scripts/` VERSIONADO, e um
-    terceiro que o PROJETO declara. Um arquivo local que o git não tem não resolve.
-
-    A pergunta ao terceiro é ao dono dela, `test_os_portoes_declaram_o_que_importam.py`
-    (o `pyproject.toml` e as `EXCECOES` com motivo, onde o `gi` do sistema mora), e não
-    ao ambiente: o `find_spec` respondia «esta venv tem o pacote?», e a resposta mudava
-    com a máquina (sem `gi` no lint-test, com um `gi` falso depois da coleta).
-    """
+    """Os imports que um clone limpo não resolve, seguindo os módulos locais que ele traz."""
     from tests.unit.test_os_portoes_declaram_o_que_importam import (
         EXCECOES,
         _declaradas_no_pyproject,
@@ -1117,14 +1044,6 @@ def test_mordida_o_import_do_modulo_ignorado_reprova() -> None:
     ]
 
 
-# A régua 6 nos três mundos (O-CI-DA-DEV-VOLTA-A-VERDE-02): o `gi` real (a máquina dela e
-# o job do GTK real), sem `gi` (um processo novo com o `gi` bloqueado, como o lint-test) e
-# com um `gi` falso de `__spec__` vazio no `sys.modules` (o lint-test depois da coleta).
-# A resposta é a mesma nos três, porque a pergunta é ao projeto e não ao ambiente.
-# MORDIDA: devolva o `importlib.util.find_spec(topo)` e os dois mundos sem o `gi` real
-# reprovam: o subprocesso com o `ModuleNotFoundError` do bloqueio, e o do `gi` falso com o
-# `ValueError: gi.__spec__ is None` da corrida 36503520655.
-
 _A_REGUA_6_NUM_PROCESSO_NOVO = '''
 import json, sys
 from tests.unit.test_o_registro_copiado_nao_entrega_o_endereco import (
@@ -1178,11 +1097,7 @@ def test_o_terceiro_nao_declarado_continua_pego(tmp_path: Path) -> None:
 def test_o_ensaio_tira_o_home_antes_do_dono(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Um nome de pessoa com `_` e seis letras hex tem a forma do sufixo de nó.
-
-    MORDIDA (conferência de 28/09/2026): passe o dono antes do `replace` do HOME
-    no `diga` — o HOME mascarado deixa de casar e sai inteiro.
-    """
+    """Um nome de pessoa com `_` e seis letras hex tem a forma do sufixo de nó."""
     ensaio = _carregar(_ENSAIO_DO_TOUCHPAD, "_o_touchpad_na_regua")
     monkeypatch.setenv("HOME", "/home/joao_decade")
     ensaio.diga(f"/home/joao_decade/.config/azahar uniq={ENDERECO}")
@@ -1192,10 +1107,6 @@ def test_o_ensaio_tira_o_home_antes_do_dono(
     assert _janelas_que_sobram(impresso) == []
 
 
-# --- régua 7: as réguas de forma veem a invertida -------------------------------------------
-
-#: O endereço do lar de mentira: fora da faixa que a régua do dono chama de sintética
-#: (`aa:bb` e `02`), na faixa localmente administrada, que a IEEE nunca dá a fabricante.
 _DA_MAQUINA = ("06", "de", "ad", "21", "43", "5d")
 _REGUA_DO_DONO = RAIZ / "scripts/check_o_endereco_dela_em_toda_forma.py"
 
@@ -1206,7 +1117,7 @@ def _carregar(caminho: Path, nome: str) -> Any:
     spec = importlib.util.spec_from_file_location(nome, caminho)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
-    sys.modules[nome] = modulo  # o `dataclass` procura o módulo pelo nome
+    sys.modules[nome] = modulo
     spec.loader.exec_module(modulo)
     return modulo
 
@@ -1254,13 +1165,7 @@ def test_a_regua_do_dono_ve_o_despejo_invertido_pelo_arquivo(tmp_path: Path) -> 
 
 
 def test_a_regua_do_dono_le_cada_separador_pelo_arquivo(tmp_path: Path) -> None:
-    """O endereço com `:` `-` `_` `.`, pelo caminho inteiro da régua (o pré-filtro incluso).
-
-    MORDIDA (conferência de 28/09/2026): estreite o `_PODE_TER_PEDACO` da régua
-    a `[: ]` — a linha com hífen, sublinhado ou ponto é pulada antes das
-    janelas, e esta régua reprova. A do despejo invertido acima não via isso:
-    ela só escreve espaço e colado.
-    """
+    """O endereço com `:` `-` `_` `.`, pelo caminho inteiro da régua (o pré-filtro incluso)."""
     lar = _o_lar_de_mentira(tmp_path)
     copiado = tmp_path / "copiado.txt"
     linhas = [
@@ -1274,7 +1179,6 @@ def test_a_regua_do_dono_le_cada_separador_pelo_arquivo(tmp_path: Path) -> None:
     assert r.returncode == 1, r.stdout + r.stderr
     for n in range(1, len(linhas) + 1):
         assert f"copiado.txt:{n}: " in r.stdout, (n, r.stdout)
-    # O que vem depois do caminho nunca leva o 4.º e o 5.º, em grafia nenhuma.
     depois_do_caminho = "\n".join(
         linha.split("copiado.txt", 1)[-1] for linha in r.stdout.splitlines())
     for separador in (":", "-", "_", ".", " ", ""):
@@ -1291,10 +1195,6 @@ def _o_virtual_com_a_mascara_da_casa() -> tuple[str, ...]:
 
 def test_a_regua_do_dono_ve_o_virtual_com_a_mascara_da_casa(tmp_path: Path) -> None:
     """A máscara do diário de antes de 28/09 escrevia o virtual assim, e sobram uns dois candidatos.
-
-    MORDIDA (conferência de 28/09/2026): tire o `com_a_mascara` do
-    `pedacos_dos_virtuais` da régua — o virtual meio mascarado passa, com os
-    dois bytes do hash à mostra.
     """
     lar = _o_lar_de_mentira(tmp_path)
     copiado = tmp_path / "copiado.txt"
@@ -1312,11 +1212,7 @@ def test_a_regua_do_dono_ve_o_virtual_com_a_mascara_da_casa(tmp_path: Path) -> N
 
 
 def test_os_dois_bytes_do_hash_sem_o_prefixo_nao_sao_achado() -> None:
-    """Sem o prefixo, o 3.º e o 6.º do virtual casam por acaso com todo despejo da árvore.
-
-    É a razão medida para a régua ler o meio mascarado com os seis octetos
-    juntos: quem trocar por quatro (`<3.º> 00 00 <6.º>`) enche o portão de ruído.
-    """
+    """Sem o prefixo, o 3.º e o 6.º do virtual casam por acaso com todo despejo da árvore."""
     regua = _carregar(_REGUA_DO_DONO, "_regua_do_dono_no_ruido")
     meio = _o_virtual_com_a_mascara_da_casa()
     pedacos = regua.pedacos_dos_virtuais(regua.virtuais_da_maquina({_DA_MAQUINA}))
@@ -1325,11 +1221,7 @@ def test_os_dois_bytes_do_hash_sem_o_prefixo_nao_sao_achado() -> None:
 
 
 def test_as_reguas_leem_a_corrida_impar_nas_duas_paridades() -> None:
-    """Um algarismo solto na frente desalinha a corrida colada, e o dono lê as duas paridades.
-
-    MORDIDA (conferência de 28/09/2026): leia só a paridade do começo nas duas
-    réguas de forma — o endereço colado atrás de um algarismo passa pelas duas.
-    """
+    """Um algarismo solto na frente desalinha a corrida colada, e o dono lê as duas paridades."""
     from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
 
     forma = _carregar(RAIZ / "scripts/check_endereco_de_radio.py", "_regua_de_forma_impar")
@@ -1346,11 +1238,7 @@ def test_as_reguas_leem_a_corrida_impar_nas_duas_paridades() -> None:
 
 
 def test_a_regua_do_dono_le_todo_virtual_que_o_dono_dos_vivos_veste() -> None:
-    """O número de MACs por aparelho é do `uhid_gamepad`, não uma cópia na régua.
-
-    MORDIDA: corte a lista da régua (`itertools.islice(…, 3)`) — o quarto
-    virtual em diante some da busca.
-    """
+    """O número de MACs por aparelho é do `uhid_gamepad`, não uma cópia na régua."""
     from hefesto_dualsense4unix.integrations import uhid_gamepad
 
     regua = _carregar(_REGUA_DO_DONO, "_regua_do_dono_na_conta")
@@ -1401,7 +1289,7 @@ def test_a_regua_de_forma_acusa_os_pedacos_do_endereco_acusado(tmp_path: Path) -
     forma = _carregar(RAIZ / "scripts/check_endereco_de_radio.py", "_regua_de_forma_2")
     acusado = ("06", "1b", "44", "11", "3a", "b7")
     pedacos = forma.pedacos_dos_acusados([acusado])
-    assert forma.acusa_pedaco(_despejo(acusado), pedacos) == ["A0"] * 3  # as três janelas
+    assert forma.acusa_pedaco(_despejo(acusado), pedacos) == ["A0"] * 3
     assert forma.acusa_pedaco(f"uniq={''.join(acusado)}", pedacos) != []
     mascarado = (*acusado[:3], "00", "00", acusado[5])
     assert forma.acusa_pedaco(_despejo(mascarado), pedacos) == []

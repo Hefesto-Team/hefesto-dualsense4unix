@@ -1,35 +1,4 @@
-"""O PORTÃO DO PORTÃO — a lista de portões desta casa é UMA SÓ.
-
-O DEFEITO, e ele é medido (INFRA-DE-EXECUCAO-01, M9): até 25/08/2026 a lista de
-portões vivia em DOIS lugares -- o bloco "Antes de fechar qualquer leva" do
-``GUIA.md`` e os jobs de ``.github/workflows/ci.yml``. Duas listas para a
-mesma coisa é o defeito que a regra do fato-errado existe para matar, e ele
-COBROU: o ``validar-caducos.py`` **roda no CI e não estava no bloco local**, e
-foi assim que um literal caduco atravessou uma leva inteira e só apareceu no
-vermelho do CI, depois de tudo commitado.
-
-A CURA É DE POSIÇÃO, NÃO DE CONTEÚDO: a lista passou a morar em
-``scripts/portoes.sh``, versionada -- o ``GUIA.md`` não pode ser a fonte
-porque ele **não é versionado** (``.gitignore``:90) e um worktree de agente
-nasce sem ele. E este teste é o que impede a divergência de voltar: ele lê os
-dois lados e reprova nomeando o script que ficou de fora, em qualquer das duas
-direções.
-
-TODA DIFERENÇA LEGÍTIMA TEM DE ESTAR DECLARADA, com o motivo, nas linhas
-``FORA-DO-LOCAL`` / ``FORA-DO-CI`` do próprio ``portoes.sh``. Diferença
-declarada é decisão; diferença calada é a M9 de novo. É por isso que o teste
-não tem lista embutida: uma terceira lista dentro do teste seria o mesmo defeito
-com roupa nova.
-
-A MORDIDA (arranque a cura, veja reprovar, devolva):
-  - tire a linha ``caducos`` da tabela de ``portoes.sh``: o teste reprova
-    nomeando ``scripts/validar-caducos.py`` como rodando no CI e ausente do
-    bloco local -- que é, literalmente, o defeito de 24/08 reproduzido;
-  - acrescente um passo ``run: python3 scripts/inventado.py`` ao ``ci.yml``: o
-    teste reprova nomeando ``scripts/inventado.py``.
-  Os dois lados são exercitados por dublê em ``test_a_regua_sabe_recusar_*``,
-  porque régua que só sabe passar não é régua (armadilha A2 desta casa).
-"""
+"""O PORTÃO DO PORTÃO — a lista de portões desta casa é UMA SÓ."""
 
 from __future__ import annotations
 
@@ -41,10 +10,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 PORTOES_SH = RAIZ / "scripts" / "portoes.sh"
 CI_YML = RAIZ / ".github" / "workflows" / "ci.yml"
 
-# As ferramentas que valem como portão mesmo sem serem um caminho em `scripts/`.
-# Não é uma lista de portões -- é o alfabeto que o extrator reconhece dos DOIS
-# lados. Acrescentar um nome aqui não declara portão nenhum: só faz o extrator
-# enxergá-lo, e a comparação continua sendo entre os dois arquivos.
 _FERRAMENTAS = ("ruff", "mypy", "shellcheck", "pytest", "pre-commit")
 
 _RE_SCRIPT = re.compile(r"scripts/[A-Za-z0-9_./-]+\.(?:py|sh)")
@@ -67,14 +32,7 @@ def _fichas(texto: str) -> set[str]:
 
 
 def fichas_do_ci(texto_ci: str) -> set[str]:
-    """O que o CI de fato RODA -- só o conteúdo dos blocos ``run:``.
-
-    Ler o arquivo inteiro contaria comentário e `uses:` como portão: o
-    ``ci.yml`` cita ``scripts/build_appimage_gui.sh`` e
-    ``scripts/install_fonts.sh`` em comentário, e nenhum dos dois é rodado por
-    ele. Portão que acusa quem está certo ensina a próxima pessoa a não
-    acreditar nele.
-    """
+    """O que o CI de fato RODA -- só o conteúdo dos blocos ``run:``."""
     fichas: set[str] = set()
     linhas = texto_ci.splitlines()
     i = 0
@@ -101,12 +59,7 @@ def fichas_do_ci(texto_ci: str) -> set[str]:
 
 
 def _linhas_declaradas(texto_sh: str) -> list[str]:
-    """A tabela crua de ``portoes.sh --listar``, sem rodar o script.
-
-    Ler o arquivo em vez de executá-lo é de propósito: o teste tem de valer
-    também dentro de um dublê, onde não há árvore de git nem venv para o script
-    resolver.
-    """
+    """A tabela crua de ``portoes.sh --listar``, sem rodar o script."""
     saida: list[str] = []
     dentro = None
     for linha in texto_sh.splitlines():
@@ -169,11 +122,6 @@ def confere(texto_sh: str, texto_ci: str) -> list[str]:
     return queixas
 
 
-# ---------------------------------------------------------------------------
-# A régua contra a árvore de verdade
-# ---------------------------------------------------------------------------
-
-
 def test_a_lista_local_e_a_do_ci_sao_a_mesma() -> None:
     queixas = confere(
         PORTOES_SH.read_text(encoding="utf-8"), CI_YML.read_text(encoding="utf-8")
@@ -196,12 +144,7 @@ def test_todo_portao_declarado_existe_no_disco() -> None:
 
 
 def test_listar_imprime_a_mesma_tabela_que_o_script_roda() -> None:
-    """`--listar` é a superfície que este teste lê; se ela mentir, o teste mente.
-
-    Roda o script de verdade e compara com a leitura estática. É a régua da
-    régua: o dia em que `--listar` filtrar alguma coisa que a corrida executa,
-    este teste é quem avisa.
-    """
+    """`--listar` é a superfície que este teste lê; se ela mentir, o teste mente."""
     saida = subprocess.run(
         ["bash", str(PORTOES_SH), "--listar"],
         check=True,
@@ -213,10 +156,6 @@ def test_listar_imprime_a_mesma_tabela_que_o_script_roda() -> None:
         PORTOES_SH.read_text(encoding="utf-8")
     )
 
-
-# ---------------------------------------------------------------------------
-# A régua sabe RECUSAR — os dois lados, com dublê (armadilha A2)
-# ---------------------------------------------------------------------------
 
 _SH_DUBLE = """#!/usr/bin/env bash
 _LISTA() {

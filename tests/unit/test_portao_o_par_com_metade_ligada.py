@@ -10,17 +10,17 @@ O RAIO DO ESTRAGO — cinco leitores em produção, e DOIS estão na tela
 --------------------------------------------------------------------
 Censo de 25/08/2026. Nenhum destes cinco pode responder ``True``:
 
-1. ``daemon/lifecycle.py:2276`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
+1. ``daemon/lifecycle.py:1272`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
    do gate do desktop, e ela **nunca é devolvida**;
-2. ``daemon/subsystems/hotkey.py:261`` — ramo de modo, num ``or`` cujo outro
+2. ``daemon/subsystems/hotkey.py:153`` — ramo de modo, num ``or`` cujo outro
    lado (``steam_input_excecao_ativa``) carrega a decisão sozinho;
-3. ``daemon/ipc_handlers.py:2210`` — publica ``vpad_suspenso`` no ``state_full``
+3. ``daemon/ipc_handlers.py:1680`` — publica ``vpad_suspenso`` no ``state_full``
    sempre ``False``, e a docstring ao lado documenta um contrato de DOIS estados
    dos quais um é inalcançável;
-4. ``app/actions/home_actions.py:1139`` (**Onda 2 · Início**) — a frase da
+4. ``app/actions/home_actions.py:695`` (**Onda 2 · Início**) — a frase da
    ponte exige ``excecao_ativa and vpad_suspenso``: a aba **nunca** consegue
    dizer "pelo Steam Input";
-5. ``app/actions/emulation_actions.py:529`` (**Onda 5 · Emulação**) — a frase
+5. ``app/actions/emulation_actions.py:300`` (**Onda 5 · Emulação**) — a frase
    *"Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, e o
    controle virtual foi recolhido"* está escrita, revisada, e é **inalcançável**:
    a chave dela É a constante do item 1.
@@ -127,26 +127,16 @@ from pathlib import Path
 _RAIZ = Path(__file__).resolve().parents[2]
 _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: Onde a sprint mandou olhar. O daemon é quem tem estado de sessão em memória;
-#: a janela lê o que ele publica e não guarda par nenhum.
 _TERRITORIO = "daemon"
 
 
-# ===========================================================================
-# O registro — assimetria com razão datada
-# ===========================================================================
-
-#: Pares cuja metade desligada é DECISÃO, não descuido. A chave é o nome do
-#: atributo; a razão cita a medição que a sustenta, porque "confie em mim" não
-#: é razão. Uma entrada que deixa de ser verdade REPROVA — ver
-#: `test_nenhuma_declaracao_ficou_obsoleta`.
 #: sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
 _PAR_ACEITO: dict[str, str] = {
     "_steam_input_vpad_suspenso": (
         "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1). O armador "
-        "`suspend_vpads_for_steam_input` (daemon/subsystems/gamepad.py:882) tem ZERO "
+        "`suspend_vpads_for_steam_input` (daemon/subsystems/gamepad.py:491) tem ZERO "
         "chamadores em src/; os desarmadores `resume_vpads_after_steam_input` "
-        "(gamepad.py:526) e `start_gamepad_emulation_desfecho` (lifecycle.py:1641) "
+        "(gamepad.py:297) e `start_gamepad_emulation_desfecho` (lifecycle.py:853) "
         "estão vivos. NÃO é descuido: o commit `d8022ea` (09/08/2026) tirou a chamada "
         "da borda de entrada da exceção de Steam Input e pôs `esconder_o_fisico_para_o_"
         "jogo` no lugar, por decisão DELA — ESCONDER-EM-VEZ-DE-SAIR-01, *a allowlist do "
@@ -156,26 +146,19 @@ _PAR_ACEITO: dict[str, str] = {
         "(`coop_derrubado_pela_excecao_steam_input`, 20 ocorrências num dia). "
         "A ENTRADA FICA ATÉ A DECISÃO DELA, e o que falta está escrito: são CINCO os "
         "leitores em produção, e DOIS deles estão na tela — a frase da ponte em "
-        "app/actions/home_actions.py:1139 (Início) e a frase do vpad recolhido em "
-        "app/actions/emulation_actions.py:529 (Emulação) são inalcançáveis. Os outros "
-        "três: lifecycle.py:2276 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
-        "ipc_handlers.py:2210, e nenhuma dessas leituras pode ser verdadeira. Ou as "
+        "app/actions/home_actions.py:695 (Início) e a frase do vpad recolhido em "
+        "app/actions/emulation_actions.py:300 (Emulação) são inalcançáveis. Os outros "
+        "três: lifecycle.py:1272 (CALADA_VPAD_SUSPENSO), hotkey.py:153 e "
+        "ipc_handlers.py:1680, e nenhuma dessas leituras pode ser verdadeira. Ou as "
         "leituras saem, ou a suspensão ganha caminho de volta — as duas mexem em "
         "arquivo de outra frente e a escolha é DELA, não deste portão."
     ),
 }
 
-#: Toda razão carrega data: razão sem idade vira paisagem. Mesmo par de réguas
 #: do irmão (`portao_a_casa_sabe_e_o_produto_nao_faz._confere_razoes`).
 _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 
-#: Abaixo disto a razão não cabe o endereço de onde a metade se perdeu.
 _RAZAO_MINIMA = 120
-
-
-# ===========================================================================
-# A varredura
-# ===========================================================================
 
 
 @dataclass
@@ -197,10 +180,6 @@ class Par:
     def descreva(self) -> str:
         vivos = self.desarmadores if self.metade_morta == "True" else self.armadores
         mortos = self.armadores if self.metade_morta == "True" else self.desarmadores
-        # As leituras vão INTEIRAS, uma por linha. Truncar a lista era o defeito
-        # do próprio instrumento: quem lê a reprovação precisa do endereço de
-        # CADA sítio que vai passar a mentir, e é essa lista que roteia o
-        # conserto entre as frentes. Cortar no sexto escondia `hotkey.py`.
         enderecos = "\n".join(f"        {onde}" for onde in self.leituras)
         return (
             f"{self.flag}: nenhum caminho de produção põe {self.metade_morta}.\n"
@@ -211,13 +190,7 @@ class Par:
 
 
 def _prosa(arvore: ast.AST) -> set[int]:
-    """Os literais que NÃO são despacho: docstring de módulo/classe/função e ``__all__``.
-
-    As duas armadilhas do cabeçalho moram aqui. Sem este descarte, um nome
-    citado dezoito vezes na própria docstring conta como dezoito chamadores — e
-    foi assim que a primeira medição deste portão saiu verde com o defeito na
-    frente dela.
-    """
+    """Os literais que NÃO são despacho: docstring de módulo/classe/função e ``__all__``."""
     fora: set[int] = set()
     for no in ast.walk(arvore):
         corpo = getattr(no, "body", None)
@@ -251,9 +224,6 @@ class _Escritas(ast.NodeVisitor):
         self.generic_visit(no)
         self.pilha.pop()
 
-    # O nome mixedCase é EXIGÊNCIA do `ast.NodeVisitor`, que despacha por
-    # `visit_<Nome do nó>` — renomear para minúsculas desliga o visitante em
-    # silêncio, e a varredura ficaria verde sem ver função nenhuma.
     visit_FunctionDef = _funcao  # type: ignore[assignment]  # noqa: N815
     visit_AsyncFunctionDef = _funcao  # type: ignore[assignment]  # noqa: N815
 
@@ -305,30 +275,12 @@ def _indexar(raiz: Path) -> _Indice:
                 and id(no) not in fora
                 and no.value.isidentifier()
             ):
-                # Despacho por string (`getattr(x, "nome")`) é caminho de produção,
-                # e ignorá-lo pegou a varredura do irmão CINCO vezes numa medição só.
-                #
-                # O `isidentifier()` NASCEU EM 25/08/2026, e nasceu de um defeito
-                # reproduzido pelo agente da aba Emulação: sem ele, a régua fazia
-                # `findall` de TODA palavra de TODA string — e uma FRASE DE TELA que
-                # citasse o nome do símbolo bastava para o portão declarar "tem
-                # chamador" e se calar. Ele mesmo silenciou este portão sem querer,
-                # escrevendo o nome numa mensagem de erro.
-                #
-                # Despacho por string é sempre o nome INTEIRO e sozinho
-                # (`getattr(x, "meu_metodo")`, `_HANDLERS["meu_metodo"]`); prosa
-                # nunca é. Descartar a prosa é o que separa uma régua que mede de
-                # uma que se desliga quando alguém escreve bem.
                 palavras.add(no.value)
     return _Indice(chamadas=chamadas, corpos=corpos, palavras=palavras)
 
 
 def _tem_chamador(nome: str, indice: _Indice) -> bool:
-    """Régua plana: alguém em ``src/`` chama este nome fora do próprio corpo?
-
-    ``__init__`` e companhia contam sempre: quem os chama é a linguagem, e
-    cobrar chamador explícito deles acusaria toda classe da árvore.
-    """
+    """Régua plana: alguém em ``src/`` chama este nome fora do próprio corpo?"""
     if nome.startswith("__") and nome.endswith("__"):
         return True
     if nome in indice.palavras:
@@ -358,13 +310,7 @@ def _le_a_flag(no: ast.AST, flag: str) -> bool:
 
 
 def _acessores(flag: str, raiz: Path) -> set[str]:
-    """As funções de ``src/`` que DEVOLVEM a flag.
-
-    ``steam_input_vpad_suspenso`` é o caso de hoje: ela envelopa
-    ``getattr(daemon, "_steam_input_vpad_suspenso", False)`` num ``return``, e
-    é por ela que passam TRÊS dos cinco leitores. Sem este salto o portão
-    encontrava dois endereços e o defeito tinha cinco.
-    """
+    """As funções de ``src/`` que DEVOLVEM a flag."""
     nomes: set[str] = set()
     for caminho in _modulos(raiz):
         texto = caminho.read_text(encoding="utf-8")
@@ -428,18 +374,13 @@ def _leituras(flag: str, raiz: Path) -> list[str]:
                 continue
             faixa = corpos.get(str(nome))
             if faixa and faixa[0] <= no.lineno <= faixa[1]:
-                # A chamada está DENTRO do próprio acessor: recursão, não leitor.
                 continue
             achados.append(f"{caminho.relative_to(raiz)}:{no.lineno} (via {nome})")
     return sorted(set(achados))
 
 
 def pares_com_metade_ligada(raiz: Path | None = None) -> dict[str, Par]:
-    """As flags de ``daemon/`` que o produto lê e só consegue escrever de um lado.
-
-    Devolve dicionário vazio quando a árvore está sã — e essa é a resposta
-    esperada assim que a decisão dela fechar o caso do registro.
-    """
+    """As flags de ``daemon/`` que o produto lê e só consegue escrever de um lado."""
     alvo = raiz or _SRC
     territorio = alvo / _TERRITORIO
     if not territorio.is_dir():  # pragma: no cover - cópia mutilada
@@ -460,7 +401,6 @@ def pares_com_metade_ligada(raiz: Path | None = None) -> dict[str, Par]:
     acusados: dict[str, Par] = {}
     for flag, lados in sorted(escritas.items()):
         if not lados[True] or not lados[False]:
-            # Flag de mão única não é PAR: ela nunca prometeu dois estados.
             continue
         par = Par(
             flag=flag,
@@ -473,16 +413,9 @@ def pares_com_metade_ligada(raiz: Path | None = None) -> dict[str, Par]:
             continue
         par.leituras = _leituras(flag, alvo)
         if not par.leituras:
-            # Sem leitor não há relato, e sem relato não há mentira: é código
-            # morto, e código morto é assunto do portão irmão.
             continue
         acusados[flag] = par
     return acusados
-
-
-# ===========================================================================
-# O portão
-# ===========================================================================
 
 
 class TestTodoParTemAsDuasMetadesLigadas:
@@ -504,14 +437,7 @@ class TestTodoParTemAsDuasMetadesLigadas:
         )
 
     def test_nenhuma_declaracao_ficou_obsoleta(self) -> None:
-        """Registro que não se limpa vira paisagem.
-
-        É esta metade que avisa quem coordena — sozinha, sem ninguém lembrar de
-        conferir — se alguma frente religar a suspensão do vpad: o par volta a
-        ser simétrico, a entrada deixa de descrever a árvore, e o portão cobra
-        o apagamento dela. O irmão já fez isso uma vez, com
-        `forbidden_reintroductions` (13/08/2026).
-        """
+        """Registro que não se limpa vira paisagem."""
         acusados = pares_com_metade_ligada()
         obsoletas = sorted(flag for flag in _PAR_ACEITO if flag not in acusados)
         assert not obsoletas, (
@@ -534,10 +460,6 @@ class TestTodoParTemAsDuasMetadesLigadas:
                 "(DD/MM/AAAA): razão sem idade vira paisagem."
             )
 
-
-# ===========================================================================
-# O portão apontado para si mesmo
-# ===========================================================================
 
 _PLANTIO = "daemon/subsystems/plantio_da_mordida.py"
 
@@ -572,12 +494,7 @@ _ARMADOR_COM_CHAMADOR = _ARMADOR_SEM_CHAMADOR.replace(
 
 
 def _copia_de_src(destino: Path) -> Path:
-    """Uma cópia de ``src/`` onde se fabrica defeito sem sujar a árvore viva.
-
-    Mutilar a árvore viva contamina a medição de quem estiver trabalhando ao
-    lado — e desde 25/08/2026 isso tem cicatriz própria (R5 de
-    COMO-REGER-AGENTES: a mordida é destrutiva enquanto dura).
-    """
+    """Uma cópia de ``src/`` onde se fabrica defeito sem sujar a árvore viva."""
     copia = destino / "src" / "hefesto_dualsense4unix"
     copia.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(_SRC, copia, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -588,14 +505,7 @@ class TestOPortaoMorde:
     """Um portão que nunca reprovou é decoração com nome de portão."""
 
     def test_a_regua_ve_o_par_de_hoje(self) -> None:
-        """A régua conferida contra resposta JÁ CONHECIDA (armadilha A5).
-
-        Se a varredura quebrasse, devolveria vazio e o portão ficaria verde para
-        sempre sem medir nada. O par de hoje é a testemunha, e ela é
-        auto-renovável: se alguém religar a suspensão, este caso e o
-        `test_nenhuma_declaracao_ficou_obsoleta` reprovam JUNTOS, dizendo a
-        mesma coisa por dois caminhos.
-        """
+        """A régua conferida contra resposta JÁ CONHECIDA (armadilha A5)."""
         acusados = pares_com_metade_ligada()
         assert "_steam_input_vpad_suspenso" in acusados, (
             "a régua deixou de ver o par que a sprint mediu. OU a suspensão do vpad "
@@ -612,41 +522,13 @@ class TestOPortaoMorde:
         )
         assert par.desarmadores.get("resume_vpads_after_steam_input") is True, (
             "a régua não vê o chamador direto de `resume_vpads_after_steam_input` "
-            "(gamepad.py:526) — sem isso ela acusaria as duas metades e o portão "
+            "(gamepad.py:297) — sem isso ela acusaria as duas metades e o portão "
             "estaria medindo ausência, não assimetria."
         )
 
     def test_a_lista_de_leituras_atravessa_o_acessor(self) -> None:
-        """O endereço é o que roteia o conserto, e ele estava faltando.
-
-        A flag ``_steam_input_vpad_suspenso`` é tocada DIRETO em dois lugares, e
-        os leitores que decidem comportamento chamam ``steam_input_vpad_suspenso``
-        — o acessor que a devolve. Medindo só o toque direto, o portão acusava o
-        par e apontava dois endereços quando o defeito tinha cinco: a razão de
-        calada em ``lifecycle.py`` e o ramo de modo em ``hotkey.py`` ficavam
-        invisíveis para quem lesse a reprovação.
-        """
+        """O endereço é o que roteia o conserto, e ele estava faltando."""
         par = pares_com_metade_ligada()["_steam_input_vpad_suspenso"]
-        # O NÚMERO ENVELHECEU E NINGUÉM VIU — corrigido em 31/08/2026.
-        # Estava `hotkey.py:261`, e a leitura pelo acessor mora na **285**
-        # (`if steam_input_excecao_ativa(daemon) or steam_input_vpad_suspenso(daemon)`);
-        # a 261 virou linha de DOCSTRING quando o arquivo cresceu. O portão
-        # sempre apontou a 285 — quem estava errado era esta linha.
-        #
-        # É a classe que o `validar-citacoes-de-linha.py` passou a cobrir hoje,
-        # e ele NÃO alcança aqui: ele varre `docs/` e as planilhas de
-        # `docs/data/`, não número cravado em teste.
-        #
-        # E O NÚMERO PAROU DE SER CRAVADO — 01/09/2026, na terceira vez que ele
-        # envelheceu. A frase acima dizia "enquanto um teste citar
-        # `arquivo:linha` à mão, ele envelhece calado"; ele envelheceu DUAS
-        # vezes na mesma sessão, porque duas curas em `lifecycle.py` empurraram
-        # a linha 12 e depois mais 9. A cura é a que a casa já usa em toda
-        # parte: **derivar**. Procura-se a CHAMADA, e o número sai dela.
-        #
-        # A MORDIDA CONTINUA INTEIRA: se o portão parar de nomear o sítio, a
-        # asserção reprova igual — o que deixou de existir é a manutenção de um
-        # número que nada tinha a ver com o que o caso mede.
         for arquivo, chamada in (
             ("daemon/lifecycle.py", "if steam_input_vpad_suspenso(self):"),
             ("daemon/subsystems/hotkey.py",
@@ -669,12 +551,7 @@ class TestOPortaoMorde:
         )
 
     def test_a_regua_nao_acusa_os_pares_simetricos(self) -> None:
-        """Portão que grita dezessete vezes é desligado na primeira semana.
-
-        MEDIDO em 25/08/2026: 17 flags de `daemon/` têm escritor dos dois lados.
-        Se a acusação crescer sem `_PAR_ACEITO` crescer junto, é a régua
-        quebrando — não a árvore.
-        """
+        """Portão que grita dezessete vezes é desligado na primeira semana."""
         acusados = pares_com_metade_ligada()
         assert len(acusados) <= 3, (
             f"a régua acusou {len(acusados)} pares: {sorted(acusados)}. Em "
@@ -698,11 +575,7 @@ class TestOPortaoMorde:
         assert acusados["_plantio_da_mordida"].metade_morta == "True"
 
     def test_a_regua_sabe_recusar(self, tmp_path: Path) -> None:
-        """Régua que só sabe passar não é régua (armadilha A2).
-
-        Mesmo plantio, com UMA linha a mais: o armador ganha chamador. O par
-        fica simétrico e a acusação some — é o caminho de recusa exercido.
-        """
+        """Régua que só sabe passar não é régua (armadilha A2)."""
         copia = _copia_de_src(tmp_path)
         (copia / _PLANTIO).write_text(_ARMADOR_COM_CHAMADOR, encoding="utf-8")
         acusados = pares_com_metade_ligada(copia)
@@ -712,14 +585,7 @@ class TestOPortaoMorde:
         )
 
     def test_a_regua_nao_confunde_prosa_com_chamador(self, tmp_path: Path) -> None:
-        """As duas armadilhas do cabeçalho, plantadas.
-
-        O plantio cita `armar_o_plantio(daemon)` dentro de uma docstring e
-        repete o nome em `__all__`. Se qualquer um dos dois contasse como
-        chamador, o caso acima ficaria verde com o defeito na frente dele — que
-        é exatamente o que aconteceu na primeira medição desta varredura, em
-        25/08/2026.
-        """
+        """As duas armadilhas do cabeçalho, plantadas."""
         assert "armar_o_plantio(daemon)" in _ARMADOR_SEM_CHAMADOR, (
             "o plantio perdeu a citação em docstring e parou de exercer a armadilha 1"
         )
@@ -743,39 +609,7 @@ class TestOPortaoMorde:
         assert "_plantio_da_mordida" not in pares_com_metade_ligada(copia)
 
     def test_uma_frase_de_tela_nao_desliga_o_portao(self, tmp_path: Path) -> None:
-        """A TERCEIRA armadilha, achada em 25/08/2026 — e a que quase passou.
-
-        As duas do teste acima são docstring e ``__all__``, e a varredura já as
-        descarta. **Esta é outra: uma FRASE COMUM.** Enquanto a régua fazia
-        ``findall`` de toda palavra de toda string, bastava um texto de tela, uma
-        mensagem de erro ou um comentário-em-string citar o nome do símbolo para
-        a varredura declarar "tem chamador" e se calar.
-
-        Foi um agente que a achou, e do pior jeito possível: **ele silenciou este
-        portão sem querer**, escrevendo o nome do símbolo numa mensagem para o
-        usuário. A régua não reprovou, e não reprovar era o defeito.
-
-        A cura é uma linha — ``no.value.isidentifier()``. Despacho por string é
-        sempre o nome INTEIRO e sozinho (``getattr(x, "meu_metodo")``); prosa
-        nunca é.
-
-        **A RECEITA DE REPRODUÇÃO, corrigida em 25/08/2026 pelo conferente da
-        leva — e a correção importa.** A primeira versão desta docstring dizia
-        *"arranque o ``isidentifier()`` e ele reprova"*. **Não reprova**, e quem
-        escreveu não conferiu: a cura são DUAS linhas no mesmo trecho, e sozinho
-        o ``isidentifier()`` não faz nada, porque a linha de baixo guarda o
-        literal INTEIRO (``palavras.add(no.value)``) — e a frase inteira nunca
-        casa com o nome do símbolo.
-
-        **O defeito volta com a linha de baixo**, que era
-        ``palavras.update(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", no.value))``:
-        é o ``findall`` que quebra a frase em palavras soltas e faz uma delas
-        casar. Para reproduzir, troque as DUAS.
-
-        Fica escrito porque receita de mordida que não morde é pior que receita
-        nenhuma: ela dá a quem vier depois a confiança de que a régua está
-        protegida quando não está.
-        """
+        """A TERCEIRA armadilha, achada em 25/08/2026 — e a que quase passou."""
         frase = (
             "Não consegui aplicar: o armar_o_plantio do daemon recusou o pedido."
         )
@@ -793,204 +627,31 @@ class TestOPortaoMorde:
         )
 
 
-# ===========================================================================
-# A SEGUNDA RÉGUA DESTE ARQUIVO — o endereço que envelheceu sozinho
-# ===========================================================================
-#
-# LEVA-4-B (26/08/2026). Esta casa cita endereço de linha em comentário e em
-# docstring o tempo todo, e o endereço é o que ROTEIA o conserto: quem lê
-# "`_handle_daemon_status` (`ipc_handlers.py:1971`)" abre a linha 1971 e
-# acredita no que encontra lá.
-#
-# Só que endereço de linha se move sozinho. Os 164 commits da madrugada de
-# 25/08 deslocaram `daemon/ipc_handlers.py` inteiro, e **nada reprovou**: o
-# `scripts/validar-citacoes-de-linha.py` varre `docs/`, não `src/` — rodado no
-# HEAD desta árvore, ele diz *"OK: 123 citações em 13 documentos"* com dez
-# arquivos de código apontando para o vazio.
-#
-# O preço não é estético. Um endereço morto manda a próxima pessoa ler uma
-# linha que hoje fala de outro assunto, e ela conclui o que aquela linha diz —
-# foi assim que a razão do `stop_autoswitch` acabou prometendo que "a thread é
-# derrubada pelo fim do processo" apontando para um `shutdown` que já a
-# derrubava em linha.
-#
-# O QUE ESTA RÉGUA NÃO ALCANÇA, e é de propósito:
-#   - endereço que caiu numa linha PLAUSÍVEL sem símbolo ao lado passa. Sem
-#     âncora nomeada não há como computar o número real, e inventar um seria
-#     medição falsa. O que ela pega é o que dá para PROVAR;
-#   - alvo fora do repositório (`pydualsense.py`) é ignorado: não é nosso.
-
 import tokenize
 
-#: `arquivo.py:NNN` ou `arquivo.py:NNN-MMM`, em qualquer prosa.
 _CITACAO = re.compile(r"(?P<alvo>[A-Za-z0-9_./]+\.py):(?P<ini>\d+)(?:-(?P<fim>\d+))?")
 
-#: Símbolo em crase (simples ou dupla) na vizinhança da citação.
 _EM_CRASE = re.compile(r"``?([^`\n]+?)``?")
 
-#: A janela de prosa em que a âncora é procurada: a linha da citação e as duas
-#: acima. Medido em 26/08/2026: três linhas cobrem toda citação desta árvore
-#: cujo símbolo veio antes da quebra; quatro só somariam falso positivo.
 _JANELA = 3
 
-#: CITAÇÕES MEDIDAS COMO ENVELHECIDAS EM 26/08/2026 QUE ESTA FRENTE NÃO PODE
-#: CONSERTAR — o arquivo citante é de outra posse (regra R-A da leva: a frente
-#: escreve nos arquivos DELA e relata o resto). Não é lista de tolerância: o
-#: `test_a_lista_de_pendentes_nao_vira_paisagem` exige que cada uma continue
-#: QUEBRADA, então consertar uma obriga a tirá-la daqui.
-#:
-#: Duas famílias, e a diferença importa para quem for fechar:
-#:  * **endereço deslocado** — o alvo existe e mudou de linha. Conserto: medir
-#:    com `grep -n` e reescrever o número;
-#:  * **endereço histórico** — o código citado FOI REMOVIDO pela própria cura
-#:    que o comentário registra (as quatro listas de bases em
-#:    `utils/repo_files.py`, mortas pela BG-BASES-01). Não há número novo para
-#:    escrever: o conserto é a prosa dizer que o endereço é de antes da cura.
 #: sai com: O-CODIGO-SEM-NARRADOR-01
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
-    # AS TRÊS DA FRASES-E-DICAS-01 SAÍRAM DAQUI NA COSTURA (13/09/2026): quem
-    # coordena reapontou `aba02.py` e os dois docstrings de `a10_perfis.py` pelo
-    # símbolo que cada um cita no `hefesto_vivo.py`.
-    # VINTE E SETE SAÍRAM DAQUI EM 10/09/2026, de uma vez: a leva do som
-    # (SOM-FIADO-01) deslocou `backend_pydualsense.py`, `lifecycle.py` e
-    # `a02_controles.py`, e reapontar TUDO por SÍMBOLO — nunca por aritmética —
-    # curou de passagem 27 endereços que estavam declarados como pendentes de
-    # outra posse. A régua acusou as 27 no mesmo fôlego (*«já conferem — apague
-    # de `_CITACOES_PENDENTES`»*), que é exatamente o que ela existe para
-    # fazer: não deixar a lápide envelhecer calada.
-    "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:262",
-    "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:168-180",
-    # `a10_perfis.py::rodape.py:114` SAIU DAQUI NO MESMO DIA (13/09/2026): a
-    # TELA-CALADA-01 a deixou pendente por posse, e quem tem a aba Perfis
+    "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:229",
+    "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:91-103",
+    # `a10_perfis.py::rodape.py:101` SAIU DAQUI NO MESMO DIA (13/09/2026): a
     # reapontou o docstring de `editor_nome` pelo SÍMBOLO, `rodape._draft_do_ativo`.
-    # `trigger_specs.py::profiles/schema.py:161` SAIU DAQUI — 07/09/2026, e ela
-    # era da primeira família (endereço deslocado). O `_validate_mode` desceu
-    # para a linha 220 nesta leva; o comentário agora o NOMEIA, e por isso a
-    # régua voltou a poder corroborá-lo em vez de só conferir que a linha não
-    # está em branco.
-    # ONDA5-06-01 (06/09/2026) — AS QUATRO QUE O BOTÃO PS DESLOCOU, e as quatro
-    # são de arquivo que a sprint declara em `nao_toca:`. A âncora de cada uma
-    # CONTINUA EXISTINDO; só o número mudou, porque o PS ganhou dono em
-    # `profiles/manager.py` (`_empurrar_o_ps`, `_canal_do_ps`, o campo
-    # `ps_action_sink`) e em `daemon/subsystems/hotkey.py` (`definir_acao_do_ps`,
-    # `_digitar_o_ps`, `_a_metade_da_maquina`).
-    #
-    # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
-    # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   a06_navegacao.py:1161 `profiles/manager.py:570`     -> `:617`
-    #   a06_navegacao.py:1175 `profiles/manager.py:614`     -> `:673`
-    #   profiles/schema.py:1045 `daemon/subsystems/hotkey.py:1004` -> `:1234`
-    #
-    # As outras QUATRO que a mesma sprint deslocou não estão aqui porque foram
-    # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
-    # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
-    # A DE `a06_navegacao.py` -> `core/acoes_de_botao.py:285` SAIU DAQUI EM
-    # 01/10/2026: a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 deslocou o
+    # A DE `a06_navegacao.py` -> `core/acoes_de_botao.py:203` SAIU DAQUI EM
     # `acoes_de_botao.py` e a pendência passou a "conferir" por acaso. O
     # comentário agora nomeia o símbolo (`core/acoes_de_botao.resolver`).
-    # A DA O-RADIO-CONECTA-ONDE-ELA-MANDA-02 SAIU DAQUI EM 26/09/2026: o
-    # `AdaptadorDeclarado` deslocou o `utils/maquina.py`, a linha velha deixou
-    # de estar em branco e a pendência passou a "conferir" por acaso. Quem
-    # coordena reapontou `a09_sistema.py` pelo símbolo (`fundir_declaracao`).
-    # A DA TRANSPLANTE-DA-SECAO-01 SAIU DAQUI EM 24/09/2026: a
-    # AS-FRASES-QUE-A-BANCADA-ACHOU-01 deslocou o `a08_conexoes.py` e a linha
-    # velha deixou de estar em branco, então a pendência passou a "conferir" por
-    # acaso. Ela reapontou `a09_sistema.py` pelo símbolo (`a08_conexoes.pacote`),
-    # num commit isolado, porque o arquivo é da FREESTYLE-02.
-    # A DA A-SUITE-NAO-PERGUNTA-AO-SOM-01 SAIU DAQUI NA COSTURA (23/09/2026): quem
-    # coordena reapontou `a10_perfis.py` pelo símbolo — `SKIP_PRESET_SEED` e
-    # `HEFESTO_CARONA_WRAPPER` de `_hefesto_fake_env` (`conftest.py:2209` e `:2254`).
-    # A DA FRASES-E-DICAS-02 SAIU DAQUI NA COSTURA (13/09/2026): quem coordena
-    # reapontou `a09_sistema.py` para `a08_conexoes.py:3781`, o `"blocos"` do
-    # mapa do gabinete.
-    # ONDA3-MOTOR-01 (06/09/2026) — AS SEIS QUE A CURA DO `— Nada —` E DA
-    # HERANÇA DE `key_bindings` DESLOCOU. O deslocamento é de **+22 linhas** em
-    # `profiles/manager.py` e em `integrations/uinput_mouse.py`, medido linha a
-    # linha com `git show HEAD:<arquivo> | sed -n`, e as seis moram em arquivo
-    # que a sprint declara em `nao_toca:` ou que é de outra posse. A âncora de
-    # cada uma CONTINUA EXISTINDO — só o número mudou.
-    #
-    # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
-    # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   rumble_actions.py:417  `profiles/manager.py:1556-1567` — REAPONTADA em
-    #     08/09/2026 pela leva da cor única, e não pelo +22 desta lista: o
-    #     endereço "corrigido" para `:1578-1589` continuava caindo no
-    #     `_carimbar_ponte`, que não fala de teto móvel nenhum. A frase que a
-    #     citação promete ("o `auto` tem degrau que muda com a bateria, e a
-    #     casa não promete número móvel na tela") mora em `:2156-2159`.
-    #   aba06.py:1714          `uinput_mouse.py:486`  -> `:508` (`emit_touchpad_move`)
-    #   a06_navegacao.py:2205  `uinput_mouse.py:500`  -> `:508` (`emit_touchpad_move`)
-    #   a06_navegacao.py:2224  `uinput_mouse.py:466`  -> `:488` (`_emit_scroll`)
-    #   a06_navegacao.py:2766  `uinput_mouse.py:446`  -> `:468`
-    #   a08_conexoes.py:3868   `profiles/manager.py:2106` -> `:2128`
-    #
-    # As DUAS que a mesma cura deslocou dentro da minha posse não estão aqui
+    #   rumble_actions.py:330  `profiles/manager.py:924-935` — REAPONTADA em
     # porque foram corrigidas no lugar (`core/acoes_de_botao.py`, as citações de
-    # `profiles/manager.py:1856`->`:1878` e `uinput_mouse.py:355`->`:377`).
-    # ONDA5-P-01 (06/09/2026) — AS TRÊS QUE A QUARTA PORTA DESLOCOU. O piloto
-    # ganhou o seletor do dono, o `input` do "ao vivo" e o despacho do gesto
-    # vivo; o deslocamento em `interface/hefesto_vivo.py` é de **+163 linhas**
     # antes do `_fita` e de **+297** antes do `_recusou_dizendo`. As três moram
-    # em `interface/pacotes/`, que a sprint declara em `nao_toca:`. A âncora de
-    # cada uma CONTINUA EXISTINDO — só o número mudou.
-    #
-    # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
-    # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   a03_gatilhos.py:1472  `hefesto_vivo.py:1515` -> `:1678` (`_fita`)
-    #   a06_navegacao.py:2710 `hefesto_vivo.py:2288` -> `:2585` (`_recusou_dizendo`)
-    #   a10_perfis.py:1284    `hefesto_vivo.py:2288` -> `:2585` (`_recusou_dizendo`)
-    #   a09_sistema.py:1788   `hefesto_vivo.py:2111-2113` -> `:2547-2550`
-    #                         (o ramo do sucesso do `trabalhar`; a citação já
-    #                          apontava para o docstring do `_dialogo` na base
-    #                          `72690101` — só não caía em linha vazia)
-    #
-    # As TRÊS que a mesma cura deslocou FORA do `nao_toca:` não estão aqui
-    # porque foram corrigidas no lugar (`interface/aba05.py:1601`, `:1609` e
-    # `:1616` — as três citações do `data-controle` daquela aba, que já
-    # apontavam para linhas erradas antes desta leva e só agora caíram numa que
-    # a régua consegue ancorar).
-    #
-    # F7-O-NOME-ACESSIVEL (11/09/2026) — AS QUATRO QUE O BLOCO DO NOME
-    # ACESSÍVEL DESLOCOU. A cura entrou dentro da `DICA_DA_CASA`, que mora na
-    # metade de cima de `hefesto_vivo.py`: **tudo abaixo dela desceu 200
-    # linhas**, e as quatro citações são de arquivo que a sprint declara em
-    # `nao_toca:` — `interface/pacotes/` está com seis frentes dentro AGORA,
-    # aplicando mudança de texto. A âncora de cada uma CONTINUA EXISTINDO.
-    #
-    # O NÚMERO CERTO JÁ ESTÁ MEDIDO **POR SÍMBOLO**, nunca por aritmética —
-    # quem for dono do arquivo troca e apaga a linha daqui (o
-    # `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   a03_gatilhos.py:1479 `hefesto_vivo.py:2111`           -> `:2311` (`_fita`)
-    #   a06_navegacao.py:2710 `hefesto_vivo.py:3107`          -> `:3307` (`_recusou_dizendo`)
-    #   a09_sistema.py:1827 `interface/hefesto_vivo.py:3080`  -> `:3280` (`_deu_certo`)
-    #   ponte.py:277 `interface/hefesto_vivo.py:2652`         -> `:2988-2989`
-    #
-    # A DE `ponte.py` MERECE NOTA, e ela é um achado: o endereço **já estava
-    # errado** antes desta leva. Os dois pontos de extensão que a prosa promete
-    # são `ponte.escolher_arquivo = …` e `ponte.salvar_arquivo = …`, e na base
-    # `bbd61c35` eles moravam em `:2788-2789` — a citação apontava para um `#:`
-    # de outro bloco, 136 linhas acima. A régua não a pegava porque a linha não
-    # estava em branco; o deslocamento de hoje a fez cair numa que está. *Uma
-    # citação errada pode atravessar a régua enquanto o acaso a mantiver sobre
-    # texto.*
-    # AS DE `a03_gatilhos.py`, `a06_navegacao.py`, `a09_sistema.py` E
-    # `a10_perfis.py` SAÍRAM DAQUI NA COSTURA DE 13/09/2026: quem coordena
+    #   a06_navegacao.py:1882 `hefesto_vivo.py:2018` -> `:2585` (`_recusou_dizendo`)
+    #   a10_perfis.py:676    `hefesto_vivo.py:2018` -> `:2585` (`_recusou_dizendo`)
+    #   a06_navegacao.py:1882 `hefesto_vivo.py:2476`          -> `:3307` (`_recusou_dizendo`)
     # reapontou cada uma pelo símbolo (`_fita`, `_recusou_dizendo`,
-    # `_deu_certo`), e a de `ponte.py` de novo pelos dois pontos de extensão.
-    # A DE `ponte.py` SAIU DAQUI — 11/09/2026, F3-CALIBRAR, e ela saiu
-    # CURADA, não escondida. A nota de 06/09 logo acima previa isto com
-    # todas as letras: *"uma citação errada pode atravessar a régua
-    # enquanto o acaso a mantiver sobre texto"* — e o acaso desta leva ia
-    # fazer exatamente isso, pousando o `:2652` de volta numa linha com
-    # letras. Em vez de aceitar o silêncio, a prosa foi reapontada POR
-    # SÍMBOLO: os dois pontos de extensão são `ponte.escolher_arquivo` e
-    # `ponte.salvar_arquivo`, e eles moram em `hefesto_vivo.py:3021-3022`.
-    #
-    # A DE `a10_perfis.py` ENTRA NO LUGAR, e é da primeira família
     # (endereço deslocado): o `_recusou_dizendo` que ela cita desceu com o
-    # comentário que o alvo `largura` ganhou hoje. O arquivo citante é de
-    # OUTRA POSSE nesta leva — três frentes estão em `a10_perfis.py` agora —
-    # e a âncora continua existindo; só o número mudou.
 })
 
 
@@ -1013,17 +674,10 @@ class CitacaoDeLinha:
 
 
 def _resolver_alvo(alvo: str, raiz: Path) -> Path | None:
-    """O `.py` citado, dentro do repositório — ou `None` se não for nosso.
-
-    `raiz` primeiro, e não o repositório: é o que faz o dublê medir a CÓPIA de
-    `src/` em vez da árvore viva. Sem isso a régua se autoconfirmaria.
-    """
+    """O `.py` citado, dentro do repositório — ou `None` se não for nosso."""
     for candidato in (raiz / alvo, _RAIZ / alvo, _RAIZ / "src" / alvo):
         if candidato.is_file():
             return candidato
-    # O caminho parcial (`pacotes/perfil.py`) casa pelo SUFIXO, e só se um
-    # arquivo casar: até 25/09/2026 ele saía daqui como «não é nosso», e nove
-    # citações de `src/` ficavam fora da régua, uma delas podre havia semanas.
     nome, sufixo = Path(alvo).name, "/" + alvo.removeprefix("./")
     achados = [p for p in raiz.rglob(nome) if p.as_posix().endswith(sufixo)] or [
         p
@@ -1034,15 +688,7 @@ def _resolver_alvo(alvo: str, raiz: Path) -> Path | None:
     return achados[0] if len(achados) == 1 else None
 
 
-#: O que é prosa para o `tokenize`, EM QUALQUER PYTHON. Até o 3.11 uma f-string
-#: é um token STRING só; do 3.12 em diante (PEP 701) ela se parte em
-#: FSTRING_START/FSTRING_MIDDLE/FSTRING_END, e o texto dela deixa de ser STRING.
-#: Sem o FSTRING_MIDDLE, esta régua ficava CEGA no 3.12 às citações escritas
-#: dentro de f-string — medido em 27/09/2026 (corrida 36354426805 do CI): 613
-#: citações lidas no 3.10 e no 3.11, 595 no 3.12. Duas delas tinham envelhecido
-#: (`aba06.py` → `coop.py:2057`, `aba10.py` → `aba03.py:502`), e a régua
 #: reprovava só nas pernas 3.10 e 3.11 do `lint-test`, verde na mesa dela e no
-#: `gtk-real` (3.12.3), que liam 18 citações a menos.
 _TOKENS_DE_PROSA: tuple[int, ...] = tuple(
     tipo
     for tipo in (tokenize.COMMENT, tokenize.STRING, getattr(tokenize, "FSTRING_MIDDLE", None))
@@ -1051,12 +697,7 @@ _TOKENS_DE_PROSA: tuple[int, ...] = tuple(
 
 
 def _prosa_de(modulo: Path) -> dict[int, str]:
-    """As linhas do módulo que são COMENTÁRIO ou STRING, pela numeração real.
-
-    `tokenize` e não regex: é o que separa `# ver foo.py:12` de um `foo.py:12`
-    que por acaso aparecesse em código. Linha multi-token vira uma entrada só.
-    O texto de f-string conta como STRING em todo Python — ver `_TOKENS_DE_PROSA`.
-    """
+    """As linhas do módulo que são COMENTÁRIO ou STRING, pela numeração real."""
     linhas: dict[int, str] = {}
     with modulo.open("rb") as fh:
         try:
@@ -1066,7 +707,7 @@ def _prosa_de(modulo: Path) -> dict[int, str]:
                 for offset, texto in enumerate(tok.string.splitlines()):
                     linhas.setdefault(tok.start[0] + offset, "")
                     linhas[tok.start[0] + offset] += texto
-        except (tokenize.TokenError, SyntaxError):  # módulo quebrado é de outro portão
+        except (tokenize.TokenError, SyntaxError):
             return {}
     return linhas
 
@@ -1119,7 +760,7 @@ def _blocos_definidos(linhas: list[str], nome: str) -> list[tuple[int, int, bool
 
     * **Onde o bloco ACABA.** O laço de recuo parava na primeira linha de
       coluna zero, e numa assinatura de várias linhas isso é o `)` do
-      cabeçalho: o `from_simple_choice` (`profiles/simple_match.py:203`) virava
+      cabeçalho: o `from_simple_choice` (`profiles/simple_match.py:137`) virava
       *"bloco 203-206"* com corpo até a 248, e a régua reprovava quem citasse a
       linha exata do comportamento — que é o que a prosa faz o tempo todo.
     * **Se é helper LOCAL.** Método de classe também é recuado e é endereço
@@ -1151,16 +792,7 @@ def _blocos_definidos(linhas: list[str], nome: str) -> list[tuple[int, int, bool
 
 
 def _definicao_unica(linhas: list[str], nome: str) -> tuple[int, int] | None:
-    """`(primeira, derradeira)` do bloco de `def`/`class` chamado `nome`.
-
-    Só `def` e `class`, e só quando há UMA. Atribuição simples fica de fora de
-    propósito: `address = ...` casaria com meia árvore e a régua acusaria quem
-    está certo — a pior coisa que um portão faz.
-
-    E `def` ANINHADO DENTRO DE OUTRA FUNÇÃO também fica de fora, pela mesma
-    razão. O porquê de cada exclusão, com o caso medido, está em
-    `_blocos_definidos` — que é quem lê a árvore.
-    """
+    """`(primeira, derradeira)` do bloco de `def`/`class` chamado `nome`."""
     achadas = _blocos_definidos(linhas, nome)
     if len(achadas) != 1:
         return None
@@ -1169,25 +801,7 @@ def _definicao_unica(linhas: list[str], nome: str) -> tuple[int, int] | None:
 
 
 def _endereco_corroborado(linhas: list[str], cit: CitacaoDeLinha, nomes: list[str]) -> bool:
-    """O trecho citado MOSTRA algum dos nomes da prosa em volta?
-
-    Se mostra, o endereço confere e a régua se cala — mesmo que o `def` daquele
-    nome more noutro lugar. Curado em 03/09/2026, e os dois casos que forçaram a
-    cura estavam CERTOS e eram acusados:
-
-    * `app/telas/vibracao.py:204` cita `controller_card.py:1511-1541` dizendo
-      *"li o corpo"* do `motores_no_fisico` — e ele começa exatamente na 1511. A
-      régua pegou da mesma frase o `pedido_de_vibracao_fresco`, que é o assunto
-      do parágrafo, e mandou o endereço para 1554.
-    * `interface/pacotes/a03_gatilhos.py:1947` cita `triggers_actions.py:597`
-      dizendo *"é chamado ANTES de todo envio"* — 597 é a CHAMADA, e é o que a
-      frase promete. A régua exigia a definição, na 342.
-
-    A suposição que caiu: *toda citação aponta para o `def`*. Prosa cita o ponto
-    de USO tanto quanto o de definição, e cita o símbolo que interessa, não o
-    último que apareceu entre crases. Endereço envelhecido continua pego — a
-    linha velha não tem traço do nome, que é o que a mordida planta.
-    """
+    """O trecho citado MOSTRA algum dos nomes da prosa em volta?"""
     trecho = "\n".join(linhas[cit.ini - 1 : cit.fim])
     return any(re.search(rf"\b{re.escape(nome)}\b", trecho) for nome in nomes)
 
@@ -1227,10 +841,6 @@ def enderecos_envelhecidos(raiz: Path | None = None) -> dict[str, str]:
     return queixas
 
 
-#: O alvo do dublê: a âncora fica na linha 4 e a linha 2 é código VIVO, não
-#: espaço em branco. As duas escolhas são deliberadas — um símbolo na linha 1
-#: engoliria o erro (a 2 estaria dentro do bloco dele) e uma linha 2 vazia faria
-#: a queixa sair pela régua de linha em branco, sem exercer a de âncora.
 _ALVO_PLANTADO = (
     "VALOR = 0\nOUTRO = 1\n\ndef ancora_plantada():\n    return 1\n"
 )
@@ -1246,12 +856,7 @@ def _citante_plantado(linha: int) -> str:
 
 class TestTodaCitacaoDeLinhaConfere:
     def test_toda_citacao_de_linha_em_comentario_de_codigo_confere(self) -> None:
-        """O endereço escrito em `src/` tem de apontar para o que ele promete.
-
-        A MORDIDA: envelheça um endereço de propósito — some 1 à linha citada
-        em qualquer comentário que nomeie o símbolo ao lado — e este teste
-        reprova nomeando OS DOIS NÚMEROS, o citado e o real.
-        """
+        """O endereço escrito em `src/` tem de apontar para o que ele promete."""
         queixas = enderecos_envelhecidos()
         vivas = {k: v for k, v in queixas.items() if k not in _CITACOES_PENDENTES}
         assert not vivas, (
@@ -1266,11 +871,7 @@ class TestTodaCitacaoDeLinhaConfere:
         )
 
     def test_a_lista_de_pendentes_nao_vira_paisagem(self) -> None:
-        """Pendência consertada TEM de sair da lista — senão ela vira ruído.
-
-        É a metade que faz a lista se limpar sozinha: quem consertar um dos
-        endereços de outra posse descobre aqui que precisa apagar a linha.
-        """
+        """Pendência consertada TEM de sair da lista — senão ela vira ruído."""
         queixas = enderecos_envelhecidos()
         curadas = sorted(_CITACOES_PENDENTES - set(queixas))
         assert not curadas, (
@@ -1280,11 +881,7 @@ class TestTodaCitacaoDeLinhaConfere:
         )
 
     def test_a_regua_sabe_reprovar(self, tmp_path: Path) -> None:
-        """Régua que só sabe passar não é régua (armadilha A2).
-
-        Planta, numa cópia de `src/`, um comentário com o endereço ERRADO de um
-        símbolo que existe — e exige que a queixa nomeie os dois números.
-        """
+        """Régua que só sabe passar não é régua (armadilha A2)."""
         copia = _copia_de_src(tmp_path)
         (copia / "utils" / "_alvo_da_mordida.py").write_text(
             _ALVO_PLANTADO, encoding="utf-8"
@@ -1306,18 +903,7 @@ class TestTodaCitacaoDeLinhaConfere:
     def test_a_regua_le_a_citacao_dentro_de_f_string_em_qualquer_python(
         self, tmp_path: Path
     ) -> None:
-        """A citação escrita dentro de uma f-string é prosa em todo Python.
-
-        27/09/2026, corrida 36354426805 do CI: no 3.12 (PEP 701) o `tokenize`
-        parte a f-string em FSTRING_START/MIDDLE/END, e o texto dela deixou de
-        ser STRING. A régua lia 19 citações a menos na mesa dela e no
-        `gtk-real` (3.12.3), duas delas envelhecidas, e reprovava só nas pernas
-        3.10 e 3.11 do `lint-test`. O plantio é o de `test_a_regua_sabe_reprovar`,
-        agora dentro de uma f-string com um campo no meio do texto.
-
-        **A MORDIDA:** tire o `FSTRING_MIDDLE` de `_TOKENS_DE_PROSA` e este caso
-        reprova no 3.12 — a mesa dela, o `gtk-real` e a perna 3.12 do `lint-test`.
-        """
+        """A citação escrita dentro de uma f-string é prosa em todo Python."""
         copia = _copia_de_src(tmp_path)
         (copia / "utils" / "_alvo_da_mordida.py").write_text(
             _ALVO_PLANTADO, encoding="utf-8"
@@ -1336,11 +922,7 @@ class TestTodaCitacaoDeLinhaConfere:
         )
 
     def test_a_regua_nao_acusa_o_endereco_certo(self, tmp_path: Path) -> None:
-        """O outro lado do dublê: o MESMO plantio, com o número certo, passa.
-
-        Sem este caso a régua poderia estar acusando tudo — e um portão que
-        acusa sempre é desligado na primeira semana, como o irmão já mediu.
-        """
+        """O outro lado do dublê: o MESMO plantio, com o número certo, passa."""
         copia = _copia_de_src(tmp_path)
         (copia / "utils" / "_alvo_da_mordida.py").write_text(
             _ALVO_PLANTADO, encoding="utf-8"
@@ -1352,11 +934,7 @@ class TestTodaCitacaoDeLinhaConfere:
         assert not plantadas, f"a régua acusou um endereço CERTO: {plantadas}"
 
     def test_a_regua_ignora_alvo_que_nao_e_desta_casa(self, tmp_path: Path) -> None:
-        """`pydualsense.py:610` é biblioteca de terceiro — não temos as linhas.
-
-        Acusar um arquivo que não está no repositório seria gritar com quem
-        está certo: o número pode estar perfeito para a versão instalada.
-        """
+        """`pydualsense.py:610` é biblioteca de terceiro — não temos as linhas."""
         copia = _copia_de_src(tmp_path)
         (copia / "utils" / "_citante_da_mordida.py").write_text(
             "# ver `biblioteca_que_nao_existe_aqui.py:99`\nVALOR = 1\n",
@@ -1367,16 +945,7 @@ class TestTodaCitacaoDeLinhaConfere:
         ]
 
     def test_o_caminho_parcial_entra_na_regua(self, tmp_path: Path) -> None:
-        """`pacotes/perfil.py:153` é nosso, e até 25/09/2026 a régua não o via.
-
-        O `_resolver_alvo` só aceitava o caminho inteiro ou o nome solto; o
-        parcial saía como «não é nosso». Nove citações de `src/` ficavam fora,
-        e três estavam podres — uma, na a10, apontava 219 linhas antes do
-        `gravar_e_reaplicar` que ela prometia.
-
-        MORDIDA: devolva o `return None` do caminho parcial ao `_resolver_alvo`
-        — o endereço plantado some da régua, e este teste reprova.
-        """
+        """`pacotes/perfil.py:134` é nosso, e até 25/09/2026 a régua não o via."""
         copia = _copia_de_src(tmp_path)
         fundo = copia / "utils" / "fundo"
         fundo.mkdir()

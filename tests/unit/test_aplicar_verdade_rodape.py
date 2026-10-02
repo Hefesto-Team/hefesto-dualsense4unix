@@ -1,28 +1,8 @@
-"""APLICAR-VERDADE-01 — o rodapé para de dizer que aplicou quando não aplicou.
-
-A cadeia do defeito, medida antes da cura:
-
-- ``DraftApplier._apply_section`` engolia a exceção da seção com um
-  ``logger.warning`` e não registrava a falha em lugar nenhum — só os
-  sucessos entravam em ``applied``;
-- o handler ``profile.apply_draft`` respondia ``{"status": "ok", ...}``
-  SEMPRE, mesmo com todas as seções falhando;
-- ``FooterActionsMixin._on_ok`` decidia pela chave ``status`` e nunca olhava
-  ``applied`` — com as sete seções fora, a statusbar dizia "Perfil aplicado
-  ao controle.".
-
-Os testes aqui cobrem os três elos e o contrato que NÃO pode mudar: ``status``
-continua ``"ok"`` (applet, CLI e TUI decidem por ele) e resposta de daemon
-antigo, sem os campos novos, continua sendo lida como sucesso.
-"""
+"""APLICAR-VERDADE-01 — o rodapé para de dizer que aplicou quando não aplicou."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("aplicar verdade rodape")
 
 from pathlib import Path
@@ -44,11 +24,6 @@ from hefesto_dualsense4unix.testing import FakeController
 
 
 MSG_SUCESSO = "Perfil aplicado ao controle."
-
-
-# ---------------------------------------------------------------------------
-# Fixtures / helpers
-# ---------------------------------------------------------------------------
 
 
 def _fake_daemon() -> MagicMock:
@@ -128,11 +103,6 @@ def _aplicar(
     return stub
 
 
-# ---------------------------------------------------------------------------
-# Elo 1 — o applier registra a falha
-# ---------------------------------------------------------------------------
-
-
 class TestApplierRegistraAFalha:
     def test_secao_que_falhou_entra_em_failed(self, applier: DraftApplier) -> None:
         """A seção inválida some de `applied` E aparece em `failed` com motivo."""
@@ -167,11 +137,6 @@ class TestApplierRegistraAFalha:
         applier.apply({"leds": {"lightbar_rgb": [10, 20, 30]}})
 
         assert applier.failed == {}
-
-
-# ---------------------------------------------------------------------------
-# Elo 2 — o handler devolve o que ficou de fora
-# ---------------------------------------------------------------------------
 
 
 class TestHandlerDevolveFailed:
@@ -211,11 +176,6 @@ class TestHandlerDevolveFailed:
 
         assert resposta["applied"] == ["leds"]
         assert resposta["failed"] == {}
-
-
-# ---------------------------------------------------------------------------
-# Elo 3 — o rodapé nomeia o que não entrou
-# ---------------------------------------------------------------------------
 
 
 class TestRodapeNaoMenteMais:

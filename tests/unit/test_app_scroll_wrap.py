@@ -1,21 +1,4 @@
-"""`_wrap_notebook_pages_in_scroll` não pode depender do TEXTO da aba (EST-10).
-
-A aba Sistema (ex-"Daemon", `daemon_box`) é a única que NÃO deve ser envolvida
-num `GtkScrolledWindow`: o
-conteúdo principal dela já é um scroller (o log, com auto-scroll) e envolvê-la de
-novo quebra a rolagem.
-
-O código identificava essa aba por `label.get_text() not in {"Daemon"}`. O
-`SPRINT-LEIGO-01` (LEIGO-03) renomeia a aba para "Sistema" — com a comparação por
-texto, o skip pararia de casar **em silêncio** e o log ganharia um segundo
-scroller. Este teste renomeia a aba de propósito: se alguém voltar a comparar por
-texto, ele quebra.
-
-O módulo `app.app` puxa `gi.repository.GdkPixbuf` no topo, que nem todo CI tem —
-seguimos a convenção do `test_quit_app_stops_daemon.py`: importar lazy e pular
-quando o gi falta. O notebook, as páginas e o builder são fakes, então o teste não
-abre janela nenhuma.
-"""
+"""`_wrap_notebook_pages_in_scroll` não pode depender do TEXTO da aba (EST-10)."""
 from __future__ import annotations
 
 from typing import Any
@@ -110,9 +93,6 @@ def _rodar_wrap(
     ])
     builder = _FakeBuilder({"main_notebook": notebook, "daemon_box": daemon_box})
 
-    # Só o ScrolledWindow precisa ser fake: é o widget que o wrap constrói. O
-    # isinstance() contra o Gtk real continua valendo para as páginas fake (que
-    # nunca são ScrolledWindow de verdade).
     gtk_falso = _GtkNamespace(app_mod.Gtk)
     monkeypatch.setattr(app_mod, "Gtk", gtk_falso)
 
@@ -158,10 +138,7 @@ class TestWrapNaoDependeDoTexto:
     def test_renomear_a_aba_nao_quebra_o_skip(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O LEIGO-03 troca "Daemon" por "Sistema" — o skip tem de continuar valendo.
-
-        Era exatamente aqui que o acoplamento a texto de UI mordia em silêncio.
-        """
+        """O LEIGO-03 troca "Daemon" por "Sistema" — o skip tem de continuar valendo."""
         notebook = _rodar_wrap("Sistema", monkeypatch)
 
         paginas = _paginas_por_nome(notebook)

@@ -1,28 +1,4 @@
-"""O portão não roda com o python de outra árvore — e, se rodar, ele GRITA.
-
-O DEFEITO, medido em 04/09/2026 dentro de uma árvore de voo (`hefesto-voo/`):
-o cabeçalho do `portoes.sh` imprimia
-
-    python  /mnt/.../hefesto-dualsense4unix-estavel/venv/bin/python
-
-— a venv de OUTRA CÓPIA do repositório, sem ``structlog``, sem ``playwright``,
-sem ``ruff`` e sem ``mypy``. Quatro portões saíam VERMELHOS sem que houvesse
-nada de errado no código. A causa era uma suposição escrita no próprio script:
-``git worktree list | awk NR==1`` devolve a árvore PRINCIPAL do ``.git``, e esta
-casa tem três árvores — a principal do git é a ``-estavel``, que não é a de
-trabalho. *"A primeira da lista"* nunca foi *"a que tem as dependências"*.
-
-É a família de defeito que esta casa persegue acima de todas — **o instrumento
-apontando para outra coisa** —, e ela é pior que um portão vermelho: um portão
-que roda com o interpretador errado **não mede**.
-
-POR QUE ESTA RÉGUA PRECISOU DE UMA OPÇÃO NOVA no script (``--interpretador``):
-sem ela a única forma de conferir a resolução seria ler o texto do `.sh`, que é
-*digitar o que se devia LER* — o defeito que esta casa já pagou onze vezes em
-26/08/2026, quando réguas reprovavam a melhora em vez do defeito. A opção torna
-a resolução **observável**: o script diz qual python escolheu e sai ``rc=1`` se
-faltar coisa nele.
-"""
+"""O portão não roda com o python de outra árvore — e, se rodar, ele GRITA."""
 
 from __future__ import annotations
 
@@ -55,7 +31,6 @@ def test_a_opcao_existe_e_nao_roda_portao_nenhum() -> None:
     r = _rodar()
     assert "portões — árvore" in r.stdout, r.stdout + r.stderr
     assert "python  " in r.stdout, r.stdout
-    # Se ele tivesse rodado a leva, a saída traria linhas de portão.
     assert " ok " not in r.stdout, (
         "`--interpretador` rodou portão: ele existe para responder SÓ o "
         "cabeçalho, e uma régua que espera a leva inteira ninguém roda.\n"
@@ -74,11 +49,7 @@ def test_o_interpretador_escolhido_tem_o_que_os_portoes_precisam() -> None:
 
 
 def test_o_python_escolhido_importa_o_que_os_portoes_importam() -> None:
-    """Não basta o script dizer que está bem: PERGUNTA-SE ao python escolhido.
-
-    Esta é a metade que LÊ em vez de digitar — ela executa o interpretador que
-    o cabeçalho nomeou, em vez de confiar na palavra do script.
-    """
+    """Não basta o script dizer que está bem: PERGUNTA-SE ao python escolhido."""
     r = _rodar()
     linha = next(
         (ln for ln in r.stdout.splitlines() if ln.strip().startswith("python ")),
@@ -102,12 +73,7 @@ def test_o_python_escolhido_importa_o_que_os_portoes_importam() -> None:
 
 
 def test_um_interpretador_capenga_e_acusado_em_vez_de_medir(tmp_path: Path) -> None:
-    """A MORDIDA: aponte de propósito para um python sem as dependências.
-
-    Sem a cura, o script aceitava calado e deixava os quatro vermelhos falsos
-    explicarem-se sozinhos. Com ela, o cabeçalho nomeia o que falta e o
-    `--interpretador` sai `rc=1`.
-    """
+    """A MORDIDA: aponte de propósito para um python sem as dependências."""
     falso = tmp_path / "bin"
     falso.mkdir()
     py = falso / "python"
@@ -158,28 +124,15 @@ def _venv_falsa(raiz: Path, nome: str, *, completa: bool) -> Path:
 
 
 def test_uma_venv_capenga_na_frente_nao_ganha_de_uma_completa(tmp_path: Path) -> None:
-    """A MORDIDA QUE PEGA O DEFEITO DE VERDADE: a ORDEM não decide sozinha.
-
-    O bug de 04/09 era de ORDEM: o script pegava a primeira venv que
-    ENCONTRAVA, e a primeira era a de outra cópia do repositório. Rodar a régua
-    na árvore de trabalho não o revela — aqui a primeira candidata JÁ é a certa,
-    e por isso a versão anterior desta régua passava com a cura arrancada. Ela
-    foi reescrita depois de eu medir exatamente isso.
-
-    Aqui as duas candidatas existem e a PRIMEIRA é a capenga: `.venv` é olhado
-    antes de `venv`. Com a regra velha (posição) o script escolhe a capenga;
-    com a nova (capacidade) ele pula para a completa.
-    """
+    """A MORDIDA QUE PEGA O DEFEITO DE VERDADE: a ORDEM não decide sozinha."""
     raiz = tmp_path / "arvore"
     (raiz / "scripts").mkdir(parents=True)
-    # Fora de repositório git: `RAIZ` cai no `dirname dirname $0`, que é o que
-    # dá o controle das candidatas sem tocar no `.git` desta casa.
     copia = raiz / "scripts" / "portoes.sh"
     copia.write_text(PORTOES.read_text(encoding="utf-8"), encoding="utf-8")
     copia.chmod(0o755)
 
-    _venv_falsa(raiz, ".venv", completa=False)   # a primeira da fila, capenga
-    _venv_falsa(raiz, "venv", completa=True)     # a segunda, completa
+    _venv_falsa(raiz, ".venv", completa=False)
+    _venv_falsa(raiz, "venv", completa=True)
 
     env = dict(os.environ)
     env.pop("HEFESTO_PY", None)
@@ -229,8 +182,6 @@ def test_as_outras_bandeiras_continuam_valendo(bandeira: str) -> None:
         )
         assert "PORTAO|" in r.stdout, r.stdout
     else:
-        # `--rapido` só precisa PARTIR: rodar a leva aqui custaria segundos e
-        # duplicaria o que o próprio `portoes.sh` já faz na integração.
         r = subprocess.run(
             ["bash", "-n", str(PORTOES)],
             cwd=RAIZ, capture_output=True, text=True, timeout=60,

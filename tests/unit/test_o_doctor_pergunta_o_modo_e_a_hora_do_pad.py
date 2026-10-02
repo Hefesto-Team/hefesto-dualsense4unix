@@ -65,13 +65,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = ROOT / "scripts" / "doctor.sh"
 APP_ID = "hefesto-dualsense4unix"
 
-#: A faixa sintética da casa: nenhum endereço de aparelho de verdade.
 UNIQS = ("aabbcc0000a1", "aabbcc0000a2", "aabbcc0000a3", "aabbcc0000a4")
-
-
-# ---------------------------------------------------------------------------
-# A mesa real: o estado sai do handler de verdade
-# ---------------------------------------------------------------------------
 
 
 class _UInputDeMentira:
@@ -97,14 +91,7 @@ class _UInputDeMentira:
 
 @dataclass
 class Jogador:
-    """Um controle na mesa e como o pad dele nasceu.
-
-    ``nasce``: ``pelo_modo`` (a fábrica com o caminho da sessão, o normal),
-    ``sem_caminho`` (a promoção de 16h16, que reiniciava sem o caminho),
-    ``no_xbox`` (o `_reerguer_o_p1` do PRAGMATA, que lia o slot Xbox) ou
-    ``antigo`` (um pad `uinput` de antes da cura, que não sabe o caminho nem
-    o motivo).
-    """
+    """Um controle na mesa e como o pad dele nasceu."""
 
     nasce: str = "pelo_modo"
     mascara: str | None = None
@@ -119,11 +106,7 @@ class _Handlers(IpcHandlersMixin):
 
 @pytest.fixture
 def fabrica(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, bool]]:
-    """A fábrica real, com o `uinput` de mentira e o `uhid` que faz bind sem kernel.
-
-    ``{"uhid": False}`` põe o `uhid` fora do ar: a fábrica cai no `uinput` e
-    pendura o motivo que ela pendura na vida real.
-    """
+    """A fábrica real, com o `uinput` de mentira e o `uhid` que faz bind sem kernel."""
     mod = types.ModuleType("evdev")
     mod.UInput = _UInputDeMentira  # type: ignore[attr-defined]
     mod.AbsInfo = _AbsInfo  # type: ignore[attr-defined]
@@ -180,8 +163,6 @@ async def _estado(
     daemon.config.gamepad_flavor = "dualsense"
     daemon.config.gamepad_caminho = caminho
     if nativo:
-        # A Conexão Nativa numera pelo registro de identidade, e o `FakeController`
-        # não o traz: o registro é o de verdade, com a fila na ordem da mesa.
         daemon.identity_registry = ControllerIdentityRegistry()
         for uniq in UNIQS[: len(jogadores)]:
             daemon.identity_registry.slot_for(uniq)
@@ -190,7 +171,6 @@ async def _estado(
         daemon.config.coop_enabled = False
         return await _Handlers(daemon)._handle_daemon_state_full({})
     if controlar_o_pc:
-        # «Controlar o PC»: o controle mexe no PC, sem pad e sem jogador.
         daemon.config.gamepad_emulation_enabled = False
         daemon.config.coop_enabled = True
         estado = await _Handlers(daemon)._handle_daemon_state_full({})
@@ -209,7 +189,6 @@ async def _estado(
         )
     daemon._coop_manager = manager  # type: ignore[assignment]
     estado = await _Handlers(daemon)._handle_daemon_state_full({})
-    # O estado tem de atravessar o socket: o servidor manda JSON.
     return json.loads(json.dumps(estado))
 
 
@@ -224,11 +203,7 @@ class TestOModoContraOAr:
         assert _resumo(modo_contra_o_ar(estado)) == [(1, "xbox", "uinput", OK)]
 
     async def test_as_16h16_xbox_pedido_e_uhid_no_ar_sem_motivo_e_falha(self) -> None:
-        """A cena do fecho de 27/09: o P1 renasceu sem o caminho, no `uhid`.
-
-        O que existia antes lia íntegro, e a régua confere isso primeiro: sem
-        esta checagem, nada no estado acusava.
-        """
+        """A cena do fecho de 27/09: o P1 renasceu sem o caminho, no `uhid`."""
         estado = await _estado("xbox", [Jogador("sem_caminho"), Jogador(), Jogador(), Jogador()])
         emulacao = estado["gamepad_emulation"]
         assert (emulacao["caminho"], emulacao["backend"], emulacao["degraded"]) == (
@@ -337,10 +312,6 @@ class TestOModoContraOAr:
             assert not re.search(r"/dev/|/sys/|event\d|input\d|hidraw|aabbcc|02:fe", frase)
 
 
-# ---------------------------------------------------------------------------
-# A hora do pad
-# ---------------------------------------------------------------------------
-
 _XBOX = "Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"
 _EDGE = "Sony Interactive Entertainment DualSense Edge Wireless Controller"
 
@@ -357,11 +328,7 @@ def _d(
     *,
     chegou: str | None = None,
 ) -> str:
-    """Uma linha do daemon no `journalctl -o short-iso-precise`.
-
-    ``chegou`` é o carimbo do journald (a chegada ao diário); sem ele, o mesmo
-    instante do registro.
-    """
+    """Uma linha do daemon no `journalctl -o short-iso-precise`."""
     carimbo = f"{dia}T{hora}"
     recebido = f"{dia}T{chegou}" if chegou else carimbo[:26]
     prefixo = f"{recebido}-03:00 maquina hefesto-dualsense4unix[4242]: {carimbo} [info     ] "
@@ -376,7 +343,6 @@ def _d(
     )
 
 
-#: A noite de 27/09, 05h20 a 05h30, com o `cosmic-osk` de pé.
 NOITE_KERNEL = [
     _k("05:20:07.008124", _EDGE, 681),
     _k("05:20:12.705122", _EDGE, 682),
@@ -415,8 +381,6 @@ NOITE_DAEMON_DEPOIS = [
     _d("05:30:02.711163", "uinput_device_created", _XBOX),
 ]
 
-#: O boot de 28/09, depois da cura: o journald carimba o kernel até 1,1 ms
-#: DEPOIS do registro do daemon, dentro da folga.
 BOOT = "2026-09-28"
 BOOT_KERNEL = [
     _k("03:01:35.422250", _XBOX, 625, BOOT),
@@ -435,9 +399,6 @@ BOOT_DAEMON = [
 ]
 
 
-#: O journald parado, na noite de 27/09 (linhas reais, nome e PID trocados). O
-#: Xbox das 23:46:18 chegou ao diário 1,85 s depois do registro, e a linha do
-#: próprio registro chegou junto com a do kernel.
 PARADA_DAEMON = [
     _d("23:37:39.482631", "daemon_starting"),
     _d("23:42:37.803397", "uinput_device_created", _XBOX, chegou="23:42:37.803458"),
@@ -502,8 +463,7 @@ class TestAHoraDoPad:
         assert medidas[2].atraso_s is not None and medidas[2].atraso_s < 0.01
 
     def test_a_parada_so_na_linha_do_kernel_e_nao_medido(self) -> None:
-        """A linha do daemon chegou na hora e a do kernel 1,85 s depois: não é a
-        mesma parada, e o pad sai «não medido», nunca OK."""
+        """A linha do daemon chegou na hora e a do kernel 1,85 s depois: não é a"""
         daemon = [
             *PARADA_DAEMON[:3],
             _d("23:46:18.957654", "uinput_device_created", _XBOX, chegou="23:46:18.957700"),
@@ -511,8 +471,7 @@ class TestAHoraDoPad:
         assert [m.veredito for m in hora_do_pad(PARADA_KERNEL, daemon)] == [OK, OK, AVISO]
 
     def test_as_duas_chegadas_longe_demais_e_nao_medido(self) -> None:
-        """A linha do kernel chegou 5,5 s antes da do daemon, e depois do registro:
-        as duas não contam a mesma parada, e nada ali mede o nascimento."""
+        """A linha do kernel chegou 5,5 s antes da do daemon, e depois do registro:"""
         daemon = [
             *PARADA_DAEMON[:3],
             _d("23:46:18.957654", "uinput_device_created", _XBOX, chegou="23:46:26.304240"),
@@ -557,11 +516,6 @@ class TestAHoraDoPad:
             29.71,
             FALHA,
         )
-
-
-# ---------------------------------------------------------------------------
-# O doctor.sh: as duas checagens, pelo socket e pelo diário
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -634,15 +588,7 @@ def _bin(lar: Path, kernel: list[str], diario: list[str]) -> Path:
 
 
 def _doctor(lar: Path, funcao: str, binario: Path | None = None, doctor: Path = DOCTOR) -> str:
-    """Roda uma função do doctor com a pasta de mentira à frente do PATH.
-
-    O python que essa pasta traz é o que o doctor usa: a escolha é do
-    `_python_do_produto` (a `.venv` ao lado do script, a do `HOME`, a do `/opt`, e só
-    por último o `python3` do PATH), e o teste a diz redefinindo o dono depois do
-    `source`, como as réguas do INSTALL-UNIVERSAL. Sem isso o python plantado só era
-    o escolhido onde não há `.venv` ao lado do `doctor.sh`; no job do GTK real e na
-    mesa dela há uma, e ela respondia no lugar dele.
-    """
+    """Roda uma função do doctor com a pasta de mentira à frente do PATH."""
     caminho = f"{binario}:/usr/bin:/bin" if binario else "/usr/bin:/bin"
     escolha = (
         f"_python_do_produto() {{ printf '%s\\n' '{binario}/python3'; }}; " if binario else ""
@@ -735,8 +681,7 @@ class TestODoctorPergunta:
         assert "[FAIL]" not in saida
 
     def test_o_diario_do_kernel_fora_de_alcance_e_uma_linha_so(self, lar: Path) -> None:
-        """Sem o grupo que lê o diário do kernel, nenhuma criação aparece: o aviso
-        diz por quê uma vez, e não cinco vezes «falta a criação dele»."""
+        """Sem o grupo que lê o diário do kernel, nenhuma criação aparece: o aviso"""
         _servir(_socket(lar), {"connected": True})
         saida = _doctor(lar, "check_a_hora_do_pad", _bin(lar, [], BOOT_DAEMON))
         avisos = [ln for ln in saida.splitlines() if ln.startswith("[WARN]")]
@@ -762,14 +707,7 @@ class TestODoctorPergunta:
         assert "o diário do daemon não tem a subida dele" not in saida
 
     def test_a_medida_que_morre_calada_avisa_com_uma_venv_ao_lado(self, lar: Path) -> None:
-        """O mundo do job do GTK real e da mesa dela: uma `.venv` ao lado do `doctor.sh`.
-
-        A `.venv` vem primeiro na ordem do dono (`_python_do_produto`), e a de mentira
-        daqui RESPONDE (`ok|…`). O python que o teste plantou e que morre é o que o
-        doctor tem de usar, com ou sem `.venv` ao lado: o teste diz ao doctor qual é.
-        MORDIDA (O-CI-DA-DEV-VOLTA-A-VERDE-02): tire a redefinição do `_doctor` e isto
-        reprova com a frase do `ok`, que é o vermelho da corrida 36503520655.
-        """
+        """O mundo do job do GTK real e da mesa dela: uma `.venv` ao lado do `doctor.sh`."""
         copia = lar / "scripts" / "doctor.sh"
         copia.parent.mkdir()
         shutil.copy2(DOCTOR, copia)

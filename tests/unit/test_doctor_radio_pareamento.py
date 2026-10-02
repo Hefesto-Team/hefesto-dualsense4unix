@@ -1,27 +1,4 @@
-"""G2 — seção "Rádio e pareamento" do doctor.sh (sprint 2026-07-19-sprint-onda-
-g-gyro02-doctor.md), hermética.
-
-A lógica vive em shell puro no doctor.sh (mesmo padrão de
-`test_doctor_vpad_motion.py`/`test_doctor_8bitdo_cascade.py`: funções PURAS
-testáveis via `source`, testadas primeiro isoladamente e depois em contratos
-de "fiação" com main()). Cobre os 6 checks do sprint:
-
-1. versão do bluez < 5.79 => FAIL (backport da Onda R); >= 5.79 => OK.
-2. `hefesto-bt-agent.service` ativo => OK; ausente/inativo => WARN.
-3. "Connected sem hidraw" (bond meio-salvo por um ângulo).
-4. "Paired sem Bonded" (bond meio-salvo pelo outro ângulo).
-5. sink de áudio PADRÃO mudo => WARN (sintoma U12).
-6. autoridade de exibição unknown presa: JÁ coberta por NUMA-05
-   (`check_display_authority`, testada em test_doctor_display_authority.py) —
-   aqui só provamos que não foi duplicada.
-
-Os checks 1/2/5 chamam comando único (dpkg-query/systemctl/wpctl) e por isso
-ganham teste de ponta-a-ponta com um binário FAKE no PATH (sem tocar no
-sistema real). Os checks 3/4 dependem de `bluetoothctl info` por MAC — aqui a
-prova de ponta-a-ponta cobre o `bluetoothctl` (fake), e o lado do hidraw
-(sysfs real, read-only) é exercitado com um MAC que não pode colidir com
-hardware nenhum — falha-sem determinística sem precisar mockar /sys.
-"""
+"""G2 — seção "Rádio e pareamento" do doctor.sh (sprint 2026-07-19-sprint-onda-"""
 from __future__ import annotations
 
 import stat
@@ -64,18 +41,13 @@ def _escrever_fake_bin(tmp_path: Path, nome: str, corpo: str) -> Path:
 def _rodar_check(
     func: str, fake_bin: Path, env_extra: dict[str, str] | None = None
 ) -> str:
-    """Executa o check_ real com PATH = fakebin primeiro (esconde o binário
-    real do sistema atrás do fake) — mesmo padrão de teste hermético."""
+    """Executa o check_ real com PATH = fakebin primeiro (esconde o binário"""
     env = {
         "PATH": f"{fake_bin}:/usr/bin:/bin",
         "DOCTOR_SH": str(DOCTOR),
     }
     if env_extra:
         env.update(env_extra)
-    # `; true` no fim: alguns checks terminam com `cond && pass ...` (padrão
-    # já usado no doctor.sh) — o próprio bash -c herdaria esse exit code como
-    # se fosse "erro", mas main() nunca olha o retorno de um check_ (só os
-    # contadores FAILS/WARNS); aqui replicamos esse mesmo desinteresse.
     res = subprocess.run(
         ["bash", "-c", f'set --; source "$DOCTOR_SH"; {func}; true'],
         capture_output=True,
@@ -88,9 +60,6 @@ def _rodar_check(
     return res.stdout
 
 
-# ---------------------------------------------------------------------------
-# 1. bluez: versão vs. o piso 5.79 (backport da Onda R).
-# ---------------------------------------------------------------------------
 class TestBluezVersionVerdict:
     def test_versao_velha_e_old(self) -> None:
         assert _rodar("_bluez_version_verdict", "5.72-0ubuntu5.5") == "old"
@@ -105,14 +74,9 @@ class TestBluezVersionVerdict:
     def test_versao_vazia_e_unknown(self) -> None:
         assert _rodar("_bluez_version_verdict", "") == "unknown"
 
-    # --- TETO 5.87: o UAF em dev_disconnected (estudo 2026-08-07 §D) --------
-    # A faixa aceita tem DOIS limites. Sem o teto, uma máquina que já veio com
-    # bluez >= 5.87 (o PC novo) passava CALADA no doctor, carregando o
-    # uso-depois-de-liberado que esta casa recusou em 22/07 e de novo em 07/08.
 
     def test_versao_do_backport_dela_fica_ok(self) -> None:
-        """A versão REAL instalada nesta máquina não pode cair no teto —
-        é a prova de que a cura explica o que JÁ funcionava."""
+        """A versão REAL instalada nesta máquina não pode cair no teto —"""
         assert _rodar("_bluez_version_verdict", "5.86-0ubuntu0.1~hefesto24.04.3") == "ok"
 
     def test_versao_no_teto_e_nova(self) -> None:
@@ -124,23 +88,15 @@ class TestBluezVersionVerdict:
         assert _rodar("_bluez_version_verdict", "5.87-0ubuntu1") == "nova"
 
     def test_versao_acima_do_teto_e_nova(self) -> None:
-        """5.88+ também cai no teto: enquanto ninguém conferir se o lançamento
-        carrega o 5bc6aa79, o doctor tem de falar — em WARN, não em silêncio."""
+        """5.88+ também cai no teto: enquanto ninguém conferir se o lançamento"""
         assert _rodar("_bluez_version_verdict", "5.88") == "nova"
 
 
 class TestCheckBluezBackportVersion:
-    """FALHA-SEM/PASSA-COM de ponta-a-ponta: dpkg-query FAKE, dpkg real
-    (comparação de string, sem tocar em pacote nenhum)."""
+    """FALHA-SEM/PASSA-COM de ponta-a-ponta: dpkg-query FAKE, dpkg real"""
 
     def _fake_dpkg_query(self, tmp_path: Path, versao: str) -> Path:
-        """Cenário do FALLBACK: quem responde é o pacote, não o daemon.
-
-        O `systemctl` falso devolve ExecStart vazio de propósito — é assim que
-        a máquina de quem NÃO reapontou a unit se comporta, e é o caminho que
-        estes casos exercitam. Sem ele, o `systemctl` real da máquina vazaria
-        para dentro do teste e o bluetoothd vivo responderia no lugar do fake.
-        """
+        """Cenário do FALLBACK: quem responde é o pacote, não o daemon."""
         _escrever_fake_bin(tmp_path, "systemctl", "exit 1")
         return _escrever_fake_bin(
             tmp_path,
@@ -149,10 +105,7 @@ class TestCheckBluezBackportVersion:
         )
 
     def _fake_daemon_vivo(self, tmp_path: Path, versao: str) -> Path:
-        """Cenário do DAEMON VIVO: a unit aponta para um bluetoothd fora do
-        dpkg, e é ELE quem vale. Foi o caso desta casa em 18/08/2026 — pacote
-        em 5.64, rádio rodando o 5.86 do tarball, e o portão reprovando a cura
-        que já estava de pé."""
+        """Cenário do DAEMON VIVO: a unit aponta para um bluetoothd fora do"""
         fake_bin = _escrever_fake_bin(
             tmp_path, "bluetoothd-falso", f'echo "{versao}"'
         )
@@ -162,7 +115,6 @@ class TestCheckBluezBackportVersion:
             "systemctl",
             f'echo "{{ path={caminho} ; argv[]={caminho} ; ignore_errors=no }}"',
         )
-        # dpkg-query diz o VELHO: se o check olhasse o pacote, reprovaria.
         return _escrever_fake_bin(tmp_path, "dpkg-query", 'echo -n "5.64-0ubuntu1.4"')
 
     def test_daemon_vivo_vence_o_pacote_velho(self, tmp_path: Path) -> None:
@@ -190,16 +142,13 @@ class TestCheckBluezBackportVersion:
     def test_bluez_acima_do_teto_e_warn_que_nomeia_o_motivo(
         self, tmp_path: Path
     ) -> None:
-        """O PC novo pode vir com 5.87. Antes do teto, isto passava como [ OK ]
-        e o UAF entrava calado. Agora é WARN — e o WARN NOMEIA o defeito, senão
-        quem lê não tem como decidir nada."""
+        """O PC novo pode vir com 5.87. Antes do teto, isto passava como [ OK ]"""
         fake_bin = self._fake_dpkg_query(tmp_path, "5.87-0ubuntu1")
         saida = _rodar_check("check_bluez_backport_version", fake_bin)
         assert "[WARN]" in saida
         assert "[ OK ]" not in saida
         assert "[FAIL]" not in saida
         assert "5.87-0ubuntu1" in saida
-        # o motivo, com nome e sobrenome — não "versão não suportada"
         assert "dev_disconnected" in saida
         assert "uso-depois-de-liberado" in saida
         assert "5bc6aa79" in saida
@@ -212,9 +161,6 @@ class TestCheckBluezBackportVersion:
         assert "[WARN]" not in saida
 
 
-# ---------------------------------------------------------------------------
-# 2. hefesto-bt-agent.service (unit de SISTEMA — systemctl sem --user).
-# ---------------------------------------------------------------------------
 class TestCheckBtAgentService:
     def _fake_systemctl(self, tmp_path: Path, ativo: bool, instalado: bool) -> Path:
         estado = "active" if ativo else "inactive"
@@ -250,10 +196,6 @@ exit 1
         assert "não instalado" in saida
 
 
-# ---------------------------------------------------------------------------
-# 3. "Connected sem hidraw" — parte pura (_bt_gamepad_missing_hidraw) +
-#    _hidraw_uniqs (sysfs parametrizado) + _mac_norm.
-# ---------------------------------------------------------------------------
 _INFO_CONECTADO_GAMEPAD = """\
 Device AA:BB:CC:00:00:AB (public)
 \tName: DualSense Wireless Controller
@@ -346,9 +288,6 @@ class TestBtGamepadMissingHidraw:
         assert saida == ""
 
 
-# ---------------------------------------------------------------------------
-# 4. "Paired sem Bonded".
-# ---------------------------------------------------------------------------
 _INFO_MEIO_SALVO = """\
 Device AA:BB:CC:00:00:AB (public)
 \tName: DualSense Wireless Controller
@@ -374,10 +313,7 @@ class TestBtPairedSemBonded:
 
 
 class TestCheckBtPairedSemBonded:
-    """Ponta-a-ponta com `busctl` FAKE (tree + get-property) — a FONTE migrou
-    do bluetoothctl 5.86 (mudo no one-shot; WATCHDOG-FP-01) para o D-Bus. O
-    check NÃO depende de sysfs, então dá para cobrir os dois lados inteiros.
-    As funções puras seguem cobertas acima com fixtures de texto."""
+    """Ponta-a-ponta com `busctl` FAKE (tree + get-property) — a FONTE migrou"""
 
     def _fake_busctl(self, tmp_path: Path, mac: str, paired: str, bonded: str) -> Path:
         dev_path = "/org/bluez/hci0/dev_" + mac.replace(":", "_")
@@ -421,10 +357,7 @@ exit 0
 
 
 class TestCheckBtConnectedSemHidraw:
-    """MAC exótico (impossível de colidir com HID_UNIQ real) => FAIL
-    determinístico mesmo lendo o /sys/class/hidraw REAL da máquina (a leitura
-    em si é read-only e não muda o veredito: nenhum hidraw real pode ter
-    este HID_UNIQ). Fonte da lista de devices: `busctl` FAKE (WATCHDOG-FP-01)."""
+    """MAC exótico (impossível de colidir com HID_UNIQ real) => FAIL"""
 
     _MAC_EXOTICO = "AA:BB:CC:EF:00:99"
 
@@ -448,10 +381,6 @@ exit 0
         assert "[FAIL]" in saida
         assert self._MAC_EXOTICO in saida
         assert "ZUMBI" in saida
-        # SDP-CACHE-01 (23/07): a causa medida do "conectado sem hidraw" é cache
-        # SDP sem [ServiceRecords], e ela se cura SEM destruir o bond. Este
-        # check é o do SINTOMA — ele não pode mais mandar desparear de cara,
-        # senão a usuária re-pareia 4 controles à toa (a dor que o projeto cura).
         assert "ANTES de desparear" in saida
         assert "bluetoothctl remove" not in saida
 
@@ -464,9 +393,6 @@ exit 0
         assert "nenhum dispositivo" in saida
 
 
-# ---------------------------------------------------------------------------
-# 5. sink de áudio PADRÃO mudo (sintoma U12).
-# ---------------------------------------------------------------------------
 class TestWpctlVolumeMuted:
     def test_com_muted_e_muted(self) -> None:
         assert _rodar("_wpctl_volume_muted", "Volume: 0.50 [MUTED]") == "muted"
@@ -503,9 +429,6 @@ class TestCheckAudioSinkMuted:
         assert "[WARN]" not in saida
 
 
-# ---------------------------------------------------------------------------
-# Contratos de fiação (padrão do repo para lógica do doctor.sh).
-# ---------------------------------------------------------------------------
 class TestFiacaoNoDoctor:
     def _texto(self) -> str:
         return DOCTOR.read_text(encoding="utf-8")
@@ -533,8 +456,7 @@ class TestFiacaoNoDoctor:
         assert "_bluez_version_verdict" in bloco
 
     def test_o_teto_existe_e_e_usado_pelo_veredito(self) -> None:
-        """O teto é uma decisão MEDIDA (estudo 2026-08-07 §D) — não pode sumir
-        numa refatoração sem que este teste caia junto."""
+        """O teto é uma decisão MEDIDA (estudo 2026-08-07 §D) — não pode sumir"""
         texto = self._texto()
         assert 'readonly _BZ_TETO="5.87"' in texto
         bloco = self._bloco("_bluez_version_verdict() {")
@@ -542,8 +464,7 @@ class TestFiacaoNoDoctor:
         assert "_BZ_PISO" in bloco
 
     def test_o_ramo_do_teto_esta_ligado_no_check(self) -> None:
-        """Veredito sem tratamento cai no `*)` (info neutro) e o UAF volta a
-        passar calado — o `case` tem de ter o ramo `nova)` em WARN."""
+        """Veredito sem tratamento cai no `*)` (info neutro) e o UAF volta a"""
         bloco = self._bloco("check_bluez_backport_version() {")
         assert "nova)" in bloco
         depois = bloco[bloco.index("nova)") :]
@@ -563,8 +484,7 @@ class TestFiacaoNoDoctor:
         assert "_wpctl_volume_muted" in bloco
 
     def test_bt_agent_e_unit_de_sistema_sem_dash_dash_user(self) -> None:
-        """hefesto-bt-agent.service é WantedBy=multi-user.target (system) —
-        ao contrário de check_service (--user), este NUNCA usa --user."""
+        """hefesto-bt-agent.service é WantedBy=multi-user.target (system) —"""
         bloco = self._bloco("check_bt_agent_service() {")
         assert "--user" not in bloco
 
@@ -578,9 +498,7 @@ class TestFiacaoNoDoctor:
         assert "> /sys" not in regiao
 
     def test_comandos_de_cura_sao_so_texto_de_conselho_nunca_executados(self) -> None:
-        """'bluetoothctl remove', 'wpctl set-mute' e 'systemctl enable --now'
-        só podem aparecer DENTRO de uma mensagem de warn/fail (conselho pro
-        humano) — nunca como uma chamada de comando real do próprio check."""
+        """'bluetoothctl remove', 'wpctl set-mute' e 'systemctl enable --now'"""
         texto = self._texto()
         inicio = texto.index("# G2 — doctor:")
         fim = texto.index("check_bt_paired_sem_bonded() {")

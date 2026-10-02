@@ -1,32 +1,10 @@
 #!/usr/bin/env python3
-"""Diagnóstico do flicker de combo no COSMIC (bug de foco/popup do cosmic-comp).
-
-Mostra o backend real (Wayland vs XWayland) e imprime no TERMINAL cada vez que o
-popup ABRE e FECHA — assim dá pra quantificar a estabilidade ao clicar.
-
-Compare os quatro cenários (clique o dropdown ~10x em cada e olhe o terminal):
-
-    # 1) Wayland nativo, SEM o fix do app:
-    python3 scripts/teste_combo.py --jitter
-    # 2) Wayland nativo, COM o fix (pausa updates enquanto o popup está aberto):
-    python3 scripts/teste_combo.py --jitter --gate
-    # 3) XWayland, COM o fix (p/ comparar — deve fechar quase sempre):
-    GDK_BACKEND=x11 python3 scripts/teste_combo.py --jitter --gate
-    # 4) controle (sem jitter):
-    python3 scripts/teste_combo.py
-
-Leitura: cada clique deveria gerar 1 "ABRIU". Se aparecer "fechou sozinho"
-(fechamento sem você escolher item nem clicar fora) = o bug bateu. Estável =
-ABRIU e fica, sem "fechou sozinho". A meta é o cenário 2 ficar estável.
-"""
+"""Diagnóstico do flicker de combo no COSMIC (bug de foco/popup do cosmic-comp)."""
 import itertools
 import sys
 import time
 
 import pathlib
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
-# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[1] / 'src')
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
@@ -48,7 +26,7 @@ GATE = "--gate" in sys.argv
 
 def backend_name() -> str:
     disp = Gdk.Display.get_default()
-    t = type(disp).__name__  # GdkWaylandDisplay / GdkX11Display
+    t = type(disp).__name__
     if "Wayland" in t:
         return "WAYLAND nativo"
     if "X11" in t:
@@ -99,7 +77,6 @@ def on_popup(combo_, _pspec):
         abriu_em["t"] = now
         print(f"[{time.strftime('%H:%M:%S')}] ABRIU            (#{stats['abriu']})", flush=True)
     else:
-        # Fechamento < 400ms após abrir, sem escolher item = "fechou sozinho" (bug).
         dt = now - abriu_em["t"]
         espontaneo = dt < 0.4
         stats["fechou"] += 1
@@ -113,7 +90,6 @@ if JITTER:
     vals = itertools.cycle([127, 9, 128, 130, 12, 129, 100])
 
     def tick() -> bool:
-        # O FIX do app: enquanto há grab (popup aberto), NÃO mexe nos widgets.
         if GATE and Gtk.grab_get_current() is not None:
             return True
         v = next(vals)

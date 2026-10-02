@@ -93,8 +93,7 @@ class _StoreEspiao:
 
 
 def _daemon(*, hidraw: dict[str | None, str] | None = None) -> Any:
-    """Daemon falso; `hidraw` != None dá ao controller o `hidraw_path` do backend
-    real (pydualsense) — é ISSO (e não o path devolvido) que libera o uhid."""
+    """Daemon falso; `hidraw` != None dá ao controller o `hidraw_path` do backend"""
     calls: list[str | None] = []
 
     def _hidraw_path(uniq: str | None = None) -> str | None:
@@ -114,8 +113,6 @@ def _daemon(*, hidraw: dict[str | None, str] | None = None) -> Any:
             coop_enabled=True,
             gamepad_flavor="dualsense",
             gamepad_emulation_enabled=False,
-            # Passthrough (None): o stop real zera motores best-effort — o
-            # controller fake sem set_rumble degrada em warning, sem crash.
             rumble_active=None,
         ),
         _gamepad_device=None,
@@ -131,18 +128,15 @@ class TestControllerAllowsUhid:
         assert controller_allows_uhid(_daemon(hidraw={})) is True
 
     def test_backend_fake_veta_o_uhid(self) -> None:
-        """FakeController/IController não têm `hidraw_path` — é a declaração
-        explícita de "sem uhid" (VPAD-08): o smoke não planta Edge real."""
+        """FakeController/IController não têm `hidraw_path` — é a declaração"""
         assert controller_allows_uhid(_daemon()) is False
 
     def test_nao_depende_de_controle_conectado(self) -> None:
-        """O gate é sobre o BACKEND, não sobre o hardware do momento: backend
-        real sem nenhum controle (boot) continua liberando o uhid — o blueprint
-        canônico não precisa do físico."""
-        daemon = _daemon(hidraw={})  # backend real, zero controles mapeados
+        """O gate é sobre o BACKEND, não sobre o hardware do momento: backend"""
+        daemon = _daemon(hidraw={})
 
         assert controller_allows_uhid(daemon) is True
-        assert daemon.hidraw_calls == []  # nem pergunta path a ninguém
+        assert daemon.hidraw_calls == []
 
 
 class TestGamepadPrimario:
@@ -159,13 +153,11 @@ class TestGamepadPrimario:
         assert chamada["player"] == 1
         assert chamada["allow_uhid"] is True
         assert callable(chamada["rumble_sink"])
-        # REPLICA-03: o vpad do P1 nasce com os sinks de replicação completos
-        # (gatilhos/lightbar/player-LED do jogo + devolução no fim da sessão).
         for sink in (
             "trigger_sink", "lightbar_sink", "player_led_sink", "session_end_sink"
         ):
             assert callable(chamada[sink]), f"sink ausente na fiação do P1: {sink}"
-        assert daemon.hidraw_calls == []  # o caminho de criação não lê o físico
+        assert daemon.hidraw_calls == []
 
     def test_backend_fake_passa_o_veto_a_factory(
         self, chamadas: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
@@ -219,8 +211,6 @@ class TestCoopPorJogador:
         assert len(chamadas) == 1
         assert chamadas[0]["player"] == 2
         assert chamadas[0]["allow_uhid"] is True
-        # Blueprint canônico: a CRIAÇÃO do vpad nunca lê o hidraw de ninguém
-        # (o vpad fake não é uhid, então nem o espelho de motion resolve nó).
         assert daemon.hidraw_calls == []
 
     def test_jogador_sem_mac_tambem_ganha_uhid(
@@ -317,8 +307,8 @@ class TestRebackendPorReselecao:
 
         assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
-        assert pad.parado is True  # derrubou o uinput degradado...
-        assert len(chamadas) == 1  # ...e recriou via factory (que prefere o uhid)
+        assert pad.parado is True
+        assert len(chamadas) == 1
         assert chamadas[0]["allow_uhid"] is True
 
     def test_apply_identico_com_uhid_saudavel_e_no_op(
@@ -334,8 +324,7 @@ class TestRebackendPorReselecao:
         assert chamadas == []
 
     def test_mascara_xbox_segue_no_op(self, chamadas: list[dict[str, Any]]) -> None:
-        """Xbox é uinput por design (o hid_playstation não faz bind em VID/PID
-        da Microsoft) — não existe promoção a fazer."""
+        """Xbox é uinput por design (o hid_playstation não faz bind em VID/PID"""
         daemon = _daemon(hidraw={})
         pad = _PadP1(flavor="xbox", backend="uinput")
         daemon._gamepad_device = pad
@@ -347,9 +336,8 @@ class TestRebackendPorReselecao:
     def test_backend_fake_nao_recria_a_toa(
         self, chamadas: list[dict[str, Any]]
     ) -> None:
-        """VPAD-08 + anti-churn: sem backend real o rebackend daria só OUTRO
-        uinput — o apply idêntico segue no-op."""
-        daemon = _daemon()  # controller sem hidraw_path = backend fake
+        """VPAD-08 + anti-churn: sem backend real o rebackend daria só OUTRO"""
+        daemon = _daemon()
         pad = _PadP1()
         daemon._gamepad_device = pad
 
@@ -360,8 +348,7 @@ class TestRebackendPorReselecao:
     def test_uhid_indisponivel_nao_derruba_o_uinput(
         self, chamadas: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ressalva do VPAD-02: com o uhid quebrado, derrubar o vpad uinput que
-        FUNCIONA seria input drop sem ganho nenhum."""
+        """Ressalva do VPAD-02: com o uhid quebrado, derrubar o vpad uinput que"""
         monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: False)
         daemon = _daemon(hidraw={})
         pad = _PadP1()
@@ -374,38 +361,31 @@ class TestRebackendPorReselecao:
     def test_segunda_tentativa_no_cooldown_e_no_op_com_log(
         self, chamadas: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ressalva do VPAD-02: o no-op por cooldown devolve True (a GUI mostra
-        sucesso), então o motivo TEM que ficar no journal — "cliquei e nada"
-        precisa de rastro."""
+        """Ressalva do VPAD-02: o no-op por cooldown devolve True (a GUI mostra"""
         espiao = _LoggerEspiao()
         monkeypatch.setattr(gamepad_mod, "logger", espiao)
         daemon = _daemon(hidraw={})
         daemon._gamepad_device = _PadP1()
         assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
-        assert len(chamadas) == 1  # 1ª re-seleção promoveu (e carimbou o cooldown)
+        assert len(chamadas) == 1
 
-        pad2 = _PadP1()  # o uhid caiu de novo (bind falhou): uinput outra vez
+        pad2 = _PadP1()
         daemon._gamepad_device = pad2
         assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
         assert pad2.parado is False
-        assert len(chamadas) == 1  # nada recriado dentro do cooldown
+        assert len(chamadas) == 1
         assert "rebackend_suprimido_por_cooldown" in espiao.eventos
 
     def test_apply_automatico_nunca_promove_sob_falha_estavel(
         self, chamadas: list[dict[str, Any]]
     ) -> None:
-        """Latch do BT-04(b), critério 1: com o uhid quebrado por razão ESTÁVEL
-        que o precheck não enxerga (kernel sem `hid_playstation` —
-        `uhid_available()` devolve True mas o bind nunca vem), N re-aplicações
-        automáticas (perfil/autoswitch a cada troca de janela) NÃO recriam o
-        vpad uinput que funciona — nem depois do cooldown expirar."""
+        """Latch do BT-04(b), critério 1: com o uhid quebrado por razão ESTÁVEL"""
         daemon = _daemon(hidraw={})
         pad = _PadP1()
         daemon._gamepad_device = pad
 
         for _ in range(5):
-            # Sem carimbo de cooldown ativo: o veto tem que ser pela ORIGEM.
             daemon._last_rebackend_ts = float("-inf")
             assert (
                 start_gamepad_emulation(daemon, flavor="dualsense", origin="profile")
@@ -413,7 +393,7 @@ class TestRebackendPorReselecao:
             )
 
         assert pad.parado is False
-        assert chamadas == []  # nenhum input drop automático, nunca
+        assert chamadas == []
 
     def test_acao_explicita_da_usuaria_tenta_uma_vez(
         self, chamadas: list[dict[str, Any]]
@@ -430,8 +410,8 @@ class TestRebackendPorReselecao:
 
         assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
-        assert pad.parado is True  # o gesto manual derrubou o degradado...
-        assert len(chamadas) == 1  # ...e recriou 1 vez (cooldown segura a 2ª)
+        assert pad.parado is True
+        assert len(chamadas) == 1
 
 
 class TestFallbackNuncaSilencioso:
@@ -472,8 +452,7 @@ class TestFallbackNuncaSilencioso:
         assert daemon.store.bumps == []
 
     def test_mascara_xbox_nao_conta(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Xbox é uinput por design (o hid_playstation não binda VID Microsoft)
-        — contá-la como degradação faria o badge da fase 2 mentir sempre."""
+        """Xbox é uinput por design (o hid_playstation não binda VID Microsoft)"""
         self._factory_devolvendo(monkeypatch, flavor="xbox", backend="uinput")
         daemon = _daemon(hidraw={})
 
@@ -483,8 +462,7 @@ class TestFallbackNuncaSilencioso:
     def test_daemon_sem_store_nao_quebra(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """getattr defensivo: daemons dublados (e o FAKE dos smokes) podem não
-        ter store — o start não pode falhar por causa da contagem."""
+        """getattr defensivo: daemons dublados (e o FAKE dos smokes) podem não"""
         self._factory_devolvendo(monkeypatch, flavor="dualsense", backend="uinput")
         daemon = _daemon(hidraw={})
         daemon.store = None
@@ -493,12 +471,7 @@ class TestFallbackNuncaSilencioso:
 
 
 class TestStartFalhoRematerializaLaunchEnv:
-    """Achado HIGH da revisão adversarial da Fase 2 (DEDUP-04): a falha TOTAL
-    do start (make_virtual_pad devolvendo None — uhid E uinput inacessíveis)
-    tem que REGRAVAR o launch_env. Sem isso, um `default.env` rançoso com
-    IGNORE (sessão anterior saudável + daemon morto SUJO) sobrevive com o
-    daemon vivo e sem vpad nenhum: o wrapper passa no gate de vida, exporta o
-    IGNORE, o físico some e não existe vpad = ZERO controles no launch."""
+    """Achado HIGH da revisão adversarial da Fase 2 (DEDUP-04): a falha TOTAL"""
 
     def test_default_env_rancoso_perde_o_ignore_no_start_falho(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -518,28 +491,21 @@ class TestStartFalhoRematerializaLaunchEnv:
             lambda *_a, **_k: None,
         )
         daemon = _daemon(hidraw={})
-        # Boot da sessão N+1: a emulação estava LIGADA na sessão anterior.
         daemon.config.gamepad_emulation_enabled = True
 
         assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is False
 
         texto = (tmp_path / "default.env").read_text(encoding="utf-8")
         assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in texto
-        assert "__GL_SHADER_DISK_CACHE=1" in texto  # só o preload inócuo
+        assert "__GL_SHADER_DISK_CACHE=1" in texto
 
 
 def test_o_lifecycle_propaga_a_origem_ate_o_gate() -> None:
-    """BT-04(b): sem o `origin=origin` no repasse do `set_gamepad_emulation`,
-    o latch anti-churn morre em silêncio — o apply de perfil/autoswitch volta
-    a contar como gesto manual e recria o vpad degradado a cada troca de
-    janela (o input drop em loop que o critério 1 do BT-04 veta)."""
+    """BT-04(b): sem o `origin=origin` no repasse do `set_gamepad_emulation`,"""
     from hefesto_dualsense4unix.daemon import lifecycle
 
     fonte = Path(lifecycle.__file__).read_text(encoding="utf-8")
 
-    # VERDADE-01 (18/08): o repasse passou a ser pelo seam do DESFECHO
-    # (`start_gamepad_emulation_desfecho`) — o `origin=origin` continua sendo o
-    # que este teste protege.
     chamada = re.search(
         r"start_gamepad_emulation_desfecho\((.*?)\)", fonte, re.DOTALL
     )

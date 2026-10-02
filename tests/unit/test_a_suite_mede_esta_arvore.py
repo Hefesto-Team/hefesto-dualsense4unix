@@ -1,28 +1,4 @@
-"""SRC-DESTA-ARVORE-01 — o teste daqui mede o produto daqui, não o de outra cópia.
-
-O DEFEITO, medido em 04/09/2026 numa árvore de integração: **doze lotes de
-suíte mediram o `src/` de OUTRA árvore**, e uma leva de portões junto.
-
-O caminho é banal, e é por isso que passa: toda venv do projeto tem o pacote em
-modo editável, e o `.pth` dela aponta para o `src/` da árvore onde a venv
-nasceu. Chamar `<venv-de-lá>/bin/python -m pytest` aqui roda os TESTES daqui
-contra o PRODUTO de lá.
-
-E o sintoma engana de um jeito específico e caro: `ImportError: cannot import
-name 'BYTE_SONS_DO_JOGO'` e `AttributeError: ... has no attribute '_ECO_DO_ATO'`
-— exatamente o que se veria se o agente que criou esses símbolos não tivesse
-terminado. Passei a diagnosticar trabalho entregue como trabalho faltando.
-
-A documentação da casa já descrevia o risco ("o daemon vivo é da árvore DELA")
-e o `portoes.sh` já AVISAVA. Nenhum dos dois curava: aviso no cabeçalho de um
-comando que termina verde é aviso que ninguém lê.
-
-As duas curas desta régua:
-
-1. `tests/conftest.py` põe o `src/` da SUA árvore na frente do `sys.path` e do
-   `PYTHONPATH` dos subprocessos — funciona com qualquer python que a chame.
-2. `scripts/portoes.sh` RESOLVE o `PYTHONPATH` em vez de reclamar dele.
-"""
+"""SRC-DESTA-ARVORE-01 — o teste daqui mede o produto daqui, não o de outra cópia."""
 
 from __future__ import annotations
 
@@ -49,11 +25,7 @@ def test_o_produto_importado_e_o_desta_arvore() -> None:
 
 
 def test_a_cura_nao_depende_de_qual_python_chamou() -> None:
-    """A MORDIDA: um python de OUTRA árvore, sem PYTHONPATH, e ainda assim daqui.
-
-    Arranque o bloco `SRC-DESTA-ARVORE-01` do `conftest.py` e este caso reprova
-    na hora — é exatamente a chamada que produziu o defeito.
-    """
+    """A MORDIDA: um python de OUTRA árvore, sem PYTHONPATH, e ainda assim daqui."""
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     r = subprocess.run(
@@ -77,11 +49,7 @@ def test_o_pythonpath_vai_junto_para_os_subprocessos() -> None:
 
 
 def test_o_portao_resolve_o_pythonpath_em_vez_de_reclamar() -> None:
-    """A outra metade: o `portoes.sh` declara o `src/` que vai medir.
-
-    A MORDIDA está no conteúdo: se alguém devolver o `else` com o texto
-    "ARMADILHA", o cabeçalho volta a AVISAR — e o aviso é o que falhou.
-    """
+    """A outra metade: o `portoes.sh` declara o `src/` que vai medir."""
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     r = subprocess.run(

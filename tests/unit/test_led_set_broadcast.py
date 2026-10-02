@@ -47,9 +47,6 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: MACs forjados na faixa aa:bb:cc (guarda de anonimato) — key do handle no
-#: formato que o backend recebe do hidapi, e o `uniq` normalizado que sai do
-#: `describe_controllers`.
 MAC_1 = "AA:BB:CC:00:00:01"
 MAC_2 = "AA:BB:CC:00:00:02"
 UNIQ_1 = "aabbcc000001"
@@ -84,12 +81,7 @@ class _FakeLedNode:
 
 
 def _fake_pydual_handle() -> Any:
-    """Handle pydualsense falso — `connected=True` é o que o describe lê.
-
-    Sem esse atributo o `describe_controllers` do backend real marca a entrada
-    como desconectada e o fan-out por MAC nem seria tentado: o teste passaria
-    pelo motivo errado.
-    """
+    """Handle pydualsense falso — `connected=True` é o que o describe lê."""
     from types import SimpleNamespace
 
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
@@ -108,11 +100,7 @@ def _fake_pydual_handle() -> Any:
 def _provider_da_paleta(
     *, cores: bool = True, numeros: bool = False
 ) -> Any:
-    """Provider automático (COR-03) com o MESMO contrato do daemon.
-
-    Devolve a cor do slot (D11) e/ou o padrão de número (D7) por MAC; `None`
-    para quem não está na mesa — exatamente como `make_auto_output_provider`.
-    """
+    """Provider automático (COR-03) com o MESMO contrato do daemon."""
     slots = {UNIQ_1: 1, UNIQ_2: 2}
 
     def provider(uniq: str) -> Any:
@@ -141,8 +129,6 @@ def _mesa_com_dois_controles(
     no_2 = _FakeLedNode()
     ctl._sysfs = {MAC_1: no_1, MAC_2: no_2}
     ctl.set_auto_output_provider(_provider_da_paleta(cores=cores, numeros=numeros))
-    # Sem jogo: a camada GAME fica FORA do merge (o gate da Onda N é medido em
-    # `test_o_broadcast_dela_vence_o_jogo`, à parte).
     ctl.set_game_authority_provider(lambda: "daemon")
     store = StateStore()
     store.update_controller_state(
@@ -161,11 +147,7 @@ def _mesa_com_dois_controles(
 
 @pytest.mark.asyncio
 async def test_broadcast_pinta_os_dois_controles_de_verdade(tmp_path: Path) -> None:
-    """O pedido SEM `uniq` tem de chegar ao hardware dos dois — era o defeito.
-
-    Falha-sem: a última escrita em cada nó é a cor da paleta (azul e vermelho),
-    que é exatamente o que ela mediu no sysfs depois do "ok".
-    """
+    """O pedido SEM `uniq` tem de chegar ao hardware dos dois — era o defeito."""
     server, _ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)
 
     resultado = await server._handle_led_set({"rgb": list(VERDE)})
@@ -177,12 +159,7 @@ async def test_broadcast_pinta_os_dois_controles_de_verdade(tmp_path: Path) -> N
 
 @pytest.mark.asyncio
 async def test_broadcast_sobrevive_ao_proximo_reassert(tmp_path: Path) -> None:
-    """A cor tem de estar REGISTRADA, não só ter sido a última escrita.
-
-    A defesa de exibição (NUMA-03) e todo hotplug re-resolvem pelo mesmo merge:
-    se a intenção não ficasse na camada certa, a paleta voltaria segundos
-    depois — o defeito só teria mudado de horário.
-    """
+    """A cor tem de estar REGISTRADA, não só ter sido a última escrita."""
     server, ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)
     await server._handle_led_set({"rgb": list(VERDE)})
     no_1.rgb_calls.clear()
@@ -218,23 +195,7 @@ async def test_caminho_com_uniq_continua_mirando_so_um(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_o_broadcast_dela_vence_o_jogo(tmp_path: Path) -> None:
-    """DECISÃO DELA — 16/09/2026, PERFIL-MANDA-01: *"meu perfil manda"*.
-
-    O QUE ESTE CASO MEDIA ATÉ AQUI, e por quê: pelo fix cross-cutting U x N
-    (20/07/2026) a camada da usuária ficava ABAIXO da camada GAME, de propósito
-    — com uma sessão aberta, a cor que o jogo pintou vencia o pedido manual no
-    mesmo instante. O nome era `test_o_jogo_continua_vencendo_o_broadcast`.
-
-    O QUE MUDOU, e não foi preferência: medido no journal dela em 16/09, a
-    "cor do jogo" que vencia era a paleta de jogador do SDL a 0x40 — dezenove
-    segundos depois de o perfil do Sackboy pintar o amarelo e o verde que ela
-    escolheu. Ela decidiu com o jogo aberto na frente. O que ela pede AGORA,
-    por gesto ou por perfil, vence o que o jogo pinta naquele controle.
-
-    O FIX U x N NÃO SE PERDEU: ele era sobre a cor manual GRUDAR — quem arrancar
-    o `reassert_resolved_outputs` do handler vê o segundo controle ficar sem a
-    cor dela, e é isso que o segundo `assert` continua travando.
-    """
+    """DECISÃO DELA — 16/09/2026, PERFIL-MANDA-01: *"meu perfil manda"*."""
     server, ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)
     ctl.set_game_authority_provider(lambda: "game")
     assert ctl.set_game_output_for(MAC_1, led=(255, 0, 255)) is True
@@ -257,7 +218,7 @@ async def test_player_set_broadcast_desenha_de_verdade(tmp_path: Path) -> None:
 
     resultado = await server._handle_led_player_set({"bits": list(bits)})
 
-    assert resultado["bits"] == list(bits)  # contrato antigo intacto
+    assert resultado["bits"] == list(bits)
     assert resultado["aplicado_em"] == [UNIQ_1, UNIQ_2]
     assert no_1.player_calls[-1] == bits
     assert no_2.player_calls[-1] == bits
@@ -267,13 +228,7 @@ async def test_player_set_broadcast_desenha_de_verdade(tmp_path: Path) -> None:
 async def test_backend_sem_api_por_uniq_diz_que_nao_registrou(
     tmp_path: Path,
 ) -> None:
-    """Caminho degradado HONESTO: escreve pelo clássico e não finge registro.
-
-    Backend sem `apply_output_for`/`describe_controllers` (FakeController,
-    backend legado) não tem como registrar por MAC — e é justamente aí que ele
-    também não tem paleta automática nenhuma para perder a disputa. A resposta
-    diz `aplicado_em: []` em vez de inventar uma lista.
-    """
+    """Caminho degradado HONESTO: escreve pelo clássico e não finge registro."""
     fc = FakeController(transport="usb")
     fc.connect()
     store = StateStore()

@@ -1,67 +1,5 @@
 #!/usr/bin/env python3
-"""quem_o_jogo_abre.py — o par que separa o jogo que enxerga do que não enxerga.
-
-A PERGUNTA QUE ELE RESPONDE
-----------------------------
-*Por que o Duskfade não vê o controle e o DON'T SCREAM vê, se os dois são a MESMA
-coisa no disco?*
-
-Em 16/08/2026 o censo de API de entrada
-(`scripts/ensaios/api_de_entrada_dos_jogos.py`) mediu os 24 jogos dela e achou
-14 com assinatura IDÊNTICA — `rawinput,xinput`, XInput carregado por
-`LoadLibrary`, zero SDL. Treze funcionam. Um, o Duskfade, não. **O disco não
-separa os dois**, e foi esse número que derrubou a ideia de escolher a máscara
-pela engine: a heurística erraria em 13 de 14.
-
-Se o disco não separa, o que separa está no COMPORTAMENTO — e comportamento só
-se mede com o jogo aberto. É o que este instrumento faz.
-
-O DESENHO É O PAR, e ele é o método desta casa
------------------------------------------------
-Não se mede o Duskfade sozinho. Mede-se o Duskfade CONTRA o DON'T SCREAM, na
-mesma máquina, na mesma sessão, com os mesmos controles. Tudo o que for igual
-nos dois está inocentado por construção; o que diferir é o suspeito.
-
-É a mesma lógica do par doente/são da lightbar (15/08) e da troca de braços
-(15/08 19h): comparar dois casos que diferem em UMA coisa é o que transforma
-correlação em causa.
-
-O QUE ELE OLHA, do processo VIVO de cada jogo
-----------------------------------------------
-1. **Quais nós de `/dev/input` o processo abriu.** É a pergunta central: o jogo
-   que funciona abre o vpad; o que não funciona abre o quê? Nada? O físico?
-2. **Quais `hidraw` ele abriu** — o caminho HIDAPI, que é outro.
-3. **As variáveis de ambiente que decidem entrada**: se o wrapper rodou
-   (`PROTON_DISABLE_HIDRAW` só existe se ele rodou), qual
-   `SDL_GAMECONTROLLER_IGNORE_DEVICES` chegou, e se o `0x054c/0x0df2` — o PID do
-   NOSSO vpad — está na lista que o jogo recebeu.
-4. **A árvore de processos**, porque sob Proton o que abre o dispositivo pode ser
-   o `wineserver` e não o `.exe`, e olhar só o processo do jogo dá falso zero.
-
-O QUE ELE NÃO FAZ
-------------------
-Não escreve em aparelho nenhum, não abre nem fecha jogo, não toca na Steam, não
-mexe em configuração. Lê `/proc` e `/sys`. O pior desfecho de um erro aqui é um
-relatório errado.
-
-E não conclui sozinho: ele imprime o par lado a lado e diz o que DIFERE. Quem
-decide o que a diferença significa é quem está olhando.
-
-COMO USAR — e a ordem importa
-------------------------------
-    # 1. com o DON'T SCREAM aberto (o que FUNCIONA), na tela do jogo:
-    quem_o_jogo_abre.py --rotulo funciona
-
-    # 2. feche, abra o Duskfade (o que NÃO funciona), na tela do jogo:
-    quem_o_jogo_abre.py --rotulo quebrado
-
-    # 3. o par, lado a lado:
-    quem_o_jogo_abre.py --comparar
-
-Rode com o jogo NA TELA, não no menu da Steam: o jogo só enumera controle depois
-de subir. Se possível, mexa no analógico antes — alguns motores só abrem o
-dispositivo quando o veem se mexer.
-"""
+"""quem_o_jogo_abre.py — o par que separa o jogo que enxerga do que não enxerga."""
 from __future__ import annotations
 
 import argparse
@@ -70,14 +8,9 @@ import os
 import re
 from pathlib import Path
 
-#: Onde os retratos ficam. Fora do repositório de propósito: são estado de uma
-#: sessão de bancada, não artefato versionado — quem quiser versionar copia.
 ONDE = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) \
     / "hefesto-dualsense4unix" / "quem-abre"
 
-#: As variáveis que DECIDEM o que o jogo enxerga. As quatro primeiras são nossas
-#: (só existem se o wrapper rodou); as outras são da Steam e do Proton. A quarta
-#: decide se a libSDL2 2.30.x casa o giroscópio ao vpad (SENSORES-NO-JOGO-02).
 VARS = (
     "PROTON_DISABLE_HIDRAW",
     "SDL_JOYSTICK_HIDAPI",
@@ -89,8 +22,6 @@ VARS = (
     "SteamGameId",
 )
 
-#: O PID do nosso vpad. Se ele aparecer no IGNORE que o jogo recebeu, o jogo foi
-#: instruído a ignorar justamente o aparelho que o produto oferece.
 VPAD_VIDPID = "0x054c/0x0df2"
 
 
@@ -120,8 +51,7 @@ def nos_de_entrada() -> dict[str, str]:
 
 
 def arvore_do_jogo(padrao: str) -> list[int]:
-    """Todo processo cujo cmdline case, MAIS os filhos — sob Proton quem abre o
-    dispositivo costuma ser outro processo que não o `.exe`."""
+    """Todo processo cujo cmdline case, MAIS os filhos — sob Proton quem abre o"""
     alvos: set[int] = set()
     rx = re.compile(padrao, re.IGNORECASE)
     for p in Path("/proc").iterdir():
@@ -134,7 +64,6 @@ def arvore_do_jogo(padrao: str) -> list[int]:
             continue
         if rx.search(cmd):
             alvos.add(int(p.name))
-    # os filhos, uma geração de cada vez até estabilizar
     mudou = True
     while mudou:
         mudou = False
@@ -153,28 +82,7 @@ def arvore_do_jogo(padrao: str) -> list[int]:
 
 
 def processo_do_jogo(padrao: str) -> int | None:
-    """O PID de quem é o JOGO — não o `reaper` que o lançou.
-
-    **Isto já mentiu, e o falso negativo foi convincente.** A primeira versão
-    lia o ambiente do primeiro processo da árvore que tivesse `SteamAppId`, em
-    ordem de PID. Sob Proton esse primeiro é o `reaper` da Steam, que roda
-    ANTES do wrapper: no ambiente dele o `PROTON_DISABLE_HIDRAW` ainda não
-    existe, e o `SDL_GAMECONTROLLER_IGNORE_DEVICES` é o da Steam, com 756
-    caracteres.
-
-    Medido em 16/08/2026, com Duskfade e DON'T SCREAM abertos ao mesmo tempo: o
-    instrumento respondeu *"o WRAPPER rodou? NÃO"* para os dois, enquanto o
-    `/proc` do processo do jogo trazia `PROTON_DISABLE_HIDRAW=0x054C/0x0CE6` e
-    um IGNORE de duas entradas, que é o nosso. **Um instrumento que acusa a
-    própria cura de não existir manda a investigação para o lugar mais caro
-    possível.**
-
-    O critério aqui é ESTRUTURAL, não pelo conteúdo: entre os processos cujo
-    cmdline casa com o padrão, vale o mais fundo na cadeia — aproximado pelo
-    maior PID, porque cada elo nasce depois do anterior. Escolher pelo conteúdo
-    ("o que tiver a variável que eu quero medir") seria o instrumento
-    confirmando a si mesmo, que é a armadilha nº 1 desta casa.
-    """
+    """O PID de quem é o JOGO — não o `reaper` que o lançou."""
     rx = re.compile(padrao, re.IGNORECASE)
     candidatos: list[int] = []
     for p in Path("/proc").iterdir():
@@ -227,10 +135,6 @@ def retrato(padrao: str) -> dict:
                     .setdefault(m.group(1), []).append(pid)
         except OSError:
             pass
-    # O ambiente vem do processo do JOGO, e SÓ dele — nunca do primeiro da
-    # árvore. Ver `processo_do_jogo` e o falso negativo que obrigou a separar
-    # isto: lendo o `reaper` da Steam, este instrumento respondeu "o WRAPPER
-    # rodou? NÃO" para dois jogos cujo `/proc` trazia a variável.
     ambiente = ambiente_de(pid_do_jogo)
     ign = ambiente.get("SDL_GAMECONTROLLER_IGNORE_DEVICES", "")
     return {
@@ -251,10 +155,6 @@ def imprimir(r: dict, titulo: str) -> None:
     print(f"\n=== {titulo} ===")
     print(f"  processos na árvore ....... {r['processos']}")
     if not r["processos"]:
-        # Sem processo não há o que afirmar. Imprimir "o wrapper não rodou"
-        # aqui seria uma afirmação sobre um jogo que não está aberto — a mesma
-        # classe de erro do instrumento que diz "o controle não respondeu"
-        # quando quem não respondeu foi a porta.
         print("  (nada a medir — nenhum processo casou com o padrão)")
         return
     print(f"  o WRAPPER rodou? .......... "

@@ -255,42 +255,28 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
-# Protocolo — input 0x31 com carga de áudio
-# ---------------------------------------------------------------------------
 
 #: Report de input do DualSense por BT (o mesmo do espelho de motion).
 INPUT_REPORT_BT = 0x31
 INPUT_REPORT_BT_SIZE = 78
 
-#: Bits do byte de seq+flags (`raw[1]`) do input BT. bit0 = o pacote traz o
-#: estado de input; bit1 = o pacote traz um quadro de áudio do microfone.
 INPUT_FLAG_HID = 0x01
 INPUT_FLAG_AUDIO = 0x02
 
-#: Janela do quadro Opus dentro do report de áudio. 3 + 71 = 74, e 74..77 é o
-#: CRC — o quadro ocupa EXATAMENTE o que sobra do report de 78 bytes.
 MIC_OPUS_OFFSET = 3
 MIC_OPUS_LEN = 71
 
-#: Formato do que sai do decodificador. O firmware manda quadros de 10 ms a
-#: 48 kHz (TOC medido: CELT, 480 amostras por quadro) ≈ 100 pacotes/s.
 MIC_TAXA_HZ = 48000
 MIC_CANAIS = 1
 MIC_AMOSTRAS_POR_QUADRO = 480
 MIC_BYTES_POR_AMOSTRA = 2
 MIC_BYTES_POR_QUADRO = MIC_AMOSTRAS_POR_QUADRO * MIC_CANAIS * MIC_BYTES_POR_AMOSTRA
 
-# ---------------------------------------------------------------------------
-# Protocolo — output 0x32 (AudioControl)
-# ---------------------------------------------------------------------------
 
-#: Output report de áudio de menor tamanho declarado pelo report descriptor do
 #: DualSense em BT (`85 32 09 32 95 8d 91 02` = 141 bytes de payload + o ID).
 AUDIO_OUTPUT_REPORT_ID = 0x32
 AUDIO_OUTPUT_REPORT_LEN = 142
 
-#: Tags dos blocos TLV do corpo. Só usamos o de AudioControl; os demais estão
-#: aqui para quem for ler o protocolo depois (0x10 SetState, 0x12 hápticos,
 #: 0x13/0x16 alto-falante) e para o teste que trava os valores.
 BLOCO_SET_STATE = 0x10
 BLOCO_AUDIO_CONTROL = 0x11
@@ -303,14 +289,9 @@ BLOCO_SPEAKER = 0x13
 BLOCO_PRESENTE = 0x80
 BLOCO_DUPLO = 0x40
 
-#: Valor do bloco AudioControl. bit0 é o liga/desliga do microfone; o bit1
-#: acompanha nas duas formas (é o que o firmware espera receber).
 AUDIO_CONTROL_MIC_ON = 0b011
 AUDIO_CONTROL_MIC_OFF = 0b010
 
-#: Offset do byte de estado do áudio dentro do report de INPUT (offset 53 do
-#: `USBGetStateData` + 2 do envelope BT): bit0 fone plugado, bit1 mic externo
-#: plugado, bit2 microfone MUDO pelo botão físico / powersave.
 INPUT_OFFSET_AUDIO_STATUS = 55
 STATUS_FONE_PLUGADO = 0x01
 STATUS_MIC_EXTERNO = 0x02
@@ -318,13 +299,7 @@ STATUS_MIC_MUDO = 0x04
 
 
 def montar_pedido_de_mic(ligar: bool, *, seq: int = 0) -> bytes:
-    """Report 0x32 completo (142 B) que LIGA ou DESLIGA o microfone por BT.
-
-    Um único bloco TLV de AudioControl. O CRC é o de OUTPUT (seed 0xA2), o
-    mesmo `bt_crc32` que o `build_bt_report` do 0x31 usa — o firmware descarta
-    silenciosamente qualquer report BT com CRC errado, e "não faz nada e não
-    reclama" é exatamente o sintoma mais caro de depurar.
-    """
+    """Report 0x32 completo (142 B) que LIGA ou DESLIGA o microfone por BT."""
     pkt = bytearray(AUDIO_OUTPUT_REPORT_LEN)
     pkt[0] = AUDIO_OUTPUT_REPORT_ID
     pkt[1] = (int(seq) & 0x0F) << 4
@@ -348,17 +323,7 @@ def eh_report_de_audio(raw: bytes | bytearray) -> bool:
 def frame_opus_do_report(
     raw: bytes | bytearray, *, validar_crc: bool = True
 ) -> bytes | None:
-    """Extrai os 71 bytes de Opus de um report 0x31 de áudio; None se não for.
-
-    Devolve None (e não levanta) para QUALQUER coisa que não seja exatamente um
-    report de áudio íntegro: tamanho errado, ID errado, bit de áudio apagado,
-    CRC quebrado. O chamador não precisa distinguir os casos — todos querem a
-    mesma ação, que é ignorar o pacote e esperar o próximo, 10 ms depois.
-
-    `validar_crc=False` existe só para o teste que monta report sintético sem
-    querer recalcular CRC; no caminho real o CRC é conferido SEMPRE (um quadro
-    corrompido pelo rádio vira estouro audível no decodificador Opus).
-    """
+    """Extrai os 71 bytes de Opus de um report 0x31 de áudio; None se não for."""
     if not eh_report_de_audio(raw):
         return None
     if validar_crc:
@@ -369,12 +334,7 @@ def frame_opus_do_report(
 
 
 def status_de_audio(raw: bytes | bytearray) -> int | None:
-    """Byte de estado do áudio de um report de INPUT normal (None se for áudio).
-
-    Só o report com estado de input carrega isso; o de áudio usa aquele mesmo
-    espaço para Opus. Ler o byte do pacote errado devolveria bits de áudio
-    comprimido interpretados como "fone plugado" — daí a checagem explícita.
-    """
+    """Byte de estado do áudio de um report de INPUT normal (None se for áudio)."""
     if len(raw) != INPUT_REPORT_BT_SIZE or raw[0] != INPUT_REPORT_BT:
         return None
     if raw[1] & INPUT_FLAG_AUDIO or not raw[1] & INPUT_FLAG_HID:
@@ -382,16 +342,12 @@ def status_de_audio(raw: bytes | bytearray) -> int | None:
     return int(raw[INPUT_OFFSET_AUDIO_STATUS])
 
 
-# ---------------------------------------------------------------------------
 # Descoberta dos DualSense em Bluetooth
 # ---------------------------------------------------------------------------
 
-#: Bus HID do `HID_ID` no sysfs (`BUS_BLUETOOTH` do kernel).
 _BUS_BLUETOOTH = 0x05
 _VENDOR_SONY = 0x054C
 #: DualSense (0x0CE6) e DualSense Edge (0x0DF2). O vpad do próprio hefesto
-#: também se apresenta como 0x0DF2, mas em `BUS_USB` — o filtro de bus já o
-#: exclui, e o `HID_PHYS=hefesto-vpad` é a segunda rede.
 _PRODUTOS_DUALSENSE = (0x0CE6, 0x0DF2)
 _PHYS_VPAD = "hefesto-vpad"
 
@@ -408,12 +364,7 @@ class NoDualSenseBT:
 
     @property
     def nome_curto(self) -> str:
-        """Sufixo estável do MAC — o que vai no nome da source do PipeWire.
-
-        Controle sem `HID_UNIQ` (raro, mas acontece em BT recém-pareado) cai no
-        nome do nó: o que não pode é dois controles gerarem o MESMO nome de
-        source e um sobrescrever o outro.
-        """
+        """Sufixo estável do MAC — o que vai no nome da source do PipeWire."""
         hexa = "".join(ch for ch in self.uniq.lower() if ch in "0123456789abcdef")
         if len(hexa) >= 6:
             return hexa[-6:]
@@ -495,12 +446,7 @@ OPUS_OK = 0
 
 
 class DecodadorOpus:
-    """Decodificador Opus mono 48 kHz — quadro de 71 B → 480 amostras s16le.
-
-    Levanta `OpusIndisponivelError` na construção quando a `libopus` não está no
-    sistema. Quem chama trata isso como "a ponte não sobe" (ausência é
-    resposta), nunca como exceção a propagar para a interface.
-    """
+    """Decodificador Opus mono 48 kHz — quadro de 71 B → 480 amostras s16le."""
 
     def __init__(self, *, taxa_hz: int = MIC_TAXA_HZ, canais: int = MIC_CANAIS) -> None:
         self._lib = _carregar_libopus()
@@ -510,18 +456,10 @@ class DecodadorOpus:
             raise OpusIndisponivelError(f"opus_decoder_create falhou: {erro.value}")
         self._dec: int | None = ponteiro
         self._canais = canais
-        # Buffer reusado: alocar 480 int16 a 100 Hz por controle geraria lixo
-        # de GC a cada 10 ms sem necessidade nenhuma.
         self._pcm = (ctypes.c_int16 * (MIC_AMOSTRAS_POR_QUADRO * canais))()
 
     def decodificar(self, quadro: bytes) -> bytes | None:
-        """Quadro Opus → PCM s16le. None quando a libopus recusa o quadro.
-
-        Um quadro recusado (rádio corrompeu abaixo do que o CRC pega, ou o
-        firmware mandou algo fora do contrato) é DESCARTADO. Não interpolamos:
-        o `module-pipe-source` já preenche o buraco com silêncio e 10 ms de
-        silêncio é inaudível.
-        """
+        """Quadro Opus → PCM s16le. None quando a libopus recusa o quadro."""
         if self._dec is None:
             return None
         n = self._lib.opus_decode(
@@ -559,11 +497,7 @@ _LOCK_OPUS = threading.Lock()
 
 
 def _carregar_libopus() -> ctypes.CDLL:
-    """Carrega e prototipa a libopus uma vez por processo (sob lock).
-
-    Duas pontes (dois controles) subindo em paralelo carregariam a .so duas
-    vezes e prototipariam por cima uma da outra — é barato evitar.
-    """
+    """Carrega e prototipa a libopus uma vez por processo (sob lock)."""
     global _LIB_OPUS
     if _LIB_OPUS is not None:
         return _LIB_OPUS
@@ -608,156 +542,41 @@ def versao_libopus() -> str | None:
     """Versão da libopus, ou None se ela não estiver no sistema (p/ o doctor)."""
     try:
         bruto = _carregar_libopus().opus_get_version_string()
-        # ctypes devolve `Any`; o gate de tipos é rígido e o retorno é público.
         return str(bytes(bruto).decode("utf-8", "replace"))
     except Exception:
-        # Inclui `OpusIndisponivelError` e qualquer .so exótica que não exporte o
-        # símbolo: um diagnóstico nunca derruba quem o chama.
         return None
 
 
-# ---------------------------------------------------------------------------
-# Publicação: source virtual do PipeWire alimentada por fifo
-# ---------------------------------------------------------------------------
-
-#: `module-pipe-source` publica uma source de CAPTURA de verdade (não um
-#: `.monitor` de sink), alimentada por um fifo. É o caminho mais curto entre
-#: "tenho PCM" e "o mic aparece em qualquer app": um módulo, um fifo, zero
-#: processo intermediário segurando o áudio. A alternativa clássica
-#: (null-sink + remap-source) precisaria de DOIS módulos e ainda publicaria um
-#: `.monitor` no meio — que é justamente o que `fontes_dualsense()` do
-#: `mic_monitor` aprendeu a descartar.
-#:
-#: ARMADILHA MEDIDA (2026-07-25, custou uma hora): a source só é LIGADA por um
-#: gerenciador de sessão. Com o `wireplumber.service` parado, o módulo carrega,
-#: `pactl list sources` mostra o nó — e ele fica em `SUSPENDED` para sempre:
-#: ninguém cria o link do cliente que grava, o fifo enche, todo quadro vira
-#: descarte e o `parec` colhe ZERO byte. O sintoma é indistinguível de "o
-#: protocolo está errado". Se a ponte estiver decodificando (`quadros_audio`
-#: subindo) e mesmo assim não sair áudio, o primeiro suspeito é
 #: `systemctl --user status wireplumber`, não o DualSense.
 _MODULO_PIPE_SOURCE = "module-pipe-source"
 
-#: A `priority.session` com que a source da ponte nasce — A MESMA FAIXA DO CABO.
-#:
-#: CANAL-POR-CONTROLE-02 (03/09/2026). Aqui estava **200**, escrito em
-#: 25/07/2026 (`d6f9d331`) com o comentário *"é o mesmo princípio do drop-in 51
-#: do WirePlumber"*. Era, naquele dia: o 51 daquela data REBAIXAVA a entrada do
-#: controle para 50, e 200 espelhava aquilo.
-#:
-#: **A doutrina que o 200 espelhava foi SUBSTITUÍDA por medição em 08/08/2026**
-#: (MONITOR-QUE-VENCE-01, `4289ace0`), e o número da ponte não veio junto. O 51
-#: parou de rebaixar e passou a pôr a entrada do controle numa FAIXA medida —
-#: acima de qualquer monitor, abaixo de qualquer captura real —, sob um
-#: invariante de uma linha: *um microfone de verdade nunca pode perder para um
-#: monitor*. Monitor é o laço de retorno do que SAI; eleger um como microfone
-#: padrão é gravar o áudio do jogo no lugar da voz dela.
-#:
-#: **E o 51 não alcança esta source.** `monitor.alsa.rules` só vê nós criados
-#: pelo monitor de ALSA do WirePlumber, e a source da ponte é um
-#: `module-pipe-source` — nó virtual, criado pelo servidor. Logo o único lugar
-#: onde a prioridade do canal do RÁDIO pode ser escrita é aqui, e ela ficou
-#: catorze dias atrás da doutrina que diz espelhar.
-#:
 #: MEDIDO NA MÁQUINA DELA EM 03/09/2026, com um DualSense no cabo e a webcam
-#: plugada (`LC_ALL=C pactl list sources`)::
-#:
-#:     alsa_output.pci-…hdmi-stereo.monitor                  696
-#:     alsa_output.pci-…iec958-stereo.monitor                736
 #:     alsa_output…DualSense…analog-surround-40.monitor     1109
 #:     alsa_input…DualSense…iec958-stereo   (o CABO)        1500   ← o drop-in 51
-#:     alsa_input.pci-…analog-stereo        (placa do PC)   2009
-#:     alsa_input…HD_Pro_Webcam_C920        (a webcam)      2109
-#:
-#: Com 200 a ponte nascia **abaixo dos três monitores** — inclusive abaixo do
-#: monitor do alto-falante do OUTRO controle. O aparelho aceita e publica o
-#: canal; quem o punha em último lugar era este literal.
-#:
 #: O QUE ISTO **NÃO** DECIDE: quem, entre dois DualSense, é o microfone padrão.
-#: Isso é da eleição (`integrations/eleicao_de_microfone.py`), e o empate entre
-#: iguais já existe no cabo desde 08/08 — o drop-in 51 casa por padrão de nome
-#: e dá 1500 aos DOIS controles no fio. A ponte passa a empatar com eles, que é
-#: o contrato da CANAL-POR-CONTROLE-01: *"perder o padrão não é perder o
-#: canal"*.
-#:
-#: DONO ÚNICO IMPOSSÍVEL, DUAS RÉGUAS NO LUGAR: um `.conf` do WirePlumber não
-#: importa Python. Então o número vive nos dois sítios e um portão exige que
-#: sejam o MESMO — `tests/unit/test_o_canal_do_radio_nao_perde_para_um_monitor.py`,
-#: que lê este valor e o do `assets/wireplumber/51-*.conf` e reprova a
-#: divergência.
 PRIORIDADE_SESSAO_DA_PONTE = 1500
 
-#: Tamanho do fifo. Ele é o ÚNICO buffer entre o rádio e o PipeWire, então ele
-#: é o teto de latência: 8 KiB = 4096 amostras ≈ 85 ms. Maior só acumularia
-#: áudio velho quando ninguém está gravando (a source fica SUSPENDED e não
-#: drena) e o primeiro segundo de gravação sairia atrasado.
 _FIFO_BYTES = 8192
 
 _TIMEOUT_PACTL_S = 5.0
 
-#: Os TRÊS estados que o servidor publica para uma source, na quinta coluna de
-#: ``pactl list sources short``. Só um deles quer dizer *"tem alguém gravando
-#: AGORA"*, e é isso que decide se o microfone do controle precisa estar no ar.
-#:
-#: MEDIDO na máquina dela em 06/09/2026 (PipeWire 1.6.8), com um
-#: ``module-pipe-source`` sintético e um `parec` de verdade entrando e saindo::
-#:
-#:     sem ouvinte  : SUSPENDED
-#:     COM ouvinte  : RUNNING
-#:     ouvinte saiu : IDLE
-#:
-#: **IDLE não é ouvinte**, e a distinção é o ponto inteiro: depois que o último
-#: app solta o nó ele fica IDLE, não volta a SUSPENDED. Tratar IDLE como
-#: "alguém está ouvindo" deixaria o microfone dela ligado para sempre depois da
-#: primeira gravação — que é o defeito de hoje com outro nome.
 ESTADO_COM_OUVINTE = "RUNNING"
 
-#: A quinta coluna, e ela é separada por TAB. **Medido, e custou uma volta:** o
-#: campo de formato tem ESPAÇOS dentro (``s16le 1ch 48000Hz``), então quebrar a
-#: linha por espaço em branco devolve ``1ch`` no lugar do estado — foi a
-#: primeira leitura que este módulo fez, e ela dava a mesma resposta para o nó
-#: com ouvinte e sem.
 _COLUNA_DO_ESTADO = 4
 
-#: A terceira coluna de ``pactl list modules short`` — ``id \t nome \t args``.
-#: Os argumentos vêm inteiros nela, com os espaços do `source_properties`
-#: dentro; ver `SourceVirtualPipeWire._modulos_do_servidor_com_este_nome`.
 _COLUNA_DOS_ARGS = 2
 
-#: `fcntl.F_SETPIPE_SZ` não é exposto em toda build do CPython; o número é
-#: estável no Linux desde o 2.6.35.
 _F_SETPIPE_SZ = getattr(fcntl, "F_SETPIPE_SZ", 1031)
 
 
-#: A MARCA DO APARELHO — A-HAPTICA-E-POR-APARELHO-01, 02/10/2026. O que vem
-#: antes das seis letras, e as letras de onde elas saem: NENHUMA é hexadecimal
-#: (as réguas de forma da casa leem seis hex seguidos como o rabo de um
-#: endereço, ``core/formas_do_endereco.py``), e nenhuma se lê como dígito (sem
-#: I, L, O).
 PREFIXO_DA_MARCA_DO_APARELHO = "APARELHO"
 LETRAS_DA_MARCA_DO_APARELHO = "GHJKMNPQRSTUVWXYZ"
-#: Quantas letras: 17 elevado a 6 são 24 milhões de marcas para os quatro
-#: controles de uma mesa.
 TAMANHO_DA_MARCA_DO_APARELHO = 6
-#: Quantos hex o ``uniq`` precisa ter para dar uma marca (o mesmo piso do rabo
-#: do nó do som, ``alto_falante_bt.HEX_DO_SUFIXO``).
 _HEX_MINIMOS_DA_MARCA = 6
 
 
 def marca_do_aparelho(uniq: str | None) -> str:
-    """``APARELHO`` e seis letras: o resumo estável da chave de UM controle. "" = sem identidade.
-
-    A-HAPTICA-E-POR-APARELHO-01, 02/10/2026, pela palavra dela de 29/09
-    (*«todas as features são um por aparelho. sempre.»*).
-    É a marca do endpoint de háptica do controle (o nome do nó), do tocador do
-    rumble, do laço do cabo e da propriedade ``hefesto.controle`` dos três nós
-    dele. **Não é o rabo do endereço:** sai de um resumo SHA-256 dos dígitos
-    (``norm_mac``, a mesma chave no cabo e no rádio), escrito em letras que não
-    são hex. O mesmo aparelho dá a mesma marca em toda volta, todo restart e
-    os dois transportes; o número do jogador não entra nela.
-    """
-    # O IMPORT É AQUI, e não no topo: uma linha a mais no cabeçalho andaria as
-    # citações `arquivo:linha` deste arquivo que moram nas planilhas.
+    """``APARELHO`` e seis letras: o resumo estável da chave de UM controle. "" = sem identidade."""
     import hashlib
 
     digitos = "".join(ch for ch in str(uniq or "").lower() if ch in "0123456789abcdef")
@@ -773,15 +592,7 @@ def marca_do_aparelho(uniq: str | None) -> str:
 
 
 def campo_do_controle(uniq: str | None) -> tuple[str, ...]:
-    """``hefesto.controle=<marca>``, a propriedade que diz de qual APARELHO o nó é.
-
-    A-HAPTICA-E-POR-APARELHO-01, 02/10/2026: os três nós de um controle (o
-    alto-falante, o microfone do rádio e a háptica) declaram a MESMA marca
-    (:func:`marca_do_aparelho`), e o número de agora fica no rótulo. Era
-    ``hefesto.lugar=N`` desde 29/09 (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-
-    CHEGAM-AO-RADIO-01), e o lugar anda quando a mesa se renumera; o aparelho,
-    não. O espaço ``hefesto.`` é lido do dono dele. Sem identidade, nada.
-    """
+    """``hefesto.controle=<marca>``, a propriedade que diz de qual APARELHO o nó é."""
     from hefesto_dualsense4unix.integrations.quem_ouve_o_microfone import (
         PREFIXO_PROPRIEDADE_HEFESTO,
     )
@@ -830,8 +641,6 @@ def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
                 f"device.description='{descricao}'",
                 f"priority.session={PRIORIDADE_SESSAO_DA_PONTE}",
                 "device.icon_name=audio-input-microphone",
-                # O APARELHO, a mesma marca do alto-falante e da háptica dele
-                # (A-HAPTICA-E-POR-APARELHO-01).
                 *campo_do_controle(controle),
             )
         )
@@ -840,12 +649,7 @@ def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
 
 
 class SourceVirtualPipeWire:
-    """Uma source de captura publicada no PipeWire, alimentada por um fifo.
-
-    `nome` é o `source_name` (o que aparece em `pactl list sources short`);
-    `descricao` é o rótulo legível que a bandeja de som mostra.  (noqa-acento:
-    nomes dos parâmetros, não texto)
-    """
+    """Uma source de captura publicada no PipeWire, alimentada por um fifo."""
 
     def __init__(
         self,
@@ -859,8 +663,6 @@ class SourceVirtualPipeWire:
     ) -> None:
         self.nome = nome
         self.descricao = descricao
-        #: O ``uniq`` do APARELHO dono do canal (``hefesto.controle``): quem
-        #: constrói sabe o controle, e o nó só conhece o nome.
         self.controle = controle
         self.taxa_hz = taxa_hz
         self.canais = canais
@@ -870,16 +672,9 @@ class SourceVirtualPipeWire:
         self._fifo: str | None = None
         self._fd: int | None = None
 
-    # -- ciclo de vida ----------------------------------------------------
 
     def _modulos_do_servidor_com_este_nome(self) -> list[str]:
-        """Os `module-pipe-source` que o SERVIDOR já tem com este `source_name`.
-
-        Casa por TOKEN (`source_name=<nome>` inteiro, entre espaços), nunca por
-        substring: o argumento traz `source_properties="…"` com espaços dentro,
-        e um `in` cru faria `hefesto_mic_0000f0` casar com um
-        `hefesto_mic_c311f01` que não é dele.
-        """
+        """Os `module-pipe-source` que o SERVIDOR já tem com este `source_name`."""
         saida = self.runner(["pactl", "list", "modules", "short"])
         achados: list[str] = []
         alvo = f"source_name={self.nome}"
@@ -928,7 +723,7 @@ class SourceVirtualPipeWire:
         if self._module_id is not None:
             return True
         orfaos = _orfaos_se_o_pactl_responde(self)
-        if orfaos is None:  # sem `pactl`, ou o servidor mudo: ver `RecuoDoPactl`
+        if orfaos is None:
             return False
         for orfao in orfaos:
             self.runner(["pactl", "unload-module", orfao])
@@ -948,13 +743,6 @@ class SourceVirtualPipeWire:
                 "format=s16le",
                 f"rate={self.taxa_hz}",
                 f"channels={self.canais}",
-                # A FAIXA MEDIDA, a mesma do cabo: acima de qualquer monitor e
-                # abaixo de qualquer captura real. O objetivo original continua
-                # cumprido — o controle não rouba o posto de um microfone de
-                # verdade, que é a queixa que criou o drop-in 51 —, e o modo de
-                # falha que o 200 criava (perder para o laço de retorno do
-                # alto-falante) deixa de ser possível. Ver
-                # `PRIORIDADE_SESSAO_DA_PONTE` para os números medidos.
                 propriedades_da_source(self.descricao, self.controle),
             ]
         )
@@ -979,26 +767,15 @@ class SourceVirtualPipeWire:
                 os.close(self._fd)
             self._fd = None
         if self._module_id is not None:
-            # Servidor mudo: o módulo fica para a varredura (`_descarregar_ou_deixar`).
             self._module_id = _descarregar_ou_deixar(self.runner, self.nome, self._module_id)
         if self._fifo is not None:
             with contextlib.suppress(OSError):
                 os.unlink(self._fifo)
             self._fifo = None
 
-    # -- leitura ----------------------------------------------------------
 
     def estado(self) -> str | None:
-        """`RUNNING` / `IDLE` / `SUSPENDED` do nó, PERGUNTADO ao servidor.
-
-        `None` = não deu para saber (nó fora da lista, `pactl` mudo). **"Não
-        sei" não é "ninguém está ouvindo"**, e quem chama trata os dois
-        diferente: ver :meth:`PonteMicBluetooth._talvez_seguir_a_source`.
-
-        Lê, nunca lembra. O estado tem UM dono — o servidor de som —, e guardar
-        aqui o que se pediu como se fosse o que está valendo é o hábito que já
-        fez esta tela parecer mentirosa quando ela nunca mentiu.
-        """
+        """`RUNNING` / `IDLE` / `SUSPENDED` do nó, PERGUNTADO ao servidor."""
         if self._module_id is None or pactl_mudo():
             return None
         saida = self.runner(["pactl", "list", "sources", "short"])
@@ -1008,17 +785,9 @@ class SourceVirtualPipeWire:
                 return campos[_COLUNA_DO_ESTADO].strip()
         return None
 
-    # -- escrita ----------------------------------------------------------
 
     def escrever(self, pcm: bytes) -> bool:
-        """Empurra PCM para o fifo SEM bloquear. False = quadro descartado.
-
-        Descarte é comportamento CORRETO aqui, não falha: quando ninguém está
-        gravando, a source fica suspensa e o PipeWire não drena o fifo — se
-        bloqueássemos, a thread pararia de ler o hidraw, a fila do kernel
-        estouraria e o prejuízo cairia no gyro e no rumble, que dividem o mesmo
-        link. Em áudio ao vivo, perder 10 ms é invisível; atrasar não é.
-        """
+        """Empurra PCM para o fifo SEM bloquear. False = quadro descartado."""
         if self._fd is None and not self._abrir_fifo():
             return False
         fd = self._fd
@@ -1030,17 +799,12 @@ class SourceVirtualPipeWire:
             self.descartes += 1
             return False
         except (BrokenPipeError, OSError):
-            # PipeWire soltou a ponta de leitura (módulo descarregado por fora,
-            # serviço reiniciado). Fecha e deixa a próxima escrita reabrir.
-            # Fecha o `fd` LOCAL, não `self._fd`: outra thread pode tê-lo posto
-            # em None entre o write e aqui, e aí o close receberia None.
             with contextlib.suppress(OSError):
                 os.close(fd)
             self._fd = None
             return False
         return True
 
-    # -- interno ----------------------------------------------------------
 
     def _caminho_do_fifo(self) -> str:
         base = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
@@ -1052,8 +816,6 @@ class SourceVirtualPipeWire:
         try:
             fd = os.open(self._fifo, os.O_WRONLY | os.O_NONBLOCK)
         except OSError as exc:
-            # ENXIO = o módulo ainda não abriu a ponta de leitura. Não é erro
-            # fatal: a próxima escrita, 10 ms depois, tenta de novo.
             logger.debug("bt_mic_fifo_sem_leitor", fifo=self._fifo, err=str(exc))
             return False
         with contextlib.suppress(OSError):
@@ -1063,19 +825,7 @@ class SourceVirtualPipeWire:
 
 
 def _rodar(argv: list[str]) -> str | None:
-    """Roda um comando curto e devolve o stdout (None em qualquer falha).
-
-    Nunca `shell=True` (invariante do projeto) e sempre com timeout — um
-    `pactl` pendurado num PipeWire morto não pode segurar o start da ponte.
-
-    **`LC_ALL=C` porque o `pactl` desta máquina TRADUZ.** Medido em 06/09/2026,
-    com o `LANG=pt_BR.UTF-8` dela: `pactl get-source-mute` responde ``Mute:
-    sim`` / ``Mute: não``. O estado da source em `list sources short` NÃO é
-    traduzido nesta versão (medido: `SUSPENDED` nos dois idiomas), mas depender
-    disso seria depender de um acidente — e esta casa já respondeu "nenhum
-    controle com placa de áudio" sobre um sistema que tinha uma, em 15/08/2026,
-    exatamente por ler saída traduzida.
-    """
+    """Roda um comando curto e devolve o stdout (None em qualquer falha)."""
     if (resposta := _pelo_retrato(argv)) is not None or shutil.which(argv[0]) is None:
         return resposta if isinstance(resposta, str) else None
     try:
@@ -1099,50 +849,20 @@ def _rodar(argv: list[str]) -> str | None:
     return proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# A ponte
-# ---------------------------------------------------------------------------
-
-#: Timeout do `select` por iteração — o teto de latência para ver o stop_flag
-#: e para o watchdog de re-arme. Nada acontece nesse tempo: a thread DORME.
 _SELECT_TIMEOUT_S = 0.25
 
-#: Silêncio de áudio (com o mic supostamente ligado) que dispara UM re-arme.
-#: O firmware manda ~100 quadros/s em CBR mesmo em sala silenciosa, então 2 s
-#: sem quadro nenhum não é "ninguém falou": é o mic desligado. Acontece de
-#: verdade quando o controle sai e volta do powersave, ou quando outro
-#: escritor (o PS app rodando em Proton, por exemplo) manda o 0b010.
 _REARME_S = 2.0
 
-#: Piso entre dois re-armes. Sem isso um controle que RECUSA ligar o mic (fone
-#: com mic externo em estado esquisito, firmware antigo) viraria um write a
-#: cada 2 s para sempre — tráfego de rádio inútil disputando com o rumble.
 _REARME_MIN_INTERVALO_S = 2.0
 
-#: Leitura: cobre os 78 bytes do 0x31 com folga.
 _READ_LEN = 128
 
-#: De quanto em quanto se pergunta ao servidor de som se AINDA tem alguém
-#: gravando do nó. É um `pactl list sources short` por segundo, por controle com
-#: ponte de pé — e ponte só existe para controle cujo canal alguém pediu.
-#:
-#: O número é o mais curto que ainda não é polling: mais lento, ela apertaria
-#: "gravar" e esperaria — e dois segundos de silêncio depois de um gesto se leem
-#: como *"não funcionou"*, que é o mesmo sintoma que o fragmento de 4 s do
-#: `parec` produzia do lado do cabo (medido em 06/09, ONDA5-MIC-VIRTUAL-01 §4).
-#: Mais rápido, seria fork+exec a mais sem ninguém para notar a diferença.
 _OLHAR_NA_SOURCE_S = 1.0
 
 
 @dataclass(frozen=True)
 class EstatisticaMic:
-    """Contadores da ponte — o que o `mic bt` e os testes olham.
-
-    `input_mudos` sobre `quadros_input` é o CICLO DE TRABALHO do mute — a
-    medida da anomalia aberta descrita no cabeçalho ("o gating do firmware").
-    Ele existe para que a mantenedora possa medir o problema com um comando,
-    em vez de acreditar num relatório.
-    """
+    """Contadores da ponte — o que o `mic bt` e os testes olham."""
 
     quadros_audio: int = 0
     quadros_input: int = 0
@@ -1190,11 +910,6 @@ class PonteMicBluetooth:
         self.no = no
         self._opener = opener or abrir_hidraw_rw
         self._decodificador_injetado = decodificador
-        # MIC-DA-MESA-ELEICAO-01: o prefixo tinha DOIS donos — esta f-string
-        # e uma constante redigitada em `app/mic_monitor.py`, que é quem LÊ o
-        # nome de volta para descobrir de que controle a source é. Trocar um
-        # lado deixaria o outro procurando um prefixo que não existe mais, em
-        # silêncio. Agora ele é lido de `integrations/fontes_de_captura.py`.
         self._nome_source = (
             nome_source or f"{PREFIXO_SOURCE_PONTE_BT}{no.nome_curto}"
         )
@@ -1207,26 +922,13 @@ class PonteMicBluetooth:
         self._seq = 0
         self._ultimo_audio = 0.0
         self._ultimo_rearme = 0.0
-        #: O canal por controle é NOSSO para fechar? Só quando FOI ESTA ponte
-        #: que o abriu. Um canal que já estava de pé tem outro dono (o cabo, ou
-        #: outra ponte da mesma sessão), e derrubá-lo no `parar()` tiraria o
-        #: microfone de quem não pediu nada.
         self._canal_e_nosso = False
-        #: O que pedimos ao controle da última vez. `None` = nada foi pedido
-        #: ainda. Ele existe para que o 0x32 só seja escrito na BORDA — a
-        #: parcimônia do cabeçalho ("nunca em regime") vale igual depois que o
-        #: pedido passou a seguir o ouvinte.
         self._mic_pedido: bool | None = None
-        #: A PALAVRA DELA sobre este microfone. `None` = ela não disse nada, e
-        #: aí quem decide é o ouvinte, como desde 06/09/2026. Três valores pelo
-        #: mesmo molde que `mic.led.set` e `ControleDeclarado.microfone` já
-        #: usam — nenhuma gramática nova entra na casa por causa disto.
         #: Ver :meth:`dizer_o_pedido_dela` e :meth:`_talvez_seguir_a_source`.
         self._pedido_dela: bool | None = None
         self._ultimo_olhar_na_source = 0.0
         self._stats = EstatisticaMic(source=self._nome_source)
 
-    # -- API pública ------------------------------------------------------
 
     @property
     def nome_source(self) -> str:
@@ -1234,26 +936,11 @@ class PonteMicBluetooth:
 
     @property
     def mic_no_ar(self) -> bool:
-        """O microfone deste controle está PEDIDO agora — 10/09/2026.
-
-        `_mic_pedido` é o único lugar desta casa que sabe o que foi escrito no
-        `0x32` por último; `None` é *"ainda não pedi nada"*, que vale `False`.
-
-        Ele nasceu público porque o SOM precisa dele: o report `0x35` que leva
-        o som carrega, no bit 0 dos enables, o mesmo microfone. Sem esta
-        pergunta o som desliga o microfone a cada report, e as duas metades da
-        casa passam a se contradizer noventa e três vezes por segundo.
-        """
+        """O microfone deste controle está PEDIDO agora — 10/09/2026."""
         return self._mic_pedido is True
 
     def estatistica(self) -> EstatisticaMic:
-        """Snapshot dos contadores (barato: só lê um dataclass sob lock).
-
-        `quadros_descartados` é o contador da SOURCE (quadro decodificado que o
-        fifo não aceitou), então ele é COPIADO de lá, não somado — a ponte não
-        tem contador próprio para isso e dois donos do mesmo número seria
-        exatamente o vício que este projeto já pagou caro.
-        """
+        """Snapshot dos contadores (barato: só lê um dataclass sob lock)."""
         with self._lock:
             stats = self._stats
         source = self._source
@@ -1272,36 +959,11 @@ class PonteMicBluetooth:
         )
 
     def dizer_o_pedido_dela(self, ligado: bool | None) -> None:
-        """A palavra DELA sobre este microfone. `None` devolve a decisão ao ouvinte.
-
-        **O SEGUNDO DONO DO 0x32, e ele faltava.** Desde 06/09/2026 quem decide
-        se o microfone vai ao ar é o estado da source — e só ele. O ouvinte é um
-        PROXY de *"alguém quer este microfone"*; o ato dela é a MESMA afirmação
-        dita pelo dono, direto, e era a única que este caminho ignorava. Medido
-        no journal dela em 07/09/2026, das 19h11m18 às 19h14m14: quase três
-        minutos de botão apertado, a ponte em `bt_mic_pedido ligar=False`, e o
-        microfone só subindo quando um aplicativo abriu o canal para gravar.
-
-        **NÃO ESCREVE NADA AQUI, e isso é desenho.** O `0x32` sai do fio numa
-        thread só — a do :meth:`_loop` —, e ela relê este campo antes de cada
-        `select` (`_SELECT_TIMEOUT_S`, 0,25 s). Escrever da thread do ato daria
-        dois donos ao contador de sequência do 0x32, que é exatamente a hipótese
-        não refutada por trás do defeito de 16/08/2026 (o botão PS disparando
-        sozinho aos ~3 minutos). Guardar e deixar o laço aplicar custa um quarto
-        de segundo e não acrescenta escritor nenhum.
-
-        Quem chama é uma porta só: `daemon/subsystems/bt_mic.BtMicSubsystem`,
-        que reaplica a palavra guardada a cada varredura — é o que faz o pedido
-        dela sobreviver ao hotplug do rádio, onde a ponte morre por rotina.
-        """
+        """A palavra DELA sobre este microfone. `None` devolve a decisão ao ouvinte."""
         self._pedido_dela = ligado
 
     def iniciar(self) -> bool:
-        """Sobe tudo: decodificador, source, fd do hidraw, thread e o 0x32.
-
-        Devolve False sem deixar nada de pé se qualquer peça faltar. Ausência é
-        resposta: não existe modo degradado com source publicada e sem áudio.
-        """
+        """Sobe tudo: decodificador, source, fd do hidraw, thread e o 0x32."""
         if self._thread is not None and self._thread.is_alive():
             return True
         try:
@@ -1332,9 +994,6 @@ class PonteMicBluetooth:
         self._parar_evt.clear()
         self._ultimo_audio = time.monotonic()
         # O 0x32 NÃO é mais escrito aqui às cegas: quem decide é o ouvinte.
-        # Ver `_talvez_seguir_a_source`. A primeira leitura nunca espera o
-        # intervalo — o `_mic_pedido is None` a dispensa —, então o caso "alguém
-        # já está gravando quando a ponte sobe" é atendido na hora.
         self._talvez_seguir_a_source()
         self._thread = threading.Thread(
             target=self._loop,
@@ -1351,23 +1010,8 @@ class PonteMicBluetooth:
         self._thread = None
         if thread is not None:
             thread.join(timeout=2.0)
-        # O desligar vai DEPOIS do join: a thread ainda podia estar num
-        # `select` sobre o mesmo fd, e o write concorrente não tem por que
-        # correr com ela.
-        #
-        # E ele é INCONDICIONAL, mesmo que o mic nunca tenha sido pedido: um
-        # 0x32 de desligar a mais custa uma escrita e fecha o caso em que outro
-        # escritor (o app da PlayStation em Proton, o re-arme de uma ponte
-        # anterior) deixou o microfone dela no ar. Deixar o microfone de alguém
-        # ligado depois de fechar não é opção.
         self._escrever_pedido(ligar=False)
         self._mic_pedido = False
-        # E A PALAVRA DELA MORRE COM A PONTE — a terceira das cinco portas do
-        # pedido dela (ver `dizer_o_pedido_dela`). Sem esta linha, uma ponte
-        # reiniciada sobre o MESMO objeto voltaria com o microfone no ar sem
-        # que ninguém tivesse pedido de novo, que é o *"liga sozinho"* pela
-        # porta dos fundos. Quem guarda o pedido entre pontes é o registro do
-        # subsystem, e é ele quem o reaplica — nunca a ponte, por si.
         self._pedido_dela = None
         self._fechar_fd()
         if self._source is not None:
@@ -1375,18 +1019,7 @@ class PonteMicBluetooth:
         self._encerrar_decodificador()
 
     def _fechar_a_source(self) -> None:
-        """Derruba o nó — pelo DONO dele, quando o dono é o canal por controle.
-
-        `canal_do_microfone` é o dono do ciclo de vida do `hefesto_mic_<hex6>`:
-        ele guarda a tabela `{uniq: source}` e é por ela que o cabo e o rádio
-        não publicam dois `module-pipe-source` com o mesmo `source_name`.
-        Chamar `source.parar()` direto derrubaria o módulo pelas costas do dono,
-        que continuaria anunciando de pé um canal que não existe mais.
-
-        **E só fecha o que ESTA ponte abriu** (`_canal_e_nosso`). Um canal que
-        já estava no ar quando a ponte subiu é de outro — e o toque dela no
-        botão do microfone de UM controle não pode derrubar o canal de outro.
-        """
+        """Derruba o nó — pelo DONO dele, quando o dono é o canal por controle."""
         source = self._source
         if source is None:
             return
@@ -1395,7 +1028,7 @@ class PonteMicBluetooth:
                 from hefesto_dualsense4unix.integrations import canal_do_microfone
 
                 canal_do_microfone.fechar(self.no.uniq)
-            except Exception:  # o dono sumiu; o nó não pode ficar de pé
+            except Exception:
                 logger.warning("bt_mic_canal_nao_fechou", no=self.no.caminho)
                 source.parar()
             self._canal_e_nosso = False
@@ -1403,32 +1036,7 @@ class PonteMicBluetooth:
         source.parar()
 
     def _abrir_o_canal_por_controle(self, descricao: str) -> Any:
-        """O nó `hefesto_mic_<hex6>` DESTE controle — `None` quando não dá.
-
-        **É AQUI QUE O RÁDIO DEIXA DE TER NOME DE TRANSPORTE.** Até 06/09/2026 a
-        ponte publicava `hefesto_dualsense_bt_<hex6>`, e o defeito estava no
-        próprio nome: trocar o cabo pelo rádio trocava o nome do microfone
-        daquele controle, e todo app que tivesse fixado o device o perdia. O nó
-        com IDENTIDADE é o mesmo nos dois transportes — é o que faz o microfone
-        dele ter UM nome só, que é o "Mic virtual" que ela pediu.
-
-        **O mecanismo NÃO é reescrito, é o mesmo:** `canal_do_microfone.abrir`
-        publica um `module-pipe-source` pela mesma
-        :class:`SourceVirtualPipeWire` que esta ponte usa desde 25/07, e o PCM
-        entra pela mesma :meth:`SourceVirtualPipeWire.escrever`. Um nó, uma
-        entrada, dois transportes.
-
-        `fonte=None` de propósito: o alimentador (`parec`) é o caminho do CABO,
-        que lê um nó ALSA. No rádio não há nó ALSA nenhum para ler — a placa de
-        som segue o transporte (medido 15/08/2026) —, e quem enche o fifo é o
-        decodificador Opus desta ponte.
-
-        **O CAMINHO DE VOLTA FICA INTEIRO**, e é o que torna esta troca
-        reversível: sem identidade no `uniq` (o caso raro do BT recém-pareado,
-        sem `HID_UNIQ`) ou com o canal recusando subir, devolve `None` e a ponte
-        publica o nó de sempre, com o nome de sempre. O rádio nunca fica sem
-        microfone por causa desta mudança.
-        """
+        """O nó `hefesto_mic_<hex6>` DESTE controle — `None` quando não dá."""
         try:
             from hefesto_dualsense4unix.integrations import canal_do_microfone
         except Exception:  # pragma: no cover - o pacote está quebrado
@@ -1453,7 +1061,6 @@ class PonteMicBluetooth:
     def __exit__(self, *_exc: object) -> None:
         self.parar()
 
-    # -- laço -------------------------------------------------------------
 
     def _loop(self) -> None:
         """O áudio é o relógio: bloqueia no `select`, nunca gira em falso."""
@@ -1461,11 +1068,6 @@ class PonteMicBluetooth:
             fd = self._fd
             if fd is None:
                 return
-            # ANTES do `select`, e não só no timeout dele: com o mic no ar
-            # chegam ~100 quadros/s e o `select` nunca estoura o prazo — a
-            # pergunta "ainda tem alguém ouvindo?" nunca seria feita, e o
-            # microfone dela ficaria ligado para sempre depois da primeira
-            # gravação. O intervalo é o que segura o custo.
             self._talvez_seguir_a_source()
             try:
                 prontos = prontos_para_ler([fd], _SELECT_TIMEOUT_S)
@@ -1480,8 +1082,6 @@ class PonteMicBluetooth:
             except BlockingIOError:
                 continue
             except OSError as exc:
-                # ENODEV = o controle sumiu (BT caiu, desligou). Encerra a
-                # thread; quem orquestra redescobre o nó e sobe outra ponte.
                 logger.info("bt_mic_hidraw_perdido", no=self.no.caminho, err=str(exc))
                 return
             if not raw:
@@ -1498,7 +1098,7 @@ class PonteMicBluetooth:
                 return
             self._ultimo_audio = time.monotonic()
             dec = self._dec
-            if dec is None:  # `parar()` correu com esta iteração
+            if dec is None:
                 return
             pcm = dec.decodificar(quadro)
             if pcm is None:
@@ -1520,66 +1120,7 @@ class PonteMicBluetooth:
         )
 
     def _talvez_seguir_a_source(self, agora: float | None = None) -> bool | None:
-        """O 0x32 segue O OUVINTE **OU** A PALAVRA DELA — o que ficou pedido.
-
-        **O DEFEITO QUE ISTO FECHA está escrito no cabeçalho do subsystem desde
-        03/09/2026**, com estas palavras: *"A ponte do rádio não sabe fazer
-        isso: `PonteMicBluetooth.iniciar()` manda o `0x32` de LIGAR
-        incondicionalmente, e daí o controle transmite áudio o tempo todo,
-        ouvido ou não."* O canal do CABO já fazia certo — ele nasce e fica
-        SUSPENDED, publicado e sem capturar nada — e era essa a assimetria que
-        obrigava a trava a negar o CANAL para evitar a CAPTURA.
-
-        Agora o rádio faz o mesmo pela pergunta que o cabo responde de graça:
-        **tem alguém gravando deste nó AGORA?** Só :data:`ESTADO_COM_OUVINTE`
-        quer dizer sim (medido em 06/09/2026 — ver a constante), e só nesse caso
-        o microfone do controle precisa estar no ar. Sem ouvinte, o que se
-        economiza é o que o cabeçalho já mediu: ~106 quadros de áudio por
-        segundo ocupando o link do rádio, e a privacidade de um microfone que
-        está capturando sem ninguém do outro lado.
-
-        **"NÃO SEI" NUNCA MUDA NADA.** `estado()` devolve `None` quando o nó
-        não está na lista ou o `pactl` não respondeu, e uma source injetada
-        (dublê, ou outro mecanismo) pode nem saber responder. Nos dois casos o
-        pedido fica como estava — no start isso é o comportamento de antes desta
-        data, palavra por palavra, e é o que mantém o rádio funcionando em
-        qualquer servidor de som que não saiba dizer o estado. Transformar
-        "não sei" em "ninguém" desligaria o microfone dela por falta de
-        instrumento, que é o *"silêncio não é sucesso"* com o sinal trocado.
-
-        **A ESCRITA É DE BORDA**, e a parcimônia do cabeçalho continua inteira:
-        só se escreve quando o pedido MUDA. Em regime — ouvinte de pé, áudio
-        chegando — nenhum 0x32 vai para o controle.
-
-        **E DESDE 08/09/2026 O 0x32 TEM DOIS DONOS EM OU, não um.** O que estava
-        acima continua inteiro, linha por linha, para `_pedido_dela is None` —
-        que é o caso de sempre, porque ninguém disse nada até ela dizer. O que
-        entrou é a pergunta que faltava: *e quando o DONO fala?*
-
-        * `False` DESLIGA sem consultar a source. É o mudo dela, e ele vence um
-          aplicativo gravando — quem não quer ser ouvida não é ouvida.
-        * `True` LIGA sem consultar. `pactl set-default-source` (o que o botão
-          do microfone faz) NÃO põe nó nenhum em ``RUNNING``: ``RUNNING`` é
-          *"tem app gravando AGORA"* (ver :data:`ESTADO_COM_OUVINTE`), então o
-          gesto dela deixava a source ``SUSPENDED`` e este método respondia
-          ``False`` sobre um microfone que ela acabara de pedir.
-        * `None` devolve a decisão ao ouvinte, e a economia de 06/09 fica
-          intacta: nada liga sozinho, que era o defeito que aquela cura matou.
-
-        **E O PEDIDO DELA NÃO PASSA PELO INTERVALO.** A janela de
-        `_OLHAR_NA_SOURCE_S` existe para não pagar um `pactl` por quadro de
-        áudio; ler um campo desta instância não custa `pactl` nenhum, e fazer o
-        ato dela esperar até um segundo seria a mesma demora que a tela lê como
-        *"não pegou"*.
-
-        **POR QUE ISTO NÃO É "LIGA E DEIXA LIGADO PARA SEMPRE":** o pedido dela
-        nasce só de um ATO, morre pelo ato inverso, morre em :meth:`parar`,
-        morre com a desdeclaração e com o controle saindo do rádio (a ponte cai
-        junto), e morre quando ela perde a eleição para outro controle — quem
-        apaga é o mesmo laço que já apaga a luz do ex-dono
-        (`daemon/subsystems/hotkey._apagar_a_luz_de_quem_perdeu_o_canal`), para
-        que o LED aceso e o microfone no ar continuem sendo a MESMA frase.
-        """
+        """O 0x32 segue O OUVINTE **OU** A PALAVRA DELA — o que ficou pedido."""
         source = self._source
         if source is None:
             return self._mic_pedido
@@ -1596,14 +1137,12 @@ class PonteMicBluetooth:
         self._ultimo_olhar_na_source = relogio
         ler = getattr(source, "estado", None)
         if not callable(ler):
-            # A source não sabe responder sobre ouvinte (dublê, mecanismo de
-            # fora). O comportamento é o de antes: liga e deixa ligado.
             if self._mic_pedido is None:
                 self._pedir_mic(True)
             return self._mic_pedido
         try:
             estado = ler()
-        except Exception:  # best-effort: o relato nunca derruba o áudio
+        except Exception:
             logger.debug("bt_mic_estado_ilegivel", exc_info=True)
             return self._mic_pedido
         if estado is None:
@@ -1622,16 +1161,7 @@ class PonteMicBluetooth:
         self._escrever_pedido(ligar=ligar)
 
     def _talvez_rearmar(self) -> None:
-        """Reenvia o 0x32 quando o áudio morre com a ponte ainda ligada.
-
-        Autocura de borda, não keepalive periódico: em regime NÃO escrevemos
-        nada no controle (ver "disputa do contador de sequência" no cabeçalho).
-
-        **E ela só vale com o microfone PEDIDO.** Sem ouvinte o silêncio é o
-        desfecho certo, não uma falha a curar: re-armar ali seria ligar o
-        microfone de volta a cada dois segundos contra a decisão que
-        :meth:`_talvez_seguir_a_source` acabou de tomar.
-        """
+        """Reenvia o 0x32 quando o áudio morre com a ponte ainda ligada."""
         if self._mic_pedido is not True:
             return
         agora = time.monotonic()
@@ -1640,11 +1170,10 @@ class PonteMicBluetooth:
         if agora - self._ultimo_rearme < _REARME_MIN_INTERVALO_S:
             return
         self._ultimo_rearme = agora
-        self._ultimo_audio = agora  # não re-armar de novo antes de dar chance
+        self._ultimo_audio = agora
         self._escrever_pedido(ligar=True)
         self._bump(rearmes=1)
 
-    # -- utilitários ------------------------------------------------------
 
     def _escrever_pedido(self, *, ligar: bool) -> bool:
         fd = self._fd
@@ -1678,44 +1207,9 @@ class PonteMicBluetooth:
             with contextlib.suppress(Exception):
                 dec.close()
 
-    # -- O-NOME-DO-SOM-RENOMEIA-JUNTO-01 (20/09/2026) ----------------------
-    #
-    # NO FIM DA CLASSE DE PROPÓSITO: o `docs/data/mapa-controles.csv` cita
-    # `dualsense_bt_audio.py` por `arquivo:LINHA` até o `:1584`, e código novo
-    # enfiado acima disso envelhece a citação. Há portão que reprova
-    # (`citacoes-de-linha`).
 
     def renomear_a_source(self) -> bool:
-        """O nó deste controle passa a dizer o assento de AGORA.
-
-        ``True`` só quando o rótulo de agora ficou NO AR. A volta com o rótulo
-        velho e o canal que sumiu devolvem ``False``, e os dois trocam a
-        referência assim mesmo — ver o corpo.
-
-        **É A PONTE QUEM FAZ, e não o supervisor**, porque é ela quem guarda a
-        referência: renomear é republicar (não há ``update-source-proplist`` no
-        ``pactl`` do PipeWire — medido em 20/09/2026), e um canal republicado
-        por um terceiro deixaria esta ponte escrevendo num nó morto, sem erro
-        nenhum — o microfone dela mudo com tudo "de pé". A troca de referência
-        acontece aqui, na mesma linha em que o nó renasce.
-
-        **E SÓ O QUE ESTA PONTE ABRIU** (``_canal_e_nosso``), pela mesma razão
-        de :meth:`_fechar_a_source`: um canal que já estava no ar quando ela
-        subiu é de outro dono.
-
-        **E O OUTRO DONO EXISTE — CORREÇÃO DE 20/09/2026.** Esta linha dizia
-        *"e é o outro dono quem o renomeia"* como se houvesse sempre um, e o
-        conferente mostrou que não havia: o canal de rádio com
-        ``_canal_e_nosso=False`` não tinha renomeador NENHUM, e o
-        ``hefesto_mic_0000ab`` dela — no ar sem número no rótulo, com o assento
-        2 — era dessa família. O dono agora é nomeado e único:
-        ``BtMicSubsystem._renomear_os_canais_velhos`` varre todo canal de pé
-        que nenhuma ponte reclame por :attr:`uniq_do_canal_proprio`.
-
-        A medição que originou isto — três dos quatro «Microfone do Controle N»
-        dela apontando para o jogador errado — está em
-        :func:`~integrations.canal_do_microfone.renomear`.
-        """
+        """O nó deste controle passa a dizer o assento de AGORA."""
         source = self._source
         if source is None or not self._canal_e_nosso:
             return False
@@ -1727,28 +1221,17 @@ class PonteMicBluetooth:
             from hefesto_dualsense4unix.integrations import canal_do_microfone
 
             novo = canal_do_microfone.renomear(self.no.uniq, de_agora)
-        except Exception:  # nunca derruba a varredura de quem chama
+        except Exception:
             logger.warning("bt_mic_canal_nao_renomeou", no=self.no.caminho, exc_info=True)
             return False
         if novo is None:
-            # **NEM A VOLTA SUBIU, E ESTA PONTE NÃO PODE FINGIR QUE TEM CANAL.**
-            # A referência que ela guarda está PARADA — o `fechar` de dentro do
-            # `renomear` já aconteceu —, e continuar escrevendo PCM nela é o
-            # microfone mudo com tudo aparentemente de pé. Soltando-a aqui, o
-            # `escrever` cai no nó de sempre e a varredura seguinte reabre o
-            # canal pelo caminho de nascimento.
             logger.warning("bt_mic_canal_sumiu_ao_renomear", no=self.no.caminho)
             self._source = None
             self._canal_e_nosso = False
             return False
-        # SÓ A REFERÊNCIA TROCA. `_canal_e_nosso` já é `True` — a guarda lá em
-        # cima exigiu isso para chegar aqui —, e reescrevê-lo seria uma linha
-        # que nenhuma mordida alcança.
         self._source = novo
         do_novo = getattr(novo, "descricao", "")  # (noqa-acento) nome de atributo
         if str(do_novo or "") != de_agora:
-            # A VOLTA subiu com o rótulo velho. A troca de referência vale
-            # igual — o objeto é outro —, mas renomear não aconteceu.
             logger.warning(
                 "bt_mic_canal_voltou_com_o_rotulo_velho", no=self.no.caminho
             )
@@ -1760,15 +1243,7 @@ class PonteMicBluetooth:
 
     @property
     def uniq_do_canal_proprio(self) -> str:
-        """O `uniq` cujo canal ESTA ponte abriu — `""` quando o canal é de outro.
-
-        **É POR ISTO QUE O SUPERVISOR SABE O QUE NÃO PODE TOCAR.** Ele varre
-        todo canal de pé para renomear o que envelheceu, e republicar por fora
-        o canal de uma ponte a deixaria escrevendo num nó morto — o defeito
-        que :meth:`renomear_a_source` existe para não cometer. Sem esta
-        resposta, o supervisor teria de ler `_canal_e_nosso` pelas costas da
-        ponte, que é a mesma coisa escrita duas vezes.
-        """
+        """O `uniq` cujo canal ESTA ponte abriu — `""` quando o canal é de outro."""
         if self._source is None or not self._canal_e_nosso:
             return ""
         return str(getattr(self.no, "uniq", "") or "")
@@ -1803,23 +1278,8 @@ def _com(stats: EstatisticaMic, **campos: Any) -> EstatisticaMic:
     return EstatisticaMic(**dados)
 
 
-# ---------------------------------------------------------------------------
-# Abertura do hidraw: broker primeiro (é ele quem tem root)
-# ---------------------------------------------------------------------------
-
-
 def abrir_hidraw_rw(caminho: str) -> int:
-    """Abre o hidraw em O_RDWR — via broker se ele estiver de pé.
-
-    Precisa ser RDWR: a ponte LÊ o 0x31 e ESCREVE o 0x32. E precisa passar pelo
-    broker porque, com a emulação ligada, o nó do físico está ESCONDIDO (modo
-    0600 root, é o que `hide` faz) — sem o fd cedido por SCM_RIGHTS o
-    `os.open` daria EACCES e o mic por BT só funcionaria com o hefesto
-    desligado, que é o contrário do que se quer.
-
-    O `make_broker_opener` do cliente não serve aqui: o fallback dele é
-    O_RDONLY (basta para o espelho de motion, não basta para nós).
-    """
+    """Abre o hidraw em O_RDWR — via broker se ele estiver de pé."""
     fd: int | None = None
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
@@ -1833,21 +1293,13 @@ def abrir_hidraw_rw(caminho: str) -> int:
 
 
 class _TitularDaLease:
-    """Dono do cliente-lease do broker deste módulo.
-
-    O `broker_client_for` guarda o singleton num atributo do objeto que recebe
-    (o daemon, normalmente). Fora do daemon — CLI, GUI — precisamos de um
-    titular estável: um objeto por processo, para não abrir uma lease nova a
-    cada `abrir_hidraw_rw` (cada lease é uma conexão viva no broker).
-    """
+    """Dono do cliente-lease do broker deste módulo."""
 
 
 _TITULAR_DA_LEASE = _TitularDaLease()
 
 
-# ---------------------------------------------------------------------------
 # Orquestração: todos os DualSense em BT de uma vez
-# ---------------------------------------------------------------------------
 
 
 class GerenciadorMicBluetooth:
@@ -1880,9 +1332,6 @@ class GerenciadorMicBluetooth:
         for caminho, no in presentes.items():
             if caminho in self._pontes:
                 continue
-            # A CONSTRUÇÃO entra no try junto com o `iniciar()`: uma fábrica que
-            # levanta (libopus sumiu no meio da sessão, injeção de teste) não
-            # pode derrubar a reconciliação dos OUTROS controles.
             try:
                 ponte = self._fabrica(no)
                 ok = ponte.iniciar()
@@ -1909,11 +1358,6 @@ class GerenciadorMicBluetooth:
 
     def __exit__(self, *_exc: object) -> None:
         self.parar()
-
-
-# ---------------------------------------------------------------------------
-# Diagnóstico (o que o `mic bt-status` imprime)
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -1954,9 +1398,6 @@ def diagnosticar() -> Diagnostico:
     tem_pactl = shutil.which("pactl") is not None
     pipe_source = False
     if tem_pactl:
-        # `pactl list modules short` só lista o que está CARREGADO; a presença
-        # do .so é o que diz se dá para carregar. Checar o arquivo evita
-        # carregar um módulo só para descobrir se ele existe.
         pipe_source = any(
             Path(d).joinpath("libpipewire-module-pipe-tunnel.so").exists()
             for d in _DIRS_PIPEWIRE
@@ -1984,49 +1425,12 @@ _DIRS_PIPEWIRE = (
 )
 
 
-# ---------------------------------------------------------------------------
-# O NOME DE GENTE do canal por controle — «Microfone do Controle N»
-#
-# ELE MORA NO FIM DO MÓDULO DE PROPÓSITO, e não é arrumação: o
-# `docs/data/mapa-controles.csv` cita este arquivo por `arquivo:LINHA` — a
-# célula `audio.microfone@dualsense` aponta `dizer_o_pedido_dela` e
-# `_talvez_seguir_a_source` —, e código novo enfiado acima daquelas linhas
-# envelhece a citação inteira. Há portão que reprova: `citacoes-de-linha`.
-# ---------------------------------------------------------------------------
-
-#: O rótulo da lista de ENTRADA do sistema, sem o número e sem o sufixo da Sony (forma A).
-#:
-#: **Decisão DELA, 09/09/2026** — `D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
-#: MICROFONE-DO-CONTROLE-N`, palavra dela: *"4a"*. As outras duas opções na
 #: frente dela eram «Jogador 1 — microfone» e «DualSense 1 · mic»; a razão da
-#: escolha está escrita na decisão e manda no código daqui: **o número é o
-#: ASSENTO (P1..P4), como na tela** — um nome por APARELHO mudaria quando o
-#: controle trocasse de assento.
-#:
-#: O par com «Alto-falante do Controle N» está em
-#: `docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`, que é
-#: a condição que ela pôs: *"o par vai para a LÍNGUA DESTA CASA antes de nascer
-#: na lista do sistema"*.
 NOME_DO_MICROFONE_DO_CONTROLE = "Microfone do Controle"
 
-#: Quem sabe em que ASSENTO está o controle. `None` = ninguém está atendendo
-#: (o subsystem no chão, ou um processo que não é o daemon), e aí a resposta
-#: honesta é *"não sei o número"* — nunca um número inventado, que poria dois
-#: controles com o mesmo rótulo na lista da pessoa.
-#:
-#: Mesmo desenho de `eleicao_de_microfone.registrar_pedidor_de_canal`, e pela
-#: mesma razão de camada: quem SABE o assento é o daemon (ele tem o backend com
-#: a lista de controles), e uma integração que importasse o daemon inverteria a
-#: dependência. Aqui a integração conhece um chamável; quem o instala é
-#: `daemon/subsystems/bt_mic.BtMicSubsystem`.
 _NUMERADOR_DE_ASSENTO: Callable[[str], int | None] | None = None
 
 
-#: Quem sabe dizer se o microfone de um `uniq` está no ar. O `BtMicSubsystem`
-#: o instala ao subir e o retira ao descer — é o mesmo padrão de gancho do
-#: numerador de assento logo abaixo, e pela mesma razão: quem PERGUNTA (o
-#: subsystem do alto-falante) não pode importar quem RESPONDE sem amarrar dois
-#: subsystems um ao outro.
 _OUVINTE_DO_MICROFONE: Callable[[str], bool] | None = None
 
 
@@ -2041,16 +1445,7 @@ def registrar_ouvinte_do_microfone(
 
 
 def o_microfone_esta_no_ar(uniq: str) -> bool:
-    """O microfone deste controle está pedido agora — `False` quando ninguém sabe.
-
-    **`False` é a resposta segura, e a escolha é medida.** Quem consome isto é
-    o bit 0 dos enables do `0x35`: dizer `True` sem saber ligaria o microfone
-    dela por conta própria, a cada report do som, sem gesto nenhum. Dizer
-    `False` sem saber deixa o aparelho onde ele já estava.
-
-    Nunca levanta: o caminho até aqui é o laço de envio do som, a 93,75
-    reports por segundo.
-    """
+    """O microfone deste controle está pedido agora — `False` quando ninguém sabe."""
     ouvinte = _OUVINTE_DO_MICROFONE
     if ouvinte is None or not uniq:
         return False
@@ -2072,13 +1467,7 @@ def registrar_numerador_de_assento(
 
 
 def numero_do_assento(uniq: str) -> int | None:
-    """P1..P4 deste controle, ou `None` quando ninguém sabe dizer.
-
-    Nunca levanta: o caminho até aqui é a ponte subindo ou o toque dela no
-    botão do microfone, e um numerador que explodisse não pode derrubar
-    nenhum dos dois. Um número que não seja um inteiro positivo vale como
-    *"não sei"* — `bool` é `int` em Python, e `True` viraria o assento 1.
-    """
+    """P1..P4 deste controle, ou `None` quando ninguém sabe dizer."""
     numerador = _NUMERADOR_DE_ASSENTO
     if numerador is None or not uniq:
         return None
@@ -2171,107 +1560,20 @@ def numero_do_rotulo(rotulo: str) -> int | None:
 
 
 def rotulo_envelheceu(no_ar: str, de_agora: str) -> bool:
-    """O rótulo que está NO AR ficou para trás do assento de agora?
-
-    **O DEFEITO QUE ISTO MATA, medido de ouvido por ela em 20/09/2026, em teste
-    cego com dois gabaritos lacrados** (`O-NOME-DO-SOM-RENOMEIA-JUNTO-01`): ela
-    mandou som para «Alto-falante do Controle 3» e ouviu no **Player 1**;
-    mandou para o «Controle 1» e ouviu no **Player 3**. Os quatro nós estavam
-    no ar, a rota era estanque (`0,000000` exato nos três não-alvo) e o timbre
-    chegava íntegro — só os NOMES de dois deles estavam trocados entre si. O
-    «Microfone do Controle N» mentia junto, e pior: três dos quatro erravam.
-
-    **A CAUSA, medida:** o numerador está CERTO — o daemon dela respondia
-    ``2, 4, 3, 1`` para os quatro ``uniq`` no mesmo instante em que os rótulos
-    diziam ``2, 4, 1, 3``. O rótulo é uma FOTOGRAFIA tirada quando o nó nasceu,
-    e quando um controle entra na mesa e empurra o assento de outro, o nó do
-    OUTRO não renasce — ele só voltava a acertar por acidente, no dia em que o
-    próprio controle piscasse.
-
-    **E NÃO HÁ RENOMEAR NO LUGAR — medido nesta máquina em 20/09/2026.** O
-    ``pactl`` do ``pipewire-pulse`` não tem ``update-sink-proplist`` nem
-    ``update-source-proplist`` (a lista inteira do ``--help``), e o ``pacmd``,
-    que os teria, responde *"No PulseAudio daemon running"* sob o PipeWire. O
-    ``device.description`` de um ``module-null-sink`` / ``module-pipe-source``
-    é fixado no ``load-module`` e não se reescreve. **Então renomear é
-    REPUBLICAR** — o mesmo ato que o daemon já faz por rotina quando o
-    controle pisca (o ``hefesto_som_000003`` dela nasceu onze vezes entre
-    23:03 e 01:19 daquela noite).
-
-    **PERDER O NÚMERO NUNCA CONTA COMO ENVELHECER**, e esta é a metade que
-    impede a cura de virar um defeito pior: o numerador responde ``None``
-    sempre que ninguém o está atendendo — o subsystem descendo, a mesa vazia
-    por uma varredura. Sem esta recusa o nó seria derrubado e republicado a
-    cada cinco segundos, e o jogo perderia o dispositivo debaixo de si em laço.
-    É a mesma regra de ``AltoFalanteSubsystem._vale_religar``: *perder a rota
-    nunca desliga o que está ligado*.
-    """
+    """O rótulo que está NO AR ficou para trás do assento de agora?"""
     de_agora = str(de_agora or "")
     if numero_do_rotulo(de_agora) is None:
         return False
     return str(no_ar or "") != de_agora
 
 
-# ---------------------------------------------------------------------------
-# O RECUO DO `pactl` e o CANAL ÓRFÃO — MIC-O-CANAL-DO-OUTRO-01 (13/09/2026)
-#
-# NO FIM DO MÓDULO pela mesma razão do bloco acima: o mapa cita linhas deste
-# arquivo, e código novo enfiado lá em cima envelhece as citações.
-# ---------------------------------------------------------------------------
-
-#: O primeiro recuo depois de um `pactl` que estourou o prazo — uma varredura
-#: do supervisor (`daemon/subsystems/bt_mic.RECONCILIA_S`).
 RECUO_PISO_S = 5.0
 
-#: O teto do recuo: com o servidor mudo, UMA sondagem por minuto — ver
-#: :class:`RecuoDoPactl` para o que havia no lugar dela.
 RECUO_TETO_S = 60.0
 
 
 class RecuoDoPactl:
-    """O servidor de som parou de responder: RECUO CRESCENTE, e não laço fixo.
-
-    **O DEFEITO, medido por quem coordena às 02:40 de 13/09/2026** no journal
-    do daemon: o controle do rádio caiu às 01:53:43 (``bt_mic_hidraw_perdido``),
-    o primeiro `pactl` estourou o prazo às 01:53:54, e até 02:40 foram 699
-    prazos estourados e 509 `load-module` sem resposta — o som a cada 10 s, o
-    microfone a cada ~15 s. O ``pipewire-pulse`` ficou 47 minutos sem atender
-    cliente nenhum, e os outros aplicativos de som da máquina junto.
-
-    **A CADÊNCIA DO MICROFONE ERA ESTE ARQUIVO, e a conta fecha:** a cada volta
-    do supervisor a ponte tentava o canal por controle (``list modules`` e
-    ``load-module``, 5 s de prazo cada) e depois o caminho de volta pelo nome do
-    transporte (mais 5 + 5 s). Dois `bt_mic_load_module_falhou` a 10 s um do
-    outro, 15 s até o próximo par — e 192 deles para 96 `bt_mic_canal_nao_subiu`
-    nos últimos 40 minutos daquela janela. Nada disso esperava o servidor voltar.
-
-    **O que isto faz:** um prazo estourado põe o `pactl` em recuo por
-    :data:`RECUO_PISO_S`; cada novo estouro dobra a espera até
-    :data:`RECUO_TETO_S`; QUALQUER resposta zera. Durante o recuo
-    `SourceVirtualPipeWire.iniciar` não carrega módulo, `estado()` responde «não
-    sei» sem perguntar, `parar()` deixa o módulo para a varredura e o supervisor
-    não abre canal de cabo nem varre órfão. Vencido o recuo, a primeira pergunta
-    é o ``list modules short`` que o `iniciar` já fazia: ela é a sondagem, e o
-    `load-module` só sai se ela responder.
-
-    **O QUE ISTO NÃO CURA: a causa do travamento.** A queda do controle é o
-    gatilho medido; a hipótese de quem coordena — descarregar o
-    ``module-pipe-sink``/``module-pipe-source`` logo depois de o controle sumir
-    deixa o servidor sem atender — não se reproduz com dublê. Reiniciar só o
-    ``pipewire-pulse`` não devolveu o `pactl`; reiniciar ``pipewire``,
-    ``pipewire-pulse`` e ``wireplumber`` juntos devolveu.
-
-    **UM RECUO SÓ, PORQUE O SERVIDOR É UM SÓ (SOM-RECUO-01, 13/09/2026).** O
-    microfone ganhou este recuo e o som e o volume ficaram de fora — lido no
-    journal do daemon dela, de 01:53:30 a 02:42:30: **291**
-    ``som_load_module_falhou`` a cada 10 s e **715** ``audio_fonte_do_uniq_falhou``
-    (2 s de prazo cada) ao lado de **232** ``bt_mic_load_module_falhou``, todos
-    na fila do mesmo ``pipewire-pulse``. Hoje ``alto_falante_bt`` e
-    ``audio_control`` anotam o prazo AQUI e esperam AQUI: um prazo estourado
-    pelo som cala o microfone no ciclo seguinte, e vice-versa. Os eventos
-    perderam o ``bt_mic_`` que tinham ao nascer (``pactl_mudo`` /
-    ``pactl_voltou``) porque quem estourou pode ter sido qualquer um dos três.
-    """
+    """O servidor de som parou de responder: RECUO CRESCENTE, e não laço fixo."""
 
     def __init__(self, *, relogio: Callable[[], float] = time.monotonic) -> None:
         self._relogio = relogio
@@ -2313,14 +1615,7 @@ class RecuoDoPactl:
     def perguntar(
         self, runner: Callable[[list[str]], str | None], argv: list[str]
     ) -> str | None:
-        """Uma pergunta ao servidor, contando a ESTE recuo o que houve com ela.
-
-        Dono único do contrato, com duas vias até ele: o ``_rodar`` de produção
-        anota o prazo sozinho e devolve ``None``; um runner injetado LEVANTA
-        ``subprocess.TimeoutExpired``, que é como a régua dubla o servidor mudo.
-        Só uma resposta que não seja ``None`` zera o recuo — ``None`` é falha, e
-        falha não prova que o servidor voltou.
-        """
+        """Uma pergunta ao servidor, contando a ESTE recuo o que houve com ela."""
         try:
             saida = runner(argv)
         except subprocess.TimeoutExpired:
@@ -2331,20 +1626,12 @@ class RecuoDoPactl:
         return saida
 
     def zerar(self) -> None:
-        """Volta ao estado de nascença SEM dizer que o servidor voltou.
-
-        Existe para a suíte (``_recuo_do_pactl_zerado`` em `tests/conftest.py`):
-        um prazo real estourado num teste não pode pôr em recuo o teste
-        seguinte, e ``respondeu()`` escreveria no log uma volta que não houve.
-        """
+        """Volta ao estado de nascença SEM dizer que o servidor voltou."""
         with self._lock:
             self._espera_s = 0.0
             self._ate = 0.0
 
 
-#: O recuo do PROCESSO, e ser um só é a razão de existir: cada volta do
-#: supervisor constrói uma `SourceVirtualPipeWire` NOVA, e uma memória por
-#: instância esqueceria o estouro no ciclo seguinte.
 PACTL = RecuoDoPactl()
 
 
@@ -2362,12 +1649,7 @@ def _anotar_o_prazo(exc: BaseException) -> None:
 def _com_recuo(
     runner: Callable[[list[str]], str | None],
 ) -> Callable[[list[str]], str | None]:
-    """O `runner` de uma source, contando ao recuo o que aconteceu com cada pergunta.
-
-    O contrato mora em :meth:`RecuoDoPactl.perguntar`. O `PACTL` é lido na hora
-    de cada pergunta, e não na construção: a régua o troca por um de relógio de
-    mentira depois de a source nascer.
-    """
+    """O `runner` de uma source, contando ao recuo o que aconteceu com cada pergunta."""
 
     def _perguntar(argv: list[str]) -> str | None:
         return PACTL.perguntar(runner, argv)
@@ -2376,12 +1658,7 @@ def _com_recuo(
 
 
 def _orfaos_se_o_pactl_responde(source: SourceVirtualPipeWire) -> list[str] | None:
-    """Os órfãos com o nome desta source — `None` quando não se deve carregar nada.
-
-    Três recusas, nesta ordem: sem `pactl` no sistema; o recuo em curso (nem se
-    pergunta); e a própria pergunta estourando o prazo — a lista de módulos É a
-    sondagem, e sem resposta a ela nenhum `load-module` sai do `iniciar`.
-    """
+    """Os órfãos com o nome desta source — `None` quando não se deve carregar nada."""
     if shutil.which("pactl") is None:
         logger.info("bt_mic_sem_pactl")
         return None
@@ -2398,13 +1675,7 @@ def _orfaos_se_o_pactl_responde(source: SourceVirtualPipeWire) -> list[str] | No
 def _descarregar_ou_deixar(
     runner: Callable[[list[str]], str | None], nome: str, module_id: str
 ) -> str | None:
-    """Descarrega o módulo — ou o deixa para a varredura, com o `pactl` mudo.
-
-    Com o servidor mudo o `unload-module` seria mais um prazo de 5 s na fila
-    dele. O módulo que fica já não tem ninguém escrevendo (o fd foi fechado
-    antes), e é exatamente o que `daemon/subsystems/bt_mic.VarredorDeCanaisOrfaos`
-    derruba quando o servidor voltar. Devolve o novo `_module_id`: sempre `None`.
-    """
+    """Descarrega o módulo — ou o deixa para a varredura, com o `pactl` mudo."""
     if pactl_mudo():
         logger.warning("bt_mic_source_ficou_para_a_varredura", source=nome, module_id=module_id)
         return None
@@ -2425,13 +1696,7 @@ class ModuloDeCaptura:
 def modulos_de_captura_da_casa(
     runner: Callable[[list[str]], str | None] | None = None,
 ) -> list[ModuloDeCaptura] | None:
-    """Os `module-pipe-source` com nome desta casa — `None` se o servidor não respondeu.
-
-    Os DOIS prefixos entram: o do canal por controle e o do nome do transporte,
-    que é o caminho de volta da ponte e nasce órfão pela mesma porta (um
-    `load-module` sem resposta, ver :class:`RecuoDoPactl`). Casa por TOKEN do
-    argumento, como `SourceVirtualPipeWire._modulos_do_servidor_com_este_nome`.
-    """
+    """Os `module-pipe-source` com nome desta casa — `None` se o servidor não respondeu."""
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
         PREFIXO_SOURCE_CANAL_DO_MIC,
     )
@@ -2458,32 +1723,11 @@ def modulos_de_captura_da_casa(
     return achados
 
 
-#: O modo de acesso dentro das ``flags:`` de um `fdinfo` — o `O_ACCMODE` do Linux.
 _MODO_DE_ACESSO = 0o3
 
 
 def alguem_escreve_no_fifo(caminho: str, *, raiz_proc: str = "/proc") -> bool | None:
-    """Algum processo segura este fifo ABERTO PARA ESCRITA? `None` = não sei.
-
-    **É a prova física do órfão, e ela foi medida antes de ser escrita** — na
-    máquina dela, em 13/09/2026, lendo ``/proc`` com o canal vivo de um controle
-    no rádio::
-
-        o daemon          flags=02104001   O_WRONLY   ← quem enche o nó
-        pipewire-pulse    flags=02104002   O_RDWR     ← o próprio módulo
-
-    Então conta só ``O_WRONLY``: o servidor segura o fifo em ``O_RDWR`` e não é
-    escritor, e a ponte (`_abrir_fifo`) abre em ``O_WRONLY``. Casa pelo destino
-    do link em ``/proc/<pid>/fd``, inclusive com o `` (deleted)`` de quando
-    `parar()` já apagou o caminho.
-
-    **SÓ PROCESSOS DO MESMO USUÁRIO**, os únicos que alcançam o
-    ``$XDG_RUNTIME_DIR`` dele. Os ilegíveis desse usuário são PULADOS, e não
-    viram «não sei»: medido na mesma hora, eram quatro — ``(sd-pam)``, dois
-    ``ssh-agent`` e um ``pw-record`` —, todos não-despejáveis e nenhum rodando
-    código desta casa. Tratá-los como «não sei» desligaria a varredura para
-    sempre. `None` fica para o que impede a pergunta inteira.
-    """
+    """Algum processo segura este fifo ABERTO PARA ESCRITA? `None` = não sei."""
     if not caminho:
         return None
     alvos = {caminho, f"{caminho} (deleted)"}
@@ -2531,20 +1775,8 @@ def descarregar_modulo(
     return _com_recuo(runner or _rodar)(["pactl", "unload-module", module_id]) is not None
 
 
-# ---------------------------------------------------------------------------
-# O `_rodar` pelo retrato do som — O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01 (28/09/2026)
-#
-# NO FIM DO MÓDULO de propósito: o mapa de canais cita linhas deste arquivo.
-# ---------------------------------------------------------------------------
-
-
 def _pelo_retrato(argv: list[str]) -> object:
-    """A LEITURA PERGUNTA AO RETRATO ANTES (`integrations/retrato_do_som`).
-
-    No daemon é ele quem responde: um `str` é a resposta, o «não sei» dele
-    volta do `_rodar` como ``None``, e ``None`` aqui (sem dono, ou uma
-    escrita) manda o `_rodar` perguntar ao servidor como sempre.
-    """
+    """A LEITURA PERGUNTA AO RETRATO ANTES (`integrations/retrato_do_som`)."""
     from hefesto_dualsense4unix.integrations import retrato_do_som
 
     return retrato_do_som.responder(argv)

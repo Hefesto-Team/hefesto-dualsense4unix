@@ -18,17 +18,12 @@ asserts de substring sobre o TEXTO-FONTE do método. Eles não proibiam bug
 nenhum — proibiam RENOMEAR: trocar o nome da função pura, ou do refresh,
 pintava três testes de vermelho sem mudar comportamento algum. Agora os dois
 renders são EXECUTADOS e o despacho é observado por dublê (`MagicMock` com
-`side_effect`, o padrão de `test_emulacao_no_jogo_teclado.py:458-459`).
+`side_effect`, o padrão de `test_emulacao_no_jogo_teclado.py:396-397`).
 """
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (02/10/2026): o `home_actions` faz
-# `import gi`. Sem o GTK real este módulo só não errava na coleta do `lint-test`
-# porque outro módulo, colhido antes, deixava o `home_actions` no `sys.modules`
-# montado sobre um `gi` falso, e o pulo dele vinha emprestado do
-# `test_home_render_state`. A guarda própria diz o motivo dele.
 exigir_gi_real("test_wrapper_banner: importa código da janela GTK")
 
 import sys
@@ -45,9 +40,6 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     wrapper_banner_text,
 )
 
-# O dublê de widgets da aba Início já existe e é mantido pelos testes de
-# render dela — copiá-lo aqui daria duas muralhas de GTK falso para manter em
-# dia, e a segunda envelheceria calada.
 from tests.unit.test_home_render_state import _FakeWidget, _HomeStub
 
 
@@ -77,7 +69,6 @@ class TestDecisaoPura:
 
     @pytest.mark.parametrize("torto", [0, "", "false", [], {}])
     def test_payload_torto_nao_vira_alarme_falso(self, torto: object) -> None:
-        # 0/""/[] são falsy mas NÃO são o False literal do contrato.
         assert wrapper_banner_text(_state(torto)) is None
 
     def test_estado_offline_nao_acende(self) -> None:
@@ -88,50 +79,19 @@ class TestDecisaoPura:
         assert wrapper_banner_text({"gamepad_emulation": "torto"}) is None
 
     def test_a_frase_diz_o_que_o_produto_faz_em_vez_de_mandar_copiar(self) -> None:
-        """07-Q2, palavra dela em 05/09/2026: *"O produto aplica ela"*.
-
-        O nome deste caso era *"aponta o caminho"*, e o caminho era ELA: a
-        frase terminava em *"Copie as opções na aba Sistema."* e a aba Sistema
-        da interface nova não copia nada — doze botões, zero "Copiar". O
-        Hefesto não explica a própria falha, ele a conserta.
-
-        MORDIDA: devolva a oração *"Copie as opções na aba Sistema."* e os dois
-        `not in` reprovam; tire a promessa da constante e os três `in` da
-        promessa reprovam.
-        """
-        # O FATO fica, na palavra da TELA — `hefesto-launch` é da CASA
-        # (`docs/A-LINGUA-DESTA-CASA`, §2), e na tela é "atalho de
-        # inicialização", que é como a Steam chama o campo que ela vê.
+        """07-Q2, palavra dela em 05/09/2026: *"O produto aplica ela"*."""
         assert "atalho de inicialização" in WRAPPER_MISSING_TEXT
         assert "duplicar" in WRAPPER_MISSING_TEXT
-        # ...e nenhuma aba a procurar, nenhum trabalho manual pedido.
         assert "aba Sistema" not in WRAPPER_MISSING_TEXT
         assert "Copie" not in WRAPPER_MISSING_TEXT
-        # A PROMESSA, com os dois gestos que a carona de fato pega e a
-        # condição que a sentinela de fato tem.
         assert "Reponho" in WRAPPER_MISSING_TEXT
         assert "Aplicar" in WRAPPER_MISSING_TEXT
         assert "Salvar Perfil" in WRAPPER_MISSING_TEXT
-        # Sem jargão que o estudo mandou esconder do leigo.
         for jargao in ("env", "vdf", "wrapper_used", "dedup", "hefesto-launch"):
             assert jargao not in WRAPPER_MISSING_TEXT
 
     def test_os_dois_botoes_que_a_frase_nomeia_existem_em_toda_aba(self) -> None:
-        """A frase só pode nomear botão que existe — foi por isso que ela mudou.
-
-        A frase velha mandava a um botão de copiar que a interface nova não
-        tem. Trocá-la por outros dois nomes sem conferir repetiria o defeito
-        num vocabulário novo, e é o tipo de coisa que só aparece quando ela
-        clica. Os dois saem do RODAPÉ, que é das DEZ abas — então em qualquer
-        aba onde este aviso acenda, "Aplicar" e "Salvar Perfil" estão à vista.
-
-        As dez, e não só a 01: o aviso é uma das seis fontes da coluna Atenção
-        da aba Jogar E o corpo do cartão da Steam na aba Lançadores, e a frase
-        tem UM dono para todas.
-
-        MORDIDA: renomeie um dos dois botões do rodapé e este caso reprova
-        antes de a frase virar endereço morto.
-        """
+        """A frase só pode nomear botão que existe — foi por isso que ela mudou."""
         paginas = Path(__file__).resolve().parents[2] / (
             "src/hefesto_dualsense4unix/interface/paginas"
         )
@@ -162,9 +122,6 @@ class TestDecisaoPura:
         from hefesto_dualsense4unix.app.actions import carona_do_wrapper
         from hefesto_dualsense4unix.interface.pacotes import perfil
 
-        # `ligada()` é o desligador do dono, e a `conftest.py` o desliga em
-        # toda a suíte porque este caminho ESCREVE no arquivo da Steam. Aqui
-        # ele volta a ligar SÓ para o dublê: quem responde é o espião.
         chamou: list[bool] = []
 
         def _espiao(*, completa: bool = True) -> Any:
@@ -183,15 +140,10 @@ class TestDecisaoPura:
         )
 
 
-# ---------------------------------------------------------------------------
-# Aba Status — _refresh_wrapper_banner (widget fixo do Glade)
-# ---------------------------------------------------------------------------
-
-
 class _FakeBanner:
     def __init__(self) -> None:
         self.text = ""
-        self.visible = True  # sobra visível: o refresh precisa apagar
+        self.visible = True
 
     def set_text(self, text: str) -> None:
         self.text = text
@@ -242,16 +194,11 @@ class TestRefreshNaAbaStatus:
 
     def test_widget_ausente_nao_explode(self) -> None:
         stub = _status_stub(None)
-        stub._refresh_wrapper_banner(_state(False))  # não levanta
+        stub._refresh_wrapper_banner(_state(False))
 
 
 def _aba_status_falsa() -> Any:
-    """A aba Status REAL com o toolkit desligado — só o despacho é gravado.
-
-    Herda o mixin inteiro de propósito: um dublê que copiasse método por
-    método não teria como reprovar a chamada que SUMIU do render, que é
-    exatamente o que se mede aqui.
-    """
+    """A aba Status REAL com o toolkit desligado — só o despacho é gravado."""
     from hefesto_dualsense4unix.app.actions.status_actions import (
         StatusActionsMixin,
     )
@@ -265,14 +212,10 @@ def _aba_status_falsa() -> Any:
             )
 
         def _get(self, _widget_id: str) -> Any:
-            # Sem Glade: todo widget é ausente, e a aba tolera isso por
-            # desenho (`if widget is not None`) em todo lugar.
             return None
 
         @staticmethod
         def _popup_is_open() -> bool:
-            # A guarda do popup tem medida própria e precisa de um GTK vivo
-            # para responder; aqui ela só mascararia o que se quer ver.
             return False
 
     return _AbaFalsa()
@@ -290,8 +233,7 @@ class TestFiacao:
         assert aba.despachos == [estado]
 
     def test_o_caminho_offline_da_status_apaga_o_banner(self) -> None:
-        """Nunca banner de um estado morto: offline manda `None`, não o último
-        estado vivo — é a diferença entre "sem jogo" e "não sei"."""
+        """Nunca banner de um estado morto: offline manda `None`, não o último"""
         aba = _aba_status_falsa()
 
         aba._render_offline()
@@ -301,12 +243,7 @@ class TestFiacao:
     def test_render_home_consome_a_mesma_funcao_pura(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A aba Início pinta o que a FUNÇÃO PURA devolveu — sem segunda régua.
-
-        O dublê entra pelo `__name__` da própria função: congelar o nome numa
-        string é o que fazia este teste reprovar um `rename` que não muda
-        comportamento nenhum (TESTE-HONESTO-01/E3).
-        """
+        """A aba Início pinta o que a FUNÇÃO PURA devolveu — sem segunda régua."""
         repo = types.ModuleType("gi.repository")
         repo.Gtk = types.SimpleNamespace(  # type: ignore[attr-defined]
             Label=_FakeWidget,

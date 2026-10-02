@@ -61,40 +61,22 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Os quatro canais do endpoint (``endpoint_de_haptica``, ``channel_map``): a
-#: frente é o alto-falante, os traseiros são os motores. O MESMO mapa dos dois
-#: lados do laço, para o PipeWire não remisturar nada.
 CANAIS = 4
 MAPA = "[ FL FR RL RR ]"
 
-#: O portão dos motores, no volume do fluxo do laço. A frente passa sempre.
 VOLUME_ABERTO = "100%"
 VOLUME_FECHADO = "0%"
 
-#: O dono dos laços desta família. Um só no processo: o ``atexit`` do
-#: ``laco_de_audio`` fecha todas as famílias registradas no fecho.
 _LACOS = Lacos(FAMILIA_DO_LACO_DO_CABO)
 
 
 def no_de_captura(marca: str) -> str:
-    """O ``node.name`` do lado de captura do laço do aparelho desta marca.
-
-    O ``module-loopback`` do PipeWire chama os dois lados do laço de
-    ``input.<nome>`` e ``output.<nome>`` quando só o ``--name`` é dado. **Não
-    medido nesta máquina:** se o nome for outro, a conferência não acha o nó e
-    responde «não sei» — o laço fica, e o diário diz que não se conferiu.
-    """
+    """O ``node.name`` do lado de captura do laço do aparelho desta marca."""
     return f"input.{MARCA_DO_LACO_DO_CABO}{chave_do_aparelho(marca)}"
 
 
 def chave_do_aparelho(marca: str) -> str:
-    """A chave do laço no dono dos laços: a marca do aparelho, em minúsculas.
-
-    Pela MARCA (``dualsense_bt_audio.marca_do_aparelho``), e não pelo endereço:
-    o nome do nó (``hefesto-haptica-do-cabo-aparelho<seis letras>``) aparece no
-    grafo do PipeWire, e é por ele que o curador do registro acha a placa que
-    o endpoint do aparelho serve (``audio_ks_dualsense.placas_servidas``).
-    """
+    """A chave do laço no dono dos laços: a marca do aparelho, em minúsculas."""
     return str(marca).lower()
 
 
@@ -102,28 +84,14 @@ def chave_do_aparelho(marca: str) -> str:
 class RotaDoCabo:
     """De onde o laço de um aparelho lê e para onde ele toca — os dois por serial."""
 
-    #: O endpoint do aparelho: o fluxo de captura mirado nele lê o monitor.
     captura: str
-    #: A placa do controle.
     destino: str
-    #: O ``node.name`` do endpoint do aparelho: é a ele que o lado de captura
-    #: do laço tem de estar ligado. Vazio = não se confere.
     origem: str = ""
-    #: O ``uniq`` do controle quando a rota se montou. É por ele que a volta
-    #: sem resposta do servidor sabe que o laço ainda é de quem está no cabo
-    #: (``AltoFalanteSubsystem._casar_o_cabo``).
     dono: str = ""
 
 
 def alvo_do_no(nome: str) -> str:
-    """O alvo com que o ``pw-loopback`` acerta o nó: o ``object.serial``. "" = não há.
-
-    SOM-ECO-02 (16/09/2026): pelo NOME, o fluxo de captura caía na fonte
-    padrão quando o nó estava suspenso, e pelo serial acertava. O serial só é
-    o índice do ``pactl`` quando quem responde é o ``pipewire-pulse``
-    (``alto_falante_bt.o_servidor_e_o_pipewire``); sem ele não há
-    ``pw-loopback`` que sirva, e a resposta honesta é "".
-    """
+    """O alvo com que o ``pw-loopback`` acerta o nó: o ``object.serial``. "" = não há."""
     from hefesto_dualsense4unix.integrations.alto_falante_bt import (
         o_servidor_e_o_pipewire,
         serial_do_no,
@@ -156,11 +124,8 @@ class HapticaDoCabo:
         self._pactl = pactl
         self._conferir_alvo = conferir
         self._rotas: dict[str, RotaDoCabo] = {}
-        #: marca -> o portão que JÁ se aplicou (``True`` = motores abertos).
         self._portao: dict[str, bool] = {}
-        #: As marcas cujo laço já se viu ligado ao endpoint certo.
         self._conferidos: set[str] = set()
-        #: marca -> a rota que se ligou a outro nó: ela não se religa.
         self._recusadas: dict[str, RotaDoCabo] = {}
 
     def aparelhos(self) -> dict[str, RotaDoCabo]:
@@ -172,13 +137,7 @@ class HapticaDoCabo:
         return self._portao.get(marca)
 
     def casar(self, rotas: Mapping[str, RotaDoCabo], abertos: Iterable[str]) -> None:
-        """Os laços ficam os de ``rotas``, e os motores abertos os de ``abertos``.
-
-        As chaves são as marcas dos aparelhos. Quem saiu de ``rotas`` perde o
-        laço; quem mudou de rota (a placa nova do cabo que voltou) é religado;
-        e o portão de cada um é aplicado quando muda. **Nunca levanta**: é a
-        volta do daemon.
-        """
+        """Os laços ficam os de ``rotas``, e os motores abertos os de ``abertos``."""
         querem_abrir = set(abertos)
         for marca in [n for n in self._rotas if n not in rotas]:
             self.soltar(marca)
@@ -204,11 +163,7 @@ class HapticaDoCabo:
                 self._portao[marca] = aberto
 
     def _conferir(self, marca: str, rota: RotaDoCabo) -> bool:
-        """O lado de captura do laço está no endpoint do aparelho? ``False`` = caiu.
-
-        Chamado só na volta SEGUINTE à que ligou o laço: a ligação no grafo não
-        é instantânea, e olhar cedo demais leria «não sei» à toa.
-        """
+        """O lado de captura do laço está no endpoint do aparelho? ``False`` = caiu."""
         if not rota.origem:
             return True
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
@@ -218,7 +173,7 @@ class HapticaDoCabo:
         olhar = self._conferir_alvo or conferir_o_alvo_do_gravador
         try:
             ligado = olhar(no_de_captura(marca))
-        except Exception as exc:  # nunca derruba a volta
+        except Exception as exc:
             logger.debug("haptica_do_cabo_conferencia_falhou", controle=marca, err=str(exc))
             ligado = None
         if ligado is None:
@@ -227,19 +182,13 @@ class HapticaDoCabo:
         if ligado == rota.origem:
             self._conferidos.add(marca)
             return True
-        # O nome do nó errado não vai ao diário: pode ser o microfone dela,
-        # que carrega o rabo do endereço do controle.
         logger.warning("haptica_do_cabo_ligado_a_outro_no", controle=marca)
         self.soltar(marca)
         self._recusadas[marca] = rota
         return False
 
     def _aplicar_o_portao(self, marca: str, aberto: bool) -> bool:
-        """O volume do fluxo do laço na placa: a frente cheia, os motores pelo portão.
-
-        ``False`` quando o fluxo ainda não apareceu no servidor (o laço acabou
-        de subir) ou o ``pactl`` não respondeu: a volta seguinte tenta de novo.
-        """
+        """O volume do fluxo do laço na placa: a frente cheia, os motores pelo portão."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
 
         correr = self._pactl or rodar_pactl
@@ -248,8 +197,6 @@ class HapticaDoCabo:
             if self._indice_do_fluxo is not None:
                 indice = self._indice_do_fluxo(no_do_laco)
             else:
-                # A leitura é a do curador (a mesma marca que ele lê para o
-                # registro), feita pela porta do daemon, que pergunta ao retrato.
                 indice = indice_do_fluxo(no_do_laco, rodar_pactl)
             if indice is None:
                 return False
@@ -258,7 +205,7 @@ class HapticaDoCabo:
                 "pactl", "set-sink-input-volume", indice,
                 VOLUME_ABERTO, VOLUME_ABERTO, motores, motores,
             ])
-        except Exception as exc:  # nunca derruba a volta
+        except Exception as exc:
             logger.debug("haptica_do_cabo_portao_falhou", controle=marca, err=str(exc))
             return False
         if resposta is None:

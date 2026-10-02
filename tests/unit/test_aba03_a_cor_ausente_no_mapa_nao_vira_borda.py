@@ -54,9 +54,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
 
-#: A FRASE QUE SÓ PODE SER DITA COM COR. Ela é a agulha desta régua: onde não há
-#: hexadecimal, esta afirmação é falsa, e uma dica falsa é pior que uma dica
-#: ausente — ela confirma para quem lê que a borda foi medida.
 AFIRMA_A_COR = "a borda é a cor do plástico"
 
 
@@ -70,14 +67,7 @@ def a03():
 
 @pytest.fixture(scope="module")
 def mapa_das_cores() -> list[tuple[str, str, str]]:
-    """`(slug, nome, tinta)` dos VINTE E OITO modelos que ela mapeou.
-
-    A lista sai de `mesa_viva.CORES` (código de fábrica → colorway) e a tinta de
-    `monta.cor_da_zona`, que LÊ a folha gerada de
-    `docs/data/cores-do-dualsense.csv`. Nenhuma cor é digitada aqui: uma tabela
-    nesta régua seria a segunda verdade que o CSV existe para matar, e ela
-    envelheceria calada no dia em que ela mapear o vigésimo nono modelo.
-    """
+    """`(slug, nome, tinta)` dos VINTE E OITO modelos que ela mapeou."""
     import monta
 
     from hefesto_dualsense4unix.interface import mesa_viva
@@ -87,13 +77,7 @@ def mapa_das_cores() -> list[tuple[str, str, str]]:
 
 
 def test_o_mapa_tem_os_dois_casos(mapa_das_cores):
-    """A régua abaixo tem o que morder — nos dois lados.
-
-    Sem esta, o dia em que o mapa passar a ter hex para todo modelo (ou para
-    nenhum) esta régua ficaria VERDE sem medir nada, e ninguém saberia. É o
-    defeito de instrumento que esta casa mais paga: *régua que passa com a cura
-    arrancada não mede nada* — e uma régua sem caso também não.
-    """
+    """A régua abaixo tem o que morder — nos dois lados."""
     com_hex = [n for _s, n, t in mapa_das_cores if t.startswith("#")]
     sem_hex = [n for _s, n, t in mapa_das_cores if not t.startswith("#")]
     assert len(mapa_das_cores) == 28, (
@@ -129,14 +113,7 @@ def test_so_o_hexadecimal_vira_borda(a03, mapa_das_cores):
 
 
 def test_nenhum_chip_leva_url_para_dentro_do_style(a03, mapa_das_cores):
-    """Nem hachura nem gradiente entram numa `border-color`.
-
-    É a forma DIRETA do defeito medido no WebKit: `url(...)` não é cor, a
-    `var()` fica inválida no tempo de valor computado, e a borda cai no
-    `currentColor` em vez da queda declarada. A régua acima já cobre o caso pelo
-    mapa de hoje; esta cobre a FORMA, e por isso alcança o gradiente de casca
-    partida se um dia ele chegar à `casca-solida`.
-    """
+    """Nem hachura nem gradiente entram numa `border-color`."""
     for slug, nome, _tinta in mapa_das_cores:
         chip = a03._cabeca_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
         assert "url(" not in chip, (
@@ -146,11 +123,7 @@ def test_nenhum_chip_leva_url_para_dentro_do_style(a03, mapa_das_cores):
 
 
 def test_a_dica_acompanha_a_cor(a03):
-    """Três estados, três frases — e só um deles pode afirmar a cor.
-
-    A dica dizia *"a borda é a cor do plástico"* nos TRÊS, e nos dois últimos
-    era mentira: sem hex a borda é a neutra do tema, não o plástico de ninguém.
-    """
+    """Três estados, três frases — e só um deles pode afirmar a cor."""
     com_cor = a03.chip_do_controle(1, "White", "USB", "#e4e0d8")
     assert AFIRMA_A_COR in com_cor, (
         f"o chip com hex parou de dizer de onde vem a borda: {com_cor!r}")
@@ -167,12 +140,6 @@ def test_a_dica_acompanha_a_cor(a03):
         f"o NOME do modelo é identidade LIDA, e ele fica: {sem_hex!r}. Não ter "
         f"o hexadecimal não é não saber qual controle está na mesa.")
 
-    # A SEGUNDA AUSÊNCIA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026.
-    # Até aqui a dica de quem ninguém leu tinha de dizer "lida". A ordem dela de
-    # 13/09 (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
-    # tira da tela a confissão sobre um estado nosso. As duas ausências seguem
-    # separadas: a do acabamento diz o que o modelo É; a não lida diz o nome, ou
-    # nada.
     nao_lida = a03.chip_do_controle(2, "", "BT", "")
     assert AFIRMA_A_COR not in nao_lida, (
         f"o chip sem leitura de cor continua afirmando a borda: {nao_lida!r}")
@@ -186,20 +153,7 @@ def test_a_dica_acompanha_a_cor(a03):
 
 
 def test_o_endereco_da_cor_existe_ate_sem_cor(a03, mapa_das_cores):
-    """O endereço da cor está SEMPRE lá — inclusive nos oito modelos sem hex.
-
-    ISTO INVERTEU EM 03/09/2026, e a inversão é a cura. Enquanto a cor morava no
-    `<span>`, o endereço tinha de ACOMPANHÁ-LA: um `<span>` filho de um pai que
-    se troca inteiro nunca recebe o selo da visita, e um endereço sem selo era
-    dívida que ninguém podia pagar.
-
-    No embrulho não é assim: ele fica FORA do HTML comparado, recebe o selo, e o
-    produto escreve nele a cada tique — o hexadecimal quando o mapa dela
-    responde um, e o vazio (que APAGA a variável) quando não responde. Tirar o
-    endereço dos oito modelos sem hex faria o controle que sai de um Chroma Teal
-    para um White ficar sem borda: a página é estática e o piloto não cria
-    endereço.
-    """
+    """O endereço da cor está SEMPRE lá — inclusive nos oito modelos sem hex."""
     for slug, nome, _t in mapa_das_cores:
         chip = a03._cabeca_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
         assert f'data-campo="{a03.CAMPO_DO_PLASTICO}"' in chip, (
@@ -210,13 +164,7 @@ def test_o_endereco_da_cor_existe_ate_sem_cor(a03, mapa_das_cores):
 
 
 def test_cor_de_borda_recusa_o_que_o_mapa_nao_diz_em_hex(a03):
-    """A peneira, nas TRÊS formas que `gerar_cores_do_dualsense._tinta` escreve.
-
-    O gradiente de casca partida não chega à `casca-solida` hoje — ela existe
-    justamente para dar UMA cor a quem precisa de uma. Ele está aqui porque a
-    peneira é sobre a FORMA, e uma régua que só conhecesse a hachura passaria
-    calada no dia em que a forma mudasse.
-    """
+    """A peneira, nas TRÊS formas que `gerar_cores_do_dualsense._tinta` escreve."""
     assert a03.cor_de_borda("#ae335a") == "#ae335a"
     assert a03.cor_de_borda("  #ae335a  ") == "#ae335a"
     assert a03.cor_de_borda("url(#hachura-sem-hex)") == ""

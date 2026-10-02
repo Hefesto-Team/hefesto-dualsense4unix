@@ -1,95 +1,4 @@
-"""Os portões que o `scripts/portoes.sh` manda rodar continuam LIGADOS no CI.
-
-Terceiro bloco da PORTÃO-VIVO-01, e o mais barato de todos: preço ZERO hoje.
-
-MEDIDO em 12/08/2026: `tests/unit/test_portao_do_mapa_esta_ligado.py` era o
-ÚNICO teste da suíte inteira que abria o `.github/workflows/ci.yml`, e ele só
-olha os dois comandos do mapa de canais. Consequência medida: o job
-`packaging-parity` podia ser apagado do `ci.yml`, ou ganhar `continue-on-error`,
-e NADA na suíte reprovaria — e ele é justamente o portão que cobra "a cura
-chegou ao install". O guarda do install não tinha guarda.
-
-Essa é a família exata do defeito que a casa já pagou três vezes:
-
-  - BUG-GATE-TEST-DATA-NAO-RODAVA-01 (25/07): o `check_test_data.sh` existia,
-    reprovava, e nenhum workflow o executava — só rodando à mão dava para
-    descobrir;
-  - PORTÃO-VIVO-01 bloco B (27/07): os quatro hooks do `.pre-commit-config.yaml`
-    não rodavam em lugar NENHUM, porque o `core.hooksPath` global da máquina
-    dela desvia o git local e nenhum workflow chamava `pre-commit`;
-  - ÍCONE-VIVO-01 (03/08): o `scripts/gerar_icones.sh` dizia no próprio cabeçalho
-    que o `--check` "é o que o CI roda", e nenhum job o chamava.
-
-A LISTA É DERIVADA, nunca digitada aqui. A fonte é o bloco "Antes de fechar
-qualquer leva" — a lista que a casa manda rodar antes de fechar
-uma leva. Um portão que está lá e não está no CI é uma promessa que só vale na
-máquina de quem lembrar dela; um portão novo entra nesta guarda sozinho, no
-mesmo commit em que entra na tabela `_LISTA` de `scripts/portoes.sh`.
-
-O QUE FICA DE FORA, e por quê. Dos dez comandos do bloco, três não são scripts
-de `scripts/`: `pytest`, `ruff` e `mypy`. Eles ficam fora de propósito, e não por
-esquecimento — a classe de defeito medida acima é "script da casa que ninguém
-chama vira arquivo", e ela precisa de um arquivo no repositório para acontecer.
-Ferramenta de terceiro que sai do CI não some calada: a suíte inteira, o lint e
-o typecheck desaparecendo do relatório é ruído que qualquer pessoa vê no
-primeiro run. Os sete scripts da casa, não — eles somem em silêncio, que é
-exatamente o que aconteceu nas três vezes acima.
-
-Dos quinze jobs do `ci.yml`, portanto, esta guarda cobre os sete que carregam
-esses scripts (`anonymity` conta dois), e deixa `lint-test`, `typecheck`,
-`gtk-real`, `runtime-smoke`, `build-wheel`, `smoke-multi-distro`, `version-sync`
-e `pre-commit` sem guarda de existência. `mapa-de-canais` já tem a sua, no
-arquivo irmão. Uma lista longa que ninguém mantém é pior que uma curta que
-morde — e esta se mantém sozinha, porque deriva.
-
-O que esta guarda NÃO policiava, e por quê (nota de 12/08/2026): um `if:` no
-passo. O argumento da época era que nenhum dos sete tinha `if:` e que inventar
-regra sem defeito é o começo de um portão que grita falso. O buraco ficou
-escrito ali mesmo: "`if: false` num passo desliga o portão sem que este arquivo
-perceba".
-
-CADUCOU EM 13/08/2026 (P0-FUROS-01). A régua da guarda era um `in` de
-substring sobre o `run` inteiro colapsado em espaços, e MEDIDO nesta árvore ela
-aprovava QUATRO formas distintas de desligar o `check_anonymity.sh` — as quatro
-com os cinco testes deste arquivo verdes:
-
-  1. `run: echo 'era bash scripts/check_anonymity.sh'` — o script vira TEXTO de
-     um echo. Nada o executa, e a substring está lá;
-  2. o comando dentro de um comentário de shell, no corpo de um `run: |`. O
-     docstring de `passos_que_rodam` dizia que o `safe_load` protege disso, e
-     essa frase estava ERRADA: o `safe_load` descarta o comentário do YAML, mas
-     o corpo de um bloco literal é uma STRING — um `#` ali chega inteiro ao
-     valor, e a substring casa;
-  3. `run: bash scripts/check_anonymity.sh || true` — roda, reprova, e o shell
-     engole. O passo fica verde;
-  4. `if: false` no passo — o buraco declarado acima.
-
-O argumento "não há defeito" não vale mais depois de a medição mostrar o
-defeito. Hoje a régua exige o script em POSIÇÃO DE COMANDO, numa linha que o
-shell executa, sem engolidor de código de saída e num passo (e num job) que não
-está desligado por `if`.
-
-PROVA DE QUE MORDE (12/08/2026) — arrancado do `ci.yml` o passo
-`run: bash scripts/check_packaging_parity.sh` do job `packaging-parity`,
-substituído por um `echo`. Reprovou `test_todo_portao_da_casa_e_invocado_no_ci`,
-e só ele. Devolvido; a rodada de controle voltou verde. A segunda mordida:
-posto `continue-on-error: true` no MESMO passo — reprovou
-`test_nenhum_portao_da_casa_virou_aviso`, e só ele. A terceira: tirado o
-`continue-on-error` do passo e posto no JOB `packaging-parity` inteiro —
-reprovou o mesmo teste, agora pela outra asserção ("o passo parece duro e o job
-o perdoa"). Os três arrancamentos foram devolvidos do `ci.yml` original guardado
-fora da árvore, com md5 conferido, e a rodada de controle voltou verde.
-
-PROVA DE QUE MORDE (13/08/2026, P0-FUROS-01) — as QUATRO formas listadas acima,
-aplicadas uma a uma sobre o passo `- run: bash scripts/check_anonymity.sh` do
-job `anonymity`. Antes desta leva: `exit=0, 5 passed` nas quatro. Depois:
-reprova nas quatro, e cada uma pelo teste que lhe cabe — 1 e 2 por
-`test_todo_portao_da_casa_e_invocado_no_ci` (o portão deixou de ser INVOCADO),
-3 por `test_nenhum_portao_da_casa_tem_a_reprovacao_engolida`, 4 por
-`test_nenhum_portao_da_casa_esta_desligado_por_if`. Devolvido do `ci.yml`
-guardado fora da árvore, com md5 conferido, e a rodada de controle voltou
-verde.
-"""
+"""Os portões que o `scripts/portoes.sh` manda rodar continuam LIGADOS no CI."""
 from __future__ import annotations
 
 import re
@@ -101,36 +10,14 @@ import yaml
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
 
-#: A LISTA DE PORTÕES, VERSIONADA — e é a cura que esta guarda pedia desde
-#: 13/08/2026, com todas as letras: *"mova a lista de portões para um arquivo
-#: VERSIONADO e aponte esta guarda para ele"*. Ela chegou em 25/08 como
-#: `scripts/portoes.sh`, e por um motivo que a guarda já conhecia: o contrato
-#: da casa não é versionado, não chega ao CI **nem a árvore de trabalho
-#: nenhuma** — `git worktree add` não copia arquivo ignorado.
-#:
-#: A guarda deixa de ser cega no CI: a fonte agora viaja com o repositório.
 PORTOES_SH = RAIZ / "scripts" / "portoes.sh"
 
-#: A ÂNCORA dentro do arquivo versionado. Se a tabela mudar de nome ou de
-#: forma, esta guarda tem de saber — daí o teste da âncora logo abaixo.
 CABECALHO = "_LISTA()"
 
-#: Quantos scripts o bloco listava quando esta guarda nasceu. É trava de
-#: encolhimento, não meta: existe para que uma reformatação do `portoes.sh` não
-#: esvazie a lista derivada em silêncio, deixando todos os testes deste arquivo
-#: passarem por vacuidade. Sobe quando alguém quiser subi-lo.
 PISO = 7
 
 def so_na_maquina_dela() -> dict[str, str]:
-    """Os portões da tabela que, por decisão registrada, NÃO rodam no CI.
-
-    O dono é o bloco `_DIVERGENCIAS` do `scripts/portoes.sh`, nas linhas
-    `FORA-DO-CI|<script>|<razão>`. Até 27/09/2026 esta guarda tinha a própria
-    lista, vazia, enquanto o `portoes.sh` já declarava os portões locais: dois
-    donos para a mesma pergunta, e o portão declarado lá reprovava aqui.
-    Declarar é honesto e este portão não castiga honestidade — só não deixa a
-    lápide envelhecer calada.
-    """
+    """Os portões da tabela que, por decisão registrada, NÃO rodam no CI."""
     texto = PORTOES_SH.read_text(encoding="utf-8")
     inicio = texto.find("_DIVERGENCIAS()")
     assert inicio != -1, "o portoes.sh perdeu o bloco `_DIVERGENCIAS()`"
@@ -144,27 +31,8 @@ def so_na_maquina_dela() -> dict[str, str]:
     return declarados
 
 
-#: A CICATRIZ, e ela está CURADA — fica porque explica o desenho de hoje.
-#: MEDIDO em 13/08/2026: a fonte desta guarda era o contrato da casa, que NÃO é
-#: rastreado pelo git. No runner do CI o `actions/checkout` não o trazia, e sem
-#: ele os cinco testes deste arquivo reprovavam — uma guarda nova derrubaria o
-#: `lint-test` no primeiro push, por um arquivo que só existe na máquina dela.
-#: A cura chegou em 25/08 com o `scripts/portoes.sh`: a fonte passou a viajar
-#: com o repositório, e a guarda passou a medir no CI o que mede aqui.
-
-
 def bloco_de_portoes() -> str:
-    """A tabela `_LISTA` do `scripts/portoes.sh` — a fonte versionada.
-
-    ATÉ 25/08/2026 esta função lia o bloco de shell do contrato da casa, e a
-    cicatriz acima declara o preço disso: no CI o arquivo não chega, e a
-    guarda ficava cega no único lugar onde ela precisa morder. A cura que
-    aquele texto pedia chegou — a lista virou `scripts/portoes.sh`, versionada
-    — e esta função aponta para ela.
-
-    O formato da tabela é `camada|id|runner|comando`, e o que interessa aqui
-    são os comandos: é deles que sai a lista de scripts.
-    """
+    """A tabela `_LISTA` do `scripts/portoes.sh` — a fonte versionada."""
     if not PORTOES_SH.is_file():
         pytest.skip(
             "scripts/portoes.sh não existe nesta árvore — sem a lista "
@@ -174,28 +42,12 @@ def bloco_de_portoes() -> str:
     inicio = texto.find("_LISTA()")
     if inicio < 0:
         return ""
-    # O fim é a LINHA `TABELA`, que fecha o heredoc. Até 27/09/2026 era a
-    # primeira ocorrência da palavra, e um comentário da própria tabela («a
-    # TABELA dela», linha 261) cortava o bloco ali: os portões de baixo
-    # ficavam fora desta guarda.
     fim = texto.find("\nTABELA\n", texto.find("<<'TABELA'", inicio))
     return texto[inicio:fim] if fim > 0 else ""
 
 
 def portoes_da_casa() -> list[str]:
-    """Os scripts de `scripts/` citados no bloco, na ordem em que aparecem.
-
-    Derivado, nunca digitado: portão novo na tabela entra aqui sozinho.
-    """
-    #: COMENTÁRIO DE SHELL NÃO É PORTÃO, e isto é defeito MEDIDO em 06/09/2026:
-    #: um comentário DENTRO da tabela `_LISTA()` explicava o custo do `bash
-    #: scripts/portoes.sh` inteiro, a expressão regular o leu como uma linha da
-    #: tabela, e a régua passou a exigir que o CI invocasse o AGREGADOR — que ele
-    #: não invoca por desenho, porque chama cada portão um a um (é o
-    #: `test_portao_a_lista_de_portoes_e_uma_so.py` quem garante que as duas
-    #: listas são a mesma). Pela quinta vez nesta casa, um comentário virou o
-    #: defeito que descrevia. O `run:` do CI já era lido sem comentário aqui
-    #: (`linhas_de_comando`); a tabela passa a ser também.
+    """Os scripts de `scripts/` citados no bloco, na ordem em que aparecem."""
     vistos: list[str] = []
     linhas = [linha for linha in bloco_de_portoes().splitlines()
               if not linha.lstrip().startswith("#")]
@@ -206,13 +58,7 @@ def portoes_da_casa() -> list[str]:
 
 
 def passos_do_ci() -> list[dict]:
-    """Todo passo de todo job do CI, já com o nome do job e o job inteiro junto.
-
-    O job vem junto porque o `continue-on-error` também existe no NÍVEL DO JOB
-    — o `smoke-multi-distro` usa exatamente essa forma (`ci.yml`, matriz
-    experimental). Olhar só o passo deixaria de pé a rota mais barata de
-    desligar um portão sem apagar linha nenhuma.
-    """
+    """Todo passo de todo job do CI, já com o nome do job e o job inteiro junto."""
     dados = yaml.safe_load(CI.read_text(encoding="utf-8"))
     passos: list[dict] = []
     for nome_do_job, job in (dados.get("jobs") or {}).items():
@@ -221,10 +67,6 @@ def passos_do_ci() -> list[dict]:
     return passos
 
 
-#: Tokens que podem PRECEDER o script sem tirá-lo da posição de comando: o
-#: interpretador que o executa. Derivado do que o `ci.yml` usa hoje
-#: (`bash scripts/...`, `python3 scripts/...`, `python scripts/...`) mais as
-#: formas que a casa escreve nos seus comandos (`.venv/bin/python`).
 INTERPRETADORES = frozenset(
     {
         "bash",
@@ -241,30 +83,15 @@ INTERPRETADORES = frozenset(
     }
 )
 
-#: Uma atribuição de variável antes do comando (`FOO=1 bash x.sh`) também não
-#: tira o script da posição de comando.
 _ATRIBUICAO = re.compile(r"[A-Za-z_][A-Za-z_0-9]*=.*")
 
-#: O que engole o código de saída do portão: ele roda, reprova, e o passo fica
-#: verde. Medido como forma 3 dos quatro furos de 13/08/2026.
 _ENGOLIDOR = re.compile(r"\|\|\s*(true|:|/bin/true|exit\s+0)\b")
 
-#: `if:` que nunca é verdadeiro. Estreito de propósito: cobre a forma que a
-#: medição de 13/08/2026 exercitou (`if: false`, que o YAML entrega como o
-#: booleano `False`) e as duas grafias equivalentes que o GitHub aceita.
 _IF_MORTO = re.compile(r"(?:\$\{\{\s*)?(?:false|0)(?:\s*\}\})?", re.IGNORECASE)
 
 
 def linhas_de_comando(run: object) -> list[str]:
-    """As linhas do `run` que o shell EXECUTA — comentário de shell fora.
-
-    O `yaml.safe_load` descarta o comentário do YAML, e até 13/08/2026 este
-    arquivo afirmava que isso bastava. Não bastava: o corpo de um `run: |` é um
-    bloco literal, ou seja, uma STRING — um `#` ali dentro não é comentário de
-    YAML nenhum, chega inteiro ao valor, e uma busca por substring casava com
-    ele. Comentar o portão continuava sendo a forma mais barata de desligá-lo,
-    só que pelo outro lado.
-    """
+    """As linhas do `run` que o shell EXECUTA — comentário de shell fora."""
     limpas: list[str] = []
     for linha in str(run).splitlines():
         nua = linha.strip()
@@ -279,12 +106,7 @@ def comandos(linha: str) -> list[str]:
 
 
 def em_posicao_de_comando(comando: str, portao: str) -> bool:
-    """O script é EXECUTADO neste comando, ou só aparece escrito nele?
-
-    Esta é a pergunta que a régua antiga não fazia. `echo 'era bash
-    scripts/check_anonymity.sh'` contém a substring e não roda portão nenhum —
-    forma 1 dos quatro furos.
-    """
+    """O script é EXECUTADO neste comando, ou só aparece escrito nele?"""
     tokens = comando.split()
     if portao not in tokens:
         return False
@@ -311,13 +133,7 @@ def desligado_por_if(valor: object) -> bool:
 
 
 def passos_que_rodam(agulha: str) -> list[dict]:
-    """Os passos que EXECUTAM o comando — não os que o mencionam.
-
-    Três exigências, uma por furo medido em 13/08/2026: a linha não pode ser
-    comentário de shell; o script tem de estar em posição de comando (só um
-    interpretador ou uma atribuição pode vir antes); e a comparação é por
-    TOKEN, não por substring.
-    """
+    """Os passos que EXECUTAM o comando — não os que o mencionam."""
     return [passo for passo in passos_do_ci() if linhas_que_rodam(passo, agulha)]
 
 
@@ -354,11 +170,7 @@ def test_todo_portao_da_casa_e_invocado_no_ci() -> None:
 
 
 def test_todo_gancho_do_pre_commit_e_portao_da_casa() -> None:
-    """O pre-commit só roda no CI; o que ele confere tem de rodar em casa também.
-
-    27/09/2026: o `gerar-indice-html.py --check` era gancho do pre-commit e não
-    era portão, e o CI do `dev` reprovou com os 65 portões verdes em casa.
-    """
+    """O pre-commit só roda no CI; o que ele confere tem de rodar em casa também."""
     config = yaml.safe_load((RAIZ / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
     casa = set(portoes_da_casa())
     faltam = [

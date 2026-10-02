@@ -38,23 +38,12 @@ _OUTRO = """Sink #37984
 \t\tsysfs.path = "/devices/pci0000:00/0000:0c:00.4/sound/card1"
 """
 
-#: O `USEC_INITIALIZED` da âncora, e o NÚMERO É ESCOLHIDO: os oito bytes dele
-#: viram os últimos campos do GUID, e um valor qualquer sai como doze hex
-#: seguidos — que a régua do anonimato lê como endereço de rádio, com razão.
-#: Este cai na faixa sintética da casa (`aabbcc…`) e continua sendo um tempo de
-#: máquina plausível (≈10 dias de `uptime` em µs).
 _USEC_DA_ANCORA = 0xCCBBAA0000
 
-#: O nó é o do LUGAR 1 desde 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
-#: o nome não carrega mais o rabo do `uniq`. O curador não lê o nome — lê o
-#: VID/PID e o `sysfs.path` —, e por isso nenhuma régua daqui mudou de conta.
 _NOME_DO_NO = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller_HEFESTOLUGAR1-00.HiFi__Speaker__sink"
 )
-#: A ÂNCORA é o `usb_device`; o nó declara a INTERFACE dela. O
-#: `udev_device_get_parent_with_subsystem_devtype` devolve um ancestral, nunca
-#: o próprio device — declarar a âncora nua faz o GUID subir para o hub raiz.
 _ANCORA = "/devices/pci0000:00/0000:00:08.1/usb3/3-4"
 _CAMINHO_DECLARADO = _ANCORA + "/3-4:1.0"
 
@@ -100,9 +89,6 @@ def udev(tmp_path: Path) -> Path:
     return banco
 
 
-# -- a leitura dos nós --------------------------------------------------------
-
-
 def test_o_no_vestido_de_dualsense_e_lido() -> None:
     assert ks.endpoints_de_mentira(_dubles(_sinks())) == [(0x0CE6, _CAMINHO_DECLARADO)]
 
@@ -121,9 +107,6 @@ def test_sem_pactl_nao_ha_endpoint() -> None:
     assert ks.endpoints_de_mentira(lambda _argv: None) == []
 
 
-# -- a subida até o usb_device ------------------------------------------------
-
-
 def test_o_pai_usb_device_e_o_primeiro_com_busnum_e_devnum(sysfs: Path) -> None:
     fundo = sysfs / _CAMINHO_DECLARADO.lstrip("/") / "sound" / "card9"
     fundo.mkdir(parents=True)
@@ -132,14 +115,7 @@ def test_o_pai_usb_device_e_o_primeiro_com_busnum_e_devnum(sysfs: Path) -> None:
 
 
 def test_o_caminho_que_ja_e_usb_device_devolve_o_pai(sysfs: Path) -> None:
-    """A régua que faltava, e que custou um lançamento inteiro.
-
-    O `udev_device_get_parent_with_subsystem_devtype` devolve um ANCESTRAL,
-    nunca o próprio device. Medido no PRAGMATA em 18/09/2026 às 03h40: com o
-    nó declarando a âncora nua, o jogo gravou
-    `ContainerId={00021d6b-0003-0001-…}` — o `1d6b:0002`, o hub raiz, PAI da
-    âncora. O device KS declarava a âncora, e os dois nunca casaram.
-    """
+    """A régua que faltava, e que custou um lançamento inteiro."""
     avo = sysfs / "devices" / "pci0000:00" / "0000:00:08.1" / "usb3"
     avo.mkdir(parents=True, exist_ok=True)
     (avo / "idVendor").write_text("1d6b\n")
@@ -160,12 +136,8 @@ def test_caminho_fora_do_sysfs_e_recusado(sysfs: Path) -> None:
     assert ks.pai_usb_device("/../../etc", sysfs) is None
 
 
-# -- o ContainerId ------------------------------------------------------------
-
-
 def test_o_container_id_e_o_da_ancora_nao_o_do_controle(sysfs: Path, udev: Path) -> None:
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
-    # `Data1 = MAKELONG(vid, pid)` da ÂNCORA (2357/0604), não da Sony.
     assert controle.prefixo_do_container() == "{06042357-0003-001d-"
     assert controle.pid == 0x0CE6, "o nome e o HardwareID continuam do controle"
     assert controle.usec == _USEC_DA_ANCORA
@@ -199,9 +171,6 @@ def test_as_duas_variantes_de_data4_saem_no_radio(sysfs: Path, udev: Path) -> No
     ]
 
 
-# -- a fronteira com o cabo ---------------------------------------------------
-
-
 def test_ancora_com_placa_de_som_e_o_cabo_e_nao_entra(sysfs: Path, udev: Path) -> None:
     """O `sysfs.path` de um DualSense no cabo sobe ao PRÓPRIO controle.
 
@@ -230,13 +199,7 @@ def test_a_instancia_do_radio_e_reconhecida_como_nossa(sysfs: Path, udev: Path) 
 def test_o_pactl_e_perguntado_na_locale_c_porque_o_desta_casa_traduz(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O `pactl` desta máquina responde em português — e o leitor fica CEGO.
-
-    Medido em 18/09/2026, numa prova de ponta a ponta que voltou vazia: sem
-    `LC_ALL=C` a saída vem com `Nome:` e `Destino #`, nenhum campo casa, e o
-    produto responde "não há endpoint" com o endpoint de pé. A casa já tinha
-    pago por isto em 15/08/2026, do outro lado do mesmo comando.
-    """
+    """O `pactl` desta máquina responde em português — e o leitor fica CEGO."""
     falso = tmp_path / "pactl"
     falso.write_text('#!/bin/sh\nprintf "LC_ALL=%s\\n" "${LC_ALL:-vazio}"\n', encoding="utf-8")
     falso.chmod(0o755)

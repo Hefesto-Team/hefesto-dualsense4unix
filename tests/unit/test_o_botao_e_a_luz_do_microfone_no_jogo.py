@@ -53,19 +53,10 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: `DS_BUTTONS2_MIC_MUTE` do `drivers/hid/hid-playstation.c`, e o byte do
-#: `struct dualsense_input_report` em que ele mora (`buttons[2]`, o décimo
-#: byte do payload). Escritos à mão: a régua não pergunta ao vpad o número
-#: que o vpad escreve.
 _BIT_DO_MIC = 0x04
 _BYTE_BUTTONS2 = 9
 _BIT_DO_CLIQUE = 0x02
 _BIT_DO_PS = 0x01
-
-
-# --------------------------------------------------------------------------
-# Reports crus do controle FÍSICO
-# --------------------------------------------------------------------------
 
 
 def _usb(*, mic: bool = False, marca: int = 0) -> bytes:
@@ -96,13 +87,8 @@ def _bt(
         raw[2 + _BYTE_BUTTONS2] |= _BIT_DO_MIC
     raw[-4:] = bt_crc32(raw[:-4], seed=BT_INPUT_CRC_SEED).to_bytes(4, "little")
     if corrupto:
-        raw[2 + _BYTE_BUTTONS2] ^= _BIT_DO_MIC  # depois do CRC
+        raw[2 + _BYTE_BUTTONS2] ^= _BIT_DO_MIC
     return bytes(raw)
-
-
-# --------------------------------------------------------------------------
-# /dev/uhid de mentira, um fd por vpad
-# --------------------------------------------------------------------------
 
 
 class _UhidPorFd:
@@ -230,7 +216,7 @@ def _rodar_pelo_pipe(fake: _UhidPorFd, reports: list[bytes]) -> list[bytes]:
         assert _esperar(lambda: pad.motion_streaming)
         for report in reports:
             os.write(escrita, report)
-            time.sleep(0.01)  # um report por read: o pipe é um stream
+            time.sleep(0.01)
         assert _esperar(lambda: leitor.reports_seen >= len(reports))
     finally:
         leitor.stop()
@@ -238,11 +224,6 @@ def _rodar_pelo_pipe(fake: _UhidPorFd, reports: list[bytes]) -> list[bytes]:
         os.close(escrita)
         os.close(lido)
     return fake.corpos(fd)
-
-
-# --------------------------------------------------------------------------
-# 0. O número do bit
-# --------------------------------------------------------------------------
 
 
 class TestONumeroDoBit:
@@ -253,11 +234,6 @@ class TestONumeroDoBit:
     def test_o_vpad_escreve_o_bit_do_driver(self) -> None:
         assert uhid_gamepad._BUTTONS2_BITS["mic_btn"] == _BIT_DO_MIC
         assert uhid_gamepad._BUTTONS2_OFFSET == _BYTE_BUTTONS2
-
-
-# --------------------------------------------------------------------------
-# 1. O aperto chega ao report do vpad, no cabo e no rádio
-# --------------------------------------------------------------------------
 
 
 class TestOApertoChegaAoJogo:
@@ -290,11 +266,6 @@ class TestOApertoChegaAoJogo:
         assert not any(
             c[_BYTE_BUTTONS2] & (_BIT_DO_CLIQUE | _BIT_DO_PS) for c in com_mic
         )
-
-
-# --------------------------------------------------------------------------
-# 2. "Não sei" não solta o botão
-# --------------------------------------------------------------------------
 
 
 class _VpadQueGuarda:
@@ -355,11 +326,6 @@ class TestONaoSeiNaoSolta:
         assert leitor.mic_button_forwards == 0
 
 
-# --------------------------------------------------------------------------
-# 3. O tique do evdev não apaga o bit
-# --------------------------------------------------------------------------
-
-
 class TestOTiqueNaoApaga:
     """Mordida: gravar o botão no `_buttons` reprova."""
 
@@ -386,11 +352,6 @@ class TestOTiqueNaoApaga:
         pad.stop()
 
 
-# --------------------------------------------------------------------------
-# 4. O hotplug não prende o dedo
-# --------------------------------------------------------------------------
-
-
 class TestOHotplugNaoPrende:
     """Mordida: tirar o esquecimento (do reader ou do vpad) reprova."""
 
@@ -402,7 +363,6 @@ class TestOHotplugNaoPrende:
         pad.set_motion_streaming(True)
         leitor._observe_mic_button(_usb(mic=True))
         assert _mic_aceso(uhid.corpos(fd)[-1])
-        # A perda do fd, como o laço a faz: esquece e desliga o streaming.
         leitor._reset_mic_button()
         pad.set_motion_streaming(False)
         assert not _mic_aceso(uhid.corpos(fd)[-1]), (
@@ -432,11 +392,6 @@ class TestOHotplugNaoPrende:
         pad.stop()
 
 
-# --------------------------------------------------------------------------
-# 5. O 0x02 que o driver do vpad manda a cada aperto
-# --------------------------------------------------------------------------
-
-
 def _evento_de_output(corpo: bytes) -> bytes:
     """UHID_OUTPUT: 4 B de tipo + data[4096] + size + rtype."""
     report = bytes([0x02]) + corpo
@@ -448,19 +403,12 @@ def _evento_de_output(corpo: bytes) -> bytes:
     return bytes(dados)
 
 
-#: `struct dualsense_output_report_common`: `mute_button_led` e
-#: `power_save_control` são o nono e o décimo byte.
 _MUTE_BUTTON_LED = 8
 _POWER_SAVE_CONTROL = 9
 
 
 def _corpo_do_driver(mudo: bool) -> bytes:
-    """O que o `hid-playstation` do lado do vpad escreve ao alternar o mudo.
-
-    `dualsense_output_worker`: `valid_flag1 |= MIC_MUTE_LED_CONTROL_ENABLE |
-    POWER_SAVE_CONTROL_ENABLE`, o `mute_button_led` e o bit de mudo do
-    `power_save_control`; `valid_flag0` zero e os motores zero.
-    """
+    """O que o `hid-playstation` do lado do vpad escreve ao alternar o mudo."""
     corpo = bytearray(47)
     corpo[1] = (
         rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
@@ -522,12 +470,7 @@ def jogo_aberto(uhid: _UhidPorFd) -> Iterator[tuple[UhidDualSense, _Pias]]:
 
 
 class TestO0x02DoDriverNaoViraEscrita:
-    """O aperto chega ao driver do vpad, que responde com um 0x02: é eco.
-
-    Desde a A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 o que separa o eco
-    do jogo é a BORDA que o pad emitiu antes dele, e não o bit: cada 0x03 aqui
-    vem depois de um aperto que saiu no report ao jogo.
-    """
+    """O aperto chega ao driver do vpad, que responde com um 0x02: é eco."""
 
     def test_nao_chama_pia_nenhuma(
         self, jogo_aberto: tuple[UhidDualSense, _Pias], uhid: _UhidPorFd
@@ -559,7 +502,7 @@ class TestO0x02DoDriverNaoViraEscrita:
         pad, pias = jogo_aberto
         corpo = bytearray(47)
         corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
-        corpo[_MUTE_BUTTON_LED] = 2  # piscando, na língua da Sony
+        corpo[_MUTE_BUTTON_LED] = 2
         pad._handle_output(_evento_de_output(bytes(corpo)))
         pad._flush_replicas()
         assert pias.chamadas == [("luz_do_mic", 2)], (
@@ -585,11 +528,6 @@ class TestO0x02DoDriverNaoViraEscrita:
         assert pias.do_microfone() == []
 
 
-# --------------------------------------------------------------------------
-# 6. Quatro jogadores, no tempo
-# --------------------------------------------------------------------------
-
-
 class TestQuatroJogadoresNoTempo:
     """30 s de relógio virtual, um aperto a cada 1,5 s alternando os quatro."""
 
@@ -597,7 +535,7 @@ class TestQuatroJogadoresNoTempo:
         pads = [_vpad(j) for j in range(1, 5)]
         fds = [p._fd for p in pads]
         leitores = [_leitor(p) for p in pads]
-        transportes = [_usb, _bt, _bt, _bt]  # P1 no cabo, P2 a P4 no rádio
+        transportes = [_usb, _bt, _bt, _bt]
         for p in pads:
             p.set_motion_streaming(True)
         apertos = [0, 0, 0, 0]
@@ -620,7 +558,6 @@ class TestQuatroJogadoresNoTempo:
                     f"{'não chegou ao' if i == dono else 'acendeu o'} vpad do P{i + 1}"
                 )
             apertos[dono] += 1
-            # soltura
             for i, leitor in enumerate(leitores):
                 marca += 1
                 leitor._observe_mic_button(transportes[i](marca=marca))
@@ -634,9 +571,7 @@ class TestQuatroJogadoresNoTempo:
             p.stop()
 
 
-# --------------------------------------------------------------------------
 # 7. O `state_full` publica as duas contas, com o vpad de produção
-# --------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -737,17 +672,8 @@ async def test_state_full_nao_inventa_com_vpad_dublado(
     assert item["mic_led_do_jogo_amostra"] is None
 
 
-# --------------------------------------------------------------------------
-# 8. As réguas que faltavam (conferência de 29/09)
-# --------------------------------------------------------------------------
-
-
 class TestOLacoEsqueceNaPerda:
-    """A régua 4 pelo LAÇO de produção, e não pelo `_reset_mic_button` na mão.
-
-    Mordida: tirar o `_reset_mic_button()` do `finally` do `_run` reprova (o
-    teste que chama o esquecimento direto passa com ele arrancado do laço).
-    """
+    """A régua 4 pelo LAÇO de produção, e não pelo `_reset_mic_button` na mão."""
 
     def test_reabrir_com_o_dedo_apertado_pelo_laco(self, uhid: _UhidPorFd) -> None:
         pad = _vpad()
@@ -775,7 +701,6 @@ class TestOLacoEsqueceNaPerda:
             os.write(canos[0][1], _usb(mic=True, marca=1))
             assert _esperar(lambda: leitor.reports_seen >= 1)
             assert _esperar(lambda: _o_jogo_ve_o_mic(uhid, fd))
-            # O físico some com o dedo no botão: EOF no primeiro cano.
             os.close(canos[0][1])
             assert _esperar(lambda: len(aberturas) == 2 and pad.motion_streaming)
             os.write(canos[1][1], _usb(mic=True, marca=2))
@@ -793,14 +718,7 @@ class TestOLacoEsqueceNaPerda:
 
 
 class TestALuzPorCausaENaoPorBit:
-    """O que separa o eco do jogo é a borda que o pad emitiu, não o bit.
-
-    A O-BOTAO separava pelo bit 0x02 (o `0x01` sem o `0x02` era jogo); desde a
-    A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 o pedido de mudo do jogo
-    É o 0x02, e um jogo na língua da Sony manda o 0x03 inteiro, igual ao
-    driver. Mordidas: separar pelo bit de novo reprova o segundo e o terceiro;
-    contar antes do `_replicating()`, o quarto.
-    """
+    """O que separa o eco do jogo é a borda que o pad emitiu, não o bit."""
 
     def test_o_driver_com_a_barra_junto_entrega_so_a_barra(
         self, jogo_aberto: tuple[UhidDualSense, _Pias]
@@ -808,7 +726,7 @@ class TestALuzPorCausaENaoPorBit:
         pad, pias = jogo_aberto
         _apertar_no_pad(pad)
         corpo = bytearray(_corpo_do_driver(True))
-        corpo[1] |= 0x04  # o worker do driver junta a barra pendente
+        corpo[1] |= 0x04
         corpo[44:47] = bytes([10, 20, 30])
         pad._handle_output(_evento_de_output(bytes(corpo)))
         pad._flush_replicas()
@@ -844,7 +762,7 @@ class TestALuzPorCausaENaoPorBit:
         self, jogo_aberto: tuple[UhidDualSense, _Pias]
     ) -> None:
         pad, pias = jogo_aberto
-        pad._bound_at = pad.time_fn()  # ainda na carência do probe
+        pad._bound_at = pad.time_fn()
         corpo = bytearray(47)
         corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
         pad._handle_output(_evento_de_output(bytes(corpo)))

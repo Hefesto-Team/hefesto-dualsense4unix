@@ -1,36 +1,4 @@
-"""Z4/T7+T8+T9 — o `None` que carregava duas coisas em `controllers`.
-
-Frente **Z4** da ONDA 0 (24/08/2026). Medido na sprint (§2.3): a janela emitia
-``controllers: None`` tanto para "nunca houve override" quanto para "ela
-apagou o último" — e o daemon pula seção ``None`` (`_apply_section`), então o
-override velho ficava vivo no controle depois de "apagar e Salvar".
-
-**T7, medido ANTES de escrever qualquer linha de produto**: o lado do DAEMON
-(`ipc_draft_applier.py`) JÁ interpreta ``controllers: {}`` corretamente —
-`reset_output_overrides(specs or None)` colapsa `{}` e `None` no MESMO
-`None` na chamada ao backend, que por sua vez trata `overrides or {}` como
-"mapa vazio" nos dois casos (`backend_pydualsense.reset_output_overrides`).
-E a trava manual (`apply`, linha ~67) já arma pela checagem
-``params.get(secao) is not None`` — `{}` não é `None`, arma do mesmo jeito.
-**Não há cura para escrever aqui** — é medido, não hipótese: os dois testes
-de `TestODaemonJaAceitaVazio` provam com o mesmo instrumento que provaria uma
-regressão, e a classe seguinte MORDE arrancando o guarda que faz isso
-funcionar, para não virar afirmação sem prova.
-
-O que estava genuinamente quebrado — e é o que T8 cura — é que a JANELA
-(`app/draft_config.py`) nunca gerava `{}`: `source_controllers` colapsa
-"mapa vazio" e "nunca houve mapa" no MESMO `None` internamente (por decisão
-deliberada, para o ARQUIVO do perfil nunca ter chave fantasma), e essa
-colisão vazava direto para o contrato IPC. A cura é
-`controllers_esvaziados_nesta_edicao` — ver o comentário dela em
-`draft_config.py`.
-
-T9 é censo: das oito seções do payload de `apply_draft`, `controllers` era a
-única com um gesto que ESVAZIA uma seção antes preenchida. As outras sete não
-têm — `mic`/`speaker` têm o contrato inverso e intencional (`None` = sem
-opinião, NUNCA "apague", com a exceção nomeada do `mic.muted`), e nenhuma das
-outras cinco guarda um MAPA que possa ficar vazio.
-"""
+"""Z4/T7+T8+T9 — o `None` que carregava duas coisas em `controllers`."""
 
 from __future__ import annotations
 
@@ -42,13 +10,6 @@ from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 
-# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
-# `test_controllers_vazio_arma_a_trava_manual_das_tres_categorias`.
-#
-# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
-# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 _UNIQ = "02fe00112233"
 
 
@@ -83,18 +44,8 @@ class TestODaemonJaAceitaVazio:
         )
 
 
-
 class TestAMordidaDoQueFazOZeroJaFuncionar:
-    """A mordida de T7: arrancar o guarda que faz `{}` chegar até aqui.
-
-    Não há "cura da T7" para arrancar (T7 não escreveu produto — ver acima).
-    O que se arranca é o ingrediente que os dois testes acima dependem para
-    fazer sentido: trocar ``if raw is None: return`` (o guarda ATUAL de
-    ``_apply_section``, correto) pela versão ingênua ``if not raw: return``
-    — que É a tentação óbvia de quem olha o código sem medir, e que QUEBRARIA
-    justamente o contrato que T7 mede. Isto prova que os testes acima MORDEM
-    de verdade: eles reprovariam se alguém introduzisse essa regressão.
-    """
+    """A mordida de T7: arrancar o guarda que faz `{}` chegar até aqui."""
 
     def test_trocar_is_none_por_not_raw_quebra_o_contrato_de_vazio(self) -> None:
         import hefesto_dualsense4unix.daemon.ipc_draft_applier as mod
@@ -104,7 +55,7 @@ class TestAMordidaDoQueFazOZeroJaFuncionar:
         def _guarda_ingenuo(
             self: Any, applied: list[str], raw: Any, section: str, fn: Any
         ) -> None:
-            if not raw:  # a troca ingênua: `{}` também é falsy e cai aqui
+            if not raw:
                 return
             try:
                 fn(raw)
@@ -126,13 +77,7 @@ class TestAMordidaDoQueFazOZeroJaFuncionar:
 
 
 class TestAJanelaEmiteVazioQuandoOUltimoOverrideCai:
-    """T8 — `_controllers_to_ipc` e o gêmeo `with_override_fields_cleared`.
-
-    MORDIDA: arranque o `controllers_esvaziados_nesta_edicao` (troque o
-    `return {} if self.controllers_esvaziados_nesta_edicao else None` do
-    `_controllers_to_ipc` por `return None` liso) e os dois primeiros testes
-    reprovam — o pytest.raises/assert abaixo mostra a diferença observável.
-    """
+    """T8 — `_controllers_to_ipc` e o gêmeo `with_override_fields_cleared`."""
 
     def test_draft_default_sem_overrides_emite_none(self) -> None:
         d = DraftConfig.default()
@@ -171,8 +116,7 @@ class TestAJanelaEmiteVazioQuandoOUltimoOverrideCai:
         )
 
     def test_gravar_um_override_novo_desarma_a_flag(self) -> None:
-        """Depois de apagar, gravar de novo volta ao comportamento normal —
-        não fica preso emitindo `{}` para sempre."""
+        """Depois de apagar, gravar de novo volta ao comportamento normal —"""
         d = DraftConfig.default().with_controller_leds(
             _UNIQ, LedsDraft(lightbar_rgb=(10, 20, 30))
         )
@@ -186,8 +130,7 @@ class TestAJanelaEmiteVazioQuandoOUltimoOverrideCai:
         assert list((d3.to_ipc_dict().get("controllers") or {}).keys()) == [_UNIQ]
 
     def test_ciclo_fim_a_fim_apagar_salvar_fechar_reabrir(self) -> None:
-        """A mordida-âncora da sprint (aceite §9, item 3): grave, apague,
-        Salvar, feche, reabra — ausente no disco E ausente no daemon."""
+        """A mordida-âncora da sprint (aceite §9, item 3): grave, apague,"""
         d = DraftConfig.default().with_controller_leds(
             _UNIQ, LedsDraft(lightbar_rgb=(10, 20, 30))
         )
@@ -197,15 +140,11 @@ class TestAJanelaEmiteVazioQuandoOUltimoOverrideCai:
         d2 = d.with_controller_fields_cleared(
             _UNIQ, "leds", {"lightbar", "lightbar_brightness"}
         )
-        # "fechar e reabrir": simulado por reconstruir o Profile do zero, como
-        # `save_profile`/`load_profile` fariam via JSON — sem `controllers`.
         perfil_salvo = d2.to_profile("z4-t8", priority=1)
         assert perfil_salvo.controllers is None, (
             f"o override sobreviveu no ARQUIVO: {perfil_salvo.controllers!r}"
         )
 
-        # e o daemon: o IPC que a janela mandaria ao aplicar ANTES de salvar
-        # tem de carregar a ordem de limpar.
         applier, controller, _store = _applier()
         applier.apply({"controllers": d2.to_ipc_dict()["controllers"]})
         controller.reset_output_overrides.assert_called_once()
@@ -214,11 +153,8 @@ class TestAJanelaEmiteVazioQuandoOUltimoOverrideCai:
 
 
 class TestOCensoDasOutrasSecoes:
-    """T9 — censo: quantas seções têm um gesto que ESVAZIA um mapa antes
-    preenchido? Resposta medida: só `controllers`."""
+    """T9 — censo: quantas seções têm um gesto que ESVAZIA um mapa antes"""
 
-    #: seção -> (tem MAPA por-chave que pode ficar vazio?, se sim qual método
-    #: de DraftConfig o esvazia).
     _CENSO: ClassVar[dict[str, tuple[bool, str]]] = {
         "leds": (False, "seção GLOBAL, sem mapa — não há 'vazio' possível"),
         "triggers": (False, "idem — global"),
@@ -240,9 +176,7 @@ class TestOCensoDasOutrasSecoes:
         )
 
     def test_o_censo_cobre_as_oito_secoes_do_payload(self) -> None:
-        """As oito seções que `DraftApplier.apply` conhece (fonte única:
-        `ipc_draft_applier.py`, a lista da ordem canônica na docstring do
-        módulo) — se uma nasce lá e não aqui, este teste acusa primeiro."""
+        """As oito seções que `DraftApplier.apply` conhece (fonte única:"""
         oito = {
             "leds",
             "triggers",

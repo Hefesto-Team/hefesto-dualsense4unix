@@ -57,14 +57,10 @@ from . import Contexto, perfil, registrar
 from . import a02_controles as a02
 from . import a06_navegacao as a06
 
-#: A PÁGINA, escrita uma vez. É o nome do arquivo que o `load-changed` entrega.
 PAGINA = "mapa-do-controle.html"
 
-#: O SELETOR DO BLOCO DOS CHIPS. O gerador escreve o `data-bloco` com esta
-#: mesma constante (`mapa.banco_de_provas`).
 BLOCO_DOS_CONTROLES = '[data-bloco="controles-do-mapa"]'
 
-#: OS PREFIXOS DOS ENDEREÇOS, um por fato. O gerador escreve os mesmos.
 ACESO = "aceso-"  # (noqa-acento) prefixo de endereço, não é prosa
 TROCA = "troca-"  # (noqa-acento) prefixo de endereço, não é prosa
 TROCADA = "trocada-"  # (noqa-acento) prefixo de endereço, não é prosa
@@ -72,27 +68,17 @@ ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
 PAPEL = "papel"
 LUZ = "luz-cor"
 
-#: AS TRÊS PEÇAS QUE O MAPA CHAMA DE OUTRO JEITO no leitor de botões
-#: (`core/evdev_reader.py`, o `mic_btn`). As outras dezesseis têm o mesmo nome
 #: nos dois lados (`ALL_BUTTONS`).
 NOME_NO_LEITOR = {"stick_l": "l3", "stick_r": "r3", "mic": "mic_btn"}
 
-#: AS PEÇAS QUE PISCAM, pelo nome do mapa.
 PISCAM: tuple[str, ...] = (*ALL_BUTTONS, *NOME_NO_LEITOR)
 
-#: O NOME NA TROCA de botões (`remap.REMAPEAVEIS`) das peças que o mapa chama
-#: de outro jeito.
 NOME_NA_TROCA = {"stick_l": "l3", "stick_r": "r3", "share": "create"}
 
-#: AS PEÇAS QUE A TROCA ALCANÇA, pelo nome do mapa, na ordem do motor.
 TROCAM: tuple[str, ...] = tuple(
     next((peca for peca, b in NOME_NA_TROCA.items() if b == botao), botao)
     for botao in remap.REMAPEAVEIS)
 
-#: AS LINHAS DA TABELA DA NAVEGAÇÃO QUE MORAM EM CADA PEÇA, com o qualificador
-#: que a própria tabela escreve ao lado do glifo (`aba06.BOTOES`): o analógico
-#: tem o clique e a direção, o touchpad tem as três regiões. As outras peças
-#: são uma linha só, de mesmo nome (o Share é o `create` do motor).
 LINHAS_DA_PECA: dict[str, tuple[tuple[str, str], ...]] = {
     "stick_l": ((acoes.EIXO_ESQUERDO, "direção"), ("l3", "clique")),
     "stick_r": ((acoes.EIXO_DIREITO, "direção"), ("r3", "clique")),
@@ -102,7 +88,6 @@ LINHAS_DA_PECA: dict[str, tuple[tuple[str, str], ...]] = {
                  ("touchpad_middle_press", "clique central")),
 }
 
-#: AS PEÇAS QUE TÊM LINHA NA NAVEGAÇÃO, pelo nome do mapa.
 NA_NAVEGACAO: tuple[str, ...] = tuple(dict.fromkeys(
     next((peca for peca, linhas in LINHAS_DA_PECA.items()
           if any(b == botao for b, _ in linhas)), botao)
@@ -110,13 +95,8 @@ NA_NAVEGACAO: tuple[str, ...] = tuple(dict.fromkeys(
 
 
 def _escolhidos(ctx: Contexto) -> tuple[str, list[dict[str, Any]]]:
-    """Quem a fita escolheu, e os itens da mesa que isso alcança.
-
-    `ctx.escolhido` vazio é um contexto que não disse (a régua, ou um piloto
-    que ainda não passa a escolha): cai no primeiro da mesa, que é o que a fita
-    mostra quando ninguém escolheu (`hefesto_vivo._pref_escolhido`).
-    """
-    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+    """Quem a fita escolheu, e os itens da mesa que isso alcança."""
+    import monta
 
     escolhido = ctx.escolhido or (str(ctx.mesa[0].get("pref") or "") if ctx.mesa else "")
     _, ativo = monta.escolha_da_fita(escolhido or "todos", ctx.mesa)
@@ -170,11 +150,7 @@ def _acoes(p: dict[str, Any]) -> dict[str, str]:
 
 def _papel_e_luz(ctx: Contexto, ativo: str,
                  itens: list[dict[str, Any]]) -> tuple[str, str]:
-    """A linha do cartão na Navegação e a cor da barra de luz do escolhido.
-
-    Com «Todos» não há UM papel a dizer: a linha fica vazia. A barra é a do
-    primeiro da mesa, que é o desenho que a página mostra.
-    """
+    """A linha do cartão na Navegação e a cor da barra de luz do escolhido."""
     if not itens:
         return "", ""
     item = itens[0]
@@ -190,12 +166,8 @@ def _papel_e_luz(ctx: Contexto, ativo: str,
 
 
 def _nome_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
-    """O nome do controle no chip, pela mesma regra do chip da fita (`monta.fita`).
-
-    O nome que só repete o transporte sai: o chip já termina nele. As três
-    linhas são as do laço da fita, que não tem dono próprio para o nome.
-    """
-    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+    """O nome do controle no chip, pela mesma regra do chip da fita (`monta.fita`)."""
+    import monta
 
     nome = str(monta.identidade_do_chip(c, mesa))
     if nome in (monta._degrau_do_transporte(c), c.get("via"), monta.TRAVESSAO):
@@ -205,21 +177,8 @@ def _nome_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
 
 def chips_do_controle(mesa: list[dict[str, Any]], ativo: str, *,
                       vivo: bool = True) -> str:
-    """Os chips do «Controle»: um por controle da mesa, «Todos» e «Nenhum».
-
-    UM DONO, DOIS CHAMADORES: o gerador (`mapa.banco_de_provas`, com a mesa do
-    desenho e ``vivo=False``) e este pacote, a cada tique, com a mesa viva.
-
-    Cada chip de controle leva o gesto da fita (`monta._endereco_do_chip`): a
-    escolha aqui é a escolha das abas. Leva também o que o desenho mostra dele:
-    ``data-jogador`` (as cinco lâmpadas) e ``data-colorway`` (o plástico). No
-    desenho, ``data-luz`` é a cor do jogador, que é o banco de provas; no
-    produto a barra é a do aparelho (`luz-cor`), e o chip não a leva.
-
-    O «Nenhum» (`data-jogador="0"`) é o desenho sem controle: não tem gesto, e
-    o portão das cores o clica pelo atributo.
-    """
-    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+    """Os chips do «Controle»: um por controle da mesa, «Todos» e «Nenhum»."""
+    import monta
 
     mostra_todos, ativo = monta.escolha_da_fita(ativo, mesa)
     chips = []

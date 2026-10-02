@@ -53,23 +53,9 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome de PASTA; caminho não leva acento
 
-#: As larguras de JANELA em que a página é medida, e o que cada uma pergunta:
-#:
-#:   1212  o PISO — o que `ponte_da_tela.LARGURA_DO_DESENHO` pede à janela
-#:   1450  a janela crescendo, ainda BEM abaixo do teto: aqui se vê se ela segue
-#:   1932  MAIOR que o teto — a TV dela, maximizada: aqui se vê se ela para
-#:
-#: O `body{padding:16px}` come 32 de cada uma, e é por isso que 1212 devolve
-#: 1180 — a largura exata do desenho que ela aprovou.
-#:
-#: **O 1450 NÃO PODE SER 1632.** A primeira volta desta régua usou 1632, que é
 #: `1600 + 32`, e ela media o TETO duas vezes  (noqa-acento: verbo medir)
-#: em vez de medir o crescimento uma
-#: vez: naquela largura o desenho para pelo teto, e um `width:1600px` FIXO
-#: passaria pelos dois casos. Uma medida no meio do caminho é o que separa
-#: "acompanha a janela" de "é grande".
 PISO, MEIO, ACIMA_DO_TETO = 1212, 1450, 1932
-RESPIRO = 32  # o `body{padding:16px}` dos dois lados
+RESPIRO = 32
 
 O_QUE_O_MOTOR_DESENHA = """() => {
   const j = document.querySelector('.janela');
@@ -107,12 +93,6 @@ def medido() -> dict:
 
     from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
 
-    # O QUE O PRODUTO ESCONDE VEM DA FOLHA, e não deste arquivo. Sem isto a
-    # `.nota` — a legenda do mockup, que o piloto apaga — deixa a página mais
-    # alta que o viewport, o Chrome pinta a barra de rolagem vertical, e ela come
-    # **15px da largura**: a primeira volta desta régua mediu 1165 onde o desenho
-    # tem 1180 e reprovou a cura por causa de uma barra que o produto não mostra.
-    # É a mesma cura que o `interface/olhar.py` já tinha, e pela mesma razão.
     esconde = "".join(f"{s}{{display:none}}" for s in seletores_escondidos())
 
     fora: dict = {}
@@ -133,12 +113,6 @@ def medido() -> dict:
     return fora
 
 
-#: A aba 07 é de OUTRA leva, e por isso ela fica fora dos casos de largura.
-#: **Isto é declaração, não silêncio:** ela não foi regerada nesta frente (a
-#: posse dela é de outra frente em voo), então a página publicada dela ainda
-#: carrega o `topo.html` de ontem e continua parada em 1180. Quem integrar roda
-#: os dez geradores no fim, e ela entra sozinha. Se ela sair desta lista sem que
-#: alguém regere, os casos abaixo reprovam — que é o que se quer.
 DE_OUTRA_LEVA = {"07-lancadores.html"}
 
 
@@ -157,18 +131,12 @@ def test_o_desenho_acompanha_a_janela(medido: dict) -> None:
 
 
 def test_o_desenho_para_no_teto(medido: dict) -> None:
-    """E ele PARA: esticar sem limite alonga a linha até ela deixar de se ler.
-
-    O teto é o que separa a decisão dela de um `width:100%`. Sem ele, o registro
-    da Sistema chega a 294 caracteres por linha na TV dela — medido em 08/09,
-    contra os 157 do desenho que ela aprovou.
-    """
+    """E ele PARA: esticar sem limite alonga a linha até ela deixar de se ler."""
     sem_teto = {n: r[ACIMA_DO_TETO]["largura"] for n, r in _nossas(medido).items()
                 if r[ACIMA_DO_TETO]["largura"] > ACIMA_DO_TETO - RESPIRO - 1}
     assert not sem_teto, (
         f"numa janela de {ACIMA_DO_TETO}px estas abas foram até a borda: "
         f"{sem_teto}. A decisão dela é esticar COM TETO.")
-    # e o teto é o mesmo nas nossas — uma aba com teto próprio é divergência calada
     tetos = {r[ACIMA_DO_TETO]["largura"] for r in _nossas(medido).values()}
     assert len(tetos) == 1, (
         f"as abas pararam em larguras diferentes: {sorted(tetos)}. O teto mora "
@@ -176,12 +144,7 @@ def test_o_desenho_para_no_teto(medido: dict) -> None:
 
 
 def test_no_piso_a_janela_entrega_o_desenho_inteiro(medido: dict) -> None:
-    """No piso de `ponte_da_tela.LARGURA_DO_DESENHO`, o desenho cabe inteiro.
-
-    O 1212 é `16+1180+16`, e o 1180 é a largura do desenho que ela aprovou.
-    Este caso é o que faz o piso continuar sendo um número com razão, agora que
-    o CSS não o escreve mais.
-    """
+    """No piso de `ponte_da_tela.LARGURA_DO_DESENHO`, o desenho cabe inteiro."""
     from hefesto_dualsense4unix.gui.ponte_da_tela import LARGURA_DO_DESENHO
 
     assert LARGURA_DO_DESENHO == PISO, (
@@ -194,12 +157,7 @@ def test_no_piso_a_janela_entrega_o_desenho_inteiro(medido: dict) -> None:
 
 
 def test_nenhuma_aba_rola_de_lado_nem_perde_caixa(medido: dict) -> None:
-    """Nas três larguras, nas DEZ: zero rolagem lateral e zero caixa fora da moldura.
-
-    A aba 07 entra AQUI de propósito, e é a diferença entre este caso e os de
-    cima: ela não foi regerada, logo a largura dela não pode ser cobrada — mas a
-    integridade pode, e ela vale para o esqueleto velho tanto quanto para o novo.
-    """
+    """Nas três larguras, nas DEZ: zero rolagem lateral e zero caixa fora da moldura."""
     ruins = []
     for nome, por_larg in medido.items():
         for larg, r in por_larg.items():

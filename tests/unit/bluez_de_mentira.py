@@ -1,21 +1,4 @@
-"""Dois BlueZ de mentira para as réguas do dono do D-Bus — BLUEZ-UM-DONO-01.
-
-**Este módulo não é um arquivo de teste** — é a bancada que três arquivos de
-teste usam (`test_o_bluez_tem_um_dono.py`, `test_o_agente_proprio.py` e
-`test_o_flatpak_alcanca_o_bluez.py`, que põe o proxy do Flatpak na frente).
-
-1. :class:`BarramentoDeMentira` — em processo, sem D-Bus nenhum. Implementa a
-   costura ``bluez_dbus.Barramento`` e deixa a régua EMITIR sinais à mão.
-2. :class:`BluezParticular` — um ``dbus-daemon`` particular, um BlueZ de mentira
-   exportado nele pelo Gio, e um ``bt-agent`` de mentira que pede para ser o
-   padrão. O BlueZ de mentira escolhe o agente do ``Pair`` como o 5.86:
-   ``agent_get(sender)`` — o agente do MESMO remetente, senão o padrão
-   (``src/device.c:3374`` e ``src/agent.c:247``). É o que prova o caminho do
-   Gio de verdade sem tocar no barramento de sistema dela.
-
-Faixa sintética da casa: ``aa:bb:cc`` com os octetos 4 e 5 zerados, e ``hci9``,
-fora da faixa da mesa dela.
-"""
+"""Dois BlueZ de mentira para as réguas do dono do D-Bus — BLUEZ-UM-DONO-01."""
 
 from __future__ import annotations
 
@@ -77,17 +60,8 @@ def mesa_inicial() -> dict[str, dict[str, dict[str, Any]]]:
     }
 
 
-# ---------------------------------------------------------------------------
-# 1. Em processo.
-# ---------------------------------------------------------------------------
-
-
 class BarramentoDeMentira:
-    """A costura ``Barramento`` sem D-Bus. Anota tudo o que o dono pede.
-
-    ``pair_chama_o_agente``: o ``Pair`` faz o que o BlueZ faz — procura o agente
-    registrado pelo remetente (o nosso nome único) e, sem ele, o padrão.
-    """
+    """A costura ``Barramento`` sem D-Bus. Anota tudo o que o dono pede."""
 
     NOME = ":1.42"
     DONO_DO_BLUEZ = ":1.7"
@@ -103,15 +77,11 @@ class BarramentoDeMentira:
         self.padrao: list[str] = ["bt-agent"]
         self.o_padrao_atendeu: list[str] = []
         self.durante_a_foto: Callable[[], None] | None = None
-        #: Quantas fotos ainda saem SEM resposta com o BlueZ de pé — o
-        #: ``GetManagedObjects`` que estoura o prazo de um ``bluetoothd`` lento.
         self.fotos_que_falham = 0
-        #: Quantos ``GetManagedObjects`` o dono pediu.
         self.fotos = 0
         self._ao_sinal: Callable[[bd.Sinal], None] | None = None
         self.fechado = False
 
-    # -- a costura -----------------------------------------------------------
 
     def vivo(self) -> bool:
         return not self.fechado
@@ -182,7 +152,6 @@ class BarramentoDeMentira:
     def fechar(self) -> None:
         self.fechado = True
 
-    # -- o que a régua faz ----------------------------------------------------
 
     def emitir(self, sinal: bd.Sinal) -> None:
         """Um sinal do barramento, como se o BlueZ o tivesse mandado."""
@@ -207,10 +176,6 @@ class BarramentoDeMentira:
         self.mesa[caminho][bd.APARELHO]["Paired"] = True
         return bd.Escrita(True, resposta=())
 
-
-# ---------------------------------------------------------------------------
-# 2. Um dbus-daemon particular, com um BlueZ e um bt-agent de mentira.
-# ---------------------------------------------------------------------------
 
 _CONFIG = """<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
@@ -261,7 +226,6 @@ _XML_DO_AGENTE = f"""<node><interface name='{bd.AGENTE}'>
   <method name='Cancel'/>
 </interface></node>"""
 
-#: O tipo D-Bus de cada propriedade da mesa de mentira.
 _TIPOS = {"Class": "u", "RSSI": "n"}
 
 
@@ -283,8 +247,7 @@ def ha_dbus_daemon() -> bool:
 
 
 class _Fio:
-    """Uma conexão Gio com laço próprio — o jeito de o BlueZ e o bt-agent de
-    mentira atenderem enquanto o fio da régua espera um ``Pair``."""
+    """Uma conexão Gio com laço próprio — o jeito de o BlueZ e o bt-agent de"""
 
     def __init__(self, endereco: str, nome: str) -> None:
         from gi.repository import Gio, GLib
@@ -365,7 +328,6 @@ class BluezParticular:
         self._fios: list[_Fio] = []
         self.endereco = ""
 
-    # -- subir e descer -------------------------------------------------------
 
     def __enter__(self) -> BluezParticular:
         soquete = self.raiz / "barramento"
@@ -382,8 +344,6 @@ class BluezParticular:
         self.endereco = self._processo.stdout.readline().strip()
         assert self.endereco, "o dbus-daemon particular não disse o endereço"
         self._subir_o_bluez("bluez-de-mentira")
-        # O bt-agent de mentira: registra e pede para ser o PADRÃO, como o
-        # `hefesto-bt-agent.service` faz na máquina dela.
         self.bt_agent = _Fio(self.endereco, "bt-agent-de-mentira")
         self._fios.append(self.bt_agent)
         self.bt_agent.exportar("/btagent", _XML_DO_AGENTE, self._atender_o_bt_agent)
@@ -408,9 +368,7 @@ class BluezParticular:
                              "RequestDefaultAgent", variante("(o)", ("/btagent",)))
 
     def reiniciar(self) -> None:
-        """O ``bluetoothd`` reinicia: o ``org.bluez`` troca de nome único, e o
-        novo não conhece agente nenhum. O ``bt-agent`` de mentira volta a se
-        registrar e a pedir o padrão, como o serviço do sistema."""
+        """O ``bluetoothd`` reinicia: o ``org.bluez`` troca de nome único, e o"""
         self._fios.remove(self.bluez)
         self.bluez.fechar()
         self.agentes.clear()
@@ -444,7 +402,6 @@ class BluezParticular:
         self._fios.append(fio)
         return fio
 
-    # -- o BlueZ de mentira ----------------------------------------------------
 
     def _foto(self) -> Any:
         variante = self.bluez.GLib.Variant
@@ -530,7 +487,6 @@ class BluezParticular:
     def _atender_o_bt_agent(
         self, _c: Any, _r: str, _caminho: str, _i: str, _metodo: str, _p: Any, invocacao: Any
     ) -> None:
-        # NoInputNoOutput: aceita tudo, como o `bt-agent` do bluez-tools.
         invocacao.return_value(None)
 
 

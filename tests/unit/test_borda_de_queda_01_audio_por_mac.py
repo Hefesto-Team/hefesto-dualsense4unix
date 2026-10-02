@@ -1,19 +1,4 @@
-"""BORDA-DE-QUEDA-01 — a queda de UM controle, quando outro segue de pé.
-
-O defeito, medido em 26/08/2026 e curado aqui:
-
-1. **O som volta no controle errado.** `reapply_speaker_after_connect(daemon)`
-   sem `uniq` cai no `_handle_for(None)` do backend, que é *o primário e mais
-   ninguém*. O Controle 2 caía no rádio, voltava, e quem recebia o volume dela
-   era o Controle 1 — que nem tinha perdido a posse dos bytes.
-2. **A queda não deixa rastro.** `is_connected()` é um `any(...)` sobre os
-   handles: com dois na mesa, a queda de um não muda a resposta, a transição
-   `online→offline` do `reconnect_loop` nunca dispara, e o controle some sem um
-   evento sequer.
-
-Os dois são a MESMA borda vista de dois lados, e é por isso que estão no mesmo
-arquivo.
-"""
+"""BORDA-DE-QUEDA-01 — a queda de UM controle, quando outro segue de pé."""
 from __future__ import annotations
 
 import asyncio
@@ -26,8 +11,6 @@ import hefesto_dualsense4unix.daemon.connection as conn_mod
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 
-#: Endereços didáticos da casa — máscara de octetos 4 e 5 zerados
-#: (`AA:BB:CC:00:00:FF`), a única forma segura em arquivo versionado.
 P1 = "aabbcc0000f1"
 P2 = "aabbcc0000f2"
 
@@ -53,22 +36,14 @@ def _backend_com(handles: dict[str, _HandleFalso]) -> PyDualSenseController:
     return ctrl
 
 
-# --- a régua: o agregado esconde, o alvo mostra -------------------------
-
-
 def test_o_agregado_diz_sim_enquanto_o_alvo_diz_quem_caiu() -> None:
-    """`is_connected()` não muda quando o secundário cai — `alvos_conectados` sim.
-
-    Esta é a MEDIÇÃO do defeito, antes da cura: prova que observar o agregado
-    não podia ver a borda, e que a fonte por alvo vê.
-    """
+    """`is_connected()` não muda quando o secundário cai — `alvos_conectados` sim."""
     handles = {P1: _HandleFalso(), P2: _HandleFalso()}
     backend = _backend_com(handles)
 
     assert backend.is_connected() is True
     assert backend.alvos_conectados() == {P1: P1, P2: P2}
 
-    # A queda pela poda de `_handles` (o caminho do `_close_handles`).
     handles.pop(P2)
     assert backend.is_connected() is True, (
         "o agregado continua 'sim' com o Controle 1 de pé — é este o ponto cego"
@@ -89,9 +64,6 @@ def test_a_key_por_path_nao_vira_endereco_falso() -> None:
     """Key de fallback por path não tem MAC — o valor é None, não um pseudo-MAC."""
     backend = _backend_com({"/dev/hidraw3": _HandleFalso()})
     assert backend.alvos_conectados() == {"/dev/hidraw3": None}
-
-
-# --- a mordida: a volta do secundário traz o volume DELE ----------------
 
 
 class _DaemonMagro:
@@ -131,12 +103,7 @@ def reaplicacoes(monkeypatch: pytest.MonkeyPatch) -> list[str | None]:
 async def test_a_volta_do_secundario_reaplica_o_volume_dele(
     reaplicacoes: list[str | None],
 ) -> None:
-    """O Controle 2 volta: o volume vai para o ENDEREÇO dele, e só para ele.
-
-    A MORDIDA desta entrega. Arrancado o `uniq` da chamada, a reaplicação sai
-    com `None` — que o backend resolve como "o primário" — e o teste reprova
-    nomeando quem recebeu o volume alheio.
-    """
+    """O Controle 2 volta: o volume vai para o ENDEREÇO dele, e só para ele."""
     daemon = _DaemonMagro(_MesaFalsa({P1: P1, P2: P2}))
 
     await conn_mod.anunciar_bordas_por_alvo(
@@ -194,9 +161,6 @@ async def test_a_mesa_parada_nao_anuncia_nada(
     assert reaplicacoes == []
 
 
-# --- a reaplicação em toda a mesa ---------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_a_reconexao_reaplica_o_som_em_cada_controle(
     reaplicacoes: list[str | None],
@@ -230,9 +194,6 @@ async def test_backend_sem_enumeracao_por_alvo_mantem_o_caminho_antigo(
     )
     await conn_mod.reaplicar_som_em_todos_os_alvos(daemon)
     assert reaplicacoes == [None]
-
-
-# --- o laço inteiro, com as bordas que ele agora enxerga -----------------
 
 
 class _ControleDoLaco:
@@ -271,8 +232,6 @@ class _DaemonDoLaco:
         return None
 
     def is_native_mode(self) -> bool:
-        # Curto-circuita o re-hide do broker: ele não é o objeto da medição e
-        # falaria com um socket que não existe nesta bancada.
         return True
 
     async def _run_blocking(self, fn, *args):  # type: ignore[no-untyped-def]
@@ -305,9 +264,9 @@ async def test_o_laco_ve_a_queda_e_a_volta_que_o_agregado_escondia(
     async def _tique(daemon_: _DaemonDoLaco, watch: object) -> bool:
         daemon_.voltas += 1
         if daemon_.voltas == 1:
-            controle.alvos.pop(P2)  # o Controle 2 cai no rádio
+            controle.alvos.pop(P2)
         elif daemon_.voltas == 3:
-            controle.alvos[P2] = P2  # e volta
+            controle.alvos[P2] = P2
         return False
 
     monkeypatch.setattr(conn_mod, "_wait_online_or_hotplug", _tique)

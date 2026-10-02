@@ -1,27 +1,4 @@
-"""Os dois buracos que a conferência da LEVA-4-C achou, e nenhum agente vira.
-
-**26/08/2026.** A frente LEVA-4-C tirou o ``.svg`` do ``EXCLUIR_SUFIXO`` do
-``check_endereco_de_radio.py`` — e a conferência mediu que as OUTRAS DUAS
-réguas da mesma regra continuavam cegas ao mesmo formato, **inclusive a
-autoritativa**. Três réguas, o mesmo ponto cego, ao mesmo tempo: é exatamente o
-que "duas réguas independentes" existe para impedir.
-
-E achou um segundo, que ninguém tinha visto: o ``.gz``. A casa já tinha a cura
-ESCRITA desde 23/08, no comentário do ``check_anonymity.sh`` — *"A cura NÃO é
-acrescentar '.gz' ao PULA: isso cegaria o portão para um MAC de verdade dentro
-de um comprimido. A cura é olhar o CONTEÚDO."* O irmão descomprimia; este
-pulava. Um MAC em TEXTO dentro de um ``.gz`` não era visto por portão nenhum
-desta casa: o ``check_anonymity.sh`` descomprime, mas só procura os oito OUIs da
-bancada em BYTES CRUS.
-
-Os dois buracos eram LATENTES — nenhum vazamento vivo foi medido. Este arquivo
-existe para que continuem fechados.
-
-**Nenhum endereço nem serial LITERAL mora aqui.** Os portões sob teste varrem
-``tests/``, e um literal se acusaria. Tudo é montado em tempo de execução, e o
-endereço plantado usa primeiro octeto ``06`` — faixa localmente administrada,
-que a IEEE nunca atribui a fabricante.
-"""
+"""Os dois buracos que a conferência da LEVA-4-C achou, e nenhum agente vira."""
 
 from __future__ import annotations
 
@@ -35,8 +12,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 PORTAO = RAIZ / "scripts" / "check_endereco_de_radio.py"
 
-#: Montado em tempo de execução: seis grupos hex separados por dois-pontos, com
-#: o primeiro octeto na faixa localmente administrada.
 _ENDERECO = ":".join(["06", "1B", "44", "11", "3A", "B7"])
 
 
@@ -68,11 +43,7 @@ def _rodar(repo: Path) -> subprocess.CompletedProcess[str]:
 
 
 def test_endereco_em_texto_dentro_de_gz_e_pego(tmp_path: Path) -> None:
-    """O buraco que ninguém tinha visto: comprimido não é esconderijo.
-
-    Arranque a cura devolvendo ``".gz"`` ao ``EXCLUIR_SUFIXO`` e este teste
-    reprova nomeando o arquivo que passaria.
-    """
+    """O buraco que ninguém tinha visto: comprimido não é esconderijo."""
     conteudo = f"data,adaptador\n2026-08-23,{_ENDERECO}\n".encode()
     repo = _repo(tmp_path, {"docs/dados.csv.gz": gzip.compress(conteudo)})
     r = _rodar(repo)
@@ -103,13 +74,7 @@ def test_gz_ilegivel_nao_derruba_a_varredura(tmp_path: Path) -> None:
 
 
 def test_svg_e_varrido_pelas_tres_reguas() -> None:
-    """As três listas de "pule este formato" não podem mais conter ``.svg``.
-
-    É teste de DECLARAÇÃO de propósito, e mede as três de uma vez: o defeito
-    não era uma régua cega, era **as três ao mesmo tempo**, e é essa
-    simultaneidade que a conferência achou. Uma régua voltando a pular SVG
-    sozinha já reprova aqui.
-    """
+    """As três listas de "pule este formato" não podem mais conter ``.svg``."""
     fontes = {
         "scripts/check_anonymity.sh": "PULA",
         "tests/unit/test_docs_mac_anonimato.py": "_SKIP_SUFFIXES",
@@ -118,10 +83,6 @@ def test_svg_e_varrido_pelas_tres_reguas() -> None:
     cegas = []
     for rel, nome in fontes.items():
         fonte = (RAIZ / rel).read_text(encoding="utf-8")
-        # A LISTA, e não a prosa em volta dela: o primeiro `nome = {...}` que é
-        # ATRIBUIÇÃO. Uma varredura por linha leria a própria docstring que
-        # explica por que o SVG saiu e acusaria a explicação — o defeito de
-        # forma que esta casa chama de "a régua confunde a PALAVRA com o ATO".
         for linha in fonte.splitlines():
             crua = linha.lstrip()
             if crua.startswith(("#", "//", "*", '"""')):
@@ -143,12 +104,7 @@ def test_svg_e_varrido_pelas_tres_reguas() -> None:
 
 @pytest.mark.parametrize("formato", [".png", ".mo", ".ico"])
 def test_os_binarios_de_verdade_continuam_fora(formato: str) -> None:
-    """A resposta contrária da anterior: a lista não podia esvaziar.
-
-    Tirar o SVG é medição; tirar tudo seria a régua acusando três bytes que
-    casam por acaso dentro de dado comprimido — que é o motivo pelo qual a
-    lista existe.
-    """
+    """A resposta contrária da anterior: a lista não podia esvaziar."""
     fonte = (RAIZ / "scripts" / "check_endereco_de_radio.py").read_text(
         encoding="utf-8"
     )

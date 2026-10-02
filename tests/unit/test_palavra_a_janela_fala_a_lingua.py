@@ -1,22 +1,4 @@
-"""PALAVRA-01 — a janela fala a língua de quem joga.
-
-Três portões, um por queixa medida na sprint
-``docs/process/sprints/arquivados/2026-07-27-PALAVRA-01-a-janela-fala-a-lingua-de-quem-joga.md``:
-
-1. **Capitalização.** Os textos de estado que ela lê no meio de uma frase
-   ("ligado", "desligado (suprimido)", "daemon offline") começavam em
-   minúscula. Frase que aparece na tela começa com maiúscula.
-2. **Nome da aba.** A aba chamava-se "Navegação DSX". "DSX" é nome de um
-   programa de outra casa: descreve de onde a ideia veio, não o que a aba
-   faz. Nenhum rótulo visível pode voltar a exibir esse nome.
-3. **Tooltip nos controles que mudam alguma coisa.** Botão, escala, seletor,
-   entrada e switch explicam o que vão fazer antes de a pessoa clicar. O
-   portão trava o número medido: a cobertura não pode cair.
-
-O portão lê o CÓDIGO-FONTE (a árvore de sintaxe do Python e o XML do Glade),
-não uma janela viva: assim ele roda na CI sem GTK e ainda assim morde quando
-alguém reescreve o texto.
-"""
+"""PALAVRA-01 — a janela fala a língua de quem joga."""
 from __future__ import annotations
 
 import ast
@@ -31,9 +13,6 @@ EMULACAO_PY = PACOTE / "app" / "actions" / "emulation_actions.py"
 MOUSE_PY = PACOTE / "app" / "actions" / "mouse_actions.py"
 GATILHOS_PY = PACOTE / "app" / "actions" / "trigger_specs.py"
 
-#: Medido na entrega: 82 controles interativos, 82 com tooltip. O piso é o
-#: número medido — se alguém acrescentar controle sem tooltip, ou tirar um
-#: tooltip que existe, a conta cai e o teste reprova.
 CONTROLES_INTERATIVOS_ESPERADOS = 82
 COBERTURA_MINIMA_DE_TOOLTIP = 82
 
@@ -41,26 +20,11 @@ _TAG_MARKUP = re.compile(r"<[^>]*>")
 _PRIMEIRA_LETRA = re.compile(r"[^\W\d_]", re.UNICODE)
 
 
-#: Tabelas de rótulo por estado: o texto vive na tupla e o `<span` é montado
-#: longe dali. LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026) — este portão coletava
-#: SÓ strings com `<span` dentro, e no dia em que os três estados do microfone
-#: viraram um dicionário (`_MIC_ROTULOS`) ele parou de enxergá-los. Reprovou
-#: dizendo que "Ligado" tinha sumido da tela; "Ligado" estava lá, o COLETOR é
-#: que tinha ficado míope.
-#:
-#: Portão que muda de cor por refatoração é portão que se aprende a desligar. A
-#: cura é olhar para os dois lugares — o markup montado na hora E as tabelas de
-#: rótulo —, e é por isso que este nome é uma lista, não um caso especial: a
-#: próxima tabela entra aqui.
 _TABELAS_DE_ROTULO: tuple[str, ...] = ("_MIC_ROTULOS",)
 
 
 def _textos_de_tela(caminho: Path) -> list[str]:
-    """Strings do módulo que chegam ao rótulo — por markup ou por tabela.
-
-    A concatenação implícita já vem resolvida pelo parser; de f-string só
-    entram os pedaços literais, que é onde mora a capitalização.
-    """
+    """Strings do módulo que chegam ao rótulo — por markup ou por tabela."""
     arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
     achados: list[str] = []
     for no in ast.walk(arvore):
@@ -74,21 +38,12 @@ def _textos_de_tela(caminho: Path) -> list[str]:
                     if isinstance(parte, ast.Constant) and isinstance(parte.value, str)
                 )
             )
-    # `>` depois do `<span`: a tag tem de FECHAR. Sem isto entra o esqueleto de
-    # f-string (`'<span foreground="'`, o pedaço literal de
-    # `f'<span foreground="{cor}">'`), que não é texto de tela nenhum — e
-    # reprovava como "começa em minúscula", apontando o `s` de `span`.
     com_markup = [t for t in achados if "<span" in t and ">" in t.split("<span", 1)[1]]
     return com_markup + _textos_das_tabelas(arvore)
 
 
 def _textos_das_tabelas(arvore: ast.AST) -> list[str]:
-    """O texto CURTO de cada estado nas tabelas de rótulo.
-
-    Só o segundo item da tupla `(cor, texto, explicação)`: é ele que vai para o
-    rótulo. A explicação longa mora no tooltip e obedece a outra regra (pode
-    começar com o nome do recurso em minúscula no meio de uma frase).
-    """
+    """O texto CURTO de cada estado nas tabelas de rótulo."""
     achados: list[str] = []
     for no in ast.walk(arvore):
         if not isinstance(no, ast.AnnAssign | ast.Assign):
@@ -118,16 +73,9 @@ def _comeca_em_minuscula(texto: str) -> bool:
     return m is not None and m.group(0).islower()
 
 
-# --- Grupo 1: capitalização dos textos de estado ---------------------------
-
-
 @pytest.mark.parametrize("arquivo", [EMULACAO_PY, MOUSE_PY], ids=["emulacao", "mouse"])
 def test_texto_de_estado_nao_comeca_em_minuscula(arquivo: Path) -> None:
-    """Ela lê "ligado"/"desligado"/"daemon offline" no meio de uma frase.
-
-    Morde ao arrancar a cura: devolver ``'<span ...>ligado</span>'`` a
-    ``emulation_actions`` faz este teste apontar o texto exato.
-    """
+    """Ela lê "ligado"/"desligado"/"daemon offline" no meio de uma frase."""
     culpados = [
         _sem_markup(t) for t in _textos_de_tela(arquivo) if _comeca_em_minuscula(_sem_markup(t))
     ]
@@ -156,9 +104,6 @@ def test_os_estados_de_hoje_estao_escritos_como_frase() -> None:
     assert any(t.startswith("Falta um componente do mouse virtual") for t in mouse)
 
 
-# --- Grupo 4: jargão dos gatilhos ------------------------------------------
-
-
 def _rotulos_de_gatilho() -> list[str]:
     from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 
@@ -173,19 +118,6 @@ def test_gatilhos_nao_mostram_jargao_em_ingles() -> None:
     banidos = ("start+1", "raw HID", "Mode HID", "Force ", "Pos ")
     culpados = [r for r in _rotulos_de_gatilho() if any(b in r for b in banidos)]
     assert culpados == [], f"rótulo de gatilho ainda em jargão: {culpados}"
-
-
-# Aqui morava `test_o_termo_tecnico_fica_so_onde_ajuda_a_achar_o_modo_em_guia`,
-# que EXIGIA "Rígido (Rigid)", "Arco (Bow)" e os irmãos no rótulo, para ela
-# reconhecer o modo que um guia em inglês cita. A decisão dela em 31/07 trocou
-# o lado — os parênteses saem, pela regra R2 do `docs/process/CLEAN-ROOM.md` —
-# e a regra inversa passou a morar em `test_gatilho_palavra_rotulos.py`, que
-# tinha a exceção nomeada `PENDENCIA_DE_PALAVRA` para os dois rótulos cuja
-# palavra era decisão dela ("Arco" e "Arma" sozinhos são ambíguos).
-#
-# A EXCEÇÃO FECHOU EM 11/09/2026: na leva de língua ela aprovou "Arco de flecha"
-# e "Disparo" sem os parênteses, e `PENDENCIA_DE_PALAVRA` é um conjunto vazio.
-# A cobrança continua morando lá, agora sobre os dezenove.
 
 
 def test_o_arquivo_de_gatilhos_nao_guarda_mais_o_texto_antigo() -> None:

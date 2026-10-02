@@ -48,8 +48,6 @@ import tempfile
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-# O LAR DE MENTIRA VEM ANTES DE TUDO: `profiles_dir()` resolve o caminho no
-# primeiro uso, e um import antes desta linha o prenderia na pasta DELA.
 _LAR = pathlib.Path(tempfile.mkdtemp(prefix="ensaio-detectar-"))
 os.environ["HOME"] = str(_LAR)
 for _x in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"):
@@ -59,7 +57,6 @@ os.environ["HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED"] = "1"
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
 from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
@@ -86,13 +83,8 @@ from hefesto_dualsense4unix.profiles.simple_match import (
 
 ABA = "10-perfis.html"
 PERFIL = "Ensaio do Detectar"
-#: A CLASSE QUE O DETECTOR VÊ, e ela NÃO é da Steam de propósito: um
-#: `steam_app_<id>` mediria o ramo velho e daria verde sobre a entrega inteira.
-#: `GrimFandango` é a classe de um perfil de fábrica de verdade
-#: (`assets/profiles_default/point_and_click.json`).
 CLASSE = "GrimFandango"
 
-#: A MESA DE MENTIRA — endereços MASCARADOS (octetos 4 e 5 zerados).
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True},
@@ -115,7 +107,6 @@ _FERRAMENTAS = r"""
   }
 """
 
-#: PRIMEIRO TEMPO — pinta o perfil e lê o que a tela mostra ANTES do clique.
 ROTEIRO_ANTES = r"""
 (function(){
 """ + _FERRAMENTAS + r"""
@@ -126,9 +117,6 @@ ROTEIRO_ANTES = r"""
 })()
 """
 
-#: SEGUNDO TEMPO — O CLIQUE. `el.click()` não basta para o ouvinte delegado com
-#: captura? Basta: ele dispara um `click` que borbulha. Mas o ensaio manda o
-#: evento à mão para deixar explícito que é o MESMO evento do navegador.
 ROTEIRO_CLIQUE = r"""
 (function(){
 """ + _FERRAMENTAS + r"""
@@ -191,8 +179,6 @@ def _uma_volta(publicado: bool, foto: str = "") -> dict[str, object]:
     piloto._mesa_de_agora = list(MESA)
     piloto._ctx_de_agora.mesa = list(MESA)
     piloto._ctx_de_agora.conectados = list(MESA)
-    # A CLASSE É IMPOSTA: sem daemon não há `window_detect_last_class`, e é
-    # exatamente ela que o gesto lê.
     piloto._ctx_de_agora.state = {"active_profile": None,
                                   "window_detect_last_class": CLASSE}
     a10_perfis._ESCOLHIDO = PERFIL
@@ -224,8 +210,6 @@ def _uma_volta(publicado: bool, foto: str = "") -> dict[str, object]:
         "__PACOTE__", json.dumps(pacote)), "antes"))
     GLib.timeout_add(3600, retratar)
     GLib.timeout_add(4200, _mandar(ROTEIRO_CLIQUE, "clique"))
-    # O GESTO RODA EM THREAD (`hefesto_vivo._gesto`): o laço tem de continuar
-    # vivo depois do clique, senão o ensaio lê o disco antes de o gesto escrever.
     GLib.timeout_add(7000, Gtk.main_quit)
     Gtk.main()
     return saida
@@ -251,17 +235,11 @@ def main() -> int:
         raise RuntimeError("ensaio: o daemon dela fica de fora")
     hefesto_vivo.mesa_viva.estado_do_daemon = _mudo  # type: ignore[assignment]
 
-    # VOLTA 1 — A BANCADA com o perfil em "Todos": a foto do ANTES, e o CLIQUE.
     bancada = _uma_volta(publicado=False, foto=opcoes.foto_antes)
     depois = _regra_no_disco()
 
-    # VOLTA 2 — A BANCADA de novo, com a regra já no disco: a foto do DEPOIS.
-    # É onde se vê o seletor mostrando "Jogo (pela janela)" e o cadeado APAGADO
-    # — o perfil que antes desta sprint abriria travado.
     reaberto = _uma_volta(publicado=False, foto=opcoes.foto_depois)
 
-    # VOLTA 3 — O PUBLICADO, com a MESMA regra no disco. Ela mede o custo da
-    # espera pelo `--publicar 10`, que é ato dela.
     publicado = _uma_volta(publicado=True)
 
     print(f"  o lar de mentira    {profiles_dir()}")
@@ -296,8 +274,6 @@ def main() -> int:
         falhas.append(f"a BANCADA reaberta não mostra o rótulo da regra nova: "
                       f"{reab.get('ambiente')!r} — o perfil abriria dizendo "
                       f"outra coisa")
-    # O ALVO `classe` acende com a classe `on` (`hefesto_vivo.escrever`, ramo
-    # `classe`, `el.dataset.hefClasse || 'on'`).
     if "on" in str(reab.get("cadeado") or "").split():
         falhas.append("o cadeado continua aceso sobre uma regra que a tela "
                       "agora sabe mostrar")

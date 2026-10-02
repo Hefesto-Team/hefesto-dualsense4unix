@@ -1,25 +1,4 @@
-"""BARRA-MUDA-01 — o sinal da barra, e as quatro mentiras que ele não pode contar.
-
-O QUE ESTES TESTES GUARDAM, e por que cada um existe:
-
-1. **O módulo nunca diz "acesa" nem "apagada".** É a mordida mais importante do
-   arquivo, e é a regra da casa em forma executável: não há leitura da lâmpada
-   (``multi_intensity`` mentiu nos dois sentidos em 16/08/2026, o report de
-   entrada não carrega LED, e dos dezessete feature reports lidos em 14-15/08
-   nenhum devolve estado de LED). Um refactor bem-intencionado que traduza
-   ``suspeita`` para "a barra está apagada" reprova aqui;
-2. **"não consegui olhar" nunca vira "limpa".** É o defeito exato que o detector
-   ``lightbar_escritor_estrangeiro`` cometeu — deu ZERO em três horas com as
-   barras apagadas, e o silêncio foi lido como "ninguém está escrevendo";
-3. **o número do hidraw é reciclado.** O ``hidraw6`` foi da ``.0028`` às 18:05 e
-   da ``.0033`` às 19:51 do MESMO dia. Casar escritor com instância só pelo nó
-   contamina a instância sã com o pecado da que morreu;
-4. **o cabo não é suspeito.** O travamento é do claim por rádio; marcar o cabo
-   mandaria a pessoa reconectar um controle que está obedecendo.
-
-FIXTURES: os endereços são da faixa sintética ``aa:bb:cc`` da casa. Nenhum
-endereço real entra em arquivo versionado, e há portão que reprova.
-"""
+"""BARRA-MUDA-01 — o sinal da barra, e as quatro mentiras que ele não pode contar."""
 
 from __future__ import annotations
 
@@ -76,8 +55,6 @@ def _nascimento(
 class TestOModuloNaoLeALampada:
     """A honestidade, em forma de teste. Esta classe é o coração do arquivo."""
 
-    #: As palavras que este módulo NÃO tem direito de usar sobre o aparelho.
-    #: Nenhuma leitura desta casa sustenta nenhuma delas.
     PROIBIDAS = ("acesa", "acessa", "apagada", "acendeu", "apagou", "está acesa")
 
     def test_nenhuma_frase_de_veredito_afirma_estado_da_lampada(self) -> None:
@@ -137,9 +114,7 @@ class TestNaoSeiNuncaViraLimpa:
         assert pids == ()
 
     def test_diario_vazio_e_diario_ilegivel_nao_sao_a_mesma_coisa(self) -> None:
-        """`{}` diz 'olhei e não achou'; `None` diz 'não olhei'. Os dois viram
-        `nao_sei` para uma instância ausente, mas por razões diferentes — e a
-        frase tem de distinguir, senão a pessoa não sabe se deve investigar."""
+        """`{}` diz 'olhei e não achou'; `None` diz 'não olhei'. Os dois viram"""
         sem_diario = sb._veredito(_no_radio(), None).porque
         so_ausente = sb._veredito(_no_radio(), {}).porque
         assert sem_diario != so_ausente
@@ -155,12 +130,9 @@ class TestOCaboNaoESuspeito:
 
 
 class TestOHidrawEReciclado:
-    """A armadilha que só aparece com duas instâncias no mesmo nó, em horas
-    diferentes — que é exatamente o que a bancada dela tinha em 22/08/2026."""
+    """A armadilha que só aparece com duas instâncias no mesmo nó, em horas"""
 
     def test_o_escritor_da_instancia_morta_nao_suja_a_viva(self) -> None:
-        # A `.0028` nasceu às 18:05:40 no hidraw6 com escritor; a `.0033` nasceu
-        # no MESMO hidraw6 às 19:51:47, 1h46 depois, com o nó livre.
         nascimentos = {
             "0028": sb.Nascimento("0028", 64_800.0, "/dev/hidraw6", "bt", (600105,), True),
             "0033": sb.Nascimento("0033", 71_507.0, "/dev/hidraw6", "bt", (), False),
@@ -170,8 +142,7 @@ class TestOHidrawEReciclado:
 
 
 class TestAVarreduraDoDiario:
-    """A régua do kernel. O defeito que estes testes pegam já aconteceu de
-    verdade neste arquivo: a forma LONGA do HID id casa zero linhas."""
+    """A régua do kernel. O defeito que estes testes pegam já aconteceu de"""
 
     LINHA_CURTA = (
         "playstation 0005:054C:0CE6.0033: hidraw6: BLUETOOTH HID v1.00 "
@@ -229,14 +200,7 @@ class TestOPrognostico:
         assert pids == ()
 
     def test_o_prognostico_nao_e_o_diagnostico(self) -> None:
-        """A instância suja de 18:06 continua suja depois de a Steam morrer.
-
-        É o estado literal da bancada dela às 20h de 22/08/2026, e é a razão de
-        as duas perguntas serem funções separadas: a sonda ao vivo diz 'mesa
-        limpa' enquanto o diagnóstico diz 'esta conexão nasceu suja'. As duas
-        estão certas, e confundi-las faz o produto declarar são um controle que
-        não obedece.
-        """
+        """A instância suja de 18:06 continua suja depois de a Steam morrer."""
         assert sb.limpo_para_conectar(sonda=lambda _: {})[0] == sb.CONFIANCA_LIMPA
         diagnostico = sb._veredito(_no_radio(), {"0029": _nascimento("0029", sujo=True)})
         assert diagnostico.confianca == sb.CONFIANCA_SUSPEITA
@@ -286,9 +250,7 @@ class TestAEnumeracaoNaoTocaOAparelho:
 
 
 class TestOCasamentoPorJanela:
-    """A janela de 5 s, medida. Um escritor detectado muito depois do
-    nascimento é OUTRA coisa (a Steam abrindo no meio da sessão), e não prova
-    que a instância nasceu suja."""
+    """A janela de 5 s, medida. Um escritor detectado muito depois do"""
 
     @pytest.mark.parametrize(
         ("atraso_s", "espera_sujo"),
@@ -297,8 +259,7 @@ class TestOCasamentoPorJanela:
     def test_so_o_que_cai_na_janela_suja_o_nascimento(
         self, atraso_s: float, espera_sujo: bool
     ) -> None:
-        """Os quatro atrasos MEDIDOS em 22/08 caem dentro; a Steam que abre dez
-        minutos depois, fora."""
+        """Os quatro atrasos MEDIDOS em 22/08 caem dentro; a Steam que abre dez"""
         nascimentos = {"0029": _nascimento("0029", sujo=False, quando=1000.0)}
         casados = sb.casar_escritores(
             nascimentos,
@@ -307,8 +268,7 @@ class TestOCasamentoPorJanela:
         assert casados["0029"].sujo is espera_sujo
 
     def test_o_no_errado_nao_suja_ainda_que_a_hora_bata(self) -> None:
-        """Os irmãos que sobem juntos caem na janela um do outro — é o NÓ que os
-        separa. Sem esta metade, a `.0034` herdaria o pecado da `.0033`."""
+        """Os irmãos que sobem juntos caem na janela um do outro — é o NÓ que os"""
         nascimentos = {"0033": _nascimento("0033", sujo=False, quando=1000.0, no="/dev/hidraw6")}
         casados = sb.casar_escritores(
             nascimentos,
@@ -327,19 +287,12 @@ class TestOCasamentoPorJanela:
         assert pids == (600105,)
 
     def test_a_deteccao_de_escritor_casa_a_bancada_de_22_08(self) -> None:
-        """O caso inteiro de 22/08/2026, com os instantes reais do kernel e do
-        daemon: quatro instâncias sujas às 18:05-18:06 e duas limpas às 19:51.
-
-        É o teste que reproduz a resposta que o OLHO DELA deu — e o único aqui
-        que tem verdade externa por trás de cada linha.
-        """
+        """O caso inteiro de 22/08/2026, com os instantes reais do kernel e do"""
         nascimentos = {
             "0028": sb.Nascimento("0028", 64_740.852, "/dev/hidraw6", "bt"),
             "0029": sb.Nascimento("0029", 64_762.210, "/dev/hidraw7", "bt"),
             "002a": sb.Nascimento("002a", 64_774.901, "/dev/hidraw8", "bt"),
             "002b": sb.Nascimento("002b", 64_793.102, "/dev/hidraw9", "bt"),
-            # 1h45 depois, os dois que ela reconectou — e o hidraw6 voltou a ser
-            # usado, agora por outra instância.
             "0033": sb.Nascimento("0033", 71_507.534, "/dev/hidraw6", "bt"),
             "0034": sb.Nascimento("0034", 71_510.240, "/dev/hidraw8", "bt"),
         }

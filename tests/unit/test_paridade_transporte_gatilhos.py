@@ -33,21 +33,15 @@ from hefesto_dualsense4unix.core import ds_output_report as rep
 
 from tests.conftest import EnvelopeDeTransporte
 
-#: Offsets do bloco de gatilho DENTRO do common, por lado.
-#: (modo, primeira das seis forças, a sétima força avulsa)
 OFFSETS_DO_GATILHO = {"right": (10, 11, 19), "left": (21, 22, 30)}
 
-#: Tamanho do bloco cru do jogo (REPLICA-03) — modo + 10 parâmetros.
 BLOCO_CRU_LEN = 11
 
-#: Efeitos de gatilho com modo E forças distinguíveis. `Rigid_B` e `Pulse_AB`
-#: existem aqui porque os valores deles (5 e 38) não são 1 nem 2: um teste que
-#: só usasse `Rigid` passaria com o modo truncado para o bit baixo.
 EFEITOS = [
-    (1, (0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),  # Rigid
-    (2, (0x10, 0x20, 0x30, 0x00, 0x00, 0x00, 0x00)),  # Pulse
-    (5, (0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07)),  # Rigid_B
-    (38, (0x90, 0x80, 0x70, 0x60, 0x50, 0x40, 0x30)),  # Pulse_AB
+    (1, (0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+    (2, (0x10, 0x20, 0x30, 0x00, 0x00, 0x00, 0x00)),
+    (5, (0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07)),
+    (38, (0x90, 0x80, 0x70, 0x60, 0x50, 0x40, 0x30)),
 ]
 
 
@@ -118,12 +112,7 @@ def test_o_flag0_autoriza_os_dois_gatilhos_nos_dois_transportes(
 def test_o_bloco_cru_do_jogo_sai_verbatim_nos_dois_transportes(
     ds5_de_bancada: Any, transporte: EnvelopeDeTransporte, lado: str
 ) -> None:
-    """REPLICA-03: os 11 bytes do jogo entram inteiros, sem passar pela DSTrigger.
-
-    A `DSTrigger` só representa 7 forças; se o bloco do jogo passasse por ela,
-    os parâmetros 8, 9 e 10 do efeito virariam zero. Este caso trava os onze
-    bytes, e trava nos dois transportes.
-    """
+    """REPLICA-03: os 11 bytes do jogo entram inteiros, sem passar pela DSTrigger."""
     bloco = bytes(range(0x81, 0x81 + BLOCO_CRU_LEN))
     atributo = "_raw_trigger_right" if lado == "right" else "_raw_trigger_left"
     setattr(ds5_de_bancada, atributo, bloco)
@@ -138,12 +127,7 @@ def test_o_bloco_cru_do_jogo_sai_verbatim_nos_dois_transportes(
 def test_o_bloco_de_gatilho_e_identico_nos_dois_e_so_o_envelope_muda(
     transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
 ) -> None:
-    """A morte que reprovava 1 teste em 8589 passa a reprovar aqui, com lado.
-
-    Este é o caso que enxerga os DOIS transportes de uma vez: se o gatilho
-    morrer só de um lado, o bloco de 22 bytes deixa de ser o mesmo e a
-    mensagem diz qual lado ficou zerado.
-    """
+    """A morte que reprovava 1 teste em 8589 passa a reprovar aqui, com lado."""
     blocos: dict[str, bytes] = {}
     for envelope in transportes:
         handle = fabrica_de_bancada(envelope)

@@ -1054,8 +1054,8 @@ check_hid_playstation_probe_abortado() {
 # LED se declarava cego. Só quem usa CABO chegava a ver este check rodar.
 #
 # O critério certo é a IDENTIDADE, não o caminho: o vpad anuncia
-# `HID_PHYS=hefesto-vpad` (a mesma marca que `broker/hidraw_broker.py:92`,
-# `integrations/cor_do_plastico.py:176` e `integrations/uhid_gamepad.py:576`
+# `HID_PHYS=hefesto-vpad` (a mesma marca que `broker/hidraw_broker.py:91`,
+# `integrations/cor_do_plastico.py:140` e `integrations/uhid_gamepad.py:302`
 # usam). Controle de verdade — cabo ou rádio — nunca tem esse `phys`.
 # Teste que morde: tests/unit/test_o_doctor_enxerga_a_luz_do_radio.py
 #
@@ -1107,7 +1107,7 @@ check_led_sysfs_gravavel() {
 # dois casava, e regra nenhuma desta casa os cobria: o acesso vinha do grupo
 # `input`, em que a usuária desta máquina está POR FORA do produto (instalador
 # nenhum daqui toca esse grupo). Numa máquina nova, nada funciona — e o sintoma
-# é a AUSÊNCIA de dado: `core/evdev_reader.py:1396` engole a PermissionError
+# é a AUSÊNCIA de dado: `core/evdev_reader.py:1154` engole a PermissionError
 # num `except Exception: continue`, o nó some do mapa e o daemon relata
 # "esse controle não tem sensor".
 #

@@ -18,7 +18,7 @@ calado.
 POR QUE ISTO PRECISOU DE RÉGUA, e é a lição mais cara do dia
 ============================================================
 O preço já estava escrito, medido, palavra por palavra, desde 19/08/2026 — em
-`integrations/ponte_escada.py:308`, na justificativa do primeiro degrau:
+`integrations/ponte_escada.py:231`, na justificativa do primeiro degrau:
 
     *"Errar aqui custa um aperto de botão; errar para Xbox custa as dez, e
     custa em silêncio."*
@@ -75,18 +75,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
 
-# ---------------------------------------------------------------------------
-# PARTE 1 — as dez são LIDAS do mapa, nunca digitadas
-# ---------------------------------------------------------------------------
-
-
 def _as_dez_do_mapa() -> tuple[str, ...]:
-    """As dez, relidas AQUI a partir do CSV, sem passar pelo módulo medido.
-
-    De propósito: uma régua que perguntasse ao próprio módulo se ele leu certo
-    mediria a si mesma. É o defeito da *"trava medida contra a própria saída"*
-    (07/09/2026), que passou verde enquanto o CSV perdia 50 colunas.
-    """
+    """As dez, relidas AQUI a partir do CSV, sem passar pelo módulo medido."""
     with MAPA.open(encoding="utf-8", newline="") as arq:
         return tuple(
             sorted(
@@ -111,16 +101,7 @@ class TestAsDezVemDoMapa:
         assert sem_imu.linhas_do_mapa() == do_mapa
 
     def test_a_copia_congelada_nao_pode_divergir_do_mapa(self) -> None:
-        """A cópia existe porque o CSV não entra no wheel — não para divergir.
-
-        `docs/data/mapa-controles.csv` fica fora de
-        `[tool.hatch.build.targets.wheel].include`, então no produto instalado
-        não há mapa no disco. Sem a cópia o evento nasceria mudo justamente na
-        máquina dela. Quem manda continua sendo o mapa, e é isto que prova.
-
-        MORDA: acrescente uma linha `uhid` nova ao mapa sem tocar na tupla —
-        este reprova nomeando a que sobrou.
-        """
+        """A cópia existe porque o CSV não entra no wheel — não para divergir."""
         assert _as_dez_do_mapa() == sem_imu.DEZ_LINHAS_CONGELADAS, (
             "a cópia congelada de `integrations/canal_sem_imu.py` divergiu do "
             "mapa; o mapa manda, e a cópia existe só para o produto instalado, "
@@ -130,23 +111,13 @@ class TestAsDezVemDoMapa:
     def test_sem_mapa_no_disco_o_evento_nao_emudece(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """O cenário do wheel: sem CSV, as dez saem da cópia congelada.
-
-        MORDA: troque o `or DEZ_LINHAS_CONGELADAS` de `chaves_fora_do_ar` por
-        um `return _DO_DISCO` — este reprova com a lista vazia, que é o produto
-        instalado nomeando ZERO linha.
-        """
+        """O cenário do wheel: sem CSV, as dez saem da cópia congelada."""
         monkeypatch.setattr(sem_imu, "MAPA", tmp_path / "nao-existe.csv")
         monkeypatch.setattr(sem_imu, "_DO_DISCO", sem_imu.linhas_do_mapa())
 
         assert sem_imu.linhas_do_mapa() == ()
         assert sem_imu.chaves_fora_do_ar() == sem_imu.DEZ_LINHAS_CONGELADAS
         assert "movimento.giroscopio.jogo" in sem_imu.chaves_fora_do_ar()
-
-
-# ---------------------------------------------------------------------------
-# PARTE 2 — a pergunta pura: qual par tira as dez do ar
-# ---------------------------------------------------------------------------
 
 
 def _vpad(*, flavor: str, backend: str, caminho: str | None) -> SimpleNamespace:
@@ -164,9 +135,6 @@ class TestOParQueTiraAsDezDoAr:
             ("dualsense", "uinput", "xbox", True, "o par do PRAGMATA"),
             # O canal do DualSense entrega as dez — nada a dizer.
             ("dualsense", "uhid", "dualsense", False, "o primeiro degrau"),
-            # Máscara Xbox NÃO é este evento: a tela diz «Xbox», o jogo vê um
-            # controle de Xbox, e o preço do segundo degrau já está declarado
-            # na ESCADA. Escolha coerente não é silêncio.
             ("xbox", "uinput", "xbox", False, "o segundo degrau, declarado"),
             # Sem caminho escolhido, a máscara DualSense resolve para o canal
             # DualSense (`caminho_resolvido`) — o produto de antes de 13/09.
@@ -176,29 +144,17 @@ class TestOParQueTiraAsDezDoAr:
     def test_so_o_par_da_queixa_dela_acende(
         self, flavor: str, backend: str, caminho: str | None, sem_dez: bool, porque: str
     ) -> None:
-        """MORDA: tire o gate da máscara de `canal_sem_imu` e o terceiro caso
-        reprova — o alarme passaria a tocar sobre a escolha explícita de Xbox,
-        e alarme que sempre toca é alarme que ninguém escuta."""
+        """MORDA: tire o gate da máscara de `canal_sem_imu` e o terceiro caso"""
         pad = _vpad(flavor=flavor, backend=backend, caminho=caminho)
         assert sem_imu.canal_sem_imu_do_vpad(pad) is sem_dez, porque
 
     def test_uhid_sem_caminho_declarado_nunca_diz_que_perdeu_a_imu(self) -> None:
-        """Um vpad `uhid` está com a IMU NO AR — diga o que disser o caminho.
-
-        MORDA: tire o gate do backend. Um pad `uhid` que nasceu antes de
-        13/09 e não sabe dizer o caminho passaria a responder "sem IMU" com a
-        IMU no ar — a mentira mais cara que existe num painel de diagnóstico.
-        """
+        """Um vpad `uhid` está com a IMU NO AR — diga o que disser o caminho."""
         pad = _vpad(flavor="dualsense", backend="uhid", caminho="xbox")
         assert sem_imu.canal_sem_imu_do_vpad(pad) is False
 
     def test_sem_vpad_nao_ha_o_que_dizer(self) -> None:
         assert sem_imu.canal_sem_imu_do_vpad(None) is False
-
-
-# ---------------------------------------------------------------------------
-# PARTE 3 — o journal do launch nomeia as dez
-# ---------------------------------------------------------------------------
 
 
 class _RegistroDeLog:
@@ -283,12 +239,7 @@ class TestOJournalNomeiaAsDez:
     def test_o_evento_sai_com_as_dez_linhas_nominadas(
         self, borda: _RegistroDeLog
     ) -> None:
-        """A entrega desta frente, vista do journal dela.
-
-        MORDA: apague a chamada de `_avisar_canal_sem_imu` em
-        `materialize_launch_env` — este reprova, e o que sobra é exatamente o
-        estado de 17/09 pela manhã: o canal amputado e o journal em silêncio.
-        """
+        """A entrega desta frente, vista do journal dela."""
         _materializar(_DaemonFalso())
 
         avisos = borda.avisos(sem_imu.EVENTO)
@@ -311,11 +262,7 @@ class TestOJournalNomeiaAsDez:
         assert payload["mascara"] == "dualsense"
 
     def test_a_mesa_de_quatro_nomeia_os_quatro(self, borda: _RegistroDeLog) -> None:
-        """O caminho é da SESSÃO, e o contágio leva os quatro juntos.
-
-        MORDA: tire o laço do co-op de `_jogadores_sem_imu` — este reprova, e o
-        evento faria a mesa de quatro parecer um caso isolado do P1.
-        """
+        """O caminho é da SESSÃO, e o contágio leva os quatro juntos."""
         daemon = _DaemonFalso(
             coop=(
                 (2, "dualsense", "uinput", "xbox"),
@@ -357,19 +304,12 @@ class TestOJournalNomeiaAsDez:
     def test_o_aviso_nunca_derruba_a_materializacao(
         self, borda: _RegistroDeLog, tmp_path: Path
     ) -> None:
-        """Telemetria, nunca portão: o `default.env` continua saindo.
-
-        `materialize_launch_env` é best-effort por contrato — um aviso que a
-        derrubasse deixaria o wrapper sem env nenhuma, trocando um defeito
-        silencioso por um barulhento.
-        """
+        """Telemetria, nunca portão: o `default.env` continua saindo."""
         _materializar(_DaemonFalso())
         assert (tmp_path / "default.env").exists()
 
 
-# ---------------------------------------------------------------------------
 # PARTE 4 — o `state_full`, com a decisão dela intacta ao lado
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -388,12 +328,7 @@ def perfis_isolados(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 async def servidor(tmp_path: Path, perfis_isolados: Path) -> Any:
-    """Servidor IPC REAL com `FakeController` — o padrão de contrato da casa.
-
-    Nada de ler o texto-fonte de `ipc_handlers.py` para provar fiação: uma
-    régua que mede o próprio código responde sobre o texto, não sobre o
-    produto, e essa assinatura já derrubou seis instrumentos desta casa.
-    """
+    """Servidor IPC REAL com `FakeController` — o padrão de contrato da casa."""
     fc = FakeController(transport="usb")
     fc.connect()
     store = StateStore()
@@ -485,12 +420,7 @@ class TestOStateFullPublicaOCampoNovo:
     async def test_o_canal_do_dualsense_publica_o_campo_em_falso(
         self, servidor: Any
     ) -> None:
-        """O campo sai SEMPRE que há vpad — ausência não pode virar resposta.
-
-        Um campo que só aparecesse no caso ruim faria "não sei" e "está tudo
-        bem" indistinguíveis para a aba Jogar, que é a mentira que a
-        `ff_nao_nulo_count` já custou a esta casa em 09/08.
-        """
+        """O campo sai SEMPRE que há vpad — ausência não pode virar resposta."""
         socket_path, daemon = servidor
         daemon._gamepad_device = _vpad(
             flavor="dualsense", backend="uhid", caminho="dualsense"
@@ -502,19 +432,8 @@ class TestOStateFullPublicaOCampoNovo:
         assert "canal_sem_imu_linhas" not in bloco
 
 
-# ---------------------------------------------------------------------------
-# PARTE 5 — o alarme que comparava dois vocabulários
-# ---------------------------------------------------------------------------
-
-
 def _perfil(*, caminho: str | None, mascara: str, carimbo: str | None) -> Profile:
-    """Um perfil de jogo com `mode` e (talvez) carimbo de ponte.
-
-    `carimbo` vai para `PonteConfirmada.gamepad_flavor`, que é onde o único
-    escritor (`launch_env.tique_da_escada`) grava o CAMINHO desde
-    MODO-DE-CONEXAO-01 — o campo se chama máscara e guarda caminho, e é essa
-    a armadilha que esta parte mede.
-    """
+    """Um perfil de jogo com `mode` e (talvez) carimbo de ponte."""
     return Profile(
         name="pragmata",
         match=MatchAny(),
@@ -532,19 +451,7 @@ def _perfil(*, caminho: str | None, mascara: str, carimbo: str | None) -> Profil
 
 class TestOAlarmeSoComparaTermoComTermo:
     def test_perfil_sem_caminho_nao_diverge_de_carimbo_nenhum(self) -> None:
-        """O ALARME FALSO DAS 10:45:02, medido no journal dela em 17/09/2026.
-
-        Era exatamente este estado: o `pragmata.json` **não tem** `caminho`, a
-        máscara dele é `xbox`, e o carimbo guardava o caminho `dualsense`. O
-        aviso saía dizendo `ponte_do_perfil=gamepad/xbox` contra
-        `ponte_gravada=gamepad/dualsense` — uma MÁSCARA contra um CAMINHO, dois
-        vocabulários no mesmo alarme, sobre uma discordância que não existe.
-
-        MORDA: devolva a `ponte_do_perfil` ao lugar da
-        `divergencia_com_o_carimbo` (a comparação `ponte_perfil !=
-        ponte_gravada`) — este reprova, porque a queda de `mode.caminho` para
-        `mode.gamepad_flavor` volta a trocar as línguas.
-        """
+        """O ALARME FALSO DAS 10:45:02, medido no journal dela em 17/09/2026."""
         perfil = _perfil(caminho=None, mascara="xbox", carimbo="dualsense")
 
         assert (
@@ -559,12 +466,7 @@ class TestOAlarmeSoComparaTermoComTermo:
         )
 
     def test_caminho_contra_caminho_continua_divergindo(self) -> None:
-        """A cura não pode emudecer o alarme legítimo.
-
-        Com os dois lados falando CAMINHO, a discordância é real e continua
-        sendo gritada — é ela que manda o próximo lançamento perguntar a quem
-        tem a palavra.
-        """
+        """A cura não pode emudecer o alarme legítimo."""
         perfil = _perfil(caminho="dualsense", mascara="dualsense", carimbo="xbox")
 
         assert pe.divergencia_com_o_carimbo(
@@ -572,12 +474,7 @@ class TestOAlarmeSoComparaTermoComTermo:
         ) == ("caminho", "dualsense", "xbox")
 
     def test_a_mascara_do_perfil_nunca_entra_na_conta(self) -> None:
-        """Trocar só a MÁSCARA não pode acender o alarme do CARIMBO.
-
-        MORDA: faça `caminho_do_perfil` cair para `mode.gamepad_flavor` como a
-        `ponte_do_perfil` faz — este reprova, e o produto volta a gritar sobre
-        uma troca de máscara que o carimbo nunca teve opinião sobre.
-        """
+        """Trocar só a MÁSCARA não pode acender o alarme do CARIMBO."""
         for mascara in ("dualsense", "xbox"):
             perfil = _perfil(caminho="xbox", mascara=mascara, carimbo="xbox")
             assert (

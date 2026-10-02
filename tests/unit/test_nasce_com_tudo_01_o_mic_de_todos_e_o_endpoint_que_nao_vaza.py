@@ -39,11 +39,6 @@ _REAL = "02001a0000"
 _A, _B = f"{_REAL}01", f"{_REAL}02"
 
 
-# ---------------------------------------------------------------------------
-# O MICROFONE — a ausência de opinião passou a LIGAR
-# ---------------------------------------------------------------------------
-
-
 def _maquina(**controles: bool | None) -> SimpleNamespace:
     return SimpleNamespace(
         controles={k: SimpleNamespace(microfone=v) for k, v in controles.items()}
@@ -102,14 +97,6 @@ def test_no_sem_endereco_nunca_entra() -> None:
     assert _Subsystem().alvos("", _A) == [_A]
 
 
-# ---------------------------------------------------------------------------
-# O ENDPOINT — a idempotência mudou de alvo
-# ---------------------------------------------------------------------------
-#
-# O ENDPOINT É DO APARELHO DESDE 02/10/2026 (A-HAPTICA-E-POR-APARELHO-01; de
-# 28/09 a 02/10 foi do lugar). A idempotência contra o servidor é a mesma, e as
-# réguas seguem pelo aparelho.
-
 _L1, _L2 = _A, _B
 
 _ANCORA = Ancora(
@@ -117,9 +104,6 @@ _ANCORA = Ancora(
     declarado="/devices/pci0000:00/usb3/3-4",
     nome="DualSense",
 )
-#: A SEGUNDA âncora é o coração do vazamento medido: o mesmo controle tinha
-#: nós com `3-4:1.0` e `3-4.1:1.0`, porque a âncora escolhida muda entre
-#: reconciliações e o nome do sink não.
 _OUTRA = Ancora(
     syspath="/sys/devices/pci0000:00/usb3/3-4/3-4.1",
     declarado="/devices/pci0000:00/usb3/3-4/3-4.1",
@@ -131,7 +115,6 @@ class _Pactl:
     """Um servidor de som de mentira, com os módulos que ELE lembra."""
 
     def __init__(self, modulos: list[tuple[str, str, str]]) -> None:
-        #: (module_id, sink_name, sysfs_path)
         self.modulos = list(modulos)
         self.comandos: list[list[str]] = []
         self._proximo = 900
@@ -207,18 +190,13 @@ def test_a_varredura_nao_toca_o_sink_de_um_dualsense_no_cabo() -> None:
 
 
 def test_mordida_do_endpoint_sem_perguntar_ao_servidor_ele_soma() -> None:
-    """Arranca a consulta: o comportamento de antes volta — mais um por restart.
-
-    O `_module_id` de instância nasce None a cada processo, então a versão
-    antiga carregava sempre. Esta régua reproduz o vazamento MEDIDO.
-    """
+    """Arranca a consulta: o comportamento de antes volta — mais um por restart."""
     nome = nome_do_endpoint(_L1)
     pactl = _Pactl([("77", nome, _ANCORA.declarado)])
-    for _ in range(4):  # quatro "restarts do daemon"
+    for _ in range(4):
         e = EndpointDeHaptica(uniq=_L1, ancora=_ANCORA, runner=pactl)
         e._module_id = None
         pactl(["pactl", "load-module", "module-null-sink", f"sink_name={nome}"])
     assert len(pactl.modulos) == 5, "a mordida não reproduz o vazamento"
-    # e a cura, no mesmo servidor sujo, devolve UM:
     EndpointDeHaptica(uniq=_L1, ancora=_ANCORA, runner=pactl).iniciar()
     assert len(endpoints_de_pe(pactl)[nome]) == 1

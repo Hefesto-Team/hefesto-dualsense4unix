@@ -1,36 +1,4 @@
-"""A TRAVA DA TELA DELA — nenhuma janela nasce visível quando o ambiente proíbe.
-
-**ESTE ARQUIVO NASCEU DE UMA FOTO.** Em 02/09/2026, com treze frentes de agente
-em voo, oito cópias da MESMA janela nasceram empilhadas na tela dela, em cima do
-que ela estava fazendo. Ela fotografou e perguntou: *"pq sempre abre essas
-inúmeras abas da mmesma tela?"*.
-
-**O `--oculta` já existia, e a regra da casa sempre foi usá-lo.** Não bastou, e a
-razão é estrutural, não de disciplina: a regra vivia no PROMPT de quem abre. Todo
-caminho novo — um teste, um script de ensaio, um visor antigo, uma frente com
-pressa — nasce sem ela. E o custo não cai em quem esqueceu: cai na tela DELA, que
-é uma só.
-
-**Uma regra que depende de quem chama lembrar dela não é regra. É sorte.** Por
-isso a trava mora no dono ÚNICO da criação de janela (`gui/ponte_da_tela`) e é do
-AMBIENTE: quem exporta ``HEFESTO_SEM_JANELA`` não abre janela visível nem
-querendo.
-
-O que estas réguas cobram, e cada uma morde um pedaço diferente:
-
-1. a trava existe e responde ao ambiente (`janela_proibida_na_tela`);
-2. com a variável no ar, o construtor da janela escolhe ``Gtk.OffscreenWindow``
-   mesmo quando o chamador pediu janela na tela — é o coração da cura;
-3. SEM a variável, nada muda: o produto continua abrindo para quem o chamou.
-   Uma trava que sequestra a janela do produto seria pior que o defeito;
-4. o visor `ver.py`, que é visível de propósito, RECUSA em vez de esconder;
-5. nenhum arquivo de teste desta casa cria janela visível na importação — que é
-   como o pytest a abriria só por COLETAR o arquivo.
-
-A quinta é a que pega a classe inteira do defeito sem depender de ninguém rodar
-nada: ela lê o fonte dos testes e reprova quem chama ``show_all()``/``present()``
-sobre uma ``Gtk.Window`` no corpo do módulo.
-"""
+"""A TRAVA DA TELA DELA — nenhuma janela nasce visível quando o ambiente proíbe."""
 
 from __future__ import annotations
 
@@ -45,15 +13,8 @@ _RAIZ = pathlib.Path(__file__).resolve().parents[2]
 _TESTES = _RAIZ / "tests"
 
 
-# ---------------------------------------------------------------------------
-# 1 e 2 — a trava existe, e ela decide
-# ---------------------------------------------------------------------------
 def test_a_trava_le_o_ambiente(monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDE: sem ler o ambiente a cada chamada, a trava vira estado congelado.
-
-    Lê-la uma vez na importação faria um teste que exporta a variável no meio da
-    sessão ser ignorado — e é exatamente assim que uma leva de agente a usa.
-    """
+    """MORDE: sem ler o ambiente a cada chamada, a trava vira estado congelado."""
     from hefesto_dualsense4unix.gui.ponte_da_tela import (
         SEM_JANELA_NA_TELA,
         janela_proibida_na_tela,
@@ -68,26 +29,15 @@ def test_a_trava_le_o_ambiente(monkeypatch: pytest.MonkeyPatch) -> None:
         "toda leva de agente volta a abrir janela na tela dela"
     )
 
-    # Vazio e só-espaço não travam: quem exporta a variável em branco não pediu
-    # nada, e travar aí calaria a janela do produto por um `export` distraído.
     monkeypatch.setenv(SEM_JANELA_NA_TELA, "   ")
     assert janela_proibida_na_tela() is False
 
 
 def test_o_construtor_escolhe_a_oculta_quando_o_ambiente_proibe() -> None:
-    """O CORAÇÃO DA CURA, lido no fonte: a decisão vem ANTES do `if oculta`.
-
-    Não abre janela nenhuma (nem oculta): ler o fonte é o que permite esta régua
-    rodar no CI sem display, e é o mesmo caminho que o portão `casa-sabe` usa
-    para cobrar cura escrita e nunca ligada.
-    """
+    """O CORAÇÃO DA CURA, lido no fonte: a decisão vem ANTES do `if oculta`."""
     caminho = _RAIZ / "src/hefesto_dualsense4unix/gui/ponte_da_tela.py"
     fonte = caminho.read_text(encoding="utf-8")
 
-    # POR AST, E NÃO POR BUSCA DE TEXTO — a primeira versão desta régua procurava
-    # `janela_proibida_na_tela()` no arquivo inteiro, e a DEFINIÇÃO da função já
-    # satisfazia a busca. Arranquei a chamada do construtor e ela passou verde.
-    # É o defeito clássico desta casa: a régua que mede a PALAVRA em vez do ATO.
     arvore = ast.parse(fonte)
     construtores = [
         no
@@ -111,7 +61,6 @@ def test_o_construtor_escolhe_a_oculta_quando_o_ambiente_proibe() -> None:
         "fabricar cura de mentira, e o portão `casa-sabe` existe por isso"
     )
 
-    # A ordem importa: a trava tem de decidir ANTES de a janela na tela nascer.
     linha_da_trava = min(
         dentro.lineno
         for init in construtores
@@ -127,16 +76,8 @@ def test_o_construtor_escolhe_a_oculta_quando_o_ambiente_proibe() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3 — a trava não sequestra a janela do produto
-# ---------------------------------------------------------------------------
 def test_sem_a_variavel_o_produto_abre_como_sempre() -> None:
-    """MORDE: uma trava que vale SEMPRE tira a janela de quem usa o produto.
-
-    O defeito que ela cura é de quem TRABALHA na máquina dela, não de quem joga.
-    Se esta régua cair, alguém trocou `if not oculta and proibida()` por algo
-    que decide sozinho — e o lançador dela passa a abrir uma janela invisível.
-    """
+    """MORDE: uma trava que vale SEMPRE tira a janela de quem usa o produto."""
     fonte = (
         _RAIZ / "src/hefesto_dualsense4unix/gui/ponte_da_tela.py"
     ).read_text(encoding="utf-8")
@@ -148,32 +89,8 @@ def test_sem_a_variavel_o_produto_abre_como_sempre() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 4 — o visor que é visível de propósito recusa dizendo
-# ---------------------------------------------------------------------------
 def test_o_visor_recusa_em_vez_de_abrir_escondido() -> None:
-    """`ver.py` existe para ela OLHAR. Escondê-lo devolveria sucesso que mente.
-
-    Chama o `main()` do visor num subprocesso, com a variável no ar, e cobra a
-    recusa. Não abre janela: a recusa acontece antes de qualquer `Gtk.Window`.
-
-    POR QUE CHAMAR `main()` EM VEZ DE EXECUTAR O ARQUIVO, e o achado é de
-    02/09/2026: **`ver.py` não tem guarda de `__main__`.** Executá-lo direto —
-    que é o que o próprio docstring dele ensina, `ver.py 08` — importa o módulo,
-    define as funções e sai com 0 sem abrir nada. O script está morto desde
-    algum ponto e ninguém notou, porque quem queria olhar usava o piloto.
-
-    Isso é defeito à parte e NÃO foi curado aqui: acrescentar a guarda faria o
-    visor voltar a abrir janela, e essa é decisão dela, não consequência de uma
-    régua. O que esta régua garante é que, no dia em que a guarda voltar, a
-    trava já esteja de pé.
-
-    SEM O GTK REAL, PULA — 27/09/2026. `ver.py` importa o `gi` no topo (é um
-    visor GTK com `WebView`), e no `lint-test` do CI o filho morria no import
-    com `rc=1` antes de chegar à trava: a régua dizia "ele abriu" sobre um
-    visor que nem nasceu. O repasse devolve a falta ao pai, e a regra do
-    `tests/conftest.py` pula com o motivo; no `gtk-real` a trava é medida.
-    """
+    """`ver.py` existe para ela OLHAR. Escondê-lo devolveria sucesso que mente."""
     import os
 
     from tests.conftest import repassar_a_falta_do_gtk
@@ -212,31 +129,13 @@ def test_o_visor_recusa_em_vez_de_abrir_escondido() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 5 — nenhum teste abre janela só por ser COLETADO
-# ---------------------------------------------------------------------------
 def _mostra_janela_no_corpo(arquivo: pathlib.Path) -> list[str]:
-    """Chamadas de `show_all`/`show`/`present` no CORPO do módulo.
-
-    O corpo é o que roda na IMPORTAÇÃO, e o pytest importa todo arquivo de
-    teste só para COLETAR. Uma janela criada ali aparece antes de qualquer
-    teste rodar — inclusive quando a seleção do `-k` não ia rodar nenhum.
-
-    Dentro de função não conta: ali o teste decide, e as fixtures da casa já
-    sabem desviar o display.
-    """
+    """Chamadas de `show_all`/`show`/`present` no CORPO do módulo."""
     try:
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
     except (SyntaxError, UnicodeDecodeError):
         return []
 
-    # SÓ o corpo do módulo. Pular `def`/`class` é o ponto inteiro: dentro deles
-    # o teste decide quando abrir, e as fixtures da casa já desviam o display.
-    #
-    # NOTA DE QUEM ESCREVEU, porque o erro foi meu e é fácil repetir: a primeira
-    # versão fazia `ast.walk(no)` sobre cada nó do corpo — e `walk` DESCE nas
-    # funções. Ela acusou 90 arquivos que estão certos. `walk` sobre um `body`
-    # não é "só o corpo"; é o arquivo inteiro por outro caminho.
     corpo = [
         no
         for no in arvore.body
@@ -257,18 +156,7 @@ def _mostra_janela_no_corpo(arquivo: pathlib.Path) -> list[str]:
 
 
 def test_nenhum_teste_mostra_janela_na_importacao() -> None:
-    """MORDE a classe inteira, sem abrir nada e sem depender de quem roda.
-
-    Esta é a régua que teria evitado a foto de 02/09: ela lê o fonte de todos os
-    testes e reprova quem manda mostrar janela no corpo do módulo.
-
-    Os dois arquivos que EXERCITAM fechar janela (`test_dialogo_nao_mata_a_
-    janela` e `test_socorro_ao_fechar_...`) montam o cenário dentro de uma
-    STRING que só roda em subprocesso sob `xvfb-run`, com `GDK_BACKEND=x11` e
-    sem `WAYLAND_DISPLAY` — por isso o `ast` não os vê aqui, e por isso eles
-    estão certos. Se alguém tirar o `xvfb-run`, é o `test_o_cenario_de_janela_
-    roda_isolado` abaixo que reprova.
-    """
+    """MORDE a classe inteira, sem abrir nada e sem depender de quem roda."""
     culpados: list[str] = []
     for arquivo in sorted(_TESTES.rglob("test_*.py")):
         culpados.extend(_mostra_janela_no_corpo(arquivo))
@@ -282,12 +170,7 @@ def test_nenhum_teste_mostra_janela_na_importacao() -> None:
 
 
 def test_o_cenario_de_janela_roda_isolado() -> None:
-    """Quem PRECISA de janela de verdade roda em display próprio.
-
-    Os dois testes de fechamento montam uma `Gtk.Window` com `show_all()` para
-    exercitar o `delete-event` — isso é legítimo e não dá para fazer offscreen.
-    O que os torna seguros é o isolamento, e é ele que esta régua guarda.
-    """
+    """Quem PRECISA de janela de verdade roda em display próprio."""
     for nome in (
         "test_dialogo_nao_mata_a_janela.py",
         "test_socorro_ao_fechar_diz_por_que_a_janela_nao_fecha.py",

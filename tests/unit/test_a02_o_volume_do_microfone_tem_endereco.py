@@ -1,31 +1,4 @@
-"""O volume do MICROFONE sai do desenho e passa a ser leitura — 12/09/2026.
-
-## A METADE QUE FALTOU, e a decisão é dela
-
-Em 02/09/2026, item 16: *"o número E a barra. Hoje os dois estão congelados no
-desenho: com o volume em 40, a tela continua mostrando 100"*.
-
-Aquela cura deu `alto-num` e `alto-barra` ao ALTO-FALANTE e parou ali. O
-deslizante do MICROFONE — **na mesma coluna, um bloco acima, com o mesmo
-defeito** — ficou sem endereço nenhum: nem o `<span class="n">` nem o `.cheio`
-tinham `data-campo`, e o produto mostrava o número do desenho (`80`) para
-sempre, qualquer que fosse o ganho da captura.
-
-É a regra desta casa cobrada por dentro: *quando a cura conhece a causa, ela
-cobre TODOS os chamadores.* Cobrir um deixa a próxima pessoa remedindo o mesmo
-defeito — e aqui foram dez dias.
-
-## O QUE ESTA RÉGUA TRAVA
-
-1. o dono do número (`a02_controles.volume_do_microfone`) lê do ESTADO, nunca
-   do `pactl`, e sabe dizer *"não sei"*;
-2. o pacote emite `mic-num` e `mic-barra` em todo tique, com os dois desfechos
-   do alto-falante: travessão no número e ZERO na barra quando não se leu;
-3. o gerador carrega os dois endereços nos quatro lugares, com os alvos certos
-   (`largura` na barra pintada, `valor` no deslizante).
-
-**A MORDIDA de cada teste está na sua docstring.**
-"""
+"""O volume do MICROFONE sai do desenho e passa a ser leitura — 12/09/2026."""
 
 from __future__ import annotations
 
@@ -98,31 +71,14 @@ class TestODonoDoNumero:
         assert a02.volume_do_microfone(None) is None
 
     def test_o_teto_e_o_do_trilho(self) -> None:
-        """MORDIDA: devolva o número do `pactl` cru.
-
-        O `pactl` admite passar de 100 (super-amplificação) e o
-        `<input type="range" max="100">` desta tela não representa isso: o
-        texto diria `140` e o polegar pararia no fim. Dois valores para o mesmo
-        volume no mesmo bloco é o defeito que o dono único existe para impedir.
-        """
+        """MORDIDA: devolva o número do `pactl` cru."""
         import pacotes.a02_controles as a02
 
         assert a02.volume_do_microfone({"volume_captura": 140}) == 100
         assert a02.volume_do_microfone({"volume_captura": -3}) == 0
 
     def test_ele_nao_pergunta_ao_sistema(self, monkeypatch: Any) -> None:
-        """MORDIDA: faça o dono chamar `volume_da_captura` (que roda `pactl`).
-
-        Ele é chamado no TIQUE da pintura, por controle. Um subprocesso ali
-        multiplica por quatro o custo de cada quadro — é a mesma razão escrita
-        no daemon, no bloco do `audio`, para a leitura morar numa thread a 2 Hz.
-
-        **ESTA RÉGUA MEDE O ATO, e não o texto do fonte.** A primeira versão
-        procurava `"pactl"` em `inspect.getsource` e REPROVOU a própria entrega:
-        o comentário que explica por que o `pactl` não entra aqui *virou* a
-        primeira ocorrência de `pactl` no arquivo. É a armadilha de PROSA que
-        esta casa já pagou quatro vezes em cinco dias.
-        """
+        """MORDIDA: faça o dono chamar `volume_da_captura` (que roda `pactl`)."""
         import subprocess
 
         import pacotes.a02_controles as a02
@@ -158,24 +114,13 @@ class TestOPacoteEmite:
         return {}
 
     def test_o_numero_e_a_barra_saem_do_estado(self) -> None:
-        """MORDIDA: emita `mic_vol` do desenho, ou o volume do alto-falante.
-
-        São dois blocos diferentes com dois volumes diferentes na mesma coluna;
-        trocá-los pinta o ganho da captura com o número do alto-falante e
-        ninguém vê, porque os dois são números plausíveis de 0 a 100.
-        """
+        """MORDIDA: emita `mic_vol` do desenho, ou o volume do alto-falante."""
         campos = self._campos(40)
         assert campos.get("mic-num") == 40
         assert campos.get("mic-barra") == 40
 
     def test_sem_leitura_o_numero_diz_nao_sei_e_a_barra_vai_a_zero(self) -> None:
-        """MORDIDA: omita as duas chaves, ou mande travessão na barra.
-
-        Omitir deixa o número do DESENHO pendurado na tela para sempre, que é o
-        defeito inteiro. E travessão na barra é pior que inútil: `largura` é um
-        dos `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE` — o CSSOM descarta `width: "—%"`
-        calado e o contador de pintura soma +1 por tique, para sempre.
-        """
+        """MORDIDA: omita as duas chaves, ou mande travessão na barra."""
         campos = self._campos(None)
         assert "mic-num" in campos
         assert "mic-barra" in campos
@@ -183,12 +128,7 @@ class TestOPacoteEmite:
         assert campos["mic-barra"] == 0
 
     def test_o_zero_lido_nao_vira_nao_sei(self) -> None:
-        """MORDIDA: escreva `mic_volume or mesa_viva.SEM_LEITOR`.
-
-        Microfone no mínimo é um fato, e é diferente de microfone não lido. O
-        `or` colapsa os dois — o mesmo `or {}` que esta aba já pagou no bloco
-        do alto-falante.
-        """
+        """MORDIDA: escreva `mic_volume or mesa_viva.SEM_LEITOR`."""
         campos = self._campos(0)
         assert campos.get("mic-num") == 0
         assert campos.get("mic-barra") == 0
@@ -198,23 +138,13 @@ class TestOGeradorEnderecou:
     """Os quatro lugares, com os dois alvos — senão o pacote escreve no vazio."""
 
     def test_os_dois_enderecos_estao_no_gerador(self) -> None:
-        """MORDIDA: tire o `data-campo` do `<span class="n">` do microfone.
-
-        Sem endereço o campo sai do pacote a cada tique e a tela não muda —
-        verde sobre um número congelado, que é como este defeito sobreviveu a
-        dez dias de réguas.
-        """
+        """MORDIDA: tire o `data-campo` do `<span class="n">` do microfone."""
         fonte = ABA02.read_text(encoding="utf-8")
         assert 'data-campo="mic-num"' in fonte
         assert 'data-campo="mic-barra"' in fonte
 
     def test_a_pagina_publicada_tem_os_quatro_lugares(self) -> None:
-        """MORDIDA: publique uma página sem os endereços novos.
-
-        **O PRODUTO RENDERIZA O PUBLICADO**, não a bancada — curar o gerador e
-        não publicar deixa a tela dela exatamente como estava. É a armadilha
-        que esta casa já pagou quatro vezes num dia só.
-        """
+        """MORDIDA: publique uma página sem os endereços novos."""
         from hefesto_dualsense4unix.interface import onde
 
         doc = onde.pagina("02-controles.html", publicado=True).read_text(

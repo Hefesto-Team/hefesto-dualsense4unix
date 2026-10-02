@@ -57,33 +57,21 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 
-#: Os dois caminhos de instalação de udev do produto. O primeiro é o que o
-#: `install.sh` chama (source/native); o segundo é o do .deb, do flatpak e do
-#: AppImage. A cura tem de estar nos DOIS — foi o furo de paridade que deixou o
-#: nativo sem trigger de hidraw nenhum.
 INSTALADORES = (
     REPO / "scripts" / "install_udev.sh",
     REPO / "scripts" / "install-host-udev.sh",
 )
 
-#: O filtro impossível. `hidraw` não tem sysattr `idVendor`.
 FILTRO_IMPOSSIVEL = "attr-match"
 
 
 def _linhas_de_trigger_hidraw(script: Path) -> list[str]:
-    """As linhas de `udevadm trigger` que mencionam `subsystem-match=hidraw`.
-
-    Comentários ficam de fora de propósito: a explicação do defeito CITA a
-    linha antiga (é o registro da medição), e um teste que lesse comentário
-    reprovaria a própria documentação da cura.
-    """
+    """As linhas de `udevadm trigger` que mencionam `subsystem-match=hidraw`."""
     linhas: list[str] = []
     for bruta in script.read_text(encoding="utf-8").splitlines():
         linha = bruta.strip()
         if linha.startswith("#"):
             continue
-        # No install-host-udev.sh o comando é montado como string (`cmd+="..."`),
-        # então basta a linha conter as duas marcas.
         if "udevadm trigger" in linha and "subsystem-match=hidraw" in linha:
             linhas.append(linha)
     return linhas
@@ -91,12 +79,7 @@ def _linhas_de_trigger_hidraw(script: Path) -> list[str]:
 
 @pytest.mark.parametrize("script", INSTALADORES, ids=lambda p: p.name)
 def test_o_instalador_redispara_hidraw(script: Path) -> None:
-    """Sem trigger de hidraw, a regra 70 só valeria no próximo replug.
-
-    É a cura de 08/08 furada: "nada à mão, nada opt-in". Um controle já
-    conectado no rádio no instante do install ficaria sem escrita até a usuária
-    descobrir sozinha que precisa reconectar.
-    """
+    """Sem trigger de hidraw, a regra 70 só valeria no próximo replug."""
     assert script.exists(), f"instalador ausente: {script}"
     linhas = _linhas_de_trigger_hidraw(script)
     assert linhas, (
@@ -126,15 +109,10 @@ def test_o_trigger_de_hidraw_nao_usa_o_filtro_impossivel(script: Path) -> None:
 
 
 def _argumentos_do_trigger_de_hidraw() -> list[str]:
-    """Extrai do `install_udev.sh` REAL os argumentos do trigger de hidraw.
-
-    O teste empírico abaixo roda o que o produto roda — não uma cópia escrita à
-    mão que poderia divergir do arquivo e mentir verde.
-    """
+    """Extrai do `install_udev.sh` REAL os argumentos do trigger de hidraw."""
     linhas = _linhas_de_trigger_hidraw(INSTALADORES[0])
     assert linhas, "install_udev.sh sem trigger de hidraw (ver teste acima)"
     linha = linhas[0]
-    # Tira o `sudo `, o redirecionamento e o `|| true` do fim.
     corpo = re.sub(r"\s*2>/dev/null.*$", "", linha)
     corpo = corpo.replace("sudo ", "", 1).strip()
     partes = corpo.split()
@@ -143,11 +121,7 @@ def _argumentos_do_trigger_de_hidraw() -> list[str]:
 
 
 def _selecionados(argumentos: list[str]) -> list[str]:
-    """Quantos dispositivos o seletor casa NESTA máquina, sem mudar nada.
-
-    `--dry-run` não dispara evento nenhum e não pede root — é leitura pura do
-    banco do udev.
-    """
+    """Quantos dispositivos o seletor casa NESTA máquina, sem mudar nada."""
     saida = subprocess.run(
         ["udevadm", "trigger", "--dry-run", "--verbose", *argumentos],
         capture_output=True,
@@ -180,13 +154,7 @@ def test_o_seletor_do_produto_casa_hidraw_de_verdade() -> None:
 
 @requer_udev
 def test_controle_negativo_o_filtro_antigo_nao_casa_nada() -> None:
-    """A mordida não é vazia: o seletor antigo seleciona zero, aqui e agora.
-
-    Item C3/E do METODO-DE-ISOLAMENTO — o controle negativo é o que separa "o
-    teste passou" de "o teste discrimina". Se um dia o kernel passar a expor
-    `idVendor` no próprio nó hidraw, este teste cai e avisa que o teste de cima
-    deixou de provar o que se pensa que ele prova.
-    """
+    """A mordida não é vazia: o seletor antigo seleciona zero, aqui e agora."""
     todos = _selecionados(["--subsystem-match=hidraw"])
     if not todos:
         pytest.skip("esta máquina não tem nenhum nó hidraw para redisparar")

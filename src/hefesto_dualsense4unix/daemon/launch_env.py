@@ -100,79 +100,15 @@ ENV_ALLOWLIST = (
     "PROTON_ENABLE_MHWILDS_USB_AUDIO",
 )
 
-#: MÁSCARA-01, entrega 3 — METADE SEGURA (07/08/2026): o par VID/PID do
 #: DualSense FÍSICO. Ele estava cravado DENTRO das duas strings abaixo; agora é
-#: o ÚNICO item de uma LISTA, e as duas strings são COMPOSTAS por
-#: `compor_lista_vidpid`. O chamador continua passando só este par — a função
-#: nasce testada e NÃO LIGADA. A condição para a lista crescer está escrita no
-#: docstring dela, e não é hoje.
-#:
-#: Fonte canônica dos dois números: `integrations.uhid_gamepad`
-#: (`DUALSENSE_VENDOR`/`DUALSENSE_PRODUCT`). Aqui eles são repetidos DE
-#: PROPÓSITO: este módulo importa `uhid_gamepad` de forma LAZY (dentro de
-#: `_env_for_profile`), e um import de topo criaria a aresta
-#: `daemon -> integrations -> core` só para ler dois inteiros. Quem impede as
-#: duas cópias de divergirem é um teste dedicado
-#: (`tests/unit/test_launch_env_lista_vidpid.py`), não a boa vontade de quem for editar.
-#:
-#: O DUALSENSE EDGE FÍSICO NÃO ENTRA AQUI, E NÃO É ESQUECIMENTO — medido em
-#: 25/09/2026 (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01). O par dele,
 #: `054c:0df2`, é o MESMO do nosso vpad em toda máscara DualSense (uhid e
-#: uinput), e a máscara troca DENTRO do jogo (PS + L3), depois de a env já ter
-#: sido lida: um `0x054c/0x0df2` no IGNORE esconderia o vpad que nascesse
-#: depois — zero controles, o pior caso desta casa —, e no DISABLE tiraria do
-#: vpad o hidraw por onde a háptica e os gatilhos do jogo chegam. O Edge físico
-#: sai do jogo pela TOPOLOGIA, que é o que separa os dois: os nós dele (hidraw,
-#: evdev e joydev, cabo e rádio) nascem `0600 root` pelas regras
-#: `assets/73-hefesto-ps5-controller.rules` e
-#: `assets/72-hefesto-touchpad-motion-uaccess.rules`, e o broker os serve só ao
-#: daemon (`broker/hidraw_broker._e_o_nosso_vpad`). A régua é
-#: `tests/unit/test_o_controle_nunca_visto_tem_nome_e_cor.py`.
 PAR_DUALSENSE_FISICO = (0x054C, 0x0CE6)
 
-#: O gamepad VIRTUAL que o Steam Input cria — Valve, `28de:11ff`.
-#:
-#: TRES-CONTROLES-01 (10/08/2026), medido na máquina dela com o Pragmata aberto
-#: e o controle dobrado na mão. O `/dev/input` tinha QUATRO aparelhos para um
-#: controle físico:
 #:
 #:     event2   Sony ... DualSense Wireless Controller       054c:0ce6  (físico)
 #:     event6   DualSense Wireless Controller (Hefesto P1)   054c:0df2  (nosso)
-#:     event21  Microsoft X-Box 360 pad 0                    28de:11ff  (Steam)
-#:     event23  Microsoft X-Box 360 pad 1                    28de:11ff  (Steam)
-#:
-#: O `steam` (pid 3699757) era o único processo com `/dev/uinput` aberto além do
-#: `input-remapper` do sistema, e o `pad 0` nasceu no MESMO segundo em que o
-#: daemon logou `steam_input_excecao_ativada appid=3357650` (02:13:40). São dois
-#: porque o Steam Input enxerga DOIS controles — o físico e o nosso vpad — e faz
-#: um espelho Xbox para cada.
-#:
-#: O `SDL_GAMECONTROLLER_IGNORE_DEVICES` escondia só o `054c:0ce6`. Os espelhos
-#: da Valve nunca estiveram em lista nenhuma deste projeto, e o jogo ficava com
-#: três controles: o nosso e os dois do Steam.
-#:
-#: POR QUE ISTO E NÃO O `_EXCEPT`. A saída elegante seria
-#: `SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT=0x054c/0x0df2` ("aceite só o nosso
-#: vpad"), e ela está ERRADA para esta casa: mataria junto os controles
-#: EXTERNOS que ela exige que funcionem — *"deve ser universal, caso eu tenha 4
-#: novos dual sense ou novos pro controler ou 8bitdo"*. O Pro Controller e o
-#: 8BitDo são read-only por decisão de produto (numeramos e acendemos o LED, não
-#: adotamos), então eles chegam ao jogo POR SI — e um `_EXCEPT` os apagaria.
-#:
-#: E POR QUE NÃO MATA O STEAM CONTROLLER DELA: o aparelho físico da Valve é
-#: `28de:1102`/`28de:1142` (o segundo já está nomeado em
-#: `app/actions/external_controllers.py`). O `11ff` é só o espelho virtual.
 PAR_STEAM_INPUT_VIRTUAL = (0x28DE, 0x11FF)
 
-#: Máscaras que sobem SEMPRE em uinput (evdev puro, sem hidraw) e por isso
-#: pedem o mesmo tratamento no `compose_env`: largar o HIDAPI do SDL, esconder
-#: o físico e desligar o hidraw do winebus.
-#:
-#: Não é uma lista digitada de fora: é o complemento exato do gate do
-#: `integrations.virtual_pad._try_uhid`, que recusa toda máscara que não seja
-#: `dualsense`. Um sabor novo no `uinput_gamepad.FLAVORS` entra aqui — e o
-#: portão `tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py` reprova
-#: quem esquecer.
 _MASCARAS_SO_EVDEV = frozenset({"xbox", "nintendo"})
 
 
@@ -204,75 +140,7 @@ def _par_vidpid(par: Any) -> tuple[int, int] | None:
 
 
 def compor_lista_vidpid(pares: Iterable[tuple[int, int]], *, maiusculas: bool) -> str:
-    """O VALOR de uma env de VID/PID, composto a partir de uma LISTA de pares.
-
-    Formato: `0xVVVV/0xPPPP`, quatro dígitos hexadecimais com zero à esquerda,
-    pares separados por VÍRGULA e mais nada (nem espaço). Lista vazia devolve
-    string VAZIA, e quem chama tem de OMITIR a variável: `VAR=` no arquivo tem
-    a mesma cara de quem escondeu alguém, e o `.env` é a primeira coisa que se
-    lê ao diagnosticar um jogo que "enxerga controle demais".
-
-    O FORMATO, e o grau de cada metade
-    ----------------------------------
-
-    `PROTON_DISABLE_HIDRAW` — **GRAU: MEDIDO** em 07/08/2026, no Proton 10
-    instalado na máquina dela. O `is_hidraw_enabled` do
-    `files/lib/wine/x86_64-windows/winebus.sys` monta a agulha com o molde
-    WIDE `0x%04X/0x%04X` e procura com `wcscasestr` — busca de SUBSTRING, sem
-    caixa. Daí: o prefixo `0x` e os quatro dígitos são OBRIGATÓRIOS (fazem
-    parte da agulha), a CAIXA é indiferente e o SEPARADOR é livre, então a
-    vírgula serve. O próprio Proton escreve uma lista assim no `proton:1828`
-    (contorno do God of War Ragnarok no Deck):
-    `0x054C/0x05C4,0x054C/0x09CC,0x054C/0x0BA0,0x054C/0x0CE6,0x054C/0x0DF2`.
-
-    `SDL_GAMECONTROLLER_IGNORE_DEVICES` — **GRAU: SUSPEITA COM MECANISMO**
-    (forte; nenhum parser do SDL foi executado). Três corroborações: o formato
-    documentado do hint é lista separada por vírgula de `0xVID/0xPID`; a
-    LaunchOptions DELA já foi estendida por vírgula, e o repositório tem regra
-    escrita para não quebrar isso (`integrations/steam_launch_options.py:147`);
-    e o Proton usa exatamente esse formato na env irmã. Medir o parser exigiria
-    plantar um joystick falso em `/dev/input` na máquina dela, com três
-    controles conectados e ela jogando — recusado, e é por isso que o grau
-    para aqui.
-
-    A CAIXA de cada valor não é enfeite
-    -----------------------------------
-
-    Minúsculas no IGNORE porque `integrations/steam_launch_options.py:97`
-    compara a LaunchOptions envenenada contra o token LITERAL
-    `SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6`, byte a byte (**GRAU:
-    MEDIDO**, é a `IGNORE_SIGNATURE`). Trocar a caixa aqui faria o `has_poison`
-    deixar de reconhecer o veneno que as versões antigas persistiram — e
-    veneno com o vpad fora de cena é ZERO controles. Maiúsculas no DISABLE por
-    paridade com o que o próprio Proton escreve; ali a caixa é indiferente ao
-    `wcscasestr`, então é preservação do que já roda, não exigência.
-
-    O WRAPPER NÃO MUDA — e isto foi conferido
-    -----------------------------------------
-
-    **GRAU: MEDIDO** na leitura de `assets/hefesto-launch.sh`: a allowlist
-    espelhada (`:85-91`) filtra por NOME de variável (`case "$line" in
-    SDL_GAMECONTROLLER_IGNORE_DEVICES=*)`), nunca por valor; e o laço final
-    (`:309-313`) passa cada linha INTEIRA como UM argumento do `env(1)`, sem
-    word-split. Um valor com vírgulas atravessa literal. O aviso da sprint
-    ("mudar de um lado exige mudar do outro") vale para NOME novo de variável,
-    e nenhum nasce aqui.
-
-    QUANDO ESTA LISTA PODE CRESCER — a condição, escrita
-    ----------------------------------------------------
-
-    Ela recebe um SEGUNDO par quando existir a `E4` da LUGAR-À-MESA-01
-    (`docs/process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md`),
-    que é a **cobertura POR PAR**: *"o par só sai no `IGNORE` se TODO aparelho
-    daquele par na mesa tiver vpad vivo"*. E a `E4` vem depois da `E3` (a
-    adoção dos externos), que ela adiou até a máscara existir.
-
-    O que a condição protege, MEDIDO naquela sprint: `054c:05c4` é o par do
-    8BitDo em modo PS4 **e** o de um DualShock 4 Sony genuíno. Emitir esse par
-    numa mesa onde o aparelho é um DS4 SEM vpad some com o controle da pessoa.
-    Enquanto a cobertura por par não existir, esta função tem de continuar
-    recebendo um par só — e é o que ela recebe.
-    """
+    """O VALOR de uma env de VID/PID, composto a partir de uma LISTA de pares."""
     molde = "0x%04X/0x%04X" if maiusculas else "0x%04x/0x%04x"
     vistos: set[tuple[int, int]] = set()
     saida: list[str] = []
@@ -289,130 +157,32 @@ def compor_lista_vidpid(pares: Iterable[tuple[int, int]], *, maiusculas: bool) -
 
 
 def valor_ignore_devices(pares: Iterable[tuple[int, int]]) -> str:
-    """Valor do `SDL_GAMECONTROLLER_IGNORE_DEVICES` para estes pares.
-
-    Minúsculas — a caixa é contrato com o `IGNORE_SIGNATURE` do
-    `steam_launch_options`, ver `compor_lista_vidpid`.
-    """
+    """Valor do `SDL_GAMECONTROLLER_IGNORE_DEVICES` para estes pares."""
     return compor_lista_vidpid(pares, maiusculas=False)
 
 
 def valor_disable_hidraw(pares: Iterable[tuple[int, int]]) -> str:
-    """Valor do `PROTON_DISABLE_HIDRAW` para estes pares.
-
-    Maiúsculas — paridade com o que o próprio Proton escreve, ver
-    `compor_lista_vidpid`.
-    """
+    """Valor do `PROTON_DISABLE_HIDRAW` para estes pares."""
     return compor_lista_vidpid(pares, maiusculas=True)
 
 
 #: O valor de HOJE, byte a byte: o DualSense físico E o espelho do Steam Input.
 #:
-#: TRES-CONTROLES-01 (10/08/2026): o segundo par entrou aqui, e NÃO num ramo
-#: novo, de propósito — assim ele herda, sem uma linha de gate própria, os três
-#: portões que esta variável já atravessa e que custaram medição para existir:
-#: fora do Modo Nativo, com a emulação ligada, e só com `cobertura_total` (um
-#: vpad por físico). O invariante que manda nesta casa é *duplicado > zero
-#: controles*: se o IGNORE não pode sair, o espelho da Valve também não é
-#: escondido, e o pior caso continua sendo o controle dobrado — nunca um jogo
-#: sem controle nenhum.
-#:
-#: NOTA DATADA — o que caducou. Até 09/08 a exceção do Steam Input SUSPENDIA o
-#: nosso vpad; o Steam via um controle só, criava um espelho só, e o jogo via
-#: um. A decisão dela de 09/08 (ESCONDER-EM-VEZ-DE-SAIR-01) manteve o vpad de
-#: pé para não derrubar o jogador 2 do co-op junto — e com isso o Steam passou a
-#: ver dois controles e a criar dois espelhos. A JOGO-01 (25/07) escreveu o
-#: invariante que voltou a valer aqui: *"a allowlist muda QUAL dispositivo o
-#: jogo vê, nunca QUANTOS"*.
 _IGNORE_VALUE = valor_ignore_devices(
     (PAR_DUALSENSE_FISICO, PAR_STEAM_INPUT_VIRTUAL)
 )
 
-#: GUERRA-01: lista VID/PID que o winebus.sys dos Protons 10/11 lê para NEGAR
-#: hidraw (a whitelist default dele dá hidraw à família Sony INTEIRA — físico
-#: 0ce6 E vpad 0df2 — e ignora a env do SDL). SÓ o físico entra aqui: o vpad
-#: Edge 0df2 PRECISA do hidraw (é por ele que rumble/triggers/lightbar do
-#: jogo chegam) — NUNCA incluir 0x0DF2. `PROTON_ENABLE_HIDRAW` morreu no
-#: Proton 10 e foi aposentada (só AMPLIAVA exposição).
 _DISABLE_HIDRAW_VALUE = valor_disable_hidraw((PAR_DUALSENSE_FISICO,))
 
-#: UNIFICA-PREDICADO-01: o predicado "isto é janela de jogo da Steam?" DESCEU
-#: para `profiles/steam_app.py` (stdlib pura, sem import do projeto) e é
-#: REEXPORTADO daqui — os oito callsites históricos e os testes que importam
-#: `daemon.launch_env.steam_appid_from_wm_class` continuam valendo sem tocar em
-#: nada. A fonte desceu em vez de subir porque `profiles/simple_match.py` é
-#: `profiles/` puro e importar `daemon.launch_env` de lá deixaria o ciclo
-#: `profiles -> daemon -> profiles` a um commit de distância.
 
-#: GUI-05 item 3 (honestidade do dedup): idade MÁXIMA, em segundos, do marker
-#: `last_run` (gravado pelo wrapper no LAUNCH) em relação à PRIMEIRA detecção
-#: da janela `steam_app_<appid>`. A janela serve para DESCARTAR markers de
-#: sessões ANTIGAS (o jogo de ontem/horas atrás) — NÃO para limitar a latência
-#: launch→janela: jogos pesados (Proton na 1ª execução, compilação de shaders,
-#: RDR2 com o Rockstar Launcher) só abrem a janela `steam_app_N` minutos depois
-#: do launch, e o marker legítimo desse launch ficaria fora de uma janela
-#: curta, derrubando `wrapper_used` para false no MEIO do jogo (falso alarme
-#: de "jogo sem wrapper"). Por isso 15 min: cobre o carregamento AAA mais lento
-#: e ainda rejeita marker de uma sessão de verdade velha. Marker de outro
-#: appid, ou ausente = o jogo NÃO passou pelo `hefesto-launch`.
 WRAPPER_MARKER_WINDOW_SEC = 900.0
 
-#: R-04 (auditoria 23/07): idade MÁXIMA, em segundos, do marker `last_run` para
-#: ele contar como "launch ACONTECENDO AGORA" e disparar o arming do modo do
-#: perfil. NÃO confundir com `WRAPPER_MARKER_WINDOW_SEC` (15 min), que responde
-#: outra pergunta ("esta JANELA já aberta veio de um launch nosso?") e por isso
-#: é generosa. Aqui a pergunta é "este marker é de um jogo SUBINDO agora?" — e a
-#: resposta tem de ser curta, senão um `daemon.status` da CLI meia hora depois
-#: rearmaria o perfil de um jogo que ela já fechou. O wrapper grava o marker e,
-#: milissegundos depois, pede o ping de vida; a reconciliação do daemon roda a
-#: 1 Hz. 60 s cobre com folga (inclusive um restart do daemon no meio do
-#: carregamento) sem virar "arming retroativo".
 LAUNCH_ARM_WINDOW_SEC = 60.0
 
-#: IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026): quanto tempo a mesa precisa ficar
-#: QUIETA antes de a cobertura ser reavaliada e o `launch_env/` regravado.
-#:
-#: A forma do defeito, medida no journal dela em 12/08 às 00h15: o produto
-#: decidia o `SDL_GAMECONTROLLER_IGNORE_DEVICES` **durante** a subida dos vpads,
-#: uma vez por borda, e nada reavaliava a decisão quando a subida terminava. É o
-#: terceiro defeito de tempo do mesmo dia e da mesma família (o keepalive que
-#: zerava rumble de terceiro e a cor da lightbar perdida dentro da rajada da
-#: Steam). A cura desenhada por ela e validada no aparelho é sempre a mesma:
-#: **armar a cada evento, disparar quando sossega, agir sobre tudo.**
-#:
-#: O número: a rajada medida de P2→P3→P4 durou **183 ms** (00:15:42.218 →
-#: 00:15:42.401). 0,6 s é mais de três vezes isso — colapsa a rajada inteira num
-#: disparo só — e fica ABAIXO da cadência de 1 Hz que consome o vencimento
-#: (`LAUNCH_RECONCILE_INTERVAL_SEC`), então quem espera nunca espera mais que um
-#: tique além da janela. Subir esta janela não compra nada: o intervalo que
-#: importava naquele journal (11 s entre o 1º e o 2º vpad) NÃO é rajada — é o
-#: poll loop parado, e nenhum debounce cura loop parado.
 JANELA_DE_SOSSEGO_SEC = 0.6
 
-#: JOGO-01: rótulo do `estado:` gravado no `steam_app_<appid>.env` dos jogos da
-#: allowlist. O texto antigo ("allowlist Steam Input (sem dedup)") descrevia com
-#: precisão o que o ramo fazia — e era exatamente o defeito: "sem dedup" com o
-#: vpad de pé é o controle duplicado. O rótulo dizia a REGRA que passou a valer,
-#: porque este arquivo é a primeira coisa que se lê ao diagnosticar um jogo que
-#: "enxerga quatro controles onde existe um".
-#:
-#: NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): **nada mais escreve
-#: este rótulo.** A regra que ele afirma — "físico é o único dispositivo" —
-#: deixou de valer por decisão dela: no jogo marcado o único dispositivo passou
-#: a ser o do Hefesto. A constante fica exportada porque é a chave de leitura de
-#: qualquer `.env` antigo que ainda exista numa máquina (a varredura de
-#: `materialize_launch_env` apaga os dela na primeira passagem, mas um arquivo
-#: copiado num relatório de defeito sobrevive a isso).
 ESTADO_ALLOWLIST_STEAM_INPUT = "allowlist Steam Input (físico é o único dispositivo)"
 
-#: ALLOWLIST-SO-A-MASCARA-01 (22/08/2026): o que o applier embrulhado da
-#: allowlist devolve quando NÃO chama o `apply_profile_mode`. Dialeto
-#: `IGNORADO_*` do `lifecycle.py`, e estado próprio de propósito: a seção
-#: `mode` do relatório da ativação precisa distinguir "a disputa foi pulada,
-#: como combinado" de `aplicado`, de `adiado_jogo_aberto` (o gate R-04 recusou)
-#: e de `falhou`. Sem palavra própria, quem lê o journal não sabe qual dos
-#: quatro aconteceu — e foi exatamente essa confusão que deixou a máscara
-#: `xbox` viva por horas num jogo cujo perfil pedia `dualsense`.
 IGNORADO_DISPUTA_DA_ALLOWLIST = "ignorado_disputa_allowlist"
 
 
@@ -435,7 +205,7 @@ def _read_kv_int_fields(path: Path) -> dict[str, int]:
             return _MARCADORES_PELA_ASSINATURA.ler(path)
         except OSError:
             return {}
-        except Exception:  # defensivo: leitura de marker jamais derruba o IPC
+        except Exception:
             logger.debug("wrapper_marker_read_falhou", exc_info=True)
             return {}
     return _read_kv_int_fields_do_disco(path)
@@ -447,7 +217,7 @@ def _read_kv_int_fields_do_disco(path: Path) -> dict[str, int]:
         text = path.read_text(encoding="utf-8")
     except OSError:
         return {}
-    except Exception:  # defensivo: leitura de marker jamais derruba o IPC
+    except Exception:
         logger.debug("wrapper_marker_read_falhou", exc_info=True)
         return {}
     return _campos_do_marker(text)
@@ -473,8 +243,6 @@ def _campos_do_marker(text: str) -> dict[str, int]:
     return out
 
 
-#: Os marcadores do lançamento guardados pela assinatura (família 6 da
-#: O-REPOUSO-ESPERA-O-EVENTO-01). Desarmar o dono do evento os esquece.
 _MARCADORES_PELA_ASSINATURA: LeituraPelaAssinatura[dict[str, int]] = LeituraPelaAssinatura(
     _decodificar_o_marker, copiar=dict
 )
@@ -482,12 +250,7 @@ _ode.ao_desarmar(_MARCADORES_PELA_ASSINATURA.esquecer)
 
 
 def assinatura_do_ultimo_lancamento(base_dir: Path | None = None) -> Assinatura | None:
-    """A assinatura do `stat` do marker `last_run`, sem abri-lo; None = ausente.
-
-    É o que a varredura de `/proc` compara para saber que um lançamento novo
-    aconteceu desde o «não há jogo» que ela guardou (O-REPOUSO-ESPERA-O-EVENTO-01,
-    família 4): o wrapper regrava o `last_run` em todo lançamento.
-    """
+    """A assinatura do `stat` do marker `last_run`, sem abri-lo; None = ausente."""
     return assinatura((base_dir if base_dir is not None else launch_env_dir()) / "last_run")
 
 
@@ -513,36 +276,13 @@ def read_last_run_marker(base_dir: Path | None = None) -> tuple[int, int] | None
 
 
 def read_last_run_pid(base_dir: Path | None = None) -> int | None:
-    """Lê o campo `pid=` OPCIONAL do marker `last_run` (NUMA-01), ou None.
-
-    `pid=$$` é gravado pelo wrapper no MOMENTO do launch — como `exec env
-    "$@"` preserva o PID (o wrapper VIRA o jogo), este é o pid do próprio
-    processo do jogo enquanto ele roda. Ausente (marker antigo, sem o
-    campo) ou lixo (não-dígito) devolve None. Nunca levanta.
-    """
+    """Lê o campo `pid=` OPCIONAL do marker `last_run` (NUMA-01), ou None."""
     path = (base_dir if base_dir is not None else launch_env_dir()) / "last_run"
     return _read_kv_int_fields(path).get("pid")
 
 
 def read_last_exit_marker(base_dir: Path | None = None) -> int | None:
-    """Lê o marker `last_exit` do wrapper: epoch (int) ou None (NUMA-01).
-
-    Formato: ``epoch=<unix epoch s>`` (+ ``pid=<int>`` OPCIONAL desde a
-    correção pós-auditoria, ver `read_last_exit_pid`), gravado pelo trap de
-    EXIT do wrapper — best-effort e só cobre as saídas SEM `exec`
-    bem-sucedido (o exec substitui o processo do wrapper pelo jogo; o trap
-    de um shell que virou outro programa não existe mais para disparar).
-    Serve para encurtar na prática a janela de "pid reuse" do `last_run`
-    (ver riscos da síntese): um marker de saída mais novo que o `last_run`
-    é evidência de que aquele launch específico NUNCA chegou a rodar o
-    jogo — MAS só quando os dois pertencem ao MESMO launch (ver
-    `read_last_exit_pid`/`wrapper_game_running`: sem essa correlação por
-    pid, o `last_exit` de um launch A que falhou o próprio `exec` invalida
-    o `last_run` de um launch B posterior e bem-sucedido, sempre que o trap
-    tardio de A grava DEPOIS de B já ter sobrescrito o marker global —
-    achado da auditoria da Onda N). Arquivo ausente/ilegível ou sem campo
-    válido devolve None. Nunca levanta.
-    """
+    """Lê o marker `last_exit` do wrapper: epoch (int) ou None (NUMA-01)."""
     path = (base_dir if base_dir is not None else launch_env_dir()) / "last_exit"
     return _read_kv_int_fields(path).get("epoch")
 
@@ -604,34 +344,7 @@ def wrapper_game_running(
     now: float | None = None,
     window_sec: float = WRAPPER_MARKER_WINDOW_SEC,
 ) -> bool:
-    """Decisão PURA: o marker do wrapper ainda atesta um jogo em execução?
-
-    NUMA-01 — evidência #3 do sinal "jogo real ativo": marker `last_run`
-    FRESCO (gravado até `window_sec` atrás de `now`) E `pid_alive` E sem
-    `exit_marker` mais novo que o próprio marker (senão aquele launch já
-    terminou/nunca decolou). Cobre a janela launch→janela (shaders/AAA,
-    mesma constante generosa de `wrapper_used_state`), Wayland puro COM
-    wrapper (não depende do detector de janela) e sobrevive a restart do
-    daemon (o marker é do disco, não de memória). Nunca levanta.
-
-    Correção pós-auditoria da Onda N (`last_run`/`last_exit` GLOBAIS, sem
-    pid/sessão amarrando um ao outro): um `exit_marker` mais novo (ou
-    igual) que `marker_epoch` só invalida o launch corrente quando
-    `marker_pid`/`exit_pid` estão presentes E CASAM — ou seja, quando o
-    `last_exit` pertence ao MESMO launch do `last_run` que está sendo
-    avaliado. Sequência do achado: launch A grava `last_run` (epoch=E1,
-    pid=P1) e o próprio `exec` FALHA; launch B (retry, ou outro jogo)
-    grava `last_run` (epoch=E2>E1, pid=P2) com sucesso — P2 vivo rodando o
-    jogo de verdade; o trap tardio de A só termina de gravar `last_exit`
-    (epoch=E3>=E2) DEPOIS que B já sobrescreveu o marker. Sem a correlação
-    por pid, `exit_marker(E3) >= marker_epoch(E2)` derrubava B mesmo com o
-    jogo de B genuinamente vivo. Com `exit_pid=P1 != marker_pid=P2`, o
-    `exit_marker` é reconhecido como de OUTRO launch e ignorado — o
-    critério antigo (só por epoch) permanece como fallback quando qualquer
-    um dos dois pids está ausente (markers gravados antes desta correção,
-    ou leitura que falhou): fail-safe do lado conservador desta evidência
-    específica (`classify` ainda tem os outros 2 ramos). Nunca levanta.
-    """
+    """Decisão PURA: o marker do wrapper ainda atesta um jogo em execução?"""
     if marker is None:
         return False
     _, marker_epoch = marker
@@ -654,18 +367,7 @@ def wrapper_used_state(
     first_seen_epoch: float,
     window_sec: float = WRAPPER_MARKER_WINDOW_SEC,
 ) -> bool:
-    """Decisão PURA do `wrapper_used` para um jogo detectado (GUI-05 item 3).
-
-    ``appid`` = jogo cuja janela `steam_app_N` o detector viu;
-    ``first_seen_epoch`` = epoch da PRIMEIRA detecção desse appid;
-    ``marker`` = `(appid, epoch)` do `last_run` (ou None).
-
-    True quando o marker é do MESMO appid e foi gravado até ``window_sec``
-    ANTES da primeira detecção — o wrapper roda no launch, antes de a janela
-    existir. Marker mais NOVO que a primeira detecção também conta (relaunch
-    pelo wrapper com a leitura do detector ainda quente). O caso "sem jogo"
-    (wm_class não é steam_app) é decidido pelo chamador (devolve None lá).
-    """
+    """Decisão PURA do `wrapper_used` para um jogo detectado (GUI-05 item 3)."""
     if marker is None:
         return False
     marker_appid, marker_epoch = marker
@@ -715,7 +417,7 @@ def steam_input_appids(path: Path | None = None) -> set[int]:
         tokens = steam_input_allowlist(
             path if path is not None else steam_input_allowlist_path()
         )
-    except Exception:  # arquivo ilegível/import quebrado: allowlist vazia
+    except Exception:
         logger.debug("steam_input_allowlist_indisponivel", exc_info=True)
         return set()
     out: set[int] = set()
@@ -729,14 +431,7 @@ def steam_input_appids(path: Path | None = None) -> set[int]:
 def launch_session_appid(
     *, base_dir: Path | None = None, now: float | None = None
 ) -> int | None:
-    """Appid do jogo lançado PELO WRAPPER que ainda está rodando, ou None.
-
-    Reusa a decisão pura `wrapper_game_running` (NUMA-01) — marker fresco +
-    pid vivo + sem `last_exit` correlacionado — em vez de reinventar o
-    critério: o mesmo sinal que já sustenta `game_signal` é o que decide se a
-    exceção do R-06 continua valendo. Sobrevive a alt-tab (o critério é o PID
-    do jogo, não o foco) e a restart do daemon (o marker é do disco).
-    """
+    """Appid do jogo lançado PELO WRAPPER que ainda está rodando, ou None."""
     marker = read_last_run_marker(base_dir)
     if marker is None:
         return None
@@ -752,31 +447,16 @@ def launch_session_appid(
     return marker[0] if vivo else None
 
 
-#: Classes de janela que NÃO são evidência de "outro app está na frente".
-#: PARTIDA-PICOTADA-01: são os dois casos medidos no journal dela em 08/08 —
-#: o backend não conseguiu ler (`unknown`/vazio) e a janela em foco ser a nossa
-#: própria (ela abrindo o editor de perfil no meio da partida). Espelha
-#: `autoswitch._tick_sem_informacao` e `autoswitch._janela_propria`; a lista de
-#: classes da GUI vem de lá, para não haver duas verdades.
 _CLASSES_CEGAS: frozenset[str] = frozenset({"", "unknown"})
 
 
 def _leitura_cega(wm_class: str | None) -> bool:
-    """True quando a leitura de janela não é evidência de app nenhum.
-
-    PARTIDA-PICOTADA-01. Duas famílias, as duas medidas no journal dela:
-    o detector não leu nada (`None`, vazio ou ``"unknown"``), ou a janela em
-    foco é a desta própria aplicação. Nenhuma das duas é evidência de outro app
-    em foco, e tratá-las como se fossem é o que picotava a partida.
-    """
+    """True quando a leitura de janela não é evidência de app nenhum."""
     if wm_class is None:
         return True
     normalizada = wm_class.strip().casefold()
     if normalizada in _CLASSES_CEGAS:
         return True
-    # Importado aqui, e não no topo, porque `profiles.autoswitch` importa deste
-    # módulo — subir o import quebraria o ciclo que `daemon/protocols.py` existe
-    # para manter desfeito.
     from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
 
     return normalizada in OWN_GUI_WM_CLASSES
@@ -789,49 +469,7 @@ def steam_input_exception_appid(
     now: float | None = None,
     allowlist: set[int] | None = None,
 ) -> int | None:
-    """Appid da allowlist com sessão ATIVA agora (R-06), ou None.
-
-    Duas evidências, nesta ordem — a mesma dupla que o plano pede
-    ("marker `last_run` **ou** janela"):
-
-    1. **marker do wrapper** (`launch_session_appid`): autoritativo e imune a
-       alt-tab, mas só existe para jogo lançado pelo wrapper;
-    2. **janela em foco** (`window_detect_current_class`): cobre o jogo aberto
-       sem as LaunchOptions do Hefesto. Leitura CRUA de propósito: aqui a
-       pergunta é "o jogo da allowlist está na frente agora?", e usar o sinal
-       sticky faria a exceção sobreviver 30 s depois do alt-tab — tempo em que
-       o físico ficaria exposto ao desktop sem motivo.
-
-    `allowlist` é injetável para o chamador que já a leu (evita reler o
-    arquivo em cada gate). Allowlist vazia ⇒ None sem tocar em disco de novo.
-
-    JOGO-01: este appid deixou de decidir só "solto o grab e exponho o hidraw"
-    e passou a decidir também "retiro o gamepad virtual de cena" (ver
-    `gamepad.suspend_vpads_for_steam_input`). Por isso as duas evidências
-    continuam sendo exatamente estas, e não uma janela mais folgada: enquanto
-    esta função disser um appid, a usuária está SEM vpad — o sinal tem de
-    apagar assim que o jogo sai da frente, não 30 s depois.
-
-    PARTIDA-PICOTADA-01 (08/08/2026): "leitura crua" não pode significar
-    "leitura CEGA derruba a exceção". A crueza existe para que um alt-tab de
-    verdade apague o sinal na hora; ela **não** existe para que um tique sem
-    informação faça o mesmo. A diferença é o defeito inteiro, e ele foi medido:
-    em 08/08, entre 01:43 e 03:03, oito ciclos de suspender/retomar vpad no meio
-    da partida dela, e **todos** os encerramentos vieram colados a um tique cego
-    — `wm_class=unknown` (o backend não leu) ou a classe da PRÓPRIA janela desta
-    aplicação, quando ela ia mexer na configuração. Nenhum deles é evidência de
-    outro app em foco. O contraste fecha a conta: no sábado 01-02/08 foram 15 quedas de
-    vpad em **48 h**; em 08/08, **12 em 1h25** — vinte e sete vezes mais.
-
-    A cura é a mesma disciplina que o autoswitch já aplica em
-    `_tick_sem_informacao` e `_janela_propria`, e é assimétrica de propósito:
-    **só evidência POSITIVA de outra janela encerra a exceção.** Um tique cego
-    ou a própria GUI não decidem nada — mantêm o que valia antes, consultando o
-    sinal sticky (`window_detect_last_class`). O medo registrado no parágrafo
-    acima — o físico exposto ao desktop 30 s depois do alt-tab — continua
-    coberto, porque um alt-tab de verdade produz leitura POSITIVA da outra
-    janela, e essa apaga a exceção no mesmo tique.
-    """
+    """Appid da allowlist com sessão ATIVA agora (R-06), ou None."""
     appids = allowlist if allowlist is not None else steam_input_appids()
     if not appids:
         return None
@@ -842,8 +480,6 @@ def steam_input_exception_appid(
     wm_class = getattr(store, "window_detect_current_class", None)
     crua = wm_class if isinstance(wm_class, str) else None
     if _leitura_cega(crua):
-        # Tique sem informação, ou a nossa própria janela: não é evidência de
-        # nada. Cai no sticky — a última classe ÚTIL que o detector viu.
         sticky = getattr(store, "window_detect_last_class", None)
         crua = sticky if isinstance(sticky, str) else None
     foco = steam_appid_from_wm_class(crua)
@@ -853,14 +489,7 @@ def steam_input_exception_appid(
 
 
 def _modo_da_ponte(ponte: ponte_escada.Ponte) -> Any:
-    """Um `ProfileModeConfig` que materializa a ponte carimbada no perfil.
-
-    PONTE-ESCADA-01. A ponte é a tupla que o perfil já sabia guardar
-    (`mode.kind` + `mode.gamepad_flavor`), então trazê-la do carimbo de volta é
-    remontar exatamente esse objeto — nenhum caminho de aplicação novo, nenhum
-    vocabulário novo. Import local pelo mesmo motivo dos vizinhos: manter
-    `daemon -> profiles` fora do topo deste módulo.
-    """
+    """Um `ProfileModeConfig` que materializa a ponte carimbada no perfil."""
     from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
     from hefesto_dualsense4unix.profiles.schema import (
         ProfileModeConfig,
@@ -868,16 +497,7 @@ def _modo_da_ponte(ponte: ponte_escada.Ponte) -> Any:
     )
 
     if ponte.kind == ponte_escada.KIND_GAMEPAD:
-        # A mesma fronteira `str` solto -> `Literal` fechado que o
-        # `carimbar_ponte` atravessa na ida. Uma máscara que o esquema não
-        # conhece vira None, e `None` é "sem opinião de máscara" — nunca uma
-        # máscara inventada.
-        #
-        # MODO-DE-CONEXAO-01 (13/09/2026): o carimbo arma a máscara que sempre
-        # armou E o caminho do mesmo nome. É o mesmo aparelho de antes — a
         # máscara DualSense no caminho DualSense é o uhid, a Xbox no caminho
-        # Xbox é o uinput —, agora com o caminho dito em voz alta, para o chip
-        # da aba Jogar acender o degrau que o lançamento subiu.
         return ProfileModeConfig(
             kind="gamepad",
             gamepad_flavor=normalizar_gamepad_flavor(ponte.mascara),
@@ -889,29 +509,12 @@ def _modo_da_ponte(ponte: ponte_escada.Ponte) -> Any:
 def ponte_do_lancamento(
     profile: Any, *, na_allowlist: bool
 ) -> ponte_escada.Ponte | None:
-    """A ponte que ESTE lançamento entrega, ou None quando não há opinião.
-
-    Fachada fina sobre `ponte_escada.ponte_do_perfil`, aqui porque é aqui que
-    as três peças da tupla se encontram: o `mode` vem do perfil, e a terceira
-    (`steam_input`) vem da allowlist que este módulo já lê em
-    `steam_input_appids`.
-    """
+    """A ponte que ESTE lançamento entrega, ou None quando não há opinião."""
     return ponte_escada.ponte_do_perfil(profile, na_allowlist=na_allowlist)
 
 
 def _jogo_na_autoridade(daemon: DaemonProtocol) -> bool:
-    """Há jogo com o controle na mão dela AGORA? PONTE-ESCADA-LACO-01.
-
-    `display_authority` é o MESMO sinal que o gate R-04 consulta
-    (`gamepad._autoridade_do_jogo`) e que o gesto da ponte já lê
-    (`hotkey._ciclar_ponte`). Uma terceira definição de "jogo vivo" nesta casa
-    seria uma terceira verdade sobre a mesma pergunta — e o preço disso já foi
-    pago em 16/08, quando duas leituras do mesmo `.vdf` discordaram e o censo
-    jurou que o Pragmata estava são.
-
-    Ele é STICKY por 30 s (NUMA-01), e isso serve à escada: uma janela que
-    pisca não encerra a tentativa dela no meio da partida.
-    """
+    """Há jogo com o controle na mão dela AGORA? PONTE-ESCADA-LACO-01."""
     return getattr(daemon, "display_authority", "unknown") == "game"
 
 
@@ -962,8 +565,6 @@ def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
         kind = getattr(mode, "kind", None) if mode is not None else None
         nome = getattr(profile, "name", None)
         if kind != "gamepad":
-            # `native`/`desktop` são disputa pura, e `None` é ausência de
-            # opinião — nenhum dos três traz máscara para entregar.
             logger.info(
                 "launch_allowlist_mode_barrado",
                 motivo="kind_e_disputa",
@@ -1000,34 +601,7 @@ def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
 def _ativar_o_perfil_do_lancamento(
     daemon: DaemonProtocol, profile: Any, *, appid: int, na_allowlist: bool = False
 ) -> dict[str, str]:
-    """Ativa o perfil do jogo que ACABOU de subir, e devolve o relatório.
-
-    A razão inteira está no chamador, junto do desvio da allowlist. Aqui ficam
-    as três coisas que são desta função:
-
-    **O gerente vem da fábrica**, não montado à mão — e desde a
-    `A-FÁBRICA-COM-UM-CLIENTE-01` (22/08/2026) todas as rotas de ativação vêm.
-    Applier ausente NÃO levanta: a seção é ignorada em silêncio, e a rota com
-    lista própria nasce funcionando "quase" — a nota
-    `PERFIL-REESCRITO-NA-PARTIDA-01` item 6 conta o preço.
-
-    **Nunca levanta.** Uma ativação que falhe não pode impedir o arming do modo
-    logo abaixo, que é o que põe o controle na mão dela. O motivo vai ao
-    journal e o relatório volta vazio — que é diferente de "aplicou nada": o
-    relatório vazio de uma exceção e o relatório cheio de `ignorado_*` contam
-    histórias diferentes, e as duas aparecem.
-
-    **O relatório sobe no dicionário de retorno do arming**, e é isso que
-    permite a alguém — a janela, o `doctor`, um agente — perguntar o que entrou
-    sem adivinhar pelo aparelho. Era o buraco que a `ELO-MUDO-01` nomeia: o
-    produto respondia pelo transporte e nunca pelo efeito.
-
-    **Na allowlist o `mode_applier` vai EMBRULHADO** — ver
-    `_mode_applier_so_a_mascara`. Ele foi `None` por algumas horas em
-    22/08/2026, e essa versão está refutada: barrar a seção `mode` inteira
-    barrava junto o `gamepad_flavor`, que não é disputa nenhuma. O embrulho
-    barra o `kind` e deixa a máscara passar.
-    """
+    """Ativa o perfil do jogo que ACABOU de subir, e devolve o relatório."""
     nome = getattr(profile, "name", None)
     if not nome:
         return {}
@@ -1035,11 +609,6 @@ def _ativar_o_perfil_do_lancamento(
     try:
         from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-        # O desvio entra por PARÂMETRO NOMEADO da fábrica (`mode_applier`), que
-        # é onde o porquê dele está escrito — a fábrica não tem, e não pode
-        # voltar a ter, um `**sobrescritas` que aceite qualquer coisa sem razão.
-        # Fora da allowlist o parâmetro simplesmente não é passado: "não
-        # informado" é diferente de `None`, e é a fábrica quem resolve.
         desvio: dict[str, Any] = (
             {"mode_applier": _mode_applier_so_a_mascara(daemon)}
             if na_allowlist
@@ -1068,41 +637,7 @@ def _ativar_o_perfil_do_lancamento(
 def tique_da_escada(
     daemon: DaemonProtocol, *, agora: float | None = None
 ) -> str | None:
-    """O relógio de 1 Hz da escada. Devolve o motivo do FIM, ou None.
-
-    PONTE-ESCADA-LACO-01 (19/08/2026), momento 3: *"quando ela para"*.
-
-    **Por que mora aqui, e não num relógio próprio.** Este tique anda no MESMO
-    ciclo do arming — `gamepad._reconciliar_launch` chama `arm_launch_profile`
-    a 1 Hz, e é a primeira linha dela que chama isto. Um segundo relógio para a
-    mesma pergunta seria um segundo estado, e dois estados sobre o mesmo jogo é
-    como esta casa fabrica duas verdades. O custo por tique sem tentativa
-    aberta é um `getattr`.
-
-    **É o ÚNICO ponto que escreve a ponte no perfil**, e ele escreve uma vez
-    só por evento: a tentativa (ou o registro do gesto) é encerrada junto, então
-    a volta seguinte não reencontra nada para reconfirmar. Recarimbar a cada
-    volta apagaria a data, que é a única informação que o carimbo antigo
-    carrega.
-
-    **Ele escreve DUAS coisas diferentes, e a diferença é a entrega**
-    (29/08/2026):
-
-    - **carimbo** (`Tique.carimbar`) — alguém confirmou. Sai com
-      `por=POR_SILENCIO` quando ninguém apertou nada, e `por=POR_GESTO` quando
-      a mão dela pôs aquela ponte de pé;
-    - **alinhamento do `mode`** (`Tique.alinhar`) — a ponte de pé volta para o
-      perfil. Vai junto do carimbo por gesto (sem isso o carimbo não muda o
-      próximo lançamento de um perfil que opina: *"o perfil manda"*) e vai
-      SOZINHO, sem carimbo, quando a escada para no degrau caro — porque ali
-      ninguém confirmou nada e carimbar mataria o caminho para o degrau
-      seguinte.
-
-    **Jogo fechado no meio da escada não carimba nada.** `ponte_tentativa.tique`
-    encerra a tentativa pela borda do jogo, e nenhum caminho de encerramento
-    carimba — só este, e só com a `Ponte` que
-    `ponte_escada.confirmacao_por_silencio` devolveu.
-    """
+    """O relógio de 1 Hz da escada. Devolve o motivo do FIM, ou None."""
     resultado = ponte_tentativa.tique(
         daemon, jogo_vivo=_jogo_na_autoridade(daemon), agora=agora
     )
@@ -1114,21 +649,10 @@ def tique_da_escada(
 
         gerente = ProfileManager(controller=daemon.controller)
         if resultado.carimbar is None:
-            # SÓ o `mode`, sem carimbo — a escada parou no degrau caro e o
-            # degrau de pé ia evaporar com a tentativa. Carimbar aqui mataria o
-            # caminho para o degrau seguinte; ver `alinhar_o_modo_do_appid`.
-            # MODO-DE-CONEXAO-01 (13/09/2026): o degrau ao vivo que ela subiu é
-            # um CAMINHO, e é o caminho que o `mode` recebe — a máscara padrão
-            # do perfil não é reescrita pela escada.
             salvo = gerente.alinhar_o_modo_do_appid(
                 resultado.appid, kind=ponte.kind, caminho=ponte.mascara
             )
         else:
-            # `POR_SILENCIO`/`POR_GESTO` são byte a byte os `CONFIRMADA_POR_*`
-            # do esquema — a igualdade é PORTÃO em
-            # `tests/unit/test_ponte_escada.py`, não coincidência, e é o que
-            # deixa a escada falar sem importar o esquema. Quem escolhe entre
-            # os dois é `ponte_escada.por_que_confirmou`, no tique.
             salvo = gerente.confirmar_ponte(
                 resultado.appid,
                 kind=ponte.kind,
@@ -1146,17 +670,9 @@ def tique_da_escada(
         )
         return resultado.fim
     if salvo is None:
-        # O jogo não tem perfil próprio, e nem `confirmar_ponte` nem
-        # `alinhar_o_modo_do_appid` INVENTAM um — criar arquivo nas costas dela
-        # tem uma porta só, que é o editor. Sem perfil não há gaveta, e o
-        # produto diz isso em vez de fingir que gravou.
         logger.info("ponte_escada_sem_perfil_para_carimbar", appid=resultado.appid)
         return resultado.fim
     if resultado.carimbar is not None:
-        # Só o carimbo tem linha própria aqui. O alinhamento sozinho já é dito
-        # por `ponte_de_pe_alinhada_no_perfil`, do escritor — e uma linha
-        # `ponte_escada_carimbada por=None` seria o journal dizendo que
-        # carimbou o que não carimbou.
         logger.info(
             "ponte_escada_carimbada",
             appid=resultado.appid,
@@ -1174,15 +690,7 @@ def _soltar_a_trava_do_lancamento(daemon: Any) -> None:
 
 
 def _travar_o_pad_que_o_jogo_vai_abrir(daemon: Any, appid: int, epoch: float) -> None:
-    """O pad de pé ao `exec` é o que o jogo abre. Nada automático o recria.
-
-    O R-04 só olha `display_authority`, e ela vira ``game`` segundos depois
-    do `exec` — ou nunca, quando a janela não tem classe. Nesse vão o perfil
-    de fora do jogo reaplicava o caminho dele e o jogo perdia o aparelho que
-    acabara de abrir. A trava começa aqui. O gesto dela continua passando
-    (`gamepad.ORIGENS_GESTO_DELA`), e o próximo lançamento a solta antes de
-    vestir o pad dele.
-    """
+    """O pad de pé ao `exec` é o que o jogo abre. Nada automático o recria."""
     daemon._pad_travado_pelo_lancamento = (int(appid), epoch)
     logger.info("pad_travado_pelo_lancamento", appid=appid, epoch=epoch)
 
@@ -1276,12 +784,6 @@ def arm_launch_profile(
       (`ponte_escada.confirmacao_por_silencio`), e quem grava é
       `profiles/manager.confirmar_ponte`.
     """
-    # PONTE-ESCADA-LACO-01: o tique da escada vem ANTES de qualquer `return`
-    # deste corpo, e de propósito. Ele anda no relógio de 1 Hz do
-    # `_reconciliar_launch`, que é este; pendurá-lo depois do gate do marker o
-    # faria parar de andar assim que a janela do lançamento vencesse — ou seja,
-    # justo quando a partida dela começa, que é quando o silêncio conta.
-    # `suppress`: a escada é um extra, e um extra nunca derruba o arming.
     with contextlib.suppress(Exception):
         tique_da_escada(daemon)
 
@@ -1295,16 +797,8 @@ def arm_launch_profile(
     if getattr(daemon, "_launch_armed_for", None) == (appid, epoch):
         return None
     daemon._launch_armed_for = (appid, epoch)  # type: ignore[attr-defined]
-    # A trava do lançamento ANTERIOR acaba aqui, antes do apply: este
-    # lançamento é quem veste o pad, e a trava nova só nasce quando o jogo
-    # está para executar. Sem esta soltura o arming se bloquearia a si mesmo.
     _soltar_a_trava_do_lancamento(daemon)
 
-    # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): com o Modo Freestyle ligado
-    # o jogo que abre usa o Freestyle, que já é o perfil ativo — nem a ativação,
-    # nem a supressão, nem o modo, nem a escada do perfil do jogo. A máscara
-    # que o jogo lê no `exec` também é a do Freestyle
-    # (`materialize_launch_env`, `_o_freestyle_que_manda`).
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
 
     if o_freestyle_manda(getattr(daemon, "store", None)):
@@ -1332,10 +826,6 @@ def arm_launch_profile(
             "motivo": "allowlist_steam_input" if na_allowlist else "sem_perfil",
         }
 
-    # ALLOWLIST-SUPRESSAO-01: a supressão vem ANTES do desvio da allowlist —
-    # ela vale para os dois caminhos. `origin="launch"` não fura o lock manual
-    # (R-03): se ela alternou o modo jogo na mão nos últimos 30 s, o gesto dela
-    # é mais novo que o perfil e o applier guarda/ignora sozinho.
     supressao: object | None = None
     aplicar_supressao = getattr(daemon, "apply_profile_suppression", None)
     if callable(aplicar_supressao):
@@ -1353,38 +843,8 @@ def arm_launch_profile(
                 err=str(exc),
             )
 
-    # ELO-MUDO-01/E1 (22/08/2026): o LANÇAMENTO ATIVA O PERFIL.
-    #
-    # Vem ANTES do desvio da allowlist, e o lugar é a entrega. Até esta data o
-    # produto sabia o nome do jogo, resolvia o perfil por appid, e aplicava DUAS
-    # seções de oito: a supressão aqui em cima e, fora da allowlist, o `mode`
-    # logo abaixo. Gatilho, luz, vibração, som e microfone esperavam o
-    # autoswitch — que espera a CLASSE DA JANELA, e ela respondeu `unknown` por
-    # 21 minutos seguidos na medição de 22/08 (`reason="sem_foco_x"`,
-    # `useful_age_sec=1276`), com o jogo aberto e o perfil certo no disco.
-    #
-    # A queixa dela era essa, com estas palavras: *"o perfil do sackboy não tá
-    # aplicando as features das abas que eu seto e clico em salvar, como as abas
-    # de rumble, gatilhos e deve ter outras"*. O perfil estava certo, o `match`
-    # casava, a ativação sabe aplicar tudo — só que ninguém a chamava.
-    #
-    # E NA ALLOWLIST TAMBÉM, porque a decisão dela é essa: permitir a allowlist
     # faz o Hefesto CONTINUAR FUNCIONANDO, com a saída sendo xbox ou DualSense e
-    # as features que ela marcou. O que a allowlist pula é a DISPUTA PELO
-    # CONTROLE — máscara, grab, vpad, que é o `mode` do bloco abaixo. Não a cor,
-    # o gatilho, o volume nem a política de vibração. A metade oposta dessa
-    # frase foi REFUTADA por medição dela em 06/08/2026
     # (`CONTROLE-SONY-MEDIDO-01`, seção A INVERSÃO): com o DualSense físico e
-    # três jogos abertos, os gatilhos dela seguraram e a cor dela ficou. Há
-    # portão contra o retorno da frase caduca —
-    # `tests/unit/test_a_frase_refutada_da_allowlist.py`, e foi ele que pegou a
-    # primeira versão deste comentário.
-    #
-    # `origin="launch"` não fura o lock manual de 30 s (R-03) e não grava
-    # `session.json` — só `origin="manual"` grava (`manager.activate`), então a
-    # ativação automática não pode reescrever a escolha dela para o próximo
-    # boot. Idempotente com o autoswitch: se ele chegar depois com a mesma
-    # janela, `_activate` nem roda (candidato igual ao corrente).
     ativacao = _ativar_o_perfil_do_lancamento(
         daemon, profile, appid=appid, na_allowlist=na_allowlist
     )
@@ -1408,19 +868,11 @@ def arm_launch_profile(
 
     mode = getattr(profile, "mode", None)
     ponte_perfil = ponte_do_lancamento(profile, na_allowlist=na_allowlist)
-    # PONTE-ESCADA-01: o carimbo vem do PRÓPRIO perfil que está armando — não
-    # de uma segunda busca por appid. Duas buscas poderiam eleger perfis
-    # diferentes (o disco dela tem appid coberto por dois perfis: pragmata e
     # pragmata2), e aí o produto armaria um e leria o carimbo do outro.
     ponte_gravada = ponte_escada.ponte_do_carimbo(getattr(profile, "ponte", None))
 
-    # PONTE-ESCADA-LACO-01, momento 1: *"jogo SEM carimbo: a escada começa"*.
     ponte_de_pe = ponte_perfil
     if ponte_de_pe is None and mode is not None:
-        # O perfil OPINA, mas com uma tupla que a escada não conhece (um
-        # `kind` fora do vocabulário dela). Silêncio e recusa são coisas
-        # diferentes: mandar `None` aqui faria a escada ler "ninguém opinou" e
-        # armar o primeiro degrau POR CIMA da escolha dela.
         ponte_de_pe = ponte_escada.Ponte(kind=str(getattr(mode, "kind", "?")))
     comeco = ponte_tentativa.comecar(
         daemon,
@@ -1437,8 +889,6 @@ def arm_launch_profile(
         and ponte_gravada is not None
         and ponte_gravada.kind != ponte_escada.KIND_DESKTOP
     ):
-        # O carimbo preenche o SILÊNCIO do perfil, nunca o contradiz. Ver a nota
-        # PONTE-ESCADA-01 na docstring.
         mode = _modo_da_ponte(ponte_gravada)
         veio_do_carimbo = True
         logger.info(
@@ -1449,11 +899,6 @@ def arm_launch_profile(
         )
     veio_da_escada = False
     if mode is None and comeco.armar is not None:
-        # O primeiro degrau da escada. Este é o ramo em que o produto deixava
-        # de fazer o que a casa já sabia: perfil sem `mode` e sem carimbo era
-        # "nada a armar", e ela ficava com a máscara que estivesse de pé por
-        # acaso. Agora ele arma o degrau que o mapa de canais justifica — e só
-        # ele, porque `comecar` já recusou armar sozinho com jogo vivo.
         mode = _modo_da_ponte(comeco.armar.ponte)
         veio_da_escada = True
         logger.info(
@@ -1464,7 +909,6 @@ def arm_launch_profile(
         )
 
     if mode is None:
-        # Perfil sem seção `mode` é ausência de opinião (R-02) — nada a armar.
         logger.info(
             "launch_arm_perfil_sem_modo", appid=appid,
             profile=getattr(profile, "name", None),
@@ -1478,21 +922,6 @@ def arm_launch_profile(
             "escada": comeco.motivo,
         }
 
-    # NÃO se resolve aqui: o perfil manda, e a discordância aparece inteira
-    # para quem tem a palavra (a aba de perfil, e ela). Resolver em silêncio
-    # é como o produto passa a discordar de si mesmo sem ninguém ver.
-    #
-    # CANAL-SEM-VOZ-01 (17/09/2026) — ESTE AVISO DIZIA A COISA ERRADA, e a
-    # conta estava aqui: ele comparava `ponte_perfil != ponte_gravada`, duas
-    # `Ponte` cujo termo do meio vinha de VOCABULÁRIOS DIFERENTES — um CAMINHO
-    # de um lado, uma MÁSCARA do outro. Era ele que saía no journal dela às
-    # 10:45:02 de 17/09 dizendo `ponte_do_perfil=gamepad/xbox` contra
-    # `ponte_gravada=gamepad/dualsense` sobre um perfil que não escolheu
-    # caminho nenhum. A conta mudou de lugar e ganhou dono:
-    # `ponte_escada.divergencia_com_o_carimbo`, onde a tradução entre os dois
-    # vocabulários já morava. O payload deixou de publicar uma chave de ponte
-    # inteira — que era a forma de misturar os dois sem ninguém ver — e passa a
-    # nomear O TERMO que divergiu.
     if ponte_gravada is not None and not veio_do_carimbo:
         discordancia = ponte_escada.divergencia_com_o_carimbo(
             profile, ponte_gravada, na_allowlist=na_allowlist
@@ -1517,16 +946,7 @@ def arm_launch_profile(
         profile=getattr(profile, "name", None),
         kind=getattr(mode, "kind", None),
     )
-    # `origin="launch"`: NÃO fura o lock manual (R-03) — se ela mexeu na
-    # máscara nos últimos 30 s, o gesto dela é mais novo que o perfil e o
-    # applier guarda a pendência sozinho. Só o gesto DELA fura o lock.
     resultado = applier(mode, profile=profile, origin="launch")
-    # MASCARA-01 (19/08): o applier devolve True para três desfechos
-    # diferentes — aplicou, já-estava, e foi RECUSADO pelo gate R-04 — então o
-    # retorno dele não prova nada. A única prova é olhar o aparelho DEPOIS: a
-    # máscara viva tem de ser a que o perfil pediu. Sem esta conferência o
-    # arming registrava "armado" numa troca recusada, e o produto acreditava
-    # ter convergido (a mentira que sustentava o laço destrói-e-recria).
     native_pos, enabled_pos, flavor_pos, backends_pos, fisicos_pos = _snapshot(daemon)
     modo_antecipado = _modo_antecipado(
         profile,
@@ -1552,28 +972,15 @@ def arm_launch_profile(
             mascara_viva=flavor_pos,
             motivo=divergencia,
         )
-    # A máscara pode ter mudado: regrava as envs para o `default.env` refletir
-    # o estado real (o arquivo por appid já vinha certo pelo `_modo_antecipado`)
     # e para a divergência acima chegar ao `state_full` pelo mesmo caminho de
-    # sempre. NA HORA, com ou sem o escrevente (O-APP-RESPONDE-NA-HORA-01): o
-    # jogo que está abrindo lê o arquivo logo depois deste arming.
     with escrita_na_hora():
         materialize_launch_env(daemon)
-    # PONTE-ESCADA-01: a ponte que este lançamento ENTREGOU, e só quando a
-    # máscara convergiu — dizer "entreguei" sobre uma troca que o gate R-04
-    # recusou é a mesma mentira que a MASCARA-01 tirou daqui em 19/08. Nada é
-    # gravado: a escada não guarda posição (o degrau é a ponte que está de pé),
-    # e quem carimba a confirmação é `profiles/manager.confirmar_ponte`.
     ponte_entregue = ponte_gravada if veio_do_carimbo else ponte_perfil
     if veio_da_escada and comeco.armar is not None:
         ponte_entregue = comeco.armar.ponte
     if divergencia is not None:
         ponte_entregue = None
         if veio_da_escada:
-            # O primeiro degrau foi PEDIDO e não subiu. A tentativa não pode
-            # ficar acreditando estar num degrau que não está de pé: o gesto
-            # seguinte pularia justamente o degrau que faltava tentar. Mesma
-            # disciplina da MASCARA-01 — a prova é o aparelho, nunca o retorno.
             ponte_tentativa.encerrar(daemon, motivo="degrau_nao_subiu")
     _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
     return {
@@ -1590,10 +997,6 @@ def arm_launch_profile(
         "ponte_confirmada": (
             ponte_gravada.chave if ponte_gravada is not None else None
         ),
-        # ELO-MUDO-01/E1: o relatório da ativação sobe junto do arming, aqui e
-        # no retorno da allowlist. Sem ele, "armado: True" continuaria sendo
-        # resposta de TRANSPORTE — diz que o modo foi pedido, e cala sobre as
-        # outras sete seções do perfil.
         "ativacao": ativacao,  # chave de payload, como a `supressao` ao lado (noqa-acento)
     }
 
@@ -1664,36 +1067,9 @@ def compose_env(
     "carregamento completo" que o botão da GUI sempre prometeu.
     """
     env: dict[str, str] = {}
-    # WRAPPER-EM-TODOS-01 (03/08/2026) — A COBERTURA, e por que ela é o portão.
-    #
     # O `SDL_GAMECONTROLLER_IGNORE_DEVICES` esconde o DualSense físico do SDL
-    # **por VID/PID** (`_IGNORE_VALUE`, um par cravado): ele some para TODOS os
-    # controles daquele par de uma vez. Quem devolve cada um ao jogo é o vpad
-    # correspondente. Logo, emitir o IGNORE sem haver um vpad por físico é
-    # afirmar ao SDL algo falso — e o jogo fica com MENOS controles do que a
-    # mesa tem.
-    #
-    # A decisão era pelo TIPO (`all(b == "uhid")`), nunca pela CONTAGEM. E o
-    # `_snapshot` só listava vpads que EXISTEM: um jogador de co-op pendente
-    # (aguardando o `EVIOCGRAB`, `vpad is None`) não entrava, e o `all(...)`
     # passava trivialmente sobre uma lista incompleta. Com 2 DualSense físicos
-    # e 1 vpad vivo — exatamente o que o `EBUSY` de 02/08 produzia o tempo
-    # todo — o IGNORE escondia os dois e só um voltava.
-    #
-    # Sem cobertura, cai no comportamento de sempre: o controle DUPLICADO, que
-    # é o pior caso que a doutrina desta casa aceita por escrito
-    # (`assets/hefesto-launch.sh`, `install.sh`) — nunca um jogo sem controle.
-    # O `PROTON_DISABLE_HIDRAW` NÃO sai junto: ele impede o winebus de entregar
-    # o hidraw do físico, e não esconde nada do SDL.
-    # `fisicos == 0` significa "NÃO SEI", não "nenhum": o `_fisicos_na_mesa`
-    # devolve 0 quando o backend não expõe `describe_controllers`
-    # (`FakeController`, dublê de teste, backend legado) e nos prognósticos de
-    # perfil, que montam env ANTES de haver controle na mão. Nesse caso mantém-se
-    # o comportamento histórico (decidir pelo TIPO do vpad) — apertar sem
-    # informação removeria o dedup de quem sempre o teve, que é regressão, não
-    # cura. Só se exige cobertura quando se SABE quantos físicos há.
     tem_cobertura = cobertura_total(backends=backends, fisicos=fisicos)
-    # Modo Nativo: expõe o físico — sem DISABLE, sem IGNORE (whitelist default).
     if not native_mode and emulation_enabled and backends:
         if flavor in _MASCARAS_SO_EVDEV:
             env["SDL_JOYSTICK_HIDAPI"] = "0"
@@ -1714,37 +1090,11 @@ def compose_env(
             )
     env["__GL_SHADER_DISK_CACHE"] = "1"
     env["__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"] = "1"
-    # 8BIT-03: controles Nintendo (Pro/8BitDo modo Switch) mapeados por
-    # POSIÇÃO física, como o resto do ecossistema PC espera — sem isso o SDL
-    # segue as etiquetas Nintendo e A/B (e X/Y) chegam trocados ao jogo.
     # Inócua para DualSense/Xbox; entra em toda variante, como o preload.
     env["SDL_GAMECONTROLLER_USE_BUTTON_LABELS"] = "0"
-    # SENSORES-NO-JOGO-02 (13/09/2026): sem HIDAPI, o giroscópio e o
-    # acelerômetro chegam ao jogo pelo evdev, com o nó «Motion Sensors» casado
-    # ao gamepad da mesma peça pelo `uniq`. A libSDL2 2.30.x com o patch
-    # LP #2085140 (a da Ubuntu; o upstream a partir da 2.30.12) só casa esse nó
-    # quando o udev dela o classifica como acelerômetro — e com a dica no padrão
-    # 1 ela o classifica como joystick: o jogo ouve `HasSensor=False`. Medido
-    # nas bibliotecas dos runtimes da Steam (2.32.10, SDL3 3.4.14, sdl2-compat
-    # 2.32.70), a dica em 0 é inócua. Entra em toda variante, como a de cima.
     env["SDL_ACCELEROMETER_AS_JOYSTICK"] = "0"
     # HAPTICA-NATIVA-01 (17/09/2026): a vibração do DualSense viaja como ÁUDIO —
-    # os canais 3 e 4 do endpoint de 4 canais são os dois motores. O PRAGMATA
-    # VIBROU, na mão dela, com estas duas opções individuais do GE-Proton mais
-    # o device KS que o `hefesto-launch` grava no prefixo
-    # (`integrations/audio_ks_dualsense.py`):
-    #
-    # - KEEP_SONY mantém o endpoint do controle visível depois da ativação e
-    #   liga o fallback do ContainerId pelo pai USB (patches 0110/0112/0121);
-    # - MHWILDS faz o `setupapi` listar interfaces `KSCATEGORY_AUDIO` — é essa
     #   a pergunta que a RE Engine faz para achar o alvo (0103). Sem DualSense
-    #   no CABO o wrapper a troca por "0" no lançamento: ela expõe KS falso de
-    #   headset USB, e foi isso que quebrou o Black Desert Online no GE.
-    #
-    # O guarda-chuva `PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS` NÃO volta:
-    # derrubava o PRAGMATA (a8cf590a0). Entram em toda variante, pela regra de
-    # jogo nascer com tudo ligado; desligar um jogo é
-    # `PROTON_ENABLE_MHWILDS_USB_AUDIO=0 %command%` na Launch Option, que vence.
     env["PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE"] = "1"
     env["PROTON_ENABLE_MHWILDS_USB_AUDIO"] = "1"
     return env
@@ -1792,7 +1142,7 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
         native = bool(daemon.is_native_mode())
     cfg = getattr(daemon, "config", None)
     enabled = bool(getattr(cfg, "gamepad_emulation_enabled", False))
-    flavor = _mascara_do_primario(daemon, cfg)  # PS-L3-MASCARA-01: a do cartão
+    flavor = _mascara_do_primario(daemon, cfg)
 
     backends: list[str] = []
     primary = getattr(daemon, "_gamepad_device", None)
@@ -1808,37 +1158,18 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
     return native, enabled, flavor, backends, _fisicos_na_mesa(daemon)
 
 
-#: Assinatura da mesa: tudo de que a decisão do IGNORE depende, e nada mais.
-#: `(native, emulação ligada, máscara, backends dos vpads, físicos na mesa,
-#: Modo Freestyle ligado)`.
 AssinaturaDaMesa = tuple[bool, bool, str, tuple[str, ...], int, bool]
 
 
 def _o_freestyle_na_assinatura(daemon: Any) -> bool:
-    """O Modo Freestyle ligado, pelo dono — o sexto campo da assinatura.
-
-    O-FREESTYLE-E-UMA-CAMADA-SO-01, conferência de 28/09/2026. Ligado, cada
-    `steam_app_<id>.env` diz a máscara do Freestyle (`_o_freestyle_que_manda`),
-    e quem liga ou desliga nem sempre passa por uma borda que materializa: o
-    ciclo do PS + D-pad ativa com a origem `manual`, e é a ativação à mão que
-    muda o modo. Com o campo na assinatura, o vigia vê a troca como vê a de um
-    vpad, e o próximo jogo não lê no `exec` a máscara do modo de antes.
-    """
+    """O Modo Freestyle ligado, pelo dono — o sexto campo da assinatura."""
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
 
     return o_freestyle_manda(getattr(daemon, "store", None))
 
 
 def _assinatura_da_mesa(daemon: DaemonProtocol) -> AssinaturaDaMesa:
-    """O estado que decide a env, em forma comparável (hashable).
-
-    IGNORE-NO-FIM-DA-SEQUENCIA-01. O `_snapshot` já produz os cinco primeiros
-    campos, e o sexto é o Modo Freestyle (`_o_freestyle_na_assinatura`); aqui
-    eles viram uma tupla para responder à única pergunta que
-    o vigia faz: **mudou alguma coisa desde a última materialização?** Sem esta
-    comparação, "reavaliar quando sossega" viraria "regravar cinco arquivos a
-    cada segundo para sempre", que é churn, não cura.
-    """
+    """O estado que decide a env, em forma comparável (hashable)."""
     native, enabled, flavor, backends, fisicos = _snapshot(daemon)
     return (
         native, enabled, flavor, tuple(backends), fisicos,
@@ -1849,19 +1180,7 @@ def _assinatura_da_mesa(daemon: DaemonProtocol) -> AssinaturaDaMesa:
 def armar_rematerializacao(
     daemon: Any, *, motivo: str, agora: float | None = None
 ) -> None:
-    """ARMA o relógio do sossego. Não escreve nada — só adia a decisão.
-
-    A metade "armar a cada evento" do padrão. Cada borda de vpad (start/stop do
-    P1, promoção/teardown de um jogador de co-op, jogador registrado com o grab
-    ainda pendente) chama isto DEPOIS de fazer o que sempre fez. Rearmar é o
-    comportamento correto e deliberado: numa rajada, o relógio anda para a
-    frente a cada evento, e o disparo cai depois do ÚLTIMO — que é a definição
-    de "agir sobre tudo".
-
-    Best-effort integral: um daemon dublado que recuse `setattr` fica sem o
-    vigia e mantém exatamente o comportamento anterior (materialização por
-    borda). O `launch_env` nunca pode derrubar quem o chama.
-    """
+    """ARMA o relógio do sossego. Não escreve nada — só adia a decisão."""
     momento = agora if agora is not None else time.monotonic()
     with contextlib.suppress(Exception):
         daemon._launch_env_sossego_em = momento + JANELA_DE_SOSSEGO_SEC
@@ -1869,25 +1188,7 @@ def armar_rematerializacao(
 
 
 def vigiar_a_mesa(daemon: Any, *, agora: float | None = None) -> None:
-    """Arma o sossego quando a mesa mudou SEM borda que materializasse.
-
-    O buraco que esta função tapa é real e está no journal dela de 12/08: às
-    00:15:32.047 os três controles secundários foram registrados com
-    `coop_player_grab_pending` — **o `_spawn_player` com grab pendente não
-    materializa nada** — e a promoção deles só veio dez segundos depois. Nesses
-    dez segundos a mesa tinha QUATRO físicos e UM vpad, e nenhum caminho do
-    produto tinha motivo para reavaliar a env.
-
-    A família inteira do buraco: o número de FÍSICOS muda sem passar por borda
-    nenhuma de vpad — um quinto controle que conecta e o co-op não adota, um
-    controle que sai enquanto o co-op está desligado, um jogador preso em
-    "aguardando grab". Em todos, o arquivo continua afirmando uma cobertura que
-    a mesa não tem mais, e o próximo jogo a abrir congela a afirmação.
-
-    Só arma se ainda NÃO houver relógio andando: rearmar a cada tique de 1 Hz
-    empurraria o vencimento para sempre e o disparo nunca aconteceria. Numa
-    rajada de verdade quem rearma são as bordas, que é o lugar certo.
-    """
+    """Arma o sossego quando a mesa mudou SEM borda que materializasse."""
     with contextlib.suppress(Exception):
         if getattr(daemon, "_launch_env_sossego_em", None) is not None:
             return
@@ -1899,24 +1200,7 @@ def vigiar_a_mesa(daemon: Any, *, agora: float | None = None) -> None:
 
 
 def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bool:
-    """DISPARA quando a mesa sossegou: reavalia a cobertura e regrava se mudou.
-
-    A metade "disparar quando sossega, agir sobre tudo". Devolve True quando
-    regravou. Chamada da reconciliação de 1 Hz
-    (`subsystems.gamepad._reconciliar_launch`), que é o único ponto de cadência
-    fixa alcançável a partir daqui.
-
-    **O que ela NÃO conserta, e é preciso dizer** (IGNORE-NO-FIM-DA-SEQUENCIA-01,
-    12/08/2026): o jogo lê estas variáveis UMA vez, no `exec env "$@"` do
-    `assets/hefesto-launch.sh`. Depois disso o ambiente dele está congelado, e
-    **regravar o arquivo não alcança processo nenhum que já subiu** — não existe
-    chamada de sistema para trocar o `environ` de outro processo. Por isso o
-    disparo avisa no journal quando a cobertura mudou com um jogo do wrapper
-    ainda rodando (`launch_env_mudou_depois_do_exec`): o arquivo passa a estar
-    certo para o PRÓXIMO lançamento, e a sessão em curso segue com a afirmação
-    velha. Fingir que a regravação curou a sessão aberta seria a mentira mais
-    cara desta casa com outra roupa.
-    """
+    """DISPARA quando a mesa sossegou: reavalia a cobertura e regrava se mudou."""
     try:
         prazo = getattr(daemon, "_launch_env_sossego_em", None)
         if prazo is None:
@@ -1924,15 +1208,8 @@ def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bo
         momento = agora if agora is not None else time.monotonic()
         if momento < float(prazo):
             return False
-        # A ESCRITA DA BORDA AINDA EM VOO (O-APP-RESPONDE-NA-HORA-01): o recibo
-        # dela está a caminho, e julgar agora seria regravar e gritar sobre o
-        # que a borda já escreveu. O relógio fica armado e vencido: o tique
-        # seguinte decide, com o recibo pousado (`_a_escrita_em_voo`).
         if _a_escrita_em_voo():
             return False
-        # Desarma ANTES de decidir: se a materialização falhar, o vigia rearma
-        # sozinho no tique seguinte (a assinatura gravada não terá mudado) em
-        # vez de o relógio ficar vencido disparando a cada tique.
         daemon._launch_env_sossego_em = None
         assinatura = _assinatura_da_mesa(daemon)
         anterior = getattr(daemon, "_launch_env_assinatura", None)
@@ -1959,15 +1236,7 @@ def _avisar_se_o_jogo_ja_congelou(
     anterior: AssinaturaDaMesa | None,
     atual: AssinaturaDaMesa,
 ) -> None:
-    """Grita no journal quando a cobertura mudou com um jogo já de pé.
-
-    A honestidade que o item 3 da IGNORE-NO-FIM-DA-SEQUENCIA-01 exige. Este é o
-    quadrante em que o produto NÃO tem cura: a env do jogo em curso está
-    congelada desde o `exec`, e a única saída real seria ele ser relançado. Sem
-    esta linha, a próxima pessoa a ler o journal veria a regravação e concluiria
-    que o problema foi resolvido — que é exatamente o erro que custou o dia de
-    12/08.
-    """
+    """Grita no journal quando a cobertura mudou com um jogo já de pé."""
     with contextlib.suppress(Exception):
         if anterior is None:
             return
@@ -2004,14 +1273,7 @@ def _load_profiles(daemon: DaemonProtocol) -> list[Any]:
 
 
 def _o_freestyle_que_manda(daemon: DaemonProtocol) -> Any | None:
-    """O perfil Freestyle quando o Modo Freestyle está ligado; ``None`` quando não.
-
-    O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), item 4: *"a máscara
-    antecipada no lançamento (`mascara_do_perfil_antecipada`, que hoje lê o
-    perfil do jogo)"* passa a ler o Freestyle ligado. O jogo lê a env UMA vez,
-    no `exec`: com a máscara do perfil do jogo ali, o pad que o Freestyle põe
-    de pé seria o errado para o jogo desde o primeiro frame.
-    """
+    """O perfil Freestyle quando o Modo Freestyle está ligado; ``None`` quando não."""
     from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, o_freestyle_manda
 
     if not o_freestyle_manda(getattr(daemon, "store", None)):
@@ -2035,32 +1297,7 @@ def _steam_profiles(daemon: DaemonProtocol) -> list[tuple[int, Any]]:
 
 
 def _nativos_fora_da_antecipacao(profiles: Sequence[Any]) -> list[str]:
-    """Nomes dos perfis NATIVOS que a antecipação por-appid NÃO cobre.
-
-    NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: o `desktop` saiu desta
-    lista. Ele entrou aqui em 09/08 pela premissa de que "desktop + IGNORE
-    congelado = ZERO controles", e a decisão dela de 14/09
-    (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL) diz o contrário: a Navegação é
-    mouse, o jogo não ver gamepad ali é a intenção, e é o único jeito de o PS + R3
-    funcionar DENTRO do jogo — a env é lida uma vez, no `exec`. Sem esta mudança
-    as duas regras opostas conviviam no mesmo módulo, e um perfil `desktop`
-    casado por título deixava o `default.env` sem IGNORE para sempre, em qualquer
-    modo. O Modo NATIVO continua aqui, e por inteiro: nele o vpad não existe de
-    propósito, e o físico escondido seria o jogo sem controle nenhum.
-
-    Achado MED da revisão adversarial da Fase 2: um perfil `kind=native`
-    casado por `window_title_regex`/`process_name` (o próprio sprint
-    UX recomenda "perfil para o launcher" por título) — ou por um
-    `window_class` que não seja `steam_app_<id>` — não gera arquivo por appid,
-    então o jogo lança pelo `default.env`. Se esse default carrega IGNORE, a
-    sequência é determinística: a janela ganha foco → o autoswitch ativa o
-    perfil nativo → a emulação cai → o vpad some e o físico continua escondido
-    pelo IGNORE congelado na env do processo = ZERO controles. Quando existe
-    ao menos um perfil assim, o `default.env` OMITE o IGNORE (conservador:
-    duplicado > zero controles). Perfil coberto = só `steam_app_*` no
-    window_class e nenhum outro critério (o arquivo por-appid antecipa o modo
-    dele). `MatchAny` com modo nativo conta como arriscado.
-    """
+    """Nomes dos perfis NATIVOS que a antecipação por-appid NÃO cobre."""
     out: list[str] = []
     for profile in profiles:
         kind = getattr(getattr(profile, "mode", None), "kind", None)
@@ -2079,14 +1316,8 @@ def _nativos_fora_da_antecipacao(profiles: Sequence[Any]) -> list[str]:
     return out
 
 
-
 def _permite_uhid(daemon: Any) -> bool:
-    """Gate VPAD-08 da factory, tolerante a dublês (R-05).
-
-    `controller_allows_uhid` mora em `subsystems.gamepad`; importar no topo
-    criaria ciclo, e um daemon dublado em teste pode não ter a superfície que
-    ele espera. Na dúvida, False = prognóstico conservador.
-    """
+    """Gate VPAD-08 da factory, tolerante a dublês (R-05)."""
     try:
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             controller_allows_uhid,
@@ -2099,34 +1330,14 @@ def _permite_uhid(daemon: Any) -> bool:
 
 @dataclass(frozen=True)
 class ModoAntecipado:
-    """O modo que o perfil de um jogo IMPÕE quando ele estiver valendo.
-
-    MASCARA-01 (19/08): antes disto o arquivo por appid guardava só a `env` e
-    um `motivo` em prosa, e a linha `estado:` dele era copiada do estado
-    GLOBAL — daí a contradição medida às 00:40, com "perfil gamepad xbox" e
-    "mascara=dualsense" na MESMA linha, sem que nada agisse. O modo do perfil
-    agora é um dado: é ele que a linha do arquivo por appid descreve, e é
-    contra ele que a divergência é medida.
-    """
+    """O modo que o perfil de um jogo IMPÕE quando ele estiver valendo."""
 
     native: bool
     emulacao: bool
     mascara: str
     backends: tuple[str, ...]
     motivo: str
-    #: Físicos na mesa NO INSTANTE em que este modo foi antecipado.
-    #: IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026): a `env` do arquivo por appid
-    #: só obedece à cobertura por físico se o número viajar junto com o modo —
-    #: `0` é "NÃO SEI", e "não sei" AUTORIZA o IGNORE (ver `cobertura_total`).
-    #: Fica fora do `como_estado`: a linha `estado:` compara modo com modo, e o
-    #: censo da mesa é do estado VIVO, que já vai na mesma linha atrás de
-    #: `vivo:`.
     fisicos: int = 0
-    #: A env esconde o físico AGORA para a troca que vem depois, sem vpad de pé.
-    #: TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a Navegação é um degrau do PS + R3,
-    #: e a env é lida UMA vez, no `exec`. Antes isto viajava escondido dentro de
-    #: `backends` com `emulacao=False`, e a linha `estado:` do arquivo dizia o
-    #: contrário do que a env fazia. É um campo porque é um FATO do modo.
     pronto_para_troca: bool = False
 
     def como_estado(self) -> str:
@@ -2145,15 +1356,7 @@ def divergencia_de_mascara(
     emulacao_viva: bool,
     flavor_vivo: str,
 ) -> str | None:
-    """Motivo curto da divergência perfil-vs-aparelho, ou None quando casam.
-
-    Decisão PURA, testável sem daemon. A pergunta é uma só: **o jogo vai ver o
-    que o perfil dela prometeu?** Perfil nativo/desktop não promete máscara
-    nenhuma (o jogo vê o físico, e é isso que ele pediu) => nunca diverge.
-    Perfil `gamepad` promete uma máscara concreta, e aí três desfechos a
-    quebram: o daemon em Modo Nativo, a emulação desligada, ou uma máscara
-    diferente de pé.
-    """
+    """Motivo curto da divergência perfil-vs-aparelho, ou None quando casam."""
     if modo is None or modo.native or not modo.emulacao:
         return None
     if native_vivo:
@@ -2175,40 +1378,7 @@ def _modo_antecipado(
     identidade: str | None = None,
     vpads_previstos: int = 1,
 ) -> ModoAntecipado | None:
-    """O `ModoAntecipado` do perfil, ou None quando ele não tem opinião.
-
-    Perfil `mode=None` não materializa arquivo próprio — o wrapper cai no
-    `default.env`. `kind=gamepad` com máscara dualsense usa os backends
-    REAIS atuais (se a emulação está desligada agora, não dá para garantir
-    uhid no futuro => conservador, sem IGNORE).
-
-    IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) — `fisicos` entrou aqui, e o
-    motivo é um buraco medido no disco dela: **a cobertura por físico nunca
-    valeu para o arquivo por appid.** O `materialize_launch_env` chamava esta
-    função sem `fisicos`, o default 0 significa "NÃO SEI" e "não sei" autoriza
-    o IGNORE — logo o `steam_app_<appid>.env`, que é justamente o arquivo que um
-    jogo COM perfil lê (o caso dela: Sackboy, appid 1599660), saía com o IGNORE
-    em mesas onde o `default.env` do MESMO instante o omitia por falta de vpad.
-    Às 00:15:42.219 de 12/08 o journal registra os dois lados ao mesmo tempo:
-    `launch_env_ignore_omitido_sem_cobertura fisicos=4 vpads=2` para o default,
-    e o arquivo do Sackboy gravado com o IGNORE no mesmo `materialize`.
-
-    O comentário do callsite afirmava o contrário — *"os demais ... ficam no
-    default 0, que é o conservador — sem cobertura provada, sem IGNORE"* — e
-    isso nunca foi verdade em código: `fisicos=0` é o ramo PERMISSIVO. Fato
-    errado se substitui.
-
-    **A correção só vale onde há contagem de verdade.** Nos ramos de
-    PROGNÓSTICO a lista de backends é um símbolo de TIPO (`["uhid"]`,
-    `["uinput"]`), não um censo de vpads: comparar `len(["uhid"]) >= 4` diria
-    "sem cobertura" sobre uma mesa que ainda nem existe e reabriria o R-05 —
-    o arquivo por appid voltaria a ficar PIOR que o `default.env`, que é o
-    defeito que o prognóstico foi escrito para curar. Ali `fisicos` continua 0,
-    e continua sendo uma promessa sobre o futuro. O preço dessa promessa está
-    declarado no relatório da sprint, porque é decisão dela: **o jogo lê a
-    promessa no instante do `exec`, e a mesa que a cumpre pode levar um minuto
-    para existir.**
-    """
+    """O `ModoAntecipado` do perfil, ou None quando ele não tem opinião."""
     mode = getattr(profile, "mode", None)
     if mode is None:
         return None
@@ -2218,24 +1388,10 @@ def _modo_antecipado(
             native=True, emulacao=False, mascara=flavor_atual,
             backends=(), motivo="perfil nativo",
         )
-    # PS-L3-MASCARA-01 (14/09/2026): a máscara que o jogo vai ver é a do CARTÃO do
-    # jogador 1 quando o perfil a guarda — a que a aba Jogar mostra e o PS + L3
-    # troca —, e só sem ela a máscara padrão do perfil.
     mascara = _mascara_prevista(profile, mode, flavor_atual=flavor_atual, identidade=identidade)
     if kind == "desktop":
-        # A NAVEGAÇÃO NÃO É FIM DE LINHA: é um dos degraus do PS + R3, e a env é
-        # lida UMA vez, no `exec`. Sem o físico escondido desde a partida, o jogo
         # que abriu na Navegação fica com o DualSense de plástico (que o Hefesto
-        # graba ao subir um modo de jogo) e o vpad chega como segundo controle.
-        # Medido em 14/09: `steam_app_4235410.env` sem IGNORE depois de o PS + R3
-        # parar na Navegação.
-        #
-        # DECISÃO DELA — D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL, 14/09/2026:
         # fora do Modo Nativo o jogo não vê o DualSense de plástico, com perfil ou
-        # sem perfil. O preço, que ela leu antes de escolher: na Navegação o jogo
-        # fica sem gamepad até ela subir um modo. `emulacao=False` continua sendo
-        # a verdade (não há vpad agora) e quem diz que a env esconde o físico é
-        # `pronto_para_troca`, que a linha `estado:` do arquivo carimba.
         return ModoAntecipado(
             native=False, emulacao=False, mascara=mascara,
             backends=_backends_da_troca(
@@ -2250,40 +1406,18 @@ def _modo_antecipado(
 
         flavor = mascara
         if flavor in _MASCARAS_SO_EVDEV:
-            # O vpad Xbox e o Nintendo Pro são uinput POR DESIGN — o IGNORE é
-            # seguro independente do estado atual (invariante VPAD-06).
             return ModoAntecipado(
                 native=False, emulacao=True, mascara=flavor,
                 backends=("uinput",), motivo=f"perfil gamepad {flavor}",
             )
         if normalizar_caminho(getattr(mode, "caminho", None)) == "xbox":
             # PS-L3-MASCARA-01: o caminho Xbox com a máscara DualSense é o Edge
-            # 0df2 em uinput, POR ESCOLHA dela — o IGNORE do 0ce6 não o alcança.
             return ModoAntecipado(
                 native=False, emulacao=True, mascara=flavor,
                 backends=("uinput",), motivo="perfil gamepad dualsense (caminho xbox)",
             )
-        # R-05 (auditoria 23/07): quando o perfil pede uma máscara DIFERENTE da
-        # vigente, os `backends` recebidos são os do vpad ATUAL — que é de outro
-        # flavor e não descreve o que vai existir quando o perfil ativar.
-        #
-        # Caso medido: máscara global em `xbox` (vpad uinput) e o Sackboy com
-        # perfil `dualsense`. O `steam_app_1599660.env` saía SEM
-        # `SDL_GAMECONTROLLER_IGNORE_DEVICES` e SEM `PROTON_DISABLE_HIDRAW`,
-        # porque "uinput" não autoriza o dedup — ou seja, o arquivo por-appid
-        # ficava estritamente PIOR que o `default.env`, e o jogo abria vendo o
         # DualSense físico junto com o virtual (o controle duplicado).
-        #
-        # A correção é PROGNOSTICAR o backend com os MESMOS gates da factory,
-        # em vez de herdar o do vpad de outro flavor.
-        #
-        # A assimetria de risco favorece o prognóstico: se ele errar, o vpad cai
-        # para uinput Edge `0x0DF2`, que NÃO está na lista do IGNORE
-        # (`0x054c/0x0ce6`) — o pior caso é mapeamento SDL menos validado, nunca
-        # "zero controles".
         backends_efetivos = backends
-        # Os backends REAIS são um censo de vpads: aqui a cobertura por físico
-        # vale, exatamente como vale para o `default.env` do mesmo instante.
         fisicos_efetivos = fisicos
         motivo = "perfil gamepad dualsense (backends reais)"
         if flavor != flavor_atual or not backends:
@@ -2291,7 +1425,6 @@ def _modo_antecipado(
 
             prognostico_uhid = uhid_available() and permite_uhid
             backends_efetivos = ["uhid"] if prognostico_uhid else backends
-            # Prognóstico: a lista acima é TIPO, não contagem — ver docstring.
             fisicos_efetivos = 0
             motivo = (
                 "perfil gamepad dualsense (prognóstico uhid)"
@@ -2314,13 +1447,7 @@ def _env_for_profile(
     permite_uhid: bool = False,
     fisicos: int = 0,
 ) -> tuple[dict[str, str], str] | None:
-    """(env, motivo) antecipando o modo que o perfil impõe; None = sem opinião.
-
-    Fachada fina sobre `_modo_antecipado` — a `env` é derivada do modo, para
-    o arquivo e a linha `estado:` dele NUNCA descreverem estados diferentes.
-    O `fisicos` atravessa inteiro: é ele que faz a cobertura por físico valer
-    também para o arquivo por appid (IGNORE-NO-FIM-DA-SEQUENCIA-01, 12/08).
-    """
+    """(env, motivo) antecipando o modo que o perfil impõe; None = sem opinião."""
     modo = _modo_antecipado(
         profile,
         flavor_atual=flavor_atual,
@@ -2334,13 +1461,7 @@ def _env_for_profile(
 
 
 def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
-    """A `env` que materializa um `ModoAntecipado`.
-
-    TROCA-DENTRO-DO-JOGO-01 (14/09/2026): `pronto_para_troca` é o modo que ainda
-    não tem vpad mas vai ter quando ela subir um modo de jogo lá dentro. A
-    PS-L3-MASCARA-01 dizia isto com um OR sobre `backends`, e o campo explícito
-    é o mesmo fato com nome — a linha `estado:` do arquivo passa a dizê-lo.
-    """
+    """A `env` que materializa um `ModoAntecipado`."""
     return compose_env(
         native_mode=modo.native,
         emulation_enabled=modo.emulacao or modo.pronto_para_troca,
@@ -2353,17 +1474,7 @@ def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
 def appids_em_cena(
     daemon: Any, *, base_dir: Path | None = None, now: float | None = None
 ) -> set[int]:
-    """Appids cujo perfil está (ou deveria estar) VALENDO agora.
-
-    Divergência entre a máscara do perfil e a máscara viva é NORMAL em repouso
-    — o arquivo por appid ANTECIPA o modo que o perfil vai impor, e o perfil só
-    passa a valer no launch. O que não é normal é divergir com o jogo em cena;
-    só esse caso vira alarme (`em_cena=True`) e chega à GUI.
-
-    As duas evidências são as mesmas do R-06 (`steam_input_exception_appid`),
-    pelo mesmo motivo: o marker do wrapper é autoritativo e imune a alt-tab; a
-    janela em foco cobre o jogo aberto sem as LaunchOptions do Hefesto.
-    """
+    """Appids cujo perfil está (ou deveria estar) VALENDO agora."""
     out: set[int] = set()
     with contextlib.suppress(Exception):
         sessao = launch_session_appid(base_dir=base_dir, now=now)
@@ -2415,9 +1526,7 @@ def _publicar_divergencias(
         if (item["appid"], item["motivo"]) in anteriores:
             continue
         if item["em_cena"]:
-            # O caso medido: ela escolheu Xbox, salvou, e o aparelho ficou
             # DualSense com o jogo aberto. Warning porque é defeito visível
-            # para ela, não curiosidade de log.
             logger.warning(
                 "mascara_do_perfil_divergente",
                 appid=item["appid"],
@@ -2527,17 +1636,7 @@ def _avisar_canal_sem_imu(
 
 
 def _device_ks_nos_lancadores() -> dict[str, int]:
-    """Grava o device KS nos prefixos dos LANÇADORES. Nunca levanta.
-
-    Devolve `{"escritos": N, "ocupados": N, "prefixos": N}` para o log — um
-    número por transição, que é o que separa *"rodou e não tinha o que fazer"*
-    de *"não rodou"*.
-
-    **O DONO DA LISTA É `camadas_vulkan.prefixos_dos_lancadores`**, e ela lê as
-    duas fontes do Heroic (o `GamesConfig/<app>.json` de quem mudou o prefixo à
-    mão e o `defaultSettings.defaultWinePrefix` de quem nunca abriu aquela
-    tela). Uma segunda lista aqui seria a segunda grafia do mesmo fato.
-    """
+    """Grava o device KS nos prefixos dos LANÇADORES. Nunca levanta."""
     fora = {"escritos": 0, "ocupados": 0, "prefixos": 0}
     try:
         from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
@@ -2549,9 +1648,6 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
             prefixos_excluidos,
         )
 
-        # O PREFIXO DO JOGO EXCLUÍDO FICA SEM O DEVICE (01/10/2026,
-        # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01): a exclusão o tira, e
-        # esta carona o reporia na transição seguinte.
         fora_da_exclusao = prefixos_excluidos()
         prefixos = [
             p for p in cv.prefixos_dos_lancadores()
@@ -2561,10 +1657,6 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
         fora["prefixos"] = len(prefixos)
         if not prefixos:
             return fora
-        # A LISTA É A DO CURADOR, pela mesma função (28/09/2026,
-        # A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): os quatro lugares e o cabo
-        # que nenhum lugar serve. Uma segunda soma aqui seria a segunda grafia
-        # da lista que o lançamento grava.
         controles = controles_do_registro()
         for prefixo in prefixos:
             try:
@@ -2575,24 +1667,13 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
                 fora["ocupados"] += 1
             elif r.escreveu:
                 fora["escritos"] += 1
-    except Exception:  # boundary best-effort (ver a chamadora)
+    except Exception:
         logger.debug("device_ks_nos_lancadores_falhou", exc_info=True)
     return fora
 
 
 def materialize_launch_env(daemon: DaemonProtocol) -> None:
-    """Regrava `default.env` + `steam_app_<appid>.env` com o estado REAL.
-
-    Best-effort e barata (arquivos de ~200 B): NUNCA propaga exceção — o
-    wrapper degrada sozinho para "nenhuma env" quando o arquivo falta; a
-    materialização quebrada não pode derrubar o start da emulação.
-
-    O-APP-RESPONDE-NA-HORA-01 (02/10/2026): com o escrevente armado (o daemon,
-    pelo `IpcServer.start`), a foto do daemon vivo é tirada aqui e o resto vai
-    ao fio escrevente; esta função volta sem esperar a escrita. Sem ele, ou
-    dentro de `escrita_na_hora()`, a escrita acontece antes de voltar, como
-    sempre. As 17 linhas que a chamam não mudam.
-    """
+    """Regrava `default.env` + `steam_app_<appid>.env` com o estado REAL."""
     escrevente = _ESCREVENTE
     no_fio = (
         escrevente is not None
@@ -2611,12 +1692,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
 def _a_parte_de_fora(
     foto: _FotoDoLancamento, devolver: Callable[[Callable[[], None]], None]
 ) -> None:
-    """A materialização sobre a foto: os perfis, os modos, a escrita, as estradas.
-
-    Não lê objeto do daemon: só a foto. As duas devoluções (as divergências e o
-    recibo) vão pelo `devolver`, que na escrita de sempre as roda na hora e no
-    fio escrevente as põe no laço do serviço.
-    """
+    """A materialização sobre a foto: os perfis, os modos, a escrita, as estradas."""
     t0 = time.perf_counter()
     target = launch_env_dir(ensure=True)
     native, enabled, flavor = foto.native, foto.enabled, foto.flavor
@@ -2625,26 +1701,11 @@ def _a_parte_de_fora(
     leitor = foto.leitor
     modo_vivo = foto.modo_vivo
     estado = modo_vivo.como_estado()
-    # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o `default.env` é o arquivo de
-    # TODO jogo sem perfil próprio, e passou a sair do mesmo tipo de modo que
-    # o arquivo por appid — `modo_do_estado_vivo`. Antes ele copiava o estado
     # vivo e, sem vpad de pé, abria o jogo com o DualSense de plástico à
-    # vista. Os argumentos abaixo saem todos do modo.
-    # WRAPPER-EM-TODOS-01: este é o ÚNICO chamador com o estado real da mesa,
-    # e o censo dela viaja dentro do modo (`ModoAntecipado.fisicos`). NOTA
-    # DATADA — 12/08/2026 (IGNORE-NO-FIM-DA-SEQUENCIA-01): aqui dizia que os
-    # demais chamadores "ficam no default 0, que é o conservador — sem
-    # cobertura provada, sem IGNORE". O código sempre fez o oposto:
-    # `fisicos=0` é "NÃO SEI" e "não sei" AUTORIZA o IGNORE (ver
-    # `cobertura_total`).
     default_env = env_do_modo(modo_vivo)
     if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
         arriscados = _nativos_fora_da_antecipacao(_load_profiles(leitor))
         if arriscados:
-            # Perfil NATIVO fora do alcance da antecipação por appid: o
-            # IGNORE congelado no default.env viraria zero controles quando
-            # o autoswitch ativasse esse perfil (ver
-            # `_nativos_fora_da_antecipacao`). Duplicado > zero.
             del default_env["SDL_GAMECONTROLLER_IGNORE_DEVICES"]
             estado += " ignore_omitido=perfil_nativo_sem_appid"
             logger.info(
@@ -2655,7 +1716,6 @@ def _a_parte_de_fora(
     desired = {"default.env"}
     em_cena = foto.em_cena
     divergencias: list[dict[str, Any]] = []
-    # O-FREESTYLE-E-UMA-CAMADA-SO-01: ligado, é o modo DELE que cada jogo lê.
     freestyle = _o_freestyle_que_manda(leitor)
     for appid, do_jogo in _steam_profiles(leitor):
         profile = freestyle if freestyle is not None else do_jogo
@@ -2665,21 +1725,11 @@ def _a_parte_de_fora(
             backends=backends,
             identidade=foto.identidade,
             permite_uhid=foto.permite_uhid,
-            # IGNORE-NO-FIM-DA-SEQUENCIA-01: a mesa REAL também chega aqui.
-            # Sem ela, o arquivo por appid era o único caminho do produto em
-            # que a cobertura por físico nunca valeu.
             fisicos=fisicos,
             vpads_previstos=foto.vpads_previstos,
         )
         if modo is None:
             continue
-        # MASCARA-01: a linha `estado:` do arquivo por appid descreve o
-        # modo DO PERFIL — que é o que este arquivo materializa. Antes ela
-        # repetia o estado GLOBAL, e o resultado era a contradição medida
-        # ("perfil gamepad xbox ... mascara=dualsense" na mesma linha): o
-        # melhor detector de divergência da árvore era só texto, e
-        # descrevia o estado errado por cima. O estado vivo continua na
-        # linha, atrás de `vivo:`, porque é dele que a divergência fala.
         estado_do_perfil = f"{modo.motivo} | {modo.como_estado()}"
         motivo_divergencia = divergencia_de_mascara(
             modo,
@@ -2705,104 +1755,16 @@ def _a_parte_de_fora(
         )
         desired.add(name)
     devolver(lambda: foto.publicar(divergencias))
-    # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui morreu o
-    # laço da allowlist do Steam Input, e ele merece o obituário inteiro
-    # porque cada linha dele tinha medição por trás.
-    #
-    # O que ele fazia: para cada appid marcado, sobrescrevia o
-    # `steam_app_<appid>.env` com `compose_env(native_mode=True,
-    # emulation_enabled=False, backends=[])` — ou seja, SEM
-    # `SDL_GAMECONTROLLER_IGNORE_DEVICES` e SEM `PROTON_DISABLE_HIDRAW`. Em
-    # português: *"jogo, olhe para o controle físico"*. Era o par obrigatório
-    # da outra metade da marca, que retirava o gamepad virtual de cena
-    # (`gamepad.sync_steam_input_exception`): o físico ficava sendo o único
-    # dispositivo, e escondê-lo aqui seria zero controles.
-    #
-    # A decisão dela inverteu a marca: o jogo marcado passa a ver o controle
-    # DO HEFESTO, e é o FÍSICO que se esconde. Com a outra metade invertida,
-    # esta aqui não pode ficar como estava — o par tem de continuar sendo
-    # par. Uma env que manda o jogo olhar para o físico enquanto o daemon o
-    # graba e esconde o hidraw produz exatamente o "Jogador 3" fantasma que
-    # ela viu no Sackboy em 08/08 (`JOGADOR-3-FANTASMA-01`): um controle
-    # enumerado que não responde a nada.
-    #
-    # E a inversão não vira um ramo novo: vira a AUSÊNCIA de ramo. O jogo
-    # marcado passa a receber exatamente a mesma env de qualquer outro jogo
-    # — a do perfil dele, se houver, e o `default.env` se não houver —, que é
-    # a leitura literal da regra dela: *"a allowlist do Steam Input NÃO tira
-    # o Hefesto da frente"*. De quebra, herda sem escrever uma linha as três
-    # travas de segurança que o ramo antigo contornava: a cobertura por
-    # físico (`cobertura_total`), o vpad degradado em uinput e o perfil
-    # nativo fora da antecipação. Nenhuma delas pode ser dispensada por
-    # opt-in — todas existem contra o mesmo desfecho, que é ela ficar com
-    # ZERO controles, e o invariante desta casa continua sendo
-    # "duplicado > zero controles".
-    #
-    # A limpeza do arquivo velho é de graça: o `steam_app_<appid>.env` sem
-    # dedup que as versões anteriores gravaram na máquina dela não está mais
-    # em `desired`, então a varredura logo abaixo o apaga sozinha na primeira
-    # materialização — sem passo manual, como manda a regra de 08/08.
     for stale in target.glob("steam_app_*.env"):
         if stale.name not in desired:
             with contextlib.suppress(OSError):
                 stale.unlink()
-    # IGNORE-NO-FIM-DA-SEQUENCIA-01: o recibo do que ficou GRAVADO. É contra
-    # ele que o vigia compara a mesa de agora — e é por isso que ele é
-    # carimbado no FIM, depois de os arquivos existirem: carimbar antes
-    # faria uma escrita que falhou passar por escrita feita, e o vigia
-    # calaria para sempre sobre a divergência.
     devolver(foto.carimbar)
-    # **E AS OUTRAS ESTRADAS SÃO REESCRITAS AQUI — 21/09/2026,
-    # LANCADOR-AGNOSTICO-01.** Ordem dela: *"O PROJETO E SUAS FEATURES
-    # DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR SER STEAM. QUALQUER OUTRO
-    # LANÇADOR O FUNCIONAMENTO SEGUE IGUAL."*
-    #
-    # Até aqui a assimetria era estrutural: a Steam recebia o ambiente VIVO
-    # (este `default.env`, relido pelo `hefesto-launch.sh` a cada
-    # lançamento) e os outros lançadores recebiam uma FOTOCÓPIA tirada no
-    # dia em que alguém clicou o botão «Consertar» — que saiu em 10/09/2026
-    # (LANCADOR-LOCALIZAR-01) e levou o ÚNICO chamador de
-    # `integrations/cura_por_estrada` junto. O módulo ficou escrito,
-    # testado e sem ninguém para acioná-lo.
-    #
-    # **A CARONA É O QUE TORNA AS DUAS SIMÉTRICAS:** o mesmo gatilho, a
-    # mesma conta, no mesmo instante. A escrita é idempotente e FUNDE (ela
-    # lê, junta e regrava, preservando o que é dela), então rodar a cada
-    # transição não acumula nada.
-    #
-    # **DENTRO DO `try`, e de propósito:** a função já promete nunca
-    # levantar, e o `except` desta borda é a segunda rede. A materialização
-    # quebrada não pode derrubar o start da emulação — que é o contrato
-    # escrito na docstring desta função.
     from hefesto_dualsense4unix.integrations.cura_por_estrada import (
         curar_todas_as_estradas,
     )
 
     estradas = curar_todas_as_estradas()
-    # **E O DEVICE KS VAI NA MESMA CARONA — 21/09/2026.**
-    #
-    # A háptica nativa (a que a RE Engine acha pelo `KSCATEGORY_AUDIO`)
-    # mora no `system.reg` do prefixo, e quem a escreve nos jogos da STEAM
-    # é o wrapper `hefesto-launch`, no lançamento. **O Heroic não passa por
-    # wrapper nenhum**, então o prefixo dele nunca recebia o device: medido
-    # no disco dela em 21/09 — três prefixos da Steam com 24, 36 e 42
-    # ocorrências de `HEFESTOKS`, e o do Guardiões da Galáxia com ZERO.
-    #
-    # ESTE É O GATILHO CERTO, e não um a mais: o que muda o device KS é o
-    # conjunto de CONTROLES, que é exatamente o que dispara esta função. O
-    # wrapper continua sendo quem serve a Steam; isto serve quem não tem
-    # wrapper, pela mesma conta e no mesmo instante — a simetria que a
-    # carona da estrada, logo acima, já estabeleceu.
-    #
-    # **SÓ OS PREFIXOS DE LANÇADOR**, e a restrição é de custo: os 32
-    # `compatdata` da Steam dela já têm dono, e varrer `/proc` por
-    # wineserver 33 vezes por transição de controle seria pagar de novo o
-    # que o wrapper já paga.
-    #
-    # Prefixo OCUPADO é pulado sem drama: `aplicar` devolve `"ocupado"`
-    # quando o `wineserver` daquele prefixo está vivo, e a próxima
-    # transição refaz. Escrever por baixo de um jogo aberto é o defeito
-    # que aquela guarda existe para impedir.
     ks = _device_ks_nos_lancadores()
     logger.info(
         "launch_env_materializado",
@@ -2823,9 +1785,6 @@ def _rodar_na_hora(acao: Callable[[], None]) -> None:
     acao()
 
 
-#: A escrita é UMA de cada vez, e nunca a de uma foto mais velha que a última
-#: escrita: o fio escrevente e a escrita de sempre (o arming do lançamento)
-#: podem se cruzar, e a foto mais nova é a que vale.
 _TRAVA_DA_ESCRITA = threading.Lock()
 _ULTIMA_ORDEM_ESCRITA = 0
 
@@ -2857,13 +1816,7 @@ def _a_foto_ou_nada(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLancament
 
 
 class _OQueOFioLe:
-    """O que a parte de fora lê no lugar do daemon — O-APP-RESPONDE-NA-HORA-01.
-
-    `_load_profiles`, `_steam_profiles` e `_o_freestyle_que_manda` recebem o
-    daemon e só leem dele o `controller` (para montar o `ProfileManager`, que
-    não o usa para listar) e o `freestyle_ligado` do `store`. No fio escrevente
-    elas recebem isto: o Modo Freestyle como a foto o viu, e nenhum objeto vivo.
-    """
+    """O que a parte de fora lê no lugar do daemon — O-APP-RESPONDE-NA-HORA-01."""
 
     def __init__(self, freestyle_ligado: bool) -> None:
         self.controller = None
@@ -2877,18 +1830,8 @@ class _StoreDaFoto:
 
 @dataclass(frozen=True)
 class _FotoDoLancamento:
-    """Tudo o que a materialização pergunta ao daemon VIVO, tirado no laço.
+    """Tudo o que a materialização pergunta ao daemon VIVO, tirado no laço."""
 
-    O-APP-RESPONDE-NA-HORA-01, cura 2 (02/10/2026). A materialização rodava
-    inteira no laço do serviço, sem `await`: de 316 a 401 ms por chamada, e
-    2.837 ms na troca de modo das 19h18 de 01/10, com o IPC inteiro esperando.
-    A foto é o que lê objeto do daemon; o resto (os perfis, o modo de cada
-    jogo, a escrita, as estradas e o device KS) trabalha só sobre ela, e pode
-    rodar no fio escrevente.
-    """
-
-    #: A ordem das fotos: a escrita de uma foto mais velha que a última
-    #: escrita não acontece (ver `_escrever_o_lancamento`).
     ordem: int
     native: bool
     enabled: bool
@@ -2900,11 +1843,7 @@ class _FotoDoLancamento:
     identidade: str | None
     permite_uhid: bool
     vpads_previstos: int
-    #: O que `_load_profiles`/`_steam_profiles`/`_o_freestyle_que_manda`
-    #: recebem: o próprio daemon na escrita de sempre, `_OQueOFioLe` no fio.
     leitor: Any
-    #: As duas devoluções ao daemon (as divergências e o recibo), que voltam
-    #: ao laço pelo escrevente; na escrita de sempre, rodam na hora.
     publicar: Callable[[list[dict[str, Any]]], None]
     carimbar: Callable[[], None]
     foto_ms: float
@@ -2921,43 +1860,16 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
         daemon, native=native, enabled=enabled, flavor=flavor,
         backends=backends, fisicos=fisicos,
     )
-    # DEDUP-06: o log de "dedup quebrada" mora AQUI, na borda de
     # materialização (transição de estado) — nunca no state_full de 20 Hz.
-    # O `dedup_ok` por jogador que a GUI/doctor consomem sai do IPC.
-    #
-    # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a regra é a MESMA do `dedup_ok`,
-    # e agora é lida do mesmo lugar. Esta cópia decidia por `backend !=
-    # "uhid"` e gritava sobre o caminho Xbox — a escolha DELA — enquanto o
-    # `dedup_status` já a isentava desde a PS-L3-MASCARA-01. Duas cópias da
-    # mesma conta é como esta casa reintroduz um defeito já pago.
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
 
     dedup_ok, dedup_motivos = dedup_status(daemon)
     if not dedup_ok and not native and enabled and backends:
         logger.warning("dedup_broken", motivos=dedup_motivos, backends=backends)
-    # CANAL-SEM-VOZ-01 (17/09/2026): a amputação deixa de cair calada.
-    #
-    # EVENTO PRÓPRIO, DONO PRÓPRIO, e a separação é decisão DELA: o
-    # `dedup_broken` acima fala de DEGRADAÇÃO, e o uinput do caminho Xbox
-    # NÃO é degradação (PS-L3-MASCARA-01, 14/09/2026) — `dedup_status` o
-    # isenta desde então, e continua isentando. Pendurar esta voz naquele
-    # aviso reabriria uma decisão medida; decisão medida não se apaga.
-    #
     # O QUE ELE DIZ QUE NINGUÉM DIZIA: com a máscara DualSense de pé, o
-    # jogo vê o par VID/PID da Sony por um canal `uinput` — e dez linhas do
-    # `docs/data/mapa-controles.csv` saem do ar juntas. O preço estava
-    # escrito desde 19/08 num COMENTÁRIO de `ponte_escada.py` (*"errar para
-    # Xbox custa as dez, e custa em silêncio"*), e em 17/09 ela jogou o
     # PRAGMATA com controle por movimento e o controle não respondeu.
-    # As dez são LIDAS do mapa, nunca digitadas aqui.
     _avisar_canal_sem_imu(daemon, native=native, enabled=enabled)
-    # RUMBLE-SEM-DONO-01 (11/08/2026): o mesmo raciocínio do `dedup_broken`
-    # acima — o aviso mora na BORDA de materialização, que é o único ponto
     # com o estado real da mesa, e não no state_full de 20 Hz. Sem vpad e
-    # sem Modo Nativo, a vibração do jogo não passa por nós (o
-    # multiplicador da GUI é do sink do vpad) e ainda assim escrevemos no
-    # mesmo controle. Era o quadrante que o journal dela mostrava e que o
-    # produto não contava a ninguém.
     from hefesto_dualsense4unix.daemon.subsystems.rumble import (
         sem_dono_do_rumble,
     )
@@ -2980,11 +1892,6 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
 
     ordem = next(_ORDEM_DAS_FOTOS)
 
-    # A DEVOLUÇÃO DE UMA FOTO VENCIDA NÃO PINTA POR CIMA DA MAIS NOVA. O fio
-    # põe as duas devoluções na fila do laço, e o arming do lançamento pode
-    # escrever (e devolver na hora) uma foto mais nova antes de a fila andar:
-    # sem esta conferência o recibo voltava ao da foto velha, e o vigia de 1 Hz
-    # gritava `launch_env_mudou_depois_do_exec` sobre o jogo que acabou de abrir.
     def carimbar() -> None:
         if ordem < _ULTIMA_ORDEM_ESCRITA:
             return
@@ -3006,9 +1913,6 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
         modo_vivo=modo_vivo,
         em_cena=frozenset(appids_em_cena(daemon)),
         identidade=_identidade_do_primario(daemon),
-        # R-05: o prognóstico do backend precisa do MESMO gate que a
-        # factory usa (VPAD-08 — o modo fake não pode plantar um Edge
-        # real no kernel).
         permite_uhid=_permite_uhid(daemon),
         vpads_previstos=_vpads_previstos(daemon, fisicos),
         leitor=_OQueOFioLe(freestyle_ligado) if no_fio else daemon,
@@ -3019,14 +1923,7 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
 
 
 class EscreventeDoLancamento:
-    """O fio que escreve o lançamento fora do laço do serviço.
-
-    O-APP-RESPONDE-NA-HORA-01, cura 2 (02/10/2026). Um pedido que chega com
-    uma escrita em curso vira no máximo UMA escrita a mais depois dela, com a
-    foto mais nova: o último estado vence, e dez pedidos numa rajada de co-op
-    não viram dez escritas. As devoluções ao daemon voltam ao laço pelo
-    `devolver` (o `call_soon_threadsafe` do laço que armou).
-    """
+    """O fio que escreve o lançamento fora do laço do serviço."""
 
     def __init__(
         self,
@@ -3034,17 +1931,12 @@ class EscreventeDoLancamento:
         laco: asyncio.AbstractEventLoop | None = None,
     ) -> None:
         self._devolver = devolver
-        #: O laço que armou: só os pedidos feitos DENTRO dele vão ao fio. Um
-        #: pedido de outro fio, ou de outro laço, escreve na hora, como sempre.
         self._laco_que_armou = laco
         self._trava = threading.Lock()
         self._pendente: _FotoDoLancamento | None = None
         self._tem_pedido = threading.Event()
         self._parar = False
-        #: Quantas fotos o fio escreveu (a régua conta as escritas por aqui).
         self.escritas = 0
-        #: A ordem da última foto pedida, e a da última cujas devoluções já
-        #: voltaram ao laço: entre as duas, a escrita está EM VOO (`em_voo`).
         self._pedida = 0
         self._pousada = 0
         self._fio = threading.Thread(
@@ -3074,13 +1966,7 @@ class EscreventeDoLancamento:
             self._tem_pedido.set()
 
     def em_voo(self) -> bool:
-        """Há foto pedida cujo recibo ainda não voltou ao laço?
-
-        É o que o vigia de 1 Hz pergunta antes de comparar a mesa com o recibo
-        (`_a_escrita_em_voo`): com a escrita fora do laço, o recibo da borda
-        chega depois dela, e a mesa de agora divergiria de um recibo que já
-        está a caminho.
-        """
+        """Há foto pedida cujo recibo ainda não voltou ao laço?"""
         with self._trava:
             return self._pedida > self._pousada
 
@@ -3107,10 +1993,6 @@ class EscreventeDoLancamento:
                     if _escrever_o_lancamento(foto, self._devolver):
                         self.escritas += 1
                 finally:
-                    # DEPOIS das devoluções da foto, na mesma fila do laço: a
-                    # escrita pousou (ou falhou, e o recibo ficou o de antes).
-                    # A ordem vai no padrão do `def`, e não pelo laço: a volta
-                    # roda depois, e a variável já seria a da foto seguinte.
                     def pousou(ordem: int = foto.ordem) -> None:
                         self._pousou(ordem)
 
@@ -3118,38 +2000,21 @@ class EscreventeDoLancamento:
                         self._devolver(pousou)
             if not parar:
                 continue
-            # PARANDO, O FIO NÃO VOLTA A ESPERAR: o evento já foi consumido, e
-            # esperá-lo de novo prendia o `stop` do serviço o teto inteiro
-            # (5 s) sempre que havia uma foto pendente. O que chegou durante
-            # esta escrita ainda é escrito; depois, o fio sai.
             with self._trava:
                 if self._pendente is None:
                     return
                 self._tem_pedido.set()
 
 
-#: O escrevente armado, ou None (a escrita de sempre, na hora). Só o
-#: `IpcServer.start` arma: a suíte, a CLI e os instrumentos não o sobem.
 _ESCREVENTE: EscreventeDoLancamento | None = None
 
 
 def _a_escrita_em_voo() -> bool:
-    """O escrevente armado tem uma escrita cujo recibo ainda não voltou ao laço?
-
-    O vigia de 1 Hz compara a mesa de agora com o recibo da última escrita
-    (`rematerializar_se_sossegou`). Na escrita de sempre o recibo era carimbado
-    na própria borda; com o escrevente ele chega depois da escrita, que leva de
-    0,3 a 2,8 s, e o tique que vence o sossego de 0,6 s da borda a julgaria
-    divergente: regravaria e gritaria `launch_env_mudou_depois_do_exec` sobre o
-    jogo de pé por uma mudança que a borda já escreveu. Com a escrita em voo, o
-    vigia julga no tique seguinte.
-    """
+    """O escrevente armado tem uma escrita cujo recibo ainda não voltou ao laço?"""
     escrevente = _ESCREVENTE
     return escrevente is not None and escrevente.vivo() and escrevente.em_voo()
 
 
-#: O arming do lançamento precisa do arquivo escrito ANTES de seguir: dentro de
-#: `escrita_na_hora()` a materialização é a de sempre, mesmo com o escrevente.
 _NA_HORA = threading.local()
 
 
@@ -3157,11 +2022,7 @@ def armar_o_escrevente(
     devolver: Callable[[Callable[[], None]], None],
     laco: asyncio.AbstractEventLoop | None = None,
 ) -> EscreventeDoLancamento | None:
-    """Arma o escrevente do processo. Devolve-o, ou None se já havia um vivo.
-
-    O de um laço que já fechou (o servidor que saiu sem `stop`) não segura o
-    lugar: ele para, e o novo entra.
-    """
+    """Arma o escrevente do processo. Devolve-o, ou None se já havia um vivo."""
     global _ESCREVENTE
     velho = _ESCREVENTE
     if velho is not None and velho.vivo():
@@ -3191,10 +2052,6 @@ def escrita_na_hora() -> Iterator[None]:
         _NA_HORA.ligada = antes
 
 
-# ---------------------------------------------------------------------------
-# PS-L3-MASCARA-01 (14/09/2026) — a env segue a máscara do CARTÃO, e o jogo abre
-# pronto para trocar de modo e de máscara dentro dele.
-# ---------------------------------------------------------------------------
 def _identidade_do_primario(daemon: Any) -> str | None:
     """O MAC do jogador 1 (`gamepad.primary_identity`), ou None. Nunca levanta."""
     with contextlib.suppress(Exception):
@@ -3217,10 +2074,6 @@ def _mascara_do_primario(daemon: Any, cfg: Any) -> str:
     """
     sessao = str(getattr(cfg, "gamepad_flavor", "dualsense") or "dualsense")
     with contextlib.suppress(Exception):
-        # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o leitor é UM
-        # (`external_mask.mascara_vestida`). Aqui havia uma cópia que aceitava
-        # qualquer string como máscara viva, e no estado de falha ela divergia
-        # da do gesto — a env do jogo e a barra de luz diziam coisas diferentes.
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             mascara_efetiva,
             mascara_vestida,
@@ -3336,12 +2189,6 @@ def modo_do_estado_vivo(
             fisicos=fisicos,
         )
     if enabled:
-        # EMULAÇÃO LIGADA E NENHUM VPAD: isto não é a Navegação, é FALHA (o
-        # `dedup_status` chama de `vpad_ausente` — /dev/uinput e /dev/uhid fora
-        # de alcance). A decisão dela é sobre o que ela ESCOLHE, e ela não
-        # escolheu isto: prometer a troca aqui seria esconder o físico sem ter o
-        # virtual para pôr no lugar, e o jogo abriria sem controle nenhum. Com o
-        # físico à vista ela pelo menos joga. TROCA-DENTRO-DO-JOGO-01, 14/09/2026.
         return ModoAntecipado(
             native=False, emulacao=False, mascara=flavor,
             backends=(), motivo="emulação ligada sem vpad (falha)",

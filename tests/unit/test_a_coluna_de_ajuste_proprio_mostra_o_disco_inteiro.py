@@ -1,46 +1,5 @@
 #!/usr/bin/env python3
-"""A coluna "Ajuste próprio" mostra TUDO o que o perfil guarda — na célula certa.
-
-QUEIXA DELA, 05/09/2026: *"a aba 10 tá com o mesmo problema de antes. nada
-mudou."*
-
-**A HIPÓTESE QUE ESTAVA NA MESA CAIU, e está medida.** A triagem anterior dizia
-que a coluna mostrava dado *deslocado uma casa* — a linha do segundo controle
-exibindo o que é do primeiro. Medido em 05/09 com o disco dela
-(``meu_perfil.json``, dois controles com ``leds``/``triggers``/``rumble``), a
-distribuição pousa certa: a leitura é POR NOME (``SECOES_DA_COLUNA``) e não pela
-ordem do dicionário, e o bloco por linha bate com o número de células.
-
-**O DEFEITO ERA OUTRO, E MAIOR: a coluna ESCONDIA uma seção inteira.**
-``ControllerOverrides`` ganhou ``sensores`` em 04/09 (``8f9589ba``,
-SENSOR-DE-VERDADE-01) e ``aba10.SECOES`` ficou nos cinco. O perfil passou a
-guardar giroscópio e acelerômetro por peça e a tabela que existe para responder
-*"o que este controle tem de próprio"* não tinha célula para dizê-lo — a dica da
-linha, que sai do ESQUEMA, já contava *"3 de 6 ajustes"* enquanto o cabeçalho ao
-lado dizia *"os cinco ajustes"*. Um controle cujo único ajuste próprio fosse o
-sensor entrava na conta do cabeçalho (*"1 de 2 controles com ajuste próprio"*)
-com a fileira inteira apagada.
-
-POR QUE ESTA RÉGUA, tendo três irmãs no assunto
-------------------------------------------------
-As três comparam LISTAS em Python — nomes contra nomes, valor contra posição no
-que o pacote EMITE. Nenhuma abre a página. Esta é a única que fecha o circuito:
-ela põe o valor na página PUBLICADA, com o ``BOOTSTRAP`` do piloto de verdade
-injetado, e pergunta ao Chrome QUAL célula acendeu — a linha e o nome da seção,
-lidos do DOM. É a régua que mediria um deslocamento se ele existisse, e é a que
-reprova no dia em que o esquema ganhar um sétimo campo sem coluna.
-
-O QUE ELA NÃO ALCANÇA: o WebKitGTK, que é o motor do produto. Aqui se mede o
-CONTRATO (quem acende o quê); a prova no motor de verdade é o ``--prova-clique``
-do piloto, com o daemon vivo.
-
-MORDIDA (as duas provadas em 05/09):
-  1. tire ``"sensores"`` de ``a10_perfis.SECOES_DA_COLUNA`` — cai
-     ``test_toda_secao_do_esquema_tem_celula_na_pagina`` e o caso do sensor;
-  2. troque a emissão de ``pacote()`` por ``for secao in (g.get("secoes") or {})``
-     (iterar o dicionário, que é o defeito de 02/09) — cai o caso da célula
-     única, dizendo quantas acenderam.
-"""
+"""A coluna "Ajuste próprio" mostra TUDO o que o perfil guarda — na célula certa."""
 from __future__ import annotations
 
 import pathlib
@@ -65,8 +24,6 @@ from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
-#: A MESA DA RÉGUA — dois controles, endereços MASCARADOS (octetos 4 e 5
-#: zerados). Nenhum endereço real de rádio entra em arquivo versionado.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "BT", "transporte": "bt", "alvo": True,
@@ -76,28 +33,12 @@ MESA = [
      "mascara": "DualSense"},
 ]
 
-#: O MENOR CORPO QUE CADA SEÇÃO ACEITA — ``None`` é "sem opinião", e
 #: ``_secoes_do_controle`` pergunta ``is not None`` sobre a SEÇÃO, não sobre o
-#: campo de dentro. Só o ``speaker`` exige conteúdo (SOM-02: ``muted`` sem
-#: ``volume`` mandaria volume ZERO e tomaria a posse do alto-falante).
-#:
-#: **A `mascara` NÃO É UM DICIONÁRIO, e é a primeira** (MASCARA-NO-PERFIL-01,
-#: 08/09/2026): o campo dela é um valor só (``"xbox"``), não uma sub-seção. Para
-#: a coluna isso é indiferente — ``!!`` de um valor é o mesmo ``!!`` de um
-#: objeto —, e por isso o tipo deste mapa é `Any` e não `dict`.
 MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
 }
 
-#: O QUE O PILOTO FAZ COM UMA LISTA, e é a linha que se mede aqui:
-#: ``alvos.forEach(function(el, i){ escrever(el, i < v.length ? v[i] : ''); })``.
-#: Ela é chamada pelo ``BOOTSTRAP`` de verdade — o texto abaixo só ENTREGA a
-#: carga e LÊ o DOM depois.
-#:
-#: O QUE SE LÊ É O PONTO desde 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
-#: o glifo diz o controle agora, e o que o perfil guarda só deste controle é o
-#: ponto (`guarda.proprio`) do mesmo `.gc`. A seção é a do glifo ao lado.
 LER_OS_PONTOS = """
 () => {
   const linhas = [];
@@ -113,12 +54,7 @@ LER_OS_PONTOS = """
 
 
 def _bootstrap() -> str:
-    """O ``BOOTSTRAP`` do piloto, lido do FONTE — sem importar ``gi``.
-
-    Importar o piloto traria o GTK junto, e uma régua que exige GTK deixa de
-    rodar no CI. Ler do fonte é o que garante que se mede o bootstrap DE
-    VERDADE, e não uma cópia que envelhece sozinha.
-    """
+    """O ``BOOTSTRAP`` do piloto, lido do FONTE — sem importar ``gi``."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py").read_text(
         encoding="utf-8")
     m = re.search(r'BOOTSTRAP = r"""(.*?)"""', fonte, re.S)
@@ -147,19 +83,7 @@ def _perfil(uniq: str, **overrides: Any) -> Any:
 def _emitidos(
     monkeypatch: pytest.MonkeyPatch, uniq: str, **overrides: Any,
 ) -> dict[str, Any]:
-    """O que ``a10_perfis.pacote()`` manda pintar, com a mesa de dois.
-
-    O DUBLÊ ENTRA PELO ``monkeypatch``, e não por atribuição crua — **medido em
-    05/09/2026, neste arquivo**. A primeira versão fazia
-    ``loader.load_all_profiles = lambda …`` direto, e o dublê SOBREVIVIA ao fim
-    do teste: rodando esta régua no mesmo processo que
-    ``test_ativar_nao_diz_aplicado_sobre_o_perfil_que_ja_vale.py``, aquele
-    arquivo caía com *"reativar o perfil que já vale passou pela guarda"* — dois
-    testes vermelhos num arquivo que não tinha defeito nenhum, e verdes quando
-    rodados sozinhos. É a mesma assinatura do dublê do co-op que envenenava
-    outro arquivo por ORDEM DE TESTE (04/09), e a cura é a mesma: quem troca
-    algo global devolve no teardown.
-    """
+    """O que ``a10_perfis.pacote()`` manda pintar, com a mesa de dois."""
     from hefesto_dualsense4unix.profiles import loader
 
     alvo = _perfil(uniq, **overrides)
@@ -176,23 +100,10 @@ def _lar(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
 
 
-# ---------------------------------------------------------------------------
-# 1. A PÁGINA TEM CÉLULA PARA TUDO O QUE O ESQUEMA GUARDA
-#    (a leitura é da PÁGINA publicada, não de uma lista Python)
-# ---------------------------------------------------------------------------
 def test_toda_secao_do_esquema_tem_celula_na_pagina() -> None:
-    """Um campo de ``ControllerOverrides`` sem célula é ajuste que a tela ESCONDE.
-
-    Ela guardaria o giroscópio daquele controle no disco e a tabela que existe
-    para mostrar o que a peça tem de próprio ficaria muda — foi o que aconteceu
-    entre 04/09 e 05/09, e é a queixa dela.
-
-    A CONTA SAI DA PÁGINA E DO ESQUEMA, e nenhum dos dois é digitado aqui.
-    """
+    """Um campo de ``ControllerOverrides`` sem célula é ajuste que a tela ESCONDE."""
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
     na_pagina = {m for m in re.findall(r'data-hef-secao="([^"]+)"', html)}
-    # A ÚNICA EXCEÇÃO É DECLARADA E TEM PRAZO: a seção que o esquema já guarda
-    # e cuja coluna espera a sessão dela (`SECOES_ESPERANDO_A_SESSAO_DELA`).
     faltando = [s for s in perfis_web.SECOES_POR_CONTROLE if s not in na_pagina
                 and s not in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA]
     assert not faltando, (
@@ -203,12 +114,7 @@ def test_toda_secao_do_esquema_tem_celula_na_pagina() -> None:
 
 
 def test_a_pagina_nao_inventa_secao_que_o_esquema_nao_guarda() -> None:
-    """O sentido contrário: célula sem campo acende sobre nada.
-
-    Ele é legítimo por um tempo — ver ``a10_perfis.ESPERANDO_O_ESQUEMA``, que
-    declara a coluna aprovada antes de o campo existir. O que não é legítimo é
-    uma coluna assim SEM declaração.
-    """
+    """O sentido contrário: célula sem campo acende sobre nada."""
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
     na_pagina = {m for m in re.findall(r'data-hef-secao="([^"]+)"', html)}
     sobrando = sorted(
@@ -220,9 +126,6 @@ def test_a_pagina_nao_inventa_secao_que_o_esquema_nao_guarda() -> None:
         f"`a10_perfis.ESPERANDO_O_ESQUEMA` ou tire a célula do desenho.")
 
 
-# ---------------------------------------------------------------------------
-# 2. O CIRCUITO FECHADO — o valor sai do perfil e acende A CÉLULA CERTA
-# ---------------------------------------------------------------------------
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 @pytest.mark.parametrize("linha", [0, 1])
@@ -230,22 +133,7 @@ def test_a_pagina_nao_inventa_secao_que_o_esquema_nao_guarda() -> None:
 def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
     monkeypatch: pytest.MonkeyPatch, linha: int, secao: str,
 ) -> None:
-    """Um ajuste, um controle: acende UMA célula, na linha e na coluna dele.
-
-    É a régua que mediria o *"deslocado uma casa"* — a linha do segundo controle
-    mostrando o do primeiro. Ela varre as duas linhas e as seis seções: 12 casos,
-    e cada um afirma o endereço EXATO do que acendeu.
-
-    O CAMINHO É O DO PRODUTO, inteiro: ``pacote()`` monta a lista achatada, o
-    ``BOOTSTRAP`` de verdade a distribui pelos ``[data-hef="guarda.proprio"]`` na
-    ordem do documento, e o alvo ``classe`` decide quem fica ``.on``. Nada aqui
-    reimplementa a pintura.
-
-    O ENDEREÇO MUDOU EM 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01): o
-    disco é o ponto embaixo do glifo. Enquanto o ponto espera o `--publicar 10`
-    (`a10_perfis.ESPERANDO_A_PUBLICACAO`), a régua mede a página do gerador; no
-    dia da publicação ela passa sozinha para a publicada.
-    """
+    """Um ajuste, um controle: acende UMA célula, na linha e na coluna dele."""
     from playwright.sync_api import sync_playwright
 
     assert secao in MENOR_CORPO, (
@@ -265,9 +153,6 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
         try:
             pg = navegador.new_page(viewport={"width": 1180, "height": 900})
             pg.goto(pagina.as_uri())
-            # A PONTE DE MENTIRA É O `webkit.messageHandlers`, como nas outras
-            # réguas de tela: o Chrome não tem `window.webkit`, e o bootstrap o
-            # toca ao instalar o ouvinte.
             pg.evaluate(
                 "window.webkit = {messageHandlers: {hefesto: "
                 "{postMessage: function(){}}}};")
@@ -279,8 +164,6 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
 
     acesas = [(i, nome) for i, celulas in enumerate(linhas)
               for nome, on in celulas if on]
-    # A SEÇÃO QUE ESPERA A SESSÃO DELA não tem célula na página publicada, e
-    # por isso não acende NENHUMA — acender uma vizinha é o defeito medido aqui.
     if secao in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA:
         assert acesas == [], (
             f"`{secao}` espera a sessão dela e acendeu {acesas} na página "
@@ -293,37 +176,11 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
         f"casando célula com vizinha.")
 
 
-# ---------------------------------------------------------------------------
-# 3. A DICA DO CABEÇALHO NÃO PODE CONTAR DIFERENTE DA LINHA
-# ---------------------------------------------------------------------------
 def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
-    """Dois números para o mesmo fato, na mesma tela, é a divergência que ela viu.
-
-    A dica da LINHA sai do esquema (``perfis_web._linhas_da_guarda``: *"3 de 6
-    ajustes só deste controle"*); a dica do CABEÇALHO sai do desenho
-    (``aba10.QUANTAS_SECOES``). Entre 04/09 e 05/09 a primeira dizia SEIS e a
-    segunda dizia CINCO, a poucos pixels uma da outra.
-
-    MORDIDA: tire uma seção de ``aba10.SECOES``, regere e publique — o cabeçalho
-    passa a dizer "cinco" e esta régua reprova mostrando os dois números.
-    """
+    """Dois números para o mesmo fato, na mesma tela, é a divergência que ela viu."""
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
-    # DIGITADO AQUI DE PROPÓSITO: é a terceira opinião. O produto e o gerador
-    # têm cada um a sua tabela, e uma régua que lesse a de qualquer um dos dois
-    # deixaria de ver um erro que os dois cometessem juntos. O `sete` entrou em
-    # 08/09/2026, com a `mascara` (MASCARA-NO-PERFIL-01).
-    #
-    # A FORMA DA FRASE MUDOU EM 11/09/2026 (A5-047, aprovada por ela): a dica
-    # dizia *"São os sete ajustes que o perfil sabe guardar por controle — …"* e
-    # passou a dizer *"São sete: …"* — a oração que repetia a primeira metade
-    # saiu, e a palavra `ajustes` com ela, porque a lista de nomes que vem a
-    # seguir já diz o que são. **O NÚMERO, que é o que esta régua mede, não
-    # mudou de lugar**: continua por extenso, na dica do cabeçalho. O que se
-    # cobra aqui é o número; a forma da frase é dela.
     extenso = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
                6: "seis", 7: "sete", 8: "oito"}
-    # A CONTA É A DA PÁGINA PUBLICADA (`SECOES_NA_TELA`): a seção que espera a
-    # sessão dela (24/09/2026, o `movimento`) ainda não tem célula ali.
     quantas = len(perfis_web.SECOES_NA_TELA)
     esperado = extenso.get(quantas, str(quantas))
     assert f"São {esperado}:" in html, (
@@ -333,33 +190,9 @@ def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
         f"ficam na mesma tela discordando.")
 
 
-# ---------------------------------------------------------------------------
-# 4. O LUGAR SEM CONTROLE NÃO DESENHA CONTROLE — 05/09/2026, palavra dela
-# ---------------------------------------------------------------------------
 def test_a_linha_sem_controle_nao_mostra_glifo_nenhum(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """*"os svgs não deveriam aparecer prós demais controles desconectados"*.
-
-    A QUEIXA É DELA, E O QUE ELA VIU ESTAVA MEDIDO DESDE 03/09 no próprio
-    pacote: com a mesa em dois controles, *"a fileira de OITO glifos de 'Ajuste
-    próprio' sai IDÊNTICA à das duas linhas de cima"*. O lugar vazio mostrava um
-    controle desenhado — apagado, mas desenhado — ao lado de um nome que já
-    dizia que ali não há ninguém.
-
-    ESTA RÉGUA MEDE A TELA, e não o CSS. Uma que procurasse a regra
-    `.tab.miuda tr.fora .gr{visibility:hidden}` no arquivo estaria DIGITANDO o
-    que devia LER — o defeito que esta casa nomeou onze vezes numa leva só —, e
-    ficaria verde com a regra presente e sem efeito (um seletor que não casa, um
-    `!important` do vizinho, a classe que o produto não acende).
-
-    O CAMINHO É O DO PRODUTO INTEIRO: `pacote()` monta as listas com UM controle
-    na mesa, o `BOOTSTRAP` de verdade as distribui, o alvo `classe` acende o
-    `fora` na `<tr>` — e a pergunta é feita ao navegador:
-    `getComputedStyle(glifo).visibility`.
-
-    A MORDIDA: apague a regra do `aba10.py`, regere e publique. As três linhas
-    sem controle voltam a `visible` e esta régua reprova nomeando a linha.
-    """
+    """*"os svgs não deveriam aparecer prós demais controles desconectados"*."""
     from playwright.sync_api import sync_playwright
 
     fora = _emitidos(monkeypatch, str(MESA[0]["uniq"]), leds={})
@@ -394,7 +227,6 @@ def test_a_linha_sem_controle_nao_mostra_glifo_nenhum(
         f"a tabela tem {len(visto)} linhas e a régua espera "
         f"{a10_perfis.LUGARES_DA_TABELA} — a medição perdeu o objeto")
 
-    # A MESA DESTA RÉGUA TEM DOIS: as duas primeiras linhas têm controle.
     for n, linha in enumerate(visto[:len(MESA)], start=1):
         assert not linha["fora"], (
             f"a linha {n} TEM controle e foi marcada como vazia")

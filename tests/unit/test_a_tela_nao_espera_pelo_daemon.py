@@ -1,47 +1,4 @@
-"""O tique da janela NÃO espera pelo daemon — A-TELA-QUE-TRAVA-01.
-
-QUEIXA DELA, 14/09/2026, com os dois controles na mesa:
-
-    *"tem algo muito estranho travando a interface do app. como um todo."*
-    (noqa-acento: citação literal dela)
-
-A CAUSA JÁ ESTAVA ESCRITA DENTRO DO PRÓPRIO TIQUE, desde a A-TELA-SAMBA-01 de
-03/09/2026: *"as DUAS VIAGENS de IPC do começo deste método são SÍNCRONAS —
-elas seguram o laço do GTK inteiro"*. Aquela leva mediu certo e curou de menos:
-ela fez o tique PULAR o seguinte quando o atual estourava o teto, o que encurta
-a fila e não desbloqueia nada. Enquanto `mesa_viva.estado_do_daemon()` não
-volta, o laço do GTK não roda — e janela que não roda o laço não rola, não
-recebe clique, não muda o `:hover` e não pisca o cursor. É travar.
-
-O NÚMERO SAI DO DIÁRIO DELA (`interface.log`, a sessão de 14/09/2026, lido sem
-escrever): **612 tiques lentos**, e em **457 deles o IPC é 80% ou mais do
-custo**. Por aba, o pior e a média do IPC:
-
-    01-jogar      244 lentos   IPC médio 568 ms   pior 6.016 ms
-    02-controles   55 lentos   IPC médio 929 ms   pior 2.665 ms
-    09-sistema      7 lentos   IPC médio 678 ms   pior 2.002 ms
-
-A CURA É DE FORMA: a leitura passou para um fio próprio (`LeitorDoEstado`), que
-pergunta na MESMA cadência de antes — uma por tique — e deixa a resposta num
-escaninho. O tique pega o que está lá e segue.
-
-AS TRÊS COISAS QUE ESTA RÉGUA SEGURA, e cada uma é uma forma de a cura morrer:
-
-1. **o tique não espera** — com uma leitura que demora, `leitor.ultimo()` volta
-   na hora;
-2. **a folga conta RESPOSTAS, não tiques** — sem a `self._geracao`, uma leitura
-   muda seria entregue a dez tiques por segundo e os três mudos de
-   `MUDOS_SEGUIDOS_QUE_VOLTARAM` queimariam em 300 ms, apagando os quatro
-   lugares da tela num piscar. É o defeito que a RECONECTAR-SAMBA-02 curou, e
-   que voltaria por outra porta;
-3. **a primeira leitura é síncrona** — sem ela o tique de abertura pinta `{}`,
-   que a tela lê como *"perguntei e não há ninguém na mesa"*.
-
-A MORDIDA, e ela é a de cima do arquivo: devolva
-`st = mesa_viva.estado_do_daemon()` ao corpo de `Piloto._tique` e
-:func:`test_o_tique_nao_chama_o_daemon_de_dentro_do_laco` reprova nomeando a
-linha.
-"""
+"""O tique da janela NÃO espera pelo daemon — A-TELA-QUE-TRAVA-01."""
 from __future__ import annotations
 
 import inspect
@@ -64,15 +21,9 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 from hefesto_dualsense4unix.interface import hefesto_vivo as hv
 
-#: Uma leitura de mentira que demora o que o daemon dela demorou no pior tique
-#: medido. Ela é o instrumento inteiro: se o tique voltar a esperar, é este
-#: número que aparece no relógio.
 PIOR_MEDIDO_S = 0.30
 
 
-# --------------------------------------------------------------------------
-# 1. O FIO: ele lê fora do laço, e quem pergunta não espera
-# --------------------------------------------------------------------------
 def test_a_primeira_leitura_e_sincrona() -> None:
     """`comecar()` semeia ANTES de soltar o fio — senão a tela nasce mentindo."""
     leitor = hv.LeitorDoEstado(lambda: {"controllers": [{"uniq": "aa"}]},
@@ -93,11 +44,7 @@ def test_a_primeira_leitura_e_sincrona() -> None:
 
 
 def test_quem_pergunta_nao_espera_pela_leitura_lenta() -> None:
-    """O teto desta régua é o custo de UM tique, e a leitura demora três.
-
-    MORDIDA: faça `leitor.ultimo()` chamar `self._ler()` e este teste reprova
-    relógio na mão — é exatamente o que o tique fazia até 14/09/2026.
-    """
+    """O teto desta régua é o custo de UM tique, e a leitura demora três."""
     soltar = threading.Event()
 
     def devagar() -> dict[str, Any]:
@@ -108,8 +55,6 @@ def test_quem_pergunta_nao_espera_pela_leitura_lenta() -> None:
     fio = threading.Thread(target=leitor.comecar, daemon=True)
     fio.start()
     try:
-        # A primeira resposta ainda está a caminho — e é justamente aí que o
-        # tique antigo ficava preso.
         t0 = time.perf_counter()
         for _ in range(10):
             leitor.ultimo()
@@ -177,15 +122,8 @@ def test_o_fio_pede_na_mesma_cadencia_do_tique() -> None:
     assert leitor._intervalo == pytest.approx(hv.TIQUE_MS / 1000.0)
 
 
-# --------------------------------------------------------------------------
-# 2. A FOLGA: ela conta RESPOSTAS, e é a geração que a segura
-# --------------------------------------------------------------------------
 def _piloto_de_mentira(leitor: hv.LeitorDoEstado) -> Any:
-    """O mínimo do `Piloto` que o caminho da resposta toca.
-
-    Montar o Piloto inteiro abriria janela GTK na tela dela, que é a TELA-DELA-01
-    desta casa. O que esta régua mede é o caminho, e ele cabe aqui.
-    """
+    """O mínimo do `Piloto` que o caminho da resposta toca."""
     piloto = SimpleNamespace(
         _folga=hv.FolgaDoServicoMudo(),
         _estado_vivo=leitor,
@@ -198,24 +136,12 @@ def _piloto_de_mentira(leitor: hv.LeitorDoEstado) -> Any:
 
 
 def _um_tique(piloto: Any) -> dict[str, Any]:
-    """UM tique, pelo método DO PRODUTO.
-
-    Reescrever aqui as linhas do portão da geração faria esta régua medir a
-    cópia e dar verde sobre o original — que é a forma de instrumento falso que
-    esta casa mais paga. `Piloto._estado_do_tique` é o dono, e é ele que roda.
-    """
+    """UM tique, pelo método DO PRODUTO."""
     return piloto._estado_do_tique()
 
 
 def test_a_folga_nao_queima_em_tiques_sem_resposta_nova() -> None:
-    """Dez tiques sobre UMA leitura muda gastam UM mudo da folga, não dez.
-
-    ESTE É O TESTE QUE A CURA PRECISAVA TER, e sem ele a A-TELA-QUE-TRAVA-01
-    reabriria a RECONECTAR-SAMBA-02 por outra porta: com o tique a 100 ms e a
-    leitura a 2 s, dez tiques leriam o mesmo `timed out` e a folga de TRÊS
-    acabaria em 300 ms — os quatro lugares apagariam e o «Reconectar controles»
-    voltaria a sambar, desta vez sem ninguém ter mexido nele.
-    """
+    """Dez tiques sobre UMA leitura muda gastam UM mudo da folga, não dez."""
     leitor = hv.LeitorDoEstado(lambda: {}, intervalo=10.0)
     leitor._estado, leitor._erro, leitor._geracao = {"controllers": ["x"]}, None, 1
     piloto = _piloto_de_mentira(leitor)
@@ -264,18 +190,8 @@ def test_o_servico_fora_do_ar_se_pinta_na_hora() -> None:
         "controles de minutos atrás sobre um daemon desligado")
 
 
-# --------------------------------------------------------------------------
-# 3. A MORDIDA: o tique não pode voltar a chamar o daemon
-# --------------------------------------------------------------------------
 def test_o_tique_nao_chama_o_daemon_de_dentro_do_laco() -> None:
-    """`Piloto._tique` não fala com o socket — quem fala é o fio.
-
-    A RÉGUA LÊ O CORPO DO MÉTODO, e a razão de ser assim é que o defeito é
-    ESTRUTURAL: não há valor de retorno que denuncie uma chamada síncrona, só a
-    espera — e medir espera dentro do `_tique` pediria a janela inteira de pé,
-    que é a TELA-DELA-01 desta casa. O que ela pega é a forma que custou seis
-    segundos de janela morta.
-    """
+    """`Piloto._tique` não fala com o socket — quem fala é o fio."""
     corpo = inspect.getsource(hv.Piloto._tique)
     linhas = [ln for ln in corpo.splitlines()
               if "estado_do_daemon" in ln and not ln.lstrip().startswith("#")]

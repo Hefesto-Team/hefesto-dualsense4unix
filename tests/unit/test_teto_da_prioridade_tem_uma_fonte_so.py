@@ -1,34 +1,4 @@
-"""O teto da escala de prioridade tem UMA fonte, e três lugares a obedecem.
-
-Decisão dela, 05/08/2026: *"preciso que as constantes apontem pros arquivos
-reais do import"*. Medido no mesmo dia, o número 200 morava em três lugares
-sem nenhum fio entre dois deles:
-
-- `profiles/sanidade.py` — `PRIORIDADE_MAXIMA`, com comentário declarando a
-  duplicação de propósito ("profiles/ não pode depender de app/");
-- `app/actions/profiles_actions.py` — `PRIORIDADE_MAXIMA`, a "fonte" que os
-  outros citavam;
-- a TELA — o trilho da Prioridade no editor da aba Perfis, que não importa
-  nada de ninguém. **Ele mudou de arquivo em 06/09/2026** (`GTK-3`, primeira
-  volta): era o `upper` do `profile_priority_adj` no `gui/main.glade`, e a
-  janela GTK sai inteira (`D-0609-GTK-LEVA-INTEIRA`). Hoje é o
-  `<input type="range" data-hef="editor.prioridade.escolha">` de
-  `interface/paginas/10-perfis.html`.
-
-Só UM par tinha portão (`test_empate01_a_cor_volta_a_ser_dela.py`, glade
-contra `profiles_actions`). O verificador semântico — que ACUSA prioridade
-fora da faixa e manda a usuária "reabrir na aba Perfis" — podia divergir da
-faixa que a aba Perfis realmente oferece, e o achado passaria a mentir sem
-que nada reprovasse. Este arquivo fecha esse triângulo.
-
-**Por que AST e não import de `profiles_actions`.** O módulo faz
-``import gi``/``gi.require_version("Gtk", "3.0")`` no topo: importá-lo aqui
-mataria o portão no CI headless. A casa tem duas saídas para isso — a guarda
-`exigir_gi_real` (que PULA o módulo inteiro sem GTK) e a leitura por AST. Aqui
-tem de ser a AST: um portão que confere se três números batem não pode ser um
-portão que some justamente onde não há GTK, porque é lá que roda o CI. Ler o
-literal pela AST não executa nada do módulo e vale em qualquer máquina.
-"""
+"""O teto da escala de prioridade tem UMA fonte, e três lugares a obedecem."""
 from __future__ import annotations
 
 import ast
@@ -48,13 +18,7 @@ _PROFILES_ACTIONS = _PACOTE / "app" / "actions" / "profiles_actions.py"
 
 
 def _constante_por_ast(arquivo: Path, nome: str) -> int:
-    """Lê um literal inteiro de módulo SEM importar o módulo.
-
-    Aceita tanto a atribuição de um literal (``X = 200``) quanto a reexport de
-    um atributo (``X = schema.PRIORIDADE_MAXIMA``) — neste segundo caso o valor
-    devolvido é o do módulo citado, resolvido pelo import de `schema`, que só
-    depende de stdlib + pydantic.
-    """
+    """Lê um literal inteiro de módulo SEM importar o módulo."""
     arvore = ast.parse(arquivo.read_text(encoding="utf-8"), filename=str(arquivo))
     for no in ast.walk(arvore):
         alvos: list[ast.expr] = []
@@ -79,7 +43,6 @@ def _constante_por_ast(arquivo: Path, nome: str) -> int:
     pytest.fail(f"{arquivo.name}: `{nome}` sumiu do módulo")
 
 
-#: O TRILHO DA PRIORIDADE na página publicada do editor de perfis.
 _TRILHO_DA_PRIORIDADE = re.compile(
     r'<input[^>]*type="range"[^>]*data-hef="editor\.prioridade\.escolha"[^>]*>'
 )
@@ -100,12 +63,7 @@ def _atributo_do_trilho(nome: str) -> int:
 
 class TestUmTetoSo:
     def test_o_verificador_semantico_usa_a_faixa_da_janela(self) -> None:
-        """`sanidade` e a aba Perfis têm de dizer o MESMO teto.
-
-        Este é o par que NÃO tinha portão. Divergir aqui faz o doctor acusar
-        "fora da faixa que a janela oferece" com uma faixa que a janela não
-        oferece — e a cura que ele imprime ("reabra na aba Perfis") não cura.
-        """
+        """`sanidade` e a aba Perfis têm de dizer o MESMO teto."""
         da_aba = _constante_por_ast(_PROFILES_ACTIONS, "PRIORIDADE_MAXIMA")
         assert da_aba == sanidade.PRIORIDADE_MAXIMA
 
@@ -127,14 +85,7 @@ class TestUmTetoSo:
 
 
 class TestAFonteEDaCamadaMaisBaixa:
-    """Depois da unificação de 05/08: quem manda mora em `profiles/schema.py`.
-
-    O critério da eleição é o import: `schema.py` depende só de stdlib +
-    pydantic, é de onde `draft_config` já lê o DEFAULT de `priority`, e é
-    importável por `profiles/`, por `app/` e pelo CLI sem puxar GTK. Os testes
-    acima seguiriam verdes com três cópias sincronizadas na mão; estes exigem
-    que não haja cópia nenhuma.
-    """
+    """Depois da unificação de 05/08: quem manda mora em `profiles/schema.py`."""
 
     def test_o_schema_declara_a_faixa(self) -> None:
         assert schema.PRIORIDADE_MINIMA == 0
@@ -148,12 +99,7 @@ class TestAFonteEDaCamadaMaisBaixa:
         assert sanidade.PRIORIDADE_MINIMA is schema.PRIORIDADE_MINIMA
 
     def test_a_aba_perfis_reexporta_em_vez_de_repetir(self) -> None:
-        """Sem importar `profiles_actions`: o literal 200 não pode voltar lá.
-
-        A leitura é textual de propósito — `_constante_por_ast` resolveria uma
-        reexport E um literal para o mesmo 200, e é justamente o literal que
-        esta asserção proíbe.
-        """
+        """Sem importar `profiles_actions`: o literal 200 não pode voltar lá."""
         arvore = ast.parse(
             _PROFILES_ACTIONS.read_text(encoding="utf-8"),
             filename=str(_PROFILES_ACTIONS),
@@ -175,10 +121,6 @@ class TestAFonteEDaCamadaMaisBaixa:
             )
 
     def test_o_nome_continua_no_modulo_da_aba(self) -> None:
-        """Seis asserções vivas importam `pa.PRIORIDADE_MAXIMA`.
-
-        Unificar não pode virar churn: o nome fica onde estava, só muda de
-        dono. Conferido pelo texto, para não puxar GTK.
-        """
+        """Seis asserções vivas importam `pa.PRIORIDADE_MAXIMA`."""
         fonte = _PROFILES_ACTIONS.read_text(encoding="utf-8")
         assert "PRIORIDADE_MAXIMA" in fonte

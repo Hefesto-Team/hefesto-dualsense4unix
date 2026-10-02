@@ -1,13 +1,13 @@
 """P2 — o daemon publica o carimbo de ponte, e a janela não tinha UM leitor.
 
 PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O `daemon.status` publica
-`pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1999`), e o
+`pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1500`), e o
 comentário ao lado diz a intenção em letra: *"para a janela dizer 'este jogo já
 sabe por onde entra'"*. Medido:
 
     $ grep -rn "pontes_confirmadas" src/hefesto_dualsense4unix/app/
-    app/draft_config.py:445:              # `manager.pontes_confirmadas()` …
-    app/actions/profiles_actions.py:3771: # carimbo viaja junto …
+    app/draft_config.py:321:              # `manager.pontes_confirmadas()` …
+    app/actions/profiles_actions.py:2294: # carimbo viaja junto …
 
 Dois hits, os dois em COMENTÁRIO. **Zero leitores.** A aba PRESERVA o carimbo
 no Salvar e nunca o mostrou — a cura escrita, o dado publicado, e a tela muda.
@@ -26,7 +26,7 @@ escrever isso na tela transformaria falta de informação em aviso.
 **FATO SUBSTITUÍDO — 26/08/2026.** Este cabeçalho dizia que
 `pontes_confirmadas` existia no `daemon.status` e **não** no
 `daemon.state_full`, e pedia o conserto de fundo. Ele foi feito: a BG-02
-publicou a chave no tique (`daemon/ipc_handlers.py:2483`). O que sobrou não é
+publicou a chave no tique (`daemon/ipc_handlers.py:1854`). O que sobrou não é
 ausência, é TETO — o tique paga um cache de 5 s
 (`_PONTES_CONFIRMADAS_TTL_SEC`, `:189`) porque a leitura crua abre cada perfil
 do disco sob `FileLock`. A aba continua buscando por GESTO porque precisa da
@@ -36,9 +36,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): sem o GTK real, este arquivo
-# importava a janela do `sys.modules` que o p10 e o p3 deixavam sobre o `gi`
-# falso. Sem aquele plantio, a guarda vem antes do import da janela.
 exigir_gi_real("p2: o carimbo de ponte na aba Perfis")
 
 from typing import Any
@@ -48,7 +45,6 @@ import pytest
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.integrations.jogos_locais import MSG_FORA_DA_MAQUINA
 
-#: O bloco `ponte` de `big_walk.json`, do disco DELA, copiado byte a byte.
 PONTE_DO_BIG_WALK: dict[str, Any] = {
     "kind": "gamepad",
     "gamepad_flavor": "dualsense",
@@ -70,12 +66,7 @@ class TestAFraseDoCarimbo:
         assert "19/08/2026" in frase, "o QUANDO é metade do que o carimbo diz"
 
     def test_a_linha_fala_o_vocabulario_da_aba_inicio(self) -> None:
-        """Um segundo vocabulário para o mesmo fato é como nascem os pares da F5.
-
-        `kind` e `gamepad_flavor` viram os MESMOS rótulos de `_MODE_KIND_ITEMS`
-        e `_MODE_FLAVOR_ITEMS`, que a aba Início já usa (UX-MODE-TERMS-01/02).
-        Se alguém escrever "modo gamepad" aqui, este teste reprova.
-        """
+        """Um segundo vocabulário para o mesmo fato é como nascem os pares da F5."""
         frase = pa.frase_da_ponte_confirmada(PONTES, APPID_DO_BIG_WALK)
         assert frase is not None
         assert dict(pa._MODE_KIND_ITEMS)["gamepad"] in frase
@@ -105,12 +96,7 @@ class TestAFraseDoCarimbo:
         assert "22/08/2026" in frase
 
     def test_o_campo_aceita_o_appid_do_jeito_que_a_tela_o_tem(self) -> None:
-        """O campo do editor guarda dígitos; o `wm_class` guarda `steam_app_<id>`.
-
-        Quem responde "que appid é este texto?" tem um dono só
-        (`normalize_appid`, da UNIFICA-PREDICADO-01) — e não pode nascer um
-        segundo regex aqui.
-        """
+        """O campo do editor guarda dígitos; o `wm_class` guarda `steam_app_<id>`."""
         for entrada in (APPID_DO_BIG_WALK, f"steam_app_{APPID_DO_BIG_WALK}"):
             assert pa.frase_da_ponte_confirmada(PONTES, entrada) is not None
 
@@ -142,11 +128,6 @@ class TestOSilencioEParteDaCura:
         frase = pa.frase_da_ponte_confirmada(pontes, "1")
         assert frase is not None
         assert "Confirmado em" not in frase
-
-
-# ---------------------------------------------------------------------------
-# A costura: a linha chega ao rótulo que já existe ao lado do campo do jogo
-# ---------------------------------------------------------------------------
 
 
 class _Rotulo:
@@ -211,14 +192,7 @@ class TestALinhaChegaNaTela:
         assert "19/08/2026" in rotulo.markup
 
     def test_sem_carimbo_o_rotulo_diz_so_o_que_ja_dizia(self) -> None:
-        """Nenhum texto NOVO na tela — o silêncio tem de chegar inteiro.
-
-        Este rótulo **já falava** antes do P2: com um appid que não está na
-        biblioteca desta bancada ele diz `MSG_FORA_DA_MAQUINA`. A prova do
-        silêncio, então, não é "invisível" — é **idêntico ao de ontem**: uma
-        linha só, e nenhuma palavra sobre ponte. Exigir invisibilidade aqui
-        seria o teste medindo o comportamento errado.
-        """
+        """Nenhum texto NOVO na tela — o silêncio tem de chegar inteiro."""
         aba = _Aba(APPID_DO_BIG_WALK)
         aba._pontes_confirmadas = {}
 
@@ -256,7 +230,7 @@ class TestABuscaDoCarimbo:
 
         A razão de 25/08 (*"`pontes_confirmadas` não existe no `state_full`"*)
         caducou na BG-02: ele é publicado nos dois lugares — por
-        `_handle_daemon_status` (`daemon/ipc_handlers.py:1999`) e por
+        `_handle_daemon_status` (`daemon/ipc_handlers.py:1500`) e por
         `_handle_daemon_state_full` (`:2483`). O que separa os dois é o TETO
         DE LEITURA: o tique passa por `_PONTES_CONFIRMADAS_TTL_SEC` (`:189`),
         cinco segundos de cache, porque a leitura crua abre cada perfil do

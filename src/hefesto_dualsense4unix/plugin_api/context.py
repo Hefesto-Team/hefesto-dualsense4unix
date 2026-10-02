@@ -1,20 +1,4 @@
-"""PluginContext — interface estavel exposta aos plugins.
-
-Plugins recebem um PluginContext em on_load() e usam seus atributos
-para interagir com o daemon de forma controlada, sem acesso direto
-ao objeto Daemon ou ao IController completo.
-
-API disponivel:
-  - ctx.controller  → ControllerProxy (subset de IController: set_led,
-                       set_trigger, set_rumble, set_player_leds,
-                       set_mic_led + estado read-only)
-  - ctx.bus         → BusProxy (bus.subscribe(topic))
-  - ctx.store       → StoreProxy (store.counter(key))
-  - ctx.log         → structlog logger prefixado com "plugin.<name>"
-
-Nota: não exponha o IController completo, DaemonConfig, StateStore
-bruto ou EventBus bruto. Use somente os proxies deste módulo.
-"""
+"""PluginContext — interface estavel exposta aos plugins."""
 from __future__ import annotations
 
 import logging
@@ -34,21 +18,12 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 
-# ---------------------------------------------------------------------------
-# ControllerProxy
-# ---------------------------------------------------------------------------
-
-
 class ControllerProxy:
-    """Fachada sobre IController exposta aos plugins.
-
-    Expoe apenas os métodos de output necessários e o estado read-only.
-    """
+    """Fachada sobre IController exposta aos plugins."""
 
     def __init__(self, controller: IController) -> None:
         self._ctrl = controller
 
-    # -- output --------------------------------------------------------------
 
     def set_led(self, color: tuple[int, int, int]) -> None:
         """Define a cor da lightbar. color = (R, G, B), valores 0-255."""
@@ -67,14 +42,9 @@ class ControllerProxy:
         self._ctrl.set_player_leds(bits)
 
     def set_mic_led(self, aceso: bool) -> None:
-        """Acende/apaga o LED do microfone. `True` = ACESO = mic VIVO.
-
-        MIC-DA-MESA-ELEICAO-01: a luz mudou de significado (era a convenção da
-        Sony, "aceso = mudo"). Acender não muta nada — o byte é outro.
-        """
+        """Acende/apaga o LED do microfone. `True` = ACESO = mic VIVO."""
         self._ctrl.set_mic_led(aceso)
 
-    # -- estado read-only ----------------------------------------------------
 
     @property
     def is_connected(self) -> bool:
@@ -92,16 +62,8 @@ class ControllerProxy:
         return self._ctrl.get_transport()
 
 
-# ---------------------------------------------------------------------------
-# BusProxy
-# ---------------------------------------------------------------------------
-
-
 class BusProxy:
-    """Fachada sobre EventBus exposta aos plugins.
-
-    Permite apenas subscribe (plugins não devem publicar eventos internos).
-    """
+    """Fachada sobre EventBus exposta aos plugins."""
 
     def __init__(self, bus: EventBus) -> None:
         self._bus = bus
@@ -111,16 +73,8 @@ class BusProxy:
         return self._bus.subscribe(topic)
 
 
-# ---------------------------------------------------------------------------
-# StoreProxy
-# ---------------------------------------------------------------------------
-
-
 class StoreProxy:
-    """Fachada sobre StateStore exposta aos plugins.
-
-    Permite leitura de contadores e snapshot, sem acesso de escrita.
-    """
+    """Fachada sobre StateStore exposta aos plugins."""
 
     def __init__(self, store: StateStore) -> None:
         self._store = store
@@ -135,26 +89,14 @@ class StoreProxy:
         return self._store.snapshot().controller
 
 
-# ---------------------------------------------------------------------------
-# PluginContext
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class PluginContext:
-    """Container de dependências injetado em Plugin.on_load().
-
-    Atributos:
-        controller: proxy sobre IController com subset de métodos.
-        bus:        proxy sobre EventBus; use bus.subscribe(topic).
-        store:      proxy sobre StateStore; use store.counter(key).
-        log:        logger structlog prefixado "plugin.<plugin_name>".
-    """
+    """Container de dependências injetado em Plugin.on_load()."""
 
     controller: ControllerProxy
     bus: BusProxy
     store: StoreProxy
-    log: Any  # structlog.BoundLogger ou logging.Logger
+    log: Any
 
 
 def make_plugin_context(

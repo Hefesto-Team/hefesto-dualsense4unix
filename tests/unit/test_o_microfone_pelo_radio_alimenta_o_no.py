@@ -1,22 +1,4 @@
-"""O RÁDIO alimenta o nó com nome de CONTROLE — ONDA5-MIC-VIRTUAL-02.
-
-O que a ONDA5-MIC-VIRTUAL-01 fez pelo cabo, aqui pelo rádio: o microfone
-daquele controle passa a ter UM nome só — ``hefesto_mic_<hex6>`` — nos dois
-transportes, alimentado pela MESMA
-:meth:`~hefesto_dualsense4unix.integrations.dualsense_bt_audio.SourceVirtualPipeWire.escrever`.
-
-**NENHUM TESTE DESTE ARQUIVO FALA COM O PIPEWIRE DELA.** O `pactl` é dublado
-por :class:`_PactlDeMentira`, que faz o que o `module-pipe-source` faria — cria
-o fifo e segura a ponta de LEITURA — para que a classe de produção seja
-exercitada inteira, do `load-module` ao byte que sai do outro lado. Um dublê
-mais frouxo que o mecanismo real já deu verde sobre nada três vezes nesta casa;
-este é mais fiel de propósito.
-
-OS ENDEREÇOS SÃO SINTÉTICOS E MASCARADOS. Octetos 4 e 5 zerados, que é a
-máscara da casa — e há DOIS portões com réguas diferentes de propósito
-(``test_docs_mac_anonimato.py`` por OUI, ``check_endereco_de_radio.py`` por
-FORMA).
-"""
+"""O RÁDIO alimenta o nó com nome de CONTROLE — ONDA5-MIC-VIRTUAL-02."""
 
 from __future__ import annotations
 
@@ -38,7 +20,6 @@ from hefesto_dualsense4unix.integrations import fontes_de_captura as fc
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: Quatro controles, quatro endereços — sintéticos, com a máscara da casa.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
@@ -46,25 +27,8 @@ P4 = "aa:bb:cc:00:00:04"
 OS_QUATRO = (P1, P2, P3, P4)
 
 
-# ---------------------------------------------------------------------------
-# Os dublês — e eles são fiéis de propósito
-# ---------------------------------------------------------------------------
-
-
 class _PactlDeMentira:
-    """O `pactl` que o `SourceVirtualPipeWire` chama — sem servidor de som.
-
-    Ele faz o que o `module-pipe-source` faz e que a classe de produção DEPENDE
-    que alguém faça: **cria o fifo e mantém a ponta de leitura aberta.** Sem
-    isso o ``os.open(..., O_WRONLY | O_NONBLOCK)`` do produto daria ENXIO, o
-    `iniciar()` recuaria, e a régua mediria o caminho de falha achando que mede
-    o de sucesso.
-
-    Ele também responde ao ``list sources short`` com o ESTADO que o teste
-    escolher, na forma exata do servidor: cinco campos separados por TAB, com o
-    formato (``s16le 1ch 48000Hz``) carregando espaços dentro do quarto campo —
-    que é o detalhe que quebrou a primeira leitura deste módulo.
-    """
+    """O `pactl` que o `SourceVirtualPipeWire` chama — sem servidor de som."""
 
     def __init__(self, estado: str = "SUSPENDED") -> None:
         self.estado = estado
@@ -205,8 +169,6 @@ def pactl(monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
     falso = _PactlDeMentira()
     monkeypatch.setattr(shutil, "which", lambda cmd: f"/usr/bin/{cmd}")
     monkeypatch.setattr(bt, "_rodar", falso)
-    # `desmutar` do dono do canal roda um `pactl` PRÓPRIO. Sem este dublê ele
-    # lançaria subprocesso de verdade contra o servidor de som dela.
     monkeypatch.setattr(canal, "_rodar_pactl", lambda argv: True)
     monkeypatch.setattr(
         canal,
@@ -233,21 +195,8 @@ def _ponte(uniq: str, par: _ParDeSockets, **kw):  # type: ignore[no-untyped-def]
     )
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 1 — o nó nasce pelo RÁDIO, com o nome do CONTROLE, e recebe áudio
-# ---------------------------------------------------------------------------
-
-
 def test_o_radio_publica_o_no_com_nome_de_controle(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """O microfone do rádio deixa de se chamar pelo TRANSPORTE.
-
-    O defeito era o NOME: ``hefesto_dualsense_bt_<hex6>`` diz o transporte, e
-    trocar o cabo pelo rádio trocava o nome do microfone daquele controle —
-    todo app que tivesse fixado o device o perdia.
-
-    ARRANQUE A CURA (faça `_abrir_o_canal_por_controle` devolver `None` sempre)
-    e esta régua REPROVA, dizendo qual nome nasceu.
-    """
+    """O microfone do rádio deixa de se chamar pelo TRANSPORTE."""
     ponte = _ponte(P1, par)
     assert ponte.iniciar(), "a ponte não subiu com o `pactl` dublado"
     try:
@@ -269,18 +218,8 @@ def test_o_radio_publica_o_no_com_nome_de_controle(pactl, par) -> None:  # type:
 
 
 def test_o_audio_do_radio_sai_do_outro_lado_do_no(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """O quadro Opus entra pelo rádio e o PCM SAI do nó — byte por byte.
-
-    Esta é a régua que prova *"o rádio alimenta o nó"*, e ela não acredita em
-    contador nenhum: mede o que um app que gravasse do canal receberia, lendo a
-    ponta de LEITURA do fifo — a mesma que o `module-pipe-source` segura.
-
-    ARRANQUE A ALIMENTAÇÃO (tire o `self._source.escrever(pcm)` do
-    `_processar`) e ela REPROVA: o contador de quadros continua subindo e do
-    outro lado não sai byte nenhum — que é exatamente o sintoma que esta casa
-    passou uma hora depurando em 25/07.
-    """
-    pactl.estado = bt.ESTADO_COM_OUVINTE  # tem app gravando: o mic é pedido
+    """O quadro Opus entra pelo rádio e o PCM SAI do nó — byte por byte."""
+    pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
     try:
@@ -325,12 +264,7 @@ def test_sem_identidade_o_radio_volta_ao_nome_de_sempre(pactl, par) -> None:  # 
 
 
 def test_a_ponte_nao_derruba_o_canal_de_quem_ela_nao_abriu(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """Fechar o que não é seu tiraria o microfone de quem não pediu nada.
-
-    O canal por controle tem UM dono de ciclo de vida, e ele é compartilhado
-    entre o cabo e o rádio. Se o canal já estava de pé quando a ponte subiu, ele
-    é de outro — e o `parar()` da ponte não pode derrubá-lo.
-    """
+    """Fechar o que não é seu tiraria o microfone de quem não pediu nada."""
     ja = canal.abrir(P1, "canal de quem chegou antes")
     assert ja is not None
     ponte = _ponte(P1, par)
@@ -343,28 +277,8 @@ def test_a_ponte_nao_derruba_o_canal_de_quem_ela_nao_abriu(pactl, par) -> None: 
     )
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 4 — o 0x32 SEGUE o ouvinte da source
-# ---------------------------------------------------------------------------
-
-
 def test_sem_ouvinte_o_radio_nao_pede_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """Nó publicado e SUSPENDED: o canal existe e o controle não captura nada.
-
-    É o que o canal do CABO faz de graça, e era a assimetria que obrigava o
-    subsystem a negar o CANAL para evitar a CAPTURA. Sem ouvinte, ligar o
-    microfone custa ~106 quadros de áudio por segundo no link do rádio e a
-    privacidade de um microfone capturando para ninguém.
-
-    CONGELE O BYTE (volte o `self._escrever_pedido(ligar=True)` incondicional
-    ao `iniciar`) e esta régua REPROVA.
-
-    **O 0x32 de DESLIGAR na subida é esperado, e é o desfecho certo**: quem sobe
-    a ponte não sabe em que estado o firmware ficou — outro escritor (o app da
-    PlayStation em Proton, o re-arme de uma ponte anterior) pode ter deixado o
-    microfone dela no ar. Uma escrita a mais custa um report; um microfone
-    ligado que ninguém pediu custa a privacidade dela.
-    """
+    """Nó publicado e SUSPENDED: o canal existe e o controle não captura nada."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -379,10 +293,7 @@ def test_sem_ouvinte_o_radio_nao_pede_o_microfone(pactl, par) -> None:  # type: 
 
 
 def test_com_ouvinte_o_radio_pede_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """`RUNNING` quer dizer que tem app gravando — e aí o mic tem de estar no ar.
-
-    O contrapeso da régua acima: seguir o estado não pode virar nunca ligar.
-    """
+    """`RUNNING` quer dizer que tem app gravando — e aí o mic tem de estar no ar."""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -395,17 +306,7 @@ def test_com_ouvinte_o_radio_pede_o_microfone(pactl, par) -> None:  # type: igno
 
 
 def test_o_ouvinte_que_sai_desliga_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """DOIS valores, e a transição entre eles — não um instante congelado.
-
-    Uma régua que lê o estado UMA vez mede um instante, não um comportamento.
-    Aqui o app começa gravando (`RUNNING`), sai (`IDLE`), e o microfone tem de
-    apagar sozinho.
-
-    **`IDLE` NÃO É OUVINTE**, e a distinção é o ponto: depois que o último app
-    solta o nó ele fica `IDLE`, não volta a `SUSPENDED` (medido na máquina dela
-    em 06/09/2026). Tratar `IDLE` como "alguém está ouvindo" deixaria o
-    microfone dela ligado para sempre depois da primeira gravação.
-    """
+    """DOIS valores, e a transição entre eles — não um instante congelado."""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -424,24 +325,14 @@ def test_o_ouvinte_que_sai_desliga_o_microfone(pactl, par) -> None:  # type: ign
 
 
 def test_o_pedido_nao_se_repete_em_regime(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """A escrita é de BORDA — a parcimônia do cabeçalho continua inteira.
-
-    Escrever 0x32 a cada volta do laço seria um write por segundo por controle
-    disputando o link com o `hid-playstation`, que é a razão pela qual este
-    módulo escreve só na borda desde 25/07.
-
-    **REGIME É COM ÁUDIO CHEGANDO**, e é por isso que este teste emite quadros
-    o tempo todo: sem áudio por dois segundos o `_talvez_rearmar` escreve de
-    novo — autocura de borda que EXISTE de propósito e não é o que esta régua
-    mede.
-    """
+    """A escrita é de BORDA — a parcimônia do cabeçalho continua inteira."""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
     try:
         assert _esperar(lambda: par.pedidos_de_mic() == [bt.AUDIO_CONTROL_MIC_ON])
         quadro = bytes(range(bt.MIC_OPUS_LEN))
-        fim = time.monotonic() + 2.5  # duas voltas do olhar na source
+        fim = time.monotonic() + 2.5
         while time.monotonic() < fim:
             par.emitir(_report_de_audio(quadro))
             time.sleep(0.05)
@@ -453,20 +344,13 @@ def test_o_pedido_nao_se_repete_em_regime(pactl, par) -> None:  # type: ignore[n
 
 
 def test_nao_sei_nunca_vira_ninguem_esta_ouvindo(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """Estado ilegível deixa o comportamento como era — nunca desliga por falta
-    de instrumento.
-
-    `estado()` devolve `None` quando o nó não está na lista ou o `pactl` não
-    respondeu. Transformar isso em "ninguém está ouvindo" desligaria o
-    microfone dela porque a régua não conseguiu perguntar — o *"silêncio não é
-    sucesso"* com o sinal trocado.
-    """
+    """Estado ilegível deixa o comportamento como era — nunca desliga por falta"""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
     try:
         assert _esperar(lambda: par.pedidos_de_mic() == [bt.AUDIO_CONTROL_MIC_ON])
-        pactl.nos.pop("hefesto_mic_000001", None)  # o nó sumiu da lista
+        pactl.nos.pop("hefesto_mic_000001", None)
         quadro = bytes(range(bt.MIC_OPUS_LEN))
         fim = time.monotonic() + 1.6
         while time.monotonic() < fim:
@@ -481,12 +365,7 @@ def test_nao_sei_nunca_vira_ninguem_esta_ouvindo(pactl, par) -> None:  # type: i
 
 
 def test_o_parar_desliga_o_microfone_mesmo_sem_ter_ligado(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """Deixar o microfone de alguém ligado depois de fechar não é opção.
-
-    O 0x32 de desligar é incondicional no `parar()` de propósito: outro
-    escritor (o app da PlayStation em Proton, o re-arme de uma ponte anterior)
-    pode ter deixado o microfone no ar, e uma escrita a mais é barata.
-    """
+    """Deixar o microfone de alguém ligado depois de fechar não é opção."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -496,29 +375,8 @@ def test_o_parar_desliga_o_microfone_mesmo_sem_ter_ligado(pactl, par) -> None:  
     )
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 5 — o 0x32 tem DOIS donos em OU: o ouvinte **ou** a palavra dela
-# ---------------------------------------------------------------------------
-#
-# A TERCEIRA PERGUNTA, e é a que faltava. As duas de cima medem os dois lados
-# do OUVINTE, corretamente — e é por isso que o defeito atravessou 06/09 e
-# 07/09 com a suíte verde: a régua respondia sobre o ouvinte, e a pergunta que
-# ninguém fazia era sobre o DONO. `pactl set-default-source` (o que o botão do
-# microfone faz) não põe nó nenhum em `RUNNING`, então o gesto dela deixava a
-# source `SUSPENDED` e o 0x32 saía DESLIGADO.
-
-
 def test_sem_ouvinte_o_ato_dela_liga_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """SUSPENDED + a palavra DELA: o microfone vai ao ar.
-
-    O caso medido no journal dela em 07/09/2026, das 19h11m18 às 19h14m14:
-    quase três minutos apertando o botão, a ponte em `bt_mic_pedido
-    ligar=False`, e o microfone só subindo quando um aplicativo ABRIU o canal
-    para gravar. Ela apertava o botão e ouvia silêncio.
-
-    ARRANQUE O OU (tire o ramo `pedido_dela is not None` de
-    `_talvez_seguir_a_source`) e esta régua REPROVA — é a que faltava.
-    """
+    """SUSPENDED + a palavra DELA: o microfone vai ao ar."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -536,14 +394,7 @@ def test_sem_ouvinte_o_ato_dela_liga_o_microfone(pactl, par) -> None:  # type: i
 
 
 def test_o_mudo_dela_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """RUNNING + `False`: *"não quero ser ouvida"* vence um app gravando.
-
-    A outra metade do OU, e ela não é simetria de enfeite: sem esta, o mudo
-    dela seria uma sugestão que qualquer aplicativo com o nó aberto ignora.
-
-    ARRANQUE O OU e esta régua REPROVA: o ouvinte volta a ser o único dono e o
-    microfone fica no ar por cima da palavra dela.
-    """
+    """RUNNING + `False`: *"não quero ser ouvida"* vence um app gravando."""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -561,12 +412,7 @@ def test_o_mudo_dela_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-un
 
 
 def test_sem_a_palavra_dela_o_ouvinte_continua_dono(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """`None` devolve a decisão ao ouvinte — a economia de 06/09 fica inteira.
-
-    É o NEGATIVO da cura, e ele é o que prova que ela não virou *"liga e deixa
-    ligado para sempre"*: esquecida a palavra, o comportamento de 06/09 volta
-    linha por linha e o microfone cai sozinho sem ninguém gravando.
-    """
+    """`None` devolve a decisão ao ouvinte — a economia de 06/09 fica inteira."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -585,12 +431,7 @@ def test_sem_a_palavra_dela_o_ouvinte_continua_dono(pactl, par) -> None:  # type
 
 
 def test_o_parar_esquece_a_palavra_dela(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """A terceira das cinco portas: o pedido dela morre com a ponte.
-
-    Sem isto, uma ponte reiniciada sobre o mesmo objeto voltaria com o
-    microfone no ar sem ninguém ter pedido de novo — o *"liga sozinho"* pela
-    porta dos fundos, que é exatamente o defeito que a cura de 06/09 matou.
-    """
+    """A terceira das cinco portas: o pedido dela morre com a ponte."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
@@ -601,11 +442,6 @@ def test_o_parar_esquece_a_palavra_dela(pactl, par) -> None:  # type: ignore[no-
         "o `parar()` deixou a palavra dela de pé; a ponte seguinte nasceria "
         "com o microfone no ar sem ninguém ter pedido"
     )
-
-
-# ---------------------------------------------------------------------------
-# A TELA CONTA QUATRO
-# ---------------------------------------------------------------------------
 
 
 def test_quatro_controles_no_radio_tem_quatro_canais(pactl) -> None:  # type: ignore[no-untyped-def]
@@ -637,11 +473,6 @@ def test_o_canal_de_um_nao_e_o_canal_do_vizinho(pactl) -> None:  # type: ignore[
     assert set(restantes) == {P1, P3, P4}, (
         f"fechar o canal do P2 mexeu no dos outros: {restantes}"
     )
-
-
-# ---------------------------------------------------------------------------
-# MORDIDA 3 — a ELEIÇÃO decide o padrão do sistema, e SÓ isso
-# ---------------------------------------------------------------------------
 
 
 def test_a_eleicao_nao_muda_quem_e_ouvido_no_canal_de_cada_um(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -690,38 +521,6 @@ def test_a_eleicao_nao_muda_quem_e_ouvido_no_canal_de_cada_um(pactl, monkeypatch
         )
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 2 — O CENSO DOS CHAMADORES, e a dirigida em cada um
-# ---------------------------------------------------------------------------
-
-#: OS CHAMADORES DE `escolher_fonte`, MEDIDOS por AST em 06/09/2026.
-#:
-#: **SÃO NOVE desde 21/09/2026** — `integrations/teste_do_microfone.py` entrou
-#: com o 🎙 que virou trava: `fonte_do_controle` responde *"de que nó sai a voz
-#: deste controle"* para o retorno do `pw-loopback` montar a ponte. Ele PASSA
-#: PELA REGRA 0 — delega a `escolher_fonte` e não reimplementa escolha nenhuma,
-#: que é o contrato desta lista. Ver a dirigida 9/9.
-#:
-#: **ERAM OITO desde 18/09/2026** — `daemon/subsystems/hotkey.py` entrou com o
-#: nascimento do microfone que não passa por cima da escolha gravada dela: ele
-#: pergunta ao dono DE QUE CONTROLE é o nó que o WirePlumber guarda como padrão.
-#: Ver a dirigida 8/8.
-#:
-#: **ERAM SETE desde 09/09/2026** — `daemon/subsystems/bt_mic.py` entrou com a
-#: MIC-OS-QUATRO-01, e ele é o único que PERGUNTA AO DONO PARA RECUSAR a
-#: resposta da regra 0: o supervisor do canal do cabo quer *"de onde eu leio"*,
-#: e a regra 0 responde *"qual é o microfone dele"*. Ver a dirigida 7/8.
-#:
-#: **ERAM SEIS, e não quatro.** O enunciado da MIC-VIRTUAL-02 diz "os quatro
-#: chamadores", herdando o número do docstring de `escolher_fonte`, que lista
-#: *"a eleição, a luz, o áudio da janela e o `escolher_sink`"*. A contagem
-#: envelheceu: `integrations/audio_control.py` entrou em 03/09/2026
-#: (`fonte_de_captura_do_uniq` deixou de ser uma segunda régua) e a luz virou
-#: DOIS — `integrations/quem_ouve_o_microfone.py` responde QUEM ouve e
-#: `daemon/subsystems/luz_do_mic.py` responde POR ONDE.
-#:
-#: É por isso que esta lista é MEDIDA e não digitada: um número escrito à mão
-#: em prosa é a forma mais barata de a próxima pessoa curar cinco de seis.
 CHAMADORES_MEDIDOS = frozenset(
     {
         "app/mic_monitor.py",
@@ -738,12 +537,7 @@ CHAMADORES_MEDIDOS = frozenset(
 
 
 def _quem_chama_escolher_fonte() -> set[str]:
-    """Os módulos de `src/` que CHAMAM `escolher_fonte` — por AST, não por grep.
-
-    Grep aqui daria falso positivo em toda a prosa que cita a função (são 20
-    linhas de docstring contra 7 chamadas). A pergunta é sobre o CÓDIGO, então
-    quem responde é o AST.
-    """
+    """Os módulos de `src/` que CHAMAM `escolher_fonte` — por AST, não por grep."""
     achados: set[str] = set()
     for arquivo in sorted(SRC.rglob("*.py")):
         try:
@@ -767,21 +561,7 @@ def _quem_chama_escolher_fonte() -> set[str]:
 
 
 def test_o_censo_dos_chamadores_de_escolher_fonte_nao_envelhece() -> None:
-    """Quem resolve "qual é o microfone deste controle" passa pelo DONO.
-
-    **ESTA É A RÉGUA QUE IMPEDE O DEFEITO DE 05/09 DE ACONTECER PELA TERCEIRA
-    VEZ.** A regra que aquele dia deixou escrita: *quando a cura conhece a
-    causa, ela cobre TODOS os chamadores* — e ela foi violada duas vezes num dia
-    porque ninguém tinha CONTADO os chamadores.
-
-    Ela reprova nos DOIS sentidos, e os dois são notícia:
-
-    * um módulo NOVO chamando — alguém passou a resolver a mesma pergunta e a
-      lista de quem precisa ser conferido cresceu;
-    * um módulo que PAROU de chamar — o suspeito imediato é uma segunda régua
-      sobre o mesmo estado, que é como esta casa fabrica divergência silenciosa
-      (foi o que `audio_control.fonte_de_captura_do_uniq` era até 03/09).
-    """
+    """Quem resolve "qual é o microfone deste controle" passa pelo DONO."""
     agora = _quem_chama_escolher_fonte()
     entraram = sorted(agora - CHAMADORES_MEDIDOS)
     sairam = sorted(CHAMADORES_MEDIDOS - agora)
@@ -813,12 +593,7 @@ def test_a_regra_0_alcanca_a_eleicao(pactl, monkeypatch) -> None:  # type: ignor
 
 
 def test_a_regra_0_alcanca_o_volume_por_controle(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 2/8 — `integrations/audio_control.py`.
-
-    É o caminho do controle deslizante do microfone. Até 03/09 ele tinha régua
-    própria e só enxergava o cabo; hoje pergunta ao dono, e é por isso que a
-    regra 0 o alcança de graça.
-    """
+    """Chamador 2/8 — `integrations/audio_control.py`."""
     from hefesto_dualsense4unix.integrations import audio_control as ac
 
     canal.abrir(P1, "Microfone do P1")
@@ -831,19 +606,7 @@ def test_a_regra_0_alcanca_o_volume_por_controle(pactl, monkeypatch) -> None:  #
 
 
 def _dois_canais() -> dict[str, str]:
-    """DOIS controles com canal — e a mesa cheia é o que dá valor a esta régua.
-
-    **COM UM SÓ, TODA RÉGUA DESTA SEÇÃO DAVA VERDE COM A REGRA 0 ARRANCADA**, e
-    isso foi MEDIDO ao mordê-las em 06/09/2026: com uma fonte e um candidato,
-    quem responde é a regra 4 (*um para um*), não a 0. Três das cinco réguas
-    dirigidas passavam sem a cura — a forma de instrumento falso que esta casa
-    já nomeou seis vezes em três dias.
-
-    Com DOIS controles e DOIS canais a regra 4 não pode disparar (ela exige um
-    único candidato), o casamento por USB não existe (rádio não tem placa) e a
-    regra 1 não casa (o nome não é `bluez_`). **Só a regra 0 pode responder** —
-    e é isso que faz destas réguas uma medição da cura, e não da vizinha.
-    """
+    """DOIS controles com canal — e a mesa cheia é o que dá valor a esta régua."""
     for uniq in (P1, P2):
         canal.abrir(uniq, f"Microfone de {uniq}")
     return dict(canal.de_pe())
@@ -907,13 +670,7 @@ def test_a_regra_0_alcanca_o_medidor_da_janela(pactl, monkeypatch) -> None:  # t
 
 
 def test_a_regra_0_e_inerte_no_escolher_sink_por_construcao(pactl) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 6/8 — `integrations/fontes_de_captura.py::escolher_sink`.
-
-    Aqui a regra 0 é INERTE **de propósito, e o corte é a montante**: um
-    `hefesto_mic_<hex6>` é nó de CAPTURA e `sinks_dualsense` nunca o devolve. O
-    microfone não sai por lugar nenhum; se ele aparecesse numa lista de sinks, o
-    defeito estaria antes daqui.
-    """
+    """Chamador 6/8 — `integrations/fontes_de_captura.py::escolher_sink`."""
     canal.abrir(P1, "Microfone do P1")
     alvo = canal.de_pe()[P1]
     tabela = f"600\t{alvo}\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED"
@@ -924,21 +681,7 @@ def test_a_regra_0_e_inerte_no_escolher_sink_por_construcao(pactl) -> None:  # t
 
 
 def test_a_regra_0_e_recusada_no_supervisor_do_cabo(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 7/8 — `daemon/subsystems/bt_mic.py`, e ele é o avesso dos seis.
-
-    MIC-OS-QUATRO-01 (09/09/2026). O supervisor do canal do CABO pergunta ao
-    dono — `escolher_fonte` — e **recusa** a resposta da regra 0, porque a
-    pergunta dele é outra: os seis acima querem *"qual é o microfone deste
-    controle"*, e ele quer *"de onde eu LEIO para encher o nó"*. Depois que o
-    canal está no ar a regra 0 responde o próprio canal, e alimentá-lo com ele
-    mesmo poria um `parec` lendo o nó que ele enche.
-
-    A régua monta o caso exato: o PipeWire publica o `hefesto_mic_<hex6>` do P1
-    ao lado do nó ALSA do cabo dele — é o que acontece na volta seguinte da
-    varredura, e depois de qualquer canal que tenha sobrado no servidor. A
-    regra 0 é a primeira a responder, e o supervisor tem de passar por cima
-    dela.
-    """
+    """Chamador 7/8 — `daemon/subsystems/bt_mic.py`, e ele é o avesso dos seis."""
     from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 
     o_canal = canal.nome_do_canal(P1)
@@ -971,15 +714,7 @@ def test_a_regra_0_e_recusada_no_supervisor_do_cabo(pactl, monkeypatch) -> None:
 
 
 def test_a_regra_0_alcanca_a_escolha_gravada_do_nascimento(pactl) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 8/8 — `daemon/subsystems/hotkey.py`, no nascimento do microfone.
-
-    18/09/2026. A partida do daemon solta um nascimento por controle na mesa, e
-    o primeiro da fila elegia por cima da escolha gravada dela. A pergunta que
-    o impede é *"de que controle é o nó que o WirePlumber guarda como padrão?"*
-    — e quem responde é o dono, pela regra 0 quando o nó é o canal por
-    controle. A escolha gravada é o canal do P2; para o P1 ela é do vizinho,
-    para o P2 ela é dele mesmo.
-    """
+    """Chamador 8/8 — `daemon/subsystems/hotkey.py`, no nascimento do microfone."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
 
     canal.abrir(P2, "Microfone do P2")
@@ -1004,11 +739,6 @@ def bt_mic_eleicao():  # type: ignore[no-untyped-def]
     return eleicao_de_microfone
 
 
-# ---------------------------------------------------------------------------
-# A PRIORIDADE QUE NÃO VIAJAVA — a régua que LÊ como o servidor lê
-# ---------------------------------------------------------------------------
-
-
 def _como_o_servidor_le(source_properties: str) -> dict[str, str]:
     """Quebra o `source_properties` como o `pipewire-pulse` o quebra.
 
@@ -1030,9 +760,6 @@ def _como_o_servidor_le(source_properties: str) -> dict[str, str]:
     try:
         pedacos = shlex.split(valor)
     except ValueError:
-        # O CORTE DEIXA UM FRAGMENTO MALFORMADO, e é por isso que a descrição
-        # chega como "Microfone": cortar no primeiro espaço parte a aspa simples
-        # da descrição ao meio. O servidor não levanta — ele fica com o pedaço.
         pedacos = valor.split(" ")
     props: dict[str, str] = {}
     for pedaco in pedacos:
@@ -1087,25 +814,8 @@ def _valor_bruto(argv: list[str], chave: str) -> str:
     raise AssertionError(f"o `load-module` foi montado sem {chave!r}")
 
 
-# ---------------------------------------------------------------------------
-# O `pactl` TRADUZ — e uma leitura que não força o idioma responde sobre ele
-# ---------------------------------------------------------------------------
-
-
 def test_o_audio_control_le_o_mudo_em_lingua_que_ele_entende(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """`Mute: sim` não contém `yes` — e era isso que a leitura de volta lia.
-
-    MEDIDO na máquina dela em 06/09/2026, com o `LANG=pt_BR.UTF-8` dela::
-
-        pactl get-source-mute <nó>    sem LC_ALL   ->  Mute: sim / Mute: não
-                                      com LC_ALL=C ->  Mute: yes
-
-    `_query_pactl_muted` responde ``"yes" in saida.lower()``, então nesta
-    máquina ele devolvia **False sempre**. A cura é a MESMA que este arquivo já
-    aplicou duas vezes por outra porta em 15/08/2026.
-
-    ARRANQUE O `env` de `AudioControl._run` e esta régua REPROVA.
-    """
+    """`Mute: sim` não contém `yes` — e era isso que a leitura de volta lia."""
     import subprocess
 
     from hefesto_dualsense4unix.integrations.audio_control import AudioControl

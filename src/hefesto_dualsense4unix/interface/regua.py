@@ -1,45 +1,15 @@
 #!/usr/bin/env python3
-"""Régua de alinhamento — mede as caixas REAIS no Chrome contra a JOGAR aprovada.
-
-A primeira versão desta régua comparava cada aba CONSIGO MESMA, e por isso era
-cega numa aba de um quadro só: não havia com o que comparar. Medido em 26/08 com
-uma mordida que ela deixou passar inteira. Agora o padrão vem de fora — da Jogar,
-que é a única aba que ela aprovou — e cada número tem de bater com o dela.
-"""
+"""Régua de alinhamento — mede as caixas REAIS no Chrome contra a JOGAR aprovada."""
 import subprocess, sys, json, re, pathlib
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
-# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
-# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
-# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
-# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
-# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
-# segunda árvore de trabalhar sem tocar na primeira.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import onde  # noqa: E402
 
-# A RÉGUA MEDE A BANCADA (`mockup/`), que é onde o desenho de hoje mora.
-# Apontá-la para `layout/` a faria medir a página congelada — verde sobre o
-# desenho velho, a armadilha do `COMO-OLHAR-A-TELA.md`.
-#
-# `--publicado` MEDE O PRODUTO, e existe para uma pergunta só: *este
-# desalinhamento é meu ou já estava aqui?* Sem ela, quem mexe numa aba herda a
-# dívida de quem mexeu antes e não tem como separar as duas — foi o que
-# aconteceu em 31/08 com um `17 / 36` que parecia novo e era de dias atrás.
 PUBLICADO = "--publicado" in sys.argv
 D = onde.PUBLICADO if PUBLICADO else onde.BANCADA
 REF = "01-jogar.html"
-ROT = 92   # o token --rot, em px — a coluna de rótulo de toda aba
+ROT = 92
 
-# ---------------------------------------------------------------------------
-# AS EXCEÇÕES, POR ABA E COM MOTIVO. Palavra dela em 27/08: "Talvez a régua tenha
-# que ser ajustada por aba." Uma regra que vale em toda tela vira ruído na tela
-# onde ela não faz sentido — e régua que grita onde não deve é régua que se
-# aprende a ignorar, que é o começo de portão cego.
-#
-# Só entra aqui o que ELA dispensou, com a frase dela. Nada de exceção por
-# conveniência de quem desenha.
-# ---------------------------------------------------------------------------
 DISPENSAS = {
     "06-navegacao.html": [
         ('quadro "Navegação"',
@@ -339,19 +309,9 @@ if __name__ == "__main__":
     print(f"  rótulo: {ref.get('rotulos')} · fileiras: "
           + " · ".join(f"{k}={v[0]}" for k,v in list(ref.get("larguras",{}).items())[:4]))
     falhou = 0
-    # AS FLAGS NÃO SÃO ARQUIVO. Sem este filtro, `regua.py 03.html --publicado`
-    # tentava abrir um arquivo chamado `--publicado`, estourava — e quem contasse
-    # a saída com `grep` lia um número que era do TRACEBACK. Aconteceu na volta
-    # em que a flag nasceu: a régua "achou 3 desalinhamentos" numa aba que ela
-    # nunca chegou a medir.
     for arq in [a for a in sys.argv[1:] if not a.startswith("-")]:
         r = medir(arq); m = r["m"]; e = list(r["erros"])
-        # O AVISO DE ROLAGEM ESPERA O CABEÇALHO. Ele era impresso durante a
-        # medição, ANTES do `=== {arq} ===`, e por isso aparecia debaixo do nome
-        # da aba ANTERIOR: em 28/08 a linha da Conexões saiu sob a Lançadores, e
-        # quem lesse iria consertar a aba errada.
         avisos = []
-        # ---- confronto com o PADRÃO, que é o que a versão cega não fazia ----
         for chave, rot in [("janela_larg","largura da janela"),("janela_alt","altura da janela"),
                            ("rodape_y","y do rodapé"),("miolo_pad","padding do miolo"),
                            ("miolo_gap","gap do miolo"),("miolo_larg","largura do miolo")]:
@@ -362,32 +322,13 @@ if __name__ == "__main__":
                 e.append(f'quadro "{q["tit"]}": título em dx={q["dx_tit"]}, a referência usa {ref["quadros"][0]["dx_tit"]}')
             if q["pad"] != ref["quadros"][0]["pad"]:
                 e.append(f'quadro "{q["tit"]}": padding {q["pad"]} != {ref["quadros"][0]["pad"]}')
-        # o rótulo tem valor CANÔNICO (o token --rot), não herdado da Jogar: a Jogar não
-        # tem campo com rótulo, e comparar com a lista vazia dela deixava a mordida passar.
         for w in m.get("rotulos", []):
             if w != ROT:
                 e.append(f"coluna de rótulo: {w}px, o token --rot é {ROT}px")
         for k, v in m.get("alturas", {}).items():
             if k in ref["alturas"] and v[0] != ref["alturas"][k][0]:
                 e.append(f"altura de {k}: {v[0]} != {ref['alturas'][k][0]} da referência")
-        # O QUE ROLA POR DENTRO. Um quadro com ZERO pixel à mostra não é uma
-        # escolha de layout: é conteúdo que a pessoa não sabe que existe. Quadro
-        # PARCIALMENTE fora é aviso — ela rola e acha; quadro INTEIRO fora é erro,
-        # porque nada na tela diz que há mais.
         for caixa in m.get("rolagem_interna", []):
-            # QUANTO PRECISA ESTAR À MOSTRA PARA VALER COMO "aparece".
-            #
-            # A RÉGUA NOMEAVA E DEIXAVA PASSAR, medido em 28/08: ela imprimia
-            # `rola por dentro em .miolo: "Rádio e adaptadores" (323px fora)` e
-            # devolvia **rc=0**, porque só reprovava quadro com ZERO pixel. Um
-            # quadro de 343px mostrando 29 é a barra do título e mais nada — e
-            # passava. O piso é 25% do quadro, OU 64px (a altura de um título com
-            # a primeira linha do corpo), o que for menor: abaixo disso a pessoa
-            # não tem como saber que há conteúdo ali.
-            # O piso é 64px — a altura de um título de quadro com a PRIMEIRA
-            # LINHA do corpo. Abaixo disso a pessoa vê uma barra de título e não
-            # tem como saber que há conteúdo. Quadro menor que 64px tem de
-            # aparecer inteiro.
             def _piso(q):
                 return min(64, q["visivel"] + q["fora"])
             invisiveis = [q for q in caixa["quadros"] if q["visivel"] < _piso(q)]
@@ -401,8 +342,6 @@ if __name__ == "__main__":
                 lista = ", ".join(f'"{q["tit"]}" ({q["fora"]}px fora)' for q in parciais[:3])
                 avisos.append(f"   – rola por dentro em {caixa['onde']}: {lista}")
 
-        # as dispensas dela saem da conta, e ficam VISÍVEIS: exceção escondida é
-        # exceção que ninguém revisita.
         dispensados = []
         for chave, motivo in DISPENSAS.get(arq, []):
             fica = [x for x in e if chave not in x]

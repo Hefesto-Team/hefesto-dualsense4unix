@@ -103,12 +103,7 @@ def test_o_jogo_que_abre_na_navegacao_ja_esconde_o_fisico(
     assert _DISABLE in env
     assert _HIDAPI not in env, "a env é a da máscara do cartão (DualSense), não a padrão"
     assert "divergente=" not in _estado(pasta / f"steam_app_{APPID}.env")
-    # NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: aqui se cobrava que o
-    # `default.env` continuasse sem IGNORE sem vpad de pé. Era o recorte do
-    # defeito, não a cura: o `default.env` é o arquivo de todo jogo SEM perfil
-    # próprio (29 dos 30 perfis dela não têm `mode`), e por ele o mesmo jogo
     # abria vendo o DualSense de plástico. Ver
-    # `test_todo_jogo_abre_pronto_mesmo_sem_perfil`.
     assert _IGNORE in _env(pasta / "default.env")
 
 
@@ -133,11 +128,7 @@ def test_o_perfil_do_caminho_xbox_com_cartao_dualsense(
 
 
 def test_o_caminho_xbox_nao_promete_o_canal_proprio(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com a sessão em outra máscara, o prognóstico R-05 prometia o uhid.
-
-    O caminho Xbox é o canal comum POR ESCOLHA dela: o vpad nasce em uinput mesmo
-    com o uhid disponível, e o arquivo tem de dizer o canal que vai existir.
-    """
+    """Com a sessão em outra máscara, o prognóstico R-05 prometia o uhid."""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.uhid_gamepad.uhid_available", lambda: True
     )

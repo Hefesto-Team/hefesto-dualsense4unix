@@ -32,7 +32,6 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 
-#: appid qualquer da allowlist — o número não importa para esta frente.
 APPID = 2111190
 
 
@@ -67,8 +66,6 @@ class _CoopDublado:
     def disable(self) -> None:
         self.desligados += 1
         if self._estoura:
-            # Teardown parcial: derruba UM e estoura. O chamador roda sob
-            # `suppress(Exception)`, então o daemon segue de pé com o resto.
             if self._players:
                 self._players.pop(next(iter(self._players)))
             raise RuntimeError("uinput sumiu no meio do teardown")
@@ -183,21 +180,11 @@ def _daemon_real_com_coop(secundarios: int) -> Any:
     return daemon
 
 
-# ---------------------------------------------------------------------------
-# O fato ganha nome no journal
-# ---------------------------------------------------------------------------
-
-
 class TestOJournalDizQueOCoopCaiu:
     async def test_derrubar_tres_jogadores_emite_o_fato_nomeado(
         self, sem_disco_nem_broker: None
     ) -> None:
-        """A MORDIDA: sem a cura, nenhum evento com nome de co-op é emitido.
-
-        Com a observabilidade arrancada, o journal só tem
-        ``steam_input_vpad_suspenso`` — cujo nome fala de vpad — e o aviso da
-        janela nunca nasce.
-        """
+        """A MORDIDA: sem a cura, nenhum evento com nome de co-op é emitido."""
         daemon = _DaemonDublado(secundarios=3)
 
         with structlog.testing.capture_logs() as registros:
@@ -216,7 +203,6 @@ class TestOJournalDizQueOCoopCaiu:
         assert quedas[0]["log_level"] == "warning", (
             "perda de função que ela não pediu não é info"
         )
-        # E a LÓGICA da queda segue intacta: um `disable()`, nada mais.
         assert daemon._coop_manager.desligados == 1
         assert daemon._gamepad_device is None
         assert gp.steam_input_vpad_suspenso(daemon) is True
@@ -225,8 +211,7 @@ class TestOJournalDizQueOCoopCaiu:
     async def test_sem_coop_de_pe_nao_inventa_aviso(
         self, sem_disco_nem_broker: None
     ) -> None:
-        """Cura exagerada reprova: com o co-op desligado, quem cai é só o vpad
-        do P1 e não há jogador nenhum a lamentar."""
+        """Cura exagerada reprova: com o co-op desligado, quem cai é só o vpad"""
         daemon = _DaemonDublado(secundarios=0)
 
         with structlog.testing.capture_logs() as registros:
@@ -244,10 +229,7 @@ class TestOJournalDizQueOCoopCaiu:
     async def test_teardown_parcial_conta_o_que_caiu_de_verdade(
         self, sem_disco_nem_broker: None
     ) -> None:
-        """`coop.disable()` roda sob `suppress(Exception)`: se estourar no meio,
-        sobra jogador de pé. Declarar "derrubei 3" ali seria a mesma classe de
-        mentira do log de ``jogadores_coop=0`` que esta sprint está desfazendo —
-        por isso a conta é o RESIDUAL, não o total de antes."""
+        """`coop.disable()` roda sob `suppress(Exception)`: se estourar no meio,"""
         daemon = _DaemonDublado(secundarios=3, estoura=True)
 
         with structlog.testing.capture_logs() as registros:
@@ -261,22 +243,8 @@ class TestOJournalDizQueOCoopCaiu:
         )
         assert queda["secundarios_derrubados"] == 1
         assert queda["secundarios_restantes"] == 2
-        # NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01): aqui havia
-        # `steam_input_coop_derrubados(daemon) == 1`, quando o número da JANELA
-        # ainda era o de vpads recolhidos. Era esse número que acendia o aviso
-        # vermelho "1 jogador saiu" com os controles dela conectados na tela. O
-        # RESIDUAL desta sprint continua exato — no journal, que é onde ele
-        # sempre foi o fato de engenharia; a janela passou a falar de CONTROLE
-        # e só acende quando um deles sai da mesa de verdade. A mesa fica
-        # registrada com a identidade de quem caiu, e é dela que o tique do
-        # co-op pergunta (ver `test_aviso_falso_do_coop_01.py`).
         assert gp.steam_input_coop_derrubados(daemon) == 0
         assert gp.coop_sentados_na_suspensao(daemon) == ("aa:bb:cc:00:00:00",)
-
-
-# ---------------------------------------------------------------------------
-# O aviso vive exatamente enquanto a suspensão vive
-# ---------------------------------------------------------------------------
 
 
 class TestOAvisoMorreQuandoOCoopVolta:
@@ -286,10 +254,6 @@ class TestOAvisoMorreQuandoOCoopVolta:
         daemon = _DaemonDublado(secundarios=2)
         assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
         await _encerrar_vigia(daemon)
-        # NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01): a suspensão sozinha
-        # já não acende o aviso (recolher vpad não é controle saindo da mesa),
-        # então o "aviso aceso" que esta saída tem de apagar é construído aqui,
-        # medindo a mesa VAZIA — os dois controles caíram de verdade.
         assert gp.reavaliar_coop_fora_da_mesa(daemon, set()) == 2
 
         with structlog.testing.capture_logs() as registros:
@@ -301,19 +265,16 @@ class TestOAvisoMorreQuandoOCoopVolta:
         assert [
             r for r in registros if r["event"] == "steam_input_coop_aviso_encerrado"
         ], "o encerramento também é um fato"
-        # A devolução do co-op continua sendo a de sempre (P2+ junto com o P1).
         assert daemon._coop_manager.syncs == [True]
 
     async def test_religar_a_emulacao_na_mao_tambem_zera_o_aviso(
         self, sem_disco_nem_broker: None
     ) -> None:
-        """A SEGUNDA saída da suspensão: ela mesma religa a emulação com o jogo
-        aberto (`origin="manual"`). Sem zerar aqui, a janela seguiria avisando."""
+        """A SEGUNDA saída da suspensão: ela mesma religa a emulação com o jogo"""
         daemon = _DaemonDublado(secundarios=2)
         daemon._steam_input_excecao = True
         assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
         await _encerrar_vigia(daemon)
-        # NOTA DATADA — 09/08/2026: ver a saída irmã acima (AVISO-FALSO-DO-COOP-01).
         assert gp.reavaliar_coop_fora_da_mesa(daemon, set()) == 2
 
         gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
@@ -325,24 +286,21 @@ class TestOAvisoMorreQuandoOCoopVolta:
         """`state_full` roda a 10 Hz e serializa em JSON: só int de verdade
         passa (a mesma blindagem do `players`)."""
         daemon = _DaemonDublado()
-        assert gp.steam_input_coop_derrubados(daemon) == 0  # atributo ausente
-        daemon._steam_input_coop_derrubados = True  # bool não é contagem
+        assert gp.steam_input_coop_derrubados(daemon) == 0
+        daemon._steam_input_coop_derrubados = True
         assert gp.steam_input_coop_derrubados(daemon) == 0
         daemon._steam_input_coop_derrubados = "dois"
         assert gp.steam_input_coop_derrubados(daemon) == 0
 
 
-# ---------------------------------------------------------------------------
 # A janela consegue avisar: o fato sai no state_full
-# ---------------------------------------------------------------------------
 
 
 class TestOStateFullPublicaAQueda:
     async def test_bloco_coop_declara_a_queda_e_quantos_cairam(
         self, config_em_tmp: Path
     ) -> None:
-        """A MORDIDA do contrato: sem estas duas chaves a janela não tem como
-        distinguir "ela desligou o co-op" de "o jogo derrubou o co-op"."""
+        """A MORDIDA do contrato: sem estas duas chaves a janela não tem como"""
         daemon = _daemon_real_com_coop(2)
         h = _Handlers(daemon, daemon.store, daemon.controller)
 
@@ -355,14 +313,12 @@ class TestOStateFullPublicaAQueda:
         cheio = await h._handle_daemon_state_full({})
         assert cheio["coop"]["derrubado_por_steam_input"] is True
         assert cheio["coop"]["secundarios_derrubados"] == 2
-        # O par de Steam Input segue publicado ao lado, intacto (JOGO-01).
         assert "excecao_ativa" in cheio["steam_input"]
 
     async def test_o_bloco_e_serializavel_com_daemon_dublado(
         self, config_em_tmp: Path
     ) -> None:
-        """Blindagem de serialização: um mock pendurado no atributo não pode
-        derrubar o servidor IPC no `json.dumps`."""
+        """Blindagem de serialização: um mock pendurado no atributo não pode"""
         import json
 
         daemon = _daemon_real_com_coop(0)
@@ -374,28 +330,10 @@ class TestOStateFullPublicaAQueda:
         json.dumps(cheio["coop"])
 
 
-# ---------------------------------------------------------------------------
-# O gatilho NÃO mudou (guarda da onda 2)
-# ---------------------------------------------------------------------------
-
-
 async def test_a_suspensao_segue_derrubando_o_coop_antes_do_p1(
     sem_disco_nem_broker: None,
 ) -> None:
-    """Guarda: esta sprint é observabilidade, não mudança de gatilho.
-
-    A ordem importa e está explicada em `suspend_vpads_for_steam_input` —
-    derrubar o P1 primeiro deixaria o jogo enumerar vpads órfãos até o tick
-    seguinte do co-op. Se alguém "melhorar" o gatilho, este teste reprova.
-
-    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela): este
-    teste entrava por `sync_steam_input_exception`, porque era a BORDA DA MARCA
-    que suspendia. Não é mais — a marca passou a esconder o controle físico e a
-    deixar os virtuais de pé, justamente porque o preço medido desta suspensão é
-    o jogador 2. A ordem interna da suspensão, que é o que este teste guarda,
-    não mudou uma linha; mudou quem a percorre. Entrar por uma porta que hoje
-    não leva a lugar nenhum deixaria o teste verde e mudo.
-    """
+    """Guarda: esta sprint é observabilidade, não mudança de gatilho."""
     daemon = _DaemonDublado(secundarios=3)
 
     assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
@@ -404,9 +342,5 @@ async def test_a_suspensao_segue_derrubando_o_coop_antes_do_p1(
     assert daemon._coop_manager.desligados == 1
     assert daemon._coop_manager._players == {}
     assert daemon._gamepad_device is None
-    # NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01): aqui havia `== 3`, do
-    # tempo em que o número da janela era o de vpads recolhidos. O gatilho —
-    # que é o que este teste guarda — não mudou: os três secundários caem, na
-    # mesma ordem, antes do P1. O que mudou é quem a JANELA ouve.
     assert gp.steam_input_coop_derrubados(daemon) == 0
     assert len(gp.coop_sentados_na_suspensao(daemon)) == 3

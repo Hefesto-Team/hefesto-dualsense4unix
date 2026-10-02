@@ -74,28 +74,18 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     frase_do_alvo_do_mic,
 )
 
-#: MAC da faixa sintética desta casa — há DOIS portões de anonimato nesta árvore.
 P1 = "aa:bb:cc:00:00:01"
 CHAVE_P1 = "aabbcc000001"
 
 NOME = "Regua da confissao"
 
 #: Um nome de sink de DualSense na forma que o PipeWire usa nesta bancada. Ele
-#: é DADO DE TESTE e nunca chega a lugar nenhum: o tocador está dublado em toda
-#: régua que o usa.
 SINK = ("alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
         "Controller-00.analog-surround-40")
 
 
 class PonteQueDizDeQuem:
-    """O dublê ESTRITO: devolve o CORPO do daemon, como a ponte real devolve.
-
-    **Um dublê mais frouxo que a ponte real é a cicatriz de 04/09/2026**, e ela
-    custou duas máscaras que nunca gravaram um byte. O `_corpo` do pacote
-    converte `True` em `{"status": "ok"}` e mais nada — sem `por_uniq` —, então
-    uma ponte que respondesse `True` mediria o caminho do *"não sei"* achando
-    que estava medindo o do *"não honrei"*.
-    """
+    """O dublê ESTRITO: devolve o CORPO do daemon, como a ponte real devolve."""
 
     def __init__(self, corpo: dict[str, Any] | None = None) -> None:
         self.corpo = corpo if corpo is not None else {"status": "ok"}
@@ -119,11 +109,7 @@ class PonteQueDizDeQuem:
 
 @pytest.fixture
 def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Path:
-    """Um `XDG_CONFIG_HOME` só desta régua, com um perfil ativo dentro.
-
-    O perfil precisa existir porque metade destas medições é sobre o que NÃO foi
-    ao disco: sem arquivo, *"não gravou"* seria verdade por acaso.
-    """
+    """Um `XDG_CONFIG_HOME` só desta régua, com um perfil ativo dentro."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
@@ -174,21 +160,13 @@ def _bytes_do_perfil() -> bytes:
     from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
 
     alvo = _arquivo_do_perfil()
-    # O COMPUTADOR JUNTO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o som
-    # é dele, e «não gravou» vale para os dois arquivos.
     maquina = caminho_da_maquina()
     return ((alvo.read_bytes() if alvo is not None else b"")
             + (maquina.read_bytes() if maquina.exists() else b""))
 
 
 def _do_controle(uniq_chave: str) -> dict[str, Any]:
-    """O bloco que VALE daquele controle: o do perfil por cima do do computador.
-
-    Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026) o som é do
-    computador: o clique grava no `maquina.json`, e no perfil só quando ele já
-    sobrepõe o cartão. A régua lê o que vale, que é o que o aparelho recebe na
-    ativação, e não um dos dois arquivos.
-    """
+    """O bloco que VALE daquele controle: o do perfil por cima do do computador."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
         carregar_o_que_vale,
     )
@@ -216,29 +194,15 @@ def _ctx(*entradas: dict[str, Any]) -> Any:
 
 def _gesto(nome: str) -> Any:
     import pacotes
-    import pacotes.a02_controles  # importar é registrar: o decorador `@gesto`
+    import pacotes.a02_controles
 
     fn = pacotes.gesto_da_pagina("02-controles.html", nome)
     assert fn is not None, f"02-controles.html:{nome} não tem dono"
     return fn
 
 
-# ===========================================================================
-# 1. O mudo confessa o alvo
-# ===========================================================================
-
-
 def test_o_mudo_confessa_quando_o_alvo_nao_foi_honrado(casa: Any) -> None:
-    """MORDIDA: arranque as duas linhas da confissão e isto reprova.
-
-    Sem elas o gesto passa das duas metades do ato e volta como SUCESSO — que é
-    o defeito inteiro na mesa cheia: a tela pinta o selo do cartão certo e quem
-    ficou mudo foi outra pessoa.
-
-    A TERCEIRA ASSERÇÃO lê os BYTES do perfil: o gesto não grava nele (o mudo é
-    do controle, O-MUDO-E-DO-CONTROLE-01) — perguntar ao dublê mediria a
-    intenção do código que está sob teste.
-    """
+    """MORDIDA: arranque as duas linhas da confissão e isto reprova."""
     antes = _bytes_do_perfil()
     p = PonteQueDizDeQuem({"status": "ok", "por_uniq": False})
 
@@ -341,21 +305,7 @@ def test_a_metade_do_ato_continua_falando_antes_da_confissao(casa: Any) -> None:
 
 
 def test_o_ato_do_microfone_ainda_nao_diz_de_quem_e_o_microfone() -> None:
-    """A RÉGUA-ESTOPIM: o fato medido em 06/09/2026, e o dia em que ele mudar.
-
-    O corpo de `mic.canal.set` é montado por `AtoDoMicrofone.como_corpo`, e ele
-    não tem `por_uniq` — quem tem é o `mic.volume.set`. Logo a confissão do gesto
-    `mudo` é, hoje, uma trava armada e calada: `alvo_honrado` devolve `None` e
-    nada é dito. **Isso não é defeito e não se conserta daqui** — o ato já recusa
-    dizendo quando a eleição do canal não é deste controle, e essa recusa sobe
-    pela outra frase.
-
-    **QUANDO O CAMPO NASCER, ESTA RÉGUA REPROVA — e é o que se quer.** Nesse dia
-    duas coisas passam a valer de uma vez: a confissão deixa de ser inerte, e a
-    frase do dono (`TEXTO_MIC_ALVO_NAO_HONRADO`, marcada `PROVISÓRIO — decisão
-    dela`) começa a dizer *"O volume foi para o microfone de OUTRO controle"*
-    depois de um clique no botão de MUDO.
-    """
+    """A RÉGUA-ESTOPIM: o fato medido em 06/09/2026, e o dia em que ele mudar."""
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
         AtoDoMicrofone,
         MetadeDoAto,
@@ -377,11 +327,6 @@ def test_o_ato_do_microfone_ainda_nao_diz_de_quem_e_o_microfone() -> None:
     )
 
 
-# ===========================================================================
-# 2. O som de confirmação
-# ===========================================================================
-
-
 @pytest.mark.parametrize(
     ("gesto", "clique"),
     [
@@ -393,17 +338,7 @@ def test_o_ato_do_microfone_ainda_nao_diz_de_quem_e_o_microfone() -> None:
 def test_os_tres_gestos_do_alto_falante_confirmam_com_som(
     casa: Any, som: list[tuple[str, Any]], gesto: str, clique: dict[str, Any]
 ) -> None:
-    """MORDIDA: arranque `_confirmar_com_som` de qualquer um dos três e reprova.
-
-    São os três que esta aba tem, e a GTK toca nos quatro dela — o quarto é a
-    devolução da posse, que esta tela não oferece. Cobrir só o deslizante
-    deixaria a próxima pessoa remedindo o mesmo defeito nos outros dois: *quando
-    a cura conhece a causa, ela cobre todos os chamadores*.
-
-    O SOM VAI PARA O SINK DAQUELE CONTROLE, e é o ponto inteiro: o motor recusa
-    sink vazio em vez de cair no padrão, porque um `paplay --device` inexistente
-    sai com ZERO e toca na televisão dela.
-    """
+    """MORDIDA: arranque `_confirmar_com_som` de qualquer um dos três e reprova."""
     _gesto(gesto)(_ctx(), {"uniq": P1, **clique}, PonteQueDizDeQuem())
 
     assert som == [(SINK, None)], (
@@ -452,16 +387,7 @@ def test_o_som_nao_segura_o_botao_em_voo(casa: Any,
 def test_o_som_que_falha_nao_derruba_o_volume(
     casa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MORDIDA 2 da sprint: ponha o motor para levantar e a gravação segue.
-
-    O som é CONFIRMAÇÃO, não pré-requisito. Um alto-falante mudo que impedisse o
-    volume de mudar seria o defeito trocado de lugar — e, na thread de verdade,
-    uma exceção solta viraria traceback no terminal de quem lançou a janela, que
-    ninguém lê.
-
-    MORDIDA: tire o `try` de dentro de `tocar` e isto reprova com a exceção
-    subindo pelo gesto.
-    """
+    """MORDIDA 2 da sprint: ponha o motor para levantar e a gravação segue."""
     import pacotes.a02_controles as a02
 
     def explode(_sink: str, **_k: Any) -> Any:
@@ -523,12 +449,7 @@ def test_a_chave_dela_desliga_o_som_e_o_gesto_nao_recusa(
 
 
 def _seletor_do_piloto(*_a: Any, **_k: Any) -> None:
-    """O que o piloto põe em `ponte.escolher_arquivo` ao subir a janela.
-
-    Ela mora no módulo do TESTE de propósito: é o `__module__` diferente que
-    `ponte.dentro_da_janela` lê, e é exatamente o que acontece quando o piloto
-    substitui o ponto de extensão pelo método dele.
-    """
+    """O que o piloto põe em `ponte.escolher_arquivo` ao subir a janela."""
     return None
 
 
@@ -551,12 +472,7 @@ class TestAGuardaDaMaquinaDela:
     def test_sem_a_janela_de_pe_o_som_nao_nasce(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MORDIDA: tire o `dentro_da_janela` de `_fora_do_voo` e isto reprova.
-
-        Os dois lados são medidos: sem janela a linha do som **não nasce**; com
-        o ponto de extensão substituído — que é o que o piloto faz ao subir —
-        ela nasce. Uma guarda que só sabe recusar desligaria o produto.
-        """
+        """MORDIDA: tire o `dentro_da_janela` de `_fora_do_voo` e isto reprova."""
         import pacotes.a02_controles as a02
         from pacotes import ponte as _ponte
 
@@ -616,18 +532,7 @@ class TestAGuardaDaMaquinaDela:
 def test_o_sink_sai_do_cache_da_camada_1_e_nunca_do_padrao(
     monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """De onde vem o sink, e por que a resposta vazia é a certa.
-
-    O cache da camada 1 é o dono barato (uma thread o renova a cada 2 s, e a aba
-    02 é a mais pintada da casa). No caso frio — o primeiro clique de uma aba
-    recém-aberta — quem responde é o MESMO dono que o cache consulta,
-    `audio_saida.sink_do_controle`, e não uma segunda regra de atribuição.
-
-    `""` É RESPOSTA HONESTA: o controle sem placa de som atribuída não tem para
-    onde tocar, e o motor recusa em vez de cair no sink padrão — que é a
-    guarda-mãe do `audio_saida` (`paplay --device` inexistente sai com ZERO e
-    toca na televisão dela).
-    """
+    """De onde vem o sink, e por que a resposta vazia é a certa."""
     import pacotes.a02_controles as a02
 
     monkeypatch.setitem(a02._CAMADA_1, P1, type("L", (), {

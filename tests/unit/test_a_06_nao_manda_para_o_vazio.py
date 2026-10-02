@@ -1,41 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA ABA 06: o que o pacote manda tem onde cair, e o que cai é inteiro.
-
-POR QUE ELA EXISTE, medido em 02/09/2026 na aba Navegação — e o achado derruba
-o enunciado do trabalho:
-
-    o passeio reportava `06-navegacao.html  1 pintura  3 valores` num HTML com
-    7 endereços, e disso se concluiu que a aba "MENCIONA 7 e PINTA 3".
-
-**Ela pinta os 8 elementos endereçados.** O `3` é contagem de MUDANÇA: o
-`escrever()` do piloto devolve `1` só quando o valor NOVO difere do que já
-estava na tela, e cinco dos oito já coincidiam com o daemon dela (`2
-controles:`, `1 USB · 1 BT`, `6`, `1`, `Ligada — atalhos e teclado na tela`).
-Contar mudança e ler "pintura" é a mesma confusão entre a PALAVRA e o ATO que
-produziu o "77%" falso desta casa, com o sinal trocado.
-
-O QUE ESTA RÉGUA COBRA, e cada item é um defeito que a medição do mesmo dia
-achou nesta aba:
-
-1. **Chave emitida tem endereço na BANCADA**, ou está declarada em
-   `SEM_ENDERECO` com a razão. `casamento.py` já imprimia os órfãos e reprovava
-   só o ZERO — esta aba mandava 8 chaves para o vazio com o portão verde, e uma
-   delas (`via`) não era falta de lugar: era o pacote mandando METADE de uma
-   linha cujo endereço cobre a linha inteira.
-2. **`SEM_ENDERECO` não guarda quem já tem casa** — declaração que envelhece é
-   a régua se desligando sozinha.
-3. **O cartão leva o transporte.** O endereço `data-campo="navega"` cobre
-   `{via} • {papel}`; mandar só o papel APAGAVA o "USB •" no primeiro tique.
-4. **As 21 linhas de *o que cada botão faz* saem do PERFIL**, e cada valor
-   emitido existe como `<option>` daquele `<select>` — condição do
-   `escrever()` com `data-hef-alvo="valor"`, que se cala calado quando não casa.
-5. **O "Guardar" não apaga o que a tela não mostrou.**
-6. **O produto nunca está à FRENTE do desenho** em endereço de pintura.
-
-A MORDIDA: tire o `via` de `_linha_do_cartao`, ou o `campo=` da chamada de
-`drop()` no gerador, ou a trava do `guardar_definicoes` — cada um reprova um
-teste diferente, nomeando o que se perdeu.
-"""
+"""A RÉGUA DA ABA 06: o que o pacote manda tem onde cair, e o que cai é inteiro."""
 from __future__ import annotations
 
 import json
@@ -48,19 +12,14 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Um controle de mentira. MAC da faixa sintética da casa — há dois portões de
-#: anonimato nesta árvore e eles não perdoam.
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "bt",
          "battery_pct": 95, "is_primary": True, "inputs": {}, "audio": {},
          "speaker": {}}
-#: A MESA é quem tem o `via` — `mesa_viva` traduz `transport` uma vez só, e o
-#: pacote lê o traduzido. Aqui ela vem montada à mão, com a mesma forma.
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "BT", "cor": "starlight-blue", "mascara": "DualSense"}]
 
 #: O estado do daemon como a aba o consome. Sem `keyboard_emulation` o pacote
-#: NÃO emite `teclado-estado`, de propósito — ver o corpo de `pacote()`.
 ESTADO = {
     "active_profile": "regua",
     "mouse_emulation": {"enabled": False, "speed": 6, "scroll_speed": 1,
@@ -74,29 +33,7 @@ CAMPO = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
 
 
 def _perfil_de_mentira(monkeypatch, tmp_path, **campos):
-    """Grava um perfil no disco e aponta a `pacotes.perfil` para ele.
-
-    O DESVIO É PELO `monkeypatch`, E ISSO NÃO É ESTILO — é o que impede esta
-    régua de mentir sobre as vizinhas. A primeira versão fazia
-    `perfil.pasta = lambda: tmp_path` cru (02/09/2026, `ad7c2c3f`), e o
-    `pacotes.perfil` é um módulo importado UMA vez por processo: a lambda ficava
-    presa ao `tmp_path` DESTE arquivo pelo resto do lote inteiro.
-
-    O QUE ISSO CUSTOU, medido em 04/09/2026 no lote 00 dos oito: três casos de
-    `test_a_aba_04_iluminacao_fecha_as_linhas.py` reprovaram por lerem o
-    `regua.json` daqui — um perfil sem a chave `leds`. Os três liam o perfil
-    pelo default da ausência (`auto_player_colors` → `True`, brilho → nenhum) e
-    acusavam o produto de não gravar o que ele tinha acabado de gravar::
-
-        AssertionError: assert 'sim' == ''
-        AssertionError: gravou (0, 0, 127) — a cor guardada é a PEDIDA
-        AssertionError: assert False is True
-
-    O par mínimo que reproduz, e ele é o mais curto que existe::
-
-        pytest tests/unit/test_a_06_nao_manda_para_o_vazio.py \\
-               tests/unit/test_a_aba_04_iluminacao_fecha_as_linhas.py
-    """
+    """Grava um perfil no disco e aponta a `pacotes.perfil` para ele."""
     from pacotes import perfil
 
     corpo = {"name": "Régua", "version": 1, "priority": 50,
@@ -130,19 +67,13 @@ def _enderecos(publicado: bool) -> set[str]:
 
 
 def test_toda_chave_emitida_tem_endereco_ou_esta_declarada(aba):
-    """Órfão calado é o defeito; órfão DECLARADO é inventário.
-
-    A mordida: acrescente uma chave qualquer ao `mesa` do pacote sem endereço no
-    desenho e sem linha no `SEM_ENDERECO` — este teste a nomeia.
-    """
+    """Órfão calado é o defeito; órfão DECLARADO é inventário."""
     _, mod, pronto = aba
     emitidas = {k for k, v in pronto["mesa"].items() if not isinstance(v, (dict, list))}
     for campos in pronto["colunas"].values():
         emitidas |= {k for k, v in campos.items() if not isinstance(v, (dict, list))}
-    # As estruturas também contam: o piloto as pula, e emiti-las é peso morto.
     emitidas |= {k for k, v in pronto["mesa"].items() if isinstance(v, (dict, list))}
     # O CABEÇALHO É DAS DEZ ABAS (`pacotes.topo`) e não é desta: cobrar dele
-    # aqui faria esta régua reprovar por causa de um dono compartilhado.
     import pacotes
 
     ctx, _, _ = aba
@@ -166,17 +97,7 @@ def test_o_sem_endereco_nao_guarda_quem_ja_tem_casa(aba):
 
 
 def test_a_linha_do_cartao_leva_o_transporte(aba):
-    """`navega` é a LINHA inteira, não o papel: o endereço cobre os dois.
-
-    Medido em 02/09/2026, com a foto: o desenho escreve
-    `USB <span class="pt">•</span> Navega o PC` e o pacote mandava só
-    `Navega o PC` — o piloto escrevia `textContent`, então o primeiro tique
-    apagava o transporte do cartão.
-
-    DESDE 21/09/2026 A LINHA É HTML, e a razão é a bolinha verde de quem navega:
-    o texto não sabia devolvê-la (ver `a06_navegacao.linha_do_cartao`). A régua
-    passou a cobrar a MESMA marcação que o gerador escreve, com a bolinha.
-    """
+    """`navega` é a LINHA inteira, não o papel: o endereço cobre os dois."""
     _, _, pronto = aba
     linha = pronto["colunas"]["p1"]["navega"]
     assert linha == '<span class="bolinha"></span>BT <span class="pt">•</span> Navega o PC', (
@@ -196,20 +117,11 @@ def test_a_linha_do_cartao_nao_inventa_transporte(aba):
 
 
 def test_o_gerador_e_o_pacote_desenham_a_mesma_linha(aba):
-    """UM DONO, DOIS CHAMADORES — o que a bancada mostra é o que o tique pinta.
-
-    A MORDIDA: devolva ao `aba06.controle` a f-string que ele tinha — com a
-    bolinha escrita à mão — e troque o `PONTO` do pacote. As duas linhas
-    divergem, e o cartão pisca no primeiro tique entre a do desenho e a do
-    produto.
-    """
+    """UM DONO, DOIS CHAMADORES — o que a bancada mostra é o que o tique pinta."""
     import onde
 
     _, mod, _ = aba
     doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    # O MIOLO INTEIRO DO `<div>`, e não um pedaço: a linha sem a bolinha é
-    # substring da linha com ela, e uma régua de `in` daria verde sobre o
-    # primário que perdeu o ponto verde.
     for via, primario in (("USB", True), ("BT", False)):
         miolo = f'data-hef-alvo="html">{mod.linha_do_cartao(via, primario)}</div>'
         assert miolo in doc, f"a bancada e o tique divergem na linha {via!r}"
@@ -233,21 +145,13 @@ def test_as_vinte_e_uma_linhas_saem_do_perfil(monkeypatch, tmp_path):
     assert mesa["acao-cross"] == "Esc", (
         "a linha do X saiu do de fábrica, e o perfil manda `KEY_ESC` — a tela "
         "estaria mostrando o desenho no lugar da escolha dela.")
-    # As outras 20 continuam no de fábrica, que é o que `None` quer dizer.
     assert mesa["acao-square"] == "Esc"
-    # O L3 ALTERNA desde 02/09/2026 (decisão dela), e por isso o rótulo mudou:
     # `core/keyboard_mappings.DEFAULT_BUTTON_BINDINGS["l3"]` é o `__TOGGLE_OSK__`.
     assert mesa["acao-l3"] == "Abrir e fechar o teclado na tela"
 
 
 def test_todo_valor_emitido_existe_como_opcao_daquela_lista(aba):
-    """`escrever()` com `data-hef-alvo="valor"` SE CALA quando o texto não casa.
-
-    Um `<select>` só aceita o texto exato de uma `<option>` (`hefesto_vivo.py`,
-    ramo `alvo === 'valor'`), e a pintura devolve `0` em silêncio quando não
-    acha. Um valor que não casa é um campo que nunca anda, sem uma linha de erro
-    em lugar nenhum — por isso a régua confere o casamento TEXTO a TEXTO.
-    """
+    """`escrever()` com `data-hef-alvo="valor"` SE CALA quando o texto não casa."""
     import onde
 
     doc = onde.pagina(PAGINA, publicado=False).read_text(encoding="utf-8")
@@ -284,12 +188,7 @@ def test_a_cobertura_conta_so_o_que_tem_casa(aba):
 
 
 class _PerfilDeMentira:
-    """O mínimo de um `Profile` que o "Guardar" toca, no idioma do pydantic.
-
-    Instanciar o modelo de verdade exigiria um `match` válido, e a régua
-    passaria a medir o esquema em vez do botão — mesma disciplina do
-    `test_o_padrao_dos_atalhos_volta_de_fabrica.py`.
-    """
+    """O mínimo de um `Profile` que o "Guardar" toca, no idioma do pydantic."""
 
     def __init__(self, nome, button_actions=None, key_bindings=None):
         self.name = nome
@@ -316,11 +215,6 @@ def disco(monkeypatch):
     monkeypatch.setattr(loader, "save_profile",
                         lambda prof, **_: gravados.append(prof), raising=False)
 
-    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): os gestos
-    # da tabela gravam por `gravar_pelo_gesto`, que escolhe entre o perfil e o
-    # computador. Aqui o disco de mentira é o de um perfil que já sobrepõe o
-    # cartão: o que se mede é o que o gesto grava, e não onde. O onde tem
-    # régua própria em `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
     def _pelo_gesto(_cartao, nome, muda, **_k):
         novo = muda(estado[nome])
         if novo is not None:
@@ -369,11 +263,7 @@ def test_o_guardar_nao_apaga_o_que_a_tela_nao_mostrou(disco):
 
 
 def test_o_guardar_continua_gravando_o_que_mudou(disco):
-    """A trava não pode virar um "Guardar" que nunca guarda.
-
-    Uma linha diferente do de fábrica é escolha real e vai para o disco — é o
-    que separa a trava de uma recusa em bloco.
-    """
+    """A trava não pode virar um "Guardar" que nunca guarda."""
     import pacotes
     from pacotes import a06_navegacao
 
@@ -411,33 +301,12 @@ def test_o_guardar_nao_grava_quando_nao_ha_o_que_gravar(disco):
 @pytest.mark.parametrize(
     ("guardado", "a_forma", "pedaco"),
     [
-        # O SEGUNDO CLIQUE que a trava manda dar: a tabela já se preencheu e
-        # mostra o que o perfil guarda.
         ({"square": "KEY_ENTER"}, {"square": "Enter"}, "1 escolha"),
-        # E o mesmo botão com o perfil de fábrica e a tela de fábrica.
         (None, {}, "de fábrica"),
     ],
 )
 def test_o_guardar_sem_o_que_guardar_recusa_dizendo(disco, guardado, a_forma, pedaco):
-    """O "Guardar" sem nada a gravar tem de DIZER que já está guardado.
-
-    O DEFEITO QUE ESTA LINHA FECHA, encenado em 02/09/2026 com dublê de disco e
-    ponte muda — e ele era cruel com quem estava usando:
-
-        1º clique (tabela ainda no desenho)   → RuntimeError, e a frase manda
-                                                 "espere a tabela se preencher
-                                                  e clique de novo"
-        2º clique (tabela cheia, = ao perfil) → voltou SEM levantar, devolveu
-                                                 None, gravou 0, chamou 0
-
-    Uma recusa que INSTRUI a repetir o gesto e depois não responde nada é pior
-    que uma recusa seca: ela promete que a segunda tentativa funciona. E um
-    gesto que devolve `None` não toca o DOM (`hefesto_vivo._deu_certo`), logo o
-    segundo clique era o botão que responde calado.
-
-    A MORDIDA: troque a recusa do `guardar_definicoes` de volta por um `return`
-    — os dois casos reprovam dizendo que o botão voltou a ficar mudo.
-    """
+    """O "Guardar" sem nada a gravar tem de DIZER que já está guardado."""
     import pacotes
     from pacotes import a06_navegacao
 
@@ -458,33 +327,7 @@ def test_o_guardar_sem_o_que_guardar_recusa_dizendo(disco, guardado, a_forma, pe
 
 
 def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
-    """O "Guardar" nomeia as linhas sem dono com o rótulo do MOTOR, não o id cru.
-
-    Medido em 02/09/2026 com dublê: trocar o `cross` faz o `l2` divergir do seu
-    espelho (`acoes.resolver` — o L2 é o cross por tabela), e a frase que ia
-    para a tela dizia *"ficaram sem quem as atenda: l2"*. `l2` e
-    `touchpad_left_press` são jargão de kernel na cara de quem clicou, e o
-    produto já tem os nomes em `app/actions/input_actions.humanize_button` desde
-    o KBD-01 — é o que a GTK que ela usa mostra.
-
-    FATO SUBSTITUÍDO — 02/09/2026, corretivo: este parágrafo citava `r3_direcao`
-    como curado junto com os outros dois. **Não está** — o motor tem 20 nomes
-    para 21 botões, e os que faltam são `l3_direcao` e `r3_direcao`. A cura é do
-    motor e está relatada; o teste abaixo é quem cobra que ninguém a escreva
-    aqui.
-
-    A mordida: faça `_nome_do_botao` devolver o argumento — este teste reprova
-    dizendo que a frase voltou a falar em `l2`.
-
-    O NOME É DO MOTOR, E O MOTOR PUXA O GTK — 27/09/2026. `input_actions`
-    importa o `gi` no topo, e `_nome_do_botao` cai de pé no id cru quando ele
-    falta (é de propósito, e está escrito lá). Sem o GTK real esta régua
-    mediria a QUEDA, não o nome: foi o `lint-test` de 27/09, onde o `pacotes`
-    só importou porque sete arquivos deixaram `app/actions/*` no cache contra
-    um `gi` falso. Importar o dono aqui declara a dependência: sem o GTK real a
-    regra do `tests/conftest.py` pula com o motivo, e no `gtk-real` a régua
-    mede o que ela lê.
-    """
+    """O "Guardar" nomeia as linhas sem dono com o rótulo do MOTOR, não o id cru."""
     import pacotes
     from pacotes import a06_navegacao
 
@@ -507,20 +350,7 @@ def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
 
 
 def test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela():
-    """Os nomes já existem no produto; escrevê-los de novo é o defeito.
-
-    LEI 0 desta migração, palavra dela: *"não temos que recriar nada, só
-    aproveitar o que foi feito"*. Esta linha reprova no dia em que alguém
-    copiar a tabela para dentro do pacote — as duas passariam a envelhecer
-    separadas, e a tela e a GTK diriam nomes diferentes para o mesmo botão.
-
-    A CONFERÊNCIA É DAS VINTE E UMA, e não de quatro escolhidas — corrigido em
-    02/09/2026. Com quatro, a tentação de remendar no pacote justamente o que o
-    motor não tem (`l3_direcao` e `r3_direcao`) passaria sem reprovar nada: são
-    os dois botões que a amostra não olhava. O buraco é do motor
-    (`app/actions/input_actions.py:129` tem 20 nomes para 21 botões) e a cura é
-    lá; o que esta linha impede é a segunda tabela nascer AQUI.
-    """
+    """Os nomes já existem no produto; escrevê-los de novo é o defeito."""
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
     from hefesto_dualsense4unix.app.actions import input_actions
     from pacotes import a06_navegacao
@@ -533,11 +363,7 @@ def test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela():
 
 
 def test_o_produto_nunca_esta_a_frente_do_desenho():
-    """Endereço no publicado que a bancada não tem = alguém editou o produto.
-
-    O fluxo tem UMA direção (`mockup/` → `paginas/`), e um endereço que só
-    exista do lado publicado é a única forma de ele ter andado sozinho.
-    """
+    """Endereço no publicado que a bancada não tem = alguém editou o produto."""
     a_mais = _enderecos(publicado=True) - _enderecos(publicado=False)
     assert not a_mais, (
         f"{sorted(a_mais)} existe na página publicada e não no desenho de hoje.")

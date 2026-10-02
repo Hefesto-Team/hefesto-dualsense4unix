@@ -114,11 +114,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def _servidor(
     tmp_path: Path, ds: ControllerIdentityRegistry
 ) -> tuple[IpcServer, _FakeDaemon, _CoopEspiao, list[str]]:
-    """Servidor com os TRÊS passos instrumentados no MESMO diário.
-
-    O diário é o instrumento inteiro: um `set` de nomes provaria que os três
-    rodaram e não provaria a ORDEM — que é justamente o que estava errado.
-    """
+    """Servidor com os TRÊS passos instrumentados no MESMO diário."""
     diario: list[str] = []
     fc = FakeController(transport="usb")
     fc.connect()
@@ -147,21 +143,7 @@ def _mesa_de_dois(tmp_path: Path) -> tuple[IpcServer, _CoopEspiao, list[str]]:
 
 
 async def _esperar_repintura(server: IpcServer) -> None:
-    """Espera a repintura DESPACHADA terminar. Sem isto a régua mede o vazio.
-
-    RÉGUA QUE MEDIA O MUNDO DE ONTEM — corrigida em 07/09/2026. Estes testes
-    nasceram quando o handler repintava ANTES de responder, e afirmavam sobre
-    `coop.chamadas`/`diario` na linha seguinte ao `await`. Desde a
-    RESPOSTA-QUE-CHEGA-TARDE-01 (`_despachar_repintura`) a repintura é
-    CONSEQUÊNCIA: ela sai num `asyncio.to_thread` para não estourar os 250 ms
-    do cliente, e no instante do `assert` ainda não rodou. As cinco réguas
-    passaram a reprovar a melhora, não o defeito.
-
-    Ela ESPERA as tasks em voo em vez de dormir um tempo fixo: `sleep(0.2)` é
-    aposta, e aposta em teste vira vermelho intermitente. Os dois giros finais
-    do laço são para o PASSO 3, que volta do worker por
-    `call_soon_threadsafe` e precisa de um turno para rodar.
-    """
+    """Espera a repintura DESPACHADA terminar. Sem isto a régua mede o vazio."""
     for _ in range(50):
         em_voo = list(getattr(server, "_repinturas_em_voo", ()) or ())
         if em_voo:
@@ -171,11 +153,6 @@ async def _esperar_repintura(server: IpcServer) -> None:
         if not getattr(server, "_repinturas_em_voo", None):
             return
     raise AssertionError("a repintura despachada nunca terminou")
-
-
-# ---------------------------------------------------------------------------
-# identity.number.set — o gesto que ela faz na aba
-# ---------------------------------------------------------------------------
 
 
 class TestONumeroAcendeALampada:
@@ -199,12 +176,7 @@ class TestONumeroAcendeALampada:
 
     @pytest.mark.asyncio
     async def test_o_sync_e_forcado(self, config_isolado: Path) -> None:
-        """`sync()` seco volta na porta: renumerar não mexe em `/dev/input`.
-
-        O ciclo cheio (o único que chama `_apply_coop_player_leds`) exige
-        `watch.poll() or activated or grab_degraded or vpad_morto or
-        retry_needed or force`. Renumerar não é nenhum dos cinco primeiros.
-        """
+        """`sync()` seco volta na porta: renumerar não mexe em `/dev/input`."""
         server, coop, _diario = _mesa_de_dois(config_isolado)
 
         await server._handle_identity_number_set({"uniq": UNIQ_B, "number": 1})
@@ -216,13 +188,7 @@ class TestONumeroAcendeALampada:
 
     @pytest.mark.asyncio
     async def test_o_coop_vem_antes_do_reassert(self, config_isolado: Path) -> None:
-        """A ORDEM é o conserto, não um detalhe.
-
-        `reassert_resolved_outputs` reafirma o MERGE do backend, e a camada do
-        co-op fica acima do override por-uniq nele. Reafirmar antes de
-        republicar reafirma o valor VELHO — que é exatamente o defeito que
-        estava no ar, com o `reassert` já no lugar.
-        """
+        """A ORDEM é o conserto, não um detalhe."""
         server, _coop, diario = _mesa_de_dois(config_isolado)
 
         await server._handle_identity_number_set({"uniq": UNIQ_B, "number": 1})
@@ -234,12 +200,7 @@ class TestONumeroAcendeALampada:
 
     @pytest.mark.asyncio
     async def test_no_op_nao_repinta_nada(self, config_isolado: Path) -> None:
-        """Pedir o número que o controle JÁ tem não paga varredura nenhuma.
-
-        `sync(force=True)` custa uma `discover_dualsense_evdevs()` (~10-40 ms,
-        PERF-MULTI-CONTROLLER-01) no event loop. Um gesto que não mudou fila
-        não pode cobrá-la.
-        """
+        """Pedir o número que o controle JÁ tem não paga varredura nenhuma."""
         server, coop, diario = _mesa_de_dois(config_isolado)
 
         resultado = await server._handle_identity_number_set(
@@ -266,24 +227,14 @@ class TestONumeroAcendeALampada:
         assert diario == []
 
 
-# ---------------------------------------------------------------------------
-# identity.renumber — o GÊMEO, com o mesmo defeito
-# ---------------------------------------------------------------------------
-
-
 class TestOGemeoRenumber:
     @pytest.mark.asyncio
     async def test_renumber_republica_a_camada_do_coop_na_mesma_ordem(
         self, config_isolado: Path
     ) -> None:
-        """Ele escreve a MESMA fila; tinha o MESMO bloco incompleto.
-
-        Curar só o `number.set` deixaria metade do defeito vivo — e a metade
-        que sobra é a que a aba Início usa.
-        """
+        """Ele escreve a MESMA fila; tinha o MESMO bloco incompleto."""
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B, UNIQ_C])
-        # Abre um buraco na fila para o "Renumerar agora" ter o que compactar.
         ds.sync_connected([UNIQ_A, UNIQ_C])
         server, _daemon, coop, diario = _servidor(config_isolado, ds)
 
@@ -310,23 +261,12 @@ class TestOGemeoRenumber:
         assert diario == []
 
 
-# ---------------------------------------------------------------------------
-# A renumeração já aconteceu no disco: repintar não pode derrubá-la
-# ---------------------------------------------------------------------------
-
-
 class TestARepinturaNaoDerrubaARenumeracao:
     @pytest.mark.asyncio
     async def test_coop_que_levanta_nao_perde_o_numero(
         self, config_isolado: Path
     ) -> None:
-        """Um co-op quebrado não pode reverter o que já foi gravado.
-
-        Os três passos são defensivos DE PROPÓSITO: quando eles rodam, a fila
-        nova já está no disco. Deixar a exceção subir transformaria "a lâmpada
-        não acendeu" em "o comando falhou", que é trocar um defeito por um
-        pior.
-        """
+        """Um co-op quebrado não pode reverter o que já foi gravado."""
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B])
         server, daemon, _coop, diario = _servidor(config_isolado, ds)
@@ -345,8 +285,6 @@ class TestARepinturaNaoDerrubaARenumeracao:
         assert resultado["ok"] is True
         assert ds.slot_for(UNIQ_B, assign=False) == 1
         assert ds.slot_for(UNIQ_A, assign=False) == 2
-        # E os passos SEGUINTES continuam rodando — a lâmpada do co-op falhou,
-        # o resto da repintura não tem culpa.
         assert diario == ["reassert", "external_tick"]
 
     @pytest.mark.asyncio
@@ -366,8 +304,6 @@ class TestARepinturaNaoDerrubaARenumeracao:
             socket_path=config_isolado / "sem-daemon.sock",
             daemon=None,
         )
-        # Sem daemon o handler não tem registro: o que se afere aqui é que ele
-        # RESPONDE em vez de levantar.
         resultado = await server._handle_identity_number_set(
             {"uniq": UNIQ_B, "number": 1}
         )

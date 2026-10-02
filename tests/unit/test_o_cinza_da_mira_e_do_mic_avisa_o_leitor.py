@@ -1,33 +1,5 @@
 #!/usr/bin/env python3
-"""O CINZA DA MIRA E DO «NATIVO» DO MICROFONE AVISA O LEITOR DE TELA.
-
-**A-MIRA-NA-NAVEGACAO-01, 24/09/2026**, item 3 da sprint: o chip «Mira
-Virtual» fica cinza no Modo Nativo (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`) e o
-«Nativo» do microfone fica cinza no BT (decisão dela de 20/09). Os dois
-ficavam cinza SÓ para quem enxerga: o endereço do cinza morava no GRUPO, e o
-botão não tinha `aria-disabled`.
-
-A FORMA É A DA PEÇA DAS DEZ (`monta.botao_cinza`): o botão leva o campo do
-cinza com `data-hef-atributo="aria-disabled"`, e o piloto deriva o atributo da
-classe no mesmo elemento (`test_o_alvo_classe_tambem_veste_o_aria`). Como um
-elemento aceita UM alvo, o aceso que o botão carregava (`mira-ligada`,
-`mic-modo-aceso`) desceu para um invólucro de `display:contents` — e é esse o
-risco que esta régua vigia: **a geometria medida não pode mudar**.
-
-A régua abre a BANCADA de verdade (`mockup/02-controles.html`) num WebKit
-offscreen, instala o BOOTSTRAP lido do fonte do piloto e pinta os três
-estados com os valores que o pacote pinta (`MIRA_NO_NATIVO`,
-`_selo_do_sensor`).
-
-AS MORDIDAS, uma por teste:
-
-* tire o `data-hef-atributo="aria-disabled"` do botão da Mira no gerador e
-  `test_no_nativo_os_dois_avisam_o_leitor` reprova;
-* tire `.sensores-peca .chip-da-mira{display:contents}` da folha e
-  `test_a_geometria_nao_mudou` reprova (o chip sai da grade de três);
-* tire `.sensores-peca .chip-da-mira.off>.sw` da folha e
-  `test_a_mira_apagada_tem_a_cara_do_sensor_apagado` reprova.
-"""
+"""O CINZA DA MIRA E DO «NATIVO» DO MICROFONE AVISA O LEITOR DE TELA."""
 from __future__ import annotations
 
 import json
@@ -50,9 +22,6 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from pacotes.a02_controles import MIRA_NO_NATIVO
 
-#: A razão do «Nativo» fora de alcance: qualquer texto não vazio acende o
-#: cinza (o alvo `classe` sem `data-hef-quando` é booleano). O texto de
-#: verdade é do pacote (`nativo_fora_de_alcance`) e não é o que se mede aqui.
 RAZAO_DE_ENSAIO = "No BT o microfone não entra sozinho."
 
 
@@ -137,7 +106,7 @@ def medido() -> dict:
     def guardou(v, res):
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # a exceção É a resposta desta ponte
+        except Exception as e:
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 
@@ -161,8 +130,6 @@ def medido() -> dict:
     try:
         Gtk.main()
     finally:
-        # Um `timeout_add` pendente depois da fixture dispara DENTRO do laço do
-        # PRÓXIMO teste de GUI do mesmo processo.
         GLib.source_remove(guarda)
         janela.destroy()
     assert saiu, "o WebKit não respondeu em 20 s"
@@ -193,8 +160,7 @@ def test_fora_do_nativo_os_dois_dizem_false(medido: dict) -> None:
 
 
 def test_a_geometria_nao_mudou(medido: dict) -> None:
-    """O invólucro não tem caixa: os três chips e os dois do microfone continuam
-    dividindo a linha em partes iguais, na MESMA caixa nos quatro estados."""
+    """O invólucro não tem caixa: os três chips e os dois do microfone continuam"""
     for estado in ("virgem", "cinza", "livre", "apagada"):
         foto = medido[estado]
         mira, giro, accel = foto["caixa_mira"], foto["caixa_giro"], foto["caixa_accel"]
@@ -210,19 +176,13 @@ def test_a_geometria_nao_mudou(medido: dict) -> None:
     virgem = medido["virgem"]
     for estado in ("cinza", "livre", "apagada"):
         assert medido[estado]["caixa_mira"] == virgem["caixa_mira"], estado
-    # O PAR DO MICROFONE ENCOLHE 9 PX NA PRIMEIRA PINTURA, e não é deste
-    # invólucro: medido em 24/09/2026 com este mesmo roteiro na página
-    # PUBLICADA, que ainda tem o botão sem invólucro — 144,1 px parado, 135,1
-    # px pintado, os mesmos números daqui. Por isso o par se compara entre os
-    # estados PINTADOS, e a igualdade com o «Virtual» acima é a outra régua.
     pintado = medido["cinza"]["caixa_nativo"]
     for estado in ("livre", "apagada"):
         assert medido[estado]["caixa_nativo"] == pintado, estado
 
 
 def test_a_mira_apagada_tem_a_cara_do_sensor_apagado(medido: dict) -> None:
-    """O `off` mora no invólucro, e a folha o leva ao botão: a Mira apagada é o
-    MESMO cinza do Acelerômetro apagado, e a acesa é a mesma cara do aceso."""
+    """O `off` mora no invólucro, e a folha o leva ao botão: a Mira apagada é o"""
     apagada = medido["apagada"]
     assert apagada["cara_mira"] == apagada["cara_accel"], (
         f"a Mira apagada não tem a cara do sensor apagado: "
@@ -235,8 +195,7 @@ def test_a_mira_apagada_tem_a_cara_do_sensor_apagado(medido: dict) -> None:
 
 
 def test_o_nativo_escolhido_tem_a_cara_do_virtual_escolhido(medido: dict) -> None:
-    """O `on` do «Nativo» mora no invólucro: escolhido, ele tem a cara que o
-    «Virtual» tem quando é ele o escolhido."""
+    """O `on` do «Nativo» mora no invólucro: escolhido, ele tem a cara que o"""
     livre, apagada = medido["livre"], medido["apagada"]
     assert livre["cara_nativo"] == apagada["cara_virtual"], (
         f"o «Nativo» escolhido não tem a cara do escolhido: "

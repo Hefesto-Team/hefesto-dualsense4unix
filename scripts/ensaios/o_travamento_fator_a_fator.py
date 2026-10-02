@@ -95,22 +95,16 @@ from typing import Any
 
 VERSAO = 1
 
-#: A mediana do movimento de um controle ``connected`` abaixo disto é colapso.
 PISO_DO_COLAPSO = 50.0
 
-#: As réguas discordam quando a soma dos Hz se afasta da entrada medida pelo
-#: instrumento em mais de 25% DELA e, ao mesmo tempo, em mais de 50 pacotes/s.
 DISCORDA_RELATIVO = 0.25
 DISCORDA_ABSOLUTO = 50.0
 
-#: Acima disto de voz (pacotes/s), o controle tem a voz no ar na janela.
 VOZ_NO_AR = 1.0
 
 #: O prazo de cada ``state_full``: o segundo inteiro não cabe, porque o resto
-#: da amostra (o ar, a varredura, o ``/proc``) vem depois dele.
 PRAZO_DO_ESTADO_S = 0.8
 
-#: As linhas do kernel que a janela conta, pelo que está escrito nelas.
 CONTAGENS_DO_KERNEL: dict[str, re.Pattern[str]] = {
     "nvrm": re.compile(r"NVRM"),
     "crc": re.compile(r"DualSense input CRC's check failed"),
@@ -118,19 +112,12 @@ CONTAGENS_DO_KERNEL: dict[str, re.Pattern[str]] = {
     "fila_cheia": re.compile(r"Output queue is full"),
 }
 
-#: As vigias do Hefesto: o tique de cada uma é a linha ``Starting`` da unidade.
 VIGIAS: dict[str, str] = {
     "vigia_do_radio": "hefesto-bt-health-watchdog.service",
     "vigia_do_wifi": "hefesto-wifi-usb-vigia.service",
 }
 
-#: A Steam de teste nasce sob o ``basetemp`` do pytest.
 MARCA_DA_STEAM_DE_TESTE = "/pytest-of-"
-
-
-# ---------------------------------------------------------------------------
-# Os números
-# ---------------------------------------------------------------------------
 
 
 def _numero(valor: Any) -> float | None:
@@ -158,11 +145,6 @@ def _mediana(valores: Sequence[float]) -> float | None:
 
 def _media(valores: Sequence[float]) -> float | None:
     return round(statistics.fmean(valores), 1) if valores else None
-
-
-# ---------------------------------------------------------------------------
-# Os nomes que saem na linha — nunca o endereço
-# ---------------------------------------------------------------------------
 
 
 class Rotulos:
@@ -210,11 +192,6 @@ class Rotulos:
         return f"wifi {self._wifi[interface]}"
 
 
-# ---------------------------------------------------------------------------
-# O /proc
-# ---------------------------------------------------------------------------
-
-
 def _ler(caminho: str) -> bytes | None:
     try:
         with open(caminho, "rb") as arquivo:
@@ -234,14 +211,7 @@ def _home_do_processo(raiz: str, pid: str) -> str | None:
 
 
 def processos_da_mesa(raiz: str, home_dela: str, excluir: Iterable[int]) -> dict[str, int]:
-    """A contagem dos processos que são fator, sem o instrumento nem quem o chamou.
-
-    Um processo entra pelo nome do executável em qualquer argumento: é assim
-    que se acha a Steam aberta por um ``bash -c`` ou por um ``reaper``. Por
-    isso mesmo o próprio instrumento («--passo steam») e o shell que o chamou
-    casariam, e ficam fora pela lista ``excluir``. A Steam se classifica pelo
-    ``HOME`` do ``environ``: a dela, a de teste (sob ``/pytest-of-``), ou outra.
-    """
+    """A contagem dos processos que são fator, sem o instrumento nem quem o chamou."""
     fora = {int(p) for p in excluir}
     contagem: Counter[str] = Counter(
         {"steam_dela": 0, "steam_de_teste": 0, "steam_outra": 0, "winedevice": 0,
@@ -349,11 +319,6 @@ def banda_pelo_iw(interface: str) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Os diários
-# ---------------------------------------------------------------------------
-
-
 def _hora_da_linha(linha: str) -> float | None:
     """A hora (epoch) de uma linha ``-o short-iso-precise`` do ``journalctl``."""
     cabeca = linha.split(" ", 1)[0]
@@ -364,11 +329,7 @@ def _hora_da_linha(linha: str) -> float | None:
 
 
 def linhas_da_janela(texto: str | None, inicio: float, fim: float) -> list[str] | None:
-    """As linhas do diário cuja hora cai em ``[inicio, fim)``. ``None`` = não sei.
-
-    A hora é a da LINHA, e não a da pergunta: o diário pode vir inteiro (desde o
-    boot) e cada linha cai na janela dela, e só nela.
-    """
+    """As linhas do diário cuja hora cai em ``[inicio, fim)``. ``None`` = não sei."""
     if texto is None:
         return None
     dentro: list[str] = []
@@ -414,11 +375,6 @@ def diario_do_sistema(inicio: float, fim: float) -> str | None:
                         *unidades, "--since", f"@{inicio:.3f}", "--until", f"@{fim:.3f}"])
 
 
-# ---------------------------------------------------------------------------
-# A amostra de um segundo
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Amostra:
     """Um segundo da janela. ``estado`` é ``None`` quando o daemon não respondeu."""
@@ -445,11 +401,7 @@ def ar_em_numeros(amostra: Mapping[str, Any] | None) -> dict[str, dict[str, floa
 
 
 def varrendo_de(varredura: Any) -> int | None:
-    """Quantos adaptadores varrem; ``None`` quando a leitura não ouviu a mesa toda.
-
-    «Não sei» nunca é zero: um ``Discovering`` que não respondeu pode estar
-    varrendo, e a janela não pode jurar que ninguém buscava.
-    """
+    """Quantos adaptadores varrem; ``None`` quando a leitura não ouviu a mesa toda."""
     if varredura is None:
         return None
     varrendo = len(getattr(varredura, "varrendo", ()) or ())
@@ -484,7 +436,7 @@ def amostrar(portas: Portas) -> Amostra:
     estado = portas.estado()
     try:
         ar = ar_em_numeros(portas.ar())
-    except Exception:  # o instrumento nunca para por uma leitura que falhou
+    except Exception:
         ar = {}
     try:
         varrendo = varrendo_de(portas.varredura())
@@ -498,11 +450,6 @@ def amostrar(portas: Portas) -> Amostra:
         processos=processos_da_mesa(portas.raiz_proc, portas.home_dela, portas.excluir),
         memoria=blocos_livres(portas.raiz_proc),
     )
-
-
-# ---------------------------------------------------------------------------
-# A linha da janela
-# ---------------------------------------------------------------------------
 
 
 def _controles_do_estado(estado: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
@@ -598,7 +545,6 @@ def linha_da_janela(
         enderecos.update(ln["adaptador"] for ln in leituras if ln["adaptador"])
     rotulos.conhecer_adaptadores(enderecos)
 
-    # Por controle: os que já passaram pela mesa, em TODA janela; «-» é None.
     controles: dict[str, Any] = {}
     medias: dict[str, float] = {}
     rotulo_de: dict[str, str] = {}
@@ -632,7 +578,6 @@ def linha_da_janela(
         if movimento:
             medias[rotulo] = (_media(movimento) or 0.0) + (_media(voz) or 0.0)
 
-    # Por adaptador: a entrada e a saída do INSTRUMENTO, o AFH e a entrada do daemon.
     adaptadores: dict[str, Any] = {}
     for endereco in sorted(enderecos, key=lambda e: rotulos.adaptador(e) or 0):
         numero = rotulos.adaptador(endereco)
@@ -661,8 +606,6 @@ def linha_da_janela(
     for amostra in amostras:
         for nome, n in amostra.processos.items():
             processos[nome] = max(processos[nome], n)
-    # Um segundo varrendo basta para a janela varrer; um segundo em «não sei»
-    # basta para ela não poder jurar que ninguém varria.
     maior = max((a.varrendo for a in amostras if a.varrendo is not None), default=0)
     varrendo: int | None = maior
     if not maior and any(a.varrendo is None for a in amostras):
@@ -746,11 +689,6 @@ def linha_da_janela(
     }
 
 
-# ---------------------------------------------------------------------------
-# O laço da janela
-# ---------------------------------------------------------------------------
-
-
 def medir(
     portas: Portas,
     *,
@@ -789,11 +727,6 @@ def medir(
         escrever(linha_da_janela(amostras, inicio, fim, rotulos, contexto))
         feitas += 1
     return feitas
-
-
-# ---------------------------------------------------------------------------
-# O resumo
-# ---------------------------------------------------------------------------
 
 
 def fatores_do_grupo(linha: Mapping[str, Any]) -> dict[str, Any]:
@@ -921,11 +854,6 @@ def ler_jsonl(caminho: str) -> list[dict[str, Any]]:
                 if isinstance(linha, dict) and linha.get("instrumento") == "o_travamento_fator_a_fator":
                     linhas.append(linha)
     return linhas
-
-
-# ---------------------------------------------------------------------------
-# As portas de verdade
-# ---------------------------------------------------------------------------
 
 
 def estado_pelo_ipc(

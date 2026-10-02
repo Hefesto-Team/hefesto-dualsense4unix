@@ -10,10 +10,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01 (TESTE-HONESTO-01/E1, lote A): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` — e nunca entrava no job `gtk-real`, que seleciona
-# por `grep exigir_gi_real|skip_sem_gi_real`. Agora ele pula honestamente.
 exigir_gi_real("emulação: os botões do modo jogo")
 
 import sys
@@ -23,11 +19,6 @@ import pytest
 
 
 def _install_gi_stubs() -> None:
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # o merge abaixo mutaria o gi REAL (sobrescreve GLib.idle_add e
-    # require_version) e fazia testes de GUI pularem como "ambiente sem GTK".
-    # Um stub instalado por outro módulo de teste (__spec__ None) segue
-    # sendo reaproveitado para merge de atributos.
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:

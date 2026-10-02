@@ -48,15 +48,7 @@ console = Console()
 
 
 def _guarda_slug(name: str, *, force: bool) -> None:
-    """Recusa gravar por cima de OUTRO perfil que já ocupa o mesmo arquivo.
-
-    R-10 (auditoria 23/07): o filename é `<slugify(name)>.json`, então
-    "Navegacao" e "Navegação" são o MESMO arquivo. `save_profile` sobrescreve
-    sem perguntar — na GUI isso virou perda silenciosa, e no CLI era pior
-    ainda: `profile create "Navegacao"` apagava a "Navegação" da usuária e
-    imprimia "perfil criado" em verde. Só recusa quando o ocupante tem outro
-    nome de exibição (mesmo nome = edição in-place, comportamento de sempre).
-    """
+    """Recusa gravar por cima de OUTRO perfil que já ocupa o mesmo arquivo."""
     if force:
         return
     ocupante = find_by_slug(name, load_all_profiles())
@@ -64,7 +56,7 @@ def _guarda_slug(name: str, *, force: bool) -> None:
         return
     try:
         arquivo = f"{slugify(name)}.json"
-    except ValueError:  # nome sem slug nem chega aqui (o schema recusa antes)
+    except ValueError:
         arquivo = "?"
     console.print(
         f"[red]'{name}' e '{ocupante.name}' são o MESMO arquivo[/red] ({arquivo}) "
@@ -78,10 +70,7 @@ def _guarda_slug(name: str, *, force: bool) -> None:
 
 @app.command("list")
 def cmd_list() -> None:
-    """Lista os perfis a escolher no diretório XDG — o Freestyle é o botão, não linha.
-
-    A ordem dela de 02/10/2026 (`profiles.manager.os_perfis_de_escolher`).
-    """
+    """Lista os perfis a escolher no diretório XDG — o Freestyle é o botão, não linha."""
     from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
     profiles = os_perfis_de_escolher(load_all_profiles())
@@ -131,14 +120,12 @@ def cmd_activate(name: str) -> None:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
 
-    # Caminho online: deixa o daemon vivo trocar o perfil (e persistir o marker).
     from hefesto_dualsense4unix.app.ipc_bridge import profile_switch
 
     if profile_switch(name):
         console.print(f"[green]perfil ativado via daemon:[/green] {name}")
         return
 
-    # Fallback offline: aplica direto no hardware (se houver) e grava a escolha.
     try:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -147,9 +134,6 @@ def cmd_activate(name: str) -> None:
         controller = PyDualSenseController()
         controller.connect()
         manager = ProfileManager(controller=controller)
-        # A VISTA, como a ativação do daemon (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-
-        # COM-O-JOGO-01): sem ela, o fallback acendia a luz e a vibração de
-        # fábrica no lugar das do computador.
         manager.apply(o_que_vale(profile))
         controller.disconnect()
         console.print(f"[green]perfil aplicado no controle: {name}[/green]")
@@ -183,15 +167,12 @@ def cmd_create(
     ),
 ) -> None:
     """Cria um perfil mínimo (triggers Off, leds apagados). Edite o JSON depois."""
-    # R-10: "Navegacao" e "Navegação" são o mesmo .json — não criar por cima.
     _guarda_slug(name, force=force)
     match: Match
     if fallback:
         match = MatchAny()
         priority = 0
     elif manual:
-        # R-12 item 3: dizer "só ativo na mão" sem depender do efeito colateral
-        # de um criteria vazio (que o doctor passa a acusar como inalcançável).
         match = MatchManual()
     else:
         match = MatchCriteria(
@@ -213,10 +194,6 @@ def cmd_create(
     path = save_profile(profile)
     console.print(f"[green]perfil criado: {path}[/green]")
     if isinstance(match, MatchCriteria) and profile.e_catch_all:
-        # R-12: `create` sem nenhum critério grava um match que NUNCA casa, e
-        # até aqui saía só o "perfil criado" em verde — o perfil nascia morto
-        # para o autoswitch e nada dizia isso (foi assim que o preset
-        # `coop_local` de fábrica passou meses inalcançável).
         console.print(
             "[yellow]sem --match-class/--match-regex/--match-exe: este perfil "
             "nunca ativa sozinho.[/yellow] Dê um alvo, ou recrie com --manual "
@@ -244,12 +221,7 @@ def cmd_delete(
 def cmd_historico(
     name: str = typer.Argument(..., help="Nome ou slug do perfil."),
 ) -> None:
-    """Lista as versões guardadas de um perfil (a mais recente por último).
-
-    PERFIL-SEM-RASTRO-01: cada gravação copia o arquivo ANTERIOR para
-    `profiles/.historico/<slug>/`. Esta é a janela para esse histórico — e a
-    resposta para "o que este perfil era ontem?".
-    """
+    """Lista as versões guardadas de um perfil (a mais recente por último)."""
     versoes = listar_historico(name)
     if not versoes:
         console.print(f"[dim]sem histórico guardado para {name!r}[/dim]")
@@ -283,11 +255,7 @@ def cmd_restore(
              "Sem isto, volta a MAIS RECENTE.",
     ),
 ) -> None:
-    """Devolve ao perfil uma versão guardada (byte a byte).
-
-    A versão atual é arquivada antes de ser substituída: restaurar por engano
-    também tem volta.
-    """
+    """Devolve ao perfil uma versão guardada (byte a byte)."""
     try:
         alvo, versao = restaurar_do_historico(name, em)
     except FileNotFoundError as exc:
@@ -306,12 +274,7 @@ def cmd_restore(
 
 
 def _resumo_da_versao(versao: Path) -> tuple[str, str]:
-    """(`match.type`, prioridade) de uma versão guardada, sem levantar.
-
-    Lê o JSON cru de propósito: uma versão que NÃO valida contra o schema é
-    exatamente a que se quer ver na lista (é o retrato da corrupção), então ela
-    aparece como "ilegível" em vez de sumir.
-    """
+    """(`match.type`, prioridade) de uma versão guardada, sem levantar."""
     try:
         dados = _json.loads(versao.read_text(encoding="utf-8"))
     except (OSError, _json.JSONDecodeError, UnicodeDecodeError):
@@ -351,13 +314,7 @@ def cmd_apply(
         False, "--force", help="Sobrescreve o perfil que já ocupa o mesmo arquivo."
     ),
 ) -> None:
-    """Valida um JSON de perfil, salva no disco e ativa via daemon (se online).
-
-    Útil para aplicar drafts exportados pela GUI ou gerados por scripts.
-    Em `--no-save`, o perfil é validado mas NÃO persistido — apenas o
-    JSON de origem é usado, e a ativação requer que o perfil JÁ exista
-    no XDG com o mesmo `name` (caso contrário, exit 1).
-    """
+    """Valida um JSON de perfil, salva no disco e ativa via daemon (se online)."""
     try:
         raw = _json.loads(file.read_text(encoding="utf-8"))
     except (OSError, _json.JSONDecodeError) as exc:
@@ -371,8 +328,6 @@ def cmd_apply(
         raise typer.Exit(code=1) from None
 
     if save:
-        # R-10: um JSON exportado com o nome sem acento não pode comer o perfil
-        # acentuado que já ocupa o arquivo.
         _guarda_slug(profile.name, force=force)
         path = save_profile(profile)
         console.print(f"[green]perfil salvo:[/green] {path}")
@@ -425,17 +380,8 @@ def cmd_save(
         )
         raise typer.Exit(code=1) from None
 
-    # R-10: clonar para um nome que cai no MESMO arquivo de outro perfil
-    # apagaria aquele perfil e imprimiria "perfil clonado" em verde.
     _guarda_slug(name, force=force)
 
-    # Clone imutável via pydantic: serializa, troca o nome, revalida.
-    # R-09 (mesmo defeito da GUI, `profiles_actions`): `model_dump` DENSIFICA —
-    # os defaults do schema saem marcados como explícitos e o
-    # `model_fields_set` das entradas de `controllers` se perde. Um override
-    # por-controle PARCIAL (só brilho) vira `lightbar:[0,0,0]` e APAGA a
-    # lightbar daquele controle no clone. Reinjetar as instâncias validadas é a
-    # mesma guarda de `draft_config.to_profile`.
     payload = source.model_dump(mode="json")
     payload["name"] = name
     if source.controllers:
@@ -458,20 +404,13 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
     Mantido em função isolada para reuso em `apply`. Mensagens claras
     (sem traceback) para todos os modos de falha.
     """
-    # Import adiado para não pagar custo de asyncio/socket em `profile list`.
     from hefesto_dualsense4unix.app.ipc_bridge import _run_call
 
     try:
         _run_call("profile.switch", {"name": name}, timeout=1.0)
         console.print(f"[green]perfil ativado via daemon:[/green] {name}")
-        # O daemon já gravou a escolha (e o espelho) pelo dono: nada a fazer
-        # aqui. NOTA DATADA — 01/10/2026: a CLI reescrevia o marcador depois.
         return
     except IpcError as exc:
-        # Fix do review (2026-07-16, MED): recusa ≠ ativação. O daemon está
-        # VIVO e disse não (perfil inexistente/corrompido) — gravar a escolha
-        # aqui registrava um switch que nunca aconteceu, e o boot seguinte
-        # abriria nele.
         console.print(f"[yellow]daemon recusou profile.switch:[/yellow] {exc.message}")
         console.print(
             "[dim]nada foi ativado — a escolha gravada ficou como estava.[/dim]"
@@ -492,8 +431,6 @@ def _describe_match(profile: Profile) -> str:
     m = profile.match
     if isinstance(m, MatchAny):
         return "[dim]any[/dim]"
-    # R-12 item 3: o sentinel não tem os campos de critério — sem este ramo o
-    # `profile list` estouraria com AttributeError num perfil só-manual.
     if isinstance(m, MatchManual):
         return "[dim]manual (nunca ativa sozinho)[/dim]"
     parts: list[str] = []
@@ -507,16 +444,7 @@ def _describe_match(profile: Profile) -> str:
 
 
 def _gravar_a_escolha_sem_o_daemon(name: str) -> None:
-    """A ativação à mão com o daemon fora do ar: a escolha dela, pelo dono.
-
-    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 2: o `profile activate` da
-    CLI conta como ativado por ela, com o daemon no ar ou não. O Modo
-    Freestyle segue a mesma regra do `activate`: escolher o Freestyle o liga,
-    escolher outro o desliga. A frase *«próxima inicialização do daemon
-    usará»* fica verdadeira pelo dono (`utils.session.gravar_a_escolha`), e não
-    pela precedência do marcador, que deixou de existir em 01/10/2026 — até lá
-    esta função gravava só o `active_profile.txt`.
-    """
+    """A ativação à mão com o daemon fora do ar: a escolha dela, pelo dono."""
     from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, ligar_o_freestyle
     from hefesto_dualsense4unix.utils.session import gravar_a_escolha
 

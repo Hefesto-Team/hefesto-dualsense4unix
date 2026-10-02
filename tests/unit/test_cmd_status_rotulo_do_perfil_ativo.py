@@ -1,12 +1,4 @@
-"""ONDA0-Z5/T13 [PROVISÓRIO — D-N] — o rótulo da CLI nomeia o que responde.
-
-`hefesto-dualsense4unix status` mostrava a linha crua ``active_profile`` sem
-dizer que ela é a rota "em vigor agora" — das TRÊS que guardam "perfil
-ativo" na casa, as outras duas (`session.json`, `active_profile.txt`)
-respondem "a última escolha" e podem divergir por decisão medida (§2.8 da
-ONDA0-Z5). Este teste prova só o rótulo — não decide qual rota "vence"
-quando elas divergem (isso é D-N, dela).
-"""
+"""ONDA0-Z5/T13 [PROVISÓRIO — D-N] — o rótulo da CLI nomeia o que responde."""
 from __future__ import annotations
 
 import pytest
@@ -35,6 +27,5 @@ def test_a_linha_de_active_profile_diz_em_vigor_agora(
 
     saida = console_gravado.export_text()
     assert "active_profile (em vigor agora)" in saida, saida
-    # A linha crua antiga, sem explicação, some — não pode sobrar as duas.
     linhas = [linha for linha in saida.splitlines() if "active_profile" in linha]
     assert len(linhas) == 1, f"linha de active_profile duplicada/ambígua: {linhas}"

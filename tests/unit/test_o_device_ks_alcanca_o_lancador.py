@@ -1,26 +1,4 @@
-"""LANCADOR-AGNOSTICO-01 — a háptica nativa chega a quem não tem wrapper.
-
-**O QUE FALTAVA, medido no disco dela em 21/09/2026.** O device KS (o que a RE
-Engine acha pelo `KSCATEGORY_AUDIO`) mora no `system.reg` do prefixo, e quem o
-escreve nos jogos da STEAM é o wrapper `hefesto-launch`, no lançamento:
-
-    três prefixos da Steam ....... 24, 36 e 42 ocorrências de `HEFESTOKS`
-    o prefixo do Heroic .......... ZERO
-
-**O Heroic não passa por wrapper nenhum.** A leva de 21/09 abriu a ENUMERAÇÃO
-(`camadas_vulkan.raizes_de_prefixo` passou a somar os prefixos dos lançadores
-aos `compatdata`), e isso já alcança o uninstall e o censo de camadas — mas
-ninguém ESCREVIA o device naquele prefixo.
-
-A cura é a carona: `materialize_launch_env` já roda a cada transição de
-controle, e o que muda o device KS é exatamente o conjunto de controles.
-
-**A LISTA TEM UM DONO DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
-o curador do lançamento e esta carona leem a MESMA função,
-`audio_ks_dualsense.controles_do_registro` — os lugares e o cabo que nenhum
-lugar serve. As réguas abaixo dublam as duas fontes dela e a pergunta das
-placas servidas; as duas do fim medem que as duas pontas leem o dono.
-"""
+"""LANCADOR-AGNOSTICO-01 — a háptica nativa chega a quem não tem wrapper."""
 
 from __future__ import annotations
 
@@ -69,14 +47,7 @@ def test_o_prefixo_do_lancador_recebe_o_device(_lar, monkeypatch):
 
 
 def test_a_segunda_volta_nao_reescreve(_lar, monkeypatch):
-    """Idempotente: o mesmo conjunto de controles não toca o arquivo de novo.
-
-    Rodar a cada transição de controle não pode acumular bloco nem trocar a
-    data do `system.reg` por nada.
-
-    MORDIDA: tire o `_mesmos_blocos` do `aplicar`. A segunda volta conta uma
-    escrita, e esta régua reprova.
-    """
+    """Idempotente: o mesmo conjunto de controles não toca o arquivo de novo."""
     from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 
     monkeypatch.setattr(
@@ -92,16 +63,7 @@ def test_a_segunda_volta_nao_reescreve(_lar, monkeypatch):
 
 
 def test_o_prefixo_ocupado_e_pulado_e_contado(_lar, monkeypatch):
-    """Escrever por baixo de um jogo aberto é o defeito que a guarda impede.
-
-    **É O ESTADO REAL DA MÁQUINA DELA EM 21/09**, às 06:20: o `wineserver` do
-    prefixo do Guardiões da Galáxia continuava vivo desde as 03:01, e a
-    tentativa respondeu `ocupado`. O número vai ao log para que isso se leia
-    como *"adiado"*, e nunca como *"não rodou"*.
-
-    MORDIDA: faça `_device_ks_nos_lancadores` ignorar o motivo. O contador
-    mente e o adiamento vira silêncio.
-    """
+    """Escrever por baixo de um jogo aberto é o defeito que a guarda impede."""
     from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 
     monkeypatch.setattr(ks, "controles_no_cabo", lambda *a, **k: [])
@@ -117,11 +79,7 @@ def test_o_prefixo_ocupado_e_pulado_e_contado(_lar, monkeypatch):
 
 
 def test_sem_lancador_nao_ha_o_que_fazer(monkeypatch):
-    """A máquina de quem só tem Steam: zero prefixos, zero varredura.
-
-    O wrapper continua sendo quem serve a Steam, e varrer os 32 `compatdata`
-    dela aqui seria pagar de novo o que ele já paga.
-    """
+    """A máquina de quem só tem Steam: zero prefixos, zero varredura."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     monkeypatch.setattr(cv, "prefixos_dos_lancadores", lambda *a, **k: [])
@@ -131,12 +89,7 @@ def test_sem_lancador_nao_ha_o_que_fazer(monkeypatch):
 
 
 def test_a_carona_vai_dentro_do_try_da_materializacao():
-    """Uma escrita que levanta não pode derrubar o start da emulação.
-
-    MORDIDA: mova a chamada para fora do `try`. Um disco hostil passa a
-    derrubar a materialização inteira — o contrato que a docstring daquela
-    função promete.
-    """
+    """Uma escrita que levanta não pode derrubar o start da emulação."""
     fonte = pathlib.Path(
         "src/hefesto_dualsense4unix/daemon/launch_env.py"
     ).read_text(encoding="utf-8")
@@ -147,22 +100,14 @@ def test_a_carona_vai_dentro_do_try_da_materializacao():
 
 
 def test_o_numero_vai_ao_log(monkeypatch):
-    """Sem o número, «rodou e não tinha o que fazer» lê-se como «não rodou».
-
-    MORDIDA: tire o `device_ks=` do `logger.info`.
-    """
+    """Sem o número, «rodou e não tinha o que fazer» lê-se como «não rodou»."""
     fonte = pathlib.Path(
         "src/hefesto_dualsense4unix/daemon/launch_env.py"
     ).read_text(encoding="utf-8")
     assert "device_ks=ks," in fonte
 
 
-# ---------------------------------------------------------------------------
-# As duas pontas leem o mesmo dono da lista — 28/09/2026
-# ---------------------------------------------------------------------------
-
 _DO_DONO = [
-    # o lugar 1, pela âncora (um hub), e o cabo que nenhum lugar serve
     ("lugar", 0x0CE6, 3, 11),
     ("cabo", 0x0CE6, 1, 7),
 ]
@@ -173,7 +118,6 @@ def _a_lista_do_dono(monkeypatch: pytest.MonkeyPatch) -> list[object]:
 
     lista = [ks.Controle(pid=pid, bus=bus, dev=dev, usec=None) for _q, pid, bus, dev in _DO_DONO]
     monkeypatch.setattr(ks, "controles_do_registro", lambda *a, **k: list(lista))
-    # As fontes de antes respondem VAZIO: quem as somasse de novo não gravaria nada.
     monkeypatch.setattr(ks, "controles_no_cabo", lambda *a, **k: [])
     monkeypatch.setattr(ks, "controles_no_radio", lambda *a, **k: [])
     return lista

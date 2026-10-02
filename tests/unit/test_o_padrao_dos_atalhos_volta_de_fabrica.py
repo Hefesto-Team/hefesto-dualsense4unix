@@ -14,7 +14,7 @@ AS TRÊS COISAS QUE ELA COBRA, e cada uma é um jeito diferente de o botão ment
 
 1. **`None`, e nunca `{}`.** O esquema define os dois: `None` é *"herda
    `DEFAULT_BUTTON_BINDINGS`"* e `{}` é *"desativa todos os bindings"*
-   (`profiles/schema.py:1035-1037`). Gravar `{}` devolveria um controle MUDO com o
+   (`profiles/schema.py:640-642`). Gravar `{}` devolveria um controle MUDO com o
    botão dizendo "de fábrica" — o pior tipo de acerto aparente.
 2. **Reaplicar.** Gravar sem `profile.switch` deixa a tela dizendo uma coisa e o
    aparelho fazendo outra até a próxima troca de perfil.
@@ -50,7 +50,6 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,)))
         return True
 
-    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
     def profile_reaplicar(self, nome: str) -> bool:
         self.chamadas.append(("profile_reaplicar", (nome,)))
         return True
@@ -61,20 +60,12 @@ class PonteDeMentira:
 
 
 class PerfilDeMentira:
-    """O mínimo de um `Profile` que este gesto toca: o nome e os bindings.
-
-    O `model_copy` é o idioma do pydantic que o gesto usa, e o dublê o imita em
-    vez de trazer o modelo de verdade: instanciar um `Profile` exigiria um
-    `match` válido, e a régua passaria a medir o esquema em vez do botão.
-    """
+    """O mínimo de um `Profile` que este gesto toca: o nome e os bindings."""
 
     def __init__(self, nome: str, key_bindings: dict[str, list[str]] | None,
                  button_actions: dict[str, str] | None = None) -> None:
         self.name = nome
         self.key_bindings = key_bindings
-        # O SEGUNDO CAMPO nasceu em 01/09/2026 (`FEAT-ACOES-DE-BOTAO-01`), e o
-        # dublê o ganhou junto: o "Voltar ao padrão" zera OS DOIS, e um dublê
-        # que só conhecesse o primeiro deixaria a metade nova sem medição.
         self.button_actions = button_actions
 
     def model_copy(self, *, update: dict[str, Any]) -> PerfilDeMentira:
@@ -115,12 +106,6 @@ def disco(monkeypatch):
     monkeypatch.setattr(loader, "load_profile", falso_load, raising=False)
     monkeypatch.setattr(loader, "save_profile", falso_save, raising=False)
 
-    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o
-    # «Voltar ao padrão» grava por `gravar_pelo_gesto`, um cartão de cada vez
-    # (as teclas são do «Teclado», as linhas do «Mouse»). Aqui o disco de
-    # mentira é o de um perfil que já sobrepõe os dois: o que se mede é o que o
-    # gesto grava. O onde tem régua própria, logo abaixo e em
-    # `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     def _pelo_gesto(_cartao: str, nome: str, muda: Any, **_k: Any) -> Any:
@@ -150,7 +135,7 @@ def test_grava_none_e_nunca_dicionario_vazio(pac, gesto, disco) -> None:
     assert gravados[0].key_bindings is None, (
         f"gravou {gravados[0].key_bindings!r}. `None` herda o "
         f"`DEFAULT_BUTTON_BINDINGS`; `{{}}` DESLIGA todos os bindings "
-        f"(`profiles/schema.py:1035-1037`) — o segundo devolveria um controle "
+        f"(`profiles/schema.py:640-642`) — o segundo devolveria um controle "
         f"mudo com o botão dizendo 'de fábrica'.")
     assert gravados[0].name == "Mortal Kombat", "gravou por cima de outro perfil"
     assert gravados[0].button_actions is None, (
@@ -228,14 +213,7 @@ def test_zera_tambem_quando_so_o_campo_novo_esta_preenchido(pac, gesto, disco) -
 
 
 def test_sem_perfil_ativo_quem_volta_e_o_computador(pac, gesto) -> None:
-    """Os atalhos são do COMPUTADOR desde 01/10/2026: sem perfil, ele volta.
-
-    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. Até ali esta régua exigia a
-    recusa («os atalhos são do PERFIL, não da máquina»). E o «já está de
-    fábrica» continua DIZENDO, agora com o computador como sujeito.
-
-    MORDIDA: devolver a recusa sem perfil ao `padrao_definicoes` reprova aqui.
-    """
+    """Os atalhos são do COMPUTADOR desde 01/10/2026: sem perfil, ele volta."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
 

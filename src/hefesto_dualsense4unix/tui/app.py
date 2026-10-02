@@ -59,9 +59,6 @@ async def fetch_daemon_snapshot() -> DaemonSnapshot:
                 profiles=profiles.get("profiles", []),
             )
     except (FileNotFoundError, ConnectionError, OSError):
-        # Daemon offline: carrega perfis direto do disco — os mesmos que o
-        # `profile.list` do daemon oferece, sem o Freestyle (a ordem dela de
-        # 02/10/2026: ele é o botão «Modo Freestyle», e não um perfil a escolher).
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
         from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
@@ -71,8 +68,6 @@ async def fetch_daemon_snapshot() -> DaemonSnapshot:
                 {
                     "name": p.name,
                     "priority": p.priority,
-                    # R-12 item 3: discriminador cru — o mesmo contrato do
-                    # `profile.list` do daemon, que agora pode dizer "manual".
                     "match_type": p.match.type,
                 }
                 for p in profiles_raw
@@ -147,8 +142,6 @@ class MainScreen(Screen[None]):
 
     async def on_mount(self) -> None:
         await self.action_refresh()
-        # Poll curto pra atualizar widgets visuais (trigger/stick/battery).
-        # Usa set_interval do Textual; timer é cancelado automaticamente no unmount.
         self.set_interval(0.1, self._tick_preview)
 
     async def _tick_preview(self) -> None:
@@ -164,7 +157,7 @@ class MainScreen(Screen[None]):
             async with IpcClient.connect() as client:
                 status = await client.call("daemon.status")
             self._apply_preview(
-                l2=0,  # daemon.status não inclui analog ainda
+                l2=0,
                 r2=0,
                 lx=128,
                 ly=128,
@@ -173,7 +166,6 @@ class MainScreen(Screen[None]):
                 battery=status.get("battery_pct"),
             )
         except Exception:
-            # IPC ausente: mantém widgets nos últimos valores
             return
 
     def _apply_preview(
@@ -310,17 +302,6 @@ class HefestoApp(App[None]):
 
 def run_tui() -> None:
     HefestoApp().run()
-
-
-# `main_async` MOROU AQUI, e foi PODADA em 26/08/2026.
-#
-# Ela se declarava "entry point síncrono", e nada a declarava de volta: MEDIDO
-# em 26/08/2026, ZERO chamadores em `src/`, em `tests/`, em `scripts/`, nos
-# heredocs Python de `install.sh`/`uninstall.sh` e em `pyproject.toml`. Os dois
-# consoles de `[project.scripts]` são `cli.app:main` e `app.main:main`; a TUI
-# entra pela irmã `run_tui`, logo acima, que É a entrada e continua de pé.
-# Era também o único acusado da lista SEM sequer um teste que o exercitasse —
-# resto puro, e o nome enganava quem lesse o módulo procurando a entrada.
 
 
 __all__ = [

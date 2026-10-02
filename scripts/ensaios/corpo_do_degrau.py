@@ -111,19 +111,13 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     bt_crc32,
 )
 
-#: Os nove degraus do rádio e o tamanho de cada um, do descritor dos aparelhos
-#: dela (medido em 15/08). O instrumento RECUSA qualquer id fora desta tabela.
 DEGRAUS: dict[int, int] = {
     0x31: 78, 0x32: 142, 0x33: 206, 0x34: 270, 0x35: 334,
     0x36: 398, 0x37: 462, 0x38: 526, 0x39: 547,
 }
 
-#: Onde a cor mora no `common` — `[41..46] lightbar/player/cor` do cabeçalho do
-#: `ds_output_report`. Os três bytes de RGB são os últimos.
 OFF_R, OFF_G, OFF_B = 44, 45, 46
 
-#: A semente do ruído do passo 3. FIXA de propósito: um ensaio que não se repete
-#: byte a byte não pode ser conferido por ninguém depois.
 SEMENTE = 20260816
 
 PASSOS: dict[int, tuple[str, tuple[int, int, int]]] = {
@@ -146,14 +140,7 @@ NOME_DA_COR = {
 
 
 def common_da_cor(r: int, g: int, b: int) -> bytearray:
-    """O `common` de 47 bytes pedindo uma cor, e nada mais.
-
-    Montado à mão de propósito NESTE caso — e a exceção é declarada: o
-    `_build_common` do produto carrega gatilhos, volume, mudo e o resto do
-    estado vivo, e o E-1 precisa que a ÚNICA coisa que varia entre os passos
-    seja o recheio. Um `common` cheio de estado tornaria cada passo uma
-    medição diferente.
-    """
+    """O `common` de 47 bytes pedindo uma cor, e nada mais."""
     c = bytearray(COMMON_LEN)
     c[1] = VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
     c[OFF_R], c[OFF_G], c[OFF_B] = r, g, b
@@ -169,31 +156,19 @@ def recheio(passo: int, n: int) -> bytes:
     if passo == 2:
         return b"\xff" * n
     if passo == 3:
-        # O gerador nasce UMA vez, fora do laço. Criá-lo dentro devolve sempre
-        # o mesmo byte (a semente reinicia a cada chamada) — o "ruído" sai
-        # `f0 f0 f0 ...`, e o passo vira mais um teste de constante. Caiu nessa
-        # na primeira execução de 16/08 e a saída denunciou.
         rnd = random.Random(SEMENTE)
         return bytes(rnd.randrange(256) for _ in range(n))
     if passo == 4:
-        # tag com bit7 (BLOCO_PRESENTE) + len que CABE no espaço restante
         corpo = bytes(n - 2) if n >= 2 else b""
         return bytes([0x13 | 0x80, max(0, n - 2)]) + corpo
     if passo == 5:
-        # o mesmo, com len maior que o espaço — a incoerência é o ensaio
         return bytes([0x13 | 0x80, 0xFF]) + bytes(max(0, n - 2))
     raise ValueError(f"passo desconhecido: {passo}")
 
 
 def montar(report_id: int, common: bytearray, extra: bytes, seq: int,
            *, crc_errado: bool = False) -> bytes:
-    """O envelope BT do degrau: id, seq, tag, common, recheio, CRC-32 no rabo.
-
-    A forma é a do `build_bt_report` do produto (`[1]=seq<<4`, `[2]=0x10`,
-    CRC-32 little-endian com semente `0xA2` nos quatro últimos), estendida para
-    o tamanho do degrau. Não se usa o `build_bt_report` direto porque ele monta
-    só o `0x31` de 78 bytes.
-    """
+    """O envelope BT do degrau: id, seq, tag, common, recheio, CRC-32 no rabo."""
     tam = DEGRAUS[report_id]
     buf = bytearray(tam)
     buf[0] = report_id
@@ -265,7 +240,6 @@ def main() -> int:
         for passo in sorted(set(args.passo or (1, 2, 3, 4, 5))):
             desc, cor = PASSOS[passo]
             n = DEGRAUS[rid] - 4 - 3 - COMMON_LEN
-            # apaga ANTES: sem isto o passo herda a cor do anterior
             seq = (seq + 1) & 0x0F
             os.write(no.fd, montar(rid, common_da_cor(0, 0, 0), b"", seq))
             time.sleep(0.6)

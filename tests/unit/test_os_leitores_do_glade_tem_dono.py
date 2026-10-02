@@ -1,45 +1,4 @@
-"""GTK-2 — os três leitores do `main.glade` que NÃO são a janela.
-
-**A decisão dela** (`D-0609-GTK-LEVA-INTEIRA`): *"a ideia sempre foi
-reaproveitar o que fiz no gtk e não apontar nada mais pra lá mas pro html"*. O
-motor fica; a janela sai. Enquanto três programas que não são a janela lerem o
-`gui/main.glade`, apagá-lo quebra o produto NOVO — e esta régua é a que prova
-que já não quebra.
-
-OS TRÊS, e o que cada um lia:
-
-===================================  =======================================
-`interface/aba05.py:273`             duas frases de tela, no corpo do módulo
-`integrations/storm_doctor.py:69`    o rótulo vivo de um botão, pelo id
-`scripts/i18n_extract.sh:22`         as strings traduzíveis da janela
-===================================  =======================================
-
-A CORREÇÃO DO ENUNCIADO, e ela é entrega: a sprint diz *"três textos de tela"*
-na aba 05. **São DOIS desde 05/09/2026** — a terceira (*"Espera 5 segundos
-antes de trocar de faixa"*) explicava o Modo Auto, que saiu desta tela por
-decisão dela, e `test_a_frase_do_auto_nao_volta_a_aba` existe para ela não
-voltar.
-
-AS MORDIDAS, todas sobre o PRODUTO e nenhuma sobre o texto do fonte:
-
-* devolva o `_GLADE = (…/"main.glade").read_text()` ao corpo de `aba05.py` →
-  `test_a_aba_05_monta_com_o_glade_apagado` reprova com o `FileNotFoundError`
-  que a `GTK-3` encontraria no dia de apagar;
-* troque a bandeira `lido_da_fonte` de `storm_doctor.rotulo_do_botao` por
-  `alvo == se_faltar` → `test_a_reserva_fica_vazia_quando_a_leitura_acerta`
-  reprova, porque hoje o rótulo do `btn_storm_fix_safe` no glade é palavra por
-  palavra o `se_faltar` desta casa;
-* apague o registro em `_ROTULOS_DE_RESERVA` →
-  `test_sem_a_fonte_a_frase_fica_de_pe_e_o_produto_sabe` reprova na segunda
-  metade (a primeira continua passando, e é esse o ponto);
-* tire a guarda do `$GLADE` do `i18n_extract.sh` →
-  `test_sem_o_glade_o_extrator_para_e_diz_o_que_sumiu` reprova, e o `.pot`
-  volta a ficar velho em silêncio.
-
-ONDE ELA NÃO MEDE: não abre janela nenhuma, não fala com o daemon e não escreve
-uma linha na árvore — o gerador da aba 05 roda numa CÓPIA, com a bancada
-desviada por `HEFESTO_BANCADA`.
-"""
+"""GTK-2 — os três leitores do `main.glade` que NÃO são a janela."""
 from __future__ import annotations
 
 import html
@@ -56,9 +15,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
-#: ONDE CADA FRASE MORA NO GLADE, enquanto o glade existir. As âncoras são as
-#: MESMAS que `aba05._do_glade` usava até 06/09/2026 — de propósito: é a
-#: comparação que impede as duas telas de divergirem antes de a janela sair.
 NO_GLADE = {
     "DICA_DO_TETO_DA_MESA":
         r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
@@ -68,48 +24,21 @@ NO_GLADE = {
         r'(.*?)&lt;/i&gt;</property>',
 }
 
-#: O id do botão que as frases do doctor mandam clicar, e a reserva dele.
-#:
-#: **A RESERVA MUDOU DE PALAVRA EM 06/09/2026 (`SISTEMA-STEAM-01`)**, e a razão
-#: é um defeito que estava VIVO na tela dela: a frase mandava clicar em
-#: *"Consertar problemas conhecidos"* **na aba Sistema**, e na aba Sistema que
-#: ela usa o botão se chama *"Refazer os consertos automáticos"*. O
-#: `rotulo_do_botao` passou a perguntar primeiro à PÁGINA que o produto
-#: renderiza, e só depois ao glade — a reserva acompanha o que a tela viva diz.
 BOTAO = "btn_storm_fix_safe"
 RESERVA_DO_BOTAO = "Refazer os consertos automáticos"
 
 
 def _sem_fonte_nenhuma(doutor, monkeypatch, tmp_path) -> None:
-    """Tira as DUAS fontes do alcance — a página e o glade.
-
-    ERAM UMA SÓ ATÉ 06/09/2026, e por isso bastava mover o `__file__`. Com a
-    página respondendo primeiro, mover só o `__file__` deixa o rótulo ser LIDO
-    e a reserva nunca sai: o caso passaria a medir o caminho feliz enquanto o
-    docstring dele diz que mede a ausência — que é a forma de instrumento falso
-    que este arquivo inteiro existe para pegar.
-    """
+    """Tira as DUAS fontes do alcance — a página e o glade."""
     monkeypatch.setattr(doutor, "_NA_TELA_VIVA", {})
     monkeypatch.setattr(
         doutor, "__file__", str(tmp_path / "sem_gui" / "storm_doctor.py"))
 
 
-# ===========================================================================
-# 1. AS DUAS FRASES DA VIBRAÇÃO TÊM DONO NO MOTOR
-# ===========================================================================
 def test_a_aba_05_le_as_duas_frases_do_motor_e_nao_as_digita(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O dono é `app/telas/vibracao`, e a aba **lê** dele — não redigita.
-
-    A identidade (`is`) é o que separa ler de copiar: dois literais iguais
-    passariam num `==` e divergiriam na primeira edição, que é exatamente o
-    defeito que a disciplina de 26/08 existe para matar.
-
-    O `HEFESTO_BANCADA` está aqui porque importar `aba05` GERA a página: sem o
-    desvio, esta régua reescreveria `mockup/05-vibracao.html` na árvore de quem
-    a roda. Instrumento não muda o que mede.
-    """
+    """O dono é `app/telas/vibracao`, e a aba **lê** dele — não redigita."""
     monkeypatch.setenv("HEFESTO_BANCADA", str(tmp_path))
     sys.path.insert(0, str(INTERFACE))
     import aba05
@@ -127,13 +56,7 @@ def test_a_aba_05_le_as_duas_frases_do_motor_e_nao_as_digita(
                     reason="o `gui/main.glade` já saiu (GTK-3) — não há duas "
                            "telas a comparar, e o dono passou a ser único")
 def test_enquanto_o_glade_existir_as_duas_telas_dizem_o_mesmo() -> None:
-    """A janela estável e a aba nova repetem a MESMA oração, palavra por palavra.
-
-    Enquanto os dois arquivos existirem há duas cópias no disco, e duas cópias
-    divergem. Esta é a régua que segura a divergência até a `GTK-3` apagar o
-    XML — e ela se cala sozinha no dia em que isso acontecer, em vez de virar
-    um vermelho herdado.
-    """
+    """A janela estável e a aba nova repetem a MESMA oração, palavra por palavra."""
     from hefesto_dualsense4unix.app.telas import vibracao
 
     fonte = GLADE.read_text(encoding="utf-8")
@@ -204,17 +127,9 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
             "calado é pior que não montar")
 
 
-# ===========================================================================
-# 2. O RÓTULO DE RESERVA NÃO É MAIS CALADO
-# ===========================================================================
 @pytest.fixture
 def doutor(monkeypatch: pytest.MonkeyPatch):
-    """O `storm_doctor` com os dois caches ZERADOS.
-
-    Os dois são de módulo e sobrevivem entre casos: sem isto, a ordem dos
-    testes decidiria o resultado — que é como um dublê envenena outro arquivo
-    (medido em 04/09/2026).
-    """
+    """O `storm_doctor` com os dois caches ZERADOS."""
     from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
     monkeypatch.setattr(sd, "_ROTULOS_EM_CACHE", {})
@@ -224,19 +139,7 @@ def doutor(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.mark.skipif(not GLADE.exists(), reason="o `gui/main.glade` já saiu (GTK-3)")
 def test_a_reserva_fica_vazia_quando_a_leitura_acerta(doutor) -> None:
-    """Com a fonte ao alcance, NADA é declarado reserva.
-
-    **É AQUI QUE O INSTRUMENTO PODE MENTIR, e o caso existe por isso:** o
-    rótulo lido é palavra por palavra o `se_faltar` desta casa. Uma
-    implementação que comparasse as duas strings acusaria reserva sobre uma
-    leitura que deu certo — régua respondendo sobre outra coisa que não o
-    produto.
-
-    **A FONTE MUDOU DE ORDEM EM 06/09/2026:** quem responde primeiro é a PÁGINA
-    que o produto renderiza, e o glade só depois. O `skipif` do glade fica: no
-    dia em que ele sair, este caso continua valendo pela página, e é ela que
-    tem de responder.
-    """
+    """Com a fonte ao alcance, NADA é declarado reserva."""
     lido = doutor.rotulo_do_botao(BOTAO, RESERVA_DO_BOTAO)
     assert lido == RESERVA_DO_BOTAO, (
         f"o rótulo lido da tela viva é {lido!r} e a reserva desta casa diz "
@@ -250,13 +153,7 @@ def test_a_reserva_fica_vazia_quando_a_leitura_acerta(doutor) -> None:
 def test_sem_a_fonte_a_frase_fica_de_pe_e_o_produto_sabe(
     doutor, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """As DUAS metades da mordida do Passo 2, no mesmo caso.
-
-    1. **a frase não some** — a reserva continua sendo reserva, porque uma
-       frase que some é pior que uma frase com um nome velho;
-    2. **o produto SABE que ela é a de reserva** — e é esta metade que era o
-       defeito: sem ela o `se_faltar` virava permanente e nada acusava.
-    """
+    """As DUAS metades da mordida do Passo 2, no mesmo caso."""
     _sem_fonte_nenhuma(doutor, monkeypatch, tmp_path)
 
     with warnings.catch_warnings(record=True) as avisos:
@@ -274,19 +171,7 @@ def test_sem_a_fonte_a_frase_fica_de_pe_e_o_produto_sabe(
 
 
 def test_o_produto_nao_publica_nenhum_rotulo_de_reserva(doutor) -> None:
-    """O PORTÃO QUE FICA: rodado o produto, a lista de reserva tem de ser VAZIA.
-
-    Este é o caso que vai para o vermelho no dia em que a `GTK-3` apagar o
-    `gui/main.glade` sem dar dono novo ao rótulo — e é para isso que ele
-    existe. Ele não pede o glade de volta: pede que a frase de tela nomeie um
-    botão que alguém conferiu.
-
-    O caminho exercido é o `check_snd_quirk`. Os DOIS chamadores reais de
-    `rotulo_do_botao` no produto (`:477` no `check_steam_input` e `:615` aqui)
-    pedem o MESMO id com a MESMA reserva, então um deles basta para a lista —
-    e exercitar o outro exigiria um `localconfig.vdf` de mentira, que mediria
-    a fixture, não o rótulo.
-    """
+    """O PORTÃO QUE FICA: rodado o produto, a lista de reserva tem de ser VAZIA."""
     doutor.check_snd_quirk(quirk_flags_text="", conf_path=Path("/nao/existe.conf"))
     assert doutor.rotulos_de_reserva() == {}, (
         "o produto está publicando rótulo de RESERVA na tela: "
@@ -305,7 +190,6 @@ def _laudo(doutor, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     )
 
 
-#: A meia-frase pela qual a linha da reserva se reconhece no laudo.
 MARCA_DA_RESERVA = "não pôde ser conferido"
 
 
@@ -313,11 +197,7 @@ MARCA_DA_RESERVA = "não pôde ser conferido"
 def test_o_laudo_nao_ganha_linha_quando_o_rotulo_foi_lido(
     doutor, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A linha da reserva é CONDICIONAL, e hoje ela não aparece.
-
-    Uma linha a mais no exame é uma linha a mais na tela dela. Este caso é o que
-    impede a cura de cobrar o preço no caminho que já estava certo.
-    """
+    """A linha da reserva é CONDICIONAL, e hoje ela não aparece."""
     linhas = _laudo(doutor, tmp_path, monkeypatch)
     assert not [m for _, m in linhas if MARCA_DA_RESERVA in m], (
         "o laudo ganhou a linha da reserva com o rótulo LIDO da fonte — a cura "
@@ -347,24 +227,14 @@ def test_o_laudo_diz_quando_o_nome_do_botao_veio_da_reserva(
         "a linha da reserva não nomeia o rótulo em questão")
 
 
-# ===========================================================================
-# 3. O `i18n_extract.sh` NÃO EXTRAI MENOS EM SILÊNCIO
-# ===========================================================================
 def _arvore_de_extracao(tmp_path: Path, *, com_glade: bool) -> Path:
-    """Uma árvore mínima onde o `i18n_extract.sh` roda de verdade.
-
-    Mínima de propósito: o que se mede aqui é o SCRIPT, e copiar 112 MB para
-    contar msgids seria pagar caro por menos medição.
-    """
+    """Uma árvore mínima onde o `i18n_extract.sh` roda de verdade."""
     arvore = tmp_path / ("com" if com_glade else "sem")
     (arvore / "scripts").mkdir(parents=True)
     pacote = arvore / "src" / "hefesto_dualsense4unix"
     (pacote / "gui").mkdir(parents=True)
     (arvore / "po").mkdir()
     shutil.copy(RAIZ / "scripts" / "i18n_extract.sh", arvore / "scripts")
-    # O ACENTO NÃO É ENFEITE: sem um byte fora do ASCII o `xgettext` deixa
-    # `CHARSET` no cabeçalho e o `msgcat` recusa o arquivo. A árvore de mentira
-    # tem de parecer com a de verdade no que o instrumento OLHA.
     (pacote / "frases.py").write_text(
         'from gettext import gettext as _\n\nTITULO = _("Frase do Python — çã")\n',
         encoding="utf-8")
@@ -404,16 +274,7 @@ def test_com_o_glade_o_extrator_continua_o_de_sempre(tmp_path: Path) -> None:
 @pytest.mark.skipif(shutil.which("xgettext") is None,
                     reason="gettext ausente nesta máquina")
 def test_sem_o_glade_o_extrator_para_e_diz_o_que_sumiu(tmp_path: Path) -> None:
-    """A MORDIDA do Passo 3: sem a fonte, o comportamento MUDA e se OUVE.
-
-    O defeito medido em 06/09/2026 não era "extrai menos": o `xgettext` do
-    passo [2/3] morria, o `set -e` levava o script junto, e o estrago era
-    calado em dois lugares — o `.pot` ficava com o conteúdo ANTIGO (o catálogo
-    seguia publicando as frases de uma janela que já não existe) e o parcial
-    `po/*.pot.python` ficava para trás. A mensagem que se via era um
-    "failed to load external entity" do gettext, que não nomeia nem a causa
-    nem a decisão.
-    """
+    """A MORDIDA do Passo 3: sem a fonte, o comportamento MUDA e se OUVE."""
     arvore = _arvore_de_extracao(tmp_path, com_glade=False)
     pot = arvore / "po" / "hefesto-dualsense4unix.pot"
     pot.write_text('msgid "o catálogo de ontem"\nmsgstr ""\n', encoding="utf-8")
@@ -436,11 +297,7 @@ def test_sem_o_glade_o_extrator_para_e_diz_o_que_sumiu(tmp_path: Path) -> None:
 @pytest.mark.skipif(shutil.which("xgettext") is None,
                     reason="gettext ausente nesta máquina")
 def test_a_bandeira_deixa_o_catalogo_menor_sair_por_escrito(tmp_path: Path) -> None:
-    """`--sem-a-janela` é a saída, e ela DIZ o tamanho do buraco.
-
-    Recusar sem oferecer caminho vira contorno: alguém comenta a guarda e o
-    silêncio volta pela porta dos fundos.
-    """
+    """`--sem-a-janela` é a saída, e ela DIZ o tamanho do buraco."""
     arvore = _arvore_de_extracao(tmp_path, com_glade=False)
     saida = _extrair(arvore, "--sem-a-janela")
     assert saida.returncode == 0, saida.stderr

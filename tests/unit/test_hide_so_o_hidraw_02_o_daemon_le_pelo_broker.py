@@ -31,14 +31,10 @@ evdev = pytest.importorskip("evdev")
 
 from hefesto_dualsense4unix.core import evdev_reader as er
 
-#: Números de nó que não existem na máquina de ninguém: o `_is_virtual_evdev`
-#: lê o `/sys/class/input` REAL, e um número baixo poderia casar um nó vivo.
 NO_TOUCHPAD = "/dev/input/event9029"
 NO_GAMEPAD = "/dev/input/event9027"
 NO_TECLADO = "/dev/input/event9003"
 
-#: `struct input_event` no x86_64: timeval (dois long) + type, code (u16) +
-#: value (s32).
 _FORMATO_DO_EVENTO = "llHHi"
 
 
@@ -47,13 +43,7 @@ def _evento(tipo: int, codigo: int, valor: int) -> bytes:
 
 
 def _uniq_do_no(no: str) -> str:
-    """O endereço do aparelho de cada nó — o mesmo no sysfs e no ioctl.
-
-    O do NO_TOUCHPAD é o `…:07` que as réguas conferem; os outros ganham o
-    final do próprio número. Um dono só para os dois lados: o sysfs de mentira
-    e o `ioctl_devinfo` de mentira publicam o que o kernel publica, e o kernel
-    publica o MESMO `uniq` nos dois.
-    """
+    """O endereço do aparelho de cada nó — o mesmo no sysfs e no ioctl."""
     base = Path(no).name
     final = "07" if base == Path(NO_TOUCHPAD).name else f"{int(base[5:]) % 100:02d}"
     return f"e8:47:3a:00:00:{final}"
@@ -73,7 +63,6 @@ def _sysfs(raiz: Path, no: str, *, vendor: str, product: str, nome: str, teclas:
 
 
 #: O bitmap `capabilities/key` de um gamepad DualSense (BTN_SOUTH..BTN_THUMBR
-#: na palavra 4) e o de um touchpad (BTN_LEFT, BTN_TOUCH, BTN_TOOL_*).
 _TECLAS_DO_GAMEPAD = "7fdb000000000000 0 0 0 0"
 _TECLAS_DO_TOUCHPAD = "e520 10000 0 0 0 0"
 
@@ -99,8 +88,6 @@ class _Broker:
         self.servidos = servidos
         self.pedidos: list[str] = []
         self.escritas: dict[str, int] = {}
-        #: De que nó é cada fd servido — o `ioctl_devinfo` de mentira responde
-        #: a identidade DAQUELE aparelho, e dois controles não viram um só.
         self.caminho_do_fd: dict[int, str] = {}
 
     def __call__(self, caminho: str) -> int | None:
@@ -138,7 +125,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
     from evdev import _input
 
     def _devinfo(fd: int) -> tuple[Any, ...]:
-        # O `uniq` é o do aparelho do nó (`_uniq_do_no`, o mesmo do sysfs).
         return (0x0005, 0x054C, 0x0CE6, 0x8111, "DualSense Wireless Controller Touchpad",
                 "", _uniq_do_no(broker.caminho_do_fd.get(fd, NO_TOUCHPAD)))
 
@@ -164,8 +150,7 @@ class TestAPortaDoNoFechado:
             dev.close()
 
     def test_no_que_nao_e_dualsense_nunca_vai_ao_broker(self, mesa: Any) -> None:
-        """O teclado dela não é assunto do broker. A MORDIDA: tire o
-        `_no_de_dualsense_no_sysfs` e o broker recebe o pedido do teclado."""
+        """O teclado dela não é assunto do broker. A MORDIDA: tire o"""
         broker, _ = mesa
         with pytest.raises(PermissionError):
             er.abrir_input_device(NO_TECLADO)
@@ -198,23 +183,13 @@ class TestAPortaDoNoFechado:
 
 
 def _list_devices_da_biblioteca(pasta: Path) -> list[str]:
-    """O `evdev.list_devices()` com o critério da BIBLIOTECA: só o nó que abre.
-
-    O `evdev/util.py:is_device` pede `os.access(R_OK | W_OK)` — e a primeira
-    versão desta régua trocava o `list_devices` por uma lista que devolvia
-    também os nós FECHADOS, mais frouxa que a biblioteca: a descoberta real
-    nunca via o físico, e a régua dava verde. O `S_ISCHR` da biblioteca fica de
-    fora só porque a suíte não cria char device sem root; o critério que
-    decide aqui é o do acesso, e ele é o de verdade.
-    """
+    """O `evdev.list_devices()` com o critério da BIBLIOTECA: só o nó que abre."""
     return [str(c) for c in sorted(pasta.glob("event*")) if os.access(c, os.R_OK | os.W_OK)]
 
 
 @pytest.fixture
 def dev_input(mesa: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
-    """O `/dev/input` de mentira: o gamepad e o touchpad do físico FECHADOS
-    (modo 0000, como o `0600 root` é para ela), o teclado aberto, e o socket
-    do broker de pé."""
+    """O `/dev/input` de mentira: o gamepad e o touchpad do físico FECHADOS"""
     if os.geteuid() == 0:  # pragma: no cover - como root o 0000 não fecha nada
         pytest.skip("como root todo nó abre")
     broker, recusa = mesa
@@ -239,9 +214,7 @@ def dev_input(mesa: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dic
 
 class TestADescobertaAchaOFisicoFechado:
     def test_a_biblioteca_filtra_pelo_acesso(self) -> None:
-        """A premissa do dublê acima: a biblioteca filtra pelo acesso. Se uma
-        versão do python-evdev parar de filtrar, esta régua avisa que o
-        `_nos_de_evento` passou a ser redundante — não errado."""
+        """A premissa do dublê acima: a biblioteca filtra pelo acesso. Se uma"""
         from evdev import util
 
         assert "os.access" in inspect.getsource(util.is_device)
@@ -249,15 +222,7 @@ class TestADescobertaAchaOFisicoFechado:
     def test_o_touchpad_fechado_entra_no_mapa(
         self, mesa: Any, dev_input: dict[str, str]
     ) -> None:
-        """Antes, o `except Exception: continue` engolia o EACCES e o
-        controle saía do mapa «sem touchpad». A MORDIDA (conferência): faça o
-        `_nos_de_evento` devolver só o `list_devices()` da biblioteca e o mapa
-        sai vazio — o nó fechado nem entra na volta.
-
-        E a descoberta NÃO pede nada ao broker
-        (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026): ela lê o
-        sysfs. Quem pede o fd é o leitor, ao abrir o nó que vai ler — a régua
-        `test_o_leitor_le_o_dedo_pelo_fd_do_broker`, logo abaixo."""
+        """Antes, o `except Exception: continue` engolia o EACCES e o"""
         broker, recusa = mesa
         mapa = er.discover_dualsense_touchpad_evdevs()
         assert list(mapa.values()) == [Path(dev_input[NO_TOUCHPAD])]
@@ -289,9 +254,7 @@ class TestADescobertaAchaOFisicoFechado:
         self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """Sem o `uniq` no sysfs, o nó segue pelo caminho de antes: abre pelo
-        broker e lê a identidade pelo fd. A MORDIDA: pule o nó ilegível e o
-        gamepad some da descoberta."""
+        """Sem o `uniq` no sysfs, o nó segue pelo caminho de antes: abre pelo"""
         broker, _ = mesa
         from evdev import ecodes
 
@@ -303,14 +266,12 @@ class TestADescobertaAchaOFisicoFechado:
         achados = er.discover_gamepads(com_sysfs=False)
         assert [g.evdev_path for g in achados] == [dev_input[NO_GAMEPAD]]
         assert [g.identidade for g in achados] == ["e8473a000027"]
-        # O touchpad não tem BTN_GAMEPAD no sysfs: não foi pedido ao broker.
         assert broker.pedidos == [dev_input[NO_GAMEPAD]]
 
     def test_os_dois_do_radio_entram_cada_um_no_seu(
         self, mesa: Any, dev_input: dict[str, str], tmp_path: Path
     ) -> None:
-        """Nunca só o P1: o P3 e o P4 no rádio, os dois com o touchpad
-        fechado, entram no mapa com a identidade de cada um."""
+        """Nunca só o P1: o P3 e o P4 no rádio, os dois com o touchpad"""
         broker, recusa = mesa
         segundo = "/dev/input/event9031"
         _sysfs(tmp_path / "sys-class-input", segundo, vendor="054c", product="0ce6",
@@ -332,9 +293,7 @@ class TestADescobertaAchaOFisicoFechado:
         self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """Sem o socket, nó fechado não tem porta: a lista é a da biblioteca,
-        e o broker nem é procurado. É também o que mantém a suíte longe do
-        `/dev/input` real dela (o conftest aponta o socket para o vazio)."""
+        """Sem o socket, nó fechado não tem porta: a lista é a da biblioteca,"""
         broker, _ = mesa
         monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(tmp_path / "nao-ha.sock"))
         assert er.discover_dualsense_touchpad_evdevs() == {}
@@ -343,13 +302,7 @@ class TestADescobertaAchaOFisicoFechado:
 
 class TestOCartaoDoTouchpadNaoFicaCego:
     def test_o_leitor_le_o_dedo_pelo_fd_do_broker(self, mesa: Any) -> None:
-        """A célula `toque.touchpad` da bancada, no nível do leitor.
-
-        O dedo entra pelo pipe como entraria pelo nó, e o `touch_state()` —
-        o que o cartão desenha — tem de mostrá-lo. A MORDIDA: faça o
-        `abrir_input_device` não perguntar ao broker e o leitor fica em
-        `touchpad_reader_open_failed`, com o dedo nunca chegando.
-        """
+        """A célula `toque.touchpad` da bancada, no nível do leitor."""
         broker, _ = mesa
         from evdev import ecodes
 
@@ -380,17 +333,7 @@ class TestOCartaoDoTouchpadNaoFicaCego:
 
 class TestOObjetoEspelhaABiblioteca:
     def test_o_input_device_do_fd_espelha_o_da_biblioteca(self) -> None:
-        """Os campos que o `__init__` da biblioteca preenche são os nossos.
-
-        A MORDIDA é de versão: um `python-evdev` que ganhe um campo novo no
-        `__init__` reprova aqui antes de o objeto montado pelo fd quebrar
-        num método que o use.
-
-        A LEITURA também é de versão (25/09/2026): o `python-evdev` 2.0, que o
-        CI instala, anota os campos (`self.fd: int = fd`), e a régua que só lia
-        `self.fd = fd` achava dois dos nove campos da biblioteca e reprovava o
-        objeto certo. Ela passa a ler a atribuição com e sem anotação.
-        """
+        """Os campos que o `__init__` da biblioteca preenche são os nossos."""
         from evdev import InputDevice
 
         atribuicao = r"self\.(\w+)\s*(?::[^=\n]+)?=(?!=)"
@@ -403,9 +346,7 @@ class TestONativoPedeOsQuatro:
     def test_o_pedido_do_modo_nativo_leva_os_nos_de_entrada(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """«Só o Modo Nativo devolve.» A MORDIDA: tire o `entradas=True` do
-        `_reconciliar_exposicao_do_modo_nativo` e o jogo no Nativo recebe o
-        hidraw sem o evdev — quem enumera /dev/input acha zero controles."""
+        """«Só o Modo Nativo devolve.» A MORDIDA: tire o `entradas=True` do"""
         from hefesto_dualsense4unix.daemon import lifecycle as mod
         import hefesto_dualsense4unix.integrations.hidraw_broker_client as cli
 
@@ -422,7 +363,6 @@ class TestONativoPedeOsQuatro:
 
         class Controller:
             def nos_hidraw_por_uniq(self) -> dict[str, str]:
-                # A mesa inteira: dois no cabo e dois no rádio.
                 return {
                     "aabbcc000001": "/dev/hidraw3",
                     "aabbcc000002": "/dev/hidraw4",
@@ -436,16 +376,13 @@ class TestONativoPedeOsQuatro:
         daemon.controller = Controller()  # type: ignore[assignment]
         daemon._exposicao_do_modo_nativo(True)
         daemon._exposicao_do_modo_nativo(False)
-        # Os quatro, cada um com o SEU nó e os nós de entrada junto — nunca
-        # só o P1 (a MORDIDA da conferência: corte o laço no primeiro).
         nos = ["/dev/hidraw3", "/dev/hidraw4", "/dev/hidraw7", "/dev/hidraw8"]
         assert pedidos == [("expor", no, True) for no in nos] + [
             ("desexpor", no, False) for no in nos
         ]
 
     def test_o_payload_so_leva_o_campo_quando_e_verdade(self) -> None:
-        """Um broker antigo ignora o campo; o `with exposicao` do handle de
-        controle não o manda."""
+        """Um broker antigo ignora o campo; o `with exposicao` do handle de"""
         from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
             HidrawBrokerClient,
         )
@@ -469,9 +406,7 @@ class TestONativoPedeOsQuatro:
     def test_a_reafirmacao_pergunta_aos_nos_de_entrada_tambem(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """Um replug renasce os nós de entrada fechados junto com o hidraw;
-        se só o hidraw fosse conferido, um nó de entrada que ficasse fechado
-        nunca seria reaberto no Nativo."""
+        """Um replug renasce os nós de entrada fechados junto com o hidraw;"""
         from hefesto_dualsense4unix.daemon import lifecycle as mod
         import hefesto_dualsense4unix.integrations.hidraw_broker_client as cli
 

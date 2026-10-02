@@ -50,30 +50,17 @@ RAIZ = Path(__file__).resolve().parents[2]
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 BANCADA = RAIZ / "mockup"
 
-#: A FORMA da mesa dela, medida em 08/09/2026 no `controllers.json` e no
-#: `personalizado.json`: QUATRO controles, `auto_player_colors: true`, global
-#: `[40,80,180]`, e override de cor em exatamente DOIS — os ranks 2 e 4,
-#: guardando as cores dos slots **1 e 2**.
-#:
-#: OS ENDEREÇOS SÃO FORJADOS (`aa:bb:cc`), e não os dela mascarados: o que esta
-#: régua mede é o PADRÃO — quem tem override e que cor ele guarda —, e a
-#: identidade não entra na conta. Máscara não é anonimato em fixture
-#: versionada; `test_anonimato_de_fixtures.py` reprova o MAC derivado de real
-#: mesmo com os octetos 4 e 5 zerados, e está certo.
 MACS = [f"AA:BB:CC:00:00:0{n}" for n in (1, 2, 3, 4)]
 UNIQS = [f"aabbcc00000{n}" for n in (1, 2, 3, 4)]
 RANK_DELA = {u: n for n, u in enumerate(UNIQS, start=1)}
 OVERRIDE_DELA = {
-    UNIQS[1]: player_slot_color(1),  # a cor do slot 1, no que hoje é o 2
-    UNIQS[3]: player_slot_color(2),  # a cor do slot 2, no que hoje é o 4
+    UNIQS[1]: player_slot_color(1),
+    UNIQS[3]: player_slot_color(2),
 }
 GLOBAL_DELA = (40, 80, 180)
 VERDE = (0, 255, 0)
 
 
-# ---------------------------------------------------------------------------
-# O PRODUTO REAL — backend, handler IPC e reassert de verdade
-# ---------------------------------------------------------------------------
 class _NoDeLed:
     """Nó sysfs falso: guarda o que SAIU no fio, que é o que ela vê no plástico."""
 
@@ -111,13 +98,7 @@ def _handle_falso() -> Any:
 
 
 def _provider_da_identidade(ranks: dict[str, int], *, auto: bool = True) -> Any:
-    """O provider automático com as DUAS companheiras do daemon.
-
-    Mesmo contrato de `daemon/subsystems/identity.make_auto_output_provider`:
-    a cor do slot, o `numero_do_slot` e o `uniqs_da_mesa`. Um dublê mais frouxo
-    que o produto é como esta casa já envenenou duas medições — aqui as três
-    respostas existem porque as três existem no daemon.
-    """
+    """O provider automático com as DUAS companheiras do daemon."""
 
     def provider(uniq: str) -> Any:
         slot = ranks.get(uniq)
@@ -148,7 +129,6 @@ def _mesa_de_quatro(
     nos = {m: _NoDeLed() for m in MACS}
     ctl._sysfs = dict(nos)
     ctl.set_auto_output_provider(_provider_da_identidade(RANK_DELA, auto=auto))
-    # Sem jogo: a camada GAME fica FORA do merge. Quem a mede é o teste dela.
     ctl.set_game_authority_provider(lambda: "daemon")
     ctl.apply_output_defaults(OutputSpec(led=GLOBAL_DELA))
     if overrides is None:
@@ -186,17 +166,7 @@ class TestAMesaDeQuatroNoProdutoReal:
     async def test_o_broadcast_dela_pinta_os_quatro_de_verde(
         self, tmp_path: Path
     ) -> None:
-        """(a) `led.set {rgb:[0,255,0]}` SEM `uniq` — o "pinta os quatro".
-
-        Este é o teste que a primeira volta escreveu com DOIS controles e o
-        verde, o único arranjo em que o defeito não aparece. Com QUATRO e os
-        overrides dela, a primeira volta escrevia
-        `[verde, vermelho, azul, rosa]`.
-
-        **A MORDIDA:** faça `_e_fossil` (ou o ramo `DO_BROADCAST` de
-        `cores_sem_colisao`) tratar o broadcast como escolha comum, e três dos
-        quatro perdem o verde — com o P1 ficando com a cor do número do 3.
-        """
+        """(a) `led.set {rgb:[0,255,0]}` SEM `uniq` — o "pinta os quatro"."""
         server, _ctl, nos = _mesa_de_quatro(tmp_path)
 
         await server._handle_led_set({"rgb": list(VERDE)})
@@ -209,12 +179,7 @@ class TestAMesaDeQuatroNoProdutoReal:
     async def test_o_broadcast_sobrevive_ao_proximo_reassert(
         self, tmp_path: Path
     ) -> None:
-        """E ele tem de RESISTIR, não só ter sido a última escrita.
-
-        A defesa de exibição (NUMA-03) e todo hotplug re-resolvem pelo mesmo
-        merge. Se a cura vivesse só na escrita, o verde voltaria a virar paleta
-        segundos depois — o defeito teria mudado de horário, não de existência.
-        """
+        """E ele tem de RESISTIR, não só ter sido a última escrita."""
         server, ctl, nos = _mesa_de_quatro(tmp_path)
         await server._handle_led_set({"rgb": list(VERDE)})
         for no in nos.values():
@@ -228,12 +193,7 @@ class TestAMesaDeQuatroNoProdutoReal:
     async def test_o_ipc_nao_diz_quatro_tendo_pintado_um(
         self, tmp_path: Path
     ) -> None:
-        """`BROADCAST-QUE-NAO-MENTE-01`, ressuscitado e fechado de novo.
-
-        A primeira volta respondia `aplicado_em` com os quatro MACs **tendo
-        pintado um** de verde. A resposta e o fio têm de contar a MESMA
-        história — é o que o nome daquela sprint promete.
-        """
+        """`BROADCAST-QUE-NAO-MENTE-01`, ressuscitado e fechado de novo."""
         server, _ctl, nos = _mesa_de_quatro(tmp_path)
 
         resposta = await server._handle_led_set({"rgb": list(VERDE)})
@@ -266,13 +226,7 @@ class TestAMesaDeQuatroNoProdutoReal:
     def test_quem_pede_a_cor_do_proprio_numero_fica_com_ela(
         self, tmp_path: Path
     ) -> None:
-        """(c) A regra sai na ordem CERTA, e a primeira volta a saía invertida.
-
-        Lá o P1 ficava com o verde (a cor do número do 3) e o P3 com o azul (a
-        do 1). Aqui cada um acende a cor do número dele: os dois sem override
-        porque é a deles, e os dois com override porque o fóssil os devolve ao
-        número de hoje.
-        """
+        """(c) A regra sai na ordem CERTA, e a primeira volta a saía invertida."""
         _server, ctl, _nos = _mesa_de_quatro(tmp_path)
 
         assert [ctl.resolved_led_for(u) for u in UNIQS] == [
@@ -294,24 +248,13 @@ class TestAMesaDeQuatroNoProdutoReal:
 
         assert resposta["aplicado_em"] == [UNIQS[0]]
         assert nos[MACS[0]].rgb[-1] == roxo
-        # Os outros três CONTINUAM na cor do número deles. O reassert do
-        # handler repinta a mesa inteira de propósito (é ele que faz o roxo
-        # sobreviver ao merge), então "não pintou" se lê na COR, não na
-        # contagem de escritas — contar escritas daria verde sobre a mesa
-        # trocada, que é a família de defeito deste arquivo.
         assert _no_fio(nos)[1:] == [player_slot_color(n) for n in (2, 3, 4)], (
             "o gesto num controle mudou a cor dos outros três")
 
     def test_a_mesma_mesa_da_sempre_a_mesma_resposta(
         self, tmp_path: Path
     ) -> None:
-        """Determinismo, e ele não é zelo: é o que impede a barra de piscar.
-
-        Medido nesta casa em 05/09/2026 — devolver o endereço da fita fez a
-        tela repintar 80 vezes em 80 tiques porque o valor tinha um segundo
-        dono. Um passe que respondesse diferente na segunda volta faria a
-        lightbar dela trocar de cor a cada batimento do reassert.
-        """
+        """Determinismo, e ele não é zelo: é o que impede a barra de piscar."""
         _server, ctl, _nos = _mesa_de_quatro(tmp_path)
 
         uma = [ctl.resolved_led_for(u) for u in UNIQS]
@@ -322,12 +265,7 @@ class TestAMesaDeQuatroNoProdutoReal:
     def test_a_ordem_de_hotplug_nao_muda_a_resposta(
         self, tmp_path: Path
     ) -> None:
-        """Quem religa primeiro não rouba a cor do vizinho.
-
-        `_handles` é ordem de HOTPLUG. Se o passe lesse dela, a mesa inteira
-        trocaria de cor a cada religada — o mesmo defeito que o
-        `_assentar_mesa_locked` fechou no NÚMERO, de volta na COR.
-        """
+        """Quem religa primeiro não rouba a cor do vizinho."""
         _s1, ctl, _n1 = _mesa_de_quatro(tmp_path)
         esperado = [ctl.resolved_led_for(u) for u in UNIQS]
 
@@ -343,17 +281,7 @@ class TestAProcedenciaEOQueElaLe:
     def test_a_cor_escolhida_para_outro_numero_e_fossil(
         self, tmp_path: Path
     ) -> None:
-        """A decisão dela, palavra por palavra: *"quando o número daquele
-        aparelho muda, a cor gravada é FÓSSIL e sai sozinha"*.
-
-        Aqui o roxo NÃO é a cor do número de ninguém — a primeira volta o
-        manteria, porque só sabia provar fóssil pela forma. Com a procedência
-        gravada dizendo "escolhido para o número 1" num aparelho que hoje é o
-        2, ele sai.
-
-        **A MORDIDA:** faça `_e_fossil` ignorar a procedência inteira e o roxo
-        fica — a cor de um dia que passou continua acesa.
-        """
+        """A decisão dela, palavra por palavra: *"quando o número daquele"""
         roxo = (90, 20, 140)
         _s, ctl, _n = _mesa_de_quatro(
             tmp_path,
@@ -367,11 +295,7 @@ class TestAProcedenciaEOQueElaLe:
     def test_a_cor_escolhida_para_o_numero_de_hoje_fica(
         self, tmp_path: Path
     ) -> None:
-        """E uma escolha VIVA sobrevive, mesmo sendo um tom qualquer.
-
-        É a outra metade da mesma linha, e sem ela a cura seria "apagar tudo":
-        um perfil com procedência certa não pode perder a cor dela.
-        """
+        """E uma escolha VIVA sobrevive, mesmo sendo um tom qualquer."""
         roxo = (90, 20, 140)
         _s, ctl, _n = _mesa_de_quatro(
             tmp_path,
@@ -384,12 +308,7 @@ class TestAProcedenciaEOQueElaLe:
     def test_o_legado_do_disco_ainda_prova_fossil_pela_forma(
         self, tmp_path: Path
     ) -> None:
-        """Perfil ESCRITO ANTES do campo: sem carimbo, a regra volta à forma.
-
-        É o disco dela hoje, e é a razão de `LEGADO` existir em vez de "sem
-        procedência = fóssil": um roxo escolhido de verdade num perfil antigo
-        sobrevive à migração; a cor do número de OUTRO da mesa não.
-        """
+        """Perfil ESCRITO ANTES do campo: sem carimbo, a regra volta à forma."""
         roxo = (90, 20, 140)
         _s, ctl, _n = _mesa_de_quatro(
             tmp_path, overrides={UNIQS[1]: roxo, UNIQS[3]: player_slot_color(1)})
@@ -399,11 +318,7 @@ class TestAProcedenciaEOQueElaLe:
             "o legado fóssil ficou aceso")
 
     def test_o_carimbo_do_broadcast_vence_a_forma_da_cor(self) -> None:
-        """O caso que derrubou a primeira volta, medido na REGRA.
-
-        Os quatro pedem o VERDE, que é a cor do número do 3 — a forma diz
-        "fóssil" para três deles. O carimbo diz "Todos", e o carimbo manda.
-        """
+        """O caso que derrubou a primeira volta, medido na REGRA."""
         mesa = [
             PecaDaMesa(uniq=u, pedida=VERDE, do_numero=player_slot_color(n),
                        procedencia=DO_BROADCAST, numero=n)
@@ -413,12 +328,7 @@ class TestAProcedenciaEOQueElaLe:
         assert cores_sem_colisao(mesa) == dict.fromkeys(UNIQS, VERDE)
 
     def test_o_perfil_leva_a_procedencia_do_disco_ao_backend(self) -> None:
-        """`LedsConfig.lightbar_para_o_numero` → `_controllers_to_procedencias`.
-
-        Sem esta ponte, o campo existiria no arquivo e o resolvedor nunca o
-        leria — que é a família de defeito que esta casa chama de "campo que
-        grava e ninguém lê".
-        """
+        """`LedsConfig.lightbar_para_o_numero` → `_controllers_to_procedencias`."""
         from hefesto_dualsense4unix.profiles.manager import (
             _controllers_to_procedencias,
         )
@@ -431,7 +341,6 @@ class TestAProcedenciaEOQueElaLe:
             UNIQS[0]: ControllerOverrides(leds=LedsConfig(
                 lightbar=(1, 2, 3), lightbar_para_o_numero=3)),
             UNIQS[1]: ControllerOverrides(leds=LedsConfig(lightbar=(4, 5, 6))),
-            # só brilho: não materializa cor, então não tem procedência
             UNIQS[2]: ControllerOverrides(leds=LedsConfig(
                 lightbar_brightness=0.5)),
         }
@@ -442,21 +351,7 @@ class TestAProcedenciaEOQueElaLe:
         }
 
     def test_o_interruptor_congela_a_cor_com_o_numero_de_hoje(self) -> None:
-        """Desligar o automático GRAVA a cor de cada um — e agora com o número.
-
-        Ele congelava "azul" e perdia "azul porque ele era o 1", que é
-        exatamente como os fósseis nasciam.
-
-        **FATO SUBSTITUÍDO — 09/09/2026.** Estas linhas diziam que este era *"o
-        único caminho da aba que escreve cor no disco"*, e era verdade — era
-        também o defeito: a cor que ela ESCOLHIA não ia a lugar nenhum, e
-        voltava ao azul no primeiro replug. Agora `_escrever_a_cor` grava toda
-        escolha dela pelo mesmo `_com_a_cor_gravada`; ver
-        `test_a_cor_escolhida_vai_ao_disco_e_o_trilho_nao_reescala.py`.
-
-        **A MORDIDA:** tire o `numero` de `_com_a_cor_gravada` e o campo volta
-        a nascer `None` — todo perfil novo já nasceria `LEGADO`.
-        """
+        """Desligar o automático GRAVA a cor de cada um — e agora com o número."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
         from hefesto_dualsense4unix.profiles.schema import (
             LedsConfig,
@@ -485,8 +380,6 @@ class TestOsBuracosDaPrimeiraVolta:
 
         **A MORDIDA:** devolva o `continue` e os dois voltam a `#0000FF`.
         """
-        # o `d4` some da mesa do provider (fica sem número e sem automática) e
-        # o global do perfil é EXATAMENTE o azul do número 1.
         ranks = {u: n for n, u in enumerate(UNIQS[:3], start=1)}
         inst = _backend_cru(ranks, {}, global_=player_slot_color(1))
         inst._handles = dict.fromkeys(MACS)
@@ -519,12 +412,7 @@ class TestOsBuracosDaPrimeiraVolta:
         assert cores[1] != cores[0], f"os dois ficaram {_hexa(cores[0])}"
 
     def test_o_todos_global_do_perfil_nao_e_colisao(self) -> None:
-        """D4: pintar os quatro com a cor GLOBAL é um ato dela, não um defeito.
-
-        É o limite da linha de cima, e sem ele "a cor global entra na mesa"
-        viraria "a cor global some da mesa": quatro controles sem opinião
-        própria acendem a cor do perfil, e nenhum deles cede a nenhum outro.
-        """
+        """D4: pintar os quatro com a cor GLOBAL é um ato dela, não um defeito."""
         mesa = [
             PecaDaMesa(uniq=u, pedida=GLOBAL_DELA, do_numero=None,
                        procedencia=DO_GLOBAL, numero=n)
@@ -582,12 +470,7 @@ class TestOsBuracosDaPrimeiraVolta:
         assert inst._merged_desired_for_key(UNIQS[0]).led == player_slot_color(1)
 
     def test_a_barra_apagada_nao_e_colisao(self) -> None:
-        """Preto é AUSÊNCIA de cor, não identidade.
-
-        Deslocar uma barra apagada acenderia um controle que ela mandou
-        apagar — e duas apagadas não são duas peças confundíveis: "as duas
-        estão desligadas" é uma resposta.
-        """
+        """Preto é AUSÊNCIA de cor, não identidade."""
         mesa = [
             PecaDaMesa(uniq=u, pedida=(0, 0, 0),
                        do_numero=player_slot_color(n),
@@ -598,18 +481,7 @@ class TestOsBuracosDaPrimeiraVolta:
         assert cores_sem_colisao(mesa) == dict.fromkeys(UNIQS, (0, 0, 0))
 
     def test_o_jogo_pinta_por_cima_da_regra(self, tmp_path: Path) -> None:
-        """A camada GAME fica ACIMA do passe, como já fica acima do brilho.
-
-        Deslocar a cor que o jogo pediu seria mentir sobre o que ele pediu —
-        é a mesma razão do R-20 item 2.
-
-        NOTA DATADA — 16/09/2026 (PERFIL-MANDA-01): este caso passou a medir um
-        controle SEM cor dela. Até aqui ele usava o `UNIQS[1]`, que tem override
-        de perfil em `OVERRIDE_DELA`, e por isso acabava medindo DUAS regras ao
-        mesmo tempo. A decisão dela daquele dia separou as duas: o jogo continua acima
-        do passe da cor única (é isto que este caso trava), e deixou de ficar
-        acima do que ELA escolheu para aquele controle — o irmão logo abaixo.
-        """
+        """A camada GAME fica ACIMA do passe, como já fica acima do brilho."""
         _s, ctl, _n = _mesa_de_quatro(tmp_path)
         ctl.set_game_authority_provider(lambda: "game")
         assert UNIQS[0] not in OVERRIDE_DELA, "o caso perde o sentido com dono"
@@ -619,18 +491,9 @@ class TestOsBuracosDaPrimeiraVolta:
         assert ctl.resolved_led_for(UNIQS[0]) == player_slot_color(1)
 
     def test_a_cor_dela_no_perfil_nao_cede_ao_jogo(self, tmp_path: Path) -> None:
-        """PERFIL-MANDA-01 (16/09/2026), ordem dela: *"meu perfil manda"*.
-
-        O irmão acima e este são o par: o que o jogo pinta continua vencendo o
-        passe da cor única, e para de vencer a cor que ela escolheu para AQUELE
-        controle. `_mesa_de_quatro` põe os overrides pela porta do perfil
-        (`reset_profile_overrides`), que é a que carimba o dono.
-        """
+        """PERFIL-MANDA-01 (16/09/2026), ordem dela: *"meu perfil manda"*."""
         _s, ctl, _n = _mesa_de_quatro(tmp_path)
         ctl.set_game_authority_provider(lambda: "game")
-        # O que ela vê ANTES do jogo — já com o passe da cor única aplicado, que
-        # é quem desloca a cor pedida quando duas peças a disputam. Comparar com
-        # `OVERRIDE_DELA` cru mediria a regra errada.
         antes = ctl.resolved_led_for(UNIQS[1])
 
         assert ctl.set_game_output_for(MACS[1], led=(0, 64, 0)) is True
@@ -649,7 +512,6 @@ class TestARecusaComAMesaCheia:
                        procedencia=DA_PALETA, numero=n)
             for n in range(1, 9)
         ]
-        # o nono pede a cor do primeiro, e não sobra tom livre
         mesa.append(PecaDaMesa(uniq="u9", pedida=player_slot_color(1),
                                do_numero=None, procedencia=LEGADO, numero=9))
 
@@ -666,12 +528,7 @@ def _backend_cru(
     *,
     global_: tuple[int, int, int] = GLOBAL_DELA,
 ) -> bp.PyDualSenseController:
-    """Backend montado à mão — para os estados que o produto não sabe POR.
-
-    Usado só onde a mesa precisa divergir do provider (um controle com handle
-    aberto e FORA da mesa da identidade), que é um estado real e transitório
-    do rádio dela e que a porta pública não sabe construir.
-    """
+    """Backend montado à mão — para os estados que o produto não sabe POR."""
     inst = bp.PyDualSenseController.__new__(bp.PyDualSenseController)
     inst._io_lock = threading.RLock()
     inst._handles = dict.fromkeys(ranks)
@@ -690,12 +547,7 @@ def _backend_cru(
 
 
 class _CtxDeMentira:
-    """A mesa DE QUATRO dela, do lado da tela.
-
-    Ela existia com DOIS, e a razão de crescer é a mesma do arquivo inteiro:
-    numa mesa de dois metade dos tons da paleta está livre, e uma guarda que
-    desloca sempre acha para onde. Com quatro, a conta aperta.
-    """
+    """A mesa DE QUATRO dela, do lado da tela."""
 
     def __init__(self) -> None:
         self.state: dict[str, Any] = {"active_profile": ""}
@@ -729,20 +581,7 @@ class TestOGestoDaAba:
     """A metade que só a TELA cumpre — a frase que diz de quem é a cor."""
 
     def test_escolher_o_tom_do_vizinho_recusa_e_diz_de_quem_e(self) -> None:
-        """A cor com dono RECUSA — decisão dela, 09/09/2026.
-
-        **FATO SUBSTITUÍDO.** Este teste chamava-se
-        `test_escolher_o_tom_do_vizinho_desloca_e_diz_de_quem_e` e mediu o
-        deslocamento — *"o segundo desloca para o tom vizinho"* —, que existiu
-        de 08/09 a 09/09. Ela decidiu o contrário
-        (`D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X`), e o deslocamento
-        era uma terceira coisa: ela clicava num tom e o aparelho acendia
-        OUTRO, escolhido pelo produto.
-
-        **A MORDIDA:** faça `_sem_repetir_a_cor_do_vizinho` devolver
-        `(rgb, None)` quando há dono e nada recusa — a cor sai repetida e ela
-        não sabe de quem era o tom.
-        """
+        """A cor com dono RECUSA — decisão dela, 09/09/2026."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         with pytest.raises(RuntimeError) as erro:
@@ -751,28 +590,11 @@ class TestOGestoDaAba:
 
         frase = str(erro.value)
         assert "P2" in frase, f"a tela não disse de quem é: {frase}"
-        # "Nada foi mudado" virou "Nada mudou" em 11/09/2026 (A4-050,
-        # aprovado por ela): o conserto passou para o fim, junto do fato.
         assert "Nada mudou" in frase, (
             f"a recusa não diz que o aparelho ficou como estava: {frase}")
 
     def test_a_guia_desenha_o_x_exatamente_no_que_o_gesto_recusa(self) -> None:
-        """As duas metades da regra leem a MESMA mesa — COR-X-01.
-
-        Uma tela que oferece o que o gesto recusa é pior do que uma que não
-        oferece nada: ela clica, o produto diz não, e a culpa parece dela.
-
-        **O X DEIXOU DE SER SÓ DESENHO — 09/09/2026.** A casa tomada perde o
-        `data-gesto`, e é isso que cumpre a palavra dela: *"um X (…) de forma
-        que me IMPEÇA de setar alguma cor de um coleguinha"*. Até aqui o X era
-        pintado e o botão guardava o gesto do lado — ela clicava, e três linhas
-        de recusa cobriam o desenho do controle por 30 s. Ela viu na bancada:
-        *"no caso o X fica o aviso saí"*. <!-- noqa-acento: citação dela -->
-
-        **A MORDIDA:** faça `fileira_de_tons` ignorar `tomadas` e o X some,
-        enquanto o gesto continua recusando; ou devolva o `data-gesto` à casa
-        tomada e o aviso volta a nascer.
-        """
+        """As duas metades da regra leem a MESMA mesa — COR-X-01."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         html = a04.fileira_de_tons("eu", a04.as_casas_da_mesa([
@@ -794,32 +616,14 @@ class TestOGestoDaAba:
         assert "P2 (DualSense)" in do_vizinho[0], (
             "o X não diz de quem é — e agora ele é o ÚNICO canal que diz, "
             "porque o aviso saiu")
-        # AS OUTRAS TREZE CONTINUAM SENDO GESTO — sem isto, travar o vizinho
-        # poderia travar a guia inteira e ninguém veria.
         livres = [c for c in casas if "tomado" not in c]
         assert len(livres) == len(a04.tons_da_guia()) - 1
         assert all('data-gesto="cor"' in c for c in livres)
-        # a MINHA cor ganha o anel, e nunca o X
         minha = [c for c in casas if f'data-hex="{_hexa(player_slot_color(1))}"' in c]
         assert "tom on" in minha[0] and "tomado" not in minha[0]
 
     def test_o_x_e_preto_com_borda_branca_e_nao_a_cor_do_dono(self) -> None:
-        """Decisão dela, 09/09/2026, com os quatro na mesa.
-
-        *"deixa o nosso x preto com borda branca pra destacar. Falo isso pois
-        ficou perfeito o nosso x, o complicado é que são tons pasteis e o
-        controle branco por exemplo não ajuda nisso o x dele fica invisível."*
-        <!-- noqa-acento: citação literal dela -->
-
-        A ideia antiga — o X na cor do PLÁSTICO do dono — vinha da regra que
-        pinta a borda da coluna, e a bancada a derrubou: **branco sobre pastel
-        não tem contraste**, e o X do controle branco dela sumia justamente na
-        casa em que ela precisa vê-lo. Um X que aparece em três dos quatro é
-        pior do que um X neutro que aparece nos quatro.
-
-        **A MORDIDA:** devolva `var(--dono)` ao `background` do `::after` e o
-        X do controle branco volta a ser invisível sobre o pastel.
-        """
+        """Decisão dela, 09/09/2026, com os quatro na mesa."""
         from hefesto_dualsense4unix.interface import aba04
 
         css = aba04.CSS
@@ -832,11 +636,7 @@ class TestOGestoDaAba:
             "o X perdeu a borda branca que o destaca do tom pastel")
 
     def test_um_lugar_sem_controle_nao_ganha_anel_nem_x(self) -> None:
-        """Não há escolha a marcar e não há dono a proteger — COR-X-01 §3.4.
-
-        **A MORDIDA:** tire o `if ligado` da conta do `on` e o lugar vazio
-        passa a afirmar uma cor que ninguém escolheu.
-        """
+        """Não há escolha a marcar e não há dono a proteger — COR-X-01 §3.4."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         html = a04.fileira_de_tons("eu", a04.as_casas_da_mesa([
@@ -867,10 +667,7 @@ class TestOGestoDaAba:
         ponte = _PonteQueAceita()
         vizinho = _hexa(player_slot_color(2))
 
-        # PELO DESPACHANTE, e não pela função: é o caminho do CLIQUE. Um teste
         # que chama `a04.reenviar` direto passaria com o `data-gesto` da página
-        # apontando para lugar nenhum, que é o defeito que esta casa nomeia
-        # como "botão que aceita o toque e não age".
         atende = pacotes.gesto_da_pagina("04-iluminacao.html", "reenviar")
         assert atende is not None, "ninguém atende o `reenviar` da página 04"
         with pytest.raises(RuntimeError) as erro:
@@ -894,11 +691,7 @@ class TestOGestoDaAba:
     def test_apagar_nao_passa_pela_guarda(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Desligar" manda PRETO, e preto não colide com nada.
-
-        Se o preto passasse pela guarda, apagar o segundo controle acenderia
-        uma cor nova nele — o oposto do que o botão promete.
-        """
+        """"Desligar" manda PRETO, e preto não colide com nada."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         monkeypatch.setattr(a04.perfil, "ativo", lambda _nome: {})
@@ -909,30 +702,12 @@ class TestOGestoDaAba:
         assert ponte.cores[-1][0] == (0, 0, 0)
 
 
-#: O NOME DO BOTÃO QUE MORREU, **NAS DUAS GRAFIAS**. Ele saiu da aba no
-#: `2c228352` — o gesto foi junto, e a página só conhece `apagar`,
 #: `auto-cores`, `brilho`, `cor`, `player` e `reenviar`.
-#:
-#: A PRIMEIRA VERSÃO SÓ CASAVA A ACENTUADA (`"autom"+"ático"`), e o bloco que
-#: vazou na tela escrevia a forma SEM acento — a régua deu verde por cima do
-#: defeito que ela existia para pegar. Uma régua que mede uma grafia de uma
-#: palavra que a casa escreve nas duas é meia régua.
 _BOTAO_MORTO = re.compile("autom" + "[áa]tico", re.I)
 
 
 def _comentarios_aninhados(html: str) -> list[int]:
-    """As linhas em que um `<!--` abre DENTRO de um comentário já aberto.
-
-    **COMENTÁRIO HTML NÃO ANINHA**, e é a quinta forma da armadilha da prosa
-    nesta casa: o `-->` de dentro FECHA o de fora, e todo o resto do bloco
-    vira CORPO VISÍVEL. Em 08/09/2026 um `<!-- noqa-acento -->` escrito dentro
-    da nota de um widget pôs na tela dela a prosa de projeto e um hash de
-    commit — o defeito que a própria nota dizia estar curando.
-
-    A régua olha a FORMA, e é por isso que ela é uma régua e não uma lista:
-    nenhuma palavra proibida a alcança, porque o texto que vaza é diferente a
-    cada vez.
-    """
+    """As linhas em que um `<!--` abre DENTRO de um comentário já aberto."""
     achados: list[int] = []
     i = 0
     while True:
@@ -953,20 +728,7 @@ class TestAProsaQueVaiPararNaTela:
 
     @pytest.mark.parametrize("pasta", [PAGINAS, BANCADA])
     def test_a_pagina_04_nao_fala_do_botao_que_saiu(self, pasta: Path) -> None:
-        """NAS DUAS LEITURAS, e a diferença entre elas é o ponto.
-
-        `texto_visivel_no_produto` desconta o que a
-        `interface/folha_da_casa.FOLHA_DA_CASA` esconde (`.nota`); a bancada é
-        o que ela abre NO NAVEGADOR, sem folha nenhuma. Uma régua só do
-        produto daria VERDE sobre as duas ocorrências da legenda — que é a
-        assinatura de instrumento falso que esta casa persegue.
-
-        **A MORDIDA:** devolva à dica do interruptor a frase que explicava o
-        botão por coluna, ou à legenda o item que narrava a saída dele, e a
-        linha correspondente reprova. **E a mordida de 08/09:** devolva o
-        comentário HTML aninhado ao gerador, regere, e esta linha pega o
-        vazamento — porque agora ela casa também a forma sem acento.
-        """
+        """NAS DUAS LEITURAS, e a diferença entre elas é o ponto."""
         from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
             texto_visivel,
             texto_visivel_no_produto,
@@ -985,17 +747,7 @@ class TestAProsaQueVaiPararNaTela:
     def test_nenhuma_pagina_tem_comentario_html_aninhado(
         self, pasta: Path
     ) -> None:
-        """A régua ESTRUTURAL da armadilha da prosa, e ela é nova.
-
-        As dez abas de uma vez: o defeito não é da 04, é da FORMA — qualquer
-        gerador pode escrever a nota de dentro sem saber que fecha a de fora.
-        Uma régua por página seria a nona vez que esta casa cura um lugar e
-        deixa dezoito.
-
-        **A MORDIDA:** ponha um `<!-- noqa -->` dentro de qualquer `<!-- … -->`
-        de qualquer gerador, regere, e a linha daquela página reprova com o
-        número dela.
-        """
+        """A régua ESTRUTURAL da armadilha da prosa, e ela é nova."""
         vazamentos = {
             html.name: _comentarios_aninhados(html.read_text(encoding="utf-8"))
             for html in sorted(pasta.glob("*.html"))
@@ -1007,11 +759,7 @@ class TestAProsaQueVaiPararNaTela:
             f"fecha o de fora e o resto vira corpo visível: {sujas}")
 
     def test_a_legenda_nao_narra_commit_nem_cita_decisao_dela(self) -> None:
-        """A tela não é changelog — regra dela, 07/09/2026.
-
-        *"O app tem que funcionar e não mostrar na tela que o app não presta.
-        (...) o layout não informa os nossos defeitos."*
-        """
+        """A tela não é changelog — regra dela, 07/09/2026."""
         from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
             texto_visivel,
         )
@@ -1028,14 +776,7 @@ class TestORecadoQueMentia:
     """A frase do interruptor, e o comentário que a gerou."""
 
     def test_a_frase_nao_promete_o_que_o_produto_nao_faz(self) -> None:
-        """*"Cada controle volta a acender a cor do número dele"* era FALSA.
-
-        A camada automática está ABAIXO do override por-uniq no
-        `_merged_desired_for_key`, então uma cor gravada continua vencendo —
-        e dois dos quatro controles dela tinham uma. A frase de hoje diz as
-        duas metades: quem não tem cor própria acende a do número, e duas
-        nunca ficam iguais (que é a promessa que o passe agora cumpre).
-        """
+        """*"Cada controle volta a acender a cor do número dele"* era FALSA."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao
 
         frase = a04_iluminacao._RECADO_DO_AUTOMATICO_VOLTOU

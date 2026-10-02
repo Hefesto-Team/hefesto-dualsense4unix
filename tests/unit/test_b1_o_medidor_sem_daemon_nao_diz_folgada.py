@@ -1,22 +1,8 @@
-"""B1 — a tela do daemon fora do ar não pode ser a de um rádio vazio.
-
-Medido na bancada viva em 23/08/2026, com o Hefesto parado: as três barras
-diziam **"Folgada"**, em verde, e **"0/1600 · derivado da especificação"** —
-byte a byte a tela de um rádio de fato vazio. Quem entra na aba justamente para
-diagnosticar rádio cheio lê "está folgado" e vai procurar o defeito no controle.
-É o padrão que esta casa já nomeou: o produto respondendo pelo TRANSPORTE e não
-pelo efeito, com ausência de notícia lida como notícia de sucesso.
-
-A MORDIDA (23/08/2026): arranquei o ramo do não-sei de `_fileira_do_medidor`
-(voltando a palavra para `ocupacao.rotulo` e a cor para `_VERDE`) e
-`test_a_tela_sem_daemon_nao_e_a_tela_do_radio_vazio` reprovou com as duas telas
-idênticas, seguido de mais dois nós. Devolvido, os cinco passam.
-"""
+"""B1 — a tela do daemon fora do ar não pode ser a de um rádio vazio."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: contra o stub (`Gtk.Box = object`) nada aqui existiria.
 exigir_gi_real("o medidor sem daemon")
 
 from types import SimpleNamespace
@@ -32,16 +18,11 @@ from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, Mesa
 from hefesto_dualsense4unix.integrations.radio_da_mesa import Ocupacao
 
-#: Um adaptador SINTÉTICO — `vid:pid` de bancada, nenhum endereço.
 _MESA = Mesa(adaptadores=(Adaptador(interface="hci0", no="1-1", vid="2357", pid="0604"),))
 
 
 def _painel() -> Any:
-    """A seção montada offscreen, com a mesa injetada.
-
-    `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
-    janelas e uma `Gtk.Window` fica 1x1 para sempre.
-    """
+    """A seção montada offscreen, com a mesa injetada."""
     host = SimpleNamespace(
         _maquina_pendente={}, _mesa_leitor=lambda: _MESA, _censo_leitor=None
     )
@@ -78,15 +59,8 @@ def _radio_vazio() -> list[str]:
 
 
 def _daemon_mudo() -> list[str]:
-    """A tela do daemon fora do ar, pelo caminho de produção.
-
-    O `_falhou` de `_pedir_o_estado` é uma closure: chega-se a ele pelo dublê do
-    `call_async`, que é por onde a falha chega de verdade.
-    """
+    """A tela do daemon fora do ar, pelo caminho de produção."""
     painel = _painel()
-    # A guarda do retrato (`_mesa_leitor` de pé = foto, e a foto não fala com o
-    # daemon) faria `_pedir_o_estado` voltar na porta. A janela de verdade não
-    # tem dublê nenhum, e é a janela que se mede aqui.
     painel._host._mesa_leitor = None
     guardado: dict[str, Any] = {}
 

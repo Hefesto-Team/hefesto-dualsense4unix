@@ -1,23 +1,4 @@
-"""A camada de cada gesto, e a marca que diz de quem é o valor. Das dez abas.
-
-O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (01/10/2026). Como o rodapé, este
-pacote é das dez abas: a tabela :data:`CAMADA` declara, para todo ``data-gesto``
-publicado, onde o clique grava; a pintura põe no cabeçalho de cada cartão do
-computador a marca de quem é o valor (`interface/marca_da_camada`); e os dois
-gestos coringa, ``("*", "so-neste-jogo")`` e ``("*", "voltar-ao-do-computador")``,
-mudam o dono de um cartão.
-
-AS CINCO CAMADAS (o vocabulário da lista conferida, §3, de
-``docs/process/estudos/2026-10-01-o-que-e-do-computador/02-a-lista-conferida.md``):
-
-- ``computador`` — grava no computador (``maquina.json``, as flags da sessão,
-  a unidade de usuário, a Steam): não muda com o jogo. Inclui o que é «o
-  computador dá o padrão e o jogo pode sobrepor»;
-- ``controle`` — grava no aparelho (o nome, o número, o microfone que existe);
-- ``jogo`` — grava no perfil do jogo (o modo, a máscara, os gatilhos, a mira);
-- ``ato`` — faz agora e não guarda escolha nenhuma;
-- ``janela`` — memória da janela (abrir, fechar, escolher o alvo).
-"""
+"""A camada de cada gesto, e a marca que diz de quem é o valor. Das dez abas."""
 from __future__ import annotations
 
 import json
@@ -34,13 +15,7 @@ CAMADAS = frozenset({COMPUTADOR, CONTROLE, JOGO, ATO, JANELA})
 
 _J, _C, _T, _A, _W = JOGO, COMPUTADOR, CONTROLE, ATO, JANELA
 
-#: A CAMADA DE TODO GESTO PUBLICADO: ``(página, gesto) -> camada``. O gesto é
-#: o nome que o piloto despacha: o ``data-gesto``, ou o ``data-hef-gesto`` (a
-#: 10), ou o ``data-papel`` (a 05). A régua
-#: `tests/unit/test_cada_gesto_diz_de_quem_e.py` confere os dois sentidos: todo
-#: gesto das dez páginas tem linha aqui, e toda linha tem gesto.
 CAMADA: dict[tuple[str, str], str] = {
-    # 01 Jogar
     ("01-jogar.html", "cadeado"): _C,
     ("01-jogar.html", "escolher-na-fita"): _W,
     ("01-jogar.html", "hefesto"): _J,
@@ -50,7 +25,6 @@ CAMADA: dict[tuple[str, str], str] = {
     ("01-jogar.html", "modo-steam"): _J,
     ("01-jogar.html", "modo-xbox"): _J,
     ("01-jogar.html", "reconectar"): _A,
-    # 02 Controles
     ("02-controles.html", "escolher-na-fita"): _W,
     ("02-controles.html", "ganho-mic"): _C,
     ("02-controles.html", "inclinacao"): _J,
@@ -62,12 +36,10 @@ CAMADA: dict[tuple[str, str], str] = {
     ("02-controles.html", "sensor"): _C,
     ("02-controles.html", "toque"): _J,
     ("02-controles.html", "volume"): _C,
-    # 03 Gatilhos
     ("03-gatilhos.html", "em-todos"): _J,
     ("03-gatilhos.html", "guardar"): _J,
     ("03-gatilhos.html", "modo"): _J,
     ("03-gatilhos.html", "pronto"): _J,
-    # 04 Iluminação
     ("04-iluminacao.html", "apagar"): _C,
     ("04-iluminacao.html", "auto-cores"): _C,
     ("04-iluminacao.html", "brilho"): _C,
@@ -75,7 +47,6 @@ CAMADA: dict[tuple[str, str], str] = {
     ("04-iluminacao.html", "cor"): _C,
     ("04-iluminacao.html", "player"): _T,
     ("04-iluminacao.html", "reenviar"): _C,
-    # 05 Vibração (`data-gesto` e `data-papel`)
     ("05-vibracao.html", "forca"): _C,
     ("05-vibracao.html", "haptica"): _C,
     ("05-vibracao.html", "intensidade"): _C,
@@ -84,7 +55,6 @@ CAMADA: dict[tuple[str, str], str] = {
     ("05-vibracao.html", "parar"): _A,
     ("05-vibracao.html", "testar"): _A,
     ("05-vibracao.html", "testar-haptica"): _A,
-    # 06 Navegação
     ("06-navegacao.html", "acao-do-gesto"): _C,
     ("06-navegacao.html", "fechar-definicoes"): _W,
     ("06-navegacao.html", "fechar-ponto"): _W,
@@ -96,8 +66,6 @@ CAMADA: dict[tuple[str, str], str] = {
     ("06-navegacao.html", "guardar-teclas"): _C,
     ("06-navegacao.html", "linha-de-botao"): _W,
     ("06-navegacao.html", "linha-de-troca"): _W,
-    # O «Status do Modo» grava o `mouse.enabled` no perfil ativo (é do jogo,
-    # `DO_JOGO`); o lado do teclado vai pelo dono do cartão.
     ("06-navegacao.html", "modo"): _J,
     ("06-navegacao.html", "modo-steam"): _C,
     ("06-navegacao.html", "navegacao-interna"): _C,
@@ -109,14 +77,12 @@ CAMADA: dict[tuple[str, str], str] = {
     ("06-navegacao.html", "teclado"): _C,
     ("06-navegacao.html", "vel-cursor"): _C,
     ("06-navegacao.html", "vel-rolagem"): _C,
-    # 07 Lançadores
     ("07-lancadores.html", "abrir-lancador"): _A,
     ("07-lancadores.html", "adicionar-lancador"): _C,
     ("07-lancadores.html", "criar-perfil-para-um-jogo"): _J,
     ("07-lancadores.html", "detectar"): _A,
     ("07-lancadores.html", "procurar"): _A,
     ("07-lancadores.html", "procurar-o-arquivo"): _C,
-    # 08 Conexões
     ("08-conexoes.html", "abrir-adaptador"): _W,
     ("08-conexoes.html", "aceitar-sugestao"): _A,
     ("08-conexoes.html", "adaptador-historico"): _W,
@@ -165,7 +131,6 @@ CAMADA: dict[tuple[str, str], str] = {
     ("08-conexoes.html", "tirar-daqui"): _C,
     ("08-conexoes.html", "trazer-para-ca"): _A,
     ("08-conexoes.html", "vizinho-o-que-e"): _C,
-    # 09 Sistema
     ("09-sistema.html", "aplicar-aos-jogos"): _C,
     ("09-sistema.html", "atualizar"): _A,
     ("09-sistema.html", "autostart"): _C,
@@ -178,7 +143,6 @@ CAMADA: dict[tuple[str, str], str] = {
     ("09-sistema.html", "refazer-consertos"): _C,
     ("09-sistema.html", "reiniciar"): _A,
     ("09-sistema.html", "restaurar-de-fabrica"): _C,
-    # 10 Perfis (`data-hef-gesto`): o perfil é a camada do jogo
     ("10-perfis.html", "ativar"): _J,
     ("10-perfis.html", "detectar"): _A,
     ("10-perfis.html", "duplicar"): _J,
@@ -193,23 +157,16 @@ CAMADA: dict[tuple[str, str], str] = {
     ("10-perfis.html", "recarregar"): _A,
     ("10-perfis.html", "remover"): _J,
     ("10-perfis.html", "selecionar"): _W,
-    # Das dez: a marca do cartão
     ("*", _marca.SO_NESTE_JOGO): _J,
     ("*", _marca.VOLTAR_AO_DO_COMPUTADOR): _J,
 }
 
 
-# ---------------------------------------------------------------------------
-# A pintura
-# ---------------------------------------------------------------------------
 _PERFIL_LIDO: dict[str, tuple[str, Any]] = {}
 
 
 def _perfil_do_jogo(nome: str) -> Any:
-    """O ``Profile`` cru do ativo quando ele é um jogo; ``None`` com o Freestyle ou sem.
-
-    Validado uma vez por versão do arquivo: a pintura roda a cada tique.
-    """
+    """O ``Profile`` cru do ativo quando ele é um jogo; ``None`` com o Freestyle ou sem."""
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -237,20 +194,11 @@ def cartoes_da_pagina(pagina: str) -> list[str]:
     return [c for c, s in SECOES.items() if s.pagina == pagina]
 
 
-#: As forças que a seção por controle aceita (`ControllerRumbleOverride.policy`):
-#: o «auto» da mesa não é escolha que um controle guarde.
 _FORCAS_DE_UM_CONTROLE = frozenset({"economia", "balanceado", "max", "custom"})
 
 
 def vivos(ctx: Contexto, cartao: str, uniq: str | None) -> dict[str, Any]:
-    """O que o aparelho tem AGORA no cartão, na forma da seção do perfil.
-
-    É o último degrau do «o que vale agora» do «Só neste jogo»
-    (``o_padrao_do_computador.perfil_so_neste_jogo``): quando nem o jogo nem o
-    computador declaram a seção, o valor é o do aparelho, que o daemon publica
-    a cada tique. Só entra o que o daemon disse; o que ele não disse fica de
-    fora, e nunca vira um número digitado aqui.
-    """
+    """O que o aparelho tem AGORA no cartão, na forma da seção do perfil."""
     state = ctx.state or {}
     if cartao == "som" and uniq:
         from .a02_controles import _bloco_do_speaker
@@ -285,12 +233,7 @@ def vivos(ctx: Contexto, cartao: str, uniq: str | None) -> dict[str, Any]:
 
 
 def marcas(pagina: str, ctx: Contexto) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
-    """``(da mesa, {uniq: do controle})``: o miolo de cada marca da página.
-
-    O «Só neste jogo» só aparece quando o clique daria ao jogo escolha própria
-    no cartão (``pode_so_neste_jogo``): sem isso, a marca diz só «PC», e não
-    oferece um botão que aceita o clique e não muda nada.
-    """
+    """``(da mesa, {uniq: do controle})``: o miolo de cada marca da página."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
         SECOES,
         o_computador,
@@ -327,12 +270,7 @@ def marcas(pagina: str, ctx: Contexto) -> tuple[dict[str, str], dict[str, dict[s
 
 
 def com_a_camada(pagina: str, ctx: Contexto, fora: dict[str, Any]) -> dict[str, Any]:
-    """O pacote da aba com as marcas que a página carregada tem onde pousar.
-
-    Só o endereço que a página PUBLICADA traz é pintado: a página de antes
-    desta sprint não tem marca, e um campo sem lugar seria um «sem dono» a mais
-    no relatório da pintura.
-    """
+    """O pacote da aba com as marcas que a página carregada tem onde pousar."""
     from . import POR_CONTROLE, alvos_da_pagina
 
     da_mesa, por_controle = marcas(pagina, ctx)
@@ -357,9 +295,6 @@ def com_a_camada(pagina: str, ctx: Contexto, fora: dict[str, Any]) -> dict[str, 
     return saida
 
 
-# ---------------------------------------------------------------------------
-# Os dois gestos da marca
-# ---------------------------------------------------------------------------
 def _o_cartao_e_o_jogo(ctx: Contexto, o: dict[str, Any]) -> tuple[str, Any, str]:
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import SECOES
 

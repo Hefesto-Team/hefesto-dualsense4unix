@@ -1,41 +1,5 @@
 #!/usr/bin/env python3
-"""check_texto_publico.py — o texto que quem usa lê fala com quem usa.
-
-O DEFEITO, medido em 27/09/2026
--------------------------------
-As páginas de uso, o README, os modelos de issue e o metainfo são o que chega a
-quem instala o Hefesto. Elas vinham carregando o vocabulário de quem o
-constrói: o ID da tarefa que fez cada mudança, a data da decisão, «dela», o
-caminho de `docs/process/` (que nem viaja no clone), «desta casa», «réguas»,
-«portão», «bancada». Quem lê a página não sabe o que é nada disso, e cada linha
-assim é uma linha a menos sobre o que o produto faz.
-
-O QUE ELE VARRE
----------------
-`README.md`, `docs/usage/` (inteiro, menos os recibos abaixo), `.github/`
-(menos `workflows/`, que é código da esteira e ninguém lê como texto),
-`NOTICE`, `CHANGELOG.md` e o metainfo do Flatpak. Varre o DISCO, e não o
-`git ls-files`: uma página nova é vista antes do `git add`.
-
-AS EXPRESSÕES, e por que cada `\\b`
-----------------------------------
-O `\\b` dos dois lados é o que separa a palavra do pedaço de palavra: sem ele,
-«bancada» pega «desbancada» e «dela» pega «delator». E não há `leva` na lista,
-de propósito: «Clicar num cartão leva a fita» é o verbo, e uma régua que
-reprovasse isso empurraria quem escreve bem a escrever pior.
-
-O ID é `\\b[A-Z]{2,}(-[A-Z0-9]+)*-[0-9]{2}\\b`: duas maiúsculas ou mais, trechos
-opcionais, e o sufixo de dois dígitos. `ADR-009`, `SHA-256`, `CVE-2026-31431`
-e `GE-Proton11-7` não casam, e medido em 28/09/2026 nenhum deles aparece como
-falso positivo.
-
-OS FALSOS POSITIVOS SE DECLARAM AQUI, pelo arquivo e pelo texto da linha, com a
-razão. Uma declaração que deixou de casar reprova também: declaração velha é
-lista que mente sobre o que isenta. Em 28/09/2026 a lista está vazia, porque as
-páginas foram reescritas e nenhuma ocorrência sobrou.
-
-Saída: 0 limpo, 1 com achado. `--raiz DIR` mede outra árvore (a mordida usa).
-"""
+"""check_texto_publico.py — o texto que quem usa lê fala com quem usa."""
 
 from __future__ import annotations
 
@@ -47,7 +11,6 @@ from pathlib import Path
 
 RAIZ_PADRAO = Path(__file__).resolve().parents[1]
 
-#: Arquivos soltos que chegam a quem usa.
 ARQUIVOS = (
     "README.md",
     "NOTICE",
@@ -55,16 +18,11 @@ ARQUIVOS = (
     "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml",
 )
 
-#: Pastas varridas por inteiro, e o que fica de fora de cada uma.
 PASTAS = (
     ("docs/usage", ()),
     (".github", (".github/workflows",)),
 )
 
-#: FICAM DE FORA, cada um com a razão. Os recibos das fotos são escritos pelo
-#: retratista e pela costura de cada entrega: dizem que foto foi conferida em
-#: qual commit, e o vocabulário deles é o de quem constrói de propósito. Ninguém
-#: os lê como página.
 EXCLUIDOS: dict[str, str] = {
     "docs/usage/assets/CONFERIDO-EM.txt": "recibo das fotos: o commit conferido e o que se mediu",
     "docs/usage/assets/CONFERIDO-EM.md": "recibo das fotos, a versão legível do .txt",
@@ -72,11 +30,8 @@ EXCLUIDOS: dict[str, str] = {
     "docs/usage/assets/maximizada/PROVA-DA-FOTO.txt": "o mesmo recibo, da vista maximizada",
 }
 
-#: Só texto. Imagem, fonte e afins não têm frase.
 SUFIXOS_DE_TEXTO = frozenset({".md", ".txt", ".xml", ".yml", ".yaml", ""})
 
-#: (nome, expressão). As de palavra ignoram a caixa; o ID não, porque é a caixa
-#: que o define.
 EXPRESSOES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("dela", re.compile(r"\bdela\b", re.IGNORECASE)),
     ("desta casa", re.compile(r"\bdesta casa\b", re.IGNORECASE)),
@@ -90,8 +45,6 @@ EXPRESSOES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("ID", re.compile(r"\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b")),
 )
 
-#: OS FALSOS POSITIVOS DECLARADOS: (arquivo, texto exato da linha sem as pontas
-#: em branco) -> razão. Vazia em 28/09/2026.
 DECLARADOS: dict[tuple[str, str], str] = {}
 
 
@@ -130,13 +83,7 @@ def arquivos_varridos(raiz: Path) -> list[Path]:
 
 
 def ausentes(raiz: Path) -> list[str]:
-    """O que a lista promete varrer e não está no disco.
-
-    Um arquivo renomeado (o metainfo muda de nome junto com o id do Flatpak,
-    por exemplo) sairia da varredura calado, e o portão seguiria verde sobre um
-    texto que ele não lê mais. Na árvore do projeto isso reprova; na árvore de
-    mentira da mordida, não, porque ela só monta o que o caso pede.
-    """
+    """O que a lista promete varrer e não está no disco."""
     faltam = [r for r in ARQUIVOS if not (raiz / r).is_file()]
     faltam += [p for p, _ in PASTAS if not (raiz / p).is_dir()]
     return faltam

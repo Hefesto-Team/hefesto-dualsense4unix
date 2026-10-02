@@ -50,7 +50,6 @@ async def test_fila_cheia_drop_oldest():
     queue = bus.subscribe("t")
     for i in range(5):
         bus.publish("t", i)
-    # Esperado: fila com os 3 mais recentes — 2, 3, 4
     received = []
     while not queue.empty():
         received.append(await queue.get())
@@ -106,7 +105,6 @@ async def test_concorrencia_publishers_multiplas_threads():
             *(loop.run_in_executor(ex, produtor, k) for k in range(n_threads))
         )
 
-    # Drena tudo
     received = []
     while True:
         try:

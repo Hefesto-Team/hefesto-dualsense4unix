@@ -66,28 +66,11 @@ from hefesto_dualsense4unix.app.telas import vibracao as _tela
 
 PAGINA = "05-vibracao.html"
 
-#: MAC da faixa SINTÉTICA da casa — há dois portões de anonimato nesta árvore.
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
 
-#: O PAR NÚMERO → TRILHO desta aba. Os nomes são os do pacote, e o par é o
-#: contrato: cada largura tem um número ao lado, e é o número que manda.
-#:
-#: **CONTINUAM TRÊS, e o do multiplicador é a PONTE DE PUBLICAÇÃO — 03/09/2026.**
-#: No desenho novo a linha do multiplicador virou um `<input type=range>` (a
-#: decisão dela: *"0 a 200%, e grava na hora"*), e ali o pintor escreve o VALOR,
-#: não a largura. Mas publicar é ato dela: a página que ela ABRE hoje ainda tem
-#: o `<span class="cheio">`, e o `forca-pct` é o único endereço que ele tem.
-#:
-#: TIRÁ-LO CUSTOU UMA FOTO, e por isso ele está de volta nesta lista: com
-#: `mult-pos` sozinho, o clique em "Economia" trocou o número de `100%` para
-#: `30%` na tela dela e o trilho FICOU ONDE ESTAVA, com a largura que o mockup
-#: cravou. Os dois endereços convivem enquanto a `05-vibracao` estiver em
-#: `mockup/DIVERGENCIAS.md`.
 PARES = (("mult", "forca-pct"), ("motor-e", "motor-e-pct"),
          ("motor-d", "motor-d-pct"))
 
-#: O PAR NÚMERO → POSIÇÃO do multiplicador, que é o outro contrato — o da
-#: bancada. A faixa dele não é 0-100: é 0-`teto_da_barra()`.
 PAR_DO_MULTIPLICADOR = ("mult", "mult-pos")
 
 
@@ -127,8 +110,7 @@ def _colunas(policy: str = "balanceado", *, per_vpad: list | None = None) -> dic
 
 @pytest.fixture(scope="module")
 def publicado() -> str:
-    """A página que o produto RENDERIZA. Não a bancada: a pergunta aqui é se a
-    cura CHEGOU nela."""
+    """A página que o produto RENDERIZA. Não a bancada: a pergunta aqui é se a"""
     import onde
 
     arq = onde.PUBLICADO / PAGINA
@@ -141,18 +123,9 @@ def _numero(largura: str) -> float:
     return float(str(largura).rstrip("%"))
 
 
-# --------------------------------------------------------------------------
-# 1. toda largura é um número, sempre
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("policy", ["economia", "balanceado", "max", "auto"])
 def test_todo_trilho_desta_aba_sai_com_numero(policy: str) -> None:
-    """O pacote nunca manda ao trilho algo que o CSSOM recuse.
-
-    O ramo ``largura`` do pintor faz ``el.style.width = t + '%'``. Um valor que
-    não seja número — ``""``, ``"—"`` — é recusado pelo CSSOM **em silêncio**: a
-    barra fica com a largura que o desenho cravou e a tela passa a afirmar um
-    comprimento que ninguém mediu. Não há erro, não há aviso; só a barra errada.
-    """
+    """O pacote nunca manda ao trilho algo que o CSSOM recuse."""
     for uniq, col in _colunas(policy).items():
         for _num, larg in PARES:
             assert larg in col, f"{uniq}: o pacote deixou de emitir {larg}"
@@ -168,17 +141,7 @@ def test_todo_trilho_desta_aba_sai_com_numero(policy: str) -> None:
 
 @pytest.mark.parametrize("policy", ["economia", "balanceado", "max", "auto"])
 def test_a_posicao_do_multiplicador_cabe_na_barra(policy: str) -> None:
-    """O `value` de um `<input type=range>` é o NÚMERO, não a fração.
-
-    O ramo `valor` do pintor faz `el.value = t`. Um valor fora de
-    `[min, max]` o navegador GRAMPEIA no extremo mais perto, calado: o polegar
-    para na ponta e a tela afirma um pedido que ninguém fez. E escrever ali a
-    LARGURA (`pct["w"]`, que é `100 * valor / teto`) poria o cursor em 75
-    quando o pedido é 150.
-
-    MORDIDA: em `a05_vibracao.pacote`, emita `pct["w"]` em `mult-pos` — este
-    caso reprova no `max`, onde a fração (75) e o número (150) divergem.
-    """
+    """O `value` de um `<input type=range>` é o NÚMERO, não a fração."""
     from pacotes import a05_vibracao as a05
 
     num, pos = PAR_DO_MULTIPLICADOR
@@ -194,9 +157,6 @@ def test_a_posicao_do_multiplicador_cabe_na_barra(policy: str) -> None:
             f"— a mesma linha contando duas histórias")
 
 
-# --------------------------------------------------------------------------
-# 2. o que não se sabe manda o trilho a ZERO
-# --------------------------------------------------------------------------
 def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
     """Número ``—`` e trilho a zero andam JUNTOS, ou a tela mente.
 
@@ -237,23 +197,8 @@ def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
             f"um número ali põe o cursor num lugar que ninguém escolheu")
 
 
-# --------------------------------------------------------------------------
-# 3. a linha do estado CHEGOU ao produto — o fato que estava errado no pacote
-# --------------------------------------------------------------------------
 def test_a_linha_do_estado_chegou_ao_produto(publicado: str) -> None:
-    """O bloco ``#vib-estado`` está na página que ela abre, não só na bancada.
-
-    O pacote afirmava por escrito que este seletor *"só existe na BANCADA até ela
-    publicar"* e que na publicada o ``querySelector`` devolvia ``null``. Era
-    verdade quando foi escrito e deixou de ser quando ela publicou a aba —
-    enquanto ficou lá, ensinava que a ÚNICA linha de texto desta tela não
-    chegava ao produto.
-
-    ``.est.info`` entra junto porque é o tom da quarta frase (a confissão de onde
-    se grava), e o CSV dizia, na mesma data, que ele *"ficou para trás na
-    publicação"*. Os dois estão publicados; esta régua é o que impede as duas
-    afirmações de voltarem.
-    """
+    """O bloco ``#vib-estado`` está na página que ela abre, não só na bancada."""
     assert 'id="vib-estado"' in publicado, (
         "o bloco da linha de estado não está na página publicada — a aba voltou "
         "a não ter uma palavra sobre o que acontece com a vibração")
@@ -263,12 +208,7 @@ def test_a_linha_do_estado_chegou_ao_produto(publicado: str) -> None:
 
 
 def test_o_bloco_do_estado_e_o_que_o_pacote_manda(publicado: str) -> None:
-    """O seletor que o pacote endereça é o que a página publica.
-
-    Um seletor que o pacote escreve e a página não tem é pintura contada sobre
-    nada: o laço do bootstrap acha ``null`` e segue, sem erro. As duas pontas
-    conferidas juntas é o que impede isso.
-    """
+    """O seletor que o pacote endereça é o que a página publica."""
     import pacotes
 
     pac = pacotes.pacote_da_pagina(PAGINA, _ctx()) or {}

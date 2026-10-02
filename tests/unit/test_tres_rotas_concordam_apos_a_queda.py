@@ -80,7 +80,7 @@ async def test_as_tres_rotas_concordam_depois_da_queda_real(
 
     run_task = asyncio.create_task(daemon.run())
     await asyncio.sleep(0.2)
-    fc.disconnect()  # a queda
+    fc.disconnect()
     await asyncio.sleep(0.2)
 
     server = IpcServer(

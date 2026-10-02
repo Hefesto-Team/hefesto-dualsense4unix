@@ -57,11 +57,7 @@ def test_o_gesto_ignorar_da_conexoes_esta_isento() -> None:
 
 
 def test_a_regua_realmente_pula_o_ignorar() -> None:
-    """E a régua tem de PULÁ-LO — a lista sozinha não é a cura.
-
-    Um nome em `PERIGOSOS` que `_alvos_a_clicar` não consulte seria uma isenção
-    de papel. Aqui se mede o que a régua faz, não o que a lista diz.
-    """
+    """E a régua tem de PULÁ-LO — a lista sozinha não é a cura."""
     from hefesto_dualsense4unix.interface import regua_do_mockup
 
     clicar, pulados = regua_do_mockup._alvos_a_clicar(
@@ -72,22 +68,7 @@ def test_a_regua_realmente_pula_o_ignorar() -> None:
 
 
 def test_os_outros_gestos_da_aba_continuam_sendo_provados() -> None:
-    """A isenção é de UM gesto, e não da aba.
-
-    Isentar demais é o outro jeito de a régua deixar de medir: os gestos
-    idempotentes desta aba têm de continuar sendo clicados, senão a prova botão
-    a botão da 08 vira uma volta em branco.
-
-    **ESTA RÉGUA DIGITAVA A LISTA, e envelheceu na primeira melhora** —
-    04/09/2026. Ela cravava os onze nomes e cobrava que os onze fossem
-    clicados; quando `teto-da-vibracao` entrou em `PERIGOSOS` (ele passou a
-    gravar `controllers[uniq].rumble` no perfil ATIVO, por decisão dela de
-    construir a política por controle), a régua REPROVOU A MELHORA. É a família
-    de defeito que esta casa mais paga: *a régua digita em vez de perguntar*.
-
-    Agora ela pergunta ao dono. O que se mede é o que a régua garantia de
-    verdade: **tudo o que ela pula desta aba está em `PERIGOSOS`, e nada mais.**
-    """
+    """A isenção é de UM gesto, e não da aba."""
     from hefesto_dualsense4unix.interface import regua_do_mockup
 
     outros = {"alvo", "todos", "mic-existe", "sala-altura", "sala-visada",

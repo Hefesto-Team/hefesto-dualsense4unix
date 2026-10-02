@@ -1,18 +1,4 @@
-"""A suíte não vê o jogo aberto de quem a roda (JOGO-SO-DA-SESSAO, 01/10/2026).
-
-MEDIDO em 01/10/2026: a suíte de quem coordena rodou com ela jogando, e quatro
-testes de `test_game_signal_wiring.py` reprovaram com `'game'` no lugar de
-`'daemon'`. A pergunta «há jogo da Steam aberto?» varre o `/proc` da máquina
-(`steam_launch_options._steam_launch_cmdline`), e o reaper do jogo dela casava
-a agulha. A cura mora no `tests/conftest.py` (bloco JOGO-SO-DA-SESSAO): a
-cmdline de jogo só chega ao produto quando o processo descende da sessão.
-
-O `/proc` dela com o jogo aberto se finge na BORDA do sistema, sem nascer
-processo nenhum (o daemon dela também lê o `/proc`, e um reaper de mentira
-viraria jogo para ele): a listagem ganha um pid acima do `pid_max`, e o
-`open` do módulo dono serve a cmdline do reaper para esse pid. O embrulho do
-conftest lê pelo mesmo `open`, então a régua mede o que o produto veria.
-"""
+"""A suíte não vê o jogo aberto de quem a roda (JOGO-SO-DA-SESSAO, 01/10/2026)."""
 from __future__ import annotations
 
 import io
@@ -29,20 +15,14 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.testing import FakeController
 
-#: Acima do `pid_max` do Linux (4.194.304): nenhum processo de verdade o tem.
 PID_DE_FORA = "9999999"
 
-#: A cmdline do reaper que embrulha todo jogo lançado pela Steam.
 REAPER = b"/home/x/.steam/steam/ubuntu12_32/reaper\0SteamLaunch\0AppId=1599660\0--\0jogo.exe\0"
 
 
 @pytest.fixture
 def proc_com_o_jogo(monkeypatch: pytest.MonkeyPatch) -> Iterator[set[str]]:
-    """O `/proc` de quem roda a suíte com um jogo da Steam aberto.
-
-    Devolve o conjunto de pids cuja cmdline vira a do reaper: começa com o pid
-    de fora, e a régua acrescenta o filho que ela nascer.
-    """
+    """O `/proc` de quem roda a suíte com um jogo da Steam aberto."""
     reapers = {PID_DE_FORA}
     listdir = os.listdir
 
@@ -75,12 +55,7 @@ def test_o_embrulho_esta_no_leitor_do_dono() -> None:
 
 
 def test_o_jogo_de_fora_nao_chega_a_pergunta(proc_com_o_jogo: set[str]) -> None:
-    """Com o jogo dela aberto, «há jogo da Steam?» responde não, nas duas perguntas.
-
-    MORDIDA: tire o `_armar_jogo_so_da_sessao()` da fixture
-    `_o_jogo_de_fora_nao_entra` (o único arme): as duas respostas viram o
-    jogo dela (`True` e `1599660`).
-    """
+    """Com o jogo dela aberto, «há jogo da Steam?» responde não, nas duas perguntas."""
     assert slo.cmdline_de_pid(PID_DE_FORA).startswith("/home/x/.steam"), (
         "o /proc de mentira não serve o reaper: a régua não mediria nada"
     )
@@ -90,11 +65,7 @@ def test_o_jogo_de_fora_nao_chega_a_pergunta(proc_com_o_jogo: set[str]) -> None:
 
 
 def test_o_jogo_que_a_sessao_nasceu_continua_visto(proc_com_o_jogo: set[str]) -> None:
-    """O processo que um teste nasce não some: o embrulho não é mais frouxo que o produto.
-
-    MORDIDA: faça o embrulho apagar toda cmdline de jogo (sem perguntar
-    `descende_da_sessao`) e esta reprova com `None`.
-    """
+    """O processo que um teste nasce não some: o embrulho não é mais frouxo que o produto."""
     filho = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
     try:
         proc_com_o_jogo.add(str(filho.pid))
@@ -129,12 +100,7 @@ class _AuthorityController(FakeController):
 
 
 async def test_o_sinal_de_jogo_nao_le_o_jogo_dela(proc_com_o_jogo: set[str]) -> None:
-    """O caso medido: sem evidência e com o detector são, a autoridade é `daemon`.
-
-    É o `test_sync_game_signal_sem_evidencia_e_detector_sao_vira_daemon` com o
-    jogo dela aberto. MORDIDA: a mesma do segundo teste; esta reprova com
-    `'game' == 'daemon'`, a forma do vermelho de 01/10.
-    """
+    """O caso medido: sem evidência e com o detector são, a autoridade é `daemon`."""
     ctrl = _AuthorityController(transport="usb")
     daemon = Daemon(
         controller=ctrl, config=DaemonConfig(ipc_enabled=False, udp_enabled=False)

@@ -97,37 +97,23 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     montar,
 )
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
-    config_isolado as config_isolado,  # fixture: o controllers.json num tmp
+    config_isolado as config_isolado,
 )
 from tests.unit.test_o_repouso_espera_o_evento import contando
 from tests.unit.test_o_repouso_espera_o_evento import (
-    raizes as raizes,  # fixture: o dono do evento armado numa /dev de mentira
+    raizes as raizes,
 )
 
-#: A mesa de quatro, na ordem de chegada da bancada dela.
 QUATRO = (P1, P2, P3, P4)
 
-#: O prazo do lugar guardado (30 s), perguntado ao dono.
 PRAZO = prazo_do_lugar_guardado()
-#: A fatia da espera sem gatilho armado.
 FATIA = cx.RECONNECT_HOTPLUG_POLL_INTERVAL_SEC
-#: O tique lento do daemon (o `sync_connected` do lifecycle e o `sync` do co-op).
 TIQUE_LENTO = 2.0
-#: O teto da volta com o dono do evento armado.
 TETO = cx.TETO_DA_VOLTA_PELO_EVENTO_SEC
 
 
-# ---------------------------------------------------------------------------
-# A bancada da espera
-# ---------------------------------------------------------------------------
-
-
 class _Tempo:
-    """O ``time`` do módulo da espera, com o ``monotonic`` no relógio de mentira.
-
-    O mecanismo do gatilho (armar e disparar) pergunta a hora a
-    ``connection.time.monotonic``; o resto do módulo ``time`` segue o real.
-    """
+    """O ``time`` do módulo da espera, com o ``monotonic`` no relógio de mentira."""
 
     def __init__(self, relogio: Relogio) -> None:
         self._relogio = relogio
@@ -140,13 +126,7 @@ class _Tempo:
 
 
 class _OsDoisEscritores:
-    """O que a tarefa do gatilho da lightbar chama no controller.
-
-    O real escreve o report do rádio (``reescrever_lightbar_por_hidraw``) e a
-    classe LED do cabo (``repintar_o_cabo_por_sysfs``) com o número que o
-    ``numero_da_lampada`` responde naquele instante. Aqui cada um anota a hora
-    e esse mesmo número, perguntado ao mesmo dono — nada de aparelho.
-    """
+    """O que a tarefa do gatilho da lightbar chama no controller."""
 
     def __init__(self, reg: ControllerIdentityRegistry, relogio: Relogio) -> None:
         self.reg = reg
@@ -192,13 +172,7 @@ class _DaemonDaEspera:
 
 
 class _Espera:
-    """Roda a espera de PRODUÇÃO com o relógio de mentira.
-
-    Cada fatia avança o relógio sem dormir; ``tique`` é o batimento de 2 s do
-    daemon (o lifecycle e o co-op), que corre fora da espera e continua
-    correndo durante ela; ``ate`` para o daemon naquele segundo da espera.
-    ``armados`` anota a hora e o evento de cada ``armar_gatilho``.
-    """
+    """Roda a espera de PRODUÇÃO com o relógio de mentira."""
 
     def __init__(
         self,
@@ -301,13 +275,7 @@ def _watch_parado(entradas: Path) -> InputDirWatch:
     return watch
 
 
-# ---------------------------------------------------------------------------
-# Régua 1 — o prazo vence e o gatilho arma na fatia seguinte, sem hotplug
-# ---------------------------------------------------------------------------
-
-#: Quem fica com o maior número: cada um dos quatro, girando a ordem de chegada.
 ORDENS = [QUATRO[i:] + QUATRO[:i] for i in range(4)]
-#: Quem sai, por posição na fila (1 a 3; o 4, o de número maior, fica). O P1 entra.
 SAEM = [
     grupo for n in (1, 2, 3) for grupo in itertools.combinations((1, 2, 3), n)
 ]
@@ -329,8 +297,6 @@ class TestOPrazoVenceEOGatilhoArma:
         ficam = [u for pos, u in enumerate(ordem, start=1) if pos not in saem]
         esperado = {u: n + 1 for n, u in enumerate(ficam)}
 
-        # A saída: o tique lento a vê, e o /dev/input que mudou acorda a volta,
-        # que confere a numeração — igual, porque o lugar fica guardado.
         reg.sync_connected(ficam)
         saida = relogio()
         _a_volta(daemon)
@@ -402,7 +368,7 @@ class TestOPrazoVenceEOGatilhoArma:
         daemon = _DaemonDaEspera(reg, escritores)
         assert escritores.numeros() == {P1: 1, P2: 3}, "a conta escrita aqui: P1, externo, P2"
 
-        externos.sync_connected([])  # o externo sai: o lugar dele fica guardado
+        externos.sync_connected([])
         saida = relogio()
         _a_volta(daemon)
 
@@ -423,11 +389,6 @@ class TestOPrazoVenceEOGatilhoArma:
             f"as lâmpadas do P2 não disseram 2 depois do prazo do externo: {escritores.radio}"
         )
         assert espera.decorrido == pytest.approx(TETO), "a fatia não pode encurtar a volta"
-
-
-# ---------------------------------------------------------------------------
-# Régua 2 — mesa parada não arma nada
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -498,8 +459,6 @@ class TestAMesaParadaNaoArma:
             agenda={4.0: voltar},
         )
         espera.rodar(_watch_parado(entradas))
-        # Fora, ninguém arma; a volta muda a tabela (ele reaparece nela) e arma
-        # uma vez, como a volta do laço já armava com o hotplug dele.
         assert all(t >= voltou[0] for t, _e in espera.armados), (
             f"armou com ele fora, dentro do prazo: {espera.armados}"
         )
@@ -509,11 +468,6 @@ class TestAMesaParadaNaoArma:
             f"o número de alguém andou na troca de transporte: {escritores.radio}"
         )
         assert escritores.numeros() == original
-
-
-# ---------------------------------------------------------------------------
-# Régua 3 — a fatia não abre arquivo
-# ---------------------------------------------------------------------------
 
 
 def _com_os_externos(reg: ControllerIdentityRegistry) -> ExternalIdentityRegistry:
@@ -575,11 +529,6 @@ class TestAFatiaNaoAbreArquivo:
         assert abertos, f"o contador não viu o arquivo: {conta[0][:10]}"
 
 
-# ---------------------------------------------------------------------------
-# Régua 4 — a ordem congelada é a mesma
-# ---------------------------------------------------------------------------
-
-#: D tem o lugar 1 na fila gravada, mas chega DEPOIS de E nesta sessão.
 D, E, F = P1, P2, P3
 
 
@@ -596,11 +545,7 @@ def fila_gravada(config_isolado: Path) -> bytes:
 
 
 def _a_sessao_de_hoje(config: Path, gravada: bytes) -> tuple[Relogio, ControllerIdentityRegistry]:
-    """E chega, D chega, F chega, e D sai — tudo antes de a mesa assentar.
-
-    A fila do momento é E, D, F; a gravada, D, E, F. D sai com o lugar
-    guardado, e a mesa só se congela depois (``JANELA_MESA_ESTAVEL_SEC``).
-    """
+    """E chega, D chega, F chega, e D sai — tudo antes de a mesa assentar."""
     (config / "controllers.json").write_bytes(gravada)
     relogio = Relogio()
     reg = ControllerIdentityRegistry(clock=relogio)
@@ -623,13 +568,11 @@ class TestAOrdemCongeladaEAMesma:
     ) -> None:
         entradas, _dev = raizes
 
-        # Hoje: a numeração se lê só na volta, no teto.
         relogio, reg = _a_sessao_de_hoje(config_isolado, fila_gravada)
         relogio.avancar(TETO)
         reg.numeros_da_mesa()
         na_volta = reg.snapshot()
 
-        # A cura: a mesma mesa lida em cada fatia da espera.
         relogio, reg = _a_sessao_de_hoje(config_isolado, fila_gravada)
         daemon = _DaemonDaEspera(reg, _OsDoisEscritores(reg, relogio))
         _a_volta(daemon)
@@ -641,21 +584,11 @@ class TestAOrdemCongeladaEAMesma:
         assert na_fatia == na_volta, (
             f"a fatia congelou outra ordem: na volta {na_volta}, na fatia {na_fatia}"
         )
-        # A conta escrita aqui: só E e F se permutam, e já estão em ordem.
         assert na_fatia == {D: 1, E: 2, F: 3}
 
 
-# ---------------------------------------------------------------------------
-# Régua 7 — com o jogo na autoridade, a cura acorda só o que já é decidido
-# ---------------------------------------------------------------------------
-
-
 class _WatchParado:
-    """O ``/dev/input`` da bancada de jogo não muda durante a espera.
-
-    A bancada troca o ``InputDirWatch.poll`` da classe por um que sempre
-    acorda (o co-op redescobre a cada tique); a espera recebe o seu próprio.
-    """
+    """O ``/dev/input`` da bancada de jogo não muda durante a espera."""
 
     def poll(self) -> bool:
         return False
@@ -669,11 +602,10 @@ def jogo_aberto(
 
     def _montar(saem: tuple[str, ...]) -> Any:
         bancada = montar(monkeypatch, 4, "mista", jogo=True)
-        assert bancada.reg.liberar_as_lampadas() is True  # a adoção já pintou
+        assert bancada.reg.liberar_as_lampadas() is True
         relogio = bancada.tempo
         assert isinstance(relogio, Relogio)
         escritores = _OsDoisEscritores(bancada.reg, relogio)
-        # Os dois escritores do backend real falam com o aparelho: aqui, anotam.
         radio = escritores.reescrever_lightbar_por_hidraw
         monkeypatch.setattr(bancada.inst, "reescrever_lightbar_por_hidraw", radio)
         monkeypatch.setattr(
@@ -693,8 +625,8 @@ def jogo_aberto(
         monkeypatch.setattr(cx, "_o_barramento_hid_mudou", lambda _d: False)
         for uniq in saem:
             bancada.mesa.levantar(uniq)
-        bancada.tique()  # o hotplug: a volta roda o connect()...
-        _a_volta(daemon)  # ...e confere a numeração, que o lugar guardado segura
+        bancada.tique()
+        _a_volta(daemon)
         return bancada, escritores
 
     yield _montar
@@ -775,20 +707,15 @@ class TestComOJogoNaAutoridade:
     def test_o_prazo_de_outro_vence_com_o_p1_fora_e_o_vpad_dele_espera(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O P2 sai, o P1 sai dez segundos depois, e o prazo do P2 vence primeiro.
-
-        É onde a R-04 trabalha: o posto do P1 está vago dentro do prazo DELE, e
-        a fatia que renumera no vencimento do P2 acorda o co-op com o vpad do P1
-        parado à espera. Os secundários descem; o vpad do P1 não renasce.
-        """
+        """O P2 sai, o P1 sai dez segundos depois, e o prazo do P2 vence primeiro."""
         bancada, escritores = jogo_aberto((P2,))
         vpad_do_p1 = bancada.vpad_do_p1
         for _ in range(5):
-            bancada.tique()  # dez segundos com o P2 fora
+            bancada.tique()
         bancada.mesa.levantar(P1)
         bancada.tique()
         _a_volta(bancada.daemon)
-        faltam = PRAZO - 6 * TIQUE_LENTO  # para o prazo do P2
+        faltam = PRAZO - 6 * TIQUE_LENTO
         espera = _Espera(
             monkeypatch,
             bancada.daemon,
@@ -811,25 +738,14 @@ class TestComOJogoNaAutoridade:
     def test_o_p1_que_voltou_tarde_segue_no_boneco_do_posto(
         self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Onde a R-04 segura de verdade quando a fatia renumera.
-
-        O P1 sai, o prazo dele vence (o P2 assume o posto) e ele volta tarde: é
-        o 1 na tela, mas o vpad do posto segue com o P2, que agora é o 2, e o
-        co-op espera o jogo soltar (``coop_ordem_do_p1_espera_o_jogo``). Aí o P3
-        sai e o prazo dele vence NA FATIA: o P4 desce para o boneco 3, e o vpad
-        do posto, fora de ordem, não entra na lista de recriação.
-
-        A MORDIDA (29/09/2026): sem a guarda da R-04 (``fixos`` vazio no
-        ``coop._ordenar``), o vpad do posto se recria já na volta tardia do P1
-        e esta régua reprova.
-        """
+        """Onde a R-04 segura de verdade quando a fatia renumera."""
         bancada, escritores = jogo_aberto(())
         vpad_do_p1 = bancada.vpad_do_p1
         via = bancada.mesa.transporte_de(P1)
         bancada.mesa.levantar(P1)
         for _ in range(int(PRAZO / TIQUE_LENTO) + 3):
             bancada.tique()
-            bancada.reg.liberar_as_lampadas()  # o gatilho de cada volta, já disparado
+            bancada.reg.liberar_as_lampadas()
         bancada.mesa.sentar(P1, transporte=via)
         for _ in range(3):
             bancada.tique()
@@ -870,24 +786,9 @@ class TestComOJogoNaAutoridade:
         assert bancada.o_jogo_ve() == {1: P2, 2: P1, 3: P4}
 
 
-# ---------------------------------------------------------------------------
-# Régua 5 — o diário diz a carta (a cura 2, 02/10/2026)
-# ---------------------------------------------------------------------------
-#
-# O roxo da fala dela: alocado com o índice 4 (o menor livre quando ele chegou,
-# com o P2 e o P3 de pé) e a carta 2 depois que os dois saíram e o prazo
-# passou. O número esperado sai da conta escrita aqui (a fila menos quem
-# saiu), e o índice, das duas vagas que os dois lugares de ``path:`` seguram —
-# a identidade sem MAC fica fora da numeração, como no produto.
-#
-# AS MORDIDAS (02/10/2026, devolvidas com o md5 conferido): o
 # ``CoopManager._numero_e_indice`` dizendo o ``player_index`` reprova as cinco
-# linhas do co-op e o ``vpad_degradado``; o ``gamepad._rotulo_do_jogador``
-# dizendo o índice reprova o ``jogador_N_uinput`` e o ``canal_sem_imu``.
 
-#: A carta do roxo, pela conta: P1, P2, P3, P4 na fila; o P2 e o P3 saem; o prazo passa.
 CARTA_DO_ROXO = 2
-#: O índice de alocação do roxo: o 2 e o 3 já estavam tomados quando ele chegou.
 INDICE_DO_ROXO = 4
 
 
@@ -965,7 +866,6 @@ def coop_do_roxo(config_isolado: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     )
     coop = CoopManager(daemon)  # type: ignore[arg-type]
     daemon._coop_manager = coop
-    # As duas vagas que o P2 e o P3 seguravam quando o roxo chegou.
     for indice in (2, 3):
         chave = f"path:/dev/input/event{20 + indice}"
         coop._players[chave] = _SecondaryPlayer(
@@ -987,11 +887,7 @@ def _linhas(registros: list[dict[str, Any]], evento: str) -> list[tuple[Any, Any
 
 
 class _DiarioDoCoop:
-    """O ``logger`` do co-op, anotando TODO nível: o ``calibracao_pendente`` é ``debug``.
-
-    O ``capture_logs`` não o vê (o filtro de nível corta antes), e é uma das
-    cinco linhas que a sprint pede.
-    """
+    """O ``logger`` do co-op, anotando TODO nível: o ``calibracao_pendente`` é ``debug``."""
 
     def __init__(self) -> None:
         self.linhas: list[dict[str, Any]] = []
@@ -1025,7 +921,7 @@ class TestODiarioDizACarta:
             lambda *_a, **_kw: _PadDoRoxo("uhid"),
         )
         coop._promote_player(roxo)
-        coop.ceder_ao_primario(P1, P4)  # o roxo vira o primário
+        coop.ceder_ao_primario(P1, P4)
         for evento in (
             "coop_player_grab_pending",
             "coop_player_calibracao_pendente",
@@ -1084,9 +980,7 @@ class TestODiarioDizACarta:
     def test_o_canal_sem_imu_do_posto_diz_a_carta_de_quem_o_alimenta(
         self, coop_do_roxo: Any
     ) -> None:
-        """O roxo cedido ao posto do P1 (o primário é ele): a lista do
-        ``canal_sem_imu`` diz a carta dele, e não um «1» fixo. Conferência de
-        02/10: a mordida «o primário sempre 1» passava sem esta."""
+        """O roxo cedido ao posto do P1 (o primário é ele): a lista do"""
         from hefesto_dualsense4unix.daemon.launch_env import _jogadores_sem_imu
 
         coop = coop_do_roxo
@@ -1095,20 +989,6 @@ class TestODiarioDizACarta:
         daemon._gamepad_device = _PadDoRoxo("uinput", caminho="xbox")
         assert _jogadores_sem_imu(daemon) == [str(CARTA_DO_ROXO)]
 
-
-# ---------------------------------------------------------------------------
-# Régua 6 — o número que o jogo escreveu, a cada mudança (a cura 3, 02/10/2026)
-# ---------------------------------------------------------------------------
-#
-# A tabela é a do ``hid-playstation`` (``player_ids[]``), escrita aqui e não
-# lida do ``led_control`` do produto: bit ``i`` do valor é a lâmpada ``i``.
-#
-# AS MORDIDAS (02/10/2026, devolvidas com o md5 conferido): sem a chamada em
-# ``apply_game_player_leds`` (o diário de antes, que só a recusa do backend
-# dizia, uma vez por sessão) reprova a primeira linha; a marca sem o
-# ``_esquecer_o_numero_do_jogo`` no fim da sessão reprova a última; e a
-# peneira do número tirada do ``set_game_output_for`` reprova a D-2309 (o
-# padrão vira camada GAME).
 
 PLAYER_IDS = {1: 0x04, 2: 0x0A, 3: 0x15, 4: 0x1B}
 
@@ -1146,7 +1026,6 @@ class TestONumeroQueOJogoEscreveu:
         assert par(escreve(2)) == [(2, 2, True)]
         gp.end_game_output_session(daemon, target_uniq=P2)
         assert par(escreve(2)) == [(2, 2, True)], "a sessão nova diz desde a primeira escrita"
-        # A D-2309: o número do jogo nunca chega ao backend como camada.
         assert all(
             getattr(camada, "player_leds", None) is None
             for camadas in (

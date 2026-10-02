@@ -63,14 +63,8 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
-# MACs fake — a regra da casa proíbe endereço real em arquivo versionado.
 MAC1 = "aabbcc000001"
 MAC2 = "aabbcc000002"
-
-
-# ---------------------------------------------------------------------------
-# Dublês
-# ---------------------------------------------------------------------------
 
 
 class _SnapFalso:
@@ -87,11 +81,7 @@ class _SnapFalso:
 
 
 class _ReaderDeGamepadFalso:
-    """`EvdevReader` de mentira que ANOTA se alguém pediu grab.
-
-    O `set_grab` existe aqui só para o teste poder provar que ele nunca é
-    chamado — é a linha que separa STATUS-04 de um defeito.
-    """
+    """`EvdevReader` de mentira que ANOTA se alguém pediu grab."""
 
     def __init__(self, uniq: str, node: Any, **kw: Any) -> None:
         self.uniq = uniq
@@ -203,11 +193,6 @@ def _make_state(**kw: Any) -> ControllerState:
     return ControllerState(**base)
 
 
-# ---------------------------------------------------------------------------
-# Servidor IPC real (o padrão de contrato da casa)
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -245,8 +230,6 @@ async def running_server(tmp_path: Path, isolated_profiles_dir: Path) -> Any:
         rumble_policy="balanceado",
         rumble_policy_custom_mult=0.7,
     )
-    # Co-op DESMONTADO: é o estado do modo Nativo e da emulação off — os
-    # cenários que o STATUS-04 nomeou como "o buraco real".
     daemon_mock._coop_manager = SimpleNamespace(
         live_snapshots=lambda: {}, _players={}, player_count=lambda: 1
     )
@@ -274,14 +257,7 @@ async def _state_full(socket_path: Path) -> dict[str, Any]:
 
 
 def _armar(server: Any, hub: SensorHub, *, gamepads: tuple[str, ...] = (MAC2,)) -> None:
-    """Pendura o hub no handler e deixa os readers JÁ ABERTOS.
-
-    Abrir antes não é conveniência, é o que faz as réguas morderem: no daemon
-    vivo o reader nasce na thread de manutenção, e um teste que não o abrisse
-    veria `None` pelo motivo errado — "o reader ainda não nasceu" em vez de "o
-    handler recusou". Foi assim que a mordida da recusa do primário passou
-    verde na primeira redação deste arquivo.
-    """
+    """Pendura o hub no handler e deixa os readers JÁ ABERTOS."""
     server._sensor_hub = hub
     for uniq in gamepads:
         hub.entradas(uniq)
@@ -290,21 +266,12 @@ def _armar(server: Any, hub: SensorHub, *, gamepads: tuple[str, ...] = (MAC2,)) 
     hub.reconciliar()
 
 
-# ---------------------------------------------------------------------------
-# A entrega: o critério de aceite literal do STATUS-04
-# ---------------------------------------------------------------------------
-
-
 class TestOSegundoControleFala:
     @pytest.mark.asyncio
     async def test_coop_desmontado_o_secundario_traz_inputs(
         self, running_server: Any
     ) -> None:
-        """O critério de aceite escrito em 17/07/2026, cobrado em 04/09/2026.
-
-        *"com co-op DESLIGADO e 2 controles fake: `controllers[1].inputs !=
-        None` e NENHUM `set_grab(True)` foi chamado no reader do secundário"*.
-        """
+        """O critério de aceite escrito em 17/07/2026, cobrado em 04/09/2026."""
         server, socket_path, _fc, _daemon = running_server
         hub, criados = _hub(lx=10, ly=20, rx=30, ry=40, l2_raw=50, r2_raw=60,
                             buttons=("square", "l1"))
@@ -321,19 +288,13 @@ class TestOSegundoControleFala:
         assert c2["inputs"]["l2_raw"] == 50
         assert c2["inputs"]["r2_raw"] == 60
         assert c2["inputs"]["buttons"] == ["l1", "square"]
-        # A outra metade do critério: nenhum grab, nunca.
         assert criados[f"{MAC2}:gamepad"].grabs == []
 
     @pytest.mark.asyncio
     async def test_os_sensores_viajam_junto_com_o_inputs(
         self, running_server: Any
     ) -> None:
-        """É `inputs` virar dict que abre a porta do `_merge_sensores`.
-
-        Sem esta cadeia o card do P2 mostrava "—" em giroscópio, acelerômetro
-        e touchpad com os nodes abertos e legíveis ao lado — a queixa dela,
-        inteira, numa linha de código.
-        """
+        """É `inputs` virar dict que abre a porta do `_merge_sensores`."""
         server, socket_path, _fc, _daemon = running_server
         hub, _criados = _hub()
         _armar(server, hub)
@@ -346,25 +307,12 @@ class TestOSegundoControleFala:
         assert inputs["touchpad"]["touching"] is True
 
 
-# ---------------------------------------------------------------------------
-# As três recusas — cada uma evita uma mentira diferente
-# ---------------------------------------------------------------------------
-
-
 class TestAsRecusas:
     @pytest.mark.asyncio
     async def test_o_primario_nunca_cai_no_reader_passivo(
         self, running_server: Any
     ) -> None:
-        """Armadilha A-09: dois números para o mesmo controle no mesmo tique.
-
-        Com `daemon._last_state` None o primário fica em `None` — que é o que
-        o TOPO do payload também mostra. Cair no reader passivo aqui faria o
-        card contradizer o resto da tela.
-
-        O reader do primário está ABERTO e respondendo (`lx=7`): a régua mede
-        a recusa do handler, não a ausência do dado.
-        """
+        """Armadilha A-09: dois números para o mesmo controle no mesmo tique."""
         server, socket_path, _fc, daemon = running_server
         daemon._last_state = None
         hub, _criados = _hub(
@@ -378,19 +326,13 @@ class TestAsRecusas:
         result = await _state_full(socket_path)
 
         assert result["controllers"][0]["inputs"] is None
-        # E o secundário, que TEM direito à fonte 3, continua falando — a
-        # recusa é do primário, não do caminho.
         assert result["controllers"][1]["inputs"]["lx"] == 7
 
     @pytest.mark.asyncio
     async def test_o_primario_com_state_continua_espelhando_o_topo(
         self, running_server: Any
     ) -> None:
-        """A fonte 1 não perdeu a precedência para a fonte 3.
-
-        O reader passivo do primário está aberto e diz `lx=7`; o `state` diz
-        200. Quem tem de sair no payload é o 200, nos dois lugares.
-        """
+        """A fonte 1 não perdeu a precedência para a fonte 3."""
         server, socket_path, _fc, daemon = running_server
         daemon._last_state = _make_state(raw_lx=200, buttons_pressed=frozenset({"ps"}))
         hub, _criados = _hub(gamepads={MAC1: "/dev/input/event9"}, lx=7)
@@ -406,17 +348,11 @@ class TestAsRecusas:
     async def test_controle_que_o_coop_segura_nao_ganha_reader_passivo(
         self, running_server: Any
     ) -> None:
-        """O jogador PENDENTE de grab: o node está sob `EVIOCGRAB` alheio.
-
-        `live_snapshots()` o exclui de propósito (sem vpad, o jogo também não
-        o vê), mas o reader do co-op JÁ está com o node. Um fd passivo ali não
-        receberia evento nenhum e publicaria os `128` de fábrica como se
-        fossem leitura — o "zero fingindo repouso" que esta casa proíbe.
-        """
+        """O jogador PENDENTE de grab: o node está sob `EVIOCGRAB` alheio."""
         server, socket_path, _fc, daemon = running_server
         daemon._coop_manager = SimpleNamespace(
-            live_snapshots=lambda: {},                     # sem vpad ainda
-            _players={MAC2: SimpleNamespace(vpad=None)},   # mas com o node
+            live_snapshots=lambda: {},
+            _players={MAC2: SimpleNamespace(vpad=None)},
             player_count=lambda: 2,
         )
         hub, criados = _hub(lx=7)
@@ -426,8 +362,6 @@ class TestAsRecusas:
 
         result = await _state_full(socket_path)
 
-        # O reader existe e responde — e mesmo assim o payload diz "—".
-        # É a recusa do handler, não a ausência de reader.
         assert result["controllers"][1]["inputs"] is None
         assert criados[f"{MAC2}:gamepad"].grabs == []
 
@@ -471,11 +405,6 @@ class TestAsRecusas:
         assert result["controllers"][1]["inputs"] is None
 
 
-# ---------------------------------------------------------------------------
-# O hub por dentro
-# ---------------------------------------------------------------------------
-
-
 class TestOHubPorDentro:
     def test_entradas_devolve_none_antes_do_reader_nascer(self) -> None:
         """A descoberta é cara e o event loop é único: nada abre no caminho."""
@@ -509,8 +438,7 @@ class TestOHubPorDentro:
         assert f"{MAC2}:gamepad" not in criados
 
     def test_o_reader_de_gamepad_morre_sozinho_quando_ninguem_pede(self) -> None:
-        """Fechar a GUI apaga a thread e o fd — sem isso, um daemon de dias
-        acumularia um reader por controle que já passou pela máquina."""
+        """Fechar a GUI apaga a thread e o fd — sem isso, um daemon de dias"""
         hub, criados = _hub()
         hub.entradas(MAC2)
         hub.reconciliar()
@@ -552,9 +480,7 @@ class TestOHubPorDentro:
         assert hub.entradas(MAC2) is None
 
     def test_so_o_tipo_que_falta_paga_a_descoberta(self) -> None:
-        """Cada descobridor abre todos os nodes de `/dev/input` (~10-40 ms —
-        PERF-MULTI-CONTROLLER-01). Pedir só sensor não pode custar a varredura
-        do gamepad."""
+        """Cada descobridor abre todos os nodes de `/dev/input` (~10-40 ms —"""
         varreduras = {"motion": 0, "touchpad": 0, "gamepad": 0}
 
         def conta(tipo: str, mapa: dict[str, str]) -> Callable[[], dict[str, Any]]:
@@ -584,17 +510,7 @@ class TestOHubPorDentro:
         assert varreduras["gamepad"] == 0
 
     def test_a_fabrica_real_entrega_um_reader_sem_grab(self) -> None:
-        """A régua sobre o código de PRODUÇÃO, não sobre o dublê.
-
-        Os testes acima provam que o handler não pede grab; este prova que a
-        fábrica também não o embute. `EvdevReader` nasce com `_grab=False` e
-        só graba por `set_grab` — a ausência da chamada em
-        `_gamepad_reader_real` é a entrega, e uma régua tem de morder se
-        alguém a acrescentar "para o reader funcionar melhor".
-
-        Hermético: com `device_path` explícito o construtor não chama o
-        finder, então nada aqui varre `/dev/input`.
-        """
+        """A régua sobre o código de PRODUÇÃO, não sobre o dublê."""
         reader = SensorHub._gamepad_reader_real(MAC2, Path("/dev/input/event999"))
         try:
             assert reader.grab_state == "off"

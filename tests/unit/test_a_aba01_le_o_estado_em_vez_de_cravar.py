@@ -59,10 +59,6 @@ from hefesto_dualsense4unix.interface import aba01, onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: O DAEMON DELA EM 03/09/2026, nas chaves que esta aba lê. Ele está em
-#: **desktop** — a Navegação —, que é o caso que a tela errava: o modo não é
-#: nenhum dos dois lados óbvios do interruptor, e `hefesto_ligado` responde
-#: **Ligado** porque o Hefesto está no meio entregando teclado e mouse.
 VIVO_NAVEGACAO: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
@@ -71,11 +67,6 @@ VIVO_NAVEGACAO: dict[str, Any] = {
     "paused": False,
     "controllers": [{"uniq": "aa", "connected": True, "player_slot": 1}],
 }
-#: AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. O daemon passou a
-#: publicar o CAMINHO (`gamepad_emulation.caminho`), e é por ele que o chip de
-#: modo acende; com a máscara da sessão em `xbox` e ninguém escolhendo caminho, o
-#: caminho publicado é `xbox` (`virtual_pad.caminho_resolvido`). ANTES o chip
-#: acendia pela máscara, e este estado não precisava do campo.
 VIVO_GAMEPAD_XBOX: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
@@ -94,9 +85,6 @@ def _ctx(state: dict[str, Any]) -> Contexto:
     return Contexto(state=state, mesa=[], conectados=[], estados={})
 
 
-#: DOIS ENDEREÇOS FORJADOS, na faixa que o portão de anonimato reserva para
-#: fixture (`aa:bb:cc`). O registro de máscaras é POR APARELHO, então uma mesa
-#: sem `uniq` não sabe responder de quem é a máscara.
 UNIQ_A = "aa:bb:cc:00:00:01"
 UNIQ_B = "aa:bb:cc:00:00:02"
 
@@ -131,9 +119,6 @@ def _mascaras_dos_cartoes(ctx: Contexto) -> list[str]:
     return [c["mascara-cartao"] for c in aba.pacote(ctx)["cartoes"].values()]
 
 
-# ---------------------------------------------------------------------------
-# 1. O ESTADO CHEGA À TELA — os três endereços que faltavam
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("state", "posicao", "chip"),
     [
@@ -165,12 +150,7 @@ def test_o_interruptor_e_o_chip_saem_do_daemon(
 
 
 def test_a_mascara_do_cartao_e_a_do_aparelho() -> None:
-    """Quem não escolheu segue a sessão — e é o cartão que recebe, não a página.
-
-    O chip **Xbox 360** aceso no cartão do P2 com o daemon em `dualsense` era o
-    desenho falando pelo produto. Sem `por_aparelho` o valor é o da sessão, que
-    é a herança do `external_mask` e o comportamento anterior ao campo existir.
-    """
+    """Quem não escolheu segue a sessão — e é o cartão que recebe, não a página."""
     assert _mascaras_dos_cartoes(_com_mesa(VIVO_NAVEGACAO)) == ["DualSense"]
     assert _mascaras_dos_cartoes(_com_mesa(VIVO_GAMEPAD_XBOX)) == ["Xbox 360"]
 
@@ -203,34 +183,7 @@ def test_dois_controles_duas_mascaras() -> None:
 def test_rotulo_desenhado_que_o_produto_nao_monta_fica_apagado(
     monkeypatch: Any,
 ) -> None:
-    """O chip apaga quando a tela DESENHA um rótulo que o produto não monta.
-
-    ESTE TESTE SE CHAMAVA `test_nintendo_pro_nunca_acende`, e a premissa dele
-    MORREU em 07/09/2026: a máscara Nintendo Pro entrou no produto por ordem
-    dela, o `ipc_handlers` passou a aceitá-la, e o chip acende — corretamente.
-    O docstring de então já previa a queda, mas pela causa errada: *"se algum
-    dia esta linha reprovar, é porque alguém traduziu uma máscara que o
-    `ipc_handlers` recusa"*. Não foi isso. Foi o `ipc_handlers` deixar de
-    recusar.
-
-    O INVARIANTE QUE SOBREVIVE não tem nome de fabricante, e são TRÊS estados
-    que `_mascara_do_cartao` separa de propósito:
-
-      * rótulo que o produto monta  -> o rótulo (o chip acende);
-      * rótulo que a tela DESENHA e o produto não monta -> ``""`` (apagado, e
-        isso é a verdade sobre ele);
-      * a mesa não falou de máscara -> a da sessão (o comportamento anterior
-        ao campo existir).
-
-    O SEGUNDO ESTADO NÃO TEM MAIS NENHUM CASO VIVO — hoje `monta.MASCARAS` e
-    `NOME_DA_MASCARA` casam rótulo a rótulo, e essa é justamente a razão de o
-    teste antigo não poder ser só reapontado para outro nome: um nome inventado
-    não está DESENHADO, e cai no terceiro estado, não no segundo. Por isso a
-    régua injeta o rótulo no desenho em vez de o digitar como dado — é a única
-    forma de exercitar o ramo que hoje nenhuma máscara real alcança, e ele tem
-    de continuar funcionando para a próxima que a tela desenhar antes de o
-    produto saber montar.
-    """
+    """O chip apaga quando a tela DESENHA um rótulo que o produto não monta."""
     from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
 
     so_no_desenho = "Máscara Só Desenhada"
@@ -245,8 +198,6 @@ def test_rotulo_desenhado_que_o_produto_nao_monta_fica_apagado(
         "um rótulo que a tela desenha e o produto não sabe montar acendeu um "
         "chip — o cartão passou a afirmar uma máscara que o daemon recusa")
 
-    # E O TERCEIRO ESTADO CONTINUA SEPARADO: sem o rótulo no desenho, o mesmo
-    # valor deixa de ser "desenhado e não montável" e vira "a mesa não falou".
     ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: "nem desenhado"})
     assert _mascaras_dos_cartoes(ctx) == ["Xbox 360"], (
         "os dois silêncios voltaram a ser um só: um nome que a tela nem "
@@ -254,15 +205,7 @@ def test_rotulo_desenhado_que_o_produto_nao_monta_fica_apagado(
 
 
 def test_a_nintendo_pro_acende_como_as_outras_duas() -> None:
-    """A máscara nova é chip de primeira classe — 07/09/2026, ordem dela.
-
-    A MORDIDA: tirar `"nintendo"` do `uinput_gamepad.FLAVORS` (ou o rótulo do
-    `mesa_viva.NOME_DA_MASCARA`) apaga este chip e reprova aqui.
-
-    Vale para os TRÊS do catálogo de uma vez, lidos dele: uma quarta máscara
-    entra nesta régua sem edição, que é o que separa esta cura de digitar
-    "Nintendo Pro" no lugar onde estava "nunca acende".
-    """
+    """A máscara nova é chip de primeira classe — 07/09/2026, ordem dela."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         mascaras_validas,
     )
@@ -293,23 +236,12 @@ def test_o_daemon_calado_nao_acende_nada() -> None:
     fora = aba.pacote(_ctx({}))
     assert fora["hef-posicao"] == ""
     assert fora["modo-aceso"] == ""
-    # E NENHUM CARTÃO, logo nenhuma máscara: sem estado não há mesa, e o valor
-    # que sobraria seria o do desenho. Ver `test_dois_controles_duas_mascaras`.
     assert fora["cartoes"] == {}
 
 
 def test_a_leitura_e_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
-    """Troca os dois leitores do produto e cobra que o pacote os siga.
-
-    Uma tradução digitada aqui passaria nos casos acima com as funções
-    originais intactas — e é por isso que a régua as TROCA, em vez de comparar
-    valores. É a mesma forma da régua da faixa laranja.
-    """
-    # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES trocava
-    # `home_actions.mascara_do_aparelho` e cobrava que o chip de modo seguisse a
-    # MÁSCARA — que era o defeito: com o cartão em Xbox 360 o chip «Sony
+    """Troca os dois leitores do produto e cobra que o pacote os siga."""
     # DualSense» acendia. AGORA troca `painel.caminho_vivo` e cobra que o chip
-    # siga o CAMINHO; e a máscara trocada não pode acender chip de modo nenhum.
     from hefesto_dualsense4unix.app.actions import home_actions
 
     monkeypatch.setattr(painel, "hefesto_ligado", lambda _s: False)
@@ -340,10 +272,6 @@ def test_a_mascara_do_cartao_tem_a_MESA_por_dona() -> None:  # noqa: N802
     assert _mascaras_dos_cartoes(ctx) == ["DualSense"], (
         "o cartão ignorou o que a mesa disse — o pacote voltou a ler o estado")
 
-    # E COM A MESA MUDA, o caminho de trás: um contexto cuja mesa não tem a
-    # chave `mascara` (a de uma régua, ou a de um daemon anterior ao
-    # `por_aparelho`) cai na máscara da SESSÃO, que é o comportamento de antes
-    # deste campo existir. Meia cura que muda comportamento é pior que nenhuma.
     sem_mascara = Contexto(
         state=ctx.state,
         mesa=[{k: v for k, v in m.items() if k != "mascara"} for m in ctx.mesa],
@@ -354,12 +282,6 @@ def test_a_mascara_do_cartao_tem_a_MESA_por_dona() -> None:  # noqa: N802
         "a mesa muda deixou de herdar a máscara da sessão")
 
 
-# ---------------------------------------------------------------------------
-# 2. A COLUNA ATENÇÃO — a ponte que faltava
-# ---------------------------------------------------------------------------
-#: O DAEMON COM UM JOGO ABERTO SEM O ATALHO — o único estado em que o aviso do
-#: selo ``JOGO`` acende. Só o ``False`` LITERAL de `wrapper_used` conta, e a
-#: `window_detect_last_class` é o que dá o appid ao produto.
 VIVO_JOGO_SEM_ATALHO: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
@@ -444,51 +366,26 @@ def _sem_a_maquina(monkeypatch: Any) -> None:
 
 @pytest.fixture()
 def duas_listas_vazias(tmp_path: Any, monkeypatch: Any) -> Any:
-    """As DUAS listas de recusa em disco, num diretório só deste teste.
-
-    Elas são arquivos de verdade, escritos pelos escritores de verdade
-    (`add_dismissed_appid` e `marcar_jogo_sem_wrapper`) — os mesmos que os dois
-    botões dela chamam. Um dublê de `ela_ja_respondeu_sobre` mediria a cura com
-    a cura; o que se quer medir é a volta inteira: **o clique dela grava, e a
-    coluna cala.**
-    """
+    """As DUAS listas de recusa em disco, num diretório só deste teste."""
     from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     dispensados = tmp_path / "launch_dialog_dismissed.json"
     sem_wrapper = tmp_path / "jogos_sem_wrapper.txt"
-    # O `**_` NÃO É ASSEIO: `_dismissed_path(ensure=True)` é como o ESCRITOR
-    # chama, e um dublê sem ele levanta `TypeError` dentro do `except Exception`
-    # do `add_dismissed_appid` — a gravação some em silêncio e o teste mede uma
-    # lista que nunca foi escrita. Custou uma volta, em 06/09/2026.
     monkeypatch.setattr(lwd, "_dismissed_path", lambda **_: dispensados)
     monkeypatch.setattr(slo, "sem_wrapper_path", lambda *_a, **_k: sem_wrapper)
-    # AS DUAS FONTES DE MÁQUINA SAEM COM AS LISTAS — 11/09/2026. Estas quatro
-    # réguas contam os selos que a coluna acende, e uma linha que vem do
-    # `/sys` desta máquina entra na conta sem ter nada a ver com a recusa
-    # dela. O porquê inteiro está em `_sem_a_maquina`.
     _sem_a_maquina(monkeypatch)
     return lwd, slo
 
 
 def _coluna(ctx: Contexto) -> tuple[list[str], list[str]]:
-    """Os selos e os textos do CANAL de avisos, na ordem da gravidade.
-
-    28/09/2026, A-TELA-PERGUNTA-AO-DONO-01: a coluna Atenção saiu da tela em
-    07/09, e o canal (`_avisos`) é o que estas réguas medem — com os achados
-    graves do exame, que a lista da aba Sistema deixa com a aba Conexões.
-    """
+    """Os selos e os textos do CANAL de avisos, na ordem da gravidade."""
     fora = aba._em_ordem(aba._avisos(ctx))
     return [a["selo"] for a in fora], [a["texto"] for a in fora]
 
 
 def test_o_aviso_do_jogo_sem_atalho_acende_na_coluna(duas_listas_vazias: Any) -> None:
-    """Sem recusa nenhuma, a coluna acusa — e é do dono que a frase vem.
-
-    A `home_actions.WRAPPER_MISSING_TEXT` é a MESMA das abas Início, Status e
-    do cartão da Steam; esta aba não escreve uma palavra. O caso irmão do
-    silêncio: sem ele, um filtro invertido calaria tudo e passaria verde.
-    """
+    """Sem recusa nenhuma, a coluna acusa — e é do dono que a frase vem."""
     from hefesto_dualsense4unix.app.actions import home_actions
 
     selos, textos = _coluna(_ctx(VIVO_JOGO_SEM_ATALHO))
@@ -527,11 +424,7 @@ def test_as_duas_recusas_dela_calam_a_coluna_atencao(
 
 
 def test_a_recusa_de_outro_jogo_nao_cala_este(duas_listas_vazias: Any) -> None:
-    """Calar demais é pior que não calar: o filtro é POR APPID.
-
-    MORDIDA: troque o `appid in lista` por um `if lista:` em
-    `home_actions.ela_ja_respondeu_sobre` e este caso reprova.
-    """
+    """Calar demais é pior que não calar: o filtro é POR APPID."""
     lwd, _slo = duas_listas_vazias
     lwd.add_dismissed_appid("730")
     selos, _textos = _coluna(_ctx(VIVO_JOGO_SEM_ATALHO))
@@ -540,12 +433,7 @@ def test_a_recusa_de_outro_jogo_nao_cala_este(duas_listas_vazias: Any) -> None:
 
 
 def test_sem_appid_o_aviso_continua(duas_listas_vazias: Any) -> None:
-    """Decisão escrita (`a07_lancadores.py:592-598`), e ela vale nas duas telas.
-
-    ``wrapper_used is False`` é o daemon AFIRMANDO que há jogo aberto sem o
-    atalho. Calar porque a `window_detect_last_class` ainda não casou trocaria
-    um aviso verdadeiro por silêncio — e a lista, aqui, está cheia.
-    """
+    """Decisão escrita (`a07_lancadores.py:445-451`), e ela vale nas duas telas."""
     lwd, slo = duas_listas_vazias
     lwd.add_dismissed_appid("570")
     slo.marcar_jogo_sem_wrapper("570")
@@ -557,23 +445,7 @@ def test_sem_appid_o_aviso_continua(duas_listas_vazias: Any) -> None:
 
 
 def test_a_bancada_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
-    """A BANCADA desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03.
-
-    `interface/jogar_vivo.py` é o instrumento que roda esta aba num
-    `WebKit2.WebView` de verdade e é quem prova a coluna Atenção no tempo. A
-    constante `PAGINA` dele dizia ``AQUI.parent / "01-jogar.html"``, que era
-    certo quando o arquivo morava em ``layout/_ferramentas/``; depois da
-    mudança para ``src/…/interface/`` a página passou a ser
-    ``interface/paginas/01-jogar.html`` e a linha ficou.
-
-    O sintoma era o pior possível: a bancada imprimia *"ERRO DE CARGA"*,
-    marcava ``voltas: 0`` e **saía com `rc=0`**. Verde sobre nada, e por isso
-    esta régua não pergunta pelo TEXTO da linha — pergunta se o arquivo existe.
-
-    MORDIDA: devolva o `AQUI.parent` e este caso reprova; e o `main()` da
-    bancada passou a devolver `rc != 0` sem uma volta, para que a próxima vez
-    doa antes de alguém abrir uma foto vazia.
-    """
+    """A BANCADA desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03."""
     jogar_vivo = pytest.importorskip(
         "hefesto_dualsense4unix.interface.jogar_vivo",
         reason="a bancada precisa do Gtk/WebKit do sistema",
@@ -581,9 +453,6 @@ def test_a_bancada_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
     assert jogar_vivo.PAGINA.exists(), (
         f"a bancada da aba Jogar abre {jogar_vivo.PAGINA}, que não existe — "
         "ela mede o vazio e sai verde")
-    # E A PASTA VEM DO DONO (`onde.PUBLICADO`), que é o que impede a próxima
-    # mudança de endereço de matar esta linha em silêncio: uma segunda montagem
-    # do mesmo caminho foi exatamente como ela morreu.
     assert jogar_vivo.PAGINA.samefile(onde.PUBLICADO / "01-jogar.html"), (
         f"a bancada abre {jogar_vivo.PAGINA}, e não a página que esta aba publica")
 
@@ -607,19 +476,7 @@ def test_a_coluna_atencao_sai_das_fontes_da_gtk(monkeypatch: Any) -> None:
 
 
 def test_uma_boa_noticia_nao_entra_na_coluna_atencao(monkeypatch: Any) -> None:
-    """O `**i` que sobrescrevia o selo, e o que ele punha na tela dela.
-
-    `_do_exame` montava ``{"selo": "RÁDIO" if grave else "AVISO", **i}`` e o
-    ``**i`` vinha DEPOIS: quem chegava à tela era o selo do exame, que tem
-    quatro estados e inclui o **CERTO**. Fotografado: o selo `CERTO` com
-    "Economia de energia desligada" sob o cabeçalho laranja **Atenção**.
-    """
-    # A PONTE FICA DE FORA DESTE TESTE — 04/09/2026, e é escolha, não remendo.
-    # `_aviso_da_ponte` nasceu como a sétima fonte da coluna (D-10 dela), e ela
-    # FALA em `VIVO_NAVEGACAO`: sem gamepad de pé, `texto_da_ponte` responde
-    # "nenhuma" com a cor de aviso do produto. Este teste mede OUTRA coisa, e
-    # deixá-la entrar aqui trocaria uma régua afiada por uma que conta linhas.
-    # Quem mede a ponte é `tests/unit/test_a01_a_ponte_entra_na_coluna.py`.
+    """O `**i` que sobrescrevia o selo, e o que ele punha na tela dela."""
     _sem_a_maquina(monkeypatch)
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
@@ -633,13 +490,6 @@ def test_uma_boa_noticia_nao_entra_na_coluna_atencao(monkeypatch: Any) -> None:
     assert selos == ["AJUSTAR"], (
         f"o selo do exame não é mais o do produto: {selos!r}")
     assert textos[0] == "Dois rádios em portas vizinhas"
-
-
-# AS TRÊS RÉGUAS DA FORMA DA COLUNA SAÍRAM — 28/09/2026, A-TELA-PERGUNTA-AO-
-# DONO-01: a conta do canto (`atencao-conta`), o acendedor das seis linhas
-# (`aviso-vivo`) e o teto de três com o `+N`. Eram o desenho da coluna Atenção
-# da Jogar, que saiu da tela em 07/09 por ordem dela; o canal foi para a lista
-# do exame da aba Sistema, que mostra todos e não tem conta nem teto.
 
 
 def test_uma_fonte_que_quebra_nao_apaga_a_coluna(monkeypatch: Any) -> None:
@@ -698,15 +548,6 @@ def test_nenhuma_fonte_fala_sem_este_arquivo_saber(monkeypatch: Any) -> None:
         "ou cale-a pelo nome no teste que a tiver por assunto")
 
 
-# ---------------------------------------------------------------------------
-# 3. A PÁGINA TEM ONDE ESCREVER — endereço que falta pinta em lugar nenhum
-# ---------------------------------------------------------------------------
-#: A ABA ESTÁ DECLARADA EM TRABALHO NA BANCADA? Enquanto estiver, o publicado
-#: pode estar atrás do desenho de propósito — é o contrato do
-#: `scripts/check_o_desenho_aprovado.py`, e a direção é `mockup/` → produto, por
-#: decisão dela de 31/08. A régua abaixo então mede a BANCADA sempre e o
-#: PUBLICADO só quando a divergência já foi fechada: ela **se rearma sozinha** no
-#: dia em que a aba for publicada, em vez de virar um caso que alguém apaga.
 def _em_trabalho() -> bool:
     arquivo = onde.BANCADA / "DIVERGENCIAS.md"
     if not arquivo.exists():
@@ -715,25 +556,6 @@ def _em_trabalho() -> bool:
     return "\n## 01-jogar.html" in f"\n{corpo}"
 
 
-#: O PRODUTO ESTÁ ATRÁS **SÓ POR ENDEREÇO**? É a outra espera, e ela não passa
-#: pelo `DIVERGENCIAS.md` — declarar ali uma página que não mudou um pixel a
-#: torna uma declaração ÓRFÃ, e o portão reprova.
-#:
-#: Um `data-campo`/`data-gesto` novo num elemento que já existia não muda nada
-#: do que ela vê, então **não é decisão dela**: quem o leva ao produto é
-#: `scripts/check_o_desenho_aprovado.py --publicar-enderecos`, ato de quem
-#: coordena. Enquanto isso não roda, a bancada anda na frente por endereço.
-#:
-#: A PERGUNTA É FEITA AO DONO, e é o que separa esta espera de um caso apagado:
-#: `so_mudou_endereco` é a função do próprio portão, e ela apaga os trinta
-#: atributos de endereço antes de comparar. Três desfechos, e só um dispensa:
-#:
-#:   páginas IDÊNTICAS ......... não dispensa (o publicado é medido, e passa)
-#:   diferem num PIXEL ......... não dispensa (a régua reprova, alto)
-#:   diferem só em ENDEREÇO .... dispensa, dizendo o comando que fecha
-#:
-#: Ela **se rearma sozinha** no dia da publicação, em vez de virar um `skip`
-#: que ninguém tira.
 def _atras_so_por_endereco() -> bool:
     import importlib.util
 
@@ -752,13 +574,7 @@ def _atras_so_por_endereco() -> bool:
 
 @pytest.mark.parametrize("publicado", [False, True])
 def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> None:
-    """Um endereço a menos deixa uma posição acesa para sempre.
-
-    A régua cobre a BANCADA e o PUBLICADO: o desenho pode andar na frente, mas
-    nenhum dos dois pode ter meia fileira endereçada. O `querySelector` de um
-    endereço que não existe não levanta — devolve `null`, e a pintura escreve
-    zero.
-    """
+    """Um endereço a menos deixa uma posição acesa para sempre."""
     if publicado and _em_trabalho():
         pytest.skip("01-jogar está declarada em trabalho no `mockup/DIVERGENCIAS.md`: "
                     "o produto recebe no `--publicar`, que é ato de quem coordena")
@@ -767,34 +583,13 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
                     "pixel mudou. Fecha com: scripts/check_o_desenho_aprovado.py "
                     "--publicar-enderecos 01")
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
-    # O `modo-aceso` DEIXOU DE COBRIR OS QUATRO CHIPS — STEAM-INPUT-01,
-    # 20/09/2026. Esta linha dizia `len(aba01.MODOS)`, e a conta caiu junto com
-    # a premissa: o chip «Steam Input» ganhou campo próprio porque ele NÃO é
     # exclusivo dos outros — «Sony DualSense» e «Steam Input» são verdade ao
-    # mesmo tempo (o degrau 4 da `ESCADA` tem `recria_vpad=False`), e num campo
-    # compartilhado acender um APAGA o outro.
-    #
-    # A CONTA PERGUNTA AO GERADOR, e o número não é digitado aqui: quem diz de
-    # qual campo é cada chip é `aba01._campo_do_chip`, o mesmo que escreve a
-    # página. Um quinto chip entra nesta régua sozinho. E a tautologia que isso
-    # abriria (derivar o esperado da função medida) está fechada do outro lado,
-    # no `conferir()` do próprio `aba01.py`, que CRAVA o único número que não
-    # sai dela: o Steam Input tem UM endereço próprio.
     por_campo = collections.Counter(aba01._campo_do_chip(m) for m in aba01.MODOS)
     esperado = {
         "hef-posicao": len(aba01.INTERRUPTOR),
         "modo-aceso": por_campo["modo-aceso"],
         "steam-input-aceso": por_campo["steam-input-aceso"],
-        # OS QUATRO LUGARES, e não só os conectados — decisão dela de 03/09:
-        # *"É uma máscara por controle. (…) Se isso não ocorre com os 4
-        # controles em cada aba, então temos que construir isso e garantir
-        # isso."* No produto a página é ESTÁTICA: o cartão do P3 REABRE quando
-        # um terceiro controle chega, e sem endereço os chips dele ficariam
-        # cegos à pintura para sempre.
         "mascara-cartao": len(monta.MASCARAS) * len(aba01.MESA),
-        # `aviso-vivo` SAIU DESTA CONTA em 07/09/2026, com a coluna Atenção que
-        # ela mandou remover da Jogar. Ele não virou zero: virou AUSENTE, e quem
-        # cobra a ausência é `test_a_coluna_atencao_saiu_da_jogar`.
         "pendente-ha": 1,
     }
     for campo, quantos in esperado.items():
@@ -802,11 +597,6 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
         assert achei == quantos, (
             f"{'publicado' if publicado else 'bancada'}: o endereço {campo!r} "
             f"aparece {achei} vezes e deviam ser {quantos}")
-    # E O CLIQUE ALCANÇA OS QUATRO — a outra metade, e ela não sai da mesma
-    # contagem: `data-campo` é por onde a verdade chega, `data-gesto` é por onde
-    # o dedo dela sai. Até 03/09 os chips do P3 e do P4 não tinham nenhum dos
-    # dois, e o ramo do gesto que responde *"Não há controle no lugar P3"* era
-    # código inalcançável.
     cliques = corpo.count('data-gesto="mascara"')
     assert cliques == len(monta.MASCARAS) * len(aba01.MESA), (
         f"{'publicado' if publicado else 'bancada'}: o clique da máscara "
@@ -814,12 +604,7 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
 
 
 def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
-    """A régua nos DOIS sentidos — sem ela, o pacote emite para o vazio.
-
-    Foi assim que a `06-navegacao` publicou zero endereços em 01/09 sem ninguém
-    ver, e assim que a Jogar pintava um valor de cinco: o pacote emitia
-    `mascara` e a página tinha `identidade`.
-    """
+    """A régua nos DOIS sentidos — sem ela, o pacote emite para o vazio."""
     corpo = onde.pagina("01-jogar.html", publicado=not _em_trabalho()).read_text(
         encoding="utf-8")
     fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
@@ -831,25 +616,11 @@ def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
 
 
 def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:
-    """A CENA MUDOU POR ORDEM DELA — 07/09/2026, e esta régua trocou de sinal.
-
-    Ela dizia: *"a cena que ela aprovou tem um aviso; as outras cinco nascem sem
-    a classe que as mostra"*. A ordem foi *"em jogar remover essa seção do
-    atenção, nenhum aviso esse — deixar só o reconectar controles"*, e agora o
-    que a página tem de mostrar entre os cartões e o botão é NADA.
-
-    NOS DOIS ARQUIVOS, e não só na bancada: publicar é ato à parte, e uma régua
-    que olhasse só o mockup daria verde com o produto dela ainda mostrando a
-    faixa.
-    """
+    """A CENA MUDOU POR ORDEM DELA — 07/09/2026, e esta régua trocou de sinal."""
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
             encoding="utf-8")
         onde_ = "publicado" if publicado else "bancada"
-        # OS MARCADORES SÃO `class="…"`, E NÃO A PALAVRA SOLTA: `.aviso-item` é
-        # regra do ESQUELETO (`monta.py`), das dez abas, e cobrar a palavra crua
-        # acusaria a folha compartilhada — mandando consertar o que esta aba não
-        # pode. Custou uma volta em 07/09/2026.
         for morto in ('class="aviso-item', 'class="col-atencao"',
                       'class="conta-avisos"',
                       'data-campo="aviso-vivo"', 'data-campo="atencao-conta"'):
@@ -859,32 +630,15 @@ def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:
             f"mandou DEIXAR, e uma régua que só proíbe passaria sem ele")
 
 
-# ---------------------------------------------------------------------------
-# 4. O FATO CADUCO — a folga de tempo que já tinha sido curada
-# ---------------------------------------------------------------------------
 def test_os_metodos_da_troca_de_modo_tem_a_folga_do_produto() -> None:
-    """`ACHADO_DO_TIMEOUT` afirmava 250 ms; `ponte.TETOS` já dava 2,0 s.
-
-    Quem lesse o texto antigo iria construir uma cura já construída. Esta régua
-    tranca o fato dos dois lados: a tabela tem todos, e com o valor que o
-    produto declara — se `mode_transition.MODE_IPC_TIMEOUT_S` mudar, ela avisa.
-    """
+    """`ACHADO_DO_TIMEOUT` afirmava 250 ms; `ponte.TETOS` já dava 2,0 s."""
     from hefesto_dualsense4unix.app.actions.mode_transition import MODE_IPC_TIMEOUT_S
     from pacotes import ponte
 
-    # OS DA TROCA DE MODO, e não `METODOS` inteiro — 04/09/2026. O
     # `gamepad.mask.set` entrou em `METODOS` junto com a cura da chamada dele, e
-    # ele NÃO é troca de modo: não cria uinput e não faz grab, que é o que os
-    # 2,0 s pagam. Ele cai nos 250 ms do bridge, e a dívida está declarada no
-    # próprio `a01_jogar.METODOS` — a linha que a fecha é de `pacotes/ponte.py`.
-    # Cobrar os 2,0 s dele aqui mandaria consertar no lugar errado.
-    #
-    # ERAM CINCO E SÃO QUATRO — 17/09/2026, POINT-AND-CLICK-01. O
     # `mouse.emulation.restore` saiu do conjunto porque saiu do PLANO, e o passo
-    # que o substituiu (`desktop.arranjo.apply`) fica de fora daqui pela MESMA
     # razão do `gamepad.mask.set`, com o sinal trocado: ele abre um `.json` de
     # perfil do disco e tem teto PRÓPRIO de 3,0 s, a família do `profile.switch`.
-    # O bloco abaixo é o que impede esse "de fora" de virar teto esquecido.
     for metodo in aba.METODOS_DA_TROCA_DE_MODO:
         assert ponte.teto(metodo) == MODE_IPC_TIMEOUT_S, (
             f"{metodo} espera {ponte.teto(metodo)}s e o produto declara "

@@ -1,34 +1,4 @@
-"""ESCONDER-EM-VEZ-DE-SAIR-01 — a marca esconde o FÍSICO e deixa o co-op vivo.
-
-Decisão dela, 09/08/2026, no desenho
-`docs/process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`:
-
-    "a allowlist do Steam Input NÃO tira o Hefesto da frente."
-
-O DEFEITO, MEDIDO
-=================
-Marcar um jogo fazia o daemon soltar o grab do físico, mandar o broker
-`restore_all` e **suspender os gamepads virtuais**. Curava o controle dobrado
-com UM controle na mesa — e derrubava o jogador 2 junto, porque **o jogador 2 é
-um gamepad virtual**. No journal dela, em 08/08:
-`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências.
-
-OS DOIS LADOS QUE ESTE ARQUIVO TRAVA
-====================================
-1. **o co-op sobrevive**: com o jogo marcado e DOIS controles na mesa, os vpads
-   continuam de pé e ninguém é derrubado;
-2. **o físico fica escondido enquanto o jogo marcado está na frente**, e volta
-   ao estado canônico quando ele sai.
-
-A MORDIDA de cada um está escrita no docstring do teste: qual linha arrancar
-para vê-lo reprovar. Foram arrancadas de verdade antes desta leva entrar.
-
-O QUE ESTE ARQUIVO NÃO PROVA, DE PROPÓSITO
-==========================================
-Que o JOGO lista dois jogadores. Isso é medição dela no aparelho (§6 do
-desenho) — aqui se prova o que o produto faz, que é manter os dois vpads de pé
-e o físico escondido. Prometer o resto seria inventar.
-"""
+"""ESCONDER-EM-VEZ-DE-SAIR-01 — a marca esconde o FÍSICO e deixa o co-op vivo."""
 
 from __future__ import annotations
 
@@ -43,8 +13,6 @@ import pytest
 import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
 from hefesto_dualsense4unix.daemon import launch_env as le
 
-#: Mullet Mad Jack — um dos dois appids que entraram na lista dela com
-#: duplicado real medido. O outro é o 3357650 (Pragmata).
 MMJ = 2111190
 
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
@@ -110,9 +78,6 @@ class _DaemonFalso:
                 pai.grabs.append(grab)
                 return True
 
-        # `hidraw_path(identity)` devolve um nó por controle: o primário sem
-        # argumento, cada secundário pelo MAC. Sem isso o teste do co-op não
-        # distinguiria "escondi o físico do P1" de "escondi os dois".
         def _hidraw(identity: str | None = None) -> str:
             if identity is None:
                 return "/dev/hidraw0"
@@ -143,9 +108,6 @@ def _broker_falso(monkeypatch: pytest.MonkeyPatch) -> None:
                 daemon.hides.append(node)
 
             def restore(self, node: str) -> None:
-                # BORDA-DE-QUEDA-01/E2: o dublê tem de saber gravar as DUAS
-                # formas de restaurar — senão a asserção `restores == 0` daria
-                # verde por AttributeError engolido, e não por ninguém expor.
                 daemon.restores += 1
 
             def restore_all(self) -> None:
@@ -169,12 +131,7 @@ def _jogo_marcado_na_frente(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def _encerrar_vigia(daemon: Any) -> Any:
-    """Cancela a task-vigia (se nasceu) e a DEVOLVE para inspeção.
-
-    Nestes testes o que interessa é justamente ela NÃO ter nascido — mas
-    cancelar mesmo assim é obrigatório: uma task viva num teste que passa vaza
-    para o próximo, e o defeito aparece longe daqui.
-    """
+    """Cancela a task-vigia (se nasceu) e a DEVOLVE para inspeção."""
     vigia = getattr(daemon, "_steam_input_vigia", None)
     if vigia is not None:
         vigia.cancel()
@@ -183,27 +140,11 @@ async def _encerrar_vigia(daemon: Any) -> Any:
     return vigia
 
 
-# ---------------------------------------------------------------------------
-# LADO 1 — o co-op não é derrubado
-# ---------------------------------------------------------------------------
-
-
 async def test_com_dois_controles_a_marca_nao_derruba_o_jogador_2(
     _broker_falso: None, _sem_env: None, _jogo_marcado_na_frente: None
 ) -> None:
-    """A MORDIDA: devolva `suspend_vpads_for_steam_input(daemon, appid=appid)`
-    à borda de entrada de `sync_steam_input_exception` e este teste reprova em
-    cinco asserções de uma vez — era exatamente o estado que produzia
-    `coop_derrubado_pela_excecao_steam_input` vinte vezes num dia.
-
-    ASSÍNCRONO por obrigação, e a razão é uma armadilha medida: a suspensão
-    antiga ABORTAVA sozinha sem event loop rodando
-    (`steam_input_vigia_sem_event_loop` — não se suspende sem quem devolva).
-    Escrito de forma síncrona, este teste passaria COM a cura arrancada, que é
-    a definição de teste que não morde. Com o loop de pé, a borda antiga
-    suspende de verdade e as linhas abaixo caem juntas.
-    """
-    daemon = _DaemonFalso(jogadores=1)  # ela + o jogador 2
+    """A MORDIDA: devolva `suspend_vpads_for_steam_input(daemon, appid=appid)`"""
+    daemon = _DaemonFalso(jogadores=1)
     vpad_do_p1 = daemon._gamepad_device
 
     assert gp.sync_steam_input_exception(daemon) is True
@@ -226,13 +167,7 @@ async def test_com_dois_controles_a_marca_nao_derruba_o_jogador_2(
 async def test_a_marca_nao_arma_vigia_porque_nao_ha_o_que_devolver(
     _broker_falso: None, _sem_env: None, _jogo_marcado_na_frente: None
 ) -> None:
-    """Sem suspensão não nasce task-vigia — e isso é a prova de que a borda
-    deixou de ser destrutiva. A vigia existia SÓ para desfazer a suspensão
-    (`_armar_vigia_da_excecao`: não se suspende sem quem devolva).
-
-    A MORDIDA é a mesma do teste acima, pelo outro lado: com a borda antiga e o
-    loop de pé, a vigia NASCE e ainda se pendura em `daemon._tasks`.
-    """
+    """Sem suspensão não nasce task-vigia — e isso é a prova de que a borda"""
     daemon = _DaemonFalso(jogadores=1)
 
     assert gp.sync_steam_input_exception(daemon) is True
@@ -246,10 +181,7 @@ async def test_a_marca_nao_arma_vigia_porque_nao_ha_o_que_devolver(
 def test_o_perfil_do_jogo_marcado_volta_a_poder_criar_o_vpad(
     _broker_falso: None, _sem_env: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA: devolva `if origin != "manual": return False` ao gate de
-    `start_gamepad_emulation` e o autoswitch volta a ser recusado no jogo
-    marcado — que é o dispositivo que a marca agora PROMETE entregar.
-    """
+    """A MORDIDA: devolva `if origin != "manual": return False` ao gate de"""
     import hefesto_dualsense4unix.integrations.virtual_pad as vp
 
     monkeypatch.setattr(vp, "make_virtual_pad", lambda key, **kw: _VpadFalso(flavor=key))
@@ -265,12 +197,7 @@ def test_o_perfil_do_jogo_marcado_volta_a_poder_criar_o_vpad(
 def test_a_rede_de_seguranca_do_vpad_vale_dentro_do_jogo_marcado(
     _broker_falso: None, _sem_env: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """VPAD-09 dispara na reconexão BT — o evento mais frequente desta máquina.
-
-    Com o físico escondido, um vpad morto e não ressuscitado é ZERO controles
-    na mão dela. A MORDIDA: devolva o `if steam_input_excecao_ativa(daemon):
-    return False` a `upgrade_primary_vpad_to_uhid`.
-    """
+    """VPAD-09 dispara na reconexão BT — o evento mais frequente desta máquina."""
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda d: True)
     monkeypatch.setattr(gp, "start_gamepad_emulation", lambda *a, **k: True)
     daemon = _DaemonFalso()
@@ -280,18 +207,10 @@ def test_a_rede_de_seguranca_do_vpad_vale_dentro_do_jogo_marcado(
     assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
 
 
-# ---------------------------------------------------------------------------
-# LADO 2 — o físico fica escondido enquanto o jogo marcado está na frente
-# ---------------------------------------------------------------------------
-
-
 def test_entrar_no_jogo_marcado_esconde_o_fisico_em_vez_de_expor(
     _broker_falso: None, _sem_env: None, _jogo_marcado_na_frente: None
 ) -> None:
-    """A MORDIDA: troque a chamada de `esconder_o_fisico_para_o_jogo` pelo par
-    antigo (`_set_evdev_grab(daemon, False)` + `client.restore_all`) e as três
-    asserções abaixo caem juntas. É a inversão inteira, numa linha.
-    """
+    """A MORDIDA: troque a chamada de `esconder_o_fisico_para_o_jogo` pelo par"""
     daemon = _DaemonFalso()
 
     assert gp.sync_steam_input_exception(daemon) is True
@@ -304,11 +223,7 @@ def test_entrar_no_jogo_marcado_esconde_o_fisico_em_vez_de_expor(
 def test_com_dois_controles_esconde_os_dois_fisicos(
     _broker_falso: None, _sem_env: None, _jogo_marcado_na_frente: None
 ) -> None:
-    """Um vpad vivo por controle ⇒ um hidraw escondido por controle.
-
-    É a metade que faz o co-op funcionar no jogo marcado: o jogador 2 vê o vpad
-    dele e não vê o aparelho dele.
-    """
+    """Um vpad vivo por controle ⇒ um hidraw escondido por controle."""
     daemon = _DaemonFalso(jogadores=1)
 
     gp.sync_steam_input_exception(daemon)
@@ -319,13 +234,7 @@ def test_com_dois_controles_esconde_os_dois_fisicos(
 def test_a_reconciliacao_online_reesconde_no_meio_da_partida(
     _broker_falso: None, _sem_env: None
 ) -> None:
-    """A MORDIDA: devolva o `if steam_input_excecao_ativa(daemon): return` a
-    `rehide_physical_hidraw`.
-
-    O nó recriado por replug/wake BT NASCE VISÍVEL (BROKER-01 §2.2). Com o gate
-    antigo, o físico voltava a aparecer no meio da partida do jogo marcado e
-    nada o escondia de novo até o jogo fechar.
-    """
+    """A MORDIDA: devolva o `if steam_input_excecao_ativa(daemon): return` a"""
     daemon = _DaemonFalso()
     daemon._steam_input_excecao = True
 
@@ -337,11 +246,7 @@ def test_a_reconciliacao_online_reesconde_no_meio_da_partida(
 def test_sair_do_jogo_marcado_mantem_o_estado_canonico(
     _broker_falso: None, _sem_env: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Reversibilidade: a saída não pode deixar nada pendurado nem estragado.
-
-    Nada foi suspenso na entrada, então a saída é idempotente — grab de pé e
-    físico escondido, que é o estado de qualquer outro jogo.
-    """
+    """Reversibilidade: a saída não pode deixar nada pendurado nem estragado."""
     daemon = _DaemonFalso()
     daemon._steam_input_excecao = True
     monkeypatch.setattr(le, "steam_input_exception_appid", lambda d, **k: None)
@@ -352,11 +257,6 @@ def test_sair_do_jogo_marcado_mantem_o_estado_canonico(
     assert gp.steam_input_vpad_suspenso(daemon) is False
     assert daemon.grabs == [True] and daemon.hides == ["/dev/hidraw0"]
     assert daemon._gamepad_device is not None
-
-
-# ---------------------------------------------------------------------------
-# O invariante que a inversão NÃO pode atropelar: duplicado > zero controles
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -377,13 +277,7 @@ def test_sem_vpad_para_devolver_o_controle_a_marca_nao_esconde_nada(
     _sem_env: None,
     _jogo_marcado_na_frente: None,
 ) -> None:
-    """Esconder o físico sem um virtual vivo é ZERO controles na mão dela.
-
-    A MORDIDA: apague qualquer um dos três gates de `esconder_o_fisico_para_o_
-    jogo` e a linha correspondente reprova. O invariante é o mais velho desta
-    casa e não é dispensável por opt-in — uma caixinha marcada semanas atrás não
-    pode deixá-la sem controle nenhum hoje.
-    """
+    """Esconder o físico sem um virtual vivo é ZERO controles na mão dela."""
     daemon = _DaemonFalso()
     preparar(daemon)
 
@@ -396,8 +290,7 @@ def test_sem_vpad_para_devolver_o_controle_a_marca_nao_esconde_nada(
 def test_o_vpad_morto_nao_autoriza_esconder(
     _broker_falso: None, _sem_env: None, _jogo_marcado_na_frente: None
 ) -> None:
-    """VIDA do vpad, não existência (lição 6/#17): um uhid derrubado por
-    UHID_STOP mantém o objeto Python de pé e não devolve controle nenhum."""
+    """VIDA do vpad, não existência (lição 6/#17): um uhid derrubado por"""
     daemon = _DaemonFalso()
     daemon._gamepad_device._started = False
 
@@ -406,21 +299,10 @@ def test_o_vpad_morto_nao_autoriza_esconder(
     assert daemon.hides == []
 
 
-# ---------------------------------------------------------------------------
-# A OUTRA METADE — a env que o jogo lê na abertura
-# ---------------------------------------------------------------------------
-
-
 def test_o_jogo_marcado_recebe_a_mesma_env_de_qualquer_outro(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA: devolva o laço da allowlist a `materialize_launch_env`.
-
-    A env do appid marcado omitia `SDL_GAMECONTROLLER_IGNORE_DEVICES` — em
-    português, *"jogo, olhe para o controle físico"*. Com o daemon escondendo o
-    físico, essa env produz um controle enumerado que não responde a nada: o
-    "Jogador 3" fantasma que ela viu no Sackboy em 08/08.
-    """
+    """A MORDIDA: devolva o laço da allowlist a `materialize_launch_env`."""
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
     monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {MMJ})
@@ -438,8 +320,7 @@ def test_o_jogo_marcado_recebe_a_mesma_env_de_qualquer_outro(
 def test_a_env_velha_do_appid_marcado_e_apagada_sozinha(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Nada à mão (regra de 08/08): o arquivo sem dedup que as versões antigas
-    gravaram na máquina dela some na primeira materialização, sem passo dela."""
+    """Nada à mão (regra de 08/08): o arquivo sem dedup que as versões antigas"""
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
     monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {MMJ})
@@ -454,20 +335,3 @@ def test_a_env_velha_do_appid_marcado_e_apagada_sozinha(
     assert not velho.exists()
 
 
-# ---------------------------------------------------------------------------
-# LADO 3 — a JANELA não pode seguir contando a história velha (SAIU EM 06/09)
-# ---------------------------------------------------------------------------
-#
-# Os três testes deste lado liam o `gui/main.glade` e cobravam que a caixinha do
-# editor de perfil e o botão "Este jogo não funciona" da aba Sistema NÃO
-# repetissem a promessa velha (*"deixar a steam entregar"*) e contassem a mesma
-# história um ao outro. A janela GTK foi aposentada por decisão dela
-# (`D-0609-GTK-LEVA-INTEIRA`) e os três saíram com ela, junto com
-# `_textos_do_objeto`, que os alimentava.
-#
-# **A REGRA DELA CONTINUA VALENDO, e o alvo mudou de arquivo:** *"tudo tem que
-# focar em funcionar na interface do app e no install"*. Quem vigia a mesma
-# promessa na tela de hoje é `scripts/validar-caducos.py`, que desde 06/09
-# alcança as dez páginas publicadas — e a caixinha do Steam Input mora em
-# `interface/paginas/10-perfis.html`, o botão em `09-sistema.html`. As frases
-# que morreram estão no git, no commit desta sprint.

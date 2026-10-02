@@ -1,15 +1,4 @@
-"""``hefesto-dualsense4unix esquecer-controles`` — a primeira vez, de novo.
-
-ESQUECER-OS-CONTROLES-01 (25/09/2026). O produto passa a se comportar como numa
-máquina que nunca viu um controle: a memória dos controles sai para uma pasta
-datada (movida, nunca apagada) e volta com ``--restaurar``, byte a byte.
-
-O QUE É «A MEMÓRIA DOS CONTROLES» não mora aqui: é o inventário de
-``utils/memoria_dos_controles.py``, e este arquivo só o executa. O daemon é
-parado e religado pelo dono de sempre (``daemon/service_install.py``); um
-daemon rodando fora do systemd faz o comando RECUSAR, porque ele regravaria o
-que está sendo movido.
-"""
+"""``hefesto-dualsense4unix esquecer-controles`` — a primeira vez, de novo."""
 from __future__ import annotations
 
 import contextlib
@@ -32,7 +21,6 @@ class SistemaDoProduto(memoria.Sistema):
         if self.ensaio:
             return
 
-        # Sem systemd de usuário a parada falha calada: a conferência abaixo decide.
         with contextlib.suppress(OSError, RuntimeError, subprocess.SubprocessError):
             ServiceInstaller().stop()
         pid = self._pid_vivo()

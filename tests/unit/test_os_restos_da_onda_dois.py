@@ -1,36 +1,5 @@
 #!/usr/bin/env python3
-"""OS RESTOS DA ONDA DOIS — RESTOS-DA-ONDA-DOIS-01, 13/09/2026.
-
-Quatro achados que as validações da onda 2 mediram e deixaram abertos só por
-posse — o §E da sprint RESTOS-DA-ONDA-DOIS-01, em `docs/process/sprints/`. A
-ordem da leva é a do índice da terceira lista: nada de botão novo, nada de frase
-de aviso, mexer o mínimo.
-
-O QUE ESTA RÉGUA COBRA:
-
-1. **02 — a guarda do alto-falante acende no WebKit.** O piloto do produto,
-   oculto, com um controle sem endereço entre dois com endereço na mesa dublê:
-   a moldura do alto-falante dele veste `data-apagado="sem-alvo"`, as peças que
-   mandam som apagam, e a frase de «sem endereço» não chega à tela nem como
-   dica. Os outros dois cartões ficam acesos. E a folha das molduras de som não
-   casa mais `[title]`, que a camada da dica da casa tira do DOM vivo;
-2. **06 — a marca «não dispara» sai da troca e fica nas Definições**, na
-   bancada e no publicado;
-3. **07 — a leitura do Steam Input não varre hidraw** — nem
-   `physical_nodes_exposure`, nem listagem de `/sys/class/hidraw` —, e a
-   contagem das exceções continua chegando;
-4. **09 — o `title` do «Parar o serviço» não crava número**, no publicado, na
-   bancada e na pergunta que o clique 1 escreve no painel.
-
-AS MORDIDAS, rodadas e coladas na entrega da sprint:
-
-* a folha e a moldura do alto-falante de volta ao `[title]`, com a 02 regerada
-  e publicada — reprovam os casos da 02;
-* a marca de volta às linhas da troca — o gerador para na autoconferência, e
-  com a página publicada de antes reprovam os casos da 06;
-* `a07_lancadores.py` e `emulation_actions.py` da base — reprovam os da 07;
-* o `{N}` de volta ao `title` do Parar, regerado e publicado — reprovam os da 09.
-"""
+"""OS RESTOS DA ONDA DOIS — RESTOS-DA-ONDA-DOIS-01, 13/09/2026."""
 from __future__ import annotations
 
 import contextlib
@@ -53,9 +22,6 @@ PAGINA_02 = "02-controles.html"
 PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 PAGINA_09 = "09-sistema.html"
 
-#: A MESA DUBLÊ DA 02, na faixa sintética da casa. O P2 vem com o `uniq` vazio,
-#: uma das três formas que `controller_card.uniq_do_entry` lê como "sem
-#: endereço"; o P1 e o P3 têm endereço, e são o controle da régua.
 UNIQ_P1 = "aa:bb:cc:00:00:3a"
 UNIQ_P3 = "aa:bb:cc:00:00:c4"
 ESTADO_02 = {
@@ -74,9 +40,6 @@ TETO_S = 20.0
 TETO_DA_PAGINA_S = 40.0
 TETO_DO_ROTEIRO_S = 120.0
 
-#: AS DUAS MOLDURAS DE SOM DE CADA CARTÃO. A opacidade é a EFETIVA, o produto
-#: dos ancestrais: `getComputedStyle(filho).opacity` não enxerga a linha que
-#: apagou em volta dele (medido na validação da MIC-SEM-FONTE-01).
 LER_AS_MOLDURAS = r"""
 (function(){
   const efetiva = function(el){
@@ -122,8 +85,6 @@ LER_A_TELA = r"""
 """
 
 
-#: O PERFIL ATIVO NO DISCO — mesma razão das réguas irmãs: a pintura lê o
-#: perfil ativo, e o disco é o lar de mentira da suíte.
 @pytest.fixture(scope="module", autouse=True)
 def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.profiles import loader
@@ -142,9 +103,6 @@ def _pagina(nome: str, publicado: bool) -> str:
     return onde.pagina(nome, publicado=publicado).read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# 1. A 02 — a guarda do alto-falante sem endereço
-# ---------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def na_02() -> dict[str, Any]:
     """Abre o piloto DE VERDADE, oculto, na 02, com a mesa dublê de três."""
@@ -164,7 +122,6 @@ def na_02() -> dict[str, Any]:
         TEXTO_AUDIO_SEM_ENDERECO,
     )
 
-    # O DUBLÊ É DEVOLVIDO NO FIM: `mesa_viva` é módulo compartilhado do produto.
     guardado = hv.mesa_viva.estado_do_daemon
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: ESTADO_02  # type: ignore[assignment]
     args = argparse.Namespace(
@@ -225,8 +182,6 @@ def na_02() -> dict[str, Any]:
                 lambda lido: lido, fim, "a leitura da frase de «sem endereço»")
 
     def um_tique_depois() -> bool:
-        # UM TIQUE A MAIS antes da medida que vale: a bateria e o cinza vêm do
-        # MESMO cartão, mas a régua não aposta na ordem da escrita dentro dele.
         esperar("molduras", LER_AS_MOLDURAS, pintados, ler_a_frase,
                 "as molduras de som depois de mais um tique")
         return False
@@ -252,9 +207,6 @@ def na_02() -> dict[str, Any]:
     GLib.timeout_add(300, comecar)
     guarda = GLib.timeout_add(int(TETO_DO_ROTEIRO_S * 1000), Gtk.main_quit)
     try:
-        # O LAÇO REENTRA ATÉ O ÚLTIMO PASSO: um `Gtk.main_quit` pendente de outro
-        # teste de GUI do mesmo processo cai dentro deste `Gtk.main()` e o
-        # encerraria no meio (ver `test_a_recusa_pisca_no_botao.py`).
         limite = _time.monotonic() + TETO_DO_ROTEIRO_S
         with contextlib.redirect_stderr(diario):
             while "fim" not in fora and _time.monotonic() < limite:
@@ -285,11 +237,7 @@ def _cartao(na_02: dict[str, Any], pref: str) -> dict[str, Any]:
 
 
 def test_a_02_o_alto_falante_sem_endereco_apaga_no_webkit(na_02: dict[str, Any]) -> None:
-    """Sem endereço, todo comando de som deste cartão iria para o controle primário.
-
-    MORDIDA: devolva a folha e a moldura do alto-falante ao `[title]` e publique
-    a 02 — o atributo volta a morar no `data-hef-dica` e nada apaga.
-    """
+    """Sem endereço, todo comando de som deste cartão iria para o controle primário."""
     from hefesto_dualsense4unix.interface.pacotes.a02_controles import MIC_SEM_ALVO
 
     p2 = _cartao(na_02, "p2")
@@ -341,17 +289,13 @@ def test_a_02_a_moldura_do_alto_falante_tem_endereco_proprio(publicado: bool) ->
         assert 'data-hef-atributo="data-apagado"' in tag, tag
 
 
-# ---------------------------------------------------------------------------
-# 2. A 06 — a marca do touchpad só onde a escolha é guardada
-# ---------------------------------------------------------------------------
 def _tela(doc: str, ident: str) -> str:
     return doc.split(f'id="{ident}"', 1)[-1].split('class="tela-nova"', 1)[0]
 
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
 def test_a_06_a_marca_sai_da_troca_e_fica_nas_definicoes(publicado: bool) -> None:
-    """MORDIDA: devolva a marca às linhas da troca — o gerador para, e o publicado
-    de antes reprova aqui."""
+    """MORDIDA: devolva a marca às linhas da troca — o gerador para, e o publicado"""
     doc = _pagina(PAGINA_06, publicado)
     for ident, com_marca in (("remapeamento", False), ("definicoes-mouse", True)):
         celulas = [c for c in re.findall(r'<td class="b">(.*?)</td>', _tela(doc, ident), re.S)
@@ -361,13 +305,6 @@ def test_a_06_a_marca_sai_da_troca_e_fica_nas_definicoes(publicado: bool) -> Non
         assert marcadas == [com_marca] * 3, (ident, marcadas)
 
 
-# ---------------------------------------------------------------------------
-# 3. A 07 — a leitura do Steam Input não varre hidraw
-#
-# A RÉGUA QUE PASSAVA PELA ABA 07 SAIU EM 21/09/2026: a linha do Steam Input
-# deixou o cartão da Steam (os mesmos botões e o mesmo corpo em todo cartão,
-# palavra dela), e a 07 não lê mais o Steam Input. A assinatura, abaixo, fica.
-# ---------------------------------------------------------------------------
 def test_a_07_a_assinatura_do_status_nao_pede_o_efetiva() -> None:
     """O valor sem leitor saiu da assinatura, e o nome antigo da leitura saiu junto."""
     from hefesto_dualsense4unix.app.actions import emulation_actions as ea
@@ -377,9 +314,6 @@ def test_a_07_a_assinatura_do_status_nao_pede_o_efetiva() -> None:
     assert not hasattr(ea.EmulationActionsMixin, "_steam_input_excecao_status")
 
 
-# ---------------------------------------------------------------------------
-# 4. A 09 — o «Parar o serviço» não crava o número de controles
-# ---------------------------------------------------------------------------
 DIGITO = re.compile(r"\d")
 
 
@@ -387,7 +321,6 @@ DIGITO = re.compile(r"\d")
 def test_a_09_o_title_do_parar_nao_crava_numero(publicado: bool) -> None:
     """MORDIDA: devolva o `{N}` ao `title` do Parar em `aba09.py` e publique."""
     tags = [t for t in re.findall(r"<button\b[^>]*>", _pagina(PAGINA_09, publicado))
-            # `desligar` virou `parar-ou-retomar` em 25/09/2026 (um botão só).
             if 'data-gesto="parar-ou-retomar"' in t]
     assert len(tags) == 1, tags
     dica = re.search(r'title="([^"]*)"', tags[0])

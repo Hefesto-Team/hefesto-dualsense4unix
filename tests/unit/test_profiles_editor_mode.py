@@ -1,30 +1,8 @@
-"""Editor de perfis — seção "Modo" (FEAT-PROFILE-MODE-GUI-01).
-
-Cobre o contrato editor→Profile da seção ``mode``:
-
-1. Cada kind do seletor ("desktop"/"gamepad"/"native") vira a seção certa no
-   Profile salvo; "none" (sem opinião) salva SEM a seção (mode=None).
-2. "none" também REMOVE a seção de um perfil existente que a tinha.
-3. Round-trip: perfil com mode carregado no editor → salvo sem perder nada.
-4. Máscara/co-op só valem com kind == "gamepad" (nos demais: None/False).
-5. Sem a seção montada (glade antigo), o mode do perfil-base sobrevive por
-   herança — comportamento anterior preservado.
-6. Visibilidade das opções de gamepad segue o kind; populate programático não
-   dispara preview (guard anti-loop).
-
-Hermético: stubs de ``gi.repository`` quando o PyGObject real não está
-disponível (padrão replicado de ``test_profiles_gui_sync.py``) e widgets fake
-com a mesma API por-ID do SegmentedSelector — nenhum GTK real é construído.
-"""
+"""Editor de perfis — seção "Modo" (FEAT-PROFILE-MODE-GUI-01)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` no `lint-test`, e aquele verde não provava o GTK.
-# Agora ele pula com o motivo onde não há GTK; o `gtk-real`, que roda a suíte
-# inteira desde 27/09, o mede contra o de verdade.
 exigir_gi_real("o editor de perfis da janela")
 
 import sys
@@ -33,14 +11,7 @@ from typing import Any
 
 
 def _install_gi_stubs() -> None:
-    """Instala stubs mínimos de ``gi.repository`` se o módulo real faltar.
-
-    Réplica do helper de ``test_profiles_gui_sync.py`` (armadilha A-12: o
-    ``.venv`` de CI pode não ter PyGObject).
-    """
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
-    # "ambiente sem GTK" mesmo com o GTK real presente.
+    """Instala stubs mínimos de ``gi.repository`` se o módulo real faltar."""
     existente = sys.modules.get("gi")
     if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
@@ -105,10 +76,6 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import (
 )
 from hefesto_dualsense4unix.profiles.schema import Profile
 
-# ---------------------------------------------------------------------------
-# Widgets fake (mesma API por-ID do SegmentedSelector; sem GTK real)
-# ---------------------------------------------------------------------------
-
 
 class _FakeEntry:
     def __init__(self, text: str = "") -> None:
@@ -149,12 +116,7 @@ class _FakeSwitch:
 
 
 class _FakeSelector:
-    """Stub do SegmentedSelector: API por-ID + "changed" emitido no set_active_id.
-
-    Espelha a semântica do widget real: só emite quando o id efetivamente muda
-    e o handler recebe apenas o seletor (sinal SEM argumentos —
-    BUG-HOME-SEGMENTED-SIGNATURE-01).
-    """
+    """Stub do SegmentedSelector: API por-ID + "changed" emitido no set_active_id."""
 
     def __init__(self, active: str | None = None) -> None:
         self._active_id = active
@@ -168,11 +130,7 @@ class _FakeSelector:
         return self._active_id
 
     def limpar_ativo(self) -> None:
-        """ESCOLHA-DELA-VENCE-01: "sem opinião" não marca botão nenhum.
-
-        Não emite "changed" — é POPULATE, não gesto dela, e o `_modo_tocado`
-        do editor separa as duas coisas.
-        """
+        """ESCOLHA-DELA-VENCE-01: "sem opinião" não marca botão nenhum."""
         self._active_id = None
 
     def set_tooltips(self, dicas: dict[str, str]) -> None:
@@ -205,11 +163,6 @@ class _FakeBox:
         self.sensitive = sensitive
 
 
-# ---------------------------------------------------------------------------
-# Stub do editor: mixin real + widgets fake resolvidos por _get
-# ---------------------------------------------------------------------------
-
-
 class _EditorStub(ProfilesActionsMixin):
     """Editor fake: métodos REAIS do mixin sobre widgets fake (sem GTK)."""
 
@@ -226,7 +179,7 @@ class _EditorStub(ProfilesActionsMixin):
         self._mode_advanced = False
         self._aplica_a = _FakeSelector("any")
 
-    def _get(self, widget_id: str) -> Any:  # sem Gtk.Builder nos testes
+    def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
 
     def com_secao_mode(self) -> _EditorStub:
@@ -249,11 +202,6 @@ def _profile_com_mode(name: str, mode: dict[str, Any] | None) -> Profile:
     if mode is not None:
         data["mode"] = mode
     return Profile.model_validate(data)
-
-
-# ---------------------------------------------------------------------------
-# editor → Profile: cada kind do seletor
-# ---------------------------------------------------------------------------
 
 
 class TestBuildProfileMode:
@@ -295,7 +243,6 @@ class TestBuildProfileMode:
         assert profile.mode is not None
         assert profile.mode.kind == "gamepad"
         assert profile.mode.gamepad_flavor == "xbox"
-        # LEIGO-01: salvar um perfil de jogo NUNCA desliga o co-op. Era este o
 
     def test_flavor_so_vale_com_gamepad(self) -> None:
         """Máscara escolhida mas kind != gamepad → gravada limpa."""
@@ -324,18 +271,13 @@ class TestBuildProfileMode:
     def test_sem_secao_montada_preserva_heranca(self) -> None:
         """Glade antigo (slot ausente) → mode do perfil-base sobrevive intacto."""
         existente = _profile_com_mode("nativo_sony", {"kind": "native"})
-        stub = _EditorStub(name="nativo_sony")  # SEM com_secao_mode()
+        stub = _EditorStub(name="nativo_sony")
         stub._profiles_cache = [existente]
 
         profile = stub._build_profile_from_editor()
 
         assert profile.mode is not None
         assert profile.mode.kind == "native"
-
-
-# ---------------------------------------------------------------------------
-# Round-trip: carregar no editor → salvar sem perder a seção
-# ---------------------------------------------------------------------------
 
 
 class TestRoundTripMode:
@@ -369,7 +311,6 @@ class TestRoundTripMode:
         """Perfil sem opinião entra e sai sem ganhar a seção por acidente."""
         original = _profile_com_mode("navegador", None)
         stub = _EditorStub(name="navegador").com_secao_mode()
-        # Editor sujo de um perfil anterior COM mode: o populate deve limpar.
         stub._mode_kind_selector.set_active_id("gamepad")
         stub._profiles_cache = [original]
 
@@ -380,16 +321,11 @@ class TestRoundTripMode:
         assert rebuilt.mode is None
 
 
-# ---------------------------------------------------------------------------
-# Visibilidade das opções de gamepad + guard anti-loop do populate
-# ---------------------------------------------------------------------------
-
-
 class TestModeOptionsVisibility:
     def test_gamepad_mostra_e_habilita_opcoes(self) -> None:
         stub = _EditorStub().com_secao_mode()
 
-        stub._mode_kind_selector.set_active_id("gamepad")  # clique da usuária
+        stub._mode_kind_selector.set_active_id("gamepad")
 
         opts = stub._mode_gamepad_opts
         assert opts.visible is True
@@ -420,12 +356,7 @@ class TestModeOptionsVisibility:
         assert stub._mode_gamepad_opts.visible is False
 
     def test_populate_programatico_sincroniza_visibilidade(self) -> None:
-        """_set_mode_editor deixa a visibilidade certa sem depender de emissão.
-
-        `set_active_id` só emite "changed" quando o id MUDA, então o populate
-        chama `_sync_mode_options_visibility` explicitamente. O handler é
-        idempotente — não existe mais cascata a proteger com guard.
-        """
+        """_set_mode_editor deixa a visibilidade certa sem depender de emissão."""
         original = _profile_com_mode(
             "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox"}
         )

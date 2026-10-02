@@ -1,37 +1,4 @@
-"""CANAL-POR-CONTROLE — LUZ: o caminho do RÁDIO escrito no mapa é o que o produto MONTA.
-
-O PEDIDO DELA, 03/09/2026, e é o que esta régua guarda::
-
-    "e supondo, se acharmos algo que não tenha mapeado ainda: o que sabemos é
-     que ele existe. e quando colocarmos o caminho certo no specs o script
-     original vai fazer uso desse place holder setado e automaticamente parear."
-
-O mecanismo depende de uma coisa só: **o endereço escrito no mapa tem de ser o
-endereço de verdade.** Um offset inventado é pior que uma célula muda — o
-``docs/specs.html`` o publica como fato, ``app/fatos_do_mapa.py`` o lê, e a
-próxima pessoa constrói em cima dele.
-
-O QUE ESTE ARQUIVO NÃO FAZ, e é a lição das onze réguas de 26/08/2026 que
-*digitavam o que deviam LER*: ele **não tem uma tabela de offsets**. O
-deslocamento do envelope é MEDIDO no builder de produção (uma marca única por
-posição do ``common``, e procura-se onde ela caiu), e os bytes de cada feature
-são lidos DE DENTRO do report que ``build_bt_lightbar_report`` devolve. Se o
-envelope BT mudar — perder o tag ``0x10``, ganhar um byte, trocar de posição —
-as células do mapa param de bater e este arquivo reprova, em vez de o mapa
-seguir publicando um endereço morto.
-
-A MORDIDA (arranque a cura e veja reprovar):
-
-- apague o ``radio_offset`` de ``luz.lightbar.cor@dualsense`` (o travessão que
-  estava lá até 03/09/2026) → ``test_toda_linha_de_luz_com_rota_no_radio_diz_o_byte``
-  reprova, nomeando a linha;
-- troque ``report[47..49]`` por ``report[45..47]`` (o offset do CABO escrito na
-  célula do rádio, que é o erro mais fácil de cometer) →
-  ``test_o_offset_escrito_no_mapa_bate_com_o_envelope_de_verdade`` reprova;
-- em ``core/ds_output_report.build_bt_report``, tire o ``buf[2] = BT_TAG`` e
-  ponha o common em ``[2..48]`` → o deslocamento medido cai para 2 e TODAS as
-  células do rádio reprovam de uma vez.
-"""
+"""CANAL-POR-CONTROLE — LUZ: o caminho do RÁDIO escrito no mapa é o que o produto MONTA."""
 from __future__ import annotations
 
 import csv
@@ -43,48 +10,28 @@ import pytest
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.lightbar_gatilho import build_bt_lightbar_report
 
-#: O mapa de canais, a partir da raiz do repositório (este arquivo mora em
-#: ``tests/unit/``).
 MAPA = Path(__file__).resolve().parents[2] / "docs" / "data" / "mapa-controles.csv"
 
-#: ``common[43] = report[46]`` e ``common[44..46] = report[47..49]`` — as duas
-#: formas em que esta casa escreve endereço de byte no mapa.
 AFIRMACAO_DE_OFFSET = re.compile(
     r"common\[(\d+)(?:\.\.(\d+))?\]\s*=\s*report\[(\d+)(?:\.\.(\d+))?\]"
 )
 
-#: As colunas de um lado em que um endereço de byte pode aparecer. `offset` é a
-#: dona; as outras entram porque a prosa desta casa repete o endereço, e um
-#: endereço errado na prosa engana igual.
 COLUNAS_COM_ENDERECO = ("offset", "comando")
 
 #: As linhas de luz do DualSense cujo caminho por rádio é o report ``0x31``
-#: AVULSO (ROTA-BT-EM-REGIME-01, 12/08/2026) — as que ganharam endereço de byte
-#: em 03/09/2026, mais as que já o tinham.
 LINHAS_DO_0X31 = (
     "luz.lightbar.cor@dualsense",
     "luz.led_jogador@dualsense",
     "luz.led_jogador.escrita_hefesto@dualsense",
     "luz.led_jogador.quinto@dualsense",
-    # ERA A `luz.lightbar.brilho` ATÉ 11/09/2026, e a troca é da MEDIÇÃO DELA,
-    # não de gosto: com um deslizante na mão e os dois transportes na bancada
-    # ela viu que *"o que o slicer altera não são as cores do lightbar mas os
-    # leds que indicam qual player é o dono daquele controle"*. O `common[42]`
-    # mudou de dono no mapa (`a3081004`, 09/09) e o endereço de rádio do brilho
-    # da BARRA voltou a ser desconhecido — cobrar dela um byte que ninguém
-    # mediu é cobrar uma resposta inventada. Quem tem o byte é a chave nova, e
-    # é ela que esta lista vigia.
     "luz.led_jogador.brilho@dualsense",
     "luz.lightbar.fade@dualsense",
     "luz.lightbar.release_leds@dualsense",
     "luz.led_microfone@dualsense",
 )
 
-#: Cor com R != B de propósito: uma cor cinza passaria com os canais trocados.
 COR_DE_PROVA = (0x2A, 0x40, 0xC8)
 
-#: Padrão de jogador assimétrico: ``--x--`` e os palíndromos do driver passariam
-#: com a ordem invertida.
 PADRAO_DE_PROVA = (True, False, True, True, False)
 
 
@@ -102,13 +49,7 @@ def _por_id() -> dict[str, dict[str, str]]:
 
 
 def _deslocamento_medido(construir) -> int:
-    """Onde o ``common`` cai dentro do envelope — MEDIDO, nunca digitado.
-
-    Uma marca única por posição (1..47, nenhuma zero) e a procura da sequência
-    inteira dentro do report que o builder de PRODUÇÃO devolve. Mudou o
-    envelope, muda este número — e é isso que faz as células do mapa serem
-    conferidas contra o código em vez de contra a memória de quem as escreveu.
-    """
+    """Onde o ``common`` cai dentro do envelope — MEDIDO, nunca digitado."""
     marca = bytes(range(1, rep.COMMON_LEN + 1))
     report = bytes(construir(marca))
     onde = report.find(marca)
@@ -123,13 +64,7 @@ DESLOCAMENTO = {
 
 
 def test_o_offset_escrito_no_mapa_bate_com_o_envelope_de_verdade() -> None:
-    """Toda ``common[X] = report[Y]`` da família luz respeita o envelope real.
-
-    Vale para os DOIS lados: no cabo o ``common`` mora em ``[1..47]`` do 0x02,
-    no rádio em ``[3..49]`` do 0x31. Escrever o offset do cabo na célula do
-    rádio é o erro mais barato de cometer e o mais caro de descobrir — quem o
-    ler monta um report que o firmware ignora, e o log diz "escrito".
-    """
+    """Toda ``common[X] = report[Y]`` da família luz respeita o envelope real."""
     achados = 0
     for linha in _linhas_de_luz():
         for lado, deslocamento in DESLOCAMENTO.items():
@@ -163,14 +98,7 @@ def test_o_offset_escrito_no_mapa_bate_com_o_envelope_de_verdade() -> None:
 
 @pytest.mark.parametrize("ident", LINHAS_DO_0X31)
 def test_toda_linha_de_luz_com_rota_no_radio_diz_o_byte(ident: str) -> None:
-    """Nenhuma destas linhas volta a ser um travessão.
-
-    Era o estado até 03/09/2026 em ``luz.lightbar.cor@dualsense`` e
-    ``luz.led_jogador@dualsense``: ``radio_report_id`` e ``radio_offset`` eram
-    ``—`` enquanto o ``radio_comando`` da MESMA linha descrevia a rota. Uma
-    célula muda ao lado de uma prosa que descreve o caminho é o que faz a
-    próxima pessoa concluir que caminho não há.
-    """
+    """Nenhuma destas linhas volta a ser um travessão."""
     linha = _por_id()[ident]
     for coluna in ("radio_report_id", "radio_offset"):
         valor = (linha.get(coluna, "") or "").strip()
@@ -193,13 +121,7 @@ def test_o_report_id_do_radio_e_o_0x31_do_codigo(ident: str) -> None:
 
 
 def test_a_cor_sai_no_byte_que_a_celula_do_radio_promete() -> None:
-    """Os índices da célula de ``luz.lightbar.cor@dualsense`` CARREGAM a cor.
-
-    Não se compara texto com texto: monta-se o report que o produto manda por
-    rádio (`build_bt_lightbar_report`, o mesmo do `_pintar_por_hidraw_bt` e do
-    `reescrever_lightbar_por_hidraw`) e leem-se os bytes nas posições que a
-    célula nomeia.
-    """
+    """Os índices da célula de ``luz.lightbar.cor@dualsense`` CARREGAM a cor."""
     celula = _por_id()["luz.lightbar.cor@dualsense"]["radio_offset"]
     faixa = AFIRMACAO_DE_OFFSET.search(celula)
     assert faixa is not None and faixa.group(4), (
@@ -238,11 +160,7 @@ def test_a_cor_sai_no_byte_que_a_celula_do_radio_promete() -> None:
 def test_o_numero_do_jogador_sai_no_byte_que_a_celula_do_radio_promete(
     ident: str,
 ) -> None:
-    """``common[43] = report[46]`` carrega o bitmask das cinco lâmpadas.
-
-    Cobre a quinta lâmpada de graça: ``PADRAO_DE_PROVA`` acende o bit 3 e apaga
-    o 4, e o padrão inteiro é assimétrico — inverter a ordem reprova.
-    """
+    """``common[43] = report[46]`` carrega o bitmask das cinco lâmpadas."""
     celula = _por_id()[ident]["radio_offset"]
     pares = [
         (int(origem), int(alvo))
@@ -278,11 +196,6 @@ def test_o_numero_do_jogador_sai_no_byte_que_a_celula_do_radio_promete(
 @pytest.mark.parametrize(
     ("ident", "byte_do_dado", "bit_do_flag2"),
     (
-        # O NOME DA CONSTANTE JÁ DIZIA DE QUEM ERA O BYTE —
-        # `LED_BRIGHTNESS`, e a fonte externa (RPCS3) o chama
-        # `SET_PLAYER_LED_BRIGHTNESS`. A régua o cobrava da barra por
-        # três meses, até ela medir. Ver o comentário da
-        # `LINHAS_DO_0X31` acima.
         ("luz.led_jogador.brilho@dualsense", 42, rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE),
         ("luz.lightbar.fade@dualsense", 41, rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE),
     ),
@@ -290,13 +203,7 @@ def test_o_numero_do_jogador_sai_no_byte_que_a_celula_do_radio_promete(
 def test_o_brilho_e_o_fade_dizem_o_byte_e_o_bit_que_o_valida(
     ident: str, byte_do_dado: int, bit_do_flag2: int
 ) -> None:
-    """As duas dívidas do rádio dizem ONDE escrever E o que autoriza o campo.
-
-    As duas são ``aciona = não`` nos DOIS transportes — ninguém as escreve. Por
-    isso a célula é tudo o que quem for implementar vai ter, e um byte de dado
-    sem o bit que o valida é um report que o firmware descarta em silêncio. Até
-    03/09/2026 o lado do rádio das duas dava só o byte de dado.
-    """
+    """As duas dívidas do rádio dizem ONDE escrever E o que autoriza o campo."""
     celula = _por_id()[ident]["radio_offset"]
     pares = {
         int(origem): int(alvo)
@@ -327,15 +234,7 @@ def test_o_brilho_e_o_fade_dizem_o_byte_e_o_bit_que_o_valida(
 
 
 def test_a_supressao_do_fluxo_continua_registrada_na_celula_da_cor() -> None:
-    """O que a célula GANHOU não pode ter apagado o que ela já dizia.
-
-    ``luz.lightbar.cor@dualsense`` descrevia SÓ a supressão do
-    ``report_thread`` (LIGHTBAR-BT-KEEPALIVE-01, 22/07/2026) e nenhum byte. Em
-    03/09/2026 ela ganhou os bytes do 0x31 avulso — e a supressão FICA, porque
-    as duas coisas são verdade ao mesmo tempo e são rotas diferentes. Uma cura
-    que apagasse a supressão devolveria a casa ao erro que travava a barra no
-    firmware.
-    """
+    """O que a célula GANHOU não pode ter apagado o que ela já dizia."""
     celula = _por_id()["luz.lightbar.cor@dualsense"]["radio_offset"].lower()
     assert "supress" in celula, (
         "a célula do rádio da cor deixou de registrar que, no report do FLUXO, "

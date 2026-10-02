@@ -25,11 +25,6 @@ from typing import Any, ClassVar
 import pytest
 
 
-# ---------------------------------------------------------------------------
-# 5 (IPC). A devolução DEVOLVE, e `null` não é `false`
-# ---------------------------------------------------------------------------
-
-
 class _ControllerFalso:
     def __init__(self) -> None:
         self.pedidos: list[tuple[Any, Any]] = []
@@ -53,11 +48,7 @@ class _Handlers:
 
 
 def test_aceso_null_devolve_a_posse_ao_kernel() -> None:
-    """`null` chega ao backend como `None` — nunca como `False`.
-
-    CURA A ARRANCAR: fazer o handler tratar `null` como `False`. O bit de
-    autorização continuaria ligado e o kernel nunca voltaria a mandar na luz.
-    """
+    """`null` chega ao backend como `None` — nunca como `False`."""
     h = _Handlers()
     r = asyncio.run(h.chamar({"aceso": None}))
 
@@ -73,10 +64,7 @@ def test_aceso_false_e_uma_ordem_e_continua_valendo() -> None:
 
 
 def test_a_chave_omitida_levanta_erro_de_parametro() -> None:
-    """No molde do `mic.set`: omitir a chave não pode virar um `False` calado.
-
-    O `ValueError` vira `-32003` (CODE_INVALID_PARAMS) no dispatcher.
-    """
+    """No molde do `mic.set`: omitir a chave não pode virar um `False` calado."""
     h = _Handlers()
     with pytest.raises(ValueError, match="obrigatório"):
         asyncio.run(h.chamar({}))
@@ -93,21 +81,8 @@ def test_mic_led_set_esta_registrado_no_dispatcher() -> None:
     assert '"mic.led.set": self._handle_mic_led_set' in fonte
 
 
-# ---------------------------------------------------------------------------
-# 10. A tela não mente na AUSÊNCIA
-# ---------------------------------------------------------------------------
-
-
 def test_o_selo_pinta_desconhecido_quando_o_state_full_nao_traz_audio() -> None:
-    """CURA A ARRANCAR: voltar `DESLIGADO if mudo else ATIVO` sem o `sabemos`.
-
-    Pinta ATIVO sobre um controle que acabou de cair — e, com a inversão, o
-    plástico dele estaria dizendo "estou no ar".
-
-    **Esta régua só morde porque o dublê parou de trazer o default falso**: com
-    o `FALSO` de sempre, que sempre tem a chave `audio`, o caminho de "não sei"
-    nunca era exercitado.
-    """
+    """CURA A ARRANCAR: voltar `DESLIGADO if mudo else ATIVO` sem o `sabemos`."""
     from hefesto_dualsense4unix.interface import casamento
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
@@ -121,20 +96,7 @@ def test_o_selo_pinta_desconhecido_quando_o_state_full_nao_traz_audio() -> None:
 
 
 def test_o_selo_continua_dizendo_a_verdade_quando_ha_leitura() -> None:
-    """A metade que prova que a cura não é "nunca mais mostra nada".
-
-    **O SELO PASSOU A DIZER O ESTADO COMPOSTO — 04/09/2026, decisão [03] da
-    ONDA2-02, pela D-12 dela.** ATIVO agora exige as QUATRO faces, e o
-    `casamento.FALSO` traz UMA: `{"audio": {"mic_mudo": False}}`. Com só ela, a
-    resposta certa é `—` (*"ainda não perguntamos ao canal"*) — e é o que o
-    caso ACIMA já mede.
-
-    ENTÃO ESTE CASO PASSOU A MONTAR AS QUATRO, no lugar de mexer no `FALSO`.
-    O dublê compartilhado é a fixture de DEZ abas e a ONDA1-D1 já relatou que
-    ele precisa crescer; encolher a decisão dela para caber num dublê velho
-    seria o contrário do que esta casa faz. Enquanto ele não cresce, quem
-    precisa de leitura completa a monta — e diz por quê.
-    """
+    """A metade que prova que a cura não é "nunca mais mostra nada"."""
     from hefesto_dualsense4unix.interface import casamento
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
@@ -159,12 +121,7 @@ def test_o_dublê_da_ausencia_realmente_nao_tem_a_chave() -> None:
 
 
 def test_o_estado_do_card_diz_quando_nao_leu() -> None:
-    """`estado_do_card` sem a chave `audio`: `mic_sabemos` tem de ser falso.
-
-    São DOIS pintores do mesmo selo — o pacote da aba 02 e o card do piloto
-    vivo — e o segundo tinha a mesma mentira. Curar só um deixaria as duas
-    versões vivas, que é o defeito que a regra da casa existe para matar.
-    """
+    """`estado_do_card` sem a chave `audio`: `mic_sabemos` tem de ser falso."""
     from hefesto_dualsense4unix.interface import casamento, mesa_viva
 
     sem = mesa_viva.estado_do_card(casamento.FALSO_SEM_AUDIO)
@@ -178,21 +135,7 @@ def test_o_estado_do_card_diz_quando_nao_leu() -> None:
 
 
 def test_o_selo_do_mic_tem_tres_estados_e_um_dono_so() -> None:
-    """O selo do card, medido pelo COMPORTAMENTO — e nos DOIS pintores.
-
-    ACHADO DA AUDITORIA DE 02/09/2026. Esta régua era `inspect.getsource` do
-    `Janela._pacote_do_card` mais `assert '<literal>' in fonte`. Olhava o TEXTO:
-    arrancada a cura de verdade (`mic_sabemos = True`, que faz o card do
-    controle CAÍDO voltar a pintar ATIVO), ela ficava VERDE — e nenhuma outra
-    régua desta casa pegava, porque `test_regua_de_tela_a_aba_controles.py` é
-    SKIP nesta máquina.
-
-    O ternário vivia escrito duas vezes; agora tem um dono só,
-    `mesa_viva.selo_do_mic`, chamado pelo pacote `a02_controles` e pelo
-    `_pacote_do_card` do piloto. Uma régua sobre a função guarda os dois.
-
-    CURA A ARRANCAR: fazer `selo_do_mic` ignorar `sabemos` — reprova aqui.
-    """
+    """O selo do card, medido pelo COMPORTAMENTO — e nos DOIS pintores."""
     from hefesto_dualsense4unix.interface import mesa_viva
 
     assert mesa_viva.selo_do_mic(False, False) == "—", (
@@ -205,19 +148,7 @@ def test_o_selo_do_mic_tem_tres_estados_e_um_dono_so() -> None:
 
 
 def test_os_dois_pintores_chamam_o_mesmo_dono_do_selo() -> None:
-    """Nenhum dos dois pode voltar a escrever o ternário por conta própria.
-
-    O commit da onda escreve *"curar só um deixaria as duas versões vivas, que
-    é o defeito que a regra da casa existe para matar"*. Ele curou os dois e
-    guardou um. Esta régua guarda os dois.
-
-    E ela lê o BYTECODE, não o texto: o comentário dos dois pintores explica o
-    defeito e cita "ATIVO" com todas as letras, e uma régua de substring
-    reprovaria justamente porque alguém escreveu bem — a forma exata das onze
-    réguas que caíram nesta casa em 26/08. Comentário não entra em `co_consts`.
-
-    CURA A ARRANCAR: reescrever o ternário em qualquer um dos dois — reprova.
-    """
+    """Nenhum dos dois pode voltar a escrever o ternário por conta própria."""
     from hefesto_dualsense4unix.interface import controles_vivos
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
@@ -238,14 +169,7 @@ def test_os_dois_pintores_chamam_o_mesmo_dono_do_selo() -> None:
 
 
 def test_o_default_de_mic_sabemos_no_piloto_e_nao_sei() -> None:
-    """A ausência da chave não pode virar ATIVO — nem por default.
-
-    A cura trazia `e.get("mic_sabemos", True)` embutido: no dia em que o
-    `estado_do_card` deixasse de emitir a chave, o card voltava a mentir
-    CALADO. É o mesmo `bool(None)` que esta onda foi curar, com outro nome.
-
-    CURA A ARRANCAR: devolver o default para `True` — reprova.
-    """
+    """A ausência da chave não pode virar ATIVO — nem por default."""
     import inspect
 
     from hefesto_dualsense4unix.interface import controles_vivos
@@ -268,21 +192,8 @@ def test_mesa_viva_publica_o_terceiro_estado() -> None:
     assert 'mic_sabemos = isinstance(audio.get("mic_mudo"), bool)' in fonte
 
 
-# ---------------------------------------------------------------------------
-# 11. O gesto novo EXIGE endereço
-# ---------------------------------------------------------------------------
-
-
 def _nomes_do_laco() -> frozenset[str]:
-    """Os nomes que o laço do mic REALMENTE toca — código, nunca prosa.
-
-    Ler `inspect.getsource` e procurar substring mediria a PALAVRA em vez do
-    ATO: o docstring desta casa cita os nomes que saíram, com o motivo de
-    terem saído. É a família das onze réguas falsas — a régua reprovaria
-    justamente porque alguém explicou bem a cura.
-
-    `co_names` é o que o bytecode carrega: atributos lidos e nomes globais.
-    """
+    """Os nomes que o laço do mic REALMENTE toca — código, nunca prosa."""
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
 
     nomes: set[str] = set()
@@ -291,9 +202,6 @@ def _nomes_do_laco() -> frozenset[str]:
         nomes.update(c.co_names)
         nomes.update(c.co_varnames)
         for const in c.co_consts:
-            # O DOCSTRING FICA DE FORA, e é o ponto: ele CITA os nomes que
-            # saíram, com o motivo. Contá-lo faria a régua reprovar justamente
-            # porque alguém explicou bem a cura.
             if const is fn.__doc__:
                 continue
             if isinstance(const, str):
@@ -307,16 +215,11 @@ def _nomes_do_laco() -> frozenset[str]:
 
 
 def test_o_laco_recusa_a_borda_sem_uniq() -> None:
-    """CURA A ARRANCAR: cair no primário quando a borda não diz o controle.
-
-    É esta régua que impede a mesa de quatro de eleger sempre o mesmo.
-    """
+    """CURA A ARRANCAR: cair no primário quando a borda não diz o controle."""
     nomes = _nomes_do_laco()
     assert "MIC_DA_MESA" in nomes, "o laço lê o tópico COM endereço"
     assert "BUTTON_DOWN" not in nomes, "o BUTTON_DOWN não carrega uniq"
 
-    # E a recusa deixa rastro — o log é a única coisa que sobra quando o gesto
-    # dela não vira nada.
     assert "mic_da_mesa_sem_endereco" in nomes
 
 
@@ -333,27 +236,6 @@ def test_o_toggle_global_de_mute_saiu_do_gesto() -> None:
     assert "set_mic_led" in nomes, "e o que ficou foi a LUZ, com endereço"
 
 
-# ---------------------------------------------------------------------------
-# 7 (o ATO). O botão elege o controle QUE APERTOU — medido, não digitado
-# ---------------------------------------------------------------------------
-#
-# AUDITORIA DE 02/09/2026. As duas réguas acima leem `co_names` e exigem que
-# certos NOMES estejam (ou não) no bytecode do laço. Isso é mais forte que
-# `inspect.getsource`, e ainda assim mede a PALAVRA e não o ATO: os nomes
-# sobrevivem à arrancada da cura. Provado com duas mordidas —
-#
-#   (a) o `continue` da recusa sem endereço virando queda no primário;
-#   (b) `_eleger_ou_devolver` elegendo SEMPRE `conectados[0]`, que é
-#       literalmente o defeito que a onda existe para impedir;
-#
-# — e nas duas as réguas de mic/áudio/hotkey/eleição desta casa ficaram verdes
-# (855 passaram com a mordida (b) em pé). Nenhuma ligava a borda à eleição ao
-# LED.
-#
-# As de cima FICAM: elas são boas nas asserções NEGATIVAS (o que saiu do laço),
-# que é o que sabem medir. O que falta é a cena, e é ela que vem aqui.
-
-
 class _Resultado:
     """O que `eleger_o_controle`/`devolver_o_microfone` devolvem."""
 
@@ -364,13 +246,7 @@ class _Resultado:
 
 
 class _EleitorDublado:
-    """`EleitorDeMicrofone` de bancada: guarda o que lhe pediram.
-
-    O campo `eleito` é o do produto, com o mesmo contrato: passa a valer o
-    `uniq` na eleição CONFERIDA e cai na devolução. Um dublê sem ele traria de
-    volta o defeito nº 5 desta própria onda — *"o portão não mordia porque o
-    dublê trazia o mesmo default falso"*.
-    """
+    """`EleitorDeMicrofone` de bancada: guarda o que lhe pediram."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, Any]] = []
@@ -389,9 +265,7 @@ class _EleitorDublado:
     def passar_o_padrao(
         self, no_ar: list[str], conectados: list[str], calou: str | None = None
     ) -> _Resultado:
-        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,
-        depois a volta à máquina (`devolver_o_microfone`, que aqui sempre tem
-        para onde ir)."""
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,"""
         for candidato in no_ar:
             passado = self.eleger_o_controle(candidato, conectados)
             if passado.ok:
@@ -446,8 +320,6 @@ async def _rodar_o_gesto(daemon: _DaemonDoGesto, bordas: list[dict[str, Any]]) -
 
     tarefa = asyncio.create_task(hotkey.mic_button_loop(daemon))  # type: ignore[arg-type]
     try:
-        # O laço só existe depois do primeiro `await`: publicar antes disso
-        # entregaria a borda a ninguém, e a régua daria verde sobre o vazio.
         for _ in range(10):
             await asyncio.sleep(0.005)
             if daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA):
@@ -467,18 +339,7 @@ async def _rodar_o_gesto(daemon: _DaemonDoGesto, bordas: list[dict[str, Any]]) -
 
 @pytest.mark.asyncio
 async def test_o_botao_elege_o_controle_que_apertou_e_nao_o_primeiro_da_mesa() -> None:
-    """O CORAÇÃO DA ONDA, medido: o Jogador 2 aperta, o Jogador 2 é eleito.
-
-    A decisão dela: *"Se eu apertar o botão físico mic do controle e ele
-    acender, significa que eu quero que o canal de áudio do microfone seja o
-    controle."* Numa mesa de quatro, "o controle" é o que APERTOU — e a mesa
-    deste teste tem o Jogador 1 na frente, exatamente para que eleger o
-    primeiro passe despercebido se ninguém olhar o endereço.
-
-    CURA A ARRANCAR: em `_eleger_ou_devolver`, trocar o `uniq` recebido por
-    `conectados[0]`. As réguas de `co_names` ficam verdes (nome nenhum muda);
-    esta reprova, dizendo qual controle foi eleito no lugar de qual.
-    """
+    """O CORAÇÃO DA ONDA, medido: o Jogador 2 aperta, o Jogador 2 é eleito."""
     backend = _BackendDaMesa((_J1, _J2))
     daemon = _DaemonDoGesto(backend)
 
@@ -497,15 +358,7 @@ async def test_o_botao_elege_o_controle_que_apertou_e_nao_o_primeiro_da_mesa() -
 
 @pytest.mark.asyncio
 async def test_a_borda_sem_endereco_nao_elege_ninguem() -> None:
-    """A recusa é ATO: eleitor nenhum é chamado, LED nenhum acende.
-
-    A régua de `co_names` acima exige o log `mic_da_mesa_sem_endereco` no
-    bytecode. Ele sobrevive a arrancar o `continue` — medido em 02/09/2026, com
-    a recusa trocada por queda no primário e a régua verde. Esta olha o efeito.
-
-    CURA A ARRANCAR: trocar o `continue` do ramo sem `uniq` por
-    `uniq = (_uniqs_conectados(daemon) or [""])[0]` — esta régua reprova.
-    """
+    """A recusa é ATO: eleitor nenhum é chamado, LED nenhum acende."""
     backend = _BackendDaMesa((_J1, _J2))
     daemon = _DaemonDoGesto(backend)
 
@@ -520,32 +373,15 @@ async def test_a_borda_sem_endereco_nao_elege_ninguem() -> None:
 
 @pytest.mark.asyncio
 async def test_o_mudo_de_quem_nao_elegeu_nao_tira_o_microfone_de_quem_elegeu() -> None:
-    """A MESA DE QUATRO, na cena que ela nomeou — e era alcançável no 1º toque.
-
-    ACHADO DA AUDITORIA DE 02/09/2026. `devolver_o_microfone()` é GLOBAL: não
-    recebe `uniq`. `_eleger_ou_devolver` decidia só pelo bit `mudo` e nunca
-    perguntava se ESTE controle era o eleito. Medido com dublês puros, antes da
-    cura:
-
-        apos J1 eleger  : leds = {J1: True}            chamadas = [(eleger, J1)]
-        apos J2 apertar : leds = {J1: True, J2: False} chamadas = [..., (DEVOLVER,)]
-
-    A J1 nunca soltou o microfone e ainda assim o perdeu — com o LED dela
-    ACESO, dizendo "estou no ar". É a mentira que esta onda existe para matar,
-    e o próprio módulo escreve *"o LED do controle passaria a mentir sobre o
-    microfone dela"*.
-
-    CURA A ARRANCAR: o ramo `if eleitor.eleito != uniq:` de
-    `_eleger_ou_devolver` — esta régua reprova com a devolução fantasma.
-    """
+    """A MESA DE QUATRO, na cena que ela nomeou — e era alcançável no 1º toque."""
     backend = _BackendDaMesa((_J1, _J2))
     daemon = _DaemonDoGesto(backend)
 
     await _rodar_o_gesto(
         daemon,
         [
-            {"uniq": _J1, "mudo": False},  # a J1 elege
-            {"uniq": _J2, "mudo": True},   # o J2 aperta o botão DELE
+            {"uniq": _J1, "mudo": False},
+            {"uniq": _J2, "mudo": True},
         ],
     )
 
@@ -565,20 +401,15 @@ async def test_o_mudo_de_quem_nao_elegeu_nao_tira_o_microfone_de_quem_elegeu() -
 
 @pytest.mark.asyncio
 async def test_o_eleito_que_vai_a_mudo_devolve_de_verdade() -> None:
-    """A outra metade: uma cura que mata o caminho de volta não é cura.
-
-    CURA A ARRANCAR: transformar o ramo novo em `return` incondicional — o
-    caminho de volta morreria calado, e é ele que impede o `.monitor` do sink
-    de virar a fonte padrão dela (FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01).
-    """
+    """A outra metade: uma cura que mata o caminho de volta não é cura."""
     backend = _BackendDaMesa((_J1, _J2))
     daemon = _DaemonDoGesto(backend)
 
     await _rodar_o_gesto(
         daemon,
         [
-            {"uniq": _J1, "mudo": False},  # a J1 elege
-            {"uniq": _J1, "mudo": True},   # e a J1 devolve
+            {"uniq": _J1, "mudo": False},
+            {"uniq": _J1, "mudo": True},
         ],
     )
 
@@ -590,34 +421,12 @@ async def test_o_eleito_que_vai_a_mudo_devolve_de_verdade() -> None:
 
 @pytest.mark.asyncio
 async def test_sem_ninguem_eleito_o_mudo_nao_reelege_a_melhor_fonte() -> None:
-    """Não se devolve o que não se tomou.
-
-    Com `eleito is None`, uma borda de mudo caía em `devolver_o_microfone()`,
-    que elege a "melhor fonte elegível" — trocando o padrão do sistema dela sem
-    que ninguém tivesse elegido nada. Na bancada de hoje isso não aparece só
-    porque não há fonte elegível, o que é sorte, não cura.
-
-    E é o PRIMEIRO toque: medido no daemon vivo em 02/09, os dois controles
-    dela estão `mic_mudo: False`, logo o próximo aperto de qualquer um é
-    `mudo=True`.
-    """
+    """Não se devolve o que não se tomou."""
     backend = _BackendDaMesa((_J1, _J2))
     daemon = _DaemonDoGesto(backend)
 
     await _rodar_o_gesto(daemon, [{"uniq": _J2, "mudo": True}])
 
-    # REAPONTADA EM 17/09/2026, e a pergunta dela NÃO mudou.
-    #
-    # O que esta régua sempre proibiu é a eleição CEGA: `devolver_o_microfone()`
-    # é GLOBAL, não recebe `uniq`, e escolhia "a melhor fonte elegível" — o
-    # padrão do sistema dela trocava sem que ninguém tivesse pedido. Isso
-    # continua proibido, e é o que a asserção abaixo mede.
-    #
-    # O que passou a ser permitido é outra coisa: com a mesa SEM DONO, uma
-    # borda de `mudo=True` de quem não está no ar elege QUEM APERTOU — escolha
-    # explícita de uma pessoa no plástico, não um palpite do produto. É a
-    # MIC-FASE-01, e sem ela o primeiro aperto depois de conectar significava
-    # DESLIGAR (medido no journal dela às 01:47:13 de 17/09).
     cegas = [c for c in daemon._eleitor_de_microfone.chamadas if c[0] == "devolver"]
     assert cegas == [], (
         "um mudo sem eleição prévia caiu em `devolver_o_microfone()`, que "
@@ -628,11 +437,6 @@ async def test_sem_ninguem_eleito_o_mudo_nao_reelege_a_melhor_fonte() -> None:
         "a eleição alcançou um controle que NÃO apertou o botão: "
         f"{escolhidos - {_J2}}"
     )
-    # A LUZ ACENDE, e isso é a cura e não um efeito colateral: com a mesa sem
-    # dono o gesto PÔS a J2 no ar, e o contrato do LED desta casa (01/09) é
-    # "aceso = este mic está no ar". Antes da MIC-FASE-01 a luz apagava — o
-    # kernel acendia na borda e o ramo de recusa a apagava logo em seguida, que
-    # é o pisca que ela via sem entender.
     assert backend.leds == {_J2: True}, (
         "só a luz de quem apertou, e ACESA: ele acabou de entrar no ar"
     )

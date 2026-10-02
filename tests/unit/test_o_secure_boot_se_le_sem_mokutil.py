@@ -37,9 +37,7 @@ BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 LIB = RAIZ / "scripts" / "dkms_lib.sh"
 INSTALL = (RAIZ / "install.sh").read_text(encoding="utf-8")
-#: O GUID das variáveis globais da UEFI — o nome é o mesmo em qualquer máquina.
 SECURE_BOOT = "SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
-#: Bytes de mentira no lugar do DER de uma chave.
 CHAVE = b"0\x82\x03\x1bCHAVE-DE-MENTIRA-DO-DKMS\x00\x01\x02"
 
 
@@ -59,7 +57,6 @@ def _efivars(tmp_path: Path, ligado: bool | None) -> Path:
     pasta = tmp_path / "efivars"
     pasta.mkdir()
     if ligado is not None:
-        # Quatro bytes de atributos e um de dado, como o kernel expõe.
         (pasta / SECURE_BOOT).write_bytes(b"\x06\x00\x00\x00" + (b"\x01" if ligado else b"\x00"))
     return pasta
 
@@ -82,11 +79,6 @@ def _lib(
         [BASH, "-c", f"set -euo pipefail\nsource '{LIB}'\n{script}\n"],
         capture_output=True, text=True, timeout=60, check=False, env=env,
     )
-
-
-# ---------------------------------------------------------------------------
-# 1. As duas leituras
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(("ligado", "esperado"), [(True, "sim"), (False, "não"), (None, "não")])
@@ -116,20 +108,6 @@ def test_a_chave_se_confere_sem_mokutil(
     assert r.stdout.strip() == esperado, (r.stdout, r.stderr)
 
 
-# ---------------------------------------------------------------------------
-# 1b. A chave que se confere é a que o dkms USA para assinar
-# ---------------------------------------------------------------------------
-# A CONFERÊNCIA DE 28/09/2026: a primeira escrita desta cura conferia sempre o
-# `/var/lib/dkms/mok.pub`, e as réguas de cima passavam porque TODAS injetam o
-# caminho por `HEFESTO_DKMS_MOK_PUB` — o dublê era mais frouxo que o produto.
-# O dkms 3.0 do Pop!_OS e do Ubuntu 24.04 (`/usr/sbin/dkms`, a assinatura)
-# assina com a `MOK.der` do `update-secureboot-policy` quando o
-# `framework.conf` não diz outra chave: conferir a `mok.pub` ali tirava os
-# quatro módulos de quem tem Secure Boot com a chave CERTA inscrita.
-#
-# A MORDIDA, feita na conferência: devolver o `_dkms_mok_pub` fixo em
-# `/var/lib/dkms/mok.pub` faz os casos do Pop, do Ubuntu e do Mint reprovarem.
-
 _POP = 'NAME="Pop!_OS"\nID=pop\nID_LIKE="ubuntu debian"\n'
 _UBUNTU = "NAME=Ubuntu\nID=ubuntu\nID_LIKE=debian\n"
 _MINT = 'ID=linuxmint\nID_LIKE="ubuntu debian"\n'
@@ -152,8 +130,6 @@ _SO_A_CHAVE = "mok_signing_key=/root/chave.priv\n"
         (_ARCH, "", "/var/lib/dkms/mok.pub"),
         (_POP, _CHAVE_PROPRIA, "/root/chave.der"),
         (_FEDORA, _CHAVE_PROPRIA, "/root/chave.der"),
-        # Chave própria sem certificado: o dkms cai no padrão dele, e não no
-        # do Ubuntu, mesmo numa família Ubuntu.
         (_UBUNTU, _SO_A_CHAVE, "/var/lib/dkms/mok.pub"),
     ],
     ids=["pop", "ubuntu", "mint", "debian", "fedora", "arch", "pop-propria",
@@ -177,8 +153,7 @@ def test_a_chave_conferida_e_a_que_o_dkms_assina(
 
 
 def test_o_passo_da_mok_gera_a_chave_com_quem_o_dkms_usa(tmp_path: Path) -> None:
-    """No Pop!_OS o `dkms generate_mok` não existe (dkms 3.0): quem gera é o
-    `update-secureboot-policy`, e a chave que se inscreve é a `MOK.der`."""
+    """No Pop!_OS o `dkms generate_mok` não existe (dkms 3.0): quem gera é o"""
     (tmp_path / "os-release").write_text(_POP, encoding="utf-8")
     conf = tmp_path / "framework.conf"
     conf.write_text(_SO_COMENTADO, encoding="utf-8")
@@ -196,11 +171,6 @@ def test_o_passo_da_mok_gera_a_chave_com_quem_o_dkms_usa(tmp_path: Path) -> None
     r = _lib(tmp_path / "fedora", "dkms_passo_da_mok", env)
     assert "sudo dkms generate_mok" in r.stdout, r.stdout
     assert "mokutil --import /var/lib/dkms/mok.pub" in r.stdout, r.stdout
-
-
-# ---------------------------------------------------------------------------
-# 2. Sem a chave, o DKMS não entra
-# ---------------------------------------------------------------------------
 
 
 def _instalar(tmp_path: Path, *, ligado: bool, inscrita: bool) -> tuple[str, str]:
@@ -259,11 +229,6 @@ def test_sem_secure_boot_o_dkms_segue(tmp_path: Path) -> None:
     assert "dkms add" in chamadas, chamadas
 
 
-# ---------------------------------------------------------------------------
-# 3. O reconhecimento do install.sh diz o mesmo, antes da senha
-# ---------------------------------------------------------------------------
-
-
 def _reconhecimento() -> str:
     inicio = INSTALL.index("_reconhecimento() {\n")
     fim = INSTALL.index("\n}\n", inicio) + 3
@@ -307,17 +272,6 @@ def test_o_reconhecimento_calado_sem_secure_boot(tmp_path: Path) -> None:
     saida = _rodar_reconhecimento(tmp_path, ligado=False)
     assert "Secure Boot" not in saida.replace("distro, bluez e Secure Boot", ""), saida
 
-
-# ---------------------------------------------------------------------------
-# 4. O doctor faz a mesma pergunta, sem o `mokutil` (a conferência de 28/09)
-# ---------------------------------------------------------------------------
-# O `_check_dkms_secureboot` do doctor era o terceiro chamador da mesma
-# pergunta, e ficou de fora da primeira escrita da B4: só falava com o
-# `mokutil` instalado, e mandava inscrever a `/var/lib/dkms/mok.pub`.
-#
-# A MORDIDA, feita na conferência: devolver o portão `command -v mokutil` ao
-# `_check_dkms_secureboot` faz `test_o_doctor_avisa_o_secure_boot_sem_mokutil`
-# reprovar.
 
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 

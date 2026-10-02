@@ -58,7 +58,6 @@ class _Pactl:
             self.padrao = argv[2]
             return ""
         if argv[:3] == ["pactl", "list", "sinks"]:
-            # formato de `pactl list sinks short`: índice TAB nome TAB ...
             return f"45\t{SINK}\tmodule\n74\t{OUTRO}\tmodule\n"
         return ""
 
@@ -71,33 +70,19 @@ class TestGarantirSaidaAudivel:
         assert pactl.mudo is False
 
     def test_diz_a_verdade_sobre_o_que_encontrou(self) -> None:
-        """Devolver True sem ter havido mute faria a tela contar história.
-
-        O retorno existe para quem quiser dizer "estava mudo, e eu resolvi" —
-        não para confirmar que a chamada aconteceu.
-        """
+        """Devolver True sem ter havido mute faria a tela contar história."""
         pactl = _Pactl(mudo=False)
         assert garantir_saida_audivel(SINK, runner=pactl) is False
         assert pactl.mudo is False
 
     def test_mute_ilegivel_desmuta_do_mesmo_jeito_e_nao_afirma_nada(self) -> None:
-        """"Não sei" é o caso que produziu o defeito — e ele TEM de desmutar.
-
-        Era exatamente aqui que o produto vazava: o mapa de mudos do
-        `mic_monitor` guarda só o que casou com certeza, a ausência virava
-        "não está mudo" no consumidor, e o tocador ia tocar no silêncio. O
-        pedido dela não muda de natureza por o mute estar ilegível.
-        """
+        """"Não sei" é o caso que produziu o defeito — e ele TEM de desmutar."""
         pactl = _Pactl(mudo=None)
         assert garantir_saida_audivel(SINK, runner=pactl) is False
         assert ["pactl", "set-sink-mute", SINK, "0"] in pactl.chamadas
 
     def test_sem_sink_nao_toca_no_sistema(self) -> None:
-        """Sink vazio é o "não sei quem é" do `escolher_sink` com 2 controles.
-
-        Um `pactl set-sink-mute "" 0` cairia no sink PADRÃO — desmutaria a
-        televisão dela para confirmar um pedido feito ao controle.
-        """
+        """Sink vazio é o "não sei quem é" do `escolher_sink` com 2 controles."""
         pactl = _Pactl(mudo=True)
         assert garantir_saida_audivel("", runner=pactl) is False
         assert pactl.chamadas == []
@@ -126,11 +111,7 @@ def _rota(pactl: _Pactl) -> tuple[RotaDeSaida, _Memoria]:
 
 class TestMandarParaOControle:
     def test_mandar_o_som_ao_controle_desmuta_o_destino(self) -> None:
-        """Mordida: mover o sink padrão para um destino mudo é o defeito dela.
-
-        A troca "funcionava" — `get-default-sink` confirmava o controle — e o
-        silêncio era lido por ela como alto-falante quebrado.
-        """
+        """Mordida: mover o sink padrão para um destino mudo é o defeito dela."""
         pactl = _Pactl(mudo=True, padrao=OUTRO)
         rota, _mem = _rota(pactl)
         assert rota.mandar_para_o_controle(SINK) is True
@@ -138,23 +119,14 @@ class TestMandarParaOControle:
         assert pactl.mudo is False
 
     def test_a_ordem_e_desmutar_antes_de_trocar(self) -> None:
-        """Trocar primeiro deixa uma janela audível-em-lugar-nenhum.
-
-        Entre o `set-default-sink` e o `set-sink-mute` o som do sistema já
-        estaria indo para um destino mudo — curto, mas é a janela em que um
-        som de sistema se perde sem deixar rastro.
-        """
+        """Trocar primeiro deixa uma janela audível-em-lugar-nenhum."""
         pactl = _Pactl(mudo=True, padrao=OUTRO)
         _rota(pactl)[0].mandar_para_o_controle(SINK)
         nomes = [c[1] for c in pactl.chamadas if len(c) > 1]
         assert nomes.index("set-sink-mute") < nomes.index("set-default-sink")
 
     def test_a_memoria_do_caminho_de_volta_continua_correta(self) -> None:
-        """A cura não pode custar o desfazer honesto (o `voltar_ao_anterior`).
-
-        Guardar de onde veio ANTES de trocar é decisão antiga e medida; o
-        desmute entrou no meio e não pode ter mudado a ordem.
-        """
+        """A cura não pode custar o desfazer honesto (o `voltar_ao_anterior`)."""
         pactl = _Pactl(mudo=True, padrao=OUTRO)
         rota, _mem = _rota(pactl)
         rota.mandar_para_o_controle(SINK)

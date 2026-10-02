@@ -1,63 +1,5 @@
 #!/usr/bin/env python3
-"""O CHECK-UP RESPONDE EM UMA LINHA, e a mesa de rádio é a DELA.
-
-**04/09/2026.** Duas frentes desta leva, e as duas fecham o mesmo tipo de
-buraco — a tela mostrando cenário onde o produto já sabia responder.
-
-**S-09 — a linha de veredito (decisão D-16 dela):** *"Uma linha de veredito no
-topo."*, *"Na cor do pior achado."* O Check-up tinha cinco pílulas e nenhum
-juízo: para saber se estava tudo certo era preciso ler as cinco e achar a pior,
-e a segunda ordem de serviço desta bancada — que não cabe nas cinco — não
-entrava nessa leitura de jeito nenhum. O pacote já emitia `achados` e `graves`
-(as duas contagens de que a frase precisa) e a página não tinha onde recebê-las.
-
-**A MESA DE RÁDIO — três coisas que a tela cravava do mockup:**
-
-    a tabela de adaptadores     "Sala / TP-Link UB500 / Entrada 3" e "Sem nome /
-                                Intel AX211 / Interno", sobre uma máquina com
-                                TRÊS adaptadores `2357:0604`
-    a régua de Desempenho       uma pista, sem nome, quando `ler_a_mesa()`
-                                enumera os três e o BlueZ dá o nome de cada um
-    a coluna "Onde" dos rádios  não existia — a linha do Check-up diz "dois
-    vizinhos                    rádios em entradas vizinhas" e não diz QUAL
-
-**A REGRA QUE ESTA LEVA CONFIRMOU:** as duas frases que o próprio código
-escrevia como impossíveis — *"UMA PISTA POR ADAPTADOR espera uma fonte"* e *"o
-apelido mora na declaração dela … as duas não casam hoje"* — descreviam o
-caminho errado, não uma falta. `mesa_de_radio.ler_a_mesa().adaptadores` enumera,
-e o `Dongle` do BlueZ carrega o endereço, o `hciN` e o nome no MESMO objeto.
-
-AS MORDIDAS — ONZE, arrancadas de verdade em 04/09/2026, uma a uma, com o
-desenho devolvido byte a byte idêntico no fim. Cada uma derrubou **um** teste, e
-só ele:
-
-===  ============================================  ==========================
- #   o que se arranca                              quem reprova
-===  ============================================  ==========================
- 1   `frase = topo.texto` incondicional em         `..._nao_diz_nada_a_mudar_
-     `_veredito_do_exame`                          com_uma_linha_grave`
- 2   `ordens=todas` no lugar de `ordens=novas`     `..._o_que_ela_calou_nao_
-                                                   segura_a_cor`
- 3   (caducou em 26/09/2026 — a linha de           `..._a_linha_de_veredito_
-     veredito saiu da tela, a pedido dela)         saiu_da_tela`
- 4   (caducou em 23/09/2026 — a régua de fatias    `..._uma_pista_por_
-     saiu com a seção velha)                       adaptador` (e a irmã)
- 5   (caducou em 23/09/2026 — a tabela saiu)       `..._a_tabela_dos_
-                                                   adaptadores_tem_endereco`
- 6   (caducou em 23/09/2026 — a coluna "Onde"      `..._a_coluna_onde_dos_
-     saiu; o vizinho é selo)                       vizinhos_tem_endereco`
- 7   (caducou em 13/09/2026 — o aviso da mesa      `..._nao_anexa_o_aviso_
-     suja saiu da dica, FRASES-E-DICAS-02)         da_mesa_suja`
- 8   (caducou em 13/09/2026 — a razão do           `..._a_razao_do_nascimento_
-     nascimento saiu da dica, FRASES-E-DICAS-03)   nao_chega_a_dica`
- 9   `"Custa +16,3 turnos"` digitado no lugar      `..._o_custo_do_mic_no_
-     da frase derivada                             radio_nao_e_digitado`
-10   o `<select data-gesto="mic-escopo">` de       `..._e_leitura_e_nao_
-     volta no lugar da leitura                     escolha`
-11   o `data-campo="mic-dica"` fora do `title`     `..._do_resumo_do_mic_
-     do resumo                                     tem_endereco`
-===  ============================================  ==========================
-"""
+"""O CHECK-UP RESPONDE EM UMA LINHA, e a mesa de rádio é a DELA."""
 from __future__ import annotations
 
 import pathlib
@@ -85,12 +27,7 @@ def _item(estado: str, chave: str = "", ordem: object = None):  # type: ignore[n
 
 
 def _ordem(chave: str, arranjo: str):  # type: ignore[no-untyped-def]
-    """Uma `Ordem` do catálogo, com o mínimo que a dispensa endereça.
-
-    A CLASSE É A DO PRODUTO, e não um dublê de forma parecida: `ordens_novas` e
-    `ordens_caladas` leem `chave` e `arranjo`, e um objeto anônimo passaria neste
-    teste e mentiria no dia em que a dispensa mudar de chave.
-    """
+    """Uma `Ordem` do catálogo, com o mínimo que a dispensa endereça."""
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Linha, Ordem
 
     vazia = Linha(texto="", selo="medido_aqui")
@@ -104,16 +41,8 @@ def _ordem(chave: str, arranjo: str):  # type: ignore[no-untyped-def]
     )
 
 
-# ---------------------------------------------------------------------------
-# S-09 — A LINHA DE VEREDITO
-# ---------------------------------------------------------------------------
 def test_a_frase_do_veredito_e_a_do_dono() -> None:
-    """A frase NÃO nasce no pacote: ela é de `ordens_da_mesa.cabecalho()`.
-
-    Quatro frases, quatro cenas — e as quatro conferidas contra o dono, que é
-    quem as escreve. Um literal no pacote seria a segunda grafia, e a primeira
-    coisa que uma segunda grafia perde é o dia em que a outra muda.
-    """
+    """A frase NÃO nasce no pacote: ela é de `ordens_da_mesa.cabecalho()`."""
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import cabecalho
 
     p = _pacote()
@@ -141,18 +70,7 @@ def test_a_cor_e_a_do_pior_achado() -> None:
 
 
 def test_o_veredito_nao_diz_nada_a_mudar_com_uma_linha_grave() -> None:
-    """A MORDIDA da cicatriz `6c86e295`, e ela é a razão de a função existir.
-
-    `ordens_da_mesa.cabecalho()` **não conhece `problema`**: sem ordem aberta
-    ele responde "Nada a mudar", em verde. `exame_da_mesa.veredito()` sobre as
-    linhas conhece — e é `secao_exame.o_mais_grave` quem os concilia. Um selo
-    pintado só pelo segundo diria *"Nada a mudar"* em verde com a linha de
-    pareamentos em vermelho, que é o defeito que esta casa pagou duas vezes em
-    agosto.
-
-    ARRANQUE A CURA: troque o `frase = topo.texto if estado == topo.estado else
-    …` por `frase = topo.texto` e este teste reprova.
-    """
+    """A MORDIDA da cicatriz `6c86e295`, e ela é a razão de a função existir."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import FRASE_DO_SELO
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import cabecalho
 
@@ -169,15 +87,7 @@ def test_o_veredito_nao_diz_nada_a_mudar_com_uma_linha_grave() -> None:
 
 
 def test_o_que_ela_calou_nao_segura_a_cor() -> None:
-    """A ordem DISPENSADA sai da conta — senão o ⊘ é botão morto.
-
-    É a mesma regra do `_escrever_o_cabecalho` da janela estável: uma ordem
-    dispensada prenderia o topo em laranja para sempre e o clique dela não
-    faria nada visível.
-
-    ARRANQUE A CURA: faça `_veredito_do_exame` passar `todas` no lugar de
-    `novas` e este teste reprova.
-    """
+    """A ordem DISPENSADA sai da conta — senão o ⊘ é botão morto."""
     p = _pacote()
     ordem = _ordem("vizinhanca", "arranjo-de-hoje")
     itens = [_item("certo"), _item("atencao", chave="o1", ordem=ordem)]  # (dado) noqa-acento
@@ -199,16 +109,7 @@ def test_o_que_ela_calou_nao_segura_a_cor() -> None:
 
 
 def test_a_linha_de_veredito_saiu_da_tela() -> None:
-    """A LINHA SAIU — 26/09/2026, pedido dela com a janela maximizada.
-
-    *«precisamos ganhar espaço vertical. vamos remover a linha 3 mudanças
-    recomendadas»*. Revoga a D-16: a Sugestão de Conexão ao lado já numera cada
-    mudança, e a contagem repetia a caixa. A frase e a cor continuam contadas
-    por `_veredito_do_exame` (as réguas acima), para quem as pedir.
-
-    ARRANQUE A CURA: devolva a `<div class="veredito">` ao gerador (ou o
-    `**veredito` ao pacote), e este teste reprova.
-    """
+    """A LINHA SAIU — 26/09/2026, pedido dela com a janela maximizada."""
     html = BANCADA.read_text()
     assert 'class="veredito"' not in html, (
         "a linha de veredito voltou ao desenho — ela saiu a pedido dela")
@@ -217,23 +118,9 @@ def test_a_linha_de_veredito_saiu_da_tela() -> None:
         "o `pacote()` emite `veredito` para um endereço que a tela não tem")
 
 
-# ---------------------------------------------------------------------------
-# A MESA DE RÁDIO SAIU DESTA RÉGUA — 23/09/2026, TRANSPLANTE-DA-SECAO-01.
-#
-# A tabela dos adaptadores, a régua de Desempenho e a coluna "Onde" dos vizinhos
-# saíram da tela com a seção velha: «Rádio e Adaptadores» é o
-# `mapa-do-radio.html` aprovado. O que elas prendiam continua preso, pela seção
-# nova, em `test_a_secao_do_radio_transplantada.py` — um cartão por adaptador
-# que o BlueZ enumera, o nome DELA no campo do cartão, e o vizinho como selo
-# com o endereço `vid:pid` do gesto.
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# O CONTEXTO VIVO — a mesa de dois que faz o `pacote()` correr inteiro
-# ---------------------------------------------------------------------------
 def _ctx():  # type: ignore[no-untyped-def]
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    # A FAIXA SINTÉTICA DA CASA — há dois portões de anonimato nesta árvore.
     p1, p2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
     mesa = [
         {"pref": "p1", "uniq": p1, "jogador": 1, "cor": "white",
@@ -250,17 +137,8 @@ def _ctx():  # type: ignore[no-untyped-def]
                     conectados=conectados, estados={})
 
 
-# ---------------------------------------------------------------------------
-# O BOTÃO "A luz não acende" — a dica que era do desenho
-# ---------------------------------------------------------------------------
 def test_a_dica_da_luz_segue_o_transporte() -> None:
-    """As duas frases são do dono, e não a mesma congelada.
-
-    O `title` do desenho era do transporte da CENA: o cartão da esquerda dizia
-    *"Este controle está no cabo"* e o da direita explicava o rádio — e os dois
-    continuavam dizendo isso quando o controle trocava de transporte. A cor já
-    obedecia desde 03/09; a frase, não.
-    """
+    """As duas frases são do dono, e não a mesma congelada."""
     from hefesto_dualsense4unix.app.actions.config.secao_controles import (
         DICA_NO_CABO,
         DICA_NO_RADIO,
@@ -275,26 +153,7 @@ def test_a_dica_da_luz_segue_o_transporte() -> None:
 
 
 def test_a_dica_da_luz_nao_anexa_o_aviso_da_mesa_suja(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """A mesa suja NÃO muda a dica — FRASES-E-DICAS-02, 13/09/2026.
-
-    CONTRATO QUE MUDOU: até esta data a dica ANEXAVA o aviso da mesa suja, com
-    instrução. A ordem dela de 13/09 tira frase de aviso da tela em toda forma,
-    `title` incluído (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-
-    INDICE.md`, a mensagem de abertura). A dica fica com o que o botão faz.
-
-    O DUBLÊ É A SONDA DE VERDADE respondendo SUSPEITA — outro programa
-    segurando o nó. Se alguém religar a pergunta pela mesa DENTRO de
-    `dica_da_luz`, as duas respostas deixam de ser iguais, com as palavras que
-    forem.
-
-    O ALCANCE DESTA, MEDIDO NA VALIDAÇÃO DE 13/09/2026: com o código de
-    `249af1f6` devolvido inteiro, ela fica VERDE — ali a sonda morava no tique
-    (`pacote()` perguntava e passava `mesa_suja` à função), e esta chamada
-    direta nunca a aciona. Quem morde essa volta é
-    `test_nenhuma_frase_de_aviso_chega_a_tela.
-    test_a_dica_da_luz_nao_avisa_com_outro_programa_segurando_o_controle`, que
-    passa pelo `pacote()`.
-    """
+    """A mesa suja NÃO muda a dica — FRASES-E-DICAS-02, 13/09/2026."""
     from hefesto_dualsense4unix.app.actions.config.secao_controles import DICA_NO_RADIO
     from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
 
@@ -337,12 +196,7 @@ def test_a_razao_do_nascimento_nao_chega_a_dica() -> None:
 
 
 def test_o_botao_da_luz_tem_a_dica_e_a_trava_em_nos_diferentes() -> None:
-    """Um `data-campo` por nó — a classe no `<i>`, a dica no `<button>`.
-
-    ARRANQUE A CURA: devolva o `data-campo="luz-trava"` ao próprio botão, e o
-    `title` volta a ser o do desenho — o defeito que a dívida do gerador
-    declarava com todas as letras.
-    """
+    """Um `data-campo` por nó — a classe no `<i>`, a dica no `<button>`."""
     html = BANCADA.read_text()
     botoes = re.findall(r'<button[^>]*data-gesto="luz-nao-acende"[^>]*>', html)
     assert botoes, "o botão 'A luz não acende' sumiu do desenho"
@@ -354,9 +208,6 @@ def test_o_botao_da_luz_tem_a_dica_e_a_trava_em_nos_diferentes() -> None:
         assert 'data-campo="luz-trava"' not in botao, (
             "a classe e a dica voltaram para o mesmo nó — o vocabulário é UM "
             "`data-campo` por nó, e uma das duas vai ficar sem endereço")
-    # O `<i>` COLADO NO `<button>`: é assim que o `~` do CSS alcança a cor, e é
-    # a única forma que prova a ORDEM dos dois. O `[^>]*></i><button` não deixa
-    # nada entrar no meio.
     irmaos = re.findall(r'<i class="ltrava[^"]*"[^>]*></i><button[^>]*'
                         r'data-gesto="luz-nao-acende"', html)
     assert len(irmaos) == len(botoes), (
@@ -379,21 +230,8 @@ def test_a_dica_da_luz_chega_ao_pacote() -> None:
             f"`title` do desenho")
 
 
-# ---------------------------------------------------------------------------
-# O MICROFONE — o escopo virou leitura (D-12) e o custo virou derivado
-# ---------------------------------------------------------------------------
-# `test_o_escopo_do_botao_do_mic_e_leitura_e_nao_escolha` SAIU — o controle «Microfone e
-# botões» saiu da linha do controle em 25/09/2026, por pedido dela
-# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
-# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
-
-
 def test_o_escopo_le_o_valor_da_maquina() -> None:
-    """As duas falas são as do `<select>` que saiu — nem uma palavra nova.
-
-    E a ausência devolve VAZIO, nunca o padrão do `DaemonConfig`: um daemon que
-    não respondeu não é um daemon que respondeu `True`.
-    """
+    """As duas falas são as do `<select>` que saiu — nem uma palavra nova."""
     p = _pacote()
     assert p.escopo_do_botao_do_mic({"mic_button_toggles_system": True}) == (
         p.FALA_DO_BOTAO_DO_MIC[True])
@@ -435,7 +273,3 @@ def test_o_mic_pelo_cabo_nao_cobra_turno_de_radio() -> None:
         "a frase do cabo trouxe a conta do rádio junto")
 
 
-# `test_o_titulo_do_resumo_do_mic_tem_endereco` SAIU — o controle «Microfone e botões»
-# saiu da linha do controle em 25/09/2026, por pedido dela
-# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
-# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).

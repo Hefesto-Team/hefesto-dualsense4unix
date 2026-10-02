@@ -40,18 +40,6 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     EDGE_KEY_MAP as _MOUSE_TECLAS_TAP,
 )
 
-# Legenda do layout de bindings — exibida acima do TreeView como referência
-# rápida dos tokens aceitos. Tokens `__*__` são virtuais (OSK); demais são
-# KEY_* canônicos do evdev.ecodes.
-#
-# TECLADO-QUE-NAO-DIGITA-01 (09/08/2026): a legenda abria com *"cada botão do
-# controle pode digitar uma tecla do teclado"* e a lista abaixo dela mostrava
-# SÓ os botões que já tinham tecla — os outros onze simplesmente não existiam
-# na tela. Quem ligava "Emular teclado" via seis linhas, apertava X, Círculo,
-# Quadrado, direcional, e concluía, com razão, que "o teclado não funciona":
-# nada na tela dizia que aqueles botões não digitam nada, e nada dizia que
-# NENHUM atalho de fábrica digita LETRA. As duas linhas novas abaixo (e a
-# `frase_dos_botoes_sem_tecla`, montada a cada refresh) são o que faltava.
 BINDINGS_LEGEND = (
     "<b>Como funciona:</b> cada botão do controle pode digitar uma tecla do "
     "teclado. Clique duas vezes na coluna “Tecla do teclado” para trocar.\n"
@@ -65,20 +53,11 @@ BINDINGS_LEGEND = (
     "computador."
 )
 
-#: Botões que o MOUSE emulado já usa quando "Emular mouse" está ligado. Vem dos
-#: mapas do próprio `integrations/uinput_mouse.py` (fonte única — lista copiada
-#: à mão envelhece calada), mais L2/R2, que aquele device injeta como
-#: cross/triangle acima do limiar analógico (`_resolve_emulated_set`).
-#:
-#: Dar uma tecla a um deles NÃO substitui o mouse: o botão passa a fazer as DUAS
-#: coisas ao mesmo tempo, cada uma pelo SEU dispositivo virtual — são dois donos
-#: do mesmo botão, e a lista oferecia os vinte botões sem dizer isso.
 BOTOES_JA_DO_MOUSE: frozenset[str] = frozenset(
     {*_MOUSE_BOTOES, *_MOUSE_DPAD, *_MOUSE_TECLAS_TAP, "l2", "r2"}
 )
 
 
-# Ordem canônica de exibição dos botões no TreeView. Corresponde aos 17 botões
 # canônicos do DualSense mais as 3 regiões de touchpad.
 CANONICAL_BUTTONS: tuple[str, ...] = (
     "cross",
@@ -99,32 +78,9 @@ CANONICAL_BUTTONS: tuple[str, ...] = (
     "create",
     "ps",
     # TOUCHPAD-DO-SISTEMA-01 (09/08/2026) — decisão dela: as três regiões do
-    # touchpad SAÍRAM da aba, e a razão é que o produto não pode oferecer duas
-    # coisas que se atropelam no mesmo dedo.
-    #
-    # O touchpad voltou a ser touchpad do SISTEMA, como era antes do Hefesto
-    # (pedido dela: *"a ideia do touchpad é ele voltar a funcionar assim, seja
-    # no modo nativo ou dualsense"*). Com isso, o clique dele já vira clique de
-    # mouse pelo libinput. Manter as regiões mapeadas somaria uma TECLA ao
-    # mesmo gesto — e o padrão de fábrica era `KEY_BACKSPACE`, ou seja: um
-    # clique apagaria texto sem ela pedir.
-    #
-    # Listar aqui um botão que o produto não dispara mais é a janela mentindo,
-    # que é o defeito que esta casa mais persegue. O runtime já se cala
-    # (`daemon/subsystems/keyboard.py`, o gate `_combine_with_touchpad`); a aba
-    # para de oferecer.
-    #
-    # PARA VOLTAR: é a mesma decisão, do outro lado — o touchpad passaria a ser
-    # do Hefesto de novo (a reversão da regra está escrita no cabeçalho de
-    # `assets/76-dualsense-touchpad-libinput-ignore.rules`), e estas três linhas
-    # voltam junto. Uma coisa não vai sem a outra.
 )
 
 
-# KBD-01: a aba Teclado era 100% jargão de programador — ids internos em inglês
-# (l1, create, touchpad_left_press) e tokens crus do evdev (KEY_LEFTALT,
-# KEY_SYSRQ, __OPEN_OSK__). Estes mapas humanizam a EXIBIÇÃO (o modelo segue
-# guardando id/binding crus para a persistência); a edição converte de volta na
 # fronteira (`_dehumanize_binding`). Nomes na língua da usuária, não do kernel.
 _BUTTON_LABELS: dict[str, str] = {
     "cross": "X (Cruz)",
@@ -149,8 +105,6 @@ _BUTTON_LABELS: dict[str, str] = {
     "touchpad_right_press": "Touchpad — lado direito",
 }
 
-#: Tokens de tecla crus → nome que a pessoa reconhece. Fora deste mapa, um
-#: `KEY_X` vira só "X" (letras/números). Round-trip garantido por `_REV_KEY`.
 _KEY_LABELS: dict[str, str] = {
     "KEY_LEFTALT": "Alt",
     "KEY_RIGHTALT": "Alt direito",
@@ -171,16 +125,11 @@ _KEY_LABELS: dict[str, str] = {
     "KEY_LEFT": "Seta ←",
     "KEY_RIGHT": "Seta →",
     # O ALTERNADOR é o preset do L3 desde 02/09/2026 (decisão dela). Sem esta
-    # linha a aba Teclado da janela mostraria `__TOGGLE_OSK__` CRU na linha do
-    # L3 — jargão de kernel na tela dela, que é exatamente o que a KBD-01 tirou
-    # daqui. O texto acompanha a forma dos dois vizinhos e ESPERA a palavra
-    # dela, que decidiu o comportamento e não o rótulo.
     "__TOGGLE_OSK__": "Abrir e fechar teclado na tela",
     "__OPEN_OSK__": "Abrir teclado na tela",
     "__CLOSE_OSK__": "Fechar teclado na tela",
 }
 
-#: Mapa reverso (rótulo minúsculo → token cru) para a edição amigável.
 _REV_KEY: dict[str, str] = {label.lower(): raw for raw, label in _KEY_LABELS.items()}
 
 
@@ -197,24 +146,14 @@ def humanize_binding(serialized: str) -> str:
         if tok in _KEY_LABELS:
             saida.append(_KEY_LABELS[tok])
         elif tok.startswith("KEY_"):
-            saida.append(tok[4:])  # KEY_C -> C
+            saida.append(tok[4:])
         else:
             saida.append(tok)
     return " + ".join(saida)
 
 
 def _e_nome_de_tecla(tok: str) -> bool:
-    """`True` quando `KEY_<TOK>` existe no vocabulário do `evdev`.
-
-    É a mesma pergunta que o loader de perfil faz — `keyboard_mappings` a
-    delega a ele por escrito —, e não uma segunda tabela: aqui não há lista de
-    teclas nenhuma, só a consulta.
-
-    Sem `evdev` (a máquina sem o pacote, o CI de documentação) devolve `False`,
-    que é o comportamento de antes desta função existir: o token segue cru e a
-    recusa vem do `parse_binding`. Nunca devolve `True` por otimismo — inventar
-    uma tecla que o device não tem seria a tela prometendo o que ninguém emite.
-    """
+    """`True` quando `KEY_<TOK>` existe no vocabulário do `evdev`."""
     if not tok or not tok.replace("_", "").isalnum():
         return False
     try:
@@ -225,12 +164,7 @@ def _e_nome_de_tecla(tok: str) -> bool:
 
 
 def dehumanize_binding(friendly: str) -> str:
-    """Inverso de `humanize_binding` — 'Alt + Tab' → 'KEY_LEFTALT+KEY_TAB'.
-
-    Aceita também tokens já crus (idempotente sobre a saída do daemon) para
-    quem preferir digitar `KEY_*`. Token desconhecido segue como está — o
-    `parse_binding` valida e rejeita com um toast na fronteira.
-    """
+    """Inverso de `humanize_binding` — 'Alt + Tab' → 'KEY_LEFTALT+KEY_TAB'."""
     partes = [tok.strip() for tok in friendly.split("+") if tok.strip()]
     saida = []
     for tok in partes:
@@ -242,26 +176,6 @@ def dehumanize_binding(friendly: str) -> str:
         elif len(tok) == 1 and tok.isalnum():
             saida.append(f"KEY_{tok.upper()}")
         elif _e_nome_de_tecla(tok):
-            # O RAMO DE FALLBACK DO `humanize_binding`, DESFEITO — 06/09/2026.
-            #
-            # As duas não eram inversas, e o buraco era grande: `humanize` faz
-            # `tok[4:]` para todo `KEY_*` fora de `_KEY_LABELS`, então a coluna
-            # "Tecla do teclado" mostrava `F5`; aqui, `F5` só voltava como `F5`,
-            # e o `parse_binding` o recusava. Alcançava **F1..F12, Home, End,
-            # Insert, PageUp, PageDown, Comma, Dot e as três de volume** — tudo
-            # o que o teclado virtual declara e o `_KEY_LABELS` não nomeia.
-            #
-            # NA JANELA ANTIGA ISSO ERA DEFEITO VIVO: ela mostrava `F5` e
-            # recusava `F5` digitado de volta, com um toast, sem ninguém ter
-            # mudado nada. Na aba nova havia um contorno declarado
-            # (`a06_navegacao._desfazer_o_humanize`), que é este mesmo ramo
-            # escrito do lado de lá — segundo dono do mesmo fato. Curado AQUI,
-            # os dois lados fecham de uma vez.
-            #
-            # QUEM DECIDE É O VOCABULÁRIO, e não este arquivo: só vira `KEY_<X>`
-            # o nome que o `evdev` conhece. Um `banana` digitado segue como veio
-            # e cai na recusa do `parse_binding`, com o nome dela na frase —
-            # que é o que acontecia antes desta linha, e continua acontecendo.
             saida.append(f"KEY_{tok.upper()}")
         else:
             saida.append(tok)
@@ -286,9 +200,6 @@ def frase_dos_botoes_sem_tecla(bindings: dict[str, tuple[str, ...]]) -> str:
     if not orfaos:
         return ""
     if len(orfaos) == len(CANONICAL_BUTTONS):
-        # `key_bindings == {}` é uma escolha legítima ("teclado silencioso"),
-        # mas na tela ela era indistinguível de defeito: lista vazia, sem uma
-        # palavra. Agora diz o que é e como sair.
         return (
             "<b>Sem tecla:</b> nenhum botão digita nada agora — a lista está "
             "vazia porque todos os atalhos foram removidos. Clique em “Voltar "
@@ -298,8 +209,6 @@ def frase_dos_botoes_sem_tecla(bindings: dict[str, tuple[str, ...]]) -> str:
     frase = f"<b>Sem tecla (não digitam nada):</b> {nomes}."
     do_mouse = [botao for botao in orfaos if botao in BOTOES_JA_DO_MOUSE]
     if do_mouse:
-        # Sem repetir os nomes: a lista acima já os deu, e repeti-la fazia a
-        # frase dobrar de tamanho na tela dela.
         quantos = (
             "Um deles já é" if len(do_mouse) == 1 else f"{len(do_mouse)} deles já são"
         )
@@ -346,35 +255,14 @@ def frase_do_teclado_na_tela(osk_disponivel: bool | None) -> str:
     )
 
 
-#: As três chaves que o perfil guarda e a lista da aba NÃO mostra. Não é uma
-#: lista de exceções: é o conjunto exato que saiu de `CANONICAL_BUTTONS` em
 #: 09/08 (TOUCHPAD-DO-SISTEMA-01) e continua em `DEFAULT_BUTTON_BINDINGS`.
-#: Existe para a frase abaixo poder dizer o MOTIVO, e não só os nomes.
 REGIOES_DO_TOUCHPAD: frozenset[str] = frozenset(
     {"touchpad_left_press", "touchpad_middle_press", "touchpad_right_press"}
 )
 
 
 def frase_dos_atalhos_fora_da_lista(bindings: dict[str, tuple[str, ...]]) -> str:
-    """Nomeia os atalhos que o perfil GUARDA e a lista da aba não mostra.
-
-    ATALHO-FORA-DA-LISTA-01, a metade que ela VÊ (a outra é a fusão em
-    `_persist_key_bindings_to_draft`, que impede a perda). Com a fusão sozinha,
-    o perfil dela passa a guardar três atalhos que a tela nunca cita — e "a casa
-    sabe e o produto não diz" é o defeito que esta casa mais persegue.
-
-    **Por que a frase, e não uma linha na lista.** As duas formas foram levadas
-    a ela; esta é a que a decisão DELA de 09/08 já escolheu. Dar linha na lista
-    devolveria à aba um botão que o produto **não dispara** hoje (o touchpad é
-    ponteiro do SISTEMA, e `daemon/subsystems/keyboard._combine_with_touchpad`
-    se cala por causa disso) — e o comentário de `CANONICAL_BUTTONS` diz, com
-    todas as letras, que listar botão que não dispara é a janela mentindo. A
-    frase informa sem oferecer.
-
-    Pura de propósito, mesma disciplina de `frase_dos_botoes_sem_tecla`. Devolve
-    `""` quando não há nada fora da lista — nada a dizer é melhor que uma linha
-    vazia na tela.
-    """
+    """Nomeia os atalhos que o perfil GUARDA e a lista da aba não mostra."""
     fora = [botao for botao in bindings if botao not in CANONICAL_BUTTONS]
     if not fora:
         return ""
@@ -405,9 +293,6 @@ class InputActionsMixin(MouseActionsMixin):
         self._install_key_bindings_treeview()
         self._refresh_key_bindings_from_draft()
 
-    # ------------------------------------------------------------------
-    # TreeView setup + refresh
-    # ------------------------------------------------------------------
 
     def _install_key_bindings_treeview(self) -> None:
         """Cria/configura colunas do `key_bindings_treeview`. Idempotente."""
@@ -418,8 +303,8 @@ class InputActionsMixin(MouseActionsMixin):
             self._key_bindings_store = tree.get_model()
             return
         store = Gtk.ListStore(
-            GObject.TYPE_STRING,  # botão canônico
-            GObject.TYPE_STRING,  # binding serializado (KEY_A+KEY_B)
+            GObject.TYPE_STRING,
+            GObject.TYPE_STRING,
         )
         tree.set_model(store)
         self._key_bindings_store = store
@@ -430,8 +315,6 @@ class InputActionsMixin(MouseActionsMixin):
                 renderer.connect(
                     "edited", self._on_key_binding_cell_edited
                 )
-            # KBD-01: exibe amigável (o modelo guarda id/binding CRUS p/ a
-            # persistência); a edição converte de volta em `_on_..._edited`.
             column = Gtk.TreeViewColumn(title, renderer)
             column.set_cell_data_func(renderer, self._render_binding_cell, idx)
             tree.append_column(column)
@@ -471,19 +354,10 @@ class InputActionsMixin(MouseActionsMixin):
             if binding is None:
                 continue
             store.append([button, format_binding(binding)])
-        # TECLADO-QUE-NAO-DIGITA-01: a legenda é recalculada A CADA refresh
-        # porque a lista de "sem tecla" muda com o rascunho (adicionar, remover,
-        # voltar ao padrão, trocar de perfil). Pintá-la só na instalação do
-        # TreeView, como era, deixaria a frase mentindo no primeiro Adicionar.
         self._atualizar_legenda(bindings)
 
     def _atualizar_legenda(self, bindings: dict[str, tuple[str, ...]]) -> None:
-        """Pinta a legenda fixa + as duas frases variáveis. Tolera glade sem ela.
-
-        As duas respondem a perguntas diferentes e nenhuma cobre a outra: a
-        primeira nomeia o que está na lista e NÃO digita; a segunda, o que o
-        perfil guarda e a lista não mostra (ATALHO-FORA-DA-LISTA-01).
-        """
+        """Pinta a legenda fixa + as duas frases variáveis. Tolera glade sem ela."""
         legend = self._get("key_bindings_legend")
         if legend is None:
             return
@@ -491,10 +365,6 @@ class InputActionsMixin(MouseActionsMixin):
         partes += [
             frase
             for frase in (
-                # `getattr` porque `_osk_disponivel` mora no mixin do MOUSE, e
-                # há hospedeiro que monta só os métodos desta aba por composição
-                # (os testes puros da legenda). Sem o atributo vale "não sei",
-                # que é o mesmo que a aba mostrava antes da N12.
                 frase_do_teclado_na_tela(getattr(self, "_osk_disponivel", None)),
                 frase_dos_botoes_sem_tecla(bindings),
                 frase_dos_atalhos_fora_da_lista(bindings),
@@ -504,12 +374,7 @@ class InputActionsMixin(MouseActionsMixin):
         legend.set_markup("\n".join(partes))
 
     def _repintar_legenda_do_teclado(self) -> None:
-        """Gancho do `_anotar_teclado_na_tela` (N12): repinta SÓ a legenda.
-
-        A lista de atalhos não muda com o `osk_disponivel`, e reconstruí-la
-        aqui derrubaria a seleção da linha em que ela está no meio de uma
-        edição. Tolera ser chamado antes de a aba existir.
-        """
+        """Gancho do `_anotar_teclado_na_tela` (N12): repinta SÓ a legenda."""
         self._atualizar_legenda(self._resolve_effective_bindings())
 
     def _resolve_effective_bindings(self) -> dict[str, tuple[str, ...]]:
@@ -524,9 +389,6 @@ class InputActionsMixin(MouseActionsMixin):
             return {}
         return {k: tuple(v) for k, v in raw.items()}
 
-    # ------------------------------------------------------------------
-    # CRUD handlers
-    # ------------------------------------------------------------------
 
     def on_key_binding_add(self, _button: Any) -> None:
         """Adiciona row vazia para o primeiro botão canônico ainda sem row."""
@@ -538,9 +400,6 @@ class InputActionsMixin(MouseActionsMixin):
             if candidate not in existing:
                 store.append([candidate, "KEY_SPACE"])
                 self._persist_key_bindings_to_draft()
-                # KBD-02: antes, "Adicionar" escolhia um botão sozinho e já o
-                # mapeava para uma tecla sem avisar. Agora explicamos, com o
-                # nome humano do botão, o que aconteceu e para onde ir p/ trocar.
                 self._toast_input(
                     "Adicionei uma linha para o botão "
                     f"“{humanize_button(candidate)}”, começando na tecla "
@@ -586,8 +445,6 @@ class InputActionsMixin(MouseActionsMixin):
         text = new_text.strip()
         if not text:
             return
-        # KBD-01: a pessoa edita nomes amigáveis ("Alt + Tab"); convertemos de
-        # volta para os tokens crus que o daemon entende antes de validar/gravar.
         raw = dehumanize_binding(text)
         try:
             parse_binding(raw)
@@ -615,7 +472,7 @@ class InputActionsMixin(MouseActionsMixin):
         `point_and_click.json` dela guarda sete atalhos, a tela mostra quatro, e
         o PRIMEIRO gesto na aba — editar uma célula, "Adicionar", "Remover" —
         apagava os três do touchpad sem uma palavra. O rodapé "Salvar Perfil"
-        emite `key_bindings=self.key_bindings` (`app/draft_config.py:825`): o
+        emite `key_bindings=self.key_bindings` (`app/draft_config.py:541`): o
         rascunho podado virava o arquivo podado.
 
         A regra da fusão, em três linhas:
@@ -648,9 +505,6 @@ class InputActionsMixin(MouseActionsMixin):
             update={"key_bindings": new_bindings or None}
         )
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     def _toast_input(self, msg: str) -> None:
         """Toast em `status_bar`. Reusa ctx id "input" pra não brigar com mouse."""

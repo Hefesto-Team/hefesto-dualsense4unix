@@ -1,33 +1,4 @@
-"""Regressão das versões rançosas e da semeadura de presets no Flatpak.
-
-VERSOES-RANCOSAS-01 (30/07). Três artefatos anunciavam versão errada ao mesmo
-tempo, e nenhum era visto por portão nenhum:
-
-  - `assets/appimage/entrypoint.sh` imprimia "v3.0.0" e mandava instalar
-    `hefesto-dualsense4unix_3.0.0_amd64.deb`, nome que o build_deb.sh não gera
-    mais (hoje é `_<versão>_amd64_py<tag>.deb`). Esse banner é o PRIMEIRO texto
-    que alguém novo lê.
-  - `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml` tinha como release mais
-    recente a 3.13.3 de 14/07 e nenhuma 0.x — a loja anunciava duas semanas de
-    atraso.
-  - `packaging/cosmic-applet/Cargo.toml` estava em 0.1.0 (e com e-mail pessoal
-    real no campo `authors`, que nem o check_anonymity.sh nem o
-    check_test_data.sh alcançam).
-
-FIX-FLATPAK-PRESET-SEED-01 (30/07). O manifesto Flatpak não instalava
-`assets/profiles_default` em nenhum dos três lugares onde o
-`profiles/loader.py` procura os presets, então quem instalava pelo Flatpak
-abria a janela sem perfil nenhum. O `scripts/build_appimage_gui.sh` faz essa
-cópia desde 25/07 (FIX-APPIMAGE-PRESET-SEED-01) e a cura nunca foi portada.
-
-Estratégia dos testes de portão: o mesmo molde de
-tests/unit/test_check_anonymity.py e test_check_packaging_parity.py — pytest +
-subprocess num repo FAKE em tmp_path, para provar que o portão reprova de
-verdade sem depender do estado do repo real. Além disso, cada alvo novo é
-conferido contra o arquivo REAL: arrancar a cura (voltar o Cargo.toml para
-0.1.0, requotar o heredoc do banner, tirar a linha do profiles_default do
-manifesto) derruba estes testes.
-"""
+"""Regressão das versões rançosas e da semeadura de presets no Flatpak."""
 from __future__ import annotations
 
 import re
@@ -49,17 +20,11 @@ CARGO_LOCK_REL = "packaging/cosmic-applet/Cargo.lock"
 MANIFESTO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
 BUILD_GUI_REL = "scripts/build_appimage_gui.sh"
 
-#: Alvos que este sprint acrescentou ao portão, com um conteúdo mínimo válido
-#: (`{v}` = versão) para montar o repo fake. Fica junto do teste de propósito:
-#: se alguém trocar a sintaxe no arquivo real, o teste contra o arquivo real
-#: falha e este molde continua documentando o que o portão espera.
 _ALVOS_NOVOS: tuple[tuple[str, str], ...] = (
     (ENTRYPOINT_REL, 'HEFESTO_VERSION_FALLBACK="{v}"\n'),
     (METAINFO_REL, '<releases>\n  <release version="{v}" date="2026-07-28"/>\n</releases>\n'),
     (CARGO_REL, '[package]\nname = "x"\nversion = "{v}"\n\n'
                 '[dependencies]\ntokio = {{ version = "1" }}\n'),
-    # O lock tem centenas de `version =`, uma por dependência: o molde põe uma
-    # ANTES da nossa, para que um regex sem a âncora do `name` case a errada.
     (CARGO_LOCK_REL,
      '[[package]]\nname = "libcosmic"\nversion = "0.1.0"\n\n'
      '[[package]]\nname = "hefesto-dualsense4unix-applet"\nversion = "{v}"\n'),
@@ -92,21 +57,10 @@ def _targets_do_portao() -> list[tuple[str, str, str]]:
 
 
 def _esperado_no_alvo(relpath: str) -> str:
-    """A versão que o portão exige NAQUELE alvo.
-
-    Não é sempre a canônica literal: o Cargo não aceita quatro componentes, e o
-    portão traduz (`versao_para_cargo`). Perguntar ao portão em vez de repetir a
-    regra aqui é o que impede este teste de virar uma segunda fonte de verdade —
-    se a tradução mudar, o teste acompanha em vez de brigar.
-    """
+    """A versão que o portão exige NAQUELE alvo."""
     gate = _portao()
     canonica = _versao_canonica()
     return gate._TRADUTORES.get(relpath, lambda v: v)(canonica)
-
-
-# --------------------------------------------------------------------------
-# 1) Os três alvos entraram no portão — e casam no arquivo REAL.
-# --------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -125,11 +79,7 @@ def test_alvo_novo_esta_no_portao(relpath: str) -> None:
     "relpath", [ENTRYPOINT_REL, METAINFO_REL, CARGO_REL, CARGO_LOCK_REL]
 )
 def test_regex_do_alvo_extrai_a_versao_canonica_do_arquivo_real(relpath: str) -> None:
-    """Cada sintaxe é diferente (shell, XML, semver) — o regex tem que pegar.
-
-    Este é o teste que morde no arquivo real: com o Cargo.toml de volta em
-    0.1.0, ou o metainfo com a 3.13.3 na frente, ele falha.
-    """
+    """Cada sintaxe é diferente (shell, XML, semver) — o regex tem que pegar."""
     esperado = _esperado_no_alvo(relpath)
     padrao = next(alvo[2] for alvo in _targets_do_portao() if alvo[1] == relpath)
     texto = (REPO / relpath).read_text(encoding="utf-8")
@@ -145,11 +95,6 @@ def test_portao_real_passa_no_repo_real() -> None:
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "OK:" in proc.stdout
-
-
-# --------------------------------------------------------------------------
-# 2) O portão MORDE: repo fake com o alvo defasado precisa reprovar.
-# --------------------------------------------------------------------------
 
 
 def _repo_fake(tmp_path: Path, versao: str, relpath: str, versao_alvo: str) -> Path:
@@ -190,18 +135,12 @@ def test_portao_aprova_alvo_novo_em_dia(tmp_path: Path, relpath: str) -> None:
     assert "1 alvo" in proc.stdout
 
 
-# --------------------------------------------------------------------------
-# 2-bis) QUATRO-COMPONENTES-02 (14/08): o portão exigia do Cargo uma string que
-# o Cargo não aceita, e o applet parou de compilar em silêncio.
-# --------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("canonica", "esperada"),
     [
-        ("0.9.4.2", "0.9.4+2"),   # o caso real que quebrou a release
-        ("0.9.4", "0.9.4"),       # três componentes atravessa intacto
-        ("1.0.0.10", "1.0.0+10"),  # a quarta casa pode ter mais de um dígito
+        ("0.9.4.2", "0.9.4+2"),
+        ("0.9.4", "0.9.4"),
+        ("1.0.0.10", "1.0.0+10"),
     ],
 )
 def test_versao_para_cargo_traduz_a_quarta_casa(canonica: str, esperada: str) -> None:
@@ -210,11 +149,7 @@ def test_versao_para_cargo_traduz_a_quarta_casa(canonica: str, esperada: str) ->
 
 
 def test_a_traducao_nao_usa_pre_release() -> None:
-    """`-W` também compila e está ERRADO: inverteria a ordem da história.
-
-    Build metadata (`+W`) não conta na precedência SemVer, então `0.9.4+2`
-    ordena igual a `0.9.4`; `0.9.4-2` é pre-release e ordena ANTES dela.
-    """
+    """`-W` também compila e está ERRADO: inverteria a ordem da história."""
     assert "-" not in _portao().versao_para_cargo("0.9.4.2")
 
 
@@ -222,11 +157,7 @@ def test_a_traducao_nao_usa_pre_release() -> None:
 def test_portao_reprova_o_cargo_com_a_canonica_literal(
     tmp_path: Path, relpath: str
 ) -> None:
-    """MORDE: escrever `9.9.9.9` no Cargo é exatamente o que quebrou o build.
-
-    Era a menor edição que deixava o portão verde antes desta correção — e
-    custou o applet. Agora reprova.
-    """
+    """MORDE: escrever `9.9.9.9` no Cargo é exatamente o que quebrou o build."""
     repo = _repo_fake(
         tmp_path, versao="9.9.9.9", relpath=relpath, versao_alvo="9.9.9.9"
     )
@@ -256,11 +187,7 @@ def test_portao_aprova_o_cargo_traduzido(tmp_path: Path, relpath: str) -> None:
     shutil.which("cargo") is None, reason="cargo ausente (CI sem toolchain Rust)"
 )
 def test_o_cargo_de_verdade_aceita_o_manifesto_real() -> None:
-    """A prova final: quem julga o Cargo.toml é o Cargo, não o nosso regex.
-
-    Sem isto o projeto volta a poder escrever uma versão que só o portão
-    aprova — foi assim que `0.9.4.2` entrou e o applet parou de compilar.
-    """
+    """A prova final: quem julga o Cargo.toml é o Cargo, não o nosso regex."""
     proc = subprocess.run(
         ["cargo", "verify-project", "--manifest-path", CARGO_REL],
         cwd=REPO,
@@ -273,8 +200,7 @@ def test_o_cargo_de_verdade_aceita_o_manifesto_real() -> None:
 
 
 def test_cargo_toml_e_lock_declaram_a_mesma_versao() -> None:
-    """O lock ficou em `9.3.2` sem ninguém ver — o comentário pedia, e pedir
-    não é portão."""
+    """O lock ficou em `9.3.2` sem ninguém ver — o comentário pedia, e pedir"""
     def _versao(rel: str, padrao: str) -> str | None:
         achado = re.search(
             padrao, (REPO / rel).read_text(encoding="utf-8"), re.MULTILINE
@@ -293,8 +219,7 @@ def test_cargo_toml_e_lock_declaram_a_mesma_versao() -> None:
 
 
 def test_regex_do_cargo_ignora_a_versao_das_dependencias(tmp_path: Path) -> None:
-    """Sem a âncora `^`, o regex casaria o `version = "1"` do tokio dentro de
-    [dependencies] e o portão julgaria pela linha errada."""
+    """Sem a âncora `^`, o regex casaria o `version = "1"` do tokio dentro de"""
     repo = _repo_fake(tmp_path, versao="9.9.9", relpath=CARGO_REL, versao_alvo="9.9.9")
     conteudo = (repo / CARGO_REL).read_text(encoding="utf-8")
     assert 'version = "1"' in conteudo, "o molde perdeu a linha de dependência"
@@ -302,11 +227,6 @@ def test_regex_do_cargo_ignora_a_versao_das_dependencias(tmp_path: Path) -> None
         [sys.executable, GATE_REL], cwd=repo, capture_output=True, text=True
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
-
-
-# --------------------------------------------------------------------------
-# 3) O banner do AppImage não pode voltar a ter versão digitada.
-# --------------------------------------------------------------------------
 
 
 def test_banner_do_appimage_deriva_a_versao() -> None:
@@ -325,8 +245,7 @@ def test_banner_do_appimage_deriva_a_versao() -> None:
 
 
 def test_deb_sugerido_pelo_banner_casa_o_nome_que_o_build_deb_gera() -> None:
-    """O nome sugerido era `..._3.0.0_amd64.deb`, que não existe no formato
-    atual: o build_deb.sh gera `_<versão>_amd64_py<tag>.deb`."""
+    """O nome sugerido era `..._3.0.0_amd64.deb`, que não existe no formato"""
     texto = (REPO / ENTRYPOINT_REL).read_text(encoding="utf-8")
     linha = next(ln for ln in texto.splitlines() if "apt install" in ln and "$" in ln)
     assert "${HEFESTO_VERSION}" in linha
@@ -344,23 +263,11 @@ def test_deb_sugerido_pelo_banner_casa_o_nome_que_o_build_deb_gera() -> None:
 def test_fallback_do_banner_e_o_unico_literal_de_versao() -> None:
     texto = (REPO / ENTRYPOINT_REL).read_text(encoding="utf-8")
     esperado = _versao_canonica()
-    # QUATRO-COMPONENTES-01 (13/08/2026): a versão canônica passou a ter
-    # QUATRO componentes (0.9.4.2) por decisão dela — a série 0.9.4.x marca
-    # o avanço do mapeamento dentro da mesma alfa. O regex de três casava
-    # ZERO literais aqui e a asserção reprovava dizendo que o fallback
-    # sumira, quando ele estava na linha 26, intacto. O `{1,2}` aceita as
-    # duas formas sem afrouxar o que a regra cobra: continua sendo UM
-    # literal, e continua tendo de ser o canônico.
     literais = re.findall(r'"(\d+\.\d+\.\d+(?:\.\d+)?)"', texto)
     assert literais == [esperado], (
         f"literais de versão em {ENTRYPOINT_REL}: {literais} "
         f"(esperado apenas o fallback {esperado})"
     )
-
-
-# --------------------------------------------------------------------------
-# 4) Metainfo: a release mais recente é a corrente.
-# --------------------------------------------------------------------------
 
 
 def test_metainfo_tem_a_versao_corrente_e_a_linha_0x() -> None:
@@ -380,15 +287,7 @@ def test_metainfo_tem_a_versao_corrente_e_a_linha_0x() -> None:
 
 
 def test_metainfo_releases_em_ordem_decrescente_sem_linha_3x() -> None:
-    """Réplica local do portão do .github/workflows/flatpak.yml.
-
-    METAINFO-ORDEM-DAS-RELEASES-01: acrescentar a 0.3.0 mantendo as entradas
-    3.x fazia o `appstreamcli validate` reprovar com
-    `releases-not-in-order 0.1.0 << 3.13.3` (medido: exit 3), e pior — o
-    AppStream compara versões, então uma loja com a 3.13.3 na lista entende que
-    o mais novo do projeto é a 3.13.3 e nunca oferece a 0.3.0. A história das
-    3.x vive no CHANGELOG.md.
-    """
+    """Réplica local do portão do .github/workflows/flatpak.yml."""
     from xml.etree import ElementTree
 
     raiz = ElementTree.parse(REPO / METAINFO_REL).getroot()
@@ -437,14 +336,8 @@ def test_metainfo_e_xml_valido_e_cada_release_tem_descricao() -> None:
         )
 
 
-# --------------------------------------------------------------------------
-# 5) Cargo.toml do applet: sem e-mail pessoal.
-# --------------------------------------------------------------------------
-
-
 def test_cargo_do_applet_nao_expoe_email_pessoal() -> None:
-    """Nem o check_anonymity.sh (não procura e-mail) nem o check_test_data.sh
-    (só varre tests/) enxergam este arquivo — este teste é o único portão."""
+    """Nem o check_anonymity.sh (não procura e-mail) nem o check_test_data.sh"""
     texto = (REPO / CARGO_REL).read_text(encoding="utf-8")
     achados = re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", texto)
     assert achados == [], f"e-mail pessoal de volta em {CARGO_REL}: {achados}"
@@ -458,11 +351,6 @@ def test_pkgbuild_e_cargo_usam_o_mesmo_padrao_de_redacao() -> None:
     assert "[REDACTED]" in pkgbuild, "o PKGBUILD deixou de ser a referência"
     cargo = (REPO / CARGO_REL).read_text(encoding="utf-8")
     assert re.search(r'authors\s*=\s*\["Vitoria Maria <\[REDACTED\]>"\]', cargo)
-
-
-# --------------------------------------------------------------------------
-# 6) Flatpak semeia os presets — no lugar em que o loader procura.
-# --------------------------------------------------------------------------
 
 
 def _comandos_do_modulo_hefesto() -> list[str]:
@@ -503,8 +391,7 @@ def test_flatpak_semeia_presets_no_caminho_que_o_loader_procura() -> None:
 
 
 def test_flatpak_e_appimage_gui_semeiam_o_mesmo_conjunto() -> None:
-    """Paridade com o FIX-APPIMAGE-PRESET-SEED-01: os dois usam glob, então um
-    preset novo em assets/ entra nos dois de graça."""
+    """Paridade com o FIX-APPIMAGE-PRESET-SEED-01: os dois usam glob, então um"""
     gui = (REPO / BUILD_GUI_REL).read_text(encoding="utf-8")
     assert "profiles_default" in gui, (
         "o build_appimage_gui.sh perdeu a semeadura de presets — era a cura de "
@@ -513,18 +400,10 @@ def test_flatpak_e_appimage_gui_semeiam_o_mesmo_conjunto() -> None:
     assert 'profiles_default/"*.json' in gui or "profiles_default/*.json" in gui
     presets = sorted(p.name for p in (REPO / "assets/profiles_default").glob("*.json"))
     assert presets, "assets/profiles_default está vazio"
-    # O canário ERA o `fallback.json`, e ele mudou de casa em 06/09/2026
-    # (PERFIS-SAO-PERFIS-01): os oito gêneros saíram da semeadura, e o que
-    # sobrou para semear é o slot dela. O NOME É LIDO NO DONO: digitado, ele
-    # reprovou a renomeação para «Freestyle» (O-MODO-FREESTYLE-02, 24/09/2026).
     from hefesto_dualsense4unix.profiles.loader import ARQUIVO_DO_PADRAO
 
     assert ARQUIVO_DO_PADRAO in presets
 
-    # E a casa nova viaja nos dois pelo mesmo par de linhas. Sem ela dentro do
-    # pacote, a migração que tira os gêneros da lista não tem com o que
-    # comparar, recua por segurança, e as oito linhas ficam na aba Perfis de
-    # quem instalou por Flatpak ou AppImage.
     assert "estilos_de_jogo" in gui, (
         "o build_appimage_gui.sh não leva assets/estilos_de_jogo/ — a migração "
         "dos gêneros fica sem o asset de referência dentro do AppImage"

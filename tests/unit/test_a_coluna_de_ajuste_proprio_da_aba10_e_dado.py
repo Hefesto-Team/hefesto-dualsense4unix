@@ -89,9 +89,6 @@ from hefesto_dualsense4unix.app.actions import perfis_web
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 
-#: A MESA DA RÉGUA — dois controles, com os endereços já MASCARADOS (octetos 4 e
-#: 5 zerados, a máscara desta casa). Nenhum endereço real de rádio em arquivo
-#: versionado.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1,
      "cor": "cosmic-red", "nome": "Cosmic Red", "via": "BT",
@@ -101,8 +98,6 @@ MESA = [
      "transporte": "usb", "alvo": False, "mascara": "DualSense"},
 ]
 
-#: A CÉLULA DA COLUNA, no HTML gerado. O `class="gr"` e o `data-hef` juntos: só
-#: o `data-hef` casaria também o `<td>` vizinho num dia de reorganização.
 CELULA = re.compile(r'<span class="gr[^"]*" data-hef="guarda\.secao"[^>]*>')
 
 
@@ -134,11 +129,7 @@ def _perfil_de_regua() -> Any:
 
 @pytest.fixture(autouse=True)
 def _perfil_no_lugar_do_disco(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O perfil da régua no lugar da pasta dela — e o `_ESCOLHIDO` limpo.
-
-    O `_ESCOLHIDO` é estado de MÓDULO (é a linha aberta no editor, e vive no
-    Python de propósito). Sem limpá-lo, um teste herdaria a escolha do anterior.
-    """
+    """O perfil da régua no lugar da pasta dela — e o `_ESCOLHIDO` limpo."""
     from hefesto_dualsense4unix.profiles import loader
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
@@ -161,16 +152,7 @@ def _celulas(publicado: bool) -> list[str]:
 
 
 def test_o_produto_acende_a_celula_do_controle_certo() -> None:
-    """A régua-mãe: um perfil que guarda `rumble` só do P1 acende UMA célula.
-
-    Ela mede as duas metades de uma vez — que o endereço SAI do pacote (se
-    voltar a `NAO_PINTAVEIS`, não sai) e que ele sai com os ESTADOS, não com os
-    nomes das seções.
-
-    O ENDEREÇO É O PONTO DESDE 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
-    o glifo (`guarda.secao`) diz o controle agora, e o disco do perfil virou o
-    ponto embaixo dele (`guarda.proprio`). A pergunta desta régua não mudou.
-    """
+    """A régua-mãe: um perfil que guarda `rumble` só do P1 acende UMA célula."""
     emitido = _emitidos().get("guarda.proprio")
     assert emitido is not None, (
         "`guarda.proprio` não é emitido: o ponto do disco voltou a ser "
@@ -178,16 +160,10 @@ def test_o_produto_acende_a_celula_do_controle_certo() -> None:
         "escrito lá — o alvo `classe` existe no piloto desde 03/09/2026.")
 
     largura = len(a10_perfis.SECOES_DA_COLUNA)
-    # A CONTA É DA TABELA, e não da mesa — 05/09/2026, ver
-    # `a10_perfis._com_os_lugares_vazios`. O bootstrap distribui a lista pela
-    # ordem do documento: um bloco a menos casa a célula de um controle com a
-    # do vizinho, e um bloco a menos que a TABELA deixa o lugar vazio sem quem
-    # acenda a marca que esconde os glifos do mockup.
     assert len(emitido) == a10_perfis.LUGARES_DA_TABELA * largura, (
         f"a emissão tem {len(emitido)} valores para uma tabela de "
         f"{a10_perfis.LUGARES_DA_TABELA} linhas x {largura} seções.")
 
-    # UMA LINHA POR CONTROLE, na ordem da mesa.
     linhas = [emitido[i * largura:(i + 1) * largura] for i in range(len(MESA))]
     aceso = {
         secao
@@ -221,20 +197,7 @@ def test_a_pagina_publicada_sabe_receber_a_pintura() -> None:
 
 
 def test_a_celula_nao_tem_dica_nenhuma() -> None:
-    """DECISÃO DELA nº4 — as oito dicas das células saíram, e não voltam.
-
-    A régua olha o ELEMENTO, e não as frases que saíram: proibir os oito textos
-    um a um deixaria a nona dica entrar livre.
-
-    ELA MEDE A BANCADA, E SÓ ELA — e isso não é frouxidão, é onde a decisão
-    mora. Tirar uma dica MUDA O QUE ELA VÊ, então é desenho; e desenho só chega
-    ao produto pelo `--publicar` DELA (`check_o_desenho_aprovado.py`, e o
-    contrário disso é o defeito que o `onde.py` inteiro existe para impedir).
-    Até lá a página publicada continua com as oito, e a espera está declarada em
-    `mockup/DIVERGENCIAS.md`, que é o portão que a policia. Cobrar o publicado
-    aqui seria esta régua reprovando a página por não ter recebido uma decisão
-    que ainda é dela para tomar.
-    """
+    """DECISÃO DELA nº4 — as oito dicas das células saíram, e não voltam."""
     com_dica = [c for c in _celulas(publicado=False) if "title=" in c]
     assert not com_dica, (
         f"{len(com_dica)} célula(s) de `Ajuste próprio` com dica. Ela mandou as "
@@ -244,21 +207,9 @@ def test_a_celula_nao_tem_dica_nenhuma() -> None:
 
 
 def test_a_ordem_das_celulas_e_a_do_desenho() -> None:
-    """`SECOES_DA_COLUNA` é a ordem em que as células saem no HTML.
-
-    A lista vive duas vezes — no gerador (`aba10.SECOES`) e no pacote — porque o
-    gerador é um script que lê o repositório no import e não pode ser importado
-    por um pacote instalado. O preço da segunda cópia é esta régua: a
-    distribuição do bootstrap é POSICIONAL, então uma divergência de ordem faz a
-    célula de uma seção mostrar o estado de outra, calada.
-    """
+    """`SECOES_DA_COLUNA` é a ordem em que as células saem no HTML."""
     secoes = [re.search(r'data-hef-secao="([^"]+)"', c).group(1)
               for c in _celulas(publicado=False)]
-    # O DESENHO PODE ESTAR UMA SESSÃO À FRENTE DO PRODUTO, e só no fim da
-    # linha: a coluna que espera o olho dela (`SECOES_ESPERANDO_A_SESSAO_DELA`)
-    # vem DEPOIS das que o pacote já distribui, na ordem do esquema — é o que
-    # deixa o `--publicar` virar a distribuição sem trocar nenhuma célula de
-    # lugar.
     do_desenho = list(a10_perfis.SECOES_DA_COLUNA) + [
         s for s in perfis_web.SECOES_POR_CONTROLE
         if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA]
@@ -267,20 +218,12 @@ def test_a_ordem_das_celulas_e_a_do_desenho() -> None:
         f"a primeira linha do desenho traz {secoes[:largura]} e o pacote "
         f"distribui na ordem {list(a10_perfis.SECOES_DA_COLUNA)}, com "
         f"{sorted(perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA)} esperando a sessão")
-    # E TODA LINHA REPETE A MESMA ORDEM: o bloco de N valores só vale se as
-    # linhas forem iguais entre si.
     assert secoes == do_desenho * (len(secoes) // largura), (
         "as linhas da tabela não repetem a mesma ordem de seções")
 
 
 def test_nenhum_campo_do_perfil_fica_sem_coluna() -> None:
-    """Tudo o que o perfil SABE guardar por controle tem célula na tela.
-
-    É o sentido que precisa morder: um campo em `ControllerOverrides` sem coluna
-    é um ajuste que o perfil guarda e a tela esconde — ela não teria como saber
-    que aquele controle tem opinião própria. O sentido contrário (coluna sem
-    campo) é legítimo e declarado: ver `ESPERANDO_O_ESQUEMA`.
-    """
+    """Tudo o que o perfil SABE guardar por controle tem célula na tela."""
     faltando = (set(perfis_web.SECOES_POR_CONTROLE) - set(a10_perfis.SECOES_DA_COLUNA)
                 - perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA)
     assert not faltando, (
@@ -289,13 +232,7 @@ def test_nenhum_campo_do_perfil_fica_sem_coluna() -> None:
 
 
 def test_toda_coluna_sem_campo_esta_declarada() -> None:
-    """Uma coluna que o esquema ainda não guarda é DECLARAÇÃO, nunca invenção.
-
-    ELA NÃO REPROVA QUANDO O CAMPO CHEGA, de propósito: no dia em que
-    `ControllerOverrides` ganhar o `mic`, a seção passa a estar no esquema e a
-    conta fecha sem ninguém mexer aqui. Uma régua que ficasse vermelha ao
-    receber a cura seria uma armadilha para a frente seguinte.
-    """
+    """Uma coluna que o esquema ainda não guarda é DECLARAÇÃO, nunca invenção."""
     sem_campo = set(a10_perfis.SECOES_DA_COLUNA) - set(perfis_web.SECOES_POR_CONTROLE)
     nao_declaradas = sem_campo - a10_perfis.ESPERANDO_O_ESQUEMA
     assert not nao_declaradas, (
@@ -306,14 +243,7 @@ def test_toda_coluna_sem_campo_esta_declarada() -> None:
 
 
 def test_a_coluna_do_microfone_existe_na_tela() -> None:
-    """DECISÃO DELA nº20 — o microfone é o quinto ajuste por controle.
-
-    *"É justamente o `Virtual` que faz o mic soar igual no cabo e no rádio, ou
-    seja: é o ajuste que faz o CANAL daquele controle funcionar."* A tela vem
-    antes do campo por decisão dela, e a célula fica apagada em todo perfil real
-    enquanto o campo não existir — o que `test_toda_coluna_sem_campo_esta_declarada`
-    mantém honesto.
-    """
+    """DECISÃO DELA nº20 — o microfone é o quinto ajuste por controle."""
     assert "mic" in a10_perfis.SECOES_DA_COLUNA, (
         "o microfone saiu da coluna `Ajuste próprio` (decisão dela nº20)")
     secoes = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
@@ -321,27 +251,8 @@ def test_a_coluna_do_microfone_existe_na_tela() -> None:
     assert "mic" in secoes, "o desenho perdeu a célula do microfone"
 
 
-# ---------------------------------------------------------------------------
-# A DIREÇÃO QUE NINGUÉM GUARDAVA — o ESQUEMA contra o PRODUTO
-#
-# As duas réguas acima comparam o produto com o DESENHO, e as duas estavam
-# verdes enquanto a coluna do microfone ficava apagada à força: o desenho tinha
-# as cinco células e o produto emitia quatro chaves. Faltava perguntar ao
-# ESQUEMA, que é quem decide o que existe no disco.
-# ---------------------------------------------------------------------------
 def test_o_produto_mostra_todo_campo_do_esquema() -> None:
-    """O que o perfil GUARDA por controle, a coluna MOSTRA. Nome a nome, na ordem.
-
-    A ORDEM entra no ``assert`` de propósito: ``pintaGuarda`` casa por NOME
-    (``linha.secoes[g.dataset.hefSecao]``), mas o pacote emite uma LISTA que o
-    piloto distribui pela ordem do documento. Duas listas com os mesmos nomes em
-    ordens diferentes acendem a luz onde a vibração está guardada, e o número de
-    valores continua batendo — ninguém acusaria.
-
-    MORDIDA: devolva ``perfis_web.SECOES_POR_CONTROLE`` à tupla digitada de
-    quatro nomes (sem o ``mic``) e esta régua reprova nomeando o campo
-    escondido.
-    """
+    """O que o perfil GUARDA por controle, a coluna MOSTRA. Nome a nome, na ordem."""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
     do_esquema = tuple(ControllerOverrides.model_fields)
@@ -355,20 +266,7 @@ def test_o_produto_mostra_todo_campo_do_esquema() -> None:
 
 
 def test_nenhuma_isencao_desta_lista_ja_caducou() -> None:
-    """Uma coluna declarada *"o campo está a caminho"* some quando ele chega.
-
-    ``ESPERANDO_O_ESQUEMA`` é isenção com prazo, e a régua que a guardava é de
-    uma direção só de propósito — ``test_toda_coluna_sem_campo_esta_declarada``
-    diz, com todas as letras, que *"ela não reprova quando o campo chega"*. Isso
-    evita uma armadilha para a frente seguinte e cria outra: a isenção nunca
-    caduca sozinha. Foi assim que o ``mic`` ficou declarado como ausente por um
-    dia depois de ter chegado, cobrindo a coluna apagada.
-
-    Esta fecha a outra direção. Ela não pede que ninguém lembre — reprova.
-
-    MORDIDA: ponha ``"mic"`` de volta em ``a10_perfis.ESPERANDO_O_ESQUEMA`` e
-    esta régua reprova mandando apagá-lo.
-    """
+    """Uma coluna declarada *"o campo está a caminho"* some quando ele chega."""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
     caducas = set(a10_perfis.ESPERANDO_O_ESQUEMA) & set(
@@ -381,23 +279,9 @@ def test_nenhuma_isencao_desta_lista_ja_caducou() -> None:
 
 
 def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
-    """*"herda os cinco ajustes do perfil"* — e a palavra sai da lista.
-
-    A frase trazia ``quatro`` digitado. Com a quinta coluna na tela, a linha de
-    um controle sem ajuste próprio mostrava cinco glifos apagados e dizia
-    *"herda os quatro"* — o número ao lado do que o desmente. Para quem lê a
-    tela contando, são duas afirmações contrárias na mesma linha.
-
-    MORDIDA: volte a escrever ``"herda os quatro ajustes do perfil"`` em
-    ``perfis_web._linhas_da_guarda`` e esta régua reprova.
-    """
+    """*"herda os cinco ajustes do perfil"* — e a palavra sai da lista."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
-    # DIGITADO AQUI DE PROPÓSITO — é a segunda opinião sobre o número, e ler a
-    # tabela do produto faria a régua concordar com ele por construção. O
-    # `sete` entrou em 08/09/2026, com a `mascara` (MASCARA-NO-PERFIL-01); o
-    # `oito` espera a sessão dela (o `movimento`, A-MIRA-POR-MOVIMENTO-NA-TELA-01).
-    # A conta é a da PÁGINA PUBLICADA — o que o olho conta ao lado da frase.
     esperado = {4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito"}[
         len(perfis_web.SECOES_NA_TELA)]
     sem_nada = Profile(name="sem nada", match=MatchAny(), controllers={})
@@ -408,18 +292,7 @@ def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
 
 
 def test_a_secao_que_espera_a_sessao_dela_ainda_nao_esta_publicada() -> None:
-    """A isenção de `SECOES_ESPERANDO_A_SESSAO_DELA` tem PRAZO, e é este teste.
-
-    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): o `movimento` entrou no
-    esquema antes de a coluna dele chegar à página publicada, porque os desenhos
-    novos se aprovam todos juntos (regra dela, 23/09). Enquanto isso, o pacote
-    distribui sete valores por linha — a página tem sete células.
-
-    NO DIA EM QUE ELA PUBLICAR a aba 10 com a célula nova, este teste reprova:
-    o nome sai da isenção e entra em `a10_perfis.SECOES_DA_COLUNA`, no mesmo
-    commit do `--publicar`. Uma isenção que não reprova quando caduca é uma
-    isenção eterna — foi assim que a coluna do microfone ficou apagada à força.
-    """
+    """A isenção de `SECOES_ESPERANDO_A_SESSAO_DELA` tem PRAZO, e é este teste."""
     publicadas = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
                   for c in _celulas(publicado=True)}
     desenhadas = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)

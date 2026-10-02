@@ -83,12 +83,7 @@ class _FakeUhid:
 
 @pytest.fixture()
 def backends(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Troca os dois backends por fakes; devolve o registro do que foi criado.
-
-    `uhid_kwargs`/`uinput_kwargs` = None enquanto aquele backend não foi tentado.
-    O blueprint NÃO é dublado: o canônico embutido é puro (bytes no pacote, sem
-    I/O) — o que chega ao backend é exatamente o que o vpad real usaria.
-    """
+    """Troca os dois backends por fakes; devolve o registro do que foi criado."""
     from hefesto_dualsense4unix.integrations import uhid_gamepad, uinput_gamepad
 
     registro: dict[str, Any] = {
@@ -105,8 +100,6 @@ def backends(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         flavor: str | None, *, rumble_sink: Any = None, player: int = 1,
         blueprint: Any = None, **sinks: Any,
     ) -> Any:
-        # REPLICA-03: a factory repassa também os sinks de replicação
-        # (trigger/lightbar/player_led/session_end) — registrados à parte.
         registro["uhid_kwargs"] = {"flavor": flavor, "player": player,
                                    "blueprint": blueprint, "sinks": sinks}
         pad = _FakeUhid(
@@ -134,12 +127,11 @@ def backends(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_dualsense_usa_uhid_sem_precisar_do_fisico(backends: dict[str, Any]) -> None:
-    """O critério central do VPAD-03: nada de hidraw, nada de controle conectado
-    — e o vpad ainda assim nasce uhid (hoje era uinput)."""
+    """O critério central do VPAD-03: nada de hidraw, nada de controle conectado"""
     pad = make_virtual_pad("dualsense", player=3)
 
     assert pad is backends["uhid"]
-    assert backends["uinput_kwargs"] is None  # nem tentou o uinput
+    assert backends["uinput_kwargs"] is None
 
 
 def test_uhid_recebe_o_player_do_slot(backends: dict[str, Any]) -> None:
@@ -150,8 +142,7 @@ def test_uhid_recebe_o_player_do_slot(backends: dict[str, Any]) -> None:
 
 
 def test_uhid_recebe_o_blueprint_canonico(backends: dict[str, Any]) -> None:
-    """O blueprint injetado é o sintético embutido — descriptor USB de 289 B e o
-    template 0x09 SEM identidade (o start() carimba o MAC do jogador depois)."""
+    """O blueprint injetado é o sintético embutido — descriptor USB de 289 B e o"""
     make_virtual_pad("dualsense", player=1)
 
     blueprint = backends["uhid_kwargs"]["blueprint"]
@@ -186,7 +177,7 @@ def test_sem_dev_uhid_cai_no_uinput(
     pad = make_virtual_pad("dualsense")
 
     assert pad is backends["uinput"]
-    assert backends["uinput_kwargs"]["flavor"] == "dualsense"  # a máscara é preservada
+    assert backends["uinput_kwargs"]["flavor"] == "dualsense"
     assert backends["uhid_kwargs"] is None
 
 
@@ -198,7 +189,7 @@ def test_allow_uhid_false_veta_o_uhid_mesmo_disponivel(
     pad = make_virtual_pad("dualsense", allow_uhid=False)
 
     assert pad is backends["uinput"]
-    assert backends["uhid_kwargs"] is None  # nem chegou a tentar
+    assert backends["uhid_kwargs"] is None
 
 
 def test_allow_uhid_false_loga_o_veto(
@@ -224,11 +215,7 @@ def test_uhid_start_falho_cai_no_uinput(backends: dict[str, Any]) -> None:
 def test_bind_que_nao_chega_cai_no_uinput_e_destroi_o_uhid(
     backends: dict[str, Any],
 ) -> None:
-    """`start()` só diz que o CREATE2 foi aceito — o bind vem depois, ou não vem.
-
-    Sem o `stop()`, o device uhid ficaria de pé (mudo, sem driver) disputando o
-    jogo com o vpad uinput criado logo a seguir = controle duplicado.
-    """
+    """`start()` só diz que o CREATE2 foi aceito — o bind vem depois, ou não vem."""
     backends["uhid_bind_ok"] = False
 
     pad = make_virtual_pad("dualsense")
@@ -268,11 +255,7 @@ def test_fallback_loga_o_motivo(
 
 
 def test_criacao_nao_le_o_controle_fisico() -> None:
-    """BT-01, critério 4: nenhum caminho de criação de vpad lê o físico.
-
-    Se `capture_dualsense_blueprint` voltar para a factory, o EIO do BT dormindo
-    volta a decidir o backend — exatamente o bug do estudo de 117 agentes.
-    """
+    """BT-01, critério 4: nenhum caminho de criação de vpad lê o físico."""
     fonte = Path(virtual_pad.__file__).read_text(encoding="utf-8")
 
     assert "capture_dualsense_blueprint" not in fonte
@@ -331,16 +314,7 @@ class TestMotivoDoFallback:
 
 
 class TestInvarianteVpad06:
-    """VPAD-06 — o teste-invariante do sprint: NENHUM caminho de criação de vpad
-    com flavor dualsense expõe o VID/PID do FÍSICO (054c:0ce6).
-
-    É o teste que teria pegado o "zero controles" antes do estudo de 117
-    agentes: o fallback uinput nascia 0ce6 e a launch option persistida na Steam
-    (`IGNORE_DEVICES=0x054c/0x0ce6`) escondia físico E vpad juntos. Usa os
-    backends REAIS (o VID/PID testado é o de produção) — só o I/O de /dev/uhid
-    e /dev/uinput é stubado, então roda em CI sem hardware e sem skip (regra
-    dos 22 skips falsos).
-    """
+    """VPAD-06 — o teste-invariante do sprint: NENHUM caminho de criação de vpad"""
 
     @pytest.fixture()
     def io_stub(self, monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
@@ -390,18 +364,13 @@ class TestInvarianteVpad06:
             "vpad dividindo VID/PID com o físico — a launch option persistida "
             "esconderia os dois (jogo com ZERO controles)"
         )
-        assert product == 0x0DF2  # Edge nos DOIS backends (VPAD-04)
+        assert product == 0x0DF2
         # UhidDualSense não tem campo vendor (constante do módulo, testada em
-        # test_uhid_edge_dedup); no uinput o vendor é campo e TEM de ser Sony.
         assert getattr(pad, "vendor", 0x054C) == 0x054C
 
 
 def test_os_dois_backends_reais_cumprem_o_protocolo() -> None:
-    """O Protocol é o contrato que permite trocar de backend sem cirurgia.
-
-    Instancia os dois DE VERDADE (sem start — nada de /dev aqui) e exercita a
-    interface inteira num pad parado: todo método é no-op seguro sem device.
-    """
+    """O Protocol é o contrato que permite trocar de backend sem cirurgia."""
     from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
     from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 
@@ -423,33 +392,14 @@ def test_os_dois_backends_reais_cumprem_o_protocolo() -> None:
 
 
 def test_uhid_declara_o_flavor_dualsense() -> None:
-    """Sem isto o daemon compara `vpad.flavor` com "dualsense", vê None e recria
-    o vpad a cada tick de sync do co-op."""
+    """Sem isto o daemon compara `vpad.flavor` com "dualsense", vê None e recria"""
     from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
     assert UhidDualSense(player=1).flavor == "dualsense"
 
 
 def test_a_normalizacao_sobrevive_ao_duble_do_coop() -> None:
-    """O dublê do co-op não pode ficar preso em quem importou o símbolo.
-
-    **REINCIDÊNCIA MEDIDA — 08/09/2026.** Em 04/09 esta casa registrou *"o dublê
-    do co-op era mais frouxo que a função real e envenenava outro arquivo por
-    ordem de teste"*. O mesmo arquivo repetiu, e desta vez o alvo foi
-    `test_flavor_desconhecido_normaliza_antes_de_escolher`: com
-    `test_subsystem_coop.py` rodando antes, `'ps'` chegava CRU ao uinput e a
-    factory escolhia o backend errado.
-
-    A CAUSA, medida com sonda e não suposta: `daemon/subsystems/external_mask`
-    é importado TARDE — a factory o traz de dentro da função —, então ele nascia
-    DENTRO da janela do `monkeypatch` e o `from … import normalize_flavor`
-    copiava o DUBLÊ. O `undo` do pytest desfaz o que ele trocou; **não desfaz o
-    que nasceu torto.**
-
-    Esta régua mede a PROPRIEDADE, não a ordem: o símbolo que o produto de fato
-    consulta tem de ser a função real, no fim de qualquer teste. Ela reprova
-    mesmo rodando sozinha se alguém deixar um dublê preso em `sys.modules`.
-    """
+    """O dublê do co-op não pode ficar preso em quem importou o símbolo."""
     import sys
 
     from hefesto_dualsense4unix.integrations import uinput_gamepad

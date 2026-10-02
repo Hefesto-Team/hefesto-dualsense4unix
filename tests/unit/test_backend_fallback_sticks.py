@@ -53,25 +53,21 @@ def _inject_usb_report(ds: pydualsense, sticks: int) -> None:
 
 def _backend_with(ds: pydualsense) -> PyDualSenseController:
     backend = PyDualSenseController(evdev_reader=_NoEvdev())
-    backend._ds = ds  # seam de compat do backend para o handle primário
+    backend._ds = ds
     return backend
 
 
 @pytest.mark.parametrize("cru", [128, 125])
 def test_fallback_preserva_repouso_dos_sticks(cru: int) -> None:
-    """Repouso cru 128 (centro perfeito) e 125 (drift típico) → raw idêntico ao
-    cru e cursor PARADO (antes: raw 0/253 → cursor voava na diagonal)."""
+    """Repouso cru 128 (centro perfeito) e 125 (drift típico) → raw idêntico ao"""
     ds = _fake_ds()
     _inject_usb_report(ds, cru)
-    # Sanidade do repro: a lib instalada centraliza em 0 (states[n] - 128).
-    # (ordem invertida por causa do SIM300 — LX em maiúsculas parece constante)
     assert cru - 128 == ds.state.LX
 
     state = _backend_with(ds).read_state()
 
     assert (state.raw_lx, state.raw_ly) == (cru, cru)
     assert (state.raw_rx, state.raw_ry) == (cru, cru)
-    # Pipeline de movimento: repouso (dentro da deadzone) → velocidade 0.
     assert _compute_move_px_per_sec(
         state.raw_lx, state.raw_ly, DEFAULT_MOUSE_SPEED
     ) == (0.0, 0.0)
@@ -84,7 +80,7 @@ def test_fallback_preserva_deflexao_real() -> None:
     state = _backend_with(ds).read_state()
     assert state.raw_lx == 200
     vx, _ = _compute_move_px_per_sec(state.raw_lx, 128, DEFAULT_MOUSE_SPEED)
-    assert vx > 0.0  # move para a direita, como o stick físico pede
+    assert vx > 0.0
 
 
 def test_fallback_nao_toca_gatilhos() -> None:
@@ -92,8 +88,8 @@ def test_fallback_nao_toca_gatilhos() -> None:
     ds = _fake_ds()
     report = [0x01] + [0] * 63
     report[1] = report[2] = report[3] = report[4] = 128
-    report[5] = 200  # L2 cru
-    report[6] = 50   # R2 cru
+    report[5] = 200
+    report[6] = 50
     ds.readInput(report)
     state = _backend_with(ds).read_state()
     assert state.l2_raw == 200
@@ -104,6 +100,5 @@ def test_centered_stick_to_raw_clampa_extremos() -> None:
     assert _centered_stick_to_raw(0) == 128
     assert _centered_stick_to_raw(-128) == 0
     assert _centered_stick_to_raw(127) == 255
-    # Valores fora do range teórico não estouram o contrato 0-255.
     assert _centered_stick_to_raw(-300) == 0
     assert _centered_stick_to_raw(300) == 255

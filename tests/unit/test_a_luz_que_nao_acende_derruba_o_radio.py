@@ -36,7 +36,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 
 
@@ -100,18 +99,14 @@ def test_ja_estava_fora_conta_como_sucesso(pac, gesto, monkeypatch) -> None:
         radio, "desconectar",
         lambda mac, **_: radio.Resultado(
             radio.ESTADO_JA_ESTAVA_FORA, radio.FRASE_JA_ESTAVA_FORA, "…"))
-    gesto(_ctx(pac, "bt"), {"uniq": UNIQ}, None)  # não levanta
+    gesto(_ctx(pac, "bt"), {"uniq": UNIQ}, None)
 
 
 @pytest.mark.parametrize("estado", ["ESTADO_NAO_DEU", "ESTADO_SEM_ALVO"])
 def test_o_que_nao_caiu_levanta_com_a_frase_do_produto(
     pac, gesto, monkeypatch, estado: str,
 ) -> None:
-    """A frase é a que o módulo escreveu para ela, não uma minha.
-
-    Reescrevê-la aqui seria a segunda verdade: o módulo tem quatro frases em
-    português, pensadas para quem está com o controle na mão.
-    """
+    """A frase é a que o módulo escreveu para ela, não uma minha."""
     from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 
     codigo = getattr(radio, estado)
@@ -131,12 +126,7 @@ def test_clique_solto_recusa(pac, gesto) -> None:
 
 
 def test_o_endereco_nunca_sai_inteiro() -> None:
-    """O módulo mascara, e é dele que a frase vem.
-
-    NESTA CASA ISSO É PORTÃO: dois deles reprovam um MAC de doze hexa em
-    arquivo versionado, e uma exceção de tela vira log. O caso mede a garantia
-    na origem, que é onde ela não depende de quem chama lembrar.
-    """
+    """O módulo mascara, e é dele que a frase vem."""
     from hefesto_dualsense4unix.integrations.gesto_de_reconexao import mascarar
 
     mascarado = mascarar("aa:bb:cc:dd:ee:ff")

@@ -1,29 +1,4 @@
-"""O mapa entra em "Conexões" por uma linha, e uma linha é o teto.
-
-CONEXÕES · MAPA 2D 01, tarefa ``MAPA-5`` (25/08/2026).
-
-O NÚMERO QUE ESCOLHE O LUGAR DO MAPA
---------------------------------------
-
-A seção pede **2465 px numa janela de 1080** (``CONFIGURAÇÕES-FECHA-01`` §2.4,
-foto ``readme_configuracoes_inteira.png``). Três faces de quadrados mais a
-lista de aparelhos são mais uns 350 px, e nasceriam **abaixo da dobra** — seria
-construir a feature e escondê-la, que é a ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ``
-outra vez. Por isso o desenho mora em janela própria, e aqui dentro ficam uma
-linha e um botão.
-
-COMO SE MEDE "UMA LINHA"
--------------------------
-
-A seção é montada DUAS vezes sobre a mesma bancada: uma com a linha do mapa, e
-outra com ela trocada por uma caixa vazia. A diferença é exatamente o que esta
-tarefa gastou de altura, e é ela que tem teto. Medir a seção inteira contra um
-número absoluto mediria as outras quatro frentes junto.
-
-Sob ``Gtk.OffscreenWindow``, nunca ``Gtk.Window``: sob Xvfb não há gerenciador
-de janelas e uma ``Gtk.Window`` fica 1x1 para sempre — a régua devolveria zero
-e o teto passaria sempre (``COMO-OLHAR-A-TELA.md``).
-"""
+"""O mapa entra em "Conexões" por uma linha, e uma linha é o teto."""
 from __future__ import annotations
 
 from typing import Any
@@ -32,7 +7,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("a linha do mapa dentro da seção Conexões")
 
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
@@ -43,7 +17,6 @@ from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, MaquinaConfig
 from tests.unit.test_mapa_a_bancada_de_mentira import bancada_de_agora, mapa_dela
 
-#: O teto declarado da tarefa: uma linha de texto mais o botão ao lado dela.
 TETO_EM_PX = 48
 
 
@@ -82,14 +55,7 @@ def _altura_da_secao(
 
 
 def test_a_secao_ganha_no_maximo_uma_linha(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A linha do mapa custa uma linha, e não uma grade de quadrados.
-
-    Mordida exercida em 25/08/2026: troquei ``_linha_do_mapa`` por uma que
-    devolve a grade das três faces (quinze quadrados de 56 px). O delta passou
-    de 48 px e o teste reprovou imprimindo os dois números — ver
-    ``test_a_grade_de_faces_dentro_da_secao_estoura_o_teto``, que é a mordida
-    escrita como teste.
-    """
+    """A linha do mapa custa uma linha, e não uma grade de quadrados."""
     com_a_linha = _altura_da_secao(mapa=mapa_dela())
 
     monkeypatch.setattr(
@@ -108,11 +74,7 @@ def test_a_secao_ganha_no_maximo_uma_linha(monkeypatch: pytest.MonkeyPatch) -> N
 def test_a_grade_de_faces_dentro_da_secao_estoura_o_teto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A mordida, escrita como teste: a grade inline passa MUITO do teto.
-
-    Este teste é a régua da régua. Se ele passar a caber em 48 px, a medição de
-    cima deixou de medir alguma coisa — e um teto que nada estoura não é teto.
-    """
+    """A mordida, escrita como teste: a grade inline passa MUITO do teto."""
     sem_a_linha_base = _altura_da_secao(mapa=mapa_dela())
 
     def _grade_das_faces(mapa: MapaDaMesa, *_a: Any, **_k: Any) -> Any:
@@ -141,12 +103,7 @@ def test_a_grade_de_faces_dentro_da_secao_estoura_o_teto(
 
 
 def test_quem_nunca_desenhou_le_o_preco_de_nao_ter_desenhado() -> None:
-    """A frase de quem abre a aba sem mapa nenhum — e ela diz o preço.
-
-    Mordida: fazer a linha sumir quando o mapa é vazio. O botão de desenhar a
-    mesa some junto, e a feature inteira fica inalcançável para exatamente
-    quem mais precisa dela — quem nunca desenhou.
-    """
+    """A frase de quem abre a aba sem mapa nenhum — e ela diz o preço."""
     linha = secao_mesa._linha_do_mapa(
         MapaDaMesa(), bancada_de_agora().censo(), lambda *_a: None
     )
@@ -161,12 +118,7 @@ def test_quem_nunca_desenhou_le_o_preco_de_nao_ter_desenhado() -> None:
 
 
 def test_com_o_mapa_a_linha_conta_faces_entradas_e_aparelhos() -> None:
-    """Três faces, quinze entradas, sete aparelhos — os números da mesa dela.
-
-    Mordida: trocar o ``resumo_do_mapa`` por uma contagem do dicionário de
-    entradas. A linha passa a dizer "16 entradas" (a ``15a`` entra na conta) e
-    o número da tela deixa de bater com a fileira do metal.
-    """
+    """Três faces, quinze entradas, sete aparelhos — os números da mesa dela."""
     linha = secao_mesa._linha_do_mapa(
         mapa_dela(), bancada_de_agora().censo(), lambda *_a: None
     )

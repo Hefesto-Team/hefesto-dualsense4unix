@@ -34,10 +34,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("player01 um numero de jogador")
 
 import json
@@ -64,7 +60,6 @@ from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
 
-#: Os controles da casa (MACs forjados — faixa aa:bb:cc).
 UNIQ_A = "aabbcc000001"
 UNIQ_B = "aabbcc000002"
 UNIQ_C = "aabbcc000003"
@@ -129,11 +124,6 @@ def _fila_no_disco(tmp: Path, kind: str) -> dict[str, int]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Entrega 2 — o comando que faltava: atribuir número
-# ---------------------------------------------------------------------------
-
-
 class TestAtribuirNumero:
     """O caminho público: ``identity.number.set`` pelo handler do IPC."""
 
@@ -141,11 +131,7 @@ class TestAtribuirNumero:
     async def test_trocar_para_1_permuta_com_quem_estava_no_1(
         self, config_isolado: Path
     ) -> None:
-        """O gesto dela: "quero que ESTE seja o 1".
-
-        A e B na mesa, A na frente. Pedir 1 para B faz B exibir 1 e A exibir 2
-        — os dois lugares que os presentes já ocupavam, trocados entre si.
-        """
+        """O gesto dela: "quero que ESTE seja o 1"."""
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B])
         assert ds.slot_for(UNIQ_A, assign=False) == 1
@@ -160,31 +146,13 @@ class TestAtribuirNumero:
         assert resultado["number"] == 1
         assert ds.slot_for(UNIQ_B, assign=False) == 1
         assert ds.slot_for(UNIQ_A, assign=False) == 2
-        # Só quem MUDOU de lugar entra no relatório (disciplina do R-15).
         assert set(resultado["changed"]) == {UNIQ_A, UNIQ_B}
 
     @pytest.mark.asyncio
     async def test_empurrar_para_o_fim_troca_com_quem_esta_la(
         self, config_isolado: Path
     ) -> None:
-        """A→3 com três na mesa: A e C trocam, **B não se mexe**.
-
-        NOTA DATADA — 29/08/2026, TROCA-DE-PLAYER-01. Este teste chamava-se
-        ``test_empurrar_para_o_fim_desliza_os_do_meio`` e exigia
-        ``B=1, C=2, A=3``: um RODÍZIO. O que caducou é a FORMA do gesto, não a
-        medição — o rodízio de fato preservava 1..N e não rebaixava ausente, e
-        continua sendo o que o ``identity.renumber`` faz.
-
-        O que o derrubou: a especificação visual aprovada por ela promete
-        TROCA em dezessete lugares (os 16 tooltips de botão de número e a
-        legenda *"Os dois trocam, os outros não se mexem"*,
-        ``src/hefesto_dualsense4unix/interface/aba04.py``), e a palavra dela de 28/08 é
-        *"Trocar é TROCA, não fila"*. Rodízio e troca dão o MESMO resultado
-        quando o salto é de um número (vizinhos) — que é o único caso
-        desenhado no mockup e o único que esta classe exercitava —, e resultados
-        diferentes de dois em diante. É por isso que a divergência atravessou
-        um mês com a suíte verde.
-        """
+        """A→3 com três na mesa: A e C trocam, **B não se mexe**."""
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B, UNIQ_C])
 
@@ -193,10 +161,7 @@ class TestAtribuirNumero:
 
         assert ds.slot_for(UNIQ_A, assign=False) == 3
         assert ds.slot_for(UNIQ_C, assign=False) == 1
-        # O DO MEIO NÃO SE MEXE — é isto que separa troca de rodízio, e é a
-        # única linha deste arquivo que reprova com o `pop`+`insert` de volta.
         assert ds.slot_for(UNIQ_B, assign=False) == 2
-        # O critério que resume a NUM-01: nunca um jogador 2 sem jogador 1.
         exibidos = sorted(
             ds.slot_for(u, assign=False) for u in (UNIQ_A, UNIQ_B, UNIQ_C)
         )
@@ -206,17 +171,11 @@ class TestAtribuirNumero:
     async def test_nao_rebaixa_quem_esta_ausente(
         self, config_isolado: Path
     ) -> None:
-        """A diferença viva para o "Renumerar agora".
-
-        O renumber empurra os ausentes para o fim da fila por construção — é o
-        gesto de faxina, e a mantenedora já mediu o efeito ("Renumerar agora
-        REBAIXA quem está ausente"). Este comando permuta APENAS os lugares
-        dos presentes: quem está na gaveta fica exatamente onde estava.
-        """
+        """A diferença viva para o "Renumerar agora"."""
         agora = [1000.0]
         ds = ControllerIdentityRegistry(clock=lambda: agora[0])
-        ds.sync_connected([UNIQ_A, UNIQ_B, UNIQ_C])  # lugares 1, 2, 3
-        ds.sync_connected([UNIQ_A, UNIQ_C])  # B foi para a gaveta
+        ds.sync_connected([UNIQ_A, UNIQ_B, UNIQ_C])
+        ds.sync_connected([UNIQ_A, UNIQ_C])
 
         server = _servidor(config_isolado, ds, None)
         await server._handle_identity_number_set({"uniq": UNIQ_C, "number": 1})
@@ -225,12 +184,8 @@ class TestAtribuirNumero:
         assert fila[UNIQ_B] == 2, "o ausente perdeu o lugar dele na fila"
         assert {fila[UNIQ_A], fila[UNIQ_C]} == {1, 3}
         assert fila[UNIQ_C] == 1
-        # E na mesa: dentro do prazo do lugar guardado do B, a troca é a da
-        # tela — o C com o 1, o A com o 3, e o 2 continua do B
-        # (O-ASSENTO-GUARDADO-NAO-ANDA-01, conferência de 24/09/2026)…
         assert ds.slot_for(UNIQ_C, assign=False) == 1
         assert ds.slot_for(UNIQ_A, assign=False) == 3
-        # …e passado o prazo, quem ficou conta 1..N sem o ausente.
         agora[0] += id_mod.prazo_do_lugar_guardado() + 1.0
         assert ds.slot_for(UNIQ_C, assign=False) == 1
         assert ds.slot_for(UNIQ_A, assign=False) == 2
@@ -313,7 +268,7 @@ class TestRecusasVisiveis:
         """Número exibido só existe para quem está na mesa (NUM-01)."""
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B])
-        ds.sync_connected([UNIQ_A])  # B saiu
+        ds.sync_connected([UNIQ_A])
         antes = ds.snapshot()
 
         server = _servidor(config_isolado, ds, None)
@@ -390,12 +345,6 @@ def test_identity_number_set_no_dict_de_handlers(tmp_path: Path) -> None:
     assert "identity.number.set" in server._handlers
 
 
-# ---------------------------------------------------------------------------
-# Entrega 4 — chips na ordem do número, índice de enumeração intacto
-# (absorve UI-SELETOR-01)
-# ---------------------------------------------------------------------------
-
-
 def _conectado(
     index: int, transport: str, slot: int | None, uniq: str | None = None
 ) -> dict[str, Any]:
@@ -412,12 +361,7 @@ def _conectado(
 
 
 def test_chips_saem_na_ordem_do_numero_de_identidade() -> None:
-    """O sintoma medido: "Sony 2 · BT | Sony 1 · BT" com o 2 na frente.
-
-    O daemon entrega na ordem de ENUMERAÇÃO (quem conectou primeiro); o número
-    é estável por MAC. Quando ela liga os controles fora de ordem — o caso
-    normal — os dois divergem.
-    """
+    """O sintoma medido: "Sony 2 · BT | Sony 1 · BT" com o 2 na frente."""
     rows = StatusActionsMixin._controller_target_rows(
         [
             _conectado(0, "bt", 2),
@@ -448,7 +392,6 @@ def test_ordenar_a_exibicao_nao_mexe_no_indice_enviado() -> None:
     )
     assert rows[1] == ("Controle 1 — BT", 1)
     assert rows[2] == ("Controle 2 — BT", 0)
-    # E o mapeamento alvo→posição continua achando o alvo certo na fita nova.
     assert StatusActionsMixin._target_active_position(rows, 0) == 2
     assert StatusActionsMixin._target_active_position(rows, 1) == 1
 
@@ -464,11 +407,6 @@ def test_controle_sem_numero_vai_para_o_fim_preservando_a_ordem() -> None:
         ]
     )
     assert [idx for _label, idx in rows] == [None, 1, 0, 2]
-
-
-# ---------------------------------------------------------------------------
-# Entrega 2 (janela) — o seletor "Número deste controle"
-# ---------------------------------------------------------------------------
 
 
 class _FakeBotaoNumero:
@@ -664,11 +602,6 @@ def test_ipc_bridge_traduz_o_motivo_da_recusa(
     assert ipc_bridge.identity_number_set(UNIQ_A, 2) == (False, None)
 
 
-# ---------------------------------------------------------------------------
-# Entrega 3 — o chip é um seletor de ALVO, e o selo diz isso sempre
-# ---------------------------------------------------------------------------
-
-
 def test_selo_aparece_tambem_sem_endereco_estavel() -> None:
     """Metade do trabalho já era feita — mas justamente no caso fácil."""
     assert (
@@ -682,11 +615,6 @@ def test_selo_aparece_tambem_sem_endereco_estavel() -> None:
     assert StatusActionsMixin._edit_badge_text(None, com_endereco=False) == ""
 
 
-# ---------------------------------------------------------------------------
-# Entrega 5 — a moldura mostra o que está ACESO, não o rascunho
-# ---------------------------------------------------------------------------
-
-
 class _FakeRotulo:
     def __init__(self) -> None:
         self.texto = ""
@@ -694,7 +622,7 @@ class _FakeRotulo:
     def set_text(self, texto: str) -> None:
         self.texto = texto
 
-    def set_active(self, _valor: bool) -> None:  # checkbox stub
+    def set_active(self, _valor: bool) -> None:
         return None
 
 
@@ -709,13 +637,7 @@ def _aceitou(uniq: str | None) -> dict[str, Any]:
 
 
 def _host_lightbar(draft: DraftConfig, uniq: str | None, slot: int | None) -> Any:
-    """Hospedeiro mínimo do mixin: draft + alvo + rótulo de leitura de volta.
-
-    O mixin é importado LAZY (padrão de ``test_controller_target_ui.py``):
-    ``lightbar_actions`` faz ``from gi.repository import Gdk, Gtk`` e o ``Gdk``
-    sem ``require_version`` puxa a 4.0 quando é o PRIMEIRO import de gi do
-    processo — rodar este arquivo sozinho derrubava a coleta inteira.
-    """
+    """Hospedeiro mínimo do mixin: draft + alvo + rótulo de leitura de volta."""
     from hefesto_dualsense4unix.app.actions.lightbar_actions import (
         LightbarActionsMixin,
     )
@@ -746,15 +668,9 @@ def _perfil_novo() -> Profile:
 
 
 def test_moldura_mostra_o_desenho_automatico_num_perfil_novo() -> None:
-    """O relato: "a moldura mostra nada selecionado enquanto o controle exibe
-    três luzes acesas". Três luzes é o desenho do P3 — o do NÚMERO dele."""
+    """O relato: "a moldura mostra nada selecionado enquanto o controle exibe"""
     host = _host_lightbar(DraftConfig.from_profile(_perfil_novo()), UNIQ_A, 3)
     host._refresh_lightbar_from_draft()
-    # L5 (25/08/2026): o prefixo deixou de ser "Aceso agora:" — não há canal de
-    # leitura de LED de jogador (`luz.led_jogador.leitura@dualsense`:
-    # `cabo_aceita = não`, `radio_aceita = não`), e a frase afirmava um estado
-    # do aparelho que ninguém pode conferir. O que a linha mede — QUAL desenho
-    # e por ordem de quem — não mudou.
     assert host.rotulo.texto == (
         "Desenho que mandamos: desenho do P3 — automático, do número deste "
         "controle."
@@ -805,9 +721,7 @@ def test_nome_do_desenho_usa_a_tabela_canonica() -> None:
 
     assert nome_do_desenho(player_led_pattern(1)) == "desenho do P1"
     assert nome_do_desenho(player_led_pattern(4)) == "desenho do P4"
-    # A varredura vai até 8 porque o espaço de numeração é único (R-24/R-25) e
     # um DualSense pode cair no 5+; o 9 é o padrão de OVERFLOW, que não nomeia
-    # jogador nenhum.
     assert nome_do_desenho(player_led_pattern(8)) == "desenho do P8"
     assert nome_do_desenho((True, False, False, True, False)) is None
 
@@ -826,14 +740,8 @@ def test_troca_do_flag_de_co_op_repinta_a_moldura() -> None:
     host._sync_coop_governa_luzes({"coop": {"enabled": True}})
     assert host._coop_ligado is True
     assert host.repintou == 1
-    # Idempotente: mesmo estado não repinta a 2 Hz.
     host._sync_coop_governa_luzes({"coop": {"enabled": True}})
     assert host.repintou == 1
-
-
-# ---------------------------------------------------------------------------
-# Entrega 6 — pedido sem destinatário falha VISIVELMENTE
-# ---------------------------------------------------------------------------
 
 
 def _host_sem_mapa_de_controles() -> Any:
@@ -846,18 +754,10 @@ def _host_sem_mapa_de_controles() -> Any:
 def test_preset_sem_destinatario_recusa_em_vez_de_gravar_abaixo_do_automatico(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O "volta sozinho", pelo caminho público do botão de preset.
-
-    Sem saber quem está na mesa, o pedido saía sem ``uniq`` e o daemon o
-    gravava no default GLOBAL — camada ABAIXO da automática no merge por campo
-    (D5). O automático o desfazia no reforço seguinte, depois de o toast já ter
-    dito que aplicou.
-    """
+    """O "volta sozinho", pelo caminho público do botão de preset."""
     from hefesto_dualsense4unix.app.actions import lightbar_actions as la
 
     enviados: list[Any] = []
-    # BG-01 (26/08/2026): a aba lê o CORPO do daemon (`_detalhado`), não mais
-    # o `bool` da ponte estreita. O que estes testes julgam é o DESTINATÁRIO.
     monkeypatch.setattr(
         la,
         "player_leds_set_detalhado",
@@ -870,9 +770,6 @@ def test_preset_sem_destinatario_recusa_em_vez_de_gravar_abaixo_do_automatico(
     assert enviados == [], "mandou um pedido sem destinatário"
     assert host.toasts
     assert "sem destinatário" in host.toasts[-1]
-    # A RÉGUA PERGUNTA AO DONO (08/09/2026): "mesa" é palavra banida na tela
-    # (decisão dela, 06/09) e o produto passou a dizer "estão ligados" — a
-    # frase digitada aqui reprovava a melhora.
     assert la._AVISO_SEM_DESTINATARIO in host.toasts[-1]
 
 
@@ -883,8 +780,6 @@ def test_aplicar_sem_destinatario_tambem_recusa(
     from hefesto_dualsense4unix.app.actions import lightbar_actions as la
 
     enviados: list[Any] = []
-    # BG-01 (26/08/2026): a aba lê o CORPO do daemon (`_detalhado`), não mais
-    # o `bool` da ponte estreita. O que estes testes julgam é o DESTINATÁRIO.
     monkeypatch.setattr(
         la,
         "player_leds_set_detalhado",
@@ -896,9 +791,6 @@ def test_aplicar_sem_destinatario_tambem_recusa(
     host.on_player_leds_apply(None)
 
     assert enviados == []
-    # A RÉGUA PERGUNTA AO DONO (08/09/2026): "mesa" é palavra banida na tela
-    # (decisão dela, 06/09) e o produto passou a dizer "estão ligados" — a
-    # frase digitada aqui reprovava a melhora.
     assert la._AVISO_SEM_DESTINATARIO in host.toasts[-1]
 
 

@@ -60,8 +60,6 @@ from hefesto_dualsense4unix.interface.pacotes.a06_navegacao import (
 )
 
 ABA = "06-navegacao.html"
-#: A tecla que a prova escolhe para o PS. Ela NÃO é um `KEY_*` digitado na tela:
-#: o que se manda ao `<select>` é o RÓTULO que o produto lhe dá.
 TECLA = "KEY_F11"
 
 BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
@@ -70,7 +68,6 @@ BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
                  teto_de_mockup=-1, voltas_por_aba=8, sem_cor=False,
                  conta_mutacoes=0, prova_no_aparelho=False, entre=2500)
 
-#: 1. ABRE A POP-UP e LÊ a linha do PS como ela nasce.
 LER_A_LINHA = r"""
 (function(){
   location.hash = 'definicoes-mouse';
@@ -90,8 +87,6 @@ LER_A_LINHA = r"""
 })()
 """
 
-#: 2. ESCOLHE a tecla como uma pessoa escolheria — pelo evento `change`, que é
-#:    o único que o ouvinte do piloto reconhece nestes `<select>`.
 ESCOLHER = r"""
 (function(){
   const sel = document.querySelector('#definicoes-mouse [data-linha="ps"]');
@@ -104,7 +99,6 @@ ESCOLHER = r"""
 })()
 """
 
-#: 3. CLICA no "Guardar" — o mesmo caminho do rato, pelo ouvinte delegado.
 GUARDAR = r"""
 (function(){
   const b = document.querySelector('#definicoes-mouse [data-gesto="guardar-definicoes"]');
@@ -114,19 +108,6 @@ GUARDAR = r"""
 })()
 """
 
-#: 4. AS DUAS CENAS DO PORTÃO, pelas mesmas duas escritas que o pacote produz.
-#:
-#: O ENDEREÇO DO LADO É ARRANCADO ANTES DE PINTAR, e é a única liberdade que
-#: este roteiro toma — declarada porque foi MEDIDA: a cena pintada durava menos
-#: que o obturador. O tique é de 100 ms e reescreve `rato-ligado` a partir do
-#: daemon; as duas fotos saíam com a palavra do daemon nas duas, provando o
-#: contrário do que provam. Sem o `data-campo` o `escrever()` do piloto não
-#: acha o elemento e a cena fica de pé para a foto.
-#:
-#: A CASCATA NÃO DEPENDE DELE: as regras do portão casam por
-#: `.tog[data-gesto="modo"]`, pela classe `ligado` e pelo `.laranja` da tira —
-#: nenhuma delas olha o `data-campo`. O que a foto mostra é exatamente o que a
-#: leitura de `getComputedStyle` mede no mesmo instante, e as duas saem daqui.
 CENA = r"""
 (function(){
   location.hash = '';
@@ -169,23 +150,10 @@ def main() -> int:
     ativo = {"nome": ""}
 
     def js(script: str, guarda: str, retrato: str = "") -> None:
-        """Pergunta ao DOM e, opcionalmente, fotografa NO RETORNO.
-
-        A FOTO TEM DE SAIR NO MESMO INSTANTE DA LEITURA, e isto foi medido em
-        06/09/2026: fotografando 700 ms depois de pintar a cena do portão, o
-        PNG saía com o valor do DAEMON — o tique é de 100 ms e já tinha
-        repintado o `rato-ligado`. A leitura estava certa e a foto contava
-        outra coisa; duas fotos assim, lado a lado, provariam o contrário do
-        que provam.
-        """
+        """Pergunta ao DOM e, opcionalmente, fotografa NO RETORNO."""
         def voltou(texto: str | None, erro: Exception | None) -> None:
             passos.append((guarda, json.loads(texto) if texto and not erro
                            else {"erro": str(erro)}))
-            # E ELA SAI UM POUCO DEPOIS, não no retorno: o `fotografar` da
-            # janela oculta entrega o quadro ANTERIOR quando chamado no mesmo
-            # instante da escrita — medido em 06/09/2026, com as duas cenas
-            # saindo trocadas uma da outra. Com o endereço já arrancado (ver
-            # `CENA`), esperar é seguro: o tique não tem mais como desfazer.
             if retrato:
                 GLib.timeout_add(500, lambda: (foto(retrato), False)[1])
         piloto.ponte.perguntar(script, voltou)
@@ -249,7 +217,6 @@ def main() -> int:
         print(f"  {nome:28s} {valor}")
 
     # O VEREDITO, e ele é do produto: o `button_actions['ps']` tem de estar no
-    # disco com o TOKEN — não com o rótulo da tela.
     gravado = dict(passos).get("o perfil no disco") or {}
     ok = gravado.get(acoes.BOTAO_PS) == TECLA
     print(f"\n{'PASSOU' if ok else 'REPROVA'}: o perfil guarda "

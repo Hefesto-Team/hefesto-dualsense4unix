@@ -1,50 +1,4 @@
-"""O censo universal do barramento USB — sem encostar no `/sys` desta máquina.
-
-`integrations/censo_do_barramento.py` devolve TODO dispositivo USB com o que o
-kernel publica: espécie lida da interface 0, topologia de hubs, controlador PCI,
-painel do gabinete e os três números de energia que o sysfs dá sem root.
-
-POR QUE NÃO HÁ UMA ÁRVORE DE ARQUIVOS AQUI
--------------------------------------------
-
-Nenhum teste deste arquivo cria diretório. O sysfs inteiro é um dicionário em
-memória, entregue pelos mesmos argumentos injetáveis que o produto expõe
-(`listar`, `ler`, `real`) — o molde é `test_a_mesa_le_o_barramento.py`. Duas
-razões, e a segunda é a que importa:
-
-1. a bancada de quem roda não é a bancada de quem escreveu. Um teste contra o
-   `/sys` real passaria aqui e mediria outra coisa na máquina seguinte;
-2. o mesmo ponto de injeção é o que protege a FOTO. Quem fotografar a aba que
-   consumir este módulo troca a raiz por uma de mentira, e o PNG versionado não
-   carrega o barramento dela. `test_nenhum_caminho_do_sys_real_e_tocado` é o que
-   segura essa porta.
-
-A BANCADA DE MENTIRA
----------------------
-
-Copiada da medição desta casa em 22/08/2026, com os `vid:pid` de MODELO (que são
-públicos) e caminhos `/mentira`. Cada nó cobre um estado que o censo sabe
-distinguir::
-
-    usb1 (PCI 0000:aa:00.0)  hub-raiz 2.0
-      1-3       25a7:fa07  03/01/02  mouse, painel right, 98 mA
-      1-4       3554:fa09  03/01/01  teclado, painel right, 100 mA
-    usb2 (PCI 0000:aa:00.0)  hub-raiz 3.0
-      2-1       0781:5583  SEM interface publicada, bDeviceClass 08
-    usb3 (PCI 0000:bb:00.3)  hub-raiz 2.0
-      3-3       05e3:0610  hub de bancada
-        3-3.1   05e3:0610  hub encadeado DENTRO do de bancada
-          3-3.1.1  2357:0604  e0/01/01  Bluetooth, fabricante " ", 500 mA
-          3-3.1.4  2357:0604  e0/01/01  Bluetooth
-        3-3.2   2357:0604  e0/01/01  Bluetooth — outro pai, MESMO hub em comum
-        3-3.3   258a:010c  03/01/01  teclado
-    usb4 (PCI 0000:bb:00.3)  hub-raiz 3.0
-      4-1       2357:012d  ff/ff/ff  o kernel NÃO nomeia
-      4-3       05e3:0626  hub 3.1
-        4-3.1   05e3:0626  hub 3.1 encadeado
-          4-3.1.2   046d:0a44  01/01/00  microfone
-          4-3.1.10  046d:0892  0e/01/00  câmera, atrás de DOIS hubs
-"""
+"""O censo universal do barramento USB — sem encostar no `/sys` desta máquina."""
 from __future__ import annotations
 
 import os
@@ -76,8 +30,6 @@ BLUETOOTH = (
 )
 CAMERA = f"{USB4}/4-3/4-3.1/4-3.1.10"
 
-#: `caminho do nó -> {atributo: valor}`. Atributo que falta falta de verdade: é
-#: assim que "não sei" chega ao produto pelo mesmo caminho de uma máquina real.
 APARELHOS: dict[str, dict[str, str]] = {
     USB1: {
         "idVendor": "1d6b",
@@ -135,8 +87,6 @@ APARELHOS: dict[str, dict[str, str]] = {
         "product": "xHCI Host Controller",
         "power/control": "on",
     },
-    # Um nó ainda NÃO configurado: sem interface publicada, e por isso a única
-    # classe que existe é a do descritor do aparelho.
     f"{USB2}/2-1": {
         "idVendor": "0781",
         "idProduct": "5583",
@@ -198,7 +148,6 @@ APARELHOS: dict[str, dict[str, str]] = {
         "speed": "12",
         "bMaxPower": "500mA",
         "bmAttributes": "e0",
-        # Medido: o descritor traz UM ESPAÇO onde deveria vir o fabricante.
         "manufacturer": " ",
         "product": "TP-Link UB500 Adapter",
         "power/control": "on",
@@ -269,7 +218,6 @@ APARELHOS: dict[str, dict[str, str]] = {
         "bMaxPower": "504mA",
         "bmAttributes": "80",
         "manufacturer": "Realtek",
-        # O nome DIZ o que é. O kernel não diz, e o nome não vale como classe.
         "product": "802.11ac NIC",
         "power/control": "on",
         "port/over_current_count": "0",
@@ -332,9 +280,6 @@ APARELHOS: dict[str, dict[str, str]] = {
     },
 }
 
-#: `caminho da interface -> {atributo: valor}`. A interface 0 é a que classifica;
-#: as `:1.1` estão aqui para provar que o censo NÃO lê a segunda por engano —
-#: o mouse `1-3` e o teclado `1-4` expõem uma o par da outra, trocado.
 INTERFACES: dict[str, dict[str, str]] = {
     f"{USB1}/1-0:1.0": {"classe": "09", "subclasse": "00", "protocolo": "00"},
     f"{USB1}/1-3/1-3:1.0": {"classe": "03", "subclasse": "01", "protocolo": "02"},
@@ -386,8 +331,6 @@ INTERFACES: dict[str, dict[str, str]] = {
     f"{CAMERA}/4-3.1.10:1.0": {"classe": "0e", "subclasse": "01", "protocolo": "00"},
 }
 
-#: Os nomes que o sysfs usa nos atributos de interface. Ficam aqui, e não no
-#: dicionário acima, para que a tabela de interfaces continue legível.
 _ATRIBUTO_DA_INTERFACE = {
     "classe": "bInterfaceClass",
     "subclasse": "bInterfaceSubClass",
@@ -408,7 +351,6 @@ class Bancada:
         self.aparelhos = APARELHOS if aparelhos is None else aparelhos
         self.interfaces = INTERFACES if interfaces is None else interfaces
         self._listar_de_fora = listar
-        #: Todo caminho que passou por qualquer um dos três leitores.
         self.tocados: list[str] = []
 
         self.conteudo = {
@@ -466,17 +408,7 @@ def _por_nome(censo: Censo) -> dict[str, Any]:
 
 
 def test_o_kernel_classifica_e_o_censo_so_traduz() -> None:
-    """Cada espécie sai da tripla da interface 0, e o grau diz que foi lida.
-
-    É a decisão dela sobre o alcance da central — *"todo o rádio, hub de energia,
-    todos os usb, todos os dongles tipo do mouse e teclado, e até webcam ou
-    microfones extras"* —, e o que a torna possível é o kernel já classificar
-    sozinho por `bInterfaceClass/SubClass/Protocol`.
-
-    Mordida: fiz `_especie` devolver sempre `(ESPECIE_DESCONHECIDA,
-    GRAU_DESCONHECIDO)`; as sete asserções de espécie reprovaram na primeira,
-    com "Não identificado" no lugar de "Mouse".
-    """
+    """Cada espécie sai da tripla da interface 0, e o grau diz que foi lida."""
     achados = _por_nome(_censo())
 
     esperado = {
@@ -495,77 +427,40 @@ def test_o_kernel_classifica_e_o_censo_so_traduz() -> None:
 
 
 def test_a_classe_sai_da_interface_e_nao_do_descritor_do_aparelho() -> None:
-    """`bDeviceClass` vale `00` em todo aparelho composto — e são quase todos.
-
-    Medido em 22/08/2026: o mouse, o teclado e o Wi-Fi desta bancada têm
-    `bDeviceClass=00`. Um censo que lesse o descritor do APARELHO devolveria
-    "não identificado" para a mesa inteira, com exceção dos hubs — e pareceria
-    uma medição.
-
-    Mordida: fiz `_ler_um` usar `campos["bDeviceClass"]` antes de tentar a
-    interface; o mouse `1-3` virou "Não identificado" e o teste reprovou.
-    """
+    """`bDeviceClass` vale `00` em todo aparelho composto — e são quase todos."""
     achados = _por_nome(_censo())
     mouse = achados["1-3"]
 
     assert mouse.classe == "03" and mouse.subclasse == "01"
     assert mouse.protocolo == "02"
     assert mouse.especie == "Mouse"
-    # E o descritor do APARELHO, que continua legível, diz outra coisa.
     assert APARELHOS[f"{USB1}/1-3"]["bDeviceClass"] == "00"
 
 
 def test_o_teclado_e_o_mouse_so_se_separam_no_protocolo_da_interface_zero() -> None:
-    """`1-3` e `1-4` expõem as MESMAS duas interfaces, em ordem trocada.
-
-    Se o censo pegasse "uma interface qualquer", os dois sairiam iguais — e
-    metade das vezes certo, que é o jeito mais convincente de errar.
-
-    Mordida: em `_classe_da_interface`, tirei o `endswith(".0")` do filtro e
-    troquei `candidatas[0]` por `candidatas[-1]` — o deslize de quem lê "a
-    interface do aparelho" em vez de "a interface 0"; o `1-3` virou "Teclado" e
-    o teste reprovou.
-    """
+    """`1-3` e `1-4` expõem as MESMAS duas interfaces, em ordem trocada."""
     achados = _por_nome(_censo())
 
     assert achados["1-3"].especie == "Mouse"
     assert achados["1-4"].especie == "Teclado"
-    # A régua: as duas interfaces existem nos dois nós, com os papéis trocados.
     assert INTERFACES[f"{USB1}/1-3/1-3:1.1"]["protocolo"] == "01"
     assert INTERFACES[f"{USB1}/1-4/1-4:1.1"]["protocolo"] == "02"
 
 
 def test_o_ff_do_fabricante_nao_vira_wifi_por_causa_do_nome_do_produto() -> None:
-    """`ff` é `ff`. O `product` diz "802.11ac NIC" e isso não classifica nada.
-
-    É o único aparelho desta casa que o kernel não nomeia, e é exatamente onde
-    a tentação de adivinhar pelo texto é maior. A tela deixa ela corrigir; o
-    módulo não inventa.
-
-    Mordida: pus em `_especie` um ramo que devolvia "Rede" quando o produto
-    continha "802.11"; o teste reprovou nas duas asserções de baixo.
-    """
+    """`ff` é `ff`. O `product` diz "802.11ac NIC" e isso não classifica nada."""
     achados = _por_nome(_censo())
     sem_nome = achados["4-1"]
 
     assert sem_nome.classe == "ff"
     assert sem_nome.especie == ESPECIE_DESCONHECIDA
     assert sem_nome.grau == GRAU_DESCONHECIDO
-    # O nome continua disponível para a tela mostrar — só não vale como classe.
     assert sem_nome.produto == "802.11ac NIC"
     assert sem_nome.origem_da_classe == "interface 0"
 
 
 def test_um_no_sem_interface_cai_no_descritor_e_diz_de_onde_veio() -> None:
-    """Aparelho ainda não configurado não tem interface — e ainda assim existe.
-
-    A resposta honesta é a classe do descritor do aparelho MAIS a origem, para
-    que a tela possa dizer de onde veio. Esconder o nó faria a pessoa procurar
-    um pendrive que o sistema enxerga.
-
-    Mordida: apaguei o ramo `if not classe:` de `_ler_um`; o `2-1` passou a sair
-    "Não identificado" com origem vazia e o teste reprovou.
-    """
+    """Aparelho ainda não configurado não tem interface — e ainda assim existe."""
     achados = _por_nome(_censo())
     pendrive = achados["2-1"]
 
@@ -575,15 +470,7 @@ def test_um_no_sem_interface_cai_no_descritor_e_diz_de_onde_veio() -> None:
 
 
 def test_o_hub_raiz_nao_conta_como_estar_em_hub() -> None:
-    """Todo aparelho pendura sob um hub-raiz — inclusive num PC sem hub nenhum.
-
-    Sem a exceção, a mesa INTEIRA sai marcada "atrás de hub", que é o defeito
-    mais fácil de acreditar: a afirmação está errada e parece medida.
-
-    Mordida: apaguei a guarda `devpath == _DEVPATH_DO_RAIZ` de `_atras_de_hub`;
-    o mouse `1-3`, que está direto no hub-raiz, passou a sair `atras_de_hub=True`
-    e o teste reprovou.
-    """
+    """Todo aparelho pendura sob um hub-raiz — inclusive num PC sem hub nenhum."""
     censo = _censo()
     achados = _por_nome(censo)
 
@@ -593,26 +480,14 @@ def test_o_hub_raiz_nao_conta_como_estar_em_hub() -> None:
     assert achados["usb1"].atras_de_hub is False
     assert achados["3-3"].atras_de_hub is False
     assert achados["3-3.1"].atras_de_hub is True
-    # E a cadeia de hubs de quem está direto no raiz é VAZIA, não `(usb1,)`.
     assert cadeia_de_hubs(censo, achados["1-3"].no) == ()
 
 
 def test_os_tres_bluetooth_estao_no_mesmo_hub_apesar_de_terem_pais_diferentes() -> None:
-    """A medição que derrubou a premissa do roteiro desta onda.
-
-    O briefing dizia que os três adaptadores estão "atrás do mesmo hub". Medido
-    em 22/08/2026: eles têm DOIS pais — `3-3.1.1` e `3-3.1.4` penduram no hub
-    encadeado `3-3.1`, e `3-3.2` pendura no `3-3`. Comparar o pai responderia
-    "hubs diferentes", e responderia errado: no metal é um aparelho só.
-
-    Mordida: fiz `hub_em_comum` comparar `a.pai` em vez de subir a cadeia; com
-    os dois pais diferentes ele devolveu `""` e o teste reprovou.
-    """
+    """A medição que derrubou a premissa do roteiro desta onda."""
     censo = _censo()
     pais = {censo.aparelho(no).pai for no in BLUETOOTH if censo.aparelho(no)}
 
-    # A régua primeiro: se os três tivessem o mesmo pai, este teste não mediria
-    # nada — seria a comparação trivial passando por sorte.
     assert len(pais) == 2, pais
     assert hub_em_comum(censo, list(BLUETOOTH)) == HUB_DE_BANCADA
     assert cadeia_de_hubs(censo, BLUETOOTH[0]) == (HUB_ENCADEADO, HUB_DE_BANCADA)
@@ -620,30 +495,17 @@ def test_os_tres_bluetooth_estao_no_mesmo_hub_apesar_de_terem_pais_diferentes() 
 
 
 def test_sem_hub_em_comum_a_resposta_e_vazia_e_nao_o_controlador() -> None:
-    """Dois aparelhos direto no raiz não estão "no mesmo hub" — estão em nenhum.
-
-    O hub-raiz é comum a tudo do barramento; devolvê-lo transformaria a pergunta
-    numa tautologia que sempre responde "sim".
-
-    Mordida: tirei o `if pai.e_hub and not pai.e_raiz` de `cadeia_de_hubs`,
-    deixando o raiz entrar; `hub_em_comum` do mouse com o teclado passou a
-    devolver `usb1` e o teste reprovou.
-    """
+    """Dois aparelhos direto no raiz não estão "no mesmo hub" — estão em nenhum."""
     censo = _censo()
     achados = _por_nome(censo)
 
     assert hub_em_comum(censo, [achados["1-3"].no, achados["1-4"].no]) == ""
-    # E entre barramentos diferentes também não há hub em comum.
     assert hub_em_comum(censo, [BLUETOOTH[0], CAMERA]) == ""
     assert hub_em_comum(censo, []) == ""
 
 
 def test_um_aparelho_atras_de_dois_hubs_conhece_a_cadeia_inteira() -> None:
-    """A câmera está a dois hubs de distância, e os dois têm de aparecer.
-
-    Mordida: fiz `cadeia_de_hubs` parar no primeiro hub encontrado; a cadeia
-    virou `(4-3.1,)` e o teste reprovou.
-    """
+    """A câmera está a dois hubs de distância, e os dois têm de aparecer."""
     censo = _censo()
     camera = censo.aparelho(CAMERA)
 
@@ -654,19 +516,7 @@ def test_um_aparelho_atras_de_dois_hubs_conhece_a_cadeia_inteira() -> None:
 
 
 def test_energia_entrega_os_tres_numeros_e_nao_afirma_fonte_propria() -> None:
-    """O bit de autoalimentado é DECLARAÇÃO, e nesta bancada ele se contradiz.
-
-    Medido em 22/08/2026: os três TP-Link declaram `bmAttributes=e0` (bit
-    `0x40`) e no mesmo descritor pedem `bMaxPower=500mA` da porta. Um aparelho
-    com fonte própria tira do barramento no máximo uma carga unitária. Por isso
-    o campo se chama `autoalimentado_declarado` e vem com
-    `declaracao_incoerente` do lado — quem desenhar a tela não pode ler o bit
-    como "este hub é alimentado".
-
-    Mordida: fiz `declaracao_incoerente` devolver só o bit
-    (`bool(self.autoalimentado_declarado)`); o hub `4-3`, que declara `e0` e
-    pede `0mA`, passou a sair incoerente e o teste reprovou.
-    """
+    """O bit de autoalimentado é DECLARAÇÃO, e nesta bancada ele se contradiz."""
     achados = _por_nome(_censo())
 
     dongle = achados["3-3.1.1"].energia
@@ -686,15 +536,7 @@ def test_energia_entrega_os_tres_numeros_e_nao_afirma_fonte_propria() -> None:
 
 
 def test_zero_e_ausencia_sao_respostas_diferentes_em_energia() -> None:
-    """`0mA` é o hub dizendo zero; campo ausente é ninguém dizendo nada.
-
-    Confundir os dois faria a tela mostrar "0 mA" para um aparelho que nunca
-    declarou corrente — uma afirmação inventada com cara de medição.
-
-    Mordida: fiz `_corrente` e `_talvez_inteiro` devolverem `0` no lugar de
-    `None`; o `2-1`, que não publica `bMaxPower` nem `port/over_current_count`,
-    passou a sair com zeros e o teste reprovou.
-    """
+    """`0mA` é o hub dizendo zero; campo ausente é ninguém dizendo nada."""
     achados = _por_nome(_censo())
 
     sem_dado = achados["2-1"].energia
@@ -705,18 +547,11 @@ def test_zero_e_ausencia_sao_respostas_diferentes_em_energia() -> None:
 
     assert achados["4-3"].energia.corrente_pedida_ma == 0
     assert achados["1-3"].energia.excesso_de_corrente == 0
-    # A porta que JÁ acusou excesso é o único número aqui que registra evento.
     assert achados["4-3.1.10"].energia.excesso_de_corrente == 3
 
 
 def test_o_fabricante_de_um_espaco_so_e_ausencia() -> None:
-    """Medido: os TP-Link publicam `manufacturer` com um espaço dentro.
-
-    Um espaço em branco na tela lê como defeito do produto. Ausência é ausência.
-
-    Mordida: tirei o `.strip()` de `_campo`; o fabricante virou `" "` e o teste
-    reprovou.
-    """
+    """Medido: os TP-Link publicam `manufacturer` com um espaço dentro."""
     achados = _por_nome(_censo())
 
     assert achados["3-3.1.1"].fabricante == ""
@@ -725,34 +560,17 @@ def test_o_fabricante_de_um_espaco_so_e_ausencia() -> None:
 
 
 def test_a_ordem_e_por_porta_numerica_e_nao_alfabetica() -> None:
-    """`3.1.2` vem antes de `3.1.10`. Em texto, `10` vem antes de `2`.
-
-    A tela lista nesta ordem, e uma lista fora de ordem faz a pessoa procurar a
-    porta errada no metal.
-
-    Mordida: troquei a chave de `_ordem` por `alvo.nome_do_kernel`; a câmera
-    `4-3.1.10` subiu para antes do microfone `4-3.1.2` e o teste reprovou.
-    """
+    """`3.1.2` vem antes de `3.1.10`. Em texto, `10` vem antes de `2`."""
     censo = _censo()
-    # Os filhos DIRETOS do hub, na ordem em que o censo os publica.
     no_hub = [a.nome_do_kernel for a in censo.aparelhos if a.pai == f"{USB4}/4-3/4-3.1"]
 
     assert no_hub == ["4-3.1.2", "4-3.1.10"], no_hub
-    # E a lista inteira começa no barramento 1 e termina no 4.
     nomes = [a.nome_do_kernel for a in censo.aparelhos]
     assert nomes[0] == "usb1" and nomes[-1] == "4-3.1.10", nomes
 
 
 def test_o_barramento_agrupa_por_busnum_e_nao_por_controlador_pci() -> None:
-    """Um controlador xHCI publica DOIS barramentos: o 2.0 e o 3.0.
-
-    Medido: `usb3` e `usb4` são ambos `0000:0c:00.3` nesta casa. Agrupar pelo
-    endereço PCI juntaria os dois lados e esconderia em qual deles o aparelho
-    está — que é justamente o que decide a velocidade negociada.
-
-    Mordida: fiz `_barramentos` agrupar por `controlador_pci`; os quatro
-    barramentos viraram dois e o teste reprovou em `len(...) == 4`.
-    """
+    """Um controlador xHCI publica DOIS barramentos: o 2.0 e o 3.0."""
     censo = _censo()
     barramentos = {b.nome_do_kernel: b for b in censo.barramentos}
 
@@ -771,32 +589,17 @@ def test_o_barramento_agrupa_por_busnum_e_nao_por_controlador_pci() -> None:
 
 
 def test_conectados_deixa_os_quatro_hubs_raiz_de_fora() -> None:
-    """O hub-raiz não é aparelho: é o próprio barramento.
-
-    Foi por esquecer este filtro que a primeira leitura de `mesa_de_radio` pôs
-    `1d6b:0002` na tabela de antenas.
-
-    Mordida: fiz `Censo.conectados` devolver `self.aparelhos`; os quatro
-    `1d6b:*` entraram na lista e o teste reprovou.
-    """
+    """O hub-raiz não é aparelho: é o próprio barramento."""
     censo = _censo()
 
     vistos = {f"{a.vid}:{a.pid}" for a in censo.conectados()}
     assert "1d6b:0002" not in vistos and "1d6b:0003" not in vistos, vistos
     assert len(censo.conectados()) == len(censo.aparelhos) - 4
-    # E o censo COMPLETO continua trazendo os raízes, que a topologia precisa.
     assert len([a for a in censo.aparelhos if a.e_raiz]) == 4
 
 
 def test_o_painel_do_gabinete_so_existe_onde_o_kernel_o_publica() -> None:
-    """Dois aparelhos sabem onde estão; o resto não, e `unknown` é não saber.
-
-    Medido: o arquivo não existe em nenhum aparelho atrás de hub. Chutar
-    "frente" seria a tela afirmando o que ninguém mediu.
-
-    Mordida: fiz `_painel` devolver o valor cru; `unknown` passou a chegar como
-    painel e o teste reprovou na asserção de `3-3.1.1`.
-    """
+    """Dois aparelhos sabem onde estão; o resto não, e `unknown` é não saber."""
     achados = _por_nome(
         ler_o_barramento(
             **Bancada(
@@ -817,11 +620,7 @@ def test_o_painel_do_gabinete_so_existe_onde_o_kernel_o_publica() -> None:
 
 
 def test_censo_vazio_ou_ilegivel_devolve_nada_sem_levantar() -> None:
-    """`/sys` ausente (contêiner, sandbox) não pode derrubar a janela.
-
-    Mordida: tirei o `except OSError: return Censo()`; a leitura passou a
-    propagar `OSError` e o teste reprovou com a exceção subindo até aqui.
-    """
+    """`/sys` ausente (contêiner, sandbox) não pode derrubar a janela."""
     vazia = ler_o_barramento(**Bancada(aparelhos={}, interfaces={}).fontes())
     assert vazia.aparelhos == ()
     assert vazia.barramentos == ()
@@ -835,17 +634,7 @@ def test_censo_vazio_ou_ilegivel_devolve_nada_sem_levantar() -> None:
 
 
 def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
-    """O teste que protege a FOTO — e o único que morde o vazamento.
-
-    Quem fotografar a aba que consumir este módulo monta a seção de verdade, e o
-    PNG entra em `docs/usage/assets` sem revisão humana. Nenhum portão desta
-    casa varre imagem. Se a leitura escapar para `/sys` quando a raiz foi
-    injetada, o barramento dela vai para a documentação.
-
-    Mordida: pus um `os.listdir("/sys/bus/usb/devices")` dentro de
-    `ler_o_barramento`, ignorando a raiz recebida — exatamente o deslize que uma
-    constante de módulo produz; o teste reprovou listando o caminho absoluto.
-    """
+    """O teste que protege a FOTO — e o único que morde o vazamento."""
     bancada = Bancada()
     ler_o_barramento(**bancada.fontes())
 

@@ -1,41 +1,5 @@
 #!/usr/bin/env python3
-"""O DÉCIMO ALVO — ``marcado``, o único que escreve ``el.checked``.
-
-**Decisão dela, 04/09/2026:** opção **a**, *décimo alvo ``marcado``*.
-
-O QUE FALTAVA, medido: o pintor tinha nove alvos e **nenhum** tocava a
-propriedade que decide se um checkbox está marcado. O acordeão do alto-falante
-da aba 02 é um ``<input type="checkbox">`` em CSS puro, e o estado da saída não
-tinha por onde chegar nele. O alvo ``valor`` não serve e a razão é do DOM: num
-checkbox ``el.value`` é a string ``"on"`` — o atributo que vai no formulário —,
-e escrever nele não marca nada nem desmarca nada.
-
-POR QUE ISTO RODA NUM WebKit DE VERDADE: o ``escrever()`` é JavaScript, e a
-única forma de saber o que ele faz é executá-lo **no motor que ela vai usar**.
-Reescrevê-lo em Python para testar seria testar a reescrita — esta casa já pagou
-por *medir contra a biblioteca errada*. A janela é ``Gtk.OffscreenWindow``: sob
-Xvfb não há gerenciador de janelas e uma ``Gtk.Window`` fica 1x1 para sempre; e
-ela tem UMA tela, então janela de teste não nasce na frente dela.
-
-AS CINCO COISAS QUE ESTA RÉGUA COBRA:
-
-1. **``marcado=sim`` ACENDE** um checkbox que nasceu apagado;
-2. **``marcado=""`` e ``marcado="—"`` APAGAM** — o travessão é o que o molde
-   escreve num lugar sem dono (``pacotes.TRAVESSAO``), e um acordeão que abrisse
-   sozinho numa coluna vazia seria a tela afirmando o que não é;
-3. **é IDEMPOTENTE**: o segundo tique com o mesmo valor devolve ``0``. Um alvo
-   que devolve ``1`` sempre infla a contagem de pinturas de toda aba que o use —
-   e ela é O instrumento com que esta casa prova que um endereço existe;
-4. **a leitura de volta fala a MESMA língua da escrita** — ``sim`` / ``""``, e
-   não ``true`` / ``false``. Sem isso a régua do mockup compararia a palavra do
-   arquivo com um booleano do navegador e acusaria toda pintura certa;
-5. **vale para o ``radio`` também**, que é o mesmo nó do HTML com outro tipo.
-
-A MORDIDA: apague o ramo ``if(alvo === 'marcado')`` do ``escrever()`` no
-BOOTSTRAP e ``test_o_checkbox_acende`` reprova dizendo que o checkbox nasceu e
-ficou fechado; troque ``el.checked ? 'sim' : ''`` por ``el.checked`` no
-``LER_CAMPOS`` e ``test_a_leitura_fala_a_lingua_da_escrita`` reprova.
-"""
+"""O DÉCIMO ALVO — ``marcado``, o único que escreve ``el.checked``."""
 from __future__ import annotations
 
 import json
@@ -50,10 +14,6 @@ sys.path.insert(0, str(RAIZ / "src"))
 
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: A PÁGINA DE ENSAIO, e ela é a forma REAL do acordeão da aba 02: um
-#: ``<input type="checkbox">`` escondido, com o corpo abrindo por ``:checked``.
-#: O ``radio`` está aqui porque o alvo vale para ele sem uma linha a mais, e uma
-#: régua que só provasse o checkbox deixaria essa metade sem medição.
 PAGINA = """<html><body>
 <div data-controle="p1">
   <input type="checkbox" id="acordeao" data-campo="saida-aberta"
@@ -67,20 +27,13 @@ PAGINA = """<html><body>
 
 
 def _constante(nome: str) -> str:
-    """O BOOTSTRAP e o LER_CAMPOS lidos do FONTE do piloto, e não importados.
-
-    Importar ``hefesto_vivo`` arrastaria a janela GTK inteira para dentro do
-    teste. É como ``test_o_pintor_acende_a_classe_e_apaga_as_irmas`` já lê o
-    piloto, e pela mesma razão.
-    """
+    """O BOOTSTRAP e o LER_CAMPOS lidos do FONTE do piloto, e não importados."""
     fonte = PILOTO.read_text(encoding="utf-8")
     achou = re.search(rf'^{nome} = r"""(.*?)"""$', fonte, re.S | re.M)
     assert achou, f"o piloto perdeu o {nome} — não há o que testar"
     return achou.group(1)
 
 
-#: O ROTEIRO INTEIRO NUMA IDA SÓ ao motor: um round-trip por asserção custaria
-#: seis cargas de página para medir o que uma mede.
 ROTEIRO = """
 (function(){
   const fora = {};
@@ -134,7 +87,7 @@ def medido() -> dict:
     def guardou(v, res):
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # a exceção É a resposta desta ponte
+        except Exception as e:
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 
@@ -158,10 +111,6 @@ def medido() -> dict:
     try:
         Gtk.main()
     finally:
-        # O RELÓGIO DE SEGURANÇA É DESARMADO, e isso não é zelo: um
-        # `timeout_add` pendente depois da fixture dispara DENTRO do laço do
-        # PRÓXIMO teste de GUI do mesmo processo. Já matou onze medições de um
-        # vizinho em 02/09.
         GLib.source_remove(guarda)
         janela.destroy()
     assert saiu, "o WebKit não respondeu em 20 s"
@@ -174,9 +123,6 @@ def _campos(linhas: list) -> dict[str, str]:
     return {str(x[0]): str(x[3]) for x in linhas}
 
 
-# --------------------------------------------------------------------------
-# 1. o alvo acende — e é o que não existia
-# --------------------------------------------------------------------------
 def test_o_checkbox_acende(medido: dict) -> None:
     assert medido["checked_virgem"] is False, (
         "a página de ensaio nasceu com o acordeão aberto — não há o que medir")
@@ -198,9 +144,6 @@ def test_o_radio_tambem(medido: dict) -> None:
         "sem canal, e ninguém veria.")
 
 
-# --------------------------------------------------------------------------
-# 2. o vazio e o travessão apagam
-# --------------------------------------------------------------------------
 def test_o_vazio_apaga(medido: dict) -> None:
     assert medido["checked_apagado"] is False, (
         "`marcado=''` não desmarcou. Um acordeão que fica aberto depois de o "
@@ -208,30 +151,17 @@ def test_o_vazio_apaga(medido: dict) -> None:
 
 
 def test_o_travessao_apaga(medido: dict) -> None:
-    """O `—` é o que o molde escreve num lugar SEM DONO (`pacotes.TRAVESSAO`).
-
-    Ele chega por um caminho diferente do vazio — o vazio é "não sei", o
-    travessão é "não há ninguém aqui" — e os dois têm de apagar. É a mesma regra
-    dos alvos `plastico` e `atributo`.
-    """
+    """O `—` é o que o molde escreve num lugar SEM DONO (`pacotes.TRAVESSAO`)."""
     assert _campos(medido["apagado"])["rota-fone"] == "", (
         "o travessão do lugar sem dono deixou o radio aceso")
 
 
 def test_so_a_palavra_sim_acende(medido: dict) -> None:
-    """A língua deste alvo é `sim`, e é a MESMA do alvo `classe` booleano.
-
-    Uma segunda palavra para o mesmo "ligado" seria a terceira maneira de dizer
-    a mesma coisa nesta casa — e `true` chegando de um pacote acenderia por
-    acidente um acordeão que ninguém mandou abrir.
-    """
+    """A língua deste alvo é `sim`, e é a MESMA do alvo `classe` booleano."""
     assert medido["checked_true"] is False, (
         "a palavra `true` acendeu o checkbox. O alvo entende `sim`, e só.")
 
 
-# --------------------------------------------------------------------------
-# 3. idempotente — o segundo tique igual devolve zero
-# --------------------------------------------------------------------------
 def test_o_segundo_tique_igual_conta_zero(medido: dict) -> None:
     assert medido["n_denovo"] == 0, (
         f"o mesmo valor pintado de novo contou {medido['n_denovo']}. Um alvo "
@@ -239,17 +169,8 @@ def test_o_segundo_tique_igual_conta_zero(medido: dict) -> None:
         f"use — e é essa contagem que prova que um endereço existe.")
 
 
-# --------------------------------------------------------------------------
-# 4. a leitura fala a língua da escrita
-# --------------------------------------------------------------------------
 def test_a_leitura_fala_a_lingua_da_escrita(medido: dict) -> None:
-    """`sim` / `""`, nunca `true` / `false`.
-
-    O ``LER_CAMPOS`` é o instrumento do ``--prova-de-mockup``, e ele compara o
-    que a TELA mostra com o que o ARQUIVO crava. Devolver um booleano faria a
-    régua comparar a palavra do arquivo com `true` e acusar **toda** pintura
-    certa — é a mesma cura de forma que o alvo `cor` já custou uma medição.
-    """
+    """`sim` / `""`, nunca `true` / `false`."""
     aceso = _campos(medido["aceso"])
     apagado = _campos(medido["apagado"])
     assert aceso["saida-aberta"] == "sim", aceso
@@ -259,11 +180,7 @@ def test_a_leitura_fala_a_lingua_da_escrita(medido: dict) -> None:
 
 
 def test_o_que_ja_nascia_aceso_continua_aceso(medido: dict) -> None:
-    """Um checkbox com `checked` no HTML lido ANTES de qualquer pintura.
-
-    É a linha de base do virgem: sem ela, um alvo que marcasse tudo passaria em
-    todos os outros testes desta página.
-    """
+    """Um checkbox com `checked` no HTML lido ANTES de qualquer pintura."""
     assert _campos(medido["virgem"])["ja-aceso"] == "sim", (
         "o leitor não viu o `checked` que o arquivo cravou — e é ele que separa "
         "o que o produto pintou do que o desenho já trazia")

@@ -1,25 +1,4 @@
-"""EMPATE-01 (E2) — a coluna "Quando usar" nunca anuncia um vencedor que o gerente não elege.
-
-Medido no disco dela em 31/07/2026: QUATRO perfis dizem "Sempre" ao mesmo
-tempo (`fallback` prio 0, `vitoria` prio 0, `meu_perfil` prio 1 e `Pragmata`
-prio 5). A coluna escrevia a MESMA palavra nas quatro linhas, um deles vencia
-e nada na tela dizia qual, nem por quê. A cura de então fez a coluna dizer a
-disputa e o vencedor, espelhando o `ProfileManager`.
-
-NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5: o
-`match any` saiu da seleção automática — nenhum «Sempre» entra sozinho, e numa
-janela que regra nenhuma casa vale a escolha dela. A disputa ACABOU, e o
-contrato desta régua continua o mesmo, com a resposta nova: o vencedor que a
-coluna anuncia é o que o gerente elege — e o gerente não elege nenhum «Sempre»,
-então a coluna não anuncia nenhum. O tooltip da disputa ficou vazio.
-
-Sem GTK de propósito: `rotulo_quando_usar` e `explicacao_da_disputa` são
-funções puras justamente para o contrato de texto ficar testável no CI
-headless. A fiação do ListStore (a 5ª coluna do tooltip) é o único ponto que
-exige widget, e vive em `TestFiacaoDaColuna`, atrás do `exigir_gi_real` do
-módulo — que roda no topo, antes de qualquer import de `gi`, pela regra
-GUARDA-GI-REAL-01.
-"""
+"""EMPATE-01 (E2) — a coluna "Quando usar" nunca anuncia um vencedor que o gerente não elege."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -53,28 +32,21 @@ def _catch_all(nome: str, prioridade: int) -> Profile:
     return _perfil(nome, prioridade, MatchAny())
 
 
-#: A mesa dela, reduzida ao que importa para a disputa. A ORDEM é a do loader
-#: (`sorted(glob("*.json"))`, loader.py:568) porque ela É o terceiro termo do
-#: desempate — trocar a ordem aqui trocaria o vencedor esperado.
 def _mesa_dela() -> list[Profile]:
     return [
-        _catch_all("fallback", 0),          # fallback.json
-        _catch_all("meu_perfil", 1),        # meu_perfil.json
+        _catch_all("fallback", 0),
+        _catch_all("meu_perfil", 1),
         _catch_all("Pragmata", 5),          # pragmata.json
         _perfil(                            # pragmata2.json — saiu da disputa
             "Pragmata2", 85, MatchCriteria(window_class=["steam_app_3357650"])
         ),
-        _catch_all("vitoria", 0),           # vitoria.json
+        _catch_all("vitoria", 0),
     ]
 
 
 class TestOTextoDaColuna:
     def test_nenhum_sempre_anuncia_disputa(self) -> None:
-        """Os quatro «Sempre» da mesa dela dizem só «Sempre»: ninguém vence sozinho.
-
-        MORDIDA: devolva a frase da disputa (`rotulo_quando_usar` com o
-        «N disputam, este vence») e este caso reprova nos quatro.
-        """
+        """Os quatro «Sempre» da mesa dela dizem só «Sempre»: ninguém vence sozinho."""
         perfis = _mesa_dela()
         for perfil in perfis:
             if perfil.match.type == "any":
@@ -127,12 +99,7 @@ class TestAColunaEspelhaOManager:
     def test_o_manager_nao_elege_sempre_e_a_coluna_nao_anuncia(
         self, monkeypatch: pytest.MonkeyPatch, incumbente: str | None
     ) -> None:
-        """Janela de desktop sem regra: o gerente não elege ninguém, a coluna também.
-
-        MORDIDA: devolva o `match any` à seleção automática
-        (`select_for_window_ex`) e o gerente elege o `Pragmata` — a coluna, que
-        não anuncia ninguém, deixa de espelhá-lo.
-        """
+        """Janela de desktop sem regra: o gerente não elege ninguém, a coluna também."""
         perfis = _mesa_dela()
         real = self._quem_o_manager_escolhe(perfis, incumbente, monkeypatch)
         anunciado = [
@@ -180,11 +147,6 @@ class TestFiacaoDaColuna:
 
         class _Stub(ProfilesActionsMixin):
             def __init__(self) -> None:
-                # PERFIL-ATUAL-01 (10/08/2026): a 6ª coluna é o REALCE da
-                # linha ativa (`Pango.AttrList`, e não uma cor de `foreground`,
-                # que o GTK descarta na linha selecionada). O store deste dublê
-                # tem de acompanhar o real — com cinco colunas,
-                # `_mark_active_profile_row` estoura.
                 self._profiles_store = Gtk.ListStore(
                     GObject.TYPE_STRING,
                     GObject.TYPE_INT,

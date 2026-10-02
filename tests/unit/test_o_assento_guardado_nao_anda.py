@@ -63,7 +63,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 )
 from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
 
-#: A bancada dela: o P1 e o P2 no cabo, o P3 e o P4 no rádio.
 KEYS = (
     "AA:BB:CC:00:00:01",
     "AA:BB:CC:00:00:02",
@@ -73,12 +72,10 @@ KEYS = (
 TRANSPORTE = ("USB", "USB", "BT", "BT")
 UNIQS = tuple(k.replace(":", "").lower() for k in KEYS)
 P1, P2, P3, P4 = UNIQS
-#: Um externo (Pro Nintendo / 8BitDo) para a mesa mista.
 EXTERNO = "aabbcc0000fe"
 
 BOOT = "boot-teste-o-assento-guardado"
 
-#: O gesto da linha 17: o P2 fica fora vinte segundos.
 VINTE_SEGUNDOS = 20.0
 
 
@@ -128,13 +125,11 @@ class Mesa:
         }
         self.backend._handles = {}  # type: ignore[assignment]
         self.backend.set_auto_output_provider(make_auto_output_provider(self.reg))
-        # Ela liga um de cada vez, com mais que uma onda entre um e outro.
         for key in KEYS:
             self.backend._handles[key] = self.handles[key]  # type: ignore[index]
             self.tique()
             self.relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
         self.backend._primary_key = KEYS[0]
-        # A adoção pinta: é o gatilho da cor que solta as lâmpadas.
         self.reg.liberar_as_lampadas()
 
     def tique(self) -> None:
@@ -148,11 +143,7 @@ class Mesa:
         )
 
     def sai(self, indice: int) -> None:
-        """O controle sai: no cabo o handle fecha; no rádio ele fica, sem link.
-
-        São as duas formas reais — o `connect()` recolhe o handle do cabo no
-        hotplug, e o do rádio sobrevive até ≤30 s com `connected` falso.
-        """
+        """O controle sai: no cabo o handle fecha; no rádio ele fica, sem link."""
         key = KEYS[indice]
         if self.transportes[indice] == "USB":
             del self.backend._handles[key]  # type: ignore[attr-defined]
@@ -202,7 +193,6 @@ class TestALinha17:
 
     @staticmethod
     def _mesa(transporte_do_p2: str) -> Mesa:
-        # A linha 17 pede o P2 no RÁDIO; a matriz dela pede os dois.
         return Mesa(("USB", transporte_do_p2, "BT", "BT"))
 
     @TRANSPORTES_DO_P2
@@ -216,8 +206,6 @@ class TestALinha17:
 
         assert mesa.tela() == {P1: 1, P3: 3, P4: 4}, "a tela fechou a fila"
         assert [mesa.player_slot(u) for u in (P1, P3, P4)] == [1, 3, 4]
-        # O gatilho da cor pode disparar no meio (uma conexão, um jogo): a
-        # liberação não tem mudança a soltar, e o aparelho fica onde estava.
         mesa.reg.liberar_as_lampadas()
         assert mesa.aparelho() == {P1: lampada(1), P3: lampada(3), P4: lampada(4)}
 
@@ -245,14 +233,10 @@ class TestALinha17:
         mesa.tique()
 
         assert mesa.tela() == {P1: 1, P3: 2, P4: 3}, "o prazo passou e a fila não fechou"
-        # As lâmpadas esperam a cor (APARELHO-NAO-SE-CONTRADIZ-01): até o
-        # gatilho, o aparelho segue com o número de antes…
         assert mesa.aparelho()[P4] == lampada(4)
-        # …e a liberação move os dois juntos.
         mesa.reg.liberar_as_lampadas()
         assert mesa.aparelho() == {P1: lampada(1), P3: lampada(2), P4: lampada(3)}
 
-        # E quem volta depois do prazo continua recuperando o dele (D2).
         mesa.volta(1)
         assert mesa.tela() == {P1: 1, P2: 2, P3: 3, P4: 4}
 
@@ -302,7 +286,6 @@ class TestAMesaMista:
     def _mista(relogio: Relogio) -> tuple[ControllerIdentityRegistry, ExternalIdentityRegistry]:
         ds = ControllerIdentityRegistry(clock=relogio)
         ext = ExternalIdentityRegistry(clock=relogio)
-        # A ponte de presença do produto, nos dois sentidos.
         ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
         ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
         ds.sync_connected([P1, P2])
@@ -325,7 +308,7 @@ class TestAMesaMista:
     def test_o_externo_sai_e_o_dualsense_depois_dele_nao_anda(self) -> None:
         relogio = Relogio()
         ds, ext = self._mista(relogio)
-        ds.sync_connected([P1, P2, P3])  # o P3 chega DEPOIS do externo
+        ds.sync_connected([P1, P2, P3])
         assert ds.numeros_da_mesa()[P3] == 4
         ext.sync_connected([])
         relogio.avancar(VINTE_SEGUNDOS)
@@ -353,15 +336,7 @@ class TestQuemNaoGuardaLugar:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOGestoDelaTrocaSobreOQueElaVe:
-    """O clique dela é TROCA sobre o que ela vê — e ela vê o buraco.
-
-    A regra é de 28/08, e está na aba 04 com todas as letras: *"os dois
-    trocam, os outros não se mexem"*. A primeira escrita desta sprint soltava
-    o lugar guardado no clique, e a troca saía sobre uma mesa fechada que ela
-    não estava vendo — pedir o 3 para o P4 mandava o P3 para o 2, e o 4 que a
-    aba oferecia ao P3 voltava recusado como fora da mesa. Conferência de
-    24/09/2026.
-    """
+    """O clique dela é TROCA sobre o que ela vê — e ela vê o buraco."""
 
     def test_o_3_para_o_p4_troca_o_p3_e_o_p4_e_mais_ninguem(self) -> None:
         mesa = Mesa()
@@ -398,7 +373,7 @@ class TestOGestoDelaTrocaSobreOQueElaVe:
     ) -> None:
         """O mesmo cinza da aba: acima dos ligados e sem ligado que o tenha."""
         mesa = Mesa()
-        mesa.sai(3)  # o P4 sai: o 4 é só do lugar guardado dele
+        mesa.sai(3)
 
         with pytest.raises(_NumeroForaDaMesaError):
             IpcHandlersMixin._set_number_locked(mesa.reg, None, P1, 4)
@@ -431,8 +406,8 @@ class TestOGestoDelaTrocaSobreOQueElaVe:
         """A fila é uma só: o lugar guardado de um externo também é assento."""
         relogio = Relogio()
         ds, ext = TestAMesaMista._mista(relogio)
-        ds.sync_connected([P1, P2, P3])  # o P3 chega depois do externo
-        ext.sync_connected([])  # e o externo sai
+        ds.sync_connected([P1, P2, P3])
+        ext.sync_connected([])
         assert ds.numeros_da_mesa()[P3] == 4
 
         IpcHandlersMixin._set_number_locked(ds, ext, P3, 3)
@@ -479,14 +454,7 @@ class TestOGestoDelaTrocaSobreOQueElaVe:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestGenteNovaRefazAMesa:
-    """Quem chega e não é dono de lugar guardado refaz a mesa (um até N).
-
-    Conferência de 24/09/2026. Segurar o novo atrás do buraco quebrava o que a
-    NUM-01 protegia: com os quatro na mesa, o P2 sai e outro controle chega —
-    o novo nascia 5 (cinco lâmpadas, barra amarela) numa mesa de quatro, e a
-    tela, que tem quatro cartões, voltava a contar por posição. A sprint manda
-    não mudar o que o lugar vazio quebra.
-    """
+    """Quem chega e não é dono de lugar guardado refaz a mesa (um até N)."""
 
     NOVO_KEY = "AA:BB:CC:00:00:05"
     NOVO = "aabbcc000005"
@@ -508,18 +476,15 @@ class TestGenteNovaRefazAMesa:
         assert sorted(tela.values()) == [1, 2, 3, 4], f"a mesa não fechou: {tela}"
         assert tela[self.NOVO] == 4
         assert mesa.reg.guardados() == {}
-        # E o aparelho, depois do gatilho da cor, acende o 4 — não o 5.
         mesa.reg.liberar_as_lampadas()
         assert mesa.aparelho()[self.NOVO] == lampada(4)
 
     def test_o_novo_que_o_provider_poe_antes_do_tique_que_ve_a_saida(self) -> None:
-        """A troca de controle entre dois tiques: o provider de cor põe o novo
-        na mesa antes de o tique lento ver a saída — e mesmo assim ninguém
-        guarda lugar para o que saiu."""
+        """A troca de controle entre dois tiques: o provider de cor põe o novo"""
         mesa = Mesa()
         del mesa.backend._handles[KEYS[1]]  # type: ignore[attr-defined]
         self._chega_o_novo(mesa, tique=False)
-        mesa.backend._merged_desired_for_key(self.NOVO_KEY)  # o provider de cor
+        mesa.backend._merged_desired_for_key(self.NOVO_KEY)
         mesa.tique()
 
         assert mesa.tela() == {P1: 1, P3: 2, P4: 3, self.NOVO: 4}
@@ -532,15 +497,13 @@ class TestGenteNovaRefazAMesa:
         assert P2 in mesa.reg.guardados()
         self._chega_o_novo(mesa, tique=False)
 
-        mesa.backend._merged_desired_for_key(self.NOVO_KEY)  # o provider de cor
+        mesa.backend._merged_desired_for_key(self.NOVO_KEY)
 
         assert mesa.tela() == {P1: 1, P3: 2, P4: 3, self.NOVO: 4}
         assert mesa.reg.guardados() == {}
 
     def test_o_controle_sem_serial_que_volta_nao_e_gente_nova(self) -> None:
-        """O crachá (O-CONTROLE-SEM-MAC-01) só se resolve no tique lento: o
-        provider de cor vê primeiro o caminho cru do P2 que voltou, e isso não
-        pode soltar o lugar de ninguém — nem o dele."""
+        """O crachá (O-CONTROLE-SEM-MAC-01) só se resolve no tique lento: o"""
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         cru = "/dev/hidraw9"
@@ -552,12 +515,12 @@ class TestGenteNovaRefazAMesa:
             relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
         assert reg.numeros_da_mesa() == {P1: 1, P2: 2, P3: 3, P4: 4}
 
-        reg.sync_connected([P1, P3, P4])  # o P2 sai
-        reg.slot_for(cru, autoridade_de_presenca=False)  # e volta pelo provider
+        reg.sync_connected([P1, P3, P4])
+        reg.slot_for(cru, autoridade_de_presenca=False)
 
         numeros = reg.numeros_da_mesa()
         assert (numeros[P3], numeros[P4]) == (3, 4), "o caminho cru soltou o lugar"
-        reg.sync_connected([P1, cru, P3, P4])  # o tique resolve o crachá
+        reg.sync_connected([P1, cru, P3, P4])
         assert reg.numeros_da_mesa() == {P1: 1, P2: 2, P3: 3, P4: 4}
 
     def test_quem_so_volta_nao_e_gente_nova(self) -> None:
@@ -590,7 +553,7 @@ class TestGenteNovaRefazAMesa:
     def test_o_dualsense_novo_refaz_a_mesa_dos_externos(self) -> None:
         relogio = Relogio()
         ds, ext = TestAMesaMista._mista(relogio)
-        ext.sync_connected([])  # o externo sai: lugar 3 guardado
+        ext.sync_connected([])
         relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
 
         ds.sync_connected([P1, P2, P3])
@@ -601,12 +564,7 @@ class TestGenteNovaRefazAMesa:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOJogoNaoPerdeOControleDeQuemFicou:
-    """O que a NUM-01 podia proteger, medido antes de mudar: o vpad do jogo.
-
-    O jogo vê a mesa pelos vpads, e o co-op os recria quando a ordem das
-    cartas não bate (``planejar_a_ordem``). Um buraco na carta continua em
-    ordem — então o lugar guardado não derruba o controle de ninguém.
-    """
+    """O que a NUM-01 podia proteger, medido antes de mudar: o vpad do jogo."""
 
     VPAD_DO_P1 = "vpad-do-p1"
 
@@ -621,8 +579,6 @@ class TestOJogoNaoPerdeOControleDeQuemFicou:
         mesa.sai(1)
         cartas = self._cartas(mesa.reg, P1, P3, P4)
         cartas[self.VPAD_DO_P1] = cartas.pop(P1)
-        # Com o jogo aberto o SDL não renumera: o vpad do P2 morreu e o lugar
-        # 1 do jogo ficou livre.
         sentados = {0: self.VPAD_DO_P1, 2: P3, 3: P4}
         assert planejar_a_ordem(sentados, cartas) == ([], True)
 
@@ -632,8 +588,7 @@ class TestOJogoNaoPerdeOControleDeQuemFicou:
             "o P2 volta no lugar dele sem derrubar o P3 nem o P4")
 
     def test_o_p1_sai_e_o_vpad_do_p1_segue_com_quem_ficou(self) -> None:
-        """Com o P1 fora o backend passa o vpad do P1 ao P2 (COOP-QUE-NAO-
-        DESMONTA-01); a carta do vpad passa a ser a do P2, e a ordem fecha."""
+        """Com o P1 fora o backend passa o vpad do P1 ao P2 (COOP-QUE-NAO-"""
         mesa = Mesa()
         mesa.sai(0)
         cartas = self._cartas(mesa.reg, P2, P3, P4)

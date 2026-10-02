@@ -46,18 +46,9 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import Profile
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
-# ---------------------------------------------------------------------------
-# Infra
-# ---------------------------------------------------------------------------
-
 
 class _Relogio:
-    """Relógio monotônico controlado pelo teste.
-
-    O lock é de 30 s de parede: sem controlar o tempo não dá para provar "adiou
-    agora" e "drenou depois" no mesmo teste. Mesmo padrão já usado em
-    `test_autoswitch_manual_lock.py` (patch de `time.monotonic` no módulo).
-    """
+    """Relógio monotônico controlado pelo teste."""
 
     def __init__(self, t0: float = 10_000.0) -> None:
         self.agora = t0
@@ -154,11 +145,6 @@ def _com_mascara_mexida_agora(daemon: Daemon, relogio: _Relogio) -> None:
     daemon._gamepad_device = SimpleNamespace(flavor="xbox")
 
 
-# ---------------------------------------------------------------------------
-# 1) Adiamento (em vez de descarte silencioso)
-# ---------------------------------------------------------------------------
-
-
 class TestAdiamento:
     def test_lock_adia_a_secao_e_agenda_pendencia(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
@@ -173,11 +159,10 @@ class TestAdiamento:
         )
 
         assert estado == "adiado_lock_manual"
-        assert setters.gamepad == []  # o lock continua protegendo o gesto dela
+        assert setters.gamepad == []
         pendencia = daemon._mode_pendente
         assert pendencia is not None
         assert pendencia.profile_name == "sackboy_nativo"
-        # A pendência vence quando o lock vence — nem antes nem "nunca".
         assert pendencia.nao_antes_de == pytest.approx(
             relogio.agora + MANUAL_PROFILE_LOCK_SEC
         )
@@ -185,10 +170,7 @@ class TestAdiamento:
     def test_pendencia_e_sobrescrita_nunca_enfileirada(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Alt-tab entre dois jogos dentro da mesma janela de 30 s.
-
-        Enfileirar aplicaria um modo que já não corresponde ao perfil ativo.
-        """
+        """Alt-tab entre dois jogos dentro da mesma janela de 30 s."""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         _com_mascara_mexida_agora(daemon, relogio)
@@ -217,13 +199,8 @@ class TestAdiamento:
         )
 
         assert estado == "aplicado"
-        # VERDADE-01: ativação por GESTO dela chega à emulação como
-        # `gesto_de_perfil` — a origem que o gate R-04 reconhece como vontade
-        # da usuária (e só ele: nada é gravado em disco nem promove backend).
         assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
         assert daemon._mode_pendente is None
-        # Consumido: a máscara que ESTE perfil acabou de pôr não pode travar o
-        # perfil seguinte (o do jogo, quando a janela aparecer).
         assert daemon._emu_manual_ts == float("-inf")
 
     def test_ativacao_que_passa_do_lock_descarta_pendencia_velha(
@@ -241,12 +218,7 @@ class TestAdiamento:
         daemon.apply_profile_mode(novo.mode, profile=novo, origin="autoswitch")
 
         assert daemon._mode_pendente is None
-        assert setters.native == []  # o modo velho NÃO ressuscita
-
-
-# ---------------------------------------------------------------------------
-# 2) Dreno (a metade que faltava: alguém reaplica depois)
-# ---------------------------------------------------------------------------
+        assert setters.native == []
 
 
 class TestDreno:
@@ -281,11 +253,7 @@ class TestDreno:
     def test_dreno_aplica_uma_unica_vez(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A cura da queixa: a máscara do perfil entra quando o lock vence.
-
-        E entra UMA vez — o dreno roda a ~1 Hz; repetir a aplicação seria o
-        flap de teardown/respawn de vpad que o MISC-08 removeu.
-        """
+        """A cura da queixa: a máscara do perfil entra quando o lock vence."""
         setters = self._adiar(daemon, relogio, monkeypatch)
         relogio.avancar(MANUAL_PROFILE_LOCK_SEC + 0.5)
 
@@ -303,7 +271,7 @@ class TestDreno:
         """A última palavra é dela: gesto novo mata a pendência do perfil."""
         setters = self._adiar(daemon, relogio, monkeypatch)
         relogio.avancar(20.0)
-        daemon._emu_manual_ts = relogio.agora  # ela mexeu na máscara de novo
+        daemon._emu_manual_ts = relogio.agora
         relogio.avancar(MANUAL_PROFILE_LOCK_SEC + 1)
 
         daemon._drenar_modo_pendente()
@@ -327,11 +295,7 @@ class TestDreno:
     def test_dreno_nao_troca_mascara_com_o_jogo_na_autoridade(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Recriar vpad mid-game invalida os handles do jogo (medido ao vivo).
-
-        A pendência SEGURA (não morre) e entra na primeira borda em que a
-        autoridade de exibição sai de "game".
-        """
+        """Recriar vpad mid-game invalida os handles do jogo (medido ao vivo)."""
         setters = self._adiar(daemon, relogio, monkeypatch)
         daemon._game_signal = SimpleNamespace(authority="game")
         relogio.avancar(MANUAL_PROFILE_LOCK_SEC + 1)
@@ -350,11 +314,7 @@ class TestDreno:
     def test_dreno_aplica_com_jogo_aberto_quando_nao_e_destrutivo(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Gate só para o que DESTRÓI: mesmo flavor não recria vpad nenhum.
-
-        Sem esta assimetria o gate viraria "o perfil nunca é aplicado", que é a
-        própria queixa (risco (b) do R-04 no plano).
-        """
+        """Gate só para o que DESTRÓI: mesmo flavor não recria vpad nenhum."""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         daemon._emu_manual_ts = relogio.agora
@@ -368,23 +328,10 @@ class TestDreno:
 
         daemon._drenar_modo_pendente()
 
-        # Vpad intocado (mesmo flavor, `set_gamepad_emulation` nem é chamado) e
-        # a pendência drena — que é o que ela precisa para jogar a 4.
-        #
-        # NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: aqui se mediu
-        # também `setters.coop == [(True, "profile")]`, porque quem subia o
-        # co-op era o perfil. Não é mais: o piso do daemon já nasce ligado e o
-        # perfil parou de governar o campo. O que este teste guarda continua
-        # inteiro — o dreno acontece com jogo aberto quando não destrói nada.
         assert setters.gamepad == []
         assert setters.coop == []
         assert daemon.config.coop_enabled is True
         assert daemon._mode_pendente is None
-
-
-# ---------------------------------------------------------------------------
-# 3) Relatório do manager + cenário fim-a-fim da queixa
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -425,15 +372,6 @@ class TestRelatorio:
         save_profile(_perfil({"kind": "gamepad", "gamepad_flavor": "dualsense"}))
         manager = _manager(daemon, daemon.store)
 
-        # PREMISSA EXPLÍCITA (auditoria 24/07): o lock deste arquivo é o de
-        # GESTO MANUAL da máscara (`_emu_manual_ts`), NÃO o Modo Freestyle
-        # (`freestyle_ligado`, o cadeado de 23/07 renomeado em 28/09/2026). São
-        # dois mecanismos com nomes parecidos e políticas opostas, e confundi-los
-        # já custou uma leitura errada desta asserção: aqui a troca de perfil é
-        # deliberadamente COMMITADA (só a seção `mode` é adiada); o Freestyle
-        # ligado, por sua vez, impede a troca acontecer — e quem o cobre é
-        # `test_o_freestyle_ligado_manda_em_tudo.py`. Fixar a premissa no próprio
-        # teste evita a confusão voltar.
         assert daemon.store.freestyle_ligado is False
 
         relatorio: dict[str, str] = {}
@@ -441,10 +379,6 @@ class TestRelatorio:
             "sackboy_nativo", origin="autoswitch", relatorio=relatorio
         )
 
-        # A ativação é COMMITADA (nada de flap a 2 Hz) e o relatório conta o que
-        # ficou pendente — antes disso a seção sumia sem rastro nenhum. A
-        # variante "não commitar para tentar de novo" segue REJEITADA (rodaria
-        # `_activate` ~60x em 30 s); o retry mora na pendência de `mode`.
         assert daemon.store.active_profile == "sackboy_nativo"
         assert relatorio["mode"] == "adiado_lock_manual"
         assert daemon._mode_pendente is not None
@@ -495,7 +429,6 @@ class TestRelatorio:
         manager.activate("sackboy_nativo", origin="manual", relatorio=relatorio)
 
         assert relatorio["mode"] == "aplicado"
-        # VERDADE-01: `origin="manual"` na ativação = gesto dela (ver acima).
         assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
 
 
@@ -524,12 +457,11 @@ class TestIpcProfileSwitch:
 
         host = _Host()
         host.store = daemon.store
-        host.daemon = None  # pula o materialize_launch_env
+        host.daemon = None
         host.profile_manager = _manager(daemon, daemon.store)
 
         resposta = await host._handle_profile_switch({"name": "sackboy_nativo"})
 
-        # Gesto manual fura o lock: modo aplicado DE VERDADE, e a resposta diz.
         assert resposta["active_profile"] == "sackboy_nativo"
         assert resposta["mode_aplicado"] is True
         assert resposta["secoes"]["mode"] == "aplicado"
@@ -537,18 +469,9 @@ class TestIpcProfileSwitch:
         assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
 
 
-# ---------------------------------------------------------------------------
-# 4) Fiação no poll loop (sem ela, a pendência nunca é drenada)
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_poll_loop_drena_a_pendencia() -> None:
-    """Integração com `Daemon.run()`: quem chama o dreno é o poll loop.
-
-    Relógio REAL aqui de propósito (o loop do asyncio depende dele): a
-    pendência nasce com o carimbo no passado, então já está vencida.
-    """
+    """Integração com `Daemon.run()`: quem chama o dreno é o poll loop."""
     from hefesto_dualsense4unix.core.controller import ControllerState
 
     estados = [
@@ -577,7 +500,7 @@ async def test_poll_loop_drena_a_pendencia() -> None:
 
     run_task = asyncio.create_task(daemon.run())
     try:
-        await asyncio.sleep(0.05)  # deixa o run() subir e conectar
+        await asyncio.sleep(0.05)
         perfil = _perfil({"kind": "gamepad", "gamepad_flavor": "dualsense"})
         daemon.store.set_active_profile(perfil.name)
         daemon._emu_manual_ts = lifecycle_mod.time.monotonic() - 120.0

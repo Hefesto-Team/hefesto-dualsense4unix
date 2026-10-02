@@ -1,38 +1,4 @@
-"""PROCESSO-CEGO-01 — o campo `process_name` que a tela mandava preencher e o
-ambiente dela não tem como casar.
-
-O DEFEITO, medido
------------------
-`process_name` é matcher de primeira classe no esquema de perfil, e a página
-`docs/usage/jogos-e-mascaras.md` MANDAVA preenchê-lo. Só que em Wayland puro os
-dois backends de janela devolvem ``exe_basename=""`` por construção —
-`window_backends/wayland_portal.py` e `window_backends/wlr_toplevel.py` montam o
-`WindowInfo` com a string vazia LITERAL, e o portal faz isso mesmo tendo o `pid`
-na mão.
-
-E `MatchCriteria.matches` é um **E** entre os campos preenchidos. Então o campo
-não falha sozinho: ele derruba o perfil INTEIRO, inclusive a `window_class` que
-casaria. Foi a causa medida (sprint PERFIL-MUDO-01, 10/08/2026, 30 dias de
-journal da máquina dela) de cinco perfis de gênero — ``FPS``, ``Ação``,
-``Aventura``, ``Corrida``, ``Esportes`` — nunca ativarem, **nenhuma vez**.
-
-O QUE ESTA LEVA **NÃO** FAZ
----------------------------
-Não mexe nos perfis dela e não sugere apagar campo nenhum: *"a vontade da GUI
-prevalece"*, e quem escreveu o critério foi ela. O que faltava não era decisão,
-era informação — e agora ela chega ANTES, na tela em que o campo é digitado (a
-aba "No jogo" já contava DEPOIS, com o jogo aberto sem o perfil).
-
-O QUE CADA TESTE MORDE
-----------------------
-Cada teste abaixo foi verificado ARRANCANDO a cura correspondente e vendo
-reprovar. Os pontos de arranque estão nomeados nas docstrings, um por teste.
-
-Os quatro primeiros são o cinto contra DERIVA: eles não acreditam na tabela
-`BACKENDS_QUE_VEEM_O_PROCESSO`, eles a conferem contra o que cada backend
-DEVOLVE. Se algum dia o portal passar a resolver `/proc/<pid>/exe`, a tabela
-fica errada e o teste reprova antes de a tela mentir.
-"""
+"""PROCESSO-CEGO-01 — o campo `process_name` que a tela mandava preencher e o"""
 
 from __future__ import annotations
 
@@ -104,23 +70,11 @@ from hefesto_dualsense4unix.integrations.window_detect import (
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria
 
 
-# ---------------------------------------------------------------------------
-# 1. A tabela conferida contra os backends de verdade
-# ---------------------------------------------------------------------------
-
-
 class TestATabelaBateComOsBackends:
     """A tabela não é crença: é conferida contra o que cada arquivo devolve."""
 
     def test_o_portal_devolve_exe_vazio_mesmo_tendo_o_pid(self) -> None:
-        """O portal RECEBE o pid e ainda assim não resolve o executável.
-
-        Este é o detalhe que faz o defeito parecer impossível de longe — "mas o
-        Wayland manda o pid!". Manda; ninguém lê `/proc/<pid>/exe` ali.
-
-        Morde em `BACKENDS_CEGOS_AO_PROCESSO`. Arranque: mover ``"portal"``
-        para `BACKENDS_QUE_VEEM_O_PROCESSO` e o `assert` do predicado reprova.
-        """
+        """O portal RECEBE o pid e ainda assim não resolve o executável."""
         info = wayland_portal._parse_portal_result(
             {"app-id": "steam_app_3357650", "title": "PRAGMATA", "pid": os.getpid()}
         )
@@ -132,11 +86,7 @@ class TestATabelaBateComOsBackends:
         assert backend_ve_nome_do_processo(nome) is False
 
     def test_o_wlrctl_devolve_exe_vazio(self, monkeypatch: Any) -> None:
-        """Mesmo com o `wlrctl` respondendo um toplevel inteiro, o campo é vazio.
-
-        Morde em `BACKENDS_CEGOS_AO_PROCESSO`. Arranque: mover ``"wlrctl"``
-        para `BACKENDS_QUE_VEEM_O_PROCESSO`.
-        """
+        """Mesmo com o `wlrctl` respondendo um toplevel inteiro, o campo é vazio."""
 
         class _Resposta:
             returncode = 0
@@ -155,17 +105,7 @@ class TestATabelaBateComOsBackends:
         assert backend_ve_nome_do_processo(nome) is False
 
     def test_o_cosmic_devolve_exe_vazio_e_pid_zero(self) -> None:
-        """O `zcosmic_toplevel_info_v1` não manda PID — nem na versão 3.
-
-        Este backend é o que passou a enxergar app Wayland nativo em 02/09,
-        e é onde a promessa era mais tentadora: ele SABE o nome do app
-        (`app_id`), então parece que saberia o processo. Não sabe. O protocolo
-        não carrega PID, e inventar um seria a mentira que o
-        `BACKENDS_CEGOS_AO_PROCESSO` existe para impedir.
-
-        Morde em `BACKENDS_CEGOS_AO_PROCESSO`. Arranque: mover ``"cosmic"``
-        para `BACKENDS_QUE_VEEM_O_PROCESSO` e o `assert` do predicado reprova.
-        """
+        """O `zcosmic_toplevel_info_v1` não manda PID — nem na versão 3."""
         janela = cosmic_toplevel._Janela()
         janela.app_id = "com.system76.CosmicTerm"
         janela.titulo = "Terminal"
@@ -183,15 +123,7 @@ class TestATabelaBateComOsBackends:
         assert backend_ve_nome_do_processo(nome) is False
 
     def test_o_xlib_resolve_o_executavel_de_verdade(self) -> None:
-        """O X11 é o único que lê `/proc/<pid>/exe` — provado com o pid deste teste.
-
-        Sem esta metade o aviso não valeria nada: um predicado que responde
-        "cego" para TUDO também passaria nos dois testes acima, e a tela
-        acusaria o ambiente em que o campo funciona.
-
-        Morde em `BACKENDS_QUE_VEEM_O_PROCESSO`. Arranque: tirar ``"xlib"`` da
-        tabela e o `assert` do predicado reprova.
-        """
+        """O X11 é o único que lê `/proc/<pid>/exe` — provado com o pid deste teste."""
         assert xlib._exe_basename_from_pid(os.getpid()) != ""
         assert backend_ve_nome_do_processo(xlib.XlibBackend.backend_name) is True
 
@@ -200,36 +132,19 @@ class TestATabelaBateComOsBackends:
         assert not (BACKENDS_QUE_VEEM_O_PROCESSO & BACKENDS_CEGOS_AO_PROCESSO)
 
     def test_backend_desconhecido_ou_ausente_nao_afirma_nada(self) -> None:
-        """"Não sei" e "não casa" mandam caçar em lugares opostos.
-
-        Daemon mais velho que o código é rotina nesta casa (install editable), e
-        um `False` inventado a partir do silêncio faria a tela acusar um defeito
-        que ninguém mediu.
-
-        Morde no ramo ``return None`` de `backend_ve_nome_do_processo`.
-        Arranque: trocar o `return None` final por `return False`.
-        """
+        """"Não sei" e "não casa" mandam caçar em lugares opostos."""
         assert backend_ve_nome_do_processo(None) is None
         assert backend_ve_nome_do_processo("") is None
         assert backend_ve_nome_do_processo("backend_de_terceiro") is None
 
 
-# ---------------------------------------------------------------------------
-# 2. O dano que o aviso descreve — o E que derruba o perfil inteiro
-# ---------------------------------------------------------------------------
-
-
 class TestOCampoDerrubaOPerfilInteiro:
     def test_com_a_window_class_certa_o_perfil_ainda_nao_entra(self) -> None:
-        """A afirmação forte do aviso, medida: *"nem com o window_class certo"*.
-
-        É o caso literal dos cinco perfis de gênero dela. Sem este teste o aviso
-        estaria prometendo um mecanismo que ninguém conferiu.
-        """
+        """A afirmação forte do aviso, medida: *"nem com o window_class certo"*."""
         janela_wayland = {
             "wm_class": "steam_app_3357650",
             "wm_name": "PRAGMATA",
-            "exe_basename": "",  # o que portal e wlrctl SEMPRE devolvem
+            "exe_basename": "",
         }
         so_a_classe = MatchCriteria(window_class=["steam_app_3357650"])
         com_o_processo = MatchCriteria(
@@ -238,11 +153,6 @@ class TestOCampoDerrubaOPerfilInteiro:
 
         assert so_a_classe.matches(janela_wayland) is True
         assert com_o_processo.matches(janela_wayland) is False
-
-
-# ---------------------------------------------------------------------------
-# 3. A frase da tela
-# ---------------------------------------------------------------------------
 
 
 class TestAFraseDoAviso:
@@ -262,15 +172,7 @@ class TestAFraseDoAviso:
             assert "window_class" in texto and "title_regex" in texto
 
     def test_o_null_nao_acusa_so_o_process_name(self) -> None:
-        """Sem leitura de janela nenhuma, trocar de campo cai no mesmo silêncio.
-
-        Dizer só do `process_name` aqui mandaria ela reescrever o critério para
-        continuar sem perfil — o aviso teria custado trabalho e não teria
-        entregado nada.
-
-        Morde no ramo ``if backend == "null"``. Arranque: apagar o ramo e a
-        frase do Wayland assume, dizendo que os outros dois campos casam.
-        """
+        """Sem leitura de janela nenhuma, trocar de campo cai no mesmo silêncio."""
         texto = pa.texto_do_processo_que_nao_casa({"window_detect_backend": "null"})
         assert texto is not None
         assert "nenhum dos três campos casa" in texto
@@ -282,11 +184,7 @@ class TestAFraseDoAviso:
         )
 
     def test_cala_com_daemon_velho_ou_desligado(self) -> None:
-        """Campo ausente é "não sei", e "não sei" não vira alerta na tela.
-
-        Morde na guarda de entrada. Arranque: tratar `backend` ausente como
-        cego, e a aba passa a acusar Wayland num daemon que nunca respondeu.
-        """
+        """Campo ausente é "não sei", e "não sei" não vira alerta na tela."""
         assert pa.texto_do_processo_que_nao_casa(None) is None
         assert pa.texto_do_processo_que_nao_casa({}) is None
         assert pa.texto_do_processo_que_nao_casa("nada") is None  # type: ignore[arg-type]
@@ -295,10 +193,7 @@ class TestAFraseDoAviso:
         )
 
     def test_a_frase_nao_manda_apagar_nada(self) -> None:
-        """*"A vontade da GUI prevalece"* — o aviso informa, não corrige.
-
-        O critério é dela; o produto diz o que o campo faz aqui e para de falar.
-        """
+        """*"A vontade da GUI prevalece"* — o aviso informa, não corrige."""
         texto = pa.texto_do_processo_que_nao_casa({"window_detect_backend": "wlrctl"})
         assert texto is not None
         minusculo = texto.lower()
@@ -306,19 +201,13 @@ class TestAFraseDoAviso:
             assert proibida not in minusculo
 
     def test_a_frase_atravessa_o_markup_do_pango_inteira(self) -> None:
-        """A costura da tela usa `set_markup` sem escapar — as frases não podem
-        levar `<`, `&` nem aspas retas (as aspas são as tipográficas “ ”)."""
+        """A costura da tela usa `set_markup` sem escapar — as frases não podem"""
         for backend in ("portal", "wlrctl", "null"):
             texto = pa.texto_do_processo_que_nao_casa(
                 {"window_detect_backend": backend}
             )
             assert texto is not None
             assert "<" not in texto and "&" not in texto and '"' not in texto
-
-
-# ---------------------------------------------------------------------------
-# 4. A frase chega à TELA — sem isso a cura fica escrita e nunca ligada
-# ---------------------------------------------------------------------------
 
 
 class _FakeLabel:
@@ -381,7 +270,6 @@ class _Editor(pa.ProfilesActionsMixin):
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
 
-    # o handler do switch chama estes dois; aqui eles não são o assunto
     def _mostrar_a_regra_nos_campos_crus(self) -> None:
         return None
 
@@ -398,13 +286,7 @@ def _responder_state(monkeypatch: Any, state: dict[str, Any]) -> None:
 
 class TestOAvisoChegaNaTela:
     def test_ligar_o_avancado_acende_o_aviso(self, monkeypatch: Any) -> None:
-        """A página avançada é a ÚNICA porta para o campo — é ao abri-la que a
-        pergunta tem de ser feita.
-
-        Morde na chamada de `_atualizar_aviso_do_processo` dentro de
-        `on_profile_advanced_toggle`. Arranque: apagar a linha e o label fica
-        invisível com o Wayland respondendo.
-        """
+        """A página avançada é a ÚNICA porta para o campo — é ao abri-la que a"""
         _responder_state(monkeypatch, {"window_detect_backend": "wlrctl"})
         ed = _Editor()
 
@@ -413,7 +295,6 @@ class TestOAvisoChegaNaTela:
         assert ed.aviso.visivel is True
         assert ed.aviso.markup is not None
         assert "process_name" in ed.aviso.markup
-        # o token de ALERTA da casa, o mesmo do `rumble_policy_aviso`
         assert "#ffb86c" in ed.aviso.markup
 
     def test_no_x11_o_aviso_fica_escondido(self, monkeypatch: Any) -> None:
@@ -427,11 +308,7 @@ class TestOAvisoChegaNaTela:
         assert ed.aviso.markup is None
 
     def test_com_daemon_desligado_o_aviso_nao_aparece(self, monkeypatch: Any) -> None:
-        """`call_async` que falha (daemon fora) é silêncio, não alarme.
-
-        Morde no `on_failure` que devolve False sem tocar no label. Arranque:
-        acender o aviso na falha e este teste reprova.
-        """
+        """`call_async` que falha (daemon fora) é silêncio, não alarme."""
 
         def _falso_call_async(**kwargs: Any) -> None:
             kwargs["on_failure"](RuntimeError("daemon fora"))
@@ -473,12 +350,7 @@ class TestOAvisoChegaNaTela:
 
 
 class TestOWlrctlNaoPrecisaDeCompositorNoTeste:
-    """Cinto do próprio instrumento: o dublê do `wlrctl` não pode virar produto.
-
-    "O instrumento mente mais que o produto" — se o `subprocess.run` não
-    estivesse dublado, o teste do wlrctl passaria por AUSÊNCIA do binário
-    (backend indisponível devolve `None`) e não por medição.
-    """
+    """Cinto do próprio instrumento: o dublê do `wlrctl` não pode virar produto."""
 
     def test_sem_o_binario_o_backend_nem_tenta(self, monkeypatch: Any) -> None:
         monkeypatch.setattr(wlr_toplevel.shutil, "which", lambda _b: None)

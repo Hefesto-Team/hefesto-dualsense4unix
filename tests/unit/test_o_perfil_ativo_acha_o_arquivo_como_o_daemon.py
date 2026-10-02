@@ -1,36 +1,5 @@
 #!/usr/bin/env python3
 """A RÉGUA DA O-PERFIL-ATIVO-ACHA-O-ARQUIVO-COMO-O-DAEMON-01: a tela acha o arquivo como o daemon.
-
-O DEFEITO, achado na conferência da A-ABA-GATILHOS-DIZ-O-QUE-VAI-AO-CONTROLE-01
-e medido num lar de mentira em 25/09/2026: `perfil.ativo` procurava o arquivo
-do perfil só pelo nome e pelo slug. O `load_profile` do daemon tem mais duas
-pernas, a varredura por `name` e a subpasta dos Estilos de Jogo, e o perfil
-achado só por elas virava `{}` na tela. Com um perfil sem `triggers`, a aba 03
-dizia «Desligado» e o daemon mandava o Rígido; a 04 perdia o brilho, a 05 e a
-08 o teto do P2, a 06 os atalhos, e a dica do Salvar a promessa. O perfil cujo
-arquivo sumiu com ele valendo caía no mesmo `{}`.
-
-AS TRÊS FORMAS: o arquivo de outro nome, o Estilo de Jogo na subpasta, e o
-arquivo apagado depois de o daemon aplicar o perfil e a tela o ler.
-
-O ORÁCULO É O DAEMON, e não um modo digitado:
-
-* o GÊMEO — o mesmo conteúdo gravado no nome canônico. O daemon carrega o
-  MESMO `Profile` nas duas casas (a régua confere), e toda aba tem de dizer, na
-  forma, exatamente o que diz no gêmeo;
-* a 03 contra o `ProfileManager.apply` real, lado a lado e controle a
-  controle, como a régua da A-ABA-GATILHOS mede;
-* a 04 e a 06 contra o `Profile` que o `load_profile` devolve (o brilho e os
-  atalhos).
-
-A MORDIDA, arrancada antes deste arquivo entrar: com `perfil.ativo` de volta às
-duas pernas, as formas «outro nome» e «estilo» reprovam com «Desligado» na 03;
-com a lembrança do último arquivo lido arrancada, o «apagado» reprova igual; com
-a assinatura da pasta cega, a memória reprova; com o «Exportar» de volta à
-cópia das duas pernas, ele reprova com «não achei o arquivo». E da conferência
-(25/09/2026): o prazo da memória arrancado, o `load_profile` com uma cópia do
-nome e do slug antes de perguntar ao dono, e a lembrança guardada pela grafia
-em vez do slug — cada uma reprova a sua régua.
 """
 from __future__ import annotations
 
@@ -48,13 +17,10 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: As abas que leem `perfil.ativo`, e a dica do Salvar do rodapé das dez.
 PAGINAS = ("03-gatilhos.html", "04-iluminacao.html", "05-vibracao.html",
            "06-navegacao.html", "08-conexoes.html")
 DICA_DO_SALVAR = "rodape.salvar"
 
-#: A mesa da matriz: P1 e P2 no USB, P3 e P4 no BT. MACs da faixa sintética da
-#: casa — há dois portões de anonimato nesta árvore e eles não perdoam.
 MACS = {1: "aa:bb:cc:00:00:01", 2: "aa:bb:cc:00:00:02",
         3: "aa:bb:cc:00:00:03", 4: "aa:bb:cc:00:00:04"}
 TRANSPORTE = {1: "usb", 2: "usb", 3: "bt", 4: "bt"}
@@ -62,12 +28,7 @@ LADOS = {"e": "left", "d": "right"}
 
 
 def _cru(nome: str) -> dict[str, Any]:
-    """O perfil da régua, na forma do disco.
-
-    SEM `triggers` de propósito: o daemon manda o nascimento do esquema, e a
-    tela que não acha o arquivo diz «Desligado». O brilho, o teto do P2 e os
-    atalhos são o que as abas 04, 05/08 e 06 mostram do perfil.
-    """
+    """O perfil da régua, na forma do disco."""
     return {
         "name": nome, "version": 1, "priority": 50,
         "match": {"type": "manual"},
@@ -119,21 +80,7 @@ def _memoria_limpa() -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 def _a_08_sem_os_fios_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A 08 lê a MÁQUINA em fios próprios, e o fio que chega no meio finge diferença.
-
-    O exame de entrada (`_pedir_o_exame_de_entrada`, que forka `busctl` e varre
-    o `/sys`) e as leituras de fundo (`_em_fundo`: o BlueZ, a `maquina.json`, o
-    diário) respondem sobre o computador em que a régua roda, não sobre o
-    perfil. Medido na conferência, em 25/09/2026: com o exame chegando entre a
-    pintura do gêmeo e a da forma, a 08 do «apagado» deu 157 campos de
-    diferença, todos do Check-up da máquina e nenhum do perfil, e a régua
-    reprovou uma cura que estava certa. O resultado dependia do relógio.
-
-    Por isso o exame não corre, as leituras de fundo dizem «não sei» nas duas
-    pinturas, e o fio que um teste anterior deixou em voo termina antes da
-    medida. A parte da 08 que o perfil decide (o teto de cada controle) não
-    passa por nenhum dos dois.
-    """
+    """A 08 lê a MÁQUINA em fios próprios, e o fio que chega no meio finge diferença."""
     import threading
 
     from pacotes import a08_conexoes
@@ -149,11 +96,7 @@ def _a_08_sem_os_fios_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def pasta() -> pathlib.Path:
-    """A pasta de perfis do lar de mentira que o `conftest` já isola.
-
-    A MESMA para os dois leitores: `pacotes.perfil.pasta()` e o `loader`
-    perguntam a `xdg_paths.profiles_dir()` na chamada.
-    """
+    """A pasta de perfis do lar de mentira que o `conftest` já isola."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     return profiles_dir(ensure=True)
@@ -178,8 +121,6 @@ def _estilo(pasta: pathlib.Path, nome: str) -> pathlib.Path:
     return pasta / ESTILOS_DE_JOGO_DIR_NAME / f"{slugify(nome)}.json"
 
 
-#: AS TRÊS FORMAS: `nome do perfil -> onde o arquivo mora`. O «apagado» mora
-#: no nome canônico até a tela o ler e o daemon o aplicar.
 FORMAS: dict[str, tuple[str, Callable[[pathlib.Path, str], pathlib.Path]]] = {
     "outro-nome": ("Perfil Da Varredura",
                    lambda p, _n: p / "arquivo-de-outro-nome.json"),
@@ -219,11 +160,7 @@ def _diferencas(gemeo: Any, forma: Any) -> list[str]:
 
 
 class _Camadas:
-    """O backend de mentira: grava as duas camadas que a ativação publica.
-
-    `efetivo` é o `_merge_desired` do backend real reduzido ao gatilho — o mesmo
-    de `test_a_aba_gatilhos_diz_o_que_vai_ao_controle.py`.
-    """
+    """O backend de mentira: grava as duas camadas que a ativação publica."""
 
     def __init__(self) -> None:
         from hefesto_dualsense4unix.core.controller import OutputSpec
@@ -294,13 +231,10 @@ def _medir(pasta: pathlib.Path, forma: str) -> tuple[str, Any, dict[str, Any], d
     nome, onde = FORMAS[forma]
     cru = _cru(nome)
 
-    # O GÊMEO: o mesmo conteúdo no nome canônico, que a tela de ontem já achava.
     gemeo = _gravar(_canonico(pasta, nome), cru)
     pintura_do_gemeo = _pintura(nome)
     do_gemeo = loader.load_profile(nome)
     gemeo.unlink()
-    # A MEMÓRIA DO GÊMEO NÃO PODE VAZAR para a forma: ela é a cura do «apagado»
-    # e mascararia as outras duas.
     perfil._ONDE_ACHOU.clear()
     perfil._LIDO.clear()
     a03_gatilhos.esquecer_o_rascunho()
@@ -311,8 +245,6 @@ def _medir(pasta: pathlib.Path, forma: str) -> tuple[str, Any, dict[str, Any], d
         f"o daemon carrega outro perfil na forma {forma!r} — a régua mediria o "
         f"conteúdo, não o caminho")
     if forma == "apagado":
-        # A janela está aberta: a tela lê o perfil num tique, o daemon já o
-        # aplicou, e o arquivo some do disco.
         _pintura(nome)
         alvo.unlink()
         with pytest.raises(FileNotFoundError):
@@ -360,12 +292,7 @@ def test_a_04_e_a_06_dizem_o_brilho_e_os_atalhos_do_perfil_que_o_daemon_le(
 
 
 def test_sem_lembranca_a_tela_nao_inventa_perfil(pasta: pathlib.Path) -> None:
-    """A janela que abre depois de o arquivo sumir não pinta um perfil de mentira.
-
-    O que o daemon aplicou não está em lugar nenhum que a tela alcance: nem no
-    disco, nem no que ela leu. A resposta é `{}`, e nunca o nascimento do
-    esquema nem o conteúdo de outro perfil.
-    """
+    """A janela que abre depois de o arquivo sumir não pinta um perfil de mentira."""
     from pacotes import perfil
 
     outro = _gravar(_canonico(pasta, "Outro Perfil"), _cru("Outro Perfil"))
@@ -409,11 +336,7 @@ def test_o_exportar_leva_o_arquivo_que_o_daemon_le(
 
 
 def test_a_tela_pergunta_ao_mesmo_dono_que_o_daemon(pasta: pathlib.Path) -> None:
-    """`perfil.arquivo` e `load_profile` acham o MESMO arquivo, na ordem do daemon.
-
-    O canônico vence a varredura, e a varredura vence a subpasta dos Estilos:
-    é a ordem de `loader.arquivo_do_perfil`, e a tela não tem outra.
-    """
+    """`perfil.arquivo` e `load_profile` acham o MESMO arquivo, na ordem do daemon."""
     from pacotes import perfil
 
     from hefesto_dualsense4unix.profiles import loader
@@ -432,13 +355,7 @@ def test_a_tela_pergunta_ao_mesmo_dono_que_o_daemon(pasta: pathlib.Path) -> None
 
 def test_a_memoria_cai_quando_a_pasta_muda(pasta: pathlib.Path,
                                           monkeypatch: pytest.MonkeyPatch) -> None:
-    """A resposta guardada cai assim que um arquivo nasce na pasta.
-
-    O limiar vai a zero para que TODA resposta entre na memória (com uma pasta
-    de dois arquivos a varredura não chega a 1 ms). O `utime` só garante que o
-    carimbo da pasta ande num sistema de arquivos de relógio grosso; o
-    nascimento do arquivo já o muda num de relógio fino.
-    """
+    """A resposta guardada cai assim que um arquivo nasce na pasta."""
     from pacotes import perfil
 
     monkeypatch.setattr(perfil, "CUSTO_QUE_SE_GUARDA_S", 0.0)
@@ -456,10 +373,7 @@ def test_a_memoria_cai_quando_a_pasta_muda(pasta: pathlib.Path,
 
 def test_a_varredura_nao_roda_a_cada_tique(pasta: pathlib.Path,
                                           monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com um Estilo de Jogo ativo, cinco tiques da 03 perguntam ao loader uma vez.
-
-    O espião DELEGA ao loader de verdade: ele conta, não responde.
-    """
+    """Com um Estilo de Jogo ativo, cinco tiques da 03 perguntam ao loader uma vez."""
     from pacotes import perfil
 
     from hefesto_dualsense4unix.profiles import loader
@@ -469,11 +383,6 @@ def test_a_varredura_nao_roda_a_cada_tique(pasta: pathlib.Path,
         _gravar(pasta / f"p{i}.json", _cru(f"P{i}"))
     nome, onde = FORMAS["estilo"]
     _gravar(onde(pasta, nome), _cru(nome))
-    # O DAEMON JÁ LEU A PASTA na máquina de verdade, e a leitura dele deixa um
-    # `.lock` ao lado de cada perfil (o `FileLock` não os apaga). Sem isto, a
-    # primeira varredura da tela é quem os cria, a pasta muda debaixo da
-    # memória e o segundo tique pergunta de novo — medido, e não acontece
-    # onde o daemon está de pé.
     loader.load_all_profiles()
     real = loader.arquivo_do_perfil
     perguntas: list[str] = []
@@ -494,12 +403,7 @@ def test_a_varredura_nao_roda_a_cada_tique(pasta: pathlib.Path,
 
 def test_o_daemon_pergunta_ao_mesmo_dono(pasta: pathlib.Path,
                                          monkeypatch: pytest.MonkeyPatch) -> None:
-    """`load_profile` acha o arquivo por `arquivo_do_perfil`, e não por uma cópia das pernas.
-
-    É a metade do «um dono só» que a ordem das pernas não prova: uma cópia do
-    nome e do slug de volta no `load_profile` responde igual hoje, e diverge no
-    dia em que alguém mexer numa das duas. O espião DELEGA ao loader de verdade.
-    """
+    """`load_profile` acha o arquivo por `arquivo_do_perfil`, e não por uma cópia das pernas."""
     from hefesto_dualsense4unix.profiles import loader
 
     nome = "Dono Único"
@@ -520,13 +424,7 @@ def test_o_daemon_pergunta_ao_mesmo_dono(pasta: pathlib.Path,
 
 def test_a_memoria_vence_no_prazo(pasta: pathlib.Path,
                                   monkeypatch: pytest.MonkeyPatch) -> None:
-    """O que a assinatura da pasta não vê cai com o prazo, que é de segundos.
-
-    O caso: o `name` de um arquivo editado no lugar. O inode é o mesmo e a pasta
-    não muda; a memória guardou «não há» e só o prazo a derruba. O relógio do
-    módulo anda cinco segundos, e não `VALIDADE_DO_ARQUIVO_S` vezes alguma
-    coisa: a régua mede a promessa (segundos), não a constante.
-    """
+    """O que a assinatura da pasta não vê cai com o prazo, que é de segundos."""
     import time as relogio
     from types import SimpleNamespace
 
@@ -540,8 +438,6 @@ def test_a_memoria_vence_no_prazo(pasta: pathlib.Path,
     nome = "Nome Editado No Lugar"
     alvo = _gravar(pasta / "arquivo-editado.json", _cru("Outro Nome Qualquer"))
     assert perfil.arquivo(nome) is None
-    # A primeira varredura deixa o `.lock` ao lado do arquivo e muda a pasta;
-    # a segunda assenta a memória.
     assert perfil.arquivo(nome) is None
     carimbo = pasta.stat().st_mtime_ns
     alvo.write_text(json.dumps(_cru(nome)), encoding="utf-8")

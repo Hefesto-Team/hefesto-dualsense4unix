@@ -1,25 +1,4 @@
-"""A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01 — o rádio só leva o que tem sinal.
-
-**A causa, medida em 27/09/2026** (PRAGMATA no menu, os quatro no rádio): o
-jogo abre um fluxo de quatro canais em cada um dos quatro endpoints e manda
-SILÊNCIO EXATO por eles (RMS e pico 0). Para o daemon, «tocando» era «o fluxo
-existe», e não «há sinal»: a ponte do som de pé em silêncio a 100 reports
-por segundo afogou o rádio em 22/09, e o portão por evdev (20/09) e o
-``quem_mexe`` (26/09) nasceram para não subir quatro pontes mudas.
-
-**A cura:** a ponte escuta o monitor o tempo todo (ler é local) e só escreve o
-bloco que tem sinal nos canais que o arranjo leva — 3-4 na háptica, 1-2 no
-som —, com UM silêncio depois do último sinal. A partida é o dono do fluxo no
-endpoint (o cliente do servidor de som), e não quem tem
-``STEAM_COMPAT_DATA_PATH`` no ambiente; e a volta acorda pelo fluxo que nasce,
-avisado pelo retrato do som, sem vigia de 0,4 s.
-
-O mundo destas réguas é de mentira e publica o que o real publica: PCM s16le
-entrelaçado de quatro canais a 48 kHz (o que o ``pw-record`` entrega do monitor
-do endpoint), um fd de escrita por controle no lugar do hidraw, e a linha curta
-do ``pactl`` com o índice do cliente dono de cada fluxo. Nenhum aparelho,
-nenhum servidor de som. Endereços da faixa forjada ``aa:bb:cc``.
-"""
+"""A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01 — o rádio só leva o que tem sinal."""
 
 from __future__ import annotations
 
@@ -33,18 +12,12 @@ import pytest
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import haptica_bt
 
-#: O tamanho do report da háptica pelo rádio (o ``0x32``) e onde o bloco mora.
 TAMANHO_032 = af.TAMANHO_DO_DEGRAU[0x32]
 BLOCO_032 = slice(13, 13 + af.BYTES_DO_BLOCO_HAPTICO)
 
 
 def _bloco_de_pcm(*, canais_com_sinal: tuple[int, ...] = (), amplitude: int = 20000) -> bytes:
-    """512 quadros de quatro canais s16le: o que um bloco háptico consome.
-
-    ``canais_com_sinal`` usa a numeração da sprint, de 1 a 4 (1-2 a voz, 3-4
-    os motores). Sem canal nenhum, é o silêncio exato que o PRAGMATA manda no
-    menu.
-    """
+    """512 quadros de quatro canais s16le: o que um bloco háptico consome."""
     quadro = [0, 0, 0, 0]
     for canal in canais_com_sinal:
         quadro[canal - 1] = amplitude
@@ -83,19 +56,9 @@ def _bomba_da_haptica(blocos: list[bytes], *, so_com_sinal: bool = True) -> tupl
     return bomba, escritas
 
 
-# ---------------------------------------------------------------------------
-# 1. A bomba: silêncio não vai, sinal vai, e um silêncio fecha
-# ---------------------------------------------------------------------------
-
-
 class TestORadioSoLevaOQueTemSinal:
     def test_o_silencio_exato_do_jogo_nao_manda_nada(self) -> None:
-        """O menu do PRAGMATA: o fluxo existe, e o rádio fica livre.
-
-        MORDIDA: troque o critério por «o fluxo existe» (faça ``_vale_mandar``
-        devolver ``True``) — o silêncio passa a mandar 93,75 reports por
-        segundo, o afogamento de 22/09.
-        """
+        """O menu do PRAGMATA: o fluxo existe, e o rádio fica livre."""
         bomba, escritas = _bomba_da_haptica([SILENCIO] * 8)
         bomba.rodar(segundos=10)
         assert escritas == [], f"o silêncio foi ao rádio: {len(escritas)} reports"
@@ -103,12 +66,7 @@ class TestORadioSoLevaOQueTemSinal:
         assert bomba.contagem.reports_montados == 0
 
     def test_o_sinal_vai_no_bloco_dele_e_um_silencio_fecha(self) -> None:
-        """Dois blocos com motor no meio de silêncio: vão os dois e UM silêncio.
-
-        O silêncio depois do último sinal é o que faz o motor parar no zero em
-        vez de ficar no último valor. MORDIDA: tire o ramo ``_mandou_sinal`` de
-        ``_vale_mandar`` — saem dois reports, e o motor fica no último valor.
-        """
+        """Dois blocos com motor no meio de silêncio: vão os dois e UM silêncio."""
         bomba, escritas = _bomba_da_haptica(
             [SILENCIO, SILENCIO, MOTOR, MOTOR, SILENCIO, SILENCIO, SILENCIO]
         )
@@ -163,11 +121,7 @@ class TestOCriterioEDoArranjo:
         return bomba, escritas
 
     def test_o_alto_falante_com_som_nos_canais_1_e_2_manda(self) -> None:
-        """O nó de som tem dois canais — os 1-2 da sprint —, e é o que o 0x35 leva.
-
-        MORDIDA: fixe o critério nos motores (``_vale_mandar`` olhando só o
-        ``haptico``) — o controle em modo som fica mudo.
-        """
+        """O nó de som tem dois canais — os 1-2 da sprint —, e é o que o 0x35 leva."""
         voz = struct.pack("<2h", 12000, -12000) * af.AMOSTRAS_POR_QUADRO
         mudo = bytes(af.BYTES_DE_PCM_POR_QUADRO)
         bomba, escritas = self._bomba_do_som([mudo, voz, voz, mudo, mudo])
@@ -182,20 +136,11 @@ class TestOCriterioEDoArranjo:
         assert escritas == []
 
     def test_a_voz_do_jogo_nao_liga_os_motores(self) -> None:
-        """Na háptica, sinal só nos canais 1-2 do endpoint é a voz: o motor não vai.
-
-        É a conta de :mod:`haptica_bt` (só os canais 3-4 viram bloco), e o
-        critério lê o bloco — por isso ele é o do arranjo.
-        """
+        """Na háptica, sinal só nos canais 1-2 do endpoint é a voz: o motor não vai."""
         voz = _bloco_de_pcm(canais_com_sinal=(1, 2))
         bomba, escritas = _bomba_da_haptica([voz] * 4)
         bomba.rodar(segundos=10)
         assert escritas == []
-
-
-# ---------------------------------------------------------------------------
-# 2. A ponte do produto liga o critério
-# ---------------------------------------------------------------------------
 
 
 def _ler_tudo(fd: int) -> bytes:
@@ -222,11 +167,7 @@ def _esperar_a_corrida(ponte: Any, prazo_s: float = 10.0) -> None:
 
 
 def test_a_ponte_do_produto_so_escreve_o_que_tem_sinal(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ponte de verdade, com o laço de verdade, num fd de mentira no lugar do hidraw.
-
-    MORDIDA: mude o padrão de ``so_com_sinal`` da ``PonteDeSomPorRadio`` para
-    ``False`` — o silêncio do menu vai ao fd, report a report.
-    """
+    """A ponte de verdade, com o laço de verdade, num fd de mentira no lugar do hidraw."""
     monkeypatch.setattr(af, "a_ponte_do_radio_pode_subir", lambda: (True, ""))
     leitura, escrita = os.pipe()
     try:
@@ -248,22 +189,8 @@ def test_a_ponte_do_produto_so_escreve_o_que_tem_sinal(monkeypatch: pytest.Monke
     assert ponte.contagem is not None and ponte.contagem.reports_calados == 9
 
 
-# ---------------------------------------------------------------------------
-# O servidor de som de mentira — as leituras curtas do `pactl`, com o dono
-# ---------------------------------------------------------------------------
-
-
 class ServidorDeSom:
-    """O ``pipewire-pulse`` de mentira, pelas leituras curtas que o produto faz.
-
-    Publica o que o real publica, no formato do ``printf`` do ``pactl`` 16.1:
-    ``list short sinks`` (índice, nome, driver, formato, estado), ``list short
-    sink-inputs`` (índice, nó, CLIENTE, driver, formato) e ``list short
-    clients`` (índice, driver, binário). O fluxo sem programa (um módulo) sai
-    com o cliente ``-``, como no real. ``mudo`` é o servidor que não responde:
-    toda leitura devolve ``None``, a mesma falha de um ``pactl`` que saiu com
-    erro. As funções do produto rodam de verdade sobre ele.
-    """
+    """O ``pipewire-pulse`` de mentira, pelas leituras curtas que o produto faz."""
 
     def __init__(self) -> None:
         self._indices: dict[str, int] = {}
@@ -311,11 +238,7 @@ class ServidorDeSom:
 
 
 def test_o_servidor_de_mentira_fala_o_formato_que_o_retrato_sintetiza() -> None:
-    """O dublê não é mais frouxo que o real: a linha curta dos fluxos é a do retrato.
-
-    O retrato do som (``retrato_do_som.curto_dos_fluxos``) é quem responde no
-    daemon; se o dublê divergisse dele, as réguas mediriam outro formato.
-    """
+    """O dublê não é mais frouxo que o real: a linha curta dos fluxos é a do retrato."""
     from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
     servidor = ServidorDeSom()
@@ -356,33 +279,18 @@ class TestODonoDoFluxo:
         assert servidor.perguntas == []
 
 
-# ---------------------------------------------------------------------------
-# 3. A mesa de quatro no rádio: o subsystem de verdade, com as pontes de verdade
-# ---------------------------------------------------------------------------
-
 P1, P2, P3, P4 = (f"aa:bb:cc:00:00:0{i}" for i in range(1, 5))
 MESA = (P1, P2, P3, P4)
 
 
 def no_do(uniq: str) -> str:
-    """O endpoint do APARELHO deste controle — o dublê de ``_EndpointDeMentira``.
-
-    O endpoint é do aparelho desde 02/10/2026 (A-HAPTICA-E-POR-APARELHO-01; de
-    28/09 a 02/10 era do lugar).
-    """
+    """O endpoint do APARELHO deste controle — o dublê de ``_EndpointDeMentira``."""
     return f"endpoint::{uniq}"
-#: O cliente do servidor de som que é o jogo (o ``winepulse`` do PRAGMATA).
 JOGO = "4243"
 
 
 class MesaDeQuatro:
-    """``_casar_as_pontes`` do produto, com a ``PonteDeSomPorRadio`` e a bomba de verdade.
-
-    Só o que toca aparelho ou servidor é de mentira: o endpoint (o nome), o
-    servidor de som (:class:`ServidorDeSom`), o monitor de cada endpoint (um
-    bloco por leitura, e o jogo fechando quando a lista acaba) e o hidraw de
-    cada controle (um cano, lido no fim).
-    """
+    """``_casar_as_pontes`` do produto, com a ``PonteDeSomPorRadio`` e a bomba de verdade."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, sinal: dict[str, list[bytes]]) -> None:
         from types import SimpleNamespace
@@ -496,15 +404,7 @@ _ORDENS = list(__import__("itertools").permutations(MESA))
 def test_so_o_endpoint_com_sinal_manda_em_toda_ordem_de_conexao(
     mesa_de_quatro: Any, ordem: tuple[str, ...]
 ) -> None:
-    """Quatro jogando, o jogo manda vibração só ao P3: só o P3 vai ao rádio.
-
-    O sinal e o fio são do MESMO controle em toda ordem de conexão — o
-    jogo vibra o controle que ele escolheu, e nenhum índice é privilegiado.
-
-    MORDIDA: troque o critério por «o fluxo existe» (``_vale_mandar``
-    devolvendo ``True``) — os três mudos mandam o silêncio do menu, bloco a
-    bloco.
-    """
+    """Quatro jogando, o jogo manda vibração só ao P3: só o P3 vai ao rádio."""
     mudo = [SILENCIO] * 4
     mesa = mesa_de_quatro({P1: mudo, P2: mudo, P3: [SILENCIO, MOTOR, SILENCIO, SILENCIO], P4: mudo})
     mesa.o_jogo_abre()
@@ -517,15 +417,7 @@ def test_so_o_endpoint_com_sinal_manda_em_toda_ordem_de_conexao(
 
 
 def test_o_jogo_que_espelha_vibra_so_quem_esta_com_o_controle_na_mao(mesa_de_quatro: Any) -> None:
-    """A noite de 27/09: o PRAGMATA mandou a mesma vibração aos quatro. Vale a (b) dela.
-
-    Um jogador (o P2, e não o P1: nenhum índice é privilegiado), os quatro no
-    rádio, o sinal nos quatro endpoints — vibra quem mexeu desde que o jogo
-    abriu. O controle parado na mão não vibra: é o limite escrito da (b).
-
-    MORDIDA: tire ``este_joga`` da condição do modo em ``_casar_as_pontes`` —
-    os quatro vibram o espelho.
-    """
+    """A noite de 27/09: o PRAGMATA mandou a mesma vibração aos quatro. Vale a (b) dela."""
     tiro = [SILENCIO, MOTOR, MOTOR, SILENCIO]
     mesa = mesa_de_quatro({u: list(tiro) for u in MESA})
     mesa.o_jogo_abre()
@@ -537,10 +429,7 @@ def test_o_jogo_que_espelha_vibra_so_quem_esta_com_o_controle_na_mao(mesa_de_qua
 
 
 def test_no_menu_nenhum_report_vai_ao_radio(mesa_de_quatro: Any) -> None:
-    """A prova 2 da sprint, na mesa de mentira: o jogo no menu, os quatro jogando.
-
-    Os quatro fluxos existem, as quatro pontes escutam — e o fio fica vazio.
-    """
+    """A prova 2 da sprint, na mesa de mentira: o jogo no menu, os quatro jogando."""
     mesa = mesa_de_quatro({u: [SILENCIO] * 12 for u in MESA})
     mesa.o_jogo_abre()
     mesa.sub._casar_as_pontes(mesa.controles())
@@ -550,23 +439,11 @@ def test_no_menu_nenhum_report_vai_ao_radio(mesa_de_quatro: Any) -> None:
     assert mesa.reports_por_controle() == dict.fromkeys(MESA, 0)
 
 
-# ---------------------------------------------------------------------------
-# 4. A partida é o dono do fluxo
-# ---------------------------------------------------------------------------
-
-
 class TestAPartidaEODonoDoFluxo:
     def test_o_processo_auxiliar_da_steam_nao_abre_a_partida(
         self, mesa_de_quatro: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Um ``run`` do GE-Proton com ``STEAM_COMPAT_DATA_PATH`` e sem fluxo: nada abre.
-
-        Medido em 27/09: a partida abria e fechava três vezes antes de o jogo
-        rodar, por um processo assim, e cada abertura zerava as marcas.
-
-        MORDIDA: devolva a partida ao ``pids_de_jogo`` (abrir quando há
-        processo com a variável do Proton) — ela abre com o auxiliar.
-        """
+        """Um ``run`` do GE-Proton com ``STEAM_COMPAT_DATA_PATH`` e sem fluxo: nada abre."""
         from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
         from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
 
@@ -581,14 +458,7 @@ class TestAPartidaEODonoDoFluxo:
         assert marcas.jogo_aberto is True, "o fluxo do jogo no endpoint não abriu a partida"
 
     def test_donos_alternados_nao_zeram_a_marca(self) -> None:
-        """Os donos A, B, A, B — os dois vivos: a marca de quem joga não zera.
-
-        Das 00h12 às 05h21 de 27/09 foram 35 aberturas, e às 05h07 as quatro
-        marcas do Sackboy zeraram no meio do jogo por um conjunto novo de pids.
-
-        MORDIDA: devolva o ``agora.isdisjoint(antes)`` ao ``acompanhar_o_jogo``
-        (dono novo sem nada em comum = outro jogo) — a marca zera na volta B.
-        """
+        """Os donos A, B, A, B — os dois vivos: a marca de quem joga não zera."""
         from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import QuemMexe
 
         marcas = QuemMexe()
@@ -636,18 +506,9 @@ class TestAPartidaEODonoDoFluxo:
         assert marcas.jogo_aberto and marcas.joga(P2)
 
 
-# ---------------------------------------------------------------------------
-# 5. O fluxo que nasce é avisado, e não caçado
-# ---------------------------------------------------------------------------
-
-
 class TestAVoltaAcordaPeloAviso:
     def test_quem_entra_na_partida_acorda_a_volta(self, mesa_de_quatro: Any) -> None:
-        """O primeiro toque de um controle pede a volta — a ponte dele sobe na hora.
-
-        MORDIDA: tire a chamada a ``ao_marcar`` de ``QuemMexe.marcar`` — a volta
-        só vem com o relógio (5 s), e o primeiro tiro não vibra.
-        """
+        """O primeiro toque de um controle pede a volta — a ponte dele sobe na hora."""
         mesa = mesa_de_quatro({})
         mesa.sub._ouvir_quem_entra_na_partida(mesa.sub._acordar_a_volta)
         mesa.o_jogo_abre()
@@ -660,14 +521,7 @@ class TestAVoltaAcordaPeloAviso:
     def test_sem_mudanca_a_espera_nao_pergunta_nada_ao_servidor(
         self, mesa_de_quatro: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A prova 5 da sprint, na régua: parado, o daemon não pergunta ao servidor.
-
-        O vigia de 0,4 s perguntava duas vezes por fatia — 5 por segundo, e sem
-        o retrato vivo eram `pactl` de verdade.
-
-        MORDIDA: devolva a fatia (``acordar.wait(min(0.4, falta))`` seguido de
-        ``_a_mesa_do_som_mudou()``) — as perguntas voltam.
-        """
+        """A prova 5 da sprint, na régua: parado, o daemon não pergunta ao servidor."""
         import time
 
         from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
@@ -691,15 +545,7 @@ class TestAVoltaAcordaPeloAviso:
     def test_a_tentativa_que_falhou_nao_prende_a_volta_num_laco(
         self, mesa_de_quatro: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A ponte que não sobe (sem fonte) não faz a volta acordar de novo.
-
-        A espera compara o que a volta LEU, e não o que ela conseguiu: uma
-        falha não muda entrada nenhuma. Um aviso do retrato que chega (o
-        endpoint que a própria volta publicou) é olhado uma vez, e só.
-
-        MORDIDA: tire o ``acordar.clear()`` de ``_esperar_a_mesa_do_som`` — o
-        aviso fica armado, e a espera gira olhando o servidor sem parar.
-        """
+        """A ponte que não sobe (sem fonte) não faz a volta acordar de novo."""
         from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 
         monkeypatch.setattr(mod, "RECONCILIA_S", 0.5)
@@ -732,11 +578,6 @@ class TestAVoltaAcordaPeloAviso:
         assert len(olhadas) == 1, f"a falha prendeu a volta: {len(olhadas)} olhadas"
 
 
-# ---------------------------------------------------------------------------
-# 6. O teto de ceder mede as tentativas: a pausa do jogo não conta, e não o zera
-# ---------------------------------------------------------------------------
-
-
 def _fila_cheia(_report: bytes) -> int:
     """O ``bluetoothd`` sem drenar: toda escrita volta com a fila cheia."""
     raise OSError(errno.EAGAIN, "fila cheia")
@@ -755,18 +596,10 @@ def _bomba_de_relogio(blocos: list[bytes], agora: list[float]) -> Any:
 
 
 def test_a_pausa_do_jogo_nao_conta_no_teto_de_ceder() -> None:
-    """Um tiro com a fila cheia, dez segundos de cena quieta e outro tiro: a ponte segue.
-
-    O teto (``TETO_DE_CEDER_S``) é o tempo TENTANDO escrever sem uma escrita
-    aceita. Na cena quieta nada se tenta, e o relógio para: contá-la derrubaria
-    a ponte no primeiro tiro depois dela.
-
-    MORDIDA: tire o desconto da pausa de ``escrever`` — o tiro depois da cena
-    quieta derruba a ponte com a fila «parada».
-    """
+    """Um tiro com a fila cheia, dez segundos de cena quieta e outro tiro: a ponte segue."""
     agora = [0.0]
     bomba = _bomba_de_relogio([MOTOR, SILENCIO, SILENCIO, SILENCIO, MOTOR], agora)
-    for _ in range(2):  # o tiro e o silêncio que o fecha, cedidos à fila cheia
+    for _ in range(2):
         report = bomba.um_report()
         assert report and bomba.escrever(report) is True
         agora[0] += 0.01
@@ -779,18 +612,7 @@ def test_a_pausa_do_jogo_nao_conta_no_teto_de_ceder() -> None:
 
 
 def test_os_tiros_com_o_adaptador_parado_derrubam_a_ponte() -> None:
-    """Tiros curtos com respiros entre eles, e a fila cheia o tempo todo: a ponte cai.
-
-    É o jogo de verdade (o tiro, o silêncio, o tiro) com o ``bluetoothd`` sem
-    drenar. Cada respiro PARA o relógio do teto, e não o zera: zerado a cada
-    respiro, ele nunca chegaria aos dois segundos, e a ponte ficaria de pé e
-    muda, sem dizer por quê. E o respiro também não conta: a ponte só cai
-    depois de dois segundos TENTANDO.
-
-    MORDIDA: troque o desconto da pausa por zerar o relógio no silêncio
-    (``self._cedendo = False`` no ramo calado de ``_vale_mandar``) — a ponte
-    nunca cai. Ou tire o desconto — ela cai com meio segundo de tentativa.
-    """
+    """Tiros curtos com respiros entre eles, e a fila cheia o tempo todo: a ponte cai."""
     quadro = 512 / 48000
     agora = [0.0]
     bomba = _bomba_de_relogio(([MOTOR] * 10 + [SILENCIO] * 30) * 40, agora)
@@ -810,26 +632,10 @@ def test_os_tiros_com_o_adaptador_parado_derrubam_a_ponte() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 7. O start() liga o que as réguas acima ligam à mão
-# ---------------------------------------------------------------------------
-
-
 def test_o_start_liga_o_ouvinte_e_o_aviso_e_o_stop_desliga(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A cura escrita e nunca ligada é o defeito mais caro desta casa.
-
-    O ``start()`` do produto sobe o ouvinte do retrato (a thread
-    ``hefesto-som-fluxos``) e entrega à partida quem acordar no primeiro
-    toque; o ``stop()`` desfaz os dois. As réguas da volta ligam o aviso e o
-    ouvinte à mão, como o ``start()`` liga — sem esta, arrancá-los do
-    ``start()`` deixaria todas verdes, e o fluxo que nasce e o primeiro toque
-    voltariam a esperar o relógio de cinco segundos.
-
-    MORDIDA: tire do ``start()`` o ``self._ouvinte.start()``, ou a linha do
-    ``_ouvir_quem_entra_na_partida`` — esta régua reprova.
-    """
+    """A cura escrita e nunca ligada é o defeito mais caro desta casa."""
     import asyncio
     from types import SimpleNamespace
 
@@ -859,7 +665,6 @@ def test_o_start_liga_o_ouvinte_e_o_aviso_e_o_stop_desliga(
         controller = None
         store = None
 
-    # A volta não toca aparelho nem servidor: o que se mede é a fiação.
     monkeypatch.setattr(mod.AltoFalanteSubsystem, "_reconciliar", lambda self, _g: None)
     daemon = SimpleNamespace()
     sub = mod.AltoFalanteSubsystem(
@@ -887,15 +692,7 @@ def test_o_start_liga_o_ouvinte_e_o_aviso_e_o_stop_desliga(
 def test_a_volta_guarda_o_que_leu_e_a_espera_so_acorda_pela_mudanca(
     mesa_de_quatro: Any,
 ) -> None:
-    """A volta anota os fluxos que leu ao começar, e a espera compara com isso.
-
-    Sem a anotação, a espera compara a leitura de agora com o «não sei» e
-    acorda a volta a cada aviso do retrato do som, com a mesa parada: o fluxo
-    de qualquer programa da máquina, num nó que não é de controle, bastaria.
-
-    MORDIDA: tire do ``_reconciliar`` a linha que guarda ``_o_que_a_volta_viu``
-    — a mesa parada acorda a volta.
-    """
+    """A volta anota os fluxos que leu ao começar, e a espera compara com isso."""
 
     class _Gerenciador:
         def reconciliar(self, *_a: Any, **_k: Any) -> None:

@@ -1,40 +1,4 @@
-"""A ponte de som por rádio é CONSTRUÍDA por linha de produção — SOM-FIADO-01.
-
-O DEFEITO QUE ESTA RÉGUA MATA, e ele tem data
-----------------------------------------------
-Em 10/09/2026 o som saiu pelo rádio de verdade: report ``0x35``, 334 B, um
-quadro Opus, 70 segundos com a orelha dela. `PonteDeSomPorRadio` nasceu no
-mesmo dia, com teste, com o arranjo provado byte a byte — **e nenhuma linha de
-produção a construía**. O único lugar do repositório onde o nome aparecia fora
-do módulo que a define era a assinatura de um construtor que ninguém chamava.
-
-A escada desta casa é ``MONTOU → SAIU NO FIO → O APARELHO OBEDECEU → O JOGO
-RECEBEU → O JOGO REAGIU``, e o alto-falante passou meses em ``MONTOU`` sendo
-lido como pronto. O portão `casa-sabe` acusava exatamente isto:
-
-    'integrations/alto_falante_bt.py::PonteDeSomPorRadio'  ← sem chamador
-
-**Uma peça verde que ninguém liga é o defeito que esta régua existe para não
-deixar repetir.**
-
-O QUE ELA TRAVA — e são cinco contratos, não um
-------------------------------------------------
-1. o subsystem constrói UMA ponte POR CONTROLE, e só para quem está no rádio;
-2. cada ponte recebe o hidraw DAQUELE controle e o monitor do nó DAQUELE
-   controle — uma ponte compartilhada mandaria o som do P2 pelo alto-falante
-   do P1, que é a família de defeito que ``sink_do_controle`` já pagou no cabo;
-3. a ponte sobe ANTES do nó, porque ``rota_do_no`` pergunta a ela no instante
-   em que o nó nasce;
-4. quem sai da lista perde a ponte (fd de hidraw e ``pw-record`` não vazam);
-5. o ``start()`` de produção injeta o callable no gerenciador — sem isso o
-   gerenciador nunca pergunta a ninguém e a rota do rádio nasce recusada.
-
-A MORDIDA
-----------
-Apague ``self._casar_as_pontes(alvos)`` de ``_reconciliar`` e os quatro
-primeiros reprovam. Tire ``ponte_do_radio_por_controle=`` do ``start()`` e o
-quinto reprova.
-"""
+"""A ponte de som por rádio é CONSTRUÍDA por linha de produção — SOM-FIADO-01."""
 from __future__ import annotations
 
 import asyncio
@@ -55,12 +19,7 @@ class _Controle:
 
 
 class _PonteDeMentira:
-    """Um dublê que responde como a ponte real — e GUARDA o que recebeu.
-
-    O que ele NÃO faz é abrir hidraw, subir thread ou falar com o rádio. O que
-    esta régua mede é a FIAÇÃO; o comportamento da ponte de verdade está em
-    `test_a_ponte_do_som_e_de_cada_controle.py`, com a mordida dele.
-    """
+    """Um dublê que responde como a ponte real — e GUARDA o que recebeu."""
 
     criadas: ClassVar[list[Any]] = []
 
@@ -158,11 +117,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_uma_ponte_por_controle_no_radio_e_nenhuma_no_cabo(bancada: dict) -> None:
-    """Três pontes para os três do rádio. O do cabo não ganha — e não é falha.
-
-    No cabo o som vai pela placa ALSA que o próprio transporte publica; subir
-    uma ponte de rádio ali seria um segundo caminho para o mesmo alto-falante.
-    """
+    """Três pontes para os três do rádio. O do cabo não ganha — e não é falha."""
     sub = bancada["sub"]
     sub._reconciliar(bancada["ger"])
 
@@ -183,12 +138,7 @@ def test_uma_ponte_por_controle_no_radio_e_nenhuma_no_cabo(bancada: dict) -> Non
 def test_cada_ponte_leva_o_hidraw_e_o_monitor_DAQUELE_controle(  # noqa: N802
     bancada: dict,
 ) -> None:
-    """O elo que impede o som do P2 de sair no alto-falante do P1.
-
-    Uma ponte só, ou três pontes com o mesmo fd, passariam no teste acima e
-    entregariam a cena errada na mesa dela. É por isso que este contrato é
-    separado.
-    """
+    """O elo que impede o som do P2 de sair no alto-falante do P1."""
     sub = bancada["sub"]
     af = bancada["af"]
     sub._reconciliar(bancada["ger"])
@@ -211,12 +161,7 @@ def test_cada_ponte_leva_o_hidraw_e_o_monitor_DAQUELE_controle(  # noqa: N802
 
 
 def test_a_ponte_sobe_antes_do_no(bancada: dict) -> None:
-    """A ORDEM, e ela é medida.
-
-    ``rota_do_no`` chama ``ponte.esta_de_pe()`` no instante em que o nó é
-    construído. Fiar na ordem inversa publica a rota do rádio como recusada e
-    só a corrige na varredura seguinte — 2 s em que o jogo pega a rota errada.
-    """
+    """A ORDEM, e ela é medida."""
     sub = bancada["sub"]
     ordem = bancada["ordem"]
     ger = bancada["ger"]
@@ -284,20 +229,7 @@ def test_o_stop_derruba_todas_as_pontes(bancada: dict) -> None:
 
 
 def test_o_gerenciador_de_producao_recebe_o_callable_da_ponte() -> None:
-    """O ``start()`` real injeta a resposta — e ela é POR CONTROLE.
-
-    Sem esta injeção o gerenciador não tem a quem perguntar, ``rota_do_no``
-    recusa o rádio com a frase honesta, e a ponte fica de pé entregando som a
-    um nó que ninguém aponta.
-
-    **O QUE A RESPOSTA SIGNIFICA MUDOU EM 22/09/2026 — RADIO-AFOGADO-01.**
-    Esta régua exigia ``None`` para quem não tem ponte, e isso estava certo
-    enquanto a ponte era permanente: sem ela, não havia caminho. Agora a ponte
-    nasce sob demanda, e exigir ``None`` aqui travava o produto num laço — o nó
-    só nasce com rota, a rota só existia com a ponte de pé, e a ponte só sobe
-    se alguém tocar no nó que não nasceu. O que se mede agora é o PAR: a
-    promessa para quem PODE ter ponte, e o ``None`` para quem TENTOU e falhou.
-    """
+    """O ``start()`` real injeta a resposta — e ela é POR CONTROLE."""
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
 
     class _Ctx:
@@ -316,9 +248,6 @@ def test_o_gerenciador_de_producao_recebe_o_callable_da_ponte() -> None:
             "o controle que PODE ter ponte ficou sem caminho — e sem caminho o "
             "nó de som dele não nasce, o que devolve o laço de 22/09"
         )
-        # E o outro lado, que é o que impede a promessa de virar o `lambda:
-        # True` otimista que esta régua sempre vetou: quem TENTOU e falhou
-        # perde o caminho, e o nó dele some com a frase honesta.
         sub._ponte_recusada["aa:bb:cc:00:00:ab"] = mod.time.monotonic()
         assert ger._ponte_do_radio("aa:bb:cc:00:00:ab") is None
     finally:

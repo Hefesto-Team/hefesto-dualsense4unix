@@ -1,69 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Exporta o controle como SVG ORGANIZADO, para ela arrumar no editor.
-
-Pedido dela, 27/08/2026:
-  "ou converter o controle inteiro pra svg que arrumo agora"
-  "com os nomes de cada elemento descritos nas layers e objetos. os agrupamentos
-   também."
-
-O que muda em relação ao ds_limpo.svg: as 29 peças passam a viver dentro de NOVE
-grupos nomeados, e todo grupo e toda peça carrega um <title> em português — que é
-o que o editor mostra na árvore de camadas. O estilo vem embutido, para o arquivo
-abrir com a mesma cara do mapa, sem depender de folha externa.
-
-O caminho de volta é o `importar.py`, irmão deste: ele lê o arquivo que ela salvar,
-extrai a caixa de cada peça e reescreve o CSV e o ds_limpo.
-"""
+"""Exporta o controle como SVG ORGANIZADO, para ela arrumar no editor."""
 import pathlib, re, csv, sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mapa
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
-# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
-# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
-# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
-# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
-# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
-# segunda árvore de trabalhar sem tocar na primeira.
-# A RAIZ TEM DONO, e é o `onde.py`. Era `parents[2]` — o que, desde a mudança
-# da interface para dentro do pacote em 01/09/2026, dá a pasta `src/` e faz
-# toda leitura de `docs/data/` procurar em `src/docs/data/`.
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
 from onde import RAIZ as R  # noqa: E402
 
-#: O `docs/data/` do repositório. Dono único, para não voltar a ser montado
-#: à mão a partir de um contador de níveis.
 DADOS_DO_REPO = R / "docs/data"
 FONTE = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
 
 
 def svg_para_editar() -> pathlib.Path:
-    """O SVG que ela abre no Inkscape — resolvido na CHAMADA, nunca no import.
-
-    FUNÇÃO E NÃO CONSTANTE, e as duas metades da razão foram medidas em
-    08/09/2026, uma depois da outra:
-
-    1. aqui estava `/home/<usuária>/Imagens/...` cravado, e o par
-       exportar/importar só funcionava na máquina dela. Estes dois arquivos
-       moram dentro de `src/hefesto_dualsense4unix/`, que é o que o wheel
-       empacota: quem instalasse o Hefesto recebia o caminho de OUTRA casa.
-       Quem achou foi `test_nenhum_script_traz_o_home_dela_como_padrao`, e só
-       depois de a varredura dele passar a olhar esta pasta — até 08/09 ela
-       varria `scripts/` e mais nada, e a interface mudou de casa em 01/09.
-       *A régua ficou verde porque o defeito mudou de pasta, não porque ele
-       saiu.*
-    2. a primeira cura foi `SAIDA = pathlib.Path.home() / ...`, no nível do
-       módulo — e `test_nenhum_modulo_do_produto_congela_caminho_de_home`
-       reprovou na hora. Constante de módulo é avaliada na IMPORTAÇÃO, que na
-       suíte acontece na COLETA, antes de qualquer fixture: o desvio de `HOME`
-       do `conftest` (escopo de função) não a alcança, e o que o produto
-       gravasse sob teste iria para o disco de quem roda.
-
-    **As duas réguas têm pontos cegos opostos**, e é o que este par prova: a
-    primeira não via a constante congelada, a segunda não via o literal
-    cravado. A cura verdadeira é a que passa nas duas.
-    """
+    """O SVG que ela abre no Inkscape — resolvido na CHAMADA, nunca no import."""
     return pathlib.Path.home() / "Imagens" / "dualsense-para-editar.svg"
 
 linhas = [l for l in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
@@ -91,8 +41,6 @@ def pega(pid):
     i = s.index(f'id="{pid}"'); ini = s.rindex("<g ", 0, i); fim = s.index("</g>", i) + 4
     return s[ini:fim]
 
-# Os filhos de cada peça ganham <title> PRÓPRIO — e com nome de verdade, não
-# "peça 1". Na árvore do editor é por esse nome que ela acha o que quer mover.
 SUB = {
   "lightbar":    ["tira esquerda", "tira direita"],
   "led-jogador": ["lâmpada 1 (sozinha, à esquerda)", "lâmpada 2", "lâmpada 3 (a do meio)",
@@ -117,12 +65,6 @@ def nomeia_filhos(bloco, base, pid=None):
         bloco = bloco.replace(tag, novo, 1)
     return bloco
 
-# ---- OS GLIFOS VÃO JUNTO -------------------------------------------------
-# Ela: "sumiu os glifos preciso deles lá". Eles moravam só no gerador do mapa —
-# no SVG não existiam, e por isso não dava para arrumá-los no editor. Agora cada
-# um vai como um grupo próprio, `glifo-<peça>`, com a posição e o tamanho que o
-# mapa lhe dá hoje. Mexer neles no editor passa a ser o jeito de ajustá-los: o
-# importar.py lê a caixa de cada um e o mapa passa a obedecer.
 def grupo_glifos(pecas):
     fora = []
     for p in pecas:
@@ -143,11 +85,6 @@ def grupo_glifos(pecas):
             cy = mapa.MESMA_LINHA[p["id"]]
         cx += mapa.DESLOCA_X.get(p["id"], 0.0)
         g = mapa.so_a_letra(p["id"], mapa.glifo(p["glifo"], tam=32))
-        # DESEMBRULHA o <svg> do glifo. Duas razões, e as duas apareceram na tela
-        # dela: (1) sem `width`/`height` um <svg> aninhado ocupa 100% do viewport, e
-        # os 18 glifos saíram do tamanho de um controle cada um; (2) mesmo com as
-        # medidas certas, um <svg> dentro de outro é uma caixa-preta no editor —
-        # desembrulhado, ela pega o path do triângulo e mexe nele.
         g = re.sub(r"^<svg[^>]*>|</svg>$", "", g.strip())
         ang = float(p.get("angulo") or 0)
         rot = f" rotate({ang:.2f})" if ang else ""
@@ -172,9 +109,6 @@ for gid, titulo, pids in GRUPOS:
             b = pega(pid)
         except ValueError:
             continue
-        # (a opacidade das features é VISUALIZAÇÃO e vive na folha embutida —
-        #  injetá-la como atributo fazia o importador trazê-la de volta como se
-        #  fosse geometria, e na segunda volta ela duplicava e quebrava o XML)
         b = nomeia_filhos(b, NOME.get(pid, pid), pid)
         dentro.append("    " + b.replace("\n  ", "\n    "))
     if dentro:
@@ -185,12 +119,6 @@ if glifos:
     corpo.append('  <g id="grupo-glifos"><title>GLIFOS (o símbolo de cada peça)</title>\n'
                  + "\n".join(glifos) + "\n  </g>")
 
-# A COR DO ARQUIVO DE EDIÇÃO SAI DO MESMO LUGAR QUE A DO DESENHO.
-# Ela era `#b11f54` digitada aqui — o Cosmic Red que a amostragem de 27/08
-# derrubou (`#A51C48`, distância 17). Um arquivo de edição pintado com o hex
-# velho ensina o hex velho a quem edita, e é a terceira cópia da mesma cor.
-# Aqui ela vem do `<style>` que `scripts/gerar_cores_do_dualsense.py` escreveu
-# dentro do SVG, pela mesma função que o `monta.py` usa.
 import sys as _sys  # noqa: E402
 _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from monta import cor_da_zona as _cor  # noqa: E402

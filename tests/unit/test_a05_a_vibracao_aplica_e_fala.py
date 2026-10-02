@@ -12,7 +12,7 @@ DualSense no cabo:
    `controller.target.set` e jogava fora o `bool` de volta. Com o daemon mudo —
    ou só mais lento que os 250 ms do `_safe_call` — a mira falhava e o gesto
    seguia para o `rumble.set`, **que sem alvo escolhido é BROADCAST**
-   (`daemon/ipc_handlers.py:4368`). O "Testar" da coluna do P2 sacudia os
+   (`daemon/ipc_handlers.py:3135`). O "Testar" da coluna do P2 sacudia os
    quatro controles, e a tela não dizia uma palavra. É pior que não fazer nada:
    faz na mesa inteira.
 2. **AS DUAS RECUSAS DO "Testar"/"Parar" ERAM `ValueError`.** O contrato do
@@ -59,7 +59,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: O ENDEREÇO DA BANCADA — faixa sintética, nunca um MAC de aparelho real.
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
@@ -99,17 +98,12 @@ class PonteDeMentira:
             self.chamadas.append((nome, a, k))
             if nome in self.recusas:
                 return self.recusas[nome]
-            # As `*_checked` da ponte devolvem `(ok, motivo)`; as outras, `bool`.
             return (True, None) if nome.endswith("_checked") else True
         return registrar
 
 
 def _perfil_de_verdade(nome: str = "Bancada", **campos: Any) -> Any:
-    """Um `Profile` DE VERDADE — o esquema é metade do que esta régua mede.
-
-    Um dublê aceitaria `policy="furrufu"` e a régua ficaria verde sobre um
-    perfil que o loader recusaria no disco dela.
-    """
+    """Um `Profile` DE VERDADE — o esquema é metade do que esta régua mede."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     return Profile.model_validate(
@@ -145,11 +139,6 @@ def disco(monkeypatch):
         loader, "save_profile", lambda prof, **_: gravados.append(prof),
         raising=False)
 
-    # O DONO DO CARTÃO (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): a força
-    # grava por `gravar_pelo_gesto`, que escolhe entre o perfil e o computador.
-    # Aqui o disco de mentira é o de um perfil que já sobrepõe a vibração: o
-    # que se mede é o que o gesto grava, e não onde. O onde tem régua própria
-    # em `test_o_que_e_do_computador_nao_muda_com_o_jogo.py`.
     def _pelo_gesto(_cartao, nome, muda, **_k):
         novo = muda(estado[nome])
         if novo is not None:
@@ -162,12 +151,7 @@ def disco(monkeypatch):
 
 
 def _ctx(pac, *, policy_da_mesa: str = "balanceado", ativo: str = "Bancada"):
-    """A mesa com UM controle, e o `rumble_policy` que o daemon publica.
-
-    O `rumble_policy` importa: é ele que a coluna mostra quando o controle não
-    tem override próprio (`a05_vibracao._forca_da_coluna`), e é contra ele que
-    a conferência da volta compara o que ela pediu.
-    """
+    """A mesa com UM controle, e o `rumble_policy` que o daemon publica."""
     return pac.Contexto(
         state={"active_profile": ativo, "rumble_policy": policy_da_mesa,
                "rumble_ff": {}},
@@ -184,15 +168,12 @@ def _gesto(pac, nome: str):
     return fn
 
 
-# ---------------------------------------------------------------------------
-# 1. A MIRA — e o broadcast que ela evitava sem ninguém conferir
-# ---------------------------------------------------------------------------
 def test_a_mira_recusada_nao_vira_vibracao_na_mesa_inteira(pac) -> None:
     """Mira que não foi = nada é mandado, e a frase diz por quê.
 
     É O DEFEITO MAIS CARO QUE ESTA ABA GUARDAVA. `rumble.set` e `rumble.stop`
     **não levam endereço**: quem escolhe o controle é o alvo de output, e sem
-    alvo escolhido o daemon faz BROADCAST (`ipc_handlers.py:4368`). Com o
+    alvo escolhido o daemon faz BROADCAST (`ipc_handlers.py:3135`). Com o
     retorno da mira jogado fora, um daemon lento fazia o "Testar" de UMA coluna
     sacudir as quatro — e o desenho promete o contrário, com todas as letras:
     *"Testar faz aquele controle tremer meio segundo"*.
@@ -247,7 +228,7 @@ def test_a_mira_aceita_leva_o_par_ao_motor(pac) -> None:
     _, args, _kw = p.chamadas[1]
     assert args == (160, 220), (
         f"o par que foi ao motor é {args}, e o par de teste da casa é o mesmo "
-        f"da janela estável (`rumble_actions.py:1032`, weak=160/strong=220)")
+        f"da janela estável (`rumble_actions.py:817`, weak=160/strong=220)")
     assert p.chamadas[0][2] == {"index": 0}, (
         f"a mira foi para {p.chamadas[0][2]} — `controller.target.set` recebe "
         f"`index`, e o 0 é a posição deste controle na lista do daemon")
@@ -256,54 +237,18 @@ def test_a_mira_aceita_leva_o_par_ao_motor(pac) -> None:
 
 
 def test_o_controle_que_saiu_da_mesa_fala_sem_dizer_o_endereco(pac) -> None:
-    """Coluna cujo controle caiu: recusa que CHEGA à tela, e sem MAC na frase.
-
-    DUAS COISAS NUMA. A primeira é o tipo: era `ValueError`, e ficava no
-    `stderr` de quem lançou a janela. A segunda é o TEXTO: a frase antiga era
-    `o controle d4:2f:… não está na mesa agora`, com o endereço de rádio no
-    meio — que é exatamente o que os dois portões de anonimato desta casa
-    existem para não deixar sair, e que não diz nada a quem está com o controle
-    na mão.
-
-    **A CARGA MUDOU EM 05/09/2026, E ELA ERA O DEFEITO DA RÉGUA.** Até aqui
-    este caso montava o clique como `{"uniq": "aa:bb:cc:…:09", "controle":
-    "p9"}` — **um `uniq` que o piloto nunca manda**. Ele manda `controle` e
-    resolve `uniq` contra a mesa; um `uniq` de controle ausente é exatamente o
-    que essa resolução NÃO produz. A régua injetava o estado que queria medir e
-    por isso mediu um ramo morto: o dublê era mais frouxo que o piloto, a mesma
-    assinatura dos três dublês que caíram em 05/09. Agora o clique é o do
-    piloto — o assento, sem `uniq` —, e as duas asserções valem palavra por
-    palavra.
-
-    MORDIDA: em `a05_vibracao._uniq`, apague o ramo
-    `if str(o.get("controle") or ""): raise …` — este caso reprova, porque a
-    frase que sobe passa a ser *"o clique não disse em qual controle"*, que
-    acusa o clique dela por uma falha do produto.
-    """
+    """Coluna cujo controle caiu: recusa que CHEGA à tela, e sem MAC na frase."""
     ctx = _ctx(pac)
-    # O CLIQUE É O DO PILOTO: o assento que a coluna carrega, e nenhum `uniq` —
-    # é o que sobra quando a tradução `assento → uniq` não acha ninguém.
     fora = {"controle": "p2"}
     with pytest.raises(RuntimeError) as recusa:
         _gesto(pac, "parar")(ctx, fora, PonteDeMentira())
 
     frase = str(recusa.value)
-    # A PALAVRA MUDOU EM 06/09/2026 (A-PALAVRA-MESA-SAI-01): a frase dizia
-    # *"este controle saiu da mesa entre o clique e agora"*, e a palavra saiu
-    # da tela por ordem dela. O FATO medido é o mesmo, e é ele que se cobra.
     assert "se desligou" in frase, f"a frase não diz o que houve: {frase}"
     assert "aa:bb:cc" not in frase and "aabbcc" not in frase, (
         f"a recusa publicou o endereço de rádio do aparelho: {frase}")
 
 
-#: O CLIQUE DE CADA GESTO, COMPLETO — o que o ouvinte do piloto manda quando ela
-#: clica naquele controle, menos o `uniq` que a mesa não soube resolver.
-#:
-#: OS ARGUMENTOS DO PRÓPRIO BOTÃO ENTRAM, e é de propósito: `data-forca`,
-#: `data-valor` e `data-lado` viajam no dataset do elemento clicado, sempre.
-#: Tirá-los faria dois dos cinco recusarem por OUTRA razão ("não disse qual
-#: degrau", "não disse qual punho") e a régua ficaria verde sem nunca chegar ao
-#: caminho que ela mede.
 CLIQUE_DE_CADA_GESTO = {
     "testar": {},
     "parar": {},
@@ -315,18 +260,7 @@ CLIQUE_DE_CADA_GESTO = {
 
 @pytest.mark.parametrize("nome", sorted(CLIQUE_DE_CADA_GESTO))
 def test_os_cinco_gestos_dizem_a_causa_certa(pac, nome) -> None:
-    """Os CINCO donos desta aba, e nenhum deles acusa o clique dela.
-
-    É A RÉGUA DO PASSO 1, e ela existe porque são QUATRO os chamadores de
-    `_uniq` — `_mirar` (que serve `testar` e `parar`), `forca`, `intensidade` e
-    `motor`. Uma cura escrita dentro de um gesto deixa os outros três com a
-    frase errada, e a próxima pessoa remede o mesmo defeito.
-
-    MORDIDA: escreva a cura dentro de `a05_vibracao._mirar` em vez de
-    `a05_vibracao._uniq` — este caso reprova em TRÊS dos cinco (`forca`,
-    `intensidade` e `motor`). Se reprovar em um só, a cura foi para o gesto e
-    não para a função que os quatro compartilham.
-    """
+    """Os CINCO donos desta aba, e nenhum deles acusa o clique dela."""
     clique = {"controle": "p2", **CLIQUE_DE_CADA_GESTO[nome]}
     p = PonteDeMentira()
     with pytest.raises(RuntimeError) as recusa:
@@ -346,22 +280,7 @@ def test_os_cinco_gestos_dizem_a_causa_certa(pac, nome) -> None:
 
 @pytest.mark.parametrize("nome", sorted(CLIQUE_DE_CADA_GESTO))
 def test_o_clique_sem_coluna_continua_dizendo_que_nao_tem_alvo(pac, nome) -> None:
-    """O PAR da régua acima: sem coluna, a frase de sempre, inteira.
-
-    SEM ESTE CASO O PASSO 1 PODE APAGAR O QUE CURA. A recusa do clique solto é
-    a que ENSINA o que fazer — *"use a barra dentro da coluna do controle que
-    você quer mudar"* —, e a do controle que caiu é outro fato. Uma régua que só
-    medisse a nova deixaria a antiga sumir sem ninguém ver.
-
-    ELA MEDIA A METADE QUE SAIU — 11/09/2026. Até hoje digitava *"não disse em
-    qual controle"*, e essa metade era o produto relatando o próprio defeito de
-    leitura: a leva de língua aprovada por ela (A4-064, 069, 070 e 072) deixou
-    só a instrução. O que se mede é o ATO — a recusa manda usar a COLUNA.
-
-    MORDIDA: em `a05_vibracao._uniq`, troque o `if str(o.get("controle") or "")`
-    por `if True` — este caso reprova nos cinco, porque o clique sem coluna
-    passa a ser acusado de ter perdido um controle que ele nunca nomeou.
-    """
+    """O PAR da régua acima: sem coluna, a frase de sempre, inteira."""
     clique = {"controle": "", "uniq": "", **CLIQUE_DE_CADA_GESTO[nome]}
     p = PonteDeMentira()
     with pytest.raises(RuntimeError) as recusa:
@@ -395,7 +314,6 @@ def test_mirar_lugar_vazio_nunca_vira_broadcast(pac, a05) -> None:
     gesto parar.
     """
     p = PonteDeMentira()
-    # UM `uniq` QUE O PILOTO NÃO PRODUZ — a mesa deste `ctx` só tem o UNIQ.
     with pytest.raises(RuntimeError, match="se desligou"):
         a05._mirar(_ctx(pac), {"uniq": "aa:bb:cc:00:00:09", "controle": "p9"}, p)
 
@@ -405,21 +323,7 @@ def test_mirar_lugar_vazio_nunca_vira_broadcast(pac, a05) -> None:
 
 
 def test_o_parar_diz_o_motivo_do_daemon_e_nao_um_palpite(pac) -> None:
-    """O "Parar" recusado: sobe o motivo do daemon, não a causa mais barata.
-
-    O `motivo` DA `*_checked` É A RECUSA DO DAEMON JÁ TRADUZIDA EM FRASE DE
-    TELA — é para isso que a função existe (`a05_vibracao._resposta`). Até
-    05/09/2026 o `parar` o lia e o jogava fora, e afirmava *"o Hefesto não está
-    rodando"* sobre um daemon vivo que recusara por outra coisa: o caso do Modo
-    Nativo, que o próprio docstring do gesto nomeia. A irmã 41 linhas acima
-    (`testar`) já fazia o certo, com o mesmo `or`.
-
-    O PALPITE NÃO SAI DE CENA: ele continua sendo o RECURSO para quando o daemon
-    não disse nada — que é o caso real do daemon desligado.
-
-    MORDIDA: tire o `motivo or` do `raise` de `a05_vibracao.parar` — este caso
-    reprova, porque a frase do daemon é engolida pelo palpite.
-    """
+    """O "Parar" recusado: sobe o motivo do daemon, não a causa mais barata."""
     recusa_do_daemon = ("o Modo Nativo está no comando: o jogo fala com o motor "
                         "por fora do Hefesto")
     p = PonteDeMentira(recusas={"rumble_stop_checked": (False, recusa_do_daemon)})
@@ -435,18 +339,7 @@ def test_o_parar_diz_o_motivo_do_daemon_e_nao_um_palpite(pac) -> None:
 
 
 def test_o_testar_diz_o_motivo_do_daemon_e_nao_um_palpite(pac) -> None:
-    """A IRMÃ, e ela estava CERTA e SEM RÉGUA — medido em 05/09/2026.
-
-    O `testar` já lia o `motivo` do daemon com o mesmo `or` desde 04/09, e era
-    ele o exemplar que ensinou o `parar` a fazer o certo. Ao morder a cura do
-    `parar`, esta régua mordeu o `testar` por engano — e **os 23 casos passaram
-    igual**: o único caminho certo dos dois não tinha quem o guardasse. Um
-    comportamento certo sem régua é um comportamento que a próxima edição apaga
-    em silêncio.
-
-    MORDIDA: tire o `motivo or` do `raise` de `a05_vibracao.testar` — este caso
-    reprova. Foi assim que ele nasceu.
-    """
+    """A IRMÃ, e ela estava CERTA e SEM RÉGUA — medido em 05/09/2026."""
     recusa_do_daemon = ("o Modo Nativo está no comando: o jogo fala com o motor "
                         "por fora do Hefesto")
     p = PonteDeMentira(recusas={"rumble_set_checked": (False, recusa_do_daemon)})
@@ -462,12 +355,7 @@ def test_o_testar_diz_o_motivo_do_daemon_e_nao_um_palpite(pac) -> None:
 
 
 def test_o_palpite_sobra_para_quando_o_daemon_nao_diz_nada(pac) -> None:
-    """O par do caso acima: sem motivo, a frase de recurso continua inteira.
-
-    SEM ESTE CASO, TROCAR O `raise` POR `raise RuntimeError(motivo)` passaria: o
-    "Parar" com o daemon desligado subiria `None` e ela leria *"None"* na tela.
-    O `or` tem duas metades, e as duas precisam de régua.
-    """
+    """O par do caso acima: sem motivo, a frase de recurso continua inteira."""
     p = PonteDeMentira(recusas={"rumble_stop_checked": (False, None)})
     with pytest.raises(RuntimeError, match="ligue na aba Sistema"):
         _gesto(pac, "parar")(_ctx(pac), {"uniq": UNIQ, "controle": "p1"}, p)
@@ -516,9 +404,6 @@ def test_a_recusa_do_degrau_nao_oferece_botao_que_nao_existe(pac) -> None:
         f"vez: {frase!r}")
 
 
-# ---------------------------------------------------------------------------
-# 2. A FORÇA — o que grava, o que chega ao motor, e o que ela vai VER
-# ---------------------------------------------------------------------------
 def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
         pac, a05, disco) -> None:
     """O caso comum: a escolha vira fator, e o silêncio é o certo.
@@ -549,7 +434,6 @@ def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
     estado["Bancada"] = _perfil_de_verdade()
     p = PonteDeMentira()
 
-    # SEM `pytest.raises`: o silêncio é a asserção. Uma frase aqui levanta.
     _gesto(pac, "forca")(_ctx(pac), {"uniq": UNIQ, "forca": "max"}, p)
 
     assert len(gravados) == 1, f"gravou {len(gravados)} vez(es), esperava uma"
@@ -705,9 +589,6 @@ def test_a_barra_arrastada_grava_e_o_multiplicador_chega(pac, disco) -> None:
         CHAVE: 1.5}, "o multiplicador arrastado não virou escala"
 
 
-# ---------------------------------------------------------------------------
-# 3. A LINHA DE ESTADO — a confissão que vive no TEMPO, e não só no clique
-# ---------------------------------------------------------------------------
 def test_a_linha_de_estado_confessa_a_mesa_em_auto(a05) -> None:
     """Quem abre a aba amanhã vê o aviso, sem ter clicado nada.
 
@@ -734,28 +615,15 @@ def test_a_linha_de_estado_confessa_a_mesa_em_auto(a05) -> None:
     assert "Auto" in frase and "1 controle" in frase, (
         f"a linha não conta o que está sendo engolido: {frase!r}")
 
-    # A MESA FORA DO AUTO NÃO ENGOLE NADA.
     assert a05._ressalva_da_mesa(
         {**com_peca, "rumble": {"policy": "balanceado"}}, mesa) == ""
-    # NEM A MESA EM AUTO SEM PEÇA COM OPINIÃO.
     assert a05._ressalva_da_mesa({"rumble": {"policy": "auto"}}, mesa) == ""
-    # NEM SOBRE UM CONTROLE QUE NÃO ESTÁ NA SALA: avisar sobre um aparelho que
-    # ela não tem na mão é alarme sem endereço.
     assert a05._ressalva_da_mesa(com_peca, []) == ""
 
 
 def test_a_ressalva_entra_na_linha_do_produto_e_nao_num_bloco_novo(
         pac, a05, monkeypatch) -> None:
-    """A confissão sai pelo MESMO emissor da linha de estado — `#vib-estado`.
-
-    UM SÓ EMISSOR PARA OS DOIS LADOS é o contrato do
-    `app/telas/vibracao.html_do_estado`: o desenho da bancada e a tela viva
-    montam esta linha do mesmo lugar. Um segundo bloco de HTML nesta tela seria
-    o segundo dono do desenho — o defeito que a pasta `novo-layout/` custou.
-
-    MORDIDA: em `a05_vibracao.pacote`, apague o `linhas_do_estado.append(...)`
-    — este caso reprova, porque a frase some da única linha de texto da aba.
-    """
+    """A confissão sai pelo MESMO emissor da linha de estado — `#vib-estado`."""
     from pacotes import perfil as _perfil
 
     monkeypatch.setattr(

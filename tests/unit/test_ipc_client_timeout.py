@@ -1,12 +1,4 @@
-"""Testes de timeout em IpcClient.connect e IpcClient.call.
-
-Verifica que:
-  (a) connect(timeout=...) em socket inexistente levanta IpcError em < 200ms;
-  (b) TimeoutError de asyncio.wait_for vira IpcError(-1, "conexão timeout");
-  (c) call(timeout=...) que demora demais levanta IpcError de timeout.
-
-Usa unittest.mock.patch para isolar de socket real.
-"""
+"""Testes de timeout em IpcClient.connect e IpcClient.call."""
 from __future__ import annotations
 
 import asyncio
@@ -17,10 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
-
-# ---------------------------------------------------------------------------
-# Testes de connect com timeout
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -70,11 +58,6 @@ async def test_connect_sem_timeout_repassa_file_not_found():
             pass
 
 
-# ---------------------------------------------------------------------------
-# Testes de call com timeout
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_call_timeout_levanta_ipc_error():
     """call(timeout=0.05) que demora levanta IpcError de timeout."""
@@ -121,4 +104,3 @@ async def test_call_sem_timeout_resposta_normal():
 
     assert result == {"ok": True}
 
-# "A sabedoria não é saber tudo, mas saber o que ignorar." — William James (adaptado)

@@ -149,30 +149,14 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     STATUS_MIC_MUDO,
 )
 
-#: O `[2]` do envelope de rádio que diz *"o que vem aqui é o `common` de 47
-#: bytes"*. Vem do dono (`core/ds_output_report.BT_TAG`) e não é redigitado: o
-#: mapa registra, na `plataforma.escada_de_output@dualsense`, que **todo** degrau
-#: da escada leva o `common` a partir de `[3]` quando `[2]` é este valor.
 TAG_DO_COMMON = rep.BT_TAG
 
-#: Quanto tempo, para cada lado da marca, a janela recorta. Seis segundos é o
-#: comprimento que ELA relatou; a janela é maior de propósito, porque o que
-#: interessa é o que veio ANTES do som tanto quanto o que veio durante.
 JANELA_PADRAO_S = 8.0
 
-#: Quanto tempo o instrumento fica armado, por omissão. Cinco minutos: longo o
-#: bastante para ela trabalhar na bancada sem pensar nele, curto o bastante
-#: para o arquivo do `btmon` não crescer sem limite.
 SEGUNDOS_PADRAO = 300.0
 
-#: Ritmo do `select` na leitura do hidraw. O mesmo do produto.
 _SELECT_TIMEOUT_S = 0.25
 _READ_LEN = 128
-
-
-# ---------------------------------------------------------------------------
-# As marcas — o instante em que ELA disse "foi agora"
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -204,8 +188,6 @@ class LeituraDoHidraw:
         ]
 
 
-#: O que um report de entrada é, para este instrumento. Três respostas, e a
-#: do meio é a que existe por causa de um estrago medido.
 E_AUDIO = "audio"
 E_ESTADO = "estado"
 E_NADA = "nada"
@@ -244,13 +226,7 @@ def classificar_report(bruto: bytes) -> tuple[str, bool]:
 def escutar_o_hidraw(
     caminho: str, *, segundos: float, parar: threading.Event
 ) -> LeituraDoHidraw:
-    """Lê o hidraw EM LEITURA e carimba toda transição do mudo. Não escreve.
-
-    **A recusa do report de ÁUDIO não é nossa** — ela vem de graça no
-    ``extract_jack_status``, que devolve ``None`` para report com o bit
-    ``0x02`` ligado ou CRC ruim. Sem ela, um quadro de Opus seria lido como
-    estado de jack e o instrumento carimbaria marcas que ela nunca fez.
-    """
+    """Lê o hidraw EM LEITURA e carimba toda transição do mudo. Não escreve."""
     saida = LeituraDoHidraw()
     limite = time.monotonic() + max(0.0, float(segundos))
     mudo_antes: bool | None = None
@@ -297,11 +273,6 @@ def escutar_o_hidraw(
     return saida
 
 
-# ---------------------------------------------------------------------------
-# A metade do FIO — o `btmon`, e o que se lê dele
-# ---------------------------------------------------------------------------
-
-
 def _sudo_serve() -> bool:
     """`sudo -n true` passa? Se não, a metade do fio não vai existir."""
     try:
@@ -314,13 +285,7 @@ def _sudo_serve() -> bool:
 
 
 def _audio_do_report(corpo: bytes) -> str:
-    """Os quatro bytes de áudio de um report de saída, ou "" se não houver.
-
-    ``corpo`` é o quadro L2CAP inteiro (o ``0xA2`` do HID em ``[0]``), então o
-    report começa em ``[1]``. Os offsets do ``common`` vêm do dono
-    (``core/ds_output_report``), somados ao começo do ``common`` dentro do
-    envelope de rádio (``OFFSET_DO_COMMON``) — nenhum número digitado aqui.
-    """
+    """Os quatro bytes de áudio de um report de saída, ou "" se não houver."""
     if len(corpo) < 2:
         return ""
     report = corpo[1:]
@@ -372,11 +337,6 @@ def _tabela_da_janela(quadros: list[Quadro], handle: int) -> str:
         for (sentido, ident), n in sorted(contas.items())
     ]
     return tabela(["sentido", "report", "quadros", "bytes de áudio (1º exemplar)"], linhas)
-
-
-# ---------------------------------------------------------------------------
-# O alvo
-# ---------------------------------------------------------------------------
 
 
 def _escolher_alvo(
@@ -454,12 +414,9 @@ def main(argv: list[str] | None = None) -> int:
             "  antes e chame de novo para ter as duas."
         )
     else:
-        # O DESTINO SAI DO AMBIENTE (`tempfile`), e não de um caminho digitado:
-        # um diretório fixo prenderia a captura à máquina de quem escreveu — e
-        # o portão de anonimato pega isso por FORMA, sem consultar nada.
         captura = CapturaDoFio("captura-armada")
         captura.comecar()
-        time.sleep(1.0)  # o btmon precisa abrir o socket antes de a gente contar
+        time.sleep(1.0)
         t_fio_zero = time.monotonic()
         print(f"\n  metade do FIO: `btmon -w {captura.caminho}` de pé (0600).")
 
@@ -520,9 +477,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    # O `ts` do btsnoop é de outra época; a marca é monotônica. O que amarra os
-    # dois é a POSIÇÃO relativa: normaliza-se pelo primeiro quadro e pela hora
-    # em que a captura começou. É aproximado, e a aproximação está declarada.
     if not quadros:
         print("  o arquivo não tem quadro ACL nenhum — nada a recortar.")
         return 1

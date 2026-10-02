@@ -1,35 +1,4 @@
-"""ARVORE-ERRADA-01 (16/08/2026) — o censo lia o `apps` que a Steam não lê.
-
-**O defeito, medido no `localconfig.vdf` dela.** O arquivo tem TRÊS blocos
-chamados `apps`, e só um é o que a Steam consulta para `LaunchOptions`::
-
-    UserLocalConfigStore/Software/Valve/Steam/apps   63 jogos   <- este
-    UserLocalConfigStore/apps                        11 jogos
-    UserLocalConfigStore/WebStorage/apps              3 jogos
-
-O leitor e o escritor conferiam só o pai imediato (``stack[-2] == "apps"``), de
-modo que os três valiam. Um appid presente em duas árvores era lido duas vezes,
-e o dicionário ficava com o ÚLTIMO — a árvore errada, que vem depois no arquivo.
-
-**O estrago, medido às 05h de 16/08/2026.** O PRAGMATA estava exatamente assim:
-
-- na árvore canônica: ``VKD3D_CONFIG=no_upload_hvv %command%`` — **sem** o
-  wrapper, que a variável de crash havia comido de novo;
-- na outra árvore: com o wrapper, escrito ali pelo nosso próprio escritor.
-
-`censo_do_wrapper()` respondia **"faltantes: 0"**. O jogo dela estava sem
-reconhecer o controle no rádio, a sentinela existia para pegar exatamente isso,
-e ela respondia que estava tudo bem — porque olhava para o lugar errado.
-
-**Por que este é o defeito mais caro da família.** Um portão que passa verde
-olhando para o lugar errado é pior que portão nenhum: portão nenhum deixa a
-busca aberta, e este a encerra. É a mesma lição do `WRAPPER-EM-TODOS-01`, agora
-no eixo do ENDEREÇO em vez do eixo da CONTAGEM.
-
-**O que este arquivo trava.** A âncora de caminho nos dois lados — quem lê e
-quem escreve —, o caso exato do Pragmata reproduzido do vdf real, e a garantia
-de que ancorar não passou a ignorar a árvore boa.
-"""
+"""ARVORE-ERRADA-01 (16/08/2026) — o censo lia o `apps` que a Steam não lê."""
 from __future__ import annotations
 
 import pytest
@@ -46,14 +15,9 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
 
 
 def _escapado(valor: str) -> str:
-    """Como o valor aparece DENTRO do vdf — com as aspas escapadas.
-
-    O wrapper tem aspas no meio (`W="$HOME/..."`), e um teste que as escrevesse
-    cruas montaria um vdf que a Steam nunca produziria.
-    """
+    """Como o valor aparece DENTRO do vdf — com as aspas escapadas."""
     return _vdf_escape(valor)
 
-#: O que a variável de crash dela deixou na linha do Pragmata (14/08/2026).
 _LINHA_COMIDA = "VKD3D_CONFIG=no_upload_hvv %command%"
 _PRAGMATA = "3357650"
 _DUSKFADE = "2542020"
@@ -69,11 +33,7 @@ def _vdf_das_tres_arvores(
     canonica: str,
     outra: str | None = None,
 ) -> str:
-    """O `localconfig.vdf` dela em miniatura: três árvores `apps`, uma boa.
-
-    A ordem importa e é a REAL: a árvore canônica vem primeiro no arquivo e a
-    `UserLocalConfigStore/apps` depois — é por isso que o valor errado vencia.
-    """
+    """O `localconfig.vdf` dela em miniatura: três árvores `apps`, uma boa."""
     bloco_canonico = _bloco_app(_PRAGMATA, ("LaunchOptions", canonica), recuo="\t\t\t\t")
     bloco_duskfade = _bloco_app(
         _DUSKFADE, ("LaunchOptions", _escapado(WRAPPER_LAUNCH)), recuo="\t\t\t\t"
@@ -87,8 +47,6 @@ def _vdf_das_tres_arvores(
             ("SteamControllerRumble", "1"),
             recuo="\t",
         )
-    # extraído por causa do Python 3.10: barra invertida dentro de f-string só
-    # é aceita a partir do 3.12, e o CI desta casa roda o mínimo suportado.
     bloco_web = _bloco_app("480", ("LaunchOptions", "lixo %command%"), recuo="\t\t\t")
     return (
         '"UserLocalConfigStore"\n{\n'
@@ -136,11 +94,7 @@ class TestOQueContaComoArvoreCanonica:
 
 class TestOLeitorNaoLeMaisDaArvoreErrada:
     def test_o_caso_do_pragmata_o_valor_bom_nao_engole_o_ruim(self) -> None:
-        """A MORDIDA. Sem a âncora, sai o wrapper e o censo diz que está tudo bem.
-
-        Este é o vdf dela às 05h de 16/08: a linha comida na árvore boa, e o
-        wrapper na árvore que a Steam ignora.
-        """
+        """A MORDIDA. Sem a âncora, sai o wrapper e o censo diz que está tudo bem."""
         texto = _vdf_das_tres_arvores(
             canonica=_LINHA_COMIDA,
             outra=_escapado(WRAPPER_LAUNCH),
@@ -150,11 +104,7 @@ class TestOLeitorNaoLeMaisDaArvoreErrada:
         assert WRAPPER_PREFIX not in lido[_PRAGMATA]
 
     def test_o_jogo_que_so_existe_na_arvore_errada_some_do_censo(self) -> None:
-        """Um appid fora da árvore canônica não é jogo da Steam para nós.
-
-        Medido: o appid 413080 só existia em `UserLocalConfigStore/apps`. Contá-lo
-        inflava o denominador de todo relatório sem que houvesse jogo nenhum.
-        """
+        """Um appid fora da árvore canônica não é jogo da Steam para nós."""
         texto = _vdf_das_tres_arvores(canonica=_LINHA_COMIDA, outra=None).replace(
             '\t"apps"\n\t{\n\t}\n',
             '\t"apps"\n\t{\n'
@@ -193,12 +143,10 @@ class TestOEscritorNaoSujaOQueNaoEDele:
         )
         novo, aplicados, _ = apply_wrapper_vdf_text(texto)
 
-        # a árvore da Steam sai byte a byte como entrou
         trecho_original = texto.split('\t"apps"\n\t{\n', 1)[1].split("\t}\n", 1)[0]
         trecho_novo = novo.split('\t"apps"\n\t{\n', 1)[1].split("\t}\n", 1)[0]
         assert trecho_novo == trecho_original
         assert "LaunchOptions" not in trecho_novo
-        # e o jogo foi consertado onde importa
         assert _PRAGMATA in aplicados
         assert WRAPPER_PREFIX in read_apps_by_appid(novo)[_PRAGMATA]
 
@@ -239,7 +187,6 @@ class TestOCensoEnxergaARegressao:
         monkeypatch.setattr(sw, "steam_game_running", lambda: False)
         monkeypatch.setattr(sw, "ler_jogos_sem_wrapper", lambda *a, **k: [])
 
-        # o registro é o que separa "perdeu o wrapper" de "nunca teve"
         visto = tmp_path / "wrapper-visto.json"
         visto.write_text(
             '{"appids": {"' + _PRAGMATA + '": "1755300000"}}', encoding="utf-8"

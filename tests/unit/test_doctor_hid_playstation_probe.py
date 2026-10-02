@@ -42,12 +42,9 @@ REBIND_PATH = REPO_ROOT / "scripts" / "bt_rebind_orphans.sh"
 
 DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8") if DOCTOR_PATH.exists() else ""
 
-# A instância medida na máquina dela em 08/08/2026 (não é MAC, é o id do
-# device HID: BUS:VID:PID.INSTANCIA).
 INSTANCIA = "0005:054C:0CE6.0069"
 OUTRA = "0005:054C:0CE6.006A"
 
-# O bloco exato do journal dela — as quatro linhas, na ordem em que saíram.
 JORNAL_ABORTO = "\n".join(
     (
         f"ago 08 23:36:14 maquina kernel: playstation {INSTANCIA}: "
@@ -106,11 +103,7 @@ def _roda_script(
 
 
 def _bin_isolado(tmp_path: Path) -> Path:
-    """PATH mínimo e CONTROLADO: só as ferramentas que a função usa.
-
-    Sem isso, o teste do caso "sem journalctl" seria mentira — o journalctl
-    real do sistema apareceria no PATH e o `command -v` acharia.
-    """
+    """PATH mínimo e CONTROLADO: só as ferramentas que a função usa."""
     binario = tmp_path / "bin"
     binario.mkdir(exist_ok=True)
     for nome in FERRAMENTAS:
@@ -158,8 +151,6 @@ class TestWiringDoCheck:
         ), "o check precisa ser CHAMADO no fluxo principal, não só definido"
 
     def test_check_roda_junto_do_irmao_que_so_via_o_modulo(self) -> None:
-        # check_hid_playstation dá PASS com o módulo carregado — e módulo
-        # carregado convive com controle invisível. Os dois andam juntos.
         assert re.search(
             r"^\s*check_hid_playstation\n\s*check_hid_playstation_probe_abortado\s*$",
             DOCTOR,
@@ -167,9 +158,6 @@ class TestWiringDoCheck:
         ), "o detector de probe abortado vem logo depois do check do módulo"
 
     def test_usa_transport_kernel_nunca_journalctl_k(self) -> None:
-        # Armadilha já paga quatro vezes nesta casa: `-k` implica o boot atual
-        # e devolve ZERO em janela que atravessa reboot — e zero é
-        # indistinguível de "não houve nada".
         corpo = _extrai_funcao_bash(DOCTOR, "check_hid_playstation_probe_abortado")
         assert "_TRANSPORT=kernel" in corpo
         assert not re.search(r"journalctl\s+(-b\s+)?-k\b", corpo), (
@@ -178,9 +166,6 @@ class TestWiringDoCheck:
         assert "--since" in corpo, "a janela é de TEMPO — precisa atravessar reboot"
 
     def test_check_e_read_only_nunca_cura(self) -> None:
-        # Regra da casa (o install.sh a repete): o doctor confere e não cura.
-        # A cura aparece nas MENSAGENS (é dica legítima); o proibido é a
-        # função EXECUTAR o rebind, mexer em serviço ou carregar módulo.
         corpo = _sem_comentarios(
             _extrai_funcao_bash(DOCTOR, "check_hid_playstation_probe_abortado")
         )
@@ -195,11 +180,9 @@ class TestWiringDoCheck:
             assert not re.match(r"^(sudo\s+)?(modprobe|rmmod|insmod)\b", nu), (
                 f"recarregar hid_playstation derrubaria TODOS os DualSense: {nu}"
             )
-        # E nada de escrever no sysfs (o bind é do bt_rebind_orphans.sh).
         assert "/bind" not in corpo, "escrever no bind é cura, não diagnóstico"
 
     def test_a_cura_apontada_existe_de_verdade(self) -> None:
-        # Mensagem que manda rodar script inexistente é pior que silêncio.
         corpo = _extrai_funcao_bash(DOCTOR, "check_hid_playstation_probe_abortado")
         assert "bt_rebind_orphans.sh" in corpo
         assert REBIND_PATH.exists(), "a cura apontada tem de existir no repo"
@@ -208,8 +191,6 @@ class TestWiringDoCheck:
         )
 
     def test_veredito_nomeia_a_causa_medida_e_nao_o_hardware(self) -> None:
-        # Ela vetou por escrito a tese de hardware, depois de dias perdidos
-        # nela. O texto do veredito não pode ressuscitá-la.
         corpo = _extrai_funcao_bash(DOCTOR, "check_hid_playstation_probe_abortado")
         assert "contenção" in corpo
         assert "assets/dkms/hid-playstation/README.md" in corpo, (
@@ -242,8 +223,6 @@ class TestScanPuro:
         assert self._roda(tmp_path, feature * 3 + aborto).stdout.strip() == f"{INSTANCIA} 1 3"
 
     def test_aborto_sem_falha_de_feature_ainda_e_aborto(self, tmp_path: Path) -> None:
-        # O gate é o ABORTO. Exigir as duas pontas esconderia um aborto por
-        # outra causa — e o controle some do mesmo jeito.
         entrada = (
             f"kernel: playstation {INSTANCIA}: "
             "probe with driver playstation failed with error -110\n"
@@ -251,7 +230,6 @@ class TestScanPuro:
         assert self._roda(tmp_path, entrada).stdout.strip() == f"{INSTANCIA} 1 0"
 
     def test_falha_de_feature_sem_aborto_fica_em_silencio(self, tmp_path: Path) -> None:
-        # O transiente que o probe SOBREVIVEU não é notícia.
         entrada = (
             f"kernel: playstation {INSTANCIA}: Failed to retrieve feature with reportID 32: -5\n"
         )
@@ -275,8 +253,6 @@ class TestScanPuro:
         ]
 
     def test_probe_de_outro_driver_nao_e_deste_check(self, tmp_path: Path) -> None:
-        # A cascata do hid-nintendo já tem check próprio; misturar os dois
-        # daria veredito com a cura errada.
         entrada = (
             "kernel: nintendo 0005:057E:2009.0041: probe - fail = -110\n"
             "kernel: nintendo 0005:057E:2009.0041: Failed to get joycon info; ret=-110\n"
@@ -307,7 +283,6 @@ class TestOrfaosAgora:
         assert self._roda(tmp_path, {INSTANCIA: True}).stdout.strip() == ""
 
     def test_vpad_do_proprio_hefesto_fica_de_fora(self, tmp_path: Path) -> None:
-        # O vpad nasce por uhid no barramento 0003 — nunca é candidato.
         assert self._roda(tmp_path, {"0003:054C:0CE6.0007": False}).stdout.strip() == ""
 
     def test_orfao_nintendo_nao_e_deste_check(self, tmp_path: Path) -> None:
@@ -381,7 +356,6 @@ class TestVeredito:
             path=str(binario),
         )
 
-    # --- caso 1: órfão AGORA -------------------------------------------------
     def test_orfao_agora_e_fail_com_a_cura_nomeada(self, tmp_path: Path) -> None:
         resultado = self._roda(tmp_path, JORNAL_ABORTO, {INSTANCIA: False})
         assert "RC=0" in resultado.stdout, resultado.stderr
@@ -397,8 +371,6 @@ class TestVeredito:
         assert "1x aborto e 1x falha de feature no journal" in resultado.stdout
 
     def test_orfao_agora_e_fail_mesmo_sem_journal(self, tmp_path: Path) -> None:
-        # O journal pode estar ilegível (sem grupo adm). O sintoma continua
-        # sendo o sysfs, e ele vale sozinho.
         resultado = self._roda(
             tmp_path, "", {INSTANCIA: False}, com_journalctl=False, com_systemctl=False
         )
@@ -424,11 +396,7 @@ class TestVeredito:
         assert "WARN: a vigia" in resultado.stdout
         assert "enable --now hefesto-bt-health-watchdog.timer" in resultado.stdout
 
-    # --- caso 2: aborto RECUPERADO ------------------------------------------
     def test_aborto_recuperado_e_informacao_nunca_alarme(self, tmp_path: Path) -> None:
-        # A decisão que separa diagnóstico de ruído: os 6 abortos de 08/08
-        # recuperaram sozinhos em 2 a 20 min. Gritar por eles ensina a
-        # ignorar o doctor.
         resultado = self._roda(tmp_path, JORNAL_ABORTO, {INSTANCIA: True})
         assert "RC=0" in resultado.stdout, resultado.stderr
         assert "FAIL" not in resultado.stdout
@@ -448,14 +416,7 @@ class TestVeredito:
     def test_a_proxima_queda_religa_na_hora_e_o_tique_e_a_rede(
         self, tmp_path: Path
     ) -> None:
-        """A frase das quedas futuras diz os DOIS tempos do religar.
-
-        OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01: desde a STORM-USB-02 o
-        kernel-watch chama o rebind pela ponte na hora do aviso do kernel, e o
-        tique de 2 em 2 minutos da vigia virou a rede. A frase dizia só o tique.
-        A MORDIDA: devolver a frase de antes («a vigia ... a chama de 2 em 2
-        minutos», sem o aviso do kernel) reprova.
-        """
+        """A frase das quedas futuras diz os DOIS tempos do religar."""
         resultado = self._roda(tmp_path, JORNAL_ABORTO, {INSTANCIA: True})
         futuras = [
             linha
@@ -470,14 +431,12 @@ class TestVeredito:
     def test_aborto_de_um_controle_com_outro_orfao_ainda_e_fail(
         self, tmp_path: Path
     ) -> None:
-        # Um controle recuperou, o outro não: manda o pior dos dois.
         resultado = self._roda(
             tmp_path, JORNAL_ABORTO, {INSTANCIA: True, OUTRA: False}
         )
         assert "FAIL: DualSense ÓRFÃO AGORA" in resultado.stdout
         assert OUTRA in resultado.stdout
 
-    # --- caso 3: nada --------------------------------------------------------
     def test_journal_limpo_e_sem_orfao_da_pass(self, tmp_path: Path) -> None:
         resultado = self._roda(tmp_path, JORNAL_LIMPO, {INSTANCIA: True})
         assert "RC=0" in resultado.stdout, resultado.stderr
@@ -485,15 +444,12 @@ class TestVeredito:
         assert "FAIL" not in resultado.stdout and "WARN" not in resultado.stdout
 
     def test_sem_journalctl_nao_finge_ter_olhado(self, tmp_path: Path) -> None:
-        # Sem journal não há PASS sobre o histórico: zero por falta de dado é
-        # indistinguível de zero por ausência de defeito.
         resultado = self._roda(
             tmp_path, "", {INSTANCIA: True}, com_journalctl=False, com_systemctl=False
         )
         assert "PASS" not in resultado.stdout
         assert "sem journalctl" in resultado.stdout
 
-    # --- a régua do journal --------------------------------------------------
     def test_o_journalctl_e_chamado_com_transport_e_since(self, tmp_path: Path) -> None:
         self._roda(tmp_path, JORNAL_LIMPO, {INSTANCIA: True})
         argv = (tmp_path / "journalctl.argv").read_text(encoding="utf-8")
@@ -505,10 +461,6 @@ class TestVeredito:
         assert not re.search(r"(^|\s)-b(\s|$)", argv), "-b prende a janela a este boot"
 
     def test_janela_default_e_larga_o_bastante_para_o_episodio(self) -> None:
-        # MEDIDO na máquina dela em 09/08: com 24 h a consulta via 1 dos 6
-        # abortos de 08/08 (o boot dela é mais velho que um dia); com 3 dias,
-        # os 6. Janela curta devolve quase-zero e ensina a mesma lição errada
-        # que o `-k`: "não houve nada".
         corpo = _extrai_funcao_bash(DOCTOR, "check_hid_playstation_probe_abortado")
         default = re.search(
             r'janela="\$\{HEFESTO_DOCTOR_PROBE_JANELA:-(\d+) (days?|hours?) ago\}"', corpo

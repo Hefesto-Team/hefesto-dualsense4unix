@@ -1,9 +1,4 @@
-"""Testes do subsystem Gamepad (FEAT-DSX-GAMEPAD-FLAVOR-01).
-
-Prova: start cria o device com a máscara certa, faz grab do controle real e
-desliga o mouse (mútua exclusão); stop libera o grab; dispatch repassa estado;
-persistência é chamada. Sem hardware — uinput é mockado via for_flavor.
-"""
+"""Testes do subsystem Gamepad (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
 from __future__ import annotations
 
 import pytest
@@ -40,7 +35,6 @@ class _FakeDevice:
         self.stopped = False
         self.analog: dict | None = None
         self.buttons: frozenset[str] | None = None
-        # FEAT-VPAD-FF-PASSTHROUGH-01: sink injetado + contagem de pumps.
         self.rumble_sink = rumble_sink
         self.ff_pumps = 0
 
@@ -106,10 +100,7 @@ class TestStartGamepad:
         assert created[0].started is True
         assert daemon.config.gamepad_emulation_enabled is True
         assert daemon.config.gamepad_flavor == "xbox"
-        # Grab do controle físico ligado (evita input dobrado).
         assert daemon.controller._evdev.grab_calls == [True]
-        # FEAT-VPAD-FF-PASSTHROUGH-01: o vpad nasce com sink de rumble → o FF
-        # do jogo tem para onde voltar (motores do primário).
         assert created[0].rumble_sink is not None
 
     def test_start_desliga_mouse_mutua_exclusao(
@@ -134,7 +125,7 @@ class TestStartGamepad:
         daemon = _FakeDaemon()
         gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
-        assert len(created) == 1  # não recria
+        assert len(created) == 1
 
     def test_troca_de_flavor_recria(
         self, monkeypatch: pytest.MonkeyPatch, no_persist: None
@@ -178,12 +169,11 @@ class TestStopGamepad:
         assert dev.stopped is True
         assert daemon._gamepad_device is None
         assert daemon.config.gamepad_emulation_enabled is False
-        # grab: ligado no start, desligado no stop.
         assert daemon.controller._evdev.grab_calls == [True, False]
 
     def test_stop_idempotente_sem_device(self, no_persist: None) -> None:
         daemon = _FakeDaemon()
-        gp.stop_gamepad_emulation(daemon)  # não deve lançar
+        gp.stop_gamepad_emulation(daemon)
         assert daemon.config.gamepad_emulation_enabled is False
 
 
@@ -205,12 +195,11 @@ class TestDispatchGamepad:
 
         assert dev.analog == {"lx": 128, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0}
         assert dev.buttons == buttons
-        # FEAT-VPAD-FF-PASSTHROUGH-01: cada dispatch bombeia o FF do vpad.
         assert dev.ff_pumps == 1
 
     def test_dispatch_noop_sem_device(self) -> None:
         daemon = _FakeDaemon()
-        gp.dispatch_gamepad(daemon, self._state(), frozenset())  # não deve lançar
+        gp.dispatch_gamepad(daemon, self._state(), frozenset())
 
     def test_dispatch_trata_excecao(self) -> None:
         daemon = _FakeDaemon()
@@ -221,7 +210,7 @@ class TestDispatchGamepad:
 
         dev.forward_analog = _boom  # type: ignore[method-assign]
         daemon._gamepad_device = dev
-        gp.dispatch_gamepad(daemon, self._state(), frozenset())  # não deve lançar
+        gp.dispatch_gamepad(daemon, self._state(), frozenset())
 
 
 class TestGamepadSubsystem:
@@ -238,7 +227,7 @@ class TestGamepadSubsystem:
     ) -> None:
         created = _patch_for_flavor(monkeypatch)
         sub = gp.GamepadSubsystem()
-        daemon = _FakeDaemon()  # gamepad_emulation_enabled=False por default
+        daemon = _FakeDaemon()
 
         class _Ctx:
             config = daemon.config
@@ -247,4 +236,4 @@ class TestGamepadSubsystem:
         ctx = _Ctx()
         ctx.daemon = daemon  # type: ignore[attr-defined]
         await sub.start(ctx)
-        assert created == []  # não criou device
+        assert created == []

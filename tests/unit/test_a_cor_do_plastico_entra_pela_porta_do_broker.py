@@ -26,12 +26,12 @@ produto batendo na porta que o nosso próprio produto fechou.
 
 A CASA JÁ TINHA A PORTA, E O ENSAIO JÁ ENTRA POR ELA
 -----------------------------------------------------
-``scripts/ensaios/cor_do_plastico.py:879`` chama ``abrir_no_hidraw``
-(``scripts/ensaios/comum.py:401``), que é ``abrir_hidraw``
-(``integrations/hidraw_broker_client.py:593``): broker primeiro, ``open()``
+``scripts/ensaios/cor_do_plastico.py:651`` chama ``abrir_no_hidraw``
+(``scripts/ensaios/comum.py:346``), que é ``abrir_hidraw``
+(``integrations/hidraw_broker_client.py:400``): broker primeiro, ``open()``
 depois, e a porta usada sai DECLARADA no relatório.
 
-``integrations/cor_do_plastico.py:474`` faz ``os.open(caminho, O_RDWR |
+``integrations/cor_do_plastico.py:366`` faz ``os.open(caminho, O_RDWR |
 O_NONBLOCK)`` e nada mais. A ``A-PORTA-QUE-A-CASA-CONSTRUIU-01`` (15/08/2026)
 fechou esse buraco em ``scripts/`` — e ``test_a_porta_que_a_casa_construiu_01``
 varre só ``scripts/`` (``SCRIPTS = RAIZ / "scripts"``, linha 64). O porte da
@@ -78,7 +78,7 @@ estas mordidas provam é que **o produto pede por ali**.
 AS COSTURAS QUE A CURA PRECISA ABRIR
 -------------------------------------
 Duas, e as duas já são padrão desta casa (``estado_do_grab`` tem as mesmas, em
-``hidraw_broker_client.py:689``)::
+``hidraw_broker_client.py:483``)::
 
     def _perguntar_ao_hidraw(
         caminho: str,
@@ -121,35 +121,18 @@ from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
     abrir_hidraw,
 )
 
-#: Serial FORJADO, com a forma real e o conteúdo de ninguém. Os caracteres 5 e
-#: 6 são ``02`` = Cosmic Red. É o mesmo forjado que
-#: ``test_docs_mac_anonimato.py:759`` já reconhece como ruído legítimo — nenhum
-#: serial de aparelho desta bancada entra em arquivo versionado.
 SERIAL_FORJADO = "ZZ9Y02Q0000000000"  # serial-de-mentira: prefixo forjado
 
-#: O que o card mostra quando a leitura não responde (``mesa_viva.py:163``).
 NAO_SEI = "Não sei"
 
-#: O endereço do controle na bancada de mentira — máscara da casa (octetos 4 e
-#: 5 zerados), e um OUI que não é de ninguém.
 UNIQ = "aa:bb:cc:00:00:01"
 
 #: O ``HID_ID`` de um DualSense no cabo: ``BARRAMENTO:VENDOR:PRODUCT``.
 HID_ID_DUALSENSE_NO_CABO = "0003:0000054C:00000CE6"
 
 
-# ---------------------------------------------------------------------------
-# A bancada — um sysfs de mentira, um broker de mentira, um aparelho de mentira
-# ---------------------------------------------------------------------------
-
-
 def sysfs_de_mentira(no: str = "hidraw9") -> dict[str, Any]:
-    """Os três argumentos que ``alvo_do_controle`` já aceita, prontos.
-
-    A costura é do produto e não minha (regra F4): ``raiz``, ``listar`` e
-    ``ler`` entram por argumento justamente para que a bancada não encoste em
-    ``/sys``.
-    """
+    """Os três argumentos que ``alvo_do_controle`` já aceita, prontos."""
     uevent = (
         f"HID_ID={HID_ID_DUALSENSE_NO_CABO}\n"
         "HID_NAME=Sony Interactive Entertainment DualSense Wireless Controller\n"
@@ -164,14 +147,7 @@ def sysfs_de_mentira(no: str = "hidraw9") -> dict[str, Any]:
 
 
 class BrokerDeMentira:
-    """Serve um fd REAL, com o mesmo contrato do cliente de verdade.
-
-    ``abrir_no`` devolve ``(fd | None, motivo)`` e ``motivo`` nunca é vazio —
-    é o contrato de ``hidraw_broker_client.abrir_no``, e é o que
-    ``abrir_hidraw`` consome. O fd é de um arquivo comum em ``tmp_path``:
-    serve para provar QUAL descritor chegou ao ``ioctl``, sem aparelho nenhum
-    por perto.
-    """
+    """Serve um fd REAL, com o mesmo contrato do cliente de verdade."""
 
     def __init__(self, arquivo: Path | None) -> None:
         self._arquivo = arquivo
@@ -208,41 +184,25 @@ class AparelhoDeMentira:
     def __call__(self, fd: int, request: int, buffer: Any, mutate: bool) -> int:
         self.fds_vistos.append(fd)
         if fd not in self.fds_aceitos:
-            # É o EACCES do nó escondido, na forma em que o kernel o entrega a
-            # quem abriu por caminho: o open falha antes, e quando não falha
-            # (fd de outra coisa) o ioctl é que recusa.
             raise OSError(errno.EACCES, "Permission denied")
         nr = request & 0xFF
-        if nr == 0x06:  # HIDIOCSFEATURE
+        if nr == 0x06:
             pedido = bytes(buffer)
-            # A trava, conferida também do lado do "aparelho": se algum dia
-            # sair daqui um par que não seja o do serial, o teste morre aqui e
-            # não na tela dela.
             conferir_pedido(pedido)
             self.escritas.append(pedido)
             return len(pedido)
-        # HIDIOCGFEATURE: 0x81, eco do par, marca de resposta boa, 17 ASCII.
         resposta = bytes([0x81, 1, 19, 2]) + self.serial.encode("ascii")
         buffer[: len(resposta)] = array.array("B", resposta)
         return len(resposta)
 
 
 def porta_do_broker(arquivo: Path) -> tuple[Any, BrokerDeMentira, AparelhoDeMentira]:
-    """``(perguntar, broker, aparelho)`` — a mesa dela, com o nó ESCONDIDO.
-
-    ``abrir_hidraw`` é o de VERDADE: quem é de mentira é o cliente que ele
-    consulta (``cliente=``, o ponto de injeção que ele documenta). Assim a
-    porta sob teste é a porta do produto, não uma cópia dela.
-    """
+    """``(perguntar, broker, aparelho)`` — a mesa dela, com o nó ESCONDIDO."""
     broker = BrokerDeMentira(arquivo)
-    # O aparelho só aceita descritores que o broker serviu — e a lista ainda
-    # está sendo preenchida quando o `ioctl` roda, daí o conjunto VIVO.
     aparelho = AparelhoDeMentira(fds_aceitos=_ConjuntoVivo(broker.servidos))
     abrir = partial(abrir_hidraw, cliente=broker)
 
     def perguntar(caminho: str, pedido: bytes) -> bytes | None:
-        # Enquanto a cura não abre a costura `abrir=`, isto levanta TypeError
-        # — e é a mordida 1 reprovando, que é o que se quer hoje.
         return produto._perguntar_ao_hidraw(
             caminho, pedido, abrir=abrir, ioctl=aparelho
         )
@@ -260,20 +220,10 @@ class _ConjuntoVivo:
         return valor in self._fonte
 
 
-# ===========================================================================
-# MORDIDA 1 — a cor atravessa o nó escondido
-# ===========================================================================
-
-
 def test_mordida_1_com_o_no_escondido_a_cor_chega_pela_porta_do_broker(
     tmp_path: Path,
 ) -> None:
-    """A mesa DELA: nó 0600 root:root, daemon rodando, broker de pé.
-
-    ARRANQUE A CURA (``_perguntar_ao_hidraw`` volta a ``os.open`` direto) e
-    este teste reprova com ``cor is None`` — que é o "Não sei" dos dois cards
-    que ela viu hoje.
-    """
+    """A mesa DELA: nó 0600 root:root, daemon rodando, broker de pé."""
     arquivo = tmp_path / "hidraw9"
     arquivo.write_bytes(b"")
     perguntar, broker, aparelho = porta_do_broker(arquivo)
@@ -282,8 +232,8 @@ def test_mordida_1_com_o_no_escondido_a_cor_chega_pela_porta_do_broker(
 
     assert cor is not None, (
         "a cor voltou None com o broker de pé — é o 'Não sei' do card dela. "
-        "A porta é `abrir_hidraw` (integrations/hidraw_broker_client.py:593), "
-        "a mesma que o ensaio usa (scripts/ensaios/comum.py:401)."
+        "A porta é `abrir_hidraw` (integrations/hidraw_broker_client.py:400), "
+        "a mesma que o ensaio usa (scripts/ensaios/comum.py:346)."
     )
     assert cor.codigo == "02"
     assert cor.nome == "Cosmic Red"
@@ -296,15 +246,10 @@ def test_mordida_1_com_o_no_escondido_a_cor_chega_pela_porta_do_broker(
 def test_mordida_1_sem_broker_a_porta_direta_continua_servindo(
     tmp_path: Path,
 ) -> None:
-    """Máquina sem broker (CI, checkout, install antigo) não pode regredir.
-
-    A cura troca a porta, não a capacidade: onde o nó é legível por caminho, a
-    leitura continua acontecendo. Se a cura passar a EXIGIR o broker, este
-    teste reprova.
-    """
+    """Máquina sem broker (CI, checkout, install antigo) não pode regredir."""
     arquivo = tmp_path / "hidraw9"
     arquivo.write_bytes(b"")
-    broker = BrokerDeMentira(None)  # o broker recusa: não há broker nenhum
+    broker = BrokerDeMentira(None)
     fds_diretos: list[int] = []
 
     class AbridorDireto:
@@ -321,7 +266,6 @@ def test_mordida_1_sem_broker_a_porta_direta_continua_servindo(
         return fd
 
     def perguntar(caminho: str, pedido: bytes) -> bytes | None:
-        # O caminho existe em tmp_path, então o `open()` de queda funciona.
         return produto._perguntar_ao_hidraw(
             str(arquivo),
             pedido,
@@ -341,12 +285,7 @@ def test_mordida_1_sem_broker_a_porta_direta_continua_servindo(
 
 
 def test_mordida_1_as_duas_portas_fechadas_viram_nao_sei_e_nunca_levantam() -> None:
-    """``ler_pelo_cabo`` nunca levanta — nem quando a porta fecha dos dois lados.
-
-    ``abrir_hidraw`` levanta ``PortaFechadaError`` (é o contrato dele, e é bom:
-    o INSTRUMENTO tem de morrer barulhento). O PRODUTO, não: aqui "Não sei" é
-    resposta válida e a janela não pode cair por causa de um controle.
-    """
+    """``ler_pelo_cabo`` nunca levanta — nem quando a porta fecha dos dois lados."""
 
     def abrir_que_fecha(no: str, **_: Any) -> NoAberto:
         raise PortaFechadaError(
@@ -363,18 +302,8 @@ def test_mordida_1_as_duas_portas_fechadas_viram_nao_sei_e_nunca_levantam() -> N
     assert cor is None, "porta fechada é 'Não sei', não exceção na cara dela"
 
 
-# ===========================================================================
-# MORDIDA 2 — o ioctl sai NO fd que o broker serviu
-# ===========================================================================
-
-
 def test_mordida_2_o_ioctl_usa_o_descritor_que_veio_do_broker(tmp_path: Path) -> None:
-    """Pedir o fd pela porta certa e reabrir por caminho seria pior que hoje.
-
-    Pior porque o relatório diria "broker (SCM_RIGHTS)" e a tela continuaria em
-    "Não sei" — uma medição que declara a porta certa e mede pela errada é
-    exatamente o alarme convincente e falso que esta casa persegue.
-    """
+    """Pedir o fd pela porta certa e reabrir por caminho seria pior que hoje."""
     arquivo = tmp_path / "hidraw9"
     arquivo.write_bytes(b"")
     perguntar, broker, aparelho = porta_do_broker(arquivo)
@@ -390,13 +319,7 @@ def test_mordida_2_o_ioctl_usa_o_descritor_que_veio_do_broker(tmp_path: Path) ->
 
 
 def test_mordida_2_o_descritor_do_broker_e_fechado_ao_fim(tmp_path: Path) -> None:
-    """Um fd de hidraw cedido pelo broker root, vazado, fica órfão até o processo morrer.
-
-    A leitura roda por controle e por abertura de tela; vazar um por vez basta
-    para estourar o teto de descritores numa sessão longa dela. Espiar
-    ``os.close`` e não ``os.fstat``: número de fd é RECICLADO, e um fstat que
-    responde pode estar respondendo por outro arquivo.
-    """
+    """Um fd de hidraw cedido pelo broker root, vazado, fica órfão até o processo morrer."""
     arquivo = tmp_path / "hidraw9"
     arquivo.write_bytes(b"")
     perguntar, broker, _aparelho = porta_do_broker(arquivo)
@@ -418,19 +341,8 @@ def test_mordida_2_o_descritor_do_broker_e_fechado_ao_fim(tmp_path: Path) -> Non
     )
 
 
-# ===========================================================================
-# MORDIDA 3 — a trava não afrouxa, e ela vem ANTES da porta
-# ===========================================================================
-
-
 def test_mordida_3_o_par_que_reseta_nao_chega_nem_a_pedir_fd(tmp_path: Path) -> None:
-    """``[1, 1]`` RESETA o controle. Ele não abre porta, não pede fd, não sai.
-
-    A cura mexe no que fica ENTRE ``conferir_pedido`` e o ``ioctl``. Esta
-    mordida existe para que essa mexida não empurre a trava para depois da
-    porta — o precipício continua ao lado da trilha, e ela tem quatro controles
-    sem reposição.
-    """
+    """``[1, 1]`` RESETA o controle. Ele não abre porta, não pede fd, não sai."""
     arquivo = tmp_path / "hidraw9"
     arquivo.write_bytes(b"")
     broker = BrokerDeMentira(arquivo)
@@ -438,7 +350,7 @@ def test_mordida_3_o_par_que_reseta_nao_chega_nem_a_pedir_fd(tmp_path: Path) -> 
 
     pedido_que_destroi = bytearray(montar_pedido())
     pedido_que_destroi[1] = 1
-    pedido_que_destroi[2] = 1  # (1, 1) — RESETA o controle
+    pedido_que_destroi[2] = 1
 
     with pytest.raises(PedidoRecusadoError):
         produto._perguntar_ao_hidraw(

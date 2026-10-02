@@ -62,12 +62,8 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: O CONTROLE DA MESA DUBLÊ, na faixa sintética da casa. Nada de MAC real em
-#: arquivo versionado — há dois portões, e eles não perdoam.
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 
-#: UM CONTROLE SÓ, e é o que faz o `.fora` existir: com um na mesa, os números
-#: 2, 3 e 4 da aba 04 passam da conta — é o gatilho da caixa da foto dela.
 ESTADO = {
     "active_profile": "regua",
     "gamepad_emulation": {"flavor": "dualsense"},
@@ -80,31 +76,6 @@ PAGINA_02 = "02-controles.html"
 PAGINA_04 = "04-iluminacao.html"
 PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: OS QUATRO BOTÕES QUE RECUSAM: página, gesto e o seletor do botão do produto.
-#:
-#: O SELETOR DA 01 NÃO DIZ A TAG, e a razão é de 20/09/2026: ele dizia
-#: `input[data-gesto="cadeado"]`, e em 19/09 o cadeado virou `<button>`
-#: (`3bf938e46`, a trava do perfil virando a pílula do Giroscópio). Três réguas
-#: deste arquivo reprovaram com «NAO ACHEI» sobre um cadeado que estava na
-#: tela — e o mesmo seletor derrubou outras dez em
-#: `test_a_aba_01_jogar_fecha_as_linhas.py`, curadas em `c2e081e4b`.
-#:
-#: A cura não é trocar `input` por `button`: é PARAR DE DIZER a tag. O endereço
-#: do elemento é o `data-gesto`, que é contrato com o gerador; a tag é decisão
-#: de desenho e pode mudar de novo amanhã — e mudou, do `<input>` de 06/09 para
-#: o `<button>` de 19/09, sem nada de errado com o produto nas duas vezes.
-#: **O BOTÃO DA 02 TROCOU DE DONO EM 20/09, E ESTAS RÉGUAS TROCARAM DE ALVO.**
-#: Elas miravam o 🎙 (`data-mudo="microfone"`), que naquele dia deixou de calar
-#: e passou a GRAVAR por ordem dela. O que elas medem, porém, nunca foi o
-#: microfone: é a MECÂNICA da recusa — o botão pisca, a frase pousa no cartão,
-#: o recibo vence. Qualquer gesto que recuse serve, e o ♪ da mesma coluna é o
-#: irmão exato: mesmo cartão, mesmo `data-mudo`, mesma ponte.
-#:
-#: **APONTÁ-LAS AO `mic-testar` SERIA O DEFEITO**, não a cura fiel: o gesto novo
-#: abre o microfone de quem estiver na frente da máquina por até 15 segundos e
-#: devolve a voz pelo alto-falante. Uma suíte que o dispara em sete réguas
-#: grava a sala dela sete vezes por corrida. Quem prova o ato novo é
-#: `test_o_teste_do_microfone_ouve.py`, com o gravador dublado.
 BOTOES = {
     "04": (PAGINA_04, "player",
            '[data-controle="p1"] .players button.fora[data-player="2"]'),
@@ -115,13 +86,8 @@ BOTOES = {
 }
 CASOS = ("04", "02", "01", "06")
 
-#: A COLISÃO DA 06 — duas linhas para o mesmo destino, a recusa que só o
-#: «Guardar» faz (a linha anota; quem confere o mapa inteiro é ele).
 COLISAO_DA_06 = {"cross": "circle", "square": "circle"}
 
-#: ESCREVE AS LINHAS NA MESMA CHAMADA DO CLIQUE: entre duas chamadas o tique
-#: repinta as listas com o que o perfil guarda, e a `forma` perderia a colisão.
-#: Sem `change`, de propósito — nenhum `linha-de-troca` antes do «Guardar».
 ARMAR_AS_LINHAS = r"""
 (function(linhas){
   return function(){
@@ -133,31 +99,15 @@ ARMAR_AS_LINHAS = r"""
 })(%s)
 """
 
-#: A FRASE QUE O ATO DO MICROFONE DEVOLVE quando falha pela metade. É frase de
-#: PROVA, a mesma de `test_a_recusa_chega_ao_cartao`: o que se mede é se a frase
-#: do dono ATRAVESSA até a tela, e digitar a do daemon mediria a própria régua.
-#: **A FRASE TROCOU COM O BOTÃO — 20/09/2026.** Estas réguas miravam o 🎙, que
-#: naquele dia deixou de calar e passou a gravar; o alvo virou o ♪ da mesma
-#: coluna (a razão longa está em `test_a_recusa_pisca_no_botao.BOTOES`), e a
-#: recusa que o ♪ dá é outra: ele não fala de microfone, fala do volume que o
-#: daemon ainda não publicou. Manter a frase velha faria a régua cobrar do ♪
-#: uma frase que só o 🎙 dizia — reprovação sobre produto são.
 RECUSA_DO_MIC = "o volume deste alto-falante ainda é desconhecido"
 
-#: O PASSO E OS TETOS DAS ESPERAS POR CONDIÇÃO — generosos de propósito, e
-#: continuam sendo régua: um marco que não chega reprova dizendo qual.
 PASSO_MS = 50
 TETO_S = 10.0
 TETO_DA_PAGINA_S = 30.0
 TETO_DO_ROTEIRO_S = 180.0
 
-#: QUANTO A PISCADA PODE PASSAR DE `MS_DA_PISCADA` no relógio da página: o
-#: `setTimeout` nunca apaga ANTES, e sob carga apaga depois.
 FOLGA_DA_PISCADA_MS = 1500
 
-#: O VIGIA E O CLIQUE NA MESMA CHAMADA. O vigia anota o botão só quando ele
-#: MUDA (classe ou carimbo de voo) e relê o seletor a cada mutação: a pintura
-#: pode trocar o nó, e uma referência guardada mediria um nó fora do documento.
 VIGIAR_E_CLICAR = r"""
 (function(sel, marco, armar){
   const b = document.querySelector(sel);
@@ -190,9 +140,6 @@ LER_A_TRILHA = r"""
 })(%s)
 """
 
-#: A TELA, lida pelo que ela MOSTRA: `innerText` respeita o `display:none` da
-#: folha da casa (a `.nota` do mockup não conta), e as duas formas de dica —
-#: `title` cru e o `data-hef-dica` que a camada da casa colhe dele — entram.
 LER_A_TELA = r"""
 (function(frase){
   const em = function(atr){
@@ -212,8 +159,6 @@ LER_A_TELA = r"""
 
 EXISTE = "JSON.stringify(document.querySelector(%s) ? 'sim' : null)"
 
-#: O PONTEIRO EM CIMA DO BOTÃO: o `mousemove` é o evento que a camada da dica
-#: escuta, e ela abre depois do atraso dela. Nada toca o mouse dela.
 PASSAR_O_MOUSE = r"""
 (function(sel){
   const b = document.querySelector(sel);
@@ -277,8 +222,6 @@ def _a_recusa_assentou(leitura: dict) -> dict | None:
     return {"pouso": pouso, "piscada": piscada, "trilha": trilha}
 
 
-#: O PERFIL ATIVO NO DISCO — mesma razão das réguas irmãs: a pintura da 02 lê o
-#: perfil ativo, e sem arquivo o gesto recusaria por outro caminho.
 @pytest.fixture(scope="module", autouse=True)
 def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.profiles import loader
@@ -311,9 +254,6 @@ def medido() -> dict:
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
     from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 
-    #: AS FRASES DOS DONOS, lidas deles: a da ponte para o número fora, a do
-    #: pacote para o cadeado, a de prova para o ato do microfone, e a do motor
-    #: com os nomes da tela para a colisão da 06.
     try:
         remap.resolver(COLISAO_DA_06)
     except remap.RemapeamentoRecusadoError as exc:
@@ -326,21 +266,15 @@ def medido() -> dict:
     frases = {"04": _MOTIVOS_NUMERO["numero_fora_da_mesa"], "02": RECUSA_DO_MIC,
               "01": a01.CADEADO_RECUSA, "06": frase_da_06}
 
-    # OS DUBLÊS SÃO DEVOLVIDOS NO FIM: `mesa_viva`, `pacotes.ponte` e o registro
-    # `GESTOS` são módulos compartilhados do produto, e deixá-los sujos entrega
-    # uma mesa de mentira a todo vizinho que abrir um `Piloto` depois.
     chave_01 = (PAGINA_01, "cadeado")
     chave_02 = (PAGINA_02, "mudo")
     guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.identity_number_set,
                 hv.ponte.mic_canal_set_detalhado)
     guardado_gestos = {k: hv.pacotes.GESTOS.get(k) for k in (chave_01, chave_02)}
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: ESTADO  # type: ignore[assignment]
-    # O NÚMERO FORA RECUSA PELO GESTO REAL: a ponte devolve `(False, motivo)`,
     # que é o corpo que `identity_number_set` devolve quando o daemon recusa.
     hv.ponte.identity_number_set = (  # type: ignore[assignment]
         lambda uniq, n: (False, frases["04"]))
-    # O MICROFONE RECUSA PELO GESTO REAL: `status: "incompleto"` com motivo é o
-    # que o ato responde quando falha pela metade.
     hv.ponte.mic_canal_set_detalhado = lambda *a, **k: {  # type: ignore[assignment]
         "status": "incompleto", "canal_feito": False, "firmware_pedido": True,
         "motivo": RECUSA_DO_MIC}
@@ -438,7 +372,6 @@ def medido() -> dict:
         esperar(f"{caso}-recusa", LER_A_TRILHA % js(caso), _a_recusa_assentou,
                 assentou, f"o botão da {pagina} pousar e a piscada apagar")
 
-    # ---- 04: a dica do número fora, e a recusa com coluna ---------------
     def comecar() -> bool:
         if not piloto.tela.na_aba:
             return True
@@ -456,7 +389,6 @@ def medido() -> dict:
         clicar_e_esperar_a_recusa(
             "04", lambda: abrir(PAGINA_02, BOTOES["02"][2], recusa_da_02))
 
-    # ---- 02: a recusa com coluna, e o clique que só arma -----------------
     def recusa_da_02() -> None:
         clicar_e_esperar_a_recusa("02", o_clique_que_so_arma)
 
@@ -473,9 +405,6 @@ def medido() -> dict:
             pouso = _pousou(trilha)
             if pouso is None:
                 return None
-            # A PISCADA QUE NÃO DEVIA EXISTIR teria acendido no pouso e
-            # apagado MS_DA_PISCADA depois: a leitura espera o prazo inteiro
-            # passar, para ver as duas pontas de uma piscada que houvesse.
             if leitura["agora"] - pouso["t"] < hv.MS_DA_PISCADA + 300:
                 return None
             return {"pouso": pouso, "trilha": trilha}
@@ -489,12 +418,10 @@ def medido() -> dict:
                 pousou_e_passou_a_piscada, depois,
                 "o botão do clique que só arma pousar, e o prazo da piscada passar")
 
-    # ---- 01: a recusa sem coluna ------------------------------------------
     def recusa_da_01() -> None:
         clicar_e_esperar_a_recusa(
             "01", lambda: abrir(PAGINA_06, BOTOES["06"][2], recusa_da_06))
 
-    # ---- 06: a colisão da troca de botões, pelo gesto real ----------------
     def recusa_da_06() -> None:
         clicar_e_esperar_a_recusa("06", fim)
 
@@ -505,11 +432,6 @@ def medido() -> dict:
     GLib.timeout_add(300, comecar)
     guarda = GLib.timeout_add(int(TETO_DO_ROTEIRO_S * 1000), Gtk.main_quit)
     try:
-        # O LAÇO REENTRA ATÉ O ÚLTIMO PASSO: um `Gtk.main_quit` pendente de outro
-        # teste de GUI do mesmo processo cai dentro deste `Gtk.main()` e o
-        # encerra no meio (ver `test_o_recado_de_sucesso_pousa_no_cartao`). E o
-        # DIÁRIO É O `stderr` DO PROCESSO: o `print(..., file=sys.stderr)` do
-        # piloto resolve o nome na hora da chamada, então cai aqui.
         limite = _time.monotonic() + TETO_DO_ROTEIRO_S
         with contextlib.redirect_stderr(diario):
             while "diario" not in fora and _time.monotonic() < limite:
@@ -540,9 +462,6 @@ def _marco(medido: dict, marco: str) -> object:
     return medido[marco]
 
 
-# --------------------------------------------------------------------------
-# 0. os três botões recusaram — senão não há o que medir
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("caso", CASOS)
 def test_o_botao_recusou_dizendo(medido: dict, caso: str) -> None:
     assert medido.get(f"{caso}-clique") == "cliquei", medido.get(f"{caso}-clique")
@@ -553,17 +472,9 @@ def test_o_botao_recusou_dizendo(medido: dict, caso: str) -> None:
     assert medido["frases"][caso] in frase, (caso, desfecho)
 
 
-# --------------------------------------------------------------------------
-# 1. a recusa não pousa recado nem frase — com coluna e sem coluna
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("caso", CASOS)
 def test_a_recusa_nao_poe_frase_na_tela(medido: dict, caso: str) -> None:
-    """A caixa da foto dela, e as outras três portas por onde a frase chegava.
-
-    A leitura acontece DEPOIS de a piscada apagar — um segundo e meio de
-    repintura por cima do clique. O canal antigo mantinha a frase 30 s no
-    cartão, então ela estaria aqui.
-    """
+    """A caixa da foto dela, e as outras três portas por onde a frase chegava."""
     tela = _marco(medido, f"{caso}-tela")
     assert isinstance(tela, dict), tela
     assert tela["aba"] == BOTOES[caso][0], tela
@@ -577,9 +488,6 @@ def test_a_recusa_nao_poe_frase_na_tela(medido: dict, caso: str) -> None:
         f"{tela['title']} `title` — a dica flutuante é uma das formas que saem")
 
 
-# --------------------------------------------------------------------------
-# 2. o botão veste a recusa, e a perde sozinho
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("caso", CASOS)
 def test_o_botao_veste_a_recusa_e_a_perde_na_piscada(medido: dict, caso: str) -> None:
     import hefesto_vivo as hv
@@ -601,9 +509,6 @@ def test_o_botao_veste_a_recusa_e_a_perde_na_piscada(medido: dict, caso: str) ->
         f"{FOLGA_DA_PISCADA_MS} ms)")
 
 
-# --------------------------------------------------------------------------
-# 3. a frase vai ao diário da janela
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("caso", CASOS)
 def test_a_frase_da_recusa_vai_ao_diario(medido: dict, caso: str) -> None:
     pagina, gesto, _seletor = BOTOES[caso]
@@ -615,9 +520,6 @@ def test_a_frase_da_recusa_vai_ao_diario(medido: dict, caso: str) -> None:
         f"da tela, e não pode sumir inteira. Linhas: {linhas!r}")
 
 
-# --------------------------------------------------------------------------
-# 4. o número fora diz só o número
-# --------------------------------------------------------------------------
 def test_o_numero_fora_diz_so_o_numero(medido: dict) -> None:
     """O cinza `.fora` já diz que o número não cabe; a dica diz qual é."""
     dica = _marco(medido, "04-dica")
@@ -627,9 +529,6 @@ def test_o_numero_fora_diz_so_o_numero(medido: dict) -> None:
         f"chega à tela nem como dica flutuante")
 
 
-# --------------------------------------------------------------------------
-# 5. o clique que só arma não pisca
-# --------------------------------------------------------------------------
 def test_o_clique_que_so_arma_nao_pisca(medido: dict) -> None:
     """Verde sobre um clique que não aplicou nada afirma o que não aconteceu."""
     assert medido.get("02-armou-clique") == "cliquei", medido.get("02-armou-clique")
@@ -643,9 +542,6 @@ def test_o_clique_que_so_arma_nao_pisca(medido: dict) -> None:
         f"pouso não pode afirmar nem que aplicou nem que recusou")
 
 
-# --------------------------------------------------------------------------
-# 6. a aba 05 não declara lugar de recado
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
 def test_a_aba_05_nao_declara_lugar_de_recado(publicado: bool) -> None:
     """A faixa `#vib-estado` era o terceiro lugar do recado; o recado saiu da tela."""
@@ -659,9 +555,6 @@ def test_a_aba_05_nao_declara_lugar_de_recado(publicado: bool) -> None:
         "e um endereço que ninguém lê é dado morto")
 
 
-# --------------------------------------------------------------------------
-# 7. as duas metades sem janela — a folha e a recusa que não escreve
-# --------------------------------------------------------------------------
 def test_a_folha_veste_a_recusa_sem_esconder_nada() -> None:
     """A classe mora na folha da casa, com a cor de aviso e sem ocupar espaço."""
     from hefesto_dualsense4unix.interface.folha_da_casa import (
@@ -677,23 +570,6 @@ def test_a_folha_veste_a_recusa_sem_esconder_nada() -> None:
         f"a regra da recusa perdeu o `!important` — as páginas declaram "
         f"`border-color` e a folha de usuário perderia: {regra}")
 
-    # A TRAVA DE CRESCIMENTO DO QUE A FOLHA ESCONDE. O nome do teste é
-    # «sem esconder nada» e é sobre a `.hef-recusou`: a piscada usa `outline`
-    # justamente para NÃO ocupar espaço nem apagar linha. Esta lista existe
-    # para que uma regra de `display:none` nova não entre de carona na folha
-    # da casa — ela apagaria texto que a régua da palavra ainda conta.
-    #
-    # ERA SÓ `.nota`, E SÃO DUAS DESDE 19/09/2026. A `.hef-sem-item` nasceu na
-    # `120fcc4e6` ("a lista rola sem teto, e a tela para de inventar achado"):
-    # é a peça do MOLDE (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) que apaga
-    # o bloco que o gerador emitiu e o produto não preencheu. O comentário dela
-    # na `folha_da_casa.py:125` traz a medição que a justifica — com três
-    # achados no Check-up e cinco blocos no desenho, a página publicada
-    # mostrava `—` em duas linhas, *a tela inventando achado numa máquina sem
-    # a bancada dela*.
-    #
-    # Ela esconder É a cura, então entra na lista em vez de derrubá-la; o que
-    # a lista continua proibindo é a TERCEIRA entrar calada.
     assert seletores_escondidos(FOLHA_DA_CASA) == (".nota", ".hef-sem-item"), (
         "a folha da casa mudou o que APAGA da tela. Se a regra nova é cura, "
         "escreva a razão aqui e acrescente o seletor; se ela entrou de carona, "
@@ -752,15 +628,7 @@ class _PilotoDoCliqueSemDono:
 
 
 def test_o_clique_sem_dono_pisca_a_recusa(capsys) -> None:
-    """Ninguém atende o clique: o botão pousa com `False`, a piscada de recusa.
-
-    Visto no piloto oculto na validação desta sprint: o «Guardar» do
-    remapeamento da aba 06, declarado sem dono em `a06_navegacao`, pousou
-    `hef-recusou`; na base ele voltava do voo sem sinal nenhum.
-
-    MORDIDA: troque `self._pousou(voo, False)` por `self._pousou(voo)` no ramo
-    sem dono de `Piloto._gesto` — o pouso vira `None`, e esta régua reprova.
-    """
+    """Ninguém atende o clique: o botão pousa com `False`, a piscada de recusa."""
     pytest.importorskip("gi", reason="o piloto importa o GTK")
     import hefesto_vivo as hv
 
@@ -777,13 +645,7 @@ def test_o_clique_sem_dono_pisca_a_recusa(capsys) -> None:
 
 
 def test_a_casa_tomada_diz_de_quem_e_sem_a_regra() -> None:
-    """A dica do tom tomado da 04 é o nome do dono, e a regra colada saiu.
-
-    MORDIDA: devolva «… já está neste tom — duas peças nunca ficam da mesma
-    cor.» ao `titulo` de `a04_iluminacao.fileira_de_tons` e esta régua reprova;
-    troque o nome pela frase da casa livre e reprova também a régua do X, em
-    `test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor`.
-    """
+    """A dica do tom tomado da 04 é o nome do dono, e a regra colada saiu."""
     from hefesto_dualsense4unix.core.led_control import player_slot_color
     from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 

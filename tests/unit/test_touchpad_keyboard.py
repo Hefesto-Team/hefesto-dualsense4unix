@@ -1,9 +1,4 @@
-"""Testa integração TouchpadReader ↔ dispatch_keyboard.
-
-`dispatch_keyboard` mescla `regions_pressed()` ao frozenset de botões antes
-de passar ao UinputKeyboardDevice, permitindo que as 3 regiões (left/middle/
-right) emitam KEY_BACKSPACE/ENTER/DELETE via bindings default.
-"""
+"""Testa integração TouchpadReader ↔ dispatch_keyboard."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -69,7 +64,6 @@ def test_dispatch_reader_excecao_continua_com_buttons() -> None:
 
     daemon = _FakeDaemon(_keyboard_device=device, _touchpad_reader=_BadReader())
 
-    # Não deve levantar. device recebe só buttons_pressed (regions zeradas).
     dispatch_keyboard(daemon, frozenset({"options"}))
 
     assert device.received == [frozenset({"options"})]
@@ -77,5 +71,4 @@ def test_dispatch_reader_excecao_continua_com_buttons() -> None:
 
 def test_dispatch_sem_device_noop() -> None:
     daemon = _FakeDaemon(_keyboard_device=None, _touchpad_reader=_FakeReader())
-    # Não deve levantar.
     dispatch_keyboard(daemon, frozenset({"r1"}))

@@ -47,14 +47,7 @@ UM = "aa:bb:cc:00:00:01"
 
 
 def _moldura_do_microfone(fonte: str) -> str:
-    """O pedaço do gerador que desenha a moldura do microfone, e só ele.
-
-    A ÂNCORA É A TAG, E NÃO O ATRIBUTO SOZINHO: `data-bloco="microfone"`
-    aparece ANTES no CSS (as regras do `data-apagado`), e fatiar por ele
-    devolvia a folha de estilo — uma régua que mede o pedaço errado dá verde
-    ou vermelho sobre outra coisa, que é a família de instrumento falso que
-    esta casa mais paga.
-    """
+    """O pedaço do gerador que desenha a moldura do microfone, e só ele."""
     inicio = fonte.index('class="moldura" data-bloco="microfone"')
     return fonte[inicio: fonte.index('data-bloco="alto-falante"', inicio)]
 
@@ -63,13 +56,7 @@ class TestODaemonLembraQuemOuve:
     """O laço da luz guarda a lista que ele JÁ perguntou."""
 
     def test_lembra_a_sala_vazia_e_esquece_quem_sai(self) -> None:
-        """MORDIDA: guarde `None` no lugar da lista vazia.
-
-        `[]` e `None` são respostas DIFERENTES, e a tela as escreve diferente:
-        a vazia vira *"ninguém está te ouvindo ainda"*, a ausência não vira
-        frase nenhuma. Colapsá-las devolveria o defeito de 19/09 à tela, no
-        mesmo dia em que ele saiu da luz.
-        """
+        """MORDIDA: guarde `None` no lugar da lista vazia."""
         from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as luz
 
         luz._lembrar_quem_ouve(UM, [])
@@ -80,13 +67,7 @@ class TestODaemonLembraQuemOuve:
         assert luz.quem_ouve_este_mic(UM) is None
 
     def test_quem_nunca_foi_perguntado_e_nao_sei(self) -> None:
-        """MORDIDA: devolva `[]` para quem não está no dicionário.
-
-        `[]` é uma AFIRMAÇÃO — *"medi, e ninguém te ouve"*. Para um controle
-        que acabou de chegar isso põe a frase na tela sem ninguém ter
-        perguntado ao servidor de som, que é a família de defeito que esta
-        casa persegue por escrito: a ausência de dado virando afirmação.
-        """
+        """MORDIDA: devolva `[]` para quem não está no dicionário."""
         from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as luz
 
         assert luz.quem_ouve_este_mic("ff:ff:ff:00:00:ff") is None
@@ -97,17 +78,10 @@ class TestOIpcPublica:
     """O que o laço sabe chega à tela pelo `state_full`."""
 
     def test_a_chave_sai_do_mesmo_lugar_que_a_luz(self) -> None:
-        """MORDIDA: pergunte à PEÇA A de novo, aqui.
-
-        Perguntar do lado do IPC seriam dois `pactl` por tique de TELA, dentro
-        do laço que serve o IPC e reafirma o report de saída — e duas respostas
-        que divergem no primeiro segundo em que uma delas chega atrasada. O
-        laço da luz já perguntou a 1 Hz; publicar é ler um `dict`.
-        """
+        """MORDIDA: pergunte à PEÇA A de novo, aqui."""
         fonte = IPC.read_text(encoding="utf-8")
         assert "quem_ouve_este_mic" in fonte
         assert 'status["ouvintes_do_mic"]' in fonte
-        # E a leitura é a do MÓDULO da luz, não uma chamada nova à PEÇA A.
         assert "quem_ouve_agora" not in fonte
 
 
@@ -115,28 +89,7 @@ class TestAPalavraTemUmDono:
     """Uma cópia só das palavras, e ela cabe numa linha."""
 
     def test_a_sala_vazia_vira_a_frase_que_faltava(self) -> None:
-        """**A FRASE SAIU EM 21/09/2026, E ESTA RÉGUA VIROU DE LADO.**
-
-        Ela nasceu em 19/09 com uma razão medida: o microfone LIGADO com
-        nenhum app gravando apagava a luz do controle, e ela desligou o
-        próprio microfone achando que o ligava. A luz passou a acender no
-        mesmo dia, e com ela a premissa caiu — o selo «ATIVO» do cartão já diz
-        o que a frase dizia.
-
-        A ordem é dela, olhando a tela instalada:
-
-            "essa frase não faz sentido
-             tambem.  <!-- noqa-acento: a digitação dela não se limpa -->
-             pq sinceramente se o mic tá ativo tá subentendido que ele tá
-             funcionando sempre. pode remover ela."
-
-        **A DECISÃO DE 19/09 NÃO FOI APAGADA — ela CADUCOU**, e a nota datada
-        está na constante. O que esta régua guarda agora é que o estado normal
-        (ninguém gravando) **não gasta uma linha do cartão**, que é o contrato
-        da D-02 dela: *"linha fixa só quando HÁ ressalva"*.
-
-        MORDIDA: devolva a frase ao ramo da lista vazia.
-        """
+        """**A FRASE SAIU EM 21/09/2026, E ESTA RÉGUA VIROU DE LADO.**"""
         import mesa_viva
 
         assert mesa_viva.frase_de_quem_te_ouve([]) == ""
@@ -145,24 +98,14 @@ class TestAPalavraTemUmDono:
             "para dizer o que o selo «ATIVO» já diz")
 
     def test_a_ausencia_nao_vira_frase(self) -> None:
-        """MORDIDA: trate `None` como lista vazia.
-
-        *"Não perguntei"* não é *"ninguém ouve"*. `""` faz a `.ressalva` sumir
-        sem cobrar um pixel (D-02 dela, *"linha fixa só quando HÁ ressalva"*),
-        que é o comportamento honesto de quem não sabe.
-        """
+        """MORDIDA: trate `None` como lista vazia."""
         import mesa_viva
 
         for cru in (None, "", 0, False, {}, "Discord"):
             assert mesa_viva.frase_de_quem_te_ouve(cru) == "", cru
 
     def test_os_nomes_aparecem(self) -> None:
-        """MORDIDA: devolva sempre a contagem, sem nomear ninguém.
-
-        A decisão dela é *"QUEM está ouvindo"*, e um *"1 programa está te
-        ouvindo"* sobre um Discord aberto responde outra pergunta — a de
-        quantos, que ninguém fez.
-        """
+        """MORDIDA: devolva sempre a contagem, sem nomear ninguém."""
         import mesa_viva
 
         assert mesa_viva.frase_de_quem_te_ouve(["Discord"]) == (
@@ -173,18 +116,7 @@ class TestAPalavraTemUmDono:
             "Chrome está te ouvindo.")
 
     def test_nenhuma_frase_dobra_a_linha(self) -> None:
-        """MORDIDA: tire o recuo para a contagem e deixe os nomes crescerem.
-
-        MEDIDO no Chrome headless sobre `mockup/02-controles.html`, na janela
-        do produto (1180px), em 19/09/2026: a coluna do som tem 281px, uma
-        linha da `.ressalva` custa 17,3px e o card vai de 329,6 a 351,9 com a
-        linha escrita, **sem o quadro rolar**. A SEGUNDA linha é que não cabe:
-        a coluna do som é uma das duas que mandam na altura, e um bloco que
-        dobra já tirou o P4 da tela dela em 30/08.
-
-        Esta régua varre os arranjos que a mesa de quatro produz — inclusive
-        nomes longos de verdade, como os que o `pactl` devolve.
-        """
+        """MORDIDA: tire o recuo para a contagem e deixe os nomes crescerem."""
         import mesa_viva
 
         nomes = ["Discord", "OBS Studio", "Google Chrome input",
@@ -201,12 +133,7 @@ class TestAPalavraTemUmDono:
             )
 
     def test_acima_do_limite_a_contagem_continua_verdadeira(self) -> None:
-        """MORDIDA: devolva a frase vazia quando os nomes não couberem.
-
-        Recuar para *"não sei"* sobre um fato que o daemon MEDIU seria perder
-        dado por causa de largura — e justamente no arranjo mais importante,
-        o de muita gente ouvindo. A contagem cabe sempre e não mente.
-        """
+        """MORDIDA: devolva a frase vazia quando os nomes não couberem."""
         import mesa_viva
 
         muitos = [f"aplicativo-numero-{n}" for n in range(7)]
@@ -218,19 +145,7 @@ class TestAPalavraTemUmDono:
 
 
 class TestOPacoteEmite:
-    """A aba lê do daemon, e não do seu próprio palpite.
-
-    **A BANCADA ANDOU NA FRENTE, e por isso o campo é CONDICIONAL.** O
-    endereço `mic-ressalva` existe em `mockup/02-controles.html` e a página
-    publicada ainda não o tem — a aba 02 só recebe pelo `--publicar 02`, que é
-    ato dela. Até lá o pacote **não** emite a chave, senão ela entra em
-    `casamento.medir(...)["orfaos"]` e conta em `cobertura.pintados` uma
-    pintura que não acontece.
-
-    Estes testes FINGEM a publicação (é o que `com_a_pagina_publicada` faz no
-    `test_a_aba_controles_reusa_o_motor.py`), e o teste logo abaixo guarda o
-    outro lado: sem publicar, a chave não sai.
-    """
+    """A aba lê do daemon, e não do seu próprio palpite."""
 
     def _campos(self, audio: dict[str, Any], *,
                 publicada: bool = True) -> dict[str, Any]:
@@ -256,19 +171,7 @@ class TestOPacoteEmite:
         return {}
 
     def test_enquanto_ela_nao_publicar_a_chave_nao_sai(self) -> None:
-        """MORDIDA: emita `mic-ressalva` fora do `_so_se_a_pagina_tiver`.
-
-        A bancada é DELA. Emitir para um endereço que a página publicada não
-        tem põe a chave nos órfãos do casamento e faz o pacote contar uma
-        pintura que não acontece — e quem reprova é o
-        `test_o_pacote_so_emite_endereco_que_a_pagina_tem`, medido nesta
-        árvore em 19/09/2026 com a frase *"o pacote emitiu ['mic-ressalva'] e
-        a página publicada não tem onde pô-los"*.
-
-        NO DIA EM QUE ELA PUBLICAR, este teste morre sozinho junto com a
-        condição — e é o desfecho certo: a régua some quando o motivo dela
-        some.
-        """
+        """MORDIDA: emita `mic-ressalva` fora do `_so_se_a_pagina_tiver`."""
         import pacotes.a02_controles as a02
 
         if "mic-ressalva" in a02._enderecos_da_pagina():  # pragma: no cover
@@ -282,23 +185,8 @@ class TestOPacoteEmite:
         assert "mic-ressalva" not in campos
 
     def test_o_campo_sai_com_a_frase_do_dono(self) -> None:
-        """MORDIDA: monte a frase aqui, em vez de chamar o dono.
-
-        Uma segunda cópia das palavras diverge da primeira no dia em que uma
-        delas for corrigida — e foi exatamente assim que o «Sem toque» desta
-        aba já mentiu.
-        """
+        """MORDIDA: monte a frase aqui, em vez de chamar o dono."""
         base = {"mic_mudo": False, "canal_ativo": True}
-        # O VAZIO NÃO TEM MAIS FRASE — ordem dela de 21/09. O que continua
-        # tendo dono é o que HÁ a dizer: o nome de quem está gravando.
-        # O CAMPO SAI COM O MARCADOR DE VAZIO, e não com string crua: é o
-        # `NADA_A_DIZER` que a peça das dez usa para o alvo `html` — a tela não
-        # mostra texto nenhum, e o pintor não precisa de um segundo caminho
-        # para "apagar". Ler a constante em vez de digitar a tag é a regra
-        # desta casa: uma régua que digita o que devia LER mede a si mesma.
-        # O import é LOCAL porque este arquivo põe a pasta da interface no
-        # `sys.path` depois dos imports do topo — um `from ... import` lá em
-        # cima roda antes e quebra a coleta inteira.
         from monta import NADA_A_DIZER
 
         vazia = self._campos({**base, "ouvintes_do_mic": []})
@@ -307,13 +195,7 @@ class TestOPacoteEmite:
         assert com_um["mic-ressalva"] == "Discord está te ouvindo."
 
     def test_sem_leitura_a_linha_some(self) -> None:
-        """MORDIDA: omita a chave quando o daemon não publicou a lista.
-
-        A chave tem de ir em TODO tique: sem ela a frase velha fica pendurada
-        na tela para sempre — a tela diria *"Discord está te ouvindo"* com o
-        Discord fechado, que é o defeito oposto e pior. `monta.NADA_A_DIZER`
-        é o que faz a `.ressalva` sumir sem cobrar um pixel.
-        """
+        """MORDIDA: omita a chave quando o daemon não publicou a lista."""
         import monta
 
         campos = self._campos({"mic_mudo": False, "canal_ativo": True})
@@ -328,15 +210,7 @@ class TestOGeradorTemOEndereco:
         return ABA02.read_text(encoding="utf-8")
 
     def test_a_linha_existe_e_mora_no_bloco_do_microfone(self) -> None:
-        """MORDIDA: tire o `monta_ressalva("mic-ressalva")` do gerador.
-
-        O campo continuaria saindo a cada tique, e o pacote continuaria
-        verde — escrevendo num endereço que a página não tem. É o defeito
-        que esta casa já mediu como *"verde sobre dois botões mortos"*.
-
-        E o LUGAR é requisito: a frase responde sobre o MICROFONE, e no bloco
-        do alto-falante ela responderia sobre a coisa errada.
-        """
+        """MORDIDA: tire o `monta_ressalva("mic-ressalva")` do gerador."""
         fonte = self._fonte()
         assert 'monta_ressalva("mic-ressalva")' in fonte
         bloco = _moldura_do_microfone(fonte)
@@ -344,13 +218,7 @@ class TestOGeradorTemOEndereco:
             "a linha de quem ouve saiu da moldura do microfone")
 
     def test_a_pagina_da_bancada_carrega_o_endereco(self) -> None:
-        """MORDIDA: gere a página sem rodar `aba02.py` de novo.
-
-        O gerador e a página são dois arquivos, e é entre eles que esta casa
-        já perdeu cura: mudar o gerador sem regerar deixa a bancada com o
-        desenho de ontem, e o `check_o_desenho_aprovado.py` compara a bancada
-        com o PUBLICADO — não com o gerador.
-        """
+        """MORDIDA: gere a página sem rodar `aba02.py` de novo."""
         pagina = RAIZ / "mockup" / "02-controles.html"
         if not pagina.exists():  # pragma: no cover - árvore sem a bancada
             import pytest
@@ -361,13 +229,7 @@ class TestOGeradorTemOEndereco:
         assert 'class="ressalva" data-campo="mic-ressalva"' in html
 
     def test_a_dica_diz_o_que_a_luz_acesa_quer_dizer(self) -> None:
-        """MORDIDA: tire da dica a frase que separa acesa de ouvida.
-
-        A luz acesa passou a querer dizer *"ligado"*, e não *"alguém te
-        ouve"* — a inversão é a decisão dela, e uma dica que continue
-        prometendo a leitura antiga ensina errado quem pega o controle pela
-        primeira vez, que é justamente para quem ela escreveu esta dica.
-        """
+        """MORDIDA: tire da dica a frase que separa acesa de ouvida."""
         fonte = self._fonte()
         bloco = _moldura_do_microfone(fonte)
         assert "não que alguém esteja ouvindo" in bloco

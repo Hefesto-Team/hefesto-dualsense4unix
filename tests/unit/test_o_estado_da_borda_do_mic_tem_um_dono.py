@@ -43,10 +43,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MU
 
 
 def _handle_cru() -> Any:
-    """O dublê mais POBRE possível: nada além do que `__new__` dá.
-
-    De propósito. Se o produto aguenta este, aguenta os dezesseis.
-    """
+    """O dublê mais POBRE possível: nada além do que `__new__` dá."""
     return _PinnedPyDualSense.__new__(_PinnedPyDualSense)
 
 
@@ -70,12 +67,7 @@ def test_o_mudo_do_daemon_atravessa_um_handle_sem_init() -> None:
 
 
 def test_zerar_e_idempotente_e_nao_apaga_o_status_lido() -> None:
-    """Chamar o dono duas vezes não inventa nem apaga estado.
-
-    `_audio_status` fica de fora de propósito: ele é o último byte LIDO do
-    aparelho, e zerá-lo transformaria *"ainda não vi report íntegro"* em *"vi,
-    e estava limpo"* — que é a diferença entre não saber e afirmar errado.
-    """
+    """Chamar o dono duas vezes não inventa nem apaga estado."""
     h = _handle_cru()
     h._audio_status = STATUS_MIC_MUDO
     h.zerar_estado_da_borda_do_mic()
@@ -89,12 +81,7 @@ def test_zerar_e_idempotente_e_nao_apaga_o_status_lido() -> None:
 
 
 def test_a_garantia_nao_pisa_no_estado_de_quem_ja_tem() -> None:
-    """Idempotência de verdade: quem já contou bordas não volta a zero.
-
-    Se `_garantir_…` zerasse a cada report, o contador nunca passaria de zero
-    e a eleição do microfone morria em silêncio — um defeito muito pior que o
-    `AttributeError` que ele cura.
-    """
+    """Idempotência de verdade: quem já contou bordas não volta a zero."""
     h = _handle_cru()
     h._registrar_borda_do_mic(0x00, False)
     h._mic_mudo_seq = 7
@@ -112,12 +99,7 @@ def test_a_garantia_nao_pisa_no_estado_de_quem_ja_tem() -> None:
      "_mic_mudo_em", "_mic_posse_solta_pela_mao"],
 )
 def test_todo_campo_do_estado_nasce_no_dono_unico(campo: str) -> None:
-    """A lista COMPLETA vive num lugar só — e é esta régua que impede a volta.
-
-    Acrescentar um campo ao estado da borda fora de
-    `zerar_estado_da_borda_do_mic` faz este teste reprovar no dia em que o
-    campo for acrescentado, e não semanas depois, num dublê distante.
-    """
+    """A lista COMPLETA vive num lugar só — e é esta régua que impede a volta."""
     h = _handle_cru()
     h.zerar_estado_da_borda_do_mic()
     assert campo in h.__dict__, (

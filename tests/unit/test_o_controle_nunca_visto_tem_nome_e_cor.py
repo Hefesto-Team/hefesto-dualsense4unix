@@ -59,20 +59,15 @@ from hefesto_dualsense4unix.interface import pacotes
 
 MAPA_DAS_CORES = RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 
-#: Os sete que a tabela digitada de 21 não tinha — medidos saindo «Não sei».
 OS_SETE = ("13", "14", "15", "ZC", "ZD", "ZE", "ZF")
 
-#: A semente do feature que SAI pelo rádio, escrita aqui de propósito (ver o
-#: cabeçalho): é o número que o aparelho aceitou em 27/08 e 02/09/2026.
 _SEMENTE_DO_APARELHO = 0x53
 
 _BUS = {"usb": "0003", "bt": "0005"}
 _PID = {"ds": "0CE6", "edge": "0DF2"}
 
-#: A palavra que não pode ser o nome de um controle que funciona.
 NAO_SEI = mesa_viva.COR_DESCONHECIDA
 
-#: O leitor de verdade, guardado antes de qualquer `monkeypatch` do daemon.
 _LER_DE_VERDADE = cp.ler_identidade_pelo_cabo
 
 
@@ -90,16 +85,8 @@ def _do_mapa(codigo: str) -> tuple[str, str]:
     raise AssertionError(f"o mapa não tem o código {codigo}")
 
 
-# ---------------------------------------------------------------------------
-# O aparelho de mentira — um sysfs e um firmware tão estritos quanto os reais
-# ---------------------------------------------------------------------------
 class Aparelhos:
-    """Um ``/sys/class/hidraw`` e os controles atrás dele.
-
-    ``controles`` é ``[(uniq, transporte, modelo, código)]``. O nó do NOSSO vpad
-    entra sempre, no fim, com a identidade do Edge no cabo: é ele que o leitor
-    não pode confundir com o Edge físico. ``bytes_enviados`` conta o que saiu.
-    """
+    """Um ``/sys/class/hidraw`` e os controles atrás dele."""
 
     def __init__(self, controles: list[tuple[str, str, str, str]]) -> None:
         self.controles = controles
@@ -114,8 +101,6 @@ class Aparelhos:
                 "HID_UNIQ": uniq,
                 "HID_PHYS": uniq if transporte == "bt" else "usb-0000:00:14.0-3/input3",
             }
-            # A TOPOLOGIA REAL: pelo rádio, BlueZ >= 5.73 põe o controle sob o
-            # uhid (bus 0005); pelo cabo, o pai é USB de verdade.
             self.pais[no] = (
                 f"/sys/devices/virtual/misc/uhid/0005:054C:{_PID[modelo]}.00{i}"
                 if transporte == "bt"
@@ -139,7 +124,7 @@ class Aparelhos:
         return self.pais[pathlib.Path(caminho).parts[-2]]
 
     def perguntar(self, caminho: str, pedido: bytes) -> bytes | None:
-        cp.conferir_pedido(pedido)  # a MESMA trava que o real roda antes da porta
+        cp.conferir_pedido(pedido)
         self.bytes_enviados.append((caminho, pedido))
         transporte, codigo = self.por_caminho[caminho]
         corte = len(pedido) - cp.TAMANHO_DO_CRC
@@ -147,9 +132,9 @@ class Aparelhos:
         if transporte == "bt":
             crc = zlib.crc32(bytes([_SEMENTE_DO_APARELHO]) + pedido[:corte]) & 0xFFFFFFFF
             if not assinado or pedido[corte:] != crc.to_bytes(4, "little"):
-                return None  # errno 5: o firmware recusa o feature sem a assinatura
+                return None
         elif assinado:
-            return None  # o cabo nunca recebeu envelope; a régua não afirma que aceita
+            return None
         serial = f"AB1C{codigo}Q0000000000"  # serial-de-mentira: prefixo forjado
         resposta = bytearray(cp.TAMANHO_DO_FEATURE)
         resposta[0:4] = bytes([cp.FEATURE_RESPOSTA, 1, 19, 2])
@@ -186,9 +171,6 @@ def _mesa(aparelhos: Aparelhos) -> list[dict[str, Any]]:
     return mesa_viva.mesa_do_estado(estado, leitor.conhecidos())
 
 
-#: OS CASOS — ``(rótulo, modelo, código, nome esperado, id esperado)``. O nome e
-#: o id esperados dos códigos do mapa saem do CSV lido aqui; o do código
-#: inventado é o do MODELO.
 def _casos() -> list[tuple[str, str, str, str, str]]:
     casos = []
     for codigo in OS_SETE:
@@ -201,7 +183,6 @@ def _casos() -> list[tuple[str, str, str, str, str]]:
     return casos
 
 
-#: Os VIZINHOS de mesa, conhecidos: o caso sob teste senta entre eles.
 _VIZINHOS = [("ds", "02"), ("ds", "05"), ("ds", "04")]
 
 
@@ -214,14 +195,11 @@ def _mesa_com(caso_modelo: str, caso_codigo: str, transporte: str, posicao: int)
             controles.append((uniq, transporte, caso_modelo, caso_codigo))
         else:
             modelo, codigo = next(vizinhos)
-            outro = "bt" if transporte == "usb" else "usb"  # mesa MISTA
+            outro = "bt" if transporte == "usb" else "usb"
             controles.append((uniq, outro, modelo, codigo))
     return Aparelhos(controles)
 
 
-# ---------------------------------------------------------------------------
-# 1 · A MATRIZ — cada caso, nos dois transportes, em cada assento
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("posicao", [1, 2, 3, 4], ids=lambda p: f"P{p}")
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize(
@@ -240,18 +218,13 @@ def test_o_cartao_diz_um_nome_e_uma_cor(
     assert item["nome"] != NAO_SEI
     assert item["cor"] == ident, (
         f"{rotulo}: o desenho recebeu {item['cor']!r}, e o mapa dela diz {ident!r}")
-    # E a identidade que a fita escreve é a MESMA do cartão — um nome só.
     entrada = next(c for c in _estado(aparelhos.controles)["controllers"]
                    if c["uniq"] == item["uniq"])
     assert pacotes.identidade_de(entrada, mesa) == nome
-    # O VPAD, com a identidade do Edge no cabo, não recebeu byte nenhum.
     vpad = f"/dev/hidraw{len(aparelhos.controles)}"
     assert all(caminho != vpad for caminho, _ in aparelhos.bytes_enviados)
 
 
-# ---------------------------------------------------------------------------
-# 2 · NENHUM CAMINHO CAI — as dez páginas, com a mesa inteira de estranhos
-# ---------------------------------------------------------------------------
 _MESA_DE_ESTRANHOS = {
     "usb-primeiro": [("aa:bb:cc:00:00:01", "usb", "ds", "ZC"),
                      ("aa:bb:cc:00:00:02", "bt", "ds", "13"),
@@ -299,16 +272,11 @@ def test_nenhuma_pagina_cai_nem_escreve_nao_sei(arranjo: str) -> None:
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_quem_ainda_nao_foi_lido_ja_tem_nome(transporte: str) -> None:
-    """O nó que ainda não nasceu, e a leitura desligada: nome da família.
-
-    É o primeiro segundo de todo controle que chega — o daemon já o publica e o
-    ``hidraw`` ainda não existe —, e é o estado de quem roda com ``--sem-cor``.
-    Nos dois não há modelo lido, e mesmo assim o cartão não diz «Não sei».
-    """
+    """O nó que ainda não nasceu, e a leitura desligada: nome da família."""
     controles = [("aa:bb:cc:00:00:01", transporte, "ds", "02"),
                  ("aa:bb:cc:00:00:02", transporte, "edge", "00")]
     sem_no = Aparelhos(controles)
-    sem_no.nos = {}  # nenhum hidraw ainda
+    sem_no.nos = {}
     assert [m["nome"] for m in _mesa(sem_no)] == ["DualSense", "DualSense"]
 
     estado = _estado(controles)
@@ -319,9 +287,6 @@ def test_quem_ainda_nao_foi_lido_ja_tem_nome(transporte: str) -> None:
     assert [(m["nome"], m["cor"]) for m in mesa] == [("DualSense", "")] * 2
 
 
-# ---------------------------------------------------------------------------
-# 3 · UM DONO SÓ DA TRADUÇÃO — o mapa dos 28
-# ---------------------------------------------------------------------------
 def test_o_produto_conhece_todo_codigo_do_mapa() -> None:
     do_mapa = {linha["codigo_da_cor"].strip().upper() for linha in _linhas_do_mapa()}
     assert len(do_mapa) == 28
@@ -353,9 +318,7 @@ def test_sem_o_mapa_nada_cai_e_o_nome_e_o_do_modelo(
     assert [m["nome"] for m in mesa] == ["DualSense", "DualSense Edge"]
 
 
-# ---------------------------------------------------------------------------
 # 4 · O EDGE — perguntado como o DualSense, sem confundir com o vpad
-# ---------------------------------------------------------------------------
 def test_os_modelos_sao_os_pids_que_o_daemon_adota() -> None:
     from hefesto_dualsense4unix.broker.hidraw_broker import PHYS_PRODUCTS
     from hefesto_dualsense4unix.core.evdev_reader import DUALSENSE_PIDS
@@ -373,12 +336,7 @@ def test_o_edge_no_cabo_e_perguntado_e_o_vpad_nao() -> None:
 
 
 def test_o_vpad_com_endereco_de_controle_cai_pela_topologia() -> None:
-    """D1 do broker: USB sob o ``uhid`` é forjado, qualquer que seja o ``uniq``.
-
-    Sem a regra inteira do broker, um nó ``0003:054C:0DF2`` sob
-    ``/misc/uhid/`` com ``uniq`` e ``phys`` de aparelho passaria pelas marcas
-    (D2) e receberia o comando de fábrica — o vpad é o único que nasce ali.
-    """
+    """D1 do broker: USB sob o ``uhid`` é forjado, qualquer que seja o ``uniq``."""
     aparelhos = Aparelhos([("aa:bb:cc:00:00:01", "usb", "edge", "00")])
     aparelhos.pais["hidraw0"] = "/sys/devices/virtual/misc/uhid/0003:054C:0DF2.0042"
     achado = aparelhos.identidade("aa:bb:cc:00:00:01")
@@ -395,9 +353,6 @@ def test_o_edge_que_nao_responde_continua_se_chamando_edge() -> None:
     assert _mesa(aparelhos)[0]["nome"] == "DualSense Edge"
 
 
-# ---------------------------------------------------------------------------
-# 5 · O DAEMON publica o nome do mapa, com a grafia do mapa
-# ---------------------------------------------------------------------------
 class _FioNaHora:
     def __init__(self, *, target: Any, args: tuple[Any, ...] = (), **_k: Any) -> None:
         self._alvo, self._args = target, args
@@ -433,13 +388,9 @@ def test_o_daemon_publica_o_modelo_do_mapa(
     handler._identidade_de_fabrica("aa:bb:cc:00:00:01", entrada)
     publicado = handler._identidade_de_fabrica("aa:bb:cc:00:00:01", entrada)
     assert publicado["modelo"] == _do_mapa(de_fabrica)[1]
-    # E a mesa diz a MESMA grafia — ``Marvel's Spider-Man 2``, não ``Spider-Man 2``.
     assert _mesa(aparelhos)[0]["nome"] == publicado["modelo"]
 
 
-# ---------------------------------------------------------------------------
-# 6 · O EDGE NO JOGO — o dedup é pela topologia, e o 0DF2 nunca entra no VID/PID
-# ---------------------------------------------------------------------------
 def test_o_0df2_nunca_entra_na_lista_do_jogo() -> None:
     """O vpad é ``054C:0DF2`` em toda máscara DualSense, e a máscara troca DENTRO
     do jogo (PS + L3): um ``0x054c/0x0df2`` no IGNORE esconderia o vpad que
@@ -460,13 +411,7 @@ def test_o_0df2_nunca_entra_na_lista_do_jogo() -> None:
 
 
 def test_o_edge_fisico_nasce_escondido_do_jogo_pela_topologia() -> None:
-    """Quem tira o Edge físico do jogo é o nó fechado, e a regra separa o vpad.
-
-    As linhas são as do ``assets/``: o Edge pelo cabo (pai USB real) e pelo
-    rádio nascem ``0600 root`` sem ``uaccess``, no hidraw e nos nós de entrada;
-    o vpad, que é o MESMO ``0003:054C:0DF2`` sob ``/devices/virtual/``, nasce
-    aberto para a sessão.
-    """
+    """Quem tira o Edge físico do jogo é o nó fechado, e a regra separa o vpad."""
     hidraw = (RAIZ / "assets/73-hefesto-ps5-controller.rules").read_text(encoding="utf-8")
     entrada = (RAIZ / "assets/72-hefesto-touchpad-motion-uaccess.rules").read_text(
         encoding="utf-8")
@@ -483,32 +428,11 @@ def test_o_edge_fisico_nasce_escondido_do_jogo_pela_topologia() -> None:
                and 'TAG-="uaccess"' in ln for ln in linhas)
 
 
-# ---------------------------------------------------------------------------
-# 7 · O RESTO NÃO DEPENDE DO MODELO — medido, e o que dependia foi curado
-# ---------------------------------------------------------------------------
 def test_nenhuma_funcao_do_controle_depende_da_cor() -> None:
-    """Número, barra, microfone, som, vibração e giroscópio não leem a cor.
-
-    Medido em 25/09/2026: fora da tela, quem importa ``cor_do_plastico`` é só o
-    daemon que PUBLICA a identidade (``daemon/ipc_handlers.py``). Um controle
-    de código desconhecido joga igual a um conhecido porque nada que faz o
-    controle funcionar pergunta a edição. A régua reprova quem passar a
-    perguntar — o dia em que uma função depender do mapa das cores, o controle
-    que ele não conhece para de funcionar.
-
-    A BARRA PASSOU A PERGUNTAR O PLÁSTICO, POR DECISÃO — 29/09/2026,
-    D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01):
-    a cor automática vem da casca, e o registro de identidade
-    (``daemon/subsystems/identity.py``) pergunta o plástico sem a janela. O
-    controle que o mapa não conhece segue funcionando igual: sem tom, a barra
-    acende a cor do número (``led_control.cor_automatica``), e a régua 6 de
-    ``test_a_luz_do_controle_nunca_sai_preta.py`` cobra essa queda.
-    """
+    """Número, barra, microfone, som, vibração e giroscópio não leem a cor."""
     raiz = RAIZ / "src" / "hefesto_dualsense4unix"
 
     def importa_a_cor(arq: pathlib.Path) -> bool:
-        # PELO IMPORT, e não pela palavra: um comentário que cita o módulo não
-        # é dependência, e uma régua que lesse texto reprovaria o aviso.
         for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
             if isinstance(no, ast.ImportFrom) and (
                 (no.module or "").endswith("cor_do_plastico")
@@ -560,17 +484,8 @@ def test_o_reconectar_chama_de_volta_o_edge_pelo_radio() -> None:
     assert achados == ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"], achados
 
 
-# ---------------------------------------------------------------------------
-# 8 · O QUE A CONFERÊNCIA ACHOU SEM RÉGUA (25/09/2026)
-# ---------------------------------------------------------------------------
 def _pergunta_que_falha(forma: str) -> Any:
-    """O firmware de mentira nas quatro FALHAS que o leitor distingue.
-
-    A trava roda antes de tudo, como no real. ``trava`` é a própria trava
-    recusando (o ``PedidoRecusadoError`` que o ``_perguntar_ao_hidraw`` deixa
-    subir); ``levanta`` é o ``ioctl`` estourando; ``sem-eco`` é a resposta que
-    não traz ``[1, 19, 2]``; ``calado`` é a porta que não abriu.
-    """
+    """O firmware de mentira nas quatro FALHAS que o leitor distingue."""
 
     def perguntar(_caminho: str, pedido: bytes) -> bytes | None:
         cp.conferir_pedido(pedido)
@@ -617,26 +532,14 @@ def test_o_edge_se_chama_edge_em_toda_forma_de_falha(forma: str, transporte: str
 def test_a_declaracao_gravada_com_a_grafia_de_antes_acha_a_cor(
     gravado: str, de_fabrica: str
 ) -> None:
-    """``ControleDeclarado.cor`` é texto livre, gravado no ``maquina.json`` dela.
-
-    Até 25/09/2026 a busca oferecia a grafia da tabela digitada (sem o trema,
-    sem o ``Marvel's``, «Limited» em vez de «Special»), e quem escolheu naquela
-    época tem esse texto no disco. Ler o mapa não pode tirar a borda dele.
-    """
+    """``ControleDeclarado.cor`` é texto livre, gravado no ``maquina.json`` dela."""
     achada = cp.cor_do_nome(gravado)
     assert achada is not None and achada.codigo == de_fabrica, (gravado, achada)
     assert achada.nome == _do_mapa(de_fabrica)[1]
 
 
 def test_a_topologia_sai_do_sysfs_de_verdade(tmp_path: pathlib.Path) -> None:
-    """Sem nada injetado além da raiz, é o ``realpath`` do pai HID que separa o vpad.
-
-    A régua de cima injeta o ``resolver``; o produto não injeta nada. Aqui a
-    árvore é de arquivos e LINKS de verdade (num diretório de teste, nunca o
-    ``/sys``): o Edge no cabo com pai USB é alvo, e um ``0003:054C:0DF2`` sob
-    ``/misc/uhid/`` — o lugar onde só o vpad nasce — não é, mesmo sem as marcas
-    dele. Um default que não resolvesse o link cairia só nas marcas (D2).
-    """
+    """Sem nada injetado além da raiz, é o ``realpath`` do pai HID que separa o vpad."""
     raiz = tmp_path / "class" / "hidraw"
 
     def no(nome: str, pai: str, uniq: str) -> None:
@@ -662,11 +565,7 @@ def test_a_topologia_sai_do_sysfs_de_verdade(tmp_path: pathlib.Path) -> None:
 
 
 def test_um_mapa_ilegivel_nao_derruba_ninguem(tmp_path: pathlib.Path) -> None:
-    """«NUNCA LEVANTA» vale também para o arquivo que existe e não é UTF-8.
-
-    A tabela é lida na IMPORTAÇÃO, e quem importa é o daemon e a janela: um
-    ``UnicodeDecodeError`` ali não é uma cor a menos, é o produto sem abrir.
-    """
+    """«NUNCA LEVANTA» vale também para o arquivo que existe e não é UTF-8."""
     ruim = tmp_path / "cores.csv"
     ruim.write_bytes(b"codigo_da_cor,id,nome,zona,hex\n00,white,Wh\xffte,casca_esq,#E4E0D8\n")
     assert cp.ler_a_tabela(ruim) == {}
@@ -675,24 +574,12 @@ def test_um_mapa_ilegivel_nao_derruba_ninguem(tmp_path: pathlib.Path) -> None:
     assert cp.ler_a_tabela(pasta) == {}
 
 
-#: OS ARQUIVOS DE `src/` QUE ESCREVEM O PID DO DUALSENSE SEM O DO EDGE, e por
-#: quê. Medido em 25/09/2026 pela varredura abaixo — é o item 4 da sprint pelo
-#: lado do MODELO: a régua de cima prova que nenhuma função lê a COR, e esta
-#: prova que nenhum filtro novo esquece o Edge. Quem entrar na lista entra com
-#: a razão; quem passar a aceitar o ``0DF2`` tem de sair dela.
 SO_O_0CE6_POR_ESCOLHA = {
-    # O par do FÍSICO no IGNORE e no DISABLE do jogo: o 0DF2 é o par do vpad
-    # (ver o bloco em `PAR_DUALSENSE_FISICO`), e o Edge sai pela topologia.
     "daemon/launch_env.py": "o 0DF2 é o vpad; o Edge físico sai pelo udev e pelo broker",
     "integrations/steam_launch_options.py": "a assinatura do IGNORE antigo do jogo, a mesma razão",
-    # O quirk do kernel é gravado com os DOIS PIDs juntos
-    # (`kernel_cmdline.HEFESTO_QUIRK_IDS`); achar um é achar a linha.
     "app/actions/emulation_actions.py": "marcador do quirk, que sai com os dois PIDs",
     "integrations/storm_doctor.py": "diagnóstico do quirk, que sai com os dois PIDs",
-    # A identidade que o NOSSO endpoint veste diante do jogo: é a que ele reconhece.
     "integrations/vestido_de_dualsense.py": "a identidade forjada para o jogo",
-    # DÍVIDA, com dono em voo (O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01):
-    # o carimbo do nascimento da barra não enxerga o Edge pelo rádio.
     "integrations/sinal_da_barra.py": "DÍVIDA: o Edge pelo rádio fica sem o carimbo da barra",
 }
 

@@ -122,48 +122,25 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Quantas barrinhas o medidor da aba 02 tem. É o número do desenho aprovado
-#: (``aba02.onda`` emite uma por valor), não uma escolha deste módulo.
 BARRAS = 14
 
-#: O piso das barras, em por cento. Vem do desenho, e a razão está no docstring
-#: de ``aba02.onda``: *"com o microfone mudo os valores caem a 4-6% e as barras
-#: somem — o bloco lia como quebrado ao lado do card cheio. Silêncio é uma linha
-#: baixa e visível, não a ausência do desenho."* Medir e depois esconder o
-#: silêncio seria desfazer uma decisão de desenho dela com um número.
 PISO_PCT = 16
 
-#: O pico linear que corresponde à barra CHEIA. 0 dBFS seria o teto do formato,
-#: e nenhuma fala doméstica chega perto: a medição de 605 s da PEÇA B, com a
-#: sala como ela deixou, tem p100 em 0,2258 e p99,9 em 0,0418. Com o teto em
-#: 1,0 toda fala normal ficaria colada no piso e a onda seria uma linha reta.
-#: 0,5 (-6 dBFS) deixa a fala usar a altura toda e ainda dá cabeçalho para o
-#: pico de um jogo.
 PICO_CHEIO = 0.5
 
-#: Bytes por amostra — ``float32``, como a PEÇA B pede ao ``parec``.
 _TAM_AMOSTRA = 4
 
-#: Quanto ler de uma vez. A 25 Hz e 4 bytes por amostra, 4096 é folga larga.
 _LOTE_BYTES = 4096
 
-#: Espera do seletor quando não há nada a ler.
 _ESPERA_DO_SELETOR_S = 0.2
 
-#: Depois de um fluxo morrer, não se tenta de novo em rajada.
 _ESPERA_APOS_MORTE_S = 2.0
 
-#: A trava da suíte. Ver "ELE NASCE DESLIGADO" no cabeçalho.
 _LIGADO = [False]
 
 
 def ligar(ligado: bool = True) -> None:
-    """Autoriza este módulo a abrir fluxo. Só o piloto chama.
-
-    Idempotente. Desligar com um medidor em voo **para** o que estiver aberto —
-    é isso que faz a mordida ``--sem-ondas`` ser uma mordida de verdade, e não
-    um desenho diferente.
-    """
+    """Autoriza este módulo a abrir fluxo. Só o piloto chama."""
     _LIGADO[0] = bool(ligado)
     if not _LIGADO[0]:
         parar_o_de_sempre()
@@ -181,20 +158,7 @@ class _Canal:
 
 
 class OndasDeSom:
-    """Mede o pico de cada nó pedido e guarda os últimos :data:`BARRAS`.
-
-    Uso, uma chamada por volta do laço de quem pinta::
-
-        ondas.seguir({no_do_mic: uniq, no_do_monitor: uniq})
-        alturas = ondas.alturas(no_do_mic)   # (16, 23, 41, …) ou None
-
-    **A CHAVE É O NÓ, e não o controle.** Dois medidores do mesmo controle (o
-    microfone e o monitor do alto-falante) são dois nós diferentes, e dois
-    controles nunca compartilham nó — a não ser quando o PipeWire resolve os
-    dois para o mesmo, e aí compartilhar o fluxo é a resposta CERTA, não um
-    acidente. O ``uniq`` vai junto só para o ``parec`` publicá-lo em
-    ``hefesto.uniq``, que é o que a PEÇA A lê para saber de quem é o fluxo.
-    """
+    """Mede o pico de cada nó pedido e guarda os últimos :data:`BARRAS`."""
 
     def __init__(
         self,
@@ -222,48 +186,26 @@ class OndasDeSom:
         self._parar = threading.Event()
         self._thread: threading.Thread | None = None
 
-    # -- o que quem pinta usa --------------------------------------------
 
     def seguir(self, alvos: Mapping[str, str]) -> None:
-        """Passa a medir exatamente estes nós — nem mais, nem menos.
-
-        Idempotente: o que já estava aberto continua aberto (e a fila dele não
-        é zerada, senão a onda recomeçaria do piso a cada volta do laço). O que
-        saiu da lista é fechado agora.
-
-        **Com o módulo desligado isto não abre nada** e ainda assim registra o
-        desejo, para que ``alturas`` saiba distinguir "nó que ninguém pediu" de
-        "nó pedido e sem leitura". Os dois respondem ``None``; a diferença
-        aparece no log, não na tela.
-        """
+        """Passa a medir exatamente estes nós — nem mais, nem menos."""
         with self._lock:
             self._desejado = {k: v for k, v in alvos.items() if k}
         if self._automatico and _LIGADO[0]:
             self._garantir_thread()
 
     def alturas(self, no: str) -> tuple[int, ...] | None:
-        """As :data:`BARRAS` últimas alturas em por cento, ou ``None``.
-
-        ``None`` é *não sei* — e nunca uma fila de zeros. Ver a última seção do
-        cabeçalho: quem pinta tem de mostrar "sem leitura", e não "silêncio".
-
-        A fila vem com a amostra mais VELHA à esquerda, que é como uma onda
-        anda: o novo entra pela direita.
-        """
+        """As :data:`BARRAS` últimas alturas em por cento, ou ``None``."""
         agora = self._agora()
         with self._lock:
             canal = self._canais.get(no)
             if canal is None or not canal.picos:
                 return None
             if (agora - canal.ultimo_dado) >= self._mudez_s:
-                # Vivo mas mudo há muito: a fila é passado, não presente.
                 return None
             picos = list(canal.picos)
         faltam = self._barras - len(picos)
         if faltam > 0:
-            # A fila ainda não encheu (o fluxo abriu há menos de 560 ms). O
-            # começo recebe o PISO, não uma cópia da primeira amostra: repetir
-            # inventaria uma história que não foi medida.
             return tuple([self._piso] * faltam + [self._pct(p) for p in picos])
         return tuple(self._pct(p) for p in picos[-self._barras:])
 
@@ -285,29 +227,17 @@ class OndasDeSom:
     def __exit__(self, *_exc: object) -> None:
         self.parar()
 
-    # -- a conta ---------------------------------------------------------
 
     def _pct(self, pico: float) -> int:
-        """Pico linear -> altura de barra, entre :data:`PISO_PCT` e 100.
-
-        Linear, e não em decibéis, por uma razão de desenho: o medidor tem 22 px
-        de altura e catorze barras: numa escala log a fala inteira se espalharia
-        pelo terço de cima e o silêncio ocuparia metade da altura. O que ela
-        pediu é que a onda MEXA com o som, e a amplitude é o que mexe junto.
-        """
-        if pico != pico or pico < 0.0:  # NaN ou negativo: o servidor não manda
+        """Pico linear -> altura de barra, entre :data:`PISO_PCT` e 100."""
+        if pico != pico or pico < 0.0:
             pico = 0.0
         fatia = min(1.0, pico / self._cheio)
         return round(self._piso + fatia * (100 - self._piso))
 
-    # -- o laço ----------------------------------------------------------
 
     def bombear(self, timeout_s: float = _ESPERA_DO_SELETOR_S) -> None:
-        """Uma volta: reconcilia os fluxos e come o que chegou.
-
-        Público de propósito, como o da PEÇA B: um teste que dirige o relógio
-        usa isto e dispensa a thread inteira.
-        """
+        """Uma volta: reconcilia os fluxos e come o que chegou."""
         self._reconciliar()
         for chave, _mascara in self._seletor.select(timeout=timeout_s):
             self._comer(str(chave.data), self._agora())
@@ -316,7 +246,7 @@ class OndasDeSom:
         while not self._parar.is_set():
             try:
                 self.bombear()
-            except Exception as exc:  # defensivo: a thread não pode morrer
+            except Exception as exc:
                 logger.warning("ondas_de_som_volta_falhou", err=str(exc))
                 time.sleep(_ESPERA_DO_SELETOR_S)
 
@@ -329,7 +259,6 @@ class OndasDeSom:
             )
         self._thread.start()
 
-    # -- as tripas -------------------------------------------------------
 
     def _reconciliar(self) -> None:
         agora = self._agora()
@@ -351,9 +280,6 @@ class OndasDeSom:
     def _abrir_canal(self, no: str, uniq: str, agora: float) -> None:
         fluxo = self._abrir(no, uniq)
         if fluxo is None:
-            # Ausência é resposta, e não se tenta de novo em rajada — a mesma
-            # disciplina da PEÇA B: um `parec` que não existe não passa a
-            # existir em 40 ms.
             self._proxima_tentativa[no] = agora + _ESPERA_APOS_MORTE_S
             return
         canal = _Canal(no=no, fluxo=fluxo, ultimo_dado=agora)
@@ -391,9 +317,6 @@ class OndasDeSom:
         except OSError:
             dados = b""
         if not dados:
-            # Fim de arquivo: o `parec` morreu. Fechar e deixar a resposta
-            # voltar a `None` — nunca a uma fila de zeros, que seria afirmar
-            # silêncio medido.
             with self._lock:
                 self._fechar(no)
             self._proxima_tentativa[no] = agora + _ESPERA_APOS_MORTE_S
@@ -409,20 +332,10 @@ class OndasDeSom:
                     struct.unpack_from("<f", canal.resto, i * _TAM_AMOSTRA)[0]
                 )
             del canal.resto[: inteiras * _TAM_AMOSTRA]
-            # A fila não cresce sem fim: guardamos o dobro das barras, que é
-            # história bastante para a tela e um teto para a memória.
             if len(canal.picos) > self._barras * 2:
                 del canal.picos[: len(canal.picos) - self._barras * 2]
             canal.ultimo_dado = agora
 
-
-# ---------------------------------------------------------------------------
-# O MEDIDOR DE SEMPRE — um por processo, e ele é o ponto de injeção das réguas
-# ---------------------------------------------------------------------------
-# Mesma forma do `_CAMADA_1` da aba 02 e do `_LENTO` da aba 09: quem pinta não
-# constrói nada, e quem mede escreve aqui direto sem esperar thread nenhuma.
-# Uma régua que dependesse de um relógio seria uma corrida, e corrida na suíte
-# é vermelho que aparece uma vez em dez.
 
 _DE_SEMPRE: list[OndasDeSom | None] = [None]
 

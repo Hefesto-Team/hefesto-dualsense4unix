@@ -67,25 +67,13 @@ pytestmark = pytest.mark.skipif(
     not (TEXTO_DOCTOR and TEXTO_FIX), reason="scripts do microfone ausentes"
 )
 
-#: O nome da marca. Ele aparece em TRÊS arquivos (o doctor lê, o fix escreve, o
-#: uninstall apaga) e é isso que `TestONomeDaMarcaEUmSo` cobra.
 NOME_DA_MARCA = "mic-do-dualsense-pedido.conf"
 DROPIN_51 = "51-hefesto-dualsense-no-default-source.conf"
 DROPIN_52 = "52-hefesto-dualsense-disable-source.conf"
 
 
-# ---------------------------------------------------------------------------
-# A máquina de mentira
-# ---------------------------------------------------------------------------
-
-
 class Maquina:
-    """Um `HOME` inteiro em `tmp_path`: drop-ins do WirePlumber e a marca.
-
-    Sem `XDG_STATE_HOME` apontando para cá, um teste que grave a marca
-    escreveria em `~/.local/state` de quem roda a suíte — e a suíte passaria a
-    curar a máquina dela pelas costas.
-    """
+    """Um `HOME` inteiro em `tmp_path`: drop-ins do WirePlumber e a marca."""
 
     def __init__(self, tmp_path: Path) -> None:
         self.home = tmp_path / "home"
@@ -158,21 +146,11 @@ def maquina(tmp_path: Path) -> Maquina:
     return Maquina(tmp_path)
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA — o degrau 3 do doctor
-# ---------------------------------------------------------------------------
-
-
 class TestAAusenciaSemMarcaNaoEEscolha:
     """A cena de 04/08/2026: sem o 51 e sem ninguém ter pedido nada."""
 
     def test_ausencia_sem_marca_nao_e_escolha(self, maquina: Maquina) -> None:
-        """A MORDIDA. Máquina sem o 51 e sem marca: o doctor NÃO diz [OK].
-
-        Arrancada a cura (o degrau 5 voltando a `return 0`), esta mesma cena
-        volta a sair `[ OK ]` — é literalmente o `doctor.sh` de ontem, e é o
-        `test_a_mordida_...` logo abaixo que prova.
-        """
+        """A MORDIDA. Máquina sem o 51 e sem marca: o doctor NÃO diz [OK]."""
         r = maquina.doctor("check_dropin_do_mic_armado")
         assert "[ OK ]" not in r.stdout, (
             "verde sobre uma máquina com a cura do microfone desarmada e "
@@ -181,12 +159,7 @@ class TestAAusenciaSemMarcaNaoEEscolha:
         assert "[WARN]" in r.stdout, r.stdout
 
     def test_o_aviso_diz_os_dois_caminhos(self, maquina: Maquina) -> None:
-        """A ambiguidade é do DISCO, então o aviso oferece as duas saídas.
-
-        Quem teve a cura desarmada precisa do comando de rearmar; quem quer o
-        mic do controle precisa do comando que GRAVA a marca — sem ele, o
-        aviso viraria aquele que se aprende a ignorar, que é pior que nenhum.
-        """
+        """A ambiguidade é do DISCO, então o aviso oferece as duas saídas."""
         saida = maquina.doctor("check_dropin_do_mic_armado").stdout
         assert "--install" in saida, saida
         assert "mic promote" in saida, saida
@@ -260,18 +233,12 @@ class TestComAMarcaOPedidoEHonrado:
         assert "2026-08-04T00:37:00-03:00" in saida, saida
 
     def test_o_mic_ativo_com_a_marca_nao_e_mais_falha(self, maquina: Maquina) -> None:
-        """`check_wireplumber_source` parava de acusar só pela presença do 51.
-
-        Quem promoveu de propósito (`mic promote`) fica SEM o 51 por desenho, e
-        levava `[FAIL]` a cada doctor. Aviso que se aprende a ignorar é pior
-        que aviso nenhum.
-        """
+        """`check_wireplumber_source` parava de acusar só pela presença do 51."""
         maquina.com_marca()
         cur = (
             "alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
             "Controller-00.iec958-stereo"
         )
-        # Dublê de `pactl` que responde o mic do controle como fonte ativa.
         binario = maquina.home.parent / "bin"
         binario.mkdir(exist_ok=True)
         stub = binario / "pactl"
@@ -292,11 +259,6 @@ class TestComAMarcaOPedidoEHonrado:
         assert "[ OK ]" in r.stdout, r.stdout
 
 
-# ---------------------------------------------------------------------------
-# Quem ESCREVE a marca — o gesto, nunca o estado
-# ---------------------------------------------------------------------------
-
-
 class TestAMarcaEDoGesto:
     def test_ligar_o_mic_grava_a_marca(self, maquina: Maquina) -> None:
         r = maquina.fix("_marca_do_gesto_gravar enable-mic")
@@ -309,8 +271,7 @@ class TestAMarcaEDoGesto:
         )
 
     def test_a_data_do_primeiro_pedido_fica(self, maquina: Maquina) -> None:
-        """Regravar a cada `--enable-mic` apagaria a única informação que a
-        marca carrega além da própria existência: QUANDO ela pediu."""
+        """Regravar a cada `--enable-mic` apagaria a única informação que a"""
         maquina.com_marca(data="2026-08-04T00:37:00-03:00")
         maquina.fix("_marca_do_gesto_gravar enable-mic")
         assert "2026-08-04T00:37:00-03:00" in maquina.marca.read_text(encoding="utf-8")
@@ -329,13 +290,7 @@ class TestAMarcaEDoGesto:
         assert r.returncode == 0, r.stderr
 
     def test_a_promocao_carimba_antes_de_apagar_o_51(self) -> None:
-        """A ORDEM importa, e é o ponto inteiro da cura.
-
-        `--promote-source` apaga o 51; é a partir daí que a ausência precisa
-        de alguém dizendo de onde ela veio. Carimbar depois deixaria uma
-        janela — e um `Ctrl-C` no meio produziria exatamente o estado
-        ambíguo que esta sprint existe para matar.
-        """
+        """A ORDEM importa, e é o ponto inteiro da cura."""
         corpo = _funcao_bash(TEXTO_FIX, "enable_mic_dualsense")
         assert "_marca_do_gesto_gravar" in corpo, "o gesto de ligar o mic parou de deixar marca"
         pos_marca = corpo.index("_marca_do_gesto_gravar")
@@ -346,12 +301,7 @@ class TestAMarcaEDoGesto:
         )
 
     def test_o_gesto_de_ligar_nao_toca_no_audio(self, maquina: Maquina) -> None:
-        """SÓ ARQUIVOS, como o `_arma_dropins_do_mic` ao lado.
-
-        É o que permite este portão exercitar a função DE VERDADE num HOME de
-        mentira, em vez de reimplementá-la aqui — e régua que reimplementa o
-        produto é como esta casa já produziu alarme convincente e falso.
-        """
+        """SÓ ARQUIVOS, como o `_arma_dropins_do_mic` ao lado."""
         for nome in ("_marca_do_gesto_gravar", "_marca_do_gesto_apagar"):
             corpo = _funcao_bash(TEXTO_FIX, nome)
             for verbo in ("systemctl", "wpctl", "pactl"):
@@ -375,11 +325,7 @@ class TestOInstaladorEODesinstaladorSabemDaMarca:
     """A regra da casa de 08/08: toda cura entra no install, sem flag."""
 
     def test_o_keep_dualsense_mic_carimba(self) -> None:
-        """`--keep-dualsense-mic` É o pedido explícito, e passa a ser escrito.
-
-        Sem isto, este ramo terminava idêntico a uma máquina que nunca
-        instalou nada — que é o estado ambíguo inteiro.
-        """
+        """`--keep-dualsense-mic` É o pedido explícito, e passa a ser escrito."""
         assert "--marcar-gesto-do-mic" in TEXTO_INSTALL, (
             "o `--keep-dualsense-mic` voltou a terminar sem carimbo: o doctor "
             "não tem como distinguir esse pedido de uma cura desarmada"
@@ -397,11 +343,7 @@ class TestOInstaladorEODesinstaladorSabemDaMarca:
         assert 'rm -f "${MARCA_MIC_PEDIDO}"' in TEXTO_UNINSTALL, TEXTO_UNINSTALL[:0]
 
     def test_o_modo_novo_e_so_arquivo(self) -> None:
-        """`--marcar-gesto-do-mic` não pode reiniciar o áudio dela.
-
-        Ele roda no fim de uma instalação que pediu para NÃO mexerem no som —
-        derrubar o WirePlumber ali seria mexer.
-        """
+        """`--marcar-gesto-do-mic` não pode reiniciar o áudio dela."""
         ramo = re.search(
             r"^    marcar-gesto\)\n(?P<c>(?:.*\n)*?)        ;;$", TEXTO_FIX, re.MULTILINE
         )
@@ -411,9 +353,7 @@ class TestOInstaladorEODesinstaladorSabemDaMarca:
 
 
 class TestONomeDaMarcaEUmSo:
-    """Três arquivos falam da mesma marca; um nome divergente a apaga em
-    silêncio — o doctor leria um caminho que ninguém escreve, e o veredito
-    voltaria a ser "não sei" para sempre."""
+    """Três arquivos falam da mesma marca; um nome divergente a apaga em"""
 
     def test_os_tres_arquivos_dizem_o_mesmo_nome(self) -> None:
         for rotulo, texto in (
@@ -438,14 +378,10 @@ class TestONomeDaMarcaEUmSo:
             )
 
     def test_o_doctor_le_e_nao_escreve(self) -> None:
-        """O diagnóstico confere e NÃO cura: criar a marca aqui seria o doctor
-        decidindo, em silêncio, o que só ela pode decidir."""
+        """O diagnóstico confere e NÃO cura: criar a marca aqui seria o doctor"""
         corpo = _funcao_bash(TEXTO_DOCTOR, "_marca_do_gesto_do_mic")
         for verbo in ("mkdir", "touch", ">", "rm "):
             assert verbo not in corpo, f"o doctor ESCREVE a marca (`{verbo}`)"
-
-
-# ---------------------------------------------------------------------------
 
 
 def _funcao_bash(fonte: str, nome: str) -> str:

@@ -1,117 +1,5 @@
 #!/usr/bin/env python3
-"""O TERCEIRO NÚMERO — a paridade entre a janela GTK e a interface em HTML.
-
-Os outros dois números desta casa medem a INTERFACE NOVA contra si mesma: a
-régua de tela conta campos escritos, a régua do mockup compara o publicado com
-o desenho aprovado. Nenhum dos dois responde *"o que a GTK faz e o HTML ainda
-não faz"* — que é a pergunta da qual sai a fila de trabalho.
-
-Este portão responde essa. A fonte é ``docs/data/paridade-gtk-html.csv``: 396
-features medidas feature a feature em 03/09/2026, cada uma com o endereço dos
-DOIS lados e um veredito.
-
-O QUE ELE MEDE, e o que ele NÃO mede
-------------------------------------
-MEDE: se o CSV continua descrevendo o CÓDIGO DE HOJE. Cada linha carrega um
-``sinal`` — um símbolo literal — e o que se espera dele no código. Quem lê é
-esta régua, no fonte, agora.
-
-NÃO MEDE: se a feature FUNCIONA. Nada aqui abre janela, clica ou toca aparelho.
-Um botão que existe nos dois lados e está quebrado nos dois passa aqui sorrindo
-— quem morde isso é a ponte JS do piloto (``--prova-gesto``), que roda com o
-daemon vivo. Dito na cara porque a casa já pagou por régua que promete mais do
-que alcança.
-
-POR QUE O SINAL EXISTE, e é a decisão de projeto deste arquivo
---------------------------------------------------------------
-Uma régua que compara o CSV com ele mesmo não mede nada — é a família de
-defeito que esta casa mais pagou, e uma frente de 03/09 pegou uma régua
-comparando o produto CONTRA ELE MESMO, concordando com a semente errada dos
-dois lados.
-
-Então o veredito de cada linha vira uma AFIRMAÇÃO SOBRE O CÓDIGO, verificável
-sem o CSV:
-
-  veredito                              sinal_espera   o que a régua lê
-  IGUAL · DIFERENTE · SO_NO_HTML        PRESENTE       o símbolo TEM de estar
-  NAO_DA_PARA_SABER                                    no arquivo do lado HTML
-  FALTA_NO_HTML                         AUSENTE        o símbolo da GTK NÃO pode
-                                                       aparecer no lado HTML
-
-A segunda metade é a que envelhece o número de propósito. Quando alguém fechar
-uma dívida — o lado HTML passar a chamar a função da GTK que a carregava —, o
-símbolo aparece, esta régua REPROVA, e o CSV tem de ser atualizado. Sem isso o
-"14% de paridade" vira propaganda no dia seguinte à primeira cura.
-
-AS DOZE REGRAS
---------------
-1. ``integridade``      cabeçalho, veredito fora do domínio, aba desconhecida,
-                        par (aba, feature) repetido, CSV vazio.
-2. ``endereco-morto``   ``caminho:linha`` cujo arquivo não existe, ou cuja linha
-                        passa do fim do arquivo. É o "os endereços ABREM no que
-                        prometem".
-3. ``lado-trocado``     endereço da GTK na coluna do HTML, ou o contrário. É o
-                        que impede este portão de virar a régua que compara o
-                        produto contra ele mesmo.
-4. ``sem-endereco``     linha sem endereço nenhum, ou linha que afirma
-                        ``PRESENTE`` e não diz ONDE, no lado HTML.
-5. ``sinal-sumiu``      ``PRESENTE`` cujo símbolo não está mais no escopo. Uma
-                        feature ``IGUAL`` pode ter sido removida sem ninguém ver.
-6. ``divida-fechada``   ``AUSENTE`` cujo símbolo APARECEU no lado HTML. O caso
-                        BOM: alguém trabalhou e o dado ficou velho.
-7. ``sinal-morto``      ``AUSENTE`` cujo símbolo não pode aparecer: não existe
-                        no lado GTK **e** não tem forma de endereço de tela
-                        (``data-algo="valor"``). Regra desligada em silêncio é
-                        pior que regra nenhuma — um símbolo que não existe em
-                        lugar nenhum e que ninguém vai escrever nunca APARECE,
-                        e aquela linha nunca morderia.
-                        As duas formas legítimas são as duas maneiras de a
-                        dívida fechar: ou o HTML passa a chamar a função da GTK
-                        que carregava a feature (símbolo do lado GTK), ou a
-                        página ganha o endereço que lhe faltava
-                        (``data-campo="fragil"``, e o pintor passa a alcançá-lo).
-8. ``numero-publicado`` a tabela do documento diverge da contagem do CSV. O
-                        número que ela lê para decidir sai do mesmo dado que a
-                        régua confere, ou o documento vira folheto.
-9. ``aposentado-vivo``  arquivo declarado em ``APOSENTADOS`` que voltou à árvore.
-
-AS TRÊS DO CRUZAMENTO COM O MAPA DE CANAIS (06/09/2026, PARIDADE-CRUZA-O-MAPA-01)
-
-10. ``ponte-morta``     uma ponta de ``PONTES`` não existe mais: o par
-                        ``(aba, feature)`` saiu do CSV, ou o ``id`` saiu do mapa.
-11. ``transporte-nao-declarado``
-                        a linha AFIRMA paridade (``IGUAL``/``DIFERENTE``) e o
-                        mapa restringe um transporte do canal embaixo dela — e a
-                        linha não diz ``cabo`` nem ``rádio`` em lugar nenhum.
-12. ``ponte-encolheu``  ``PONTES`` tem menos entradas que ``PISO_DAS_PONTES``.
-
-E O QUE NÃO É REGRA, e é decisão dela: ``AVISO``. Todo lado restrito cuja causa
-é ``nao-medido`` sai impresso e **não muda o rc**
-(``D-0609-O-MAPA-INFORMA-NUNCA-VETA``): a célula está ATRASADA, não fechada, e
-quem a remede é a bancada. O mapa INFORMA, nunca VETA.
-
-**E A ORDEM DA SAÍDA É PARTE DO CONTRATO:** a FALHA fala primeiro e declara ser
-o ``rc=1``; o AVISO fala por último e declara não ser. Impresso na ordem
-inversa — como estava até 06/09/2026 — um portão honesto se LÊ como um portão
-que reprova pelo próprio aviso, e foi assim que ele foi diagnosticado. Aviso
-avisa, reprovação reprova, e nenhum dos dois se lê pelo lugar do outro.
-
-A MORDIDA (arranque a cura, veja reprovar, devolva)
----------------------------------------------------
-  - apague o ``html_onde`` de uma linha ``IGUAL``:  ``sem-endereco``;
-  - troque uma linha citada por um número maior que o arquivo: ``endereco-morto``;
-  - crie, no lado HTML, o símbolo que uma linha ``FALTA_NO_HTML`` diz faltar:
-    ``divida-fechada`` — e é essa que prova que o número não envelhece calado;
-  - apague a palavra ``cabo`` do ``porque`` de *Alto-falante — o som de
-    confirmação*: ``transporte-nao-declarado``;
-  - troque ``CAUSA_ATRASADA``: as três linhas do brilho da barra passam de AVISO
-    a FALHA, e é essa que prova que o escape do ``nao-medido`` está vivo.
-
-Uso:
-    scripts/check_paridade_gtk_html.py              confere (rc=1 no primeiro achado)
-    scripts/check_paridade_gtk_html.py --tabela     imprime o número por aba
-    scripts/check_paridade_gtk_html.py --cruzamento imprime a ponte com o mapa
-"""
+"""O TERCEIRO NÚMERO — a paridade entre a janela GTK e a interface em HTML."""
 
 from __future__ import annotations
 
@@ -124,7 +12,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import prosa_do_codigo  # o irmão nesta pasta
+import prosa_do_codigo
 
 RAIZ = Path(__file__).resolve().parents[1]
 CSV = RAIZ / "docs" / "data" / "paridade-gtk-html.csv"
@@ -151,11 +39,6 @@ ABAS = (
     "06-navegacao", "07-lancadores", "08-conexoes", "09-sistema", "10-perfis",
 )
 
-# ---------------------------------------------------------------------------
-# OS DOIS LADOS, por pasta. Quem não está em nenhuma das duas listas é COMUM
-# (o `core`, o `daemon`, o `profiles`) e pode ser citado dos dois lados: são as
-# camadas que os dois consomem.
-# ---------------------------------------------------------------------------
 SO_GTK = (
     "src/hefesto_dualsense4unix/gui/",
     "src/hefesto_dualsense4unix/app/actions/",
@@ -167,35 +50,15 @@ SO_HTML = (
     "mockup/",
 )
 
-#: MORAM NA GTK E SERVEM AO HTML — e isso é medido pelos imports, não pela
 #: pasta: ``interface/sistema_viva.py`` importa ``gui.aba_sistema``,
-#: ``interface/aba08.py`` importa ``gui.aba_conexoes``, e ``perfis_web`` é a
-#: fonte da lista de perfis da aba 10. Tratá-los como exclusivos da GTK faria a
-#: regra 3 acusar quem está certo.
 COMPARTILHADOS = frozenset({
     "src/hefesto_dualsense4unix/gui/aba_sistema.py",
     "src/hefesto_dualsense4unix/gui/aba_conexoes.py",
     "src/hefesto_dualsense4unix/app/actions/perfis_web.py",
 })
 
-#: Onde a régua procura um sinal cujo escopo é o lado inteiro.
 SUFIXOS = {".py", ".html", ".glade", ".css", ".js"}
 
-#: OS ARQUIVOS QUE A CASA APOSENTOU POR DECISÃO — 06/09/2026, sprint `GTK-3`.
-#:
-#: Um endereço num deles NÃO é endereço morto: é endereço HISTÓRICO. A coluna
-#: `gtk_onde` responde *"onde a GTK fazia isto"*, e essa pergunta continua tendo
-#: resposta depois de o arquivo sair — a resposta é o git. Tratar as 126
-#: citações como defeito obrigaria a apagá-las, e apagar o endereço apagaria a
-#: única prova de que a feature EXISTIU do lado GTK, que é o que faz o
-#: `FALTA_NO_HTML` desta planilha ser dívida e não opinião.
-#:
-#: **A LISTA NÃO PODE APODRECER, e há régua para isso:** um caminho declarado
-#: aqui que VOLTE a existir na árvore reprova, nomeando. A declaração é sobre um
-#: arquivo que saiu, não uma licença para não conferir endereço.
-#:
-#: E ela só vale para `gtk_onde`. Endereço histórico no lado HTML seria a régua
-#: medindo a tela contra um arquivo que não abre — que é o defeito inteiro.
 APOSENTADOS: dict[str, str] = {
     "src/hefesto_dualsense4unix/gui/main.glade": (
         "a janela GTK, aposentada em 06/09/2026 por decisão dela "
@@ -224,48 +87,11 @@ def aposentado(caminho: str) -> str | None:
             return razao
     return None
 
-#: O vocabulário de endereço da interface nova (``data-campo``, ``data-gesto``,
-#: ``data-hef-alvo``…). Um sinal ``AUSENTE` com esta forma é legítimo mesmo sem
-#: existir hoje em lugar nenhum: é O ENDEREÇO QUE A PÁGINA VAI GANHAR quando a
-#: dívida fechar, e é assim que a metade "leitura ao vivo" desta medição fecha.
 ENDERECO_DE_TELA = re.compile(r'data-[a-z-]+="[^"]+"')
 
-# ===========================================================================
-# O CRUZAMENTO COM O MAPA DE CANAIS — regras 10, 11 e 12
-# ===========================================================================
-#
-# O ACHADO QUE ISTO FECHA (A-TELA-NOVA-ENTRA-NA-REGUA-DO-MAPA-01, §5.4,
-# 06/09/2026): ``paridade-gtk-html.csv`` e ``mapa-controles.csv`` eram lidos
-# juntos por DOIS arquivos do produto (``interface/aba02.py`` e
-# ``interface/mesa_viva.py``) e por **portão nenhum**. Uma linha podia dizer
-# ``IGUAL`` — a tela nova faz o que a janela fazia — enquanto o mapa dizia que
-# o CANAL embaixo dela só aciona num transporte. Os dois números concordavam
-# consigo mesmos e ninguém perguntava ao outro.
-#
-# E ELE INFORMA, NUNCA VETA (``D-0609-O-MAPA-INFORMA-NUNCA-VETA``). Palavra
-# dela, 06/09/2026: *"Esse mapa é funcional e real. tá desatualizado no sentido
-# de não ter sido medido. foi e tudo funciona."*  Uma célula em ``aciona=não``
-# quer dizer **ninguém remediu**, não *o aparelho recusa* — por isso a causa
-# ``nao-medido`` vira AVISO impresso, jamais ``rc=1``. Quem recolhe os avisos e
-# marca a célula é a SPECS-A-PROCEDENCIA-01; este portão só põe a fila na mesa.
-#
-# POR QUE A PONTE É DECLARADA, e por que isso não é "a régua digitando o que
-# devia ler": as duas planilhas não têm UMA palavra em comum. O ``sinal`` da
 # paridade é um símbolo do código (``rumble_ff``, ``data-volume="microfone"``);
-# a ``chave`` do mapa é o endereço de um canal do aparelho
-# (``audio.microfone.mudo``). Medido em 06/09/2026: **zero** dos 396 ``sinal``
-# contém uma das 110 ``chave``, em qualquer forma. Alguém tem de dizer que a
-# fatia de tela X anda sobre o canal Y — e o que este portão NÃO deixa ser
-# digitado é o VEREDITO: ele lê ``aciona`` e a causa do mapa a cada execução, e
-# nunca guarda "esta feature é só no cabo". A ponte é o endereço; o fato é do
-# mapa. As três travas que impedem a lista de apodrecer estão nas regras 10 e
-# 12 — as duas pontas mortas reprovam, e a lista só pode CRESCER.
 
-#: A ponte: ``(aba, feature)`` da paridade → ``id`` do mapa (``chave@controle``).
-#: Uma entrada só entra aqui quando a fatia de tela ANDA SOBRE aquele canal —
-#: nunca por parecença de nome.
 PONTES: dict[tuple[str, str], str] = {
-    # ── o alto-falante: o volume tem canal nos dois transportes; o SOM, não ──
     ("02-controles", "Alto-falante — o controle deslizante de volume"):
         "audio.alto_falante.volume@dualsense",
     ("02-controles", "Alto-falante — o número e a barra do bloco"):
@@ -276,14 +102,12 @@ PONTES: dict[tuple[str, str], str] = {
         "audio.alto_falante@dualsense",
     ('02-controles', 'Alto-falante — "Todo o som do PC"'):
         "audio.alto_falante@dualsense",
-    # ── o microfone ────────────────────────────────────────────────────────
     ("02-controles", "Microfone — o gesto do mudo (mic.set)"):
         "audio.microfone.mudo@dualsense",
     ("08-conexoes", "Microfone — quanto ele custa de rádio (a frase da capacidade)"):
         "audio.microfone@dualsense",
     ("08-conexoes", "Microfone — a trava no cabo e sem endereço"):
         "audio.microfone@dualsense",
-    # ── a barra de luz ─────────────────────────────────────────────────────
     ("02-controles", "Barra de luz — o código hexadecimal da cor"):
         "luz.lightbar.cor@dualsense",
     ("02-controles", "Barra de luz — o retângulo colorido"):
@@ -300,7 +124,6 @@ PONTES: dict[tuple[str, str], str] = {
         "luz.lightbar.release_leds@dualsense",
     ('08-conexoes', '"A luz não acende" — a trava no cabo'):
         "luz.lightbar.release_leds@dualsense",
-    # ── o que a mesa lê do aparelho ────────────────────────────────────────
     ("01-jogar", "A bateria de cada controle no cartão"):
         "energia.bateria.percentual@dualsense",
     ("02-controles", "Bateria — o número"):
@@ -324,45 +147,24 @@ PONTES: dict[tuple[str, str], str] = {
         "vibracao.rumble.ff@dualsense",
 }
 
-#: A CATRACA (regra 12). A ponte só CRESCE: quem apagar uma linha para calar um
-#: achado é barrado, nomeando o piso. É a forma provada da casa
-#: (``PISO_DA_REGUA``, de 06/09/2026) — comparação por ``>=``, para que
-#: acrescentar uma ponte nunca seja punido.
 PISO_DAS_PONTES = 26
 
-#: Os dois lados do mapa, e o nome deles nas colunas do CSV.
 LADOS_DO_MAPA = ("cabo", "radio")
 
-#: A palavra que a linha da paridade tem de trazer para cada lado. É o glossário
-#: da casa (cabo/rádio, nunca usb/bt) — e é por isso que o `usb` NÃO conta.
 PALAVRA_DO_LADO = {"cabo": ("cabo",), "radio": ("radio", "radios")}
 
-#: A causa que quer dizer *"ninguém remediu"*, e por isso nunca veta.
 CAUSA_ATRASADA = "nao-medido"
 
-#: Só o veredito que AFIRMA paridade é cobrado. `FALTA_NO_HTML` é dívida
-#: declarada — cobrar transporte de quem já diz que não fez seria acusar duas
-#: vezes; `SO_NO_HTML` e `NAO_DA_PARA_SABER` não afirmam paridade nenhuma.
 VEREDITOS_QUE_AFIRMAM = ("IGUAL", "DIFERENTE")
 
 def sem_acento(texto: str) -> str:
-    """`Rádio` e `radio` são a mesma palavra para esta régua.
-
-    Sem isto a linha que escreve certo (com acento, que é a regra da casa)
-    escaparia da cobrança — o defeito que a casa chama de *a régua desliga
-    exatamente quando alguém escreve bem*.
-    """
+    """`Rádio` e `radio` são a mesma palavra para esta régua."""
     decomposto = unicodedata.normalize("NFD", texto)
     return "".join(c for c in decomposto if unicodedata.category(c) != "Mn").lower()
 
 
 def diz_o_transporte(linha: dict[str, str]) -> set[str]:
-    """Que transportes a linha do CSV NOMEIA, em palavra inteira.
-
-    Varre a linha inteira (a feature, o que cada lado faz e o porquê): a
-    declaração pode estar em qualquer um deles, e exigir uma coluna certa seria
-    inventar uma regra de forma sobre 396 linhas escritas antes dela.
-    """
+    """Que transportes a linha do CSV NOMEIA, em palavra inteira."""
     texto = sem_acento(" ".join(
         linha.get(c, "") for c in ("feature", "gtk_faz", "html_faz", "porque")))
     achados = set()
@@ -446,29 +248,7 @@ class Arvore:
         return None
 
     def usa(self, alvo: str, arquivos: list[Path]) -> Path | None:
-        """O símbolo é USADO — citá-lo na prosa não conta.
-
-        SÓ A REGRA ``divida-fechada`` CHAMA ESTA, e a razão é a assimetria:
-        ``PRESENTE`` pergunta *"isto ainda está aqui?"* e uma citação basta;
-        ``AUSENTE`` afirma *"o lado HTML NÃO faz isto"*, e citar a função alheia
-        num comentário não é fazer.
-
-        O DEFEITO QUE ELA MATA MORDEU TRÊS VEZES. Em 03/09/2026 as linhas 315 e
-        343 foram promovidas a ``DIFERENTE`` porque o símbolo "apareceu" no lado
-        HTML — era um COMENTÁRIO citando a função da GTK — e foram devolvidas no
-        mesmo dia. Em 06/09/2026 a mesma linha 315 caiu de novo, agora por uma
-        DOCSTRING que explicava o que a janela antiga fazia. E o mesmo defeito,
-        no mesmo dia, mordeu ``check_donos_de_comportamento.py``.
-
-        A separação tem dono único (``scripts/prosa_do_codigo.py``): a regra
-        desta casa é que a cura cobre TODOS os chamadores. O portão dos donos
-        resolve a mesma pergunta por outro caminho — ele coleta os NOMES que o
-        ``ast`` aponta —, e é o certo lá: naquele CSV o dono é sempre um
-        símbolo. Aqui não dá: **o sinal pode ser uma cadeia**
-        (``"restaurar-de-fabrica"`` é o nome de um gesto), e coletar só nomes
-        derrubaria essas linhas. Duas perguntas parecidas, dois instrumentos, a
-        mesma decisão declarada nos dois lugares.
-        """
+        """O símbolo é USADO — citá-lo na prosa não conta."""
         for p in arquivos:
             if prosa_do_codigo.usa(p, alvo):
                 return p
@@ -517,28 +297,10 @@ def ler_csv() -> tuple[list[dict[str, str]], list[str]]:
 
 
 def conferir_a_lista_de_aposentados() -> list[str]:
-    """Regra 9: arquivo declarado APOSENTADO não pode estar de volta na árvore.
-
-    Lista de exceção que envelhece calada vira paisagem — é regra desta casa, e
-    aqui o preço seria alto: um `gui/main.glade` que voltasse a existir teria os
-    endereços dele deixados de conferir para sempre, e a régua daria verde sobre
-    linha que ninguém mais abre.
-    """
+    """Regra 9: arquivo declarado APOSENTADO não pode estar de volta na árvore."""
     falhas: list[str] = []
     for caminho, razao in APOSENTADOS.items():
         alvo = RAIZ / caminho
-        # A CASCA VAZIA NÃO É A COISA DE VOLTA — medido em 08/09/2026, na
-        # árvore DELA, depois do install. O commit `f5311616` apagou os
-        # arquivos de `scripts/gui-captura/` corretamente; o que sobrou foi o
-        # DIRETÓRIO, vazio. Git não rastreia diretório vazio, então
-        # `git status` fica limpo, o CI fica verde e uma worktree de agente
-        # nunca reproduz — e a árvore dela carregava o único vermelho dos 49,
-        # mandando a próxima pessoa caçar uma remoção desfeita que não
-        # aconteceu.
-        #
-        # A pergunta desta regra é *"o que a decisão dela mandou apagar voltou?"*
-        # Uma pasta sem nada dentro não é a coisa de volta. Um diretório só
-        # reprova se tiver CONTEÚDO; arquivo reprova sempre.
         if alvo.is_dir() and not any(alvo.iterdir()):
             continue
         if alvo.exists():
@@ -557,16 +319,12 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
         onde = f"{CSV.name}:{n}  [{l['aba']}] {l['feature'][:64]}"
         gtk, html = enderecos(l["gtk_onde"]), enderecos(l["html_onde"])
 
-        # --- regra 2 e 3: os endereços abrem, e cada um no seu lado ---------
         for coluna, lista, esperado in (("gtk_onde", gtk, "gtk"), ("html_onde", html, "html")):
             for e in lista:
                 caminho, _, numero = e.partition(":")
                 p = RAIZ / caminho
                 razao = aposentado(caminho)
                 if razao is not None:
-                    # Endereço HISTÓRICO, não morto — ver `APOSENTADOS`. Só no
-                    # lado GTK: no lado HTML seria a régua medindo a tela contra
-                    # um arquivo que não abre.
                     if coluna != "gtk_onde":
                         falhas.append(
                             f"endereco-morto: {onde}\n"
@@ -590,7 +348,6 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
                         f"    {coluna} cita {e}, que é do lado {achado.upper()}.\n"
                         "    Endereço no lado errado é a régua comparando o produto contra ele mesmo.")
 
-        # --- regra 4: quem afirma tem de dizer onde -------------------------
         if not gtk and not html:
             falhas.append(f"sem-endereco: {onde}\n    a linha não cita um endereço sequer.")
         if l["sinal_espera"] == "PRESENTE" and not html:
@@ -599,7 +356,6 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
                 f"    o veredito {l['veredito']} afirma que o lado HTML TEM isto, "
                 "e `html_onde` está vazio.")
 
-        # --- regras 5, 6 e 7: o sinal contra o código -----------------------
         sinal, escopo = l["sinal"], l["sinal_escopo"]
         if not sinal:
             falhas.append(f"sem-endereco: {onde}\n    a linha não tem `sinal`: nada nela é conferível.")
@@ -642,12 +398,7 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
 
 
 def conferir_o_documento(linhas: list[dict[str, str]]) -> list[str]:
-    """Regra 8: a tabela publicada é a contagem do CSV, linha por linha.
-
-    O documento carrega a tabela dentro de um bloco ``<!-- TABELA-DA-PARIDADE
-    -->``…``<!-- /TABELA-DA-PARIDADE -->``. Quem mexer no CSV e não regerar o
-    documento é barrado aqui, nomeando a aba que divergiu.
-    """
+    """Regra 8: a tabela publicada é a contagem do CSV, linha por linha."""
     if not DOC.is_file():
         return [f"numero-publicado: {DOC.relative_to(RAIZ)} não existe. "
                 "O documento é metade desta entrega."]
@@ -686,12 +437,7 @@ def conferir_o_documento(linhas: list[dict[str, str]]) -> list[str]:
 
 
 def ler_mapa() -> tuple[dict[str, dict[str, str]], list[str]]:
-    """O mapa de canais, indexado pelo `id` (`chave@controle`).
-
-    O mapa é `nao_toca` desta frente: aqui ele só é LIDO. Ausência dele é falha
-    de integridade e não silêncio — uma régua que se desliga sozinha quando a
-    fonte some é a régua que dá verde sobre nada.
-    """
+    """O mapa de canais, indexado pelo `id` (`chave@controle`)."""
     if not MAPA.is_file():
         return {}, [f"integridade: {MAPA.name} não existe, e o cruzamento com o "
                     "mapa de canais é metade deste portão."]
@@ -714,22 +460,7 @@ def cruzar_com_o_mapa(
     pontes: dict[tuple[str, str], str] | None = None,
     piso: int | None = None,
 ) -> tuple[list[str], list[str]]:
-    """Regras 10, 11 e 12. Devolve `(falhas, avisos)`.
-
-    10. ``ponte-morta``            uma ponta da ponte não existe mais — o par
-                                   ``(aba, feature)`` sumiu do CSV da paridade,
-                                   ou o ``id`` sumiu do mapa.
-    11. ``transporte-nao-declarado`` a linha AFIRMA paridade (``IGUAL`` /
-                                   ``DIFERENTE``) e o mapa restringe um dos dois
-                                   transportes do canal embaixo dela — e a linha
-                                   não nomeia transporte nenhum.
-    12. ``ponte-encolheu``         a ponte tem menos entradas que o piso.
-
-    O AVISO (nunca ``rc=1``): todo lado restrito cuja causa é ``nao-medido``. A
-    célula está ATRASADA, não fechada — e quem a remede é a bancada, com o
-    relatório de quem passou por ela. Se um lado restrito é só ``nao-medido``, a
-    linha não deve nada: o mapa ainda não tem o que cobrar.
-    """
+    """Regras 10, 11 e 12. Devolve `(falhas, avisos)`."""
     pontes = PONTES if pontes is None else pontes
     piso = PISO_DAS_PONTES if piso is None else piso
     falhas: list[str] = []
@@ -853,22 +584,6 @@ def main() -> int:
         do_cruzamento, avisos = cruzar_com_o_mapa(linhas, mapa)
         falhas += do_cruzamento
 
-    # A REPROVAÇÃO VEM PRIMEIRO, e a ordem é a cura de um defeito medido —
-    # 06/09/2026, A-CURA-DOS-DOIS-PORTOES-01.
-    #
-    # Até aqui o AVISO era impresso ANTES da FALHA, e a segunda linha dele diz
-    # *"isto NÃO é rc=1"*. Num dia em que as duas coisas aconteceram juntas, o
-    # `portoes.sh` mostrou `paridade-gtk-html VERMELHO rc=1` seguido, na linha
-    # de baixo, do aviso que se declara inofensivo — e a FALHA que de fato
-    # reprovava ficava vinte e cinco linhas abaixo. A leitura óbvia, e a que foi
-    # feita e escrita, é que *o portão reprova pelo próprio aviso que ele diz
-    # não ser reprovação*. O código nunca fez isso: `avisos` nunca tocou o `rc`.
-    # Era a ORDEM DA SAÍDA mentindo sobre o código.
-    #
-    # Então: quem reprova fala primeiro, quem informa fala por último, e cada
-    # bloco declara o que faz com o rc. Aviso avisa, reprovação reprova, e a
-    # linha final diz de onde o rc veio — sem isso a próxima pessoa remede o
-    # mesmo defeito, que é o que esta casa mais paga.
     if falhas:
         print(f"FALHA: {len(falhas)} achado(s) em {CSV.relative_to(RAIZ)}.")
         print("       ISTO é o rc=1 deste portão.\n")

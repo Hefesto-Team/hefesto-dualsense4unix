@@ -89,30 +89,20 @@ from hefesto_dualsense4unix.utils.leitura_pela_assinatura import LeituraPelaAssi
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import BibliotecaDoLancador
 
-#: O arquivo, ao lado das outras listas, no ``XDG_CONFIG_HOME``.
 RELPATH = "hefesto-dualsense4unix/lista_de_exclusao.json"
 FORMATO = 1
 
-#: As duas listas por feature, na ordem em que se escreve. A do Steam Input
-#: NÃO está aqui — ver o topo do módulo.
 LISTAS: tuple[str, ...] = ("pino", "atalho")
 
-#: A nota que acompanha a linha em cada lista — é o que ela lê se abrir o
-#: arquivo, e o que diz que a linha não é dela.
 NOTA_DAS_LISTAS = "posto pela lista de exclusão do Hefesto"
 
 _STEAM_APP = re.compile(r"^steam_app_(\d+)$")
 
-#: A chave do emulador inteiro — a aba 07 a monta (`_chave_do_emulador`).
 PREFIXO_DO_EMULADOR = "emulador:"
 
 
 def caminho(config_home: Path | None = None) -> Path:
-    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/lista_de_exclusao.json``.
-
-    A conta é do dono da trava (`cura_por_estrada.caminho_da_lista`): a trava
-    mora ao lado do arquivo, e quem escreve tem de achar a mesma.
-    """
+    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/lista_de_exclusao.json``."""
     return cpe.caminho_da_lista(config_home)
 
 
@@ -131,27 +121,12 @@ class Entrada:
     nome: str
     quando: str
     nota: str = ""
-    #: As listas em que ESTA exclusão escreveu — e só delas o «Tirar» sai.
     escritas: tuple[str, ...] = field(default_factory=tuple)
-    #: As OUTRAS classes de janela que esta entrada cobre. Um emulador é um
-    #: processo para todas as ROMs, e o mesmo emulador anuncia classes
-    #: diferentes conforme veio (o flatpak do RetroArch se chama
-    #: `org.libretro.RetroArch` e a janela dele diz `com.libretro.RetroArch`,
-    #: medido em 10/09/2026). Vazio para o jogo da Steam e do umu, cuja chave
-    #: JÁ é a classe da janela.
     janelas: tuple[str, ...] = field(default_factory=tuple)
-    #: As cópias do Heroic que esta exclusão mexeu, com o «antes» de cada uma
-    #: (01/10/2026): o jogo do Heroic sai do ambiente pela lista própria, e o
-    #: «Tirar» a devolve. Vazio para quem o Heroic não conhece.
     heroic: tuple[cpe.CopiaDoJogo, ...] = field(default_factory=tuple)
-    #: Os `.yml` do Lutris Flatpak que esta exclusão cobriu, com o «antes» de
-    #: cada um (02/10/2026). Vazio para quem o Lutris não conhece.
     lutris: tuple[cpe.YmlDoJogo, ...] = field(default_factory=tuple)
 
 
-# ---------------------------------------------------------------------------
-# As duas listas — um adaptador por lista, os donos de verdade fazem a escrita
-# ---------------------------------------------------------------------------
 _POR: dict[str, Callable[[str], str]] = {
     "pino": lambda a: proton_pin.nomear_fora_do_pino(a, nota=NOTA_DAS_LISTAS),
     "atalho": lambda a: slo.marcar_jogo_sem_wrapper(a, nota=NOTA_DAS_LISTAS),
@@ -162,9 +137,6 @@ _TIRAR: dict[str, Callable[[str], str]] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# O arquivo
-# ---------------------------------------------------------------------------
 class _ArquivoTortoError(Exception):
     """O JSON existe e não se lê — recusa, nunca sobrescreve."""
 
@@ -198,13 +170,7 @@ def _ler_cru(destino: Path) -> list[Entrada]:
 
 
 def _como_dado(e: Entrada) -> dict[str, object]:
-    """A entrada como vai ao JSON — sem a chave ``heroic`` quando vazia.
-
-    Sem cópia do Heroic, a linha sai byte a byte como saía antes de 01/10: o
-    `hefesto-launch.sh` lê este arquivo linha a linha, e uma lista vazia a
-    mais não muda nada para ele, mas o arquivo de quem nunca excluiu um jogo
-    do Heroic não tem por que mudar.
-    """
+    """A entrada como vai ao JSON — sem a chave ``heroic`` quando vazia."""
     dado: dict[str, object] = asdict(e)
     dado.pop("heroic", None)
     dado.pop("lutris", None)
@@ -231,10 +197,6 @@ def _gravar(destino: Path, entradas: list[Entrada]) -> None:
         raise
 
 
-#: O-REPOUSO-ESPERA-O-EVENTO-01, família 6 (29/09/2026): a lista que o
-#: autoswitch pergunta a 2 Hz, guardada pela assinatura do `stat`. Medido na
-#: sonda S.4: 117 `open` por minuto num arquivo que nem existia. Só com o dono
-#: do evento armado; desarmar esquece.
 _LISTA_PELA_ASSINATURA: LeituraPelaAssinatura[list[Entrada]] = LeituraPelaAssinatura(
     _ler_cru, copiar=list
 )
@@ -265,12 +227,7 @@ def e_caixa(chave: str) -> bool:
 
 
 def o_que_a_carona_pula(config_home: Path | None = None) -> cpe.NaExclusao:
-    """O que `cura_por_estrada.curar_todas_as_estradas` não escreve.
-
-    As caixas: as janelas das entradas de emulador (os `app-id` estão entre
-    elas). As cópias: as do Heroic, que a carona mantém sem o que é nosso. Os
-    `.yml`: os do Lutris Flatpak, que a carona mantém cobrindo a caixa.
-    """
+    """O que `cura_por_estrada.curar_todas_as_estradas` não escreve."""
     entradas = ler(config_home)
     return cpe.NaExclusao(
         caixas=frozenset(j.casefold() for e in entradas if e_caixa(e.chave)
@@ -280,13 +237,7 @@ def o_que_a_carona_pula(config_home: Path | None = None) -> cpe.NaExclusao:
 
 
 def anotar_os_ymls(ymls: Iterable[cpe.YmlDoJogo], config_home: Path | None = None) -> str:
-    """A carona escreveu de novo nestes `.yml`: o registro da volta acompanha.
-
-    Cada um substitui o de mesmo arquivo na entrada que o tem. Sem isso, a
-    volta byte a byte compararia o arquivo com o `sha256` de uma escrita velha
-    e cairia na volta pelos pares. Status: ``"feito"`` | ``"nada"`` |
-    ``"erro"``. Nunca levanta.
-    """
+    """A carona escreveu de novo nestes `.yml`: o registro da volta acompanha."""
     novos = {y.arquivo: y for y in ymls}
     if not novos:
         return "nada"
@@ -316,14 +267,8 @@ def _anotar_na_trava(destino: Path, novos: dict[str, cpe.YmlDoJogo]) -> str:
     return "feito"
 
 
-#: O arquivo em que o Heroic anota quem usa cada prefixo: a cada lançamento ele
-#: acrescenta o `app_name` do jogo a `<winePrefix>/installed_games`, uma lista
-#: JSON (lido no `app.asar` do Heroic 2.22.3 em 02/10/2026; no disco dela, o
-#: prefixo do Guardiões tem um `app_name` só).
 _MORADORES_DO_HEROIC = "installed_games"
 
-#: Os prefixos divididos já ditos no diário, com o número de moradores e se o
-#: censo leu — uma linha por mudança, e não uma por transição.
 _DIVIDIDOS_DITOS: set[tuple[str, int, bool]] = set()
 
 
@@ -345,11 +290,7 @@ def _o_censo_do_heroic(casa: Path) -> BibliotecaDoLancador | None:
 
 
 def _responde_pelo_instalado(biblioteca: BibliotecaDoLancador | None) -> bool:
-    """O censo leu jogo e voltou sem erro: só então ele TIRA morador.
-
-    O censo com erro ainda SOMA, na terceira fonte, como sempre somou: a
-    sprint prometeu, sem o censo, o comportamento de antes (02/10/2026).
-    """
+    """O censo leu jogo e voltou sem erro: só então ele TIRA morador."""
     return biblioteca is not None and bool(biblioteca.jogos) and not biblioteca.erros
 
 
@@ -359,27 +300,7 @@ def _moradores(prefixo: Path, casa: Path) -> set[str]:
 
 
 def _moradores_e_o_censo(prefixo: Path, casa: Path) -> tuple[set[str], bool]:
-    """``(os moradores deste prefixo, o censo leu)``.
-
-    Três fontes, somadas: quem o Heroic anotou em `installed_games`; toda cópia
-    da casa (`GamesConfig/<app>.json`) com o mesmo `winePrefix` resolvido; e,
-    quando o prefixo é o da lista global (`defaultSettings.winePrefix`), todo
-    jogo sem `winePrefix` próprio — as cópias sem ele e os instalados sem
-    cópia. Nunca levanta: o que não se lê não entra.
-
-    **SÓ QUEM ESTÁ INSTALADO — 02/10/2026,
-    O-PREFIXO-DIVIDIDO-CONTA-SO-QUEM-ESTA-INSTALADO-01.** As duas primeiras
-    fontes são registros que o Heroic não limpa: o `installed_games` só
-    acrescenta (o único escritor é o lançamento, lido no `app.asar` do 2.22.3
-    dela), e a cópia fica sem «remover as configurações». Medido num lar de
-    mentira: com B desinstalado pelo caminho padrão do Heroic e A excluído, o
-    prefixo seguia «dividido» para sempre, e A, excluído, com o device KS. Quem
-    responde «instalado» é o censo (:func:`_o_censo_do_heroic`): sai das três
-    fontes todo jogo que ele diz NÃO instalado. Quem o censo não conhece (um
-    jogo «adicionado» à mão, que mora em `sideload_apps`; uma loja nova)
-    continua contando, por delegação, a validar por ela: na dúvida o prefixo
-    fica dividido. Sem o censo, nada sai, e o diário diz ``sem_censo=1``.
-    """
+    """``(os moradores deste prefixo, o censo leu)``."""
     biblioteca = _o_censo_do_heroic(casa)
     leu = _responde_pelo_instalado(biblioteca)
     desinstalados = ({j.chave for j in biblioteca.jogos if not j.instalado}
@@ -422,23 +343,7 @@ def _moradores_e_o_censo(prefixo: Path, casa: Path) -> tuple[set[str], bool]:
 
 
 def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
-    """Os prefixos dos jogos excluídos do Heroic em que TODO morador está excluído.
-
-    Caminho resolvido, porque quem compara (a carona do device KS e o
-    «Corrigir Vulkan») lê o mesmo prefixo por outra fonte.
-
-    **O PREFIXO DIVIDIDO FICA — 02/10/2026, A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01.**
-    O Heroic aceita dois jogos no mesmo `winePrefix`, e o device KS e as camadas
-    Vulkan moram no prefixo, não no jogo. Medido num lar de mentira na
-    integração: com A e B no mesmo prefixo e só A excluído, a carona do KS
-    pulava o prefixo, e B perdia a háptica pelo áudio sem ter sido excluído.
-    Por delegação, a validar por ela: o prefixo em que mora alguém que ela não
-    excluiu fica com o device KS e as camadas, porque tirar a háptica do jogo
-    que ela não excluiu custa mais do que deixá-la no que ela excluiu. O diário
-    diz ``exclusao_prefixo_dividido moradores=<n>`` (:func:`_moradores`), com
-    ``sem_censo=1`` quando o censo do Heroic não leu a casa. Mora quem está
-    instalado (:func:`_moradores_e_o_censo`).
-    """
+    """Os prefixos dos jogos excluídos do Heroic em que TODO morador está excluído."""
     excluidos: dict[Path, set[str]] = {}
     candidatos: dict[Path, Path] = {}
     for e in ler(config_home):
@@ -470,13 +375,7 @@ def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
 
 
 def ids_dos_prefixos(config_home: Path | None = None) -> list[str]:
-    """O que o botão Vulkan pula: o appid na Steam, o caminho resolvido nos outros.
-
-    `camadas_vulkan.curar_todos` compara o appid só com os prefixos de
-    `compatdata` e o caminho com os demais (02/10/2026): pelo NOME da pasta, a
-    exclusão de um jogo do Heroic pulava também o prefixo de outra casa com a
-    mesma pasta. O prefixo dividido não entra (:func:`prefixos_excluidos`).
-    """
+    """O que o botão Vulkan pula: o appid na Steam, o caminho resolvido nos outros."""
     caminhos = sorted(str(p) for p in prefixos_excluidos(config_home))
     return list(dict.fromkeys([*appids(config_home), *caminhos]))
 
@@ -487,14 +386,7 @@ def appids(config_home: Path | None = None) -> list[str]:
 
 
 def contem(chave: str, config_home: Path | None = None) -> bool:
-    """Esta classe de janela está excluída — pela chave ou por uma das janelas?
-
-    É o que o autoswitch pergunta a cada tique, com a `wm_class` em foco. A
-    comparação das `janelas` ignora maiúsculas porque a mesma aplicação chega
-    com grafias diferentes: o journal de 21/09/2026 tem a janela do próprio
-    Hefesto como `Hefesto-Dualsense4Unix` (113 vezes) e como
-    `hefesto-dualsense4unix` (60).
-    """
+    """Esta classe de janela está excluída — pela chave ou por uma das janelas?"""
     alvo = chave.strip()
     if not alvo:
         return False
@@ -505,9 +397,6 @@ def contem(chave: str, config_home: Path | None = None) -> bool:
     )
 
 
-# ---------------------------------------------------------------------------
-# Os dois atos
-# ---------------------------------------------------------------------------
 def adicionar(
     chave: str,
     *,
@@ -519,20 +408,11 @@ def adicionar(
     janelas: tuple[str, ...] = (),
     lar: Path | None = None,
 ) -> str:
-    """Exclui o jogo. Status: ``"adicionado"`` | ``"ja_estava"`` |
-    ``"chave_invalida"`` | ``"erro"``. Nunca levanta.
-
-    `escritas_herdadas`: listas em que o jogo já estava e que passam a ser
-    DESTA exclusão (o «Tirar» sai delas também). Vazio no uso normal.
-    `lar`: o `HOME` onde moram o Heroic e as caixas do Flatpak (``None`` = o
-    de verdade).
-    """
+    """Exclui o jogo. Status: ``"adicionado"`` | ``"ja_estava"`` |"""
     alvo = chave.strip()
     if not alvo:
         return "chave_invalida"
     destino = caminho(config_home)
-    # UM ESCRITOR POR VEZ (02/10/2026): a lista se lê com a trava na mão, e
-    # tudo o que a exclusão escreve fica dentro dela (`cpe.trava_da_lista`).
     with cpe.trava_da_lista(destino) as na_mao:
         if not na_mao:
             return "erro"
@@ -557,9 +437,6 @@ def _adicionar_na_trava(
     appid = appid_da_chave(alvo)
 
     def desfazer_as_listas() -> None:
-        # Uma escrita que falhou desfaz as que já foram feitas: um jogo meio
-        # excluído é o estado que a D-2109-A-EXCLUSAO-E-TUDO-OU-NADA existe
-        # para não ter.
         if appid is not None:
             for feita in escritas:
                 if feita not in escritas_herdadas:
@@ -577,9 +454,6 @@ def _adicionar_na_trava(
                 return "erro"
 
     janelas_limpas = tuple(j.strip() for j in janelas if j.strip())
-    # FORA DA STEAM, O AMBIENTE (01/10/2026). O jogo do Heroic com esta janela
-    # ganha a lista própria sem o que é nosso; a caixa do emulador perde o
-    # ambiente inteiro. Ver `cura_por_estrada`, «A EXCLUSÃO».
     copias: tuple[cpe.CopiaDoJogo, ...] = ()
     ymls: tuple[cpe.YmlDoJogo, ...] = ()
     if appid is not None:
@@ -587,8 +461,6 @@ def _adicionar_na_trava(
         if status == "erro":
             desfazer_as_listas()
             return "erro"
-        # A CAMADA DO JOGO DO LUTRIS (02/10/2026): o `.yml` do jogo do Lutris
-        # Flatpak com esta janela cobre a caixa, que é de todos os jogos dele.
         ymls, status = cpe.tirar_o_nosso_do_jogo_do_lutris(alvo, lar=lar)
         if status == "erro":
             cpe.devolver_ao_jogo_do_heroic(copias)
@@ -616,12 +488,7 @@ def _adicionar_na_trava(
 
 
 def tirar(chave: str, *, config_home: Path | None = None, lar: Path | None = None) -> str:
-    """Devolve o jogo ao Hefesto. Status: ``"removido"`` | ``"nao_estava"`` |
-    ``"erro"``. Nunca levanta.
-
-    Sai SÓ das listas em que esta exclusão escreveu (``Entrada.escritas``): uma
-    linha que já era dela antes da exclusão continua lá.
-    """
+    """Devolve o jogo ao Hefesto. Status: ``"removido"`` | ``"nao_estava"`` |"""
     alvo = chave.strip()
     destino = caminho(config_home)
     with cpe.trava_da_lista(destino) as na_mao:
@@ -651,45 +518,20 @@ def _tirar_na_trava(alvo: str, destino: Path, lar: Path | None) -> str:
     except OSError:
         return "erro"
     if e_caixa(alvo):
-        # A caixa volta pela carona: fora da lista, ela recebe o ambiente de
-        # agora — e, sem o ambiente publicado, na próxima transição.
         cpe.curar_todas_as_estradas(lar=lar)
     return "removido"
 
 
-# ---------------------------------------------------------------------------
-# O disco — o que o jogo já tem sai AGORA, se a Steam deixar
-# ---------------------------------------------------------------------------
-#: As recusas que querem dizer "a Steam está aberta" nos dois donos.
 _ESPERA_A_STEAM = frozenset({"steam_aberta", "jogo_da_steam_aberto"})
 
 
 def tirar_do_disco(chave: str) -> str:
-    """Tira do jogo o pino, o atalho e o que o Hefesto pôs no prefixo dele.
-
-    Nunca levanta. O prefixo é o `_devolver_o_prefixo`: o device KS e as
-    camadas Vulkan que a cura desligou.
-
-    Status: ``"feito"`` | ``"nada_a_tirar"`` | ``"espera_a_steam"`` |
-    ``"sem_appid"`` | ``"erro"``.
-
-    As duas listas só fazem o jogo ser PULADO (§11.2 da sprint): entrar nelas
-    não tira o que ele já tem. Quem tira é o vigia da Steam — o
-    `sentinela_do_wrapper --reparar` e o `proton_pin --manter`, que desde
-    21/09 honram a própria lista nos dois sentidos —, e ele roda quando a
-    Steam fecha. Esta função é o mesmo passo feito na hora do clique, para o
-    jogo não abrir uma vez com o Hefesto antes de a Steam fechar.
-
-    Com a Steam aberta os dois donos recusam sem escrever, e o status diz
-    ``"espera_a_steam"``: a lista já está gravada, e o vigia termina o serviço.
-    """
+    """Tira do jogo o pino, o atalho e o que o Hefesto pôs no prefixo dele."""
     appid = appid_da_chave(chave)
     if appid is None:
         return "sem_appid"
     pino = proton_pin.destravar_um_jogo(appid)
     atalho = slo.tirar_o_atalho_dos_jogos([appid])
-    # O PREFIXO DIVIDIDO FICA (02/10/2026): só sai o prefixo em que todo
-    # morador está excluído — a mesma regra da carona do device KS.
     inteiros = prefixos_excluidos()
     do_heroic = [Path(c.prefixo) for e in ler() if e.chave == chave.strip()
                  for c in e.heroic if c.prefixo.strip()
@@ -706,19 +548,7 @@ def tirar_do_disco(chave: str) -> str:
 
 
 def _devolver_o_prefixo(appid: str, do_heroic: list[Path] | None = None) -> str:
-    """O prefixo Wine do jogo volta ao que era sem o Hefesto.
-
-    Duas coisas moram lá, e as duas são nossas: o device KS da háptica
-    (`audio_ks_dualsense`) e as camadas Vulkan que a cura desligou
-    (`camadas_vulkan`). O KS sai inteiro; as camadas voltam a ligar SÓ as que
-    nós desligamos, sem virar escolha dela (``pela_exclusao``). Os prefixos
-    são o `compatdata/<appid>` da Steam e, em ``do_heroic``, o prefixo próprio
-    do mesmo jogo no Heroic.
-
-    Com o jogo aberto o `wineserver` regravaria o registro ao sair, e a edição
-    seria perdida: ``"ocupado"``. Status: ``"feito"`` | ``"nada"`` |
-    ``"ocupado"`` | ``"erro"``. Nunca levanta.
-    """
+    """O prefixo Wine do jogo volta ao que era sem o Hefesto."""
     from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 

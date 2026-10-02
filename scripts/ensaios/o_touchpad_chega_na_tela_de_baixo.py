@@ -102,72 +102,43 @@ for _caminho in (str(_RAIZ / "src"), str(_SCRIPTS), str(_AQUI)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import identidade_do_vpad  # a régua única do vpad (VPAD-NO-ESPELHO-01)
-from comum import (  # o chão dos instrumentos: um cabeçalho, uma tabela
+import identidade_do_vpad
+from comum import (
     descobrir_aparelhos,
     cabecalho_do_instrumento,
     resumo,
     tabela,
 )
 
-from hefesto_dualsense4unix.core.formas_do_endereco import mascarar  # a máscara da casa
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
-#: O emulador desta medição, e o atalho dela — que é quem carrega a cura.
-#: O `rodar.sh` lê o `default.env` VIVO a cada abertura, então ele nunca
-#: digita a variável: ele pergunta ao daemon.
 LANCADOR = Path.home() / "Lançadores" / "azahar" / "rodar.sh"
 
-#: A configuração do emulador. É dela; este instrumento LÊ e nunca escreve.
 CONFIG = Path(
     os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")
 ) / "azahar-emu" / "qt-config.ini"
 
-#: A opção da interface do emulador — *"Map touchpads on controllers like the
 #: DualSense directly to touch"*, rotulada «Use controller touchpad» na tela.
-#: O nome da chave sai do arquivo que o próprio emulador escreve.
 CHAVE_DO_RECURSO = "use_touchpad"
 CHAVE_DO_APARELHO_DE_TOQUE = "controller_touch_device"
 CHAVE_DA_FONTE_DE_TOQUE = "touch_device"
 
-#: O papel de cada nó, lido do sufixo que o `hid_playstation` dá ao nome. É o
-#: mesmo sufixo no físico e no vpad, porque é o mesmo driver que os publica.
 _PAPEIS = (
     (" Touchpad", "touchpad"),
     (" Motion Sensors", "movimento"),
     (" Headset Jack", "fone"),
 )
 
-#: O que faz um travamento ser ESTE travamento, e não um processo lento. A
-#: assinatura foi medida em 10/09/2026 com `eu-stack`: a thread do rumble do
-#: HIDAPI presa num futex, e a principal esperando por ela.
 THREAD_DO_TRAVAMENTO = "HIDAPI Rumble"
 
 
 def diga(texto: object = "") -> None:
-    """Imprime com a máscara da casa aplicada — endereço e HOME.
-
-    O endereço é do dono no produto (`core/formas_do_endereco`); até 28/09/2026
-    ele vinha de um módulo que o `.gitignore` tira do clone, e o ensaio morria
-    com `ModuleNotFoundError` em toda máquina que não fosse a dela. O HOME é
-    deste ensaio: o dono só cuida de identidade de aparelho. E ele sai ANTES
-    do dono: um nome de pessoa com `_` e seis letras hex (`joao_decade`) é a
-    forma do sufixo de nó, e mascarado primeiro ele deixaria de casar com o
-    HOME, que sairia inteiro.
-    """
+    """Imprime com a máscara da casa aplicada — endereço e HOME."""
     print(mascarar(str(texto).replace(str(Path.home()), "~")))
 
 
-# ---------------------------------------------------------------------------
-# DEGRAU 0 — o recurso está ligado na configuração do emulador?
-# ---------------------------------------------------------------------------
-
-
 def _valores_do_ini(caminho: Path, chave: str) -> list[tuple[str, str]]:
-    """Todos os `perfil\\chave=valor` do `.ini`, com o perfil ao lado.
-
-    O emulador guarda um bloco por perfil de entrada (`profiles\\1\\...`), e
-    ler só o primeiro esconderia um perfil ligado no segundo.
-    """
+    """Todos os `perfil\\chave=valor` do `.ini`, com o perfil ao lado."""
     try:
         texto = caminho.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -176,7 +147,7 @@ def _valores_do_ini(caminho: Path, chave: str) -> list[tuple[str, str]]:
     padrao = re.compile(rf"^(.*?){re.escape(chave)}=(.*)$")
     for linha in texto.splitlines():
         if linha.endswith("\\default=true") or linha.endswith("\\default=false"):
-            continue  # a linha-irmã que só diz "isto ainda é o padrão"
+            continue
         casou = padrao.match(linha.strip())
         if casou:
             achados.append((casou.group(1).strip("\\") or "(sem perfil)",
@@ -231,11 +202,6 @@ def degrau_zero() -> tuple[bool, list[str]]:
     return algum, linhas
 
 
-# ---------------------------------------------------------------------------
-# DEGRAU 1 — os nós existem, e de quem é cada um
-# ---------------------------------------------------------------------------
-
-
 def _papel_do_nome(nome: str) -> str:
     for sufixo, papel in _PAPEIS:
         if nome.endswith(sufixo):
@@ -244,12 +210,7 @@ def _papel_do_nome(nome: str) -> str:
 
 
 def nos_de_entrada() -> dict[str, dict[str, str]]:
-    """`event27` -> quem ele é, resolvido AGORA do `/proc` e do sysfs.
-
-    A fonte é `/proc/bus/input/devices`, que já traz o caminho de sysfs de cada
-    nó (`S:`) — assim não há uma segunda busca em `/sys/class/input` que possa
-    discordar da primeira entre uma leitura e outra.
-    """
+    """`event27` -> quem ele é, resolvido AGORA do `/proc` e do sysfs."""
     fora: dict[str, dict[str, str]] = {}
     try:
         texto = Path("/proc/bus/input/devices").read_text(
@@ -303,19 +264,8 @@ def so_dualsense(nos: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
     }
 
 
-# ---------------------------------------------------------------------------
-# DEGRAU 2 — o que o emulador abriu, e por qual porta
-# ---------------------------------------------------------------------------
-
-
 def arvore_de(padrao: str, raiz: int | None = None) -> list[int]:
-    """Todo processo cujo cmdline case com a expressão, MAIS os descendentes.
-
-    Um AppImage roda dentro de um `mount` próprio e o binário de verdade é um
-    filho: olhar só o processo cujo nome casa dá falso zero. Se `raiz` vier, a
-    árvore é a DESSE processo — que é o caso do `--abrir`, em que o instrumento
-    sabe exatamente quem criou.
-    """
+    """Todo processo cujo cmdline case com a expressão, MAIS os descendentes."""
     alvos: set[int] = set()
     if raiz is not None:
         alvos.add(raiz)
@@ -372,12 +322,7 @@ def descritores(pids: list[int]) -> tuple[dict[str, list[int]], dict[str, list[i
 
 
 def threads_travadas(pids: list[int]) -> list[tuple[int, str, str]]:
-    """(tid, nome da thread, `wchan`) de cada thread da árvore.
-
-    `wchan` é a função do kernel em que a thread está dormindo. É o que separa
-    *"o processo está lento"* de *"o processo está preso num futex"* — e essa
-    diferença é o diagnóstico inteiro deste ensaio.
-    """
+    """(tid, nome da thread, `wchan`) de cada thread da árvore."""
     fora: list[tuple[int, str, str]] = []
     for pid in pids:
         base = Path("/proc") / str(pid) / "task"
@@ -398,18 +343,10 @@ def threads_travadas(pids: list[int]) -> list[tuple[int, str, str]]:
 def assinatura_do_futex(
     threads: list[tuple[int, str, str]]
 ) -> list[tuple[int, str, str]]:
-    """As threads dormindo em futex — a corroboração do travamento.
-
-    Em 10/09/2026 o `eu-stack` mostrou a thread `HIDAPI Rumble` presa num
-    futex e a principal esperando por ela. Aqui a mesma coisa sai de
-    `/proc/<tid>/wchan`, que é a função do kernel em que a thread dorme — e
-    sem depender de o `eu-stack` existir na máquina.
-    """
+    """As threads dormindo em futex — a corroboração do travamento."""
     return [t for t in threads if "futex" in t[2]]
 
 
-#: Os quadros de pilha que decidem quem prende quem. Tudo o mais é ruído de
-#: uma pilha de 41 threads, e ruído esconde a assinatura.
 _QUADRO_QUE_IMPORTA = re.compile(
     r"hid|HID|SDL|sdl|udev|Rumble|Joystick|Controller|InputCommon"
 )
@@ -418,13 +355,7 @@ _QUADRO_QUE_IMPORTA = re.compile(
 def pilha_do_travamento(
     pids: list[int], *, segundos: float = 30.0
 ) -> tuple[str, list[str]]:
-    """As pilhas das threads pelo `eu-stack` — o instrumento de 10/09/2026.
-
-    O nome da thread não decide (thread sem nome herda o do processo), e o
-    `wchan` diz onde ela dorme mas não quem a mandou dormir. A pilha diz.
-    Devolve (motivo, quadros que importam) — motivo vazio quer dizer que a
-    leitura foi feita.
-    """
+    """As pilhas das threads pelo `eu-stack` — o instrumento de 10/09/2026."""
     if not pids:
         return "sem processo para olhar", []
     if not shutil.which("eu-stack"):
@@ -446,12 +377,6 @@ def pilha_do_travamento(
     except OSError as erro:
         return f"`eu-stack` falhou: {erro}", []
 
-    # O RETORNO DECIDE, NÃO A SAÍDA. Medido em 10/09/2026: com
-    # `ptrace_scope=1` o `eu-stack` sai com rc=2 e AINDA IMPRIME duas linhas de
-    # cabeçalho (`PID … - process`, `TID …:`). Aceitar a saída não vazia como
-    # "leitura feita" fazia o instrumento anunciar *"pilha lida, e nenhum
-    # quadro cita HID"* sobre uma pilha que ele nunca leu — e essa frase é uma
-    # afirmação sobre o emulador, não sobre a recusa do kernel.
     if saida.returncode != 0:
         motivo = next(
             (linha.strip() for linha in (saida.stderr or "").splitlines()
@@ -487,20 +412,11 @@ def pilha_do_travamento(
     return "", quadros[:12]
 
 
-#: Menor que isto é janela de serviço do Qt (dono de seleção, tela de ícone),
-#: não a janela do emulador. Medido: com a cura, a do emulador saiu 933x855; o
-#: travamento deixa só uma de 3x3 na tela.
 JANELA_DE_VERDADE = 200
 
 
 def janelas(display: str | None) -> list[dict[str, object]]:
-    """As janelas na tela `display`, com título e geometria.
-
-    A janela é o sintoma que ELA vê: em 10/09 o Qt subia inteiro e a janela
-    nunca nascia. Medir só o descritor deixaria esse sintoma de fora — e
-    CONTAR janelas também deixaria, porque o processo travado ainda cria as
-    janelinhas de serviço do Qt. O que separa uma coisa da outra é o tamanho.
-    """
+    """As janelas na tela `display`, com título e geometria."""
     if not display:
         return []
     try:
@@ -534,19 +450,8 @@ def nasceu_janela(lista: list[dict[str, object]]) -> bool:
     )
 
 
-# ---------------------------------------------------------------------------
-# O `--abrir`: sobe o emulador escondido, com teto de tempo, e mata pelo PID
-# ---------------------------------------------------------------------------
-
-
 def alvo_sem_cura(lancador: Path) -> Path | None:
-    """O executável CRU ao lado do atalho, para a mordida.
-
-    A mordida do §5 exige rodar SEM a cura, e o atalho existe justamente para
-    aplicá-la: ele lê o `default.env` vivo e exporta a variável. Rodar o atalho
-    e chamar isso de «sem cura» seria a mordida que não morde — então quando o
-    cru não é achado, o instrumento RECUSA em vez de medir outra coisa.
-    """
+    """O executável CRU ao lado do atalho, para a mordida."""
     for candidato in sorted(lancador.parent.glob("*.AppImage")):
         if os.access(candidato, os.X_OK):
             return candidato
@@ -583,11 +488,8 @@ def abrir_o_emulador(
         env=ambiente,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        start_new_session=True,  # grupo próprio: o que ele criar, ele mata
+        start_new_session=True,
     )
-    # Espera o processo mostrar o que veio mostrar. Sai antes do teto quando
-    # já há janela E descritor de entrada: o que vier depois não muda a
-    # resposta, e o teto é rede, não relógio de espera.
     limite = time.monotonic() + segundos
     while time.monotonic() < limite:
         time.sleep(0.5)
@@ -601,11 +503,7 @@ def abrir_o_emulador(
 
 
 def matar(proc: subprocess.Popen[bytes] | None) -> str:
-    """Mata o que ESTE instrumento criou, pelo PID, e nada mais.
-
-    Nunca por padrão de linha de comando: um `pkill -f` já derrubou o
-    compositor dela em 04/09/2026.
-    """
+    """Mata o que ESTE instrumento criou, pelo PID, e nada mais."""
     if proc is None or proc.poll() is not None:
         return "nada a matar"
     try:
@@ -628,10 +526,6 @@ def matar(proc: subprocess.Popen[bytes] | None) -> str:
     return f"encerrado (PID {proc.pid}, SIGKILL — não respondeu ao SIGTERM)"
 
 
-# ---------------------------------------------------------------------------
-# O gesto do degrau 3 — o que só o olho dela fecha
-# ---------------------------------------------------------------------------
-
 O_GESTO = """\
 O DEGRAU 3 É DELA, e é este o gesto:
 
@@ -647,9 +541,6 @@ O DEGRAU 3 É DELA, e é este o gesto:
   touchpad saiu 0 de 8 bytes variando, e por pouco não se escreveu que o
   produto não preenchia os pontos de toque.
 """
-
-
-# ---------------------------------------------------------------------------
 
 
 def medir(padrao: str, *, raiz: int | None, display: str | None) -> dict:
@@ -670,12 +561,7 @@ def medir(padrao: str, *, raiz: int | None, display: str | None) -> dict:
 
 
 def imprimir_degrau_dois(r: dict) -> tuple[bool, bool | None]:
-    """Imprime o degrau 2. Devolve (o touchpad chegou?, a janela nasceu?).
-
-    O segundo vem `None` quando a pergunta da janela não foi feita — e ela só
-    se faz na tela que ESTE instrumento criou. Perguntar na sessão viva
-    listaria as janelas dela, que não são assunto de medição nenhuma aqui.
-    """
+    """Imprime o degrau 2. Devolve (o touchpad chegou?, a janela nasceu?)."""
     diga(f"  processos na árvore ....... {len(r['pids'])}")
     if not r["pids"]:
         diga("  (nada a medir — nenhum processo casou com o padrão)")
@@ -699,9 +585,6 @@ def imprimir_degrau_dois(r: dict) -> tuple[bool, bool | None]:
         diga("  >> TRAVOU — a janela do emulador NUNCA NASCEU dentro do teto.")
         diga("  >> É o sintoma que ela vê: o Qt sobe inteiro e o processo dorme.")
         if futex:
-            # Uma pilha de threads de `llvmpipe` dormindo em futex é pool
-            # ocioso, não travamento — e enterraria a assinatura no meio do
-            # ruído. Sobem primeiro as que decidem: a principal e as do SDL.
             def _peso(t: tuple[int, str, str]) -> tuple[int, int]:
                 marcada = t[1].startswith(THREAD_DO_TRAVAMENTO[:15])
                 principal = t[0] in r["pids"]
@@ -855,8 +738,6 @@ def main() -> int:
          + (f" ({', '.join(touchpads)})" if touchpads else " — NENHUM"))
 
     proc: subprocess.Popen[bytes] | None = None
-    #: A tela só se pergunta quando é a que ESTE instrumento criou. A sessão
-    #: viva é a dela, e listar as janelas dela não mede nada.
     display: str | None = None
     raiz: int | None = None
     if args.abrir:

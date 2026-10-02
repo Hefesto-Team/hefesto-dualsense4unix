@@ -54,7 +54,6 @@ for _p in (str(RAIZ / "src"), str(INTERFACE)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-#: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UM = "aa:bb:cc:00:00:01"
 DOIS = "aa:bb:cc:00:00:02"
 CHAVE_UM = "aabbcc000001"
@@ -106,12 +105,7 @@ def _ctx(pac, *, perfil="regua", conectados=None, state=None):
 
 
 class PonteDeMentira:
-    """Dublê da ponte que guarda o que foi chamado e devolve o caminho feliz.
-
-    **ELE SABE RECUSAR** — com `corpo=None` o `player_leds_set_detalhado` volta
-    sem corpo e os gestos levantam a frase do produto. Um dublê que só sabe
-    passar não é dublê, e esta casa já mediu o preço disso três vezes.
-    """
+    """Dublê da ponte que guarda o que foi chamado e devolve o caminho feliz."""
 
     def __init__(self, corpo: object = ...):
         self.corpo = ({"status": "ok", "aplicado_em": [UM, DOIS],
@@ -145,58 +139,31 @@ def _semear(nome: str = "regua"):
 
 
 def _janela_de_todos(a04, pac, conectados=None):
-    """Um `_Janela` com o alvo em "Todos" — pela função DO PRODUTO.
-
-    `_janela_do_desfecho` com `uniq` vazio é a porta que o próprio módulo
-    nomeia; `definir_alvo` é quem sabe que vazio quer dizer "Todos".
-    """
+    """Um `_Janela` com o alvo em "Todos" — pela função DO PRODUTO."""
     return a04._janela_do_desfecho(_ctx(pac, conectados=conectados), "")
 
 
 def _abrir_o_todos(monkeypatch, a04, pac):
-    """Faz o desfecho desta aba mirar "Todos" — sobre a função do produto.
-
-    A ABA NÃO TEM ESSE ESCOPO HOJE (decisão dela, em aberto), então a régua o
-    abre pela única porta honesta: a própria `_janela_do_desfecho`, chamada com
-    o `uniq` vazio que ela já sabe interpretar. Nada de dublê que responda o que
-    a régua quer ouvir — o objeto que chega ao dono da frase é o mesmo que
-    chegaria no dia em que o botão nascer.
-    """
+    """Faz o desfecho desta aba mirar "Todos" — sobre a função do produto."""
     real = a04._janela_do_desfecho
     monkeypatch.setattr(
         a04, "_janela_do_desfecho",
         lambda ctx, uniq, rotulo="": real(ctx, "", rotulo))
 
 
-# ---------------------------------------------------------------------------
-# 1. A CONTA DEIXOU DE SER CONSTANTE
-# ---------------------------------------------------------------------------
 def test_a_conta_e_a_do_dono_e_nao_um_zero_cravado(a04, pac, dono):
-    """Com o alvo em "Todos" e dois na mesa, a conta é DOIS.
-
-    **A MORDIDA:** devolva o `return 0` a `_Janela._quantos_recebem_o_desenho`
-    e esta asserção cai — era esse o estado de ontem, e ele estava documentado
-    como um fato desta aba em vez de como uma pergunta ao dono.
-    """
+    """Com o alvo em "Todos" e dois na mesa, a conta é DOIS."""
     janela = _janela_de_todos(a04, pac)
     assert janela._quantos_recebem_o_desenho() == 2, (
         "a `_Janela` não contou os dois controles da mesa com o alvo em "
         "'Todos' — a conta voltou a ser uma constante desta aba")
-    # E ELA É A MESMA CONTA DO DONO, sobre o MESMO objeto: se as duas
-    # divergirem, quem está reescrevendo a regra é este lado.
     assert (janela._quantos_recebem_o_desenho()
             == dono.LightbarActionsMixin._quantos_recebem_o_desenho(janela)), (
         "a conta desta aba divergiu da do dono sobre o mesmo objeto")
 
 
 def test_com_alvo_por_controle_a_conta_e_zero_e_agora_e_medida(a04, pac):
-    """O zero de hoje continua zero — e passou a ser resposta, não afirmação.
-
-    Todo gesto desta aba leva `uniq`, então o alvo é CONTROLE e o dono devolve
-    0. Este caso existe para que a cura não vire regressão silenciosa: se um dia
-    a conta passar a responder N para um alvo de um controle só, o aviso apareceria
-    num clique que pegou em um.
-    """
+    """O zero de hoje continua zero — e passou a ser resposta, não afirmação."""
     janela = a04._janela_do_desfecho(_ctx(pac), UM, "White")
     assert janela._quantos_recebem_o_desenho() == 0, (
         "o alvo é UM controle e a conta disse mais de um — o aviso dos N "
@@ -204,20 +171,13 @@ def test_com_alvo_por_controle_a_conta_e_zero_e_agora_e_medida(a04, pac):
 
 
 def test_a_mesa_de_um_controle_nao_dispara_o_aviso(a04, pac):
-    """"Todos" com UM na mesa é um, e um não é aviso — a régua do limiar.
-
-    O dono só cola a frase a partir de dois (`quantos >= 2`), e é a única
-    leitura possível de *"o mesmo desenho foi para os N controles"*.
-    """
+    """"Todos" com UM na mesa é um, e um não é aviso — a régua do limiar."""
     janela = _janela_de_todos(a04, pac, conectados=[P1])
     assert janela._quantos_recebem_o_desenho() == 1
     assert a04._o_aviso_dos_n(janela) == "", (
         "um controle só disparou o aviso dos N")
 
 
-# ---------------------------------------------------------------------------
-# 2. A FRASE É DO DONO, PALAVRA POR PALAVRA
-# ---------------------------------------------------------------------------
 def test_o_aviso_e_a_frase_do_dono_e_nenhuma_silaba_nasce_aqui(a04, pac, dono):
     """O texto sai de `_AVISO_MESMO_DESENHO_NOS_QUATRO`, com o N do dono."""
     janela = _janela_de_todos(a04, pac)
@@ -227,13 +187,7 @@ def test_o_aviso_e_a_frase_do_dono_e_nenhuma_silaba_nasce_aqui(a04, pac, dono):
 
 
 def test_o_pacote_nao_digita_o_texto_do_aviso(a04):
-    """O fonte cita o NOME da constante e nunca o texto dela.
-
-    A régua lê o próprio arquivo porque é o único jeito de pegar a segunda
-    escrita: uma cópia literal da frase passaria em todos os casos acima e só
-    apareceria no dia em que o dono mudasse uma palavra e as duas telas do mesmo
-    produto passassem a contar o mesmo evento diferente.
-    """
+    """O fonte cita o NOME da constante e nunca o texto dela."""
     fonte = pathlib.Path(a04.__file__).read_text(encoding="utf-8")
     assert "_AVISO_MESMO_DESENHO_NOS_QUATRO" in fonte, (
         "o pacote deixou de citar o dono do texto — é o `sinal` que o CSV da "
@@ -243,17 +197,8 @@ def test_o_pacote_nao_digita_o_texto_do_aviso(a04):
         "mesmo texto, o defeito que a RADAR-01 mediu")
 
 
-# ---------------------------------------------------------------------------
-# 3. O AVISO PAROU DE SER ENGOLIDO — a mordida que importa
-# ---------------------------------------------------------------------------
 def test_a_comparacao_do_desfecho_e_surda_ao_aviso_por_construcao(a04, pac, dono):
-    """O fato que fazia o aviso morrer: as duas frases são IGUAIS com N ≥ 2.
-
-    Este caso não mede a cura — mede a CAUSA, e existe para que ela não se
-    perca. O `_msg_do_desenho` cola o aviso na frase do corpo real E na do corpo
-    feliz, porque as duas saem do mesmo método com a mesma `_Janela`. Um
-    `if frase != feliz` nunca ia vê-lo.
-    """
+    """O fato que fazia o aviso morrer: as duas frases são IGUAIS com N ≥ 2."""
     janela = _janela_de_todos(a04, pac)
     bits = (False, True, False, True, False)
     descricao = dono.LightbarActionsMixin._descreve_player_leds(bits)
@@ -276,12 +221,7 @@ def test_a_comparacao_do_desfecho_e_surda_ao_aviso_por_construcao(a04, pac, dono
 
 def test_o_desfecho_devolve_a_frase_quando_ela_tem_aviso(monkeypatch, a04, pac,
                                                          dono):
-    """A CURA: `_cobrar_a_frase_do_desenho` devolve a frase do dono, com o aviso.
-
-    **A MORDIDA:** troque o corpo pelo de ontem — `if frase != feliz: raise` e
-    nada mais — e a devolução volta a ser `None`. O caso acima prova que o
-    `!=` cala; este prova que alguém mais fala.
-    """
+    """A CURA: `_cobrar_a_frase_do_desenho` devolve a frase do dono, com o aviso."""
     _abrir_o_todos(monkeypatch, a04, pac)
     bits = (False, True, False, True, False)
     frase = a04._cobrar_a_frase_do_desenho(
@@ -301,11 +241,7 @@ def test_sem_aviso_o_desfecho_continua_mudo(a04, pac):
 
 
 def test_o_desfecho_que_falhou_continua_levantando(monkeypatch, a04, pac):
-    """A cura não engoliu a recusa: corpo sem destino nenhum ainda levanta.
-
-    É a guarda contra a regressão mais provável desta mudança — trocar um
-    `raise` por um `return` e transformar toda recusa em recibo verde.
-    """
+    """A cura não engoliu a recusa: corpo sem destino nenhum ainda levanta."""
     _abrir_o_todos(monkeypatch, a04, pac)
     with pytest.raises(RuntimeError):
         a04._cobrar_a_frase_do_desenho(
@@ -315,17 +251,8 @@ def test_o_desfecho_que_falhou_continua_levantando(monkeypatch, a04, pac):
 
 def test_se_o_dono_parar_de_colar_o_aviso_o_pacote_recusa(monkeypatch, a04, pac,
                                                           dono):
-    """As duas metades andam juntas — ou ninguém anda.
-
-    Com a conta dizendo N ≥ 2 e a frase do dono sem o aviso, calar poria um
-    recibo comum no canal que existe para o aviso, e devolver a frase seria
-    prometer um aviso que ela não tem. O pacote levanta, nomeando os dois lados.
-    """
+    """As duas metades andam juntas — ou ninguém anda."""
     _abrir_o_todos(monkeypatch, a04, pac)
-    # O DONO PARA DE COLAR — e a conta continua dizendo dois. Não se troca a
-    # CONSTANTE aqui: trocá-la mudaria o texto nos dois lados ao mesmo tempo (o
-    # dono a lê do módulo e a sonda também), e as duas metades continuariam
-    # concordando. Quem tem de deixar de colar é o método que compõe.
     monkeypatch.setattr(dono.LightbarActionsMixin, "_msg_do_desenho",
                         staticmethod(lambda *a, **k: "Desenho das luzes."))
     with pytest.raises(RuntimeError, match="2 controles"):
@@ -334,9 +261,6 @@ def test_se_o_dono_parar_de_colar_o_aviso_o_pacote_recusa(monkeypatch, a04, pac,
             {"status": "ok", "aplicado_em": [UM, DOIS], "guardado_em": []})
 
 
-# ---------------------------------------------------------------------------
-# 4. O GESTO QUE ESCREVE DESENHO PÕE A FRASE NO CANAL VERDE
-# ---------------------------------------------------------------------------
 def _os_que_escrevem_desenho(a04, pac):
     """Os caminhos de escrita de desenho desta aba, com o clique de cada.
 
@@ -388,33 +312,15 @@ def test_o_gesto_poe_a_frase_do_dono_no_canal_de_recado(monkeypatch, a04, pac,
 
 @pytest.mark.parametrize("indice", range(1))
 def test_sem_o_aviso_o_gesto_continua_calado(a04, pac, indice):
-    """Um controle só: nada de recado, e a piscada do piloto responde.
-
-    Sem este caso a cura poderia pôr uma frase de seis segundos no cartão a cada
-    clique de lâmpada — que é o contrário da `03-Q4` dela (*"quando o gesto só
-    repete o que ela acabou de fazer, a tela pisca"*).
-    """
+    """Um controle só: nada de recado, e a piscada do piloto responde."""
     _semear()
     nome, gesto, clique = _os_que_escrevem_desenho(a04, pac)[indice]
     assert gesto(_ctx(pac), clique, PonteDeMentira()) is None, (
         f"o gesto {nome} falou num clique que pegou em um controle só")
 
 
-# ---------------------------------------------------------------------------
-# 5. O CANAL É A CHAVE `recado`, QUE O PILOTO LEVA AO DIÁRIO
-# ---------------------------------------------------------------------------
 def test_o_canal_e_a_chave_que_o_piloto_leva_ao_diario(a04, pac):
-    """ERA `test_o_canal_e_o_verde_de_seis_segundos` — o contrato mudou em 13/09/2026.
-
-    A chave e o relógio eram cobrados pelo dono: `recado` é a chave que o
-    piloto colhe e RETIRA da carga antes da pintura (ela não é endereço de
-    campo nenhum), e o relógio do recado verde era
-    `SEGUNDOS_DO_RECADO_DE_SUCESSO` (6,0 s, D-01, 04/09/2026). O RELÓGIO SAIU
-    com o canal: o sucesso deixou de ir à tela na TELA-CALADA-01 (*"em todas as
-    abas da interface"*), e o depósito inteiro saiu na FRASES-E-DICAS-01. A
-    frase do aviso dos N continua sendo devolvida pela chave, e vai ao diário
-    da janela como `[relato] …`.
-    """
+    """ERA `test_o_canal_e_o_verde_de_seis_segundos` — o contrato mudou em 13/09/2026."""
     from hefesto_dualsense4unix.interface import hefesto_vivo as hv
 
     assert a04._o_recado("uma frase") == {"recado": "uma frase"}

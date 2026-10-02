@@ -65,46 +65,20 @@ import os
 import re
 from collections.abc import Iterable, Mapping
 
-#: `phys` do `UHID_CREATE2`, republicado pelo kernel como `HID_PHYS`. É a marca
-#: MAIS forte: não é endereço nem nome de aparelho, é uma palavra que só este
 #: produto escreve. Num DualSense de verdade este campo é o MAC do adaptador
-#: (rádio) ou o caminho USB (cabo).
 VPAD_HID_PHYS = "hefesto-vpad"
 
-#: Prefixo do MAC forjado por jogador (`uhid_gamepad.player_mac` →
-#: `02:fe:00:00:00:0N`), que sai em `HID_UNIQ` e também no `uniq` do nó de
-#: entrada — o `hid_playstation` copia `hdev->uniq` para o `input_dev` (fonte:
-#: `assets/dkms/hid-playstation/hid-playstation.c:704`).
 VPAD_UNIQ_PREFIXO = "02:fe:"
 
-#: SEGUNDA REDE, nunca a régua: a marca humana no nome
 #: (`DualSense Wireless Controller (Hefesto P1)`). Nome é frágil por natureza —
 #: este mesmo já mudou uma vez (BT-E-VPAD-01 trocou `Hefesto Virtual DualSense
-#: P1` pelo de hoje, e há código nesta casa que ainda procura o nome velho).
-#: Entra só para o caso em que o `uevent` do pai não se deixa ler.
 VPAD_MARCA_NO_NOME = "(Hefesto P"
 
-#: O `phys` do NÓ DE ENTRADA não serve de régua nenhuma para esta classe de
-#: aparelho, e isto é MEDIDO, não suposto: o `ps_allocate_input_dev` do
-#: `hid_playstation` copia `bustype`, `vendor`, `product`, `version`, `uniq` e
-#: `name` para o `input_dev`, e **não copia `phys`**
-#: (`assets/dkms/hid-playstation/hid-playstation.c:691-718`; a cópia do `uniq`
-#: está na linha 704, e não há linha equivalente para `phys`). Na mesa de
-#: 12/08/2026, os 22 nós de entrada com pai `DRIVER=playstation` — vpads,
-#: cabeados e de rádio — trazem `phys` VAZIO, enquanto os 10 nós de
-#: `DRIVER=hid-generic` da mesma máquina trazem o `phys` preenchido. Por isso
-#: esta régua lê `HID_PHYS` do **uevent do pai**, nunca o atributo do nó.
 _PHYS_DO_NO_NAO_SERVE = True
 
 
 def campos_do_uevent(texto: str) -> dict[str, str]:
-    """As linhas `CHAVE=valor` de um `uevent` como dicionário.
-
-    Aceita o texto já lido em vez do caminho de propósito: quem chama costuma
-    precisar do MESMO texto para outra coisa (o barramento, o `HID_ID`), e ler
-    o arquivo duas vezes abriria a porta para duas fontes discordarem sobre o
-    mesmo device entre uma leitura e outra.
-    """
+    """As linhas `CHAVE=valor` de um `uevent` como dicionário."""
     return dict(
         linha.split("=", 1) for linha in texto.splitlines() if "=" in linha
     )
@@ -125,27 +99,7 @@ def e_vpad_do_hefesto(
     uniq_do_no: str = "",
     nome: str = "",
 ) -> bool:
-    """True quando o aparelho descrito por `campos` é um vpad DESTE produto.
-
-    `campos` são as linhas do `uevent` do device HID **pai** — o mesmo arquivo
-    de que sai o `HID_ID`. `uniq_do_no` é o `uniq` do nó de entrada, quando
-    quem chama já o tem em mãos (é a MESMA marca por outro caminho: o
-    `hid_playstation` copia `hdev->uniq` para o `input_dev`). `nome` cai no
-    `HID_NAME` do próprio `uevent` quando não é passado.
-
-    Em ordem de força:
-
-    1. `HID_PHYS == hefesto-vpad` — carimbo do produto, some junto com o vpad;
-    2. `HID_UNIQ` (ou o `uniq` do nó) com o prefixo do MAC forjado;
-    3. a marca no nome, SEGUNDA REDE, para o caso de o `uevent` não abrir.
-
-    Conservadora por desenho: na ausência total de dado ela devolve **False**.
-    Aqui isso é o certo, e é o oposto da escolha do `_is_virtual_evdev` do
-    daemon — lá, "na dúvida é virtual" protege contra o daemon adotar a própria
-    saída; aqui, "na dúvida é vpad" recusaria mirar num aparelho de verdade e
-    o ensaio não aconteceria. Quem fecha o outro lado é o filtro de VID/PID e
-    barramento de quem chama, que este módulo deliberadamente não substitui.
-    """
+    """True quando o aparelho descrito por `campos` é um vpad DESTE produto."""
     if campos.get("HID_PHYS", "").strip().lower().startswith(VPAD_HID_PHYS):
         return True
     if campos.get("HID_UNIQ", "").strip().lower().startswith(VPAD_UNIQ_PREFIXO):
@@ -155,30 +109,16 @@ def e_vpad_do_hefesto(
     return VPAD_MARCA_NO_NOME in (nome or campos.get("HID_NAME", ""))
 
 
-#: O PAD `uinput` (O-BASICO-MEDIDO-01, 28/09/2026). Ele é evdev puro: nasce
-#: por `/dev/uinput`, sem device HID pai, sem `uniq` e sem `HID_PHYS` — nenhum
-#: dos três carimbos acima existe nele, e o `e_vpad_do_hefesto` responde
-#: `False` com razão. Na noite de 27/09 isso fez o `o_jogo_segura_o_nosso_no`
-#: dizer «NÃO SONDADO» sobre um jogo que segurava o nosso pad `uinput` com a
 #: máscara DualSense. Até a marca `phys` que a A-ENTRADA vai carimbar, a régua
-#: dele é a posse direta: o nó que a árvore do jogo segura, com o nome lido do
-#: `/sys` igual, byte a byte, a um dos nomes que o produto pede ao kernel
-#: (`uinput_gamepad.FLAVORS`), E morando onde o uinput mora. O espelho que o
-#: Steam Input publica tem outro nome (`Microsoft X-Box 360 pad 0`), e um
 #: DualSense Edge de verdade tem device HID pai — os dois ficam fora.
 _MORADA_DO_UINPUT = re.compile(r"/devices/virtual/input/input\d+/?$")
 
 
 def nomes_do_pad_uinput() -> frozenset[str]:
-    """Os nomes que o produto pede ao kernel para o pad `uinput`, do FONTE dele.
-
-    Vazio quando o pacote não se importa (o `python3` do sistema): sem o dono
-    dos nomes não há régua, e inventar uma lista aqui seria a segunda régua
-    que envelhece calada.
-    """
+    """Os nomes que o produto pede ao kernel para o pad `uinput`, do FONTE dele."""
     try:
         from hefesto_dualsense4unix.integrations.uinput_gamepad import FLAVORS
-    except Exception:  # sem o pacote (ou sem o evdev) no interpretador
+    except Exception:
         return frozenset()
     return frozenset(str(dados["name"]) for dados in FLAVORS.values())
 
@@ -186,15 +126,7 @@ def nomes_do_pad_uinput() -> frozenset[str]:
 def e_pad_uinput_do_hefesto(
     nome: str, dir_device: str, nomes: Iterable[str] | None = None
 ) -> bool:
-    """True quando o nó de entrada em `dir_device` é o pad `uinput` DESTE produto.
-
-    `dir_device` é o `/sys/class/input/eventN/device` (o link é resolvido
-    aqui). As duas condições valem juntas: o nome EXATO de uma máscara do
-    produto, e a morada do uinput (`/devices/virtual/input/inputN`, sem device
-    HID acima). Nenhuma das duas sozinha basta — o nome sozinho abraçaria um
-    Edge de verdade com o nome de fábrica, e a morada sozinha abraçaria todo
-    espelho do Steam Input.
-    """
+    """True quando o nó de entrada em `dir_device` é o pad `uinput` DESTE produto."""
     permitidos = nomes_do_pad_uinput() if nomes is None else frozenset(nomes)
     if not nome or nome not in permitidos:
         return False
@@ -206,11 +138,7 @@ def e_pad_uinput_do_hefesto(
 
 
 def uniq_do_no_de_entrada(dir_device: str) -> str:
-    """O `uniq` do nó de entrada em `dir_device` ("" se ilegível).
-
-    Conveniência para quem tem o diretório do nó em mãos (o
-    `/sys/class/input/eventN/device`) e quer alimentar `uniq_do_no`.
-    """
+    """O `uniq` do nó de entrada em `dir_device` ("" se ilegível)."""
     try:
         with open(
             os.path.join(dir_device, "uniq"), encoding="utf-8", errors="replace"

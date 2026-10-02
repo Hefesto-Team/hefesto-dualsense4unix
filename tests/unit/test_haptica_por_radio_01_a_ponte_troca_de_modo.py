@@ -96,15 +96,7 @@ class _Estado:
     monitores: list[str]
 
     def o_alto_falante_toca(self, uniq: str, sim: bool = True) -> None:
-        """Alguém está tocando no `hefesto_som_<hex6>` daquele controle.
-
-        **RADIO-AFOGADO-01, 22/09/2026, e sem isto estas réguas mediriam outro
-        produto.** Até este dia a ponte do som subia em silêncio, e as réguas
-        daqui herdaram esse mundo: elas chamam `_casar_as_pontes` e esperam uma
-        `PonteDeSomPorRadio` do outro lado. Agora a ponte do som só existe com
-        som — então quem mede o ARRANJO tem de dizer que há som, senão mede a
-        desistência e não a troca de modo.
-        """
+        """Alguém está tocando no `hefesto_som_<hex6>` daquele controle."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
 
         self.tocando[nome_do_sink(uniq)] = sim
@@ -136,22 +128,6 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
     )
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
 
-    # **O GATE DA HÁPTICA GANHOU UM SEGUNDO LADO, e a fixture foi atrás —
-    # 21/09/2026.** A QUEM-JOGA-E-QUEM-VIBRA-01 acrescentou *"o jogo está
-    # LENDO aquele controle"* ao *"o jogo abriu o canal do endpoint"*, porque
-    # só o primeiro fazia três controles vibrarem num jogo de um jogador.
-    #
-    # Estas réguas medem a FIAÇÃO do alto-falante, não a leitura de `/proc` —
-    # essa tem dono e réguas próprias (`integrations/quem_o_jogo_le.py`). Sem
-    # este dublê elas reprovavam por AMBIENTE (a máquina da suíte não tem jogo
-    # aberto), e um vermelho de ambiente se lê como regressão: foi o que
-    # aconteceu, e ficou vermelho na árvore por dias.
-    #
-    # **E O VOTO MUDOU DE DONO — A-HAPTICA-QUEM-JOGA-02, 26/09/2026.** Quem
-    # joga é quem mexeu desde que o jogo abriu (`_quem_mexeu_na_partida`); o
-    # evdev que o jogo segura (`_quem_o_jogo_le`) virou pista e não vota. O
-    # dublê do voto põe todo controle jogando; o da pista segue, para a
-    # varredura não ler o `/proc` da máquina.
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()
     )
@@ -250,11 +226,7 @@ def test_cada_aparelho_ganha_uma_ancora_propria(bancada: _Estado) -> None:
 
 
 def test_o_controle_no_cabo_tambem_sobe_o_endpoint_dele(bancada: _Estado) -> None:
-    """FATO QUE CAIU (28/09/2026): «no cabo o endpoint é a placa de verdade».
-
-    O cabo passa pelo endpoint do aparelho (um laço dele à placa,
-    ``integrations/haptica_do_cabo``). Nenhuma ponte do rádio sobe.
-    """
+    """FATO QUE CAIU (28/09/2026): «no cabo o endpoint é a placa de verdade»."""
     bancada.sub._casar_as_pontes([_Controle("aa:bb:cc:00:00:09", "/dev/hidraw9", "usb")])
     assert [e.uniq for e in _EndpointDeMentira.criados] == ["aa:bb:cc:00:00:09"]
     assert _PonteDeMentira.criadas == []

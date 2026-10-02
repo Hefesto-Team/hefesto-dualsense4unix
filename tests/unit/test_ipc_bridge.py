@@ -26,10 +26,6 @@ import pytest
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
-# ---------------------------------------------------------------------------
-# _safe_call — contrato central
-# ---------------------------------------------------------------------------
-
 
 class TestSafeCallDaemonOffline:
     """Erros esperados de transporte retornam (False, None) e logam debug."""
@@ -63,7 +59,6 @@ class TestSafeCallDaemonOffline:
         ):
             ipc_bridge._safe_call("daemon.status")
 
-        # Falha esperada não deve subir para warning; deve sair em debug.
         warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert not warnings, f"warnings indevidos: {warnings!r}"
 
@@ -112,18 +107,8 @@ class TestSafeCallExcecaoInesperadaPropaga:
             ipc_bridge._safe_call("foo.bar")
 
 
-# ---------------------------------------------------------------------------
-# Wrappers públicos — bool na superfície, propagação de bug preservada
-# ---------------------------------------------------------------------------
-
-
 class TestWrappersRetornamBool:
-    """Os wrappers públicos retornam bool e respeitam o contrato.
-
-    Eram treze até 26/08/2026; a poda da BG-07 levou três deles
-    (``apply_draft``, ``rumble_policy_set``, ``mouse_emulation_set``) por não
-    terem chamador nenhum em ``src/``.
-    """
+    """Os wrappers públicos retornam bool e respeitam o contrato."""
 
     OFFLINE_EXC = FileNotFoundError("daemon offline")
 
@@ -208,9 +193,7 @@ class TestApplyDraftDetalhado:
             assert ipc_bridge.apply_draft_detalhado({"leds": {}}) == resposta
 
     def test_offline_devolve_none_e_nao_dicionario_vazio(self):
-        """``None`` quer dizer "não houve resposta" — é o que separa "o Hefesto
-        está desligado" de "a seção não entrou". Um ``{}`` no lugar apagaria a
-        distinção que a aba Lightbar usa para escolher a frase."""
+        """``None`` quer dizer "não houve resposta" — é o que separa "o Hefesto"""
         with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
             assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
 
@@ -219,12 +202,11 @@ class TestApplyDraftDetalhado:
             assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
 
     def test_aplicacao_confirmada_e_o_dono_unico_da_regra_r18(self):
-        """A mesma leitura do payload para os dois caminhos — sem ``failed``
-        vazio virando sucesso e sem daemon antigo virando falha."""
+        """A mesma leitura do payload para os dois caminhos — sem ``failed``"""
         confirmada = ipc_bridge.aplicacao_confirmada
         assert confirmada({"status": "ok", "applied": ["leds"]}) is True
         assert confirmada({"status": "ok", "applied": []}) is False
-        assert confirmada({"status": "ok"}) is True  # daemon antigo
+        assert confirmada({"status": "ok"}) is True
         assert confirmada({"status": "erro", "applied": ["leds"]}) is False
         assert confirmada(None) is False
         assert confirmada(True) is False
@@ -277,11 +259,6 @@ class TestWrappersPropagandoBugs:
             wrapper(*args)
 
 
-# ---------------------------------------------------------------------------
-# profile_list — fallback de disco preservado
-# ---------------------------------------------------------------------------
-
-
 class TestProfileListFallback:
     """profile_list tem duas camadas: IPC primário + disco fallback."""
 
@@ -302,26 +279,15 @@ class TestProfileListFallback:
             "_run_call",
             side_effect=FileNotFoundError("sem socket"),
         ):
-            # Chamada real ao loader — garante formato mínimo.
             resultado = ipc_bridge.profile_list()
 
-        # assets/profiles_default/ tem pelo menos 1 perfil default.
         assert isinstance(resultado, list)
         assert all("name" in p and "active" in p for p in resultado)
-        assert all(p["active"] is False for p in resultado)  # fallback marca offline
-
-
-# ---------------------------------------------------------------------------
-# HARM-19 — recusa do daemon != daemon offline
-# ---------------------------------------------------------------------------
+        assert all(p["active"] is False for p in resultado)
 
 
 class TestTriggerSetChecked:
-    """`trigger_set_checked` separa "o daemon recusou" de "não achei o daemon".
-
-    `_safe_call` colapsa os dois em (False, None) — e era por isso que a aba
-    Triggers pintava "Fim <= Início" como "daemon offline?" com o daemon vivo.
-    """
+    """`trigger_set_checked` separa "o daemon recusou" de "não achei o daemon"."""
 
     def test_recusa_de_validacao_devolve_a_mensagem(self):
         from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS
@@ -342,8 +308,7 @@ class TestTriggerSetChecked:
         assert (ok, motivo) == (False, None)
 
     def test_timeout_de_transporte_nao_vira_motivo(self):
-        """O timeout do IpcClient também é IpcError — mas com code=-1, não é
-        uma recusa do daemon."""
+        """O timeout do IpcClient também é IpcError — mas com code=-1, não é"""
         with patch.object(
             ipc_bridge, "_run_call", side_effect=IpcError(-1, "conexão timeout")
         ):
@@ -366,18 +331,10 @@ class TestTriggerSetChecked:
             ipc_bridge.trigger_set_checked("left", "Rigid", [5, 200])
 
 
-# ---------------------------------------------------------------------------
-# BG-07 (26/08/2026) — o `__all__` é lista de ROTAS, não vitrine
-# ---------------------------------------------------------------------------
-
 _RAIZ = Path(__file__).resolve().parents[2]
 _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 _PONTE = _SRC / "app" / "ipc_bridge.py"
 
-#: Quem ficou no lugar de cada ponte podada em 26/08/2026. A mensagem de falha
-#: precisa disto: reprovar dizendo só "sem chamador" manda a próxima pessoa
-#: procurar um chamador para uma função que já foi substituída — que é
-#: exatamente o gesto que a poda existe para impedir.
 _QUEM_FICOU_NO_LUGAR: dict[str, str] = {
     "apply_draft": "apply_draft_detalhado + aplicacao_confirmada",
     "rumble_policy_set": "rumble_policy_set_checked",
@@ -385,18 +342,11 @@ _QUEM_FICOU_NO_LUGAR: dict[str, str] = {
     "trigger_reset": "trigger_reset_detalhado",
     "mouse_emulation_set": (
         "call_async('mouse.emulation.set', ...) direto, em "
-        "app/actions/mouse_actions.py:462 e :560"
+        "app/actions/mouse_actions.py:316 e :560"
     ),
 }
 
-#: As rotas publicadas que HOJE ninguém atravessa, cada uma com onde a dívida
-#: já está registrada. Declarar é honesto; o que esta lista não deixa é a
-#: sexta nascer calada.
-#:
-#: Todas as quatro têm lápide viva em
 #: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`, com o endereço do
-#: que as fecharia — é lá que mora a razão longa, e repeti-la aqui só criaria
-#: duas versões para divergirem.
 _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
     "alvo_honrado": (
         "MIC-DA-MESA-CHEIA-01: lê o `por_uniq` do daemon. Lápide em "
@@ -410,17 +360,9 @@ _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
     ),
     "machine_declare": (
         "CONFIG-03: invólucro estreito de `machine_declare_detalhado`, que é "
-        "quem `app/actions/footer_actions.py:353` chama. Lápide em "
+        "quem `app/actions/footer_actions.py:181` chama. Lápide em "
         "`_NAO_E_PROMESSA`."
     ),
-    #: AS DUAS DE 04/09/2026 SÃO DÍVIDA COM DATA E DONO, e é por isso que elas
-    #: entram aqui em vez de a rota ser forçada: a ONDA1-D1 entregou o MOTOR do
-    #: microfone-como-um-ato (D-12), e quem atravessa é a frente da aba 02, na
-    #: ONDA 2 — `interface/pacotes/a02_controles.py`, o gesto `mudo`, que hoje
-    #: ainda chama `mic_set`. Fiar a rota daqui seria a frente do motor editando
-    #: arquivo de outra frente, que é a R1 desta casa ao contrário.
-    #: QUANDO A ABA 02 FECHAR, ESTAS DUAS LINHAS SAEM — e a régua volta a
-    #: cobrá-las sozinha, que é o desenho dela.
     "mic_canal_set": (
         "ONDA1-D1-O-SOM-01 (04/09/2026): o ato inteiro do microfone — mudo do "
         "firmware MAIS o canal de captura eleito no PipeWire. Atravessa quando "
@@ -436,22 +378,11 @@ _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
         "Irmão exato do `led_set`, pela mesma edição (BG-01) e com a mesma "
         "lápide. Cai no mesmo commit que ele, quando cair."
     ),
-    # A LÁPIDE DE `rumble_motores_set` SAIU EM 04/09/2026, no mesmo dia em que
-    # nasceu — **e é o desenho funcionando**. Ela dizia, com todas as letras,
-    # "QUANDO A ABA 05 FECHAR, ESTA LINHA SAI": a ONDA1-D2 entregou o motor sem
-    # chamador porque a metade de tela era de outra frente, e a ONDA2-05 fiou a
-    # rota (`interface/pacotes/ponte.rumble_motores_set` e o gesto `motor` de
-    # `a05_vibracao`). A régua volta a cobrar esta função sozinha.
 }
 
 
 def _nomes_do_all() -> list[str]:
-    """Os nomes do ``__all__`` LIDOS DO ARQUIVO, nunca do módulo importado.
-
-    Importar devolveria o que o interpretador montou; a pergunta aqui é o que
-    o arquivo PUBLICA. São a mesma coisa hoje, e é justamente por serem a mesma
-    coisa hoje que a diferença passaria despercebida amanhã.
-    """
+    """Os nomes do ``__all__`` LIDOS DO ARQUIVO, nunca do módulo importado."""
     arvore = ast.parse(_PONTE.read_text(encoding="utf-8"))
     for no in arvore.body:
         if isinstance(no, ast.Assign) and any(
@@ -486,14 +417,7 @@ def _identificadores(no: ast.AST) -> set[str]:
 
 
 def _travessias() -> dict[str, list[str]]:
-    """``{nome do __all__: quem o cita}``, varrendo `src/` inteiro.
-
-    Uma citação DENTRO do próprio `ipc_bridge.py` só conta quando vem de outro
-    escopo — o corpo de `apply_draft` citando `apply_draft_detalhado` é
-    travessia da segunda, não da primeira. Sem essa distinção, todo invólucro
-    estreito se daria por vivo citando a irmã que o substituiu, e a régua
-    passaria a medir a corrente fechada em vez da rota.
-    """
+    """``{nome do __all__: quem o cita}``, varrendo `src/` inteiro."""
     travessias: dict[str, list[str]] = {nome: [] for nome in _nomes_do_all()}
 
     def registrar(nome: str, onde: str) -> None:
@@ -514,7 +438,7 @@ def _travessias() -> dict[str, list[str]]:
                 isinstance(alvo, ast.Name) and alvo.id == "__all__"
                 for alvo in no.targets
             ):
-                continue  # o próprio `__all__` não é travessia de ninguém
+                continue
             for citado in _identificadores(no):
                 if citado != dono:
                     registrar(citado, f"{rotulo}:{getattr(no, 'lineno', 0)}")
@@ -558,12 +482,7 @@ class TestOAllSoPublicaRotaAtravessada:
         )
 
     def test_a_isencao_declarada_nao_vira_cemiterio(self) -> None:
-        """A outra direção: isenção citando nome que saiu do ``__all__``.
-
-        Sem ela a lista de cima viraria cemitério e passaria a responder a
-        pergunta com entradas mortas — que é o defeito que o portão de lápides
-        já pagou uma vez.
-        """
+        """A outra direção: isenção citando nome que saiu do ``__all__``."""
         publicados = set(_nomes_do_all())
         fantasmas = sorted(set(_SEM_TRAVESSIA_DECLARADA) - publicados)
         assert not fantasmas, (
@@ -574,21 +493,7 @@ class TestOAllSoPublicaRotaAtravessada:
         )
 
     def test_a_regua_enxerga_chamada_e_ignora_texto(self) -> None:
-        """Validação do instrumento, em fonte FABRICADA e na árvore de verdade.
-
-        Um instrumento quebrado erra em duas direções opostas, e cada metade
-        pega uma:
-
-        * numa fonte fabricada, `chamada_de_verdade` é código e as outras três
-          são comentário, docstring e literal. Contar texto é o falso positivo
-          que já enganou o portão de lápides: a chave de IPC
-          `"profile.apply_draft"`, escrita noutro módulo e para outra coisa,
-          dava a função `apply_draft` por alcançada;
-        * na árvore de verdade, `call_async` é a rota mais atravessada da ponte
-          — dezenas de chamadores em `app/actions/`. Se ela aparecesse sem
-          travessia, a varredura não estaria enxergando chamada nenhuma, e o
-          verde de cima seria o silêncio de uma régua que não mede.
-        """
+        """Validação do instrumento, em fonte FABRICADA e na árvore de verdade."""
         fabricada = ast.parse(
             '"""Este docstring cita citada_em_docstring."""\n'
             "# citada_em_comentario(1, 2)\n"

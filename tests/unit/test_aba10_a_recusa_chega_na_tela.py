@@ -50,47 +50,21 @@ from hefesto_dualsense4unix.profiles import loader
 
 PAGINA = "10-perfis.html"
 
-#: A MESA — endereço MASCARADO (octetos 4 e 5 zerados).
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
      "mascara": "DualSense"},
 ]
 
-#: AS FRASES QUE SÃO DELA, uma por gesto, com o pedaço que a identifica.
-#:
-#: Cada linha é um clique que ela pode dar hoje e que o produto RECUSA. A régua
 #: exige ``RuntimeError`` em todas — é a única classe que ``_recusou_dizendo``
-#: leva ao DOM. O ``selecionar`` fica FORA de propósito: a frase dele
-#: ("o clique não trouxe o nome do perfil") fala com quem programa, e é o único
-#: ``ValueError`` que continua certo neste arquivo.
-#:
-#: A SEXTA MUDOU EM 03/09/2026, à noite, e a troca é a entrega: era *"o perfil
-#: não guarda Estilo de Jogo"*, a recusa do campo sem motor. O motor nasceu (ver
-#: `test_aba10_o_slider_e_o_estilo_gravam.py`) e a frase que sobra é a de quem
-#: escolheu o travessão — a única recusa que o campo ainda tem. As duas últimas
-#: são as do slider, que nasceu no mesmo dia.
 DELA = ("já é o perfil que está valendo",
         "escolha um perfil na lista primeiro",
         "o perfil precisa de um nome",
         "gravar este por cima apagaria o dele",
-        # A QUINTA MUDOU EM 11/09/2026, e a troca é a entrega: era *"«X» não é
-        # uma regra que o perfil saiba guardar"*, a recusa do rótulo sem preset
-        # atrás. O campo «Funciona em:» passou a dizer DE ONDE O JOGO VEM
-        # (C4-FUNCIONA-EM, ordem dela), e as duas recusas que sobram são
-        # outras: escolher o travessão — que não é uma procedência, é o que a
-        # tela mostra quando não sabe descrever a regra — e trocar para um
-        # lançador sem o jogo no campo de baixo.
         "não é uma procedência",
-        # **ESTA ENTRA PELO SÍMBOLO, e não pelas palavras**: a frase mora no
-        # PRODUTO (`simple_match.MSG_ESCOLHA_O_JOGO`), porque ela é sobre o
-        # casamento e não sobre esta tela, e o que este arquivo tem é o `raise`
-        # que a levanta. Digitar as palavras aqui mediria a cópia, e não o ato.
         "MSG_ESCOLHA_O_JOGO",
         "escolha um Estilo de Jogo na lista",
         "está fora da faixa que o perfil aceita",
-        # A ÚLTIMA MUDOU EM 02/10/2026: o campo se chama «Preferência» na tela
-        # (A-LINHA-INTEIRA-ABRE-O-PERFIL-01, a resposta 41 dela).
         "a preferência tem de ser um número")
 
 
@@ -120,11 +94,7 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> list[Any]:
-    """A pasta de perfis, sem escrever no disco.
-
-    SEM ISTO A PASTA É VAZIA: a ``conftest.py`` põe
-    ``HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`` em TODO teste.
-    """
+    """A pasta de perfis, sem escrever no disco."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     todos = [Profile(name=n, match=MatchAny(), priority=100 - i)
@@ -141,22 +111,8 @@ def _ctx(ativo: str | None = None) -> Contexto:
                     conectados=list(MESA), estados={})
 
 
-# --------------------------------------------------------------------------
-# 1. O "ESTILO DE JOGO" TEM DONO — e desde 03/09/2026, à noite, o dono APLICA
-#
-# O QUE ESTA SEÇÃO GUARDA depois do motor: que o campo tem dono, e as DUAS
-# recusas que sobraram — o clique sem valor e o travessão. O que ele GRAVA está
-# em `test_aba10_o_slider_e_o_estilo_gravam.py`, junto do slider que nasceu no
-# mesmo dia.
-# --------------------------------------------------------------------------
-
 def test_o_estilo_de_jogo_tem_dono() -> None:
-    """MORDIDA: tire o ``@gesto`` de ``editor_estilo`` e isto reprova.
-
-    É o degrau que o piloto consulta antes de despachar
-    (``hefesto_vivo._gesto`` → ``pacotes.gesto_da_pagina``); sem ele o clique
-    dela cai no ramo do ``print`` no stdout, calado na tela.
-    """
+    """MORDIDA: tire o ``@gesto`` de ``editor_estilo`` e isto reprova."""
     assert pacotes.gesto_da_pagina(PAGINA, "editor.estilo") is not None, (
         "o `<select>` Estilo de Jogo voltou a ser um gesto SEM DONO: a escolha "
         "dela some no stdout de quem lançou a janela")
@@ -165,28 +121,14 @@ def test_o_estilo_de_jogo_tem_dono() -> None:
 def test_o_estilo_recusa_ate_sem_valor_no_clique(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem ``valor`` a recusa continua — e sem ``KeyError`` na cara dela.
-
-    O ``change`` de um ``<select>`` sempre traz ``valor``, mas o gesto também
-    chega pelo ``click`` (o ouvinte do bootstrap escuta os dois) e de qualquer
-    régua que monte o dicionário à mão. Um ``KeyError`` aqui derrubaria o
-    despacho em vez de recusar.
-    """
+    """Sem ``valor`` a recusa continua — e sem ``KeyError`` na cara dela."""
     _o_disco_tem(monkeypatch, "Pragmata")
     with pytest.raises(RuntimeError, match="escolha um Estilo de Jogo na lista"):
         a10_perfis.editor_estilo(_ctx("Pragmata"), {}, PonteDeMentira())
 
 
 def test_o_travessao_nao_e_uma_escolha(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A primeira opção do desenho é ``<option value="">—</option>``.
-
-    Um clique que não escolheu nada chega com ``valor=""`` e ``rotulo="—"`` — o
-    ``rotulo`` é o texto VISÍVEL da opção marcada (``hefesto_vivo.py:702``).
-    Medido na prova no aparelho: a tarja saía dizendo *“—” não foi salvo*.
-
-    MORDIDA: tire o ``if escolhido == "—"`` do gesto e isto reprova com
-    *"“—” não é um dos Estilos de Jogo do produto"*, que não é frase de gente.
-    """
+    """A primeira opção do desenho é ``<option value="">—</option>``."""
     _o_disco_tem(monkeypatch, "Pragmata")
     with pytest.raises(RuntimeError) as erro:
         a10_perfis.editor_estilo(_ctx("Pragmata"),
@@ -213,19 +155,10 @@ def test_o_estilo_entrou_em_sem_eco_quando_ganhou_motor() -> None:
             f"vai contá-lo como 'disse aplicado e nada mudou'")
 
 
-# --------------------------------------------------------------------------
-# 2. AS RECUSAS DELA SÃO `RuntimeError` — a única classe que vira tarja
-# --------------------------------------------------------------------------
-
 def test_o_ativar_recusa_com_a_classe_que_a_tarja_pinta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caso medido: ela clica "Ativar" no perfil que já vale.
-
-    MORDIDA: troque o ``RuntimeError`` de ``a10_perfis.ativar`` por
-    ``ValueError`` e isto reprova — que é exatamente o estado em que a aba
-    estava, com a frase certa saindo só no terminal.
-    """
+    """O caso medido: ela clica "Ativar" no perfil que já vale."""
     _o_disco_tem(monkeypatch, "meu_perfil")
     a10_perfis._ESCOLHIDO = "meu_perfil"
     ponte = PonteDeMentira()
@@ -237,12 +170,7 @@ def test_o_ativar_recusa_com_a_classe_que_a_tarja_pinta(
 def test_renomear_por_cima_de_outro_perfil_recusa_na_tela(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A recusa que protege DADO DELA — e era a mais cara de perder.
-
-    ``editor.nome`` recusa quando o nome novo já é de outro perfil, porque
-    gravar apagaria o dele. Com ``ValueError``, ela renomeava, não via aviso
-    nenhum, e ficava sem saber por que o nome não mudou.
-    """
+    """A recusa que protege DADO DELA — e era a mais cara de perder."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     a10_perfis._ESCOLHIDO = "Pragmata"
     with pytest.raises(RuntimeError, match="apagaria o dele"):
@@ -270,8 +198,6 @@ def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
     import re
 
     fonte = inspect.getsource(a10_perfis)
-    # Cada `raise <Classe>(` com o corpo até o fecho do parêntese seguinte —
-    # basta para dizer em qual `raise` a frase mora.
     blocos = re.findall(r"raise (ValueError|RuntimeError)\((.*?)\)\n",
                         fonte, re.S)
     mudas = [pedaco for pedaco in DELA
@@ -280,8 +206,6 @@ def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
     assert not mudas, (
         f"{len(mudas)} recusa(s) escrita(s) para ELA voltaram a ser "
         f"`ValueError`, e `_recusou_dizendo` só pinta `RuntimeError`: {mudas}")
-    # O CONTRAPESO: a régua acima ficaria verde para sempre se as frases
-    # sumissem do arquivo. Esta linha exige que as seis continuem EXISTINDO.
     achadas = [pedaco for pedaco in DELA if pedaco in fonte]
     assert achadas == list(DELA), (
         f"frase(s) de recusa sumiram do arquivo: "
@@ -289,12 +213,6 @@ def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
 
 
 def test_o_selecionar_continua_valueerror() -> None:
-    """O contrapeso da regra: nem toda recusa é dela.
-
-    ``selecionar`` levanta quando o clique não trouxe nome de perfil — não há
-    nada que ela possa fazer com essa frase, e pô-la na tarja trocaria um
-    silêncio por um ruído. Sem esta régua, "tudo vira ``RuntimeError``" passaria
-    como se fosse a regra.
-    """
+    """O contrapeso da regra: nem toda recusa é dela."""
     with pytest.raises(ValueError, match="não trouxe o nome do perfil"):
         a10_perfis.selecionar(_ctx(), {"texto": ""}, PonteDeMentira())

@@ -733,8 +733,8 @@
      "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
 
      ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
-     seis lugares (`monta.py:267`, `aba01.py:936`, `aba04.py:832`,
-     `aba05.py:1105`, `aba06.py:1181`, `aba10.py:584`), assim:
+     seis lugares (`monta.py:84`, `aba01.py:650`, `aba04.py:689`,
+     `aba05.py:778`, `aba06.py:1042`, `aba10.py:380`), assim:
      "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
      um controle; um desenho cinza diz."
      O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
@@ -744,11 +744,11 @@
      É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
      cobram a regra e o elemento no publicado
      (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
-     por ÍNDICE — `aba06.py:1186` avisa que "um lugar vazio sem endereço tiraria
+     por ÍNDICE — `aba06.py:1047` avisa que "um lugar vazio sem endereço tiraria
      uma casa da fila e o P4 receberia a cor do P3".
 
      UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
-     gerador E pelo piloto (`hefesto_vivo.py:603`), e reaberta quando o controle
+     gerador E pelo piloto (`hefesto_vivo.py:425`), e reaberta quando o controle
      chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
      aba01/04/05/06/10. */
   [data-conectado="nao"] .ds-svg,
@@ -1557,7 +1557,7 @@
      falta card. E só nasce no dia em que sobra — sem sobra, o produto não
      emite o elemento e a coluna fica exatamente como estava.
 
-     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:1011` já
+     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:399` já
      define `.gls .mais` para o "+N" do glossário das dez páginas. Um `.mais`
      solto aqui é o vizinho de nome igual que esta aba já pagou três vezes
      (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
@@ -1757,7 +1757,7 @@
   .gc-corpo .ltrava{display:none}
   .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
   .gc-corpo .ltrava.on ~ .btn:hover{color:var(--texto-mudo)}
-  /* REGRA DELA, escrita em `secao_controles.py:150`: *"sempre visível mas só
+  /* REGRA DELA, escrita em `secao_controles.py:109`: *"sempre visível mas só
      acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
      instável. */
   .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
@@ -5433,7 +5433,7 @@ document.addEventListener("click", function (ev) {
 
   <h2>O teto da vibração está nos dois, e a tela diz qual vale</h2>
   <ul>
-    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>Sistema</b>, onde se chama <b>Perfil de Bateria</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:127</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>Perfil Máximo</b>, que é <b>Sem teto</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
+    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>Sistema</b>, onde se chama <b>Perfil de Bateria</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:97</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>Perfil Máximo</b>, que é <b>Sem teto</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
     <li><b>O do controle sobrepõe</b>, e o campo de cada linha mostra qual é o caso: o P3 está com a bateria em 31% e sobrepõe com <b>30% da força</b>; os outros dizem <b>Segue o global</b>. A conta feita — <b>qual dos dois está valendo, de onde ele veio, e em que aba o global se muda</b> — está no <code>?</code> ao lado do campo, e não mais numa coluna de texto ao lado dele.</li>
     <li><b>Isso nasce como sprint sobre o que já existe.</b> A <code>POR-UNIDADE-01</code> (10/08) já grava política de vibração POR CONTROLE (<code>profiles/manager._controllers_to_rumble_scales</code>), relativa à global. <b>Falta uma frase sua:</b> quando o controle sobrepõe, ele vence sempre, ou o produto aplica o <code>min</code> como faz hoje entre o orçamento e a política? O <code>min</code> é o que impede um “teto” de <i>aumentar</i> a força.</li>
   </ul>

@@ -157,98 +157,25 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# ---------------------------------------------------------------------------
-# O vocabulário — todo ele emprestado de quem já o tinha
-# ---------------------------------------------------------------------------
 
-#: `mode.gamepad_flavor` (profiles/schema.py). Nomes idênticos, de propósito.
 MASCARA_DUALSENSE = "dualsense"
 MASCARA_XBOX = "xbox"
 
-#: `mode.kind` (profiles/schema.py).
 KIND_GAMEPAD = "gamepad"
 KIND_NATIVE = "native"
 KIND_DESKTOP = "desktop"
 
-#: Como uma ponte foi confirmada. Só estes três confirmam; nada mais.
 POR_GESTO = "gesto"
 POR_SILENCIO = "silencio"
 POR_ESCOLHA_DELA = "escolha_dela"
 CONFIRMACOES = frozenset({POR_GESTO, POR_SILENCIO, POR_ESCOLHA_DELA})
 
-#: O que custa subir um degrau, do ponto de vista dela. Vocabulário de string,
-#: como os desfechos de emulação em `daemon/subsystems/gamepad.py`.
-#:
-#:   - ``"agora"``            — o jogo não está aberto: o degrau vale no
-#:                              próximo lançamento e não custa nada a ninguém;
-#:   - ``"so_com_gesto"``     — o jogo está aberto e o degrau recria o vpad
-#:                              (R-04). Só o gesto DELA autoriza;
-#:   - ``"reabrindo_o_jogo"`` — o degrau não alcança um processo já rodando: a
-#:                              env dele congelou no `exec`;
-#:   - ``"fechando_a_steam"`` — o degrau mexe no `localconfig.vdf`, que só
-#:                              sobrevive com a Steam fechada.
 SUBIR_AGORA = "agora"
 SUBIR_SO_COM_GESTO = "so_com_gesto"
 SUBIR_REABRINDO_O_JOGO = "reabrindo_o_jogo"
 SUBIR_FECHANDO_A_STEAM = "fechando_a_steam"
 
-#: Quanto silêncio dela conta como confirmação, em segundos.
-#:
-#: **O relógio começa no GESTO, nunca no lançamento** — e isto é o que o número
-#: tem de medido. `launch_env.WRAPPER_MARKER_WINDOW_SEC` registra que a latência
-#: launch→janela chega a 15 minutos (Proton na 1ª execução, compilação de
-#: shaders, launcher de terceiro). Contar o silêncio a partir do lançamento
-#: confirmaria o degrau de baixo enquanto o jogo ainda compila shaders e ela
-#: nem viu o controle.
-#:
-#: **O valor em si NÃO é medido, e a honestidade é dizer isso.** Não existe nesta
-#: casa uma medição de quanto tempo ela leva para perceber que o controle não
-#: pegou. Três minutos é a estimativa.
-#:
-#: **O GESTO DELA RECARIMBA — e é o gesto, não o próximo silêncio sozinho.**
-#: (implementado em 29/08/2026; até essa data esta nota registrava, com razão,
-#: que NADA recarimbava). O que mudou, e onde:
-#:
-#:   - `carimbar_ponte` (`profiles/manager.py`) continua sendo o ÚNICO lugar do
-#:     produto que monta um `PonteConfirmada` dentro de um perfil, e quem o
-#:     chama continua sendo `ProfileManager.confirmar_ponte`, no mesmo arquivo;
-#:   - `confirmar_ponte` continua com UM chamador,
-#:     `daemon/launch_env.tique_da_escada`. O que ele passa em `por=` deixou de
-#:     ser sempre `POR_SILENCIO`: quando a ponte de pé foi posta ali por gesto
-#:     DELA (`gestos > 0`), o carimbo sai `POR_GESTO` — que é o nome que o
-#:     esquema já tinha e ninguém escrevia;
-#:   - e a recusa "já há carimbo" ficou mais estreita, de propósito:
-#:     `confirmacao_por_silencio` recusa recarimbar o que ninguém contestou, e
-#:     ACEITA quando a ponte de pé DIVERGE do carimbo e foi o gesto dela que a
-#:     pôs ali. Carimbo antigo intacto até ela discordar; corrigido quando ela
-#:     discorda;
 #:   - salvar o perfil continua sem LIMPAR nada: `carimbo_que_o_save_leva`
-#:     (`app/actions/profile_writer.py`), dono único da resposta para os dois
-#:     botões que gravam, nunca devolve `None` havendo carimbo.
-#:
-#: **E o carimbo sozinho não bastava**, o que é o defeito de fundo: o carimbo
-#: só preenche o SILÊNCIO do perfil (`launch_env.arm_launch_profile` o lê apenas
-#: quando `mode is None` — *"o perfil manda"*). Num perfil que opina, carimbar
-#: `xbox` e deixar `mode.gamepad_flavor="dualsense"` faz o lançamento seguinte
-#: armar `dualsense` de novo, gritar a divergência no journal, e ela apertar
-#: outra vez. Por isso a confirmação por gesto grava as DUAS coisas, na mesma
-#: gravação (`manager.alinhar_o_modo_com_a_ponte`).
-#:
-#: O preço que pagou por isto, no journal dela de 29/08/2026: o Mullet Mad Jack
-#: foi carimbado `dualsense` às 03:23:13, por silêncio, com `gestos=0`. Entre
-#: 03:27:59 e 03:29:02 ela apertou `PS + R3` quatro vezes e parou no `xbox`. O
-#: carimbo `dualsense` continuou lá, e a aba Perfis passou a contar que aquela
-#: ponte funcionou e ninguém precisou mexer — o contrário do que aconteceu. Em
-#: 7 dias, 24 apertos: os 23 perfis de jogo dela pedem `dualsense` e ela joga em
-#: `xbox`.
-#:
-#: **Os dois lados de errar continuam custando**, e o número não mudou por
-#: isso: errar para MAIS deixa ela apertando um botão que não faz nada; errar
-#: para MENOS grava um dado errado — agora reversível pelo gesto, mas ainda
-#: errado enquanto ela não aperta.
-#:
-#: O número continua 180.0 de propósito: mudar QUANDO o produto carimba muda o
-#: comportamento do produto dela, e é decisão dela.
 SILENCIO_CONFIRMA_SEC = 180.0
 
 
@@ -287,11 +214,8 @@ class Degrau:
 
     ponte: Ponte
     porque: str
-    #: Subir aqui destrói e recria o vpad (R-04).
     recria_vpad: bool
-    #: O degrau não alcança um processo já rodando (env congelada no `exec`).
     exige_reabrir_jogo: bool
-    #: O degrau mexe no `localconfig.vdf` — só sobrevive com a Steam fechada.
     exige_fechar_steam: bool
 
     @property
@@ -300,7 +224,6 @@ class Degrau:
         return not self.exige_reabrir_jogo and not self.exige_fechar_steam
 
 
-#: A ESCADA. Ordem justificada no cabeçalho, com o dado ao lado de cada linha.
 ESCADA: tuple[Degrau, ...] = (
     Degrau(
         ponte=Ponte(KIND_GAMEPAD, MASCARA_DUALSENSE),
@@ -357,10 +280,6 @@ ESCADA: tuple[Degrau, ...] = (
     ),
 )
 
-# ---------------------------------------------------------------------------
-# As decisões — puras: sem disco, sem daemon, sem relógio próprio
-# ---------------------------------------------------------------------------
-
 
 def indice_do_degrau(ponte: Ponte) -> int:
     """Posição da ponte na `ESCADA`, ou -1 quando ela não é um degrau."""
@@ -371,22 +290,13 @@ def indice_do_degrau(ponte: Ponte) -> int:
 
 
 def ponte_do_perfil(profile: Any, *, na_allowlist: bool) -> Ponte | None:
-    """A ponte que ESTE perfil entrega HOJE, ou None quando ele não opina.
-
-    Duck-typing sobre `mode` de propósito: este módulo não importa
-    `profiles/schema.py` para não criar mais um nó no ciclo
-    `profiles -> daemon -> profiles` que `daemon/protocols.py` existe para
-    manter desfeito.
-    """
+    """A ponte que ESTE perfil entrega HOJE, ou None quando ele não opina."""
     mode = getattr(profile, "mode", None)
     if mode is None:
         return None
     kind = getattr(mode, "kind", None)
     if kind not in (KIND_GAMEPAD, KIND_NATIVE, KIND_DESKTOP):
         return None
-    # MODO-DE-CONEXAO-01 (13/09/2026): os degraus ao vivo são CAMINHOS, e o
-    # perfil que escolheu um o diz em `mode.caminho`. Sem escolha, o degrau sai
-    # da máscara padrão, como saía — nenhum perfil muda de degrau no dia da cura.
     mascara = (
         (getattr(mode, "caminho", None) or getattr(mode, "gamepad_flavor", None))
         if kind == KIND_GAMEPAD
@@ -398,14 +308,7 @@ def ponte_do_perfil(profile: Any, *, na_allowlist: bool) -> Ponte | None:
 
 
 def ponte_do_carimbo(carimbo: Any) -> Ponte | None:
-    """A `Ponte` de um `PonteConfirmada` do perfil, ou None quando não há.
-
-    O esquema chama a máscara de `gamepad_flavor` (para ficar campo a campo com
-    o `mode` ao lado dela no arquivo) e a escada a chama de `mascara`. Esta é a
-    ÚNICA tradução entre os dois vocabulários, e ela mora aqui de propósito —
-    espalhá-la por cada chamador é como se fabrica a divergência que
-    `PonteConfirmada.mesma_ponte` existe para não deixar acontecer.
-    """
+    """A `Ponte` de um `PonteConfirmada` do perfil, ou None quando não há."""
     if carimbo is None:
         return None
     kind = getattr(carimbo, "kind", None)
@@ -420,20 +323,7 @@ def ponte_do_carimbo(carimbo: Any) -> Ponte | None:
 
 
 def caminho_do_perfil(profile: Any) -> str | None:
-    """O CAMINHO que ESTE perfil declara — `None` é *"ele não declara nenhum"*.
-
-    SEM o ramo de queda para `mode.gamepad_flavor` que :func:`ponte_do_perfil`
-    tem. Lá a queda é certa e datada (*"nenhum perfil muda de degrau no dia da
-    cura"*); aqui ela seria a própria troca de vocabulário que esta função
-    existe para não deixar acontecer.
-
-    A ARMADILHA, e é por isso que ela não se vê a olho nu: os dois vocabulários
-    usam AS MESMAS DUAS PALAVRAS. `mode.caminho` vale ``"dualsense"``/``"xbox"``
-    e `mode.gamepad_flavor` também — só que o primeiro diz por qual CANAL o
-    controle chega e o segundo diz que par VID/PID o jogo VÊ. Trocar um pelo
-    outro não produz erro de tipo, não produz valor estranho, e produz um
-    alarme que afirma uma divergência inteira sobre nada.
-    """
+    """O CAMINHO que ESTE perfil declara — `None` é *"ele não declara nenhum"*."""
     mode = getattr(profile, "mode", None)
     if mode is None or getattr(mode, "kind", None) != KIND_GAMEPAD:
         return None
@@ -496,34 +386,10 @@ def divergencia_com_o_carimbo(
 def proximo_degrau(
     *, ponte_atual: Ponte | None, confirmada: Ponte | None = None
 ) -> Degrau | None:
-    """O próximo degrau a tentar, ou None quando a escada NÃO deve rodar.
-
-    **Este é o ponto que transforma "achar rápido" em "nunca mais procurar", e
-    um bug aqui é regressão pura** — a escada rodando em jogo que já
-    funcionava. Por isso a primeira linha do corpo é a recusa, e não uma
-    otimização depois de calcular o resto.
-
-    `confirmada` é o carimbo do perfil daquele jogo
-    (`profiles/manager.ponte_confirmada_do_appid`, traduzido por
-    `ponte_do_carimbo`). Três motivos para não rodar, nesta ordem:
-
-    1. **o produto SABE** — há ponte confirmada para este jogo. Vale mesmo que
-       a ponte de pé hoje seja outra: divergir do carimbo é assunto do
-       prontuário (`PONTE_DIVERGENTE`), e não licença para a escada recomeçar;
-    2. **a ponte de pé não é um degrau** — ela escolheu na mão uma tupla que a
-       escada não conhece. A escolha dela manda; a escada não a corrige;
-    3. **a escada acabou** — o último degrau já está de pé e ninguém confirmou
-       nada. Voltar ao primeiro faria um laço eterno, e um laço de escada é o
-       laço destrói-e-recria com outro nome.
-
-    A escada NÃO guarda posição própria: o degrau em que ela está é a ponte que
-    está de pé. É isso que faz o jogo fechado no meio da escada retomar de onde
-    parou sem nenhum arquivo de estado para ficar velho.
-    """
+    """O próximo degrau a tentar, ou None quando a escada NÃO deve rodar."""
     if confirmada is not None:
         return None
     if ponte_atual is None:
-        # Ninguém opinou ainda: a escada começa no primeiro degrau.
         return ESCADA[0]
     posicao = indice_do_degrau(ponte_atual)
     if posicao < 0:
@@ -535,13 +401,7 @@ def proximo_degrau(
 
 
 def como_subir(degrau: Degrau, *, jogo_vivo: bool) -> str:
-    """O preço de subir ESTE degrau agora. Um de `SUBIR_*`.
-
-    A regra que este módulo não abre mão: **com o jogo vivo a resposta nunca é
-    `SUBIR_AGORA`.** Cada degrau ao vivo recria o vpad, e recriar o vpad com o
-    jogo aberto arranca o controle da mão dela (R-04). O produto pode subir
-    sozinho entre lançamentos; com o jogo aberto, quem sobe é o gesto dela.
-    """
+    """O preço de subir ESTE degrau agora. Um de `SUBIR_*`."""
     if degrau.exige_fechar_steam:
         return SUBIR_FECHANDO_A_STEAM
     if jogo_vivo and degrau.exige_reabrir_jogo:
@@ -560,31 +420,7 @@ def confirmacao_por_silencio(
     confirmada: Ponte | None = None,
     gestos: int = 0,
 ) -> Ponte | None:
-    """A ponte que o SILÊNCIO dela confirma, ou None quando nada é confirmado.
-
-    *"Se ela para de apertar, a ponte atual é a que pegou."* Com quatro
-    condições, e são elas que separam isto de inventar confirmação:
-
-    1. **há ponte de pé** para confirmar;
-    2. **há algo NOVO a dizer.** Sem carimbo, qualquer confirmação é nova.
-       Havendo carimbo, só o gesto DELA reabre a pergunta — e só quando a ponte
-       de pé DIVERGE do que está carimbado. Recarimbar o que ninguém contestou
-       apagaria a data, que é a única informação que o carimbo antigo carrega;
-    3. **o jogo tem de estar VIVO.** Silêncio com o jogo fechado não é ela
-       aprovando a ponte — é ela tendo ido embora. Se ela fechou o jogo no meio
-       da escada, nada é confirmado: a ponte de pé continua sendo a última
-       tentada, e o próximo lançamento retoma dali;
-    4. **o relógio conta do último GESTO**, nunca do lançamento — ver
-       `SILENCIO_CONFIRMA_SEC`.
-
-    `gestos` é quantos `PS + R3` dela puseram esta ponte de pé. Ele existe para
-    a condição 2 e para `por_que_confirmou`, e o default `0` deixa o chamador
-    que não conta gestos com o comportamento de sempre: com carimbo, nada é
-    confirmado.
-
-    Devolve a `Ponte` a carimbar; quem grava é
-    `profiles/manager.confirmar_ponte`, com `por=por_que_confirmou(gestos)`.
-    """
+    """A ponte que o SILÊNCIO dela confirma, ou None quando nada é confirmado."""
     if ponte_atual is None:
         return None
     if confirmada is not None and not (gestos > 0 and ponte_atual != confirmada):
@@ -597,15 +433,7 @@ def confirmacao_por_silencio(
 
 
 def por_que_confirmou(gestos: int) -> str:
-    """`POR_GESTO` quando a mão dela pôs a ponte de pé; `POR_SILENCIO` quando não.
-
-    A distinção é a do esquema, palavra por palavra (`CONFIRMADA_POR_*`):
-    `gesto` é *"ela confirma UMA vez, com um gesto no controle, qual pegou"*;
-    `silencio` é *"ela jogou e não reclamou"*. Guardar QUAL deles é o que
-    separa *"o produto adivinhou e ela não desmentiu"* de *"ela mandou"* no dia
-    em que a escada errar — e até 29/08/2026 o produto só sabia escrever um dos
-    dois, porque só o tique sem gesto tinha escritor.
-    """
+    """`POR_GESTO` quando a mão dela pôs a ponte de pé; `POR_SILENCIO` quando não."""
     return POR_GESTO if gestos > 0 else POR_SILENCIO
 
 

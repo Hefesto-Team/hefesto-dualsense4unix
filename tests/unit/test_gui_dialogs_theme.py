@@ -1,27 +1,8 @@
-"""GUI-05 (P4/P5) — tema dos diálogos + segmentado read-only da ficha.
-
-P5 (estudo 2026-07-18): `_build_wrapper_dialog` criava `Gtk.MessageDialog` SEM
-a classe `.hefesto-dualsense4unix-window` — TODO o CSS Drácula é escopado a
-ela, e sob XWayland no COSMIC o diálogo herdava Adwaita CLARO. A cura tem duas
-camadas (as duas testadas aqui):
-
-1. VARREDURA: todo `Gtk.MessageDialog`/`Gtk.Dialog` do app aplica a classe
-   (helper `gui_dialogs._apply_app_theme` ou o `add_class` literal);
-2. estrutural: bloco top-level `messagedialog` no theme.css (test_theme_css).
-
-P4: a ficha do controle externo ganha um seletor SEGMENTADO READ-ONLY
-(Nintendo | Xbox) marcando o modo DETECTADO — sem popup (veto 8BIT-02). A
-camada pura vive em test_external_controllers; aqui ficam a montagem GTK real
-(guardada por display) e os espelhos por fonte que rodam headless.
-"""
+"""GUI-05 (P4/P5) — tema dos diálogos + segmentado read-only da ficha."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("gui dialogs theme")
 
 import contextlib
@@ -39,8 +20,6 @@ _APP_DIR = (
     / "app"
 )
 
-#: Como um diálogo pode receber a classe de tema: pelo helper canônico ou pelo
-#: add_class literal (módulos que não importam gui_dialogs).
 _THEME_MARKS = (
     "_apply_app_theme(",
     'add_class("hefesto-dualsense4unix-window")',
@@ -48,15 +27,8 @@ _THEME_MARKS = (
 
 
 def _tem_tema(src: str) -> bool:
-    # Compacta o whitespace antes de casar: o `add_class(` quebrado em duas
-    # linhas pelo limite de coluna (daemon_actions) continua contando.
     compacto = re.sub(r"\s+", "", src)
     return any(mark in compacto for mark in _THEME_MARKS)
-
-
-# ---------------------------------------------------------------------------
-# Varredura: cada construtor de diálogo conhecido aplica a classe de tema
-# ---------------------------------------------------------------------------
 
 
 def _funcoes_com_dialogo() -> list[tuple[str, str]]:
@@ -101,13 +73,7 @@ def test_cada_dialogo_conhecido_aplica_a_classe_de_tema(
 
 
 def test_varredura_nenhum_modulo_do_app_cria_dialogo_sem_tema() -> None:
-    """Guarda de regressão: módulo do app/ que constrói Gtk.MessageDialog ou
-    Gtk.Dialog precisa aplicar a classe de tema em algum lugar do arquivo.
-
-    Granularidade por ARQUIVO (a por-função vive no teste parametrizado
-    acima): pega o esquecimento clássico — um diálogo novo num módulo que
-    nunca tematizou nada.
-    """
+    """Guarda de regressão: módulo do app/ que constrói Gtk.MessageDialog ou"""
     padrao = re.compile(r"Gtk\.(MessageDialog|Dialog)\(")
     problemas: list[str] = []
     for arquivo in sorted(_APP_DIR.rglob("*.py")):
@@ -150,12 +116,8 @@ def test_helper_do_tema_nao_propaga_excecao_de_stub() -> None:
     class _SemStyle:
         pass
 
-    _apply_app_theme(_SemStyle())  # não levanta
+    _apply_app_theme(_SemStyle())
 
-
-# ---------------------------------------------------------------------------
-# P4 — segmentado read-only da ficha do externo
-# ---------------------------------------------------------------------------
 
 _NINTENDO_USB = {
     "name": "Nintendo Co., Ltd. Pro Controller",
@@ -168,27 +130,16 @@ _DESCONHECIDO = {"name": "Marca Xpto Pad", "vid": "abcd", "pid": "0001", "bus": 
 
 
 def test_ficha_monta_o_segmentado_e_o_subtitulo() -> None:
-    """Espelho por fonte (headless): a ficha empacota a linha do segmentado
-    (`_external_mode_row`) e o subtítulo, mantendo o texto de orientação
-    existente (`mode_guidance`)."""
+    """Espelho por fonte (headless): a ficha empacota a linha do segmentado"""
     from hefesto_dualsense4unix.app import gui_dialogs
 
     src = inspect.getsource(gui_dialogs.show_external_controller)
     assert "_external_mode_row(" in src
-    assert "mode_guidance(" in src  # a orientação existente continua lá
+    assert "mode_guidance(" in src
 
 
 def test_ficha_tolera_slot_none_com_traco_honesto() -> None:
-    """NUMA-05 — espelho por fonte (headless, sem GTK real): a ficha do
-    controle externo SEMPRE monta a linha "Controle N" — nunca mais a omite
-    quando o registry ainda não opinou (`slot=None`). A formatação "número
-    ou —" é centralizada em `slot_label` (mesma fonte que `button_labels_for`
-    e o tooltip do seletor usam — GUI e ficha nunca discordam).
-
-    FALHA-SEM: no HEAD pré-NUMA-05, a ficha tinha ``if slot is not None:``
-    ao redor do label — com resolver opinando None, a linha SUMIA (em vez de
-    mostrar "—"). Este teste reprova se o guard condicional voltar.
-    """
+    """NUMA-05 — espelho por fonte (headless, sem GTK real): a ficha do"""
     from hefesto_dualsense4unix.app import gui_dialogs
 
     src = inspect.getsource(gui_dialogs.show_external_controller)
@@ -204,7 +155,7 @@ def test_external_mode_row_e_read_only_por_construcao() -> None:
     from hefesto_dualsense4unix.app import gui_dialogs
 
     src = inspect.getsource(gui_dialogs._external_mode_row)
-    assert "SegmentedSelector" in src  # padrão da casa, nunca combo/popup
+    assert "SegmentedSelector" in src
     assert "ComboBox" not in src
     assert "set_sensitive(False)" in src
     assert "MODE_SELECTOR_TOOLTIP" in src
@@ -235,11 +186,10 @@ class TestFichaGtkReal:
         montado = _external_mode_row(_NINTENDO_USB)
         assert montado is not None
         row, sub = montado
-        # a linha tem o rótulo + o seletor
         chave, seletor = row.get_children()
         assert "O jogo vê como" in chave.get_text()
         assert seletor.get_active_id() == "nintendo"
-        assert seletor.get_sensitive() is False  # read-only de verdade
+        assert seletor.get_sensitive() is False
         assert seletor.get_tooltip_text() == MODE_SELECTOR_TOOLTIP
         assert sub.get_text() == MODE_SELECTOR_SUBTITLE
 

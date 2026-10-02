@@ -136,33 +136,11 @@ CHAVE_NO_MAPA_DE_CANAIS = "audio.microfone"
 HZ_INPUT_SEM_MIC = 260.4
 
 #: Relatórios de entrada por segundo com a ponte de microfone de pé — o input
-#: CAI, porque o áudio divide a mesma fila (``dualsense_bt_audio.py:77``).
-#: Mesma medição que :data:`CHAVE_NO_MAPA_DE_CANAIS` registra em
-#: ``radio_ressalva``.
 HZ_INPUT_COM_MIC = 170.5
 
-#: Quadros de áudio por segundo com a ponte de pé (``dualsense_bt_audio.py:77``).
-#: Mesma medição que :data:`CHAVE_NO_MAPA_DE_CANAIS` registra em
-#: ``radio_ressalva``.
 HZ_AUDIO_COM_MIC = 106.2
 
-#: Z6-08 (24/08/2026) — o número medido ganha um dono só. As três constantes
-#: acima e a célula ``radio_ressalva`` da linha 23 de
-#: ``docs/data/mapa-controles.csv`` (``audio.microfone@dualsense``) eram a
 #: MESMA medição escrita duas vezes, sem nada entre elas: trocar a constante
-#: passava em 36 testes sem que a prosa do mapa se movesse (§0.1 do
-#: SPRINT_ORDER, F9). Esta tupla é o que
-#: ``scripts/validar-fala-de-tela.py`` lê POR AST (nunca importando este
-#: módulo — ele puxa ``structlog`` por ``core.sysfs_leds``) para reprovar
-#: quando a constante e a célula divergirem: cada item é um
-#: :class:`~hefesto_dualsense4unix.app.fala_do_mapa.Numero`, e o ``valor`` é a
-#: MESMA referência de nome acima — nunca um literal copiado — para as duas
-#: nunca poderem divergir sem alguém precisar editar as duas linhas.
-#:
-#: DE ``Numero``, E NÃO DE TUPLA CRUA, desde 28/09/2026: a tupla de quatro
-#: campos era o tipo sem o construtor, e o ``__post_init__`` que recusa valor
-#: que não é número (e chave vazia) nunca rodava sobre ela. Agora ele roda ao
-#: importar este módulo, e o portão aceita só esta forma.
 NUMEROS_MEDIDOS_NO_MAPA: tuple[Numero, ...] = (
     Numero(constante="HZ_INPUT_SEM_MIC", valor=HZ_INPUT_SEM_MIC,
            chave="audio.microfone@dualsense", coluna="radio_ressalva"),
@@ -172,29 +150,14 @@ NUMEROS_MEDIDOS_NO_MAPA: tuple[Numero, ...] = (
            chave="audio.microfone@dualsense", coluna="radio_ressalva"),
 )
 
-#: Até aqui a mesa é "Folgada". Decisão R3 do PO.
 CORTE_FOLGADA = 0.60
 
-#: Daqui para cima a mesa é "Cheia"; entre os dois cortes, "Apertada". As três
-#: palavras são só sobre OCUPAÇÃO — ver :data:`PALAVRAS_DE_CULPA`.
 CORTE_APERTADA = 0.85
 
-#: As três palavras, na ordem dos cortes. Duas cores só: a primeira é verde, as
-#: outras duas são laranja (`@orange`). **Nunca vermelho** — rádio cheio é
-#: reversível (basta tirar um controle do adaptador), e nesta casa o vermelho é
-#: para o que destrói e não tem volta.
 PALAVRA_FOLGADA = "Folgada"
 PALAVRA_APERTADA = "Apertada"
 PALAVRA_CHEIA = "Cheia"
 
-#: O que o rótulo do medidor NÃO pode conter, em nenhuma das três palavras nem
-#: em nada que a GUI componha a partir delas.
-#:
-#: Não é paranoia de redação: a desigualdade de quase o dobro entre dois
-#: controles do mesmo adaptador (ver o cabeçalho) é ABERTA, e sobreviveu à troca
-#: de unidades. Uma tela que ligue ocupação a qualidade estaria afirmando uma
-#: causa que a bancada não sustenta — e ensinando a trocar de controle quando o
-#: problema pode ser outro. O teste varre esta lista contra o texto que sai.
 PALAVRAS_DE_CULPA = frozenset(
     {
         "culpa",
@@ -212,32 +175,15 @@ PALAVRAS_DE_CULPA = frozenset(
     }
 )
 
-#: Chave do balde de "não sei a qual adaptador este controle pertence". É a
-#: string vazia porque é exatamente o que :func:`adaptador_por_uniq` devolve
-#: para ausência — um controle bt sem endereço legível NUNCA empresta o
-#: adaptador do vizinho.
 SEM_ADAPTADOR = ""
 
-#: MAC bem-formado, minúsculo. É a MESMA regex de ``broker/hidraw_broker.py:132``,
-#: recompilada aqui de propósito: lá ela é privada e mora no broker, e importar
-#: um símbolo privado de outra camada é dívida pior que quatro linhas repetidas.
 _MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 
 _MARCA_UNIQ = "HID_UNIQ="
 _MARCA_PHYS = "HID_PHYS="
 
-#: A raiz de produção do ``hidraw`` no ``/sys``. O mapa guardado só vale nela
-#: (ou com o dono injetado): a suíte aponta a raiz para uma pasta de mentira, e
-#: um mapa da raiz real não pode responder por ela.
 RAIZ_DO_HIDRAW = "/sys/class/hidraw"
 
-#: O-REPOUSO-ESPERA-O-EVENTO-01, família 2 (29/09/2026): o mapa inteiro
-#: ``{uniq em hex: HID_PHYS ou ""}`` dos nós, preso à geração de NOMES dos
-#: ``hidraw*`` de ``/dev``. Medido na sonda S.4 (60 s, os quatro no rádio,
-#: parados): 2.788 leituras de ``uevent`` por minuto, porque o governador
-#: pergunta a cada 1 s por controle autorizado e cada pergunta lia os 12 nós. A
-#: resposta só muda quando o controle sai do adaptador, e sair do adaptador é o
-#: nó dele sumir: um evento. ``(raiz, ficha do dono, mapa)``; None = nada guardado.
 _MAPA_DO_HIDRAW: tuple[str, tuple[int, ...], dict[str, str]] | None = None
 _MAPA_TRAVA = threading.Lock()
 
@@ -255,13 +201,7 @@ _ode.ao_desarmar(_esquecer_o_mapa)
 def _mapa_do_hidraw(
     raiz: str, listar: Callable[[str], list[str]]
 ) -> tuple[dict[str, str], bool]:
-    """``({uniq em hex: HID_PHYS ou ""}, completo?)`` dos nós de ``raiz``.
-
-    A mesma regra do laço de :func:`adaptador_por_uniq`: por ``uniq``, vale o
-    primeiro nó (em ordem) cujo ``HID_PHYS`` é MAC. ``completo`` é False quando
-    algum ``uevent`` não se leu (o sysfs some sob a mão): um mapa assim não se
-    guarda. O ``OSError`` do ``listar`` sobe para quem chama.
-    """
+    """``({uniq em hex: HID_PHYS ou ""}, completo?)`` dos nós de ``raiz``."""
     mapa: dict[str, str] = {}
     completo = True
     for no in sorted(listar(raiz)):
@@ -279,13 +219,7 @@ def _mapa_do_hidraw(
 
 @dataclass(frozen=True)
 class Ocupacao:
-    """Quanto do rádio de UM adaptador está comprometido.
-
-    Os campos são fatias por segundo (não Hz, não porcentagem) porque é nessa
-    unidade que a conta fecha contra o teto da especificação. As frações são
-    derivadas e vêm CRUAS: passar de 1,0 é resultado legítimo, e é justamente o
-    que a barra precisa saber dizer.
-    """
+    """Quanto do rádio de UM adaptador está comprometido."""
 
     slots_input: float = 0.0
     slots_audio: float = 0.0
@@ -316,11 +250,7 @@ class Ocupacao:
 
 
 def palavra_da_ocupacao(fracao: float) -> str:
-    """A palavra da ocupação, pelos dois cortes da decisão R3.
-
-    Fração é a do TOTAL (entrada mais áudio), e vem crua: acima de 1,0 continua
-    "Cheia", que é o que a pessoa precisa ler.
-    """
+    """A palavra da ocupação, pelos dois cortes da decisão R3."""
     if fracao <= CORTE_FOLGADA:
         return PALAVRA_FOLGADA
     if fracao <= CORTE_APERTADA:
@@ -338,12 +268,12 @@ def adaptador_por_uniq(
 ) -> dict[str, str]:
     """``{uniq: endereço do adaptador}`` — ``""`` para quem não está no rádio.
 
-    Molde literal de ``integrations/usb_pai.py:161-201``, com uma troca só: lá
+    Molde literal de ``integrations/usb_pai.py:157-197``, com uma troca só: lá
     o ``HID_UNIQ`` é a chave de busca e a resposta é o nó USB pai; aqui o
     ``HID_UNIQ`` segue sendo a chave e a resposta é o ``HID_PHYS``.
 
     Por que o ``HID_PHYS`` responde à pergunta "qual adaptador": o próprio
-    broker decide por ele. ``broker/hidraw_broker.py:394`` recusa o nó cujo
+    broker decide por ele. ``broker/hidraw_broker.py:318`` recusa o nó cujo
     ``HID_PHYS`` não é MAC, com o comentário literal *"BT real tem HID_PHYS =
     MAC do adaptador"*, e o belt de ``:395-397`` só confirma quando o sysfs de
     Bluetooth está legível.
@@ -393,7 +323,6 @@ def adaptador_por_uniq(
             try:
                 mapa, completo = _mapa_do_hidraw(raiz, listar)
             except OSError:
-                # O mesmo «não sei» de sempre, e nada se guarda.
                 return saida
             if completo:
                 with _MAPA_TRAVA:
@@ -404,9 +333,6 @@ def adaptador_por_uniq(
     try:
         nos = sorted(listar(raiz))
     except OSError:
-        # Sysfs ilegível é "não sei", nunca um adaptador chutado. O sysfs de
-        # Bluetooth é instável ao vivo — adaptador em down, rfkill, hci sem
-        # `address` (`broker/hidraw_broker.py:179-185`).
         return saida
     leitor = ler if ler is not None else _ler_texto
     for no in nos:
@@ -433,7 +359,7 @@ def ocupacao_por_adaptador(
     """``{endereço do adaptador: Ocupacao}`` a partir do estado do daemon.
 
     ``controles`` é a lista ``state["controllers"]`` como ela já chega
-    (``core/backend_pydualsense.py:8021``, o `describe_controllers`): cada item traz ``transport``,
+    (``core/backend_pydualsense.py:5347``, o `describe_controllers`): cada item traz ``transport``,
     ``connected`` e ``uniq`` — este último com 12 hex sem separador, **ou
     ``None``** quando a chave do backend era um caminho e não um MAC
     (``:4664-4679``, a guarda que impediu o pseudo-MAC ``deda4``).
@@ -499,95 +425,27 @@ def ocupacao_por_adaptador(
     }
 
 
-# ============================================================================
-# O AR, DESDE 23/09/2026 — AR-MEDIDO-01, decisões R10 e R11 dela
-# ============================================================================
-#
-# A conta aditiva acima somava a ENTRADA de cada controle contra 1.600 fatias.
-# O estudo de 23/09 mediu que a entrada é ELÁSTICA: um controle sozinho num
-# adaptador dá ~750 relatórios/s, dois dividindo dão ~400 cada — ela ocupa o
-# ar que sobra, e somá-la como demanda fixa é o erro. O que transborda um
-# adaptador são as saídas de RITMO FIXO: as pontes de som (0x35) e de
-# vibração (0x32), 93,75 relatórios/s cada, que não cedem.
-#
-# Por isso o orçamento de agora conta PONTES contra :data:`N_MAX_PONTES`, e os
-# Hz que a tela mostra são MEDIDOS — o nó de movimento de cada controle e o
-# contador do adaptador (``ar_do_adaptador``). Nada somado, nada estimado
-# (D-CONTA-ADITIVA-DO-RADIO, 25/08). As procedências, uma por linha, estão em
-# ``docs/data/orcamento-de-ar.csv``, e a régua
-# ``test_o_orcamento_conta_a_ponte.py`` reprova quando o CSV e estas constantes
-# divergirem.
-#
-# NOTAS DATADAS — 23/09/2026, sobre a vista aditiva que fica lá em cima:
-#
-# * ``SLOTS_POR_RELATORIO = 1`` era chamado de «hipótese conservadora». É o
-#   lado OTIMISTA: o medido é 2 (:data:`FATIAS_POR_RELATORIO_DE_ENTRADA`). O 1
-#   fica porque o mockup APROVADO do arranjo (``mockup/mapa-das-portas.html``,
-#   ``CUSTO_SEM_MIC = 260.4``) e o motor que o espelha (``arranjo_da_mesa``)
-#   fazem ``HZ * SLOTS_POR_RELATORIO``, e o portão da paridade reprova a
-#   divergência: trocar para 2 mudaria o desenho dela sem o OK dela. Sai
-#   quando o último leitor da vista aditiva migrar (MOVER-UM-POR-VEZ-01 no
-#   ``plano_de_radio``, TRANSPLANTE-DA-SECAO-01 na aba 08).
-# * A consequência 1 do cabeçalho («o nominal do A/B, nunca uma medição ao
-#   vivo») vale só para aquela vista. A R10 dela manda Hz REAIS, e este
-#   orçamento os lê do nó de movimento, contado pelo carimbo do kernel — não
-#   pelo laço de leitura que a nota de 23/08 acusou.
-
-#: Quantas pontes um adaptador comporta. MEDIDO: duas viveram 63 min no mesmo
-#: adaptador; a terceira derrubou em 11, 15 e 89 s (22/09/2026). Provisório até
-#: a bancada dela medir o k (a tabela «O QUE É DELA» do índice da leva).
 N_MAX_PONTES = 2
 
-#: Relatórios por segundo de UMA ponte — um quadro Opus de 10 ms e mais um
-#: pedaço, o ritmo da ``BombaDeSomPeloRadio``. Vale para o 0x35 e para o 0x32.
 HZ_DA_PONTE = 93.75
 
-#: Fatias por relatório de ponte (o k). PROVISÓRIO: o 0x35 de 339 B no ar cabe
-#: em 3 fatias (2-DH3/3-DH3) ou em 5 (DH5), e quem escolhe é o firmware do
-#: adaptador — não se observa por HCI. A bancada mede por deslocamento.
 FATIAS_DA_PONTE = 3
 
-#: Fatias por relatório de ENTRADA: 2, medido — ver o cabeçalho deste módulo.
-#: A entrada é elástica e não entra no orçamento; o número serve para ler o
-#: contador do adaptador em fração do ar (``acl_rx/s * 2 / 1.600``).
 FATIAS_POR_RELATORIO_DE_ENTRADA = 2
 
-#: Os dois modos de ponte que ocupam o ar em ritmo fixo.
 MODOS_DA_PONTE = frozenset({"som", "haptica"})
 
 
-# -- O NÍVEL DO MOVIMENTO (O-HZ-TEM-A-COR-DA-DISTANCIA-01, 30/09/2026) --------
-# O pedido dela, com a aba Conexões aberta e os quatro no rádio:
-# *«naquela sessão do hertz eles precisam ter os
 # numeros com fontes mudando de cores do vermelho <!-- noqa-acento: citação literal dela -->
-# branco e verde pra indicar o quão bom a sua
 # distancia tá daquele conector.»* <!-- noqa-acento: citação literal dela -->
-# O Hz é o que CHEGA ao jogo (ele cai com o vizinho, com a
-# voz, com o Wi-Fi e com a distância); a cor diz quanto chega, e não por quê
-# (:data:`PALAVRAS_DE_CULPA`). O vermelho daqui é pedido dela pelo nome, e vale
-# só para o Hz e para os canais: o medidor de OCUPAÇÃO continua sem vermelho.
-# D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE, quem coordena, 30/09/2026, a
-# validar por ela.
 
-#: Abaixo disto o giroscópio passa de 8 ms entre leituras: o engasgo que ela
-#: sente na mão. Corte de desenho, não medido; a bancada dela decide o de
-#: verdade, e trocar é esta linha.
 HZ_QUE_ENGASGA = 1000.0 / 8
-#: O teto do movimento que o pad virtual entrega ao jogo — e o que o USB dá em
-#: qualquer modo. Daqui para cima o jogo não perde nada que o USB daria.
 HZ_DO_JOGO = MOTION_EMIT_MAX_HZ
-#: A cor piora na hora e melhora devagar: a volta ao nível melhor espera isto,
-#: em segundos, sem nenhuma janela no nível de antes. O rádio vem em rajadas,
-#: e pela janela de 1 s a cor piscaria. O número em si é o de agora (R10).
 SEGURA_O_NIVEL_S = 3.0
 
 
 def nivel_do_movimento(hz: object) -> str:
-    """O nível do Hz de movimento de um controle: ``liso`` a partir de
-    :data:`HZ_DO_JOGO`, ``engasga`` abaixo de :data:`HZ_QUE_ENGASGA` (o ``0.0``
-    também) e o :data:`NIVEL_MEDIO` entre os dois. ``""`` = sem número (``None``, um
-    ``bool``, o que não é número). Vale para qualquer transporte e modo: o Hz
-    é do nó físico, antes do pad virtual."""
+    """O nível do Hz de movimento de um controle: ``liso`` a partir de"""
     if isinstance(hz, bool) or not isinstance(hz, int | float) or hz != hz:
         return ""
     if hz >= HZ_DO_JOGO:
@@ -598,11 +456,7 @@ def nivel_do_movimento(hz: object) -> str:
 
 
 def palavra_das_pontes(pontes: int, n_max: int = N_MAX_PONTES) -> str:
-    """As três palavras de sempre, agora lendo PONTES contra ``n_max``.
-
-    Abaixo do limite, Folgada; no limite, Apertada; além dele, Cheia — que é
-    reversível (basta mover um controle) e por isso nunca vermelho.
-    """
+    """As três palavras de sempre, agora lendo PONTES contra ``n_max``."""
     if pontes < n_max:
         return PALAVRA_FOLGADA
     if pontes == n_max:
@@ -683,20 +537,7 @@ def orcamento_por_adaptador(
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> dict[str, OrcamentoDoAdaptador]:
-    """``{endereço do adaptador: OrcamentoDoAdaptador}`` — o P3 da R10.
-
-    ``controles`` é ``state["controllers"]``. Cada item pode trazer o que o
-    daemon publica por controle desde a AR-MEDIDO-01: ``adaptador`` (do
-    ``HID_PHYS``), ``hz_movimento``, ``hz_voz`` e ``ponte_do_radio``
-    (``"som"``/``"haptica"``/``None``). O ``adaptador`` ausente é resolvido
-    aqui pelo :func:`adaptador_por_uniq`, com a mesma regra de honestidade:
-    controle no rádio sem endereço legível vai para :data:`SEM_ADAPTADOR`.
-
-    ``ar`` é o ``MedidorDeAr.amostrar()`` (``integrations/ar_do_adaptador``):
-    todo adaptador que ele conhece aparece, com ou sem controle — o adaptador
-    vazio é «zero pontes», não ausência. ``canais_evitados`` é o AFH por
-    adaptador, já reduzido (``canais_evitados_pelo_adaptador``).
-    """
+    """``{endereço do adaptador: OrcamentoDoAdaptador}`` — o P3 da R10."""
     no_radio = [
         c for c in controles
         if c.get("transport") == "bt" and c.get("connected", True)
@@ -763,15 +604,7 @@ def _ler_texto(caminho: str) -> str:
 
 
 def _hex(valor: str) -> str:
-    """Só os dígitos hex minúsculos, "" quando não há nenhum.
-
-    ``core.sysfs_leds.norm_mac`` é o normalizador público do projeto e é o MESMO
-    que produz o ``uniq`` do estado (``core/backend_pydualsense.py:8059-8073``,
-    o ``_key_to_uniq``, que só aceita os doze dígitos de um MAC e recusa a
-    chave que é caminho),
-    então os dois lados casam por construção. Aqui só a ausência muda de forma:
-    ``None`` vira ``""``, que é a resposta que o resto deste módulo espera.
-    """
+    """Só os dígitos hex minúsculos, "" quando não há nenhum."""
     return norm_mac(valor) or ""
 
 

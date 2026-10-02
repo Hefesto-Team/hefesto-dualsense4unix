@@ -72,14 +72,7 @@ class TestOQueOAparelhoDeclara:
     def test_a_captura_sai_por_um_terminal_headset(
         self, ensaio: ModuleType, unidades: dict[int, dict]
     ) -> None:
-        """O veredito da sprint, medido: 0x0402, «Headset».
-
-        MORDIDA: faça `_terminal_da_captura` devolver o primeiro terminal de
-        entrada em vez de seguir a corrente a partir do `USB Streaming` de
-        SAÍDA. Ele devolve 0x0101 (a unidade 1, que é a saída de áudio PARA o
-        controle) e este teste reprova — que é o ponto: o instrumento tem de
-        SEGUIR o que o descritor liga, nunca escolher pelo índice.
-        """
+        """O veredito da sprint, medido: 0x0402, «Headset»."""
         codigo = ensaio._terminal_da_captura(unidades)
         assert codigo == 0x0402, f"esperava 0x0402, veio {codigo!r}"
         assert ensaio._nome_do_terminal(codigo) == "Headset"
@@ -87,12 +80,7 @@ class TestOQueOAparelhoDeclara:
     def test_nenhum_terminal_declara_interface_digital(
         self, ensaio: ModuleType, unidades: dict[int, dict]
     ) -> None:
-        """A pergunta do enunciado, fechada.
-
-        MORDIDA: acrescente 0x0101 (USB Streaming) à lista de tipos digitais —
-        o descritor tem dois deles, o teste passa a achar digital e reprova.
-        `USB Streaming` é o fluxo para o host, não uma interface S/PDIF.
-        """
+        """A pergunta do enunciado, fechada."""
         digitais = [
             u["terminal"] for u in unidades.values()
             if u["terminal"] in ensaio._TIPOS_DIGITAIS
@@ -103,25 +91,14 @@ class TestOQueOAparelhoDeclara:
         )
 
     def test_o_microfone_e_um_par_de_verdade(self, unidades: dict[int, dict]) -> None:
-        """Dois canais, FL|FR — e é isso que torna o remix 2→1 uma MÉDIA.
-
-        O `wChannelConfig` do terminal de captura é 0x0003 (front-left |
-        front-right). Não é mono duplicado: a média `(L+R)/2` de dois
-        microfones melhora o SNR em cerca de 3 dB, e por isso a H2 do ensaio
-        («o remix que ninguém escolheu») saiu de candidata forte.
-        """
+        """Dois canais, FL|FR — e é isso que torna o remix 2→1 uma MÉDIA."""
         captura = [u for u in unidades.values() if u["terminal"] == 0x0402]
         assert len(captura) == 1, "há de haver exatamente um terminal de captura"
         assert captura[0]["canais"] == 2
         assert captura[0]["mapa"] == 0x0003
 
     def test_a_saida_e_de_quatro_canais(self, unidades: dict[int, dict]) -> None:
-        """E ela é a razão de trocar o perfil de ENTRADA mexer na saída dela.
-
-        0x0033 = FL|FR|RL|RR. Os canais 3-4 são os motores da háptica
-        (HAPTICA-NATIVA-01): mexer no perfil da placa para caçar microfone
-        mexe na vibração no mesmo ato.
-        """
+        """E ela é a razão de trocar o perfil de ENTRADA mexer na saída dela."""
         entrada_usb = [u for u in unidades.values() if u["terminal"] == 0x0101]
         origem = [u for u in entrada_usb if u["tipo"] == "entrada"]
         assert len(origem) == 1
@@ -131,27 +108,7 @@ class TestOQueOAparelhoDeclara:
     def test_o_ganho_de_captura_controla_os_dois_canais_juntos(
         self, unidades: dict[int, dict]
     ) -> None:
-        """Por que o `amixer` mostra `Mono: Capture` e não há balanço L/R.
-
-        A Feature Unit que nasce do terminal de captura declara **dois** bytes
-        de `bmaControls`: o *master*, com mute+volume, e UM byte por canal, que
-        é zero. É essa unidade que carrega o `Headset Capture Volume`,
-        0…+48 dB.
-
-        **DOIS, e não três** — o terminal tem dois canais, e o padrão pediria
-        um byte por canal além do master. O aparelho declara um só
-        (`bLength=9`, `bmaControls=03 00`), e é o que ele declara que o host
-        lê. Medido no descritor gravado, 20/09/2026.
-
-        MORDIDA 1: troque a unidade lida (a de fonte 4) pela de fonte 1 — o
-        `bmaControls` tem cinco bytes em vez de dois e o teste reprova. As duas
-        Feature Units existem e são de coisas diferentes.
-
-        MORDIDA 2: acrescente um `0x00` ao fim do `bmaControls` desta unidade.
-        Sem a conta do COMPRIMENTO, um byte a mais de valor zero passa
-        despercebido — e foi exatamente assim que a transcrição do descritor
-        ganhou o `iFeature` como se fosse controle de canal.
-        """
+        """Por que o `amixer` mostra `Mono: Capture` e não há balanço L/R."""
         ganhos = [u for u in unidades.values() if u["tipo"] == "ganho"]
         do_mic = [u for u in ganhos if u["fonte"] == 4]
         assert len(do_mic) == 1, f"uma Feature Unit alimentada pelo 0x0402; achei {ganhos!r}"
@@ -168,13 +125,7 @@ class TestOQueOAparelhoDeclara:
     def test_a_feature_unit_da_saida_nao_se_confunde_com_a_do_microfone(
         self, unidades: dict[int, dict]
     ) -> None:
-        """As duas existem, e a do alto-falante é a de CINCO bytes.
-
-        `bLength=12`, `bmaControls=03 00 00 00 00` — master mais quatro canais,
-        que são os quatro da saída (FL|FR e os dois motores da háptica). Ela
-        fica aqui escrita com o comprimento porque a transcrição de 17/09
-        contava seis: o último byte é o `iFeature`, e não controla canal nenhum.
-        """
+        """As duas existem, e a do alto-falante é a de CINCO bytes."""
         da_saida = [
             u for u in unidades.values()
             if u["tipo"] == "ganho" and u["fonte"] == 1
@@ -188,24 +139,14 @@ class TestOQueOAparelhoDeclara:
 
 class TestOInstrumentoNaoInventa:
     def test_lixo_nao_vira_veredito(self, ensaio: ModuleType) -> None:
-        """Bytes que não são descritor não podem produzir um terminal.
-
-        MORDIDA: faça `_ler_uac` seguir em frente com `bLength` zero — o laço
-        nunca anda, o instrumento trava, e um instrumento travado é pior que um
-        vermelho.
-        """
+        """Bytes que não são descritor não podem produzir um terminal."""
         unidades, fluxo = ensaio._ler_uac(b"\x00\x00\x00\x00")
         assert unidades == {}
         assert fluxo == []
         assert ensaio._terminal_da_captura(unidades) is None
 
     def test_descritor_truncado_no_meio_nao_estoura(self, ensaio: ModuleType) -> None:
-        """Meio descritor é resposta parcial, nunca exceção.
-
-        Uma leitura de `/sys` pode vir curta. O instrumento para no último
-        descritor inteiro — e quem chama distingue «não achei» de «não é
-        S/PDIF», que é a diferença entre não saber e saber.
-        """
+        """Meio descritor é resposta parcial, nunca exceção."""
         bruto = FIXTURE.read_bytes()
         unidades, _ = ensaio._ler_uac(bruto[: len(bruto) // 2])
         assert isinstance(unidades, dict)

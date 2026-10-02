@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Mede, no navegador, qual subpath de cada peça é o CONTORNO EXTERNO.
-
-Por que medir e não calcular: os paths deste desenho usam arcos relativos
-(`a r r ...`), e os números deles são raios e deltas, não coordenadas. Duas
-heurísticas minhas erraram por isso — "o primeiro subpath" e "o de maior extensão
-numérica" escolheram os dois o FURO do triângulo, e o alvo saiu do tamanho do
-buraco: nenhuma das 27 peças respondia ao ponteiro.
-
-O resultado vai para `subpath-externo.json`, e o mapa.py o lê ao gerar.
-
-    python3 medir_subpaths.py
-"""
+"""Mede, no navegador, qual subpath de cada peça é o CONTORNO EXTERNO."""
 import json, pathlib, re
 from playwright.sync_api import sync_playwright
 
@@ -20,7 +9,7 @@ SVG = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
 SAIDA = pathlib.Path(__file__).with_name("subpath-externo.json")
 
 s = SVG.read_text()
-alvos = []          # (peça, índice do elemento, índice do subpath, d)
+alvos = []
 for m in re.finditer(r'<g\b[^>]*\bid="([^"]+)"[^>]*>', s):
     pid = m.group(1)
     i = m.start(); prof, j = 0, i

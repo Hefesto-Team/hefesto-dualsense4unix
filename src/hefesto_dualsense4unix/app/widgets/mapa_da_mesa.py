@@ -1,68 +1,4 @@
-"""A janela onde ela desenha o gabinete — clique no aparelho, clique na entrada.
-
-CONEXÕES · MAPA 2D 01, tarefa ``MAPA-4`` (25/08/2026).
-
-POR QUE JANELA PRÓPRIA, E NÃO DENTRO DA SEÇÃO
------------------------------------------------
-
-O número decide: a seção "Conexões" já pede **2465 px numa janela de 1080**
-(``CONFIGURAÇÕES-FECHA-01`` §2.4). Três faces de quadrados mais a lista de
-aparelhos são mais uns 350 px, e nasceriam abaixo da dobra — seria construir a
-feature e escondê-la, que é a ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`` de novo.
-Dentro da seção fica uma linha e um botão; o desenho mora aqui.
-
-POR QUE CLIQUE-EM-CLIQUE, E NÃO ARRASTAR
------------------------------------------
-
-Decisão de quem coordena a leva (25/08/2026), pelo que a própria sprint mediu:
-
-* **código:** dois sinais (``toggled``, ``clicked``) contra quatro
-  (``drag-begin``, ``drag-data-get``, ``drag-data-received``, ``drag-drop``)
-  mais ``Gtk.TargetEntry`` e ícone de arrasto;
-* **precedente:** ``Gtk.Grid`` está em dez arquivos desta casa; arrastar-e-
-  soltar está em **zero** — medido, ``grep`` de ``drag_source_set`` em ``src/``
-  não devolve nada;
-* **teclado:** Tab e Enter funcionam de graça; arrastar é inutilizável sem
-  mouse;
-* **foto:** os estados são contáveis — nada escolhido, aparelho escolhido,
-  entrada cheia, entrada com extensão, mesa vazia —, e um arrasto pela metade
-  **não é um estado**, então o retrato de diálogos não o fotografa.
-
-A decisão ``D-MAPA-2D`` dela diz *"desenhado e arrastado por ela"*, e a palavra
-"arrastado" continua sendo dela: **ela reverte esta escolha numa frase.**
-
-O QUE ESTA JANELA NÃO FAZ
---------------------------
-
-**Não grava em disco.** Ela escreve no rascunho ``host._maquina_pendente``, e
-quem grava é o "Aplicar" do rodapé — o mesmo gesto das outras seções. Um
-desenho que se gravasse sozinho seria a única coisa da aba a não esperar o
-botão, e a pessoa perderia o "desfazer" que o rascunho dá de graça.
-
-**Não cria face nenhuma sozinha.** Um notebook declara "Esquerda: 1, 2" e
-"Direita: 3", e ponto. Face inventada é a presunção que a ``ONDA0-Z7 · O
-AMBIENTE PRESUMIDO`` existe para caçar. Zero faces é estado legítimo, e a
-janela nasce assim para quem nunca desenhou.
-
-**Não detecta extensão.** Cabo de extensão passivo não tem descritor USB, e
-nenhuma leitura de ``/sys``, hoje ou nunca, distingue "dongle na entrada do
-hub" de "dongle a três metros dali". Quem sabe é ela, pelo botão
-"Tem uma extensão aqui" — e é por isso que a entrada por extensão carrega o
-selo de que foi ela quem disse.
-
-COMO A REMOÇÃO CHEGA AO DISCO — E POR QUE NÃO É "SUMIR DO RASCUNHO"
---------------------------------------------------------------------
-
-``gravar_maquina`` funde a declaração contra o disco, e a regra do módulo é
-explícita: *"``None`` presente na declaração é uma escolha ('voltei para Não
-sei') e SOBRESCREVE. Só a AUSÊNCIA da chave preserva o que havia."* Logo, tirar
-um aparelho de uma entrada **não pode** ser tirar a chave do rascunho: a chave
-ausente é exatamente o que manda o disco preservar o que estava lá, e o
-aparelho voltaria no "Aplicar" seguinte.
-
-Tirar é escrever ``caminho: None``. O ``_podar`` da gravação tira o ``None``
-antes de escrever, e a entrada **some do arquivo** — que é onde sumir importa.
-"""
+"""A janela onde ela desenha o gabinete — clique no aparelho, clique na entrada."""
 from __future__ import annotations
 
 import contextlib
@@ -79,23 +15,12 @@ from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
 
 logger = get_logger(__name__)
 
-#: O título da janela e a frase que explica o gesto de dois tempos.
-#: PROVISÓRIO — decisão dela: texto novo, e a prova de tela não fechou.
-#:
-#: O TÍTULO ERA "A minha mesa" ATÉ 05/09/2026, e divergia do botão que abre esta
-#: janela (`secao_mesa._BOTAO_DESENHAR`). A `D-MAPEAR-ENTRADAS-E-NAO-PORTAS`
-#: (28/08) já mandava os dois para **Mapear Entradas**; a ordem dela de 05/09
-#: sobre a palavra "mesa" foi o que a cumpriu. O nome do módulo e a classe
-#: continuam `mapa_da_mesa` / `MapaDaMesa`: são chave de máquina, e renomeá-las
-#: é outra frente.
 TITULO_DA_JANELA = "Mapear Entradas"
 EXPLICACAO = (
     "Clique no aparelho, depois na entrada em que ele está. O Hefesto passa a "
     "chamar cada aparelho pelo número que você escreveu no gabinete."
 )
 
-#: Os rótulos dos gestos. Todos em "entrada", nunca "porta".
-#: PROVISÓRIO — decisão dela.
 ROTULO_APARELHOS = "O que o Hefesto encontrou"
 ROTULO_SEM_FACE = (
     "Você ainda não criou nenhuma face. Crie uma para cada conjunto de "
@@ -110,13 +35,6 @@ ROTULO_VAZIA = "vazia"
 ROTULO_POR_EXTENSAO = "por extensão"
 NOME_DA_FACE_EM_BRANCO = "Nome da face"
 
-#: AS TRÊS DICAS DOS QUADRADOS, e elas ganharam nome em 01/09/2026. Eram
-#: literais dentro do corpo da janela GTK, e a aba nova as havia COPIADO — o
-#: gerador do mockup guardava uma terceira grafia, e um portão dele
-#: (`_confere_no_produto`) existia só para conferir que as duas ainda batiam.
-#: Um portão que compara duas cópias é a confissão de que há duas; agora há uma,
-#: e os dois desenhos a leem.
-#: ``{onde}`` vem do dono da grafia: «na Entrada 3», «na entrada Meio».
 DICA_JA_COLOCADO = "Você já colocou este aparelho {onde}."
 DICA_ENUMERA = "O sistema enumera este aparelho como {c}."
 DICA_EXTENSAO = (
@@ -125,68 +43,18 @@ DICA_EXTENSAO = (
     "própria entrada do hub."
 )
 
-#: O rádio que não pendura em USB nenhum — o embutido do notebook. Ele é um
-#: quadrado FIXO, fora das faces e nunca editável. Sem ele o dono do notebook
-#: abre o mapa, não acha o Bluetooth dele em entrada nenhuma e conclui que o
-#: produto está quebrado — e é o caso mais comum lá fora.
-#: PROVISÓRIO — decisão dela.
 ROTULO_EMBUTIDO = "Dentro da máquina"
 
-#: AS DUAS FRASES DO RODAPÉ DO MAPA, e são DUAS porque são dois comportamentos.
-#:
-#: O desenho do mapa tem duas telas: esta janela GTK, que junta as mudanças e
-#: só as faz valer no "Aplicar" da barra de baixo, e a janelinha da interface
-#: nova, onde **cada clique já gravou** — decisão dela de 01/09/2026, executada
-#: pelos seis gestos de `interface/pacotes/a08_conexoes._gravar_o_mapa`.
-#:
-#: **UNIFICÁ-LAS PORIA A MENTIRA NUMA DAS DUAS.** Não é uma frase com duas
-#: grafias: é uma frase por comportamento, e a decisão de 01/09 é o que as
-#: reparte. Quem mudar o comportamento de uma das telas troca a frase DELA, e
-#: só dela.
-#:
-#: **AS DUAS SÃO TEXTO DE TELA E MORAM AQUI, no dono** — 06/09/2026,
-#: `ONDA5-08-02`. A segunda foi digitada em `interface/aba08.py` entre 04/09 e
-#: hoje, e a dívida estava declarada no próprio arquivo: régua nenhuma desta
-#: casa compara HTML com Python, então uma frase digitada no gerador vira a
-#: segunda versão dela no dia em que o produto a corrigir. O gerador as lê por
-#: AST (`aba08._constantes`), que **derruba a geração da tela** quando um nome
-#: some daqui.
-#: PROVISÓRIO — decisão dela.
 ESPERA_O_APLICAR = (
     "O desenho vale quando você clicar em Aplicar, na barra de baixo da janela."
 )
 
-#: A irmã dela, para a tela que grava no clique. Decisão [08] do PO, 04/09/2026
-#: — *"Trocar pela verdade"*: a frase de antes mandava apertar um "Aplicar" que
-#: nesta aba faz OUTRA coisa (*"Vale agora: envia a configuração aos controles
-#: na hora. NÃO grava"*), sobre um desenho que o clique dela já gravou.
-#: PROVISÓRIO — decisão dela.
-#:
-#: ENCOLHEU EM 11/09/2026, aprovado por ela: a segunda oração era a primeira ao
-#: contrário — quem leu que já foi gravado já sabe que não há o que aplicar.
 GRAVA_NO_CLIQUE = "Tudo aqui é gravado no clique."
 
-#: As letras que uma entrada por extensão pode receber, na ordem. Vinte e seis
-#: extensões numa entrada só é mais do que qualquer gabinete comporta, e o
-#: esquema recusa a vigésima sétima — que é o teto fazendo o trabalho dele.
 _LETRAS = "abcdefghijklmnopqrstuvwxyz"
 
-#: Quantas entradas cabem numa fileira antes de quebrar para a linha seguinte.
-#: Sete é a fileira do hub dela, que é a maior face desta casa.
 _COLUNAS = 7
 
-#: O cabeçalho da confissão, e a frase de cada coisa que o desenho não diz.
-#: PROVISÓRIO — decisão dela: texto novo, e a prova de tela não fechou.
-#:
-#: O cabeçalho sai do léxico que já existe: ``calibrar_entradas.LAUDO_NAO_CONFERI``
-#: é "O que eu não consegui conferir", e esta é a mesma coisa dita sobre o
-#: desenho em vez de sobre a entrada.
-#:
-#: POR QUE ELAS EXISTEM: o motor recebe cada campo com o valor por omissão
-#: quando ninguém o preencheu, e não tem como distinguir "é assim" de "ninguém
-#: disse". Publicar o juízo sem publicar isto é o juízo otimista CALADO que a
-#: ``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS`` mandou acabar: *"a linha do mapa DIZ
-#: isso em vez de calar"*.
 CONFISSAO_ABERTURA = "O que eu não consegui conferir neste desenho:"
 CONFISSAO: dict[str, str] = {
     mapa_das_portas.LACUNA_POSICAO: (
@@ -215,20 +83,10 @@ CONFISSAO: dict[str, str] = {
 
 
 class LogicaDoMapa:
-    """O rascunho do gabinete e os quatro gestos que o mudam — sem GTK.
-
-    Mora fora da janela de propósito: é aqui que a decisão dela vira dado, e
-    dado que só existe dentro de um widget não se testa sem display. A janela
-    chama estes métodos e redesenha; ela não guarda estado nenhum.
-    """
+    """O rascunho do gabinete e os quatro gestos que o mudam — sem GTK."""
 
     def __init__(self, mapa: MapaDaMesa) -> None:
         bruto = mapa.model_dump(mode="json")
-        #: ``perto`` e ``alto`` viajam intactos, e não é zelo: são FATO DELA
-        #: (a face virada para quem senta, a face no alto do rack), só ela os
-        #: tem, e a gravação SUBSTITUI a lista de faces inteira. Deixá-los cair
-        #: aqui faria o primeiro "Aplicar" depois de um clique no desenho
-        #: apagar do disco o que ela declarou noutra tela.
         self.faces: list[dict[str, Any]] = [
             {
                 "nome": face.get("nome", ""),
@@ -241,11 +99,8 @@ class LogicaDoMapa:
         self.portas: dict[str, dict[str, Any]] = {
             numero: dict(valor) for numero, valor in bruto.get("portas", {}).items()
         }
-        #: O caminho do aparelho escolhido no primeiro tempo do gesto — ``""``
-        #: quando nada está escolhido, que é o estado em que a janela nasce.
         self.escolhido: str = ""
 
-    # -- leitura ------------------------------------------------------------
 
     def como_documento(self) -> dict[str, Any]:
         """O rascunho no formato do ``maquina.json``, pronto para o rodapé."""
@@ -285,19 +140,13 @@ class LogicaDoMapa:
                 return numero
         return ""
 
-    # -- os quatro gestos ---------------------------------------------------
 
     def escolher(self, caminho: str) -> None:
         """Primeiro tempo: escolhe o aparelho. Escolher de novo desescolhe."""
         self.escolhido = "" if self.escolhido == caminho else caminho
 
     def colocar(self, numero: str) -> bool:
-        """Segundo tempo: põe o aparelho escolhido nesta entrada.
-
-        Um aparelho está em UM lugar: pôr onde ele já não estava o tira de onde
-        estava, no mesmo gesto. Sem isso o mesmo dongle apareceria em duas
-        entradas e o mapa passaria a mentir de um jeito novo.
-        """
+        """Segundo tempo: põe o aparelho escolhido nesta entrada."""
         if not self.escolhido or numero not in self._todas_as_entradas():
             return False
         anterior = self.entrada_do_caminho(self.escolhido)
@@ -309,11 +158,7 @@ class LogicaDoMapa:
         return True
 
     def tirar(self, numero: str) -> bool:
-        """Tira o aparelho desta entrada — escrevendo ``None``, não sumindo.
-
-        Ver o cabeçalho do módulo: a chave AUSENTE é o que manda a gravação
-        preservar o que estava no disco. Só o ``None`` explícito apaga.
-        """
+        """Tira o aparelho desta entrada — escrevendo ``None``, não sumindo."""
         if numero not in self.portas:
             return False
         if not self.portas[numero].get("caminho"):
@@ -322,12 +167,7 @@ class LogicaDoMapa:
         return True
 
     def acrescentar_extensao(self, numero: str) -> str:
-        """Cria a entrada-filha desta entrada — ``15`` vira ``15a``.
-
-        A filha NÃO entra na fileira da face: ela desenha dentro do quadrado de
-        quem a hospeda. Pôr a ``15a`` na fileira faria a fileira de sete do hub
-        virar oito, e o desenho deixaria de bater com o metal.
-        """
+        """Cria a entrada-filha desta entrada — ``15`` vira ``15a``."""
         if numero not in self._todas_as_entradas() or not numero.isdigit():
             return ""
         usadas = {filha[len(numero) :] for filha in self.filhas_de(numero)}
@@ -340,12 +180,7 @@ class LogicaDoMapa:
         return ""
 
     def acrescentar_entrada(self, indice: int) -> str:
-        """Acrescenta a próxima entrada livre a esta face.
-
-        O número é o menor inteiro que ainda não existe em face nenhuma: os
-        números são do GABINETE, e dois buracos diferentes não podem receber o
-        mesmo número.
-        """
+        """Acrescenta a próxima entrada livre a esta face."""
         if not 0 <= indice < len(self.faces):
             return ""
         usados = {
@@ -381,7 +216,6 @@ class LogicaDoMapa:
             self._esvaziar(numero)
         return True
 
-    # -- interno ------------------------------------------------------------
 
     def _todas_as_entradas(self) -> set[str]:
         numeros = {numero for face in self.faces for numero in face["portas"]}
@@ -396,13 +230,7 @@ class LogicaDoMapa:
 
 
 def bancada_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.Bancada:
-    """A mesa do motor montada a partir do RASCUNHO — não do disco.
-
-    Do rascunho porque é ele que está na frente dela: assim o juízo de cada
-    quadrado responde ao clique que ela acabou de dar, e não ao que o
-    "Aplicar" ainda não gravou. Um mapa que só julgasse depois do botão faria
-    a pessoa aplicar para descobrir se o lugar era bom.
-    """
+    """A mesa do motor montada a partir do RASCUNHO — não do disco."""
     return mapa_das_portas.mesa_do_motor(
         MapaDaMesa.model_validate(logica.como_documento()), censo
     )
@@ -427,13 +255,7 @@ def classe_do_escolhido(bancada: mapa_das_portas.Bancada, caminho: str) -> str:
 def veredito_do_quadrado(
     bancada: mapa_das_portas.Bancada, numero: str, escolhido: str
 ) -> motor.Veredito | None:
-    """O que este quadrado diz sobre o aparelho que está na mão dela.
-
-    ``None`` quando não há nada a dizer — e é a maioria das vezes, porque
-    ``None`` é o que o motor devolve para uma entrada vazia sem aparelho na
-    mão. Publicar o veredito só no gesto de dois tempos é o mesmo desenho do
-    resto da janela: ela clica no aparelho, e aí cada entrada responde.
-    """
+    """O que este quadrado diz sobre o aparelho que está na mão dela."""
     entrada = motor.por_num(bancada.mesa.faces, numero)
     if entrada is None:
         return None
@@ -446,12 +268,7 @@ def veredito_do_quadrado(
 
 
 def confissao_do_desenho(bancada: mapa_das_portas.Bancada) -> tuple[str, ...]:
-    """As frases do que o desenho não diz, na ordem das chaves.
-
-    Vazio quando o desenho responde por tudo. Chave sem frase não some calada:
-    ela sai com o próprio nome, para que a próxima pessoa veja que falta a
-    palavra em vez de ver o silêncio.
-    """
+    """As frases do que o desenho não diz, na ordem das chaves."""
     return tuple(
         _(CONFISSAO[chave]) if chave in CONFISSAO else chave
         for chave in bancada.lacunas
@@ -459,29 +276,14 @@ def confissao_do_desenho(bancada: mapa_das_portas.Bancada) -> tuple[str, ...]:
 
 
 def aparelhos_para_colocar(censo: Censo) -> tuple[Aparelho, ...]:
-    """Tudo que o censo achou, menos os hubs-raiz — na ordem do barramento.
-
-    Os hubs de bancada FICAM na lista, e é de propósito: o cabo do hub dela
-    ocupa uma entrada da traseira, e é justamente essa amarração que ensina o
-    produto a não acusar as entradas do hub de não pendurarem em lugar nenhum.
-    """
+    """Tudo que o censo achou, menos os hubs-raiz — na ordem do barramento."""
     return censo.conectados()
 
 
 def rotulo_do_aparelho(aparelho: Aparelho) -> str:
-    """A palavra de tela de um aparelho da lista — espécie e caminho.
-
-    O caminho fica visível porque ele é a única coisa que distingue dois
-    aparelhos idênticos: os dois adaptadores Bluetooth desta bancada são o
-    mesmo ``2357:0604``, e uma lista que só mostrasse a espécie ofereceria dois
-    itens iguais para dois aparelhos diferentes.
-    """
+    """A palavra de tela de um aparelho da lista — espécie e caminho."""
     return f"{aparelho.especie} · {aparelho.nome_do_kernel}"
 
-
-# ---------------------------------------------------------------------------
-# Resolução condicional de GTK (mesmo padrão de segmented_selector)
-# ---------------------------------------------------------------------------
 
 try:
     import gi
@@ -512,18 +314,10 @@ if _GTK_DISPONIVEL:
             self._censo = censo
             self._ao_fechar = ao_fechar
             self.logica = LogicaDoMapa(mapa)
-            #: A entrada em que ela clicou por último, para os gestos que agem
-            #: sobre uma entrada ("Tirar daqui", "Tem uma extensão aqui").
             self._em_foco = ""
-            #: `número -> botão`, para o teste e para o retrato alcançarem um
-            #: quadrado sem varrer a árvore de widgets.
             self.quadrados: dict[str, Any] = {}
             self.aparelhos: dict[str, Any] = {}
-            #: `número -> veredito`, o juízo publicado no último redesenho. Fica
-            #: aqui pelo mesmo motivo de `quadrados`: para o teste e o retrato
-            #: alcançarem o que a tela diz sem varrer a árvore de widgets.
             self.vereditos: dict[str, motor.Veredito] = {}
-            #: As frases do que o desenho não diz, no último redesenho.
             self.confissao: tuple[str, ...] = ()
             self._bancada = mapa_das_portas.Bancada(
                 mesa=motor.Mesa(aparelhos=(), faces=(), mapa={}, leitura={})
@@ -553,7 +347,6 @@ if _GTK_DISPONIVEL:
             self._montar()
             self._redesenhar()
 
-        # -- montagem ------------------------------------------------------
 
         def _montar(self) -> None:
             explicacao = Gtk.Label(label=_(EXPLICACAO))
@@ -607,7 +400,6 @@ if _GTK_DISPONIVEL:
             rodape.pack_end(fechar, False, False, 0)
             self._raiz.pack_start(rodape, False, False, 0)
 
-        # -- desenho -------------------------------------------------------
 
         def _redesenhar(self) -> None:
             """Redesenha a lista e as faces a partir do rascunho."""
@@ -624,19 +416,10 @@ if _GTK_DISPONIVEL:
             self.show_all()
 
         def _remontar_a_bancada(self) -> None:
-            """A mesa do motor, refeita a cada gesto — o desenho mudou de forma.
-
-            Refazer inteiro em vez de remendar: acrescentar uma entrada muda o
-            pareamento da face toda (as irmãs saem de duas em duas), e um
-            pareamento remendado seria a segunda verdade que este produto mais
-            paga para matar.
-            """
+            """A mesa do motor, refeita a cada gesto — o desenho mudou de forma."""
             try:
                 self._bancada = bancada_do_rascunho(self.logica, self._censo)
             except Exception:
-                # Rascunho que ainda não passa no esquema (uma face sem nome
-                # recém-criada, por exemplo): o desenho continua na tela e o
-                # juízo cala até o rascunho voltar a ser válido.
                 logger.debug("o rascunho do mapa ainda não monta a mesa", exc_info=True)
 
         def _desenhar_confissao(self) -> None:
@@ -753,12 +536,7 @@ if _GTK_DISPONIVEL:
             return botao
 
         def _veredito_em(self, numero: str) -> motor.Veredito | None:
-            """O juízo do motor sobre esta entrada, guardado para quem olhar.
-
-            Sem aparelho escolhido não há juízo a publicar: a pergunta que o
-            motor responde é *"e para ESTE aparelho, aqui serve?"*, e sem a
-            primeira metade do gesto ela não tem sujeito.
-            """
+            """O juízo do motor sobre esta entrada, guardado para quem olhar."""
             if not self.logica.escolhido:
                 return None
             veredito = veredito_do_quadrado(
@@ -774,8 +552,6 @@ if _GTK_DISPONIVEL:
             for aparelho in self._censo.conectados():
                 if aparelho.nome_do_kernel == caminho:
                     return aparelho.especie
-            # Declarado e ausente: ela colocou, o aparelho saiu. O mapa continua
-            # valendo, e a tela diz o caminho em vez de fingir que está vazia.
             return caminho
 
         # -- gestos --------------------------------------------------------
@@ -831,17 +607,7 @@ else:  # pragma: no cover - ambiente sem PyGObject
 
 
 def acumular_no_rascunho(host: Any, logica: LogicaDoMapa) -> None:
-    """Escreve o mapa inteiro em ``host._maquina_pendente``, sob a chave ``mapa``.
-
-    **Substituição, não fusão**, e é o oposto do que as outras seções fazem —
-    de propósito. Aquelas mandam pedaços de campos independentes; esta janela é
-    a ÚNICA editora do mapa inteiro, e fundir faria uma entrada tirada
-    ressuscitar dentro do próprio rascunho. As outras chaves de topo do
-    rascunho (``mesa``, ``controles``, ``orcamento``) são preservadas intactas:
-    a substituição alcança ``mapa`` e nada mais.
-
-    Não chama ``machine.declare``: quem grava é o "Aplicar" do rodapé.
-    """
+    """Escreve o mapa inteiro em ``host._maquina_pendente``, sob a chave ``mapa``."""
     with contextlib.suppress(Exception):
         pendente = getattr(host, "_maquina_pendente", None)
         documento: dict[str, Any] = (

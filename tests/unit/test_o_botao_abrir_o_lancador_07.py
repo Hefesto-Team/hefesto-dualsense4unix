@@ -97,21 +97,8 @@ def espia(monkeypatch):
     return duble
 
 
-# --------------------------------------------------------------------------
-# 1. o endereço está nos seis cartões, e ele diz QUAL
-# --------------------------------------------------------------------------
 def test_os_seis_cartoes_mandam_o_gesto_e_dizem_qual_lancador(desenho):
-    """Um botão sem `data-v` faria o gesto adivinhar pelo TEXTO do botão.
-
-    E o texto é o mesmo nos seis — é a razão de o `Acao.v` existir, e a mesma
-    pela qual `Consertar` já o carregava.
-    """
-    # A CONTA SAI DA LISTA DE FÁBRICA, e não do teclado — 08/09/2026, quando a
-    # Epic entrou e esta linha reprovou a inclusão por estar CERTA. Ela era
-    # `== 6`, digitado. **A Epic saiu no mesmo dia, por decisão dela, e esta
-    # régua não notou nenhuma das duas vezes** — que é a prova de que ler a
-    # lista era o certo. O que a régua precisa é de UM cartão por lançador de
-    # fábrica; quantos são é decisão dela, e muda sem que nada aqui mude.
+    """Um botão sem `data-v` faria o gesto adivinhar pelo TEXTO do botão."""
     cartoes = desenho.cartoes(None)
     assert [c.chave for c in cartoes] == [x.chave for x in desenho.EMBUTIDOS], (
         f"a grade de partida não é a lista de fábrica: "
@@ -127,11 +114,7 @@ def test_os_seis_cartoes_mandam_o_gesto_e_dizem_qual_lancador(desenho):
 
 
 def test_o_botao_da_steam_tem_endereco_nos_quatro_estados_do_cartao(desenho):
-    """Os quatro estados do cartão da Steam trocam a FILEIRA inteira.
-
-    Ligar só o estado que o HTML estático mostra deixaria o botão morto nos
-    outros três — e a fileira é pintada, então o defeito seria mudo.
-    """
+    """Os quatro estados do cartão da Steam trocam a FILEIRA inteira."""
     lidas = {
         "primeira meia volta": None,
         "Steam ilegível": desenho.Leitura(erros=("não abriu o vdf",)),
@@ -146,15 +129,8 @@ def test_o_botao_da_steam_tem_endereco_nos_quatro_estados_do_cartao(desenho):
             f"o cartão da Steam em '{estado}' perdeu o endereço do botão")
 
 
-# --------------------------------------------------------------------------
-# 2, 3. o gesto da Steam CHAMA quem sabe abrir — e recusa dizendo quando não dá
-# --------------------------------------------------------------------------
 def test_o_gesto_da_steam_chama_reopen_steam(a07, ctx, espia, desenho):
-    """A metade que FAZ. Sem esta régua, apagar a chamada não muda a tela.
-
-    A MORDIDA: troque `qual != desenho.STEAM` por `qual == desenho.STEAM` em
-    `abrir_lancador` e este teste reprova dizendo que a Steam não foi chamada.
-    """
+    """A metade que FAZ. Sem esta régua, apagar a chamada não muda a tela."""
     a07.abrir_lancador(ctx, {"gesto": desenho.ABRIR, "v": desenho.STEAM}, None)
     assert espia.chamadas == 1, (
         f"o botão da Steam chamou `reopen_steam` {espia.chamadas} vez(es) — o "
@@ -162,22 +138,13 @@ def test_o_gesto_da_steam_chama_reopen_steam(a07, ctx, espia, desenho):
 
 
 def test_a_steam_que_nao_abre_recusa_dizendo(a07, ctx, monkeypatch, desenho):
-    """`reopen_steam` devolve `False` quando não há `steam` nem `xdg-open`.
-
-    O contrato desta casa para "o produto recusou" é `RuntimeError`, e é ele
-    que leva a frase à tela. Engolir o `False` seria o botão que aceita o
-    clique e não faz nada — que é o defeito com nome desta casa.
-    """
+    """`reopen_steam` devolve `False` quando não há `steam` nem `xdg-open`."""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     monkeypatch.setattr(slo, "reopen_steam", _Espia(devolve=False))
     with pytest.raises(RuntimeError) as erro:
         a07.abrir_lancador(ctx, {"gesto": desenho.ABRIR, "v": desenho.STEAM}, None)
     frase = str(erro.value)
-    # O `xdg-open` E O `PATH` SAÍRAM DA FRASE EM 11/09/2026 — A2-040, aprovada
-    # por ela: eles não dizem nada a quem lê, e o que fazer não muda com eles.
-    # A régua passa a cobrar o que a recusa TEM de dizer — o que o produto não
-    # conseguiu, o que fazer agora, e que nada mudou.
     assert "steam" in frase.lower() and "menu" in frase.lower(), (
         f"a recusa não diz o que fazer: {frase!r}. Sem o caminho de saída ela "
         f"fica olhando um botão que não abriu nada.")
@@ -198,23 +165,9 @@ def test_o_clique_sem_qual_lancador_e_recusa_e_nao_palpite(a07, ctx, espia,
     assert espia.chamadas == 0, "o clique sem endereço abriu a Steam mesmo assim"
 
 
-# --------------------------------------------------------------------------
-# 4, 5. os cinco sem função recusam DIZENDO — e não abrem a Steam por engano
-# --------------------------------------------------------------------------
 def test_os_cinco_sem_funcao_recusam_nomeando_o_lancador(a07, ctx, espia,
                                                          desenho):
-    """Um botão que mente é pior que um botão que recusa.
-
-    O produto sabe ONDE eles estão (`_onde_estao_os_lancadores` devolve o
-    caminho inteiro) e **não sabe abri-los**: não há função no produto que abra
-    o Heroic, o Lutris, o RetroArch, o Dolphin ou o mGBA, e o Flatpak não é
-    aplicativo. A recusa nomeia o lançador para ela saber de qual cartão veio.
-    """
-    # LÊ A LISTA, NÃO O NÚMERO. Ela era `len(...) == 5` e a Epic a fez reprovar
-    # por estar certa em 08/09/2026 — a mesma forma das onze réguas de 26/08.
-    # (A Epic entrou e saiu no mesmo dia; esta régua atravessou as duas.)
-    # O que importa é que TODOS os sem-censo recusem nomeando; um a mais na
-    # lista é um a mais a cobrar, nunca um motivo para o vermelho.
+    """Um botão que mente é pior que um botão que recusa."""
     assert desenho.SEM_FONTE, "a lista dos sem censo esvaziou — a régua mediria zero"
     for item in desenho.SEM_FONTE:
         with pytest.raises(RuntimeError) as erro:
@@ -225,12 +178,7 @@ def test_os_cinco_sem_funcao_recusam_nomeando_o_lancador(a07, ctx, espia,
 
 
 def test_nenhum_dos_cinco_abre_a_steam(a07, ctx, espia, desenho):
-    """A MORDIDA CENTRAL: um `if` invertido abriria a Steam pelo RetroArch.
-
-    Troque `qual != desenho.STEAM` por `qual == desenho.STEAM` em
-    `abrir_lancador` e este teste reprova — que é o que se quer: o defeito é
-    invisível na tela (a Steam abrindo parece "funcionou").
-    """
+    """A MORDIDA CENTRAL: um `if` invertido abriria a Steam pelo RetroArch."""
     for item in desenho.SEM_FONTE:
         with pytest.raises(RuntimeError):
             a07.abrir_lancador(ctx, {"gesto": desenho.ABRIR, "v": item.chave}, None)
@@ -239,19 +187,8 @@ def test_nenhum_dos_cinco_abre_a_steam(a07, ctx, espia, desenho):
         f"vez(es) — a tela dela ganharia uma janela que ela não pediu")
 
 
-# --------------------------------------------------------------------------
-# 6. a segunda metade da decisão dela: a prova automática NÃO clica este botão
-# --------------------------------------------------------------------------
 def test_o_gesto_esta_entre_os_perigosos(desenho):
-    """Sem isto, `--prova-gesto` abriria a Steam na tela dela a cada volta.
-
-    A CHAVE É QUALIFICADA PELA PÁGINA, e o `PERIGOSOS` já explica por quê:
-    `modo` na Navegação mexe no cursor dela e `modo` nos Gatilhos é inócuo. Uma
-    lista por nome cru trataria os dois igual.
-
-    A MORDIDA: tire a linha `("07-lancadores.html", "abrir-lancador")` de
-    `hefesto_vivo.PERIGOSOS` e este teste reprova.
-    """
+    """Sem isto, `--prova-gesto` abriria a Steam na tela dela a cada volta."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     assert (PAGINA, desenho.ABRIR) in hefesto_vivo.PERIGOSOS, (
@@ -261,13 +198,7 @@ def test_o_gesto_esta_entre_os_perigosos(desenho):
 
 
 def test_a_prova_automatica_pula_o_botao_e_nao_reprova_por_isso(desenho):
-    """A CONSEQUÊNCIA, e não a lista: o botão fica de fora dos cliques.
-
-    Estar em `PERIGOSOS` é o MEIO; o fim é `_alvos_a_clicar` mandá-lo para os
-    PULADOS. E a segunda metade importa tanto quanto: `_cobertura_dos_gestos`
-    NÃO pode reprovar por ele ter ficado de fora — senão a saída seria tirá-lo
-    dos perigosos, que é o inverso da decisão dela.
-    """
+    """A CONSEQUÊNCIA, e não a lista: o botão fica de fora dos cliques."""
     import pacotes
 
     from hefesto_dualsense4unix.interface import hefesto_vivo, onde, regua_do_mockup
@@ -292,11 +223,7 @@ def test_a_prova_automatica_pula_o_botao_e_nao_reprova_por_isso(desenho):
 
 
 def test_o_botao_saiu_do_sem_dono(a07, desenho):
-    """Um botão não pode ter dono e ser declarado sem dono na mesma carga.
-
-    `sem_dono` é o que a tela usa para marcar o que o produto não faz. Deixar o
-    `abrir-lancador` lá depois de ligá-lo faria a aba declarar contra si mesma.
-    """
+    """Um botão não pode ter dono e ser declarado sem dono na mesma carga."""
     assert desenho.ABRIR not in a07.SEM_DONO, (
         "o `abrir-lancador` tem dono agora e continua declarado sem dono")
     assert "criar-perfil" in a07.SEM_DONO, (

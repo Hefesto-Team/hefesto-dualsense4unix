@@ -1,8 +1,4 @@
-"""Desligar/desativar o daemon sem desinstalar (FEAT-DAEMON-DISABLE-CONTROL-01).
-
-`disable()` para o daemon e desabilita o auto-start mantendo a unit instalada
-(distinto de pause em runtime e de uninstall). `enable()` faz o inverso.
-"""
+"""Desligar/desativar o daemon sem desinstalar (FEAT-DAEMON-DISABLE-CONTROL-01)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,7 +21,6 @@ def test_disable_stops_and_disables_keeping_unit(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     inst = si.ServiceInstaller()
-    # Simula unit instalada para o _disable_if_installed disparar o disable.
     (tmp_path / si.SERVICE_NORMAL).write_text("[Unit]\n", encoding="utf-8")
     monkeypatch.setattr(si, "user_unit_dir", lambda: tmp_path)
     calls: list[tuple[str, ...]] = []
@@ -33,5 +28,4 @@ def test_disable_stops_and_disables_keeping_unit(
     inst.disable()
     assert ("disable", si.SERVICE_NORMAL) in calls
     assert ("stop", si.SERVICE_NORMAL) in calls
-    # A unit NÃO foi removida (disable != uninstall).
     assert (tmp_path / si.SERVICE_NORMAL).exists()

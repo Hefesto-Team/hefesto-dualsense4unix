@@ -28,12 +28,7 @@ console = Console()
 
 
 def _call_sync(method: str, params: dict[str, Any] | None = None) -> Any:
-    """Chama método IPC e converte IpcError/OSError em mensagem amigável.
-
-    Reutiliza `_run_call` do `ipc_bridge` (módulo que NÃO importa GTK no
-    topo — a importação de `GLib` é adiada para `call_async`). Portanto
-    seguro de usar na CLI sem puxar dependência de GTK.
-    """
+    """Chama método IPC e converte IpcError/OSError em mensagem amigável."""
     from hefesto_dualsense4unix.app.ipc_bridge import _run_call
 
     try:
@@ -64,7 +59,6 @@ def cmd_on(
     if scroll_speed is not None:
         params["scroll_speed"] = scroll_speed
 
-    # ORIGEM-QUE-MENTE-01: a CLI é ela digitando — gesto, não reconciliação.
     params["origin"] = "manual"
     result = _call_sync("mouse.emulation.set", params)
     ok = isinstance(result, dict) and bool(result.get("enabled"))
@@ -94,7 +88,6 @@ def cmd_status(
     state = _call_sync("daemon.state_full")
     mouse = state.get("mouse_emulation") if isinstance(state, dict) else None
     if not isinstance(mouse, dict):
-        # Daemon antigo (pré-paridade): não expõe estado do mouse.
         mouse = {"enabled": None, "speed": None, "scroll_speed": None}
 
     if as_json:
@@ -121,8 +114,5 @@ def cmd_status(
 
 __all__ = ["app"]
 
-# Nota de implementação:
 # - `mouse.emulation.set` já existe em ipc_server (FEAT-MOUSE-01).
 # - `daemon.state_full` é estendido nesta sprint (FEAT-CLI-PARITY-01) para
-#   incluir bloco `mouse_emulation` com {enabled, speed, scroll_speed}.
-#   Sem isso, `status` mostra "indisponível" sem estourar traceback.

@@ -52,10 +52,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
 )
 from hefesto_dualsense4unix.core.escritor_cru import Veredito
 
-# --------------------------------------------------------------------------
-# O predicado, nu: o que conta como prova de que a escrita saiu
-# --------------------------------------------------------------------------
-
 
 def test_escrita_curta_nao_e_escrita_completa() -> None:
     """78 pedidos, 40 saídos: o fio disse que faltou, e `False` é a resposta."""
@@ -73,22 +69,13 @@ def test_escrita_inteira_e_escrita_completa() -> None:
 
 
 def test_o_fio_que_nao_responde_nao_e_acusado() -> None:
-    """`None` = o device não disse. Ausência de dado não é prova de falha.
-
-    É a mesma disciplina do `sondado_em is None` do `escritor_cru`: esta casa
-    não acusa sem prova, nos dois sentidos.
-    """
+    """`None` = o device não disse. Ausência de dado não é prova de falha."""
     assert _bytes_que_sairam(None) is None
     assert _escrita_completa(None, 78) is True
 
 
 def test_o_duble_nao_inventa_escrita_curta() -> None:
-    """Um objeto que não é `int` é ausência de resposta, não acusação.
-
-    Sem isto, `int(MagicMock())` devolveria `1` e TODA escrita da suíte viraria
-    "curta" — uma acusação nascida de dublê, que é o mesmo defeito com o sinal
-    trocado.
-    """
+    """Um objeto que não é `int` é ausência de resposta, não acusação."""
 
     class _Qualquer:
         pass
@@ -103,17 +90,8 @@ def test_bool_nao_conta_como_numero_de_bytes() -> None:
     assert _escrita_completa(True, 78) is True
 
 
-# --------------------------------------------------------------------------
-# O `writeReport` do handle: o retorno deixou de ser jogado fora
-# --------------------------------------------------------------------------
-
-
 class _DeviceQueResponde:
-    """Um `device` de mentira que DEVOLVE NÚMERO, como o `hidapi` devolve.
-
-    Os dublês que já existiam na suíte devolvem `None` — e por isso nenhum
-    deles conseguia revelar este defeito. Este devolve o que mandarem.
-    """
+    """Um `device` de mentira que DEVOLVE NÚMERO, como o `hidapi` devolve."""
 
     def __init__(self, resposta: Any) -> None:
         self.resposta = resposta
@@ -125,17 +103,7 @@ class _DeviceQueResponde:
 
 
 def _handle_cru(resposta: Any) -> Any:
-    """O handle DO PRODUTO por `__new__`, sem aparelho.
-
-    O método exercitado é o do produto, como manda o método do
-    `test_lightbar_medir_o_0x08.py`: um dublê que reimplementasse a regra
-    mediria o dublê. Até 29/09/2026 este era um objeto vazio com o
-    `writeReport` e o `_escrever_conferindo` emprestados um a um; o
-    `writeReport` passou a contar a entrega ao C (`_no_c`,
-    A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01), e o objeto emprestado
-    ficava mais pobre que o produto a cada método novo. Por `__new__`, o
-    handle traz todos, com os defaults de classe.
-    """
+    """O handle DO PRODUTO por `__new__`, sem aparelho."""
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 
     inst = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
@@ -152,14 +120,10 @@ def test_write_report_devolve_quantos_bytes_sairam() -> None:
 
 
 def test_write_report_do_radio_tambem_devolve() -> None:
-    """O ramo 0x31 (78 bytes, carimbado) confere igual ao do cabo.
-
-    É o ramo que o rádio toma SEMPRE, e era o único sem conferência nenhuma.
-    """
+    """O ramo 0x31 (78 bytes, carimbado) confere igual ao do cabo."""
     quadro = [0x31] + [0] * 77
     handle = _handle_cru(78)
     assert handle.writeReport(list(quadro)) == 78
-    # o carimbo continua acontecendo: o comportamento da escrita não mudou
     assert len(handle.device.quadros) == 1
     assert len(handle.device.quadros[0]) == 78
 
@@ -169,17 +133,8 @@ def test_write_report_nao_mente_sobre_escrita_curta() -> None:
     assert handle.writeReport([0x31] + [0] * 77) == 12
 
 
-# --------------------------------------------------------------------------
-# A RÉGUA QUE MORDE (1): escrita curta tem de produzir `enviado=False`
-# --------------------------------------------------------------------------
-
-
 class _HandleDoRadio:
-    """Handle BT mínimo: `conType` de rádio + o `writeReport` que RESPONDE.
-
-    É o ramo `callable(escritor)` do gatilho da cor — o que handle BT toma
-    sempre, e onde o `ok = True` era incondicional.
-    """
+    """Handle BT mínimo: `conType` de rádio + o `writeReport` que RESPONDE."""
 
     def __init__(self, resposta: Any) -> None:
         self.conType = type("Con", (), {"name": "BT_31"})()
@@ -200,12 +155,7 @@ def _controlador_com(handle: Any) -> PyDualSenseController:
 
 
 def test_a_escrita_curta_no_radio_sai_como_nao_enviado() -> None:
-    """A MORDIDA. O fio disse que só metade saiu — `enviado` tem de ser False.
-
-    Este é o caso exato da noite de 19/09: o report vai, a chamada não levanta
-    exceção, e a barra fica apagada. Com `ok = True` incondicional este teste
-    reprova.
-    """
+    """A MORDIDA. O fio disse que só metade saiu — `enviado` tem de ser False."""
     handle = _HandleDoRadio(20)
     ctl = _controlador_com(handle)
     resultado = ctl.reescrever_lightbar_por_hidraw()
@@ -220,10 +170,7 @@ def test_o_erro_do_fio_no_radio_sai_como_nao_enviado() -> None:
 
 
 def test_a_escrita_inteira_no_radio_continua_enviada() -> None:
-    """O outro lado da mordida: escrita boa NÃO pode virar `False`.
-
-    Uma régua que só sabe reprovar passaria dizendo que nada funciona.
-    """
+    """O outro lado da mordida: escrita boa NÃO pode virar `False`."""
     handle = _HandleDoRadio(None)
     ctl = _controlador_com(handle)
     resultado = ctl.reescrever_lightbar_por_hidraw()
@@ -235,11 +182,6 @@ def test_a_escrita_inteira_no_radio_continua_enviada() -> None:
     }
 
 
-# --------------------------------------------------------------------------
-# A RÉGUA QUE MORDE (2): a foto conferida contra o presente
-# --------------------------------------------------------------------------
-
-#: O nó da mesa de mentira. Nada aqui chega perto de `/dev/hidraw*` de verdade.
 NO = "/dev/hidraw9"
 
 
@@ -248,11 +190,7 @@ def _foto_com(pids: tuple[int, ...]) -> Veredito:
 
 
 def test_a_foto_com_o_processo_morto_para_de_acusar() -> None:
-    """A MORDIDA. A Steam morreu; a foto ainda a lembra; o campo tem de zerar.
-
-    Com `segurado` cru no lugar de `segurado_de_fato`, isto reprova — que é o
-    defeito medido em 19/09, sete segundos depois do SIGTERM.
-    """
+    """A MORDIDA. A Steam morreu; a foto ainda a lembra; o campo tem de zerar."""
     foto = _foto_com((4242,))
     assert foto.segurado(NO) is True, "a foto guarda o PID — preparo do teste"
     assert foto.segurado_de_fato(NO, vivo=lambda _p: False) is False
@@ -291,11 +229,6 @@ def test_processo_vivo_conhece_o_proprio_processo() -> None:
 
     assert _escritor_cru.processo_vivo(os.getpid()) is True
     assert _escritor_cru.processo_vivo(0) is False
-
-
-# --------------------------------------------------------------------------
-# A RÉGUA QUE MORDE (3): o campo que a TELA dela lê
-# --------------------------------------------------------------------------
 
 
 class _DaemonComSentinela:

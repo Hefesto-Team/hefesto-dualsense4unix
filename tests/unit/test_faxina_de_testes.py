@@ -1,15 +1,4 @@
-"""`scripts/faxina-de-testes.py` — o passivo de `/tmp`, e o que ele NÃO toca.
-
-O berço (BERCO-DE-TMP-01, em `tests/conftest.py`) resolve o futuro: desde
-07/08/2026 a suíte não deixa mais nada solto em `/tmp`. Este script existe para
-o que ficou ANTES — 906 diretórios `tmp<8>` medidos no `/tmp` dela naquele dia.
-
-Um script que apaga arquivo no `/tmp` de uma máquina viva tem UM jeito certo de
-existir: o critério de "isto é lixo de teste" precisa ser POSITIVO — prova de
-quem criou —, nunca *"não reconheço, então apago"*. A maioria dos testes deste
-arquivo é sobre a segunda metade do contrato: **o que o script se recusa a
-apagar**, e por quê.
-"""
+"""`scripts/faxina-de-testes.py` — o passivo de `/tmp`, e o que ele NÃO toca."""
 
 from __future__ import annotations
 
@@ -24,12 +13,7 @@ import pytest
 
 
 def _faxina() -> Any:
-    """Importa `scripts/faxina-de-testes.py` (o hífen impede o import normal).
-
-    O módulo entra em `sys.modules` ANTES do `exec_module`: ele usa
-    `from __future__ import annotations` com `@dataclass`, e o `dataclasses`
-    resolve a anotação em texto procurando o módulo pelo nome.
-    """
+    """Importa `scripts/faxina-de-testes.py` (o hífen impede o import normal)."""
     ja = sys.modules.get("faxina_de_testes")
     if ja is not None:
         return ja
@@ -74,11 +58,6 @@ def raiz(tmp_path: Path) -> Path:
     return alvo
 
 
-# ---------------------------------------------------------------------------
-# O que o script PROVA que é lixo
-# ---------------------------------------------------------------------------
-
-
 def test_diretorio_assinado_pela_migracao_e_alvo(raiz: Path) -> None:
     d = _dir_de_migracao(raiz, "tmpabcdefgh")
 
@@ -119,17 +98,10 @@ def test_registro_do_pactl_com_o_conteudo_certo_e_alvo(raiz: Path) -> None:
     assert [(a.caminho, a.regra) for a in alvos] == [(f, "R4")]
 
 
-# ---------------------------------------------------------------------------
-# O QUE O SCRIPT SE RECUSA A APAGAR — a metade que decide se ele pode existir
-# ---------------------------------------------------------------------------
-
-
 def test_um_nome_fora_do_conjunto_fechado_salva_o_diretorio_inteiro(
     raiz: Path,
 ) -> None:
-    """O CASO PERIGOSO. Marcador de migração presente, mas há um arquivo que
-    aqueles testes nunca escrevem — então o diretório pode ser de outra coisa,
-    e a dúvida se resolve para 'não mexa'."""
+    """O CASO PERIGOSO. Marcador de migração presente, mas há um arquivo que"""
     d = _dir_de_migracao(raiz, "tmpabcdefgh", {"perfil-dela.json": '{"name": "x"}'})
 
     alvos, recusas, _ = FAXINA.recolher(raiz, UMA_HORA, AGORA)
@@ -141,8 +113,7 @@ def test_um_nome_fora_do_conjunto_fechado_salva_o_diretorio_inteiro(
 
 
 def test_diretorio_sem_marcador_nem_e_mencionado(raiz: Path) -> None:
-    """Um `tmp<8>` que não tem NENHUMA prova de origem some do radar — não é
-    alvo e nem aparece como recusa. O script só fala do que sabe nomear."""
+    """Um `tmp<8>` que não tem NENHUMA prova de origem some do radar — não é"""
     d = raiz / "tmpzzzzzzzz"
     d.mkdir()
     (d / "coisa-dela.json").write_text('{"name": "vitoria"}', encoding="utf-8")
@@ -167,8 +138,7 @@ def test_subdiretorio_salva_o_diretorio(raiz: Path) -> None:
 
 
 def test_berco_de_sessao_viva_e_recusado(raiz: Path) -> None:
-    """Nesta máquina rodam várias suítes ao mesmo tempo: apagar o berço de uma
-    sessão viva é apagar o `/tmp` de quem está trabalhando agora."""
+    """Nesta máquina rodam várias suítes ao mesmo tempo: apagar o berço de uma"""
     d = raiz / f"hefesto-berco-{os.getpid()}"
     d.mkdir()
 
@@ -203,8 +173,7 @@ def test_registro_do_pactl_com_outro_conteudo_e_recusado(raiz: Path) -> None:
 
 
 def test_link_simbolico_nunca_e_alvo(raiz: Path, tmp_path: Path) -> None:
-    """Um link com nome de alvo apontando para a config dela é o pior acidente
-    imaginável, e é barato de impedir: link não é seguido, ponto."""
+    """Um link com nome de alvo apontando para a config dela é o pior acidente"""
     config_dela = tmp_path / "config-dela"
     config_dela.mkdir()
     (config_dela / "vitoria.json").write_text('{"name": "vitoria"}', encoding="utf-8")
@@ -242,8 +211,7 @@ def test_raiz_de_sistema_e_recusada(proibida: str) -> None:
 
 
 def test_o_home_dela_nunca_pode_ser_raiz() -> None:
-    """Um script de faxina que aceite `$HOME` como raiz é um script que um dia
-    vai receber `$HOME` como raiz."""
+    """Um script de faxina que aceite `$HOME` como raiz é um script que um dia"""
     lar = Path(os.path.expanduser("~"))
     assert FAXINA.raiz_permitida(lar) is not None
     assert FAXINA.raiz_permitida(lar / ".config") is not None
@@ -251,8 +219,7 @@ def test_o_home_dela_nunca_pode_ser_raiz() -> None:
 
 
 def test_pytest_of_e_pulse_so_entram_no_relato(raiz: Path) -> None:
-    """Quem cria não é esta suíte (o pytest tem retenção própria; a libpulse
-    roda fora da suíte). Relatar é o máximo que este script pode fazer."""
+    """Quem cria não é esta suíte (o pytest tem retenção própria; a libpulse"""
     (raiz / "pytest-of-vitoriamaria").mkdir()
     (raiz / "pulse-abcdefghijkl").mkdir()
 
@@ -262,11 +229,6 @@ def test_pytest_of_e_pulse_so_entram_no_relato(raiz: Path) -> None:
     assert recusas == []
     assert dict(relato) == {"pytest-of-": 1, "pulse-": 1}
     assert (raiz / "pytest-of-vitoriamaria").exists()
-
-
-# ---------------------------------------------------------------------------
-# O `main`: relatar é o padrão; apagar é pedido explícito
-# ---------------------------------------------------------------------------
 
 
 def test_o_padrao_e_relatar_sem_apagar_nada(
@@ -286,8 +248,7 @@ def test_o_padrao_e_relatar_sem_apagar_nada(
 def test_com_apagar_leva_o_alvo_e_deixa_o_resto(
     raiz: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A MORDIDA do conjunto: o lixo sai, o arquivo dela FICA — no mesmo `/tmp`,
-    na mesma execução."""
+    """A MORDIDA do conjunto: o lixo sai, o arquivo dela FICA — no mesmo `/tmp`,"""
     lixo = _dir_de_migracao(raiz, "tmpabcdefgh")
     quase = _dir_de_migracao(raiz, "tmpbbbbbbbb", {"perfil-dela.json": "{}"})
     dela = raiz / "Screenshot_2026-08-07_15-49-08.png"
@@ -320,44 +281,10 @@ def test_raiz_inexistente_nao_estoura(tmp_path: Path) -> None:
 
 
 def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
-    """O conjunto fechado é o coração da R3 — se ele sair de sincronia com os
-    dois arquivos de teste, a regra passa a recusar diretórios legítimos (lado
-    seguro) OU, pior, a aceitar nome que não é nosso.
-
-    Este teste lê as bancadas VIVAS e exige que todo `<nome>.json` que elas
-    escrevem esteja declarado.
-
-    NOTA DATADA — 23/08/2026. O segundo arquivo era
-    `test_preset_flavor_migration.py`, APAGADO em 22/08 pela MASCARA-QUE-GRUDA-01
-    sem que esta lista fosse repontada — e este teste passou a estourar
-    `FileNotFoundError`, vermelho na árvore. O sucessor é
-    `test_o_preset_nao_escolhe_a_mascara.py`, declarado no cabeçalho dele.
-
-    A TERCEIRA forma de escrita (`(d / arquivo).write_text(...)`, com o nome
-    vindo das CHAVES de um dicionário) entrou junto com o sucessor. Sem ela a
-    régua lia o arquivo novo e extraía ZERO nomes — verde por cegueira, que é
-    pior que o vermelho que ela substituiu: era o `assert escritos` de baixo,
-    alimentado só pela outra bancada, que segurava o teste de pé.
-
-    NOTA DATADA — 03/09/2026. Aconteceu de novo, do outro lado: em 02/09 o
-    commit `11fa3e8b` ("cada controle é um jogador") arrancou o interruptor de
-    co-op de perfil, e com ele a migração inteira e a bancada
-    `test_coop_default_on_migration.py`. A lista continuou apontando para ela e
-    o portão reprovou — desta vez com a MENSAGEM CERTA em vez de um
-    `FileNotFoundError`, porque a nota de 23/08 tinha deixado o `exists()` aqui.
-    A régua fez o trabalho dela: nomeou o arquivo e nomeou a cura.
-
-    A bancada morta NÃO tem sucessor — a migração não foi substituída, foi
-    removida —, então a lista fica com uma. E os nomes que ela escrevia
-    CONTINUAM no conjunto fechado do script: ver a nota do
-    `NOMES_DA_MIGRACAO`, que é um retrato do lixo no disco, não do código.
-    """
+    """O conjunto fechado é o coração da R3 — se ele sair de sincronia com os"""
     import re
 
     raiz_repo = Path(__file__).resolve().parents[2]
-    # As bancadas VIVAS que abrem um `tmp<8>` com `tempfile.mkdtemp()` e rodam
-    # as migrações de verdade dentro dele. Levantadas em 03/09/2026 procurando
-    # `mkdtemp` em `tests/`: das nove que o usam, só esta escreve perfil.
     arquivos = [
         raiz_repo / "tests" / "unit" / "test_o_preset_nao_escolhe_a_mascara.py",
     ]
@@ -373,8 +300,6 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
         texto = arquivo.read_text(encoding="utf-8")
         escritos |= {f"{n}.json" for n in re.findall(r'_escrever\(d, "([a-z_]+)"', texto)}
         escritos |= set(re.findall(r'\(d / "([^"]+\.json)"\)', texto))
-        # A forma por chave de dicionário: `"acao.json": None,` num literal que
-        # o teste depois percorre escrevendo `(d / arquivo)`.
         escritos |= set(re.findall(r'^\s*"([a-z_]+\.json)":', texto, re.MULTILINE))
 
     assert escritos, "a bancada de migração mudou de forma"
@@ -386,7 +311,6 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
 
 
 def test_o_relato_de_tempo_nao_depende_do_relogio_da_maquina() -> None:
-    """`recolher` recebe o `agora` de fora justamente para o teste poder
-    envelhecer um diretório sem `sleep`."""
+    """`recolher` recebe o `agora` de fora justamente para o teste poder"""
     assert "agora" in FAXINA.recolher.__code__.co_varnames
-    assert time.time is not None  # a chamada real fica só no `main`
+    assert time.time is not None

@@ -71,10 +71,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-# --- o vocabulário ---------------------------------------------------------
 
-#: Quem já pergunta "que escopo é este" antes de escrever. Consultar QUALQUER
-#: um destes antes do laço de fan-out livra a função da reprovação.
 _GUARDIOES = frozenset(
     {
         "_resolver_escopo",
@@ -83,10 +80,6 @@ _GUARDIOES = frozenset(
     }
 )
 
-#: Chamadas que, dentro de um `for` sobre muitos, são a ESCRITA em si —
-#: física (o handle do pydualsense) ou de registro (o override por-uniq que
-#: sobrevive ao reassert). Lista fechada de propósito: um verbo genérico
-#: demais (`set`, `apply`) acusaria meio código-fonte à toa.
 _VERBOS_DE_ESCRITA = frozenset(
     {
         "apply_output_for",
@@ -101,9 +94,6 @@ _VERBOS_DE_ESCRITA = frozenset(
     }
 )
 
-#: Padrões (substring do `ast.unparse` do iterável) que dizem "isto enumera
-#: MAIS DE UM controle". `handle`/`handles` no nome cobre `self._handles`,
-#: `handles.items()`, um parâmetro `handles: dict[str, Any]` etc.
 _FONTES_DE_MUITOS = (
     "handles",
     "_uniqs_conectados(",
@@ -116,15 +106,6 @@ class _Excecao:
     justificativa: str
 
 
-#: A SEGUNDA forma do mesmo defeito (Regra 2 — "degrada sem descartar"), do
-#: §2.1(d) da sprint: uma função com parâmetro ``target_uniq`` tenta uma
-#: chamada POR-UNIQ (convenção desta casa: nome termina em ``_for`` —
-#: ``set_rumble_for``, ``set_game_trigger_for``...) guardada por
-#: ``target_uniq is not None`` e, se a tentativa não devolver antes, CAI numa
-#: chamada de escrita GENÉRICA — sem ``target_uniq`` entre os argumentos —
-#: que replica em quem quer que o seletor global esteja mirando no momento.
-#: É a forma exata de `apply_game_rumble` antes de Z3-1: o rumble do JOGO,
-#: pedido para UM jogador, sacode a mesa que o seletor mirar.
 _VERBOS_DE_QUEDA_PARA_BROADCAST = frozenset(
     {
         "set_rumble",
@@ -137,12 +118,7 @@ _VERBOS_DE_QUEDA_PARA_BROADCAST = frozenset(
 
 
 def _mapa_getattr_local(corpo_direto: list[ast.AST]) -> dict[str, str]:
-    """``var = getattr(obj, "nome", padrão)`` -> {"var": "nome"}.
-
-    O idioma desta casa para chamada duck-typed defensiva: quase toda API
-    opcional do backend é lida assim, nunca por atributo cru. Sem resolver
-    isto, tanto `_GUARDIOES` quanto as duas regras de fan-out ficam cegas
-    para o próprio código que elas precisam ler."""
+    """``var = getattr(obj, "nome", padrão)`` -> {"var": "nome"}."""
     mapa: dict[str, str] = {}
     for node in corpo_direto:
         if not isinstance(node, ast.Assign) or len(node.targets) != 1:
@@ -202,11 +178,6 @@ def _achado_regra2_degrada_sem_descartar(
         )
         if not tem_tentativa_por_uniq:
             continue
-        # Se este `if` SEMPRE termina em `return`/`raise` (última instrução
-        # do corpo dele), a tentativa não pode cair para fora — é o formato
-        # da cura (Z3-1): o `if target_uniq is not None:` inteiro devolve
-        # antes de chegar ao broadcast. Só quando falta essa garantia é que
-        # o que vem DEPOIS do `if` é alcançável mesmo com endereço pedido.
         termina_com_retorno = bool(node.body) and isinstance(
             node.body[-1], (ast.Return, ast.Raise)
         )
@@ -225,16 +196,11 @@ def _achado_regra2_degrada_sem_descartar(
         if nome not in _VERBOS_DE_QUEDA_PARA_BROADCAST:
             continue
         if _args_incluem_nome(node, "target_uniq"):
-            continue  # esta chamada respeita o alvo — não é a queda
+            continue
         return Achado(arquivo=arquivo_rel, linha=node.lineno, qualname=_qualname(func))
     return None
 
 
-#: (arquivo relativo a `src/`, qualname) -> justificativa. Cada entrada tem
-#: de apontar para uma frase de VERDADE no docstring/comentário da própria
-#: função — este dicionário não é a fonte da justificativa, é o ÍNDICE dela.
-#: Nasce da batida de C (rodada 0 da Z3) — a varredura completa de fan-out
-#: fora de `_resolver_escopo` que a sprint pede em §4.
 _EXCECOES_DELIBERADAS: dict[tuple[str, str], _Excecao] = {
     (
         "hefesto_dualsense4unix/core/backend_pydualsense.py",
@@ -247,9 +213,6 @@ _EXCECOES_DELIBERADAS: dict[tuple[str, str], _Excecao] = {
         "(HARM-16)."
     ),
 }
-
-
-# --- a varredura -------------------------------------------------------------
 
 
 def _unparse(node: ast.AST) -> str:
@@ -269,11 +232,7 @@ def _nome_chamada(node: ast.Call) -> str | None:
 
 
 def _e_chamada_de_guardiao(node: ast.Call) -> bool:
-    """True quando `node` nomeia um `_GUARDIOES`, direto OU pelo idioma
-    defensivo desta casa: ``getattr(obj, "nome_do_guardiao", padrão)``. O
-    censo (§2.1) mostrou que TODO chamador de produção usa `getattr`
-    defensivo, nunca o atributo cru — uma régua que só reconhecesse a
-    chamada direta reprovaria o próprio `_registrar_em_todos` já curado."""
+    """True quando `node` nomeia um `_GUARDIOES`, direto OU pelo idioma"""
     if _nome_chamada(node) in _GUARDIOES:
         return True
     if isinstance(node.func, ast.Name) and node.func.id == "getattr" and len(node.args) >= 2:
@@ -286,7 +245,6 @@ def _e_chamada_de_guardiao(node: ast.Call) -> bool:
 def _e_fonte_de_muitos(iteravel_src: str, variaveis_de_muitos: set[str]) -> bool:
     if any(padrao in iteravel_src for padrao in _FONTES_DE_MUITOS):
         return True
-    # variável local: `alvos = self._uniqs_conectados()` ... `for alvo in alvos:`
     return iteravel_src in variaveis_de_muitos
 
 
@@ -340,8 +298,6 @@ def _achado_regra1_fanout_sem_guardiao(
     if primeiro_for_fanout is None:
         return None
 
-    # CONSULTOU: chamada a um guardião em QUALQUER ponto do corpo direto
-    # ANTES da linha do for de fan-out.
     for node in corpo_direto:
         if (
             isinstance(node, ast.Call)
@@ -363,9 +319,7 @@ def _analisa_funcao(
 
 
 class _SoCorpoDireto:
-    """Iterável de nós do CORPO de `func`, SEM descer em `def`/`lambda`
-    aninhados — são escopos próprios, analisados como funções à parte quando
-    o `walk` do módulo chegar neles (ver `_funcoes_do_arquivo`)."""
+    """Iterável de nós do CORPO de `func`, SEM descer em `def`/`lambda`"""
 
     def __init__(self, func: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         self._vistos: list[ast.AST] = []
@@ -376,7 +330,7 @@ class _SoCorpoDireto:
     def _coleta(self, node: ast.AST) -> None:
         for filho in ast.iter_child_nodes(node):
             if isinstance(filho, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
-                continue  # escopo próprio — não desce
+                continue
             self._vistos.append(filho)
             self._coleta(filho)
 
@@ -390,8 +344,7 @@ def _qualname(func: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
 
 
 def _marca_qualnames(tree: ast.Module) -> None:
-    """Prefixa cada função com `Classe.` quando ela é método — um só passo,
-    de fora para dentro, sem alterar a AST em outra coisa."""
+    """Prefixa cada função com `Classe.` quando ela é método — um só passo,"""
 
     def visita(node: ast.AST, prefixo: str) -> None:
         for filho in ast.iter_child_nodes(node):
@@ -439,9 +392,6 @@ def varre(raiz_src: Path) -> list[Achado]:
                 continue
             achados.append(achado)
     return achados
-
-
-# --- CLI ---------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> int:

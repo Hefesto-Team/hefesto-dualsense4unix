@@ -4,7 +4,7 @@ POR QUE ESTE ARQUIVO EXISTE
 ===========================
 Em 22/08/2026 a auditoria da luz achou o mesmo byte descrito de duas maneiras
 opostas na MESMA árvore: `core/lightbar_reset.py:12-16` chama o `0x08` de
-*"A CURA da lightbar por Bluetooth"*, e `core/backend_pydualsense.py:2448-2457`
+*"A CURA da lightbar por Bluetooth"*, e `core/backend_pydualsense.py:1682-1691`
 o chama de *"o CULPADO"*, com 7 eventos de correlação perfeita. O código está
 coerente com a decisão de 04/08 — quem não está coerente é o texto.
 
@@ -61,16 +61,10 @@ MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 CLI = RAIZ / "docs" / "usage" / "cli.md"
 BLUETOOTH = RAIZ / "docs" / "usage" / "bluetooth.md"
 
-#: O escritor cru do `0x08`. Quem o chama está mandando o byte.
 ESCRITOR = "send_release_leds"
 
-#: O ÚNICO método de produção autorizado a chamá-lo, e o motivo está no
-#: docstring dele: "NÃO é chamado por caminho automático nenhum: se um dia o
-#: reset voltar à adoção, ele volta lá, com a sua própria decisão e o seu
-#: próprio teste". Este teste é o "próprio teste" da frase.
 SOB_DEMANDA = "enviar_release_leds"
 
-#: A célula do mapa que responde pelo microfone no rádio.
 LINHA_DO_MICROFONE = "audio.microfone@dualsense"
 COLUNA_DO_MICROFONE = "radio_aciona"
 ACIONA = frozenset({"sim", "parcial"})
@@ -84,19 +78,13 @@ def _modulos_do_produto() -> list[Path]:
 
 
 def _chamadas(caminho: Path, nome: str) -> list[tuple[int, str | None]]:
-    """Onde `nome` é CHAMADO, e dentro de qual função — por AST, não por grep.
-
-    Grep contaria o `import`, o `__all__` e cada linha de comentário que cita o
-    nome (são nove neste arquivo), e a régua ficaria vermelha para sempre por
-    causa de prosa. O que importa é a CHAMADA.
-    """
+    """Onde `nome` é CHAMADO, e dentro de qual função — por AST, não por grep."""
     arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
     dono: dict[int, str] = {}
     for no in ast.walk(arvore):
         if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
             fim = getattr(no, "end_lineno", no.lineno) or no.lineno
             for linha in range(no.lineno, fim + 1):
-                # a função mais interna vence
                 dono[linha] = no.name
 
     achadas: list[tuple[int, str | None]] = []
@@ -129,9 +117,6 @@ def _celula_do_mapa(ident: str, coluna: str) -> str:
         f"o mapa de canais não tem mais a linha {ident!r} — a régua deste teste "
         "perdeu a fonte viva e tem de ser reescrita, não desligada"
     )
-
-
-# ── 1. o 0x08 ───────────────────────────────────────────────────────────────
 
 
 def test_o_release_leds_so_sai_sob_demanda() -> None:
@@ -172,14 +157,11 @@ def test_a_pagina_do_cli_nao_promete_a_cura_automatica() -> None:
     )
 
 
-# ── 2. o áudio por Bluetooth ────────────────────────────────────────────────
-
-
 def test_a_pagina_do_bluetooth_nao_poe_o_audio_fora_de_escopo() -> None:
     """Enquanto o MAPA disser que o microfone por rádio aciona, a página não pode negar."""
     aciona = _celula_do_mapa(LINHA_DO_MICROFONE, COLUNA_DO_MICROFONE)
     if aciona not in ACIONA:
-        return  # o mapa mudou de ideia: a página deixa de estar errada
+        return
 
     culpados = [
         p
@@ -198,11 +180,7 @@ def test_a_pagina_do_bluetooth_nao_poe_o_audio_fora_de_escopo() -> None:
 
 
 def test_a_regua_do_audio_le_o_mapa_e_nao_a_pagina() -> None:
-    """A régua tem de mudar de resposta quando o MAPA muda — não quando a página muda.
-
-    Sem isto, o teste acima seria a página conferindo a si mesma: bastaria
-    apagar a palavra para ficar verde, e a contradição com o mapa seguiria viva.
-    """
+    """A régua tem de mudar de resposta quando o MAPA muda — não quando a página muda."""
     origem = Path(__file__).read_text(encoding="utf-8")
     corpo = origem.split("def test_a_pagina_do_bluetooth_nao_poe_o_audio_fora_de_escopo")[1]
     corpo = corpo.split("\ndef ")[0]

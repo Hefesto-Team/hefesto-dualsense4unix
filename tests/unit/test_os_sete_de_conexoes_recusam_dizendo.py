@@ -52,9 +52,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA = "08-conexoes.html"
 
-#: O gabinete de BANCADA, e ele nunca sai daqui. Ler o `maquina.json` de quem
-#: roda faria a régua passar nesta máquina e reprovar em qualquer outra — é a
-#: razão escrita no pacote para os seis não terem entrada em `PROVAS`.
 GABINETE = {
     "faces": [{"nome": "Traseira", "portas": ["1", "2"], "perto": False,
                "alto": False},
@@ -67,7 +64,6 @@ GABINETE = {
 
 UNIQ_RADIO = "aabbcc000001"
 UNIQ_CABO = "aabbcc000002"
-#: A mesa de 02/09, lida do daemon vivo. O do CABO é o não-primário, e é ele
 #: que volta `player: None` — a assinatura é `is_primary`, não o transporte.
 CONECTADOS = [
     {"uniq": UNIQ_RADIO, "index": 0, "transport": "bt", "connected": True,
@@ -76,11 +72,8 @@ CONECTADOS = [
      "player": None, "player_slot": 2, "is_primary": False, "battery_pct": 95},
 ]
 
-#: O clique CEGO — exatamente o que o instrumento mandou em 02/09: o controle
-#: da coluna, e nada do botão. É o que produziu as sete acusações.
 CEGO = {"controle": "p1", "texto": "Régua"}
 
-#: O clique DIRIGIDO, gesto a gesto: o argumento que o botão carrega no HTML.
 DIRIGIDO: dict[str, dict[str, Any]] = {
     "escolher-aparelho": {"caminho": "3-1.1.4"},
     "escolher-entrada": {"entrada": "1"},
@@ -91,18 +84,12 @@ DIRIGIDO: dict[str, dict[str, Any]] = {
     "luz-nao-acende": {"uniq": UNIQ_CABO},
 }
 
-#: OS SEIS DO MAPA DO GABINETE — os que gravam (ou preparam) o desenho dela.
 DO_GABINETE = ("escolher-aparelho", "escolher-entrada", "tirar-daqui",
                "nova-entrada", "nova-extensao", "nova-face")
 
 
 class PonteDeMentira:
-    """Guarda o que foi pedido à ponte. Responde a qualquer nome, de propósito.
-
-    O dublê não pode virar uma segunda lista das funções da ponte: ela
-    envelheceria em silêncio. Quem confere que o nome existe de verdade é
-    `test_os_botoes_tem_dono.test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem`.
-    """
+    """Guarda o que foi pedido à ponte. Responde a qualquer nome, de propósito."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple, dict]] = []
@@ -130,12 +117,7 @@ def a08():
 
 @pytest.fixture(autouse=True)
 def gabinete_de_bancada(a08, monkeypatch):
-    """Um rascunho novo por caso, e NUNCA o `maquina.json` de quem roda.
-
-    O `_LOGICA` é global de propósito — é ele que segura o aparelho na mão
-    entre os dois tempos do gesto. Sem esta troca, o primeiro caso leria o
-    gabinete da máquina do CI e os seguintes herdariam o que o anterior mudou.
-    """
+    """Um rascunho novo por caso, e NUNCA o `maquina.json` de quem roda."""
     from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
@@ -183,24 +165,10 @@ def _ctx(pac):
 
 
 def _onde_a_razao_mora(caminho: pathlib.Path) -> str:
-    """A prosa que EXPLICA o `SEM_ECO`, e só ela — não o arquivo inteiro.
-
-    SÃO DOIS LUGARES, e são os dois onde a razão de fato mora: o bloco de
-    comentários `#:` que precede a tupla `SEM_ECO`, e os docstrings das funções
-    de gesto. Nada mais entra.
-
-    **POR QUE NÃO O ARQUIVO INTEIRO, e isto foi MEDIDO:** a primeira versão
-    desta régua procurava o nome em qualquer comentário ou docstring do módulo.
-    A mordida — acrescentar `mic-escopo` ao `SEM_ECO` sem escrever uma linha
-    sobre eco — passou VERDE, porque `mic-escopo` já aparecia num comentário
-    do inventário de contradições, 1000 linhas acima e sobre outro assunto.
-    Uma régua que aceita qualquer menção mede a PALAVRA, não a razão — que é o
-    modo de falhar mais frequente desta casa.
-    """
+    """A prosa que EXPLICA o `SEM_ECO`, e só ela — não o arquivo inteiro."""
     texto = caminho.read_text(encoding="utf-8")
     linhas = texto.splitlines()
 
-    # O bloco `#:` colado na tupla, lido de baixo para cima a partir dela.
     fim = next(i for i, linha in enumerate(linhas)
                if linha.startswith("SEM_ECO"))
     inicio = fim
@@ -209,31 +177,20 @@ def _onde_a_razao_mora(caminho: pathlib.Path) -> str:
         inicio -= 1
     pedacos = linhas[inicio:fim]
 
-    # E os docstrings das funções — onde o gesto explica a si mesmo.
     for no in ast.walk(ast.parse(texto)):
         if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
             doc = ast.get_docstring(no)
             if doc:
                 pedacos.append(doc)
-    # O `tokenize` fica: é ele que garante que um `#` dentro de string não
-    # entre no bloco acima como se fosse comentário.
     for tok in tokenize.generate_tokens(io.StringIO(texto).readline):
         if tok.type == tokenize.COMMENT and inicio < tok.start[0] <= fim:
             pedacos.append(tok.string)
     return "\n".join(pedacos)
 
 
-# --------------------------------------------------------------------------
-# 1. o clique CEGO — os sete recusam DIZENDO, e nenhum toca a ponte
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("nome", [*DO_GABINETE, "luz-nao-acende"])
 def test_o_clique_sem_o_argumento_do_botao_recusa_dizendo(pac, nome) -> None:
-    """A prova de que a acusação de 02/09 mediu recusa, não mentira.
-
-    E o que a régua cobra é a FRASE: `raise ValueError` com mensagem vazia
-    passaria por qualquer teste de "levantou" e chegaria à tela como um retângulo
-    de erro sem uma palavra dentro.
-    """
+    """A prova de que a acusação de 02/09 mediu recusa, não mentira."""
     p = PonteDeMentira()
     with pytest.raises((ValueError, RuntimeError)) as caiu:
         _gesto(pac, nome)(_ctx(pac), dict(CEGO), p)
@@ -248,9 +205,6 @@ def test_o_clique_sem_o_argumento_do_botao_recusa_dizendo(pac, nome) -> None:
         f"mundos: a tela diz que não deu, e o disco mudou.")
 
 
-# --------------------------------------------------------------------------
-# 2. o clique DIRIGIDO — o que cada um faz quando o botão diz o alvo
-# --------------------------------------------------------------------------
 def test_escolher_aparelho_guarda_na_mao_e_nao_fala_com_o_daemon(pac, a08) -> None:
     """O primeiro tempo do gesto de dois: guardar é tudo o que ele faz.
 
@@ -312,11 +266,7 @@ def test_o_gesto_de_dois_tempos_grava_no_segundo(pac) -> None:
 
 
 def test_escolher_entrada_sem_o_primeiro_tempo_recusa_dizendo(pac) -> None:
-    """Clicar a entrada sem ter escolhido o aparelho não tem o que fazer.
-
-    Engolir isso faria a pessoa clicar dez vezes achando que o mapa quebrou —
-    e é o defeito que esta casa chama de responder calado.
-    """
+    """Clicar a entrada sem ter escolhido o aparelho não tem o que fazer."""
     p = PonteDeMentira()
     with pytest.raises(RuntimeError) as caiu:
         _gesto(pac, "escolher-entrada")(_ctx(pac), {**CEGO, "entrada": "1"}, p)
@@ -325,16 +275,8 @@ def test_escolher_entrada_sem_o_primeiro_tempo_recusa_dizendo(pac) -> None:
     assert p.chamadas == []
 
 
-# --------------------------------------------------------------------------
-# 3. luz-nao-acende: a recusa do cabo é do DESENHO, e não se conserta
-# --------------------------------------------------------------------------
 def test_a_luz_no_cabo_recusa_dizendo_e_nao_derruba_nada(pac) -> None:
-    """No cabo a barra de luz não depende de reconexão nenhuma.
-
-    A recusa é o comportamento CONTRATADO: o `title` do botão apagado diz
-    exatamente isto. Derrubar um controle que está no cabo não o derruba — e um
-    botão que aceita o clique e não faz nada é o que responde calado.
-    """
+    """No cabo a barra de luz não depende de reconexão nenhuma."""
     p = PonteDeMentira()
     with pytest.raises(RuntimeError) as caiu:
         _gesto(pac, "luz-nao-acende")(
@@ -361,9 +303,6 @@ def test_a_luz_nao_e_sem_eco_porque_derrubar_do_radio(a08) -> None:
         "não ter efeito, o defeito é dele — não da régua que o mede.")
 
 
-# --------------------------------------------------------------------------
-# 4. a classificação vira portão
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("nome", DO_GABINETE)
 def test_os_seis_do_gabinete_estao_declarados_sem_eco(a08, nome) -> None:
     """Medido em 02/09: o `state_full` não publica `mapa` nem `maquina`.
@@ -379,18 +318,7 @@ def test_os_seis_do_gabinete_estao_declarados_sem_eco(a08, nome) -> None:
 
 
 def test_todo_sem_eco_desta_aba_tem_razao_escrita(a08) -> None:
-    """`SEM_ECO` sem razão escrita é lápide para esconder defeito.
-
-    A razão tem de estar ONDE ELA MORA — no bloco `#:` colado na tupla, ou no
-    docstring da própria função de gesto. Ver `_onde_a_razao_mora`: procurar no
-    arquivo inteiro deixou esta régua passar verde sobre uma lápide de verdade.
-
-    MEDIDO NAS DEZ ABAS em 02/09: `a02`, `a03`, `a08`, `a09` e `a10` passam;
-    `a05_vibracao` tem `testar` citado só pelo RÓTULO ("Testar", com maiúscula)
-    no comentário que o explica. A régua fica NESTA aba porque o conserto
-    daquela é de quem tem a aba 05 na mão — e o defeito lá é de grafia, não de
-    razão ausente.
-    """
+    """`SEM_ECO` sem razão escrita é lápide para esconder defeito."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/"
              "a08_conexoes.py")
     prosa = _onde_a_razao_mora(fonte)
@@ -403,20 +331,14 @@ def test_todo_sem_eco_desta_aba_tem_razao_escrita(a08) -> None:
 
 
 def test_nenhum_dos_sete_e_o_monte_c(pac, a08) -> None:
-    """O fecho da classificação: nenhum dos sete MENTIU, e isso é verificável.
-
-    Mentir seria aceitar o clique dirigido, não chamar a ponte e não estar em
-    `SEM_ECO`. A régua percorre os sete e cobra que cada um esteja em UM dos
-    dois montes honestos: recusou dizendo, ou fez algo (com eco ou declarado
-    sem ele).
-    """
+    """O fecho da classificação: nenhum dos sete MENTIU, e isso é verificável."""
     mentirosos = []
     for nome in (*DO_GABINETE, "luz-nao-acende"):
         p = PonteDeMentira()
         try:
             _gesto(pac, nome)(_ctx(pac), {**CEGO, **DIRIGIDO[nome]}, p)
         except (ValueError, RuntimeError):
-            continue  # recusou dizendo — monte (a)
+            continue
         if not p.chamadas and nome not in a08.SEM_ECO:
             mentirosos.append(nome)
     assert mentirosos == [], (

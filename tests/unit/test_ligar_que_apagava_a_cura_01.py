@@ -3,7 +3,7 @@
 MEDIDO no código, em 10/08/2026, seguindo a cadeia inteira de ponta a ponta:
 
     gui/main.glade:3121            <signal handler="on_emulation_mic_on"/>
-    emulation_actions.py:930-945   -> _run_mic("--enable-mic", ...)
+    emulation_actions.py:511-526   -> _run_mic("--enable-mic", ...)
     fix_wireplumber_default_source.sh (enable_mic_dualsense)
                                    -> rm -f nos TRÊS drop-ins, o 51 junto
 
@@ -48,8 +48,6 @@ from pathlib import Path
 
 import pytest
 
-# Reusa o andaime de stubs de `gi` do portão irmão (o import dele instala os
-# stubs quando não há PyGObject real) em vez de duplicar quarenta linhas.
 from tests.unit.test_emulation_mic_quirk import Mixin
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -62,20 +60,8 @@ DISABLE_OUT = "53-hefesto-dualsense-disable-output.conf"
 ASSET_PROMOTOR = RAIZ / "assets" / "wireplumber" / PROMOTOR
 
 
-# ---------------------------------------------------------------------------
-# Andaime do lado shell — HOME de mentira e `systemctl` que não faz nada
-# ---------------------------------------------------------------------------
-
-
 def _ambiente(tmp_path: Path) -> tuple[Path, dict[str, str]]:
-    """Devolve ``(dir_dos_dropins, env)`` para rodar o wp-fix com segurança.
-
-    O script monta ``DROPIN_DIR`` a partir do ``HOME`` já no carregamento (e as
-    variáveis são ``readonly``), então o ``HOME`` precisa ser falso ANTES do
-    ``source``. Os dublês de ``systemctl``/``wpctl``/``pactl`` existem para o
-    caso de alguém, um dia, acrescentar uma chamada dessas na função sob teste:
-    o portão avisaria por outro caminho, mas a sessão dela não pagaria a conta.
-    """
+    """Devolve ``(dir_dos_dropins, env)`` para rodar o wp-fix com segurança."""
     casa = tmp_path / "casa"
     dropins = casa / ".config" / "wireplumber" / "wireplumber.conf.d"
     dropins.mkdir(parents=True)
@@ -118,19 +104,8 @@ def _planta(dropins: Path, *nomes: str) -> None:
             dropins.joinpath(nome).write_text("# dublê\n", encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# 1. O promotor sobrevive ao botão "Ligar"
-# ---------------------------------------------------------------------------
-
-
 def test_ligar_o_mic_nao_apaga_o_promotor(tmp_path: Path) -> None:
-    """O defeito, em uma asserção.
-
-    ARRANQUE A CURA: devolva ``"${DROPIN_DST}"`` ao ``for`` de
-    ``_arma_dropins_do_mic`` (era o primeiro da lista) e este teste REPROVA — é
-    o estado exato que a máquina dela ficava depois de um clique em "Ligar":
-    entrada de volta ao 50, monitor a 1109 vencendo.
-    """
+    """O defeito, em uma asserção."""
     dropins, env = _ambiente(tmp_path)
     _planta(dropins, PROMOTOR, DISABLE_SRC, DISABLE_OUT)
 
@@ -143,21 +118,11 @@ def test_ligar_o_mic_nao_apaga_o_promotor(tmp_path: Path) -> None:
         "monitor da saída (1109) vence o microfone (50) e o que se grava é o "
         f"eco do que sai.\n{res.stdout}"
     )
-    # E o conteúdo continua sendo o do repositório: apagar-e-reescrever-errado
-    # seria o mesmo defeito com outra roupa.
     assert "priority.session = 1500" in (dropins / PROMOTOR).read_text(encoding="utf-8")
 
 
 def test_ligar_o_mic_instala_o_promotor_quando_ele_falta(tmp_path: Path) -> None:
-    """Ligar o mic é ARMAR a cura, não só deixar de desarmá-la.
-
-    É o estado de quem desligou o mic (``--disable-source`` instala 52/53 e não
-    toca no 51) numa máquina onde o 51 já não estava — exatamente o que a versão
-    anterior deste script deixava para trás.
-
-    ARRANQUE A CURA: troque o ramo ``elif install_dropin`` por um ``:`` e este
-    teste REPROVA, porque o mic volta livre, porém no 50 de fábrica.
-    """
+    """Ligar o mic é ARMAR a cura, não só deixar de desarmá-la."""
     dropins, env = _ambiente(tmp_path)
     _planta(dropins, DISABLE_SRC, DISABLE_OUT)
 
@@ -171,11 +136,7 @@ def test_ligar_o_mic_instala_o_promotor_quando_ele_falta(tmp_path: Path) -> None
 
 
 def test_ligar_o_mic_e_idempotente(tmp_path: Path) -> None:
-    """Dois cliques seguidos em "Ligar" terminam no mesmo lugar.
-
-    Contrapeso da cura acima: garantir o promotor não pode virar reinstalar em
-    cima do que já está certo com erro no segundo passe.
-    """
+    """Dois cliques seguidos em "Ligar" terminam no mesmo lugar."""
     dropins, env = _ambiente(tmp_path)
     _planta(dropins, DISABLE_SRC, DISABLE_OUT)
 
@@ -188,21 +149,8 @@ def test_ligar_o_mic_e_idempotente(tmp_path: Path) -> None:
     assert "promotor mantido" in segundo.stdout, segundo.stdout
 
 
-# ---------------------------------------------------------------------------
-# 2. O contrapeso: a supressão de verdade continua saindo
-# ---------------------------------------------------------------------------
-
-
 def test_ligar_o_mic_continua_removendo_a_supressao_de_verdade(tmp_path: Path) -> None:
-    """Sem isto, "curar" viraria não fazer nada.
-
-    O 52 e o 53 são ``node.disabled = true``: são eles que impedem o nó de
-    existir. Se a cura os poupasse junto com o 51, o botão "Ligar" deixaria de
-    ligar o microfone.
-
-    ARRANQUE A CURA: tire ``"${DROPIN_DISABLE_DST}"``/``"${DROPIN_OUTPUT_DST}"``
-    do ``for`` e este teste REPROVA.
-    """
+    """Sem isto, "curar" viraria não fazer nada."""
     dropins, env = _ambiente(tmp_path)
     _planta(dropins, PROMOTOR, DISABLE_SRC, DISABLE_OUT)
 
@@ -217,22 +165,8 @@ def test_ligar_o_mic_continua_removendo_a_supressao_de_verdade(tmp_path: Path) -
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. A promoção explícita não pode mudar de significado
-# ---------------------------------------------------------------------------
-
-
 def test_a_promocao_explicita_continua_removendo_o_51(tmp_path: Path) -> None:
-    """A ausência do 51 é um SINAL que outro programa lê.
-
-    ``doctor.sh:_prefere_mic_do_dualsense`` (linha 821) usa a presença do 51
-    como "a política default é rebaixar" e a ausência como "a usuária promoveu o
-    controle a dedo". Fazer a promoção manter o arquivo apagaria a escolha dela
-    no próximo ``doctor --fix``.
-
-    ARRANQUE A CURA: faça o ramo ``sem-promotor`` cair no ramo padrão e este
-    teste REPROVA.
-    """
+    """A ausência do 51 é um SINAL que outro programa lê."""
     dropins, env = _ambiente(tmp_path)
     _planta(dropins, PROMOTOR, DISABLE_SRC)
 
@@ -246,13 +180,7 @@ def test_a_promocao_explicita_continua_removendo_o_51(tmp_path: Path) -> None:
 
 
 def test_a_promocao_pede_sem_promotor_ao_enable_mic() -> None:
-    """A fiação: quem promove tem de pedir o modo, senão herda o novo padrão.
-
-    Contrato de texto porque ``promote_source_dualsense`` fala com ``wpctl`` e
-    com o ``doctor.sh`` — rodá-la de verdade é mexer no áudio da máquina.
-
-    ARRANQUE A CURA: tire o argumento da chamada e este teste REPROVA.
-    """
+    """A fiação: quem promove tem de pedir o modo, senão herda o novo padrão."""
     texto = WP_FIX.read_text(encoding="utf-8")
     inicio = texto.index("promote_source_dualsense() {")
     corpo = texto[inicio : texto.index("\n}\n", inicio)]
@@ -264,12 +192,7 @@ def test_a_promocao_pede_sem_promotor_ao_enable_mic() -> None:
 
 
 def test_o_enable_mic_do_despacho_nao_pede_sem_promotor() -> None:
-    """O caminho do botão "Ligar" usa o padrão, e o padrão guarda o promotor.
-
-    ARRANQUE A CURA: escreva ``enable_mic_dualsense "sem-promotor"`` no ramo
-    ``enable-mic)`` do ``case`` e este teste REPROVA — seria o defeito de volta
-    pela porta do despacho.
-    """
+    """O caminho do botão "Ligar" usa o padrão, e o padrão guarda o promotor."""
     texto = WP_FIX.read_text(encoding="utf-8")
     inicio = texto.index("    enable-mic)")
     bloco = texto[inicio : texto.index("    unmute-routes)", inicio)]
@@ -278,11 +201,6 @@ def test_o_enable_mic_do_despacho_nao_pede_sem_promotor() -> None:
         "o `--enable-mic` (o que o botão “Ligar” da aba Emulação roda) voltou a "
         "apagar o promotor"
     )
-
-
-# ---------------------------------------------------------------------------
-# 4. A tela para de afirmar o contrário do que aconteceu
-# ---------------------------------------------------------------------------
 
 
 class _RotuloFalso:
@@ -299,18 +217,8 @@ class _RotuloFalso:
         self.tooltip = texto
 
 
-#: NOTA DATADA — 25/08/2026 (EMULACAO-UM-DONO-SO-01/E3). `_mic_state` ganhou um
 #: QUARTO estado, `MIC_SEM_ALVO`: sem placa ALSA de DualSense em
-#: `/proc/asound/cards` a tela não pode mais escrever "Ligado" em verde. Isso
-#: fez o `test_ligado_de_verdade_continua_verde` passar a depender de haver um
-#: controle no cabo da bancada — MEDIDO no mesmo dia, apontando o
-#: `_PLACAS_ALSA` para um caminho inexistente: ele reprovava em
-#: `assert obj._mic_is_on() is True`, e só passava aqui porque havia um
 #: DualSense no cabo desta máquina. É o vício de bancada da NO-MEU-FUNCIONA-01,
-#: e a cura é declarar o alvo em vez de herdá-lo da sala.
-#:
-#: Uma placa, e não zero: o assunto DESTE arquivo é o promotor (o drop-in 51),
-#: e todos os casos dele pressupõem que existe um microfone a promover.
 _CARDS_COM_UM_DUALSENSE = """\
  0 [HDMI           ]: HDA-Intel - HDA ATI HDMI
                       HDA ATI HDMI at 0xfe960000 irq 66
@@ -335,15 +243,8 @@ def _tela(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[object, _Rot
 def test_a_tela_nao_diz_ligado_sem_o_promotor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O rótulo verde era a segunda metade do defeito.
-
-    Sem o 51, a captura padrão pode cair no monitor da saída — e a aba escrevia
-    "Ligado" em verde, no mesmo segundo em que o botão tinha desarmado a cura.
-
-    ARRANQUE A CURA: devolva o ``_mic_is_on`` que só olhava o 52/53 e este teste
-    REPROVA nas duas asserções.
-    """
-    obj, rotulo = _tela(tmp_path, monkeypatch)  # diretório vazio: nem 52/53 nem 51
+    """O rótulo verde era a segunda metade do defeito."""
+    obj, rotulo = _tela(tmp_path, monkeypatch)
 
     assert obj._mic_is_on() is False, (
         "a janela considerou o mic ligado sem o promotor no lugar — é a leitura "
@@ -352,7 +253,6 @@ def test_a_tela_nao_diz_ligado_sem_o_promotor(
     obj._refresh_mic_status()
     assert "#50fa7b" not in rotulo.markup, f"verde de tudo certo: {rotulo.markup}"
     assert "sem prioridade" in rotulo.markup, rotulo.markup
-    # E não pode mentir para o outro lado: nada foi suprimido aqui.
     assert "suprimido" not in rotulo.markup, rotulo.markup
 
 
@@ -367,8 +267,8 @@ def test_a_dica_explica_a_consequencia_e_o_caminho(
     """
     obj, rotulo = _tela(tmp_path, monkeypatch)
     obj._refresh_mic_status()
-    assert "grav" in rotulo.tooltip, rotulo.tooltip  # o que acontece de errado
-    assert "Ligar" in rotulo.tooltip, rotulo.tooltip  # e o que fazer a respeito
+    assert "grav" in rotulo.tooltip, rotulo.tooltip
+    assert "Ligar" in rotulo.tooltip, rotulo.tooltip
 
 
 def test_ligado_de_verdade_continua_verde(
@@ -387,11 +287,7 @@ def test_ligado_de_verdade_continua_verde(
 def test_suprimido_continua_dizendo_suprimido(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suprimido: str
 ) -> None:
-    """O estado que já existia não podia mudar de nome no meio da cura.
-
-    Vale com o promotor no lugar: o 52/53 vence, porque ``node.disabled`` tira o
-    nó do mapa e prioridade nenhuma ressuscita o que não existe.
-    """
+    """O estado que já existia não podia mudar de nome no meio da cura."""
     obj, rotulo = _tela(tmp_path, monkeypatch)
     obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
     obj._wp_dropin_dir().joinpath(suprimido).write_text("x", encoding="utf-8")

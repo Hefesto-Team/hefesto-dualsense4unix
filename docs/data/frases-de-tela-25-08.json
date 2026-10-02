@@ -1,6 +1,6 @@
 {
  "as_oito_que_mais_mudam": [
-  "**Emulação — o microfone para de pintar \"Ligado\" em verde sobre alvo que a aba nunca olhou.** A conclusão saía de três arquivos do WirePlumber, sem jamais perguntar se existe microfone a ligar — e o caso comum disso é o controle no RÁDIO, onde não há placa ALSA nenhuma. Nasce um quarto estado, \"sem alvo\". (`emulation_actions.py:1169-1170`; texto novo não citado no relatório.)",
+  "**Emulação — o microfone para de pintar \"Ligado\" em verde sobre alvo que a aba nunca olhou.** A conclusão saía de três arquivos do WirePlumber, sem jamais perguntar se existe microfone a ligar — e o caso comum disso é o controle no RÁDIO, onde não há placa ALSA nenhuma. Nasce um quarto estado, \"sem alvo\". (`emulation_actions.py:693-694`; texto novo não citado no relatório.)",
   "**Gatilhos — \"Rigid aplicado\" com zero destino vira \"nenhum controle recebeu — não há controle na mesa\".** O daemon respondeu `aplicado_em: []`, `guardado_em: []`: nenhum byte no fio, e a barra dizia \"aplicado\". Com a mesa vazia ela leria a barra e concluiria que o gatilho está armado.",
   "**Rodapé — \"Perfil aplicado.\" sobre uma RECUSA do daemon.** A troca de máscara era recusada e o rodapé comemorava; a frase nova é a do desfecho da recusa, que contém \"Ainda não\". A mordida é literal e cruel: `assert 'Ainda não' in 'Perfil aplicado.'`. O rodapé aparece em todas as abas.",
   "**Início — a pausa chega à primeira aba.** Com o daemon em pausa, a aba prometia luz e vibração que não saem. A frase da pausa entra NO LUGAR da promessa do modo, não ao lado dela — duas frases no mesmo instante fariam a aba dizer duas coisas.",
@@ -16,8 +16,8 @@
   "**Causa 3 — seis dos meus 60 não são de aba nenhuma.** Duas são do rodapé (que ela vê em todas as abas) e quatro são SAÍDA DE TERMINAL do `scripts/doctor.sh`, não janela. Tirando as seis, sobram 54.",
   "**Causa 4 — o documento diz \"em dez das onze abas\" e a minha lista toca as ONZE.** Logo a contagem publicada deixou pelo menos uma aba inteira de fora. Não tenho como saber qual, porque a lista dela não existe.",
   "**Cuidado com a direção do erro: 60 já é uma agregação, não o piso.** Cinco entradas são elas próprias pacotes de frases — as OITO frases do `./install.sh` (Sistema), as 38 dicas dos 19 modos (Gatilhos), as quatro dicas de política (Rumble), os quatro estados da dica do microfone (Emulação) e os quatro botões da janela do mapa (Configurações). Frase por frase, o número real passa de 100.",
-  "**Conferi no código o que o leitor dos Gatilhos pediu que se conferisse.** A constante virou três, em `src/hefesto_dualsense4unix/app/textos_de_aplicacao.py:293-295`: `NADA_ACONTECEU = \"nenhum controle recebeu\"`, `NADA_ACONTECEU_MESA_VAZIA = \"nenhum controle recebeu — não há controle na mesa\"` e `NADA_ACONTECEU_NATIVO`, que monta `\"nenhum controle recebeu — em Modo Nativo quem manda no controle é o jogo\"` a partir de `_MOTIVO_NATIVO` (linha 173). A frase transitória do Modo Nativo, que o leitor relatou como \"entrou\", **nunca chegou a ela** — foi consertada no mesmo dia.",
-  "**Conferi a aba que o leitor do SINAL-NO-NASCIMENTO-01-D1 marcou \"CONFERIR no código\": é Configurações.** `src/hefesto_dualsense4unix/app/actions/config/__init__.py:21` diz `secao_controles.py   seção 1 — \"Os controles\"`, e `frase_do_nascimento` mora em `secao_controles.py:241`, chamada em `:1201`.",
+  "**Conferi no código o que o leitor dos Gatilhos pediu que se conferisse.** A constante virou três, em `src/hefesto_dualsense4unix/app/textos_de_aplicacao.py:172-174`: `NADA_ACONTECEU = \"nenhum controle recebeu\"`, `NADA_ACONTECEU_MESA_VAZIA = \"nenhum controle recebeu — não há controle na mesa\"` e `NADA_ACONTECEU_NATIVO`, que monta `\"nenhum controle recebeu — em Modo Nativo quem manda no controle é o jogo\"` a partir de `_MOTIVO_NATIVO` (linha 173). A frase transitória do Modo Nativo, que o leitor relatou como \"entrou\", **nunca chegou a ela** — foi consertada no mesmo dia.",
+  "**Conferi a aba que o leitor do SINAL-NO-NASCIMENTO-01-D1 marcou \"CONFERIR no código\": é Configurações.** `src/hefesto_dualsense4unix/app/actions/config/__init__.py:21` diz `secao_controles.py   seção 1 — \"Os controles\"`, e `frase_do_nascimento` mora em `secao_controles.py:159`, chamada em `:1201`.",
   "**Duas entradas da Emulação recebem o MESMO texto novo em widgets diferentes** — `emulation_gamepad_xbox_button` (`main.glade:3402`) e `emulation_gamepad_hint_label` (`main.glade:3411`). Não é duplicata de leitor: são dois lugares da tela, das quatro frases de vibração da E8. Mantive as duas; se ela quiser a ressalva uma vez só, a decisão é de desenho, não de texto.",
   "**As minhas oito divergem em dois lugares da lista publicada** (ONDE-PARAMOS, linhas 52-72). Seis coincidem. Saíram da minha lista: \"Sistema — oito frases param de mandar rodar `./install.sh`\" (nº 7 publicada) e \"Configurações — 'Entrada 9' no lugar de 'Barramento 3, porta 1.2'\" (nº 8 publicada). Motivo: o critério que me deram é *frase que a levaria a uma decisão errada, ou que afirmava sobre o aparelho dela algo que o produto não tinha como saber* — e nenhuma das duas afirma falso: o `./install.sh` existe na máquina DELA (ela clonou o repositório), e \"Barramento 3, porta 1.2\" era verdadeiro, só não era a língua dela. Entraram no lugar delas duas que afirmam falso: os Gatilhos dizendo \"aplicado\" com zero destino, e o rodapé dizendo \"Perfil aplicado.\" sobre uma recusa. **As duas que saíram são a nona e a décima**, e continuam na lista por aba.",
   "**A varredura dos leitores cobriu 15 dos 27 relatórios; conferi os outros 12 e não encontrei texto de tela faltando.** `ORDEM-DE-SERVICO-B8` tem texto novo de tela (ORDEM-5 e a metade da ORDEM-6, cards e dois botões em `secao_exame.py`) mas está declarado como **tarefa ABERTA, não feita**. `INFRA-DE-EXECUCAO-A1` diz \"nada aqui toca a tela do produto\". `VPAD-SUSPENSO-MORTO-01-D2` diz que as duas frases do estado **já existem e já foram revisadas — só estão em tela inalcançável**, e fechar a E2 é decisão pendente. Os outros nove não discutem texto de tela.",
@@ -72,7 +72,7 @@
      "literal": true
     },
     {
-     "onde": "linha \"Ponte com o jogo:\", ramo da exceção de Steam Input — `home_actions.py:1112-1116`, ramo APAGADO (Saída A)",
+     "onde": "linha \"Ponte com o jogo:\", ramo da exceção de Steam Input — `home_actions.py:672-676`, ramo APAGADO (Saída A)",
      "saiu": "pelo Steam Input — neste jogo a Steam entrega os botões",
      "entrou": "pelo Hefesto",
      "porque": "a frase é do mundo de 06/08, quando a exceção suspendia o vpad. Desde 09/08 (ESCONDER-EM-VEZ-DE-SAIR-01) a exceção esconde o físico e MANTÉM o vpad de pé — publicá-la seria pôr um fato derrubado na primeira tela.",
@@ -141,12 +141,12 @@
     {
      "onde": "a MESMA barra/toast, ramo do Modo Nativo ligado com controle NA mesa — `frase_do_desfecho` em `app/textos_de_aplicacao.py`",
      "saiu": "Gatilho esquerdo (L2): Rigid — guardado; em Modo Nativo quem manda no controle é o jogo. Vale quando o Modo Nativo sair.",
-     "entrou": "(não transcrita no relatório; CONFERIDA POR MIM em `textos_de_aplicacao.py:295` + `:173`) \"Gatilho esquerdo (L2): Rigid — nenhum controle recebeu — em Modo Nativo quem manda no controle é o jogo\"",
+     "entrou": "(não transcrita no relatório; CONFERIDA POR MIM em `textos_de_aplicacao.py:174` + `:173`) \"Gatilho esquerdo (L2): Rigid — nenhum controle recebeu — em Modo Nativo quem manda no controle é o jogo\"",
      "porque": "durante algumas horas do dia este ramo passou a dizer \"não há controle na mesa\" — FALSO, e num caso que o código acertava antes. Quem coordena consertou no mesmo dia: a frase de mesa vazia deixou de cobrir os cinco motivos de `([], [])`. A frase transitória nunca chegou a ela.",
      "literal": false
     },
     {
-     "onde": "a MESMA barra/toast, ramo dos três casos que a janela NÃO tem como enxergar — constante `NADA_ACONTECEU` (`textos_de_aplicacao.py:293`)",
+     "onde": "a MESMA barra/toast, ramo dos três casos que a janela NÃO tem como enxergar — constante `NADA_ACONTECEU` (`textos_de_aplicacao.py:172`)",
      "saiu": "<assunto> — nenhum controle recebeu — não há controle na mesa",
      "entrou": "nenhum controle recebeu",
      "porque": "uma frase só embutia a causa de cinco situações diferentes; virou três (a genérica, a de mesa vazia e a de Modo Nativo). Nos três caminhos que a janela não enxerga a frase agora CALA em vez de diagnosticar — \"olhei e não sei por quê\" é uma resposta.",
@@ -282,7 +282,7 @@
      "literal": false
     },
     {
-     "onde": "a frase pintada em `src/hefesto_dualsense4unix/integrations/storm_doctor.py:261` — o último lugar de `src/` onde ela ainda ia para a tela (o docstring de `emulation_actions.py` que a repetia também saiu, mas docstring não é tela)",
+     "onde": "a frase pintada em `src/hefesto_dualsense4unix/integrations/storm_doctor.py:130` — o último lugar de `src/` onde ela ainda ia para a tela (o docstring de `emulation_actions.py` que a repetia também saiu, mas docstring não é tela)",
      "saiu": "ex.: jogos cujo DualSense é entregue pela Steam)",
      "entrou": "(o relatório NÃO cita o texto novo — só diz: \"A redação nova é a da caixinha de Perfis, palavra por palavra.\")",
      "porque": "a frase afirmava que a Steam entrega o DualSense ao jogo — afirmação que ela derrubou em 09/08 e que seguia sendo pintada na tela.",
@@ -316,7 +316,7 @@
    "quantas": 6,
    "mudancas": [
     {
-     "onde": "o cartão do microfone — o ramo do alvo em `app/actions/emulation_actions.py:1169-1170`; nasce um quarto estado, \"sem alvo\"",
+     "onde": "o cartão do microfone — o ramo do alvo em `app/actions/emulation_actions.py:693-694`; nasce um quarto estado, \"sem alvo\"",
      "saiu": "Ligado (escrito em verde `#50fa7b` mesmo sem placa de áudio do controle no sistema)",
      "entrou": "(NÃO ACHEI o texto novo literal — o relatório diz que \"a frase da tela fala de «placa de áudio neste computador», nomeia o rádio como o caso normal\", e que um caso do portão guarda a formulação, proibindo conclusões sobre o aparelho)",
      "porque": "a aba concluía \"Ligado\" olhando só três arquivos do WirePlumber, sem nunca olhar se existe microfone a ligar — e o caso mais comum disso é o controle no rádio, onde não há placa ALSA nenhuma.",
@@ -351,7 +351,7 @@
      "literal": false
     },
     {
-     "onde": "as dicas do microfone, nos QUATRO estados; o texto sai do Python, sem tocar o `main.glade` (o relatório cita literalmente só a do estado \"ligado\", pela mordida B em `emulation_actions.py:1279`)",
+     "onde": "as dicas do microfone, nos QUATRO estados; o texto sai do Python, sem tocar o `main.glade` (o relatório cita literalmente só a do estado \"ligado\", pela mordida B em `emulation_actions.py:759`)",
      "saiu": "O microfone do controle está livre e com prioridade acima do eco da saída.",
      "entrou": "Isto vale para o computador inteiro, não para este jogo: não entra no perfil e não mexe na ponte de microfone por Bluetooth (aba Configurações).",
      "porque": "a dica não dizia de QUAL microfone se tratava — a pessoa podia ler o botão como se ele valesse para o jogo ou mexesse na ponte de microfone por Bluetooth. ATENÇÃO: o \"entrou\" é a frase ACRESCENTADA, não a frase final inteira; o relatório não mostra o texto combinado.",
@@ -364,28 +364,28 @@
    "quantas": 4,
    "mudancas": [
     {
-     "onde": "a legenda da lista de atalhos (o bloco que começa por \"<b>Como funciona…\"), escrita pela função pura `frase_dos_atalhos_fora_da_lista` — `app/actions/input_actions.py:411`",
+     "onde": "a legenda da lista de atalhos (o bloco que começa por \"<b>Como funciona…\"), escrita pela função pura `frase_dos_atalhos_fora_da_lista` — `app/actions/input_actions.py:296`",
      "saiu": "(não existia)",
      "entrou": "Guardados, sem linha na lista: Touchpad — lado esquerdo, Touchpad — meio, Touchpad — lado direito. O touchpad voltou a ser o mouse do computador, então esta versão não dispara esses atalhos. O perfil continua guardando o que você escolheu — nada nesta aba os apaga.",
      "porque": "o perfil guardava três atalhos de touchpad que a lista nunca mostrava, e a tela não dizia que eles existiam — a pessoa não tinha como saber que estavam lá nem por que não disparam.",
      "literal": true
     },
     {
-     "onde": "a palavra ao lado do interruptor do mouse, no caso \"Hefesto sem resposta\" — `app/actions/mouse_actions.py:200-205` (era `texto = MODE_GATE_HINT if blocked and mode is not None else \"\"`)",
+     "onde": "a palavra ao lado do interruptor do mouse, no caso \"Hefesto sem resposta\" — `app/actions/mouse_actions.py:119-124` (era `texto = MODE_GATE_HINT if blocked and mode is not None else \"\"`)",
      "saiu": "(não existia — o interruptor ficava APAGADO e sem nenhuma palavra ao lado; a mordida mostra `assert '' == ...`)",
      "entrou": "Não consegui falar com o Hefesto agora, então não sei se ligar o mouse derrubaria um jogo em andamento — por isso o interruptor está apagado. Veja como está o Hefesto na aba Sistema.",
      "porque": "o interruptor aparecia apagado em silêncio, e a frase do modo jogo afirmaria que há jogo em andamento, que é justo o que ali não se sabe.",
      "literal": true
     },
     {
-     "onde": "a mensagem depois de clicar o interruptor do mouse — `_on_ok`/`_on_err` em `app/actions/mouse_actions.py:290`; passam a ser três saídas (ok, recusado, sem resposta), com `RECUSA_SEM_MOTIVO`, `SEM_RESPOSTA_DO_HEFESTO` e a tabela `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`",
+     "onde": "a mensagem depois de clicar o interruptor do mouse — `_on_ok`/`_on_err` em `app/actions/mouse_actions.py:196`; passam a ser três saídas (ok, recusado, sem resposta), com `RECUSA_SEM_MOTIVO`, `SEM_RESPOSTA_DO_HEFESTO` e a tabela `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`",
      "saiu": "Falha ao comunicar com o daemon",
      "entrou": "(o relatório cita as duas novas só TRUNCADAS, na mordida N6) \"O Hefesto recusou: o modo jogo está suspendendo mouse e teclado…\" e \"Não obtive resposta do Hefesto…\"",
      "porque": "toda resposta `status != \"ok\"` caía no texto do timeout: a janela acusava um defeito de comunicação que não houve, quando o daemon apenas tinha recusado.",
      "literal": false
     },
     {
-     "onde": "a legenda do teclado na tela, repintada por `_anotar_teclado_na_tela` a partir de `keyboard_emulation.osk_disponivel` do `state_full` — `app/actions/mouse_actions.py:266`; são duas frases (\"tem\" e \"não tem\")",
+     "onde": "a legenda do teclado na tela, repintada por `_anotar_teclado_na_tela` a partir de `keyboard_emulation.osk_disponivel` do `state_full` — `app/actions/mouse_actions.py:181`; são duas frases (\"tem\" e \"não tem\")",
      "saiu": "(NÃO ACHEI o texto literal — o relatório diz que \"a legenda recitava `onboard` e `wvkbd-mobintl` como texto fixo sem nunca dizer se algum estava instalado\")",
      "entrou": "(NÃO ACHEI o texto literal — a mordida N12 só mostra `assert 'Neste computador' in ''`; na frase de \"não tem\", `wvkbd-mobintl` vem ANTES de `onboard`, porque o onboard digita por XTEST e não alcança cliente Wayland nativo)",
      "porque": "a legenda recomendava dois programas como texto fixo sem nunca dizer se algum deles existia na máquina — e, na ordem antiga, o primeiro recomendado abre o teclado e não digita.",
@@ -533,7 +533,7 @@
   "Início · o hover do aviso de grab — citado TRUNCADO: \"Outro programa pegou este controle antes e não solta, ...\".",
   "Status · a barra da bateria — o relatório só diz que ela \"passa a poder dizer '— %'\"; a frase inteira não aparece.",
   "Status · a linha do giroscópio no card (`_motion_label`) — o teste só procura 'Hz'; o texto não é citado. E está marcada PROVISÓRIO, decisão dela.",
-  "Gatilhos · o ramo do Modo Nativo do toast — o \"entrou\" que o leitor trouxe é a frase TRANSITÓRIA, já consertada; a frase de hoje eu li no código (`textos_de_aplicacao.py:295` + `:173`), não no relatório.",
+  "Gatilhos · o ramo do Modo Nativo do toast — o \"entrou\" que o leitor trouxe é a frase TRANSITÓRIA, já consertada; a frase de hoje eu li no código (`textos_de_aplicacao.py:174` + `:173`), não no relatório.",
   "Gatilhos · as 38 dicas dos 19 modos — só a do `Rigid` está transcrita, e o agente avisa que NÃO fotografou a aba.",
   "Lightbar · o rótulo novo `lightbar_estado_no_controle` — a frase citada é uma das QUATRO; as outras três (Modo Nativo, fonte desconhecida, apagada) não estão.",
   "Lightbar · o toast do \"Aplicar o desenho\" — só o pedaço \"os 2 controles da mesa\" aparece; a frase inteira, não.",

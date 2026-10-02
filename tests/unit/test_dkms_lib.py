@@ -1,28 +1,4 @@
-"""Onda T — scripts/dkms_lib.sh (infra DKMS genérica, reusada pela Onda W).
-
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md §infra.
-
-Contrato inviolável da lib, testado em dois níveis (falha-sem/passa-com):
-
-1. Comportamental REAL (bash de verdade, PATH de stubs, SEM root, SEM tocar
-   no kernel): os caminhos de fail-safe retornam 0 com aviso honesto e NUNCA
-   escalam (o stub de sudo registra qualquer invocação — a ausência do log é
-   a prova); a remoção pede `dkms remove --all` + limpa /usr/src via sudo.
-
-2. Contrato de texto: `bash -n` limpo; PROIBIDO modprobe/rmmod/insmod (a
-   ativação é do chamador — recarregar módulo derrubaria Pro/8BitDo em uso);
-   idempotência via `diff -rq -x patch`; validação por `modinfo -F filename`
-   em updates/dkms (NUNCA srcversion — armadilha documentada no estudo).
-
-3. Execução de PONTA A PONTA (achado #4 do corretor): os dois contratos
-   centrais — 2ª chamada é no-op limpo e build falho cai em fail-safe sem
-   tentar install — provados por EXECUÇÃO com um dkms stub COM ESTADO e as
-   raízes parametrizadas (HEFESTO_DKMS_SRC_ROOT/HEFESTO_DKMS_MODULES_ROOT,
-   costura de teste da lib) apontando p/ tmp — sem root, sem tocar no
-   sistema. Também: remoção com `dkms remove` falho preserva registro e
-   source sem anunciar sucesso (achado #8) e a função de remoção sobrevive
-   a `set -euo pipefail` do uninstall com `rm -rf` falhando (achado #7).
-"""
+"""Onda T — scripts/dkms_lib.sh (infra DKMS genérica, reusada pela Onda W)."""
 
 from __future__ import annotations
 
@@ -39,8 +15,7 @@ LIB = LIB_PATH.read_text(encoding="utf-8") if LIB_PATH.exists() else ""
 
 
 def _sem_comentarios(texto: str) -> str:
-    """Remove comentários de linha (# no início ou precedido de espaço) —
-    suficiente para a lib, que não usa '#' dentro de strings."""
+    """Remove comentários de linha (# no início ou precedido de espaço) —"""
     linhas = [re.sub(r"(^|\s)#.*$", r"\1", linha) for linha in texto.splitlines()]
     return "\n".join(linhas)
 
@@ -56,12 +31,6 @@ def _roda(
 ) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["PATH"] = path
-    # A MÁQUINA DE MENTIRA NÃO TEM SECURE BOOT, e isso é dito aqui: desde a
-    # B4 da O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026) o
-    # `dkms_install_patched_module` lê a efivars e, com Secure Boot sem a
-    # chave, não instala. Herdando o `os.environ`, esta régua lia a efivars
-    # de quem a roda, e numa máquina (ou num runner do CI) com Secure Boot
-    # ligado reprovava sem defeito nenhum (medido na conferência).
     env["HEFESTO_EFIVARS_ROOT"] = "/nao-existe/efivars-sem-secure-boot"
     env.update(env_extra or {})
     completo = f"source '{LIB_PATH}'\n{script}\n"
@@ -81,8 +50,6 @@ class TestContratoDeTexto:
         assert resultado.returncode == 0, resultado.stderr
 
     def test_proibido_modprobe_rmmod_insmod(self) -> None:
-        # Ativação é do CHAMADOR e a mensagem é "vale no próximo boot" —
-        # recarregar módulo com Pro/8BitDo conectados os derrubaria.
         codigo = _sem_comentarios(LIB)
         assert not re.search(r"\b(modprobe|rmmod|insmod)\b", codigo), (
             "dkms_lib.sh NUNCA pode carregar/descarregar módulo"
@@ -108,32 +75,13 @@ class TestContratoDeTexto:
         )
 
     def test_build_e_install_tolerantes_a_reexecucao(self) -> None:
-        """Idempotência lida SEM cano — a régua envelheceu em 01/09/2026.
-
-        Ela cobrava os literais `grep -qE 'built|installed'` e `grep -q
-        'installed'`, e a lib os ABANDONOU DE PROPÓSITO no mesmo dia
-        (`dkms_lib.sh`, comentário "LER O `dkms status` SEM MORRER DE
-        SIGPIPE"): com o `set -o pipefail` de quem a sourceia, o `grep -q` sai
-        no primeiro acerto, o `dkms` morre de SIGPIPE e o pipeline devolve
-        **141 exatamente quando ACHA** — a guarda `if ! …` vira sempre
-        verdadeira e o passo protegido roda sempre. Medido na máquina dela: o
-        instalador anunciava *"in-tree continua"* sobre módulos instalados e em
-        uso.
-
-        Cobrar o literal aqui era reprovar a melhora em vez do defeito. A régua
-        passa a ler o que a lib faz agora — guarda por VARIÁVEL — e ganha a
-        parte que faltava: proibir a volta da forma que sangrou.
-        """
+        """Idempotência lida SEM cano — a régua envelheceu em 01/09/2026."""
         assert re.search(
             r'\[\[\s*!\s*"\$\(_dkms_status_texto[^)]*\)"\s*=~\s*\(built\|installed\)', LIB
         ), "dkms build só roda se ainda não construído, e lido sem cano (idempotente)"
         assert re.search(
             r'\[\[\s*"\$\(_dkms_status_texto[^)]*\)"\s*!=\s*\*installed\*', LIB
         ), "dkms install só roda se ainda não instalado, e lido sem cano (idempotente)"
-        # SOBRE `_sem_comentarios` AQUI: a forma proibida está ESCRITA na lib,
-        # no comentário que explica por que ela saiu. Cobrá-la sobre o texto
-        # cru é a régua confundindo a PALAVRA com o ATO — o defeito que esta
-        # casa já pagou onze vezes numa leva só. Só o código conta.
         assert not re.search(r"dkms status[^\n|]*\|\s*grep", _sem_comentarios(LIB)), (
             "SIGPIPE: `dkms status | grep` devolve 141 quando ACHA, sob pipefail — "
             "leia para variável (_dkms_status_texto) e pergunte à variável"
@@ -192,7 +140,6 @@ class TestRemocao:
         stubs = tmp_path / "bin"
         stubs.mkdir()
         log_sudo = tmp_path / "sudo.log"
-        # sudo de mentira: registra e NÃO executa (nada é tocado de verdade).
         _stub(stubs, "sudo", f'echo "sudo $@" >> "{log_sudo}"\nexit 0')
         resultado = _roda(
             "dkms_remove_patched_module hefesto-teste 9.9.9\n"
@@ -211,7 +158,6 @@ class TestRemocao:
         stubs.mkdir()
         log_sudo = tmp_path / "sudo.log"
         marcador = tmp_path / "dkms-remove-rodou"
-        # sudo executa SÓ dkms (resolvido no stub abaixo); o resto é engolido.
         _stub(
             stubs,
             "sudo",
@@ -291,15 +237,11 @@ class TestConsultas:
         assert "RC=1" in resultado.stdout, resultado.stderr
 
     def test_module_loaded_converte_hifen_para_underscore(self) -> None:
-        # /sys/module usa underscore (hid_nintendo), o pacote usa hífen.
         assert "${1//-/_}" in LIB
 
 
 def _prepara_e2e(tmp_path: Path, build_falha: bool = False) -> dict[str, Path | str]:
-    """Ambiente de execução real da lib SEM root: raízes em tmp (costura
-    HEFESTO_DKMS_*), sudo que EXECUTA (paths todos em tmp), dkms stub com
-    ESTADO em arquivos (added/built/installed) e modinfo resolvendo p/
-    updates/dkms."""
+    """Ambiente de execução real da lib SEM root: raízes em tmp (costura"""
     stubs = tmp_path / "bin"
     stubs.mkdir(exist_ok=True)
     log = tmp_path / "calls.log"
@@ -317,7 +259,6 @@ def _prepara_e2e(tmp_path: Path, build_falha: bool = False) -> dict[str, Path | 
     (assets / "hid-teste.c").write_text("// fonte patchada\n", encoding="utf-8")
     (assets / "patch" / "0001-ref.patch").write_text("referência\n", encoding="utf-8")
     _stub(stubs, "uname", f'echo "{kver}"')
-    # sudo registra e EXECUTA — todos os caminhos apontam p/ tmp_path.
     _stub(stubs, "sudo", f'echo "sudo $@" >> "{log}"\nexec "$@"')
     _stub(stubs, "modinfo", 'echo "/lib/modules/x/updates/dkms/hid-teste.ko"')
     build_acao = "exit 1" if build_falha else f'touch "{estado}/built"'
@@ -363,10 +304,7 @@ def _roda_e2e(tmp_path: Path, script: str, build_falha: bool = False) -> tuple[
 
 
 class TestExecucaoDePontaAPonta:
-    """Achado #4 do corretor: os contratos "2º install = no-op" e "build
-    falho = fail-safe REAL" só existiam em prosa/regex — agora são provados
-    por execução (uma regressão em qualquer passo da sequência vira teste
-    vermelho, não bug ao vivo na máquina da mantenedora)."""
+    """Achado #4 do corretor: os contratos "2º install = no-op" e "build"""
 
     SCRIPT_DUAS_CHAMADAS = (
         "dkms_install_patched_module hefesto-teste 9.9.9 {assets} hid-teste\n"
@@ -383,8 +321,6 @@ class TestExecucaoDePontaAPonta:
         )
         resultado, registro, src_root = _roda_e2e(tmp_path, script)
         assert "RC=0" in resultado.stdout, resultado.stderr
-        # Conta SÓ as invocações via sudo (o stub de dkms também loga a
-        # própria linha — contar "dkms add" pegaria as duas).
         assert registro.count("sudo dkms add hefesto-teste/9.9.9") == 1
         assert registro.count("sudo dkms build hefesto-teste/9.9.9") == 1
         assert registro.count("sudo dkms install hefesto-teste/9.9.9") == 1
@@ -400,17 +336,7 @@ class TestExecucaoDePontaAPonta:
         assert "já sincronizado" in resultado.stdout, (
             "a 2ª chamada precisa reconhecer o source já em dia (diff -rq)"
         )
-        # NENHUM passo repetido: 1 remove (da 1ª sincronização), 1 cp -a,
-        # 1 add, 1 build, 1 install — a 2ª chamada não re-registra nada.
         assert registro.count("sudo dkms remove") == 1
-        # A contagem do `cp -a` exclui o destino `LICENSES/` desde 07/08/2026:
-        # a LICENÇA-QUE-VIAJA-01 acrescentou UMA cópia de `LICENSES/` para
-        # dentro de `/usr/src/<pkg>-<ver>` (a GPL-2.0, seção 1, pede que o
-        # texto acompanhe o fonte). Ela é do passo 1-bis, tem guarda de `diff`
-        # própria e NÃO se repete na 2ª chamada — que é o que este teste
-        # protege. Contar `cp -a` cru mediria "quantas cópias existem", não
-        # "a 2ª chamada repetiu alguma"; quem cobra a não-repetição da licença
-        # é `tests/unit/test_licenca_viaja_com_o_fonte_dkms.py`.
         copias_de_source = [
             linha
             for linha in registro.splitlines()
@@ -439,9 +365,7 @@ class TestExecucaoDePontaAPonta:
 
 
 class TestRemocaoFalhasNaoMentem:
-    """Achados #7 e #8 do corretor: a remoção era o único caminho com
-    comando perigoso sem guarda (set -e do uninstall matava o script) e
-    anunciava sucesso mesmo com `dkms remove` falho (registro órfão)."""
+    """Achados #7 e #8 do corretor: a remoção era o único caminho com"""
 
     def test_dkms_remove_falho_preserva_registro_e_source_sem_anunciar_sucesso(
         self, tmp_path: Path
@@ -481,9 +405,6 @@ class TestRemocaoFalhasNaoMentem:
         assert "remova à mão" in resultado.stdout, "warn aponta a cura manual"
 
     def test_rm_falho_nao_aborta_o_chamador_com_set_e(self, tmp_path: Path) -> None:
-        # uninstall.sh roda com set -euo pipefail e faz source da lib:
-        # um rm -rf falho (fs read-only, sudoers restrito, chattr +i)
-        # NÃO pode matar o uninstall inteiro no meio (achado #7).
         stubs = tmp_path / "bin"
         stubs.mkdir()
         log = tmp_path / "calls.log"

@@ -14,11 +14,9 @@ def test_quirk_presente_e_ausente() -> None:
 
 
 def test_steam_input_ligado_desligado_ausente(tmp_path: Path) -> None:
-    # Sem nenhum vdf → INFO.
     tag, _ = sd.check_steam_input(tmp_path)
     assert tag == sd.INFO
 
-    # vdf com PSSupport="2" → WARN (ligado).
     vdf = tmp_path / ".steam/steam/userdata/123/config/localconfig.vdf"
     vdf.parent.mkdir(parents=True)
     vdf.write_text('\t\t\t\t"SteamController_PSSupport"\t\t"2"\n', encoding="utf-8")
@@ -26,7 +24,6 @@ def test_steam_input_ligado_desligado_ausente(tmp_path: Path) -> None:
     assert tag2 == sd.WARN
     assert "LIGADO" in msg2
 
-    # vdf com "0" → desligado (OK).
     vdf.write_text('\t\t\t\t"SteamController_PSSupport"\t\t"0"\n', encoding="utf-8")
     tag3, _ = sd.check_steam_input(tmp_path)
     assert tag3 == sd.OK
@@ -34,7 +31,7 @@ def test_steam_input_ligado_desligado_ausente(tmp_path: Path) -> None:
 
 def test_wireplumber_dropin(tmp_path: Path) -> None:
     tag, _ = sd.check_wireplumber(tmp_path)
-    assert tag == sd.INFO  # sem drop-in
+    assert tag == sd.INFO
     (tmp_path / "51-hefesto-dualsense-no-default-source.conf").write_text("x")
     tag2, _ = sd.check_wireplumber(tmp_path)
     assert tag2 == sd.OK
@@ -66,24 +63,20 @@ def test_storm_report_agrega_todos(tmp_path: Path) -> None:
         snd_conf_path=tmp_path / "ausente.conf",
         cards_text="",
     )
-    # SPRINT-GAME-RUMBLE-01: agora 6 checks (cura de raiz + áudio saudável novos).
     assert len(rows) == 6
     assert all(isinstance(t, str) and isinstance(m, str) for t, m in rows)
 
 
 def test_check_snd_quirk_ativo_agendado_ausente(tmp_path: Path) -> None:
-    # Ativo na sessão (sysfs com o quirk).
     tag, _ = sd.check_snd_quirk(
         quirk_flags_text="054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m",
         conf_path=tmp_path / "x.conf",
     )
     assert tag == sd.OK
-    # Só persistido (drop-in presente, sysfs vazio) = agendado.
     conf = tmp_path / "hefesto-dualsense-storm.conf"
     conf.write_text("options snd_usb_audio quirk_flags=054c:0ce6:ignore_ctl_error")
     tag, _ = sd.check_snd_quirk(quirk_flags_text="", conf_path=conf)
     assert tag == sd.INFO
-    # Ausente dos dois = warn.
     tag, _ = sd.check_snd_quirk(quirk_flags_text="", conf_path=tmp_path / "nada.conf")
     assert tag == sd.WARN
 

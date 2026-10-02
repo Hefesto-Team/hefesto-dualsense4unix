@@ -88,15 +88,11 @@ from tests.unit import test_a_marca_da_cor_nao_some as marca
 from tests.unit import test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar as regua_do_brilho
 from tests.unit.test_a_marca_da_cor_nao_some import MACS, NOME, UNIQS
 
-# O caminho de `pacotes` é posto pela mesa da A-MARCA, importada acima.
 import pacotes
 from pacotes import a04_iluminacao, rodape
 
-#: UM BRILHO DIFERENTE EM CADA: a palavra das luzes e o trilho da barra. Tudo
-#: acima do teto da economia (Fraco e 30%), senão o teto passaria sem a cura.
 PALAVRAS = {1: "forte", 2: "medio", 3: "forte", 4: "medio"}  # (noqa-acento) chaves ASCII
 TRILHOS = {1: 90, 2: 70, 3: 60, 4: 50}
-#: O «Todos» das luzes: diferente de todas, para o global cru aparecer se vier.
 GLOBAL_DAS_LUZES = "fraco"
 FRACO = BRILHOS_DAS_LUZES["fraco"]
 
@@ -227,20 +223,11 @@ def _o_aplicar_nao_mexe_e_nao_pisca(mesa: Any, esperado: dict[int, dict[str, Any
             f"degrau {final} — um quadro intermediário")
 
 
-# ---------------------------------------------------------------------------
-# 1. A economia de UM controle — P1 a P4, cabo e rádio
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
 def test_a_economia_de_um_controle_atravessa_o_aplicar_o_salvar_e_sai_quando_desliga(
         mesa_de, economia, k: int, via: str) -> None:
-    """A economia no P<k>, e os outros três com a palavra e o trilho deles.
-
-    Ativação → «Aplicar» → «Salvar» → economia desligada: o aparelho de cada
-    um é o que a ativação decidiu, o disco guarda o que ELA escolheu, e o P<k>
-    volta inteiro quando a economia sai — pela ativação `system`, que é a que
-    o daemon faz no clique (`lifecycle.reaplicar_se_a_economia_mudou`).
-    """
+    """A economia no P<k>, e os outros três com a palavra e o trilho deles."""
     from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
 
     mesa = mesa_de(via)
@@ -252,7 +239,6 @@ def test_a_economia_de_um_controle_atravessa_o_aplicar_o_salvar_e_sai_quando_des
     economia(declaracao_da_economia(UNIQS[k - 1], True))
     mesa.trocar(NOME, "manual")
     esperado = _mesa_inteira(mesa)
-    # A régua precisa do teto no P<k>, e só nele.
     assert esperado[k]["luzes"] == (FRACO, FRACO), esperado[k]
     assert esperado[k]["barra"] is not None and esperado[k]["barra"] <= 0.3, esperado[k]
     assert esperado[k]["gatilhos"] != livre[k]["gatilhos"], "a economia não pôs teto no gatilho"
@@ -277,9 +263,6 @@ def test_a_economia_de_um_controle_atravessa_o_aplicar_o_salvar_e_sai_quando_des
             f"e sem ela era {livre[k][campo]} — o teto ficou preso")
 
 
-# ---------------------------------------------------------------------------
-# 2. A «Bateria longa» da mesa inteira
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_a_bateria_longa_atravessa_o_aplicar_e_o_salvar(mesa_de, economia, via: str) -> None:
     """O Perfil Global de Bateria em «Bateria longa»: os quatro no teto, e o disco no dela."""
@@ -310,9 +293,6 @@ def test_a_bateria_longa_atravessa_o_aplicar_e_o_salvar(mesa_de, economia, via: 
             f"mesa/{via}: o P{n} ficou em {solto} depois da «Bateria longa»")
 
 
-# ---------------------------------------------------------------------------
-# 3. O rascunho leva o Fraco, o Médio e o Forte — o global e o de cada um
-# ---------------------------------------------------------------------------
 def test_o_rascunho_leva_as_luzes_de_numero_de_quem_as_escreveu() -> None:
     """`to_ipc_dict` com o «Todos» em `leds`, e a palavra só de quem a escreveu."""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -349,9 +329,6 @@ def test_sem_economia_o_aplicar_e_o_de_antes() -> None:
     assert applier._em_economia == frozenset()
 
 
-# ---------------------------------------------------------------------------
-# 4. A procedência da cor mora no `DraftConfig`, e o rodapé não usa o privado
-# ---------------------------------------------------------------------------
 def test_a_mesma_cor_regravada_guarda_o_numero_e_a_outra_nao() -> None:
     """`with_controller_leds` leva o `lightbar_para_o_numero` só da MESMA cor."""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -385,25 +362,11 @@ def test_o_rodape_nao_escreve_no_rascunho_pela_porta_privada() -> None:
     assert privados == [], f"o rodapé escreve no rascunho por {privados}"
 
 
-# ---------------------------------------------------------------------------
-# 5. O que a conferência achou (26/09/2026) — quatro mordidas que não mordiam
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("modo", ["um", "mesa"])
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_o_tom_do_numero_de_outro_nao_vira_fossil_no_aplicar_da_economia(
         mesa_de, economia, via: str, modo: str) -> None:
-    """O P4 no tom do número 2, em economia: o «Aplicar» mantém a cor da ativação.
-
-    O controle em economia vai na camada do PERFIL, e a ativação a publica com
-    o número de cada cor (`manager._controllers_to_procedencias`). Sem ele a
-    cor entra `LEGADO`, e o resolvedor a prova fóssil pela forma: medido na
-    conferência, na «Bateria longa» o P4 acendia `(76, 0, 0)` na ativação e
-    `(76, 0, 38)` — a cor do número dele — depois do «Aplicar».
-
-    **A MORDIDA:** tire as procedências de `DraftApplier._publicar_a_economia`
-    (ou o `lightbar_para_o_numero` de `DraftConfig._controllers_to_ipc`) e a
-    «Bateria longa» reprova no P4.
-    """
+    """O P4 no tom do número 2, em economia: o «Aplicar» mantém a cor da ativação."""
     from hefesto_dualsense4unix.core.led_control import player_slot_color
     from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
 
@@ -426,15 +389,7 @@ def test_o_tom_do_numero_de_outro_nao_vira_fossil_no_aplicar_da_economia(
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_na_bateria_longa_quem_herda_o_global_fica_no_teto_depois_do_aplicar(
         mesa_de, economia, via: str) -> None:
-    """O P1 e o P3 sem opinião própria herdam o global — e o global vai no teto.
-
-    A seção 2 dá a cada controle a palavra e o trilho dele, e aí o global da
-    vista não aparece em lugar nenhum: o teto do global podia sair calado.
-    Aqui o «Todos» é o Forte e o perfil está a 82%, e dois controles herdam.
-
-    **A MORDIDA:** tire o `novo["leds"]` da mesa em `_a_vista_da_economia` e o
-    P1 e o P3 voltam a 82% no «Aplicar».
-    """
+    """O P1 e o P3 sem opinião própria herdam o global — e o global vai no teto."""
     mesa = mesa_de(via)
     regua_do_brilho._o_global_das_luzes(mesa, "forte")
     mesa.clicar_na_pilula(2, "medio")  # (noqa-acento) chave ASCII
@@ -451,20 +406,7 @@ def test_na_bateria_longa_quem_herda_o_global_fica_no_teto_depois_do_aplicar(
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_sem_mapa_no_perfil_o_aplicar_da_economia_devolve_o_disco_e_nao_pisca(
         mesa_de, economia, via: str) -> None:
-    """Perfil sem opinião por controle e a economia no P2: o «Aplicar» é o disco.
-
-    NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01). Esta régua
-    dizia que o «Aplicar» não apagava a cor que o `led.set` deu ao P3 sem
-    gravar no disco: o `DraftApplier` escrevia na camada dela e não tocava o
-    que o rascunho não dizia. O «Aplicar» passou a ser a cadeia da ativação,
-    e o aparelho volta a ser a projeção do disco
-    (`D-2709-O-SALVAR-LE-O-PERFIL`; a prova da sprint é o valor do aparelho
-    que diverge do disco voltando ao do disco). O roxo que só o aparelho
-    tinha sai; a economia do P2 fica, e nenhum controle pisca.
-
-    **A MORDIDA:** faça o `reaplicar` aplicar a luz com a origem `system` (que
-    não solta a camada da mão, `ProfileManager.apply`) e o roxo fica no P3.
-    """
+    """Perfil sem opinião por controle e a economia no P2: o «Aplicar» é o disco."""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
@@ -486,15 +428,7 @@ def test_sem_mapa_no_perfil_o_aplicar_da_economia_devolve_o_disco_e_nao_pisca(
 
 
 def test_o_alto_falante_do_controle_em_economia_viaja_no_aplicar() -> None:
-    """A economia não toca o alto-falante, e a vista não o pode perder.
-
-    `_entrada_na_economia` troca a luz, os gatilhos e a vibração do controle
-    em economia, e o resto da entrada segue como veio
-    (`schema.A_ECONOMIA_EM_CADA_PECA`: «Fica como está»).
-
-    **A MORDIDA:** faça `_entrada_na_economia` começar vazia e o volume do P2
-    não chega ao aparelho.
-    """
+    """A economia não toca o alto-falante, e a vista não o pode perder."""
     from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
     from hefesto_dualsense4unix.profiles.schema import (
         declaracao_da_economia,

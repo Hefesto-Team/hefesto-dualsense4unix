@@ -1,70 +1,4 @@
-"""O no-sniff da BORDA do connect alcança todo Pro, não só o desta bancada.
-
-UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 / E1, a metade que faltava (25/08/2026).
-
-O QUE ESTAVA ERRADO
---------------------
-``scripts/bt_nosniff_now.sh`` decidia "é um Pro genuíno?" com um
-``[[ "${MAC^^}" != "E0:F6:B5"* ]] && exit 0``, e ``assets/82-*.rules`` só o
-chamava para essa mesma faixa. ``E0:F6:B5`` é a faixa do Pro DESTA casa; a
-Nintendo tem oitenta e duas registradas e a 8BitDo tem UMA (medido contra
-``/usr/share/ieee-data/oui.csv`` em 22/08/2026). Quem tem um Pro de outra safra
-não recebia a cura da borda — o link caindo sob carga, e nem a linha de journal
-que o script escreve quando falha, porque o ``exit 0`` era MUDO.
-
-A cura do lado do produto (``core/linhagem_nintendo.py``, a pergunta por
-negativa) entrou em 22/08 e alcançou o daemon, a tela e o ``bt_active_mode.sh``.
-Os dois caminhos da BORDA ficaram para trás, e são justamente os que agem no
-instante em que o link nasce.
-
-O QUE ESTE ARQUIVO GUARDA — três coisas, e nenhuma é a outra
--------------------------------------------------------------
-1. **A cópia em shell não se separa do dono.** O helper roda pelo udev, como
-   root, na borda do connect: importar Python ali seria depender de um venv que
-   pode não estar de pé. Então a regra existe duas vezes — e um portão lê os
-   dois lados. Cópia PINADA, não cópia solta.
-2. **Quem recebe o tratamento, medido rodando o script DE VERDADE**, com um
-   ``hcitool`` dublê no ``PATH``. Não é leitura de fonte: o script decide, e o
-   teste olha se ele chamou ou não chamou.
-3. **As recusas são palavras DIFERENTES** (defeito de forma F7, decisão
-   ``D-O-QUE-O-PRODUTO-DIZ-SEM-SABER`` de 25/08/2026): *"você não declarou o
-   nome"* é ausência de DECLARAÇÃO, do chamador; *"o nome que você declarou não
-   é de um Pro"* é ausência de CASAMENTO, medida aqui. Um ``exit 0`` mudo dizia
-   as duas com a mesma cara — que é nenhuma.
-
-A RÉGUA É INDEPENDENTE, e vale nomear como
--------------------------------------------
-Nada aqui faz ``monkeypatch`` na lista que confere. O ``hcitool`` dublê não sabe
-de OUI nenhuma: ele só anota o que recebeu. A faixa de "outra safra" é LITERAL
-neste arquivo e o teste cobra que ela NÃO esteja em nenhuma das listas do
-produto — se alguém a adicionar para fazer o teste passar, o teste reprova por
-esse motivo, com essa palavra.
-
-SEM APARELHO: nada aqui pareia, conecta ou escreve em rádio. O ``hcitool`` de
-verdade nunca é chamado — o dublê vem antes no ``PATH``.
-
-E "sem aparelho" PRECISA SER DECLARADO, não herdado da bancada (16/09/2026).
-Até esta data a frase acima terminava com *"medido em 25/08/2026 com
-``/sys/class/bluetooth/`` VAZIO (o hub USB dela fora do barramento)"* — e era
-essa a única razão de o ``ExameDeMentira`` ficar verde. Trocar o ``PATH`` não
-esconde Bluetooth FÍSICO: ``_bt_adaptadores()`` lê o sysfs, e numa bancada com
-um adaptador plugado ela devolve o adaptador REAL — ``hci1`` aqui — enquanto o
-``busctl`` dublê só sabe falar de ``hci0``. O ``_bt_hospeda_linhagem`` então
-responde NÃO, o bloco inteiro do modo ativo é pulado, e o exame sai sem a linha:
-os três testes da ``TestOExameNaoAprovaOQueNaoOlhou`` reprovavam com
-``assert '[ OK ]' in ''``. Quem declara o sysfs é ``HEFESTO_BT_SYSFS_ROOT``, que
-existe no produto desde 24/08/2026 e que ``test_migracao_bluez_depreciados.py``
-já usava — esta régua é que não tinha ido junto.
-
-ANONIMATO: os endereços são montados com os octetos 4 e 5 zerados, a máscara da
-casa. As faixas ``e0:f6:b5`` e ``e4:17:d8`` vêm das constantes do produto; a de
-"outra safra" é uma MA-L real da Nintendo que esta bancada nunca viu, e é
-justamente por não ser daqui que ela serve.
-
-MORDE? Devolva o ``[[ "${MAC^^}" != "E0:F6:B5"* ]] && exit 0`` ao helper, ou
-tire a rota por nome da regra 82: cada um reprova um teste distinto deste
-arquivo. As duas mordidas estão coladas no relatório da frente D3.
-"""
+"""O no-sniff da BORDA do connect alcança todo Pro, não só o desta bancada."""
 
 from __future__ import annotations
 
@@ -87,20 +21,12 @@ RAIZ = Path(__file__).resolve().parents[2]
 HELPER = RAIZ / "scripts" / "bt_nosniff_now.sh"
 REGRA = RAIZ / "assets" / "82-nintendo-pro-nosniff.rules"
 
-#: Uma MA-L REAL da Nintendo que esta bancada nunca viu — a faixa é o ponto: se
-#: o teste usasse o hardware da casa, ele passaria verde exatamente no defeito
-#: que a sprint mediu. Sufixo com a máscara da casa.
 OUI_DE_OUTRA_SAFRA = "5c:52:1e"
 MAC_DE_OUTRA_SAFRA = f"{OUI_DE_OUTRA_SAFRA}:00:00:44"
 
-#: O nome com que o Pro se anuncia por rádio. O clone anuncia o MESMO — é essa
-#: colisão que obriga a decisão a passar pela OUI.
 NOME_PRO = "Pro Controller"
 NOME_PRO_PELO_CABO = "Nintendo Co., Ltd. Pro Controller"
 
-#: Pelo CABO o `HID_UNIQ` do Pro é o serial, e o clone mente o mesmo serial
-#: (`assets/84-nintendo-pro-variant.rules`). Não é endereço, e cabo não tem link
-#: BR/EDR para tirar do sniff.
 SERIAL_DO_CABO = "000000000001"
 
 
@@ -115,11 +41,6 @@ def _mac_do_clone() -> str:
 
 def _mac_da_faixa_conhecida() -> str:
     return _mascarado(next(iter(com_dois_pontos(OUIS_NINTENDO_VISTAS))), 0x11)
-
-
-# ---------------------------------------------------------------------------
-# A bancada de mentira: um `hcitool` que só anota
-# ---------------------------------------------------------------------------
 
 
 class Desfecho:
@@ -137,12 +58,7 @@ class Desfecho:
 
 @pytest.fixture()
 def rodar(tmp_path: Path):
-    """Roda o helper DE VERDADE, com um `hcitool` dublê antes no `PATH`.
-
-    O dublê é o que torna o teste executável sem aparelho: ele não sabe de OUI
-    nenhuma, não escreve em rádio nenhum, e só registra o argv que recebeu. Quem
-    decide continua sendo o script de produção.
-    """
+    """Roda o helper DE VERDADE, com um `hcitool` dublê antes no `PATH`."""
     binario = tmp_path / "bin"
     binario.mkdir()
     registro = tmp_path / "hcitool.txt"
@@ -177,11 +93,6 @@ def rodar(tmp_path: Path):
     return _rodar
 
 
-# ---------------------------------------------------------------------------
-# 1. A cópia em shell é PINADA no dono
-# ---------------------------------------------------------------------------
-
-
 def _lista_do_shell(nome: str) -> list[str]:
     """Lê um array bash literal (`NOME=("a" "b")`) do helper."""
     texto = HELPER.read_text(encoding="utf-8")
@@ -191,12 +102,7 @@ def _lista_do_shell(nome: str) -> list[str]:
 
 
 class TestACopiaEmShellNaoSeSeparaDoDono:
-    """`core/linhagem_nintendo.py` é o dono; o shell é cópia, e é PINADA.
-
-    Sem este portão, o dia em que uma faixa nova de clone entrar em
-    `OUIS_CLONE` o helper continua sem saber dela — e a cura da borda passa a
-    envenenar a probe de um aparelho que precisa do sniff, calada.
-    """
+    """`core/linhagem_nintendo.py` é o dono; o shell é cópia, e é PINADA."""
 
     def test_a_faixa_do_clone_e_a_mesma_dos_dois_lados(self) -> None:
         do_shell = {o.replace(":", "").lower() for o in _lista_do_shell("OUIS_CLONE")}
@@ -227,12 +133,7 @@ class TestACopiaEmShellNaoSeSeparaDoDono:
     def test_a_faixa_de_outra_safra_deste_teste_nao_e_conhecida_pelo_produto(
         self,
     ) -> None:
-        """A régua tem de continuar apontando para fora da bancada.
-
-        Se alguém "consertar" um vermelho daqui adicionando `5c:52:1e` às
-        listas, o teste inteiro vira medição de si mesmo. Este é o portão do
-        portão.
-        """
+        """A régua tem de continuar apontando para fora da bancada."""
         colada = OUI_DE_OUTRA_SAFRA.replace(":", "")
         assert colada not in OUIS_NINTENDO_VISTAS, (
             f"`{OUI_DE_OUTRA_SAFRA}` entrou em OUIS_NINTENDO_VISTAS. Ela existe "
@@ -242,19 +143,9 @@ class TestACopiaEmShellNaoSeSeparaDoDono:
         assert colada not in OUIS_CLONE
 
 
-# ---------------------------------------------------------------------------
-# 2. Quem recebe o tratamento — rodando o script de verdade
-# ---------------------------------------------------------------------------
-
-
 class TestQuemRecebeONoSniff:
     def test_o_pro_de_outra_safra_recebe_o_no_sniff(self, rodar) -> None:
-        """O DEFEITO DA SPRINT, em um teste.
-
-        MORDIDA: devolva ao helper o `[[ "${MAC^^}" != "E0:F6:B5"* ]] && exit 0`
-        e este teste reprova — que é o que acontece hoje, calado, na máquina de
-        quem não tem o Pro desta casa.
-        """
+        """O DEFEITO DA SPRINT, em um teste."""
         desfecho = rodar(MAC_DE_OUTRA_SAFRA, NOME_PRO)
         assert desfecho.aplicou, (
             "um Pro Controller numa faixa Nintendo que esta bancada nunca viu "
@@ -264,13 +155,7 @@ class TestQuemRecebeONoSniff:
         assert MAC_DE_OUTRA_SAFRA in desfecho.chamadas[0]
 
     def test_o_clone_com_o_mesmo_nome_continua_de_fora(self, rodar) -> None:
-        """A contraprova obrigatória: a cura não pode virar regressão do clone.
-
-        O 8BitDo em modo Switch mente VID, PID, serial e nome — anuncia-se com o
-        MESMO "Pro Controller". Se a regra passasse a valer por nome sozinho, ele
-        entraria; e o no-sniff é VENENO para ele (A/B de 23/07/2026: a probe
-        morre em `Failed to get joycon info; ret=-110`).
-        """
+        """A contraprova obrigatória: a cura não pode virar regressão do clone."""
         desfecho = rodar(_mac_do_clone(), NOME_PRO)
         assert not desfecho.aplicou, (
             "o clone 8BitDo recebeu o no-sniff: a probe dele morre em ret=-110 "
@@ -282,11 +167,7 @@ class TestQuemRecebeONoSniff:
         )
 
     def test_a_faixa_conhecida_nao_passa_a_depender_do_nome(self, rodar) -> None:
-        """Não-regressão: nada que já funcionava passa a exigir um dado novo.
-
-        A regra 82 passa o nome pelo AMBIENTE, e ambiente é coisa que falta.
-        Quem já recebia a cura pela faixa continua recebendo sem nome nenhum.
-        """
+        """Não-regressão: nada que já funcionava passa a exigir um dado novo."""
         desfecho = rodar(_mac_da_faixa_conhecida())
         assert desfecho.aplicou, (
             "o Pro da faixa já conhecida deixou de receber o no-sniff quando o "
@@ -294,16 +175,7 @@ class TestQuemRecebeONoSniff:
         )
 
     def test_o_nome_pode_vir_do_ambiente_como_o_udev_o_entrega(self, rodar) -> None:
-        """O udev exporta as propriedades do device; `HID_NAME` é uma delas.
-
-        É por isso que o `RUN+=` da regra 82 não precisou mudar: pôr
-        `$env{HID_NAME}` na linha de comando quebraria o nome em cinco
-        argumentos, porque o udev separa o argv por espaço DEPOIS de substituir.
-
-        MORDIDA: troque `NOME="${2:-${HID_NAME:-}}"` por `NOME="${2:-}"` e este
-        teste reprova — e com ele a cura inteira, porque em produção quem chama
-        é o udev e ele não passa nome nenhum no argv.
-        """
+        """O udev exporta as propriedades do device; `HID_NAME` é uma delas."""
         desfecho = rodar(MAC_DE_OUTRA_SAFRA, None, nome_no_ambiente=NOME_PRO_PELO_CABO)
         assert desfecho.aplicou, (
             "o helper ignorou o `HID_NAME` do ambiente. Em produção quem o chama "
@@ -312,13 +184,7 @@ class TestQuemRecebeONoSniff:
         )
 
     def test_o_serial_do_cabo_nao_vira_endereco(self, rodar) -> None:
-        """Pelo cabo não há link BR/EDR — e o `HID_UNIQ` ali é o serial.
-
-        Preço de a regra passar a casar por NOME: o Pro no CABO também se chama
-        "Pro Controller". Sem a guarda de forma, ele chegaria ao `hcitool lp`
-        contra um "endereço" que não é endereço, e o journal registraria uma
-        falha que não é falha.
-        """
+        """Pelo cabo não há link BR/EDR — e o `HID_UNIQ` ali é o serial."""
         desfecho = rodar(SERIAL_DO_CABO, NOME_PRO_PELO_CABO)
         assert not desfecho.chamadas, (
             "o helper tentou mudar link policy de um SERIAL de USB: "
@@ -337,12 +203,7 @@ class TestQuemRecebeONoSniff:
 
 
 class TestAsDuasRecusasSaoPalavrasDiferentes:
-    """F7: "não medi" e "você não declarou" não são a mesma frase.
-
-    `D-O-QUE-O-PRODUTO-DIZ-SEM-SABER` (25/08/2026). Um `exit 0` mudo dizia as
-    duas com a mesma cara — e quem lia o journal não tinha como saber se o
-    caminho a seguir era declarar o nome ou trocar de controle.
-    """
+    """F7: "não medi" e "você não declarou" não são a mesma frase."""
 
     def test_sem_nome_declarado_a_recusa_acusa_quem_chama(self, rodar) -> None:
         desfecho = rodar(MAC_DE_OUTRA_SAFRA)
@@ -375,11 +236,6 @@ class TestAsDuasRecusasSaoPalavrasDiferentes:
         )
 
 
-# ---------------------------------------------------------------------------
-# 3. A regra 82 — o chamador em produção
-# ---------------------------------------------------------------------------
-
-
 def _linhas_de_regra() -> list[str]:
     return [
         ln.strip()
@@ -389,12 +245,7 @@ def _linhas_de_regra() -> list[str]:
 
 
 class TestARegra82ChamaOHelperParaTodoPro:
-    """A cura do helper é INERTE se a regra só o chamar para uma faixa.
-
-    É o padrão que mais custa nesta casa: *a casa sabe e o produto não faz*.
-    O helper aprendeu a decidir em 25/08; sem esta metade, ele continuaria sendo
-    chamado só para o Pro desta bancada e nada mudaria na máquina de ninguém.
-    """
+    """A cura do helper é INERTE se a regra só o chamar para uma faixa."""
 
     def test_a_regra_casa_por_nome_e_nao_so_por_faixa(self) -> None:
         """MORDIDA: apague a linha de `HID_NAME` e este teste reprova."""
@@ -411,11 +262,7 @@ class TestARegra82ChamaOHelperParaTodoPro:
         )
 
     def test_a_rota_por_nome_exige_forma_de_endereco(self) -> None:
-        """Pelo cabo o `HID_UNIQ` é o serial, e o nome é o mesmo.
-
-        MORDIDA: tire o `ENV{HID_UNIQ}!="??:??:??:??:??:??"` e o Pro no cabo
-        passa a chamar o helper a cada `add`.
-        """
+        """Pelo cabo o `HID_UNIQ` é o serial, e o nome é o mesmo."""
         assert any(
             "??:??:??:??:??:??" in ln for ln in _linhas_de_regra()
         ), (
@@ -439,11 +286,7 @@ class TestARegra82ChamaOHelperParaTodoPro:
         )
 
     def test_o_pro_desta_bancada_nao_chama_o_helper_duas_vezes(self) -> None:
-        """Duas rotas para o mesmo aparelho seriam dois `RUN+=` por connect.
-
-        Quem impede é o `GOTO`: a rota da faixa salta direto para o `LABEL` que
-        aplica, sem passar pela rota do nome.
-        """
+        """Duas rotas para o mesmo aparelho seriam dois `RUN+=` por connect."""
         linhas = _linhas_de_regra()
         com_run = [ln for ln in linhas if "RUN+=" in ln]
         assert len(com_run) == 1, (
@@ -456,9 +299,7 @@ class TestARegra82ChamaOHelperParaTodoPro:
         )
 
     def test_a_regra_nao_casa_a_faixa_do_clone_por_endereco(self) -> None:
-        """Quem recusa o clone é o helper, pela OUI — mas a regra não o convida
-        por faixa: convidá-lo por faixa seria escrever a faixa dele num arquivo
-        que decide quem recebe a cura, e a cura dele é a RECUSA."""
+        """Quem recusa o clone é o helper, pela OUI — mas a regra não o convida"""
         texto = "\n".join(_linhas_de_regra()).lower()
         for oui in OUIS_CLONE:
             com_dois = ":".join(oui[i : i + 2] for i in (0, 2, 4))
@@ -469,11 +310,7 @@ class TestARegra82ChamaOHelperParaTodoPro:
 
     @pytest.mark.skipif(shutil.which("udevadm") is None, reason="sem udevadm nesta máquina")
     def test_o_udev_aprova_a_sintaxe_e_a_regua_nao_e_no_op(self, tmp_path: Path) -> None:
-        """`udevadm verify` sobre a regra de verdade — e sobre uma quebrada.
-
-        A segunda metade é o que separa uma régua de um carimbo: se o `verify`
-        aprovasse qualquer coisa, aprovar a nossa não significaria nada.
-        """
+        """`udevadm verify` sobre a regra de verdade — e sobre uma quebrada."""
         ok = subprocess.run(
             ["udevadm", "verify", str(REGRA)], capture_output=True, text=True, timeout=60
         )
@@ -495,29 +332,14 @@ class TestARegra82ChamaOHelperParaTodoPro:
         )
 
 
-# ---------------------------------------------------------------------------
-# 4. A vigia de 2 min — o mesmo defeito no caminho SUSTENTADO
-# ---------------------------------------------------------------------------
-#
-# A borda cobre o instante do connect. Quem mantém o Pro fora do sniff pela
-# sessão inteira é o `bt_active_mode.sh`, no `ExecStartPost` do bluetoothd e a
-# cada tick da vigia. Ele decidia pela MESMA faixa única — e é o caminho que
-# importa numa partida de quatro jogadores, que é onde o link cai.
-
 MODO_ATIVO = RAIZ / "scripts" / "bt_active_mode.sh"
 
-#: Faixa sintética desta mesa de mentira, fora da faixa de fixture da casa.
 _ADAPTADOR = "d2:c1:b0:00:00:01"
 _DUALSENSE = "d2:c1:b0:00:00:12"
 
 
 class MesaDeMentira:
-    """Um adaptador, os controles que eu mandar, e um registro do `hcitool lp`.
-
-    Sem aparelho: `busctl`, `hciconfig`, `hcitool` e `id` são dublês. O `hcitool`
-    só anota o argv — não sabe de OUI nenhuma, e por isso não pode concordar com
-    o script por engano.
-    """
+    """Um adaptador, os controles que eu mandar, e um registro do `hcitool lp`."""
 
     def __init__(self, tmp: Path, controles: dict[str, str]) -> None:
         self.tmp = tmp
@@ -610,13 +432,7 @@ class TestAVigiaDeDoisMinutosTambemAlcancaTodoPro:
     def test_o_pro_de_outra_safra_e_tirado_do_sniff_a_cada_tique(
         self, tmp_path: Path
     ) -> None:
-        """MORDIDA: devolva o `[[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]] &&
-        continue` ao laço por-conexão e este teste reprova.
-
-        É o caminho SUSTENTADO — o que mantém o link de pé pela sessão inteira.
-        A borda cobre o instante do connect; esta é a que importa quando o Pro
-        cai no meio da partida.
-        """
+        """MORDIDA: devolva o `[[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]] &&"""
         mesa = MesaDeMentira(
             tmp_path,
             {_DUALSENSE: "DualSense Wireless Controller", MAC_DE_OUTRA_SAFRA: NOME_PRO},
@@ -652,14 +468,7 @@ class TestAVigiaDeDoisMinutosTambemAlcancaTodoPro:
         assert _DUALSENSE not in mesa.rodar()
 
     def test_as_listas_do_modo_ativo_nao_se_separam_do_dono_nem_de_si(self) -> None:
-        """Três arrays no script, e a `OUIS_LINHAGEM` é a união das outras duas.
-
-        As duas perguntas — "é da linhagem?" (prefixo do adaptador, genuíno E
-        clone) e "é um Pro genuíno?" (no-sniff, só o genuíno) — moram no mesmo
-        arquivo. Sem este portão elas se separam em silêncio, e o dia em que uma
-        faixa nova entrar em uma e não na outra o aparelho recebe o tratamento
-        do outro.
-        """
+        """Três arrays no script, e a `OUIS_LINHAGEM` é a união das outras duas."""
         texto = MODO_ATIVO.read_text(encoding="utf-8")
 
         def lista(nome: str) -> set[str]:
@@ -677,48 +486,16 @@ class TestAVigiaDeDoisMinutosTambemAlcancaTodoPro:
         )
 
 
-# ---------------------------------------------------------------------------
-# 5. O exame — o que ele AFIRMA sobre um controle que não olhou
-# ---------------------------------------------------------------------------
-#
-# `scripts/doctor.sh` procurava o "Pro genuíno conectado" com um `grep` da faixa
-# desta bancada. Com um Pro de outra safra conectado e COM sniff — a cura
-# FURADA, que é o defeito — o grep não o achava, e o exame imprimia
-# `[ OK ] ... no-sniff só no Pro genuíno` sem ter olhado controle nenhum.
-#
-# Um exame que aprova a cura ausente é pior que exame nenhum: ele é a razão pela
-# qual ninguém foi procurar.
-
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
 class ExameDeMentira:
-    """Um adaptador com alias `Nintendo*`, um controle conectado, e dublês.
-
-    Roda UMA função do `doctor.sh` (`source` + chamada), como já faz
-    `tests/unit/test_migracao_bluez_depreciados.py`. Nada toca o rádio: o
-    `hcitool` dublê responde a link policy que o teste mandar.
-
-    A BANCADA É DECLARADA INTEIRA, e as três declarações são o que faz esta
-    régua medir o `doctor.sh` em vez de medir a máquina de quem a roda:
-
-    1. `HEFESTO_BT_SYSFS_ROOT` — um `/sys/class/bluetooth` de mentira com UM
-       adaptador, `hci0`, que é o mesmo de que o `busctl` dublê fala. Sem ele,
-       `_bt_adaptadores()` devolve os adaptadores FÍSICOS da bancada e o exame
-       nunca chega ao bloco do modo ativo (ver o cabeçalho deste arquivo).
-    2. Um `systemctl` dublê — `check_bt_resilience` sai com `return` logo na
-       primeira linha quando `systemctl` não está no `PATH`, e aí o exame
-       também sai mudo. Com o dublê, o primeiro veredito é o da bancada, e não
-       o dos timers que por acaso estejam de pé na máquina.
-    3. O `busctl`/`hciconfig`/`hcitool` dublês, que já existiam.
-    """
+    """Um adaptador com alias `Nintendo*`, um controle conectado, e dublês."""
 
     def __init__(self, tmp: Path, *, mac: str, nome: str, sniff_no_controle: bool) -> None:
         self.tmp = tmp
         self.fakes = tmp / "fakes"
         self.fakes.mkdir(parents=True, exist_ok=True)
-        #: O `/sys/class/bluetooth` desta bancada: um adaptador só, `hci0`, o
-        #: mesmo de que o `busctl` dublê fala. É o que esconde o rádio físico.
         self.sysfs_bt = tmp / "sysfs-bt"
         (self.sysfs_bt / "hci0").mkdir(parents=True, exist_ok=True)
         dev = "/org/bluez/hci0/dev_" + mac.upper().replace(":", "_")
@@ -759,10 +536,6 @@ exit 0
             f"    echo 'Link policy: {politica}'\n"
             "    exit 0\nfi\nexit 0\n",
         )
-        # Sem `systemctl` no `PATH`, `check_bt_resilience` sai na primeira linha
-        # e o exame fica mudo — o mesmo sintoma do sysfs vazando. Aqui ele
-        # responde pela BANCADA, para que o veredito não dependa dos timers que
-        # estejam de pé na máquina de quem roda a suíte.
         self._escrever(
             "systemctl",
             'case "$1 $2" in\n'
@@ -795,12 +568,6 @@ exit 0
         for linha in proc.stdout.splitlines():
             if "modo ativo p/ Nintendo" in linha:
                 return linha
-        # NADA NÃO É UM VEREDITO, e devolver "" fazia cada teste acusar o
-        # veredito ERRADO: o do clone dizia *"o exame passou a reclamar do
-        # 8BitDo"* quando o exame não tinha dito palavra nenhuma sobre o modo
-        # ativo. Custou a leitura de 16/09/2026 — a mensagem apontava para o
-        # `doctor.sh` e a causa estava na bancada. Aqui ela se nomeia, com a
-        # saída inteira do exame junto.
         raise AssertionError(
             "o exame não disse NADA sobre o modo ativo p/ Nintendo — não é "
             "aprovação nem reclamação, é o bloco inteiro pulado. Confira se a "
@@ -815,19 +582,10 @@ class TestOExameNaoAprovaOQueNaoOlhou:
     def test_o_pro_de_outra_safra_com_sniff_faz_o_exame_reclamar(
         self, tmp_path: Path
     ) -> None:
-        """O FALSO VERDE, em um teste.
-
-        MORDIDA: devolva o
-        `_pro_mac="$(_bt_macs_conectados | grep -oiE 'E0:F6:B5(:[0-9A-F]{2}){3}' ...)"`
-        ao `check_bt_resilience` e este teste reprova com um `[ OK ]` — o mesmo
-        `[ OK ]` que a pessoa com um Pro de outra safra recebia enquanto o link
-        dela caía sob carga.
-        """
+        """O FALSO VERDE, em um teste."""
         exame = ExameDeMentira(
             tmp_path, mac=MAC_DE_OUTRA_SAFRA, nome=NOME_PRO, sniff_no_controle=True
         )
-        # "o exame não falou nada" já é reprovação com nome próprio, dentro do
-        # `linha_do_modo_ativo()` — aqui a linha nunca chega vazia.
         linha = exame.linha_do_modo_ativo()
         assert "[WARN]" in linha, (
             "o exame APROVOU a cura sem ter olhado o controle: há um Pro "
@@ -839,10 +597,7 @@ class TestOExameNaoAprovaOQueNaoOlhou:
     def test_o_pro_de_outra_safra_sem_sniff_continua_aprovado(
         self, tmp_path: Path
     ) -> None:
-        """A outra ponta: alargar a régua não pode virar barulho.
-
-        Barulho em exame é o que ensina a ignorar exame.
-        """
+        """A outra ponta: alargar a régua não pode virar barulho."""
         exame = ExameDeMentira(
             tmp_path, mac=MAC_DE_OUTRA_SAFRA, nome=NOME_PRO, sniff_no_controle=False
         )
@@ -852,10 +607,7 @@ class TestOExameNaoAprovaOQueNaoOlhou:
         )
 
     def test_o_clone_com_sniff_nao_faz_o_exame_reclamar(self, tmp_path: Path) -> None:
-        """O clone DEVE estar com sniff — reclamar dele seria cobrar o defeito.
-
-        Ele anuncia o mesmo "Pro Controller"; quem o separa é a OUI.
-        """
+        """O clone DEVE estar com sniff — reclamar dele seria cobrar o defeito."""
         exame = ExameDeMentira(
             tmp_path, mac=_mac_do_clone(), nome=NOME_PRO, sniff_no_controle=True
         )
@@ -866,11 +618,7 @@ class TestOExameNaoAprovaOQueNaoOlhou:
         )
 
     def test_as_listas_do_exame_nao_se_separam_do_dono(self) -> None:
-        """O comentário do `doctor.sh` prometia este portão, e ele não existia.
-
-        Medido em 25/08/2026: as listas do exame já tinham DERIVADO — havia um
-        `98:B6:E9` escrito à mão que não existe em lugar nenhum do produto.
-        """
+        """O comentário do `doctor.sh` prometia este portão, e ele não existia."""
         texto = DOCTOR.read_text(encoding="utf-8")
 
         def lista(nome: str) -> set[str]:

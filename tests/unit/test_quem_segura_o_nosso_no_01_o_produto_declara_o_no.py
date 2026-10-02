@@ -63,7 +63,6 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 
-#: O físico dela, na faixa FORJADA da casa (`check_anonymity.sh`).
 P1_FISICO = "aabbcc000001"
 P2_FISICO = "aabbcc000002"
 
@@ -78,19 +77,8 @@ def _nome_do_vpad(jogador: int) -> str:
     return f"DualSense Wireless Controller (Hefesto P{jogador})"
 
 
-# ---------------------------------------------------------------------------
-# A bancada forjada: uma árvore de sysfs igual à de verdade, em tmp_path
-# ---------------------------------------------------------------------------
-
-
 class Bancada:
-    """Uma árvore `/sys` + `/dev` de mentira, no formato exato do kernel.
-
-    `/sys/class/input/eventN/device` é um symlink para `<HID>/input/inputM`, e
-    é subindo por ele que a régua acha o device HID e o `hidraw` dele. É a
-    topologia que importa aqui, não o conteúdo — por isso ela é reproduzida em
-    vez de simplificada.
-    """
+    """Uma árvore `/sys` + `/dev` de mentira, no formato exato do kernel."""
 
     def __init__(self, raiz: Path) -> None:
         self.raiz = raiz
@@ -208,23 +196,11 @@ def bancada(tmp_path: Path) -> Bancada:
 
 
 def _trocar_o_no_por_outro(caminho: Path) -> None:
-    """Põe OUTRO arquivo no lugar deste, com inode garantidamente diferente.
-
-    `unlink` + recriar não serve: o `tmpfs` do `/tmp` recicla o inode na hora,
-    e o teste passaria a medir a sorte do alocador em vez da régua. Criar o
-    substituto ANTES (os dois vivos ao mesmo tempo) e trocar por `os.replace`
-    garante inodes distintos — e essa garantia é o que este teste precisa
-    afirmar, não a política de alocação de nenhum sistema de arquivos.
-    """
+    """Põe OUTRO arquivo no lugar deste, com inode garantidamente diferente."""
     novo = caminho.with_name(caminho.name + ".substituto")
     novo.write_text("outro nó", encoding="utf-8")
     assert os.stat(novo).st_ino != os.stat(caminho).st_ino
     os.replace(novo, caminho)
-
-
-# ---------------------------------------------------------------------------
-# A régua: qual nó é o nosso
-# ---------------------------------------------------------------------------
 
 
 class TestARegua:
@@ -279,14 +255,7 @@ class TestARegua:
     def test_hidraw_so_sai_quando_o_uevent_do_pai_confirma(
         self, bancada: Bancada
     ) -> None:
-        """MORDIDA 2: duas rotas que discordam não viram afirmação.
-
-        O nó de entrada diz o nosso `uniq`, e o `uevent` do device HID dono
-        dele diz outra coisa — sem carimbo `hefesto-vpad` e com outro
-        `HID_UNIQ`. Arrancar a confirmação faz a régua publicar
-        `/dev/hidraw9`, o hidraw de um aparelho que não é nosso; e é por um
-        hidraw errado que um instrumento escreve no controle errado.
-        """
+        """MORDIDA 2: duas rotas que discordam não viram afirmação."""
         estranho = bancada.aparelho(
             id_hid="0005:054C:0CE6.000F",
             hid_uniq="aa:bb:cc:00:00:02",
@@ -312,13 +281,7 @@ class TestARegua:
     def test_o_inode_vem_do_mesmo_instante_que_o_caminho(
         self, bancada: Bancada
     ) -> None:
-        """O par caminho+inode é o ponto todo desta peça.
-
-        `/dev/input/eventN` é um número de fila: entre publicar o caminho e
-        quem lê fazer o `stat` dele cabe a renumeração inteira. Publicar o
-        inode lido no MESMO instante fecha essa janela — e `os.stat` não abre
-        o nó, que é o que permite medir sem disparar `UHID_OPEN`.
-        """
+        """O par caminho+inode é o ponto todo desta peça."""
         bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
 
         no = bancada.resolver(player_mac(1), _nome_do_vpad(1))
@@ -329,12 +292,7 @@ class TestARegua:
     def test_o_vpad_de_uinput_nao_inventa_um_hidraw(
         self, bancada: Bancada
     ) -> None:
-        """O uinput é evdev puro: casa pelo nome e NÃO tem hidraw.
-
-        Dizer um seria inventar — e é exatamente por não ter hidraw que o SDL
-        não faz o vpad de uinput vibrar. Um `hidraw` publicado aqui mandaria
-        quem depura procurar a vibração no lugar onde ela não pode existir.
-        """
+        """O uinput é evdev puro: casa pelo nome e NÃO tem hidraw."""
         bancada.no_de_uinput(event_n="event31", nome=_nome_do_vpad(1))
 
         no = bancada.resolver(None, _nome_do_vpad(1))
@@ -344,13 +302,7 @@ class TestARegua:
         assert no["ino"] == os.stat(bancada.dev_input / "event31").st_ino
 
     def test_sem_uniq_e_sem_nome_nao_ha_chute(self, bancada: Bancada) -> None:
-        """MORDIDA 3: "pega o primeiro gamepad que achar" é proibido.
-
-        Com a mesa montada, um fallback desses devolveria um nó — e com um
-        vpad dublado (sem `mac` nem `name`) o payload do produto passaria a
-        AFIRMAR um caminho sobre o controle físico dela. Quatro `None` é a
-        resposta certa: "não sei" vale mais que um palpite plausível.
-        """
+        """MORDIDA 3: "pega o primeiro gamepad que achar" é proibido."""
         bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
 
         assert bancada.resolver(None, None) == NO_DESCONHECIDO
@@ -409,14 +361,7 @@ class TestOInodeReprovaOCaminhoVelho:
         assert no_ainda_vale(no) is False
 
     def test_bloco_sem_no_nao_gasta_stat_e_deixa_o_ttl_mandar(self) -> None:
-        """Quem não afirma caminho não tem caminho a envelhecer.
-
-        MORDIDA ao contrário: fazer `no_ainda_vale` reprovar aqui parece mais
-        seguro e é o defeito — a varredura inteira de `/sys/class/input`
-        passaria a rodar a 10 Hz no caso MAIS COMUM (vpad de uinput, vpad
-        nascendo, máquina sem controle), que é exatamente o custo que o cache
-        existe para não pagar. O nó que APARECEU é problema do TTL.
-        """
+        """Quem não afirma caminho não tem caminho a envelhecer."""
         assert no_ainda_vale(dict(NO_DESCONHECIDO)) is True
 
 
@@ -442,28 +387,14 @@ class TestASuiteNaoOlhaOSysfsDela:
 
 class TestOCarimboTemUmDonoSo:
     def test_o_phys_publicado_e_o_mesmo_que_o_create2_escreve(self) -> None:
-        """A régua confere o que o produto CARIMBA — e são o mesmo objeto.
-
-        MORDIDA: alguém trocar a palavra no `_create2_event` e deixar a
-        constante para trás. Aí `no_do_vpad` procuraria um carimbo que o
-        kernel não recebeu mais, `hidraw` sairia `None` para sempre, e nada
-        reprovaria — o modo de falha "duas réguas, uma envelhece calada" que
-        esta peça inteira existe para fechar. Este teste lê os bytes do evento
-        que vai ao `/dev/uhid`, não a constante.
-        """
+        """A régua confere o que o produto CARIMBA — e são o mesmo objeto."""
         evento = UhidDualSense(player=1)._create2_event(b"\x05\x01")
 
-        # Layout do UHID_CREATE2: u32 tipo + name[128] + phys[64] + uniq[64].
         phys = evento[4 + 128 : 4 + 128 + 64].rstrip(b"\0").decode("ascii")
 
         assert phys == VPAD_HID_PHYS
         uniq = evento[4 + 128 + 64 : 4 + 128 + 128].rstrip(b"\0").decode("ascii")
         assert uniq == player_mac(1), "o outro lado da régua, no mesmo evento"
-
-
-# ---------------------------------------------------------------------------
-# O fato chega ao estado publicado
-# ---------------------------------------------------------------------------
 
 
 class _Handlers(IpcHandlersMixin):
@@ -499,12 +430,7 @@ def config_em_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def sysfs_da_bancada(
     bancada: Bancada, monkeypatch: pytest.MonkeyPatch
 ) -> Bancada:
-    """Aponta a régua do produto para a árvore forjada, e só para ela.
-
-    Por cima da fixture de sessão do `conftest`, que aponta a suíte inteira
-    para o vazio. A troca é nas constantes do módulo — que `resolver_no_do_vpad`
-    resolve na hora da chamada, e não no `def`, exatamente para isto.
-    """
+    """Aponta a régua do produto para a árvore forjada, e só para ela."""
     monkeypatch.setattr(no_mod, "RAIZ_CLASS_INPUT", str(bancada.class_input))
     monkeypatch.setattr(no_mod, "RAIZ_DEV_INPUT", str(bancada.dev_input))
     monkeypatch.setattr(no_mod, "RAIZ_DEV", str(bancada.dev))
@@ -548,13 +474,7 @@ class TestOStateFullDeclaraONo:
     async def test_per_vpad_diz_evdev_hidraw_inode_e_sessao_aberta(
         self, config_em_tmp: Path, sysfs_da_bancada: Bancada
     ) -> None:
-        """A MORDIDA do contrato publicado.
-
-        Arrancar = voltar a publicar só contadores. Aí a pergunta *"o jogo
-        abriu o NOSSO nó?"* volta a não ter resposta observável, e o próximo
-        instrumento inventa a quarta régua para "quem é o nosso nó" — que é o
-        estado de 20/08/2026.
-        """
+        """A MORDIDA do contrato publicado."""
         sysfs_da_bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
         sysfs_da_bancada.vpad(2, event_gamepad="event27", hidraw="hidraw6")
         daemon = _daemon_com_dois_vpads(game_open_do_p2=True)
@@ -595,13 +515,8 @@ class TestOStateFullDeclaraONo:
     async def test_as_chaves_existem_mesmo_sem_no_resolvido(
         self, config_em_tmp: Path, sysfs_da_bancada: Bancada
     ) -> None:
-        """Shape estável: `None`, nunca chave ausente.
-
-        Senão "daemon antigo" e "o daemon não sabe" chegam iguais em quem lê —
-        e é exatamente esse silêncio que fazia o `game_open` não existir para
-        ninguém de fora.
-        """
-        daemon = _daemon_com_dois_vpads()  # sysfs vazio de propósito
+        """Shape estável: `None`, nunca chave ausente."""
+        daemon = _daemon_com_dois_vpads()
         h = _Handlers(daemon, daemon.store, daemon.controller)
 
         um = _bloco(await h._handle_daemon_state_full({}), 1)
@@ -632,13 +547,7 @@ class TestOStateFullDeclaraONo:
     async def test_o_cache_nao_publica_o_caminho_velho(
         self, config_em_tmp: Path, sysfs_da_bancada: Bancada
     ) -> None:
-        """MORDIDA 3: o cache de 2 s não pode reintroduzir a renumeração.
-
-        O vpad muda de `eventN` — cai e volta, o co-op recria, a Steam abre uma
-        janela. Arrancar a re-conferência por inode (`no_ainda_vale`) e confiar
-        só no TTL faz este teste ler `event22` na segunda chamada: um caminho
-        que já não é o nosso, publicado pelo produto com toda a confiança.
-        """
+        """MORDIDA 3: o cache de 2 s não pode reintroduzir a renumeração."""
         sysfs_da_bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
         daemon = _daemon_com_dois_vpads()
         h = _Handlers(daemon, daemon.store, daemon.controller)
@@ -666,11 +575,7 @@ class TestOStateFullDeclaraONo:
         sysfs_da_bancada: Bancada,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """O TTL existe porque isto roda a 10-20 Hz — e ele tem de valer.
-
-        Sem cache seriam dezenas de `listdir` por segundo para responder a
-        mesma pergunta. Aqui: duas chamadas seguidas, UMA varredura.
-        """
+        """O TTL existe porque isto roda a 10-20 Hz — e ele tem de valer."""
         sysfs_da_bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
         daemon = _daemon_com_dois_vpads()
         h = _Handlers(daemon, daemon.store, daemon.controller)

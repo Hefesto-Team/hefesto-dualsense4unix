@@ -1,58 +1,5 @@
 #!/usr/bin/env python3
-"""F7 — o NOME ACESSÍVEL sobrevive à colheita da dica.
-
-**11/09/2026, e esta régua nasce de uma dívida DECLARADA, não de uma queixa.**
-A ``TOOLTIP-C1`` curou a dica que não abria do único jeito que funcionava: a
-camada ``DICA_DA_CASA`` colhe todo ``title`` para ``data-hef-dica`` e **esvazia
-o ``title`` no DOM vivo** — sem ele o popup do compositor não tem de que
-nascer. A própria C1 escreveu o preço no mesmo dia:
-
-    o ``title`` era também o **nome acessível** do elemento.
-
-Esvaziado, um botão de ícone vira *«botão»* para quem usa leitor de tela. É a
-mesma queixa dela — *«somem os textos»* — com outro nome e outra pessoa, e a
-ordem dela de hoje é exatamente sobre essa outra pessoa:
-
-    *"a ideia é que todas as features mesmo*  # noqa-acento: citação dela
-    *do app funcionem nao so pra mim mas pra*  # noqa-acento: citação dela
-    *qualquer outro user"*  # noqa-acento: citação dela
-
-O QUE ESTA RÉGUA MEDE, E POR QUE NO DOM VIVO
---------------------------------------------
-Nenhuma régua de fonte vê este defeito: no arquivo publicado o ``title`` está
-lá, inteiro, nas treze páginas. O nome só some **depois** que a camada roda —
-então a medição tem de ser a mesma que a pessoa recebe: a página carregada num
-``WebKit2.WebView``, a camada aplicada, e a conta do HTML-AAM feita sobre o que
-sobrou. É ``Gtk.OffscreenWindow`` porque ela tem UMA tela.
-
-AS TRÊS MEDIDAS, e cada uma morde num lugar
--------------------------------------------
-* **ninguém fica mudo** — todo elemento que aceita nome acessível e teve o
-  ``title`` colhido tem nome por alguma via;
-* **ninguém fala duas vezes** — um botão que já diz «Aplicar» dentro NÃO ganha
-  ``aria-label``. Um nome redundante faz o leitor de tela ler duas vezes, e
-  isso é pior do que não fazer nada;
-* **A MORDIDA** — com as duas funções da cura neutralizadas, a página volta a
-  ficar muda. Se esta última passar, a régua não mede a cura.
-
-O NÚMERO DE PARTIDA, medido nas treze páginas publicadas em 11/09/2026, com a
-camada da C1 de pé e sem a cura desta sprint:
-
-====================================  =====
-o que                                 quantos
-====================================  =====
-``title`` colhidos com texto            693
- … já tinham nome pelo conteúdo         357
- … já tinham ``aria-label`` da aba       31
- … são casca sem papel (span/div)       215
- … **ficavam MUDOS**                  **90**
-``<title>`` de SVG esvaziados         1.930
- … **ficavam MUDOS**               **1.930**
-**total sem nome**                **2.020**
-====================================  =====
-
-Os 90: 52 botões de ícone, 14 deslizantes, 12 campos de digitar, 12 listas.
-"""
+"""F7 — o NOME ACESSÍVEL sobrevive à colheita da dica."""
 from __future__ import annotations
 
 import json
@@ -65,30 +12,13 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-#: ONDE A MORDIDA SE MEDE, e a escolha é pelo tamanho do sinal: a
-#: ``04-iluminacao`` é a página com mais gente muda sem a cura — 44 elementos de
-#: HTML e 304 ``<title>`` de desenho. Uma mordida num alvo magro passa por acaso.
 PAGINA_DA_MORDIDA = "04-iluminacao.html"
 
-#: O piso da mordida. Bem abaixo dos 348 medidos: o número exato é da página de
-#: hoje, e esta régua não pode reprovar porque alguém acrescentou um botão.
 MUDOS_SEM_A_CURA = 40
 
-#: Quanto o laço do GTK pode demorar por página antes de a régua desistir.
 MS_DE_GUARDA = 30000
 
 
-#: O CENSO, e ele é a conta do HTML-AAM podada ao que existe nestas páginas.
-#:
-#: **A PODA QUE DECIDE:** ``texto_que_nomeia`` não é ``textContent``. Um
-#: ``<title>`` de SVG está DENTRO do elemento e não é texto de tela — contá-lo
-#: faria todo botão de ícone passar por botão com rótulo, que é justamente o
-#: botão que perde o nome aqui. Sem esta poda a régua ficaria verde sobre 52
-#: botões mudos.
-#:
-#: E ``aria-hidden="true"`` não é ausência de nome: é a declaração de que o
-#: elemento está FORA da árvore de acessibilidade de propósito — o ícone
-#: decorativo ao lado do texto que já o nomeia.
 _JS_CENSO = r"""
 (function(){
   var SVG = 'http://www.w3.org/2000/svg';
@@ -221,12 +151,7 @@ _JS_CENSO = r"""
 
 
 def _censo(pagina: pathlib.Path, camada: str) -> dict[str, Any]:
-    """Carrega a página, aplica ``camada`` e conta quem ficou sem nome.
-
-    ``Gtk.OffscreenWindow`` e não ``Gtk.Window``: sob Xvfb não há gerenciador de
-    janelas e uma janela comum fica 1x1 para sempre — e offscreen também porque
-    ela tem UMA tela, e janela de teste não nasce na frente dela (TELA-DELA-01).
-    """
+    """Carrega a página, aplica ``camada`` e conta quem ficou sem nome."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -268,9 +193,6 @@ def _censo(pagina: pathlib.Path, camada: str) -> dict[str, Any]:
 
     view.connect("load-changed", carregou)
     view.load_uri(pagina.as_uri())
-    # O `timeout_add` PENDENTE DE OUTRO TESTE mata este laço com um `main_quit`
-    # armado lá atrás — já custou onze medições nesta casa. A guarda própria sai
-    # no `finally`.
     guarda = GLib.timeout_add(MS_DE_GUARDA, Gtk.main_quit)
     try:
         Gtk.main()
@@ -296,13 +218,7 @@ def com_a_cura() -> list[dict[str, Any]]:
 
 @pytest.fixture(scope="module")
 def sem_a_cura() -> dict[str, Any]:
-    """A MORDIDA: as duas funções que vestem o nome saem de circulação.
-
-    Não se apaga o bloco inteiro — as chamadas continuam lá, e é por isso que a
-    mordida prova o CAMINHO e não só a existência do código: se um dia alguém
-    tirar a chamada de dentro do ``colher()``, este teste continua vermelho
-    quando devia, porque com as funções neutras o número tem de subir.
-    """
+    """A MORDIDA: as duas funções que vestem o nome saem de circulação."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     inteira = hefesto_vivo.DICA_DA_CASA
@@ -352,12 +268,7 @@ def test_ninguem_fica_mudo_no_desenho(com_a_cura: list[dict[str, Any]]) -> None:
 
 
 def test_ninguem_fala_duas_vezes(com_a_cura: list[dict[str, Any]]) -> None:
-    """O botão que já diz «Aplicar» NÃO ganha um «Aplicar» por cima.
-
-    É a metade negativa da regra, e sem ela a cura seria um ``aria-label`` em
-    tudo — 357 elementos passariam a ser lidos duas vezes, que é pior do que o
-    defeito que esta sprint fecha.
-    """
+    """O botão que já diz «Aplicar» NÃO ganha um «Aplicar» por cima."""
     sobra = {m["arquivo"]: [x for x in m["redundantes"] if x]
              for m in com_a_cura if m["redundantes"]}
     total = sum(len(m["redundantes"]) for m in com_a_cura)
@@ -367,11 +278,7 @@ def test_ninguem_fala_duas_vezes(com_a_cura: list[dict[str, Any]]) -> None:
 
 
 def test_o_icone_decorativo_sai_da_arvore(com_a_cura: list[dict[str, Any]]) -> None:
-    """Medidos 63 dos 222 ``<svg>`` de ícone: o nome deles já está no texto ao lado.
-
-    ``<svg><title>Cruz</title></svg>`` ao lado da palavra «Cruz» não precisa de
-    nome nenhum — precisa sair da árvore, senão a frase vem dobrada.
-    """
+    """Medidos 63 dos 222 ``<svg>`` de ícone: o nome deles já está no texto ao lado."""
     escondidos = sum(m["escondidos"] for m in com_a_cura)
     assert escondidos > 0, (
         "nenhum ícone decorativo foi escondido — ou as páginas pararam de "
@@ -389,8 +296,6 @@ def test_o_papel_img_so_no_icone(com_a_cura: list[dict[str, Any]]) -> None:
     """
     com_papel = sum(m["papelImg"] for m in com_a_cura)
     assert com_papel > 0, "nenhum ícone ganhou `role=img` — a regra caiu"
-    # Um `<svg role=img>` só é contado uma vez por `<title>`; se um desenho com
-    # zonas tivesse ganho o papel, o mesmo `<svg>` apareceria dezenas de vezes.
     desenhos = sum(m["desenhos"] for m in com_a_cura)
     assert com_papel < desenhos, (
         f"{com_papel} de {desenhos} `<title>` estão sob um `role=img` — um "
@@ -398,11 +303,7 @@ def test_o_papel_img_so_no_icone(com_a_cura: list[dict[str, Any]]) -> None:
 
 
 def test_a_mordida_sem_a_cura_a_pagina_emudece(sem_a_cura: dict[str, Any]) -> None:
-    """A MORDIDA. Com as duas funções neutras, volta o defeito que a C1 deixou.
-
-    Se este teste passar, a régua acima não mede a cura — mede outra coisa, que
-    é a família de defeito que esta casa nomeou em 04/09/2026.
-    """
+    """A MORDIDA. Com as duas funções neutras, volta o defeito que a C1 deixou."""
     m = sem_a_cura
     assert not m["erro"], m["erro"]
     mudos = len(m["mudos"]) + len(m["desenhosMudos"])
@@ -415,20 +316,6 @@ def test_a_mordida_sem_a_cura_a_pagina_emudece(sem_a_cura: dict[str, Any]) -> No
         "medindo uma página que já vinha vestida")
 
 
-# ---------------------------------------------------------------------------
-# O NOME QUE TROCA DE TEXTO — e ele não precisa de ponteiro nem de página real.
-#
-# O alvo `atributo` do piloto escreve `title` em 66 endereços das dez abas (9
-# deles em `<button>`), e a camada desvia esse texto para `data-hef-dica`. Se o
-# nome acessível não for junto, quem usa leitor de tela fica com a frase do
-# instante em que a página carregou — que é o mesmo defeito da dica congelada
-# que a C1 curou do lado de quem vê.
-# ---------------------------------------------------------------------------
-
-#: OS QUATRO CASOS, e o primeiro é a forma exata dos 52 botões que emudeceram:
-#: um ``<button>`` cujo único conteúdo é um desenho. O ``<title>`` do desenho
-#: está DENTRO do botão e some no ``textContent`` de quem não o podar — é por
-#: ele que uma régua ingênua daria verde sobre um botão mudo.
 _PAGINA_DE_ENSAIO = """<!doctype html><html><body>
 <button id="mudo" title="Ignora este conselho"><svg width="8" height="8">
   <title>Proibido</title><path d="M0 0h4v4H0z"/></svg></button>
@@ -541,13 +428,7 @@ def test_o_icone_de_svg_ganha_nome_e_papel(ensaio: dict[str, Any]) -> None:
 
 
 def test_o_nome_segue_a_dica_que_o_tique_troca(ensaio: dict[str, Any]) -> None:
-    """66 endereços trocam de `title` em voo; o nome tem de ir junto.
-
-    Quem chama ``trocar()`` no produto é o ramo ``title`` do ``escrever()``,
-    que ANTES já gravou o texto novo em ``data-hef-dica`` — por isso a régua
-    mede o ``aria-label`` e não a dica: aqui a chamada é direta, e o
-    ``data-hef-dica`` continua sendo o da carga da página de propósito.
-    """
+    """66 endereços trocam de `title` em voo; o nome tem de ir junto."""
     assert not ensaio["erro"], ensaio["erro"]
     m = ensaio["depois_da_troca"]["mudo"]
     assert m["rotulo"] == "Ignora ESTE conselho", (
@@ -562,12 +443,7 @@ def test_a_dica_que_some_leva_o_nome_junto(ensaio: dict[str, Any]) -> None:
 
 
 def test_o_nome_que_a_aba_escreveu_manda_mais(ensaio: dict[str, Any]) -> None:
-    """A posse é declarada: mexer só no que a camada vestiu.
-
-    Um ``aria-label`` que o gerador da aba escreveu é decisão de quem desenhou a
-    tela. A camada não o toca nem na colheita nem na troca — e sem esta guarda
-    a dívida da C1 se pagaria estragando os 31 nomes que já existiam.
-    """
+    """A posse é declarada: mexer só no que a camada vestiu."""
     assert not ensaio["erro"], ensaio["erro"]
     antes = ensaio["depois_da_colheita"]["dono"]
     depois = ensaio["depois_da_troca"]["dono"]

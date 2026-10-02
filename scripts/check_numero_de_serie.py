@@ -73,43 +73,22 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-#: A FORMA DE UM SERIAL DE APARELHO. As bordas negativas impedem que um pedaço
-#: de um token maior (um hash de 40, uma chave de API) case por dentro.
 SERIAL = re.compile(r"(?<![0-9A-Za-z_#])([0-9A-Z]{15,20})(?![0-9A-Za-z_#])")
 
-#: O MÍNIMO DE CADA CLASSE. Sem os dois, a forma pegaria uma sigla longa
-#: (``CONFIGURACAOPADRAO``) e um carimbo de tempo (``20260903150000``) — e um
-#: portão que acusa o que não é o defeito é um portão que alguém desliga.
 MINIMO_DE_LETRAS = 2
 MINIMO_DE_DIGITOS = 6
 
-#: A MARCA DE ISENÇÃO, na mesma linha do token.
 ISENTO = re.compile(r"serial-de-mentira")
 
-#: O QUE NÃO SE VARRE. Binário não tem linha, e o histórico é de outra régua.
 EXCLUIR_SUFIXO = {
     ".png", ".jpg", ".jpeg", ".gif", ".ico", ".mo", ".gz", ".woff", ".woff2",
     ".pdf", ".zip", ".whl", ".so",
 }
 
-#: OS SVG FICAM DENTRO, e é deliberado: em 24/08/2026 um endereço de rádio saiu
-#: num `.svg` justamente porque a régua o tratava como binário. A mesma porta
-#: serve para um serial.
-
 
 def _e_endereco_de_memoria(token: str) -> bool:
-    """``0000000000C2CEF2`` — o ponteiro de um log, e não um serial.
-
-    DUAS CONDIÇÕES, e as duas juntas: o token usa SÓ o alfabeto hexadecimal (um
-    serial de aparelho quase sempre traz letras de fora dele — G, W, N…), **e**
-    tem uma fileira de seis zeros ou mais, que é como um endereço de 64 bits
-    aparece impresso. Exigir as duas é o que impede a isenção de virar porta
-    larga: um serial hexadecimal por acaso, mas sem a fileira de zeros,
-    continua sendo acusado.
-    """
+    """``0000000000C2CEF2`` — o ponteiro de um log, e não um serial."""
     # serial-de-mentira: o literal abaixo é o ALFABETO hexadecimal, não um
-    # serial — e é o único jeito de escrevê-lo. A ironia é o ponto: o portão
-    # acusa a si mesmo se a marca sair.
     so_hex = all(c in "0123456789ABCDEF" for c in token)  # serial-de-mentira
     return so_hex and "000000" in token
 
@@ -120,12 +99,7 @@ def _mascarado(token: str) -> bool:
 
 
 def arquivos_versionados() -> list[Path]:
-    """O rastreado E o novo, sem o ignorado — portões são cegos a arquivo novo.
-
-    ``--cached --others --exclude-standard`` é o mesmo par que o portão do MAC
-    usa: sem o ``--others``, um arquivo recém-criado e ainda não commitado
-    passaria calado, que é exatamente quando o vazamento entra.
-    """
+    """O rastreado E o novo, sem o ignorado — portões são cegos a arquivo novo."""
     saida = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
         cwd=str(RAIZ), capture_output=True, text=True, check=False).stdout
@@ -158,10 +132,6 @@ def acusa(caminho: Path) -> list[str]:
                 continue
             if _mascarado(token) or _e_endereco_de_memoria(token):
                 continue
-            # O CAMINHO RELATIVO É UMA CORTESIA, e não um requisito: quem
-            # chama `acusa` com um arquivo de fora da árvore (uma régua que o
-            # exercita num lar de mentira) não pode receber um `ValueError` no
-            # lugar do achado.
             try:
                 rel = caminho.relative_to(RAIZ).as_posix()
             except ValueError:
@@ -171,12 +141,7 @@ def acusa(caminho: Path) -> list[str]:
 
 
 def _mascara_de_exemplo() -> str:
-    """A máscara, PERGUNTADA ao dono — nunca digitada aqui.
-
-    Digitar `AB1C05###########` nesta mensagem faria duas verdades sobre a mesma
-    regra, e a daqui envelheceria no dia em que ela mudasse o número de
-    caracteres públicos.
-    """
+    """A máscara, PERGUNTADA ao dono — nunca digitada aqui."""
     sys.path.insert(0, str(RAIZ / "scripts/ensaios"))
     try:
         from cor_do_plastico import mascarar_serial

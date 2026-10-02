@@ -1,47 +1,4 @@
-"""VIGIA-DE-APARELHO-01 — o portão da SUITE-QUE-SUJA-O-JORNAL-01 (E4).
-
-O defeito que este arquivo existe para impedir de voltar, medido em 20/08/2026
-na máquina dela: **1289 nós `Hefesto - Dualsense4Unix Virtual Keyboard` num
-dia**, criados pelas minhas execuções de `pytest`, cada add/remove de teclado
-re-assentando o seat do compositor e derrubando a tela cheia dela no meio de um
-jogo. A cura (o dublê de `uinput.Device`) pegou: de 19 a 22/08 o `journalctl -k`
-dela não registra UM nó com esse nome. O que faltava é este portão — entre a
-descoberta (04/08) e a cura (20/08) foram dezesseis dias em que ninguém notou.
-
-## A régua escolhida, e por que as outras três não servem
-
-Todas foram MEDIDAS nesta máquina em 22/08 antes de serem descartadas:
-
-- **contagem de `/dev/input/event*` antes e depois** — CEGA ao defeito: o nó
-  morre quando o descritor que o criou fecha, e isso é dentro do próprio teste.
-  `test_a_regua_pega_o_no_de_verdade_que_a_contagem_nao_ve` PROVA isso criando
-  um nó de verdade: a contagem é a mesma antes e depois, e o kernel viu o nó.
-- **o maior `inputN` de `/sys/class/input`** — parecia a saída e caiu na
-  primeira execução deste arquivo: o número cresce e não é reciclado (o nó da
-  mordida saiu `input198` com o máximo em 196), mas o sysfs só lista o que está
-  VIVO, e o máximo volta a 196 no instante em que o nó morre. Nenhuma régua de
-  sysfs enxerga o nó que já morreu. Ela também não atribuiria: 43 aparelhos de
-  entrada nasceram nesta máquina em uma hora sem suíte nenhuma (espelhos do
-  Steam Input e os controles dela).
-- **journal do kernel** — a única régua que sobrevive à morte do nó, e foi com
-  ela que os 1289 foram contados. Não serve de portão (não existe no CI, e a
-  linha não diz de QUEM é o nó); fica como AVISO no `sessionfinish`, onde é o
-  único instrumento que vê nó que nasce em processo FILHO.
-- **arquivo fora do `tmp_path`** — é o CANARIO-FS-01 + BERCO-DE-TMP-01, e
-  nenhum dos dois vê uinput: nó de entrada não deixa arquivo.
-
-A régua é **a PORTA**: `uinput.Device`, `evdev.UInput` e `os.open` de
-`/dev/uinput` / `/dev/uhid`. Atribui (é o nosso processo), não pede privilégio,
-e vê o nó transitório. O cego dela é o processo FILHO — coberto pelo aviso.
-
-## O portão tem duas metades, e as duas são necessárias
-
-Este arquivo roda no meio da suíte, então o livro que ele lê só tem quem passou
-ANTES dele. A cobertura da sessão inteira é do `_vigia_no_fim_da_sessao` no
-conftest, que reprova com `exitstatus = 1`. O que este arquivo garante, e o
-`sessionfinish` não garantiria sozinho, é que **a vigia está armada** e que **a
-régua morde** — um portão desarmado passa despercebido para sempre.
-"""
+"""VIGIA-DE-APARELHO-01 — o portão da SUITE-QUE-SUJA-O-JORNAL-01 (E4)."""
 
 from __future__ import annotations
 
@@ -55,20 +12,11 @@ import pytest
 
 from tests import conftest as vigia_mod
 
-#: O nome do nó da mordida vem do conftest porque os dois lados precisam
-#: concordar: aqui ele é criado, e lá o aviso do journal o EXCLUI. NUNCA o nome
-#: de produção (regra E1 da sprint), e ele vive microssegundos.
 NOME_DA_MORDIDA = vigia_mod.NOME_DO_NO_DE_MORDIDA
 
 
 def _uinput_de_verdade() -> Any:
-    """A fábrica REAL do python-uinput, guardada pela vigia antes do dublê.
-
-    Vem de `vigia.originais` de propósito: pegar `uinput.Device` do módulo
-    devolveria o dublê da sessão (que não cria nada) ou a porta da vigia (que
-    recusa) — e o teste da mordida precisa do nó de VERDADE, senão ele prova
-    que a régua funciona contra a própria régua.
-    """
+    """A fábrica REAL do python-uinput, guardada pela vigia antes do dublê."""
     vigia = vigia_mod.vigia_da_sessao()
     if vigia is None:
         return None
@@ -89,18 +37,12 @@ def _da_para_criar_no() -> bool:
     return True
 
 
-#: Medido UMA vez: a sonda abre e fecha `/dev/uinput`, e não cria nada.
 PODE_MORDER = _da_para_criar_no()
 
 sem_uinput = pytest.mark.skipif(
     not PODE_MORDER,
     reason="sem python-uinput ou sem permissão em /dev/uinput (é o caso do CI)",
 )
-
-
-# ---------------------------------------------------------------------------
-# O portão
-# ---------------------------------------------------------------------------
 
 
 def test_a_vigia_esta_armada_nas_portas_que_este_ambiente_tem() -> None:
@@ -113,14 +55,11 @@ def test_a_vigia_esta_armada_nas_portas_que_este_ambiente_tem() -> None:
     assert "os.open" in vigia.originais
     assert getattr(os.open, "vigia_de_aparelho", None) == "os.open"
 
-    # Cada fábrica que EXISTE neste ambiente tem de estar coberta. Coberta é
-    # "não é mais a original": ou está a porta da vigia, ou está o dublê da
-    # `_nenhum_uinput_de_verdade` por cima dela — os dois impedem o nó.
     for modulo, atributo in vigia_mod.FABRICAS_DE_APARELHO:
         porta = f"{modulo}.{atributo}"
         original = vigia.originais.get(porta)
         if original is None:
-            continue  # biblioteca ausente neste ambiente
+            continue
         alvo = __import__(modulo, fromlist=[atributo])
         assert getattr(alvo, atributo) is not original, (
             f"{porta} está exposto: um teste que chame isso cria aparelho de "
@@ -135,11 +74,6 @@ def test_o_livro_da_vigia_esta_limpo_ate_aqui() -> None:
         "algum teste tentou criar aparelho de entrada de verdade:\n  "
         + "\n  ".join(problemas)
     )
-
-
-# ---------------------------------------------------------------------------
-# A mordida: um nó de VERDADE, criado e destruído aqui dentro
-# ---------------------------------------------------------------------------
 
 
 def _no_do_aparelho(nome: str) -> int | None:
@@ -165,14 +99,7 @@ def _quantos_event() -> int:
 
 
 def _journal_viu(nome: str, desde: str, teto: float = 5.0) -> bool:
-    """O journal já registrou `nome`? Espera até `teto` segundos por ele.
-
-    A espera não é zelo: o journald escreve com atraso, medido em 22/08 numa
-    série de cinco nós — 0,02 s no caso comum e 0,13 s no pior. A primeira
-    versão deste teste perguntava UMA vez e reprovou sozinha na terceira
-    execução. Teto alto e saída na primeira resposta: o custo comum é uma
-    consulta só.
-    """
+    """O journal já registrou `nome`? Espera até `teto` segundos por ele."""
     limite = time.monotonic() + teto
     while True:
         nascidos = vigia_mod.nascimentos_no_journal(desde) or []
@@ -185,24 +112,8 @@ def _journal_viu(nome: str, desde: str, teto: float = 5.0) -> bool:
 
 @sem_uinput
 def test_a_regua_pega_o_no_de_verdade_que_a_contagem_nao_ve() -> None:
-    """A mordida, e ela é UMA só: um nó de verdade, criado e morto aqui dentro.
-
-    Um nó por execução, e não dois, porque cada nó destes é exatamente o custo
-    que a sprint existe para não pagar (add/remove de teclado re-assenta o seat
-    do compositor dela). Com esse único nó o teste responde as quatro perguntas
-    que decidem a régua:
-
-    1. a PORTA registra a passagem, com nodeid e nome;
-    2. o KERNEL confirma o mesmo nó (`/sys/class/input/*/name`) — contagem
-       independente, sem a qual a régua estaria medindo a si mesma;
-    3. a contagem de `/dev/input/event*` sobe com o nó vivo e volta EXATAMENTE
-       ao valor de antes quando ele morre — a prova de que a régua (a) é cega
-       ao nó transitório, que é o motivo de a régua ser a porta;
-    4. o journal do kernel registra o nascimento e continua registrando depois
-       da morte — a régua (c), a única que sobrevive ao nó, e a que valida esta
-       aqui contra uma contagem que não é nossa.
-    """
-    import uinput  # a biblioteca; a FÁBRICA real vem da vigia
+    """A mordida, e ela é UMA só: um nó de verdade, criado e morto aqui dentro."""
+    import uinput
 
     fabrica = _uinput_de_verdade()
     vigia = vigia_mod.VigiaDeAparelho(recusar=False)
@@ -247,24 +158,14 @@ def test_a_regua_pega_o_no_de_verdade_que_a_contagem_nao_ve() -> None:
         "a guardar memória do número usado, a régua (b) volta a estar na mesa"
     )
 
-    # A régua (c), medida no mesmo nó: o journal LEMBRA do que o sysfs esqueceu.
-    if vigia_mod.nascimentos_no_journal(desde) is not None:  # no CI não há
+    if vigia_mod.nascimentos_no_journal(desde) is not None:
         assert _journal_viu(NOME_DA_MORDIDA, desde), (
             "o journal do kernel não registrou o nó em 5 s — o aviso do fim da "
             "sessão está cego e o buraco do processo filho fica sem instrumento"
         )
 
-    # E a mordida NÃO sujou o livro da sessão: ela passou pela porta dela
-    # mesma, não pela da sessão. Sem isto, provar a régua deixaria o portão
-    # vermelho para sempre. Afirmação estreita de propósito — se OUTRO teste
-    # sujou o livro, quem reprova é o portão acima, e não este.
     da_sessao = vigia_mod.problemas_da_vigia(vigia_mod.vigia_da_sessao())
     assert [p for p in da_sessao if NOME_DA_MORDIDA in p] == []
-
-
-# ---------------------------------------------------------------------------
-# A porta fecha, além de anotar
-# ---------------------------------------------------------------------------
 
 
 def test_a_porta_recusa_e_nao_chama_a_fabrica_de_verdade() -> None:
@@ -300,11 +201,7 @@ def test_os_dois_nos_de_kernel_sao_recusados_no_os_open(no: str) -> None:
 
 
 def test_o_os_open_vigiado_deixa_passar_o_resto(tmp_path: Any) -> None:
-    """A porta olha DOIS caminhos; qualquer outro arquivo abre normalmente.
-
-    Sem esta afirmação a vigia seria um `os.open` quebrado para a suíte inteira
-    — e o defeito apareceria longe daqui, num teste que nada tem com uinput.
-    """
+    """A porta olha DOIS caminhos; qualquer outro arquivo abre normalmente."""
     vigia = vigia_mod.VigiaDeAparelho()
     abrir = vigia.envolver_os_open(os.open)
     alvo = tmp_path / "arquivo.txt"

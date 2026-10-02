@@ -126,14 +126,11 @@ class TestP1:
     ) -> None:
         daemon, capturado = wired
         assert gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
-        # A calibração do PRIMÁRIO viajou até a factory do vpad.
         assert capturado["calibration_0x05"] == _CALIB
         reader = daemon._motion_reader
         assert isinstance(reader, _FakeReader)
         assert reader.started is True
-        # O provider resolve o hidraw do primário NA HORA (retarget barato).
         assert reader.path_provider() == "/dev/hidraw9"
-        # Registrado no backend para o retarget de `_recompute_primary`.
         assert daemon.controller.attached == [reader]
 
     def test_stop_para_o_reader_antes_do_device(
@@ -144,10 +141,8 @@ class TestP1:
         device = daemon._gamepad_device
         gp.stop_gamepad_emulation(daemon)
         assert daemon._motion_reader is None
-        # A ordem é a alma do teardown: reader morre ANTES do fd do uhid.
         eventos = device.eventos
         assert eventos.index("reader.stop") < eventos.index("device.stop")
-        # E o backend foi desregistrado (attach(None) depois do attach(reader)).
         assert daemon.controller.attached[-1] is None
 
     def test_fallback_uinput_nao_ganha_reader(
@@ -177,7 +172,6 @@ class TestP1:
             OSError("EIO")
         )
         assert gp.read_primary_calibration(daemon) is None
-        # Backend SEM o método (FakeController do smoke): None sem explodir.
         daemon.controller = SimpleNamespace()
         assert gp.read_primary_calibration(daemon) is None
 
@@ -218,20 +212,9 @@ class TestCoop:
     def test_espelho_nasce_com_o_handle_ainda_fechado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """ESPELHO-QUE-NAO-NASCEU-01: perder a corrida não é ficar sem espelho.
-
-        A promoção roda no tick do hotplug, e o `_open_one` do backend para
-        aquele MAC pode ainda estar no ar (até `INIT_TIMEOUT_SEC` = 5 s; o BT
-        chega a estourar o teto). Enquanto ele não abre, `hidraw_path(identity)`
-        devolve None. O reader TEM de nascer assim mesmo: quem espera é ele, no
-        `path_provider`, na thread dele — como o espelho do P1 sempre fez.
-
-        Medido na mesa de quatro em 15/08/2026: o vpad do jogador que perdeu
-        essa corrida entregava ~0,4 Hz ao jogo contra 165-196 Hz dos outros.
-        """
+        """ESPELHO-QUE-NAO-NASCEU-01: perder a corrida não é ficar sem espelho."""
         monkeypatch.setattr(prr, "PhysicalReportReader", _FakeReader)
         controller = _FakeController()
-        # O handle ainda não abriu: o backend não sabe o hidraw deste MAC.
         aberto = False
 
         def _hidraw(uniq: str | None = None) -> str | None:
@@ -244,10 +227,7 @@ class TestCoop:
 
         assert isinstance(player.motion_reader, _FakeReader)
         assert player.motion_reader.started is True
-        # Enquanto o handle não abre, o provider devolve None e o reader espera.
         assert player.motion_reader.path_provider() is None
-        # Quando o backend termina de abrir, o MESMO reader acha o nó sozinho —
-        # sem que ninguém precise reexecutar a promoção.
         aberto = True
         assert player.motion_reader.path_provider() == "/dev/hidraw11"
 
@@ -295,7 +275,6 @@ class TestCoop:
         assert set(achados) == {"aabbccddee02"}
         assert "aabbcc000042" not in achados
         assert "aabbcc000043" not in achados
-        # A lista fechada que sustenta a garantia continua fechada.
         assert er.DUALSENSE_VENDOR == 0x054C
         assert sorted(er.DUALSENSE_PIDS) == [0x0CE6, 0x0DF2]
 
@@ -371,7 +350,7 @@ class TestRetargetNoBackend:
         handle = SimpleNamespace(conType=SimpleNamespace(name="USB"))
         inst._handles = {"aabbccddee01": handle}
         inst._primary_key = None
-        inst._recompute_primary()  # elege o primário novo
+        inst._recompute_primary()
         assert pedidos == ["primary_changed"]
 
     def test_attach_none_desregistra(self) -> None:

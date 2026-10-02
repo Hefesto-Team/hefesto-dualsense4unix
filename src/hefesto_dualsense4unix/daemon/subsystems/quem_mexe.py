@@ -82,13 +82,9 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O atributo do daemon onde mora o dono único das marcas.
 ATRIBUTO = "_quem_mexe"
 
-#: A zona morta do eixo e do gatilho, em 0..255. É o MESMO número com que a
-#: casa já diz «o analógico se mexeu de propósito» — a zona do cursor
 #: (``uinput_mouse.MOVE_DEADZONE``). O repouso de um DualSense fica a poucas
-#: unidades do centro; um controle parado na mesa não marca.
 ZONA_MORTA = MOVE_DEADZONE
 
 _CRIACAO = threading.Lock()
@@ -113,24 +109,14 @@ def teve_entrada(
 
 
 class QuemMexe:
-    """As marcas da partida: ``{12 dígitos do físico: instante da primeira entrada}``.
-
-    Escrito pelo laço do daemon (o tique) e lido pela volta do alto-falante,
-    que mora noutra thread — daí a trava. Fora da partida, a
-    marca nem nasce: ``anotar`` devolve na primeira comparação.
-    """
+    """As marcas da partida: ``{12 dígitos do físico: instante da primeira entrada}``."""
 
     def __init__(self, *, relogio: Callable[[], float] = time.monotonic) -> None:
         self._relogio = relogio
         self._trava = threading.Lock()
         self._marcas: dict[str, float] = {}
-        #: Quando a partida começou (o relógio de ``relogio``); None = sem jogo.
         self._aberto_em: float | None = None
-        #: Os donos de fluxo que esta partida já viu — para reconhecer outro jogo.
         self._donos: frozenset[Hashable] = frozenset()
-        #: Quem acordar quando um controle entra na partida (a volta do
-        #: alto-falante, que sobe a ponte da háptica dele). Chamado fora da
-        #: trava, uma vez por controle e partida; ``None`` = ninguém.
         self.ao_marcar: Callable[[str], None] | None = None
 
     # -- a partida (a volta do alto-falante) ------------------------------
@@ -145,20 +131,7 @@ class QuemMexe:
         *,
         vivos: Callable[[frozenset[Hashable]], frozenset[Hashable] | None] | None = None,
     ) -> None:
-        """A volta diz quem é dono de fluxo nos endpoints; a partida abre, segue ou fecha.
-
-        ``donos`` são os donos dos fluxos que tocam AGORA nos endpoints de
-        háptica (o índice do cliente no servidor de som). ``vivos`` responde,
-        dos donos já vistos, quais seguem conectados ao servidor — ``None`` é
-        «não sei», e aí a partida não muda de dono nem fecha. Sem ``vivos``,
-        ninguém sabe perguntar: um dono novo é da mesma partida, e sem fluxo a
-        partida fecha.
-
-        Abrir e virar outra partida ZERAM as marcas: a entrada de antes da
-        partida não é desta partida, e a de um jogo fechado não é do próximo.
-        **Donos que se alternam não zeram nada** — só a ausência de todo dono
-        de antes diz que o jogo é outro.
-        """
+        """A volta diz quem é dono de fluxo nos endpoints; a partida abre, segue ou fecha."""
         agora = frozenset(donos)
         with self._trava:
             conhecidos, aberto = self._donos, self._aberto_em
@@ -168,11 +141,8 @@ class QuemMexe:
             return
         if agora and agora <= conhecidos:
             return
-        # Um dono novo, ou nenhum fluxo: os de antes seguem no servidor?
         seguem = vivos(conhecidos) if vivos is not None else (conhecidos if agora else frozenset())
         if seguem is None:
-            # NA DÚVIDA, NÃO MEXE: sem saber se o jogo de antes vive, a
-            # partida segue, e o dono novo entra nela.
             with self._trava:
                 self._donos = conhecidos | agora
             return
@@ -184,8 +154,6 @@ class QuemMexe:
             self._abrir(agora)
             return
         if seguem:
-            # O jogo fechou o fluxo e segue vivo (o GE remira a háptica a cada
-            # hotplug de endpoint): é a mesma partida.
             with self._trava:
                 self._donos = frozenset(seguem)
             return
@@ -215,7 +183,6 @@ class QuemMexe:
         chave = _digitos(uniq)
         return bool(chave) and self._aberto_em is not None and chave in self._marcas
 
-    # -- o tique (o laço do daemon) ----------------------------------------
 
     def anotar(
         self,
@@ -236,12 +203,7 @@ class QuemMexe:
             self.marcar(uniq)
 
     def marcar(self, uniq: object) -> None:
-        """``uniq`` teve entrada agora. Só a PRIMEIRA da partida escreve.
-
-        As seguintes são uma pertinência num dicionário, sem trava. A primeira
-        vai ao diário, uma vez por controle e partida — é a linha que diz, no
-        gesto dela, quando o daemon passou a contar aquele controle.
-        """
+        """``uniq`` teve entrada agora. Só a PRIMEIRA da partida escreve."""
         chave = _digitos(uniq)
         if not chave or chave in self._marcas or self._aberto_em is None:
             return
@@ -250,33 +212,22 @@ class QuemMexe:
             if aberto is None or chave in self._marcas:
                 return
             agora = self._relogio()
-            # Troca o dicionário inteiro, nunca o muda no lugar: quem lê noutra
-            # thread (a volta, o vigia) segura sempre um dicionário acabado.
             self._marcas = {**self._marcas, chave: agora}
         logger.info(
             "haptica_quem_joga",
             uniq=mascarar_endereco(chave),
             desde_a_abertura_s=round(agora - aberto, 1),
         )
-        # O CONTROLE QUE ENTRA É AVISADO, E NÃO CAÇADO (A-HAPTICA-DO-RADIO-
-        # OBEDECE-AO-SINAL-DO-JOGO-01): a volta do alto-falante acorda e sobe a
-        # ponte da háptica dele, sem vigia perguntando a cada 0,4 s.
         ao_marcar = self.ao_marcar
         if ao_marcar is not None:
             try:
                 ao_marcar(chave)
-            except Exception as exc:  # o laço do daemon não cai por um aviso
+            except Exception as exc:
                 logger.debug("haptica_aviso_de_quem_joga_falhou", err=str(exc))
 
 
 def quem_mexe_de(daemon: Any) -> QuemMexe | None:
-    """O dono único das marcas daquele daemon — criado na primeira pergunta.
-
-    Quem cria é a volta do alto-falante (a única que sabe se há jogo); o laço
-    só lê, por :func:`marcas_da_partida`. ``None`` sem daemon, ou num dublê que
-    recusa atributo. A classe é conferida: num ``MagicMock`` o ``getattr``
-    devolveria um mock, e um mock responde «sim» a toda pergunta.
-    """
+    """O dono único das marcas daquele daemon — criado na primeira pergunta."""
     if daemon is None:
         return None
     atual = getattr(daemon, ATRIBUTO, None)
@@ -289,16 +240,13 @@ def quem_mexe_de(daemon: Any) -> QuemMexe | None:
         novo = QuemMexe()
         try:
             setattr(daemon, ATRIBUTO, novo)
-        except Exception:  # dublê que recusa atributo: sem marca, e sem exceção
+        except Exception:
             return None
         return novo
 
 
 def marcas_da_partida(daemon: Any) -> QuemMexe | None:
-    """As marcas, SÓ com a partida aberta — a pergunta do tique. Nunca cria.
-
-    Com o jogo fechado, o custo por tique é este ``getattr`` e uma comparação.
-    """
+    """As marcas, SÓ com a partida aberta — a pergunta do tique. Nunca cria."""
     marcas = getattr(daemon, ATRIBUTO, None)
     if isinstance(marcas, QuemMexe) and marcas.jogo_aberto:
         return marcas
@@ -306,13 +254,7 @@ def marcas_da_partida(daemon: Any) -> QuemMexe | None:
 
 
 def anotar_o_primario(daemon: Any, state: Any, botoes: Iterable[str]) -> None:
-    """O laço marca o controle do posto com o que ele JÁ leu neste tique.
-
-    ``state`` é o ``read_state()`` do tique (eixos e gatilhos do evdev do
-    primário) e ``botoes`` o ``_evdev_buttons_once()`` — nenhum snapshot a mais.
-    O ``primary_uniq`` só é perguntado quando há entrada. Nunca levanta: o
-    laço do daemon não cai por uma marca.
-    """
+    """O laço marca o controle do posto com o que ele JÁ leu neste tique."""
     marcas = marcas_da_partida(daemon)
     if marcas is None:
         return
@@ -328,7 +270,7 @@ def anotar_o_primario(daemon: Any, state: Any, botoes: Iterable[str]) -> None:
         ):
             return
         marcas.marcar(getattr(getattr(daemon, "controller", None), "primary_uniq", None))
-    except Exception as exc:  # nunca derruba o laço
+    except Exception as exc:
         logger.debug("haptica_marca_do_primario_falhou", err=str(exc))
 
 

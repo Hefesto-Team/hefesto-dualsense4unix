@@ -34,15 +34,10 @@ import pytest
 
 from hefesto_dualsense4unix.interface import onde
 
-#: A aba dos cards dos controles. É a única com glifos de botão por card.
 PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
 
-#: A CLASSE QUE DÁ FORMA, e a única que pode nascer sem ter quem a apague.
 ESTRUTURA = "gb"
 
-#: O QUE O PILOTO APAGA, e o nome não se digita aqui por gosto: é o default do
-#: ramo `classe` do `hefesto_vivo.BOOTSTRAP` (``el.dataset.hefClasse || 'on'``).
-#: Um glifo que declare `data-hef-classe` é medido por ele, não por este.
 APAGAVEL_POR_PADRAO = "on"
 
 _GLIFO = re.compile(
@@ -52,12 +47,7 @@ _GLIFO = re.compile(
 
 
 def _paginas() -> list[pathlib.Path]:
-    """A bancada e o publicado.
-
-    OS DOIS, E NÃO SÓ UM: medir só a bancada deixaria a régua verde com a tela
-    dela ainda na página velha; medir só o publicado daria verde sobre a página
-    congelada. É a armadilha que esta casa já pagou quatro vezes num dia.
-    """
+    """A bancada e o publicado."""
     return [onde.pagina(PAGINA), onde.pagina(PAGINA, publicado=True)]
 
 
@@ -84,11 +74,7 @@ def test_ha_glifos_a_medir(pagina: str) -> None:
 
 
 def test_glifo_so_nasce_com_estrutura_ou_com_o_que_o_dado_apaga(pagina: str) -> None:
-    """Nenhum glifo carrega classe que o tique não possa tirar.
-
-    É a régua inteira: a cor do plástico (`plast`) — ou qualquer outra pintura
-    futura — não pode nascer num card que afirma o estado do aparelho.
-    """
+    """Nenhum glifo carrega classe que o tique não possa tirar."""
     presos: list[str] = []
     for achado in _GLIFO.finditer(pagina):
         tag = achado.group(0)

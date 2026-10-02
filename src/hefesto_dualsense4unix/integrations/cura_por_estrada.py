@@ -151,50 +151,24 @@ from typing import cast
 try:
     from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 except ImportError:  # pragma: no cover - script avulso do uninstall, sem a .venv
-    # `python3 <este arquivo>` põe a pasta das integrações no `sys.path`, e não
-    # o `src/`: o pacote se acha pelo caminho deste arquivo. A corrente que o
-    # desfazer importa (`sandbox_dos_lancadores`, `censo_dos_lancadores`,
     # `identidade_de_janela`) é só biblioteca padrão.
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 
-#: AS DUAS ESTRADAS. O nome é o do ARQUIVO que se escreve, e não o do lançador:
-#: quem ganhar uma terceira estrada amanhã (um lançador nativo com config
-#: própria) acrescenta um valor aqui, e não um `if` no meio da escrita.
 HEROIC_CONFIG = "heroic-config"
 FLATPAK_OVERRIDE = "flatpak-override"
 
-#: A CHAVE DO HEROIC, com a grafia DELE. `enviromentOptions` — sem o segundo
-#: `n` — é como o Heroic gravou desde sempre, e foi lida assim no `config.json`
-#: dela em 09/09/2026. Corrigir a grafia aqui escreveria uma chave que o
-#: Heroic não lê: seria a cura silenciosa, que é pior que nenhuma.
 CHAVE_DO_HEROIC = "enviromentOptions"
 
-#: A FRASE DA RECUSA SEM AMBIENTE. Ela nomeia o que falta e o que fazer, e não
-#: menciona arquivo nenhum: «ambiente», «serviço» e «controle» são as palavras
-#: da tela; `default.env` é a língua de dentro.
 SEM_AMBIENTE = ("O serviço ainda não publicou o ambiente desta sessão. Ligue o "
                 "Hefesto, conecte um controle e tente de novo.")
 
-#: A FRASE DA RECUSA SOBRE UM ARQUIVO QUE NÃO ABRE — e ela existe para o
-#: produto NÃO reescrever configuração dela por cima de um arquivo que ele não
-#: entendeu. Ver :func:`_ler_heroic`.
 ILEGIVEL = ("Não consegui ler o `{arquivo}` deste lançador, e não vou "
             "reescrevê-lo por cima. Abra o lançador uma vez e tente de novo.")
 
-#: AS DUAS QUE UMA PESSOA COSTUMA PÔR SOZINHA — o cache de shader da NVIDIA. Com
-#: as :data:`DELA_MANDA`, é a leitura do «limpa?» (`utils/memoria_dos_controles`,
-#: a régua confere que são iguais): o valor que ela tinha antes da primeira
-#: escrita do Hefesto é guardado e volta no desfazer.
 PODEM_SER_DELA: frozenset[str] = frozenset(
     {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"})
 
-#: O QUE UMA VERSÃO SEM REGISTRO ESCREVEU, e o conjunto é HISTÓRICO: são as
-#: variáveis da `ENV_ALLOWLIST` em 25/09/2026, o dia em que o registro nasceu,
-#: menos as :data:`PODEM_SER_DELA`. Uma variável que a allowlist ganhar depois
-#: já nasce anotada no registro e NÃO entra aqui. Ela mora neste módulo, e não é
-#: lida do daemon, porque o desfazer roda com o `python3` do sistema, e o
-#: `daemon/launch_env` puxa dependência que a `.venv` levou junto.
 _DO_PRODUTO_SEM_REGISTRO: frozenset[str] = frozenset({
     "SDL_GAMECONTROLLER_IGNORE_DEVICES",
     "SDL_JOYSTICK_HIDAPI",
@@ -205,35 +179,15 @@ _DO_PRODUTO_SEM_REGISTRO: frozenset[str] = frozenset({
     "PROTON_ENABLE_MHWILDS_USB_AUDIO",
 })
 
-#: AS CORREÇÕES QUE NÃO DEPENDEM DE CONTROLE, e a carona as leva junto com a
-#: ponte (AS-CORRECOES-AUTOMATICAS-DESLIGAM-O-XALIA-E-O-FOSSILIZE-01, 02/10/2026).
-#: O `proton` (Valve e GE) liga o xalia quando `PROTON_USE_XALIA` não vem
-#: (GE-Proton10-34 `proton:2093-2099`, o 11-7 em `:2527-2533`), e nem o Heroic
-#: nem o Lutris a escrevem. O lançador da Steam já a entrega (`xalia_fora`, em
-#: `assets/hefesto-launch.sh`, com o mesmo valor: a régua confere); fora dela,
-#: o jogo do Heroic e o do Lutris abriam com o xalia ligado. Ela não passa pela
-#: `ENV_ALLOWLIST`, que é a lista do que o serviço publica por estado dos
-#: controles. Nasce anotada no registro: não entra no :data:`_DO_PRODUTO_SEM_REGISTRO`.
 CORRECOES_DA_CARONA: tuple[tuple[str, str], ...] = (("PROTON_USE_XALIA", "0"),)
 
-#: AS QUE, POSTAS POR ELA, MANDAM: a regra do lançador da Steam («quem já pôs
-#: `PROTON_USE_XALIA` manda»). Um valor que já está no arquivo e não é um dos
-#: nossos é dela: a carona não escreve por cima, não o anota como nosso, e o
-#: desfazer não o toca (:func:`_as_que_ela_pos`, :func:`_tomar`).
 DELA_MANDA: frozenset[str] = frozenset(k for k, _ in CORRECOES_DA_CARONA)
 
-#: Quantos valores nossos o registro lembra por chave. O último é o de agora;
-#: os de antes cobrem a escrita que caiu no meio e o arquivo que o «devolver»
-#: da ESQUECER-OS-CONTROLES-01 trouxe de volta com um valor nosso mais velho.
 _VALORES_LEMBRADOS = 16
 
 
 def _pasta_do_ambiente(pasta: Path | None) -> Path:
-    """A pasta `launch_env` — a pedida, ou a do daemon (import tardio).
-
-    O `utils/xdg_paths` puxa o `platformdirs`, que o `python3` do sistema não
-    tem: o desfazer do uninstall sempre diz a pasta, e nunca chega aqui.
-    """
+    """A pasta `launch_env` — a pedida, ou a do daemon (import tardio)."""
     if pasta is not None:
         return pasta
     from hefesto_dualsense4unix.utils.xdg_paths import launch_env_dir
@@ -242,23 +196,7 @@ def _pasta_do_ambiente(pasta: Path | None) -> Path:
 
 
 def ambiente_da_ponte(pasta: Path | None = None) -> dict[str, str]:
-    """O ambiente que o daemon publicou para ESTA sessão — ou `{}`.
-
-    É o `default.env`: o que o wrapper exportaria para um jogo sem perfil
-    próprio, que é exatamente o caso de todo jogo dos outros lançadores (nenhum
-    tem `steam_app_<id>`). Ler o do daemon em vez de recalcular é o que impede
-    duas contas para a mesma pergunta.
-
-    **NUNCA LEVANTA, e `{}` é resposta:** quem chama trata o vazio como recusa
-    (:data:`SEM_AMBIENTE`). Um `{}` escrito no disco dela apagaria o ambiente
-    que já estivesse lá, que é o contrário da cura.
-
-    O IMPORT DA ALLOWLIST É TARDIO, e é estrutural: `daemon/launch_env.py` puxa
-    o daemon inteiro, e este módulo é lido pelo DESENHO da aba 07 — que o
-    gerador `aba07.py` importa rodando como script solto, fora da instalação.
-    Um import no topo faria o gerador arrastar o daemon para desenhar um botão.
-    A lista continua tendo UM dono; só a hora de perguntar a ele mudou.
-    """
+    """O ambiente que o daemon publicou para ESTA sessão — ou `{}`."""
     from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
 
     alvo = _pasta_do_ambiente(pasta) / "default.env"
@@ -279,11 +217,7 @@ def ambiente_da_ponte(pasta: Path | None = None) -> dict[str, str]:
 
 
 def ambiente_da_carona(pasta: Path | None = None) -> dict[str, str]:
-    """O que a carona leva a cada estrada: a ponte e as :data:`CORRECOES_DA_CARONA`.
-
-    Sem a ponte, `{}`: a carona recusa como antes (:data:`SEM_AMBIENTE`), e a
-    correção não sai sozinha para um lançador que o serviço nunca alcançou.
-    """
+    """O que a carona leva a cada estrada: a ponte e as :data:`CORRECOES_DA_CARONA`."""
     ponte = ambiente_da_ponte(pasta)
     return {**ponte, **dict(CORRECOES_DA_CARONA)} if ponte else {}
 
@@ -295,30 +229,18 @@ class Estrada:
     cartao: str
     tipo: str
     arquivo: Path
-    #: Só nas estradas de override — o `app-id` da caixa que recebe o ambiente.
     app_id: str = ""
 
 
 @dataclass(frozen=True)
 class Plano:
-    """O que a cura FARIA, antes de fazer.
-
-    ELE EXISTE SEPARADO DA ESCRITA de propósito: a tela precisa saber se há
-    botão a oferecer (`tem_estrada`) sem tocar em disco dela, e a régua precisa
-    medir a decisão sem exercitar a escrita.
-    """
+    """O que a cura FARIA, antes de fazer."""
 
     cartao: str
     estradas: tuple[Estrada, ...] = ()
     ambiente: dict[str, str] = field(default_factory=dict)
     impedimento: str = ""
-    #: O NOME QUE A TELA MOSTRA (*"Heroic (Epic · GOG)"*), e não a chave
-    #: interna. **MEDIDO NA TELA VIVA em 09/09/2026:** sem ele a tarja dizia
-    #: *"Ajustei o ambiente de heroic"* — a chave do `data-lancador` na frente
-    #: dela, que é a língua de dentro num recado de tela.
     nome: str = ""
-    #: A pasta `launch_env` de onde o ambiente veio — e onde mora o registro
-    #: do que a escrita põe nos arquivos dela. `None` = a do daemon.
     pasta_do_ambiente: Path | None = None
 
     @property
@@ -327,22 +249,10 @@ class Plano:
         return self.nome or self.cartao
 
 
-#: Onde o Flatpak do usuário guarda o override de cada aplicativo — no lar,
-#: como o `sandbox_dos_lancadores` lê.
 _PASTA_DOS_OVERRIDES = ".local/share/flatpak/overrides"
 
 def _pastas_do_heroic(lar: Path | None) -> tuple[Path, ...]:
-    """As casas do Heroic em que a carona escreve: as que o censo lê.
-
-    **A REGRA MORA NO CENSO (02/10/2026,
-    O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01):** a cópia das duas casas que
-    morava aqui (`~/.var/app/…/config/heroic` e `~/.config/heroic`, fixas) não
-    seguia o XDG, e com o `XDG_CONFIG_HOME` desviado a carona não achava o
-    `config.json` do Heroic nativo; nem a regra do programa instalado, e com
-    a sobra do Flatpak ela escrevia na casa que nenhum Heroic lê. O ``lar``
-    ``None`` é o de verdade, com o XDG do ambiente
-    (`censo_dos_lancadores._Onde`).
-    """
+    """As casas do Heroic em que a carona escreve: as que o censo lê."""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     return censo.pastas_lidas("Heroic", lar)
@@ -357,31 +267,14 @@ def _pasta_do_heroic(lar: Path | None) -> Path | None:
 def estradas_do_cartao(chave: str, atalhos: tuple[str, ...],
                        lar: Path | None = None,
                        raiz_sistema: Path | None = None) -> tuple[Estrada, ...]:
-    """Por onde a cura entra neste cartão. Vazio = não há estrada aqui.
-
-    O HEROIC TEM ESTRADA PRÓPRIA e não ganha override, e a escolha é dele, não
-    minha: o Heroic MONTA o ambiente do jogo a partir do
-    `enviromentOptions` — escrever nos dois lugares poria a mesma variável em
-    duas listas que envelhecem separadas, e a próxima pessoa não saberia qual
-    manda.
-
-    A STEAM NÃO ENTRA AQUI. Ela tem o atalho de inicialização, que é a estrada
-    dela, e um override por cima seria a segunda entrega do mesmo ambiente.
-    """
+    """Por onde a cura entra neste cartão. Vazio = não há estrada aqui."""
     if chave == "steam":
         return ()
     if chave == "heroic":
-        #: COM OS DOIS HEROIC INSTALADOS, A CARONA ENTRA NOS DOIS (02/10/2026):
-        #: cada um lança o jogo pela casa dele.
         return tuple(Estrada(chave, HEROIC_CONFIG, pasta / "config.json")
                      for pasta in _pastas_do_heroic(lar))
     lar = Path.home() if lar is None else lar
     raiz = lar / _PASTA_DOS_OVERRIDES
-    #: QUEM SABE QUAIS CAIXAS ESTE CARTÃO TEM é o `sandbox_dos_lancadores` —
-    #: a mesma função que o cartão «Flatpak» usa para contar. Duas listas de
-    #: `app-id`, uma para contar e outra para escrever, divergiriam no dia em
-    #: que um cartão ganhasse um segundo programa dentro — que é exatamente o
-    #: que o «Dolphin · mGBA» é.
     return tuple(Estrada(chave, FLATPAK_OVERRIDE, raiz / a, a)
                  for a in _caixa.app_ids_instalados(atalhos, lar, raiz_sistema))
 
@@ -389,11 +282,7 @@ def estradas_do_cartao(chave: str, atalhos: tuple[str, ...],
 def planejar(chave: str, atalhos: tuple[str, ...], lar: Path | None = None,
              pasta_do_ambiente: Path | None = None,
              raiz_sistema: Path | None = None, nome: str = "") -> Plano:
-    """O que a cura faria neste cartão — sem escrever um byte.
-
-    :param nome: o rótulo do cartão, para a frase da tela. Sem ele a frase sai
-        com a chave interna, que é a língua de dentro num recado dela.
-    """
+    """O que a cura faria neste cartão — sem escrever um byte."""
     estradas = estradas_do_cartao(chave, atalhos, lar, raiz_sistema)
     if not estradas:
         return Plano(chave, (), {}, "não há por onde entrar neste lançador",
@@ -407,36 +296,12 @@ def planejar(chave: str, atalhos: tuple[str, ...], lar: Path | None = None,
 def tem_estrada(chave: str, atalhos: tuple[str, ...],
                 lar: Path | None = None,
                 raiz_sistema: Path | None = None) -> bool:
-    """Há botão a oferecer neste cartão? — a pergunta da VIGIA.
-
-    Ela NÃO olha o ambiente de propósito. Um botão que some quando o serviço
-    está desligado seria a tela escondendo a cura justamente de quem está
-    tentando entender por que o controle não chega; o botão fica, e a recusa
-    (:data:`SEM_AMBIENTE`) diz o que ligar.
-
-    **ELA ABRE DISCO**, e por isso quem pergunta é `desenho.medir_no_disco`, na
-    thread da vigia — nunca a pintura do tique.
-
-    O `raiz_sistema` VIAJA COM O `lar` desde 09/09/2026: sem ele, uma régua com
-    lar de mentira ainda ia ler `/var/lib/flatpak` no disco de verdade, e a
-    resposta dela dependia da máquina em que rodasse.
-    """
+    """Há botão a oferecer neste cartão? — a pergunta da VIGIA."""
     return bool(estradas_do_cartao(chave, atalhos, lar, raiz_sistema))
 
 
 def _modo_de_nascimento(pasta: Path) -> int:
-    """O modo de um arquivo que NASCE nesta pasta — herdado dela.
-
-    **NÃO SE LÊ O `umask` AQUI, e a razão é de thread:** `os.umask` é a única
-    forma de consultá-lo pela biblioteca padrão, e consultar é ESCREVER (põe
-    zero e devolve o valor). Esta escrita roda na thread de um gesto, com a
-    janela viva ao lado; um arquivo que outra thread abrisse naquela janelinha
-    nasceria com a permissão errada.
-
-    A PASTA CARREGA A MESMA INTENÇÃO: `~/.local/share/flatpak/overrides` a
-    0755 devolve 0644, e uma pasta fechada a 0700 devolve 0600. É o que o
-    `flatpak override` produz nas duas máquinas, sem perguntar nada ao processo.
-    """
+    """O modo de um arquivo que NASCE nesta pasta — herdado dela."""
     try:
         return stat.S_IMODE(pasta.stat().st_mode) & 0o666
     except OSError:  # pragma: no cover - a pasta acabou de ser criada
@@ -444,30 +309,8 @@ def _modo_de_nascimento(pasta: Path) -> int:
 
 
 def _escrever_atomico(alvo: Path, texto: str) -> None:
-    """Grava por arquivo temporário no MESMO diretório, e então renomeia.
-
-    Configuração dela: um `write_text` interrompido no meio deixaria o
-    `config.json` do Heroic truncado, e o Heroic abriria sem a biblioteca. O
-    temporário vizinho garante que ou o arquivo velho está inteiro, ou o novo
-    está.
-
-    **E ELE DEVOLVE O MODO E O DONO DO ARQUIVO DELA — 09/09/2026, e sem isto a
-    troca era silenciosa.** `NamedTemporaryFile` nasce **0600** (é o contrato
-    dele, contra arquivo temporário bisbilhotado), e `replace()` leva o modo do
-    TEMPORÁRIO junto: o `config.json` do Heroic dela, medido a **0644** antes
-    da cura, ficava **0600** depois. Este módulo promete *"nunca apaga o que já
-    estava lá"*, e a permissão de um arquivo é parte do que estava lá — um
-    override a 0600 deixa de ser legível por um serviço que rode com outro
-    usuário, e ninguém liga isso ao clique de ontem.
-
-    O DONO VAI JUNTO **quando dá**: um `chown` para o mesmo usuário é sempre
-    permitido, e para outro usuário só com privilégio que este produto não tem
-    (e não quer). O `OSError` é o caso normal, não a exceção — por isso ele
-    passa em silêncio: o arquivo continua inteiro, com o modo certo.
-    """
+    """Grava por arquivo temporário no MESMO diretório, e então renomeia."""
     alvo.parent.mkdir(parents=True, exist_ok=True)
-    #: O ANTES SE MEDE ANTES DE ESCREVER, e não depois: `replace()` já terá
-    #: destruído o modo original quando alguém pensar em perguntar por ele.
     try:
         antes: os.stat_result | None = alvo.stat()
     except OSError:
@@ -495,14 +338,7 @@ def _escrever_atomico(alvo: Path, texto: str) -> None:
 
 
 def _ler_heroic(alvo: Path) -> dict[str, object] | None:
-    """O `config.json` do Heroic, `{}` se ele não existe, `None` se ILEGÍVEL.
-
-    **OS TRÊS CASOS SÃO DIFERENTES, e confundir dois deles APAGA a configuração
-    dela.** Um arquivo que existe e não abre pode estar truncado por um Heroic
-    que morreu no meio de um `write` — e reescrevê-lo com `{}` mais o nosso
-    ambiente jogaria fora a biblioteca, o caminho do Wine e tudo o mais. Quem
-    não sabe ler não pode escrever: ver :func:`escrever_a_estrada`.
-    """
+    """O `config.json` do Heroic, `{}` se ele não existe, `None` se ILEGÍVEL."""
     if not alvo.exists():
         return {}
     try:
@@ -512,18 +348,11 @@ def _ler_heroic(alvo: Path) -> dict[str, object] | None:
     return dado if isinstance(dado, dict) else None
 
 
-# ── O REGISTRO DAS ESTRADAS: o que é nosso, anotado por quem escreve ───────
-
-
 @dataclass
 class Marca:
     """Uma chave nossa num arquivo dela."""
 
-    #: Os valores que o Hefesto já pôs nela, o de agora por último.
     valores: list[str]
-    #: O que estava lá antes da primeira escrita (``None`` = nada). Só as
-    #: :data:`PODEM_SER_DELA` guardam um valor aqui: as demais são do produto
-    #: (ver o cabeçalho, «o nome do produto»).
     antes: str | None = None
 
 
@@ -532,25 +361,16 @@ class Entrada:
     """O que o Hefesto pôs num arquivo de lançador."""
 
     tipo: str
-    #: O arquivo não existia antes da primeira escrita.
     nasceu: bool = False
-    #: As peças de estrutura que o arquivo não tinha e a escrita criou: a seção
-    #: ``Environment`` do override, ou ``defaultSettings``/``enviromentOptions``
-    #: do Heroic. Vazias depois do desfazer, elas saem.
     moldura: list[str] = field(default_factory=list)
     chaves: dict[str, Marca] = field(default_factory=dict)
 
 
-#: Um par ``(chave, valor)`` na ordem em que está no arquivo dela.
 Pares = list[tuple[str, str]]
 
 
 def caminho_do_registro(pasta_do_ambiente: Path | None = None) -> Path:
-    """O registro mora AO LADO do `default.env`, dentro do `launch_env/`.
-
-    É a mesma pasta de onde a escrita tira o ambiente, a que o daemon
-    materializa a cada transição e que o uninstall apaga — depois de desfazer.
-    """
+    """O registro mora AO LADO do `default.env`, dentro do `launch_env/`."""
     return _pasta_do_ambiente(pasta_do_ambiente) / "estradas.json"
 
 
@@ -609,11 +429,7 @@ def gravar_registro(registro: dict[str, Entrada],
 
 
 def _entrada_para(alvo: Path, tipo: str, entrada: Entrada | None) -> Entrada:
-    """A entrada que a escrita atualiza — nova quando o arquivo não existe.
-
-    Um arquivo que sumiu (ela o apagou) e volta a nascer começa do zero: o
-    «antes» da entrada velha falava de um arquivo que não existe mais.
-    """
+    """A entrada que a escrita atualiza — nova quando o arquivo não existe."""
     if not alvo.exists():
         return Entrada(tipo, nasceu=True)
     if entrada is None or entrada.tipo != tipo:
@@ -628,12 +444,7 @@ def _anotar_moldura(entrada: Entrada, *pecas: str) -> None:
 
 
 def _por_por_cima(pares: Pares, ambiente: dict[str, str]) -> Pares:
-    """As nossas no lugar em que já estavam; as que faltam, no fim, em ordem.
-
-    O QUE JÁ ESTAVA LÁ FICA, na ordem em que estava — um `MANGOHUD=1` dela não
-    some porque o Hefesto passou por ali. Uma chave nossa repetida na lista
-    dela vira uma só.
-    """
+    """As nossas no lugar em que já estavam; as que faltam, no fim, em ordem."""
     fora: Pares = []
     vistas: set[str] = set()
     for chave, valor in pares:
@@ -655,28 +466,15 @@ class _Contas:
 
 def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
                      contas: _Contas) -> Pares:
-    """Tira as chaves nossas pedidas — só onde o valor ainda é NOSSO.
-
-    Um valor que ela mudou depois do Hefesto é dela e fica. O valor que estava
-    lá antes da primeira escrita volta; o que não existia volta a não existir.
-    A chave sai do registro nos dois casos: dali em diante ela é dela.
-
-    **O VALOR DE ANTES VOLTA NO LUGAR EM QUE ESTAVA** (conferência de 25/09): a
-    escrita pôs o nosso por cima do dela, na mesma posição
-    (:func:`_por_por_cima`), e o desfazer o devolve ali — não no fim da lista.
-    """
+    """Tira as chaves nossas pedidas — só onde o valor ainda é NOSSO."""
     for chave in list(chaves):
         marca = entrada.chaves.pop(chave)
         nossos = set(marca.valores)
         if not any(a == chave and b in nossos for a, b in pares):
-            #: O valor de antes de uma :data:`DELA_MANDA` nunca foi trocado pelo
-            #: Hefesto: é dela desde antes, e não «mudou depois».
             if any(a == chave and not (chave in DELA_MANDA and b == marca.antes)
                    for a, b in pares):
                 contas.ficaram.append(chave)
             continue
-        #: Um valor que não é nosso na mesma chave é dela, e o de antes não volta
-        #: por cima dele.
         devolver = marca.antes is not None and not any(
             a == chave and b not in nossos for a, b in pares)
         novos: Pares = []
@@ -695,11 +493,7 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
 
 def _as_que_ela_pos(pares: Pares, ambiente: dict[str, str],
                     entrada: Entrada) -> frozenset[str]:
-    """As :data:`DELA_MANDA` do ambiente que ela já pôs neste arquivo.
-
-    É dela o valor que está no arquivo e não é um dos nossos no registro: o que
-    ela pôs antes do Hefesto (sem marca) e o que ela trocou depois.
-    """
+    """As :data:`DELA_MANDA` do ambiente que ela já pôs neste arquivo."""
     dela: set[str] = set()
     for chave in DELA_MANDA & ambiente.keys():
         marca = entrada.chaves.get(chave)
@@ -710,22 +504,7 @@ def _as_que_ela_pos(pares: Pares, ambiente: dict[str, str],
 
 
 def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
-    """A ESCRITA sobre os pares do arquivo, anotando no registro o que é nosso.
-
-    Uma chave nossa que saiu do ambiente sai do arquivo (o Modo Nativo não tem
-    `IGNORE`: um `IGNORE` congelado no Heroic deixava o jogo sem o controle
-    que o Modo Nativo existe para mostrar). As de agora entram por cima, menos
-    as :data:`DELA_MANDA` que ela já pôs (:func:`_as_que_ela_pos`).
-
-    **A DELA FICA, E A MARCA TAMBÉM.** O registro da lista global do Heroic é o
-    das cópias por jogo: com o valor dela na global, a carona ainda põe o nosso
-    na cópia que não tem a chave, e o desfazer e a exclusão só o reconhecem pela
-    marca da global. Sem a marca, o nosso ficava na cópia depois do uninstall e
-    entrava no jogo excluído. O «antes» de uma :data:`DELA_MANDA` é o valor que
-    estava no arquivo e só vale enquanto a chave estiver lá: quando o nosso
-    entra numa chave vazia, ele volta a ``None``, e o desfazer não devolve um
-    valor que ela já tirou.
-    """
+    """A ESCRITA sobre os pares do arquivo, anotando no registro o que é nosso."""
     dela = _as_que_ela_pos(pares, ambiente, entrada)
     atual = dict(pares)
     pares = _devolver_chaves(
@@ -733,9 +512,6 @@ def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
     for chave, valor in ambiente.items():
         marca = entrada.chaves.get(chave)
         if marca is None:
-            #: A PRIMEIRA VEZ. Só as que podem ser dela guardam o «antes»: as
-            #: demais são do produto, e um valor que já estava lá é presumido de
-            #: uma versão que escrevia sem registro (ver o cabeçalho).
             antes = atual.get(chave) if chave in PODEM_SER_DELA | DELA_MANDA else None
             entrada.chaves[chave] = Marca([valor], antes)
         elif marca.valores[-1] != valor:
@@ -770,11 +546,7 @@ def _pares_do_heroic(raiz: dict[str, object]) -> Pares:
 
 def _heroic_fundido(alvo: Path, ambiente: dict[str, str],
                     entrada: Entrada | None = None) -> tuple[str, Entrada]:
-    """O `config.json` do Heroic com o ambiente fundido, e o registro dele.
-
-    Não escreve: é a conta. A lista é de `{key, value}`; o resto do arquivo
-    (a biblioteca, o caminho do Wine, a língua) passa intacto.
-    """
+    """O `config.json` do Heroic com o ambiente fundido, e o registro dele."""
     nova = _entrada_para(alvo, HEROIC_CONFIG, entrada)
     raiz = _ler_heroic(alvo) or {}
     padroes = raiz.get("defaultSettings")
@@ -791,24 +563,14 @@ def _heroic_fundido(alvo: Path, ambiente: dict[str, str],
 
 def _escrever_no_heroic(alvo: Path, ambiente: dict[str, str],
                         entrada: Entrada | None = None) -> Entrada:
-    """Funde o ambiente em `defaultSettings.enviromentOptions` e grava.
-
-    O QUE JÁ ESTAVA LÁ FICA: as nossas substituem as de mesmo `key` e as
-    demais seguem na ordem em que estavam. Devolve o registro do arquivo.
-    """
+    """Funde o ambiente em `defaultSettings.enviromentOptions` e grava."""
     texto, nova = _heroic_fundido(alvo, ambiente, entrada)
     _escrever_atomico(alvo, texto)
     return nova
 
 
 def _render_ini(cfg: configparser.ConfigParser) -> str:
-    """O arquivo de override como o Flatpak o escreve — `chave=valor`, sem espaço.
-
-    NÃO SE USA `ConfigParser.write`, e a razão é de FORMATO: ele emite
-    `chave = valor`, com espaços, e o arquivo é lido pelo `GKeyFile` do Flatpak.
-    Escrever num formato que o dono do arquivo não emite é convidar o dia em que
-    ele deixa de ler — num arquivo de configuração dela, e sem aviso.
-    """
+    """O arquivo de override como o Flatpak o escreve — `chave=valor`, sem espaço."""
     partes: list[str] = []
     for secao in cfg.sections():
         partes.append(f"[{secao}]")
@@ -818,13 +580,7 @@ def _render_ini(cfg: configparser.ConfigParser) -> str:
 
 
 def _ler_override(alvo: Path) -> configparser.ConfigParser | None:
-    """O override deste aplicativo, vazio se não existe, `None` se ILEGÍVEL.
-
-    A MESMA DISCIPLINA DE :func:`_ler_heroic`, e pela mesma razão: um override
-    que existe e não abre pode ter a `[Context]` inteira dela lá dentro, e
-    reescrevê-lo só com o nosso `[Environment]` tiraria do aplicativo o acesso
-    que ela deu à mão.
-    """
+    """O override deste aplicativo, vazio se não existe, `None` se ILEGÍVEL."""
     cfg = configparser.ConfigParser(strict=False, interpolation=None)
     cfg.optionxform = str  # type: ignore[method-assign,assignment]
     if not alvo.exists():
@@ -861,35 +617,14 @@ def _override_fundido(alvo: Path, ambiente: dict[str, str],
 
 def _escrever_no_override(alvo: Path, ambiente: dict[str, str],
                           entrada: Entrada | None = None) -> Entrada:
-    """Põe o ambiente em `[Environment]`, preservando todo o resto do arquivo.
-
-    É O MESMO ARQUIVO de `flatpak override --user --env=NOME=VALOR`, e por isso
-    ele continua reversível pelo caminho dela: `flatpak override --user --reset`
-    apaga o arquivo inteiro, e `--unset-env=NOME` tira uma linha. Devolve o
-    registro do arquivo.
-    """
+    """Põe o ambiente em `[Environment]`, preservando todo o resto do arquivo."""
     texto, nova = _override_fundido(alvo, ambiente, entrada)
     _escrever_atomico(alvo, texto)
     return nova
 
 
 def frase_do_feito(plano: Plano) -> str:
-    """O recibo que a tela mostra — e ele diz o que mudou, onde e o que fazer.
-
-    **A PALAVRA É A DO GLOSSÁRIO DESTA CASA.** «ambiente» sozinho não diz nada
-    a quem clica; o que o `docs/A-LINGUA-DESTA-CASA` já usa para este fato é
-    *"faz o jogo enxergar o controle pelo Hefesto"*, na linha do atalho de
-    inicialização. É o mesmo fato por outra estrada, e por isso a mesma frase.
-
-    **SEM ARTIGO ANTES DO NOME**, pela razão que a
-    `desenho_dos_lancadores.NOVO_PARA_O_CARTAO` já mediu em 08/09/2026: o nome
-    vem do cartão — inclusive de um que ELA acrescentou —, e adivinhar o gênero
-    de um nome que ainda não existe é palpite na tela dela.
-
-    UMA MONTADORA SÓ, e ela é pública porque a régua a lê. Montar a frase
-    dentro da escrita obrigaria a régua a escrever num arquivo para saber o que
-    a tela diria.
-    """
+    """O recibo que a tela mostra — e ele diz o que mudou, onde e o que fazer."""
     n = len(plano.ambiente)
     k = len(plano.estradas)
     quantos = f"os {k} programas " if k > 1 else ""
@@ -900,26 +635,13 @@ def frase_do_feito(plano: Plano) -> str:
 
 
 def escrever_a_estrada(plano: Plano) -> str:
-    """Escreve o ambiente nas estradas do plano e diz o que escreveu.
-
-    **RECUSA LEVANTANDO**, que é o contrato desta casa para "o produto não
-    fez": um retorno mudo viraria piscada verde sobre um arquivo que ninguém
-    tocou. A frase da recusa é a que a tela mostra.
-
-    A FRASE DE SUCESSO DIZ O QUE FOI ESCRITO E ONDE — não *"pronto"*. Ela é a
-    única prova que ela tem, sem abrir um terminal, de que o clique alcançou
-    alguma coisa; e é o que a régua lê para saber que a escrita aconteceu.
-    """
+    """Escreve o ambiente nas estradas do plano e diz o que escreveu."""
     if plano.impedimento:
         raise RuntimeError(plano.impedimento)
     if not plano.estradas:
         raise RuntimeError("não há por onde entrar neste lançador")
     if not plano.ambiente:
         raise RuntimeError(SEM_AMBIENTE)
-    #: **NINGUÉM ESCREVE ANTES DE TODOS SEREM LEGÍVEIS.** Um cartão pode ter
-    #: DUAS estradas, e recusar no meio do laço deixaria uma escrita e a outra
-    #: não, com a tela mostrando só a recusa — o pior dos dois mundos. A
-    #: conferência inteira vem primeiro; depois é só escrever.
     for estrada in plano.estradas:
         legivel = (_ler_heroic(estrada.arquivo) if estrada.tipo == HEROIC_CONFIG
                    else _ler_override(estrada.arquivo))
@@ -934,11 +656,6 @@ def escrever_a_estrada(plano: Plano) -> str:
                                 registro.get(str(estrada.arquivo)))
         registro[str(estrada.arquivo)] = entrada
         textos.append((estrada.arquivo, texto))
-    #: O REGISTRO VAI ANTES DOS ARQUIVOS, e a ordem é a do lado seguro: uma
-    #: escrita que cair no meio deixa o registro dizendo «nosso» sobre um valor
-    #: que ainda não chegou — e o desfazer, que só tira valor nosso, não tira
-    #: nada que não esteja lá. Na ordem inversa, o valor chegaria sem ninguém
-    #: saber de quem é.
     if registro != lido:
         gravar_registro(registro, plano.pasta_do_ambiente)
     for alvo, texto in textos:
@@ -946,16 +663,6 @@ def escrever_a_estrada(plano: Plano) -> str:
     return frase_do_feito(plano)
 
 
-#: OS CARTÕES QUE TÊM ESTRADA, e os `app-id`/`stem` que os denunciam.
-#:
-#: **A TABELA NÃO É NOVA — ela é LIDA do censo** (`censo_dos_lancadores._ONDE`),
-#: que já a tem por outra razão (achar a pasta de configuração). Uma segunda
-#: cópia aqui divergiria no dia em que um lançador trocasse de `app-id`, e o
-#: sintoma seria o pior desta casa: a cura escreveria no arquivo de ontem e a
-#: tela diria «pronto».
-#:
-#: A STEAM NÃO ENTRA, e a razão está em `estradas_do_cartao`: ela tem o atalho
-#: de inicialização, que é a estrada dela.
 def cartoes_com_estrada() -> tuple[tuple[str, tuple[str, ...]], ...]:
     """`[(chave, atalhos)]` dos lançadores que podem receber a cura."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import _ONDE
@@ -972,55 +679,7 @@ def curar_todas_as_estradas(
     exclusao: NaExclusao | None = None,
     espera: float | None = None,
 ) -> tuple[str, ...]:
-    """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu.
-
-    **POR QUE ESTA FUNÇÃO EXISTE — 21/09/2026, LANCADOR-AGNOSTICO-01.** Ordem
-    dela: *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR
-    SER STEAM. QUALQUER OUTRO LANÇADOR O FUNCIONAMENTO SEGUE IGUAL."*
-
-    Este módulo inteiro estava **ÓRFÃO desde 10/09/2026**. Ele nasceu com um
-    chamador só — o botão «Consertar» do cartão do lançador —, e a
-    LANCADOR-LOCALIZAR-01 tirou o botão. A cura ficou escrita, testada e sem
-    ninguém para acioná-la; a dívida ficou declarada no `casa-sabe`, que é
-    honesto e não é entrega.
-
-    **O QUE ISSO CUSTAVA, e é a diferença estrutural entre a Steam e o resto:**
-    a Steam recebe o ambiente VIVO — o daemon rematerializa o `default.env` a
-    cada transição e o `hefesto-launch.sh` o lê no lançamento. Os outros
-    lançadores recebiam uma FOTOCÓPIA tirada no dia em que alguém clicou um
-    botão que não existe mais. Um ambiente de 10/09 num produto que mudou todo
-    dia desde então.
-
-    **A CURA É CARONA, E NÃO BOTÃO**, e é o que a torna simétrica: quem chama é
-    o mesmo ponto que já regrava o `default.env` da Steam
-    (`daemon/launch_env.materialize_launch_env`). As duas estradas passam a ser
-    reescritas pelo mesmo gatilho, com a mesma conta — que é literalmente o
-    *"o funcionamento segue igual"* que ela pediu.
-
-    **IDEMPOTENTE E FUNDE, e isso já era verdade antes desta função:**
-    `_escrever_no_heroic` lê, funde e regrava preservando o que é dela; o
-    override do Flatpak idem. Rodar a cada transição não acumula nada.
-
-    **NUNCA LEVANTA.** Quem chama é a borda de materialização do daemon, que já
-    é best-effort declarada: *"a materialização quebrada não pode derrubar o
-    start da emulação"*. Um lançador ilegível ou uma estrada sem ambiente
-    devolve nada e segue — e quem quiser a RAZÃO tem o `planejar`, que a diz.
-
-    Devolve as chaves dos cartões em que escreveu, para o journal.
-
-    **A LISTA DE EXCLUSÃO MANDA AQUI TAMBÉM** (01/10/2026): a caixa de um
-    emulador excluído não recebe o ambiente, a cópia de um jogo do Heroic
-    excluído volta a ficar sem o que é nosso, e (02/10/2026) o `.yml` de um
-    jogo excluído do Lutris Flatpak volta a cobrir a caixa — ver
-    :class:`NaExclusao`.
-    O parâmetro da exclusão existe para a régua; ``None`` lê a lista do dono.
-
-    **UM ESCRITOR POR VEZ (02/10/2026):** a carona inteira roda sob a
-    :func:`trava_da_lista` (a lista, o registro das estradas e os arquivos dos
-    lançadores), e a lista se lê já com ela na mão. ``espera``: ``None`` é a do
-    serviço (:data:`ESPERA_DO_SERVICO_S`); sem a trava no prazo, a carona pula
-    esta vez e o diário diz `carona_esperou_a_janela`.
-    """
+    """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu."""
     prazo = ESPERA_DO_SERVICO_S if espera is None else espera
     with trava_da_lista(espera=prazo) as na_mao:
         if not na_mao:
@@ -1049,9 +708,6 @@ def _curar_na_trava(
                              if e.app_id.casefold() not in fora.caixas)
             if not estradas:
                 continue
-            #: O registro de ANTES da escrita vai às cópias: a escrita tira dele
-            #: a chave que saiu do ambiente (o `IGNORE` no Modo Nativo), e a
-            #: cópia ainda a tem — sem o de antes, ela ficaria lá.
             registro_antes = ler_registro(pasta_do_ambiente)
             escrever_a_estrada(replace(plano, estradas=estradas))
             for estrada in estradas:
@@ -1066,29 +722,10 @@ def _curar_na_trava(
     for copia in fora.copias:
         with contextlib.suppress(Exception):
             _sem_o_nosso_no_jogo(Path(copia.arquivo), copia.app, pasta_do_ambiente)
-    #: O `.yml` do jogo excluído do Lutris Flatpak cobre a caixa que acabou de
-    #: ser escrita (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01, 02/10/2026).
     _manter_os_ymls(fora.ymls, lar, pasta_do_ambiente)
     return tuple(escritos)
 
 
-# ── AS CÓPIAS DOS JOGOS DO HEROIC recebem o ambiente de agora ─────────────
-#
-# AS-SOLUCOES-NOS-LANCADORES-01 (01/10/2026). A escrita acima vai à lista
-# GLOBAL do Heroic, e o jogo com cópia própria não a lê mais (o Heroic monta
-# `{...globais, ...do jogo}`). Todo jogo INSTALADO tem cópia: o Heroic a grava
-# ao instalar, com o `winePrefix`. Medido no disco dela em 01/10, só leitura: a
-# global tinha as 8 variáveis da ponte, e a cópia do Guardiões (de 22/09) não
-# tinha três: `PROTON_ENABLE_MHWILDS_USB_AUDIO`,
-# `PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE` e `SDL_ACCELEROMETER_AS_JOYSTICK`.
-# A háptica pelo áudio e o acelerômetro não chegavam ao único jogo instalado
-# do Heroic. Era a «dívida aberta» do cabeçalho deste módulo.
-#
-# A CONTA É A MESMA DA GLOBAL, com o registro da casa: os valores que vão à
-# cópia são os mesmos que acabaram de ir à global, então o desfazer do
-# uninstall (que lê a cópia pelo registro da casa) os reconhece. As que
-# PODEM SER DELA não entram na cópia: numa cópia elas são a escolha dela para
-# aquele jogo (:func:`_entrada_da_copia`). O jogo excluído não recebe nada.
 def _ambiente_da_copia(ambiente: dict[str, str]) -> dict[str, str]:
     return {k: v for k, v in ambiente.items() if k not in PODEM_SER_DELA}
 
@@ -1107,12 +744,7 @@ def _por_o_nosso_nas_copias(
     casa: Path, ambiente: dict[str, str], pasta_do_ambiente: Path | None,
     excluidas: frozenset[str], antes: Entrada | None = None,
 ) -> int:
-    """O ambiente de agora em cada cópia com lista própria desta casa.
-
-    ``antes``: o registro da casa de antes da escrita da global, somado ao de
-    agora. Devolve quantas cópias mudaram. Cópia ilegível não se reescreve;
-    cópia sem lista própria segue a global e fica como está. Nunca levanta.
-    """
+    """O ambiente de agora em cada cópia com lista própria desta casa."""
     entrada = _unir(antes, ler_registro(pasta_do_ambiente).get(str(casa / "config.json")))
     nosso = _ambiente_da_copia(ambiente)
     mudaram = 0
@@ -1146,10 +778,7 @@ def _por_o_nosso_nas_copias(
 
 
 def frase_das_estradas(escritos: Iterable[str]) -> str:
-    """O recibo da carona, para o diário: os lançadores que receberam o ambiente.
-
-    O nome é o do censo (`_ONDE`), e não a chave interna. Vazio = nenhum.
-    """
+    """O recibo da carona, para o diário: os lançadores que receberam o ambiente."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import _ONDE
 
     nomes = {k.casefold(): k for k in _ONDE}
@@ -1164,31 +793,17 @@ def onde_falta_o_ambiente(
     pasta_do_ambiente: Path | None = None, raiz_sistema: Path | None = None,
     exclusao: NaExclusao | None = None,
 ) -> tuple[str, ...]:
-    """Onde o ambiente de agora NÃO está neste cartão — para a aba Lançadores.
-
-    No Heroic, os nomes dos jogos INSTALADOS cuja lista efetiva (a própria, ou
-    a global para quem não tem) não traz o ambiente; nas caixas do Flatpak, os
-    `app-id` das caixas sem ele. Vazio quando está tudo no lugar, quando não há
-    estrada, ou quando o serviço não publicou o ambiente (não há com o que
-    comparar). O excluído não conta: ele está sem o ambiente de propósito.
-
-    SÓ LÊ, e abre disco: quem chama é a vigia da aba, nunca a pintura.
-    """
+    """Onde o ambiente de agora NÃO está neste cartão — para a aba Lançadores."""
     plano = planejar(chave, atalhos, lar, pasta_do_ambiente, raiz_sistema)
     if plano.impedimento or not plano.estradas or not plano.ambiente:
         return ()
     fora = _a_exclusao() if exclusao is None else exclusao
 
     def falta_em(pares: Pares, ambiente: dict[str, str]) -> bool:
-        #: Uma :data:`DELA_MANDA` presente não falta, com qualquer valor: o
-        #: dela manda, e a carona não o trocaria.
         tem = dict(pares)
         return any(tem.get(k) != v and not (k in DELA_MANDA and k in tem)
                    for k, v in ambiente.items())
 
-    #: SÓ O QUE A CARONA ESCREVE: a caixa de um lançador que ela declarou à mão
-    #: não está na tabela da carona (:func:`cartoes_com_estrada`), e dizer que
-    #: falta ali seria cobrar o que nada põe.
     da_carona = {a.casefold() for _, ats in cartoes_com_estrada() for a in ats}
     faltam: list[str] = []
     for estrada in plano.estradas:
@@ -1207,8 +822,6 @@ def onde_falta_o_ambiente(
         excluidas = {c.arquivo for c in fora.copias}
         from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-        #: OS JOGOS DESTA CASA, e não os do Heroic inteiro: com os dois
-        #: instalados, o jogo da outra casa tem a cópia na outra `GamesConfig`.
         biblioteca = censo._heroic(estrada.arquivo.parent)
         pasta = estrada.arquivo.parent / _PASTA_DOS_JOGOS_DO_HEROIC
         for jogo in biblioteca.jogos:
@@ -1231,9 +844,6 @@ def onde_falta_o_ambiente(
     return tuple(faltam)
 
 
-# ── O DESFAZER: o uninstall tira exatamente o que é nosso ─────────────────
-
-
 @dataclass
 class Desfeito:
     """O que o desfazer fez num arquivo de lançador."""
@@ -1242,23 +852,13 @@ class Desfeito:
     tiradas: list[str] = field(default_factory=list)
     devolvidas: list[str] = field(default_factory=list)
     ficaram: list[str] = field(default_factory=list)
-    #: O arquivo nasceu com o Hefesto, e sem o que é nosso ficou vazio: saiu.
     apagado: bool = False
-    #: Não abriu, ou não gravou: não se reescreve por cima (ver
-    #: :func:`_ler_heroic`), e o registro fica para a próxima vez.
     erro: str = ""
-    #: O jogo excluído voltou a ser como era antes da exclusão (02/10/2026).
     voltou: bool = False
 
 
 def _casas_do_heroic_na_rede(lar: Path) -> list[Path]:
-    """Toda casa do Heroic que existe, instalado ou não — a rede do desfazer.
-
-    As do lar e, quando o ambiente desvia o `XDG_CONFIG_HOME`, a nativa de lá:
-    a mesma conta das listas de exclusão (:func:`_listas_de_exclusao_padrao`),
-    porque o `uninstall.sh` passa o `--lar` e o XDG dela vem do ambiente. A
-    regra das casas é do censo (`censo_dos_lancadores.pastas_que_existem`).
-    """
+    """Toda casa do Heroic que existe, instalado ou não — a rede do desfazer."""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     casas = list(censo.pastas_que_existem("Heroic", lar))
@@ -1271,13 +871,7 @@ def _casas_do_heroic_na_rede(lar: Path) -> list[Path]:
 
 
 def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
-    """Todo arquivo de lançador em que a cura pode ter escrito, e que existe.
-
-    É a rede de quem escreveu SEM registro: o `config.json` em toda casa do
-    Heroic (:func:`_casas_do_heroic_na_rede`), e o override de cada `app-id`
-    dos cartões com estrada — instalado ou não, porque desinstalar o lançador
-    pelo Flatpak não leva o override.
-    """
+    """Todo arquivo de lançador em que a cura pode ter escrito, e que existe."""
     achados: list[tuple[Path, str]] = []
     for casa in _casas_do_heroic_na_rede(lar):
         alvo = casa / "config.json"
@@ -1285,7 +879,7 @@ def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
             achados.append((alvo, HEROIC_CONFIG))
     raiz = lar / _PASTA_DOS_OVERRIDES
     for chave, atalhos in cartoes_com_estrada():
-        if chave == "heroic":  # a estrada dele é o `config.json` (estradas_do_cartao)
+        if chave == "heroic":
             continue
         for app_id in atalhos:
             alvo = raiz / app_id
@@ -1294,8 +888,6 @@ def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
     return achados
 
 
-#: A PASTA DAS CÓPIAS POR JOGO do Heroic, dentro da casa dele
-#: (`gamesConfigPath` no fonte do Heroic: `<casa>/GamesConfig/<jogo>.json`).
 _PASTA_DOS_JOGOS_DO_HEROIC = "GamesConfig"
 
 
@@ -1326,19 +918,7 @@ def copias_por_jogo_do_heroic(lar: Path) -> list[tuple[Path, Path]]:
 
 
 def _entrada_da_copia(entrada: Entrada) -> Entrada:
-    """O registro do `config.json` da casa, como vale para a cópia de um jogo.
-
-    **SEM AS QUE PODEM SER DELA**, e é o lado reversível: numa cópia por jogo
-    um `__GL_SHADER_*` pode ser a escolha dela PARA AQUELE JOGO, e devolver ali
-    o «antes» da lista global trocaria o que ela pôs. As do produto saem pelo
-    valor nosso, como na lista global.
-    """
-    #: O «antes» de uma :data:`DELA_MANDA` é o da lista global, e numa cópia o
-    #: desfazer o poria num jogo que nunca o teve: na cópia ela vale sem ele.
-    #: **E O VALOR DELE, NA CÓPIA, É DELA** (02/10/2026): o Heroic copia a
-    #: global para dentro do jogo, e a carona nunca troca a dela. Com o `0` dela
-    #: na global antes do Hefesto, o `0` de uma cópia é o dela copiado; lido como
-    #: nosso, o uninstall e a exclusão o tiravam, e o jogo voltava ao xalia.
+    """O registro do `config.json` da casa, como vale para a cópia de um jogo."""
     chaves: dict[str, Marca] = {}
     for k, m in entrada.chaves.items():
         if k in PODEM_SER_DELA:
@@ -1353,12 +933,7 @@ def _entrada_da_copia(entrada: Entrada) -> Entrada:
 
 
 def _desfazer_na_copia_do_jogo(alvo: Path, entrada: Entrada, feito: Desfeito) -> str | None:
-    """A cópia de um jogo sem o que é nosso; ``None`` = igual (ou não é para mexer).
-
-    O Heroic nunca apaga a cópia, e o desfazer também não: só a lista
-    `enviromentOptions` de cada jogo muda, e o resto do arquivo passa intacto.
-    O texto sai no formato do dono (`JSON.stringify(config, null, 2)`).
-    """
+    """A cópia de um jogo sem o que é nosso; ``None`` = igual (ou não é para mexer)."""
     try:
         texto = alvo.read_text(encoding="utf-8")
     except OSError:
@@ -1369,8 +944,6 @@ def _desfazer_na_copia_do_jogo(alvo: Path, entrada: Entrada, feito: Desfeito) ->
     except ValueError:
         raiz = None
     if not isinstance(raiz, dict):
-        #: «Não sei» não é zero: um arquivo torto que CITA uma variável nossa
-        #: pode estar com ela, e o desfazer diz; um que não cita não é conosco.
         suspeitas = (_DO_PRODUTO_SEM_REGISTRO | set(entrada.chaves)) - PODEM_SER_DELA
         if any(nome in texto for nome in suspeitas):
             feito.erro = "não consegui ler — não reescrevo por cima"
@@ -1462,55 +1035,21 @@ def _desfazer_no_arquivo(alvo: Path, entrada: Entrada, *, copia_do_jogo: bool = 
     return feito
 
 
-#: O ARQUIVO DA LISTA DE EXCLUSÃO, dentro da configuração — o mesmo
-#: `lista_de_exclusao.RELPATH`, repetido aqui porque o desfazer roda com o
-#: `python3` do sistema e a lista puxa o pacote. Uma régua segura os dois iguais
-#: (`test_o_uninstall_devolve_o_jogo_excluido.py`).
 RELPATH_DA_LISTA = "hefesto-dualsense4unix/lista_de_exclusao.json"
 
 
 def caminho_da_lista(config_home: Path | None = None) -> Path:
-    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/lista_de_exclusao.json``.
-
-    A conta é uma só (`lista_de_exclusao.caminho` pergunta aqui): a trava mora
-    ao lado do arquivo, e a janela e o serviço têm de achar a mesma.
-    """
+    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/lista_de_exclusao.json``."""
     if config_home is None:
         xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
         config_home = Path(xdg) if xdg else Path.home() / ".config"
     return config_home / RELPATH_DA_LISTA
 
 
-# ── A TRAVA DA LISTA: um escritor por vez ─────────────────────────────────
-#
-# A-LISTA-DE-EXCLUSAO-TEM-UM-ESCRITOR-POR-VEZ-01 (02/10/2026). A lista de
-# exclusão, o registro das estradas e os arquivos dos lançadores têm dois
-# processos que leem, juntam e regravam: a janela («Excluir», «Tirar da
-# lista», «Aplicar soluções nos lançadores») e o serviço (a carona de cada
-# transição). Cada escrita é atômica, e nenhuma é trava: medido num lar de
-# mentira com 300 «Excluir» seguidos e a anotação da carona em laço noutro
-# processo, 147, 222 e 149 das 300 exclusões sumiram do arquivo. A exclusão que
-# some deixa no disco o que ela fez, sem registro para o «Tirar» devolver.
-#
-# O DONO DA TRAVA É ESTE MÓDULO, e não a lista: o desfazer do uninstall roda
-# este arquivo sozinho, com o `python3` do sistema. Só biblioteca padrão.
-#
-# É REENTRANTE NO MESMO PROCESSO: o «Tirar da lista» de uma caixa chama a
-# carona, e a carona chama o `anotar_os_ymls`, com a trava na mão. Um segundo
-# `flock` num descritor novo do mesmo arquivo, no mesmo processo, esperaria o
-# primeiro. O descritor abre uma vez por processo; o mesmo fio entra de novo
-# sem pedir, outro fio do processo espera como outro processo esperaria.
-
-#: O arquivo da trava, ao lado da lista. Nunca sai: apagar um arquivo de
-#: `flock` enquanto outro processo o espera daria duas trancas a dois donos.
 NOME_DA_TRAVA = ".lista_de_exclusao.trava"
 
-#: Quanto a JANELA espera: o clique dela termina (por delegação, a validar por
-#: ela). O desfazer do uninstall espera como ela.
 ESPERA_DA_JANELA_S = 5.0
 
-#: Quanto o SERVIÇO espera: a carona é idempotente e a próxima transição a
-#: refaz; sem a trava, ela pula a transição e diz `carona_esperou_a_janela`.
 ESPERA_DO_SERVICO_S = 1.0
 
 @dataclass
@@ -1527,11 +1066,7 @@ _TRAVAS_DO_PROCESSO = threading.Lock()
 
 
 def _esquecer_as_travas_no_filho() -> None:
-    """O filho de um `fork` nasce sem trava: o descritor herdado só se fecha.
-
-    Fechar não solta o `flock` do pai (a descrição aberta segue com ele); um
-    `LOCK_UN` aqui soltaria.
-    """
+    """O filho de um `fork` nasce sem trava: o descritor herdado só se fecha."""
     global _TRAVAS_DO_PROCESSO
     for trava in _TRAVAS.values():
         if trava.fd >= 0:
@@ -1546,13 +1081,7 @@ if hasattr(os, "register_at_fork"):
 
 
 def _travar_o_arquivo(alvo: Path, prazo: float, criar: bool) -> int | None:
-    """O descritor com o `flock` exclusivo; ``-1`` = segue sem; ``None`` = o prazo passou.
-
-    Segue sem trava (``-1``) onde não há `fcntl`, onde a pasta não existe e
-    ``criar`` é falso (o desfazer do uninstall não cria a configuração dela),
-    e onde o arquivo não abre: é o comportamento de antes, e recusar ali
-    deixaria a janela sem «Excluir» por uma permissão.
-    """
+    """O descritor com o `flock` exclusivo; ``-1`` = segue sem; ``None`` = o prazo passou."""
     try:
         import fcntl
     except ImportError:  # pragma: no cover - só Linux roda isto
@@ -1580,19 +1109,7 @@ def _travar_o_arquivo(alvo: Path, prazo: float, criar: bool) -> int | None:
 
 
 def _esperar_na_fila(fcntl: ModuleType, fd: int, prazo: float) -> int | None:
-    """Espera o `flock` na fila do núcleo, com prazo; ``fd`` / ``-1`` / ``None``.
-
-    QUEM ESPERA ESTÁ NA FILA, e não perguntando de tempos em tempos: medido
-    em 02/10/2026, quem perguntava a cada 20 ms perdia para um escritor que
-    retoma a trava logo depois de soltá-la (9 de 10 esperas passaram de 2 s;
-    a régua da corrida reprovou 2 de 12 vezes com o «Excluir» voltando
-    «erro»). Na fila, o `LOCK_UN` do outro acorda quem espera, e a espera
-    foi de no máximo 4 ms. O `flock` bloqueante não tem prazo: ele corre num
-    fio próprio, e quem chama espera o fio até o prazo. Se o prazo passa, o
-    descritor fica com o fio, que solta e fecha assim que pegar a trava;
-    ninguém mais o fecha (um descritor fechado por baixo de um `flock` em
-    curso pode ter o número reusado e travar outro arquivo).
-    """
+    """Espera o `flock` na fila do núcleo, com prazo; ``fd`` / ``-1`` / ``None``."""
     pegou = threading.Event()
     guarda = threading.Lock()
     desistiu = [False]
@@ -1623,8 +1140,7 @@ def _esperar_na_fila(fcntl: ModuleType, fd: int, prazo: float) -> int | None:
 
 
 def _soltar(fd: int) -> None:
-    """Solta o `flock` e fecha. O `LOCK_UN` vem antes: um filho de `fork` que
-    ainda tenha a cópia do descritor não segura a trava depois do dono."""
+    """Solta o `flock` e fecha. O `LOCK_UN` vem antes: um filho de `fork` que"""
     with contextlib.suppress(OSError, ImportError):
         import fcntl
 
@@ -1636,13 +1152,7 @@ def _soltar(fd: int) -> None:
 @contextlib.contextmanager
 def trava_da_lista(lista: Path | None = None, *, espera: float | None = None,
                    criar: bool = True) -> Iterator[bool]:
-    """Um escritor por vez na lista de exclusão e no que ela anota.
-
-    Rende ``True`` com a trava na mão (ou sem trava possível, ver
-    :func:`_travar_o_arquivo`), e ``False`` quando o prazo passou: quem chama
-    não escreve nada. Quem já a segura neste fio entra sem esperar.
-    ``espera``: ``None`` é a da janela (:data:`ESPERA_DA_JANELA_S`).
-    """
+    """Um escritor por vez na lista de exclusão e no que ela anota."""
     alvo = (caminho_da_lista() if lista is None else lista).parent / NOME_DA_TRAVA
     chave = os.path.realpath(alvo)
     with _TRAVAS_DO_PROCESSO:
@@ -1673,11 +1183,7 @@ def trava_da_lista(lista: Path | None = None, *, espera: float | None = None,
 
 
 def _ler_a_lista_crua(arquivo: Path) -> tuple[list[CopiaDoJogo], list[YmlDoJogo]] | None:
-    """As cópias do Heroic e os `.yml` do Lutris que a lista anotou, lida como JSON cru.
-
-    Ausente = ``([], [])``; existe e não se lê = ``None``. Só biblioteca padrão:
-    quem a lê aqui é o desfazer do uninstall.
-    """
+    """As cópias do Heroic e os `.yml` do Lutris que a lista anotou, lida como JSON cru."""
     try:
         texto = arquivo.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -1705,16 +1211,7 @@ def _ler_a_lista_crua(arquivo: Path) -> tuple[list[CopiaDoJogo], list[YmlDoJogo]
 
 
 def _sem_o_cache_que_a_exclusao_copiou(copia: CopiaDoJogo, entrada: Entrada) -> list[str]:
-    """A cópia que a exclusão CRIOU da lista global perde o cache de shader nosso.
-
-    Numa cópia por jogo o `__GL_SHADER_*` é lido como «pode ser dela»
-    (:func:`_entrada_da_copia`), mas numa cópia que a exclusão criou da global
-    (`sem_lista`) ele veio da global, com o valor que a carona pôs lá. Medido
-    na O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01: os dois ficavam no jogo depois do
-    uninstall. Só sai o par que ainda tem o valor que a exclusão copiou e que o
-    registro da casa diz que é nosso; o «antes» dela volta no lugar. Devolve as
-    chaves tiradas. Nunca levanta.
-    """
+    """A cópia que a exclusão CRIOU da lista global perde o cache de shader nosso."""
     alvo = Path(copia.arquivo)
     try:
         raiz = cast("object", json.loads(alvo.read_text(encoding="utf-8")))
@@ -1742,12 +1239,7 @@ def _sem_o_cache_que_a_exclusao_copiou(copia: CopiaDoJogo, entrada: Entrada) -> 
 
 def _devolver_os_excluidos(listas: Iterable[Path],
                            registro: dict[str, Entrada]) -> list[Desfeito]:
-    """A volta de cada jogo excluído fora da Steam, antes de tirar o nosso.
-
-    A mesma volta do «Tirar da lista» (:func:`devolver_ao_jogo_do_heroic` e
-    :func:`devolver_ao_jogo_do_lutris`): exata se ninguém mexeu, ou só os
-    pares da exclusão. O `.yml` mexido sem o PyYAML fica, e é sobra.
-    """
+    """A volta de cada jogo excluído fora da Steam, antes de tirar o nosso."""
     feitos: list[Desfeito] = []
     for arquivo in dict.fromkeys(listas):
         lido = _ler_a_lista_crua(arquivo)
@@ -1786,30 +1278,7 @@ def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
                          lar: Path | None = None,
                          listas_de_exclusao: Iterable[Path] = (),
                          ) -> tuple[list[Desfeito], bool]:
-    """Tira de todo lançador o que o Hefesto escreveu. ``(o que fez, completo)``.
-
-    Os arquivos vêm do registro de cada pasta (a do ``XDG_STATE_HOME`` e a do
-    lar, quando são duas) e da rede de :func:`estradas_possiveis` — e, depois
-    deles, as cópias por jogo que o Heroic tirou da lista global
-    (:func:`copias_por_jogo_do_heroic`), lidas com o registro do `config.json`
-    da mesma casa. Completo, o registro sai; com um arquivo que não abriu, o
-    que é dele fica anotado na primeira pasta, para o desfazer de novo — e a
-    resposta é ``False``.
-
-    **O JOGO EXCLUÍDO VOLTA PRIMEIRO — 02/10/2026,
-    O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01.** A exclusão também escreve nos
-    arquivos dos lançadores (a lista própria do jogo do Heroic, o `.yml` do
-    jogo do Lutris Flatpak), e a anotação da volta mora na lista de exclusão.
-    Medido num lar de mentira: sem ela, o jogo do Heroic que seguia a global
-    saía do uninstall com uma lista própria (e o cache de shader nosso
-    dentro), e não seguia mais a global dela. Cada `listas_de_exclusao` é lida
-    como JSON cru, e a volta de cada jogo vem antes de tirar o nosso.
-
-    **ESPERA COMO A JANELA (02/10/2026):** a trava da lista
-    (:func:`trava_da_lista`) é a mesma da janela e do serviço, e sem ela no
-    prazo nada se escreve: o desfazer fica para depois, com o registro
-    intacto. A pasta da configuração dela não nasce daqui.
-    """
+    """Tira de todo lançador o que o Hefesto escreveu. ``(o que fez, completo)``."""
     with trava_da_lista(criar=False) as na_mao:
         if not na_mao:
             return [Desfeito(caminho_da_lista(), erro=(
@@ -1841,8 +1310,6 @@ def _desfazer_na_trava(pastas_do_ambiente: Iterable[Path], lar: Path | None,
         entrada = registro.get(str(casa), Entrada(HEROIC_CONFIG))
         feito = _desfazer_no_arquivo(copia, entrada, copia_do_jogo=True)
         feitos.append(feito)
-        #: A cópia que não abriu segura o registro da CASA: é ele que diz, no
-        #: desfazer de depois, quais valores são nossos.
         if feito.erro and str(casa) in registro:
             sobrou[str(casa)] = registro[str(casa)]
     for i, pasta in enumerate(pastas):
@@ -1870,44 +1337,17 @@ def frase_do_desfeito(feito: Desfeito) -> str:
     return f"{feito.arquivo}: " + "; ".join(partes) if partes else ""
 
 
-# ── A EXCLUSÃO: o jogo e a caixa que ela tirou do Hefesto ──────────────────
-#
-# OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, a metade dos outros
-# lançadores (01/10/2026). O jogo excluído vê o controle como se o Hefesto não
-# estivesse instalado; fora da Steam, o que o Hefesto põe nele é ESTE ambiente.
-#
-# MEDIDO ANTES DA CURA, num lar de mentira: excluir o jogo do Heroic deixava o
-# `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW` na cópia
-# dele, e excluir o RetroArch deixava os dois na caixa — que a carona da
-# transição seguinte reescrevia. Com a janela do excluído em foco o daemon
-# liga o Modo Nativo (sem controle virtual), e o jogo ficava sem controle
-# NENHUM: o físico escondido pelo ambiente, e o virtual desligado.
-#
-# A UNIDADE É A DA ESTRADA. O Heroic monta as opções de um jogo como
-# `{...globais, ...do jogo}` (`GameConfigV0.getSettings`, lido no fonte dele em
-# 01/10): a lista própria do jogo SUBSTITUI a global, e é por ela que um jogo
-# sai sozinho. A caixa do Flatpak é uma só para todos os jogos do emulador — e
-# o emulador já entra na lista inteiro, «todos os jogos».
 @dataclass(frozen=True)
 class CopiaDoJogo:
     """O que a exclusão fez na cópia de UM jogo do Heroic — e como voltar."""
 
-    #: `<casa do Heroic>/GamesConfig/<app>.json`.
     arquivo: str
-    #: O `app_name` do jogo, que é a chave dentro do arquivo.
     app: str
-    #: O arquivo não existia: a volta o apaga, se ninguém mexeu nele.
     nasceu: bool = False
-    #: O arquivo existia sem a chave do jogo.
     sem_jogo: bool = False
-    #: O jogo seguia a lista GLOBAL: a volta tira a lista própria, e ele volta
-    #: a segui-la (com a carona que a mantém).
     sem_lista: bool = False
-    #: A lista que valia para o jogo antes da exclusão, e a que ficou.
     antes: tuple[tuple[str, str], ...] = ()
     depois: tuple[tuple[str, str], ...] = ()
-    #: O prefixo PRÓPRIO do jogo (`winePrefix` da cópia), quando há: o device
-    #: KS e as camadas Vulkan moram lá.
     prefixo: str = ""
 
     def como_dado(self) -> dict[str, object]:
@@ -1938,25 +1378,12 @@ class CopiaDoJogo:
 
 @dataclass(frozen=True)
 class YmlDoJogo:
-    """O que a exclusão fez no `.yml` de UM jogo do Lutris Flatpak — e como voltar.
+    """O que a exclusão fez no `.yml` de UM jogo do Lutris Flatpak — e como voltar."""
 
-    A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01 (02/10/2026): a camada que só este jogo
-    lê é o `system.env` do `games/<configpath>.yml` dele, e o Lutris a põe por
-    cima do ambiente da caixa (`monitored_command.get_child_environment` e
-    `runners/runner.py:292-293`, lidos no 0.5.22 instalado nela).
-    """
-
-    #: `<configuração do Lutris>/games/<configpath>.yml`.
     arquivo: str
-    #: O texto inteiro de antes da exclusão, para a volta byte a byte. ``None``
-    #: quando ela mexeu no arquivo e a carona escreveu de novo por cima: aí a
-    #: volta é só pelos pares.
     antes: str | None
-    #: O `sha256` do texto que a exclusão (ou a carona dela) gravou por último.
     depois: str
-    #: Os pares que a exclusão pôs em `system.env`, e só os que não estavam lá.
     pares: tuple[tuple[str, str], ...] = ()
-    #: As peças que o arquivo não tinha e a exclusão criou (`system`, `env`).
     moldura: tuple[str, ...] = ()
 
     def como_dado(self) -> dict[str, object]:
@@ -1984,20 +1411,13 @@ class YmlDoJogo:
 class NaExclusao:
     """O que a carona pula: as caixas excluídas e as cópias a manter limpas."""
 
-    #: Os `app-id` das caixas excluídas, em `casefold`.
     caixas: frozenset[str] = frozenset()
     copias: tuple[CopiaDoJogo, ...] = ()
-    #: Os `.yml` dos jogos excluídos do Lutris Flatpak, que a carona mantém
-    #: cobrindo a caixa (02/10/2026).
     ymls: tuple[YmlDoJogo, ...] = ()
 
 
 def _a_exclusao() -> NaExclusao:
-    """A lista do dono (`lista_de_exclusao`), lida tarde. Nunca levanta.
-
-    O import é tardio pelo mesmo motivo do cabeçalho: o desfazer do uninstall
-    roda este arquivo com o `python3` do sistema, e a lista puxa o pacote.
-    """
+    """A lista do dono (`lista_de_exclusao`), lida tarde. Nunca levanta."""
     try:
         from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 
@@ -2009,13 +1429,7 @@ def _a_exclusao() -> NaExclusao:
 def _sem_o_nosso_no_jogo(
     alvo: Path, app: str, pasta_do_ambiente: Path | None = None,
 ) -> tuple[str, CopiaDoJogo | None]:
-    """A cópia do jogo `app` com a lista própria, sem nada do que é nosso.
-
-    O que é nosso é o que o desfazer do uninstall tiraria da mesma cópia
-    (:func:`_desfazer_pares`, com o registro da casa sem as que podem ser
-    dela): é a lista do jogo «como se o Hefesto não estivesse instalado».
-    Status: ``"feito"`` | ``"nada"`` | ``"erro"``. Nunca levanta.
-    """
+    """A cópia do jogo `app` com a lista própria, sem nada do que é nosso."""
     casa = alvo.parent.parent
     nasceu = not alvo.exists()
     try:
@@ -2049,7 +1463,6 @@ def _sem_o_nosso_no_jogo(
     jogo[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in novos]
     raiz[app] = jogo
     if nasceu:
-        #: A forma que o próprio Heroic grava (`flush` do `GameConfigV0`).
         raiz.setdefault("version", "v0")
         raiz.setdefault("explicit", True)
     try:
@@ -2060,13 +1473,7 @@ def _sem_o_nosso_no_jogo(
 
 
 def jogos_do_heroic_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
-    """As cópias (`GamesConfig/<app>.json`) dos jogos do Heroic com esta janela.
-
-    Quem diz qual jogo anuncia qual janela é o censo
-    (`JogoDoLancador.classe_de_janela`); a casa é a que ele leu, e com os dois
-    Heroic instalados cada jogo fica na dele. O arquivo pode ainda não
-    existir: é onde a cópia nasce.
-    """
+    """As cópias (`GamesConfig/<app>.json`) dos jogos do Heroic com esta janela."""
     alvo = classe.strip()
     if not alvo:
         return []
@@ -2088,11 +1495,7 @@ def jogos_do_heroic_pela_janela(classe: str, lar: Path | None = None) -> list[Pa
 def tirar_o_nosso_do_jogo_do_heroic(
     classe: str, *, lar: Path | None = None, pasta_do_ambiente: Path | None = None,
 ) -> tuple[tuple[CopiaDoJogo, ...], str]:
-    """O jogo do Heroic com esta janela passa a ter a lista própria sem o nosso.
-
-    Devolve ``(o que fez, status)``: ``"feito"`` | ``"nada"`` | ``"erro"``.
-    Com erro numa cópia, as que já foram feitas voltam — tudo ou nada.
-    """
+    """O jogo do Heroic com esta janela passa a ter a lista própria sem o nosso."""
     feitas: list[CopiaDoJogo] = []
     status = "nada"
     for alvo in jogos_do_heroic_pela_janela(classe, lar):
@@ -2107,14 +1510,7 @@ def tirar_o_nosso_do_jogo_do_heroic(
 
 
 def devolver_ao_jogo_do_heroic(copias: Iterable[CopiaDoJogo]) -> str:
-    """A volta: a cópia de cada jogo como estava antes da exclusão.
-
-    Se ninguém mexeu na cópia desde a exclusão, ela volta EXATA (a lista de
-    antes, ou nenhuma lista própria, ou nenhum arquivo). Se o Heroic ou ela
-    mexeu, o que mudou fica e só os pares que a exclusão tirou voltam, sem
-    passar por cima de uma chave que esteja lá. Status: ``"feito"`` |
-    ``"nada"`` | ``"erro"``. Nunca levanta.
-    """
+    """A volta: a cópia de cada jogo como estava antes da exclusão."""
     status = "nada"
     for copia in copias:
         alvo = Path(copia.arquivo)
@@ -2130,9 +1526,6 @@ def devolver_ao_jogo_do_heroic(copias: Iterable[CopiaDoJogo]) -> str:
             continue
         atual = _pares_da_lista(jogo.get(CHAVE_DO_HEROIC))
         tem_lista = isinstance(jogo.get(CHAVE_DO_HEROIC), list)
-        #: JÁ VOLTOU (02/10/2026, O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01): o
-        #: desfazer adiado do uninstall roda de novo sobre a mesma lista, e a
-        #: volta parcial reporia na cópia os pares que a exclusão tirou.
         if (copia.sem_lista and not tem_lista) or (
                 not copia.sem_lista and tem_lista and tuple(atual) == copia.antes):
             continue
@@ -2172,14 +1565,7 @@ def tirar_o_nosso_da_caixa(
     app_ids: Iterable[str], *, lar: Path | None = None,
     pasta_do_ambiente: Path | None = None,
 ) -> str:
-    """A caixa do Flatpak destes `app-id` sem o ambiente que é nosso.
-
-    É o desfazer do uninstall, recortado para estas caixas: o valor dela de
-    antes volta, o que ela mudou fica, o arquivo que nasceu com o Hefesto
-    sai. A entrada da caixa sai do registro: a carona não escreve numa caixa
-    excluída, e a volta («Tirar da lista») é a carona escrevendo de novo.
-    Status: ``"feito"`` | ``"nada"`` | ``"erro"``. Nunca levanta.
-    """
+    """A caixa do Flatpak destes `app-id` sem o ambiente que é nosso."""
     lar = Path.home() if lar is None else lar
     try:
         registro = ler_registro(pasta_do_ambiente)
@@ -2208,81 +1594,16 @@ def tirar_o_nosso_da_caixa(
     return status
 
 
-# ── A CAMADA DO JOGO DO LUTRIS: o `system.env` do `.yml` do excluído ───────
-#
-# A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01 (02/10/2026). A caixa do Lutris Flatpak
-# é uma só para todos os jogos dele, e a exclusão é de UM jogo: tirar o
-# ambiente da caixa tiraria o Hefesto de todos, e deixá-lo mantinha o jogo
-# excluído com o físico escondido e o Modo Nativo ligado em foco — zero
-# controles. Medido num lar de mentira na integração: a caixa seguia com as 9.
-#
-# O LUTRIS PÕE O AMBIENTE DO JOGO POR CIMA DO DA CAIXA (0.5.22, lido no fonte
-# instalado nela): `get_child_environment` faz `system.get_environment()` e
-# depois `env.update(self.env)` (`monitored_command.py:150-154`), e o `self.env`
-# traz o `system.env` do `.yml` do jogo por último (`runners/runner.py:292-293`).
-# Uma chave com valor `''` passa e cobre a da caixa; uma chave NULA é pulada
-# (`monitored_command.py:141-142`), e aí vale a da caixa.
-#
-# O LUTRIS NATIVO NÃO GANHA CAMADA: o ambiente do Hefesto só chega ao jogo dele
-# pela caixa do Flatpak (a carona não tem estrada para o nativo), e um `.yml`
-# com valores nossos ali mudaria o jogo em vez de devolvê-lo.
-#
-# O ARQUIVO SE LÊ E SE ESCREVE COM O PyYAML, o mesmo leitor do Lutris
-# (`util/yaml.py`: `safe_load` e `safe_dump(..., default_flow_style=False)`). O
-# import é tardio: o desfazer do uninstall roda este arquivo com o `python3` do
-# sistema, e sem o PyYAML a volta é só a exata (:func:`devolver_ao_jogo_do_lutris`).
-
-#: A caixa do Lutris Flatpak.
 _LUTRIS_APP_ID = "net.lutris.Lutris"
 
-#: O «NÃO VEIO» DE CADA LEITOR: o valor que o leitor de uma família de variáveis
-#: lê como se ela não tivesse vindo. Nunca nulo (o Lutris pula a chave nula).
-#:
-#: * ``SDL_`` → ``""``. MEDIDO em 02/10/2026 no SDL2 2.32.10 do runtime da Steam
-#:   (`SDL_GetHintBoolean` por `ctypes`, sem iniciar subsistema nenhum): com o
-#:   valor vazio, as três dicas booleanas devolvem o padrão, como ausentes. A
-#:   lista do `SDL_GAMECONTROLLER_IGNORE_DEVICES` vazia não ignora aparelho
-#:   nenhum (lido, não medido: a função que a lê é interna). O SDL do runtime do
-#:   Proton é da mesma série, e fica a confirmar nele;
-#: * ``PROTON_`` → ``""``. O script do Proton (GE-Proton10-34) lê as opções dele
-#:   por `nonzero` (`len(s) > 0 and s != "0"`, `proton:167-168`, pela
-#:   `check_environment`, `:1733-1740`): `''` desliga como a ausência, mas a
-#:   presença cala os padrões que o próprio script poria. As três `PROTON_*` de
-#:   hoje não passam pelo `check_environment`: quem as lê é o Wine, depois do
-#:   script, e o efeito do `''` no jogo não foi medido além disso;
-#: * o par ``__GL_SHADER_*`` FICA FORA: o leitor é o driver fechado da NVIDIA, e
-#:   o efeito do `''` não está medido (ele pode desligar o cache). Por
-#:   delegação, a validar por ela: sem a medida, o jogo excluído do Lutris herda
-#:   da caixa o cache de shader, que não toca o controle. Com um «antes» dela no
-#:   registro da caixa, o `.yml` leva o dela;
-#: * o ``PROTON_USE_XALIA`` não tem UM valor de «não veio»: ele depende do jogo
-#:   (:data:`_NAO_VEIO_POR_JOGO`).
 _NAO_VEIO: tuple[tuple[str, str], ...] = (("SDL_", ""), ("PROTON_", ""))
 
-#: O «NÃO VEIO» QUE DEPENDE DO JOGO — 02/10/2026,
-#: O-JOGO-EXCLUIDO-DO-LUTRIS-VOLTA-AO-XALIA-DO-PROTON-01. Lido no GE-Proton 11-7
-#: (`proton:2527-2533`) e no 10-34 (`:2093-2099`) instalados nela, só leitura: se
-#: `PROTON_USE_XALIA` não veio, o script põe `0` quando o appid está em
-#: `noxalia` e, senão, põe `1` E `XALIA_SUPPORTED_ONLY=1` (a menos que a
-#: configuração de compatibilidade traga `xalia`). Quem lê o
-#: `XALIA_SUPPORTED_ONLY` é o próprio xalia (`share/xalia/main.gudl:1477-1479`).
-#: Logo o par é o padrão do jogo que abre pelo script do Proton; com o driver
-#: Wayland, o script põe `0` por cima de qualquer valor (11-7 `:2621-2623`), como
-#: no padrão. O Wine sem o script do Proton não põe a variável, e o
-#: `explorer.exe` sem ela não sobe o xalia: ali o `0` da caixa É o padrão, e a
-#: camada não cobre nada. Quem diz por qual dos dois o jogo abre é o censo
-#: (`JogoDoLancador.pelo_proton`). Por delegação, a validar por ela; o preço: um
-#: jogo cujo appid o script põe em `noxalia` (cinco da Steam no 11-7,
-#: `:1752-1761`) recebe o xalia, porque com a variável presente o script não
-#: decide. O diário diz `camada_do_lutris_xalia par=1` com o jogo.
 _NAO_VEIO_POR_JOGO: dict[str, tuple[tuple[str, str], ...]] = {
     "PROTON_USE_XALIA": (("PROTON_USE_XALIA", "1"), ("XALIA_SUPPORTED_ONLY", "1")),
 }
 
-#: As chaves sem UM valor de «não veio» (:func:`nao_veio` devolve ``None``).
 _SEM_NAO_VEIO: frozenset[str] = frozenset(_NAO_VEIO_POR_JOGO)
 
-#: O par do xalia, que entra e sai junto: as chaves que a camada põe por ele.
 _PAR_DO_XALIA: frozenset[str] = frozenset(
     k for pares in _NAO_VEIO_POR_JOGO.values() for k, _ in pares)
 
@@ -2316,15 +1637,7 @@ def pares_da_camada_do_lutris(
     lar: Path | None = None, pasta_do_ambiente: Path | None = None, *,
     pelo_proton: bool = False,
 ) -> dict[str, str]:
-    """O que o `.yml` de um jogo excluído do Lutris Flatpak precisa cobrir.
-
-    Cada chave que o desfazer tiraria da caixa (:func:`_desfazer_pares`, a mesma
-    conta da cópia do Heroic), no valor que o jogo veria sem o Hefesto: o
-    «antes» do registro da caixa quando ela tinha um, e quando não tinha, o
-    :func:`nao_veio` do leitor — e, nas que dependem do jogo
-    (:data:`_NAO_VEIO_POR_JOGO`), o padrão do script do Proton quando o jogo
-    abre por ele (``pelo_proton``). Caixa sem o nosso, ou ilegível = ``{}``.
-    """
+    """O que o `.yml` de um jogo excluído do Lutris Flatpak precisa cobrir."""
     base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
     return _com_o_padrao_do_jogo(base, por_jogo, pelo_proton=pelo_proton)
 
@@ -2367,12 +1680,7 @@ def _a_camada_da_caixa(
 
 
 def _pasta_do_lutris_flatpak(lar: Path | None) -> Path | None:
-    """A casa do Lutris Flatpak, que o censo acha pela regra do Lutris.
-
-    A regra mora no censo (`censo_dos_lancadores.pasta_do_flatpak`): a cópia
-    que morava aqui tentava a `config/` e a `data/` do Flatpak, o censo só a
-    `config/`, e as duas respostas divergiam na mesma máquina (02/10/2026).
-    """
+    """A casa do Lutris Flatpak, que o censo acha pela regra do Lutris."""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     return censo.pasta_do_flatpak("Lutris", lar)
@@ -2385,8 +1693,6 @@ def _pelo_proton_por_yml(lar: Path | None) -> dict[str, bool]:
         return {}
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-    #: O LAR VAI JUNTO (02/10/2026): o censo não o deduz do caminho, e é nele
-    #: que acha a pasta de dados e o Proton.
     return {str(j.configuracao): j.pelo_proton for j in censo._lutris(pasta, lar).jogos
             if j.configuracao is not None}
 
@@ -2400,12 +1706,7 @@ def _dizer_o_par(alvo: Path, par: int) -> None:
 
 
 def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
-    """Os `.yml` dos jogos do Lutris FLATPAK que anunciam esta janela.
-
-    Quem diz qual jogo anuncia qual janela é o censo (`classe_de_janela`, com o
-    umu-id do Lutris); a casa é só a do Flatpak (o nativo não ganha camada).
-    Só os `.yml` que existem: sem ele o Lutris nem abre o jogo.
-    """
+    """Os `.yml` dos jogos do Lutris FLATPAK que anunciam esta janela."""
     alvo = classe.strip()
     pasta = _pasta_do_lutris_flatpak(lar)
     if not alvo or pasta is None:
@@ -2425,14 +1726,7 @@ def _com_o_nosso_no_yml(
     texto: str, pares: dict[str, str], moldura: tuple[str, ...] = (),
     ja_nossos: tuple[tuple[str, str], ...] = (),
 ) -> tuple[str, tuple[tuple[str, str], ...], tuple[str, ...]] | None:
-    """O `.yml` com os pares em `system.env`, sem passar por cima de chave dela.
-
-    Devolve ``(texto, os pares postos, a moldura)``; ``None`` = o arquivo não é
-    um dicionário que o Lutris leria (não se reescreve por cima). Uma chave que
-    já está no `system.env` é dela (ou da exclusão, de antes) e fica. O par do
-    xalia (:data:`_PAR_DO_XALIA`) entra junto ou não entra: com uma das duas
-    posta por ela (fora de ``ja_nossos``), o que é dela manda e o par fica fora.
-    """
+    """O `.yml` com os pares em `system.env`, sem passar por cima de chave dela."""
     yaml = _yaml()
     if yaml is None:
         return None
@@ -2491,13 +1785,7 @@ def _cobrir_no_yml(alvo: Path, pares: dict[str, str]) -> YmlDoJogo | None:
 def tirar_o_nosso_do_jogo_do_lutris(
     classe: str, *, lar: Path | None = None, pasta_do_ambiente: Path | None = None,
 ) -> tuple[tuple[YmlDoJogo, ...], str]:
-    """O jogo do Lutris Flatpak com esta janela passa a cobrir a caixa.
-
-    Devolve ``(o que fez, status)``: ``"feito"`` | ``"nada"`` | ``"erro"``. O
-    jogo cuja caixa ainda não tem o nosso fica anotado sem pares: a carona o
-    cobre quando escrever a caixa. Com erro num `.yml`, os já feitos voltam —
-    tudo ou nada. A caixa não é tocada.
-    """
+    """O jogo do Lutris Flatpak com esta janela passa a cobrir a caixa."""
     ymls = jogos_do_lutris_pela_janela(classe, lar)
     if not ymls:
         return (), "nada"
@@ -2515,18 +1803,7 @@ def tirar_o_nosso_do_jogo_do_lutris(
 
 
 def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
-    """A carona mantém o `.yml` do excluído cobrindo a caixa de agora.
-
-    Acrescenta, e o que falta se lê no ARQUIVO, não no registro: o uninstall
-    que guarda a configuração devolve o `.yml` e deixa a entrada, e o install de
-    depois deixava o excluído sem a camada (medido em 02/10/2026).
-    **O PAR DO XALIA SEGUE O JOGO** (02/10/2026): ele também SAI, quando o jogo
-    deixa de abrir pelo Proton (ela trocou o Wine dele) ou o xalia da caixa
-    deixa de ser nosso; sai só o par que ainda tem o valor nosso.
-    Devolve o registro novo quando escreveu, ``None`` quando não mudou nada ou
-    não pôde. Se ela mexeu no arquivo desde a última escrita nossa, a volta
-    exata deixa de valer (``antes=None``); o arquivo igual ao «antes» a mantém.
-    """
+    """A carona mantém o `.yml` do excluído cobrindo a caixa de agora."""
     alvo = Path(yml.arquivo)
     try:
         texto = alvo.read_text(encoding="utf-8")
@@ -2559,10 +1836,7 @@ def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
 
 
 def _sem_os_pares_no_yml(texto: str, yml: YmlDoJogo) -> str | None:
-    """O `.yml` sem os pares da exclusão que ainda estão lá com o valor dela.
-
-    ``None`` = sem PyYAML, ou o arquivo não abre: não se escreve YAML à mão.
-    """
+    """O `.yml` sem os pares da exclusão que ainda estão lá com o valor dela."""
     yaml = _yaml()
     if yaml is None:
         return None
@@ -2585,15 +1859,7 @@ def _sem_os_pares_no_yml(texto: str, yml: YmlDoJogo) -> str | None:
 
 
 def devolver_ao_jogo_do_lutris(ymls: Iterable[YmlDoJogo]) -> str:
-    """A volta: o `.yml` de cada jogo como estava antes da exclusão.
-
-    Se ninguém mexeu no arquivo desde a última escrita nossa (o `sha256` bate),
-    o texto de antes volta inteiro, byte a byte — sem PyYAML. Se ela (ou o
-    Lutris) mexeu, saem só os pares da exclusão que ainda têm o valor dela, e
-    isso precisa do PyYAML; sem ele o arquivo fica como está e o status é
-    ``"ficou"``. Status: ``"feito"`` | ``"nada"`` | ``"ficou"`` | ``"erro"``.
-    Nunca levanta.
-    """
+    """A volta: o `.yml` de cada jogo como estava antes da exclusão."""
     status = "nada"
     for yml in ymls:
         if not yml.pares:
@@ -2607,7 +1873,7 @@ def devolver_ao_jogo_do_lutris(ymls: Iterable[YmlDoJogo]) -> str:
             status = "erro"
             continue
         if yml.antes is not None and _sha(texto) == _sha(yml.antes):
-            continue  # já voltou: o desfazer adiado roda de novo sobre a lista
+            continue
         if _sha(texto) == yml.depois and yml.antes is not None:
             novo = yml.antes
         else:
@@ -2654,10 +1920,7 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
 
 
 def _pastas_do_ambiente_padrao(lar: Path) -> list[Path]:
-    """As `launch_env` desta casa pela regra do XDG — e a do lar, se for outra.
-
-    Só biblioteca padrão: é a conta que o `uninstall.sh` também faz.
-    """
+    """As `launch_env` desta casa pela regra do XDG — e a do lar, se for outra."""
     from hefesto_dualsense4unix.utils import identidade
 
     slug = identidade.atual().slug
@@ -2702,16 +1965,6 @@ def main(argv: Sequence[str] | None = None) -> int:
               else _listas_de_exclusao_padrao(lar))
     feitos, completo = desfazer_as_estradas(pastas, lar, listas)
     if completo:
-        #: O DESFAZER QUE FICOU PARA DEPOIS deixou a pasta de estado de pé SÓ
-        #: pelo registro (o uninstall apagou o resto): terminado ele, ela sai.
-        #: Só `rmdir` — uma pasta com qualquer outra coisa dentro fica, e é o
-        #: passo dela que a nomeia. No uninstall de uma vez, o `default.env`
-        #: ainda está ali e nada sai daqui.
-        #:
-        #: A LISTA DE EXCLUSÃO QUE O UNINSTALL GUARDOU NO `launch_env` (com o
-        #: --purge-config e o desfazer adiado, O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01)
-        #: só existe para este desfazer: terminado ele, ela sai. A da
-        #: configuração nunca sai daqui.
         for lista in listas:
             if lista.parent.name == "launch_env" and lista.name.startswith("lista_de_exclusao"):
                 with contextlib.suppress(OSError):

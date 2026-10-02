@@ -84,11 +84,7 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 )
 from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
 
-# --- a mesa de quatro, mascarada --------------------------------------------
 
-#: Os quatro na ordem da fila. O TERCEIRO é o que pisca no rádio — de
-#: propósito no meio, para que uma readmissão indevida mexa no número do
-#: quarto (o degrau que o defeito 1 produz) sem mexer nos dois da frente.
 KEYS = (
     "AA:BB:CC:00:00:01",
     "AA:BB:CC:00:00:02",
@@ -98,15 +94,11 @@ KEYS = (
 UNIQS = tuple(k.replace(":", "").lower() for k in KEYS)
 PRIMEIRO, SEGUNDO, QUE_PISCA, QUARTO = UNIQS
 
-#: Os que continuam na mesa enquanto o terceiro pisca — os "MACs vivos" do
-#: aceite, cujo slot tem de ser ESTÁVEL.
 VIVOS = (PRIMEIRO, SEGUNDO, QUARTO)
 
 BOOT = "boot-teste-quatro-na-mesa-01"
 
 #: A aba Status resolve a 10 Hz (``ipc_handlers``: *"o `state_full` roda a
-#: 10 Hz"*). Oito segundos de aba aberta = 80 leituras — a mesma ordem de
-#: grandeza da janela de ≤30 s em que o handle sobrevive ao piscar do rádio.
 LEITURAS_DE_OITO_SEGUNDOS = 80
 
 
@@ -139,12 +131,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def mesa_de_quatro(relogio: Relogio) -> ControllerIdentityRegistry:
-    """Os quatro na mesa, cada um na SUA onda — a fila do momento é 1, 2, 3, 4.
-
-    Um de cada vez, com intervalo maior que `JANELA_DE_ONDA_SEC`, porque é
-    assim que ela pareia. Com todos na mesma onda o desempate seria o gravado
-    e o cenário ficaria indistinguível de um empate — que é outro caso.
-    """
+    """Os quatro na mesa, cada um na SUA onda — a fila do momento é 1, 2, 3, 4."""
     reg = ControllerIdentityRegistry(clock=relogio)
     na_mesa: list[str] = []
     for uniq in UNIQS:
@@ -155,19 +142,7 @@ def mesa_de_quatro(relogio: Relogio) -> ControllerIdentityRegistry:
 
 
 def o_tique_viu_tres(reg: ControllerIdentityRegistry) -> None:
-    """O batimento de 2 s: o terceiro piscou no rádio e saiu do `connected`.
-
-    É o `_sync_identity_registry` do `lifecycle`, que filtra por
-    `info.get("connected")` do `describe_controllers` — e o handle do que
-    piscou CONTINUA aberto (o `connect()` só o recolhe em ≤30 s). É essa
-    diferença entre "tem handle" e "está conectado" que abre a janela.
-
-    **E O RELÓGIO PASSA DO PRAZO DO LUGAR GUARDADO** (O-ASSENTO-GUARDADO-NAO-
-    ANDA-01, 24/09/2026). Dentro do prazo o lugar do terceiro fica guardado e
-    o quarto é 4 com ou sem a readmissão — a régua do defeito 1 não
-    distinguiria a cura da falta dela. Depois do prazo a NUM-01 volta, o
-    quarto é 3, e uma readmissão indevida o empurra para 4 de novo.
-    """
+    """O batimento de 2 s: o terceiro piscou no rádio e saiu do `connected`."""
     reg.sync_connected([PRIMEIRO, SEGUNDO, QUARTO])
     relogio = getattr(reg, "_clock", None)
     assert isinstance(relogio, Relogio), "a mesa de quatro nasce com relógio de mentira"
@@ -223,30 +198,18 @@ class TestOSegundoEscritorDeConnected:
     def test_o_ausente_fica_sem_opiniao_em_vez_de_acender(
         self, config_isolado: Path
     ) -> None:
-        """Ausente não acende número (contrato de `numero_da_lampada`, 27/08).
-
-        `None` = sem opinião: o controle segue com o que já tinha até o
-        próximo batimento, em vez de acender um número que outro está
-        acendendo. Era isso que a autoadmissão tornava inalcançável.
-        """
+        """Ausente não acende número (contrato de `numero_da_lampada`, 27/08)."""
         reg = mesa_de_quatro(Relogio())
         provider = make_auto_output_provider(reg)
         o_tique_viu_tres(reg)
 
         assert provider(QUE_PISCA) is None
-        # `assign=False` é a leitura pura; o default (`assign=True`) é do
-        # TIQUE e continua podendo readmitir — é por ele que o link que volta
-        # entra de novo na mesa.
         assert reg.numero_da_lampada(QUE_PISCA, assign=False) is None
 
     def test_a_leitura_nao_mexe_o_numero_dos_outros(
         self, config_isolado: Path
     ) -> None:
-        """O sintoma dela: oito segundos de aba Status, zero mudança nos vivos.
-
-        Antes da cura, a PRIMEIRA leitura já empurrava o quarto de 3 para 4 e
-        a lightbar dele de verde para rosa.
-        """
+        """O sintoma dela: oito segundos de aba Status, zero mudança nos vivos."""
         reg = mesa_de_quatro(Relogio())
         provider = make_auto_output_provider(reg)
         o_tique_viu_tres(reg)
@@ -265,11 +228,7 @@ class TestOSegundoEscritorDeConnected:
         assert saida.player_leds == player_led_pattern(3)
 
     def test_a_aba_status_a_10_hz_nao_mexe_a_mesa(self, config_isolado: Path) -> None:
-        """O caminho REAL da aba: `resolved_led_for`, pelo backend de verdade.
-
-        `_lightbar_for_uniq` cai aqui quando o nó de sysfs do controle some —
-        que é exatamente o que acontece com quem piscou no rádio.
-        """
+        """O caminho REAL da aba: `resolved_led_for`, pelo backend de verdade."""
         reg = mesa_de_quatro(Relogio())
         inst = backend_com_os_quatro()
         inst.set_auto_output_provider(make_auto_output_provider(reg))
@@ -290,21 +249,15 @@ class TestOSegundoEscritorDeConnected:
         o_tique_viu_tres(reg)
         assert provider(QUE_PISCA) is None
 
-        reg.sync_connected(list(UNIQS))  # o link voltou e o tique viu
+        reg.sync_connected(list(UNIQS))
 
         saida = provider(QUE_PISCA)
         assert saida is not None
-        assert saida.player_leds == player_led_pattern(3)  # D2: o número é dele
+        assert saida.player_leds == player_led_pattern(3)
         assert reg.numero_da_lampada(QUARTO) == 4
 
     def test_a_estreia_ainda_entra_na_mesa(self, config_isolado: Path) -> None:
-        """D1 continua de pé: quem ESTREIA nasce numerado no tique do hotplug.
-
-        A cura separa dois atos que estavam colados. Apresentar um endereço
-        que a casa nunca viu é identidade (R-14 §1) e continua acontecendo na
-        primeira consulta; RESSUSCITAR quem o tique já declarou ausente é o
-        que deixou de acontecer.
-        """
+        """D1 continua de pé: quem ESTREIA nasce numerado no tique do hotplug."""
         reg = ControllerIdentityRegistry(clock=Relogio())
         provider = make_auto_output_provider(reg)
 
@@ -345,10 +298,8 @@ class TestATempestadeDeStateFull:
         def o_tique() -> None:
             try:
                 while not parar.is_set():
-                    # O batimento continua substituindo o conjunto inteiro,
-                    # sempre com o mesmo trio: quem piscou segue fora.
                     reg.sync_connected([PRIMEIRO, SEGUNDO, QUARTO])
-            except BaseException as exc:  # a thread não pode morrer calada
+            except BaseException as exc:
                 explodiu.append(exc)
 
         def a_aba_status() -> None:
@@ -358,7 +309,7 @@ class TestATempestadeDeStateFull:
                     for uniq in VIVOS:
                         provider(uniq)
                         vistos[uniq].add(reg.numero_da_lampada(uniq))
-            except BaseException as exc:  # a thread não pode morrer calada
+            except BaseException as exc:
                 explodiu.append(exc)
             finally:
                 parar.set()
@@ -400,13 +351,7 @@ class TestNenhumInstanteComDoisNoMesmoJogador:
     def test_nenhum_instante_com_dois_padroes_iguais(
         self, config_isolado: Path
     ) -> None:
-        """A queixa histórica: dois controles acesos como jogador 2.
-
-        A camada automática resolve o padrão de player-LED de todos os quatro
-        handles num LOTE (é a forma de `enviar_gatilho_da_cor` e do
-        `reassert_resolved_outputs`). Nenhuma amostra pode ter duas chaves com
-        o mesmo padrão — e `None` (sem opinião) não conta como padrão.
-        """
+        """A queixa histórica: dois controles acesos como jogador 2."""
         reg = mesa_de_quatro(Relogio())
         inst = backend_com_os_quatro()
         inst.set_auto_output_provider(make_auto_output_provider(reg))
@@ -422,35 +367,11 @@ class TestNenhumInstanteComDoisNoMesmoJogador:
     def test_a_geometria_de_27_08_nao_colide_mais_por_construcao(
         self, config_isolado: Path
     ) -> None:
-        """A cena do journal dela, e é a única que produz a colisão.
-
-        Quem piscou tem de ser o **PRIMEIRO da fila** e resolver por
-        **ÚLTIMO** no lote: os três primeiros são numerados com a mesa de
-        três (1, 2, 3) e o quarto, ao ser resolvido, entraria na mesa e — por
-        ser o primeiro da fila de chegada — sairia com o número 1. Dois
-        "jogador 1", ninguém no 4, e assim ficava por 28 minutos, porque a
-        lâmpada só é reescrita quando algo acontece.
-
-        **MEDIDO nesta árvore em 06/09/2026** com o defeito 2 reintroduzido
-        (o provider voltando a chamar `slot_for`, como antes de 27/08) E o
-        `_assentar_mesa_locked` do backend neutralizado::
-
-            AA:BB:CC:00:00:02  (F, F, T, F, F)   -> jogador 1
-            AA:BB:CC:00:00:03  (F, T, F, T, F)   -> jogador 2
-            AA:BB:CC:00:00:04  (T, F, T, F, T)   -> jogador 3
-            AA:BB:CC:00:00:01  (F, F, T, F, F)   -> jogador 1   <- COLISÃO
-
-        Com a cura de hoje a colisão é impossível **sem depender do
-        assentamento**: uma leitura não move a mesa, então os quatro do lote
-        leem a mesma tabela por construção, e quem o tique tem como ausente
-        fica sem opinião em vez de tomar o número de um presente.
-        """
+        """A cena do journal dela, e é a única que produz a colisão."""
         reg = mesa_de_quatro(Relogio())
         inst = backend_com_os_quatro()
         inst.set_auto_output_provider(make_auto_output_provider(reg))
 
-        # O primeiro da fila caiu do rádio; o handle dele voltou ANTES do
-        # próximo batimento, e por isso no FIM do dict de handles.
         reg.sync_connected(list(UNIQS[1:]))
         voltou = inst._handles.pop(KEYS[0])
         inst._handles[KEYS[0]] = voltou
@@ -461,15 +382,15 @@ class TestNenhumInstanteComDoisNoMesmoJogador:
         }
         acesos = [p for p in lote.values() if p is not None]
         assert len(set(acesos)) == len(acesos), lote
-        assert lote[KEYS[0]] is None  # ausente não toma número de presente
+        assert lote[KEYS[0]] is None
 
-        reg.sync_connected(list(UNIQS))  # o tique viu o link de volta
+        reg.sync_connected(list(UNIQS))
         lote = {
             key: inst._merged_desired_for_key(key).player_leds
             for key in inst._handles
         }
         assert set(lote.values()) == {player_led_pattern(n) for n in (1, 2, 3, 4)}
-        assert lote[KEYS[0]] == player_led_pattern(1)  # D2: o 1 é dele
+        assert lote[KEYS[0]] == player_led_pattern(1)
 
     def test_com_o_tique_completo_a_mesa_fecha_1_a_4(
         self, config_isolado: Path
@@ -488,20 +409,14 @@ class TestNenhumInstanteComDoisNoMesmoJogador:
 
 
 class TestAReguaSabeRecusar:
-    """A mordida da mordida: com a cura arrancada, tudo aqui REPROVA.
-
-    O caminho pré-cura continua alcançável de propósito —
-    `autoridade_de_presenca=True` é o default, porque é por ele que o tique e
-    os rótulos passam. Chamá-lo do lugar do provider é reproduzir o defeito 1
-    exatamente como ele estava, sem comentar linha nenhuma do produto.
-    """
+    """A mordida da mordida: com a cura arrancada, tudo aqui REPROVA."""
 
     @staticmethod
     def _provider_pre_cura(reg: ControllerIdentityRegistry):
         """O provider como era: `numero_da_lampada` COM autoridade de presença."""
 
         def provider(uniq: str) -> int | None:
-            return reg.numero_da_lampada(uniq)  # o default readmite
+            return reg.numero_da_lampada(uniq)
 
         return provider
 
@@ -515,7 +430,6 @@ class TestAReguaSabeRecusar:
 
         provider(QUE_PISCA)
 
-        # A régua de cima reprovaria aqui — e é este o defeito medido.
         assert QUE_PISCA in reg.snapshot_connected()
 
     def test_o_caminho_pre_cura_mexe_o_numero_do_quarto(

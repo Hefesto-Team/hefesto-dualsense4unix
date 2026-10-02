@@ -83,42 +83,6 @@ import re
 import threading
 from functools import cache
 
-#: Trechos proibidos em qualquer texto que chegue à tela. A comparação é por
-#: SUBSTRING e sem normalizar: são trechos literais que já estiveram no
-#: produto, e uma reescrita que os evite por acaso já não é a frase banida.
-#:
-#: **O TERCEIRO TRECHO ESTAVA CEGO PARA O PRODUTO — corrigido em 06/09/2026,
-#: ONDA5-01-02.** Ele era ``"duros como no PS5"``, a forma que o gerador da
-#: interface nova cita; a janela antiga escrevia *"os gatilhos ficam duros de
-#: apertar, como no PS5"*, e ``"duros como no PS5" in`` essa frase é ``False``.
-#: A lista nasceu medida contra o texto do gerador, não contra o do produto, e
-#: **um terço da proibição foi decorativo desde o primeiro dia**.
-#:
-#: ``"gatilhos ficam duros"`` casa com as DUAS escritas, e é o trecho mais
-#: curto que casa sem pegar frase inocente. **A sprint propunha
-#: ``"como no PS5"`` e a medição o RECUSOU**: esse trecho aparece em
-#: ``app/actions/config/secao_controles.py``, na `DICA_MIC_NO_RADIO` —
-#: *"Traz o microfone deste controle pelo rádio, como no PS5"* —, que é frase
-#: medida e viva. Ele reprovaria a guarda de fonte sobre ela e, pior, o funil
-#: de execução a recusaria a caminho do WebView: a régua contra o alarme sem
-#: medição viraria o alarme sem medição. Medido em 06/09/2026 com
-#: ``grep -rn "gatilhos ficam duros" src/``: duas ocorrências, as duas a frase
-#: banida; ``grep -rn "como no PS5" src/``: quatro, uma delas inocente.
-#:
-#: **O QUARTO TRECHO ENTROU EM 24/09/2026** (A-FRASE-DO-RECONECTAR-SAI-01), e
-#: ele não alarma: NARRA o que a tela já mostra. Era a frase que a JOGAR-02
-#: propôs, em 09/09, para o «Reconectar controles» quando algum número mudasse
-#: — *"Os controles foram renumerados: P1, P2."* —, e ela respondeu
-#: *«Nada: o número novo aparece no próprio cartão»*
-#: (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`). O trecho é o miolo que a frase tinha
-#: no produto: pega a mesma frase com outros assentos e não pega frase
-#: inocente. Medido em 24/09/2026, antes da cura, com
-#: ``git grep -n "foram renumerad" -- src/ mockup/``: UMA ocorrência, a
-#: constante que a guardava (`painel._RENUMEROU`); nenhuma nas páginas.
-#:
-#: **O ÍNDICE DE CADA TRECHO É ENDEREÇO**: o comentário do `_MODE_DESCRIPTIONS`
-#: de `home_actions` aponta os índices 0 e 2, e a régua do terceiro trecho lê
-#: ``FRASES_BANIDAS[2]``. Trecho novo entra no FIM.
 FRASES_BANIDAS: tuple[str, ...] = (
     "derrubam o controle",
     "resultado é ZERO",
@@ -127,45 +91,6 @@ FRASES_BANIDAS: tuple[str, ...] = (
 )
 
 
-#: PALAVRAS proibidas em texto de tela, casadas por BORDA DE PALAVRA e sem
-#: distinguir maiúscula. Elas são a outra metade da proibição, e a comparação é
-#: outra de propósito: :data:`FRASES_BANIDAS` casa por substring porque são
-#: frases literais que já estiveram no produto; uma palavra por substring
-#: pegaria *remessa* e todo identificador que a carrega.
-#:
-#: ``mesa`` entrou em 06/09/2026 (A-PALAVRA-MESA-SAI-01). O que entra no lugar
-#: dela está no glossário, §1: *os controles*, *todos*, *P1 e P2*, *quem está
-#: ligado*. **A feature não sai; a palavra sai** — nenhuma tabela, contagem ou
-#: aviso caiu por causa disto.
-#: ``reconciliad`` e ``compactada`` entraram em 09/09/2026 (JOGAR-02 §5), e as
-#: duas são a LÍNGUA DE DENTRO: `CoopManager.sync` e `identity.compact`
-#: escritos na tela dela. A frase que ela mandou remover era
-#: *"Jogadores reconciliados — 2 jogador(es). A numeração já estava
-#: compacta."* O que entrou no lugar nomeava os assentos, e saiu em 24/09/2026
-#: pela decisão dela — está em :data:`FRASES_BANIDAS`, o quarto trecho.
-#:
-#: **`compactada` E NÃO `compacta`:** a segunda é raiz de `compactar`, que é o
-#: verbo certo em código e em comentário, e a régua casa por BORDA DE PALAVRA —
-#: banir a raiz curta acusaria toda prosa que explica o que o daemon faz.
-#:
-#: **A LISTA DEIXOU DE SER DIGITADA — 11/09/2026, F5-A-REGUA-LE-O-GESTO.** Ela
-#: tinha TRÊS palavras enquanto o glossário
-#: (`docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`)
-#: proibia ONZE, e só a de baixo tinha régua. Foi por essa fresta que `uinput`
-#: chegou à dica da Navegação e ficou.
-#:
-#: **O DONO É O GLOSSÁRIO, e esta tupla é a CÓPIA que o produto carrega.** O
-#: pacote instalado não leva `docs/` junto, então um módulo que lesse o arquivo
-#: em execução quebraria na máquina dela. A cópia não envelhece porque
-#: `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py` mede as duas listas uma
-#: contra a outra NOS DOIS SENTIDOS: palavra nova no glossário e ausente daqui
-#: reprova, e palavra daqui que o glossário não tem reprova também.
-#:
-#: As oito que entraram são língua de dentro — o nome do subsistema
-#: (`uinput`, `hidraw`), o do arquivo da Steam (`vdf`), o da variável (`env`), o
-#: do endereço do aparelho (`uniq`, `MAC`), o do campo interno (`wrapper_used`,
-#: `dedup`) — mais duas frases que mandam a pessoa a um lugar que a tela dela
-#: não tem (*janela do aplicativo*, *linha de comando*).
 PALAVRAS_BANIDAS: tuple[str, ...] = (
     "env",
     "vdf",
@@ -182,30 +107,16 @@ PALAVRAS_BANIDAS: tuple[str, ...] = (
     "compactada",
 )
 
-#: As letras que fazem de uma ocorrência um IDENTIFICADOR e não uma palavra.
 #: `-` e `_` estão aqui porque `mesa-frase`, `radio-mesa` e `MESA_VAZIA` são
-#: endereços vivos desta casa; os acentuados estão porque `\w` do `re` já os
-#: cobre em `str`, e escrever a classe à mão sem eles deixaria *mesamente*
-#: passar por palavra inteira.
 _COLADO = r"0-9A-Za-zÀ-ÖØ-öø-ÿ_\-"
 
-#: `<style>`, `<script>` e comentário HTML NÃO são tela. Foi medido em
-#: 06/09/2026: das 194 ocorrências cruas de `mesa` nos dez mockups, **121
-#: estavam em comentário de CSS** e 14 em comentário de HTML — prosa da casa,
-#: que o glossário deixa ficar.
 _MUDOS = re.compile(
     r"<!--.*?-->|<style\b[^>]*>.*?</style>|<script\b[^>]*>.*?</script>",
     re.S | re.I,
 )
 
-#: `<code>` é a ZONA DO IDENTIFICADOR na tela desta casa: é assim que a legenda
-#: dos mockups escreve `monta.MESA` e `a10_perfis`. O nome fica, e por isso o
-#: que está dentro dele não é palavra de tela.
 _CODIGO = re.compile(r"<code\b[^>]*>.*?</code>", re.S | re.I)
 
-#: OS ATRIBUTOS QUE A PESSOA LÊ. `title` é a dica do `?` — o glossário diz que
-#: *a explicação mora aqui* —, e uma régua que só olhasse nó de texto daria
-#: verde sobre a palavra escondida numa dica.
 _ATRIBUTO_LIDO = re.compile(
     r"\b(?:title|placeholder|aria-label|alt)\s*=\s*(\"[^\"]*\"|'[^']*')", re.I
 )
@@ -220,10 +131,6 @@ def _apagar(alvo: list[str], inicio: int, fim: int) -> None:
             alvo[i] = " "
 
 
-#: As tags que NÃO FECHAM. Sem esta lista, um `<br>` dentro do elemento
-#: escondido contaria como abertura e a conta de profundidade nunca voltaria a
-#: zero — o resto do arquivo sairia apagado, e um apagão silencioso numa régua
-#: é o mesmo defeito que ela veio curar, só que ao contrário.
 _SEM_FECHO = frozenset(
     (
         "area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -231,9 +138,6 @@ _SEM_FECHO = frozenset(
     )
 )
 
-#: Uma tag de ABERTURA, com o nome separado dos atributos e com as aspas
-#: respeitadas: um `title="a > b"` tem `>` DENTRO do valor, e o `<[^>]*>` da
-#: leitura de tag cortaria a tag no meio dele.
 _ABERTURA = re.compile(
     r"<([A-Za-z][A-Za-z0-9:-]*)((?:\"[^\"]*\"|'[^']*'|[^>\"'])*)>", re.S
 )
@@ -251,12 +155,7 @@ def _valor(atributos: str, nome: str) -> str:
 
 
 def _casa(nome: str, atributos: str, seletor: str) -> bool:
-    """Este elemento é o que o seletor nomeia?
-
-    Só as três formas que a folha desta casa usa — `.classe`, `#id` e `tag`. O
-    que passa daí é RECUSADO lá no dono (`folha_da_casa.seletores_escondidos`),
-    em voz alta, antes de chegar aqui.
-    """
+    """Este elemento é o que o seletor nomeia?"""
     if seletor.startswith("."):
         return seletor[1:] in _valor(atributos, "class").split()
     if seletor.startswith("#"):
@@ -265,11 +164,7 @@ def _casa(nome: str, atributos: str, seletor: str) -> bool:
 
 
 def _fim_do_elemento(pagina: str, nome: str, apos: int) -> int:
-    """Onde acaba o elemento aberto em ``apos`` — contando os aninhados.
-
-    A `.nota` do mockup tem `<div>` dentro de `<div>`: parar no primeiro
-    `</div>` deixaria de fora justamente o miolo, que é onde o texto mora.
-    """
+    """Onde acaba o elemento aberto em ``apos`` — contando os aninhados."""
     par = re.compile(
         rf"<(/?){re.escape(nome)}\b((?:\"[^\"]*\"|'[^']*'|[^>\"'])*)>", re.I | re.S
     )
@@ -306,13 +201,7 @@ def _apagar_o_escondido(
 
 
 def _ler(pagina: str, escondidos: tuple[str, ...] = ()) -> str:
-    """O motor das duas leituras — a da bancada e a do produto.
-
-    ``escondidos`` são os seletores que a FOLHA do produto apaga, e é o único
-    ponto em que as duas diferem. Ele entra ANTES do `<code>` e das tags, e
-    DEPOIS do `<style>`/comentário de propósito: um comentário de CSS que cite
-    ``<div class="nota">`` viraria elemento de verdade se a ordem fosse outra.
-    """
+    """O motor das duas leituras — a da bancada e a do produto."""
     letras = list(pagina)
     for muda in _MUDOS.finditer(pagina):
         _apagar(letras, muda.start(), muda.end())
@@ -326,69 +215,18 @@ def _ler(pagina: str, escondidos: tuple[str, ...] = ()) -> str:
         lidos = [m.span(1) for m in _ATRIBUTO_LIDO.finditer(tag.group(0))]
         _apagar(letras, tag.start(), tag.end())
         for a, b in lidos:
-            # o valor volta SEM as aspas — elas são sintaxe, não leitura.
             for i in range(tag.start() + a + 1, tag.start() + b - 1):
                 letras[i] = limpo[i]
     return "".join(letras)
 
 
 def texto_visivel(pagina: str) -> str:
-    """O que uma pessoa LÊ nesta página NO NAVEGADOR — a leitura da BANCADA.
-
-    A ordem importa, e cada passo tem uma medição atrás:
-
-    1. saem `<style>`, `<script>` e comentário HTML (135 das 194 ocorrências de
-       `mesa` de 06/09 moravam aí, e nenhuma delas chega a olho nenhum);
-    2. saem os `<code>…</code>`, que são o nome interno escrito de propósito;
-    3. saem as tags que sobraram — **menos** os `title`/`placeholder`/
-       `aria-label`/`alt`, que a pessoa lê mesmo estando dentro de uma tag.
-
-    **ELA DEVOLVE UMA STRING DO MESMO TAMANHO**, com espaço no lugar do que não
-    é tela e a quebra de linha preservada. Isso não é economia: é o que deixa a
-    régua dizer *página, linha e frase* em vez de "há uma em algum lugar" — e a
-    entrega de uma régua é o endereço do defeito, não o número dele.
-
-    A ENTIDADE FICA COMO ESTÁ (`&nbsp;`, `&amp;`): desfazê-la mudaria o
-    tamanho, e nenhuma palavra desta lista se escreve com entidade — a borda de
-    palavra trata `;` e `&` como separador, que é o que basta.
-
-    CONFERIDO CONTRA O NAVEGADOR, 06/09/2026: para as quatro abas fotografadas,
-    o número que esta função dá é o mesmo do `innerText` da `.nota` num Chrome
-    de verdade (13 · 6 · 6 · 3). Um stripper que ninguém conferiu contra o
-    motor é a armadilha do `COMO-OLHAR-A-TELA.md`.
-
-    **ELA CONTA A `.nota`, E ISSO É O CERTO AQUI.** A bancada (`mockup/`) é o
-    que ela abre NO NAVEGADOR, sem folha de usuário nenhuma: ali o bilhete de
-    projeto é texto visível de verdade. Quem quer a leitura do PRODUTO chama
-    :func:`texto_visivel_no_produto` — a diferença entre as duas é o ponto
-    inteiro da separação.
-    """
+    """O que uma pessoa LÊ nesta página NO NAVEGADOR — a leitura da BANCADA."""
     return _ler(pagina)
 
 
 def texto_visivel_no_produto(pagina: str) -> str:
-    """O que uma pessoa LÊ nesta página DENTRO DA JANELA — a leitura do PRODUTO.
-
-    A diferença para :func:`texto_visivel` é uma só, e ela custou uma sprint:
-    o produto não renderiza a página crua. O `JanelaDaAba` injeta a
-    :data:`~hefesto_dualsense4unix.interface.folha_da_casa.FOLHA_DA_CASA` pela
-    `UserContentManager`, e a primeira regra dela é
-    `.nota{display:none !important}` — *"tira os bilhetes de projeto que o
-    mockup carrega para quem o lê no navegador; eles não são produto"*.
-
-    O NÚMERO QUE PROVA, medido em 06/09/2026 sobre `interface/paginas/`:
-    `--palavra mesa --publicado` acusava **34 ocorrências visíveis "em o
-    produto"** e um Chrome com a folha posta mostrava **ZERO** — as 34 estavam
-    todas dentro da `.nota`. O instrumento respondia sobre o ARQUIVO e dizia "o
-    produto"; é a assinatura de instrumento falso que esta casa persegue.
-
-    **O SELETOR NÃO SE DIGITA AQUI.** Ele vem de
-    :func:`~hefesto_dualsense4unix.interface.folha_da_casa.seletores_escondidos`, que
-    lê o `display:none` da folha do produto: uma segunda regra de esconder
-    amanhã vale para esta régua sem ninguém tocar nela. Digitar `.nota` uma
-    segunda vez seria o defeito que esta casa mais paga — o mesmo valor com dois
-    donos.
-    """
+    """O que uma pessoa LÊ nesta página DENTRO DA JANELA — a leitura do PRODUTO."""
     from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
 
     return _ler(pagina, seletores_escondidos())
@@ -396,12 +234,7 @@ def texto_visivel_no_produto(pagina: str) -> str:
 
 @cache
 def _borda(palavra: str) -> re.Pattern[str]:
-    """A palavra inteira, e nunca o pedaço de um nome.
-
-    O `functools.cache` porque esta régua roda por LINHA das dez páginas e por
-    literal dos dez pacotes — são dezenas de milhares de chamadas, e
-    recompilar o mesmo padrão em cada uma é trabalho que ninguém pediu.
-    """
+    """A palavra inteira, e nunca o pedaço de um nome."""
     p = re.escape(palavra)
     return re.compile(
         rf"(?<![{_COLADO}])(?<![{_COLADO}]\.){p}(?![{_COLADO}])(?!\.[{_COLADO}])",
@@ -410,25 +243,7 @@ def _borda(palavra: str) -> re.Pattern[str]:
 
 
 def frase_banida_em(texto: str) -> str | None:
-    """O primeiro trecho banido presente em ``texto``, ou ``None``.
-
-    ELA NÃO CONSULTA :data:`PALAVRAS_BANIDAS`, e isso foi medido, não esquecido.
-    Esta função era o que `hefesto_vivo._json` chamava quando o `_json`
-    **levantava** — ele é o funil por onde todo valor passa a caminho do
-    WebView. Desde 13/09/2026 o funil chama `primeiro_trecho_banido` e só
-    DENUNCIA: levantando, ele congelava a janela inteira. Duas coisas o fariam
-    quebrar a tela dela em 06/09:
-
-    * a chave ``"mesa"`` do próprio pacote, que sete pacotes emitem a cada
-      tique (``{"mesa": {campo: valor}}``);
-    * **dezesseis frases de `app/`** que ainda dizem a palavra e chegam à tela em
-      execução (medidas em 06/09; a lista está no relatório da sprint). O
-      `app/` não é da posse desta sprint, e um funil que levanta sobre frase
-      que ninguém pode curar troca uma palavra feia por uma janela morta.
-
-    Quem curar o `app/` fecha o ciclo trocando esta chamada por
-    :func:`primeiro_trecho_banido`, que já sabe consultar as duas listas.
-    """
+    """O primeiro trecho banido presente em ``texto``, ou ``None``."""
     for frase in FRASES_BANIDAS:
         if frase in texto:
             return frase
@@ -436,15 +251,7 @@ def frase_banida_em(texto: str) -> str | None:
 
 
 def palavra_banida_em(texto: str) -> str | None:
-    """A primeira palavra banida presente em ``texto``, ou ``None``.
-
-    DUAS OCORRÊNCIAS NÃO CONTAM, e as duas são o nome interno:
-
-    * o texto que **é** a palavra e nada mais — ``"mesa"`` sozinho é a chave do
-      pacote, não uma frase;
-    * a forma de chave num JSON já serializado (``"mesa":``), que é o mesmo
-      nome depois de passar pelo `json.dumps`.
-    """
+    """A primeira palavra banida presente em ``texto``, ou ``None``."""
     for palavra in PALAVRAS_BANIDAS:
         if texto.strip().lower() == palavra.lower():
             continue
@@ -463,47 +270,12 @@ def primeiro_trecho_banido(texto: str) -> str | None:
 
 
 def sem_o_trecho(texto: str, trecho: str) -> str:
-    """``texto`` sem as ocorrências de ``trecho``, lido como a régua o lê.
-
-    A FRASE sai por substring, como :func:`frase_banida_em` a acha; a PALAVRA
-    sai pela borda de :func:`_borda`, como :func:`palavra_banida_em` a acha. No
-    lugar fica um espaço, para que o que sobra dos dois lados não se cole numa
-    palavra nova. É o que deixa o funil achar o SEGUNDO trecho do mesmo valor:
-    sem tirar o primeiro, :func:`primeiro_trecho_banido` o devolveria de novo.
-    """
+    """``texto`` sem as ocorrências de ``trecho``, lido como a régua o lê."""
     if trecho in FRASES_BANIDAS:
         return texto.replace(trecho, " ")
     return _borda(trecho).sub(" ", texto)
 
 
-# ---------------------------------------------------------------------------
-# A CITAÇÃO — O-FUNIL-DIZ-O-CAMPO-E-O-DIARIO-E-CITACAO-01, 28/09/2026
-# ---------------------------------------------------------------------------
-# O QUE A TELA CITA DE OUTRO PROGRAMA NÃO É FRASE DA TELA. É a regra do
-# `<code>` do glossário (§5: o que está dentro dele é identificador, não
-# palavra de tela) levada ao funil de execução, que não vê marcação nenhuma:
-# ele lê valores.
-#
-# O CASO QUE A FEZ NASCER é o painel «Registro do serviço» da aba 09. Ela o
-# quer sempre à vista, para copiar e colar num relato de defeito (25/09), e as
-# linhas são do daemon: `uhid_device_created mac=…`, `backend_conectado
-# uniq=…`. O funil acusava `'MAC'` e `'uniq'` a cada abertura da aba, sem
-# dizer de onde, e ninguém podia curar: a palavra é a chave do registro, e o
-# relato de defeito precisa dela.
-#
-# A MARCA NÃO MUDA UM BYTE. Uma subclasse de `str` não sobreviveria ao
-# caminho (o `str(repouso)` de `a09_sistema._no_painel` e o `"\n".join` do
-# painel a perdem), então o dono REGISTRA o trecho citado e o funil o tira da
-# leitura antes de procurar a palavra. O resto do valor segue lido: a frase do
-# produto no mesmo campo continua na régua.
-#
-# O REGISTRO SE LÊ POR CÓPIA, sob trava: quem cita é a faixa lenta da 09, numa
-# thread, e quem lê é o tique. Um `RuntimeError` de dicionário mudando no meio
-# da leitura, dentro do tique, congelaria a janela.
-
-#: QUANTAS CITAÇÕES O REGISTRO GUARDA. A faixa lenta relê o diário a cada 2 s,
-#: e o painel mostra a mais nova; as de antes só servem enquanto um tique ainda
-#: carrega o texto velho. A mais antiga sai primeiro.
 CITACOES_QUE_O_FUNIL_LEMBRA = 16
 
 _CITADOS: dict[str, None] = {}
@@ -511,11 +283,7 @@ _TRAVA_DOS_CITADOS = threading.Lock()
 
 
 def citar(texto: str) -> str:
-    """Registra ``texto`` como CITAÇÃO de outro programa e o devolve igual.
-
-    Devolve o MESMO objeto: quem cita escreve ``return citar(texto)`` e a tela
-    recebe exatamente o que receberia sem a marca.
-    """
+    """Registra ``texto`` como CITAÇÃO de outro programa e o devolve igual."""
     if texto:
         with _TRAVA_DOS_CITADOS:
             _CITADOS.pop(texto, None)
@@ -532,11 +300,7 @@ def citados() -> tuple[str, ...]:
 
 
 def sem_o_citado(texto: str) -> str:
-    """O que o funil lê de ``texto``: tudo, menos os trechos citados.
-
-    O trecho citado sai inteiro, e fica uma quebra de linha no lugar dele —
-    as palavras de antes e de depois não se colam.
-    """
+    """O que o funil lê de ``texto``: tudo, menos os trechos citados."""
     for citado in citados():
         if citado in texto:
             texto = texto.replace(citado, "\n")

@@ -90,8 +90,6 @@ from comum import (
 )
 from escrita_pelo_broker import mascarar
 
-#: AS TRÊS FORMAS, e cada uma é uma hipótese sobre o que o firmware exige no
-#: cabo. Nenhuma é "a certa" — o ensaio existe justamente porque não se sabe.
 FORMAS = {
     "tal-e-qual": "o 0x39 como vai pelo rádio, com o CRC-32 no rabo",
     "sem-crc": "o mesmo, com os 4 bytes de CRC cortados (o cabo não usa CRC)",
@@ -148,7 +146,6 @@ def main() -> int:
         print(resumo(f"arranjo que o produto não conhece: {desconhecidos}"))
         return 1
 
-    # A CONDIÇÃO É A DO PRODUTO, com o volume que ELA ouviu no cabo.
     common = af.common_de_audio(
         volume=af.VOLUME_QUE_ELA_OUVIU,
         rota=rep.SAIDA_SO_NO_ALTO_FALANTE,
@@ -169,9 +166,6 @@ def main() -> int:
         print(resumo("leitura pura — nenhum byte escrito. Rode com --tocar, com ela ouvindo."))
         return 0
 
-    # O `Escritor` do broker monta o report a partir do `common` — aqui o pacote
-    # já vem PRONTO do arranjo (é o corpo do 0x39, não um estado), então a porta
-    # se abre direto. O broker continua sendo quem a entrega, com o daemon vivo.
     no = abrir_no_hidraw(alvo.caminho_hidraw, escrita=True)
     print(getattr(no, "linha_de_relatorio", "porta: broker"))
     total_recusas = 0
@@ -189,8 +183,6 @@ def main() -> int:
                     os.write(no.fd, pkt)
                 except OSError as erro:
                     recusas += 1
-                    # UM KERNEL QUE RECUSA O PRIMEIRO RECUSA OS 200: insistir só
-                    # enche o log e atrasa a resposta na tela dela.
                     motivo = f"{erro.__class__.__name__} {erro.errno} — {erro.strerror}"
                     break
                 time.sleep(intervalo)

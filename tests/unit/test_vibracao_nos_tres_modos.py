@@ -37,10 +37,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_vibracao_nos_tres_modos: importa código da janela GTK")
 
 import contextlib
@@ -66,27 +62,13 @@ class _RelogioFalso:
         return self.agora
 
 
-# ---------------------------------------------------------------------------
-# 1. O maior pedido, comparado por INTENSIDADE (vale para os dois backends)
-# ---------------------------------------------------------------------------
-
-
 def test_o_maior_pedido_e_o_que_a_mao_sente_e_nao_o_primeiro_byte():
-    """MORDE: com `>` de tupla no lugar, `(1, 0)` vence `(0, 255)` e passa a ser
-    "o maior pedido do jogo" — a tela passa a dizer que o jogo só pediu
-    vibração imperceptível quando ele pediu a máxima."""
+    """MORDE: com `>` de tupla no lugar, `(1, 0)` vence `(0, 255)` e passa a ser"""
     assert pedido_mais_forte((0, 255), (1, 0)) == (0, 255)
     assert pedido_mais_forte((0, 0), (0, 255)) == (0, 255)
     assert pedido_mais_forte((10, 10), (200, 3)) == (200, 3)
-    # Mesmo pico nos dois: quem sacode mais é quem move os DOIS motores.
     assert pedido_mais_forte((200, 0), (200, 50)) == (200, 50)
-    # Empate perfeito de pico E soma mantém o registro antigo (estável).
     assert pedido_mais_forte((0, 255), (255, 0)) == (0, 255)
-
-
-# ---------------------------------------------------------------------------
-# 2. Máscara Xbox (uinput): o modo que era impossível de medir
-# ---------------------------------------------------------------------------
 
 
 class _EfeitoFalso:
@@ -116,11 +98,7 @@ class _EfeitoFalso:
 
 @pytest.fixture
 def vpad_xbox():
-    """Vpad Xbox sem `/dev/uinput`: exercita o catálogo/`_refresh_ff` de verdade.
-
-    Mesma bancada dos testes de FF que já existem — o que precisa ser travado é
-    a CONTABILIDADE do caminho real, não uma função isolada.
-    """
+    """Vpad Xbox sem `/dev/uinput`: exercita o catálogo/`_refresh_ff` de verdade."""
     from evdev import ecodes
 
     pad = UinputGamepad.for_flavor("xbox")
@@ -142,11 +120,7 @@ def _carregar_e_tocar(pad, ident: int, weak: int, strong: int, duracao_ms=1000) 
 
 
 def test_mascara_xbox_deixa_de_dizer_forca_zero_com_o_motor_girando(vpad_xbox):
-    """MORDE: sem `ff_nao_nulo_count` no backend uinput, o `getattr(..., 0)` do
-    `ipc_handlers` devolve 0 e a aba afirma "pediu força zero em todas" com o
-    controle sacudindo na mão dela. Arranque a propriedade e este teste cai
-    no `assert` do texto."""
-    # 0x8000 nos dois motores = metade da escala do kernel -> 128 em 0-255.
+    """MORDE: sem `ff_nao_nulo_count` no backend uinput, o `getattr(..., 0)` do"""
     _carregar_e_tocar(vpad_xbox, ident=1, weak=0x8000, strong=0xC000)
 
     assert vpad_xbox.recebido == [(0x80, 0xC0)], "o par tem de chegar ao sink"
@@ -154,7 +128,6 @@ def test_mascara_xbox_deixa_de_dizer_forca_zero_com_o_motor_girando(vpad_xbox):
     assert vpad_xbox.ff_nao_nulo_count == 1, "houve FORÇA — e o backend tem de saber"
     assert vpad_xbox.ff_maior_pedido == (0x80, 0xC0)
 
-    # E a frase que ela lê na aba, montada como o daemon a monta.
     estado = {
         "native_mode": False,
         "rumble_ff": {
@@ -171,8 +144,7 @@ def test_mascara_xbox_deixa_de_dizer_forca_zero_com_o_motor_girando(vpad_xbox):
 
 
 def test_mascara_xbox_guarda_o_maior_por_intensidade(vpad_xbox):
-    """MORDE: com a comparação lexicográfica, o pedido fraco de `weak` apaga o
-    pedido máximo de `strong` que veio antes."""
+    """MORDE: com a comparação lexicográfica, o pedido fraco de `weak` apaga o"""
     _carregar_e_tocar(vpad_xbox, ident=1, weak=0x0000, strong=0xFF00)
     _carregar_e_tocar(vpad_xbox, ident=1, weak=0x0100, strong=0x0000)
 
@@ -180,8 +152,7 @@ def test_mascara_xbox_guarda_o_maior_por_intensidade(vpad_xbox):
 
 
 def test_mascara_xbox_conta_o_play_de_efeito_que_nao_temos(vpad_xbox):
-    """MORDE: sem o contador, um pedido perdido no catálogo é indistinguível de
-    "o jogo não pediu" — e o defeito é nosso."""
+    """MORDE: sem o contador, um pedido perdido no catálogo é indistinguível de"""
     vpad_xbox._start_ff_effect(99, repeats=1)
 
     assert vpad_xbox.ff_play_count == 0, "não tocou nada"
@@ -189,8 +160,7 @@ def test_mascara_xbox_conta_o_play_de_efeito_que_nao_temos(vpad_xbox):
 
 
 def test_forca_zero_de_verdade_continua_dizendo_forca_zero(vpad_xbox):
-    """A cura não pode virar otimismo: um efeito abaixo de 1/256 da escala NÃO
-    move o motor, e contá-lo como força seria a mesma mentira ao contrário."""
+    """A cura não pode virar otimismo: um efeito abaixo de 1/256 da escala NÃO"""
     _carregar_e_tocar(vpad_xbox, ident=1, weak=0x00C8, strong=0x0032)
 
     assert vpad_xbox.ff_play_count == 1
@@ -198,9 +168,7 @@ def test_forca_zero_de_verdade_continua_dizendo_forca_zero(vpad_xbox):
     assert vpad_xbox.ff_maior_pedido == (0, 0)
 
 
-# ---------------------------------------------------------------------------
 # 3. Máscara DualSense (uhid): os três buracos do painel
-# ---------------------------------------------------------------------------
 
 
 class _VpadUhidDeBancada(uhid.UhidDualSense):
@@ -278,9 +246,7 @@ def vpad_ds():
 
 
 def test_report_com_envelope_estranho_deixa_de_sumir_calado(vpad_ds):
-    """MORDE: sem o contador, escrita CHEGANDO produz o painel de "nenhum jogo
-    enxergou o gamepad virtual" — e as duas conclusões mandam caçar em pontas
-    opostas (dedup/udev/máscara x o nosso parser)."""
+    """MORDE: sem o contador, escrita CHEGANDO produz o painel de "nenhum jogo"""
     vpad_ds._handle_output(_evento_de_output(report_id=0x31, flag0=_V1, weak=200))
 
     assert vpad_ds.output_count == 0, "não é o 0x02: nada foi lido"
@@ -297,11 +263,9 @@ def test_report_com_envelope_estranho_deixa_de_sumir_calado(vpad_ds):
 
 
 def test_a_parada_do_sdl_deixa_de_ser_invisivel(vpad_ds):
-    """MORDE: a parada volta ANTES do `+= 1` do `plays` (certo), e sem contá-la
-    "o jogo vibrou e mandou parar" e "ninguém pediu nada" ficam com o MESMO
-    painel — quando a parada é prova de vibração viva."""
+    """MORDE: a parada volta ANTES do `+= 1` do `plays` (certo), e sem contá-la"""
     vpad_ds._handle_output(_evento_de_output(flag0=_V1, weak=120, strong=90))
-    vpad_ds._handle_output(_evento_de_output())  # tudo zerado = parada do SDL
+    vpad_ds._handle_output(_evento_de_output())
 
     assert vpad_ds.recebido == [(120, 90), (0, 0)]
     assert vpad_ds.ff_play_count == 1, "a parada NÃO é pedido"
@@ -309,9 +273,7 @@ def test_a_parada_do_sdl_deixa_de_ser_invisivel(vpad_ds):
 
 
 def test_o_anel_diz_quem_escreveu_e_por_qual_ramo(vpad_ds):
-    """MORDE: sem os bytes crus, `plays=4 nao_nulos=0` tem dois autores
-    possíveis — o jogo pelo hidraw e o `hid_playstation` traduzindo FF do nó
-    evdev — e eles mandam caçar em lugares opostos. O anel os separa."""
+    """MORDE: sem os bytes crus, `plays=4 nao_nulos=0` tem dois autores"""
     relogio = vpad_ds.time_fn
     vpad_ds._handle_output(_evento_de_output(flag0=_V1, weak=10, strong=20))
     relogio.agora += 2.0

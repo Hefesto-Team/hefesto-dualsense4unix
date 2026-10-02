@@ -27,7 +27,6 @@ from pathlib import Path
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "check_faixa_sintetica.py"
 
-#: A grafia medida no `controllers.json` de 23/08: sem `:` entre os octetos.
 LINHA_SUJA = '{"mac": "aabbcc112233", "slot": 1}\n'
 
 
@@ -64,13 +63,7 @@ def test_o_nome_exato_continua_pego(tmp_path: Path) -> None:
 
 
 def test_prefixo_parecido_de_outra_familia_nao_e_varrido(tmp_path: Path) -> None:
-    """O alcance por PREFIXO não pode virar alcance por qualquer coisa.
-
-    ``controllers.jsonl`` é outro formato (JSON Lines), não um backup: os
-    ``suffixes`` dele são ``['.jsonl']``, e ``.jsonl`` não está na lista de
-    extensões varridas. Sem este teste, "varrer por prefixo" seria licença para
-    o varredor abrir binário e inventar achado.
-    """
+    """O alcance por PREFIXO não pode virar alcance por qualquer coisa."""
     (tmp_path / "controllers.jsonl").write_text(LINHA_SUJA, encoding="utf-8")
     processo = rodar(tmp_path)
     assert processo.returncode == 0, processo.stdout

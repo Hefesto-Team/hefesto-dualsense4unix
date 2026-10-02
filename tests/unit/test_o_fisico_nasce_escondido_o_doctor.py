@@ -51,8 +51,6 @@ def _chamar(funcao: str, *args: str) -> str:
         [
             "bash",
             "-c",
-            # O `set --` cala o parser de argumentos do doctor no `source`; os
-            # argumentos da função vão guardados antes.
             f'ARGS=("$@"); set --; source "$DOCTOR_SH"; {funcao} "${{ARGS[@]}}"',
             "doctor",
             *args,
@@ -65,11 +63,6 @@ def _chamar(funcao: str, *args: str) -> str:
     )
     assert res.returncode == 0, res.stderr
     return res.stdout
-
-
-# ---------------------------------------------------------------------------
-# A máquina de mentira: regras, banco do udev e /sys
-# ---------------------------------------------------------------------------
 
 
 def _regras(tmp: Path, *, nossa: str, extra: dict[str, str] | None = None) -> tuple[Path, Path]:
@@ -108,15 +101,8 @@ def _sys(tmp: Path) -> str:
     return str(tmp / "sys" / "class" / "hidraw")
 
 
-#: O banco do hidraw6 dela em 25/09 (o P2 no rádio): uaccess corrente, sem seat.
 BANCO_ABERTO = "I:336334317\nG:uaccess\nQ:uaccess\nV:1\n"
-#: O que a regra certa deixa: a tag pegajosa fica (G:), a corrente sai (Q:).
 BANCO_FECHADO = "I:336334317\nG:uaccess\nG:seat\nQ:seat\nV:1\n"
-
-
-# ---------------------------------------------------------------------------
-# 1. O efeito da regra no banco do udev
-# ---------------------------------------------------------------------------
 
 
 class TestOBancoDoUdevDizComoONoNasceu:
@@ -133,15 +119,10 @@ class TestOBancoDoUdevDizComoONoNasceu:
         assert "71-sony-controllers.rules:22" in saida, saida
         assert "71-sony-controllers.rules:26" in saida, saida
         assert f"a de hoje é a {NOVA}" in saida, saida
-        # O 60-steam-input corre ANTES e não é culpado de nada.
         assert "60-steam-input" not in saida, saida
 
     def test_a_tag_pegajosa_nao_e_acusada(self, tmp_path: Path) -> None:
-        """A MORDIDA: leia `G:` no lugar de `Q:` e o nó fechado vira acusação.
-
-        O `TAG-=` só tira a tag CORRENTE; a pegajosa (`G:`) fica no banco para
-        sempre. É a corrente que o `73-seat-late` lê para dar a ACL.
-        """
+        """A MORDIDA: leia `G:` no lugar de `Q:` e o nó fechado vira acusação."""
         etc, usr = _regras(tmp_path, nossa=NOVA)
         _no(tmp_path, "hidraw6", "237:6", "0005:0000054C:00000CE6", BANCO_FECHADO)
         _no(tmp_path, "hidraw4", "237:4", "0003:0000054C:00000DF2", BANCO_FECHADO)
@@ -212,15 +193,7 @@ class TestOBancoDoUdevDizComoONoNasceu:
         assert _chamar("_regra_do_no_instalada", str(etc), str(usr)).strip() == NOVA
 
     def test_a_variante_aberta_nao_e_acusada(self, tmp_path: Path) -> None:
-        """O `--no-fechar-o-no` (e o pacote sem o broker) abre o nó DE PROPÓSITO.
-
-        Conferência de 25/09/2026: a primeira versão deste check dava FAIL
-        sobre a escolha de quem instalou — a variante aberta é o caminho de
-        volta que o próprio asset ensina, e o fail-safe dos pacotes.
-
-        A MORDIDA: tire o ramo `_regra_do_no_e_a_aberta` do veredito e isto
-        volta a FAIL, nomeando a 71-sony como culpada.
-        """
+        """O `--no-fechar-o-no` (e o pacote sem o broker) abre o nó DE PROPÓSITO."""
         etc, usr = _regras(tmp_path, nossa=NOVA)
         aberta = subprocess.run(
             ["bash", str(RAIZ / "scripts" / "regra_do_no_aberta.sh"), str(etc / NOVA),
@@ -238,13 +211,7 @@ class TestOBancoDoUdevDizComoONoNasceu:
         assert "variante aberta" in saida, saida
 
     def test_o_link_para_dev_null_desliga_a_regra_de_terceiro(self, tmp_path: Path) -> None:
-        """man 7 udev: um link para /dev/null em /etc DESLIGA a de mesmo nome em /usr/lib.
-
-        É o conserto que quem administra a máquina aplica na `71-sony`; o
-        doctor não pode continuar acusando a regra desligada. A MORDIDA: volte
-        o `[[ -f ]]` para ANTES do `visto` em `_regras_udev_em_ordem` e a
-        71-sony reaparece como culpada.
-        """
+        """man 7 udev: um link para /dev/null em /etc DESLIGA a de mesmo nome em /usr/lib."""
         etc, usr = _regras(tmp_path, nossa=VELHA)
         os.symlink("/dev/null", etc / "71-sony-controllers.rules")
         culpados = _chamar("_regras_que_reabrem_o_fisico", VELHA, str(etc), str(usr))
@@ -260,11 +227,6 @@ class TestOBancoDoUdevDizComoONoNasceu:
         assert "99-hidraw.rules:1" in _chamar("_udev_hidraw_rw_global", str(etc), str(usr))
         os.symlink("/dev/null", etc / "99-hidraw.rules")
         assert _chamar("_udev_hidraw_rw_global", str(etc), str(usr)) == ""
-
-
-# ---------------------------------------------------------------------------
-# 2. Quem segura o nó físico agora
-# ---------------------------------------------------------------------------
 
 
 def _processo(proc: Path, pid: int, comm: str, cmdline: str, fds: dict[int, str]) -> None:
@@ -299,7 +261,6 @@ class TestQuemSeguraOFisico:
         assert "hidraw6: steam (PID 44275)" in saida, saida
         assert "hidraw8: steam (PID 44275)" in saida, saida
         assert "2477877" not in saida, saida
-        # O hidraw9 é o vpad: a Steam segura o vpad de propósito.
         assert "hidraw9" not in saida, saida
 
     def test_no_modo_nativo_o_jogo_segura_de_proposito(self, tmp_path: Path) -> None:
@@ -316,11 +277,6 @@ class TestQuemSeguraOFisico:
                   {3: "/dev/hidraw6"})
         saida = _chamar("_veredito_de_quem_segura_o_fisico", str(proc), "/dev/hidraw6", "")
         assert "[ OK ] só o Hefesto" in saida, saida
-
-
-# ---------------------------------------------------------------------------
-# 3. O nascimento condenado vivo, pelo IPC do daemon
-# ---------------------------------------------------------------------------
 
 
 def _servidor_de_mentira(caminho: Path, resultado: dict[str, object]) -> threading.Thread:
@@ -382,7 +338,6 @@ class TestONascimentoCondenado:
         saida = _chamar("_veredito_dos_nascimentos", texto)
         assert "[WARN] nascimento condenado vivo em P2 (instância 000C) P3" in saida, saida
         assert "P1" not in saida, saida
-        # O carimbo diz a CONDIÇÃO: em 25/09 a barra do P2 obedeceu.
         assert "pode não obedecer" in saida, saida
 
     def test_sem_condenado_passa(self) -> None:
@@ -394,11 +349,6 @@ class TestONascimentoCondenado:
     def test_daemon_parado_nao_e_veredito(self) -> None:
         saida = _chamar("_veredito_dos_nascimentos", "")
         assert "[WARN]" not in saida and "[ OK ]" not in saida, saida
-
-
-# ---------------------------------------------------------------------------
-# 4. As peças estão no diagnóstico de verdade
-# ---------------------------------------------------------------------------
 
 
 def test_os_dois_checks_rodam_no_main() -> None:

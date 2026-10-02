@@ -38,8 +38,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: a seção monta widgets de verdade, e "pulei porque não
-# tenho GTK" é reprovação no job `gtk-real`. Vem antes do bloco de imports.
 exigir_gi_real("a seção Orçamento da aba Configurações")
 
 import ast
@@ -65,8 +63,6 @@ from hefesto_dualsense4unix.utils.maquina import OrcamentoDeclarado
 RAIZ = Path(__file__).resolve().parents[2]
 APP = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
 
-#: O degrau do Economia em percentual inteiro, derivado do dono único. É o
-#: número que a tela mostra, e ele não se escreve em teste nenhum.
 PCT_ECONOMIA = round(RUMBLE_POLICY_MULT["economia"] * 100)
 
 
@@ -76,10 +72,6 @@ class _Host:
     def __init__(self, orcamento: str | None = None) -> None:
         self._maquina_pendente: dict[str, Any] | None = None
         self._orcamento_lido = lambda: orcamento
-        #: A caixa fica PENDURADA no hospedeiro, e não é detalhe de arrumação:
-        #: solta numa variável local ela é coletada ao fim do `_montar`, o GTK
-        #: destrói os filhos junto e o seletor para de emitir "changed" — o
-        #: teste do clique falhava sem uma linha de erro, com o rascunho vazio.
         self._caixa: Any = None
 
     def _get(self, _ident: str) -> Any:
@@ -90,11 +82,6 @@ def _montar(host: _Host) -> Any:
     host._caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     secao_orcamento.montar(host, host._caixa)
     return host._caixa
-
-
-# ---------------------------------------------------------------------------
-# 1. A linha da aba de origem
-# ---------------------------------------------------------------------------
 
 
 def test_sem_declaracao_a_linha_nao_aparece() -> None:
@@ -109,13 +96,7 @@ def test_orcamento_sem_teto_nao_acende_a_linha(orcamento: str) -> None:
 
 
 def test_em_auto_a_linha_cala_porque_o_teto_e_movel() -> None:
-    """MORDIDA 1. Em Auto o teto muda a cada tique com a bateria.
-
-    A casa já enfrentou este caso e escolheu não prometer percentual
-    (`profiles/manager.py:1568-1579`, o pulo com log
-    `escala_de_vibracao_pulada_base_movel`). Um "limitado a 100%" que vira 30%
-    no minuto seguinte ensina a desconfiar da tela inteira.
-    """
+    """MORDIDA 1. Em Auto o teto muda a cada tique com a bateria."""
     assert teto_do_orcamento("auto") is None
     assert texto_do_teto_do_orcamento(RUMBLE_POLICY_MULT["max"], "auto") is None
 
@@ -143,18 +124,9 @@ def test_sem_saber_o_pedido_a_linha_cala() -> None:
 
 
 def test_o_percentual_da_linha_vem_do_dono_unico() -> None:
-    """Nenhum número desta linha é digitado: todos derivam da tabela.
-
-    Prova pela negativa: o texto tem de conter o percentual DERIVADO, e o
-    módulo da aba não pode ter o literal escrito em lugar nenhum.
-    """
+    """Nenhum número desta linha é digitado: todos derivam da tabela."""
     texto = texto_do_teto_do_orcamento(2.0, "economia")
     assert texto == f"200% · limitado a {PCT_ECONOMIA}% pelo orçamento"
-
-
-# ---------------------------------------------------------------------------
-# 2. Um dono só para a escada
-# ---------------------------------------------------------------------------
 
 
 def test_nenhum_modulo_de_app_recalcula_a_escada() -> None:
@@ -224,29 +196,15 @@ def test_a_celula_e_calculada_e_nao_digitada() -> None:
 
 
 def test_a_dica_aprovada_diz_o_numero_que_o_produto_entrega() -> None:
-    """A dica do botão Economia é texto aprovado, e por isso é literal.
-
-    Literal não pode virar mentira: se o degrau do Economia mudar, esta frase
-    passa a prometer o que o daemon não faz — e é este teste que avisa, em vez
-    de a usuária descobrir sentindo. Foi assim que o "40%" do desenho caiu, em
-    22/08/2026: o produto entrega 30%, e o número tem dono.
-    """
+    """A dica do botão Economia é texto aprovado, e por isso é literal."""
     assert (
         f"{PCT_ECONOMIA}%"
         in secao_orcamento.DICAS[secao_orcamento.PERFIL_BATERIA_LONGA]
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. A seção não grava nada
-# ---------------------------------------------------------------------------
-
-
 def test_as_chaves_sao_as_do_schema() -> None:
     """MORDIDA 4. A tupla da tela é o Literal que persiste, sem uma chave a mais."""
-    # A anotação é `Literal[...] | None`: o primeiro `get_args` abre a união,
-    # o segundo abre o Literal. Ler só o primeiro nível devolveria tupla vazia,
-    # e o teste passaria comparando nada com nada.
     do_schema: tuple[str, ...] = tuple(
         valor
         for ramo in get_args(OrcamentoDeclarado.model_fields["teto"].annotation)
@@ -261,12 +219,7 @@ def test_as_chaves_sao_as_do_schema() -> None:
 
 
 def test_o_clique_acumula_a_chave_e_nunca_o_rotulo() -> None:
-    """O rascunho leva a CHAVE do disco, nunca o id do botão nem o rótulo.
-
-    Gravar `"tudo_ligado"` (o id do botão) ou `"Tudo ligado"` (o rótulo) faria
-    o `extra="forbid"` do pydantic recusar o DOCUMENTO INTEIRO na próxima
-    carga — e o sintoma na tela seria "não consegui gravar".
-    """
+    """O rascunho leva a CHAVE do disco, nunca o id do botão nem o rótulo."""
     host = _Host()
     _montar(host)
     host._config_orcamento_seletor.set_active_id(  # type: ignore[attr-defined]
@@ -290,11 +243,7 @@ def test_a_declaracao_e_parcial_e_nao_apaga_as_outras_secoes() -> None:
 
 
 def test_o_clique_nao_grava_nada() -> None:
-    """MORDIDA 3 (D-A4). Nada de IPC nem de disco no clique — só o rascunho.
-
-    Prova pelo fonte, e não por espião: um espião só pegaria a chamada que ele
-    conhece, e o que a decisão proíbe é QUALQUER escritor nesta seção.
-    """
+    """MORDIDA 3 (D-A4). Nada de IPC nem de disco no clique — só o rascunho."""
     fonte = Path(secao_orcamento.__file__).read_text(encoding="utf-8")
     codigo = "\n".join(
         linha for linha in fonte.splitlines() if not linha.lstrip().startswith("#")
@@ -305,14 +254,8 @@ def test_o_clique_nao_grava_nada() -> None:
             "dono, e é o 'Aplicar' do rodapé"
         )
 
-    # NOTA DATADA — 25/08/2026. `call_async` saiu da lista acima e ganhou régua
-    # PRÓPRIA, mais estreita. A conta de fatias precisa de UMA coisa que o
-    # sysfs desta seção não tem — quem está no rádio —, e ela mora no
     # `daemon.state_full`. Banir a palavra inteira empurraria essa leitura para
-    # outro módulo só para escapar do portão, que é a meia-honestidade que esta
-    # casa não aceita. O que a `D-A4` proíbe é ESCRITOR, e é isso que a régua
     # abaixo mede: toda chamada assíncrona desta seção nomeia `daemon.state_full`
-    # e nada mais.
     arvore = ast.parse(fonte)
     metodos = sorted(
         {
@@ -356,10 +299,7 @@ def test_o_clique_nao_grava_nada() -> None:
 def test_montar_com_a_escolha_gravada_afunda_o_botao_certo(
     gravado: str, perfil: str
 ) -> None:
-    """A migração da `D-PERFIL-DE-DESEMPENHO`, campo a campo, sem perder nada.
-
-    E não deixa declaração pendente: abrir a janela não é gesto dela.
-    """
+    """A migração da `D-PERFIL-DE-DESEMPENHO`, campo a campo, sem perder nada."""
     host = _Host(gravado)
     _montar(host)
     assert host._config_orcamento_seletor.get_active_id() == perfil  # type: ignore[attr-defined]
@@ -374,27 +314,14 @@ def test_sem_nada_declarado_nenhum_botao_nasce_afundado() -> None:
 
 
 def test_a_secao_le_o_gravado_e_nunca_o_pendente() -> None:
-    """A aba de origem descreve o que o Hefesto aplica AGORA.
-
-    Mostrar ali a escolha ainda pendente faria a aba Rumble anunciar um limite
-    que o daemon não está impondo — a mentira oposta, e igualmente cara.
-    """
+    """A aba de origem descreve o que o Hefesto aplica AGORA."""
     host = _Host("balanceado")
     host._maquina_pendente = {"orcamento": {"teto": "economia"}}
     assert secao_orcamento.orcamento_em_vigor(host) == "balanceado"
 
 
 class TestOBotaoMostraOQueElaEscolheu:
-    """Achado da conferência de 23/08/2026: a tela se contradizia.
-
-    Com a marca nova do rodapé, o defeito ficou visível: declare um orçamento,
-    troque de aba, volte — o rodapé dizia "Há escolhas declaradas por aplicar" e
-    o botão mostrava o valor do disco. O caso mais feio era o "Não sei", que
-    declara `teto: None`: na remontagem, o botão ANTIGO voltava afundado, e a
-    escolha da pessoa sumia da tela sem aviso.
-
-    As duas funções coexistem de propósito, e este teste prende as duas pontas.
-    """
+    """Achado da conferência de 23/08/2026: a tela se contradizia."""
 
     def test_a_declaracao_pendente_vence_o_disco_no_botao(self) -> None:
         """MORDE: com `orcamento_em_vigor` no lugar, o botão mostra o disco."""
@@ -423,11 +350,7 @@ class TestOBotaoMostraOQueElaEscolheu:
         assert secao_orcamento.orcamento_em_vigor(host) == "balanceado"
 
     def test_a_aba_rumble_continua_ignorando_o_pendente(self) -> None:
-        """A razão de existirem DUAS funções, presa em teste.
-
-        MORDE: se alguém fizer `orcamento_em_vigor` olhar o pendente, a aba
-        Rumble passa a afirmar um limite que o daemon não está impondo.
-        """
+        """A razão de existirem DUAS funções, presa em teste."""
         host = _Host("balanceado")
         host._maquina_pendente = {"orcamento": {"teto": "max"}}
 

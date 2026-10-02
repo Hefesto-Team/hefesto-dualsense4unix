@@ -1,25 +1,4 @@
-"""O «Corrigir Vulkan» age onde a camada carrega — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.
-
-Ela, em 27/09: *«ou seja não resolveu e meteu uma placa falando que não
-presta.»* E a decisão dela:
-*«Nao sai. Passa a funcionar do jeito certo.»* <!-- noqa-acento: citação literal dela -->
-
-Até 28/09 o botão e o gancho do lançador mexiam só no registro do prefixo
-Wine, que nenhum jogo desta máquina lê: o `vulkan-1` do Wine devolve zero
-camadas. O que chega ao jogo são as camadas do LADO LINUX, e as duas da Steam
-(a sobreposição e o gravador de shaders) saem pelo ambiente que o lançador
-entrega ao jogo. Esta régua roda o lançador DE VERDADE, num lar de mentira,
-com o comando final sendo o `env` — o que ele imprime é o ambiente do jogo.
-
-AS MORDIDAS:
-
-- tire as duas linhas `DISABLE_VK_LAYER_VALVE_*` do `case` de
-  `camadas_da_steam_fora` em `assets/hefesto-launch.sh` e
-  `test_com_o_botao_ligado_o_jogo_recebe_as_duas` reprova;
-- tire o `traz_o_carregador_da_khronos` do modo `--prefixo` de
-  `integrations/camadas_vulkan.py` e
-  `test_o_registro_nao_se_mexe_sem_o_carregador_da_khronos` reprova.
-"""
+"""O «Corrigir Vulkan» age onde a camada carrega — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01."""
 from __future__ import annotations
 
 import json
@@ -56,12 +35,7 @@ def _registro(valor: str = "00000000") -> str:
 
 @pytest.fixture
 def lar(tmp_path: Path) -> Path:
-    """O lar de mentira: casa, config, estado e o PATH sem o Game Mode.
-
-    `system76-power`, `busctl` e `dbus-send` mudos na frente do PATH: o
-    lançador pede o perfil de energia a quem responder, e a régua não pode
-    falar com o daemon de energia da máquina de quem a roda.
-    """
+    """O lar de mentira: casa, config, estado e o PATH sem o Game Mode."""
     casa = tmp_path / "casa"
     (casa / ".config").mkdir(parents=True)
     mudos = tmp_path / "mudos"
@@ -94,7 +68,6 @@ def _lancar(lar: Path, **extra: str) -> dict[str, str]:
         "XDG_STATE_HOME": str(lar / "estado"),
         "XDG_RUNTIME_DIR": str(lar / "runtime"),
         "PATH": f"{lar / 'mudos'}:/usr/bin:/bin",
-        # O que a Steam põe no jogo, medido no `environ` do PRAGMATA em 28/09.
         "ENABLE_VK_LAYER_VALVE_steam_overlay_1": "1",
         "ENABLE_VK_LAYER_VALVE_steam_fossilize_1": "1",
         **extra,
@@ -115,17 +88,8 @@ def _as_da_steam(visto: dict[str, str]) -> set[str]:
     return {f"{k}={v}" for k, v in visto.items() if k.startswith("DISABLE_VK_LAYER_VALVE_")}
 
 
-# ---------------------------------------------------------------------------
-# 1. O AMBIENTE QUE O LANÇADOR ENTREGA AO JOGO
-# ---------------------------------------------------------------------------
-
-
 def test_com_o_botao_ligado_o_jogo_recebe_as_duas(lar: Path) -> None:
-    """Ligado pelo dono, o jogo nasce com as duas `DISABLE_…_1=1` — sem daemon.
-
-    O lar não tem daemon nenhum: a escolha é dela sobre o jogo, e não pode
-    depender de o serviço estar de pé.
-    """
+    """Ligado pelo dono, o jogo nasce com as duas `DISABLE_…_1=1` — sem daemon."""
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
     visto = _lancar(lar, SteamAppId="1599660")
     assert _as_da_steam(visto) == set(cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM), (
@@ -160,22 +124,16 @@ _SOBREPOSICAO, _GRAVADOR = cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM
 
 @pytest.mark.parametrize("escrito", [
     f"{_SOBREPOSICAO}\n{_GRAVADOR}\n",
-    f"# comentário\n{_GRAVADOR}\n{_SOBREPOSICAO}",       # sem a quebra no fim
-    f"{_SOBREPOSICAO} \n{_GRAVADOR}\n",                 # espaço no fim da linha
-    f" {_SOBREPOSICAO}\n{_GRAVADOR}\n",                 # espaço no começo
-    f"{_SOBREPOSICAO}\r\n{_GRAVADOR}\r\n",              # salvo com \r\n
-    f"{_SOBREPOSICAO}\n{_GRAVADOR}\n".encode() + b"\xff\xfe\n",  # byte fora do UTF-8
+    f"# comentário\n{_GRAVADOR}\n{_SOBREPOSICAO}",
+    f"{_SOBREPOSICAO} \n{_GRAVADOR}\n",
+    f" {_SOBREPOSICAO}\n{_GRAVADOR}\n",
+    f"{_SOBREPOSICAO}\r\n{_GRAVADOR}\r\n",
+    f"{_SOBREPOSICAO}\n{_GRAVADOR}\n".encode() + b"\xff\xfe\n",
 ], ids=["exato", "sem-quebra-no-fim", "espaco-no-fim", "espaco-no-comeco", "crlf",
         "byte-torto"])
 def test_a_pilula_e_o_lancador_leem_o_mesmo_arquivo_do_mesmo_jeito(
         lar: Path, escrito: str | bytes) -> None:
-    """A pílula acende se, e só se, o jogo recebe as duas.
-
-    Há DOIS leitores do mesmo arquivo — o dono em Python (a pílula e a linha do
-    exame) e o lançador em shell puro (o jogo). Se discordam, a tela diz «sem a
-    da Steam» sobre um jogo que nasceu com ela. MORDIDA: devolva o `strip()` ao
-    `camadas_da_steam_fora` do dono e o caso do espaço reprova.
-    """
+    """A pílula acende se, e só se, o jogo recebe as duas."""
     arquivo = cv.caminho_da_escolha(_config(lar))
     arquivo.parent.mkdir(parents=True)
     if isinstance(escrito, bytes):
@@ -191,10 +149,7 @@ def test_a_pilula_e_o_lancador_leem_o_mesmo_arquivo_do_mesmo_jeito(
 
 def test_o_jogo_da_lista_de_exclusao_abre_sem_nada(
         lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O jogo que ela tirou do Hefesto abre como se ele não estivesse instalado.
-
-    A lista se escreve PELO DONO: uma mudança de formato lá reprova aqui.
-    """
+    """O jogo que ela tirou do Hefesto abre como se ele não estivesse instalado."""
     from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(_config(lar)))
@@ -203,11 +158,6 @@ def test_o_jogo_da_lista_de_exclusao_abre_sem_nada(
     assert _as_da_steam(_lancar(lar, SteamAppId="1599660")) == set()
     assert _as_da_steam(_lancar(lar, SteamAppId="1971870")) == set(
         cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM)
-
-
-# ---------------------------------------------------------------------------
-# 2. O REGISTRO DO PREFIXO, SÓ NO JOGO QUE O LÊ
-# ---------------------------------------------------------------------------
 
 
 def _prefixo_e_jogo(lar: Path, *, com_carregador: bool) -> tuple[Path, Path, str]:
@@ -224,11 +174,7 @@ def _prefixo_e_jogo(lar: Path, *, com_carregador: bool) -> tuple[Path, Path, str
 
 
 def test_o_registro_nao_se_mexe_sem_o_carregador_da_khronos(lar: Path) -> None:
-    """Botão ligado, camada ligada no registro, e o jogo sem `vulkan-1.dll`: nada.
-
-    Era o gancho que editava todo prefixo em todo lançamento — e nenhum jogo
-    desta máquina lia a chave.
-    """
+    """Botão ligado, camada ligada no registro, e o jogo sem `vulkan-1.dll`: nada."""
     _instalar_o_curador(lar)
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
     prefixo, jogo, antes = _prefixo_e_jogo(lar, com_carregador=False)
@@ -252,15 +198,7 @@ def test_o_registro_se_mexe_no_jogo_que_traz_o_carregador(lar: Path) -> None:
 
 
 def test_religado_depois_de_devolver_o_gancho_volta_a_tirar(lar: Path) -> None:
-    """Desligar devolve e grava `manter`; ligar de novo é a voz dela por cima.
-
-    O botão é um ligável desde 25/09 e a escolha é o arquivo que o lançador lê:
-    desligar apaga a escolha E devolve (o `religar` grava `escolha: manter`).
-    Quando ela liga de novo, o gancho do jogo que traz o carregador tem de
-    voltar a tirar — é o `forcar=True` do modo `--prefixo`. Sem ele, o `manter`
-    de ontem venceria o clique de hoje, e a pílula acesa mentiria sobre esse
-    jogo. MORDIDA: troque o `forcar=True` do `main` por `forcar=False`.
-    """
+    """Desligar devolve e grava `manter`; ligar de novo é a voz dela por cima."""
     _instalar_o_curador(lar)
     prefixo, jogo, _ = _prefixo_e_jogo(lar, com_carregador=True)
     marca = cv.chave_de_estado(r"Software\Khronos\Vulkan\ImplicitLayers", EPIC)
@@ -287,11 +225,6 @@ def test_com_o_botao_desligado_o_registro_nao_se_mexe(lar: Path) -> None:
     assert (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8") == antes
 
 
-# ---------------------------------------------------------------------------
-# 3. O DONO
-# ---------------------------------------------------------------------------
-
-
 def test_ligar_e_desligar_pelo_dono(tmp_path: Path) -> None:
     config = tmp_path / "config"
     assert cv.camadas_da_steam_fora(config) is False
@@ -300,7 +233,7 @@ def test_ligar_e_desligar_pelo_dono(tmp_path: Path) -> None:
     cv.gravar_camadas_da_steam_fora(False, config_home=config)
     assert cv.camadas_da_steam_fora(config) is False
     assert not cv.caminho_da_escolha(config).exists()
-    cv.gravar_camadas_da_steam_fora(False, config_home=config)  # desligar duas vezes
+    cv.gravar_camadas_da_steam_fora(False, config_home=config)
 
 
 def test_a_busca_do_carregador(tmp_path: Path) -> None:

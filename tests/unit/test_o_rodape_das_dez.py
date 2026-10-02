@@ -1,31 +1,5 @@
 #!/usr/bin/env python3
-"""O RODAPÉ: Aplicar · Salvar Perfil · Importar · Exportar, nas dez abas.
-
-ELE NÃO É DE ABA NENHUMA — mora no `topo.html`, o esqueleto compartilhado — e é
-por isso que seus gestos são registrados em `("*", nome)`.
-
-O QUE ELE É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido dela (*"salvar
-exportar importar. dividir e ver se a feature do botão tá condizendo com o
-output seu"*):
-
-    Aplicar   footer_actions.on_apply_draft    → profile.apply_draft     ✓ existe
-    Salvar    footer_actions.on_save_profile   → save_profile            ✓ existe
-    Importar  footer_actions.on_import_profile → FileChooser + validação ✓ existe
-    Exportar  ——                                                          NÃO EXISTE
-
-**"Exportar" é um botão que o desenho criou e o produto nunca teve.** Não há
-handler no `src/`, e o `main.glade` traz `btn_footer_apply`, `btn_footer_import`
-e `btn_footer_save_profile` — mais nenhum. Ele foi CONSTRUÍDO nesta leva, por
-ordem dela: *"o que tiver em falta ou vc constrói ou manda agente ir
-construindo"*.
-
-O QUE ESTA RÉGUA COBRA, e as três primeiras são sobre estrago:
-
-1. **Importar não sobrescreve perfil dela.** Nome repetido vira `nome-2`.
-2. **Importar recusa o que não é perfil** ANTES de tocar a pasta.
-3. **Cancelar não é erro** — e não escreve nada.
-4. Aplicar e Salvar recusam sem perfil ativo, dizendo o quê fazer.
-"""
+"""O RODAPÉ: Aplicar · Salvar Perfil · Importar · Exportar, nas dez abas."""
 from __future__ import annotations
 
 import json
@@ -48,12 +22,7 @@ PERFIL = {
 
 
 class PonteDeMentira:
-    """Dublê da ponte, com o seletor de arquivo PROGRAMÁVEL.
-
-    O seletor é o que separa este rodapé do resto: ele não é IPC, é do SISTEMA.
-    Programá-lo aqui é o que deixa a régua cobrir os três caminhos que importam
-    — ela escolhe, ela cancela, e ela escolhe um arquivo que não presta.
-    """
+    """Dublê da ponte, com o seletor de arquivo PROGRAMÁVEL."""
 
     def __init__(self, escolhe=None, salva=None) -> None:
         self.chamadas: list[tuple] = []
@@ -113,12 +82,7 @@ def test_os_quatro_do_rodape_valem_em_qualquer_aba():
 
 
 def test_importar_nao_sobrescreve_perfil_dela(casa, ctx, tmp_path):
-    """Nome repetido vira `nome-2`.
-
-    Perder um perfil dela por um clique de importação é o estrago que esta
-    linha impede — e a janela estável faz o mesmo ("resolve conflito de nome se
-    necessário", `on_import_profile`).
-    """
+    """Nome repetido vira `nome-2`."""
     (casa / "importado.json").write_text('{"ja": "estava aqui"}', encoding="utf-8")
     vindo = tmp_path / "de-fora.json"
     vindo.write_text(json.dumps(PERFIL), encoding="utf-8")
@@ -147,7 +111,7 @@ def test_importar_recusa_o_que_nao_e_perfil(casa, ctx, tmp_path):
 def test_cancelar_o_seletor_nao_e_erro(casa, ctx):
     """Ela clicou e desistiu. Não levanta, não escreve."""
     p = PonteDeMentira(escolhe=None)
-    _g("importar")(ctx, {}, p)            # não levanta
+    _g("importar")(ctx, {}, p)
     assert list(casa.glob("*.json")) == []
     assert p.chamadas[0][0] == "escolher_arquivo"
 

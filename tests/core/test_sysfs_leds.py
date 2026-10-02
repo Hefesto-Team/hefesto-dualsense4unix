@@ -1,10 +1,4 @@
-"""Testes herméticos da rota sysfs de LED do kernel (FEAT-DSX-LIGHTBAR-SYSFS-01).
-
-Monta uma árvore /sys/class/leds falsa em tmp_path espelhando o layout que o
-`hid_playstation` cria (lightbar `*:rgb:indicator` + 5 `*:white:player-N`,
-device HID com `uevent` contendo `HID_UNIQ`) e valida discovery por MAC,
-gravabilidade e escrita.
-"""
+"""Testes herméticos da rota sysfs de LED do kernel (FEAT-DSX-LIGHTBAR-SYSFS-01)."""
 from __future__ import annotations
 
 import os
@@ -16,14 +10,7 @@ from hefesto_dualsense4unix.core import sysfs_leds
 
 
 def _build_fake_leds(root: Path, *, mac: str, prefix: str = "input88", players: int = 5) -> Path:
-    """Cria a árvore sysfs falsa e devolve o diretório /sys/class/leds simulado.
-
-    Estrutura espelhando o kernel:
-        <dev>/uevent                       (HID_UNIQ=<mac>)
-        <dev>/leds/<prefix>:rgb:indicator/{multi_intensity,brightness}
-        <dev>/leds/<prefix>:white:player-N/brightness
-        <leds_class>/<nome>  -> symlink p/ o nó real (como /sys/class/leds)
-    """
+    """Cria a árvore sysfs falsa e devolve o diretório /sys/class/leds simulado."""
     dev = root / "devices" / "hid0"
     leds_real = dev / "leds"
     (dev).mkdir(parents=True)
@@ -58,10 +45,7 @@ def test_norm_mac_strips_colons_and_lowercases() -> None:
     assert sysfs_leds.norm_mac("aabbcc000001") == "aabbcc000001"
     assert sysfs_leds.norm_mac(None) is None
     assert sysfs_leds.norm_mac("") is None
-    # string sem nenhum dígito hex -> None (não casa um nó por MAC)
     assert sysfs_leds.norm_mac("ghijkl") is None
-    # um path qualquer só preserva os hex contíguos — nunca colide com um MAC
-    # real (12 dígitos), então cai no fallback single-controle do backend.
     assert sysfs_leds.norm_mac("/dev/hidraw5") == "deda5"
 
 
@@ -76,7 +60,6 @@ def test_discover_keys_by_normalized_mac(fake_leds: Path) -> None:
 def test_discover_falls_back_to_uniq_when_no_hid_uniq(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # uevent sem HID_UNIQ, mas com input/<prefix>/uniq preenchido.
     dev = tmp_path / "devices" / "hid0"
     (dev / "input" / "input88").mkdir(parents=True)
     (dev / "uevent").write_text("HID_NAME=DualSense Wireless Controller\n")
@@ -117,7 +100,6 @@ def test_set_players_maps_bits_to_brightness(fake_leds: Path) -> None:
 def test_writable_reflects_permission(fake_leds: Path) -> None:
     node = sysfs_leds.discover()["aabbcc000001"]
     assert node.writable() is True
-    # remove permissão de escrita -> writable() vira False (gate anti-regressão)
     os.chmod(node._multi_intensity, 0o444)
     assert node.writable() is False
 
@@ -127,9 +109,6 @@ def test_discover_empty_when_no_nodes(tmp_path: Path, monkeypatch: pytest.Monkey
     empty.mkdir(parents=True)
     monkeypatch.setattr(sysfs_leds, "LEDS_ROOT", str(empty))
     assert sysfs_leds.discover() == {}
-
-
-# --- GUERRA-01 item 3: cache da última escrita em set_rgb --------------------
 
 
 def _conta_writes(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
@@ -148,73 +127,58 @@ def _conta_writes(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
 def test_set_rgb_igual_pula_o_filesystem(
     fake_leds: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Reescrever a MESMA cor (o reassert de 30s do reconnect_loop) não toca o
-    filesystem — o "flash azul" periódico morre; cor nova escreve normal."""
+    """Reescrever a MESMA cor (o reassert de 30s do reconnect_loop) não toca o"""
     node = sysfs_leds.discover()["aabbcc000001"]
     calls = _conta_writes(monkeypatch)
 
     assert node.set_rgb(0, 0, 153) is True
-    # UMA escrita, não duas. LUZ-CEGA-01/F3 (22/08/2026): a bancada falsa já
-    # tem `brightness=255`, e "fixar em 255" virou GARANTIR 255 — o `btmon`
-    # mediu os dois quadros saindo no mesmo milissegundo com bytes idênticos,
-    # porque o output report da classe LED leva o estado inteiro.
-    assert calls["n"] == 1  # só multi_intensity
-    assert node.set_rgb(0, 0, 153) is True  # cache: nada de write, mas True
     assert calls["n"] == 1
-    assert node.set_rgb(153, 0, 0) is True  # cor mudou => escreve
+    assert node.set_rgb(0, 0, 153) is True
+    assert calls["n"] == 1
+    assert node.set_rgb(153, 0, 0) is True
     assert calls["n"] == 2
 
 
 def test_brightness_divergente_volta_a_ser_escrito(
     fake_leds: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A economia de F3 é CONDICIONAL, e é isto que a torna segura.
-
-    Se um terceiro apagou pela classe (`brightness` != 255), ou se o nó ficou
-    ilegível num replug, a escrita volta a acontecer como sempre aconteceu — e
-    na MESMA ordem, o `brightness` antes da cor. Arranque a condição e este
-    teste reprova junto com o de cima: um passa a exigir uma escrita onde há
-    duas, o outro duas onde há uma.
-    """
+    """A economia de F3 é CONDICIONAL, e é isto que a torna segura."""
     node = sysfs_leds.discover()["aabbcc000001"]
-    Path(node._indicator_brightness).write_text("0")  # terceiro apagou pela classe
+    Path(node._indicator_brightness).write_text("0")
     calls = _conta_writes(monkeypatch)
     assert node.set_rgb(0, 0, 153) is True
-    assert calls["n"] == 2  # brightness + multi_intensity
+    assert calls["n"] == 2
     assert Path(node._indicator_brightness).read_text().strip() == "255"
 
 
 def test_invalidate_cache_forca_a_proxima_escrita(
     fake_leds: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Posse retomada (fim de sessão de jogo): `invalidate_cache()` garante que
-    a paleta volta ao físico mesmo sendo "a mesma cor" para o cache."""
+    """Posse retomada (fim de sessão de jogo): `invalidate_cache()` garante que"""
     node = sysfs_leds.discover()["aabbcc000001"]
     calls = _conta_writes(monkeypatch)
     node.set_rgb(0, 0, 153)
     node.invalidate_cache()
     node.set_rgb(0, 0, 153)
-    assert calls["n"] == 2  # duas passagens, uma escrita cada (ver F3 acima)
+    assert calls["n"] == 2
 
 
 def test_set_rgb_falho_nao_cacheia_e_retenta(
     fake_leds: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Escrita que falhou não pode virar cache — a próxima tentativa escreve
-    (senão um EIO transitório congelaria a cor errada até o replug)."""
+    """Escrita que falhou não pode virar cache — a próxima tentativa escreve"""
     node = sysfs_leds.discover()["aabbcc000001"]
     os.chmod(node._multi_intensity, 0o444)
     assert node.set_rgb(10, 20, 30) is False
     os.chmod(node._multi_intensity, 0o644)
     calls = _conta_writes(monkeypatch)
-    assert node.set_rgb(10, 20, 30) is True  # retentou de verdade
+    assert node.set_rgb(10, 20, 30) is True
     assert calls["n"] == 1
     assert Path(node._multi_intensity).read_text() == "10 20 30"
 
 
 def test_no_recriado_escreve_naturalmente(fake_leds: Path) -> None:
-    """Wake/adoção BT recria o nó => instância NOVA => cache vazio => escreve
-    (o cache é por instância de propósito)."""
+    """Wake/adoção BT recria o nó => instância NOVA => cache vazio => escreve"""
     node1 = sysfs_leds.discover()["aabbcc000001"]
     assert node1.set_rgb(0, 0, 153) is True
     node2 = sysfs_leds.discover()["aabbcc000001"]

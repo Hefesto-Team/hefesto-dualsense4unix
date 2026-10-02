@@ -1,30 +1,4 @@
-"""O-CO-OP-LOCAL-SAI-01 — o Estilo «Co-op local» saiu, e a tela não trata o co-op como modo.
-
-O pedido é dela (`D-2409-O-CO-OP-LOCAL-SAI`), e ela confirmou a leitura: o
-Hefesto dá um controle virtual a cada jogador SEMPRE, do P1 ao P4, e o co-op não
-é um modo que se escolhe.
-
-Três partes, e cada uma morde sozinha:
-
-1. **o dono dos estilos** — o `coop` não volta, em chave nem em rótulo, e a conta
-   que a dica da aba Perfis diz sai de `estilos_de_jogo.DE_FABRICA`;
-2. **o perfil que recebeu o estilo**, num lar de mentira (o `conftest` desvia o
-   `HOME` e os `XDG_*`): o estilo nunca foi guardado — ele é um verbo
-   (`perfis_web.ESTILO_APLICA_E_SAI`) —, então quem o recebeu fica com os ajustes
-   dele e sem estilo SEM migração nenhuma. A régua passa pelo caminho de verdade
-   (`a10_perfis._com_o_estilo` + `loader.save_profile`, que guarda a versão de
-   antes no `.historico`) e depois pela primeira carga de perfis do processo, com
-   as migrações one-shot rodando; o arquivo tem de sair byte a byte igual;
-3. **a tela** — nenhuma das dez abas diz «co-op» no que o produto renderiza (a
-   bancada sempre; o publicado quando a aba não está em trabalho), a dica da
-   célula LEDs é a mesma de um a quatro jogadores, e a recusa do «Jogador» diz o
-   que aconteceu.
-
-As MORDIDAS estão escritas caso a caso. A da parte 1 é a que a sprint pede:
-devolver o `coop` a `ESTILOS` reprova.
-
-Os `uniq` são sintéticos (regra da casa: fixture usa faixa forjada).
-"""
+"""O-CO-OP-LOCAL-SAI-01 — o Estilo «Co-op local» saiu, e a tela não trata o co-op como modo."""
 from __future__ import annotations
 
 import json
@@ -49,30 +23,19 @@ _INTERFACE = str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface")
 if _INTERFACE not in sys.path:
     sys.path.insert(0, _INTERFACE)
 
-#: «co-op» em qualquer grafia que já apareceu nesta casa — `co-op`, `coop`,
-#: `Co-op local` —, por borda de palavra.
 CO_OP = re.compile(r"(?i)\bco-?op\b")
 
-#: A RECEITA QUE SAIU, congelada como estava no motor até 25/09/2026 — é o que o
-#: produto gravava em quem escolhia «Co-op local». Não é um estilo vivo: é o
-#: DADO que existe hoje no disco de quem o usou, e é contra ele que a parte 2
-#: mede.
 RECEITA_QUE_SAIU = estilos_de_jogo.Estilo(
     "coop", "Co-op local", "SimpleRigid", "balanceado", (0, 0, 255), 1.0,
     "quatro na mesa: a família é a paleta canônica de jogador, que é a que ela "
     "já conhece de olhar")
 
-#: A MESA INTEIRA — P1 a P4, dois no cabo e dois no rádio. Nunca só o P1.
 MESA = [
     {"pref": f"p{n}", "uniq": f"aa:bb:cc:00:00:0{n}", "jogador": n,
      "nome": f"Controle {n}", "via": via, "transporte": via.lower()}
     for n, via in ((1, "USB"), (2, "BT"), (3, "USB"), (4, "BT"))
 ]
 
-
-# =============================================================================
-# 1. O DONO DOS ESTILOS — o `coop` não volta
-# =============================================================================
 
 def test_o_coop_nao_volta_ao_dono_dos_estilos() -> None:
     """MORDIDA: devolva o `Estilo("coop", "Co-op local", …)` a `ESTILOS`."""
@@ -93,10 +56,6 @@ def test_os_de_fabrica_sao_os_que_tem_receita() -> None:
     assert len(estilos_de_jogo.DE_FABRICA) == len(estilos_de_jogo.ESTILOS) - 1
 
 
-#: O NÚMERO POR EXTENSO só para LER a dica — a régua compara a palavra que a tela
-#: diz com a conta do motor. Quem escreve a palavra é o gerador
-#: (`aba10._EXTENSO`); ter a tabela aqui é o que deixa a régua reprovar uma
-#: palavra digitada lá.
 _LIDO = {"um": 1, "dois": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6,
          "sete": 7, "oito": 8, "nove": 9, "dez": 10, "onze": 11, "doze": 12,
          "treze": 13, "catorze": 14, "quinze": 15, "dezesseis": 16,
@@ -104,13 +63,7 @@ _LIDO = {"um": 1, "dois": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6,
 
 
 def test_a_dica_da_aba_perfis_conta_pelo_dono() -> None:
-    """A dica do «Estilo de Jogo» diz quantos de fábrica o MOTOR tem.
-
-    Era «Os catorze de fábrica» digitado no gerador, e ficou velho no minuto em
-    que o «Co-op local» saiu. MORDIDA: digite a palavra de volta no `title` do
-    `aba10.py` e regere — a bancada passa a dizer um número que não é o do motor
-    (e o próprio gerador recusa escrever).
-    """
+    """A dica do «Estilo de Jogo» diz quantos de fábrica o MOTOR tem."""
     bancada = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     achado = re.search(r"Os (\w+) de fábrica não se editam", bancada)
     assert achado, "a dica do Estilo de Jogo não diz mais quantos são de fábrica"
@@ -124,19 +77,9 @@ def test_a_dica_da_aba_perfis_conta_pelo_dono() -> None:
         f"a conta da dica voltou a ser digitada no gerador: «{digitada.group(0)}»")
 
 
-# =============================================================================
-# 2. O PERFIL QUE RECEBEU O ESTILO — fica com os ajustes, e sem estilo
-# =============================================================================
-
 @pytest.fixture
 def primeira_carga(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Liga a semeadura e as migrações one-shot (o `conftest` as desliga).
-
-    É o caminho que o daemon e a janela percorrem na primeira carga de perfis do
-    processo — `_maybe_seed_presets`, com as três migrações do slot do padrão e
-    as outras que ela chama. O censo dos jogos não é assunto desta régua, e a
-    máquina de quem roda a suíte não pode decidir o resultado.
-    """
+    """Liga a semeadura e as migrações one-shot (o `conftest` as desliga)."""
     monkeypatch.delenv(loader.SEED_SKIP_ENV_VAR, raising=False)
     monkeypatch.setattr(loader, "_seed_attempted", False)
     monkeypatch.setattr(loader, "_DEFAULT_SEED_SOURCE_DIRS",
@@ -145,12 +88,7 @@ def primeira_carga(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _o_perfil_que_recebeu_o_coop() -> tuple[pathlib.Path, bytes, Profile]:
-    """Um perfil de jogo que recebeu o «Co-op local» pelo caminho do produto.
-
-    Nasce sem receita (a versão que vai ao `.historico`), recebe a receita pelo
-    `_com_o_estilo` DE VERDADE — o mesmo que o gesto `editor.estilo` chama —, com
-    os quatro controles na mesa, e é gravado pelo `save_profile` de verdade.
-    """
+    """Um perfil de jogo que recebeu o «Co-op local» pelo caminho do produto."""
     from pacotes import a10_perfis
 
     antes = Profile(name="Jogo do Sofá", match=MatchAny(), priority=30)
@@ -203,12 +141,7 @@ def test_o_perfil_que_recebeu_o_coop_fica_com_os_ajustes_e_sem_estilo(
 
 
 def test_a_volta_de_antes_do_estilo_continua_no_historico(primeira_carga: None) -> None:
-    """A cópia do perfil de ANTES da receita está no `.historico`, e volta inteira.
-
-    É o `save_profile` que a guarda, no clique em que ela escolheu o estilo — a
-    mesma volta que a FREESTYLE-02 usa (`restaurar_do_historico`). A primeira
-    carga depois da saída do estilo não a apaga nem a substitui.
-    """
+    """A cópia do perfil de ANTES da receita está no `.historico`, e volta inteira."""
     arquivo, _bruto, _gravado = _o_perfil_que_recebeu_o_coop()
     versoes_antes = loader.listar_historico("Jogo do Sofá")
     assert versoes_antes, "o save do estilo não guardou a versão de antes"
@@ -225,11 +158,7 @@ def test_a_volta_de_antes_do_estilo_continua_no_historico(primeira_carga: None) 
 
 
 def test_o_gesto_recusa_o_estilo_que_saiu_sem_gravar() -> None:
-    """Até quem coordena publicar a 10, a página velha ainda oferece «Co-op local».
-
-    O gesto RECUSA dizendo, e nada vai ao disco. MORDIDA: devolva o `coop` ao
-    motor — o gesto volta a gravar a receita.
-    """
+    """Até quem coordena publicar a 10, a página velha ainda oferece «Co-op local»."""
     from pacotes import Contexto, a10_perfis
 
     pasta = profiles_dir(ensure=True)
@@ -244,13 +173,6 @@ def test_o_gesto_recusa_o_estilo_que_saiu_sem_gravar() -> None:
     assert (pasta / "jogo_do_sofa.json").read_bytes() == antes
 
 
-# =============================================================================
-# 3. A TELA — nenhum «co-op» como modo
-# =============================================================================
-
-#: O «co-op» que PODE ficar na tela, com a razão. Vazia de propósito: medido em
-#: 25/09/2026, depois da cura, o texto que o produto renderiza das dez abas da
-#: bancada não diz «co-op» nenhuma vez. Quem acrescentar aqui escreve o porquê.
 CO_OP_QUE_PODE_FICAR: tuple[str, ...] = ()
 
 
@@ -268,15 +190,7 @@ def _as_dez(publicado: bool) -> list[pathlib.Path]:
 
 
 def test_nenhuma_aba_diz_co_op_no_que_o_produto_renderiza() -> None:
-    """A leitura do PRODUTO (`texto_visivel_no_produto`: sem a `.nota`, sem código).
-
-    A bancada é medida sempre; o publicado, quando a aba não está em trabalho —
-    publicar é ato de quem coordena, e a espera fica declarada no
-    `DIVERGENCIAS.md`. A régua se rearma sozinha no dia da publicação.
-
-    MORDIDA: devolva «(co-op)» ao título da linha do exame em `aba09.py` e regere
-    a 09 — a bancada reprova com a linha e a frase.
-    """
+    """A leitura do PRODUTO (`texto_visivel_no_produto`: sem a `.nota`, sem código)."""
     bancada = _as_dez(publicado=False)
     assert len(bancada) == 10, [p.name for p in bancada]
     alvos = bancada + [p for p in _as_dez(publicado=True) if not _em_trabalho(p.name)]
@@ -307,13 +221,7 @@ def _colunas_da_04(jogadores: int) -> dict[str, Any]:
 
 
 def test_a_dica_da_celula_leds_e_a_mesma_de_um_a_quatro_jogadores() -> None:
-    """Com dois jogadores ou mais a dica somava «com o co-op ligado, é ele que…».
-
-    Medido no piloto oculto, no lar de mentira, em 25/09/2026, antes da cura:
-    *"Não sei (USB) · Desenho que mandamos: o do co-op — com o co-op ligado, é
-    ele que manda nas 5 luzes."* MORDIDA: devolva a `dica_da_luz` o ramo do
-    co-op — as colunas com quatro jogadores deixam de ser as de um.
-    """
+    """Com dois jogadores ou mais a dica somava «com o co-op ligado, é ele que…»."""
     um = _colunas_da_04(1)
     for jogadores in (2, 3, 4):
         muitos = _colunas_da_04(jogadores)
@@ -325,18 +233,7 @@ def test_a_dica_da_celula_leds_e_a_mesma_de_um_a_quatro_jogadores() -> None:
 
 @pytest.mark.parametrize("jogadores", [1, 2, 3, 4])
 def test_nenhum_dos_dez_pacotes_pinta_co_op(jogadores: int) -> None:
-    """O que os DEZ pacotes pintam no tique, com a mesa de quatro, não diz «co-op».
-
-    A régua do HTML (`test_nenhuma_aba_diz_co_op_no_que_o_produto_renderiza`)
-    lê o que a página traz de casa; o que o produto PINTA por cima, a cada
-    tique, sai dos pacotes — foi por aí que a frase da célula LEDs chegava à
-    tela com dois jogadores ou mais, e o arquivo da 04 não a tinha. Esta régua
-    pinta as dez abas pelo `pacote_da_pagina` de verdade, com P1 a P4 (dois no
-    USB, dois no BT) e de um a quatro jogadores no bloco `coop` do estado.
-
-    MORDIDA: devolva a `dica_da_luz` o ramo do co-op — com dois jogadores ou
-    mais a 04 volta a pintar «Desenho que mandamos: o do co-op…» nas colunas.
-    """
+    """O que os DEZ pacotes pintam no tique, com a mesa de quatro, não diz «co-op»."""
     import pacotes
 
     conectados = [
@@ -385,12 +282,7 @@ class _Ponte:
 
 @pytest.mark.parametrize("jogadores", [2, 3, 4])
 def test_a_recusa_do_jogador_diz_o_que_aconteceu(jogadores: int) -> None:
-    """O número mudou e as lâmpadas não: é isso, e só.
-
-    Antes: *"…mas as cinco lâmpadas não: com o co-op ligado, quem as acende é o
-    jogo."* — o co-op como modo, e o jogo como dono das lâmpadas, contra a
-    `D-2309-O-HEFESTO-MANDA-NO-NUMERO`. MORDIDA: devolva a cauda da frase.
-    """
+    """O número mudou e as lâmpadas não: é isso, e só."""
     import pacotes
 
     estado = {"active_profile": "", "coop": {"enabled": True, "players": jogadores}}

@@ -75,7 +75,6 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-#: Os nibbles altos do byte 52, do `dualsense_parse_report` (kernel 6.18).
 _CARGA_DESCARREGANDO = 0x0
 _CARGA_CARREGANDO = 0x1
 _CARGA_CHEIO = 0x2
@@ -83,25 +82,14 @@ _CARGA_TEMPERATURA = 0xA
 _CARGA_ERRO = 0xF
 
 
-# ---------------------------------------------------------------------------
-# Reports crus do físico e /dev/uhid falso (o mesmo desenho do
-# `test_orfaos_que_voltam_a_interface`, que é o irmão desta fiação)
-# ---------------------------------------------------------------------------
-
-
 def _usb_report(*, bateria: int = 0, marca: int = 0) -> bytes:
-    """Report 0x01 (64 B) do físico com o byte 52 pedido.
-
-    `marca` entra no gyro para que reports consecutivos sejam DIFERENTES — sem
-    isso o dedup por valor do throttle engoliria o segundo e o teste mediria o
-    throttle, não a fiação.
-    """
+    """Report 0x01 (64 B) do físico com o byte 52 pedido."""
     raw = bytearray(64)
     raw[0] = 0x01
     raw[1:7] = bytes([0x80, 0x80, 0x80, 0x80, 0, 0])
     raw[1 + 15] = marca & 0xFF
-    raw[1 + 32] = 0x80  # sem dedo no ponto 1
-    raw[1 + 36] = 0x80  # sem dedo no ponto 2
+    raw[1 + 32] = 0x80
+    raw[1 + 36] = 0x80
     raw[1 + BATTERY_STATUS_OFFSET] = bateria & 0xFF
     return bytes(raw)
 
@@ -115,7 +103,7 @@ def _bt_report(*, bateria: int = 0, corrupt: bool = False) -> bytes:
     crc = bt_crc32(raw[:-4], seed=BT_INPUT_CRC_SEED)
     raw[-4:] = crc.to_bytes(4, "little")
     if corrupt:
-        raw[2 + BATTERY_STATUS_OFFSET] ^= 0xFF  # muda DEPOIS do CRC
+        raw[2 + BATTERY_STATUS_OFFSET] ^= 0xFF
     return bytes(raw)
 
 
@@ -158,9 +146,6 @@ class _FakeUhid:
         return bodies[-1][uhid_gamepad._STATUS_OFFSET] if bodies else None
 
 
-#: fd sentinela do /dev/uhid falso. O fake é POR FD porque `uhid_gamepad.os` e
-#: `physical_report_reader.os` são O MESMO objeto módulo — um `os.read` cego
-#: cegaria também o reader, que lê o hidraw do físico por `os.read`.
 _FD_UHID = 4243
 
 
@@ -214,11 +199,6 @@ def _esperar(cond: Any, timeout_s: float = 3.0) -> bool:
     return cond()
 
 
-# ===========================================================================
-# CURA 1 — o som do jogo entra na linha de recursos do card
-# ===========================================================================
-
-
 def _entry() -> dict[str, Any]:
     return {"player": 1, "is_primary": True}
 
@@ -230,12 +210,7 @@ def _estado(**vpad: Any) -> dict[str, Any]:
 
 
 def _pedido_de_vibracao(ha_s: float = 0.2) -> list[dict[str, Any]]:
-    """Um anel de vibração com um PEDIDO de verdade: motor não-nulo e fresco.
-
-    NO-JOGO-SEM-FALSO-VERDE-01/T1 (25/08/2026). O carimbo `rumble` sozinho sai
-    também da PARADA do SDL, que chega sem jogo nenhum na mesa — quem separa os
-    dois é o anel `ff_ultimos_reports`.
-    """
+    """Um anel de vibração com um PEDIDO de verdade: motor não-nulo e fresco."""
     return [
         {
             "ha_s": ha_s,
@@ -251,13 +226,7 @@ def _pedido_de_vibracao(ha_s: float = 0.2) -> list[dict[str, Any]]:
 
 class TestOSomDoJogoNaLinhaDeRecursos:
     def test_som_chegando_agora(self) -> None:
-        """MORDIDA: apagar a entrada `alto_falante` de `_CATEGORIA_DO_RECURSO`.
-
-        Sem ela o `estado_do_recurso` devolve `None` (recurso desconhecido não
-        inventa frase) e o recurso SOME da linha — que é o estado em que a
-        auditoria de hoje encontrou o carimbo: medido, publicado no soquete, e
-        invisível na janela.
-        """
+        """MORDIDA: apagar a entrada `alto_falante` de `_CATEGORIA_DO_RECURSO`."""
         estado = estado_do_recurso(
             "alto_falante", _entry(), _estado(visto_ha_s={"audio_do_jogo": 0.4})
         )
@@ -274,29 +243,13 @@ class TestOSomDoJogoNaLinhaDeRecursos:
         assert estado.situacao == SITUACAO_PARADO
 
     def test_ninguem_com_a_sessao_aberta_mandou_audio(self) -> None:
-        """Categoria ausente = ninguém com a sessão aberta mandou bytes de áudio.
-
-        **Não** é "nenhum jogo pediu", e este teste dizia que era até
-        25/08/2026 (NO-JOGO-SEM-FALSO-VERDE-01/T2). O gate do carimbo é
-        `_replicating()` — sessão uhid aberta —, e sessão aberta não é jogo: a
-        docstring de `uhid_gamepad.game_open` chama isso de VETO PERMANENTE,
-        *"o CLIENTE Steam também abre"*. O que a correção de 02/08 tirou de
-        dentro do carimbo foi o probe do `hid-playstation`, que escreve áudio
-        no nascimento do vpad; ela não transformou sessão em jogo.
-
-        O que o silêncio prova, então, e é bastante: ninguém escreveu áudio
-        neste vpad. Não prova quem teria escrito se tivesse escrito.
-        """
+        """Categoria ausente = ninguém com a sessão aberta mandou bytes de áudio."""
         estado = estado_do_recurso("alto_falante", _entry(), _estado())
         assert estado is not None
         assert estado.situacao == SITUACAO_NUNCA
 
     def test_a_frase_nao_carrega_o_volume(self) -> None:
-        """Decisão dela: a linha diz que o som chega, não em que volume.
-
-        A amostra (`audio_do_jogo_amostra`, `alto_falante: 100`) continua sendo
-        dado de diagnóstico — ela não vira texto de tela.
-        """
+        """Decisão dela: a linha diz que o som chega, não em que volume."""
         estado = estado_do_recurso(
             "alto_falante",
             _entry(),
@@ -323,25 +276,13 @@ class TestOSomDoJogoNaLinhaDeRecursos:
         assert "No jogo agora: vibração, som do controle" in frase
 
     def test_a_categoria_e_a_mesma_dos_dois_lados(self) -> None:
-        """O reader e o vpad falam do MESMO carimbo, e é o teste que os prende.
-
-        Divergir aqui não quebra nada visível: a linha diria "sem pedido ainda"
-        para sempre, com o carimbo saindo do daemon a cada partida. É o mesmo
-        travamento que o offset do jack e a janela de motion já têm.
-        """
+        """O reader e o vpad falam do MESMO carimbo, e é o teste que os prende."""
         from hefesto_dualsense4unix.app.widgets import controller_card
 
         assert (
             controller_card._CATEGORIA_DO_RECURSO["alto_falante"]
             == uhid_gamepad.ATIVIDADE_AUDIO_DO_JOGO
         )
-
-
-# ===========================================================================
-# CURA 2 — a bateria do controle chega ao jogo
-# ---------------------------------------------------------------------------
-# 1. O parser do byte 52 (mesma disciplina de transporte do clique e do jack)
-# ===========================================================================
 
 
 class TestExtrairABateriaDoReportCru:
@@ -352,12 +293,7 @@ class TestExtrairABateriaDoReportCru:
         assert extract_battery_status(_bt_report(bateria=0x1A)) == 0x1A
 
     def test_bt_com_crc_corrompido_nao_diz_nada(self) -> None:
-        """``None`` e não ``0``: rádio corrompido não descarrega o controle.
-
-        ``0x00`` é um controle real descarregando com 5% — o valor que dispara
-        o alerta de bateria fraca no jogo. Transformar "não sei" em "quase
-        acabando" faria um pacote ruim de rádio interromper a partida dela.
-        """
+        """``None`` e não ``0``: rádio corrompido não descarrega o controle."""
         assert extract_battery_status(_bt_report(bateria=0x1A, corrupt=True)) is None
 
     def test_report_de_outro_id_nao_diz_nada(self) -> None:
@@ -375,16 +311,8 @@ def test_o_offset_da_bateria_e_o_mesmo_nos_dois_lados() -> None:
     assert BATTERY_STATUS_OFFSET == uhid_gamepad._STATUS_OFFSET
 
 
-# ---------------------------------------------------------------------------
-# 2. A escala — o ponto em que "não converta no chute" foi cobrado
-# ---------------------------------------------------------------------------
-
-
 class TestAEscalaDaBateria:
-    """A conta é a do kernel 6.18 (`dualsense_parse_report`), grau ALTA.
-
-    Não é uma porcentagem: são **11 níveis** num nibble (5, 15, ..., 95, 100).
-    """
+    """A conta é a do kernel 6.18 (`dualsense_parse_report`), grau ALTA."""
 
     @pytest.mark.parametrize("nivel", list(range(11)))
     @pytest.mark.parametrize(
@@ -393,16 +321,7 @@ class TestAEscalaDaBateria:
     def test_a_ida_e_a_volta_sao_o_mesmo_byte(
         self, fake_uhid: _FakeUhid, nivel: int, carga: int
     ) -> None:
-        """MORDIDA: trocar a conta por `percent = nibble` (o chute óbvio).
-
-        Os 22 casos passam a errar: um controle em 95% (nível 9) chegaria ao
-        jogo como 15%, e o alerta de bateria fraca que esta cura existe para
-        apagar acenderia com o controle quase cheio.
-
-        Percorre os ONZE níveis nos dois estados de carga que o report do vpad
-        sabe escrever: se a ida e a volta não fossem o inverso exato uma da
-        outra, algum destes 22 bytes voltaria diferente.
-        """
+        """MORDIDA: trocar a conta por `percent = nibble` (o chute óbvio)."""
         status0 = (carga << 4) | nivel
         pct, carregando = decodificar_bateria(status0)
 
@@ -413,23 +332,12 @@ class TestAEscalaDaBateria:
         assert fake_uhid.bateria() == status0
 
     def test_cheio_na_base_nao_vira_descarregando(self) -> None:
-        """0x2 é "cheio" — o report do vpad só sabe dizer dois estados.
-
-        `(100, carregando)` é o mais próximo que o campo consegue, e é honesto
-        no que importa: o controle está na base, cheio, e nenhum alerta deve
-        aparecer. "100% descarregando" inventaria um consumo que não existe.
-        """
+        """0x2 é "cheio" — o report do vpad só sabe dizer dois estados."""
         assert decodificar_bateria((_CARGA_CHEIO << 4) | 0x0A) == (100, True)
 
     @pytest.mark.parametrize("carga", [_CARGA_TEMPERATURA, 0xB, _CARGA_ERRO, 0x7])
     def test_erro_de_carga_vira_nao_sei_e_nao_zero(self, carga: int) -> None:
-        """MORDIDA: devolver a capacidade 0 do kernel nesses casos.
-
-        O kernel devolve **0** para tensão/temperatura fora de faixa e erro de
-        carga. Repassar zero acenderia alerta de bateria crítica por causa de
-        um controle quente. "Não sei" é a resposta que a casa já escolheu para
-        este byte (`_STATUS_DESCONHECIDO`), e ela não dispara alerta nenhum.
-        """
+        """MORDIDA: devolver a capacidade 0 do kernel nesses casos."""
         assert decodificar_bateria((carga << 4) | 0x03) == (None, False)
 
     def test_nao_sei_vira_o_byte_que_nao_alerta(self, fake_uhid: _FakeUhid) -> None:
@@ -443,22 +351,9 @@ class TestAEscalaDaBateria:
         assert pad.bateria_anunciada == (None, False)
 
 
-# ---------------------------------------------------------------------------
-# 3. O vpad: o `forward_battery` passa a EMITIR de verdade
-# ---------------------------------------------------------------------------
-
-
 class TestOEncoderDaBateria:
     def test_emite_com_o_reader_como_relogio(self, fake_uhid: _FakeUhid) -> None:
-        """MORDIDA: trocar `from_reader=from_reader` por `from_reader=False`.
-
-        Este é o segundo defeito de 15/07, e o sorrateiro: o método CHAMAVA
-        `_emit_if_changed()`, só que sem a palavra-chave. Com
-        `_motion_streaming` ligado — o estado NORMAL, porque é o reader quem o
-        liga — o gate devolve `False` na primeira linha e nada sai. Fiar o
-        chamador sem isto seria uma cura que passa em revisão e não entrega
-        nada.
-        """
+        """MORDIDA: trocar `from_reader=from_reader` por `from_reader=False`."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         pad.set_motion_streaming(True)
@@ -474,13 +369,7 @@ class TestOEncoderDaBateria:
         assert pad.battery_forward_count == 1
 
     def test_o_poll_loop_continua_sendo_so_cache(self, fake_uhid: _FakeUhid) -> None:
-        """O contrato do `set_motion_streaming` fica de pé.
-
-        `from_reader` é PARÂMETRO e não `True` fixo justamente por isto: quem
-        vem do poll loop continua governado pelo gate, e o report do reader
-        carrega o cache junto no tick seguinte. Sem o parâmetro, este arranjo
-        viraria uma emissão a mais por tick de poll.
-        """
+        """O contrato do `set_motion_streaming` fica de pé."""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         pad.set_motion_streaming(True)
@@ -503,13 +392,7 @@ class TestOEncoderDaBateria:
         assert pad.battery_forward_count == 1
 
     def test_perder_o_fisico_volta_para_nao_sei(self, fake_uhid: _FakeUhid) -> None:
-        """MORDIDA: apagar `self._status_byte = _STATUS_DESCONHECIDO` do
-        `set_motion_streaming`.
-
-        Um controle que caiu com 8% ficaria 8% no report do vpad para sempre —
-        o jogo passaria a partida inteira piscando alerta de bateria fraca por
-        um controle que já foi embora.
-        """
+        """MORDIDA: apagar `self._status_byte = _STATUS_DESCONHECIDO` do"""
         pad = UhidDualSense(player=1, blueprint=_blueprint())
         assert pad.start()
         pad.set_motion_streaming(True)
@@ -530,11 +413,6 @@ class TestOEncoderDaBateria:
         assert pad.battery_forward_count == 0
 
 
-# ---------------------------------------------------------------------------
-# 4. O chamador que faltava por 25 dias — a bateria atravessa até o jogo
-# ---------------------------------------------------------------------------
-
-
 class TestABateriaChegaAoJogo:
     def _rodar_fluxo(self, fake: _FakeUhid, reports: list[bytes]) -> list[bytes]:
         """O hidraw do físico é um pipe; o /dev/uhid é o fake da fixture."""
@@ -552,8 +430,6 @@ class TestABateriaChegaAoJogo:
             assert _esperar(lambda: pad.motion_streaming)
             for report in reports:
                 os.write(escrita, report)
-                # Um report por vez: o pipe é um stream e o reader lê 128 B de
-                # cada vez — escrever tudo junto colaria dois reports num read.
                 time.sleep(0.01)
             assert _esperar(lambda: reader.reports_seen >= len(reports))
             assert _esperar(lambda: reader.battery_forwards >= 1, timeout_s=1.0)
@@ -567,16 +443,8 @@ class TestABateriaChegaAoJogo:
     def test_a_carga_do_fisico_atravessa_ate_o_report_do_jogo(
         self, fake_uhid: _FakeUhid
     ) -> None:
-        """O teste que MORDE o chamador, ponta a ponta.
-
-        Arrancar o `self._observe_battery(data)` do `_read_until_lost` — o
-        chamador que faltou por 25 dias — derruba a conta a zero.
-
-        O que se conta é o que o JOGO lê: um payload escrito no /dev/uhid com o
-        byte 52 dizendo 95% descarregando, e não o `_STATUS_DESCONHECIDO` de
-        nascença.
-        """
-        cheio = (_CARGA_DESCARREGANDO << 4) | 0x09  # nível 9 = 95%
+        """O teste que MORDE o chamador, ponta a ponta."""
+        cheio = (_CARGA_DESCARREGANDO << 4) | 0x09
         fluxo = [_usb_report(bateria=cheio, marca=1), _usb_report(bateria=cheio, marca=2)]
 
         bodies = self._rodar_fluxo(fake_uhid, fluxo)
@@ -588,15 +456,10 @@ class TestABateriaChegaAoJogo:
         )
 
     def test_a_bateria_caindo_atravessa(self, fake_uhid: _FakeUhid) -> None:
-        """A carga desce e o jogo vê descer, na ordem.
-
-        O último report do fluxo é o do FAIL-SAFE (`_STATUS_DESCONHECIDO`, que
-        o `reader.stop()` do teardown provoca) — por isso a asserção é sobre a
-        SEQUÊNCIA de valores distintos, e não sobre o último byte.
-        """
+        """A carga desce e o jogo vê descer, na ordem."""
         fluxo = [
-            _usb_report(bateria=0x09, marca=1),  # 95%
-            _usb_report(bateria=0x02, marca=2),  # 25%
+            _usb_report(bateria=0x09, marca=1),
+            _usb_report(bateria=0x02, marca=2),
         ]
         bodies = self._rodar_fluxo(fake_uhid, fluxo)
         assert bodies, "o vpad não emitiu nada"
@@ -610,27 +473,16 @@ class TestABateriaChegaAoJogo:
         assert vistos == [
             0x09,
             0x02,
-            uhid_gamepad._STATUS_DESCONHECIDO,  # fail-safe do reader parando
+            uhid_gamepad._STATUS_DESCONHECIDO,
         ]
 
     def test_a_carga_viaja_mesmo_com_o_controle_parado(
         self, fake_uhid: _FakeUhid
     ) -> None:
-        """MORDIDA: tirar o `from_reader` do `_emit_if_changed` do vpad.
-
-        Este é o caso que separa "chega" de "chega por acaso", e é ele que o
-        segundo defeito de 15/07 quebrava. Com o controle PARADO, os dois
-        reports trazem a MESMA janela de motion — o dedup por valor do
-        `_maybe_emit` engole a segunda, e nenhum report de outra coisa sai. Se
-        o `forward_battery` só mexesse no cache, a carga nova ficaria esperando
-        um report que pode nunca vir (é o que acontece com o rádio BT em
-        repouso, onde o firmware emudece).
-
-        A conta é: reports que o JOGO leu com a carga NOVA.
-        """
+        """MORDIDA: tirar o `from_reader` do `_emit_if_changed` do vpad."""
         fluxo = [
             _usb_report(bateria=0x09, marca=7),
-            _usb_report(bateria=0x02, marca=7),  # mesma janela: dedup engole
+            _usb_report(bateria=0x02, marca=7),
         ]
 
         bodies = self._rodar_fluxo(fake_uhid, fluxo)
@@ -664,23 +516,13 @@ class TestOReaderNaoInventaBateria:
         )
 
     def test_vpad_sem_o_metodo_degrada_calado(self) -> None:
-        """Contrato duck-typed: o `UinputGamepad` NÃO tem `forward_battery`.
-
-        Não é hipótese de teste — é o backend que roda com máscara Xbox 360, e
-        ele não carrega bateria no mesmo canal.
-        """
+        """Contrato duck-typed: o `UinputGamepad` NÃO tem `forward_battery`."""
         reader = self._reader(SimpleNamespace())
         reader._observe_battery(_usb_report(bateria=0x09))
         assert reader.battery_forwards == 0
 
     def test_reabrir_reentrega_a_carga(self) -> None:
-        """MORDIDA: apagar o `_reset_battery()` do fail-safe do `_run`.
-
-        O vpad volta para "não sei" ao perder o fd. Sem o reset local, o reader
-        compararia o novo report com o cache antigo, veria "igual" e nunca
-        reentregaria — o jogo passaria a partida inteira achando que o controle
-        está cheio e carregando.
-        """
+        """MORDIDA: apagar o `_reset_battery()` do fail-safe do `_run`."""
         recebidos: list[int | None] = []
         vpad = SimpleNamespace(
             forward_battery=lambda pct, *, charging=False, from_reader=False: (
@@ -694,9 +536,7 @@ class TestOReaderNaoInventaBateria:
         assert recebidos == [95, 95]
 
 
-# ---------------------------------------------------------------------------
 # 5. O `state_full` carrega a bateria que o vpad ANUNCIA
-# ---------------------------------------------------------------------------
 
 
 def _vpad_completo(**extra: Any) -> SimpleNamespace:
@@ -806,12 +646,7 @@ async def test_state_full_publica_a_bateria_do_vpad(servidor: Any) -> None:
 async def test_state_full_nao_inventa_bateria_quando_o_vpad_e_mock(
     servidor: Any,
 ) -> None:
-    """A blindagem de sempre deste payload: MagicMock não vira dado.
-
-    Um vpad uinput não tem nenhuma destas propriedades, e um dublê devolve algo
-    truthy e comparável com qualquer coisa — sem a tipagem estrita, a janela
-    publicaria uma bateria que ninguém mediu.
-    """
+    """A blindagem de sempre deste payload: MagicMock não vira dado."""
     socket_path, daemon = servidor
     daemon._gamepad_device = _vpad_completo(
         bateria_anunciada=MagicMock(), battery_forward_count=MagicMock()

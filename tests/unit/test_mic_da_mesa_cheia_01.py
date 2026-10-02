@@ -34,22 +34,14 @@ import pytest
 from hefesto_dualsense4unix.integrations import audio_control
 
 #: Duas placas de DualSense, uma por aparelho, como o `pactl list sources` as
-#: mostra no cabo. Os nomes são indistinguíveis de propósito: é assim mesmo que
-#: eles chegam, e é o que torna o casamento por nome impossível.
 _P1 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.mono-fallback"
 _P2 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.2.mono-fallback"
 
-#: O eco da SAÍDA, que casa com qualquer marca que a placa casaria. Já custou um
-#: defeito real em 16/08: o controle deslizante de MICROFONE mexia no monitor do
-#: ALTO-FALANTE.
 _MONITOR = (
     "alsa_output.usb-Sony_Interactive_Entertainment_Wireless_Controller"
     "-00.analog-surround-40.monitor"
 )
 
-#: A source que a PONTE de microfone por Bluetooth publica. Os seis hex do fim
-#: são os três últimos octetos do MAC daquele controle — é ali que mora a
-#: identidade que o controle no rádio tem e o dispositivo USB não dá.
 _PONTE_BT = "hefesto_dualsense_bt_070809"
 
 _USB_P1 = "usb-0000:0c:00.3-3"
@@ -59,8 +51,6 @@ _UNIQ_P1 = "aabbcc010203"
 _UNIQ_P2 = "aabbcc040506"
 _UNIQ_BT = "aabbcc070809"
 
-#: A saída LONGA não é lida por ninguém aqui: quem a interpreta é o
-#: `nos_e_sysfs`, que está dublado. A CURTA é lida de verdade — é dela que sai
 #: a lista de fontes de DualSense.
 _LONGA = "(a saída longa; quem a lê é o `nos_e_sysfs`, que está dublado)"
 
@@ -107,12 +97,7 @@ def mesa_de_dois(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def mesa_de_cabo_e_radio(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Um controle no FIO e um no AR, com a ponte de microfone de pé.
-
-    O do rádio **não tem dispositivo USB nenhum** — a placa segue o transporte,
-    medido em 15/08/2026 —, e por isso ele não aparece em `usb_pai_por_uniq`
-    nem em `usb_pai_por_no`. A identidade dele está no NOME da source da ponte.
-    """
+    """Um controle no FIO e um no AR, com a ponte de microfone de pé."""
 
     def fake_por_uniq(uniqs: Any, **_kw: Any) -> dict[str, str]:
         return {u: _USB_P1 for u in uniqs if u == _UNIQ_P1}
@@ -134,12 +119,7 @@ class TestAFonteSaiDoAparelhoCerto:
         assert audio_control.fonte_de_captura_do_uniq(_UNIQ_P2) == _P2
 
     def test_o_monitor_da_saida_nunca_entra(self, mesa_de_dois: None) -> None:
-        """O eco do alto-falante casa com o MESMO USB do P1 — e não pode vencer.
-
-        Sem esta guarda, o dicionário poderia devolver o `.monitor` para o P1
-        dependendo da ordem, e o controle deslizante do microfone mexeria no
-        alto-falante. Foi um defeito real em 16/08.
-        """
+        """O eco do alto-falante casa com o MESMO USB do P1 — e não pode vencer."""
         assert audio_control.fonte_de_captura_do_uniq(_UNIQ_P1) == _P1
 
     def test_controle_desconhecido_devolve_nada_em_vez_de_chutar(
@@ -172,7 +152,6 @@ class TestOHandlerHonraOAlvo:
     ) -> None:
         mandados: list[Any] = []
         self._handler(monkeypatch, mandados)
-        # A rota global devolveria SEMPRE a primeira da lista — o P1.
         monkeypatch.setattr(
             audio_control, "fonte_de_captura_do_controle", lambda: _P1
         )
@@ -233,9 +212,5 @@ class TestOControleNoRadioTambemTemDono:
     def test_a_ponte_de_outro_controle_nao_serve(
         self, mesa_de_cabo_e_radio: None
     ) -> None:
-        """O rabo do MAC é identidade: quem não casa não leva.
-
-        Sem esta guarda, "achou uma source virtual" viraria "é sua" — que é o
-        chute que o `None` desta função existe para não dar.
-        """
+        """O rabo do MAC é identidade: quem não casa não leva."""
         assert audio_control.fonte_de_captura_do_uniq("aabbccfefdfc") is None

@@ -1,24 +1,4 @@
-"""O lixo do WebKit se recolhe no fio do GTK, depois de cada teste (02/10/2026).
-
-MEDIDO em 01 e 02/10/2026, num lote de 42 arquivos vizinhos da aba Conexões,
-três vezes em três: o processo morria com `Fatal Python error: Aborted`, e a
-pilha dizia «Garbage-collecting» num fio da central do rádio. O objeto do
-`WebKit2` que um teste deixava num ciclo de referências só saía na coleta, e a
-coleta rodava no fio que estivesse alocando — fora do fio do GTK, onde o WebKit
-aborta ao soltar o objeto. A cura é a borda do `tests/conftest.py`
-(`pytest_runtest_teardown_do_webkit`): depois de todo teste de arquivo que diz
-`WebKit2`, e na troca de arquivo com o WebKit carregado, a coleta roda no fio
-principal.
-
-Esta régua não precisa do WebKit: o ciclo é de Python, e o que se prova é que a
-borda o recolhe no teardown, e só onde deve.
-
-AS MORDIDAS: tire o `gc.collect()` de `_recolher_no_fio_do_gtk`, e a primeira
-reprova (o ciclo sobrevive ao teardown); faça `_e_arquivo_do_webkit` dizer
-sempre «não», e a primeira reprova também; tire o `@pytest.hookimpl` da borda,
-e o pytest recusa o conftest (um `pytest_*` que não é gancho conhecido) antes
-de coletar; trocado o nome, a terceira reprova.
-"""
+"""O lixo do WebKit se recolhe no fio do GTK, depois de cada teste (02/10/2026)."""
 from __future__ import annotations
 
 import contextlib
@@ -44,7 +24,7 @@ class _Item:
 def _ciclo_que_guarda_a_sentinela() -> weakref.ref[_Sentinela]:
     sentinela = _Sentinela()
     no: dict[str, Any] = {"vista": sentinela}
-    no["eu"] = no  # o ciclo: só a coleta o solta
+    no["eu"] = no
     return weakref.ref(sentinela)
 
 

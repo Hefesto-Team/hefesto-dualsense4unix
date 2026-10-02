@@ -1,27 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Devolve ids e agrupamentos ao SVG que ELA editou, sem tocar na geometria.
-
-27/08/2026. Ela passou quase três horas ajustando o desenho à mão, e o editor
-levou junto parte dos ids: o L1 e o L2 viraram `group-1` e `group-3` (ela os fez
-espelhando o R1 e o R2 com uma matriz — mais inteligente do que estava), o
-analógico direito ficou solto dentro do grupo, e o Share e o Options viraram dois
-<rect> sem dono.
-
-Este script NÃO redesenha nada. Ele só devolve a etiqueta: id, data-entrada e o
-grupo de cada peça, para o mapa e o portão voltarem a reconhecê-las.
-
-    python3 remapear.py <svg-dela> [--gravar]
-"""
+"""Devolve ids e agrupamentos ao SVG que ELA editou, sem tocar na geometria."""
 import pathlib, re, sys
 
-# A RAIZ TEM DONO, e é o `onde.py`. `parents[2]` virou a pasta `src/` quando a
-# interface se mudou para dentro do pacote, e toda leitura de `docs/data/`
-# passou a procurar em `src/docs/data/`.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from onde import RAIZ as R  # noqa: E402
 
-#: O `docs/data/` do repositório. Dono único.
 DADOS_DO_REPO = R / "docs/data"
 
 
@@ -66,20 +50,14 @@ def main():
     s = alvo.read_text()
     feito = []
 
-    # 1. o L1 e o L2, que ela fez espelhando os direitos
     for de, para, ex in (("group-1", "l1", ""),
                          ("group-3", "l2", ' data-feature="gatilho-adaptativo-esquerdo"')):
         if f'id="{de}"' in s:
             s = renomeia(s, de, para, ex)
             feito.append(f"{de} -> {para}")
 
-    # 2. o analógico direito: um <path> solto dentro de grupo-analogicos
     def acha_stick_r(t):
-        """O <path> do analógico direito, solto dentro de grupo-analogicos.
-
-        O critério é POSIÇÃO, não ordem: o primeiro número do `d` é o x de partida,
-        e o analógico direito é o que fica além do eixo do corpo (x=64).
-        """
+        """O <path> do analógico direito, solto dentro de grupo-analogicos."""
         i = t.index('id="grupo-analogicos"')
         ini = t.rindex("<g ", 0, i)
         fim = bloco_do_grupo(t, ini)
@@ -106,7 +84,6 @@ def main():
     if ok:
         feito.append("o <path> solto do lado direito -> stick_r")
 
-    # 3. a bola interna de cada analógico entra no grupo do analógico
     for cx, pid, rot in ((45.5, "stick_l", "esquerdo"), (78.5, "stick_r", "direito")):
         m = re.search(rf'<ellipse\b[^>]*\bcx="{cx}"[^>]*/>', s)
         if not m or f'id="{pid}"' not in s:
@@ -116,13 +93,11 @@ def main():
         i = s.index(f'id="{pid}"')
         ini = s.rindex("<g ", 0, i)
         fim = bloco_do_grupo(s, ini)
-        # entra ANTES do </g> do analógico: a bola gira DENTRO do anel externo
         s = (s[:fim - 4]
              + f'<g class="miolo"><title>Analógico {rot} — bola do polegar</title>{el}</g>'
              + s[fim - 4:])
         feito.append(f"a bola do polegar entra em {pid}")
 
-    # 4. o Share e o Options: dois <rect> soltos, um deles espelhado
     for x, pid, titulo in (("37.043", "share", "Share (Create)"),
                            ("-37.043", "options", "Options")):
         m = re.search(rf'<rect\b[^>]*\bx="{re.escape(x)}"[^>]*/>', s)
@@ -132,7 +107,6 @@ def main():
              + m.group(0) + "</g>" + s[m.end():])
         feito.append(f"o <rect> em x={x} -> {pid}")
 
-    # 5. a letra R estava dentro do glifo do analógico ESQUERDO
     i = s.find('id="glifo-stick_l"')
     if i > 0:
         fim = bloco_do_grupo(s, s.rindex("<g ", 0, i))

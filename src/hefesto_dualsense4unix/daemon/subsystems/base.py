@@ -1,18 +1,4 @@
-"""Protocol Subsystem — interface mínima para subsystems do daemon.
-
-Cada subsystem deve implementar start(), stop() e is_enabled().
-O atributo `name` identifica o subsystem nos logs.
-
-E O «CONTROLE N» DOS NÓS DE SOM, que é a outra coisa que mora aqui
-------------------------------------------------------------------
-TRES-CONTAS-PARA-UM-NUMERO-01 (12/09/2026). Os dois nós que ela lê na lista de
-som do sistema — «Alto-falante do Controle N» e «Microfone do Controle N» —
-eram batizados por DUAS cópias da mesma regra (uma em `alto_falante.py`, outra
-em `bt_mic.py`), e essa regra era uma TERCEIRA conta de «Controle N», diferente
-da que a tela imprime no cartão. Agora as duas chamam
-:func:`numero_do_assento_na_mesa`, que **não tem conta nenhuma**: ela pergunta
-ao dono.
-"""
+"""Protocol Subsystem — interface mínima para subsystems do daemon."""
 from __future__ import annotations
 
 import contextlib
@@ -24,8 +10,6 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
 
-#: Doze hex minúsculos sem separador — a chave de `norm_mac`. Um `uniq` que não
-#: chega a este tamanho não é endereço, e sem endereço não há de quem seja o nó.
 UNIQ_HEX = 12
 
 
@@ -140,11 +124,6 @@ def numero_do_assento_na_mesa(
     cartão nessa mesma situação, pela mesma razão. ``None`` é *"não sei"*, e o
     rótulo nasce sem número; nunca com um inventado.
     """
-    # O DONO DA REGRA É O DO IPC, e o import é tardio de propósito: importar um
-    # subsystem não pode arrastar o servidor IPC inteiro. Ele é privado ao
-    # módulo dele, e copiá-lo aqui seria a QUARTA conta — o que esta sprint
-    # existe para não fazer. Há régua que reprova se ele sair de lá:
-    # `test_o_som_por_controle_cai_em_cada_um.py`.
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
     from hefesto_dualsense4unix.daemon.ipc_handlers import _numero_de_exibicao
 

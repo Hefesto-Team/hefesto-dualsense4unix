@@ -15,12 +15,7 @@ runner = CliRunner()
 
 @pytest.fixture
 def mock_ipc(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Mocka `_run_call` com um registro mutável e uma resposta configurável.
-
-    - registry["calls"] -> lista de (method, params)
-    - registry["response"] -> resposta padrão (override via atribuição)
-    - registry["raise"] -> exceção pra levantar (caso != None)
-    """
+    """Mocka `_run_call` com um registro mutável e uma resposta configurável."""
     registry: dict[str, Any] = {"calls": [], "response": {"status": "ok"}, "raise": None}
 
     def fake_run_call(
@@ -101,7 +96,7 @@ def test_mouse_status_json(mock_ipc: dict[str, Any]) -> None:
 
 def test_mouse_status_daemon_antigo_sem_bloco(mock_ipc: dict[str, Any]) -> None:
     """Daemon pré-paridade: state_full não retorna `mouse_emulation`."""
-    mock_ipc["response"] = {"connected": True}  # sem mouse_emulation
+    mock_ipc["response"] = {"connected": True}
     result = runner.invoke(app, ["mouse", "status"])
     assert result.exit_code == 1
     assert "indisponível" in result.output

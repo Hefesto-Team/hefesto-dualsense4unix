@@ -77,187 +77,81 @@ import textwrap
 
 import pytest
 
-#: O QUE CONTA COMO ESCRITA. Cada nome é uma porta para o disco dela, para a
-#: máquina ou para o aparelho de um jeito que persiste. Vindos do produto, não
-#: inventados.
-#:
-#: NÃO É "grava no disco", é **"muda algo dela que ela não mandou mudar"** — o
-#: `set_text` (a área de transferência) está aqui pela mesma razão que o
-#: `save_profile`. A quarta repetição foi o que autorizou a generalização; as
-#: três primeiras ainda podiam passar por azar.
 ESCREVEM = {
-    "save_profile",            # grava o perfil em disco
-    "gravar_e_reaplicar",      # grava E manda o perfil inteiro ao daemon
-    "_gravar",                 # o helper das abas que grava a seção
-    "_gravar_a_forca",         # idem, na Vibração
-    "_gravar_so_o_gatilho",    # grava o perfil dela SEM reaplicá-lo
-    # O ESCRITOR DE UM CARTÃO DO COMPUTADOR — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-
-    # COM-O-JOGO-01, 01/10/2026: grava no `maquina.json` dela, ou no perfil
-    # quando ele já sobrepõe o cartão.
+    "save_profile",
+    "gravar_e_reaplicar",
+    "_gravar",
+    "_gravar_a_forca",
+    "_gravar_so_o_gatilho",
     "gravar_pelo_gesto",
-    # OS DOIS DEGRAUS DO CARTÃO (a mesma sprint): o «Só neste jogo» grava o
-    # perfil do jogo, e as duas voltas gravam o perfil ou o `maquina.json`.
     "so_neste_jogo",
     "voltar_ao_do_computador",
     "voltar_o_computador_ao_de_fabrica",
-    # `gravar_o_modo_no_ativo` SAIU DAQUI em 29/09/2026
-    # (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01), com a função: a seção `mode` do perfil
-    # ativo deixou de ser escrita pela janela. Quem a grava é o daemon, depois
-    # do aparelho, e os quatro gestos da aba Jogar que a alcançam declaram por
-    # FRASE a porta do daemon (ver `FORA_DA_ARVORE`).
     "salvar_perfil",
-    "machine_declare",         # grava `MesaDeclarada` no `maquina.json`
-    "set_mask",                # grava a máscara daquele aparelho
+    "machine_declare",
+    "set_mask",
     "clear_mask",
-    "freestyle_set",           # grava o Modo Freestyle ligado (era a trava da troca automática)
-    "save_freestyle_ligado",   # o escritor por baixo dela
-    # `renomear_o_dongle` SAIU DAQUI em 23/09/2026 (TRANSPLANTE-DA-SECAO-01),
-    # e o `dar_nome` do lugar em 26/09/2026: o nome do adaptador mora no
-    # endereço dele (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO), com UM escritor.
-    "dar_nome_ao_adaptador",   # grava o nome do adaptador no `maquina.json` dela
-    # O EDITOR DA ENTRADA DO MAPA DAS CONEXÕES — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
-    # 26/09/2026: o hub, o extensor e a velocidade vão ao `maquina.json` dela.
+    "freestyle_set",
+    "save_freestyle_ligado",
+    "dar_nome_ao_adaptador",
     "declarar_a_ligacao",
     "declarar_a_velocidade",
-    # O NOME DA ENTRADA — O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026: da posição,
-    # em `mapa.portas[N].nome` (D-2609-O-NOME-E-DA-POSICAO).
     "dar_nome_a_entrada",
-    "trocar_as_entradas",      # o «Trocar com…»: o buraco de duas entradas troca
-    "ensinar_a_entrada",       # o ensinar: o nó do aparelho fora do mapa vai à entrada
-    # A ORDEM DAS CAIXAS DOS ADAPTADORES — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
-    # 25/09/2026: vai para o `maquina.json` dela, na `ordem` de cada adaptador
-    # (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026).
+    "trocar_as_entradas",
+    "ensinar_a_entrada",
     "guardar_ordem_dos_adaptadores",
-    "escrever_propriedade",    # grava o `Alias` de um aparelho no BlueZ dela
-    # O X DA ABA 08 — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, 26/09/2026: apaga a
-    # chave do pareamento de um controle num adaptador do BlueZ dela
-    # (`RemoveDevice` e o verbo `esquecer` da ponte privilegiada).
+    "escrever_propriedade",
     "esquecer_o_pareamento",
-    # AS DUAS RESPOSTAS DO «MAPEAR ENTRADA A ENTRADA» (a cerimônia da 08): a
-    # face e o «Não alcanço» vão ao `maquina.json` dela na hora.
     "responder",
     "nao_alcanco",
-    "mic_canal_set_detalhado",  # liga ou cala o microfone dela, ao vivo
-    # O CHIP «Mira Virtual» — A-MIRA-POR-MOVIMENTO-NA-TELA-01, 24/09/2026:
-    # `mira.set` grava a mira DAQUELE controle no perfil ativo dela.
+    "mic_canal_set_detalhado",
     "mira_set_detalhado",
-    "rumble_motores_set",      # grava a barra de cada motor no perfil dela
-    "rumble_policy_set_checked",  # muda o degrau de vibração de TODOS, ao vivo
-    "set_text",                # `Gtk.Clipboard.set_text` — a área dela
-    # AS OITO DA ABA 07 — a quarta repetição, e a maior. Achadas pela
-    # `STEAM-INPUT-01` em 06/09/2026: a régua estava cega para a aba INTEIRA,
-    # e por isso deu verde sobre dois gestos que a própria frente tinha
-    # escrito naquele dia.
+    "rumble_motores_set",
+    "rumble_policy_set_checked",
+    "set_text",
     "marcar_jogo_sem_wrapper",     # escreve o `jogos_sem_wrapper.txt` dela
-    "desmarcar_jogo_sem_wrapper",  # o par de volta, e escreve o mesmo arquivo
-    "add_dismissed_appid",         # escreve o `launch_dialog_dismissed.json`
-    "remove_dismissed_appid",      # idem, na volta
-    "reparar_ou_adiar",            # REESCREVE a linha de lançamento no vdf da Steam
-    "add_appid_to_steam_input_allowlist",  # marca um jogo dela como exceção
-    # AS TRÊS DO STEAM INPUT POR JOGO — STEAM-INPUT-01, 20/09/2026, e a
-    # primeira é a mais destrutiva desta lista inteira: `garantir_ponte`
-    # REESCREVE o `localconfig.vdf` da Steam dela (com backup e escrita atômica,
-    # mas reescreve), e `garantir_fora_da_lista_desligado` faz o mesmo pelo
-    # avesso. Até hoje nenhum gesto as alcançava, e por isso os nomes não
-    # estavam aqui; o chip «Steam Input» da aba Jogar alcança as três.
-    #
-    # ELAS ENTRAM PORQUE HÁ CHAMADOR, e é o contrato desta lista: *"um nome aqui
-    # sem chamador nenhum não protege coisa alguma e não acusa coisa alguma"*.
-    "remove_appid_from_steam_input_allowlist",  # tira o jogo da lista dela
+    "desmarcar_jogo_sem_wrapper",
+    "add_dismissed_appid",
+    "remove_dismissed_appid",
+    "reparar_ou_adiar",
+    "add_appid_to_steam_input_allowlist",
+    "remove_appid_from_steam_input_allowlist",
     "garantir_ponte",                    # escreve `UseSteamControllerConfig=2`
-    "garantir_fora_da_lista_desligado",  # escreve `0` no vdf da Steam dela
-    "apply_wrapper_to_all_games",  # a linha de lançamento de TODOS os jogos dela
-    "with_steam_closed",           # FECHA a Steam dela (escala para `pkill -KILL`)
-    # E MAIS QUATRO, que apareceram ao declarar `grava=` gesto a gesto. A
-    # cegueira era mais larga que o relato dizia — quatro portas fora da aba 07
-    # também não estavam aqui, e os seis gestos delas só estavam protegidos
-    # porque alguém tinha escrito a linha à mão em `PERIGOSOS`. No dia em que a
-    # linha caísse, nada acusaria.
-    "delete_profile",          # apaga um perfil dela do disco
-    "restaurar_do_historico",  # troca o perfil pelo backup de ontem
-    "_systemctl",              # liga, para e reinicia o serviço na máquina dela
-    "curar_todos",             # tira ou devolve as camadas Vulkan dos prefixos dela
-    "gravar_camadas_da_steam_fora",  # a escolha que o lançador entrega a todo jogo dela
-    # A LISTA DE EXCLUSÃO — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01,
-    # 21/09/2026. `adicionar` e `tirar` são a API do dono
-    # (`integrations/lista_de_exclusao`), e escrevem a lista E as duas listas
+    "garantir_fora_da_lista_desligado",
+    "apply_wrapper_to_all_games",
+    "with_steam_closed",
+    "delete_profile",
+    "restaurar_do_historico",
+    "_systemctl",
+    "curar_todos",
+    "gravar_camadas_da_steam_fora",
     # por feature (`jogos_sem_wrapper.txt` e a de fora do pino). O
-    # `tirar_do_disco` é o mais caro dos quatro: tira o pino e o atalho — que
-    # REESCREVE o `localconfig.vdf` da Steam dela — e o device KS e as camadas
-    # Vulkan do prefixo do jogo. O `criar_para_o_jogo` é o gravador da aba
-    # Perfis, que a aba 07 chama por outro módulo, onde esta régua não desce.
-    # O `tirar` casa também o `tirar-daqui` da aba 08 (o mapa do gabinete), que
     # já declara `machine_declare` e continua protegido do mesmo jeito.
     "adicionar",
     "tirar",
     "tirar_do_disco",
     "criar_para_o_jogo",
 
-    # `escrever_a_estrada` SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026.
-    #
-    # Ela entrou em 09/09 com o gesto `consertar-lancador`, que escrevia o
-    # ambiente na configuração de OUTRO programa (o `config.json` do Heroic e o
-    # override do Flatpak dos demais). O botão e o gesto saíram por palavra
-    # dela, e com eles o único `grava="escrever_a_estrada"` da árvore.
-    #
-    # **A LINHA SAI PORQUE ESTA LISTA NÃO É UM CATÁLOGO DE PERIGOS, é o
-    # vocabulário que a DIREÇÃO A usa para ACUSAR:** um nome aqui sem chamador
-    # nenhum não protege coisa alguma e não acusa coisa alguma — é ruído, e a
-    # própria régua diz que "uma declaração que a árvore não acha é ruído".
-    #
-    # **E O PERIGO NÃO SUMIU: `integrations/cura_por_estrada` continua no disco**
-    # (a lacuna que ela cura continua aberta — ver
     # `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`). No dia em que a
-    # LANCADOR-CARONA-01 ligar `escrever_a_estrada` à carona do perfil, a
-    # DIREÇÃO A desta régua acusa o gesto novo — e a resposta será devolver esta
-    # linha, junto com o `grava=`, no MESMO commit.
 }
 
-#: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`
-#: não aparece como chamada de função com esse nome.
 METODOS_QUE_ESCREVEM = {
     "machine.declare",
     "gamepad.mask.set",
     "profile.save",
     "freestyle.set",
-    # O RÁDIO DELA — TRANSPLANTE-DA-SECAO-01, 23/09/2026. `radio.mover` tira o
-    # controle de um adaptador e o pareia noutro (mexe nos pareamentos do
-    # BlueZ dela); `radio.ponte.ligar_aqui` sobe uma ponte de som além do
-    # limite do adaptador.
     "radio.mover",
     "radio.ponte.ligar_aqui",
-    # O «PROCURAR» — O-CONECTAR-E-UM-INTERRUPTOR-01, 30/09/2026: liga a busca do
-    # rádio dela (``StartDiscovery`` e ``Pairable`` no adaptador).
     "radio.busca.set",
-    # O X DO «NÃO CONECTOU» — ESQUECER-E-LIMPAR-AS-CONEXOES-01, 30/09/2026: tira
-    # da central o movimento acabado (a linha some em toda janela).
     "radio.dispensar",
-    # O «STATUS DO MODO» — O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026. O
-    # interruptor da aba Navegação gravava `mouse.enabled` e `teclado_emulado`
-    # pela janela (`_guardar_no_perfil`); agora o daemon grava os dois no perfil
-    # ativo dela, depois do aparelho, e a porta é este método.
     "desktop.status.set",
 }
 
-#: As portas de IPC do `ponte.py` cujo PRIMEIRO argumento é o método.
 _CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")
 
 
-#: AS ISENÇÕES, e cada uma carrega a MEDIÇÃO que a sustenta.
-#:
-#: Um gesto que "escreve" mas grava EXATAMENTE o que já estava no disco não faz
-#: estrago nenhum quando a régua de clique o aciona — e protegê-lo custaria
-#: cobertura: a régua deixaria de provar que aquele botão responde.
-#:
-#: A MEDIÇÃO É DE 03/09/2026, e está no `hefesto_vivo`: *"os outros clicam o
-#: valor que a PÁGINA mostra, e a página mostra o que a declaração já dizia —
-#: re-declarar é idempotente. `sala-altura`, `sala-visada` e `mic-existe`
-#: gravaram exatamente o que já estava lá, e o ÚNICO campo que mudou no arquivo
 #: foi `ordens_dispensadas`"* — que é o ⊘, e ele ESTÁ protegido.
-#:
 #: **A ISENÇÃO É DO PAR, NUNCA DA PORTA.** Isentar `machine_declare` inteiro
-#: deixaria o ⊘ passar no dia em que alguém o renomeasse. Cada linha aqui é um
-#: gesto nomeado, com a razão do lado.
 ISENTOS: dict[tuple[str, str], str] = {
     ("02-controles.html", "mic-modo"):
         "`machine.declare` idempotente: grava o valor que a própria página "
@@ -274,18 +168,6 @@ ISENTOS: dict[tuple[str, str], str] = {
 }
 
 
-#: OS PERIGOS QUE A ÁRVORE NÃO TEM COMO VER — e por isso a declaração deles é
-#: uma FRASE, não o nome de uma porta.
-#:
-#: A DIREÇÃO B DESTA RÉGUA (*"declarou e a árvore não acha"*) reprovaria os
-#: quatro, e reprovar estaria errado: eles mexem na máquina dela por caminhos
-#: que uma leitura de árvore não alcança — um `getattr`, um `subprocess` com o
-#: script montado em variável, o cursor que anda na tela, uma janela que nasce
-#: por cima do trabalho dela.
-#:
-#: **É O MESMO CONTRATO DO `ISENTOS`: a assinatura é do PAR, com a razão do
-#: lado.** Um "declarou por frase" solto seria a porta por onde qualquer gesto
-#: escaparia da conferência — bastaria escrever uma frase em vez do nome.
 FORA_DA_ARVORE: dict[tuple[str, str], str] = {
     ("08-conexoes.html", "mapear-gravar"):
         "grava o nome e o lugar da porta da vez no `maquina.json` dela pelo "
@@ -299,12 +181,7 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "29/09/2026 (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01) quem grava é o daemon, "
         "pelo `desktop.arranjo.apply` à mão, e o método sai da tabela do plano "
         "(`_plano_do_chip`), onde a árvore não o vê pelo nome",
-    # OS TRÊS QUE GRAVAVAM PELA JANELA — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01,
     # 29/09/2026. Até ali o interruptor e os chips «Sony DualSense» e «Xbox»
-    # declaravam `gravar_o_modo_no_ativo`, o escritor da janela, chamado depois
-    # da resposta. Com quatro controles a resposta passava do teto e a escolha
-    # não chegava ao perfil. Quem grava agora é o setter do daemon, pela porta
-    # do plano, e é ela que a frase nomeia.
     ("01-jogar.html", "hefesto"):
         "grava a seção `mode` do perfil ativo pelo daemon: o `native.mode.set` "
         "e o `gamepad.emulation.set` à mão saem da tabela do plano "
@@ -324,8 +201,6 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "roda os scripts de `CONSERTOS` por `subprocess.run([\"bash\", "
         "str(caminho), …])`, com o caminho montado em variável — a árvore vê um "
         "`run`, que é genérico demais para virar porta sem encher de falso",
-    # O «Refazer a fixação do Proton» virou o ligável «Fixar Proton» em
-    # 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01) — a mesma razão, o gesto novo.
     ("09-sistema.html", "fixar-proton"):
         "chama `travar()`, que é um `getattr(pin, \"lock_proton_for_all_games\")`, "
         "e o destravar pelo mesmo `getattr` — o nome não está no fonte como "
@@ -351,33 +226,12 @@ def _declaracoes():
     return dict(pacotes.GESTOS_QUE_MEXEM)
 
 
-#: Quantos ajudantes de profundidade a régua segue. DOIS basta para todo caso
-#: medido nas dez abas, e um teto existe para a régua não virar um interpretador.
 _FUNDO = 2
 
 
 def _portas(fn, _visto: frozenset[str] = frozenset(),
             _fundo: int = _FUNDO) -> set[str]:
-    """TODAS as portas de escrita que este gesto alcança, ou um conjunto vazio.
-
-    LÊ A ÁRVORE. Um `grep` por `save_profile` casaria a docstring de quem apenas
-    explica por que NÃO grava — e marcaria como perigoso um gesto inócuo, que é
-    o erro na direção oposta e igualmente caro: a régua de clique deixaria de
-    cobrir um botão que precisa ser coberto.
-
-    E ELA DESCE PELOS AJUDANTES DO PRÓPRIO MÓDULO — acrescentado em 04/09/2026,
-    e a razão é um defeito vivo que ela deixou passar. O gesto
-    `08-conexoes·renomear-adaptador` grava o alias no BlueZ, e esta régua deu
-    VERDE sobre ele: o corpo do gesto chama `_gravar_o_apelido(...)`, um
-    ajudante do mesmo arquivo, e é o AJUDANTE que chama `renomear_o_dongle`.
-    Ler um nível só é ler o que o autor teve a gentileza de deixar na
-    superfície.
-
-    **DEVOLVE UM CONJUNTO, e não a primeira porta que achar** — 06/09/2026. A
-    direção B cobra que a porta DECLARADA esteja na árvore; com "a primeira",
-    um gesto que passa por duas portas reprovaria por declarar a outra, e a
-    régua ensinaria a declarar o que ela quer ouvir em vez do que o código faz.
-    """
+    """TODAS as portas de escrita que este gesto alcança, ou um conjunto vazio."""
     try:
         fonte = inspect.getsource(fn)
         arvore = ast.parse(textwrap.dedent(fonte))
@@ -396,13 +250,11 @@ def _portas(fn, _visto: frozenset[str] = frozenset(),
         if nome in ESCREVEM:
             achadas.add(nome)
             continue
-        # `p.chamar("machine.declare", …)` — o método vai no primeiro argumento
         if nome in _CHAMAM_O_METODO and no.args:
             alvo = no.args[0]
             if isinstance(alvo, ast.Constant) and alvo.value in METODOS_QUE_ESCREVEM:
                 achadas.add(str(alvo.value))
                 continue
-        # UM AJUDANTE DO MESMO MÓDULO, chamado pelo nome.
         if (
             _fundo > 0
             and isinstance(no.func, ast.Name)
@@ -425,12 +277,7 @@ def _escreve(fn) -> str:
 
 
 def test_todo_gesto_que_escreve_declara_grava() -> None:
-    """DIREÇÃO A — a que faltou quatro vezes: grava e não declarou.
-
-    É o buraco que a derivação sozinha NÃO fecha. Se `PERIGOSOS` sai só do que
-    o autor escreveu, o autor que esquecia a linha passa a esquecer o `grava=`,
-    e nada acusa. A árvore é a segunda fonte.
-    """
+    """DIREÇÃO A — a que faltou quatro vezes: grava e não declarou."""
     declarados = _declaracoes()
     desprotegidos = []
     for (pagina, nome), fn in sorted(_gestos_registrados().items()):
@@ -452,17 +299,7 @@ def test_todo_gesto_que_escreve_declara_grava() -> None:
 
 
 def test_toda_declaracao_a_arvore_confirma() -> None:
-    """DIREÇÃO B — declarou e a árvore não acha.
-
-    Sem ela a declaração vira ruído: qualquer gesto entra em `PERIGOSOS`
-    escrevendo uma palavra, a régua de clique para de acioná-lo, e ninguém
-    prova mais que aquele botão responde. Cobertura perdida de graça.
-
-    E ela pega o caso mais provável de todos: a declaração que ENVELHECEU. O
-    gesto deixou de chamar a porta, ou ela mudou de nome, e o `grava=` continua
-    apontando para um nome que não existe mais — do mesmo jeito que
-    `restaurar-de-fabrica` apontava para um gesto que nunca existiu.
-    """
+    """DIREÇÃO B — declarou e a árvore não acha."""
     registrados = _gestos_registrados()
     mentiras = []
     for (pagina, nome), declarado in sorted(_declaracoes().items()):
@@ -470,7 +307,7 @@ def test_toda_declaracao_a_arvore_confirma() -> None:
         assert fn is not None, (
             f"declaração de gesto inexistente: {pagina}·{nome} — impossível "
             "pelo decorador, logo alguém escreveu em `GESTOS_QUE_MEXEM` à mão")
-        if " " in declarado:                       # é frase, não porta
+        if " " in declarado:
             if (pagina, nome) not in FORA_DA_ARVORE:
                 mentiras.append(
                     f"{pagina}·{nome} declarou por FRASE ({declarado!r}) e não "
@@ -491,11 +328,7 @@ def test_toda_declaracao_a_arvore_confirma() -> None:
 
 
 def test_a_regua_acha_alguma_escrita() -> None:
-    """Guarda de vacuidade: se ela não achar NENHUM gesto que escreve, morreu.
-
-    Bastaria alguém renomear `save_profile` para os testes acima ficarem verdes
-    para sempre sobre um produto que grava em toda parte.
-    """
+    """Guarda de vacuidade: se ela não achar NENHUM gesto que escreve, morreu."""
     achados = {f"{p}·{n}": sorted(_portas(fn))
                for (p, n), fn in _gestos_registrados().items() if _portas(fn)}
     assert len(achados) >= 3, (
@@ -504,18 +337,7 @@ def test_a_regua_acha_alguma_escrita() -> None:
 
 
 def test_a_lista_nao_protege_gesto_que_nao_existe() -> None:
-    """E o outro lado: um nome errado em `PERIGOSOS` protege NADA.
-
-    Um `("10-perfis.html", "editor.prioridad")` com um erro de digitação
-    pareceria proteger e não protegeria — e ninguém notaria, porque a lista só
-    é lida para PULAR. Foi o que aconteceu com `("09-sistema.html",
-    "restaurar-de-fabrica")`, que passou meses ali enquanto o gesto se chamava
-    `refazer-proton`.
-
-    DESDE 06/09/2026 O FANTASMA NÃO TEM COMO NASCER — a chave sai do registro,
-    não de um literal. Este teste passou a medir isso: que `PERIGOSOS` continua
-    DERIVADA. Alguém que volte a digitá-la reprova aqui.
-    """
+    """E o outro lado: um nome errado em `PERIGOSOS` protege NADA."""
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
@@ -544,13 +366,7 @@ def test_os_dois_da_leva_das_nove_estao_protegidos(nome: str) -> None:
 
 @pytest.mark.parametrize("nome", [
     "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
-    # O `este-jogo-nao-funciona` SAIU em 21/09/2026 com o gesto — o desenho da
-    # lista de exclusão pôs o «Adicionar à lista de exclusão» no lugar dele.
-    # Os três da exclusão que gravam entram no lugar, e com mais razão.
     "confirmar-exclusao", "tirar-da-exclusao", "confirmar-perfil",
-    # E NA MESMA NOITE SAÍRAM QUATRO: `nao-perguntar`, `consertar`,
-    # `consertar-fechando-a-steam` e `deixar-tudo-pronto`, com os outros
-    # botões que só a Steam tinha — o reparo é do vigia.
 ])
 def test_as_portas_da_aba_07_estao_protegidas(nome: str) -> None:
     """A quarta repetição, nomeada — para a regressão ter nome.
@@ -568,11 +384,7 @@ def test_as_portas_da_aba_07_estao_protegidas(nome: str) -> None:
 
 
 def test_toda_isencao_aponta_um_gesto_e_tem_razao() -> None:
-    """Isenção sem razão é ponto cego com nome bonito.
-
-    E isenção que aponta um gesto que não existe é pior: ela parece cobrir um
-    caso e não cobre nada.
-    """
+    """Isenção sem razão é ponto cego com nome bonito."""
     registrados = set(_gestos_registrados())
     declarados = _declaracoes()
     for tabela, rotulo in ((ISENTOS, "isenção"), (FORA_DA_ARVORE, "assinatura")):
@@ -585,9 +397,6 @@ def test_toda_isencao_aponta_um_gesto_e_tem_razao() -> None:
             f"{rotulo}(ões) sem razão medida: {sem_razao}. Escreva o que foi "
             "medido e quando — quem ler daqui a um mês precisa poder conferir.")
 
-    # E AS DUAS TABELAS NÃO PODEM SE CRUZAR: isento é "escreve e não faz mal";
-    # assinado é "faz mal e a árvore não vê". Um par nos dois seria uma
-    # contradição que a régua leria como isenção, calada.
     nos_dois = sorted(set(ISENTOS) & set(FORA_DA_ARVORE))
     assert not nos_dois, f"gesto(s) isentos E assinados ao mesmo tempo: {nos_dois}"
     isentos_declarados = sorted(p for p in ISENTOS if p in declarados)
@@ -597,12 +406,7 @@ def test_toda_isencao_aponta_um_gesto_e_tem_razao() -> None:
 
 
 def test_a_isencao_nao_alcanca_o_que_grava_valor_novo() -> None:
-    """A lista de isentos não pode crescer para dentro do perigo.
-
-    O ⊘ da Conexões é o caso que prova: ele CHAMA `machine.declare`, como os
-    três isentos, e grava algo que a página NÃO mostra — o resultado do EXAME.
-    Se alguém isentar a porta em vez do par, ele passa.
-    """
+    """A lista de isentos não pode crescer para dentro do perigo."""
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
     assert ("08-conexoes.html", "ignorar") not in ISENTOS, (
@@ -636,8 +440,6 @@ def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
         "só o corpo do gesto, e é assim que o nome do adaptador ficou "
         "desprotegido até 04/09/2026."
     )
-    # E a superfície do próprio gesto NÃO tem a porta — é isso que torna o
-    # caso uma prova de profundidade, e não uma coincidência.
     fonte = inspect.getsource(fn)
     assert "dar_nome_ao_adaptador(" not in fonte.split('"""')[-1], (
         "o gesto passou a chamar a porta DIRETAMENTE; este caso deixou de "

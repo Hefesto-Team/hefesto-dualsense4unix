@@ -1,53 +1,5 @@
 #!/usr/bin/env python3
-"""Portão: cada comportamento tem UM dono, e a tela nova o CHAMA.
-
-Nasceu da queixa dela, 05/09/2026:
-
-    *"a parte de recriarmos cada script ao invés de adaptar o que já temos
-    pronto do gtk, isso eu havia pedido e sempre repetia, mas tá sendo
-    recriado tudo sempre (…) estamos recriando um produto que estava
-    praticamente pronto pro gtk."*
-
-Cinco agentes mediram 410 comportamentos das dez abas contra a janela GTK. O
-resultado virou :file:`docs/data/donos-de-comportamento.csv`, e este portão é o
-que **impede o mapa de envelhecer** — que é como todo mapa desta casa morre.
-
-O que ele reprova, e por quê:
-
-1. **Endereço morto.** Todo ``dono`` e todo ``onde_html`` é ``arquivo.py:símbolo``
-   e tem de resolver — arquivo que existe, símbolo definido lá dentro. Por
-   SÍMBOLO e não por linha, de propósito: número de linha caduca a cada edição
-   acima dele, e um portão que fica vermelho por nada é um portão que se
-   aprende a ignorar. Medido em 05/09: dez dos endereços vindos dos laudos já
-   apontavam para outra função, horas depois.
-
-2. **Cura descosturada.** Linha ``CURADO`` cujo arquivo de tela deixou de
-   CHAMAR o símbolo do dono. É a regressão exata que os seis defeitos vivos de
-   hoje tinham: a tela recalculava porque a ponte para o dono não passava
-   tráfego. Uma linha ``CURADO`` sem ``onde_html`` também reprova — sem o
-   endereço da tela não há o que conferir, e a cura ficaria sem régua.
-
-3. **SO-GTK que já migrou.** Linha ``SO-GTK`` diz "isto existe pronto na janela
-   e a tela nova não tem". No dia em que alguém ligar, o mapa passa a mentir —
-   e mentir para menos, dizendo que falta trabalho já feito. O portão vê o
-   símbolo ser CHAMADO em ``interface/`` e manda reclassificar.
-
-**CHAMAR, e não "aparecer no arquivo".** As duas regras acima leem o código com
-o ``ast`` (:func:`_referencias`), nunca o texto cru. A versão que lia o texto
-mentiu nos dois sentidos no mesmo dia, e o preço está escrito lá.
-
-4. **A dívida só desce.** ``TETO_DE_LINHAS_DUPLICADAS`` é o quanto de código
-   recriado ainda está declarado. Declarar duplicata nova é o certo a fazer —
-   e é o que estoura o teto, obrigando a decisão a ser tomada por gente, com
-   data, em vez de a dívida crescer calada.
-
-5. **Linha incompleta.** Sem ``razao`` não se decide nada meses depois; sem
-   ``economia_linhas`` uma duplicata não entra na conta do item 4.
-
-O portão NÃO tenta adivinhar se um código "calcula em vez de chamar" — isso é
-julgamento, e julgamento vira laudo, não régua. O que ele garante é que o laudo
-continue verdadeiro.
-"""
+"""Portão: cada comportamento tem UM dono, e a tela nova o CHAMA."""
 
 from __future__ import annotations
 
@@ -61,37 +13,16 @@ RAIZ = Path(__file__).resolve().parent.parent
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 MAPA = RAIZ / "docs" / "data" / "donos-de-comportamento.csv"
 
-#: A dívida declarada de código recriado, em linhas. **Só desce.**
-#:
-#: 05/09/2026 — 2.397, a soma de ``economia_linhas`` das treze duplicatas que os
-#: cinco laudos mediram. Quem declarar uma duplicata nova estoura o teto de
-#: propósito: a alternativa é ela entrar calada, e foi assim que 27.689 linhas
-#: de ``interface/pacotes/`` nasceram sem ninguém somar o custo.
-#:
-#: 21/09/2026 — 2.301: a `_VigiaDaSteam` (96 linhas) saiu da aba 07 com os
-#: botões que só a Steam tinha, e a duplicata dela saiu do mapa junto.
-#:
-#: 23/09/2026 — 2.101: a régua de Desempenho da aba 08 (`_regua_do_radio`, a
-#: duplicata `regua.do_radio` de 200 linhas) saiu com a seção antiga
-#: (TRANSPLANTE-DA-SECAO-01), e a linha `radio.ocupacao.para_a_tela` saiu com a
-#: ponte `_adaptadores`: a tela deixou de fazer a conta da ocupação e passou a
 #: LER a do daemon (`radio_ar`, `radio_governador`). As duas saíram do mapa.
 TETO_DE_LINHAS_DUPLICADAS = 2101
 
-#: Onde a tela nova mora. Um símbolo SO-GTK que apareça aqui deixou de ser
-#: SO-GTK — é o item 3 do cabeçalho.
 TELA_NOVA = ("interface", "app/actions/perfis_web.py", "app/actions/jogar")
 
 VEREDITOS_DE_DUPLICATA = ("DUPLICATA", "DUPLICATA-QUE-PIOROU")
 
 
 def _simbolos(caminho: Path) -> set[str]:
-    """Todo nome que este arquivo DEFINE — def, class e atribuição de topo.
-
-    Inclui método de classe: o dono de um comportamento pode ser um método
-    (``DaemonActionsMixin._ESTADOS_COM_DAEMON_DE_PE`` é um deles), e exigir
-    função solta empurraria o mapa a mentir sobre onde a regra mora.
-    """
+    """Todo nome que este arquivo DEFINE — def, class e atribuição de topo."""
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"))
     except (OSError, SyntaxError):
@@ -114,8 +45,6 @@ def _parte(endereco: str) -> tuple[str, str]:
     return arquivo, simbolo
 
 
-#: As referências de código de cada arquivo, lidas UMA vez. Sem ele o portão
-#: reabriria e reparsearia a mesma árvore de `interface/` uma vez por linha.
 _REFERENCIAS: dict[Path, frozenset[str]] = {}
 
 
@@ -230,11 +159,6 @@ def main(argv: list[str] | None = None) -> int:
                     f"{MAPA.name}:{i} {nome}: `{coluna}` cita `{simbolo}`, que {arquivo} não define"
                 )
 
-        # UMA LINHA `CURADO` SEM `onde_html` É INFALSIFICÁVEL, e o portão calava
-        # sobre ela: a regra abaixo só corria quando a coluna estava preenchida.
-        # "Curei, e não digo onde" é a forma de escapar da única régua que
-        # cobra a cura. Nenhuma das oito de hoje faz isso — a trava nasce em
-        # zero, que é quando ela custa nada.
         if veredito == "CURADO" and not linha["onde_html"].strip():
             queixas.append(
                 f"{MAPA.name}:{i} {nome}: CURADO sem `onde_html` — não há o que "

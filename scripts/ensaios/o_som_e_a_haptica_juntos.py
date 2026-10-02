@@ -1,50 +1,5 @@
 #!/usr/bin/env python3
-"""o_som_e_a_haptica_juntos.py — o som e a vibração fina no MESMO report do rádio.
-
-O-SOM-E-A-HAPTICA-CHEGAM-JUNTOS-PELO-RADIO-01, o passo 0. A resposta [21] dela,
-29/09/2026: *«1, por hora mas no ps5 não é assim que funciona no bt. Lá os dois
-chegam ao mesmo tempo.»* <!-- noqa-acento: citação literal dela -->
-
-Hoje a ponte de cada controle no rádio escolhe UM arranjo (o `0x35` do som ou o
-`0x32` da háptica). A passada azul de 18/09 provou que o `0x35` aceita o bloco
-háptico, mas no assento do som ([11] tag, [13..76]); os dois nunca estiveram no
-mesmo report. Este ensaio monta os dois juntos e os manda, com a orelha e a mão
-dela como veredito.
-
-AS PASSADAS (``--passada``):
-
-    A   o ``0x35`` de 334 B: [2] o bloco ``0x11`` (AudioControl, 7 B em [4..10]),
-        [11] o som (tag ``0x93``, 200 B de Opus em [13..212]) e [213] o bloco
-        háptico (tag ``0x92``, 64 B em [215..278]), o CRC nos quatro últimos.
-    B   o ``0x36`` de 398 B, o do console. ESPERA: a fonte desta casa
-        (``docs/protocol/dualsense-modo-de-relatorio.md`` §5.4) diz só que o
-        ``common`` de 47 B mora no offset 13; o háptico e o áudio depois dele
-        não estão ditos, e a passada A decide sozinha até estarem.
-
-O SOM é o tom de 1300 Hz (o da prova 0 da A-PONTE-DO-SOM), em Opus pelo
-codificador do PRODUTO; a HÁPTICA é a senoide de 150 Hz, int8 estéreo a 3 kHz
-(32 amostras por canal, os mesmos 10,667 ms do quadro de Opus). Um report a
-cada 10,667 ms, um quadro de cada.
-
-AS MORDIDAS: ``--sem-haptico`` (o ``0x35`` de hoje, sem o bloco háptico: o tom
-tem de sair igual, e é o par que separa «o háptico cortou o som»), ``--sem-som``
-(o mesmo arranjo com o Opus de silêncio no assento do som: a cadeia de blocos
-fica a mesma, e o motor tem de vibrar igual) e ``--crc-errado`` (nada vale).
-
-AS GUARDAS, as do ``scripts/ensaios/historico/a_haptica_pelo_radio.py``: sem
-``--tocar`` não abre porta nenhuma, só mostra os bytes e os relê; com o daemon
-no ar ele RECUSA, e não há escape (dois escritores do contador do ``0x35`` foi
-o que travou o microfone em 10/09); a porta é a do broker; e o controle é
-devolvido no fim (a porta fecha, e o daemon o retoma ao subir de novo).
-
-    o_som_e_a_haptica_juntos.py                         # os bytes, relidos
-    o_som_e_a_haptica_juntos.py --tocar                 # 20 s no controle do rádio
-    o_som_e_a_haptica_juntos.py --tocar --sem-haptico   # a mordida do som
-    o_som_e_a_haptica_juntos.py --tocar --todos --segundos 60   # o ar dos quatro
-
-O VEREDITO É DELA: o tom sai inteiro, sem corte (a orelha), e o motor vibra ao
-mesmo tempo (a mão). ``write()`` aceito não prova nenhum dos dois.
-"""
+"""o_som_e_a_haptica_juntos.py — o som e a vibração fina no MESMO report do rádio."""
 
 from __future__ import annotations
 
@@ -81,9 +36,6 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     BLOCO_SPEAKER,
 )
 
-#: OS ASSENTOS DA PASSADA A — do ensaio, e não de um ``Arranjo`` do produto: a
-#: régua que relê o report compara contra estes números, e o produto que um dia
-#: os adotar será medido contra eles.
 DEGRAU_A = 0x35
 POS_TAG_CONTROLE = 2
 LEN_CONTROLE = 7
@@ -92,12 +44,10 @@ POS_SOM = 13
 POS_TAG_HAPTICO = POS_SOM + BYTES_POR_QUADRO_OPUS
 POS_HAPTICO = POS_TAG_HAPTICO + 2
 
-#: As três tags, com o bit de presença; nenhuma dobrada.
 TAG_CONTROLE = tag_tlv(BLOCO_AUDIO_CONTROL)
 TAG_SOM = tag_tlv(BLOCO_SPEAKER)
 TAG_HAPTICO = tag_tlv(BLOCO_HAPTICS)
 
-#: A háptica: 32 amostras por canal a 3 kHz, int8 estéreo entrelaçado.
 TAXA_HAPTICA = 3000
 AMOSTRAS_HAPTICAS = BYTES_DO_BLOCO_HAPTICO // 2
 
@@ -109,13 +59,7 @@ FRASE_DA_PASSADA_B = (
 
 
 def quadros_do_tom(total: int, *, frequencia: float, amplitude: int) -> list[bytes]:
-    """``total`` quadros de PCM ``s16le`` estéreo (480 amostras) do tom.
-
-    O seno anda na taxa da FONTE (45 kHz), não na do Opus: o aparelho toca as
-    480 amostras de cada quadro em 10,667 ms, e é nessa taxa que o tom sai
-    com a frequência pedida (a prova 0 da A-PONTE-DO-SOM ouviu 1300 Hz a
-    48 kHz sair em 1219,4 Hz).
-    """
+    """``total`` quadros de PCM ``s16le`` estéreo (480 amostras) do tom."""
     quadros: list[bytes] = []
     n = 0
     for _ in range(total):
@@ -152,12 +96,7 @@ def montar_junto(
     sem_haptico: bool = False,
     crc_errado: bool = False,
 ) -> bytes:
-    """O ``0x35`` da passada A: o AudioControl, o som e o bloco háptico, e o CRC.
-
-    ``sem_haptico`` monta o ``0x35`` de hoje (a cadeia acaba no som). O
-    AudioControl é o do produto (:func:`controle_de_audio_035`), sem microfone:
-    o contador conta quadros de áudio, um por report.
-    """
+    """O ``0x35`` da passada A: o AudioControl, o som e o bloco háptico, e o CRC."""
     if len(quadro) > BYTES_POR_QUADRO_OPUS:
         raise ValueError(f"quadro de Opus de {len(quadro)} B não cabe em {BYTES_POR_QUADRO_OPUS}")
     if len(bloco) != BYTES_DO_BLOCO_HAPTICO:
@@ -193,11 +132,7 @@ class Relido:
 
 
 def reler(pkt: bytes) -> Relido:
-    """Relê o report pela cadeia TLV, sem os assentos: o que cada tag diz que carrega.
-
-    Anda de ``[2]`` em diante, tag e ``len``, até a primeira tag sem o bit de
-    presença (``0x80``); o bit ``0x40`` dobra o ``len``.
-    """
+    """Relê o report pela cadeia TLV, sem os assentos: o que cada tag diz que carrega."""
     blocos: list[tuple[int, int, int]] = []
     i = 2
     fim = len(pkt) - 4

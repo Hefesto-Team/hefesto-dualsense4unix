@@ -1,43 +1,4 @@
-"""DAEMON-ACORDADO-01 — o laço que validava o MESMO report quatro vezes.
-
-O achado da sprint é um número da máquina dela: **15,2 % de um núcleo com
-ninguém jogando**. Este arquivo tranca a fatia que `core/physical_report_reader`
-responde por, e a tranca com a régua que sobrevive a máquina de CI.
-
-O DEFEITO
----------
-O laço `_read_until_lost` precisa de QUATRO campos do MESMO report — clique do
-touchpad, fone/microfone, bateria e a janela de motion — e cada extrator
-público começava resolvendo `_struct_base` por conta própria. No rádio o
-`_struct_base` valida CRC-32: **quatro CRC-32 por report onde um basta**, mais
-as três cópias de buffer que cada `bt_crc32` faz.
-
-POR QUE ESTE PORTÃO CONTA, E NÃO CRONOMETRA
--------------------------------------------
-Cronômetro em máquina de CI é a armadilha nº 1 desta casa em outra roupa: o
-número muda com a carga da máquina e o teste vira ou frouxo (teto alto demais
-para pegar a regressão) ou instável (vermelho por vizinho barulhento). O que
-NÃO muda é a **contagem**: um report, uma validação. Duas réguas independentes,
-como a casa exige:
-
-* `bt_crc32` — o custo real, e o que a regressão faria voltar a quatro;
-* `_struct_base` — a régua que sobrevive a alguém trocar o CRC por algo mais
-  barato e continuar resolvendo a base quatro vezes.
-
-O cronômetro está no comentário do módulo, com a data e o hardware. Aqui fica o
-que morde.
-
-O DUBLÊ DE LEITOR
------------------
-Um `socketpair(AF_UNIX, SOCK_SEQPACKET)`, não um `os.pipe()`: o pipe é um
-STREAM e `os.read(fd, 128)` colaria dois reports de 78 B numa leitura só — o
-`SEQPACKET` preserva a fronteira de mensagem como o hidraw preserva a do
-report. Fechar a ponta escritora dá EOF, e o laço REAL (`_read_until_lost`,
-não uma imitação dele) roda na thread do teste, sem `sleep` e sem corrida.
-
-O relógio é injetado (`time_fn`) para o throttle ser decidido pelo teste, e não
-pelo relógio da máquina.
-"""
+"""DAEMON-ACORDADO-01 — o laço que validava o MESMO report quatro vezes."""
 from __future__ import annotations
 
 import contextlib
@@ -55,18 +16,12 @@ from hefesto_dualsense4unix.core.physical_report_reader import (
     PhysicalReportReader,
 )
 
-#: Bit de fone plugado no byte de status do jack (`status[1]`).
 _HP_DETECT = 0x01
-#: Byte de bateria: nível 9 (95%) descarregando.
 _BATERIA = 0x09
 
 
 def _janela(marca: int) -> bytes:
-    """Janela de motion reconhecível e DIFERENTE a cada report.
-
-    Diferente de propósito: o throttle dedupa por VALOR, e uma janela repetida
-    não emitiria — o teste passaria a medir o dedup em vez do laço.
-    """
+    """Janela de motion reconhecível e DIFERENTE a cada report."""
     return bytes([(marca + i) & 0xFF for i in range(MOTION_WINDOW_LEN)])
 
 
@@ -86,7 +41,7 @@ def _bt(marca: int = 1, *, clique: bool = False, jack: int = 0,
         bateria: int = 0, corrompido: bool = False) -> bytes:
     raw = bytearray(INPUT_REPORT_BT_SIZE)
     raw[0] = prr.INPUT_REPORT_BT
-    raw[1] = 0x01  # contador do BT; o bit de ÁUDIO (0x02) fica DESLIGADO
+    raw[1] = 0x01
     raw[17 : 17 + MOTION_WINDOW_LEN] = _janela(marca)
     if clique:
         raw[2 + prr.BUTTONS2_OFFSET] |= prr.TOUCHPAD_CLICK_BIT
@@ -94,7 +49,7 @@ def _bt(marca: int = 1, *, clique: bool = False, jack: int = 0,
     raw[2 + prr.BATTERY_STATUS_OFFSET] = bateria
     raw[-4:] = bt_crc32(raw[:-4], seed=BT_INPUT_CRC_SEED).to_bytes(4, "little")
     if corrompido:
-        raw[20] ^= 0xFF  # muda o corpo DEPOIS do CRC
+        raw[20] ^= 0xFF
     return bytes(raw)
 
 
@@ -145,16 +100,12 @@ class _Contador:
 
 
 def _rodar_o_laco(reports: list[bytes], vpad: Any) -> PhysicalReportReader:
-    """Empurra `reports` pelo laço REAL do reader e volta quando der EOF.
-
-    Sem thread e sem `sleep`: o `SEQPACKET` guarda as fronteiras, o `close` da
-    ponta escritora vira o `b""` que faz `_read_until_lost` retornar.
-    """
+    """Empurra `reports` pelo laço REAL do reader e volta quando der EOF."""
     escritor, leitor = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
     passo = {"t": 0.0}
 
     def relogio() -> float:
-        passo["t"] += 1.0  # muito além do teto de emissão: nada é engolido
+        passo["t"] += 1.0
         return passo["t"]
 
     reader = PhysicalReportReader(
@@ -166,8 +117,6 @@ def _rodar_o_laco(reports: list[bytes], vpad: Any) -> PhysicalReportReader:
         escritor.close()
         reader._read_until_lost(leitor.fileno())
     finally:
-        # O teardown nunca reprova: a ponta escritora já foi fechada acima no
-        # caminho feliz, e um erro aqui esconderia o erro de verdade.
         with contextlib.suppress(OSError):
             leitor.close()
         with contextlib.suppress(OSError):
@@ -181,11 +130,7 @@ class TestUmReportUmaValidacao:
     def test_bt_valida_o_crc_uma_vez_por_report(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida principal.
-
-        Com o laço chamando os quatro extratores PÚBLICOS (o estado de antes
-        de 25/08/2026), esta contagem sai **4 por report** e o teste reprova.
-        """
+        """A mordida principal."""
         contador = _Contador(monkeypatch)
         vpad = _VpadEspiao()
         reports = [_bt(marca=m, jack=_HP_DETECT, bateria=_BATERIA)
@@ -223,12 +168,7 @@ class TestUmReportUmaValidacao:
     def test_report_corrompido_tambem_valida_uma_vez_so(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O caminho do descarte é o que mais tinha a ganhar, e ganhou.
-
-        Antes, um report de rádio corrompido pagava QUATRO CRC-32 para os
-        quatro consumidores concluírem, cada um por si, que não sabiam nada
-        sobre ele. Agora paga uma — e o `bt_drops` continua contando igual.
-        """
+        """O caminho do descarte é o que mais tinha a ganhar, e ganhou."""
         contador = _Contador(monkeypatch)
         vpad = _VpadEspiao()
 
@@ -242,11 +182,7 @@ class TestUmReportUmaValidacao:
 
 
 class TestOsQuatroCamposContinuamChegando:
-    """A economia não pode ter comido nenhuma das quatro entregas.
-
-    Contar validações sozinho aceitaria a "otimização" que não entrega nada.
-    Estes testes são o contrapeso: os mesmos reports, e o que o JOGO veria.
-    """
+    """A economia não pode ter comido nenhuma das quatro entregas."""
 
     @pytest.mark.parametrize("fabricar", [_usb, _bt], ids=["cabo", "rádio"])
     def test_clique_jack_bateria_e_motion_saem_do_mesmo_report(
@@ -254,11 +190,11 @@ class TestOsQuatroCamposContinuamChegando:
     ) -> None:
         vpad = _VpadEspiao()
         reports = [
-            fabricar(marca=1),                                  # nada aceso
+            fabricar(marca=1),
             fabricar(marca=2, clique=True, jack=_HP_DETECT,
-                     bateria=_BATERIA),                         # os três acendem
+                     bateria=_BATERIA),
             fabricar(marca=3, clique=True, jack=_HP_DETECT,
-                     bateria=_BATERIA),                         # e seguem acesos
+                     bateria=_BATERIA),
         ]
 
         reader = _rodar_o_laco(reports, vpad)
@@ -267,9 +203,6 @@ class TestOsQuatroCamposContinuamChegando:
         assert vpad.janelas == [_janela(1), _janela(2), _janela(3)]
         assert vpad.cliques == [False, True], "o clique sai por BORDA, não por report"
         assert vpad.jacks == [0, _HP_DETECT]
-        # 5 e não 0: a escala do nibble são ONZE níveis (5, 15, ..., 95, 100),
-        # então o byte 0x00 é "nível 0 descarregando" = 5%. Ver
-        # `decodificar_bateria` — a conta do `dualsense_parse_report` do kernel.
         assert [p for p, _ in vpad.baterias] == [5, 95]
         assert reader.touchpad_clicks == 1
         assert reader.jack_forwards == 2
@@ -277,17 +210,7 @@ class TestOsQuatroCamposContinuamChegando:
 
 
 class TestAPortaDeQuemSoTemUmReport:
-    """Os extratores públicos que ficam continuam corretos.
-
-    Eles são a porta de quem tem UM report na mão (um ensaio, um dump, a suíte)
-    e não têm base para receber. A equivalência com o caminho quente é o que
-    impede as duas metades de divergirem em silêncio — o defeito que a casa
-    persegue desde a regra "fato errado sai de TODOS os lugares".
-
-    O da janela de motion (`extract_motion_window`) SAIU em 28/09/2026: só a
-    suíte o chamava, e a janela ficou com um dono só, o par `_struct_base` +
-    `_janela_com_base` do laço.
-    """
+    """Os extratores públicos que ficam continuam corretos."""
 
     @pytest.mark.parametrize("fabricar", [_usb, _bt], ids=["cabo", "rádio"])
     def test_com_base_e_sem_base_dao_o_mesmo(self, fabricar: Any) -> None:
@@ -341,12 +264,7 @@ class TestOReportDeAudioNaoViraInput:
 
 
 class TestODubleDeLeitorEHonesto:
-    """A régua do teste, medida contra si mesma (armadilha nº 1 desta casa).
-
-    Se o `SEQPACKET` colasse dois reports numa leitura — como um `os.pipe()`
-    faria —, `reports_seen` viria menor que o número escrito e todas as
-    contagens acima estariam medindo outra coisa.
-    """
+    """A régua do teste, medida contra si mesma (armadilha nº 1 desta casa)."""
 
     def test_cada_report_escrito_vira_exatamente_uma_leitura(self) -> None:
         vpad = _VpadEspiao()
@@ -365,14 +283,7 @@ class TestODubleDeLeitorEHonesto:
 
 
 def test_o_modulo_nao_ficou_com_extrator_orfao() -> None:
-    """Os três públicos que ficam seguem exportados, e o da janela não volta.
-
-    A sprint ENTREGA-QUE-NAO-LIGOU-01 desta casa nasceu do inverso (função sem
-    chamador); esta guarda o outro lado: chamador sem função. O
-    `extract_jack_status` tem chamador fora da suíte
-    (`scripts/ensaios/a_captura_armada_do_som_no_radio.py`). O
-    `extract_motion_window` saiu em 28/09/2026, e a janela tem um dono só.
-    """
+    """Os três públicos que ficam seguem exportados, e o da janela não volta."""
     assert not hasattr(prr, "extract_motion_window")
     assert "extract_motion_window" not in prr.__all__
     for nome in (

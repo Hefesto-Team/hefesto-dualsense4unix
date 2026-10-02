@@ -73,11 +73,8 @@ _INTERFACE = str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface")
 if _INTERFACE not in sys.path:
     sys.path.insert(0, _INTERFACE)
 
-#: Os quatro controles, na grafia do backend (com dois-pontos).
 _P = {n: f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4)}
-#: A chave de peça do perfil (doze hex), como o JSON à mão a escreveria.
 _CHAVE = {n: f"aabbcc00000{n}" for n in (1, 2, 3, 4)}
-#: Um giro de pulso no `yaw`, bem acima da zona morta e abaixo do teto.
 _GIRO = (0.0, 150.0, 0.0)
 _CENTRO = 128
 
@@ -119,25 +116,14 @@ def _perfil_escrito_a_mao(
     return bruto
 
 
-# ---------------------------------------------------------------------------
-# 1. O ESQUEMA — as três portas por onde o «mouse» entra
-# ---------------------------------------------------------------------------
-
-
 def test_o_mouse_escrito_a_mao_vira_o_analogico_direito(perfis: Path) -> None:
-    """A seção do perfil, a peça de um controle e o ARQUIVO no disco: nas três
-    o «mouse» sai analógico direito, e o resto do arranjo dela fica intacto.
-
-    MORDIDA: apague o `_o_cursor_fora_da_navegacao_e_o_analogico_direito` do
-    esquema e as três reprovam com `'mouse'`.
-    """
+    """A seção do perfil, a peça de um controle e o ARQUIVO no disco: nas três"""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     secao = ProfileMovimentoConfig.model_validate({"destino": "mouse", "sensibilidade": 9})
     assert (secao.destino, secao.sensibilidade) == ("analogico_direito", 9)
     peca = ControllerOverrides.model_validate({"movimento": {"destino": "mouse"}})
     assert peca.movimento is not None and peca.movimento.destino == "analogico_direito"
-    # O ARQUIVO À MÃO: o caminho que o JSON dela faz de verdade.
     bruto = _perfil_escrito_a_mao(mesa={"destino": "mouse", "gatilho": "l2"},
                                   por_controle={3: {"destino": "mouse"}})
     (perfis / "feito_no_editor.json").write_text(json.dumps(bruto), encoding="utf-8")
@@ -150,23 +136,15 @@ def test_o_mouse_escrito_a_mao_vira_o_analogico_direito(perfis: Path) -> None:
 
 @pytest.mark.parametrize("destino", ["nenhum", "analogico_direito", "analogico_esquerdo"])
 def test_os_outros_destinos_nao_mudam(destino: str) -> None:
-    """Só o «mouse» é lido de outro jeito: o esquerdo continua o esquerdo e o
-    desligado continua desligado.
-
-    MORDIDA: faça o validador devolver sempre o analógico direito e o esquerdo
-    e o desligado reprovam.
-    """
+    """Só o «mouse» é lido de outro jeito: o esquerdo continua o esquerdo e o"""
     assert ProfileMovimentoConfig(destino=destino).destino == destino  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
 # 2. O MOTOR FORA DA NAVEGAÇÃO — Sony DualSense e Xbox, P1 a P4, USB e BT
-# ---------------------------------------------------------------------------
 
 
 class _NoDoUinput:
-    """O nó `uinput` de mentira do `UinputGamepad`: guarda cada `write`, na
-    ordem, e não tem evento de volta (`read_one` é `None`)."""
+    """O nó `uinput` de mentira do `UinputGamepad`: guarda cada `write`, na"""
 
     def __init__(self) -> None:
         self.escritas: list[tuple[int, int, int]] = []
@@ -182,7 +160,6 @@ class _NoDoUinput:
 
 
 #: O blueprint mínimo do `UhidDualSense` — o molde de `test_uhid_gamepad.py`,
-#: com o MAC FORJADO da faixa sintética no feature 0x09.
 _BLUEPRINT = {
     "descriptor": bytes([0x05, 0x01, 0x09, 0x05, 0xA1, 0x01]),
     "features": {
@@ -194,12 +171,7 @@ _BLUEPRINT = {
 
 
 class _NoDoUhid:
-    """O `/dev/uhid` de mentira: um descritor por vpad, cada escrita guardada.
-
-    Só os descritores DELE são desviados — todo o resto do processo continua
-    falando com o `os` de verdade (a régua monta um `Daemon` inteiro, e ele
-    escreve arquivos no lar de mentira da suíte).
-    """
+    """O `/dev/uhid` de mentira: um descritor por vpad, cada escrita guardada."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self.escritas: dict[int, list[bytes]] = {}
@@ -263,8 +235,7 @@ def _eixos_que_o_jogo_le(vpad: Any, uhid: _NoDoUhid | None) -> dict[str, int]:
 
 @pytest.fixture
 def vpads_de_verdade(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
-    """Fábrica dos controles virtuais das duas máscaras; os uhid morrem no fim
-    (o `stop` devolve o MAC que o registro dos vpads vivos guarda)."""
+    """Fábrica dos controles virtuais das duas máscaras; os uhid morrem no fim"""
     uhid = _NoDoUhid(monkeypatch)
     vivos: list[UhidDualSense] = []
 
@@ -290,12 +261,7 @@ def _mesa_com_controle_virtual(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str, mascara: str,
     bruto: dict[str, Any], vpads_de_verdade: Any,
 ) -> dict[int, Any]:
-    """O `Daemon` real com o controle virtual de pé: o P1 pelo `dispatch_gamepad`
-    e os P2 a P4 pelo `CoopManager.forward_all`, os quatro girando igual.
-
-    O perfil entra pelo `model_validate` do dicionário cru — o caminho do
-    arquivo à mão — e pelo `ProfileManager.apply_movimento` do produto.
-    """
+    """O `Daemon` real com o controle virtual de pé: o P1 pelo `dispatch_gamepad`"""
     hub = _hub({_P[n]: _GIRO for n in (1, 2, 3, 4)})
     controle = FakeController(transport=transporte)  # type: ignore[arg-type]
     controle.primary_uniq = _P[1]  # type: ignore[attr-defined]
@@ -325,7 +291,7 @@ def _mesa_com_controle_virtual(
             player_index=n,
             vpad=vpads[n],
         )
-    for _ in range(2):  # a demanda abre o leitor; a segunda volta lê o giro
+    for _ in range(2):
         gp.dispatch_gamepad(daemon, _estado(transporte), frozenset())
         coop.forward_all()
         hub.reconciliar()
@@ -343,12 +309,7 @@ def test_fora_da_navegacao_o_mouse_da_peca_move_o_analogico_direito(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, vpads_de_verdade: Any,
     jogador: int, transporte: str, mascara: str,
 ) -> None:
-    """O «mouse» escrito à mão na peça do jogador N: o analógico direito do
-    controle virtual DELE anda, e só o dele. O esquerdo fica no centro.
-
-    MORDIDA: apague o validador do esquema e os dezesseis casos reprovam com o
-    analógico direito parado — o giro ia a um mouse emulado que não existe.
-    """
+    """O «mouse» escrito à mão na peça do jogador N: o analógico direito do"""
     bruto = _perfil_escrito_a_mao(por_controle={jogador: {"destino": "mouse"}})
     vpads = _mesa_com_controle_virtual(monkeypatch, tmp_path, transporte, mascara,
                                        bruto, vpads_de_verdade)
@@ -366,10 +327,7 @@ def test_fora_da_navegacao_o_mouse_da_mesa_move_os_quatro(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, vpads_de_verdade: Any,
     transporte: str, mascara: str,
 ) -> None:
-    """O «mouse» na mira do PERFIL inteiro: os quatro analógicos direitos andam.
-
-    MORDIDA: a mesma do esquema.
-    """
+    """O «mouse» na mira do PERFIL inteiro: os quatro analógicos direitos andam."""
     bruto = _perfil_escrito_a_mao(mesa={"destino": "mouse"})
     vpads = _mesa_com_controle_virtual(monkeypatch, tmp_path, transporte, mascara,
                                        bruto, vpads_de_verdade)
@@ -378,23 +336,13 @@ def test_fora_da_navegacao_o_mouse_da_mesa_move_os_quatro(
         f"{mascara}/{transporte}: a mira da mesa no «mouse» não moveu os quatro: {eixos}")
 
 
-# ---------------------------------------------------------------------------
-# 3. NA NAVEGAÇÃO CONTINUA O CURSOR
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("jogador", [1, 2, 3, 4])
 def test_na_navegacao_o_mouse_escrito_a_mao_continua_o_cursor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     jogador: int, transporte: str,
 ) -> None:
-    """O mesmo «mouse» à mão, na Navegação: o cursor anda o giro de UM controle,
-    o dele, e nada vira rolagem.
-
-    MORDIDA: faça o validador ler o «mouse» como `nenhum` e os oito casos
-    reprovam com o cursor parado.
-    """
+    """O mesmo «mouse» à mão, na Navegação: o cursor anda o giro de UM controle,"""
     bruto = _perfil_escrito_a_mao(por_controle={jogador: {"destino": "mouse"}})
     nav = _navegacao(tmp_path, monkeypatch, transporte, perfil=Profile.model_validate(bruto))
     assert _ate_andar(nav) == (_PX_POR_TIQUE, 0), f"P{jogador}/{transporte}"
@@ -405,16 +353,7 @@ def test_na_navegacao_o_mouse_escrito_a_mao_continua_o_cursor(
 def test_na_navegacao_a_peca_de_chip_apagado_drena(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A DRENAGEM VEM ANTES DO PORTÃO DA PEÇA, no caminho que o produto alcança.
-
-    A mira do perfil no «mouse» (à mão) e o P4 com o chip apagado: os três
-    outros movem o cursor, e o P4 DESCARTA o próprio ângulo a cada tique em vez
-    de guardá-lo para um salto no dia em que voltar a seguir o perfil. Conta as
-    drenagens, não o efeito.
-
-    MORDIDA: ponha o `return` da peça que não mira ANTES da drenagem em
-    `gamepad.aplicar_o_movimento` e o P4 reprova.
-    """
+    """A DRENAGEM VEM ANTES DO PORTÃO DA PEÇA, no caminho que o produto alcança."""
     bruto = _perfil_escrito_a_mao(mesa={"destino": "mouse"},
                                   por_controle={4: {"destino": "nenhum"}})
     nav = _navegacao(tmp_path, monkeypatch, "bt", perfil=Profile.model_validate(bruto))
@@ -427,20 +366,11 @@ def test_na_navegacao_a_peca_de_chip_apagado_drena(
         f"a peça de chip apagado não descartou o ângulo: {drenagens}")
 
 
-# ---------------------------------------------------------------------------
-# 4. O QUE O SERVIÇO PUBLICA E A DICA DO GIROSCÓPIO DIZ — os quatro modos
-# ---------------------------------------------------------------------------
-#: AS FRASES, por extenso: a régua confere o pacote contra o que o produto faz.
 _DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
 _DICA_NO_DIREITO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
                     "pelo analógico direito.")
 _DICA_NO_CURSOR = "Com a Mira Virtual acesa, o giro deste controle move o cursor."
 
-#: O bloco `mouse_emulation` como o daemon o publica
-#: (`ipc_handlers._mouse_emulation_payload`): o interruptor, o device e o
-#: `despachando`/`bloqueio` do dono único (`_bloqueio_da_emulacao_de_desktop`).
-#: A CONFERÊNCIA achou o dublê anterior mais frouxo que o daemon: ele só tinha o
-#: `enabled`, e o cartão lia o sinal mais fraco.
 _RATO_ANDANDO = {"enabled": True, "device_ativo": True, "despachando": True, "bloqueio": None}
 _RATO_DESLIGADO = {"enabled": False, "device_ativo": False, "despachando": False,
                    "bloqueio": "desligada"}
@@ -458,8 +388,7 @@ _NATIVO = {"native_mode": True, "gamepad_emulation": {"enabled": False},
 
 
 def _o_que_o_servico_publica(tmp_path: Path, bruto: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """O bloco `mira` de cada controle, pelo `_merge_mira` do `IpcServer` real,
-    depois de o perfil à mão passar pelo `apply_movimento` do produto."""
+    """O bloco `mira` de cada controle, pelo `_merge_mira` do `IpcServer` real,"""
     controle = FakeController(transport="usb")  # type: ignore[arg-type]
     daemon = Daemon(controller=controle)
     gerente = ProfileManager(controller=controle, store=daemon.store)
@@ -501,14 +430,10 @@ def test_a_dica_do_mouse_a_mao_diz_o_que_acontece_em_cada_modo(
     assert a02.pacote(ctx)["cards"][_P[3]]["giro-dica"] == esperada
 
 
-# ---------------------------------------------------------------------------
-# 5. O CARTÃO DA ABA 06 — o pacote, e a página renderizada
-# ---------------------------------------------------------------------------
 _PAPEL_QUE_NAVEGA = "Navega o PC"
 _PAPEL_SO_A_JANELA = "Só a janela"
 _PAPEL_DO_CURSOR = "Move o cursor"
 
-#: As duas mesas de transporte: cada jogador passa pelo USB e pelo BT.
 _MESAS = {"A": {1: "usb", 2: "bt", 3: "bt", 4: "usb"},
           "B": {1: "bt", 2: "usb", 3: "usb", 4: "bt"}}
 
@@ -565,8 +490,6 @@ def _via(mesa: str, n: int) -> str:
     return "USB" if _MESAS[mesa][n] == "usb" else "BT"
 
 
-#: Os casos da matriz: cada jogador fora do posto de quem navega, nos dois
-#: transportes. O P1 só sai do posto com o P2 navegando.
 _CASOS = [(mesa, quem_navega, n) for mesa in _MESAS
           for quem_navega, jogadores in ((1, (2, 3, 4)), (2, (1,))) for n in jogadores]
 
@@ -575,13 +498,7 @@ _CASOS = [(mesa, quem_navega, n) for mesa in _MESAS
 def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
     mesa: str, quem_navega: int, jogador: int,
 ) -> None:
-    """Na Navegação, com o mouse ligado, a Mira acesa no jogador N: o cartão dele
-    diz «Move o cursor», o de quem navega diz «Navega o PC» e os outros dois,
-    «Só a janela». Sem bolinha verde no cartão novo: o verde é de quem navega.
-
-    MORDIDA: devolva sempre «Só a janela» em `linha_do_cartao` para quem não
-    navega e os oito casos reprovam.
-    """
+    """Na Navegação, com o mouse ligado, a Mira acesa no jogador N: o cartão dele"""
     estado = _estado_da_06(_NAVEGACAO, mesa, quem_navega, {jogador})
     linhas = _linhas_do_pacote(estado)
     for n, linha in linhas.items():
@@ -594,10 +511,6 @@ def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
 
 @pytest.mark.parametrize(("nome", "modo"), [
     ("mouse desligado", {**_NAVEGACAO, "mouse_emulation": _RATO_DESLIGADO}),
-    # O INTERRUPTOR LIGADO NÃO BASTA — a conferência, 25/09/2026. Nos três o
-    # `enabled` segue `true` e o tique da Navegação não roda
-    # (`lifecycle._poll_loop`): o PS segurado (modo jogo), o `/dev/uinput` sem
-    # permissão e o jogo com a entrada calando o desktop.
     ("modo jogo", {**_NAVEGACAO, "mouse_emulation": {
         **_RATO_ANDANDO, "despachando": False, "bloqueio": "modo_jogo"}}),
     ("sem o mouse virtual", {**_NAVEGACAO, "mouse_emulation": {
@@ -610,23 +523,13 @@ def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
     ("Xbox", _XBOX),
     ("Nativo", _NATIVO),
     ("sem resposta do mouse", {"native_mode": False, "gamepad_emulation": {"enabled": False}}),
-    # O MODO VENCE A PREFERÊNCIA DO MOUSE. O serviço desliga o mouse ao sair da
-    # Navegação (`mouse.stop_mouse_emulation` zera `mouse_emulation_enabled`),
-    # e o cartão não depende dessa ordem: quem diz para onde vai o giro é o
     # modo (`mode_of_state`), o mesmo leitor da dica do Giroscópio.
     ("Sony DualSense com o mouse ainda ligado",
      {**_DUALSENSE, "mouse_emulation": _RATO_ANDANDO}),
     ("Nativo com o mouse ainda ligado", {**_NATIVO, "mouse_emulation": _RATO_ANDANDO}),
 ])
 def test_fora_do_cursor_o_cartao_continua_so_a_janela(nome: str, modo: dict[str, Any]) -> None:
-    """A MESMA Mira acesa nos quatro, onde o giro NÃO vai ao cursor: o cartão de
-    quem não navega continua «Só a janela», e o de quem navega, «Navega o PC».
-
-    MORDIDA: tire a pergunta `_na_navegacao` de `move_o_cursor` e os dois casos
-    do mouse ainda ligado reprovam; tire a do `mouse_emulation` e reprovam o
-    mouse desligado, os três bloqueios e o mouse sem resposta; troque o
-    `despachando` pelo `enabled` e reprovam os três bloqueios.
-    """
+    """A MESMA Mira acesa nos quatro, onde o giro NÃO vai ao cursor: o cartão de"""
     linhas = _linhas_do_pacote(_estado_da_06(modo, "A", 1, {1, 2, 3, 4}))
     assert linhas == {1: f"USB • {_PAPEL_QUE_NAVEGA}", 2: f"BT • {_PAPEL_SO_A_JANELA}",
                       3: f"BT • {_PAPEL_SO_A_JANELA}", 4: f"USB • {_PAPEL_SO_A_JANELA}"}, (
@@ -634,11 +537,7 @@ def test_fora_do_cursor_o_cartao_continua_so_a_janela(nome: str, modo: dict[str,
 
 
 def test_sem_leitura_da_mira_o_cartao_nao_afirma_o_cursor() -> None:
-    """Um controle sem o bloco `mira` (o serviço ainda não publicou): «Só a
-    janela». Afirmação sem leitura é chute.
-
-    MORDIDA: troque o `is not True` de `move_o_cursor` por `is False`.
-    """
+    """Um controle sem o bloco `mira` (o serviço ainda não publicou): «Só a"""
     estado = _estado_da_06(_NAVEGACAO, "A", 1, set())
     for c in estado["controllers"]:
         c.pop("mira")
@@ -649,19 +548,7 @@ def test_sem_leitura_da_mira_o_cartao_nao_afirma_o_cursor() -> None:
 def test_com_o_giroscopio_desligado_o_cartao_nao_afirma_o_cursor(
     mesa: str, quem_navega: int, jogador: int,
 ) -> None:
-    """A Mira acesa nos quatro, e o chip Giroscópio do jogador N DESLIGADO por
-    ela: o giro dele não chega ao cursor (`gamepad.aplicar_o_movimento` para no
-    `REGISTRO.estado(uniq).giroscopio`, medido em
-    `test_a_mira_na_navegacao.test_o_giroscopio_desligado_nao_move_o_cursor`), e
-    o cartão dele diz «Só a janela»; os outros dois que não navegam seguem
-    «Move o cursor». Do P1 ao P4, USB e BT.
-
-    Achado da conferência (25/09/2026): no piloto, com o Giroscópio do P2
-    desligado pela aba Controles, a 06 dizia «BT • Move o cursor».
-
-    MORDIDA: tire a pergunta do giroscópio de `move_o_cursor` e os oito casos
-    reprovam.
-    """
+    """A Mira acesa nos quatro, e o chip Giroscópio do jogador N DESLIGADO por"""
     estado = _estado_da_06(_NAVEGACAO, mesa, quem_navega, {1, 2, 3, 4},
                            sem_giroscopio={jogador})
     linhas = _linhas_do_pacote(estado)
@@ -673,13 +560,7 @@ def test_com_o_giroscopio_desligado_o_cartao_nao_afirma_o_cursor(
 
 @pytest.mark.parametrize("sem", ["o interruptor", "o leitor de movimento"])
 def test_sem_leitura_do_giroscopio_o_cartao_nao_afirma_o_cursor(sem: str) -> None:
-    """Sem o bloco `sensores` (ninguém leu o interruptor) ou sem `inputs.gyro`
-    (o controle sem leitor de movimento — o motor não tem velocidade para
-    mover): «Só a janela». Afirmação sem leitura é chute.
-
-    MORDIDA: troque o `is not True` do interruptor por `is False`, ou tire a
-    pergunta do `gyro_do_inputs`, e o caso correspondente reprova.
-    """
+    """Sem o bloco `sensores` (ninguém leu o interruptor) ou sem `inputs.gyro`"""
     estado = _estado_da_06(_NAVEGACAO, "A", 1, {3})
     dele = next(c for c in estado["controllers"] if c["uniq"] == _P[3])
     if sem == "o interruptor":
@@ -688,8 +569,6 @@ def test_sem_leitura_do_giroscopio_o_cartao_nao_afirma_o_cursor(sem: str) -> Non
         dele["inputs"].pop("gyro")
     assert _linhas_do_pacote(estado)[3] == f"BT • {_PAPEL_SO_A_JANELA}", sem
 
-
-# --- a página renderizada: o WebKit, o BOOTSTRAP do piloto, as duas páginas ---
 
 _PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 _PAGINAS = {
@@ -734,7 +613,6 @@ def _cenarios_da_pagina() -> list[tuple[str, dict[str, Any]]]:
                  _a_carga_da_06(_estado_da_06(_NAVEGACAO, mesa, quem_navega, {n})))
                 for mesa, quem_navega, n in _CASOS]
     cenarios.append(("nativo", _a_carga_da_06(_estado_da_06(_NATIVO, "A", 1, {1, 2, 3, 4}))))
-    # O P1 E O P3 NA MESA, o P2 e o P4 fora: a casca de vazio vai para quem saiu.
     dois = _estado_da_06(_NAVEGACAO, "A", 1, {3})
     dois["controllers"] = [c for c in dois["controllers"] if c["uniq"] in (_P[1], _P[3])]
     cenarios.append(("dois", _a_carga_da_06(dois)))
@@ -764,7 +642,7 @@ def renderizada() -> dict[str, dict[str, dict[str, str | None]]]:
         def guardou(v: Any, res: Any, saiu: list[str] = saiu) -> None:
             try:
                 saiu.append(v.evaluate_javascript_finish(res).to_string())
-            except Exception as e:  # a exceção É a resposta desta ponte
+            except Exception as e:
                 saiu.append(f"ERRO {e}")
             Gtk.main_quit()
 
@@ -801,12 +679,7 @@ def test_a_pagina_renderizada_diz_o_cursor(
     renderizada: dict[str, dict[str, dict[str, str | None]]],
     onde: str, mesa: str, quem_navega: int, jogador: int,
 ) -> None:
-    """A carga do pacote pintada pelo BOOTSTRAP do piloto, na bancada e na
-    publicada: o cartão do jogador N diz «Move o cursor», do P1 ao P4, USB e BT.
-
-    MORDIDA: a mesma do pacote; e tire o `data-hef-alvo="html"` da linha do
-    cartão no gerador, e a bancada reprova (a linha vira texto cru).
-    """
+    """A carga do pacote pintada pelo BOOTSTRAP do piloto, na bancada e na"""
     lido = renderizada[onde][f"{mesa}-{quem_navega}-{jogador}"]
     for n in (1, 2, 3, 4):
         papel = (_PAPEL_QUE_NAVEGA if n == quem_navega
@@ -827,13 +700,7 @@ def test_no_nativo_a_pagina_renderizada_nao_fala_do_cursor(
 def test_o_lugar_com_dono_perde_a_cara_de_vazio(
     renderizada: dict[str, dict[str, dict[str, str | None]]], onde: str,
 ) -> None:
-    """O P3 e o P4 nascem `nav-ctl vazia` no desenho. Com os quatro na mesa,
-    nenhum cartão fica esmaecido; com o P1 e o P3, o P2 e o P4 ficam — e o P3
-    diz «Move o cursor» com a casca de quem está na mesa.
-
-    MORDIDA: tire a chave `vazia` das marcas do lugar no pacote da 06 e o P3 e
-    o P4 conectados reprovam, esmaecidos como se tivessem saído.
-    """
+    """O P3 e o P4 nascem `nav-ctl vazia` no desenho. Com os quatro na mesa,"""
     quatro = renderizada[onde]["A-1-3"]
     assert [quatro[f"vazia_p{n}"] for n in (1, 2, 3, 4)] == [False] * 4, quatro
     dois = renderizada[onde]["dois"]

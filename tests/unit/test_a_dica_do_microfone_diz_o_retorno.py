@@ -1,23 +1,4 @@
-"""O «?» do Microfone diz o que o 🎙 faz HOJE — acrescentado em 24/09/2026.
-
-A preparação da sessão de validação (`wf_14dd508b-6ea`) achou a frase: o «?» do
-bloco Microfone da aba 02 dizia que *"o 🎙 cala o microfone e apaga a luz
-vermelha do controle"*. **Desde 21/09 o 🎙 é o RETORNO**, por ordem dela — ele
-liga e desliga a escuta da própria voz, com o volume e o ganho da coluna — e o
-`title` do próprio botão já dizia isso. A tela contava duas histórias sobre o
-mesmo botão, a um centímetro uma da outra.
-
-**A RÉGUA LÊ A PÁGINA RENDERIZADA**, e não a constante: a frase mora dentro do
-HTML que o gerador escreve (`interface/aba02.py`), no meio do molde do
-cartão, e o que ela lê é o que o gerador PÔS na bancada. E ela confere as duas
-falas do mesmo botão uma contra a outra — o «?» e o `title` do 🎙 —, que é a
-forma exata do defeito.
-
-**O PUBLICADO ENTRA quando a 02 sair de trabalho**: enquanto ela estiver
-declarada no `mockup/DIVERGENCIAS.md`, o produto mostra a frase de ontem, e
-quem coordena publica por delegação dela de 24/09. Com a seção apagada pelo
-`--publicar 02`, esta régua passa a cobrar o publicado sozinha.
-"""
+"""O «?» do Microfone diz o que o 🎙 faz HOJE — acrescentado em 24/09/2026."""
 
 from __future__ import annotations
 
@@ -32,7 +13,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 BANCADA = RAIZ / "mockup/02-controles.html"
 PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
 
-#: O que o 🎙 NÃO faz desde 21/09 — as duas metades da frase velha.
 O_QUE_ELE_NAO_FAZ = (re.compile(r"🎙\W*\s*cala", re.I),
                      re.compile(r"apaga a luz vermelha", re.I))
 
@@ -55,8 +35,6 @@ def _texto(html: str) -> str:
 def _dicas_do_microfone(doc: str) -> list[str]:
     """O texto do «?» de cada rótulo Microfone, como a pessoa o lê."""
     doc = re.sub(r"<!--.*?-->", "", doc, flags=re.S)
-    # Do rótulo Microfone até o fim da PRIMEIRA dica depois dele: o selo ATIVO
-    # vem antes, e também fecha em `</span></span>`.
     dicas = re.findall(
         r'<div class="rot rot-linha">Microfone.*?<span class="dica">(.*?)</span></span>',
         doc, flags=re.S)
@@ -69,9 +47,7 @@ def _titulos_do_botao(doc: str) -> list[str]:
 
 @pytest.mark.parametrize("alvo", [BANCADA, PUBLICADO], ids=["bancada", "publicado"])
 def test_o_interrogacao_do_microfone_diz_o_retorno(alvo: pathlib.Path) -> None:
-    """MORDIDA: devolva «O 🎙 cala o microfone e apaga a luz vermelha do
-    controle» ao «?» do Microfone no gerador e regere.
-    """
+    """MORDIDA: devolva «O 🎙 cala o microfone e apaga a luz vermelha do"""
     if alvo == PUBLICADO and _a_02_esta_em_trabalho():
         pytest.skip("a 02 está declarada em trabalho: o publicado é o desenho "
                     "de ontem até quem coordena publicar")
@@ -90,12 +66,7 @@ def test_o_interrogacao_do_microfone_diz_o_retorno(alvo: pathlib.Path) -> None:
 
 @pytest.mark.parametrize("alvo", [BANCADA, PUBLICADO], ids=["bancada", "publicado"])
 def test_o_interrogacao_e_o_botao_contam_a_mesma_historia(alvo: pathlib.Path) -> None:
-    """As duas falas do MESMO botão, uma contra a outra: o `title` do 🎙 diz
-    retorno e manda calar pelo controle; o «?» tem de dizer as mesmas duas
-    coisas. É a forma exata do defeito — duas histórias a um centímetro.
-
-    MORDIDA: a mesma de cima; ou troque o `title` do 🎙 sem mexer no «?».
-    """
+    """As duas falas do MESMO botão, uma contra a outra: o `title` do 🎙 diz"""
     if alvo == PUBLICADO and _a_02_esta_em_trabalho():
         pytest.skip("a 02 está declarada em trabalho")
     doc = alvo.read_text(encoding="utf-8")

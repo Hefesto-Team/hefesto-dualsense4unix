@@ -1,32 +1,4 @@
-"""LOADER-SVG-01 — o portão cobra o loader SVG em TODA forma de empacotamento.
-
-A leva de 19/08/2026 pôs o `librsvg` nos empacotamentos, e a conferência
-combinada foi *"rode o `check_packaging_parity.sh` e veja se os três
-concordam"*. O portão respondeu VERDE — e estava CEGO: não havia uma linha
-sobre `librsvg` naquele arquivo. **Verde por silêncio é a pior resposta que um
-portão dá**, porque quem perguntou vai embora achando que mediu.
-
-O que a seção segura, e por que cada peça está lá:
-
-* o sintoma NÃO aponta para a causa — sem o loader,
-  ``GdkPixbuf.Pixbuf.new_from_file_at_scale`` devolve ``None`` em SILÊNCIO, o
-  ícone some da bandeja e os 38 glifos da interface caem junto, sem uma linha de
-  erro no log (BUG-TRAY-ICONE-INVISIVEL-01);
-* os NOMES DIVERGEM por família (``librsvg2-common`` no Debian, ``librsvg2`` no
-  Fedora, ``librsvg`` no Arch/Nix), e o vizinho de nome parecido
-  (``librsvg2-bin``/``librsvg2-tools``) é o ``rsvg-convert``, ferramenta de
-  BUILD — o errado em todos eles;
-* a PROSA não pode satisfazer o portão. Os quatro arquivos EXPLICAM a armadilha
-  de nome em texto corrido, e a ``Description:`` do ``debian/control`` não é
-  comentário: um portão que procurasse a palavra no arquivo inteiro passaria
-  verde com a dependência arrancada. É a mesma armadilha que a seção do teclado
-  na tela já pagou uma vez.
-
-Técnica: a dos irmãos deste portão (`test_portao_reprova_irmao_sem_carona.py`)
-— repo de mentira em ``tmp_path``, o script REAL copiado para dentro, e o
-recorte da seção pela linha de cabeçalho, para não confundir um ``[FAIL]``
-desta seção com o de qualquer outra.
-"""
+"""LOADER-SVG-01 — o portão cobra o loader SVG em TODA forma de empacotamento."""
 from __future__ import annotations
 
 import shutil
@@ -39,8 +11,6 @@ REPO_RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT_REL_PATH = "scripts/check_packaging_parity.sh"
 CABECALHO = "== loader SVG do gdk-pixbuf"
 
-#: O arquivo que CRIA a promessa: enquanto o produto desenhar SVG em execução,
-#: todo formato tem de declarar o loader.
 PROMESSA_REL = "src/hefesto_dualsense4unix/gui/widgets/button_glyph.py"
 
 CONTROL_BOM = """\
@@ -105,8 +75,7 @@ _DEPS_DE_SISTEMA=(
 
 
 def _semeia_simbolico(raiz: Path) -> None:
-    """O par de simbólicos que a seção do applet exige — sem ele a saída
-    começaria a acusar numa seção que não é o alvo daqui."""
+    """O par de simbólicos que a seção do applet exige — sem ele a saída"""
     desenho = '<svg viewBox="0 0 16 16"><title>fake</title></svg>\n'
     for alvo in (
         raiz / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg",
@@ -132,8 +101,7 @@ def escreve(repo: Path, rel: str, conteudo: str) -> None:
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    """Repo de mentira COMPLETO do ponto de vista desta seção: a promessa viva
-    e os cinco declarantes em ordem. Cada teste arranca UMA peça."""
+    """Repo de mentira COMPLETO do ponto de vista desta seção: a promessa viva"""
     src_script = REPO_RAIZ / SCRIPT_REL_PATH
     if not src_script.exists():
         pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
@@ -155,8 +123,6 @@ def repo(tmp_path: Path) -> Path:
     escreve(tmp_path, "packaging/arch/PKGBUILD", PKGBUILD_BOM)
     escreve(tmp_path, "packaging/nix/package.nix", NIX_BOM)
     escreve(tmp_path, "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml", FLATPAK_BOM)
-    # A lacuna declarada aponta para este arquivo; sem ele a seção reprovaria
-    # por "lacuna que já não vale", que é outro assunto.
     escreve(tmp_path, "scripts/build_appimage_gui.sh", "# empacotador de mentira\n")
     _semeia_simbolico(tmp_path)
     return tmp_path
@@ -180,15 +146,13 @@ def secao(saida: str) -> str:
 
 class TestASecaoAprovaQuemEstaCerto:
     def test_com_os_cinco_declarantes_a_secao_passa(self, repo: Path) -> None:
-        """Um portão que grita com quem está certo é desligado na primeira
-        semana. Este caso é o que impede isso."""
+        """Um portão que grita com quem está certo é desligado na primeira"""
         s = secao(roda(repo).stdout)
         assert "[ OK ]" in s, s
         assert "[FAIL]" not in s, s
 
     def test_sem_a_promessa_a_secao_cala(self, repo: Path) -> None:
-        """A âncora é a promessa, não o pacote: se o produto deixar de desenhar
-        SVG em execução, cobrar o loader seria cobrar por nada."""
+        """A âncora é a promessa, não o pacote: se o produto deixar de desenhar"""
         (repo / PROMESSA_REL).unlink()
         s = secao(roda(repo).stdout)
         assert "nada a checar" in s, s
@@ -234,15 +198,13 @@ class TestASecaoMorde:
         assert "[FAIL]" in s and "PKGBUILD" in s, s
 
     def test_nix_sem_o_librsvg_nos_build_inputs(self, repo: Path) -> None:
-        """O comentário do topo cita `librsvg` três vezes e continua lá: só o
-        `buildInputs` monta o `GDK_PIXBUF_MODULE_FILE` do wrapper."""
+        """O comentário do topo cita `librsvg` três vezes e continua lá: só o"""
         escreve(repo, "packaging/nix/package.nix", NIX_BOM.replace("    librsvg\n", ""))
         s = secao(roda(repo).stdout)
         assert "[FAIL]" in s and "package.nix" in s, s
 
     def test_flatpak_que_troca_de_runtime_perde_a_isencao(self, repo: Path) -> None:
-        """O Flatpak não declara porque o `org.gnome.Platform` já traz o loader.
-        Trocar de runtime derruba a premissa, e a isenção morre junto."""
+        """O Flatpak não declara porque o `org.gnome.Platform` já traz o loader."""
         escreve(
             repo,
             "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
@@ -265,8 +227,7 @@ class TestASecaoMorde:
         assert "[FAIL]" not in s, s
 
     def test_install_que_rebaixa_o_loader_a_importante(self, repo: Path) -> None:
-        """`importante` só avisa e segue. Sem o loader a interface não desenha —
-        isso é `obrigatoria`, e a diferença é quem morre: o passo ou a tela."""
+        """`importante` só avisa e segue. Sem o loader a interface não desenha —"""
         escreve(
             repo,
             "install.sh",
@@ -276,8 +237,7 @@ class TestASecaoMorde:
         assert "[FAIL]" in s and "obrigatória" in s, s
 
     def test_install_que_pergunta_pelo_nome_em_vez_do_efeito(self, repo: Path) -> None:
-        """A checagem `svg` pergunta se o gdk-pixbuf LÊ SVG. Trocá-la pelo nome
-        de um pacote quebraria a régua nas outras duas famílias no mesmo dia."""
+        """A checagem `svg` pergunta se o gdk-pixbuf LÊ SVG. Trocá-la pelo nome"""
         escreve(
             repo,
             "install.sh",
@@ -289,8 +249,7 @@ class TestASecaoMorde:
         assert "[FAIL]" in s and "EFEITO" in s, s
 
     def test_install_que_perde_o_nome_de_uma_familia(self, repo: Path) -> None:
-        """O `_pkg_nome` é a tradução por família. Perder uma linha deixa quem
-        instala naquela distro sem o loader e sem mensagem que o diga."""
+        """O `_pkg_nome` é a tradução por família. Perder uma linha deixa quem"""
         escreve(repo, "install.sh", INSTALL_BOM.replace('_dnf="librsvg2"', '_dnf=""'))
         s = secao(roda(repo).stdout)
         assert "[FAIL]" in s and "_pkg_nome" in s, s
@@ -298,8 +257,7 @@ class TestASecaoMorde:
 
 class TestALacunaDeclaradaNaoEnvelheceCalada:
     def test_lacuna_que_aponta_para_arquivo_morto_reprova(self, repo: Path) -> None:
-        """Lacuna que sobrevive ao próprio defeito vira paisagem — e a próxima
-        pessoa lê a lista como se fosse a verdade de hoje."""
+        """Lacuna que sobrevive ao próprio defeito vira paisagem — e a próxima"""
         (repo / "scripts" / "build_appimage_gui.sh").unlink()
         s = secao(roda(repo).stdout)
         assert "[FAIL]" in s and "lacuna declarada que já não vale" in s, s

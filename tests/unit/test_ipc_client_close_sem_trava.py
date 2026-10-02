@@ -1,15 +1,4 @@
-"""IPC-SEM-TRAVA-01: nenhuma chamada do IpcClient pode ficar presa.
-
-O `close()` fazia `await writer.wait_closed()` sem prazo nenhum, dentro do
-`finally` do `async with IpcClient.connect(...)`. Com uma escrita pendente que
-o servidor nunca drena, o `wait_closed()` não retorna — e o worker que estava
-executando a chamada fica preso para sempre. Como a GUI compartilha um pool de
-um worker só, isso congela o IPC assíncrono da janela inteira.
-
-Estes testes usam um writer falso cujo `wait_closed()` nunca resolve. Sem a
-cura, cada teste estoura o prazo curto do próprio teste (fica VERMELHO); com a
-cura, retorna. O mesmo vale para o `drain()` do caminho de envio.
-"""
+"""IPC-SEM-TRAVA-01: nenhuma chamada do IpcClient pode ficar presa."""
 from __future__ import annotations
 
 import asyncio
@@ -21,8 +10,6 @@ import pytest
 from hefesto_dualsense4unix.cli import ipc_client as mod
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 
-# Prazo do próprio teste: se a chamada ficar presa, o teste falha em vez de
-# pendurar a suíte inteira.
 PRAZO_DO_TESTE_S = 1.0
 
 
@@ -43,7 +30,6 @@ class _WriterQueNuncaFecha:
         self.fechou = True
 
     async def wait_closed(self) -> None:
-        # Nunca resolve — imita a escrita pendente que o servidor não drena.
         await asyncio.Event().wait()
 
 
@@ -66,7 +52,6 @@ async def test_close_nao_levanta_quando_o_prazo_estoura():
         writer=_WriterQueNuncaFecha(),  # type: ignore[arg-type]
     )
 
-    # Se levantasse, o pytest reportaria a exceção aqui.
     await asyncio.wait_for(client.close(timeout=0.05), timeout=PRAZO_DO_TESTE_S)
 
 
@@ -142,4 +127,3 @@ async def test_call_com_drain_preso_vira_ipc_error():
     assert exc_info.value.code == -1
     assert "timeout" in exc_info.value.message.lower()
 
-# "O que não se mede, não se cura." — adaptado de Lord Kelvin

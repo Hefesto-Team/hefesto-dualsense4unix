@@ -1,40 +1,4 @@
-"""O mapa do controle pisca, segue a troca de botões e diz qual controle mostra.
-
-O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01. A fala dela, 29/09/2026:
-*«Mesmo Sistema que implementamos na aba Controles para cada botão piscar
-quando apertarmos ele no controle fisico deve ser implementado no Mapa do  (noqa-acento: dela)
-Controle. (…) Falta um filtro pro controle conectado que está sendo visto
-ali.»*
-
-A MESA É DE MENTIRA, nas faixas sintéticas da casa (`aa:bb:cc`), e o esperado
-de cada régua sai do que a régua montou, nunca do que o pacote escreveu:
-
-1. o pisca é do controle escolhido (`Contexto.escolhido`);
-2. «Todos» é a união;
-3. a troca diz o que a Navegação diz, com o nome da peça do mapa;
-3b. a troca aparece no desenho, no motor dela (WebKit);
-4. o endereço existe dos dois lados (pacote e página);
-5. a classe acende a peça, no motor dela (WebKit);
-6. a fita é uma só: o chip do mapa leva o gesto das abas, e a escolha feita no
-   mapa chega ao contexto das abas, pelo `hefesto_vivo._contexto`;
-7. o desenho nunca fica com o controle de outro chip: a mesa sem controle apaga
-   as lâmpadas e a barra, e o «Todos» desenha o primeiro da mesa (WebKit).
-8. o nome do controle cabe no chip em toda janela, da dela à estreita (WebKit).
-
-A PÁGINA LIDA: enquanto o mapa estiver declarado em trabalho no
-`mockup/DIVERGENCIAS.md` (a licença do portão `desenho-aprovado`), a bancada;
-depois do `--publicar`, a publicada.
-
-AS MORDIDAS: o pacote ler o primeiro da mesa no lugar do escolhido (1, 2); a
-troca com o id cru (3); tirar a regra da marca tracejada, ou emitir
-`trocada-` para toda peça (3b); tirar o endereço de um item do gerador (4);
-tirar a regra `.on` do laço (5); um gesto local do mapa, ou o `escolhido` fora do
-`pacotes.Contexto` do `hefesto_vivo._contexto` (6); o `segue` sem a
-queda no «Nenhum», ou o `desenha` do «Todos» sem o primeiro da mesa (7); tirar o
-`flex-wrap` do bloco dos chips (8: o chip sai da caixa da janela).
-
-Sem tela o WebKit não abre e as réguas 3b, 5, 7 e 8 PULAM: rode com `xvfb-run -a`.
-"""
+"""O mapa do controle pisca, segue a troca de botões e diz qual controle mostra."""
 from __future__ import annotations
 
 import csv
@@ -58,13 +22,9 @@ from hefesto_dualsense4unix.interface.pacotes import perfil
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PAGINA = a13.PAGINA
 
-#: A mesa de quatro, nas faixas sintéticas. P1 no cabo, os outros no rádio.
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03",
          "aa:bb:cc:00:00:04")
-#: O que cada um aperta: o P1 a Cruz, o P3 o Triângulo e o clique do analógico
-#: esquerdo (o `l3` do leitor, que o mapa chama `stick_l`).
 APERTA = {1: ["cross"], 3: ["triangle", "l3"]}
-#: O que acende, pelo nome do mapa.
 ACENDE_P1 = {"cross"}
 ACENDE_P3 = {"triangle", "stick_l"}
 
@@ -112,9 +72,6 @@ def com_troca(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     return p
 
 
-# --------------------------------------------------------------------------
-# 1 e 2. o pisca é do escolhido, e «Todos» é a união
-# --------------------------------------------------------------------------
 def test_o_pisca_e_do_controle_escolhido() -> None:
     assert _acesos("p3") == ACENDE_P3, (
         f"com o P3 escolhido acendeu {_acesos('p3')}; o P3 aperta {ACENDE_P3}")
@@ -130,9 +87,6 @@ def test_sem_escolha_e_o_primeiro_da_mesa() -> None:
     assert _acesos("") == ACENDE_P1
 
 
-# --------------------------------------------------------------------------
-# 3. a troca diz o que a Navegação diz
-# --------------------------------------------------------------------------
 def _nome_da_peca(pid: str) -> str:
     linhas = [x for x in (RAIZ / "docs/data/pecas-do-dualsense.csv").read_text(
         encoding="utf-8").splitlines() if x and not x.startswith("#")]
@@ -152,9 +106,6 @@ def test_a_troca_diz_o_que_a_navegacao_diz(com_troca: dict[str, Any]) -> None:
     assert f"{a13.TROCADA}cross" in sem_troca and len(sem_troca) == len(a13.TROCAM) - 1
 
 
-# --------------------------------------------------------------------------
-# 4. o endereço existe dos dois lados
-# --------------------------------------------------------------------------
 def test_o_endereco_existe_dos_dois_lados() -> None:
     texto = _a_pagina().read_text(encoding="utf-8")
     na_pagina = set(re.findall(r'data-campo="([^"]+)"', texto))
@@ -170,9 +121,6 @@ def test_o_endereco_existe_dos_dois_lados() -> None:
         assert nome and f'data-bloco="{nome.group(1)}"' in texto, seletor
 
 
-# --------------------------------------------------------------------------
-# 6. a fita é uma só
-# --------------------------------------------------------------------------
 def test_o_chip_do_mapa_e_o_gesto_da_fita_das_abas() -> None:
     gesto = pacotes.gesto_da_pagina(PAGINA, monta.GESTO_DA_FITA)
     assert gesto is not None, "o chip do mapa não tem quem o atenda"
@@ -210,9 +158,6 @@ def test_a_escolha_feita_no_mapa_chega_ao_contexto_das_abas(escolha_limpa: Any) 
     assert montar().escolhido == "p3"
 
 
-# --------------------------------------------------------------------------
-# 3b e 5. no motor dela
-# --------------------------------------------------------------------------
 MEDIDA = r"""
 (function(){
   const vis = s => { const e = document.querySelector(s);
@@ -236,11 +181,7 @@ ROSA = "rgb(255, 121, 198)"
 
 
 def _no_webkit(cargas: list[Any]) -> list[dict[str, Any]]:
-    """Abre a página, instala a ponte e mede depois de cada carga pintada.
-
-    Uma carga que é texto é um gesto (JavaScript) da pessoa na página, e não uma
-    pintura do produto: a medida vem depois dele do mesmo jeito.
-    """
+    """Abre a página, instala a ponte e mede depois de cada carga pintada."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -316,17 +257,14 @@ def _carga(escolhido: str) -> dict[str, Any]:
 
 
 def test_a_troca_e_o_pisca_aparecem_no_desenho(com_troca: dict[str, Any]) -> None:
-    """3b e 5: a marca tracejada e a linha «No jogo» da peça trocada, e a peça
-    apertada acesa — e as duas coisas apagam quando o fato some."""
+    """3b e 5: a marca tracejada e a linha «No jogo» da peça trocada, e a peça"""
     com_p3, com_p1 = _no_webkit([_carga("p3"), _carga("p1")])
     destino = _nome_da_peca(com_troca["remapeamento"]["triangle"])
     assert com_p3["marca_tri"] != "none" and com_p3["linha_tri"] != "none", com_p3
     assert com_p3["texto_tri"] == destino, com_p3
     assert com_p3["marca_cruz"] == "none" and com_p3["linha_cruz"] == "none", (
         f"a Cruz não tem troca e ganhou a marca: {com_p3}")
-    # o P3 aperta o Triângulo: aceso; o P1 aperta a Cruz, que no P3 não acende
     assert com_p3["peca_tri"] == ROSA and com_p3["peca_cruz"] != ROSA, com_p3
-    # trocando para o P1, o Triângulo apaga e a Cruz acende
     assert com_p1["peca_tri"] != ROSA and com_p1["peca_cruz"] == ROSA, com_p1
 
 
@@ -336,8 +274,7 @@ def _rgb(cor: str) -> str:
 
 
 def test_a_mesa_sem_controle_e_o_desenho_sem_controle() -> None:
-    """7: sem controle na mesa, o bloco do produto chega só com o «Nenhum», e o
-    desenho apaga as lâmpadas e a barra; antes ficava o chip da bancada aceso."""
+    """7: sem controle na mesa, o bloco do produto chega só com o «Nenhum», e o"""
     ctx = pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
     vazia = pacotes.normalizar(pacotes.pacote_da_pagina(PAGINA, ctx) or {}, {})
     (medida,) = _no_webkit([vazia])
@@ -347,8 +284,7 @@ def test_a_mesa_sem_controle_e_o_desenho_sem_controle() -> None:
 
 
 def test_o_todos_desenha_o_primeiro_da_mesa() -> None:
-    """7: o «Todos» depois de outro chip desenha o primeiro da mesa, de quem o
-    produto pinta a barra, e não as lâmpadas do chip anterior."""
+    """7: o «Todos» depois de outro chip desenha o primeiro da mesa, de quem o"""
     from hefesto_dualsense4unix.core.led_control import player_led_pattern
 
     def acesas(n: int) -> list[int]:
@@ -366,10 +302,6 @@ def test_o_todos_desenha_o_primeiro_da_mesa() -> None:
         f"o «Todos» ficou com as lâmpadas do chip anterior: {no_todos}")
 
 
-# --------------------------------------------------------------------------
-# 8. o nome do controle cabe no chip, em toda janela
-# --------------------------------------------------------------------------
-#: As janelas que a casa mede nas páginas avulsas (as do Mapa das Conexões).
 VISTAS_DO_MAPA = {"dela": (1918, 840), "ladrilhada": (1212, 809), "estreita": (860, 809)}
 
 CHIPS = r"""
@@ -429,11 +361,7 @@ def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
 
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
 def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str) -> None:
-    """8 (conferência final, 02/10/2026): os chips levam o nome do controle
-    («P3 • Galactic Purple • BT»), e na janela ladrilhada e na estreita o texto
-    quebrava e vazava por baixo do chip de 28 px. Agora o nome fica numa linha e
-    os chips descem para a linha seguinte. Sem a descida, o nome inteiro empurra
-    os chips para fora da caixa da janela."""
+    """8 (conferência final, 02/10/2026): os chips levam o nome do controle"""
     chips = _chips_na_vista(*VISTAS_DO_MAPA[vista])
     assert len(chips) >= 3, f"a página não tem os chips do «Controle»: {chips}"
     ruins = [c for c in chips if c["vaza"] or c["fora"]]

@@ -56,8 +56,6 @@ pytestmark = pytest.mark.skipif(
 
 PAGINA = "06-navegacao.html"
 
-#: A largura da janela do produto mais a folga do fundo. O que decide é a
-#: ALTURA, e ela é fixa em `--alt-janela`: a régua não escolhe nenhuma das duas.
 VIEWPORT = {"width": 1212, "height": 900}
 
 
@@ -71,9 +69,6 @@ def _a_cena_dela() -> dict[str, str]:
     return {
         "modo-portao": f'<span class="laranja">{RAZAO_DO_PORTAO}</span>',
         "ativacao-ressalva": RESSALVA_DOS_GLOBAIS,
-        # `True` é o estado DESTA máquina, e é o caso curto. O caso longo (sem
-        # teclado na tela instalado) é medido no segundo teste, que é onde o
-        # comprimento decide.
         "teclado-osk": frase_do_teclado_na_tela(True),
     }
 
@@ -102,13 +97,6 @@ _MEDIR_O_MIOLO = """
 }
 """
 
-#: Abre TODA `.dica` do painel que carrega frase viva e devolve o quanto cada
-#: uma passa do fim da janela. Uma de cada vez: duas abertas ao mesmo tempo não
-#: é cena que exista, e mediria a soma de duas coisas que nunca se somam.
-#: QUEM RECORTA É O `.miolo`, e não a `.janela`: ele tem `overflow-y:auto`, e o
-#: recorte de um ancestral que rola vale também para o descendente
-#: `position:absolute` — que é o que a `.dica` é. Medir contra a janela daria
-#: uma folga de 213px que não existe (a altura do rodapé mais o vão).
 _MEDIR_AS_DICAS = """
 () => {
   const miolo = document.querySelector('.miolo').getBoundingClientRect();
@@ -149,9 +137,6 @@ def pagina():
     with sync_playwright() as pw:
         navegador = pw.chromium.launch(
             executable_path=str(CHROME), args=["--no-sandbox"],
-            # Sem isto o Chrome headless não pinta barra de rolagem nenhuma e
-            # `scrollHeight` continua certo, mas a largura do miolo muda 15px —
-            # e a altura de uma frase depende da largura em que ela quebra.
             ignore_default_args=["--hide-scrollbars"])
         try:
             pg = navegador.new_page(viewport=VIEWPORT, device_scale_factor=1)
@@ -164,11 +149,7 @@ def pagina():
 
 
 def test_as_tres_frases_nao_empurram_mais_a_fileira_para_fora(pagina):
-    """Pintadas, elas custam ZERO no fluxo do painel.
-
-    O QUE ERA, medido em 07/09 na página que ela abriu: quadro 215 -> 300,25px,
-    miolo com 66px de sobra e a fileira 41,25px FORA da janela.
-    """
+    """Pintadas, elas custam ZERO no fluxo do painel."""
     antes = pagina.evaluate(_MEDIR_O_MIOLO)
     pagina.evaluate(_PINTAR, [_a_cena_dela()])
     pagina.wait_for_timeout(120)
@@ -189,18 +170,7 @@ def test_as_tres_frases_nao_empurram_mais_a_fileira_para_fora(pagina):
 
 @pytest.mark.parametrize("osk", [True, False])
 def test_toda_dica_com_frase_viva_cabe_dentro_da_janela(pagina, osk):
-    """O `?` que recebeu a frase tem de mostrá-la INTEIRA.
-
-    OS DOIS ESTADOS DO `teclado-osk`, e o segundo é o que mede: com teclado na
-    tela instalado a frase tem uma linha; sem ele são QUATRO, porque manda
-    instalar um dos dois pacotes pelo nome. Medir só o caso curto daria verde
-    sobre a máquina de quem não tem nenhum — que é justamente quem precisa ler
-    a frase.
-
-    O `.miolo` TEM `overflow-y:auto`, e é ele que corta: uma `.dica` é
-    `position:absolute` e nasce para fora da caixa de propósito, mas o recorte
-    do ancestral que rola vale para ela também.
-    """
+    """O `?` que recebeu a frase tem de mostrá-la INTEIRA."""
     from hefesto_dualsense4unix.app.actions.input_actions import (
         frase_do_teclado_na_tela,
     )

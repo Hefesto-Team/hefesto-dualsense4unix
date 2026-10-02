@@ -1,17 +1,4 @@
-"""HAPTICA-POR-RADIO-01 (P4) — a bomba que leva a háptica ao fio, um escritor só.
-
-O report destas réguas é o que VIBROU na mão dela em 18/09/2026: primeiro com
-senoide (``scripts/ensaios/historico/a_haptica_pelo_radio.py``), depois com o PCM do
-PRAGMATA saindo do endpoint de quatro canais — *"se eu atirei x vezes vibrou x
-vezes"*, 2161 reports, zero recusas.
-
-**A régua que mais vale é a primeira:** ela compara byte a byte o que o produto
-monta com os bytes medidos. Um produto que monte "quase" o report não vibra, e
-"quase" é indistinguível de silêncio no fio.
-
-Nenhuma régua daqui toca aparelho: a fonte é uma função e o escritor é uma
-lista.
-"""
+"""HAPTICA-POR-RADIO-01 (P4) — a bomba que leva a háptica ao fio, um escritor só."""
 
 from __future__ import annotations
 
@@ -22,9 +9,6 @@ import pytest
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations.haptica_bt import ConversorDeHaptica
 
-#: Os doze primeiros bytes do report que vibrou: id, seq<<4, a tag `0x91` com
-#: `len` 7, os sete bytes do AudioControl (enables sem microfone, o
-#: `audio_buffer_length` que tocou e o contador) e a tag `0x92` com `len` 64.
 _CABECA_MEDIDA = bytes.fromhex("32 10 91 07 fe 00 00 00 00 ff 01 92 40".replace(" ", ""))
 
 
@@ -52,11 +36,7 @@ def _fonte_de(dados: bytes):
 
 
 def _escritor_para(escritas: list[bytes]):
-    """O escritor devolve o NÚMERO DE BYTES, como o `os.write` do fio.
-
-    Um dublê que devolve `None` é mais pobre que o produto, e a bomba levanta
-    ao contá-lo — foi o que aconteceu ao escrever estas réguas.
-    """
+    """O escritor devolve o NÚMERO DE BYTES, como o `os.write` do fio."""
 
     def escrever(report: bytes) -> int:
         escritas.append(report)
@@ -76,9 +56,6 @@ def _bomba(dados: bytes, **kw):
         **kw,
     )
     return bomba, escritas
-
-
-# -- o report ------------------------------------------------------------------
 
 
 def test_o_report_montado_e_o_que_vibrou_na_mao_dela() -> None:
@@ -129,9 +106,6 @@ def test_o_arranjo_da_haptica_nao_escreve_no_byte_do_id() -> None:
     assert report[0] == 0x32
 
 
-# -- a bomba -------------------------------------------------------------------
-
-
 def test_um_report_por_bloco_e_a_fonte_e_o_relogio() -> None:
     bomba, _ = _bomba(_pcm(512 * 3, canal=2))
     for _ in range(3):
@@ -151,8 +125,7 @@ def test_o_pico_e_os_mudos_separam_o_jogo_quieto_da_ponte_morta() -> None:
 
 
 def test_a_voz_do_jogo_nao_vai_para_os_motores() -> None:
-    """Canais 1 e 2 são o alto-falante; mandá-los ao motor faria o controle
-    tremer com a fala do jogo."""
+    """Canais 1 e 2 são o alto-falante; mandá-los ao motor faria o controle"""
     bomba, _ = _bomba(_pcm(512 * 2, canal=0) + _pcm(512 * 2, canal=1))
     while bomba.um_report() is not None:
         pass
@@ -161,13 +134,7 @@ def test_a_voz_do_jogo_nao_vai_para_os_motores() -> None:
 
 
 def test_a_sequencia_anda_e_o_contador_de_quadros_tambem() -> None:
-    """Sem o contador andando, o firmware perde a conta dos quadros.
-
-    **Ele começa em ZERO, e isso é o caminho do som**, que tocou 70 s seguidos
-    em 10/09: o contador é montado ANTES de o report ser somado. O ensaio que
-    vibrou começava em 1, e o firmware aceitou os dois — o que importa é andar
-    de um em um.
-    """
+    """Sem o contador andando, o firmware perde a conta dos quadros."""
     bomba, escritas = _bomba(_pcm(512 * 3, canal=3))
     while True:
         r = bomba.um_report()

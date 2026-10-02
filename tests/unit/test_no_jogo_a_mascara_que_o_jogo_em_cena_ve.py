@@ -34,10 +34,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_no_jogo_a_mascara_que_o_jogo_em_cena_ve: importa código da janela GTK")
 
 from typing import Any
@@ -47,9 +43,6 @@ from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
     texto_do_contexto,
 )
 
-#: O rótulo de cada máscara vem da aba Início (`ITENS_DE_MASCARA`), e é a razão
-#: de esta aba não ter vocabulário próprio de máscara. Repetidos aqui como
-#: ESPERADO da tela, nunca como fonte.
 _ROTULO_XBOX = "Xbox 360"
 _ROTULO_DUALSENSE = "DualSense (botões PlayStation)"
 
@@ -80,18 +73,8 @@ def _estado(
     return {"connected": True, "native_mode": False, "gamepad_emulation": gamepad}
 
 
-# ---------------------------------------------------------------------------
-# A mordida: as DUAS máscaras na mesma linha
-# ---------------------------------------------------------------------------
-
-
 def test_com_divergencia_o_cabecalho_imprime_as_duas_mascaras() -> None:
-    """O caso medido de 19/08: perfil `xbox`, bandeira viva `dualsense`.
-
-    Arranque para ver reprovar: tirar a chamada de
-    `mascara_pedida_pelo_jogo_em_cena` de `texto_do_contexto`. Volta a imprimir
-    só a viva — que é o estado de 23/08, com o alarme publicado e sem leitor.
-    """
+    """O caso medido de 19/08: perfil `xbox`, bandeira viva `dualsense`."""
     texto = texto_do_contexto(_estado(divergente=_divergencia()))
 
     assert _ROTULO_DUALSENSE in texto
@@ -99,13 +82,7 @@ def test_com_divergencia_o_cabecalho_imprime_as_duas_mascaras() -> None:
 
 
 def test_sem_divergencia_a_linha_nao_muda_uma_letra() -> None:
-    """A contraprova, e ela é a metade que protege o caminho feliz.
-
-    Uma cura que escrevesse a segunda máscara sempre — com o campo ausente, ou
-    com ele `None`, que é o valor que o daemon publica no caso normal — poria
-    um alarme permanente no topo da aba. Alarme que está sempre aceso ensina a
-    não olhar.
-    """
+    """A contraprova, e ela é a metade que protege o caminho feliz."""
     sem_a_chave = texto_do_contexto(_estado())
     com_a_chave_nula = texto_do_contexto(
         _estado(mascara_divergente=None, mascara_divergencias=[])
@@ -118,11 +95,7 @@ def test_sem_divergencia_a_linha_nao_muda_uma_letra() -> None:
 
 
 def test_a_lista_de_divergencias_sozinha_nao_acende_nada() -> None:
-    """Jogo FECHADO com perfil divergente é antecipação, não alarme.
-
-    O daemon separa as duas chaves por isso, e esta aba lê só o alarme. Se a
-    lista bastasse, a linha ficaria acesa por um jogo que ela não abriu.
-    """
+    """Jogo FECHADO com perfil divergente é antecipação, não alarme."""
     texto = texto_do_contexto(
         _estado(
             mascara_divergente=None,
@@ -134,19 +107,8 @@ def test_a_lista_de_divergencias_sozinha_nao_acende_nada() -> None:
     assert "pedia" not in texto
 
 
-# ---------------------------------------------------------------------------
-# O que a linha NÃO pode fazer: escrever o que não sabe nomear
-# ---------------------------------------------------------------------------
-
-
 def test_mascara_do_perfil_sem_nome_conhecido_faz_a_tela_calar() -> None:
-    """Payload de um Hefesto mais novo (ou mais velho) que esta janela.
-
-    A máscara do perfil vem do DISCO. Um identificador fora da lista-dona da
-    aba Início não tem rótulo, e escrever o cru — "o perfil deste jogo pedia
-    ps4_v2" — seria pior que calar: é uma palavra que não existe em nenhuma
-    outra tela deste produto.
-    """
+    """Payload de um Hefesto mais novo (ou mais velho) que esta janela."""
     texto = texto_do_contexto(_estado(divergente=_divergencia(perfil="ps4_v2")))
 
     assert texto == texto_do_contexto(_estado())
@@ -154,12 +116,7 @@ def test_mascara_do_perfil_sem_nome_conhecido_faz_a_tela_calar() -> None:
 
 
 def test_divergencia_que_nao_e_dicionario_nao_derruba_a_linha() -> None:
-    """Blindagem de payload, que nesta casa é rotina e não paranoia.
-
-    O daemon vivo é mais velho que o código com frequência suficiente para que
-    a regra tenha nome próprio. Uma linha de cabeçalho que estoura leva a aba
-    inteira junto.
-    """
+    """Blindagem de payload, que nesta casa é rotina e não paranoia."""
     for torto in ("divergente", 1, [], {"sem": "as chaves"}, True):
         texto = texto_do_contexto(_estado(divergente=torto))
         assert _ROTULO_DUALSENSE in texto
@@ -180,11 +137,6 @@ def test_a_mesma_mascara_dos_dois_lados_nao_e_divergencia() -> None:
     assert texto == texto_do_contexto(_estado())
 
 
-# ---------------------------------------------------------------------------
-# A função pura, sozinha
-# ---------------------------------------------------------------------------
-
-
 def test_a_funcao_devolve_none_quando_nao_ha_o_que_dizer() -> None:
     """Sem daemon, sem bloco, sem alarme: ``None`` nos três."""
     assert mascara_pedida_pelo_jogo_em_cena(None) is None
@@ -193,16 +145,10 @@ def test_a_funcao_devolve_none_quando_nao_ha_o_que_dizer() -> None:
 
 
 def test_a_funcao_le_a_chave_do_daemon_e_nao_outra() -> None:
-    """A régua contra a régua errada: as chaves são as do `launch_env`.
-
-    Um teste escrito com `perfil`/`viva` — os nomes que o texto da sprint
-    propunha — passaria com a cura arrancada, porque nenhum dos dois lados
-    olharia para o campo que o daemon de verdade publica.
-    """
+    """A régua contra a régua errada: as chaves são as do `launch_env`."""
     assert (
         mascara_pedida_pelo_jogo_em_cena(_estado(divergente=_divergencia()))
         == _ROTULO_XBOX
     )
-    # As chaves da sprint, sozinhas, não dizem nada a ninguém.
     inventado = {"appid": 1234, "em_cena": True, "perfil": "xbox"}
     assert mascara_pedida_pelo_jogo_em_cena(_estado(divergente=inventado)) is None

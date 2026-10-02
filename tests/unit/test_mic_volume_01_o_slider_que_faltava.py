@@ -48,20 +48,7 @@ from hefesto_dualsense4unix.integrations import audio_control as ac
 from hefesto_dualsense4unix.profiles.schema import ProfileMicConfig
 
 
-# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
-# `TestOGestoDelaArmaATravaDeAudio`.
-#
-# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
-# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
-#: O nome REAL do source no cabo, lido ao vivo em 17/08/2026.
-#:
-#: A versão anterior deste dado era INVENTADA: eu escrevi
 #: `Sony_Interactive_Entertainment_Wireless_Controller`, sem "DualSense",
-#: porque tinha inferido que o descritor USB não traria a palavra. **Traz.**
-#: Um fixture construído sobre inferência valida o mundo errado — e este
-#: chegou a justificar uma marca a mais na lista de reconhecimento.
 _SOURCES_COM_CABO = (
     "42\talsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-stereo\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED\n"
@@ -71,9 +58,6 @@ _SOURCES_COM_PONTE_BT = (
     "43\talsa_input.pci-0000_0c_00.4.analog-stereo\tPipeWire\ts32le 2ch\tRUNNING\n"
     "108048\thefesto_dualsense_bt_aabbcc\tPipeWire\ts16le 1ch 48000Hz\tRUNNING\n"
 )
-#: O cenário REAL do cabo, medido em 16/08/2026. Note o `.monitor` do sink do
-#: controle: todo sink ganha um de brinde, e ele casa com as MESMAS marcas que
-#: o microfone. Foi ele que a primeira versão da função devolveu.
 _SOURCES_COM_CABO_REAL = (
     "19596\talsa_input.pci-0000_0c_00.4.analog-stereo\tPipeWire\ts32le 2ch\tRUNNING\n"
     "121464\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
@@ -116,13 +100,7 @@ def rodado(monkeypatch: pytest.MonkeyPatch) -> _Rodado:
 
 class TestAchaAFonteNosDoisTransportes:
     def test_cada_marca_da_lista_e_necessaria(self, rodado: _Rodado) -> None:
-        """Nenhuma marca pode ser REDUNDANTE — redundância finge cobertura.
-
-        Este teste nasceu de um defeito NO PRÓPRIO TESTE: a lista tinha
-        `hefesto_dualsense`, e arrancá-la não reprovava nada, porque o source
-        da ponte (`hefesto_dualsense_bt_<mac>`) já casa com `dualsense`. Uma
-        marca que nunca é a única a pegar alguma coisa é ruído.
-        """
+        """Nenhuma marca pode ser REDUNDANTE — redundância finge cobertura."""
         for marca in ac._MARCAS_DA_FONTE_DO_CONTROLE:
             outras = [m for m in ac._MARCAS_DA_FONTE_DO_CONTROLE if m != marca]
             assert not any(o in marca for o in outras), (
@@ -161,26 +139,16 @@ class TestAchaAFonteNosDoisTransportes:
         assert ac.fonte_de_captura_do_controle() == "hefesto_dualsense_bt_aabbcc"
 
     def test_sem_controle_devolve_none(self, rodado: _Rodado) -> None:
-        """A MORDIDA do caso do rádio SEM a ponte — o estado real de 16/08.
-
-        `None` aqui é o que faz o controle deslizante ficar insensível. Se esta
-        função inventar uma fonte, a interface aceita o gesto e não faz nada.
-        """
+        """A MORDIDA do caso do rádio SEM a ponte — o estado real de 16/08."""
         rodado.saidas["pactl list"] = _SOURCES_SEM_CONTROLE
         assert ac.fonte_de_captura_do_controle() is None
 
     def test_o_idioma_do_shell_nao_decide_a_resposta(self, rodado: _Rodado) -> None:
-        """`LC_ALL=C` é obrigatório: o `pactl` TRADUZ a saída.
-
-        Em 15/08 uma função irmã respondeu "nenhum controle com placa de áudio"
-        sobre um sistema que tinha uma — a afirmação era sobre o idioma do
-        shell, não sobre o aparelho.
-        """
+        """`LC_ALL=C` é obrigatório: o `pactl` TRADUZ a saída."""
         rodado.saidas["pactl list"] = _SOURCES_COM_CABO
         ac.fonte_de_captura_do_controle()
         (chamada,) = [c for c in rodado.chamadas if c[:2] == ["pactl", "list"]]
-        assert chamada  # a chamada aconteceu
-        # o env com LC_ALL=C é passado por kwargs; conferido no código-fonte
+        assert chamada
         import inspect
 
         fonte = inspect.getsource(ac.fonte_de_captura_do_controle)
@@ -188,15 +156,7 @@ class TestAchaAFonteNosDoisTransportes:
 
 
 class TestDefinirVolume:
-    """**`fonte=` PASSOU A SER OBRIGATÓRIO — ONDA5-02-01, 06/09/2026.**
-
-    Estes casos chamavam `definir_volume_da_captura(60)` seco e a função
-    resolvia a fonte sozinha, pela rota global. Essa porta fechou: quem escreve
-    declara em qual aparelho está escrevendo, como o `muted` do `mic.set` já
-    obriga. **O que cada caso MEDE não mudou uma linha** — o que mudou é que a
-    resolução da fonte, que antes acontecia escondida dentro da função, agora
-    aparece na chamada, que é o ponto inteiro da mudança.
-    """
+    """**`fonte=` PASSOU A SER OBRIGATÓRIO — ONDA5-02-01, 06/09/2026.**"""
 
     def test_sem_fonte_nao_manda_nada_e_devolve_false(self, rodado: _Rodado) -> None:
         """Sem fonte, nenhum comando de escrita pode sair."""
@@ -246,8 +206,7 @@ class TestLerOVolume:
             fonte=ac.fonte_de_captura_do_controle()) == 50
 
     def test_le_em_vez_de_lembrar(self) -> None:
-        """A função não guarda estado — não há onde um valor mandado virar
-        leitura. É a disciplina que impede a tela de parecer mentirosa."""
+        """A função não guarda estado — não há onde um valor mandado virar"""
         import inspect
 
         fonte = inspect.getsource(ac.volume_da_captura)
@@ -263,20 +222,7 @@ class TestOPerfilLembra:
         assert mic.muted is False
 
     def test_perfil_sem_opiniao_nao_toma_a_posse(self) -> None:
-        """Campo a ``None`` continua sendo AUSÊNCIA DE OPINIÃO sobre o campo.
-
-        **NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01).** Esta docstring
-        dizia que era "o mesmo contrato do `mouse` e do `speaker`" e que um
-        perfil "não pode mexer no microfone ao ser ativado". A segunda metade
-        caducou, e foi ELA quem a derrubou: *"isso é informação antiga. o
-        sistema de perfis não funcionava, mas acho que não vem ao caso, até pq
-        na época não tinhamos microfone dentro do sistema de perfis."* Ativar um
-        perfil **aplica** o microfone que ele guarda — o que continua valendo é
-        o de baixo, e só ele: perfil que não pediu nada não impõe nada.
-
-        O que este caso trava, hoje: os defaults são ``None`` nos dois campos,
-        e é isso que o applier lê como "não escreva".
-        """
+        """Campo a ``None`` continua sendo AUSÊNCIA DE OPINIÃO sobre o campo."""
         mic = ProfileMicConfig(button_toggles_system=True)
         assert mic.volume is None and mic.muted is None
 
@@ -301,8 +247,7 @@ class TestAsDuasCamadasNaoSeMisturam:
         assert '"mic.volume.set"' in servidor
 
     def test_o_volume_nao_fala_com_o_firmware(self) -> None:
-        """A MORDIDA da separação: se o handler de volume chamar o mudo do
-        firmware, ele passa a apagar a luz do microfone sem ninguém pedir."""
+        """A MORDIDA da separação: se o handler de volume chamar o mudo do"""
         from pathlib import Path
 
         raiz = Path(__file__).resolve().parents[2]
@@ -316,33 +261,11 @@ class TestAsDuasCamadasNaoSeMisturam:
         assert "definir_volume_da_captura" in corpo
 
 
-# ---------------------------------------------------------------------------
-# PERFIL-GUARDA-O-MIC-01 (18/08/2026) — o mic chega ao RASCUNHO e ao PERFIL
-# ---------------------------------------------------------------------------
-
-
 class TestOMicChegaAoRascunho:
-    """A metade de CIMA do caminho: o dedo dela chega ao rascunho do perfil?
-
-    Pedido dela em 18/08/2026, depois de o microfone ficar mudo e o DON'T
-    SCREAM não ouvir nada: *"informação de microfone e som, touch,
-    acelerômetro, giroscópio e afins. cara, temos que salvar isso no perfil
-    sempre."* Medido no mesmo dia: **nenhum dos 18 perfis dela tinha a seção
-    `mic`**, embora `ProfileMicConfig` guardasse `volume` e `muted` desde
-    16/08 — a classe de defeito *"a casa sabe e o produto não faz"*.
-    """
+    """A metade de CIMA do caminho: o dedo dela chega ao rascunho do perfil?"""
 
     def test_o_mic_faz_ida_e_volta_com_o_volume_e_sem_o_mudo(self) -> None:
-        """A trava do ``to_profile``: o volume chega ao arquivo, o mudo não.
-
-        O mudo é do controle desde 29/09 (O-MUDO-E-DO-CONTROLE-01, resposta 9
-        dela): mora no ``maquina.json``, e o gesto de Silenciar não entra no
-        rascunho.
-
-        MORDIDA: em ``app/draft_config.py``, tire ``volume=self.mic.volume``
-        do ``ProfileMicConfig`` construído no ``to_profile`` (o volume some),
-        ou devolva o ``muted`` ao ``with_mic`` (o mudo chega ao arquivo).
-        """
+        """A trava do ``to_profile``: o volume chega ao arquivo, o mudo não."""
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         draft = DraftConfig().with_mic(volume=70, muted=True)
@@ -366,13 +289,7 @@ class TestOMicChegaAoRascunho:
         assert DraftConfig().to_profile("intocado").mic is None
 
     def test_um_gesto_nao_apaga_o_campo_do_outro(self) -> None:
-        """O volume não apaga o que o disco já dizia do mudo.
-
-        Desde 29/09 (O-MUDO-E-DO-CONTROLE-01) o rascunho não escreve o mudo —
-        mas um perfil de antes da migração ainda pode carregá-lo, e o gesto do
-        volume o atravessa como estava: apagá-lo no caminho seria um segundo
-        escritor, e quem o leva ao dono é a migração.
-        """
+        """O volume não apaga o que o disco já dizia do mudo."""
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
         from hefesto_dualsense4unix.profiles.schema import (
             MatchAny,
@@ -388,12 +305,7 @@ class TestOMicChegaAoRascunho:
         assert draft.mic.volume == 40
 
     def test_liberar_apaga_o_mudo_e_preserva_o_volume(self) -> None:
-        """"Liberar" devolve a posse do registrador ao ``hid-playstation``.
-
-        Um perfil salvo depois desse gesto não pode continuar carregando um
-        ``muted`` que a ativação seguinte reaplicaria — retomando a posse que
-        ela acabou de largar. O volume, que é de outra camada, fica.
-        """
+        """"Liberar" devolve a posse do registrador ao ``hid-playstation``."""
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         draft = DraftConfig().with_mic(volume=55, muted=True)
@@ -413,7 +325,7 @@ class TestOMicChegaAoRascunho:
             pass
 
         janela = _JanelaSemRascunho()
-        registrar_microfone_no_rascunho(janela, volume=10)  # não levanta
+        registrar_microfone_no_rascunho(janela, volume=10)
         assert not hasattr(janela, "draft")
 
     def test_gesto_sem_opiniao_nao_cria_secao_fantasma(self) -> None:
@@ -431,12 +343,6 @@ class TestOMicChegaAoRascunho:
         assert janela.draft.to_profile("nada").mic is None
 
 
-# ---------------------------------------------------------------------------
-# A FIAÇÃO: onde o `speaker_applier` é injetado, o `mic_applier` também tem de
-# ---------------------------------------------------------------------------
-
-
-#: Rotas de ativação de perfil, e o que cada uma injeta hoje.
 _ROTAS_DE_ATIVACAO: tuple[str, ...] = (
     "src/hefesto_dualsense4unix/daemon/lifecycle.py",
     "src/hefesto_dualsense4unix/daemon/connection.py",
@@ -445,49 +351,12 @@ _ROTAS_DE_ATIVACAO: tuple[str, ...] = (
     "src/hefesto_dualsense4unix/daemon/subsystems/autoswitch.py",
 )
 
-#: Injeções de `speaker_applier` que NÃO ganham um `mic_applier` ao lado,
-#: com quantas são e a razão por extenso e datada. O portão compara
-#: CONTAGENS, e este dicionário é a única folga que ele aceita.
 _SEM_MIC_HOJE: dict[str, tuple[int, str]] = {
-    # 18/08/2026 — a entrada de `daemon/subsystems/autoswitch.py` SAIU daqui
-    # porque a lacuna foi fechada: as duas rotas de subida do autoswitch
-    # passaram a injetar o `mic_applier`, e a troca de perfil por JANELA
-    # aplica o volume do microfone do perfil. Foi este caso que cobrou a
-    # remoção, reprovando no instante em que as linhas entraram.
-    # 16/09/2026 — a entrada de `daemon/connection.py` SAIU daqui, e com ela
-    # cai um FATO, não só uma lacuna (SOM-MIC-REPLUG-01).
-    #
-    # A razão escrita em 18/08 dizia: *"o microfone não tem essa perda: o
-    # `volume` mora na fonte do PipeWire e sobrevive ao replug, e o `muted` é
-    # barrado ali de qualquer forma pela exceção MIC-GRAVACAO-01 (…) Injetá-lo
-    # aqui seria uma linha que nunca escreve nada."*
-    #
-    # **A primeira metade era verdadeira e a segunda escondia o defeito.** O
-    # `volume` de fato sobrevive — ele é da FONTE do PipeWire. O `muted` não:
-    # ele é do FIRMWARE, morre com o cabo, e o aparelho volta com o microfone
-    # ABERTO. Ler as duas camadas como uma fez a conclusão sair errada, e o
-    # preço era de privacidade: quem deixou o mic mudo e trocou o cabo voltava
-    # a ser ouvida sem saber.
-    #
-    # E "seria uma linha que nunca escreve nada" era circular — o `muted` não
-    # passava porque a reconexão usava `origin="system"`, e usava `"system"`
-    # porque ninguém tinha decidido o que o replug deveria fazer. Decidido em
-    # 16/09: `origin="replug"`, com passagem assimétrica (`True` atravessa e
-    # acende o LED, `False` não, para não apagá-lo). Foi ESTE caso que cobrou
-    # a remoção, reprovando no instante em que a injeção entrou.
 }
 
 
 class TestOApplierDoMicEstaFiado:
-    """O applier pode existir e não estar ligado em lugar nenhum.
-
-    É a classe de defeito mais cara desta casa — *"a casa sabe e o produto não
-    faz"*: `ProfileMicConfig` guardava `volume` e `muted` desde 16/08/2026 e
-    NADA os lia, e por isso nenhum dos 18 perfis dela tinha a seção. Um portão
-    de comportamento por rota custaria a máquina inteira do
-    `test_daemon_speaker_wiring.py`; este aqui é o barato que pega o esquecido:
-    **toda rota que injeta o irmão tem de injetar este**.
-    """
+    """O applier pode existir e não estar ligado em lugar nenhum."""
 
     def _fonte(self, caminho: str) -> str:
         from pathlib import Path
@@ -496,8 +365,7 @@ class TestOApplierDoMicEstaFiado:
         return (raiz / caminho).read_text(encoding="utf-8")
 
     def test_toda_rota_com_speaker_applier_tambem_tem_o_do_mic(self) -> None:
-        """MORDIDA: apague um `mic_applier=` de qualquer rota e o caso nomeia
-        o arquivo. Provada em 18/08 arrancando o de `subsystems/hotkey.py`."""
+        """MORDIDA: apague um `mic_applier=` de qualquer rota e o caso nomeia"""
         faltando: list[str] = []
         for caminho in _ROTAS_DE_ATIVACAO:
             fonte = self._fonte(caminho)
@@ -514,11 +382,7 @@ class TestOApplierDoMicEstaFiado:
         )
 
     def test_a_lacuna_conhecida_nao_envelhece_calada(self) -> None:
-        """Lacuna declarada tem razão longa, e continua sendo lacuna de verdade.
-
-        No dia em que a rota do autoswitch ganhar a linha, este caso REPROVA e
-        cobra que a entrada saia daqui — a lápide não pode sobreviver à cura.
-        """
+        """Lacuna declarada tem razão longa, e continua sendo lacuna de verdade."""
         for caminho, (folga, razao) in _SEM_MIC_HOJE.items():
             assert len(razao) > 120, f"a razão de {caminho} é curta demais"
             fonte = self._fonte(caminho)

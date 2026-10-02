@@ -1,24 +1,8 @@
-"""Testes de persistência de brightness da lightbar — FEAT-LED-BRIGHTNESS-03.
-
-Valida o ciclo set-brightness → save → load: o valor do slider persiste
-no JSON do perfil e é recuperado ao recarregar o estado.
-
-CORREÇÃO DATADA (13/08/2026, TESTE-HONESTO-01/E1, lote A): a linha antiga
-dizia *"não depende de GTK real (usa stubs), portanto roda em CI sem display"*.
-Era falsa como promessa de cobertura: os mixins importados abaixo vêm de
-módulos que fazem ``import gi``, e o stub plantado aqui os deixava passar
-verdes contra ``Gtk.Box = object``. Hoje o módulo EXIGE o PyGObject real e
-pula honestamente onde ele não existe — os stubs abaixo ficam só para o
-``GLib.idle_add`` síncrono.
-"""
+"""Testes de persistência de brightness da lightbar — FEAT-LED-BRIGHTNESS-03."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01 (TESTE-HONESTO-01/E1, lote A): a guarda vem ANTES de
-# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
-# widgets que são `object` — e nunca entrava no job `gtk-real`, que seleciona
-# por `grep exigir_gi_real|skip_sem_gi_real`. Agora ele pula honestamente.
 exigir_gi_real("lightbar: persistência do brilho no perfil")
 
 import sys
@@ -28,25 +12,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Stubs de gi — mesmo padrão de test_status_actions_reconnect.py
-# ---------------------------------------------------------------------------
-
 
 def _install_gi_stubs() -> None:
-    """Instala stubs minimos de gi.repository para rodar em CI sem display.
-
-    Complementa stubs existentes: se gi ja esta em sys.modules (instalado
-    por outro módulo de teste), ainda garante que Gdk e GObject estao
-    disponiveis — necessários para lightbar_actions (Gdk.RGBA) e
-    profiles_actions (GObject.TYPE_STRING).
-    """
+    """Instala stubs minimos de gi.repository para rodar em CI sem display."""
     try:
-        # Ambiente com GTK real: não instala stubs.
-        # BUG-TEST-GDK-VERSION-PIN-01: SEM o require_version, este import
-        # carregava Gdk 4.0 e envenenava o processo inteiro — qualquer módulo
-        # que exigisse 3.0 depois (lightbar_actions) falhava na coleta,
-        # dependendo da ORDEM alfabética dos arquivos de teste.
         import gi as _gi
 
         _gi.require_version("Gdk", "3.0")
@@ -65,13 +34,7 @@ def _install_gi_stubs() -> None:
 
     repo_mod = sys.modules.get("gi.repository") or types.ModuleType("gi.repository")
 
-    # --- Gtk ---
     gtk_mod = sys.modules.get("gi.repository.Gtk") or types.ModuleType("gi.repository.Gtk")
-    # GUARDA-GI-REAL-01: esta lista era INCOMPLETA de propósito — o docstring
-    # acima dizia "complementa stubs existentes", ou seja, contava com o stub
-    # que OUTRO arquivo de teste tivesse plantado antes dele no alfabeto.
-    # Faltava `Gtk.Box`, e sem ele o `SegmentedSelector` (que herda de Gtk.Box)
-    # derruba a coleta deste módulo. Agora a lista se basta sozinha.
     for _attr in (
         "Builder", "Window", "Button", "ComboBoxText", "Switch",
         "TextView", "TextBuffer", "Scale", "DrawingArea", "ColorButton",
@@ -84,21 +47,18 @@ def _install_gi_stubs() -> None:
         if not hasattr(gtk_mod, _attr):
             setattr(gtk_mod, _attr, object)
 
-    # --- GObject ---
     gobj_mod = sys.modules.get("gi.repository.GObject") or types.ModuleType("gi.repository.GObject")
     if not hasattr(gobj_mod, "TYPE_STRING"):
         gobj_mod.TYPE_STRING = str  # type: ignore[attr-defined]
     if not hasattr(gobj_mod, "TYPE_INT"):
         gobj_mod.TYPE_INT = int  # type: ignore[attr-defined]
 
-    # --- GLib ---
     glib_mod = sys.modules.get("gi.repository.GLib") or types.ModuleType("gi.repository.GLib")
     if not hasattr(glib_mod, "timeout_add"):
         glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     if not hasattr(glib_mod, "timeout_add_seconds"):
         glib_mod.timeout_add_seconds = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
 
-    # --- Gdk (necessário para Gdk.RGBA em lightbar_actions) ---
     gdk_mod = sys.modules.get("gi.repository.Gdk") or types.ModuleType("gi.repository.Gdk")
 
     class _FakeRGBA:
@@ -125,16 +85,11 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-# Imports dependentes de gi abaixo da instalação dos stubs.
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
-
-# ---------------------------------------------------------------------------
-# Fixture: diretório isolado de perfis
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -151,11 +106,6 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
     return target
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
 def _mk_profile(name: str, brightness: float = 1.0) -> Profile:
     return Profile(
         name=name,
@@ -169,14 +119,8 @@ def _make_profiles_instance(pending_brightness: float = 1.0) -> ProfilesActionsM
     instance = ProfilesActionsMixin.__new__(ProfilesActionsMixin)
     instance._pending_brightness = pending_brightness  # type: ignore[attr-defined]
     instance._profiles_store = MagicMock()  # type: ignore[attr-defined]
-    # modo simples por padrão nos testes
     instance._mode_advanced = False  # type: ignore[attr-defined]
     return instance
-
-
-# ---------------------------------------------------------------------------
-# Testes de schema: brightness persiste no JSON
-# ---------------------------------------------------------------------------
 
 
 def test_brightness_persiste_no_json(isolated_profiles_dir: Path) -> None:
@@ -197,9 +141,7 @@ def test_brightness_default_1(isolated_profiles_dir: Path) -> None:
     assert reloaded.leds.lightbar_brightness == pytest.approx(1.0)
 
 
-# ---------------------------------------------------------------------------
 # Testes do _build_profile_from_editor: inclui _pending_brightness
-# ---------------------------------------------------------------------------
 
 
 def test_build_profile_inclui_pending_brightness(isolated_profiles_dir: Path) -> None:
@@ -249,9 +191,7 @@ def test_build_profile_sem_existente_usa_pending(isolated_profiles_dir: Path) ->
     assert result.leds.lightbar_brightness == pytest.approx(0.6)
 
 
-# ---------------------------------------------------------------------------
 # Teste do guard de refresh: on_lightbar_brightness_changed
-# ---------------------------------------------------------------------------
 
 
 def test_refresh_guard_previne_loop() -> None:
@@ -259,12 +199,11 @@ def test_refresh_guard_previne_loop() -> None:
     instance = LightbarActionsMixin.__new__(LightbarActionsMixin)
     instance._current_brightness = 0.5  # type: ignore[attr-defined]
     instance._pending_brightness = 0.5  # type: ignore[attr-defined]
-    instance._refresh_guard = True  # guard ativo
+    instance._refresh_guard = True
 
     scale_mock = MagicMock()
     scale_mock.get_value.return_value = 80.0
 
-    # Com guard ativo, o handler não deve alterar os valores.
     instance.on_lightbar_brightness_changed(scale_mock)
 
     assert instance._current_brightness == pytest.approx(0.5)  # type: ignore[attr-defined]

@@ -55,13 +55,10 @@ import subprocess
 import pytest
 
 #: O nome REAL do nó do mic do DualSense no PipeWire, quebrado só para caber na
-#: régua de 100 colunas. É dado de máquina, não texto: encurtá-lo faria o dublê
-#: medir um nome que o produto nunca vê.
 NO_DO_MIC = (
     "alsa_input.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller-00.iec958-stereo"
 )
-#: A webcam dela — a fonte que o filtro TEM de deixar passar.
 NO_DA_WEBCAM = "alsa_input.usb-046d_HD_Pro_Webcam_C920-02.analog-stereo"
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -82,9 +79,6 @@ def fix() -> str:
     return FIX.read_text(encoding="utf-8")
 
 
-# --------------------------------------------------------------------------
-# 1. O eleitor não pode herdar o fallback do ranqueador
-# --------------------------------------------------------------------------
 def test_o_ranqueador_do_doctor_ainda_tem_o_fallback(fix: str) -> None:
     """A premissa desta régua, medida no código do doctor.
 
@@ -133,9 +127,6 @@ def test_a_regua_le_a_mesma_lista_do_eleitor(fix: str) -> None:
     )
 
 
-# --------------------------------------------------------------------------
-# 2. O veredicto não pode depender do relógio
-# --------------------------------------------------------------------------
 def test_o_laco_espera_o_auto_null_passar(fix: str) -> None:
     corpo = _corpo(fix, "verify_active_not_dualsense")
     assert "e_o_nada_do_pipewire" in corpo, (
@@ -146,12 +137,7 @@ def test_o_laco_espera_o_auto_null_passar(fix: str) -> None:
 
 
 def test_o_auto_null_e_reconhecido_pelo_prefixo(fix: str) -> None:
-    """`auto_null` é o nome do nó; `auto_null.monitor` é o monitor dele.
-
-    Os dois significam a mesma coisa aqui — "nada está pronto" —, e por isso a
-    checagem é por PREFIXO. Casar só o nome exato deixaria o `.monitor` passar,
-    que foi justamente a forma que apareceu na tela dela.
-    """
+    """`auto_null` é o nome do nó; `auto_null.monitor` é o monitor dele."""
     corpo = _corpo(fix, "e_o_nada_do_pipewire")
     assert "auto_null*" in corpo, (
         "a checagem do `auto_null` deixou de ser por prefixo — o "
@@ -171,15 +157,9 @@ def test_o_orcamento_do_laco_cobre_o_restart(fix: str) -> None:
     )
 
 
-# --------------------------------------------------------------------------
-# 3. O instalador tem de distinguir os desfechos
-# --------------------------------------------------------------------------
 def test_o_instalador_distingue_escassez_de_eleicao() -> None:
     """Dizer "fonte padrão reeleita" sobre uma eleição que não houve é mentira."""
     fonte = INSTALL.read_text(encoding="utf-8")
-    # O chamador que RELATA o desfecho — o que imprime as frases do drop-in.
-    # Há mais de um `--install` no instalador; os outros são cobertos pelo caso
-    # seguinte, que cobra o tratamento do rc em TODOS.
     i = fonte.index("drop-in do WirePlumber instalado")
     trecho = fonte[max(0, i - 1500) : i + 1500]
     assert 'case "${rc:-0}" in' in trecho, (
@@ -191,11 +171,7 @@ def test_o_instalador_distingue_escassez_de_eleicao() -> None:
 
 
 def test_escassez_nao_manda_ela_rodar_o_mesmo_comando_de_novo() -> None:
-    """rc 2 e rc 3 são o ESTADO da máquina, não falha do gesto.
-
-    Mandar rodar de novo um comando que fará exatamente o mesmo é o laço que
-    esta leva curou.
-    """
+    """rc 2 e rc 3 são o ESTADO da máquina, não falha do gesto."""
     fonte = INSTALL.read_text(encoding="utf-8")
     for m in re.finditer(r'fix_wireplumber_default_source\.sh" --install', fonte):
         trecho = fonte[max(0, m.start() - 600) : m.start() + 900]
@@ -205,19 +181,8 @@ def test_escassez_nao_manda_ela_rodar_o_mesmo_comando_de_novo() -> None:
         )
 
 
-# --------------------------------------------------------------------------
-# 4. A prova de COMPORTAMENTO: mesma entrada, mesma saída
-# --------------------------------------------------------------------------
 def test_o_filtro_de_verdade_exclui_o_que_promete(tmp_path) -> None:
-    """Roda a `fontes_elegiveis` REAL contra um `pactl` de mentira.
-
-    Medir uma cópia do filtro escrita aqui provaria só que eu sei copiar. O
-    dublê troca as duas coisas de fora — o `pactl` e o doctor — e deixa a
-    função do produto rodar inteira.
-
-    E mede IDEMPOTÊNCIA no que dá para medir sem tocar no áudio dela: mesma
-    entrada, três execuções, uma resposta só.
-    """
+    """Roda a `fontes_elegiveis` REAL contra um `pactl` de mentira."""
     curta = (
         "1021\talsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor\tPipeWire\ts32le 2ch\tSUSPENDED\n"
         f"1027\t{NO_DO_MIC}\tPipeWire\ts32le 2ch\tSUSPENDED\n"
@@ -231,8 +196,6 @@ def test_o_filtro_de_verdade_exclui_o_que_promete(tmp_path) -> None:
         encoding="utf-8",
     )
     (falso_bin / "pactl").chmod(0o755)
-    # O doctor de mentira: `_sources_com_porta_usavel` passa tudo adiante, para
-    # que o que sobrar seja exatamente o que ESTA função exclui.
     doutor = tmp_path / "doctor.sh"
     doutor.write_text("_sources_com_porta_usavel() { cat; }\n", encoding="utf-8")
     entrada = tmp_path / "curta.txt"
@@ -263,11 +226,7 @@ def test_o_filtro_de_verdade_exclui_o_que_promete(tmp_path) -> None:
 
 
 def test_sem_elegivel_a_funcao_devolve_vazio_e_nao_erro(tmp_path) -> None:
-    """Vazio COM exit 0 é "consultei e não há". É o que o chamador espera.
-
-    Se ela devolvesse erro, o `pick_target_source_name` cairia no caminho antigo
-    do `wpctl` — o que não filtra porta — e o defeito voltaria por baixo.
-    """
+    """Vazio COM exit 0 é "consultei e não há". É o que o chamador espera."""
     curta = (
         f"1027\t{NO_DO_MIC}\tPipeWire\ts32le\tSUSPENDED\n"
         "1021\talsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor\tPipeWire\ts32le\tSUSPENDED\n"
@@ -298,21 +257,11 @@ def test_sem_elegivel_a_funcao_devolve_vazio_e_nao_erro(tmp_path) -> None:
     assert r.stdout.strip() == "", f"sobrou algo que não devia: {r.stdout!r}"
 
 
-# --------------------------------------------------------------------------
-# 5. "Existe um microfone que NÃO é controle nenhum?" (18/09/2026)
-# --------------------------------------------------------------------------
-#: O canal que o daemon publica por controle — `hefesto_mic_<hex6>`, sufixo
-#: sintético. O nome dele NÃO tem a palavra `dualsense`.
 NO_DO_CANAL = "hefesto_mic_0000b1"
 
 
 def _rodar_a_consulta(tmp_path: pathlib.Path, curta: str, funcao: str) -> str:
-    """Uma consulta REAL do wp-fix contra um `pactl` e um doctor de mentira.
-
-    O doctor de mentira deixa toda porta passar e traz o ranqueador REAL do
-    `doctor.sh` — assim o que sobra é exatamente o que as funções do wp-fix
-    decidem, e o ranqueamento é o do produto.
-    """
+    """Uma consulta REAL do wp-fix contra um `pactl` e um doctor de mentira."""
     falso_bin = tmp_path / "bin"
     falso_bin.mkdir()
     (falso_bin / "pactl").write_text(
@@ -348,15 +297,7 @@ def _rodar_a_consulta(tmp_path: pathlib.Path, curta: str, funcao: str) -> str:
 
 
 def test_so_os_controles_na_maquina_nao_ha_outra_captura(tmp_path) -> None:
-    """A mesa dela: o microfone do cabo e o canal do rádio, e nada mais.
-
-    O nascimento do microfone (`hotkey._microfone_que_ja_e_da_maquina`) só
-    elege o controle fonte padrão quando esta resposta é VAZIA. Se o canal de
-    um controle passasse por outra captura, na mesa dela — os canais do rádio
-    de pé desde a partida — nenhum controle elegeria mais.
-
-    MORDIDA: tire o `awk ... !~ /^hefesto_mic_/` de `outra_captura_elegivel`.
-    """
+    """A mesa dela: o microfone do cabo e o canal do rádio, e nada mais."""
     curta = (
         f"1027\t{NO_DO_MIC}\tPipeWire\ts32le 2ch\tSUSPENDED\n"
         f"1040\t{NO_DO_CANAL}\tPipeWire\ts16le 1ch\tRUNNING\n"
@@ -368,11 +309,7 @@ def test_so_os_controles_na_maquina_nao_ha_outra_captura(tmp_path) -> None:
 
 
 def test_o_d2_continua_valendo_para_o_install(tmp_path) -> None:
-    """O contraste: a lista do install mantém o canal, pelo §D.2.
-
-    MIC-PADRAO-NO-CABO-01, §D.2: *"Pelo rádio, o eleito é o `hefesto_mic_…`"*.
-    A pergunta do nascimento é outra função justamente para não desfazer esta.
-    """
+    """O contraste: a lista do install mantém o canal, pelo §D.2."""
     curta = (
         f"1027\t{NO_DO_MIC}\tPipeWire\ts32le 2ch\tSUSPENDED\n"
         f"1040\t{NO_DO_CANAL}\tPipeWire\ts16le 1ch\tRUNNING\n"
@@ -392,11 +329,7 @@ def test_com_o_canal_de_pe_o_headset_continua_sendo_a_resposta(tmp_path) -> None
 
 
 def test_o_prefixo_do_shell_e_o_do_dono_python(fix: str) -> None:
-    """Duas grafias do mesmo nome; o dono é `PREFIXO_SOURCE_CANAL_DO_MIC`.
-
-    Se o prefixo mudar no Python e não aqui, a consulta volta a contar o canal
-    como microfone da máquina — calada, porque nada no shell importa o Python.
-    """
+    """Duas grafias do mesmo nome; o dono é `PREFIXO_SOURCE_CANAL_DO_MIC`."""
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
         PREFIXO_SOURCE_CANAL_DO_MIC,
     )
@@ -406,12 +339,7 @@ def test_o_prefixo_do_shell_e_o_do_dono_python(fix: str) -> None:
 
 
 def test_a_consulta_nova_e_consulta_e_nao_escreve(fix: str) -> None:
-    """O modo tem de estar na lista dos que NÃO instalam drop-in.
-
-    O despacho do wp-fix instala o drop-in 54 em todo modo fora dessa lista. Uma
-    consulta que o daemon faz a cada nascimento de microfone escreveria na
-    configuração do WirePlumber de quem conecta um controle.
-    """
+    """O modo tem de estar na lista dos que NÃO instalam drop-in."""
     inicio = fix.index("ACORDADO_MUDOU=1")
     guarda = fix[inicio : fix.index("install_dropin_acordado ||", inicio)]
     assert '"${MODE}" != "outra-captura-elegivel"' in guarda, (
@@ -422,12 +350,7 @@ def test_a_consulta_nova_e_consulta_e_nao_escreve(fix: str) -> None:
 
 
 def test_o_daemon_alcanca_a_consulta_nova(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O lado Python pergunta ao script DESTA árvore, e o script conhece a flag.
-
-    Sem isto `outra_captura_elegivel` devolveria `None` sempre — "não há outro
-    microfone" — e o nascimento voltaria a tomar o microfone de quem tem
-    headset, com todas as réguas de cima verdes.
-    """
+    """O lado Python pergunta ao script DESTA árvore, e o script conhece a flag."""
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
 
     assert elm._script_do_wireplumber() == FIX
@@ -443,15 +366,11 @@ def test_o_daemon_alcanca_a_consulta_nova(monkeypatch: pytest.MonkeyPatch) -> No
     assert elm.outra_captura_elegivel() == NO_DA_WEBCAM
     assert pedidos == [["bash", str(FIX), "--outra-captura-elegivel"]]
 
-    # CONSULTA QUE FALHOU NÃO É "NÃO HÁ" (18/09/2026). O `rc=1` é o "não deu
-    # para consultar" do contrato do shell, e o `127` é o `_rodar` estourando o
-    # `_TIMEOUT_S`. Devolver `None` aqui fazia o nascimento eleger na dúvida.
     for rc in (1, 127):
         monkeypatch.setattr(elm, "_rodar", lambda argv, rc=rc: (rc, ""))
         with pytest.raises(elm.ConsultaIndisponivelError):
             elm.outra_captura_elegivel()
 
-    # E o "consultei e não há" continua sendo `None`: é a mesa dela.
     monkeypatch.setattr(elm, "_rodar", lambda argv: (0, ""))
     assert elm.outra_captura_elegivel() is None
 
@@ -459,19 +378,7 @@ def test_o_daemon_alcanca_a_consulta_nova(monkeypatch: pytest.MonkeyPatch) -> No
 def test_a_instalacao_nativa_alcanca_o_script(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No `.deb`, no Fedora, no Arch e no Nix o script mora no `share/`.
-
-    `packaging/fedora/…spec`, `packaging/arch/PKGBUILD`, `packaging/nix/package.nix`
-    e `scripts/build_deb.sh` o instalam em `share/hefesto-dualsense4unix/scripts/`
-    — nenhum desses é pai do pacote Python. A busca antiga subia pelos pais
-    deste pacote e pelo `PATH`, então fora do checkout ela devolvia `None`: a
-    eleição inteira recusava e o microfone que nasce no ar ficava MUDO.
-
-    A instalação de mentira tem SÓ o script, numa base do `share/`; o checkout
-    sai da lista de bases, e o `PATH` fica vazio. MORDIDA: volte
-    `_script_do_wireplumber` a subir pelos pais do pacote — ele acha o script
-    do checkout em vez do da instalação, e a régua reprova.
-    """
+    """No `.deb`, no Fedora, no Arch e no Nix o script mora no `share/`."""
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
     from hefesto_dualsense4unix.utils import repo_files
 

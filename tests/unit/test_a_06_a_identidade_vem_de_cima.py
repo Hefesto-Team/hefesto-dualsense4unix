@@ -56,9 +56,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: DOIS CONTROLES SINTÉTICOS, na faixa da casa — há dois portões de anonimato
-#: nesta árvore. O segundo é o caso que importa: está no RÁDIO, e pelo rádio a
-#: cor do plástico não chega.
 UM = "aa:bb:cc:00:00:01"
 DOIS = "aa:bb:cc:00:00:02"
 
@@ -69,9 +66,7 @@ CONTROLES = [
      "player": 2, "is_primary": False},
 ]
 
-#: A MESA COMO O PILOTO A MONTA. `cor` é o slug do desenho, e o do rádio vem
 #: VAZIO — é o que `mesa_viva.mesa_do_estado` devolve quando o leitor de cor não
-#: respondeu, e é o estado de verdade da mesa dela hoje.
 MESA = [
     {"pref": "p1", "uniq": UM, "jogador": 1, "cor": "white", "nome": "White",
      "via": "USB", "transporte": "usb", "alvo": True, "mascara": "DualSense"},
@@ -87,9 +82,6 @@ ESTADO = {
     "controllers": CONTROLES,
 }
 
-#: OS NOMES DE PLÁSTICO DO MOCKUP desta aba. Eles não se digitam: saem da
-#: `monta.MESA`, que é o dono do desenho — digitá-los aqui criaria uma segunda
-#: lista que envelhece calada no dia em que ela trocar o desenho.
 def _nomes_do_desenho() -> list[str]:
     import monta
 
@@ -105,12 +97,7 @@ def bancada() -> str:
 
 @pytest.fixture
 def miolo(bancada: str) -> str:
-    """Só o miolo, sem comentário HTML e sem `<style>`.
-
-    As três armadilhas que já fizeram as réguas das abas irmãs reprovarem o que
-    estava certo: a prosa do comentário, a folha de estilo e a legenda do
-    mockup, que fala SOBRE o desenho e não É a tela.
-    """
+    """Só o miolo, sem comentário HTML e sem `<style>`."""
     corpo = bancada.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
     return re.sub(r"<style[^>]*>.*?</style>", "", corpo, flags=re.S)
@@ -128,9 +115,6 @@ def carga(monkeypatch):
                               {str(c["uniq"]): str(c["pref"]) for c in MESA})
 
 
-# ---------------------------------------------------------------------------
-# 1. O ENDEREÇO EXISTE — em cada lugar onde a aba diz identidade
-# ---------------------------------------------------------------------------
 def test_os_cartoes_enderecam_o_nome_e_a_cor(miolo):
     """Os QUATRO lugares têm endereço de cor E de nome.
 
@@ -178,11 +162,6 @@ def test_a_fita_e_as_duas_dicas_tem_endereco(bancada):
         "a fita da 06 perdeu o endereço — e `hefesto_vivo._fita`, o dono "
         "compartilhado dela, DESISTE quando um controle da mesa não tem cor "
         "lida, que é o caso do rádio hoje")
-    # ERA UMA DICA A MAIS ATÉ 13/09/2026 (F1-REMAPEAR): a da tela "Trocar os
-    # botões" dizia *"Valem para o controle que navega o PC"*, e a troca passou a
-    # valer nos quatro controles — a frase errada saiu da dica, e o endereço
-    # saiu com ela. A régua continua cobrando o que cobrava: a dica que nomeia o
-    # controle tem endereço, e o nome do desenho não fica cravado no texto.
     assert bancada.count('data-campo="quem-navega"') == 1, (
         "a dica da tela de Definições perdeu o endereço de quem navega, ou a "
         "frase voltou à dica da troca de botões, onde ela é falsa")
@@ -199,9 +178,6 @@ def test_nenhum_title_nomeia_o_controle(bancada):
         "reescreve")
 
 
-# ---------------------------------------------------------------------------
-# 2. O PACOTE ESCREVE — e escreve o que LEU
-# ---------------------------------------------------------------------------
 def test_o_pacote_escreve_os_quatro_enderecos(carga):
     """Cada endereço da identidade recebe valor, e nenhum sai vazio por engano."""
     mesa = carga["mesa"]
@@ -238,15 +214,8 @@ def test_a_folha_viva_pinta_o_casco_de_quem_tem_cor(carga):
         "colorway do mockup, que endereço nenhum alcança")
 
 
-# ---------------------------------------------------------------------------
-# 3. O SILÊNCIO — campo sem informação não mostra nada
-# ---------------------------------------------------------------------------
 def test_o_controle_sem_cor_lida_nao_ganha_cor_nenhuma(carga):
-    """Pelo rádio a cor não chega, e a tela tem de dizer isso calando.
-
-    A regra é dela, e o oposto dela é o defeito que esta onda existe para
-    matar: cair de volta na cor do mockup.
-    """
+    """Pelo rádio a cor não chega, e a tela tem de dizer isso calando."""
     assert carga["mesa"]["plastico"][1] == "", (
         "o lugar do controle sem cor lida ganhou um hex — ou o pacote inventou "
         "uma cor, ou caiu de volta no desenho")
@@ -273,11 +242,7 @@ def test_a_fita_cala_o_nome_que_nao_se_leu(carga):
 
 
 def test_sem_primario_a_dica_nao_inventa_um(monkeypatch):
-    """Sem primário na mesa, `quem-navega` sai vazio — nunca a posição.
-
-    Numerar por ordem de chegada é o defeito que a ROTA-A mediu: o MESMO
-    controle mudava de nome quando o segundo entrava na mesa.
-    """
+    """Sem primário na mesa, `quem-navega` sai vazio — nunca a posição."""
     import pacotes
     from pacotes import a06_navegacao, perfil
 

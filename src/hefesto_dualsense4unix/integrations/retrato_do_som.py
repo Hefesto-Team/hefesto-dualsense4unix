@@ -70,18 +70,10 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O que o retrato guarda. `server` é o `pactl info` — de onde saem os dois
-#: padrões e o nome do servidor.
 TIPOS: Final[tuple[str, ...]] = (
     "sinks", "sources", "sink-inputs", "source-outputs", "modules", "server",
 )
 
-#: A palavra do `subscribe` (``Event 'change' on sink-input #12``) e o tipo
-#: do retrato que ela manda reler. `client` fica de fora de propósito: cada
-#: `pactl` — inclusive os deste módulo — é um cliente que nasce e morre, e
-#: reler por eles faria o retrato perguntar por causa das próprias perguntas.
-#: `card` também: a troca de perfil de uma placa chega como evento dos nós
-#: dela, que já estão aqui.
 TIPO_DO_EVENTO: Final[Mapping[str, str]] = {
     "sink": "sinks",
     "source": "sources",
@@ -91,8 +83,6 @@ TIPO_DO_EVENTO: Final[Mapping[str, str]] = {
     "server": "server",
 }
 
-#: A ÚNICA pergunta de leitura que o daemon faz ao servidor, por tipo. Os
-#: módulos ficam na forma curta porque é a única que alguém lê.
 _LEITURA_DO_TIPO: Final[Mapping[str, tuple[str, ...]]] = {
     "sinks": ("pactl", "list", "sinks"),
     "sources": ("pactl", "list", "sources"),
@@ -102,8 +92,6 @@ _LEITURA_DO_TIPO: Final[Mapping[str, tuple[str, ...]]] = {
     "server": ("pactl", "info"),
 }
 
-#: Os verbos do `pactl` que só leem. O resto é escrita — menos o `subscribe`,
-#: que é o canal de eventos e tem dono próprio (`ouvinte_do_som`).
 LEITURAS: Final[frozenset[str]] = frozenset({
     "list", "info", "stat",
     "get-default-sink", "get-default-source",
@@ -111,14 +99,8 @@ LEITURAS: Final[frozenset[str]] = frozenset({
     "get-sink-mute", "get-source-mute",
 })
 
-#: O teto de uma leitura. Curto de propósito, pela razão do `ouvinte_do_som`:
-#: uma leitura pendurada segura quem esperava a resposta.
 TETO_DA_LEITURA_S: Final[float] = 4.0
 
-#: Um tipo cuja releitura FALHOU não responde, e só se tenta de novo depois
-#: deste intervalo. Sem ele, um servidor que recusa depressa (rc≠0 sem estouro,
-#: que o recuo não pega) voltaria a levar uma pergunta por leitor por tique —
-#: o defeito inteiro, pela porta dos fundos.
 INTERVALO_DA_DUVIDA_S: Final[float] = 1.0
 
 
@@ -139,16 +121,7 @@ class _NaoSei:
         return False
 
 
-#: **O retrato tem dono e não sabe responder**: o servidor caiu, a releitura
-#: falhou, ou o nó perguntado não existe. O executor devolve a MESMA falha que
-#: devolveria para um `pactl` que saiu com erro — `None`, `""`, `(127, "")` —,
-#: e não pergunta ao servidor por conta própria.
 NAO_SEI: Final[_NaoSei] = _NaoSei()
-
-
-# ---------------------------------------------------------------------------
-# O formato do `pactl`, lido uma vez por releitura
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -169,11 +142,7 @@ class NoDeSom:
 
 @dataclass(frozen=True)
 class Fluxo:
-    """Um fluxo de um programa: `Sink Input` (tocando) ou `Source Output` (gravando).
-
-    ``alvo`` é o índice do nó onde ele toca ou de onde grava, como o `pactl` o
-    imprime; ``cliente`` é ``"n/a"`` quando o fluxo não tem cliente.
-    """
+    """Um fluxo de um programa: `Sink Input` (tocando) ou `Source Output` (gravando)."""
 
     indice: int
     alvo: str
@@ -206,14 +175,7 @@ class _Bloco:
 
 
 def _blocos(texto: str, cabecas: tuple[str, ...]) -> list[_Bloco]:
-    """Os blocos de um `pactl list` longo, com os campos de nível um e as propriedades.
-
-    O formato, pelo binário: o bloco abre em ``<Cabeça> #<índice>``; os campos
-    têm UM tab (``\\tName: …``); a continuação do volume tem um tab e espaços
-    (``\\t        balance 0.00``); as propriedades têm DOIS tabs e a forma
-    ``chave = "valor"``. Portas e formatos também têm dois tabs, e ficam de
-    fora porque ninguém os lê.
-    """
+    """Os blocos de um `pactl list` longo, com os campos de nível um e as propriedades."""
     blocos: list[_Bloco] = []
     atual: _Bloco | None = None
     nas_propriedades = False
@@ -295,23 +257,13 @@ def fluxos_do_texto(texto: str) -> tuple[Fluxo, ...]:
 
 
 def curto_dos_nos(nos: Iterable[NoDeSom]) -> str:
-    """O `pactl list sinks|sources short` a partir do longo.
-
-    ``%u\\t%s\\t%s\\t%s\\t%s`` — índice, nome, driver, formato, estado —, o
-    `printf` do `pactl` 16.1. Conferido byte a byte contra a saída curta da
-    máquina dela em 28/09/2026.
-    """
+    """O `pactl list sinks|sources short` a partir do longo."""
     return "".join(
         f"{n.indice}\t{n.nome}\t{n.driver}\t{n.formato}\t{n.estado}\n" for n in nos)
 
 
 def curto_dos_fluxos(fluxos: Iterable[Fluxo]) -> str:
-    """O `pactl list sink-inputs|source-outputs short` a partir do longo.
-
-    ``%u\\t%u\\t%s\\t%s\\t%s`` — índice, nó, cliente, driver, formato. O cliente
-    que o longo diz ``n/a`` o curto diz ``-``: é o mesmo `PA_INVALID_INDEX`
-    nas duas formas do `printf`.
-    """
+    """O `pactl list sink-inputs|source-outputs short` a partir do longo."""
     return "".join(
         f"{f.indice}\t{f.alvo}\t{'-' if f.cliente in ('', 'n/a') else f.cliente}"
         f"\t{f.driver}\t{f.formato}\n"
@@ -329,18 +281,9 @@ def campos_do_servidor(texto: str) -> dict[str, str]:
 
 
 def _servidor_sem_o_cliente(texto: str) -> str:
-    """O `info` sem a linha que muda a cada pergunta.
-
-    ``Client Index`` é o número do PRÓPRIO `pactl` que perguntou — muda toda
-    vez, e compará-lo faria cada releitura parecer mudança.
-    """
+    """O `info` sem a linha que muda a cada pergunta."""
     return "\n".join(
         linha for linha in texto.splitlines() if not linha.startswith("Client Index:"))
-
-
-# ---------------------------------------------------------------------------
-# A pergunta
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -348,7 +291,7 @@ class Pergunta:
     """Uma leitura que o retrato sabe responder: de qual tipo, e em que forma."""
 
     tipo: str
-    forma: str  # "longa" | "curta" | "padrão" | "volume" | "mudo" | "info"
+    forma: str
     alvo: str = ""
 
 
@@ -422,21 +365,12 @@ def tipos_da_escrita(argv: Sequence[object]) -> frozenset[str]:
     return frozenset(TIPOS)
 
 
-# ---------------------------------------------------------------------------
-# Quem pergunta ao servidor
-# ---------------------------------------------------------------------------
-
-
 def _ambiente() -> dict[str, str]:
     return {**os.environ, "LC_ALL": "C", "LANG": "C"}
 
 
 def ler_do_servidor(argv: Sequence[str]) -> str | None:
-    """A leitura do retrato: o stdout do `pactl`, ou `None` em qualquer falha.
-
-    Pelo recuo do servidor, que é um só (`dualsense_bt_audio.PACTL`): em recuo
-    não pergunta; prazo estourado entra no recuo; rc=0 o zera. Nunca levanta.
-    """
+    """A leitura do retrato: o stdout do `pactl`, ou `None` em qualquer falha."""
     from hefesto_dualsense4unix.integrations.dualsense_bt_audio import PACTL
 
     if shutil.which("pactl") is None or PACTL.mudo():
@@ -495,13 +429,12 @@ class RetratoDoSom:
         self._geracao_do_tipo: dict[str, int] = dict.fromkeys(TIPOS, 0)
         self._esperas: set[tuple[asyncio.AbstractEventLoop, asyncio.Event]] = set()
 
-    # -- quem lê -------------------------------------------------------------
 
     def _ler(self, argv: Sequence[str]) -> str | None:
         ler = self._ler_injetado or ler_do_servidor
         try:
             return ler(list(argv))
-        except Exception as exc:  # a leitura nunca derruba quem pergunta
+        except Exception as exc:
             logger.debug("retrato_do_som_leitura_falhou", err=str(exc))
             return None
 
@@ -518,7 +451,7 @@ class RetratoDoSom:
                         self._pendente_desde.pop(tipo, None)
                 return False
             if self._seq.get(tipo, 0) > seq:
-                return False  # uma leitura mais nova já chegou
+                return False
             antes = self._textos.get(tipo)
             if tipo == "server":
                 mudou = antes is None or (
@@ -551,11 +484,7 @@ class RetratoDoSom:
         return not self.faltando()
 
     def faltando(self) -> frozenset[str]:
-        """Os tipos que o retrato não sabe: nunca lidos, ou com a última releitura falha.
-
-        É o que a insistência do ouvinte relê — e SÓ isso: um tipo que o
-        servidor não responde nunca não pode custar a releitura dos outros.
-        """
+        """Os tipos que o retrato não sabe: nunca lidos, ou com a última releitura falha."""
         with self._trava:
             return frozenset(t for t in TIPOS if t not in self._textos or t in self._duvida)
 
@@ -564,7 +493,6 @@ class RetratoDoSom:
         with self._trava:
             return any(t in self._textos and t not in self._duvida for t in TIPOS)
 
-    # -- o dono --------------------------------------------------------------
 
     def assumir(self, laco: asyncio.AbstractEventLoop | None = None) -> None:
         """O ouvinte leu e está escutando: daqui em diante as leituras saem da foto."""
@@ -599,8 +527,6 @@ class RetratoDoSom:
     def dono(self) -> bool:
         with self._trava:
             if self._dono and self._laco is not None and self._laco.is_closed():
-                # O laço que assumiu morreu sem soltar (um teste que não parou o
-                # daemon, um processo que saiu pelo meio). Dono morto é solto.
                 self._dono = False
                 self._conectado = False
                 self._laco = None
@@ -618,19 +544,12 @@ class RetratoDoSom:
             return self._geracao
 
     def marca(self, tipos: Iterable[str] | None = None) -> int:
-        """A geração dos tipos dados (todos, sem `tipos`). Só cresce.
-
-        Quem espera por UM assunto — o canal do microfone lê fontes e padrão;
-        o vigia do alto-falante, saídas e fluxos — não acorda pela mudança dos
-        outros: um jogo tocando muda os fluxos de saída e não tem por que
-        fazer o selo do microfone reler quatro controles.
-        """
+        """A geração dos tipos dados (todos, sem `tipos`). Só cresce."""
         with self._trava:
             if tipos is None:
                 return self._geracao
             return sum(self._geracao_do_tipo.get(t, 0) for t in tipos)
 
-    # -- quem espera ---------------------------------------------------------
 
     def _avisar(self, tipos: Iterable[str] = TIPOS) -> None:
         with self._trava:
@@ -652,13 +571,7 @@ class RetratoDoSom:
     def esperar(
         self, desde: int, prazo: float, tipos: Iterable[str] | None = None
     ) -> int:
-        """Bloqueia até a :meth:`marca` dos `tipos` sair de `desde`, ou até o prazo.
-
-        Devolve a marca de agora, que pode ser a mesma: :meth:`acordar` e a
-        mudança de outro assunto também soltam quem espera — é assim que quem
-        vai parar não espera o prazo inteiro. Quem recebe a mesma marca só
-        olha de novo, e a olhada sai da foto.
-        """
+        """Bloqueia até a :meth:`marca` dos `tipos` sair de `desde`, ou até o prazo."""
         assunto = None if tipos is None else tuple(tipos)
         with self._mudou:
             if self.marca(assunto) == desde:
@@ -692,24 +605,9 @@ class RetratoDoSom:
             if laco.time() >= limite:
                 return self.marca(assunto)
 
-    # -- quem pergunta -------------------------------------------------------
 
     def _texto_em_dia(self, tipo: str) -> str | None:
-        """O texto do tipo, relido antes se uma escrita o deixou pendente.
-
-        Só com o retrato VIVO: sem dono não há evento que o mantenha em dia, e
-        uma foto que ninguém atualiza responderia sobre o passado para sempre.
-
-        **SERVIDOR SOB SUSPEITA NÃO RESPONDE PELA FOTO.** Um `pipewire-pulse`
-        TRAVADO não derruba o `subscribe` — ele só para de falar —, e a foto
-        continuaria respondendo como se nada houvesse. Quem percebe o
-        travamento é o recuo do servidor (`dualsense_bt_audio.PACTL`), pelo
-        prazo estourado de uma escrita ou de uma releitura. Com o recuo de pé,
-        toda resposta passa a exigir leitura nova: em recuo ela nem sai («não
-        sei»); com o recuo vencido, a primeira que responder o zera — é a
-        mesma sondagem de `alto_falante_bt._o_servidor_atende`, pela porta do
-        retrato.
-        """
+        """O texto do tipo, relido antes se uma escrita o deixou pendente."""
         if not self.vivo:
             return None
         with self._trava:
@@ -723,9 +621,6 @@ class RetratoDoSom:
             if self._reler_um(tipo):
                 self._avisar({tipo})
         with self._trava:
-            # Uma escrita que chegou DURANTE a releitura deixa o tipo pendente
-            # de novo; a resposta é a desta releitura, que já é posterior à
-            # escrita que a pediu, e a próxima pergunta relê outra vez.
             if tipo in self._duvida:
                 return None
             return self._textos.get(tipo)
@@ -851,7 +746,6 @@ class RetratoDoSom:
             for tipo in tipos:
                 self._pendente_desde[tipo] = seq
 
-    # -- as consultas de quem mora no daemon ---------------------------------
 
     def nos(self, tipo: str) -> tuple[NoDeSom, ...] | None:
         """Os nós de `sinks` ou `sources`, ou `None` (não sei)."""
@@ -886,7 +780,6 @@ class RetratoDoSom:
         return fora
 
 
-#: O retrato deste processo. Nasce SOLTO: só o `ouvinte_do_som` do daemon o assume.
 RETRATO: Final[RetratoDoSom] = RetratoDoSom()
 
 

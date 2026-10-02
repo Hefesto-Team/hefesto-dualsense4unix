@@ -1,23 +1,4 @@
-"""O diálogo só aparece quando a mudança de fato exige o jogo reabrir.
-
-RELANCAR-01 (08/08/2026). O wrapper termina em `exec env "$@"`
-(`assets/hefesto-launch.sh:320`): o jogo recebe as variáveis **uma vez**, na
-abertura. Mudar depois não chega até ele, e mexer no grab/vpad ao vivo é pior —
-MEDIDO em 08/08, isso deixou ela **sem controle nenhum no meio da partida**.
-
-Ela recusou as duas saídas que evitavam o problema (recusar o gesto, ou fazê-lo
-valer só depois) e propôs a que o resolve: *"se implementarmos e dermos um
-restart… o tempo de reconexão seria um bom pagamento pra termos ele
-funcionando"*. Se a mudança exige relançar, o produto **oferece** relançar.
-
-A METADE QUE É FÁCIL ERRAR
-==========================
-A lista do que **NÃO** exige é entrega tanto quanto o diálogo. Se ele aparecer
-quando ela troca a cor da luz, vira ruído, ela aprende a clicar sem ler — e aí o
-diálogo que importa não é lido. A fronteira vem da medição dela de 06/08
-(`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*): dentro de um jogo, a **saída**
-continua sendo do Hefesto; o que não muda ao vivo é a **entrada**.
-"""
+"""O diálogo só aparece quando a mudança de fato exige o jogo reabrir."""
 
 from __future__ import annotations
 
@@ -26,71 +7,37 @@ import pytest
 from hefesto_dualsense4unix.app.actions import relancar as r
 
 
-# --- quando perguntar ---------------------------------------------------------
-
-
 @pytest.mark.parametrize("mudanca", sorted(r.EXIGEM_RELANCAR))
 def test_com_jogo_aberto_as_mudancas_de_entrada_perguntam(mudanca: str) -> None:
-    """ARRANQUE a mudança da lista e este teste REPROVA.
-
-    Cada uma destas mexe em quem entrega os eventos ao jogo — pelo
-    `compose_env` ou pela borda da exceção de Steam Input. Aplicar em silêncio é
-    o que produziu o "Jogador 3" fantasma e a partida sem inputs.
-    """
+    """ARRANQUE a mudança da lista e este teste REPROVA."""
     assert r.precisa_perguntar(mudanca=mudanca, jogo_aberto=True) is True
 
 
 @pytest.mark.parametrize("mudanca", sorted(r.MUDA_NA_HORA))
 def test_o_que_muda_na_hora_nunca_pergunta(mudanca: str) -> None:
-    """O contrapeso, e é o que impede o diálogo de virar ruído.
-
-    Se algum destes passar a perguntar, ela aprende a clicar sem ler — e o
-    diálogo que importa deixa de ser lido. É a forma mais fácil de estragar esta
-    entrega enquanto ela parece mais completa.
-    """
+    """O contrapeso, e é o que impede o diálogo de virar ruído."""
     assert r.precisa_perguntar(mudanca=mudanca, jogo_aberto=True) is False
 
 
 @pytest.mark.parametrize("mudanca", sorted(r.EXIGEM_RELANCAR))
 def test_sem_jogo_aberto_nunca_pergunta(mudanca: str) -> None:
-    """Sem jogo, a mudança aplica direto — como sempre fez.
-
-    O diálogo custa uma interrupção, e só se paga quando há um jogo para o qual
-    a mudança não chegaria.
-    """
+    """Sem jogo, a mudança aplica direto — como sempre fez."""
     assert r.precisa_perguntar(mudanca=mudanca, jogo_aberto=False) is False
 
 
 def test_mudanca_desconhecida_nao_interrompe() -> None:
-    """Tela nova que esqueça de se registrar segue como antes, sem incomodar.
-
-    A falha é para o lado de não interromper: uma tela que passasse a
-    interromper a partida dela por engano é pior que uma que não pergunta. Quem
-    acusa a ausência é o teste de cobertura abaixo, e é lá que deve doer.
-    """
+    """Tela nova que esqueça de se registrar segue como antes, sem incomodar."""
     assert r.precisa_perguntar(mudanca="algo_que_ninguem_escreveu", jogo_aberto=True) is False
 
 
 def test_as_duas_listas_nao_se_cruzam() -> None:
-    """Nenhuma mudança pode estar nas duas listas.
-
-    Cruzamento aqui significa que alguém escreveu a mesma coisa em dois lugares
-    com respostas opostas — e a lista que vence passa a ser acidente de leitura.
-    """
+    """Nenhuma mudança pode estar nas duas listas."""
     cruzamento = r.EXIGEM_RELANCAR & r.MUDA_NA_HORA
     assert not cruzamento, f"mudança em AMBAS as listas: {sorted(cruzamento)}"
 
 
-# --- o que o diálogo diz ------------------------------------------------------
-
-
 def test_o_corpo_diz_as_tres_coisas() -> None:
-    """O corpo tem de dizer o que mudou, por que não chega, e o que muda na hora.
-
-    A terceira é a que mais se perde num "enxugar o texto" — e sem ela ela
-    conclui que precisa fechar o jogo para trocar a cor da luz, que é falso e
-    contradiz a medição dela de 06/08.
-    """
+    """O corpo tem de dizer o que mudou, por que não chega, e o que muda na hora."""
     corpo = r.corpo_do_dialogo(
         mudanca="mascara", valor="Xbox 360", jogo="Sackboy: A Big Adventure"
     )
@@ -123,11 +70,7 @@ def test_o_corpo_avisa_da_perda_do_que_nao_foi_salvo() -> None:
     ],
 )
 def test_a_frase_usa_o_lexico_da_janela(mudanca: str, valor: str, esperado: str) -> None:
-    """Nenhuma palavra nova: os rótulos são os que já estão na tela.
-
-    Ela recusa vocabulário que não deriva do que o produto já usa — nome novo
-    que não deriva do que há é sinal de conceito errado.
-    """
+    """Nenhuma palavra nova: os rótulos são os que já estão na tela."""
     assert esperado in r.frase_da_mudanca(mudanca, valor)
 
 
@@ -137,9 +80,6 @@ def test_o_titulo_pergunta_em_vez_de_avisar() -> None:
         "o título deixou de ser pergunta. Fechar o jogo dela é consequência "
         "pesada: o produto pede, não anuncia."
     )
-
-
-# --- as três saídas -----------------------------------------------------------
 
 
 def test_cada_saida_tem_a_sua_frase_honesta() -> None:
@@ -170,17 +110,8 @@ def test_os_tres_rotulos_existem_e_sao_distintos() -> None:
     )
 
 
-# --- RELANCAR-AGORA-01: o botão faz o que promete ----------------------------
-
-
 def test_o_rotulo_promete_o_fim_e_nao_o_meio() -> None:
-    """"Aplicar agora e reiniciar o jogo" — as palavras dela.
-
-    O rótulo antigo ("Fechar o jogo e abrir de novo") descrevia o MEIO e calava
-    o fim: ela não clica ali para fechar o jogo, clica para a mudança valer
-    agora. Ela leu na tela e apontou: *"a última opção deveria ser aplicar agora
-    e reiniciar jogo"*.
-    """
+    """"Aplicar agora e reiniciar o jogo" — as palavras dela."""
     assert "Aplicar agora" in r.ROTULO_FECHAR, (
         "o rótulo voltou a descrever o meio (fechar) em vez do fim (aplicar). "
         "Quem lê o botão precisa saber o que GANHA, não só o que perde."
@@ -192,13 +123,7 @@ def test_o_rotulo_promete_o_fim_e_nao_o_meio() -> None:
 
 
 def test_o_toast_do_relancamento_diz_o_que_de_fato_aconteceu() -> None:
-    """Uma frase por desfecho, e nenhuma promete o que não foi conferido.
-
-    ARRANQUE a distinção (volte a uma frase fixa) e este teste REPROVA. O texto
-    anterior dizia "o jogo fechou, a mudança valeu e eu pedi a abertura" ANTES
-    de qualquer uma das três coisas acontecer — e ela viu: *"não sei nem se
-    aplicou"*.
-    """
+    """Uma frase por desfecho, e nenhuma promete o que não foi conferido."""
     ok = r.toast_do_relancamento(fechou=True, reabriu=True, appid=1599660)
     assert "fechei o jogo" in ok.lower() and "mudança valeu" in ok
     assert "pode demorar" in ok.lower(), (
@@ -226,12 +151,7 @@ def test_o_toast_do_relancamento_diz_o_que_de_fato_aconteceu() -> None:
 
 
 def test_o_toast_nunca_afirma_que_o_jogo_abriu() -> None:
-    """Reabrir é PEDIR à Steam. Afirmar "abriu" seria mentir de novo.
-
-    A Steam leva de segundos a minutos (shader cache, atualização). O contrato
-    do produto aqui é "o pedido saiu", e o texto tem de espelhar isso — mentir no
-    mesmo lugar, na segunda tentativa, é o que queima a confiança de vez.
-    """
+    """Reabrir é PEDIR à Steam. Afirmar "abriu" seria mentir de novo."""
     ok = r.toast_do_relancamento(fechou=True, reabriu=True, appid=1)
     for promessa in ("o jogo abriu", "jogo aberto", "está aberto"):
         assert promessa not in ok.lower(), (
@@ -239,57 +159,25 @@ def test_o_toast_nunca_afirma_que_o_jogo_abriu() -> None:
         )
 
 
-# --- RELANCAR-ORDEM-01: pergunta onde a decisão está COMPLETA ----------------
-
-
 def test_o_modo_pergunta_agora_que_a_decisao_fecha_no_aplicar() -> None:
-    """O modo voltou a perguntar — e a ida e a volta são a MESMA decisão dela.
-
-    NOTA DATADA (08/08/2026, noite — AGORA-E-DEPOIS-01). Este teste travava o
-    contrário, e o texto anterior continua valendo para o mundo em que ele
-    nasceu: enquanto o diálogo aparecia no CLIQUE do seletor, perguntar no modo
-    era perguntar sobre uma decisão pela metade — *"como já aparece a tela de
-    aplicar e reiniciar se nem sei o que ele vai aplicar?"*.
-
-    O que mudou não foi a opinião dela; foi o LUGAR da pergunta. O clique deixou
-    de aplicar, e o diálogo passou a nascer no "Aplicar" do rodapé, onde modo e
-    máscara já estão escolhidos. Aí ela disse: *"se o jogo tiver aberto aparece
-    o popup falando em fechar o jogo pra aplicar e afins. e isso vai permitir
-    aplicar tudo que alterar em todas as abas"*.
-
-    O "caos" dos dois diálogos numa sequência só, que era o risco de antes,
-    não pode mais acontecer: os cliques não perguntam nada, e o "Aplicar"
-    pergunta UMA vez pela mudança inteira.
-    """
+    """O modo voltou a perguntar — e a ida e a volta são a MESMA decisão dela."""
     assert "modo" in r.EXIGEM_RELANCAR, (
         "`modo` saiu da lista de novo. Com o diálogo no 'Aplicar', trocar o "
         "modo com o jogo aberto voltaria a mexer no `compose_env` ao vivo sem "
         "ela saber — o caminho do 'Jogador 3' fantasma."
     )
     assert r.precisa_perguntar(mudanca="modo", jogo_aberto=True) is True
-    # E o contrapeso de sempre: sem jogo aberto não se pergunta nada.
     assert r.precisa_perguntar(mudanca="modo", jogo_aberto=False) is False
 
 
 def test_a_mascara_continua_perguntando() -> None:
-    """O contrapeso: tirar do modo não pode esvaziar a cura.
-
-    A máscara é onde a decisão fecha, e é a mudança que de fato chega ao jogo
-    (`SDL_JOYSTICK_HIDAPI` no Xbox, vpad recriado nos dois). Se ela também
-    parasse de perguntar, o produto voltaria a trocar o dono do input embaixo de
-    um jogo em curso — que é o defeito de origem.
-    """
+    """O contrapeso: tirar do modo não pode esvaziar a cura."""
     assert "mascara" in r.EXIGEM_RELANCAR
     assert r.precisa_perguntar(mudanca="mascara", jogo_aberto=True) is True
 
 
 def test_a_frase_do_modo_continua_existindo() -> None:
-    """O texto do modo fica, porque o diálogo pode voltar a usá-lo.
-
-    Quando a JOGADOR-3-FANTASMA-01 for curada de verdade, o caminho do modo pode
-    passar a oferecer o relançamento. Apagar a frase agora obrigaria a próxima
-    pessoa a reescrevê-la — e a reescrever pior, sem o léxico da tela.
-    """
+    """O texto do modo fica, porque o diálogo pode voltar a usá-lo."""
     assert "O que o controle faz agora" in r.frase_da_mudanca(
         "modo", "Jogar pelo Hefesto"
     )

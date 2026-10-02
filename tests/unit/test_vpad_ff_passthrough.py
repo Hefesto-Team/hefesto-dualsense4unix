@@ -1,11 +1,4 @@
-"""FEAT-VPAD-FF-PASSTHROUGH-01 — force-feedback do vpad → rumble físico.
-
-Cobre o protocolo de FF do `UinputGamepad` com um `evdev` falso (handshake de
-upload/erase, play/stop, duração, gain, soma de efeitos, throttle por mudança
-e degradação sem FF) e o caminho `apply_game_rumble` do subsystem gamepad
-(rumble fixado vence, política global aplicada, targeting por MAC com
-salvar/restaurar do alvo, broadcast como fallback). Sem hardware.
-"""
+"""FEAT-VPAD-FF-PASSTHROUGH-01 — force-feedback do vpad → rumble físico."""
 from __future__ import annotations
 
 import sys
@@ -108,7 +101,7 @@ class _FakeUInput:
     """UInput falso com o handshake de FF (begin/end upload/erase) e fd scriptável."""
 
     instances: ClassVar[list[_FakeUInput]] = []
-    fail_with_ff = False  # knob: criação COM EV_FF falha (ambiente sem FF)
+    fail_with_ff = False
 
     def __init__(self, events: dict[int, list[Any]], **kwargs: Any) -> None:
         if type(self).fail_with_ff and _EC.EV_FF in events:
@@ -117,11 +110,8 @@ class _FakeUInput:
         self.kwargs = kwargs
         self.writes: list[tuple[int, int, int]] = []
         self.closed = False
-        #: Eventos que o "jogo" gerou, drenados por read_one().
         self.queue: deque[SimpleNamespace] = deque()
-        #: request_id → efeito pendente de upload (o que begin_upload devolve).
         self.pending_uploads: dict[int, SimpleNamespace] = {}
-        #: request_id → effect_id pendente de erase.
         self.pending_erases: dict[int, int] = {}
         self.uploads_done: list[SimpleNamespace] = []
         self.erases_done: list[SimpleNamespace] = []
@@ -155,7 +145,6 @@ class _FakeUInput:
     def end_erase(self, erase: SimpleNamespace) -> None:
         self.erases_done.append(erase)
 
-    # -- conveniências de script ("o jogo fez X") ------------------------
 
     def game_uploads(self, effect: SimpleNamespace, *, request_id: int) -> None:
         self.pending_uploads[request_id] = effect
@@ -209,7 +198,6 @@ class TestVpadFF:
 
         gp.pump_ff()
 
-        # Handshake respondido (retval 0) e magnitudes 0-65535 → 0-255 (>>8).
         assert [u.retval for u in dev.uploads_done] == [0]
         assert sink == [(0x80, 0xFF)]
 
@@ -225,32 +213,24 @@ class TestVpadFF:
         assert sink == [(0xFF, 0xFF), (0, 0)]
 
     def test_duracao_expira_zera_sem_stop(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Jogos que só dão play e nunca stop: a duração do efeito manda.
         gp, dev, sink, clock = _make_vpad(monkeypatch)
         dev.game_uploads(_rumble_effect(0, strong=0x4000, weak=0, duration_ms=100), request_id=1)
         dev.game_plays(0)
         gp.pump_ff()
         assert sink == [(0, 0x40)]
 
-        clock[0] += 0.050  # ainda dentro da duração
+        clock[0] += 0.050
         gp.pump_ff()
         assert sink == [(0, 0x40)]
 
-        clock[0] += 0.060  # 110ms > 100ms — venceu
+        clock[0] += 0.060
         gp.pump_ff()
         assert sink == [(0, 0x40), (0, 0)]
 
     def test_duracao_zero_tem_teto_de_seguranca(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Duração 0 = "toca até mandar parar" — mas não para sempre.
-
-        O deadline era `math.inf`: só o jogo podia parar o motor, e se ele
-        fechasse no meio de uma vibração, travasse, ou o stop se perdesse, o
-        controle vibrava indefinidamente. Foi o "não parava por nada" relatado
-        ao vivo — e a saída foi o botão "Parar", que trava o rumble em silêncio
-        e cria o problema seguinte.
-        """
+        """Duração 0 = "toca até mandar parar" — mas não para sempre."""
         gp, dev, sink, clock = _make_vpad(monkeypatch)
         dev.game_uploads(
             _rumble_effect(0, strong=0x8000, weak=0, duration_ms=0), request_id=1
@@ -259,22 +239,18 @@ class TestVpadFF:
         gp.pump_ff()
         assert sink == [(0, 0x80)]
 
-        clock[0] += FF_TETO_SEM_DURACAO_S - 1  # ainda dentro do teto
+        clock[0] += FF_TETO_SEM_DURACAO_S - 1
         gp.pump_ff()
         assert sink == [(0, 0x80)], "o teto não pode cortar antes da hora"
 
-        clock[0] += 2  # passou do teto sem o jogo pedir mais nada
+        clock[0] += 2
         gp.pump_ff()
         assert sink == [(0, 0x80), (0, 0)], "o motor tem de parar sozinho"
 
     def test_teto_e_renovado_por_novo_play(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Vibração contínua legítima não é cortada.
-
-        Uma cena que vibra sem parar fica remandando play; cada um renova o
-        prazo. O teto só age quando ninguém está mais pedindo nada.
-        """
+        """Vibração contínua legítima não é cortada."""
         gp, dev, sink, clock = _make_vpad(monkeypatch)
         dev.game_uploads(
             _rumble_effect(0, strong=0x8000, weak=0, duration_ms=0), request_id=1
@@ -282,7 +258,6 @@ class TestVpadFF:
         dev.game_plays(0)
         gp.pump_ff()
 
-        # O jogo segue pedindo, pertinho de vencer o prazo.
         for _ in range(3):
             clock[0] += FF_TETO_SEM_DURACAO_S - 1
             dev.game_plays(0)
@@ -296,10 +271,10 @@ class TestVpadFF:
     def test_play_com_repeticoes_estica_o_deadline(self, monkeypatch: pytest.MonkeyPatch) -> None:
         gp, dev, sink, clock = _make_vpad(monkeypatch)
         dev.game_uploads(_rumble_effect(0, strong=0x4000, weak=0, duration_ms=100), request_id=1)
-        dev.game_plays(0, repeats=3)  # 3 repetições = 300ms
+        dev.game_plays(0, repeats=3)
         gp.pump_ff()
 
-        clock[0] += 0.150  # venceria com 1 repetição; com 3 ainda toca
+        clock[0] += 0.150
         gp.pump_ff()
         assert sink == [(0, 0x40)]
 
@@ -314,7 +289,6 @@ class TestVpadFF:
         dev.game_uploads(_rumble_effect(0, strong=0xFFFF, weak=0xFFFF), request_id=1)
         dev.game_plays(0)
         gp.pump_ff()
-        # Jogo "reprograma" o efeito em curso (padrão SDL para variar rumble).
         dev.game_uploads(_rumble_effect(0, strong=0x2000, weak=0x1000), request_id=2)
 
         gp.pump_ff()
@@ -335,13 +309,12 @@ class TestVpadFF:
 
     def test_gain_escala_o_rumble(self, monkeypatch: pytest.MonkeyPatch) -> None:
         gp, dev, sink, _ = _make_vpad(monkeypatch)
-        dev.game_sets_gain(0x8000)  # ~50%
+        dev.game_sets_gain(0x8000)
         dev.game_uploads(_rumble_effect(0, strong=0xFFFF, weak=0xFFFF), request_id=1)
         dev.game_plays(0)
 
         gp.pump_ff()
 
-        # 0xFFFF x (0x8000/0xFFFF) = 0x8000 → >>8 = 0x80 nos dois motores.
         assert sink == [(0x80, 0x80)]
 
     def test_periodic_mapeia_para_os_dois_motores(
@@ -353,7 +326,6 @@ class TestVpadFF:
 
         gp.pump_ff()
 
-        # |0x4000| * 2 = 0x8000 → >>8 = 0x80 nos dois motores.
         assert sink == [(0x80, 0x80)]
 
     def test_efeitos_simultaneos_somam_com_clamp(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -365,7 +337,6 @@ class TestVpadFF:
 
         gp.pump_ff()
 
-        # strong: 0xC000+0xC000 clampa em 0xFFFF → 0xFF; weak: 0x2000 → 0x20.
         assert sink == [(0x20, 0xFF)]
 
     def test_throttle_sink_so_quando_muda(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -373,7 +344,7 @@ class TestVpadFF:
         dev.game_uploads(_rumble_effect(0, strong=0x8000, weak=0x8000), request_id=1)
         dev.game_plays(0)
         gp.pump_ff()
-        gp.pump_ff()  # nada mudou — o sink escreve HID, não pode repetir
+        gp.pump_ff()
         gp.pump_ff()
 
         assert sink == [(0x80, 0x80)]
@@ -384,13 +355,13 @@ class TestVpadFF:
         sink: list[tuple[int, int]] = []
         gp = UinputGamepad.for_flavor("xbox", rumble_sink=lambda w, s: sink.append((w, s)))
 
-        assert gp.start() is True  # degradou para vpad SEM EV_FF
+        assert gp.start() is True
         assert gp.ff_supported is False
         dev = fake.instances[0]
         assert _EC.EV_FF not in dev.events
 
-        gp.pump_ff()  # no-op, sem crash
-        gp.forward_analog(lx=1, ly=2, rx=3, ry=4, l2=5, r2=6)  # input segue vivo
+        gp.pump_ff()
+        gp.forward_analog(lx=1, ly=2, rx=3, ry=4, l2=5, r2=6)
         assert sink == []
         assert len(dev.writes) == 6
 
@@ -406,7 +377,7 @@ class TestVpadFF:
         dev.game_uploads(_rumble_effect(0, strong=0xFFFF, weak=0), request_id=1)
         dev.game_plays(0)
 
-        gp.pump_ff()  # não propaga
+        gp.pump_ff()
 
     def test_stop_do_vpad_zera_rumble_fisico(self, monkeypatch: pytest.MonkeyPatch) -> None:
         gp, dev, sink, _ = _make_vpad(monkeypatch)
@@ -414,7 +385,7 @@ class TestVpadFF:
         dev.game_plays(0)
         gp.pump_ff()
 
-        gp.stop()  # vpad some — ninguém mais mandaria o stop do motor
+        gp.stop()
 
         assert sink == [(0xFF, 0xFF), (0, 0)]
         assert dev.closed is True
@@ -427,17 +398,8 @@ class TestVpadFF:
         assert gp.ff_supported is True
 
 
-# -- apply_game_rumble (subsystem gamepad) -------------------------------
-
-
 class _FakeBackend:
-    """Backend multi-controle com a API por-uniq (PERFIL-01): registra rumbles.
-
-    `rumbles` guarda `(uniq | None, weak, strong)` — None = broadcast. O
-    seletor global (`set_output_target`) existe só para PROVAR que o rumble
-    do jogo nunca o toca (`target_calls` fica vazio): o flip transitório foi
-    substituído por `set_rumble_for` no PERFIL-01.
-    """
+    """Backend multi-controle com a API por-uniq (PERFIL-01): registra rumbles."""
 
     def __init__(self, uniqs: tuple[str, ...] = (MAC_1, MAC_2)) -> None:
         self._uniqs = list(uniqs)
@@ -471,20 +433,7 @@ def _make_daemon(
     battery: int = 80,
     controller: Any | None = None,
 ) -> Any:
-    """Daemon de mentira para os testes de TARGETING do FF.
-
-    O padrão era ``policy="max"``, e funcionava por ACIDENTE: enquanto o
-    "Máximo" valia 1,0, o multiplicador era neutro e cada assert podia escrever
-    o número cru que entrou. Em 11/08/2026 o Máximo passou a amplificar
-    (decisão dela) e seis testes de MAC reprovaram de uma vez — nenhum deles
-    fala de intensidade.
-
-    O padrão agora é o ``balanceado``, que é o degrau neutro POR DEFINIÇÃO
-    (1,0 = "o que o jogo pediu"): o multiplicador sai da frente e cada teste
-    volta a falar só do que é dele. Quem quer testar o multiplicador passa a
-    política explicitamente — é o que `test_politica_global_aplica_multiplicador`
-    faz logo abaixo.
-    """
+    """Daemon de mentira para os testes de TARGETING do FF."""
     ctrl_state = SimpleNamespace(battery_pct=battery)
     return SimpleNamespace(
         config=SimpleNamespace(
@@ -503,7 +452,7 @@ class TestApplyGameRumble:
     def test_rumble_fixado_manual_vence_o_ff(self) -> None:
         daemon = _make_daemon(rumble_active=(10, 20))
         gp_mod.apply_game_rumble(daemon, 200, 200)
-        assert daemon.controller.rumbles == []  # FF ignorado (fixado vence)
+        assert daemon.controller.rumbles == []
 
     def test_politica_global_aplica_multiplicador(self) -> None:
         daemon = _make_daemon(policy="custom")
@@ -512,53 +461,36 @@ class TestApplyGameRumble:
         assert daemon.controller.rumbles == [(None, 100, 50)]
 
     def test_target_por_mac_via_api_por_uniq_sem_flip(self) -> None:
-        """PERFIL-01: o FF do jogo mira por `set_rumble_for` — o seletor
-        global NUNCA é tocado (o flip transitório corria com o executor
-        multi-thread e podia persistir config no controle errado)."""
+        """PERFIL-01: o FF do jogo mira por `set_rumble_for` — o seletor"""
         backend = _FakeBackend()
         daemon = _make_daemon(controller=backend)
         gp_mod.apply_game_rumble(daemon, 255, 255, target_uniq=MAC_2)
 
-        assert backend.rumbles == [(MAC_2, 255, 255)]  # aplicado no controle certo
-        assert backend.target_calls == []  # seletor global intocado
+        assert backend.rumbles == [(MAC_2, 255, 255)]
+        assert backend.target_calls == []
         assert backend.get_output_target_index() is None
 
     def test_target_nao_toca_selecao_previa_da_usuaria(self) -> None:
         backend = _FakeBackend()
-        backend.set_output_target(0)  # usuária tinha selecionado o Controle 1
+        backend.set_output_target(0)
         backend.target_calls.clear()
         daemon = _make_daemon(controller=backend)
         gp_mod.apply_game_rumble(daemon, 100, 100, target_uniq=MAC_2)
 
         assert backend.rumbles == [(MAC_2, 100, 100)]
-        assert backend.get_output_target_index() == 0  # seleção preservada
-        assert backend.target_calls == []  # nem um flip sequer
+        assert backend.get_output_target_index() == 0
+        assert backend.target_calls == []
 
     def test_mac_pedido_e_nao_casado_nao_vira_broadcast(self) -> None:
-        """BROADCAST-PROIBIDO-01, 24/08/2026: endereço PEDIDO e que não casa
-        nenhum handle descarta com log — NUNCA replica nos outros controles.
-        Este teste é a inversão do antigo `test_mac_desconhecido_cai_em_
-        broadcast`, que exigia (e travava, F2 na forma canônica) exatamente o
-        comportamento que esta invariante proíbe: o pulso do jogador 2 na mão
-        dos outros três."""
+        """BROADCAST-PROIBIDO-01, 24/08/2026: endereço PEDIDO e que não casa"""
         backend = _FakeBackend()
         daemon = _make_daemon(controller=backend)
         gp_mod.apply_game_rumble(daemon, 90, 90, target_uniq="ffffffffffff")
-        assert backend.rumbles == []  # descartado, ninguém vibra
+        assert backend.rumbles == []
         assert backend.target_calls == []
 
     def test_sem_endereco_pedido_broadcast_continua_legitimo(self) -> None:
-        """Contra-classe de `test_mac_pedido_e_nao_casado_nao_vira_broadcast`:
-        quando NENHUM endereço foi pedido (`target_uniq is None` — backend sem
-        `primary_uniq`, ex.: `FakeController`, ou mesa de um controle só),
-        broadcast e mira são a MESMA coisa, e o broadcast continua legítimo.
-        Antes de 24/08 este teste chamava com `target_uniq=MAC_2` — um
-        endereço explicitamente pedido — e por isso, junto do teste acima,
-        travava o broadcast proibido a dois nomes que a leitura não distinguia
-        (ambos "caem em broadcast"). Corrigido para o caso real: um backend
-        sem a API por-uniq nunca RECEBE um `target_uniq` — quem chama
-        (`make_primary_rumble_sink`) resolve `primary_uniq` via `getattr(...,
-        None)` e passa `None` adiante."""
+        """Contra-classe de `test_mac_pedido_e_nao_casado_nao_vira_broadcast`:"""
         rumbles: list[tuple[int, int]] = []
         controller = SimpleNamespace(
             set_rumble=lambda weak, strong: rumbles.append((weak, strong))

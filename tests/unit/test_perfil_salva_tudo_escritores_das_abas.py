@@ -29,9 +29,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o stub
-# que outro arquivo de teste planta em sys.modules. No TOPO, antes de qualquer
-# import do pacote: `app/actions/base.py` importa `gi` na primeira linha útil.
 exigir_gi_real("PERFIL-SALVA-TUDO-01/E3 (escritores das abas Inicio/Emulacao)")
 
 from hefesto_dualsense4unix.app.actions import emulation_actions as ea
@@ -104,13 +101,7 @@ class _FakeLabel:
 
 
 class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin, fa.FooterActionsMixin):
-    """Emulação + Início + rodapé compartilhando UM rascunho (a MRO do HefestoApp).
-
-    AGORA-E-DEPOIS-01 (08/08/2026): o rodapé entrou na lista porque o gesto da
-    aba Início passou a terminar nele — o clique no seletor marca, o "Aplicar"
-    aplica e registra. Sem os três na mesma casca, este arquivo mediria metade
-    do caminho.
-    """
+    """Emulação + Início + rodapé compartilhando UM rascunho (a MRO do HefestoApp)."""
 
     def __init__(self, perfil: Profile) -> None:
         self.draft = DraftConfig.from_profile(perfil)
@@ -127,7 +118,6 @@ class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin, fa.FooterActionsMix
         self._home_mode_selector.connect("changed", self._on_home_mode_changed)
         self._home_flavor_selector.connect("changed", self._on_home_flavor_changed)
 
-    # --- superfícies que os handlers tocam e que não são o assunto daqui ---
 
     def _get(self, _widget_id: str) -> Any:
         return None
@@ -168,9 +158,6 @@ def _ipc_que_confirma(
     monkeypatch.setattr(ea, "call_async", _fake)
     monkeypatch.setattr(ha, "call_async", _fake)
     monkeypatch.setattr(mt, "call_async", _fake)
-    # AGORA-E-DEPOIS-01: o "Aplicar" do rodapé manda o rascunho por outro
-    # cano (`footer_actions.ipc_bridge`) — sem cobri-lo, o gesto novo da aba
-    # Início falaria com o daemon de verdade no meio do teste.
     monkeypatch.setattr(fa.ipc_bridge, "call_async", _fake)
     return chamadas
 
@@ -191,18 +178,11 @@ def _ipc_que_falha(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ea, "call_async", _fake)
     monkeypatch.setattr(ha, "call_async", _fake)
     monkeypatch.setattr(mt, "call_async", _fake)
-    # AGORA-E-DEPOIS-01: o "Aplicar" do rodapé manda o rascunho por outro
-    # cano (`footer_actions.ipc_bridge`) — sem cobri-lo, o gesto novo da aba
-    # Início falaria com o daemon de verdade no meio do teste.
     monkeypatch.setattr(fa.ipc_bridge, "call_async", _fake)
 
 
 def _ipc_envenenado(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Qualquer IPC daqui para a frente REPROVA o teste.
-
-    É a prova de que REGISTRAR não é APLICAR (HARM-05): o escritor do rascunho
-    não pode encostar no daemon.
-    """
+    """Qualquer IPC daqui para a frente REPROVA o teste."""
 
     def _bomba(*args: Any, **kwargs: Any) -> None:
         raise AssertionError(
@@ -215,11 +195,6 @@ def _ipc_envenenado(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mt, "call_async", _bomba)
     monkeypatch.setattr(mt, "apply_mode", _bomba)
     monkeypatch.setattr(fa.ipc_bridge, "call_async", _bomba)
-
-
-# ---------------------------------------------------------------------------
-# O modo e a máscara da aba Emulação
-# ---------------------------------------------------------------------------
 
 
 class TestAAbaEmulacaoEscreveNoRascunho:
@@ -240,9 +215,7 @@ class TestAAbaEmulacaoEscreveNoRascunho:
     def test_clicar_desligado_registra_o_modo_desktop(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Desligado" nesta aba É o modo "Controlar o PC" (o comentário do
-        handler diz isso) — o perfil tem de nascer declarando desktop, não
-        ``mode: null``."""
+        """"Desligado" nesta aba É o modo "Controlar o PC" (o comentário do"""
         janela = _Janela(_perfil("Navegação", com_regra=True))
         _ipc_que_confirma(monkeypatch)
 
@@ -255,11 +228,7 @@ class TestAAbaEmulacaoEscreveNoRascunho:
     def test_daemon_desligado_nao_registra_nada(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O rascunho descreve o que FICOU de pé, não a intenção.
-
-        Se o registro fosse no clique (e não na confirmação), um daemon morto
-        deixaria o perfil dela dizendo um modo que nunca subiu.
-        """
+        """O rascunho descreve o que FICOU de pé, não a intenção."""
         janela = _Janela(_perfil("Pragmata", com_regra=True))
         _ipc_que_falha(monkeypatch)
 
@@ -273,17 +242,10 @@ class TestAAbaInicioEscreveNoRascunho:
     def test_comutador_de_modo_registra_o_que_ela_escolheu(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """AGORA-E-DEPOIS-01: o gesto tem dois tempos, e o registro é no segundo.
-
-        O clique no seletor MARCA (e nada mais); o "Aplicar" do rodapé aplica e
-        registra. A queixa dela que este teste guarda continua a mesma — *"salvei
-        o perfil e as configs das outras abas não ficam salvas"* — e agora ela só
-        estaria de volta se o caminho INTEIRO falhasse.
-        """
+        """AGORA-E-DEPOIS-01: o gesto tem dois tempos, e o registro é no segundo."""
         janela = _Janela(_perfil("Pragmata", com_regra=True))
         _ipc_que_confirma(monkeypatch)
 
-        # O gesto real: clique no seletor emite "changed" com UM argumento.
         janela._home_mode_selector.set_active_id("native")
         assert janela.draft.to_profile("Pragmata").mode is None, (
             "o clique registrou sozinho — o rascunho voltou a guardar intenção "
@@ -312,12 +274,7 @@ class TestAAbaInicioEscreveNoRascunho:
     def test_reconciliacao_do_poller_nao_conta_como_gesto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """``_render_home`` mexe nos seletores para refletir o daemon.
-
-        Com o guard de pé isso NÃO é gesto dela — se contasse, o simples fato de
-        a aba estar aberta marcaria o rascunho como editado e o modo do daemon
-        entraria no perfil dela sem ninguém pedir.
-        """
+        """``_render_home`` mexe nos seletores para refletir o daemon."""
         janela = _Janela(_perfil("Pragmata", com_regra=True))
         _ipc_que_confirma(monkeypatch)
         janela._home_guard = True
@@ -330,12 +287,7 @@ class TestAAbaInicioEscreveNoRascunho:
     def test_trocar_a_mascara_nao_mexe_no_resto_da_secao(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O que a janela não edita, ela não reescreve.
-
-        Trocar a MÁSCARA é um gesto sobre UM campo. Se ele devolvesse o resto
-        da seção `mode` ao default, mudaria o arquivo dela sem pedido — e é o
-        defeito que esta classe inteira persegue.
-        """
+        """O que a janela não edita, ela não reescreve."""
         janela = _Janela(
             _perfil(
                 "Solo",
@@ -356,21 +308,11 @@ class TestAAbaInicioEscreveNoRascunho:
         )
 
 
-# ---------------------------------------------------------------------------
-# HARM-05: registrar NÃO é aplicar
-# ---------------------------------------------------------------------------
-
-
 class TestRegistrarNaoEAplicar:
     def test_os_escritores_do_rascunho_nao_encostam_no_daemon(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Com todo IPC envenenado, os três escritores ainda funcionam.
-
-        É o cadeado do HARM-05. Se alguém "melhorar" o escritor fazendo-o aplicar
-        junto, um toque num gatilho (que também escreve no rascunho) passaria a
-        poder recriar o vpad ou suspender a emulação no meio da partida.
-        """
+        """Com todo IPC envenenado, os três escritores ainda funcionam."""
         janela = _Janela(_perfil("Sackboy", com_regra=True))
         _ipc_envenenado(monkeypatch)
 
@@ -386,12 +328,7 @@ class TestRegistrarNaoEAplicar:
     def test_o_aplicar_do_rodape_continua_sem_levar_modo_nem_modo_jogo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O outro lado do mesmo contrato (HARM-05, seção ``mouse``).
-
-        Registrar no rascunho não pode fazer o "Aplicar" passar a empurrar modo e
-        supressão pelo IPC — é o caminho por onde um gesto de gatilho recriaria o
-        vpad no meio do jogo.
-        """
+        """O outro lado do mesmo contrato (HARM-05, seção ``mouse``)."""
         janela = _Janela(_perfil("Sackboy", com_regra=True))
         _ipc_que_confirma(monkeypatch)
 
@@ -404,13 +341,7 @@ class TestRegistrarNaoEAplicar:
 
 
 class TestOEscritorNaoDependeDaMontagemDaJanela:
-    """Dublê PARCIAL não pode quebrar por causa do escritor novo.
-
-    MEDIDO: o `_HomeStub` de ``test_auto01_um_clique_em_vez_de_dez`` copia
-    handlers avulsos da Início (sem o resto da classe e sem `draft`). Chamada
-    entre mixins quebra esse dublê — a onda 2 já pagou esse preço uma vez. Por
-    isso o escritor é FUNÇÃO de módulo e o rascunho vem por ``getattr``.
-    """
+    """Dublê PARCIAL não pode quebrar por causa do escritor novo."""
 
     def test_janela_sem_rascunho_nao_estoura(self) -> None:
         class _JanelaCrua:
@@ -450,7 +381,6 @@ class TestOsMiolosPuros:
             ea.frase_do_modo_jogo(padrao, ligado=True, guardado=True, tem_regra=True)
             == padrao
         )
-        # Sem rascunho não há perfil para guardar nem promessa a desmentir.
         assert (
             ea.frase_do_modo_jogo(padrao, ligado=True, guardado=False, tem_regra=False)
             == padrao
@@ -461,12 +391,7 @@ class TestOsMiolosPuros:
         )
 
     def test_o_catch_all_guarda_no_miolo_puro(self) -> None:
-        """``rascunho_com_modo_jogo`` não recusa mais — nem no ligar.
-
-        A recusa morava exatamente aqui (um ``if ligado and not
-        perfil_do_rascunho_tem_opiniao(draft)``), e é o miolo que o resto da aba
-        usa. Sem esta linha, o teste de handler acima é o único a morder.
-        """
+        """``rascunho_com_modo_jogo`` não recusa mais — nem no ligar."""
         catch_all = DraftConfig.from_profile(_perfil("vitoria", com_regra=False))
 
         novo, guardado = ea.rascunho_com_modo_jogo(catch_all, True)

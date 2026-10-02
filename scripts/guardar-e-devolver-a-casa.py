@@ -1,31 +1,5 @@
 #!/usr/bin/env python3
-"""Guarda a casa inteira do Hefesto, confere a máquina limpa e devolve tudo.
-
-ESQUECER-OS-CONTROLES-01, o alcance que cresceu (25/09/2026). O pedido dela:
-*«os perfis e demais configs poderiam ser selecionado e jogados na mesma pasta
-de backup. dariamos um uninstall completo um resete completo nos 4 controles e
-testaríamos tudo. […] Aí depois restauramos os perfis.»*  (noqa-acento: citação literal dela)
-
-O fluxo, e este script serve a cada passo::
-
-    python3 scripts/guardar-e-devolver-a-casa.py guardar     # com a Steam fechada
-    ./uninstall.sh --purge-config --yes
-    python3 scripts/guardar-e-devolver-a-casa.py limpa       # «a máquina está limpa?»
-    ./install.sh --yes
-    (o teste: a primeira vez de verdade, com os controles resetados)
-    python3 scripts/guardar-e-devolver-a-casa.py devolver    # com a Steam fechada
-
-POR QUE UM SCRIPT DO REPOSITÓRIO, e com o ``python3`` do sistema: depois do
-uninstall o comando do Hefesto não existe (a ``.venv`` sai junto). O dono do
-inventário é ``src/hefesto_dualsense4unix/utils/memoria_dos_controles.py``, e
-este script o carrega PELO CAMINHO — ele é só biblioteca padrão, como os
-módulos de ``integrations/`` que o próprio uninstall roda avulsos.
-
-A parte do root (os pareamentos Bluetooth dos controles, as cópias de
-pareamento, o diário do root) passa por ``sudo -A`` quando há ``SUDO_ASKPASS``
-e por ``sudo -n`` quando não há. Senha no terminal, nunca: sem nenhum dos dois o
-script recusa ANTES de tocar em qualquer coisa.
-"""
+"""Guarda a casa inteira do Hefesto, confere a máquina limpa e devolve tudo."""
 from __future__ import annotations
 
 import argparse
@@ -81,10 +55,6 @@ def principal(argv: list[str] | None = None) -> int:
                 print(pasta)
             return 0
         else:
-            # Três respostas, e «não sei» é uma delas: o BlueZ só o root lê, e
-            # sem privilégio a pergunta não tem resposta — contá-lo como
-            # «sobrou» faria toda máquina de verdade reprovar; como «limpa»,
-            # esconderia um controle ainda pareado.
             rastros = m.conferir_a_casa(raizes, sistema)
             defeitos = [r for r in rastros if not r.de_proposito and not r.nao_sei]
             incertos = [r for r in rastros if r.nao_sei]

@@ -2,7 +2,7 @@
 
 Medido em 05/09/2026: ela clicava "Não perguntar para este jogo" na aba
 Lançadores e **três outras telas continuavam acusando** — a Início, a Status e a
-coluna Atenção da aba Jogar (`app/actions/jogar/painel.py:649`). As três
+coluna Atenção da aba Jogar (`app/actions/jogar/painel.py:358`). As três
 chamavam `wrapper_banner_text` direto, que só olha
 `gamepad_emulation.wrapper_used` e não consulta lista nenhuma.
 

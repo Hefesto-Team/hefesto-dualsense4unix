@@ -46,8 +46,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: O `state_full` de mentira — o suficiente para a camada do produto responder
-#: cada uma das seis linhas sem inventar nada. O MAC é da faixa sintética da
-#: casa: há dois portões de anonimato nesta árvore.
 ESTADO = {
     "active_profile": "meu_perfil",
     "paused": False,
@@ -66,12 +64,6 @@ ESTADO = {
 def a09(monkeypatch):
     from pacotes import a09_sistema as mod
 
-    # O PERFIL DE BATERIA É GRAVADO NO DISCO DE MENTIRA, e não injetado: o
-    # `conftest.py` desta casa desvia `HOME` e os quatro `XDG_*` para um lar
-    # que nasce sem `maquina.json`, e `perfil_na_tela()` responde `None` — que
-    # é a verdade daquele lar, não um defeito. Gravando pelo caminho do PRODUTO
-    # (`gravar_maquina`), a régua atravessa o mesmo disco que a mão dela
-    # atravessa. Um `monkeypatch` em `perfil_na_tela` mediria o dublê.
     from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
         PERFIL_BATERIA_LONGA,
         TETO_POR_PERFIL,
@@ -80,23 +72,10 @@ def a09(monkeypatch):
 
     gravar_maquina({"orcamento": {"teto": TETO_POR_PERFIL[PERFIL_BATERIA_LONGA]}})
 
-    # A SESSÃO GRÁFICA TAMBÉM É DECLARADA, e não herdada de quem roda — medido
-    # em 27/09/2026, na corrida 36354426805 do CI. A linha `hefesto-ambiente`
-    # sai de `_sessao()`, que lê `XDG_SESSION_TYPE` e `XDG_CURRENT_DESKTOP` do
-    # processo: na máquina dela a sessão COSMIC atravessava a suíte e a linha
-    # dizia «Wayland · COSMIC»; no runner não há sessão, e o traço é a resposta
-    # HONESTA do produto (o `({}, None)` de `test_a_09_sistema_em_tres_secoes`
-    # a cobra). Esta régua mede um `Leitura` COMPLETO, e a sessão é parte dele,
-    # como o `ESTADO` do daemon logo acima.
     monkeypatch.setenv("XDG_SESSION_TYPE", "wayland")
     monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
     monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
 
-    # O CACHE DA FAIXA LENTA É ESVAZIADO A CADA TESTE, e é por isso que ele é um
-    # `dict` de módulo e não um `lru_cache`: um cache que a régua não zera daria
-    # verde sobre a leitura do teste ANTERIOR. O `_BARATO` guarda a sessão por
-    # `LENTO_S`: sem esvaziá-lo, a sessão lida por outro arquivo no mesmo
-    # processo (o `lint-test` roda vinte mil testes num só) venceria a declarada.
     mod._LENTO.clear()
     mod._BARATO.clear()
     mod._PAINEL[0] = None
@@ -115,19 +94,8 @@ def ctx():
         conectados=[c for c in ESTADO["controllers"]], estados={})
 
 
-# ---------------------------------------------------------------------------
-# 1. O `Leitura` chega COMPLETO
-# ---------------------------------------------------------------------------
 def test_a_leitura_preenche_os_sete_campos(a09, ctx):
-    """Nenhum campo do `Leitura` pode voltar a chegar vazio por esquecimento.
-
-    **A MORDIDA:** apague `ambiente=…` da chamada em `_leitura` e este teste
-    reprova nomeando o campo. Executada em 02/09/2026:
-
-        AssertionError: `Leitura.ambiente` chegou vazio à camada do produto.
-        Com ele `None`, a linha que ele alimenta devolve o traço — e o traço
-        não chega à tela: o que fica à vista é o literal do mockup.
-    """
+    """Nenhum campo do `Leitura` pode voltar a chegar vazio por esquecimento."""
     leitura = a09._leitura(ctx)
     for campo in ("status", "autostart", "state", "achados", "deteccao",
                   "ambiente", "perfil"):
@@ -138,24 +106,7 @@ def test_a_leitura_preenche_os_sete_campos(a09, ctx):
 
 
 def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx):
-    """As seis linhas de estado respondem com DADO, não com `—`.
-
-    É o teste que mede o efeito de 1 do lado de fora: um `Leitura` completo tem
-    de virar seis valores escritos, e não seis traços honestos.
-
-    **A MORDIDA:** troque `perfil=perfil_da_bateria` por `perfil=None` em
-    `_leitura` e este teste reprova em `bateria-impoe`. Executada:
-
-        AssertionError: `bateria-impoe` continua no traço — o pacote está
-        emitindo o endereço e a fonte dele não foi lida.
-
-    **A SEGUNDA MORDIDA (27/09/2026):** tire a sessão declarada do `a09` e rode
-    com o ambiente vazio do runner (`env -i`): reprova em `hefesto-ambiente`,
-    como reprovou nos dois jobs do CI.
-    """
-    # DESDE 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01) as linhas de estado
-    # moram no Status, uma lista só; as duas do Perfil de Bateria saíram por
-    # pedido dela. A régua cobra o mesmo: nenhuma pílula no traço.
+    """As seis linhas de estado respondem com DADO, não com `—`."""
     import re
 
     p = a09.pacote(ctx)
@@ -171,15 +122,7 @@ def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx):
 
 
 def test_a_faixa_lenta_nao_repete_o_subprocesso_a_cada_tique(a09, ctx):
-    """`systemctl`, `storm_report` e o disco: UMA vez a cada `LENTO_S`.
-
-    O tique da pintura é de 500 ms. Sem a faixa lenta, três leituras caras
-    rodariam duas vezes por segundo para escrever o que não muda entre dois
-    piscares — e o `systemctl` JÁ rodava assim antes desta mudança.
-
-    **A MORDIDA:** troque o `if _LENTO and …` de `_faixa_lenta` por `if False:`
-    e este teste reprova com `2 != 1`.
-    """
+    """`systemctl`, `storm_report` e o disco: UMA vez a cada `LENTO_S`."""
     chamadas = []
     original = a09._autostart
     a09._autostart = lambda: (chamadas.append(1), "enabled")[1]
@@ -194,9 +137,6 @@ def test_a_faixa_lenta_nao_repete_o_subprocesso_a_cada_tique(a09, ctx):
         f"para ler UMA vez a cada {a09.LENTO_S}s.")
 
 
-# ---------------------------------------------------------------------------
-# 2. O pacote emite endereço DA PÁGINA
-# ---------------------------------------------------------------------------
 def _campos_da_pagina() -> set[str]:
     """Os `data-campo` da página PUBLICADA — lidos, nunca digitados."""
     import onde
@@ -227,7 +167,6 @@ def test_o_pacote_nao_apaga_o_perfil_do_cabecalho(a09, ctx):
         "o pacote da 09 voltou a emitir `perfil`, que é o endereço do "
         "CABEÇALHO (o perfil de JOGO, dono `pacotes.topo`). Como o piloto usa "
         "`setdefault`, quem chega primeiro ganha — e este pacote chega primeiro.")
-    # E a prova do outro lado: com o pacote calado, o dono certo escreve.
     carga = pacotes.normalizar(p, {})
     for chave, valor in pacotes.topo(ctx).items():
         carga["mesa"].setdefault(chave, valor)
@@ -254,35 +193,6 @@ def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
 
     from hefesto_dualsense4unix.gui import aba_sistema
 
-    # O QUE VIRA VALOR DE TELA TEM DONO, E ELE NÃO É ESTA RÉGUA: quem separa
-    # "chave de contrato" (`mesa`, `colunas`, `blocos`, `cobertura`, `sem_dono`)
-    # de "endereço a escrever" é `pacotes.normalizar`, e é dele que sai a lista
-    # medida aqui. A versão anterior digitava `("sem_dono", "cobertura")` e por
-    # isso ACUSOU o `blocos:` dos rótulos dos botões destrutivos (03/09/2026) —
-    # uma chave de contrato que o piloto consome desde 01/09. Régua que digita o
-    # que devia perguntar reprova a melhora; é a lição mais cara desta casa.
-    #
-    # E ELA CAIU NELA DE NOVO, EM 04/09/2026 — de duas formas, no mesmo `if`:
-    #
-    # 1. A isenção do `-cls` era um SUFIXO DIGITADO. A lista declarada para
-    #    exatamente isso é `a09_sistema.SEM_ALVO_NA_PAGINA`, e as entradas dela
-    #    terminam em `-cls` POR ACASO — o dia em que uma declaração precisar de
-    #    outro sufixo, o sufixo digitado deixa a chave passar calada. Medido
-    #    hoje: os seis `-cls` que o pacote emite são EXATAMENTE os seis
-    #    declarados (`set(cls_emitidos) - set(SEM_ALVO_NA_PAGINA) == set()`),
-    #    logo ler em vez de digitar é mais APERTADO, não mais frouxo: um `-cls`
-    #    novo e não declarado passa a reprovar aqui.
-    # 2. Faltava a QUARTA espécie, `ESPERA_A_PUBLICACAO` — a página TEM o
-    #    endereço (`mockup/09-sistema.html`), o piloto SABE escrevê-lo, e o que
-    #    falta é a PUBLICAÇÃO, que é ato dela. `_campos_da_pagina()` lê o
-    #    PUBLICADO, então os três `data-campo` do botão cinza caíam como
-    #    "nome de camada" — o contrário do que são.
-    #
-    # AS DUAS DECLARAÇÕES SÃO COBRADAS NOS DOIS SENTIDOS por outras réguas
-    # (`test_a_classe_da_linha_esta_declarada_como_sem_alvo` e
-    # `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos`), então
-    # consultá-las não abre porta: no dia em que a aba for publicada, aquelas
-    # reprovam pedindo que a declaração saia, e esta volta a cobrar o endereço.
     conhecidos = (set(aba_sistema.ENDERECOS) | _campos_da_pagina()
                   | set(a09.SEM_ALVO_NA_PAGINA) | set(a09.ESPERA_A_PUBLICACAO))
     p = a09.pacote(ctx)
@@ -296,14 +206,7 @@ def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
 
 
 def test_o_que_nao_chega_na_tela_esta_declarado(a09, ctx):
-    """Endereço que o produto sabe responder e a pintura não sabe escrever.
-
-    Os três (`hefesto-autostart`, `bateria-perfil`, `bateria-frase`) dependem de
-    escrita que não é texto — classe, ou um endereço que a página não tem. Ficam
-    em `NAO_CHEGA_NA_TELA` com a razão, para ninguém "ligar" duas vezes o que já
-    está lido. E o teste cobra a outra metade: eles NÃO podem ser emitidos, ou
-    a pintura os escreveria por cima do interruptor e dos três botões.
-    """
+    """Endereço que o produto sabe responder e a pintura não sabe escrever."""
     p = a09.pacote(ctx)
     for endereco, razao in a09.NAO_CHEGA_NA_TELA.items():
         assert razao.strip(), f"`{endereco}` está declarado sem razão"
@@ -313,9 +216,6 @@ def test_o_que_nao_chega_na_tela_esta_declarado(a09, ctx):
             f"não, escrevê-lo apaga o widget que mora naquele endereço.")
 
 
-# ---------------------------------------------------------------------------
-# 3. O exame vem do DADO
-# ---------------------------------------------------------------------------
 def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
     """A contagem do exame saiu da página, e o endereço saiu dos dois lados.
 
@@ -328,7 +228,6 @@ def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
     ele reprova pelo contrato.
     """
     # o `gui.aba_sistema` pelo apelido que o próprio pacote já traz: um segundo
-    # `import` dele aqui faria a lista do `nada-aponta-para-a-janela` crescer.
     tela = a09._tela
 
     assert "exame-contagem" not in tela.ENDERECOS
@@ -338,31 +237,19 @@ def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
 
 
 def test_a_lista_do_exame_tem_uma_linha_por_achado(a09):
-    """Seis achados viram seis `.saude`, em duas colunas, e nada mais.
-
-    O desenho tem OITO blocos fixos; `storm_report` devolve de seis a oito. A
-    lista se troca INTEIRA (`data-hef-alvo="html"`) porque não existe endereço
-    para uma linha que ainda não existe.
-    """
+    """Seis achados viram seis `.saude`, em duas colunas, e nada mais."""
     exame = {"linhas": [{"selo": "OK", "cls": "ok", "g": "✓", "txt": f"achado {i}"}
                         for i in range(6)],
              "vazio": ""}
     html_ = a09._html_do_exame(exame)
     assert html_.count('class="saude"') == 6, html_
     assert html_.count('class="col-lista"') == 2, html_
-    # o corte é `ceil(len/2)`, o mesmo do gerador
     esquerda = html_.split('<div class="risco">')[0]
     assert esquerda.count('class="saude"') == 3, esquerda
 
 
 def test_a_lista_do_exame_escapa_a_frase_do_produto(a09):
-    """A frase vem do `doctor`, não daqui. Um `<` dela não pode virar tag.
-
-    **A MORDIDA:** tire o `html.escape` de `_linha_do_exame` e este teste
-    reprova. Executada:
-
-        AssertionError: a frase do produto entrou crua no HTML da tela.
-    """
+    """A frase vem do `doctor`, não daqui. Um `<` dela não pode virar tag."""
     exame = {"linhas": [{"selo": "OK", "cls": "ok", "g": "✓",
                          "txt": '<b>x</b> & "y"'}],
              "vazio": ""}
@@ -372,11 +259,7 @@ def test_a_lista_do_exame_escapa_a_frase_do_produto(a09):
 
 
 def test_o_exame_vazio_diz_qual_dos_dois_vazios_e(a09):
-    """`None` (não respondeu) e `[]` (nada a relatar) não podem virar o mesmo.
-
-    A camada do produto já escreveu as duas frases; o que este teste tranca é
-    que a lista vazia leve a frase à tela em vez de um painel em branco.
-    """
+    """`None` (não respondeu) e `[]` (nada a relatar) não podem virar o mesmo."""
     html_ = a09._html_do_exame(
         {"linhas": [],
          "vazio": "O exame não respondeu — não dá para dizer o que esta máquina tem."})
@@ -385,13 +268,7 @@ def test_o_exame_vazio_diz_qual_dos_dois_vazios_e(a09):
 
 
 def test_o_endereco_do_exame_existe_na_bancada(a09, ctx):
-    """Os dois endereços do exame existem no desenho de HOJE, com o alvo `html`.
-
-    A BANCADA e não o publicado, de propósito: a marcação nasceu aqui em
-    02/09/2026 e o produto só a recebe pelo `--publicar 09`, que é ato DELA.
-    Apontar esta régua para o publicado daria VERMELHO sobre trabalho feito —
-    e apontá-la para lá depois da publicação continuará dando verde.
-    """
+    """Os dois endereços do exame existem no desenho de HOJE, com o alvo `html`."""
     import onde
 
     doc = onde.pagina("09-sistema.html").read_text(encoding="utf-8")
@@ -408,9 +285,6 @@ def test_o_endereco_do_exame_existe_na_bancada(a09, ctx):
     assert p["exame-lista"].startswith('<div class="col-lista">'), p["exame-lista"][:80]
 
 
-# ---------------------------------------------------------------------------
-# 4. O painel de registro não pisca
-# ---------------------------------------------------------------------------
 def test_o_repouso_do_painel_e_o_da_camada_e_nao_o_do_mockup(a09, ctx):
     """Sem ninguém ter clicado, o painel mostra o que o PRODUTO responde.
 
@@ -422,7 +296,7 @@ def test_o_repouso_do_painel_e_o_da_camada_e_nao_o_do_mockup(a09, ctx):
     (`p[REGISTRO] == "—"`), e o travessão era o repouso de então: a nota de
     `aba_sistema.SEM_FONTE` dizia que não havia método de IPC que devolvesse o
     registro. **A GTK nunca teve um traço aqui:** o `Gtk.TextView` dela fica
-    sempre com a saída de `systemctl status <unit>` (`daemon_actions.py:1970` e
+    sempre com a saída de `systemctl status <unit>` (`daemon_actions.py:1577` e
     `:2549`). O repouso passou a ser o mesmo dela, mais a identidade de fábrica
     (decisão 10). O que este teste guarda continua sendo o mesmo: **o repouso é
     do PRODUTO, e nunca as quatro linhas inventadas do mockup.**
@@ -440,17 +314,7 @@ def test_o_repouso_do_painel_e_o_da_camada_e_nao_o_do_mockup(a09, ctx):
 
 
 def test_o_que_o_gesto_escreve_no_painel_sobrevive_ao_tique(a09, ctx):
-    """O tique seguinte repinta o MESMO texto, em vez de apagá-lo.
-
-    A pintura corre a cada 500 ms. Sem `_PAINEL`, as oitenta linhas do registro
-    apareceriam e sumiriam antes de ela terminar de ler.
-
-    **A MORDIDA:** troque `_para_o_painel(texto)` por
-    `{"mesa": {REGISTRO: texto}}` em `ver_detalhes` e este teste reprova.
-    Executada:
-
-        AssertionError: o tique seguinte apagou o que o gesto escreveu: '—'
-    """
+    """O tique seguinte repinta o MESMO texto, em vez de apagá-lo."""
     resposta = a09._para_o_painel("linha do journal")
     assert resposta == {"mesa": {a09.REGISTRO: "linha do journal"}}
     depois = a09.pacote(ctx)
@@ -459,26 +323,10 @@ def test_o_que_o_gesto_escreve_no_painel_sobrevive_ao_tique(a09, ctx):
         f"{depois[a09.REGISTRO]!r}")
 
 
-# ---------------------------------------------------------------------------
-# O CSS: `1fr` cru não volta às faixas internas
-# ---------------------------------------------------------------------------
 def test_nenhuma_faixa_desta_aba_volta_ao_1fr_cru():
-    """`.bloco2` e `.saude-cols` medem `minmax(0,1fr)`, e a régua do gerador cobra.
-
-    MEDIDO em 02/09/2026, no Chrome (1920x1080), com os valores REAIS: os quatro
-    botões do serviço estouravam 27px por cima do Perfil de Bateria, e a segunda
-    coluna do exame estourava 253px por cima de "Preparar os jogos". Com os
-    textos do desenho, os dois davam 41px de folga — o defeito só existia com
-    dado de verdade dentro.
-
-    **A MORDIDA:** volte `.bloco2` a `1fr 1px 184px` e o PRÓPRIO GERADOR recusa
-    a rodar (régua 5), antes deste teste. Este aqui é a segunda trava, para o
-    dia em que alguém editar o HTML sem passar pelo gerador.
-    """
+    """`.bloco2` e `.saude-cols` medem `minmax(0,1fr)`, e a régua do gerador cobra."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba09.py").read_text(
         encoding="utf-8")
-    # `.bloco2` SAIU em 25/09/2026 com a faixa do serviço; as faixas de hoje
-    # são as três da régua 5 do gerador.
     for faixa in (".status3", ".avancadas", ".saude-cols"):
         regra = re.search(re.escape(faixa) + r"\{[^}]*grid-template-columns:([^;]*);",
                           fonte)

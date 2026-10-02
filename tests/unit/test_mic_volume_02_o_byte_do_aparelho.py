@@ -52,28 +52,15 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
     byte_do_volume_do_microfone,
 )
 
-#: Os dois controles da mesa, com a máscara da casa.
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
 
-#: As duas placas de captura — uma por aparelho no cabo.
 FONTE_P2 = "alsa_input.usb-Sony_DualSense-00.mono-fallback"
 FONTE_P3 = "alsa_input.usb-Sony_DualSense-01.mono-fallback"
 
 
-# ---------------------------------------------------------------------------
-# Handles e backend REAIS — o `_build_common` é a única testemunha do fio
-# ---------------------------------------------------------------------------
-
-
 def _handle_real() -> Any:
-    """Handle da pydualsense sem device, só com o estado que o builder lê.
-
-    Mesmo molde de `tests/unit/test_som_02_devolucao_da_posse.py`: um dublê de
-    handle não teria os bits de validação, e é justamente o bit que decide se o
-    byte age. Dublê mais frouxo que a peça real já deu verde sobre gesto que
-    nunca gravou um byte nesta casa.
-    """
+    """Handle da pydualsense sem device, só com o estado que o builder lê."""
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
@@ -111,30 +98,14 @@ def _backend_com_dois() -> tuple[Any, Any, Any]:
     return inst, h2, h3
 
 
-# ---------------------------------------------------------------------------
-# 1. A RÉGUA — uma conta, num lugar só
-# ---------------------------------------------------------------------------
-
-
 class TestARegua:
     def test_o_teto_e_lido_do_protocolo_e_nao_digitado(self) -> None:
-        """100 % é o teto REAL do campo, e ele vem de `ds_output_report`.
-
-        Um segundo `0x40` escrito na régua envelheceria no dia em que o
-        primeiro mudasse — é a razão pela qual a régua do alto-falante virou
-        módulo próprio.
-        """
+        """100 % é o teto REAL do campo, e ele vem de `ds_output_report`."""
         assert rep.TETO_MIC_VOLUME == 0x40
         assert byte_do_volume_do_microfone(100) == rep.TETO_MIC_VOLUME
 
     def test_zero_e_zero_e_um_por_cento_nao_e_silencio(self) -> None:
-        """MORDIDA 1: trocar o `max(1, ...)` pela conta crua `v * 0x40 // 100`.
-
-        A conta crua do enunciado da sprint devolve **0 para 1 %** — a tela
-        diria "um pouquinho" sobre um microfone mudo no aparelho. É a mesma
-        regra que `core/speaker_scale.volume_do_percentual` já cobra do irmão:
-        *"pedir 1 % e receber silêncio seria o defeito de novo"*.
-        """
+        """MORDIDA 1: trocar o `max(1, ...)` pela conta crua `v * 0x40 // 100`."""
         assert byte_do_volume_do_microfone(0) == 0, (
             "0 % tem de ser ZERO no registrador — é o único valor que o resto "
             "do sistema reconhece como desligado")
@@ -157,19 +128,9 @@ class TestARegua:
         assert byte_do_volume_do_microfone("nada") == 0
 
 
-# ---------------------------------------------------------------------------
-# 2. O BYTE NO FIO — e o bit que decide se ele age
-# ---------------------------------------------------------------------------
-
-
 class TestOByteSaiNoFioComPosse:
     def test_o_byte_e_o_bit_de_validacao_saem_juntos(self) -> None:
-        """MORDIDA 2: arrancar a posse (escrever `common[6]` sem o `0x40`).
-
-        Sem o bit, o firmware continua dono do campo e o byte sai INERTE — o
-        produto diria "aplicado" sobre um report que o aparelho ignora. É
-        exatamente a classe de defeito do AUDIO-OWNER-01, do outro lado.
-        """
+        """MORDIDA 2: arrancar a posse (escrever `common[6]` sem o `0x40`)."""
         inst, h2, _h3 = _backend_com_dois()
         assert inst.set_microphone_volume(100, uniq=P2) is True
 
@@ -181,13 +142,7 @@ class TestOByteSaiNoFioComPosse:
             "descarta — mandar sem posse é não mandar")
 
     def test_escrever_o_microfone_nao_mexe_na_vizinhanca(self) -> None:
-        """MORDIDA 3: passar `headphone=`/`speaker=`/`audio_path=` junto.
-
-        Os quatro bytes de `common[4..7]` têm posse POR BYTE, cada um com o seu
-        bit. O `common[7]` é o pior: ele carrega a rota de saída E o caminho do
-        microfone, e escrevê-lo inteiro apaga metade em silêncio (a regressão
-        medida em 02/08, quando o microfone parou de captar).
-        """
+        """MORDIDA 3: passar `headphone=`/`speaker=`/`audio_path=` junto."""
         inst, h2, _h3 = _backend_com_dois()
         inst.set_microphone_volume(50, uniq=P2)
 
@@ -204,11 +159,7 @@ class TestOByteSaiNoFioComPosse:
         assert common[rep.COMMON_AUDIO_PATH] == 0
 
     def test_o_zero_com_dono_nao_e_a_mesma_coisa_que_sem_dono(self) -> None:
-        """0 % TOMA a posse — e é isso que faz o silêncio ser nosso, não dele.
-
-        `0x00` sem o bit é "o firmware manda"; `0x00` com o bit é "mandamos
-        zero". Confundir os dois é a distinção cara do AUDIO-OWNER-01.
-        """
+        """0 % TOMA a posse — e é isso que faz o silêncio ser nosso, não dele."""
         inst, h2, _h3 = _backend_com_dois()
         antes = h2._build_common(rumble_asserted=False)
         assert antes[0] & rep.VALID_FLAG0_MIC_VOLUME == 0
@@ -247,19 +198,9 @@ class TestPorControle:
         assert c3[0] & rep.VALID_FLAG0_MIC_VOLUME
 
 
-# ---------------------------------------------------------------------------
-# 3. A DEVOLUÇÃO DE UM CAMPO NÃO GASTA A DO OUTRO
-# ---------------------------------------------------------------------------
-
-
 class TestADevolucaoNaoGastaOCampoVizinho:
     def test_devolver_o_alto_falante_nao_apaga_o_ganho_do_microfone(self) -> None:
-        """MORDIDA 4: tirar o `microfone=False` do `release_speaker_volume`.
-
-        Sem ele o byte do microfone volta ao firmware junto com o do som, e em
-        SILÊNCIO: o número fica na tela e o aparelho deixa de obedecer. São dois
-        campos, com dois donos e duas telas.
-        """
+        """MORDIDA 4: tirar o `microfone=False` do `release_speaker_volume`."""
         inst, h2, _h3 = _backend_com_dois()
         inst.set_microphone_volume(100, uniq=P2)
         inst.set_speaker_volume(180, uniq=P2)
@@ -298,18 +239,8 @@ class TestADevolucaoNaoGastaOCampoVizinho:
         assert list(common[4:8]) == [0, 0, 0, 0]
 
 
-# ---------------------------------------------------------------------------
-# 4. OS DOIS CHAMADORES — o gesto dela e o perfil dela
-# ---------------------------------------------------------------------------
-
-
 class _Aparelho:
-    """O que chegou a `set_microphone_volume`, com a assinatura ESTRITA.
-
-    `uniq` é keyword-only e sem padrão, igual à do produto. Um dublê mais
-    frouxo que a peça real é o instrumento falso que esta casa mais pegou — em
-    04/09/2026, duas vezes num dia.
-    """
+    """O que chegou a `set_microphone_volume`, com a assinatura ESTRITA."""
 
     def __init__(self) -> None:
         self.escritas: list[tuple[int, str | None]] = []
@@ -323,12 +254,7 @@ class _Aparelho:
 async def test_o_gesto_dela_chega_ao_aparelho_no_controle_certo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """MORDIDA 5: arrancar a chamada do `_handle_mic_volume_set`.
-
-    Sem ela o gesto volta a mexer só na fonte do sistema — o mundo de antes
-    desta sprint, com o campo do aparelho escrito e nunca ligado, que é a
-    classe de defeito mais cara desta casa.
-    """
+    """MORDIDA 5: arrancar a chamada do `_handle_mic_volume_set`."""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.integrations import audio_control
@@ -364,12 +290,7 @@ async def test_o_gesto_dela_chega_ao_aparelho_no_controle_certo(
 async def test_sem_fonte_ninguem_escreve_nem_no_aparelho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`sem_fonte` deixa o deslizante CINZA — e cinza não promete nada.
-
-    Escrever o byte do aparelho por baixo de um controle insensível seria a
-    tela prometendo nada e o aparelho mudando de ganho: o mesmo engano do
-    `sem_fonte` que mentia "aplicado", só do outro lado.
-    """
+    """`sem_fonte` deixa o deslizante CINZA — e cinza não promete nada."""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.integrations import audio_control
@@ -397,13 +318,7 @@ async def test_sem_fonte_ninguem_escreve_nem_no_aparelho(
 def test_o_perfil_dela_tambem_chega_ao_aparelho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """MORDIDA 6: arrancar a chamada do `apply_profile_mic`.
-
-    **A cura cobre TODOS os chamadores**, e este é o segundo. Ligar o byte só
-    no gesto vivo faria o número voltar ao disco, ser reaplicado na próxima
-    troca de janela, e metade dele ficar pelo caminho — o preço que esta casa
-    já pagou duas vezes num dia só.
-    """
+    """MORDIDA 6: arrancar a chamada do `apply_profile_mic`."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
     from hefesto_dualsense4unix.integrations import audio_control
 
@@ -424,18 +339,8 @@ def test_o_perfil_dela_tambem_chega_ao_aparelho(
         f"{aparelho.escritas}")
 
 
-# ---------------------------------------------------------------------------
-# 5. O PERFIL SOBREVIVE AO SALVAR
-# ---------------------------------------------------------------------------
-
-
 def test_o_volume_por_peca_atravessa_o_salvar_e_volta() -> None:
-    """Ida e volta do `controllers[uniq].mic.volume` pelo disco.
-
-    Esta casa já perdeu **6 de 11 campos** num "Salvar", e três deles eram
-    DESTRUÍDOS pelo próprio Salvar depois de a aba ter gravado o valor certo.
-    Campo que o aparelho obedece e o disco esquece é meio campo.
-    """
+    """Ida e volta do `controllers[uniq].mic.volume` pelo disco."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerMicOverride,

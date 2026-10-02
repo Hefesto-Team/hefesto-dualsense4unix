@@ -36,17 +36,8 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface.pacotes import rodape
 
-#: A COR DELA, e ela é o azul que o resto da casa usa nos exemplos.
 COR_DELA = (0, 0, 255)
 
-#: O ENDEREÇO DE RÁDIO DA BANCADA, com a máscara da casa (octetos 4 e 5
-#: zerados). Nada de MAC real em arquivo versionado.
-#:
-#: SEM OS DOIS-PONTOS de propósito: é assim que o daemon publica o `uniq`, e é
-#: assim que o mapa `source_controllers` do rascunho o guarda. Pedir com o
-#: formato do `comum` (com dois-pontos) não dá erro — dá override nenhum, que
-#: se lê como "a cura não gravou" quando o que houve foi um endereço que não
-#: casa com chave alguma.
 UNIQ = "aabbcc0000ff"
 
 
@@ -85,20 +76,12 @@ def _cor_do_controle(prof: Any, uniq: str = UNIQ) -> tuple[int, int, int] | None
 
 @pytest.fixture
 def perfil_com_a_cor_dela(monkeypatch: pytest.MonkeyPatch) -> str:
-    """Um perfil no disco de mentira, com a cor dela guardada.
-
-    O ``conftest`` desta casa já desvia ``HOME`` e os quatro ``XDG_*`` para um
-    lar de mentira; aqui só se grava dentro dele.
-    """
+    """Um perfil no disco de mentira, com a cor dela guardada."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     nome = "perfil-da-prova"
-    # `match` É OBRIGATÓRIO no esquema, e `MatchAny` é o que o resto da
-    # suíte usa quando a regra de casamento não é o que se está medindo.
     p = Profile(name=nome, match=MatchAny(), priority=100)
-    # O ESQUEMA DO DISCO CHAMA O CAMPO DE `lightbar`; o rascunho da GUI o
-    # chama de `lightbar_rgb`. São o mesmo dado com dois nomes.
     p.leds.lightbar = COR_DELA
     save_profile(p, origem="teste")
     assert tuple(load_profile(nome).leds.lightbar) == COR_DELA
@@ -122,12 +105,7 @@ def test_cor_desconhecida_tambem_nao_grava(perfil_com_a_cor_dela: str) -> None:
 
 def test_barra_acesa_noutra_cor_tambem_nao_grava(
         perfil_com_a_cor_dela: str) -> None:
-    """Acesa noutra cor (a camada da mão, o automático, a luz pós-brilho): o disco fica.
-
-    Até 27/09 esta régua cobrava o contrário — a cor acesa no disco —, porque
-    em 03/09 o clique no tom ainda não gravava. Quem leva a escolha dela ao
-    disco hoje é o clique (`test_a_cor_escolhida_vai_ao_disco_e_o_trilho_nao_reescala.py`).
-    """
+    """Acesa noutra cor (a camada da mão, o automático, a luz pós-brilho): o disco fica."""
     salvo = _salvar(perfil_com_a_cor_dela,
                     _controle((126, 184, 212), acesa=True))
     assert _cor_do_controle(salvo) == COR_DELA
@@ -135,11 +113,7 @@ def test_barra_acesa_noutra_cor_tambem_nao_grava(
 
 def test_dois_controles_um_apagado_e_um_aceso(
         perfil_com_a_cor_dela: str) -> None:
-    """Na mesa de dois, nenhum dos dois leva a luz do aparelho ao disco.
-
-    É a forma que a fita da luz já pagou uma vez nesta casa: um controle sem
-    cor apagava a tira INTEIRA. Aqui nenhum dos dois ganha override.
-    """
+    """Na mesa de dois, nenhum dos dois leva a luz do aparelho ao disco."""
     outro = "aabbcc0000ee"
     salvo = _salvar(perfil_com_a_cor_dela,
                     _controle((0, 0, 0), acesa=False),

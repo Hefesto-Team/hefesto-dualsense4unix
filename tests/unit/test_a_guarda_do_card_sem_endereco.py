@@ -84,12 +84,7 @@ def _controles() -> list[dict[str, Any]]:
 
 
 def _controle_sem_endereco() -> dict[str, Any]:
-    """O Controle 3 do payload real, com o endereço ARRANCADO.
-
-    O terceiro (índice 2) é escolhido de propósito: ele está no rádio e NÃO é
-    o primário do payload — é o card em que a confusão de alvo dói, porque o
-    gesto dela iria para o Controle 1, que está no cabo e é de outra pessoa.
-    """
+    """O Controle 3 do payload real, com o endereço ARRANCADO."""
     entry = _controles()[2]
     assert entry["transport"] == "bt"
     assert not entry.get("is_primary"), "o caso perde o sentido no primário"
@@ -100,32 +95,13 @@ def _controle_sem_endereco() -> dict[str, Any]:
 def _com_posse_do_volume(
     entry: dict[str, Any], *, volume: int = 137, muted: bool = False
 ) -> dict[str, Any]:
-    """Acrescenta a chave ``speaker`` do jeito que o DAEMON a publica.
-
-    Não é dublê de conveniência: é o bloco de ``_merge_audio``
-    (`daemon/ipc_handlers.py`) — ``{"volume": 0-255, "muted": bool}`` no
-    ``entry`` e espelhado em ``inputs``, "MESMO dicionário de origem, copiado".
-    O fixture real não o traz porque ninguém tinha escrito volume nenhum quando
-    ele foi capturado; a chave nasce no primeiro ``speaker.set``.
-
-    **E num card SEM endereço ela nasce sozinha.** O daemon lê o `uniq` do
-    próprio entry e passa `None` adiante; `speaker_state_for(None)` cai em
-    `_handle_for(None)`, que devolve o handle do PRIMÁRIO. Com a posse do
-    volume no primário, este card sem endereço mostra o volume DELE — e é aí
-    que "Silenciar" e "Soltar" ficam sensíveis, e que a tranca de dentro do
-    gesto vira a última defesa.
-    """
+    """Acrescenta a chave ``speaker`` do jeito que o DAEMON a publica."""
     bloco = {"volume": volume, "muted": muted}
     entry["speaker"] = dict(bloco)
     inputs = entry.get("inputs")
     if isinstance(inputs, dict):
         inputs["speaker"] = dict(bloco)
     return entry
-
-
-# ---------------------------------------------------------------------------
-# A regra, sem GTK: quem tem endereço e quem não tem
-# ---------------------------------------------------------------------------
 
 
 def test_os_quatro_controles_reais_tem_endereco() -> None:
@@ -148,15 +124,7 @@ def test_endereco_ausente_ou_em_branco_desliga_o_som(valor: Any) -> None:
 
 
 def test_a_posse_do_volume_abre_o_silenciar_e_o_soltar_sem_endereco() -> None:
-    """A proteção a montante do "Silenciar"/"Soltar" NÃO é garantia.
-
-    Ela depende do PAYLOAD (a chave `speaker`), não da regra — e o payload que
-    a derruba é o que o daemon publica: sem `uniq`, `_merge_audio` lê o
-    alto-falante do PRIMÁRIO e o carimba neste card. Este teste é a razão de o
-    caso "com posse" existir; se ele reprovar porque as duas ações passaram a
-    nascer insensíveis por outro motivo, a tranca de dentro do gesto deixou de
-    ter quem a exercite e o teste da mordida abaixo virou enfeite.
-    """
+    """A proteção a montante do "Silenciar"/"Soltar" NÃO é garantia."""
     cru = _controle_sem_endereco()
     assert acao_speaker_mudo(cru).sensivel is False, (
         "sem a chave `speaker` os dois botões já voltam ANTES da tranca — é "
@@ -172,11 +140,6 @@ def test_a_posse_do_volume_abre_o_silenciar_e_o_soltar_sem_endereco() -> None:
     assert acao_speaker_mudo(com_posse).muted is True
     assert acao_speaker_devolucao(com_posse).sensivel is True
     assert acao_speaker_devolucao(com_posse).release is True
-
-
-# ---------------------------------------------------------------------------
-# A tela: o bloco desligado E o porquê
-# ---------------------------------------------------------------------------
 
 
 class TestNaTela:
@@ -203,7 +166,7 @@ class TestNaTela:
         janela.add(card)
         janela.set_size_request(1180, 700)
         janela.show_all()
-        card._janela_do_teste = janela  # segura a referência viva
+        card._janela_do_teste = janela
         card.update(entry, {}, None)
         return card
 
@@ -254,20 +217,10 @@ class TestNaTela:
         assert card._mic_botao.get_sensitive() is True
         assert card._speaker_escala.get_sensitive() is True
 
-    # -- A MORDIDA -------------------------------------------------------
 
     @staticmethod
     def _espiar_o_ipc(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, Any]]:
-        """Troca as três saídas de som por espiões e devolve a lista de pedidos.
-
-        As três são as três chamadas de `ipc_bridge` que escrevem som deste
-        card: o mudo do microfone, o volume do microfone e tudo do
-        alto-falante. Até 16/08 havia uma quarta, o `ligar_ponte_bt` do próprio
-        módulo — o interruptor "Pelo rádio" saiu do card (ver
-        `test_o_interruptor_do_mic_por_bluetooth.py`) e a vaga dele nesta lista
-        foi para o `mic.volume.set`, que é o gesto novo e corre o MESMO risco:
-        sem `uniq`, o daemon aplica no controle primário.
-        """
+        """Troca as três saídas de som por espiões e devolve a lista de pedidos."""
         from hefesto_dualsense4unix.app import ipc_bridge
 
         pedidos: list[tuple[str, Any]] = []
@@ -288,12 +241,6 @@ class TestNaTela:
             "speaker_set",
             lambda **kw: pedidos.append(("speaker.set", kw.get("uniq"))) or True,
         )
-        # MIC-DA-MESA-CHEIA-01 (26/08/2026): o card passou a chamar a rota
-        # DETALHADA, para ler o `por_uniq` e não gravar no rascunho dela um
-        # volume que foi parar no microfone de outra pessoa. O espião muda de
-        # nome junto — o que esta guarda mede continua sendo o `uniq` que sai
-        # no pedido, e ele é o mesmo argumento nas duas rotas. O corpo devolvido
-        # é o de um alvo HONRADO, que é o caso normal deste teste.
         monkeypatch.setattr(
             ipc_bridge,
             "mic_volume_set_detalhado",
@@ -304,18 +251,7 @@ class TestNaTela:
 
     @staticmethod
     def _disparar_os_seis_gestos(card: Any) -> None:
-        """Os SEIS gestos que escrevem som, num lugar só.
-
-        Um lugar só porque a afirmação da cura é "os seis": se a lista do caso
-        SEM endereço e a do caso COM endereço fossem duas, elas se afastariam,
-        e a tranca de um gesto poderia sumir sem ninguém ver.
-
-        Os gestos são disparados NO WIDGET, e de propósito: `clicked()` e
-        `set_active()` emitem o sinal mesmo com a peça insensível, e o repouso
-        do volume pode estar armado de antes. Se a única tranca fosse a
-        sensibilidade, o teste passaria e o produto continuaria escrevendo no
-        controle de outra pessoa.
-        """
+        """Os SEIS gestos que escrevem som, num lugar só."""
         from hefesto_dualsense4unix.app.widgets import controller_card as cc
 
         card._mic_botao.clicked()
@@ -330,13 +266,7 @@ class TestNaTela:
     def test_nenhum_gesto_sem_endereco_vira_pedido_ao_daemon(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA: com a guarda arrancada, cada gesto vira byte no PRIMÁRIO.
-
-        Este é o payload CRU, e ele exercita QUATRO dos seis: o "Silenciar" e o
-        "Soltar" voltam antes, sem posse do volume. Os seis inteiros estão no
-        teste seguinte — e os dois testes existem separados porque o estado sem
-        posse é o comum, e não pode deixar de ser coberto.
-        """
+        """A MORDIDA: com a guarda arrancada, cada gesto vira byte no PRIMÁRIO."""
         pedidos = self._espiar_o_ipc(monkeypatch)
 
         card = self._card(_controle_sem_endereco())
@@ -350,19 +280,7 @@ class TestNaTela:
     def test_com_posse_do_volume_os_dois_ultimos_gestos_tambem_morrem(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A MORDIDA que faltava: o "Silenciar" e o "Soltar" CHEGANDO na tranca.
-
-        Com a posse do volume, as duas ações nascem sensíveis (provado sem GTK
-        em `test_a_posse_do_volume_abre_o_silenciar_e_o_soltar_sem_endereco`) e
-        a tranca de dentro do gesto passa a ser a ÚNICA coisa entre o clique e
-        um `speaker.set` no PRIMÁRIO. Sem este caso, arrancar
-        `if self._som_sem_alvo(): return` de `_on_speaker_mudo_clicado` e de
-        `_on_speaker_devolucao_clicada` deixava a suíte VERDE.
-
-        A asserção sobre as ações é parte da mordida, não decoração: ela é o
-        que impede o teste de voltar a passar por o botão estar insensível, em
-        vez de por a tranca ter segurado.
-        """
+        """A MORDIDA que faltava: o "Silenciar" e o "Soltar" CHEGANDO na tranca."""
         pedidos = self._espiar_o_ipc(monkeypatch)
 
         card = self._card(_com_posse_do_volume(_controle_sem_endereco()))
@@ -383,19 +301,11 @@ class TestNaTela:
     def test_com_endereco_os_seis_gestos_chegam_e_miram_este_controle(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A outra metade da mordida: a guarda não pode matar o produto.
-
-        Sem isto, "desligar tudo sempre" passaria nos testes de cima — e seria
-        a entrega errada com a mesma cara da certa. São os MESMOS seis gestos,
-        pela mesma função, e no MESMO estado de posse do caso anterior: a única
-        diferença entre passar e não passar é o endereço.
-        """
+        """A outra metade da mordida: a guarda não pode matar o produto."""
         entry = _com_posse_do_volume(_controles()[2])
         pedidos = self._espiar_o_ipc(monkeypatch)
 
         card = self._card(entry)
-        # O som de confirmação não encosta no sistema: o card avulso nasce com
-        # o sink vazio, que é o mesmo "não dá para saber" da mesa cheia real
         # (com mais de um DualSense o `escolher_sink` recusa de propósito).
         assert card._speaker_sink == ""
 

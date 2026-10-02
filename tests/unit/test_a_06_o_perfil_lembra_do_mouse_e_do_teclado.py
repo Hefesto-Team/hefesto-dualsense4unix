@@ -14,7 +14,7 @@ O QUE FOI MEDIDO ANTES DE ESCREVER UMA LINHA, no ciclo inteiro (perfil no disco
     teclado_emulado  False → True PERDIDO
 
 **O `teclado_emulado` não tinha caminho NENHUM.** `keyboard.emulation.set` grava
-na flag global da sessão (`utils/session.py:372`) e `DraftConfig.to_profile` o
+na flag global da sessão (`utils/session.py:273`) e `DraftConfig.to_profile` o
 emite por PASSTHROUGH do que veio do disco — então desligar o teclado e clicar
 Salvar devolvia o valor VELHO, por cima da escolha dela, sem uma palavra.
 
@@ -62,12 +62,9 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
 
 PAGINA = "06-navegacao.html"
 
-#: Endereços da faixa SINTÉTICA da casa — há dois portões de anonimato aqui.
 UM = "aa:bb:cc:00:00:01"
 OUTRO = "aa:bb:cc:00:00:02"
 
-#: O QUE O DAEMON PUBLICA no tique em que ela clica. `speed`/`scroll_speed` são
-#: os do perfil semeado, para o teste medir a MUDANÇA e não o acaso.
 VIVO = {"enabled": True, "speed": 3, "scroll_speed": 1}
 
 
@@ -86,14 +83,7 @@ def pac():
 
 
 class PonteDeMentira:
-    """Um dublê da ponte: guarda o que foi chamado e aceita tudo.
-
-    O DUBLÊ NÃO PODE SER MAIS FROUXO QUE A PONTE REAL — é a cicatriz de 04/09,
-    em que um dublê generoso deixou passar a máscara que nunca gravou um byte.
-    Aqui `resultado` devolve o corpo do caminho FELIZ dos dois métodos que estes
-    gestos chamam (`{"status": "ok"}`), que é o que o daemon responde; qualquer
-    outra forma faria o gesto levantar antes de chegar ao disco.
-    """
+    """Um dublê da ponte: guarda o que foi chamado e aceita tudo."""
 
     def __init__(self, recusa: str = "") -> None:
         self.recusa = recusa
@@ -120,12 +110,7 @@ class PonteDeMentira:
 
 def _semear(nome: str, *, speed: int = 3, scroll: int = 1, enabled: bool = True,
             teclado: bool | None = True, com_mouse: bool = True) -> pathlib.Path:
-    """Escreve o perfil de ONTEM no lar de mentira, pelo dono do arquivo.
-
-    Pelo `save_profile` do produto e não por um `json.dump`: o que se mede aqui
-    é um round-trip disco→gesto→disco, e semear por fora deixaria a régua
-    concordando com uma forma de arquivo que o produto não escreve.
-    """
+    """Escreve o perfil de ONTEM no lar de mentira, pelo dono do arquivo."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.schema import (
         MatchAny,
@@ -148,7 +133,7 @@ def _ctx(pac, *, perfil: str = "regua", conectados: int = 1, **estado):
 
     O MODO NÃO É UM CAMPO `mode`, e digitá-lo aqui daria verde sobre o portão
     errado: `mode_of_state` deriva o modo de `native_mode` e de
-    `gamepad_emulation.enabled` (`app/actions/mode_transition.py:198`), e a
+    `gamepad_emulation.enabled` (`app/actions/mode_transition.py:139`), e a
     ausência dos dois É o desktop. Um `{"mode": "gamepad"}` inventado passaria
     pelo portão como se fosse desktop — foi assim que a primeira versão deste
     arquivo mediu um bloqueio que não houve.
@@ -188,15 +173,8 @@ def _zerar_a_memoria(a06) -> None:
     a06._largar_o_que_ela_mexeu()
 
 
-# ---------------------------------------------------------------------------
-# 1. AS DUAS BARRAS GRAVAM — no clique, sem ninguém clicar em "Salvar"
-# ---------------------------------------------------------------------------
 def test_a_barra_do_cursor_grava_no_perfil(pac, a06):
-    """Ela arrasta para 11 e fecha a janela. No dia seguinte o perfil diz 11.
-
-    A MORDIDA: tire o `_guardar_no_perfil` de `vel_cursor` e esta linha reprova
-    com `3` — a velocidade de ONTEM, que é exatamente o defeito relatado.
-    """
+    """Ela arrasta para 11 e fecha a janela. No dia seguinte o perfil diz 11."""
     _semear("regua", speed=3)
     a06.vel_cursor(_ctx(pac), {"valor": "11"}, PonteDeMentira())
     assert _disco()["speed"] == 11, (
@@ -212,16 +190,7 @@ def test_a_barra_da_rolagem_grava_no_perfil(pac, a06):
 
 
 def test_a_barra_grava_o_numero_que_foi_ao_daemon_e_nao_o_do_tique(pac, a06):
-    """O `ctx` é o tique ANTERIOR — gravar dali guardaria o valor velho.
-
-    A distinção não é teórica: o estado do dublê diz `speed: 3` enquanto a barra
-    manda `11`. Um `_guardar_no_perfil(ctx, mouse_speed=_rato(ctx)["speed"])`
-    passaria nos dois testes acima com o disco em 3 se o perfil já estivesse em
-    3 — aqui ele reprova, porque os dois números são diferentes DE PROPÓSITO.
-
-    A MORDIDA: troque o `alvo` por `_rato(ctx).get("speed")` na chamada de
-    `vel_cursor` e esta linha reprova com `3`.
-    """
+    """O `ctx` é o tique ANTERIOR — gravar dali guardaria o valor velho."""
     _semear("regua", speed=3)
     ponte = PonteDeMentira()
     a06.vel_cursor(_ctx(pac), {"valor": "11"}, ponte)
@@ -233,13 +202,7 @@ def test_a_barra_grava_o_numero_que_foi_ao_daemon_e_nao_o_do_tique(pac, a06):
 
 
 def test_a_barra_apara_na_faixa_do_dono_antes_de_gravar(pac, a06):
-    """Um `999` da barra não vira `999` no disco: o esquema o recusaria.
-
-    `ProfileMouseConfig.speed` é `ge=1, le=12`. A aparadura já existia para o
-    daemon; o que este teste fixa é que o DISCO recebe o mesmo número aparado, e
-    não o cru — um `ValidationError` aqui derrubaria o gesto DEPOIS de o
-    aparelho já ter mudado.
-    """
+    """Um `999` da barra não vira `999` no disco: o esquema o recusaria."""
     _semear("regua", speed=3)
     a06.vel_cursor(_ctx(pac), {"valor": "999"}, PonteDeMentira())
     from hefesto_dualsense4unix.integrations.uinput_mouse import MOUSE_SPEED_MAX
@@ -247,19 +210,8 @@ def test_a_barra_apara_na_faixa_do_dono_antes_de_gravar(pac, a06):
     assert _disco()["speed"] == MOUSE_SPEED_MAX
 
 
-# ---------------------------------------------------------------------------
-# 2. O TECLADO — o campo que o Salvar PERDIA
-# ---------------------------------------------------------------------------
 def test_a_lista_do_teclado_grava_teclado_emulado(pac, a06):
-    """Ela escolhe "Desativado", e o perfil passa a dizer `False`.
-
-    ESTE É O BURACO INTEIRO desta aba, e ele sobrevivia até ao "Salvar": o
-    `to_profile` emite `teclado_emulado` por passthrough do disco, então o
-    rodapé regravava o valor VELHO por cima da escolha dela.
-
-    A MORDIDA: tire o `_guardar_no_perfil` de `teclado()` e esta linha reprova
-    com `True`.
-    """
+    """Ela escolhe "Desativado", e o perfil passa a dizer `False`."""
     _semear("regua", teclado=True)
     a06.teclado(_ctx(pac), {"valor": a06.TECLADO_DESATIVADO}, PonteDeMentira())
     assert _disco()["teclado"] is False
@@ -273,13 +225,7 @@ def test_a_lista_do_teclado_grava_o_ligar_tambem(pac, a06):
 
 
 def test_a_opcao_sem_dono_nao_toca_no_disco(pac, a06):
-    """"Só dentro do jogo" recusa dizendo — e não grava um valor inventado.
-
-    A opção que o produto não tem não pode virar `True` nem `False` por
-    conveniência. Ela recusa, e o disco fica como estava.
-
-    A MORDIDA: faça `_ESCOLHA["dentro"] = False` e esta linha reprova.
-    """
+    """"Só dentro do jogo" recusa dizendo — e não grava um valor inventado."""
     _semear("regua", teclado=True)
     with pytest.raises(RuntimeError):
         a06.teclado(_ctx(pac), {"valor": a06.TECLADO_SO_DENTRO}, PonteDeMentira())
@@ -287,12 +233,7 @@ def test_a_opcao_sem_dono_nao_toca_no_disco(pac, a06):
 
 
 def test_o_teclado_recusado_pelo_daemon_nao_grava(pac, a06):
-    """Recusou lá, não guarda aqui: o disco não afirma o que não aconteceu.
-
-    A MORDIDA: mova o `_guardar_no_perfil` para ANTES do `if …failed` e esta
-    linha reprova — o perfil passaria a dizer `False` sobre um teclado que
-    continua ligado.
-    """
+    """Recusou lá, não guarda aqui: o disco não afirma o que não aconteceu."""
     _semear("regua", teclado=True)
     ponte = PonteDeMentira(recusa="keyboard.emulation.set")
     with pytest.raises(RuntimeError):
@@ -300,9 +241,6 @@ def test_o_teclado_recusado_pelo_daemon_nao_grava(pac, a06):
     assert _disco()["teclado"] is True
 
 
-# ---------------------------------------------------------------------------
-# 3. O "STATUS DO MODO" pede ao dono, e a janela não grava
-# ---------------------------------------------------------------------------
 class _DonoDoStatus(PonteDeMentira):
     """A resposta do `desktop.status.set`, com o lado que o teste escolhe.
 
@@ -379,23 +317,14 @@ def test_o_interruptor_recusado_no_mouse_larga_a_reserva(pac, a06):
 
 
 def test_o_interruptor_sem_perfil_avisa_em_vez_de_recusar(pac, a06):
-    """O daemon mudou o aparelho e não achou perfil: o recado é o de sempre.
-
-    A frase tem um dono (`_o_que_nao_guardou`), e é a mesma das barras.
-
-    A MORDIDA: tire o `if corpo.get("gravado") is False` e o gesto volta
-    calado sobre uma escolha que não vai durar até amanhã.
-    """
+    """O daemon mudou o aparelho e não achou perfil: o recado é o de sempre."""
     _zerar_a_memoria(a06)
     volta = a06.modo(_ctx(pac), {}, _DonoDoStatus(perfil="", gravado=False))
     assert isinstance(volta, dict) and "perfil ativo" in volta.get("recado", "")
 
 
 def test_o_portao_de_modo_recusa_antes_de_qualquer_escrita(pac, a06):
-    """Jogando, o interruptor recusa — e o disco não é tocado.
-
-    A MORDIDA: apague o `if modo_agora != MODE_DESKTOP` e esta linha reprova.
-    """
+    """Jogando, o interruptor recusa — e o disco não é tocado."""
     _zerar_a_memoria(a06)
     _semear("regua", enabled=True, teclado=True)
     ponte = PonteDeMentira()
@@ -406,16 +335,8 @@ def test_o_portao_de_modo_recusa_antes_de_qualquer_escrita(pac, a06):
     assert _disco()["teclado"] is True
 
 
-# ---------------------------------------------------------------------------
-# 4. O SEGUNDO DISPARO DO MESMO ARRASTE não reescreve o arquivo
-# ---------------------------------------------------------------------------
 def _quantos_backups(nome: str = "regua") -> int:
-    """Quantas cópias o `save_profile` já guardou no `.historico`.
-
-    É a CONTAGEM DE ESCRITAS medida pelo disco, e não pelo número de chamadas:
-    `save_profile` faz backup a cada gravação de arquivo já existente, então uma
-    escrita a mais aparece aqui mesmo que o conteúdo final seja igual.
-    """
+    """Quantas cópias o `save_profile` já guardou no `.historico`."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     hist = profiles_dir() / ".historico" / nome.replace("-", "_")
@@ -445,21 +366,7 @@ def test_o_click_depois_do_change_nao_grava_de_novo(pac, a06):
 
 
 def test_a_secao_do_mouse_nasce_quando_o_perfil_nao_a_tinha(pac, a06):
-    """Perfil sem `mouse`: a seção NASCE, e o `enabled` vem do que está valendo.
-
-    `ProfileMouseConfig.enabled` é obrigatório, então uma seção que nasce por um
-    arraste de VELOCIDADE precisa dizer alguma coisa sobre o liga/desliga — e a
-    única coisa verdadeira é o estado vivo. Inventar `False` faria o perfil, na
-    próxima ativação, DESLIGAR uma emulação que estava ligada.
-
-    A MORDIDA: troque o `bool(vivo.get("enabled"))` por `False` e esta linha
-    reprova.
-
-    O PERFIL SOBREPÕE O CARTÃO «MOUSE» PELOS BOTÕES desde 01/10/2026
-    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): a seção só nasce no perfil
-    quando o cartão é do jogo. Sem isso, a velocidade vai ao computador (a
-    régua seguinte).
-    """
+    """Perfil sem `mouse`: a seção NASCE, e o `enabled` vem do que está valendo."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -471,14 +378,7 @@ def test_a_secao_do_mouse_nasce_quando_o_perfil_nao_a_tinha(pac, a06):
 
 
 def test_sem_a_secao_e_sem_os_botoes_a_velocidade_vai_ao_computador(pac, a06):
-    """Perfil sem `mouse` e sem botões: o cartão é do computador, e o perfil fica.
-
-    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01. O liga e desliga do mouse é
-    do jogo (`DO_JOGO`); as duas velocidades, do computador.
-
-    A MORDIDA: `onde_grava` devolver sempre o jogo faz a seção nascer no
-    perfil, e o arquivo muda.
-    """
+    """Perfil sem `mouse` e sem botões: o cartão é do computador, e o perfil fica."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
     caminho = _semear("regua", com_mouse=False)
@@ -490,22 +390,12 @@ def test_sem_a_secao_e_sem_os_botoes_a_velocidade_vai_ao_computador(pac, a06):
 
 
 def test_sem_o_bloco_do_daemon_a_secao_nao_nasce_chutada(pac, a06):
-    """Daemon mudo e perfil sem `mouse`: nada nasce, em vez de nascer inventado.
-
-    Um `enabled` chutado aqui valeria para todo jogo que casasse com este
-    perfil, para sempre.
-
-    A MORDIDA: apague o `if vivo.get("speed") is None: return None` e esta linha
-    reprova — a seção nasceria com o liga/desliga que ninguém mediu.
-    """
+    """Daemon mudo e perfil sem `mouse`: nada nasce, em vez de nascer inventado."""
     _semear("regua", com_mouse=False)
     a06.vel_cursor(_ctx(pac, mouse_emulation={}), {"valor": "9"}, PonteDeMentira())
     assert _disco()["speed"] is None
 
 
-# ---------------------------------------------------------------------------
-# 5. GRAVAR NÃO REAPLICA — e é o que protege as outras abas
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("gesto,carga", [
     ("vel-cursor", {"valor": "11"}),
     ("vel-rolagem", {"valor": "4"}),
@@ -530,20 +420,8 @@ def test_a_barra_nao_manda_o_daemon_reaplicar_o_perfil(pac, a06, gesto, carga):
         f"arraste de barra desfaria a cor que ela acabou de escolher na aba 04")
 
 
-# ---------------------------------------------------------------------------
-# 6. SEM PERFIL ATIVO: o aparelho muda, e o gesto DIZ que não guardou
-# ---------------------------------------------------------------------------
 def test_sem_perfil_ativo_a_velocidade_vai_ao_computador(pac, a06):
-    """Sem perfil ativo, o mouse muda agora E fica guardado: é do computador.
-
-    Até 01/10/2026 o gesto avisava «mudei agora, mas não guardei: não há
-    perfil ativo». Desde a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 as
-    velocidades são do computador, e o que é do computador não precisa de
-    perfil. O gesto não fala: é o caminho feliz.
-
-    A MORDIDA: devolver o «não há perfil ativo» ao `_guardar_no_perfil`
-    reprova aqui.
-    """
+    """Sem perfil ativo, o mouse muda agora E fica guardado: é do computador."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
     ponte = PonteDeMentira()
@@ -557,75 +435,32 @@ def test_sem_perfil_ativo_a_velocidade_vai_ao_computador(pac, a06):
 
 
 def test_com_perfil_ativo_o_gesto_nao_tem_nada_a_dizer(pac, a06):
-    """Caminho feliz: gravou, e o cartão fica com a frase padrão do piloto.
-
-    Um `recado` aqui faria toda barra arrastada abrir um cartão — e ela arrasta
-    a barra dezenas de vezes seguidas.
-    """
+    """Caminho feliz: gravou, e o cartão fica com a frase padrão do piloto."""
     _semear("regua", speed=3)
     assert a06.vel_cursor(_ctx(pac), {"valor": "11"}, PonteDeMentira()) is None
 
 
-# ---------------------------------------------------------------------------
-# 7. A RESSALVA DA D3 — a tela para de prometer por-controle
-# ---------------------------------------------------------------------------
 def test_a_ressalva_nasce_com_dois_controles_e_cala_com_um(pac, a06):
-    """*"Linha fixa só quando HÁ ressalva."* (D-02)
-
-    Com UM controle ligado o ajuste global É o ajuste daquele controle: não há
-    promessa quebrada, e a linha ocuparia a tela para dizer uma verdade sem
-    consequência. Com DOIS, a fileira de cartões em cima oferece uma escolha que
-    as sete linhas de baixo não honram.
-
-    A MORDIDA: troque o `len(ctx.conectados) > 1` por `True` e a primeira linha
-    reprova; troque por `False` e a segunda.
-    """
+    """*"Linha fixa só quando HÁ ressalva."* (D-02)"""
     assert a06._a_ressalva_dos_globais(_ctx(pac, conectados=1)) == a06.NADA_A_DIZER
     com_dois = a06._a_ressalva_dos_globais(_ctx(pac, conectados=2))
     assert "todos os controles ligados" in com_dois
 
 
 def test_a_ressalva_sai_no_pacote_em_todo_tique(pac, a06):
-    """A chave é emitida sempre, cheia ou vazia.
-
-    Chave AUSENTE deixaria a frase na tela depois de o segundo controle sair, e
-    a linha passaria a ressalvar uma escolha que não existe mais — é a mesma
-    razão pela qual `monta.ressalva` tem o marcador `.nada`.
-
-    A MORDIDA: ponha a emissão sob um `if` e esta linha reprova.
-    """
+    """A chave é emitida sempre, cheia ou vazia."""
     for quantos in (1, 2):
         mesa = a06.pacote(_ctx(pac, conectados=quantos))["mesa"]
         assert a06.ENDERECO_DA_RESSALVA in mesa
 
 
 def test_a_ressalva_nao_usa_a_palavra_que_ela_baniu(a06):
-    """*"não é pra ter mesa em nada da interface"* — ordem dela, 05/09/2026.
-
-    A palavra tinha dois sentidos na mesma tela, e o que saiu foi o de *conjunto
-    de controles ligados* — que é exatamente o sentido de que esta frase
-    precisa. Ela diz "todos os controles ligados", como as outras oito frases
-    reescritas naquele corte.
-    """
+    """*"não é pra ter mesa em nada da interface"* — ordem dela, 05/09/2026."""
     assert "mesa" not in a06.RESSALVA_DOS_GLOBAIS.lower()
 
 
 def test_a_pagina_publicada_tem_o_endereco_da_ressalva_e_ele_nasce_vazio(a06):
-    """O desenho dá o LUGAR; quem escreve a frase é o pacote, ao vivo.
-
-    Uma ressalva cravada no HTML afirmaria também na tela de quem tem um
-    controle só — *"ressalva congelada é a que já mentiu na aba 08"*.
-
-    A FORMA MUDOU EM 07/09/2026, e a razão é dela, olhando a aba com os quatro
-    controles na mesa: *"navegacao tem essas 3 frases aqui na parte de baixo que
-    quebram o layout"*. A ressalva era uma delas — uma `<div class="ressalva">`
-    logo abaixo da grade das sete linhas. Ela virou `<span class="viva">` dentro
-    do `?` dos três campos de que fala, e o que esta régua cobra não mudou: o
-    endereço existe, o alvo é `html` e ele NASCE VAZIO.
-
-    A MORDIDA: passe o texto da ressalva para dentro do `ajuda()` do `aba06.py`,
-    regere a página e esta linha reprova — o `<i class="nada"></i>` some.
-    """
+    """O desenho dá o LUGAR; quem escreve a frase é o pacote, ao vivo."""
     import onde
 
     doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
@@ -637,23 +472,7 @@ def test_a_pagina_publicada_tem_o_endereco_da_ressalva_e_ele_nasce_vazio(a06):
 
 
 def test_a_ressalva_esta_no_ponto_de_interrogacao_dos_tres_campos(a06):
-    """Nos `?` dos três campos que ela NOMEIA, e em nenhum outro lugar.
-
-    A frase diz *"O cursor, a rolagem e o teclado são um só para o computador
-    inteiro"*, e os três campos são "Velocidade de cursor", "Velocidade da
-    rolagem" e "Função do teclado". Ela nunca valeu para as sete linhas do
-    painel: "Navegação Interna" é por controle e "Modo Steam" já diz na própria
-    dica que vale para a máquina.
-
-    TRÊS, E NÃO CINCO. As dicas das duas velocidades são COMPARTILHADAS com a
-    pop-up "Estilo Point-and-click", cujos dois botões de passo são a velocidade
-    do ESTILO e não escrevem em lugar nenhum. Pendurar a ressalva na dica
-    compartilhada leva a frase para uma tela onde ela é falsa — foi o defeito da
-    primeira volta desta frente, e é o que este número trava.
-
-    A MORDIDA: troque `D_VEL_ESTILO` por `D_VEL` no `TELA_PONTO` do `aba06.py`,
-    regere e esta linha reprova com 4.
-    """
+    """Nos `?` dos três campos que ela NOMEIA, e em nenhum outro lugar."""
     import onde
 
     doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
@@ -666,16 +485,7 @@ def test_a_ressalva_esta_no_ponto_de_interrogacao_dos_tres_campos(a06):
 
 
 def test_a_ressalva_nao_ocupa_mais_linha_no_pe_do_painel(a06):
-    """Ela saiu do pé — e nenhuma `.ressalva` solta voltou para lá.
-
-    O QUE FOI MEDIDO em 07/09/2026, na página publicada, com as três frases
-    pintadas: o quadro "As opções de ativação" ia de **215px a 300,25px**, o
-    miolo passava **66px** da janela e a fileira dos quatro botões terminava
-    **41,25px FORA** dela — cortada pelo rodapé, como na foto dela.
-
-    A MORDIDA: devolva o `monta.ressalva` ao `MIOLO` do `aba06.py`, regere e
-    esta linha reprova.
-    """
+    """Ela saiu do pé — e nenhuma `.ressalva` solta voltou para lá."""
     import onde
 
     doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
@@ -685,36 +495,16 @@ def test_a_ressalva_nao_ocupa_mais_linha_no_pe_do_painel(a06):
         "ativação — é uma das três frases que ela mandou tirar em 07/09")
 
 
-# ---------------------------------------------------------------------------
-# 8. OS QUATRO GESTOS ESTÃO PROTEGIDOS
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("nome", ["vel-cursor", "vel-rolagem", "teclado", "modo"])
 def test_o_gesto_que_grava_esta_em_perigosos(nome):
-    """A régua de clique não troca a velocidade do mouse dela para se provar.
-
-    A lista ficou para trás de uma cura CINCO vezes até 04/09, e a regra que
-    sobrou é a que este teste cobra: *quem ensinar um gesto a escrever no disco
-    acrescenta a linha lá NO MESMO COMMIT*.
-
-    O irmão exaustivo é `test_todo_gesto_que_grava_esta_protegido`, que lê a
-    ÁRVORE de todo gesto registrado. Este nomeia os quatro desta frente — para
-    a mensagem dizer QUAL saiu, em vez de dizer que a contagem mudou.
-    """
+    """A régua de clique não troca a velocidade do mouse dela para se provar."""
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
     assert (PAGINA, nome) in PERIGOSOS
 
 
-# ---------------------------------------------------------------------------
-# 9. O ARQUIVO QUE SAI É O QUE O ESQUEMA LÊ
-# ---------------------------------------------------------------------------
 def test_o_json_no_disco_tem_as_chaves_do_esquema(pac, a06):
-    """Ida e volta pelo JSON, não pelo objeto em memória.
-
-    Provar com `load_profile` já é um round-trip; olhar o JSON cru fecha a
-    outra ponta — `save_profile` OMITE chave `None` por compatibilidade, e uma
-    seção que saísse com nome trocado passaria calada por um `getattr`.
-    """
+    """Ida e volta pelo JSON, não pelo objeto em memória."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     _semear("regua", speed=3, teclado=True)

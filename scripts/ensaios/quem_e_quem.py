@@ -129,8 +129,6 @@ from identidade_do_vpad import e_pad_uinput_do_hefesto
 
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
-#: Os endereços desta mesa, lidos no começo: o dono da máscara os usa como
-#: conhecidos e pega até a forma que só quem sabe o valor enxerga.
 CONHECIDOS: list[str] = []
 
 
@@ -138,10 +136,6 @@ def dizer(texto: str = "") -> None:
     """Toda linha que sai daqui passa pelo dono da máscara."""
     print(mascarar(texto, CONHECIDOS))
 
-# Importado no topo de propósito: o cabeçalho declara de QUAL ARQUIVO veio cada
-# biblioteca, e um import preguiçoso lá dentro faria essa linha mentir
-# ("NÃO IMPORTADO") justamente no instrumento que existe para não deixar buraco
-# calado. Ausente, o `--apertar` cai fora sozinho; a tabela de sysfs não precisa.
 try:
     import evdev
     from evdev import ecodes
@@ -150,7 +144,6 @@ except ImportError:  # pragma: no cover - só quando falta a dep do projeto
     ecodes = None  # type: ignore[assignment]
 
 # Os padrões de player LED do DualSense: cinco luzes, e só quatro desenhos
-# válidos. Conferidos contra os quatro controles da mesa em 15/08/2026.
 DESENHOS_DO_LED = {
     (0, 0, 1, 0, 0): 1,
     (0, 1, 0, 1, 0): 2,
@@ -350,26 +343,14 @@ def tabela_dos_vpads(saidas: list[Aparelho]) -> None:
     dizer(tabela(cabecalho, linhas))
 
 
-# ---------------------------------------------------------------------------
-# O ENSAIO DO APERTO — físico ↔ pad ↔ cartão (A-PROVA-DO-BOTAO-TEM-TESTEMUNHA-01)
-# ---------------------------------------------------------------------------
-#
 # Em 29/09/2026 um laço de 0,1 s leu 1.767 vezes o `state_full` com os botões
-# vazios nos quatro cartões, e o vazio foi lido como «a tela não viu». Não
-# havia aperto nenhum dentro daquele laço: a aba Controles estava fora da
-# tela e o primeiro da ordem não apertou nada. O defeito era da prova — um
-# zero sem aperto testemunhado. Este ensaio lê DUAS fontes juntas, e a que diz
-# «houve aperto» nunca sai do estado: é o pad que o jogo lê.
 
-#: O que um aperto testemunhado pode dar. Só o `ACENDEU` e a `FALHA` contam
-#: como medida; os outros dois dizem por que aquele aperto não mede nada.
 ACENDEU = "acendeu"
 FALHA = "falha"
 CURTO = "curto"
 SEM_TELA = "sem_tela"
 SEM_GLIFO = "sem_glifo"
 
-#: O rc do `--apertar` quando ele vence o da tabela.
 RC_FALHA = 2
 RC_NADA_MEDIDO = 3
 
@@ -384,9 +365,7 @@ class Testemunha:
 
     caminho: str
     tipo: str
-    #: «P2» quando o próprio nó diz o jogador (o pad uhid), «» quando não diz.
     jogador: str = ""
-    #: O endereço do físico (a testemunha do Nativo); «» nos pads.
     uniq: str = ""
 
     @property
@@ -402,7 +381,6 @@ class Testemunha:
 class Aperto:
     testemunha: Testemunha
     codigo: int
-    #: O nome que o jogo viu, pelo dono do nome (`EvdevReader.BUTTON_MAP`).
     nome: str
     descida: float
     subida: float | None = None
@@ -413,9 +391,7 @@ class Leitura:
     """Uma pergunta ao `state_full`, com a hora em que a resposta chegou."""
 
     hora: float
-    #: {número do cartão: glifos acesos}; `None` quando a tela não respondeu.
     acesos: dict[int, frozenset[str]] | None
-    #: {número do cartão: endereço do controle}, para a testemunha do Nativo.
     enderecos: dict[int, str] = field(default_factory=dict)
 
 
@@ -543,14 +519,7 @@ def julgar(
     fim: float,
     tem_glifo: Any = None,
 ) -> Veredito:
-    """O veredito de UM aperto testemunhado.
-
-    A janela vai da descida à subida, mais um tique da tela e a volta do laço
-    deste ensaio (outro tique). O aperto que durou menos que um tique e não
-    acendeu nada é curto demais para a tela a 10 Hz, que também não o mostra:
-    não é FALHA, e também não é medida. O botão que a grade não desenha
-    (`tem_glifo` diz que não) e não acendeu nada também não é medida.
-    """
+    """O veredito de UM aperto testemunhado."""
     subida = aperto.subida if aperto.subida is not None else fim
     duracao = subida - aperto.descida
     janela = [x for x in leituras if aperto.descida <= x.hora <= subida + 2 * tique_s]
@@ -598,11 +567,7 @@ def _colher(
     relogio: Any,
     novo_seletor: Any,
 ) -> tuple[list[Aperto], list[Leitura], set[Testemunha], float]:
-    """O laço: o pad pela hora do kernel, a tela a cada tique.
-
-    O `evdev.InputDevice` não é hashable (ele define `__eq__`): o nó aberto
-    se acha pela identidade, nunca como chave de dicionário.
-    """
+    """O laço: o pad pela hora do kernel, a tela a cada tique."""
     seletor = novo_seletor()
     dono_do_no: dict[int, Testemunha] = {}
     for dispositivo, testemunha in abertos:
@@ -627,8 +592,6 @@ def _colher(
                     leituras.append(Leitura(relogio(), None))
                 else:
                     leituras.append(ler_a_tela_de(estado, relogio()))
-                # O daemon que demora não empilha perguntas: a próxima fica
-                # a um tique da resposta.
                 proxima = max(proxima + tique_s, relogio() + tique_s / 2)
                 continue
             for chave, _ in seletor.select(max(0.0, min(proxima, fim) - agora)):
@@ -666,16 +629,7 @@ def ensaio_de_aperto(
     relogio: Any = time.time,
     novo_seletor: Any = selectors.DefaultSelector,
 ) -> int | None:
-    """Físico ↔ pad ↔ cartão: cada aperto testemunhado pelo pad, e o cartão
-    que a tela acendeu nele.
-
-    Devolve o rc que vence o da tabela (2 com uma FALHA, 3 com nada medido),
-    ou `None` quando todo aperto medido acendeu o cartão dele — e então vale o
-    rc da tabela, com o aviso do LED de jogador.
-
-    O relógio é o `time.time()`: o nó evdev carimba no `CLOCK_REALTIME`
-    enquanto ninguém o troca, e este ensaio não o troca.
-    """
+    """Físico ↔ pad ↔ cartão: cada aperto testemunhado pelo pad, e o cartão"""
     dizer()
     dizer("  ENSAIO DO APERTO — físico ↔ pad ↔ cartão")
     dizer()
@@ -684,7 +638,7 @@ def ensaio_de_aperto(
         return RC_NADA_MEDIDO
     try:
         mesa_viva, leitura_viva, mesa_do_estado, tique_ms = _a_tela()
-    except Exception as erro:  # sem o pacote da interface (ou sem o Gtk dele)
+    except Exception as erro:
         dizer(f"  A tela não se lê aqui ({type(erro).__name__}: {erro}) — nada medido.")
         return RC_NADA_MEDIDO
     from hefesto_dualsense4unix.core import evdev_reader
@@ -721,8 +675,6 @@ def ensaio_de_aperto(
             lambda estado, hora: ler_a_tela(estado, leitura_viva, mesa_do_estado, hora),
             relogio, novo_seletor)
 
-    # O NÓ QUE NÃO FALOU sai pelo dono do zero: «o controle não emitiu» e «eu
-    # não posso ler» não podem sair iguais. Perguntado depois de fechar os nós.
     calados = [t for t in testemunhas if t not in falaram]
     for testemunha in calados:
         estado_grab = hidraw_broker_client.estado_do_grab(testemunha.caminho)
@@ -831,8 +783,6 @@ def main(argv: list[str] | None = None) -> int:
         "`hefesto coop status --json` (`coop.jogadores`, desde 15/08/2026)."
     )
     dizer(resumo(veredito))
-    # O aperto que falhou ou não mediu nada vence; o que passou não apaga o
-    # aviso do LED de jogador, que é o rc da tabela.
     if rc_do_aperto is not None:
         return rc_do_aperto
     return 1 if avisos else 0

@@ -1,20 +1,4 @@
-"""R-04 (auditoria 23/07) — o vpad não é destruído com o jogo na autoridade.
-
-Medido ao vivo: trocar a máscara com o jogo já rodando DESTRÓI e RECRIA os
-vpads, e o jogo perde os handles que abriu (a Steam nunca reabre o hidraw do
-vpad do P1). Como o modo do perfil só era aplicado quando a JANELA aparecia —
-ou seja, sempre com o jogo já rodando — a sequência era determinística: abrir o
-Sackboy (perfil ``dualsense``) com a máscara global em ``xbox`` derrubava o
-controle de todo mundo no meio da partida.
-
-Contradição 3 da §5 do plano: a operação DESTRUTIVA lê o sinal STICKY
-(``display_authority``), porque aqui o fail-safe é NÃO destruir; a reversão de
-modo para desktop continua lendo a janela CRUA (R-02, ``lifecycle.py``). Os
-dois sinais NÃO são unificados.
-
-O gesto MANUAL nunca é bloqueado: trocar de máscara com o jogo aberto é escolha
-legítima dela (é o "botão de força" do VPAD-02).
-"""
+"""R-04 (auditoria 23/07) — o vpad não é destruído com o jogo na autoridade."""
 
 from __future__ import annotations
 
@@ -132,8 +116,7 @@ class TestGateDestrutivo:
         assert daemon.config.gamepad_flavor == "xbox"
 
     def test_vpad_morto_pode_ser_recriado_mesmo_no_jogo(self) -> None:
-        """Vpad derrubado por UHID_STOP: não há o que perder, e recriar é a
-        única chance de o jogo ter controle."""
+        """Vpad derrubado por UHID_STOP: não há o que perder, e recriar é a"""
         vpad = _Vpad("dualsense", vivo=False)
         daemon = _DaemonFalso(autoridade="game", vpad=vpad)
 
@@ -157,8 +140,7 @@ class TestPromocaoUhidNoJogo:
     def test_promocao_por_hotplug_nao_recria_vpad_com_jogo_na_autoridade(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Reconexão BT é frequente nesta máquina: recuperar vibração não pode
-        custar o controle inteiro do jogo."""
+        """Reconexão BT é frequente nesta máquina: recuperar vibração não pode"""
         monkeypatch.setattr(gp, "controller_allows_uhid", lambda *a, **k: True)
         monkeypatch.setattr(
             "hefesto_dualsense4unix.integrations.uhid_gamepad.uhid_available",
@@ -177,8 +159,7 @@ class TestPromocaoUhidNoJogo:
     def test_revive_pos_falha_total_nao_e_bloqueado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """VPAD-09: sem device NENHUM o jogo já está com zero controles —
-        reviver só pode melhorar, mesmo com o jogo na autoridade."""
+        """VPAD-09: sem device NENHUM o jogo já está com zero controles —"""
         monkeypatch.setattr(gp, "controller_allows_uhid", lambda *a, **k: True)
         daemon = _DaemonFalso(autoridade="game", vpad=None)
         daemon.config.gamepad_emulation_enabled = True

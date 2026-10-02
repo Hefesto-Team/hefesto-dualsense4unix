@@ -128,32 +128,17 @@ __all__ = [
     "uniq_por_evdev",
 ]
 
-#: A variável que marca um processo rodando sob Proton. Um jogo Steam a carrega
-#: em toda a cadeia (medido em 20/09: seis dos sete processos do PRAGMATA,
-#: inclusive o `.exe`); nenhum shell nosso a carrega, e é isso que a torna um
-#: filtro e não um palpite.
 ENV_DO_JOGO = "STEAM_COMPAT_DATA_PATH"
 
-#: `eventN` no alvo de um link de `/proc/<pid>/fd`.
 _EVENTO = re.compile(r"/(event\d+)$")
-#: `hidrawN` no alvo de um link de `/proc/<pid>/fd`.
 _HIDRAW = re.compile(r"/(hidraw\d+)$")
 
-#: Onde o kernel lista os ``hidrawN``. Lida na CHAMADA, e não no padrão do
-#: argumento: a suíte a aponta para uma pasta vazia (``tests/conftest.py``), e
-#: nenhum teste lê o ``uevent`` de um aparelho dela.
 RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
 
 
 @dataclass(frozen=True)
 class RetratoDoJogo:
-    """O que a volta viu do jogo, numa passada só de ``/proc``.
-
-    A-HAPTICA-QUEM-JOGA-01. A linha do portão fechado recebe o que o jogo
-    segura da MESMA varredura que :func:`quem_o_jogo_le` já fazia: medido em
-    26/09 com o jogo aberto, ela custa 8 ms para achar os 18 processos e 15 ms
-    para ler os descritores. Desde 28/09 ela só roda quando a linha sai.
-    """
+    """O que a volta viu do jogo, numa passada só de ``/proc``."""
 
     pids: frozenset[int] = frozenset()
     eventos: frozenset[str] = frozenset()
@@ -161,12 +146,7 @@ class RetratoDoJogo:
 
 
 def uniq_por_evdev(raiz: pathlib.Path | str = "/sys/class/input") -> dict[str, str]:
-    """``{"event22": "d4:2f:4b:…"}`` — o dono de cada nó de entrada.
-
-    Um controle publica VÁRIOS ``eventN`` (botões, movimento, touchpad, o
-    conector do fone), e todos carregam o mesmo ``uniq``. Ler qualquer um
-    responde a mesma coisa, então não há escolha a fazer aqui.
-    """
+    """``{"event22": "d4:2f:4b:…"}`` — o dono de cada nó de entrada."""
     mapa: dict[str, str] = {}
     base = pathlib.Path(raiz)
     try:
@@ -193,12 +173,7 @@ def _ambiente(pid: int, raiz_proc: pathlib.Path) -> str:
 
 
 def pids_de_jogo(raiz_proc: pathlib.Path | str = "/proc") -> set[int]:
-    """Os processos que são JOGO, pelo ambiente e não pelo nome.
-
-    Casar por nome de processo seria uma lista de jogos — e a ordem dela de
-    16/09 é que *o app é de acessibilidade e não se cura por caso*. O ambiente
-    responde sobre qualquer jogo Steam, inclusive os que ela instalar amanhã.
-    """
+    """Os processos que são JOGO, pelo ambiente e não pelo nome."""
     raiz = pathlib.Path(raiz_proc)
     achados: set[int] = set()
     try:
@@ -217,11 +192,7 @@ def pids_de_jogo(raiz_proc: pathlib.Path | str = "/proc") -> set[int]:
 def nos_abertos_por(
     pids: Iterable[int], raiz_proc: pathlib.Path | str = "/proc"
 ) -> tuple[frozenset[str], frozenset[str]]:
-    """Os ``(eventN, hidrawN)`` que aqueles processos têm abertos AGORA.
-
-    Um descritor que não se consegue ler não é um "não": é um desconhecido, e
-    ele simplesmente não entra no conjunto. Quem chama trata o vazio.
-    """
+    """Os ``(eventN, hidrawN)`` que aqueles processos têm abertos AGORA."""
     raiz = pathlib.Path(raiz_proc)
     eventos: set[str] = set()
     hidraws: set[str] = set()
@@ -282,24 +253,7 @@ def quem_o_jogo_le(
     raiz_input: pathlib.Path | str = "/sys/class/input",
     ao_ver_o_jogo: Callable[[RetratoDoJogo], None] | None = None,
 ) -> set[str]:
-    """Os ``uniq`` FÍSICOS que algum jogo está lendo agora.
-
-    :param fisicos: os ``uniq`` dos controles de verdade, para separar o que é
-        aparelho do que é vpad. Sem esta lista não há como distinguir os dois,
-        e inventar a distinção por forma do endereço seria adivinhar.
-    :param dono_do_vpad: dado o ``uniq`` de um vpad, devolve o do controle
-        físico que o ALIMENTA agora (:func:`dono_do_vpad_pelo_coop`). É
-        injetável porque o dono dessa ligação é o co-op — perguntar a ele é a
-        regra da casa.
-    :param ao_ver_o_jogo: recebe o :class:`RetratoDoJogo` desta passada, antes
-        de qualquer resposta — também quando não há jogo, que é o retrato vazio.
-        É por ele que a linha do portão fechado diz o que o jogo segura sem
-        varrer ``/proc`` de novo.
-
-    Devolve conjunto VAZIO quando não há jogo, quando ``/proc`` não se lê, ou
-    quando o que o jogo abriu não se traduz em controle nenhum. O vazio aqui
-    quer dizer "ninguém vibra", que é o lado seguro.
-    """
+    """Os ``uniq`` FÍSICOS que algum jogo está lendo agora."""
     conhecidos = {str(u).lower() for u in fisicos if u}
     pids = pids_de_jogo(raiz_proc)
     abertos, hidraws = nos_abertos_por(pids, raiz_proc) if pids else (frozenset(), frozenset())
@@ -317,9 +271,6 @@ def quem_o_jogo_le(
         if uniq in conhecidos:
             jogando.add(uniq)
             continue
-        # NÃO É UM CONTROLE FÍSICO: é o vpad que o Hefesto publica, e com
-        # máscara é ele que o jogo lê. Sem tradutor, a resposta honesta é não
-        # contar — nunca chutar um físico.
         if dono_do_vpad is None:
             continue
         fisico = dono_do_vpad(uniq)
@@ -328,19 +279,11 @@ def quem_o_jogo_le(
     return jogando
 
 
-#: Um endereço de aparelho tem doze dígitos hexadecimais.
 _DIGITOS_DE_MAC = 12
 
 
 def _digitos(endereco: object) -> str:
-    """Os doze dígitos de um endereço, em minúsculas — ou ``""``.
-
-    O co-op guarda a identidade colada (``aabbcc000001``, a do ``norm_mac``) e
-    o sysfs a imprime com ``:``; os dois lados são o mesmo aparelho. Descartar
-    e não peneirar: um caractere fora de ``[0-9a-f:]`` invalida o valor (um
-    ``path:`` tem ``d``, ``e`` e ``a`` no meio, e uma peneira faria dele um
-    endereço).
-    """
+    """Os doze dígitos de um endereço, em minúsculas — ou ``""``."""
     baixo = str(endereco or "").strip().lower()
     if any(ch not in "0123456789abcdef:" for ch in baixo):
         return ""
@@ -351,22 +294,7 @@ def _digitos(endereco: object) -> str:
 def dono_do_vpad_pelo_coop(
     coop: Any, fisicos: Iterable[str]
 ) -> Callable[[str], str | None]:
-    """O tradutor vpad→físico de :func:`quem_o_jogo_le`, PERGUNTANDO AO CO-OP.
-
-    A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01. O dono da ligação entre cada
-    físico e o vpad dele é quem a faz: o ``CoopManager``
-    (``quem_alimenta_cada_vpad``) — o posto é do primário de AGORA, e cada
-    secundário é do físico dele. A pergunta é feita UMA vez, na montagem; o
-    tradutor devolvido só consulta a resposta.
-
-    O físico devolvido é o da lista ``fisicos``, na grafia em que ela veio:
-    é com ela que :func:`quem_o_jogo_le` compara.
-
-    **Nunca chuta.** Sem co-op (o daemon ainda não o criou), sem a pergunta
-    (um dublê), com um vpad que ninguém alimenta ou com um dono que não está
-    na mesa, a resposta é ``None``: ninguém vibra por aquele vpad. Uma
-    exceção da pergunta SOBE — quem chama registra e responde o vazio.
-    """
+    """O tradutor vpad→físico de :func:`quem_o_jogo_le`, PERGUNTANDO AO CO-OP."""
     perguntar = getattr(coop, "quem_alimenta_cada_vpad", None)
     if not callable(perguntar):
         return lambda _vpad: None

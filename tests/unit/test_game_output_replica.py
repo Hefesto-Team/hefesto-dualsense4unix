@@ -1,18 +1,4 @@
-"""REPLICA-03 no backend + fiação do daemon — a posse do output pelo jogo.
-
-O que o jogo escreve no vpad chega ao FÍSICO do jogador certo:
-
-- camada GAME no merge do desejado (`_merged_desired_for_key`): jogo vence
-  override/auto/global enquanto a sessão uhid está aberta; o reassert passa a
-  reafirmar a COR DO JOGO (mata a race verde-limãoazul por construção);
-- trigger effects CRUS (11 bytes do DS5EffectsState_t do SDL) embutidos
-  verbatim no report do físico pelo `_build_common`;
-- `end_game_session_for` (UHID_CLOSE) devolve perfil/paleta/co-op, com
-  `invalidate_cache()` no nó sysfs (o jogo pode ter escrito por hidraw);
-- appliers/sinks do daemon miram por MAC (P1 = primary_uniq resolvido na
-  hora; co-op = identity fixa), SEM broadcast (réplica no controle errado é
-  o próprio bug P1-lightbar do estudo 2026-07-18).
-"""
+"""REPLICA-03 no backend + fiação do daemon — a posse do output pelo jogo."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -90,13 +76,7 @@ class TestCamadaGameNoMerge:
         assert ctl._merged_desired_for_key(MAC_1).led == (0, 255, 0)
 
     def test_merge_por_campo_game_parcial_herda_o_resto(self) -> None:
-        """GAME só com player_leds: o número é RECUSADO e nada muda embaixo.
-
-        STEAM-NO-FISICO-01 (23/09/2026): esta régua travava a réplica do
-        número do jogo no físico; a decisão dela (*"Hefesto manda e controla
-        sempre"*) a revogou. O número do jogador é do Hefesto, inclusive em
-        co-op — ver `bp.numeracao_do_jogo`.
-        """
+        """GAME só com player_leds: o número é RECUSADO e nada muda embaixo."""
         ctl = _ctl_com(_fake_handle(), _FakeNode())
         ctl._desired_default.led = (10, 20, 30)
 
@@ -116,12 +96,10 @@ class TestCamadaGameNoMerge:
         )
 
         assert node.rgb_calls == [(1, 2, 3)]
-        # STEAM-NO-FISICO-01: o número do jogo não vai ao aparelho.
         assert node.player_calls == []
 
     def test_reassert_reafirm_a_cor_do_jogo_nao_a_paleta(self) -> None:
-        """O reassert periódico (reconnect_loop) durante a sessão reafirma a
-        COR DO JOGO — não recria a race verde-limãoazul internamente."""
+        """O reassert periódico (reconnect_loop) durante a sessão reafirma a"""
         node = _FakeNode()
         ctl = _ctl_com(_fake_handle(), node)
         ctl.set_auto_output_provider(
@@ -166,8 +144,7 @@ class TestGameTriggersCrus:
         assert ctl._game_triggers_by_uniq == {}
 
     def test_build_common_embute_o_bloco_verbatim(self) -> None:
-        """common[10..20] (R) / [21..31] (L) — a rota DSTrigger só representa
-        7 forças e espalharia zeros nos parâmetros 8/9/10 do efeito do jogo."""
+        """common[10..20] (R) / [21..31] (L) — a rota DSTrigger só representa"""
         from pydualsense.enums import ConnectionType
 
         inst = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
@@ -187,15 +164,13 @@ class TestGameTriggersCrus:
 
         report = inst.prepareReport()
 
-        # Report USB: envelope [0]=0x02, common em [1..47] → offsets +1.
         assert bytes(report[11:22]) == _BLOCO
         assert bytes(report[22:33]) == _BLOCO_L
 
     def test_hotplug_rependura_o_trigger_do_jogo(self) -> None:
-        """Reconexão (wake BT) no meio da sessão: a posse sobrevive ao handle
-        novo — `_reapply_desired` rependura os blocos crus registrados."""
+        """Reconexão (wake BT) no meio da sessão: a posse sobrevive ao handle"""
         ctl = bp.PyDualSenseController()
-        ctl.set_game_trigger_for(MAC_1, "right", _BLOCO)  # desconectado: registra
+        ctl.set_game_trigger_for(MAC_1, "right", _BLOCO)
         handle = _fake_handle()
         ctl._handles = {MAC_1: handle}
 
@@ -221,11 +196,8 @@ class TestFimDaSessao:
 
         assert ctl.end_game_session_for(MAC_1) is True
 
-        # O jogo pode ter escrito por hidraw (classe LED stale): cache fora.
         assert node.invalidated == 1
         assert node.rgb_calls == [(0, 0, 153)]
-        # STEAM-NO-FISICO-01: o número do jogo nunca virou camada, então não
-        # há número a devolver — ele nunca saiu do Hefesto.
         assert node.player_calls == []
         assert ctl._game_output_by_uniq == {}
 
@@ -249,7 +221,7 @@ class TestFimDaSessao:
         handle = _fake_handle()
         ctl = _ctl_com(handle)
         ctl.set_game_trigger_for(MAC_1, "left", _BLOCO_L)
-        handle.triggerL.forces[0] = 99  # sujeira que o Off precisa limpar
+        handle.triggerL.forces[0] = 99
 
         ctl.end_game_session_for(MAC_1)
 
@@ -271,8 +243,7 @@ class TestFimDaSessao:
         assert node.invalidated == 0
 
     def test_paleta_sem_opiniao_nao_escreve_cor(self) -> None:
-        """desired.led None (sem perfil/paleta): a cor do jogo fica — melhor
-        que apagar o LED de um controle aceso."""
+        """desired.led None (sem perfil/paleta): a cor do jogo fica — melhor"""
         node = _FakeNode()
         ctl = _ctl_com(_fake_handle(), node)
         ctl.set_game_output_for(MAC_1, led=(0, 255, 0))
@@ -281,27 +252,11 @@ class TestFimDaSessao:
         ctl.end_game_session_for(MAC_1)
 
         assert node.rgb_calls == []
-        assert node.invalidated == 1  # o cache ainda é invalidado (posse retomada)
+        assert node.invalidated == 1
 
 
 class TestRetencaoNaoSobreviveAoClose:
-    """Correção pós-auditoria da Onda N: a réplica RETIDA (NUMA-02) sob
-    autoridade 'daemon' — ex.: o cliente Steam escrevendo player_leds sem
-    jogo nenhum, o próprio mecanismo do incidente 14:42 — não pode
-    sobreviver ao UHID_CLOSE da sessão que a escreveu. Sem a purga em
-    `end_game_session_for`, o valor fica pendurado em
-    `_retained_game_outputs` (dict por UNIQ, não por sessão) e vaza pelo
-    `replay_retained_game_outputs()` para a PRÓXIMA sessão de jogo real
-    deste controle — o "player 3 verde" acendendo antes de o jogo escrever
-    qualquer coisa.
-
-    Nota de 13/09/2026 (LIGHTBAR-NA-STEAM-01): o replay deixou de entregar a
-    luz retida — ele a descarta e só diz no journal o que descartou. Estes
-    testes travam a REGRA (a retenção morre com a sessão que a gerou), não o
-    sintoma: quem morde a purga é a asserção sobre `_retained_game_outputs`;
-    o `player_calls == []` depois do replay passa a valer por duas razões.
-    A regra nova tem régua própria em
-    `test_lightbar_na_steam_01_a_paleta_do_cliente_nao_vira_camada_do_jogo.py`."""
+    """Correção pós-auditoria da Onda N: a réplica RETIDA (NUMA-02) sob"""
 
     def test_close_purga_a_retencao_do_cliente(self) -> None:
         node = _FakeNode()
@@ -309,25 +264,13 @@ class TestRetencaoNaoSobreviveAoClose:
         autoridade = {"valor": "daemon"}
         ctl.set_game_authority_provider(lambda: autoridade["valor"])
 
-        # Cliente Steam escreve uma cor sob 'daemon' (sem jogo): fica RETIDA,
-        # nunca chega ao físico (é o veto de drop-sem-retenção).
-        #
-        # STEAM-NO-FISICO-01 (23/09/2026): esta régua usava `player_leds`, que
-        # desde a decisão dela é recusado ANTES da retenção (o número é do
-        # Hefesto). A retenção continua existindo para a cor que não é número,
-        # e é com ela que a purga se mede.
         assert ctl.set_game_output_for(MAC_1, led=(9, 99, 9)) is True
         assert ctl._retained_game_outputs[UNIQ_1] == {"led": (9, 99, 9)}
         assert node.rgb_calls == []
 
-        # Cliente fecha a sessão (UHID_CLOSE) — o fantasma tem de sumir
-        # JUNTO com as camadas GAME/triggers (que aqui nunca existiram).
         assert ctl.end_game_session_for(MAC_1) is True
         assert ctl._retained_game_outputs == {}
 
-        # Minutos/horas depois, um jogo de verdade e SEM RELAÇÃO nenhuma
-        # com a sessão antiga abre: a autoridade sobe e o replay da
-        # abertura do gate não pode entregar o valor do cliente morto.
         autoridade["valor"] = "game"
         node.rgb_calls.clear()
         ctl.replay_retained_game_outputs()
@@ -335,21 +278,17 @@ class TestRetencaoNaoSobreviveAoClose:
         assert node.rgb_calls == []
 
     def test_close_purga_a_retencao_mesmo_com_camada_game_presente(self) -> None:
-        """Caso misto: o jogo já tinha escrito (camada GAME) e, além disso,
-        havia uma retenção pendurada de um episódio 'daemon' anterior — o
-        CLOSE tem de zerar as duas, não só a camada GAME de sempre."""
+        """Caso misto: o jogo já tinha escrito (camada GAME) e, além disso,"""
         ctl = _ctl_com(_fake_handle(), _FakeNode())
         ctl._retained_game_outputs[UNIQ_1] = {"led": (9, 9, 9)}
-        ctl.set_game_output_for(MAC_1, led=(0, 255, 0))  # sem provider: jogo vence
+        ctl.set_game_output_for(MAC_1, led=(0, 255, 0))
 
         ctl.end_game_session_for(MAC_1)
 
         assert ctl._retained_game_outputs == {}
 
     def test_desconectado_ainda_purga_a_retencao(self) -> None:
-        """Controle sem handle (desconectado no momento do CLOSE): o early
-        return por `handle is None` não pode pular a purga da retenção —
-        ela já foi feita antes, sob o MESMO lock."""
+        """Controle sem handle (desconectado no momento do CLOSE): o early"""
         ctl = bp.PyDualSenseController()
         ctl._retained_game_outputs[UNIQ_1] = {"player_leds": (True,) * 5}
 
@@ -409,50 +348,36 @@ class TestFiacaoP1:
         daemon = _daemon(backend)
         sinks = gp_mod.make_primary_replica_sinks(daemon)
         sinks["lightbar_sink"](1, 1, 1)
-        backend.primary_uniq = MAC_2  # hotplug trocou o primário
+        backend.primary_uniq = MAC_2
 
         sinks["lightbar_sink"](2, 2, 2)
 
         assert [o[0] for o in backend.outputs] == [MAC_1, MAC_2]
 
     def test_close_encerra_todo_replicado_apos_troca_de_primario(self) -> None:
-        """BT-hotplug: o primário CAI/TROCA no meio do jogo ANTES do CLOSE.
-
-        A camada GAME grudou no controle que RECEBEU a réplica (A), não no
-        primário do instante do CLOSE (B). O CLOSE tem de encerrar a sessão de
-        TODO controle replicado — encerrar só o primário corrente vazaria a
-        camada de A, que voltaria como TOPO do merge quando A reconecta (a
-        writer-war de paleta que o REPLICA-03 mata). Exercita o backend REAL
-        para provar que os dicionários de posse ficam VAZIOS e o merge de A já
-        não traz a cor do jogo.
-        """
+        """BT-hotplug: o primário CAI/TROCA no meio do jogo ANTES do CLOSE."""
         ctl = bp.PyDualSenseController()
-        ctl._primary_key = MAC_1  # o primário é o A
+        ctl._primary_key = MAC_1
         sinks = gp_mod.make_primary_replica_sinks(_daemon(ctl))
 
-        # A recebe a cor e o gatilho do jogo enquanto é primário.
         sinks["lightbar_sink"](0, 255, 0)
         sinks["trigger_sink"]("right", _BLOCO)
         assert ctl._game_output_by_uniq[UNIQ_1].led == (0, 255, 0)
         assert ctl._game_triggers_by_uniq[UNIQ_1] == {"right": _BLOCO}
 
-        # A cai no BT e o primário é promovido para B ANTES do CLOSE.
         ctl._primary_key = MAC_2
-        sinks["lightbar_sink"](255, 0, 0)  # agora B recebe a cor
+        sinks["lightbar_sink"](255, 0, 0)
 
-        sinks["session_end_sink"]()  # fim da sessão uhid do P1
+        sinks["session_end_sink"]()
 
-        # Nenhuma posse do jogo pode sobrar (hoje o A vaza nos dois dicts).
         assert ctl._game_output_by_uniq == {}
         assert ctl._game_triggers_by_uniq == {}
 
-        # Ao reconectar A, o merge não traz mais a camada game — paleta limpa.
         ctl._handles = {MAC_1: _fake_handle()}
         assert ctl._merged_desired_for_key(MAC_1).led is None
 
     def test_sem_primario_descarta_sem_broadcast(self) -> None:
-        """Réplica sem alvo NUNCA vira broadcast (pintaria o jogador errado —
-        o rumble faz broadcast, LED/trigger NÃO)."""
+        """Réplica sem alvo NUNCA vira broadcast (pintaria o jogador errado —"""
         backend = _FakeReplicaBackend(primary=MAC_1)
         backend.primary_uniq = None
         sinks = gp_mod.make_primary_replica_sinks(_daemon(backend))
@@ -469,7 +394,7 @@ class TestFiacaoP1:
         daemon = _daemon(SimpleNamespace(primary_uniq=MAC_1))
         sinks = gp_mod.make_primary_replica_sinks(daemon)
 
-        sinks["trigger_sink"]("right", _BLOCO)  # não levanta
+        sinks["trigger_sink"]("right", _BLOCO)
         sinks["lightbar_sink"](1, 2, 3)
         sinks["player_led_sink"]((True, True, True, True, True))
         sinks["session_end_sink"]()
@@ -510,8 +435,7 @@ class TestFiacaoCoop:
         assert backend.ends == []
 
     def test_promote_player_passa_os_sinks(self) -> None:
-        """Contrato de fiação: o vpad de cada jogador do co-op nasce com os
-        sinks de replicação da identidade DELE."""
+        """Contrato de fiação: o vpad de cada jogador do co-op nasce com os"""
         import hefesto_dualsense4unix.daemon.subsystems.coop as coop_mod
 
         fonte = Path(coop_mod.__file__).read_text(encoding="utf-8")

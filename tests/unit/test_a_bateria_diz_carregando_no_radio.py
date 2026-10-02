@@ -74,19 +74,13 @@ from hefesto_dualsense4unix.interface.pacotes.a02_controles import (
 
 PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
 
-#: Um endereço da faixa forjada da casa — nunca o do aparelho dela.
 UNIQ = "aa:bb:cc:00:00:02"
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "BT", "cor": "starlight-blue", "mascara": "DualSense"}]
 
 
 def _handle(nibble: int, level: int, *, via: str) -> Any:
-    """Um handle da pydualsense como o ``report_thread`` dela o deixa.
-
-    ``via`` é o ``conType.name`` que o ``_detect_transport`` lê — e é o único
-    lugar deste dublê que fala de transporte. A carga vem do ``battery``, que é
-    outro objeto: eles não se tocam nem no dublê, que é o ponto.
-    """
+    """Um handle da pydualsense como o ``report_thread`` dela o deixa."""
     return SimpleNamespace(
         battery=SimpleNamespace(Level=level, State=nibble),
         conType=SimpleNamespace(name=via),
@@ -109,17 +103,7 @@ def _entrada(**mais: Any) -> dict[str, Any]:
 
 
 def _card(entrada: dict[str, Any]) -> dict[str, Any]:
-    """O card que o pacote da aba 02 monta para esta entrada.
-
-    **O `_ENDERECOS` É FORÇADO, E A RÉGUA DIZ POR QUÊ.** O pacote só emite os
-    endereços da BANCADA quando a página PUBLICADA já os tem
-    (`_so_se_a_pagina_tiver`) — e publicar é ato DELA, que ainda não olhou este
-    desenho. Sem esta linha a régua mediria a espera pela publicação, não a
-    cura: ela daria verde com o `bateria-carga` apagado no pacote.
-
-    O que se força é só o CONJUNTO de endereços da página, nunca o valor: quem
-    responde "Carregando" continua sendo o produto.
-    """
+    """O card que o pacote da aba 02 monta para esta entrada."""
     from pacotes import Contexto
     from pacotes import a02_controles as mod
 
@@ -138,18 +122,9 @@ def _bancada() -> str:
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# 1. O DAEMON — dois fatos, duas leituras, nenhuma inferência
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("via", ["BT", "USB"])
 def test_o_daemon_diz_carregando_nos_dois_transportes(via: str) -> None:
-    """O MESMO byte de carga com o MESMO nibble, no cabo e no rádio.
-
-    MORDE: faça `_carga` (ou `describe_controllers`) consultar o transporte
-    antes de devolver `battery_state`, e o caso `BT` reprova.
-    """
+    """O MESMO byte de carga com o MESMO nibble, no cabo e no rádio."""
     entradas = _backend(_handle(0x1, level=65, via=via)).describe_controllers()
     assert entradas[0]["transport"] == ("bt" if via == "BT" else "usb")
     assert entradas[0]["battery_state"] == "carregando", (
@@ -160,11 +135,7 @@ def test_o_daemon_diz_carregando_nos_dois_transportes(via: str) -> None:
 
 
 def test_o_radio_nao_diz_so_carregando() -> None:
-    """Não é só o carregando: os três estados comuns atravessam o rádio.
-
-    Sem isto a régua acima passaria com um `if` que devolvesse "carregando"
-    para tudo que fala por rádio — o acoplamento pelo lado avesso.
-    """
+    """Não é só o carregando: os três estados comuns atravessam o rádio."""
     lidos = {
         nibble: _backend(_handle(nibble, level=65, via="BT"))
         .describe_controllers()[0]["battery_state"]
@@ -173,20 +144,8 @@ def test_o_radio_nao_diz_so_carregando() -> None:
     assert lidos == {0x0: "descarregando", 0x1: "carregando", 0x2: "cheio"}
 
 
-# ---------------------------------------------------------------------------
-# 2. A PALAVRA — lida do dono, e sem porta por onde o transporte entre
-# ---------------------------------------------------------------------------
-
-
 def test_todo_estado_do_dono_tem_resposta_na_tela() -> None:
-    """A lista é a de `backend_pydualsense.ESTADO_DE_CARGA`, e não se digita.
-
-    Um sexto estado que o kernel publique e a tela não conheça tem de REPROVAR
-    aqui, nomeando-o — nunca sumir calado do card. É a regra da casa: quando um
-    valor tem dono, a régua PERGUNTA ao dono.
-
-    MORDE: apague uma linha de `_NA_TELA_POR_CARGA`.
-    """
+    """A lista é a de `backend_pydualsense.ESTADO_DE_CARGA`, e não se digita."""
     from pacotes import a02_controles as mod
 
     assert estados_de_carga() == frozenset(ESTADO_DE_CARGA.values())
@@ -199,48 +158,27 @@ def test_todo_estado_do_dono_tem_resposta_na_tela() -> None:
 
 
 def test_carregando_e_cheio_tem_palavra_e_descarregando_e_silencio() -> None:
-    """A decisão dela, lida ao pé da letra: só o que o número NÃO diz vira ícone.
-
-    `descarregando` é o estado comum e o percentual ao lado já o conta; um ícone
-    em todo card o tempo todo é ruído crônico.
-    """
+    """A decisão dela, lida ao pé da letra: só o que o número NÃO diz vira ícone."""
     assert carga_na_tela("carregando") == "Carregando"
     assert carga_na_tela("cheio") == "Cheio"
     assert carga_na_tela("descarregando") == ""
 
 
 def test_fora_de_faixa_e_erro_falam_porque_o_numero_deixou_de_valer() -> None:
-    """Os dois estados em que o driver ZERA a capacidade ganham palavra.
-
-    O `hid-playstation` faz `capacity = 0` em `0xa`, `0xb` e `0xf`, enquanto a
-    `pydualsense` segue calculando `nibble*10+5` do mesmo byte — o percentual
-    que o card mostra nesses estados é um número que o driver já descartou.
-    Calar ali seria a tela afirmando uma carga que ninguém sustenta.
-    """
+    """Os dois estados em que o driver ZERA a capacidade ganham palavra."""
     assert carga_na_tela("fora_de_faixa") == "Fora de faixa"
     assert carga_na_tela("erro") == "Erro de carga"
 
 
 def test_ninguem_reportou_ainda_nao_desenha_icone() -> None:
-    """`None` e qualquer palavra que não seja do dono caem no silêncio.
-
-    `""` é o que APAGA o atributo na pintura — inventar um ícone para "não sei"
-    seria a tela afirmando o que ninguém mediu.
-    """
+    """`None` e qualquer palavra que não seja do dono caem no silêncio."""
     assert carga_na_tela(None) == ""
     assert carga_na_tela("plugado") == ""
     assert carga_na_tela(7) == ""
 
 
 def test_a_funcao_da_palavra_nao_tem_por_onde_receber_o_transporte() -> None:
-    """A decisão dela escrita na ASSINATURA, e é a régua mais barata do arquivo.
-
-    Enquanto `carga_na_tela` receber só o estado, não há como acoplá-la ao
-    transporte sem MUDAR A FORMA da função — e mudar a forma é o que esta régua
-    nomeia.
-
-    MORDE: acrescente um parâmetro `transport` e este caso reprova.
-    """
+    """A decisão dela escrita na ASSINATURA, e é a régua mais barata do arquivo."""
     import inspect
 
     parametros = list(inspect.signature(carga_na_tela).parameters)
@@ -250,17 +188,8 @@ def test_a_funcao_da_palavra_nao_tem_por_onde_receber_o_transporte() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. O CARD — o caminho inteiro, com o controle no rádio
-# ---------------------------------------------------------------------------
-
-
 def test_o_card_do_radio_carregando_diz_o_icone() -> None:
-    """A cena da decisão dela, medida onde a tela lê: **rádio e carregando**.
-
-    MORDE: tire o `"bateria-carga"` do pacote, ou faça-o consultar o
-    `transport`, e este caso reprova.
-    """
+    """A cena da decisão dela, medida onde a tela lê: **rádio e carregando**."""
     card = _card(_entrada(transport="bt", battery_state="carregando"))
     assert card["bateria-carga"] == "Carregando", (
         "um controle NO RÁDIO e carregando não anunciou o estado no card — é "
@@ -271,11 +200,7 @@ def test_o_card_do_radio_carregando_diz_o_icone() -> None:
 
 @pytest.mark.parametrize("estado", ["carregando", "cheio", "descarregando"])
 def test_a_palavra_e_a_mesma_no_cabo_e_no_radio(estado: str) -> None:
-    """O MESMO estado, os DOIS transportes, o MESMO valor no card.
-
-    É a régua que fecha a porta pelos dois lados: nem "carregando" some no
-    rádio, nem "descarregando" ganha ícone por estar no cabo.
-    """
+    """O MESMO estado, os DOIS transportes, o MESMO valor no card."""
     no_cabo = _card(_entrada(transport="usb", battery_state=estado))
     no_radio = _card(_entrada(transport="bt", battery_state=estado))
     assert no_cabo["bateria-carga"] == no_radio["bateria-carga"] == carga_na_tela(estado)
@@ -289,24 +214,12 @@ def test_o_numero_e_o_estado_continuam_sendo_duas_coisas() -> None:
     assert card["bateria-carga"] == "Carregando"
 
 
-# ---------------------------------------------------------------------------
-# 4. O HTML — o ícone existe, tem nome, e a cena ensina o caso dela
-# ---------------------------------------------------------------------------
-
-
 def _icones(doc: str) -> list[str]:
     return re.findall(r'<span class="carga"[^>]*>.*?</span></span>', doc, re.S)
 
 
 def test_o_icone_tem_endereco_e_os_dois_alvos() -> None:
-    """Dois elementos, um endereço só — a gramática do `giro-no-jogo`.
-
-    O de fora veste o `title` (o nome), o de dentro veste o `data-carga` (a
-    forma). Dois `data-campo` diferentes para o mesmo fato é o que esta casa
-    persegue: eles poderiam DIVERGIR na tela.
-
-    MORDE: tire um dos `data-hef-atributo` no gerador e regere a aba.
-    """
+    """Dois elementos, um endereço só — a gramática do `giro-no-jogo`."""
     icones = _icones(_bancada())
     assert icones, "não achei o ícone de carga na bancada da aba Controles"
     for icone in icones:
@@ -316,11 +229,7 @@ def test_o_icone_tem_endereco_e_os_dois_alvos() -> None:
 
 
 def test_o_icone_tem_nome_acessivel() -> None:
-    """A palavra vai no `title`, e é ela que um leitor de tela anuncia.
-
-    Um ícone sem nome deixa quem não reconhece o desenho com o card de ontem —
-    só o número. MORDE: apague o `title` em `selo_da_carga` e regere.
-    """
+    """A palavra vai no `title`, e é ela que um leitor de tela anuncia."""
     doc = _bancada()
     for palavra in (carga_na_tela("carregando"), carga_na_tela("cheio")):
         assert f'title="{palavra}"' in doc, (
@@ -329,11 +238,7 @@ def test_o_icone_tem_nome_acessivel() -> None:
 
 
 def test_a_folha_casa_com_a_palavra_do_produto() -> None:
-    """A regra de CSS é gerada da MESMA palavra que o produto escreve.
-
-    Se a folha digitasse a palavra, a divergência seria SILENCIOSA — uma regra
-    que não casa não dá erro, o ícone só sumiria da tela viva.
-    """
+    """A regra de CSS é gerada da MESMA palavra que o produto escreve."""
     doc = _bancada()
     for estado in ("carregando", "cheio", "fora_de_faixa", "erro"):
         assert f'[data-carga="{carga_na_tela(estado)}"]' in doc, (
@@ -344,13 +249,7 @@ def test_a_folha_casa_com_a_palavra_do_produto() -> None:
 
 
 def test_o_desenho_mostra_um_controle_no_radio_carregando() -> None:
-    """A correção de premissa dela, virada CENA — é o que ela vai olhar.
-
-    O mockup é o que ensina a ler o produto. Um desenho em que só o controle do
-    cabo carrega ensinaria de volta a premissa errada.
-
-    MORDE: troque o `carga` do P2 no `ESTADO` do gerador e regere a aba.
-    """
+    """A correção de premissa dela, virada CENA — é o que ela vai olhar."""
     import aba02
 
     no_radio = [c for c in aba02.CONECTADOS if c.get("transporte") == "bt"]

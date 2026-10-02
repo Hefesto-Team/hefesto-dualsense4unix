@@ -50,7 +50,6 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
 )
 from tests.unit.test_vpad_ff_passthrough import _EC, _AbsInfo
 
-#: Faixa sintética da casa (a IEEE nunca dá `aa:bb:cc` a fabricante).
 _JOGADOR_2 = "aabbcc0000a7"
 
 
@@ -204,11 +203,7 @@ class TestOCoopEOEstadoPerguntamAoDono:
 
 
 def _connect(pad: Any, monkeypatch: pytest.MonkeyPatch) -> tuple[bool, list[Any]]:
-    """O controle conecta com o `pad` já de pé e o uhid de volta ao ar.
-
-    O uhid só volta DEPOIS de o pad nascer: a fábrica real, com ele no ar,
-    abriria o `/dev/uhid` da máquina.
-    """
+    """O controle conecta com o `pad` já de pé e o uhid de volta ao ar."""
     partidas: list[Any] = []
     monkeypatch.setattr(
         gamepad, "stop_gamepad_emulation", lambda _d, **kw: partidas.append(("stop", kw))
@@ -219,8 +214,6 @@ def _connect(pad: Any, monkeypatch: pytest.MonkeyPatch) -> tuple[bool, list[Any]
         lambda _d, flavor=None, **kw: partidas.append(("start", kw)) or True,
     )
     monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
-    # O caminho da promoção é o do DONO da sessão (O-MODO-XBOX-NAO-E-QUEDA-02,
-    # 28/09): o do pad, que é o que o dono diz enquanto ninguém muda de modo.
     daemon = SimpleNamespace(
         _gamepad_device=pad,
         controller=SimpleNamespace(hidraw_path=lambda uniq=None: None),
@@ -266,8 +259,7 @@ class TestAPromocaoDoConnectPerguntaAoDono:
 def test_o_revive_depois_da_falha_total_volta_no_modo_da_sessao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem pad nenhum (o boot perdeu a corrida da ACL), o revive recria o P1 no
-    modo que a sessão escolheu. Mordida: tire o `caminho=` do revive."""
+    """Sem pad nenhum (o boot perdeu a corrida da ACL), o revive recria o P1 no"""
     partidas: list[Any] = []
     monkeypatch.setattr(
         gamepad,
@@ -297,8 +289,7 @@ def test_o_revive_depois_da_falha_total_volta_no_modo_da_sessao(
 def test_a_devolucao_do_xbox_roda_uma_vez_e_a_escolha_seguinte_fica(
     devolucao: str, gravador: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O primeiro boot devolve o `xbox` do vazamento de 18 a 21/09; o seguinte,
-    com o `xbox` que ela escolheu depois, não mexe. Mordida: tire a marca."""
+    """O primeiro boot devolve o `xbox` do vazamento de 18 a 21/09; o seguinte,"""
     from hefesto_dualsense4unix.daemon import lifecycle
     from hefesto_dualsense4unix.utils import session
 

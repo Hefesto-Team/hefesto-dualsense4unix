@@ -60,39 +60,20 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     palavra_da_ocupacao,
 )
 
-#: Endereços SINTÉTICOS, na faixa `aa:bb:cc` que o
-#: `test_anonimato_de_fixtures` reserva para fixture.
-#:
-#: SUBSTITUÍDOS EM 22/08/2026, no mesmo dia em que foram escritos: nasceram
 #: como os dois DualSense reais desta bancada com a máscara da casa (octetos 4
-#: e 5 zerados), e a máscara NÃO BASTA para fixture de teste. O
-#: `check_anonymity.sh` os aprovou — ele procura MAC sem máscara —, e o portão
-#: mais estrito reprovou: em fixture, o prefixo do fabricante ainda é a marca
-#: do aparelho DELA, e a faixa sintética existe justamente para o teste não
-#: precisar dessa distinção. Duas réguas, e a que morde é a mais estrita.
-#:
-#: Os endereços de adaptador sempre foram inventados: não há adaptador nenhum
-#: nesta bancada para copiar (medido em 22/08: `/sys/class/bluetooth` vazio).
 UNIQ_A = "aa:bb:cc:00:00:03"
 UNIQ_B = "aa:bb:cc:00:00:d8"
 ADAPTADOR_1 = "aa:bb:cc:00:00:33"
 ADAPTADOR_2 = "aa:bb:cc:00:00:66"
 
 #: O `HID_PHYS` REAL de um DualSense no cabo nesta máquina, lido do uevent em
-#: 22/08/2026. Não é MAC: é caminho de barramento USB. É este valor que faz o
-#: controle negativo da sprint ser executável sem dongle nenhum.
 PHYS_DO_CABO = "usb-0000:0c:00.3-1/input3"
 
 
 def _bancada(
     nos: Mapping[str, Mapping[str, str]],
 ) -> tuple[Callable[[str], list[str]], Callable[[str], str]]:
-    """Um `/sys/class/hidraw` de mentira: `{nó: {chave do uevent: valor}}`.
-
-    Devolve o par `(listar, ler)` que as funções do módulo aceitam por
-    argumento — nenhum caminho real é aberto, e é por isso que este arquivo
-    roda igual em qualquer máquina.
-    """
+    """Um `/sys/class/hidraw` de mentira: `{nó: {chave do uevent: valor}}`."""
 
     def listar(_raiz: str) -> list[str]:
         return sorted(nos)
@@ -117,15 +98,8 @@ def _hex(mac: str) -> str:
     return mac.replace(":", "")
 
 
-# -- o casamento controle -> adaptador ---------------------------------------
-
-
 def test_o_hid_phys_de_um_controle_no_radio_e_o_endereco_do_adaptador() -> None:
-    """É o casamento inteiro do medidor, e ele não custa `sudo`.
-
-    `broker/hidraw_broker.py:316` já decide por este campo, com o comentário
-    literal de que BT real tem `HID_PHYS` = MAC do adaptador.
-    """
+    """É o casamento inteiro do medidor, e ele não custa `sudo`."""
     listar, ler = _bancada(
         {"hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1}}
     )
@@ -136,12 +110,7 @@ def test_o_hid_phys_de_um_controle_no_radio_e_o_endereco_do_adaptador() -> None:
 
 
 def test_uniq_com_e_sem_dois_pontos_casam() -> None:
-    """Os dois lados escrevem o mesmo endereço de jeitos diferentes.
-
-    O estado do daemon dá 12 hex sem separador (`backend_pydualsense.py:4865`);
-    o uevent dá MAC com dois-pontos. Sem normalizar os dois lados, o casamento
-    falha em silêncio e a barra fica em zero com o rádio cheio.
-    """
+    """Os dois lados escrevem o mesmo endereço de jeitos diferentes."""
     listar, ler = _bancada(
         {"hidraw3": {"HID_UNIQ": UNIQ_A.upper(), "HID_PHYS": ADAPTADOR_1}}
     )
@@ -186,12 +155,7 @@ def test_o_vpad_nao_vira_adaptador() -> None:
 
 
 def test_sysfs_ilegivel_devolve_ausencia_e_nao_levanta() -> None:
-    """Leitura falha vira "não sei", nunca um adaptador chutado.
-
-    `broker/hidraw_broker.py:179-185` mede que o sysfs de Bluetooth é instável
-    ao vivo — adaptador em down, rfkill, hci sem `address`. Uma exceção aqui
-    derrubaria a troca de aba; um adaptador inventado seria pior.
-    """
+    """Leitura falha vira "não sei", nunca um adaptador chutado."""
 
     def listar_que_falha(_raiz: str) -> list[str]:
         raise OSError("sysfs sumiu sob a mão")
@@ -205,9 +169,6 @@ def test_sysfs_ilegivel_devolve_ausencia_e_nao_levanta() -> None:
     )
     assert list(ocupacoes) == [SEM_ADAPTADOR]
     assert ocupacoes[SEM_ADAPTADOR].controles == 1
-
-
-# -- a conta ------------------------------------------------------------------
 
 
 def test_controle_no_cabo_nao_ocupa_radio_de_ninguem() -> None:
@@ -294,7 +255,7 @@ def test_controle_bt_sem_endereco_nao_pega_o_adaptador_do_vizinho() -> None:
 
 
 def test_uniq_nulo_cai_na_barra_de_nao_sei_sem_levantar() -> None:
-    """`controllers[].uniq` pode ser `None` (`backend_pydualsense.py:4855`)."""
+    """`controllers[].uniq` pode ser `None` (`backend_pydualsense.py:3142`)."""
     listar, ler = _bancada({})
 
     ocupacoes = ocupacao_por_adaptador([_controle(None)], listar=listar, ler=ler)
@@ -303,14 +264,7 @@ def test_uniq_nulo_cai_na_barra_de_nao_sei_sem_levantar() -> None:
 
 
 def test_o_microfone_troca_entrada_por_audio_e_a_soma_quase_nao_se_move() -> None:
-    """O comportamento MEDIDO no A/B de 25/07: o áudio divide a mesma fila.
-
-    É o aceite da sprint escrito como invariante: com a ponte de pé a fatia de
-    áudio aparece, a de entrada ENCOLHE, e o total sobe menos de 7 % —
-    276,7/260,4. Um medidor que somasse o áudio por cima do input inteiro
-    diria que ligar o microfone custa 41 % a mais de rádio, e mandaria a pessoa
-    desligar o microfone por um custo que não existe.
-    """
+    """O comportamento MEDIDO no A/B de 25/07: o áudio divide a mesma fila."""
     listar, ler = _bancada(
         {"hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1}}
     )
@@ -337,12 +291,7 @@ def test_o_microfone_troca_entrada_por_audio_e_a_soma_quase_nao_se_move() -> Non
 
 
 def test_o_conjunto_de_pontes_casa_mesmo_escrito_com_dois_pontos() -> None:
-    """A ponte de mic guarda o `HID_UNIQ` CRU, com dois-pontos.
-
-    `dualsense_bt_audio.py:387` lê o valor direto do uevent; o estado do daemon
-    dá 12 hex. Sem normalizar os dois, o conjunto nunca casa e a fatia de áudio
-    nunca aparece — falha silenciosa, que é a pior classe.
-    """
+    """A ponte de mic guarda o `HID_UNIQ` CRU, com dois-pontos."""
     listar, ler = _bancada(
         {"hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1}}
     )
@@ -365,11 +314,7 @@ def test_o_conjunto_de_pontes_casa_mesmo_escrito_com_dois_pontos() -> None:
 
 
 def test_a_fracao_crua_passa_de_um_e_quem_satura_e_a_barra() -> None:
-    """Estourar o teto é o que a barra existe para saber dizer.
-
-    Saturar a CONTA esconderia o caso: o selo diria `1600/1600` para uma mesa
-    de sete controles que pede 1822. Quem satura é o desenho.
-    """
+    """Estourar o teto é o que a barra existe para saber dizer."""
     listar, ler = _bancada(
         {
             f"hidraw{i}": {"HID_UNIQ": f"aa:bb:cc:00:00:{i:02x}", "HID_PHYS": ADAPTADOR_1}
@@ -394,9 +339,6 @@ def test_a_fatia_de_audio_comeca_onde_a_de_entrada_termina() -> None:
     assert fatias_da_barra(-1.0, -1.0) == (0.0, 0.0)
 
 
-# -- as palavras, e a fronteira ----------------------------------------------
-
-
 def test_as_tres_palavras_e_os_dois_cortes() -> None:
     """Folgada até 60 %, Apertada até 85 %, Cheia acima. Decisão R3."""
     assert palavra_da_ocupacao(0.0) == PALAVRA_FOLGADA
@@ -408,16 +350,7 @@ def test_as_tres_palavras_e_os_dois_cortes() -> None:
 
 
 def test_nenhuma_palavra_do_medidor_carrega_culpa() -> None:
-    """A fronteira que a tela não atravessa, como portão.
-
-    Dois controles no MESMO adaptador diferiram por quase o dobro com a mesa
-    FOLGADA (381,54 contra 191,40 Hz), a desigualdade sobreviveu à troca de
-    braços e o motivo é ABERTO. O medidor pode dizer que a mesa está cheia; não
-    pode dizer que por isso o controle está ruim.
-
-    Mordida: acrescentar qualquer frase de causa às três palavras, ao rótulo ou
-    ao selo.
-    """
+    """A fronteira que a tela não atravessa, como portão."""
     textos = [
         PALAVRA_FOLGADA,
         PALAVRA_APERTADA,
@@ -455,16 +388,8 @@ def test_o_rotulo_e_o_endereco_e_nunca_o_hci() -> None:
     assert "hci" not in _rotulo_do_medidor(ADAPTADOR_1)
 
 
-# -- quais barras aparecem ----------------------------------------------------
-
-
 def test_sem_controle_no_radio_cada_adaptador_ganha_uma_barra_em_zero() -> None:
-    """O estado desta bancada: adaptadores de pé, todos os controles no cabo.
-
-    Barra em zero é resultado válido, e é o que a foto da aba mostra. O nome
-    vem da identidade física, porque sem controle nenhum no ar não há
-    `HID_PHYS` de onde tirar endereço.
-    """
+    """O estado desta bancada: adaptadores de pé, todos os controles no cabo."""
     mesa = Mesa(
         adaptadores=(
             Adaptador(interface="hci0", no="1-1", vid="0a12", pid="0001"),
@@ -490,9 +415,5 @@ def test_com_controle_no_radio_a_barra_e_por_endereco() -> None:
 
 
 def test_sem_adaptador_e_sem_controle_nao_ha_barra_nenhuma() -> None:
-    """A linha "Nenhum adaptador Bluetooth encontrado" já disse tudo.
-
-    Uma barra vazia embaixo dela ocuparia altura para repetir a mesma resposta.
-    É o estado real desta máquina em 22/08/2026.
-    """
+    """A linha "Nenhum adaptador Bluetooth encontrado" já disse tudo."""
     assert _medidores_da_mesa(Mesa(), {}) == []

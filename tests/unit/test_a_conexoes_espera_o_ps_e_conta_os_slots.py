@@ -62,7 +62,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
@@ -76,11 +75,7 @@ def pac():
 
 @pytest.fixture
 def a08(pac):
-    """O pacote da aba, com o depósito de esperas VAZIO nos dois sentidos.
-
-    Ele é estado de módulo (o `Contexto` é remontado a cada tique e não tem onde
-    guardar nada), então uma régua que não o limpasse mediria o caso anterior.
-    """
+    """O pacote da aba, com o depósito de esperas VAZIO nos dois sentidos."""
     from pacotes import a08_conexoes
 
     a08_conexoes._ESPERAS.clear()
@@ -124,11 +119,6 @@ def _caiu(monkeypatch, estado: str = "ESTADO_DESCONECTOU") -> list[str]:
     return pediu
 
 
-# ---------------------------------------------------------------------------
-# 1 · O clique entra na espera, e o mesmo botão vira Cancelar
-# ---------------------------------------------------------------------------
-
-
 def test_o_clique_entra_na_espera(pac, a08, dono, gesto, monkeypatch) -> None:
     pediu = _caiu(monkeypatch)
     assert a08.texto_do_botao_da_luz(UNIQ) == dono.TEXTO_DO_BOTAO
@@ -155,11 +145,7 @@ def test_a_contagem_e_a_do_dono(pac, a08, dono, gesto, monkeypatch) -> None:
 
 
 def test_o_que_nao_caiu_nao_entra_na_espera(pac, a08, gesto, monkeypatch) -> None:
-    """`nao_deu` levanta com a frase do dono — e NÃO liga o relógio.
-
-    Mandar apertar PS depois de um `Disconnect` que não surtiu efeito é gastar o
-    gesto dela por uma coisa que não aconteceu.
-    """
+    """`nao_deu` levanta com a frase do dono — e NÃO liga o relógio."""
     _caiu(monkeypatch, "ESTADO_NAO_DEU")
     with pytest.raises(RuntimeError):
         gesto(_ctx(pac), {"uniq": UNIQ}, None)
@@ -167,18 +153,8 @@ def test_o_que_nao_caiu_nao_entra_na_espera(pac, a08, gesto, monkeypatch) -> Non
         "a tela entrou na espera sem o controle ter caído")
 
 
-# ---------------------------------------------------------------------------
-# 2 · O relógio — a armadilha desta cura
-# ---------------------------------------------------------------------------
-
-
 def test_o_relogio_conta_segundos_e_nao_tiques(a08, dono) -> None:
-    """DEZ pinturas em UM segundo gastam UM segundo, nunca dez.
-
-    O tique do piloto é de 100 ms; a espera do dono é de 60 SEGUNDOS. Um
-    `tique()` por pintura faria a tela dizer "não voltou" com 54 segundos
-    sobrando na mão dela.
-    """
+    """DEZ pinturas em UM segundo gastam UM segundo, nunca dez."""
     a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: set())
     for i in range(1, 11):
         a08._correr_as_esperas(agora=i / 10.0)
@@ -196,11 +172,6 @@ def test_a_espera_termina_no_tempo_do_dono(a08, dono) -> None:
     assert not a08.esperando(UNIQ), "a espera passou dos segundos do dono"
 
 
-# ---------------------------------------------------------------------------
-# 3 · O Cancelar, e ele não fala com o BlueZ
-# ---------------------------------------------------------------------------
-
-
 def test_o_segundo_clique_cancela_sem_falar_com_o_radio(
     pac, a08, dono, gesto, monkeypatch,
 ) -> None:
@@ -208,9 +179,6 @@ def test_o_segundo_clique_cancela_sem_falar_com_o_radio(
     gesto(_ctx(pac), {"uniq": UNIQ}, None)
     assert a08.esperando(UNIQ)
 
-    # O CONTROLE JÁ CAIU, então ele não está mais no `conectados` — e é assim
-    # que o clique do Cancelar chega de verdade. Um ramo que dependesse do
-    # transporte recusaria o próprio Cancelar com a frase do cabo.
     gesto(pac.Contexto(state={"controllers": []}, conectados=[]), {"uniq": UNIQ}, None)
 
     assert not a08.esperando(UNIQ), "o Cancelar não saiu da espera"
@@ -220,18 +188,6 @@ def test_o_segundo_clique_cancela_sem_falar_com_o_radio(
     assert a08.texto_do_botao_da_luz(UNIQ) == dono.TEXTO_DO_BOTAO
     assert a08.linha_da_espera(UNIQ) == a08._sem_valor(), (
         "o Cancelar deixou recado; desistir não é notícia")
-
-
-# ---------------------------------------------------------------------------
-# 4 · O fim da espera — ele não fala na tela, e vai ao diário
-#
-# MUDOU DE CONTRATO EM 13/09/2026 (TELA-CALADA-03). Os três casos que moravam
-# aqui cobravam o recado do fim NA LINHA DO CARTÃO: `nao_voltou` sobrevivendo à
-# espera, morrendo quando o controle voltava, e `nao_caiu` com a frase do dono.
-# A palavra dela tirou a frase da tela — ver o item 4 do cabeçalho. O que se
-# cobra agora é a outra metade de cada um: a frase continua sendo a do DONO, e
-# ela chega ao diário da janela UMA vez.
-# ---------------------------------------------------------------------------
 
 
 def test_o_fim_de_nao_voltou_nao_fala_na_tela_e_vai_ao_diario(
@@ -269,9 +225,9 @@ def test_o_controle_que_volta_sai_da_espera_sem_recado(a08, dono) -> None:
     presentes = [{CHAVE}]
     a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: presentes[0])
     a08._correr_as_esperas(agora=1.0)
-    presentes[0] = set()            # caiu
+    presentes[0] = set()
     a08._correr_as_esperas(agora=2.0)
-    presentes[0] = {CHAVE}          # ela apertou PS
+    presentes[0] = {CHAVE}
     a08._correr_as_esperas(agora=3.0)
     assert not a08.esperando(UNIQ), "o controle voltou e a espera continuou contando"
     assert a08.linha_da_espera(UNIQ) == a08._sem_valor(), (
@@ -279,19 +235,9 @@ def test_o_controle_que_volta_sai_da_espera_sem_recado(a08, dono) -> None:
 
 
 def test_em_repouso_a_linha_nao_ocupa_nada(a08) -> None:
-    """`monta.NADA_A_DIZER`, nunca `""`.
-
-    O `escrever()` do piloto troca vazio por travessão ANTES de olhar o alvo, e
-    uma ressalva vazia viraria uma linha com um `—` — altura gasta para não
-    dizer nada.
-    """
+    """`monta.NADA_A_DIZER`, nunca `""`."""
     assert a08.linha_da_espera(UNIQ) == a08._sem_valor()
     assert a08.linha_da_espera(UNIQ) != ""
-
-
-# ---------------------------------------------------------------------------
-# 5 · A pintura leva os dois campos para o cartão
-# ---------------------------------------------------------------------------
 
 
 def test_a_pintura_emite_os_dois_campos_no_cartao(pac, a08, dono, monkeypatch) -> None:
@@ -309,20 +255,6 @@ def test_a_pintura_emite_os_dois_campos_no_cartao(pac, a08, dono, monkeypatch) -
     assert "luz-espera" in coluna, "o cartão não recebeu a linha da espera"
 
 
-# ---------------------------------------------------------------------------
-# 6 · A conta de slots — CADUCOU EM 23/09/2026
-#
-# Os cinco casos que moravam aqui cobravam `a08._conta_de_slots`: a resposta
-# honesta sem serviço (SEM_RESPOSTA_DO_DAEMON), o rádio vazio, a frase do dono
-# por adaptador, o declarado que não subiu antes do «cabe mais um» e o `hciN`
-# fora da tela. A linha saiu com a régua da ocupação quando a seção virou o
-# desenho aprovado (TRANSPLANTE-DA-SECAO-01). O que cada caso protegia foi para
-# a seção nova e é cobrado em `test_a_secao_do_radio_transplantada.py`: o cartão
-# diz «com som N de 2», o que não cabe vira o pedido do governador, e nenhum
-# `hciN` nem endereço de rádio chega à tela.
-# ---------------------------------------------------------------------------
-
-
 def test_a_conta_de_slots_saiu_com_o_endereco() -> None:
     """A função e o endereço saíram JUNTOS — nenhum dos dois ficou órfão."""
     from pacotes import a08_conexoes
@@ -335,18 +267,9 @@ def test_a_conta_de_slots_saiu_com_o_endereco() -> None:
         "a página voltou a ter `conta-de-slots`, e o pacote não escreve mais nele")
 
 
-# ---------------------------------------------------------------------------
-# 7 · Os endereços existem na página
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("endereco", ["luz-texto", "luz-espera"])
 def test_a_pagina_tem_o_endereco(endereco: str) -> None:
-    """Campo sem endereço é pintura que cai no vazio — e dá verde calado.
-
-    A régua lê a BANCADA (`mockup/`), que é o desenho de HOJE: apontá-la para o
-    publicado a faria dar verde sobre a página congelada.
-    """
+    """Campo sem endereço é pintura que cai no vazio — e dá verde calado."""
     from hefesto_dualsense4unix.interface import onde
 
     pagina = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
@@ -354,21 +277,6 @@ def test_a_pagina_tem_o_endereco(endereco: str) -> None:
         f"a página não tem `data-campo=\"{endereco}\"` — o pacote escreveria "
         f"para ninguém")
 
-
-# ---------------------------------------------------------------------------
-# 8 · DO PACOTE AO PIXEL — a bancada num WebKit, com o BOOTSTRAP do piloto
-# ---------------------------------------------------------------------------
-#
-# POR QUE ESTA PARTE EXISTE, e ela não é a segunda cópia de nada: os casos acima
-# provam o PACOTE (o que ele emite) e a página (que ela tem os endereços). O elo
-# do meio — o `escrever()` do piloto achando os dois campos DENTRO do cartão
-# certo e a `.ressalva` deixando de estar escondida — não tem régua nenhuma nos
-# dois lados, e é justamente onde uma pintura cai no vazio calada.
-#
-# AQUI NADA É IMITADO: a página é a BANCADA de verdade, o roteiro é o
-# `hefesto_vivo.BOOTSTRAP` de verdade (lido do módulo, nunca copiado), e a carga
-# sai de `a08_conexoes.pacote` + `pacotes.normalizar`, que é a MESMA sequência
-# do piloto. O molde é o do `test_a_aba01_veste_o_controle_de_ponta_a_ponta.py`.
 
 ROTEIRO_DA_ESPERA = """
 (function(){
@@ -403,11 +311,6 @@ def _carga_da_luz(a08, pac, esperando_agora: bool, transporte: str = "bt") -> di
           "transporte": transporte, "mascara": "DualSense"}
     a08._ESPERAS.clear()
     if esperando_agora:
-        # O RELÓGIO É O DE VERDADE, e tem de ser: `pacote()` chama
-        # `_correr_as_esperas` com `time.monotonic()`, e uma base de zero faria a
-        # espera VENCER no mesmo tique — foi o que esta régua mediu na primeira
-        # volta, e o sintoma era mudo (a pintura escreveu ZERO campos, porque a
-        # carga tinha voltado a ser a de repouso).
         agora = a08._agora()
         a08.comecar_a_espera(UNIQ, agora=agora, sonda=lambda: set())
         a08._correr_as_esperas(agora=agora + 1)
@@ -446,9 +349,6 @@ def no_webkit():
         pytest.skip("sem sessão gráfica — o WebKit não abre")
 
     saiu: list[str] = []
-    # `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
-    # janelas e uma janela comum fica 1x1 para sempre. E offscreen também porque
-    # ela tem UMA tela — janela de teste não nasce na frente dela.
     janela = Gtk.OffscreenWindow()
     view = WebKit2.WebView()
     janela.add(view)
@@ -479,8 +379,6 @@ def no_webkit():
 
     view.connect("load-changed", carregou)
     view.load_uri(pagina.as_uri())
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do mesmo
-    # processo — a cicatriz de 05/09, e ela já matou onze medições nesta casa.
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -513,18 +411,7 @@ def test_no_motor_a_linha_da_espera_nasce_e_some(no_webkit, dono) -> None:
 
 
 def test_no_motor_o_botao_segue_o_transporte(no_webkit) -> None:
-    """O botão da linha do P1 deixou de nascer apagado PARA SEMPRE — 06/09/2026.
-
-    **MEDIDO NO DOM, e é o que trouxe esta linha para a régua:** com um controle
-    no RÁDIO no lugar do P1, o `luz-trava` chegava certo (o `<i>` ficava
-    `ltrava`, sem o `on`) e o botão continuava com `class="btn apagado"`,
-    opacidade 0,55 e cursor `help` — a classe do MOCKUP, que o pintor não tem
-    como apagar porque o `data-campo` do botão está gasto no `title`. Quem
-    herdasse o lugar do P1 pelo rádio veria um botão com cara de desligado, e o
-    "Cancelar" desta sprint nasceria cinza.
-
-    A APARÊNCIA PASSOU A TER UM DONO SÓ: o `<i class="ltrava">`, que é dado.
-    """
+    """O botão da linha do P1 deixou de nascer apagado PARA SEMPRE — 06/09/2026."""
     assert "apagado" not in no_webkit["espera"]["classe"], (
         f"o Cancelar nasceu com cara de desligado: "
         f"{no_webkit['espera']['classe']!r}")

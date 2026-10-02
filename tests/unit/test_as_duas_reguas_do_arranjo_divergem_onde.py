@@ -1,96 +1,4 @@
-"""AS DUAS RÉGUAS DO ARRANJO, RODADAS LADO A LADO — e onde elas divergem.
-
-Ela decidiu em 25/08/2026 (``docs/data/decisoes-dela.csv``,
-``D-QUAL-REGUA-MANDA-NO-ARRANJO``): *"MEDIR AS DUAS ANTES DE ESCOLHER. Um teste
-comparativo roda as duas sobre a mesma bancada e mostra onde divergem; a escolha
-vem depois, com o caso na mão."* **Este arquivo é essa medição. A ESCOLHA é
-dela, e não está aqui.**
-
-AS DUAS RÉGUAS RESPONDEM À MESMA PERGUNTA — *"qual controle move para qual
-adaptador"* — e nenhum arquivo da árvore as rodava juntas:
-
-``plano_de_radio.ordem_de_redistribuicao``
-    **Já está na tela**, publicada por ``app/actions/config/secao_orcamento.py``
-    (a seção Desempenho). Manda mover **no máximo um** controle, e só quando as
-    duas condições se juntam: um adaptador passou do corte da "Apertada"
-    (``fracao_total > 0,85``) **e** existe outro adaptador que continua fora da
-    "Cheia" depois de receber. Qual controle: o que carrega microfone, porque é
-    o mais caro.
-
-``arranjo_da_mesa.plano_dos_controles``
-    Portada byte a byte do mockup dela em 25/08/2026, **sem tela nenhuma que a
-    consuma**. Devolve o destino de **todos** os controles, e move quantos forem
-    preciso enquanto isso **baixar o pico** do adaptador mais cheio. Corte
-    nenhum: ela rebalanceia mesa folgada.
-
-COMO LER A MEDIÇÃO, sem pytest e sem procurar traceback::
-
-    .venv/bin/python tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py
-
-Ela imprime as seis bancadas, caso a caso, com origem, destino e a razão de cada
-régua. Sob pytest o mesmo relatório sai com ``-s``.
-
-O QUE A MEDIÇÃO ACHOU. São QUATRO, e os quatro estão nas bancadas abaixo. **Os
-três primeiros aparecem NA TELA DELA hoje**, e nenhum deles é opinião:
-
-  1. **Na mesa cheia desta casa a régua da tela cala e a outra manda mover
-     dois.** Quatro controles com microfone no mesmo adaptador somam 1.106,8 de
-     1.600 fatias — fração 0,69, abaixo do corte 0,85 —, então
-     ``ordem_de_redistribuicao`` não diz nada, e ``plano_dos_controles``
-     redistribui os quatro pelos três dongles do hub dela (bancada 1).
-
-  2. **A régua da tela não enxerga adaptador VAZIO, e a frase que ela publica
-     nesse estado é FALSA.** ``plano_por_adaptador`` só produz um
-     ``PlanoDoAdaptador`` para adaptador que TEM controle conectado: um dongle
-     livre noutra controladora PCI simplesmente não existe para ela. Com o
-     adaptador carregado acima do corte e nenhum candidato à vista, a seção cai
-     no ``elif _algum_apertado(planos)`` de ``secao_orcamento.py:760`` e imprime
-     ``FRASE_DO_ADAPTADOR_UNICO`` — *"Todos os controles estão no mesmo
-     adaptador, e é o único que você tem"* — com um segundo adaptador vazio na
-     mesa (bancada 4). A mesma frase sai com DOIS adaptadores cheios e os
-     controles divididos entre eles (bancada 6), onde ela é falsa nas duas
-     metades. **Isto é conserto de arquivo alheio: está relatado, não curado.**
-
-  3. **A ordem de serviço manda mover de "Adaptador sem nome" para "Adaptador
-     sem nome".** Com dois dongles que ela ainda não apelidou, os dois caem no
-     mesmo :data:`plano_de_radio.ADAPTADOR_SEM_NOME`, e a frase de
-     ``ganho_esperado`` nomeia origem e destino com a MESMA palavra — a tela
-     manda mover um controle sem dizer para onde (bancada 3). Também relatado,
-     não curado: a frase mora em ``plano_de_radio.py``.
-
-  4. **As duas discordam da PALAVRA, não só do movimento.** Seis controles num
-     adaptador dão 1.562,4 de 1.600: a régua da tela chama isso de "Cheia"
-     (corte 85%) e ``PlanoDosControles.cabe`` responde ``True`` (corte 100%).
-     Duas respostas para "cabe?" na mesma mesa, e é o caso da bancada 5.
-
-NOTA DATADA — 23/09/2026 (MOVER-UM-POR-VEZ-01). A régua da tela mudou o que
-PESA, por decisão de quem coordena tirada da onda 1 do rádio: ela conta as
-PONTES de som e vibração contra ``radio_da_mesa.N_MAX_PONTES`` (dois), e não
-mais a soma aditiva de fatias. As bancadas ganharam o campo ``ponte`` e as
-contagens da tela foram remedidas. O que isso fez com os quatro achados:
-
-  1. **a mesa dela** (quatro com microfone E com ponte de som, todos no
-     primeiro): a tela deixou de calar — ela propõe UM movimento, porque a R12
-     dela é um de cada vez, e o motor segue mandando mover dois;
-  2. **o adaptador vazio** passou a EXISTIR para a régua da tela: quem monta os
-     planos diz quais adaptadores a mesa tem (``adaptadores=``), e o dongle livre
-     vira destino. A frase do adaptador único que a seção Desempenho imprime
-     continua saindo pela conta aditiva DELA (``secao_orcamento._algum_apertado``),
-     que não é posse daquela frente nem desta;
-  3. e 4. continuam como estão: o nome vem do apelido, e a palavra aditiva é da
-     seção Desempenho.
-
-O LIMITE DESTA RÉGUA, DECLARADO: as bancadas são SINTÉTICAS. O ``/sys/class/
-hidraw`` é de mentira (``_sysfs_de_mentira``) justamente para o teste não medir
-a bancada de quem o roda — é a armadilha "medir contra a biblioteca errada"
-entrando pela porta do sysfs. Nenhum aparelho é tocado, nenhum daemon é ouvido.
-
----
-
-E MAIS UM PORTÃO, no mesmo arquivo por posse de leva e não por assunto:
-``test_o_achado_da_colisao_tem_linha_propria`` cobra a saída de
-``scripts/check_colisao_de_sprints.py``. Ver o docstring dele.
-"""
+"""AS DUAS RÉGUAS DO ARRANJO, RODADAS LADO A LADO — e onde elas divergem."""
 
 from __future__ import annotations
 
@@ -114,23 +22,15 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Endereços da FAIXA DA CASA (`e8:47:3a`, `aa:bb:cc`), octetos 4 e 5 zerados.
-#: Nada de MAC real em arquivo versionado — há dois portões, e um pega por FORMA.
 DONGLE_A = "e8:47:3a:00:00:09"
 DONGLE_B = "e8:47:3a:00:00:15"
 DONGLE_C = "e8:47:3a:00:00:21"
 CONTROLES = tuple(f"aa:bb:cc:00:00:{n:02d}" for n in range(1, 11))
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# 1. A BANCADA SINTÉTICA — uma só, e as DUAS réguas comem dela
-# ═══════════════════════════════════════════════════════════════════════════
-
-
 @dataclass(frozen=True)
 class Posto:
-    """Um controle, o adaptador em que ele JÁ está, se o microfone está de pé e
-    se a ponte de som dele está no ar (o que a régua da tela pesa desde 23/09)."""
+    """Um controle, o adaptador em que ele JÁ está, se o microfone está de pé e"""
 
     nome: str
     endereco: str
@@ -141,21 +41,13 @@ class Posto:
 
 @dataclass(frozen=True)
 class Bancada:
-    """Uma mesa de mentira, e o que se espera de cada régua sobre ela.
-
-    Os dois campos de expectativa não são enfeite: são a MORDIDA. Uma régua
-    neutralizada — que devolva "não mexo em nada" sempre — passaria num teste
-    que só conferisse rótulos, e "régua que não vê nada passa sempre" é o
-    defeito que esta casa já pagou três vezes.
-    """
+    """Uma mesa de mentira, e o que se espera de cada régua sobre ela."""
 
     id: str
     titulo: str
     adaptadores: tuple[str, ...]
     postos: tuple[Posto, ...]
-    #: quantos controles a `ordem_de_redistribuicao` manda mover (ela move 0 ou 1)
     tela_move: int
-    #: quantos controles o `plano_dos_controles` manda mover
     motor_move: int
     nota: str = ""
 
@@ -169,9 +61,6 @@ def _postos(
     )
 
 
-#: As seis bancadas. As quatro que ela pediu são a 1, a 2, a 4 e a 5; a 3 e a 6
-#: entraram porque sem elas a régua da tela nunca é vista MANDANDO mover, e um
-#: teste em que ela cala em todas as bancadas passaria com ela arrancada.
 BANCADAS: tuple[Bancada, ...] = (
     Bancada(
         id="1-a-mesa-dela",
@@ -268,11 +157,7 @@ BANCADAS: tuple[Bancada, ...] = (
 
 
 def _sysfs_de_mentira(postos: tuple[Posto, ...]) -> dict[str, Any]:
-    """Um ``/sys/class/hidraw`` de papel: ``{uniq do controle: MAC do adaptador}``.
-
-    Sem isto a régua da tela leria o sysfs da máquina de quem roda o teste, e a
-    medição diria mais sobre a bancada de quem roda que sobre as duas réguas.
-    """
+    """Um ``/sys/class/hidraw`` de papel: ``{uniq do controle: MAC do adaptador}``."""
     nos = {
         f"hidraw{i}": (posto.endereco, posto.onde) for i, posto in enumerate(postos)
     }
@@ -291,11 +176,6 @@ def _sysfs_de_mentira(postos: tuple[Posto, ...]) -> dict[str, Any]:
 def _sem_dois_pontos(mac: str) -> str:
     """Como o ``uniq`` do estado do daemon chega: 12 hex, sem separador."""
     return mac.replace(":", "")
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# 2. AS DUAS RÉGUAS, CADA UMA NO SEU VEREDITO
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 @dataclass(frozen=True)
@@ -326,13 +206,7 @@ def _num(valor: float) -> str:
 
 
 def veredito_da_tela(bancada: Bancada) -> Veredito:
-    """A régua que JÁ está na tela — ``plano_de_radio.ordem_de_redistribuicao``.
-
-    Nada de ``try``/``except`` aqui, e é de propósito: se a régua levantar, o
-    teste tem de REPROVAR. Engolir a exceção transformaria "a régua quebrou" em
-    "a régua não viu nada", que é exatamente a leitura que faz uma régua morta
-    parecer uma régua calma.
-    """
+    """A régua que JÁ está na tela — ``plano_de_radio.ordem_de_redistribuicao``."""
     estado = [
         {
             "transport": "bt",
@@ -370,7 +244,6 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
         e for e, p in planos.items() if p.agora.fracao_total > CORTE_APERTADA
     ]
     if apertados and ordem is None:
-        # É literalmente o `elif _algum_apertado(planos)` de secao_orcamento.py:760.
         vistos += (
             "A TELA IMPRIME: " + plano_de_radio.FRASE_DO_ADAPTADOR_UNICO,
         )
@@ -393,8 +266,6 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
         return Veredito("régua da tela", (), razao, vistos)
 
     if ordem.origem_na_tela == ordem.destino_na_tela:
-        # ACHADO 3: sem apelido, os dois adaptadores viram a mesma palavra, e a
-        # ordem de serviço manda mover sem dizer para onde. Ver o cabeçalho.
         vistos += (
             "A TELA MANDA MOVER DE "
             f'"{ordem.origem_na_tela}" PARA "{ordem.destino_na_tela}" — o mesmo '
@@ -416,10 +287,7 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
 
 
 def veredito_do_motor(bancada: Bancada) -> Veredito:
-    """A régua portada do mockup — ``arranjo_da_mesa.plano_dos_controles``.
-
-    Sem ``try``/``except``, pela mesma razão de :func:`veredito_da_tela`.
-    """
+    """A régua portada do mockup — ``arranjo_da_mesa.plano_dos_controles``."""
     adaptadores = tuple(
         motor.Adaptador(id=endereco, entrada=str(i + 1), rotulo=f"entrada {i + 1}")
         for i, endereco in enumerate(bancada.adaptadores)
@@ -435,8 +303,6 @@ def veredito_do_motor(bancada: Bancada) -> Veredito:
         if plano.destino.get(c.nome) != c.onde
     )
 
-    # O pico ANTES sai da bancada, não de uma segunda régua: é a soma dos custos
-    # de cada controle no adaptador em que ele já estava.
     antes: dict[str, float] = {a.id: 0.0 for a in adaptadores}
     for c in controles:
         if c.onde in antes:
@@ -467,11 +333,6 @@ def veredito_do_motor(bancada: Bancada) -> Veredito:
         f"ainda caberiam {plano.sobra} controle(s) com microfone",
     )
     return Veredito("motor do arranjo", movimentos, razao, extras)
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# 3. O RELATÓRIO — a divergência caso a caso, e em português
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _bloco_do_veredito(veredito: Veredito) -> list[str]:
@@ -543,20 +404,8 @@ def relatorio_completo() -> str:
     return "\n\n".join(cabeca[:2] + [relatorio_de(b) for b in BANCADAS])
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# 4. A MORDIDA
-# ═══════════════════════════════════════════════════════════════════════════
-
-
 def test_a_divergencia_esta_nomeada() -> None:
-    """MORDIDA. Cada bancada nomeia origem, destino e razão DE CADA RÉGUA.
-
-    E as contagens de movimento são conferidas contra o que a bancada declara:
-    é isso que impede uma régua neutralizada — a que devolve "não mexo em nada"
-    sempre — de passar. Se qualquer uma das duas levantar exceção, o teste
-    reprova aqui mesmo: :func:`veredito_da_tela` e :func:`veredito_do_motor`
-    não têm ``except``.
-    """
+    """MORDIDA. Cada bancada nomeia origem, destino e razão DE CADA RÉGUA."""
     laudo = relatorio_completo()
     print("\n" + laudo)
 
@@ -614,14 +463,7 @@ def test_a_divergencia_esta_nomeada() -> None:
 
 
 def test_a_regua_da_tela_enxerga_o_adaptador_vazio() -> None:
-    """O achado 2, CURADO em 23/09/2026 (MOVER-UM-POR-VEZ-01).
-
-    Até esta data um dongle livre não existia para a régua da tela — o que fazia
-    a seção Desempenho publicar *"é o único que você tem"* com um segundo
-    adaptador na mesa. Agora quem monta os planos diz os adaptadores da mesa
-    (``adaptadores=``) e o vazio é destino. O nó continua aqui, virado: se a
-    régua voltar a não ver o dongle livre, ele reprova.
-    """
+    """O achado 2, CURADO em 23/09/2026 (MOVER-UM-POR-VEZ-01)."""
     bancada = next(b for b in BANCADAS if b.id == "4-buraco-livre-noutra-controladora")
     tela = veredito_da_tela(bancada)
     arranjo = veredito_do_motor(bancada)
@@ -636,12 +478,7 @@ def test_a_regua_da_tela_enxerga_o_adaptador_vazio() -> None:
 
 
 def test_na_mesa_dela_a_tela_propoe_um_e_o_motor_manda_mover_dois() -> None:
-    """O achado 1, remedido em 23/09/2026: quatro pontes num adaptador de duas.
-
-    Até 23/09 a tela CALAVA aqui (a soma aditiva não passava do corte). Pesando
-    pontes, ela propõe UM movimento — a R12 dela é um de cada vez, e o próximo só
-    depois do «chegou» —, e o motor do arranjo segue mandando mover dois.
-    """
+    """O achado 1, remedido em 23/09/2026: quatro pontes num adaptador de duas."""
     bancada = next(b for b in BANCADAS if b.id == "1-a-mesa-dela")
     tela = veredito_da_tela(bancada)
     arranjo = veredito_do_motor(bancada)
@@ -654,17 +491,8 @@ def test_na_mesa_dela_a_tela_propoe_um_e_o_motor_manda_mover_dois() -> None:
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# 5. O OUTRO PORTÃO DESTA FRENTE — a colisão de posse tem de ser LEGÍVEL
-# ═══════════════════════════════════════════════════════════════════════════
-
 SCRIPT_DA_COLISAO = RAIZ / "scripts" / "check_colisao_de_sprints.py"
 
-#: O script saiu do repositório com o despacho de leva (INSUMO-FORA-DO-GIT-01,
-#: `tests/conftest.py`). Num clone limpo — o do `release.yml` — os dois testes
-#: abaixo pulam COM A RAZÃO em vez de reprovar por ambiente; onde ele existe,
-#: nada muda. E se ele sumir sem que o `.gitignore` explique, o marcador RECUSA
-#: pular e o `assert` logo abaixo reprova no claro, que é o que tem de acontecer.
 _SEM_O_SCRIPT_DA_COLISAO = pytest.mark.insumo_fora_do_git(
     "scripts/check_colisao_de_sprints.py"
 )
@@ -692,21 +520,7 @@ def _sprint_de_papel(nome: str, arquivo: str) -> str:
 
 @_SEM_O_SCRIPT_DA_COLISAO
 def test_o_achado_da_colisao_tem_linha_propria(tmp_path: Path) -> None:
-    """MORDIDA. ``grep '^FALHA'`` tem de achar a colisão na saída do script.
-
-    O DEFEITO, medido em 26/08/2026 na árvore de verdade: a lista de DÍVIDA ia
-    para o ``stdout`` e o bloco de falha para o ``stderr``. Fundidos no mesmo
-    destino (``> saída 2>&1``, que é o que o CI e o gancho fazem), o ``stdout``
-    ganha buffer de bloco e o ``stderr`` não — o ``FALHA:`` era escrito no meio
-    de uma descarga parcial e saía **colado no fim de um nome de arquivo**, na
-    linha 269, no meio de 276 linhas de dívida. ``grep -c '^FALHA'`` devolvia
-    **zero** sobre uma saída que reprovava com rc=1.
-
-    A bancada reproduz o estado inteiro: duas sprints colidindo **mais** 300 de
-    dívida, que é o que enche o buffer. O ``tmp_path`` do pytest não serve
-    sozinho — ``carrega()`` faz ``relative_to(RAIZ)`` —, então a pasta de mentira
-    nasce DENTRO da raiz e é apagada no ``finally``.
-    """
+    """MORDIDA. ``grep '^FALHA'`` tem de achar a colisão na saída do script."""
     assert SCRIPT_DA_COLISAO.exists(), SCRIPT_DA_COLISAO
 
     pasta = Path(tempfile.mkdtemp(dir=RAIZ, prefix=".colisao-de-mentira-"))
@@ -720,11 +534,6 @@ def test_o_achado_da_colisao_tem_linha_propria(tmp_path: Path) -> None:
             _sprint_de_papel("OUTRA-01", "src/hefesto_dualsense4unix/app/disputado.py"),
             encoding="utf-8",
         )
-        # A DÍVIDA, e sem ela o defeito não aparece: é ela que enche o buffer
-        # do `stdout` a ponto de ele descarregar NO MEIO de uma linha. São
-        # **276** porque 276 é o número que a árvore de verdade tinha em
-        # 26/08/2026, quando o `FALHA:` saiu na linha 269 colado num nome de
-        # arquivo. Os nomes têm comprimento variado pela mesma razão.
         for i in range(276):
             nome = f"2026-08-2{i % 10}-DIVIDA-{i:03d}-" + "e" * (10 + i % 37) + ".md"
             (pasta / nome).write_text(
@@ -754,8 +563,6 @@ def test_o_achado_da_colisao_tem_linha_propria(tmp_path: Path) -> None:
             repr(linha) for linha in texto.splitlines() if "FALHA" in linha
         )[:2000]
     )
-    # O par sai ordenado pelo CAMINHO do arquivo, não pelo nome da sprint: por
-    # isso a régua cobra os dois nomes e o arquivo, nunca uma ordem.
     acusacao = next(
         (linha for linha in texto.splitlines() if " x " in linha and "UMA-01" in linha),
         "",

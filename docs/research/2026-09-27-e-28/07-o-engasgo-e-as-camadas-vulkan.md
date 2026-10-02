@@ -193,11 +193,11 @@ biblioteca compara não se sabe.
 
 **Os laços de ~1 s do daemon, com dono:** as três leituras de `pactl` saem de
 `ler_quem_ouve`
-(`src/hefesto_dualsense4unix/integrations/quem_ouve_o_microfone.py:472`), chamada
+(`src/hefesto_dualsense4unix/integrations/quem_ouve_o_microfone.py:304`), chamada
 pela luz do microfone a `INTERVALO_DE_QUEM_OUVE_S = 1.0`
-(`src/hefesto_dualsense4unix/daemon/subsystems/luz_do_mic.py:254`), desde
+(`src/hefesto_dualsense4unix/daemon/subsystems/luz_do_mic.py:217`), desde
 `82d04f960` (03/09). O vpad só responde `UHID_GET_REPORT` dentro de `pump_ff`
-(`src/hefesto_dualsense4unix/integrations/uhid_gamepad.py:2119`), uma vez por
+(`src/hefesto_dualsense4unix/integrations/uhid_gamepad.py:1213`), uma vez por
 tique do laço de 60 Hz; o excesso de cada pico no início do defeito (~15–16 ms) é
 perto de um tique. É compatível com o caminho do controle, não prova.
 
@@ -229,7 +229,7 @@ caiu: o compositor fica em outro grupo de CPU.
 - **A conferência corrigiu dois defeitos:** a espera do `systemd-run` nasceu com
   10 s dentro do laço de leitura do daemon e poderia deixar os quatro controles sem
   entrada; caiu para 2,0 s, o mesmo teto do `pgrep` e do `wmctrl` do mesmo toque
-  (`src/hefesto_dualsense4unix/integrations/fora_do_servico.py:133`, `50b403cdb`).
+  (`src/hefesto_dualsense4unix/integrations/fora_do_servico.py:63`, `50b403cdb`).
   E um comando que chegasse como texto pelo `daemon.reload` virava uma letra por
   argumento (`00f669bef`).
 - **O comentário do nice** em `src/hefesto_dualsense4unix/daemon/main.py` dizia que

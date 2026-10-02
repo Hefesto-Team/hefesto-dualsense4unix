@@ -70,20 +70,13 @@ from hefesto_dualsense4unix.interface import aba01
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: Faixa FORJADA da casa (`aa:bb:cc`), sem sequência simples — a régua de
-#: anonimato de fixtures reprova endereço real podado.
 MAC_1 = "aa:bb:cc:00:00:1f"
 MAC_2 = "aa:bb:cc:00:00:d8"
 MAC_3 = "aa:bb:cc:00:00:7a"
 
 
 def _registro(*macs: str) -> ControllerIdentityRegistry:
-    """Um registro REAL com os MACs já na fila, na ordem em que chegaram.
-
-    ``slot_for`` com o padrão ``assign=True`` é o caminho por onde o produto dá
-    lugar na fila (`identity.py:668`), e é o único I/O-free: quem grava em
-    disco é o ``sync_connected``, que não entra aqui.
-    """
+    """Um registro REAL com os MACs já na fila, na ordem em que chegaram."""
     reg = ControllerIdentityRegistry()
     for mac in macs:
         reg.slot_for(mac)
@@ -110,16 +103,8 @@ def _ctrl(uniq: str | None, conectado: bool = True) -> dict[str, Any]:
     return {"uniq": uniq, "connected": conectado, "transport": "usb"}
 
 
-# ---------------------------------------------------------------------------
-# 1. O NÚMERO — NATIVA-2 / Caminho B
-# ---------------------------------------------------------------------------
 def test_o_numero_do_jogador_sobrevive_sem_vpad() -> None:
-    """Dois controles na Conexão Nativa recebem 1 e 2, na ordem do registro.
-
-    A MORDIDA: troque o corpo de ``coop._numeros_sem_vpad`` por
-    ``return [None] * len(controllers)`` — o que a função fazia até 06/09/2026 —
-    e esta régua reprova nomeando os dois controles que ficaram sem número.
-    """
+    """Dois controles na Conexão Nativa recebem 1 e 2, na ordem do registro."""
     daemon = _daemon(nativo=True, registro=_registro(MAC_1, MAC_2))
     numeros = resolve_player_numbers(daemon, [_ctrl(MAC_1), _ctrl(MAC_2)])
     assert numeros == [1, 2], (
@@ -130,16 +115,7 @@ def test_o_numero_do_jogador_sobrevive_sem_vpad() -> None:
 
 
 def test_no_controlar_o_pc_ninguem_e_jogador() -> None:
-    """A CONTRAPROVA, e ela vale tanto quanto a cura.
-
-    Sem vpad e sem Modo Nativo o controle mexe no PC: não há jogo do outro lado
-    e não há jogador. Alargar a cura para os dois modos seria trocar um defeito
-    por outro — o cartão passaria a prometer um jogador para quem está movendo
-    um cursor.
-
-    A MORDIDA: apague o ``if ligado is not True`` de ``_numeros_sem_vpad`` e
-    esta régua reprova.
-    """
+    """A CONTRAPROVA, e ela vale tanto quanto a cura."""
     daemon = _daemon(nativo=False, registro=_registro(MAC_1, MAC_2))
     assert resolve_player_numbers(daemon, [_ctrl(MAC_1), _ctrl(MAC_2)]) == [
         None,
@@ -148,26 +124,14 @@ def test_no_controlar_o_pc_ninguem_e_jogador() -> None:
 
 
 def test_um_daemon_dublado_nao_numera_a_sala_inteira() -> None:
-    """``is_native_mode`` que devolve algo TRUTHY mas não ``True`` não vale.
-
-    É a blindagem que o irmão ``isinstance(number, int)`` já tinha: com o
-    daemon dublado por ``MagicMock`` toda chamada devolve um mock truthy, e um
-    ``if`` solto numeraria a mesa num teste que nunca falou de modo nenhum.
-
-    A MORDIDA: troque ``if ligado is not True`` por ``if not ligado`` e esta
-    régua reprova.
-    """
+    """``is_native_mode`` que devolve algo TRUTHY mas não ``True`` não vale."""
     daemon = _daemon(nativo=True, registro=_registro(MAC_1))
-    daemon.is_native_mode = lambda: "sim"  # truthy, e não é o booleano
+    daemon.is_native_mode = lambda: "sim"
     assert resolve_player_numbers(daemon, [_ctrl(MAC_1)]) == [None]
 
 
 def test_daemon_sem_a_pergunta_do_modo_continua_calado() -> None:
-    """Daemon velho (sem ``is_native_mode``) não ganha número por acidente.
-
-    O install editable deixa daemon e janela de versões diferentes convivendo
-    até o próximo start — é o mesmo caso que o ``native_bt_fragil`` já trata.
-    """
+    """Daemon velho (sem ``is_native_mode``) não ganha número por acidente."""
     daemon = _daemon(nativo=True, registro=_registro(MAC_1))
     del daemon.is_native_mode
     assert resolve_player_numbers(daemon, [_ctrl(MAC_1)]) == [None]
@@ -200,7 +164,6 @@ def test_perguntar_o_numero_nao_da_lugar_na_fila() -> None:
     """
     registro = _registro(MAC_1)
     daemon = _daemon(nativo=True, registro=registro)
-    # MAC_3 nunca foi apresentado ao registro.
     assert resolve_player_numbers(daemon, [_ctrl(MAC_1), _ctrl(MAC_3)]) == [1, None]
     assert registro.slot_for(MAC_3, assign=False) is None, (
         "a leitura do número deu lugar na fila a um controle que só passou "
@@ -209,14 +172,7 @@ def test_perguntar_o_numero_nao_da_lugar_na_fila() -> None:
 
 
 def test_a_conexao_nativa_continua_sem_ligar_o_vpad() -> None:
-    """§9 da sprint: o gate do co-op fica FECHADO no Modo Nativo, de propósito.
-
-    O mecanismo do co-op é *grab do físico + um vpad por jogador*; pôr-se no
-    meio é exatamente o que a Conexão Nativa dispensa. Esta régua existe para
-    que a próxima pessoa que ler «co-op na Conexão Nativa» não abra
-    ``should_be_active`` achando que era isso que faltava: o que a sprint curou
-    foi a tela dizer que ninguém é jogador, não o Hefesto voltar para o meio.
-    """
+    """§9 da sprint: o gate do co-op fica FECHADO no Modo Nativo, de propósito."""
     daemon = _daemon(nativo=True, registro=_registro(MAC_1, MAC_2))
     assert CoopManager(daemon).should_be_active() is False, (
         "o co-op passou a se ligar sem vpad: ou o grab e o vpad deixaram de ser "
@@ -224,9 +180,6 @@ def test_a_conexao_nativa_continua_sem_ligar_o_vpad() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. A TELA — NATIVA-1 / Caminho A
-# ---------------------------------------------------------------------------
 def _estado(nativo: bool, quantos: int) -> dict[str, Any]:
     return {
         "connected": True,
@@ -241,13 +194,7 @@ def _estado(nativo: bool, quantos: int) -> dict[str, Any]:
 
 
 def test_o_texto_do_modo_nativo_fala_de_jogadores() -> None:
-    """Com dois controles na Conexão Nativa, a tela diz de quem é a conta.
-
-    A MORDIDA: tire o ``Aviso(SELO_DO_MODO, …)`` de ``painel.AVISOS_DA_TELA`` e
-    esta régua reprova imprimindo a coluna inteira — que é o que ela mostrava
-    até 06/09/2026: nada sobre jogadores no único modo em que o número muda de
-    dono.
-    """
+    """Com dois controles na Conexão Nativa, a tela diz de quem é a conta."""
     linhas = painel.avisos_do_estado(_estado(nativo=True, quantos=2))
     do_modo = [a for a in linhas if a["fonte"] == "painel.aviso_do_modo_nativo"]
     assert do_modo, (
@@ -263,12 +210,7 @@ def test_o_texto_do_modo_nativo_fala_de_jogadores() -> None:
 
 
 def test_com_um_controle_so_a_linha_do_modo_cala() -> None:
-    """Sem dois controles não existe pergunta de co-op — e a coluna é Atenção.
-
-    A MORDIDA: troque o ``if quantos < 2`` por ``if quantos < 1`` em
-    ``painel.aviso_do_modo_nativo`` e esta régua reprova: a linha passaria a
-    falar sempre, empurrando para o ``+N`` os avisos que falam quando dói.
-    """
+    """Sem dois controles não existe pergunta de co-op — e a coluna é Atenção."""
     assert painel.aviso_do_modo_nativo(_estado(nativo=True, quantos=1)) is None
 
 
@@ -304,11 +246,7 @@ def test_a_linha_do_modo_chega_a_coluna_da_aba(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_o_selo_do_modo_esta_na_escada_da_gravidade() -> None:
-    """Selo fora de ``ORDEM_DA_GRAVIDADE`` vai para DEPOIS DE TUDO.
-
-    Um selo nomeado no produto e ausente da escada desce abaixo de notícias
-    menos graves — que é o defeito que esta régua trava.
-    """
+    """Selo fora de ``ORDEM_DA_GRAVIDADE`` vai para DEPOIS DE TUDO."""
     assert painel.SELO_DO_MODO in aba.ORDEM_DA_GRAVIDADE, (
         f"o selo {painel.SELO_DO_MODO!r} não está na escada de gravidade")
     ordem = aba.ORDEM_DA_GRAVIDADE
@@ -318,14 +256,7 @@ def test_o_selo_do_modo_esta_na_escada_da_gravidade() -> None:
 
 
 def test_a_dica_do_desligado_fala_de_jogadores() -> None:
-    """A herdeira do ``TEXTO_NATIVO``: o ``title`` da posição Desligado.
-
-    Ela é o par CRAVADO da linha viva — está sempre lá, mesmo com um controle
-    só, porque explica o modo e não o estado da sala.
-
-    A MORDIDA: devolva a dica de ontem (*"Modo Nativo: o Hefesto sai do meio e
-    o jogo fala direto com o controle."*) e esta régua reprova imprimindo-a.
-    """
+    """A herdeira do ``TEXTO_NATIVO``: o ``title`` da posição Desligado."""
     dicas = {chave: dica for chave, _modo, _rot, dica in aba01.INTERRUPTOR}
     dica = dicas["desligado"]
     assert "jogadores" in dica, (
@@ -335,16 +266,7 @@ def test_a_dica_do_desligado_fala_de_jogadores() -> None:
 
 
 def test_a_pagina_diz_isto_nos_dois_lugares_e_por_um_dono_so() -> None:
-    """O ``title`` da posição Desligado E o ``?`` da linha Status.
-
-    Os dois já repetiam palavra por palavra a metade velha da frase. Estender
-    um só deixaria o ``?`` explicando o Modo Nativo e calando exatamente sobre
-    o que mudou — a correção pela metade que esta casa proíbe.
-
-    A MORDIDA: tire o ``{NATIVO_E_OS_JOGADORES}`` do bloco ``<span
-    class="ajuda">`` do ``MIOLO`` e esta régua reprova contando uma ocorrência
-    onde tem de haver duas.
-    """
+    """O ``title`` da posição Desligado E o ``?`` da linha Status."""
     quantas = aba01.MIOLO.count(aba01.NATIVO_E_OS_JOGADORES)
     assert quantas == 2, (
         f"a frase do Modo Nativo aparece {quantas} vez(es) na página e tem de "
@@ -353,19 +275,8 @@ def test_a_pagina_diz_isto_nos_dois_lugares_e_por_um_dono_so() -> None:
 
 
 def test_nenhuma_das_duas_frases_afirma_o_que_ninguem_mediu() -> None:
-    """A §4.2 é INFERIDO DO CÓDIGO, e a tela não pode publicá-la como medida.
-
-    *"O jogo vê dois jogadores"* seria afirmação forte sem régua — quem conta
-    gamepads é o jogo, e a medição que fecharia a pergunta é bancada dela
-    (MESA-DE-QUATRO-01). As duas frases dizem de QUEM é a conta, nunca qual é
-    o resultado dela.
-    """
+    """A §4.2 é INFERIDO DO CÓDIGO, e a tela não pode publicá-la como medida."""
     dicas = {chave: dica for chave, _modo, _rot, dica in aba01.INTERRUPTOR}
-    # A ORAÇÃO DE QUEM CONTA SE LÊ, NÃO SE DIGITA — 11/09/2026. Esta régua
-    # cravava a oração de ontem e teria reprovado a melhora que ela aprovou
-    # (A3-007: a frase encolheu, a oração ficou). O dono da oração é
-    # `aba01.NATIVO_E_OS_JOGADORES`, e é dele que ela sai — assim a régua
-    # mede o ATO (as duas dizerem de quem é a conta) e não a redação de um dia.
     conta = aba01.NATIVO_E_OS_JOGADORES.rstrip(".").lower()
     for frase in (dicas["desligado"], painel.FRASE_DO_MODO_NATIVO):
         baixo = frase.lower()

@@ -1,17 +1,4 @@
-"""Assets do FastConnectable do BlueZ (PLAT-04 item 3).
-
-Estudo 2026-07-18-estudo-bt-maximo.md §3/§7 item 5. DUAS formas, ambas em
-``assets/bluetooth/`` — a lane de wiring escolhe conforme o BlueZ da máquina:
-
-- ``hefesto-fastconnectable.conf``: drop-in p/ /etc/bluetooth/main.conf.d/
-  (SE o BlueZ suportar o diretório; o 5.72 do Pop!_OS 24.04 NÃO tem);
-- ``hefesto-fastconnectable.block``: bloco marcado com sentinelas para apensar
-  ao /etc/bluetooth/main.conf (conffile dpkg → backup + idempotência).
-
-ARMADILHA respeitada: NUNCA reiniciar o bluetoothd no install (derruba os
-controles BT conectados — provado ao vivo em 2026-07-17). Os assets são
-estáticos e devem AVISAR isso no texto.
-"""
+"""Assets do FastConnectable do BlueZ (PLAT-04 item 3)."""
 from __future__ import annotations
 
 import configparser
@@ -81,10 +68,7 @@ class TestBlocoMarcado:
         assert ativos == ["[General]", "FastConnectable=true"]
 
     def test_general_duplicado_e_seguro_no_keyfile(self, block_text: str) -> None:
-        """Simula o apenso ao fim de um main.conf real: grupos [General]
-        repetidos precisam FUNDIR (comportamento do GKeyFile, provado ao vivo
-        2026-07-18) — configparser é mais estrito, então testamos a semântica
-        com um parser tolerante a duplicatas."""
+        """Simula o apenso ao fim de um main.conf real: grupos [General]"""
         main_conf = "[General]\n\n[Policy]\nAutoEnable=true\n"
         combinado = main_conf + "\n" + block_text
         parser = configparser.ConfigParser(strict=False)

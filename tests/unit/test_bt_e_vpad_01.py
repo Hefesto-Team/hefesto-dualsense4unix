@@ -1,26 +1,10 @@
-"""BT-E-VPAD-01 — o que só existe no cabo, e os furos do gamepad virtual.
-
-A hipótese dela, com o controle no Bluetooth, ao ver a lightbar apagada e o
-botão do microfone desobedecendo:
-
-    "engraçado que os gatilhos funcionam no BT. Talvez algo não esteja pareado
-     pra tudo funcionar via BT — cada uma das features esteja setada pra
-     funcionar só via cabo, o que é um erro de design nosso."
-
-**Está certa**, e esta casa já tem isso registrado com nome: *"a premissa
-USB-é-o-mundo"*, listada como bug recorrente.
-"""
+"""BT-E-VPAD-01 — o que só existe no cabo, e os furos do gamepad virtual."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from hefesto_dualsense4unix.integrations import uhid_gamepad as uhid
-
-
-# ---------------------------------------------------------------------------
-# Defeito 1 — o botão do mic alternava o microfone ERRADO no Bluetooth
-# ---------------------------------------------------------------------------
 
 
 class _AudioDeBancada:
@@ -44,12 +28,7 @@ class _AudioDeBancada:
 
 
 def test_a_fonte_padrao_do_controle_e_reconhecida() -> None:
-    """Com o cabo, a fonte padrão É o controle — e o botão pode agir.
-
-    Mordida: fazer `fonte_padrao_e_o_controle` devolver False sempre. O botão
-    do microfone para de funcionar até no cabo, que é o caso que sempre
-    funcionou.
-    """
+    """Com o cabo, a fonte padrão É o controle — e o botão pode agir."""
     for backend, saida in (
         ("pactl", "alsa_input.usb-Sony_DualSense_Wireless_Controller-00.mono"),
         ("wpctl", 'node.description = "DualSense Wireless Controller Mono"'),
@@ -85,14 +64,7 @@ def test_a_fonte_padrao_de_outro_dispositivo_nao_e_confundida() -> None:
 
 
 def test_sem_backend_de_audio_a_resposta_e_nao_mexer() -> None:
-    """Em caso de dúvida, False — e o chamador não mexe em nada.
-
-    Não fazer nada é sempre melhor que mutar o microfone errado. É a mesma
-    disciplina do resto da casa: uma tela que não sabe diz que não sabe, e um
-    botão que não sabe não age.
-
-    Mordida: devolver True no ramo do backend ausente.
-    """
+    """Em caso de dúvida, False — e o chamador não mexe em nada."""
     bancada = _AudioDeBancada("none", "DualSense")
     assert bancada.real.fonte_padrao_e_o_controle() is False
 
@@ -147,8 +119,6 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
         nomes.update(c.co_names)
         nomes.update(c.co_varnames)
         for const in c.co_consts:
-            # O docstring fica de fora: ele CITA os nomes que saíram, com o
-            # motivo. Contá-lo faria a régua reprovar porque alguém explicou.
             if const is fn.__doc__:
                 continue
             if isinstance(const, str):
@@ -166,40 +136,14 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# A afirmação forte que a auditoria de 02/09 derrubou
-# ---------------------------------------------------------------------------
-
-
 def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
-    """O kernel alterna na BORDA DO BOTÃO, e nada que escrevamos muda isso.
-
-    MIC-DA-MESA-ELEICAO-01 acrescentou às três recusas do `common[9]` um motivo
-    NOVO (recitação-da-frase-derrubada)
-    — *"escrever no `common[9]` faz o kernel parar de alternar na borda"* —
-    e chamou aquilo de impossibilidade construtiva. **A auditoria de 02/09/2026
-    derrubou a frase contra o fonte C desta árvore.**
-
-    O `hid-playstation` decide pelo BIT DO BOTÃO no report de ENTRADA
-    (`ds_report->buttons[2] & DS_BUTTONS2_MIC_MUTE`); nenhuma leitura ali
-    consulta o que o userspace escreveu no output report. Ele continua
-    alternando. O que se perderia é a legibilidade da borda **do nosso lado**,
-    porque quem lê aqui é o mudo do FIRMWARE (`status[1]` BIT(2)) — escolha de
-    implementação, não lei do aparelho.
-
-    Esta régua guarda as duas metades: que o fonte C continua sendo o que a
-    correção diz que é, e que a frase derrubada não voltou a nenhum arquivo.
-
-    Mordida: repor a frase em qualquer `.py`/`.md` de `src/`, `tests/` ou
-    `docs/` — esta régua reprova.
-    """
+    """O kernel alterna na BORDA DO BOTÃO, e nada que escrevamos muda isso."""
     import pathlib
     import re
 
     raiz = pathlib.Path(__file__).resolve().parents[2]
     marca_de_recitacao = "recitação-da-frase-derrubada"
 
-    # (a) o fato: a condição do toggle é o bit do botão no report de ENTRADA.
     fonte_c = (raiz / "assets/dkms/hid-playstation/hid-playstation.c").read_text(
         encoding="utf-8", errors="replace"
     )
@@ -218,7 +162,6 @@ def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
         "o toggle de `ds->mic_muted` na borda sumiu do driver"
     )
 
-    # (b) a frase derrubada não pode voltar a lugar nenhum.
     proibidas = ("parar de alternar", "deixa de alternar", "para de alternar")
     reincidentes: list[str] = []
     for pasta in ("src", "tests", "docs"):
@@ -229,27 +172,17 @@ def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
             for n, linha in enumerate(linhas, 1):
                 if not any(p in linha for p in proibidas):
                     continue
-                # A frase só é a frase derrubada quando fala do byte ou do
-                # kernel; a vizinhança cobre a quebra de linha do parágrafo.
                 janela = "\n".join(linhas[max(0, n - 8) : n + 8])
                 if marca_de_recitacao in janela:
-                    # Quem CITA a frase para dizer que ela é falsa carrega a
-                    # marca. Sem esta porta a régua reprovaria a própria
-                    # correção — o defeito das onze réguas de 26/08.
                     continue
                 if "common[9]" in janela or "kernel" in janela:
                     reincidentes.append(f"{arq.relative_to(raiz)}:{n}: {linha.strip()}")
 
-    assert not reincidentes, (  # recitação-da-frase-derrubada
+    assert not reincidentes, (
         "voltou a afirmação que a auditoria de 02/09/2026 derrubou — o kernel "
         "NÃO para de alternar quando afirmamos o `common[9]`:\n"
         + "\n".join(reincidentes)
     )
-
-
-# ---------------------------------------------------------------------------
-# Furo 1 — o nome do vpad não continha "Wireless Controller"
-# ---------------------------------------------------------------------------
 
 
 def test_o_nome_do_vpad_contem_a_substring_que_os_jogos_procuram() -> None:
@@ -267,30 +200,12 @@ def test_o_nome_do_vpad_contem_a_substring_que_os_jogos_procuram() -> None:
     nome = UhidDualSense(player=2, blueprint=None).name
 
     assert "Wireless Controller" in nome
-    # E a distinção humana continua: é o que separa este device do físico na
-    # lista do sistema, e é o que ela vê.
     assert "Hefesto" in nome
     assert "P2" in nome
 
 
-# ---------------------------------------------------------------------------
-# Furo 2 — o byte 53 nunca era escrito
-# ---------------------------------------------------------------------------
-
-
 def test_o_byte_53_acompanha_o_fisico_em_vez_de_sair_fixo() -> None:
-    """`HP_DETECT`, `MIC_DETECT` e `MIC_MUTE` — os três bits que faltavam.
-
-    O `_encode_body` escrevia o byte 52 (bateria) e **nunca o 53**. Com valor
-    fixo, o campo não acompanhava o controle de verdade: um jogo que decida
-    rotear som para o alto-falante do controle **só quando não há fone
-    plugado** estava lendo um número que não vinha de lugar nenhum.
-
-    O dado está FORA da janela de motion (15..39), então precisa de caminho
-    próprio — o mesmo desenho que o clique do touchpad já usa.
-
-    Mordida: apagar a linha `body[_STATUS1_OFFSET] = ...` do `_encode_body`.
-    """
+    """`HP_DETECT`, `MIC_DETECT` e `MIC_MUTE` — os três bits que faltavam."""
     from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
     pad = UhidDualSense(player=1, blueprint=None)
@@ -298,32 +213,19 @@ def test_o_byte_53_acompanha_o_fisico_em_vez_de_sair_fixo() -> None:
     corpo = pad._encode_body()
     assert corpo[uhid._STATUS1_OFFSET] == uhid._STATUS1_NEUTRO
 
-    # Fone plugado (bit0) e microfone mudo (bit2).
     pad.forward_jack(0b101)
     corpo = pad._encode_body()
     assert corpo[uhid._STATUS1_OFFSET] == 0b101
 
 
 def test_so_os_tres_bits_conhecidos_do_byte_53_sao_encaminhados() -> None:
-    """O resto do byte é do firmware, e não é nosso para repassar.
-
-    Mandar bit desconhecido adiante é a mesma classe de erro que autorizar um
-    campo de áudio sem escrever valor nele — o `AUDIO-OWNER-01` já pagou por
-    essa lição noutro lugar deste projeto.
-
-    Mordida: trocar a máscara por `0xFF`.
-    """
+    """O resto do byte é do firmware, e não é nosso para repassar."""
     from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
     pad = UhidDualSense(player=1, blueprint=None)
     pad.forward_jack(0xFF)
 
     assert pad._encode_body()[uhid._STATUS1_OFFSET] == 0b111
-
-
-# ---------------------------------------------------------------------------
-# PARIDADE-SONY-01/E1 — o INSTRUMENTO do portão de medição
-# ---------------------------------------------------------------------------
 
 
 def _corpo_de_audio(flag0: int, bytes_de_audio: tuple[int, int, int, int]) -> bytes:
@@ -350,14 +252,7 @@ def _vpad_mudo() -> Any:
 
 
 def _vpad_em_jogo() -> Any:
-    """Um vpad com a sessão de jogo ABERTA e a graça pós-bind vencida.
-
-    Os testes que medem as OUTRAS condições do carimbo (o keepalive, os bits
-    de autorização) precisam deste estado, senão passam por acidente: sem
-    sessão de jogo o carimbo não sai de jeito nenhum, e a asserção fica
-    verdadeira pelo motivo errado. Foi o que aconteceu na primeira versão
-    deles, e o laço de mordidas pegou.
-    """
+    """Um vpad com a sessão de jogo ABERTA e a graça pós-bind vencida."""
     pad = _vpad_mudo()
     pad._game_open = True
     pad._bound_at = pad.time_fn() - 3600
@@ -365,28 +260,10 @@ def _vpad_em_jogo() -> Any:
 
 
 def test_o_jogo_que_pede_audio_deixa_carimbo() -> None:
-    """O portão de medição da PARIDADE-SONY-01, como instrumento PERMANENTE.
-
-    A pergunta da sprint: *"algum jogo que ela joga escreve `common[4]`, `[5]`,
-    `[6]` ou `[7]` no gamepad virtual?"*. Ela pedia um log temporário; um
-    carimbo permanente responde melhor, porque não depende de alguém lembrar
-    de ligá-lo antes de jogar — ele já está lá quando ela joga.
-
-    **Ele NÃO replica nada.** Mede. A replicação é a E2, e só acontece se esta
-    medição disser que sim — como está escrito na sprint: *"um código escrito
-    contra uma premissa não medida é dívida"*.
-
-    Mordida: apagar o bloco do carimbo do `_handle_output`.
-    """
-    # SESSÃO DE JOGO ABERTA — sem ela o carimbo não sai, e a razão é a
-    # primeira leitura do instrumento (02/08): ele apareceu com 8 segundos de
-    # idade num daemon recém-reiniciado, SEM jogo nenhum. O driver
-    # `hid-playstation` do kernel escreve os campos de áudio no PROBE do
-    # device. Ver `test_o_probe_do_kernel_nao_conta_como_jogo`, abaixo.
+    """O portão de medição da PARIDADE-SONY-01, como instrumento PERMANENTE."""
     pad = _vpad_em_jogo()
     assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s
 
-    # Jogo pedindo volume de alto-falante: bit 0x20 ligado, byte 5 não-nulo.
     pad._handle_output(_corpo_de_audio(0x20, (0, 180, 0, 0)))
 
     assert uhid.ATIVIDADE_AUDIO_DO_JOGO in pad.visto_ha_s
@@ -438,7 +315,6 @@ def test_o_probe_do_kernel_nao_conta_como_jogo() -> None:
     Mordida: tirar o `self._replicating()` da condição do carimbo.
     """
     pad = _vpad_mudo()
-    # Sem sessão de jogo: é exatamente o estado do probe do kernel.
     pad._game_open = False
     pad._bound_at = pad.time_fn() - 3600
 
@@ -448,22 +324,11 @@ def test_o_probe_do_kernel_nao_conta_como_jogo() -> None:
         "escrita de áudio FORA de uma sessão de jogo é o kernel adotando o "
         "device — carimbar isso faria o portão da sprint dar um falso 'sim'"
     )
-    # E o carimbo de OUTPUT continua saindo: ele mede outra coisa (alguém
-    # está escrevendo no hidraw deste vpad), e essa resposta é verdadeira.
     assert uhid.ATIVIDADE_OUTPUT in pad.visto_ha_s
 
 
 def test_bits_de_audio_ligados_com_bytes_zerados_nao_contam() -> None:
-    """A armadilha 10 da sprint: keepalive não é intenção.
-
-    Bits ligados com os quatro bytes em zero é o jogo mantendo a autoridade
-    sobre o bloco, não pedindo volume. Contar isso como "o jogo quer áudio"
-    levaria a replicar "volume zero" ao controle dela a 60 Hz — a mesma classe
-    de defeito que o `AUDIO-OWNER-01` curou noutro lugar deste projeto, e que
-    o keepalive de vibração do `GUERRA-01` já produziu de verdade.
-
-    Mordida: tirar o `any(...)` da condição.
-    """
+    """A armadilha 10 da sprint: keepalive não é intenção."""
     pad = _vpad_em_jogo()
 
     pad._handle_output(_corpo_de_audio(0xF0, (0, 0, 0, 0)))
@@ -475,13 +340,7 @@ def test_bits_de_audio_ligados_com_bytes_zerados_nao_contam() -> None:
 
 
 def test_report_sem_os_bits_de_audio_nao_conta() -> None:
-    """E um report de vibração com lixo nos bytes 4-7 também não.
-
-    Sem os bits de autorização, aqueles bytes não são áudio: o firmware os
-    ignora, e nós também temos de ignorar.
-
-    Mordida: tirar o teste de `_AUDIO_FLAGS_DO_JOGO` da condição.
-    """
+    """E um report de vibração com lixo nos bytes 4-7 também não."""
     pad = _vpad_em_jogo()
 
     pad._handle_output(_corpo_de_audio(0x01, (99, 99, 99, 99)))
@@ -490,33 +349,13 @@ def test_report_sem_os_bits_de_audio_nao_conta() -> None:
 
 
 def test_a_amostra_diz_quais_bytes_o_jogo_escreveu() -> None:
-    """PARIDADE-SONY-01 — o dado que DESTRANCA a E2.
-
-    O veredito do portão, em 02/08, foi "sim, alguém escreve áudio durante uma
-    sessão". E a sprint trancou a E2 na pergunta seguinte, com todas as letras:
-
-        *"Ainda não medido: o que exatamente foi escrito (quais dos quatro
-        bytes, com que valores). (...) A E2 não deve começar antes disso.
-        Replicar sem saber QUAL byte o jogo escreve é o mesmo erro de sempre,
-        com o carimbo dando falsa confiança."*
-
-    O carimbo responde QUANDO; esta amostra responde O QUÊ. Sem ela a E2
-    escolheria no escuro qual dos quatro campos replicar — e o `common[7]`
-    (roteamento) tem VETO escrito na sprint, porque ninguém sabe o valor
-    neutro dele. Uma amostra distingue "o jogo pediu volume" de "o jogo mudou
-    a rota do áudio", e são coisas muito diferentes de replicar.
-
-    Mordida: apagar a atribuição de `_audio_do_jogo_amostra` do
-    `_handle_output`, ou trocar a ordem de dois dos quatro bytes.
-    """
+    """PARIDADE-SONY-01 — o dado que DESTRANCA a E2."""
     pad = _vpad_em_jogo()
     assert pad.audio_do_jogo_amostra is None, (
         "sem escrita nenhuma, a amostra tem de ser ausente — publicar zeros "
         "faria a E2 ler 'o jogo pediu volume 0', que é mandar MUDO"
     )
 
-    # Fone 10, alto-falante 180, mic 0, rota 2 — os quatro valores distintos
-    # de propósito: uma amostra que troque dois campos de lugar reprova aqui.
     pad._handle_output(_corpo_de_audio(0x20, (10, 180, 0, 2)))
 
     assert pad.audio_do_jogo_amostra == {
@@ -529,25 +368,11 @@ def test_a_amostra_diz_quais_bytes_o_jogo_escreveu() -> None:
 
 
 def test_a_amostra_obedece_as_mesmas_guardas_do_carimbo() -> None:
-    """Keepalive e probe do kernel não entram na amostra — nem no carimbo.
-
-    Se a amostra tivesse guarda própria, ela e o carimbo divergiriam sobre o
-    que é "durante um jogo" — que é exatamente o erro que o veredito do portão
-    documenta ter cometido uma vez, e cuja cura foi *reusar* o `_replicating()`
-    da REPLICA-03 em vez de escrever um segundo gate.
-
-    Uma amostra que sobrevive ao keepalive é pior que amostra nenhuma: ela diz
-    "o jogo pediu volume 0" quando o jogo não pediu nada, e mandar 0 ao
-    controle é mandar MUDO (armadilha 10 da sprint).
-
-    Mordida: tirar a atribuição da amostra de dentro do `if` do carimbo.
-    """
-    # (a) keepalive: bits ligados, bytes zerados.
+    """Keepalive e probe do kernel não entram na amostra — nem no carimbo."""
     keepalive = _vpad_em_jogo()
     keepalive._handle_output(_corpo_de_audio(0xF0, (0, 0, 0, 0)))
     assert keepalive.audio_do_jogo_amostra is None
 
-    # (b) probe do kernel: valores de verdade, mas fora de sessão de jogo.
     probe = _vpad_mudo()
     probe._game_open = False
     probe._bound_at = probe.time_fn() - 3600
@@ -559,19 +384,7 @@ def test_a_amostra_obedece_as_mesmas_guardas_do_carimbo() -> None:
 
 
 def test_a_amostra_nao_sobrevive_ao_stop(tmp_path: Any) -> None:
-    """A amostra morre com o device, como os carimbos que ela acompanha.
-
-    Um `alto_falante=180` herdado da vida anterior do vpad seria medição de um
-    device que não existe mais — e a E2 seria decidida sobre bytes que outro
-    gamepad virtual recebeu.
-
-    O `stop()` é chamado DE VERDADE (com um fd de arquivo no lugar do
-    `/dev/uhid`, que o `contextlib.suppress(OSError)` do próprio método
-    absorve): um teste que repetisse o bloco de reset à mão passaria com a
-    linha arrancada do produto, que é a definição de teste que não morde.
-
-    Mordida: apagar a linha que zera `_audio_do_jogo_amostra` no `stop()`.
-    """
+    """A amostra morre com o device, como os carimbos que ela acompanha."""
     import os
 
     pad = _vpad_em_jogo()
@@ -582,7 +395,4 @@ def test_a_amostra_nao_sobrevive_ao_stop(tmp_path: Any) -> None:
     pad.stop()
 
     assert pad.audio_do_jogo_amostra is None
-    # E o carimbo que ela acompanha morreu junto — os dois são a mesma
-    # medição, e um sobreviver ao outro seria a divergência que o veredito do
-    # portão já documenta ter custado uma leitura errada.
     assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s

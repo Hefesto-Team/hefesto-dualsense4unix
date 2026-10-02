@@ -1,17 +1,4 @@
-"""Testes de `hefesto_dualsense4unix.daemon.connection` — AUDIT-FINDING-LOG-EXC-INFO-01.
-
-Cobre:
-- `connect_with_retry` backoff exponencial (1s, 2s, 4s, ..., teto 30s).
-- `connect_with_retry` aborta no shutdown via `stop_event`.
-- Reset do backoff ao valor inicial após sucesso (não testado aqui, coberto indiretamente).
-- TESTE-HONESTO-01/E2: os cinco casos rodam também por Bluetooth — o
-  `_FakeController` ganha `transport` no construtor, e o payload publicado em
-  `CONTROLLER_CONNECTED` é conferido contra o transporte pedido. Antes desta
-  entrega o `get_transport()` do fake devolvia `"usb"` fixo, e nenhum teste
-  desta suíte jamais exercitava o par BT do backoff/reconexão.
-
-Usa fakes puros — sem pydualsense real.
-"""
+"""Testes de `hefesto_dualsense4unix.daemon.connection` — AUDIT-FINDING-LOG-EXC-INFO-01."""
 from __future__ import annotations
 
 import asyncio
@@ -72,7 +59,6 @@ class _SleepRecorder:
 
     async def wait_for(self, coro: Any, timeout: float) -> None:
         self.calls.append(timeout)
-        # Cancela o coro para não deixar pendente; levanta TimeoutError como a implementação real.
         if asyncio.iscoroutine(coro):
             coro.close()
         raise asyncio.TimeoutError()
@@ -92,8 +78,6 @@ async def test_connect_with_retry_sucesso_primeira_tentativa(transporte: str) ->
     await connect_with_retry(daemon)
     assert daemon.controller._calls == 1
     assert any(topic for topic, _ in daemon.bus.published)
-    # O par diferencial: CONTROLLER_CONNECTED carrega o transporte de QUEM
-    # conectou, não um valor fixo — antes da E2 o fake sempre devolvia "usb".
     topic, payload = daemon.bus.published[-1]
     assert topic == EventTopic.CONTROLLER_CONNECTED
     assert payload["transport"] == transporte
@@ -115,10 +99,8 @@ async def test_connect_with_retry_backoff_exponencial(
 
     await connect_with_retry(daemon)
 
-    # 3 falhas geraram 3 esperas com backoff 1.0, 2.0, 4.0 — o backoff não
-    # muda com o transporte, e é isso que o par usb/bt prova.
     assert recorder.calls == [1.0, 2.0, 4.0], f"esperado [1,2,4], obtido {recorder.calls}"
-    assert daemon.controller._calls == 4  # 3 falhas + 1 sucesso
+    assert daemon.controller._calls == 4
     _, payload = daemon.bus.published[-1]
     assert payload["transport"] == transporte
 
@@ -129,7 +111,6 @@ async def test_connect_with_retry_backoff_com_teto(
     monkeypatch: pytest.MonkeyPatch, transporte: str
 ) -> None:
     """Após suficientes falhas, backoff cresce mas não passa de BACKOFF_MAX_SEC."""
-    # Com backoff inicial 10s: 10 → 20 → 30 (teto) → 30 → 30...
     daemon = _FakeDaemon(
         config=_FakeConfig(reconnect_backoff_sec=10.0),
         controller=_FakeController(fail_until=5, transport=transporte),
@@ -153,22 +134,19 @@ async def test_connect_with_retry_aborta_no_shutdown(
     """Se stop_event setar durante o backoff, connect_with_retry retorna sem conectar."""
     daemon = _FakeDaemon(
         config=_FakeConfig(reconnect_backoff_sec=1.0),
-        controller=_FakeController(fail_until=99, transport=transporte),  # sempre falha
+        controller=_FakeController(fail_until=99, transport=transporte),
         _stop_event=asyncio.Event(),
     )
 
-    # wait_for que SINALIZA sucesso (stop_event.wait completou) no primeiro call.
     async def stop_triggered_wait_for(coro: Any, timeout: float) -> None:
         if asyncio.iscoroutine(coro):
             coro.close()
-        return None  # stop_event.wait() retornou sem timeout — aborta.
+        return None
 
     monkeypatch.setattr("hefesto_dualsense4unix.daemon.connection.asyncio.wait_for", stop_triggered_wait_for)  # noqa: E501
 
     await connect_with_retry(daemon)
 
-    # Primeira tentativa falhou, stop_event "sinalizou" no sleep, função retornou.
-    # Nunca conectou — nenhum CONTROLLER_CONNECTED sai, em nenhum transporte.
     assert daemon.controller._calls == 1
     assert daemon.bus.published == []
 
@@ -187,11 +165,6 @@ async def test_connect_with_retry_sem_auto_reconnect_propaga_erro(transporte: st
     assert daemon.bus.published == []
 
 
-# -----------------------------------------------------------------------------
-# is_connected — default conservador False (item 7 do must-do)
-# -----------------------------------------------------------------------------
-
-
 def test_is_connected_default_false_quando_attr_ausente() -> None:
     """`PyDualSenseController.is_connected()` retorna False quando `connected` ausente."""
     from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
@@ -199,7 +172,6 @@ def test_is_connected_default_false_quando_attr_ausente() -> None:
     ctrl = PyDualSenseController()
 
     class _FakeDS:
-        # Intencionalmente sem atributo `connected`.
         pass
 
     ctrl._ds = _FakeDS()  # type: ignore[assignment]

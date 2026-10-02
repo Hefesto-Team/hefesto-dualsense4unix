@@ -77,12 +77,7 @@ def _linhas_de_chamada(nome: str) -> list[int]:
 
 
 def test_o_forward_do_coop_roda_antes_do_gate_de_conexao() -> None:
-    """A cura, e é uma questão de ORDEM no arquivo.
-
-    Morde ao devolver o bloco do co-op para depois do gate: é o estado do
-    produto até 10/08/2026, e o efeito é o jogador 2 mudo no meio da partida
-    sempre que o controle do P1 sai da mesa.
-    """
+    """A cura, e é uma questão de ORDEM no arquivo."""
     gate = _linha_do_gate_de_conexao()
     forwards = _linhas_de_chamada("forward_all")
     assert forwards, "o laço não repassa mais input aos secundários?"
@@ -93,12 +88,7 @@ def test_o_forward_do_coop_roda_antes_do_gate_de_conexao() -> None:
 
 
 def test_o_sync_do_coop_tambem_roda_antes_do_gate() -> None:
-    """Repassar sem reconciliar não basta.
-
-    O `sync` é quem CRIA o gamepad virtual de cada secundário. Deixá-lo para
-    depois do gate curaria só metade: um P2 que já estivesse de pé continuaria
-    andando, e um que entrasse na mesa com o P1 desconectado nunca nasceria.
-    """
+    """Repassar sem reconciliar não basta."""
     gate = _linha_do_gate_de_conexao()
     syncs = [
         n.lineno
@@ -112,12 +102,7 @@ def test_o_sync_do_coop_tambem_roda_antes_do_gate() -> None:
 
 
 def test_o_primario_continua_sendo_lido_depois_do_gate() -> None:
-    """O contraponto: a cura não pode virar leitura de controle desconectado.
-
-    Se o `read_state` do primário subisse junto, o daemon passaria a ler um
-    aparelho que não está lá a cada tique — o gate existe por isso
-    (BUG-DAEMON-NO-DEVICE-FATAL-01).
-    """
+    """O contraponto: a cura não pode virar leitura de controle desconectado."""
     gate = _linha_do_gate_de_conexao()
     leituras = [
         n.lineno
@@ -132,15 +117,7 @@ def test_o_primario_continua_sendo_lido_depois_do_gate() -> None:
 
 
 def test_o_grace_e_recalculado_depois_da_borda_de_reconexao() -> None:
-    """As DUAS atribuições de `grace_passed` são necessárias, e por quê.
-
-    A de cima (pré-gate) serve o co-op. A de baixo serve o primário — e entre as
-    duas está a borda desconectado→conectado, que ARMA um grace novo. Apagar a
-    de baixo por parecer duplicada faria o primário despachar sem o settling
-    anti-ghost, que é o defeito que o BUG-DAEMON-CONNECT-GHOST-INPUT-01 curou.
-
-    Morde ao apagar qualquer uma das duas.
-    """
+    """As DUAS atribuições de `grace_passed` são necessárias, e por quê."""
     fonte = LIFECYCLE.read_text(encoding="utf-8").splitlines()
     graces = [
         i + 1

@@ -83,7 +83,7 @@ class _HandleFalso:
 class _BackendMinimo:
     """Só o necessário para exercitar `enviar_release_leds` sem hardware."""
 
-    enviar_release_leds = None  # preenchido no __init_subclass__ abaixo
+    enviar_release_leds = None
 
     def __init__(self, handles: dict[str, Any], sysfs: dict[str, Any]) -> None:
         import threading
@@ -99,8 +99,6 @@ def _backend(handles: dict[str, Any], sysfs: dict[str, Any]) -> Any:
     )
 
     alvo = _BackendMinimo(handles, sysfs)
-    # O método é copiado do mixin real — um dublê que reimplementasse a
-    # regra mediria o dublê, e o instrumento tem de ser o do produto.
     alvo.enviar_release_leds = (  # type: ignore[assignment]
         PyDualSenseController.enviar_release_leds.__get__(alvo)
     )
@@ -108,14 +106,7 @@ def _backend(handles: dict[str, Any], sysfs: dict[str, Any]) -> Any:
 
 
 def test_o_report_sai_pelo_write_report_do_handle() -> None:
-    """RESET-03: seq/CRC por handle. Escrever cru no device já matou a cura uma vez.
-
-    Desde o BTREPORT-02 todo 0x31 nosso carrega o nibble de sequência do
-    handle. Um reset que escrevesse direto no `device` com seq fixo seria
-    descartado pelo firmware como fora de sequência — e o claim NUNCA voltaria.
-    O sintoma seria o pior possível para medir: o log diz "enviado" e a barra
-    continua apagada.
-    """
+    """RESET-03: seq/CRC por handle. Escrever cru no device já matou a cura uma vez."""
     handle = _HandleFalso()
     backend = _backend({"aa:bb": handle}, {})
 
@@ -125,20 +116,11 @@ def test_o_report_sai_pelo_write_report_do_handle() -> None:
     assert len(handle.reports) == 1
     report = handle.reports[0]
     assert report[0] == 0x31, "não é o report de output BT"
-    # common[1] é o valid_flag1, e ele mora em [4] no envelope (ver o layout em
-    # `core/lightbar_reset.py`): 0x08 = Reset LED state.
     assert report[4] == 0x08, "o flag de Reset LED state não está no report"
 
 
 def test_o_cache_do_no_sysfs_e_invalidado_junto() -> None:
-    """Sem isto, a barra fica apagada com o produto achando que já pintou.
-
-    O 0x08 zera o estado de LED no firmware. Se o cache do nó continuar dizendo
-    "já está nessa cor", a escrita seguinte é pulada — e a medição na mesa dela
-    daria "não curou" por causa do instrumento, não do aparelho. Esta
-    invalidação vinha junto do reset original e foi removida com ele em
-    `108b711`.
-    """
+    """Sem isto, a barra fica apagada com o produto achando que já pintou."""
     no = _NoSysfsFalso()
     backend = _backend({"aa:bb": _HandleFalso()}, {"aa:bb": no})
 
@@ -160,11 +142,7 @@ def test_uniq_restringe_a_um_controle_so() -> None:
 
 
 def test_sem_handle_aberto_devolve_vazio_em_vez_de_estourar() -> None:
-    """"Nenhum controle aberto" é resposta, não falha.
-
-    Quem estiver medindo precisa distinguir "mandei e nada aconteceu" de "não
-    havia a quem mandar" — são conclusões opostas sobre o mesmo silêncio.
-    """
+    """"Nenhum controle aberto" é resposta, não falha."""
     backend = _backend({}, {})
 
     assert backend.enviar_release_leds() == {}
@@ -188,18 +166,7 @@ def test_falha_de_um_handle_nao_derruba_o_outro() -> None:
 
 
 def test_o_instrumento_nao_virou_cura_por_acidente() -> None:
-    """O portão que impede o 0x08 de voltar à adoção sem decisão dela.
-
-    A remoção de `108b711` foi um erro de leitura de correlação, mas ela foi
-    DELIBERADA e está documentada. Devolver o reset ao caminho automático é
-    decisão dela, com a medição na mão — não efeito colateral de alguém
-    "consertando" por dedução.
-
-    Este teste lê a árvore de sintaxe do backend e afirma que `send_release_leds`
-    só é chamado de DENTRO do instrumento (`enviar_release_leds`). Se voltar à
-    adoção ou ao wake, ele reprova — e quem for devolver a cura vai ter que
-    reescrevê-lo, que é exatamente o momento de reler esta docstring.
-    """
+    """O portão que impede o 0x08 de voltar à adoção sem decisão dela."""
     arvore = ast.parse(BACKEND_PY.read_text(encoding="utf-8"))
     donos: list[str] = []
     for no in ast.walk(arvore):

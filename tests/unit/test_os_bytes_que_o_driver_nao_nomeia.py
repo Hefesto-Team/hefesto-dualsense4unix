@@ -39,7 +39,6 @@ DRIVER = RAIZ / "assets/dkms/hid-playstation/hid-playstation.c"
 DOC = RAIZ / "docs/protocol/dualsense-o-que-nao-e-canal-e-os-bytes-que-o-driver-nao-nomeia.md"
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 
-#: As seis chaves do tema, todas do controle `dualsense`.
 CHAVES_DO_TEMA = (
     "plataforma.camera_ir",
     "plataforma.transporte_radio",
@@ -49,9 +48,6 @@ CHAVES_DO_TEMA = (
     "plataforma.vpad",
 )
 
-#: Tamanho em bytes de cada tipo que aparece nas duas structs lidas. Um tipo
-#: novo no fonte reprova por `KeyError` em vez de calcular offset errado em
-#: silêncio — que é o defeito que esta régua existe para não repetir.
 TAMANHOS = {
     "u8": 1,
     "__le16": 2,
@@ -59,11 +55,6 @@ TAMANHOS = {
     "struct dualsense_touch_point": 4,
 }
 
-#: Uma DECLARAÇÃO inteira: o tipo e tudo até o `;`. A lista de nomes vem
-#: depois, porque o driver escreve `u8 x, y;` — três linhas assim (`x, y`,
-#: `rx, ry`, `z, rz`) valem 6 bytes, e um leitor que só aceite um nome por
-#: linha os perde e desloca a struct inteira em 6. Aconteceu na primeira
-#: versão desta régua, e o sintoma foi `buttons` aparecer no offset 1.
 _DECLARACAO = re.compile(
     r"^\s*(u8|__le16|__le32|struct dualsense_touch_point)\s+([^;]+);"
 )
@@ -71,11 +62,7 @@ _DECLARADOR = re.compile(r"^(\w+)\s*(?:\[\s*(\d+)\s*\])?$")
 
 
 def _campos_da_struct(fonte: str, nome: str) -> tuple[dict[str, tuple[int, int]], int]:
-    """Offsets `(primeiro, último)` de cada campo, e o tamanho total da struct.
-
-    Lê do fonte C, não de uma tabela redigitada: a lista tem UM dono, e ele é o
-    driver que está compilado nesta máquina.
-    """
+    """Offsets `(primeiro, último)` de cada campo, e o tamanho total da struct."""
     inicio = fonte.index(f"struct {nome} {{")
     corpo = fonte[inicio:]
     corpo = corpo[: corpo.index("\n} __packed;")]
@@ -134,17 +121,8 @@ def linhas_do_tema() -> dict[str, dict[str, str]]:
     return achadas
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# A ÂNCORA: o fonte C decide, o documento obedece.
-# ─────────────────────────────────────────────────────────────────────────
-
-
 def test_o_corpo_de_entrada_tem_63_bytes_e_o_common_de_saida_tem_47(entrada, saida):
-    """Os dois números que sustentam o argumento de que não sobra endereço.
-
-    Se a struct crescer, o argumento da §2 do documento ("não há vaga onde uma
-    câmera caberia") deixa de valer sozinho e alguém tem de reabrir a conta.
-    """
+    """Os dois números que sustentam o argumento de que não sobra endereço."""
     _, total_entrada = entrada
     _, total_saida = saida
     assert total_entrada == 63, (
@@ -158,11 +136,7 @@ def test_o_corpo_de_entrada_tem_63_bytes_e_o_common_de_saida_tem_47(entrada, sai
 
 
 def test_o_doc_publica_as_faixas_que_o_driver_declara(entrada, doc):
-    """Cada faixa `reserved` da §3 tem de ser a faixa que o driver declara.
-
-    Este é o teste que morde de verdade: a tabela do documento foi escrita à
-    mão, e um dígito trocado nela não é pego por portão nenhum desta casa.
-    """
+    """Cada faixa `reserved` da §3 tem de ser a faixa que o driver declara."""
     campos, _ = entrada
     esperado = {
         "reserved": "11-14",
@@ -182,13 +156,7 @@ def test_o_doc_publica_as_faixas_que_o_driver_declara(entrada, doc):
 
 
 def test_as_duas_posicoes_vivas_que_o_vpad_zera_sao_as_que_o_doc_nomeia(entrada, doc):
-    """O achado central da linha `plataforma.vpad`: 10 e 54 não são reserva.
-
-    O vpad zera 26 posições; 24 são `reserved` no driver e DUAS carregam dado —
-    `buttons[3]` (o quarto byte de botão, que o driver declara e nunca lê) e
-    `status[2]`. Se o driver passar a nomear qualquer uma delas, o texto do
-    documento vira mentira e esta régua avisa.
-    """
+    """O achado central da linha `plataforma.vpad`: 10 e 54 não são reserva."""
     campos, _ = entrada
     assert campos["buttons"] == (7, 10), (
         f"`buttons[4]` saiu de 7-10 para {campos['buttons']}: a posição 10, que o "
@@ -228,12 +196,7 @@ def test_os_offsets_de_luz_do_report_de_saida_batem_com_o_driver(saida, doc):
 
 
 def test_a_mascara_dos_leds_de_jogador_bate_com_o_driver(doc):
-    """A §4 afirma CONFIRMAÇÃO INDEPENDENTE de 0x04, 0x0A, 0x15, 0x1B, 0x1F.
-
-    O lado de fora (o `WinUHid`) não dá para conferir daqui. O lado de dentro
-    dá: os cinco valores saem de `player_ids[]` no driver desta máquina. Se
-    eles divergirem, a confirmação que o documento anuncia deixa de existir.
-    """
+    """A §4 afirma CONFIRMAÇÃO INDEPENDENTE de 0x04, 0x0A, 0x15, 0x1B, 0x1F."""
     fonte = DRIVER.read_text(encoding="utf-8")
     trecho = fonte[fonte.index("static const int player_ids[5]") :]
     trecho = trecho[: trecho.index("};")]
@@ -258,19 +221,8 @@ def test_a_mascara_dos_leds_de_jogador_bate_com_o_driver(doc):
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# A HONESTIDADE DE GRAU: nada foi ao aparelho nesta leva.
-# ─────────────────────────────────────────────────────────────────────────
-
-
 def test_nenhuma_linha_do_tema_afirma_ter_medido(linhas_do_tema):
-    """`medido` é o vocabulário mais forte do mapa, e esta leva não o ganhou.
-
-    O levantamento de 03/09 foi feito em repositório público com a máquina dela
-    ocupada por dois controles vivos. Nenhuma célula pode dizer `medido` por
-    causa dele — e o portão do mapa não pega isso, porque `medido` é valor de
-    domínio válido em qualquer linha.
-    """
+    """`medido` é o vocabulário mais forte do mapa, e esta leva não o ganhou."""
     for chave, linha in linhas_do_tema.items():
         for lado in ("cabo", "radio"):
             de_onde_sei = (linha[f"{lado}_de_onde_sei"] or "").strip()
@@ -285,12 +237,7 @@ def test_nenhuma_linha_do_tema_afirma_ter_medido(linhas_do_tema):
 
 
 def test_o_que_veio_de_fora_declara_a_fonte(linhas_do_tema):
-    """Célula com `de_onde_sei = afirmado-no-doc` tem de dizer de qual doc.
-
-    A regra 19 do portão cobra que exista PROVENIÊNCIA quando há conteúdo
-    escrito. Ela não cobra o contrário: um `afirmado-no-doc` com
-    `fonte_externa` vazia afirma sobre o aparelho apontando para lugar nenhum.
-    """
+    """Célula com `de_onde_sei = afirmado-no-doc` tem de dizer de qual doc."""
     for chave, linha in linhas_do_tema.items():
         de_fora = any(
             (linha[f"{lado}_de_onde_sei"] or "").strip() == "afirmado-no-doc"
@@ -310,12 +257,7 @@ def test_o_que_veio_de_fora_declara_a_fonte(linhas_do_tema):
 
 
 def test_a_camera_ir_do_dualsense_esta_respondida_com_a_razao(linhas_do_tema):
-    """A entrega desta linha é dizer NÃO com endereço, não achar um offset.
-
-    Ela viveu como `desconhecido` com as células mudas de propósito desde
-    11/08/2026. Voltar para `desconhecido` seria perder o trabalho de ir buscar
-    a resposta fora; voltar para `tem` seria inventar um canal.
-    """
+    """A entrega desta linha é dizer NÃO com endereço, não achar um offset."""
     linha = linhas_do_tema["plataforma.camera_ir"]
     assert linha["existe"] == "nao-tem", (
         f"`plataforma.camera_ir@dualsense` voltou a `existe = {linha['existe']!r}`"
@@ -333,13 +275,7 @@ def test_a_camera_ir_do_dualsense_esta_respondida_com_a_razao(linhas_do_tema):
 
 
 def test_nada_desta_leva_subiu_degrau_de_escada(linhas_do_tema):
-    """`ate_onde_foi` mede o que FOI AO APARELHO. Nada foi.
-
-    As duas células que já tinham `MONTOU` (a linha do vpad) são de 19/08/2026 e
-    ficam. O que esta régua proíbe é uma leva de LEITURA subir degrau — e
-    `O APARELHO OBEDECEU` é o degrau que um levantamento em documento jamais
-    pode escrever.
-    """
+    """`ate_onde_foi` mede o que FOI AO APARELHO. Nada foi."""
     proibidos = {"SAIU NO FIO", "O APARELHO OBEDECEU", "O JOGO RECEBEU", "O JOGO REAGIU"}
     for chave, linha in linhas_do_tema.items():
         for lado in ("cabo", "radio"):

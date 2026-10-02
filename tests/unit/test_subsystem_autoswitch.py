@@ -1,11 +1,4 @@
-"""Testes unitários do subsystem Autoswitch (isolamento).
-
-Prova que:
-  - AutoswitchSubsystem.is_enabled segue config.autoswitch_enabled.
-  - AutoswitchSubsystem.stop é idempotente.
-  - AutoswitchSubsystem.stop chama autoswitch.stop() quando existe.
-  - o desligar do daemon tem um dono só: a utilitária `stop_autoswitch` não volta.
-"""
+"""Testes unitários do subsystem Autoswitch (isolamento)."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -33,7 +26,7 @@ class TestAutoswitchSubsystem:
     @pytest.mark.asyncio
     async def test_stop_idempotente_sem_autoswitch(self) -> None:
         subsystem = AutoswitchSubsystem()
-        await subsystem.stop()  # _autoswitch is None — não deve lançar
+        await subsystem.stop()
 
     @pytest.mark.asyncio
     async def test_stop_chama_autoswitch_stop(self) -> None:
@@ -46,14 +39,7 @@ class TestAutoswitchSubsystem:
 
 
 class TestODesligarTemUmDonoSo:
-    """O `shutdown` de `daemon/connection.py` derruba `_autoswitch` em linha.
-
-    A utilitária `stop_autoswitch` fazia o mesmo e só a suíte a chamava: duas
-    cópias do desligar, que divergiriam na primeira mudança de uma delas.
-    Ela saiu em 28/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01). Quem prova
-    o desligar é `tests/unit/test_daemon_shutdown.py`, que sobe o daemon e
-    confere `_autoswitch` zerado depois do `shutdown`.
-    """
+    """O `shutdown` de `daemon/connection.py` derruba `_autoswitch` em linha."""
 
     def test_a_utilitaria_de_desligar_nao_volta(self) -> None:
         assert not hasattr(modulo, "stop_autoswitch")

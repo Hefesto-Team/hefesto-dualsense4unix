@@ -1,44 +1,4 @@
-"""CONSERTO 1.7 — o ramo de compatibilidade com dente, e o doctor EXECUTADO.
-
-Três defeitos, todos medidos por céticos independentes em 14/08/2026, e nenhum
-deles no miolo da entrega MESA-CHEIA-11/E1 (que é boa):
-
-**A — o ramo `conhece_a_mesa` não tinha mordida.** Em
-`daemon/ipc_handlers.py`, o bloco::
-
-    result["native_bt_fragil"] = bool(
-        frageis if conhece_a_mesa
-        else (result["native_mode"] and result["transport"] == "bt")
-    )
-
-O `else` é a REGRA ANTIGA — a que olha só o primário — e existe para o backend
-que não sabe QUEM está na mesa (sem `describe_controllers`: o `FakeController`,
-um `MagicMock`, um daemon de versão anterior). Dois céticos o arrancaram por
-caminhos diferentes (`bool(frageis)` e `bool(frageis and conhece_a_mesa)`) e a
-suíte inteira ficou verde nos dois: 105 e 109 testes passando com a regra
-antiga no lixo. O comportamento estava CERTO; era a rede que não existia.
-
-**B — o texto do doctor tinha plural fixo.** Com UM controle frágil ele
-imprimia *"Modo Nativo com os Controles 3 em BLUETOOTH ... se o jogo não vir
-esses controles"*. A janela, no mesmo estado, acerta (tem dois moldes). Para
-quem tem um controle só no rádio — exatamente quem este aviso nasceu para
-socorrer — a frase tinha PIORADO: antes da entrega era "o controle", singular
-e correto.
-
-**C — o teste do doctor era substring de fonte.** O antigo
-`test_o_doctor_le_a_lista_nova` era `assert "native_bt_quais" in doctor`; um
-cético arrancou a cura inteira do shell (o ramo que nomeia, a variável e o
-`sed` que a extrai, deixando só o `print` do trecho python) e 722 testes
-seguiram verdes, esse inclusive. É o anti-padrão que esta casa condenou POR
-ESCRITO para ESTA MESMA flag, em
-`docs/process/sprints/arquivados/2026-07-31-TESTE-HONESTO-01-os-297-verdes-que-nao-medem-interface.md`
-(linhas 155-161). Aqui o doctor é EXECUTADO: a função `check_dedup_ipc` sai do
-`scripts/doctor.sh` por `awk` e roda contra um socket UNIX de mentira que fala
-JSON-RPC — o mesmo desenho de `tests/unit/test_doctor_justworks_comportamento.py`.
-
-Nada aqui abre janela nem toca hardware: os dois bancos são o handler IPC real
-por socket e o shell real por subprocesso.
-"""
+"""CONSERTO 1.7 — o ramo de compatibilidade com dente, e o doctor EXECUTADO."""
 
 from __future__ import annotations
 
@@ -55,10 +15,6 @@ import pytest
 
 from hefesto_dualsense4unix.core.controller import ControllerState
 from tests.conftest import arvore_congelada
-
-# ---------------------------------------------------------------------------
-# A — o ramo `conhece_a_mesa`, pelos DOIS lados, com IpcServer de verdade
-# ---------------------------------------------------------------------------
 
 
 def _estado_do_primario(transporte: str | None) -> ControllerState:
@@ -89,8 +45,6 @@ def _state_full(
     async def corpo(caminho: Path) -> dict[str, Any]:
         fc = FakeController(transport=transporte_do_primario or "usb")
         fc.connect()
-        # O `FakeController` NÃO tem `describe_controllers` — é o backend que
-        # não conhece a mesa. Só ganha o método quando o caso pede.
         assert not hasattr(FakeController, "describe_controllers"), (
             "o FakeController passou a descrever a mesa: este banco perdeu o "
             "único backend de teste que exercita o ramo de compatibilidade"
@@ -124,9 +78,6 @@ def _state_full(
         return asyncio.run(corpo(Path(tmp) / "hefesto.sock"))
 
 
-#: Mesa CONHECIDA e inteira no cabo. O `transport` do topo (o do primário) vem
-#: em "bt" de propósito: é o discriminante entre "a lista manda" e "a regra
-#: antiga manda". Com a mesa conhecida, ninguém é frágil — e o aviso CALA.
 MESA_TODA_NO_CABO = [
     {"index": 0, "connected": True, "transport": "usb",
      "is_primary": True, "uniq": "aabbcc0000d8"},
@@ -134,8 +85,6 @@ MESA_TODA_NO_CABO = [
      "is_primary": False, "uniq": "aabbcc000003"},
 ]
 
-#: Mesa conhecida como LISTA, mas sem ninguém conectado — é a mesa que o daemon
-#: enxerga entre a desconexão e a próxima varredura.
 MESA_TODA_OFFLINE = [
     {"index": 0, "connected": False, "transport": None,
      "is_primary": True, "uniq": "aabbcc0000d8"},
@@ -146,14 +95,7 @@ class TestORamoDaMesaDesconhecida:
     """A regra ANTIGA (só o primário) sobrevive para quem não conhece a mesa."""
 
     def test_sem_describe_controllers_o_primario_em_bt_ainda_acende(self) -> None:
-        """A MORDIDA que faltava: `bool(frageis)` deixava isto MUDO.
-
-        Backend sem `describe_controllers` + Modo Nativo + primário no rádio: a
-        lista de frágeis é vazia porque não há mesa para varrer, e é a regra
-        antiga que tem de acender a flag. A lista sai `[]` DE PROPÓSITO — a
-        janela cai no texto genérico em vez de nomear um controle que ninguém
-        sabe qual é.
-        """
+        """A MORDIDA que faltava: `bool(frageis)` deixava isto MUDO."""
         resultado = _state_full(
             nativo=True, transporte_do_primario="bt", controllers=None
         )
@@ -180,11 +122,7 @@ class TestORamoDaMesaDesconhecida:
         assert resultado["native_bt_fragil"] is False
 
     def test_sem_describe_controllers_fora_do_modo_nativo_cala(self) -> None:
-        """Fora do Modo Nativo o jogo vê o gamepad virtual — nada a avisar.
-
-        Guarda a metade `native_mode` da regra antiga: sem ela, quem usa a
-        emulação com o controle no rádio levaria um susto que não é dele.
-        """
+        """Fora do Modo Nativo o jogo vê o gamepad virtual — nada a avisar."""
         resultado = _state_full(
             nativo=False, transporte_do_primario="bt", controllers=None
         )
@@ -192,13 +130,7 @@ class TestORamoDaMesaDesconhecida:
         assert resultado["native_bt_fragil"] is False
 
     def test_a_mesa_conhecida_manda_mais_que_o_transporte_do_topo(self) -> None:
-        """Quem conhece a mesa NÃO consulta a regra antiga.
-
-        Este é o caso que separa `frageis if conhece_a_mesa else (...)` de um
-        `frageis or (...)`: a mesa está inteira no cabo, então o aviso cala —
-        mesmo com o `transport` do topo dizendo "bt". Se o `or` entrasse no
-        lugar do `if/else`, a mesa toda no cabo acenderia um aviso falso.
-        """
+        """Quem conhece a mesa NÃO consulta a regra antiga."""
         resultado = _state_full(
             nativo=True, transporte_do_primario="bt", controllers=MESA_TODA_NO_CABO
         )
@@ -212,12 +144,7 @@ class TestORamoDaMesaDesconhecida:
         )
 
     def test_lista_sem_ninguem_conectado_volta_para_a_regra_antiga(self) -> None:
-        """Uma lista VAZIA de gente não é uma mesa conhecida.
-
-        Guarda a definição de `conhece_a_mesa` (`any(... connected)`): trocá-la
-        por um mero `isinstance(entradas, list)` faria o aviso apagar toda vez
-        que a varredura chegasse antes da conexão.
-        """
+        """Uma lista VAZIA de gente não é uma mesa conhecida."""
         for mesa in (MESA_TODA_OFFLINE, []):
             resultado = _state_full(
                 nativo=True, transporte_do_primario="bt", controllers=mesa
@@ -229,22 +156,13 @@ class TestORamoDaMesaDesconhecida:
             )
 
 
-# ---------------------------------------------------------------------------
-# B e C — o doctor EXECUTADO contra um socket de mentira
-# ---------------------------------------------------------------------------
-
 RAIZ = arvore_congelada()
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 FUNCAO = "check_dedup_ipc"
 
 
 def _extrair_funcao() -> str:
-    """A função tal como está no `doctor.sh` de hoje — nunca uma cópia.
-
-    Extração por `awk`, como em `test_doctor_justworks_comportamento.py`: se
-    alguém renomear `check_dedup_ipc`, o harness não a acha e TODOS os testes
-    deste bloco ficam vermelhos. Renomear não é rota de fuga.
-    """
+    """A função tal como está no `doctor.sh` de hoje — nunca uma cópia."""
     proc = subprocess.run(
         [
             "awk",
@@ -279,8 +197,6 @@ class _DaemonDeMentira:
         self._srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._srv.bind(str(caminho))
         self._srv.listen(4)
-        # Espera CURTA no accept, com bandeira: um `settimeout` longo faria o
-        # `join` do encerramento pendurar a bancada por segundos a cada caso.
         self._srv.settimeout(0.1)
         self._parar = threading.Event()
         self._thread = threading.Thread(target=self._servir, daemon=True)
@@ -364,12 +280,7 @@ class TestODoctorFalaDoBtFragilDeVerdade:
     """O doctor EXECUTADO — não o fonte do doctor lido como texto."""
 
     def test_um_fragil_sai_no_singular(self, tmp_path: Path) -> None:
-        """O DEFEITO B: "com os Controles 3 ... esses controles", plural para um.
-
-        Quem tem um controle só no rádio é justamente quem este aviso nasceu
-        para socorrer, e para ela a frase tinha REGREDIDO — antes da entrega o
-        doctor dizia "o controle", singular e correto.
-        """
+        """O DEFEITO B: "com os Controles 3 ... esses controles", plural para um."""
         saida = _rodar_doctor(tmp_path, _payload(fragil=True, quais=[3]))
 
         assert "o Controle 3 em BLUETOOTH" in saida, saida
@@ -417,15 +328,8 @@ class TestODoctorFalaDoBtFragilDeVerdade:
         assert "BLUETOOTH" not in saida, saida
 
 
-# ---------------------------------------------------------------------------
-# A mesa REAL — os dois bancos atravessados pela captura de 14/08/2026
-# ---------------------------------------------------------------------------
-
 #: `tests/fixtures/state_full_quatro_controles.json`: payload REAL, com quatro
-#: controles na mesa (dois no cabo, dois no rádio), capturado com a mesa cheia.
 #: É a única mesa desta casa em que `player_slot` NÃO é `index + 1` — o handle
-#: 2 é o Controle 3 e o handle 3 é o Controle 2 —, e por isso é a única capaz de
-#: separar "o número que a jogadora vê" de "a ordem em que o kernel abriu".
 MESA_REAL: dict[str, Any] = json.loads(
     (
         Path(__file__).resolve().parents[1]
@@ -466,8 +370,6 @@ class TestAMesaDeVerdadeAtravessaOsDoisBancos:
             "os dois no rádio são os Controles 3 e 2 (handles 2 e 3), e a "
             "frase os lê em ordem crescente"
         )
-        # A régua do defeito E1 na mesa REAL: a regra antiga olha o transporte
-        # do primário, que aqui é "usb" — ela calaria para os dois no rádio.
         regra_antiga = MESA_REAL["transport"] == "bt"
         assert regra_antiga is False, "a flag velha calaria nesta mesa"
 
@@ -481,15 +383,10 @@ class TestAMesaDeVerdadeAtravessaOsDoisBancos:
 @pytest.mark.parametrize(
     "trecho",
     [
-        "native_bt_fragil_controles",  # a chave que ele lê do daemon
-        "native_bt_quantos",  # o contador que escolhe o molde
+        "native_bt_fragil_controles",
+        "native_bt_quantos",
     ],
 )
 def test_o_doctor_ainda_le_a_lista_e_conta(trecho: str) -> None:
-    """Rede de segurança do RENOME, e só isso — a prova é a execução acima.
-
-    Este assert de fonte existe para dar uma mensagem legível quando alguém
-    renomear a chave do contrato IPC; ele NÃO é a mordida (TESTE-HONESTO-01:
-    substring de fonte sobrevive à cura arrancada, e sobreviveu, em 14/08).
-    """
+    """Rede de segurança do RENOME, e só isso — a prova é a execução acima."""
     assert trecho in DOCTOR.read_text(encoding="utf-8")

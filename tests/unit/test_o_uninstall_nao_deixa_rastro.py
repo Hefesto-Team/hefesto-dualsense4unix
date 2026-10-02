@@ -53,8 +53,6 @@ HEROIC = "com.heroicgameslauncher.hgl"
 LUTRIS = "net.lutris.Lutris"
 MGBA = "io.mgba.mGBA"
 
-#: O `default.env` do daemon com a emulação ligada — os pares VID/PID são de
-#: aparelho (Sony, Valve), não endereço de rádio.
 AMBIENTE_EMULADO = (
     "# Materializado pelo daemon do Hefesto\n"
     "PROTON_DISABLE_HIDRAW=0x054C/0x0CE6\n"
@@ -62,15 +60,12 @@ AMBIENTE_EMULADO = (
     "__GL_SHADER_DISK_CACHE=1\n__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1\n"
     "SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0\nSDL_ACCELEROMETER_AS_JOYSTICK=0\n"
 )
-#: O do Modo Nativo: sem `IGNORE` nem `DISABLE_HIDRAW` (`launch_env.env_do_modo`).
 AMBIENTE_NATIVO = (
     "# Materializado pelo daemon do Hefesto\n"
     "__GL_SHADER_DISK_CACHE=1\n__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1\n"
     "SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0\nSDL_ACCELEROMETER_AS_JOYSTICK=0\n"
 )
 
-#: O que ela tem no Heroic antes do Hefesto: o `MANGOHUD` e um cache de shader
-#: DESLIGADO — uma das duas variáveis que o Hefesto também escreve.
 HEROIC_DELA = {
     "version": "v0",
     "defaultSettings": {
@@ -81,11 +76,7 @@ HEROIC_DELA = {
         ],
     },
 }
-#: O override do Lutris que ela deu à mão — a caixa aberta, nada de ambiente.
 LUTRIS_DELA = "[Context]\ndevices=all;\nfilesystems=host;\n"
-
-
-# ─── o lar de mentira dos donos ───────────────────────────────────────────
 
 
 def _instalar_flatpak(lar: Path, app_id: str) -> None:
@@ -133,14 +124,7 @@ def _opcoes(alvo: Path) -> dict[str, str]:
 
 def _heroic_copia_para_o_jogo(config: Path, jogo: str, *, dela: list[dict[str, str]] | None = None,
                               ) -> Path:
-    """O que o Heroic faz quando ela muda uma opção de um jogo — pelo fonte dele.
-
-    `GameConfigV0.getSettings` monta `{...globais, ...do jogo}` com
-    `enviromentOptions: [...enviromentOptions]` (a CÓPIA da lista global), e o
-    `setSetting` grava tudo em `GamesConfig/<jogo>.json` com
-    `JSON.stringify(config, null, 2)`. `dela` são as que ela pôs só naquele
-    jogo, depois da cópia.
-    """
+    """O que o Heroic faz quando ela muda uma opção de um jogo — pelo fonte dele."""
     global_ = json.loads(config.read_text(encoding="utf-8"))["defaultSettings"]
     lista = [dict(x) for x in global_.get("enviromentOptions", [])] + list(dela or [])
     alvo = config.parent / "GamesConfig" / f"{jogo}.json"
@@ -169,16 +153,11 @@ def mesa(tmp_path: Path) -> dict[str, Path]:
             "pasta": _ambiente(tmp_path / "estado/launch_env")}
 
 
-# ─── 1. o dono de «o que é nosso» ─────────────────────────────────────────
-
-
 @pytest.mark.parametrize("nativo", [False, True], ids=["heroic-flatpak", "heroic-nativo"])
 def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_dela(
     tmp_path: Path, nativo: bool
 ) -> None:
-    """A MORDIDA: faça `_devolver_chaves` ignorar o `antes` e o cache de shader
-    dela (`0`) não volta; troque o `nossos` por «qualquer valor» e o teste do
-    valor mudado depois (logo abaixo) reprova."""
+    """A MORDIDA: faça `_devolver_chaves` ignorar o `antes` e o cache de shader"""
     lar = tmp_path / "lar"
     lar.mkdir()
     _instalar_flatpak(lar, MGBA)
@@ -207,13 +186,7 @@ def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_dela(
 
 
 def test_o_valor_de_antes_volta_no_lugar_em_que_estava(mesa: dict[str, Path]) -> None:
-    """A escrita põe o nosso por cima do dela, NA MESMA POSIÇÃO; o desfazer o
-    devolve ali. O `HEROIC_DELA` tem o cache de shader por ÚLTIMO, e por isso
-    não via a ordem — aqui ele vem PRIMEIRO, antes do `MANGOHUD`.
-
-    A MORDIDA: devolva o «antes» com `pares.append` (no fim da lista), como
-    era, e o `config.json` dela volta com a ordem trocada.
-    """
+    """A escrita põe o nosso por cima do dela, NA MESMA POSIÇÃO; o desfazer o"""
     dela = json.loads(json.dumps(HEROIC_DELA))
     dela["defaultSettings"]["enviromentOptions"].reverse()
     mesa["heroic"].write_text(json.dumps(dela, indent=2) + "\n", encoding="utf-8")
@@ -230,7 +203,7 @@ def test_o_valor_que_ela_mudou_depois_do_hefesto_fica(mesa: dict[str, Path]) -> 
     dado = json.loads(mesa["heroic"].read_text(encoding="utf-8"))
     for item in dado["defaultSettings"]["enviromentOptions"]:
         if item["key"] == "PROTON_DISABLE_HIDRAW":
-            item["value"] = "0x045e/0x028e"  # ela mudou à mão, depois
+            item["value"] = "0x045e/0x028e"
     mesa["heroic"].write_text(json.dumps(dado, indent=2), encoding="utf-8")
 
     feitos, _ = cura.desfazer_as_estradas([mesa["pasta"]], mesa["lar"])
@@ -243,13 +216,7 @@ def test_o_valor_que_ela_mudou_depois_do_hefesto_fica(mesa: dict[str, Path]) -> 
 
 
 def test_a_chave_nossa_que_sai_do_ambiente_sai_do_arquivo(mesa: dict[str, Path]) -> None:
-    """O Modo Nativo não tem `IGNORE` nem `DISABLE_HIDRAW` — todo modo, toda
-    estrada. Antes, a escrita FUNDIA e nunca tirava: o `IGNORE` da emulação
-    ficava congelado no Heroic, e o jogo do Modo Nativo abria sem o controle.
-
-    A MORDIDA: tire de `_tomar` a chamada a `_devolver_chaves` e o `IGNORE`
-    fica nos dois arquivos.
-    """
+    """O Modo Nativo não tem `IGNORE` nem `DISABLE_HIDRAW` — todo modo, toda"""
     _curar(mesa["lar"], mesa["pasta"])
     _ambiente(mesa["pasta"], AMBIENTE_NATIVO)
     _curar(mesa["lar"], mesa["pasta"])
@@ -264,9 +231,7 @@ def test_a_chave_nossa_que_sai_do_ambiente_sai_do_arquivo(mesa: dict[str, Path])
 
 
 def test_sem_registro_o_nome_do_produto_decide(mesa: dict[str, Path]) -> None:
-    """A instalação de antes do registro escreveu sem anotar (o escritor de
-    09/09 e a carona de 21/09). As variáveis que só o produto usa saem; as
-    duas que podem ser dela ficam — o «limpa?» também não as conta."""
+    """A instalação de antes do registro escreveu sem anotar (o escritor de"""
     ambiente = cura.ambiente_da_ponte(mesa["pasta"])
     cura._escrever_no_heroic(mesa["heroic"], ambiente)
     cura._escrever_no_override(mesa["lutris"], ambiente)
@@ -283,13 +248,7 @@ def test_sem_registro_o_nome_do_produto_decide(mesa: dict[str, Path]) -> None:
 
 
 def test_um_valor_do_produto_de_antes_do_registro_nao_volta(mesa: dict[str, Path]) -> None:
-    """A primeira escrita com registro acha um `IGNORE` de uma versão que
-    escrevia sem anotar — com OUTRO valor (a lista de aparelhos cresceu). Ele é
-    presumido do produto: devolvê-lo no desfazer deixaria o jogo sem controle.
-
-    A MORDIDA: guarde o «antes» de toda chave em `_tomar` (e não só das que
-    podem ser dela) e o `IGNORE` velho volta ao Heroic depois do uninstall.
-    """
+    """A primeira escrita com registro acha um `IGNORE` de uma versão que"""
     cura._escrever_no_heroic(
         mesa["heroic"], {"SDL_GAMECONTROLLER_IGNORE_DEVICES": "0x054c/0x0ce6"})
     _curar(mesa["lar"], mesa["pasta"])
@@ -302,9 +261,7 @@ def test_um_valor_do_produto_de_antes_do_registro_nao_volta(mesa: dict[str, Path
 def test_arquivo_que_nao_abre_nao_e_reescrito_e_o_registro_fica(
     mesa: dict[str, Path]
 ) -> None:
-    """Um `config.json` truncado pode ser o Heroic que morreu no meio de um
-    `write`: reescrevê-lo jogaria fora a biblioteca dela. O desfazer não toca,
-    diz, e o registro fica para o desfazer de depois."""
+    """Um `config.json` truncado pode ser o Heroic que morreu no meio de um"""
     _curar(mesa["lar"], mesa["pasta"])
     mesa["heroic"].write_text('{"defaultSettings": {"enviromentOpt', encoding="utf-8")
     antes = mesa["heroic"].read_bytes()
@@ -373,9 +330,7 @@ def test_a_copia_por_jogo_do_heroic_perde_so_o_que_e_nosso(
 
 
 def test_a_copia_por_jogo_que_nao_abre_segura_o_registro(mesa: dict[str, Path]) -> None:
-    """Uma cópia truncada que CITA uma variável nossa pode estar com ela: o
-    desfazer não reescreve, diz, e o registro da casa fica para depois. Uma
-    que não cita nada nosso não é conosco e não segura nada."""
+    """Uma cópia truncada que CITA uma variável nossa pode estar com ela: o"""
     _curar(mesa["lar"], mesa["pasta"])
     jogos = mesa["heroic"].parent / "GamesConfig"
     jogos.mkdir()
@@ -394,8 +349,6 @@ def test_a_copia_por_jogo_que_nao_abre_segura_o_registro(mesa: dict[str, Path]) 
     assert (jogos / "torto.json").read_bytes() == torto
 
 
-#: As variáveis que a `ENV_ALLOWLIST` ganhar DEPOIS de 25/09/2026 nascem com
-#: registro e não entram no conjunto histórico — anote-as aqui, não lá.
 NASCIDAS_DEPOIS_DO_REGISTRO: frozenset[str] = frozenset()
 
 
@@ -410,9 +363,6 @@ def test_os_espelhos_do_desfazer() -> None:
     historico = allowlist - cura.PODEM_SER_DELA - NASCIDAS_DEPOIS_DO_REGISTRO
     assert historico == cura._DO_PRODUTO_SEM_REGISTRO
     assert cura._PASTA_DOS_OVERRIDES == m.PASTA_DOS_OVERRIDES
-    #: As casas do Heroic da carona e do desfazer moram no censo desde 02/10/2026
-    #: (O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01): o espelho do inventário é
-    #: o dele, num lar sem XDG desviado.
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     lar = Path("/lar")
@@ -420,9 +370,6 @@ def test_os_espelhos_do_desfazer() -> None:
     assert tuple(str(config.relative_to(lar)) for config, _ in casas) == m.PASTAS_DO_HEROIC
 
 
-#: SÓ A BIBLIOTECA PADRÃO, e por recusa, não por sorte: o `python3` do sistema
-#: desta bancada TEM o `platformdirs` (`/usr/lib/python3/dist-packages`), e um
-#: `-I` sozinho deixaria o desfazer importá-lo aqui e cair noutra máquina.
 _SO_A_BIBLIOTECA_PADRAO = (
     "import os, runpy, sys\n"
     "class _Recusa:\n"
@@ -442,15 +389,7 @@ _SO_A_BIBLIOTECA_PADRAO = (
 
 @pytest.mark.parametrize("pasta_pedida", [True, False], ids=["pasta-pedida", "pasta-padrao"])
 def test_o_desfazer_roda_com_o_python_do_sistema(tmp_path: Path, pasta_pedida: bool) -> None:
-    """Depois de a `.venv` sair, o uninstall o roda com o `python3` do sistema
-    (`-I`: nem PYTHONPATH, nem o site do usuário) — o pacote se acha pelo
-    caminho do arquivo, e a corrente do desfazer é só biblioteca padrão.
-
-    As DUAS formas de chamar: a do `uninstall.sh` (com `--pasta-do-ambiente`)
-    e a que o ADIADO manda ela rodar depois (sem argumento: as pastas pela
-    regra do XDG). A MORDIDA: um `import platformdirs` no topo do módulo e as
-    duas reprovam — sem a recusa, só reprovariam numa máquina sem ele.
-    """
+    """Depois de a `.venv` sair, o uninstall o roda com o `python3` do sistema"""
     py = shutil.which("python3", path=SISTEMA)
     if py is None:
         pytest.skip("sem python3 no sistema")
@@ -478,17 +417,12 @@ def test_o_desfazer_roda_com_o_python_do_sistema(tmp_path: Path, pasta_pedida: b
     assert "tirei" in r.stdout
 
 
-# ─── 2. o uninstall.sh de verdade, num lar de mentira ────────────────────
-
-#: Leem, e só leem: o PATH de mentira os aponta para os de verdade.
 _REAIS = ("cat", "grep", "sed", "awk", "head", "tail", "ls", "date", "id", "uname",
           "dirname", "basename", "sort", "uniq", "tr", "cut", "wc", "readlink",
           "realpath", "stat", "mktemp", "env", "true", "false", "diff", "cmp",
           "timeout", "printf", "echo", "test", "expr")
-#: Mexem em arquivo: RECUSAM qualquer caminho fora do lar de mentira.
 _GUARDADOS = ("rm", "rmdir", "mv", "cp", "mkdir", "ln", "chmod", "chown", "touch",
               "install", "tee", "find")
-#: Mudam a máquina: anotam e não fazem nada (o `sudo` responde «sem privilégio»).
 _DUBLES = {
     "sudo": "exit 1",
     "systemctl": 'case "$*" in *is-active*|*is-enabled*|*is-failed*) exit 1;; esac; exit 0',
@@ -499,14 +433,8 @@ _DUBLES = {
         "modprobe", "depmod"), "exit 0"),
     "busctl": "exit 1", "dpkg": "exit 1", "btmgmt": "exit 1",
 }
-#: Os `.py` que o uninstall roda e que rodam de verdade aqui, sem poder abrir
-#: processo nenhum e lendo a TABELA DE PROCESSOS DO LAR (`processos.json`), e
-#: nunca a da máquina. Os demais (camadas, device KS) só são anotados.
 _PY_QUE_RODAM = ("proton_pin.py", "steam_launch_options.py", "cura_por_estrada.py")
 
-#: A tabela de processos do lar, `pid -> cmdline`. Vazia: nada roda aqui, nem a
-#: Steam nem jogo. Até 28/09/2026 os três testes do uninstall liam a da máquina
-#: e reprovavam com um jogo aberto nela (VERDE-NAO-E-PROVA-01, passo 3).
 NADA_RODANDO: dict[int, str] = {}
 
 
@@ -550,9 +478,6 @@ def _montar_o_path(raiz: Path, diario: Path,
         '    raise RuntimeError(f"o lar de mentira não abre processo: {a!r}")\n'
         "subprocess.Popen = _recusa\n"
         "os.system = _recusa\n"
-        # A tabela de processos do lar. Os dois leitores da tabela de verdade
-        # (a varredura de `/proc` e o `pgrep` do `steam_running`) passam a ler
-        # esta; qualquer outro que tente a da máquina fica no diário e recusa.
         f"PROCESSOS = {{int(k): v for k, v in json.load(open({str(tabela)!r})).items()}}\n"
         "def _leu_a_maquina(caminho):\n"
         '    with open(DIARIO, "a", encoding="utf-8") as d:\n'
@@ -579,16 +504,12 @@ def _montar_o_path(raiz: Path, diario: Path,
         "def _cmdline_do_lar(pid):\n"
         '    return PROCESSOS.get(int(pid), "")\n'
         "def _steam_do_lar():\n"
-        # O que o `pgrep -af steamrt64/steam` e o `pgrep -x steamwebhelper`
-        # do `steam_running` casariam, perguntado à tabela do lar.
         "    return any('steamrt64/steam' in c\n"
         "               or os.path.basename(c.split(' ')[0])[:15] == 'steamwebhelper'\n"
         "               for c in PROCESSOS.values())\n"
         "slo._cmdline_of = slo.cmdline_de_pid = _cmdline_do_lar\n"
         "slo.steam_running = _steam_do_lar\n"
         "slo.stop_steam = _recusa\n"
-        # Antes do import do módulo: o `proton_pin` copia `steam_running` e
-        # `steam_game_running` do `slo` quando importa.
         "mod = importlib.import_module(os.path.basename(script)[:-3])\n"
         "sys.exit(mod.main())\n", encoding="utf-8")
     casos = "|".join(f"*/{n}" for n in _PY_QUE_RODAM)
@@ -647,33 +568,23 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
     estado.mkdir(parents=True)
     (estado / "proton-pin-lock.json").write_text(
         json.dumps({"tool_name": nome, "changes": mudancas}), encoding="utf-8")
-    # Os lançadores dela, e a carona do daemon com o default.env dele.
     _instalar_flatpak(lar, MGBA)
     heroic, lutris = _heroic(lar, nativo=heroic_nativo), _lutris(lar)
     pasta = _ambiente(estado / "launch_env")
     assert set(_curar(lar, pasta)) == {"heroic", "lutris", "mgba"}
-    # O jogo em que ela mudou uma opção: o Heroic copia a lista global para ele.
     jogo = _heroic_copia_para_o_jogo(heroic, "Jogo1")
-    # O estado do daemon (pelo XDG) e o que o install grava no lar (sem ele).
     for nome_do_arquivo, corpo in (
         ("conexao-zumbi.json", '{"links": {}}'), ("lugares-dos-adaptadores.json", "{}"),
         ("wrapper-visto.json", "{}"), ("camadas-vulkan.json", '{"prefixos": {}}'),
         ("radio-diario.jsonl", "{}\n"), ("kernel.log", "boot\n"),
     ):
         (estado / nome_do_arquivo).write_text(corpo, encoding="utf-8")
-    # Um que nenhum passo do uninstall nomeia (o registro da mesa de medição,
-    # `scripts/mesa_de_medicao.py`): com --purge-config ele vai para o backup.
     (estado / "mesa-de-medicao").mkdir()
     (estado / "mesa-de-medicao/registro.json").write_text("{}", encoding="utf-8")
     no_lar = lar / ".local/state" / m.SLUG
     no_lar.mkdir(parents=True, exist_ok=True)
     (no_lar / "gabinete.json").write_text("{}", encoding="utf-8")
     (no_lar / "teclado-na-tela.conf").write_text("resultado=pulado\n", encoding="utf-8")
-    # Os drop-ins do WirePlumber: o produto grava pelo XDG_CONFIG_HOME
-    # (`xdg_paths.wireplumber_config_dir`), o install no lar. O 51 marcado
-    # «recriado manualmente» é dela, e fica. (Em minúsculas: o «limpa?» só
-    # reconhece a marca assim, e o uninstall a reconhece de qualquer jeito — a
-    # divergência é do dono do «limpa?», fora desta sprint.)
     wp_xdg = r.config / "wireplumber/wireplumber.conf.d"
     wp_lar = lar / ".config/wireplumber/wireplumber.conf.d"
     for pasta_wp, nome_wp, corpo_wp in (
@@ -697,8 +608,6 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
                 ".local/bin/hefesto-dualsense4unix-gui"):
         (lar / rel).parent.mkdir(parents=True, exist_ok=True)
         (lar / rel).write_text("# do install\n", encoding="utf-8")
-    # O symlink do comando aponta para a `.venv` (install.sh, passo 5); sem
-    # ela — um uninstall que roda de novo —, ele fica pendurado.
     venv_bin = repo / ".venv/bin/hefesto-dualsense4unix"
     if com_venv:
         venv_bin.parent.mkdir(parents=True)
@@ -778,9 +687,7 @@ def _defeitos(r: m.Raizes, tmp_path: Path) -> list[str]:
 
 
 def _limpa(r: m.Raizes, tmp_path: Path) -> subprocess.CompletedProcess[str]:
-    """O INSTRUMENTO de verdade: `guardar-e-devolver-a-casa.py limpa`, com o
-    `python3` do sistema (é assim que ela o roda depois do uninstall) e a
-    guarda de ensaio da ESQUECER ligada — ela RECUSA se uma raiz for a real."""
+    """O INSTRUMENTO de verdade: `guardar-e-devolver-a-casa.py limpa`, com o"""
     py = shutil.which("python3", path=SISTEMA)
     assert py, "sem python3 no sistema"
     env = {"HOME": str(r.lar), "XDG_CONFIG_HOME": str(r.config),
@@ -827,8 +734,6 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
     assert not alvos["mgba"].exists()
     for estado in {r.estado / m.SLUG, r.lar / ".local/state" / m.SLUG}:
         assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
-    # O WirePlumber nas duas casas (o «limpa?» só olha a do XDG): o nosso sai, o
-    # 51 que ela marcou fica.
     wps = {p.name for casa in {r.config, r.lar / ".config"}
            for p in (casa / "wireplumber/wireplumber.conf.d").glob("*hefesto*")}
     assert wps == {"51-hefesto-dualsense-no-default-source.conf"}, wps
@@ -837,9 +742,7 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
 
 
 def test_a_mordida_sem_o_passo_dos_lancadores_o_limpa_acusa(tmp_path: Path) -> None:
-    """A mordida da sprint, como teste: o MESMO uninstall sem o passo dos
-    lançadores deixa o ambiente no Heroic e nos dois overrides, e o «limpa?»
-    acusa os três. Se este teste passar sem o passo, o de cima não mede nada."""
+    """A mordida da sprint, como teste: o MESMO uninstall sem o passo dos"""
     texto = UNINSTALL.read_text(encoding="utf-8")
     inicio = texto.index("# O AMBIENTE NOS OUTROS LANÇADORES")
     fim = texto.index("# PLAT-01: destrava o CompatToolMapping")
@@ -859,14 +762,7 @@ def test_a_mordida_sem_o_passo_dos_lancadores_o_limpa_acusa(tmp_path: Path) -> N
 
 
 def test_sem_purge_fica_so_o_historico_e_o_uninstall_diz(tmp_path: Path) -> None:
-    """Sem `--purge-config`, o histórico fica de propósito (o kernel.log e o
-    diário guardado, decisão de 23/09) — e SÓ ele: o `conexao-zumbi.json` é
-    estado, como o dos lugares. E o `rmdir` que falhava calado passa a dizer o
-    que ficou.
-
-    A MORDIDA: tire o `rm` do `conexao-zumbi.json` no bloco do rádio e ele fica
-    ao lado do histórico.
-    """
+    """Sem `--purge-config`, o histórico fica de propósito (o kernel.log e o"""
     r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
     alvos = _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
 
@@ -880,31 +776,16 @@ def test_sem_purge_fica_so_o_historico_e_o_uninstall_diz(tmp_path: Path) -> None
     assert "kernel.log" in ficou
     assert [n for n in ficou if n.startswith("radio-diario.pre-uninstall-")], ficou
     historico = {"kernel.log"} | {n for n in ficou if n.startswith("radio-diario.pre-")}
-    # O que nenhum passo nomeia (a mesa de medição) também fica sem
-    # --purge-config — e é DITO, que é o que o `rmdir` calado não fazia.
     assert set(ficou) <= historico | {"mesa-de-medicao"}, (
         f"sem --purge-config, só o histórico (e o que ninguém nomeia) fica: {ficou}")
     assert f"a pasta de estado {estado} fica, com:" in rodou.stdout
     assert "mesa-de-medicao" in rodou.stdout
-    # Os lançadores saem com ou sem --purge-config: não são configuração do Hefesto.
     assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA
     assert not alvos["mgba"].exists()
 
 
 def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) -> None:
-    """O caminho do ADIADO, de ponta a ponta: o `config.json` do Heroic não
-    abre na hora do uninstall (um Heroic que morreu no meio de um `write`). O
-    uninstall não o reescreve, e o registro das estradas FICA — sozinho — na
-    pasta de estado, com `--purge-config` inclusive. Ela abre o Heroic, que
-    regrava o arquivo, e roda o comando que o ADIADO disse: o desfazer termina
-    pelo registro (o valor de antes dela volta), e a pasta que só existia por
-    ele sai junto — o «limpa?» responde limpo.
-
-    AS MORDIDAS: apague o `launch_env` inteiro no uninstall mesmo com o
-    desfazer adiado e o registro some (o valor de antes dela não volta); tire
-    do `main` o `rmdir` do que ficou vazio e o «limpa?» acusa a pasta de estado
-    para sempre.
-    """
+    """O caminho do ADIADO, de ponta a ponta: o `config.json` do Heroic não"""
     r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
     alvos = _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
     inteiro = alvos["heroic"].read_text(encoding="utf-8")
@@ -922,7 +803,7 @@ def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) ->
         "o arquivo que não abriu segurou o desfazer dos outros lançadores")
     assert _limpa(r, tmp_path).returncode == 1, "o «limpa?» não viu o desfazer pendente"
 
-    alvos["heroic"].write_text(inteiro, encoding="utf-8")  # ela abriu o Heroic
+    alvos["heroic"].write_text(inteiro, encoding="utf-8")
     py = shutil.which("python3", path=SISTEMA)
     assert py, "sem python3 no sistema"
     depois = subprocess.run(
@@ -940,8 +821,6 @@ def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) ->
     assert limpa.returncode == 0, limpa.stdout + limpa.stderr
 
 
-#: Um jogo da Steam aberto NA TABELA DO LAR: a Steam e o `reaper` que ela põe
-#: na frente de todo jogo que lança.
 UM_JOGO_ABERTO: dict[int, str] = {
     4242: "/lar/.local/share/Steam/ubuntu12_64/steamrt64/steam -silent",
     4243: "reaper SteamLaunch AppId=100 -- /lar/jogo/jogo.exe",
@@ -949,20 +828,7 @@ UM_JOGO_ABERTO: dict[int, str] = {
 
 
 def test_o_uninstall_le_a_tabela_de_processos_do_lar(tmp_path: Path) -> None:
-    """Os testes do uninstall não dependem do que roda na máquina.
-
-    Até 28/09/2026 a partida do lar dublava o `steam_running` e o `_steam_gate`
-    e deixava o `steam_game_running` ler o `/proc` da máquina. Com um jogo
-    aberto nela, o uninstall do lar recusava tirar o atalho da Steam e três
-    testes deste arquivo reprovavam (medido com um jogo de mentira num
-    namespace de montagem próprio, VERDE-NAO-E-PROVA-01, passo 3).
-
-    Aqui o jogo está na tabela DO LAR: o uninstall tem de vê-lo, sem ler a
-    tabela da máquina.
-
-    A MORDIDA: devolva a partida antiga (o `_cmdline_of` e o `os.listdir` da
-    máquina) e este teste reprova numa máquina sem jogo aberto.
-    """
+    """Os testes do uninstall não dependem do que roda na máquina."""
     r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
     _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
 
@@ -981,23 +847,13 @@ def test_o_uninstall_le_a_tabela_de_processos_do_lar(tmp_path: Path) -> None:
         f"com o jogo aberto o atalho da Steam fica, e o «limpa?» o acusa: {defeitos}")
 
 
-#: Só a Steam aberta NA TABELA DO LAR, sem jogo: o que o `pgrep -x
-#: steamwebhelper` do `steam_running` casaria.
 SO_A_STEAM: dict[int, str] = {
     4244: "/lar/.local/share/Steam/ubuntu12_64/steamwebhelper --type=renderer",
 }
 
 
 def test_o_uninstall_ve_a_steam_aberta_na_tabela_do_lar(tmp_path: Path) -> None:
-    """O segundo leitor da tabela, o `steam_running`, também pergunta ao lar.
-
-    O teste de cima prova a varredura de `/proc` (o jogo). Este prova o outro
-    leitor: com a Steam aberta e sem jogo, o destravamento do Proton é ADIADO
-    e o jogo não é anunciado.
-
-    A MORDIDA: troque o `_steam_do_lar` da partida por `lambda: False` (a
-    partida antiga) e este teste reprova.
-    """
+    """O segundo leitor da tabela, o `steam_running`, também pergunta ao lar."""
     r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
     _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
 
@@ -1015,14 +871,7 @@ def test_o_uninstall_ve_a_steam_aberta_na_tabela_do_lar(tmp_path: Path) -> None:
 
 
 def test_o_zumbi_sai_das_duas_casas_sem_purge(tmp_path: Path) -> None:
-    """O daemon grava o `conexao-zumbi.json` pelo XDG do AMBIENTE DELE (a unit
-    do usuário), que pode não ser o do terminal que desinstala: com o
-    XDG_STATE_HOME fora do lar no terminal, o do daemon pode estar no lar. As
-    duas casas perdem o zumbi, sem `--purge-config` também.
-
-    A MORDIDA: volte o `rm` a olhar só o `ESTADO_DO_RADIO` e o zumbi do lar
-    fica.
-    """
+    """O daemon grava o `conexao-zumbi.json` pelo XDG do AMBIENTE DELE (a unit"""
     r, repo = _casa_de_mentira(tmp_path, xdg_fora=True)
     _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
     no_lar = r.lar / ".local/state" / m.SLUG

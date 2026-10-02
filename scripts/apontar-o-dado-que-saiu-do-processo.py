@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""O ponteiro que fica onde o dado morava — 20/09/2026.
-
-Sete arquivos de `docs/process/` eram LIDOS por régua e pelo produto, e por
-isso saíram para `docs/method/`, que é versionado. Ordem dela, escolhida entre
-três: *"mover o que as réguas precisam"*.
-
-**POR QUE ISTO É UM SCRIPT, e não sete arquivos no commit:** `docs/process/` é
-`.gitignore:178`. Nada escrito lá VIAJA — o ponteiro que eu deixasse na minha
-árvore morreria com ela. Quem tem a pasta no disco (a máquina dela, e toda
-worktree de agente que a copiou) roda isto uma vez e ganha os sete ponteiros;
-quem não tem não precisa deles, porque para essa pessoa o arquivo sempre
-esteve em `docs/method/`.
-
-    python3 scripts/apontar-o-dado-que-saiu-do-processo.py            # confere
-    python3 scripts/apontar-o-dado-que-saiu-do-processo.py --escrever # escreve
-
-Sem a pasta `docs/process/` no disco, os dois modos saem com `0` e dizem que
-não há o que apontar: a ausência dela é o estado normal de um clone limpo.
-"""
+"""O ponteiro que fica onde o dado morava — 20/09/2026."""
 
 from __future__ import annotations
 
@@ -27,9 +9,6 @@ import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 
-#: A CASA NOVA de cada um, e a subpasta de onde ele saiu. A subpasta importa:
-#: os dois donos do gesto já tinham sido arquivados uma vez, e é justamente
-#: onde alguém vai procurá-los.
 OS_QUE_SAIRAM: dict[str, str] = {
     "METODO-DE-ISOLAMENTO.md": "",
     "COMO-OLHAR-A-TELA.md": "",
@@ -42,8 +21,6 @@ OS_QUE_SAIRAM: dict[str, str] = {
         "sprints/arquivados",
 }
 
-#: A MARCA que diz "isto é ponteiro, não conteúdo". Uma régua a procura, e
-#: quem abrir o arquivo a lê na primeira linha.
 MARCA = "ESTE ARQUIVO MUDOU DE CASA"
 
 

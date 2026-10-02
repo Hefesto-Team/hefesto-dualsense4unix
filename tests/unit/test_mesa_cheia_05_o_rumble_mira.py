@@ -103,8 +103,6 @@ class _Mesa:
             )
         )
         self.config = DaemonConfig()
-        # "balanceado" = 1,0: a conta da política não entra no caminho da
-        # medição, e o que sai do motor é o que ela fixou.
         self.config.rumble_policy = "balanceado"
 
         self.daemon = MagicMock()
@@ -139,14 +137,7 @@ class _Mesa:
             reassert_rumble(self.daemon, float(i))
 
     def daemon_de_verdade(self) -> Daemon:
-        """Um `Daemon` REAL sobre a MESMA mesa (backend, store e config).
-
-        Dois dos sítios de cura moram em `lifecycle` — a troca de POLÍTICA e as
-        duas solturas do par —, e o `MagicMock` que serve ao `reassert_rumble`
-        não executa nenhum deles: com ele, arrancar a cura de lá não reprovava
-        nada. O backend é o mesmo objeto, então o que este daemon escrever
-        aparece nos mesmos quatro handles.
-        """
+        """Um `Daemon` REAL sobre a MESMA mesa (backend, store e config)."""
         return Daemon(controller=self.backend, store=self.store, config=self.config)
 
 
@@ -168,7 +159,6 @@ class TestOParFixadoNaoMigra:
         await mesa.server._handle_rumble_set({"weak": 160, "strong": 220})
         assert mesa.motores_de(dois), "o gesto tem de vibrar o alvo escolhido"
 
-        # O gesto que NÃO fala de vibração: ela troca de controle no cabeçalho.
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(tres)})
         mesa.limpar_motores()
         mesa.ticks()
@@ -245,7 +235,7 @@ class TestODonoQueSaiDaMesa:
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
         await mesa.server._handle_rumble_set({"weak": 160, "strong": 220})
 
-        del mesa.backend._handles[_key_de(dois)]  # o Controle 2 sai da mesa
+        del mesa.backend._handles[_key_de(dois)]
         mesa.limpar_motores()
         mesa.ticks()
         for uniq in mesa.uniqs:
@@ -265,7 +255,7 @@ class TestODonoQueSaiDaMesa:
 
         handle = mesa.backend._handles.pop(_key_de(dois))
         mesa.ticks(1)
-        mesa.backend._handles[_key_de(dois)] = handle  # replug
+        mesa.backend._handles[_key_de(dois)] = handle
         mesa.limpar_motores()
         mesa.ticks(1)
         assert mesa.motores_de(dois) == [("left", 220), ("right", 160)]
@@ -304,27 +294,8 @@ class TestEscreverRumbleNoDono:
         escrever_rumble_no_dono(controller, "aabbcc0000ff", 10, 20)
 
 
-# ---------------------------------------------------------------------------
-# As OUTRAS PORTAS do mesmo defeito (14/08/2026)
-#
-# A cura da E0 tocou QUATRO famílias de sítio, e a primeira leva de testes só
-# guardava DUAS (a aba Rumble e o reassert do poll loop). As duas de baixo
-# sobreviviam a ser arrancadas com a suíte INTEIRA verde — e uma delas, meio
-# aplicada, é ESTRITAMENTE pior que não ter feito nada: o «Aplicar» do rodapé
-# grava o par novo e deixa o dono rançoso no controle do gesto anterior, então
-# o reassert marreta um controle que ela não escolheu e o que ela escolheu não
-# recebe nada. Antes da cura, o valor pelo menos ia para o seletor.
-# ---------------------------------------------------------------------------
-
-
 class TestOAplicarDoRodapeTambemTemDono:
-    """Sítio órfão 1 — `ipc_draft_applier.DraftApplier._apply_rumble`.
-
-    O botão «Aplicar» do rodapé mira o MESMO seletor do cabeçalho que a aba
-    Rumble mira, e por isso tem de congelar o dono pelo mesmo critério. A rota
-    é outra (`profile.apply_draft`, não `rumble.set`), e era por ela que o
-    defeito voltava inteiro.
-    """
+    """Sítio órfão 1 — `ipc_draft_applier.DraftApplier._apply_rumble`."""
 
     @pytest.mark.asyncio
     async def test_aplicar_mirado_no_tres_nao_marreta_o_dois(
@@ -335,7 +306,6 @@ class TestOAplicarDoRodapeTambemTemDono:
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
         await mesa.server._handle_rumble_set({"weak": 160, "strong": 220})
 
-        # Ela troca de controle no cabeçalho e clica «Aplicar» com outro par.
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(tres)})
         resposta = await mesa.server._handle_profile_apply_draft(
             {"rumble": {"weak": 40, "strong": 80}}
@@ -382,13 +352,7 @@ class TestOAplicarDoRodapeTambemTemDono:
 
 
 class TestATrocaDePoliticaNaoTrocaDeControle:
-    """Sítio órfão 2 — `lifecycle.Daemon._reapply_rumble_policy_to_active`.
-
-    Trocar a INTENSIDADE re-escala o par que já está fixado e o reescreve na
-    hora. Enquanto isso passava por `set_rumble` seco, a re-escala caía no
-    seletor DE AGORA: a §1.c inteira de volta, por uma porta que não fala de
-    escolher controle nenhum.
-    """
+    """Sítio órfão 2 — `lifecycle.Daemon._reapply_rumble_policy_to_active`."""
 
     @pytest.mark.asyncio
     async def test_trocar_para_max_reescala_no_dono_e_nao_no_seletor(
@@ -403,7 +367,6 @@ class TestATrocaDePoliticaNaoTrocaDeControle:
         mesa.limpar_motores()
         assert daemon.apply_profile_rumble_policy("max") == APLICADO
 
-        # 160 e 220 vezes 1,5 -> 240 e 255 (o teto corta o segundo).
         assert mesa.motores_de(tres) == [], (
             "a re-escala da política caiu no controle do SELETOR — trocar a "
             "intensidade virou gesto de trocar de controle"
@@ -414,14 +377,7 @@ class TestATrocaDePoliticaNaoTrocaDeControle:
 
 
 class TestSoltarOParEsqueceODono:
-    """Sítios órfãos 3 e 4 — as duas solturas do par em `lifecycle`.
-
-    `rumble_active_uniq` é o endereço DAQUELE par; quando o par é solto o
-    endereço deixa de significar coisa alguma. A invariante é curta: **par
-    solto, dono esquecido** — nenhum caminho pode deixar um endereço rançoso
-    esperando o próximo par, que é como o defeito da §1.c nasceu (um ponteiro
-    de um gesto valendo para o gesto seguinte).
-    """
+    """Sítios órfãos 3 e 4 — as duas solturas do par em `lifecycle`."""
 
     @pytest.mark.asyncio
     async def test_o_release_do_modo_nativo_esquece_o_dono(
@@ -467,42 +423,6 @@ class TestSoltarOParEsqueceODono:
         assert mesa.config.rumble_active_uniq == dois
 
 
-# ---------------------------------------------------------------------------
-# A ROTA DE VOLTA DO CONTROLE ABANDONADO (14/08/2026, terceira rodada)
-#
-# Congelar o dono matou a migração do par — e criou o ABANDONO. As duas rodadas
-# anteriores mediram só o INSTANTE do clique, onde HEAD e árvore são idênticos;
-# um gesto depois eles DIVERGEM, e divergem para pior. Medido nos dois mundos
-# com a mesma sonda (`git archive HEAD` num diretório separado, não emulação):
-#
-#     1. fixa 160/220 no Controle 2   -> dono = 2, motor do 2 em 220/160
-#     2. move o seletor para o 3
-#     3. clica «Parar»                -> os zeros vão para o 3; o 2 segue em 220/160
-#     4. VOLTA o seletor para o controle que continua vibrando, para ver o que há
-#
-#     HEAD ....: o 2 recebe [(left,0),(right,0)] x3  -> SILENCIADO
-#     Árvore ..: o 2 recebe []                       -> vibra em 220/160 PARA SEMPRE
-#
-# O reassert passou a mirar eternamente o 3, e voltar o seletor ao 2 deixou de
-# significar coisa alguma: a cura tinha arrancado a única rota de resgate que
-# ela tinha num controle abandonado vibrando.
-#
-# E O «PARAR» NÃO É A ÚNICA PORTA — foi o que sustentou a escolha da cura. A
-# mesma sonda mostra `rumble.set` mirado no 3 (e o «Aplicar» do rodapé) deixando
-# o 2 em 220/160 do mesmo jeito. Por isso a cura tem DOIS chamadores e não um
-# remendo no «Parar»:
-#
-#   * o «Parar» resgata NA HORA (parar quer dizer «cale o que está vibrando»);
-#   * o poll loop resgata a cada tick — `lifecycle.py:3959` marca
-#     `tick_started + 0.200`, cinco ticks por segundo —, e é a rede que apanha
-#     as outras portas, inclusive as que não estão nesta cerca.
-#
-# Por isso os testes abaixo RODAM O POLL LOOP entre os gestos: é o que a máquina
-# dela faz. Sem tick nenhum entre dois gestos de rumble — 200 ms, impossível a
-# mão — só o «Parar» resgata.
-# ---------------------------------------------------------------------------
-
-
 class TestOAbandonadoTemRotaDeVolta:
     """§5 da sprint: *"a volta ao neutro vale tanto quanto a ida"*."""
 
@@ -515,7 +435,7 @@ class TestOAbandonadoTemRotaDeVolta:
 
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
         await mesa.server._handle_rumble_set({"weak": 160, "strong": 220})
-        mesa.ticks(2)  # o poll loop roda enquanto ela sente o controle vibrar
+        mesa.ticks(2)
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(tres)})
 
         mesa.limpar_motores()
@@ -529,7 +449,6 @@ class TestOAbandonadoTemRotaDeVolta:
             "o controle do seletor também recebe os zeros do gesto"
         )
 
-        # GESTO 4: ela volta o seletor para o controle que vibrava.
         mesa.limpar_motores()
         await mesa.server._handle_controller_target_set({"index": mesa.indice_de(dois)})
         mesa.ticks(3)

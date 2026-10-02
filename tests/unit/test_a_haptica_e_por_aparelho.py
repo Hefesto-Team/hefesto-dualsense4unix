@@ -68,26 +68,10 @@ def _identidade(m: _Mesa, uniq: str) -> tuple[str, str, str]:
     return (str(no["nome"]), str(no["mid"]), str(no["props"]["sysfs.path"]))
 
 
-# ---------------------------------------------------------------------------
-# 1. O endpoint segue o aparelho
-# ---------------------------------------------------------------------------
-
-
 def test_renumerar_a_mesa_nao_troca_o_endpoint_a_ponte_nem_o_laco(
     mesa: _Mesa,  # noqa: F811
 ) -> None:
-    """O P2 sai com o jogo aberto, e o P3 passa a ser o «Controle 2».
-
-    O P1 no cabo, o P2 e o P3 no rádio, o jogo tocando nos três e os três com
-    o controle na mão. Depois da renumeração, o endpoint do P3 é o MESMO nó
-    (nome, módulo e âncora), a ponte dele não desce e segue lendo o endpoint
-    dele, e o laço do P1 não se religa. O nó do P2 fica de pé enquanto o jogo
-    toca nele: nó que some quebra o jogo que o escolheu.
-
-    MORDIDA: em ``AltoFalanteSubsystem._aparelhos_da_mesa``, chaveie pelo
-    número (``marca_do_aparelho(f"00:00:00:00:00:0{self.numero_do_assento(uniq)}")``)
-    — o nó do P3 não é mais o do aparelho dele, e reprova.
-    """
+    """O P2 sai com o jogo aberto, e o P3 passa a ser o «Controle 2»."""
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     p2, p3 = _Controle(_P2, "bt", "/dev/hidraw2"), _Controle(_P3, "bt", "/dev/hidraw3")
     mesa.assentos.update({_P2: 2, _P3: 3})
@@ -98,7 +82,6 @@ def test_renumerar_a_mesa_nao_troca_o_endpoint_a_ponte_nem_o_laco(
     ponte_do_p3 = mesa.sub._pontes[_P3]
     assert mesa.sub._endpoint_da_ponte[_P3] == eh.nome_do_endpoint(_P3)
     ligacoes = list(mesa.lacos.ligacoes)
-    # O P2 sai; o dono renumera, e o P3 vira o 2.
     mesa.assentos[_P3] = 2
     mesa.volta(p1, p3)
     mesa.volta(p1, p3)
@@ -117,15 +100,7 @@ def test_renumerar_a_mesa_nao_troca_o_endpoint_a_ponte_nem_o_laco(
 def test_o_aparelho_que_passa_do_cabo_ao_radio_fica_com_o_endpoint(
     mesa: _Mesa,  # noqa: F811
 ) -> None:
-    """A MATRIZ, última linha: o P1 sai do cabo e volta pelo rádio com o jogo aberto.
-
-    O endpoint é o mesmo nó; o laço do cabo dá lugar à ponte do rádio, que lê o
-    mesmo endpoint.
-
-    MORDIDA: em ``_aparelhos_da_mesa``, chaveie pelo transporte e pelo
-    ``uniq`` (``marca_do_aparelho(uniq + transporte)``) — o rádio ganha outro
-    nó, e reprova.
-    """
+    """A MATRIZ, última linha: o P1 sai do cabo e volta pelo rádio com o jogo aberto."""
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_P1))
     mesa.jogando.add(_P1)
     mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
@@ -138,12 +113,6 @@ def test_o_aparelho_que_passa_do_cabo_ao_radio_fica_com_o_endpoint(
     assert mesa.servidor.quedas == []
 
 
-# ---------------------------------------------------------------------------
-# 2. O nome não tem endereço
-# ---------------------------------------------------------------------------
-
-#: Endereços da faixa forjada com os octetos 4 e 5 NÃO nulos: as formas do
-#: endereço existem, e a régua tem o que procurar.
 _COM_FORMA = ("aa:bb:cc:12:34:56", "aa:bb:cc:ab:cd:ef", "02:fe:00:5e:a3:c9")
 
 
@@ -159,12 +128,7 @@ def _o_portao_das_formas() -> ModuleType:
 
 @pytest.mark.parametrize("uniq", _COM_FORMA)
 def test_o_nome_do_endpoint_nao_carrega_pedaco_do_endereco(uniq: str) -> None:
-    """Nenhuma janela de três octetos, nenhum rabo de seis hex, nada que o portão acuse.
-
-    MORDIDA: em ``nome_do_endpoint``, devolva o nome pelo rabo
-    (``MOLDE_DO_NOME.format(marca=marca_do_controle(uniq))``) — o portão de
-    forma acusa o nó, e reprova.
-    """
+    """Nenhuma janela de três octetos, nenhum rabo de seis hex, nada que o portão acuse."""
     portao = _o_portao_das_formas()
     nome = eh.nome_do_endpoint(uniq)
     assert nome and all(agulha in nome for agulha in eh.AGULHAS), nome
@@ -175,7 +139,6 @@ def test_o_nome_do_endpoint_nao_carrega_pedaco_do_endereco(uniq: str) -> None:
     assert eh.marca_do_controle(uniq) not in baixo
     assert portao.acusa_no(nome) == []
     assert portao.acusa_serial(nome) == [] and portao.acusa_mac(nome) == []
-    # E o mesmo aparelho tem o mesmo nome em qualquer grafia do endereço.
     assert eh.nome_do_endpoint(uniq.upper().replace(":", "")) == nome
 
 
@@ -185,19 +148,8 @@ def test_quatro_aparelhos_quatro_nomes() -> None:
     assert len(nomes) == 7 and "" not in nomes
 
 
-# ---------------------------------------------------------------------------
-# 3. Os três nós de um controle dizem o mesmo aparelho
-# ---------------------------------------------------------------------------
-
-
 class ServidorQueGuarda:
-    """O ``pipewire-pulse`` de mentira que guarda o que o NÓ recebeu.
-
-    O argumento ``sink_properties=``/``source_properties=`` é lido como o real
-    o lê (``_props_do_argumento`` da irmã de 28/09): entre aspas duplas vale
-    inteiro, sem elas o valor morre no primeiro espaço. Quem é lido é o nó, e
-    não o argv. Todo o resto responde vazio, como um comando que deu certo.
-    """
+    """O ``pipewire-pulse`` de mentira que guarda o que o NÓ recebeu."""
 
     def __init__(self) -> None:
         self.nos: dict[str, dict[str, str]] = {}
@@ -224,7 +176,6 @@ class ServidorQueGuarda:
         return f"{self._id}\n"
 
 
-#: O dono do assento desta régua: nenhum número é a posição do controle na lista.
 _MESA = tuple(f"aa:bb:cc:00:00:2{i}" for i in range(1, 5))
 _ASSENTOS = dict(zip(_MESA, (3, 1, 4, 2), strict=True))
 
@@ -233,15 +184,7 @@ _ASSENTOS = dict(zip(_MESA, (3, 1, 4, 2), strict=True))
 def test_os_tres_nos_do_controle_dizem_o_aparelho(
     uniq: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O alto-falante, o microfone do rádio e a háptica: ``hefesto.controle=<marca>``.
-
-    A marca é a do aparelho (a mesma nos três), e o número de agora fica no
-    rótulo. Era ``hefesto.lugar=N`` de 29/09 a 02/10.
-
-    MORDIDA: tire ``*campo_do_controle(...)`` de um dos três
-    (``propriedades_do_sink``, ``propriedades_da_source`` ou
-    ``propriedades_do_endpoint``) — aquele nó chega ao servidor sem o aparelho.
-    """
+    """O alto-falante, o microfone do rádio e a háptica: ``hefesto.controle=<marca>``."""
     from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
 
@@ -273,7 +216,6 @@ def test_os_tres_nos_do_controle_dizem_o_aparelho(
         )
         assert "hefesto.lugar" not in props, f"o nó do {papel} ainda diz o lugar"
         assert f" {_ASSENTOS[uniq]}" in props["device.description"], props
-    # O rótulo continua o dele: a propriedade nova não comeu o que vinha antes.
     assert servidor.nos[nos["alto-falante"]]["device.description"] == (
         af.descricao_do_alto_falante(uniq)
     )
@@ -282,11 +224,7 @@ def test_os_tres_nos_do_controle_dizem_o_aparelho(
 def test_o_microfone_do_radio_pelo_caminho_de_volta_tambem_diz_o_aparelho(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O canal recusa e a ponte publica o nó de sempre: ele também diz o aparelho.
-
-    MORDIDA: tire o ``controle=self.no.uniq`` do ``SourceVirtualPipeWire`` de
-    reserva em ``PonteMicBluetooth.iniciar`` — o nó chega sem o aparelho.
-    """
+    """O canal recusa e a ponte publica o nó de sempre: ele também diz o aparelho."""
     from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
 
@@ -297,8 +235,7 @@ def test_o_microfone_do_radio_pelo_caminho_de_volta_tambem_diz_o_aparelho(
     monkeypatch.setattr(canal, "abrir", lambda *_a, **_k: None)
 
     class _SourceQuePublicaEPara(dba.SourceVirtualPipeWire):
-        """Publica o nó de verdade no servidor de mentira e recusa depois: a
-        régua lê o NÓ, e não quer uma thread de áudio girando na suíte."""
+        """Publica o nó de verdade no servidor de mentira e recusa depois: a"""
 
         def iniciar(self) -> bool:
             super().iniciar()
@@ -318,21 +255,8 @@ def test_o_microfone_do_radio_pelo_caminho_de_volta_tambem_diz_o_aparelho(
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. O registro do lançamento é dos aparelhos
-# ---------------------------------------------------------------------------
-
-
 def test_tres_na_mesa_tres_blocos_no_registro(mesa: _Mesa) -> None:  # noqa: F811
-    """O curador grava um bloco por endpoint vivo: três controles, três blocos.
-
-    O P1 no cabo e o P3 e o P4 no rádio. Cada bloco é o da âncora do endpoint
-    do aparelho (o cabo com endpoint sai da lista pela placa servida).
-
-    MORDIDA: em ``AltoFalanteSubsystem._aparelhos_de_pe``, devolva os quatro
-    lugares de volta (complete ``de_pe`` até quatro com marcas de
-    ``f"00:00:00:00:00:0{n}"``) — o registro ganha um quarto bloco, e reprova.
-    """
+    """O curador grava um bloco por endpoint vivo: três controles, três blocos."""
     mesa.volta(
         _no_cabo(mesa, _P1, 1, "3-8", 28),
         _Controle(_P3, "bt", "/dev/hidraw3"),
@@ -348,31 +272,17 @@ def test_tres_na_mesa_tres_blocos_no_registro(mesa: _Mesa) -> None:  # noqa: F81
     assert instancias == {f"HEFESTOKS&003&{d:03d}&0" for d in devnums}
 
 
-# ---------------------------------------------------------------------------
-# 5. Quem entra com o jogo aberto é dito
-# ---------------------------------------------------------------------------
-
-
 def _sem_registro(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [r for r in registros if r["event"] == "haptica_aparelho_sem_registro_no_jogo"]
 
 
 def test_quem_chega_com_o_jogo_aberto_e_dito_uma_vez(mesa: _Mesa) -> None:  # noqa: F811
-    """O P4 chega com a partida aberta: o endpoint dele nasce, e o diário diz por quê.
-
-    É o preço que ela aceitou na pergunta [27]: o registro se grava no
-    lançamento, e o jogo não conhece o endpoint que nasce depois. Uma linha por
-    aparelho e partida; e sem partida, nenhuma.
-
-    MORDIDA: tire a chamada a ``_avisar_quem_o_jogo_nao_conhece`` de
-    ``_casar_as_pontes`` — o P4 fica sem háptica sem rastro, e reprova.
-    """
+    """O P4 chega com a partida aberta: o endpoint dele nasce, e o diário diz por quê."""
     dois = [_Controle(_P1, "bt", "/dev/hidraw1"), _Controle(_P2, "bt", "/dev/hidraw2")]
     with structlog.testing.capture_logs() as antes_do_jogo:
         mesa.volta(*dois)
     assert _sem_registro(antes_do_jogo) == [], "sem partida, ninguém ficou sem registro"
     mesa.servidor.jogo_em.update(eh.nome_do_endpoint(u) for u in (_P1, _P2))
-    # A partida da volta: o jogo (o cliente 42 do servidor) toca nos endpoints.
     mesa.sub._donos_da_volta = frozenset({"42"})
     quatro = _Controle(_P4, "bt", "/dev/hidraw4")
     with structlog.testing.capture_logs() as registros:
@@ -382,7 +292,6 @@ def test_quem_chega_com_o_jogo_aberto_e_dito_uma_vez(mesa: _Mesa) -> None:  # no
     assert len(linhas) == 1, linhas
     assert linhas[0]["controle"] == eh.marca_do_aparelho(_P4)
     assert eh.nome_do_endpoint(_P4) in mesa.servidor.nossos()
-    # A partida fecha: a mesma chegada, numa partida nova, é dita de novo.
     mesa.sub._donos_da_volta = frozenset()
     mesa.volta(*dois)
     mesa.servidor.jogo_em.clear()

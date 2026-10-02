@@ -62,19 +62,15 @@ from hefesto_dualsense4unix.core import escritor_cru as ec
 
 UID = os.getuid()
 ACL = "system.posix_acl_access"
-#: Faixas sintéticas da casa para fixture: nunca endereço real mascarado.
 MAC_DO_ADAPTADOR = "aa:bb:cc:00:00:01"
 
-#: (jogador, hidraw, transporte, HID_ID do pai, MAC do controle). O número do
-#: hidraw é o prefixo dos nós de entrada dele, só para quem lê se achar.
 CONTROLES = (
     ("P1", "hidraw3", "radio", "0005:054C:0CE6.0003", "e8:47:3a:00:00:03"),
     ("P2", "hidraw5", "radio", "0005:054C:0CE6.0005", "e8:47:3a:00:00:05"),
     ("P3", "hidraw7", "cabo", "0003:054C:0CE6.0007", ""),
-    ("P4", "hidraw9", "cabo", "0003:054C:0DF2.0009", ""),  # o Edge
+    ("P4", "hidraw9", "cabo", "0003:054C:0DF2.0009", ""),
 )
 JOGADORES = tuple(c[0] for c in CONTROLES)
-#: As voltas da R2 (e os rehides da R4) em que alguém mexe num nó.
 VOLTA_DA_REGRA_QUE_REABRE = 17
 VOLTA_DO_MODE_DE_TERCEIRO = 31
 VOLTA_DA_ACL_VELHA = 38
@@ -86,11 +82,6 @@ OUTRO = 6161
 
 IN_ATTRIB = 0x00000004
 IN_Q_OVERFLOW = 0x00004000
-
-
-# ---------------------------------------------------------------------------
-# A mesa de mentira
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -122,7 +113,7 @@ class Mesa:
         n = base.removeprefix("hidraw")
         nomes = [f"event{n}0", f"js{n}0", f"event{n}1", f"event{n}2"]
         if transporte == "cabo":
-            nomes.append(f"event{n}3")  # a tomada do fone
+            nomes.append(f"event{n}3")
         return [self.dev_input / nome for nome in nomes]
 
     def js_do_movimento(self, jogador: str) -> Path:
@@ -157,8 +148,8 @@ def _nascer(mesa: Mesa, jogador: str, *, aberto: bool) -> None:
             caminho.chmod(0o600)
             caminho.unlink()
         caminho.write_text("", encoding="ascii")
-        caminho.chmod(0o600)  # a regra da cura: o físico nasce fechado
-    mesa.js_do_movimento(jogador).chmod(0o000)  # a regra 80, para todos
+        caminho.chmod(0o600)
+    mesa.js_do_movimento(jogador).chmod(0o000)
     if aberto:
         for caminho in mesa.do_controle(jogador):
             _abrir_para_ela(caminho)
@@ -208,7 +199,6 @@ def _montar(raiz: Path, *, aberta: bool) -> Mesa:
                 (d / filho / "dev").write_text("0:0\n", encoding="ascii")
                 (mesa.sys_input / filho).symlink_to(d / filho)
         _nascer(mesa, jogador, aberto=aberta)
-    # O NOSSO vpad, que o validador recusa: USB sob o uhid.
     vpad = raiz / "sys" / "devices" / "virtual" / "misc" / "uhid" / "0003:054C:0DF2.0004"
     vpad.mkdir(parents=True)
     (vpad / "uevent").write_text("HID_ID=0003:0000054C:00000DF2\nHID_NAME=x\n", encoding="ascii")
@@ -221,11 +211,7 @@ def _montar(raiz: Path, *, aberta: bool) -> Mesa:
 
 
 class _StatQueAceitaArquivo(ModuleType):
-    """O módulo `stat` com UMA troca: o `S_ISCHR` aceita arquivo comum.
-
-    Só o `hidraw_broker` o recebe, e só enquanto o teste vive. O `S_IMODE`
-    que a pergunta da cura usa é o do stdlib.
-    """
+    """O módulo `stat` com UMA troca: o `S_ISCHR` aceita arquivo comum."""
 
     def __init__(self) -> None:
         super().__init__("stat")
@@ -377,11 +363,6 @@ def _resumo(por_volta: list[Counter[str]]) -> str:
     return f"{sum(total.values())} IN_ATTRIB em {voltas} de {len(por_volta)} voltas: {dict(total)}"
 
 
-# ---------------------------------------------------------------------------
-# As mudanças do meio da R2 (e da R4): cada uma é uma forma do mundo real
-# ---------------------------------------------------------------------------
-
-
 def _a_regra_que_reabre(mesa: Mesa) -> set[str]:
     """O hidraw e o event do gamepad do P3 voltam a `0660` com a ACL dela."""
     alvos = [mesa.no("P3"), mesa.entradas("P3")[0]]
@@ -417,27 +398,14 @@ MUDANCAS: dict[int, Callable[[Mesa], set[str]]] = {
     VOLTA_DA_ACL_VELHA: _a_acl_velha,
     VOLTA_DO_EDGE_QUE_RENASCE: _o_edge_que_renasce,
 }
-#: As mudanças que mexem num HIDRAW — as únicas cuja firma a vigia lê.
 MUDANCAS_NO_HIDRAW = {VOLTA_DA_REGRA_QUE_REABRE, VOLTA_DO_EDGE_QUE_RENASCE}
-
-
-# ---------------------------------------------------------------------------
-# R0 — a mesa alcança o kernel
-# ---------------------------------------------------------------------------
 
 
 class TestR0AMesaAlcancaOKernel:
     def test_a_primeira_volta_escreve_nos_22_nos_e_fecha_todos(
         self, raiz: Path, abrir_inotify: Callable[[Mesa], _Inotify]
     ) -> None:
-        """Os nós nascem abertos para ela (uma regra que reabre), e a primeira
-        volta é uma transição de verdade: cada nó recebe ao menos um
-        `IN_ATTRIB` e termina `0600` sem ACL.
-
-        Sem este irmão, uma mesa cujo instrumento não visse nada deixaria a R1
-        verde sobre nada. A MORDIDA: troque o `IN_ATTRIB` do `add_watch` por
-        outro evento e esta régua reprova.
-        """
+        """Os nós nascem abertos para ela (uma regra que reabre), e a primeira"""
         mesa = _montar(raiz, aberta=True)
         diario: list[tuple[str, dict[str, Any]]] = []
         st = _estado(mesa, diario)
@@ -471,30 +439,16 @@ class TestR0AMesaAlcancaOKernel:
         assert _aberto_para_ela(mesa.vpad)
 
 
-# ---------------------------------------------------------------------------
-# R1 — no tempo: sessenta voltas com os nós parados não escrevem nada
-# ---------------------------------------------------------------------------
-
-
 class TestR1NoTempo:
     def test_sessenta_voltas_de_rehide_com_os_nos_parados(
         self, raiz: Path, abrir_inotify: Callable[[Mesa], _Inotify]
     ) -> None:
-        """30 min de mesa. A cada volta, e não só no fim: zero `IN_ATTRIB`,
-        `ctime` parado nos 22 nós, `hidden` nas quatro respostas e nenhuma
-        linha no diário — o rehide segue mudo, como já era.
-
-        AS MORDIDAS, as duas medidas em 25/09:
-          - sem a pergunta no `hide`: 1 `IN_ATTRIB` por hidraw por volta
-            (240 em 60 voltas);
-          - sem a pergunta no `fechar_entradas`: 1 por nó de entrada por volta
-            (1.080 em 60 voltas).
-        """
+        """30 min de mesa. A cada volta, e não só no fim: zero `IN_ATTRIB`,"""
         mesa = _montar(raiz, aberta=True)
         diario: list[tuple[str, dict[str, Any]]] = []
         st = _estado(mesa, diario)
         vigia = abrir_inotify(mesa)
-        _volta(st, mesa)  # a R0: a transição de verdade
+        _volta(st, mesa)
         vigia.drenar()
         ctimes = _ctimes(mesa.todos())
         linhas = len(diario)
@@ -516,28 +470,11 @@ class TestR1NoTempo:
         assert all(_fechado(c) for c in mesa.todos())
 
 
-# ---------------------------------------------------------------------------
-# R2 — o que já funcionava: a reconvergência
-# ---------------------------------------------------------------------------
-
-
 class TestR2AReconvergencia:
     def test_so_o_no_que_mudou_e_escrito_e_volta_fechado(
         self, raiz: Path, abrir_inotify: Callable[[Mesa], _Inotify]
     ) -> None:
-        """No meio das sessenta voltas, quatro formas do mundo real mexem num
-        nó (`MUDANCAS`). Na volta seguinte a cada uma, SÓ esses nós recebem
-        `IN_ATTRIB`, e todos terminam `0600` sem ACL; na volta depois dela,
-        zero de novo. É o rehide sendo o que sempre foi: a reconvergência
-        contra o que não avisa o broker.
-
-        AS MORDIDAS, uma por forma errada da pergunta:
-          - perguntar «ela consegue abrir?» (`is_exposed_to`) deixa o `0666`
-            do js do P2 aberto;
-          - lembrar em memória (o nó já fechado por caminho) deixa o Edge
-            renascido aberto;
-          - olhar só o modo deixa a ACL velha do event do P1.
-        """
+        """No meio das sessenta voltas, quatro formas do mundo real mexem num"""
         mesa = _montar(raiz, aberta=True)
         st = _estado(mesa, [])
         vigia = abrir_inotify(mesa)
@@ -546,13 +483,12 @@ class TestR2AReconvergencia:
 
         escritos: dict[int, Counter[str]] = {}
         esperados: dict[int, set[str]] = {}
-        #: nó -> a primeira volta depois da qual ele ficou aberto.
         ficou_aberto: dict[str, int] = {}
         for volta in range(1, 61):
             mudar = MUDANCAS.get(volta)
             if mudar is not None:
                 esperados[volta] = mudar(mesa)
-                vigia.drenar()  # o que a mudança disparou não é do broker
+                vigia.drenar()
             assert _volta(st, mesa) == ["hidden"] * 4, volta
             escritos[volta] = vigia.drenar()
             for caminho in mesa.todos():
@@ -567,11 +503,6 @@ class TestR2AReconvergencia:
             )
         for jogador in JOGADORES:
             assert stat.S_IMODE(mesa.js_do_movimento(jogador).stat().st_mode) == 0
-
-
-# ---------------------------------------------------------------------------
-# R3 — o lado de abrir (o Modo Nativo)
-# ---------------------------------------------------------------------------
 
 
 def _acl_com_dois(uid: int, outro: int) -> bytes:
@@ -593,18 +524,7 @@ class TestR3OLadoDeAbrir:
     def test_o_expose_repetido_nao_escreve_e_o_que_mudou_e_reescrito(
         self, raiz: Path, abrir_inotify: Callable[[Mesa], _Inotify], jogador: str
     ) -> None:
-        """O Modo Nativo pede `expose` com `"entradas": true`. O primeiro pedido
-        escreve; os trinta iguais seguintes, nada. O nó que renasce `0600` é
-        escrito no pedido seguinte, e o nó com a ACL dela E a de um segundo
-        uid volta ao blob canônico — o alvo é o blob, não «ela consegue
-        abrir?». Para cada um dos quatro: os dois pelo rádio, o do cabo (com a
-        tomada do fone) e o Edge pelo cabo.
-
-        AS MORDIDAS:
-          - sem a pergunta no `restore` e no `abrir_entradas`, cada pedido
-            gera `IN_ATTRIB` em cada nó do controle;
-          - perguntar `is_exposed_to(uid)` deixa o segundo uid na ACL.
-        """
+        """O Modo Nativo pede `expose` com `"entradas": true`. O primeiro pedido"""
         mesa = _montar(raiz, aberta=False)
         st = _estado(mesa, [])
         vigia = abrir_inotify(mesa)
@@ -622,7 +542,7 @@ class TestR3OLadoDeAbrir:
             repetidos.append(vigia.drenar())
         assert all(not conta for conta in repetidos), _resumo(repetidos)
 
-        _nascer(mesa, jogador, aberto=False)  # o replug: o nó renasce fechado
+        _nascer(mesa, jogador, aberto=False)
         vigia.drenar()
         assert _pede(st, pedido)["state"] == "exposed"
         assert set(vigia.drenar()) == do_controle
@@ -646,11 +566,6 @@ class TestR3OLadoDeAbrir:
         assert all(_fechado(c) for j in outros for c in mesa.do_controle(j))
 
 
-# ---------------------------------------------------------------------------
-# R6 — na dúvida, escreve
-# ---------------------------------------------------------------------------
-
-
 def _getxattr_que_falha(erro: int) -> Callable[..., bytes]:
     """O `getxattr` da ACL falhando com `erro`; qualquer outro atributo é o real."""
     real = os.getxattr
@@ -663,11 +578,9 @@ def _getxattr_que_falha(erro: int) -> Callable[..., bytes]:
     return falso
 
 
-#: (errno da leitura da ACL, o nó `0600` é reescrito?). Só as duas respostas
-#: que PROVAM «sem ACL» pulam a escrita; qualquer outra é dúvida, e escreve.
 LEITURAS_DO_FECHAR = (
-    (errno.ENODATA, False),  # sem ACL: o devtmpfs, o tmpfs e o ext4
-    (errno.EOPNOTSUPP, False),  # o fs que não guarda ACL POSIX
+    (errno.ENODATA, False),
+    (errno.EOPNOTSUPP, False),
     (errno.EIO, True),
     (errno.EACCES, True),
     (errno.ENOMEM, True),
@@ -684,16 +597,7 @@ class TestR6NaDuvidaEscreve:
         erro: int,
         escreve: bool,
     ) -> None:
-        """A mesa fechada e uma volta do rehide cuja leitura da ACL falha.
-        `ENODATA` e `EOPNOTSUPP` dizem «não há ACL», e o nó `0600` fica como
-        está; qualquer outro erro é dúvida, e os 22 nós são reescritos — como
-        antes da cura.
-
-        AS MORDIDAS:
-          - «todo erro é sem ACL» deixa de escrever no `EIO`;
-          - «só o `ENODATA` é sem ACL» reescreve a cada volta num fs sem ACL
-            POSIX, que é o achado de volta em outra máquina.
-        """
+        """A mesa fechada e uma volta do rehide cuja leitura da ACL falha."""
         mesa = _montar(raiz, aberta=True)
         st = _estado(mesa, [])
         vigia = abrir_inotify(mesa)
@@ -717,12 +621,7 @@ class TestR6NaDuvidaEscreve:
         monkeypatch: pytest.MonkeyPatch,
         erro: int,
     ) -> None:
-        """Os quatro já abertos no alvo (`0660` e o blob dela). Sem ler o
-        blob, não há prova de alvo: todo erro de leitura reescreve, no
-        `restore` e no `abrir_entradas`.
-
-        A MORDIDA: «erro de leitura é alvo» deixa de escrever.
-        """
+        """Os quatro já abertos no alvo (`0660` e o blob dela). Sem ler o"""
         mesa = _montar(raiz, aberta=True)
         ops = _OpsDeArquivo(
             sys_class_hidraw=str(mesa.sys_hidraw),
@@ -745,16 +644,8 @@ class TestR6NaDuvidaEscreve:
         assert all(_aberto_para_ela(c) for c in mesa.todos())
 
 
-# ---------------------------------------------------------------------------
-# A vigia do sequestro sobre a mesa: firma REAL, /proc e relógio de mentira
-# ---------------------------------------------------------------------------
-
-
 class _Proc:
-    """O `/proc` de mentira: quem segura cada nó e quem está vivo. A sonda conta.
-
-    Processo morto não aparece na varredura, como no `/proc` de verdade.
-    """
+    """O `/proc` de mentira: quem segura cada nó e quem está vivo. A sonda conta."""
 
     def __init__(self) -> None:
         self.donos: dict[str, list[int]] = {}
@@ -785,13 +676,7 @@ class _Proc:
 
 
 def _ela_abre(no: str) -> bool:
-    """O `access(2)` de um processo dela sobre o nó, que na máquina é de root.
-
-    Na mesa o arquivo é do usuário do teste, e o `access(2)` de verdade diria
-    «abre» até num `0600`. Aqui a pergunta é a do kernel para quem NÃO é dono:
-    os bits de outros, ou a entrada dela na ACL com a máscara (os bits de
-    grupo) deixando ler e escrever.
-    """
+    """O `access(2)` de um processo dela sobre o nó, que na máquina é de root."""
     try:
         modo = stat.S_IMODE(os.stat(no).st_mode)
     except OSError:
@@ -806,11 +691,7 @@ def _ela_abre(no: str) -> bool:
 
 
 def _espera_o_relogio_do_fs(sonda: Path) -> None:
-    """Espera o relógio do fs passar da última escrita (teto de 50 ms).
-
-    Dois `chmod` no mesmo tique do relógio do fs dão o mesmo `ctime`, e a
-    mordida da R4 contaria de menos: o rehide que escreve não andaria a firma.
-    """
+    """Espera o relógio do fs passar da última escrita (teto de 50 ms)."""
     sonda.chmod(0o600)
     antes = sonda.stat().st_ctime_ns
     fim = time.monotonic() + 0.05
@@ -821,13 +702,7 @@ def _espera_o_relogio_do_fs(sonda: Path) -> None:
 
 
 class _Bancada:
-    """A `VigiaDoSequestro` de produção sobre os hidraw da mesa, no tempo.
-
-    Uma fatia de 2 s (`RECONNECT_HOTPLUG_POLL_INTERVAL_SEC`), que encolhe para
-    `PASSO_DA_VIGIA_S` com a vigia alerta, como no `_wait_online_or_hotplug`;
-    e o rehide do `BrokerState` a cada 30 s, seguido de um passo da vigia na
-    mesma hora, como no `reconnect_loop`.
-    """
+    """A `VigiaDoSequestro` de produção sobre os hidraw da mesa, no tempo."""
 
     def __init__(self, raiz: Path, mesa: Mesa, st: BrokerState, proc: _Proc) -> None:
         self.mesa = mesa
@@ -843,7 +718,6 @@ class _Bancada:
         self.rehides = 0
         self._proximo_rehide = 30.0
         self.antes_do_rehide: dict[int, Callable[[Mesa], object]] = {}
-        #: (t, passo) de cada passo dado.
         self.passos: list[tuple[float, ec.PassoDaVigia]] = []
 
     def passo(self) -> ec.PassoDaVigia:
@@ -890,21 +764,9 @@ def _bancada(raiz: Path) -> _Bancada:
     return bancada
 
 
-# ---------------------------------------------------------------------------
-# R4 — a vigia volta ao desenho dela
-# ---------------------------------------------------------------------------
-
-
 class TestR4AVigiaVoltaAoDesenhoDela:
     def test_com_os_nos_parados_uma_varredura_so(self, raiz: Path) -> None:
-        """«Nó fechado, firma parada e ninguém segurando: nunca» — o desenho da
-        vigia. Um passo a cada 2 s por 30 min e o rehide a cada 30 s: uma
-        varredura, a da primeira vista.
-
-        A MORDIDA: sem a pergunta no `hide`, o `chmod` de cada rehide anda o
-        `ctime` e a vigia varre o `/proc` uma vez por volta — 61 varreduras,
-        60 delas sobre nada.
-        """
+        """«Nó fechado, firma parada e ninguém segurando: nunca» — o desenho da"""
         bancada = _bancada(raiz)
         ctimes = _ctimes([bancada.mesa.no(j) for j in JOGADORES])
 
@@ -916,11 +778,7 @@ class TestR4AVigiaVoltaAoDesenhoDela:
         assert not any(p.a_reafirmar for _t, p in bancada.passos)
 
     def test_cada_mudanca_de_verdade_no_hidraw_custa_uma_varredura(self, raiz: Path) -> None:
-        """As mudanças da R2, no meio dos 30 min. As duas que mexem num hidraw
-        (a regra que reabre o do P3, e o Edge que renasce) custam uma
-        varredura cada; as dos nós de entrada, nenhuma — a vigia lê só a firma
-        do hidraw. É o fd que entrou pela janela sendo visto depois de ela
-        fechar, e é o caminho das três detecções de 25/09."""
+        """As mudanças da R2, no meio dos 30 min. As duas que mexem num hidraw"""
         bancada = _bancada(raiz)
         bancada.antes_do_rehide = {volta: mudar for volta, mudar in MUDANCAS.items()}
 
@@ -931,28 +789,12 @@ class TestR4AVigiaVoltaAoDesenhoDela:
         assert all(_fechado(c) for c in bancada.mesa.todos())
 
 
-# ---------------------------------------------------------------------------
-# R5 — o herdeiro do dono que morreu
-# ---------------------------------------------------------------------------
-
-
 class TestR5OHerdeiroDoDonoQueMorreu:
     def test_o_fd_herdado_e_visto_na_fatia_seguinte_a_morte(self, raiz: Path) -> None:
-        """A Steam segura o hidraw do P2 que acabou de fechar (a varredura a
-        vê); um filho herda o fd, e a Steam morre antes da varredura
-        seguinte. Com o nó fechado e a firma parada, só a vigia que não confia
-        na morte o vê: em até uma fatia, uma varredura acha o filho, o nó
-        segue na foto e a reescrita continua. Morto o filho também, o nó sai
-        da foto com a reescrita final. E com a mesa em repouso, a morte de
-        quem não segura nada não custa varredura.
-
-        A MORDIDA: sem o `pop` da firma no `_soltar_os_mortos`, nenhuma
-        varredura depois da morte, e o filho nunca é visto em 30 min de mesa.
-        """
+        """A Steam segura o hidraw do P2 que acabou de fechar (a varredura a"""
         bancada = _bancada(raiz)
         no = str(bancada.mesa.no("P2"))
 
-        # A janela: uma regra reabre o nó, a Steam o abre, e o rehide o fecha.
         def a_janela(mesa: Mesa) -> None:
             _abrir_para_ela(mesa.no("P2"))
             bancada.proc.segurar(no, STEAM)
@@ -963,7 +805,6 @@ class TestR5OHerdeiroDoDonoQueMorreu:
         assert bancada.vigia.sequestrados == {no: (STEAM,)}
         assert _fechado(bancada.mesa.no("P2"))
 
-        # O filho herda o fd, e a Steam morre antes da varredura seguinte.
         bancada.proc.segurar(no, FILHO)
         bancada.proc.morrer(STEAM)
         morte = bancada.t
@@ -979,21 +820,18 @@ class TestR5OHerdeiroDoDonoQueMorreu:
         assert passo.soltos == ()
         assert passo.sondou
 
-        # A reescrita continua: dez minutos de sequestro, nenhum buraco de mais de 1 s.
         inicio = len(bancada.passos)
         bancada.andar_ate(visto_em + 600.0)
         reescritas = [t for t, p in bancada.passos[inicio:] if no in p.a_reafirmar]
         buracos = [b - a for a, b in zip([visto_em, *reescritas], reescritas, strict=False)]
         assert reescritas and max(buracos) <= 1.0 + 1e-9, max(buracos, default=None)
 
-        # Morto o filho também: o nó sai da foto, com a reescrita final.
         bancada.proc.morrer(FILHO)
         passo = bancada.fatia()
         assert passo.soltos == (no,)
         assert no in passo.a_reafirmar
         assert bancada.vigia.sequestrados == {}
 
-        # Em repouso, a morte de quem não segura nada não custa varredura.
         varreduras = bancada.proc.varreduras
         bancada.proc.vivos.add(OUTRO)
         bancada.andar_ate(bancada.t + 60.0)

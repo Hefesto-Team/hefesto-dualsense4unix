@@ -1,24 +1,4 @@
-"""O «Mapa do controle» mora só na aba Conexões.
-
-O-MAPA-DO-CONTROLE-MORA-SO-NA-CONEXOES-01. A fala dela, 29/09/2026, ~18h30:
-*«mapa do controle deveria ter saído da guia de Controles e ter ficado só na
-guia conexões.»* E a resposta dela no chat, ~21h30, sobre a porta de canto da
-Navegação: *«Sai também»*. A decisão vai ao `decisoes-dela.csv` como D-2909 na
-costura; a régua a escreve aqui, com a fonte.
-
-A CASA DO MAPA: a régua acha, em TODAS as páginas da tela (por `glob`, não numa
-lista digitada), todo elemento com `href="mapa-do-controle.html"`, e exige um
-só: o `a.btn` da fileira `.ferramentas` da `08-conexoes.html`. E a reserva do
-«← Voltar» do mapa é a página onde esse botão foi ACHADO (derivada da leitura).
-
-A PÁGINA LIDA: a publicada; a declarada em trabalho no `mockup/DIVERGENCIAS.md`
-(a licença do portão `desenho-aprovado`), lida da bancada até o `--publicar`.
-
-AS MORDIDAS: devolver o botão ao `aba02.py` reprova nomeando a
-`02-controles.html`; devolver a porta ao `aba06.py` reprova nomeando a
-`06-navegacao.html`; tirar o botão da 08 reprova dizendo que a casa ficou sem
-porta; a reserva do «Voltar» de volta a `02-controles.html` reprova a segunda.
-"""
+"""O «Mapa do controle» mora só na aba Conexões."""
 from __future__ import annotations
 
 import html.parser
@@ -32,11 +12,8 @@ from hefesto_dualsense4unix.interface import onde
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MAPA = "mapa-do-controle.html"
 
-#: A DECISÃO, escrita com a fonte: um `a.btn` na fileira de ferramentas da
-#: Conexões, e em nenhuma outra página.
 CASA = ("08-conexoes.html", "btn", "ferramentas")
 
-#: Tags que não fecham: não entram na pilha de ancestrais.
 _VAZIAS = frozenset({"area", "base", "br", "col", "embed", "hr", "img", "input",
                      "link", "meta", "source", "track", "wbr"})
 

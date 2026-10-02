@@ -173,8 +173,6 @@ def test_o_registro_do_sysfs_e_o_que_o_fd_diria(montar: Any, escondidos: bool) -
     assert pro.eixos, "o externo segue trazendo a faixa declarada"
 
 
-#: Cada arquivo do sysfs que classifica o nó. Sem qualquer um deles, o nó
-#: segue pelo caminho de antes: abre (pelo broker, se escondido) e lê pelo fd.
 _ILEGIVEIS = ["uniq", "name", "id/bustype", "capabilities/key"]
 
 
@@ -183,14 +181,7 @@ _ILEGIVEIS = ["uniq", "name", "id/bustype", "capabilities/key"]
 def test_o_sysfs_ilegivel_segue_o_caminho_de_hoje(
     montar: Any, arquivo: str, escondidos: bool
 ) -> None:
-    """O P3 (no cabo) com um arquivo do sysfs ilegível é achado pelo caminho de
-    antes, e só ele: os outros três continuam sem pedido. A MORDIDA: pule o
-    nó que o sysfs não classifica e o P3 some da descoberta.
-
-    No cabo, e não no rádio, de propósito: o nó do rádio mora sob
-    `/devices/virtual/misc/uhid/`, e sem o `uniq` legível o `_is_virtual_evdev`
-    já o tratava como o vpad do daemon antes desta sprint. É o caminho de
-    hoje também, e não é desta sprint mudá-lo."""
+    """O P3 (no cabo) com um arquivo do sysfs ilegível é achado pelo caminho de"""
     mesa = montar(escondidos)
     p3 = mesa.de(3)
     alvo = Path(os.path.realpath(mesa.sys_class / Path(p3).name / "device")) / arquivo

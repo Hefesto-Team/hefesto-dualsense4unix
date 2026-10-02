@@ -1,99 +1,5 @@
 #!/usr/bin/env python3
-"""giro_e_buraco.py — o giroscópio mede zero? e some report na janela? (E-8)
-
-AS DUAS PERGUNTAS QUE ELE RESPONDE
------------------------------------
-1. `movimento.giroscopio@dualsense` — cabo e rádio, os DOIS lados em
-   `inferido-do-codigo`: *o giroscópio entrega número calibrado, em cada
-   transporte?* A régua é ABSOLUTA: um controle parado na mesa **não gira**.
-   Nenhuma conclusão depende de comparar um braço com o outro.
-2. `movimento.imu.perda@dualsense` — cabo e rádio, também os dois em
-   `inferido-do-codigo`: *dentro de uma janela, some report?* A célula do cabo
-   dizia, em 14/08, que o `sensor_timestamp` "É a régua que falta — ele é
-   repassado VERBATIM e nunca parseado. NÃO TENTADO: contar buraco por delta de
-   `sensor_timestamp`". Este instrumento tenta — e acha uma régua melhor.
-
-O CONTADOR DE REPORTS QUE O DRIVER JOGA FORA (a descoberta desta leva)
------------------------------------------------------------------------
-O `struct dualsense_input_report` do `hid-playstation.c:295-315` tem um
-`seq_number` em `corpo[6]` e um `reserved[4]` em `corpo[11..14]`. Medido em
-15/08/2026 nos quatro aparelhos da mesa 2+2:
-
-  `corpo[6]`      (`seq_number`) .... anda de 1 em 1 **SÓ NO CABO**. No rádio
-                  ele fica **constante em 1**: delta zero em **1628 de 1628
-                  pares** no bruto versionado
-                  `2026-08-15-E8-A-unidade-no-radio-que-dormiu-e-caiu.csv`, e
-                  o mesmo em janelas mais curtas nos dois aparelhos de rádio.
-                  Como régua de perda por rádio, ele é MUDO.
-  `corpo[11..14]` (`reserved`) ...... lido como `__le32` é um **contador de
-                  reports de 32 bits**, e anda de 1 em 1 em **100% dos pares,
-                  nos quatro aparelhos, NOS DOIS TRANSPORTES**.
-
-O kernel chama de `reserved` e nunca olha. É, hoje, a única régua de perda que
-funciona igual no cabo e no rádio — e é ela que fecha a assimetria que o mapa
-declara ("uma degradação de link no CABO é invisível para a telemetria").
-
-A RÉGUA DO GIROSCÓPIO É DERIVADA DO PRÓPRIO APARELHO — e a de antes ERRAVA 62x
-------------------------------------------------------------------------------
-`DS_GYRO_RES_PER_DEG_S = 1024` é a resolução **DE SAÍDA**, depois da
-calibração: é a escala do `ABS_RX/RY/RZ` que o kernel publica. O número CRU do
-fio **não está nessa escala**. O driver converte
-(`hid-playstation.c:1196-1213, :1670-1686`):
-
-    graus_por_s = cru * speed_2x / sens_denom_do_eixo
-
-com `speed_2x` e `sens_denom` lidos do **feature report 0x05** de CADA unidade.
-Medido nos quatro aparelhos: `speed_2x = 1080` e `sens_denom ~ 17700`, ou seja
-**~16,4 LSB por grau/s** no fio — e não 1024.
-
-Dividir o cru por 1024 encolhe a leitura por **62,5x**. Isso não é imprecisão:
-é a `A-3` desta casa em estado puro, porque a régua errada **torna o controle
-negativo impossível de reprovar** — com ela, um controle girando a 60 graus/s
-leria "0,96 graus/s" e passaria por parado. O `imu_no_cabo.py` imprimia o
-giroscópio assim, e o bruto `2026-08-15-E4-imu_no_cabo.csv` guarda os números
-errados; a correção está datada na docstring dele.
-
-O CONTROLE POSITIVO E O NEGATIVO — os dois, e sem pedir a mão dela (Lei 2)
----------------------------------------------------------------------------
-POSITIVO 1: no MESMO report, o acelerômetro tem de dar 1 g. É o que prova que
-  os offsets e o transporte estão certos — se o corpo estivesse deslocado, o
-  módulo da gravidade não sairia.
-POSITIVO 2: a conta feita AQUI (cru x `speed_2x`/`sens_denom`, do feature 0x05)
-  tem de bater com o `ABS_RX/RY/RZ` que o KERNEL publica no nó *Motion
-  Sensors*. São duas implementações independentes da mesma régua; se elas
-  divergirem, quem está errado sou eu, e o ensaio para.
-NEGATIVO: o giroscópio decodificado no offset do ACELERÔMETRO, com a régua boa,
-  tem de dar **centenas** de graus/s (a gravidade vale ~8192 LSB, que na escala
-  do giro são ~500 graus/s). Sem ele, "deu perto de zero" não valeria nada:
-  seria preciso mostrar que a régua CONSEGUE produzir número grande.
-NEGATIVO do instrumento: a maior parada do próprio laço de leitura é medida e
-  impressa. Um buraco na fila que coincida com o laço parado é MEU, não do
-  enlace — e a tabela separa os dois.
-
-A PORTA, DECLARADA
--------------------
-**Broker**, nos quatro físicos, por `comum.abrir_no_hidraw`, com o daemon VIVO
-(Lei 1). Os hidraw dos físicos estão `0600 root:root` — é o próprio Hefesto
-escondendo-os do jogo — e um `open()` direto ali mede `EACCES`, não o aparelho.
-
-O nó evdev *Motion Sensors* é aberto **só para o controle positivo 2**, em
-`O_RDONLY`, **sem `EVIOCGRAB`**: ler dali não rouba evento de ninguém, e o
-estado do grab vai no cabeçalho.
-
-O QUE ELE NUNCA FAZ (Lei 3)
-----------------------------
-**Não escreve no aparelho.** Nem um byte, em transporte nenhum. O feature 0x05
-sai por `HIDIOCGFEATURE` num fd **`O_RDONLY`** (conferido: o kernel aceita), que
-é GET_REPORT — leitura. Nada de `SET_FEATURE`, nada de output report.
-
-PRECISA DO DAEMON PARADO? **Não** — e não pode pedir: parar o daemon derruba os
-quatro vpads e o co-op, que é a mesa inteira.
-
-USO
-    giro_e_buraco.py                          # 20 s, os quatro físicos
-    giro_e_buraco.py --segundos 60 --csv /tmp/e8.csv
-    giro_e_buraco.py --sem-mascara            # MAC inteiro na TELA (nunca em arquivo)
-"""
+"""giro_e_buraco.py — o giroscópio mede zero? e some report na janela? (E-8)"""
 
 from __future__ import annotations
 
@@ -128,9 +34,6 @@ from comum import (
     tabela,
 )
 
-# A régua do acelerômetro, os offsets por transporte e a máscara de MAC são
-# REUSADOS do E-4, nunca recopiados: uma régua só na casa. Foi assim que o
-# `identidade_do_vpad.py` nasceu, e é a mesma disciplina.
 from imu_no_cabo import (
     DS_ACC_RES_PER_G,
     DS_GYRO_RES_PER_DEG_S,
@@ -141,39 +44,21 @@ from imu_no_cabo import (
     mascarar,
 )
 
-#: `corpo[6]` — o `seq_number` do `struct dualsense_input_report`. MEDIDO em
-#: 15/08/2026: anda de 1 em 1 no CABO e fica CONSTANTE no rádio. Fica aqui como
-#: régua declarada e como o CONTRA-exemplo do contador de baixo.
 OFFSET_SEQ_NO_CORPO = 6
 
-#: `corpo[11..14]` — o `reserved[4]` que o driver ignora, e que lido como
-#: `__le32` é um contador de reports que anda de 1 em 1 nos DOIS transportes.
-#: É a régua de perda deste instrumento.
 OFFSET_CONTADOR_NO_CORPO = 11
 
-#: `corpo[27..30]` — o `sensor_timestamp`, `__le32`, em unidades de 0,33 us
-#: (`hid-playstation.c:1688-1702`: o driver divide por 3 para virar us). É o
-#: relógio DO CONTROLE, e serve para separar "o firmware calou" de "o enlace
-#: comeu": os dois produzem silêncio no relógio do host, e só este campo diz
-#: qual dos dois foi.
 OFFSET_TS_NO_CORPO = 27
 
-#: Quantos ticks do `sensor_timestamp` valem um microssegundo.
 TICKS_POR_US = 3
 
-#: Feature report da calibração da IMU (`DS_FEATURE_REPORT_CALIBRATION` /
-#: `_SIZE`, `hid-playstation.c`). Sai por GET_REPORT — leitura pura.
 FEATURE_CALIBRACAO = 0x05
 TAMANHO_CALIBRACAO = 41
 
-#: `HIDIOCGFEATURE(len)` = `_IOC(READ|WRITE, 'H', 0x07, len)`. O `WRITE` do
-#: nome é a direção do BUFFER do ioctl (o report id entra), não escrita no
-#: aparelho: é um GET_REPORT, e roda num fd `O_RDONLY`.
 def _hidiocgfeature(tamanho: int) -> int:
     return (3 << 30) | (tamanho << 16) | (ord("H") << 8) | 0x07
 
 
-#: `EVIOCGABS(code)` — a `resolution` que o kernel publica para cada eixo.
 _TAMANHO_ABSINFO = 24
 
 
@@ -181,21 +66,13 @@ def _eviocgabs(codigo: int) -> int:
     return (2 << 30) | (_TAMANHO_ABSINFO << 16) | (0x45 << 8) | (0x40 + codigo)
 
 
-#: Códigos evdev dos seis eixos do nó *Motion Sensors*: ABS_X/Y/Z é o
-#: acelerômetro, ABS_RX/RY/RZ é o giroscópio (`hid-playstation.c` os registra
-#: nessa ordem em `gyro_calib_data`/`accel_calib_data`).
 ABS_ACEL = (0x00, 0x01, 0x02)
 ABS_GIRO = (0x03, 0x04, 0x05)
 
 _BYTES_POR_LEITURA = 256
 
-#: O teto abaixo do qual um controle parado conta como PARADO. Não é chute
-#: estatístico: 5 graus/s é ~0,24% do fundo de escala (+-2048 graus/s), e o
-#: negativo deste ensaio (o giro lido no offset do acelerômetro) dá ~500
-#: graus/s — cem vezes acima. Entre os dois cabe qualquer bias de fábrica.
 TETO_DE_PARADO_DPS = 5.0
 
-#: O teto do controle positivo do acelerômetro, o mesmo do E-4.
 FAIXA_DE_1G = (0.90, 1.10)
 
 
@@ -222,13 +99,7 @@ def alimentacao(aparelho: Aparelho) -> tuple[str, str]:
 
 @dataclass
 class Calibracao:
-    """A régua do giroscópio DESTA unidade, lida do feature 0x05 dela.
-
-    `bias` NÃO entra: o driver lê `gyro_pitch_bias` e companhia e depois faz
-    `bias = 0` de propósito (`hid-playstation.c:1200, :1206, :1212`). Repetir a
-    escolha dele é o que permite comparar o número daqui com o `ABS_R*` que ele
-    publica — que é o controle positivo 2.
-    """
+    """A régua do giroscópio DESTA unidade, lida do feature 0x05 dela."""
 
     ok: bool = False
     motivo: str = ""
@@ -253,12 +124,7 @@ class Calibracao:
 
 
 def ler_calibracao(aparelho: Aparelho) -> Calibracao:
-    """O feature 0x05 desta unidade -> a régua do giroscópio dela.
-
-    Pela porta do broker e em `O_RDONLY`: `HIDIOCGFEATURE` é GET_REPORT, e o
-    kernel o aceita num fd de leitura (conferido em 15/08/2026). Pedir um fd
-    de escrita para ler seria abrir a porta que a Lei 3 fecha.
-    """
+    """O feature 0x05 desta unidade -> a régua do giroscópio dela."""
     try:
         no = abrir_no_hidraw(aparelho.caminho_hidraw, escrita=False)
     except (PortaFechadaError, OSError) as erro:
@@ -318,26 +184,16 @@ class Medida:
     curtos: int = 0
     ids_vistos: dict[int, int] = field(default_factory=dict)
 
-    # --- o giroscópio -------------------------------------------------------
-    #: Os triplos CRUS, guardados como vieram do fio. A conversão para graus/s
-    #: acontece em `finalizar`, DEPOIS da janela, porque a régua (feature 0x05)
-    #: só é lida depois — ver `main`.
     giros_crus: list[tuple[int, int, int]] = field(default_factory=list)
     aceis_crus: list[tuple[int, int, int]] = field(default_factory=list)
-    giros_dps: list[float] = field(default_factory=list)       # régua boa
-    giros_ingenuos: list[float] = field(default_factory=list)  # cru/1024 (A-3)
-    giros_no_offset_errado: list[float] = field(default_factory=list)  # negativo
+    giros_dps: list[float] = field(default_factory=list)
+    giros_ingenuos: list[float] = field(default_factory=list)
+    giros_no_offset_errado: list[float] = field(default_factory=list)
     somas_giro_lsb: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
-    modulos_g: list[float] = field(default_factory=list)       # positivo 1
+    modulos_g: list[float] = field(default_factory=list)
 
     def finalizar(self) -> None:
-        """Converte o cru guardado para graus/s, com a régua já lida.
-
-        Existe porque a régua é lida DEPOIS da janela: um `GET_REPORT` por
-        Bluetooth é tráfego no enlace, e este instrumento mede justamente
-        silêncio de enlace. Ler a calibração antes seria cutucar o aparelho e
-        depois medir se ele está quieto.
-        """
+        """Converte o cru guardado para graus/s, com a régua já lida."""
         fator = self.calib.dps_por_lsb
         for gx, gy, gz in self.giros_crus:
             self.giros_ingenuos.append(
@@ -350,34 +206,23 @@ class Medida:
         if not self.calib.ok:
             return
         for ax, ay, az in self.aceis_crus:
-            # NEGATIVO: o acelerômetro lido COMO SE fosse giroscópio. A
-            # gravidade vale ~8192 LSB, que nesta escala são centenas de graus/s.
             nx, ny, nz = (ax * fator[0], ay * fator[1], az * fator[2])
             self.giros_no_offset_errado.append(math.sqrt(nx * nx + ny * ny + nz * nz))
 
-    # --- a perda -----------------------------------------------------------
     contador_anterior: int | None = None
     seq_anterior: int | None = None
     ts_anterior: int | None = None
     pares: int = 0
-    saltos_do_contador: list[int] = field(default_factory=list)  # (delta-1) > 0
+    saltos_do_contador: list[int] = field(default_factory=list)
     reports_perdidos: int = 0
     saltos_do_seq: int = 0
     seq_parado: int = 0
     deltas_ts_us: list[float] = field(default_factory=list)
     intervalos_host_ms: list[float] = field(default_factory=list)
-    #: intervalo do host no par EXATO em que o contador saltou — é o que separa
-    #: "o enlace comeu" de "eu estava parado".
     host_ms_nos_saltos: list[float] = field(default_factory=list)
     ultimo_ns: int = 0
-    #: O silêncio da CAUDA: do último report até o fim da janela. Sem ele o
-    #: instrumento mentia por omissão — medido em 15/08/2026 às 22h21, um
-    #: controle que calou nos últimos 55 s de uma janela de 60 s apareceu com
-    #: "silêncio máximo 19 ms", porque um silêncio que nunca termina não fecha
-    #: nenhum par e nenhum par é nenhuma amostra.
     cauda_muda_ms: float = 0.0
 
-    # --- o controle positivo 2 (o kernel fazendo a mesma conta) -------------
     evdev_no: str = ""
     evdev_grab: str = ""
     evdev_resolucao_giro: int | None = None
@@ -441,12 +286,7 @@ class Medida:
 
     @property
     def fracao_da_janela_medida(self) -> float:
-        """Quanto da janela está coberto por intervalo medido, de 0 a 1.
-
-        Muito abaixo de 1 quer dizer que o aparelho passou a maior parte da
-        janela calado — e que qualquer p95 acima é o p95 do pedaço em que ele
-        falou, não da janela.
-        """
+        """Quanto da janela está coberto por intervalo medido, de 0 a 1."""
         if self.segundos <= 0:
             return 0.0
         return min(1.0, sum(self.intervalos_host_ms) / 1000.0 / self.segundos)
@@ -487,12 +327,8 @@ def _consumir(medida: Medida, bruto: bytes, agora_ns: int) -> None:
     medida.giros_crus.append((gx, gy, gz))
     medida.aceis_crus.append((ax, ay, az))
 
-    # Controle positivo 1: o mesmo report tem de trazer 1 g. Esta é a única
-    # conta que roda DENTRO da janela, porque a régua dela (8192 LSB/g) não
-    # depende de perguntar nada ao aparelho.
     medida.modulos_g.append(math.sqrt(ax * ax + ay * ay + az * az) / DS_ACC_RES_PER_G)
 
-    # --- a perda -----------------------------------------------------------
     contador = struct.unpack_from("<I", bruto, corpo + OFFSET_CONTADOR_NO_CORPO)[0]
     seq = bruto[corpo + OFFSET_SEQ_NO_CORPO]
     carimbo = struct.unpack_from("<I", bruto, corpo + OFFSET_TS_NO_CORPO)[0]
@@ -523,12 +359,7 @@ def _consumir(medida: Medida, bruto: bytes, agora_ns: int) -> None:
 
 
 def _abrir_evdev(medida: Medida) -> int | None:
-    """O nó *Motion Sensors* deste controle, em `O_RDONLY` e SEM `EVIOCGRAB`.
-
-    Ler dali não rouba evento de ninguém. Se o nó não abrir, ou estiver pego por
-    terceiro, isso vira MOTIVO na tabela — nunca um zero silencioso, que é o
-    modo de falha que o `leitura_de_zero` desta casa existe para impedir.
-    """
+    """O nó *Motion Sensors* deste controle, em `O_RDONLY` e SEM `EVIOCGRAB`."""
     caminho = _no_de_movimento(medida.aparelho)
     medida.evdev_no = caminho
     if not caminho:
@@ -557,10 +388,9 @@ def _consumir_evdev(medida: Medida, dados: bytes, atual: dict[int, int]) -> None
     resolucao = medida.evdev_resolucao_giro or DS_GYRO_RES_PER_DEG_S
     for i in range(0, len(dados) - 23, 24):
         _s, _us, tipo, codigo, valor = struct.unpack_from("QQHHi", dados, i)
-        if tipo == 0x03:  # EV_ABS
+        if tipo == 0x03:
             atual[codigo] = valor
         elif tipo == 0x00 and codigo == 0 and all(c in atual for c in ABS_GIRO):
-            # SYN_REPORT com os três eixos já vistos = uma amostra completa.
             medida.evdev_amostras += 1
             medida.evdev_giros_dps.append(
                 math.sqrt(sum(atual[c] ** 2 for c in ABS_GIRO)) / resolucao
@@ -568,19 +398,7 @@ def _consumir_evdev(medida: Medida, dados: bytes, atual: dict[int, int]) -> None
 
 
 def medir(medidas: list[Medida], segundos: float) -> float:
-    """Lê hidraw E evdev dos quatro físicos na MESMA janela; devolve a parada do laço.
-
-    A MESMA janela não é elegância: o controle positivo 2 compara a minha conta
-    com a do kernel, e duas janelas em fila não comparam nada. Medido em
-    15/08/2026 às 22h15, com o evdev numa janela separada de 2 s: um aparelho
-    foi encostado durante a janela do hidraw e não durante a do evdev, e o
-    instrumento acusou 1,15 contra 26,18 graus/s — divergência de instrumento
-    sem nenhum instrumento errado. Este parágrafo é o preço daquele minuto.
-
-    A maior parada do laço é o controle negativo do próprio instrumento: se ela
-    for da ordem de um buraco medido, o buraco pode ser meu. Ela sai na tabela
-    ao lado do silêncio de cada aparelho, e não num comentário.
-    """
+    """Lê hidraw E evdev dos quatro físicos na MESMA janela; devolve a parada do laço."""
     seletor = selectors.DefaultSelector()
     de_hidraw: dict[int, Medida] = {}
     de_evdev: dict[int, tuple[Medida, dict[int, int]]] = {}
@@ -840,9 +658,6 @@ def veredicto(medidas: list[Medida], laco_ms: float) -> str:
         )
     )
 
-    # Um aparelho que não falou NÃO pode desaparecer da linha final. "Todos
-    # parados" com um mudo na mesa é a frase que faz a próxima pessoa achar que
-    # mediu quatro quando mediu três — e o mudo é justamente o caso interessante.
     mudos = [m for m in medidas if not m.aproveitados and not m.erro]
     aviso_mudo = ""
     if mudos:

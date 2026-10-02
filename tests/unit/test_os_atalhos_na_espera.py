@@ -1,77 +1,4 @@
-"""OS-ATALHOS-NA-ESPERA-01 — na espera do lugar guardado, os atalhos do PS seguem vivos.
-
-**REVISTO EM 28/09/2026** pela O-MODO-XBOX-NAO-E-QUEDA-02, item 5 (a decisão
-dela de 27/09, ``D-2709-O-PS-R3-EM-QUALQUER-CONTROLE``): o PS e as combinações
-valem em QUALQUER um dos quatro controles, dentro e fora da espera. O que esta
-régua afirmava como «só o próximo da fila segura» (as testemunhas mudas, o P2 mudo
-com o P1 na mesa, o diário da troca de mão) caducou com a decisão; o que fica é
-a espera: o P1 fora dentro do prazo não cala os atalhos de ninguém, o vpad
-parado dele não recebe nada, e a pergunta «de quem é o gesto» nunca responde o
-P1 ausente. A régua de qualquer controle com o P1 na mesa é
-``test_o_ps_vale_em_qualquer_controle.py``.
-
-**A decisão é dela** (24/09/2026, 19h, ``D-2409-OS-ATALHOS-NA-ESPERA-FICAM-COM-
-O-P2``, escolhida em opções, com a foto do dia): *«O P2 segura os atalhos
-durante a espera, sem trocar de número»*; quando o P1 volta, os atalhos voltam
-para ele. Revoga o «custo aceito» da ``D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO``.
-
-**O QUE FOI MEDIDO, antes da cura** (24/09/2026, nesta bancada, a classe real):
-com o jogo aberto e o P1 fora dentro do prazo, o posto de P1 fica VAGO
-(``_posto_vago_de``), o leitor do primário fica sem nó, e o laço entregava
-``frozenset()`` aos atalhos em todo tique. O PS + R3, o PS + L3 e o PS sozinho
-do P2 não disparavam nada — aos 2 s e aos 20 s, com 2, 3 e 4 controles, USB, BT
-e a mesa mista. Com o P1 na mesa, só o PS + R3 dele disparava; de volta, também.
-
-**A cura mora no dono** (``poll.botoes_de_cada_controle``): os atalhos leem
-os botões de cada controle na mesa, e o vpad do P1 continua recebendo só os
-botões do posto. O laço de produção entrega os botões por
-``poll.observar_os_atalhos``, e o PS + L3 anda o cartão de quem faz o gesto
-(``poll.quem_segura_os_atalhos``); fora de um gesto, na vaga, a resposta é o
-próximo da fila — o menor número da lâmpada entre os jogadores sentados no
-co-op —, nunca o P1 ausente.
-
-**A bancada é a honesta** (:class:`MesaHonesta`, da O-VPAD-DO-P1-NAO-REPETE-O-
-MAC-01): os vpads da fábrica REAL contra o kernel de mentira que recusa MAC
-repetido, com o backend, o co-op e o registro de identidade reais. Ela ganha a
-MÃO de quem joga — o que se aperta num controle chega a quem lê o nó dele: o
-leitor do primário ou o do co-op — e o ``HotkeyManager`` real, montado pelo
-``start_hotkey_manager`` real (os combos de fábrica), com os atos trocados por
-quem anota o que disparou. O laço de produção é medido à parte, com o
-``Daemon.run`` de verdade (:class:`TestOLacoDeProducao`).
-
-**A conferência (24/09/2026) a deixou mais honesta em dois pontos.** O grab do
-co-op confirma no tique seguinte, como no ``EvdevReader`` de verdade — o leitor
-de mentira confirmava na hora e escondia os pulsos de falha do PS + L3 do P2.
-E os atos rodam de verdade (:func:`armar_o_ato_do_daemon`), como tarefa com o
-laço seguindo (:func:`_gesto_com_o_laco`): o PS + R3 do P2 troca o modo na
-espera, do disparo até o vpad do posto renascido no caminho novo
-(:class:`TestOPsR3DoP2TrocaOModo`).
-
-AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido; revistas em
-28/09/2026 com a O-MODO-XBOX-NAO-E-QUEDA-02):
-
-- ``botoes_de_cada_controle`` devolvendo só os botões do posto (o produto de
-  antes da OS-ATALHOS) reprova a matriz do P2, o próximo da fila e os três
-  caminhos: o silêncio dos 30 s volta;
-- o próximo da fila pelo MAIOR número reprova os que medem a resposta do
-  posto com três ou quatro na mesa;
-- a vaga perguntada ao ``primary_uniq`` fora da mesa (em vez do
-  ``_posto_vago_de`` do backend) não passa pela régua do próprio dono:
-  reprova ``test_a_vaga_e_a_do_backend``;
-- o PS + L3 andando o cartão do ``primary_identity`` reprova
-  :class:`TestOPsL3AndaOCartaoDeQuemSegura`: o do P1 ausente seria gravado;
-- o laço voltando a chamar ``observe`` com os botões do posto reprova
-  :class:`TestOLacoDeProducao`, e só ela — as outras chamam o dono direto;
-- (conferência) a prova do PS + L3 julgando sem esperar o vpad do co-op
-  voltar reprova a troca do P2 e o ciclo dele; a prova olhando o vpad do posto
-  reprova o P2 que não volta; o ciclo partindo da máscara do P1 reprova o ciclo
-  do P2; a mão presa a quem tem vpad de pé reprova o tique do renascer; o
-  diário e a pergunta «de quem é o gesto» caindo no posto na vaga vazia
-  reprovam a vaga sem ninguém sentado;
-- (28/09) o laço voltando a ler só o posto reprova :class:`TestOLacoDeProducao`.
-
-Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
-"""
+"""OS-ATALHOS-NA-ESPERA-01 — na espera do lugar guardado, os atalhos do PS seguem vivos."""
 from __future__ import annotations
 
 import asyncio
@@ -124,10 +51,8 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
     config_isolado,
 )
 
-#: O gesto da linha 17 e da O-ASSENTO-02: fora vinte segundos, dentro do prazo.
 VINTE_SEGUNDOS = 20.0
 
-#: Os atos do ``HotkeyManager``, pelo nome do gesto que cada um responde.
 ATOS = {
     "on_next_bridge": "ponte",
     "on_next_mask": "mascara",
@@ -137,7 +62,6 @@ ATOS = {
     "on_ps_long_press": "modo_jogo",
 }
 
-#: Os seis atalhos do PS, e o que cada um dispara.
 GESTOS = [
     pytest.param(("ps", "r3"), "ponte", id="ps-r3-proximo-modo"),
     pytest.param(("ps", "l3"), "mascara", id="ps-l3-proxima-mascara"),
@@ -147,15 +71,12 @@ GESTOS = [
     pytest.param(("ps", "options"), "modo_jogo", id="ps-options"),
 ]
 
-#: A matriz de sempre: dois, três e quatro controles; USB, BT e a mesa mista.
 MATRIZ = pytest.mark.parametrize(
     ("quantos", "transporte"),
     [(n, t) for n in (2, 3, 4) for t in TRANSPORTES],
     ids=[f"{n}-controles-{t}" for n in (2, 3, 4) for t in TRANSPORTES],
 )
 
-#: Os três caminhos da casa: o Virtual (uhid), o Xbox (uinput) e o Nativo (o
-#: jogo recebe o físico, sem vpad do Hefesto).
 CAMINHO_VIRTUAL = "virtual"
 CAMINHO_NATIVO = "nativo"
 CAMINHOS = [CAMINHO_VIRTUAL, CAMINHO_XBOX, CAMINHO_NATIVO]
@@ -168,18 +89,8 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
         yield k
 
 
-# ---------------------------------------------------------------------------
-# A mão de quem joga
-# ---------------------------------------------------------------------------
-
-
 class _LeitorDoP1QueAperta(_LeitorDoP1):
-    """O leitor do P1 da bancada, que também devolve o que se aperta no nó que ele lê.
-
-    O carimbo de dono (``de:<uniq>``) continua: é por ele que a bancada sabe
-    quem dirige o vpad do P1. Sem nó (a vaga), ninguém aperta nada aqui — e o
-    ``evdev_buttons_once`` nem chega a pedir, porque o leitor não está de pé.
-    """
+    """O leitor do P1 da bancada, que também devolve o que se aperta no nó que ele lê."""
 
     def snapshot(self) -> Any:
         base = super().snapshot()
@@ -191,22 +102,7 @@ class _LeitorDoP1QueAperta(_LeitorDoP1):
 
 
 class _LeitorDoCoopQueAperta(_LeitorDeSecundario):
-    """O leitor de um jogador do co-op, que devolve o que se aperta no controle DELE.
-
-    Só enquanto o nó que ele segura ainda é o do controle: quem saiu da mesa
-    não aperta nada, e um nó renumerado não herda os botões de ninguém.
-
-    **E O GRAB CONFIRMA NO TIQUE SEGUINTE, como no ``EvdevReader`` de verdade**
-    (conferência de 24/09/2026). O ``set_grab(True)`` que o co-op chama logo
-    depois do ``start()`` acha o device ainda fechado — quem o abre é a thread
-    do leitor — e fica «pending»; o vpad do jogador nasce no ``forward_all`` de
-    um tique seguinte (``CoopManager._promote_pending``). O leitor da bancada de
-    queda confirmava na hora, e era mais frouxo que o real justamente onde o
-    PS + L3 do P2 mede: o vpad dele renasce, e a prova do aparelho olhava antes
-    de ele voltar — os pulsos de falha sobre uma troca que pegou passavam
-    verdes. ``mesa.grab_recusado`` recusa o grab de quem estiver nele: o
-    controle que outro leitor exclusivo segura.
-    """
+    """O leitor de um jogador do co-op, que devolve o que se aperta no controle DELE."""
 
     def set_grab(self, grab: bool) -> bool:
         mesa = type(self).mesa
@@ -236,12 +132,7 @@ class _LeitorDoCoopQueAperta(_LeitorDeSecundario):
 
 
 class MesaDosAtalhos(MesaHonesta):
-    """A bancada honesta, com a mão de quem joga e o gerente de atalhos real.
-
-    ``caminho`` escolhe um dos três caminhos: o Virtual é o da bancada; no
-    Xbox o posto e os jogadores nascem pelo ``uinput`` (o de mentira do
-    kernel); no Nativo o vpad do P1 não existe — o jogo recebe o físico.
-    """
+    """A bancada honesta, com a mão de quem joga e o gerente de atalhos real."""
 
     def __init__(
         self,
@@ -274,7 +165,6 @@ class MesaDosAtalhos(MesaHonesta):
             )
             self.vpad_do_p1 = self.daemon._gamepad_device = posto
         elif caminho == CAMINHO_NATIVO:
-            # O Modo Nativo solta o vpad do P1: o jogo recebe o físico.
             self.vpad_do_p1.stop()
             self.vpads = []
             self.daemon._gamepad_device = None
@@ -283,18 +173,13 @@ class MesaDosAtalhos(MesaHonesta):
         gerente = self.daemon._hotkey_manager
         for atributo, nome in ATOS.items():
             setattr(gerente, atributo, self._anotador(nome))
-        #: O que o laço mandou ao vpad do P1 em cada tique (`evdev_buttons_once`).
         self.ao_vpad_do_p1: list[frozenset[str]] = []
 
     def _anotador(self, nome: str) -> Any:
         return lambda: self.disparos.append(nome)
 
     def tique(self, segundos: float = TIQUE) -> None:
-        """Os laços da bancada, e a metade do laço que alimenta o vpad do P1 e os atalhos.
-
-        Entre um tique e outro, a thread de cada leitor do co-op que pediu o grab
-        abriu o device (:meth:`_LeitorDoCoopQueAperta.abrir`).
-        """
+        """Os laços da bancada, e a metade do laço que alimenta o vpad do P1 e os atalhos."""
         for jogador in list(self.coop._players.values()):
             abrir = getattr(jogador.reader, "abrir", None)
             if callable(abrir):
@@ -357,14 +242,7 @@ def _fora_dentro_do_prazo(bancada: MesaDosAtalhos, *quem: str) -> None:
 
 
 def _gesto_com_o_laco(bancada: MesaDosAtalhos, gesto: Any) -> None:
-    """O ato do gesto como o daemon o roda: uma tarefa no laço, com o poll seguindo.
-
-    O ``HotkeyManager._fire`` agenda o callback com ``create_task`` e o laço do
-    daemon continua a cada tique enquanto ele espera — é esse laço que promove o
-    vpad de um jogador do co-op que renasce (``forward_all``). Rodar o callback
-    sozinho (``asyncio.run``) congelaria a mesa no instante do ato. Os tiques
-    daqui não andam o relógio: o prazo do lugar guardado não vence no meio.
-    """
+    """O ato do gesto como o daemon o roda: uma tarefa no laço, com o poll seguindo."""
 
     async def _junto() -> None:
         tarefa = asyncio.ensure_future(gesto())
@@ -380,17 +258,7 @@ def _gesto_com_o_laco(bancada: MesaDosAtalhos, gesto: Any) -> None:
 def armar_o_ato_do_daemon(
     bancada: MesaDosAtalhos, monkeypatch: pytest.MonkeyPatch
 ) -> SimpleNamespace:
-    """Os atos de verdade do ``Daemon`` no daemon de mentira da bancada.
-
-    O PS + R3 (e o PS + L3 do cartão do posto) chamam o
-    ``set_gamepad_emulation`` do ``Daemon``, que recria o vpad do posto pela
-    fábrica real (contra o kernel de mentira) e força o ``sync`` do co-op.
-    Dublado só o que tocaria o aparelho ou o disco dela — o grab do físico, o
-    launch env, o espelho de movimento, a leitura da calibração, os motores, as
-    preferências da sessão e a gravação do modo no perfil ativo — e a luz, que
-    é anotada em vez de piscar. Devolve ``luz`` (cada sequência e cada piscada,
-    na ordem) e ``gravado`` (o modo que o gesto gravaria no perfil).
-    """
+    """Os atos de verdade do ``Daemon`` no daemon de mentira da bancada."""
     d: Any = bancada.daemon
     d._emu_lock = threading.Lock()
     d._native_mode = False
@@ -432,9 +300,6 @@ def armar_o_ato_do_daemon(
         lambda _d, _cor, *, modo: anotado.luz.append(("piscada", modo)) or True,
     )
     monkeypatch.setattr(hotkey, "_appid_do_jogo_do_wrapper", lambda: None)
-    # O ESCRITOR DO MODO É O SETTER DO DAEMON desde a O-MODO-SE-GRAVA-ONDE-ELE-
-    # MUDA-01 (29/09/2026): o gesto lhe diz a porta, e ele grava depois do
-    # aparelho. Aqui ele só anota o que gravaria, com a assinatura do real.
     def _gravar_o_modo_escolhido(
         kind: str,
         *,
@@ -446,15 +311,8 @@ def armar_o_ato_do_daemon(
         return None
 
     d.gravar_o_modo_escolhido = _gravar_o_modo_escolhido
-    # A espera da prova do PS + L3 cede o laço a cada volta, e quem anda é a
-    # bancada (`_gesto_com_o_laco`): um tique por volta, sem relógio de parede.
     monkeypatch.setattr(hotkey, "_PASSO_DA_ESPERA_DO_VPAD_S", 0.0)
     return anotado
-
-
-# ---------------------------------------------------------------------------
-# A prova da sprint
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -482,7 +340,6 @@ class TestOP2SeguraOsAtalhosNaEspera:
         assert bancada.vaga(), "o prazo venceu antes dos vinte segundos"
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"], "aos 20 s o atalho do P2 sumiu"
 
-        # Sem trocar de número, de lâmpada nem de boneco.
         assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(ficaram)}
         assert bancada.dono_do_vpad_do_p1() is None, "o P2 passou a dirigir o boneco 1"
         assert bancada.o_jogo_ve() == {1: None, **{n + 2: u for n, u in enumerate(ficaram)}}
@@ -507,13 +364,7 @@ class TestOP2SeguraOsAtalhosNaEspera:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, transporte: str,
     ) -> None:
-        """Na espera, os atalhos são de todos os que estão na mesa (item 5, 28/09).
-
-        Até 28/09 esta régua pedia o contrário (as «testemunhas» mudas): os
-        atalhos eram de um controle só. A decisão dela de 27/09 (resposta 11,
-        D-2709-O-PS-R3-EM-QUALQUER-CONTROLE) revogou isso para o PS + R3, e o
-        item 5 da O-MODO-XBOX-NAO-E-QUEDA-02 estende ao PS sozinho.
-        """
+        """Na espera, os atalhos são de todos os que estão na mesa (item 5, 28/09)."""
         bancada = montar_atalhos(monkeypatch, kernel, quantos, transporte)
         _fora_dentro_do_prazo(bancada, P1)
         for uniq in UNIQS[2:quantos]:
@@ -591,7 +442,6 @@ class TestOProximoDaFila:
         for uniq in UNIQS[:4]:
             if uniq not in fora and uniq != segura:
                 assert bancada.apertar(uniq, "ps", "r3") == ["ponte"], f"{uniq} ficou mudo"
-        # E ninguém trocou de número por isso.
         assert bancada.a_tela() == {u: UNIQS.index(u) + 1 for u in UNIQS[:4] if u not in fora}
 
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
@@ -725,14 +575,7 @@ class TestAVagaEDoBackend:
     def test_a_vaga_e_a_do_backend(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, jogo: bool,
     ) -> None:
-        """O handle do P1 que caiu e ainda não foi podado não abre a vaga.
-
-        Entre o controle cair e o ``connect()`` podar o handle, o P1 já não está
-        entre os conectados (``alvos_conectados``), mas o posto ainda é dele e
-        não está vago. Os atalhos seguem a MESMA resposta que para o vpad do P1
-        — senão mudariam de mão antes de o posto parar, e também sem jogo, onde
-        a espera nem existe e o P2 assume o posto no ``connect()`` seguinte.
-        """
+        """O handle do P1 que caiu e ainda não foi podado não abre a vaga."""
         relogio = Relogio()
         bancada = MesaDosAtalhos(monkeypatch, kernel=kernel, relogio=relogio, jogo=jogo)
         for uniq in UNIQS[:3]:
@@ -740,7 +583,7 @@ class TestAVagaEDoBackend:
         for _ in range(3):
             bancada.tique()
         handle_do_p1 = bancada.inst._handles["AA:BB:CC:00:00:01"]
-        handle_do_p1.connected = False  # caiu; o `connect()` ainda não passou
+        handle_do_p1.connected = False
         assert P1 not in bancada.inst.alvos_conectados().values()
         assert bancada.inst.primary_uniq == P1 and not bancada.vaga()
         assert quem_segura_os_atalhos(bancada.daemon) == P1
@@ -748,20 +591,9 @@ class TestAVagaEDoBackend:
         assert botoes_de_cada_controle(bancada.daemon, do_posto)[P1] is do_posto
 
 
-# ---------------------------------------------------------------------------
-# O PS + L3: o cartão de quem segura
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.usefixtures("config_isolado")
 class TestOPsL3AndaOCartaoDeQuemSegura:
-    """Na espera, o PS + L3 do P2 anda o cartão DELE — o do P1 ausente não se mexe.
-
-    O ato é o de verdade: o callback do gesto, o ``escolher_a_mascara`` e o
-    ``vestir_a_mascara_do_aparelho`` do ``Daemon``, o co-op recriando o vpad
-    de quem trocou (:func:`armar_o_ato_do_daemon`). Só a luz é anotada em vez
-    de piscar.
-    """
+    """Na espera, o PS + L3 do P2 anda o cartão DELE — o do P1 ausente não se mexe."""
 
     @staticmethod
     def _preparar(bancada: MesaDosAtalhos, monkeypatch: pytest.MonkeyPatch) -> list[Any]:
@@ -772,13 +604,7 @@ class TestOPsL3AndaOCartaoDeQuemSegura:
     def test_o_ps_l3_do_p2_na_espera_troca_a_mascara_dele(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
-        """A luz diz o que o aparelho fez: o vpad do P2 volta num tique seguinte.
-
-        Conferência de 24/09/2026: com o grab do co-op confirmando no tique
-        seguinte, como no leitor de verdade, a prova do aparelho julgava antes
-        de o vpad do P2 renascer e piscava os pulsos de falha sobre uma troca
-        que pegou.
-        """
+        """A luz diz o que o aparelho fez: o vpad do P2 volta num tique seguinte."""
         bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
         luz = self._preparar(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
@@ -806,12 +632,7 @@ class TestOPsL3AndaOCartaoDeQuemSegura:
     def test_o_ps_l3_do_p2_anda_o_ciclo_dele_e_nao_o_do_p1(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
-        """Três apertos do P2 na espera: o ciclo parte da máscara DELE a cada vez.
-
-        Conferência de 24/09/2026: com o ciclo partindo da máscara do posto (a
-        do P1 ausente, que não anda), o segundo aperto pedia de novo o Xbox 360
-        que o P2 já vestia, a luz dizia «trocou» e o ciclo dele ficava parado.
-        """
+        """Três apertos do P2 na espera: o ciclo parte da máscara DELE a cada vez."""
         bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
         luz = self._preparar(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
@@ -837,12 +658,7 @@ class TestOPsL3AndaOCartaoDeQuemSegura:
     def test_o_ps_l3_do_p2_que_nao_volta_da_os_pulsos_de_falha(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
-        """A prova é o vpad DELE: o do posto de pé não responde pelo do P2.
-
-        O co-op não consegue sentar o P2 de novo (outro leitor exclusivo segura
-        o controle dele), o vpad do P2 não volta, e a luz diz que falhou — o do
-        posto, parado à espera do P1, continua de pé e não é prova de nada.
-        """
+        """A prova é o vpad DELE: o do posto de pé não responde pelo do P2."""
         bancada = montar_atalhos(monkeypatch, kernel, 3)
         luz = self._preparar(bancada, monkeypatch)
         monkeypatch.setattr(hotkey, "_ESPERA_DO_VPAD_DO_COOP_S", 0.05)
@@ -878,26 +694,13 @@ class TestOPsL3AndaOCartaoDeQuemSegura:
         assert ("piscada", "mascara:xbox") in luz
 
 
-# ---------------------------------------------------------------------------
-# O PS + R3 do P2 troca o modo DE VERDADE
-# ---------------------------------------------------------------------------
-
-
 class _OPostoSoltouNoMeioDoAtoError(AssertionError):
     """O posto que espera o P1 soltou durante o ato — e só isso conta como o xfail."""
 
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOPsR3DoP2TrocaOModo:
-    """A prova da sprint até o fim: o ato do PS + R3 do P2 roda na espera.
-
-    Conferência de 24/09/2026. A régua da implementação parava no disparo
-    (``on_next_bridge``); o ato — ``Daemon.set_gamepad_emulation`` com
-    ``origin="manual"``, o vpad do posto recriado no caminho novo com o MAC do
-    P1, o ``sync`` forçado do co-op recriando cada jogador — não rodava na
-    espera. Aqui ele roda, pela fábrica real contra o kernel de mentira, com o
-    grab do co-op confirmando no tique seguinte.
-    """
+    """A prova da sprint até o fim: o ato do PS + R3 do P2 roda na espera."""
 
     @MATRIZ
     def test_o_modo_troca_e_a_espera_segue_de_pe(
@@ -918,7 +721,6 @@ class TestOPsR3DoP2TrocaOModo:
         for _ in range(3):
             bancada.tique(0.0)
 
-        # O modo trocou, e o aparelho concorda: o posto renasceu no caminho novo.
         assert hotkey.ponte_atual(bancada.daemon) == hotkey.PONTE_XBOX
         assert bancada.daemon._gamepad_device is not posto
         assert getattr(bancada.daemon._gamepad_device, "backend", None) == "uinput"
@@ -927,7 +729,6 @@ class TestOPsR3DoP2TrocaOModo:
         assert anotado.luz == [("pulsos", 4)], (
             f"a luz disse {anotado.luz}: os dois pulsos de risco antes, e nada de falha"
         )
-        # E a espera segue de pé: ninguém trocou de número, de lâmpada nem de boneco.
         assert bancada.vaga(), "o PS + R3 do P2 soltou o posto que espera o P1"
         assert bancada.inst.primary_uniq == P1
         assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(ficaram)}
@@ -935,7 +736,6 @@ class TestOPsR3DoP2TrocaOModo:
         bancada.o_jogo_segue_a_tela()
         assert quem_segura_os_atalhos(bancada.daemon) == P2
 
-        # O P1 volta e dirige o vpad do posto, que renasceu à espera dele.
         bancada.mesa.sentar(P1, transporte=via)
         bancada.tique()
         bancada.tique()
@@ -952,19 +752,10 @@ class TestOPsR3DoP2TrocaOModo:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, gesto: Any,
     ) -> None:
-        """No tique em que o co-op ainda não promoveu quem renasceu, a mão fica com o P2.
-
-        Conferência de 24/09/2026. O ato do PS + R3 recria todos os jogadores
-        do co-op, e o do PS + L3 do P2 recria o dele; cada um volta a sentar
-        com o grab pendente e só ganha vpad no ``forward_all`` de um tique
-        seguinte. Com os atalhos presos a quem tem vpad de pé, nesse tique a
-        mão ia para o P3 — ou, sem ninguém de pé, para o posto: a pergunta «de
-        quem é o gesto», fora de um gesto, respondia o P1 ausente.
-        """
+        """No tique em que o co-op ainda não promoveu quem renasceu, a mão fica com o P2."""
         bancada = montar_atalhos(monkeypatch, kernel, quantos)
         armar_o_ato_do_daemon(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
-        # O tique do daemon que roda antes de a thread do leitor abrir o device.
         monkeypatch.setattr(hotkey, "_ESPERA_DO_VPAD_DO_COOP_S", 0.0)
         asyncio.run(gesto(bancada.daemon)())
         assert em.mascara_vestida(bancada.daemon, P2) is None, "premissa: o P2 renasce"
@@ -977,12 +768,7 @@ class TestOPsR3DoP2TrocaOModo:
     def test_na_vaga_sem_ninguem_sentado_ninguem_segura(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
-        """O P2 está na mesa, mas o co-op não consegue sentá-lo: ninguém segura.
-
-        Outro leitor exclusivo segura o controle do P2 (o grab é recusado), e o
-        posto segue vago. Os botões do P2 não chegam a leitor nenhum do
-        Hefesto, e a pergunta «de quem é o gesto» não responde o P1 ausente.
-        """
+        """O P2 está na mesa, mas o co-op não consegue sentá-lo: ninguém segura."""
         bancada = montar_atalhos(monkeypatch, kernel, 2)
         _fora_dentro_do_prazo(bancada, P1)
         bancada.mesa.grab_recusado.add(P2)  # type: ignore[attr-defined]
@@ -1009,14 +795,7 @@ class TestOPsR3DoP2TrocaOModo:
     def test_a_leitura_do_executor_no_meio_do_ato_nao_solta_o_posto(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
-        """O laço lê o estado num fio do executor enquanto o gesto recria o vpad do posto.
-
-        O ato do PS + R3 é síncrono no laço de eventos, mas o ``read_state`` do
-        tique anterior pode estar rodando no executor ``hefesto-hid`` ao mesmo
-        tempo; na vaga, ele refaz a pergunta da espera a cada tique
-        (``_ds_depois_da_vaga``). A régua põe essa leitura no instante em que o
-        vpad do posto já parou e o novo ainda não nasceu.
-        """
+        """O laço lê o estado num fio do executor enquanto o gesto recria o vpad do posto."""
         bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
         armar_o_ato_do_daemon(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
@@ -1026,7 +805,7 @@ class TestOPsR3DoP2TrocaOModo:
         def _nascer_com_a_leitura_no_meio(flavor: Any, **kw: Any) -> Any:
             if kw.get("identity") == P1 and not no_meio:
                 no_meio.append(bancada.daemon._gamepad_device)
-                bancada.inst.read_state()  # o tique do executor, no meio do ato
+                bancada.inst.read_state()
             return nascer(flavor, **kw)
 
         monkeypatch.setattr(
@@ -1044,22 +823,11 @@ class TestOPsR3DoP2TrocaOModo:
             )
 
 
-# ---------------------------------------------------------------------------
-# O laço de produção
-# ---------------------------------------------------------------------------
-
-
 class _CoopDaEspera:
-    """O co-op como o laço o vê: o P2 e o P3 na mesa, cada um apertando um botão.
-
-    Dublê SÓ do que o laço chama por tique e do que os atalhos perguntam; o
-    comportamento do co-op de verdade é o da bancada honesta, lá em cima.
-    """
+    """O co-op como o laço o vê: o P2 e o P3 na mesa, cada um apertando um botão."""
 
     def __init__(self) -> None:
         self._players: dict[str, Any] = {}
-        # Botões que não formam atalho nenhum: o laço de verdade despacharia o
-        # ato de verdade, e o do PS + R3 recria vpad (um nó uinput real).
         self._vivos = {
             P2: SimpleNamespace(buttons_pressed=frozenset({"triangle"})),
             P3: SimpleNamespace(buttons_pressed=frozenset({"square"})),
@@ -1095,12 +863,7 @@ def _estados(n: int) -> list[ControllerState]:
 
 
 class TestOLacoDeProducao:
-    """O `_poll_loop` de verdade entrega aos atalhos os botões de cada controle.
-
-    A bancada honesta chama o dono direto; esta é a régua de que o LAÇO chama
-    o dono, com o ``Daemon.run`` de verdade e o ``FakeController`` — nenhum
-    aparelho, nenhum nó.
-    """
+    """O `_poll_loop` de verdade entrega aos atalhos os botões de cada controle."""
 
     @staticmethod
     async def _rodar(
@@ -1117,7 +880,7 @@ class TestOLacoDeProducao:
         monkeypatch.setattr(HotkeyManager, "observe", _espiao)
         fc = FakeController(transport="usb", states=_estados(400))
         leitor = MagicMock()
-        leitor.is_available.return_value = not vaga  # na vaga o leitor do P1 não tem nó
+        leitor.is_available.return_value = not vaga
         leitor.snapshot.return_value = SimpleNamespace(buttons_pressed=["cross"])
         fc._evdev = leitor
         fc._posto_vago_de = "AA:BB:CC:00:00:01" if vaga else None  # type: ignore[attr-defined]

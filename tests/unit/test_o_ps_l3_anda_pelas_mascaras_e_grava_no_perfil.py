@@ -1,25 +1,4 @@
-"""PS-L3-MASCARA-01 — o PS + L3 anda pelas MÁSCARAS, grava no perfil e não mexe no modo.
-
-O pedido dela, 14/09/2026, com a grafia dela: *"preciso que o ps+ l3 funcione
-igual o ps /+ r3 que muda o modo porém para as máscaras. a ideia é que eu
-nao precise fechar o jogo (noqa-acento: citação literal)
-pra ajustar ingame isso e continuar a jogar."*
-
-A bancada é a da `test_o_ps_r3_anda_por_caminhos_e_grava_no_perfil.py`: o
-callback REAL do gesto (`hotkey.build_next_mask_callback`), o handler REAL do
-chip do cartão (`IpcHandlersMixin._handle_gamepad_mask_set`) e os métodos REAIS
-do `lifecycle.Daemon`; dublados só o vpad, o grab, o launch env, as flags de
-sessão, o co-op e a lightbar. O perfil ativo é achado pela perna do disco.
-
-MORDE, e são quatro curas independentes (medidas em 14/09, uma de cada vez):
-
-* o gesto escrever só o registro, sem o handler do cartão — o vpad não troca e o
-  perfil ativo fica como estava;
-* `mascara_atual` ler o registro em vez do vpad — o aparelho que não vestiu a
-  máscara ganha a cor dela na barra;
-* tirar o `on_next_mask` do `start_hotkey_manager` — o combo dispara no vazio;
-* tirar o `"mascara"` do despacho do `HotkeyManager` — idem, pelo outro lado.
-"""
+"""PS-L3-MASCARA-01 — o PS + L3 anda pelas MÁSCARAS, grava no perfil e não mexe no modo."""
 from __future__ import annotations
 
 import asyncio
@@ -51,7 +30,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.utils import session, xdg_paths
 
-#: A faixa sintética da casa — nada de endereço real em arquivo versionado.
 P1 = "aabbcc000001"
 PERFIL = "Bancada"
 
@@ -94,13 +72,6 @@ class _Daemon:
             gamepad_flavor="dualsense",
             gamepad_emulation_enabled=False,
             gamepad_caminho="dualsense",
-            # O-CAMINHO-NAO-VAZA-01 (17/09/2026) — A ESCOLHA DELA MUDOU DE SLOT.
-            # `gamepad_caminho` é o caminho DESTA sessão e acompanha o start;
-            # o que vale em todo jogo (a flag que o boot relê) mora agora em
-            # `gamepad_caminho_global`. A bancada representa *"ela escolheu
-            # dualsense"*, então os dois nascem preenchidos — é o que o produto
-            # faz num gesto manual. Sem esta linha o start sem opinião limparia
-            # o slot e a asserção de baixo acusaria o gesto de máscara.
             gamepad_caminho_global="dualsense",
             coop_enabled=True,
             rumble_active=(0, 0),
@@ -218,17 +189,9 @@ async def test_tres_apertos_andam_pelas_mascaras_com_o_jogo_aberto(
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
     assert d._gamepad_device.backend == "uhid", "premissa: Sony DualSense com cartão DualSense"
     d.display_authority = "game"
-    # LIDO, E NÃO DIGITADO — 19/09/2026. Esta prova cravava `"dualsense"`, que
-    # era o que a herança pelo arquivo global punha no slot. A
-    # CAMINHO-CONTAGIO-01 tirou a herança (um start sem opinião não nasce de
-    # lugar nenhum, e a máscara decide), então o valor de referência mudou e a
-    # régua reprovou a cura em vez do defeito. O que ela promete no texto — *o
-    # gesto de MÁSCARA não mexe no MODO* — continua medido, e melhor: agora
-    # contra o que estava lá, qualquer que seja.
     caminho_antes = d.config.gamepad_caminho
 
     gesto = hotkey.build_next_mask_callback(d)  # type: ignore[arg-type]
-    #: (a máscara que o vpad veste, o canal) depois de cada aperto.
     esperado = [("xbox", "uinput"), ("nintendo", "uinput"), ("dualsense", "uhid")]
     for aperto, (mascara, canal) in enumerate(esperado, start=1):
         await gesto()
@@ -274,15 +237,7 @@ async def test_na_navegacao_o_gesto_guarda_a_mascara_sem_ligar_o_vpad(
 async def test_o_aparelho_que_nao_veste_a_mascara_nao_ganha_a_cor_dela(
     luz: dict[str, list[Any]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A prova é o aparelho, e a escolha que não pegou não fica pendurada.
-
-    NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: esta régua cobrava que o
-    registro ficasse com a máscara pedida ("premissa: o handler gravou") e só a
-    LUZ dissesse a verdade. Era o retrato da ordem velha — gravar tudo e
-    conferir depois —, e ela deixava a aba Jogar acesa numa máscara que o jogo
-    não estava vendo. Agora o ato veste primeiro: recusado pelo aparelho, o
-    registro VOLTA e o perfil não é tocado.
-    """
+    """A prova é o aparelho, e a escolha que não pegou não fica pendurada."""
     _perfil_com_cartao_dualsense()
     d = _Daemon()
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
@@ -307,16 +262,7 @@ async def test_o_aparelho_que_nao_veste_a_mascara_nao_ganha_a_cor_dela(
 async def test_dois_apertos_seguidos_andam_duas_casas(
     luz: dict[str, list[Any]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o segundo aperto não se perde.
-
-    Com o jogo na mão, o gesto pisca ~0,56 s de aviso antes de trocar. Nessa
-    janela cabia um segundo PS + L3: ele lia a máscara de ANTES — nada havia
-    sido gravado ainda — e mirava o MESMO alvo. Ela apertava duas vezes
-    esperando o Nintendo Pro, ficava no Xbox 360, e o vpad era recriado duas
-    vezes no meio do jogo.
-
-    MORDE: ler `atual = mascara_atual(daemon)` ANTES dos pulsos de risco.
-    """
+    """TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o segundo aperto não se perde."""
     _perfil_com_cartao_dualsense()
     d = _Daemon()
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO

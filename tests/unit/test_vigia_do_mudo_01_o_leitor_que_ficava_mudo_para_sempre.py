@@ -1,48 +1,4 @@
-"""VIGIA-DO-MUDO-01 (17/08/2026) — o leitor mudo com o fd aberto, sem log.
-
-**O defeito, medido duas vezes com o aparelho na mão dela.** O `EvdevReader`
-para de receber eventos mantendo o **mesmo** `eventN`: o fd continua aberto, o
-`select` nunca acusa nada, não há `ENODEV`, não há exceção, e **não sai uma
-linha no journal**. O daemon segue publicando `connected=True` com os sticks
-congelados. Só `systemctl --user restart hefesto-dualsense4unix` curava.
-
-Sintoma publicado, e ele engana::
-
-    o vpad emitindo 1573 reports em 10 s, cadência normal, LX travado em 129
-    (16/08, no rádio: 396 reports em 8 s, LX travado em 128)
-
-**Quem estava emitindo não era quem tinha parado.** O vpad tem dois leitores
-alimentando o mesmo report: o `PhysicalReportReader` (hidraw — giro, touch) e
-o `EvdevReader` (sticks, botões, gatilhos). A ~157 Hz medidos, quem emitia era
-o espelho do hidraw, que estava **vivo**. O ramo evdev é que estava mudo. Por
-isso "o vpad continua emitindo" nunca foi consolo: os dois ramos são
-independentes, e o que o jogo joga vem do que estava parado.
-
-**E o `LX=129` é a prova, não o ruído.** 129 não é o valor de fábrica do
-snapshot — esse é 128 cravado (`EvdevSnapshot.lx`). 129 é o que a
-`_semear_posicao_de_repouso` escreve no **open**, lendo do `absinfo` a posição
-real daquela unidade (SEMENTE-DO-REPOUSO-01; nenhuma das quatro unidades da
-mesa de 15/08 repousa em 128). Logo: **o nó foi reaberto com sucesso e, a
-partir daquele open, zero `EV_ABS` chegou.**
-
-**Por que ninguém pegou antes.** O irmão `PhysicalReportReader` tem teto de
-silêncio desde a GYRO-BT-SILENCIO-01 (`_SILENCE_REOPEN_USB_S = 1.0`) — larga o
-fd e re-resolve. O `EvdevReader` não tinha nada equivalente: só sabia se curar
-quando o nó **trocava de número** (`is_stale`), e este modo de falha não troca.
-A casa sabia se curar num leitor e não no outro.
-
-**E copiar o teto do irmão seria um segundo defeito.** O hidraw entrega ~250 Hz
-mesmo com o controle parado na mesa — lá, silêncio É link morto. O evdev só
-emite quando algo MUDA: um controle em repouso fica legitimamente mudo para
-sempre, e um teto de tempo puro o reabriria em laço. Por isso a régua é a
-DISCORDÂNCIA com o `EVIOCGABS`, e o teste que prova essa diferença é o
-`test_controle_parado_na_mesa_nao_e_mudo` — sem ele, a cura errada passa.
-
-**A régua, provada na bancada em 17/08:** com o daemon segurando o grab do
-`event25`, um segundo leitor sem grab recebe zero eventos e mesmo assim vê o
-`absinfo` acompanhar o kernel. O `EVIOCGABS` lê o estado do `input_dev`, não a
-nossa fila — e é essa distinção que faz o vigia possível.
-"""
+"""VIGIA-DO-MUDO-01 (17/08/2026) — o leitor mudo com o fd aberto, sem log."""
 
 from __future__ import annotations
 
@@ -56,9 +12,6 @@ from hefesto_dualsense4unix.core.evdev_reader import (
     EvdevReader,
 )
 
-#: Os códigos evdev que o vigia consulta. Os valores são os do kernel (Linux
-#: `input-event-codes.h`) — inventar números aqui faria o teste concordar com
-#: um `ecodes` de mentira e discordar do produto.
 _ECODES = SimpleNamespace(
     ABS_X=0x00, ABS_Y=0x01, ABS_Z=0x02, ABS_RX=0x03, ABS_RY=0x04, ABS_RZ=0x05
 )
@@ -68,11 +21,7 @@ _FAIXA_STICK = EixoAbsoluto(minimo=0, maximo=255, flat=0, fuzz=0, resolucao=0)
 
 
 class _DevFalso:
-    """Um `InputDevice` cujo `absinfo` responde o que a bancada mandar.
-
-    `ilegivel=True` reproduz o eixo sem `absinfo` legível — o caso "não sei
-    conferir", que **não pode** ser confundido com "discorda".
-    """
+    """Um `InputDevice` cujo `absinfo` responde o que a bancada mandar."""
 
     def __init__(self, valores: dict[int, int], *, ilegivel: bool = False) -> None:
         self.valores = valores
@@ -139,11 +88,7 @@ class TestARegua:
         assert reader._o_kernel_discorda(dev, _ECODES) == {}
 
     def test_talo_fantasma_nao_e_discordancia(self) -> None:
-        """Valor igual ao mínimo declarado, num stick, é memória zerada.
-
-        Mesma recusa da semeadura, pelo mesmo motivo: tratar isso como
-        discordância faria o vigia reabrir em laço um nó que acabou de nascer.
-        """
+        """Valor igual ao mínimo declarado, num stick, é memória zerada."""
         reader = _reader_publicando(lx=128)
         dev = _DevFalso({_ECODES.ABS_X: 0})
         assert reader._o_kernel_discorda(dev, _ECODES) == {}
@@ -156,20 +101,12 @@ class TestARegua:
 
 
 class TestOLaco:
-    """`_read_until_signaled` — o vigia dentro do laço de leitura.
-
-    Nenhum destes testes dorme: o silêncio é contado por `_SELECT_TIMEOUT_S`,
-    não por relógio de parede. A casa exige relógio injetado, nunca `sleep`.
-    """
+    """`_read_until_signaled` — o vigia dentro do laço de leitura."""
 
     @staticmethod
     def _sempre_em_timeout(reader: EvdevReader, monkeypatch: pytest.MonkeyPatch,
                            teto: int = 400) -> dict[str, int]:
-        """O select nunca fica pronto — o fd está vivo e mudo.
-
-        O teto existe para o teste do controle parado terminar: lá o vigia
-        NUNCA devolve "mudo", e sem parada o laço giraria para sempre.
-        """
+        """O select nunca fica pronto — o fd está vivo e mudo."""
         contas = {"voltas": 0}
 
         def _wait(_dev: object) -> list[object]:
@@ -182,12 +119,7 @@ class TestOLaco:
         return contas
 
     def test_o_leitor_mudo_larga_o_fd(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A MORDIDA. Arranque o `_o_kernel_discorda` e este teste fica vermelho.
-
-        Antes da VIGIA-DO-MUDO-01 este laço nunca saía: o fd vivo, o select em
-        timeout para sempre, e o daemon publicando o valor do open até alguém
-        reiniciar o serviço na mão.
-        """
+        """A MORDIDA. Arranque o `_o_kernel_discorda` e este teste fica vermelho."""
         reader = _reader_publicando(lx=129)
         self._sempre_em_timeout(reader, monkeypatch)
         dev = _DevFalso({_ECODES.ABS_X: 40})
@@ -200,13 +132,7 @@ class TestOLaco:
     def test_controle_parado_na_mesa_nao_e_mudo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O teste que separa esta cura da cura ERRADA.
-
-        Um teto de silêncio puro — o do `PhysicalReportReader`, que é a cura
-        óbvia e a que quase se escreveu — reprovaria aqui: o controle está
-        parado na mesa, o evdev não emite (é o normal dele), e o fd está
-        perfeito. Reabrir seria um laço de reopen num nó saudável.
-        """
+        """O teste que separa esta cura da cura ERRADA."""
         reader = _reader_publicando(lx=127, ly=126)
         contas = self._sempre_em_timeout(reader, monkeypatch)
         dev = _DevFalso({_ECODES.ABS_X: 127, _ECODES.ABS_Y: 126})
@@ -220,22 +146,12 @@ class TestOLaco:
     def test_uma_conferencia_so_nao_basta(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Corrida benigna: o evento estava a caminho entre o ioctl e a conta.
-
-        O kernel discorda na primeira conferência e concorda na segunda. O
-        vigia tem de engolir — largar o fd por uma leitura solitária trocaria
-        um defeito raro por um reopen espúrio frequente.
-        """
+        """Corrida benigna: o evento estava a caminho entre o ioctl e a conta."""
         reader = _reader_publicando(lx=129)
         contas = self._sempre_em_timeout(reader, monkeypatch)
 
         class _DevQueSeCorrige(_DevFalso):
-            """Discorda no `ABS_X` na 1ª conferência e concorda daí em diante.
-
-            Conta CONFERÊNCIAS pelo `ABS_X`, não consultas: cada rodada do
-            vigia consulta os seis eixos, e contar consultas faria a "primeira
-            conferência" acabar no meio dela.
-            """
+            """Discorda no `ABS_X` na 1ª conferência e concorda daí em diante."""
 
             def __init__(self) -> None:
                 super().__init__({})
@@ -244,7 +160,7 @@ class TestOLaco:
             def absinfo(self, code: int) -> Any:
                 self.consultas += 1
                 if code != _ECODES.ABS_X:
-                    raise OSError(22, "Invalid argument")  # "não sei" nos outros
+                    raise OSError(22, "Invalid argument")
                 self.conferencias += 1
                 return SimpleNamespace(value=40 if self.conferencias == 1 else 129)
 
@@ -258,12 +174,7 @@ class TestOQueOVigiaNaoQuebra:
     """Os irmãos herdam o laço e não podem herdar um veredito que não sabem dar."""
 
     def test_a_base_nao_sabe_conferir_e_isso_sai_como_concordancia(self) -> None:
-        """`MotionSensorReader`/`TouchpadReader` não têm eixos de stick.
-
-        O hook da base devolve `{}` — que significa "concordamos" E "não sei".
-        Os dois têm de sair iguais, senão um leitor que não sabe se conferir
-        derrubaria o próprio fd a cada `_CONFERIR_MUDO_S`.
-        """
+        """`MotionSensorReader`/`TouchpadReader` não têm eixos de stick."""
         from hefesto_dualsense4unix.core.evdev_reader import _EvdevReconnectLoop
 
         assert _EvdevReconnectLoop._o_kernel_discorda(

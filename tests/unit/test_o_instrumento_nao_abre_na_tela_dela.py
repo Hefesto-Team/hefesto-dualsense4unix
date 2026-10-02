@@ -1,23 +1,4 @@
-"""TELA-DELA-02 — nenhum instrumento de `scripts/` abre janela na tela dela.
-
-O PAR do TELA-DELA-01. Aquele curou a SUÍTE; este cura a outra metade, que é a
-que os agentes disparam à mão: **os scripts de `scripts/` que constroem
-`Gtk.Window` de verdade**, um por execução, na sessão gráfica viva.
-
-Ela pediu duas vezes em 04/09/2026: *"segue tudo abrindo na Meow ao invés da
-OS"*. E a regra desta casa *"SE VOCÊ MEXEU NA TELA, VOCÊ ABRE A TELA E CLICA"*
-garante que TODA onda de interface vai rodar esses instrumentos — sem guarda,
-toda onda custa a tela dela.
-
-A guarda é `hefesto_dualsense4unix.utils.tela_de_mentira`, chamada no topo de
-cada instrumento. Ela redireciona (não recusa) de propósito: recusar deixaria
-os instrumentos inúteis até alguém acrescentar bandeira em cada um — e "alguém
-lembrar" é exatamente o que falhou.
-
-ESTA RÉGUA É DE COBERTURA, e é o formato certo aqui: o defeito não era um
-instrumento errado, era um instrumento ESQUECIDO. Um script novo que abra
-janela e não chame a guarda reprova aqui no dia em que nascer.
-"""
+"""TELA-DELA-02 — nenhum instrumento de `scripts/` abre janela na tela dela."""
 
 from __future__ import annotations
 
@@ -29,13 +10,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPTS = RAIZ / "scripts"
 
-#: O que caracteriza "este script abre uma janela de verdade".
-#: A CHAMADA no nível do módulo. Import não basta — ver a mordida abaixo.
 _CHAMA_A_GUARDA = re.compile(r"^garantir_tela_de_mentira\(", re.M)
 
-#: Menção em prosa (docstring/comentário) não abre janela nenhuma. A régua tem
-#: de LER o código, não o texto — é a família de defeito que esta casa já pagou
-#: onze vezes em 26/08/2026, quando réguas digitavam o que deviam ler.
 def _abre_janela_no_codigo(caminho: Path) -> bool:
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"))
@@ -43,7 +19,7 @@ def _abre_janela_no_codigo(caminho: Path) -> bool:
         return False
     for no in ast.walk(arvore):
         if isinstance(no, ast.Expr) and isinstance(no.value, ast.Constant):
-            continue  # docstring solta
+            continue
         if isinstance(no, ast.Attribute):
             alvo = f"{getattr(no.value, 'id', '')}.{no.attr}"
             if alvo in {"Gtk.Window", "Gtk.main", "WebKit2.WebView"}:
@@ -72,10 +48,6 @@ def test_a_regua_acha_instrumentos_para_medir() -> None:
 
 def test_todo_instrumento_que_abre_janela_chama_a_guarda() -> None:
     """A METADE QUE IMPORTA — e ela cobre o script que ainda não existe."""
-    # A CHAMADA, não o import. A primeira versão desta régua aceitava o
-    # `from ... import garantir_tela_de_mentira` sozinho — e a mordida provou
-    # na hora: arranquei a chamada de um instrumento e ela passou verde. Um
-    # import sem chamada não desvia janela nenhuma.
     sem_guarda = [
         p.relative_to(RAIZ)
         for p in _instrumentos_que_abrem_janela()
@@ -111,5 +83,4 @@ def test_a_guarda_e_idempotente_e_nao_mexe_em_sessao_ja_headless() -> None:
     primeira = tm.garantir_tela_de_mentira(anunciar=False)
     segunda = tm.garantir_tela_de_mentira(anunciar=False)
     assert primeira == segunda
-    # A suíte já corre sob a tela do TELA-DELA-01: a guarda não a troca.
     assert os.environ.get("DISPLAY") == antes_display

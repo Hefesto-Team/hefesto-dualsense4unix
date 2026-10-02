@@ -1,25 +1,4 @@
-"""A report_thread sai antes de o handle fechar — A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01.
-
-O DEFEITO, lido no diário da parada do daemon de 29/09/2026 (00:21:25-27):
-um `report_thread_nao_encerrou` e, logo depois, dois
-`report_thread_morreu_por_excecao tipo=TypeError err="initializer for ctype
-'hid_device *' must be a cdata pointer, not NoneType"`, no mesmo milissegundo
-em que o nó de cada controle saiu do kernel.
-
-A CAUSA: o `close()` fechava o `hidapi.Device` com a `report_thread` ainda
-dentro de um `hid_read`. Fechar o fd não acorda o `read` (medido com um pipe
-neste kernel); o `hid_close` libera a estrutura debaixo de quem lê; quando o
-kernel solta a thread, o `read` volta erro e o wrapper chama
-`hid_error(self._device)` com o `_device` já `None`.
-
-O INSTRUMENTO: o `hidapi.Device` INSTALADO (o wrapper de verdade, que confere
-o `_device` antes de cada chamada e consulta o `_device` no caminho de erro),
-com o lado C (`hidapi.hidapi`) de mentira: o `read` e o `write` bloqueiam até
-o «kernel» soltar (um report, ou o nó que sai); o `hid_close` NÃO solta
-ninguém; e um `hid_close` com leitor ou escritor dentro fica registrado como
-«liberado com uso em curso». Nenhuma régua compara a saída com ela mesma:
-todas perguntam ao lado C o que ele teria visto.
-"""
+"""A report_thread sai antes de o handle fechar — A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01."""
 
 from __future__ import annotations
 
@@ -38,13 +17,7 @@ from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core import physical_report_reader as prr
 
 TETO = bp.CLOSE_JOIN_TIMEOUT_SEC
-#: Folga de máquina carregada: a suíte roda em paralelo com outras árvores.
 FOLGA = 0.35
-
-
-# ---------------------------------------------------------------------------
-# O lado C do hidapi, com o kernel na mão do teste
-# ---------------------------------------------------------------------------
 
 
 def _report_do_radio(*, botao_do_mic: bool = False) -> bytes:
@@ -64,12 +37,10 @@ class _No:
     def __init__(self) -> None:
         self.cond = threading.Condition()
         self.fila: deque[bytes] = deque()
-        #: o kernel SEGURA o `read` com a fila vazia, qualquer que seja o modo:
-        #: é a chamada ao C que não volta (o controle calado com o nó de pé)
         self.segurar_read = False
         self.segurar_write = False
         self.saiu = False
-        self.bloqueante = True  # `hidapi.Device(path=...)` nasce com `blocking=True`
+        self.bloqueante = True
         self.leitores = 0
         self.escritores = 0
         self.fechado = False
@@ -96,7 +67,6 @@ class _No:
 
 def _exigir(dev: Any) -> _No:
     if dev is None:
-        # A mensagem do cffi quando o `_device` do wrapper já virou `None`.
         raise TypeError(
             "initializer for ctype 'hid_device *' must be a cdata pointer, not NoneType"
         )
@@ -129,7 +99,7 @@ class _CDoHidapi:
                     n = min(length, len(quadro))
                     self.ffi.memmove(bufp, quadro, n)
                     return n
-                return -1  # o nó saiu: EIO
+                return -1
             finally:
                 no.leitores -= 1
 
@@ -154,7 +124,7 @@ class _CDoHidapi:
         no = _exigir(dev)
         with no.cond:
             if no.leitores or no.escritores:
-                no.liberado_com_uso = True  # o `free(dev)` com alguém dentro
+                no.liberado_com_uso = True
             no.fechado = True
 
     def hid_error(self, dev: Any) -> Any:
@@ -255,21 +225,8 @@ def _cronometrar(fn: Any) -> float:
     return time.monotonic() - inicio
 
 
-# ---------------------------------------------------------------------------
-# 1 e 7. O handle só fecha depois que a thread sai, e o aviso diz onde
-# ---------------------------------------------------------------------------
-
-
 def test_o_handle_so_fecha_depois_que_a_thread_sai(bancada: _Bancada) -> None:
-    """A thread presa no `read`; `close()` volta no teto e NÃO fecha por cima dela.
-
-    O «kernel» tira o nó; a thread sai pelo `OSError`, fecha ela mesma, e o
-    diário tem `report_thread_saiu_e_fechou` e nenhum
-    `report_thread_morreu_por_excecao`.
-
-    MORDIDA: o `close()` de antes (fecha de todo jeito) registra o uso em curso
-    no lado C e, quando o nó sai, o `TypeError` da parada de 29/09.
-    """
+    """A thread presa no `read`; `close()` volta no teto e NÃO fecha por cima dela."""
     no = _No()
     h, t = _preso_no_read(bancada, no)
 
@@ -278,7 +235,7 @@ def test_o_handle_so_fecha_depois_que_a_thread_sai(bancada: _Bancada) -> None:
     assert gasto <= TETO + FOLGA, f"o close levou {gasto:.2f} s"
     assert no.fechado is False, "o hid_device fechou com a thread dentro do read"
     assert t.is_alive()
-    no.soltar()  # o nó sai do kernel
+    no.soltar()
     t.join(timeout=2.0)
     assert not t.is_alive()
     assert no.fechado is True, "quem saiu por último não fechou"
@@ -291,11 +248,7 @@ def test_o_handle_so_fecha_depois_que_a_thread_sai(bancada: _Bancada) -> None:
 
 
 def test_o_aviso_diz_onde_a_thread_estava(bancada: _Bancada) -> None:
-    """O `report_thread_nao_encerrou` traz o nó, os segundos e ONDE ela está.
-
-    MORDIDA: tirar os quadros de cima (`_onde_a_thread_esta`) deixa o campo
-    sem a função do C de mentira em que a thread está.
-    """
+    """O `report_thread_nao_encerrou` traz o nó, os segundos e ONDE ela está."""
     no = _No()
     h, _t = _preso_no_read(bancada, no)
 
@@ -310,24 +263,10 @@ def test_o_aviso_diz_onde_a_thread_estava(bancada: _Bancada) -> None:
     assert "ficou com ela" in aviso["detalhe"]
 
 
-# ---------------------------------------------------------------------------
-# 2. Depois do sinal, nada vai ao aparelho
-# ---------------------------------------------------------------------------
-
-
 def test_depois_do_sinal_o_report_que_chega_e_jogado_fora(bancada: _Bancada) -> None:
-    """O kernel solta o `read` com um REPORT (o dedo no botão do microfone).
-
-    Nenhuma escrita depois do `close()` (nem da thread, nem de um avulso que
-    chegue com o `hid_device` ainda aberto), nenhuma borda, e a linha de volta
-    diz um report descartado.
-
-    MORDIDAS: sem a conferência do sinal depois da leitura, o report vai à
-    borda (`_mic_mudo_seq` anda); sem a recusa do `_no_c`, a escrita avulsa
-    chega ao C.
-    """
+    """O kernel solta o `read` com um REPORT (o dedo no botão do microfone)."""
     no = _No()
-    no.fila.append(_report_do_radio())  # a primeira volta: o dedo solto
+    no.fila.append(_report_do_radio())
     h = bancada.handle(no)
     t = bancada.subir(h)
     for _ in range(400):
@@ -343,8 +282,6 @@ def test_depois_do_sinal_o_report_que_chega_e_jogado_fora(bancada: _Bancada) -> 
     seq_antes = h._mic_mudo_seq
 
     h.close()
-    # Um escritor avulso depois da marca, com o `hid_device` ainda aberto (a
-    # thread está no C): a escrita é recusada ANTES de chegar a ele.
     with pytest.raises(OSError):
         h.writeReport([0x31] + [0] * 77)
     assert no.writes_chamados == writes_antes, "a escrita depois da marca chegou ao C"
@@ -359,24 +296,10 @@ def test_depois_do_sinal_o_report_que_chega_e_jogado_fora(bancada: _Bancada) -> 
     assert no.fechado is True and no.liberado_com_uso is False
 
 
-# ---------------------------------------------------------------------------
-# 3. O escritor avulso
-# ---------------------------------------------------------------------------
-
-
 def test_o_escritor_avulso_fecha_ao_sair_e_o_close_nao_espera_por_ele(
     bancada: _Bancada,
 ) -> None:
-    """Um `hid_write` avulso preso (um USB lento); a `report_thread` já saiu.
-
-    O `close()` volta no teto sem fechar por cima do `write`; o avulso sai e
-    fecha; e um `writeReport` depois do `close()` recebe `OSError` sem chegar
-    ao C.
-
-    MORDIDAS: fechar direto registra o uso em curso; tomar o `_write_lock` no
-    `close()` sem teto faz o `close()` não voltar no prazo; tirar a recusa do
-    `writeReport` deixa uma escrita depois da marca.
-    """
+    """Um `hid_write` avulso preso (um USB lento); a `report_thread` já saiu."""
     no = _No()
     h = bancada.handle(no)
     h.report_thread = None
@@ -407,11 +330,6 @@ def test_o_escritor_avulso_fecha_ao_sair_e_o_close_nao_espera_por_ele(
     assert no.writes_chamados == chamados, "a escrita depois da marca chegou ao C"
 
 
-# ---------------------------------------------------------------------------
-# 4. Quatro que param juntos pagam um teto
-# ---------------------------------------------------------------------------
-
-
 def _mesa_presa(
     bancada: _Bancada, n: int
 ) -> tuple[Any, list[_No], list[bp._PinnedPyDualSense]]:
@@ -433,12 +351,7 @@ def _mesa_presa(
 def _os_que_sairam_param_e_fecham(
     bancada: _Bancada, nos: list[_No], handles: list[bp._PinnedPyDualSense]
 ) -> None:
-    """Todo handle que saiu recebeu o sinal, e fecha quando o «kernel» o solta.
-
-    Sem esta conferência, um teto comum sem o sinal passaria verde: o prazo
-    acaba igual, mas as threads seguem com `ds_thread` de pé e voltam a
-    escrever num controle que já saiu do mapa (mordida de 29/09, conferência).
-    """
+    """Todo handle que saiu recebeu o sinal, e fecha quando o «kernel» o solta."""
     assert all(h.ds_thread is False for h in handles), "um handle saiu sem o sinal"
     for no in nos:
         no.soltar(_report_do_radio())
@@ -452,11 +365,7 @@ def _os_que_sairam_param_e_fecham(
 
 
 def test_os_quatro_presos_param_num_teto_so(bancada: _Bancada) -> None:
-    """`disconnect()` com os quatro presos no `read` volta em < 1,5 x o teto.
-
-    MORDIDAS: o sinal e o `join` um handle por vez dão ≥ 4 x o teto; o teto
-    comum SEM o sinal de todos antes do primeiro `join` deixa as threads de pé.
-    """
+    """`disconnect()` com os quatro presos no `read` volta em < 1,5 x o teto."""
     ctl, nos, handles = _mesa_presa(bancada, 4)
 
     gasto = _cronometrar(ctl.disconnect)
@@ -485,11 +394,6 @@ def test_os_dois_que_saem_no_hotplug_pagam_um_teto(bancada: _Bancada) -> None:
     _os_que_sairam_param_e_fecham(bancada, nos[2:], handles[2:])
 
 
-# ---------------------------------------------------------------------------
-# 5. A thread é daemon e tem o nome do nó, por qualquer caminho
-# ---------------------------------------------------------------------------
-
-
 def _find_device_de_mentira(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
 ) -> list[_No]:
@@ -497,7 +401,7 @@ def _find_device_de_mentira(
 
     def _achar(self: bp._PinnedPyDualSense) -> tuple[Any, bool]:
         no = _No()
-        no.fila.append(_report_do_radio())  # o que o `determineConnectionType` lê
+        no.fila.append(_report_do_radio())
         criados.append(no)
         return bancada.device(no), False
 
@@ -526,12 +430,7 @@ def test_pelo_open_one_a_thread_e_daemon_e_tem_o_nome_do_no(
 def test_por_uma_thread_que_nao_e_daemon_a_report_thread_segue_daemon(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Um `init()` chamado de uma thread NÃO-daemon (um ensaio, um teste).
-
-    MORDIDAS: sem o `daemon=True` explícito, a thread herda `False` daqui (o
-    caminho do `_open_one` segue verde pela herança, e é por isso que a régua
-    mede os dois); sem o nome, sai `Thread-N (sendReport)`.
-    """
+    """Um `init()` chamado de uma thread NÃO-daemon (um ensaio, um teste)."""
     _find_device_de_mentira(bancada, monkeypatch)
     h = bp._PinnedPyDualSense(b"/dev/hidraw6", is_edge=False)
     quem_inicia = threading.Thread(target=h.init, daemon=False)
@@ -545,17 +444,8 @@ def test_por_uma_thread_que_nao_e_daemon_a_report_thread_segue_daemon(
     h.close()
 
 
-# ---------------------------------------------------------------------------
-# 6. O que já funcionava continua
-# ---------------------------------------------------------------------------
-
-
 def test_com_o_controle_falando_o_close_fecha_na_hora_sem_aviso(bancada: _Bancada) -> None:
-    """(a) A thread vê o sinal, o `close()` fecha ele mesmo e não há aviso.
-
-    MORDIDA: entregar sempre à thread deixa o dispositivo aberto quando o
-    `close()` volta.
-    """
+    """(a) A thread vê o sinal, o `close()` fecha ele mesmo e não há aviso."""
     no = _No()
     h = bancada.handle(no)
     t = bancada.subir(h)
@@ -576,18 +466,11 @@ def test_com_o_controle_falando_o_close_fecha_na_hora_sem_aviso(bancada: _Bancad
 
 
 def test_a_queda_do_radio_sai_limpa_e_o_close_nao_avisa(bancada: _Bancada) -> None:
-    """(b) O kernel tira o nó ANTES: o `read` volta erro com o `_device` de pé.
-
-    O laço sai pelo `OSError`, `connected` vira `False`, e o `close()` depois
-    fecha sem aviso nenhum.
-
-    MORDIDA: tratar o `-1` como exceção genérica leva ao
-    `report_thread_morreu_por_excecao`.
-    """
+    """(b) O kernel tira o nó ANTES: o `read` volta erro com o `_device` de pé."""
     no = _No()
     h, t = _preso_no_read(bancada, no)
 
-    no.soltar()  # o nó sai com o daemon de pé
+    no.soltar()
     t.join(timeout=2.0)
     assert not t.is_alive()
     assert h.connected is False

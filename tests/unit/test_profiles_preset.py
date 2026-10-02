@@ -1,43 +1,4 @@
-"""Testes dos perfis preset de fábrica — as duas casas em que eles moram.
-
-Valida que cada JSON é aceito pelo schema pydantic e que os params de
-trigger são reconhecidos por build_from_name. Cobre os 9 arquivos de fábrica
-depois da poda de 26/08/2026, da renomeação de 05/09/2026 e da mudança de casa
-de 06/09/2026:
-  acao.json, aventura.json, corrida.json, esportes.json, fallback.json,
-  fps.json, navegacao.json, freestyle.json, point_and_click.json.
-
-ONDE ELES MORAM DESDE 06/09/2026 (PERFIS-SAO-PERFIS-01)
---------------------------------------------------------
-Só o `freestyle.json` ficou em `assets/profiles_default/`, que é o que a
-semeadura copia. Os outros oito foram para `assets/estilos_de_jogo/` por
-decisão dela — *"ação, aventura, corrida. Isso não é perfil, isso é estilo de
-jogo"* —, e de lá **não são semeados**: somem da lista dela, os arquivos ficam.
-
-O CONTEÚDO NÃO MUDOU UMA CHAVE, e é por isso que este arquivo continua medindo
-os nove: mudou o endereço. Quem responde por ele é `preset_path`, logo abaixo.
-
-O `meu_perfil.json` VIROU `personalizado.json` em 05/09/2026, por decisão dela:
-*"Meu_perfil como perfil default não deveria existir. Deixa ou Meu Perfil ou
-Personalizado. acho esse melhor."* A migração one-shot que renomeia o arquivo
-no disco DELA — e repõe o `session.json` e o `active_profile.txt` para o nome
-novo — é `loader.migrate_default_profile_name`.
-
-E o `personalizado.json` VIROU `freestyle.json` em 24/09/2026
-(O-MODO-FREESTYLE-02): o perfil de fora do jogo fica, com os ajustes dela, e se
-chama «Freestyle». A migração do disco é `loader.o_personalizado_vira_freestyle`.
-
-A PODA DE 26/08/2026
----------------------
-`bow.json`, `coop_local.json` e `sackboy_nativo.json` saíram da fábrica.
-Palavra dela: *"em termos de perfis de jogo vamos manter os que temos ativos
-apenas"* — e o disco já tinha executado o gesto antes da ordem: os três
-estavam em `.historico/` no diretório de perfis dela, nenhum ativo.
-
-`TestOsPodadosNaoVoltam`, no fim deste arquivo, é a mordida que impede o
-retorno por descuido — a mesma forma que `shooter.json` e `driving.json` já
-tinham desde que foram apagados.
-"""
+"""Testes dos perfis preset de fábrica — as duas casas em que eles moram."""
 from __future__ import annotations
 
 import json
@@ -50,14 +11,6 @@ import pytest
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.profiles.schema import Profile
 
-#: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica passou a morar em DUAS
-#: casas. `assets/profiles_default/` é o que a semeadura copia — e ficou só com
-#: o `freestyle.json`; `assets/estilos_de_jogo/` guarda os oito gêneros, que
-#: por decisão dela **não são perfil** e não são mais semeados.
-#:
-#: Os arquivos são os MESMOS: o conteúdo que este arquivo mede não mudou uma
-#: chave. Por isso a busca é por nome nas duas casas, e não uma cópia da lista
-#: de quem mora onde — uma lista dessas seria a régua digitando o que devia LER.
 _RAIZ = Path(__file__).parent.parent.parent
 FABRICA_DIR = _RAIZ / "assets" / "profiles_default"
 ESTILOS_DIR = _RAIZ / "assets" / "estilos_de_jogo"
@@ -65,12 +18,7 @@ CASAS_DE_FABRICA = (FABRICA_DIR, ESTILOS_DIR)
 
 
 def preset_path(nome: str) -> Path:
-    """O arquivo de fábrica de `nome`, na casa em que ele estiver hoje.
-
-    Devolve o caminho na semeadura quando não existe em nenhuma das duas — é
-    ele que a mensagem de erro do chamador mostra, e "faltou na fábrica" é a
-    leitura certa de um preset que sumiu das duas.
-    """
+    """O arquivo de fábrica de `nome`, na casa em que ele estiver hoje."""
     for casa in CASAS_DE_FABRICA:
         candidato = casa / f"{nome}.json"
         if candidato.exists():
@@ -79,11 +27,7 @@ def preset_path(nome: str) -> Path:
 
 
 def preset_em_alguma_casa(nome: str) -> bool:
-    """True se `nome` está em QUALQUER das duas casas de fábrica.
-
-    A poda de 26/08 tem de valer para as duas: devolver `coop_local.json` ao
-    `estilos_de_jogo/` o traria de volta pela porta nova.
-    """
+    """True se `nome` está em QUALQUER das duas casas de fábrica."""
     return any((casa / f"{nome}.json").exists() for casa in CASAS_DE_FABRICA)
 
 
@@ -125,12 +69,6 @@ EXPECTED_PRESETS = {
         "priority": 0,
         "triggers_left_mode": "Off",
         "triggers_right_mode": "Off",
-        # EMPATE-01/E-1 (27/07): `None` aqui quer dizer "o preset NÃO opina
-        # sobre a cor". O `[40, 40, 40]` que estava neste lugar era a semente do
-        # repositório — num LED RGB, a olho nu, um controle APAGADO — e vencia,
-        # pelo alfabeto, o perfil que tinha opinião melhor. Sem o campo, vale a
-        # cor automática por jogador. O detalhe do porquê está em
-        # `test_empate01_a_cor_volta_a_ser_dela.py`.
         "lightbar": None,
         "lightbar_brightness": 1.0,
     },
@@ -145,14 +83,9 @@ EXPECTED_PRESETS = {
     "freestyle": {
         "name": "Freestyle",
         "priority": 1,
-        # O-MODO-FREESTYLE-03 (24/09/2026): o Freestyle de fábrica nasce com os
-        # gatilhos de nascimento do produto — a ordem dela de 17/09. Era `Off`.
         "triggers_left_mode": "Rigid",
         "triggers_right_mode": "Rigid",
         "lightbar": (40, 80, 180),
-        # ONDA-U (U9-brightness): 0.4→1.0 — o default de código já é 1.0; o
-        # asset destoava (queixa "brightness não é 100%"). navegacao.json é
-        # perfil DIFERENTE (não é cópia deste) e mantém 0.4 de propósito.
         "lightbar_brightness": 1.0,
     },
     "navegacao": {
@@ -231,10 +164,6 @@ class TestPresetValida:
         p = _load_preset(preset_name)
         expected = EXPECTED_PRESETS[preset_name]["lightbar"]
         if expected is None:
-            # EMPATE-01/E-1: preset SEM opinião de cor — o que se trava aqui é
-            # a AUSÊNCIA do campo, não um valor. Comparar com (0, 0, 0) (o
-            # default do schema) deixaria passar um `"lightbar": [0, 0, 0]`
-            # escrito à mão, que é preto e não é "sem opinião".
             assert "lightbar" not in p.leds.model_fields_set, (
                 f"{preset_name}: o preset voltou a opinar sobre a cor "
                 f"({tuple(p.leds.lightbar)}) — a cor automática por jogador "
@@ -271,32 +200,17 @@ class TestPresetFreestyle:
         assert isinstance(p.match, MatchAny), "o Freestyle deve ter MatchAny"
 
     def test_nome_nao_e_slug(self) -> None:
-        """PERFIL-PADRAO-PERSONALIZADO-01: o asset traz NOME DE GENTE.
-
-        Decisão dela, 05/09/2026: *"Meu_perfil como perfil default nao deveria  noqa-acento
-        existir. Deixa ou Meu Perfil ou Personalizado. acho esse melhor."* O
-        `Profile.name` é o que a aba Perfis MOSTRA — o asset gravava o slug
-        `meu_perfil` ali, e era isso que ela lia na lista. Desde 24/09/2026 o
-        nome é «Freestyle» (O-MODO-FREESTYLE-02).
-        """
+        """PERFIL-PADRAO-PERSONALIZADO-01: o asset traz NOME DE GENTE."""
         p = _load_preset("freestyle")
         assert p.name == "Freestyle"
 
     def test_priority_acima_do_fallback(self) -> None:
-        """freestyle.json deve ter priority=1 (catch-all pessoal acima do fallback nu).
-
-        Empata-quebra: o Freestyle (priority 1) vence o fallback.json
-        (priority 0) e auto-ativa como slot universal; perfis de jogo
-        (priority 10-70) ainda ganham de ambos.
-        """
+        """freestyle.json deve ter priority=1 (catch-all pessoal acima do fallback nu)."""
         p = _load_preset("freestyle")
         assert p.priority == 1
 
     def test_brightness_100_por_cento(self) -> None:
-        """ONDA-U (U9-brightness): default de código já é 1.0; o asset
-        destoava em 0.4 (queixa "brightness deveria ser 100% e não é") —
-        decisão de produto: alinhar o asset ao default (falha-sem: antes
-        deste fix o asset tinha 0.4)."""
+        """ONDA-U (U9-brightness): default de código já é 1.0; o asset"""
         p = _load_preset("freestyle")
         assert abs(p.leds.lightbar_brightness - 1.0) < 1e-6
 
@@ -365,11 +279,6 @@ class TestPresetPointAndClick:
     """FEAT-POINT-AND-CLICK-01 — perfil default para Grim Fandango e afins."""
 
     def test_match_grim_fandango(self) -> None:
-        # BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: o match é Grim-específico. O port
-        # Linux do Grim Fandango Remastered é NATIVO (wm_class GrimFandango), não
-        # roda sob ScummVM — os genéricos "scummvm"/"residualvm" foram removidos
-        # para não sequestrar QUALQUER jogo ScummVM (que a usuária pode jogar de
-        # gamepad) ligando modo mouse e matando o gamepad virtual.
         p = _load_preset("point_and_click")
         for wm_class in ("GrimFandango", "grim"):
             assert p.matches({"wm_class": wm_class}), (
@@ -386,8 +295,7 @@ class TestPresetPointAndClick:
         assert p.priority > nav.priority
 
     def test_key_bindings_do_jogo_sem_vazamento_desktop(self) -> None:
-        """Override COMPLETO (dict = sem merge): só estes botões emitem —
-        nada de Super/Alt+Tab/PrintScreen/OSK dentro do jogo (A10)."""
+        """Override COMPLETO (dict = sem merge): só estes botões emitem —"""
         p = _load_preset("point_and_click")
         assert p.key_bindings == {
             "l1": ["KEY_LEFTSHIFT"],
@@ -442,9 +350,7 @@ class TestPresetPointAndClick:
     def test_ativacao_emite_teclas_do_jogo(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Critério de aceite: ativar com FakeController + teclado virtual fake
-        emite KEY_E/KEY_U/KEY_P nas regiões do touchpad e KEY_LEFTSHIFT no l1
-        (rota real: activate → set_bindings → dispatch → key_binding_emit)."""
+        """Critério de aceite: ativar com FakeController + teclado virtual fake"""
         import shutil
 
         from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -465,11 +371,7 @@ class TestPresetPointAndClick:
             loader_module, "profiles_dir", lambda ensure=False: target
         )
 
-        # Teclado virtual com módulo uinput fake (mesmo pattern de
-        # test_keyboard_emulator.py) — hermético, sem /dev/uinput.
         fake_mod = MagicMock()
-        # Códigos únicos e determinísticos (hash() é randomizado por processo
-        # e colisões tornariam as contagens abaixo flaky).
         for idx, key_name in enumerate(SUPPORTED_KEYS):
             setattr(fake_mod, key_name, (1, 1000 + idx))
         fake_device = MagicMock()
@@ -494,19 +396,16 @@ class TestPresetPointAndClick:
                 if c[0] == "emit" and c[1][0] == code and c[1][1] == 1
             ]
 
-        # Regiões do touchpad → E (examinar), U (usar), P (pegar).
         dev.dispatch(frozenset({"touchpad_left_press"}))
         assert len(presses_de(fake_mod.KEY_E)) == 1
         dev.dispatch(frozenset({"touchpad_middle_press"}))
         assert len(presses_de(fake_mod.KEY_U)) == 1
         dev.dispatch(frozenset({"touchpad_right_press"}))
         assert len(presses_de(fake_mod.KEY_P)) == 1
-        # L1 → Shift (correr); R1 → "." (pular diálogo).
         dev.dispatch(frozenset({"l1"}))
         assert len(presses_de(fake_mod.KEY_LEFTSHIFT)) == 1
         dev.dispatch(frozenset({"r1"}))
         assert len(presses_de(fake_mod.KEY_DOT)) == 1
-        # Override sem merge: options do default (Super) NÃO vaza — vira Esc.
         dev.dispatch(frozenset({"options"}))
         assert len(presses_de(fake_mod.KEY_LEFTMETA)) == 0
         assert len(presses_de(fake_mod.KEY_ESC)) == 1
@@ -524,7 +423,6 @@ class TestArquivosNaoExistem:
         )
 
     def test_todos_novos_existem(self) -> None:
-        # Lista contém nomes literais de arquivos JSON (acao.json, navegacao.json).
         nomes = [
             "navegacao", "fps", "aventura",  # slugs de arquivo (noqa-acento)
             "acao", "corrida", "esportes",  # slugs de arquivo (noqa-acento)
@@ -536,15 +434,7 @@ class TestArquivosNaoExistem:
 
 
 class TestOsPodadosNaoVoltam:
-    """A poda de 26/08/2026, presa em régua.
-
-    Sem isto a poda é uma linha de `git rm`, e uma linha de `git rm` volta
-    sozinha na próxima vez que alguém "restaurar" a fábrica de um backup ou
-    de uma release antiga. Foi o mesmo raciocínio que criou
-    `TestArquivosNaoExistem` para `shooter.json` e `driving.json`.
-
-    MORDE: devolver qualquer um dos três a `assets/profiles_default/`.
-    """
+    """A poda de 26/08/2026, presa em régua."""
 
     @pytest.mark.parametrize(
         # Slugs literais dos arquivos apagados (noqa-acento).
@@ -560,25 +450,9 @@ class TestOsPodadosNaoVoltam:
         )
 
     def test_a_fabrica_embarca_nove_em_duas_casas(self) -> None:
-        """Guarda do instrumento: régua que não acha nada passa sempre.
-
-        Se um diretório sumir ou o glob mudar de forma, o teste acima fica
-        verde por AUSÊNCIA de dado — e é exatamente o modo de falha que esta
-        casa chama de "a régua confunde a palavra com o ato".
-
-        A conta continua NOVE, em DUAS casas desde 06/09/2026. A separação é o
-        ponto inteiro da PERFIS-SAO-PERFIS-01: o que está em `profiles_default/`
-        é SEMEADO, e ela pediu que os gêneros parassem de ser. Um deles de volta
-        aqui é a decisão dela desfeita em silêncio.
-        """
+        """Guarda do instrumento: régua que não acha nada passa sempre."""
         semeados = sorted(p.name for p in FABRICA_DIR.glob("*.json"))
         assert semeados == [
-            # O `meu_perfil.json` ESTAVA AQUI e virou este, em 05/09/2026, por
-            # decisão dela: *"Meu_perfil como perfil default não deveria
-            # existir. Deixa ou Meu Perfil ou Personalizado. acho esse
-            # melhor."* Foi renomeação, não poda. E o `personalizado.json`
-            # virou este em 24/09/2026 (O-MODO-FREESTYLE-02) — renomeação de
-            # novo, com os ajustes dela migrando junto.
             "freestyle.json",
         ], f"a semeadura mudou de tamanho sem passar por aqui: {semeados}"
 

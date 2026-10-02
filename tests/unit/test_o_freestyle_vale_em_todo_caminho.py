@@ -66,7 +66,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 FABRICA = RAIZ / "assets" / "profiles_default"
 ASSET = FABRICA / "freestyle.json"
 
-#: A mesa dela: P1 e P3 no cabo, P2 e P4 no rádio — nunca só o P1, nunca um lado só.
 MESA: tuple[tuple[str, str], ...] = (
     ("AA:BB:CC:00:00:01", "usb"),
     ("AA:BB:CC:00:00:02", "bt"),
@@ -74,18 +73,12 @@ MESA: tuple[tuple[str, str], ...] = (
     ("AA:BB:CC:00:00:04", "bt"),
 )
 
-#: O perfil de um jogo, com regra de janela (até 01/10/2026 o boot o PULAVA,
-#: RESTORE-ESCOPO-01). `steam_app_1599660` é o Sackboy na Steam.
 JANELA_DO_JOGO = "steam_app_1599660"
 JOGO = "Sackboy"
 
-#: Os três caminhos da sessão que a sprint nomeia, e o quarto da conferência
-#: final de 02/10/2026: sem sessão, mas com um perfil de jogo na pasta.
 CAMINHOS = ("sessao-vazia", "sessao-com-perfil-de-janela", "sessao-com-o-freestyle",
             "sessao-vazia-com-perfil-de-jogo")
 
-#: Offsets do bloco de gatilho DENTRO do common: (modo, primeira das seis forças,
-#: a sétima avulsa). Os mesmos da `test_paridade_transporte_gatilhos.py`.
 OFFSETS_DO_GATILHO = {"right": (10, 11, 19), "left": (21, 22, 30)}
 
 
@@ -95,18 +88,11 @@ def semeadura_ligada(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(loader.SEED_SKIP_ENV_VAR, raising=False)
     monkeypatch.setattr(loader, "_seed_attempted", False)
     monkeypatch.setattr(loader, "_DEFAULT_SEED_SOURCE_DIRS", (FABRICA,))
-    # O censo dos jogos não é assunto desta régua, e a máquina de quem roda a
-    # suíte não pode decidir o resultado.
     monkeypatch.setattr(loader, "_talvez_semear_jogos", lambda: None)
 
 
 class _FioDeMentira:
-    """O `device` de um handle de bancada: guarda o que seria escrito, e só.
-
-    A rota de luz do rádio escreve AVULSO pelo `writeReport` do handle
-    (`_pintar_por_hidraw_bt`). Sem aparelho nenhum atrás, o fio responde que
-    escreveu tudo — nunca um nó de verdade.
-    """
+    """O `device` de um handle de bancada: guarda o que seria escrito, e só."""
 
     def __init__(self) -> None:
         self.quadros: list[bytes] = []
@@ -149,15 +135,7 @@ def _o_jogo_de_janela() -> None:
 
 
 def _prepara_a_sessao(caminho: str) -> None:
-    """Deixa o disco no caminho pedido, e só então semeia.
-
-    A ORDEM É A DO DISCO DE QUEM ATUALIZA: a sessão e o perfil do jogo já
-    existem quando a semeadura roda a migração da escolha
-    (`utils.session.migrar_a_escolha_dela`), que espelha a escolha no
-    marcador. Sem sessão nenhuma e só com o Freestyle na pasta, é a máquina
-    nova, e o botão nasce aceso; sem sessão e com um perfil de jogo na pasta, é
-    quem atualiza sem nunca ter ativado um perfil à mão, e nada acende.
-    """
+    """Deixa o disco no caminho pedido, e só então semeia."""
     if caminho != "sessao-vazia":
         _o_jogo_de_janela()
     if caminho == "sessao-com-perfil-de-janela":
@@ -192,15 +170,6 @@ def _o_estado_do_boot(store: StateStore) -> tuple[str | None, str | None]:
     return store.active_profile, store.perfil_adiado_por_janela
 
 
-# =============================================================================
-# 1 e 3. O BOOT — os quatro controles, USB e BT, nos três caminhos
-# =============================================================================
-
-#: O que o boot deixa valendo em cada caminho da sessão, desde 01/10/2026: a
-#: máquina nova nasce com o botão aceso (Freestyle); a escolha dela com regra de
-#: janela volta; a sessão que apontava o Freestyle desligado é «sem escolha»; e
-#: quem atualiza sem sessão, com um perfil de jogo na pasta, também (o botão
-#: aceso calaria o jogo dele, que entra sozinho pela janela).
 VALE_NO_BOOT = {
     "sessao-vazia": (loader.NOME_DO_PADRAO, True),
     "sessao-com-perfil-de-janela": (JOGO, False),
@@ -213,20 +182,7 @@ VALE_NO_BOOT = {
 def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
     semeadura_ligada: None, fabrica_de_bancada: Any, caminho: str,
 ) -> None:
-    """Em cada caminho da sessão, vale o que ela escolheu, e o gatilho chega aos quatro.
-
-    MORDIDAS:
-    - tire a migração da escolha da semeadura (`migrar_a_escolha_dela`) e a
-      célula `sessao-vazia` reprova sem perfil nenhum;
-    - devolva o `pulado` da RESTORE-ESCOPO-01 ao `restore_last_profile` e a
-      célula `sessao-com-perfil-de-janela` reprova sem o Sackboy;
-    - devolva `"mode": "Off"` aos gatilhos do `freestyle.json` de fábrica e a
-      célula `sessao-vazia` reprova no byte, nos quatro controles e nos dois
-      transportes;
-    - tire a pasta da conta da máquina nova (`_so_o_freestyle_na_pasta`, em
-      `utils.session.migrar_a_escolha_dela`) e a célula
-      `sessao-vazia-com-perfil-de-jogo` reprova com o Freestyle aceso.
-    """
+    """Em cada caminho da sessão, vale o que ela escolheu, e o gatilho chega aos quatro."""
     _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
@@ -251,14 +207,7 @@ def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
 def test_o_boot_nao_reescreve_a_escolha_dela(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """O boot restaura a escolha sem regravá-la: a sessão continua dizendo o jogo dela.
-
-    `origin="system"` é o que segura: a escolha só muda por gesto dela.
-
-    MORDIDA: troque o `origin="system"` do `restore_last_profile` por
-    `origin="manual"` e o espelho passa a ser regravado (a trava da troca à
-    mão se arma no boot).
-    """
+    """O boot restaura a escolha sem regravá-la: a sessão continua dizendo o jogo dela."""
     _prepara_a_sessao("sessao-com-perfil-de-janela")
     controle, _ = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
@@ -275,21 +224,7 @@ def test_o_boot_nao_reescreve_a_escolha_dela(
 def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """A cena inteira: o botão aceso, nada o troca; apagado, o jogo entra.
-
-    NOTA DATADA — 28/09/2026. Esta régua cobria a
-    `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (LOCK-CEDE-01): com o Modo
-    Freestyle ligado, a janela do jogo com perfil próprio trocava o perfil. A
-    `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` a revogou: ligado, o Freestyle
-    manda em tudo, e o jogo só entra com ele desligado. É o autoswitch real, com
-    o `ProfileManager` real. NOTA DATADA — 01/10/2026: o «Ativar» do Freestyle
-    liga o modo sempre (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 3), e
-    apagá-lo devolve a escolha dela (aqui, nenhuma: o perfil sai).
-
-    MORDIDA: devolva ao `_tick` do autoswitch o cadeado que cedia à regra do
-    jogo, e tire a recusa do `ProfileManager.activate` — a primeira metade
-    reprova com o Sackboy valendo.
-    """
+    """A cena inteira: o botão aceso, nada o troca; apagado, o jogo entra."""
     _prepara_a_sessao("sessao-com-o-freestyle")
     controle, _ = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
@@ -352,19 +287,8 @@ def test_no_modo_nativo_o_boot_nao_aplica_perfil_nenhum(
     assert all(h.device.quadros == [] for h, _ in pecas)
 
 
-# =============================================================================
-# 2. O RODAPÉ — os três gestos perguntam ao mesmo dono
-# =============================================================================
-
 class _PonteDoRodape:
-    """A ponte dos gestos do rodapé, com os dois contratos reais e nada mais.
-
-    `apply_draft_detalhado` devolve o dicionário que o daemon devolve
-    (`ipc_bridge.apply_draft_detalhado`), e `salvar_arquivo` o caminho que ela
-    escolheu (`ponte.salvar_arquivo`, que o piloto substitui). Não há
-    `__getattr__` que responda a qualquer coisa: um gesto que chame outro
-    método reprova aqui, como reprovaria na janela.
-    """
+    """A ponte dos gestos do rodapé, com os dois contratos reais e nada mais."""
 
     def __init__(self, salva: str | None = None) -> None:
         self.enviados: list[str] = []
@@ -379,8 +303,6 @@ class _PonteDoRodape:
         self.salvar_pedido.append(sugestao)
         return self._salva
 
-    # A VOLTA DO RODAPÉ (02/10/2026, O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): o
-    # funil do Salvar avisa o lançamento, e a volta reconcilia e renumera.
     def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
         return True
 
@@ -460,22 +382,12 @@ def test_sem_freestyle_no_disco_os_tres_recusam_dizendo(
     assert list(profiles_dir().glob("*.json")) == []
 
 
-# =============================================================================
-# 3. A FÁBRICA — nasce ligada, e só alcança a cópia de fábrica
-# =============================================================================
-
 def _gatilhos(dados: dict[str, Any]) -> dict[str, Any]:
     return dados.get("triggers") or {}
 
 
 def test_a_fabrica_do_freestyle_nasce_com_o_gatilho_de_nascimento_do_produto() -> None:
-    """Os dois lados do asset trazem o gatilho de nascimento do DONO, escrito.
-
-    ESCRITO, e não ausente: um perfil sem a seção é lido pela aba Gatilhos como
-    «Desligado» (`a03_gatilhos._do_lado`). E pelo DONO: se o padrão do produto
-    mudar, esta régua pede o asset junto — e a lista das fábricas de antes ganha
-    a versão que sai.
-    """
+    """Os dois lados do asset trazem o gatilho de nascimento do DONO, escrito."""
     dados = json.loads(ASSET.read_text(encoding="utf-8"))
     esperado = {"mode": esquema.MODO_DE_NASCIMENTO_DO_GATILHO,
                 "params": list(esquema.PARAMS_DE_NASCIMENTO_DO_GATILHO)}
@@ -484,15 +396,7 @@ def test_a_fabrica_do_freestyle_nasce_com_o_gatilho_de_nascimento_do_produto() -
 
 
 def test_a_lista_das_fabricas_de_antes_e_fechada() -> None:
-    """Seis versões, e o asset de hoje fora dela.
-
-    As cinco primeiras nasceram com os gatilhos em Off; a sexta é a de 24/09
-    (O-MODO-FREESTYLE-03), com o gatilho de nascimento e sem o «ultra» de
-    28/09 (O-FREESTYLE-E-UMA-CAMADA-SO-01).
-
-    Com o asset de hoje dentro, a migração o trocaria por ele mesmo a cada
-    disco novo e guardaria no histórico um arquivo que ninguém escreveu.
-    """
+    """Seis versões, e o asset de hoje fora dela."""
     antigas = loader._FABRICAS_ANTERIORES_DO_FREESTYLE
     hoje = json.loads(ASSET.read_text(encoding="utf-8"))
     assert hoje not in antigas
@@ -525,14 +429,7 @@ def _copias(pasta: Path) -> list[bytes]:
 def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
     semeadura_ligada: None, versao: int,
 ) -> None:
-    """A cópia intocada de qualquer fábrica de antes nasce ligada na primeira carga.
-
-    Os bytes antigos vão ao `.historico` ANTES da escrita, e o «restaurar do
-    histórico» os devolve; a marca faz a segunda carga não fazer nada.
-
-    MORDIDA: tire a chamada `o_freestyle_de_fabrica_nasce_ligado()` de
-    `_maybe_seed_presets` e as seis células reprovam, com o arquivo de antes.
-    """
+    """A cópia intocada de qualquer fábrica de antes nasce ligada na primeira carga."""
     pasta = profiles_dir(ensure=True)
     bruto = _grava(pasta, loader._FABRICAS_ANTERIORES_DO_FREESTYLE[versao])
     (pasta / loader.SEED_MARKER_NAME).write_text("freestyle.json\n", encoding="utf-8")
@@ -553,12 +450,7 @@ def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
 def test_a_fabrica_de_antes_com_o_nome_de_antes_chega_a_de_hoje_numa_carga(
     semeadura_ligada: None, arquivo_antigo: str,
 ) -> None:
-    """A cadeia inteira: a cópia de fábrica ainda com o nome antigo, numa carga só.
-
-    As duas renomeações trocam o nome e mais nada; a fábrica nova vem DEPOIS
-    delas no `_maybe_seed_presets`, e por isso alcança o que elas acabaram de
-    renomear — a máquina de quem nunca mexeu no padrão sai com o gatilho ligado.
-    """
+    """A cadeia inteira: a cópia de fábrica ainda com o nome antigo, numa carga só."""
     pasta = profiles_dir(ensure=True)
     nome_antigo = "meu_perfil" if arquivo_antigo == "meu_perfil.json" else "Personalizado"
     velha = dict(loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4], name=nome_antigo)
@@ -578,11 +470,7 @@ def _o_freestyle_dela() -> dict[str, Any]:
 
 
 def test_o_freestyle_dela_nao_muda(semeadura_ligada: None) -> None:
-    """Um byte de ajuste dela e ele deixa de ser fábrica: nem arquivo, nem histórico.
-
-    MORDIDA: troque o `if dados not in _FABRICAS_ANTERIORES_DO_FREESTYLE` de
-    `_levar_a_fabrica_nova` por `if False` e o disco dela vira o asset.
-    """
+    """Um byte de ajuste dela e ele deixa de ser fábrica: nem arquivo, nem histórico."""
     pasta = profiles_dir(ensure=True)
     bruto = _grava(pasta, _o_freestyle_dela())
     (pasta / loader.SEED_MARKER_NAME).write_text("freestyle.json\n", encoding="utf-8")
@@ -610,12 +498,7 @@ def test_sem_a_copia_no_historico_nada_muda_e_a_proxima_carga_tenta(
 def test_o_personalizado_dela_vence_a_fabrica_de_antes_que_o_shell_copiou(
     semeadura_ligada: None,
 ) -> None:
-    """O disco de quem atualizou em 24/09: o shell copiou a fábrica em Off ao lado dela.
-
-    A renomeação da O-MODO-FREESTYLE-02 só cede o lugar a uma FÁBRICA; com o
-    asset mudado, a de antes tem de continuar sendo fábrica — senão ficariam dois
-    padrões, e o dela não viraria Freestyle.
-    """
+    """O disco de quem atualizou em 24/09: o shell copiou a fábrica em Off ao lado dela."""
     pasta = profiles_dir(ensure=True)
     _grava(pasta, loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4])
     dela = dict(_o_freestyle_dela(), name="Personalizado")
@@ -642,13 +525,7 @@ def _install_profiles(home: Path) -> subprocess.CompletedProcess[str]:
 def test_o_que_o_install_faz_num_disco_que_ja_tem_o_freestyle(
     tmp_path: Path, semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch, disco: str,
 ) -> None:
-    """A MEDIDA QUE A SPRINT PEDIU: o install só copia o ausente, e a fábrica anda pelo Python.
-
-    - máquina nova: o shell copia o asset de hoje, ligado;
-    - a fábrica de antes (o shell de 24/09 já a copiou e registrou): o shell não
-      toca, e a primeira carga do Python a leva ao asset de hoje;
-    - o Freestyle dela: nem o shell nem o Python mudam um byte.
-    """
+    """A MEDIDA QUE A SPRINT PEDIU: o install só copia o ausente, e a fábrica anda pelo Python."""
     home = tmp_path / "home"
     pasta = home / ".config" / "hefesto-dualsense4unix" / "profiles"
     monkeypatch.setenv("HOME", str(home))
@@ -673,10 +550,6 @@ def test_o_que_o_install_faz_num_disco_que_ja_tem_o_freestyle(
     assert final == (bruto if disco == "o-dela" else ASSET.read_bytes())
 
 
-# =============================================================================
-# 4. A DICA DO SALVAR — segue o perfil ativo, curta e sem recado
-# =============================================================================
-
 def _ctx(nome: str) -> Any:
     return SimpleNamespace(state={"active_profile": nome}, mesa=[])
 
@@ -687,8 +560,6 @@ def _um_perfil(nome: str, match: dict[str, Any]) -> None:
         {"name": nome, "version": 1, "priority": 10, "match": match}), encoding="utf-8")
 
 
-#: O que a promessa de cada tipo NÃO pode dizer. Medir a ausência da frase falsa
-#: é o que protege a cura; o texto de cada uma é do dono (`pacotes._QUANDO_VOLTA`).
 PROMETE_O_JOGO = "este jogo abrir"
 
 
@@ -703,14 +574,7 @@ PROMETE_O_JOGO = "este jogo abrir"
 def test_a_dica_do_salvar_so_promete_o_jogo_a_perfil_de_jogo(
     match: dict[str, Any], de_jogo: bool,
 ) -> None:
-    """Achado 4: *"volta sozinho toda vez que este jogo abrir"* só vale com regra de jogo.
-
-    O `criteria` sem nenhum dos três campos nunca entra sozinho (é o `manual`
-    escrito por acidente), e promete o que o manual promete.
-
-    MORDIDA: faça `_tipo_do_perfil` devolver sempre `"jogo"` e as três células
-    sem regra de jogo reprovam.
-    """
+    """Achado 4: *"volta sozinho toda vez que este jogo abrir"* só vale com regra de jogo."""
     from hefesto_dualsense4unix.interface import pacotes
 
     _um_perfil("Alvo", match)
@@ -750,14 +614,7 @@ def _o_titulo_do_salvar(html: str) -> str:
 
 
 def test_o_rodape_congelado_diz_o_mesmo_que_a_tela_pinta_sem_perfil() -> None:
-    """O `fim.html` e a pintura sem perfil dizem a MESMA frase, e ela não promete jogo.
-
-    É a regra do `_SEM_PERFIL`: a tela antes e depois da pintura diz a mesma
-    coisa. O congelado prometia o jogo a qualquer perfil.
-
-    MORDIDA: devolva ao `title` do `.r-salvar` no `fim.html` a cauda
-    *"o que você salvar aqui volta sozinho toda vez que este jogo abrir."*.
-    """
+    """O `fim.html` e a pintura sem perfil dizem a MESMA frase, e ela não promete jogo."""
     from hefesto_dualsense4unix.interface import onde, pacotes
 
     congelado = _o_titulo_do_salvar((onde.AQUI / "fim.html").read_text(encoding="utf-8"))
@@ -766,17 +623,12 @@ def test_o_rodape_congelado_diz_o_mesmo_que_a_tela_pinta_sem_perfil() -> None:
     assert PROMETE_O_JOGO not in congelado
 
 
-#: As dez abas, pelo prefixo do arquivo.
 DEZ = [f"{n:02d}-" for n in range(1, 11)]
 
 
 @pytest.mark.parametrize("pagina", DEZ)  # (noqa-acento): nome de parâmetro
 def test_a_bancada_das_dez_traz_o_rodape_novo(pagina: str) -> None:
-    """O desenho de HOJE das dez abas: o rodapé regerado, sem a promessa do jogo.
-
-    A BANCADA, não o publicado: quem publica é quem coordena, e a lacuna de
-    publicação tem dono (`scripts/check_o_desenho_aprovado.py`).
-    """
+    """O desenho de HOJE das dez abas: o rodapé regerado, sem a promessa do jogo."""
     from hefesto_dualsense4unix.interface import onde
 
     caminhos = sorted(onde.saida().glob(f"{pagina}*.html"))

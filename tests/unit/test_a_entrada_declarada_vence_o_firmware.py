@@ -45,12 +45,8 @@ from hefesto_dualsense4unix.utils.maquina import (
     gravar_maquina,
 )
 
-#: O barramento lento e o rápido de uma placa de mentira.
 _LENTO, _RAPIDO = "usb9", "usb10"
 
-#: As entradas de mentira, e o que o firmware liga a cada uma. A 1 é a da
-#: frente: a placa não publicou o par SuperSpeed dela, então o firmware diz
-#: USB 2.0. A 7 é a de trás: a placa diz que ela tem o lado rápido.
 _NOS = {
     "1": [f"{_LENTO}-port4"],
     "5": [f"{_LENTO}-port5", f"{_RAPIDO}-port1"],
@@ -92,15 +88,8 @@ def _usb(bancada: mapa_das_portas.Bancada) -> dict[str, int]:
     return {e.n: e.usb for f in bancada.mesa.faces for e in f.entradas}
 
 
-# ── 1. a precedência: aparelho, ela, placa ───────────────────────────────
-
-
 def test_a_velocidade_declarada_vence_o_par_do_firmware() -> None:
-    """O ``peer`` diz 2.0 na frente e ela diz 3.0: vale o que ela disse.
-
-    O CONTROLE vem primeiro, e é ele que impede o verde por vacuidade: sem
-    declaração, a frente sai 2.0 e a de trás 3.0 — o firmware, como antes.
-    """
+    """O ``peer`` diz 2.0 na frente e ela diz 3.0: vale o que ela disse."""
     sem = _usb(mapa_das_portas.mesa_do_motor(_mapa(), _censo()))
     assert sem == {"1": 2, "5": 3, "7": 3}, f"o firmware de mentira não diz o que devia: {sem}"
 
@@ -136,16 +125,9 @@ def test_o_arranjo_da_pagina_pinta_a_velocidade_que_ela_disse() -> None:
     assert veio["declarado"]["1"] == {"usb": 3}
 
 
-# ── 2. o editor grava no disco dela, e o produto lê de lá ────────────────
-
-
 @pytest.fixture()
 def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes.
-
-    E o barramento é o de mentira: o gesto do editor relê a máquina depois de
-    gravar (O-MAPA-QUE-ELA-CORRIGE-01), e a régua não lê o ``/sys`` de ninguém.
-    """
+    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes."""
     from hefesto_dualsense4unix.integrations import censo_do_barramento
 
     alvo = caminho_da_maquina()
@@ -179,7 +161,6 @@ def test_declarar_hub_grava_e_a_face_do_hub_volta_ao_reler(disco: Path) -> None:
     assert usb["7"] == 2, "a 7 não é preta no desenho, e ela disse USB 2.0"
     assert veio["declarado"]["5"] == {"liga": "hub"}
 
-    # «Direto» desfaz, e a face some — sem apagar os nós da entrada
     assert ee.declarar_a_ligacao("5", None).gravou
     veio = arranjo_desta_maquina.arranjo(
         carregar=carregar_maquina, ler_o_barramento=_censo)
@@ -238,9 +219,6 @@ def test_os_dois_gestos_gravam_o_que_o_clique_diz(disco: Path) -> None:
         velocidade(None, {"entrada": "1", "usb": ""}, None)
 
 
-# ── 3. o Mapear diz de onde veio a velocidade e oferece o hub ────────────
-
-
 def _no(no: str, aparelho: str = "", mbps: float = 480.0, par: str = "") -> NoDeEntrada:
     hub = no.rpartition("-port")[0]
     return NoDeEntrada(
@@ -273,18 +251,9 @@ def test_o_mapear_pinta_a_velocidade_declarada_e_oferece_o_hub() -> None:
     assert ee._face_aceita(hub, maquina), "o Mapear oferece o hub e recusa gravar nele"
 
 
-# ── 4. a página e o produto desenham a MESMA coisa ───────────────────────
-
-
 def test_a_pagina_e_o_produto_desenham_o_mesmo_hub_e_o_mesmo_extensor() -> None:
-    """Antes de reler, quem desenha é o JavaScript; depois, o Python.
-
-    Se as duas pontas disserem coisas diferentes, o que ela viu ao clicar
-    muda sozinho quando a janela reabre.
-    """
+    """Antes de reler, quem desenha é o JavaScript; depois, o Python."""
     pagina = pagina_do_mapa.pagina()
-    # O NOME VEM DO DONO, injetado pelo gerador (O-MAPA-QUE-ELA-CORRIGE-01): a
-    # página não compõe a palavra.
     molde = json.dumps(ee.FACE_DO_HUB_DECLARADO, ensure_ascii=False)
     assert f"var FACE_DO_HUB = {molde};" in pagina, "o hub da página tem outro nome"
     assert 'nome: FACE_DO_HUB.replace("{numero}", n)' in pagina
@@ -308,17 +277,6 @@ def test_a_pagina_manda_os_dois_gestos_e_eles_tem_dono() -> None:
     assert "GRAVA = Object.keys(DECLARADO);" in pagina, (
         "a página deixou de saber quais entradas o editor grava")
 
-
-# ── 5. o clique na página chega ao disco — no WebKit, pela ponte do piloto ──
-#
-# As réguas de cima medem o gravador e o arranjo, e a de cima desta lê o
-# JavaScript como TEXTO. Nenhuma clicava: a conferência de 26/09/2026 arrancou
-# o `gravaNaEntrada` inteiro (o botão nunca leva o gesto) e o `_declarado`
-# passou a mandar só as entradas que JÁ tinham declaração — o que deixa quem
-# nunca declarou nada sem gravar coisa alguma —, e as dez passaram. Esta régua
-# abre a página PUBLICADA num WebKit fora da tela, instala o BOOTSTRAP do
-# piloto (o mesmo ouvinte de clique que o produto usa), entrega o arranjo,
-# clica, leva cada mensagem ao pacote como o piloto leva, e relê.
 
 _LER_A_PAGINA = r"""
 (function(){
@@ -351,16 +309,7 @@ def _clicar(seletor: str) -> str:
 
 
 def _na_pagina(passos: list[str]) -> tuple[list[str], list[dict[str, Any]]]:
-    """Abre a página publicada, instala o BOOTSTRAP e roda os ``passos`` em ordem.
-
-    Devolve o que cada passo respondeu e as mensagens que a página mandou pelo
-    canal do piloto. ``Gtk.OffscreenWindow``: sob Xvfb uma janela comum fica
-    1x1, e ela tem UMA tela — janela de teste não nasce na frente dela.
-
-    O canal é montado aqui, com o WebKit cru, e não pela ``PonteDaTela`` da
-    janela GTK que está saindo (D-0609-GTK-LEVA-INTEIRA): o que a régua precisa
-    é do nome que o BOOTSTRAP pronuncia, ``messageHandlers.hefesto``.
-    """
+    """Abre a página publicada, instala o BOOTSTRAP e roda os ``passos`` em ordem."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre a página num WebKit")
@@ -377,7 +326,7 @@ def _na_pagina(passos: list[str]) -> tuple[list[str], list[dict[str, Any]]]:
     mensagens: list[dict[str, Any]] = []
     respostas: list[str] = []
     ucm = WebKit2.UserContentManager()
-    ucm.register_script_message_handler("hefesto")  # a série 4.1 leva UM argumento
+    ucm.register_script_message_handler("hefesto")
     ucm.connect("script-message-received::hefesto",
                 lambda _u, r: mensagens.append(json.loads(r.get_js_value().to_string())))
     view = WebKit2.WebView.new_with_user_content_manager(ucm)
@@ -389,7 +338,6 @@ def _na_pagina(passos: list[str]) -> tuple[list[str], list[dict[str, Any]]]:
 
     def seguinte() -> bool:
         if not fila:
-            # as mensagens do último clique atravessam a ponte depois da resposta
             GLib.timeout_add(400, lambda: (Gtk.main_quit(), False)[1])
             return False
         js = fila.pop(0)
@@ -397,7 +345,7 @@ def _na_pagina(passos: list[str]) -> tuple[list[str], list[dict[str, Any]]]:
         def respondeu(v: Any, res: Any, _u: Any = None) -> None:
             try:
                 respostas.append(v.evaluate_javascript_finish(res).to_string())
-            except Exception as erro:  # a exceção É a resposta do passo
+            except Exception as erro:
                 respostas.append(f"ERRO {erro}")
             GLib.idle_add(seguinte)
 
@@ -428,11 +376,7 @@ def _entregar() -> str:
 
 
 def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
-    """E1 de ponta a ponta: clique → mensagem do piloto → pacote → disco → página.
-
-    Quem NUNCA declarou nada é o caso que decide: nenhuma entrada do disco tem
-    ``liga`` nem ``usb`` antes do primeiro clique.
-    """
+    """E1 de ponta a ponta: clique → mensagem do piloto → pacote → disco → página."""
     from hefesto_dualsense4unix.interface import pacotes
 
     antes, mensagens = _na_pagina([
@@ -456,8 +400,6 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
         "entrada-o-que-tem:extensor@5", "entrada-velocidade:3@5",
         "entrada-velocidade:2@5"]), (
         f"a entrada do mapa dela não leva o gesto ao disco: {editor_na_5['gestos']}")
-    # A TELA ESPERA O DISCO (O-MAPA-QUE-ELA-CORRIGE-01): o «Hub» clicado não
-    # desenha o hub antes de o disco responder.
     assert len(sem_esperar["faces"]) == len(entregue["faces"]), (
         f"a página desenhou o hub antes do disco: {sem_esperar['faces']}")
 
@@ -494,7 +436,6 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     assert relida["v3"]["7"] is False, "a 7 relida não é preta, e ela disse USB 2.0"
     assert relida["v3"]["5.1"] is True and "5.1a" not in relida["v3"]
     assert "hub" in editor["apertados"], f"o editor da 5 relido: {editor['apertados']}"
-    # DE ONDE VEIO (O-MAPA-QUE-ELA-CORRIGE-01, passo 6): a 5 é da placa, a 7 é dela.
     frases = pagina_do_mapa.FRASES_DA_ORIGEM_DA_VELOCIDADE
     assert (editor["origem"] or "").lower() == frases[mapa_das_portas.USB_PELA_PLACA].lower()
     assert (editor_na_7["origem"] or "").lower() == frases[mapa_das_portas.USB_DECLARADA].lower()
@@ -502,37 +443,12 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
         "a origem se diz só na entrada do mapa dela")
 
 
-# ── 6. de onde veio a velocidade, e uma régua só (O-MAPA-QUE-ELA-CORRIGE-01) ──
-#
-# D-2609-A-VELOCIDADE-DELA-VENCE-A-PLACA. A precedência já tinha um dono só
-# (``mapa_das_portas.velocidade_da_entrada``); faltava DIZER de onde veio, no
-# editor, e travar que todo leitor da velocidade da ENTRADA responde por ele.
-# A régua pegou uma segunda pergunta viva: o Mapear olhava só o PRIMEIRO
-# aparelho dos nós (no hub de dois chips, o lado de 480M) e dizia «placa» onde
-# o arranjo dizia «aparelho» — agora os dois perguntam
-# ``mapa_das_portas.aparelho_usb3_na_entrada``.
-#
-# A MORDIDA: inverta o aparelho e a declarada no ``velocidade_da_entrada`` —
-# a 5 (aparelho a 5 Gbps e ela dizendo USB 2.0) reprova aqui.
-
-#: A velocidade de cada hub da máquina sintética de 15 entradas
-#: (``test_o_nome_da_entrada_e_da_posicao``): o ``usb1`` e o ``usb3`` são os
-#: lentos, o ``usb2`` e o ``usb4`` os rápidos, e o hub de dois chips na 3.
 _HUBS = {"usb1": 480.0, "usb2": 5000.0, "usb3": 480.0, "usb4": 10000.0,
          "3-1": 480.0, "3-1.1": 480.0, "4-1": 5000.0, "4-1.1": 5000.0}
 
 
 def _a_placa_que_erra() -> dict[str, Any]:
-    """A máquina de 15 entradas com a placa trocada e a declaração contrária.
-
-    A frente (1, 2) só tem o nó do ``usb1``, sem ``peer``: a placa diz USB 2.0,
-    e ela diz 3.0. A 7 ganha o lado do ``usb2`` (a placa diz 3.0), e ela diz
-    2.0; a 8 também ganha, e ela não diz nada. A 5 tem um aparelho a 5 Gbps
-    no lado rápido, e ela diz 2.0: vence o aparelho.
-
-    A máquina de 15 entradas é a de antes da A-ENTRADA-TEM-UM-REGISTRO-SO-01,
-    com ``lugares``; aqui ela vai migrada (``utils/maquina.migrar_o_documento``).
-    """
+    """A máquina de 15 entradas com a placa trocada e a declaração contrária."""
     from hefesto_dualsense4unix.utils.maquina import migrar_o_documento
     from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_dela
 
@@ -560,8 +476,7 @@ def _o_censo_da_placa_que_erra() -> Censo:
 
 
 def _os_nos_lidos(documento: MaquinaConfig, censo: Censo) -> tuple[NoDeEntrada, ...]:
-    """O que o ``/sys`` diria dos nós: a velocidade do hub que hospeda, o
-    ``peer`` do outro lado e o aparelho encaixado — a mesma máquina do censo."""
+    """O que o ``/sys`` diria dos nós: a velocidade do hub que hospeda, o"""
     from hefesto_dualsense4unix.utils.lugar import caminho_do_no
 
     plugados = {a.nome_do_kernel for a in censo.aparelhos}
@@ -604,10 +519,10 @@ def test_o_arranjo_e_o_mapear_dizem_a_mesma_velocidade_e_a_mesma_origem() -> Non
     aparelho, dela, placa = (mapa_das_portas.USB_PELO_APARELHO,
                              mapa_das_portas.USB_DECLARADA, mapa_das_portas.USB_PELA_PLACA)
     assert {n: da_tela[n] for n in ("1", "2", "3", "5", "7", "8", "9")} == {
-        "1": (3, dela), "2": (3, dela),   # a frente: a placa diz 2.0, ela diz 3.0
-        "3": (3, aparelho),               # o lado de 5 Gbps do hub de dois chips
-        "5": (3, aparelho),               # ela diz 2.0, e há um aparelho a 5 Gbps
-        "7": (2, dela), "8": (3, placa),  # a placa diz 3.0 nas duas; ela, 2.0 na 7
+        "1": (3, dela), "2": (3, dela),
+        "3": (3, aparelho),
+        "5": (3, aparelho),
+        "7": (2, dela), "8": (3, placa),
         "9": (3, placa),
     }
 
@@ -638,9 +553,7 @@ def test_as_frases_da_origem_cobrem_as_chaves_do_dono() -> None:
 
 
 def test_nenhum_leitor_decide_a_velocidade_da_entrada_fora_do_dono() -> None:
-    """Uma régua só: fora de ``mapa_das_portas`` (e de ``entradas_do_gabinete``,
-    que MEDE o nó), nenhum módulo lê ``Furo.rapido`` nem as velocidades dos
-    hubs para decidir a velocidade de uma ENTRADA."""
+    """Uma régua só: fora de ``mapa_das_portas`` (e de ``entradas_do_gabinete``,"""
     import ast
 
     raiz = Path(ee.__file__).resolve().parents[1]

@@ -1,13 +1,4 @@
-"""O que é do computador não muda com o jogo (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01).
-
-Ela, 01/10, depois de uma noite com visitas: *«algumas features precisam ser por
-computador e permanecerem salvas»*. O som, os sensores, a luz, a vibração, o
-mouse e o teclado ganham um padrão do computador no ``maquina.json``
-(``computador``), e o perfil do jogo só sobrepõe.
-
-Tudo num lar de mentira (o ``conftest`` desvia os ``XDG_*``), com identidades da
-faixa sintética da casa.
-"""
+"""O que é do computador não muda com o jogo (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01)."""
 from __future__ import annotations
 
 import json
@@ -39,15 +30,8 @@ def _computador(documento: dict[str, Any]) -> Any:
     return opc.o_computador()
 
 
-# ---------------------------------------------------------------------------
-# O dono: o campo `computador` do `maquina.json`
-# ---------------------------------------------------------------------------
 def test_o_computador_vai_ao_disco_so_com_o_que_foi_declarado() -> None:
-    """O brilho de fábrica de UM controle não pode ir ao disco por extenso.
-
-    MORDIDA: tirar o serializador de ``ComputadorDeclarado`` grava o ``LedsConfig``
-    inteiro do P2, e o brilho 1.0 de fábrica passaria a vencer o do computador.
-    """
+    """O brilho de fábrica de UM controle não pode ir ao disco por extenso."""
     _computador({"controles": {P2: {"leds": {"lightbar": [0, 255, 0]}}}})
     bruto = json.loads(m.caminho_da_maquina().read_text(encoding="utf-8"))
     assert bruto["computador"] == {"controles": {P2: {"leds": {"lightbar": [0, 255, 0]}}}}
@@ -74,9 +58,6 @@ def test_o_resgate_salva_o_resto_do_computador() -> None:
     assert relido.global_.mouse is None
 
 
-# ---------------------------------------------------------------------------
-# A vista
-# ---------------------------------------------------------------------------
 def test_sem_computador_a_vista_e_o_mesmo_objeto() -> None:
     """Quem nunca declarou nada aplica byte a byte o que aplicava."""
     jogo = _perfil(leds={"lightbar": [9, 9, 9]})
@@ -84,11 +65,7 @@ def test_sem_computador_a_vista_e_o_mesmo_objeto() -> None:
 
 
 def test_a_precedencia_campo_a_campo() -> None:
-    """O jogo neste controle > o jogo global > o computador neste controle > o todo controle.
-
-    MORDIDA: deixar o computador do P2 vencer a escolha global do jogo põe o verde
-    do computador no P2 de um jogo que escolheu vermelho para todos.
-    """
+    """O jogo neste controle > o jogo global > o computador neste controle > o todo controle."""
     computador = _computador({
         "global": {"leds": {"lightbar": [10, 20, 200], "lightbar_brightness": 0.5},
                    "rumble": {"policy": "max"}},
@@ -98,25 +75,21 @@ def test_a_precedencia_campo_a_campo() -> None:
     jogo = _perfil(leds={"lightbar": [255, 0, 0]},
                    controllers={P2: {"rumble": {"motor_forte_pct": 80}}})
     vista = opc.perfil_que_vale(jogo, computador)
-    assert vista.leds.lightbar == (255, 0, 0)  # o jogo, global
-    assert vista.leds.lightbar_brightness == 0.5  # o computador, todo controle
+    assert vista.leds.lightbar == (255, 0, 0)
+    assert vista.leds.lightbar_brightness == 0.5
     assert vista.rumble.policy == "max"
     p2 = vista.controllers[P2]
-    assert p2.rumble.motor_forte_pct == 80  # o jogo, neste controle
-    assert p2.leds.lightbar_brightness == 0.3  # o computador, neste controle
-    assert "lightbar" not in p2.leds.model_fields_set  # o jogo global vence
+    assert p2.rumble.motor_forte_pct == 80
+    assert p2.leds.lightbar_brightness == 0.3
+    assert "lightbar" not in p2.leds.model_fields_set
 
 
 def test_o_valor_de_fabrica_das_secoes_densas_segue_o_computador() -> None:
-    """O `leds` que o «Salvar» antigo gravava por extenso não é escolha (a resposta 4).
-
-    MORDIDA: tirar a guarda do valor de fábrica (`escolhas_globais_do_jogo`) faz o
-    `leds` denso sobrepor a luz do computador, e reprova.
-    """
+    """O `leds` que o «Salvar» antigo gravava por extenso não é escolha (a resposta 4)."""
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
 
     computador = _computador({"global": {"leds": {"lightbar": [10, 20, 200]}}})
-    for leds in ({}, LedsConfig().model_dump(mode="json")):  # vazio, e denso de fábrica
+    for leds in ({}, LedsConfig().model_dump(mode="json")):
         jogo = _perfil(leds=leds)
         assert not opc.sobrepoe(jogo, "luz"), leds
         assert opc.perfil_que_vale(jogo, computador).leds.lightbar == (10, 20, 200)
@@ -131,11 +104,7 @@ def test_o_par_da_politica_anda_junto() -> None:
 
 
 def test_o_controle_nunca_visto_nasce_do_computador() -> None:
-    """Uma identidade nova, sem linha no perfil nem no computador, recebe o global.
-
-    MORDIDA: cair no de fábrica (a vista não pôr o global do computador no perfil)
-    deixa a barra em preto.
-    """
+    """Uma identidade nova, sem linha no perfil nem no computador, recebe o global."""
     computador = _computador({"global": {"leds": {"lightbar": [10, 20, 200]}}})
     vista = opc.perfil_que_vale(_perfil(), computador)
     assert P3 not in (vista.controllers or {})
@@ -151,18 +120,12 @@ def test_os_botoes_e_as_teclas_do_computador_por_baixo_do_jogo() -> None:
     jogo = _perfil(button_actions={"circle": "KEY_BACKSPACE"}, key_bindings={})
     vista = opc.perfil_que_vale(jogo, computador)
     assert vista.button_actions == {"cross": "KEY_ENTER", "circle": "KEY_BACKSPACE"}
-    assert vista.key_bindings == {}  # o teclado silencioso do jogo vale
+    assert vista.key_bindings == {}
     assert vista.teclado_emulado is True
 
 
-# ---------------------------------------------------------------------------
-# O escritor
-# ---------------------------------------------------------------------------
 def test_o_clique_grava_no_computador_quando_o_jogo_nao_sobrepoe() -> None:
-    """O perfil fica byte a byte; o `maquina.json` muda.
-
-    MORDIDA: `onde_grava` devolver sempre o jogo grava no perfil.
-    """
+    """O perfil fica byte a byte; o `maquina.json` muda."""
     caminho = save_profile(_perfil())
     antes = caminho.read_bytes()
     onde = opc.gravar("luz", {"leds": {"lightbar": [1, 2, 3]}}, uniq=P2,
@@ -182,12 +145,7 @@ def test_o_clique_grava_no_jogo_quando_ele_ja_sobrepoe_o_cartao() -> None:
 
 
 def test_o_gesto_roda_sobre_o_que_vale_e_so_a_diferenca_vai_ao_computador() -> None:
-    """`gravar_pelo_gesto`: o gesto de sempre, sobre a vista; o perfil não muda.
-
-    A base é o que VALE: o 0% que o computador guarda para o P2 sai pelo gesto
-    que religa, mesmo sem nada no perfil. MORDIDA: rodar o gesto sobre o perfil
-    cru deixa o 0% no computador.
-    """
+    """`gravar_pelo_gesto`: o gesto de sempre, sobre a vista; o perfil não muda."""
     save_profile(_perfil(controllers={P1: {"triggers": {"left": {"mode": "Off"}}}}))
     _computador({"controles": {P2: {"leds": {"lightbar_brightness": 0.0}}}})
     caminho_antes = load_profile("Jogo X").model_dump(mode="json")
@@ -213,11 +171,7 @@ def test_o_gesto_roda_sobre_o_que_vale_e_so_a_diferenca_vai_ao_computador() -> N
 
 
 def test_o_gesto_le_o_que_vale_e_nao_o_cru() -> None:
-    """O gesto que parte do valor de agora parte do que VALE (o computador), não do cru.
-
-    MORDIDA: rodar o gesto sobre o perfil cru faz ele partir do preto, e o
-    computador recebe (1, 1, 1) em vez de (11, 21, 31).
-    """
+    """O gesto que parte do valor de agora parte do que VALE (o computador), não do cru."""
     save_profile(_perfil())
     _computador({"controles": {P2: {"leds": {"lightbar": [10, 20, 30]}}}})
 
@@ -266,18 +220,7 @@ def test_o_freestyle_nao_sobrepoe_nada() -> None:
 
 
 def test_na_vista_o_freestyle_fica_por_baixo_do_computador() -> None:
-    """O que o arquivo do Freestyle ainda guarda de um cartão do computador não vence.
-
-    O «Status do Modo» e o «Salvar» do rodapé reescrevem o Freestyle depois da
-    migração. A marca diz «PC» e o clique grava no computador; se a vista
-    deixasse o Freestyle por cima, o aparelho receberia o valor velho dele
-    (medido na conferência de 02/10/2026: a luz do P2 seguia vermelha com o
-    computador dizendo azul).
-
-    MORDIDA: devolver às entradas do Freestyle a proteção do jogo
-    (``escritos`` sem a guarda do Freestyle) reprova na luz e na força; tirar
-    o ``freestyle`` do teclado reprova no teclado.
-    """
+    """O que o arquivo do Freestyle ainda guarda de um cartão do computador não vence."""
     _computador({"global": {"teclado_emulado": True, "button_actions": {"r1": "KEY_UP"}},
                  "controles": {P2: {"leds": {"lightbar": [0, 0, 255]},
                                     "rumble": {"motor_forte_pct": 40}}}})
@@ -294,7 +237,6 @@ def test_na_vista_o_freestyle_fica_por_baixo_do_computador() -> None:
     assert entrada.rumble.motor_forte_pct == 40
     assert vista.teclado_emulado is True
     assert vista.button_actions == {"r1": "KEY_UP", "l1": "KEY_LEFT"}
-    # Num jogo, o mesmo arquivo é escolha dele e vence o computador.
     save_profile(Profile.model_validate({
         **freestyle.model_dump(mode="json", exclude_unset=True),
         "name": "Jogo X", "match": {"type": "criteria", "window_class": ["jogox"]}}))
@@ -313,18 +255,12 @@ def test_restaurar_esvazia_o_computador_e_guarda_a_marca_da_migracao() -> None:
     assert computador.global_.leds is None
 
 
-# ---------------------------------------------------------------------------
-# A peça «Vibração» da economia
-# ---------------------------------------------------------------------------
 def test_a_economia_diz_que_corta_tambem_a_haptica() -> None:
     """A economia corta a háptica desde 29/09 (``daemon/ganho_da_haptica``)."""
     vibracao = next(p for p in A_ECONOMIA_EM_CADA_PECA if p.nome == "Vibração")
     assert vibracao.o_que_faz == "O teto da Economia, nos dois motores e na háptica."
 
 
-# ---------------------------------------------------------------------------
-# Quem lê, lê a vista (commit 2)
-# ---------------------------------------------------------------------------
 def _gerente(**appliers: Any) -> tuple[Any, Any]:
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -341,10 +277,7 @@ def _ultima_cor(fc: Any) -> Any:
 
 
 def test_a_ativacao_aplica_o_computador_no_que_o_jogo_nao_escolheu() -> None:
-    """O jogo sem cor recebe a cor do computador, igual a um perfil que a escolhesse.
-
-    MORDIDA: tirar o `o_que_vale` do `ProfileManager._ativar` deixa o jogo sem cor.
-    """
+    """O jogo sem cor recebe a cor do computador, igual a um perfil que a escolhesse."""
     save_profile(_perfil("Controle", leds={"lightbar": [10, 20, 200]}))
     gerente, fc = _gerente()
     gerente.activate("Controle", origin="launch")
@@ -359,10 +292,6 @@ def test_a_ativacao_aplica_o_computador_no_que_o_jogo_nao_escolheu() -> None:
 
 
 #: AS QUATRO PORTAS DA TROCA. O «Ativar» da aba Perfis (`profile.switch`) e o
-#: ciclo do PS no controle (`hotkey.build_profile_cycle_callback`) entram como
-#: `manual`; a troca de janela, como `autoswitch`; o jogo que abre, como
-#: `launch`. As quatro chamam o mesmo `ProfileManager.activate`, e a régua as
-#: passa pela origem que cada uma diz.
 PORTAS = ("manual", "autoswitch", "launch")
 P4 = "aabbcc000004"
 
@@ -371,16 +300,7 @@ P4 = "aabbcc000004"
 @pytest.mark.parametrize("porta", PORTAS)
 @pytest.mark.parametrize("uniq", [P1, P2, P3, P4])
 def test_a_troca_nao_leva_o_que_e_do_computador(uniq: str, porta: str, transporte: str) -> None:
-    """Régua 1: B, A, B de novo — e o B volta ao computador, nunca ao que o A escolheu.
-
-    O jogo A sobrepõe a luz (global) e o som daquele controle; o B não escolhe
-    nenhum dos dois. O computador tem os dois. Nos quatro lugares, nos dois
-    transportes e pelas três origens: o B recebe o do computador, o A o dele, e
-    o B outra vez o do computador.
-
-    MORDIDA: tirar a vista do `ProfileManager._ativar` deixa o B sem a cor e sem
-    o som do computador, e a régua reprova.
-    """
+    """Régua 1: B, A, B de novo — e o B volta ao computador, nunca ao que o A escolheu."""
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
     from hefesto_dualsense4unix.testing import FakeController
@@ -427,11 +347,7 @@ def test_as_velocidades_do_jogo_de_mouse_vem_do_computador() -> None:
 
 
 def test_o_reinicio_nao_esquece_a_velocidade(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem a seção no perfil, a Navegação liga o mouse com a velocidade do computador.
-
-    MORDIDA: deixar a velocidade só no `mouse_emulation.flag` (o recuo pular o
-    computador) devolve a da sessão.
-    """
+    """Sem a seção no perfil, a Navegação liga o mouse com a velocidade do computador."""
     from hefesto_dualsense4unix.daemon import lifecycle
     from hefesto_dualsense4unix.utils import session
 
@@ -471,7 +387,6 @@ def test_o_mouse_virtual_volta_ao_de_fabrica_sem_os_botoes() -> None:
     assert chamadas == [None]
 
 
-#: Os leitores do perfil que NÃO aplicam o que é do computador, com a razão.
 LEITORES_DO_QUE_E_DO_JOGO: dict[tuple[str, str], str] = {
     ("daemon/connection.py", "perfil_que_o_boot_restaura"):
         "o boot lê só o `match` e o `mode`, que são do jogo",
@@ -481,17 +396,7 @@ LEITORES_DO_QUE_E_DO_JOGO: dict[tuple[str, str], str] = {
 
 
 def test_todo_leitor_le_a_vista() -> None:
-    """Todo `load_profile(` do daemon, do gerente e da CLI: escritor, leitor do jogo, ou a vista.
-
-    Um escritor só conta se a MESMA função chama `save_profile(` — a lista não
-    se mede contra ela mesma. A CLI entrou na conferência final de 02/10/2026:
-    o `profile activate` com o daemon fora aplica pelo `ProfileManager.apply`, e
-    aplicava o perfil cru.
-
-    MORDIDA: devolver o `load_profile` cru ao `gamepad._motores_do_perfil_ativo`
-    (sem o `o_que_vale`) deixa um leitor sem classe; o mesmo com o
-    `manager.apply(profile)` cru do `cmd_profile.cmd_activate`.
-    """
+    """Todo `load_profile(` do daemon, do gerente e da CLI: escritor, leitor do jogo, ou a vista."""
     import ast
     from pathlib import Path
 
@@ -529,9 +434,6 @@ def test_todo_leitor_le_a_vista() -> None:
     assert set(LEITORES_DO_QUE_E_DO_JOGO) <= vistos, "a lista dos leitores do jogo envelheceu"
 
 
-# ---------------------------------------------------------------------------
-# Quem grava, grava pelo dono (commit 3)
-# ---------------------------------------------------------------------------
 UM = "aa:bb:cc:00:00:01"
 
 
@@ -583,7 +485,6 @@ def _contexto(pac: Any, ativo: str) -> Any:
         conectados=[um], estados={})
 
 
-#: Um gesto por cartão do computador: ``(cartão, página, gesto, o que ela mandou)``.
 CLIQUES: list[tuple[str, str, str, dict[str, Any]]] = [
     ("som", "02-controles.html", "volume",
      {"uniq": UM, "volume": "microfone", "valor": "42"}),
@@ -601,13 +502,7 @@ CLIQUES: list[tuple[str, str, str, dict[str, Any]]] = [
 def test_o_clique_basta_e_o_perfil_fica(
     cartao: str, aba: str, gesto: str, carga: dict[str, Any]
 ) -> None:
-    """Régua 6: o gesto do cartão grava no clique, sem «Salvar» nem «Aplicar».
-
-    O perfil ativo não sobrepõe o cartão: o arquivo dele fica byte a byte, e o
-    ``maquina.json`` relido do disco (o contexto descartado) guarda o clique.
-
-    MORDIDA: `onde_grava` devolver sempre o jogo reprova nos cinco cartões.
-    """
+    """Régua 6: o gesto do cartão grava no clique, sem «Salvar» nem «Aplicar»."""
     pac = _pacotes()
     caminho = save_profile(_perfil("Jogo X"))
     antes = caminho.read_bytes()
@@ -647,11 +542,7 @@ def _handlers(ativo: str | None) -> Any:
 
 @pytest.mark.parametrize("ativo", ["Jogo X", None], ids=["com-perfil", "sem-perfil"])
 def test_o_daemon_grava_a_barra_do_motor_pelo_dono(ativo: str | None) -> None:
-    """`rumble.motores.set`: o perfil sem a vibração do P1 deixa a barra no computador.
-
-    Sem perfil ativo, também: deixou de ser «não grava».
-    MORDIDA: devolver o `save_profile` direto ao handler reprova nos dois.
-    """
+    """`rumble.motores.set`: o perfil sem a vibração do P1 deixa a barra no computador."""
     import asyncio
 
     caminho = save_profile(_perfil("Jogo X"))
@@ -663,9 +554,6 @@ def test_o_daemon_grava_a_barra_do_motor_pelo_dono(ativo: str | None) -> None:
     assert opc.o_computador().controles[P1].rumble.motor_forte_pct == 40
 
 
-# ---------------------------------------------------------------------------
-# A migração, uma vez (commit 4)
-# ---------------------------------------------------------------------------
 CONTROLES_DA_CASA = [f"aabbcc0000{n:02x}" for n in range(1, 5)]
 
 
@@ -690,13 +578,7 @@ def _freestyle_da_forma_dela() -> Profile:
 
 
 def _os_vinte_e_oito() -> list[Profile]:
-    """Os outros 28 perfis, na forma das contagens da sprint (§2), valores sintéticos.
-
-    Dez com ``leds`` e ``rumble`` globais (iguais ao Freestyle, de fábrica, ou
-    diferentes), oito com ``mouse``, um com ``teclado_emulado``, nove com
-    ``controllers`` (29 entradas com luz; som, microfone, motor e sensores em
-    parte delas).
-    """
+    """Os outros 28 perfis, na forma das contagens da sprint (§2), valores sintéticos."""
     import random
 
     sorte = random.Random(110)
@@ -707,9 +589,9 @@ def _os_vinte_e_oito() -> list[Profile]:
                                  "match": {"type": "criteria", "window_class": [f"j{i}"]}}
         if i < 10:
             dados["leds"] = sorte.choice([
-                {"lightbar": [10, 20, 200], "lightbar_brightness": 0.6},  # = Freestyle
-                {},  # de fábrica, por extenso
-                {"lightbar": [255, 0, 0]},  # do jogo
+                {"lightbar": [10, 20, 200], "lightbar_brightness": 0.6},
+                {},
+                {"lightbar": [255, 0, 0]},
             ])
             dados["rumble"] = sorte.choice([{"policy": "max"}, {},
                                             {"policy": "custom", "custom_mult": 1.3}])
@@ -743,16 +625,7 @@ def _os_vinte_e_oito() -> list[Profile]:
 
 
 def test_a_migracao_nao_muda_nenhum_valor_efetivo() -> None:
-    """Régua 5: depois da migração, cada perfil vale o mesmo que valia, campo a campo.
-
-    A comparação lê o ``.antes-do-computador`` (a cópia que a migração fez
-    ANTES de reescrever), e nunca o arquivo que ela reescreveu: medir contra a
-    própria saída é a trava que não trava nada. Isentos, pela resposta 4 dela,
-    os campos de luz e vibração globais guardados com o valor de fábrica.
-
-    MORDIDAS: apagar a sobreposição diferente (``ceder_ao_computador`` aceitar
-    todo grupo) reprova; e a migração não deixar a cópia reprova.
-    """
+    """Régua 5: depois da migração, cada perfil vale o mesmo que valia, campo a campo."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     perfis = [_freestyle_da_forma_dela(), *_os_vinte_e_oito()]
@@ -786,7 +659,6 @@ def test_a_migracao_nao_muda_nenhum_valor_efetivo() -> None:
                 continue
             assert vale.get(k) == valia.get(k), (
                 f"{nome}: {k} valia {valia.get(k)!r}, vale {vale.get(k)!r}")
-        # O PS solo que a linha guardava foi para o ⑥ da tabela (`_sem_o_ps_da_tabela`).
         de_antes = de_antes.model_copy(update={
             "button_actions": opc._sem_o_ps_da_tabela(de_antes.button_actions) or None})
         assert opc.efetivo(de_antes, computador) == vale, f"{nome} mudou com o mesmo computador"
@@ -829,14 +701,7 @@ def test_o_ps_da_linha_vai_para_a_tabela() -> None:
 @pytest.mark.parametrize(("token", "faz"), [("__NADA__", "nada"),
                                             ("__STEAM__", "abrir_a_steam")])
 def test_o_ps_do_freestyle_muda_de_dono_sem_se_perder(token: str, faz: str) -> None:
-    """O PS do Freestyle na linha das Definições vira o ⑥ da tabela, e não some.
-
-    Medido na conferência de 02/10/2026: a migração tirava o ``__NADA__`` do
-    Freestyle e não o levava a lugar nenhum, e um PS calado fora do jogo
-    voltaria a abrir a Steam. Um ⑥ já escolhido vence.
-
-    MORDIDA: tirar a chamada do ``migrar_uma_vez`` reprova.
-    """
+    """O PS do Freestyle na linha das Definições vira o ⑥ da tabela, e não some."""
     save_profile(Profile.model_validate({"name": "Freestyle", "match": {"type": "any"},
                                          "button_actions": {"ps": token}}))
     opc.migrar_uma_vez()
@@ -852,17 +717,8 @@ def test_o_sexto_ja_escolhido_vence_o_ps_do_freestyle() -> None:
     assert m.carregar_maquina().gestos["ps"].faz == "abrir_o_hefesto"
 
 
-# ---------------------------------------------------------------------------
-# O PS tem um lugar só para o que faz no computador (commit 5)
-# ---------------------------------------------------------------------------
 def test_a_linha_do_ps_so_digita() -> None:
-    """Régua 8: a lista da linha do PS não tem «Abrir a Steam» nem «— Nada —».
-
-    E `_a_metade_da_maquina` responde só pela tabela dos gestos: o token antigo
-    que um perfil guarde não decide mais o ato do computador.
-
-    MORDIDA: devolver o `__NADA__` ao `hotkey._a_metade_da_maquina` reprova.
-    """
+    """Régua 8: a lista da linha do PS não tem «Abrir a Steam» nem «— Nada —»."""
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
@@ -882,9 +738,6 @@ def test_a_linha_do_ps_so_digita() -> None:
     assert hotkey._a_metade_da_maquina(de_fabrica, acoes.TOKEN_STEAM, calado) == ag.NADA
 
 
-# ---------------------------------------------------------------------------
-# A frase da troca (commit 6)
-# ---------------------------------------------------------------------------
 def test_a_frase_fala_a_lingua_da_tela() -> None:
     """Régua 7: o que é de fábrica ou do computador não é «menos», e chave crua não sai.
 
@@ -917,11 +770,7 @@ def test_a_frase_fala_a_lingua_da_tela() -> None:
 def test_so_neste_jogo_num_controle_sem_entrada_copia_o_que_vale(
     cartao: str, secao: str, esperado: dict[str, Any]
 ) -> None:
-    """O controle sem entrada vale o global da vista (ou o de fábrica): é isso que se copia.
-
-    Sem a cópia, o «Só neste jogo» de um controle que só tinha o valor global
-    não escrevia nada, e a marca continuava dizendo «PC».
-    """
+    """O controle sem entrada vale o global da vista (ou o de fábrica): é isso que se copia."""
     _computador({"global": {"leds": {"lightbar": [10, 20, 200]},
                             "speaker": {"volume": 70}}})
     save_profile(_perfil("Jogo X"))
@@ -935,18 +784,7 @@ def test_so_neste_jogo_num_controle_sem_entrada_copia_o_que_vale(
 
 @pytest.mark.parametrize("porta", ["status", "chip"])
 def test_entrar_na_navegacao_nao_da_ao_jogo_o_que_e_do_computador(porta: str) -> None:
-    """O «Status do Modo» e a entrada à mão na Navegação gravam o liga, e só ele, no jogo.
-
-    As velocidades vivas são as do computador, e o teclado é cartão do
-    computador. Medido na conferência de 02/10/2026: o jogo sem a seção
-    ``mouse`` ganhava ``speed: 11`` (a do computador), a marca do Mouse virava
-    o nome do jogo, e a velocidade 4 escolhida depois no PC não chegava mais a
-    ele; e o teclado ia ao perfil, com a marca do Teclado virando junto.
-
-    MORDIDA: devolver as vivas à seção nova (``secao_do_mouse_da_navegacao``)
-    reprova no mouse; devolver o ``teclado_emulado`` ao perfil reprova no
-    teclado.
-    """
+    """O «Status do Modo» e a entrada à mão na Navegação gravam o liga, e só ele, no jogo."""
     from hefesto_dualsense4unix.profiles import manager
 
     _computador({"global": {"mouse": {"speed": 11, "scroll_speed": 3},
@@ -967,7 +805,6 @@ def test_entrar_na_navegacao_nao_da_ao_jogo_o_que_e_do_computador(porta: str) ->
     vista = opc.o_que_vale(load_profile("Jogo X"))
     assert (vista.mouse.speed, vista.mouse.scroll_speed) == (4, 2)
     if porta == "status":
-        # O desligar do teclado vai ao computador, pelo dono, e não ao jogo.
         _computador({"global": {"teclado_emulado": True}})
         save_profile(_perfil("Jogo Y"))
         manager.gravar_a_navegacao_no_perfil_ativo(

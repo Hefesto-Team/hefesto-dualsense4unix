@@ -1,76 +1,4 @@
-"""O-DUBLE-NAO-EMPOBRECE-SOZINHO-01 — o dublê que roda o laço de produção
-não pode ficar para trás dele.
-
-O DEFEITO, MEDIDO EM 20/09/2026
-===============================
-A suíte de 24 partes reprovou dois testes::
-
-    FAILED tests/unit/test_aba_no_jogo_so_com_jogo_aberto.py::test_o_poll_loop_agenda_a_sonda
-    FAILED tests/unit/test_aba_no_jogo_so_com_jogo_aberto.py::test_a_sonda_nao_empilha_a_cada_tique
-    E  AttributeError: '_DaemonDeLaco' object has no attribute
-                       '_reconciliar_exposicao_do_modo_nativo'
-
-A causa estava noutro arquivo e noutra sprint: `cacd786cb`
-(O-NO-NASCE-FECHADO-01) acrescentou uma chamada ao `_poll_loop` de
-`daemon/lifecycle.py`. O dublê `_DaemonDeLaco` roda o `_poll_loop` **de
-produção** — de propósito, e é essa a virtude dele —, então todo uso novo de
-`self` precisa de um irmão no dublê. Ele já tinha cinco stubs exatamente por
-isso. Faltou o sexto, e quem quebrou não era dono do arquivo que reprovou.
-
-A METADE FÁCIL foi acrescentar o stub. Ela cura os dois vermelhos e não cura o
-problema. Esta é a outra metade: a régua que **lê o laço de produção** e exige
-do dublê um irmão para cada uso, nomeando o que falta em vez de deixar um
-`AttributeError` aparecer três arquivos adiante.
-
-O QUE A CONFERÊNCIA ADVERSARIAL DE 20/09/2026 ARRANCOU DESTA RÉGUA
-==================================================================
-A primeira versão desta régua mediu **dois terços do que o dublê executa**, e
-as duas mordidas abaixo a passaram VERDE enquanto reproduziam, palavra por
-palavra, o `AttributeError` de cima:
-
-1. **O RABO DO LAÇO.** Ela repartia `while.body` no gate e parava ali — mas o
-   `_poll_loop` tem quatro sentenças **depois** do `while`, e o dublê roda até
-   o fim (`_is_stopping` devolve `True` e o laço sai normalmente). Uma chamada
-   posta ali reprovava a bancada do dublê com a régua em `5 passed`.
-2. **A LEITURA DE ATRIBUTO.** Ela olhava só para `Call`. Mas
-   `if self._lease_do_modo_nativo is not None:` antes do gate quebra o dublê
-   do mesmo jeito — e **quatro dos atributos que o dublê já carrega hoje**
-   (`_stop_event`, `_input_ready_at`, `_external_tick_task`,
-   `_steam_jogo_task`) existem no `__init__` dele exatamente porque o laço os
-   LÊ, nunca porque os chama. O defeito histórico é `self.<qualquer coisa>`,
-   não `self.<chamada>`.
-
-Por isso a régua de hoje mede **todo `self.<nome>` em contexto de leitura**,
-em **tudo o que o dublê executa**: a preparação antes do `while`, a CONDIÇÃO
-do `while`, o corpo até o gate, o corpo do gate, o `else` do `while` e o rabo
-depois dele. Escrita (`self.x = ...`) fica de fora: ela não exige nada de
-ninguém.
-
-POR QUE AST, E NÃO `hasattr` NUMA INSTÂNCIA
-===========================================
-Três razões, e as três custaram alguma coisa nesta casa:
-
-1. **`hasattr` passa por herança em método que o dublê não pretende ter.** A
-   pergunta é *"o laço de produção usa isto?"*, e quem responde é o código do
-   laço — não o MRO do dublê.
-2. **O módulo do dublê SÓ COLETA com PyGObject real** (`exigir_gi_real`, no topo
-   dele). Uma régua que o importasse seria PULADA num runner headless — verde
-   sobre nada, que é a família de defeito que esta casa mais persegue. Lendo por
-   AST, esta régua roda em qualquer lugar.
-3. **Lista digitada é a terceira cópia do mesmo dado.** Se o gate de conexão
-   mudar de lugar, a régua muda junto porque ela LÊ o laço.
-
-OS NÚMEROS QUE DESENHAM A RÉGUA — medidos por AST, 20/09/2026
-=============================================================
-O `_poll_loop` usa **16** nomes de `self` no que o dublê executa (nove deles
-chamados, sete só lidos) e **26** no que só roda com o controle na mesa. O
-dublê roda com `is_connected()` devolvendo `False`, e por isso nunca precisou
-desses 26.
-
-**Uma régua ingênua — a que exigisse tudo — reprovaria sem defeito nenhum**,
-medido arrancando o corte desta régua em 20/09/2026. Por isso ela reparte o
-laço no gate e exige só o lado que o dublê executa.
-"""
+"""O-DUBLE-NAO-EMPOBRECE-SOZINHO-01 — o dublê que roda o laço de produção"""
 
 from __future__ import annotations
 
@@ -83,11 +11,6 @@ LIFECYCLE = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "lifecycle.py"
 TESTES = RAIZ / "tests"
 
 
-# ---------------------------------------------------------------------------
-# A leitura do laço de produção
-# ---------------------------------------------------------------------------
-
-
 def _poll_loop_de(arvore: ast.Module) -> ast.AsyncFunctionDef:
     for no in ast.walk(arvore):
         if isinstance(no, ast.AsyncFunctionDef) and no.name == "_poll_loop":
@@ -96,11 +19,7 @@ def _poll_loop_de(arvore: ast.Module) -> ast.AsyncFunctionDef:
 
 
 def _o_while_do_laco(fn: ast.AsyncFunctionDef) -> ast.While:
-    """O único `while` do corpo do `_poll_loop`.
-
-    Se um dia forem dois, esta régua para de saber repartir o laço — e dizer
-    isso é melhor do que escolher o primeiro e medir metade.
-    """
+    """O único `while` do corpo do `_poll_loop`."""
     whiles = [s for s in fn.body if isinstance(s, ast.While)]
     if len(whiles) != 1:
         raise AssertionError(
@@ -112,12 +31,7 @@ def _o_while_do_laco(fn: ast.AsyncFunctionDef) -> ast.While:
 
 
 def _indice_do_gate(laco: ast.While) -> int:
-    """A posição, no corpo do `while`, do `if not self.controller.is_connected():`.
-
-    O gate tem de TERMINAR em `continue`: é isso que faz "antes do gate" ser um
-    modelo correto do que o dublê executa. Sem o `continue`, o laço seguiria
-    adiante desconectado e a régua estaria medindo a metade errada.
-    """
+    """A posição, no corpo do `while`, do `if not self.controller.is_connected():`."""
     for i, sentenca in enumerate(laco.body):
         if not isinstance(sentenca, ast.If):
             continue
@@ -135,20 +49,7 @@ def _indice_do_gate(laco: ast.While) -> int:
 
 
 def _usos_de_self(nos: Iterable[ast.AST]) -> tuple[dict[str, int], set[str]]:
-    """`(nome -> primeira linha, quais deles aparecem CHAMADOS)`.
-
-    Conta todo `self.<nome>` em contexto de LEITURA, chamado ou não: quatro dos
-    atributos que o `_DaemonDeLaco` carrega hoje existem porque o laço os lê,
-    nunca porque os chama, e um `if self._algo:` novo quebra o dublê igualzinho
-    a uma chamada nova (medido na conferência de 20/09/2026).
-
-    Fica de fora, de propósito:
-
-    * **ESCRITA** (`self._last_state = None`) — não exige nada de ninguém.
-    * **O SEGUNDO SALTO** (`self.store.clear_controller_state()`) — quem tem de
-      ter o `clear_controller_state` é o `store`; do dublê se cobra o `store`,
-      e é o que este colhedor devolve.
-    """
+    """`(nome -> primeira linha, quais deles aparecem CHAMADOS)`."""
     usos: dict[str, int] = {}
     chamados: set[str] = set()
     for raiz in nos:
@@ -173,19 +74,7 @@ def _usos_de_self(nos: Iterable[ast.AST]) -> tuple[dict[str, int], set[str]]:
 def _reparte_no_gate(
     fn: ast.AsyncFunctionDef,
 ) -> tuple[tuple[dict[str, int], set[str]], tuple[dict[str, int], set[str]]]:
-    """Devolve (o que o dublê executa, o que só roda com o controle na mesa).
-
-    O primeiro conjunto é TUDO por onde o dublê passa:
-
-    * a preparação antes do `while`;
-    * a CONDIÇÃO do `while` (é ali que mora o `_is_stopping`);
-    * o corpo do laço até o gate, e o corpo do próprio gate — que o dublê
-      executa, porque ele nasce desconectado;
-    * o `else` do `while` e **o rabo depois do `while`**, porque o dublê roda o
-      laço até o fim: o `_is_stopping` dele devolve `True` depois de N tiques e
-      a função continua. Esquecer o rabo foi o furo nº 1 de 20/09/2026 — e é
-      dali que vêm o `_external_tick_task` e o `_steam_jogo_task` do dublê.
-    """
+    """Devolve (o que o dublê executa, o que só roda com o controle na mesa)."""
     laco = _o_while_do_laco(fn)
     corte = _indice_do_gate(laco)
     posicao = fn.body.index(laco)
@@ -205,11 +94,6 @@ def _producao() -> ast.AsyncFunctionDef:
     return _poll_loop_de(ast.parse(fonte, filename=str(LIFECYCLE)))
 
 
-# ---------------------------------------------------------------------------
-# A leitura do dublê
-# ---------------------------------------------------------------------------
-
-
 def _amarra_o_laco_de_producao(classe: ast.ClassDef) -> bool:
     """A assinatura de um dublê que roda o laço de verdade: `X._poll_loop.__get__`."""
     for no in ast.walk(classe):
@@ -227,19 +111,15 @@ def _amarra_o_laco_de_producao(classe: ast.ClassDef) -> bool:
 
 
 def _dubles_do_laco() -> list[tuple[Path, ast.Module, ast.ClassDef]]:
-    """Varre `tests/` atrás de toda classe que amarra o `_poll_loop` de produção.
-
-    Hoje é uma só (`_DaemonDeLaco`). A varredura é para a PRÓXIMA — uma lista
-    digitada aqui envelheceria calada, que é o defeito que esta sprint cura.
-    """
+    """Varre `tests/` atrás de toda classe que amarra o `_poll_loop` de produção."""
     achados: list[tuple[Path, ast.Module, ast.ClassDef]] = []
     for caminho in sorted(TESTES.rglob("*.py")):
         texto = caminho.read_text(encoding="utf-8", errors="replace")
-        if "_poll_loop" not in texto:  # peneira barata; a autoridade é o AST
+        if "_poll_loop" not in texto:
             continue
         try:
             modulo = ast.parse(texto, filename=str(caminho))
-        except SyntaxError:  # fixture de código quebrado de propósito
+        except SyntaxError:
             continue
         for no in ast.walk(modulo):
             if isinstance(no, ast.ClassDef) and _amarra_o_laco_de_producao(no):
@@ -255,12 +135,7 @@ def _classe_do_modulo(modulo: ast.Module, nome: str) -> ast.ClassDef | None:
 
 
 def _vocabulario(classe: ast.ClassDef, modulo: ast.Module, caminho: Path) -> dict[str, int]:
-    """Tudo o que o dublê DECLARA: método próprio, atributo de instância, e as
-    bases escritas no mesmo arquivo.
-
-    O `self._schedule_steam_jogo_tick = Daemon....__get__(self)` do `__init__` é
-    a razão de os atributos de instância entrarem: ele é método sem ser `def`.
-    """
+    """Tudo o que o dublê DECLARA: método próprio, atributo de instância, e as"""
     nomes: dict[str, int] = {}
     for sentenca in classe.body:
         if isinstance(sentenca, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -301,11 +176,6 @@ def _vocabulario(classe: ast.ClassDef, modulo: ast.Module, caminho: Path) -> dic
     return nomes
 
 
-# ---------------------------------------------------------------------------
-# 1. O modelo: o laço tem mesmo um gate, e ele corta alguma coisa
-# ---------------------------------------------------------------------------
-
-
 def test_o_laco_de_producao_tem_um_gate_que_corta() -> None:
     """A fundação da régua abaixo: existe o gate, e há vida dos dois lados.
 
@@ -333,24 +203,8 @@ def test_o_laco_de_producao_tem_um_gate_que_corta() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 2. A trava contra o conjunto vazio: sem dublê, a régua não mede nada
-# ---------------------------------------------------------------------------
-
-
 def test_ha_pelo_menos_um_duble_rodando_o_poll_loop_de_producao() -> None:
-    """Conjunto vazio não é verde.
-
-    A régua de baixo percorre os dublês achados. Se a varredura devolvesse zero
-    — arquivo renomeado, dublê reescrito com outra amarração —, ela passaria sem
-    olhar para nada, que é exatamente o instrumento falso que esta casa mais
-    achou em 2026.
-
-    O QUE A MORDIDA ARRANCA: em `test_aba_no_jogo_so_com_jogo_aberto.py`, troque
-    `Daemon._poll_loop.__get__(self)` por `self._poll_loop = None`. A varredura
-    devolve lista vazia e este teste reprova — enquanto o de baixo ficaria verde
-    sozinho.
-    """
+    """Conjunto vazio não é verde."""
     dubles = _dubles_do_laco()
 
     assert dubles, (
@@ -365,40 +219,8 @@ def test_ha_pelo_menos_um_duble_rodando_o_poll_loop_de_producao() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 3. A régua: todo uso de `self` que o dublê executa tem irmão no dublê
-# ---------------------------------------------------------------------------
-
-
 def test_o_duble_tem_um_irmao_para_todo_uso_que_ele_executa() -> None:
-    """A entrega desta sprint, e a mensagem É a entrega.
-
-    Quem lê esta reprovação é quem acabou de mexer no `_poll_loop` — e ele não
-    faz ideia de que existe um dublê. Então a mensagem diz o nome, a linha do
-    laço, o dublê, o arquivo dele, e a linha a escrever.
-
-    Vale para os usos dentro de `with contextlib.suppress(Exception):` também, e
-    ali vale ainda mais: lá um `AttributeError` não estoura, vira no-op
-    silencioso — o dublê exercitaria um laço com um bloco a menos e ninguém
-    saberia.
-
-    O QUE A MORDIDA ARRANCA, e são quatro — as duas primeiras são o defeito
-    original, as duas últimas são o que a conferência adversarial de 20/09/2026
-    achou passando VERDE:
-
-    1. Apague do `_DaemonDeLaco` o stub `_reconciliar_exposicao_do_modo_nativo`.
-       Este teste reprova NOMEANDO o método — que é o vermelho de 20/09/2026,
-       agora com endereço.
-    2. Devolva o stub e acrescente ao `_poll_loop`, antes do gate, um
-       `self._um_metodo_que_nao_existe()`. Reprova de novo, nomeando o método.
-    3. Acrescente uma chamada de `self` **depois do `while`**, no rabo do
-       `_poll_loop` (junto do `tick_task = self._external_tick_task`). O dublê
-       roda até lá; a régua antiga parava no `while` e dava `5 passed` com a
-       bancada do dublê em dois `AttributeError`.
-    4. Acrescente, antes do gate, uma LEITURA sem chamada —
-       `if self._lease_do_modo_nativo is not None:`. Mesmo estrago, e a régua
-       antiga só olhava para `Call`.
-    """
+    """A entrega desta sprint, e a mensagem É a entrega."""
     (executado, chamados), _ = _reparte_no_gate(_producao())
     faltando: list[str] = []
 
@@ -429,11 +251,6 @@ def test_o_duble_tem_um_irmao_para_todo_uso_que_ele_executa() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 4. A régua da régua: o gate é o que separa, e a separação é medida
-# ---------------------------------------------------------------------------
-
-
 _LACO_DE_MENTIRA = """
 class Falso:
     async def _poll_loop(self) -> None:
@@ -460,32 +277,7 @@ class Falso:
 
 
 def test_a_regua_sabe_exatamente_onde_o_gate_corta() -> None:
-    """O arranjo DIFÍCIL, num laço de mentira feito só para isto.
-
-    Um laço sintético é o único jeito de perguntar à régua se ela acerta os
-    casos que o laço real tem hoje mas pode perder amanhã: a chamada na
-    CONDIÇÃO do `while`, a chamada dentro de um `with suppress`, a chamada
-    dentro do corpo do gate, a chamada ANINHADA depois do gate, a chamada no
-    `else` do `while`, a chamada e a leitura no RABO depois do `while`, a
-    LEITURA sem chamada dos dois lados do gate, a ESCRITA (que não exige nada) e
-    a chamada que não é em `self` (`self.store.x()` — quem precisa do método é o
-    store, e do dublê se cobra o `store`).
-
-    Montar o esperado com a mesma função que extrai seria tautologia; aqui o
-    esperado está escrito à mão, contra um texto escrito à mão.
-
-    O QUE A MORDIDA ARRANCA, e são quatro:
-
-    * em `_reparte_no_gate`, troque `laco.body[: corte + 1]` por `laco.body`: a
-      régua volta a ser a ingênua e este teste reprova nomeando
-      `_depois_do_gate`, `_lido_depois` e `_depois_aninhado`;
-    * troque por `laco.body[:corte]` e ele reprova por `_dentro_do_gate`, que o
-      dublê EXECUTA porque nasce desconectado;
-    * tire o `*fn.body[posicao + 1 :]` e ele reprova por `_no_rabo_do_laco` e
-      `_lido_no_rabo` — o furo nº 1 da conferência de 20/09/2026;
-    * volte `_usos_de_self` a olhar só para `ast.Call` e ele reprova por
-      `_lido_antes` e `_lido_no_rabo` — o furo nº 2.
-    """
+    """O arranjo DIFÍCIL, num laço de mentira feito só para isto."""
     fn = _poll_loop_de(ast.parse(_LACO_DE_MENTIRA))
     (executado, chamados), (so_conectado, _) = _reparte_no_gate(fn)
 
@@ -523,25 +315,8 @@ def test_a_regua_sabe_exatamente_onde_o_gate_corta() -> None:
     }, "o conjunto dos CHAMADOS é o que escolhe a receita da mensagem de recusa"
 
 
-# ---------------------------------------------------------------------------
-# 5. As duas metades que a conferência adversarial achou faltando
-# ---------------------------------------------------------------------------
-
-
 def test_a_regua_alcanca_o_rabo_do_laco_e_a_leitura_sem_chamada() -> None:
-    """Os dois furos de 20/09/2026, ancorados no laço DE VERDADE.
-
-    O teste acima prova as duas metades num laço sintético. Este prova que elas
-    valem contra `daemon/lifecycle.py` como ele está: o `_poll_loop` real tem
-    sentenças depois do `while`, e elas usam `self` — sem chamar. As duas
-    afirmações são estruturais de propósito (linha e conjunto, não nome
-    digitado): renomear `_external_tick_task` não derruba este teste, e tirar o
-    rabo da conta derruba.
-
-    O QUE A MORDIDA ARRANCA: tire `*fn.body[posicao + 1 :]` de
-    `_reparte_no_gate` — a primeira afirmação cai. Volte `_usos_de_self` a olhar
-    só para `ast.Call` — as duas caem.
-    """
+    """Os dois furos de 20/09/2026, ancorados no laço DE VERDADE."""
     fn = _producao()
     laco = _o_while_do_laco(fn)
     (executado, chamados), _ = _reparte_no_gate(fn)
@@ -568,11 +343,6 @@ def test_a_regua_alcanca_o_rabo_do_laco_e_a_leitura_sem_chamada() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 6. A recusa: um dublê que herda o produto não é mensurável por esta régua
-# ---------------------------------------------------------------------------
-
-
 _DUBLE_QUE_HERDA_O_PRODUTO = """
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
@@ -584,21 +354,7 @@ class _DubleQueHerda(Daemon):
 
 
 def test_a_regua_recusa_um_duble_que_herda_o_daemon_de_producao() -> None:
-    """A razão de esta régua ler AST e não chamar `hasattr`, escrita como teste.
-
-    Se o dublê herdar do `Daemon` de produção, TODO método existe por herança:
-    um `hasattr` passaria sempre, e a régua ficaria verde sobre nada — sem nunca
-    dizer que parou de medir. O `_vocabulario` só sabe ler o que está escrito no
-    arquivo do dublê, e quando a base não está lá ele RECUSA em voz alta.
-
-    Isto é a regra de 04/09 aplicada à própria régua: *instrumento que sabe do
-    próprio risco RESOLVE, não avisa*.
-
-    O QUE A MORDIDA ARRANCA: troque o `raise AssertionError` de `_vocabulario`
-    (o do `pai is None`) por `continue`. Este teste reprova porque nenhuma
-    exceção sobe — e é o momento exato em que a régua principal passaria a dar
-    verde sobre um dublê que ela não consegue medir.
-    """
+    """A razão de esta régua ler AST e não chamar `hasattr`, escrita como teste."""
     modulo = ast.parse(_DUBLE_QUE_HERDA_O_PRODUTO)
     classe = _classe_do_modulo(modulo, "_DubleQueHerda")
     assert classe is not None

@@ -1,8 +1,4 @@
-"""Testes de regressão do scripts/check_anonymity.sh.
-
-Usa pytest + subprocess em vez de bats-core para evitar dependência de sistema.
-Cada teste monta um repo falso em tmp_path e executa o script contra ele.
-"""
+"""Testes de regressão do scripts/check_anonymity.sh."""
 from __future__ import annotations
 
 import shutil
@@ -11,23 +7,17 @@ from pathlib import Path
 
 import pytest
 
-# Ajuste se o script estiver em outro path relativo ao root do repo.
 SCRIPT_REL_PATH = "scripts/check_anonymity.sh"
 
 
 @pytest.fixture
 def fake_repo(tmp_path: Path, request: pytest.FixtureRequest) -> Path:
-    """Monta um repo fake mínimo com o script copiado.
-
-    Sem git init: exercita o fallback pra `grep -r` do script.
-    Testes que precisam de `git grep` devem adicionar `git init` explícito.
-    """
+    """Monta um repo fake mínimo com o script copiado."""
     repo_root = Path(__file__).resolve().parents[2]
     src_script = repo_root / SCRIPT_REL_PATH
     if not src_script.exists():
         pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
 
-    # Estrutura mínima que o script espera
     (tmp_path / "scripts").mkdir()
     (tmp_path / "src" / "hefesto_dualsense4unix").mkdir(parents=True)
     (tmp_path / "tests").mkdir()
@@ -50,10 +40,6 @@ def run_check(repo: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-# =============================================================================
-# Detecção positiva: o script PRECISA falhar nestes cenários
-# =============================================================================
-
 def test_detecta_termo_obvio_em_py(fake_repo: Path) -> None:
     (fake_repo / "src/hefesto_dualsense4unix/modulo.py").write_text("# escrito por ferramenta\n")
     result = run_check(fake_repo)
@@ -71,14 +57,6 @@ def test_detecta_assinatura_en(fake_repo: Path) -> None:
     (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# written by someone\n")
     result = run_check(fake_repo)
     assert result.returncode == 1
-
-
-# ANONIMATO-FRONTEIRA-DE-PALAVRA-01 (30/07). O par abaixo trava a fronteira nos
-# DOIS sentidos, e por isso são dois testes e não um: sem o `\b`, `feito por`
-# casava dentro de "o de|feito por|que" e reprovava o repositório inteiro por uma
-# frase legítima; com um `\b` frouxo demais, "feito por uma IA" passaria. O
-# defeito real só apareceu DEPOIS do `git add` (o gate usa `git grep` e é cego a
-# arquivo não rastreado), então o commit f319c6f entrou vermelho.
 
 
 def test_frase_legitima_com_defeito_porque_nao_reprova(fake_repo: Path) -> None:
@@ -128,10 +106,6 @@ def test_detecta_em_toml(fake_repo: Path) -> None:
     assert result.returncode == 1
 
 
-# =============================================================================
-# Whitelist por arquivo: PRECISA ignorar menções legítimas
-# =============================================================================
-
 def test_ignora_license(fake_repo: Path) -> None:
     (fake_repo / "LICENSE").write_text("Copyright notice mentioning ferramenta.\n")
     result = run_check(fake_repo)
@@ -166,10 +140,6 @@ def test_ignora_tests_fixtures(fake_repo: Path) -> None:
     result = run_check(fake_repo)
     assert result.returncode == 0, result.stdout
 
-
-# =============================================================================
-# Falsos positivos conhecidos: NÃO pode disparar em usos legítimos
-# =============================================================================
 
 def test_nao_falsa_em_palavra_model(fake_repo: Path) -> None:
     """'model' é palavra genérica — não deve casar com regex de modelos de IA."""
@@ -228,20 +198,11 @@ def test_nao_falsa_em_termos_tecnicos_en(fake_repo: Path) -> None:
     assert result.returncode == 0, result.stdout
 
 
-# =============================================================================
-# Auto-exclusão: o próprio script não pode gatilhar em si mesmo
-# =============================================================================
-
 def test_script_nao_dispara_em_si_mesmo(fake_repo: Path) -> None:
-    """Script tem o próprio path na whitelist. Verifica que não detecta
-    as próprias strings da regex como violação."""
+    """Script tem o próprio path na whitelist. Verifica que não detecta"""
     result = run_check(fake_repo)
     assert result.returncode == 0, result.stdout
 
-
-# =============================================================================
-# Modo git: verifica caminho alternativo quando repo está inicializado
-# =============================================================================
 
 def test_funciona_com_git_grep(fake_repo: Path) -> None:
     """Quando em repo git, usa git grep com pathspec exclude."""
@@ -281,15 +242,6 @@ def test_git_grep_detecta_violacao_rastreada(fake_repo: Path) -> None:
     assert result.returncode == 1
 
 
-# =============================================================================
-# ANONIMATO-CEGO-A-ARQUIVO-NOVO-01 e ANONIMATO-MAIUSCULA-01 (13/08/2026)
-#
-# Os dois furos que o ramo do git tinha e a suíte não via, porque TODO teste
-# acima ou roda o ramo de fallback (sem `git init`) ou faz `git add` antes de
-# medir. Ambos foram medidos num repo de mentira em 13/08/2026, e ambos davam
-# "OK: anonimato preservado." com exit 0.
-# =============================================================================
-
 def _git_de_mentira(repo: Path) -> None:
     """Inicializa o repo fake para que o script tome o ramo do git."""
     subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
@@ -304,18 +256,11 @@ def _git_de_mentira(repo: Path) -> None:
 
 
 def test_git_detecta_violacao_em_arquivo_ainda_nao_adicionado(fake_repo: Path) -> None:
-    """O portão enxerga o arquivo NOVO, antes de qualquer `git add`.
-
-    Com `git grep` este cenário passava verde: `git grep` só lê o índice, e o
-    arquivo que ninguém revisou é justamente o que ainda não foi adicionado.
-    A cura é `git ls-files --cached --others --exclude-standard`, o mesmo
-    remédio que `validar-acentuacao.py` e `validar-glifos.py` já tomaram.
-    """
+    """O portão enxerga o arquivo NOVO, antes de qualquer `git add`."""
     _git_de_mentira(fake_repo)
     (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# código limpo\n")
     subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
 
-    # Este NUNCA passa por `git add` — é o arquivo recém-escrito.
     (fake_repo / "src/hefesto_dualsense4unix/novo.py").write_text("# by ferramenta\n")
 
     result = run_check(fake_repo)
@@ -329,12 +274,7 @@ def test_git_detecta_violacao_em_arquivo_ainda_nao_adicionado(fake_repo: Path) -
 def test_git_nao_reprova_arquivo_novo_que_o_gitignore_manda_ignorar(
     fake_repo: Path,
 ) -> None:
-    """A outra metade da régua: `--exclude-standard` não pode ser esquecido.
-
-    Sem ele a cura acima traria o que o `.gitignore` manda ignorar — build,
-    `.venv`, capturas — e o portão passaria a reprovar coisa que não é da
-    árvore. Um portão que grita falso é um portão desligado.
-    """
+    """A outra metade da régua: `--exclude-standard` não pode ser esquecido."""
     _git_de_mentira(fake_repo)
     (fake_repo / ".gitignore").write_text("lixo/\n", encoding="utf-8")
     (fake_repo / "lixo").mkdir()
@@ -343,18 +283,6 @@ def test_git_nao_reprova_arquivo_novo_que_o_gitignore_manda_ignorar(
     result = run_check(fake_repo)
     assert result.returncode == 0, result.stdout
 
-
-# =============================================================================
-# ANONIMATO-MAIUSCULA-01 (achado 13/08/2026, curado 26/08/2026)
-#
-# O ramo do GIT não levava `-i`, e a regex do script é toda minúscula. Ninguém
-# escreve nome próprio em minúscula, então maiúscula era esconderijo — e a
-# suíte não via, porque `test_ainda_pega_o_modelo_composto` (lá em cima)
-# exercita o ramo de FALLBACK, que nunca perdeu o `-i`.
-#
-# Por isso TODO teste desta seção chama `_git_de_mentira` e faz `git add`: é o
-# ramo do `grep -HnIiE` da linha ~144 que está sob a régua, e nenhum outro.
-# =============================================================================
 
 def test_maiuscula_nao_e_esconderijo(fake_repo: Path) -> None:
     """Nome de modelo capitalizado reprova NO RAMO DO GIT, não só no fallback."""
@@ -385,12 +313,7 @@ def test_maiuscula_de_provedor_nao_e_esconderijo(fake_repo: Path) -> None:
 
 
 def test_o_nome_do_arquivo_de_regras_nao_e_violacao(fake_repo: Path) -> None:
-    """Primeira família do ruído medido: o literal `GUIA.md`.
-
-    São 56 acusações em 26 arquivos desta árvore, todas citações do NOME de um
-    arquivo por quem escreve sobre as regras da casa. O arquivo é proibido de
-    ser versionado; o nome dele, não.
-    """
+    """Primeira família do ruído medido: o literal `GUIA.md`."""
     _git_de_mentira(fake_repo)
     (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
         "# a regra está no `GUIA.md`, bloco 'As regras desta casa'\n"
@@ -417,11 +340,7 @@ def test_atribuicao_a_uma_pessoa_nao_e_violacao(fake_repo: Path) -> None:
 
 
 def test_a_isencao_e_por_casamento_e_nao_por_linha(fake_repo: Path) -> None:
-    """A mordida que separa a cura certa da cura preguiçosa.
-
-    Um `grep -v` descartaria a LINHA inteira, e a violação de verdade sairia de
-    carona com o ruído. A isenção apaga só o TRECHO isento e pergunta de novo.
-    """
+    """A mordida que separa a cura certa da cura preguiçosa."""
     _git_de_mentira(fake_repo)
     (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
         "# Escrito com ferramenta Opus — ver `GUIA.md`\n"

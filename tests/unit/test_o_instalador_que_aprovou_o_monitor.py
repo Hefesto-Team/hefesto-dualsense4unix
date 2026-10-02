@@ -64,14 +64,9 @@ RAIZ = Path(__file__).resolve().parents[2]
 WP_FIX = RAIZ / "scripts" / "fix_wireplumber_default_source.sh"
 INSTALL = RAIZ / "install.sh"
 
-#: O nome MEDIDO na máquina dela em 09/08/2026 — o monitor da saída S/PDIF.
 MONITOR_DELA = "alsa_output.pci-0000_0c_00.4.iec958-stereo.monitor"
-#: A única entrada de captura de verdade da máquina dela — com as TRÊS portas
-#: `not available` (nada plugado no jack), medido no mesmo instante.
 ONBOARD_DELA = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 
-#: `pactl list sources` (o longo) como ele saiu na máquina dela: o monitor sem
-#: portas e a onboard com as três de captura `not available`.
 PACTL_LONGO = f"""Source #61288
 \tName: {MONITOR_DELA}
 \tDescription: Monitor of Digital Stereo (IEC958)
@@ -93,9 +88,6 @@ PACTL_CURTO = (
     f"61289\t{ONBOARD_DELA}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
 )
 
-#: O mesmo cenário com uma webcam plugada: porta de captura `unknown`, que conta
-#: como USÁVEL (medido em 26/07 — a entrada do controle grava de verdade com
-#: `unknown`, e só o `not available` explícito reprova).
 WEBCAM = "alsa_input.usb-046d_C920-02.analog-stereo"
 PACTL_LONGO_COM_WEBCAM = PACTL_LONGO + f"""
 Source #61300
@@ -113,11 +105,7 @@ PACTL_CURTO_COM_WEBCAM = PACTL_CURTO + (
 def _dubla_pactl(
     tmp_path: Path, *, padrao: str, longo: str = PACTL_LONGO, curto: str = PACTL_CURTO
 ) -> dict[str, str]:
-    """Um `pactl` dublê num PATH temporário; devolve o env para o subprocess.
-
-    Só responde o que as funções sob teste perguntam. Qualquer outro subcomando
-    sai vazio com status 0 — dublê que finge saber tudo esconde chamada nova.
-    """
+    """Um `pactl` dublê num PATH temporário; devolve o env para o subprocess."""
     binario = tmp_path / "bin"
     binario.mkdir(exist_ok=True)
     (binario / "pactl").write_text(
@@ -152,11 +140,6 @@ def _rodar(func: str, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. Monitor nunca mais sai como OK
-# ---------------------------------------------------------------------------
-
-
 def test_monitor_nao_e_aprovado_pela_verificacao_do_install(tmp_path: Path) -> None:
     """O estado EXATO de 09/08 na máquina dela tem de REPROVAR.
 
@@ -168,7 +151,6 @@ def test_monitor_nao_e_aprovado_pela_verificacao_do_install(tmp_path: Path) -> N
     assert res.returncode == 3, f"esperava exit 3 (monitor), veio {res.returncode}: {res.stdout}"
     assert "OK" not in res.stdout, f"o monitor voltou a ser aprovado: {res.stdout}"
     assert "MONITOR" in res.stdout
-    # A consequência, não só o rótulo: ela precisa saber o que está sendo gravado.
     assert "SAÍDA" in res.stdout
 
 
@@ -210,28 +192,14 @@ def test_entrada_de_verdade_continua_passando(tmp_path: Path) -> None:
 def test_is_monitor_source_classifica_pelo_sufixo(
     tmp_path: Path, nome: str, e_monitor: bool
 ) -> None:
-    """No PipeWire o monitor termina em `.monitor` — sufixo do nó, não palpite.
-
-    O caso do meio importa: um nó cujo nome CONTÉM "monitor" no meio não é um
-    monitor, e reprovar por substring transformaria a cura em alarme falso.
-    """
+    """No PipeWire o monitor termina em `.monitor` — sufixo do nó, não palpite."""
     env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "WP_FIX": str(WP_FIX)}
     res = _rodar(f'is_monitor_source "{nome}"', env)
     assert (res.returncode == 0) is e_monitor, res.stdout
 
 
-# ---------------------------------------------------------------------------
-# 2. Um critério só: o alvo sai do mesmo filtro que a cura do doctor usa
-# ---------------------------------------------------------------------------
-
-
 def test_nao_elege_fonte_sem_porta_usavel(tmp_path: Path) -> None:
-    """Sem fonte que se sustente, o instalador não elege NADA.
-
-    Medido na máquina dela: elegia a onboard (três portas `not available`), o
-    WirePlumber a recusava e reelegia o sink — e a preferência persistida dela
-    tinha sido sobrescrita por um nó que não para de pé.
-    """
+    """Sem fonte que se sustente, o instalador não elege NADA."""
     env = _dubla_pactl(tmp_path, padrao=MONITOR_DELA)
     res = _rodar("pick_target_source_name", env)
     assert res.returncode == 0, res.stderr
@@ -258,22 +226,12 @@ def test_reset_diz_que_nao_elegeu_em_vez_de_eleger_qualquer_um(tmp_path: Path) -
     assert "nenhuma fonte de captura com porta usável" in res.stdout, res.stdout
 
 
-# ---------------------------------------------------------------------------
-# 3. O install.sh dá um veredito FINAL do microfone
-# ---------------------------------------------------------------------------
-
-
 def _texto_do_install() -> str:
     return INSTALL.read_text(encoding="utf-8")
 
 
 def test_install_confere_a_fonte_padrao_depois_da_cura() -> None:
-    """A leitura final existe, e vem DEPOIS do `--fix-mic`.
-
-    Antes desta ordem o veredito era sempre parcial: a verificação do wp-fix roda
-    antes da cura, então aprovar ou reprovar ali é falar de um estado que o
-    próprio passo ainda vai tentar mudar.
-    """
+    """A leitura final existe, e vem DEPOIS do `--fix-mic`."""
     texto = _texto_do_install()
     assert "INSTALADOR-QUE-APROVOU-O-MONITOR-01" in texto
     pos_fix_mic = texto.find("doctor.sh\" --fix-mic --quiet")
@@ -287,16 +245,11 @@ def test_install_reprova_o_monitor_com_a_consequencia_na_tela() -> None:
     texto = _texto_do_install()
     assert "o microfone padrão do sistema é um MONITOR" in texto
     assert "SAI do PC" in texto, "a consequência sumiu do texto do install"
-    # O medidor mostrando sinal é o que faz o defeito não PARECER defeito.
     assert "parece estar funcionando" in texto
 
 
 def test_install_nao_oferece_comando_impotente_para_o_monitor() -> None:
-    """RECEITA-ERRADA-01: sem fonte de captura, não há comando que resolva.
-
-    O bloco do veredito não pode mandar rodar `--fix-mic` (que acabou de rodar) —
-    a saída honesta é dizer que o que resolve é conectar uma entrada de verdade.
-    """
+    """RECEITA-ERRADA-01: sem fonte de captura, não há comando que resolva."""
     texto = _texto_do_install()
     inicio = texto.find("o microfone padrão do sistema é um MONITOR")
     assert inicio > 0
@@ -312,17 +265,11 @@ def test_o_wp_fix_documenta_o_exit_3() -> None:
     assert "3 = a fonte padrão é um MONITOR" in cabecalho
 
 
-#: O passo do install que decide o microfone padrão do sistema.
 MARCADOR_DO_PASSO_10 = 'step "10/11"'
 
 
 def _bloco_do_passo(marcador: str) -> str:
-    """Do `step "N/11"` até a régua (`# ---…`) que abre o passo seguinte.
-
-    Substitui a fatia de 2000 caracteres que esta régua usava: um comprimento
-    cravado é um fato que envelhece sozinho — bastava o passo 10 crescer para a
-    régua passar a medir meio passo, sem avisar ninguém.
-    """
+    """Do `step "N/11"` até a régua (`# ---…`) que abre o passo seguinte."""
     texto = _texto_do_install()
     inicio = texto.index(marcador)
     fim = re.search(r"^# -{10,}", texto[inicio:], re.MULTILINE)
@@ -337,16 +284,7 @@ def _roda_o_passo_10(
     padrao: str = ONBOARD_DELA,
     sustenta: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    """Executa o passo 10 REAL do install, com o wp-fix e o doctor dublados.
-
-    O `ROOT_DIR` aponta para uma raiz de mentira em `tmp`, então os dois scripts
-    que o passo chama são os dublês — o papel deles aqui é devolver o código de
-    saída do cenário e responder as duas consultas da conferência final
-    (MIC-PADRAO-NO-CABO-01): `--fonte-se-sustenta` devolve o nome só quando
-    `sustenta`, e `--melhor-fonte-elegivel` não acha outra. O `pactl` é o dublê
-    do arquivo, e por isso a conferência final também roda sem tocar o áudio da
-    máquina.
-    """
+    """Executa o passo 10 REAL do install, com o wp-fix e o doctor dublados."""
     raiz = tmp_path / "raiz"
     (raiz / "scripts").mkdir(parents=True, exist_ok=True)
     wp = raiz / "scripts" / "fix_wireplumber_default_source.sh"
@@ -408,24 +346,17 @@ def test_install_trata_o_exit_3_sem_declarar_reeleicao(tmp_path: Path) -> None:
     """
     monitor = _roda_o_passo_10(tmp_path / "rc3", rc_do_wp_fix=3)
     assert monitor.returncode == 0, monitor.stderr
-    # não é falha do drop-in:
     assert "drop-in do WirePlumber instalado" in monitor.stdout, monitor.stdout
     assert "falhou" not in monitor.stdout, monitor.stdout
-    # não é veredito — ele sai no fim:
     assert "o veredito do microfone sai no fim deste passo" in monitor.stdout, monitor.stdout
     assert "ainda não é um microfone" not in monitor.stdout, monitor.stdout
-    # e não é reeleição:
     assert "reeleita" not in monitor.stdout, (
         "o rc 3 voltou a cair no desfecho genérico e declarou uma eleição que "
         f"não houve: {monitor.stdout}"
     )
-    # o veredito do fim, sobre a onboard com as três portas `not available`:
     assert "(entrada de verdade)" not in monitor.stdout, monitor.stdout
     assert "vai gravar silêncio" in monitor.stdout, monitor.stdout
 
-    # O contraste que impede o teste de passar por ausência: com rc 0 a frase da
-    # reeleição TEM de aparecer, e uma fonte que se sustenta é entrada de verdade.
-    # Sem isto, apagar o texto do install deixaria os `not in` acima verdes.
     eleicao = _roda_o_passo_10(
         tmp_path / "rc0", rc_do_wp_fix=0, padrao=WEBCAM, sustenta=True
     )
@@ -437,16 +368,7 @@ def test_install_trata_o_exit_3_sem_declarar_reeleicao(tmp_path: Path) -> None:
 
 
 def test_nenhum_teste_daqui_toca_o_audio_da_maquina() -> None:
-    """Cinto de segurança: o dublê é o único `pactl` que estes testes alcançam.
-
-    Um comando de trocar a fonte padrão escapando daqui mudaria o áudio de quem
-    roda a suíte — e é o áudio da máquina dela.
-
-    A verificação monta os nomes por concatenação DE PROPÓSITO: escrever o
-    comando por extenso aqui faria este teste encontrar a si mesmo e reprovar
-    para sempre. Foi o que aconteceu na primeira versão — o cinto de segurança
-    prendeu o próprio cinto.
-    """
+    """Cinto de segurança: o dublê é o único `pactl` que estes testes alcançam."""
     fonte = Path(__file__).read_text(encoding="utf-8")
     proibidos = ("set-default-" + "source", "wpctl set-" + "default")
     for comando in proibidos:

@@ -1,26 +1,4 @@
-"""A-ENTRADA-SOZINHA-SEPARA-A-TELA-DO-PAD-01 — o instrumento que dava alarme falso.
-
-Em 29/09/2026, quatro pads parados na mesa por um minuto, e o
-`scripts/ensaios/a_entrada_que_nasce_sozinha.py` imprimiu «8875 evento(s) NO
-QUE MEXE NA TELA» com `rc 0`, sem nada se mexer na tela. Seis defeitos do
-instrumento, e as réguas abaixo prendem a cura de cada um:
-
-1. a classe do nó vem do udev, pelas marcas de CLASSE, e nunca do nome;
-2. a conta é por nó (o caminho), e quatro pads iguais dão quatro linhas;
-3. o eco da vibração (`EV_FF`) é saída, e sai com o tipo e o efeito;
-4. o pad pergunta ao dono da zona (`quem_mexe.teve_entrada`), e o chiado de
-   1 LSB fica dentro dela;
-5. o fantasma de 10/09 (eixo que salta, botão num pad parado) continua pego;
-6. o zero de quem não foi lido sai com a frase do dono, e o grab do nó aberto
-   pelo broker se pergunta no fd dele;
-7. os donos são os objetos da casa, e não cópias com o mesmo nome;
-8. o veredito zero diz «ZERO no que mexe na tela», que a folha da bancada lê, e
-   o rc que o processo devolve é o do veredito;
-9. o cabeçalho diz de onde veio a biblioteca, porque o `import` vem antes.
-
-Todas puras: nada de `/dev/input`, de `/run/udev` ou de broker de verdade. O
-leitor de propriedades, o de eventos e o do grab entram injetados.
-"""
+"""A-ENTRADA-SOZINHA-SEPARA-A-TELA-DO-PAD-01 — o instrumento que dava alarme falso."""
 
 from __future__ import annotations
 
@@ -43,7 +21,6 @@ ec = pytest.importorskip("evdev").ecodes
 
 _NOME_DO_PAD = "Microsoft X-Box 360 pad (Hefesto)"
 
-#: As propriedades do udev medidas às 02h20 de 29/09 (só leitura), por nó.
 _GAMEPAD_FISICO = {
     "ID_INPUT": "1",
     "ID_INPUT_JOYSTICK": "1",
@@ -82,11 +59,6 @@ def mod() -> Any:
 @pytest.fixture(scope="module")
 def comum(mod: Any) -> Any:
     return sys.modules["comum"]
-
-
-# ---------------------------------------------------------------------------
-# Os dublês: um aparelho que publica o que o nó publica
-# ---------------------------------------------------------------------------
 
 
 class _Aparelho:
@@ -155,11 +127,6 @@ def _eco(quantos: int) -> list[Any]:
     return [_ev(ec.EV_FF, 0, 1) for _ in range(quantos)]
 
 
-# ---------------------------------------------------------------------------
-# 1. A classe vem do udev
-# ---------------------------------------------------------------------------
-
-
 def _montar(mod: Any, alvos: list[tuple[str, str, dict[str, str] | None]]) -> list[Any]:
     """Monta os nós com as propriedades injetadas e nenhum nó aberto."""
     props = {caminho: p for caminho, _n, p in alvos}
@@ -177,8 +144,7 @@ def _montar(mod: Any, alvos: list[tuple[str, str, dict[str, str] | None]]) -> li
 
 
 def test_a_classe_vem_do_udev_e_nao_do_nome(mod: Any) -> None:
-    """Mordida (a): a IMU volta a sair pelo nome («Motion Sensors» no nome
-    vira IMU), e o nó com a marca de touchpad deixa de ser tela."""
+    """Mordida (a): a IMU volta a sair pelo nome («Motion Sensors» no nome"""
     nos = _montar(mod, [
         ("/x/event900", "DualSense Wireless Controller Motion Sensors",
          {"ID_INPUT": "1", "ID_INPUT_TOUCHPAD": "1"}),
@@ -207,8 +173,7 @@ def test_a_classe_vem_do_udev_e_nao_do_nome(mod: Any) -> None:
 def test_as_propriedades_medidas_dao_a_classe_certa(
     mod: Any, propriedades: dict[str, str] | None, classe: str
 ) -> None:
-    """Mordida (b): leia «qualquer outra `ID_INPUT_*`» como tela, e o gamepad
-    físico (`ID_INPUT_JOYSTICK_INTEGRATION=external`) vira tela."""
+    """Mordida (b): leia «qualquer outra `ID_INPUT_*`» como tela, e o gamepad"""
     assert mod.classe_do_no(propriedades) == classe
 
 
@@ -239,14 +204,8 @@ def test_sem_o_banco_do_udev_a_classe_e_nao_sei(mod: Any, tmp_path: Path) -> Non
     assert mod.propriedades_do_udev(str(arquivo_comum), raiz=str(tmp_path)) is None
 
 
-# ---------------------------------------------------------------------------
-# 2. A conta é por nó
-# ---------------------------------------------------------------------------
-
-
 def test_quatro_nos_com_o_mesmo_nome_dao_quatro_linhas(mod: Any, comum: Any) -> None:
-    """Mordida: conte por nome, e as quatro linhas repetem a soma (8.875 em
-    cada uma, em 29/09)."""
+    """Mordida: conte por nome, e as quatro linhas repetem a soma (8.875 em"""
     nos = [_no(mod, comum, f"/x/event{n}", mod.TELA, _NOME_DO_PAD) for n in range(20, 24)]
     _alimentar(mod, nos[0], [_ev(ec.EV_KEY, ec.BTN_SOUTH, 1), _syn()] * 3)
     _alimentar(mod, nos[1], [_ev(ec.EV_KEY, ec.BTN_EAST, 1), _syn()] * 5)
@@ -263,16 +222,8 @@ def test_quatro_nos_com_o_mesmo_nome_dao_quatro_linhas(mod: Any, comum: Any) -> 
     assert [no.entradas for no in nos] == [3, 5, 0, 0]
 
 
-# ---------------------------------------------------------------------------
-# 3. O eco da vibração é saída
-# ---------------------------------------------------------------------------
-
-
 def test_o_eco_da_vibracao_nao_e_entrada(mod: Any, comum: Any) -> None:
-    """1.199 `EV_FF` de efeito 0 em cada pad (4.796 no total, a medida de
-    29/09): zero na tela, zero com mão, e uma linha de eco por pad.
-
-    Mordida: conte `EV_FF` como entrada, e o alarme de 29/09 volta."""
+    """1.199 `EV_FF` de efeito 0 em cada pad (4.796 no total, a medida de"""
     pads = [_pad(mod, comum, f"/x/event{n}") for n in range(20, 24)]
     for pad in pads:
         _alimentar(mod, pad, _eco(1199))
@@ -291,11 +242,6 @@ def test_o_rotulo_leva_o_tipo(mod: Any) -> None:
     assert mod.rotulo_do_evento(ec, ec.EV_ABS, ec.ABS_RX) == "EV_ABS ABS_RX"
 
 
-# ---------------------------------------------------------------------------
-# 4. O chiado pergunta ao dono da zona
-# ---------------------------------------------------------------------------
-
-
 def _a_corrida_de_29_09(mod: Any, comum: Any) -> list[Any]:
     """Os quatro pads com os eixos e as trocas medidos, ±1 em torno de 124..132."""
     p1 = _pad(mod, comum, "/x/event21", ABS_X=127, ABS_RX=131)
@@ -312,9 +258,7 @@ def _a_corrida_de_29_09(mod: Any, comum: Any) -> list[Any]:
 
 
 def test_o_chiado_do_aparelho_fica_dentro_da_zona(mod: Any, comum: Any) -> None:
-    """A corrida de 29/09 reproduzida dá ZERO e rc 0, com o chiado por pad.
-
-    Mordida (a): conte todo `EV_ABS` de pad como candidato, e o rc vira 1."""
+    """A corrida de 29/09 reproduzida dá ZERO e rc 0, com o chiado por pad."""
     pads = _a_corrida_de_29_09(mod, comum)
     rc, frase = mod.veredito(pads)
     assert rc == 0, frase
@@ -331,8 +275,7 @@ def test_o_chiado_do_aparelho_fica_dentro_da_zona(mod: Any, comum: Any) -> None:
 def test_a_zona_e_a_do_dono_e_nao_uma_copia(
     mod: Any, comum: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Mordida (b): com `quem_mexe.ZONA_MORTA = 0`, o chiado vira «com mão».
-    Prova que o instrumento pergunta ao dono: se ele mudar, o veredito muda."""
+    """Mordida (b): com `quem_mexe.ZONA_MORTA = 0`, o chiado vira «com mão»."""
     from hefesto_dualsense4unix.daemon.subsystems import quem_mexe
 
     monkeypatch.setattr(quem_mexe, "ZONA_MORTA", 0)
@@ -342,15 +285,8 @@ def test_a_zona_e_a_do_dono_e_nao_uma_copia(
     assert all(pad.quadros_com_mao for pad in pads)
 
 
-# ---------------------------------------------------------------------------
-# 5. O fantasma continua pego
-# ---------------------------------------------------------------------------
-
-
 def test_o_eixo_que_salta_e_pego(mod: Any, comum: Any) -> None:
-    """O caso de 10/09: um eixo que salta para 250 num pad parado.
-
-    Mordida: tire o pad da pergunta, e o fantasma passa com rc 0."""
+    """O caso de 10/09: um eixo que salta para 250 num pad parado."""
     pad = _pad(mod, comum, "/x/event30", ABS_RX=131)
     _alimentar(mod, pad, [*_chiado("ABS_RX", 131, 132, 10),
                           _ev(ec.EV_ABS, ec.ABS_RX, 250), _syn()])
@@ -391,11 +327,6 @@ def test_a_imu_e_a_chave_sao_contexto(mod: Any, comum: Any) -> None:
     assert "40 de IMU, 1 de chave" in frase
 
 
-# ---------------------------------------------------------------------------
-# 6. O zero de quem não se leu
-# ---------------------------------------------------------------------------
-
-
 def _sem_permissao(tmp_path: Path, nome: str) -> Path:
     """Um arquivo `0000` no lugar do nó escondido: `os.open` dá `EACCES`."""
     if os.geteuid() == 0:  # pragma: no cover - a raiz abre tudo
@@ -417,8 +348,7 @@ def _ioctl_de_terceiro(_fd: int, _pedido: int, _arg: int) -> None:
 def test_o_touchpad_sem_permissao_sai_com_a_frase_do_dono(
     mod: Any, comum: Any, tmp_path: Path
 ) -> None:
-    """Mordida (a): imprima 0, e a corrida dá rc 0 sobre um touchpad que
-    ninguém leu."""
+    """Mordida (a): imprima 0, e a corrida dá rc 0 sobre um touchpad que"""
     caminho = str(_sem_permissao(tmp_path, "event256"))
 
     def _recusa(c: str) -> Any:
@@ -458,10 +388,7 @@ def test_o_no_preso_por_terceiro_nao_segura_o_veredito(
 def test_o_touchpad_lido_pelo_broker_tem_o_grab_perguntado_no_fd(
     mod: Any, comum: Any, tmp_path: Path
 ) -> None:
-    """O nó é `0600 root`: o `os.open` dá `EACCES`, e o broker serviu o fd.
-
-    Mordida (b): chame `estado_do_grab(caminho)` sem o `abrir`, e o touchpad
-    lido pelo broker sai «sem permissão»."""
+    """O nó é `0600 root`: o `os.open` dá `EACCES`, e o broker serviu o fd."""
     caminho = str(_sem_permissao(tmp_path, "event259"))
     servido = tmp_path / "o-fd-do-broker"
     servido.write_bytes(b"")
@@ -520,16 +447,8 @@ def test_o_no_que_saiu_no_meio_invalida_a_medicao(mod: Any, comum: Any) -> None:
     assert frase.startswith("MEDIÇÃO INVÁLIDA")
 
 
-# ---------------------------------------------------------------------------
-# 7. Os donos são os objetos da casa
-# ---------------------------------------------------------------------------
-
-
 def test_os_donos_sao_os_objetos_da_casa(mod: Any, comum: Any) -> None:
-    """É a régua de dono, e não a da palavra: uma cópia local com o mesmo
-    nome passaria numa busca pelo texto `estado_do_grab(`.
-
-    Mordida: copie a função para dentro do instrumento, e a identidade reprova."""
+    """É a régua de dono, e não a da palavra: uma cópia local com o mesmo"""
     from hefesto_dualsense4unix.core import evdev_reader
     from hefesto_dualsense4unix.daemon.subsystems import quem_mexe
     from hefesto_dualsense4unix.integrations import hidraw_broker_client
@@ -556,11 +475,6 @@ def test_a_porta_padrao_e_o_dono_da_porta(mod: Any, monkeypatch: pytest.MonkeyPa
     assert chamados == ["/x/event60"]
 
 
-# ---------------------------------------------------------------------------
-# 8 e 9. A frase do zero e a biblioteca do cabeçalho
-# ---------------------------------------------------------------------------
-
-
 def test_a_frase_do_zero_e_a_que_a_folha_le(mod: Any, comum: Any) -> None:
     rc, frase = mod.veredito([_pad(mod, comum, "/x/event21")])
     assert rc == 0
@@ -572,10 +486,7 @@ def test_o_cabecalho_diz_de_onde_veio_o_evdev(
     mod: Any, comum: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Com um `evdev` falso no caminho de import, a linha da biblioteca traz o
-    `__file__` dele, e não «NÃO IMPORTADO».
-
-    Mordida: imprima o cabeçalho antes do `import evdev`."""
+    """Com um `evdev` falso no caminho de import, a linha da biblioteca traz o"""
     pacote = tmp_path / "evdev"
     pacote.mkdir()
     (pacote / "__init__.py").write_text("ecodes = None\n", encoding="utf-8")
@@ -641,11 +552,7 @@ def test_o_rc_do_main_e_o_do_veredito(
     mod: Any, comum: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
     caso: str, rc_esperado: int, no_resumo: str,
 ) -> None:
-    """A corrida inteira pelo `main`, com o aparelho injetado: o rc que sai do
-    processo é o do veredito. Em 29/09 o alarme saiu com `rc 0`, e o
-    `o_basico.py` passará a ler o rc.
-
-    Mordida: devolva 0 no fim do `main`, e o alarme e o «não sei» passam."""
+    """A corrida inteira pelo `main`, com o aparelho injetado: o rc que sai do"""
     import itertools
 
     mesa = _a_mesa_do_main(caso)

@@ -1,8 +1,8 @@
 """CONTAGEM-E-COOP-01 (E1a) — o banner AVISA que o jogo derrubou o co-op.
 
 A outra metade já entrou em 29/07: o daemon emite o fato
-(`gamepad.py:508-537`) e o `state_full` o publica em duas chaves
-(`ipc_handlers.py:1657-1662`). O que faltava era a janela LER. Medido no HEAD
+(`gamepad.py:279-308`) e o `state_full` o publica em duas chaves
+(`ipc_handlers.py:1208-1213`). O que faltava era a janela LER. Medido no HEAD
 `7bd0cb7`, antes desta entrega::
 
     $ grep -rn "coop_derrubado" src/hefesto_dualsense4unix/app/
@@ -25,9 +25,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no topo, antes de qualquer import de `gi`. Só a classe
-# `TestOBadgeNoBanner` precisa de widget; as de vocabulário são puras e ficam
-# aqui junto por serem o MESMO contrato de texto.
 exigir_gi_real("coop derrubado: o aviso no banner")
 
 from typing import Any
@@ -40,12 +37,7 @@ from hefesto_dualsense4unix.app.actions.status_actions import (
 
 
 def _coop(derrubado: bool, secundarios: int, players: int = 1) -> dict[str, Any]:
-    """O bloco `coop` como o daemon o publica — inclusive as duas mentiras.
-
-    `enabled=True` com `players=1` durante a queda NÃO é engano do teste: é o
-    que `ipc_handlers.py:1613-1622` publica de verdade, porque `disable()` não
-    toca em `coop_enabled` (`coop.py:1416-1424`).
-    """
+    """O bloco `coop` como o daemon o publica — inclusive as duas mentiras."""
     return {
         "enabled": True,
         "players": players,
@@ -83,22 +75,12 @@ class TestAsTresPartesObrigatorias:
         assert texto == "1 jogador saiu — não foi você; volta sozinho"
 
     def test_o_p1_nunca_entra_na_lista(self) -> None:
-        """O P1 não é jogador do co-op: tem observável próprio (`vpad_suspenso`).
-
-        A lista vive no tooltip (a linha do banner não a comporta com o badge
-        de vibração aceso), e é lá que o P1 não pode aparecer.
-        """
+        """O P1 não é jogador do co-op: tem observável próprio (`vpad_suspenso`)."""
         assert "P1" not in tooltip_do_coop_derrubado(_coop(True, 3))
         assert "P2, P3 e P4" in tooltip_do_coop_derrubado(_coop(True, 3))
 
     def test_a_linha_do_banner_cabe_com_o_badge_de_vibracao_aceso(self) -> None:
-        """Os DOIS badges no mesmo `header_bar` — a pergunta que a sprint abriu.
-
-        Medido com o glade real na largura da janela dela (953px): com a lista
-        de jogadores na frase, os dois juntos pediam 966px e o aviso era
-        cortado no meio de "não foi vo…". A asserção aqui é o teto de
-        caracteres, que é font-independente e é o que sustenta aquela medida.
-        """
+        """Os DOIS badges no mesmo `header_bar` — a pergunta que a sprint abriu."""
         assert len(texto_do_coop_derrubado(_coop(True, 3))) <= 52
         assert len(texto_do_coop_derrubado(_coop(True, 12))) <= 52
 
@@ -108,7 +90,7 @@ class TestOAvisoMorreQuandoOCoopVolta:
         assert texto_do_coop_derrubado(_coop(False, 0, players=4)) == ""
 
     def test_gatilho_aceso_com_zero_derrubados_nao_pendura_aviso(self) -> None:
-        """As duas mortes do contador existem para isto (`gamepad.py:565`/:1401)."""
+        """As duas mortes do contador existem para isto (`gamepad.py:326`/:1401)."""
         assert texto_do_coop_derrubado(_coop(True, 0)) == ""
 
     def test_bloco_ausente_ou_estranho_nao_explode(self) -> None:
@@ -129,16 +111,7 @@ class TestOTooltipDizOPrecoPorExtenso:
         assert "fechar o jogo" in texto
 
     def test_o_tooltip_nao_diz_o_contrario_do_que_ela_mediu(self) -> None:
-        """NOTA DATADA — 07/08/2026: a abertura antiga estava INVERTIDA.
-
-        O tooltip abria com *"O jogo assumiu o controle: o Hefesto saiu da
-        frente dele"*. A medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`,
-        seção *A INVERSÃO*, grau MEDIDO) mostrou o contrário **dentro** da
-        lista de exceções: os gatilhos dela seguraram e a cor dela ficou. Quem
-        "assume o controle" da luz e dos gatilhos é o jogo que está **fora**
-        da lista (medido no Sackboy). Um tooltip que promete a perda faz a
-        pessoa desmarcar o jogo justamente quando marcar era o certo.
-        """
+        """NOTA DATADA — 07/08/2026: a abertura antiga estava INVERTIDA."""
         texto = tooltip_do_coop_derrubado(_coop(True, 3))
         assert "saiu da frente" not in texto
         assert "assumiu o controle" not in texto
@@ -173,8 +146,6 @@ class TestOBadgeNoBanner:
         assert "voltam sozinhos" in stub._coop_badge.get_text()
         assert "fechar o jogo" in (stub._coop_badge.get_tooltip_text() or "")
 
-        # O co-op voltou: o daemon zerou o contador e o aviso tem de sumir NO
-        # MESMO TIQUE, sem reiniciar a janela.
         stub._update_coop_badge({"coop": _coop(False, 0, players=4)})
         assert not stub._coop_badge.get_visible()
 

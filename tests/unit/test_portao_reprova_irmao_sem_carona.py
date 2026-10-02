@@ -1,36 +1,4 @@
-"""O portão reprova script distribuído que chama irmão que ninguém distribuiu.
-
-`IRMAO-SEM-CARONA-01` — a seção "irmão sem carona" de
-`scripts/check_packaging_parity.sh`, e a cura que ela cobrou no
-`scripts/doctor.sh`.
-
-O DEFEITO, MEDIDO em 12/08/2026: `scripts/build_deb.sh:216` leva cinco scripts
-para dentro do pacote — entre eles o `doctor.sh` — e o `doctor.sh` chamava, em
-`apply_fixes`, um SEXTO que ninguém levou: `sudo bash
-"${ROOT_DIR}/scripts/install_udev.sh"`. Como o `ROOT_DIR` do doctor é derivado
-do lugar do próprio arquivo (`scripts/doctor.sh:60`), no layout do .deb aquilo
-apontava para um arquivo inexistente, e `hefesto-dualsense4unix doctor --fix`
-— que ACHA o doctor no .deb (`cli/cmd_doctor.py:26`) — respondia "falha ao
-reaplicar udev" na máquina de quem instalou pelo pacote. O irmão certo para
-aquele layout viajava no mesmo pacote desde sempre: `install-host-udev.sh`.
-
-Esta é a outra metade da pergunta que a seção "artefato de sistema sem dono"
-recusa explicitamente ("o dono de um `.sh` é quem o CHAMA — pergunta diferente
-da desta seção"): não *"quem instala este arquivo?"*, mas **"o que este arquivo
-instalado chama, e isso foi junto?"**.
-
-O que estes testes seguram é o PORTÃO e a CURA, em duas alturas:
-
-- os repos de mentira mordem a régua da seção — a falta reprova, e os três
-  jeitos legítimos de estar certo (carona, guarda, recado) continuam passando,
-  senão a seção grita com quem está certo e é desligada na primeira semana;
-- o último bloco morde a cura por EXECUÇÃO, no layout do pacote: com só o
-  `install-host-udev.sh` no disco, `_dono_das_regras_udev` tem de escolher ele.
-
-Técnica: a mesma de `tests/unit/test_portao_reprova_artefato_de_sistema_sem_dono.py`
-— pytest + subprocess num repo fake em `tmp_path`, sem bats-core e sem depender
-do estado do repositório real.
-"""
+"""O portão reprova script distribuído que chama irmão que ninguém distribuiu."""
 
 from __future__ import annotations
 
@@ -43,19 +11,13 @@ import pytest
 SCRIPT_REL_PATH = "scripts/check_packaging_parity.sh"
 DOCTOR_REL_PATH = "scripts/doctor.sh"
 
-#: Cabeçalho da seção: é por ele que os testes recortam a saída, para não
-#: confundir um [FAIL] desta seção com o de qualquer outra.
 CABECALHO = "== irmão sem carona"
 
 REPO_RAIZ = Path(__file__).resolve().parents[2]
 
 
 def _semeia_simbolico(raiz: Path) -> None:
-    """O par de simbólicos que a seção do applet exige (APPLET-MONOCROMÁTICO-01).
-
-    Sem eles, todo caso de "passa" reprovaria por uma seção que não é o alvo
-    daqui — e a saída começaria a acusar no lugar errado.
-    """
+    """O par de simbólicos que a seção do applet exige (APPLET-MONOCROMÁTICO-01)."""
     desenho = '<svg viewBox="0 0 16 16"><title>fake</title></svg>\n'
     alvos = (
         raiz / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg",
@@ -76,12 +38,7 @@ def _semeia_simbolico(raiz: Path) -> None:
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    """Repo fake mínimo: o portão, um `install.sh` vazio e a pasta `scripts/`.
-
-    Nasce sem irmão nenhum: cada teste escreve o par que quer exercitar. Não há
-    artefato em `assets/` de propósito — a seção anterior é de outro assunto, e
-    um artefato aqui faria a saída falar dela.
-    """
+    """Repo fake mínimo: o portão, um `install.sh` vazio e a pasta `scripts/`."""
     src_script = REPO_RAIZ / SCRIPT_REL_PATH
     if not src_script.exists():
         pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
@@ -120,16 +77,10 @@ def secao(saida: str) -> str:
     return partes[1].split("─", 1)[0]
 
 
-#: O instalador de mentira que COPIA `alfa.sh` para fora do checkout, na forma
-#: literal — a mesma de `scripts/build_deb.sh:193`.
 INSTALL_LITERAL = """#!/usr/bin/env bash
 sudo install -Dm755 "${ROOT_DIR}/scripts/alfa.sh" /usr/local/lib/hefesto/alfa.sh
 """
 
-#: A outra forma que a árvore usa de verdade: o laço com variável
-#: (`install.sh:1821` e `scripts/build_deb.sh:216`), que um grep literal do nome
-#: NÃO vê. Se a seção perder este caso, ela fica cega justamente nos dois
-#: lugares onde o produto copia scripts hoje.
 INSTALL_LACO = """#!/usr/bin/env bash
 for _s in alfa.sh; do
     sudo install -Dm755 "${ROOT_DIR}/scripts/${_s}" "/usr/local/lib/hefesto/${_s}"
@@ -164,13 +115,7 @@ class TestAMordidaDaSecao:
         )
 
     def test_o_laco_com_variavel_nao_cega_a_secao(self, repo: Path) -> None:
-        """A forma que a árvore usa de verdade tem de ser vista igual.
-
-        `install.sh:1821` e `scripts/build_deb.sh:216` copiam por
-        `scripts/${VAR}` dentro de um `for`. Uma seção que só lê nome literal
-        acharia que instalador nenhum copia script nenhum — e daria verde para
-        a árvore inteira, calada.
-        """
+        """A forma que a árvore usa de verdade tem de ser vista igual."""
         escreve(repo, "install.sh", INSTALL_LACO)
         escreve(repo, "scripts/alfa.sh", ALFA_CHAMA_BETA)
         escreve(repo, "scripts/beta.sh", BETA)
@@ -200,12 +145,7 @@ class TestOsTresJeitosDeEstarCerto:
         assert "[FAIL]" not in secao(r.stdout)
 
     def test_guarda_de_existencia_com_o_nome_literal_passa(self, repo: Path) -> None:
-        """O idioma que a casa já usava antes desta seção existir.
-
-        `scripts/doctor.sh:4619` e `scripts/bt_health_watchdog.sh:215` testam a
-        existência antes de chamar. Quem escreve a guarda está dizendo "sei que
-        pode não estar aqui, e tratei" — e o portão acredita.
-        """
+        """O idioma que a casa já usava antes desta seção existir."""
         escreve(repo, "install.sh", INSTALL_LITERAL)
         escreve(
             repo,
@@ -223,11 +163,7 @@ class TestOsTresJeitosDeEstarCerto:
         assert r.returncode == 0, f"o portão acusou quem escreveu a guarda:\n{r.stdout}"
 
     def test_recado_que_ensina_a_rodar_o_irmao_nao_e_chamada(self, repo: Path) -> None:
-        """MEDIDO: sem este descarte, o portão acusava seis falsos só no doctor.
-
-        `scripts/doctor.sh:461` é um `info` que ensina a rodar o rebind à mão.
-        Recado pode citar script ausente; é o ofício dele.
-        """
+        """MEDIDO: sem este descarte, o portão acusava seis falsos só no doctor."""
         escreve(repo, "install.sh", INSTALL_LITERAL)
         escreve(
             repo,
@@ -243,13 +179,7 @@ class TestOsTresJeitosDeEstarCerto:
         assert r.returncode == 0, f"o portão confundiu recado com chamada:\n{r.stdout}"
 
     def test_script_que_ninguem_distribui_nao_e_cobrado(self, repo: Path) -> None:
-        """A âncora é a CHAMADA de quem foi copiado, não o arquivo em `scripts/`.
-
-        É esta linha que responde "o `scripts/identidade_do_vpad.py` é
-        instalado?": não — e não precisa ser, porque quem o importa (os três
-        ensaios de bancada) instalador nenhum distribui. Mesmo caso, e mesmo
-        precedente, de `scripts/eliminacao.py`.
-        """
+        """A âncora é a CHAMADA de quem foi copiado, não o arquivo em `scripts/`."""
         escreve(repo, "install.sh", "# instalador que não copia script nenhum\n")
         escreve(repo, "scripts/alfa.sh", ALFA_CHAMA_BETA)
         escreve(repo, "scripts/beta.sh", BETA)
@@ -278,12 +208,7 @@ class TestOModuloPythonViajaComQuemOImporta:
     def test_import_de_modulo_irmao_e_cobrado_quando_o_script_e_distribuido(
         self, repo: Path
     ) -> None:
-        """No dia em que um ensaio for distribuído, a régua tem de ir junto.
-
-        `import` é incondicional: não existe guarda de existência em Python que
-        o portão precise honrar aqui. Sem o módulo ao lado, o script distribuído
-        morre com `ModuleNotFoundError` na primeira linha, na máquina limpa.
-        """
+        """No dia em que um ensaio for distribuído, a régua tem de ir junto."""
         escreve(
             repo,
             "install.sh",
@@ -342,16 +267,7 @@ class TestACuraNoDoctorRodaNoLayoutDoPacote:
 
     @staticmethod
     def _escolhido(raiz: Path) -> subprocess.CompletedProcess[str]:
-        """Carrega o doctor SEM rodar o diagnóstico e pergunta quem ele escolheu.
-
-        O `source` é o caminho que o próprio doctor documenta (`:4517`), e o
-        `ROOT_DIR` sai do lugar do arquivo — que é o mecanismo do defeito.
-
-        O `declare -F` antes da chamada não é zelo: sem ele, arrancar a função
-        inteira faria o `|| printf 'NENHUM'` responder "NENHUM" — e o caso da
-        ausência dos dois passaria com a cura no chão, que é um teste que não
-        testa nada.
-        """
+        """Carrega o doctor SEM rodar o diagnóstico e pergunta quem ele escolheu."""
         return subprocess.run(
             [
                 "bash",
@@ -368,11 +284,7 @@ class TestACuraNoDoctorRodaNoLayoutDoPacote:
     def test_no_layout_do_pacote_escolhe_o_install_host_udev(
         self, tmp_path: Path
     ) -> None:
-        """A MORDIDA da cura: é o .deb, e o `install_udev.sh` não está lá.
-
-        Antes da cura, `apply_fixes` chamava `install_udev.sh` direto e o
-        usuário do pacote lia "falha ao reaplicar udev".
-        """
+        """A MORDIDA da cura: é o .deb, e o `install_udev.sh` não está lá."""
         raiz = self._layout(tmp_path, "install-host-udev.sh")
 
         r = self._escolhido(raiz)

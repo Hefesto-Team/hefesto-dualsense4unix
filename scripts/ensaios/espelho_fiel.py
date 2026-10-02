@@ -1,70 +1,5 @@
 #!/usr/bin/env python3
-"""espelho_fiel.py — o vpad repassa o que o físico manda? Campo a campo.
-
-A PERGUNTA QUE ELE RESPONDE
-----------------------------
-*O controle virtual é um espelho FIEL do físico, ou perde alguma coisa pelo
-caminho?* — e, quando perde, **qual campo**, em vez de "o giroscópio parece
-ruim".
-
-Ideia dela, 16/08/2026: *"conseguimos parear o que o controle físico manda e o
-que o virtual manda?"*. É a Pedra de Roseta do projeto aplicada ao par
-físico x virtual, em vez de cabo x rádio.
-
-O QUE JÁ SE SABIA, E O QUE FALTAVA
------------------------------------
-O `taxa_no_hidraw.py` já mede QUANTOS relatórios cada nó entrega na mesma
-janela. Em 16/08 isso foi medido com a mão dela e deu, em 10 s::
-
-    canal        vpad     físico
-    gamepad       286      0 (grab do daemon, correto)
-    giroscópio  7 231     19 435
-    touchpad    2 807      3 660
-
-Os números levantam a pergunta e não a respondem: **~37% dos eventos do
-giroscópio.** Pode ser decimação legítima (o vpad publica a 250 Hz, o físico
-entrega mais), pode ser perda. Contagem não distingue as duas.
-
-Este instrumento olha o CONTEÚDO: pega os dois fluxos na mesma janela e compara
-campo a campo — eixos, gatilhos, botões, giroscópio, acelerômetro, touchpad.
-
-O QUE ELE MEDE, E O QUE NÃO MEDE
----------------------------------
-**Mede:** se cada campo VARIA nos dois lados; a amplitude de cada um; e se o
-vpad reproduz os valores do físico ou os achata. Um campo que se mexe no físico
-e fica parado no vpad é perda, e o instrumento o nomeia.
-
-**Não mede:** latência entre os dois (exigiria carimbo comum, que não existe no
-fio), nem se o JOGO usa o que chega. Este é o andar do transporte.
-
-A ARMADILHA QUE ELE EVITA
---------------------------
-Comparar amostras colhidas em janelas DIFERENTES. Se o físico for lido primeiro
-e o vpad depois, o gesto humano no meio muda tudo e a diferença é do gesto, não
-do repasse. Aqui os dois nós são lidos em threads simultâneas, na mesma janela,
-e o instrumento **recusa** comparar se um dos lados não recebeu nada.
-
-E a lição de 16/08, que custou um diagnóstico errado: **um ensaio mede UM
-gesto**. Pedir "gire o controle E toque no touchpad" produziu `0/8 bytes
-variam` no touchpad e quase virou acusação ao produto — com o gesto isolado,
-os bytes variavam normalmente. Por isso este instrumento pede um gesto por vez
-e diz qual.
-
-O PAR É DITO, NUNCA ADIVINHADO (O-BASICO-MEDIDO-01, 28/09)
------------------------------------------------------------
-Até 28/09, sem `--fisico` e `--vpad` ele pegava o PRIMEIRO físico e o PRIMEIRO
-vpad da enumeração — com quatro controles na mesa, isso compara o pad do P1
-com o físico do P3 e acusa perda que não existe. Agora ele RECUSA (rc=2) e
-lista os candidatos, com o endereço pelo dono da máscara da casa; quem casa o
-par é o `quem_e_quem.py` (ou o `o_basico.py entrada`, pelo carimbo do sensor).
-E um espelho que perde campo sai com rc=1: um "não é fiel" com rc=0 passava
-calado por quem só lê o código de saída.
-
-USO
-    espelho_fiel.py                      # lista os candidatos e recusa
-    espelho_fiel.py --fisico /dev/hidraw5 --vpad /dev/hidraw4
-    espelho_fiel.py --segundos 8 --fisico /dev/hidraw5 --vpad /dev/hidraw4
-"""
+"""espelho_fiel.py — o vpad repassa o que o físico manda? Campo a campo."""
 from __future__ import annotations
 
 import argparse
@@ -88,20 +23,10 @@ from comum import (
 )
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
-#: Buffer folgado: um `read()` de hidraw devolve UM relatório, e o maior é o
-#: `0x31` do rádio com 78 bytes.
 _BUF = 256
 
-#: Onde cada campo mora, por transporte. O deslocamento do `struct
-#: dualsense_input_report` é 1 no USB (`0x01` + payload) e 2 no BT (`0x31` +
-#: 1 byte de cabeçalho) — os mesmos números do
-#: `core/physical_report_reader._USB_STRUCT_BASE`/`_BT_STRUCT_BASE`, e é de lá
-#: que eles vêm. Duplicá-los aqui com outro valor seria criar uma segunda
-#: verdade sobre o mesmo aparelho.
 _BASE = {0x01: 1, 0x31: 2}
 
-#: Os campos, em deslocamento DENTRO do payload. Batem com o
-#: `struct dualsense_input_report` do `hid-playstation.c`.
 _CAMPOS: tuple[tuple[str, int, int], ...] = (
     ("analógico esq. X", 0, 1),
     ("analógico esq. Y", 1, 1),
@@ -117,9 +42,6 @@ _CAMPOS: tuple[tuple[str, int, int], ...] = (
     ("touchpad", 32, 8),
 )
 
-#: O bit de ÁUDIO do byte 1 num `0x31`: o relatório carrega Opus, não estado de
-#: entrada. Mesmo número do `physical_report_reader.INPUT_FLAG_AUDIO`, e pelo
-#: mesmo motivo — em 16/08 ele prendeu o MIC e o PS por ser lido como botão.
 _FLAG_AUDIO = 0x02
 
 
@@ -132,7 +54,6 @@ class Colheita:
     audio_descartado: int = 0
     tamanhos: set[int] = field(default_factory=set)
     ids: set[int] = field(default_factory=set)
-    #: Por campo: o conjunto de valores distintos vistos (como bytes).
     valores: dict[str, set[bytes]] = field(default_factory=dict)
     erro: str | None = None
 
@@ -164,9 +85,6 @@ def _colher(caminho: str, segundos: float) -> Colheita:
             base = _BASE.get(rid)
             if base is None:
                 continue
-            # O relatório de áudio tem o MESMO id e o MESMO tamanho do de
-            # entrada; só este bit os separa. Contá-lo como entrada foi o
-            # defeito que prendeu MIC e PS em 16/08.
             if rid == 0x31 and len(dados) > 1 and (dados[1] & _FLAG_AUDIO):
                 c.audio_descartado += 1
                 continue

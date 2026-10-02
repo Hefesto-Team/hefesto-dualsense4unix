@@ -41,11 +41,7 @@ REPORT = RAIZ / "src/hefesto_dualsense4unix/core/ds_output_report.py"
 
 
 def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
-    """Um handle da pydualsense sem device, nascido pelo `__init__` de produção.
-
-    `led_gravavel` é o `_suppress_leds`: com o nó de LED do kernel gravável o
-    fluxo é LED-neutro (no rádio, sempre).
-    """
+    """Um handle da pydualsense sem device, nascido pelo `__init__` de produção."""
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
@@ -87,18 +83,7 @@ def test_a_constante_existe_e_e_o_bit_zero() -> None:
 
 
 def test_o_bit_fica_desligado_enquanto_a_fonte_do_valor_for_a_barra() -> None:
-    """A METADE QUE MORDE — e desde 24/09/2026 ela pergunta ao PRODUTO.
-
-    Ligar o bit mandando o `light.brightness` da pydualsense faz o produto
-    atenuar as lâmpadas com um degrau que ninguém escolheu. O nome do caso
-    ficou (o mapa o cita em `luz.lightbar.brilho`); o que ele cobra agora é que,
-    com o bit ligado, o byte seja o do campo próprio — o `_brilho_das_luzes`,
-    que o perfil escreve — e nunca o da pydualsense.
-
-    MORDIDA (24/09/2026): devolva `common[42] = int(self.light.brightness.value)`
-    ao `_build_common` e o degrau Forte (0) do campo sai como o Fraco (2) da
-    pydualsense — reprova na segunda asserção.
-    """
+    """A METADE QUE MORDE — e desde 24/09/2026 ela pergunta ao PRODUTO."""
     from pydualsense.enums import Brightness
 
     from hefesto_dualsense4unix.core import ds_output_report as rep

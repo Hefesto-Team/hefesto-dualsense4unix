@@ -45,14 +45,8 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     reset_identity_registry,
 )
 
-#: A função REAL de leitura da âncora, capturada ANTES de qualquer fixture
-#: monkeypatchá-la (R-23). Os 15 dublês de `_read_boot_id` espalhados pela
-#: suíte faziam com que o caminho de I/O real nunca rodasse em teste — e era
-#: justamente ele que falhava sem `/proc` (Flatpak/contêiner), renumerando a
-#: casa a cada restart. Quem quiser exercitar a leitura de verdade repõe isto.
 _READ_BOOT_ID_REAL = identity._read_boot_id
 
-#: MACs forjados (faixa aa:bb:cc — teste-guarda de anonimato; NUNCA 14:3a).
 UNIQ_A = "aabbcc000001"
 UNIQ_B = "aabbcc000002"
 UNIQ_C = "aabbcc000003"
@@ -92,13 +86,7 @@ def _arquivo(tmp: Path) -> dict[str, object]:
 
 
 def _fila_no_disco(tmp: Path, kind: str = identity.KIND_DUALSENSE) -> dict[str, int]:
-    """Endereço → lugar, lidos do campo ``order`` do arquivo (NUM-01).
-
-    O schema 3 gravou os dois registros numa FILA só (``order``, uma lista de
-    ``{addr, kind, rank}``) — antes eram dois mapas MAC→número (``slots`` e
-    ``externals``), e é essa forma que não conseguia representar "quem está na
-    mesa é 1..N". Este helper existe para os casos continuarem legíveis.
-    """
+    """Endereço → lugar, lidos do campo ``order`` do arquivo (NUM-01)."""
     entradas = _arquivo(tmp)[identity.ORDER_FIELD]
     assert isinstance(entradas, list)
     return {
@@ -135,20 +123,18 @@ class TestAtribuicaoDeSlots:
         reg = ControllerIdentityRegistry()
         assert reg.slot_for(UNIQ_A) == 1
         assert reg.slot_for(UNIQ_B) == 2
-        # Idempotente: consultar de novo não realoca.
         assert reg.slot_for(UNIQ_A) == 1
 
     def test_assign_false_so_consulta(self, isolated_config: Path) -> None:
         reg = ControllerIdentityRegistry()
-        assert reg.slot_for(UNIQ_A, assign=False) is None  # nada atribuído
+        assert reg.slot_for(UNIQ_A, assign=False) is None
         assert reg.snapshot() == {}
         reg.slot_for(UNIQ_A)
-        assert reg.slot_for(UNIQ_A, assign=False) == 1  # leitura pura
+        assert reg.slot_for(UNIQ_A, assign=False) == 1
 
     def test_mac_com_separadores_canoniza(self, isolated_config: Path) -> None:
         reg = ControllerIdentityRegistry()
         assert reg.slot_for("AA:BB:CC:00:00:01") == 1
-        # A grafia canônica é o MESMO controle.
         assert reg.slot_for(UNIQ_A) == 1
 
     def test_uniq_vazio_ou_none_sem_slot(self, isolated_config: Path) -> None:
@@ -175,8 +161,7 @@ class TestAtribuicaoNoSync:
         assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}
 
     def test_ordem_do_iteravel_manda_nao_o_hash(self, isolated_config: Path) -> None:
-        """O lifecycle entrega em ordem de `describe_controllers` (primário
-        primeiro) — numerar por hash de `set` faria o "Controle 1" sortear."""
+        """O lifecycle entrega em ordem de `describe_controllers` (primário"""
         reg = ControllerIdentityRegistry()
         reg.sync_connected([UNIQ_B, UNIQ_A])
         assert reg.snapshot() == {UNIQ_B: 1, UNIQ_A: 2}
@@ -188,8 +173,7 @@ class TestAtribuicaoNoSync:
         assert reg.snapshot() == {UNIQ_B: 1, UNIQ_A: 2}
 
     def test_sync_respeita_a_reserva_dos_externos(self, isolated_config: Path) -> None:
-        """A atribuição do sync passa pelo MESMO `used` do `slot_for` (espaço
-        de numeração único, EXT-04) — nunca por uma segunda regra."""
+        """A atribuição do sync passa pelo MESMO `used` do `slot_for` (espaço"""
         reg = ControllerIdentityRegistry()
         reg.set_external_reserve_provider(lambda: {1})
         reg.sync_connected([UNIQ_A])
@@ -198,7 +182,7 @@ class TestAtribuicaoNoSync:
     def test_sync_nao_numera_vpad(self, isolated_config: Path) -> None:
         reg = ControllerIdentityRegistry()
         reg.sync_connected(["02fe00000001", UNIQ_A])
-        assert reg.snapshot() == {UNIQ_A: 1}  # D9: vpad nunca é Controle N
+        assert reg.snapshot() == {UNIQ_A: 1}
 
     def test_sync_persiste_o_que_atribuiu(self, isolated_config: Path) -> None:
         reg = ControllerIdentityRegistry()
@@ -213,38 +197,22 @@ class TestReservaDeSessao:
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
         reg.mark_disconnected(UNIQ_A)
-        # B segue conectado — a sessão NÃO esvaziou; reserva de A vale.
         reg.sync_connected({UNIQ_B})
-        assert reg.slot_for(UNIQ_A) == 1  # A volta ao 1, não vira 3
+        assert reg.slot_for(UNIQ_A) == 1
 
     def test_reserva_nao_segura_mais_o_numero_de_quem_esta_na_mesa(
         self, isolated_config: Path
     ) -> None:
-        """NUM-01 — TROCA DELIBERADA de contrato (25/07).
-
-        Este caso era `test_reserva_ocupa_o_numero_para_terceiros` e assertava
-        `slot_for(UNIQ_C) == 3`: com A desligado, o lugar 1 dele ficava
-        RESERVADO e empurrava todo mundo para cima. Era literalmente a queixa
-        medida — "ao usar o branco ele sempre liga no player 2" —, só que com
-        um controle a mais.
-
-        O que continua valendo (D2, sem LRU): C NÃO rouba o LUGAR de A na
-        fila; ele entra no fim (lugar 3). O que muda é a EXIBIÇÃO: quem está
-        na mesa conta 1..N sem contar o ausente, então B é 1 e C é 2 — e
-        nunca existe um jogador 2 sem jogador 1.
-        """
+        """NUM-01 — TROCA DELIBERADA de contrato (25/07)."""
         relogio = _Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
-        reg.sync_connected({UNIQ_B})  # A desconectou (o lugar 1 continua dele)
-        # O-ASSENTO-GUARDADO-NAO-ANDA-01: dentro do prazo B continua 2; a
-        # NUM-01 que esta régua mede é a de depois do prazo.
+        reg.sync_connected({UNIQ_B})
         relogio.passar_o_prazo()
-        assert reg.slot_for(UNIQ_C) == 2  # exibição: B=1, C=2
+        assert reg.slot_for(UNIQ_C) == 2
         assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2, UNIQ_C: 3}
         assert reg.slot_for(UNIQ_B) == 1
-        # E quando A volta, cada um recupera a própria colocação.
         reg.sync_connected([UNIQ_A, UNIQ_B, UNIQ_C])
         assert (reg.slot_for(UNIQ_A), reg.slot_for(UNIQ_B), reg.slot_for(UNIQ_C)) == (
             1,
@@ -280,15 +248,12 @@ class TestReservaDeSessao:
         reg = ControllerIdentityRegistry(clock=relogio)
         assert reg.slot_for(UNIQ_A) == 1
         assert reg.slot_for(UNIQ_B) == 2
-        reg.sync_connected(set())  # os dois desligaram (a fila fica)
-        relogio.passar_o_prazo()  # O-ASSENTO: e os lugares se liberaram
+        reg.sync_connected(set())
+        relogio.passar_o_prazo()
         assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}
-        # Volta o B sozinho: ele é o jogador 1 (naturalidade), sem perder o
-        # lugar de A na fila.
         reg.sync_connected([UNIQ_B])
         assert reg.slot_for(UNIQ_B) == 1
         assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}
-        # Com os dois de volta (em ordem INVERTIDA), ninguém rouba o 1.
         reg.sync_connected([UNIQ_B, UNIQ_A])
         assert reg.slot_for(UNIQ_B) == 2
         assert reg.slot_for(UNIQ_A) == 1
@@ -296,33 +261,25 @@ class TestReservaDeSessao:
     def test_mark_disconnected_sozinho_nao_expira(
         self, isolated_config: Path
     ) -> None:
-        """Desconectar RESERVA o slot; nada aqui renumera (R-15).
-
-        Antes do R-15 a reserva vivia "até o sync ver a sessão vazia"; agora
-        vive o boot inteiro. O caso segue valendo como guarda de que o
-        caminho quente por evento não mexe no mapa.
-        """
+        """Desconectar RESERVA o slot; nada aqui renumera (R-15)."""
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.mark_disconnected(UNIQ_A)
-        assert reg.snapshot() == {UNIQ_A: 1}  # reserva viva até o sync ver
+        assert reg.snapshot() == {UNIQ_A: 1}
         assert reg.slot_for(UNIQ_A) == 1
 
     def test_sync_vazio_antes_de_qualquer_conexao_nao_expira(
         self, isolated_config: Path
     ) -> None:
-        """O sync do boot (antes de o backend abrir handles) não pode expirar
-        as entradas recém-carregadas do disco — o caso que motivou o antigo
-        `_saw_connected` e que R-15 resolve por construção (ninguém expira).
-        """
+        """O sync do boot (antes de o backend abrir handles) não pode expirar"""
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
-        reg.sync_connected({UNIQ_A, UNIQ_B})  # persiste
+        reg.sync_connected({UNIQ_A, UNIQ_B})
         reg2 = ControllerIdentityRegistry()
         reg2.load()
-        reg2.sync_connected(set())  # boot: backend ainda sem handles
-        assert reg2.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}  # reservas intactas
+        reg2.sync_connected(set())
+        assert reg2.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}
         assert reg2.slot_for(UNIQ_A) == 1
 
 
@@ -333,7 +290,6 @@ class TestGuardasVpadEVolatil:
         assert reg.slot_for("02fe00000001") is None
         assert reg.slot_for("02:fe:00:00:00:02") is None
         assert reg.snapshot() == {}
-        # E não entra nem pelo sync (não conta como sessão viva).
         reg.sync_connected({"02fe00000001"})
         assert reg.snapshot() == {}
 
@@ -345,22 +301,17 @@ class TestGuardasVpadEVolatil:
         assert reg.slot_for("path:/dev/input/event5") == 1
         assert reg.slot_for(UNIQ_A) == 2
         reg.sync_connected({"path:/dev/input/event5", UNIQ_A})
-        assert _fila_no_disco(isolated_config) == {UNIQ_A: 2}  # volátil de fora
+        assert _fila_no_disco(isolated_config) == {UNIQ_A: 2}
 
     def test_path_com_hex_espalhado_nao_vira_pseudo_mac(
         self, isolated_config: Path
     ) -> None:
-        """Um path com 12+ chars hex espalhados segue VOLÁTIL (regex estrita,
-        não o norm_mac permissivo) — e volátil sozinho nem gera arquivo."""
+        """Um path com 12+ chars hex espalhados segue VOLÁTIL (regex estrita,"""
         reg = ControllerIdentityRegistry()
-        # 14 chars hex espalhados num path (12 contíguos na faixa forjada
-        # aa:bb:cc — guarda de anonimato das fixtures).
         chave = "/dev/aabbcc123456/ee"
         assert reg.slot_for(chave) == 1
         reg.sync_connected({chave})
-        # Nada persistível mudou → nenhum controllers.json é criado.
         assert not (isolated_config / "controllers.json").exists()
-        # Com um MAC junto, o save roda e o volátil segue de fora.
         reg.slot_for(UNIQ_A)
         reg.sync_connected({chave, UNIQ_A})
         assert _fila_no_disco(isolated_config) == {UNIQ_A: 2}
@@ -374,11 +325,11 @@ class TestPersistencia:
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
-        reg.sync_connected({UNIQ_A, UNIQ_B})  # save no tick lento
+        reg.sync_connected({UNIQ_A, UNIQ_B})
 
-        reg2 = ControllerIdentityRegistry()  # "daemon reiniciou"
+        reg2 = ControllerIdentityRegistry()
         reg2.load()
-        reg2.sync_connected({UNIQ_A, UNIQ_B})  # controles seguem presentes
+        reg2.sync_connected({UNIQ_A, UNIQ_B})
         assert reg2.slot_for(UNIQ_B) == 2
         assert reg2.slot_for(UNIQ_A) == 1
 
@@ -392,23 +343,13 @@ class TestPersistencia:
         assert data[identity.ORDER_FIELD] == [
             {"addr": UNIQ_A, "kind": identity.KIND_DUALSENSE, "rank": 1}
         ]
-        # Sem lixo de tmp deixado para trás (mkstemp + os.replace).
         sobras = [p.name for p in isolated_config.iterdir() if p.name.startswith(".controllers_")]
         assert sobras == []
 
     def test_arquivo_de_outro_boot_restaura_os_mesmos_numeros(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """R-23: REBOOT NÃO RENUMERA — troca de contrato deliberada (25/07).
-
-        Este caso assertava o contrário (`test_arquivo_de_outro_boot_e_sessao
-        _morta`: boot_id diferente ⇒ mapa descartado ⇒ renumera do 1). Era a
-        causa direta da queixa "ao abrir os jogos ou o perfil, os controles se
-        reenumeram e nunca sei o que é o quê": o mapa é keyed por MAC, e MAC
-        não muda no reboot — o número é IDENTIDADE, não sessão. Quem renumera
-        agora é o schema (arquivo de outra REGRA de numeração) ou o gesto
-        explícito "Renumerar agora".
-        """
+        """R-23: REBOOT NÃO RENUMERA — troca de contrato deliberada (25/07)."""
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
@@ -418,9 +359,6 @@ class TestPersistencia:
         reg2 = ControllerIdentityRegistry()
         reg2.load()
         assert reg2.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}
-        # E a ordem de wake do boot novo não troca dono de número nenhum:
-        # com OS DOIS na mesa (NUM-01 — a contagem é dos presentes), o B
-        # continua 2 mesmo tendo acordado primeiro.
         reg2.sync_connected([UNIQ_B, UNIQ_A])
         assert reg2.slot_for(UNIQ_B) == 2
         assert reg2.slot_for(UNIQ_A) == 1
@@ -449,7 +387,6 @@ class TestPersistencia:
             identity.CONTROLLERS_SCHEMA_VERSION
         )
 
-        # E a partir daí o arquivo NOVO já é restaurado normalmente.
         reg2 = ControllerIdentityRegistry()
         reg2.load()
         assert reg2.snapshot() == {UNIQ_A: 1}
@@ -457,37 +394,23 @@ class TestPersistencia:
     def test_sessao_esvaziada_sobrevive_ao_restart_e_so_o_boot_renumera(
         self, isolated_config: Path
     ) -> None:
-        """R-15: quem renumera é o BOOT — não "todo mundo desligou".
-
-        TROCA DELIBERADA de contrato (par do caso acima; este slot era o
-        `test_expiracao_regrava_o_arquivo_vazio`, que assertava o arquivo
-        virar `{}` quando a sessão esvaziava). Agora: com todos desligados o
-        arquivo CONTINUA com os slots, um restart do daemon os restaura, e só
-        um `boot_id` diferente (máquina reiniciada) devolve a numeração ao 1.
-        """
+        """R-15: quem renumera é o BOOT — não "todo mundo desligou"."""
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
         reg.sync_connected({UNIQ_A, UNIQ_B})
-        reg.sync_connected(set())  # todos desligados — a fila fica
+        reg.sync_connected(set())
         assert _fila_no_disco(isolated_config) == {UNIQ_A: 1, UNIQ_B: 2}
 
-        reg2 = ControllerIdentityRegistry()  # daemon reiniciou no MESMO boot
+        reg2 = ControllerIdentityRegistry()
         reg2.load()
         reg2.sync_connected([UNIQ_A, UNIQ_B])
-        assert reg2.slot_for(UNIQ_B) == 2  # o lugar é do MAC, não da ordem
+        assert reg2.slot_for(UNIQ_B) == 2
 
     def test_boot_id_ilegivel_nao_derruba_a_numeracao(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """R-23: âncora ilegível NÃO renumera — troca de contrato (25/07).
-
-        Este caso assertava `snapshot() == {}` ("sem boot_id, renumera por
-        conservadorismo"). Na prática era o oposto de conservador: em
-        Flatpak/contêiner `/proc/sys/kernel/random/boot_id` simplesmente não
-        existe, então TODO restart do daemon caía aqui e renumerava a casa
-        inteira. A âncora não decide mais nada; quem decide é o schema.
-        """
+        """R-23: âncora ilegível NÃO renumera — troca de contrato (25/07)."""
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
@@ -502,15 +425,7 @@ class TestPersistencia:
     def test_sem_proc_a_ancora_cai_no_machine_id_de_verdade(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Exercita a LEITURA REAL da âncora sem `/proc` (R-23).
-
-        Os 15 monkeypatches de `_read_boot_id` espalhados pela suíte faziam
-        com que o caminho de I/O real NUNCA rodasse em teste — o modo
-        Flatpak/contêiner (sem `/proc/sys/kernel/random/boot_id`) só era
-        exercitado na máquina da usuária, e falhando. Aqui `open` é
-        redirecionado para um sysfs falso: `/proc` some, `/etc/machine-id`
-        existe, e a âncora tem de descer o degrau sem levantar.
-        """
+        """Exercita a LEITURA REAL da âncora sem `/proc` (R-23)."""
         monkeypatch.setattr(identity, "_read_boot_id", _READ_BOOT_ID_REAL)
         machine = isolated_config / "machine-id"
         machine.write_text("aabbcc0f0f0f\n", encoding="utf-8")
@@ -524,16 +439,13 @@ class TestPersistencia:
             return real_open(caminho, *a, **kw)
 
         monkeypatch.setattr("builtins.open", fake_open)
-        assert identity._read_boot_id() is None  # leitura REAL, não dublê
+        assert identity._read_boot_id() is None
         assert identity._session_anchor() == "machine:aabbcc0f0f0f"
 
     def test_sem_proc_e_sem_machine_id_a_ancora_e_none_sem_levantar(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Último degrau: nenhuma fonte de âncora ⇒ `None`, e o load segue.
-
-        Falha-sem (pré-R-23): `None` aqui abortava o `load` e renumerava tudo.
-        """
+        """Último degrau: nenhuma fonte de âncora ⇒ `None`, e o load segue."""
         monkeypatch.setattr(identity, "_read_boot_id", _READ_BOOT_ID_REAL)
         real_open = open
 
@@ -549,7 +461,7 @@ class TestPersistencia:
 
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
-        reg.sync_connected([UNIQ_A])  # grava com boot_id=None
+        reg.sync_connected([UNIQ_A])
         reg2 = ControllerIdentityRegistry()
         reg2.load()
         assert reg2.snapshot() == {UNIQ_A: 1}, "sem âncora, o número fica"
@@ -559,7 +471,7 @@ class TestPersistencia:
             "{lixo", encoding="utf-8"
         )
         reg = ControllerIdentityRegistry()
-        reg.load()  # não levanta
+        reg.load()
         assert reg.slot_for(UNIQ_A) == 1
 
     def test_load_descarta_entrada_degenerada(self, isolated_config: Path) -> None:
@@ -568,10 +480,10 @@ class TestPersistencia:
             isolated_config,
             {
                 UNIQ_A: 1,
-                UNIQ_B: 1,  # duplicata de lugar: 1º ganha
-                UNIQ_C: 0,  # lugar inválido
-                "02fe00000009": 4,  # vpad jamais
-                "path:/dev/x": 5,  # volátil jamais deveria estar aqui
+                UNIQ_B: 1,
+                UNIQ_C: 0,
+                "02fe00000009": 4,
+                "path:/dev/x": 5,
             },
         )
         reg = ControllerIdentityRegistry()
@@ -581,9 +493,7 @@ class TestPersistencia:
     def test_load_ignora_entrada_malformada_da_fila(
         self, isolated_config: Path
     ) -> None:
-        """NUM-01: a fila é uma LISTA — item sem ``addr``/``kind``/``rank``
-        (arquivo editado à mão, truncado, ou de uma versão futura) é pulado
-        em silêncio, sem levar junto as entradas boas."""
+        """NUM-01: a fila é uma LISTA — item sem ``addr``/``kind``/``rank``"""
         (isolated_config / "controllers.json").write_text(
             json.dumps(
                 {
@@ -607,12 +517,7 @@ class TestPersistencia:
     def test_load_trunca_no_teto_e_mantem_a_frente_da_fila(
         self, isolated_config: Path
     ) -> None:
-        """R-23: nada expira mais, então o arquivo tem um TETO.
-
-        Sem teto, um arquivo que só cresce (todo controle que já passou pela
-        casa mantém o lugar para sempre) faria a fila começar cada vez mais
-        longa. Poda o FIM da fila — a frente é quem a casa usa.
-        """
+        """R-23: nada expira mais, então o arquivo tem um TETO."""
         _gravar_fila(isolated_config, {f"aabbcc{n:06d}": n for n in range(1, 25)})
         reg = ControllerIdentityRegistry()
         reg.load()
@@ -658,7 +563,6 @@ class TestReservaExternaCompartilhada:
         assert reg.slot_for(UNIQ_A) == 1
         assert reg.slot_for(UNIQ_B) == 2
         externos.add(3)  # o externo entrou na fila depois dos dois DualSense
-        # O fim da fila PRÓPRIA seria 3, mas o externo o detém.
         assert reg.snapshot()[UNIQ_A] == 1
         assert reg.slot_for(UNIQ_C) == 4
         assert reg.snapshot()[UNIQ_C] == 4
@@ -682,17 +586,16 @@ class TestReservaExternaCompartilhada:
         """
         reg = ControllerIdentityRegistry()
         reg.set_external_reserve_provider(lambda: {2})
-        assert reg.slot_for(UNIQ_A) == 2  # o externo (lugar 2) é o jogador 1
+        assert reg.slot_for(UNIQ_A) == 2
         assert reg.snapshot()[UNIQ_A] == 3
-        assert reg.slot_for(UNIQ_B) == 3  # entra atrás, sem colidir
+        assert reg.slot_for(UNIQ_B) == 3
 
     def test_nao_renumera_quem_ja_tem_slot(self, isolated_config: Path) -> None:
-        """A união externa só afeta atribuições NOVAS — jamais mexe num slot
-        já dado, mesmo que o externo passe a reservá-lo (estabilidade vence)."""
+        """A união externa só afeta atribuições NOVAS — jamais mexe num slot"""
         reg = ControllerIdentityRegistry()
-        assert reg.slot_for(UNIQ_A) == 1  # atribuído ANTES de haver reserva
-        reg.set_external_reserve_provider(lambda: {1})  # externo "reivindica" 1
-        assert reg.slot_for(UNIQ_A) == 1  # A continua 1 (leitura do existente)
+        assert reg.slot_for(UNIQ_A) == 1
+        reg.set_external_reserve_provider(lambda: {1})
+        assert reg.slot_for(UNIQ_A) == 1
 
     def test_provider_que_explode_cai_no_historico(
         self, isolated_config: Path
@@ -732,16 +635,12 @@ class TestConfiguracaoDoAuto:
 
 
 class TestCompactRenumeracao:
-    """`compact` (ONDA-U/U2/U10) — reatribuição EXPLÍCITA, distinta da lazy.
-
-    Falha-sem: `ControllerIdentityRegistry` no HEAD não tem `compact` nenhum
-    — `identity.renumber` não existiria como handler possível.
-    """
+    """`compact` (ONDA-U/U2/U10) — reatribuição EXPLÍCITA, distinta da lazy."""
 
     def test_reescreve_so_as_chaves_do_mapping(self, isolated_config: Path) -> None:
         reg = ControllerIdentityRegistry()
-        reg.slot_for(UNIQ_A)  # slot 1
-        reg.slot_for(UNIQ_B)  # slot 2
+        reg.slot_for(UNIQ_A)
+        reg.slot_for(UNIQ_B)
         reg.compact({UNIQ_A: 3, UNIQ_B: 1})
         assert reg.snapshot() == {UNIQ_A: 3, UNIQ_B: 1}
 
@@ -755,7 +654,7 @@ class TestCompactRenumeracao:
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
-        reg.sync_connected({UNIQ_A, UNIQ_B})  # save inicial (1, 2)
+        reg.sync_connected({UNIQ_A, UNIQ_B})
         reg.compact({UNIQ_A: 2, UNIQ_B: 1})
         assert _fila_no_disco(isolated_config) == {UNIQ_A: 2, UNIQ_B: 1}
 
@@ -773,7 +672,7 @@ class TestCompactRenumeracao:
             original()
 
         monkeypatch.setattr(reg, "_save_locked", espiao)
-        reg.compact({UNIQ_A: 1})  # já é 1 — no-op
+        reg.compact({UNIQ_A: 1})
         assert chamou["sim"] is False
 
 

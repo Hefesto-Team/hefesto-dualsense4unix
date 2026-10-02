@@ -56,25 +56,9 @@ _IPC = _SRC / "daemon" / "ipc_handlers.py"
 _LIFECYCLE = _SRC / "daemon" / "lifecycle.py"
 _GAMEPAD = _SRC / "daemon" / "subsystems" / "gamepad.py"
 
-#: A função do daemon que MONTA o campo. É ela, e só ela: quem publicar
-#: `bloqueio` de outro lugar cria um segundo dono do contrato, e este portão
-#: passa a olhar para o lugar errado — por isso o primeiro caso confere que ela
-#: continua sendo a única.
-#: Quem DECIDE o valor de `bloqueio` hoje.
-#:
-#: REAPONTADO em 25/08/2026, e a régua estava certa em reclamar. Até a frente
 #: BG-02 quem montava o `bloqueio` por ramos era `_keyboard_emulation_payload`,
-#: e esta régua lia os ramos DELE. A BG-02 extraiu a decisão para um DONO ÚNICO
-#: — `_bloqueio_da_emulacao_de_desktop` —, porque o mouse precisava da MESMA
-#: conjunção e duas cópias divergiriam na primeira edição.
-#:
-#: A régua não cegou em silêncio: `test_o_montador_do_bloqueio_continua_tendo_um_dono_so`
-#: reprovou dizendo "deixou de montar o `bloqueio` por ramos (1)", e o outro
-#: caso reprovou com "a régua não achou NENHUM valor produzível — ela cegou".
-#: **É assim que um portão deve morrer** — avisando, não passando verde.
 _MONTADOR = "_bloqueio_da_emulacao_de_desktop"
 
-#: O montador do payload, que agora CHAMA o dono acima em vez de decidir.
 _PAYLOAD = "_keyboard_emulation_payload"
 
 
@@ -107,23 +91,10 @@ def _constantes_de_modulo(caminho: Path) -> dict[str, object]:
 
 
 def valores_que_o_daemon_consegue_publicar() -> set[str]:
-    """Os `bloqueio` que ALGUM caminho de produção alcança hoje.
-
-    Duas fontes, e é isso que a função tem de fazer certo:
-
-    1. os literais que o montador atribui direto a `bloqueio`;
-    2. o que os PRODUTORES do `motivo_jogo` conseguem devolver — hoje só
-       `lifecycle._jogo_no_controle_do_desktop`, e ele devolve `CALADA_*` sob
-       guarda. Um `return CALADA_X` cuja guarda é uma função sem escritor de
-       `True` não conta: é o defeito desta sprint. Por isso a constante só entra
-       quando a guarda tem escritor vivo (`_guarda_tem_escritor`).
-    """
+    """Os `bloqueio` que ALGUM caminho de produção alcança hoje."""
     montador = _corpo(_IPC, _MONTADOR)
     alcancaveis: set[str] = set()
     for no in ast.walk(montador):
-        # O dono único devolve o literal em vez de atribuí-lo (ver a nota do
-        # contador de ramos acima). Sem este ramo a régua não acha valor
-        # nenhum e reprova dizendo que cegou — o que ela fez, e bem.
         if (
             isinstance(no, ast.Return)
             and isinstance(no.value, ast.Constant)
@@ -150,22 +121,7 @@ def valores_que_o_daemon_consegue_publicar() -> set[str]:
 
 
 def _guarda_tem_escritor(nome_da_constante: str) -> bool:
-    """A constante `CALADA_VPAD_SUSPENSO` é devolvida sob uma guarda VIVA?
-
-    Régua estreita e declarada: hoje há UMA constante devolvida sob guarda, e a
-    guarda é `steam_input_vpad_suspenso`, que lê `_steam_input_vpad_suspenso`.
-    Se um dia houver uma segunda constante sob outra guarda, esta função devolve
-    `False` para ela e a entrada terá de ser declarada — falso positivo
-    barulhento, que é o lado certo de errar: portão que perde em silêncio é pior
-    que portão nenhum.
-
-    O DEFEITO QUE ESTA FUNÇÃO JÁ TEVE, e é a armadilha inteira desta sprint:
-    a primeira versão procurava a ATRIBUIÇÃO `= True` e parava aí. Ela existe —
-    dentro de `suspend_vpads_for_steam_input`, que **não tem chamador de
-    produção**. O instrumento respondia "viva" para a flag exatamente onde a
-    medição diz "morta", e teria dado verde na pergunta errada. Escritor só
-    conta se a função que o contém for CHAMADA.
-    """
+    """A constante `CALADA_VPAD_SUSPENSO` é devolvida sob uma guarda VIVA?"""
     if nome_da_constante != "CALADA_VPAD_SUSPENSO":
         return False
     arvore = ast.parse(_GAMEPAD.read_text(encoding="utf-8"), filename=str(_GAMEPAD))
@@ -187,12 +143,7 @@ def _guarda_tem_escritor(nome_da_constante: str) -> bool:
 
 
 def _tem_chamador_de_producao(funcao: str) -> bool:
-    """Alguém em `src/` CHAMA esta função? Por AST — citação não é chamada.
-
-    Procurar o nome com `grep` contaria comentário e docstring, que é como a
-    `suspend_vpads_for_steam_input` parecia viva: seis das sete ocorrências dela
-    em `src/` são prosa.
-    """
+    """Alguém em `src/` CHAMA esta função? Por AST — citação não é chamada."""
     for caminho in sorted(_SRC.rglob("*.py")):
         if "__pycache__" in caminho.parts:
             continue
@@ -216,18 +167,12 @@ def _tem_chamador_de_producao(funcao: str) -> bool:
     return False
 
 
-# ---------------------------------------------------------------------------
 def test_o_montador_do_bloqueio_continua_tendo_um_dono_so() -> None:
     """Se `bloqueio` passar a ser escrito noutro lugar, esta régua cega."""
     fonte = _IPC.read_text(encoding="utf-8")
     donos = re.findall(r'^\s*"bloqueio":', fonte, re.MULTILINE)
     donos += re.findall(r"^\s*bloqueio\s*=", fonte, re.MULTILINE)
     montador = _corpo(_IPC, _MONTADOR)
-    # DUAS FORMAS, e a régua conta as duas de propósito. O montador antigo
-    # atribuía (`bloqueio = "modo_jogo"`); o dono único de 25/08 é uma função
-    # de decisão e RETORNA (`return "modo_jogo"`). Contar só uma faria a régua
-    # cegar na próxima vez que alguém trocasse o estilo — que é exatamente o
-    # que acabou de acontecer.
     dentro = sum(
         1
         for no in ast.walk(montador)
@@ -249,8 +194,6 @@ def test_o_montador_do_bloqueio_continua_tendo_um_dono_so() -> None:
         "esta asserção existe para pegar."
     )
 
-    # E o payload tem de CHAMAR o dono, senão haveria dois caminhos vivos: o
-    # dono único decidindo para ninguém, e o payload decidindo por conta.
     payload = _corpo(_IPC, _PAYLOAD)
     chama = any(
         isinstance(no, ast.Attribute) and no.attr == _MONTADOR
@@ -264,12 +207,7 @@ def test_o_montador_do_bloqueio_continua_tendo_um_dono_so() -> None:
 
 
 def test_toda_frase_do_teclado_fala_de_um_estado_que_o_daemon_produz() -> None:
-    """A régua de classe.
-
-    ARRANQUE A CURA: apague a entrada de `BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO` e
-    este caso REPROVA nomeando a frase morta — é o defeito de hoje, medido pelo
-    instrumento, sem plantio nenhum.
-    """
+    """A régua de classe."""
     alcancaveis = valores_que_o_daemon_consegue_publicar()
     assert alcancaveis, "a régua não achou NENHUM valor produzível — ela cegou"
 
@@ -288,12 +226,7 @@ def test_toda_frase_do_teclado_fala_de_um_estado_que_o_daemon_produz() -> None:
 
 
 def test_a_declaracao_de_morte_nao_sobrevive_a_propria_cura() -> None:
-    """A metade que avisa sozinha se alguma frente RELIGAR a suspensão.
-
-    ARRANQUE A CURA: devolva um escritor de `True` à flag em
-    `daemon/subsystems/gamepad.py` e este caso REPROVA — a declaração virou
-    lápide de um defeito que acabou, e a frase precisa ser revisitada.
-    """
+    """A metade que avisa sozinha se alguma frente RELIGAR a suspensão."""
     alcancaveis = valores_que_o_daemon_consegue_publicar()
     ressuscitadas = [
         chave for chave in ea.BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO if chave in alcancaveis
@@ -317,25 +250,14 @@ def test_toda_declaracao_de_morte_aponta_o_dono_da_decisao() -> None:
 
 
 def test_a_frase_viva_de_pausa_continua_dizendo_que_nao_foi_desligado() -> None:
-    """O invariante que o daemon deixou por escrito, e o E15 não pode quebrar.
-
-    Nos casos de PAUSA o `enabled` continua TRUE — o teclado dela não foi
-    desligado. Marcar uma frase como morta não pode virar a porta para mexer no
-    texto das que estão vivas.
-    """
+    """O invariante que o daemon deixou por escrito, e o E15 não pode quebrar."""
     viva = ea.BLOQUEIO_DO_TECLADO_EM_PORTUGUES["modo_jogo"]
     assert "em pausa" in viva, viva
     assert "esligado" not in viva, viva
 
 
 def test_a_frase_marcada_como_morta_ainda_esta_no_disco() -> None:
-    """A escolha declarada: MARCAR, não apagar.
-
-    Apagar a frase decidiria por ela uma pergunta que a VPAD-SUSPENSO-MORTO-01
-    deixou aberta e que é da mantenedora. Este caso registra a escolha em
-    código, para que apagá-la seja um gesto deliberado e não um efeito colateral
-    de outra leva.
-    """
+    """A escolha declarada: MARCAR, não apagar."""
     frase = ea.BLOQUEIO_DO_TECLADO_EM_PORTUGUES.get("vpad_suspenso_pelo_steam_input")
     assert frase, "a frase foi apagada — se foi decisão dela, apague este caso junto"
     assert "Não foi desligado" in frase, frase

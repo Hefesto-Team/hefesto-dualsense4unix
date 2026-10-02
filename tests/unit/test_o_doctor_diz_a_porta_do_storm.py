@@ -68,8 +68,6 @@ from collections.abc import Callable
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts/doctor.sh"
 
-#: O ambiente mínimo do doctor. Rodar o doctor inteiro traria sudo, systemd e o
-#: daemon vivo para dentro de um teste — e o que se mede aqui é UMA costura.
 _PREAMBULO = textwrap.dedent(
     """
     set -uo pipefail
@@ -86,11 +84,7 @@ _PREAMBULO = textwrap.dedent(
 
 
 def _do_fonte(abre: str) -> str:
-    """O corpo de um trecho do doctor, do FONTE — nunca uma cópia.
-
-    Copiar o bloco para dentro deste arquivo faria a régua medir a si mesma: no
-    dia em que o doctor mudasse, ela continuaria verde sobre o texto antigo.
-    """
+    """O corpo de um trecho do doctor, do FONTE — nunca uma cópia."""
     fonte = DOCTOR.read_text(encoding="utf-8")
     i = fonte.index(abre)
     j = fonte.index("\n}\n", i)
@@ -103,8 +97,6 @@ def _roteiro() -> str:
     corpo = _do_fonte(
         '    local log="${HOME}/.local/state/hefesto-dualsense4unix/kernel.log"'
     )
-    # O corpo usa `local`, que só existe dentro de função — mesmo contexto do
-    # doctor de verdade, onde ele é o corpo de `check_kernel_watch`.
     return _PREAMBULO + "\n" + endereco + "\n_bloco() {\n" + corpo + "\n_bloco\n"
 
 
@@ -150,8 +142,6 @@ def _rodar(
             TMPPYTHON=(python if python is not None else sys.executable),
             HEFESTO_DOCTOR_JANELA_DIAS=str(janela),
             HEFESTO_DOCTOR_RAIZ_USB=str(raiz_usb),
-            # O estado do timer do watchdog, pelo gancho: a régua não pergunta
-            # ao systemd de quem a roda.
             HEFESTO_DOCTOR_VIGIA_DO_REBIND=vigia,
         )
         r = subprocess.run(
@@ -170,12 +160,7 @@ def _linha(dias_atras: int, mensagem: str) -> str:
 
 
 def test_o_doctor_diz_a_porta_e_o_aparelho() -> None:
-    """A entrega da sprint: o -71 sai com o endereço, não só com o número.
-
-    A MORDIDA: apague a chamada a `_o_endereco_do_storm` dentro de
-    `check_kernel_watch` e esta régua reprova — sobra o "33 vez(es)" que não
-    manda ninguém a lugar nenhum.
-    """
+    """A entrega da sprint: o -71 sai com o endereço, não só com o número."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -184,13 +169,6 @@ def test_o_doctor_diz_a_porta_e_o_aparelho() -> None:
     )
     assert "3-4.1.3" in saida, f"o doctor não disse a porta:\n{saida}"
     assert "DualSense (054c:0ce6)" in saida, f"o doctor não disse o aparelho:\n{saida}"
-    # O PREFIXO, FIXADO AQUI DE PROPÓSITO: quem o vigiava era
-    # `test_log_limpo_nao_ganha_bloco_de_endereco`, e só pela AUSÊNCIA. Mudar o
-    # texto do `porta)` deixava as duas verdes — a régua do log limpo passaria a
-    # afirmar a ausência de uma frase que já não existe em lugar nenhum.
-    # E A ENTRADA PELO DONO DO NOME (24/09, «nomear e religar»): com a bancada
-    # injetada, os nomes que ela deu não valem — é outra máquina — e sobra o
-    # que o desenho dá a qualquer um, «Entrada 4.1.3», com o caminho junto.
     assert "-71 em Entrada 4.1.3 (3-4.1.3)" in saida, f"o prefixo do bloco mudou:\n{saida}"
 
 
@@ -207,12 +185,7 @@ def test_o_doctor_diz_o_hub_no_caminho() -> None:
 
 
 def test_a_porta_que_nao_existe_mais_nao_ganha_aparelho() -> None:
-    """Porta vazia: o doctor diz que NÃO SABE qual era, e nunca nomeia um vizinho.
-
-    É o caso mais comum de um -71 de quatro dias atrás — o aparelho caiu e não
-    voltou. Emprestar a identidade de quem está no hub ao lado daria um laudo
-    convincente e falso.
-    """
+    """Porta vazia: o doctor diz que NÃO SABE qual era, e nunca nomeia um vizinho."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -225,12 +198,7 @@ def test_a_porta_que_nao_existe_mais_nao_ganha_aparelho() -> None:
 
 
 def test_o_hub_em_comum_e_aviso_e_nao_nota_de_rodape() -> None:
-    """Duas portas em pane sob o mesmo hub viram WARN, com o que fazer junto.
-
-    A MORDIDA: troque o `warn` do caso `hub)` por `info` e esta régua reprova.
-    Das linhas deste bloco, a do hub é a ÚNICA sobre a qual há ato possível —
-    publicá-la no mesmo tom das outras é esconder a cura no meio do laudo.
-    """
+    """Duas portas em pane sob o mesmo hub viram WARN, com o que fazer junto."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -258,18 +226,7 @@ def test_uma_porta_so_nao_acusa_o_hub() -> None:
 
 
 def test_evento_velho_nao_ganha_endereco() -> None:
-    """Fora da janela, nenhum endereço — o passado não se conta no presente.
-
-    A MORDIDA EXIGE AS DUAS TRAVAS, e descobrir isso custou uma mordida que
-    NÃO mordeu: arrancar só o `-gt 0` do `check_kernel_watch` não faz o evento
-    de agosto aparecer (o `--dias` do módulo o corta), e arrancar só o corte do
-    módulo também não (a guarda nem chama). Arranque AS DUAS e esta régua
-    reprova, com o defeito de 03/09 de volta — um endereço de agosto impresso
-    como se fosse a queda de ontem.
-
-    A redundância é deliberada e está escrita no doctor: a guarda é economia
-    de dois `python3` por execução; quem decide a janela é o módulo.
-    """
+    """Fora da janela, nenhum endereço — o passado não se conta no presente."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -281,19 +238,7 @@ def test_evento_velho_nao_ganha_endereco() -> None:
 
 
 def test_a_janela_do_doctor_e_a_do_modulo_sao_uma_so() -> None:
-    """O `--dias` que o doctor passa é o `HEFESTO_DOCTOR_JANELA_DIAS` que ele conta.
-
-    A MORDIDA: troque o ``--dias "${dias}"`` por um ``7`` fixo e esta régua
-    reprova — com a janela em 30 o WARN continuaria dizendo *"1 vez(es) nos
-    últimos 30 dias"* e o bloco de endereços viria VAZIO, que o doctor lê como
-    "o módulo não respondeu".
-
-    E O `sem_endereco` NÃO PEGARIA ISSO, que é o ponto: ele mede o que o
-    módulo não soube LER dentro da janela DELE. Duas janelas diferentes fazem
-    a soma dos endereços ficar menor que a contagem com `sem_endereco` igual a
-    zero — exatamente a cegueira que o `sem_endereco` foi escrito para
-    impedir, entrando pela porta de trás.
-    """
+    """O `--dias` que o doctor passa é o `HEFESTO_DOCTOR_JANELA_DIAS` que ele conta."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -309,17 +254,7 @@ def test_a_janela_do_doctor_e_a_do_modulo_sao_uma_so() -> None:
 
 
 def test_sem_python_do_produto_o_doctor_diz_que_nao_sabe() -> None:
-    """Sem python, a resposta é "NÃO SEI" — nunca silêncio.
-
-    É o caso da instalação por PACOTE que não carrega o módulo. A MORDIDA:
-    troque o `info` desta primeira guarda por um `:` mudo e esta régua reprova.
-
-    **DUAS GUARDAS, DUAS RÉGUAS, e a separação custou uma mordida que não
-    mordeu:** a primeira versão deste teste passava um python INEXISTENTE e
-    dizia cobrir esta guarda — mas `py` vinha não-vazio, a guarda nem rodava,
-    e quem respondia era a segunda (:func:`test_python_que_nao_responde_...`).
-    Arrancar esta linha deixava a régua verde. Agora cada guarda tem a sua.
-    """
+    """Sem python, a resposta é "NÃO SEI" — nunca silêncio."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -331,13 +266,7 @@ def test_sem_python_do_produto_o_doctor_diz_que_nao_sabe() -> None:
 
 
 def test_python_que_nao_responde_o_doctor_diz_que_nao_sabe() -> None:
-    """Python que existe no nome e não roda: também "NÃO SEI", e por outra frase.
-
-    A MORDIDA: troque o `info` do laudo vazio por um `return` mudo e esta régua
-    reprova. Depois de um WARN de 33 eventos, a ausência de linhas de endereço
-    se lê como "nenhum deles tem endereço" — ausência de medida vendida como
-    medida de ausência.
-    """
+    """Python que existe no nome e não roda: também "NÃO SEI", e por outra frase."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -349,13 +278,7 @@ def test_python_que_nao_responde_o_doctor_diz_que_nao_sabe() -> None:
 
 
 def test_o_evento_sem_porta_nao_vira_modulo_mudo() -> None:
-    """Um -71 que o parser não endereça NÃO se lê como "o módulo não respondeu".
-
-    As duas ausências são opostas e a mesma frase serviria às duas: *"não sei
-    ler esta forma de linha"* é uma medição; *"o módulo não respondeu"* é a
-    falta dela. Aqui o log só tem linhas inendereçáveis — o laudo sai, com a
-    confissão certa, e a frase de falha não aparece.
-    """
+    """Um -71 que o parser não endereça NÃO se lê como "o módulo não respondeu"."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -367,12 +290,7 @@ def test_o_evento_sem_porta_nao_vira_modulo_mudo() -> None:
 
 
 def test_o_evento_sem_endereco_chega_ao_terminal() -> None:
-    """A linha que o parser não soube ler é DITA, e o total fecha com a contagem.
-
-    A MORDIDA: engula o `sem_endereco` no trecho Python de
-    `_o_endereco_do_storm` e esta régua reprova — o doctor mostraria uma porta
-    sobre três eventos, com a diferença invisível.
-    """
+    """A linha que o parser não soube ler é DITA, e o total fecha com a contagem."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -393,12 +311,7 @@ def test_log_limpo_nao_ganha_bloco_de_endereco() -> None:
 
 
 def test_o_endereco_nao_le_o_sys_da_maquina_que_roda() -> None:
-    """Com a raiz injetada VAZIA, nenhum aparelho é nomeado — nem o dela.
-
-    É a guarda de universalidade (F9): se esta régua dependesse do barramento
-    de quem a roda, ela mudaria de resposta entre a máquina dela e o CI, e
-    nenhuma das duas respostas seria sobre o produto.
-    """
+    """Com a raiz injetada VAZIA, nenhum aparelho é nomeado — nem o dela."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -418,11 +331,7 @@ def _interface_hid_sem_driver(raiz: pathlib.Path) -> None:
 
 
 def test_o_controle_sem_hid_vira_aviso_com_o_gesto() -> None:
-    """O controle encaixado sem o HID sai em WARN, com a entrada e o gesto.
-
-    A MORDIDA: troque o `warn` do caso `parada_hid)` por `info` e esta régua
-    reprova — o controle mudo para o jogo ficaria no mesmo tom da contagem.
-    """
+    """O controle encaixado sem o HID sai em WARN, com a entrada e o gesto."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -438,13 +347,7 @@ def test_o_controle_sem_hid_vira_aviso_com_o_gesto() -> None:
 
 
 def test_sem_a_vigia_o_doctor_nao_promete_o_religar() -> None:
-    """Com o timer do watchdog parado, a linha não diz que o Hefesto religa sozinho.
-
-    Conferência de 24/09: o «tenta religá-lo sozinho a cada 2 minutos» saía
-    sem perguntar se a vigia que faz isso estava de pé — o órfão do rádio, no
-    mesmo doctor, já perguntava. A MORDIDA: tire o `if` do estado da vigia e
-    deixe só a frase de sempre, e esta régua reprova.
-    """
+    """Com o timer do watchdog parado, a linha não diz que o Hefesto religa sozinho."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -474,11 +377,7 @@ def test_o_controle_com_hid_nao_vira_aviso() -> None:
 
 
 def test_a_entrada_largada_vira_aviso_com_o_gesto() -> None:
-    """A entrada que o kernel largou vazia sai em WARN, com o gesto de tirar e pôr.
-
-    A MORDIDA: troque o `warn` do caso `parada_vazia)` por `info` e esta régua
-    reprova.
-    """
+    """A entrada que o kernel largou vazia sai em WARN, com o gesto de tirar e pôr."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",

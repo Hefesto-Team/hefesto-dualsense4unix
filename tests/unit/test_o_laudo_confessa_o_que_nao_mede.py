@@ -1,25 +1,4 @@
-"""O laudo tem quatro blocos, e o quarto **nunca some** — a ``CAL-7``.
-
-``CALIBRAR-AS-ENTRADAS-01`` §4.3 (26/08/2026).
-
-O EXAME É A MOLDURA, E FOI A PALAVRA DELA
--------------------------------------------
-
-*"vai servir pra desculpa de olharmos a saúde do seu computador"*. O laudo
-aparece **antes** de ela encaixar qualquer coisa, e é o que faz a tela valer a
-pena mesmo se ela fechar ali.
-
-Quatro blocos, sempre nesta ordem: **O que está bem** · **O que merece
-atenção** · **O que eu não consegui conferir** · **O que eu não meço**.
-
-POR QUE O QUARTO NUNCA SOME
-----------------------------
-
-Ele é o que impede o exame de virar promessa. Um laudo que só fala do que sabe
-ensina a pessoa a confiar nele para tudo — inclusive para o que ele nunca
-mediu. É a mesma disciplina do cabeçalho *"O que NÃO verifiquei"* das entregas
-desta casa: a confissão é a parte que dá valor ao resto.
-"""
+"""O laudo tem quatro blocos, e o quarto **nunca some** — a ``CAL-7``."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.app.widgets.calibrar_entradas import (
@@ -41,11 +20,7 @@ from tests.unit.test_entradas_do_gabinete import _entradas
 
 
 def _mesa_perfeita() -> tuple[NoDeEntrada, ...]:
-    """Duas entradas, as duas ocupadas, as duas com painel, zero excesso.
-
-    Nada a relatar em bloco nenhum — que é exatamente o caso em que esconder o
-    quarto bloco seria tentador.
-    """
+    """Duas entradas, as duas ocupadas, as duas com painel, zero excesso."""
     return (
         NoDeEntrada(
             no="usb1-port1",
@@ -76,19 +51,8 @@ def _logica(entradas, censo: Censo | None = None) -> LogicaDaCalibracao:
     )
 
 
-# ---------------------------------------------------------------------------
-# A mordida
-# ---------------------------------------------------------------------------
-
-
 def test_o_quarto_bloco_nunca_some() -> None:
-    """Mesa perfeita, e "O que eu não meço" **continua na tela**.
-
-    MORDIDA: esconder o bloco quando não há nada a relatar — o
-    ``default_factory`` do ``Laudo.nao_meco`` virando tupla vazia, ou
-    ``blocos()`` filtrando bloco vazio. O bloco some e o teste reprova, porque
-    é ele que impede o exame de virar promessa.
-    """
+    """Mesa perfeita, e "O que eu não meço" **continua na tela**."""
     laudo = _logica(_mesa_perfeita()).laudo()
     titulos = [titulo for titulo, _linhas in laudo.blocos()]
 
@@ -105,20 +69,13 @@ def test_o_quarto_bloco_nunca_some() -> None:
 
 
 def test_o_bloco_do_que_esta_bem_conta_o_que_conferiu() -> None:
-    """"zero em 2" — o número, não o adjetivo.
-
-    Um laudo que diz "está tudo bem" não é conferível; um que diz "zero em 2"
-    é. É a mesma razão pela qual o progresso mostra os dois números (R26).
-    """
+    """"zero em 2" — o número, não o adjetivo."""
     laudo = _logica(_mesa_perfeita()).laudo()
     assert any("zero em 2" in linha for linha in laudo.bem), laudo.bem
 
 
 def test_o_excesso_de_corrente_vai_para_atencao_com_a_entrada_nomeada() -> None:
-    """Excesso de corrente é sintoma, e a linha diz EM QUAL entrada.
-
-    "Alguma entrada teve excesso" não conserta nada. O nó nomeado conserta.
-    """
+    """Excesso de corrente é sintoma, e a linha diz EM QUAL entrada."""
     com_excesso = (
         NoDeEntrada(
             no="usb1-port1",
@@ -137,12 +94,7 @@ def test_o_excesso_de_corrente_vai_para_atencao_com_a_entrada_nomeada() -> None:
 
 
 def test_a_declaracao_incoerente_do_descritor_vira_atencao() -> None:
-    """MEDIDO em 22/08/2026 nos três TP-Link: ``bmAttributes=e0`` com 500 mA.
-
-    Declara fonte própria E pede meio ampère da entrada. Quem consome esse dado
-    precisa ver a contradição junto da declaração, senão desenha "hub
-    alimentado" em cima de um bit que não sustenta a afirmação.
-    """
+    """MEDIDO em 22/08/2026 nos três TP-Link: ``bmAttributes=e0`` com 500 mA."""
     mentiroso = Aparelho(
         no="/mentira/3-1",
         nome_do_kernel="3-1",
@@ -154,14 +106,8 @@ def test_a_declaracao_incoerente_do_descritor_vira_atencao() -> None:
 
 
 def test_o_que_nao_conferi_conta_as_vazias_e_as_sem_painel() -> None:
-    """As entradas que nunca receberam nada não viram "problema": viram lacuna.
-
-    A diferença é honesta e é o desenho: o produto não sabe se elas existem no
-    metal ou se são conectores internos que ninguém alcança. É exatamente o que
-    a caminhada da fase em pé existe para responder.
-    """
+    """As entradas que nunca receberam nada não viram "problema": viram lacuna."""
     laudo = _logica(_entradas()).laudo()
     assert laudo.nao_conferi, "11 buracos vazios e nada no bloco da lacuna"
     assert any("11" in linha for linha in laudo.nao_conferi), laudo.nao_conferi
-    # E o quarto bloco continua lá, com a mesa cheia de lacuna.
     assert laudo.nao_meco

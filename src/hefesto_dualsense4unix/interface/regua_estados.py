@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""Régua dos ESTADOS: a mesma aba, medida em cada posição do acordeão.
-
-POR QUE ELA EXISTE, e o buraco que ela fecha (28/08/2026). A `regua.py` abre a
-página, mede e fecha — **um estado só**, o que vem marcado no HTML. As abas com
-acordeão têm CINCO (`Todos`, `P1`…`P4`), e o que rola por dentro muda com eles.
-
-Medido: a Controles, no estado **Todos**, esconde 794px e mostra **um dos
-quatro** controles (P1 inteiro, P2 pela metade, P3 e P4 com zero pixel). A
-`regua.py` devolvia rc=0 para essa mesma aba, porque no estado que ela visita —
-`P1` — não rola nada. É o mesmo defeito que fez a régua ganhar a conta do que
-rola por dentro ("na Controles, a aba que É sobre os controles mostrava um e
-meio dos quatro"): ele não voltou, ele nunca saiu — mudou de estado.
-
-Ela NÃO reprova: quanto cada estado pode esconder é decisão de desenho, e é
-dela. Esta régua põe o número na mesa, aba por aba e estado por estado.
-
-Uso:  regua_estados.py 02-controles.html 08-conexoes.html
-      regua_estados.py            # todas as que têm acordeão
-"""
+"""Régua dos ESTADOS: a mesma aba, medida em cada posição do acordeão."""
 import pathlib
 import sys
 
@@ -26,8 +8,6 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import onde  # noqa: E402
 
-# MEDE A BANCADA (`mockup/`) — 31/08/2026. Este caminho era `parent.parent`,
-# que resolvia para `layout/`; apontá-lo lá hoje mediria a página congelada.
 D = onde.BANCADA
 
 SONDA = r"""
@@ -97,8 +77,6 @@ def medir(pg, arq):
 if __name__ == "__main__":
     alvos = sys.argv[1:] or sorted(p.name for p in D.glob("[0-9][0-9]-*.html"))
     with sync_playwright() as pw:
-        # SEM `--hide-scrollbars`: o Playwright liga essa bandeira por padrão, e
-        # ela esconde justamente a barra que diz que há mais coisa embaixo.
         b = pw.chromium.launch(executable_path="/usr/bin/google-chrome",
                                args=["--no-sandbox"],
                                ignore_default_args=["--hide-scrollbars"])

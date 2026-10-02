@@ -1,36 +1,4 @@
-"""O diário da vigia diz o que mede: a escrita, e não a lâmpada.
-
-O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 (25/09/2026). Às 09:32 o
-daemon carimbou `nascimento_condenado` para P2, P3 e P4 — e, no mesmo tique,
-`sequestro_corrigido resultado={…: True}` para os três. O `True` quer dizer só
-que o write(2) do report voltou inteiro; pelo rádio, que o BlueZ o pôs na
-fila. As barras do P3 e do P4 estavam apagadas.
-
-E ELA VIU A OUTRA METADE, às 09h50: *«o p2 tá ligado. com um verde claro ou
-azul ciano»* — a cor que o Hefesto dá ao P2. O P2 também foi carimbado
-condenado, com a Steam segurando o físico dele. Então o carimbo diz a
-CONDIÇÃO do nascimento, e não a lâmpada. O P2 obedecia com a vigia
-reescrevendo-o a cada segundo; se é a reescrita que o segura ali contra a
-Steam NÃO foi medido (conferência de 25/09/2026), mas tirar o condenado da
-vigia (como uma das medições recomendou) arriscaria justamente o controle cuja
-barra obedece.
-
-O que esta régua cobra:
-
-1. o evento se chama `sequestro_reescrito`, a medida se chama
-   `escrita_aceita`, e o nascimento condenado vai junto — nunca «corrigido»;
-2. o controle condenado CONTINUA sendo reescrito, como os outros;
-3. os endereços saem mascarados (as duas grafias: com e sem dois-pontos);
-4. o sequestro longo deixa prova no diário (`sequestro_segue`, em 10, 100,
-   1000… reescritas) — em 25/09 não havia uma linha entre 09:35 e 09:44;
-5. a razão do carimbo condenado diz que a barra PODE não obedecer, pelas
-   duas portas que a escrevem.
-
-AS MORDIDAS, medidas: devolver o nome `sequestro_corrigido` reprova a 1; tirar
-o condenado do `reafirmar` reprova a 2; tirar o `_endereco_mascarado` das
-chaves reprova a 3; tirar o laço dos marcos reprova a 4; devolver a frase de
-antes a qualquer das duas portas reprova a 5.
-"""
+"""O diário da vigia diz o que mede: a escrita, e não a lâmpada."""
 
 from __future__ import annotations
 
@@ -55,8 +23,6 @@ NO_2 = "/dev/hidraw6"
 NO_3 = "/dev/hidraw8"
 STEAM = 44275
 
-#: Faixa forjada (aa:bb:cc), com os octetos 4 e 5 DIFERENTES de zero: é o que
-#: prova a máscara — eles têm de sair zerados.
 MAC_2 = "aa:bb:cc:12:34:02"
 UNIQ_2 = "aabbcc123402"
 MAC_3 = "aa:bb:cc:12:34:03"
@@ -86,8 +52,7 @@ class _Mesa:
 
 
 class _Controle:
-    """Como o backend responde: a chave é a DELE (com dois-pontos), e o valor é
-    o que a escrita devolveu — não um `True` de fábrica por uniq pedido."""
+    """Como o backend responde: a chave é a DELE (com dois-pontos), e o valor é"""
 
     def __init__(self) -> None:
         self.reescritos: list[list[str]] = []
@@ -169,11 +134,7 @@ def test_sem_condenado_o_campo_nao_aparece() -> None:
 
 
 def test_o_condenado_continua_sendo_reescrito() -> None:
-    """O P2 de 25/09: condenado, e com a barra na cor do Hefesto.
-
-    Ele obedecia com a vigia reescrevendo-o a cada segundo; tirá-lo da vigia
-    arriscaria a barra que obedece, e o carimbo não separa ele do P3 e do P4.
-    """
+    """O P2 de 25/09: condenado, e com a barra na cor do Hefesto."""
     controle = _Controle()
     _rodar(_daemon(controle, _cartorio(UNIQ_2, UNIQ_3)), 3)
     assert controle.reescritos == [[UNIQ_2, UNIQ_3]] * 3
@@ -207,13 +168,7 @@ def _alvo_do_radio() -> Instancia:
 
 
 def test_o_carimbo_nao_afirma_a_lampada_pelas_duas_portas() -> None:
-    """A razão do condenado dizia «a barra não obedece, e só a reconexão devolve».
-
-    O P2 de 25/09 desmentiu as duas metades: condenado, e com a barra na cor
-    do Hefesto, sem reconectar. As duas portas que escrevem a razão — o diário
-    lido (`veredito_do_nascimento`) e a sonda do próprio daemon (`carimbar`
-    com `nos_segurados`) — passam a dizer que PODE não obedecer.
-    """
+    """A razão do condenado dizia «a barra não obedece, e só a reconexão devolve»."""
     alvo = _alvo_do_radio()
     pelo_diario = sdb.veredito_do_nascimento(
         instancias=[alvo],

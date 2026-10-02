@@ -1,23 +1,4 @@
-"""CANARIO-FS-01 — a suíte escreveu no ``$HOME`` de verdade?
-
-O PORQUÊ, medido em 04/08/2026: os perfis dela foram encontrados corrompidos e
-a pergunta que ficou sem resposta foi *"como sabemos se algum teste ou algo a
-mais corrompeu algo?"*. Havia (e continua havendo) constantes de módulo com
-`Path.home()` avaliadas na importação
-(`integrations/storm_doctor.py:34`, `app/actions/emulation_actions.py:718`) —
-nenhuma fixture alcança um valor que já foi calculado no import, isolar o
-``HOME`` incluído.
-
-CORRIGIDO 24/08/2026 (BERÇO-DE-TMP-01, cauda do `$HOME`): esta seção dizia que
-a fixture `_hefesto_fake_env` "isola os diretórios XDG, mas NÃO isola o
-``HOME``" — não é mais verdade, ela isola os dois desde essa cauda. O canário
-continua existindo pelo motivo do parágrafo acima (constante de módulo) e por
-cobrir o que nenhum instrumento mapeou ainda — não por o `HOME` seguir aberto.
-
-O canário responde a pergunta por medição. Estes testes provam as duas metades
-do contrato dele: ele PEGA a escrita, e ele NÃO reclama do que a máquina viva
-faz ao lado (senão vira alarme que se aprende a ignorar).
-"""
+"""CANARIO-FS-01 — a suíte escreveu no ``$HOME`` de verdade?"""
 from __future__ import annotations
 
 import os
@@ -38,14 +19,7 @@ class _SessaoFalsa:
 
 
 def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Um ``$HOME`` de mentira com as árvores que o canário vigia.
-
-    As duas listas: a que REPROVA (`_CANARIO_ALVOS`) e a que só AVISA
-    (`_CANARIO_ALVOS_AVISO`, acrescentada em 07/08/2026). A foto de aviso é
-    tirada aqui, já com o ``HOME`` desviado — sem isto o `sessionfinish`
-    compararia a foto da sessão VIVA (o `$HOME` real) contra este lar de
-    mentira, e acusaria a árvore inteira de ter sumido.
-    """
+    """Um ``$HOME`` de mentira com as árvores que o canário vigia."""
     lar = tmp_path / "lar"
     (lar / ".config" / "hefesto-dualsense4unix" / "profiles").mkdir(parents=True)
     (lar / ".config" / "wireplumber").mkdir(parents=True)
@@ -65,15 +39,6 @@ def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         canario, "_CANARIO_FOTO_AVISO", canario._fotografar_tudo_de_aviso()
     )
-    # Os testes daqui chamam o `pytest_sessionfinish` DE VERDADE, e ele carrega
-    # três guardas. A da ARVORE-CONGELADA-01 mede a árvore REAL do repositório e
-    # também escreve `exitstatus = 1` — então, numa árvore viva (outro agente
-    # editando, um `git checkout` ao lado), ela derrubava as asserções de
-    # `exitstatus == 0` daqui por um motivo que nada tem a ver com o canário.
-    # MEDIDO em 07/08/2026: 5 vermelhos numa suíte inteira, todos por um arquivo
-    # meu salvo durante a execução. Neutralizar a guarda vizinha isola a unidade
-    # sob teste e NÃO afrouxa nada — a mordida do canário é o `exitstatus = 1`
-    # que o bloco DELE escreve, e essa continua valendo linha por linha.
     monkeypatch.setattr(canario, "_deltas_do_congelado", lambda: [])
     return lar
 
@@ -94,11 +59,7 @@ def test_canario_vigia_os_tres_diretorios_reais(
 def test_escrita_em_perfil_real_vira_delta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Um teste que grava no perfil DELA aparece nomeado no relatório.
-
-    MORDIDA: arrancar a comparação de conteúdo (`_deltas_do_canario`) faz esta
-    asserção reprovar — e é ela que descreve o defeito que se quer pegar.
-    """
+    """Um teste que grava no perfil DELA aparece nomeado no relatório."""
     lar = _lar_falso(tmp_path, monkeypatch)
     antes = canario._fotografar_tudo()
 
@@ -130,15 +91,7 @@ def test_arquivo_novo_e_apagado_tambem_contam(
 def test_mtime_sozinho_nao_acusa_ninguem(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Toque de mtime SEM mudança de conteúdo não é delta.
-
-    Isto não é folga: é a medição de 05/08. Com o daemon e a janela dela de pé,
-    os `*.json.lock` mudam de mtime a cada poucos segundos (o `filelock` toca o
-    arquivo a cada aquisição), e um canário que reprovasse por isso acusaria a
-    suíte do que o daemon fez — e seria desligado na primeira semana.
-
-    MORDIDA: voltar a comparar a tupla inteira (com mtime_ns) reprova aqui.
-    """
+    """Toque de mtime SEM mudança de conteúdo não é delta."""
     lar = _lar_falso(tmp_path, monkeypatch)
     trava = lar / ".config/hefesto-dualsense4unix/profiles/vitoria.json.lock"
     trava.write_bytes(b"")
@@ -153,11 +106,7 @@ def test_mtime_sozinho_nao_acusa_ninguem(
 def test_sessionfinish_reprova_a_sessao_com_delta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A sessão inteira REPROVA quando o canário encontra rastro.
-
-    MORDIDA: tirar o `session.exitstatus = 1` do fim de `pytest_sessionfinish`
-    faz esta asserção reprovar — e é ela que transforma o relatório em portão.
-    """
+    """A sessão inteira REPROVA quando o canário encontra rastro."""
     lar = _lar_falso(tmp_path, monkeypatch)
     monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
     monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
@@ -215,16 +164,7 @@ def test_home_sem_a_arvore_nao_estoura(
 def test_canario_desarmado_nao_acusa_o_home_inteiro(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Sem a foto inicial, o canário fica QUIETO em vez de acusar tudo.
-
-    Uma sessão que começou com o canário desligado e terminou com ele ligado
-    compararia contra um dicionário vazio: cada arquivo do ``$HOME`` viraria
-    "CRIADO durante a suíte". É o alarme mais falso que existe, e o selo
-    `_CANARIO_ARMADO` é o que o impede.
-
-    MORDIDA: tirar o `not _CANARIO_ARMADO` da guarda de `pytest_sessionfinish`
-    faz esta sessão reprovar com a árvore inteira na lista.
-    """
+    """Sem a foto inicial, o canário fica QUIETO em vez de acusar tudo."""
     _lar_falso(tmp_path, monkeypatch)
     monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", {})
     monkeypatch.setattr(canario, "_CANARIO_ARMADO", False)
@@ -232,23 +172,6 @@ def test_canario_desarmado_nao_acusa_o_home_inteiro(
     sessao: Any = _SessaoFalsa()
     canario.pytest_sessionfinish(sessao, 0)
     assert sessao.exitstatus == 0
-
-
-# ---------------------------------------------------------------------------
-# A segunda lista, de 07/08/2026: a árvore que só AVISA
-# ---------------------------------------------------------------------------
-# O PORQUÊ, MEDIDO em 07/08 com retrato do disco antes e depois de uma suíte
-# inteira: os quatro `~/.local/state/hefesto-dualsense4unix/launch_env/*.env`
-# foram REGRAVADOS às 16:19:38, dentro da janela da suíte. Quem escreveu não foi
-# a suíte — foi o daemon VIVO dela (`launch_env_materializado` no journal, pid
-# 2870305), 20 s depois da primeira rajada de teclados uinput que a suíte cria,
-# e o próprio daemon nomeia o mecanismo duas linhas adiante:
-# `backend_hotplug_reconcile trigger=input_dir_change`.
-#
-# Essa árvore estava FORA de qualquer instrumento desta casa. Entrou — como
-# aviso, e não como portão, porque um portão que fica vermelho na máquina dela e
-# verde na CI é um portão que alguém desliga na semana seguinte (é a lição do
-# DIV-11, os 15 `.lock` da estreia do canário).
 
 
 def test_arvore_de_aviso_e_resolvida_contra_o_home_vivo(
@@ -263,12 +186,7 @@ def test_arvore_de_aviso_e_resolvida_contra_o_home_vivo(
 def test_mudanca_na_arvore_de_aviso_relata_e_nao_reprova(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """As duas metades do contrato do aviso, na mesma asserção: ele APARECE, e
-    a sessão continua verde.
-
-    MORDIDA: mover o bloco do aviso para dentro do bloco que reprova (ou
-    acrescentar um `session.exitstatus = 1` a ele) derruba a segunda asserção.
-    """
+    """As duas metades do contrato do aviso, na mesma asserção: ele APARECE, e"""
     lar = _lar_falso(tmp_path, monkeypatch)
     monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
     monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
@@ -288,12 +206,7 @@ def test_mudanca_na_arvore_de_aviso_relata_e_nao_reprova(
 def test_o_aviso_nao_engole_o_portao(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """As duas listas convivem: aviso na de aviso, REPROVA na que reprova.
-
-    MORDIDA: um `return` no bloco do aviso (ou pô-lo depois do `if not deltas:
-    return`) faz um dos dois sumir — e o que some em silêncio é sempre o que
-    importava.
-    """
+    """As duas listas convivem: aviso na de aviso, REPROVA na que reprova."""
     lar = _lar_falso(tmp_path, monkeypatch)
     monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
     monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
@@ -334,11 +247,7 @@ def test_escotilha_desliga_tambem_o_aviso(
 def test_o_aviso_nunca_restaura_nada(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Contrato declarado, e é o que separa este mecanismo de um estrago: o
-    canário MEDE o ``$HOME``, e não desfaz escrita nenhuma. Quem escreveu na
-    árvore de aviso costuma ser a daemon VIVA dela, e desfazer isso seria o
-    dano maior.
-    """
+    """Contrato declarado, e é o que separa este mecanismo de um estrago: o"""
     lar = _lar_falso(tmp_path, monkeypatch)
     monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
     monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)

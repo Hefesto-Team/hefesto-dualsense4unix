@@ -1,46 +1,4 @@
-"""BONDS-QUE-SOBREVIVEM-01 — o gatilho da volta, e o que ele tem de recusar.
-
-Decisão dela, 08/08/2026: *"restauro de bonds tem de ser automático — manual
-com `sudo` não é produto"*. O salva-vidas GRAVA sozinho desde 21/07; a volta
-era um comando que ela tinha de digitar, e por isso nunca aconteceu.
-
-O QUE APAGA OS BONDS — medido no journal dela em **15/08/2026, 06:29**, com
-bluez **5.86** (o backport já aplicado: ele não curou isto):
-
-    06:29:01  snapshot de bonds gravado ... (4 bond(s))
-    06:29:41  snapshot de bonds gravado ... (1 bond(s))   <- 3 bonds em 40 s
-    06:29:46  bluetoothd: malloc_consolidate(): unaligned fastbin chunk detected
-    06:29:49  bluetooth.service: Main process exited, code=dumped, status=6/ABRT
-    06:29:50  bluetooth.service: Scheduled restart job, restart counter is at 1
-    06:29:56  snapshot de bonds gravado ... (2 bond(s))
-
-A corrupção de heap apaga os diretórios de device de `/var/lib/bluetooth`
-**segundos antes** de abortar. O salva-vidas tinha a cópia boa das 06:29:01 e
-ninguém a usou: ela ficou com dois dos quatro controles.
-
-O GATILHO é o `ExecStopPost` do `bluetooth.service`, e só na MORTE do daemon.
-Ali o `bluetoothd` já saiu (o storage está parado sem que ninguém precise
-pará-lo — parar o BlueZ à mão foi o que derrubou o agente de pareamento por
-oito horas em 14/08), o systemd reinicia 1 s depois, e a unit roda como root:
-nenhum `sudo`, nenhum polkit.
-
-AS MORDIDAS (cada uma tem o "arranque" escrito no docstring do teste):
-
-  1. a varredura por device, do snapshot mais NOVO para o mais velho — sem
-     ela, "o último snapshot" é o DEGRADADO, e a volta devolve nada;
-  2. o gate `SERVICE_RESULT != success` — sem ele, uma remoção que ela decidiu
-     é desfeita pelo produto no desligamento seguinte;
-  3. a regra ADITIVA (nunca escrever onde há `[LinkKey]` viva) — é ela que
-     transforma o risco da "chave rotacionada" em não-risco, e era esse risco
-     que mantinha a restauração manual desde 21/07;
-  4. a quarentena por boot (E4 da sprint de 04/08) — sem ela, um bond que não
-     para de pé realimenta o laço de autenticação que o crash adora;
-  5. a poda por VALOR do acervo (E2) — sem ela, uma fila de snapshots pobres
-     expulsa o rico e o gatilho acorda para um acervo cheio e inútil;
-  6. o destino do log (DIÁRIO-QUE-NAO-MENTE-01, 15/08) — sem ele, ESTE arquivo
-     de teste escreve no journal da máquina dela a linha "bluetooth.service
-     morreu", e a próxima pessoa a ler o journal caça um defeito que não houve.
-"""
+"""BONDS-QUE-SOBREVIVEM-01 — o gatilho da volta, e o que ele tem de recusar."""
 from __future__ import annotations
 
 import os
@@ -51,8 +9,6 @@ import pytest
 
 from tests.unit.fonte_do_instalador import texto_do_instalador
 
-#: Os scripts da família `bt_*` que registram no journal. Todos passaram a
-#: escrever por `_registrar`, e é isso que o portão desta lista guarda.
 SCRIPTS_QUE_REGISTRAM = (
     "bt_active_mode.sh",
     "bt_bonds_autorestore.sh",
@@ -69,19 +25,13 @@ DROPIN = REPO_ROOT / "assets" / "systemd" / "bluetooth-dropin-10-hefesto-resilie
 INSTALL = REPO_ROOT / "install.sh"
 UNINSTALL = REPO_ROOT / "uninstall.sh"
 
-# Faixa sintética canônica das fixtures (test_anonimato_de_fixtures.py).
 ADAPTER = "AA:BB:CC:00:00:01"
 VERMELHO = "AA:BB:CC:00:00:02"
 AZUL = "AA:BB:CC:00:00:03"
 PRETO = "AA:BB:CC:00:00:04"
 BRANCO = "AA:BB:CC:00:00:05"
 
-#: Um boot fixo, para a quarentena ser determinística. Em produção é o
-#: `/proc/sys/kernel/random/boot_id`; para o script é só uma etiqueta opaca, e
-#: aqui ela é prosa de propósito — um UUID de mentira casa o detector de MAC do
-#: test_anonimato_de_fixtures.py no último grupo de hexa.
 BOOT = "boot-do-ensaio-01"
-#: 15/08/2026 06:30:00 -03 em epoch, o minuto do crash medido.
 AGORA = "1786822200"
 
 
@@ -120,9 +70,6 @@ def _rodar(
     agora: str = AGORA,
     extra: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    # A raiz do storage do BlueZ existe sempre (é o `StateDirectory=bluetooth`
-    # da unit do bluez) — inclusive depois do crash, que come os diretórios de
-    # device e não a raiz.
     destino.mkdir(parents=True, exist_ok=True)
     env = {
         **os.environ,
@@ -153,9 +100,6 @@ def _bonds(destino: Path) -> set[str]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Linha de base — sem ela, um script que recusa TUDO passaria em todo o resto.
-# ---------------------------------------------------------------------------
 class TestAVoltaAcontece:
     def test_bond_comido_pelo_crash_volta_sozinho(self, tmp_path: Path) -> None:
         """O caso de 15/08, em miniatura: o disco perdeu um, o acervo tem os dois."""
@@ -182,32 +126,16 @@ class TestAVoltaAcontece:
         assert "nenhum bond faltando" in proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 1 (a principal) — o snapshot mais recente é o PIOR deles.
-# ---------------------------------------------------------------------------
 class TestEscolhaDoSnapshot:
     def test_restaura_do_snapshot_bom_e_nao_do_degradado(self, tmp_path: Path) -> None:
-        """A reprodução literal do relógio de 15/08 06:29.
-
-        ARRANQUE: troque a varredura `sort -r` por device pelo "snapshot mais
-        recente" (o `--latest` do `bt_bonds_restore.sh`) e este teste fica
-        vermelho — porque às 06:29:41 o snapshot mais recente era o de UM bond,
-        gravado 5 s depois do crash ter comido três.
-
-        É a mordida principal porque o defeito não é copiar errado: é PERGUNTAR
-        errado. A pergunta certa não é "qual foi o último retrato?", é "quando
-        foi a última vez que eu vi ESTE bond vivo?".
-        """
+        """A reprodução literal do relógio de 15/08 06:29."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
-        # 06:29:01 — os quatro controles da mesa dela.
         _snapshot(
             acervo,
             "20260815-062901",
             {VERMELHO: "V1", AZUL: "A1", PRETO: "P1", BRANCO: "B1"},
         )
-        # 06:29:41 — o retrato do estrago, e é ele o MAIS RECENTE.
         _snapshot(acervo, "20260815-062941", {VERMELHO: "V1"})
-        # O disco depois do restart: dois de quatro.
         _poe_device(destino, VERMELHO, "V1")
         _poe_device(destino, AZUL, "A1")
 
@@ -242,19 +170,9 @@ class TestEscolhaDoSnapshot:
         assert _bonds(destino) == set(), "snapshot de 45 dias atrás ressuscitou um bond"
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 2 — o gate da MORTE. É a E1 da sprint: distinguir "perdemos" de
-# "ela despareou de propósito".
-# ---------------------------------------------------------------------------
 class TestSoNaMorteDoDaemon:
     def test_parada_limpa_nao_restaura_nada(self, tmp_path: Path) -> None:
-        """ARRANQUE: tire o `case "${SERVICE_RESULT:-}"` e este teste reprova.
-
-        Sem o gate, a sequência "ela roda `bluetoothctl remove`, depois desliga
-        o computador" faz o produto RESSUSCITAR o pareamento que ela mandou
-        embora — reescrevendo a escolha dela em silêncio, que é exatamente o
-        que a E1 da BONDS-QUE-SOBREVIVEM-01 proíbe.
-        """
+        """ARRANQUE: tire o `case "${SERVICE_RESULT:-}"` e este teste reprova."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260815-062901", {VERMELHO: "V1", AZUL: "A1"})
         _poe_device(destino, VERMELHO, "V1")
@@ -301,20 +219,9 @@ class TestSoNaMorteDoDaemon:
         assert _bonds(destino) == {AZUL}
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 3 — ADITIVO. É o que derruba o motivo de a volta ser manual.
-# ---------------------------------------------------------------------------
 class TestNuncaPorCimaDeChaveViva:
     def test_nunca_sobrescreve_linkkey_viva(self, tmp_path: Path) -> None:
-        """ARRANQUE: tire o `if [[ -f DST_INFO ]] && _tem_chave` e reprova.
-
-        É esta linha, e só ela, que responde ao motivo escrito em três lugares
-        para a restauração ser manual desde 21/07: *"se o controle já rotacionou
-        a própria chave, reimpor a chave antiga gera um laço de falha de
-        autenticação — a mesma classe de gatilho do crash"*. A chave viva em
-        disco é sempre a mais nova. Não escrevendo onde há chave, o risco
-        deixa de existir — não é mitigado, é ausente.
-        """
+        """ARRANQUE: tire o `if [[ -f DST_INFO ]] && _tem_chave` e reprova."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260815-062901", {AZUL: "CHAVE-VELHA"})
         _poe_device(destino, AZUL, "CHAVE-QUE-O-CONTROLE-ROTACIONOU")
@@ -352,27 +259,17 @@ class TestNuncaPorCimaDeChaveViva:
         assert not (destino / ADAPTER / BRANCO).exists()
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 4 — quarentena por boot (E4, 04/08).
-# ---------------------------------------------------------------------------
 class TestQuarentena:
     def test_o_mesmo_device_nao_volta_duas_vezes_no_mesmo_boot(
         self, tmp_path: Path
     ) -> None:
-        """ARRANQUE: tire o `_restauros_neste_boot` e reprova.
-
-        Regra escrita na E4: *"restaurar o mesmo MAC duas vezes no mesmo boot é
-        o começo do laço que realimenta o crash — e é PROIBIDO"*. Um bond que
-        sumiu DE NOVO logo depois de ter voltado não é vítima do crash: é chave
-        velha sendo rejeitada pelo controle. Insistir alimenta o laço.
-        """
+        """ARRANQUE: tire o `_restauros_neste_boot` e reprova."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
 
         primeira = _rodar(acervo, destino)
         assert _bonds(destino) == {AZUL}, primeira.stdout
 
-        # o controle rejeitou a chave e o bond evaporou outra vez
         for arquivo in (destino / ADAPTER / AZUL).iterdir():
             arquivo.unlink()
         (destino / ADAPTER / AZUL).rmdir()
@@ -403,9 +300,6 @@ class TestQuarentena:
         assert _bonds(destino) == {AZUL}
 
 
-# ---------------------------------------------------------------------------
-# A régua da RADIO-ABERTO-01/E10, agora num caminho que roda SOZINHO.
-# ---------------------------------------------------------------------------
 class TestSnapshotHostilNaoEhCopiado:
     def test_info_symlink_nao_e_restaurado(self, tmp_path: Path) -> None:
         """`cp -a` preservaria o link, e o bluetoothd escreve como ROOT por dentro dele."""
@@ -466,19 +360,9 @@ class TestSnapshotHostilNaoEhCopiado:
         assert _bonds(destino) == set()
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 5 — a poda por VALOR (E2). O gatilho depende do acervo servir.
-# ---------------------------------------------------------------------------
 class TestPodaPorValor:
     def test_o_melhor_snapshot_nunca_sai_na_poda(self, tmp_path: Path) -> None:
-        """ARRANQUE: volte a poda para `sort | head -n -12` puro e reprova.
-
-        MEDIDO em 04/08 às 03:04: o snapshot das 23:51:44 com os QUATRO
-        controles já tinha sido podado por doze snapshots de UM bond, gravados
-        em série por um `bluetoothd` que caía. O acervo estava cheio e não
-        servia para nada — e um gatilho automático que acorda para esse acervo
-        restaura o próprio estrago.
-        """
+        """ARRANQUE: volte a poda para `sort | head -n -12` puro e reprova."""
         acervo = tmp_path / "acervo"
         fonte = tmp_path / "bluetooth"
         acervo.mkdir()
@@ -492,7 +376,6 @@ class TestPodaPorValor:
         ]
         assert len(list(acervo.iterdir())) == 13
 
-        # o estado de agora é magro, e diferente de tudo que está no acervo
         _poe_device(fonte, VERMELHO, "V-DE-AGORA")
 
         proc = subprocess.run(
@@ -518,17 +401,9 @@ class TestPodaPorValor:
         assert "preservado" in proc.stdout
 
 
-# ---------------------------------------------------------------------------
-# A FIAÇÃO — de nada adianta o mecanismo se ele não está ligado em lugar nenhum.
-# ---------------------------------------------------------------------------
 class TestFiacao:
     def test_o_dropin_arma_o_gatilho_depois_do_snapshot(self) -> None:
-        """ARRANQUE: tire o `ExecStopPost` do autorestore do drop-in e reprova.
-
-        A ordem importa e é assertada: o snapshot fotografa o estrago primeiro
-        (valor forense; o acervo nunca aceita foto vazia), a restauração corre
-        depois, sobre o disco já fotografado.
-        """
+        """ARRANQUE: tire o `ExecStopPost` do autorestore do drop-in e reprova."""
         texto = DROPIN.read_text(encoding="utf-8")
         linhas = [ln for ln in texto.splitlines() if ln.startswith("ExecStopPost=")]
         alvos = [ln for ln in linhas if "bt_bonds_" in ln]
@@ -543,12 +418,7 @@ class TestFiacao:
             )
 
     def test_o_gatilho_nao_usa_sudo_nem_para_o_servico(self) -> None:
-        """A volta não pode repetir o AGENTE-QUE-NAO-VOLTA-01.
-
-        Parar o `bluetooth.service` derruba o `hefesto-bt-agent.service` junto
-        (`Requires=`), e em 14/08 isso custou oito horas de Bluetooth. No
-        `ExecStopPost` o daemon já morreu — não há nada a parar.
-        """
+        """A volta não pode repetir o AGENTE-QUE-NAO-VOLTA-01."""
         codigo = "\n".join(
             linha
             for linha in AUTORESTORE.read_text(encoding="utf-8").splitlines()
@@ -559,11 +429,7 @@ class TestFiacao:
         assert "systemctl mask" not in codigo
 
     def test_o_dry_run_nao_esbarra_no_daemon_vivo(self) -> None:
-        """Portão de TEXTO, e assumido como tal: o gate do daemon vivo protege a
-        ESCRITA, e o `--dry-run` não escreve. Com a máquina viva é justamente
-        quando a pergunta "o que voltaria agora?" serve — e ela tem de poder
-        ser feita sem parar nada. O caminho real exige root e não cabe na suíte.
-        """
+        """Portão de TEXTO, e assumido como tal: o gate do daemon vivo protege a"""
         codigo = AUTORESTORE.read_text(encoding="utf-8")
         assert 'if [[ "${DRY}" -eq 0 ]] \\\n       && command -v systemctl' in codigo, (
             "o gate do bluetooth vivo tem de deixar o --dry-run passar"
@@ -574,13 +440,7 @@ class TestFiacao:
         assert "bt_bonds_autorestore.sh" in UNINSTALL.read_text(encoding="utf-8")
 
     def test_o_install_nao_promete_mais_restauro_manual(self) -> None:
-        """A decisão dela de 08/08 contra a linha de `install.sh` que a contradizia.
-
-        `install.sh:1808` dizia *"restauração é MANUAL"*. As duas posições
-        ficaram escritas lado a lado desde 08/08 (o mapa de 13/08 registra a
-        contradição). Fato errado se SUBSTITUI — e este portão impede que ele
-        volte por descuido.
-        """
+        """A decisão dela de 08/08 contra a linha de `install.sh` que a contradizia."""
         texto = texto_do_instalador()
         assert "restauração é MANUAL" not in texto, (
             "o install.sh voltou a prometer restauro manual — contradiz a "
@@ -596,17 +456,7 @@ class TestFiacao:
         assert proc.returncode == 0, proc.stderr
 
     def test_o_diario_nao_mente_e_o_portao_e_da_familia_inteira(self) -> None:
-        """DIÁRIO-QUE-NAO-MENTE-01: quem registra, registra por `_registrar`.
-
-        ARRANQUE: troque o `_registrar` de qualquer um dos seis por um
-        `logger -t ... "$*"` direto e este portão reprova.
-
-        O critério não é "o script tem uma variável": é que exista UM único
-        ponto de saída para o journal em cada script, e que ele seja
-        endereçável. Dois pontos de saída significam que um deles vai escapar —
-        foi assim no `bt_nosniff_now.sh`, que registrava em duas linhas soltas
-        no meio do fluxo, longe de qualquer função de log.
-        """
+        """DIÁRIO-QUE-NAO-MENTE-01: quem registra, registra por `_registrar`."""
         for nome in SCRIPTS_QUE_REGISTRAM:
             texto = (REPO_ROOT / "scripts" / nome).read_text(encoding="utf-8")
             codigo = [
@@ -624,18 +474,7 @@ class TestFiacao:
             assert "_registrar()" in texto, f"{nome} não define `_registrar`"
 
     def test_a_suite_inteira_nasce_com_o_log_desviado(self) -> None:
-        """O fail-safe: nenhum teste FUTURO precisa lembrar de desviar o log.
-
-        ARRANQUE: tire o `monkeypatch.setenv("HEFESTO_BT_LOG_DEST", ...)` do
-        `_hefesto_fake_env` (tests/conftest.py) e este teste reprova.
-
-        Curar só este arquivo deixaria o defeito à espreita: qualquer teste novo
-        que rode um `bt_*.sh` voltaria a escrever no journal DELA, e o sintoma
-        (uma linha convincente sobre uma morte que não houve) só aparece dias
-        depois, para quem está caçando outra coisa. A fixture é autouse, então
-        o desvio vale para o processo inteiro — inclusive para os subprocessos,
-        que herdam o `os.environ`.
-        """
+        """O fail-safe: nenhum teste FUTURO precisa lembrar de desviar o log."""
         destino = os.environ.get("HEFESTO_BT_LOG_DEST")
         assert destino, (
             "a suíte não desviou o log dos scripts bt_*: eles vão escrever no "
@@ -644,24 +483,10 @@ class TestFiacao:
         assert destino != "", destino
 
 
-# ---------------------------------------------------------------------------
-# MORDIDA 6 — DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026).
-# ---------------------------------------------------------------------------
-# O log de produção é útil e não pode sumir: é ele que conta a história quando
-# o bond volta de verdade. O que não pode existir é a linha que descreve um
-# evento que NÃO aconteceu. Estes testes fixam as duas metades ao mesmo tempo:
-# o journal fica limpo sob teste, e continua escrito em produção.
 class TestOLogNaoMenteNoJournalDela:
     @staticmethod
     def _logger_falso(tmp_path: Path) -> tuple[Path, dict[str, str]]:
-        """Um `logger` de mentira na frente do PATH.
-
-        É a única régua honesta aqui: perguntar ao journal do sistema tornaria
-        o teste dependente da máquina, da retenção e da permissão de leitura —
-        e um teste que consulta o journal para provar que não sujou o journal
-        já falhou de propósito. O shim responde a pergunta exata: o script
-        CHAMOU o `logger`, sim ou não?
-        """
+        """Um `logger` de mentira na frente do PATH."""
         binario = tmp_path / "bin-falso"
         binario.mkdir(exist_ok=True)
         registro = tmp_path / "logger-foi-chamado.txt"
@@ -675,14 +500,7 @@ class TestOLogNaoMenteNoJournalDela:
         return registro, {"PATH": f"{binario}:{os.environ['PATH']}"}
 
     def test_sob_teste_nenhuma_linha_chega_ao_journal(self, tmp_path: Path) -> None:
-        """ARRANQUE: volte o `log()` a chamar `logger -t ... "$*"` direto e reprova.
-
-        O defeito medido: em 15/08 esta suíte gravou 36 linhas dizendo
-        "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" no journal DELA —
-        oito entre 18h29 e 21h38 — sobre um `bluetoothd` que nunca morreu
-        (`systemctl`: Result=success, NRestarts=2, ativo desde as 14:14:32).
-        Vinte minutos de investigação foram atrás desse defeito inexistente.
-        """
+        """ARRANQUE: volte o `log()` a chamar `logger -t ... "$*"` direto e reprova."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
         registro, caminho = self._logger_falso(tmp_path)
@@ -705,13 +523,7 @@ class TestOLogNaoMenteNoJournalDela:
     def test_o_desvio_registra_a_mesma_linha_em_vez_de_engolir(
         self, tmp_path: Path
     ) -> None:
-        """Desviar, não emudecer — senão a cura vira 'apagamos o log'.
-
-        ARRANQUE: troque o ramo do caminho por `:` (silêncio) e reprova. É esta
-        asserção que impede a cura preguiçosa: um `--quiet` global limparia o
-        journal e destruiria, junto, a única prova de que a restauração
-        aconteceu.
-        """
+        """Desviar, não emudecer — senão a cura vira 'apagamos o log'."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
         diario = tmp_path / "diario.log"
@@ -727,12 +539,7 @@ class TestOLogNaoMenteNoJournalDela:
     def test_em_producao_a_linha_continua_indo_para_o_journal(
         self, tmp_path: Path
     ) -> None:
-        """O contrapeso: sem `HEFESTO_BT_LOG_DEST`, o journal recebe tudo.
-
-        Produção é exatamente isto: o `ExecStopPost` roda o script sem env
-        nenhuma. Se um dia alguém "simplificar" removendo o `logger`, este
-        teste é quem reclama.
-        """
+        """O contrapeso: sem `HEFESTO_BT_LOG_DEST`, o journal recebe tudo."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
         registro, caminho = self._logger_falso(tmp_path)
@@ -768,11 +575,7 @@ class TestOLogNaoMenteNoJournalDela:
         assert "restaurado" in proc.stdout, "o stdout NUNCA depende do destino do log"
 
     def test_o_snapshot_irmao_tambem_desvia(self, tmp_path: Path) -> None:
-        """O `bt_bonds_snapshot.sh` roda neste MESMO arquivo (TestPodaPorValor).
-
-        Ele sozinho pôs 535 linhas no journal dela em 15/08. Curar só o
-        autorestore deixaria metade do defeito de pé.
-        """
+        """O `bt_bonds_snapshot.sh` roda neste MESMO arquivo (TestPodaPorValor)."""
         fonte, acervo = tmp_path / "bluetooth", tmp_path / "acervo"
         acervo.mkdir()
         _poe_device(fonte, AZUL, "A1")

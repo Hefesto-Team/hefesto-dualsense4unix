@@ -53,7 +53,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.utils import session, xdg_paths
 
-#: A faixa sintética da casa — nada de endereço real em arquivo versionado.
 P1 = "aabbcc000001"
 PERFIL = "Bancada"
 
@@ -99,9 +98,6 @@ class _Daemon:
         self._gamepad_device: Any = None
         self._mouse_device = None
         self._coop_manager = None
-        # O PERFIL ATIVO QUE O DAEMON SABE — desde a O-MODO-SE-GRAVA-ONDE-ELE-
-        # MUDA-01 (29/09/2026) quem grava o modo do chip é o daemon, e o perfil
-        # que recebe é o `store.active_profile` dele (o da janela saiu).
         self.store = SimpleNamespace(active_profile=PERFIL)
         self._emu_lock = threading.Lock()
         self._native_mode = False
@@ -179,8 +175,6 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         lambda d: SimpleNamespace(sync=lambda force=False, origem=None: None),
     )
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
-    # A assinatura do real (`caminho, *, origem`), desde 28/09: um dublê mais
-    # estreito levantava TypeError, que o `suppress` do produto engolia.
     monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, **_k: None)
     em._zerar_registro_de_mascaras()
     (xdg_paths.config_dir(ensure=True) / "controller_masks.json").unlink(missing_ok=True)
@@ -304,15 +298,8 @@ def test_com_o_cartao_em_xbox_360_o_chip_acende_o_escolhido_e_nao_a_mascara() ->
     assert _mascara_do_cartao_no_disco() == "xbox"
 
 
-# ---------------------------------------------------------------------------
-# ACRESCENTADAS NA VALIDAÇÃO — 13/09/2026
-# ---------------------------------------------------------------------------
-# As duas cenas acima dublam a fábrica, leem o caminho por `_caminho_publicado`
-# e nunca reativam um perfil. Medido na validação: arrancar o caminho da fábrica
 # REAL, do bloco `gamepad_emulation` do `state_full` ou de `apply_profile_mode`
-# passava com as quatro réguas novas e as vizinhas verdes. As três abaixo mordem.
 
-#: A fábrica REAL, guardada no import — antes de o `_bancada` trocá-la pelo dublê.
 _FABRICA_REAL = vp.make_virtual_pad
 
 
@@ -333,8 +320,6 @@ def test_a_fabrica_real_decide_o_canal_pelo_caminho(
         return None, "uhid_indisponivel"
 
     monkeypatch.setattr(vp, "_try_uhid", _espiao)
-    # Só o `start`, que abriria o nó do kernel — o molde de
-    # `test_mascara_por_controle_manda_no_vpad._sem_no_de_kernel`.
     from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 
     monkeypatch.setattr(UinputGamepad, "start", lambda self: True)
@@ -372,13 +357,7 @@ def _daemon_do_perfil(vpad: Any) -> tuple[Any, list[dict[str, Any]]]:
 
 
 def test_o_perfil_sem_caminho_nao_muda_de_aparelho_e_o_com_caminho_muda() -> None:
-    """§D.1: um perfil de antes da cura não tem `mode.caminho` e dá o MESMO aparelho.
-
-    E o perfil que escolheu um caminho o pede ao vpad quando entra.
-
-    MORDE: tirar de `apply_profile_mode` o termo do caminho — o perfil com
-    ``caminho="xbox"`` entra e o vpad segue no `uhid`.
-    """
+    """§D.1: um perfil de antes da cura não tem `mode.caminho` e dá o MESMO aparelho."""
     uhid = _Vpad("dualsense", P1, "dualsense")
     assert uhid.backend == "uhid", "premissa"
     antigo = Profile(
@@ -441,16 +420,6 @@ def test_o_state_full_publica_o_caminho_que_acende_o_chip() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# ACRESCENTADA NA SEGUNDA VALIDAÇÃO — 13/09/2026
-# ---------------------------------------------------------------------------
-# As três bancadas desta sprint trocam `session.save_gamepad_caminho` por um
-# dublê, e nenhuma régua lia a flag do caminho no boot. Medido: arrancar do
-# `Daemon.run` a leitura de `load_gamepad_caminho_com_origem`, ou gravar o caminho
-# dentro da flag velha, passava com todas as réguas verdes.
-
-#: As escritas REAIS da sessão, guardadas no import — antes de o `_bancada`
-#: trocá-las pelos dublês.
 _SALVAR_EMULACAO_REAL = session.save_gamepad_emulation
 _SALVAR_CAMINHO_REAL = session.save_gamepad_caminho
 
@@ -462,16 +431,7 @@ class _ParouNoTecladoError(Exception):
 def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """§I, `utils/session.py`: o caminho persiste AO LADO da flag, que o boot lê.
-
-    Três metades: só o gesto manual persiste (a R-07 do liga/desliga); o
-    `gamepad_emulation.flag` sai byte a byte igual; e o `Daemon.run` REAL devolve
-    à config o caminho que ela escolheu.
-
-    MORDE: tirar do `run` a leitura de `load_gamepad_caminho_com_origem` (o boot
-    nasce sem o caminho), gravar o caminho dentro do `gamepad_emulation.flag` (a
-    flag velha muda de formato) ou persistir fora do gesto manual.
-    """
+    """§I, `utils/session.py`: o caminho persiste AO LADO da flag, que o boot lê."""
     from hefesto_dualsense4unix.testing import FakeController
 
     monkeypatch.setattr(session, "save_gamepad_caminho", _SALVAR_CAMINHO_REAL)
@@ -510,19 +470,6 @@ def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
                 pool = getattr(daemon, nome, None)
                 if pool is not None:
                     pool.shutdown(wait=False)
-        # NOTA DATADA — 19/09/2026, CAMINHO-CONTAGIO-01, ponto 3. Esta linha
-        # exigia `"xbox"`, e o boot passou a DEVOLVER esse valor ao default: o
-        # `gamepad_caminho.flag` da máquina dela dizia `xbox` desde 18/09 às
-        # 11:18 porque o PS + R3 dentro do DON'T SCREAM gravava nos dois
-        # lugares, e não por escolha dela para todos os jogos.
-        #
-        # NOTA DATADA — 28/09/2026, O-MODO-XBOX-NAO-E-QUEDA-02, itens (a) e 3.
-        # O gesto fora do jogo grava COM A ORIGEM, e o boot devolve só o valor
-        # sem origem (o legado de 18/09, medido em `test_o_modo_tem_um_dono.py`):
-        # o `xbox` que o gesto acima gravou é a escolha dela e fica, no arquivo
-        # e em `gamepad_caminho_global`. O slot da SESSÃO nasce com o modo do
-        # perfil que o boot restaura — o Freestyle de fábrica não opina, então
-        # ele nasce vazio: ninguém nasce do arquivo global.
         assert daemon.config.gamepad_caminho_global == "xbox", (
             "o boot não leu o caminho dela, ou desfez a escolha com origem"
         )

@@ -1,15 +1,4 @@
-"""Testes unitários do subsystem de métricas Prometheus.
-
-Cobre:
-  - MetricsCollector.collect() gera texto válido em Prometheus exposition format.
-  - Todas as métricas canônicas estão presentes no payload.
-  - Labels são corretamente renderizadas (transport, result, topic, etc.).
-  - MetricsSubsystem.is_enabled() segue config.metrics_enabled.
-  - MetricsSubsystem sobe servidor HTTP em porta alta e responde /metrics.
-  - MetricsSubsystem.stop() é idempotente (sem servidor levantado).
-  - Rota inexistente devolve 404.
-  - Porta ocupada não derruba o daemon (no-op com warning).
-"""
+"""Testes unitários do subsystem de métricas Prometheus."""
 from __future__ import annotations
 
 import re
@@ -28,10 +17,6 @@ from hefesto_dualsense4unix.daemon.subsystems.metrics import (
     MetricsSubsystem,
     _porta_efetiva,
 )
-
-# ---------------------------------------------------------------------------
-# Fixtures auxiliares
-# ---------------------------------------------------------------------------
 
 
 def _make_store(
@@ -70,11 +55,6 @@ def _get_metrics(port: int) -> str:
     url = f"http://127.0.0.1:{port}/metrics"
     with urllib.request.urlopen(url, timeout=5) as resp:
         return resp.read().decode("utf-8")
-
-
-# ---------------------------------------------------------------------------
-# Testes do MetricsCollector (sem rede)
-# ---------------------------------------------------------------------------
 
 
 class TestMetricsCollector:
@@ -164,12 +144,7 @@ class TestMetricsCollector:
         assert int(match.group(1)) == 0
 
     def test_ipc_requests_com_counters_tem_labels(self) -> None:
-        """Com contadores ipc.*, payload deve ter labels method/status.
-
-        Convenção: chave "ipc.<method>.<status>" onde status é o último
-        segmento (após o último ponto) e method é o restante.
-        Ex.: "ipc.daemon.status.ok" → method="daemon.status", status="ok".
-        """
+        """Com contadores ipc.*, payload deve ter labels method/status."""
         payload = self._collector(
             extra_counters={"ipc.daemon.status.ok": 10}
         ).collect()
@@ -202,20 +177,10 @@ class TestMetricsCollector:
         )
 
 
-# ---------------------------------------------------------------------------
-# Testes do MetricsSubsystem (com servidor HTTP real)
-# ---------------------------------------------------------------------------
-
-
 class TestMetricsSubsystem:
     @pytest.fixture(autouse=True)
     def _sem_env_de_metricas(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """As duas chaves saem do ambiente antes de cada teste desta classe.
-
-        Sem isto, um `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` exportado no
-        shell de quem roda a suíte faria `test_is_enabled_false` reprovar por
-        motivo que não é do código.
-        """
+        """As duas chaves saem do ambiente antes de cada teste desta classe."""
         monkeypatch.delenv(ENV_METRICS_ENABLED, raising=False)
         monkeypatch.delenv(ENV_METRICS_PORT, raising=False)
 
@@ -241,15 +206,6 @@ class TestMetricsSubsystem:
         subsystem = MetricsSubsystem()
         assert subsystem.is_enabled(self._make_config(enabled=False)) is False
 
-    # -----------------------------------------------------------------------
-    # PROMESSA-NÃO-CUMPRIDA-01/C1 — a chave que faltava.
-    #
-    # A mordida: arrancada a cura de `is_enabled` (voltando ao `return
-    # bool(getattr(config, "metrics_enabled", False))`), o primeiro teste fica
-    # VERMELHO — a env deixa de existir para o código. Um teste que só
-    # conferisse `metrics_enabled=True` continuaria verde com a cura arrancada,
-    # porque essa metade nunca esteve quebrada.
-    # -----------------------------------------------------------------------
 
     def test_a_env_liga_as_metricas_com_a_config_desligada(
         self, monkeypatch: pytest.MonkeyPatch
@@ -264,12 +220,7 @@ class TestMetricsSubsystem:
     def test_so_o_literal_um_liga(
         self, valor: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Mesma gramática dos plugins: só `"1"`, e nada de `"true"`.
-
-        Duas chaves opcionais do mesmo daemon com regras diferentes seria
-        armadilha — quem aprendeu `PLUGINS_ENABLED=1` escreveria `=true` aqui e
-        veria o endpoint não subir, sem erro nenhum.
-        """
+        """Mesma gramática dos plugins: só `"1"`, e nada de `"true"`."""
         monkeypatch.setenv(ENV_METRICS_ENABLED, valor)
         subsystem = MetricsSubsystem()
 
@@ -305,7 +256,7 @@ class TestMetricsSubsystem:
     async def test_stop_idempotente_sem_servidor(self) -> None:
         """stop() sem servidor ativo não deve lançar exceção."""
         subsystem = MetricsSubsystem()
-        await subsystem.stop()  # _server is None — idempotente
+        await subsystem.stop()
 
     @pytest.mark.asyncio
     async def test_servidor_sobe_e_responde_metrics(self) -> None:
@@ -360,7 +311,6 @@ class TestMetricsSubsystem:
     @pytest.mark.asyncio
     async def test_porta_ocupada_nao_derruba_daemon(self) -> None:
         """Se a porta estiver ocupada, MetricsSubsystem vira no-op (não lança)."""
-        # Abre socket para ocupar a porta
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(("127.0.0.1", 0))
@@ -370,7 +320,6 @@ class TestMetricsSubsystem:
         subsystem = MetricsSubsystem()
         ctx = self._make_ctx(port)
         try:
-            # Não deve lançar — deve apenas logar warning e ficar no-op
             await subsystem.start(ctx)
             assert subsystem._server is None, "servidor deveria ser None (porta ocupada)"
         finally:
@@ -385,4 +334,4 @@ class TestMetricsSubsystem:
         ctx = self._make_ctx(port)
         await subsystem.start(ctx)
         await subsystem.stop()
-        await subsystem.stop()  # segundo stop — deve ser silencioso
+        await subsystem.stop()

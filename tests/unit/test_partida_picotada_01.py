@@ -34,10 +34,8 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.launch_env import steam_input_exception_appid
 
-#: O appid do Sackboy, que é o caso medido.
 SACKBOY = 1599660
 
-#: A classe que a Steam dá à janela do jogo.
 CLASSE_DO_JOGO = f"steam_app_{SACKBOY}"
 
 
@@ -55,19 +53,12 @@ class _DaemonFalso:
 
 
 def _perguntar(crua: str | None, sticky: str | None, tmp_path: Path) -> int | None:
-    """Chama a função como o daemon a chama, com a allowlist injetada.
-
-    `base_dir` aponta para um diretório vazio de propósito: sem marker de
-    wrapper, a única evidência é a janela — que é o que este teste mede.
-    """
+    """Chama a função como o daemon a chama, com a allowlist injetada."""
     return steam_input_exception_appid(
         _DaemonFalso(_StoreFalso(crua, sticky)),
         base_dir=tmp_path,
         allowlist={SACKBOY},
     )
-
-
-# --- o que a cura tem de preservar -------------------------------------------
 
 
 def test_jogo_na_frente_ativa_a_excecao(tmp_path: Path) -> None:
@@ -76,23 +67,13 @@ def test_jogo_na_frente_ativa_a_excecao(tmp_path: Path) -> None:
 
 
 def test_alt_tab_de_verdade_encerra_a_excecao_no_mesmo_tique(tmp_path: Path) -> None:
-    """O medo registrado no docstring continua coberto.
-
-    Um alt-tab real para outro app dá leitura POSITIVA dessa outra janela, e
-    essa apaga a exceção IMEDIATAMENTE — o físico não fica exposto ao desktop
-    esperando um sticky decair. Este teste é o contrapeso do de baixo: sem ele,
-    alguém "curaria" a instabilidade tornando tudo sticky, e reabriria o defeito
-    que a leitura crua existe para evitar.
-    """
+    """O medo registrado no docstring continua coberto."""
     assert _perguntar("firefox", CLASSE_DO_JOGO, tmp_path) is None
 
 
 def test_jogo_fora_da_allowlist_nunca_ativa(tmp_path: Path) -> None:
     """Outro jogo da Steam em foco não liga a exceção de um appid alheio."""
     assert _perguntar("steam_app_3357650", "steam_app_3357650", tmp_path) is None
-
-
-# --- o que a cura conserta — ARRANQUE A CURA E ESTES REPROVAM -----------------
 
 
 @pytest.mark.parametrize(
@@ -104,16 +85,7 @@ def test_jogo_fora_da_allowlist_nunca_ativa(tmp_path: Path) -> None:
     ],
 )
 def test_tique_cego_nao_derruba_a_excecao(crua: str | None, tmp_path: Path) -> None:
-    """`wm_class=unknown` é "não sei", nunca "o jogo saiu da frente".
-
-    É o caso das 02:27:28 no journal dela: o detector devolveu `unknown` com o
-    Sackboy ainda em `current=`, e 700 ms depois o vpad foi recriado no meio da
-    partida.
-
-    ARRANQUE A CURA (o bloco `if _leitura_cega(crua):` em
-    `daemon/launch_env.py`) e este teste REPROVA: sem ele a função devolve
-    `None`, a exceção cai, o vpad é destruído e o jogador 2 do co-op vai junto.
-    """
+    """`wm_class=unknown` é "não sei", nunca "o jogo saiu da frente"."""
     assert _perguntar(crua, CLASSE_DO_JOGO, tmp_path) == SACKBOY, (
         f"leitura cega ({crua!r}) derrubou a exceção — é o defeito da "
         "PARTIDA-PICOTADA-01: o vpad é recriado no meio da partida e o "
@@ -122,15 +94,7 @@ def test_tique_cego_nao_derruba_a_excecao(crua: str | None, tmp_path: Path) -> N
 
 
 def test_janela_do_proprio_hefesto_nao_derruba_a_excecao(tmp_path: Path) -> None:
-    """Ela abrir a janela do Hefesto não pode picotar a partida.
-
-    Caso das 01:44:42 e das 03:01:20 no journal: `wm_class` da própria GUI, e
-    logo em seguida `steam_input_excecao_encerrada`. Ela estava mexendo na
-    configuração enquanto o jogo rodava — que é exatamente o que a janela existe
-    para permitir.
-
-    ARRANQUE A CURA e este teste REPROVA.
-    """
+    """Ela abrir a janela do Hefesto não pode picotar a partida."""
     from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
 
     for classe in sorted(OWN_GUI_WM_CLASSES):
@@ -141,11 +105,7 @@ def test_janela_do_proprio_hefesto_nao_derruba_a_excecao(tmp_path: Path) -> None
 
 
 def test_cego_sem_sticky_nao_inventa_excecao(tmp_path: Path) -> None:
-    """Cego + sticky vazio ⇒ None. A cura não pode inventar sinal do nada.
-
-    Sem esta asserção, "cair no sticky" viraria "assumir que o jogo está na
-    frente", e a exceção nasceria sozinha numa máquina que nunca viu o jogo.
-    """
+    """Cego + sticky vazio ⇒ None. A cura não pode inventar sinal do nada."""
     assert _perguntar("unknown", None, tmp_path) is None
     assert _perguntar(None, "", tmp_path) is None
 

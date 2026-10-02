@@ -75,11 +75,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-#: Quanto se espera entre a escrita e a leitura de volta. Medido na bancada em
-#: 04/09/2026: o `report_thread` só põe o byte no fio no ciclo do keepalive, e
 #: o `state_full` publicou o valor novo em **547 ms** e **548 ms** nas duas
-#: direções. Um segundo e meio é quase o triplo, e continua curto o bastante
-#: para o som dela não ficar no controle por mais que um instante.
 ASSENTAR_S: float = 1.5
 
 
@@ -159,9 +155,6 @@ def main() -> int:
 
     falhas: list[str] = []
     try:
-        # ------------------------------------------------------------------ IDA
-        # A CAMADA 1 PRIMEIRO, e a ordem é a do produto: "a camada 1 vence a
-        # camada 2 — volume e rota perfeitos num sink mudo é trabalho invisível".
         desfecho = audio_saida.mandar_o_som_do_pc(escolhido, na_mesa)
         dizer(f"\nIDA camada 1: ok={desfecho.ok} sink={desfecho.sink or '—'} "
               f"{desfecho.motivo}")
@@ -176,8 +169,6 @@ def main() -> int:
         dizer(f"IDA camada 2: {resposta}")
         time.sleep(ASSENTAR_S)
 
-        # ------------------------------------------------------------- A VOLTA
-        # DA LEITURA. É esta a entrega: as duas camadas, lidas do produto.
         byte = _byte_da_rota(escolhido)
         padrao = _pactl("get-default-sink")
         leitura = audio_saida.RotaDasDuasCamadas(
@@ -197,7 +188,6 @@ def main() -> int:
                 f"camadas não concordam (byte={byte!r}, sink={padrao!r})"
             )
     finally:
-        # ------------------------------------------------------------- A VOLTA
         if args.sem_volta:
             print(
                 "\n--sem-volta: A DEVOLUÇÃO FOI ARRANCADA DE PROPÓSITO. O som "

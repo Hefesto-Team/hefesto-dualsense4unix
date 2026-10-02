@@ -93,20 +93,12 @@ P3 = "aabbcc000033"
 P4 = "aabbcc000044"
 OS_QUATRO = (P1, P2, P3, P4)
 
-# --- os números do `hid-playstation`, escritos à mão --------------------------
-#: `DS_OUTPUT_VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE` e
-#: `DS_OUTPUT_VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE` (`valid_flag1`), e o
-#: `LIGHTBAR_CONTROL_ENABLE`.
 _FLAG1_LUZ = 0x01
 _FLAG1_MUDO = 0x02
 _FLAG1_BARRA = 0x04
-#: `DS_OUTPUT_POWER_SAVE_CONTROL_MIC_MUTE` (`power_save_control`).
 _BIT_MUDO = 0x10
-#: `mute_button_led` e `power_save_control` no `struct
-#: dualsense_output_report_common`: o nono e o décimo byte.
 _BYTE_LUZ = 8
 _BYTE_MUDO = 9
-#: `UHID_START` e `UHID_CLOSE` do `linux/uhid.h`.
 _UHID_START = 2
 _UHID_CLOSE = 5
 
@@ -114,11 +106,6 @@ _UHID_CLOSE = 5
 def _com_dois_pontos(uniq: str) -> str:
     """A forma do `uniq` do evdev (a identidade do co-op): `aa:bb:cc:…`."""
     return ":".join(uniq[i : i + 2] for i in range(0, 12, 2))
-
-
-# ---------------------------------------------------------------------------
-# O relógio do pad, os reports do jogo e do driver
-# ---------------------------------------------------------------------------
 
 
 class _Relogio:
@@ -184,11 +171,6 @@ def _mandar(pad: UhidDualSense, relogio: _Relogio, evento: bytes, passo: float =
     pad.pump_ff()
 
 
-# ---------------------------------------------------------------------------
-# O aparelho: o handle de PRODUÇÃO de cada controle
-# ---------------------------------------------------------------------------
-
-
 def _handle() -> Any:
     """O `_PinnedPyDualSense` sem device: só o estado que o `_build_common` lê."""
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
@@ -210,12 +192,7 @@ def _handle() -> Any:
 
 
 class _Aparelho:
-    """Os controles físicos como o daemon os vê, com o handle de produção de cada um.
-
-    A luz e o mudo vão ao handle pelo método DELE (`set_microphone_led`,
-    `set_microphone_mute`), e o report que sai é o que ele monta. O firmware
-    obedece à ordem do mudo no report seguinte, como o aparelho.
-    """
+    """Os controles físicos como o daemon os vê, com o handle de produção de cada um."""
 
     def __init__(self, uniqs: tuple[str, ...], transportes: tuple[str, ...] = ()) -> None:
         self.uniqs = list(uniqs)
@@ -226,7 +203,6 @@ class _Aparelho:
         self.firmware = dict.fromkeys(uniqs, False)
         self.luzes: list[tuple[str, int | None]] = []
         self.mudos: list[tuple[str, bool | None]] = []
-        #: O `common` que saiu a cada ordem de mudo (a posse de pé).
         self.commons_do_mudo: list[tuple[str, bytes]] = []
         self.primary_uniq = uniqs[0]
 
@@ -302,10 +278,7 @@ class _EleitorQueAnota:
 
 
 class _DaemonDoJogo:
-    """O daemon mínimo que os ralos, o laço da luz e o do mudo tocam.
-
-    `_run_blocking` sem keywords, como o real.
-    """
+    """O daemon mínimo que os ralos, o laço da luz e o do mudo tocam."""
 
     def __init__(self, aparelho: _Aparelho, *, autoridade: str = "unknown") -> None:
         self.bus = EventBus()
@@ -361,11 +334,7 @@ def palavra() -> Iterator[_Palavra]:
 
 @pytest.fixture(autouse=True)
 def _a_bancada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """O lar de mentira, as cadências da luz encolhidas e os registros limpos.
-
-    A PEÇA A responde «ninguém ouve» (a luz decide ACESA ou APAGADA pelo mudo)
-    e a PEÇA B não existe: nada disto chama `pactl`.
-    """
+    """O lar de mentira, as cadências da luz encolhidas e os registros limpos."""
     for nome in ("XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_DATA_HOME"):
         monkeypatch.setenv(nome, str(tmp_path / nome.lower()))
     monkeypatch.setattr(luz, "INTERVALO_S", 0.001)
@@ -428,11 +397,6 @@ def _eventos(fila: asyncio.Queue[Any]) -> list[dict[str, Any]]:
             return saida
 
 
-# ===========================================================================
-# 1. O pedido de luz acende, pisca e apaga a luz do controle daquele jogador
-# ===========================================================================
-
-
 class TestALuzDoJogoVaiAoPlastico:
     """Mordidas: o laço da luz ignorando o pedido; o aplicador mirando o primário."""
 
@@ -457,7 +421,6 @@ class TestALuzDoJogoVaiAoPlastico:
                     assert common[_BYTE_LUZ] == valor, (
                         f"no {transporte}, o report do P2 não leva a luz {valor} do jogo"
                     )
-                    # A tela segue dizendo o microfone, e não a luz do jogo.
                     assert luz.estado_da_luz_do_mic(P2) == luz.ACESA
                 assert aparelho.luzes_de(P1) == [luz.ACESA], (
                     f"a luz que o jogo pediu ao P2 chegou ao P1: {aparelho.luzes_de(P1)}"
@@ -465,12 +428,7 @@ class TestALuzDoJogoVaiAoPlastico:
                 assert luz.luz_do_mic_do_jogo(P1) is None
         finally:
             pad.stop()
-        assert pad.mic_led_do_jogo == 0  # o stop zera a conta
-
-
-# ===========================================================================
-# 2. O pedido de mudo cala e abre o microfone dele, e nada além
-# ===========================================================================
+        assert pad.mic_led_do_jogo == 0
 
 
 @pytest.fixture
@@ -488,8 +446,7 @@ def espioes(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
 
 
 class TestOMudoDoJogo:
-    """Mordidas: o jogo pelo `ligar_o_microfone` (o disco e o eleitor reprovam);
-    sem a palavra do rádio no calar; `dizer_no_ar(uniq, not mudo)` no abrir."""
+    """Mordidas: o jogo pelo `ligar_o_microfone` (o disco e o eleitor reprovam);"""
 
     @pytest.mark.parametrize("transporte", ["usb", "bt"])
     async def test_cala_e_abre_o_microfone_do_p3(
@@ -532,7 +489,7 @@ class TestOMudoDoJogo:
     ) -> None:
         aparelho = _Aparelho((P3,))
         aparelho.firmware[P3] = True
-        palavra.de_pe[P3] = True  # ela pôs no ar
+        palavra.de_pe[P3] = True
         daemon = _DaemonDoJogo(aparelho)
         relogio = _Relogio()
         pad = _pad(3, CoopManager(daemon)._make_player_replica_sinks(P3), relogio)
@@ -544,11 +501,6 @@ class TestOMudoDoJogo:
             pad.stop()
         assert palavra.ditos == [] and palavra.esquecidos == []
         assert palavra.de_pe == {P3: True}
-
-
-# ===========================================================================
-# 3. O eco do driver não conta
-# ===========================================================================
 
 
 class _Ralos:
@@ -583,8 +535,7 @@ def pad_e_ralos(uhid: _UhidPorFd) -> Iterator[tuple[UhidDualSense, _Ralos, _Relo
 
 
 class TestOEcoDoDriver:
-    """Mordidas: todo 0x03 como eco; nenhum como eco; a janela sem teto; a janela
-    que não se consome; a janela aberta no `forward_mic_button`."""
+    """Mordidas: todo 0x03 como eco; nenhum como eco; a janela sem teto; a janela"""
 
     def test_o_eco_depois_da_borda_nao_conta(
         self, pad_e_ralos: tuple[UhidDualSense, _Ralos, _Relogio]
@@ -645,8 +596,6 @@ class TestOEcoDoDriver:
         pad, ralos, relogio = pad_e_ralos
         pad.forward_mic_button(True)
         _mandar(pad, relogio, _eco_do_driver(True), passo=0.005)
-        # Driver novo (o `UHID_START`), com o dedo ainda no botão: o próximo
-        # report que SAIR é borda para ele, sem `forward_mic_button` novo.
         pad._handle_event(struct.pack("<I", _UHID_START))
         pad._bound_at = relogio() - 10.0
         pad.forward_buttons(frozenset({"cross"}))
@@ -657,14 +606,7 @@ class TestOEcoDoDriver:
     def test_o_eco_que_chega_antes_de_o_write_voltar_e_eco(
         self, pad_e_ralos: tuple[UhidDualSense, _Ralos, _Relogio], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O kernel agenda o eco DENTRO do `write` do report que traz a borda.
-
-        O `kworker` pode entregar o 0x02 ao fio do uhid antes de o `write`
-        voltar à thread que emitiu; o fio o atende na hora. A janela tem de
-        estar aberta para ele nesse instante, e não só depois do `write`.
-        Mordida: a janela aberta sem a trava do emissor (o fio acha o deque
-        vazio e entrega o eco aos ralos como se fosse o jogo).
-        """
+        """O kernel agenda o eco DENTRO do `write` do report que traz a borda."""
         pad, ralos, relogio = pad_e_ralos
         real = pad.send_report
         fios: list[threading.Thread] = []
@@ -676,7 +618,6 @@ class TestOEcoDoDriver:
             )
             fios.append(fio)
             fio.start()
-            # O fio do uhid atende enquanto o emissor ainda está no `write`.
             fio.join(timeout=0.3)
             return ok
 
@@ -704,17 +645,8 @@ class TestOEcoDoDriver:
         assert ralos.do_microfone() == [("luz", 1), ("mudo", True)]
 
 
-# ===========================================================================
-# 4. O botão físico sempre vale
-# ===========================================================================
-
-
 class _KernelComLuz(_Kernel):
-    """O `_Kernel` da régua irmã, com o instante do aperto e a luz do plástico.
-
-    `segurar` deixa o laço das bordas sem ver o aperto até `soltar_a_borda`:
-    é a cena em que o jogo responde antes de o Hefesto processar a borda.
-    """
+    """O `_Kernel` da régua irmã, com o instante do aperto e a luz do plástico."""
 
     def __init__(self, uniqs: tuple[str, ...], **kw: Any) -> None:
         super().__init__(uniqs, **kw)
@@ -764,10 +696,7 @@ def _atos(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 class TestOBotaoFisicoSempreVale:
-    """Mordidas: o pad esquecendo o dedup no aperto (cena 1); a borda sem o
-    `a_pessoa_mandou` (cena 1b); o laço do botão sem adotar a resposta (cena 2);
-    o ato carimbando a hora dele em vez do `em` da borda (cena 2); um pedido mais
-    velho vencendo (cena 3)."""
+    """Mordidas: o pad esquecendo o dedup no aperto (cena 1); a borda sem o"""
 
     async def _cena(self, casa: Any, kernel: _KernelComLuz) -> tuple[Any, UhidDualSense, _Relogio]:  # noqa: F811
         daemon = _daemon_da_casa(casa, kernel)
@@ -790,7 +719,7 @@ class TestOBotaoFisicoSempreVale:
         daemon, pad, relogio = await self._cena(casa, kernel)
         assert await hotkey.nascer_no_ar(daemon, P1) is True
         espiao = daemon.bus.subscribe(str(EventTopic.MIC_DO_JOGO))
-        quadro = _saida(luz=0, mudo=False)  # a língua da Sony: aberto
+        quadro = _saida(luz=0, mudo=False)
 
         async def _quadros(n: int) -> None:
             for _ in range(n):
@@ -805,7 +734,7 @@ class TestOBotaoFisicoSempreVale:
                 with structlog.testing.capture_logs() as registros:
                     kernel.apertar(P1)
                     self._o_aperto_no_pad(pad, relogio, mudo_do_driver=True)
-                    await _quadros(300)  # cinco segundos do jogo reafirmando
+                    await _quadros(300)
                     await _ate(lambda: len(_atos(registros)) == 1)
                     await _drenar(0.4)
                 assert _atos(registros)[0]["ligado"] is False, "o aperto não calou"
@@ -818,7 +747,6 @@ class TestOBotaoFisicoSempreVale:
                 assert [sorted(e) for e in _eventos(espiao)] == [
                     ["em", "luz", "uniq"], ["em", "mudo", "uniq"]
                 ], "os reportes repetidos chegaram aos ralos"
-                # O jogo MUDA o pedido: a luz volta ao jogo.
                 _mandar(pad, relogio, _saida(luz=1, mudo=False))
                 await _ate(lambda: kernel.luzes_de(P1)[-1:] == [1])
                 assert luz.luz_do_mic_do_jogo(P1) == 1
@@ -864,9 +792,8 @@ class TestOBotaoFisicoSempreVale:
                 await _drenar(ESPERA_DAS_GUARDAS_S)
                 with structlog.testing.capture_logs() as registros:
                     kernel.segurar = True
-                    kernel.apertar(P1)  # o aperto pede LIGAR
+                    kernel.apertar(P1)
                     self._o_aperto_no_pad(pad, relogio, mudo_do_driver=True)
-                    # A resposta do jogo ao aperto, na língua da Sony: calado.
                     _mandar(pad, relogio, _saida(luz=1, mudo=True))
                     await _ate(lambda: P1 in hotkey._MUDO_DO_JOGO)
                     kernel.soltar_a_borda(P1)
@@ -911,7 +838,7 @@ class TestOBotaoFisicoSempreVale:
                 await _drenar(ESPERA_DAS_GUARDAS_S)
                 with structlog.testing.capture_logs() as registros:
                     kernel.segurar = True
-                    em = kernel.apertar(P1)  # o aperto pede LIGAR
+                    em = kernel.apertar(P1)
                     velho = em - 0.5
                     topico = str(EventTopic.MIC_DO_JOGO)
                     daemon.bus.publish(topico, {"uniq": P1, "luz": 2, "em": velho})
@@ -927,7 +854,6 @@ class TestOBotaoFisicoSempreVale:
                 assert luz.luz_do_mic_do_jogo(P1) is None, "o pedido velho ficou com a luz"
                 assert kernel.luzes_de(P1)[-1] == luz.ACESA
                 assert kernel.mudo_no_firmware(P1) is False
-                # E o velho que só chega depois do ato não o desfaz.
                 daemon.bus.publish(
                     str(EventTopic.MIC_DO_JOGO), {"uniq": P1, "mudo": True, "em": velho}
                 )
@@ -937,11 +863,6 @@ class TestOBotaoFisicoSempreVale:
                 )
         finally:
             pad.stop()
-
-
-# ===========================================================================
-# 5. O 🎙 da tela também é dela
-# ===========================================================================
 
 
 async def test_o_clique_da_tela_derruba_o_pedido_do_jogo(
@@ -961,15 +882,8 @@ async def test_o_clique_da_tela_derruba_o_pedido_do_jogo(
         await _ate(lambda: kernel.luzes_de(P1)[-1] == luz.ACESA)
 
 
-# ===========================================================================
-# 6. O jogo solta
-# ===========================================================================
-
-
 class TestOJogoSolta:
-    """Mordidas: sem o `mic_led_sink(None)` no fim da sessão; a marca da luz
-    dentro do `if not self._game_dirty: return`; a entrega do microfone
-    ligando o `_game_dirty`."""
+    """Mordidas: sem o `mic_led_sink(None)` no fim da sessão; a marca da luz"""
 
     async def test_o_close_devolve_a_luz_e_o_mudo_fica(
         self, uhid: _UhidPorFd, palavra: _Palavra  # noqa: F811
@@ -1023,10 +937,10 @@ class TestOJogoSolta:
         espiao = daemon.bus.subscribe(str(EventTopic.MIC_DO_JOGO))
         try:
             _mandar(pad, relogio, _saida(luz=3))
-            pad._fio_do_uhid = threading.current_thread()  # o CLOSE chega pelo fio
+            pad._fio_do_uhid = threading.current_thread()
             pad._handle_event(struct.pack("<I", _UHID_CLOSE))
             assert ["solta" in e for e in _eventos(espiao)] == [False]
-            pad.pump_ff()  # o tique
+            pad.pump_ff()
             assert ["solta" in e for e in _eventos(espiao)] == [True]
         finally:
             pad._fio_do_uhid = None
@@ -1034,12 +948,7 @@ class TestOJogoSolta:
 
 
 class TestOEnderecoDoPedido:
-    """O pedido vai ao controle do jogador pelo endereço dele, e só a ele.
-
-    Mordidas: o laço da luz esquecendo o pedido do controle que saiu da mesa (o
-    rádio que cai e volta no meio do jogo perde a luz do jogo, e o dedup do pad
-    não a reenvia); o aplicador caindo no primário quando o alvo não é MAC.
-    """
+    """O pedido vai ao controle do jogador pelo endereço dele, e só a ele."""
 
     async def test_o_radio_que_cai_e_volta_traz_a_luz_do_jogo(
         self, uhid: _UhidPorFd, palavra: _Palavra  # noqa: F811
@@ -1053,13 +962,11 @@ class TestOEnderecoDoPedido:
             async with _lacos(daemon):
                 _mandar(pad, relogio, _saida(luz=2))
                 await _ate(lambda: aparelho.luzes_de(P2)[-1:] == [2])
-                # O rádio do P2 cai (sai da mesa) e volta com o handle novo; o
-                # pad virtual fica, e o jogo não repete o que já pediu.
                 aparelho.uniqs.remove(P2)
                 await _ate(lambda: luz.estado_da_luz_do_mic(P2) is None)
                 aparelho.handles[P2] = _handle()
                 aparelho.uniqs.append(P2)
-                _mandar(pad, relogio, _saida(luz=2))  # o jogo reafirma: o dedup segura
+                _mandar(pad, relogio, _saida(luz=2))
                 await _ate(lambda: aparelho.common(P2)[_BYTE_LUZ] == 2)
                 assert aparelho.luzes_de(P2)[-1] == 2
                 assert luz.luz_do_mic_do_jogo(P2) == 2
@@ -1080,16 +987,9 @@ class TestOEnderecoDoPedido:
             _mandar(pad, relogio, _saida(luz=1, mudo=True))
             assert _eventos(espiao) == [], "o pedido de um jogador sem MAC foi difundido"
             assert pad.mic_led_do_jogo == 0 and pad.mic_mudo_do_jogo == 0
-            # «Retido» é a pergunta da prova 5 (quem escreve sem jogo?); o
-            # jogador sem MAC não a responde.
             assert pad.mic_do_jogo_retido == 0, "o descartado sem endereço contou como retido"
         finally:
             pad.stop()
-
-
-# ===========================================================================
-# 7. Quatro jogadores, no tempo
-# ===========================================================================
 
 
 async def test_quatro_jogadores_trinta_segundos(uhid: _UhidPorFd, palavra: _Palavra) -> None:  # noqa: F811
@@ -1143,11 +1043,6 @@ async def test_quatro_jogadores_trinta_segundos(uhid: _UhidPorFd, palavra: _Pala
             p.stop()
 
 
-# ===========================================================================
-# 8. Sem jogo, o pedido fica retido
-# ===========================================================================
-
-
 class TestSemJogoORetido:
     """Mordidas: sem o portão da autoridade; contar antes do `_replicating()`."""
 
@@ -1196,7 +1091,7 @@ class TestSemJogoORetido:
         espiao = daemon.bus.subscribe(str(EventTopic.MIC_DO_JOGO))
         relogio = _Relogio()
         pad = _pad(1, gp.make_primary_replica_sinks(daemon), relogio)
-        pad._bound_at = relogio()  # o probe ainda escreve
+        pad._bound_at = relogio()
         try:
             pad._handle_output(_saida(luz=2, mudo=True))
             pad.pump_ff()
@@ -1208,9 +1103,7 @@ class TestSemJogoORetido:
             pad.stop()
 
 
-# ===========================================================================
 # 9. O `state_full`
-# ===========================================================================
 
 
 class _ControleComMicrofone(FakeController):  # type: ignore[misc]

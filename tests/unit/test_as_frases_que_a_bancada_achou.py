@@ -1,32 +1,4 @@
-"""AS-FRASES-QUE-A-BANCADA-ACHOU-01 — o que a tela dizia e o produto desmentia.
-
-Em 24/09/2026 a preparação da sessão de validação reescreveu os gestos da mesa
-de medição contra a tela de hoje, e o conferente achou frases do PRODUTO que
-contradizem o que o produto faz. Gesto nenhum cura isso: a cura é na tela.
-
-AS TRÊS FRASES, medidas antes de mexer:
-
-* aba 05, o «?» do «Testar agora» prometia *"treme este controle por meio
-  segundo"*. Desde 07/09 (pedido dela) o `a05_vibracao.testar` fica ligado até
-  o «Parar» e o de outra coluna encerra o anterior — a §1 abaixo mede o gesto,
-  e não só a frase;
-* aba 08, a contagem da Gestão dizia *"4 controles • 2 no cabo • 2 no rádio"*;
-* aba 08, a linha do Microfone dizia *"pelo cabo • Placa do controle"* /
-  *"pelo rádio • Pela ponte"*.
-
-As duas da 08 caíram com a decisão dela de 21/09/2026, que revogou a I9: a
-palavra do transporte na tela é USB e BT. A razão que segurava a contagem —
-*"2 cabo · 0 rádio" não é português* (D-05) — caiu junto.
-
-AS RÉGUAS LEEM A PÁGINA GERADA (`mockup/`), nunca o texto do gerador, e a
-PALAVRA DO TRANSPORTE SE PERGUNTA AO DONO (`home_actions.palavra_do_transporte`),
-nunca se digita: a régua de 06/09 que negava `"USB"` teria reprovado a decisão
-dela de 21/09. A exceção é o «Parar», que é RÓTULO do botão e decisão dela de
-30/08 (*"se o user quiser parar vai clicar em Parar"*).
-
-MORDIDAS (cada uma no docstring do seu caso): devolva a frase velha ao gerador
-ou ao dono, regere a página, e o caso reprova nomeando a frase.
-"""
+"""AS-FRASES-QUE-A-BANCADA-ACHOU-01 — o que a tela dizia e o produto desmentia."""
 from __future__ import annotations
 
 import html
@@ -58,12 +30,7 @@ P2 = "aa:bb:cc:00:00:02"
 
 
 def _pagina(nome: str) -> str:
-    """A página gerada, SEM os comentários — o que chega ao olho.
-
-    Os comentários desta casa contam a história da frase velha, e uma régua que
-    os lesse reprovaria quem escreve o porquê (a régua confundindo a palavra
-    com o ato).
-    """
+    """A página gerada, SEM os comentários — o que chega ao olho."""
     bruto = (BANCADA / nome).read_text(encoding="utf-8")
     return re.sub(r"<!--.*?-->", "", bruto, flags=re.S)
 
@@ -74,9 +41,6 @@ def _texto(trecho: str) -> str:
     return re.sub(r"\s+", " ", html.unescape(sem_tags)).strip()
 
 
-# ---------------------------------------------------------------------------
-# 1. A 05 — o «?» do «Testar agora» deixa de prometer meio segundo
-# ---------------------------------------------------------------------------
 def _dica_do_testar() -> str:
     """O primeiro parágrafo do `?` do «Testar agora», como a página o mostra."""
     x = _pagina("05-vibracao.html")
@@ -87,11 +51,7 @@ def _dica_do_testar() -> str:
 
 
 def test_a_dica_do_testar_nao_promete_duracao() -> None:
-    """O «?» diz que o teste vai até o «Parar», e não põe prazo nenhum.
-
-    MORDIDA: devolva *"treme este controle por meio segundo"* ao `aba05.py`,
-    regere a 05 — reprova citando a frase.
-    """
+    """O «?» diz que o teste vai até o «Parar», e não põe prazo nenhum."""
     dica = _dica_do_testar()
     prazo = re.search(r"\b(segundos?|ms|milissegundos?)\b", dica, flags=re.I)
     assert not prazo, (
@@ -133,8 +93,6 @@ def _ctx(pac: Any) -> Any:
         ],
         conectados=[
             {"uniq": P1, "connected": True, "transport": "usb", "index": 0, "player": 1},
-            # "bt", e não "bluetooth": é a palavra que o daemon publica
-            # (`_detect_transport`), e o dublê não pode ser mais frouxo que ele.
             {"uniq": P2, "connected": True, "transport": "bt", "index": 1,
              "player": 2},
         ],
@@ -143,16 +101,7 @@ def _ctx(pac: Any) -> Any:
 
 def test_o_testar_fica_ligado_ate_o_parar_e_o_de_outro_controle_o_encerra(
         pac: Any, a05: Any) -> None:
-    """O fato que a frase nova afirma, medido no gesto — não na prosa.
-
-    Três tempos: o Testar do P1 não manda parada nenhuma e fica marcado; o do
-    P2 toma a marca (o daemon cala o dono abandonado,
-    `rumble.silenciar_dono_abandonado`); e só o «Parar» apaga a marca e devolve
-    os motores ao jogo.
-
-    MORDIDA: ponha um `p.rumble_stop()` no fim de `a05_vibracao.testar` (o
-    pulso de antes de 07/09) — reprova no primeiro tempo.
-    """
+    """O fato que a frase nova afirma, medido no gesto — não na prosa."""
     testar = pac.gesto_da_pagina("05-vibracao.html", "testar")
     parar = pac.gesto_da_pagina("05-vibracao.html", "parar")
     assert testar is not None and parar is not None, "o par Testar/Parar perdeu o dono"
@@ -176,9 +125,6 @@ def test_o_testar_fica_ligado_ate_o_parar_e_o_de_outro_controle_o_encerra(
         f"o Parar não devolveu os motores ao jogo: {fim.nomes}")
 
 
-# ---------------------------------------------------------------------------
-# 2. A 08 — a contagem da Gestão fala USB e BT
-# ---------------------------------------------------------------------------
 def _cartoes_da_gestao() -> list[tuple[str, str]]:
     """`(nome, bloco)` de cada linha da Gestão de Controles na página gerada."""
     x = _pagina("08-conexoes.html")
@@ -194,9 +140,7 @@ def _cartoes_da_gestao() -> list[tuple[str, str]]:
 
 
 def _palavra_do_cartao(nome: str) -> str | None:
-    """A palavra de transporte que o nome mostra, se mostrar.
-
-    Desde 26/09/2026 a bateria vem depois dela («Cosmic Red • BT • 85%»)."""
+    """A palavra de transporte que o nome mostra, se mostrar."""
     pedacos = [pedaco.strip() for pedaco in nome.split("•")]
     return next((p for p in pedacos if p in {palavra("usb"), palavra("bt")}), None)
 
@@ -230,36 +174,13 @@ def test_a_contagem_omite_o_transporte_vazio(transportes: list[str], esperada: s
 
 @pytest.mark.parametrize("cru", ["usb", "bt", "bluetooth"])
 def test_a_tabela_da_gestao_diz_o_que_o_dono_diz(cru: str) -> None:
-    """`NOME_DO_TRANSPORTE` é a segunda grafia da tabela do dono — e presa a ela.
-
-    O módulo nasceu puro (o gerador da 08 roda sem o `structlog`) e não importa
-    `home_actions`; é esta régua que impede as duas de divergirem.
-    """
+    """`NOME_DO_TRANSPORTE` é a segunda grafia da tabela do dono — e presa a ela."""
     assert gestao.NOME_DO_TRANSPORTE[cru] == palavra(cru)
-
-
-# ---------------------------------------------------------------------------
-# 3. A 08 — a linha do Microfone e as duas dicas dela
-# ---------------------------------------------------------------------------
-# `test_a_linha_do_microfone_na_pagina_fala_o_transporte_da_linha` SAIU — o controle
-# «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela
-# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
-# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
-
-
-# `test_o_interruptor_do_microfone_nomeia_as_duas_palavras` SAIU — o controle «Microfone
-# e botões» saiu da linha do controle em 25/09/2026, por pedido dela
-# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
-# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_o_pacote_e_a_gestao_dizem_a_mesma_frase_do_microfone(via: str) -> None:
-    """A repintura (`a08_conexoes.caminho_do_microfone`) e a Gestão
-    (`Controle.texto_do_microfone`) são duas escritoras da mesma frase.
-
-    MORDIDA: mude só uma das duas — reprova com as duas frases.
-    """
+    """A repintura (`a08_conexoes.caminho_do_microfone`) e a Gestão"""
     from pacotes import a08_conexoes
 
     do_pacote = _texto(a08_conexoes.caminho_do_microfone(via))
@@ -271,17 +192,7 @@ def test_o_pacote_e_a_gestao_dizem_a_mesma_frase_do_microfone(via: str) -> None:
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_a_dica_do_microfone_no_pacote_nao_volta_a_dizer_pelo_cabo(via: str) -> None:
-    """A dica que o pacote pinta a cada tique fala a palavra do dono — as DUAS
-    frases dela, a do caminho e a do custo.
-
-    A frase do custo (`_MIC_NAO_CUSTA_RADIO`, *"Pelo USB ele não custa turno de
-    rádio nenhum"*) mudou nesta sprint e nenhuma régua a lia: a da página só
-    procura o `<b>pelo …</b>`. «Turno de rádio» fica — ali o rádio é o recurso
-    que a barra «Rádio em uso» mede, não a palavra do transporte.
-
-    MORDIDA: devolva *"Pelo cabo ele não custa…"* ao `_MIC_NAO_CUSTA_RADIO` —
-    reprova no USB.
-    """
+    """A dica que o pacote pinta a cada tique fala a palavra do dono — as DUAS"""
     from pacotes import a08_conexoes
 
     dica = html.unescape(a08_conexoes.dica_do_microfone(via))
@@ -292,10 +203,6 @@ def test_a_dica_do_microfone_no_pacote_nao_volta_a_dizer_pelo_cabo(via: str) -> 
         f"— a palavra do transporte é USB/BT desde 21/09: {dica!r}")
 
 
-# ---------------------------------------------------------------------------
-# 4. O mapa — a mesa pré-marca o que o PRODUTO faz (a §2 da sprint)
-# ---------------------------------------------------------------------------
-#: As quatro células que a §2 mexeu, pelo `id` que a mesa lhes dá.
 _SOM_PELO_RADIO = ("mapa-audio.saida_dedicada-radio",
                    "mapa-audio.saida_dedicada.payload_do_degrau-radio")
 _BRILHO_DAS_LAMPADAS = ("mapa-luz.led_jogador.brilho-cabo",
@@ -316,17 +223,7 @@ def pre_marcas() -> dict[str, str]:
 
 
 def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
-    """Um handle da pydualsense sem device, nascido pelo `__init__` de produção.
-
-    `led_gravavel` é o `_suppress_leds`: o produto instalado tem o nó de LED do
-    kernel gravável, e aí o fluxo é LED-neutro (no rádio, sempre).
-
-    ELE NASCIA POR `__new__` ATÉ 24/09/2026, com o estado privado escrito à mão
-    — e o dublê por `__new__` fica mais pobre que o produto a cada campo novo:
-    o `_brilho_das_luzes` (O-BRILHO-DAS-LUZES-DE-NUMERO-01) não existia nele, e
-    o fluxo do dublê saía sem o brilho que o do produto leva. O `__init__` de
-    produção não toca em hardware; é a mesma fábrica do `conftest`.
-    """
+    """Um handle da pydualsense sem device, nascido pelo `__init__` de produção."""
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
@@ -342,13 +239,7 @@ def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
 
 def test_o_som_pelo_radio_nao_chega_a_bancada_pre_marcado_nada(
         pre_marcas: dict[str, str]) -> None:
-    """O produto leva o som de cada controle do rádio pelo `0x35` desde 10/09
-    (os `teste_que_morde` das duas linhas), e a mesa pré-marcava «nada» a
-    partir de uma célula de antes disso — a resposta errada, já marcada.
-
-    MORDIDA: devolva `radio_aciona = não` (e o degrau vazio) a
-    `audio.saida_dedicada` no CSV — reprova com a pré-marca «nada».
-    """
+    """O produto leva o som de cada controle do rádio pelo `0x35` desde 10/09"""
     for celula in _SOM_PELO_RADIO:
         assert pre_marcas[celula] != "nada", (
             f"a mesa pré-marca «nada» em {celula}, e o produto monta o som do "
@@ -357,27 +248,7 @@ def test_o_som_pelo_radio_nao_chega_a_bancada_pre_marcado_nada(
 
 def test_o_brilho_das_lampadas_e_o_que_o_build_common_manda(
         pre_marcas: dict[str, str]) -> None:
-    """A célula do brilho pergunta ao PRODUTO, não ao ensaio de 09/09.
-
-    O ensaio mediu o APARELHO (com o bit, os três degraus mudam as lâmpadas).
-    O mapa mede o produto, e desde 24/09/2026 (O-BRILHO-DAS-LUZES-DE-NUMERO-01)
-    o `_build_common` responde duas coisas:
-
-    * com o nó de LED gravável — o produto instalado, e o rádio sempre — o
-      `flag2` bit0 do FLUXO continua DESLIGADO: o brilho vai ao lado do número,
-      fora do fluxo (`_levar_o_brilho_das_luzes`), e quem o prende é
-      `test_o_brilho_das_luzes_de_numero.py`. A mesa não pode pré-marcar
-      «obedeceu»: o caminho do produto é novo e ninguém o olhou no aparelho;
-    * no cabo sem nó gravável o bit sai LIGADO com o degrau que o HANDLE
-      guarda (`_brilho_das_luzes`, o Fraco se ninguém escolheu), e não mais o
-      herdado do `ledOption` com o padrão da pydualsense.
-
-    MORDIDAS: (1) tire a `VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE` do
-    `&= ~(…)` da supressão no `_build_common` — reprova na primeira metade;
-    (2) devolva `O APARELHO OBEDECEU` à linha do CSV — reprova com a
-    pré-marca «obedeceu»; (3) devolva o `light.brightness` como fonte do
-    `common[42]` — reprova na última.
-    """
+    """A célula do brilho pergunta ao PRODUTO, não ao ensaio de 09/09."""
     from pydualsense.enums import Brightness
 
     from hefesto_dualsense4unix.core import ds_output_report as rep

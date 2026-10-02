@@ -99,40 +99,12 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-# o dono da forma de confissão — importado DEPOIS do `sys.path` acima, de
-# propósito: é irmão nesta pasta, e uma segunda cópia da peneira aqui seria a
-# divergência calada que a lista de portões já pagou.
 from check_a_tela_nao_confessa import FORMA
 
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: OS CAMINHOS QUE AS LISTAS APONTAM E NINGUÉM ABRE. Um caminho morto numa lista
-#: de isenção é pior que um defeito, porque o vermelho que ele deveria causar
-#: simplesmente não acontece — mas ele NÃO aborta a corrida.
-#:
-#: **POR QUE JUNTAR EM VEZ DE ABORTAR NO PRIMEIRO — 08/09/2026, ressalva do
-#: conferente:** `app/tray.py` e `app/compact_window.py` moram numa pasta em
-#: demolição (`D-0609-GTK-LEVA-INTEIRA`, que já levou `app/app.py`). No dia em
-#: que os dois saírem, um `SystemExit` no primeiro pararia a varredura e o
-#: portão diria UM caminho, escondendo o outro e todo o resto que ele mediria.
-#: Quem for consertar a lista conserta uma vez, com ela inteira na frente.
-#:
-#: A SEVERIDADE NÃO MUDOU: continua reprovação, e a mensagem continua mandando
-#: consertar o ponteiro em vez de tirar a linha.
 _CAMINHOS_MORTOS: list[tuple[str, str]] = []
 
-# ---------------------------------------------------------------------------
-# ONDE A MOLDURA DO PRODUTO É ESCRITA
-# ---------------------------------------------------------------------------
-#: Os arquivos que escrevem o que aparece FORA da página, no produto que o
-#: lançador dela abre. Cada um com a razão de estar aqui — uma lista de
-#: caminhos sem razão envelhece e ninguém sabe se um que falta é esquecimento.
-#: **A `compact_window.py` SAIU DESTA LISTA — 19/09/2026, `ORFAOS-DA-MIGRACAO-01`.**
-#: Ela foi para o código aposentado (no histórico), e este portão era uma das
-#: duas bocas que a mantinham artificialmente viva. A sprint escreve a regra
-#: que isso deixa:
-#: *quem CHAMA para trabalhar conta como vida; quem MEDE não* — vigia de
-#: defunto é uso aparente, e foi por ele que o censo de 17/09 a contou viva.
 A_MOLDURA: dict[str, str] = {
     "interface/hefesto_vivo.py":
         "o piloto único, e é o que o lançador abre — quem passa `titulo` e "
@@ -147,21 +119,6 @@ A_MOLDURA: dict[str, str] = {
         "pelo `.desktop`, pelo `--version` e pela bandeja",
 }
 
-#: OS PILOTOS DE BANCADA FICAM FORA, e a lista existe para que isso seja
-#: DECISÃO e não esquecimento. Eles abrem uma janela cada, com subtítulo
-#: próprio, e alguns carregam a palavra que ela baniu em 06/09 — mas nenhum é o
-#: produto: o lançador dela abre `hefesto_vivo.py`, e estes se chamam à mão, por
-#: quem desenvolve.
-#:
-#: **SÓ OS CAMINHOS ESTÃO AQUI, e o texto de cada um é LIDO** — a régua abre o
-#: arquivo e mostra o que ele diz HOJE. Digitar as frases faria a isenção
-#: envelhecer calada no dia em que um deles mudasse de subtítulo, que é a forma
-#: de instrumento falso que esta casa mais pagou: *a régua digitava o que devia
-#: LER*.
-#:
-#: A régua IMPRIME esta lista a cada corrida, com as marcas de cada um, em vez de
-#: calar: uma isenção silenciosa é como um defeito real vira paisagem. Se um dia
-#: um destes virar produto, ele muda de tabela — não de silêncio.
 A_BANCADA: tuple[str, ...] = (
     "interface/controles_vivos.py",
     "interface/jogar_vivo.py",
@@ -171,23 +128,10 @@ A_BANCADA: tuple[str, ...] = (
     "interface/ver.py",
 )
 
-#: Os `.desktop` e as units. O `.desktop` é o que a dock mostra ANTES de a
-#: janela existir; a `Description` da unit é o que o `systemctl status` imprime.
 CHAVES_DESKTOP = ("Name", "GenericName", "Comment")
 CHAVES_UNIT = ("Description",)
 
 
-# ---------------------------------------------------------------------------
-# O VOCABULÁRIO — duas peneiras próprias, duas lidas do dono
-# ---------------------------------------------------------------------------
-#: A LÍNGUA DA OBRA: as palavras com que esta equipe fala do próprio trabalho.
-#: Nenhuma delas diz nada a quem abriu o programa para configurar um controle.
-#:
-#: A lista é curta de propósito, e o que ficou de FORA foi medido: `frente`
-#: (a tela diz *"o programa na frente"*, e é fato do mundo), `desenho` (a aba
-#: Iluminação mostra o desenho do controle) e `nota` (a bateria e o volume não
-#: são obra). Uma peneira que os pegasse obrigaria a declarar frase inocente, e
-#: tabela que ninguém lê não segura nada.
 OBRA = re.compile(
     r"\b(?:"
     r"onda|ondas|leva|levas|sprint|sprints"
@@ -200,10 +144,6 @@ OBRA = re.compile(
     re.IGNORECASE,
 )
 
-#: O APELIDO DA CASA — *"as dez abas"*, com ou sem o *"vivas"* atrás. É como
-#: esta equipe chama o piloto único desde que ele nasceu, e foi o texto que ela
-#: leu na barra de título. A contagem entra como número OU por extenso porque as
-#: duas formas circulam nos documentos desta casa.
 APELIDO = re.compile(
     r"\bas\s+(?:\d+|uma|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)"
     r"\s+abas\b"
@@ -211,9 +151,6 @@ APELIDO = re.compile(
     re.IGNORECASE,
 )
 
-#: OS IDENTIFICADORES INTERNOS — a mesma família que
-#: `check_a_conferencia_dela.a_tela_nao_narra_commit` já proíbe no corpo das
-#: dez páginas. Aqui eles valem para a moldura, pela mesma razão.
 IDS: tuple[tuple[str, str], ...] = (
     (r"\bD-\d{4}-[A-Z]", "um id de decisão interna"),
     (r"\b[A-Z]{3,}-[A-Z0-9-]+-\d{2}\b", "um id de sprint"),
@@ -223,16 +160,7 @@ IDS: tuple[tuple[str, str], ...] = (
 
 
 def palavras_que_ela_baniu() -> tuple[str, ...]:
-    """`PALAVRAS_BANIDAS`, lida do DONO por AST — nunca copiada para cá.
-
-    A leitura é por AST e não por `import` porque o módulo mora dentro do
-    pacote, e importá-lo puxaria `interface/` inteiro; o CI roda esta régua no
-    `python3` pelado, sem o pacote instalado.
-
-    **Achar zero é ERRO, não lista vazia.** Uma régua que perde a fonte e segue
-    verde é o instrumento falso que esta casa mais paga: ela passaria a medir
-    três peneiras onde deveria medir quatro, e ninguém veria.
-    """
+    """`PALAVRAS_BANIDAS`, lida do DONO por AST — nunca copiada para cá."""
     dono = FONTE / "interface" / "frases_que_ela_baniu.py"
     arvore = ast.parse(dono.read_text(encoding="utf-8"))
     for no in ast.walk(arvore):
@@ -258,10 +186,6 @@ def palavras_que_ela_baniu() -> tuple[str, ...]:
         f"conserte o ponteiro em vez de deixá-la passar.")
 
 
-#: As letras que fazem de uma ocorrência um IDENTIFICADOR e não uma palavra.
-#: É a mesma borda do dono da lista: `mesa` é nome interno vivo (`mesa_viva.py`,
-#: `data-campo="mesa-frase"`), e a sprint diz com todas as letras que o nome
-#: fica. Quem trocasse identificador por causa desta lista faria estrago.
 _COLADO = r"0-9A-Za-zÀ-ÖØ-öø-ÿ_\-"
 
 
@@ -284,24 +208,12 @@ def _acusar(texto: str, banidas: tuple[str, ...]) -> list[str]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# A LEITURA
-# ---------------------------------------------------------------------------
-#: Os argumentos e os métodos que viram texto de moldura. `titulo_esperado` NÃO
-#: entra: ele é a asserção de carga da página (`JanelaDaAba`), não texto que
-#: alguém lê.
 KWARGS = ("titulo", "subtitulo", "title", "subtitle")
 METODOS = ("set_title", "set_subtitle")
 
 
 def _texto_de_moldura(rel: str, lista: object) -> list[tuple[str, str]]:
-    """Todo literal de moldura de UM arquivo de `src/`, por AST.
-
-    **Um caminho que não existe é ERRO.** Esta régua nasceu porque uma tela ficou
-    sem dono; uma lista dela apontando para arquivo apagado repetiria o defeito
-    num nível acima — e um caminho morto numa lista de isenção é pior ainda,
-    porque o vermelho que ele deveria causar simplesmente não acontece.
-    """
+    """Todo literal de moldura de UM arquivo de `src/`, por AST."""
     p = FONTE / rel
     if not p.is_file():
         _CAMINHOS_MORTOS.append((str(lista), rel))
@@ -320,7 +232,6 @@ def _texto_de_moldura(rel: str, lista: object) -> list[tuple[str, str]]:
             if kw.arg in KWARGS and isinstance(kw.value, ast.Constant) \
                     and isinstance(kw.value.value, str):
                 fora.append((f"{rel}:{no.lineno} ({kw.arg}=)", kw.value.value))
-    # a identidade não é chamada: são campos de uma dataclass
     if rel.endswith("identidade.py"):
         for no in ast.walk(arvore):
             if isinstance(no, ast.keyword) and no.arg in ("nome", "nome_longo") \
@@ -336,13 +247,7 @@ def da_janela() -> list[tuple[str, str]]:
 
 
 def da_bancada() -> list[tuple[str, str]]:
-    """O mesmo, para os pilotos isentos — LIDO, para a isenção não envelhecer.
-
-    **RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE:** um piloto de bancada sem nenhum
-    texto de moldura quer dizer que ele deixou de passar `subtitulo`, ou que
-    esta régua deixou de saber onde olhar. Nos dois casos a isenção passou a
-    isentar nada, e isso se diz em voz alta.
-    """
+    """O mesmo, para os pilotos isentos — LIDO, para a isenção não envelhecer."""
     fora: list[tuple[str, str]] = []
     for rel in A_BANCADA:
         achado = _texto_de_moldura(rel, "A_BANCADA")
@@ -356,12 +261,7 @@ def da_bancada() -> list[tuple[str, str]]:
 
 
 def _ini(p: pathlib.Path, chaves: tuple[str, ...]) -> list[tuple[str, str]]:
-    """As chaves pedidas de um arquivo `chave=valor`, com a linha.
-
-    O `.desktop` traduzido (`Comment[pt_BR]`) entra junto: a chave com locale é
-    o que ela lê de fato, e uma régua que só olhasse a chave nua daria verde
-    sobre a tradução.
-    """
+    """As chaves pedidas de um arquivo `chave=valor`, com a linha."""
     fora = []
     for n, linha in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
         chave, sep, valor = linha.partition("=")
@@ -374,11 +274,7 @@ def _ini(p: pathlib.Path, chaves: tuple[str, ...]) -> list[tuple[str, str]]:
 
 
 def do_sistema() -> list[tuple[str, str]]:
-    """Os `.desktop` e as units — o que o sistema mostra fora da janela.
-
-    O NOME DO ARQUIVO entra junto do conteúdo: a sprint pede *"o nome da
-    unit"*, e ele aparece em todo `systemctl --user status`.
-    """
+    """Os `.desktop` e as units — o que o sistema mostra fora da janela."""
     fora: list[tuple[str, str]] = []
     for p in sorted(RAIZ.rglob("*.desktop")):
         if ".git" in p.parts:

@@ -1,14 +1,4 @@
-"""O instrumento do ABBA — O-ENGASGO-DO-JOGO-LEVE-SE-SEPARA-EM-ABBA-01.
-
-A saída do `bpftrace` abaixo é a forma que o programa do instrumento imprime
-(`q <nsecs> <µs>`), com os números da rodada D de 01/10 (Pro Jank Footy, ela
-jogando, clock livre): quadros de 16,6 ms, um de 21 ms, um de 26 ms e o tranco
-de 261 ms. Os maps são os do jogo daquela noite, com o caminho do Proton.
-
-A MORDIDA: troque `q > LIMIAR_JITTER_MS` por `q > LIMIAR_TRANCO_MS` em
-`resumir_rodada` de `scripts/ensaios/quadros_do_jogo.py` e
-`test_o_balde_de_20_ms_conta_o_jitter` reprova.
-"""
+"""O instrumento do ABBA — O-ENGASGO-DO-JOGO-LEVE-SE-SEPARA-EM-ABBA-01."""
 from __future__ import annotations
 
 import importlib.util

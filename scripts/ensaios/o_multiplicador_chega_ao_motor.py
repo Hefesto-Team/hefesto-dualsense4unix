@@ -85,14 +85,10 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
-#: Os números DELA, verbatim da decisão de 04/09/2026 — o degrau "Máximo" e a
-#: barra forte pela metade. São a ENTRADA da conta do produto, não a saída.
 DEGRAU_DELA = "max"
 BARRA_FORTE_DELA = 50
 BARRA_FRACA_DELA = 100
 
-#: O endereço da peça no perfil sintético. Faixa SINTÉTICA da casa — o MAC real
-#: do aparelho na mesa nunca entra num arquivo versionado.
 PECA = "aabbcc000001"
 
 
@@ -126,8 +122,6 @@ def _daemon_sintetico(degrau: str) -> Any:
         ),
         _last_auto_mult=1.0,
         _last_auto_change_at=0.0,
-        # O mapa por peça entregue pronto: o ensaio mede a CONTA, e ir ao disco
-        # aqui mediria o `load_profile` junto.
         _rumble_motores_pct=(None, {PECA: (BARRA_FORTE_DELA, BARRA_FRACA_DELA)}),
     )
 
@@ -163,11 +157,6 @@ def _estado_do_daemon() -> dict[str, Any] | None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    # 160 e não 200: com o degrau "Máximo" (1,5) o motor fraco sai em 240 e o
-    # forte em 120 — a razão 2:1 INTEIRA, sem encostar no teto. Em 200 o fraco
-    # pediria 300, o `min(255, …)` cortaria, e a razão medida viraria 1,7 por
-    # SATURAÇÃO, não por conta errada. É a nota SATURA-01 mordendo o
-    # instrumento em vez do produto.
     ap.add_argument("--base", type=int, default=160,
                     help="intensidade base a que a conta se aplica (0-255)")
     ap.add_argument("--segundos", type=float, default=1.5,
@@ -217,8 +206,6 @@ def main() -> int:
 
     from hefesto_dualsense4unix.app import ipc_bridge
 
-    #: O QUE ESTAVA ANTES, para devolver no fim. `None` = passthrough (o jogo
-    #: manda), e é o estado normal da máquina dela.
     antes = estado.get("rumble_active")
     print(f"  estado antes .. rumble_active={antes!r} "
           f"(será devolvido no fim, seja qual for)")
@@ -251,13 +238,6 @@ def main() -> int:
         ipc_bridge.rumble_stop()
         time.sleep(0.4)
 
-    # A DEVOLUÇÃO, e ela é obrigatória — MEDIDA em 04/09/2026, na primeira
-    # execução deste ensaio: `rumble.stop` NÃO devolve o passthrough, deixa
-    # `rumble_active=(0,0)`. E com o rumble FIXADO o `apply_game_rumble`
-    # descarta o FF do jogo (primeira linha dele) — ou seja, o instrumento
-    # saía deixando a máquina dela SEM vibração em jogo nenhum, em silêncio.
-    # É a armadilha de `docs/method/COMO-OLHAR-A-TELA.md` na forma mais cara:
-    # o instrumento brigando com o produto e ninguém vendo.
     if antes is None:
         ipc_bridge.rumble_passthrough(True)
     else:

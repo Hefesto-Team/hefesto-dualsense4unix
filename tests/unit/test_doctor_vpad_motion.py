@@ -28,9 +28,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = ROOT / "scripts" / "doctor.sh"
 
-# Réplica do formato real de /proc/bus/input/devices desta máquina: físico
-# Sony (USB e BT), nó principal do vpad (sem "Motion Sensors") e os Motion
-# dos vpads P1/P2 — só os dois últimos podem sair.
 _PROC_DEVICES = """\
 I: Bus=0003 Vendor=054c Product=0ce6 Version=0111
 N: Name="Sony Interactive Entertainment DualSense Wireless Controller"
@@ -101,16 +98,15 @@ class TestVpadMotionEventNodes:
         assert _rodar("_vpad_motion_event_nodes", str(tmp_path / "nao-existe")) == ""
 
 
-# Constantes do input core (linux/input-event-codes.h) usadas nos dumps.
 _EV_SYN = 0
 _EV_KEY = 1
 _EV_ABS = 3
 _EV_MSC = 4
 _MSC_TIMESTAMP = 5
-_BTN_SOUTH = 304  # cross
-_ABS_X = 0  # 1º eixo de gyro/accel no nó Motion
-_ABS_RZ = 5  # último eixo de gyro/accel
-_ABS_HAT0X = 16  # d-pad — NUNCA existe no nó Motion, e não é gyro
+_BTN_SOUTH = 304
+_ABS_X = 0
+_ABS_RZ = 5
+_ABS_HAT0X = 16
 
 
 def _evento(tipo: int, code: int, valor: int) -> bytes:
@@ -130,9 +126,7 @@ class TestMotionNodeSample:
         assert _rodar("_motion_node_sample", str(node), "1") == "vivo"
 
     def test_dump_so_com_botoes_e_msc_da_silencio(self, tmp_path: Path) -> None:
-        """Regressão GYRO-03-FIX: input de stick/botão durante a amostra gera
-        EV_KEY + EV_MSC/MSC_TIMESTAMP + EV_SYN no nó Motion (o hid_playstation
-        carimba MSC_TIMESTAMP em TODO report) — nada disso é gyro → NÃO."""
+        """Regressão GYRO-03-FIX: input de stick/botão durante a amostra gera"""
         node = tmp_path / "event-fake"
         node.write_bytes(
             _evento(_EV_MSC, _MSC_TIMESTAMP, 111)
@@ -145,8 +139,7 @@ class TestMotionNodeSample:
         assert _rodar("_motion_node_sample", str(node), "1") == "silencio"
 
     def test_gyro_no_meio_de_botoes_e_vivo(self, tmp_path: Path) -> None:
-        """Uso real do diagnóstico: mexer no controle COM o espelho vivo —
-        botões e gyro misturados na amostra → SIM (o EV_ABS decide)."""
+        """Uso real do diagnóstico: mexer no controle COM o espelho vivo —"""
         node = tmp_path / "event-fake"
         node.write_bytes(
             _evento(_EV_KEY, _BTN_SOUTH, 1)
@@ -164,8 +157,7 @@ class TestMotionNodeSample:
         assert _rodar("_motion_node_sample", str(node), "1") == "silencio"
 
     def test_no_mudo_da_silencio_no_timeout(self, tmp_path: Path) -> None:
-        """FIFO sem escritor = nó aberto que nunca entrega evento — o probe
-        espera o timeout e declara silêncio (o caso 'gyro não flui')."""
+        """FIFO sem escritor = nó aberto que nunca entrega evento — o probe"""
         fifo = tmp_path / "fifo-fake"
         os.mkfifo(fifo)
         assert _rodar("_motion_node_sample", str(fifo), "0.4") == "silencio"
@@ -197,8 +189,7 @@ class TestFiacaoNoDoctor:
         assert "_motion_node_sample" in bloco
 
     def test_read_only_por_construcao(self) -> None:
-        """O check NUNCA escreve em nó de input: dd só com if= (nunca of=),
-        sem redirecionamento para /dev, sem sudo."""
+        """O check NUNCA escreve em nó de input: dd só com if= (nunca of=),"""
         texto = self._texto()
         inicio = texto.index("_vpad_motion_event_nodes() {")
         fim = texto.index("check_steam_input() {")
@@ -215,8 +206,7 @@ class TestFiacaoNoDoctor:
         assert "daemon.state_full" in bloco
 
     def test_silencio_e_warn_nunca_fail(self) -> None:
-        """Gyro parado não derruba o exit code do doctor (emulação recém
-        ligada, jogo sem gyro): é aviso acionável, não falha dura."""
+        """Gyro parado não derruba o exit code do doctor (emulação recém"""
         bloco = self._bloco_do_check()
         for linha in bloco.splitlines():
             if "giroscópio chegando ao jogo: NÃO" in linha:

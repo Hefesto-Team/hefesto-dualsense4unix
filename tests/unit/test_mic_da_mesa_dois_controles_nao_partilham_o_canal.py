@@ -61,12 +61,7 @@ def test_dois_controles_com_o_rabo_igual_nao_podem_gerar_o_mesmo_nome() -> None:
 
 
 def test_o_docstring_de_nome_curto_promete_o_que_o_codigo_nao_entrega() -> None:
-    """A promessa está escrita, e é ela que faz o buraco parecer curado.
-
-    Esta metade PASSA hoje, e existe para que a divergência entre a prosa e o
-    ato fique registrada onde alguém a encontre — em vez de descoberta de novo
-    na mesa dela, com quatro controles na mão.
-    """
+    """A promessa está escrita, e é ela que faz o buraco parecer curado."""
     doc = NoDualSenseBT.nome_curto.__doc__ or ""
     assert "MESMO nome de\n        source" in doc or "MESMO nome de" in doc
     a = _no("aa:bb:cc:00:00:01", "/dev/hidraw3")

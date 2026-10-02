@@ -58,7 +58,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.utils import session, xdg_paths
 
-#: A faixa sintética da casa — nada de endereço real em arquivo versionado.
 P1 = "aabbcc000001"
 PERFIL = "Bancada"
 
@@ -171,7 +170,6 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     )
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
     monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, *, origem=None: None)
-    # O gesto sem jogo e sem relógio: esta régua mede DECISÃO.
     monkeypatch.setattr(hotkey, "PULSO_SEG", 0.0)
     monkeypatch.setattr(hotkey, "_appid_do_jogo_do_wrapper", lambda: None)
     em._zerar_registro_de_mascaras()
@@ -202,7 +200,6 @@ def _preparar_cartao_dualsense() -> _Daemon:
         ),
         origem="teste",
     )
-    # O perfil que está valendo, pela perna do disco — o daemon não sabe o nome.
     session.save_last_profile(PERFIL)
     session.save_active_marker(PERFIL)
     em.registro_de_mascaras().set_mask(P1, "dualsense")
@@ -220,7 +217,6 @@ async def test_tres_apertos_andam_pelos_caminhos_e_cada_um_fica_no_perfil(
     assert d._gamepad_device.backend == "uhid", "premissa da bancada"
 
     gesto = hotkey.build_next_bridge_callback(d)  # type: ignore[arg-type]
-    #: (a ponte de pé, o canal do vpad, o `mode` gravado) depois de cada aperto.
     esperado = [
         (hotkey.PONTE_XBOX, "uinput", ("gamepad", "xbox")),
         (hotkey.PONTE_MOUSE_TECLADO, None, ("desktop", None)),
@@ -241,8 +237,6 @@ async def test_tres_apertos_andam_pelos_caminhos_e_cada_um_fica_no_perfil(
             f"aperto {aperto}: o perfil ativo ficou em {gravado!r}, e o gesto "
             "grava na hora — sem esperar silêncio nem jogo"
         )
-        # ACRESCENTADA NA VALIDAÇÃO — 13/09/2026. A volta passa pela Navegação,
-        # e a poda de antes apagava aqui a máscara padrão do perfil.
         assert gravado.gamepad_flavor == "dualsense", (
             f"aperto {aperto}: o gesto apagou a máscara padrão do perfil: {gravado!r}"
         )

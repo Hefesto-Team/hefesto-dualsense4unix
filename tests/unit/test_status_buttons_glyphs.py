@@ -19,10 +19,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("status buttons glyphs")
 
 from typing import Any
@@ -33,8 +29,6 @@ gi.require_version("Gtk", "3.0")
 
 import pytest
 
-# CI headless sem libcairo: pula o módulo (o ControllerCard renderiza os sticks
-# via cairo e cai num stub sem os sub-widgets quando o GTK real não está pronto).
 pytest.importorskip("cairo")
 
 from hefesto_dualsense4unix.app.widgets.controller_card import (
@@ -83,11 +77,6 @@ def card() -> ControllerCard:
     return c
 
 
-# ---------------------------------------------------------------------------
-# (a) cross + dpad_up pressionados
-# ---------------------------------------------------------------------------
-
-
 def test_cross_e_dpad_up_pressionados(card: ControllerCard) -> None:
     """cross e dpad_up acendem; os demais ficam apagados."""
     card.update(_entry(buttons=["cross", "dpad_up"]), STATE)
@@ -99,20 +88,10 @@ def test_cross_e_dpad_up_pressionados(card: ControllerCard) -> None:
             assert not glyph.is_pressed, f"{nome} devia estar False"
 
 
-# ---------------------------------------------------------------------------
-# (b) Nenhum botão pressionado
-# ---------------------------------------------------------------------------
-
-
 def test_nenhum_botao_pressionado(card: ControllerCard) -> None:
     card.update(_entry(), STATE)
     for nome, glyph in card._glyphs.items():
         assert not glyph.is_pressed, f"{nome} devia estar False"
-
-
-# ---------------------------------------------------------------------------
-# (c) L2/R2 analógicos por threshold
-# ---------------------------------------------------------------------------
 
 
 def test_l2_raw_acima_threshold_ilumina_glyph(card: ControllerCard) -> None:
@@ -135,11 +114,6 @@ def test_r2_raw_acima_threshold_ilumina_glyph(card: ControllerCard) -> None:
     assert not card._glyphs["l2"].is_pressed
 
 
-# ---------------------------------------------------------------------------
-# (d) L3 pressionado — stick esquerdo com o accent do controle
-# ---------------------------------------------------------------------------
-
-
 def test_l3_pressionado_pinta_titulo_com_accent(card: ControllerCard) -> None:
     card.update(_entry(buttons=["l3"]), STATE)
 
@@ -147,14 +121,9 @@ def test_l3_pressionado_pinta_titulo_com_accent(card: ControllerCard) -> None:
     assert not card._stick_right._l3_pressed
 
     markup_esq = card._stick_left_title.get_label()
-    assert card._accent_hex in markup_esq  # cor do CONTROLE, não roxo fixo
+    assert card._accent_hex in markup_esq
     markup_dir = card._stick_right_title.get_label()
     assert card._accent_hex not in markup_dir
-
-
-# ---------------------------------------------------------------------------
-# (e) R3 pressionado — stick direito com o accent
-# ---------------------------------------------------------------------------
 
 
 def test_r3_pressionado_pinta_titulo_com_accent(card: ControllerCard) -> None:
@@ -163,11 +132,6 @@ def test_r3_pressionado_pinta_titulo_com_accent(card: ControllerCard) -> None:
     assert card._stick_right._l3_pressed
     assert not card._stick_left._l3_pressed
     assert card._accent_hex in card._stick_right_title.get_label()
-
-
-# ---------------------------------------------------------------------------
-# (f) Diff: estado idêntico não dispara set_pressed novamente
-# ---------------------------------------------------------------------------
 
 
 def test_diff_estado_igual_nao_re_dispara_set_pressed(
@@ -189,26 +153,19 @@ def test_diff_estado_igual_nao_re_dispara_set_pressed(
     card.update(_entry(buttons=["circle"]), STATE)
     apos_1 = dict(chamadas)
 
-    card.update(_entry(buttons=["circle"]), STATE)  # mesmo estado
+    card.update(_entry(buttons=["circle"]), STATE)
     for nome in ALL_BUTTONS:
         assert apos_1[nome] == chamadas[nome], (
             f"set_pressed chamado novamente em '{nome}' sem mudança de estado"
         )
 
 
-# ---------------------------------------------------------------------------
 # (g) grid tem exatamente 16 entradas (ALL_BUTTONS) e o card os carrega
-# ---------------------------------------------------------------------------
 
 
 def test_all_buttons_tem_16_entradas(card: ControllerCard) -> None:
     assert len(ALL_BUTTONS) == 16, f"Esperado 16, obtido {len(ALL_BUTTONS)}"
     assert sorted(card._glyphs) == sorted(ALL_BUTTONS)
-
-
-# ---------------------------------------------------------------------------
-# (h) reset_inputs apaga todos os glyphs e mostra o "—"
-# ---------------------------------------------------------------------------
 
 
 def test_reset_inputs_apaga_glyphs_e_mostra_sem_leitor(
@@ -228,11 +185,6 @@ def test_reset_inputs_apaga_glyphs_e_mostra_sem_leitor(
     assert not card._stick_right._l3_pressed
     assert card._sem_leitor_label.get_visible() is True
     assert card._inputs_area.get_visible() is False
-
-
-# ---------------------------------------------------------------------------
-# Alias share/create (BUG-GLYPH-SHARE-NAME-MISMATCH-01) — preservado no card
-# ---------------------------------------------------------------------------
 
 
 def test_daemon_emite_create_e_o_glyph_share_acende(

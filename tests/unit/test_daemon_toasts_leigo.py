@@ -1,25 +1,8 @@
-"""Os toasts da aba Sistema não mostram comando cru nem `rc=N` (LEIGO-03).
-
-O toast de Ligar/Desligar/auto-start era ``systemctl start
-hefesto-dualsense4unix.service → rc=0``: o comando inteiro mais um código que só
-um dev distingue — `rc=0` (deu certo) e `rc=1` (falhou) tinham exatamente a mesma
-cara na barra de status, então a usuária não sabia se a ação funcionou.
-
-Aqui o teste é sobre a REGRA (sucesso e falha se distinguem; nada de jargão), não
-sobre uma frase específica: foi o acoplamento à frase que quebrou os testes de
-status quando a aba foi reescrita.
-
-`_on_systemctl_done` roda na thread GTK e só toca `_toast_daemon` e o refresh —
-os dois dublados aqui, então nada de GTK real.
-"""
+"""Os toasts da aba Sistema não mostram comando cru nem `rc=N` (LEIGO-03)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_daemon_toasts_leigo: importa código da janela GTK")
 
 from typing import Any
@@ -28,20 +11,13 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
-#: Palavras que só existem porque o código usa systemd por baixo.
 _JARGAO = ("systemctl", "systemd", "rc=", ".service", "unit", "daemon")
 
 _ACTIONS = ("start", "stop", "enable", "disable")
 
 
 class _Host:
-    """Instância mínima com o que `_on_systemctl_done` toca.
-
-    T-08 (25/08/2026): o callback passou a tocar também o painel "Detalhes
-    técnicos" — `_detalhe_tecnico` na falha, `_limpar_detalhe_tecnico` no
-    sucesso. O dublê acompanha, e GUARDA o que recebeu: é assim que os testes
-    de T-08 lá embaixo conferem a ORDEM (detalhe antes do toast) sem GTK.
-    """
+    """Instância mínima com o que `_on_systemctl_done` toca."""
 
     _on_systemctl_done = DaemonActionsMixin._on_systemctl_done
 
@@ -50,7 +26,6 @@ class _Host:
         self.refreshes = 0
         self.detalhes: list[tuple[str, str]] = []
         self.limpezas = 0
-        #: A ordem em que as coisas aconteceram, para a mordida da T-08.
         self.ordem: list[str] = []
 
     def _toast_daemon(self, msg: str) -> None:
@@ -116,7 +91,6 @@ def test_sempre_reconcilia_a_view(rc: int) -> None:
     resultado = host._on_systemctl_done("start", "hefesto-dualsense4unix.service", rc)
 
     assert host.refreshes == 1
-    # GLib.idle_add: False = não reagendar (senão o callback vira loop).
     assert resultado is False
 
 
@@ -131,9 +105,7 @@ def _mensagens_de_erro() -> list[str]:
 
 
 def test_falhas_nao_afirmam_sucesso() -> None:
-    """Regressão do BUG-HOME-SHUTDOWN-FALSE-OK-01, agora no texto: rc!=0 não
-    desligou/ligou nada, então nenhuma mensagem de falha pode começar por
-    "Pronto"."""
+    """Regressão do BUG-HOME-SHUTDOWN-FALSE-OK-01, agora no texto: rc!=0 não"""
     for msg in _mensagens_de_erro():
         assert not msg.startswith("Pronto"), msg
 
@@ -144,29 +116,13 @@ def test_toast_de_sucesso_confirma() -> None:
 
 
 def test_assinatura_do_callback_nao_mudou() -> None:
-    """`GLib.idle_add(self._on_systemctl_done, action, unit, rc)` passa 3 args
-    posicionais — o dublê acima só vale se a assinatura real for essa.
-
-    T-08 acrescentou um QUARTO argumento (`detalhe`), e ele é opcional de
-    propósito: o contrato de três posicionais continua valendo, e é isto que
-    esta linha continua medindo.
-    """
+    """`GLib.idle_add(self._on_systemctl_done, action, unit, rc)` passa 3 args"""
     host: Any = _Host()
     assert host._on_systemctl_done("stop", "x.service", 0) is False
 
 
-# ---------------------------------------------------------------------------
-# T-08 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026) — o painel recebe o motivo
-# ---------------------------------------------------------------------------
-
-
 def test_a_falha_poe_o_motivo_no_painel_antes_do_toast() -> None:
-    """A frase manda "ver os Detalhes técnicos"; o motivo tem de estar lá.
-
-    E tem de estar ANTES: quando a pessoa lê o toast e olha para baixo, o
-    painel já mudou. Ordem invertida faria o painel piscar o conteúdo velho
-    no instante exato em que ela olha.
-    """
+    """A frase manda "ver os Detalhes técnicos"; o motivo tem de estar lá."""
     host = _Host()
 
     host._on_systemctl_done(
@@ -179,11 +135,7 @@ def test_a_falha_poe_o_motivo_no_painel_antes_do_toast() -> None:
 
 
 def test_falha_sem_saida_crua_ainda_diz_alguma_coisa() -> None:
-    """`systemctl` pode falhar calado — e "nada" não é detalhe.
-
-    Sem esta linha, a frase "veja os Detalhes técnicos" continuaria mandando
-    para um painel vazio no caso em que o `stderr` vem em branco.
-    """
+    """`systemctl` pode falhar calado — e "nada" não é detalhe."""
     host = _Host()
 
     host._on_systemctl_done("start", "hefesto-dualsense4unix.service", 1, "")

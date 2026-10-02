@@ -109,48 +109,26 @@ import re
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
-#: O grau da classificação. ``lido`` = o kernel disse e temos palavra para
-#: isso; ``desconhecido`` = ninguém disse (classe ``ff``, ou um código que este
-#: módulo não sabe nomear). O código cru fica em ``Aparelho.classe`` nos dois
-#: casos, e é ele que distingue "o fabricante declinou" de "falta mapa aqui".
 GRAU_LIDO = "lido"
 GRAU_DESCONHECIDO = "desconhecido"
 
-#: A palavra de quando não há palavra. Vale para ``ff`` e para código sem mapa.
 ESPECIE_DESCONHECIDA = "Não identificado"
 
-#: Classe USB de hub, tanto no descritor do aparelho quanto na interface.
 CLASSE_HUB = "09"
 
-#: Classe de dispositivo de entrada (HID) e classe de controlador sem fio.
 _CLASSE_ENTRADA = "03"
 _CLASSE_SEM_FIO = "e0"
 
-#: A porta ``0`` não existe num barramento USB: quem tem ``devpath`` ``0`` é o
-#: hub-raiz do controlador xHCI. Medido em 22/08/2026 — os quatro ``usbN`` desta
-#: bancada são os únicos nós assim.
 _DEVPATH_DO_RAIZ = "0"
 
-#: Uma carga unitária, em mA. É o teto que um aparelho com fonte própria pode
-#: tirar da porta; pedir mais e ainda declarar autoalimentado é contradição do
-#: descritor, e nesta bancada os três TP-Link fazem exatamente isso (500 mA).
 _CARGA_UNITARIA_MA = 100
 
-#: Bit 6 de ``bmAttributes`` — "autoalimentado", na declaração do descritor.
 _BIT_AUTOALIMENTADO = 0x40
 
-#: O último ``0000:xx:xx.x`` da cadeia sysfs é o controlador xHCI onde o
-#: aparelho pendura. Mesmo algoritmo de ``mesa_de_radio.py``, repetido e não
-#: importado: lá ele é privado, e um módulo de integração puxar o privado do
-#: outro é acoplamento que ninguém pediu.
 _CONTROLADOR_PCI = re.compile(r"0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]")
 
-#: ``bMaxPower`` chega como ``500mA``; só o número interessa.
 _CORRENTE = re.compile(r"^([0-9]+)")
 
-#: Classe da interface -> palavra de gente. Fora deste mapa a resposta é
-#: ``ESPECIE_DESCONHECIDA`` com grau ``desconhecido``: um código sem palavra na
-#: tela é pior que dizer "não sei", porque parece informação.
 _ESPECIE_POR_CLASSE: dict[str, str] = {
     "01": "Áudio",
     "02": "Rede",
@@ -177,15 +155,7 @@ _ESPECIE_POR_CLASSE: dict[str, str] = {
 
 @dataclass(frozen=True)
 class Energia:
-    """O que o ``/sys`` diz sobre energia sem root — e só isso.
-
-    ``corrente_pedida_ma`` é o ``bMaxPower`` do descritor: o que o aparelho
-    **pede**, não o que ele gasta. ``None`` quando o arquivo não existe ou vem
-    ilegível, que é diferente de ``0``.
-
-    ``autoalimentado_declarado`` é o bit ``0x40`` de ``bmAttributes``, e o nome
-    é longo de propósito: é declaração do descritor, e nesta bancada ela mente.
-    """
+    """O que o ``/sys`` diz sobre energia sem root — e só isso."""
 
     corrente_pedida_ma: int | None = None
     controle: str = ""
@@ -194,13 +164,7 @@ class Energia:
 
     @property
     def declaracao_incoerente(self) -> bool:
-        """Declara fonte própria E pede mais de uma carga unitária da porta.
-
-        Medido em 22/08/2026 nos três TP-Link ``2357:0604``: ``bmAttributes=e0``
-        com ``bMaxPower=500mA``. Quem consumir este módulo precisa ver a
-        contradição junto com a declaração, senão vai desenhar "hub alimentado"
-        em cima de um bit que não sustenta a afirmação.
-        """
+        """Declara fonte própria E pede mais de uma carga unitária da porta."""
         if not self.autoalimentado_declarado:
             return False
         return (self.corrente_pedida_ma or 0) > _CARGA_UNITARIA_MA
@@ -208,17 +172,7 @@ class Energia:
 
 @dataclass(frozen=True)
 class Aparelho:
-    """Um dispositivo USB, com tudo que o kernel publica sobre ele.
-
-    ``no`` é o caminho real no sysfs — a mesma convenção de
-    ``mesa_de_radio.Adaptador.no``, para que os dois módulos falem do mesmo
-    aparelho com a mesma palavra. ``nome_do_kernel`` é o apelido curto
-    (``3-3.1.1``), que é o que cabe na tela.
-
-    ``fabricante`` e ``produto`` são texto do descritor e podem vir vazios: os
-    TP-Link desta bancada publicam ``manufacturer`` com **um espaço** dentro.
-    Espaço em branco é ausência, e ausência é resposta.
-    """
+    """Um dispositivo USB, com tudo que o kernel publica sobre ele."""
 
     no: str
     nome_do_kernel: str
@@ -263,12 +217,7 @@ class Censo:
     barramentos: tuple[Barramento, ...] = ()
 
     def conectados(self) -> tuple[Aparelho, ...]:
-        """Tudo menos os hubs-raiz — o que uma pessoa chamaria de aparelho.
-
-        Existe para que ninguém precise lembrar do filtro. Foi por esquecê-lo
-        que a primeira leitura de ``mesa_de_radio`` pôs ``1d6b:0002`` na tabela
-        de antenas: o hub-raiz não é aparelho, é o próprio barramento.
-        """
+        """Tudo menos os hubs-raiz — o que uma pessoa chamaria de aparelho."""
         return tuple(a for a in self.aparelhos if not a.e_raiz)
 
     def aparelho(self, no: str) -> Aparelho | None:
@@ -286,24 +235,13 @@ def ler_o_barramento(
     ler: Callable[[str], str] | None = None,
     real: Callable[[str], str] = os.path.realpath,
 ) -> Censo:
-    """Uma varredura de ``/sys``, e o barramento inteiro sai dela.
-
-    Chamada ao entrar na aba e no botão de reexame, nunca em tique: os tiques
-    desta casa são de 100 ms, 500 ms e 2 s, e pendurar uma varredura de
-    barramento em qualquer um deles é gastar CPU relendo o que não muda.
-
-    ``/sys`` ausente ou ilegível (contêiner, sandbox) devolve censo vazio. Não
-    pode derrubar a janela: a ausência do barramento é uma resposta sobre a
-    máquina, não um defeito do produto.
-    """
+    """Uma varredura de ``/sys``, e o barramento inteiro sai dela."""
     leitor = _ler_texto if ler is None else ler
     try:
         nomes = sorted(listar(raiz_usb))
     except OSError:
         return Censo()
 
-    #: `1-3:1.0` é INTERFACE, não dispositivo: ela não tem `idVendor` e
-    #: multiplicaria o mesmo aparelho por quantas funções ele expuser.
     nos = [nome for nome in nomes if ":" not in nome]
     interfaces = [nome for nome in nomes if ":" in nome]
 
@@ -329,14 +267,7 @@ def ler_o_barramento(
 
 
 def cadeia_de_hubs(censo: Censo, no: str) -> tuple[str, ...]:
-    """Os hubs acima deste aparelho, do mais perto ao mais longe.
-
-    Sem os hubs-raiz: eles não são aparelho de bancada, e incluí-los faria dois
-    dispositivos quaisquer do mesmo controlador parecerem "no mesmo hub".
-
-    Medido: ``3-3.1.1`` devolve ``(3-3.1, 3-3)`` — dois hubs encadeados dentro
-    do mesmo aparelho de bancada.
-    """
+    """Os hubs acima deste aparelho, do mais perto ao mais longe."""
     por_no = {a.no: a for a in censo.aparelhos}
     atual = por_no.get(no)
     cadeia: list[str] = []
@@ -353,14 +284,7 @@ def cadeia_de_hubs(censo: Censo, no: str) -> tuple[str, ...]:
 
 
 def hub_em_comum(censo: Censo, nos: Sequence[str]) -> str:
-    """O hub mais próximo que está acima de TODOS estes aparelhos — ou ``""``.
-
-    É a pergunta que a tela faz — *"os três rádios de controle estão no mesmo
-    hub?"* — e ela **não** se responde comparando o pai. Medido em 22/08/2026:
-    os três adaptadores desta casa têm dois pais diferentes (``3-3.1`` e
-    ``3-3``) e um único hub em comum, o ``3-3``. Comparar o pai diria que não,
-    e diria errado.
-    """
+    """O hub mais próximo que está acima de TODOS estes aparelhos — ou ``""``."""
     if not nos:
         return ""
     cadeias = [cadeia_de_hubs(censo, no) for no in nos]
@@ -373,19 +297,8 @@ def hub_em_comum(censo: Censo, nos: Sequence[str]) -> str:
     return ""
 
 
-# `filhos_de` (quem pendura num nó) SAIU EM 28/09/2026: a frase «quem mais está
-# no hub» que ele servia nunca entrou, e o desenho aprovado da aba 08 marca o
-# adaptador atrás de hub sem listar os vizinhos — uma lista ali seria tela nova.
-
-
 def _barramentos(aparelhos: Sequence[Aparelho]) -> tuple[Barramento, ...]:
-    """Um ``Barramento`` por hub-raiz, com tudo que pendura abaixo dele.
-
-    O agrupamento é por ``busnum`` e não por controlador PCI: um controlador
-    xHCI publica DOIS barramentos (o 2.0 e o 3.0). Medido nesta bancada —
-    ``usb3`` e ``usb4`` são ambos ``0000:0c:00.3``, e juntá-los esconderia que
-    o aparelho está no lado 2.0 ou no lado 3.0.
-    """
+    """Um ``Barramento`` por hub-raiz, com tudo que pendura abaixo dele."""
     achados: list[Barramento] = []
     for raiz in sorted((a for a in aparelhos if a.e_raiz), key=_ordem):
         abaixo = tuple(
@@ -457,9 +370,6 @@ def _ler_um(
         real=real,
     )
     if not classe:
-        # Sem interface 0 — aparelho ainda não configurado. O descritor do
-        # APARELHO é o que sobra, e continua sendo o kernel falando; só a
-        # origem muda, e ela vai para a tela junto.
         classe = campos["bDeviceClass"].lower()
         origem = "descritor do aparelho" if classe else ""
     return _Bruto(
@@ -518,13 +428,7 @@ def _montar(
 
 
 def _atras_de_hub(pai: _Bruto | None) -> bool:
-    """O pai é um hub DE VERDADE, e não o hub-raiz do controlador?
-
-    Sem a exceção do raiz, a mesa INTEIRA sai rotulada "em hub", porque todo
-    aparelho pendura sob um hub-raiz, sempre, em qualquer PC. É a mesma medição
-    que ``mesa_de_radio._atras_de_hub`` já carregava; aqui a régua do raiz é o
-    ``devpath`` em vez do nome.
-    """
+    """O pai é um hub DE VERDADE, e não o hub-raiz do controlador?"""
     if pai is None:
         return False
     if pai.campos["devpath"] == _DEVPATH_DO_RAIZ:
@@ -542,13 +446,7 @@ def _classe_da_interface(
     leitor: Callable[[str], str],
     real: Callable[[str], str],
 ) -> tuple[str, str, str, str]:
-    """``(classe, subclasse, protocolo, origem)`` da interface 0 deste nó.
-
-    O prefixo é ``f"{busnum}-{devpath}:"`` e cobre os dois formatos de uma vez:
-    o nó ``3-3.1.1`` tem interfaces ``3-3.1.1:1.0``, e o hub-raiz ``usb3`` —
-    cujo nome não parece com nada — tem ``3-0:1.0``. Medido em 22/08/2026: os
-    quatro hubs-raiz desta bancada publicam ``N-0:1.0``, classe ``09/00/00``.
-    """
+    """``(classe, subclasse, protocolo, origem)`` da interface 0 deste nó."""
     prefixo = f"{busnum}-{devpath}:" if busnum and devpath else f"{nome}:"
     candidatas = sorted(
         alvo
@@ -567,13 +465,7 @@ def _classe_da_interface(
 
 
 def _especie(classe: str, subclasse: str, protocolo: str) -> tuple[str, str]:
-    """``(palavra de gente, grau)`` a partir da tripla que o kernel publica.
-
-    Teclado e mouse só se distinguem no PROTOCOLO (``03/01/01`` e ``03/01/02``);
-    Bluetooth só se distingue de "sem fio" na subclasse e no protocolo
-    (``e0/01/01``). Parar na classe daria "aparelho de entrada" para os dois
-    primeiros e "sem fio" para o terceiro — verdadeiro e inútil.
-    """
+    """``(palavra de gente, grau)`` a partir da tripla que o kernel publica."""
     if classe == _CLASSE_ENTRADA and subclasse == "01":
         if protocolo == "01":
             return "Teclado", GRAU_LIDO
@@ -588,22 +480,12 @@ def _especie(classe: str, subclasse: str, protocolo: str) -> tuple[str, str]:
 
 
 def _painel(valor: str) -> str:
-    """O painel do gabinete, na palavra do kernel — ``""`` quando ele não sabe.
-
-    São sete valores possíveis (``top``, ``bottom``, ``left``, ``right``,
-    ``front``, ``back``, ``unknown``) e o arquivo simplesmente não existe na
-    maioria dos aparelhos, inclusive em todos os que estão atrás de um hub.
-    Quem traduz para palavra de tela é a janela.
-    """
+    """O painel do gabinete, na palavra do kernel — ``""`` quando ele não sabe."""
     return "" if valor == "unknown" else valor
 
 
 def _autoalimentado(bm_attributes: str) -> bool | None:
-    """Bit ``0x40`` de ``bmAttributes``; ``None`` quando o campo não é legível.
-
-    ``None`` e ``False`` são respostas diferentes: uma é "não sei", a outra é
-    "o descritor diz que depende da porta".
-    """
+    """Bit ``0x40`` de ``bmAttributes``; ``None`` quando o campo não é legível."""
     try:
         return bool(int(bm_attributes, 16) & _BIT_AUTOALIMENTADO)
     except ValueError:
@@ -658,11 +540,7 @@ def _talvez_inteiro(valor: str) -> int | None:
 
 
 def _campo(no: str, atributo: str, ler: Callable[[str], str]) -> str:
-    """Um atributo do nó, já sem o ``\\n`` do sysfs — ``""`` se não houver.
-
-    O ``strip()`` também é o que transforma o ``manufacturer`` de um espaço só
-    dos TP-Link em ausência de verdade.
-    """
+    """Um atributo do nó, já sem o ``\\n`` do sysfs — ``""`` se não houver."""
     return ler(os.path.join(no, atributo)).strip()
 
 

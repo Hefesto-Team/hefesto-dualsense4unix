@@ -1,24 +1,4 @@
-"""Contratos de wiring da onda PLATAFORMA (sprint 2026-07-18).
-
-Padrão do repo para lógica que vive em shell: testes de TEXTO travam o
-contrato dos 3 scripts (install.sh, uninstall.sh, scripts/doctor.sh) e dos
-instaladores de pacote — a validação viva acontece no ciclo final do install
-(gate do orquestrador). Estudos: 2026-07-18-estudo-kernel-hardening.md +
-2026-07-18-estudo-bt-maximo.md.
-
-O que está travado aqui:
-- PLAT-01: Proton pinado DEFAULT no install (--ensure → --lock; opt-out
-  --no-proton-pin; checksum errado ABORTA), unlock simétrico no uninstall
-  (o Proton extraído FICA — dado do usuário) e --report no doctor.
-- PLAT-03: regras 81 (devices+hosts) em todos os instaladores + trigger pci;
-  cmdline gerenciado com MERGE do token único usbcore.quirks e registro de
-  dono (cmdline-owners.conf); uninstall reverte SÓ o registrado como nosso
-  (strip_quirks_token para o token compartilhado).
-- PLAT-04: modprobe.d do btusb DEFAULT + FastConnectable sem restart do
-  bluetoothd (drop-in OU bloco marcado com sentinelas; uninstall remove).
-- PLAT-06: kernel-watch DEFAULT (opt-out --no-kernel-watch); doctor resume o
-  kernel.log (fallback storm.log) por tag e nunca usa a policy sysfs de ASPM.
-"""
+"""Contratos de wiring da onda PLATAFORMA (sprint 2026-07-18)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,16 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 INSTALL = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
 UNINSTALL = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
 DOCTOR = (REPO_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
-#: RADIO-ABERTO-01/E1-bis (06/08/2026): a config do BlueZ saiu de dentro do
-#: install.sh/uninstall.sh para `scripts/bluez_config.sh`, justamente para
-#: deixar de ser testável só por TEXTO — a bancada de raiz falsa está em
-#: tests/unit/test_bluez_config_sh.py. Os contratos abaixo passaram a olhar o
-#: novo dono, e ganharam um que não existia: o de que install e uninstall
-#: realmente o CHAMAM (sem isso, mover a lógica seria mover o furo).
 BLUEZ_CONFIG = (REPO_ROOT / "scripts" / "bluez_config.sh").read_text(encoding="utf-8")
-
-
-# --- PLAT-01: Proton pinado --------------------------------------------------
 
 
 class TestProtonPinWiring:
@@ -52,12 +23,10 @@ class TestProtonPinWiring:
         assert "--no-proton-pin" in INSTALL
 
     def test_install_aborta_no_checksum_errado(self) -> None:
-        # rc 1 do --ensure = checksum_mismatch → o passo NUNCA segue pro lock.
         assert "checksum" in INSTALL.lower()
         assert "não verificado" in INSTALL
 
     def test_install_adia_lock_com_steam_aberta(self) -> None:
-        # rc 3 do --lock = Steam/jogo abertos → adiar com instrução, nunca matar.
         assert "-eq 3" in INSTALL
 
     def test_uninstall_destrava_e_preserva_o_proton_extraido(self) -> None:
@@ -65,8 +34,6 @@ class TestProtonPinWiring:
         assert "dado do usuário" in UNINSTALL
 
     def test_uninstall_unlock_antes_do_strip_das_launch_options(self) -> None:
-        # O strip (--stop-steam) REABRE a Steam ao final; o unlock exige Steam
-        # fechada — então precisa vir ANTES no fluxo.
         assert UNINSTALL.index("--unlock") < UNINSTALL.index("--strip --stop-steam")
 
     def test_doctor_usa_o_report_read_only(self) -> None:
@@ -76,9 +43,6 @@ class TestProtonPinWiring:
 
     def test_doctor_avisa_proton_9_vazando(self) -> None:
         assert "Proton <= 9" in DOCTOR
-
-
-# --- PLAT-03: regras 81 + cmdline gerenciado ---------------------------------
 
 
 @pytest.mark.parametrize(
@@ -126,13 +90,11 @@ class TestCmdlineGerenciado:
 
     def test_install_registra_dono_em_estado_local(self) -> None:
         assert "cmdline-owners.conf" in INSTALL
-        # "hefesto" de install passado vence o "terceiro" do plano novo.
         assert "_register_cmdline_owner" in INSTALL
 
     def test_uninstall_reverte_so_o_registrado_como_nosso(self) -> None:
         assert "cmdline-owners.conf" in UNINSTALL
         assert "strip_quirks_token" in UNINSTALL
-        # terceiro (Aurora) NUNCA é tocado.
         assert "preservado" in UNINSTALL
 
     def test_doctor_compara_proc_cmdline_e_configuration(self) -> None:
@@ -140,15 +102,11 @@ class TestCmdlineGerenciado:
         assert "/proc/cmdline" in DOCTOR
 
     def test_doctor_nunca_usa_a_policy_sysfs_como_prova_de_aspm(self) -> None:
-        # Armadilha provada: com pcie_aspm=off a policy sysfs mostra [default].
         assert "pcie_aspm" in DOCTOR
         assert "mente" in DOCTOR
 
     def test_doctor_acusa_token_usbcore_quirks_duplicado(self) -> None:
         assert "MAIS DE UM token" in DOCTOR
-
-
-# --- PLAT-04: btusb + FastConnectable ---------------------------------------
 
 
 class TestBtMaximoWiring:
@@ -164,16 +122,6 @@ class TestBtMaximoWiring:
         assert 'scripts/bluez_config.sh" remover' in UNINSTALL
 
     def test_install_escreve_dropin_e_tambem_o_bloco_marcado(self) -> None:
-        # ONDA-R2 (camada 1 da sprint BlueZ 2026-07-21): o bloco apensado ao
-        # main.conf virou o UNIFICADO (hefesto-bt.block), reescrito de forma
-        # idempotente — os .block legados só existem para o uninstall limpar
-        # instalações antigas.
-        #
-        # RADIO-ABERTO-01/E1-bis (06/08/2026): era "decide dropin OU bloco", e
-        # o OU era o furo — com main.conf.d presente o install nunca abria o
-        # main.conf, onde o `always` seguia vivo. Hoje é E: os dois lugares
-        # recebem o mesmo valor. Quem prova o comportamento é
-        # test_bluez_config_sh.py::test_dropin_presente_nao_deixa_always_no_main_conf.
         assert "/etc/bluetooth" in BLUEZ_CONFIG
         assert "hefesto-fastconnectable.conf" in BLUEZ_CONFIG
         assert "hefesto-bt.block" in BLUEZ_CONFIG
@@ -187,45 +135,26 @@ class TestBtMaximoWiring:
 
     @pytest.mark.parametrize("texto", [INSTALL, UNINSTALL, BLUEZ_CONFIG])
     def test_nunca_reinicia_o_bluetoothd(self, texto: str) -> None:
-        # Derrubaria os controles BT conectados (provado ao vivo 2026-07-17).
         assert "systemctl restart bluetooth" not in texto
         assert "systemctl restart bluetoothd" not in texto
 
     def test_doctor_checa_btusb_e_fastconnectable(self) -> None:
         assert "enable_autosuspend" in DOCTOR
         assert "FastConnectable" in DOCTOR
-        # RADIO-ABERTO-01/E1-bis (06/08/2026): o doctor mencionava
-        # `JustWorksRepairing` ZERO vezes. Foi essa cegueira que deixou o
-        # `always` viver quatro dias no main.conf dela depois de a sprint
-        # declarar a E1 "FEITA" — o valor seguro estava no repositório e
-        # ninguém tinha como ver que não estava no disco.
         assert "JustWorksRepairing" in DOCTOR
-
-
-# --- PLAT-04/doctor: clone DS4 e rádio ---------------------------------------
 
 
 class TestDoctorRadio:
     def test_clone_ds4_detectado_por_modalias_com_texto_de_troca_de_modo(self) -> None:
         assert "usb:v054Cp05C4" in DOCTOR
-        # NOTA DATADA — 23/08/2026. Aqui estava `assert "troque o modo" in
-        # DOCTOR`, e o portão congelava em verde um conselho que a medição da
-        # casa derrubou: para um aparelho PAREADO, mandar trocar para Switch é
-        # mandar para o modo "PROVADO instável, no rádio", saindo do
-        # DirectInput/PS4 que é o RECOMENDADO por rádio. O teste passa a exigir
-        # o contrário — e a intenção original (nunca mandar jogar fora) fica.
         assert "não troque para Switch sem o cabo" in DOCTOR
         assert "RECOMENDADO por rádio" in DOCTOR
-        # E a causalidade refutada em 04/08 não pode voltar.
         assert "degradando o Bluetooth de TODOS" not in DOCTOR
-        # Nunca "jogue fora" — é provavelmente um 8BitDo em modo D-input.
         assert "jogue fora" not in DOCTOR
 
     def test_rssi_discovering_trusted_e_idletimeout(self) -> None:
         assert "RSSI" in DOCTOR
         assert "Discovering: yes" in DOCTOR
-        # WATCHDOG-FP-01: a cura de trust agora é ensinada via D-Bus (o
-        # bluetoothctl 5.86 one-shot é mudo; o watchdog corrige sozinho).
         assert "Trusted b true" in DOCTOR
         assert "IdleTimeout" in DOCTOR
 
@@ -234,13 +163,9 @@ class TestDoctorRadio:
         assert "DualSense input CRC" in DOCTOR
 
 
-# --- PLAT-06: kernel-watch ---------------------------------------------------
-
-
 class TestKernelWatchWiring:
     def test_install_tem_kernel_watch_default_com_opt_out(self) -> None:
         assert "--no-kernel-watch" in INSTALL
-        # O gate antigo (opt-in via --with-storm-watch/AUTO_YES) morreu.
         assert 'WITH_STORM_WATCH}" -eq 1' not in INSTALL
 
     def test_flag_antiga_segue_aceita_como_compat(self) -> None:
@@ -257,9 +182,6 @@ class TestKernelWatchWiring:
     def test_uninstall_remove_symlink_de_compat_mas_preserva_log(self) -> None:
         assert "storm.log" in UNINSTALL
         assert "kernel.log" in UNINSTALL
-
-
-# --- doctor: regras 81 no conjunto canônico ----------------------------------
 
 
 def test_doctor_lista_as_81_no_conjunto_canonico() -> None:

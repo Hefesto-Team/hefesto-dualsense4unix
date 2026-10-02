@@ -1,22 +1,4 @@
-"""As versões que rodam são as que a casa mediu no aparelho — B3 da O-PRODUTO.
-
-``O-PRODUTO-EM-QUALQUER-MAQUINA-01`` (28/09/2026), a L4 do estudo
-``2026-09-27-o-basico-e-os-jogos/03-qualquer-maquina.md``: o ``install.sh``
-fazia ``pip install -e`` sem trava, e o ``pyproject.toml`` pede ``evdev>=1.6``.
-Nesta casa o ``evdev`` é o 1.7.0 do apt; numa máquina nova o pip entregava o
-2.0.0, que nenhum aparelho rodou — e a cura da queda da sessão sobrescreve o
-``UInput._find_device``, que vale no 2.0.0 por coincidência.
-
-O ``constraints.txt`` guarda as versões medidas; o install instala com ``-c``;
-e esta régua lê o arquivo e o ``importlib.metadata`` do Python que roda a
-suíte (a ``.venv`` do produto), e reprova divergência.
-
-A MORDIDA, feita em 28/09/2026 sem tocar em ``.venv`` nenhuma: trocar a linha
-``evdev==1.7.0`` do ``constraints.txt`` por ``evdev==2.0.0`` faz
-``test_a_venv_roda_as_versoes_travadas`` reprovar, nomeando o ``evdev``; tirar
-o ``"${_travas[@]}"`` de um dos dois ``pip install -e`` do ``install.sh`` faz
-``test_o_install_instala_com_as_travas`` reprovar. Devolvidos, md5 conferido.
-"""
+"""As versões que rodam são as que a casa mediu no aparelho — B3 da O-PRODUTO."""
 
 from __future__ import annotations
 

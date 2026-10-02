@@ -1,23 +1,4 @@
-"""**O 🎙 é uma TRAVA, não um gatilho — ordem dela, 21/09/2026, em caixa alta.**
-
-    *"SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE ELE TÁ ATIVADO E SEGUE ASSIM
-    ATÉ EU DESATIVAR CLICANDO NOVAMENTE E ELE FICANDO CINZA. POR DEFAULT SEGUE
-    DESLIGADO, ATÉ ALGUME CLICAR E VER ISSO REFLETINDO LÁ."*
-
-Antes disto o botão GRAVAVA três segundos e devolvia — um gatilho, que termina
-sozinho. Ela pediu o botão do Discord: liga, fica, desliga. São quatro fatos, e
-cada um tem régua abaixo:
-
-1. **Por default, desligado.** Ninguém nasce com o microfone aberto.
-2. **Um clique liga**, e fica ligado — o retorno é um processo de pé.
-3. **O clique seguinte desliga**, e fica desligado.
-4. **A tela reflete os dois**, pelo campo `mic-retorno`.
-
-E uma quinta, que não é dela mas é desta casa: **o retorno morre com o
-processo**. Um `pw-loopback` órfão deixaria o microfone dela aberto depois de a
-interface fechar — o defeito que o `atexit` existe para não deixar acontecer, e
-o irmão daquele em que 22 `null-sinks` vazaram onde cabiam 4.
-"""
+"""**O 🎙 é uma TRAVA, não um gatilho — ordem dela, 21/09/2026, em caixa alta.**"""
 
 from __future__ import annotations
 
@@ -35,13 +16,7 @@ PAGINA = pathlib.Path(
 
 
 class _Falso:
-    """Um `pw-loopback` de mentira que se comporta como o real.
-
-    **MAIS RIGOROSO QUE O PRODUTO, de propósito** — esta casa já pagou três
-    vezes por dublê mais frouxo que o aparelho. Ele responde `poll()` como o
-    `Popen` real (None enquanto vivo, o código quando morto) e registra o
-    `terminate`, que é o que o desligar tem de chamar.
-    """
+    """Um `pw-loopback` de mentira que se comporta como o real."""
 
     def __init__(self, argv: list[str]) -> None:
         self.argv = argv
@@ -51,11 +26,6 @@ class _Falso:
     def poll(self) -> int | None:
         return self._morto
 
-    # AS DUAS MORTES CONTAM. O produto usa `kill()` de propósito — um loopback
-    # de áudio não tem estado a salvar, e um segundo entre o clique e o
-    # silêncio é um segundo em que o botão mente. Um dublê que só registrasse
-    # o `terminate` reprovaria a escolha CERTA do produto, que é a forma mais
-    # cara de régua falsa desta casa.
     def terminate(self) -> None:
         self.terminou = True
         self._morto = 0
@@ -80,10 +50,6 @@ def mesa(monkeypatch):
         nascidos.append(p)
         return p
 
-    # **O DUBLÊ MIRA O DONO, NÃO A FACHADA** — desde 21/09 o `pw-loopback` tem
-    # um dono só (`integrations/laco_de_audio.py`) e este módulo é a fachada
-    # dele para o eixo do microfone. Mirar aqui deixaria o produto abrindo
-    # processo de verdade na máquina que roda a suíte.
     from hefesto_dualsense4unix.integrations import laco_de_audio
 
     monkeypatch.setattr(laco_de_audio.subprocess, "Popen", _popen)
@@ -100,11 +66,7 @@ class TestOBotaoEUmaTrava:
         assert monitor_do_microfone.ligados() == ()
 
     def test_um_clique_liga_e_fica_ligado(self, mesa):
-        """O fato que separa a trava do gatilho: ele não termina sozinho.
-
-        MORDIDA: faça o `ligar` esperar o processo (`wait`) — o retorno passa a
-        durar um instante e o botão volta a ser um gatilho.
-        """
+        """O fato que separa a trava do gatilho: ele não termina sozinho."""
         assert monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
         assert monitor_do_microfone.esta_ligado(UNIQ)
         assert monitor_do_microfone.ligados() == (UNIQ,)
@@ -112,17 +74,7 @@ class TestOBotaoEUmaTrava:
         assert not mesa[0].terminou, "o retorno morreu no mesmo clique"
 
     def test_o_clique_seguinte_desliga(self, mesa):
-        """O SEGUNDO CLIQUE APAGA, e é a metade da ordem dela que faltava.
-
-        **O `alternar` DO MÓDULO SAIU EM 21/09** e esta régua anda pelo caminho
-        que o gesto anda de verdade: a guarda do microfone mudo mora ENTRE o
-        «está ligado?» e o «ligar», então nenhum chamador podia usar um
-        `alternar` que decidisse os dois por conta própria. Medir pelo caminho
-        que ninguém usa é a régua respondendo sobre outra coisa que não o
-        produto — a assinatura dos seis instrumentos falsos de 05/09.
-
-        MORDIDA: faça o `desligar` devolver `False` sem matar nada.
-        """
+        """O SEGUNDO CLIQUE APAGA, e é a metade da ordem dela que faltava."""
         monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
         assert monitor_do_microfone.esta_ligado(UNIQ)
         monitor_do_microfone.desligar(UNIQ)
@@ -130,33 +82,19 @@ class TestOBotaoEUmaTrava:
         assert mesa[0].terminou, "o processo do retorno ficou de pé"
 
     def test_o_segundo_ligar_nao_abre_um_segundo_processo(self, mesa):
-        """Dois cliques rápidos não podem deixar DOIS `pw-loopback` no ar.
-
-        É o defeito dos 22 `null-sinks` onde cabiam 4, na mesma casa e no mesmo
-        mês: quem pergunta à lembrança em vez de ao estado vaza.
-
-        MORDIDA: tire a guarda do `esta_ligado` no topo do `ligar`.
-        """
+        """Dois cliques rápidos não podem deixar DOIS `pw-loopback` no ar."""
         monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
         monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
         assert len(mesa) == 1, "abriu um segundo retorno para o mesmo controle"
 
     def test_um_processo_que_morreu_sozinho_conta_como_desligado(self, mesa):
-        """O estado é do SISTEMA, não da nossa lembrança.
-
-        MORDIDA: guarde um booleano em vez de perguntar ao `poll()`. O botão
-        fica verde para sempre depois de o `pw-loopback` cair.
-        """
+        """O estado é do SISTEMA, não da nossa lembrança."""
         monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
-        mesa[0]._morto = 1  # o loopback caiu sozinho
+        mesa[0]._morto = 1
         assert not monitor_do_microfone.esta_ligado(UNIQ)
 
     def test_a_latencia_vai_escrita_no_comando(self, mesa):
-        """Gravador sem latência explícita atrasa dois segundos — medido nesta
-        casa, e mordeu o microfone e a ponte do rádio.
-
-        MORDIDA: tire o `--latency` do argv.
-        """
+        """Gravador sem latência explícita atrasa dois segundos — medido nesta"""
         monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
         argv = mesa[0].argv
         assert "--latency" in argv, "o retorno saiu sem latência explícita"
@@ -174,11 +112,7 @@ class TestOFechoNaoDeixaMicrofoneAberto:
         assert all(p.terminou for p in mesa)
 
     def test_o_atexit_esta_registrado(self):
-        """A cura escrita e nunca ligada é o defeito mais caro desta casa.
-
-        MORDIDA: tire o `atexit.register`. O microfone dela fica aberto depois
-        de a interface fechar, e nada na tela diz isso.
-        """
+        """A cura escrita e nunca ligada é o defeito mais caro desta casa."""
         from hefesto_dualsense4unix.integrations import laco_de_audio
 
         fonte = pathlib.Path(
@@ -189,23 +123,12 @@ class TestOFechoNaoDeixaMicrofoneAberto:
 
 class TestATelaRefleteOsDoisEstados:
     def test_o_campo_do_botao_e_o_do_retorno(self):
-        """Ela pediu que o clique REFLITA na tela.
-
-        O botão veste o que o botão CAUSA. A luz do plástico tem dono no daemon
-        e aparece no selo ao lado — dois donos no mesmo elemento é o defeito que
-        os `data-campo` existem para não deixar acontecer.
-
-        MORDIDA: devolva `data-campo="mic-botao-estado"` ao 🎙.
-        """
+        """Ela pediu que o clique REFLITA na tela."""
         pagina = PAGINA.read_text(encoding="utf-8")
         assert 'data-gesto="mic-retorno" data-campo="mic-retorno"' in pagina
 
     def test_o_pacote_publica_os_dois_valores(self):
-        """Ligado publica a palavra; desligado publica `""`, que REMOVE o
-        atributo e devolve o cinza de base.
-
-        MORDIDA: publique a palavra sempre. O botão nasce verde.
-        """
+        """Ligado publica a palavra; desligado publica `""`, que REMOVE o"""
         fonte = PACOTE.read_text(encoding="utf-8")
         i = fonte.index('"mic-retorno": (')
         trecho = fonte[i : i + 200]

@@ -1,19 +1,4 @@
-"""Contratos KERNEL-07 + PATH-06 (sprint 2026-07-18-sprint-infra-kernel-install).
-
-Padrão do repo para lógica que vive em shell/regras udev: testes de TEXTO
-travam o contrato dos arquivos (assets/*.rules, install/uninstall, doctor) —
-a validação viva acontece no ciclo final do install (gate do orquestrador).
-
-- A regra do nó (a 70 até 25/09/2026, hoje a 73-hefesto) cobre o hidraw do
-  VPAD uhid (bus 0003, sem pai USB real) — sem depender do steam-devices de
-  terceiro; uaccess vale porque o arquivo ordena antes de 73-seat-late.
-- Regra 80 esconde os js legados de Motion Sensors (MODE 0000).
-- Regra 78 ampliada: nomes BT (sem prefixo Sony) e vpads Hefesto Virtual.
-- Assets 73/74 (hotplug-GUI) fora do repo; rm compensatório preservado.
-- Symlink ~/.local/bin/hefesto-launch no install, removido no uninstall.
-- Doctor: wrapper no PATH + contagem de jogos com wrapper + WARN da env morta
-  PROTON_ENABLE_HIDRAW no launch_env.
-"""
+"""Contratos KERNEL-07 + PATH-06 (sprint 2026-07-18-sprint-infra-kernel-install)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,9 +18,6 @@ def _rule_lines(path: Path) -> list[str]:
     ]
 
 
-# --- regra 70: hidraw do vpad uhid ------------------------------------------
-
-
 def test_regra_70_cobre_o_hidraw_do_vpad_uhid() -> None:
     linhas = _rule_lines(ASSETS / "73-hefesto-ps5-controller.rules")
     vpad = [ln for ln in linhas if 'KERNELS=="0003:054C:0DF2.*"' in ln]
@@ -48,12 +30,9 @@ def test_regra_70_cobre_o_hidraw_do_vpad_uhid() -> None:
 
 def test_regra_70_mantem_fisico_usb_e_bt() -> None:
     blob = "\n".join(_rule_lines(ASSETS / "73-hefesto-ps5-controller.rules"))
-    assert 'ATTRS{idVendor}=="054c"' in blob  # USB físico
-    assert 'KERNELS=="0005:054C:0CE6.*"' in blob  # BT standard
-    assert 'KERNELS=="0005:054C:0DF2.*"' in blob  # BT Edge
-
-
-# --- regra 80: js de Motion Sensors fora da API legada -----------------------
+    assert 'ATTRS{idVendor}=="054c"' in blob
+    assert 'KERNELS=="0005:054C:0CE6.*"' in blob
+    assert 'KERNELS=="0005:054C:0DF2.*"' in blob
 
 
 def test_regra_80_esconde_js_de_motion_sensors() -> None:
@@ -62,7 +41,6 @@ def test_regra_80_esconde_js_de_motion_sensors() -> None:
     for ln in linhas:
         assert 'SUBSYSTEM=="input"' in ln, ln
         assert 'KERNEL=="js[0-9]*"' in ln, ln
-        # ATTRS (plural) sobe a hierarquia js -> input parent, onde vive o name.
         assert 'ATTRS{name}=="*Motion Sensors*"' in ln, ln
         assert 'MODE="0000"' in ln, ln
 
@@ -73,19 +51,13 @@ def test_regra_80_nunca_toca_event_nem_hidraw() -> None:
     assert "hidraw" not in blob
 
 
-# --- regra 78 ampliada: nomes BT e vpads -------------------------------------
-
-
 @pytest.mark.parametrize(
     "nome",
     [
-        # físico USB (prefixo Sony) — cobertura original
         "Sony Interactive Entertainment DualSense Wireless Controller Motion Sensors",
         "Sony Interactive Entertainment DualSense Edge Wireless Controller Motion Sensors",
-        # BT: o kernel expõe SEM o prefixo do vendor
         '=="DualSense Wireless Controller Motion Sensors"',
         '=="DualSense Edge Wireless Controller Motion Sensors"',
-        # vpads uhid do daemon (nome próprio, P1..P4 via wildcard)
         "Hefesto Virtual DualSense P* Motion Sensors",
     ],
 )
@@ -100,9 +72,6 @@ def test_regra_78_sempre_zera_joystick_e_marca_acelerometro() -> None:
         assert 'ENV{ID_INPUT_ACCELEROMETER}="1"' in ln, ln
 
 
-# --- assets 73/74 removidos, rm compensatório preservado ---------------------
-
-
 def test_assets_73_e_74_sairam_do_repo() -> None:
     assert not (ASSETS / "73-ps5-controller-hotplug.rules").exists()
     assert not (ASSETS / "74-ps5-controller-hotplug-bt.rules").exists()
@@ -113,9 +82,6 @@ def test_rm_compensatorio_de_73_74_permanece_no_install_udev() -> None:
     texto = (REPO_ROOT / "scripts/install_udev.sh").read_text(encoding="utf-8")
     assert "rm -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules" in texto
     assert "74-ps5-controller-hotplug-bt.rules" in texto
-
-
-# --- conjunto canônico sincronizado em todos os instaladores -----------------
 
 
 @pytest.mark.parametrize(
@@ -148,9 +114,6 @@ def test_install_host_udev_dispara_trigger_de_input() -> None:
     assert "--subsystem-match=input" in texto
 
 
-# --- PATH-06: symlink do wrapper no PATH -------------------------------------
-
-
 def test_install_cria_symlink_hefesto_launch_no_path() -> None:
     texto = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
     assert 'ln -sf "${LAUNCH_WRAPPER_TARGET}" "${BIN_DIR}/hefesto-launch"' in texto
@@ -163,16 +126,12 @@ def test_uninstall_remove_o_symlink_do_path() -> None:
 
 
 def test_string_canonica_do_wrapper_continua_por_caminho_absoluto() -> None:
-    """PATH-06 item 1: o symlink é conveniência — WRAPPER_LAUNCH INALTERADA
-    (formato `sh -c` com caminho absoluto, funciona sem PATH)."""
+    """PATH-06 item 1: o symlink é conveniência — WRAPPER_LAUNCH INALTERADA"""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     assert slo.WRAPPER_LAUNCH.startswith("sh -c '")
     assert slo.WRAPPER_HOME_RELPATH in slo.WRAPPER_LAUNCH
     assert slo.WRAPPER_LAUNCH.endswith(" %command%")
-
-
-# --- doctor: checks novos ----------------------------------------------------
 
 
 def test_doctor_checa_wrapper_no_path() -> None:
@@ -182,34 +141,18 @@ def test_doctor_checa_wrapper_no_path() -> None:
 
 
 def test_doctor_nomeia_quem_falta_em_vez_de_contar() -> None:
-    """O contador SAIU em 16/08/2026, e a ausência dele é o que se trava aqui.
-
-    Ele fazia `grep -o` do caminho do wrapper no vdf inteiro e imprimia
-    "N jogo(s) com o wrapper aplicado" em VERDE — contando as três árvores
-    `apps` do arquivo quando a Steam só lê uma (medido: "[ OK ] 76" onde a
-    árvore viva tem 63), e nunca dizendo QUAL faltava.
-
-    Era a forma exata do `WRAPPER-EM-TODOS-01`, e nos últimos dias esse verde
-    saía logo ACIMA do `[FAIL] PRAGMATA`. O dano de um portão assim não é errar
-    o diagnóstico uma vez: é ensinar que verde-e-vermelho juntos são normais
-    aqui, e é assim que um portão morre de descrédito.
-
-    O que tem de existir no lugar são as duas réguas que NOMEIAM.
-    """
+    """O contador SAIU em 16/08/2026, e a ausência dele é o que se trava aqui."""
     texto = (REPO_ROOT / "scripts/doctor.sh").read_text(encoding="utf-8")
 
-    # o `pass` que contava sem nomear não pode voltar
     assert "jogo(s) com o wrapper hefesto-launch aplicado" not in texto
 
-    # e as duas que nomeiam têm de estar chamadas, não só definidas
     assert texto.count("check_sentinela_wrapper") >= 2
     assert texto.count("check_arvore_canonica_do_wrapper") >= 2
     assert "jogo(s) que PERDERAM as Opções de Inicialização do Hefesto:" in texto
 
 
 def test_doctor_avisa_env_morta_proton_enable_hidraw() -> None:
-    """MISC-08 item 6: PROTON_ENABLE_HIDRAW é herança do Proton <= 9 — presença
-    num launch_env/*.env indica materialização antiga do daemon."""
+    """MISC-08 item 6: PROTON_ENABLE_HIDRAW é herança do Proton <= 9 — presença"""
     texto = (REPO_ROOT / "scripts/doctor.sh").read_text(encoding="utf-8")
     assert "PROTON_ENABLE_HIDRAW" in texto
     assert "env morta" in texto

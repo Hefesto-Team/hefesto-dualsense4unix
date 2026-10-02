@@ -1,18 +1,4 @@
-"""BORDA-DE-QUEDA-01 (26/08/2026): o P1 morre, os secundários ficam escondidos.
-
-`rehide_physical_hidraw` tinha `if not _vpad_vivo(daemon): return` no TOPO, e
-`_vpad_vivo` olha **só** `daemon._gamepad_device` — o vpad do Jogador 1. Com o
-uhid do P1 derrubado (UHID_STOP de um probe), a função inteira devolvia antes
-de chegar ao laço dos jogadores 2..4. Cada replug/wake BT recria o nó físico
-VISÍVEL (rule 70 + uaccess do udev), e a reconciliação online, que existe
-justamente para reesconder, ficava muda: o jogo passava a ver o físico E o
-vpad de cada secundário — os **controles duplicados**, o defeito histórico
-mais caro desta casa.
-
-A mordida: mesa com o P1 morto e os jogadores 2 e 3 vivos afirma **dois**
-`client.hide(n)`. Devolvendo o gate ao topo dá zero, e o teste reprova
-nomeando os dois nós que o jogo passou a ver dobrados.
-"""
+"""BORDA-DE-QUEDA-01 (26/08/2026): o P1 morre, os secundários ficam escondidos."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -93,7 +79,7 @@ def _com_secundarios_vivos(daemon: _DaemonFalso) -> None:
 
 def test_os_secundarios_sao_reescondidos_sem_o_p1(mesa: _DaemonFalso) -> None:
     """A mordida: P1 morto, jogadores 2 e 3 vivos → DOIS hides."""
-    mesa._gamepad_device = _VpadFalso(started=False)  # UHID_STOP derrubou o P1
+    mesa._gamepad_device = _VpadFalso(started=False)
     _com_secundarios_vivos(mesa)
 
     gp.rehide_physical_hidraw(mesa)  # type: ignore[arg-type]
@@ -104,8 +90,6 @@ def test_os_secundarios_sao_reescondidos_sem_o_p1(mesa: _DaemonFalso) -> None:
         "VISÍVEIS: o jogo vê /dev/hidraw7 e /dev/hidraw9 dobrados (físico + "
         f"vpad de cada um). Escondidos de fato: {escondidos}"
     )
-    # E o nó do P1 NÃO entra: o vpad dele está morto, e esconder o físico de
-    # quem não tem vpad vivo é o caminho direto para ZERO controles.
     assert "/dev/hidraw3" not in mesa.broker.escondidos
 
 
@@ -126,10 +110,7 @@ def test_com_o_p1_vivo_os_tres_nos_somem(mesa: _DaemonFalso) -> None:
 def test_secundario_morto_continua_sem_autorizar_o_proprio_no(
     mesa: _DaemonFalso,
 ) -> None:
-    """Cada jogador é guardado pelo vpad DELE — o gate por-nó nos dois sentidos.
-
-    Achado Onda S #1 intacto: a mudança move o gate do P1, não o afrouxa.
-    """
+    """Cada jogador é guardado pelo vpad DELE — o gate por-nó nos dois sentidos."""
     mesa._gamepad_device = _VpadFalso(started=False)
     mesa._coop_manager = SimpleNamespace(
         _players={
@@ -153,11 +134,7 @@ def test_p1_morto_e_sem_secundarios_nao_esconde_nada(mesa: _DaemonFalso) -> None
 
 
 def test_os_gates_da_mesa_inteira_continuam_de_pe(mesa: _DaemonFalso) -> None:
-    """Modo Nativo e emulação desligada seguem cortando ANTES de tudo.
-
-    Esses três (nativo, emulação, backend com `hidraw_path`) valem para a mesa
-    inteira; só o gate de vpad virou por-nó.
-    """
+    """Modo Nativo e emulação desligada seguem cortando ANTES de tudo."""
     _com_secundarios_vivos(mesa)
 
     mesa._native = True

@@ -58,19 +58,12 @@ from hefesto_dualsense4unix.core.physical_report_reader import (
 )
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
 
-#: `buttons[2]` do `struct dualsense_input_report` — onde moram MIC e PS.
 _BUTTONS2_NO_PAYLOAD = 9
-#: O byte 1 de um `0x31` normal de input: o bit HID ligado, o de áudio não.
 _FLAG_HID = 0x01
 
 
 def _report_bt(*, com_audio: bool, recheio: int = 0xFF) -> bytes:
-    """Um `0x31` de 78 bytes com CRC VÁLIDO — de áudio ou de input.
-
-    O recheio `0xFF` imita o pior caso real: bytes de Opus que, lidos como
-    `buttons[2]`, acendem TODOS os botões de uma vez (foi assim que MIC e PS
-    apareceram presos juntos).
-    """
+    """Um `0x31` de 78 bytes com CRC VÁLIDO — de áudio ou de input."""
     corpo = bytearray(INPUT_REPORT_BT_SIZE - 4)
     corpo[0] = INPUT_REPORT_BT
     corpo[1] = _FLAG_HID | (INPUT_FLAG_AUDIO if com_audio else 0x00)
@@ -82,11 +75,7 @@ def _report_bt(*, com_audio: bool, recheio: int = 0xFF) -> bytes:
 
 class TestOReportDeAudioNaoEInput:
     def test_a_mordida_audio_com_crc_valido_e_recusado(self) -> None:
-        """Arranque o filtro do bit e este teste reprova.
-
-        E note o que ele prova junto: o report é PERFEITO em id, tamanho e CRC.
-        As três defesas que existiam antes o deixariam passar.
-        """
+        """Arranque o filtro do bit e este teste reprova."""
         audio = _report_bt(com_audio=True)
         assert audio[0] == INPUT_REPORT_BT
         assert len(audio) == INPUT_REPORT_BT_SIZE
@@ -109,13 +98,7 @@ class TestOReportDeAudioNaoEInput:
         assert _struct_base(usb) == 1
 
     def test_a_janela_de_motion_tambem_recusa_audio(self) -> None:
-        """Um consumidor, um portão: motion herda a mesma disciplina.
-
-        Se o motion tivesse um caminho próprio, o giroscópio passaria a receber
-        Opus e a mira giraria sozinha.
-        """
-        # O laço lê a janela pelo mesmo portão da base (`_struct_base`, e só
-        # depois `_janela_com_base`): o report de áudio para no portão.
+        """Um consumidor, um portão: motion herda a mesma disciplina."""
         assert _struct_base(_report_bt(com_audio=True)) is None
         base = _struct_base(_report_bt(com_audio=False))
         assert base is not None
@@ -130,11 +113,7 @@ class TestOReportDeAudioNaoEInput:
 
 class TestOsBotoesQueFicaramPresos:
     def test_audio_recusado_nunca_vira_buttons2(self) -> None:
-        """O byte que prendeu MIC e PS não pode mais ser alcançado.
-
-        Com recheio 0xFF, `buttons[2]` viria com todos os bits em 1 — MIC e PS
-        inclusive. É a foto exata do que ela viu.
-        """
+        """O byte que prendeu MIC e PS não pode mais ser alcançado."""
         audio = _report_bt(com_audio=True, recheio=0xFF)
         base = _struct_base(audio)
         assert base is None, (
@@ -143,10 +122,7 @@ class TestOsBotoesQueFicaramPresos:
         )
 
     def test_um_report_de_input_com_buttons2_cheio_ainda_passa(self) -> None:
-        """Botões de verdade todos apertados é possível — e tem de passar.
-
-        O filtro separa áudio de input, não 'muitos botões' de 'poucos'.
-        """
+        """Botões de verdade todos apertados é possível — e tem de passar."""
         entrada = _report_bt(com_audio=False, recheio=0xFF)
         base = _struct_base(entrada)
         assert base == 2
@@ -155,12 +131,7 @@ class TestOsBotoesQueFicaramPresos:
 
 class TestAsDuasConstantesNaoPodemDivergir:
     def test_o_bit_e_o_mesmo_dos_dois_lados(self) -> None:
-        """A constante é duplicada de propósito; divergir seria pior que duplicar.
-
-        O caminho quente da leitura não pode importar o módulo de áudio (ctypes,
-        libopus). Então o valor vive nos dois lugares — e este teste é o que
-        impede que um mude sem o outro.
-        """
+        """A constante é duplicada de propósito; divergir seria pior que duplicar."""
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             INPUT_FLAG_AUDIO as DO_AUDIO,
         )

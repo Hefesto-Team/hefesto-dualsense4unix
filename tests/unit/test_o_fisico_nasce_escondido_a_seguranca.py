@@ -66,7 +66,6 @@ HOST_UDEV = (RAIZ / "scripts" / "install-host-udev.sh").read_text(encoding="utf-
 UNINSTALL = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
-#: O `sudo` de mentira: `install` e `rm` executam; o resto só se anota.
 SUDO_DE_MENTIRA = r"""#!/usr/bin/env bash
 for a in "$@"; do
   case "$a" in
@@ -124,12 +123,7 @@ def _efetivas(texto: str) -> list[str]:
 
 
 def _comando_rm(texto: str, *, depois_de: str = "") -> str:
-    """O `rm` que cita a regra de hoje, com a continuação — ache-o pela FORMA.
-
-    Pela forma (qualquer `rm`, com ou sem `-f`), e não pelo texto exato: a
-    mordida desta régua é justamente o `-f`, e um recorte que digitasse
-    `rm -f` reprovaria por «não achei o texto», e não pela razão certa.
-    """
+    """O `rm` que cita a regra de hoje, com a continuação — ache-o pela FORMA."""
     inicio = texto.index(depois_de) if depois_de else 0
     padrao = re.compile(
         rf"^[ \t]*(?:sudo[ \t]+)?rm\b[^\n]*{re.escape(ETC)}/{re.escape(NOVA)}", re.M
@@ -149,10 +143,6 @@ def _funcao(texto: str, nome: str) -> str:
     b = texto.index("\n}\n", a)
     return texto[a : b + 3]
 
-
-# ---------------------------------------------------------------------------
-# 1-2. install_udev.sh: máquina nova, duas vezes, e o opt-out que vai e volta
-# ---------------------------------------------------------------------------
 
 BLOCO_DO_INSTALL = INSTALL_UDEV[
     INSTALL_UDEV.index('if [[ "$ABRIR_O_NO" -eq 1 ]]; then\n    # A transformação tem UM DONO') :
@@ -195,10 +185,6 @@ def test_o_opt_out_vai_e_volta(tmp_path: Path) -> None:
     assert (etc / NOVA).read_bytes() == ASSET.read_bytes()
 
 
-# ---------------------------------------------------------------------------
-# 3. uninstall.sh: duas vezes, e a máquina que só tem a regra de antes
-# ---------------------------------------------------------------------------
-
 RM_DO_UNINSTALL = _comando_rm(UNINSTALL, depois_de='if [[ "${REMOVE_UDEV}" -eq 1 ]]; then')
 
 
@@ -214,7 +200,6 @@ def test_o_uninstall_depois_do_install_e_de_novo(tmp_path: Path) -> None:
     r = _desinstalar(tmp_path, etc)
     assert r.returncode == 0, r.stderr
     assert sorted(p.name for p in etc.iterdir()) == ["99-de-outro-programa.rules"]
-    # A segunda vez não acha nada, e não pode falhar por isso.
     r = _desinstalar(tmp_path, etc)
     assert r.returncode == 0, r.stderr
     assert sorted(p.name for p in etc.iterdir()) == ["99-de-outro-programa.rules"]
@@ -227,10 +212,6 @@ def test_o_uninstall_na_maquina_que_so_tem_a_velha(tmp_path: Path) -> None:
     assert r.returncode == 0, r.stderr
     assert list(etc.iterdir()) == []
 
-
-# ---------------------------------------------------------------------------
-# 4. --keep-udev: a regra do nó que fica vira a aberta, porque o broker sai
-# ---------------------------------------------------------------------------
 
 ABRIR_A_QUE_FICA = _funcao(UNINSTALL, "_abrir_a_regra_do_no_que_fica")
 
@@ -262,13 +243,9 @@ def test_a_regra_fechada_que_fica_vira_a_aberta(tmp_path: Path, nome: str) -> No
     texto = (etc / nome).read_text(encoding="utf-8")
     assert not _fechada(texto), texto
     abertas = [linha for linha in _efetivas(texto) if 'TAG+="uaccess"' in linha]
-    assert len(abertas) == 5, abertas  # as quatro físicas e a do vpad
+    assert len(abertas) == 5, abertas
 
 
-#: Linhas de enchimento DEPOIS das fechadas: a saída do `grep -v` passa do
-#: buffer do cano (64 KiB), e um `| grep -q` que ache cedo leva o produtor ao
-#: SIGPIPE de forma determinística (a régua da casa é
-#: `test_o_pipefail_nao_transforma_acerto_em_falha.py`; esta mede o EFEITO).
 ENCHIMENTO = "".join(f'ENV{{HEFESTO_ENCHIMENTO}}="{i:06d}"\n' for i in range(8000))
 
 
@@ -302,11 +279,7 @@ def test_a_regra_grande_nao_engana_o_doctor_sob_pipefail(tmp_path: Path) -> None
 
 
 def test_com_a_regra_que_fica_o_fisico_volta_ao_mundo_de_antes(tmp_path: Path) -> None:
-    """Pela cadeia inteira (o udev de bolso): o físico e o vpad com a ACL da sessão.
-
-    É o estado de uma máquina sem o Hefesto: sem broker, um nó fechado é um
-    controle que ninguém abre — nem a Steam, nem o jogo.
-    """
+    """Pela cadeia inteira (o udev de bolso): o físico e o vpad com a ACL da sessão."""
     raiz = udev.montar(tmp_path, terceiros=udev.TERCEIROS_POR_MAQUINA["nenhuma"])
     _manter_udev(tmp_path)
     for nome, aparelho in sorted(udev.FISICOS.items()):
@@ -371,11 +344,6 @@ def test_o_ensaio_do_keep_udev_so_diz(tmp_path: Path) -> None:
     assert (etc / NOVA).read_bytes() == ASSET.read_bytes()
 
 
-# ---------------------------------------------------------------------------
-# 5. install-host-udev.sh: o comando de root roda limpo numa máquina nova
-# ---------------------------------------------------------------------------
-
-
 def _comandos_do_helper(tmp: Path, etc: Path, src: Path) -> list[str]:
     escopo = "\n".join(
         (
@@ -410,10 +378,6 @@ def test_o_helper_roda_limpo_numa_maquina_nova_e_duas_vezes(tmp_path: Path) -> N
         assert r.returncode == 0 and r.stderr == "", r.stderr
     assert sorted(p.name for p in etc.iterdir()) == [NOVA]
 
-
-# ---------------------------------------------------------------------------
-# 6. Os pacotes: a remoção numa máquina em que o helper nunca rodou
-# ---------------------------------------------------------------------------
 
 REMOCAO = {
     "deb": (RAIZ / "packaging" / "debian" / "prerm", "\n    remove)\n"),
@@ -468,11 +432,6 @@ def test_o_ciclo_do_pacote_nao_deixa_rastro(tmp_path: Path, pacote: str) -> None
     assert list(etc.iterdir()) == []
 
 
-# ---------------------------------------------------------------------------
-# 7. O doctor só lê, e não diz que a barra está acesa
-# ---------------------------------------------------------------------------
-
-#: As funções que a sprint pôs no doctor. Nenhuma pode escrever na máquina.
 FUNCOES_NOVAS_DO_DOCTOR = (
     "_regras_udev_em_ordem",
     "_caminho_da_regra_do_no",
@@ -510,7 +469,6 @@ def _codigo_sem_texto(corpo: str) -> str:
 def test_as_funcoes_novas_do_doctor_so_leem(nome: str) -> None:
     codigo = _codigo_sem_texto(_funcao(DOCTOR.read_text(encoding="utf-8"), nome))
     assert not _VERBO_QUE_ESCREVE.findall(codigo), (nome, _VERBO_QUE_ESCREVE.findall(codigo))
-    # Redirecionar para arquivo também escreve; só o /dev/null e os descritores valem.
     for alvo in re.findall(r"(?<![<0-9&])[0-9]?>>?\s*([^\s;|)]+)", codigo):
         assert alvo.startswith(("/dev/null", "&")), (nome, alvo)
 
@@ -548,11 +506,7 @@ def _servidor_de_mentira(caminho: Path, resultado: dict[str, object]) -> threadi
 
 
 def test_o_doctor_diz_a_cor_pedida_e_nao_a_lampada(tmp_path: Path) -> None:
-    """Em 25/09 a linha dizia `lightbar_rgb=[0, 255, 0]` sobre a barra APAGADA do P3.
-
-    O socket é um servidor de mentira: o `runtime_socket` é trocado DEPOIS do
-    `source`, e nenhum IPC chega ao daemon dela.
-    """
+    """Em 25/09 a linha dizia `lightbar_rgb=[0, 255, 0]` sobre a barra APAGADA do P3."""
     caminho = tmp_path / "d.sock"
     fio = _servidor_de_mentira(
         caminho,

@@ -95,20 +95,7 @@ def _recado(frase: str) -> None:
 
 
 def _draft_do_ativo(nome: str) -> Any:
-    """O `DraftConfig` do perfil `nome`, lido do disco e só dele.
-
-    É o rascunho que o «Aplicar» manda aos controles e o que o «Salvar»
-    regrava normalizado, em qualquer aba. O perfil no disco é o único dono do
-    valor; o aparelho é a projeção dele. O estado vivo tem três fontes que não
-    são escolha dela (a ativação que não aplica todo campo, as camadas como a
-    economia, e o próprio controle, como o botão do microfone), e ler o vivo
-    fazia dessas três a escolha dela. Cada escolha dela vai ao disco no gesto
-    que a fez (`tests/unit/test_todo_gesto_que_muda_escolha_grava.py`).
-    Decisão `D-2709-O-SALVAR-LE-O-PERFIL`.
-
-    `None` quando não há nome ou o perfil não se lê: cada gesto recusa
-    dizendo o que fazer.
-    """
+    """O `DraftConfig` do perfil `nome`, lido do disco e só dele."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
     from hefesto_dualsense4unix.profiles.loader import load_profile
@@ -121,48 +108,12 @@ def _draft_do_ativo(nome: str) -> Any:
         return None
 
 
-# OS TRÊS GESTOS DESTE RODAPÉ PERGUNTAM O PERFIL A `perfil_do_rodape`, e nenhum
 # dos três lê `ctx.state["active_profile"]` cru. A-PERNA-QUE-FALTA-01,
-# 11/09/2026, e O-MODO-FREESTYLE-03, 24/09/2026.
-#
-# A PERGUNTA TEM UM DONO E ELE RESOLVE EM DUAS PERNAS — o daemon primeiro, a
-# escolha dela no disco depois (`profiles_actions.perfil_que_esta_valendo`, e
 # deste lado `perfil.nome_do_ativo`). O estado cru só tem a primeira.
-#
 # E A SEGUNDA PERNA NÃO É HIPÓTESE: `nome_do_ativo` documenta, medido em
-# 06/09/2026 na máquina dela, o daemon respondendo `active_profile: null` com um
-# perfil valendo no disco. Sob esse estado os três levantavam — *"não há perfil
-# ativo. Escolha um na aba Perfis."* — em cima de um perfil que ESTAVA escolhido.
-# A TERCEIRA chegou ao Salvar na O-MODO-FREESTYLE-02 e só a ele; o Aplicar e o
-# Exportar seguiam recusando com o Freestyle no disco, e a conferência daquela
-# sprint achou a assimetria. Agora é uma linha igual nos três.
-#
-# Três linhas iguais e nenhum `if`: quem decide é a função dona, e um segundo
-# `or ""` aqui seria a terceira leitura de uma pergunta que já tem resposta.
 @gesto("*", "aplicar")
 def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O botão verde. Manda o perfil ativo INTEIRO aos controles, sem gravar.
-
-    O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o método é o
-    `profile.reaplicar`, que roda no daemon a MESMA cadeia da ativação, com o
-    perfil lido do disco e todas as camadas (a luz, os gatilhos, a vibração e
-    a política dela, o modo, a máscara de cada controle, os sensores, a mira,
-    o som e o volume do microfone). Até aqui ia o `profile.apply_draft` com o
-    `to_ipc_dict()` do rascunho, que levava menos da metade disso. O
-    «Aplicar» não é escolha: não grava a sessão, não mexe no Modo Freestyle e
-    não arma a trava da troca à mão.
-
-    O PERFIL É O DO RODAPÉ (:func:`perfil_do_rodape`), o mesmo do «Salvar» e
-    do «Exportar». Sem ele, recusa dizendo o que fazer.
-
-    O DAEMON CALADO RECUSA: o `None` do `profile_reaplicar` é «não houve
-    resposta», e a frase é a que a pílula já usa
-    (`a04_iluminacao.sem_resposta_do_daemon`). Antes o botão piscava verde.
-
-    E TERMINA COM A VOLTA (:func:`perfil.a_volta_do_perfil`, 02/10/2026): os
-    arquivos que a Steam lê, o elo morto do rádio, a reconciliação e a
-    numeração (O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01).
-    """
+    """O botão verde. Manda o perfil ativo INTEIRO aos controles, sem gravar."""
     from .a04_iluminacao import sem_resposta_do_daemon
 
     nome = perfil_do_rodape(ctx.state)
@@ -205,7 +156,6 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     draft = _draft_do_ativo(nome)
     if draft is None:
         raise ValueError("salvar: não há perfil ativo. Escolha um na aba Perfis.")
-    # A PRIORIDADE É A QUE O DISCO JÁ TINHA, e viaja no próprio rascunho.
     perfil.gravar_e_reaplicar(
         draft.to_profile(nome, priority=draft.source_priority), ctx, p)
     perfil.a_volta_do_perfil(ctx, p)
@@ -257,16 +207,13 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     pasta = perfil.pasta()
     if pasta is None:
         raise RuntimeError("exportar: não achei a pasta de perfis.")
-    # O ARQUIVO É O QUE O DAEMON LÊ — O-PERFIL-ATIVO-ACHA-O-ARQUIVO-COMO-O-DAEMON-01.
-    # Aqui morava uma cópia das duas primeiras pernas (o nome e o slug), e o
-    # perfil de arquivo de outro nome ou de Estilo de Jogo não se exportava.
     origem = perfil.arquivo(nome, pasta)
     if origem is None:
         raise FileNotFoundError(f"exportar: não achei o arquivo de {nome!r}.")
     sugestao = str(pathlib.Path.home() / f"hefesto-{origem.name}")
     escolhido = p.salvar_arquivo("Onde guardar o perfil", sugestao=sugestao)
     if not escolhido:
-        return  # ela cancelou
+        return
     destino = pathlib.Path(escolhido)
     destino.write_bytes(origem.read_bytes())
     print(f"[exportar] {destino}")
@@ -295,10 +242,6 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     caminho = p.escolher_arquivo("Escolha o perfil para importar", padrao="*.json")
     if not caminho:
-        # ELA CANCELOU, E CANCELAR NÃO É ERRO — nem notícia. O `None` explícito
-        # é o que o gesto passou a dever desde que ele devolve recado: um
-        # `return` seco aqui é `Return value expected` no mypy, e a diferença
-        # não é de estilo — quem lê tem de ver que o silêncio é intencional.
         return None
 
     perfil._com_o_src()
@@ -335,11 +278,7 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 PISO_DA_ABA = 4
 PROVAS: list[dict[str, Any]] = [
-    # O "aplicar" e o "salvar" dependem do perfil ATIVO, e a régua roda sem
-    # daemon: eles são provados pelo teste de recusa, abaixo, e no aparelho.
 ]
-#: `chamar` e `resultado` são da volta (`perfil.a_volta_do_perfil`), que os três
-#: botões que gravam ou mandam perfil chamam no fim.
 PONTE = {"profile_reaplicar", "escolher_arquivo", "salvar_arquivo",
          "chamar", "resultado"}
 METODOS: set[str] = {"launch_env.refresh", "coop.sync", "identity.renumber"}

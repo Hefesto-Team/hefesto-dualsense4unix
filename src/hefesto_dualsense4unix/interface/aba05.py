@@ -1,22 +1,4 @@
-"""Aba 05 · Vibração — a mesa de QUATRO controles.
-
-Pedido dela, 27/08/2026: *"precisamos que cada aba dessa do nosso mockup seja
-reescrita pra 4 controles conectados. (…) considerando o nosso mapa. e o sistema
-de fitas. cada vez que o svg ou do controle ou de um glifo aparecerem tem que
-considerar os do nosso mapa."*
-
-Aqui isso quer dizer quatro coisas, e nenhuma é digitada:
-
-* os quatro controles saem de `monta.MESA`, na mesma ordem dos chips da fita;
-* a cor de cada plástico sai de `monta.cor_da_zona()`, que LÊ o `<style>` que o
-  `gerar_cores_do_dualsense.py` escreveu no SVG;
-* **os dois motores saem de `docs/data/pecas-do-dualsense.csv`** — o id no SVG
-  (`no_svg`), o glifo (`glifo`), o nome e a nota de cada um. Digitar
-  `feat-rumble-esquerdo` aqui seria a segunda verdade que o mapa existe para
-  matar: quando a peça mudar de id, esta aba muda junto ou reprova alto.
-* o número do jogador acende as cinco lâmpadas pelo padrão do produto
-  (`monta.PADRAO_JOGADOR`, de `core/led_control.py`).
-"""
+"""Aba 05 · Vibração — a mesa de QUATRO controles."""
 import csv
 import math
 import pathlib
@@ -33,19 +15,10 @@ from monta import (  # noqa: E402
 )
 import marca_da_camada as _marca  # noqa: E402
 
-# O DONO ÚNICO DO DEGRAU DE FORÇA. O `monta` já põe `src/` no `sys.path` para
-# ler o padrão das lâmpadas do produto; esta aba faz o mesmo com a tabela de
-# multiplicadores, em vez de digitar `economia`/`balanceado`/`max` aqui e
-# divergir no dia em que o produto renomear um.
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
     RUMBLE_POLICY_MULT,
 )
 
-# O DONO ÚNICO DO TETO DA BARRA "Personalizado" — 03/09/2026, decisão dela:
-# *"0 a 200%, e grava na hora."* O número mora no esquema do perfil, que é quem
-# recusa o que passa dele (`ControllerRumbleOverride._validate_custom_mult` e o
-# irmão global). Digitar `200` aqui seria a segunda verdade que a régua desta
-# casa persegue — e o `150` que estava nesta linha já era exatamente isso.
 from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
     HAPTICA_PCT_MAX,
     HAPTICA_PCT_PADRAO,
@@ -54,22 +27,8 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
     RUMBLE_CUSTOM_MULT_MAX,
 )
 
-# A LINHA DO ESTADO SAI DO PRODUTO, e não de prosa digitada aqui — 02/09/2026.
-# O mesmo par de funções que a tela viva chama monta o desenho da bancada: se um
-# dia a frase mudar no produto, o desenho muda junto e não fica um mockup
-# afirmando o que a tela já não diz.
-#
-# `estado_da_trava` / `html_da_trava` SAÍRAM DAQUI EM 05/09/2026, com a oitava
-# faixa da grade — ver :data:`SEM_A_FAIXA_DE_ESTADO`. E saíram do PRODUTO junto:
-# esta aba era a única chamadora das cinco peças da trava, e a janela estável
 # pinta a linha dela pelo seu próprio método (`app/actions/rumble_actions.py`,
-# linha 1274 — o nome NÃO se escreve aqui: ele é o `sinal` AUSENTE da linha 170
-# do `paridade-gtk-html.csv`, e citá-lo deste lado fecharia a dívida no papel).
 # Quem mediu isso não fui eu — foi o `portao_a_casa_sabe_e_o_produto_nao_faz`,
-# que reprovou nomeando as duas assim que a faixa saiu.
-#
-# E DESDE 06/09/2026 (GTK-2) as DUAS FRASES da janela estável vêm por aqui
-# também — ver o bloco "AS FRASES QUE A JANELA ESTÁVEL TEM", abaixo.
 from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
     DICA_DO_TETO_DA_MESA,
     DICA_DOS_VALORES_QUE_PASSAM,
@@ -78,34 +37,9 @@ from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
     textos_do_estado,
 )
 
-#: A CENA DA FAIXA DE ESTADO no desenho, e o `economia` NÃO é enfeite.
-#:
-#: `textos_do_estado` consulta o ORÇAMENTO DA MÁQUINA (`carregar_maquina()`) para
-#: decidir se a linha "limitado a 30% pelo orçamento" aparece. Com um degrau
-#: qualquer, o desenho gerado passaria a depender da máquina de quem roda o
-#: gerador — e o portão `desenho-aprovado`, que compara byte a byte a bancada com
-#: o publicado, reprovaria sozinho na máquina seguinte.
-#:
-#: Com `economia` o teto NUNCA morde: o pedido é 0,3 e o único teto que o
-#: orçamento impõe é o mesmo 0,3 (`core.rumble.teto_do_orcamento`), e a função
-#: cala quando `pedido <= teto`. O desenho fica determinístico por CONSTRUÇÃO, e
-#: não por sorte da configuração de quem gerou.
-#:
-#: **E DESDE 07/09/2026 ELA RENDE ZERO LINHA, que é o desenho certo.** A única
-#: frase que esta cena acendia era a contagem de pedidos do jogo, e ela saiu por
-#: ordem dela (`app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`). Com a mesa
-#: quieta a faixa nasce VAZIA e o `.vib-estado:empty{display:none}` a esconde —
-#: não há mais linha de texto permanente sob a grade. A cena FICA porque é ela
-#: que prova, no gerador, que a faixa continua saindo do emissor do produto e
-#: não de prosa digitada aqui; a régua 8 do `_conferir` é quem cobra isso.
 CENA_DO_ESTADO = {"rumble_policy": "economia",
                   "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 1}}
 
-# ---------------------------------------------------------------------------
-# OS DOIS MOTORES, LIDOS DO MAPA. A coluna `regiao` do CSV é quem diz quais
-# peças são de vibração; o id no SVG é a coluna `no_svg`; o glifo é a coluna
-# `glifo` — os mesmos 19 arquivos de `assets/glyphs/` que a aba Status usa.
-# ---------------------------------------------------------------------------
 _LINHAS = [
     l for l in csv.DictReader(
         x for x in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
@@ -116,8 +50,6 @@ if len(_LINHAS) != 2:
     raise SystemExit(f"ERRO: o mapa tem {len(_LINHAS)} peça(s) de vibração, e a aba "
                      f"desenha duas. Confira docs/data/pecas-do-dualsense.csv")
 
-# "Motor de vibração esquerdo" -> "Motor esquerdo": o rótulo curto é DERIVADO do
-# nome do mapa, e não uma segunda escrita dele.
 MOTORES = [
     {
         "id": l["no_svg"],
@@ -127,95 +59,18 @@ MOTORES = [
         "nota": l["nota"],
         "apelido": l["apelidos"],
     }
-    for l in sorted(_LINHAS, key=lambda l: float(l["x1"]))  # esquerdo antes do direito
+    for l in sorted(_LINHAS, key=lambda l: float(l["x1"]))
 ]
 ESQ, DIR = MOTORES
 
-# ---------------------------------------------------------------------------
-# O ESTADO DE CADA CONTROLE NA MESA. Um mockup mostra uma cena, e esta cena foi
-# escolhida para ensinar — e o que ela ensina agora são as DUAS decisões de
-# 04/09, nas duas colunas que estão VIVAS (P1 e P2; o P3 e o P4 são lugares
-# vazios desde 31/08, por ordem dela):
-#
-#   P1  o AJUSTE PRÓPRIO, com a conta dela: Máximo (150%) e as duas barras de
-#       motor diferentes. O degrau aceso na coluna é dela.
-#   P2  o HERDADO — a decisão [05]: nenhum dos quatro degraus acende, porque
-#       este controle não tem ajuste próprio; quem está aceso é o `Auto` da
-#       LINHA DE MESA, que é o que o produto está usando nele. Sem UMA coluna
-#       viva assim o desenho não ensinaria a diferença, e a régua reprova.
-#   P2  também é o lado DESLIGADO, à esquerda, com a barra em 0 — *"este motor
-#       não treme neste perfil"*, que é o zero como escolha válida.
-#   P4  guarda o lado desligado à direita, para o dia em que a mesa encher.
-#
-# O `auto` MUDOU DE LUGAR, e é fato do produto: ele é o único degrau que **não
-# pode ser override de peça** (`profiles/schema.py` o recusa por unidade), então
-# ele só existe na MESA. Até 04/09 uma coluna o desenhava como escolha dela
-# naquele controle — um estado que o produto não sabe guardar.
-#
-# A CENA DO P1 É A CONTA DELA, 04/09/2026, com os números que ela escreveu:
-#
-#     "se eu tiver 150% do perfil de vibração e as duas linhas estiverem 100
 #      entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver 100 e  # noqa-acento: citação literal dela
-#      a outrqa 50% então será 150 em um e 75% no outro entende?"
-#
-# Máximo (150%) · barra do motor FRACO (o direito) em 100 · barra do motor FORTE
-# (o esquerdo) em 50. `efetivo = degrau x barra`, e a coluna mostra os dois
-# fatores lado a lado.
-#
-# FATO SUBSTITUÍDO — as duas linhas anteriores diziam *"o P1 … esquerdo
-# desligado em 0, direito ligado em 60"*, e os números eram do tempo em que a
-# linha do motor era LEITURA (o par 0-255 que o jogo pediu). A partir do momento
-# em que ela decidiu que a barra é POLÍTICA que multiplica o degrau, `60 /255`
-# deixou de ser o que a linha mostra — mantê-lo ao lado faria a próxima pessoa
-# escolher entre duas escalas para a mesma barra.
-# ---------------------------------------------------------------------------
-# OS QUATRO DEGRAUS: o RÓTULO é dela, a CHAVE é do produto.
-#
-# "Máximo" é texto de tela; `max` é contrato — está no perfil no disco
-# (`profiles/schema.py`), no IPC (`rumble.policy_set`) e no `RUMBLE_POLICY_MULT`
-# (`daemon/subsystems/rumble.py:82`). O `data-forca` do HTML carrega a CHAVE,
-# nunca o rótulo: endereçar pelo rótulo quebra a pintura no dia em que ela
-# renomear um degrau, e quebra calado.
-#
-# SÃO TRÊS, E A TABELA DO PRODUTO TAMBÉM TEM TRÊS — 05/09/2026, decisão dela.
-# `RUMBLE_POLICY_MULT` = {economia: 0.3, balanceado: 1.0, max: 1.5}. Até hoje
-# esta lista tinha um quarto, o **Auto**, que não está naquela tabela porque não
-# tem multiplicador fixo: ele escala pela BATERIA em
-# `core/rumble._effective_mult` (>50% → 1.0 · 20-50% → 0.7 · <20% → 0.3).
-#
-# **ELE SAIU DA TELA, E A RAZÃO É QUE O TRABALHO DELE JÁ TINHA DONO.** Palavra
-# dela: *"segue os três modos sempre. clicou em perfil de energia econômico na
-# aba sistema todos vão pra vibração manual. o resto é desnecessário e só polui
-# e deixa difícil entender"*.
-#
-# E o produto lhe dá razão, medido: o Perfil de Bateria da aba 09 grava
-# `orcamento.teto`, e `_effective_mult` aplica `min(modo escolhido, teto)` —
-# nunca produto (`_sob_o_teto`). O perfil econômico JÁ limita todo mundo no
-# nível Economia, qualquer que seja o modo. O `Auto` era um SEGUNDO dono do
-# mesmo trabalho, numa aba diferente, com uma conta diferente.
-#
-# O QUE ISSO CURA DE QUEBRA: o botão `Auto` da coluna nunca pôs peça nenhuma em
-# Auto — o esquema o recusa por unidade, e o clique significava *"limpa o meu
-# ajuste e segue o global"*. O rótulo dizia uma coisa e o ato era outra
+# (`daemon/subsystems/rumble.py:20`). O `data-forca` do HTML carrega a CHAVE,
 # (`a05_vibracao._aplicar_a_forca`, desfecho 3, medido em 04/09). Um botão a
-# menos é uma mentira a menos.
-#
-# `auto` CONTINUA VÁLIDO NO DAEMON e na janela GTK — o que saiu foi a OFERTA
-# nesta tela, e NADA de código novo foi preciso para o caso de encontrá-lo
-# guardado de antes: o caminho da pintura já trata degrau desconhecido, e trata
 # bem. `a05_vibracao._pct_da_coluna` chama `_pedido_da_politica`, que faz
-# `_POLICY_MULT.get(policy)` — um `auto` devolve `None`, a coluna não acende
-# degrau nenhum e a linha do percentual não aparece. É o mesmo "não sei" que o
-# produto já dizia para política fora dos degraus conhecidos
 # (`rumble_actions:414`, silêncio 3), e é mais honesto que acender um botão que
-# ela não escolheu.
 FORCA = [("Economia", "economia"), ("Balanceado", "balanceado"),
          ("Máximo", "max")]
 
-# O DONO DOS DEGRAUS DA TELA É O PRODUTO — 28/09/2026: `degraus_da_forca()`
-# (`app/telas/vibracao`), o mesmo que o pacote da aba pergunta para escrever a
-# recusa do clique sem degrau. A conferência passou a cobrar a ORDEM também: a
-# fileira desenhada e a frase da recusa listam os degraus na mesma sequência.
 if tuple(chave for _, chave in FORCA) != degraus_da_forca():
     raise SystemExit(
         f"ERRO: os degraus desta aba são {[c for _, c in FORCA]} e o "
@@ -223,129 +78,29 @@ if tuple(chave for _, chave in FORCA) != degraus_da_forca():
         "degraus_da_forca). O `data-forca` é o endereço por onde a pintura acha "
         "o botão — divergir aqui faz a tela acender o degrau errado, em silêncio.")
 
-#: O TETO DA BARRA "Personalizado", em pontos percentuais. **200 — decisão dela,
-#: 03/09/2026:** *"0 a 200%, e grava na hora."*
-#:
-#: FATO SUBSTITUÍDO, e a linha inteira era `TETO = 150  # a barra para no Máximo
-#: — "não passa dele", pedido dela`. Os 150 eram o teto da POLÍTICA (o degrau
-#: `max`), e valiam enquanto a barra era LEITURA: ela só mostrava o que um dos
-#: quatro degraus pedia. A partir do momento em que ela ARRASTA a barra, o teto
 #: passa a ser o do multiplicador personalizado — `RUMBLE_CUSTOM_MULT_MAX`, que
-#: é 2,0 e é quem recusa o que passa dele. Manter 150 aqui faria a barra encher
-#: aos 150% e ficar cheia até os 200%, mentindo sobre o quanto ainda há.
-#:
-#: E ELE NÃO SE DIGITA: o `150` do dia anterior já era a segunda cópia de
-#: `RUMBLE_POLICY_MULT["max"]`, e `app/telas/vibracao.teto_da_barra()` nasceu
-#: justamente para não a ter. Aquela função continua sendo o teto da ESCADA (os
-#: quatro degraus); esta constante é o teto do que ela pode PEDIR.
 TETO = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 
-#: O PASSO DO ARRASTE, e ele é DERIVADO — nunca escolhido a dedo.
-#:
-#: A regra: **todo degrau do produto tem de cair EM CIMA de uma parada da
-#: barra.** Se o `Máximo` vale 150% e a barra andasse de 7 em 7, ela não
-#: conseguiria pousar no mesmo número que o botão ao lado escreve — e as duas
-#: metades da mesma tela diriam coisas diferentes.
-#:
-#: O maior passo que satisfaz isso é o MDC dos degraus e do teto: hoje
-#: `mdc(30, 100, 150, 200) = 10`, que dá 21 paradas. No dia em que o produto
-#: acrescentar um degrau de 0,45, o passo vira 5 sozinho.
 PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
 
-#: O TETO DA BARRA DE CADA MOTOR — **100, e ele NÃO é o :data:`TETO` da linha
-#: "Personalizado"**. A diferença é a decisão dela de 04/09/2026, e ela está
-#: escrita no esquema (`MOTOR_PCT_MAX`): a barra do motor é o SEGUNDO fator, e
-#: quem amplifica é o degrau. `efetivo(motor) = degrau x barra(motor)`.
-#:
-#: Uma barra de motor acima de 100 daria à mesma peça **duas portas para o mesmo
-#: estouro** — e o número não se digita aqui pelo mesmo motivo de sempre: quem
-#: RECUSA o que passa dele é a borda do esquema, e a frase da recusa é dela.
 TETO_DO_MOTOR = MOTOR_PCT_MAX
 
-#: O TETO DA BARRA DA HÁPTICA POR ÁUDIO — lido do esquema (`HAPTICA_PCT_MAX`,
-#: 200), e nunca digitado. Ela passa de 100 ao contrário das dos motores: no PCM
-#: do jogo a Força não alcança, e esta barra é o único fator
-#: (O-GANHO-DA-HAPTICA-TEM-DONO-01). O passo é 1, como o dos motores.
 TETO_DA_HAPTICA = HAPTICA_PCT_MAX
 
-#: O PASSO DA BARRA DE MOTOR, e ele é DERIVADO como o irmão :data:`PASSO`: a
 #: regra é que a barra tenha uma parada em cima de **todo valor que a borda
 #: aceita**. O esquema aceita `int` de 0 a 100 (`motor_forte_pct`), logo o passo
-#: é 1 — qualquer outro esconderia números que o produto grava sem reclamar.
 PASSO_DO_MOTOR = 1
 
-#: O VALOR DE QUEM NÃO ARRASTOU NADA, do esquema (`MOTOR_PCT_PADRAO`). Ele é o
 #: que a peça sem opinião vale no motor, e o `state_full` o publica ao lado do
-#: mapa (`rumble_motor_pct_padrao`) justamente para a tela não o digitar.
 BARRA_DO_MOTOR_PADRAO = MOTOR_PCT_PADRAO
 
-# ---------------------------------------------------------------------------
-# AS FRASES QUE A JANELA ESTÁVEL TEM E ESTA ABA NÃO TINHA — 03/09/2026.
-#
 # Dois textos de tela existiam no `gui/main.glade` há semanas e não
-# atravessaram para o desenho novo. Eles não são enfeite: cada um ensina uma
-# coisa que a aba nova deixa a usuária descobrir batendo com a cara.
-#
-# ELAS SÃO LIDAS, NÃO REDIGITADAS. É a mesma disciplina dos motores (do CSV),
-# dos degraus (do `RUMBLE_POLICY_MULT`) e da linha de estado (do
-# `app/telas/vibracao`): o que tem dono não se digita. Uma segunda cópia de um
-# texto de tela diverge na primeira edição — e esta casa já pagou por isso, com
-# o nome do botão "Devolver ao jogo" que não existia
 # (`rumble_actions.BTN_GIVE_BACK_TO_GAME`, RUM-01).
-#
-# O DONO MUDOU EM 06/09/2026 — sprint GTK-2, `D-0609-GTK-LEVA-INTEIRA`. Até
-# aqui esta aba abria o `gui/main.glade` no corpo do módulo e casava um
-# `re.search` por âncora. A REGRA NÃO MUDOU; o dono, sim: a janela GTK está
-# sendo aposentada, e ler texto de tela de um arquivo marcado para apagar é
-# escolher o dia em que a aba nova para de montar. As duas frases moram agora
-# em `app/telas/vibracao`, que já era a fonte da linha de estado desta aba — e
-# esta linha continua sendo LEITURA, não digitação.
-#
-# ERAM TRÊS. A terceira ("Espera 5 segundos antes de trocar de faixa")
-# explicava o Modo Auto, que saiu desta tela em 05/09 por decisão dela; ela
-# nunca chegou a precisar de dono novo.
-#
-# QUEM IMPEDE AS DUAS TELAS DE DIVERGIREM enquanto o glade existe é
-# `tests/unit/test_os_leitores_do_glade_tem_dono.py`, que compara o dono novo
-# com as âncoras do XML — a recusa que o `_do_glade` fazia aqui, feita onde
-# reprovar é barato e não derruba o gerador.
-# ---------------------------------------------------------------------------
 
-#: A OITAVA FAIXA DA GRADE — a linha "Estado" — SAIU. Decisão dela, 05/09/2026:
-#:
-#:   *"pq temos uma linha de estado se o estado em vibração sempre vai ser o
-#:    jogo mandando os input pro controle e a gnt aumentando eles ou
-#:    diminuindo? remove ela não faz sentido"*
-#:
-#: **E A MEDIÇÃO DÁ RAZÃO A ELA, pelo caminho que ela usa.** A faixa tinha três
-#: estados (o `estado_da_trava` de `app/telas/vibracao.py`, morto no mesmo dia),
-#: e os dois "travada" só nascem com `rumble_active` armado. Os DOIS gestos
-#: desta aba terminam em
 #: `rumble_passthrough(True)` — `a05_vibracao.testar` (passos 3 e 4) e
-#: `a05_vibracao.parar` —, que zera o par. Quem arma e DEIXA armado é a janela
-#: GTK (o "Parar" de lá é botão separado do "Devolver ao jogo") ou a linha de
-#: comando (`hef test rumble`), que é exatamente o que o `?` da faixa confessava:
-#: *"Esta aba não trava — quem trava é a janela do Hefesto ou a linha de
-#: comando."* Nesta tela a faixa dizia sempre a mesma frase, menos pelo meio
-#: segundo do "Testar" (`SEGUNDOS_DO_TESTE`), em que ela piscava a trava.
-#:
-#: O QUE SOBRA NA TELA é o rodapé `#vib-estado`, que é outra coisa: ele avisa
-#: quantas vezes o jogo pediu vibração e que a intensidade não alcança jogo
-#: nenhum sem o gamepad virtual. Nenhuma das suas frases é um dos três estados
-#: da trava.
 SEM_A_FAIXA_DE_ESTADO = True
 
 #: A CHAVE `propria` DIZ SE AQUELA COLUNA TEM AJUSTE PRÓPRIO — e ela é chave de  # (noqa-acento) chave da cena
-#: máquina, por isso sem acento.
-#:
-#: **O QUE O P2 DESENHA MUDOU EM 05/09/2026, com o `Auto`.** Até hoje ele
-#: mostrava `auto` — o degrau que o esquema recusa por peça — para ensinar que
-#: uma coluna sem ajuste próprio segue o global. Com o `Auto` fora desta tela
-#: (ver :data:`FORCA`), a cena precisava de outro jeito de mostrar o mesmo, e o
-#: jeito é o mais simples: o P2 segue tendo `propria=False` e desenha o degrau
-#: do GLOBAL — `balanceado` —, que é literalmente o que a coluna herdada
-#: acende. O desenho parou de precisar de um degrau especial para dizer
-#: "herdado", porque o `Auto` era esse degrau especial e ele não existe mais.
 ESTADO = {
     "p1": {"forca": "max",        "pct": 150, "propria": True,  # (noqa-acento) chave
            "esq": (True, 50),   "dir": (True, 100),
@@ -948,7 +703,7 @@ CSS = """
   .vib-estado .est.alerta .sinal{color:var(--orange)}
   /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
      casa, o que ela usa na frase "grava aqui, manda ali"
-     (`rumble_actions.py:628`, com o comentário "a frase explica, não alarma").
+     (`rumble_actions.py:503`, com o comentário "a frase explica, não alarma").
      Ela saía como `diz` — o cinza — e o erro só apareceria na tela no dia em
      que a MIGRA-VIBRACAO-04 ligasse o alvo por controle. `--cyan` é o mesmo
      hexadecimal, já declarado no `topo.html`. */
@@ -1009,96 +764,14 @@ CSS = """
      mesma lição das quatro regras da `.vib .ressalva`, logo acima. */
 """
 
-# ---------------------------------------------------------------------------
-# AS CINCO LÂMPADAS DO JOGADOR SAEM DESTE DESENHO — decisão dela, 28/08/2026:
-# elas somem dos desenhos pequenos e ficam nos grandes, da Iluminação.
-#
-# E o número que a sustenta foi medido AQUI, no Chrome, nesta aba: cada lâmpada
-# tem **2,79 × 0,93 px**. Não é pouco contraste — é pouco PIXEL: um retângulo de
-# menos de um pixel de altura não tem como dizer coisa nenhuma, aceso ou
-# apagado. Quem diz o jogador nesta aba é o rótulo escrito embaixo da coluna
-# (`P1 • Cosmic Red • USB`), que se lê.
-#
-# ELAS SAEM DO DESENHO, e não do CSS: `svg(..., lampadas=False)` arranca o
-# `<g id="…-led-jogador">` inteiro. **Apagar não é tirar** — a regra
-# `display:none` que morava aqui deixava as vinte lâmpadas no DOM, e quem herda
-# um desenho com o grupo lá dentro volta a acendê-lo no dia em que precisar do
-# número do jogador. Medido em 28/08: com a regra, 24 elementos de lâmpada nesta
-# aba; sem o grupo, zero.
-#
-# A GUARDA DA ÂNCORA veio junto e ficou em UM lugar: `_tira_grupo()` reprova a
-# geração quando o `<g>` some do desenho. Era uma checagem à mão em `_coluna()`,
-# que é a mesma régua escrita duas vezes.
-#
-# O QUE NÃO SE PERDEU: o padrão que acende as lâmpadas continua sendo o do
-# produto (`core/led_control.py::player_led_pattern` — P3 é `135`, e não o `234`
 # que já esteve digitado no mockup). Ele não é desenhado aqui; segue desenhado
-# na Iluminação, onde o controle é grande.
-# ---------------------------------------------------------------------------
 
-#: OS ÚNICOS PAPÉIS QUE PODEM SAIR COMO `data-papel` NESTA ABA — os que têm
-#: gesto registrado em `pacotes/a05_vibracao.py`.
-#:
-#: POR QUE ESTA LISTA EXISTE, e a medição é de 03/09/2026, clicando a aba
-#: publicada no WebKit com o daemon dela vivo. O ouvinte do piloto lê
-#: **qualquer** `data-papel` como o NOME DE UM GESTO
-#: (`hefesto_vivo.py`, `manda_do_alvo`: `gesto: d.gesto || d.hefGesto ||
-#: d.papel || …`). Esta aba tinha QUATRO nomes que nenhum pacote registra, e os
-#: quatro estavam em elementos grandes:
-#:
-#: ===========  =========  ============  ==========================================
-#: `data-papel` elementos  área clicável o que a usuária vê ao clicar
-#: ===========  =========  ============  ==========================================
-#: `desenho`    4          98.332 px²    o DESENHO do controle — o maior alvo da aba
-#: `motor`      4          28.548 px²    a linha inteira de cada motor
-#: `identidade` 2           6.740 px²    o rótulo `P1 · White · USB`
-#: `lado`       4           5.184 px²    o interruptor de punho, que é `<button>`
-#: ===========  =========  ============  ==========================================
-#:
-#: São **138.804 px²** — perto de um quarto do miolo — em que o clique dela vira
-#: `[gesto sem dono]` no terminal de quem lançou a janela e **nada** na tela.
-#: Medido: `desfechos` marca os quatro como `("sem dono", "")` e o DOM não ganha
-#: uma letra (`recados: []`). É a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura
-#: — a forma que o próprio `_gesto` nomeia: *"um botão que responde calado
-#: quando não há quem atenda"*.
-#:
-#: A CURA É O ATRIBUTO, e não uma lista nova de exceções: os TRÊS atributos de
-#: endereço de pintura são `data-campo`, `data-papel` e `data-hef`
-#: (`regua_do_mockup.ATRIBUTOS_DE_CAMPO`), e o ouvinte de clique só lê o do
-#: meio. Trocar `data-papel` por `data-hef` mantém o endereço **exatamente**
-#: onde estava — o pintor continua achando por `[data-hef=X]`, a régua do mockup
-#: continua contando o campo — e tira o clique fantasma. Nenhum pixel muda.
-#:
-#: O QUE ISTO NÃO CURA, e fica dito: o interruptor de punho continua PARECENDO
-#: um interruptor, com estado aceso e apagado, e continua sem fonte no produto
-#: (`app/telas/vibracao.SEM_FONTE["lado:ligado"]`, fecha em MIGRA-VIBRACAO-06).
-#: Um clique nele agora é silêncio honesto em vez de despacho fantasma — o botão
-#: que não deveria estar ligado é decisão dela.
-#:
-#: `intensidade` ENTROU EM 03/09/2026 com a barra arrastável — ver
-#: :func:`_barra` e `a05_vibracao.intensidade`. Ele é o único desta aba que
-#: chega por `change` e não por `click`: um `<input type=range>` não se "clica"
-#: no sentido útil, ele MUDA (`hefesto_vivo.py`, o ouvinte de `change`).
-#: `motor` ENTROU EM 04/09/2026 com gesto no mesmo commit — que é a única forma
-#: de entrar nesta lista sem a devolver ao defeito que ela nomeia. Ele era
-#: `data-hef` desde 03/09 porque a barra do motor não tinha dono
-#: (`a05_vibracao.SEM_DONO["barra:motor"]`, que esperava a palavra dela). Ela
-#: decidiu, o método existe (`rumble.motores.set`), e o gesto está registrado. O
-#: `data-papel` vive no `<input>`, não na linha inteira — ver
-#: :func:`_barra_de_motor`.
-#:
-#: **`forca-mesa` ENTROU E SAIU** — nasceu em 04/09 com a linha de mesa e saiu
-#: em 05/09 com ela. Palavra dela: *"não é pra ter mesa em nada da interface (…)
-#: segue os três modos sempre"*. Ver :data:`FORCA`.
 PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar",
                         "intensidade", "motor", "haptica", "testar-haptica")
 
 
 def _endereco_de_pintura(nome, extra=""):
-    """`data-papel` quando o nome é gesto desta aba; `data-hef` quando não é.
-
-    Ver :data:`PAPEIS_QUE_SAO_GESTO` — a razão inteira, com a área medida.
-    """
+    """`data-papel` quando o nome é gesto desta aba; `data-hef` quando não é."""
     atributo = "data-papel" if nome in PAPEIS_QUE_SAO_GESTO else "data-hef"
     return f' {atributo}="{nome}"' + extra
 
@@ -1135,27 +808,7 @@ def _trilho_arrastavel(valor, teto, campo):
 
 
 def _trilho(valor, teto, passo, campo, papel, titulo, extra=""):
-    """O `<input type=range>` das TRÊS barras que se arrastam nesta coluna.
-
-    NASCEU DE UMA SÓ — a "Personalizado" de 03/09 — e virou três em 04/09, com
-    as duas barras de motor (:func:`_barra`, `arrasta=True`). Extrair foi a
-    resposta certa e não estética: as duas de motor precisam do MESMO `min`,
-    do mesmo `appearance:none`, do mesmo alvo `valor` e do mesmo cuidado com o
-    `data-papel` no `<input>` (e não no `<div>` de fora, que é onde o clique
-    ficaria sem `value`). Uma segunda tag escrita à mão divergiria no primeiro
-    atributo — e a divergência é silenciosa: um `<input>` sem
-    `data-hef-alvo="valor"` recebe o número no `textContent`, que num `<input>`
-    não desenha nada.
-
-    OS TRÊS NÚMEROS SÃO DE QUEM CHAMA, e cada um é DERIVADO na origem: o `max` e
-    o `step` da Personalizado saem do esquema e do MDC dos degraus
-    (:data:`TETO`, :data:`PASSO`); os do motor saem do `MOTOR_PCT_MAX` e da
-    faixa que a borda aceita (:data:`TETO_DO_MOTOR`, :data:`PASSO_DO_MOTOR`).
-    O `min` é o único escrito, e é zero nas três — *"nada de vibração"* não é um
-    número que alguém decidiu, é o fundo da escala. **E nas barras de motor o
-    zero é ESCOLHA VÁLIDA**, dita por quem construiu o método: *"este motor não
-    treme neste perfil"*.
-    """
+    """O `<input type=range>` das TRÊS barras que se arrastam nesta coluna."""
     return (f'<input class="trilho arrasta" type="range" min="0"'
             f' max="{teto}" step="{passo}" value="{valor}"'
             f' data-papel="{papel}" data-campo="{campo}"'
@@ -1196,7 +849,7 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
 
     `campo_num` é o ENDEREÇO DO NÚMERO quando ele NÃO PODE ser o nome do papel,
     e entrou em 02/09/2026. O pintor procura um valor por
-    `[data-campo=X],[data-papel=X],[data-hef=X]` (`hefesto_vivo.py:183`): um
+    `[data-campo=X],[data-papel=X],[data-hef=X]` (`hefesto_vivo.py:74`): um
     nome que seja `data-papel` de um botão e `data-campo` de um número faz a
     pintura escrever o valor DENTRO do botão. Era o caso do `forca` — a linha
     do "Personalizado" tinha `data-papel="forca"` e `data-campo="forca"`, e os
@@ -1206,7 +859,7 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     SÓ O NÚMERO TROCA DE NOME, e o trilho continua `forca-pct`. Não é descuido:
     o trilho nunca esteve em colisão — ele é um `<span>` filho, e o que o apagava
     era a pintura do PAI. Renomeá-lo junto seria mais bonito e custaria caro
-    agora: o `casamento.py:66` mede contra a página PUBLICADA, e a publicação é
+    agora: o `casamento.py:54` mede contra a página PUBLICADA, e a publicação é
     ato DELA — um nome novo lá vira órfão até ela publicar. Quando a
     `05-vibracao` sair da `mockup/DIVERGENCIAS.md`, unificar o par em
     `mult`/`mult-pct` é uma linha aqui e uma no pacote.
@@ -1222,33 +875,11 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     unidade, não um estado.
     """
     pct = round(100 * valor / teto, 1)
-    # `motor` NÃO É GESTO, e por isso ele sai em `data-hef` — ver
-    # :data:`PAPEIS_QUE_SAO_GESTO`. `forca` continua em `data-papel`: ele TEM
-    # gesto registrado, e a recusa da linha "Personalizado" (*"a barra não é
-    # botão"*) é o comportamento escrito no pacote, não um clique órfão.
-    # PAPEL VAZIO = LINHA SEM ENDEREÇO, e é o que a linha do "Personalizado"
-    # passou a ser em 03/09/2026: o clique dela mora agora no `<input>` de
-    # dentro, e o valor também. Um `data-hef` no `<div>` de fora seria endereço
-    # que ninguém pinta — a dívida que a régua do mockup conta.
     endereco = (_endereco_de_pintura(papel, f' data-lado="{lado}"' if lado else "")
                 if papel else "")
 
-    #: O SEGUNDO ENDEREÇO, e ele não substitui o primeiro. Esta aba nasceu com
-    #: `data-papel` + `data-lado`, que é um PAR — e o piloto `vibracao_viva.py`
-    #: o usa. O piloto ÚNICO das dez endereça por `data-campo`, uma chave só,
-    #: porque é o que as outras nove páginas trazem.
-    #:
-    #: Medido em 01/09/2026: a aba Vibração tinha 28 `data-papel` e TRÊS
-    #: `data-campo` (os do cabeçalho, que são de todas). O pacote dela emitia
-    #: dezesseis valores e nenhum tinha onde cair — zero casamentos, sem uma
-    #: linha de erro. Os dois vocabulários convivem: um par para quem já o
-    #: usava, uma chave para quem chegou depois.
     campo = f"{papel}-{lado}" if lado else papel
     cauda = sufixo_html or f'<span class="teto">{sufixo}</span>'
-    # O TRILHO TEM DUAS FORMAS, e a diferença não é de estilo: o de LEITURA é um
-    # `<span>` cuja LARGURA o piloto pinta; o arrastável é um `<input>` cujo
-    # VALOR ele pinta, e que devolve o número dela quando ela solta. Ver
-    # :func:`_trilho_arrastavel`.
     trilho = (_trilho_arrastavel(valor, teto, campo_trilho or f"{campo}-pct")
               if arrasta else
               f'<span class="trilho"><span class="cheio"'
@@ -1321,10 +952,6 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     cena põe os dois de acordo.
     """
     campo = f"barra-{sigla}"
-    # A FRASE DEIXOU DE SER MONTADA POR PEDAÇO — 11/09/2026, aprovada por ela.
-    # Ela colava `m["nome"].lower()` depois de `a` e saía sem artigo ("chega a
-    # motor de vibração esquerdo"); o punho é o que a pessoa procura na mão, e
-    # não depende de o nome da peça caber na regência.
     titulo = (f'Quanto da vibração chega a este punho — 0 a {TETO_DO_MOTOR}% do'
               f' degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só'
               f' para este controle.')
@@ -1355,8 +982,6 @@ def _linha_da_haptica(valor, ligado, vazio=False):
     (o Nativo pelo rádio sem a ponte), o pacote acende `fora` e a linha fica
     cinza — e o porquê fica no `?` do rótulo, e não na tela aberta.
     """
-    # A CLASSE NÃO COMEÇA POR `lado`: os oito interruptores de PUNHO são contados
-    # por ela (dois por lugar), e este não é um punho; o desenho é o mesmo.
     botao = (f'<button class="haptica-lado lado{" on" if ligado else ""}" '
              f'data-gesto="haptica" '
              f'data-campo="lado-h" data-hef-alvo="classe" '
@@ -1367,9 +992,6 @@ def _linha_da_haptica(valor, ligado, vazio=False):
               f' 100% é o jogo como ele mandou. Grava na hora, só para ele.')
     trilho = _trilho(valor, TETO_DA_HAPTICA, PASSO_DO_MOTOR, "barra-h", "haptica",
                      titulo)
-    # SEM O `off` DA CENA: a classe de fora do endereço é a mesma em todo
-    # lugar (o pintor só acende e apaga o `fora`); desligada, quem diz é o
-    # interruptor apagado e o trilho no zero.
     return (f'<div class="motor mult haptica"'
             f' data-campo="haptica-fora" data-hef-alvo="classe"'
             f' data-hef-classe="fora">'
@@ -1382,66 +1004,19 @@ def _linha_da_haptica(valor, ligado, vazio=False):
 
 
 def _teto_do_multiplicador(no_teto):
-    """A célula do `Máx` — a palavra SEMPRE no HTML, acesa por classe.
-
-    DECISÃO 11 DELA, 03/09/2026: esconder **reservando o espaço**
-    (`visibility:hidden`), nunca `display:none`. A razão é o uso — nada se mexe
-    quando ela acende ou apaga, e esta aba é para olhar enquanto o jogo treme.
-
-    ANTES ELA ERA TEXTO CRAVADO, e mentia: o gerador escrevia `Máx` só quando a
-    CENA do mockup estava no teto, e a foto de 02/09 mostra a coluna do P1 com
-    `70%` e `Máx` ao lado — a tela afirmando que 70% é o teto. O
-    `a05_vibracao.SEM_DONO["mult-teto"]` nomeava a pendência e apontava a cura:
-    *"o alvo certo é o `classe` SEM `data-hef-quando`, que é booleano"*.
-
-    POR QUE NÃO O ALVO `texto`: o `escrever()` do piloto troca vazio por
-    travessão (`hefesto_vivo.py:171`), e um `—` nesta célula afirmaria "não sei"
-    onde a resposta é "não está no teto".
-    """
+    """A célula do `Máx` — a palavra SEMPRE no HTML, acesa por classe."""
     return (f'<span class="teto mx{" on" if no_teto else ""}"'
             f' data-campo="mult-teto" data-hef-alvo="classe">Máx</span>')
 
 
-#: A tradução `lado da tela` → `lado do desenho`, num lugar só. `e`/`d` é a
-#: língua dela (esquerdo/direito); `weak`/`strong` é contrato de código e mora
-#: do lado do Python (`app/telas/vibracao.LADO_PARA_MOTOR`). Escrever
-#: `weak`/`strong` no HTML seria a segunda verdade — e é a inversão que este
-#: assunto convida, porque `weak` é o motor DIREITO.
 LADOS = (("e", ESQ, "esq"), ("d", DIR, "dir"))
 
 
-#: O marcador de campo vazio — o mesmo travessão da Jogar, da Controles, da
-#: Gatilhos e da Iluminação.
 VAZIO = "—"
 
 
 def _endereca_o_tremor(desenho, pref):
-    """Dá endereço de pintura aos dois grupos de motor do SVG — 03/09/2026.
-
-    O PUNHO ACESO ERA DA CENA, e ficava aceso para sempre. O `svg(acesos=…)`
-    funde a classe `acesa` na geração, e a página publicada nasce com o motor
-    DIREITO do P1 e o ESQUERDO do P2 acesos — a mesa parada, `vpads == 0`, e a
-    tela mostrando dois punhos tremendo. Não é desenho esperando dado: é a tela
-    afirmando um tremor que ninguém mediu.
-
-    E O DADO JÁ EXISTIA. `app/telas/vibracao.pacote_da_coluna` devolve `treme`
-    por lado desde que nasceu, com a nota certa — *"`None` (nada a dizer) apaga;
-    nunca acende"*. O CSS que acende também (`.vib .ds-svg .oculta.acesa`). O
-    valor era jogado fora entre um e outro; o que faltava eram estes dois
-    atributos e a emissão no pacote (`a05_vibracao`, chaves `treme-e`/`treme-d`).
-
-    BOOLEANO, como o `Máx`: alvo `classe` SEM `data-hef-quando` acende por si. E
-    `data-hef-classe="acesa"` porque a classe do desenho não é `on` — quem
-    escolheu o nome foi o SVG compartilhado, não esta aba.
-
-    RECUSA QUANDO A ÂNCORA SOME, e é a lição do `str.replace` que não casava:
-    em 27/08 a fusão da classe das lâmpadas deixou de casar por causa de seis
-    atributos entre o `id` e o `fill`, devolveu o texto intacto e **não avisou**
-    — `svg(jogador=N)` nunca acendeu uma lâmpada em aba nenhuma. Um endereço que
-    não entra no HTML é uma pintura que não acontece, e ela é silenciosa dos
-    dois lados: o pacote emite, o `achar()` devolve zero elementos, e a foto
-    continua igual.
-    """
+    """Dá endereço de pintura aos dois grupos de motor do SVG — 03/09/2026."""
     for sigla, m, _k in LADOS:
         ancora = f'id="{pref}-{m["id"]}"'
         if ancora not in desenho:
@@ -1457,68 +1032,13 @@ def _endereca_o_tremor(desenho, pref):
     return desenho
 
 
-# ---------------------------------------------------------------------------
-# A COR DO DESENHO VEM DO APARELHO — 03/09/2026
-# ---------------------------------------------------------------------------
-# A LEI, e ela é dela:
-#
 #     "eu mapeei as cores, glifos, controles, id e tudo mais. é pro projeto usar  # noqa-acento: citação literal dela
-#      esse meu trabalho (…) eu quero que cada user ao usar seu controle se toque
-#      disso que o app se adaptou ao controle dele"
-#
-#     "os svgs do dualsense (…) mudam de acordo com o controle identificado no
 #      canto superior. é white no p1, mas a borda de tudo é cosmic red e os svgs  # noqa-acento: citação literal dela
-#      não são os que o meu mapa cataloga. isso tá errado"
-#
-# A borda da moldura já obedecia desde a manhã (o alvo `plastico`). O DESENHO
-# não: cada `<svg>` nascia com o `data-colorway` da `monta.MESA` e não havia
-# como reescrevê-lo — dos alvos do `escrever()` do piloto, nenhum tocava
-# atributo. O alvo `atributo` existe desde 03/09; aqui entram as DUAS metades
-# que faltavam nesta aba, e uma sem a outra não pinta um pixel.
-#
-# 1. O ENDEREÇO, no `<svg>`: `data-campo="colorway"` mais o par
-#    `data-hef-alvo="atributo"` / `data-hef-atributo="data-colorway"`.
-# 2. A FOLHA DOS 28, publicada UMA VEZ na página. Esta é a metade que se
-#    esquece, e sem ela o endereço TROCA UMA COR ERRADA POR UM CINZA:
-#    `monta._so_o_colorway` guarda dentro de cada SVG só as regras do modelo
-#    pedido — 3.082 bytes dos 45.452 dos 28 —, então escrever `white` num
-#    desenho que só embute `cosmic-red` não casa regra nenhuma e o controle cai
-#    nos `fill` crus do `ds_limpo.svg`.
-#
-# POR QUE UMA VEZ NA PÁGINA, e não os 28 dentro de cada SVG: são quatro
-# desenhos, e quatro cópias da folha inteira somariam ~180 KB de CSS que
-# ninguém lê — a razão que o próprio `_so_o_colorway` escreve. Um `<style>` de
-# SVG embutido em HTML vale para o DOCUMENTO, não para aquele `<svg>`: as
-# regras já eram globais, e cada desenho continua escolhendo a sua pelo
-# `svg[data-colorway="…"]`. Publicar a folha completa não muda o que ela
-# aprovou — muda quantos modelos existem para escolher, de um para 28.
-#
-# NÃO HÁ TABELA DE COR AQUI. A folha é a que
-# `scripts/gerar_cores_do_dualsense.py` escreveu no desenho a partir do
-# `docs/data/cores-do-dualsense.csv`, lida de volta — o mesmo caminho que
-# `cor_da_zona()` já usa para a moldura.
-#
-# A LEITURA TEM UM DONO, e é o `monta.folha_das_cores()` — 28/09/2026
-# (A-TELA-PERGUNTA-AO-DONO-01). Esta aba relia o `<style>` do desenho por conta
-# própria, com o mesmo padrão; o `monta` recusa com `SystemExit` do mesmo jeito
-# quando a folha some do `ds_limpo.svg`. Tirar as duas marcas do `<style>` dá o
-# miolo que esta aba publicava, e a página saiu byte a byte igual.
 
-#: A TABELA DELA, em CSS: as dez zonas dos 28 modelos. Entra no `<style>` da
-#: página, ao lado do CSS da aba.
 FOLHA_DOS_28 = re.sub(r"</?style[^>]*>", "", monta_.folha_das_cores())
 
-#: A TINTA QUE A FOLHA REFERENCIA. Doze dos 28 modelos pintam com `url(#…)` — a
-#: hachura dos que ela não amostrou e os dois gradientes de casca (God of War
-#: 20th e Spider-Man 2). Esses três `id` moram no `<defs>` do desenho, e
 #: `monta.svg()` PREFIXA todo id por controle (`vb-p1-hachura-sem-hex`): uma
 #: folha de página que diga `url(#hachura-sem-hex)` não acharia nada, e os doze
-#: modelos ficariam sem casca. Por isso o `<defs>` sai uma vez, sem prefixo.
-#:
-#: MEDIDO, e é o que faz esta linha existir: sem ele, escrever `ghost-of-yotei`
-#: no `data-colorway` deixa a casca com uma referência morta — que não é a cor
-#: do aparelho nem o cinza neutro do "não sei", é um terceiro estado que não
-#: quer dizer nada.
 _ABRE_A_TINTA = '<defs id="cores-do-dualsense">'
 if _ABRE_A_TINTA not in monta_.DS:
     raise SystemExit(
@@ -1530,27 +1050,14 @@ TINTA_DOS_28 = (
               monta_.DS.index('<style id="cores-do-dualsense-folha">')]
     + "</defs>")
 
-#: O BLOCO DA TINTA, invisível e fora do fluxo. `position:absolute` com 0×0, e
-#: NÃO `display:none`: um `<defs>` num ramo escondido é caminho que já falhou em
-#: motor de SVG, e aqui não há o que ganhar arriscando — este `<svg>` não
-#: desenha nada, só empresta os três `id`.
 BLOCO_DA_TINTA = (
     f'          <svg width="0" height="0" aria-hidden="true"\n'
     f'               style="position:absolute;overflow:hidden">'
     f'{TINTA_DOS_28}</svg>\n')
 
-#: O ENDEREÇO COM QUE O PRODUTO TROCA O MODELO DO DESENHO.
-#:
-#: O nome do atributo vem SEPARADO (`data-hef-atributo`), e não colado no alvo:
-#: a régua do mockup, o `LER_CAMPOS` do piloto e cada `campo.alvo == "…"`
-#: comparam o alvo por IGUALDADE, e um `atributo:data-colorway` viraria uma
-#: palavra nova por atributo escrito. É a mesma forma que o alvo `classe` já
-#: usa com `data-hef-classe`/`data-hef-quando`.
 ENDERECO_DA_COR = ('data-campo="colorway" data-hef-alvo="atributo"'
                    ' data-hef-atributo="data-colorway"')
 
-#: A folha PODADA que `monta.svg()` embute em cada desenho — a que sai daqui,
-#: porque a página passou a publicar as 28. O `id` vem prefixado pelo controle.
 _FOLHA_PODADA = re.compile(
     r'\s*<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
 
@@ -1588,16 +1095,8 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
     return _FOLHA_PODADA.sub("", desenho, count=1)
 
 
-#: O ESTADO DE UM LUGAR SEM CONTROLE, escrito na língua de cada campo —
-#: 07/09/2026. Ele NÃO é uma cena: é o "não sei" no valor INICIAL de cada
-#: endereço, para o desenho nascer sem afirmar nada sobre um aparelho que não
-#: está aqui. Nenhum degrau aceso (`propria=False`), o multiplicador no fundo da
-#: escala e os dois punhos apagados — e o que a tela MOSTRA continua sendo o
 #: travessão, posto pela folha (`.ctrl[data-conectado="nao"] … ::after`).
-#:
-#: O `forca` FICA FORA DAS TRÊS CHAVES de propósito: com `propria=False` nenhum
 #: botão acende de qualquer jeito, e uma chave real aqui seria o desenho
-#: escolhendo uma política para quem não tem nenhuma.
 ESTADO_DO_LUGAR_VAZIO = {"forca": "", "pct": 0, "propria": False,  # (noqa-acento) chave
                          "esq": (False, 0), "dir": (False, 0), "hap": (False, 0)}
 
@@ -1664,47 +1163,14 @@ def _coluna(c, e=None, conectado=None):
     e = e or (ESTADO[c["pref"]] if conectado else ESTADO_DO_LUGAR_VAZIO)
     plastico = cor_da_zona(c["cor"])
     acesos = tuple(m["id"] for m, k in ((ESQ, "esq"), (DIR, "dir")) if e[k][0])
-    # `lampadas=False`: o grupo das cinco sai do desenho (ver o bloco das
-    # lâmpadas, acima). Quem reprova quando a âncora some é o `_tira_grupo()`,
-    # dentro do `svg()` — uma régua só, no lugar onde o corte acontece.
-    # O ENDEREÇO DA COR ENTRA AQUI, e não dentro do `svg()`: o desenho
-    # compartilhado é das dez abas, e cada uma decide o que endereça. Ver
-    # `_endereca_a_cor` — ele também tira a folha de um modelo só, porque a
-    # página passou a publicar as 28.
     desenho = _endereca_a_cor(
         _endereca_o_tremor(
             svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False),
             f'vb-{c["pref"]}'),
-        # `com_dono=False` NO LUGAR VAZIO — o ENDEREÇO da cor entra nos quatro,
-        # o VALOR só em quem tem aparelho. Ver `_endereca_a_cor`: sem
-        # `data-colorway` nenhuma regra da folha casa e o desenho cai no cinza
-        # neutro, que é a regra dela — campo sem informação não mostra nada.
         f'vb-{c["pref"]}', c["cor"], com_dono=conectado)
 
-    # QUAL DEGRAU ESTÁ ACESO É DADO, e o endereço é o `classe` — 03/09/2026.
-    # Até hoje os quatro botões só tinham `data-papel="forca"`, que é o endereço
-    # do CLIQUE, e a classe `on` saía da CENA do mockup: a foto de 02/09 mostra
-    # o P1 em "Máximo" e o P2 em "Balanceado" com o `rumble_policy` do daemon
-    # igual para os dois — pelo menos uma das colunas mentia. A pendência estava
-    # escrita em `a05_vibracao.SEM_DONO["degrau-aceso"]`, com esta cura pelo
     # nome: `data-campo="degrau" data-hef-alvo="classe" data-hef-quando=<chave>`.
-    #
-    # O `data-campo` NÃO COLIDE com o `data-papel`: são nomes diferentes de
-    # propósito (`degrau` × `forca`), e a régua 6 do `_conferir` reprova o dia em
-    # que alguém os igualar — foi assim que a pintura escreveu `balanceado`
-    # DENTRO dos quatro botões em 01/09.
-    #
-    # E O RÓTULO NÃO PRECISA DE MARCA: com o alvo `classe`, o que a régua do
-    # mockup mede neste elemento é o ESTADO, não o texto. Marcá-lo
     # `data-hef-rotulo` esconderia justamente o dado que ele passou a mostrar.
-    #
-    # E SÓ ACENDE QUEM TEM AJUSTE PRÓPRIO — decisão [05] dela, 04/09/2026:
-    # *"a coluna sem ajuste próprio deixa de acender degrau e passa a apontar
-    # para essa linha — 'herdado' fica óbvio sem uma palavra a mais"*. Até
-    # 04/09 as duas coisas tinham a MESMA cara: um degrau que ela escolheu para
-    # aquele controle e um degrau que o Hefesto está usando porque a mesa manda.
-    # Quem sabe a diferença é o PERFIL (existe override com `policy` escrita?),
-    # e o pacote a emite como valor vazio — o alvo `classe` apaga os quatro.
     degraus = "".join(
         f'<button class="{"on" if e["propria"] and chave == e["forca"] else ""}" '  # noqa-acento: chave
         f'data-campo="degrau" data-hef-alvo="classe" data-hef-quando="{chave}" '
@@ -1714,48 +1180,8 @@ def _coluna(c, e=None, conectado=None):
     linhas = []
     for sigla, m, k in LADOS:
         ligado, valor = e[k]
-        # `data-hef-rotulo` NO INTERRUPTOR DE LADO — a categoria dela de
         # 03/09/2026. O que a régua lê aqui é o `<title>` do glifo, que é o NOME
-        # DA PEÇA (`docs/data/pecas-do-dualsense.csv`): "Motor de vibração
-        # esquerdo" não muda em estado nenhum do produto, e cobrá-lo como dívida
-        # era acusar um nome de peça de ser desenho.
-        #
-        # O QUE A MARCA NÃO ESCONDE, e é o cuidado que a decisão dela exige: a
-        # dívida deste botão é a classe `on` — se o lado está ligado —, e ela
-        # continua declarada NOS DOIS LADOS, com sprint: `SEM_FONTE["lado:ligado"]`
-        # do produto ("NÃO EXISTE EM LINHA NENHUMA … Fecha: MIGRA-VIBRACAO-06")
-        # e `a05_vibracao.SEM_DONO["lado:ligado"]`. Quando ela ganhar fonte, o
-        # elemento troca a marca pelo alvo `classe` — como os degraus acabaram
-        # de fazer.
-        # O INTERRUPTOR GANHOU FONTE — 14/09/2026, ordem dela com o controle na
-        # mão: *"o motor esquerdo do controle azul não fica ativado e nem se eu
-        # clicar em máximo ele liga. ele deveria ligar se > 0 no slicer dele."*
-        #
-        # O QUE ELE ERA, e o comentário de 03/09 logo acima já prometia esta
         # troca: `data-hef="lado"` mais a classe `on` CRAVADA pelo desenho. As
-        # duas metades faltavam, e as duas mentiam do mesmo jeito:
-        #
-        #   - não havia PINTURA. A classe era a da cena do mockup — o P2 com o
-        #     esquerdo apagado, para sempre. Medido no daemon dela em 14/09: as
-        #     duas barras do P2 em **100**, e o punho esquerdo apagado na tela;
-        #   - não havia CLIQUE. `data-hef` não está na lista que o ouvinte do
-        #     piloto varre (`hefesto_vivo.manda_do_alvo` casa `data-gesto`,
-        #     `data-papel`, `data-forca`…), então o clique nunca saía do
-        #     navegador — e nenhum gesto `lado` estava registrado do outro lado
-        #     para atendê-lo. Era um botão morto com cara de interruptor.
-        #
-        # A REGRA É DELA E NÃO INVENTA CAMPO: aceso = a barra daquele motor é
-        # maior que zero. O estado não vai ao disco por si — ele é a LEITURA do
-        # valor que já existe (`controllers[uniq].motores`, o mesmo que a barra
-        # ao lado move), e é por isso que ele pôde nascer sem um campo novo no
-        # `profiles/schema.py`. `data-hef-quando="1"` porque o pacote emite
-        # `"1"`/`""`, o mesmo vocabulário booleano do `treme-*` e do `mult-teto`.
-        #
-        # O CLIQUE É O PAR DA BARRA, e não um interruptor com memória própria:
-        # desligar escreve 0 e ligar devolve 100, pelo mesmo `rumble.motores.set`
-        # que o arraste usa. Um campo `ligado` separado do valor seria a segunda
-        # verdade que esta aba passaria a ter de manter em dia — e a primeira vez
-        # que os dois divergissem, a tela diria "ligado" com a barra em zero.
         botao = (f'<button class="lado{" on" if ligado else ""}" '
                  f'data-gesto="lado" data-lado="{sigla}" '
                  f'data-campo="lado-{sigla}" data-hef-alvo="classe" '
@@ -1765,66 +1191,14 @@ def _coluna(c, e=None, conectado=None):
         linhas.append(_barra_de_motor(valor, sigla, m, ligado, botao,
                                       vazio=not conectado))
 
-    # `data-uniq` VAZIO NA CENA ESTÁTICA, e não é descuido: o mockup não tem MAC
-    # de verdade e não pode ter — `AA:BB:CC:DD:EE:FF` num arquivo é o que os dois
-    # portões de anonimato existem para reprovar. Quem o preenche é a mesa viva.
-    #
-    # O `data-controle` ENTROU EM 02/09/2026, e é o que faltava para esta aba
-    # existir como produto. Ele NÃO substitui o `data-uniq`: o `uniq` é o
-    # endereço do APARELHO e nasce vazio aqui; o `pref` é o endereço da COLUNA e
-    # é o que o pintor e o ouvinte de clique procuram. As três frentes que ele
-    # destrava, medidas em 02/09 contra o daemon dela:
-    #
-    # 1. A PINTURA POR CONTROLE. `hefesto_vivo.py:1322` faz
-    #    `querySelectorAll('[data-controle="p1"]')` e pinta DENTRO. Sem o
-    #    atributo, os doze valores por coluna — identidade, o multiplicador e os
-    #    dois motores, nos dois controles — não tinham onde cair: a aba pintava
-    #    13 valores, e os 13 eram do cabeçalho e da destruição dos degraus. A
-    #    tela continuava mostrando `0 /255` e `60 /255` do desenho com o daemon
-    #    dizendo `—`.
-    # 2. O DONO DO CLIQUE. O ouvinte sobe com
-    #    `closest` pela lista de assentos (`hefesto_vivo.py:1552`) e lê
-    #    `dataset.controle || dataset.uniq`. Achava este `<div>` e lia `""`, de
-    #    modo que "Testar" e "Parar" chegavam ao pacote sem controle nenhum e
-    #    RECUSAVAM SEMPRE — para ela, com o rato de verdade. A régua unitária
-    #    passava porque injeta o `uniq` à mão: verde sobre dois botões mortos.
-    # 3. O LUGAR QUE ESVAZIA. `hefesto_vivo.py:1305` marca os lugares sem
-    #    controle por `[data-controle="pN"]`. Sem o atributo, um controle só na
-    #    mesa deixava a coluna do P2 com os números do desenho — a sétima
-    #    aparição do defeito que o pintor já sabia curar.
-    #
-    # A COR DO PLÁSTICO DESCEU DA COLUNA PARA A MOLDURA — 03/09/2026, e é o que
-    # a lei da identidade obriga: *"se identificou o controle como modelo White
     # a cor do card em volta tem que ser branco"*. Ela era `style="--plastico:…"`
-    # no `<div class="ctrl">`, que NÃO tem endereço de pintura — e o pintor só
-    # visita DESCENDENTES da raiz (`hefesto_vivo.achar` é
-    # `raiz.querySelectorAll`, e a raiz é este `<div>`). Escrita ali, a cor
-    # ficava congelada no que o desenho soube: a foto de 03/09 mostra a moldura
-    # do P1 em Cosmic Red com o rótulo logo abaixo dizendo `P1 · White · USB`.
-    #
-    # A MOLDURA É O LUGAR CERTO e não um lugar qualquer: os DOIS usos de
     # `var(--plastico)` nesta aba moram nela ou dentro dela — a borda da própria
-    # moldura e o halo do lado que treme (`.vib .ds-svg .oculta.acesa`).
-    # Descer a variável não muda um pixel do desenho e a põe num elemento que o
-    # pintor alcança.
-    #
     # O `style="--plastico:…"` SÓ VAI EM QUEM TEM APARELHO, e o par de
-    # endereços vai nos QUATRO — 07/09/2026. É a mesma divisão do
-    # `com_dono` da cor: um lugar sem controle não tem plástico, e escrever
-    # aqui o do desenho deixaria a moldura do P3 com a cor do mockup no
-    # instante em que um controle de outro modelo entrasse. Sem a variável, a
     # folha cai no `var(--plastico, …)` de sempre — e o alvo `plastico` do
-    # piloto sabe apagar (`removeProperty`) tão bem quanto escrever.
     classe = "ctrl" if conectado else "ctrl off"
     marca = ("" if conectado else
              ' data-conectado="nao" title="Nenhum controle neste lugar."')
     tinta = f' style="--plastico:{plastico}"' if conectado else ""
-    # O `</div>` MORA DENTRO DOS DOIS RAMOS de propósito: a régua cruzada
-    # `test_o_lugar_vazio_diz_que_esta_vazio.test_a_frase_e_a_mesma_do_desenho`
-    # casa `</span> Desconectado</div>` NO FONTE deste gerador, para garantir
-    # que a palavra do desenho e a que `pacotes.apagar_os_lugares_sem_dono`
-    # escreve são a MESMA. Quebrar o literal em duas partes deixaria as duas
-    # frases livres para divergirem, que é o que ela existe para impedir.
     if conectado:
         rotulo = (f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}\n'
                   f'              <span class="pt">•</span> {c["via"]}</div>')
@@ -2027,7 +1401,7 @@ MIOLO = f'''
              sempre e NÃO existia aqui: a tela nova tinha os dois motores, os
              quatro degraus e o "Testar", e nenhuma palavra sobre o que acontece
              com eles. As quatro frases já estavam escritas e ninguém as chamava
-             (`app/actions/rumble_actions.py:186,291,370,459`).
+             (`app/actions/rumble_actions.py:127,291,370,459`).
 
              DEPOIS DA GRADE, e não dentro: as cinco colunas compartilham as
              alturas de linha, e uma linha a mais lá dentro empurraria o "Testar"
@@ -2035,7 +1409,7 @@ MIOLO = f'''
              dela desde 30/08.
 
              O `id` É O ENDEREÇO DO BLOCO: o pintor troca o miolo inteiro por
-             `p.blocos` (`hefesto_vivo.py:213`), porque o NÚMERO de linhas muda
+             `p.blocos` (`hefesto_vivo.py:78`), porque o NÚMERO de linhas muda
              com o estado e não há endereço para uma linha que ainda não existe.
              Campo a campo, a linha que não se aplica viraria `—`. -->
         <!-- A FAIXA DEIXOU DE SER LUGAR DE RECADO — 13/09/2026,
@@ -2090,14 +1464,6 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-#: A MARCA DA VIBRAÇÃO — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
-#: 01/10/2026. A força de cada controle é do computador, e o jogo pode
-#: sobrepor: a marca diz de quem é o valor da coluna
-#: (`interface/marca_da_camada.py`), e o pacote a reescreve a cada tique
-#: (`pacotes/camada.py`). Ela pousa na borda de cima da moldura, como a
-#: legenda de um quadro, e não ganha linha: as faixas da grade são a mesma
-#: régua nas quatro colunas. É a mesma forma da Iluminação (`aba04.py`), e a
-#: mesma razão de ela ser a ÚLTIMA filha da coluna.
 CSS += _marca.CSS + """
   .vib .ctrl{position:relative}
   .vib .ctrl > .camada{position:absolute;top:-8px;left:18px;z-index:1;
@@ -2106,14 +1472,6 @@ CSS += _marca.CSS + """
 """
 
 
-# Fora de `monta.ABAS_QUE_ESCOLHEM` — decisão dela, 28/08/2026: em Gatilhos, Iluminação e
-# Vibração os quatro ficam lado a lado, sempre visíveis, e a fita fica
-# esmaecida. Ela não é o alvo destas três abas porque não há alvo: cada coluna
-# se ajusta no seu lugar.
-#: AS DUAS MEDIDAS DA PRIMEIRA COLUNA, injetadas do dono (`medidas.py`). Elas não
-#: podem ser digitadas no bloco `CSS` acima porque ele é uma string crua — e um
-#: número digitado ali seria a terceira cópia do mesmo valor, que é o defeito que
-#: `medidas.py` nasceu para matar.
 CSS_DAS_MEDIDAS = f"""
   .vib{{
     --larg-rot:{monta_.larg_rotulos('05-vibracao')}px;
@@ -2122,19 +1480,7 @@ CSS_DAS_MEDIDAS = f"""
 """
 
 def _colunas_do_corpo(corpo):
-    """O HTML de cada `[data-controle="pN"]`, na língua em que o PILOTO o lê.
-
-    Ele faz `document.querySelectorAll('[data-controle="pN"]')` e, dentro de
-    cada raiz, `raiz.querySelectorAll('[data-campo="…"]')` — logo TODO
-    descendente conta, inclusive o que está dentro do `<svg>`, que traz um
-    `data-controle="dualsense"` do desenho compartilhado e nunca casa com um
-    `pref`.
-
-    O CORTE DA ÚLTIMA COLUNA É A FAIXA DE ESTADO, e ele não é zelo: sem ele o
-    pedaço do P4 varre o resto do miolo e a régua atribuiria a ele tudo que
-    vier depois — que é exatamente o defeito que a régua 3 pagou em 04/09,
-    acusando o inocente por ler o pedaço errado.
-    """
+    """O HTML de cada `[data-controle="pN"]`, na língua em que o PILOTO o lê."""
     import re as _re
     ate_a_faixa = corpo.split('class="vib-estado"', 1)[0]
     achados = {}
@@ -2147,9 +1493,7 @@ def _colunas_do_corpo(corpo):
 
 
 def _conferir(doc):
-    """As decisões dela nesta aba, conferidas NA SAÍDA. Só o miolo, sem
-    comentário HTML e sem o `<style>` — as três armadilhas que fizeram as réguas
-    das outras abas reprovarem o que estava certo."""
+    """As decisões dela nesta aba, conferidas NA SAÍDA. Só o miolo, sem"""
     import re as _re
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = _re.sub(r"<!--.*?-->", "", corpo, flags=_re.S)
@@ -2164,11 +1508,7 @@ def _conferir(doc):
 
     vazios = [c for c in MESA if not c.get("conectado", True)]
     blocos = _colunas_do_corpo(corpo)
-    # 1. A MESA — dois conectados, dois lugares vazios, e a marca do lugar vazio
-    #    é a MESMA que o piloto põe e TIRA (`class="ctrl off"` +
     #    `data-conectado="nao"`). A classe `vazia` morreu em 07/09/2026: o
-    #    piloto não a conhece, então um cartão que nascesse com ela ficaria
-    #    cinza para sempre depois que o controle chegasse. Ver :func:`_coluna`.
     exigir(corpo.count('class="ctrl off"') == len(vazios),
            f"os lugares vazios marcados `ctrl off` não são {len(vazios)}")
     exigir(corpo.count('data-conectado="nao"') == len(vazios),
@@ -2180,16 +1520,7 @@ def _conferir(doc):
            "para sempre com o dado dela chegando por baixo")
     exigir(len(blocos) == len(MESA),
            f"a régua não achou as {len(MESA)} colunas: {sorted(blocos)}")
-    # 2. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome do plástico.
-    #
     #    O `data-colorway` E O `--plastico` ENTRARAM NESTA RÉGUA EM 07/09/2026,
-    #    e é a metade que a fusão dos dois ramos deixou exposta: com os quatro
-    #    lugares saindo do mesmo molde, o ENDEREÇO da cor passou a existir nos
-    #    quatro — e um `com_dono=True` distraído no lugar vazio faria o desenho
-    #    afirmar "Galactic Purple" sobre um lugar sem aparelho. É a regra dela:
-    #    campo sem informação não mostra nada. A régua irmã que mede isso na
-    #    tela é `test_o_lugar_vazio_nao_afirma_modelo_nenhum`; esta é a que
-    #    reprova ANTES de o arquivo chegar à bancada.
     for c in vazios:
         exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
                f"a coluna do P{c['jogador']} não diz Desconectado")
@@ -2203,29 +1534,12 @@ def _conferir(doc):
         exigir("--plastico:" not in bloco,
                f"o lugar vazio {c['pref']} afirma uma cor de plástico — mesma "
                f"regra do `data-colorway` logo acima")
-    # 3. NENHUM AJUSTE VIVO NUM LUGAR VAZIO — E QUEM O SOME É A FOLHA.
-    #
-    #    ESTA RÉGUA INVERTEU EM 07/09/2026, e o que a inverteu foi um defeito
     #    medido com os quatro DualSense dela na mesa. Até aqui ela proibia os
-    #    endereços de ajuste DENTRO do bloco vazio — e proibia bem, enquanto o
-    #    lugar vazio fosse um cartão à parte. Só que era esse cartão sem
-    #    endereço nenhum que fazia o dado do P3 e do P4 chegar e não ter onde
-    #    pousar (ver :func:`_coluna`): **a régua estava guardando o defeito**.
-    #
-    #    O QUE ELA GUARDA AGORA é a mesma decisão pela porta certa: os widgets
-    #    de um lugar sem controle não aparecem porque a FOLHA os esconde, e
-    #    `display:none` não recebe clique. A régua pergunta à folha, que é onde
-    #    a resposta mora — e sem o `:not(...)` que separava as duas caras do
-    #    mesmo estado, senão a regra volta a valer só para metade dos lugares.
     for alvo in (".seg > *", ".motor > *", ".acoes-col > *"):
         exigir(f'.vib .ctrl[data-conectado="nao"] {alvo}' in doc,
                f"a folha deixou de esconder `{alvo}` num lugar sem controle — "
                f"os degraus, os trilhos e o `Testar` voltam a ficar clicáveis "
                f"para um aparelho que não está na mesa")
-    #    A PERGUNTA É SOBRE A FOLHA DESTA ABA (`.vib .ctrl…`), e não sobre o
-    #    documento inteiro: `monta.py` guarda o `:not(.vazia)` na regra
-    #    COMPARTILHADA porque as outras abas ainda emitem a classe, e cobrar
-    #    aquele arquivo daqui seria uma aba legislando sobre as dez.
     exigir('.vib .ctrl[data-conectado="nao"]:not(' not in doc,
            "voltou uma exceção ao `[data-conectado=\"nao\"]` na folha desta "  # (noqa-acento) valor do atributo
            "aba — ela separa o lugar que NASCE vazio do que esvazia ao vivo, e "
@@ -2233,67 +1547,22 @@ def _conferir(doc):
            "persegue")
     exigir(corpo.count('class="trilho arrasta"') == len(MESA) * (1 + len(LADOS) + 1),
            "os trilhos arrastáveis não são os mesmos nos quatro lugares")
-    # 4. O RESPIRO — a divisória no meio do vão, e o passo como o dobro do ar.
     exigir("--r-passo:calc(var(--r-ar) * 2)" in doc, "o passo deixou de ser o dobro do ar")
     exigir("top:calc(var(--r-ar) * -1)" in doc or "top:-var(--r-ar)" in doc
            or "top: calc(var(--r-ar) * -1)" in doc,
            "a divisória saiu do meio do vão")
-    # 5. OS RÓTULOS ALINHAM À ESQUERDA — decisão dela de 31/08.
     exigir(".rotulos > *{align-items:flex-start;text-align:left}" in doc,
            "os rótulos voltaram a alinhar à direita")
-    # 6. NENHUM NOME É VALOR E CLIQUE AO MESMO TEMPO — 02/09/2026.
-    #    O pintor procura um valor por `[data-campo=X],[data-papel=X],
-    #    [data-hef=X]` (`hefesto_vivo.py:183`) e o ouvinte de clique lê
-    #    `data-papel` como o nome do gesto (`hefesto_vivo.py:288`). Um nome nos
-    #    dois papéis faz a pintura escrever o valor DENTRO do botão. Aconteceu
-    #    com `forca`, e a foto de 02/09 mostra os quatro degraus lendo
-    #    "balanceado" e a linha do "Personalizado" apagada.
     campos = set(_re.findall(r'data-campo="([^"]+)"', corpo))
     papeis = set(_re.findall(r'data-papel="([^"]+)"', corpo))
     exigir(not (campos & papeis),
            f"nome que é valor E clique ao mesmo tempo: {sorted(campos & papeis)} — "
            f"a pintura escreve o valor dentro do botão")
-    # 7. TODA COLUNA TEM ENDEREÇO DE COLUNA — 02/09/2026.
-    #    Sem `data-controle`, o pintor não acha onde pôr os valores daquele
-    #    controle e o ouvinte não sabe de quem foi o clique: "Testar" e "Parar"
-    #    recusavam sempre.
     for c in MESA:
         exigir(f'data-controle="{c["pref"]}"' in corpo,
                f'a coluna do {c["pref"]} não tem data-controle')
     exigir(corpo.count('data-controle="p') == len(MESA),
            f'as colunas endereçadas não são {len(MESA)}')
-    # 8. A FAIXA DE ESTADO EXISTE, NASCE VAZIA, E A CONTAGEM NÃO VOLTA —
-    #    02/09/2026, reescrita em 07/09/2026.
-    #
-    #    O QUE ELA COBRAVA ATÉ ONTEM: que o bloco mostrasse, byte a byte, o que
-    #    `app/telas/vibracao` monta — a régua que impede alguém de "melhorar" a
-    #    frase aqui e criar a segunda versão de um texto de tela.
-    #
-    #    O QUE MUDOU: a contagem de pedidos do jogo saiu por ordem dela
-    #    (*"Vibração remove essa última frase também"*, 07/09/2026), e era a
-    #    única linha que a `CENA_DO_ESTADO` acendia. Com a cena rendendo zero
-    #    linha, `html_do_estado(cena) in corpo` vira `"" in corpo` — VERDADEIRO
-    #    sempre, sobre nada. Uma régua que passa a medir o vazio é pior que
-    #    régua nenhuma, porque continua verde no relatório.
-    #
-    #    O QUE ELA COBRA AGORA, e as três metades:
-    #      a) a faixa continua na página (ela é o pouso do recibo do clique —
-    #         ver a régua 17, que confere os dois atributos);
-    #      b) ela nasce VAZIA no desenho, e o CSS que esconde o vazio existe:
-    #         sem `.vib-estado:empty` a faixa vira uma tira de 2 px de nada
-    #         debaixo da grade;
-    #      c) e a MORDIDA que LÊ O PRODUTO — *"com um estado em que a função da
-    #         contagem tem o que dizer, `textos_do_estado` não pode devolvê-la"*
-    #         — mora no `tests/unit/test_a_vibracao_diz_o_que_esta_acontecendo.
-    #         test_a_contagem_de_pedidos_do_jogo_nao_volta`, e NÃO aqui. A razão
-    #         é medida: para escrevê-la aqui eu teria de CHAMAR a função da GTK
-    #         neste arquivo, e o `check_paridade_gtk_html` lê isso como a dívida
-    #         FECHANDO (`divida-fechada`, regra 6) — o lado HTML voltando a fazer
-    #         o que declarou não fazer. Ele distingue prosa de uso
-    #         (`scripts/prosa_do_codigo.py`), então CITAR o nome é livre e
-    #         chamá-lo não é. A régua fica no teste, que está fora daquela
-    #         árvore; o que sobra aqui é estrutura, e as duas primeiras já
-    #         reprovam sozinhas se a linha voltar.
     exigir('id="vib-estado"' in corpo, "a faixa de estado sumiu da aba")
     cena = textos_do_estado(CENA_DO_ESTADO)
     exigir(cena == [],
@@ -2312,19 +1581,6 @@ def _conferir(doc):
            f"a faixa voltou a falar sobre o que o JOGO pediu: "
            f"{textos_do_estado(_com_pedidos)} — ela saiu por ordem dela em "
            f"07/09/2026")
-    # 9. O PUNHO QUE TREME TEM ENDEREÇO — 03/09/2026.
-    #    Sem ele o `acesa` do SVG é a CENA, e ela fica acesa para sempre: a
-    #    página publicada nasce com o motor direito do P1 e o esquerdo do P2
-    #    tremendo, com a mesa parada. É o mesmo defeito do degrau, um andar
-    #    abaixo — a tela AFIRMANDO um tremor que ninguém mediu.
-    #
-    #    A CONTA PASSOU DE `CONECTADOS` PARA `MESA` EM 07/09/2026, e o
-    #    complemento desta régua INVERTEU. Ela terminava exigindo que *"um lugar
-    #    vazio"* não tivesse endereço de tremor — e era essa exigência que
-    #    deixava o P3 e o P4 sem onde receber o `treme-e`/`treme-d` que o pacote
-    #    já emitia para os quatro lugares. O ENDEREÇO vai nos quatro; o que um
-    #    lugar vazio não pode ter é a classe `acesa` no HTML de nascença, e é
-    #    isso que a linha seguinte guarda.
     for sigla, _m, _k in LADOS:
         exigir(corpo.count(f'data-campo="treme-{sigla}"') == len(MESA),
                f"o motor {sigla!r} não tem endereço em cada uma das "
@@ -2336,28 +1592,9 @@ def _conferir(doc):
         exigir(' acesa' not in blocos.get(c["pref"], ""),
                f"o lugar vazio {c['pref']} nasceu com um punho ACESO — o "
                f"endereço vai nos quatro, a classe só em quem tremeu de verdade")
-    # 10. AS TRÊS FRASES DA JANELA ESTÁVEL ESTÃO NA TELA — 03/09/2026, e a
-    #     comparação é com o que o glade diz AGORA (elas são lidas de lá, não
-    #     redigitadas). Uma dica que perde a frase volta a deixar a usuária
-    #     descobrir o teto da mesa quando ele já mordeu.
     for frase, nome in ((DICA_DO_TETO_DA_MESA, "o teto da mesa"),
                         (DICA_DOS_VALORES_QUE_PASSAM, "os valores que passam pela intensidade")):
         exigir(frase in corpo, f"a dica perdeu a frase da janela estável: {nome}")
-    # 11. TODO `data-papel` DESTA ABA TEM GESTO — 03/09/2026, e é a irmã da
-    #     régua 6. A 6 pega o nome que é VALOR e CLIQUE ao mesmo tempo; esta
-    #     pega o nome que é CLIQUE E NINGUÉM ATENDE.
-    #
-    #     Medido clicando a aba publicada no WebKit, com o daemon dela vivo:
-    #     `desenho`, `motor`, `identidade` e `lado` chegavam ao Python como
-    #     gesto, saíam em `[gesto sem dono]` no terminal e não punham uma letra
-    #     na tela (`desfechos` = `("sem dono", "")`, `recados: []`). São 138.804
-    #     px² de clique que não responde — o maior deles é o próprio desenho do
-    #     controle. Ver :data:`PAPEIS_QUE_SAO_GESTO`.
-    #
-    #     A LISTA NÃO SE DIGITA DUAS VEZES: os nomes vêm de
-    #     `PAPEIS_QUE_SAO_GESTO`, que é a mesma constante que o `_barra` e o
-    #     `_endereco_de_pintura` usam para escolher o atributo. Uma segunda
-    #     lista aqui seria a régua conferindo a si mesma.
     sobrando = papeis - set(PAPEIS_QUE_SAO_GESTO)
     exigir(not sobrando,
            f"`data-papel` sem gesto que atenda: {sorted(sobrando)} — o ouvinte "
@@ -2365,38 +1602,12 @@ def _conferir(doc):
            f"nenhum pacote registra vira clique que não responde. Use "
            f"`data-hef` para endereço que é só pintura")
 
-    # 12. A BARRA "Personalizado" SE ARRASTA, E O TETO É O DO ESQUEMA —
-    #     03/09/2026, decisão dela: *"0 a 200%, e grava na hora."*
-    #
-    #     TRÊS COISAS, E CADA UMA É UM JEITO DIFERENTE DE A BARRA MENTIR:
-    #
-    #     a) ela tem de ser um `<input type=range>`, uma vez por coluna VIVA. Um
-    #        `<div>` não tem `value`, e o ouvinte manda `valor: alvo.value ?? ''`
-    #        — o clique chegaria ao pacote sem quantidade nenhuma, que é
-    #        exatamente o estado de ontem (a recusa da linha "Personalizado").
-    #     b) o `max` tem de ser o :data:`TETO`, que sai do
     #        `RUMBLE_CUSTOM_MULT_MAX` do esquema. Um `max` menor esconderia
-    #        posições que o produto aceita; um maior gravaria o que a borda
-    #        recusa, e a recusa sairia como erro de pydantic na cara dela.
-    #     c) todo degrau do produto tem de cair EM CIMA de uma parada. Com o
-    #        `max` e o `step` divergindo da escada, o botão "Máximo" escreveria
-    #        150% e a barra não conseguiria pousar nesse número — as duas
-    #        metades da mesma linha diriam coisas diferentes.
-    #
-    #     E A CONTA PASSOU A SER POR PAPEL — 04/09/2026. Eram uma por coluna
-    #     viva; hoje são TRÊS (a Personalizado e as duas de motor), com tetos e
-    #     passos DIFERENTES de propósito. Uma régua que só contasse `<input>`
-    #     daria verde com a barra do motor indo até 200% — que é o HARM-19 pela
-    #     outra porta, e é justamente o que `MOTOR_PCT_MAX` existe para impedir.
     arrastaveis = _re.findall(r'<input class="trilho arrasta"[^>]*>', corpo)
     por_papel = {}
     for tag in arrastaveis:
         achado = _re.search(r'data-papel="([^"]+)"', tag)
         por_papel.setdefault(achado.group(1) if achado else "", []).append(tag)
-    # A CONTA É POR LUGAR DESDE 07/09/2026, e não por coluna viva: os quatro
-    # lugares saem do MESMO molde (ver :func:`_coluna`), e num lugar vazio a
-    # barra é `display:none` — não recebe clique, e passa a existir no instante
-    # em que o controle chega, sem regerar HTML nenhum.
     exigir(len(por_papel.get("intensidade", [])) == len(MESA),
            f"as barras 'Personalizado' arrastáveis não são {len(MESA)} "
            f"(achei {len(por_papel.get('intensidade', []))}) — a de cada lugar "
@@ -2410,24 +1621,6 @@ def _conferir(doc):
         exigir(f'step="{PASSO}"' in tag,
                f"o passo do arraste não é {PASSO} — ele é o MDC dos degraus com "
                f"o teto, e é o que faz cada degrau ter uma parada em cima dele")
-    # 13. AS DUAS BARRAS DE MOTOR SÃO AJUSTE — 04/09/2026, decisão dela: a barra
-    #     não manda `rumble.set`, ela é POLÍTICA que MULTIPLICA o degrau.
-    #
-    #     QUATRO COISAS, e cada uma é um jeito de a linha voltar a mentir:
-    #
-    #     a) DUAS por coluna viva, e as duas com `data-lado` — sem o lado, o
-    #        gesto não sabe qual das duas foi arrastada e gravaria a errada;
-    #     b) o teto é o `MOTOR_PCT_MAX` do esquema, **não** o :data:`TETO` da
-    #        Personalizado. Os dois são 100 e 200 de propósito: a barra é o
-    #        SEGUNDO fator, e quem amplifica é o degrau;
-    #     c) o `data-papel` no `<input>`, nunca no `<div>` — a lição já paga:
-    #        um `<div>` não tem `value`, e o clique chega sem quantidade;
-    #     d) o endereço de pintura é NOVO (`barra-e`/`barra-d`). Reusar
-    #        `motor-e` — que na página PUBLICADA é o número de 0 a 255 que o
-    #        jogo pediu — faria o produto escrever um multiplicador dentro de
-    #        uma barra de outra escala.
-    # A HÁPTICA POR ÁUDIO (29/09/2026) tem gesto e teto próprios: o
-    # `HAPTICA_PCT_MAX` do esquema, e não o dos motores.
     da_haptica = por_papel.get("haptica", [])
     de_motor = por_papel.get("motor", [])
     exigir(len(da_haptica) == len(MESA),
@@ -2462,17 +1655,6 @@ def _conferir(doc):
                f"o passo da barra de motor não é {PASSO_DO_MOTOR} — a borda "
                f"aceita todo inteiro de 0 a {TETO_DO_MOTOR}, e um passo maior "
                f"esconderia valores que o produto grava sem reclamar")
-    # 14. A FAIXA "Estado" NÃO VOLTA — decisão dela, 05/09/2026. A régua que
-    #     EXIGIA a linha por coluna passou a guardar a REMOÇÃO dela: é a regra
-    #     desta casa (régua que cobrava o que saiu se inverte, não se apaga).
-    #     OS TRÊS ENDEREÇOS, e não só o primeiro: a célula, o rótulo da coluna
-    #     de rótulos e a faixa da grade. Apagar o `<div>` e deixar o
-    #     `data-campo="trava"` vivo noutro canto seria campo emitido para
-    #     endereço que a página não tem — escrita em lugar nenhum, calada.
-    #     O `corpo` NÃO TEM CSS (o `_conferir` tira o `<style>` logo no começo),
-    #     por isso as duas últimas perguntas vão ao `doc` inteiro. Foi o próprio
-    #     gerador que ensinou isso: a primeira versão desta régua perguntou
-    #     `--r-estado` ao `corpo` e teria dado verde sobre a variável viva.
     for morto in ('data-campo="trava"', '<span class="sec-rot">Estado'):
         exigir(morto not in corpo,
                f"{morto!r} voltou à aba 05 — a faixa de estado saiu em "
@@ -2484,22 +1666,6 @@ def _conferir(doc):
     exigir(doc.count("var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);") == 1,
            "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava "
            "faixa saiu em 05/09/2026 e a `grid-template-rows` foi junto")
-    # 16. A NOTA DO TESTAR MORA NA DICA — 05-Q2 dela, 05/09/2026: *"As duas na
-    #     dica."* São dois `exigir`, e METADE desta régua inverteu enquanto a
-    #     outra metade não mudou uma letra:
-    #
-    #     · o PRIMEIRO exigia `class="vib-nota">` — a linha permanente na tela,
-    #       decisão do PO atribuída a ela em 04/09. Ele inverteu: agora cobra a
-    #       frase DENTRO do `?` do "Testar agora";
-    #     · o SEGUNDO (`count == 1`) é a metade que NÃO TEM LADO. Ele proíbe a
-    #       frase de existir em dois lugares, seja qual for o lugar escolhido:
-    #       era ele que impedia o `?` e a linha ao mesmo tempo em 04/09, e é ele
-    #       que impede o inverso agora. Por isso fica byte a byte como estava.
-    #
-    #     O ENDEREÇO É A CÉLULA, não a página: perguntar `frase in corpo` daria
-    #     verde com a frase em QUALQUER canto da aba — inclusive de volta na
-    #     linha embaixo da grade, que é exatamente o que esta régua passou a
-    #     proibir. O corte é o rótulo, e o `<span class="dica"` dentro dele.
     _apos_o_rotulo = corpo.split('<span class="sec-rot">Testar agora', 1)
     exigir(len(_apos_o_rotulo) == 2,
            'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
@@ -2509,42 +1675,18 @@ def _conferir(doc):
     exigir(DICA_DOS_VALORES_QUE_PASSAM in _dica_do_testar,
            'a nota do Testar não está no `?` do "Testar agora" — a 05-Q2 dela é '
            '*"As duas na dica"*')
-    # E ELA TEM DE CABER NA JANELA — 06/09/2026, medido no Chrome a 1920x1080.
-    # `left:auto;right:22px` é o arranjo das dicas do lado DIREITO da página;
-    # neste `?`, que mora na primeira coluna da grade, ele punha 224 dos 330 px
-    # da caixa FORA da janela. Guardar a frase num lugar que a janela corta é
-    # não guardar a frase.
     exigir("left:auto" not in _celula,
            'a dica do "Testar agora" voltou a abrir para a ESQUERDA — na '
            "primeira coluna da grade isso joga 224 px dela para fora da janela")
     exigir(corpo.count(DICA_DOS_VALORES_QUE_PASSAM) == 1,
            "a nota do Testar aparece mais de uma vez na mesma tela")
     for _rot, chave in FORCA:
-        # SEM EXCEÇÃO DESDE 05/09/2026: o `Auto` era o único degrau sem
-        # multiplicador fixo, e com ele fora da tela os TRÊS que sobram estão
-        # todos em `RUMBLE_POLICY_MULT`. O `continue` que ficasse aqui seria uma
-        # isenção sem dono — a porta por onde um quarto degrau mudo voltaria.
         degrau = round(RUMBLE_POLICY_MULT[chave] * 100)
         exigir(degrau % PASSO == 0 and degrau <= TETO,
                f"o degrau {chave!r} vale {degrau}% e a barra não para nele "
                f"(passo {PASSO}, teto {TETO}) — clicar o botão e arrastar a "
                f"barra deixariam de poder dizer o mesmo número")
 
-    # 17. A FAIXA NÃO É LUGAR DE RECADO, E O TOM DO RECIBO CONTINUA VERDE.
-    #
-    #     ATÉ 13/09/2026 esta régua exigia o par de atributos que dizia ao
-    #     piloto onde o recado de sucesso pousava nesta página, e com que
-    #     classes — a 05-Q4 dela, 06/09/2026 (*"Linha embaixo da grade (…)
-    #     nomeando a coluna (`P2 · voltou ao ajuste geral`) e some logo depois;
-    #     nada se mexe dentro das colunas"*). O piloto parou de pôr frase na
-    #     tela (TELA-CALADA-01 e FRASES-E-DICAS-01, esta pela foto da caixa
-    #     laranja no índice da leva, `2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`),
-    #     e o endereço virou dado morto: a régua passou a exigir que ele NÃO
-    #     volte. A metade da COR fica, porque o tom é nome do pacote.
-    #
-    #     E O RECIBO NÃO PODE SER LARANJA: `--orange` é o `alerta`, e alerta
-    #     sobre um clique que GRAVOU ensina que o botão falha — o defeito que a
-    #     D-01 fechou em 04/09/2026.
     _faixa = corpo.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
     exigir("data-hef-recado" not in _faixa,
            "a faixa voltou a declarar lugar de recado — o piloto não põe mais "
@@ -2558,30 +1700,7 @@ def _conferir(doc):
            "o recibo da faixa ficou laranja — laranja é o `alerta`, e alerta "
            "sobre um clique que gravou ensina que o botão falha")
 
-    # 18. OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE ENDEREÇOS — 07/09/2026, e é
-    #     a régua que impede este defeito de voltar.
-    #
     #     MEDIDO com os quatro DualSense dela na mesa: o daemon publicava os
-    #     quatro, a carga chegava com `colunas = ['p1','p2','p3','p4']` e a tela
-    #     mostrava DOIS. Contando `data-campo` por `[data-controle="pN"]` na
-    #     página publicada de 06/09: **P1 e P2 com 14 endereços distintos, P3 e
-    #     P4 com UM**. O piloto procura `data-campo` DENTRO do bloco daquele
-    #     controle (`hefesto_vivo._pintar`, passo 2) — sem endereço, o dado dela
-    #     chega e não tem onde pousar. Nenhuma régua desta aba via isso, porque
-    #     todas contavam `len(CONECTADOS)`: elas mediam o mundo do desenho, não
-    #     o da mesa dela.
-    #
-    #     O CONJUNTO TEM DE SER IGUAL, NÃO MAIOR. Um campo a mais num lugar é um
-    #     endereço que o pacote não emite — pintura que nunca acontece, e a
-    #     régua do mockup a conta como dívida. A comparação é de CONJUNTOS, e
-    #     não de contagem: `mult` uma vez e `degrau` três não é assimetria, é a
-    #     forma do desenho.
-    #
-    #     E ELA MEDE AS MARCAS JUNTO (`data-hef-alvo`, `-classe`, `-quando`,
-    #     `-atributo`), porque o endereço sozinho não pinta: um `treme-e` sem
-    #     `data-hef-classe="acesa"` acenderia uma classe que o CSS não conhece —
-    #     pintura contada, tela igual. Foi como o `degrau` nasceu certo e o
-    #     `mult-teto` quase nasceu errado.
     _marcas = _re.compile(
         r'data-campo="([^"]+)"'
         r'|data-hef-alvo="([^"]+)"'
@@ -2617,38 +1736,14 @@ def _conferir(doc):
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-# A FOLHA DOS 28 VAI POR ÚLTIMO, e a ordem é medida, não gosto: enquanto ela
-# morava dentro de cada `<svg>` (no corpo), as regras dela vinham DEPOIS das
-# desta aba na cascata. Mantê-la no fim do `<style>` preserva essa ordem, e o
-# que decide de fato continua sendo a especificidade — `.vib
 # .ctrl[data-conectado="nao"] .ds-svg rect:not([fill="none"])` (0,5,1) ganha de
-# `svg[data-colorway] .z-casca :is(…)` (0,2,2) nos dois arranjos, que é o que
-# mantém o lugar vazio cinza. A conta NÃO MUDOU com a fusão de 07/09/2026: o
 # `.vazia` que saiu valia uma classe e o `[data-conectado="nao"]` que entrou
-# vale um atributo, e os dois pesam igual na coluna do meio.
 
-# A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
-# 06/09/2026: `import aba05` REESCREVIA a bancada dela como efeito de um
-# import. Bastava o pytest COLETAR
-# `tests/unit/test_a_vibracao_diz_qual_degrau_esta_aceso.py` — que importa
-# `aba05` no topo — para `mockup/05-vibracao.html` mudar no disco, com a
-# contagem VIVA de controles dentro: `1 USB · 1 BT` virou `0 USB · 0 BT`
-# porque os controles não estavam ligados naquele instante. A régua do desenho
-# aprovado passava a reprovar por causa do que estava na tomada.
-#
-# A ironia estava escrita: o próprio teste avisa, na docstring, que *"importar
-# `aba05` REESCREVE a bancada dela como efeito de um `import`, e uma régua não
-# mexe no que mede"* — e importava assim mesmo. A `aba01` e a `aba02` já tinham
-# esta guarda desde que `jogar_vivo.py` e `controles_vivos.py` passaram a
-# importá-las; as outras oito não.
 if __name__ == "__main__":
     import os
     import shutil
     import tempfile
 
-    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
-    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
-    # no fim do `aba04.py`.
     _real = onde.saida()
     _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-05-"))
     for _vizinha in _real.glob("*.html"):

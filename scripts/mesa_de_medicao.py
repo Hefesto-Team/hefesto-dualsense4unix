@@ -69,19 +69,11 @@ from typing import Any
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 
-# O `monta` mora dentro do pacote e é importado POR CAMINHO, como as dez abas
-# fazem (`aba01.py:60-62`). Ele puxa `onde` como módulo solto do mesmo
-# diretório, então acrescentar a pasta ao `sys.path` é o contrato dele, não um
-# atalho meu.
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "scripts"))
 import monta
 
-# A PALETA É DO IRMÃO NESTA PASTA, e é o mesmo módulo de que o `specs.html`, o
-# `painel.html`, o `frases-de-tela.html` e o `index.html` leem. A mesa nasceu
-# com nove hex próprios, claros, e ela apontou: *"mantém o mesmo tema que vemos
-# aplicando"*.
 import paleta_da_casa
 
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
@@ -89,42 +81,22 @@ PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
 ROTEIRO = RAIZ / "scripts"
 
-#: O nome do arquivo do roteiro é um PADRÃO, não um caminho cravado: o índice de
-#: sprints renomeia arquivo, e um caminho literal morreria calado no dia da
-#: renomeação — deixando a mesa com as células do mapa e sem a aceitação.
 ROTEIRO_PADRAO = "roteiro-da-bancada-de-quatro.md"
 
 #: Só DualSense nesta volta (§8 da especificação). O Nintendo Pro e o 8BitDo são
-#: outra frente, e a palavra é dela: *"Quatro controles é o foco. Nenhum externo
-#: entra nesta mesa."*
 CONTROLE = "dualsense"
 
-#: Os quatro postos. É o vocabulário da tela — `P1`…`P4` — e ele casa com o
 #: `player_slot` que o daemon publica.
 POSTOS = ("P1", "P2", "P3", "P4")
 
-#: O grau FORTE da escada, e o dono da definição é o `LEIA-PRIMEIRO.md` §3:
-#: *"Grau forte é `SAIU NO FIO` ou `O APARELHO OBEDECEU`"*. Tudo abaixo disso é
-#: grau fraco, e grau fraco é o que esta mesa existe para subir.
 GRAU_FORTE = ("SAIU NO FIO", "O APARELHO OBEDECEU")
 
-#: A marca com que o mapa diz "ninguém mediu esta célula". Ela mora nas colunas
-#: `cabo_por_que_nao_aciona` / `radio_por_que_nao_aciona`.
 NAO_MEDIDO = "nao-medido"
 
-#: O tempo padrão do TIMER, em segundos. Ele não é enfeite: é o que ela pediu —
-#: *"mostra um timer pra antes de aplicar tal coisa"* —, e serve para ela tirar
-#: os olhos da tela e pôr nos controles ANTES de qualquer coisa acontecer. Sem
-#: ele a coisa acontece enquanto ela ainda lê, e a medição se perde.
 SEGUNDOS_PADRAO = 5
 
-#: O teto do que a página conta sozinha. Acima disto ela mostra o alvo e um
-#: botão de "já passou": ninguém fica olhando uma barra por vinte minutos, e a
-#: linha 10 do roteiro ("volta neles aos 20 min") pede exatamente isso.
 SEGUNDOS_LONGO = 120
 
-#: As quatro respostas por controle. A quarta é a que salva medição — *o
-#: inesperado é o achado* —, e por isso ela abre o campo de texto.
 RESPOSTAS = (
     ("obedeceu", "Obedeceu"),
     ("nada", "Nada aconteceu"),
@@ -132,76 +104,32 @@ RESPOSTAS = (
     ("outra-coisa", "Aconteceu outra coisa"),
 )
 
-#: AS FAMÍLIAS QUE SÓ SE MEDEM DE UM EM UM, e a razão é ela: *"se algum canto
-#: for sobre condições tipo vibração, ouvir, falar e afins. coisas que eu
-#: precisa fazer todos separados um por vez (…) afinal podemos ter 4 controles
-#: mas só tenho um par de mãos"*.
-#:
-#: Vibração se sente com a MÃO, som se ouve com a ORELHA, microfone se testa
-#: FALANDO. Nos três, medir quatro ao mesmo tempo não é difícil — é impossível:
-#: com dois tremendo juntos ninguém sabe qual tremeu. Luz e bateria não entram
-#: aqui porque se leem com os OLHOS, e os olhos pegam os quatro de uma vez.
 _FAMILIAS_UM_POR_VEZ = ("vibracao", "audio")
 
-#: E as palavras que dizem a mesma coisa no roteiro, que não tem família.
 _DIZ_UM_POR_VEZ = ("um de cada vez", "um por vez", "um a um", "uma por vez")
 
 
 def e_um_por_vez(familia: str, texto: str) -> bool:
-    """Este teste se faz num controle de cada vez?
-
-    DUAS FONTES, nenhuma digitada por teste: a FAMÍLIA da célula do mapa
-    (vibração e áudio, que se medem com a mão e a orelha) e as PALAVRAS do
-    roteiro (*"um de cada vez"*, *"um a um"*), que ela mesma escreveu na
-    tabela. Uma terceira fonte seria uma lista de 199 linhas a manter à mão.
-    """
+    """Este teste se faz num controle de cada vez?"""
     if familia in _FAMILIAS_UM_POR_VEZ:
         return True
     return any(x in _dobra(texto) for x in _DIZ_UM_POR_VEZ)
 
 
-#: Os papéis do desenho, e eles TÊM de ser distintos: um teste em que os quatro
-#: brilham igual não diz nada.
 PAPEL_REAGE = "reage"
 PAPEL_CALADO = "calado"
 PAPEL_OBSERVA = "observa"
 
-#: Os três vereditos do VERIFICAR — por CONTROLE, não por teste.
 BATE = "bate"
 NAO_BATE = "nao-bate"
 SEM_JULGAR = "sem-julgar"
 
 
 def confere(papel: str, resposta: str) -> tuple[str, str]:
-    """O que o VERIFICAR diz sobre UM controle: bate · não bate · sem julgar.
-
-    PEDIDO DELA, 06/09/2026: *"após responder e clicar em verificar ele mostra
-    se deu certo ou errado pra cada controle"*.
-
-    ISTO NÃO É O :func:`veredito`, E A DIFERENÇA É O PONTO INTEIRO. Aquele
-    resume o TESTE para o índice e **não olha papel de propósito** — a docstring
-    de lá explica por quê: transformar em "falhou" um `obedeceu` de quem devia
-    ficar calado esconderia justamente o achado. Esta função faz o oposto e pela
-    mesma razão: ela olha o papel para **mostrar** a divergência na cara dela,
-    com o nome do que aconteceu. O achado deixa de ser escondido em qualquer um
-    dos dois lados — um o preserva no resumo, o outro o anuncia na hora.
-
-    QUEM NÃO JULGA: `observa` não tem expectativa (o roteiro não disse o que
-    esperar daquele controle), e `nao-vi` não é resposta sobre o aparelho — é
-    resposta sobre a medição. Julgar qualquer um dos dois seria inventar um
-    veredito que ninguém mediu.
-
-    `outra-coisa` NUNCA bate, em papel nenhum: o inesperado é o achado, e um
-    achado carimbado de "certo" é um achado perdido.
-    """
+    """O que o VERIFICAR diz sobre UM controle: bate · não bate · sem julgar."""
     if resposta in ("", "nao-vi"):
         return SEM_JULGAR, ("sem resposta" if not resposta
                             else "não deu para ver — a medição não aconteceu")
-    # O `outra-coisa` VEM ANTES DO `observa`, e a ordem é a regra: sem
-    # expectativa declarada continua havendo o inesperado, e ele é achado
-    # igual. Com o `observa` na frente, um controle "só de observar" que fez
-    # algo estranho saía carimbado de "sem julgar" — o silêncio que esta mesa
-    # existe para não produzir.
     if resposta == "outra-coisa":
         return NAO_BATE, "aconteceu outra coisa — escreva o quê, isto é achado"
     if papel == PAPEL_OBSERVA:
@@ -215,11 +143,6 @@ def confere(papel: str, resposta: str) -> tuple[str, str]:
             else (NAO_BATE, "reagiu, e este não podia reagir"))
 
 
-#: A MESMA REGRA, servida ao navegador como DADO. O JS não a reimplementa: uma
-#: segunda cópia da tabela em JavaScript divergiria no dia em que uma das duas
-#: fosse corrigida, e é exatamente o defeito que esta casa caça. A função que
-#: monta o HTML
-#: publica isto em `window.__CONFERE__`, e o JS só consulta.
 def tabela_de_conferencia() -> dict[str, dict[str, list[str]]]:
     """`{papel: {resposta: [veredito, frase]}}`, gerada por :func:`confere`."""
     return {
@@ -229,13 +152,8 @@ def tabela_de_conferencia() -> dict[str, dict[str, list[str]]]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Ler os donos
-# ---------------------------------------------------------------------------
 def _dobra(texto: str) -> str:
-    """Minúsculas, sem acento. A busca por texto desta casa é sem acento — o
-    `LEIA-PRIMEIRO.md` §6 já avisa que `grep 'rádio'` não acha uma linha do
-    caderno."""
+    """Minúsculas, sem acento. A busca por texto desta casa é sem acento — o"""
     return "".join(
         c for c in unicodedata.normalize("NFD", texto.lower())
         if unicodedata.category(c) != "Mn"
@@ -243,12 +161,7 @@ def _dobra(texto: str) -> str:
 
 
 def _fichas(texto: str) -> set[str]:
-    """As palavras de um texto, dobradas, sem o plural e sem as curtas.
-
-    O `-s` final cai porque a tela escreve *"Gatilhos"* e a peça se chama
-    *"gatilho adaptativo esquerdo"*: sem isto a linha 7 do roteiro não acharia
-    peça nenhuma. Três letras é o piso porque `luz` é palavra dela.
-    """
+    """As palavras de um texto, dobradas, sem o plural e sem as curtas."""
     return {
         t[:-1] if len(t) > 3 and t.endswith("s") else t
         for t in re.split(r"[^a-z0-9]+", _dobra(texto))
@@ -257,12 +170,7 @@ def _fichas(texto: str) -> set[str]:
 
 
 def _sem_comentario(caminho: pathlib.Path) -> list[str]:
-    """As linhas de um CSV desta casa, sem o cabeçalho em prosa.
-
-    O `pecas-do-dualsense.csv` e o `cores-do-dualsense.csv` abrem com dezenas de
-    linhas `#` que explicam a decisão que os criou — e o `csv.DictReader` cru
-    leria a primeira delas como cabeçalho.
-    """
+    """As linhas de um CSV desta casa, sem o cabeçalho em prosa."""
     return [
         linha for linha in caminho.read_text(encoding="utf-8").splitlines()
         if linha.strip() and not linha.lstrip().startswith("#")
@@ -275,15 +183,7 @@ def pecas() -> list[dict[str, str]]:
 
 
 def nomes_dos_colorways() -> dict[str, str]:
-    """`{slug: nome DE FÁBRICA}` — `cosmic-red` -> `Cosmic Red`.
-
-    IRMÃ DE `colorway_por_nome`, E NÃO A MESMA: aquela indexa pelo nome
-    DOBRADO (minúsculas, sem acento), porque a busca desta casa é sem acento e
-    o que ela recebe é o `modelo` que o daemon publica. Esta preserva a
-    capitalização de fábrica, porque o que ela alimenta é a TELA — e um cartão
-    dizendo *"cosmic red"* em vez de *"Cosmic Red"* é a página inventando uma
-    grafia que a Sony não usa. As duas leem o MESMO CSV, na mesma passada.
-    """
+    """`{slug: nome DE FÁBRICA}` — `cosmic-red` -> `Cosmic Red`."""
     fora: dict[str, str] = {}
     for linha in csv.DictReader(io.StringIO("\n".join(_sem_comentario(CORES)))):
         nome, slug = (linha.get("nome") or "").strip(), (linha.get("id") or "").strip()
@@ -321,12 +221,7 @@ def linhas_do_mapa() -> list[dict[str, str]]:
 
 
 def arquivo_do_roteiro() -> pathlib.Path:
-    """O arquivo do roteiro da bancada, achado pelo padrão.
-
-    Ele mora em `scripts/`, ao lado desta mesa, que é quem o lê: é roteiro
-    de teste de quem desenvolve, e não página de uso. Versionado, quem for
-    medir a mesa o encontra com o repositório recém-clonado.
-    """
+    """O arquivo do roteiro da bancada, achado pelo padrão."""
     achados = sorted(ROTEIRO.glob(ROTEIRO_PADRAO))
     if not achados:
         raise SystemExit(
@@ -337,17 +232,7 @@ def arquivo_do_roteiro() -> pathlib.Path:
 
 
 def linhas_do_roteiro() -> list[tuple[str, str, str, str, str]]:
-    """As 21 linhas da §2 da sprint, lidas da tabela markdown.
-
-    CINCO CAMPOS DESDE 07/09/2026: entrou a coluna *"o que cada controle faz"*,
-    a encomenda dela — cada controle é uma CONDIÇÃO do experimento, não o mesmo
-    gesto repetido quatro vezes. A leitura aceita as duas larguras.
-
-    A SEÇÃO É ACHADA PELO TÍTULO, não pelo número de linha. Um documento desta
-    casa é reescrito toda semana, e um `sed -n '60,80p'` cravado envelheceria em
-    silêncio — que é a família de defeito que o `citacoes-de-linha` existe para
-    pegar.
-    """
+    """As 21 linhas da §2 da sprint, lidas da tabela markdown."""
     texto = arquivo_do_roteiro().read_text(encoding="utf-8")
     marca = "## 2. O ROTEIRO"
     if marca not in texto:
@@ -366,10 +251,6 @@ def linhas_do_roteiro() -> list[tuple[str, str, str, str, str]]:
             fora.append((celulas[0], celulas[1], celulas[2],
                          celulas[3], celulas[4]))
         elif len(celulas) == 4:
-            # A TABELA DE QUATRO COLUNAS, a de antes de 07/09/2026: continua
-            # valendo, e a condição fica vazia. Uma régua que exigisse cinco
-            # derrubaria a mesa inteira no dia em que alguém editasse a tabela
-            # sem saber da coluna nova.
             fora.append((celulas[0], celulas[1], "", celulas[2], celulas[3]))
     if not fora:
         raise SystemExit(
@@ -378,22 +259,8 @@ def linhas_do_roteiro() -> list[tuple[str, str, str, str, str]]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# De que peça um teste fala
-# ---------------------------------------------------------------------------
 def vocabulario_das_pecas() -> dict[str, set[str]]:
-    """`{palavra: {ids de peça}}`, do CSV que é dono dos nomes.
-
-    POR QUE ISTO NÃO É UMA LISTA ESCRITA À MÃO, que é o que a regra da casa
-    proíbe: as palavras saem de `nome` e `apelidos` do `pecas-do-dualsense.csv`.
-    *"Vibração"* acha os dois motores porque eles se chamam *Motor de vibração
-    esquerdo/direito*; *"Gatilhos"* acha L2 e R2 porque o apelido deles é
-    *gatilho adaptativo*. Mudou o nome da peça, muda o que a mesa acende.
-
-    Medido em 06/09/2026: as 46 palavras que saem daqui identificam, cada uma,
-    no MÁXIMO quatro peças — e as de quatro são justamente o D-pad, que é uma
-    peça em quatro direções. Não há palavra genérica a filtrar.
-    """
+    """`{palavra: {ids de peça}}`, do CSV que é dono dos nomes."""
     fora: dict[str, set[str]] = {}
     for p in pecas():
         fonte = p["nome"] + " " + p["apelidos"].replace("|", " ").replace("-", " ")
@@ -403,14 +270,7 @@ def vocabulario_das_pecas() -> dict[str, set[str]]:
 
 
 def pecas_citadas(texto: str, vocab: dict[str, set[str]]) -> list[tuple[str, str]]:
-    """`[(id da peça, a palavra que a achou)]` — e a palavra vai junto de
-    propósito.
-
-    Quem olha a tela e discorda do que acendeu tem de poder ver **por qual
-    palavra** a mesa decidiu. Um realce sem procedência é um realce que ninguém
-    pode contestar, e esta casa já pagou caro por instrumento que não declara
-    como decidiu.
-    """
+    """`[(id da peça, a palavra que a achou)]` — e a palavra vai junto de"""
     achados: dict[str, str] = {}
     for ficha in sorted(_fichas(texto) & set(vocab)):
         for pid in sorted(vocab[ficha]):
@@ -424,12 +284,7 @@ def postos_citados(texto: str) -> list[str]:
 
 
 def segundos_do_texto(texto: str) -> int:
-    """O tempo que a linha nomeia, em segundos. Sem número, o padrão.
-
-    O timer *conta durante* o que dura: um teste de vibração de 2 s mostra os
-    2 s correndo, e a linha 10 do roteiro (*"volta neles aos 20 min"*) mostra os
-    vinte minutos.
-    """
+    """O tempo que a linha nomeia, em segundos. Sem número, o padrão."""
     m = re.search(r"(\d+)\s*(min|minuto|s\b|seg|segundo)", _dobra(texto))
     if not m:
         return SEGUNDOS_PADRAO
@@ -437,9 +292,6 @@ def segundos_do_texto(texto: str) -> int:
     return n * 60 if m.group(2).startswith("min") else n
 
 
-# ---------------------------------------------------------------------------
-# O teste
-# ---------------------------------------------------------------------------
 @dataclass
 class Teste:
     """Um teste da mesa. Tudo nele veio de um arquivo com dono."""
@@ -449,34 +301,16 @@ class Teste:
     titulo: str
     vai_acontecer: str
     passa_quando: str
-    #: `{P1: papel}` — quem DEVE reagir, quem NÃO PODE reagir, quem observa.
     papeis: dict[str, str]
-    #: `[(id da peça, palavra que a achou)]`
     pecas: list[tuple[str, str]]
     celula: str
     hoje: str
-    #: O COMO que o arquivo já publica: comando, report, offset, canal, código.
     como: list[tuple[str, str]]
     segundos: int
     fonte: str
-    #: VAZIO quando ninguém mediu. Quando o mapa JÁ registra grau forte, traz o
-    #: grau e a procedência — e a página pré-marca a resposta com isso.
-    #: Nasceu de uma frase dela, 07/09/2026: *"a ideia é ficar fácil pra
-    #: validarmos as teses, a grande maioria ali já foi validada uns 80%"*. A
-    #: mesa só listava o que FALTAVA, então ela não tinha como confirmar de
-    #: relance o que já estava de pé.
     ja_medido: str = ""
-    #: `{P1: "liga PRIMEIRO, pelo cabo"}` — o que CADA controle faz neste
-    #: teste. Vem da coluna *"o que cada controle faz"* da §2 do roteiro, e é a
-    #: encomenda dela: cada controle é uma CONDIÇÃO do mesmo experimento.
-    #: Vazio nas células do mapa, onde ela escreve na hora.
     condicoes: dict[str, str] = field(default_factory=dict)
-    #: TRUE quando o teste se faz num controle de cada vez — vibração, som,
-    #: microfone. A página então anda P1 → P2 → P3 → P4, com timer entre cada
-    #: um, e ela só passa ao seguinte depois de responder o anterior.
     um_por_vez: bool = False
-    #: A resposta que o mapa implica, para vir pré-marcada: `obedeceu` quando a
-    #: célula diz que aciona, `nada` quando diz que não. Só existe com selo.
     resposta_do_mapa: str = ""
 
     def para_json(self) -> dict[str, Any]:
@@ -484,13 +318,7 @@ class Teste:
 
 
 def _como_da_celula(r: dict[str, str], lado: str) -> list[tuple[str, str]]:
-    """O gesto que o MAPA já publica para aquela célula.
-
-    É a metade do "como" que não depende de ninguém lembrar: o comando, o
-    report, o offset, o canal e o `arquivo:linha` estão no CSV desde que a
-    célula nasceu. A outra metade — o que a pessoa de fato fez — ela digita na
-    hora, e as duas são gravadas lado a lado.
-    """
+    """O gesto que o MAPA já publica para aquela célula."""
     pares = [
         ("canal", r[f"{lado}_canal"]),
         ("report", r[f"{lado}_report_id"]),
@@ -502,18 +330,7 @@ def _como_da_celula(r: dict[str, str], lado: str) -> list[tuple[str, str]]:
     return [(k, v.strip()) for k, v in pares if v and v.strip()]
 
 
-#: O QUE UMA CONDIÇÃO DIZ SOBRE O PAPEL. As duas listas são de VERBOS da
-#: coluna que ela escreveu, e A ORDEM É A REGRA: o CALADO vem primeiro porque
-#: as frases passivas contêm os verbos de ação. Dois casos medidos em
-#: 07/09/2026, na primeira volta desta função:
-#:
-#:   "não pode mudar de cor"  contém `muda`   -> viraria REAGE
-#:   "fica ligado, no cabo"   contém `liga`   -> viraria REAGE
-#:
-#: Nos dois o controle está parado e é justamente o que se observa. Por isso
-#: `fica ` e `continua` entram na lista de baixo, e ela é consultada antes.
 # noqa-acento: as chaves abaixo são DOBRADAS (minúsculas, sem acento), que
-# é a forma com que `_dobra` compara — escrevê-las com acento as quebraria.
 _CALADO_DIZ = ("ninguem toca", "nao pode", "fica fora", "fica ligado",  # noqa-acento: chaves DOBRADAS, sem acento de propósito
                "fica no", "continua", "nao e este", "e a testemunha",  # noqa-acento: chave DOBRADA, sem acento de propósito
                "de comparacao")
@@ -523,23 +340,11 @@ _REAGE_DIZ = ("e este", "liga", "poe ", "muda", "troca", "aperta", "anota",
 
 
 def papel_da_condicao(frase: str, posto: str, nomeados: set[str] | list[str]) -> str:
-    """O papel de um controle, lido da CONDIÇÃO que ela escreveu para ele.
-
-    É mais preciso que contar citações de posto no enunciado, que era a régua
-    até 07/09/2026: a condição diz, na própria frase, se aquele controle é o
-    que age (*"é ESTE que desliga"*, *"põe VERMELHO"*) ou o que fica parado
-    (*"ninguém toca"*, *"não pode tremer"*). Sem a coluna, cai na regra velha.
-    """
+    """O papel de um controle, lido da CONDIÇÃO que ela escreveu para ele."""
     dobrada = _dobra(frase)
     if not dobrada:
         return ((PAPEL_REAGE if posto in nomeados else PAPEL_CALADO)
                 if nomeados else PAPEL_OBSERVA)
-    # A EXPECTATIVA EXPLÍCITA GANHA DE TUDO. *"tem de continuar"* contém
-    # `continua`, que é palavra de controle parado — mas a frase declara o que
-    # se ESPERA daquele controle, e é isso que ela vai conferir. Sem esta
-    # linha, as duas linhas de "os quatro têm de continuar" (fechar o jogo,
-    # abrir pelo lançador) saíam com os quatro marcados "não pode reagir", que
-    # é o contrário do que o roteiro pede.
     if "tem de" in dobrada or dobrada.startswith("deve"):
         return PAPEL_REAGE
     if any(x in dobrada for x in _CALADO_DIZ):
@@ -549,66 +354,25 @@ def papel_da_condicao(frase: str, posto: str, nomeados: set[str] | list[str]) ->
     return PAPEL_OBSERVA
 
 
-#: O ARQUIVO QUE É DONO DO GESTO. O roteiro dela diz O QUE se testa, em uma
-#: linha por teste; o gesto de fazer não cabe numa linha, e ela pediu que fosse
-#: meu, por pedido dela: *"isso eu espero que seja descrito"* — a frase
-#: inteira, com o nome que ela usou, está no cabeçalho do arquivo do gesto.
-#:
-#: ELE SAIU DE `docs/process/` EM 20/09/2026 — decisão dela, *"mover o que as
-#: réguas precisam"*. O gesto é DADO: o produto o lê para desenhar a página.
-#: Morando numa pasta `.gitignore`, ele morria em todo clone limpo e em toda
-#: worktree de agente, e ainda podia ser arquivado por baixo do leitor.
 _O_COMO_DAS_21 = ("docs/method/"
                   "2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md")
 
-#: E O DO MAPA, escrito depois, no mesmo molde — ordem dela: *"depois de
-#: melhorar os 21. quero que aí sim vc use o novo modelo pra remodelar os demais
-#: testes via agentes."* São DOIS arquivos e não um só porque os donos são
-#: outros: as 21 são a aceitação que ela escreveu, as 178 são o acervo do mapa.
 _O_COMO_DO_MAPA = ("docs/method/"
                    "2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md")
 
 
 def como_das_21() -> dict[str, list[tuple[str, str]]]:
-    """`{id do teste: [(rótulo, texto)]}` — o gesto exato, lido do dono.
-
-    *"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,
-    ela olhando a linha 10. O COMO saía como `linha do roteiro: 10` mais
-    `passa quando: mudaram`: o roteiro repetido, não o gesto. Um roteiro
-    escrito em telegrama serve a quem o escreveu e a mais ninguém.
-
-    A ORDEM DOS RÓTULOS É A ORDEM DE FAZER, e não é gosto: primeiro o que se
-    prova (senão ela executa sem saber o que está medindo), depois onde olhar
-    (senão ela faz o gesto olhando para o lugar errado), depois os passos. A
-    armadilha vem por último de propósito — lida antes, contamina a leitura.
-    """
+    """`{id do teste: [(rótulo, texto)]}` — o gesto exato, lido do dono."""
     return _gesto_do_arquivo(_O_COMO_DAS_21, r"##\s+Linha\s+(\d+)\s+—",
                              lambda m: f"roteiro-{int(m.group(1)):02d}")
 
 
 def como_do_mapa() -> dict[str, list[tuple[str, str]]]:
-    """O gesto das 178 células, lido do arquivo que é dono delas.
-
-    O CABEÇALHO DA SEÇÃO É O PRÓPRIO ID (`## mapa-luz.lightbar.cor-radio`), e
-    não um número: as células não têm ordem no roteiro, têm endereço. Trocar o
-    número pelo id também tira uma tradução do caminho — o que o arquivo diz é
-    a chave que a página usa.
-    """
+    """O gesto das 178 células, lido do arquivo que é dono delas."""
     return _gesto_do_arquivo(_O_COMO_DO_MAPA, r"##\s+(mapa-\S+)\s+—",
                              lambda m: m.group(1))
 
 
-# A BANCADA ANTES DE COMEÇAR — o que se faz UMA VEZ, não 199.
-#
-# Medido em 07/09/2026: os 199 testes somavam 3.129 passos, e 299 deles eram
-# a mesma cerimônia repetida — "Abra o Hefesto", "Feche o jogo", "Ligue o P1 e
-# o P2 pelo cabo". Ela leu isso como *"milhares de etapas manuais"*, e estava
-# certa: eram milhares, e um décimo delas era o mesmo gesto pedido de novo.
-#
-# A REGRA: se um passo descreve o ESTADO DA BANCADA — e não um ato deste
-# teste —, ele sai do teste e sobe para o topo da página, onde é conferido uma
-# vez. O que não estiver escrito aqui FICA no teste; a lista é fechada de
-# propósito, para nunca comer um ato de verdade.
 PREPARO_DA_BANCADA: tuple[tuple[str, str], ...] = (
     (r"^Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio\.?$",
      "P1 e P2 no cabo · P3 e P4 no rádio"),
@@ -620,24 +384,15 @@ PREPARO_DA_BANCADA: tuple[tuple[str, str], ...] = (
      "a janela do Hefesto aberta"),
 )
 
-# A ABA NÃO É UM PASSO — é ONDE o teste acontece. Ela abria o mesmo "Clique na
-# aba Controles" em 82 testes seguidos. Vira uma etiqueta ao lado do título.
 _A_ABA_DO_PASSO = (r"^(?:Abra (?:o Hefesto e clique n)?a|Clique na"
                    r"|Vá para a|Volte à) aba (\w+)\.?$")
 
-# O ROTULO da etiqueta, para quem lê o HTML e para o teste que a mede.
 ROTULO_DA_ABA = "a aba"
 
 
 def enxuga_os_passos(
         campos: list[tuple[str, str]]) -> list[tuple[str, str]]:
-    """Tira do teste o que é da bancada, e a aba vira etiqueta.
-
-    Entra a lista de campos como o arquivo a escreveu; sai a mesma lista com
-    `os passos` sem a cerimônia e, quando o teste disser em que aba mora, um
-    campo `a aba` a mais. Nada é inventado aqui: o que sai tem de casar com
-    `PREPARO_DA_BANCADA` ou com `_A_ABA_DO_PASSO`, palavra por palavra.
-    """
+    """Tira do teste o que é da bancada, e a aba vira etiqueta."""
     fora: list[tuple[str, str]] = []
     aba = ""
     for rotulo, corpo in campos:
@@ -651,8 +406,6 @@ def enxuga_os_passos(
             if any(re.match(r, passo) for r, _ in PREPARO_DA_BANCADA):
                 continue
             achou = re.match(_A_ABA_DO_PASSO, passo)
-            # a PRIMEIRA aba citada é onde o teste mora; se ele volta a
-            # outra no meio, esse passo continua sendo um ato e fica
             if achou and not aba:
                 aba = achou.group(1)
                 continue
@@ -664,22 +417,7 @@ def enxuga_os_passos(
 
 
 def _o_dono_do_gesto(relativo: str) -> pathlib.Path | None:
-    """O arquivo dono do gesto, em `docs/method/` — ou `None` se sumiu.
-
-    ARQUIVAR A SPRINT NÃO PODE APAGAR O GESTO DE 199 TESTES. Medido em
-    20/09/2026: os dois donos foram para `sprints/arquivados/` quando as
-    fechadas saíram da pasta que a IA lê, e este motor passou a devolver `{}`
-    — calado. As 199 células caíram no fallback da procedência, que é
-    literalmente o defeito que ela apontou na linha 10 (*"sinceramente não
-    entendi o que diabos é pra fazer aqui"*), voltando inteiro seis dias
-    depois. Sete réguas ficaram vermelhas e nenhuma dizia o porquê.
-
-    A BUSCA NOS `arquivados/` SAIU no mesmo dia, e não por descuido: os dois
-    donos deixaram `docs/process/sprints/` e viraram dado versionado em
-    `docs/method/`, que não tem gaveta de arquivo. Procurar numa gaveta que
-    não existe ensinaria a próxima pessoa que o arquivo pode ser movido de
-    novo — e ele não pode: quem o mover quebra o git, não uma busca.
-    """
+    """O arquivo dono do gesto, em `docs/method/` — ou `None` se sumiu."""
     alvo = RAIZ / relativo
     return alvo if alvo.exists() else None
 
@@ -689,13 +427,6 @@ def _gesto_do_arquivo(relativo: str, marca: str,
     """O motor dos dois: mesma forma de seção, chaves diferentes."""
     alvo = _o_dono_do_gesto(relativo)
     if alvo is None:
-        # O SILÊNCIO ACABOU DE VEZ — 20/09/2026. Enquanto o dono morava em
-        # `docs/process/` (`.gitignore`), a ausência da pasta inteira era
-        # legítima num clone limpo, e este motor devolvia `{}` calado; o preço
-        # foi o defeito acima. Em `docs/method/` o arquivo é RASTREADO: ele
-        # não pode faltar num checkout, e faltar significa que alguém o moveu
-        # ou apagou. Instrumento que sabe do próprio risco RESOLVE; este
-        # levanta, sempre, com o nome do arquivo na mão.
         raise FileNotFoundError(
             f"o dono do gesto sumiu: {relativo} — ele é versionado, logo a "
             "ausência é remoção, não ambiente. Sem ele os testes caem na "
@@ -737,20 +468,10 @@ def _gesto_do_arquivo(relativo: str, marca: str,
             if achou.group(2).strip():
                 campos[ultimo].append(achou.group(2).strip())
             continue
-        # O SEPARADOR DO MARKDOWN NÃO É TEXTO. Sem esta linha o `---` que
-        # divide as seções entrava no fim do último campo, e ela lia "…parado
-        # por horas. ---" na tela.
         if linha.strip() in ("---", "***", "___"):
             ultimo = ""
             continue
         if ultimo and linha.strip():
-            # OS PASSOS VIRAM UMA FRASE SÓ, e o separador é `\n` — NUNCA `·`.
-            # Medido em 07/09/2026: o produto tem um rótulo cujo TEXTO é
-            # `· acordado`, e o passo «confirme que ele traz "· acordado" ou
-            # "· dormindo"» chegava na tela dela partido em três — um deles
-            # lia `acordado" ou "`, sozinho, numa bolinha de lista. Um
-            # separador que também é conteúdo não separa nada. O `\n` não
-            # aparece em passo nenhum porque a leitura é linha a linha.
             campos[ultimo].append(re.sub(r"^\s*(?:\d+\.|\*)\s*", "\n", linha)
                                   .replace("**", ""))
     fecha()
@@ -758,18 +479,7 @@ def _gesto_do_arquivo(relativo: str, marca: str,
 
 
 def secoes_do_roteiro() -> dict[str, str]:
-    """`{"6": "Uma feature por controle"}` — a seção de cada linha das 21.
-
-    AS 21 NÃO SÃO UMA FILA PLANA, e ela viu isso antes de mim: abriu o seletor
-    de seções e perguntou *"cadê as seções das 21?"*. A especificação da mesa
-    já as trazia desde 06/09/2026 (§4, seis seções) e a página as ignorava —
-    jogava as 21 numa gaveta só chamada "O roteiro". Com seis, ela fecha uma e
-    passa à seguinte, que é como a hora dela anda de verdade.
-
-    A TABELA MORA NO ROTEIRO, não aqui: `### As seis seções das 21`, na §2 da
-    sprint. Uma cópia neste arquivo seria a segunda verdade sobre o mesmo
-    agrupamento, e no dia em que ela mexesse numa a outra mentiria.
-    """
+    """`{"6": "Uma feature por controle"}` — a seção de cada linha das 21."""
     texto = arquivo_do_roteiro().read_text(encoding="utf-8")
     marca = "### As seis seções das 21"
     if marca not in texto:
@@ -788,39 +498,23 @@ def secoes_do_roteiro() -> dict[str, str]:
 
 
 def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
-    """As 21 linhas da aceitação, uma por teste.
-
-    **As linhas 13-21 são a ACEITAÇÃO DO PRODUTO** — a definição de pronto dela,
-    dita em gestos. Elas vêm primeiro na página por isso.
-    """
+    """As 21 linhas da aceitação, uma por teste."""
     fora = []
     fonte = f"{arquivo_do_roteiro().relative_to(RAIZ)} §2"
     secoes = secoes_do_roteiro()
-    # UMA LEITURA PARA AS 21, não uma por linha: o arquivo do gesto tem 79 KB.
     gestos = como_das_21()
     for numero, gesto, cond, passa, sprints in linhas_do_roteiro():
         limpo = re.sub(r"[*`]", " ", f"{gesto} {cond} {passa}")
         nomeados = postos_citados(limpo)
-        # AS QUATRO CONDIÇÕES, uma por controle. A coluna as traz numa frase
-        # só, separadas por `·` e prefixadas pelo posto — o formato é o que ela
-        # escreveu à mão na tabela, e a régua o lê em vez de exigir uma coluna
-        # por controle (que multiplicaria a tabela por quatro).
         condicoes = {}
         for pedaco in re.split(r"\s+·\s+", re.sub(r"[*`]", "", cond)):
             achado = re.match(r"\s*(P[1-4])\s*:\s*(.+)", pedaco)
             if achado:
                 condicoes[achado.group(1)] = achado.group(2).strip()
-        # O PAPEL SAI DA CONDIÇÃO quando ela existe, e é MUITO mais preciso
-        # que contar citações de posto: a condição diz, na frase, se aquele
-        # controle é o que age ("é ESTE que...", "põe VERMELHO") ou o que fica
-        # parado ("ninguém toca", "não pode tremer"). Sem a coluna, cai na
-        # regra velha — quem é citado reage, o resto fica calado.
         papeis = {p: papel_da_condicao(condicoes.get(p, ""), p, nomeados)
                   for p in POSTOS}
         fora.append(Teste(
             id=f"roteiro-{int(numero):02d}",
-            # A SEÇÃO SAI DA TABELA DAS SEIS. Sem ela, cai no rótulo
-            # antigo — uma gaveta só para as 21, que é o que ela apanhou.
             secao=(f"O roteiro · {secoes[numero]}" if numero in secoes
                    else "O roteiro — a aceitação do produto"),
             titulo=re.sub(r"[*`]", "", gesto),
@@ -830,10 +524,6 @@ def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
             pecas=pecas_citadas(limpo, vocab),
             celula=f"linha {numero} do roteiro",
             hoje=f"quem já descreveu isto: {re.sub(r'[*`]', '', sprints)}",
-            # O GESTO VEM DO DONO. Sem ele, a linha do roteiro e o critério —
-            # que é o que ela viu na tela e não conseguiu executar. A queda é
-            # declarada em vez de silenciosa: um COMO vazio some da tela e ela
-            # fica sem saber se ninguém escreveu ou se a leitura quebrou.
             como=(gestos.get(f"roteiro-{int(numero):02d}")
                   or [("linha do roteiro", numero),
                       ("passa quando", re.sub(r"[*`]", "", passa)),
@@ -848,23 +538,8 @@ def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
 
 
 def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
-    """As células que o `specs.html` ainda não sabe, uma por (linha, lado).
-
-    A REGRA DE ENTRADA, e cada metade dela tem dono escrito:
-
-    * a célula está marcada `nao-medido` na coluna do porquê — o mapa declarando
-      que ninguém mediu —, **ou**
-    * o **grau é fraco** (`ate_onde_foi` fora de `SAIU NO FIO` / `O APARELHO
-      OBEDECEU`, que é como o `LEIA-PRIMEIRO.md` §3 define grau forte) **e** o
-      produto AFIRMA alguma coisa ali (`aciona` em `sim`/`parcial`). Sem a
-      segunda metade a mesa gastaria a hora dela com célula que o produto nem
-      tenta.
-
-    E o que `existe = nao-tem` sai fora: não há o que olhar num aparelho que não
-    tem a peça, e pôr isso na fila dela seria fazê-la conferir uma ausência.
-    """
+    """As células que o `specs.html` ainda não sabe, uma por (linha, lado)."""
     fora = []
-    # UMA LEITURA PARA AS 178, não uma por célula: o arquivo do gesto tem 720 KB.
     gestos_do_mapa = como_do_mapa()
     for r in linhas_do_mapa():
         if r["existe"] == "nao-tem":
@@ -874,23 +549,10 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
             fraco = r[f"{lado}_ate_onde_foi"] not in GRAU_FORTE
             afirma = r[f"{lado}_aciona"] in ("sim", "parcial")
             falta = nao_medido or (fraco and afirma)
-            # AS DUAS FAMÍLIAS, e a segunda é nova em 07/09/2026. Antes só
-            # entrava o que FALTAVA — e ela mediu o efeito disso: *"a ideia é
-            # ficar fácil pra validarmos as teses, a grande maioria ali já foi
-            # validada uns 80%"*. Uma bancada que esconde o que já está de pé
-            # não deixa ela CONFIRMAR nada; deixa só descobrir.
-            #
-            # O SELO SAI DE `de_onde_sei`, NÃO DO DEGRAU, e a diferença é
-            # medida: `ate_onde_foi` está VAZIO em 115 das 195 células desta
-            # árvore, inclusive em muitas que dizem `medido` — o degrau é
-            # coluna nova e quase ninguém a preencheu. `de_onde_sei = medido`
-            # marca CEM células, e é o que responde à frase dela. Usar o degrau
-            # daria 39, e a bancada continuaria escondendo o que ela já sabe.
             de_onde = r[f"{lado}_de_onde_sei"] or ""
             ja = "" if falta or de_onde != "medido" else (
                 f'medido · {r[f"{lado}_ate_onde_foi"] or "sem degrau declarado"}')
             if not falta and not ja:
-                # nem falta, nem alguém mediu: não há tese a confirmar aqui
                 continue
             texto = f'{r["rotulo"]} {r["chave"]}'
             das_colunas = [(p, "coluna `peca` do mapa") for p in r["peca"].split()]
@@ -899,10 +561,6 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
                 id=f'mapa-{r["chave"]}-{lado}',
                 secao=f'O mapa de canais — {r["familia"]}',
                 titulo=f'{r["rotulo"]} · {palavra}',
-                # SEM `**` AQUI: a frase vai para um `<p>` de HTML, não para
-                # um leitor de markdown, e os asteriscos apareciam crus na
-                # tela dela. O rótulo também sai — ele já é o TÍTULO do
-                # cartão, uma linha acima.
                 vai_acontecer=(
                     f'O produto '
                     f'{"afirma" if r[f"{lado}_aciona"] == "sim" else "afirma em parte"} '
@@ -915,12 +573,6 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
                 papeis={p: PAPEL_OBSERVA for p in POSTOS},
                 pecas=achadas,
                 celula=f'{r["chave"]} @ {palavra}',
-                # A PROCEDÊNCIA TÉCNICA VAI JUNTO, e ela mudou de lugar sem
-                # sumir: o canal, o report, o offset, o comando e o teste que
-                # morde eram o "como" desta célula até 07/09/2026 — e não são
-                # gesto nenhum, são de onde a casa sabe. Agora o gesto vem do
-                # arquivo dono e isto desce para a gaveta da procedência, ao
-                # lado do `aciona` e do degrau. Some da frente, não do arquivo.
                 hoje=(
                     f'aciona={r[f"{lado}_aciona"] or "-"} · '
                     f'de_onde_sei={r[f"{lado}_de_onde_sei"] or "-"} · '
@@ -928,18 +580,12 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
                     + (f' · {NAO_MEDIDO}' if nao_medido else "")
                     + "".join(f' · {k}={v}'
                               for k, v in _como_da_celula(r, lado))),
-                # O GESTO DAS 178, do arquivo dono. Sem ele, cai no que a
-                # célula publica — que é a procedência, não o gesto: é o mesmo
-                # defeito que ela apontou na linha 10 do roteiro.
                 como=(gestos_do_mapa.get(f"mapa-{r['chave']}-{lado}")
                       or _como_da_celula(r, lado)),
                 segundos=SEGUNDOS_PADRAO,
                 fonte=f'docs/data/mapa-controles.csv · {r["id"]} [{lado}]',
                 ja_medido=ja,
                 um_por_vez=e_um_por_vez(r["familia"], texto),
-                # A RESPOSTA QUE O MAPA IMPLICA. `parcial` fica sem
-                # pré-marca de propósito: metade é a que interessa, e escolher
-                # uma das duas por ela seria a página respondendo no lugar dela.
                 resposta_do_mapa=(
                     "obedeceu" if ja and r[f"{lado}_aciona"] == "sim"
                     else "nada" if ja and r[f"{lado}_aciona"] == "não" else ""),
@@ -948,60 +594,29 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
 
 
 def todos_os_testes() -> list[Teste]:
-    """O roteiro primeiro, o mapa depois. A ordem é dela: a hora com os quatro
-    controles é a aceitação, e ela tem sessenta minutos."""
+    """O roteiro primeiro, o mapa depois. A ordem é dela: a hora com os quatro"""
     vocab = vocabulario_das_pecas()
     return testes_do_roteiro(vocab) + testes_do_mapa(vocab)
 
 
-# ---------------------------------------------------------------------------
-# Quem está na mesa, ao vivo
-# ---------------------------------------------------------------------------
 def _mascarar(endereco: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados. Há DOIS portões que a cobram.
-
-    É a mesma regra de `integrations.sinal_da_barra.mascarar`, e ela é aplicada
-    ANTES de o endereço sair deste processo — o registro em disco pode ser lido
-    e colado num documento versionado, e um MAC real ali é o defeito que os dois
-    portões existem para pegar.
-
-    AS DUAS FORMAS, e a segunda quase custou o vazamento: o `sysfs` publica o
-    endereço com dois-pontos (`aa:bb:cc:00:00:ff`) e **o daemon o publica
-    COLADO**, doze dígitos sem separador. Esta função só conhecia a primeira e
-    devolvia a segunda INTACTA — com o daemon vivo o endereço real atravessava
-    a página inteira e ia para o registro em disco. Achado em 07/09/2026, ao
-    ligar o daemon dela; nada tinha ido ao disco ainda porque a bancada rodara
-    o dia todo com o daemon parado, no caminho do `sysfs`, que usa a outra
-    forma.
-
-    *Uma máscara que não reconhece a forma não devolve erro: devolve o
-    original.* É a mesma assinatura das réguas que dão verde sobre nada.
-    """
+    """A máscara da casa: octetos 4 e 5 zerados. Há DOIS portões que a cobram."""
     partes = endereco.split(":")
     if len(partes) == 6:
         partes[3] = partes[4] = "00"
         return ":".join(partes)
-    # A FORMA COLADA, doze dígitos: os octetos 4 e 5 são os caracteres 6..9.
     if re.fullmatch(r"[0-9A-Fa-f]{12}", endereco):
         return endereco[:6] + "0000" + endereco[10:]
     return endereco
 
 
 #: O DualSense por dentro do `hid_playstation`, no VID/PID que o driver casa.
-#: O barramento distingue o transporte sem que ninguém escreva um byte:
-#: `0003` é USB e `0005` é Bluetooth, e é o mesmo par que o `uevent` publica.
 _VID_PID_DUALSENSE = ("0000054C", "00000CE6")
 _BUS = {"0003": "cabo", "0005": "rádio"}
 
 
 def _texto(caminho: pathlib.Path) -> str:
-    """Lê um arquivo do sysfs, e devolve vazio se ele não existe ou não abre.
-
-    O sysfs some por baixo de quem lê: o controle cai no meio da varredura e o
-    caminho evapora. Um `try` largo aqui é a coisa certa — o que interessa é a
-    ausência ser DITA como ausência, não virar traceback numa página que ela
-    tem aberta com quatro controles na mão.
-    """
+    """Lê um arquivo do sysfs, e devolve vazio se ele não existe ou não abre."""
     try:
         return caminho.read_text(encoding="utf-8", errors="replace").strip()
     except OSError:
@@ -1082,9 +697,6 @@ def pelo_sysfs() -> list[dict[str, Any]]:
     return achados
 
 
-#: ONDE A ESCOLHA DELA DE COR FICA. Ela nomeia o controle UMA vez, por
-#: endereço, e a mesa lembra — é o que o daemon faria de graça se estivesse
-#: ligado, e é ela quem sabe qual plástico está na mão dela.
 def arquivo_das_cores_dela() -> pathlib.Path:
     return pasta_do_registro() / "as-cores-que-ela-disse.json"
 
@@ -1097,8 +709,7 @@ def cores_que_ela_disse() -> dict[str, str]:
 
 
 def guardar_cor_dela(endereco: str, colorway: str) -> dict[str, str]:
-    """Grava (ou apaga, com `colorway` vazio) a cor que ela disse de UM
-    controle, pelo endereço já mascarado."""
+    """Grava (ou apaga, com `colorway` vazio) a cor que ela disse de UM"""
     tudo = cores_que_ela_disse()
     if colorway:
         tudo[endereco] = colorway
@@ -1113,30 +724,7 @@ def guardar_cor_dela(endereco: str, colorway: str) -> dict[str, str]:
 
 
 def ler_a_cor_no_aparelho() -> dict[str, Any]:
-    """PERGUNTA A COR AOS CONTROLES, e é ATO DELA — nunca automático.
-
-    A PÁGINA NÃO ESCREVE NO APARELHO por decisão, e esta função é a única
-    exceção, aberta por ela em 07/09/2026 depois de ver os quatro cartões
-    dizendo *"cor não lida"*: *"A cor exige escrita mesmo. Mas ler uma vez, sob
-    seu comando, é o que o daemon faz. então por favor faz isso. é o que eu
-    venho pedindo."*
-
-    O QUE ISTO ESCREVE, e por que é seguro: um `SET_FEATURE 0x80` com o payload
-    `[1, 19]`, que PEDE o serial de fábrica — o mesmo que o daemon manda uma
-    vez por controle por sessão, e o mesmo que o `dualshock-tools` manda. A cor
-    está nos caracteres 5-6 desse serial.
-
-    QUEM MONTA E CONFERE O PEDIDO NÃO É ESTA FUNÇÃO: é
-    `integrations.cor_do_plastico`, que tem uma função sem parâmetro para o
-    payload e outra que o confere byte a byte antes de sair. A razão está
-    escrita lá e vale repetir aqui: `0x80` é a família em que `[1, 1]` RESETA o
-    controle e `[12, 1, …]` grava calibração na memória não-volátil. Não há
-    desfazer, e ela tem quatro controles sem reposição. Uma segunda montagem
-    nesta página seria uma segunda chance de escrever o byte errado.
-
-    NÃO É AUTOMÁTICO, e é o outro lado da mesma trava: só roda quando ela
-    aperta o botão. Uma leitura por tique seria uma escrita por tique.
-    """
+    """PERGUNTA A COR AOS CONTROLES, e é ATO DELA — nunca automático."""
     from hefesto_dualsense4unix.integrations import cor_do_plastico
 
     fora: dict[str, Any] = {"lidos": {}, "erros": {}}
@@ -1145,15 +733,12 @@ def ler_a_cor_no_aparelho() -> dict[str, Any]:
         endereco = visto["uniq"]
         try:
             cor = cor_do_plastico.ler_pelo_cabo(visto["uniq_cru"])
-        except Exception as erro:  # o aparelho recusou, ou o nó sumiu
+        except Exception as erro:
             fora["erros"][endereco] = f"{type(erro).__name__}: {erro}"
             continue
         if cor is None:
             fora["erros"][endereco] = "o controle não devolveu o serial"
             continue
-        # O NOME VIRA SLUG PELO CSV DELA, que é o dono do par nome/desenho. O
-        # `cor_do_plastico` devolve o nome de fábrica; o desenho escolhe por
-        # `data-colorway`, e a junta é o mesmo CSV das 28 cores.
         slug = slugs.get(_dobra(cor.nome), "")
         if not slug:
             fora["erros"][endereco] = (
@@ -1163,25 +748,12 @@ def ler_a_cor_no_aparelho() -> dict[str, Any]:
         guardar_cor_dela(endereco, slug)
         fora["lidos"][endereco] = {
             "nome": cor.nome, "colorway": slug,
-            # A CHAVE ABAIXO É O NOME DO CAMPO que `cor_do_plastico`
-            # publica. Acentuá-la a faria divergir do atributo do dono, e a
-            # página passaria a falar um nome que o dono não responde. (E este
-            # comentário não pode ESCREVER a chave: escrevê-la o tornaria a
-            # própria violação que ele explica — aconteceu, nesta linha.)
             "codigo": cor.codigo}  # noqa-acento: campo publicado pelo dono
     return fora
 
 
 def _pergunta_ao_daemon(metodo: str, prazo: float = 1.5) -> Any:
-    """Uma chamada JSON-RPC pelo socket unix, com a biblioteca padrão.
-
-    O `cli/ipc_client.py` é o cliente da casa, e ele é assíncrono e puxa o
-    pacote inteiro. Aqui basta uma linha de JSON e uma de resposta: o contrato é
-    *uma mensagem por linha*, e está publicado em
-    `docs/protocol/ipc-unix-socket.md`. O caminho do socket continua vindo do
-    dono (`utils/xdg_paths.ipc_socket_path`) — reinventá-lo era o jeito garantido
-    de medir outro daemon.
-    """
+    """Uma chamada JSON-RPC pelo socket unix, com a biblioteca padrão."""
     from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
     caminho = ipc_socket_path()
@@ -1204,31 +776,11 @@ def _pergunta_ao_daemon(metodo: str, prazo: float = 1.5) -> Any:
     return resposta.get("result")
 
 
-#: A PORTA DA RÉGUA, e ela é só da régua. Um JSON com a mesma forma que
-#: :func:`quem_esta_na_mesa` devolve, para o Playwright poder provar os quatro
-#: desenhos com quatro MODELOS diferentes sem os quatro controles dela na mesa.
-#:
-#: POR QUE ISTO É UM CAMINHO DECLARADO E NÃO UM `monkeypatch` do teste: a prova
-#: que interessa — *o realce vence a folha das zonas* — só existe quando há
-#: colorway, e sem daemon não há. Um teste que remenda o módulo por dentro
-#: prova o remendo; um que entra pela porta prova a porta. O nome tem `MENTIRA`
-#: no meio de propósito, e o cabeçalho da página diz quando ela está aberta.
 PORTA_DA_REGUA = "MESA_DE_MEDICAO_MESA_DE_MENTIRA"
 
 
 def quem_esta_na_mesa() -> dict[str, Any]:
-    """Os quatro postos, com o que o daemon publicou — ou a ausência, dita.
-
-    A PÁGINA NÃO ESCREVE NADA NO APARELHO PARA SABER QUEM É QUEM. O degrau
-    `modelo` custa um `SET_FEATURE 0x80` — a mesma família em que `[1, 1]`
-    RESETA o controle —, e quem o paga é o daemon, uma vez por controle por
-    sessão. Aqui só se lê o que ele já publicou.
-
-    A PRECEDÊNCIA DO NOME TEM DONO e não se reinventa: `nome_declarado` (o nome
-    que ELA deu) > `modelo` (decodificado do serial) > o transporte sozinho.
-    **Sem modelo publicado, travessão — nunca um colorway escolhido**, porque
-    escolher um seria a tela afirmar um aparelho que ninguém leu.
-    """
+    """Os quatro postos, com o que o daemon publicou — ou a ausência, dita."""
     de_mentira = os.environ.get(PORTA_DA_REGUA)
     if de_mentira:
         dado = json.loads(pathlib.Path(de_mentira).read_text(encoding="utf-8"))
@@ -1246,32 +798,9 @@ def quem_esta_na_mesa() -> dict[str, Any]:
     }
     fora: dict[str, Any] = {"daemon": "", "postos": postos, "quando": _agora()}
     def _pelo_kernel(motivo: str) -> dict[str, Any]:
-        """A SEGUNDA FONTE, quando o daemon não responde — e ela não é
-        consolo: é o kernel, que é quem o daemon também lê.
-
-        Ela mediu isto com quatro controles na mesa e o daemon parado, e a
-        página punha travessão em tudo: *"nem qual controle (…) nem o modo de
-        conexão (qual é bt e qual é cabo) se tá ou não carregando"*. Tudo isso
-        o `hid_playstation` publica de graça. O único campo que fica vazio é a
-        COR, que exige escrita — e ela é preenchida pela escolha dela, que a
-        mesa guarda por endereço.
-        """
+        """A SEGUNDA FONTE, quando o daemon não responde — e ela não é"""
         dela = cores_que_ela_disse()
         vistos = pelo_sysfs()
-        # A LÂMPADA SÓ É O POSTO ENQUANTO ALGUÉM A ESCREVE, e quem escreve é o
-        # daemon. Com ele parado o LED é RESTO da sessão passada: o kernel não
-        # o apaga quando o daemon morre, nem o reatribui quando o controle
-        # volta. Medido em 07/09/2026, com ela seguindo o roteiro — plugou UM
-        # controle, que pelo roteiro é o P1, e a página o pôs no P3 porque o
-        # LED 3 tinha sido escrito horas antes. Palavra dela: *"nem o controle
-        # é reconhecido corretamente, nem o player ali é (…) tá usando valores
-        # hardcoded"*. Não era hardcoded — era um valor real medindo o mundo de
-        # ontem, que dá no mesmo para quem lê.
-        #
-        # A LÂMPADA CONTINUA DECIDINDO quando o daemon está vivo: ali ela é o
-        # número que ele acabou de escrever, e é o que o plástico mostra na mão
-        # dela. Quando duas coincidem, o desempate é a ordem do nó e o cartão
-        # DIZ que empatou em vez de fingir certeza.
         por_posto: dict[str, dict[str, Any]] = {}
         sobra = []
         for v in vistos:
@@ -1301,13 +830,6 @@ def quem_esta_na_mesa() -> dict[str, Any]:
                 "empatou": bool(sobra) and v in sobra,
             })
         quantos = len(por_posto)
-        # A TRAVA. Sem daemon não há produto para medir: todo teste desta
-        # página começa por "abra o Hefesto", e o Hefesto sem daemon é uma
-        # janela que não fala com aparelho nenhum. Até 07/09/2026 a página
-        # servia os testes assim mesmo, com os cartões afirmando posto,
-        # transporte e bateria — e ela passou a bancada inteira medindo nada.
-        # A casa já tem a regra: instrumento que sabe do próprio risco
-        # RESOLVE, não avisa. O aviso estava lá, em cinza, no cabeçalho.
         if quantos:
             fora["bloqueio"] = {
                 "titulo": "o daemon está parado — nada aqui é medição",
@@ -1322,11 +844,6 @@ def quem_esta_na_mesa() -> dict[str, Any]:
         fora["daemon"] = (
             f"{motivo} · lendo direto do kernel: {quantos} DualSense na mesa. "
             f"Transporte, bateria, carga, lâmpada e barra vêm do `sysfs`. "
-            # A COR TEM DOIS CAMINHOS desde 07/09/2026, e o texto diz os
-            # dois: o botão pergunta ao aparelho (uma escrita, sob o comando
-            # dela), e o seletor continua valendo para quando ela preferir
-            # dizer. Antes esta frase afirmava que a página não lia — e a
-            # afirmação envelheceu no mesmo dia em que o botão nasceu.
             f"A COR do plástico sai por leitura no aparelho: clique em `ler a "
             f"cor nos controles` e a mesa lembra pelo endereço. Ou diga qual é "
             f"cada um no seletor de cada cartão."
@@ -1338,14 +855,10 @@ def quem_esta_na_mesa() -> dict[str, Any]:
         estado = _pergunta_ao_daemon("daemon.state_full")
     except FileNotFoundError:
         return _pelo_kernel("daemon offline")
-    except Exception as erro:  # o canal caiu; a página continua servindo
+    except Exception as erro:
         return _pelo_kernel(f"daemon não respondeu ({erro})")
 
     # A CARGA SÓ EXISTE NO KERNEL. O daemon publica `battery_pct` e não publica
-    # se está carregando; o `power_supply/*/status` do `sysfs` publica. Com o
-    # daemon vivo o cartão dizia "100%" e mais nada — e "100% na bateria" e
-    # "100% carregando" são estados diferentes na bancada dela. Ler os dois não
-    # é redundância: é cada dado vindo de quem o tem.
     carga_do_kernel = {
         re.sub(r"[^0-9a-f]", "", v["uniq_cru"].lower()): v["estado_da_bateria"]
         for v in pelo_sysfs()}
@@ -1364,12 +877,6 @@ def quem_esta_na_mesa() -> dict[str, Any]:
             continue
         modelo = str(c.get("modelo") or "").strip()
         declarado = str(c.get("nome_declarado") or "").strip()
-        # O DAEMON CHAMA O CAMPO DE `transport`, EM INGLÊS, e diz `usb`/`bt`.
-        # A página lia só `transporte` e caía no vazio: com o daemon PARADO o
-        # cartão dizia "cabo", e com ele VIVO dizia "sem transporte" — o
-        # caminho principal mais pobre que o de emergência. Medido em
-        # 07/09/2026, ligando o daemon dela. A tradução usa as mesmas duas
-        # palavras do `_BUS`, que é quem já nomeia os dois transportes aqui.
         transporte = str(c.get("transporte") or c.get("transport") or "").strip()
         transporte = {"usb": "cabo", "bt": "rádio",
                       "bluetooth": "rádio"}.get(transporte.lower(), transporte)
@@ -1393,9 +900,6 @@ def quem_esta_na_mesa() -> dict[str, Any]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# O registro em disco — o ponto inteiro
-# ---------------------------------------------------------------------------
 def pasta_do_registro() -> pathlib.Path:
     """Onde o registro vive. `XDG_STATE_HOME`, pelo dono do caminho."""
     from hefesto_dualsense4unix.utils.xdg_paths import state_dir
@@ -1410,19 +914,7 @@ def _agora() -> str:
 
 
 class Registro:
-    """Grava CADA clique, na hora, em disco.
-
-    DUAS ESCRITAS, e as duas são necessárias:
-
-    * `registro-<data>.jsonl` — a fita, append-only. É o histórico, e uma
-      resposta corrigida não apaga a anterior: *não se apaga decisão medida*;
-    * `estado.json` — a última resposta de cada teste. É o que a página lê ao
-      recarregar, e é o que faz uma medição SOBREVIVER a fechar o navegador.
-
-    E CADA LINHA CARREGA O **COMO** — o gesto que foi aplicado, o que o mapa
-    publica sobre aquela célula, e o estado dos quatro no instante. É esta parte
-    que se perdia quando a sessão morria.
-    """
+    """Grava CADA clique, na hora, em disco."""
 
     def __init__(self, pasta: pathlib.Path | None = None) -> None:
         self.pasta = pasta or pasta_do_registro()
@@ -1441,29 +933,9 @@ class Registro:
         return dado if isinstance(dado, dict) else {}
 
     def gravar(self, item: dict[str, Any]) -> dict[str, Any]:
-        """Uma resposta. RECUSA a que não traz o COMO.
-
-        A recusa é a régua morando dentro do instrumento. A queixa dela é que o
-        resultado sobrevivia e o *como* não; gravar uma resposta sem o gesto
-        seria reproduzir o defeito com um arquivo a mais. Quem não sabe dizer
-        como fez, escreve isso — o campo aceita `"não apliquei"`, o que não
-        aceita é o silêncio.
-        """
+        """Uma resposta. RECUSA a que não traz o COMO."""
         gesto = str(item.get("gesto") or "").strip()
         if not gesto:
-            # O COMO NÃO É DELA — corrigido em 07/09/2026, com a frase dela:
-            # *"isso aqui me quebra. isso eu espero que a página descreva"*.
-            # Ela tinha razão e o defeito era de quem escreveu a recusa: o
-            # COMO já existe nos arquivos (as colunas `canal`, `report_id`,
-            # `offset`, `comando`, `codigo_ref` e `teste_que_morde` da célula),
-            # e cobrar dela que o digitasse era pedir que ela redigitasse o
-            # que o repositório já publica. A página agora o traz PRONTO e
-            # ela só corrige se estiver errado.
-            #
-            # A RECUSA CONTINUA EXISTINDO, e continua sendo o ponto: o que não
-            # se grava é uma linha SEM COMO NENHUM — nem o do arquivo, nem o
-            # dela. Isso só acontece se a página deixar de preencher, e aí a
-            # recusa está apanhando um defeito meu, não uma falta dela.
             raise ValueError(
                 "esta linha chegou sem COMO nenhum — nem o que o arquivo "
                 "publica nem um escrito à mão. O COMO é a metade que se "
@@ -1477,20 +949,8 @@ class Registro:
             "titulo": item.get("titulo"),
             "celula": item.get("celula"),
             "respostas": item.get("respostas") or {},
-            # O QUE ELA ESCREVEU SOBRE CADA CONTROLE, separado do que ela
-            # escreveu sobre o conjunto. Com quatro na mesa, "acendeu na hora"
-            # sem dizer em qual é uma frase que ninguém consegue usar depois.
             "notas": item.get("notas") or {},
-            # A CONDIÇÃO DE CADA CONTROLE NESTE TESTE, escrita por ela antes do
-            # INICIAR: *"Controle A, não liga, o b cor azul. o c, tá conectado
-            # no rosa, o y vai conectar azul"*. Sem ela gravada, a fita diria
-            # que os quatro fizeram a mesma coisa — e o teste inteiro existe
-            # porque eles não fizeram.
             "condicoes": item.get("condicoes") or {},
-            # O PAPEL DE CADA UM NO MOMENTO DA RESPOSTA. Ele mora no roteiro e
-            # o roteiro muda; sem gravá-lo aqui, uma medição de hoje relida
-            # amanhã seria julgada contra a expectativa de amanhã, e o
-            # `confere()` daria outro veredito sobre o mesmo fato.
             "papeis": item.get("papeis") or {},
             "o_que_eu_vi": item.get("o_que_eu_vi") or "",
             "gesto": gesto,
@@ -1498,9 +958,6 @@ class Registro:
             "mesa": _mesa_mascarada(item.get("mesa") or {}),
             "veredito": item.get("veredito") or "",
         }
-        # O LAUDO POR CONTROLE É DERIVADO, e é gravado por isso mesmo: quem
-        # ler a fita daqui a um mês não precisa reexecutar a regra para saber
-        # o que a mesa disse na hora. `confere()` é o dono dos dois lados.
         linha["confere"] = {
             posto: list(confere(linha["papeis"].get(posto, PAPEL_OBSERVA),
                                 linha["respostas"].get(posto, "")))
@@ -1519,12 +976,7 @@ class Registro:
 
 
 def _mesa_mascarada(mesa: dict[str, Any]) -> dict[str, Any]:
-    """O estado dos quatro, com o endereço já na máscara da casa.
-
-    A máscara é aplicada DE NOVO aqui, mesmo que `quem_esta_na_mesa` já a tenha
-    aplicado, porque este dicionário chega pelo navegador — e o que chega de
-    fora não é de confiança. Duas réguas independentes é o que revela.
-    """
+    """O estado dos quatro, com o endereço já na máscara da casa."""
     postos = (mesa or {}).get("postos") or {}
     if isinstance(postos, dict):
         for p in postos.values():
@@ -1534,49 +986,19 @@ def _mesa_mascarada(mesa: dict[str, Any]) -> dict[str, Any]:
 
 
 def veredito(respostas: dict[str, str]) -> str:
-    """`obedeceu` · `falhou` · `parcial` · `não feito` — o que o índice mostra.
-
-    O papel de cada controle NÃO entra aqui de propósito: quem julga é quem
-    olhou o aparelho. Uma resposta `obedeceu` num controle que deveria ficar
-    calado é um ACHADO, e transformá-la em "falhou" automaticamente esconderia
-    exatamente a linha que interessa.
-
-    DEFEITO MEDIDO E CURADO EM 06/09/2026, PELA PROVA — e ele era um verde
-    sobre nada, que é a família que esta casa caça:
-
-    * `{P1..P4: "nada"}` — **os quatro disseram que NÃO ACONTECEU NADA** —
-      devolvia `obedeceu`. A regra era `all(v in ("obedeceu", "nada"))`, e um
-      conjunto só de `nada` a satisfaz. O índice é o instrumento que ela lê
-      para saber o que ainda falta medir: pintar de verde a linha em que o
-      gesto não produziu efeito em controle NENHUM é a leitura errada que uma
-      mesa de medição não pode produzir;
-    * e `falhou` era **INALCANÇÁVEL**. Esta docstring nomeia quatro estados, o
-      CSS tem a classe `.e-falhou` e o JS tem o ramo que a escolhe — e nenhum
-      caminho desta função jamais o devolvia. Uma paleta com quatro cores para
-      três estados é o instrumento afirmando uma medida que ele não faz.
-
-    A REGRA AGORA, e ela continua sem julgar papel: `obedeceu` exige que **ao
-    menos um** controle tenha obedecido. Nenhum obedeceu e ninguém viu coisa
-    estranha = o gesto não pegou em lugar nenhum = `falhou`.
-    """
+    """`obedeceu` · `falhou` · `parcial` · `não feito` — o que o índice mostra."""
     valores = [v for v in respostas.values() if v]
     if not valores or all(v == "nao-vi" for v in valores):
         return "não feito"
     if any(v == "outra-coisa" for v in valores):
         return "parcial"
     if not any(v == "obedeceu" for v in valores):
-        # Só `nada` (e talvez algum `nao-vi`): o gesto não produziu efeito em
-        # controle nenhum. Isto é o `falhou` do índice, e é o que ela precisa
-        # ver para voltar à linha.
         return "falhou"
     if all(v in ("obedeceu", "nada") for v in valores):
         return "obedeceu"
     return "parcial"
 
 
-#: A PÁGINA QUE É DONA DO DESENHO. O mapa do controle pinta o contorno com a
-#: cor do plástico desde 27/08/2026, e é dele que esta mesa lê a regra — não
-#: uma segunda cópia. Mordida: mude o `stroke-width` lá e a mesa muda junto.
 _A_PAGINA_DO_MAPA = ("src/hefesto_dualsense4unix/interface/paginas/"
                      "mapa-do-controle.html")
 
@@ -1592,42 +1014,9 @@ def _regras_de_estilo(texto: str) -> list[tuple[str, str]]:
 
 
 def folha_do_desenho(prefixos: Sequence[str]) -> str:
-    """As regras que PINTAM O DESENHO — perguntadas à página que as escreve.
-
-    *"e cara o contorno não tá pintado"* — 07/09/2026, ela comparando com o
-    mapa. E estava certa: o desenho é DE LINHA, e quem dá cor à linha é o
-    `stroke`. A folha dos 28 (`monta.folha_das_cores()`) pinta as ZONAS; o
-    contorno do casco, os furos e as juntas vivem numa segunda folha, que até
-    hoje só existia dentro do `mapa-do-controle.html`.
-
-    Copiá-la aqui seria a segunda cópia que diverge sem ninguém ver — o defeito
-    que aposentou a pasta do mockup. Então esta função LÊ o mapa e reescreve
-    só o endereço: `.ds` vira o desenho desta página, e `mp-` vira o prefixo de
-    cada um dos quatro postos (sem prefixo os ids colidem e o `url(#…)` do
-    segundo desenho aponta para o gradiente do primeiro).
-    """
+    """As regras que PINTAM O DESENHO — perguntadas à página que as escreve."""
     texto = (RAIZ / _A_PAGINA_DO_MAPA).read_text(encoding="utf-8")
-    # A FOLHA DO DESENHO SÃO AS REGRAS `.ds ` — o desenho, não a página. Ficam
-    # de fora duas famílias, e as duas por razão medida:
-    #
-    # * `.ds{width:100%…}`, que é o TAMANHO no mapa. A mesa põe quatro lado a
-    #   lado e tem teto próprio; herdar o de lá esticaria cada um a 74vh.
-    # * as `.mapa:has(.item-X:hover)`, que são o realce DE LÁ. O gatilho delas
-    #   mora na lista da direita, que aqui não existe: quem acende na mesa é
-    #   `monta.folha_de_realce()`, pela classe `marcada` que `monta.svg` põe no
-    #   próprio grupo. Trazer as de lá seria acender no hover do mouse — e o
-    #   que manda acender aqui é o roteiro, não o ponteiro.
-    #
-    # O QUE ENTRA, e cada uma responde por uma queixa dela: o `fill` do grupo,
-    # o `stroke` do casco (*"o contorno não tá pintado"*), o `sem-tinta` que
-    # apaga o círculo do PS (*"o do PS não tem esse círculo no meio"*), a luz
-    # do lightbar, os LEDs de jogador e as peças ocultas.
     regras = _regras_de_estilo(texto)
-    # E OS GLIFOS ENTRAM JUNTO (`.sobre`): eles são a segunda vista da mesma
-    # peça — o R do analógico, o triângulo, o losango do Options. Sem as regras
-    # deles os vinte glifos caíam no preto padrão do SVG, que sobre o casco
-    # escuro é peça invisível. Medido em 07/09/2026: mapa cinza-claro, mesa
-    # `rgb(0,0,0)`.
     do_desenho = [(sel, corpo) for sel, corpo in regras
                   if (sel.startswith(".ds ") or sel.startswith(".sobre"))
                   and ":hover" not in sel]
@@ -1635,12 +1024,6 @@ def folha_do_desenho(prefixos: Sequence[str]) -> str:
         raise RuntimeError(
             f"o desenho perdeu a folha do traço em {_A_PAGINA_DO_MAPA} — a mesa "
             f"lê de lá e não tem cópia própria")
-    # AS VARIÁVEIS VIAJAM COM AS REGRAS, e esta linha é uma cicatriz: a
-    # primeira volta trouxe `fill:var(--led-apagado)` sem trazer o
-    # `--led-apagado`, e os cinco LEDs de jogador ficaram PRETOS — um valor que
-    # não resolve não herda o de trás, cai no padrão. O mapa as declara no
-    # `:root` dele; aqui elas moram no desenho, para não disputarem com a
-    # paleta da casa.
     usadas = {m for _, corpo in do_desenho
               for m in re.findall(r"var\((--[\w-]+)", corpo)}
     da_casa = {"--z-casca-solida", "--luz", "--realce"}
@@ -1665,9 +1048,6 @@ def folha_do_desenho(prefixos: Sequence[str]) -> str:
     return "\n".join(linhas)
 
 
-# ---------------------------------------------------------------------------
-# Os quatro desenhos
-# ---------------------------------------------------------------------------
 def desenhos(teste: Teste, mesa: dict[str, Any]) -> dict[str, str]:
     """Os quatro DualSense, com a peça do teste acesa e os papéis distintos.
 
@@ -1688,11 +1068,6 @@ def desenhos(teste: Teste, mesa: dict[str, Any]) -> dict[str, str]:
     for posto in POSTOS:
         vivo = postos.get(posto) or {}
         colorway = str(vivo.get("colorway") or "")
-        # A PEÇA ACENDE NOS QUATRO, e é de propósito: o que separa os papéis é
-        # a TINTA (`--realce`, definida por `.papel-*` no cartão), não a
-        # ausência. Acender só no que deve reagir tiraria da tela justamente a
-        # pergunta que interessa — *o que NÃO PODE reagir reagiu?* — e ela só se
-        # responde olhando a mesma peça nos quatro.
         acender = tuple(pid for pid, _ in teste.pecas)
         lampada = vivo.get("lampada")
         fora[posto] = monta.svg(
@@ -1707,20 +1082,10 @@ def desenhos(teste: Teste, mesa: dict[str, Any]) -> dict[str, str]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# A página
-# ---------------------------------------------------------------------------
 def _e(texto: Any) -> str:
     return html.escape(str(texto), quote=True)
 
 
-#: A PALETA TEM DONO, E NÃO É ESTA PÁGINA — `scripts/paleta_da_casa.py`, o
-#: mesmo módulo de que o `specs.html`, o `painel.html`, o `frases-de-tela.html`
-#: e o `index.html` leem. Pedido dela, 06/09/2026: *"mantém o mesmo tema que
-#: vemos aplicando"*. A mesa nasceu com paleta clara PRÓPRIA, com nove hex
-#: digitados aqui — a quinta cópia da mesma decisão, e a única fora de dia.
-#: Os quatro nomes abaixo são os do papel de cada controle, e ESSES são desta
-#: página: não há papel de controle em artefato nenhum dos outros quatro.
 _TEMA_DA_MESA = """
 :root{
   --reage:var(--color-accent);
@@ -2767,21 +2132,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
-    """A página inteira. Ela é MONTADA A CADA `GET /`, nunca guardada em disco.
-
-    Assim ela nunca envelhece: mudou o CSV, o próximo `F5` já mostra a mesa
-    nova. Um HTML publicado seria a cópia que diverge da fonte sem ninguém ver —
-    que foi o que aconteceu com a pasta do mockup, e ela mandou aposentá-la.
-    """
+    """A página inteira. Ela é MONTADA A CADA `GET /`, nunca guardada em disco."""
     dados = json.dumps([t.para_json() for t in testes], ensure_ascii=False)
     salvos = json.dumps(gravado, ensure_ascii=False)
-    # A REGRA DO VERIFICAR VIAJA COMO DADO, gerada por `confere()`. O JS a
-    # consulta e não a reimplementa — duas cópias divergiriam.
     confere_json = json.dumps(tabela_de_conferencia(), ensure_ascii=False)
-    # A LISTA DO PREPARO SAI DA MESMA CONSTANTE QUE CORTA O PASSO. Uma segunda
-    # cópia aqui seria a divergência de sempre: o dia em que alguém tirasse um
-    # padrão de `PREPARO_DA_BANCADA`, o passo voltaria ao teste E continuaria
-    # anunciado no topo, e ninguém veria.
     preparo = "".join(f"<li>{_e(rotulo)}</li>"
                       for _, rotulo in PREPARO_DA_BANCADA)
     return f"""<!doctype html>
@@ -2976,34 +2330,7 @@ window.__CONFERE__ = {confere_json};
 
 
 def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
-    """Os quatro cartões: desenho, quem é, a CONDIÇÃO, as respostas e o campo.
-
-    A COLUNA É UMA PILHA, na ordem em que ela olha: o desenho com a peça acesa,
-    quem é o controle (com o seletor de cor), a condição que ELA escreveu para
-    este controle neste teste, as quatro respostas, o campo de texto que é a
-    quinta, e o laudo do VERIFICAR.
-
-    O QUE MUDOU EM 07/09/2026, e veio dela inteiro:
-
-    * *"cada controle sirva para testarmos variações daquilo e o esperado (…)
-      Controle A, não liga, o b cor azul. o c, tá conectado no rosa, o y vai
-      conectar azul"* — cada controle é uma CONDIÇÃO do mesmo experimento, não
-      um papel. A condição é escrita por ela antes do INICIAR e viaja com o
-      registro;
-    * *"demos 4 opções pra cada controle uma 5 deveria ser um campo pra eu
-      descrever por controle o que ocorreu"* — o campo de texto é a QUINTA
-      opção, dentro da mesma lista, e não um apêndice;
-    * *"não esquece da cor dos plasticos e dos botões e área igual a página do
-      mapa do controle"* — o desenho é o mesmo `monta.svg` do mapa, com as dez
-      zonas pintadas pelo CSV dela. Quando o daemon está parado a cor não se lê
-      sem escrever no aparelho, então o seletor deixa ELA dizer, e a mesa
-      lembra pelo endereço.
-
-    A LUZ DE JOGADOR ENTRA NA IDENTIFICAÇÃO — pedido dela: *"lá tem o led do
-    player, o led que fica aceso também e afins"*. O desenho mostra qual lâmpada
-    está acesa em cada um, e é assim que ela casa o cartão da tela com o
-    plástico na mesa.
-    """
+    """Os quatro cartões: desenho, quem é, a CONDIÇÃO, as respostas e o campo."""
     svgs = desenhos(teste, mesa)
     postos = (mesa or {}).get("postos") or {}
     cores = sorted(nomes_dos_colorways().items(), key=lambda x: x[1])
@@ -3021,11 +2348,6 @@ def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
             f"{bateria}%" if isinstance(bateria, (int, float)) else "bateria —",
             carga,
             f'lâmpada {vivo["lampada"]}' if vivo.get("lampada") else "lâmpada —",
-            # DE ONDE SAIU O POSTO, e ele só se declara quando é FRACO. Com o
-            # daemon vivo o posto é o que ele acabou de escrever e não há o que
-            # ressalvar; com ele parado o posto saiu de um LED que ninguém
-            # atualiza há horas, e o cartão tem de dizer isso na mesma linha em
-            # que afirma o número — não num cinza no alto da página.
             "posto pela lâmpada, que o daemon parado não atualiza"
             if vivo.get("de_onde") == "kernel" else "",
         ) if x)
@@ -3034,10 +2356,6 @@ def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
             f'<option value="{_e(slug)}"'
             f'{" selected" if slug == atual else ""}>{_e(nome)}</option>'
             for slug, nome in cores)
-        # O NOME DO PLÁSTICO É TEXTO; o seletor de 28 fica DENTRO de um
-        # `<details>`. Com ele aberto o tempo todo, as 28 opções entravam no
-        # texto do cartão quatro vezes e o nome do modelo — a única linha que
-        # ela lê para casar a tela com o controle na mão — sumia no meio.
         nome_da_cor = nome_do_colorway(atual)
         seletor = (
             f'<div class="nome">{_e(nome_da_cor or "cor não lida")}</div>'
@@ -3052,11 +2370,6 @@ def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
             f'<label><input type="radio" name="r-{posto}" value="{v}">'
             f'<span>{_e(rot)}</span></label>'
             for v, rot in RESPOSTAS)
-        # A BORDA DO CARTÃO É A COR DO PLÁSTICO — pedido dela, 07/09/2026:
-        # *"a borda de cada controle deve ter a borda na cor do model"*. O hex
-        # se PERGUNTA a `monta.cor_da_zona`, que é o dono do par colorway/zona
-        # e lê o CSV dela; digitá-lo aqui seria a segunda tabela das 28 cores.
-        # Sem cor lida, a borda fica na régua neutra e o cartão diz por quê.
         casca = monta.cor_da_zona(atual, "casca-solida") if atual else ""
         estilo = f' style="--cor-do-modelo:{casca}"' if casca else ""
         blocos.append(
@@ -3068,15 +2381,10 @@ def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
             f'</div>'
             f'{seletor}'
             f'<div class="meta ender">{_e(vivo.get("uniq") or "sem endereço")}</div>'
-            # A CONDIÇÃO DESTE CONTROLE NESTE TESTE — escrita por ela, e por
-            # isso um campo, não um rótulo. É o que faz os quatro medirem
-            # coisas DIFERENTES em vez de repetirem o mesmo gesto quatro vezes.
             f'<label class="condicao-rot" for="cond-{posto}">O que fazer neste</label>'
             f'<input class="condicao" id="cond-{posto}" name="c-{posto}" '
             f'type="text" placeholder="ex.: não liga · cor azul · já está no rosa">'
             f'<div class="resp">{respostas}'
-            # A QUINTA OPÇÃO, dentro da lista: ela pediu *"uma 5 deveria ser um
-            # campo pra eu descrever por controle o que ocorreu"*.
             f'<label class="quinta"><span class="marca">5</span>'
             f'<textarea class="extra" name="n-{posto}" rows="2" '
             f'placeholder="Ou descreva o que ocorreu neste"></textarea></label>'
@@ -3086,9 +2394,6 @@ def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
     return f'<div class="quatro">{"".join(blocos)}</div>'
 
 
-# ---------------------------------------------------------------------------
-# O servidor
-# ---------------------------------------------------------------------------
 class Mesa:
     """O estado do processo: os testes, o registro e a mesa viva."""
 
@@ -3104,9 +2409,7 @@ class _Atendente(BaseHTTPRequestHandler):
     server_version = "MesaDeMedicao/1"
 
     def log_message(self, formato: str, *args: Any) -> None:
-        """Silêncio no terminal DELA. Saída de comando vai para arquivo — foi
-        assim que a sessão de 02/09 quebrou, e o terminal é o mesmo em que a
-        conversa acontece."""
+        """Silêncio no terminal DELA. Saída de comando vai para arquivo — foi"""
 
     def _responder(self, corpo: bytes, tipo: str, codigo: int = 200) -> None:
         self.send_response(codigo)
@@ -3154,11 +2457,6 @@ class _Atendente(BaseHTTPRequestHandler):
             return
         tamanho = int(self.headers.get("Content-Length") or 0)
         cru = self.rfile.read(tamanho).decode("utf-8") if tamanho else ""
-        # CORPO VAZIO É VÁLIDO, e `/ler-cor` é justamente assim: ele não leva
-        # dado nenhum, só a ordem dela. `json.loads("")` levanta, e o erro saía
-        # como texto puro num canal que o navegador lê como JSON — o recado que
-        # chegava à tela era `Unexpected token 'E'`, que não diz nada a
-        # ninguém. Medido clicando o botão, em 07/09/2026.
         try:
             item = json.loads(cru) if cru.strip() else {}
         except ValueError as erro:
@@ -3167,18 +2465,11 @@ class _Atendente(BaseHTTPRequestHandler):
                 "application/json; charset=utf-8", 400)
             return
         if caminho == "/ler-cor":
-            # A ÚNICA ESCRITA NO APARELHO QUE ESTA PÁGINA FAZ, e ela chega por
-            # um POST porque é ATO DELA: um GET seria disparado por um F5.
             self._responder(
                 json.dumps(ler_a_cor_no_aparelho(), ensure_ascii=False).encode(),
                 "application/json; charset=utf-8")
             return
         if caminho == "/cor":
-            # A COR QUE ELA DISSE, por endereço. É a única coisa que esta
-            # página guarda sobre o APARELHO em vez de sobre a medição, e ela
-            # existe porque a cor não se lê sem escrever no controle — o que
-            # esta página não faz. O endereço chega já mascarado do navegador e
-            # é mascarado de novo aqui: o que vem de fora não é de confiança.
             tudo = guardar_cor_dela(_mascarar(str(item.get("endereco") or "")),
                                     str(item.get("colorway") or ""))
             self._responder(json.dumps(tudo, ensure_ascii=False).encode("utf-8"),
@@ -3196,12 +2487,7 @@ class _Atendente(BaseHTTPRequestHandler):
 
 
 def servir(porta: int = 0) -> tuple[ThreadingHTTPServer, str]:
-    """Sobe o servidor em `127.0.0.1` e devolve o endereço.
-
-    **`127.0.0.1`, nunca `0.0.0.0`.** Esta página mostra o endereço dos
-    controles dela e o que a bancada mediu; um servidor que atende a rede
-    inteira publicaria isso para quem estivesse no mesmo Wi-Fi.
-    """
+    """Sobe o servidor em `127.0.0.1` e devolve o endereço."""
     _Atendente.mesa = Mesa()
     httpd = ThreadingHTTPServer(("127.0.0.1", porta), _Atendente)
     return httpd, f"http://127.0.0.1:{httpd.server_address[1]}/"

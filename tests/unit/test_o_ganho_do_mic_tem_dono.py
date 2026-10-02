@@ -35,19 +35,11 @@ UCM = RAIZ / "assets" / "ucm" / "DualSense-HiFi.conf"
 FIXTURES = RAIZ / "tests" / "fixtures" / "mic-cabo"
 
 #: O elemento de ganho de captura que a placa do DualSense tem. **Não é um
-#: literal de conveniência:** é o que o `amixer scontents` gravado em
-#: `tests/fixtures/mic-cabo/` imprime, e os testes abaixo o CONFEREM contra a
-#: resposta do decisor do doctor antes de usá-lo em qualquer asserção.
 ELEMENTO = "Headset"
 
 
 def _secao_do_mic(texto: str) -> str:
-    """O `SectionDevice."Mic"` inteiro, do jeito que o doctor o recorta.
-
-    É a mesma fatia que `_definicao_da_porta_de_captura` entrega ao decisor
-    quando a porta ativa é `[In] Mic`: da linha do `SectionDevice` até a
-    primeira chave de fechamento na coluna zero.
-    """
+    """O `SectionDevice."Mic"` inteiro, do jeito que o doctor o recorta."""
     fora: list[str] = []
     dentro = False
     for linha in texto.splitlines(keepends=True):
@@ -111,13 +103,7 @@ class TestOUcmLigaOElemento:
         )
 
     def test_a_secao_recortada_nao_e_o_arquivo_inteiro(self) -> None:
-        """A fatia que o doctor lê é o `SectionDevice."Mic"`, e só ele.
-
-        **O QUE A MORDIDA ARRANCA:** se `_secao_do_mic` devolvesse o arquivo
-        inteiro, o teste acima passaria com as duas linhas dentro do
-        `SectionDevice."Speaker"` — um lugar onde elas não valem nada. Esta
-        régua fecha essa porta, e é a razão de o recorte existir.
-        """
+        """A fatia que o doctor lê é o `SectionDevice."Mic"`, e só ele."""
         secao = _secao_do_mic(UCM.read_text(encoding="utf-8"))
         assert 'SectionDevice."Mic"' in secao
         assert 'SectionDevice."Speaker"' not in secao, (
@@ -127,15 +113,7 @@ class TestOUcmLigaOElemento:
         assert "CaptureVolume" in secao and "CaptureMixerElem" in secao
 
     def test_o_mudo_nao_ganha_um_terceiro_dono(self) -> None:
-        """Nenhum `CaptureSwitch` entra: o mudo já tem dois donos e chega.
-
-        **O QUE A MORDIDA ARRANCA:** acrescente `CaptureSwitch` ao
-        `SectionDevice."Mic"` e este teste reprova. O mudo desta casa é do
-        firmware (`mic.set`, que apaga a luz vermelha) e da rota do
-        WirePlumber; um terceiro caminho seria a terceira verdade sobre o mesmo
-        botão, que é a família de defeito que a camada 1 do doctor existe para
-        acusar.
-        """
+        """Nenhum `CaptureSwitch` entra: o mudo já tem dois donos e chega."""
         secao = _secao_do_mic(UCM.read_text(encoding="utf-8"))
         assert "CaptureSwitch" not in secao, (
             "o `CaptureSwitch` liga o mudo da porta ao elemento de hardware e "
@@ -144,45 +122,21 @@ class TestOUcmLigaOElemento:
 
 
 class TestOTrilhoDoGanhoNaLinhaQueElaAprovou:
-    """**A RÉGUA MEDIA O ARRANJO QUE ELA RECUSOU — invertida em 21/09/2026.**
-
-    O arranjo D (trilho na linha do rótulo, bloco próprio) foi escolhido pelo
-    PREÇO: a §3 da sprint mediu +22,00px para a linha nova, +5px para o `.vol`,
-    e ZERO para a linha do rótulo — e o cartão tinha 0,37px de folga.
-
-    **Ela recusou, em 20/09**, e o produto foi para a linha própria: um segundo
-    `.vol` embaixo do volume, com o rótulo «Ganho» ao lado. A lição desta casa
-    está escrita: *implemente a imagem aprovada e pague a conta de altura
-    depois, medindo*. Um arranjo escolhido pelo preço não é o desenho dela.
-
-    O que estas réguas passam a medir é o arranjo DELA — e o preço continua
-    tendo dono: `scripts/check_a_altura_do_cartao.py`, que é portão.
-    """
+    """**A RÉGUA MEDIA O ARRANJO QUE ELA RECUSOU — invertida em 21/09/2026.**"""
 
     def test_o_ganho_e_uma_linha_propria_como_o_volume(self) -> None:
-        """Ele é um `.vol`, e herda dele o `flex`, o `gap` e a altura.
-
-        MORDIDA: devolva `class="ganho"` sozinho ao container. O trilho perde
-        as regras `.vol .trilho` e desenha invisível — que é o defeito que a
-        troca de arranjo tinha de não trazer de volta.
-        """
+        """Ele é um `.vol`, e herda dele o `flex`, o `gap` e a altura."""
         from hefesto_dualsense4unix.interface import aba02
 
         assert 'class="vol ganho"' in aba02.MIOLO, (
             "o bloco do ganho deixou de ser uma `.vol` — sem ela o trilho não "
             "herda regra nenhuma e desenha invisível")
-        # E O QUE ELE TEM A MAIS CONTINUA NA FOLHA: a unidade, o número de
-        # quatro caracteres e o cinza do fora de alcance.
         css = aba02.CSS
         for filho in (".ganho .un", ".ganho .n", ".ganho.sem-ganho .trilho"):
             assert filho in css, f"falta `{filho}` na folha"
 
     def test_o_rotulo_do_ganho_esta_na_linha_dele(self) -> None:
-        """A linha do ganho diz «Ganho», senão os dois trilhos ficam iguais.
-
-        MORDIDA: tire o `<span class="rot-vol">{ROTULO_LINHA_GANHO}</span>` e a
-        pessoa vê dois trilhos idênticos empilhados, sem saber qual é qual.
-        """
+        """A linha do ganho diz «Ganho», senão os dois trilhos ficam iguais."""
         from hefesto_dualsense4unix.interface import aba02
 
         bloco = re.search(r'<div class="vol ganho"(.*?)</div>',
@@ -193,23 +147,10 @@ class TestOTrilhoDoGanhoNaLinhaQueElaAprovou:
             "viram dois trilhos iguais")
 
     def test_os_dois_enderecos_do_ganho_existem_na_pagina(self) -> None:
-        """A barra e o número têm `data-campo`, senão o desenho congela.
-
-        **O QUE A MORDIDA ARRANCA:** tire o `data-campo="mic-ganho-barra"` do
-        `.cheio` e o produto mostra para sempre o `+48` do DESENHO — que é,
-        letra por letra, o defeito que o volume do microfone teve até 12/09.
-        """
+        """A barra e o número têm `data-campo`, senão o desenho congela."""
         from hefesto_dualsense4unix.interface import aba02
 
         pagina = aba02.MIOLO
-        # O `\s+` e não um espaço: a marcação quebra linha entre os dois
-        # atributos, e uma régua que exige o espaço literal reprova por
-        # FORMATAÇÃO — que é dar vermelho sobre outra coisa que não o endereço.
-        #
-        # O NÚMERO NÃO DECLARA ALVO, e isso é o contrato do piloto, não
-        # descuido: sem `data-hef-alvo` ele escreve TEXTO, que é o que o
-        # `mic-num` do volume — o vizinho e o molde — já faz. A barra declara
-        # `largura` porque largura não é o padrão.
         esperado = len(aba02.MESA)
         barra = re.findall(
             r'data-campo="mic-ganho-barra"\s+data-hef-alvo="largura"', pagina)
@@ -225,13 +166,7 @@ class TestOTrilhoDoGanhoNaLinhaQueElaAprovou:
         )
 
     def test_a_pergunta_carrega_a_unidade_e_a_diferenca(self) -> None:
-        """§6.4: o `?` diz a unidade e separa ganho de volume.
-
-        **O QUE A MORDIDA ARRANCA:** tire a palavra `amplifica` (ou a palavra
-        `entrega`) da dica e esta régua reprova. Sem as duas, o número sai como
-        `+48` sem unidade visível, a dois trilhos de distância do volume, e a
-        tela deixa a pessoa adivinhar qual dos dois ela acabou de mexer.
-        """
+        """§6.4: o `?` diz a unidade e separa ganho de volume."""
         from hefesto_dualsense4unix.interface import aba02
 
         dica = aba02.DICA_GANHO_MIC.lower()
@@ -249,33 +184,17 @@ class TestOTrilhoDoGanhoNaLinhaQueElaAprovou:
         )
 
 
-#: O Chrome do sistema, o mesmo dos três portões de Playwright desta casa.
-#: `launch()` sem `headless=False` não abre janela nenhuma na tela dela.
 CHROME = Path("/usr/bin/google-chrome")
 
 
 @pytest.mark.skipif(not CHROME.exists(), reason="Chrome do sistema ausente")
 class TestOCinzaDoRadioNaoCobraAltura:
-    """O estado do RÁDIO custa 17px de LARGURA e zero de altura — medido.
-
-    **POR QUE ELE PRECISA DE RÉGUA PRÓPRIA:** o
-    `scripts/check_a_altura_do_cartao.py` mede a página PARADA, e nela o `?` do
-    ganho está escondido (as duas regras `:has(.dica:empty)`/`:has(.nada)` da
-    folha comum). No rádio ele aparece — e a §3 da sprint mediu o arranjo D
-    **sem** ele. Esta régua mede o estado que a mesa dela tem de verdade.
-    """
+    """O estado do RÁDIO custa 17px de LARGURA e zero de altura — medido."""
 
     def test_com_o_cinza_e_o_ponto_de_interrogacao_o_cartao_nao_cresce(
         self, tmp_path: Path
     ) -> None:
-        """Aciona o cinza nas quatro molduras e mede o cartão nas três larguras.
-
-        **O QUE A MORDIDA ARRANCA:** dê altura ao `.ganho` (ou ponha o `?` numa
-        linha própria) e o cartão passa de 327,63px, estourando os 0,37px de
-        folga contra `PARA_O_CARD`. E se o `?` não acender — `acionados == 0` —
-        a régua reprova também: ela não pode dar verde medindo uma tela em que
-        o estado que ela testa não chegou a existir.
-        """
+        """Aciona o cinza nas quatro molduras e mede o cartão nas três larguras."""
         playwright = pytest.importorskip("playwright.sync_api")
         from hefesto_dualsense4unix.interface import aba02, onde
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
@@ -328,21 +247,10 @@ class TestOCinzaDoRadioNaoCobraAltura:
 
 
 class TestODonoDoNumeroPerguntaAoAparelho:
-    """O valor vem do `amixer`, e os três estados de "não sei" são distintos.
-
-    A §8 da sprint escreve a regra com o comando: *pergunte ao **aparelho**
-    (`amixer … sget`), nunca ao número que a tela escreveu*.
-    """
+    """O valor vem do `amixer`, e os três estados de "não sei" são distintos."""
 
     def test_o_ganho_sai_da_gravacao_do_aparelho(self) -> None:
-        """O leitor tira `(por cento, dB)` do `scontents` REAL da bancada.
-
-        **O QUE A MORDIDA ARRANCA:** troque o `(\\d+)%` por um literal (ou faça
-        o leitor devolver `GANHO_PADRAO_PCT` quando não achar) e este teste
-        reprova — porque o esperado NÃO é montado com as constantes que a
-        função lê: ele vem do arquivo que o `amixer` cuspiu no controle dela,
-        `tests/fixtures/mic-cabo/scontents-dualsense-2026-09-20.txt`.
-        """
+        """O leitor tira `(por cento, dB)` do `scontents` REAL da bancada."""
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         bruto = (FIXTURES / "scontents-dualsense-2026-09-20.txt").read_text(
@@ -352,10 +260,6 @@ class TestODonoDoNumeroPerguntaAoAparelho:
             "o leitor não achou elemento de ganho na gravação do aparelho"
         )
         pct, db = lido
-        # O ESPERADO É LIDO DA MESMA GRAVAÇÃO, por um caminho INDEPENDENTE do
-        # da função: aqui casa-se a linha inteira do `amixer`, lá caminha-se
-        # pelas capacidades. Montar o esperado com as constantes da função
-        # seria tautologia, e passaria mesmo com ela quebrada.
         esperada = re.search(r"Capture \d+ \[(\d+)%\] \[(-?[\d.]+)dB\]", bruto)
         assert esperada, "a gravação do aparelho mudou de forma"
         assert (pct, db) == (int(esperada.group(1)), float(esperada.group(2)))
@@ -365,13 +269,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         )
 
     def test_placa_sem_ganho_de_captura_nao_inventa_zero(self) -> None:
-        """Sem elemento de captura a resposta é `None`, nunca `0`.
-
-        **O QUE A MORDIDA ARRANCA:** faça o leitor devolver `(0, 0.0)` no fim e
-        este teste reprova. Zero pintaria «ganho no mínimo» sobre uma placa que
-        não tem ganho nenhum — que é, letra por letra, a «cura» de 26/07 que
-        emudeceu o microfone de quem a rodou.
-        """
+        """Sem elemento de captura a resposta é `None`, nunca `0`."""
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         bruto = (FIXTURES / "scontents-sem-captura-2026-09-20.txt").read_text(
@@ -400,10 +298,6 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         assert a02._CAPACIDADE_DE_GANHO == "cvolume", (
             "a capacidade que separa entrada de saída mudou de nome"
         )
-        # SINTÉTICO, e declarado: é a FORMA que o `amixer` usa para um controle
-        # simples que mistura saída e chave de entrada. O que ancora a forma no
-        # real é o `Front Mic Boost` da placa de bordo desta bancada, que
-        # declara `Playback channels` e `Capture channels` no mesmo elemento.
         dificil = (
             "Simple mixer control 'Mic',0\n"
             "  Capabilities: pvolume pswitch cswitch\n"
@@ -424,12 +318,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         )
 
     def test_a_ordem_da_gravacao_nao_decide_qual_elemento_e_o_ganho(self) -> None:
-        """O de saída vem ANTES na gravação real, e mesmo assim não vence.
-
-        **O QUE A MORDIDA ARRANCA:** faça o leitor pegar o primeiro elemento
-        que tiver qualquer volume e ele devolve o `PCM` — que é o volume do
-        alto-falante do controle, não o ganho do microfone dela.
-        """
+        """O de saída vem ANTES na gravação real, e mesmo assim não vence."""
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         bruto = (FIXTURES / "scontents-dualsense-2026-09-20.txt").read_text(
@@ -441,14 +330,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         assert a02._ganho_do_scontents(bruto) == (100, 48.0)
 
     def test_os_tres_estados_do_cinza(self) -> None:
-        """Ausente = não sei · `None` = não alcança · tupla = alcança.
-
-        **O QUE A MORDIDA ARRANCA:** colapse os dois primeiros (por exemplo,
-        `return "" if uniq in _GANHO else RAZAO_DO_GANHO_FORA`) e o primeiro
-        `assert` reprova — o trilho acenderia cinza nos ~2 s que a thread da
-        camada 1 demora a dar a primeira volta, sobre uma ignorância que dura
-        dois segundos.
-        """
+        """Ausente = não sei · `None` = não alcança · tupla = alcança."""
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         uniq = "aa:bb:cc:00:00:01"
@@ -475,13 +357,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
             a02._GANHO.update(guardado)
 
     def test_o_controle_que_sai_nao_deixa_ganho_para_o_que_volta(self) -> None:
-        """A poda do cache conhece a quinta leitura — CACHE-SEM-PODA-01.
-
-        **O QUE A MORDIDA ARRANCA:** tire o `_GANHO` de `_POR_CONTROLE` e este
-        teste reprova. O `uniq` é o MAC e volta igual: sem a poda, o controle
-        que reconecta veria o ganho da placa que o PipeWire já destruiu — que é
-        exatamente a queixa dela de 20/09 renascendo num cache novo.
-        """
+        """A poda do cache conhece a quinta leitura — CACHE-SEM-PODA-01."""
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         assert a02._GANHO in a02._POR_CONTROLE, (
@@ -502,18 +378,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
     def test_o_radio_entra_com_chave_e_o_cabo_nao_e_chutado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`_ler_o_ganho` responde por TODO controle da mesa, inclusive o mudo.
-
-        **O QUE A MORDIDA ARRANCA:** faça `_ler_o_ganho` devolver `{}` quando
-        nenhum controle tem nó nativo (em vez de `{uniq: None}`) e este teste
-        reprova — a aba deixa de distinguir *ainda não perguntei* de *perguntei
-        e não há*, e o cinza do rádio nunca acende.
-
-        Quem diz que o rádio não publica nó nativo é o DONO da resposta
-        (`eleicao_de_microfone.fonte_nativa_do_controle`), e é ele que está
-        dublado aqui — digitar «rádio → sem ganho» dentro do `_ler_o_ganho`
-        seria a segunda régua sobre o mesmo fato.
-        """
+        """`_ler_o_ganho` responde por TODO controle da mesa, inclusive o mudo."""
         from hefesto_dualsense4unix.integrations import eleicao_de_microfone
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
@@ -531,27 +396,11 @@ class TestODonoDoNumeroPerguntaAoAparelho:
     def test_o_servidor_de_som_mudo_nao_acende_o_cinza(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`pactl` calado é *não sei*, e "não sei" fica de FORA do dicionário.
-
-        **O TERCEIRO ESTADO É O QUE SE PERDE PRIMEIRO.** O cinza do trilho
-        carrega uma razão que AFIRMA — *"pelo rádio o microfone chega como som
-        já digitalizado… Ligue o cabo e ele acende"*. Acendê-lo porque o
-        servidor de som não respondeu é dizer «não há» quando a verdade é «não
-        consegui perguntar», e quem está com o cabo na mão lê uma ordem para
-        ligar o cabo.
-
-        **O QUE A MORDIDA ARRANCA:** faça `_ler_o_ganho` escrever
-        `fora[uniq] = None` também quando `fonte_nativa_do_controle` devolve
-        `None` (ou faça essa função colapsar `None` em `""`) e este teste
-        reprova — a chave aparece, `ganho_fora_de_alcance` acende o cinza, e a
-        razão passa a mandar ligar um cabo sobre uma ignorância nossa.
-        """
+        """`pactl` calado é *não sei*, e "não sei" fica de FORA do dicionário."""
         from hefesto_dualsense4unix.integrations import eleicao_de_microfone
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         mudo = ("aa:bb:cc:00:00:05", "aa:bb:cc:00:00:06")
-        # O `_rodar` da eleição devolve `(127, "")` quando o `pactl` não está
-        # lá — é o mesmo desfecho de um servidor de som que não responde.
         monkeypatch.setattr(eleicao_de_microfone, "_rodar",
                             lambda argv: (127, ""))
         lido = a02._ler_o_ganho(mudo)
@@ -559,7 +408,6 @@ class TestODonoDoNumeroPerguntaAoAparelho:
             f"com o `pactl` mudo nenhuma chave pode sair; saiu {lido!r} — e "
             "cada chave dessas acende o cinza com a razão do cabo"
         )
-        # E a tela, com o dicionário assim, não apaga nada.
         guardado = dict(a02._GANHO)
         try:
             a02._GANHO.clear()
@@ -609,8 +457,6 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         radio = "aa:bb:cc:00:00:02"
         nativo = ("alsa_input.usb-Sony_Interactive_Entertainment_DualSense_"
                   "Wireless_Controller-00.HiFi__Mic__source")
-        # O QUE O DAEMON ELEGEU para os DOIS é o nó da nossa ponte — inclusive
-        # para o do cabo. É esta linha que a redação antiga lia.
         curta = "\n".join([
             f"41\t{nativo}\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED",
             "42\thefesto_mic_000001\tPipeWire\ts16le 1ch 48000Hz\tRUNNING",
@@ -642,8 +488,6 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         monkeypatch.setattr(
             eleicao_de_microfone, "_rodar",
             lambda argv: (0, curta) if argv[-1] == "short" else (127, ""))
-        # O CENSO DE `/sys` É O ÚNICO PEDAÇO QUE UM TESTE NÃO PODE RODAR. O
-        # casamento em si roda de verdade: `casar` compara os dois mapas.
         monkeypatch.setattr(
             eleicao_de_microfone, "casamento_usb_agora",
             lambda uniqs: CasamentoUSB(por_uniq={cabo: "3-2", radio: ""},
@@ -692,21 +536,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
     def test_o_pacote_nao_emite_o_ganho_antes_de_ela_publicar(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Enquanto a página publicada não tiver o trilho, o campo não sai.
-
-        **O QUE A MORDIDA ARRANCA, E A PRIMEIRA REDAÇÃO NÃO ARRANCAVA NADA:**
-        esta régua comparava `A_PAGINA_TEM_O_GANHO` com o mesmo arquivo de que
-        a constante nasce — tautologia, e ela passava VERDE com a guarda
-        removida da emissão (medido em 20/09/2026, trocando a condição por
-        `if True`). Quem pergunta é o PACOTE, e é a ele que se pergunta agora:
-        com a guarda baixa as três chaves não saem, com ela alta saem. Tire o
-        `if A_PAGINA_TEM_O_GANHO else {}` e o primeiro bloco reprova nomeando
-        as chaves que vazaram.
-
-        A razão da guarda é que **publicar é ato dela**: emitir antes põe as
-        três chaves em `orfaos` no casamento das dez, e o pacote passa a se
-        reportar pintando o que não pinta.
-        """
+        """Enquanto a página publicada não tiver o trilho, o campo não sai."""
         import pacotes
 
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02

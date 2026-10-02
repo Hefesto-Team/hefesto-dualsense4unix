@@ -46,18 +46,12 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import audio_control
 
-# ---------------------------------------------------------------------------
-# A MESA, em nomes — e todos eles são a chave da casa, nunca um endereço real
-# ---------------------------------------------------------------------------
 
 #: Duas placas de DualSense no cabo, uma por aparelho. Os nomes são
-#: indistinguíveis DE PROPÓSITO: o `-00`/`-00.2` é desempate posicional do
 #: PipeWire e a string de serial USB do DualSense é a mesma em todos.
 _P1 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.mono-fallback"
 _P2 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.2.mono-fallback"
 
-#: O eco da SAÍDA. Casa com a mesma marca que a placa casaria, e já custou um
-#: defeito real em 16/08: o deslizante do MICROFONE mexia no ALTO-FALANTE.
 _MONITOR = (
     "alsa_output.usb-Sony_Interactive_Entertainment_Wireless_Controller"
     "-00.analog-surround-40.monitor"
@@ -70,7 +64,6 @@ _UNIQ_P1 = "aabbcc010203"
 _UNIQ_P2 = "aabbcc040506"
 _UNIQ_RADIO = "aabbcc070809"
 
-#: A saída LONGA não é interpretada aqui: quem a lê é o `nos_e_sysfs`, dublado.
 _LONGA = "(a saída longa; quem a lê é o `nos_e_sysfs`, que está dublado)"
 
 
@@ -85,12 +78,7 @@ def _curta(*nomes: str) -> str:
 def _dublar_pactl(
     monkeypatch: pytest.MonkeyPatch, curta: str, *, longa_ilegivel: bool = False
 ) -> None:
-    """Responde à CURTA e à LONGA com textos diferentes, como o `pactl` faz.
-
-    `longa_ilegivel` é a cena do `pactl list sources` que não volta — e é ela
-    que apaga o casamento por USB, deixando só as regras de identidade e o
-    um-para-um de pé. É o caso 4 da sprint.
-    """
+    """Responde à CURTA e à LONGA com textos diferentes, como o `pactl` faz."""
 
     class _Saida:
         def __init__(self, stdout: str) -> None:
@@ -121,18 +109,8 @@ def _dublar_sysfs(
     monkeypatch.setattr(usb_pai, "nos_e_sysfs", lambda _s: {})
 
 
-# ---------------------------------------------------------------------------
-# O DUBLÊ ESTRITO, e o host de IPC
-# ---------------------------------------------------------------------------
-
-
 class _EscritaEstrita:
-    """O que chegou a `definir_volume_da_captura`, e ele RECUSA o descuido.
-
-    `fonte` é keyword-only e SEM padrão, igual à função de verdade desde
-    06/09/2026. Um dublê com `fonte=None` de padrão engoliria em silêncio a
-    chamada que a cura existe para tornar impossível — e mediria a si mesmo.
-    """
+    """O que chegou a `definir_volume_da_captura`, e ele RECUSA o descuido."""
 
     def __init__(self) -> None:
         self.escritas: list[tuple[int, str | None]] = []
@@ -148,12 +126,7 @@ class _EscritaEstrita:
 
 
 class _ControleQueLista:
-    """O backend, do jeito que `recado_do_microfone.mesa_de_agora` o lê.
-
-    Ele exige o `connected` — é a diferença entre "tem card na tela" e "há um
-    handle aberto", e é por isso que a mesa vem daquela função e não de
-    `_uniqs_conectados`.
-    """
+    """O backend, do jeito que `recado_do_microfone.mesa_de_agora` o lê."""
 
     def __init__(self, *uniqs: str, sabe_listar: bool = True) -> None:
         self._uniqs = uniqs
@@ -188,17 +161,8 @@ def escrita(monkeypatch: pytest.MonkeyPatch) -> _EscritaEstrita:
     e = _EscritaEstrita()
     monkeypatch.setattr(audio_control, "definir_volume_da_captura", e.definir)
     monkeypatch.setattr(audio_control, "volume_da_captura", e.ler)
-    # A ROTA GLOBAL DEVOLVE SEMPRE A PRIMEIRA — é ela que este arquivo existe
-    # para ver NÃO acontecer quando há endereço. Deixá-la respondendo é o que
-    # torna a mordida visível: sem isto, arrancar a cura daria `sem_fonte` em
-    # vez do nome da placa errada, e a régua reprovaria sem dizer o defeito.
     monkeypatch.setattr(audio_control, "fonte_de_captura_do_controle", lambda: _P1)
     return e
-
-
-# ---------------------------------------------------------------------------
-# 1. DOIS NO CABO — o caso que já estava curado, e que tem de continuar
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -219,24 +183,13 @@ async def test_o_gesto_do_p2_escreve_na_placa_do_p2(
         f"o gesto do card do Jogador 2 não chegou à placa dele: {escrita.escritas}")
 
 
-# ---------------------------------------------------------------------------
-# 2. A PORTA QUE FICOU ABERTA — o passo 1 da sprint
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_o_deslizante_do_p2_nao_cai_na_placa_do_p1(
     monkeypatch: pytest.MonkeyPatch, escrita: _EscritaEstrita
 ) -> None:
-    """Dois no cabo, o sysfs ILEGÍVEL: ninguém escreve em placa nenhuma.
-
-    **MORDE:** devolva as duas linhas do `if fonte is None:
-    fonte = fonte_de_captura_do_controle()` em `_handle_mic_volume_set` e este
-    caso reprova nomeando `_P1` na chamada a `definir_volume_da_captura` — que
-    é, palavra por palavra, o microfone da outra pessoa.
-    """
+    """Dois no cabo, o sysfs ILEGÍVEL: ninguém escreve em placa nenhuma."""
     _dublar_pactl(monkeypatch, _curta(_P1, _P2, _MONITOR))
-    _dublar_sysfs(monkeypatch, {}, {})  # o censo de USB não respondeu
+    _dublar_sysfs(monkeypatch, {}, {})
 
     res = await _host(_ControleQueLista(_UNIQ_P1, _UNIQ_P2))._handle_mic_volume_set(
         {"volume": 70, "uniq": _UNIQ_P2})
@@ -255,12 +208,7 @@ async def test_o_deslizante_do_p2_nao_cai_na_placa_do_p1(
 async def test_o_radio_sem_canal_nao_cai_na_placa_de_quem_esta_no_cabo(
     monkeypatch: pytest.MonkeyPatch, escrita: _EscritaEstrita
 ) -> None:
-    """Um no cabo, um no rádio SEM o canal do microfone de pé.
-
-    O do rádio não tem dispositivo USB nenhum — a placa segue o transporte,
-    medido em 15/08/2026 — e, sem o canal publicado, não tem nó nenhum. A única
-    fonte da lista é a placa de quem está no CABO, e ela tem dono.
-    """
+    """Um no cabo, um no rádio SEM o canal do microfone de pé."""
     _dublar_pactl(monkeypatch, _curta(_P1, _MONITOR))
     _dublar_sysfs(monkeypatch, {_UNIQ_P1: _USB_P1}, {_P1: _USB_P1, _MONITOR: _USB_P1})
 
@@ -273,26 +221,11 @@ async def test_o_radio_sem_canal_nao_cai_na_placa_de_quem_esta_no_cabo(
     assert res["status"] == "sem_fonte"
 
 
-# ---------------------------------------------------------------------------
-# 3. A MESA ENTRA NA CONTA — o passo 2, e sem ele o passo 1 é regressão
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_um_controle_e_uma_source_resolvem_sem_rota_global(
     monkeypatch: pytest.MonkeyPatch, escrita: _EscritaEstrita
 ) -> None:
-    """Um controle só, uma source, o `pactl list sources` ILEGÍVEL.
-
-    Antes desta sprint este caso resolvia pela rota global — **certo por
-    acaso**, porque a primeira da lista calhava de ser a única. Fechar a queda
-    sem a mesa o teria quebrado; com a mesa, a regra 4 do `escolher_fonte`
-    (um-para-um) o resolve — **certo por REGRA**.
-
-    **MORDE:** devolva o `[]` no lugar de `candidatos` em
-    `audio_control.fonte_de_captura_do_uniq` e este caso reprova com
-    `sem_fonte` onde a mesa de um tem resposta certa.
-    """
+    """Um controle só, uma source, o `pactl list sources` ILEGÍVEL."""
     _dublar_pactl(monkeypatch, _curta(_P1, _MONITOR), longa_ilegivel=True)
     _dublar_sysfs(monkeypatch, {_UNIQ_P1: _USB_P1}, {_P1: _USB_P1})
 
@@ -309,13 +242,7 @@ async def test_um_controle_e_uma_source_resolvem_sem_rota_global(
 async def test_backend_que_nao_sabe_listar_nao_inventa_dono(
     monkeypatch: pytest.MonkeyPatch, escrita: _EscritaEstrita
 ) -> None:
-    """`None` da mesa é "não perguntei", e mantém o comportamento de antes.
-
-    A diferença entre `[]` e `None` é a diferença entre *"não há ninguém"* e
-    *"não perguntei a ninguém"* — confundi-las é como esta casa já publicou
-    ausência de dado como negação. Com o backend mudo, a regra 4 fica desligada
-    e o um-para-um não é inventado: ninguém escreve.
-    """
+    """`None` da mesa é "não perguntei", e mantém o comportamento de antes."""
     _dublar_pactl(monkeypatch, _curta(_P1, _MONITOR), longa_ilegivel=True)
     _dublar_sysfs(monkeypatch, {}, {})
 
@@ -327,21 +254,11 @@ async def test_backend_que_nao_sabe_listar_nao_inventa_dono(
     assert escrita.escritas == []
 
 
-# ---------------------------------------------------------------------------
-# 4. A ROTA GLOBAL CONTINUA EXISTINDO — ela nunca foi o defeito
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_sem_endereco_a_rota_global_continua(
     monkeypatch: pytest.MonkeyPatch, escrita: _EscritaEstrita
 ) -> None:
-    """Quem não manda `uniq` continua com a conveniência de sempre.
-
-    A rota global nunca foi o defeito; o defeito era ela ser o CONSOLO de um
-    endereço que não resolveu. Matá-la junto teria fechado o caminho de quem
-    tem um controle só e não manda endereço.
-    """
+    """Quem não manda `uniq` continua com a conveniência de sempre."""
     _dublar_pactl(monkeypatch, _curta(_P1, _MONITOR))
     _dublar_sysfs(monkeypatch, {_UNIQ_P1: _USB_P1}, {_P1: _USB_P1})
 
@@ -352,21 +269,8 @@ async def test_sem_endereco_a_rota_global_continua(
     assert escrita.escritas == [(12, _P1)]
 
 
-# ---------------------------------------------------------------------------
-# 5. AS DUAS PORTAS DORMENTES — o passo 3
-# ---------------------------------------------------------------------------
-
-
 def test_ninguem_escreve_volume_sem_dizer_em_qual_fonte() -> None:
-    """`fonte=` deixou de ter padrão nas duas funções que falam com o `pactl`.
-
-    Elas eram portas fechadas com a chave na fechadura: nenhum chamador de
-    `src/` as empurrava, e quem as empurrasse amanhã cairia na primeira placa
-    da lista sem uma linha de aviso. É a disciplina do `muted` do `mic.set`,
-    que também não tem padrão — quem escreve declara em qual aparelho escreve.
-
-    **MORDE:** devolva o `= None` a qualquer uma das duas e este caso reprova.
-    """
+    """`fonte=` deixou de ter padrão nas duas funções que falam com o `pactl`."""
     import inspect
 
     for funcao in (audio_control.definir_volume_da_captura,
@@ -384,19 +288,10 @@ def test_ninguem_escreve_volume_sem_dizer_em_qual_fonte() -> None:
 
 
 def test_nenhum_chamador_de_src_omite_a_fonte() -> None:
-    """A outra metade do passo 3: a porta fechou e ninguém ficou do lado de fora.
-
-    Uma assinatura que aperta sem esta conta deixa um `TypeError` esperando o
-    primeiro clique dela em vez de esperar o CI.
-    """
+    """A outra metade do passo 3: a porta fechou e ninguém ficou do lado de fora."""
     import ast
     import pathlib
 
-    # POR AST, E NÃO POR EXPRESSÃO REGULAR. A primeira tentativa desta régua
-    # recortava o argumento até o primeiro `)` e acusou
-    # `lifecycle.py:3417`, que passa `fonte=` — o `)` era o do `int(volume)`
-    # aninhado. Uma régua que lê estrutura com busca de texto é a ferramenta
-    # errada, e esta casa já pagou por isso.
     alvos = {"definir_volume_da_captura", "volume_da_captura"}
     raiz = pathlib.Path(__file__).resolve().parents[2] / "src"
     fora: list[str] = []
@@ -415,18 +310,8 @@ def test_nenhum_chamador_de_src_omite_a_fonte() -> None:
     assert not fora, f"chamadores sem `fonte=`: {fora}"
 
 
-# ---------------------------------------------------------------------------
-# 6. A FRASE DA RECUSA — o passo 4
-# ---------------------------------------------------------------------------
-
-
 class _PonteEstrita:
-    """O dublê da ponte da tela, tão estrito quanto a ponte de verdade.
-
-    Um nome que `interface/pacotes/ponte.py` não expõe levanta `AttributeError`
-    em vez de responder `True` — é a diferença entre medir o gesto e medir o
-    próprio dublê, e a cicatriz é de 04/09/2026.
-    """
+    """O dublê da ponte da tela, tão estrito quanto a ponte de verdade."""
 
     def __init__(self, **respostas: Any) -> None:
         self.chamadas: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
@@ -448,16 +333,7 @@ class _PonteEstrita:
 
 
 def test_sem_fonte_nao_diz_que_o_hefesto_esta_parado() -> None:
-    """A frase do `sem_fonte` deixou de mandar procurar nos lugares errados.
-
-    Com a queda fechada, `sem_fonte` passa a ser a resposta NORMAL do controle
-    no rádio sem o canal do microfone de pé. Nesse caso o serviço não está
-    parado e o controle não saiu — e a frase antiga afirmava as duas coisas.
-
-    **MORDE:** devolva o ramo único (`if corpo is None or status != "ok"`) e
-    este caso reprova comparando a frase depositada no cartão com as duas
-    causas falsas.
-    """
+    """A frase do `sem_fonte` deixou de mandar procurar nos lugares errados."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
     from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
@@ -482,43 +358,20 @@ def test_sem_fonte_nao_diz_que_o_hefesto_esta_parado() -> None:
 
 
 def test_a_frase_do_sem_fonte_fala_a_lingua_da_tela() -> None:
-    """Nenhum comando, nenhum nome de nó, e nem a palavra que ela baniu.
-
-    `docs/A-LINGUA-DESTA-CASA`: são proibidos em texto de tela `hidraw`, `MAC`,
-    `uniq`, "linha de comando", "mesa" e qualquer frase que mande a pessoa
-    procurar um botão que não existe. Uma recusa nova é exatamente onde jargão
-    entra sem ninguém ver.
-    """
+    """Nenhum comando, nenhum nome de nó, e nem a palavra que ela baniu."""
     from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
     frase = a02.TEXTO_MIC_SEM_FONTE.lower()
     for banida in ("mesa", "pactl", "pipewire", "hidraw", "uniq", "mic bt",
                    "source", "daemon", "terminal", "comando"):
         assert banida not in frase, f"a frase de tela diz `{banida}`"
-    # O DIAGNÓSTICO POR TRANSPORTE SAIU — 11/09/2026, A3-054, aprovada por ela:
-    # *no rádio é o canal que não está de pé, no cabo é a placa de som* é o
-    # NOSSO mecanismo, e ela não pode agir sobre nenhum dos dois. Esta linha
-    # cobrava `cabo` e `rádio` DIGITADOS e teria reprovado a melhora.
-    #
-    # O QUE SOBRA DE MEDÍVEL É A PROMESSA: o clique não mexeu em nada. Sem ela,
-    # quem lê fica sem saber se o ajuste entrou pela metade.
     assert "nada foi mudado" in frase, (
         "a frase deixou de dizer que nada foi mudado — quem lesse ficaria sem "
         "saber se o ajuste entrou pela metade")
 
 
-# ---------------------------------------------------------------------------
-# 7. NADA SE PERDEU — a confissão continua podendo acontecer
-# ---------------------------------------------------------------------------
-
-
 def test_a_confissao_da_tela_continua_de_pe_para_o_daemon_velho() -> None:
-    """`por_uniq: False` ainda faz a tela confessar.
-
-    Ele deixa de poder disparar contra ESTE daemon e continua sendo a última
-    trava contra um daemon INSTALADO mais velho que a janela — o caso que
-    aconteceu de verdade em 04/09 com o `mic.canal.set`, na máquina dela.
-    """
+    """`por_uniq: False` ainda faz a tela confessar."""
     from hefesto_dualsense4unix.app.ipc_bridge import alvo_honrado
     from hefesto_dualsense4unix.app.widgets.controller_card import (
         TEXTO_MIC_ALVO_NAO_HONRADO,
@@ -530,31 +383,8 @@ def test_a_confissao_da_tela_continua_de_pe_para_o_daemon_velho() -> None:
     assert frase_do_alvo_do_mic(alvo_honrado({"status": "ok"})) == ""
 
 
-# ---------------------------------------------------------------------------
-# 8. O ALVO `marcado` QUE A RÉGUA DO MOCKUP NÃO ENXERGAVA
-# ---------------------------------------------------------------------------
-#
-# **POR QUE ISTO MORA AQUI, e a razão é de endereço.** O buraco foi medido no
-# alvo `p1·card-aberto` — o rádio que abre o cartão do Jogador 1 na aba 02, a
-# aba desta sprint —, e ele REPROVAVA a `--prova-de-mockup` inteira com a
-# cegueira *"o parser e o leitor de tela discordam neste alvo"*. Não é assunto
-# de microfone; é assunto DESTA ABA, e ficar sem régua era deixar a próxima
-# pessoa remedindo o mesmo defeito.
-
-
 def test_o_arquivo_e_a_tela_falam_a_mesma_lingua_no_alvo_marcado() -> None:
-    """`checked` no arquivo é `sim`, igual ao que o navegador devolve.
-
-    O leitor de tela (`hefesto_vivo.LER_CAMPOS`) responde `el.checked ? 'sim'
-    : ''` para o alvo `marcado`, e o parser do arquivo NÃO tinha esse ramo:
-    caía no do TEXTO, que num `<input>` é sempre vazio. As duas leituras têm de
-    casar endereço a endereço — é o que a guarda do DOM virgem cobra a cada
-    aba, e era ela que estava reprovando.
-
-    **MORDE:** tire o ramo `elif alvo == "marcado"` de
-    `regua_do_mockup._Leitor._campo` e este caso reprova com `''` onde a página
-    virgem mostra `'sim'`.
-    """
+    """`checked` no arquivo é `sim`, igual ao que o navegador devolve."""
     from hefesto_dualsense4unix.interface import regua_do_mockup
 
     campos = regua_do_mockup._campos_cravados(
@@ -572,11 +402,7 @@ def test_o_arquivo_e_a_tela_falam_a_mesma_lingua_no_alvo_marcado() -> None:
 
 
 def test_a_pagina_publicada_da_aba_02_nao_cega_a_regua() -> None:
-    """O caso real, no arquivo que o produto renderiza.
-
-    Medido em 06/09/2026, ANTES da cura: `p1·card-aberto` lia `''` no arquivo e
-    `'sim'` na página virgem. Este caso é o mesmo endereço, no mesmo arquivo.
-    """
+    """O caso real, no arquivo que o produto renderiza."""
     import pathlib
 
     from hefesto_dualsense4unix.interface import regua_do_mockup

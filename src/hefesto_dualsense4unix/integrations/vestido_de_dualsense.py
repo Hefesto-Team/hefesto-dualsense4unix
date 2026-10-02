@@ -36,20 +36,13 @@ prove que os dois podem ser um só (a pergunta do §8 da sprint).
 
 from __future__ import annotations
 
-#: O VID/PID que o ``winepulse.drv`` lê NO PROPLIST — não no aparelho.
 VID_SONY = "054c"
 PID_DUALSENSE = "0ce6"
 
 #: As strings USB da Sony, lidas no sysfs de um DualSense no cabo em
-#: 21/09/2026 (``product`` e ``manufacturer``). O PipeWire monta o nome do nó
-#: real a partir delas, e ``fontes_de_captura.MARCADORES_DUALSENSE`` casa por
-#: substring das mesmas.
 NOME_USB_DA_SONY = "DualSense Wireless Controller"
 FABRICANTE_USB = "Sony Interactive Entertainment"
 
-#: O teto do nome no Wine (``MAX_DEVICE_NAME_LEN``, ``pulse.c``). Acima dele o
-#: ``get_device_name`` troca a descrição inteira pelo ``device.product.name`` —
-#: e o jogo perderia «Controle N», que é o que diz qual dos quatro é qual.
 TETO_DO_NOME_NO_WINE = 62
 
 _SUFIXO = f" ({NOME_USB_DA_SONY})"
@@ -73,12 +66,7 @@ def com_o_nome_da_sony(rotulo: str) -> str:
 
 
 def sem_o_nome_da_sony(rotulo: str) -> str:
-    """O rótulo dela, sem o sufixo da Sony — a leitura inversa da forma A.
-
-    Existe porque o número do assento é a ÚLTIMA palavra do rótulo dela, e é
-    dele que ``dualsense_bt_audio.numero_do_rotulo`` depende: com o sufixo no
-    fim, a última palavra seria ``Controller)`` e todo nó perderia o número.
-    """
+    """O rótulo dela, sem o sufixo da Sony — a leitura inversa da forma A."""
     texto = str(rotulo or "").strip()
     if texto.endswith(_SUFIXO):
         return texto[: -len(_SUFIXO)].rstrip()
@@ -86,18 +74,7 @@ def sem_o_nome_da_sony(rotulo: str) -> str:
 
 
 def campos_do_nome() -> tuple[str, ...]:
-    """A metade do NOME, em ``chave=valor`` para o ``sink_properties=``.
-
-    Os três são os da placa de verdade, medidos em 21/09/2026 no nó do cabo, e
-    nenhum leva o endereço do controle: um pedaço do MAC na lista de som da
-    máquina é o defeito que a descrição do microfone já pagou em 09/09.
-
-    O que o Wine faz com eles: o ``device.product.name`` é o nome de RESERVA do
-    ``get_device_name`` quando a descrição passa do teto — e o monitor do nó
-    («Monitor of Alto-falante do Controle 1 (…)», 69 caracteres) passa. Sem ele
-    o nome do monitor chegaria ao jogo com 69, que é o comprimento que derruba
-    os aplicativos que o teto existe para proteger.
-    """
+    """A metade do NOME, em ``chave=valor`` para o ``sink_properties=``."""
     return (
         f"device.vendor.name='{FABRICANTE_USB}'",
         f"device.product.name='{NOME_USB_DA_SONY}'",
@@ -106,12 +83,7 @@ def campos_do_nome() -> tuple[str, ...]:
 
 
 def campos_da_identidade(sysfs_declarado: str) -> tuple[str, ...]:
-    """A metade da IDENTIDADE: barramento, VID, PID e a âncora do ``ContainerId``.
-
-    ``()`` sem âncora: sem ``sysfs.path`` o Wine zera o ``ContainerId`` — e
-    zerado é o valor de toda saída que não é USB, então um nó que diz «sou USB
-    da Sony» sem dizer de qual aparelho é pior que um nó que não diz nada.
-    """
+    """A metade da IDENTIDADE: barramento, VID, PID e a âncora do ``ContainerId``."""
     caminho = str(sysfs_declarado or "").strip()
     if not caminho:
         return ()

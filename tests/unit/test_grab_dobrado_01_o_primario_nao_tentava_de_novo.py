@@ -52,17 +52,11 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 RAIZ = Path(__file__).resolve().parents[2]
 LIFECYCLE = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "lifecycle.py"
 
-NODE = Path("/dev/input/event265")  # o nó da medição de 14/08
+NODE = Path("/dev/input/event265")
 
 
 class _DevOcupado:
-    """Um nó de evdev cujo `grab()` levanta EBUSY enquanto `ocupado` for True.
-
-    É o kernel do defeito em miniatura: `EVIOCGRAB` é exclusivo por CLIENTE, e
-    o segundo cliente leva `-EBUSY`. Solta-se o `ocupado` para representar o
-    outro processo largando o nó (fechar o jogo, o co-op derrubar o jogador, a
-    Steam soltar o controle).
-    """
+    """Um nó de evdev cujo `grab()` levanta EBUSY enquanto `ocupado` for True."""
 
     def __init__(self, ocupado: bool = True) -> None:
         self.ocupado = ocupado
@@ -122,12 +116,7 @@ class _Daemon:
 
 
 def _reader_com_grab_recusado(dev: _DevOcupado) -> EvdevReader:
-    """Um reader do PRIMÁRIO no estado exato do journal de 14/08 15:54:58.
-
-    `device_path` explícito para o `__init__` não varrer /dev/input (o teste
-    roda sem hardware). O `_grab=True` é a INTENÇÃO registrada pelo start da
-    emulação; o `failed` é o que o `_reapply_grab` deixou ao levar EBUSY.
-    """
+    """Um reader do PRIMÁRIO no estado exato do journal de 14/08 15:54:58."""
     reader = EvdevReader(device_path=NODE)
     reader._active_dev = dev
     reader._grab = True
@@ -135,50 +124,31 @@ def _reader_com_grab_recusado(dev: _DevOcupado) -> EvdevReader:
     return reader
 
 
-# -- Mordida 1: a cura ------------------------------------------------------
-
-
 def test_o_grab_do_primario_e_retomado_quando_o_no_libera() -> None:
-    """A cura, e é a mordida principal.
-
-    Arranque o corpo de `reconciliar_grab_do_primario` (ou o `set_grab` de
-    dentro dele) e este teste reprova: o estado fica em `failed` para sempre,
-    que é o produto até 15/08/2026 — input dobrado no jogo para o P1 até o
-    próximo replug ou restart.
-    """
+    """A cura, e é a mordida principal."""
     dev = _DevOcupado(ocupado=True)
     reader = _reader_com_grab_recusado(dev)
     daemon = _Daemon(reader)
 
-    # 1º ciclo: o outro processo ainda segura o nó — nada a fazer além de tentar.
     assert gp.reconciliar_grab_do_primario(daemon) is False
     assert reader.grab_state == "failed"
     assert dev.grabs == 1, "o produto tem de TENTAR de novo, e tentou uma vez"
 
-    # 2º ciclo: continua ocupado. O retry não pode desistir.
     assert gp.reconciliar_grab_do_primario(daemon) is False
     assert dev.grabs == 2
 
-    # O nó liberou (jogo fechado, co-op derrubou o jogador, Steam soltou).
     dev.ocupado = False
     assert gp.reconciliar_grab_do_primario(daemon) is True
     assert reader.grab_state == "held", "o P1 voltou a ser exclusivo do daemon"
     assert "gamepad.grab.recovered" in daemon.store.bumps
 
-    # E depois de retomado a função vira uma comparação de string: sem I/O.
     grabs_antes = dev.grabs
     assert gp.reconciliar_grab_do_primario(daemon) is False
     assert dev.grabs == grabs_antes, "reconciliar com o grab de pé não pode tocar no nó"
 
 
 def test_cada_recusa_conta_no_store_para_o_doctor_enxergar() -> None:
-    """A recusa que PERSISTE não pode ficar muda depois da primeira linha.
-
-    Antes desta entrega o journal tinha UMA linha `evdev_grab_failed`, no
-    instante da recusa, e silêncio depois: meia hora de input dobrado ficava
-    indistinguível de meio segundo. Arranque o `store.bump` do caminho de falha
-    e este teste reprova.
-    """
+    """A recusa que PERSISTE não pode ficar muda depois da primeira linha."""
     dev = _DevOcupado(ocupado=True)
     daemon = _Daemon(_reader_com_grab_recusado(dev))
     for _ in range(3):
@@ -186,16 +156,8 @@ def test_cada_recusa_conta_no_store_para_o_doctor_enxergar() -> None:
     assert daemon.store.bumps.count("gamepad.grab.retry_failed") == 3
 
 
-# -- Mordida 2: os gates ("duplicado > zero controles") ---------------------
-
-
 def test_nao_graba_com_a_emulacao_desligada() -> None:
-    """Sem vpad para devolver o controle ao jogo, grabar é ZERO controles.
-
-    Arranque o gate da emulação e este teste reprova — o retry passaria a
-    esconder o físico dela de todo jogo com a emulação desligada, que é o
-    estrago relatado ao vivo na GUERRA-01.
-    """
+    """Sem vpad para devolver o controle ao jogo, grabar é ZERO controles."""
     dev = _DevOcupado(ocupado=False)
     daemon = _Daemon(_reader_com_grab_recusado(dev), emulacao=False)
     assert gp.reconciliar_grab_do_primario(daemon) is False
@@ -211,11 +173,7 @@ def test_nao_graba_em_modo_nativo() -> None:
 
 
 def test_nao_graba_com_o_vpad_morto() -> None:
-    """VIDA do vpad, não existência (lição 6/#17): `_started=False` não vale.
-
-    Um uhid derrubado por `UHID_STOP` deixa o objeto Python vivo. Grabar por
-    causa dele esconderia o físico sem nenhum virtual de pé.
-    """
+    """VIDA do vpad, não existência (lição 6/#17): `_started=False` não vale."""
 
     class _VpadMorto:
         _started = False
@@ -226,17 +184,8 @@ def test_nao_graba_com_o_vpad_morto() -> None:
     assert dev.grabs == 0
 
 
-# -- Mordida 3: o reader tem de ACEITAR a nova tentativa --------------------
-
-
 def test_set_grab_nao_engole_a_retomada_de_um_estado_failed() -> None:
-    """A cura depende de `set_grab(True)` REALMENTE tentar quando está `failed`.
-
-    O `BUG-GRAB-DOUBLE-EBUSY-01` pôs um atalho em `set_grab`: com o estado já
-    `held`, não re-graba (re-grabar o próprio fd levanta EBUSY espúrio). Se
-    algum dia esse atalho crescer para `failed`, a reconciliação vira um no-op
-    silencioso e o defeito volta inteiro — sem nenhum outro teste notar.
-    """
+    """A cura depende de `set_grab(True)` REALMENTE tentar quando está `failed`."""
     dev = _DevOcupado(ocupado=False)
     reader = _reader_com_grab_recusado(dev)
     assert reader.set_grab(True) is True
@@ -245,26 +194,13 @@ def test_set_grab_nao_engole_a_retomada_de_um_estado_failed() -> None:
 
 
 def test_grab_do_primario_dobrado_e_a_conta_das_duas_metades() -> None:
-    """`failed` sozinho não é o estrago: `failed` COM vpad vivo é.
-
-    A aba Início já fazia esse `and` na mão. A detecção tem um dono agora, e
-    arrancar qualquer uma das metades reprova aqui.
-    """
+    """`failed` sozinho não é o estrago: `failed` COM vpad vivo é."""
     dev = _DevOcupado(ocupado=True)
     reader = _reader_com_grab_recusado(dev)
     assert gp.grab_do_primario_dobrado(_Daemon(reader)) is True
-    # Sem emulação não há virtual concorrendo com o físico: não está dobrado.
     assert gp.grab_do_primario_dobrado(_Daemon(reader, emulacao=False)) is False
-    # Com o grab de pé, idem.
     reader._grab_state = "held"
     assert gp.grab_do_primario_dobrado(_Daemon(reader)) is False
-
-
-# -- Mordida 4: a cura tem de estar LIGADA no laço --------------------------
-#
-# "A casa sabe e o produto não faz" é o defeito mais caro daqui: a cura escrita
-# e nunca chamada. Sem este teste, apagar a linha do poll loop devolveria o
-# defeito inteiro com a suíte toda verde.
 
 
 def _poll_loop() -> ast.AsyncFunctionDef:
@@ -291,12 +227,7 @@ def test_o_poll_loop_reconcilia_o_grab_do_primario() -> None:
 
 
 def test_a_reconciliacao_do_grab_e_throttada_como_a_do_coop() -> None:
-    """Rodar todo tick custaria um `ioctl` a 250 Hz por nada.
-
-    O gate é o MESMO padrão dos outros seis blocos lentos do laço
-    (`... >= *_next_at`), e o intervalo tem nome e razão escrita em
-    `GRAB_RECONCILE_SEC`.
-    """
+    """Rodar todo tick custaria um `ioctl` a 250 Hz por nada."""
     from hefesto_dualsense4unix.daemon import lifecycle
 
     assert lifecycle.GRAB_RECONCILE_SEC > 0

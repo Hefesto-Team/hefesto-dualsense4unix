@@ -1,33 +1,6 @@
-"""paleta_da_casa.py — os tokens visuais que os artefatos HTML desta casa dividem.
-
-Este módulo nasceu em 23/08/2026 para responder a um pedido dela: *"e sincronizar
-ele com o specs.html também?"*, sobre o painel do plano. Sincronizar dois HTML
-gerados por scripts diferentes só é verdade se a paleta tiver **um dono**; duas
-cópias do mesmo hexadecimal divergem no dia em que alguém corrige uma delas.
-
-Quem lê daqui: ``scripts/gerar-mapa.py``, que escreve ``docs/specs.html`` (o
-mapa de canais), e os geradores locais das páginas que não se versionam.
-
-A procedência que elas dividem — commit e hora — tem outro dono, o irmão
-``scripts/carimbo_da_casa.py``, e pelo mesmo motivo escrito aqui.
-
-**A REGRA QUE NÃO SE NEGOCIA: nada de fonte web.** O texto abaixo é o do
-``gerar-mapa.py`` que a originou, e vale igual aqui: *"uma fonte que não carrega
-transforma um instrumento numa página quebrada, e um instrumento que só funciona
-com rede não serve para depurar rádio."* Os dois arquivos abrem com duplo
-clique, sem servidor, sem venv e sem internet.
-
-As cores são a paleta Drácula, a mesma que o produto usa no ``theme.css`` — o
-artefato tem de parecer parte do Hefesto, não um site sobre ele.
-"""
+"""paleta_da_casa.py — os tokens visuais que os artefatos HTML desta casa dividem."""
 from __future__ import annotations
 
-#: Os tokens, como bloco CSS pronto para entrar num ``<style>``.
-#:
-#: **Este texto é byte a byte o que estava em ``gerar-mapa.py`` até 23/08/2026.**
-#: O ``--check`` daquele script compara CONTEÚDO da página gerada, então mudar
-#: um único caractere aqui o deixa vermelho — que é exatamente o que se quer:
-#: a paleta não muda por acidente.
 TOKENS = """
 :root {
   /* Paleta Drácula — a mesma que o produto usa em 82 lugares no código.

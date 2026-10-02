@@ -35,8 +35,6 @@ import pytest
 
 DOCTOR = Path(__file__).resolve().parents[2] / "scripts" / "doctor.sh"
 
-#: `pactl list sources` reduzido ao que as duas funções leem, com os nomes e a
-#: disponibilidade EXATOS medidos na máquina dela em 30/07.
 LISTA_COMPLETA = """\
 Source #8240
 	State: SUSPENDED
@@ -90,8 +88,7 @@ class TestPortaIndisponivel:
         )
 
     def test_dualsense_com_availability_unknown_e_usavel(self) -> None:
-        """`unknown` NÃO é `not available`. Confundir os dois descarta o único
-        microfone de verdade da máquina dela e deixa só monitores na disputa."""
+        """`unknown` NÃO é `not available`. Confundir os dois descarta o único"""
         r = _fonte("_source_porta_ativa_indisponivel", DS_MIC, entrada=LISTA_COMPLETA)
         assert r.returncode != 0, (
             "porta com disponibilidade DESCONHECIDA tem de contar como usável — "
@@ -100,11 +97,7 @@ class TestPortaIndisponivel:
 
 
 class TestMelhorFonte:
-    """O seletor puro, alimentado com a lista já filtrada.
-
-    Estes travam o contrato de quem escolhe; o filtro em si é do chamador
-    (`fix_default_source_monitor`), e o teste dele é o de fiação abaixo.
-    """
+    """O seletor puro, alimentado com a lista já filtrada."""
 
     CURTA_SO_DS = f"8240\t{DS_MIC}\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED\n"
 
@@ -125,30 +118,10 @@ class TestMelhorFonte:
 
 
 class TestFiacao:
-    """O portão que pega a regressão real: a função existir e não ser chamada.
+    """O portão que pega a regressão real: a função existir e não ser chamada."""
 
-    Foi exatamente esse o estado encontrado em 30/07 — o filtro escrito,
-    documentado, testado por dentro, e desligado do caminho que decide.
-    """
-
-    #: A CHAMADA, não a menção. A primeira versão deste teste procurava o nome
-    #: solto e passava com a chamada arrancada, porque o nome também aparece no
-    #: comentário que explica o filtro logo acima — teste tautológico, o defeito
-    #: que esta casa nomeia. O que prova a fiação é a invocação.
     INVOCACAO = '| _source_porta_ativa_indisponivel "'
-    #: Idem para o seletor: comparar posição de MENÇÃO com posição de menção dá
-    #: a resposta errada, porque o comentário que explica o filtro cita os dois
-    #: nomes antes de qualquer código. Chamada contra chamada.
     INVOCACAO_ESCOLHA = '| _melhor_source_de_captura "'
-    #: NOTA DATADA 06/08/2026 (RECEITA-ERRADA-01). O filtro deixou de ser
-    #: inline na cura e virou `_sources_com_porta_usavel`, para que o CHECK
-    #: ofereça o MESMO alvo que a cura elegeria. Enquanto cada um tinha o seu
-    #: critério, o check mandava `pactl set-default-source <onboard>` (portas
-    #: `not available`) e a cura se recusava a eleger a mesma onboard: duas
-    #: verdades no mesmo programa, e a que aparecia na tela dela era a errada.
-    #: O contrato não afrouxou — ele agora cobre os DOIS lados, e a cadeia
-    #: `_sources_com_porta_usavel -> _source_porta_ativa_indisponivel` continua
-    #: verificada por chamada, nunca por menção.
     INVOCACAO_FILTRO = '| _sources_com_porta_usavel "'
 
     @staticmethod
@@ -191,14 +164,7 @@ class TestFiacao:
         )
 
     def test_o_check_oferece_o_alvo_que_a_cura_elegeria(self) -> None:
-        """RECEITA-ERRADA-01 — a metade nova do portão.
-
-        MEDIDO em 29 e 30/07: o check reprovava e mandava eleger a onboard,
-        cujas três portas de captura estão `not available`. O `pactl` aceita, o
-        WirePlumber não consegue honrar e REELEGE o monitor — a receita levava
-        ao lugar errado e o defeito voltava sozinho, agora com a chancela do
-        doctor. O check tem de passar pelo mesmo filtro da cura.
-        """
+        """RECEITA-ERRADA-01 — a metade nova do portão."""
         corpo = self._corpo("check_default_source_monitor")
         assert self.INVOCACAO_FILTRO in corpo, (
             "o check voltou a calcular o alvo SEM o filtro de porta usável — "

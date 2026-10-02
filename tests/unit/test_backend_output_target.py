@@ -20,8 +20,6 @@ from types import SimpleNamespace
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
-#: Keys MAC-formadas (faixa forjada aa:bb:cc — teste-guarda de anonimato) que
-#: normalizam para uniq 12-hex; keys "a"/"b" dos testes legados viram uniq None.
 KEY_1 = "AA:BB:CC:00:00:01"
 KEY_2 = "AA:BB:CC:00:00:02"
 UNIQ_1 = "aabbcc000001"
@@ -86,7 +84,6 @@ class TestSetGetTarget:
     def test_indice_mapeia_para_key_e_volta(self) -> None:
         inst, _h1, _h2 = _with_two_handles()
         assert inst.set_output_target(1) == 1
-        # Guardou a KEY, não o índice.
         assert inst._output_target_key == "b"
         assert inst.get_output_target_index() == 1
 
@@ -106,16 +103,15 @@ class TestSetGetTarget:
     def test_alvo_que_some_volta_a_none(self) -> None:
         """Se o controle alvo desconecta, o índice efetivo cai para None."""
         inst, _h1, _h2 = _with_two_handles()
-        inst.set_output_target(1)  # alvo = "b"
-        # "b" desconecta (hotplug-out simplificado).
+        inst.set_output_target(1)
         del inst._handles["b"]
         assert inst.get_output_target_index() is None
 
     def test_indice_acompanha_reordenacao_por_key(self) -> None:
         """O alvo é a KEY: se o primário cai, o índice da key sobrevivente muda."""
         inst, _h1, _h2 = _with_two_handles()
-        inst.set_output_target(1)  # alvo = "b" (índice 1)
-        del inst._handles["a"]  # "b" agora é o único → índice 0
+        inst.set_output_target(1)
+        del inst._handles["a"]
         assert inst.get_output_target_index() == 0
 
 
@@ -128,36 +124,16 @@ class TestForEachRespeitaAlvo:
 
     def test_so_o_alvo_recebe(self) -> None:
         inst, h1, h2 = _with_two_handles()
-        inst.set_output_target(1)  # alvo = h2
+        inst.set_output_target(1)
         inst.set_led((9, 9, 9))
         assert h1.light.colors == []
         assert h2.light.colors == [(9, 9, 9)]
 
     def test_alvo_sumido_nao_escreve_em_ninguem(self) -> None:
-        """Alvo fora da mesa é NO-OP — o broadcast daqui caducou em 23/08/2026.
-
-        **Nota datada (P4, 23/08/2026).** Até aqui este teste se chamava
-        `test_alvo_sumido_cai_em_broadcast` e exigia o contrário: o
-        remanescente TINHA de receber. Era decisão declarada da
-        FEAT-DSX-CONTROLLER-SELECTOR-01, com justificativa de robustez
-        (*"1 handle morto não derruba os outros"*), e por isso vira nota em
-        vez de sumir: quem a escreveu não errou de leve.
-
-        O que a derrubou foi a medição do P4 sobre co-op — que nesta casa é
-        sempre ligado. A justificativa era de ROBUSTEZ; o efeito era de
-        ENDEREÇAMENTO. Alvo = Controle 2, Controle 2 desliga, ela clica
-        "Testar": os motores que sacodem são os das outras três pessoas na
-        partida, e o reassert de 5 Hz insiste até alguém clicar "Parar".
-        Ninguém pediu que o comando fosse para os outros.
-
-        A casa já tinha decidido o oposto em dois lugares para o MESMO caso
-        (`subsystems/rumble.py`, *"Dono ausente da mesa é NO-OP, não
-        broadcast"*, e `apply_output_for`, que devolve `"registrado"`) — este
-        sítio era a exceção sobrevivente. Ver `_resolver_escopo_locked`.
-        """
+        """Alvo fora da mesa é NO-OP — o broadcast daqui caducou em 23/08/2026."""
         inst, h1, _h2 = _with_two_handles()
-        inst.set_output_target(1)  # alvo = "b"
-        del inst._handles["b"]  # alvo sumiu
+        inst.set_output_target(1)
+        del inst._handles["b"]
         inst.set_led((4, 5, 6))
         assert h1.light.colors == [], (
             "o gesto mirado no controle que saiu chegou ao remanescente — em "
@@ -173,36 +149,30 @@ class TestDescribeIndex:
 
 
 class TestRegistroDoDesejadoPorAlvo:
-    """PERFIL-01 (4P-01): o registro do desejado segue o ESCOPO do alvo.
-
-    Era o bug provado ao vivo: os setters gravavam no `_desired` global
-    INCONDICIONALMENTE mesmo com alvo selecionado — replugar o Controle 1 o
-    pintava com a cor pedida "só no Controle 2".
-    """
+    """PERFIL-01 (4P-01): o registro do desejado segue o ESCOPO do alvo."""
 
     def test_escrita_mirada_registra_no_override_nao_no_default(self) -> None:
         inst, _h1, h2 = _with_two_macs()
-        inst.set_led((10, 10, 10))  # broadcast: default
-        inst.set_output_target(1)  # mira o Controle 2
+        inst.set_led((10, 10, 10))
+        inst.set_output_target(1)
         inst.set_led((0, 255, 0))
 
         assert h2.light.colors[-1] == (0, 255, 0)
-        assert inst._desired_default.led == (10, 10, 10)  # default intacto
+        assert inst._desired_default.led == (10, 10, 10)
         assert inst._desired_by_uniq[UNIQ_2].led == (0, 255, 0)
-        assert UNIQ_1 not in inst._desired_by_uniq  # o outro não ganha entrada
+        assert UNIQ_1 not in inst._desired_by_uniq
 
     def test_broadcast_todos_limpa_o_campo_dos_overrides(self) -> None:
         """"Mudei todos para azul, repluguei e um voltou verde" — proibido."""
         inst, h1, h2 = _with_two_macs()
         inst.set_output_target(1)
-        inst.set_led((0, 255, 0))  # override verde no Controle 2
+        inst.set_led((0, 255, 0))
         inst.set_output_target(None)
-        inst.set_led((0, 0, 255))  # "Todos" azul
+        inst.set_led((0, 0, 255))
 
         assert h1.light.colors[-1] == (0, 0, 255)
         assert h2.light.colors[-1] == (0, 0, 255)
         assert inst._desired_default.led == (0, 0, 255)
-        # O campo escrito sumiu do override (entrada vazia é podada do mapa).
         assert UNIQ_2 not in inst._desired_by_uniq
 
     def test_broadcast_limpa_so_o_campo_escrito(self) -> None:
@@ -212,22 +182,22 @@ class TestRegistroDoDesejadoPorAlvo:
         inst.set_led((0, 255, 0))
         inst.set_mic_led(True)
         inst.set_output_target(None)
-        inst.set_led((0, 0, 255))  # broadcast SÓ de led
+        inst.set_led((0, 0, 255))
 
         override = inst._desired_by_uniq[UNIQ_2]
-        assert override.led is None  # campo escrito: limpo
-        assert override.mic_led is True  # campo alheio: preservado
+        assert override.led is None
+        assert override.mic_led is True
 
     def test_alvo_sem_mac_nao_entra_no_mapa_mas_escreve_no_hardware(self) -> None:
         """Key de fallback por path não tem identidade estável (regra do sprint)."""
-        inst, h1, h2 = _with_two_handles()  # keys "a"/"b" → uniq None
+        inst, h1, h2 = _with_two_handles()
         inst.set_output_target(1)
         inst.set_led((1, 2, 3))
 
-        assert h2.light.colors == [(1, 2, 3)]  # a escrita mirada aconteceu
+        assert h2.light.colors == [(1, 2, 3)]
         assert h1.light.colors == []
-        assert inst._desired_by_uniq == {}  # nada registrado por-uniq
-        assert inst._desired_default.led is None  # e o global não foi contaminado
+        assert inst._desired_by_uniq == {}
+        assert inst._desired_default.led is None
 
     def test_registro_offline_vale_para_o_hotplug(self) -> None:
         """Perfil ativado sem controle nenhum ainda registra o default."""
@@ -241,12 +211,12 @@ class TestSetRumbleFor:
 
     def test_mira_o_controle_certo_sem_tocar_o_seletor(self) -> None:
         inst, h1, h2 = _with_two_macs()
-        inst.set_output_target(0)  # usuária mirando o Controle 1 na GUI
+        inst.set_output_target(0)
 
         assert inst.set_rumble_for(UNIQ_2, 10, 20) is True
         assert h2.motors == [("left", 20), ("right", 10)]
         assert h1.motors == []
-        assert inst.get_output_target_index() == 0  # seleção intocada
+        assert inst.get_output_target_index() == 0
 
     def test_mac_desconhecido_devolve_false(self) -> None:
         inst, h1, h2 = _with_two_macs()
@@ -257,4 +227,4 @@ class TestSetRumbleFor:
     def test_rumble_nao_entra_no_desejado(self) -> None:
         inst, _h1, _h2 = _with_two_macs()
         inst.set_rumble_for(UNIQ_2, 10, 20)
-        assert inst._desired_by_uniq == {}  # transitório de propósito
+        assert inst._desired_by_uniq == {}

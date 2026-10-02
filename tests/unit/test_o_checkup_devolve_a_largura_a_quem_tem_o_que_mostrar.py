@@ -1,63 +1,4 @@
-"""O exame fica com 46% da largura, e a Sugestão de Conexão nunca some.
-
-**A METADE «SEM ORDEM, O EXAME LEVA TUDO» CAIU EM 26/09/2026**, por pergunta
-dela olhando a aba sem controle: *«pq sumiu a parte da caixinha no canto
-superior direito?»* (`D-2609-A-SUGESTAO-FICA-LARGA-E-COM-TITULO`,
-A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01). A caixa tem título, fica sempre, e
-quando não há o que mudar diz «Nada a mudar agora.»; e os dois blocos têm a
-mesma altura, com a Sugestão encostada no exame (*«equipa a altura dos dois
-blocos e aumenta a largura do bloco da direita até chegar ao lado do bloco da
-esquerda»*). O exame fica com 46% da largura (era a largura do texto, até 62%,
-e o WebKitGTK da janela a calculava curta demais; foi a 40% e, na foto seguinte
-dela, a 46%, com as frases encurtadas) — o achado mais longo cabe numa linha de
-1366 px para cima. A metade que ficou de 19/09 é o teto
-das frases do exame (`TETO_DA_FRASE`), e a medição no navegador, que agora mede
-a caixa que FICA. O registro de 19/09 segue abaixo, porque é decisão medida.
-
-CHECKUP-VAO-01 — decisão dela, 19/09/2026:
-
-    *"falta deixarmos a área sempre disponível pra ocupar o espaço vazio do
-    checkup mesmo sem mostrar nada"*  ·  *"aumenta a largura aqui e resume mais
-    pra ter uma linha só"*
-
-**MEDIDO NO NAVEGADOR**, com o achado mais longo do produto injetado nas cinco
-linhas, contando quantas ocupam DUAS linhas:
-
-    =========  ===========  =========  ====================  ==============
-    janela     ordem?       coluna     frase de 111 (antes)  de 90 (depois)
-    =========  ===========  =========  ====================  ==============
-    1600 px    com          927 px     0 de 5                0 de 5
-    1200 px    com          676 px     **5 de 5**            0 de 5
-     940 px    com          512 px     5 de 5                5 de 5
-    1200 px    **sem**     1100 px     —                     0 de 5
-     940 px    **sem**      840 px     —                     0 de 5
-     820 px    **sem**      720 px     —                     0 de 5
-    =========  ===========  =========  ====================  ==============
-
-O resumo ganhou a faixa dos 1200; o alargamento ganhou a dos 940 **quando a
-coluna da direita está vazia**, que é o caso que ela fotografou. Com ordem de
-serviço a 940 px ainda quebra, e isso está declarado: 90 caracteres não cabem em
-512 px a 12 px de fonte, e encurtar mais custaria sentido.
-
-ESTA RÉGUA NASCEU DIGITANDO O CSS, E FICOU VERDE SOBRE O DEFEITO VIVO
----------------------------------------------------------------------
-
-As três primeiras versões conferiam se o TEXTO da regra estava no arquivo. Elas
-passaram, a cura foi instalada, e ela fotografou a mesma tela vazia horas
-depois: *"tá vazio aqui ainda"*.
-
-A regra estava lá e não valia. `:empty` não casa um elemento que tem filho, e a
-coluna sem card recebe `monta.NADA_A_DIZER` — `<i class="nada"></i>`, que vai
-ali de propósito porque o `escrever()` do piloto troca `''` por travessão. Na
-bancada dela as ordens não têm DESTINO (`dongle_atras_de_hub`,
-`teclado_so_no_hub`), então o caminho do `NADA_A_DIZER` é o NORMAL, não a
-exceção — e era justamente o que o seletor não pegava.
-
-É a armadilha que esta casa já pagou onze vezes num dia: *a régua digita o que
-devia LER*. Os testes de texto ficam (publicar é outro erro possível), mas quem
-MANDA agora é a medição no Chrome, abaixo — ela reprova com a regra presente e
-inválida, que é o caso que aconteceu.
-"""
+"""O exame fica com 46% da largura, e a Sugestão de Conexão nunca some."""
 
 from __future__ import annotations
 
@@ -71,33 +12,21 @@ GERADOR = RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py"
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
 EXAME = RAIZ / "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py"
 
-#: O teto que a medição sustenta. As frases foram encurtadas de novo em
-#: 26/09/2026 (*«talvez encurtar as frases da primeira seção ajude a limpar
-#: mais o nosso layout»*): a maior do fonte tem 67 caracteres.
 #: (noqa-acento: citação literal dela)
 TETO_DA_FRASE = 70
 
-#: As regras do desenho de 26/09: o exame com 46% e a Sugestão com o resto,
-#: encostada nele; e a frase de quando não há o que mudar. Era `fit-content(62%)`
-#: até a foto dela da janela maximizada: o WebKitGTK calculava a coluna curta demais
-#: e três das cinco linhas quebravam (o comentário mora no gerador).
 REGRAS = (
     ".duas-colunas:has(.col-exame){grid-template-columns:minmax(0,46%) minmax(0,1fr);",
     ".lado-d .sugestao .col-ordem > .ordem{align-items:stretch}",
     ".sugestao .nada-a-mudar{",
 )
 
-#: As que ESCONDIAM a coluna (19/09) e saíram em 26/09: nenhuma delas pode
-#: voltar à página, porque a caixa não some mais.
 AS_QUE_ESCONDIAM = (
     ".duas-colunas:has(.col-exame){grid-template-columns:1.7fr 1fr}",
     ".duas-colunas:has(.col-exame):has(.col-ordem:empty)",
     ".duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child)",
 )
 
-#: O QUE O PRODUTO PÕE NA COLUNA DA DIREITA, nos três estados que ela tem.
-#: Lido do dono (`monta.NADA_A_DIZER`) e não digitado: se o dono trocar a tag,
-#: a régua acompanha em vez de medir um mundo que não existe mais.
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 
@@ -142,11 +71,7 @@ def test_ha_frases_para_medir() -> None:
 
 
 def test_nenhuma_frase_do_exame_passa_do_teto() -> None:
-    """*"resume mais pra ter uma linha só"* — a ordem dela, virada número.
-
-    A MORDIDA: devolver qualquer uma das seis frases encurtadas em 19/09 faz
-    esta régua reprovar. A pior tinha 129 caracteres.
-    """
+    """*"resume mais pra ter uma linha só"* — a ordem dela, virada número."""
     longas = [f for f in frases_do_exame() if len(f) > TETO_DA_FRASE]
     assert not longas, "\n".join(
         f"  {len(f)} caracteres: {f}" for f in longas
@@ -155,10 +80,6 @@ def test_nenhuma_frase_do_exame_passa_do_teto() -> None:
         "linha do achado, que é o que a CHECKUP-VAO-01 veio fechar"
     )
 
-
-# ──────────────────────────────────────────────────────────────────────────
-# A MEDIÇÃO QUE MANDA — a largura LIDA da tela, não a regra digitada
-# ──────────────────────────────────────────────────────────────────────────
 
 def _bootstrap() -> str:
     """O `BOOTSTRAP` do piloto, lido do fonte SEM importar `gi`."""
@@ -170,7 +91,7 @@ def _bootstrap() -> str:
 
 
 @pytest.fixture(scope="module")
-def tela():  # o tipo é o `Page` do playwright, importado lá dentro
+def tela():
     """A `08-conexoes` publicada, num Chrome, com o piloto e a folha da casa."""
     if not CHROME.exists():  # pragma: no cover — CI sem o Chrome do sistema
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
@@ -196,11 +117,6 @@ def tela():  # o tipo é o `Page` do playwright, importado lá dentro
 
 def _larguras(pg, ordem: str, achados: int = 8) -> dict:
     """Pinta um tique com essa coluna da direita e mede os dois blocos."""
-    # O ESTADO VEM DO DONO (`exame_da_mesa.ESTADO_ATENCAO`) e não digitado. Ele
-    # é chave de MÁQUINA, ASCII por contrato — digitá-lo aqui poria a régua a
-    # afirmar uma palavra do produto por conta própria, e é a classe de defeito
-    # que esta casa mede há um mês: *quando um valor tem dono, a régua pergunta
-    # ao dono*. De quebra, o portão de acentuação para de ver prosa sem acento.
     from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_ATENCAO
 
     pg.evaluate("p => window.__hef.pintar(p)", {"mesa": {
@@ -254,17 +170,7 @@ def test_sem_ajuste_a_caixa_fica_e_diz_que_nao_ha_o_que_mudar(tela) -> None:
 
 
 def test_o_nada_a_dizer_do_piloto_tambem_nao_esconde_a_caixa(tela) -> None:
-    """O filho invisível de 19/09 (`monta.NADA_A_DIZER`) não esconde mais nada.
-
-    MORDIDA: devolva à página publicada a regra
-    `.duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child) > .lado-d{display:none}`
-    — esta reprova com a caixa em zero px.
-    """
-    # O APELIDO EM `sys.modules`, e não um `sys.path.insert`: `monta.py` faz
-    # `import onde` CRU (nasceu como script de gerador, onde `interface/` é o
-    # `sys.path[0]`). É o mesmo truque de `a08_conexoes._monta`, e a razão de
-    # não pôr a pasta no caminho de busca está escrita lá — vinte nomes curtos
-    # (`casamento`, `mapa`, `regua`, `ver`…) virariam módulos de topo.
+    """O filho invisível de 19/09 (`monta.NADA_A_DIZER`) não esconde mais nada."""
     import sys
 
     from hefesto_dualsense4unix.interface import onde as _onde

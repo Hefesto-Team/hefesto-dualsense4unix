@@ -1,15 +1,4 @@
-"""A espera por leitura passa do descritor 1023, o teto do `select`.
-
-No CI de 27/09/2026 a suíte roda num processo só, os pipes das réguas passam do
-descritor 1023, e o `select.select` levanta `ValueError`: o fio da vibração do
-pad saía calado no primeiro instante, e o leitor do hidraw lia o erro como «o
-nó morreu». Os seis lugares do produto que esperavam pelo `select` esperam por
-`utils.espera.prontos_para_ler`, sobre `poll`.
-
-Mordidas: devolva o `select.select` ao corpo de `prontos_para_ler` e as duas
-réguas do descritor alto reprovam; devolva um `select.select(` a qualquer
-módulo do produto e a régua do código reprova.
-"""
+"""A espera por leitura passa do descritor 1023, o teto do `select`."""
 from __future__ import annotations
 
 import contextlib
@@ -33,7 +22,6 @@ from tests.unit.test_vpad_ff_passthrough import _rumble_effect
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Acima do `FD_SETSIZE` (1024), com folga.
 _ALTO = 1500
 
 
@@ -63,7 +51,7 @@ def test_a_espera_acorda_com_o_descritor_acima_de_1023() -> None:
     alto = _para_o_alto(leitura)
     try:
         with pytest.raises(ValueError):
-            select.select([alto], [], [], 0)  # a premissa: o select não alcança
+            select.select([alto], [], [], 0)
         assert prontos_para_ler([alto], 0) == []
         os.write(escrita, b"x")
         assert prontos_para_ler([alto], 1.0) == [alto]

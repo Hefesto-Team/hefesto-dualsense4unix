@@ -1,25 +1,4 @@
-"""Z4/T13+T14 — o modo que falta, e o teclado que ganha campo de perfil.
-
-Frente **Z4** da ONDA 0 (24/08/2026).
-
-**T13** — medido na sprint (§2.2): 22 dos 34 perfis dela não têm `mode`, e
-`sackboy.json` é o caso que ela nomeou. A PERGUNTA que falta responder —
-"o que a TELA diz ao ativar um perfil sem `mode`" — é **[ESTRUTURAL]**: texto
-novo de interface, e a regra da casa (`COMO-EXECUTAR-UMA-SPRINT.md` §8) é
-"escolha em silêncio vira fato consumado que ela descobre na tela". Este
-módulo não escreve essa frase — só prova, campo a campo, que a MEDIÇÃO
-continua batendo (o número muda se o corpo de prova mudar, e este teste
-acusa antes de alguém confiar num "22" que envelheceu).
-
-**T14** — o campo `Profile.teclado_emulado` e a função pura
-`resolver_teclado_emulado` (`profiles/schema.py`). O contrato: perfil SEM
-opinião (`None`) deixa a flag global mandar; perfil COM opinião vence —
-inclusive quando a opinião é "desligado" e a flag está ligada (a mesma
-proteção que valia para o `mic.muted` até ele sair do perfil em 29/09/2026,
-O-MUDO-E-DO-CONTROLE-01: perfil sem opinião nunca apaga o que já valia).
-**Nenhum widget foi ligado** — é a régua e o campo, não o fio (ver a nota
-datada em `Profile.teclado_emulado`).
-"""
+"""Z4/T13+T14 — o modo que falta, e o teclado que ganha campo de perfil."""
 
 from __future__ import annotations
 
@@ -47,7 +26,7 @@ class TestOsVinteEDoisSemModo:
         sem_mode = []
         for f in sorted(FIXTURES_REAIS.glob("*.json")):
             if f.name.startswith("z_fabricado_"):
-                continue  # sintéticos da T1, fora da amostra dela
+                continue
             dados = json.loads(f.read_text())
             if "mode" not in dados:
                 sem_mode.append(f.name)
@@ -59,11 +38,7 @@ class TestOsVinteEDoisSemModo:
         )
 
     def test_perfil_sem_mode_nao_tem_opiniao_sobre_o_modo(self) -> None:
-        """Perfil sem a seção `mode` não opina sobre modo nenhum.
-
-        É a consequência que importa: ativar um perfil assim libera só o modo
-        que outro PERFIL tinha ligado, e não desfaz gesto manual dela.
-        """
+        """Perfil sem a seção `mode` não opina sobre modo nenhum."""
         dados = json.loads((FIXTURES_REAIS / "sackboy.json").read_text())
         perfil = Profile.model_validate(dados)
         assert perfil.mode is None
@@ -103,8 +78,7 @@ class TestAPrecedenciaDoTecladoEmulado:
         assert resolver_teclado_emulado(None, flag_global=False) is False
 
     def test_o_campo_e_opcional_e_perfis_existentes_continuam_validos(self) -> None:
-        """Aditivo — nenhum dos 46 perfis do corpo de prova (T1) tem
-        `teclado_emulado`, e todos continuam validando."""
+        """Aditivo — nenhum dos 46 perfis do corpo de prova (T1) tem"""
         for f in sorted(FIXTURES_REAIS.glob("*.json")):
             dados = json.loads(f.read_text())
             assert "teclado_emulado" not in dados

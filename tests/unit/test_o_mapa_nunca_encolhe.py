@@ -1,30 +1,4 @@
-"""O mapa de canais NUNCA encolhe, e o piso é dado, não palpite.
-
-Em 05/09/2026 um script desta casa apagou 104 linhas do mapa num comando só.
-Era `scripts/migrar-mapa-v2.py`: ele rodou uma vez, em 11/08, e rodá-lo de novo
-lia o retrato congelado daquele dia (204 linhas) e escrevia **264 linhas por
-cima das 308** — sem backup, porque o guardado já existia, e imprimindo
-`prova: nenhum campo do v1 se perdeu`, que comparava o v2 recém-montado com o v1
-que o gerou e nunca olhava o destino.
-
-O que se perderia: o trabalho de cerca de trezentos agentes que leram os
-repositórios externos, mais a validação ao vivo na bancada dela.
-
-    "Não podemos perder ou regenerar errado isso e desconsiderar o excelente
-     trabalho deles."  — ela, 05/09/2026
-
-**A primeira cura foi uma trava no script; ela foi trocada pela cura dela.** A
-razão, nas palavras dela no mesmo dia: *"a ideia é termos menos arquivos, se
-algo vira a v2 deveria ser o mesmo arquivo sobrescrevendo o anterior"*. Um
-migrador de uma vez só que já rodou é arma descarregada: não se tranca, apaga-se.
-O script e os dois retratos congelados saíram do disco; o git os guarda em
-`6ca1417d`, e a medição que justificou o formato v2 está em
-`docs/data/LEIA-PRIMEIRO.md`.
-
-Esta régua é o que SOBREVIVE aos três: ela não sabe o nome de nenhum script.
-Pergunta só ao mapa se ele continua sendo o que era, e reprova se alguém —
-script novo, edição em massa, merge torto — o fizer encolher.
-"""
+"""O mapa de canais NUNCA encolhe, e o piso é dado, não palpite."""
 from __future__ import annotations
 
 import csv
@@ -33,12 +7,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
-#: O piso, medido em 05/09/2026. Ele SOBE quando o mapa crescer — nunca desce
-#: sem uma linha datada aqui dizendo o que foi retirado e por quem.
 PISO_DE_LINHAS = 308
 
-#: As colunas que o grão `(chave, controle)` exige. Perder qualquer uma é ter
-#: voltado a um formato anterior.
 COLUNAS_DO_GRAO = ("chave", "controle", "cabo_de_onde_sei", "radio_de_onde_sei")
 
 

@@ -1,7 +1,3 @@
-# A PASTA, não /tmp: estas três liam um `monta` de /tmp — o de 26/08 23:50 —
-# que por sua vez lia um `topo.html` de /tmp parado às 10:59. Três das dez
-# abas vinham de um montador e de um esqueleto de ontem, e nenhuma correção
-# no topo.html desta pasta as alcançava. Achado em 27/08.
 import pathlib
 import sys
 
@@ -11,52 +7,16 @@ import onde  # noqa: E402
 import monta as monta_  # noqa: E402  o MÓDULO, para ler CONECTADOS
 from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta  # noqa: E402
 
-# OS PARÂMETROS DE CADA MODO SAEM DO PRODUTO, e não de uma tabela digitada aqui.
-# `app/actions/trigger_specs.py` é quem sabe quantos ajustes cada um dos 19
-# modos tem, como cada um se chama e em que faixa ele anda — a mesma metadata
-# que a aba Gatilhos usa para montar os sliders. Digitar "Posição, 0 a 9" nesta
-# página seria a segunda verdade que o mapa existe para matar: no dia em que o
-# produto mudar a faixa, a porcentagem desenhada aqui muda junto ou REPROVA.
 sys.path.insert(0, str(R / "src"))
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS  # noqa: E402
 from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
 )
 
-# O PISO DO MIOLO TEM UM DONO SÓ, e ele mora na ponte da janela — §3.5 da
-# ALTURA-DA-VISTA-01. Custa 0,13 s e NÃO abre tela: o módulo importa o `gi`
-# dentro da função que cria a janela, não no topo.
 from hefesto_dualsense4unix.gui import ponte_da_tela as _ponte  # noqa: E402
 
 SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 
-# A CAIXA DE AJUSTES TEM UM DONO SÓ, e ele é o PACOTE. O desenho e o produto
-# escrevem a MESMA marcação: `html_dos_ajustes` monta a lista de barras aqui, na
-# cena, e monta a lista de barras lá, no tique — com o modo que estiver no
-# perfil. Escrita nos dois, ela divergiria no primeiro dia em que alguém mexesse
-# num só, e o produto passaria a trocar o desenho por outro desenho.
-#
-# O `TRAVESSAO` VEM JUNTO pela mesma regra: é ele que o `<select>` tem de
-# OFERECER para o lugar vazio poder mostrá-lo (decisão 13 dela), e é ele que o
-# pacote pergunta antes de emitir. Um `"—"` digitado aqui e outro lá seriam duas
-# verdades sobre a mesma opção.
-#
-# O CHIP DA COLUNA veio junto em 03/09/2026, e pela MESMA regra: a identidade do
-# controle vem da fita do topo, que lê do aparelho, e o produto reescreve o chip
-# a cada tique. Se o desenho o montasse à mão, a bancada e o produto teriam duas
-# marcações — e a régua `check_identidade_vem_de_cima` só enxerga a bancada.
-#
-# E A DESCRIÇÃO DE CADA MODO VEIO JUNTO, em 04/09/2026, pela MESMA regra. Ela
-# era um dicionário deste arquivo, e por isso só existia na BANCADA: o gerador a
-# cravava no `title` de cada `<option>` e o produto não tinha como pôr a frase do
-# modo ESCOLHIDO no campo. Com a decisão [01] do PO — *"a dica do campo deixa de
-# ser fixa e passa a ser a explicação do modo escolhido, reescrita a cada
-# tique"* — quem a escreve passou a ser o produto, e o dono do texto é o pacote.
-# ELA CONFIRMOU EM 05/09/2026, pergunta `03-Q1` (*"Aparece ao parar o mouse"*):
-# a decisão passa a ser dela, e a linha de 04/09 fica como registro de quem a
-# tomou primeiro.
-# A guarda de conjunto contra o `PRESETS` fica AQUI, logo abaixo, porque é aqui
-# que ela pode morder: neste arquivo o `PRESETS` é importado no topo.
 from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
     ALVO_DO_PLASTICO,
     CAMPO_DO_CHIP,
@@ -77,17 +37,6 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     sem_comentarios_de_css,
 )
 
-# O GLIFO DO GATILHO TEM UM TAMANHO MEDIDO, e não um escolhido no olho.
-# Achado em 27/08 numa foto: a 22px o L2 e o R2 liam como quadradinhos azuis.
-# A conta é do próprio arquivo — `assets/glyphs/l2.svg` desenha "L2" com
-# `font-size="9"` num `viewBox` de 32, ou seja **28,1% da caixa**. A tela devolve
-# `9 × tam / 32`:
-#     tam 17 (o recibo) →  4,8px   ·  tam 22 (o título) →  6,2px
-#     tam 30            →  8,4px   ·  tam 36            → 10,1px
-# O menor tipo desta casa é 10px (`.degrau i` do topo.html) e o segundo menor é
-# 10,5px (`.pa-rot`, `.selo`). Abaixo disso não é texto, é textura. Logo o piso é
-#     9 × tam / 32 ≥ 10  →  tam ≥ 35,6px  →  **36px**,
-# que é exatamente `--h-escolha`: o glifo vale uma linha da escala.
 GL = monta_.GLIFO_DA_SECAO
 
 CSS = CSS_GLIFO + """
@@ -447,7 +396,7 @@ CSS = CSS_GLIFO + """
      fechados pedem 403, e a caixa tem 564. Os 69px de um só aberto rolam no
      instante em que ela está mexendo NAQUELE bloco, que é quando ela quer
      vê-lo inteiro. É a mesma gramática de rádio do acordeão da `02-controles`
-     que ela já aprovou (`aba02.py:2268`, `name="mesa"`).
+     que ela já aprovou (`aba02.py:1702`, `name="mesa"`).
 
      `height:0;overflow:hidden;visibility:hidden` E NÃO `display:none`, e a
      razão está escrita na `02-controles`: a régua de alturas mede o corpo
@@ -523,7 +472,7 @@ CSS = CSS_GLIFO + """
      convida para uma recusa é pior que um botão que não existe.
 
      O SELETOR É O `data-conectado`, e não a classe `off`, porque ele é o que o
-     PILOTO mantém vivo: `hefesto_vivo.py:229-236` põe `data-conectado="nao"`
+     PILOTO mantém vivo: `hefesto_vivo.py:84-91` põe `data-conectado="nao"`
      em todo lugar que a mesa não tem, a cada tique. Assim a inércia acompanha
      a mesa DELA — um controle ligado no P3 devolve a coluna sem tocar em CSS —
      em vez de congelar no estado que o gerador viu.
@@ -629,44 +578,6 @@ CSS = CSS_GLIFO + """
      `sem_comentarios_de_css` documenta, e que já custou uma régua nesta aba. */
 """
 
-# ---------------------------------------------------------------------------
-# O RÓTULO DE CADA MODO NÃO SE DIGITA AQUI — ele é do produto.
-#
-# Esta lista era um par `(rótulo, dica)` com os 19 rótulos escritos à mão, e ela
-# era a SEGUNDA CÓPIA de um texto que já tem dono: `trigger_specs.PRESETS`, onde
-# o `GATILHO-PALAVRA-01` separa os dois campos com todas as letras — o `name` é
-# contrato (está no perfil dela, no IPC e no DSX) e o `label` é texto de tela.
-#
-# DUAS CÓPIAS DIVERGIRAM, e a medição é de 03/09/2026, no DOM vivo: os oito
-# `<select>` desta aba mostravam `Arco de flecha` e `Disparo` onde o produto diz
-# `Arco de flecha (Bow)` e `Disparo (Weapon)` — as duas desambiguações que ELA
-# pediu em 07/08/2026 e que esta página nunca acompanhou. **16 divergências**,
-# duas por campo, e nenhuma régua as via: o gerador reprovava se o TAMANHO das
-# duas listas mudasse, e nunca se um rótulo mudasse.
-#
-# A DICA CONTINUA DESTA TELA, e é a metade que fica. A descrição do produto (o
-# terceiro campo do preset) diz "Barreira rígida numa posição fixa."; esta aba
-# diz "Trava dura do começo ao fim do curso. Serve para freio de carro e para
-# arma travada." — a frase mais concreta é a que ela leu e aprovou aqui, e
-# trocá-la para fechar a dívida do rótulo seria pagar uma dívida abrindo outra.
-#
-# ESCRITO SEM O NOME DO SÍMBOLO DE PROPÓSITO, e a razão é uma régua: o
-# `check_paridade_gtk_html.py` procura o símbolo daquele campo NO TEXTO dos
-# arquivos do lado HTML, e não distingue código de comentário. Citá-lo aqui
-# fecharia, calada, a linha "Descrição visível do modo ESCOLHIDO", que continua
-# aberta — a página não tem elemento de descrição, só o `title` da opção.
-#
-# A CHAVE É O `name`, E NÃO A ORDEM. O casamento por posição continuaria certo
-# hoje e erraria calado no dia em que alguém reordenasse `PRESETS`: cada dica
-# desceria um modo, e o portão de tamanho não veria nada. Com o `name` como
-# chave, um modo novo no produto reprova ALTO na hora — a guarda logo abaixo.
-# ---------------------------------------------------------------------------
-# A TABELA MUDOU DE CASA — 04/09/2026. Ela mora em
-# `pacotes/a03_gatilhos.DICA_DO_MODO`, importada no topo, porque quem a
-# reescreve a cada tique é o PRODUTO (decisão [01] do PO, confirmada por ELA em
-# 05/09/2026 na `03-Q1`). O que fica aqui é a
-# GUARDA, e ela fica porque é aqui que morde: `PRESETS` é importado no topo
-# deste arquivo, e um modo novo no produto REPROVA a geração alto.
 
 _SEM_DICA = [p.name for p in PRESETS if p.name not in DICA_DO_MODO]
 _DICA_ORFA = [n for n in DICA_DO_MODO if n not in {p.name for p in PRESETS}]
@@ -678,56 +589,14 @@ if _SEM_DICA or _DICA_ORFA:
         f"Um modo novo no produto precisa da frase que ESTA tela mostra; uma dica\n"
         f"órfã é texto de um modo que o produto não tem mais.")
 
-#: O RÓTULO PELO `name`, para a cena não digitar rótulo nenhum. Mudar o texto de
-#: um modo no produto passa a mudar o desenho junto, em vez de deixar as duas
-#: verdades vivas.
 ROT = {p.name: p.label for p in PRESETS}
 
-#: `(rótulo do produto, dica desta tela)`, na ordem em que o produto os nomeia.
 MODOS = [(p.label, DICA_DO_MODO[p.name]) for p in PRESETS]
 
-# AS CURVAS PRONTAS TAMBÉM TÊM DONO, e é `profiles/trigger_presets.py`. Esta
-# lista era digitada e trazia CINCO das seis de `FEEDBACK_POSITION_LABELS` —
-# faltava `Linear médio` (`[4]` dez vezes, a firmeza constante), que existe no
-# motor desde antes desta aba e que a GUI estável oferece. Medido no DOM vivo em
-# 03/09/2026: os oito campos ofereciam cinco curvas e não a sexta.
-#
-# O GERADOR JÁ REPROVAVA UM RÓTULO QUE O PRODUTO NÃO TEM (a guarda de
-# `CHAVE_DO_PRONTO`, mais abaixo) e NUNCA um que o produto tem e a tela
-# esqueceu. Perguntando a lista, as duas metades ficam cobertas de graça: não há
-# como esquecer o que não se digita.
-#
-# `— Nenhum —` É DELA e fica: o produto chama o `custom` de "Personalizar", e o
-# nome desta tela é o que ela aprovou. Por isso a primeira posição é literal e o
-# resto vem do motor, na ordem do motor.
 PRONTOS = ["— Nenhum —"] + [rot for chave, rot in FEEDBACK_POSITION_LABELS.items()
                             if chave != "custom"]
 MEUS = ["Recuo do MK — pesado no fim", "Freio do carro — trava tardia"]
 
-# ---------------------------------------------------------------------------
-# A CENA. Um mockup mostra um estado, e este foi escolhido para ENSINAR: os
-# quatro controles trazem 4, 3, 2 e nenhuma barra de ajuste, que é o que prova
-# no desenho que a caixa de ajustes é do MODO e não do controle.
-#
-# O P1 é LITERAL — é a cena que ela aprovou em 27/08 ("aba gatilhos perfeita"),
-# com os mesmos quatro números. Ela não sai do `trigger_specs.py` de propósito:
-# o produto diz que Metralhadora tem SEIS parâmetros (Início, Fim, Amplitude A,
-# Amplitude B, Frequência, Período) e o mockup aprovado desenha quatro com
-# outros nomes. A divergência é REAL e está declarada na legenda; corrigi-la
-# seria mudar o que ela aprovou, e isto não é o que a decisão de 28/08 pede.
-#
-# Os outros três saem do produto: o rótulo e a faixa vêm de `trigger_specs`, e a
-# porcentagem do trilho é DERIVADA da faixa. Se o produto mudar um nome, esta
-# aba reprova alto em vez de desenhar um trilho com a régua errada.
-# ---------------------------------------------------------------------------
-#
-# E A CENA NOMEIA OS MODOS PELO `ROT[name]`, nunca pelo rótulo escrito — as
-# quatro linhas abaixo diziam "Metralhadora", "Arco de flecha", "Arma
-# semi-automática" e "Rígido" à mão, e um rótulo digitado numa cena é a mesma
-# segunda cópia que a `MODOS` era: no dia em que o produto acrescentar uma
-# desambiguação (o `(Bow)` de 07/08 é exatamente isso), a chave para de casar e
-# a cena reprova por um motivo que não é o dela.
-# ---------------------------------------------------------------------------
 LITERAL_P1 = {
     ROT["Machine"]: [("Força", 78, "7"), ("Frequência", 44, "4"),
                      ("Início do curso", 25, "25"), ("Fim do curso", 90, "230")],
@@ -740,23 +609,6 @@ CENA = {
     "p2": {"esq": (ROT["SemiAutoGun"], "Trava seca",
                    [("Início", 3), ("Fim", 6), ("Força", 5)]),
            "dir": (ROT["Rigid"], PRONTOS[0], [("Posição", 5), ("Força", 200)])},
-    # O P3 E O P4 SÃO LUGAR VAZIO — decisão dela, 31/08/2026: *"os demais 3 e o 4
-    # ficam lá com os espaços mas tudo com Desligado e Nenhum, fora a borda do P1
-    # e P2."* A coluna continua na tela (é o "ficam lá com os espaços"); o que
-    # sai é o ESTADO, porque não há controle para tê-lo.
-    #
-    # E ISSO DEVOLVE ALTURA, que é o que a aba mais precisa: a linha de ajustes
-    # do R2 valia o MAIOR modo que estivesse nela, e o maior era a Vibração do
-    # P3, com três barras. Sem ela, o R2 passa a valer duas — 23px de volta para
-    # o respiro que ela pediu, sem tirar nada de quem está conectado.
-    #
-    # A PALAVRA MUDOU EM 02/09/2026, e é ELA quem a trocou — decisão 13:
-    # *"o lugar vazio mostra travessão"*. O "Desligado e Nenhum" de 31/08 valia
-    # enquanto não havia como distinguir *"não há aparelho"* de *"há um aparelho
-    # e o gatilho está solto"*: as duas coisas diziam a mesma palavra. A decisão
-    # de hoje separa as duas, e é a de hoje que vale. O resto da frase de 31/08
-    # — a coluna fica, a borda de cor sai — continua de pé, e a régua abaixo
-    # continua cobrando as duas metades.
     "p3": {"esq": (TRAVESSAO, TRAVESSAO, []),
            "dir": (TRAVESSAO, TRAVESSAO, [])},
     "p4": {"esq": (TRAVESSAO, TRAVESSAO, []),
@@ -766,7 +618,7 @@ CENA = {
 
 def barras(modo, escolha):
     """As barras de um modo — do produto, com a porcentagem DERIVADA da faixa."""
-    if escolha is None:                       # o P1, literal e aprovado por ela
+    if escolha is None:
         return LITERAL_P1[modo]
     fora = [n for n, _ in escolha if n not in SPEC.get(modo, {})]
     if fora:
@@ -777,53 +629,16 @@ def barras(modo, escolha):
     for nome, valor in escolha:
         q = SPEC[modo][nome]
         pct = round((valor - q.min_value) / (q.max_value - q.min_value) * 100)
-        # "Início" e "Fim" viram "Início do curso" e "Fim do curso": é o
-        # vocabulário que ela já leu e aprovou nesta aba, e o rótulo cabe nos
-        # 92px do `--rot` (medido: 82px e 68px).
         rot = {"Início": "Início do curso", "Fim": "Fim do curso"}.get(nome, nome)
         saida.append((rot, pct, str(valor)))
     return saida
 
 
-# ---------------------------------------------------------------------------
-# O `value` DE CADA OPÇÃO É O CONTRATO, e o texto é o RÓTULO. Os dois campos, os
-# dois donos — a mesma separação que o `trigger_specs.py` faz entre `name` e
-# `label`, escrita ali com todas as letras: o `name` está serializado no perfil
-# em disco (`triggers.left.mode`), no IPC (`trigger.set`) e no DSX; o `label` é
-# só texto de tela.
-#
-# ATÉ HOJE ESTA PÁGINA SÓ TINHA O RÓTULO, e por isso o clique não tinha o que
 # mandar ao daemon: `trigger.set` quer `Rigid`, e a opção dizia `Rígido`.
-#
-# E NEM O `value` NEM O RÓTULO SE DIGITAM — os dois saem do `PRESETS`.
-#
-# ATÉ HOJE ESTA PÁGINA CASAVA AS DUAS LISTAS PELA ORDEM, e a razão escrita aqui
-# era esta: *"casá-las por RÓTULO seria casar por um campo que já divergiu"* —
-# `MODOS` dizia `Arco de flecha` e o produto diz `Arco de flecha (Bow)`.
-#
-# O CAMPO PAROU DE DIVERGIR PORQUE PAROU DE SER DIGITADO — 03/09/2026: `MODOS`
-# agora É `PRESETS`, rótulo por rótulo (ver `DICA_DO_MODO`). Com uma lista só,
 # não há casamento a fazer nem tamanho a conferir: `CHAVE_DO_MODO` sai direto do
-# produto, e a guarda que sobra é a de `DICA_DO_MODO`, lá em cima — ela cobra o
-# CONJUNTO de modos nos dois sentidos, que é mais do que o tamanho cobrava.
 CHAVE_DO_MODO = {p.label: p.name for p in PRESETS}
 
-# O "EFEITO PRONTO" TEM DONO NO PRODUTO, e o dono é `profiles/trigger_presets.py`:
-# os seis nomes desta lista SÃO os seis `FEEDBACK_POSITION_LABELS`, porque desde
-# 03/09/2026 eles vêm de lá em vez de serem digitados. Eles não são enfeite de
-# mockup — cada um resolve para dez intensidades de 0 a 8, que é o que o modo
 # "Curva de força" (`MultiPositionFeedback`) manda ao controle.
-#
-# A GUARDA ABAIXO SOBREVIVE À MUDANÇA, e vale a pena dizer por quê: ela nunca
-# poderá acusar enquanto a lista vier do próprio dicionário — e é exatamente
-# isso que se quer de uma trava depois que a causa morre. Ela fica porque
-# `PRONTOS[0]` continua sendo texto DELA e porque a lista pode voltar a receber
-# um nome à mão amanhã; o custo é uma volta de laço.
-#
-# `— Nenhum —` VIRA `custom`, e não uma palavra inventada: `custom` é o token do
-# próprio produto para "nenhuma curva pronta, os valores são os que estão aí"
-# (`FEEDBACK_POSITION_LABELS["custom"]`, e o `_populate_preset_combo` da GUI
-# estável abre nele). Um `""` aqui obrigaria a tela a ter um sexto token só dela.
 _PRONTO_POR_ROTULO = {rot: chave for chave, rot in FEEDBACK_POSITION_LABELS.items()}
 CHAVE_DO_PRONTO = {PRONTOS[0]: "custom"}
 for _rot in PRONTOS[1:]:
@@ -834,29 +649,11 @@ for _rot in PRONTOS[1:]:
             f"perdeu a curva, ou esta aba oferece uma que ninguém sabe aplicar — "
             f"e a segunda é um botão que responde calado.")
     CHAVE_DO_PRONTO[_rot] = _PRONTO_POR_ROTULO[_rot]
-# OS "MEUS EFEITOS" NASCEM SEM CHAVE, e o vazio é a afirmação: não há, em todo o
-# `src/`, onde guardar um efeito com nome. Eles ficam no desenho porque ela os
-# aprovou; o `value=""` é o que faz o gesto RECUSAR DIZENDO em vez de aplicar
-# outra coisa no lugar.
 for _rot in MEUS:
     CHAVE_DO_PRONTO[_rot] = ""
 
 
-# O TRAVESSÃO É A PRIMEIRA OPÇÃO DOS DOIS CAMPOS — decisão 13 dela, 02/09/2026:
-# *"o lugar vazio mostra travessão"*, e a razão é dela: **`Desligado` é uma
-# escolha legítima de um controle conectado**, e usar a mesma palavra para as
-# duas coisas confunde as duas. `— Nenhum —` tem exatamente o mesmo problema no
-# campo de baixo — é a ausência de curva num controle que ESTÁ aqui —, então os
-# dois campos ganham a opção pela mesma razão dela.
-#
-# ELA NASCE `disabled`, e isso não a impede de ser PINTADA: `select.value = '—'`
-# escolhe a opção pelo `value` sem olhar o `disabled` (é o que o `escrever()` do
-# piloto faz). O que o `disabled` impede é o contrário — que alguém a escolha com
-# o rato e mande "nada" ao daemon como se fosse um efeito.
-#
 # O `value` É O PRÓPRIO TRAVESSÃO, e não `""`: o piloto troca vazio por `—`
-# ANTES de escolher, e uma opção com `value=""` não seria achada — o campo
-# nasceria em branco somando uma pintura por tique, para sempre.
 def _op_vazio(escolhido):
     return (f'                <option value="{TRAVESSAO}"'
             f'{" selected" if escolhido == TRAVESSAO else ""} disabled>'
@@ -902,23 +699,7 @@ def bloco(lado, sigla, modo, pronto, ajustes):
     """
     aj = html_dos_ajustes(sigla, [{"nome": n, "pct": p, "valor": v}
                                   for n, p, v in ajustes])
-    # O ENDEREÇO DE PINTURA DO MODO É A **CHAVE**, e não o rótulo — e junto vem o
     # `data-hef-alvo="valor"`. Os dois consertam o mesmo defeito, medido em
-    # 01/09/2026 lendo o `escrever()` do piloto (`hefesto_vivo.py:100-115`): sem
-    # `data-hef-alvo`, o alvo padrão é `texto`, e `select.textContent = "Rígido"`
-    # **apaga as 19 opções** e põe um nó de texto no lugar. A primeira pintura
-    # destruiria o campo de escolha desta aba, nas cinco colunas.
-    # Com `valor`, o piloto faz `select.value = t` — e é por isso que o endereço
-    # tem de ser `modo-chave-*` (`Rigid`), que é o que o `value` das opções
-    # carrega. O `modo-*` (o rótulo "Rígido") continua saindo do pacote porque
-    # `tests/unit/test_o_perfil_chega_na_tela.py:134` o cobra, mas nenhum
-    # elemento o lê: o que casa com a opção é a chave.
-    # A DICA DE CADA CAMPO SAI DO PACOTE, e a CENA a pede pelo modo que ela
-    # desenha — decisões [01] e [02] do PO, 04/09/2026. Escrevê-la aqui à mão
-    # seria a segunda cópia de um texto que o produto reescreve a cada tique, e
-    # a bancada passaria a explicar um modo com a frase de outro no dia em que
-    # alguém mexesse num só. O lugar vazio não tem modo: o `TRAVESSAO` cai na
-    # queda do pacote, e o produto escreve a frase do lugar sem aparelho.
     _chave = CHAVE_DO_MODO.get(modo, modo)
     _vazio = _chave == TRAVESSAO
     _d_modo = SEM_APARELHO_AQUI if _vazio else descricao_do_modo(_chave)
@@ -984,56 +765,8 @@ def coluna(c):
     cena = CENA[c["pref"]]
     esq = bloco("esquerdo", "e", *cena["esq"][:2], barras(*cena["esq"][::2]))
     dire = bloco("direito", "d", *cena["dir"][:2], barras(*cena["dir"][::2]))
-    # O VALOR SAI DA F-STRING, e a razão é que ele VAZAVA PARA A TELA. A palavra
-    # do atributo faz o portão de acentuação reprovar, e o marcador que a isenta
-    # tem de ficar na MESMA linha física — que, aqui, era DENTRO da f-string.
     # Resultado: as colunas da aba Gatilhos nasciam com `  # noqa-acento` (citação; nada a isentar)
-    # como TEXTO, logo depois da `<div class="ctrl">`, visível para quem abrisse
-    # a aba. Medido em 01/09/2026, no dia em que os dez geradores voltaram a
-    # rodar; ninguém tinha visto porque ninguém os rodava.
     conectado = "sim" if c.get("conectado", True) else "nao"  # (noqa-acento) valor
-    # O "EM TODOS" ENTROU NA FAIXA — GATILHOS-EM-TODOS-01, 06/09/2026, e é a
-    # LINHA 110 do CSV da paridade. **PROVISÓRIO — decisão dela**: o mecanismo é
-    # do produto e está provado, mas o BOTÃO é tela nova, e tela nova é dela.
-    # Ele nasce SÓ NA BANCADA; o `--publicar 03` continua sendo ato dela, e até
-    # lá o produto não ganha um pixel. Está declarado em `mockup/DIVERGENCIAS.md`.
-    #
-    # POR QUE NA COLUNA E NÃO NA FAIXA DO TÍTULO, que é onde a `a04_iluminacao`
-    # pôs o escopo global dela: a `04` espalha um ESTADO (as cores automáticas),
-    # que não tem origem; esta espalha um EFEITO, e o efeito é o par L2+R2 de UMA
-    # coluna. Um botão na faixa do título teria de escolher a coluna de origem
-    # sozinho — e escolher a do P1 seria a tela afirmando o que ninguém pediu.
-    # A faixa do título ficou medida e vaga (980px livres), e a razão de não usá-la
-    # está aqui para a próxima pessoa não remedir.
-    #
-    # E O "GUARDAR ESSE EFEITO" ENCURTOU PARA "GUARDAR" — porque, MEDIDO, os três
-    # não cabiam. Com o rótulo longo a faixa sangrava 24px e o campo do nome caía
-    # para 16px de largura, que é um campo que não se digita. Com "Guardar" a
-    # conta fecha em 202px: campo 66 · Guardar 58 · Em todos 66, sangria ZERO e
-    # zero rolagem lateral na página (Chrome, 1920x1080, `--oculta`).
-    # O encurtamento é o que ela mesma pediu noutro botão em 31/08 — *"aonde tem
-    # Voltar ao automático deixa só Automático"* — e nada se perde: a frase longa
-    # virou o `title` do botão, que é onde esta casa põe a explicação.
-    # REVERSÍVEL NUMA FRASE: devolva o texto longo ao "Guardar" e tire o "Em todos".
-    #
-    # O BOTÃO DE REENVIO SAIU DA FAIXA `guardar` — 06/09/2026, decisão dela.
-    # Ele nasceu em 04/09 (a decisão [03] do PO) e ela o viu depois: perguntada
-    # com o botão na tela e a foto ao lado, escolheu *"sai"*. A faixa volta a ser
-    # o que era — o campo do nome e o botão de guardar.
-    #
-    # O GESTO SAIU DO PACOTE EM 08/09/2026, e a espera dele acabou aqui. Ele
-    # ficou de propósito enquanto a página PUBLICADA — a que o produto renderiza
-    # — ainda mostrava o botão: tirar o dono de um botão vivo daria a ela um `↻`
-    # que morre CALADO, porque um gesto sem dono só imprime `[gesto sem dono]`
-    # no stderr de quem lançou a janela. A publicação de `44c2327e` tirou o
-    # botão e a segunda metade do ato ficou pendurada dois dias. Quem amarra os
-    # dois lados, nos DOIS sentidos, continua sendo
-    # `test_o_reenvio_sai_do_pacote_quando_sair_do_produto`.
-    #
-    # E A EXPLICAÇÃO MORA AQUI, E NÃO NUM `<!-- -->` DENTRO DA COLUNA: esta
-    # f-string é emitida UMA VEZ POR CONTROLE, e um comentário de doze linhas
-    # dentro dela sai quatro vezes na página. Medido: a primeira versão desta
-    # nota engordou a bancada em 60 linhas de prosa repetida.
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or c["pref"]}"
              data-conectado="{conectado}">
           {_chip(c)}
@@ -1060,37 +793,8 @@ def coluna(c):
         </div>'''
 
 
-# ---------------------------------------------------------------------------
-# AS NOVE LINHAS DA GRADE, e a altura da coluna é a SOMA delas.
-#
-# A LINHA DE AJUSTES SAI DA CENA, e não de um número escolhido no olho: ela vale
-# o MAIOR modo que está NELA. Quem é esse modo MUDA com a cena — em 31/08 o P3
-# virou lugar vazio e o R2 deixou de valer a Vibração dele —, e por isso nem o
-# número nem o NOME se digitam: os dois saem de `_dono_da_linha()`, logo abaixo.
-# Com um número só para as duas, a linha do R2 herdava a
-# altura do L2 e as três colunas de dois ajustes ficavam com uma barra de vão em
-# cima do botão. É a regra dela: a cura do vão é na ALTURA.
-#
-# O TETO É MEDIDO: o miolo tem 508px úteis (542 de caixa menos os 16+18 de
-# padding), e o quadro gasta 28 de cabeçalho, 24 de padding e 2 de borda — sobram
-# 454px para a grade. O que passar disso rola por dentro, e quadro que rola é
-# conteúdo que ninguém sabe que existe.
-# ---------------------------------------------------------------------------
-ALT_BARRA = 23   # uma barra: 11,5px de rótulo e 5 de trilho
-#: O PASSO ENTRE LINHAS — 10 até 31/08, 14 desde então. Pedido dela:
-#: *"lá precisa de respiro em tudo (…) fora o respiro entre as linhas na questão
-#: do espaço vertical."*
-#:
-#: E ELE FOI PAGO, não raspado: os 4px a mais em oito vãos custam 32px, e os 32
-#: vieram de duas coisas que ela mesma decidiu no mesmo turno — o P3 e o P4
-#: desligados devolveram 23 (a linha de ajustes do R2 valia a Vibração do P3, com
-#: três barras, e passou a valer duas), e a janela de 777px devolveu os outros.
-#: É a regra desta casa: a cura do vão é na ALTURA, e a altura tem dono.
+ALT_BARRA = 23
 R_NOME, R_MODO, R_PRONTO, R_SEP, R_ACAO = 24, 36, 36, 1, 34
-#: O RESPIRO É O DONO, e o passo é o DOBRO dele — a mesma construção da Vibração
-#: (`aba05.py`, 30/08). Assim a divisória cai no MEIO do vão e todo conteúdo
-#: centrado na célula fica centrado na FAIXA. Escrever os dois à mão é como a
-#: Vibração ficou torta antes de 30/08.
 R_AR = 7
 R_PASSO = R_AR * 2
 N_ESQ = max(len(barras(*CENA[c["pref"]]["esq"][::2])) for c in MESA)
@@ -1099,25 +803,13 @@ R_AJ_E, R_AJ_D = N_ESQ * ALT_BARRA, N_DIR * ALT_BARRA
 
 
 def _dono_da_linha(lado, n):
-    """Quem manda na altura da linha de ajustes — LIDO da cena, nunca digitado.
-
-    A legenda dizia *"3 no R2 (a Vibração do P3)"*, e em 31/08 o P3 virou lugar
-    vazio por decisão dela: o número caiu para 2 (o gerador o calcula) e o NOME
-    continuou apontando um modo que saiu da tela. Metade certa, metade mentindo
-    — que é o pior estado de uma legenda, porque a metade certa a faz parecer
-    conferida. Agora as duas metades saem do mesmo lugar.
-    """
+    """Quem manda na altura da linha de ajustes — LIDO da cena, nunca digitado."""
     donos = [(c, CENA[c["pref"]][lado][0]) for c in MESA
              if len(barras(*CENA[c["pref"]][lado][::2])) == n]
     if not donos:
         raise SystemExit(f"ERRO: nenhum modo do {lado} tem {n} barra(s) — a "
                          f"legenda ficaria sem dono para citar.")
     c, modo = donos[0]
-    # SEM ARTIGO, e não é estilo: o artigo obriga a saber o GÊNERO de 19 nomes de
-    # modo, e a primeira versão escreveu *"a Arco de flecha do P1"*. Um gerador
-    # que precisa concordar em gênero com dado que ele lê ou carrega uma tabela
-    # de gêneros — outra coisa para envelhecer calada — ou erra o português na
-    # primeira troca de cena. A vírgula resolve as duas.
     return f'{modo}, do P{c["jogador"]}'
 
 
@@ -1125,48 +817,7 @@ DONO_ESQ, DONO_DIR = _dono_da_linha("esq", N_ESQ), _dono_da_linha("dir", N_DIR)
 LINHAS = [R_NOME, R_MODO, R_PRONTO, R_AJ_E, R_SEP, R_MODO, R_PRONTO, R_AJ_D, R_ACAO]
 ALT_COLUNA = sum(LINHAS) + (len(LINHAS) - 1) * R_PASSO
 
-#: A largura da coluna de rótulos VEM DE `medidas.py`, que é o dono dela nas
-#: TRÊS abas que têm essa coluna. Ela era 128 (o par glifo+palavra espremido numa
-#: trilha só) e virou 138 quando o glifo ganhou trilha própria — e 138 não batia
-#: com os 132 da Iluminação e da Vibração. Ela viu: *"tem algo que deixa estranho
-#: essa área da primeira coluna."*
 LARG_ROT = monta_.larg_rotulos("03-gatilhos", com_glifo=True)
-#: O TETO DA GRADE, MEDIDO NO CHROME — 477px com a janela de 777.
-#:
-#: ELE ERA 454, e 454 era o número da janela de 757px. Com os 777 que ela pediu
-#: em 31/08 ele ficou pequeno demais: teria reprovado um desenho que cabe.
-#:
-#: E EU TENTEI DERIVÁ-LO DA SOMA DAS PARTES ANTES DE MEDIR — cabeçalho + tira +
-#: rodapé + paddings + cromo do quadro — e deu **528**, 51px a mais do que a
-#: tela aguenta. Uma conta de layout que não passa pelo navegador erra por
-#: margens que ninguém lembra de somar, e um teto folgado demais é pior que
-#: nenhum: ele deixa passar a aba que rola.
-#:
-#: O COMANDO QUE O MEDE, e ele é reproduzível — empurra a coluna 2px por vez e
-#: acha onde o `.miolo` começa a rolar:
-#:
-#:     pg.add_style_tag(content=f".duas-colunas > div{{padding-bottom:{n}px}}")
-#:     m.scrollHeight > m.clientHeight + 1
-#:
-#: Última coluna que coube: 477px. A primeira que rolou: 479px.
-#:
-#: O 477 DEIXOU DE SER DIGITADO — 10/09/2026, §3.5 da ALTURA-DA-VISTA-01. Ele
-#: era o teto de um miolo de **564**, que era o miolo de uma janela de altura
-#: FIXA; com a altura seguindo a vista (decisão dela, «1 + rodapé») o miolo
-#: mudou e o 477 passou a descrever uma janela que não existe mais.
-#:
-#: O QUE SOBREVIVE DA MEDIÇÃO ACIMA É O VÃO, e é ele que vira o dado: o Chrome
-#: disse que a última coluna que coube tinha 477 num miolo de 564, logo o
-#: quadro e os recuos que a grade NÃO pode usar medem **87 px**. Esse vão é do
-#: desenho do quadro, não da altura da janela — e é ele que se carrega para o
-#: miolo novo, em vez de somar as partes de novo. *Somar as partes é o erro que
-#: o parágrafo acima registra: deu 528, 51 px a mais do que a tela aguentava.*
-#:
-#: O TETO PASSA A SUBIR SOZINHO com o piso, porque o dono do piso é um só
-#: (`gui/ponte_da_tela.MIOLO_NO_PISO`). E ele continua sendo um teto de PISO:
-#: na vista de 840 px da TV dela a grade tem mais do que isto. Quem for GASTAR
-#: a folga nova refaz o empurrão de 2 px acima — um teto herdado prova que a
-#: coluna de hoje cabe, não que a de amanhã caiba.
 VAO_DO_QUADRO_NA_GRADE = 87
 TETO_DA_GRADE = _ponte.MIOLO_NO_PISO - VAO_DO_QUADRO_NA_GRADE
 if ALT_COLUNA > TETO_DA_GRADE:
@@ -1186,41 +837,11 @@ CSS_DA_CENA = f"""
     --gl:{GL}px; --larg-rot:{LARG_ROT}px; --gap-col:{monta_.GAP_DAS_COLUNAS}px; --vao-gl:{monta_.VAO_DO_GLIFO}px;
   }}
 """ + "".join(
-    #: A COLUNA DE CADA FILHO, ESCRITA. A primeira é a de rótulos; as outras são
-    #: os controles da `MESA`, na ordem. A palavra "quatro" continua fora de
-    #: laço nenhum — quem conta é a mesa.
     f"  .duas-colunas > div:nth-child({i}){{grid-column:{i}}}\n"
     for i in range(1, len(MESA) + 2))
 
-#: O NÚMERO DE COLUNAS NÃO CABE NUMA `var()`: `repeat()` exige um inteiro na
-#: contagem, e uma variável CSS ali não é aceita por nenhum motor. A troca é de
-#: texto, e o `MESA` continua sendo o único que conta.
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
 
-# O GLIFO ANTES DA PALAVRA, e é a gramática das vizinhas: a `aba08` escreve
-# `{glifo("mic", tam=16)} Microfone e botões`, a `aba06` monta `glifo + nome` no
-# `_um()`, e a `aba02` põe o glifo sozinho no botão. Aqui é o mesmo molde, com o
-# `<title>` do SVG dizendo o nome da peça (L2 / R2) — nunca um `title=` no
-# `<svg>`, que o navegador ignora (`monta.glifo`, docstring).
-#
-# ELES JÁ TINHAM SIDO ESCRITOS, E CAÍRAM CALADOS. Estavam nestas duas linhas até
-# 48b4e1a2; a leva das divisórias de 30/08 reescreveu o bloco `ROTULOS` inteiro e
-# levou os dois `glifo()` junto — sem nota, sem pedido, e com a legenda da aba
-# continuando a prometê-los ("Os glifos são os do mapa"). Sobreviveram o `GL = 36`
-# com a conta paga e o `import glifo` na linha 9, os dois sem um único chamador:
-# é a assinatura do `a-casa-sabe-e-o-produto-nao-faz`. Devolvidos em 31/08/2026,
-# a pedido dela: *"abas como gatilhos tinhamos os svgs do r2 e l2, isso tem que
-# voltar."*
-#
-# CUSTO DE ALTURA: ZERO, e é medido. As nove trilhas de `.duas-colunas > div`
-# são px FIXOS (`grid-template-rows`), então o glifo de 36px entra na trilha
-# `--r-modo`, que também é 36px — a coluna continua em ALT_COLUNA px e o miolo
-# não rola. Quem cresce é a LARGURA da coluna de rótulos, e ela já foi paga: os
-# 128px do `grid-template-columns` e o "Gatilho / esquerdo" em duas linhas
-# existem por causa deste glifo — está escrito no comentário do `.sec-rot .duas`.
-#: AS DICAS DAS DUAS DOBRAS. Elas moram aqui e não na f-string porque a
-#: f-string do `ROTULOS` sai UMA VEZ, mas a do `bloco()` sai por controle — e
-#: um texto de tela repetido em dois lugares é o defeito que esta casa nomeia.
 DICA_DE_ABRIR = "Abre os ajustes deste gatilho. Só um fica aberto por vez."
 DICA_DE_FECHAR = "Fecha os ajustes."
 
@@ -1415,38 +1036,14 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-#: O COMEÇO DE UMA COLUNA, e ela se acha PELO `data-controle` — nunca pela
-#: classe. É o que o piloto faz:
-#: `document.querySelectorAll('[data-controle="' + pref + '"]')`, sem olhar
-#: classe nenhuma. Casar por `class="ctrl"` foi a primeira versão desta linha, e
-#: a MORDIDA de 07/09/2026 a derrubou: o ramo do lugar vazio nasce
-#: `class="ctrl off"` (é assim na `aba01`), a régua achava DUAS colunas em vez
-#: de quatro e reprovava pelo recorte — não pelos endereços que faltavam. Uma
-#: régua tem de procurar o que o produto procura, senão ela reprova pelo motivo
-#: errado no dia em que morder de verdade.
 _INICIO_DA_COLUNA = re.compile(r'<div\b[^>]*?\bdata-controle="(p\d+)"')
 
-#: QUALQUER TAG COM ENDEREÇO DE PINTURA. A régua 10 lê o `data-campo` e, junto,
-#: o ALVO — porque endereço sem alvo é meia cura, e é o defeito que a régua
-#: 5-ter já nomeia num campo só.
 _TAG = re.compile(r"<[a-z]+\b[^>]*>")
 _ATRIBUTO = re.compile(r'([a-z-]+)="([^"]*)"')
 
 
 def _fim_da_coluna(corpo, ini):
-    """Onde fecha a coluna que começa em `ini`.
-
-    A CONTA É DE PROFUNDIDADE, e as duas alternativas fáceis estão erradas —
-    medido em 07/09/2026, escrevendo esta função:
-
-    * cortar no primeiro `</div>` devolve um pedaço: a coluna aninha oito divs
-      (os dois embrulhos de dica, as duas caixas de ajuste, o vão do L2/R2 e a
-      faixa de guardar);
-    * cortar no começo da PRÓXIMA coluna deixa a ÚLTIMA engolir o rodapé, que
-      traz `rodape.salvar` e `rodape.exportar` — e a régua acusaria o P4 por
-      dois endereços que não são dele. Foi o que a primeira medição desta
-      frente marcou: P4 com 12 campos onde ele tem 10.
-    """
+    """Onde fecha a coluna que começa em `ini`."""
     fundo = 0
     for m in re.finditer(r"<div\b|</div>", corpo[ini:]):
         fundo += -1 if m.group(0) == "</div>" else 1
@@ -1456,13 +1053,7 @@ def _fim_da_coluna(corpo, ini):
 
 
 def _enderecos_de_cada_coluna(corpo):
-    """`pref` → {`data-campo`: o alvo, o atributo e a classe dele}.
-
-    LIDO DO DOCUMENTO, e não montado chamando `coluna()` outra vez: uma régua
-    que digita o que devia ler mede a si mesma, e é a forma dos instrumentos
-    falsos que esta casa já derrubou onze vezes. Lendo, ela alcança qualquer
-    pós-processamento que o `monta()` faça depois da f-string.
-    """
+    """`pref` → {`data-campo`: o alvo, o atributo e a classe dele}."""
     saida = {}
     for m in _INICIO_DA_COLUNA.finditer(corpo):
         trecho = corpo[m.start():_fim_da_coluna(corpo, m.start())]
@@ -1479,11 +1070,7 @@ def _enderecos_de_cada_coluna(corpo):
 
 
 def _conferir(doc):
-    """As decisões dela de 31/08 nesta aba, conferidas NA SAÍDA.
-
-    Só o miolo e sem comentário HTML — a régua da aba Jogar nasceu errada duas
-    vezes por casar token na legenda e no próprio comentário que a explicava.
-    """
+    """As decisões dela de 31/08 nesta aba, conferidas NA SAÍDA."""
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
     if len(corpo) < 2000:
@@ -1494,42 +1081,20 @@ def _conferir(doc):
         if not cond:
             falhas.append(oque)
 
-    # 1. O L2 E O R2 TITULAM A SEÇÃO — *"deveriam controlar a seção e não ficar
-    #    do lado esquerdo de gatilho esquerdo ou direito."*
     for g in ("g-l2", "g-r2"):
         exigir(f'class="sec-glifo {g}"' in corpo, f"o glifo {g[-2:].upper()} não titula a seção")
     exigir("Gatilho<br>esquerdo" not in corpo and "Gatilho<br>direito" not in corpo,
            "o rótulo 'Gatilho esquerdo/direito' voltou para o lado do glifo")
     exigir(corpo.count(">Modo</span>") == 2, "as duas seções não se chamam 'Modo'")
 
-    # 2. O P3 E O P4 SÃO LUGAR VAZIO — *"tudo com Desligado e Nenhum, fora a
-    #    borda do P1 e P2."* A régua olha as DUAS metades: o estado e a borda.
     vazios = [c for c in MESA if not c.get("conectado", True)]
     exigir(corpo.count('class="chip vazio"') == len(vazios),
            f"os chips sem cor do plástico não são {len(vazios)}")
     exigir(corpo.count('class="chip plastico"') == len(MESA) - len(vazios),
            "a borda de cor saiu de quem ESTÁ na mesa, ou ficou em quem não está")
-    # 2-bis. TODO CHIP TEM DOIS ENDEREÇOS, e a cor mora no de fora —
-    #    03/09/2026, a lei dela: *"imagina que cada pessoa tenha um dualsense
     #    diferente. (…) nada hardcoded. eu quero que cada user ao usar seu  # noqa-acento: citação literal dela
-    #    controle se toque disso que o app se adaptou ao controle dele"*
-    #
-    #    SÃO DOIS ENDEREÇOS ANINHADOS, e cada um tem um trabalho:
-    #
     #    * o do EMBRULHO (`data-campo="plastico"` + alvo `plastico`) é o da COR.
     #      É o único alvo do piloto que escreve `--plastico`, e ele vale para a
-    #      subárvore inteira por herança de CSS. Ele está nas QUATRO colunas,
-    #      cheias e vazias: a página é estática, e sem endereço no P3 o dia em
-    #      que um controle entra ali a cor não teria por onde chegar.
-    #    * o do MIOLO (`data-campo="chip-do-controle"` + alvo `html`) refaz o
-    #      `<span>` inteiro — classe, dica e nome de uma vez.
-    #
-    #    POR QUE ANINHADOS, e não um só: `escrever()` carimba o selo da visita
-    #    no elemento que escreve. Com a cor DENTRO do HTML comparado, o selo
-    #    entra na comparação e a coluna repinta a cada tique, para sempre
-    #    (medido: 17 tiques, 17 pinturas). Fora dele, as duas escritas convivem.
-    #
-    #    Arranque qualquer um dos dois e é aqui que o gerador para.
     exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == len(MESA),
            f"os {len(MESA)} miolos de chip não têm endereço — o produto "
            f"perde onde escrever a identidade que a fita do topo já leu")
@@ -1549,43 +1114,23 @@ def _conferir(doc):
     exigir(corpo.count("--plastico:") == len(MESA) - len(vazios),
            "há cor de plástico cravada fora dos chips de quem está na mesa")
     # E A COR NÃO MORA MAIS DENTRO DO HTML COMPARADO. Um `--plastico` no
-    # `<span class="chip …">` volta a ser cor que o produto não reescreve — é o
-    # achado que `check_a_cor_vem_do_aparelho.py` contava nesta aba.
     exigir(not re.search(r'<span class="chip[^>]*--plastico', corpo),
            "o `<span>` do chip voltou a carregar a cor. Ali ela fica DENTRO do "
            "HTML que o alvo `html` compara: o produto não pode reescrevê-la "
            "sem repintar a coluna a cada tique, e a régua da cor a acusa")
 
     for c in vazios:
-        # O TRAVESSÃO SUBSTITUIU O "DESLIGADO" AQUI — decisão 13 dela, 02/09.
-        # A régua muda com ela: cobrar `Desligado` agora reprovaria a decisão.
         exigir(CENA[c["pref"]]["esq"][0] == TRAVESSAO
                and CENA[c["pref"]]["dir"][0] == TRAVESSAO,
                f"o {c['pref'].upper()} é lugar vazio e não mostra o travessão — "
                f"volta a dizer a mesma palavra que um controle conectado diria")
 
-    # 2-bis. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome de um plástico
-    #    que não está na mesa — *"na parte do nome do P3 e do P4 colocar algo como
-    #    Desconectado e não os controles mockados."* A régua olha as DUAS metades:
-    #    a palavra tem de estar lá, e o nome do plástico NÃO.
     for c in vazios:
         exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
                f"o lugar do P{c['jogador']} não diz Desconectado")
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
 
-    # 2-ter. O GLIFO CENTRA VERTICALMENTE NA SEÇÃO — *"o l2 e o r2 tem que tá
-    #    centralizado entre modo, efeito pronto e ajustes (verticalmente)."*
-    #    Ela decidiu o CONTRÁRIO do que eu tinha escrito no CSS um turno antes, e
-    #    é por isso que a régua nomeia o valor errado: quem herdar o comentário
-    #    velho e "consertar" para `flex-start` esbarra aqui.
-    #    E A SETA DO GLIFO É UM CARACTERE QUE SE LÊ — 11/09/2026. Ela saía como
-    #    o byte 0x15 mais duas letras soltas, e a tela mostrava o retângulo de
-    #    glifo faltando ao lado do L2 e do R2, com um `be` colado. A causa é do
-    #    PYTHON (ver a nota no CSS), e por isso a régua olha o DOCUMENTO: o que
-    #    reprova aqui é o byte de controle na tela, venha ele de onde vier.
-    #
-    #    A MORDIDA: devolva `'\25be'` ao `content` e o gerador para aqui.
     _controles = sorted({hex(ord(ch)) for ch in doc
                          if ord(ch) < 32 and ch not in "\n\t"})
     exigir(not _controles,
@@ -1601,59 +1146,28 @@ def _conferir(doc):
     exigir(".rotulos > .sec-glifo{display:flex;align-items:center" in doc,
            "o glifo deixou de centrar verticalmente na seção")
 
-    # 3. O RESPIRO — a divisória cai no MEIO do vão, e o passo é o DOBRO do ar.
-    #    *"lá precisa de respiro em tudo (…) o respiro entre as linhas."*
     exigir("top:calc(var(--r-ar) * -1)" in doc,
            "a divisória voltou para o topo da célula — vão todo de um lado só")
     exigir("--r-passo:calc(var(--r-ar) * 2)" in doc,
            "o passo deixou de ser o dobro do ar — os dois podem divergir de novo")
     exigir(R_PASSO == R_AR * 2, "R_PASSO e R_AR divergiram no Python")
 
-    # 4. A ALTURA CABE, com folga. Zero de folga já mordeu duas vezes hoje.
     exigir(TETO_DA_GRADE - ALT_COLUNA >= 10,
            f"a grade tem só {TETO_DA_GRADE - ALT_COLUNA}px de folga — um pixel não é folga")
 
-    # 5. OS BOTÕES TÊM ENDEREÇO — 01/09/2026. Sem `data-gesto` o clique não
-    #    atravessa a ponte, e o piloto nem consegue RECUSAR dizendo o nome: o
-    #    ouvinte dele (`hefesto_vivo.py:1023`) só enxerga quem está marcado.
     for _g in ("modo", "pronto", "guardar", GESTO_DE_TODOS):
         exigir(f'data-gesto="{_g}"' in corpo,
                f"o endereço do gesto {_g!r} sumiu do desenho — o clique some calado")
 
-    # 5-bis. O REENVIO NÃO ESTÁ MAIS AQUI — 06/09/2026, decisão dela, e esta
-    #    régua INVERTEU. Ela cobrava o botão nas quatro colunas (a decisão [03]
-    #    do PO, de 04/09); ela o viu na tela, com a foto ao lado, e escolheu
-    #    *"sai"*.
-    #
-    #    POR QUE UMA RÉGUA E NÃO O SILÊNCIO: a remoção é de UM `<button>` dentro
-    #    de uma f-string de coluna, e um `git revert` desatento ou uma sprint
-    #    velha o devolvem sem barulho — o desenho voltaria a mostrar um botão que
-    #    ela recusou, e o portão do desenho não veria nada, porque a bancada
-    #    estaria só "andando" de novo. É a mesma forma da 5, do avesso.
     exigir('data-gesto="reenviar"' not in corpo,
            "o botão de reenvio voltou ao desenho — ela mandou tirá-lo em "
            "06/09/2026, vendo-o na tela. Se a decisão mudou, o lugar de mudar "
            "é a resposta dela, não esta linha")
 
-    # 5-ter. A DICA DO CAMPO É PINTADA, E O `<select>` NÃO TEM `title` PRÓPRIO —
-    #    decisões [01] e [02] do PO, e as DUAS metades são a mesma cura.
-    #
-    #    O navegador mostra o `title` do ancestral mais próximo quando o
-    #    elemento sob o rato não tem o seu. Um `title` no `<select>` VENCE o do
-    #    embrulho — e o embrulho é o único que pode ser pintado, porque o campo
-    #    de escolha já gasta o seu `data-hef-alvo` com `valor`. Devolver o
-    #    `title` ao `<select>` não deixaria a tela vazia: deixaria a explicação
-    #    CONGELADA na frase da cena, que é a tela afirmando o modo de ontem.
     exigir("<select" in corpo and 'title="' not in corpo.split("<select", 1)[1]
            .split(">", 1)[0],
            "o `<select>` voltou a ter `title` próprio — ele sombreia a dica que "
            "o produto reescreve a cada tique, e a tela congela na frase da cena")
-    #    A RÉGUA COBRA O ENDEREÇO E O ALVO NA MESMA CONTA, e por isso ela é uma
-    #    expressão só: um embrulho com `data-campo` e sem `data-hef-alvo`
-    #    nasceria com o `title` da CENA cravado e nunca mais mudaria — que é o
-    #    defeito, não a metade dele. Contar `data-hef-atributo="title"` solto no
-    #    documento não serve: o rodapé (`fim.html`, um só para as dez páginas)
-    #    já traz dois, nos botões Salvar e Exportar.
     for _pre in (PREFIXO_DA_DICA_DO_MODO, PREFIXO_DA_DICA_DO_PRONTO):
         for _s in ("e", "d"):
             _n = len(re.findall(
@@ -1664,37 +1178,16 @@ def _conferir(doc):
                    f"{len(MESA)} colunas — a coluna que ficar sem endereço, ou "
                    f"sem alvo, guarda a dica da CENA para sempre")
 
-    # 6. TODO MODO CARREGA O CONTRATO DE DISCO NO `value`. `trigger.set` quer
-    #    `Rigid`; a opção que só tivesse "Rígido" mandaria um modo que o
-    #    `build_from_name` não conhece, e a recusa viria do daemon, não da tela.
     for _spec in PRESETS:
         exigir(f'<option value="{_spec.name}"' in corpo,
                f"o modo {_spec.name} perdeu o `value` — o clique iria sem contrato")
 
-    # 7. TODO CAMPO DE ESCOLHA PINTA POR `valor`, nunca por texto. Com o alvo
-    #    padrão (`texto`), a primeira pintura faria `select.textContent = …` e
-    #    APAGARIA as opções — as 19 do modo e as 8 do efeito pronto, nas quatro
-    #    colunas. Medido no `escrever()` do piloto, `hefesto_vivo.py:100-115`.
     _campos = corpo.count("<select")
     _por_valor = corpo.count('data-hef-alvo="valor"')
     exigir(_por_valor == _campos,
            f"{_campos} campos de escolha e {_por_valor} pintando por valor — "
            f"o que sobra pinta por texto e perde as opções na primeira pintura")
 
-    # 8. A CAIXA DE AJUSTES CRESCE COM O MODO — decisão dela, 02/09/2026.
-    #    A régua olha as DUAS metades da cura, porque uma sem a outra é pior que
-    #    nenhuma: sem o `subgrid` as cinco colunas deixam de partilhar as
-    #    trilhas e saem de registro; sem o `minmax(...,auto)` a trilha continua
-    #    fixa e as barras que sobram vazam por cima da linha de baixo.
-    #
-    #    A RÉGUA OLHA O DOCUMENTO SEM OS COMENTÁRIOS, e isso não é higiene: era
-    #    um instrumento falso. Medido em 02/09/2026 — arrancada a declaração
-    #    `grid-template-rows:subgrid` de `.duas-colunas > div` (e SÓ ela), o
-    #    gerador continuou dizendo `OK`, porque o comentário CSS que EXPLICA a
-    #    cura escreve a declaração por extenso e comentário vai para dentro do
-    #    `<style>`. A régua lia a própria prosa. Com a foto do estrago que ela
-    #    deixava passar: as cinco colunas saíam de registro e o miolo rolava
-    #    185px. É a nona vez que esta casa pega uma régua medindo a PALAVRA.
     _css = sem_comentarios_de_css(doc)
     exigir("grid-template-rows:subgrid" in _css,
            "as colunas deixaram de partilhar as trilhas da grade — cada uma "
@@ -1707,10 +1200,6 @@ def _conferir(doc):
            "a caixa de ajustes voltou a ter um número FIXO de trilhas — ela "
            "tem de medir o que o modo tem, e o modo vai de 0 a 11")
 
-    # 8-bis. A MARCAÇÃO DA CAIXA TEM UM DONO SÓ. O produto troca a caixa
-    #    inteira a cada tique (o `blocos:` do pacote); se o desenho escrever a
-    #    sua própria versão, as duas divergem e o produto passa a substituir um
-    #    desenho por outro. A régua compara a cena com o que o dono devolve.
     exigir(html_dos_ajustes("x", []).strip() in corpo,
            "a caixa do modo sem ajuste não é mais a que o pacote monta — o "
            "desenho e o produto voltaram a escrever a mesma coisa duas vezes")
@@ -1725,10 +1214,6 @@ def _conferir(doc):
            "recolhe a coluna por endereço e passaria a gravar os PADRÕES do "
            "modo por cima do que ela salvou")
 
-    # 8-ter. O LUGAR VAZIO MOSTRA TRAVESSÃO — decisão 13 dela, 02/09/2026.
-    #    Os DOIS campos de escolha o oferecem: `Desligado` e `— Nenhum —` são
-    #    escolhas legítimas de um controle CONECTADO, e usar as mesmas palavras
-    #    para "não há aparelho aqui" confunde as duas coisas.
     _com_travessao = len(re.findall(
         rf'<option value="{TRAVESSAO}"[^>]*\bdisabled\b', corpo))
     exigir(_com_travessao == corpo.count("<select"),
@@ -1737,64 +1222,15 @@ def _conferir(doc):
            f"`escrever()` do piloto recusa em silêncio e a coluna do lugar vazio "
            f"fica com o efeito de quem saiu dali")
 
-    # 8-quater. O NOME DO EFEITO TEM ONDE SER ESCRITO — decisão 17 dela.
-    #    "Meus efeitos" existia no campo de escolha com dois exemplos e sem
-    #    dono. Sem este campo, não há como a pessoa dar o nome — e a seção
-    #    continuaria sendo desenho.
     exigir(corpo.count('data-linha="nome-do-efeito"') == len(MESA),
            f"o campo do nome do efeito não está nas {len(MESA)} colunas — "
            f"'Meus efeitos' volta a ser promessa sem dono")
 
-    # 9. O LUGAR VAZIO NÃO SE CLICA. A trava é de CSS e pende do
-    #    `data-conectado`, que o piloto mantém a cada tique — logo ela vale para
-    #    a mesa DELA, não para a cena que o gerador viu. Fotografado em 02/09:
-    #    P3 e P4 diziam `Desconectado` com os campos abertos e o "Guardar esse
-    #    efeito" clicável.
-    #    A RÉGUA OLHA O `doc`, e não o `corpo`: o `corpo` é só o MIOLO (do
-    #    `<div class="miolo">` até a nota), e a folha de estilo mora no
-    #    cabeçalho. Procurar CSS ali dá não-achado convincente.
     exigir('.ctrl[data-conectado="nao"] select' in doc,  # (noqa-acento) valor
            "a trava do lugar vazio sumiu do CSS — as colunas sem controle "
            "voltam a aceitar clique que só pode terminar em recusa")
 
-    # 10. OS QUATRO LUGARES CARREGAM O MESMO ENDEREÇO — 07/09/2026.
-    #
-    #    O DEFEITO QUE ESTA RÉGUA IMPEDE foi medido HOJE, com os quatro
     #    DualSense dela na mesa: o daemon publica quatro, a carga da aba chega
-    #    com `colunas` para `p1..p4` e `ocupados` com os quatro — e a tela
-    #    mostra DOIS. Os outros dois seguem dizendo "Desconectado", com
-    #    travessão em tudo.
-    #
-    #    A CAUSA É ESTRUTURAL, e vive nas abas que têm um RAMO À PARTE para o
-    #    lugar vazio: ele devolve um cartão SEM NENHUM `data-campo` por dentro.
-    #    O piloto pinta por endereço — `achar(raiz, k)` procura
-    #    `data-campo="k"` DENTRO do bloco daquele controle (`hefesto_vivo.py`,
-    #    passo 2) —, então o dado dela chega e não tem onde pousar. É o defeito
-    #    que esta casa já nomeou muitas vezes — *a tela afirmando o que não é* —
-    #    e aqui ela afirma AUSÊNCIA: dois controles na mesa e a coluna dizendo
-    #    que não há aparelho.
-    #
-    #    ESTA ABA NÃO TEM O RAMO — `coluna()` é UMA, e `conectado` decide só a
-    #    classe, o atributo e o TEXTO inicial de cada campo. Medido antes desta
-    #    régua nascer: os quatro lugares já traziam os mesmos dez endereços de
-    #    coluna. A régua existe para que continue assim — ela reprova no dia em
-    #    que alguém escrever um segundo caminho para o lugar vazio, que é
-    #    exatamente como o defeito nasceu nas outras: um dos dois ramos
-    #    envelheceu sem o outro.
-    #
-    #    OS `aj-*` FICAM FORA DA CONTA, e a razão é medida, não conveniência:
-    #    eles NÃO são pintados por `colunas`. A caixa de ajustes é um BLOCO que
-    #    o produto troca INTEIRO a cada tique (o `blocos:` do pacote, emitido
-    #    para cada lugar de `_todos_os_lugares_da_pagina()` — cheio ou vazio),
-    #    e o número de barras é do MODO, não do lugar: nesta cena o P1 desenha
-    #    seis e o P2 cinco. São dois lugares CHEIOS com conjuntos diferentes,
-    #    logo exigi-los iguais obrigaria a inventar no P2 um `aj-*-e-3` que ele
-    #    não tem — e mudaria as alturas de linha que a CENA calcula em `N_ESQ`
-    #    e `N_DIR`. Quem cobra as barras é a régua 8-bis, pela contagem.
-    #
-    #    A CONTA É PELA UNIÃO, e não contra uma coluna escolhida como base: com
-    #    base fixa, o dia em que a PRIMEIRA coluna perder um endereço a régua
-    #    passa a medir o buraco como se fosse o contrato.
     _por_coluna = _enderecos_de_cada_coluna(corpo)
     exigir(len(_por_coluna) == len(MESA),
            f"a régua achou {len(_por_coluna)} colunas e a `MESA` tem "
@@ -1813,10 +1249,6 @@ def _conferir(doc):
                f"outros lugares têm. Um controle que chegar nele fica com o "
                f"texto do desenho para sempre: o piloto procura o "
                f"`data-campo` DENTRO da coluna e não acha")
-    #    E O ALVO VAI JUNTO, pela mesma união: endereço com alvo diferente de
-    #    coluna para coluna é o mesmo dado pousando de dois jeitos. A régua 7 já
-    #    cobra o `valor` dos campos de escolha e a 5-ter o `atributo` das dicas;
-    #    esta alcança QUALQUER endereço, inclusive os que ainda não nasceram.
     for _campo in sorted(_todos):
         _assinaturas = {c[_campo] for c in _de_coluna.values() if _campo in c}
         exigir(len(_assinaturas) == 1,
@@ -1830,30 +1262,11 @@ def _conferir(doc):
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-# A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
-# 06/09/2026, achado pelo coordenador na costura: `import aba03` REESCREVIA a
-# bancada dela como efeito de um import. Bastava o pytest COLETAR um teste que
-# importasse este módulo no topo para `mockup/03-gatilhos.html` mudar no disco,
-# com o estado VIVO da mesa dentro — a contagem de controles do cabeçalho vira
-# `0 USB · 0 BT` quando nada está na tomada, e o portão do desenho aprovado
-# passa a reprovar por causa do que está na TOMADA, não do que alguém escreveu.
-#
-# OITO DOS DEZ GERADORES ESTAVAM ASSIM. A `aba01` e a `aba02` já tinham a
-# guarda desde que `jogar_vivo.py` e `controles_vivos.py` passaram a importá-
-# las; as outras oito não, e a razão é a de sempre — o defeito só aparece
-# quando alguém importa, e ninguém importava.
-#
-# A MORDIDA VIVE FORA DESTE ARQUIVO:
-# `tests/unit/test_a_palavra_do_transporte_tem_um_dono_so.py::
-# test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import`.
 if __name__ == "__main__":
     import os
     import shutil
     import tempfile
 
-    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
-    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
-    # no fim do `aba04.py`.
     _real = onde.saida()
     _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-03-"))
     for _vizinha in _real.glob("*.html"):

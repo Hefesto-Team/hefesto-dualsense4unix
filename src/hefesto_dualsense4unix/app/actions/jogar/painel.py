@@ -104,59 +104,23 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
     normalizar_caminho,
 )
 
-#: O que se escreve no lugar de um valor que o produto não tem como responder.
-#: É um traço, e não um zero: zero é uma medida, e esta tela não mediu nada.
 SEM_LEITOR = "—"
 
-#: O TRAÇO DO CÍRCULO DA ESCADA, para quem não é degrau. **Não é o
-#: :data:`SEM_LEITOR`**, e a diferença é de caractere: o desenho escreve um EN
-#: DASH (``U+2013``) dentro do ``<i class="tr">``, e o ``SEM_LEITOR`` é um EM
-#: DASH (``U+2014``). Escrever o outro aqui faria a tela e o produto dizerem
-#: coisas parecidas com bytes diferentes — que é como uma régua de comparação
-#: nasce cega.
-#: (escrito com o nome do caractere, e não com ele: `ruff` reprova um EN DASH
-#: solto como ambíguo — RUF001 — e tem razão, porque ele e o hífen são a mesma
-#: mancha na tela de quem revisa.)
 SEM_ALGARISMO = "\N{EN DASH}"
 
-# ---------------------------------------------------------------------------
-# LÁPIDE — o quarto botão de modo, "Desligado" (29/08/2026 → 31/08/2026)
-# ---------------------------------------------------------------------------
-# ELE EXISTIU, E O QUE O MATOU FOI UMA DECISÃO DELA, não um conserto.
-#
-# De 29/08 a 31/08 a fileira tinha QUATRO botões, e o quarto — `desligado` — era
 # o único sem leitor no produto: `mode_of_state` devolve três valores e nunca um
 # quarto, e chamar de "Desligado" o `state_full.paused` (que é o PS+Options, com
-# texto próprio em `home_actions.texto_da_pausa`) seria a tela inventando um
-# estado. Estava aberto como MIGRA-JOGAR-06, e a pergunta era dela.
-#
-# 31/08/2026, ela redesenhou o Modo de conexão e a resposta veio pela forma:
 # **Desligado = Modo Nativo**, *"o DualSense da forma como veio ao mundo"*. O
-# botão órfão sumiu do desenho e a posição Desligado do interruptor passou a
-# endereçar `MODE_NATIVE` (`src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`,
-# `data-modo="native"`), que TEM
-# leitor e TEM escritor. A MIGRA-JOGAR-06 fecha sem uma linha de produto nova.
-#
-# A CONSTANTE FICA porque ela é a resposta a uma pergunta que volta: *"e o botão
-# Desligado, sumiu por quê?"*. Ela não é usada por nada — `escritor_do_modo` e
-# `porque_nao_aplica` respondem por ela pelo caminho do endereço desconhecido,
-# que é o mesmo de qualquer DOM adulterado.
 MODO_DESLIGADO = "desligado"
 
 
 class Modo(NamedTuple):
     """Um botão da fileira "O que o controle faz agora"."""
 
-    #: o ``data-modo`` do botão na página
     chave: str
-    #: o rótulo aprovado por ela, no desenho
     rotulo: str
     #: o valor que ``mode_of_state`` devolve para este botão — ``None`` quando
-    #: **nenhum** valor dela corresponde a ele. Desde 31/08/2026 os três têm
-    #: leitor, e o campo fica: ele é o que impede a próxima linha de tela de
-    #: nascer sem dono e ninguém notar.
     lido_como: str | None
-    #: por que este botão não tem leitor (vazio quando tem)
     porque_nao: str = ""
 
     @property
@@ -164,25 +128,7 @@ class Modo(NamedTuple):
         return self.lido_como is not None
 
 
-#: A FILEIRA DE MODOS, NA ORDEM DO DESENHO — e desde 31/08/2026 são **TRÊS**,
-#: que é exatamente o que ``mode_transition.MODES`` tem. Pela primeira vez os
-#: dois conjuntos são o mesmo conjunto: todo endereço da tela tem leitor E
-#: escritor, e nenhum modo do produto ficou sem lugar na tela.
-#:
-#: Onde cada um mora no desenho (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``):
-#:
-#:   * ``gamepad`` — a posição **Ligado** do interruptor;
-#:   * ``native``  — a posição **Desligado** ("Modo Nativo");
-#:   * ``desktop`` — o chip **Navegação**, dentro do lado Ligado. Ele mora ali,
 #:     e não do lado desligado, porque **quem emula teclado e mouse é o próprio
-#:     Hefesto**: com ele fora do meio não existe teclado nem mouse.
-#:
-#: Os rótulos NÃO são digitados aqui: saem de
-#: ``home_actions.ITENS_DE_MODO``/``_MODE_ITEMS``, que é o léxico desta casa
-#: (``app/actions/contrato_da_mascara.py`` o republica, e o
-#: ``app/widgets/painel_no_jogo.py`` o consome). Digitá-los seria a segunda
-#: cópia da palavra dela. **Eles não são as palavras do desenho** ("Ligado",
-#: "Desligado", "Navegação"): estas são a tela, e são do gerador do mockup.
 _ROTULO_DO_MODO: dict[str, str] = dict(home_actions._MODE_ITEMS)
 
 MODOS_DA_TELA: tuple[Modo, ...] = (
@@ -191,51 +137,23 @@ MODOS_DA_TELA: tuple[Modo, ...] = (
     Modo(MODE_DESKTOP, _ROTULO_DO_MODO[MODE_DESKTOP], MODE_DESKTOP),
 )
 
-#: OS DOIS MODOS QUE SÃO O HEFESTO **LIGADO**. Ele está no meio nos dois: no
-#: ``gamepad`` entregando um controle ao jogo, no ``desktop`` entregando teclado
-#: e mouse ao computador. Só o ``native`` é ele fora do meio.
 MODOS_LIGADOS: tuple[str, ...] = (MODE_GAMEPAD, MODE_DESKTOP)
 
 
 def modo_vivo(state: dict[str, Any] | None) -> str | None:
-    """Qual botão da fileira está aceso — ``None`` com o daemon calado.
-
-    Delega, sem uma linha de regra própria. O valor devolvido é a ``chave`` de
-    um :class:`Modo` de :data:`MODOS_DA_TELA`, ou ``None``.
-    """
+    """Qual botão da fileira está aceso — ``None`` com o daemon calado."""
     return mode_of_state(state)
 
 
 def ligado_por_modo(chave: str | None) -> bool | None:
-    """O interruptor, a partir de uma chave de modo — ``None`` quando não se sabe.
-
-    Existe separada de :func:`hefesto_ligado` por um motivo de tela: a aba viva
-    tem um **eco** (o clique dela valendo até o daemon alcançar), e o
-    interruptor precisa responder pela mesma regra nos dois casos. Uma segunda
-    lista de "quais modos são Ligado" escrita em JavaScript seria o segundo dono
-    da regra, na linguagem em que ninguém a mede.
-    """
+    """O interruptor, a partir de uma chave de modo — ``None`` quando não se sabe."""
     if not chave:
         return None
     return chave in MODOS_LIGADOS
 
 
 def hefesto_ligado(state: dict[str, Any] | None) -> bool | None:
-    """A POSIÇÃO DO INTERRUPTOR agora: ``True`` Ligado · ``False`` Desligado ·
-    ``None`` o daemon não respondeu.
-
-    **POR QUE ISTO É DERIVADO, e não a comparação de um botão só.** A pintura
-    viva acende ``[data-modo]`` comparando a chave com o modo do daemon, uma a
-    uma — e o Hefesto **Ligado** é ``gamepad`` *ou* ``desktop``. Sem esta
-    leitura, com o modo vivo em ``desktop`` (a Navegação) o interruptor fica
-    **apagado dos dois lados**: a tela não estaria mentindo, estaria muda — e
-    mudo é pior, porque parece defeito.
-
-    Foi o que o desenho de 31/08 encomendou ao código com todas as letras, e é
-    o estado em que a máquina dela estava quando esta função nasceu:
-    ``modo_vivo`` respondendo ``desktop``, com o gamepad desligado por gesto
-    dela.
-    """
+    """A POSIÇÃO DO INTERRUPTOR agora: ``True`` Ligado · ``False`` Desligado ·"""
     return ligado_por_modo(modo_vivo(state))
 
 
@@ -265,39 +183,9 @@ def caminho_vivo(state: dict[str, Any] | None) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# O INTERRUPTOR — do clique dela até o disco
-# ---------------------------------------------------------------------------
-# POR QUE ESTE BLOCO NASCEU (31/08/2026). Pedido dela, literal: *"Não sei se o
-# botão de ativar ele na interface tá funcionando viu. não sei se segue
-# desativado."* e *"eu quero é que ele funcione na interface e se lembre"*.
-#
-# MEDIDO na tela nova, antes de uma linha ser escrita: com o `./interface`
-# aberto e a tira navegada até a aba Jogar, `[data-modo="gamepad"]` aparecia
-# ACESO, `listeners=0` em TODOS os quatro botões, o clique sintético produziu
-# ZERO gestos e o `gamepad_disabled.flag` não se moveu. A tela afirmava "Jogar
 # pelo Hefesto" enquanto o `mode_of_state` do daemon dizia `desktop` — o F7
-# desta casa (*estado velho como padrão*) na pergunta em que ela mais dói.
-#
-# O QUE FALTAVA NÃO ERA MÉTODO DE IPC. `gamepad.emulation.set` existe
-# (`daemon/ipc_server.py:166`), persiste (`utils/session.save_gamepad_emulation`
-# grava/apaga o `gamepad_disabled.flag`) e é respeitado depois de reiniciar
-# (`gamepad_multiplos_controles_adiado estado=ignorado_gesto_dela`). Faltava a
-# metade ESCRITORA desta tela: o módulo dizia qual botão acende e nunca disse
-# quem aplica o clique.
-#
-# Este bloco NÃO reimplementa a sequência: ela continua sendo de
-# `mode_transition.plan_mode_transition`, que é o dono declarado desde o HARM-01.
-# O que nasce aqui é (a) o mapa `botão → escritor`, que é o par honesto do
-# `tem_leitor` já existente, e (b) a leitura do DISCO, que é a única fonte que
-# responde "segue desativado?" com o daemon calado.
 
-#: QUEM APLICA CADA BOTÃO DA FILEIRA, num lugar só — o par escritor do
-#: :attr:`Modo.tem_leitor`. Ler e escrever são perguntas DIFERENTES, e o fato de
-#: hoje os três coincidirem não as junta: o "Automático" da escada tinha leitor
 #: nenhum e escritor nenhum, e a **Navegação** é o caso do meio ao contrário —
-#: ela tem escritor aqui (``apply_mode('desktop')``) e **não** é degrau da
-#: ``ESCADA``: "não é degrau" não é "não tem dono".
 ESCRITOR_DOS_MODOS: dict[str, str] = {
     MODE_DESKTOP: "`mode_transition.apply_mode('desktop')` — três IPCs em ordem "
     "(`native.mode.set` off, `gamepad.emulation.set` off, "
@@ -316,12 +204,7 @@ ESCRITOR_DOS_MODOS: dict[str, str] = {
 
 
 def escritor_do_modo(chave: str) -> str:
-    """Quem APLICA este botão, ou o porquê de ninguém aplicar.
-
-    Nunca levanta ``KeyError``: uma chave que o gerador não escreve chega aqui
-    quando alguém adultera o DOM (uma régua, por exemplo), e derrubar a tela
-    dela para relatar um dono desconhecido é o pior dos dois males.
-    """
+    """Quem APLICA este botão, ou o porquê de ninguém aplicar."""
     escritor = ESCRITOR_DOS_MODOS.get(chave)
     if escritor is not None:
         return escritor
@@ -339,34 +222,16 @@ def escritor_do_modo(chave: str) -> str:
 
 
 def porque_nao_aplica(chave: str) -> str:
-    """Vazio quando o botão TEM escritor; a recusa do dono, quando não tem.
-
-    É a frase com que o gesto recusa. Botão vivo que ninguém atende dispara
-    trabalho que não acontece e a tela confirma; a recusa dita é a cura, e
-    quem a diz é :func:`escritor_do_modo`, o dono da pergunta "quem aplica".
-    """
+    """Vazio quando o botão TEM escritor; a recusa do dono, quando não tem."""
     if chave in ESCRITOR_DOS_MODOS:
         return ""
-    # A RECUSA É DO DONO — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. Aqui havia
-    # uma segunda frase para o mesmo fato (*"O botão … ainda não tem quem o
-    # atenda no Hefesto. Ele está no desenho e a decisão é dela"*), escrita ao
-    # lado da que :func:`escritor_do_modo` já dizia. O gesto da aba Jogar
-    # (`a01_jogar._plano`) recusa com ESTA, e ela vai ao diário da janela, não à
-    # tela: o botão só pisca a recusa.
     return escritor_do_modo(chave)
 
 
 def plano_do_modo(
     chave: str, mascara: str | None = None, caminho: str | None = None
 ) -> list[tuple[str, dict[str, Any]]] | None:
-    """A sequência de IPC do clique — DELEGADA, sem uma linha de regra própria.
-
-    ``None`` quando o botão não tem escritor (hoje, só o "Desligado"). Quem
-    define o que cada modo É continua sendo
-    :func:`~hefesto_dualsense4unix.app.actions.mode_transition.plan_mode_transition`;
-    escrever a ordem das chamadas aqui criaria o segundo dono que o HARM-01
-    enterrou. ``caminho`` é o de :attr:`Chip.caminho` (MODO-DE-CONEXAO-01).
-    """
+    """A sequência de IPC do clique — DELEGADA, sem uma linha de regra própria."""
     if chave not in ESCRITOR_DOS_MODOS:
         return None
     return plan_mode_transition(chave, mascara, caminho)
@@ -381,27 +246,14 @@ class Lembranca(NamedTuple):
     sei se segue desativado"* — é mais aflita.
     """
 
-    #: ``True`` deixou ligado · ``False`` desligou DE PROPÓSITO · ``None`` nunca
     #: decidiu. Os três são estados diferentes, e o do meio é o que a automação
-    #: do daemon respeita (``gamepad_multiplos_controles_adiado``).
     ligado: bool | None
-    #: a máscara gravada junto, quando ligado
     mascara: str | None
-    #: a frase que responde, em português, "e agora, segue desativado?"
     frase: str
 
 
 def modo_lembrado() -> Lembranca:
-    """O opt-out persistido do gamepad virtual, com a frase da tela.
-
-    Delega a :func:`~hefesto_dualsense4unix.utils.session.load_gamepad_preference`,
-    que é o dono do arquivo — nenhum caminho de disco é escrito aqui. Ela já é
-    à prova de I/O (erro vira "nunca decidiu"), e por isso esta função também é.
-
-    **A lembrança responde por UM eixo só**, e isso está dito na frase: o
-    arquivo guarda o gamepad virtual, não o Modo Nativo nem o mouse. Deduzir
-    daqui qual dos outros modos está valendo seria a tela inventando um estado.
-    """
+    """O opt-out persistido do gamepad virtual, com a frase da tela."""
     from hefesto_dualsense4unix.utils.session import load_gamepad_preference
 
     ligado, mascara = load_gamepad_preference()
@@ -429,28 +281,14 @@ def modo_lembrado() -> Lembranca:
     )
 
 
-# ---------------------------------------------------------------------------
-# A escada — os cinco modos de dentro do Hefesto LIGADO
-# ---------------------------------------------------------------------------
 class Chip(NamedTuple):
     """Um chip da fileira "Modo", do lado Ligado do interruptor."""
 
-    #: o ``data-degrau`` do chip na página
     chave: str
-    #: o rótulo aprovado por ela
     rotulo: str
-    #: a ponte que este chip NOMEIA — ``None`` quando ele não nomeia ponte
-    #: nenhuma, e é o caso do "Point And Click"
     ponte: ponte_escada.Ponte | None
-    #: o ``mode_transition`` que este chip aplica, quando aplica algum. Só a
-    #: **Navegação** tem: ela não é degrau da escada e mesmo assim tem dono, e
-    #: é este campo que separa "não é degrau" de "não tem dono".
     modo: str | None = None
-    #: o CAMINHO que este chip escolhe — MODO-DE-CONEXAO-01, 13/09/2026. Só o
     #: «Sony DualSense» e o «Xbox» têm: são os dois degraus ao vivo da escada, e
-    #: o clique manda `gamepad.emulation.set {caminho}`. Até 13/09 o chip
-    #: mandava a MÁSCARA da `ponte` (`flavor`), e com máscara no cartão ele dizia
-    #: «aplicado» sem mudar nada. O «Steam Input» não tem: não há IPC que o ligue.
     caminho: str | None = None
 
     @property
@@ -462,63 +300,12 @@ class Chip(NamedTuple):
 
     @property
     def algarismo(self) -> str:
-        """O que iria no círculo — **derivado, nunca digitado**.
-
-        **A TELA NÃO MOSTRA MAIS ESTE NÚMERO — 31/08/2026**, e a razão é o que
-        esta property existia para evitar: os dois números divergiram. A aba
-        escrevia ``③ Steam Input``; daqui sai **4**, porque o terceiro degrau da
-        ``ESCADA`` é o Nativo, que a decisão dela do mesmo dia tirou da fileira
-        para virar a posição DESLIGADO do interruptor. Havia três saídas —
-        numerar ``1 · 2 · 4`` com o buraco, numerar pela posição na tela, ou
-        tirar os números; **ela tirou**. A ordem passou a viver na dica de cada
-        modo. Ver ``src/hefesto_dualsense4unix/interface/aba01.py``, o comentário do ``MODOS``.
-
-        ELA FICA, e não é código morto por acaso: enquanto a ordem for uma
-        afirmação do produto, este é o **único** lugar de onde um número pode
-        sair. Se os algarismos voltarem, voltam daqui — digitá-los na tela é o
-        que produziu a divergência que os matou.
-
-        O algarismo é a ordem em que o produto TENTA, e o dono dessa ordem é a
-        ``ponte_escada.ESCADA``. Digitá-lo criaria o mesmo número em dois
-        lugares, e dois números iguais escritos à mão divergem no primeiro dia
-        em que alguém mexe num deles.
-
-        Quem não é degrau leva :data:`SEM_ALGARISMO`, nunca um número: um
-        algarismo ali diria que o **PS + R3** para naquele modo, e ele não para.
-        """
+        """O que iria no círculo — **derivado, nunca digitado**."""
         indice = self.indice
         return SEM_ALGARISMO if indice < 0 else str(indice + 1)
 
 
-#: OS QUATRO MODOS DO LADO **LIGADO**, na ordem do desenho, com a ponte que
-#: cada um nomeia — e os quatro são os quatro ``data-degrau`` da página
-#: publicada. Eram CINCO aqui e quatro na tela, e a diferença era a linha
-#: fantasma `pointclick` (ver o bloco dela, abaixo).
-#: Os rótulos são dela (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``);
-#: a ponte é a
-#: tradução para o vocabulário de ``integrations/ponte_escada``.
-#:
-#: **A tradução é declarada aqui e o ALGARISMO é calculado** — nunca digitado
-#: (:attr:`Chip.algarismo`). Acrescentar ou tirar um degrau da ``ESCADA`` muda
-#: esta tela sozinho, e a régua da suíte denuncia quem ficar sem chip.
-#:
-#: O QUE MUDOU EM 31/08/2026, contra a fileira plana de quatro:
-#:
 #:   * o chip chamado **"Hefesto"** virou **Sony DualSense** — ele sempre foi
-#:     ``Ponte(gamepad, dualsense)``, e era o nome do PRODUTO no lugar do nome
-#:     da máscara, numa fileira em que os outros também são o Hefesto;
-#:   * **Xbox** entrou: ``Ponte(gamepad, xbox)`` é o SEGUNDO degrau que o
-#:     produto tenta, e nenhum chip o nomeava — era o que
-#:     a conferência da escada contra a tela denunciava desde 29/08;
-#:   * **"Sony (nativo)"** saiu: ele é a posição **Desligado** do interruptor
-#:     (ver :data:`PONTES_DO_INTERRUPTOR`);
-#:   * **"Teclado + Mouse"** virou **Navegação**, e ganhou o ``modo``:
-#:     ``KIND_DESKTOP`` não é degrau da ``ESCADA``, mas ``apply_mode('desktop')``
-#:     funciona hoje;
-#:   * **Point And Click** nasceu por ordem dela — e SAIU no mesmo 31/08, pela
-#:     ordem seguinte dela: *"nos mockups tira o point and click e deixa só o
-#:     navegação."* A linha da tabela sobreviveu à tela por dezessete dias, e
-#:     saiu em 17/09/2026 (POINT-AND-CLICK-01). São QUATRO chips.
 CHIPS_DA_ESCADA: tuple[Chip, ...] = (
     Chip(
         "dualsense",
@@ -541,35 +328,6 @@ CHIPS_DA_ESCADA: tuple[Chip, ...] = (
             steam_input=True,
         ),
     ),
-    # A LINHA `pointclick` SAIU — POINT-AND-CLICK-01, 17/09/2026, e ela era uma
-    # LINHA FANTASMA. O comentário que estava aqui dizia três coisas e duas
-    # eram falsas: que ele era *"o único DA TELA sem dono nenhum"* (ele não
-    # está na tela desde 31/08 — a página publicada tem quatro `data-degrau` e
-    # o gerador tem trava contra o quinto) e que estava aqui *"por ordem dela,
-    # de 31/08 (manter)"* — a ordem dela de 31/08 é **tirar**: *"nos mockups
-    # tira o point and click e deixa só o navegação."*, e é a que a tela
-    # cumpre. Uma linha de código mandando a próxima pessoa CONSTRUIR um botão
-    # que a ordem dela mandou tirar é o mesmo defeito que a entrada `"mascara"`
-    # já registrou neste arquivo.
-    #
-    # E ELA ENVENENAVA UMA RÉGUA: a conta dos chips sem dono devolvia `['pointclick']`
-    # sobre um chip que a tela não mostra. A régua existe para marcar um botão
-    # inerte **na tela**; medindo uma linha que não chega lá, ela responde
-    # sobre outra coisa que não o produto — a assinatura dos instrumentos
-    # falsos desta casa. Agora devolve `()`.
-    #
-    # O MODO NÃO SAIU COM ELA: *"o modo point and click é o modo navegação"* —
-    # ordem dela de 17/09/2026. É o chip `navegacao` logo abaixo, e é o mesmo
-    # `MODE_DESKTOP`. O `Estilo Point-and-click` da aba Navegação e o perfil de
-    # fábrica `assets/estilos_de_jogo/point_and_click.json` continuam.
-    # O RÓTULO da fileira é decisão dela e não se decide aqui (§7.1 da sprint):
-    # hoje a tela diz **Navegação**, e é o que esta tabela diz.
-    #
-    # O CASO DO MEIO, E ELE É BOM: `KIND_DESKTOP` EXISTE como constante
-    # (`ponte_escada.KIND_DESKTOP`) e é aceito por `ponte_do_perfil` e
-    # `ponte_do_carimbo` — mas NÃO É DEGRAU: a `ESCADA` não tem uma linha com
-    # ele, e `indice_do_degrau` devolve -1. O MODO, esse, tem dono e funciona
-    # hoje. Por isso ela leva traço no algarismo e NÃO leva a marca de sem dono.
     Chip(
         "navegacao",
         "Navegação",
@@ -578,70 +336,21 @@ CHIPS_DA_ESCADA: tuple[Chip, ...] = (
     ),
 )
 
-#: Compatibilidade de nome com o gerador do mockup, que chama a mesma coisa de
-#: "degraus". São os chips do desenho, não os degraus do código — e a diferença
-#: entre os dois é o assunto deste bloco.
 DEGRAUS_DA_TELA = CHIPS_DA_ESCADA
 
-#: AS PONTES QUE TÊM LUGAR NA TELA **FORA** DA FILEIRA. Hoje é uma só, e é a do
-#: interruptor: ``Ponte(KIND_NATIVE)`` é a posição **Desligado**.
-#:
-#: Sem esta linha a régua da escada acusaria o Nativo de não ter lugar na
-#: tela — e seria **acusação falsa**, do tipo mais caro: a régua reprovando a
-#: melhora em vez do defeito. Ela pergunta "este degrau tem onde aparecer?", e a
-#: resposta para o Nativo é sim; o que ele não tem é chip na fileira, que é
-#: outra pergunta.
 PONTES_DO_INTERRUPTOR: frozenset[ponte_escada.Ponte] = frozenset(
     {ponte_escada.Ponte(ponte_escada.KIND_NATIVE)}
 )
 
 
-# AS QUATRO CONFERÊNCIAS E O LEITOR POR JOGO SAÍRAM — A-TELA-PERGUNTA-AO-DONO-01,
-# 28/09/2026. `indice_do_chip`, `chips_sem_degrau`, `chips_sem_dono`,
-# `degraus_sem_chip` e `degrau_vivo` moravam aqui, e nenhuma tela as perguntava:
-# o `casa-sabe` as listava como promessa sem caminho desde 01/09.
-#
-# AS QUATRO PRIMEIRAS ERAM RÉGUA, e régua mora na suíte. Elas conferiam a
-# tabela desta aba contra a escada do produto (todo degrau tem onde aparecer;
-# todo chip tem quem o atenda), e as respostas eram sempre as mesmas: `()`.
-# Pedir isso na tela seria o chip cinza com a frase "ainda não tem quem o
-# atenda", que é a tela confessando dívida nossa. As conferências estão em
-# `tests/unit/test_o_botao_de_ligar_funciona_e_se_lembra.py` e em
-# `tests/unit/test_a_fileira_nao_tem_linha_fantasma.py`, com a mesma mordida
-# do interruptor (:data:`PONTES_DO_INTERRUPTOR`). A posição na escada continua
-# sendo :attr:`Chip.indice`.
-#
-# `degrau_vivo` ERA UM SEGUNDO LEITOR DO CHIP ACESO, e o que ela lia caducou:
-# o carimbo por jogo do prontuário. Desde a MODO-DE-CONEXAO-01 (13/09/2026) o
-# chip acende pelo CAMINHO que o daemon publica — :func:`caminho_vivo` e
-# :func:`modo_vivo`, lidos pelo pacote da aba (`a01_jogar._chip_do_caminho`).
-# Duas regras para o mesmo chip aceso divergem no primeiro jogo carimbado.
-
-
-# ---------------------------------------------------------------------------
-# A coluna Atenção
-# ---------------------------------------------------------------------------
 class Aviso(NamedTuple):
     """Uma linha da coluna Atenção: o selo, e quem sabe dizer o texto."""
 
-    #: o texto do selo colorido do desenho (`.selo.alerta`)
     selo: str
-    #: a função PURA do produto que responde por este aviso
     fonte: Callable[[dict[str, Any] | None], str | None]
-    #: o nome da fonte, para o relatório e para a régua
     nome: str
 
 
-#: A FRASE DO MODO NATIVO — **PROVISÓRIO, decisão dela** (PROVA-DE-TELA-01).
-#:
-#: COOP-NA-CONEXAO-NATIVA-01, Caminho A (06/09/2026). O que ela substitui está
-#: medido na §2.4 da sprint: a tela do modo mais fiel ao aparelho dizia, sobre
-#: dois controles na mesma sala, que *"não há aqui o que medir"* — verdadeiro
-#: sobre movimento, toque, vibração e som, e **mudo sobre a única coisa que
-#: muda de comportamento: quantos jogadores existem**.
-#:
-#: ELA DIZ O MECANISMO, NÃO A RETIRADA, e isso é cicatriz: a primeira redação
-#: do ``TEXTO_NATIVO`` foi reprovada por um portão
 #: (``tests/unit/test_a_frase_refutada_da_allowlist.py``) por começar com *"O
 #: Hefesto saiu da frente"* — a construção que a medição dela derrubou em
 #: 06/08. Aqui não há verbo de afastamento nenhum: há o que o produto NÃO monta
@@ -698,19 +407,6 @@ def aviso_do_modo_nativo(state: dict[str, Any] | None) -> str | None:
     return FRASE_DO_MODO_NATIVO.format(quantos=quantos)
 
 
-# ---------------------------------------------------------------------------
-# AS CINCO QUE A COLUNA NÃO LIA — JOGAR-OS-SEIS-AVISOS-01 (06/09/2026)
-# ---------------------------------------------------------------------------
-# TODAS TÊM A MESMA FORMA, e é a forma que o enunciado da sprint nomeia: **o
-# daemon publica a chave, ou `home_actions` já tem a função pura, e o pacote da
-# aba não lê.** Nada de regra nova: o que nasce aqui é o LEITOR — uma função de
-# ``state`` que devolve texto ou ``None``, que é o contrato de :class:`Aviso`.
-#
-# POR QUE ELAS MORAM AQUI, E NÃO EM ``interface/pacotes/a01_jogar.py``: a sprint
-# diz com todas as letras que *"os avisos entram na coluna Atenção por
-# `painel.AVISOS_DA_TELA` e `ORDEM_DA_GRAVIDADE` — não invente um segundo
-# lugar"*. É a mesma razão que pôs :func:`aviso_do_modo_nativo` aqui em 06/09: o
-# pacote da aba PINTA, e quem responde pelo assunto é o motor.
 def aviso_do_grab_dobrado(state: dict[str, Any] | None) -> str | None:
     """O jogo pode estar recebendo cada botão duas vezes; ``None`` quando não.
 
@@ -718,7 +414,7 @@ def aviso_do_grab_dobrado(state: dict[str, Any] | None) -> str | None:
     a I9 já tirou do meio do montador de widgets exatamente para ser chamada de
     fora da GTK — ``is_primary and gamepad_on and grab_state == "failed"``. O
     que esta função faz é o que faltava: **ler do ``state`` os três termos** que
-    a janela antiga lia dos widgets dela (`home_actions.py:2943` passa
+    a janela antiga lia dos widgets dela (`home_actions.py:1892` passa
     ``state.get("primary_grab_state")`` e o ``is_primary`` de cada cartão).
 
     ``aviso_de_grab`` devolve ``(linha, porquê)`` — a linha era o rótulo e o
@@ -753,56 +449,13 @@ def aviso_do_grab_dobrado(state: dict[str, Any] | None) -> str | None:
     return f"{linha}. {porque}"
 
 
-#: A FRASE DA LINHA DE ORIGEM — **PROVISÓRIO, decisão dela** (PROVA-DE-TELA-01).
-#:
-#: Ela responde a UMA pergunta, e a sprint a escreve assim: *"por que o modo
-#: mudou sem eu mexer"*. A janela antiga respondia com ``"Nativo ligado pelo
-#: perfil ativo"`` / ``"Gamepad ligado pelo perfil ativo"``
-#: (`home_actions.py:2884-2888`), duas frases montadas dentro do render e
-#: juntadas por ``" · "``.
-#:
-#: **O QUE MUDA AQUI É O NOME DO MODO, e é o glossário que manda.** ``Nativo`` e
-#: ``Gamepad`` são palavras da casa; na tela os modos chamam-se *Conexão Nativa
-#: (Sony)* e *Jogar pelo Hefesto* (`docs/A-LINGUA-DESTA-CASA`, §2), e os rótulos
-#: saem de :data:`_ROTULO_DO_MODO`, que é `home_actions._MODE_ITEMS` — o léxico
-#: que as quatro superfícies desta casa compartilham. Digitá-los seria a segunda
-#: cópia da palavra dela.
-#:
-#: **A REGÊNCIA É "QUEM LIGOU … FOI", e não "… foi ligado", por causa do
-#: GÊNERO.** Os dois rótulos que entram aqui têm gêneros diferentes — *a*
-#: Conexão Nativa e *o* Jogar pelo Hefesto —, e um particípio concordaria com um
-#: e erraria o outro em toda tela que mostrasse o primeiro. Uma frase que exige
-#: um `if` de gênero para não sair errada é uma frase mal escolhida; esta não
-#: flexiona nada.
 FRASE_DA_ORIGEM_DO_MODO = "Quem ligou {modo} foi o perfil ativo, e não um gesto seu."
 
-#: O QUE SEPARA AS DUAS ORIGENS quando as duas falam. É o mesmo ``" · "`` da
-#: janela antiga (`home_actions.py:2892`), e não um "e": as duas são fatos
-#: independentes, não uma frase composta.
 SEPARADOR_DA_ORIGEM = " · "
 
 
 def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
-    """O modo em vigor foi ligado pelo PERFIL, e não por ela; ``None`` se não.
-
-    **É A SEGUNDA DAS SETE QUE NÃO MORA EM ``home_actions``, e pela mesma razão
-    da primeira** (:func:`aviso_do_modo_nativo`): lá ela nunca foi função. A
-    regra vivia SOLTA dentro de ``HomeActionsMixin._render_home``, montando uma
-    lista de pedaços entre dois `set_text` — não havia o que importar. A janela
-    GTK saiu inteira em 06/09 (``D-0609-GTK-LEVA-INTEIRA``), então pôr isto lá
-    criaria um dono novo num arquivo que está de saída.
-
-    AS DUAS CHAVES SÃO DO DAEMON, e cada uma tem escritor próprio:
-    ``native_mode_origin`` (`daemon/state_store.py:604`) e ``mode_from_profile``
-    (`daemon/lifecycle.py:2649`). O ``native_mode`` entra na conta junto com a
-    origem porque a origem SOBREVIVE ao modo no store — sem ele a tela diria
-    que o perfil ligou um Nativo que já não está de pé.
-
-    ``== "profile"`` e ``== "gamepad"`` LITERAIS, e não "qualquer coisa que não
-    seja vazio": os dois campos têm outros valores (origem manual, e o
-    ``native`` do ``mode_from_profile``, que o ramo de cima já cobre), e um
-    ``truthy`` transformaria *"você mesma ligou"* em *"o perfil ligou"*.
-    """
+    """O modo em vigor foi ligado pelo PERFIL, e não por ela; ``None`` se não."""
     if not isinstance(state, dict):
         return None
     partes: list[str] = []
@@ -813,23 +466,6 @@ def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
     return SEPARADOR_DA_ORIGEM.join(partes) if partes else None
 
 
-#: O QUE O "Reconectar Controles" DIZ QUANDO NEM O PRIMEIRO PASSO SAIU.
-#:
-#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01). A janela antiga
-#: dizia *"Não consegui reconciliar — o Hefesto pode estar desligado."*, um
-#: literal solto dentro do ``_sync_fail`` do handler
-#: (`home_actions.py:3348-3351`) — sem constante, e portanto sem como ser
-#: importado por quem não é aquela janela.
-#:
-#: **O VERBO MUDOU PORQUE O BOTÃO MUDOU.** A legenda desta aba registra a troca:
-#: *"'Reconciliar jogadores' virou 'Reconectar Controles'"* (`aba01.py:2025`).
-#: Uma recusa que usa o verbo de um botão que não existe mais manda a pessoa
-#: procurar o que não está lá, que é o que o glossário proíbe.
-#:
-#: E ELA NÃO AFIRMA QUE NADA ACONTECEU: ``chamar``/``resultado`` devolvem falha
-#: também no timeout, e o daemon pode ter feito o trabalho sem a resposta
-#: chegar — é a mesma cicatriz que a `a09_sistema.SEM_RESPOSTA_DO_SERVICO`
-#: escreve por extenso. O que ela afirma é o que se sabe: não deu para falar.
 RECONECTAR_SEM_SERVICO = (
     "Não consegui falar com o serviço para reconectar os controles — o Hefesto "
     "pode estar desligado."
@@ -837,69 +473,15 @@ RECONECTAR_SEM_SERVICO = (
 
 
 def recibo_do_reconectar(jogadores: object, resultado: object) -> str:
-    """O que o passo 2 do "Reconectar Controles" tem a dizer — ou `""`.
-
-    ``resultado`` é a resposta do `identity.renumber` (``None`` quando ele não
-    respondeu). A função é a PONTE entre o gesto da aba
-    (`interface/pacotes/a01_jogar.reconectar`) e este módulo, que a casa elegeu
-    para isso (é o que `AVISOS_DA_TELA` já faz com as outras fontes).
-    ``jogadores`` chega e não é lido desde 09/09/2026: a contagem era da frase
-    da janela GTK, que saiu com a JOGAR-02.
-
-    **SÓ A FALHA FALA — 24/09/2026, decisão dela**
-    (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`): *«Nada: o número novo aparece no
-    próprio cartão»*. A numeração que deu certo, tenha mudado ou não, não é
-    notícia: o cartão mostra o número novo no tique seguinte. Quem cala é
-    :func:`_sem_noticia`; quem fala é :func:`_na_lingua_da_tela`, e só das duas
-    falhas — *"não consegui"* é o produto dizendo que não fez.
-
-    A HISTÓRIA QUE FICA, porque é ela que impede de reabrir por engano:
-
-    * **09/09/2026, JOGAR-02** — pedido dela, com um print da aba Jogar:
-      *"remover essa frase que aparece
-      tambem ao clciar em reconectar controles"*.  # noqa-acento: citação dela
-      A frase era a da janela GTK (*"Jogadores reconciliados — 2 jogador(es).
-      A numeração já estava compacta."*): a língua de dentro, e notícia
-      nenhuma. A JOGAR-02 a calou e PROPÔS, para o olho dela, uma frase que
-      nomeava os assentos quando algum número mudasse.
-    * **24/09/2026** — ela escolheu não ter frase nenhuma. A proposta saiu do
-      produto e entrou em `interface/frases_que_ela_baniu.FRASES_BANIDAS`, que
-      a impede de voltar por este gesto ou por outro.
-
-    :return: a frase de falha, ou **`""`** quando não há o que contar — e o
-        gesto traduz o vazio em "sem recado", que é a piscada verde do botão.
-    """
+    """O que o passo 2 do "Reconectar Controles" tem a dizer — ou `""`."""
     return _na_lingua_da_tela(resultado)
 
 
-#: AS DUAS FRASES DO PASSO 2 DO RECONECTAR — e são só as de FALHA.
-#:
-#: ELAS NÃO VÊM DE `home_actions.reconciliar_toast` desde a JOGAR-02
-#: (09/09/2026): aquela é a frase da JANELA GTK, que saiu inteira
-#: (`D-0609-GTK-LEVA-INTEIRA`), e ela fala a língua de dentro — *"Jogadores
-#: reconciliados"*, *"numeração compactada"* são `CoopManager.sync` e
-#: `identity.compact` escritos na tela dela.
-#:
-#: A FRASE DO SUCESSO SAIU — 24/09/2026, decisão dela
-#: (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`): *«Nada: o número novo aparece no
-#: próprio cartão»*. Ela nomeava os assentos que mudaram de número, era a
-#: proposta da JOGAR-02 e esperava o olho dela. A constante que a guardava saiu
-#: com ela, e o trecho mora em `interface/frases_que_ela_baniu.FRASES_BANIDAS`
-#: — quem a devolver aqui reprova a guarda do fonte.
-#:
-#: A FRASE DE FALHA CONTINUA SENDO FALHA: *"não consegui"* não é língua de
-#: dentro, é o produto dizendo que não fez — e silêncio sobre isso é a mentira
-#: que esta casa persegue.
 _NAO_CONFERIU = "Não consegui conferir a numeração dos controles."
 _NAO_COMPACTOU = "Não consegui ajustar a numeração dos controles."
 
 
-#: O PASSO 0 DO «RECONECTAR CONTROLES» — o rádio, ordem dela de 22/09/2026:
-#: *"pera o reconectar deveria sim tocar no radio. não faz sentido ele ficar de
 #: fora."* <!-- noqa-acento: citação literal dela -->
-#:
-#: Duas frases porque são dois desfechos que pedem coisas diferentes dela: um
-#: já está resolvido, o outro espera a mão dela. Quem faz os dois passos é
 #: `integrations/gesto_de_reconexao.reconectar`.
 _VOLTARAM_PELO_RADIO = "{quantos} controle(s) voltaram pelo rádio."
 _ESPERAM_O_PS = (
@@ -924,21 +506,7 @@ def recado_do_radio(voltaram: int, esperam_o_ps: int) -> str:
 
 
 def _na_lingua_da_tela(resultado: object) -> str:
-    """O desfecho do `identity.renumber` em palavras da tela — só a FALHA fala.
-
-    QUEM DECIDE O QUE É NOTÍCIA É :func:`_sem_noticia`, e esta função pergunta
-    a ela antes de tudo: todo sucesso e a recusa por jogo aberto voltam `""`.
-    O que sobra são as duas falhas — a resposta que não chegou
-    (:data:`_NAO_CONFERIU`) e o `ok` falso por outro motivo
-    (:data:`_NAO_COMPACTOU`). Com a pergunta aqui dentro, um sucesso nunca
-    chega a um ramo de falha, venha a chamada de onde vier.
-
-    O NÚMERO NOVO NÃO SE DIZ AQUI — 24/09/2026, decisão dela
-    (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`): ele aparece no próprio cartão, que
-    lê o número do daemon no tique seguinte (`a01_jogar.pacote`, a chave
-    `jogador`). O `renumbered` continua chegando na resposta, e ninguém aqui o
-    lê.
-    """
+    """O desfecho do `identity.renumber` em palavras da tela — só a FALHA fala."""
     if _sem_noticia(resultado):
         return ""
     if not isinstance(resultado, dict):
@@ -946,20 +514,6 @@ def _na_lingua_da_tela(resultado: object) -> str:
     return _NAO_COMPACTOU
 
 
-#: OS DESFECHOS QUE NÃO SÃO NOTÍCIA — e a lista é curta de propósito.
-#:
-#: **TODO `ok` VERDADEIRO**, com o `renumbered` vazio ou cheio. O vazio é "a
-#: numeração já estava compacta", que a JOGAR-02 calou em 09/09/2026; o cheio é
-#: "algum número mudou", e calou em 24/09/2026 pela decisão dela
-#: (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`) — o número novo aparece no cartão.
-#:
-#: E `sessao_de_jogo_aberta`, a recusa do passo 2 com o jogo aberto — que **não
-#: é falha**: os jogadores já voltaram no passo 1, e um recado de erro ali
-#: seria a interface mentindo (é a mesma regra do `reported_step_index`).
-#:
-#: O QUE CONTINUA SENDO NOTÍCIA: as duas falhas ("não consegui conferir", "não
-#: consegui ajustar") — as duas dizem que o produto não fez, e silêncio sobre
-#: isso é a mentira que esta casa persegue.
 def _sem_noticia(resultado: object) -> bool:
     """Este desfecho do `identity.renumber` fica calado? `True` = nada a contar."""
     if not isinstance(resultado, dict):
@@ -969,114 +523,33 @@ def _sem_noticia(resultado: object) -> bool:
     return True
 
 
-#: AS DOZE FONTES DE AVISO. Dez são função PURA de ``home_actions`` que devolve
-#: o texto ou nada (``None`` ou ``""``, conforme a que estava lá antes; os dois
-#: contam como "sem aviso"); as outras duas — :func:`aviso_do_modo_nativo` e
-#: :func:`aviso_da_origem_do_modo` — nasceram aqui, e cada uma diz por quê no
-#: próprio docstring.
-#:
-#: **NÃO CONTE ESTA LISTA NUM NÚMERO ESCRITO EM OUTRO LUGAR.** A docstring de
-#: `a01_jogar._avisos` já errou o próprio três vezes em três dias; o que fica
-#: escrito é a LISTA, que se conta sozinha. Quem acrescentar uma fonte
-#: acrescenta uma linha aqui — e nada mais.
-#:
-#: O aviso do mockup — *"Dois rádios da bancada estão em portas vizinhas"* — é
-#: **cena**, e a legenda dele já o declarava (``aba01.AVISOS``): a frase é da
 #: aba Conexões, e o ``state_full`` não publica contagem nem texto de aviso.
-#: A coluna viva a substitui pelas de baixo.
 AVISOS_DA_TELA: tuple[Aviso, ...] = (
     Aviso("PAUSA", home_actions.texto_da_pausa, "home_actions.texto_da_pausa"),
     Aviso("GAMEPAD", home_actions.vpad_degradation_text, "home_actions.vpad_degradation_text"),
     Aviso("RÁDIO", home_actions.texto_do_radio_fragil, "home_actions.texto_do_radio_fragil"),
     # `aviso_do_wrapper`, e não `wrapper_banner_text`: o segundo responde "há
-    # jogo sem wrapper agora?" e o primeiro responde "há algo a DIZER a ela
-    # sobre isso?" — calando quando ela já dispensou o jogo. Trocado em
-    # 05/09/2026, decisão dela `07-Q3`: "as duas recusas calam tudo".
-    #
-    # É A ÚNICA DAS SEIS QUE TOCA O DISCO, e só no caso raro: com jogo aberto
-    # sem o atalho ela lê as duas listas de recusa. Medido em 06/09/2026
-    # (ONDA5-07-03): **0,050 ms por tique** com os dois arquivos povoados,
-    # contra 2,85 ms de mediana do tique inteiro da aba Jogar. O número está no
-    # docstring de `home_actions.ela_ja_respondeu_sobre`, com a razão de não
-    # haver vigia em segundo plano aqui.
     Aviso("JOGO", home_actions.aviso_do_wrapper, "home_actions.aviso_do_wrapper"),
     Aviso("PERFIL", home_actions.autoswitch_lock_text, "home_actions.autoswitch_lock_text"),
     Aviso("PERFIL", home_actions.texto_do_cadeado_cego, "home_actions.texto_do_cadeado_cego"),
-    # COOP-NA-CONEXAO-NATIVA-01, Caminho A: o modo mais fiel ao aparelho era o
-    # único que não dizia quantos jogadores existem nele. Entra por ÚLTIMO na
-    # declaração e por ORDEM na tela — quem ordena é `ORDEM_DA_GRAVIDADE`.
     Aviso(SELO_DO_MODO, aviso_do_modo_nativo, "painel.aviso_do_modo_nativo"),
-    # --- JOGAR-OS-SEIS-AVISOS-01, 06/09/2026: as cinco que faltavam ---------
-    #
-    # NENHUM SELO NOVO, e é escolha medida. `a01_jogar.ORDEM_DA_GRAVIDADE` diz
-    # que o que não está na tupla dela cai DEPOIS DE TUDO — abaixo de notícias
-    # menos graves que ele. As cinco entram nos
-    # degraus que já existem, pelo assunto de cada uma.
-    #
-    # `MODO` — a tela promete "Controlar o PC" e o controle não move o cursor.
-    # É o MODO-QUE-NAO-CONTROLA-01, medido com ela ao vivo (*"cliquei em
-    # aplicar e nada"*), e é a MESMA pergunta do `aviso_do_modo_nativo` vizinho:
-    # o modo em vigor faz o que o nome dele promete? Os dois nunca disputam a
-    # linha — um só fala no Nativo, o outro só no desktop.
-    #
-    # **O TERCEIRO ARGUMENTO DELA NÃO SE PASSA AQUI, e o custo está medido no
-    # relato:** `texto_do_desktop_sem_emulacao` aceita `modo_mudou_agora=` para
-    # não julgar a emulação no mesmo tique em que o modo mudou (o
     # `mouse.emulation.restore` é o ÚLTIMO dos três IPCs). Uma fonte desta
-    # coluna é função PURA de `state`, e o tique da interface nova não tem
-    # memória do tique anterior — então o aviso pode piscar durante a transição
-    # para o desktop. `modo_exibido=` também fica de fora, e por medição: nesta
-    # interface o clique aplica na hora, então exibido e vigente são o mesmo
-    # valor e o argumento não muda desfecho nenhum.
     Aviso("MODO", home_actions.texto_do_desktop_sem_emulacao,
           "home_actions.texto_do_desktop_sem_emulacao"),
-    # `GAMEPAD` — os dois falam de como o JOGO vê os controles, que é o critério
-    # que o degrau declara. O vpad degradado é o jogo recebendo MENOS do que ela
-    # pediu; o grab dobrado é o jogo recebendo DUAS VEZES o mesmo botão.
-    #
-    # A TERCEIRA FORMA DESSE MESMO ASSUNTO — a divergência de máscara — **não
-    # entra nesta tupla**, e a razão é de ENDEREÇO, não de conteúdo:
-    # `home_actions.texto_da_divergencia` devolve markup do Pango, e quem sabe
-    # tirá-lo é uma função da JANELA GTK. Apontar deste arquivo para lá seria
-    # uma citação NOVA para a janela que está saindo (`D-0609-GTK-LEVA-INTEIRA`),
-    # e há portão que reprova — `scripts/check_nada_aponta_para_a_janela.py`,
-    # que reprovou a primeira versão desta cura em 06/09/2026 nomeando arquivo e
-    # linha. Ela mora em `a01_jogar._aviso_da_divergencia_de_mascara`, ao lado
-    # do `_aviso_da_ponte`, que é a outra fonte desta coluna que volta em markup
-    # e que já tem a única citação DECLARADA daquele arquivo.
-    #
-    # E O NOME DAQUELA FUNÇÃO NÃO SE ESCREVE AQUI, nem em prosa: o portão varre
-    # o texto do arquivo, não os imports — um comentário que a soletrasse seria
-    # a citação que ele proíbe. É a mesma lição do `BOOTSTRAP` em 05/09, quando
-    # um aviso citou literalmente o padrão que descrevia e virou o defeito.
     Aviso("GAMEPAD", aviso_do_grab_dobrado, "painel.aviso_do_grab_dobrado"),
-    # `JOGO` — o degrau é "há jogo aberto", e é exatamente o que esta linha diz:
-    # com a partida de pé o "Reconectar Controles" traz os jogadores de volta e
-    # a numeração espera. A FRASE É DO DONO, sem prefixo nosso: pôr o nome do
-    # botão na frente seria a segunda cópia de um rótulo cujo dono é o gerador
-    # da página.
     Aviso("JOGO", home_actions._reconciliar_gate_text,
           "home_actions._reconciliar_gate_text"),
-    # `PERFIL` — o mesmo degrau do cadeado da troca automática e do detector
-    # cego, e o mesmo assunto: o perfil agindo sozinho. Esta é a resposta a "por
-    # que o modo mudou sem eu mexer".
     Aviso("PERFIL", aviso_da_origem_do_modo, "painel.aviso_da_origem_do_modo"),
 )
 
 
 def avisos_do_estado(state: dict[str, Any] | None) -> list[dict[str, str]]:
-    """A coluna Atenção de agora: ``[{"selo", "texto", "fonte"}, …]``.
-
-    Uma fonte que levanta exceção **não derruba a coluna**: as outras cinco
-    continuam valendo, e a que falhou vira um aviso com o selo ``ERRO``. Uma
-    coluna de avisos que some quando um aviso quebra é a pior das duas falhas —
-    ela apaga justamente o que existia para ser visto.
-    """
+    """A coluna Atenção de agora: ``[{"selo", "texto", "fonte"}, …]``."""
     fora: list[dict[str, str]] = []
     for aviso in AVISOS_DA_TELA:
         try:
             texto = aviso.fonte(state)
-        except Exception as erro:  # o `Exception` largo é o ponto — ver o docstring
+        except Exception as erro:
             fora.append(
                 {
                     "selo": "ERRO",
@@ -1090,19 +563,7 @@ def avisos_do_estado(state: dict[str, Any] | None) -> list[dict[str, str]]:
     return fora
 
 
-# `texto_da_conta` SAIU — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. Era o canto
-# da coluna Atenção («nenhum aviso», «3 avisos»), e a coluna saiu da Jogar por
-# ordem dela; os avisos foram para a lista do exame da 09, que não conta linhas
-# desde 25/09 (*«Remove esse 8 linhas deixa o espaço vazio»*). O último a
-# chamá-la era o piloto de bancada da Jogar, pintando um endereço que a página
-# não tem mais.
-
-
-# `nome_do_perfil` SAIU — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. Ela lia só o
-# `active_profile` do daemon, e o crachá das dez abas pergunta ao dono das duas
-# pernas (daemon, depois o marcador em disco): `interface/pacotes/perfil.
 # nome_do_ativo`, que `pacotes.topo()` já chama. Dois leitores do perfil ativo
-# era o defeito que ela dizia evitar.
 
 
 __all__ = [

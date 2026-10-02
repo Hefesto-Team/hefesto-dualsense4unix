@@ -1,32 +1,4 @@
-"""SOM-RECUO-01 — o som e o volume respeitam o recuo do servidor (13/09/2026).
-
-Lido no journal do daemon dela, de 01:53:30 a 02:42:30 de 13/09, com o
-``pipewire-pulse`` sem atender ninguém: 291 ``som_load_module_falhou`` a cada
-10 s, 232 ``bt_mic_load_module_falhou`` e 715 ``audio_fonte_do_uniq_falhou``. A
-MIC-O-CANAL-DO-OUTRO-01 deu recuo ao microfone; o som e o volume continuaram
-batendo na mesma porta. Esta régua é das quatro metades da cura:
-
-1. o som (``alto_falante_bt``) anota o prazo e espera o recuo;
-2. som, microfone e volume dividem UM recuo — o servidor é um só;
-3. ``audio_control`` devolve o «não sei» NA HORA em recuo;
-4. a suíte não carrega módulo pelo ``_rodar`` do microfone, e o recuo do
-   processo nasce zerado em cada teste.
-
-NENHUM TESTE AQUI FALA COM O SERVIDOR DE SOM DA MÁQUINA: todo ``pactl`` é dublê,
-injetado como ``runner`` ou posto no lugar do ``subprocess.run``.
-
-COMO MORDE (exercido em 13/09/2026, as saídas estão na entrega)
-----------------------------------------------------------------
-* arranque a espera e a sondagem de ``alto_falante_bt._o_servidor_atende`` →
-  reprova a seção 1;
-* troque o ``dualsense_bt_audio.PACTL`` de ``alto_falante_bt._o_recuo`` e o de
-  ``audio_control._rodar_pelo_recuo`` por um recuo próprio → reprova a seção 2;
-* arranque o ``if PACTL.mudo()`` de ``_rodar_pelo_recuo`` → reprova a seção 3;
-* arranque a guarda do ``dualsense_bt_audio._rodar`` e o ``zerar()`` de
-  ``tests/conftest.py`` → reprova a seção 4.
-
-Endereços sintéticos da faixa ``e8:47:3a`` com a máscara da casa.
-"""
+"""SOM-RECUO-01 — o som e o volume respeitam o recuo do servidor (13/09/2026)."""
 
 from __future__ import annotations
 
@@ -76,11 +48,7 @@ def _so_o(palavra: str) -> Callable[[list[str]], bool]:
 
 
 class _Pactl:
-    """`pactl` dublado que sabe as duas respostas: responde, ou estoura o prazo.
-
-    `trava` diz quais perguntas estouram — é assim que o `subprocess.run` real
-    se comporta com o servidor mudo, e é o que `RecuoDoPactl.perguntar` lê.
-    """
+    """`pactl` dublado que sabe as duas respostas: responde, ou estoura o prazo."""
 
     def __init__(self, *, trava: Callable[[list[str]], bool] = _nunca) -> None:
         self.chamadas: list[list[str]] = []
@@ -115,20 +83,10 @@ def _resposta(stdout: str, rc: int = 0) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(["pactl"], rc, stdout=stdout, stderr="")
 
 
-# ===========================================================================
-# 1. O SOM ANOTA O PRAZO E ESPERA O RECUO
-# ===========================================================================
-
-
 def test_dois_ciclos_com_o_load_module_estourando_fazem_um_load_module(
     recuo: _Relogio,
 ) -> None:
-    """A cadência do journal: um ciclo do som a cada 10 s com o servidor mudo.
-
-    Sem a cura, cada ciclo constrói um nó novo e manda o seu `load-module`. Com
-    ela: o primeiro estoura e põe o servidor em recuo; o do ciclo seguinte, ainda
-    no recuo, não sai; o de depois, com o recuo vencido, só pergunta a sondagem.
-    """
+    """A cadência do journal: um ciclo do som a cada 10 s com o servidor mudo."""
     pactl = _Pactl(trava=_sempre)
     assert af.SinkVirtualPipeWire(uniq=DELE, runner=pactl).iniciar() is False
     assert bt.pactl_mudo() is True
@@ -189,7 +147,6 @@ def test_o_primeiro_prazo_da_rota_para_a_rota_inteira(recuo: _Relogio) -> None:
     )
     assert len(af.argv_das_rotas(af.nome_do_sink(DELE), rota)) == 2
     pactl = _Pactl(trava=_so_o("module-loopback"))
-    # O nó sobe mesmo sem rota — decisão dela de 08/09 (`D-0809-O-NO-DE-SOM-…`).
     assert af.SinkVirtualPipeWire(uniq=DELE, runner=pactl, rota=rota).iniciar() is True
     loopbacks = [argv for argv in pactl.chamadas if "module-loopback" in argv]
     assert len(loopbacks) == 1, "o segundo loopback foi para a fila do servidor mudo"
@@ -228,11 +185,6 @@ def test_o_rodar_do_som_anota_o_prazo_e_a_resposta(
     assert bt.PACTL.espera_s == 0.0
 
 
-# ===========================================================================
-# 2. SOM, MICROFONE E VOLUME DIVIDEM UM RECUO
-# ===========================================================================
-
-
 def test_prazo_estourado_no_som_cala_o_microfone_no_ciclo_seguinte(
     recuo: _Relogio,
 ) -> None:
@@ -268,20 +220,10 @@ def test_prazo_estourado_no_volume_cala_o_microfone_e_o_som(
     assert som.chamadas == [], "o som perguntou ao servidor que o volume viu mudo"
 
 
-# ===========================================================================
-# 3. O VOLUME DEVOLVE O «NÃO SEI» NA HORA
-# ===========================================================================
-
-
 def test_em_recuo_a_fonte_do_uniq_volta_na_hora(
     recuo: _Relogio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A pergunta de 715 prazos no journal: em recuo, ela não espera nada.
-
-    O dublê demora 1 s e estoura, como um servidor mudo com o prazo encurtado.
-    A primeira chamada aquece os imports de dentro da função; a medida é da
-    segunda.
-    """
+    """A pergunta de 715 prazos no journal: em recuo, ela não espera nada."""
     run = _RunDoServidorMudo(espera_s=1.0)
     monkeypatch.setattr(subprocess, "run", run)
     bt.PACTL.estourou()
@@ -369,9 +311,9 @@ def test_em_recuo_a_pergunta_segurada_nao_vira_aviso(
 
     monkeypatch.setattr(ac, "logger", _Logger())
     monkeypatch.setattr(subprocess, "run", _RunDoServidorMudo(espera_s=0.0))
-    assert ac.fonte_de_captura_do_controle() is None  # a falha de verdade: o prazo
+    assert ac.fonte_de_captura_do_controle() is None
     assert avisos == ["audio_fonte_do_controle_falhou"]
-    assert ac.fonte_de_captura_do_controle() is None  # agora, em recuo
+    assert ac.fonte_de_captura_do_controle() is None
     assert avisos == ["audio_fonte_do_controle_falhou"], "a pergunta segurada virou aviso"
     assert depuracoes == ["audio_fonte_do_controle_falhou"]
 
@@ -395,21 +337,10 @@ def test_vencido_o_recuo_so_a_resposta_de_verdade_zera(
     assert bt.PACTL.espera_s == 0.0
 
 
-# ===========================================================================
-# 4. A SUÍTE: A GUARDA DO MICROFONE E O RECUO QUE NASCE ZERADO
-# ===========================================================================
-
-
 def test_a_source_sem_runner_nao_carrega_modulo_no_servidor_de_verdade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any
 ) -> None:
-    """A guarda do `dualsense_bt_audio._rodar` em `tests/conftest.py`.
-
-    Sem `runner`, `SourceVirtualPipeWire` resolve o `_rodar` do módulo, que chama
-    `subprocess.run` — o `pactl` DELA. O dublê aqui é o próprio `subprocess.run`,
-    e ele conta: a leitura passa (a guarda deixa ler), o `load-module` e o
-    `unload-module` não chegam.
-    """
+    """A guarda do `dualsense_bt_audio._rodar` em `tests/conftest.py`."""
     chegaram: list[list[str]] = []
 
     def _run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:

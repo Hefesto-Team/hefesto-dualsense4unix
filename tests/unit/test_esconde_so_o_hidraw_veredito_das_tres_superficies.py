@@ -62,7 +62,6 @@ DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8") if DOCTOR_PATH.exists() else ""
 
 pytestmark = pytest.mark.skipif(not DOCTOR, reason="scripts/doctor.sh ausente")
 
-#: As quatro funções do veredito, na ordem em que uma chama a outra.
 FUNCOES = (
     "_nos_de_entrada_do_hidraw",
     "_entrada_alcancavel_pelo_jogo",
@@ -70,8 +69,6 @@ FUNCOES = (
     "_veredito_do_hide",
 )
 
-#: A frase que mentia. Só pode aparecer num `pass` que mediu as três
-#: superfícies — e o `TestAFraseQueMentia` é quem cobra isso.
 FRASE_ANTIGA = "o jogo só vê o vpad"
 
 #: O pai HID do DualSense FÍSICO desta bancada (USB, 25/08/2026).
@@ -86,11 +83,6 @@ def _extrai_funcao_bash(fonte: str, nome: str) -> str:
     return fonte[match.start() : match.end() + fim.end() + 1]
 
 
-# ---------------------------------------------------------------------------
-# A cena: um /dev e um /sys de mentira
-# ---------------------------------------------------------------------------
-
-
 class Entrada:
     """Um nó de `/dev/input` do controle: nome, modo e se tem ACL nomeada."""
 
@@ -102,12 +94,7 @@ class Entrada:
 
 
 def _monta_cena(raiz: Path, controles: dict[str, list[Entrada] | None]) -> list[str]:
-    """Monta a árvore falsa e devolve os nós hidraw na ordem pedida.
-
-    ``controles`` mapeia `hidrawN` para a lista de entradas do MESMO device
-    HID. ``None`` encena o sysfs que não sabe responder — nó recém-sumido,
-    replug no meio da leitura —, que é diferente de "está tudo fechado".
-    """
+    """Monta a árvore falsa e devolve os nós hidraw na ordem pedida."""
     (raiz / "dev" / "input").mkdir(parents=True, exist_ok=True)
     (raiz / "sys" / "class" / "hidraw").mkdir(parents=True, exist_ok=True)
     nos: list[str] = []
@@ -131,12 +118,7 @@ def _monta_cena(raiz: Path, controles: dict[str, list[Entrada] | None]) -> list[
 
 
 def _stub_getfacl(raiz: Path) -> Path:
-    """`getfacl` de mentira: só devolve `user:<eu>:rw-` para quem está em COM_ACL.
-
-    Sem ele a cena não teria como encenar a ACL nomeada do `uaccess` — a
-    árvore falsa em `tmp_path` não tem ACL nenhuma —, e a distinção entre "ACL
-    da sessão" e "grupo do nó", que é o coração da função, sumiria.
-    """
+    """`getfacl` de mentira: só devolve `user:<eu>:rw-` para quem está em COM_ACL."""
     binario = raiz / "bin"
     binario.mkdir(parents=True, exist_ok=True)
     stub = binario / "getfacl"
@@ -168,13 +150,7 @@ def _roda(
     doctor: str | None = None,
     censo: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Extrai as funções do doctor, reancora os caminhos na cena e roda.
-
-    ``censo`` é o CENSO DE FÍSICOS — a mesa inteira, como
-    `broker/hidraw_broker.py:physical_nodes_exposure` a enxerga. `None` (o
-    default) encena a mesa em que o broker escondeu TUDO o que existe, que é a
-    premissa que todos os testes anteriores a 26/08/2026 assumiam sem dizer.
-    """
+    """Extrai as funções do doctor, reancora os caminhos na cena e roda."""
     fonte = DOCTOR if doctor is None else doctor
     corpo = "\n".join(_extrai_funcao_bash(fonte, nome) for nome in FUNCOES)
     corpo = corpo.replace("/sys/class/hidraw/", f"{raiz}/sys/class/hidraw/")
@@ -210,8 +186,6 @@ def _roda(
     )
 
 
-#: A bancada de 25/08/2026, byte a byte: hidraw escondido, evdev com a ACL
-#: dela, joydev com a ACL dela E o bit de leitura de `other`.
 def _cena_de_hoje() -> dict[str, list[Entrada] | None]:
     return {
         "hidraw4": [
@@ -221,8 +195,6 @@ def _cena_de_hoje() -> dict[str, list[Entrada] | None]:
     }
 
 
-#: O mesmo controle com as três superfícies fechadas — a cena que o `pass`
-#: descreve, e que nesta casa ninguém produziu ainda.
 def _cena_fechada() -> dict[str, list[Entrada] | None]:
     return {"hidraw4": [Entrada("event21", 0o600), Entrada("js0", 0o600)]}
 
@@ -317,24 +289,13 @@ class TestODenominadorEAMesa:
     def test_censo_igual_ao_hide_continua_podendo_ser_verde(
         self, tmp_path: Path
     ) -> None:
-        """A cura não pode ter custado o verde quando ele é VERDADE.
-
-        Sem esta guarda passaria um "conserto" que avisasse sempre — e o
-        `pass` deixaria de dizer o que a pessoa precisa saber no caso em que a
-        mesa inteira está escondida e fechada.
-        """
+        """A cura não pode ter custado o verde quando ele é VERDADE."""
         r = _roda(tmp_path, _cena_fechada(), censo=["/dev/hidraw4"])
         assert "[PASS]" in r.stdout, r.stdout
         assert FRASE_ANTIGA in r.stdout, r.stdout
 
     def test_censo_vazio_e_nao_sei_e_nao_zero(self, tmp_path: Path) -> None:
-        """Ausência de dado não é prova de divergência — nem de cura.
-
-        Sem o pacote alcançável (`python3` sem o `src` no caminho) o censo sai
-        vazio. Tratá-lo como "zero físicos na mesa" faria a régua acusar o
-        hide de esconder o que não existe; tratá-lo como divergência faria
-        toda máquina sem o pacote sair amarela. Vazio é seguir sem comparar.
-        """
+        """Ausência de dado não é prova de divergência — nem de cura."""
         r = _roda(tmp_path, _cena_fechada(), censo=[])
         assert "[PASS]" in r.stdout, r.stdout
         assert "[WARN]" not in r.stdout, r.stdout
@@ -342,12 +303,7 @@ class TestODenominadorEAMesa:
     def test_a_mordida_o_denominador_antigo_volta_a_ficar_verde(
         self, tmp_path: Path
     ) -> None:
-        """A prova de que esta régua não sabe só passar.
-
-        Devolvido o denominador antigo — o veredito comparando o censo consigo
-        mesmo, que é o que "medir só o que eu escondi" quer dizer —, a cena de
-        16/08 volta a sair verde com a frase que mentia.
-        """
+        """A prova de que esta régua não sabe só passar."""
         alvo = "    for _fisico in ${censo}; do"
         assert alvo in DOCTOR, "o laço do censo mudou de forma"
         arrancado = DOCTOR.replace(alvo, '    for _fisico in "$@"; do')
@@ -396,8 +352,7 @@ class TestOCensoUsaARegraDoProduto:
 
 
 class TestAsTresFormasDeAlcancar:
-    """Cada forma tem um teste que só ela faz passar — as três foram medidas
-    nesta casa, e nenhuma é hipótese."""
+    """Cada forma tem um teste que só ela faz passar — as três foram medidas"""
 
     def test_bit_de_leitura_de_other_no_joydev(self, tmp_path: Path) -> None:
         """O estado de fábrica do `jsN`: `crw-rw-r--`, legível pelo mundo."""
@@ -420,13 +375,7 @@ class TestAsTresFormasDeAlcancar:
         assert "js0" not in r.stdout
 
     def test_grupo_do_no_com_a_sessao_dentro(self, tmp_path: Path) -> None:
-        """O acidente do grupo `input` (OQ-6): funciona aqui, não numa limpa.
-
-        O nó nasce no grupo primário de quem roda o teste, e `id -nG` o
-        contém — que é exatamente a forma do `root:input` com ela dentro do
-        grupo `input`. Sem este ramo o instrumento diria "fechado" para um nó
-        que a máquina dela abre.
-        """
+        """O acidente do grupo `input` (OQ-6): funciona aqui, não numa limpa."""
         cena: dict[str, list[Entrada] | None] = {
             "hidraw4": [Entrada("event21", 0o640), Entrada("js0", 0o600)]
         }
@@ -456,8 +405,7 @@ class TestAusenciaDeDadoNaoEProvaDeCura:
         assert "NÃO afirma" in r.stdout, r.stdout
 
     def test_no_sem_mapa_nao_conta_como_escondido(self, tmp_path: Path) -> None:
-        """Um controle mapeado e aberto, outro sem mapa: o aviso continua, e
-        o sem-mapa é declarado fora da conta em vez de virar crédito."""
+        """Um controle mapeado e aberto, outro sem mapa: o aviso continua, e"""
         cena: dict[str, list[Entrada] | None] = {
             "hidraw4": [Entrada("event21", 0o660, acl=True), Entrada("js0", 0o664)],
             "hidraw5": None,
@@ -505,15 +453,13 @@ class TestAFraseQueMentia:
             )
 
     def test_o_veredito_e_uma_funcao_propria_e_testavel(self) -> None:
-        """A régua que mentia nunca teve teste porque vivia soldada dentro de
-        uma função de 220 linhas que precisa de systemd, socket e aparelho."""
+        """A régua que mentia nunca teve teste porque vivia soldada dentro de"""
         for nome in FUNCOES:
             assert f"\n{nome}() {{\n" in DOCTOR, f"{nome}() sumiu do doctor.sh"
 
 
 class TestAFiacaoDosNomes:
-    """Sem os NOMES dos nós escondidos não há veredito nenhum — e a degradação
-    seria SILENCIOSA: tudo viraria "sem mapa" e o doctor voltaria a calar."""
+    """Sem os NOMES dos nós escondidos não há veredito nenhum — e a degradação"""
 
     def test_o_status_do_broker_imprime_os_nomes(self) -> None:
         assert 'print("hidden_nodes=" + " ".join(hidden))' in DOCTOR, (
@@ -532,8 +478,7 @@ class TestAFiacaoDosNomes:
 
 
 class TestOInstrumentoNaoCura:
-    """Confere e NÃO cura: qual das três saídas o produto vai tomar é a E2, e
-    a E2 é DELA. Nenhuma destas funções pode escrever permissão nenhuma."""
+    """Confere e NÃO cura: qual das três saídas o produto vai tomar é a E2, e"""
 
     def test_nenhuma_funcao_do_veredito_escreve_permissao(self) -> None:
         proibidos = ("setfacl", "chmod", "chown", "udevadm control", "usermod")
@@ -550,12 +495,7 @@ class TestOInstrumentoNaoCura:
 
 
 class TestAMordidaDaCuraArrancada:
-    """A prova de que a régua não sabe só passar.
-
-    Com `_tres_superficies_medir "$@"` comentado — a cura arrancada, o
-    veredito voltando a ser a contagem de hidraw —, a cena de hoje volta a
-    sair `pass` com a frase antiga. É literalmente o `doctor.sh` de ontem.
-    """
+    """A prova de que a régua não sabe só passar."""
 
     def test_sem_a_medicao_das_superficies_a_cena_de_hoje_volta_a_ser_verde(
         self, tmp_path: Path
@@ -570,13 +510,8 @@ class TestAMordidaDaCuraArrancada:
         assert "[WARN]" not in r.stdout, r.stdout
 
     def test_sem_o_ramo_da_acl_o_evdev_dela_passa_batido(self, tmp_path: Path) -> None:
-        """A segunda mordida: a ACL nomeada é a única forma que abre o
-        `event21` desta bancada. Arrancado o ramo, o instrumento jura que o
-        controle está escondido — e o evdev dela continua aberto."""
+        """A segunda mordida: a ACL nomeada é a única forma que abre o"""
         corpo = _extrai_funcao_bash(DOCTOR, "_entrada_alcancavel_pelo_jogo")
-        # HIDE-SO-O-HIDRAW-02 (24/09/2026): o ramo passou a descontar a linha
-        # que a máscara anula (`#effective:---`); a mordida arranca o ramo
-        # inteiro, como antes.
         alvo = (
             "getfacl -p \"${no}\" 2>/dev/null | grep -E '^user:[^:]+:r' "
             "| grep -vq '#effective:-'"
@@ -592,26 +527,10 @@ class TestAMordidaDaCuraArrancada:
 
 
 class TestOPassNaoAfirmaSobreOQueNaoMediu:
-    """O `pass` só pode falar dos controles que ele MEDIU.
-
-    ACRESCENTADO em 25/08/2026 pela conferência da frente C4, e o defeito era
-    real: `TRES_SUP_CONTROLES` é incrementado ANTES do `continue` que manda o
-    nó sem mapa embora, então ele conta quem entrou na varredura, não quem foi
-    medido. O `pass` usava esse número e afirmava as três superfícies fechadas
-    de controles que a linha `info` logo acima acabara de declarar **fora do
-    veredito**.
-
-    É a mesma família do defeito que este bloco inteiro veio curar — a régua
-    mentindo sobre a própria cura —, só que uma camada acima.
-    """
+    """O `pass` só pode falar dos controles que ele MEDIU."""
 
     def _cena_uma_fechada_uma_sem_mapa(self) -> dict[str, list[Entrada] | None]:
-        """Um controle com tudo fechado; outro que o sysfs não soube mapear.
-
-        `None` encena o nó recém-sumido ou o replug no meio da leitura, que é
-        diferente de "está tudo fechado" — a distinção que o `_monta_cena` já
-        modelava e que o `pass` apagava.
-        """
+        """Um controle com tudo fechado; outro que o sysfs não soube mapear."""
         return {
             "hidraw4": [Entrada("event21", 0o600), Entrada("js0", 0o600)],
             "hidraw5": None,
@@ -631,11 +550,7 @@ class TestOPassNaoAfirmaSobreOQueNaoMediu:
         )
 
     def test_o_pass_confessa_o_que_ficou_de_fora(self, tmp_path: Path) -> None:
-        """Contar certo não basta: quem lê tem de saber que houve um não-medido.
-
-        Sem esta linha, o `pass` "dos 1 controle(s)" seria verdadeiro e ainda
-        assim enganoso — some o segundo controle sem dizer que ele existiu.
-        """
+        """Contar certo não basta: quem lê tem de saber que houve um não-medido."""
         r = _roda(tmp_path, self._cena_uma_fechada_uma_sem_mapa())
         assert "NÃO afirmo nada sobre 1" in r.stdout, (
             f"o `pass` contou certo mas não disse o que ficou de fora:\n{r.stdout}"
@@ -646,12 +561,7 @@ class TestOPassNaoAfirmaSobreOQueNaoMediu:
         )
 
     def test_sem_nenhum_sem_mapa_a_frase_forte_continua(self, tmp_path: Path) -> None:
-        """A cura não pode ter custado a conclusão quando ela é VERDADE.
-
-        Sem esta guarda passaria um "conserto" que apagasse a frase forte
-        sempre — e o `pass` deixaria de dizer o que a pessoa precisa saber no
-        caso em que tudo foi medido e tudo está fechado.
-        """
+        """A cura não pode ter custado a conclusão quando ela é VERDADE."""
         r = _roda(tmp_path, _cena_fechada())
         assert "[PASS]" in r.stdout, r.stdout
         assert "o jogo só vê o vpad" in r.stdout, (

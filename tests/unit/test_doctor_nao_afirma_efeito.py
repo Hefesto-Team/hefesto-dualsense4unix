@@ -1,34 +1,4 @@
-"""LED-QUE-NÃO-AFIRMA-01 — o diagnóstico que dizia OK para o que não mediu.
-
-O `check_led_sysfs_gravavel` do `scripts/doctor.sh` faz UMA coisa só: um
-`[[ -w "${node}/multi_intensity" ]]`. O comentário do próprio check declara,
-em letra do autor, *"Só `test -w`: este check NUNCA escreve no nó"* — e ainda
-assim o `pass` dele anunciava **"cor por-controle via sysfs OK"**, que é
-afirmação de EFEITO.
-
-Por que isso custa caro nesta casa: ela abre o doctor exatamente quando a cor
-**não** está saindo. Um `[ OK ]` dizendo que a cor funciona manda procurar no
-lugar errado — e as três causas que sobram depois da permissão continuam
-todas de pé (hidraw em EIO no Bluetooth, `lightbar_source=="desired"`, driver
-`hid_playstation` ausente). Permissão de escrita derruba UMA hipótese; não
-prova nenhuma.
-
-O que estes testes travam:
-
-- **o `pass` não afirma efeito.** Nada de "cor ... OK", "a cor funciona", "cor
-  aplicada": a linha diz o que foi medido, que é gravabilidade;
-- **o `pass` declara a natureza da medição** — cita o `test -w`, ou que o
-  check não escreve, ou que não é prova de efeito. Sem essa metade, "gravável"
-  sozinho volta a ser lido como "funciona";
-- **o check continua somente-leitura de verdade** — rodado contra um sysfs de
-  mentira, o conteúdo do nó tem de sair byte a byte igual ao que entrou.
-
-A mordida: devolvendo a frase antiga ao `doctor.sh` numa cópia, os dois
-primeiros testes reprovam nomeando a linha inteira.
-
-O check é extraído do `doctor.sh` e roda em bash contra um `/sys/class/leds`
-de mentira em `tmp_path` — sem hardware, sem root, sem encostar no daemon.
-"""
+"""LED-QUE-NÃO-AFIRMA-01 — o diagnóstico que dizia OK para o que não mediu."""
 
 from __future__ import annotations
 
@@ -44,9 +14,6 @@ DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8")
 
 NOME_DO_CHECK = "check_led_sysfs_gravavel"
 
-#: O que uma linha de diagnóstico NÃO pode dizer sem ter escrito no nó. Cada
-#: padrão é uma afirmação de efeito — a primeira é literalmente a frase que
-#: estava no ar até 13/08/2026.
 AFIRMACOES_DE_EFEITO = (
     r"cor\s+por-controle\s+via\s+sysfs\s+OK",
     r"\bcor\b[^\n]{0,40}\bOK\b",
@@ -55,7 +22,6 @@ AFIRMACOES_DE_EFEITO = (
     r"\bcor\s+sai\s+OK\b",
 )
 
-#: E o que ela PRECISA dizer para não ser lida como efeito.
 MARCAS_DE_HONESTIDADE = (
     r"test\s+-w",
     r"NUNCA\s+escreve",

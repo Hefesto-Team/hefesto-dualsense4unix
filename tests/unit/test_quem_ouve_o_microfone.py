@@ -1,17 +1,4 @@
-"""A luz só acende se alguém DE FORA estiver ouvindo — LUZ-DO-MIC-01, PEÇA A.
-
-O risco central desta peça está escrito na §3 da sprint e é curto: **se o
-medidor de nível do próprio Hefesto contar como ouvinte, a luz acende sozinha
-e não apaga nunca.** Todo teste de exclusão aqui é sobre isso, e cada um MORDE
-uma regra diferente — porque a forma do stream irmão foi vista mudar duas vezes
-no mesmo dia (``parec`` pulse, com PID; ``pw-cat`` nativo, sem PID nenhum), e
-uma exclusão de uma regra só morre calada na forma que ela não previu.
-
-Os blocos de ``pactl`` deste arquivo têm a ESTRUTURA medida em 03/09/2026 nesta
-máquina (indentação, ordem dos campos, aspas nos valores, a linha ``balance``
-sem dois-pontos). O que foi trocado são as identidades: MAC com a máscara da
-casa (octetos 4 e 5 zerados), sem nome de máquina e sem nome de usuária.
-"""
+"""A luz só acende se alguém DE FORA estiver ouvindo — LUZ-DO-MIC-01, PEÇA A."""
 
 from __future__ import annotations
 
@@ -25,13 +12,10 @@ from hefesto_dualsense4unix.integrations import eleicao_de_microfone
 from hefesto_dualsense4unix.integrations import quem_ouve_o_microfone as qom
 from hefesto_dualsense4unix.integrations.fontes_de_captura import CasamentoUSB
 
-#: Os dois controles da mesa medida: um no cabo, um no rádio. Máscara da casa.
 UNIQ_CABO = "aa:bb:cc:00:00:ab"
 UNIQ_RADIO = "aa:bb:cc:00:00:f0"
 
-#: A saída curta MEDIDA nesta máquina, com os índices reais (598..603). A fonte
 #: do DualSense é a 600; a 599 é o MONITOR da saída dele, que
-#: `fontes_dualsense` descarta de propósito.
 SOURCES_SHORT = (
     "598\talsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor\t"
     "PipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
@@ -47,13 +31,6 @@ FONTE_DO_DUALSENSE = (
     "alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.iec958-stereo"
 )
 
-#: A mesa de DOIS CANAIS — um por controle, que é o modelo da §1.2 da sprint.
-#: Hoje o PipeWire publica um canal só (o do cabo); esta saída é a forma que a
-#: ponte de mic por Bluetooth já sabe produzir hoje
-#: (``fontes_de_captura.PREFIXO_SOURCE_PONTE_BT``, com o rabo hex do MAC), e é
-#: também a forma que a CANAL-POR-CONTROLE-01 vai generalizar. Escrever a mesa
-#: de dois aqui é o que permite medir a pergunta que a mesa de um NÃO alcança:
-#: **a luz deste controle fala deste microfone, ou do sistema?**
 FONTE_DO_CABO = "hefesto_dualsense_bt_0000ab"
 FONTE_DO_RADIO = "hefesto_dualsense_bt_0000f0"
 
@@ -72,11 +49,7 @@ def bloco(
     *,
     corked: bool = False,
 ) -> str:
-    """Um bloco de `pactl list source-outputs` com a forma medida.
-
-    A ordem e a indentação são as do comando real, inclusive a linha
-    ``balance 0.00``, que não tem dois-pontos e já derrubou parser ingênuo.
-    """
+    """Um bloco de `pactl list source-outputs` com a forma medida."""
     linhas = [
         f"Source Output #{indice}",
         "\tDriver: PipeWire",
@@ -99,10 +72,7 @@ def bloco(
     return "\n".join(linhas) + "\n"
 
 
-#: Um app de terceiro gravando da FONTE PADRÃO — e o ponto é o que ele NÃO tem.
-#: Medido: um cliente que não pede device explícito sai SEM `target.object`, e
 #: a fonte padrão desta máquina é justamente o microfone do DualSense. Quem
-#: escrever o elo com `target.object` fica cego exatamente aqui.
 ALHEIO_SEM_TARGET = bloco(
     1500,
     600,
@@ -118,7 +88,6 @@ ALHEIO_SEM_TARGET = bloco(
     },
 )
 
-#: O medidor da PEÇA B na forma `parec` pulse: tem papel, id e PID.
 MEDIDOR_PULSE = bloco(
     1352,
     600,
@@ -137,9 +106,6 @@ MEDIDOR_PULSE = bloco(
     },
 )
 
-#: O MESMO medidor na forma PipeWire nativa: sem `application.process.id`, sem
-#: `application.id`, sem `client.api`. Sobram `application.name` e `node.name`
-#: — e é por isso que o crivo não pode ser o PID.
 MEDIDOR_NATIVO = bloco(
     1428,
     600,
@@ -154,8 +120,6 @@ MEDIDOR_NATIVO = bloco(
     },
 )
 
-#: O `parec` da JANELA (`app/mic_monitor.py`), que sai CRU: nome `parec`, igual
-#: ao `parec` de qualquer outro programa. Só a árvore de processos o denuncia.
 PAREC_DA_JANELA = bloco(
     1200,
     600,
@@ -171,11 +135,7 @@ PAREC_DA_JANELA = bloco(
 
 
 def _proc_falso(tmp_path: Path, arvore: dict[int, tuple[int, str]]) -> Path:
-    """Monta um `/proc` de mentira: `{pid: (ppid, cmdline)}`.
-
-    O `stat` sai com a forma do kernel — o `comm` entre parênteses no campo 2,
-    o `ppid` no campo 4 — e o `comm` leva espaço e parêntese de propósito.
-    """
+    """Monta um `/proc` de mentira: `{pid: (ppid, cmdline)}`."""
     raiz = tmp_path / "proc"
     for pid, (ppid, cmdline) in arvore.items():
         pasta = raiz / str(pid)
@@ -188,11 +148,7 @@ def _proc_falso(tmp_path: Path, arvore: dict[int, tuple[int, str]]) -> Path:
 
 
 def _falar_pactl(monkeypatch: pytest.MonkeyPatch, respostas: dict[str, tuple[int, str]]) -> None:
-    """Faz o `pactl` do módulo responder o que o teste mandar.
-
-    A chave é o subcomando (`source-outputs`, `sources short`), e ninguém sai
-    do processo: este arquivo não toca no áudio da máquina dela.
-    """
+    """Faz o `pactl` do módulo responder o que o teste mandar."""
 
     def falso(argv: list[str]) -> tuple[int, str]:
         chave = " ".join(argv[1:])
@@ -200,11 +156,6 @@ def _falar_pactl(monkeypatch: pytest.MonkeyPatch, respostas: dict[str, tuple[int
 
     monkeypatch.setattr(qom, "_rodar", falso)
     monkeypatch.setattr(qom, "casamento_usb_agora", lambda uniqs: None)
-
-
-# --------------------------------------------------------------------------
-# O ELO COM A FONTE: `Source: <índice>`, nunca `target.object`
-# --------------------------------------------------------------------------
 
 
 def test_o_elo_com_a_fonte_e_o_indice_e_nao_o_target_object() -> None:
@@ -249,11 +200,6 @@ def test_stream_de_fonte_desconhecida_e_descartado() -> None:
     assert pausados == {}
 
 
-# --------------------------------------------------------------------------
-# O PARSER: a forma medida do `pactl`, e o que ela tem de armadilha
-# --------------------------------------------------------------------------
-
-
 def test_o_parser_le_indice_fonte_e_propriedades_do_bloco_medido() -> None:
     """A forma real: `Source Latency:` não pode ser confundido com `Source:`."""
     (stream,) = qom.streams_de_captura(ALHEIO_SEM_TARGET)
@@ -271,13 +217,7 @@ def test_saida_vazia_e_ninguem_capturando_e_nao_erro() -> None:
 
 
 def test_a_saida_traduzida_nao_produz_bloco_nenhum() -> None:
-    """Por que o `LC_ALL=C` não é opcional — o sintoma é uma lista VAZIA.
-
-    No idioma dela o `pactl` responde `Saída da fonte #`, `Fonte:` e
-    `Cork: não`. Um leitor sem o ambiente C lê zero blocos e devolve "ninguém
-    está ouvindo", que é uma resposta plausível e falsa. Este teste fixa o
-    sintoma; quem impede é o `_rodar` blindado, no teste seguinte.
-    """
+    """Por que o `LC_ALL=C` não é opcional — o sintoma é uma lista VAZIA."""
     traduzido = (
         "Saída da fonte #1500\n"
         "\tFonte: 600\n"
@@ -289,26 +229,12 @@ def test_a_saida_traduzida_nao_produz_bloco_nenhum() -> None:
 
 
 def test_a_leitura_usa_o_pactl_blindado_da_casa() -> None:
-    """O `pactl` sai por `_rodar`, que põe `LC_ALL=C` e tem tempo limite.
-
-    Reimplementar a chamada aqui criaria a segunda régua sobre o mesmo estado —
-    e a primeira coisa que a cópia perderia é justamente o ambiente C.
-    """
+    """O `pactl` sai por `_rodar`, que põe `LC_ALL=C` e tem tempo limite."""
     assert qom._rodar is eleicao_de_microfone._rodar
 
 
 def test_o_ambiente_c_chega_de_verdade_ao_pactl(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O antídoto da armadilha 2 tem de CHEGAR ao processo, não só existir.
-
-    O teste acima prova que esta peça não reimplementou a chamada; ele NÃO
-    prova que a chamada blindada continua blindada. Medido arrancando as duas
-    linhas de ``_ambiente_c``: os 43 testes deste arquivo ficavam verdes com o
-    ``LC_ALL`` fora — e o produto passaria a ler ``Saída da fonte #`` e a
-    responder "ninguém está ouvindo" para sempre, sem erro nenhum.
-
-    A régua vive AQUI, e não só do lado da eleição, porque é o cabeçalho deste
-    módulo que promete o antídoto: quem herda a promessa herda a prova.
-    """
+    """O antídoto da armadilha 2 tem de CHEGAR ao processo, não só existir."""
     ambiente_visto: dict[str, str] = {}
 
     class _Proc:
@@ -333,11 +259,6 @@ def test_bloco_sem_campo_de_fonte_e_descartado() -> None:
     assert qom.streams_de_captura(sem_fonte) == []
 
 
-# --------------------------------------------------------------------------
-# A EXCLUSÃO DO NOSSO STREAM — o risco central, uma regra por vez
-# --------------------------------------------------------------------------
-
-
 def test_o_medidor_pulse_nao_conta_como_ouvinte() -> None:
     """A forma `parec` do medidor da PEÇA B sai da conta."""
     ouvindo, pausados = ouvintes(MEDIDOR_PULSE)
@@ -346,12 +267,7 @@ def test_o_medidor_pulse_nao_conta_como_ouvinte() -> None:
 
 
 def test_o_medidor_nativo_tambem_nao_conta_como_ouvinte() -> None:
-    """A forma `pw-cat` não publica PID nenhum — e ainda assim sai da conta.
-
-    É a junta entre a PEÇA A e a PEÇA B: uma exclusão escrita por PID daria
-    verde no teste da forma pulse e deixaria a luz acesa para sempre na forma
-    nativa, sem nenhum teste de nenhuma das duas peças reprovar.
-    """
+    """A forma `pw-cat` não publica PID nenhum — e ainda assim sai da conta."""
     (stream,) = qom.streams_de_captura(MEDIDOR_NATIVO)
     assert stream.pid is None
     assert qom.e_stream_do_hefesto(stream) is True
@@ -369,23 +285,13 @@ def test_o_medidor_nativo_tambem_nao_conta_como_ouvinte() -> None:
     ],
 )
 def test_cada_marca_sozinha_ja_exclui_o_stream(chave: str, valor: str) -> None:
-    """Cinco redes independentes, e cada uma pega sozinha.
-
-    Independentes porque a forma do stream irmão ainda não está fixada: a
-    nativa não tem `application.id` nem PID, a pulse tem tudo. Uma rede só
-    seria uma aposta em qual das duas vence.
-    """
+    """Cinco redes independentes, e cada uma pega sozinha."""
     stream = qom.StreamDeCaptura(indice=1, fonte=600, corked=False, props={chave: valor})
     assert qom.e_stream_do_hefesto(stream) is True
 
 
 def test_o_modo_de_pico_exclui_ate_medidor_de_terceiro() -> None:
-    """`resample.peaks` é INTRÍNSECO, não convenção nossa.
-
-    Um stream em modo de pico recebe `max|x|` por bloco — um envelope, não
-    áudio. Ele estruturalmente não consegue ouvir o que ela diz, seja de quem
-    for, e por isso não é ouvinte.
-    """
+    """`resample.peaks` é INTRÍNSECO, não convenção nossa."""
     medidor_alheio = qom.StreamDeCaptura(
         indice=2,
         fonte=600,
@@ -407,12 +313,7 @@ def test_app_alheio_com_nome_parecido_continua_contando() -> None:
 
 
 def test_o_parec_cru_da_janela_e_pego_pela_arvore_de_processos(tmp_path: Path) -> None:
-    """O buraco que nenhuma marca alcança — e o sintoma seria acusar a aba.
-
-    A janela do Hefesto já captura hoje, e o `parec` que ela lança sai sem
-    marca nenhuma. Sem esta rede, abrir a aba Status acenderia a luz — e isso
-    se lê como *"a aba está me espionando"*, não como *"a régua é curta"*.
-    """
+    """O buraco que nenhuma marca alcança — e o sintoma seria acusar a aba."""
     raiz = _proc_falso(
         tmp_path,
         {
@@ -438,12 +339,7 @@ def test_parec_alheio_com_a_mesma_cara_continua_contando(tmp_path: Path) -> None
 
 
 def test_a_subida_pela_arvore_de_processos_tem_teto(tmp_path: Path) -> None:
-    """Sem teto a regra pegaria a máquina inteira.
-
-    O `systemd --user` é ancestral de tudo o que ela roda; se um dia o nome do
-    Hefesto aparecer num ancestral remoto, subir sem limite excluiria todo
-    stream da sessão dela — e a luz nunca mais acenderia.
-    """
+    """Sem teto a regra pegaria a máquina inteira."""
     arvore: dict[int, tuple[int, str]] = {}
     for pid in range(800, 808):
         arvore[pid] = (pid + 1, "/usr/bin/inocente")
@@ -466,18 +362,7 @@ def test_proc_ausente_nao_levanta_e_responde_nao(tmp_path: Path) -> None:
 
 
 def test_a_peca_a_reconhece_o_que_a_peca_b_realmente_declara() -> None:
-    """O ENCONTRO das duas peças — e é este teste que impede a luz acesa eterna.
-
-    O defeito da junta não mora dentro de peça nenhuma: cada uma passa nos
-    próprios testes e a luz acende sozinha. A única régua que o pega é a que
-    pergunta à PEÇA B o que ela publica DE VERDADE e manda a PEÇA A julgar.
-
-    Ele já pagou por si: escrito, ele mostrou que as duas peças tinham
-    inventado nomes diferentes um do outro (`br.com.hefesto.dualsense4unix`
-    contra `br.dev.hefesto.luz_do_mic`, `nivel-do-mic` contra
-    `medidor-de-nivel`). A cura não foi combinar a string — foi a PEÇA A parar
-    de combinar nome e passar a reconhecer o ESPAÇO DE NOME.
-    """
+    """O ENCONTRO das duas peças — e é este teste que impede a luz acesa eterna."""
     nivel = pytest.importorskip(
         "hefesto_dualsense4unix.integrations.nivel_do_microfone",
         reason="a PEÇA B nasce na mesma leva; sem ela não há junta a medir",
@@ -490,23 +375,7 @@ def test_a_peca_a_reconhece_o_que_a_peca_b_realmente_declara() -> None:
 
 
 def test_a_peca_c_acha_esta_peca_pelo_endereco_que_ela_guarda() -> None:
-    """A outra junta: o ENDEREÇO (módulo + nome) e o TIPO do retorno.
-
-    O laço da luz não importa esta peça: ele guarda o caminho e o nome em
-    duas constantes e resolve por ``importlib`` + ``getattr``
-    (``luz_do_mic._da_peca``). Nada nas duas peças reprova quando esse
-    endereço aponta para o vazio — o sintoma é um ``luz_do_mic_peca_sem_funcao``
-    no journal dela e a luz apagada para sempre. É este teste que fecha isso,
-    e ele já pagou por si duas vezes na leva de 03/09: o nome do lado da PEÇA C
-    mudou enquanto as duas eram escritas.
-
-    Por isso a régua lê o que a PEÇA C DECLARA — nunca uma string redigitada
-    aqui — e aceita a constante do nome tanto como texto quanto como lista,
-    que são as duas formas em que ela já apareceu. O que não se negocia é o
-    fim da linha: o endereço tem de resolver numa função DESTE módulo, e ela
-    tem de prometer ``dict``, porque o laço descarta em silêncio tudo o que
-    não for ``dict``.
-    """
+    """A outra junta: o ENDEREÇO (módulo + nome) e o TIPO do retorno."""
     luz = pytest.importorskip(
         "hefesto_dualsense4unix.daemon.subsystems.luz_do_mic",
         reason="a PEÇA C nasce na mesma leva",
@@ -523,33 +392,16 @@ def test_a_peca_c_acha_esta_peca_pelo_endereco_que_ela_guarda() -> None:
     assert "dict" in str(anotado), f"a PEÇA C só aceita dict; esta peça promete {anotado}"
 
 
-# --------------------------------------------------------------------------
-# PAUSADO NÃO É OUVINTE — e a decisão fica visível
-# --------------------------------------------------------------------------
-
-
 def test_stream_pausado_sai_do_mapa_de_ouvintes_e_entra_no_de_pausados() -> None:
-    """`Corked: yes` é microfone aberto e PARADO — não é alguém te ouvindo.
-
-    O caso `yes` não apareceu na mesa em 03/09; o campo foi lido e separado
-    para que a PEÇA C possa decidir sem reabrir o parser.
-    """
+    """`Corked: yes` é microfone aberto e PARADO — não é alguém te ouvindo."""
     parado = bloco(1503, 600, {"application.name": "Gravador"}, corked=True)
     ouvindo, pausados = ouvintes(parado)
     assert ouvindo == {}
     assert pausados == {FONTE_DO_DUALSENSE: ["Gravador"]}
 
 
-# --------------------------------------------------------------------------
-# A LEITURA INTEIRA: os três estados que ela tem de saber separar
-# --------------------------------------------------------------------------
-
-
 def test_nao_saber_nao_e_ninguem_ouvindo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem `pactl` a resposta é `lida=False`, nunca a lista vazia.
-
-    As duas se pareceriam na tela — a luz apagada —, e só uma delas é honesta.
-    """
+    """Sem `pactl` a resposta é `lida=False`, nunca a lista vazia."""
     _falar_pactl(monkeypatch, {})
     leitura = qom.ler_quem_ouve([UNIQ_CABO])
     assert leitura.lida is False
@@ -603,21 +455,7 @@ def test_o_controle_do_radio_vai_para_sem_canal(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_a_luz_de_um_controle_nao_fala_pelo_outro(monkeypatch: pytest.MonkeyPatch) -> None:
-    """§1.2 da sprint: cada luz fala DAQUELE microfone, nunca do sistema.
-
-    Este é o único teste do arquivo com DOIS canais na mesa, e é por isso que
-    ele existe: com um canal só, uma peça que somasse os ouvintes de todas as
-    fontes dá exatamente a mesma resposta que a peça certa. Medido arrancando
-    a cura — trocando a atribuição por fonte pela soma de
-    ``ouvindo.values()`` —, os 43 testes anteriores ficavam TODOS verdes, e o
-    defeito que passava era o pior possível para ela: abrir o microfone de um
-    controle acenderia a luz dos QUATRO.
-
-    A mesa de dois canais é a de hoje pela ponte de Bluetooth e a de amanhã
-    pela CANAL-POR-CONTROLE-01, e o casamento uniq→fonte aqui é o rabo hex do
-    MAC (regra 2 de ``escolher_fonte``), não uma string combinada neste
-    arquivo.
-    """
+    """§1.2 da sprint: cada luz fala DAQUELE microfone, nunca do sistema."""
     no_cabo = bloco(1600, 700, {"application.name": "Google Chrome input"})
     _falar_pactl(
         monkeypatch,
@@ -634,17 +472,7 @@ def test_a_luz_de_um_controle_nao_fala_pelo_outro(monkeypatch: pytest.MonkeyPatc
 
 
 def test_o_pausado_chega_a_peca_c_separado_e_por_uniq(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`Corked: yes` sai do mapa de ouvintes E entra no de pausados, por uniq.
-
-    A separação já era medida um nível abaixo (`ouvintes_por_fonte`), mas o
-    mapa por ``uniq`` da leitura inteira não tinha régua nenhuma: apagar a
-    linha que preenche ``pausados_por_uniq`` deixava os 43 testes verdes.
-    Quem decide se pausado conta é a PEÇA C — e ela não pode decidir sobre um
-    campo que chega sempre vazio.
-
-    Um gravador com o microfone dela ABERTO e parado não é alguém ouvindo:
-    ``alguem_ouve`` tem de dizer ``False``, não ``True``.
-    """
+    """`Corked: yes` sai do mapa de ouvintes E entra no de pausados, por uniq."""
     parado = bloco(1601, 700, {"application.name": "Gravador"}, corked=True)
     _falar_pactl(
         monkeypatch,
@@ -705,12 +533,7 @@ def test_a_mesa_vazia_nao_gasta_uma_chamada_de_pactl(
 
 
 def test_o_uniq_vale_nos_dois_formatos(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com e sem dois-pontos dão a mesma resposta — a armadilha 2 da sprint.
-
-    Pedir com o formato errado não dá erro: dá silêncio, que se lê como "não
-    há controle na mesa". A normalização vem do `escolher_fonte`, e este teste
-    é o que impede alguém de introduzir um casamento por string crua aqui.
-    """
+    """Com e sem dois-pontos dão a mesma resposta — a armadilha 2 da sprint."""
     respostas = {
         "list source-outputs": (0, ALHEIO_SEM_TARGET),
         "list sources short": (0, SOURCES_SHORT),
@@ -726,11 +549,7 @@ def test_o_uniq_vale_nos_dois_formatos(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_medidor_da_peca_b_nao_acende_a_luz_sozinho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O teste que a sprint pede com todas as letras, de ponta a ponta.
-
-    Com o medidor da PEÇA B no ar — nas DUAS formas — e mais nada, a resposta
-    para o controle dela tem de ser "ninguém está me ouvindo".
-    """
+    """O teste que a sprint pede com todas as letras, de ponta a ponta."""
     _falar_pactl(
         monkeypatch,
         {
@@ -758,11 +577,7 @@ def test_o_alheio_aparece_mesmo_com_o_nosso_medidor_no_ar(
 
 
 def test_a_leitura_nao_abre_stream_de_captura(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Só comandos de LEITURA saem daqui.
-
-    Abrir um stream prenderia o nó em `RUNNING` — e a régua passaria a medir a
-    si mesma. Todo argv que sai deste módulo é `pactl list …`.
-    """
+    """Só comandos de LEITURA saem daqui."""
     vistos: list[list[str]] = []
 
     def falso(argv: list[str]) -> tuple[int, str]:
@@ -782,12 +597,7 @@ def test_a_leitura_nao_abre_stream_de_captura(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_o_custo_e_de_tres_chamadas_no_pior_caso(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O alvo de custo da §3 é ~1 Hz sem processo permanente.
-
-    O laço não pode crescer com o número de controles: uma chamada de
-    `source-outputs` lista os streams de TODAS as fontes de uma vez, então
-    quatro controles custam a mesma leitura que um.
-    """
+    """O alvo de custo da §3 é ~1 Hz sem processo permanente."""
     contagem: dict[str, int] = {}
 
     def falso(argv: list[str]) -> tuple[int, str]:
@@ -807,11 +617,7 @@ def test_o_custo_e_de_tres_chamadas_no_pior_caso(monkeypatch: pytest.MonkeyPatch
 
 
 def test_o_modulo_nao_escreve_no_controle() -> None:
-    """A PEÇA A só LÊ. Quem decide e escreve é a PEÇA C.
-
-    A separação é o que permite as quatro peças serem construídas ao mesmo
-    tempo — e o que impede esta régua de virar mais um dono do `common[8]`.
-    """
+    """A PEÇA A só LÊ. Quem decide e escreve é a PEÇA C."""
     fonte = Path(qom.__file__).read_text(encoding="utf-8")
     for proibido in ("set_mic_led", "set_microphone_led", "common[8]", "hidraw"):
         assert proibido not in fonte, f"a PEÇA A não pode tocar em {proibido}"
@@ -834,12 +640,7 @@ def test_a_estrutura_e_dado_e_nao_texto(monkeypatch: pytest.MonkeyPatch) -> None
 def test_nao_sei_chega_a_peca_c_como_none_e_nao_como_dicionario_vazio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`None` e `{}` são coisas diferentes na porta da PEÇA C.
-
-    `{}` faria o laço ler `dict.get(uniq)` → `None` por controle, que também é
-    "não sei" — mas só por acidente. `None` diz a mesma coisa de propósito, e é
-    o que o `_perguntar` já trata como peça que não respondeu.
-    """
+    """`None` e `{}` são coisas diferentes na porta da PEÇA C."""
     _falar_pactl(monkeypatch, {})
     assert qom.quem_ouve_agora([UNIQ_CABO]) is None
 

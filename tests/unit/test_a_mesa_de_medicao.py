@@ -1,25 +1,4 @@
-"""A MESA DE MEDIÇÃO — as réguas que a provam, e cada uma MORDE.
-
-A queixa dela, de 06/09/2026, é o que decide o que se mede aqui, e ela está
-transcrita em `docs/process/agentes/2026-09-06/A-VALIDACAO-DOS-QUATRO-01-entrada/
-ESPEC-A-VALIDACAO.md`: a sessão de quem estava na bancada acabava e levava embora não só o
-resultado como **o modo de chegar nele**.
-
-Logo a régua mais importante deste arquivo não é a que confere que a página
-abre — é a que confere que **o COMO é gravado**, e que gravar sem ele é
-recusado. Uma página que salva "passou" e esquece o gesto reproduz o defeito
-com um arquivo a mais.
-
-AS MORDIDAS, uma por afirmação, e todas foram vistas reprovar antes de entrar:
-
-* mude uma linha do mapa e os testes mudam — se não mudarem, alguém copiou a
-  lista à mão, que é o defeito que a especificação proíbe;
-* troque a coluna `peca` e o realce muda de lugar;
-* arranque o campo do "como" e a gravação é recusada;
-* tire um `.marcada` do seletor e a especificidade cai abaixo da folha das
-  zonas — que foi o defeito REAL medido no Chrome nesta leva;
-* tire o `class=` fundido e a peça marcada perde a zona de plástico.
-"""
+"""A MESA DE MEDIÇÃO — as réguas que a provam, e cada uma MORDE."""
 
 from __future__ import annotations
 
@@ -46,32 +25,19 @@ import mesa_de_medicao as med
 import monta
 
 CHROME = "/usr/bin/google-chrome"
-#: O lançador da mesa. Ele mora em `scripts/` e acha a raiz um nível acima.
 LANCADOR = RAIZ / "scripts" / "mesa-de-medicao.sh"
 
-#: O SUFIXO É INVENTADO, e o endereço só vira "forma de MAC" quando colado ao
-#: OUI real EM TEMPO DE EXECUÇÃO. Escrever o endereço inteiro num literal faria
-#: os dois portões de anonimato reprovarem este arquivo — e os dois estariam
-#: certos. É o mesmo arranjo de `tests/unit/test_bateria_no_journal.py`, e ele
-#: existe justamente porque provar a máscara EXIGE um endereço sem máscara.
 _SUFIXO_DE_FIXTURE = ("c3", "1a", "f7")
 
 
 def _endereco_sem_mascara(ultimo: str = "f7") -> str:
-    """Um endereço com OUI real desta bancada, montado na hora.
-
-    O OUI REAL importa: é ele que os dois portões reconhecem, e é contra os
-    portões que a mordida da máscara é medida.
-    """
+    """Um endereço com OUI real desta bancada, montado na hora."""
     from tests.unit.test_docs_mac_anonimato import _OUIS_REAIS_OCTETOS
 
     return ":".join([*_OUIS_REAIS_OCTETOS[0], _SUFIXO_DE_FIXTURE[0],
                      _SUFIXO_DE_FIXTURE[1], ultimo])
 
 
-# ---------------------------------------------------------------------------
-# Os testes SAEM DOS ARQUIVOS
-# ---------------------------------------------------------------------------
 def test_a_regua_acha_o_que_medir() -> None:
     """Régua que não acha nada dá verde sobre o vazio."""
     testes = med.todos_os_testes()
@@ -102,13 +68,7 @@ def _mapa_de_mentira(tmp: pathlib.Path, troca) -> pathlib.Path:
 
 
 def test_mordida_mude_o_mapa_e_a_mesa_muda(tmp_path, monkeypatch) -> None:
-    """A mordida da especificação §7.1: *mude uma linha do mapa e a página muda;
-    se não mudar, ela copiou.*
-
-    A troca é cirúrgica: uma célula que hoje entra na mesa por ter grau fraco
-    passa a `O APARELHO OBEDECEU`, e o teste dela tem de SUMIR. Se a lista
-    estivesse escrita à mão, ela continuaria lá.
-    """
+    """A mordida da especificação §7.1: *mude uma linha do mapa e a página muda;"""
     antes = {t.id for t in med.todos_os_testes()}
     alvo = next(t for t in med.todos_os_testes() if t.id.startswith("mapa-"))
     chave = alvo.id[len("mapa-"):].rsplit("-", 1)[0]
@@ -122,9 +82,6 @@ def test_mordida_mude_o_mapa_e_a_mesa_muda(tmp_path, monkeypatch) -> None:
         d = dict(zip(cabecalho, campos, strict=False))
         d["cabo_ate_onde_foi"] = d["radio_ate_onde_foi"] = "O APARELHO OBEDECEU"
         d["cabo_por_que_nao_aciona"] = d["radio_por_que_nao_aciona"] = ""
-        # E A PROCEDÊNCIA JUNTO: desde 07/09/2026 é `de_onde_sei` que decide o
-        # selo, não o degrau — `ate_onde_foi` está vazio em 115 das 195 células
-        # desta árvore, inclusive em muitas que dizem `medido`.
         d["cabo_de_onde_sei"] = d["radio_de_onde_sei"] = "medido"
         saida = __import__("io").StringIO()
         __import__("csv").writer(saida, lineterminator="\n").writerow(
@@ -138,12 +95,6 @@ def test_mordida_mude_o_mapa_e_a_mesa_muda(tmp_path, monkeypatch) -> None:
     assert antes != falta_depois, (
         "promovi uma célula a medida no mapa e a fila do que falta não mudou — "
         "a lista de testes não está saindo do arquivo.")
-    # ELA SAI DA FILA E ENTRA NA OUTRA FAMÍLIA — 07/09/2026. Até aqui a régua
-    # cobrava que a célula promovida SUMISSE, e sumir era o comportamento: a
-    # mesa só listava o que faltava. Ela pediu o contrário — *"a grande maioria
-    # ali já foi validada uns 80%"* —, e agora a célula medida continua na
-    # página, com selo e com a resposta do mapa pré-marcada, para ela confirmar
-    # de relance em vez de refazer.
     assert alvo.id not in falta_depois, (
         f"{alvo.id} continua na fila do que falta depois de ser promovido")
     assert alvo.id in depois, (
@@ -155,8 +106,7 @@ def test_mordida_mude_o_mapa_e_a_mesa_muda(tmp_path, monkeypatch) -> None:
 
 
 def test_mordida_troque_a_peca_e_o_realce_muda_de_lugar(tmp_path, monkeypatch) -> None:
-    """A mordida da especificação §7.7: *troque a `peca` da linha no mapa e veja
-    o brilho mudar de lugar.*"""
+    """A mordida da especificação §7.7: *troque a `peca` da linha no mapa e veja"""
     alvo = next(t for t in med.todos_os_testes()
                 if t.id.startswith("mapa-") and t.pecas)
     chave = alvo.id[len("mapa-"):].rsplit("-", 1)[0]
@@ -198,8 +148,7 @@ def test_a_peca_de_um_teste_do_roteiro_declara_a_palavra_que_a_achou() -> None:
 
 
 def test_o_vocabulario_das_pecas_vem_do_csv_e_nao_e_generico() -> None:
-    """A afirmação da docstring, remedida: cada palavra identifica no máximo
-    quatro peças — e as de quatro são o D-pad."""
+    """A afirmação da docstring, remedida: cada palavra identifica no máximo"""
     vocab = med.vocabulario_das_pecas()
     assert len(vocab) > 30, len(vocab)
     demais = {k: sorted(v) for k, v in vocab.items() if len(v) > 4}
@@ -207,16 +156,7 @@ def test_o_vocabulario_das_pecas_vem_do_csv_e_nao_e_generico() -> None:
 
 
 def test_os_papeis_saem_da_condicao_que_ela_escreveu() -> None:
-    """*Um teste em que os quatro brilham igual não diz nada.*
-
-    E DESDE 07/09/2026 O PAPEL SAI DA CONDIÇÃO, não da citação do posto no
-    enunciado — dela: *"cada controle sirva para testarmos variações daquilo e
-    o esperado (…) Controle A, não liga, o b cor azul"*. A régua antes exigia
-    que a linha 6 (a vibração) tivesse os QUATRO em `observa`, porque o
-    enunciado não citava posto nenhum; hoje a coluna diz *"P1: é ESTE que deve
-    tremer · P2: não pode tremer …"*, e os quatro deixaram de brilhar igual —
-    que é o que a própria docstring pedia.
-    """
+    """*Um teste em que os quatro brilham igual não diz nada.*"""
     sete = next(t for t in med.todos_os_testes() if t.id == "roteiro-07")
     assert sete.papeis["P3"] == med.PAPEL_REAGE, sete.papeis
     assert {sete.papeis[p] for p in ("P1", "P2", "P4")} == {med.PAPEL_CALADO}
@@ -225,13 +165,6 @@ def test_os_papeis_saem_da_condicao_que_ela_escreveu() -> None:
     assert seis.papeis["P1"] == med.PAPEL_REAGE, seis.papeis
     assert {seis.papeis[p] for p in ("P2", "P3", "P4")} == {med.PAPEL_CALADO}
 
-    # NENHUMA DAS 21 SAI COM OS QUATRO IGUAIS SEM QUE A COLUNA MANDE: um teste
-    # assim não separa nada, e é o defeito que esta régua existe para pegar.
-    # O QUE TEM DE SER DISTINTO É A CONDIÇÃO, NÃO O PAPEL — e a primeira volta
-    # desta régua errou nisso. A linha 1 diz *"P1: liga PRIMEIRO · P2: liga
-    # SEGUNDO · P3: liga TERCEIRO · P4: liga POR ÚLTIMO"*: quatro condições
-    # diferentes, e os quatro DEVEM reagir, porque os quatro têm de aparecer.
-    # Exigir papéis diferentes ali seria pedir que um dos controles falhasse.
     for teste in med.todos_os_testes():
         if not teste.id.startswith("roteiro-"):
             continue
@@ -242,13 +175,7 @@ def test_os_papeis_saem_da_condicao_que_ela_escreveu() -> None:
 
 
 def test_a_condicao_de_cada_controle_vem_da_coluna_do_roteiro() -> None:
-    """A coluna *"o que cada controle faz"* chega inteira aos quatro postos.
-
-    MORDIDA JUNTO: uma tabela sem a coluna (as quatro colunas de antes de
-    07/09/2026) continua sendo lida, com a condição vazia — uma régua que
-    exigisse cinco derrubaria a mesa no dia em que alguém editasse a tabela sem
-    saber da coluna nova.
-    """
+    """A coluna *"o que cada controle faz"* chega inteira aos quatro postos."""
     das_21 = [t for t in med.todos_os_testes() if t.id.startswith("roteiro-")]
     assert len(das_21) == 21, len(das_21)
     assert all(len(t.condicoes) == 4 for t in das_21), (
@@ -270,22 +197,11 @@ def test_o_timer_conta_o_que_a_linha_nomeia() -> None:
     assert med.segundos_do_texto("nada aqui") == med.SEGUNDOS_PADRAO
 
 
-# ---------------------------------------------------------------------------
-# O COMO — o ponto inteiro
-# ---------------------------------------------------------------------------
 def test_o_como_do_arquivo_vem_do_mapa() -> None:
-    """O comando, o report, o offset e o canal já estão no CSV. Ninguém digita
-    de novo o que o arquivo publica."""
+    """O comando, o report, o offset e o canal já estão no CSV. Ninguém digita"""
     com_como = [t for t in med.todos_os_testes()
                 if t.id.startswith("mapa-") and t.como]
     assert len(com_como) > 20, len(com_como)
-    # O CANAL E O COMANDO MUDARAM DE LUGAR EM 07/09/2026, e a régua vai atrás
-    # deles onde eles estão. Eles nunca foram GESTO — são de onde a casa sabe —,
-    # e ocupavam o campo do "como" enquanto ninguém tinha escrito o gesto de
-    # verdade. Hoje o gesto vem do arquivo dono e a procedência desceu para a
-    # gaveta, junto do `aciona` e do degrau. O que a régua não pode deixar
-    # acontecer é ela SUMIR: sem o comando e o canal, quem for conferir a
-    # medição amanhã não sabe por onde a casa falou com o aparelho.
     onde_vive = " ".join(t.hoje for t in com_como)
     assert "canal=" in onde_vive and "comando=" in onde_vive, (
         "o canal e o comando sumiram da procedência das células")
@@ -295,17 +211,8 @@ def test_o_como_do_arquivo_vem_do_mapa() -> None:
 
 
 def test_mordida_gravar_sem_o_como_e_recusado(tmp_path) -> None:
-    """Arranque a gravação do gesto e veja a régua reprovar (§7.9).
-
-    Este é o teste que sustenta a razão de a página existir. Se ele passar a
-    aceitar o silêncio, a mesa volta a produzir "passou" sem o como — que é
-    exatamente o que se perdia quando a sessão morria.
-    """
+    """Arranque a gravação do gesto e veja a régua reprovar (§7.9)."""
     r = med.Registro(tmp_path)
-    # A RÉGUA LÊ O QUE IMPORTA, não a frase inteira: o motivo mudou em
-    # 07/09/2026 — o COMO deixou de ser cobrado DELA e passa a vir do
-    # arquivo —, e a recusa continua de pé para a linha que chega sem COMO
-    # NENHUM. Cravar o texto fazia a régua reprovar a correção, não o defeito.
     with pytest.raises(ValueError, match="COMO"):
         r.gravar({"teste": "x", "respostas": {"P1": "obedeceu"}})
     with pytest.raises(ValueError):
@@ -330,16 +237,13 @@ def test_o_registro_grava_o_como_e_sobrevive_ao_processo(tmp_path) -> None:
     fita = (tmp_path / f"registro-{__import__('datetime').date.today().isoformat()}.jsonl")
     bruto = fita.read_text(encoding="utf-8")
     assert "report 0x02" in bruto, "o COMO não chegou ao disco"
-    # OUTRO processo lê o mesmo disco: é isto que faz a medição sobreviver à
-    # sessão que morre.
     outro = med.Registro(tmp_path).ler()
     assert outro["roteiro-07"]["gesto"] == linha["gesto"]
     assert outro["roteiro-07"]["veredito"] == "obedeceu"
 
 
 def test_o_endereco_sai_mascarado_mesmo_vindo_do_navegador(tmp_path) -> None:
-    """MAC mascarado sempre — octetos 4 e 5 zerados. O que chega de fora não é
-    de confiança, e por isso a máscara é aplicada DE NOVO na gravação."""
+    """MAC mascarado sempre — octetos 4 e 5 zerados. O que chega de fora não é"""
     from tests.unit.test_docs_mac_anonimato import _OUIS_REAIS_OCTETOS
 
     cru = _endereco_sem_mascara("be")
@@ -349,26 +253,20 @@ def test_o_endereco_sai_mascarado_mesmo_vindo_do_navegador(tmp_path) -> None:
     })
     octetos = linha["mesa"]["postos"]["P1"]["uniq"].split(":")
     assert octetos[3] == "00" and octetos[4] == "00", octetos
-    # o que a análise precisa sobrevive: o fabricante e o último octeto
     assert octetos[:3] == list(_OUIS_REAIS_OCTETOS[0]) and octetos[5] == "be"
     assert ":".join(_SUFIXO_DE_FIXTURE[:2]) not in json.dumps(linha)
 
 
 def test_o_veredito_nao_julga_o_papel() -> None:
-    """Uma resposta `obedeceu` num controle que devia ficar calado é um ACHADO;
-    virar "falhou" sozinho esconderia a linha que interessa."""
+    """Uma resposta `obedeceu` num controle que devia ficar calado é um ACHADO;"""
     assert med.veredito({}) == "não feito"
     assert med.veredito({"P1": "obedeceu", "P2": "nada"}) == "obedeceu"
     assert med.veredito({"P1": "outra-coisa"}) == "parcial"
     assert med.veredito({"P1": "nao-vi", "P2": "nao-vi"}) == "não feito"
 
 
-# ---------------------------------------------------------------------------
-# O desenho, a cor e o realce
-# ---------------------------------------------------------------------------
 def test_mordida_apertados_recusa_quando_a_ancora_some() -> None:
-    """`str.replace` que não casa devolve o texto intacto sem avisar. Aqui a
-    ausência PARA a geração."""
+    """`str.replace` que não casa devolve o texto intacto sem avisar. Aqui a"""
     with pytest.raises(SystemExit, match="não é um"):
         monta.svg("p1", "cosmic-red", apertados=("alto_falante",))
     with pytest.raises(SystemExit):
@@ -376,13 +274,7 @@ def test_mordida_apertados_recusa_quando_a_ancora_some() -> None:
 
 
 def test_mordida_a_peca_marcada_nao_perde_a_zona_de_plastico() -> None:
-    """O DEFEITO MEDIDO em 06/09/2026: a classe entrava como um SEGUNDO atributo
-    `class`, o navegador ignorava o segundo, e a peça marcada perdia a zona.
-
-    Com um Nova Pink na mesa o R1 pintava `rgb(227,91,140)` e o L2 marcado caía
-    no `#3a3f4b` cru do desenho — a peça em foco era a única sem a cor do
-    aparelho dela.
-    """
+    """O DEFEITO MEDIDO em 06/09/2026: a classe entrava como um SEGUNDO atributo"""
     x = monta.svg("p3", "nova-pink", apertados=("l2",), folha=False)
     i = x.index('id="p3-l2"')
     tag = x[x.rindex("<", 0, i):x.index(">", i)]
@@ -391,25 +283,12 @@ def test_mordida_a_peca_marcada_nao_perde_a_zona_de_plastico() -> None:
     assert "marcada" in classes and "z-gatilhos" in classes, classes
 
 
-#: Os nomes de elemento que aparecem nos seletores destas duas folhas.
 _ELEMENTOS = ("svg", "g", "path", "rect", "circle", "ellipse", "polygon",
               "line", "polyline")
 
 
 def _especificidade(seletor: str) -> tuple[int, int, int]:
-    """(id, classe, elemento) de um seletor, contado como o navegador conta.
-
-    As duas regras que decidem esta conta, e a primeira já me enganou uma vez
-    nesta leva: **`:is(a,b)` vale o MAIS ESPECÍFICO dos argumentos** e
-    **`:not(X)` vale exatamente X** — o `:not` não acrescenta nada por si. A
-    primeira versão desta função somava um ponto de classe pelo `:not(` E outro
-    pelo `[fill="none"]` de dentro dele, e por isso dava à folha das zonas um
-    ponto que ela não tem.
-
-    Nos dois seletores em jogo todos os argumentos de `:is()` são nomes de
-    elemento, então a redução é literal: troca-se o `:is(…)` por UM elemento e
-    o `:not(X)` por X.
-    """
+    """(id, classe, elemento) de um seletor, contado como o navegador conta."""
     achatado = re.sub(r":is\([^)]*\)", " path", seletor)
     achatado = re.sub(r":not\(([^)]*)\)", r"\1", achatado)
     ids = len(re.findall(r"#[\w-]+", achatado))
@@ -423,12 +302,7 @@ def _especificidade(seletor: str) -> tuple[int, int, int]:
 
 
 def test_mordida_o_realce_vence_a_folha_das_zonas() -> None:
-    """A conta que a versão anterior desta regra perdia por um ponto.
-
-    Sem o `.marcada` repetido a regra dá (0,2,3) e a folha das zonas dá (0,3,2):
-    o realce simplesmente NÃO APARECIA nas peças pintadas — que são quase todas.
-    Medido no Chrome antes de virar teste.
-    """
+    """A conta que a versão anterior desta regra perdia por um ponto."""
     realce = monta.folha_de_realce().splitlines()[0].split("{")[0].strip()
     zona = ('svg[data-colorway="nova-pink"] .z-gatilhos '
             ':is(path,rect,circle,ellipse,polygon):not([fill="none"])')
@@ -440,8 +314,7 @@ def test_mordida_o_realce_vence_a_folha_das_zonas() -> None:
 
 
 def test_a_folha_publicada_tem_os_vinte_e_oito_modelos() -> None:
-    """*Uma folha podada é uma escolha cravada*, e há portão que a conta como
-    dívida (`check_a_cor_vem_do_aparelho.py`). A página publica a tabela DELA."""
+    """*Uma folha podada é uma escolha cravada*, e há portão que a conta como"""
     folha = monta.folha_das_cores()
     declarados = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', folha))
     do_csv = {
@@ -455,8 +328,7 @@ def test_a_folha_publicada_tem_os_vinte_e_oito_modelos() -> None:
 
 
 def test_o_desenho_de_cada_posto_nao_carrega_a_folha_podada() -> None:
-    """Quatro cópias dos 28 seriam 180 KB de CSS que ninguém lê; uma cópia
-    podada por desenho seria a escolha cravada que o portão conta."""
+    """Quatro cópias dos 28 seriam 180 KB de CSS que ninguém lê; uma cópia"""
     x = monta.svg("p1", "cosmic-red", folha=False)
     assert "cores-do-dualsense-folha" not in x
     assert 'data-colorway="cosmic-red"' in x, (
@@ -477,16 +349,12 @@ def test_os_quatro_desenhos_nao_colidem_de_id() -> None:
 
 
 def test_sem_modelo_publicado_o_desenho_nao_escolhe_um_colorway() -> None:
-    """*Sem modelo publicado, travessão — nunca um colorway escolhido.* Escolher
-    um seria a tela afirmando um aparelho que ninguém leu."""
+    """*Sem modelo publicado, travessão — nunca um colorway escolhido.* Escolher"""
     teste = med.todos_os_testes()[0]
     quatro = med.desenhos(teste, {"postos": {}})
     assert all('data-colorway=""' in s for s in quatro.values())
 
 
-# ---------------------------------------------------------------------------
-# O servidor
-# ---------------------------------------------------------------------------
 @pytest.fixture()
 def mesa_no_ar(tmp_path, monkeypatch):
     """Sobe o servidor numa porta livre, com o registro num lar de mentira."""
@@ -538,8 +406,7 @@ def test_o_endpoint_dos_desenhos_traz_quatro_e_a_peca_acesa(mesa_no_ar) -> None:
 
 
 def test_o_servidor_so_atende_o_proprio_computador() -> None:
-    """`127.0.0.1`, nunca `0.0.0.0`: esta página mostra o endereço dos controles
-    dela e o que a bancada mediu."""
+    """`127.0.0.1`, nunca `0.0.0.0`: esta página mostra o endereço dos controles"""
     httpd, url = med.servir(0)
     try:
         assert httpd.server_address[0] == "127.0.0.1"
@@ -549,25 +416,11 @@ def test_o_servidor_so_atende_o_proprio_computador() -> None:
 
 
 def test_o_validar_sh_existe_e_tem_o_sem_abrir() -> None:
-    """A janela é DELA; a régua usa `--sem-abrir`.
-
-    E O LANÇADOR PODE LIGAR O DAEMON — `start`, nunca `restart` nem `stop`.
-    Pedido dela em 07/09/2026: *"quando rodar o validar ele tem que acionar
-    isso automaticamente"*, depois de atravessar meia bancada com o daemon
-    morto e a página mostrando o posto da LÂMPADA da sessão passada.
-
-    ATÉ ALI ESTA RÉGUA PROIBIA `systemctl` INTEIRO, e a proibição estava
-    certa pelo motivo errado: o perigo nunca foi a palavra, foi DERRUBAR o
-    daemon vivo com os controles na mão dela. `start` num serviço já ativo não
-    faz nada; `restart` corta uma medição em curso. Então a régua deixa de
-    caçar a palavra e passa a caçar o VERBO — que é o que morde.
-    """
+    """A janela é DELA; a régua usa `--sem-abrir`."""
     sh = LANCADOR
     assert sh.exists() and os.access(sh, os.X_OK)
     fonte = sh.read_text(encoding="utf-8")
     assert "--sem-abrir" in fonte
-    # O `install.sh` continua fora: ele reescreve os lançadores dela e a unit.
-    # O `pkill` também — `pkill -f` já derrubou o compositor dela.
     codigo = "\n".join(linha for linha in fonte.splitlines()
                        if not linha.lstrip().startswith("#"))
     for proibido in ("install.sh", "pkill"):
@@ -586,27 +439,14 @@ def test_o_validar_sh_existe_e_tem_o_sem_abrir() -> None:
 
 @pytest.mark.skipif(not shutil.which("shellcheck"), reason="sem shellcheck")
 def test_o_lancador_passa_no_shellcheck() -> None:
-    """O lançador passa no `shellcheck` também na suíte, e não só no portão
-    que varre `scripts/*.sh` (que não roda em toda árvore)."""
+    """O lançador passa no `shellcheck` também na suíte, e não só no portão"""
     r = subprocess.run(["shellcheck", "-S", "error", str(LANCADOR)],
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_o_lancador_sobe_a_mesa_sem_tela_e_sem_daemon(mentira, tmp_path) -> None:
-    """O lançador SOBE a mesa, e não só existe: a régua de texto acima e o
-    `shellcheck` passam com a raiz errada, porque o `mesa_de_medicao.py` que
-    ele chama só é procurado quando ele sobe.
-
-    Sem tela (`--sem-abrir`), sem daemon (`--sem-daemon`), pela mesa de mentira
-    da régua (nenhum aparelho é lido) e num lar de mentira: o socket do daemon
-    mora no `XDG_RUNTIME_DIR`, e o daqui não tem daemon nenhum. O servidor
-    morre pelo grupo do processo que esta régua criou, nunca por nome.
-
-    MORDIDA (medida em 28/09/2026): tire o `/..` da `RAIZ` do lançador e ele
-    morre sem imprimir endereço, na guarda do interpretador — o pacote passa a
-    resolver fora da `RAIZ` (`o python resolve para OUTRA árvore`).
-    """
+    """O lançador SOBE a mesa, e não só existe: a régua de texto acima e o"""
     lar = tmp_path / "lar"
     for sub in (".config", ".local/state", ".local/share", ".cache", "run"):
         (lar / sub).mkdir(parents=True)
@@ -622,13 +462,6 @@ def test_o_lancador_sobe_a_mesa_sem_tela_e_sem_daemon(mentira, tmp_path) -> None
         "TMPDIR": str(tmp_path),
         med.PORTA_DA_REGUA: str(mentira),
     })
-    # A SAÍDA SE LÊ PELO DESCRITOR, em bytes, e não por `readline()`: o
-    # `select()` só enxerga o que ainda está no cano. Um `readline()` que chega
-    # atrasado (máquina carregada) puxa o endereço junto com as linhas de
-    # antes para o buffer do Python, o cano esvazia — o lançador fica calado no
-    # `wait` — e o laço espera o prazo inteiro sobre um endereço já lido.
-    # Medido em 28/09/2026 com o leitor atrasado 1,5 s: o laço por
-    # `readline()` saía sem endereço aos 8 s; este acha na hora.
     proc = subprocess.Popen(
         ["bash", str(LANCADOR), "--sem-abrir", "--sem-daemon", "--porta", "0"],
         cwd=tmp_path, env=ambiente, stdout=subprocess.PIPE,
@@ -672,16 +505,9 @@ def test_o_lancador_sobe_a_mesa_sem_tela_e_sem_daemon(mentira, tmp_path) -> None
             proc.wait(timeout=15)
 
 
-# ---------------------------------------------------------------------------
-# A PROVA COM O NAVEGADOR — os três tempos, clicados
-# ---------------------------------------------------------------------------
 @pytest.fixture()
 def mentira(tmp_path):
-    """Quatro modelos DIFERENTES, pela porta declarada da régua.
-
-    Sem colorway não há folha de zonas a vencer, e a prova que interessa — *o
-    realce vence a cor do plástico* — não existiria.
-    """
+    """Quatro modelos DIFERENTES, pela porta declarada da régua."""
     arq = tmp_path / "mentira.json"
     modelos = [("P1", "cosmic-red", "Cosmic Red", "USB"),
                ("P2", "starlight-blue", "Starlight Blue", "USB"),
@@ -696,18 +522,8 @@ def mentira(tmp_path):
     return arq
 
 
-
-
 def _abre_o_como(pg) -> None:
-    """Abre a gaveta do campo do COMO, CLICANDO — nunca pelo `.open`.
-
-    O `#gesto` saiu da cara do teste em 07/09/2026: ele repetia em prosa os
-    passos que já estavam logo acima, e ela escreveu *"quanto texto (…) tá
-    impossível ler ou fazer algo aqui"*. Ele mora numa gaveta com nome, e o
-    `fill` desta régua estourou por isso — a quebra estava CERTA. Abrir pelo
-    clique é o gesto dela; pelo `.open` seria medir um caminho que a mão dela
-    não tem.
-    """
+    """Abre a gaveta do campo do COMO, CLICANDO — nunca pelo `.open`."""
     if not pg.evaluate("() => !!document.querySelector('#caixa-do-gesto')?.open"):
         pg.click("#caixa-do-gesto > summary")
     pg.wait_for_selector("#gesto", state="visible")
@@ -715,22 +531,12 @@ def _abre_o_como(pg) -> None:
 
 @pytest.mark.skipif(not pathlib.Path(CHROME).exists(), reason="sem Chrome")
 def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> None:
-    """Os três tempos, clicados — e o realce medido no `getComputedStyle`.
-
-    ELE NÃO ABRE JANELA NA TELA DELA: o Chrome sobe headless, que é o padrão do
-    `launch()`, e é o mesmo caminho que os portões `pecas-do-dualsense` e
-    `cores-do-dualsense` já usam.
-    """
+    """Os três tempos, clicados — e o realce medido no `getComputedStyle`."""
     sync_playwright = pytest.importorskip(
         "playwright.sync_api", reason="playwright não está no pyproject",
     ).sync_playwright
     monkeypatch.setenv(med.PORTA_DA_REGUA, str(mentira))
 
-    # O ALVO É ESCOLHIDO PELO QUE A RÉGUA PRECISA MEDIR: uma peça a acender
-    # (`l2`) E os dois papéis na mesma linha, para o "brilham igual não diz
-    # nada" ter o que comparar. Antes bastava a peça, e a régua dependia de o
-    # primeiro achado ter papéis distintos — o que deixou de ser verdade quando
-    # as condições entraram, em 07/09/2026.
     alvo = next(t for t in med.todos_os_testes()
                 if t.id.startswith("roteiro-")
                 and any(p == "l2" for p, _ in t.pecas)
@@ -746,45 +552,28 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             pg.goto(mesa_no_ar + "#" + alvo.id)
             pg.wait_for_selector("#iniciar")
 
-            # §7.2 — o botão de iniciar existe, e NADA acontece antes dele.
             assert pg.is_visible("#antes")
             assert not pg.is_visible("#depois")
-            # OS DESENHOS ESTÃO NA TELA NO TEMPO 1, e é o pedido dela: o
-            # botão "mostra o que vai acontecer E O QUE OBSERVAR". A peça
-            # acesa é o que observar. Esta linha cobrava zero desenho até
-            # 06/09/2026 — ver a razão inteira em
-            # `test_nada_acontece_antes_do_iniciar_...` do arquivo irmão.
             pg.wait_for_selector(".ctl svg")
             assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4, (
                 "os quatro desenhos não chegaram ao TEMPO 1")
-            # O TESTE ESCOLHIDO tem de ter os dois papéis — e a régua o
-            # escolhe, em vez de crer que o primeiro da fila os terá. O
-            # `roteiro-02` (mover cada controle) tem os quatro reagindo desde
-            # que as condições entraram, e é correto: os quatro se movem.
             obs = pg.inner_text("#observar")
             assert "DEVE REAGIR" in obs or "não pode reagir" in obs, obs
 
-            # §7.3 — o timer conta antes de aplicar.
             pg.click("#iniciar")
             assert pg.is_visible("#contagem")
             assert pg.inner_text("#relogio").strip() != "", "o relógio não conta"
             pg.click("#pular-timer")
             pg.wait_for_selector(".ctl svg")
 
-            # §7.6 — os quatro, com transporte, modelo e lâmpada de jogador.
             assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4
             cores = pg.eval_on_selector_all(
                 ".ctl svg", "es=>es.map(e=>e.getAttribute('data-colorway'))")
             assert cores == ["cosmic-red", "starlight-blue", "nova-pink",
                              "midnight-black"], cores
-            # OS PAPÉIS SE PERGUNTAM AO DONO, não se cravam: eles saem da
-            # coluna do roteiro desde 07/09/2026, e uma lista escrita à mão
-            # aqui reprovaria toda vez que ela editasse a tabela — a régua
-            # medindo o mundo de ontem, que é a família que esta casa caça.
             papeis = pg.eval_on_selector_all(".ctl", "es=>es.map(e=>e.className)")
             esperado = [f"ctl papel-{alvo.papeis[p]}" for p in med.POSTOS]
             assert papeis == esperado, (papeis, esperado)
-            # cinco lâmpadas por controle, uma acesa por posto -> P1..P4 acendem
             assert pg.eval_on_selector_all(".ctl svg .led-on", "e=>e.length") > 0
             texto = pg.inner_text(".quatro")
             oui = ":".join(_endereco_sem_mascara().split(":")[:3])
@@ -798,17 +587,6 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                   return f ? getComputedStyle(f).fill : '';
                 }""")
 
-            # §7.7 — a peça acende, na peça certa, e com papéis distintos.
-            #
-            # A COR SE LÊ DO TOKEN, NÃO SE DIGITA — curado em 06/09/2026. Estas
-            # duas linhas cravavam `rgb(255, 121, 198)` e `rgb(124, 133, 152)`,
-            # os hex que a mesa tinha quando nasceu com paleta PRÓPRIA. Ela
-            # mandou usar o tema da casa (`paleta_da_casa.TOKENS`), a paleta
-            # mudou por decisão, e a régua reprovou a DECISÃO em vez do
-            # defeito. É a família que esta casa mais encontra: *a régua digita
-            # o que devia ler*. Agora ela pergunta ao token, e continua
-            # cobrando o que importa — que os papéis sejam DISTINTOS e que cada
-            # peça use o realce do SEU papel.
             def token(nome: str) -> str:
                 return pg.evaluate(
                     "(n) => { const s = document.createElement('span');"
@@ -816,17 +594,6 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                     " const c = getComputedStyle(s).color; s.remove(); return c; }",
                     nome)
 
-            # O FOCO É UM SÓ, E O PAPEL É A MOLDURA — mudou em 07/09/2026,
-            # por decisão dela: *"as bordas ou coisas a serem observadas ficam
-            # com o foco o mesmo que temos no mapa dos controles"*. Lá a peça
-            # em foco acende em `--pink`, e o rosa é o que ela já associa a
-            # "olhe aqui" em toda a casa.
-            #
-            # ESTA RÉGUA COBRAVA TRÊS CORES DE REALCE, uma por papel, e por
-            # isso reprovou a DECISÃO em vez do defeito — a segunda vez que
-            # acontece com estas mesmas linhas. O que ela tem de cobrar é que
-            # a tela SEPARE os papéis; ela só não pode dizer POR ONDE, porque
-            # isso é escolha de desenho e a escolha mudou.
             reage, calado = tinta("#p3-l2"), tinta("#p1-l2")
             assert reage == calado == token("--color-pink"), (
                 f"a peça em foco não acende no rosa do mapa: {reage} {calado}")
@@ -838,51 +605,33 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                     " return {halo: s.boxShadow, opacidade: s.opacity,"
                     "         borda: s.borderTopColor};}")
 
-            # OS PAPÉIS SE SEPARAM NA MOLDURA, e a régua vai atrás do que a
-            # tela usa hoje: o halo de quem deve reagir, e o recuo de quem tem
-            # de ficar calado.
             m3, m1 = moldura("P3"), moldura("P1")
             assert m3 != m1, (
                 "os quatro cartões estão idênticos — quem deve reagir e quem "
                 "tem de ficar calado não se distinguem em nada")
             assert m3["halo"] != "none", (
                 "quem deve reagir perdeu o halo — sobrou só o texto")
-            # E A BORDA CONTINUA SENDO A COR DO PLÁSTICO, não a do papel: os
-            # dois sinais convivem porque dizem coisas diferentes. A primeira
-            # volta pôs um `outline` do papel e ele cobria a cor do modelo.
             assert m3["borda"] != m1["borda"], (
                 "os dois cartões têm a mesma borda — a cor do plástico sumiu "
                 "da moldura")
-            # e a peça que NÃO é do teste continua com a cor do plástico dela
             assert tinta("#p3-r1") != reage
             assert tinta("#p3-r1") != tinta("#p1-r1"), (
                 "dois modelos diferentes com a mesma cor de plástico")
 
-            # A MORDIDA no navegador: sem a classe, a cor do aparelho volta.
             pg.eval_on_selector("#p3-l2", "e=>e.classList.remove('marcada')")
             assert tinta("#p3-l2") != reage
             pg.eval_on_selector("#p3-l2", "e=>e.classList.add('marcada')")
 
-            # §7.5 — uma resposta gravada sobrevive a recarregar, e está em disco.
             pg.check('.ctl[data-posto="P3"] input[value="obedeceu"]')
             pg.check('.ctl[data-posto="P1"] input[value="nada"]')
             _abre_o_como(pg)
             pg.fill("#gesto", "aba 03 > efeito Arma no P3 · report 0x02")
-            # o campo geral saiu; o que ela escreve é por CONTROLE
             pg.fill('textarea[name="n-P3"]', "só o P3 endureceu")
             pg.click("#salvar")
             pg.wait_for_timeout(500)
 
-            # §7.4 — avançar andou, e o campo do COMO NÃO herda o do anterior.
             assert pg.evaluate("location.hash") != "#" + alvo.id, (
                 "salvar não avançou para o teste seguinte")
-            # O CAMPO NÃO FICA VAZIO — ele vem com o COMO DO TESTE NOVO.
-            # Até 07/09/2026 esta linha cobrava vazio, porque o COMO era
-            # cobrado DELA; ela leu a cobrança e disse *"isso aqui me quebra.
-            # isso eu espero que a página descreva"*. Agora o campo chega
-            # pronto do arquivo, e o que a régua tem de provar é o que ela
-            # temia de verdade: que o texto seja o DESTE teste, nunca o do
-            # anterior. É a mesma armadilha, cobrada pelo lado certo.
             agora = pg.input_value("#gesto")
             seguinte = pg.evaluate("() => TESTES[atual].id")
             assert agora, "o COMO chegou vazio — ela teria de digitar de novo"
@@ -890,12 +639,6 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                 "o COMO do teste anterior ficou na tela — ela salvaria o COMO "
                 "errado sem perceber")
             do_novo = next(x for x in med.todos_os_testes() if x.id == seguinte)
-            # O CAMPO NASCE COM OS PASSOS, e não com o gesto inteiro — mudou em
-            # 07/09/2026, quando o COMO deixou de ser o roteiro repetido e
-            # passou a ter sete campos vindos do arquivo dono. Esta linha
-            # cravava o `passa quando` do roteiro dentro do campo; cobrá-lo de
-            # volta hoje seria reprovar a cura. O que ela tem de provar é o
-            # mesmo de sempre: que o texto é o DESTE teste.
             passos = dict(do_novo.como).get("os passos", "")
             primeiro = next((x.strip() for x in passos.split("\n") if x.strip()), "")
             assert primeiro and primeiro[:40] in agora, (
@@ -906,10 +649,6 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             pg.click("#anterior")
             assert pg.evaluate("location.hash") == "#" + alvo.id, "voltar não anda"
 
-            # RECARREGAR DE VERDADE. Um `goto` que só troca o `#` é navegação
-            # no MESMO documento: o `DOMContentLoaded` não dispara e a página
-            # continua sendo a de antes. Foi assim que a primeira versão desta
-            # régua deu verde sobre um campo que nunca tinha sido relido.
             pg.goto("about:blank")
             pg.goto(mesa_no_ar + "#" + alvo.id)
             pg.wait_for_selector("#iniciar")
@@ -920,26 +659,14 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                 "a resposta não sobreviveu a recarregar")
             assert pg.is_checked('.ctl[data-posto="P3"] input[value="obedeceu"]')
 
-            # §7.8 — o índice tem as seções e cada número leva ao teste.
-            # `.lower()` porque o título da seção é `text-transform:uppercase`:
-            # a régua compara o TEXTO, não o que o CSS fez com ele.
             indice = pg.inner_text("#indice-corpo").lower()
             assert "o roteiro" in indice and "o mapa de canais" in indice
             assert "obedeceu" in indice, "o índice não mostra o estado gravado"
-            # A CONTAGEM É POR SEÇÃO desde 07/09/2026 — *"cadê as seções das
-            # 21?"*. Antes o índice trazia um total só ("1 de 21"), e esta
-            # linha o cravava; com as seis seções do roteiro cada uma conta a
-            # sua, e a régua passa a cobrar o que interessa: que ALGUMA seção
-            # registre o que acabou de ser respondido.
             contagens = re.findall(r"— (\d+) de (\d+)", indice)
             assert contagens, f"o índice não conta nada: {indice[:200]}"
             assert any(int(f) > 0 for f, _ in contagens), (
                 "o índice não conta o que foi feito — nenhuma seção registrou "
                 "a resposta que acabou de ser gravada")
-            # E AS SEÇÕES SOMAM A FATIA QUE ESTÁ NA TELA, não o acervo: o
-            # filtro abre em *"o que falta"* por pedido dela, e um índice que
-            # contasse os 199 enquanto a página mostra 148 mandaria procurar
-            # teste que não está ali.
             na_tela = pg.evaluate("() => TESTES.length")
             assert sum(int(quantos) for _, quantos in contagens) == na_tela, (
                 f"o índice perdeu testes pelo caminho: as seções somam "
@@ -951,7 +678,6 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
         finally:
             navegador.close()
 
-    # E O DISCO, que é o que a sessão que morre não leva embora.
     fita = next(iter(sorted((med.pasta_do_registro()).glob("registro-*.jsonl"))))
     bruto = fita.read_text(encoding="utf-8")
     assert "report 0x02" in bruto

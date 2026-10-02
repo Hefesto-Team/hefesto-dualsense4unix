@@ -49,8 +49,6 @@ from hefesto_dualsense4unix.profiles import loader
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 CAMPO = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
 
-#: A MESA — endereço MASCARADO, faixa sintética da casa. Há dois portões de
-#: anonimato nesta árvore e nenhum deles perdoa.
 UNIQ = "aabbcc000001"
 MESA = [{"pref": "p1", "uniq": UNIQ, "jogador": 1, "cor": "cosmic-red",
          "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
@@ -92,12 +90,7 @@ def _ctx(diz: str | None = "Sackboy") -> Contexto:
 
 
 def _como_o_piloto_pinta(ctx: Contexto) -> dict[str, Any]:
-    """As TRÊS LINHAS de ``hefesto_vivo.py``, na ordem em que ele as roda.
-
-    É o que separa esta régua das que erraram: aqui o valor medido é o que o
-    ``escrever()`` recebe para pôr no ``data-campo`` da página, e não o que o
-    pacote devolveu antes de o cabeçalho entrar.
-    """
+    """As TRÊS LINHAS de ``hefesto_vivo.py``, na ordem em que ele as roda."""
     bruto = pacotes.pacote_da_pagina(PAGINA, ctx) or {}
     carga = pacotes.normalizar(bruto, {UNIQ: "p1"})
     for chave, valor in pacotes.topo(ctx).items():
@@ -117,28 +110,11 @@ def _emitidas(carga: dict[str, Any]) -> set[str]:
     return fora
 
 
-# --------------------------------------------------------------------------
-# 1 e 2. TODA CHAVE TEM ONDE CAIR
-# --------------------------------------------------------------------------
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
 def test_toda_chave_emitida_tem_endereco_ou_esta_declarada(
     disco: list[Any], publicado: bool,
 ) -> None:
-    """Órfão calado é o defeito; órfão DECLARADO é inventário.
-
-    **AS DUAS PÁGINAS SÃO COBRADAS, e é de propósito.** A armadilha desta leva é
-    curar na BANCADA e o produto continuar lendo a PUBLICADA; uma régua que só
-    olhasse o mockup diria "tem endereço" sobre uma tela que ela não vê.
-
-    MORDIDA: devolva ``"ativo": ativo or "—"`` ao ``fora`` de
-    ``a10_perfis.pacote`` — é a chave que provocou esta régua — e os dois casos
-    reprovam nomeando-a.
-    """
-    # O QUE ESPERA O ATO DELA SÓ VALE NA PUBLICADA — 03/09/2026. Um campo que o
-    # gerador acabou de marcar existe na BANCADA e não na publicada, porque
-    # publicar é ato dela. Sem esta linha, marcar campo novo reprovava sempre, e
-    # a única forma de ficar verde era publicar — que é o que uma frente não faz.
-    # Na bancada a lista NÃO desconta nada: lá o endereço tem de estar mesmo.
+    """Órfão calado é o defeito; órfão DECLARADO é inventário."""
     espera = set(a10_perfis.ESPERANDO_A_PUBLICACAO) if publicado else set()
     orfaos = (_emitidas(_como_o_piloto_pinta(_ctx()))
               - _enderecos(publicado)
@@ -154,11 +130,7 @@ def test_toda_chave_emitida_tem_endereco_ou_esta_declarada(
 
 
 def test_o_sem_endereco_nao_guarda_quem_ja_tem_casa(disco: list[Any]) -> None:
-    """Declaração que envelheceu é a régua desligada sem ninguém decidir isso.
-
-    MORDIDA: ponha em ``SEM_ENDERECO`` um nome que a página tem (``perfis.conta``,
-    por exemplo) e este teste o nomeia.
-    """
+    """Declaração que envelheceu é a régua desligada sem ninguém decidir isso."""
     tem_casa = set(a10_perfis.SEM_ENDERECO) & (
         _enderecos(publicado=True) | _enderecos(publicado=False))
     assert not tem_casa, (
@@ -175,9 +147,6 @@ def test_o_sem_endereco_nao_declara_quem_a_aba_nao_manda(disco: list[Any]) -> No
         f"Quem parou de emitir tira da lista no mesmo commit.")
 
 
-# --------------------------------------------------------------------------
-# 3. O CABEÇALHO É DAS DEZ ABAS
-# --------------------------------------------------------------------------
 def test_esta_aba_nao_emite_os_campos_do_cabecalho(disco: list[Any]) -> None:
     """``perfil``, ``conta`` e ``conta-b`` são de ``pacotes.topo()``, não daqui.
 
@@ -204,9 +173,6 @@ def test_esta_aba_nao_emite_os_campos_do_cabecalho(disco: list[Any]) -> None:
         f"de `pacotes.topo()` — e as outras nove telas ficam com outro valor.")
 
 
-# --------------------------------------------------------------------------
-# 4. A DÍVIDA DO CHIP — declarada, medida, e ela reprova no dia em que for paga
-# --------------------------------------------------------------------------
 def test_o_chip_do_topo_ainda_mostra_o_nome_cru_e_isso_e_divida(
     disco: list[Any],
 ) -> None:

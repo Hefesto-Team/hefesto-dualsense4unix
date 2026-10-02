@@ -58,20 +58,14 @@ from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
 from hefesto_dualsense4unix.utils import session as sessao
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
-#: AS DEZ, e a lista é FIXA: derivá-la de `PACOTES` faria a régua passar por
-#: vacuidade no dia em que uma aba saísse da tabela.
 ABAS = (
     "01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
     "05-vibracao.html", "06-navegacao.html", "07-lancadores.html",
     "08-conexoes.html", "09-sistema.html", "10-perfis.html",
 )
 
-#: O perfil do disco nesta régua. Não é nome de perfil dela.
 NO_DISCO = "chip-de-um-dono"
 
-#: Um controle na forma do daemon e o mesmo na forma do desenho — os dois
-#: vocabulários que os pacotes leem (o molde de `test_o_despachante_serve_as_dez`).
-#: Endereço da faixa sintética da casa.
 UNIQ = "aa:bb:cc:00:00:01"
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua", "via": "USB",
          "cor": "starlight-blue", "mascara": "DualSense", "alvo": True}]
@@ -87,12 +81,7 @@ FALSO = {
 
 @pytest.fixture
 def perfil_no_disco() -> Iterator[str]:
-    """Um perfil no disco e os dois marcadores da sessão apontando para ele.
-
-    A ÂNCORA É O LAR DO `passwd`, não o `$HOME`: o `$HOME` é o que o desvio do
-    `conftest` mexe, e perguntá-lo seria conferir o desvio com ele mesmo (o
-    molde é `test_a_perna_que_falta_01_a_segunda_perna_do_perfil_ativo`).
-    """
+    """Um perfil no disco e os dois marcadores da sessão apontando para ele."""
     lar_real = pathlib.Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
     alvo = profiles_dir(ensure=True).resolve()
     assert not alvo.is_relative_to(lar_real), (
@@ -116,11 +105,7 @@ def _com_o_daemon_calado() -> Contexto:
 
 
 def _o_que_o_chip_recebe(pagina: str, ctx: Contexto) -> Any:
-    """As três linhas de `hefesto_vivo.py`, na ordem em que o piloto as roda.
-
-    O valor devolvido é o que o pintor recebe para o `data-campo="perfil"` do
-    `topo.html` — não o que o pacote devolveu antes de o cabeçalho entrar.
-    """
+    """As três linhas de `hefesto_vivo.py`, na ordem em que o piloto as roda."""
     bruto = pacotes.pacote_da_pagina(pagina, ctx) or {}
     carga = pacotes.normalizar(bruto, {UNIQ: "p1"})
     for chave, valor in pacotes.topo(ctx).items():

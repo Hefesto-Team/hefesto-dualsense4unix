@@ -1,38 +1,4 @@
-"""A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01 — reaplicar o perfil não escurece a barra.
-
-**OS DOIS ACHADOS DA CONFERÊNCIA DA A-MARCA-DA-COR-NAO-SOME-01, 24/09/2026**,
-medidos de novo antes da cura na mesa de quatro real (a `Mesa` daquela régua:
-`IpcServer`, `ProfileManager.apply`, `SysfsLedNode` sobre arquivos e a paleta
-de `make_auto_output_provider`), com o perfil a 82%:
-
-1. **o brilho entrava duas vezes em quem não tem cor gravada.** O P1 a 60%
-   acendia `(0,0,153)` pelo trilho e `(0,0,111)` a cada perfil reaplicado
-   pelo boot, pela troca de jogo ou pelo autoswitch; o P4 a 30%, de
-   `(76,0,38)` a `(27,0,13)`; o trilho seguinte a 40% publicava `(0,0,74)`.
-   A RAIZ: o fator de brilho por controle (`backend._scaled_led`) caía sobre
-   a cor RESOLVIDA, e com ela sobre o override por controle, que já traz o
-   brilho dele. Quem tinha cor gravada não escurecia porque o manager não lhe
-   publicava fator — a guarda estava na ponta errada. Pelo Salvar do rodapé o
-   brilho também entrava duas vezes: ele gravava a luz ACESA como a cor
-   escolhida, e a troca de perfil seguinte a escurecia de novo. Desde 27/09
-   o Salvar não lê a luz do aparelho (`D-2709-O-SALVAR-LE-O-PERFIL`);
-2. **sem a paleta, o fóssil ia para o tom de outra peça.** O do P3 saía no
-   azul cheio `(0,0,255)`, ao lado do P1 azul a 82%, `(0,0,209)`: o byte
-   estava livre, a cor não, e o brilho do P3 sumia.
-
-A REGRA, em todo caminho (boot, troca manual, troca de jogo, autoswitch,
-Salvar): a barra de cada controle acende a cor dele no brilho dele, numa conta
-só — a mesma que o trilho faz —, e três aplicações seguidas do perfil dão o
-mesmo byte que a primeira.
-
-AS MORDIDAS, arrancadas e devolvidas com md5 (a lista está no relatório da
-sprint): o `_scaled_led` de volta sobre a cor resolvida; o `rodape` gravando a
-luz acesa (desde 27/09, a luz acesa de volta no Salvar); o `_scaled_led` pela
-razão em vez do `reescalar`; o `_controllers_to_led_scales` pulando quem tem
-cor; o `_primeiro_tom_livre` com
-o tom cheio e comparando bytes; o manager sem publicar o brilho do perfil; e o
-`_brilho_da_peca_locked` sem o arredondamento.
-"""
+"""A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01 — reaplicar o perfil não escurece a barra."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -61,12 +27,8 @@ from tests.unit.test_a_marca_da_cor_nao_some import (
 )
 from tests.unit.ponte_do_rodape import PonteDoRodape
 
-#: A PALETA AUTOMÁTICA, os oito tons do número.
 PALETA = tuple(player_slot_color(n) for n in range(1, 9))
 
-#: O «Salvar» CLICADO NA ABA ILUMINAÇÃO, como o piloto o manda: todo clique
-#: carrega a aba de onde veio (e o Salvar é o mesmo em toda aba desde 27/09)
-#: (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
 CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
                 "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
@@ -76,7 +38,6 @@ def _na(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
     return LedSettings(lightbar=rgb).apply_brightness(brilho).lightbar
 
 
-#: O handle falso da `Mesa`, guardado antes de qualquer troca pelo transporte.
 _HANDLE_DA_MESA = marca._handle_falso
 
 
@@ -110,12 +71,7 @@ def mesa_de(tmp_path, monkeypatch):
 
 
 def _luz(mesa: Mesa) -> list[tuple[int, int, int]]:
-    """O que cada barra ACENDE: o nó de LED de cada controle, P1 a P4.
-
-    E o nó tem de ser o que o produto decidiu (`_merged_desired_for_key`):
-    uma luz que concorda com a régua e discorda do resolvido mediria o
-    instrumento, não o produto.
-    """
+    """O que cada barra ACENDE: o nó de LED de cada controle, P1 a P4."""
     acesas = []
     for m in MACS:
         no = mesa.ctl._sysfs[m].get_rgb()
@@ -127,16 +83,7 @@ def _luz(mesa: Mesa) -> list[tuple[int, int, int]]:
 
 
 class _PonteDoRodape:
-    """A ponte do rodapé com o `profile.reaplicar` entregue ao handler REAL.
-
-    O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» manda o
-    nome, e o daemon roda a cadeia da ativação com o perfil do disco. O
-    `apply_draft_detalhado` fica para as réguas que medem o `DraftApplier`
-    (o método do daemon segue para a janela GTK e a linha de comando).
-
-    Qualquer outra chamada é recusada: um dublê que aceita tudo mede menos
-    que o produto.
-    """
+    """A ponte do rodapé com o `profile.reaplicar` entregue ao handler REAL."""
 
     def __init__(self, mesa: Mesa) -> None:
         self.mesa = mesa
@@ -154,15 +101,11 @@ class _PonteDoRodape:
 def _reaplicar(mesa: Mesa, caminho: str) -> None:
     """O perfil do disco aplicado de novo, pela porta de cada caminho do produto."""
     if caminho == "boot":
-        # O daemon que nasce não tem a camada da mão: é o restauro de boot
-        # (`origin="system"`) sobre ela vazia.
         mesa.ctl.clear_user_output_overrides()
         mesa.pm.apply(mesa._perfil(), origin="system")
     elif caminho == "troca-manual":
         mesa.rodar(mesa.server._handle_profile_switch({"name": NOME}))
     elif caminho == "troca-de-jogo":
-        # O jogo abre com o perfil DELE e fecha devolvendo o dela — a prova
-        # que ela faz com a mão: mexer no brilho, trocar de jogo e voltar.
         from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 
         jogo = Profile(name="o-jogo", match=MatchAny(),
@@ -188,33 +131,14 @@ def _reaplicar(mesa: Mesa, caminho: str) -> None:
 CAMINHOS = ["boot", "troca-manual", "troca-de-jogo", "autoswitch", "aplicar", "salvar"]
 
 
-#: NOTA DATADA — 01/10/2026: aqui morava `O_APLICAR_SEM_O_PISO`, o `xfail` das
-#: réguas do «Aplicar» enquanto o `DraftApplier` escalava a cor fora do dono
-#: (`LedSettings.apply_brightness`, com o piso de D-2909-O-BRILHO-TEM-PISO). O
-#: «Aplicar» deixou de passar pelo `DraftApplier`: ele é a cadeia da ativação
-#: (`profile.reaplicar`, O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01), que acende pelo
-#: dono por construção, e a marca perguntava a um aplicador que o gesto não usa.
 CAMINHOS_COM_O_PISO = CAMINHOS
 
 
-# ---------------------------------------------------------------------------
-# 1. o brilho entra uma vez só — P1 a P4, USB e BT, «Todos» e um controle só
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("caminho", CAMINHOS_COM_O_PISO)
 def test_reaplicar_tres_vezes_da_a_luz_da_primeira(mesa_de, caminho, alvo, via):
-    """O trilho acende; o perfil reaplicado três vezes acende o mesmo byte.
-
-    A mesa: P1 e P4 sem cor gravada (a paleta do número), P2 laranja e P3
-    ciano escolhidos. O P1 vai a 60%, o P4 a 30% e o P2 a 50% pelo trilho; o
-    P3 fica no brilho do perfil. A luz de cada um é a cor dele no brilho dele,
-    numa conta só — a do trilho —, e três aplicações do perfil não a mexem.
-    Depois, o trilho do P1 a 40% e mais uma aplicação.
-
-    **A MORDIDA:** devolva o `_scaled_led` para depois do merge (sobre a cor
-    resolvida) e o P1 e o P4 saem `(0,0,111)` e `(27,0,13)` já na primeira.
-    """
+    """O trilho acende; o perfil reaplicado três vezes acende o mesmo byte."""
     mesa = mesa_de(alvo, via)
     mesa.soltar(1, 60)
     mesa.soltar(4, 30)
@@ -237,18 +161,7 @@ def test_reaplicar_tres_vezes_da_a_luz_da_primeira(mesa_de, caminho, alvo, via):
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("caminho", CAMINHOS_COM_O_PISO)
 def test_sem_a_paleta_o_global_acende_a_conta_do_trilho(mesa_de, caminho, alvo, via):
-    """Sem a paleta, o controle no GLOBAL com o brilho dele acende o byte do trilho.
-
-    O global dela (`#2850B4`) não é tom da paleta, e o fator entrava pela
-    razão, com duas truncagens: o P4 a 30% do trilho acendia `(12,24,54)` e
-    o perfil reaplicado `(11,23,53)` pelo boot, pela troca manual e pelo
-    «Aplicar» (conferência). O P1 azul escolhido, o P2 laranja e o P3 ciano
-    ficam na cor deles; três aplicações dão a luz do trilho.
-
-    **AS MORDIDAS:** tire a cor do perfil do `reescalar` do `_scaled_led`
-    (ou do `set_led_scales` do manager, ou do `DraftApplier`) e o P4 sai
-    `(11, 23, 53)`.
-    """
+    """Sem a paleta, o controle no GLOBAL com o brilho dele acende o byte do trilho."""
     mesa = mesa_de(alvo, via)
     mesa.clicar_no_tom(1, COR_DELE[1])
     mesa.desligar_a_paleta(GLOBAL)
@@ -264,13 +177,7 @@ def test_sem_a_paleta_o_global_acende_a_conta_do_trilho(mesa_de, caminho, alvo, 
 
 
 def test_sem_a_paleta_o_global_nao_perde_o_tom_com_o_perfil_quase_apagado(mesa_de):
-    """O perfil a 2% e o P4 no global a 100%: o `#2850B4` inteiro, sem perder o vermelho.
-
-    Pela razão, `(0,1,3)` vezes cinquenta dava `(0,50,150)`: o controle de
-    quem sobe o brilho perdia o tom que o de pouca luz tem.
-
-    **A MORDIDA:** as do teste acima.
-    """
+    """O perfil a 2% e o P4 no global a 100%: o `#2850B4` inteiro, sem perder o vermelho."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
     mesa = mesa_de()
@@ -285,15 +192,7 @@ def test_sem_a_paleta_o_global_nao_perde_o_tom_com_o_perfil_quase_apagado(mesa_d
 
 
 def test_a_cor_do_perfil_e_o_par_do_brilho(mesa_de):
-    """Publicar o brilho sem a cor diz «não se sabe o global», e o preto não é cor.
-
-    Guardar a cor do perfil anterior levaria o global de ONTEM à conta de
-    hoje: um perfil com o preto no global (que não é cor) herdaria o tom do
-    outro.
-
-    **A MORDIDA:** faça o `set_led_scales` guardar a cor velha quando a nova
-    não vem, e esta reprova.
-    """
+    """Publicar o brilho sem a cor diz «não se sabe o global», e o preto não é cor."""
     ctl = mesa_de().ctl
     ctl.set_led_scales(None, brilho_do_perfil=0.5, cor_do_perfil=(40, 80, 180))
     assert ctl._cor_do_perfil == (40, 80, 180)
@@ -305,15 +204,7 @@ def test_a_cor_do_perfil_e_o_par_do_brilho(mesa_de):
 
 
 def test_sem_no_o_produto_decide_a_mesma_luz(mesa_de):
-    """O cabo sem o nó de LED do kernel: o que o produto DECIDE é o mesmo.
-
-    Sem o nó a luz vai pelo fluxo da pydualsense no próximo `_reapply_desired`
-    (limitação documentada do caminho degradado em
-    `reassert_resolved_outputs`); o que se mede aqui é a decisão, que é o que
-    esse caminho escreve.
-
-    **A MORDIDA:** a do teste acima.
-    """
+    """O cabo sem o nó de LED do kernel: o que o produto DECIDE é o mesmo."""
     mesa = mesa_de()
     mesa.soltar(1, 60)
     mesa.soltar(4, 30)
@@ -330,17 +221,7 @@ def test_sem_no_o_produto_decide_a_mesma_luz(mesa_de):
 
 
 def test_o_salvar_nao_grava_a_luz_acesa_como_a_cor(mesa_de):
-    """O Salvar do rodapé regrava a cor de cada controle como o disco a tem.
-
-    A luz publicada é pós-brilho (D8). Gravada como a cor escolhida, ao lado
-    do brilho do controle, ela era escalada de novo na aplicação seguinte: o
-    P1 a 60% ia ao disco como `#000099`, e o trilho seguinte a 40% acendia
-    `#00003D`. O trilho grava o brilho, e só ele; o Salvar, depois, não
-    acrescenta cor nenhuma.
-
-    **A MORDIDA:** devolva ao Salvar a luz acesa no override (o
-    `lightbar_rgb` publicado) e esta reprova com o `(0, 0, 153)` no disco.
-    """
+    """O Salvar do rodapé regrava a cor de cada controle como o disco a tem."""
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from pacotes import a04_iluminacao, rodape
 
@@ -361,16 +242,7 @@ def test_o_salvar_nao_grava_a_luz_acesa_como_a_cor(mesa_de):
 
 
 def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
-    """Sem a paleta, o global dela (`#2850B4`) acende fora dos catorze tons.
-
-    A inversão pelos tons da casa não o acha, e a luz ia ao disco como a cor
-    do P4: a 82%, `(32,65,147)` no lugar de `(40,80,180)`, e cada Salvar
-    seguido de troca de perfil escurecia mais. Desde 27/09 o Salvar regrava
-    a cor que o disco já dá a ele.
-
-    **A MORDIDA:** devolva ao Salvar a luz acesa no override e esta reprova
-    com o `(32, 65, 147)`.
-    """
+    """Sem a paleta, o global dela (`#2850B4`) acende fora dos catorze tons."""
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from pacotes import a04_iluminacao, rodape
 
@@ -384,8 +256,6 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
         rodape.salvar(mesa.ctx(), CLIQUE_DA_04, PonteDoRodape())
         mesa.pm.apply(mesa._perfil(), origin="manual")
         assert _luz(mesa)[3] == acesa, "o Salvar e a troca escureceram o P4"
-    # A cor do P4 no disco: a dele, ou o global que ele herda — o rascunho só
-    # guarda no override o que DIVERGE do global (COR-04).
     prof = load_profile(NOME)
     dele = (prof.controllers or {}).get(a04_iluminacao.chave_do_override(UNIQS[3]))
     leds = getattr(dele, "leds", None)
@@ -398,18 +268,7 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("o_que_mudou", ["brilho-do-controle", "brilho-do-perfil"])
 def test_o_aplicar_acende_o_brilho_que_o_disco_diz(mesa_de, o_que_mudou, alvo, via):
-    """O «Aplicar» leva à barra o brilho do disco, e não só ao resolvido.
-
-    O brilho sozinho de um controle viaja como FATOR, sem cor, e o único
-    reassert do «Aplicar» rodava ANTES do mapa novo. Medido na conferência:
-    com a camada viva solta (troca manual) e o brilho mudado no disco por
-    outra porta, o produto decidia a luz nova e a barra ficava na velha — o
-    P1 a 30% decidido `(0,0,76)` e aceso `(0,0,153)`; o perfil a 50%, o P1
-    decidido `(0,0,153)` e aceso `(0,0,92)`.
-
-    **A MORDIDA:** tire o reassert do fim de `DraftApplier._apply_controllers`
-    e esta reprova no `_luz` (o nó não é o que o produto decidiu).
-    """
+    """O «Aplicar» leva à barra o brilho do disco, e não só ao resolvido."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from pacotes import rodape
 
@@ -431,15 +290,8 @@ def test_o_aplicar_acende_o_brilho_que_o_disco_diz(mesa_de, o_que_mudou, alvo, v
         assert _luz(mesa) == esperada, f"{vez}º «Aplicar» depois do disco mudar"
 
 
-# ---------------------------------------------------------------------------
-# 2. o brilho do controle vale para a cor do número de quem tem cor gravada
-# ---------------------------------------------------------------------------
 def test_o_fossil_volta_ao_numero_no_brilho_dele(mesa_de):
-    """O P2 laranja a 50%, com a cor fóssil, volta ao vermelho a 50% — não a 82%.
-
-    **A MORDIDA:** devolva o `"lightbar" in campos` à guarda de
-    `manager._controllers_to_led_scales` e o P2 volta ao vermelho a 82%.
-    """
+    """O P2 laranja a 50%, com a cor fóssil, volta ao vermelho a 50% — não a 82%."""
     mesa = mesa_de()
     mesa.soltar(2, 50)
     mesa.fossilizar(2, escolhida_para=3)
@@ -447,10 +299,7 @@ def test_o_fossil_volta_ao_numero_no_brilho_dele(mesa_de):
 
 
 def test_o_preto_gravado_com_brilho_acende_a_paleta_no_brilho_dele(mesa_de):
-    """O preto não é cor (22/09): o P3 com o preto e 30% acende o verde a 30%.
-
-    **A MORDIDA:** a do teste acima; aqui o P3 acende o verde a 82%.
-    """
+    """O preto não é cor (22/09): o P3 com o preto e 30% acende o verde a 30%."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from pacotes import a04_iluminacao
 
@@ -467,14 +316,7 @@ def test_o_preto_gravado_com_brilho_acende_a_paleta_no_brilho_dele(mesa_de):
 
 
 def test_o_controle_acima_do_brilho_do_perfil_nao_perde_a_cor(mesa_de):
-    """O perfil a 5% e o P1 a 100%: o azul volta inteiro, numa conta só.
-
-    Pela razão, a cor do perfil (`(0,0,12)`) vezes vinte dava `(0,0,240)`: o
-    controle de quem precisa de mais luz perdia a cor que o de menos luz tem.
-
-    **A MORDIDA:** troque o `reescalar` do `_scaled_led` pela razão e esta
-    reprova com o `(0, 0, 240)`.
-    """
+    """O perfil a 5% e o P1 a 100%: o azul volta inteiro, numa conta só."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
     mesa = mesa_de()
@@ -488,16 +330,7 @@ def test_o_controle_acima_do_brilho_do_perfil_nao_perde_a_cor(mesa_de):
 
 
 def test_o_brilho_da_peca_nao_carrega_o_ruido_do_ponto_flutuante(mesa_de):
-    """O perfil a 9%, o P4 a 50% e o P1 a 100%: o byte do trilho, sem um a menos.
-
-    O fator é `0.5 / 0.09`, e a volta `0.09 * (0.5 / 0.09)` dá `0.4999…`: o
-    rosa acendia `(127,0,63)` onde o trilho acende `(127,0,64)`, e o azul a
-    100% saía `(0,0,254)`. Medido: 134 pares de percentuais erravam assim nos
-    três tons com o 128.
-
-    **A MORDIDA:** tire o `round(..., 9)` de `_brilho_da_peca_locked` e esta
-    reprova com o `(127, 0, 63)`.
-    """
+    """O perfil a 9%, o P4 a 50% e o P1 a 100%: o byte do trilho, sem um a menos."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
     mesa = mesa_de()
@@ -513,9 +346,6 @@ def test_o_brilho_da_peca_nao_carrega_o_ruido_do_ponto_flutuante(mesa_de):
         assert luz[3] == _na(COR_DELE[4], 0.50)
 
 
-# ---------------------------------------------------------------------------
-# 3. sem a paleta, o deslocado sai no brilho dele e num tom que ninguém acende
-# ---------------------------------------------------------------------------
 def _tons_de(luz: tuple[int, int, int]) -> set[tuple[int, int, int]]:
     return {t for t in PALETA if _acende_o_tom(luz, t)}
 
@@ -523,16 +353,7 @@ def _tons_de(luz: tuple[int, int, int]) -> set[tuple[int, int, int]]:
 @pytest.mark.parametrize(("n", "para"), [(2, 3), (3, 2)], ids=["P2-fossil", "P3-fossil"])
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 def test_sem_a_paleta_o_fossil_nao_cai_no_tom_de_outra_peca(mesa_de, n, para, alvo):
-    """O fóssil deslocado acende um tom da paleta NO BRILHO DELE, livre pelo tom.
-
-    O caso da conferência: o P1 azul escolhido, a paleta desligada, e o P3
-    fóssil ia para o azul cheio ao lado do P1 azul a 82%. Aqui o fóssil é o
-    P2 ou o P3, reaplicado três vezes, e de novo depois do trilho dele a 50%.
-
-    **AS MORDIDAS:** o `_primeiro_tom_livre` com o tom cheio (sem
-    `_na_escala`) reprova no brilho; com o `_tomado` comparando só bytes, o P3
-    reprova no tom do P1.
-    """
+    """O fóssil deslocado acende um tom da paleta NO BRILHO DELE, livre pelo tom."""
     mesa = mesa_de(alvo)
     mesa.clicar_no_tom(1, COR_DELE[1])
     mesa.desligar_a_paleta(VERDE_AGUA)
@@ -555,15 +376,7 @@ def test_sem_a_paleta_o_fossil_nao_cai_no_tom_de_outra_peca(mesa_de, n, para, al
 
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 def test_sem_a_paleta_o_fossil_nao_cai_no_tom_do_global(mesa_de, alvo):
-    """O global é um tom da paleta, e o fóssil deslocado não cai nele.
-
-    O global entra na regra só na SEGUNDA volta, depois dos fósseis: o P3
-    fóssil a 50% ia para o azul a 50%, `(0,0,127)`, com o P1 e o P4 no azul
-    global a 82%, `(0,0,209)` — o byte livre, o tom não (conferência).
-
-    **A MORDIDA:** tire as peças que ficam (`ficam`) do `_tomado` de
-    `led_control.cores_sem_colisao` e o P3 acende o azul do P1.
-    """
+    """O global é um tom da paleta, e o fóssil deslocado não cai nele."""
     mesa = mesa_de(alvo)
     mesa.desligar_a_paleta(player_slot_color(1))
     mesa.fossilizar(3, escolhida_para=2)
@@ -581,19 +394,11 @@ def test_sem_a_paleta_o_fossil_nao_cai_no_tom_do_global(mesa_de, alvo):
 
 
 def test_o_deslocado_nao_cai_no_tom_de_quem_fica():
-    """A mesa pura: o deslocado evita o tom de quem fica, venha antes ou depois.
-
-    Os dois buracos da primeira volta, os dois com o byte livre e o tom não:
-    o global que só entra na segunda volta, e a escolha viva que vem DEPOIS
-    do fóssil na ordem.
-
-    **A MORDIDA:** a do teste acima.
-    """
+    """A mesa pura: o deslocado evita o tom de quem fica, venha antes ou depois."""
     from hefesto_dualsense4unix.core.led_control import DO_GLOBAL
 
     azul = player_slot_color(1)
     ciano = (0, 255, 255)
-    # o global azul a 82% e o fóssil a 50%
     saida = cores_sem_colisao([
         PecaDaMesa(uniq="p1", pedida=_na(azul, 0.82), do_numero=None,
                    procedencia=DO_GLOBAL, numero=1, brilho=0.82),
@@ -602,7 +407,6 @@ def test_o_deslocado_nao_cai_no_tom_de_quem_fica():
     ])
     assert saida["p1"] == _na(azul, 0.82)
     assert azul not in _tons_de(saida["p3"]), saida
-    # o fóssil é o primeiro da ordem, e quem escolheu azul a 50% vem depois
     saida = cores_sem_colisao([
         PecaDaMesa(uniq="p1", pedida=_na(ciano, 0.82), do_numero=None,
                    procedencia=2, numero=1, brilho=0.82),
@@ -613,9 +417,6 @@ def test_o_deslocado_nao_cai_no_tom_de_quem_fica():
     assert azul not in _tons_de(saida["p1"]), saida
 
 
-# ---------------------------------------------------------------------------
-# 4. os donos das duas contas
-# ---------------------------------------------------------------------------
 def test_acende_o_tom_e_a_pergunta_do_tom_e_nao_do_byte():
     """O azul a 82% é o azul; o verde-água nunca é o verde nem o ciano."""
     azul = player_slot_color(1)
@@ -624,7 +425,6 @@ def test_acende_o_tom_e_a_pergunta_do_tom_e_nao_do_byte():
     assert not _acende_o_tom((0, 0, 209), player_slot_color(8))
     assert not _acende_o_tom(_na(VERDE_AGUA, 0.82), player_slot_color(3))
     assert not _acende_o_tom(_na(VERDE_AGUA, 0.82), player_slot_color(6))
-    # a conta do produto, em cada brilho do trilho, para os oito tons
     for pct in range(1, 101):
         for tom in PALETA:
             assert _acende_o_tom(_na(tom, pct / 100), tom), (tom, pct)
@@ -636,17 +436,12 @@ def test_reescalar_faz_a_conta_de_uma_vez_na_paleta_e_a_razao_fora_dela():
         for para in (0.0, 0.3, 0.6, 1.0):
             for tom in PALETA:
                 assert reescalar(_na(tom, de), de, para) == _na(tom, para), (tom, de, para)
-    # o global dela, fora da paleta: vale a razão — entre os FATORES do piso
-    # (D-2909-O-BRILHO-TEM-PISO, 29/09/2026), e não entre os brilhos
     from hefesto_dualsense4unix.core.led_control import _escala_crua, fator_do_brilho
 
     fora = _na((40, 80, 180), 0.82)
     assert reescalar(fora, 0.82, 0.41) == _escala_crua(
         fora, fator_do_brilho(0.41) / fator_do_brilho(0.82))
-    # o global dela entra como tom a mais, e a conta é a do trilho
     assert reescalar(fora, 0.82, 0.41, ((40, 80, 180),)) == _na((40, 80, 180), 0.41)
-    # abaixo de 1% o vermelho, o rosa e o laranja acendem o mesmo (1, 0, 0):
-    # não há tom único, e o brilho não troca a cor por palpite
     assert reescalar((1, 0, 0), 0.005, 1.0) == _escala_crua(
         (1, 0, 0), fator_do_brilho(1.0) / fator_do_brilho(0.005))
 
@@ -660,7 +455,5 @@ def test_o_tom_livre_sai_no_brilho_da_peca():
                    procedencia=2, numero=3, brilho=0.6),
     ]
     saida = cores_sem_colisao(mesa)
-    # O azul do P1 a 82%, perguntado ao dono da escala: era `(0, 0, 209)` antes
-    # do piso do brilho (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
     assert saida["p1"] == _na(player_slot_color(1), 0.82)
     assert saida["p3"] == _na(player_slot_color(2), 0.6), saida

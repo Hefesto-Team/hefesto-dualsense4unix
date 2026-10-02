@@ -51,7 +51,6 @@ import pytest
 
 from hefesto_dualsense4unix.core.physical_report_reader import INPUT_FLAG_AUDIO
 
-#: O driver que ESTE produto instala — a cópia versionada, não a do sistema.
 DRIVER = (
     Path(__file__).resolve().parents[2]
     / "assets"
@@ -69,11 +68,7 @@ def fonte_do_driver() -> str:
 
 
 def test_as_duas_metades_usam_o_mesmo_bit(fonte_do_driver: str) -> None:
-    """`INPUT_FLAG_AUDIO` (Python) e `DS_INPUT_BT_FLAG_AUDIO` (C) são o MESMO.
-
-    Dois números que precisam concordar e moram em arquivos diferentes é a
-    família de defeito que esta casa já nomeia. Aqui a régua LÊ os dois.
-    """
+    """`INPUT_FLAG_AUDIO` (Python) e `DS_INPUT_BT_FLAG_AUDIO` (C) são o MESMO."""
     achado = re.search(
         r"#define\s+DS_INPUT_BT_FLAG_AUDIO\s+(0x[0-9A-Fa-f]+|\d+)", fonte_do_driver
     )
@@ -89,11 +84,7 @@ def test_as_duas_metades_usam_o_mesmo_bit(fonte_do_driver: str) -> None:
 
 
 def test_o_driver_descarta_o_report_de_audio(fonte_do_driver: str) -> None:
-    """A guarda existe, e ela está NO CAMINHO DO PARSE por Bluetooth.
-
-    Não basta a constante existir: ela tem de ser consultada antes de o
-    `ds_report` ser apontado para o payload.
-    """
+    """A guarda existe, e ela está NO CAMINHO DO PARSE por Bluetooth."""
     assert "DS_INPUT_BT_FLAG_AUDIO" in fonte_do_driver
 
     corpo = fonte_do_driver[fonte_do_driver.index("DS_INPUT_REPORT_BT_SIZE) {") :]
@@ -109,12 +100,7 @@ def test_o_driver_descarta_o_report_de_audio(fonte_do_driver: str) -> None:
 
 
 def test_a_guarda_devolve_consumido_e_nao_erro(fonte_do_driver: str) -> None:
-    """`return 0`, nunca `-EILSEQ`.
-
-    Um report de áudio não é malformado — ele é de outro tipo. Devolver erro
-    encheria o `dmesg` dela a ~100 linhas por segundo com o microfone ligado,
-    que é um segundo defeito em cima do primeiro.
-    """
+    """`return 0`, nunca `-EILSEQ`."""
     corpo = fonte_do_driver[fonte_do_driver.index("DS_INPUT_BT_FLAG_AUDIO)") :]
     depois = corpo[: corpo.index("ds_report =")]
     assert "return 0;" in depois, (
@@ -124,12 +110,7 @@ def test_a_guarda_devolve_consumido_e_nao_erro(fonte_do_driver: str) -> None:
 
 
 def test_a_razao_viaja_com_a_cura(fonte_do_driver: str) -> None:
-    """O comentário da guarda diz as DUAS consequências, não só uma.
-
-    Quem ler só *«o microfone desliga»* vai achar que a entrada fantasma é
-    outro defeito, e vai medi-la de novo — foi o que aconteceu em 10/09, com
-    quatro medições e uma hipótese errada.
-    """
+    """O comentário da guarda diz as DUAS consequências, não só uma."""
     trecho = fonte_do_driver[
         fonte_do_driver.index("MIC-NAO-E-BOTAO-01") : fonte_do_driver.index(
             "if (data[1] & DS_INPUT_BT_FLAG_AUDIO)"

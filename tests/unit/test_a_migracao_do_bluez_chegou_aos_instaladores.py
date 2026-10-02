@@ -1,30 +1,4 @@
-"""MIGRACAO-BLUEZ-DEPRECIADOS-01 nos dois instaladores.
-
-A migração de 19/08/2026 tirou `hciconfig`, `hcitool` e `sdptool` de seis
-scripts (`doctor.sh`, `bt_active_mode.sh`, `bt_nosniff_now.sh`,
-`bt_health_watchdog.sh`, `storm_watch.sh`, `medir_w3_coex.sh`), e
-`tests/unit/test_migracao_bluez_depreciados.py` é o portão daqueles seis. O
-`install.sh` e o `uninstall.sh` NÃO estavam na lista — nem na da migração, nem
-na do portão. Este arquivo fecha os dois lados que ficaram de fora:
-
-* **o uninstall**: ele achava o adaptador só pelo `hciconfig`. Numa distro que
-  moveu as depreciadas para `bluez-deprecated` — Fedora e Arch, que são
-  EXATAMENTE o público da migração — `_hci` saía vazio e o bloco inteiro era
-  pulado **em silêncio**, inclusive a reversão do Alias, que sai por D-Bus e não
-  precisava do `hciconfig` para nada. O adaptador dela ficava chamado
-  "Nintendo ..." para sempre depois de desinstalar o Hefesto.
-
-* **o install**: o censo `_DEPS_DE_SISTEMA` pedia só o `bluetoothctl`, e desde a
-  migração o produto também chama o `btmgmt`. A tabela de PACOTES não muda — os
-  dois viajam juntos nas três famílias, medido em contêiner limpo em
-  19/08/2026 (`bluez` no Debian e no Fedora, `bluez-utils` no Arch, que o
-  install já instala junto). O que muda é a régua: ela agora pergunta pelas duas
-  ferramentas que o produto usa, em vez de por uma só.
-
-A bancada é a dos irmãos: fakes no PATH, nada do sistema real é tocado. O
-`sandbox_sem_velhas` é a máquina que não tem as depreciadas — sem ele não há
-como exercitar o cenário que recebia o silêncio.
-"""
+"""MIGRACAO-BLUEZ-DEPRECIADOS-01 nos dois instaladores."""
 from __future__ import annotations
 
 import contextlib
@@ -41,26 +15,15 @@ INSTALL = RAIZ / "install.sh"
 UNINSTALL = RAIZ / "uninstall.sh"
 BASH = shutil.which("bash") or "/bin/bash"
 
-#: Depreciadas do BlueZ — as três que a upstream aposentou.
 VELHAS = ("hciconfig", "hcitool", "sdptool")
 
-#: Âncoras do bloco do uninstall que reverte a cura do Pro. O fim é a PRÓXIMA
-#: seção (os snapshots de bond) e não um `fi` — a escada tem quatro `fi` pelo
-#: caminho, e casar o primeiro recortaria o bloco pela metade em silêncio.
 ANCORA_INICIO = "# BT-NINTENDO-ACTIVE-01: reverter a link policy"
 ANCORA_FIM = "    if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then"
 
 
-# ---------------------------------------------------------------------------
-# Bancada
-# ---------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def sandbox_sem_velhas(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """PATH com tudo do sistema MENOS as três depreciadas.
-
-    Links, não cópias: os binários de verdade (grep, sed, awk...) continuam
-    rodando — o sandbox só apaga as três da vista.
-    """
+    """PATH com tudo do sistema MENOS as três depreciadas."""
     alvo = tmp_path_factory.mktemp("bin-sem-velhas")
     for origem in ("/usr/bin", "/bin", "/usr/sbin", "/sbin"):
         d = Path(origem)
@@ -137,19 +100,13 @@ def _roda_reversao(
 
 @pytest.fixture
 def bancada(tmp_path: Path) -> tuple[Path, Path, Path]:
-    """`(fakes, sysfs_vazio, home)` — o cenário da distro sem as depreciadas.
-
-    O sysfs nasce VAZIO de propósito: é o degrau que a máquina de quem roda a
-    suíte tem e o contêiner do CI não, e deixá-lo real faria o primeiro degrau
-    vencer sempre — os três de baixo, que são a migração, nunca seriam medidos.
-    """
+    """`(fakes, sysfs_vazio, home)` — o cenário da distro sem as depreciadas."""
     fakes = tmp_path / "fakes"
     sysfs = tmp_path / "sysfs-vazio"
     sysfs.mkdir()
     home = tmp_path / "casa"
     home.mkdir()
     fakes.mkdir()
-    # `sudo` que só ecoa o que teria rodado: o teste NUNCA escala privilégio.
     _fake(fakes, "sudo", 'printf "SUDO: %s\\n" "$*"\nexit 0\n')
     return fakes, sysfs, home
 
@@ -170,22 +127,16 @@ exit 0
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O uninstall acha o adaptador SEM as depreciadas.
-# ---------------------------------------------------------------------------
 class TestOUninstallAchaOAdaptadorSemAsVelhas:
     def test_pelo_dbus_o_alias_nintendo_e_revertido(
         self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
-        """O caso da distro que não tem `hciconfig`: a metade que dá para
-        desfazer TEM de ser desfeita."""
+        """O caso da distro que não tem `hciconfig`: a metade que dá para"""
         fakes, sysfs, home = bancada
         _busctl_fake(fakes, alias="Nintendo meowsystem")
 
         r = _roda_reversao(fakes, sandbox_sem_velhas, sysfs=sysfs, home=home)
 
-        # A escrita do Alias vai por `sudo busctl set-property`, então quem a
-        # registra é o `sudo` de mentira.
         assert "SUDO: busctl set-property" in r.stdout, (
             "sem hciconfig o uninstall NÃO achou o adaptador e pulou o bloco em "
             "silêncio: o adaptador dela fica chamado 'Nintendo ...' para sempre "
@@ -196,8 +147,7 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
     def test_sem_hciconfig_ele_diz_que_a_link_policy_ficou(
         self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
-        """A link policy não tem sucessor vivo. Calar sobre isso seria mentir
-        por omissão — a mesma regra dos contadores de erro do rádio."""
+        """A link policy não tem sucessor vivo. Calar sobre isso seria mentir"""
         fakes, sysfs, home = bancada
         _busctl_fake(fakes, alias="Nintendo meowsystem")
 
@@ -215,8 +165,6 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
         """O terceiro degrau: a ferramenta que a upstream indica."""
         fakes, sysfs, home = bancada
         _fake(fakes, "btmgmt", 'printf "hci0:\\tPrimary controller\\n"\nexit 0\n')
-        # Sem `busctl` no PATH — o sandbox tem o do sistema, então um `busctl`
-        # de mentira que FALHA é o jeito de provar que o degrau seguinte assume.
         _fake(fakes, "busctl", "exit 1\n")
 
         r = _roda_reversao(fakes, sandbox_sem_velhas, sysfs=sysfs, home=home)
@@ -245,12 +193,7 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
     def test_o_sysfs_e_o_primeiro_degrau(
         self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
-        """Kernel puro: sem pacote, sem privilégio, sem D-Bus de pé.
-
-        E o filtro `^hci[0-9]+$` importa: em `/sys/class/bluetooth` as entradas
-        de CONEXÃO nascem como `hci0:256`, e pegar uma delas montaria um caminho
-        D-Bus que não existe.
-        """
+        """Kernel puro: sem pacote, sem privilégio, sem D-Bus de pé."""
         fakes, sysfs, home = bancada
         (sysfs / "hci0:256").mkdir()
         (sysfs / "hci0").mkdir()
@@ -277,9 +220,6 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
         assert "NÃO revertida" not in r.stdout
 
 
-# ---------------------------------------------------------------------------
-# 2. O censo do install pergunta pelas DUAS ferramentas que o produto usa.
-# ---------------------------------------------------------------------------
 def _linha_do_bluez() -> str:
     texto = INSTALL.read_text(encoding="utf-8")
     m = re.search(r"_DEPS_DE_SISTEMA=\((.*?)\n\)", texto, re.S)
@@ -292,12 +232,7 @@ def _linha_do_bluez() -> str:
 
 class TestOCensoDoInstallConheceOBtmgmt:
     def test_a_regua_pede_bluetoothctl_e_btmgmt(self) -> None:
-        """Os dois, porque o produto chama os dois.
-
-        `bt_active_mode.sh`, `doctor.sh` e agora o `uninstall.sh` usam `btmgmt`;
-        o pareamento e o diagnóstico usam `bluetoothctl`. Pedir só um deixava a
-        régua cega para metade do que ela promete conferir.
-        """
+        """Os dois, porque o produto chama os dois."""
         _, _, checagem, _ = _linha_do_bluez().split("|")
         pedidos = checagem.removeprefix("cmd:").split(",")
         assert "bluetoothctl" in pedidos and "btmgmt" in pedidos, (
@@ -305,16 +240,7 @@ class TestOCensoDoInstallConheceOBtmgmt:
         )
 
     def test_a_tabela_de_pacotes_nao_muda_e_o_arch_leva_o_bluez_utils(self) -> None:
-        """MEDIDO em contêiner limpo em 19/08/2026, família por família:
-
-            debian:12   dpkg -S /usr/bin/btmgmt                    -> bluez
-            fedora:40   dnf repoquery --whatprovides .../btmgmt    -> bluez
-            archlinux   pacman -F usr/bin/btmgmt                   -> bluez-utils
-
-        No Arch a dupla mora em `bluez-utils`, e por isso a linha `bluez)` do
-        `_pkg_nome` instala os DOIS nomes. Tirar o `bluez-utils` de lá deixaria
-        o Arch sem `bluetoothctl` e sem `btmgmt` com o portão dizendo OK.
-        """
+        """MEDIDO em contêiner limpo em 19/08/2026, família por família:"""
         texto = INSTALL.read_text(encoding="utf-8")
         m = re.search(r"\n        bluez\)\n(.*?);;\n", texto, re.S)
         assert m is not None, "a linha `bluez)` sumiu de _pkg_nome"
@@ -329,11 +255,7 @@ class TestOCensoDoInstallConheceOBtmgmt:
     def test_a_regua_reprova_quando_o_btmgmt_falta(
         self, tmp_path: Path, sandbox_sem_velhas: Path
     ) -> None:
-        """A régua REAL do install.sh, rodada contra um PATH sem `btmgmt`.
-
-        É o teste que separa "a linha do censo mudou" de "a checagem morde": a
-        função `_dep_presente` é recortada do arquivo e executada.
-        """
+        """A régua REAL do install.sh, rodada contra um PATH sem `btmgmt`."""
         texto = INSTALL.read_text(encoding="utf-8")
         m = re.search(r"^_dep_presente\(\) \{\n", texto, re.M)
         assert m is not None, "_dep_presente() não encontrada em install.sh"
@@ -345,7 +267,7 @@ class TestOCensoDoInstallConheceOBtmgmt:
 
         so_bluetoothctl = tmp_path / "so-bluetoothctl"
         _fake(so_bluetoothctl, "bluetoothctl", "exit 0\n")
-        _fake(so_bluetoothctl, "command", "exit 0\n")  # nunca usado: `command` é builtin
+        _fake(so_bluetoothctl, "command", "exit 0\n")
 
         def roda(path: str) -> int:
             return subprocess.run(

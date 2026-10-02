@@ -1,7 +1,4 @@
 # A PASTA, não /tmp: estas três liam um `monta` de /tmp — o de 26/08 23:50 —
-# que por sua vez lia um `topo.html` de /tmp parado às 10:59. Três das dez
-# abas vinham de um montador e de um esqueleto de ontem, e nenhuma correção
-# no topo.html desta pasta as alcançava. Achado em 27/08.
 import ast
 import html
 import importlib.util
@@ -15,74 +12,19 @@ from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,  # noq
                    cor_da_zona, monta, player_slot_color,
                    ressalva as monta_ressalva, svg)
 
-# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
-# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
-# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
-# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
-# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
-# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
-# segunda árvore de trabalhar sem tocar na primeira.
-# A RAIZ TEM DONO, e é o `onde.py`. Ela era `parents[2]` aqui — o que dava
-# a pasta `src/` depois que a interface se mudou para dentro dela em
-# 01/09/2026, e fazia toda leitura de fonte procurar em `src/src/…`. Os
 # geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
-# `FileNotFoundError: .../src/src/hefesto_dualsense4unix/app/actions/...`.
-# O contador de níveis é o defeito que o `onde.py` existe para não repetir.
 from onde import RAIZ as R  # noqa: E402
 
-# A CAMADA DE TELA DESTA ABA, que já existe no produto e nunca foi ligada.
-# Daqui sai a lista de respostas do "— O que é? —": ver `VIZINHOS`, abaixo.
 from hefesto_dualsense4unix.gui import aba_conexoes as _aba_conexoes  # noqa: E402
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada  # noqa: E402,E501
 
-# O PACOTE DESTA ABA — e ele é DONO do que os dois lados desenham: o rótulo do
-# controle e, desde 23/09/2026, a seção «Rádio e Adaptadores» inteira (a sala,
-# os moldes e as réguas do espectro — TRANSPLANTE-DA-SECAO-01).
-# Mesma dependência que o `aba04.py` já tem do `pacotes.a04_iluminacao`, e pela
-# mesma razão: enquanto o desenho e o produto escreverem a mesma frase duas
-# vezes, elas divergem sem que ninguém veja.
 from pacotes import a08_conexoes as _pacote08  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# OS NÚMEROS DO PRODUTO VÊM DO PRODUTO, LIDOS POR AST.
-#
-# Eles estavam digitados nesta tela: `1.600`, `260,4`, `276,7`, `16,3`, `553`,
-# `830`, `1.107` — sete literais, e nenhuma régua sabia dizer se algum deles
-# ainda batia com a medição. É o mesmo defeito que o `PADRAO_JOGADOR` do
-# `monta.py` tinha (o jogador 3 escrito `"234"` quando o canônico é `"135"`), e
-# a cura é a mesma: deixar de ter um literal.
-#
-# E O DEFEITO ESTAVA VIVO NUM OITAVO NÚMERO, achado em 28/08: a dica do teto da
-# vibração dizia *"«Bateria longa» corta a força em 60%"*. O produto corta em
-# **30%** — `RUMBLE_POLICY_MULT["economia"] = 0.3`, e é dele que
-# `secao_orcamento` deriva a frase da tela, com o cuidado escrito no próprio
-# arquivo: *"escrever «30%» à mão nesta tela"* é o que ele existe para evitar.
-# O 60 era o dobro do limite real, e nenhuma régua podia vê-lo. Agora ele
-# também é derivado.
-#
-# POR AST E NÃO POR IMPORT, e o motivo é medido: `radio_da_mesa` puxa
-# `structlog` por `core.sysfs_leds`, e o `python3 abaNN.py` desta pasta não roda
-# no `.venv`. É exatamente o que `scripts/validar-fala-de-tela.py` já faz com o
-# mesmo módulo, e pela mesma razão — "nunca importando este módulo".
-# ---------------------------------------------------------------------------
 def _valor(no, ja):
-    """O valor de um nó de AST, resolvendo NOME contra o que já foi lido.
-
-    `ast.literal_eval` sozinho não dá conta de `{PERFIL_TUDO_LIGADO: "Tudo
-    ligado"}` — a chave é um `Name`, não um literal, e a chamada estoura. Como
-    o módulo é lido de cima para baixo, o nome já está no `ja` quando a linha
-    que o usa aparece; é a mesma leitura que o interpretador faria, sem
-    executar nada.
-    """
+    """O valor de um nó de AST, resolvendo NOME contra o que já foi lido."""
     if isinstance(no, ast.Name):
         return ja[no.id]
     if isinstance(no, ast.Attribute):
-        #: `mapa_das_portas.LACUNA_POSICAO` vira `"LACUNA_POSICAO"` — o NOME da
-        #: chave, não o valor dela (que mora noutro módulo). É o bastante para o
-        #: que esta tela precisa: a `CONFISSAO` do produto é um dicionário cujas
-        #: CHAVES são atributos, e sem esta linha o `literal_eval` estoura e o
-        #: dicionário inteiro é engolido pelo `except` — a tela teria de digitar
-        #: as cinco frases de novo, que é a segunda verdade que esta casa mata.
         return no.attr
     if isinstance(no, ast.Dict):
         return {_valor(k, ja): _valor(v, ja) for k, v in zip(no.keys, no.values)}
@@ -94,11 +36,7 @@ def _valor(no, ja):
 
 
 def _constantes(caminho, nomes):
-    """As constantes de módulo daquele arquivo, lidas sem importar nada.
-
-    Reprova em voz alta quando um nome some: uma constante renomeada no produto
-    tem de derrubar a geração da tela, não sumir dela em silêncio.
-    """
+    """As constantes de módulo daquele arquivo, lidas sem importar nada."""
     arvore = ast.parse(pathlib.Path(caminho).read_text())
     ja, achado = {}, {}
     for no in arvore.body:
@@ -113,7 +51,7 @@ def _constantes(caminho, nomes):
         try:
             ja[alvo.id] = _valor(valor, ja)
         except (ValueError, TypeError, KeyError, SyntaxError):
-            continue  # o que não é literal não interessa — e não pode parar a leitura
+            continue
         if alvo.id in nomes:
             achado[alvo.id] = ja[alvo.id]
     if faltam := set(nomes) - set(achado):
@@ -122,37 +60,12 @@ def _constantes(caminho, nomes):
     return achado
 
 
-# OS HZ MEDIDOS DO RÁDIO, lidos do dono. A conta aditiva de fatias
-# (`SLOTS_POR_RELATORIO`, `palavra_da_ocupacao`, o teto de 1.600) SAIU desta
-# aba em 23/09/2026 com a seção do rádio (TRANSPLANTE-DA-SECAO-01): a tela diz
-# Hz de verdade e pontes N de 2, e não soma (R10, D-CONTA-ADITIVA-DO-RADIO).
 RADIO = _constantes(
     R / "src/hefesto_dualsense4unix/integrations/radio_da_mesa.py",
     {"HZ_INPUT_SEM_MIC", "HZ_INPUT_COM_MIC", "HZ_AUDIO_COM_MIC"})
 
-# ---------------------------------------------------------------------------
-# O TETO DA VIBRAÇÃO — o global e o do controle, com os dois números do produto.
-#
-# Decisão dela, 28/08: *"nos dois: o global manda, o do controle sobrepõe"*. O do
-# controle é novo, e nasce como sprint sobre a `POR-UNIDADE-01` (10/08), que já
-# grava política de vibração POR CONTROLE em
-# `profiles/manager._controllers_to_rumble_scales`.
-#
-# O GLOBAL MORAVA AQUI E MUDOU-SE. Ainda no mesmo 28/08 ele foi para a aba
-# **Sistema** como **Perfil de Bateria** (ver `CASA_DO_TETO_GLOBAL`, abaixo).
-# Esta aba continua LENDO os três perfis do produto — é deles que sai a frase de
-# quanto o global vale hoje, que cada linha de controle mostra no `?` —, mas não
-# tem mais o campo que os muda.
-#
-# Os três rótulos e o "Sem teto" são do `secao_orcamento`; o degrau é do
-# `RUMBLE_POLICY_MULT`, que é o dono único dele.
-# ---------------------------------------------------------------------------
 MULT = _constantes(R / "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py",
                    {"RUMBLE_POLICY_MULT"})["RUMBLE_POLICY_MULT"]
-#: `SEM_TETO` SAIU DO `secao_orcamento` em 01/09/2026 e está aqui, ao lado do
-#: `_ORCAMENTO_COM_TETO` — aquele módulo puxa `gi`/`Gtk` no import, e a camada de
-#: tela que precisa da palavra promete não ter GTK. Este `_constantes` reprova em
-#: voz alta se ele mudar de casa outra vez, que é o contrato dele.
 _RUM = _constantes(R / "src/hefesto_dualsense4unix/core/rumble.py",
                    {"_ORCAMENTO_COM_TETO", "SEM_TETO"})
 COM_TETO = _RUM["_ORCAMENTO_COM_TETO"]
@@ -160,34 +73,12 @@ ORC = _constantes(R / "src/hefesto_dualsense4unix/app/actions/config/secao_orcam
                   {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL"})
 ORC["SEM_TETO"] = _RUM["SEM_TETO"]
 
-#: A FRASE DO TETO É DO PRODUTO — 01/09/2026. Esta função existia AQUI, com a
-#: mesma conta escrita de novo, e agora ela é um ponteiro para
-#: `gui.aba_conexoes.fala_do_teto`. Havia TRÊS grafias das mesmas três frases (a
-#: desta bancada, as três literais que a `gui/aba_conexoes.py` digitava no HTML e
-#: a que o pacote da interface nova ia precisar), e a direção desta casa é o
-#: gerador LER o produto: se `RUMBLE_POLICY_MULT["economia"]` deixar de ser 0,3,
-#: a tela, o mockup e o pacote mudam juntos ou nenhum.
-#:
-#: As leituras por AST de `MULT` e `ORC["SEM_TETO"]` FICAM: elas servem os
-#: outros usos deste arquivo (a tabela do orçamento, o `teto_dica`), e são a
-#: única forma de ler um número sem importar `structlog`.
 fala_do_teto = _aba_conexoes.fala_do_teto
 
-#: O perfil da mesa que esta tela mostra escolhido. É id de BOTÃO do produto, e
-#: a tradução para disco é do produto também — a tela não inventa nenhuma das
-#: duas pontas.
 PERFIL_DA_MESA = ORC["PERFIS"][0]
-#: A chave de DISCO daquele perfil — o que `orcamento_em_vigor()` devolveria se
-#: ela tivesse declarado este perfil. É o argumento das frases do produto.
 ORCAMENTO_DA_MESA = ORC["TETO_POR_PERFIL"][PERFIL_DA_MESA]
 TETO_GLOBAL = fala_do_teto(ORCAMENTO_DA_MESA)
 
-# A VÍRGULA TEM UM DONO SÓ — `app/fala_do_mapa.formata_pt_br`, desde 26/08/2026.
-# Carregado POR CAMINHO, como o `validar-fala-de-tela.py` o carrega: o módulo é
-# zero-dependência de propósito, e passar pelo `__init__` de `app/` traria a GUI.
-# O `sys.modules[nome]` ANTES do `exec_module` não é zelo: sem ele o
-# `@dataclass` do arquivo estoura, porque `dataclasses` procura o módulo pelo
-# nome para resolver as anotações. Mesma sequência do `validar-fala-de-tela.py`.
 _alvo = R / "src/hefesto_dualsense4unix/app/fala_do_mapa.py"
 _spec = importlib.util.spec_from_file_location("fala_do_mapa_da_tela", _alvo)
 _fala = importlib.util.module_from_spec(_spec)
@@ -196,29 +87,13 @@ _spec.loader.exec_module(_fala)
 
 
 def num(valor):
-    """`1600` → `1.600`; `260.4` → `260,4`; `1106.8` → `1.106,8`.
-
-    A vírgula é do dono único; o ponto de milhar é só a forma desta tela, que
-    escreve o teto como `1.600` desde o primeiro desenho.
-    """
+    """`1600` → `1.600`; `260.4` → `260,4`; `1106.8` → `1.106,8`."""
     inteiro, _, decimal = _fala.formata_pt_br(valor).partition(",")
     milhar = f"{int(inteiro):,}".replace(",", ".")
     return milhar if decimal == "0" and float(valor).is_integer() else f"{milhar},{decimal}"
 
 
-# ---------------------------------------------------------------------------
-# A MÁSCARA E A BATERIA DE CADA CONTROLE SAEM DA ABA CONTROLES, POR AST.
-#
-# A linha fechada do acordeão traz o resumo que ela pediu — *máscara ·
-# microfone · bateria*. Máscara e bateria são LEITURA nesta aba: a máscara
-# passou a ser por controle na aba **Jogar** (decisão dela, 28/08) e a bateria
-# é da **Controles**. Escrevê-las aqui criaria a segunda verdade sobre o que o
-# jogo vê — o P2 aparece como `Xbox 360` na Controles, e um dia apareceria como
 # `DualSense` aqui sem ninguém ver.
-#
-# POR AST, e não por `import aba02`: importar o gerador de outra aba o EXECUTA,
-# e ele reescreve `02-controles.html`. Gerador de aba não é biblioteca.
-# ---------------------------------------------------------------------------
 def _estado_da_aba_controles(campos):
     arq = pathlib.Path(__file__).resolve().parent / "aba02.py"
     for no in ast.parse(arq.read_text()).body:
@@ -239,99 +114,19 @@ def _estado_da_aba_controles(campos):
                      "desta aba (máscara · microfone · bateria) sai de lá.")
 
 
-#: SÓ A BATERIA VEM DA ABA CONTROLES. A MÁSCARA saiu de lá em 28/08 e ganhou
-#: fonte única em `monta.MESA[...]["mascara"]` — ela estava em três telas e
 #: divergia (a Jogar dizia que o P2 era DualSense e o P3 Xbox 360; a Controles e
-#: esta aba diziam o contrário, na mesma sessão). Aqui se lê `c["mascara"]`.
 DA_CONTROLES = _estado_da_aba_controles({"bat"})
 if faltam := {c["pref"] for c in MESA} - set(DA_CONTROLES):
     raise SystemExit(f"ERRO: a MESA tem {sorted(faltam)} e o ESTADO da aba02 não.")
 
-# ---------------------------------------------------------------------------
-# O QUE ESTA ABA GOVERNA EM CADA CONTROLE.
-#
-# O MICROFONE NASCE LIGADO nos quatro, e isso não é uma coluna por controle: é
-# a decisão dela de 25/08 (`audio-e-giro-nascem-ligados-em-todo-jogo`) — mic
-# ATIVO, e só muda se ela mudar e salvar.
-#
-# O TETO é o que varia, e varia de propósito: a tela precisa mostrar as DUAS
-# leituras que a decisão de 28/08 exige — quem SEGUE o global e quem SOBREPÕE.
-# O P3 é o que sobrepõe porque é o que está com a bateria mais baixa da mesa
-# (31%, medido na aba Controles, de onde esta tela lê o número).
-# ---------------------------------------------------------------------------
-#: Também do produto, e pela mesma razão de `fala_do_teto`: a opção que não
-#: grava nada tem um dono só (`gui.aba_conexoes.SEGUE_O_GLOBAL`).
 SEGUE_O_GLOBAL = _aba_conexoes.SEGUE_O_GLOBAL
 TETO_DO_CONTROLE = {"p3": COM_TETO}
-#: O QUE O BOTÃO FÍSICO DO MICROFONE FAZ — e ele deixou de ser ESCOLHA em
-#: 04/09/2026. Ver `a08_conexoes.FALA_DO_BOTAO_DO_MIC`, que é o dono das duas
-#: falas e o único lugar que traduz o `mic_button_toggles_system` do daemon.
-#:
-#: A CENA DA BANCADA MOSTRA O PADRÃO DO PRODUTO (`DaemonConfig
-#: .mic_button_toggles_system = True`), e não uma das duas escolhida a dedo:
-#: o desenho tem de parecer o que a máquina de quem instala vai mostrar.
 BOTAO_DO_MIC = _pacote08.FALA_DO_BOTAO_DO_MIC[True]
 
 
-#: ONDE O TETO GLOBAL MORA AGORA — e não é mais nesta aba.
-#:
-#: Decisão dela, 28/08: *"Teto da Vibração, que na verdade é Perfil de
-#: Bateria"*. O dropdown dos três perfis do produto
-#: (`app/actions/config/secao_orcamento.py`) mudou-se para a aba **Sistema**,
-#: onde vira **Perfil de Bateria**. O código já lhe dava razão antes do nome:
-#: `secao_orcamento.py:127` chama a chave de `PERFIL_BATERIA_LONGA`, e a
-#: `D-PERFIL-DE-DESEMPENHO` (24/08) diz com todas as letras que *"o perfil decide
-#: o que custa BATERIA"*.
-#:
-#: O QUE FICA NESTA ABA é a régua de turnos por adaptador — ela mede o RÁDIO, e
-#: não a bateria. Esta aba passa a ser LEITORA do global: o campo de cada
-#: controle continua podendo sobrepô-lo, e o `?` dele diz em que aba o global se
-#: muda. Ponteiro com endereço, que é o que a frase antiga ("abaixo") não tinha.
-#:
-#: A SEÇÃO CONTINUA CHAMANDO-SE "DESEMPENHO", e a decisão é minha, com o porquê
-#: aqui para ela derrubar numa frase. Foi proposto renomeá-la para "Rádio em
-#: uso", que é o que ela mostra — e a proposta CAI numa medição de duas
-#: palavras: o subtítulo é literal dela (*"o rádio de cada adaptador, em
-#: fatias"*), então "Rádio em uso" produziria **"Rádio em uso • O rádio de cada
-#: adaptador, em turnos"** — a palavra "rádio" duas vezes em oito, no mesmo
-#: rótulo. Trocar o subtítulo para desfazer a repetição seria mexer na frase
-#: dela, que não foi o que ela pediu.
-#:
-#: E "Desempenho" não fica órfão: ele nomeava a régua, e não o dropdown. Com o
-#: dropdown fora, a colisão que existia — "perfil de desempenho"
-#: (`D-PERFIL-DE-DESEMPENHO`) e "Desempenho" a seção — desaparece em vez de
-#: piorar: o perfil agora se chama "Perfil de Bateria" e mora noutra aba, e nesta
-#: sobra um sentido só para a palavra. O que a seção mede — quanto do tempo do
-#: rádio está em uso — é desempenho, e de nada mais.
-#: Os dois nomes MUDARAM-SE PARA O PRODUTO em 01/09/2026 — `gui.aba_conexoes` —,
-#: junto com a frase do `?` que os usa. O comentário acima fica: ele é a razão
-#: da mudança de aba, e razão não se repete no outro arquivo.
 CASA_DO_TETO_GLOBAL = _aba_conexoes.CASA_DO_TETO_GLOBAL
 ABA_DO_TETO_GLOBAL = _aba_conexoes.ABA_DO_TETO_GLOBAL
 
-#: A LEITURA "Vale Sem teto, do global, abaixo" SAIU DA TELA — decisão dela,
-#: `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES` (28/08): *"some a leitura, fica o
-#: seletor"*. Ela saiu dos DOIS lugares em que estava: destas quatro linhas de
-#: controle (y=271 a 384, o que ela via) e da capa do Desempenho (y=834, fora da
-#: dobra — o que casava letra por letra com o pedido dela, e que ela não podia
-#: ter visto).
-#:
-#: E o "abaixo" caducou por tabela: com o teto global mudando-se para a aba
-#: **Sistema**, o endereço que esta frase dava passou a apontar para um lugar que
-#: não existe mais nesta aba. Duas razões independentes para a mesma saída.
-#:
-#: A frase do que VALE não se perdeu: ela continua no `?` do campo, que é onde
-#: ela é lida sob demanda em vez de ocupar uma coluna nas quatro linhas. E lá ela
-#: é UMA frase por caso, não três pedaços costurados: costurada, o texto saía
-#: *"vale Sem teto, do global, na aba Sistema. O global hoje é Sem teto, e quem o
-#: muda é o Perfil de Bateria, na aba Sistema"* — "Sem teto" duas vezes e "na aba
-#: Sistema" duas vezes, na mesma dica.
-#: O GLOBAL VIVO DA BANCADA — o `state['rumble_policy']` que o daemon publicaria.
-#: O desenho mostra a mesa em repouso, e "em repouso" é o padrão que o produto
-#: assume quando ninguém escolheu nada (`profiles/manager._RUMBLE_POLICY_PADRAO`).
-#: ELE NÃO É O ORÇAMENTO, e a distinção é o defeito inteiro que 01/09/2026
-#: corrigiu: o orçamento põe um teto POR CIMA da política viva, e é a viva que
-#: multiplica o que chega ao motor.
 GLOBAL_VIVO = _constantes(R / "src/hefesto_dualsense4unix/profiles/manager.py",
                           {"_RUMBLE_POLICY_PADRAO"})["_RUMBLE_POLICY_PADRAO"]
 
@@ -347,35 +142,10 @@ def _vibracao_da_bancada(c):
 
 
 def teto_que_vale(c):
-    """(o que a tela mostra no CAMPO, a frase de quem manda neste controle).
-
-    A CONTA É DO PRODUTO desde 01/09/2026 — `gui.aba_conexoes.teto_que_vale`. O
-    que sobra aqui é a BANCADA: qual controle sobrepõe (`TETO_DO_CONTROLE`) e
-    qual perfil de mesa esta tela mostra escolhido (`PERFIL_DA_MESA`). Na tela
-    viva, as quatro pontas vêm do perfil dela, do `state` do daemon e do
-    `maquina.json`.
-    """
+    """(o que a tela mostra no CAMPO, a frase de quem manda neste controle)."""
     return _aba_conexoes.teto_que_vale(_vibracao_da_bancada(c))
 
 
-# ---------------------------------------------------------------------------
-# A MESA FÍSICA: os adaptadores, e quem fala em cada um.
-#
-# `prefs` aponta para a MESA — nunca repete um nome de controle. Assim a pista
-# do rádio, a fita do topo e as linhas do acordeão não podem discordar.
-#
-# MAIÚSCULA EM "Sem nome" E "Interno": eles são VALOR DE CÉLULA, e a célula
-# vizinha da mesma coluna já era maiúscula — "Sala" na coluna Nome, "Entrada 3"
-# na coluna Onde está. Duas células da mesma coluna com caixa diferente é o que
-# faz a tabela parecer montada por duas pessoas. O `SEM_NOME` vira constante
-# porque o valor é lido DUAS vezes: uma para escrever a célula e outra para
-# decidir se ela sai apagada (`class="mudo"`) — dois literais iguais é um que
-# pode ficar para trás.
-# O `SEM_NOME` PASSOU A VIR DO PACOTE em 04/09/2026, com a tabela. A tabela
-# saiu da tela viva em 23/09 (TRANSPLANTE-DA-SECAO-01) e a seção nova não o
-# escreve: ele sobra só para o `ADAPTADORES` deste desenho, que a nota da
-# seção 3 e o mapa das entradas ainda leem.
-# ---------------------------------------------------------------------------
 SEM_NOME = _pacote08.SEM_NOME
 ADAPTADORES = [
     {"nome": "Sala", "modelo": "TP-Link UB500", "onde": "Entrada 3",
@@ -384,9 +154,6 @@ ADAPTADORES = [
      "detalhe": "M.2", "prefs": []},
 ]
 
-#: Os rádios que falam em 2,4 GHz perto do adaptador. É desta lista que sai a
-#: contagem da linha NOTA do exame — ela dizia "4" digitado, e divergiria da
-#: tabela no primeiro vizinho a mais.
 RADIOS_VIZINHOS = [
     ("Intel AX211 (banda 2,4)", "Wi-Fi", False),
     ("Logitech Unifying", "Teclado", False),
@@ -395,22 +162,7 @@ RADIOS_VIZINHOS = [
 ]
 
 def sel(opcoes, escolhida, classe="pronto", dica="", gesto="", campo=""):
-    """Um `<select>` com a opção escolhida marcada — uma forma só na tela.
-
-    `gesto` é o ENDEREÇO do que este campo faz, e ele entra mesmo quando ninguém
-    o atende ainda: o piloto único (`hefesto_vivo.py`) imprime
-    `[gesto sem dono] 08-conexoes.html · <nome>` e o clique vira inventário do
-    que falta, em vez de sumir sem uma linha. Sem o atributo, o `closest()` do
-    ouvinte não acha nada e o clique não produz **nem recusa** — que é a forma
-    calada do mesmo defeito.
-
-    `campo` é o endereço da PINTURA, e ele vem com `data-hef-alvo="valor"` de
-    propósito: sem o alvo, o piloto escreveria o texto DENTRO do `<select>` em
-    vez de escolher a opção (`hefesto_vivo.BOOTSTRAP`, `escrever()`), e a lista
-    ganharia uma linha solta "Ligado" no meio das opções. Um campo com gesto e
-    sem pintura é pior que os dois faltando: o clique grava e a tela continua
-    mostrando o padrão do desenho, então o segundo clique parece o primeiro.
-    """
+    """Um `<select>` com a opção escolhida marcada — uma forma só na tela."""
     marca = f' data-gesto="{gesto}"' if gesto else ""
     endereco = f' data-campo="{campo}" data-hef-alvo="valor"' if campo else ""
     corpo = "".join(f'<option{" selected" if o == escolhida else ""}>{o}</option>'
@@ -418,50 +170,15 @@ def sel(opcoes, escolhida, classe="pronto", dica="", gesto="", campo=""):
     return f'<select class="{classe}" title="{dica}"{marca}{endereco}>{corpo}</select>'
 
 
-# ---------------------------------------------------------------------------
-# O QUE A MESA RESPONDE — tudo o que a tela conta, contado aqui.
-#
-# QUANTOS CARDS: quantos estiverem ligados, e só eles (decisão dela, 28/08).
-#
-# O CAMPO PASSOU A EXISTIR — 31/08/2026. Este comentário dizia *"um filtro por um
-# campo 'ligado' que não existe seria inventar estado"*, e estava certo até o dia
-# em que ela mandou deixar dois lugares vazios na mesa: nasceu `conectado` em
-# `monta.MESA`, e com ele a lista `CONECTADOS`.
-#
-# ENQUANTO ISSO NÃO FOI FEITO, A ABA CONTAVA QUATRO EM SILÊNCIO: o Check-up dizia
-# *"as entradas dão energia para os 2 controles no cabo"* contando o P4, que não
-# está na mesa, e *"2 dos seus 4 controles falam nessa mesma faixa"* contando o
-# P3. Nenhuma régua viu — as frases estavam gramaticalmente perfeitas e os
-# números batiam com a lista errada.
-#
-# `MESA` continua sendo quem o DESENHO percorre: é ela que dá os quatro lugares,
-# e é o lugar vazio que ensina que ali cabe um e ele não está.
-# ---------------------------------------------------------------------------
-#: A SIGLA DA CENA TRADUZIDA PARA A CHAVE CRUA, e é a ÚNICA tradução do arquivo.
-#: `via` é a palavra que o CHIP mostra, e ela muda com o glossário; `transporte`
-#: é `usb`/`bt`, que é o que o produto compara. Enquanto `monta.MESA` não tiver
-#: a chave crua, ela sai daqui — e no dia em que tiver, o primeiro ramo de
-#: :func:`transporte_de` a lê e este dicionário para de ser consultado.
 _CRU_DA_SIGLA = {"USB": "usb", "BT": "bt"}
 
-#: A PALAVRA DA TELA PARA O TRANSPORTE, LIDA DO DONO POR AST — `cabo`/`rádio`.
-#: `home_actions` puxa `structlog` por `escritor_cru`, e o `python3 aba08.py`
-#: desta pasta não roda no `.venv`: é a MESMA razão pela qual os sete números do
-#: rádio vêm por AST, escrita no cabeçalho deste arquivo. O dicionário é o dono
-#: (`home_actions._PALAVRA_DO_TRANSPORTE`), e se ele for renomeado a geração PARA.
 _PALAVRA = _constantes(
     R / "src/hefesto_dualsense4unix/app/actions/home_actions.py",
     {"_PALAVRA_DO_TRANSPORTE", "PALAVRA_DE_TRANSPORTE_DESCONHECIDO"})
 
 
 def palavra_do_transporte(cru):
-    """`usb` → `USB`, `bt` → `BT`. A tabela do dono, lida por AST.
-
-    O ramo do desconhecido é do dono também: valor ausente vira a frase de "não
-    sei", e valor que a tabela não conhece volta CRU — porque um transporte novo
-    tem de APARECER na tela para alguém o ver, em vez de sumir atrás de uma
-    frase genérica.
-    """
+    """`usb` → `USB`, `bt` → `BT`. A tabela do dono, lida por AST."""
     bruto = str(cru or "").strip()
     if not bruto:
         return _PALAVRA["PALAVRA_DE_TRANSPORTE_DESCONHECIDO"]
@@ -469,22 +186,7 @@ def palavra_do_transporte(cru):
 
 
 def transporte_de(c):
-    """`usb`/`bt` do controle da CENA — a chave CRUA, nunca a palavra da tela.
-
-    **NOVE COMPARAÇÕES LIAM `via` NESTE ARQUIVO** (06/09/2026, achado da
-    costura). A chave `via` do produto passou a carregar a PALAVRA da tela
-    (`cabo`/`rádio`, de `home_actions.palavra_do_transporte`) e o pacote já
-    pergunta pela crua (:func:`a08_conexoes._e_radio`); aqui a cena ainda guarda
-    a sigla `"USB"`/`"BT"`, então as nove **funcionam hoje**. O que elas criam é
-    a armadilha: no dia em que a mesa do desenho falar a língua da tela,
-    `NO_CABO` e `NO_RADIO` ficam VAZIOS em silêncio — e com eles a frase da
-    energia, a do rádio, a régua de Desempenho e o custo do microfone.
-
-    **A PALAVRA DESCONHECIDA PARA A GERAÇÃO**, e é o ponto inteiro: um `.get`
-    com padrão devolveria "cabo" para tudo e a página sairia errada e verde.
-    Aqui o gerador MORRE dizendo qual palavra chegou, que é o que esta casa
-    escreve em toda régua — *seletor que casa zero é ERRO, não silêncio*.
-    """
+    """`usb`/`bt` do controle da CENA — a chave CRUA, nunca a palavra da tela."""
     cru = str(c.get("transporte") or "").strip().lower()
     if cru:
         return cru
@@ -507,38 +209,11 @@ NO_CABO = [c for c in CONECTADOS if not e_radio(c)]
 NO_RADIO = [c for c in CONECTADOS if e_radio(c)]
 POR_PREF = {c["pref"]: c for c in MESA}
 
-#: O ENDEREÇO DA ORDEM DE SERVIÇO — 03/09/2026, `MIGRA-08-01`, e ele mata a
-#: mentira mais cara desta aba.
-#:
-#: O que a coluna da direita do Check-up desenha é uma ORDEM DE SERVIÇO — uma
-#: instrução para ela mexer no gabinete: *"Mova o adaptador Bluetooth da Entrada
-#: 3 para a Entrada 9"*, com de→para, ganho e um `?` de duas frases. Tudo
-#: escrito à mão neste arquivo, tudo apresentado como diagnóstico da máquina
-#: dela. Fotografado no produto vivo em 03/09, com o exame dizendo CERTO nas
-#: três linhas que corriam.
-#:
-#: O DONO DO CARD JÁ EXISTIA: `gui.aba_conexoes.html_da_ordem`, com estas MESMAS
-#: classes — foi deste desenho que ele foi extraído. O que faltava era o produto
-#: chamá-lo; ver `pacotes.a08_conexoes._html_da_ordem`.
-#:
-#: O ALVO É `html` porque o card muda de FORMA: sem ordem pendente ele é uma
-#: linha só (*"Nenhuma mudança recomendada agora."*, texto do dono), e com ordem
-#: são quatro blocos. Não há endereço para um filho que ainda não existe — é a
-#: mesma razão da fita e do mapa do gabinete.
-#:
-#: O NOME É CONSTANTE PORQUE O PACOTE O EMITE COM ESTA GRAFIA. Um endereço
-#: escrito duas vezes é um endereço que diverge sem sintoma: o `achar()` não o
-#: encontra e escreve zero, calado.
 CAMPO_DA_ORDEM = "ordem"
 
 
 def _sugestao_da_cena():
-    """A Sugestão de Conexão da bancada, pelas MESMAS funções do produto.
-
-    Uma ordem com destino (o adaptador Bluetooth numa entrada que divide o
-    controlador) e a proposta da central (o P2 no adaptador com três
-    controles). O produto repinta a coluna inteira a cada tique.
-    """
+    """A Sugestão de Conexão da bancada, pelas MESMAS funções do produto."""
     ordem = SimpleNamespace(acao="Mova o adaptador Bluetooth para a Entrada 9",
                             destino="9", alvo=SimpleNamespace(caminho="Entrada 3"),
                             chave="bancada", arranjo="")
@@ -554,44 +229,16 @@ def _sugestao_da_cena():
     finally:
         _pacote08._ORDENS_NA_TELA = antes
 
-#: O microfone segue o TRANSPORTE — ponto final dela, 28/08: *"se tiver em modo
-#: rádio, então o mic é modo rádio"*. Não há chavinha e não há heurística de
-#: orçamento: os turnos do rádio viraram CONSEQUÊNCIA, e a consequência aparece
-#: na régua do Desempenho.
 def tem_mic_pelo_radio(c):
     return e_radio(c)
 
 
-#: O caminho por onde o microfone deste controle chega — DERIVADO, nunca
 #: escolhido. Pelo CABO o DualSense expõe placa USB Audio própria e o PipeWire a
-#: publica sozinho (medido em 15/08/2026, duas placas ALSA com ~475.000 amostras
-#: não-zero). Pelo RÁDIO não existe placa nenhuma — o aparelho não implementa
-#: A2DP/HFP/HSP —, e o áudio vem em Opus dentro do HID 0x31: quem o traz é a
-#: ponte do Hefesto, que publica um source virtual do PipeWire
-#: (`hefesto_dualsense_bt_<nó>`, medido RUNNING em 16/08/2026).
-#:
-#: MAIÚSCULA DEPOIS DO `•`: o ponto separa CAMPOS nesta casa — é a mesma
-#: pontuação do rótulo do controle ("Sony • Player 1 • Cosmic Red • USB"), e ali
-#: todo campo começa com maiúscula. "pela ponte" e "placa do controle" eram os
-#: dois únicos campos minúsculos da linha fechada, ao lado de "Vê como
 #: DualSense" e "Bateria 100%". Medido em 28/08 nas quatro linhas.
-#: O DONO DAS DUAS FRASES MUDOU-SE PARA O PACOTE — 03/09/2026, mesmo molde do
-#: `rotulo_do_controle`. Enquanto elas moravam só aqui, o
-#: produto não tinha como reescrevê-las: a linha fechada dizia "pelo cabo •
-#: Placa do controle" no primeiro lugar e "pelo rádio • Pela ponte" no segundo
-#: porque foi assim que a CENA foi desenhada, e não porque o daemon tenha dito.
-#: Agora há um dono só, chamado pelos dois — este gerador com a mesa da bancada,
-#: o pacote a cada tique com o transporte vivo.
 def caminho_do_mic(c):
     return _pacote08.caminho_do_microfone(transporte_de(c))
 
 
-# O RÓTULO E A TINTA MUDARAM-SE PARA O PACOTE — 03/09/2026,
-# `IDENTIDADE-VEM-DE-CIMA-01`. Eles nomeiam o PLÁSTICO do controle, e o plástico
-# é identidade de aparelho: escrito só aqui, o produto não tinha como reescrevê-lo
-# e a Gestão de Controles mostrava o `Cosmic Red` do desenho com o White dela no
-# cabo. Agora há um dono só, e ele é chamado pelos dois — este gerador com a mesa
-# da bancada, o pacote a cada tique com a mesa viva. Mesmo molde da
 # `a04_iluminacao.um_botao_de_player`.
 rotulo = _pacote08.rotulo_do_controle
 
@@ -1052,7 +699,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      falta card. E só nasce no dia em que sobra — sem sobra, o produto não
      emite o elemento e a coluna fica exatamente como estava.
 
-     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:1011` já
+     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:399` já
      define `.gls .mais` para o "+N" do glossário das dez páginas. Um `.mais`
      solto aqui é o vizinho de nome igual que esta aba já pagou três vezes
      (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
@@ -1252,7 +899,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-corpo .ltrava{display:none}
   .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
   .gc-corpo .ltrava.on ~ .btn:hover{color:var(--texto-mudo)}
-  /* REGRA DELA, escrita em `secao_controles.py:150`: *"sempre visível mas só
+  /* REGRA DELA, escrita em `secao_controles.py:109`: *"sempre visível mas só
      acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
      instável. */
   .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
@@ -1590,35 +1237,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
 """
 
 
-#: A largura da coluna do nome, medida no Chrome em 28/08: o mais largo dos
-#: rótulos da mesa é o do P3 ("Sony • Player 3 • Galactic Purple • BT"), com
-#: 214,3px. 220 dá 5,7 de folga — uma palavra maior nessa linha estoura, e aí é
-#: este número que sobe, num lugar só.
 LARG_NOME = 220
-#: A LINHA DO EXTERNO BEBE DA MESMA VARIÁVEL — 06/09/2026, com a escolha dela de
-#: pôr os externos no mesmo frame. A coluna do nome tem de cair no MESMO x das
-#: quatro linhas de cima, senão a fileira de baixo lê como outra tabela; e um
-#: segundo número aqui seria a segunda grafia da mesma medida.
 CSS += (f"\n  .gc-cabeca,\n"
         f"  .gc .ext-linha{{--larg-nome:{LARG_NOME}px}}\n")
 
-# ---------------------------------------------------------------------------
-# AS REGRAS QUE O ACORDEÃO GERA — uma por estado, e o estado é o LUGAR.
-#
-# Duas coisas saem daqui, e as duas são a decisão dela de 28/08:
-#   1. a linha ABERTA é a da fita, e clicar numa linha MUDA A FITA;
-#   2. o chip "Todos" abre os quatro.
-#
-# O CHIP SE ACHA PELO JOGADOR, NUNCA PELA POSIÇÃO — A-GESTAO-SEGUE-O-JOGADOR-01,
-# 24/09/2026. A regra contava filhos (`.chip:nth-child(n)`) e a fita só desenha
-# quem está na mesa: com o P1 fora, abrir o P2 acendia o P3, e o P3 e o P4 não
-# tinham regra. O `data-pref` do chip (`monta._endereco_do_chip`) é o número.
-#
-# ATÉ 05/09/2026 O CHIP NÃO CLICAVA: o chip da fita era um `<span>` do
-# esqueleto, e um `<span>` não vira alvo de clique sem tocar o `monta.py`. O
-# "voltar para Todos" continua também na linha aberta, com o `title` que o diz.
-# ---------------------------------------------------------------------------
-#: Os QUATRO lugares, como os `<input>` do acordeão — a mesa da tela é a viva.
 ESTADOS = ["todos"] + [c["pref"] for c in MESA]
 
 _regras = [
@@ -1633,8 +1255,6 @@ _regras = [
 ]
 for estado in ESTADOS:
     marcado = f"body:has(#gc-{estado}:checked)"
-    # O CHIP É ACHADO PELO JOGADOR (`data-pref`). Com UM controle na mesa não há
-    # chip «Todos», e o dele É o todos (`monta.escolha_da_fita`).
     chips = [f'{marcado} .fita .chip[data-pref="{estado}"]']
     if estado == "todos":
         chips.append(f'{marcado} .fita:not(:has(.chip[data-pref="todos"])) .chip[data-pref]')
@@ -1649,25 +1269,6 @@ for estado in ESTADOS:
         "{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}")
 CSS += "\n" + "\n".join(_regras) + "\n"
 
-# ---------------------------------------------------------------------------
-# A PORTA PARA O BANCO DE PROVAS — `.porta`, 29/08/2026.
-#
-# DEFEITO MEDIDO: `mapa-das-portas.html` tem 1475 linhas e é o desenho do motor
-# do arranjo — o mesmo motor que hoje roda em Python
-# (`integrations/arranjo_da_mesa.py`, `mapa_das_portas.py`,
-# `censo_do_gabinete.py`) — e `grep -c 'mapa-das-portas' layout/??-*.html`
-# devolve **0 nas dez abas**. Só se chega nele digitando o caminho.
-#
-# Ele é o banco de provas DESTE quadro: as entradas do gabinete, os
-# adaptadores, os arranjos possíveis e a conta das 1600 fatias. A porta fica no
-# `.quadro-topo` de "Rádio e adaptadores", empurrada à direita, e não é padrão
-# novo: é o mesmo `margin-left:auto` do `.sensores` da aba Controles.
-#
-# A ALTURA É TRAVADA EM 17px, e o número é medido na aba Navegação, onde esta
-# mesma porta nasceu: o `.quadro-topo` é `align-items:center`, o
-# `.quadro-titulo` mede 17px, e uma pastilha com borda de 19px derrubou o quadro
-# inteiro 2px — 663 das 733 caixas da aba mudaram de lugar. Sem borda e sem
-# preenchimento, a medição de antes e depois bate caixa a caixa.
 CSS += """
   .porta{margin-left:auto;font-size:11px;line-height:17px;height:17px;
     color:var(--texto-mudo);text-decoration:none;white-space:nowrap}
@@ -1675,100 +1276,20 @@ CSS += """
 """
 
 
-#: "VER AS ORDENS IGNORADAS" — o nome do botão que ELA APAGOU em 31/08.
-#:
-#: **ELE NÃO É MAIS TEXTO DE TELA VIVA**, e é isso que mudou em 04/09/2026: o
-#: nome sobrevive só na retrospectiva do fim desta página, que conta por que a
-#: fileira de quatro botões existiu e por que a palavra "caladas" virou
-#: "ignoradas". Ali ele nomeia um botão no PASSADO, e isso continua verdadeiro.
-#:
-#: O QUE SAIU foi o uso dele em frase que fala do AGORA — ver
-#: :data:`ORDEM_IGNORADA_VOLTA`.
 VER_IGNORADAS = "Ver as ordens ignoradas"
 
-#: O QUE ACONTECE COM UMA ORDEM QUE ELA MANDOU IGNORAR — a MEDIÇÃO, não a
-#: promessa. 04/09/2026, decisão [05] do PO.
-#:
-#: **O DONO MUDOU DE ARQUIVO EM 06/09/2026, `ONDA5-08-01`.** A frase deixou de
-#: ser só desenho: o `title` do ⊘ passou a ser PINTADO pelo produto
-#: (`data-campo="ignorar-dica"`), e quem pinta é dono. Ela mora em
-#: `pacotes/a08_conexoes.ORDEM_IGNORADA_VOLTA` e é lida daqui — o pacote não
-#: pode importar este gerador, que escreve a bancada ao ser importado.
-#:
-#: **A DECISÃO [05] ESTÁ INTEIRA NA TELA DESDE 06/09.** A metade que faltava —
-#: *"a linha fica na lista, apagada, e o mesmo ⊘ desfaz"* — é a 08-Q5 dela, e o
-#: endereço que faltava (`exame-calada`, alvo `classe`) nasceu nesta sprint.
 ORDEM_IGNORADA_VOLTA = _pacote08.ORDEM_IGNORADA_VOLTA
 
-# O RODAPÉ DA JANELINHA DO MAPA — decisão [08] do PO, 04/09/2026:
-# **"Trocar pela verdade."**
-#
-# **O QUE ESTAVA AQUI MENTIA, e a contradição era com um clique DELA.** A linha
-# dizia *"O desenho vale quando você clicar em Aplicar, na barra de baixo da
-# janela."* — e ela decidiu em 01/09 que **clicar já aplica**: os seis gestos
-# do mapa gravam no ato (`a08_conexoes._gravar_o_mapa`). Pior: o "Aplicar" do
-# rodapé faz OUTRA coisa, e a dica dele diz isso — *"Vale agora: envia a
-# configuração aos controles na hora. NÃO grava"*. A frase mandava apertar um
-# botão que não tem nada a ver com o desenho que o clique dela já gravou.
-#
-# **HÁ DUAS FRASES, E ELAS FICAM DUAS.** A de antes é
-# `mapa_da_mesa.ESPERA_O_APLICAR`, e continua VERDADEIRA lá — o `Gtk.Label` que
-# a exibe está numa janela que espera mesmo o "Aplicar". São duas telas com
-# dois comportamentos, e a decisão de 01/09 é o que as reparte: unificá-las
-# poria a mentira numa das duas.
-#
-# **A DÍVIDA QUE ESTE BLOCO DECLARAVA FECHOU EM 06/09/2026, `ONDA5-08-02`.** O
-# texto era digitado aqui, num `MAPA_JA_GRAVOU` que não existe mais: o dono
-# ganhou a frase irmã (`mapa_da_mesa.GRAVA_NO_CLIQUE`) e esta tela passou a
-# LÊ-LA, como já fazia com os quatro rótulos da mesma janelinha. O que sobra
-# aqui é a razão de haver duas — que é decisão medida e fica, com a data.
 
-#: AS DUAS JANELAS DA MESA — `D-MAPEAR-ENTRADAS-E-NAO-PORTAS` (28/08).
-#:
-#: Ela pediu "Mapear Portas" e "Mapear Porta a Porta". Vista a colisão com a
-#: `D-A-PALAVRA-ENTRADA` (24/08, que saiu de uma frase dela mesma — *"o número da
-#: entrada usb salvaria muito como coluna"* — e diz que a aba fala **entrada**,
-#: nunca **porta**, para não colidir com porta de rede), ela escolheu manter
-#: "entrada": *"Desenhar a minha mesa"* vira **Mapear Entradas**, e *"Ensinar as
-#: minhas entradas"* vira **Mapear Entrada a Entrada**.
-#:
-#: O NOME FICA NUM LUGAR SÓ porque cada um aparece em quatro: o botão, o `?` do
-#: quadro que o hospeda, o `?` do "Está tudo certo?" (que manda as duas perguntas
-#: da sala para lá) e a legenda. As dicas dos dois botões continuam valendo —
-#: nenhum deles mudou de função, só de nome.
 MAPEAR_ENTRADAS = "Mapear Entradas"
 MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
 
-#: O botão que sobrou dos quatro do Check-up, já na seção das entradas.
-#:
-#: A COLISÃO FECHOU EM 11/09/2026 — A1-046, e ela aprovou. O nome era
-#: "Examinar Portas" e colidia com a `D-A-PALAVRA-ENTRADA` (24/08), que fixou
-#: **entrada** para não confundir com porta de rede. A mesma seção ENSINA que a
-#: tela deixou de dizer *porta* e passou a dizer *Entrada*, e o botão ao lado
-#: continuava dizendo Portas. Medido no texto visível: **35 ocorrências de
-#: "entrada" contra 4 de "porta"**, e as 4 eram este botão, o link do mapa e a
-#: frase que os condenava. O `data-gesto` NÃO muda — `examinar-portas` é
-#: endereço de contrato, não vocabulário de tela.
 EXAMINAR_PORTAS = "Examinar Entradas"
 
-#: A DICA DO CAMPO DE NOME — e ela mudou de casa em 04/09/2026, com a tabela.
-#: A tabela saiu da tela viva em 23/09 (TRANSPLANTE-DA-SECAO-01), e desde então
-#: esta constante e a do pacote não têm leitor. A razão dela (*"tirar o botão Renomear e
-#: adicionar a possibilidade de renomear dando duplo clique no nome"*, 31/08)
-#: segue no pacote, junto da constante.
 RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
 
-#: O ESTADO DA SEGUNDA LINHA DO EXAME, e ele é constante por um motivo de
-#: ferramenta: os `exame(...)` do desenho moram DENTRO do f-string que monta a
-#: aba, e o estado é chave de máquina do `exame_da_mesa.Item` — ASCII por
 #: contrato. O `validar-acentuacao.py` isenta a LINHA que traga `noqa-acento`, e
-#: uma linha de dentro do f-string não pode trazer comentário nenhum: ele sairia
-#: impresso no HTML. Aqui fora, a isenção cabe e diz por quê.
-#:
-#: Os outros três estados do mapa não precisam disto: dois deles não levam
-#: acento, e o terceiro vem colado num `_`, que é o que a régua de acentuação
-#: já não cobra.
 _ATENCAO = "atencao"  # noqa-acento (chave de máquina do exame, ASCII por contrato)
 
 
@@ -1865,9 +1386,6 @@ def exame(estado, txt, dica, linha=0):
     não muda é a cicatriz da trava da luz, medida em 04/09.**
     """
     classe, palavra = _aba_conexoes.SELO_DO_ESTADO[estado]
-    # UM INTERRUPTOR POR ESTADO, menos o `problema` — ele é a própria pílula.
-    # A ORDEM É A DO MAPA, e o `data-hef-quando` é a chave de máquina do exame:
-    # é ela que o `escrever()` compara com o que o pacote emite.
     interruptores = "".join(
         f'<i class="est est-{_aba_conexoes.SELO_DO_ESTADO[e][0]}'
         f'{" on" if e == estado else ""}" data-campo="{endereco}" '
@@ -1882,182 +1400,52 @@ def exame(estado, txt, dica, linha=0):
           </div>'''
 
 
-# ---------------------------------------------------------------------------
-# UM CONTROLE DO ACORDEÃO — uma função, N chamadas, zero texto repetido.
-# ---------------------------------------------------------------------------
-#: A FRASE QUE CADUCOU, e por que a nova fala de NÓS e não do aparelho.
-#:
-#: Esta aba dizia, em dois lugares, que *"pelo rádio o aparelho recusa a
-#: leitura"* da cor. **Não recusa.** Medido nesta bancada em 27/08/2026, no cabo
-#: e no rádio, com o serial saindo dos dois (`hidraw8`, rádio, `F55602…`, Cosmic
-#: Red, aceita): o que travava era a semente do NOSSO CRC — `0x53`
-#: (`SET_REPORT|FEATURE`), e não `0xA3` (`DATA|FEATURE`), que foi a de 23/08.
-#: Ver `docs/protocol/dualsense-referencia-canonica.md:1574-1663`.
-#:
-#: MAS A CURA AINDA NÃO ESTÁ NO PRODUTO — ela é a `ONDA-CONEXOES-11`. Por isso a
-#: frase nova não promete leitura pelo rádio: ela diz o que É verdade hoje, que é
-#: que **nós ainda não perguntamos**. Só o "ainda" sai quando a onda fechar.
 BORDA_LIDA = ("A borda é a cor do plástico que o Hefesto <b>leu do aparelho</b>: este controle "
               "está no cabo, e pelo cabo ele pergunta e o aparelho responde.")
-#: A DICA NÃO CONFESSA ROADMAP — 30/08/2026, regra dela: *"informar na dica que
-#: o produto não presta e não tá pronto é o fim dos tempos"*. Ela estava certa: a
-#: pessoa que passa o mouse quer saber POR QUE a borda está cinza, não em que
-#: onda do nosso plano a cor vai chegar. O código da sprint sai da tela e fica
-#: aqui, onde é útil a quem programa. A frase passa a dizer o que É: a cor não
-#: foi lida, e por isso a borda não a inventa.
 BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não foi lida</b>. "
                 "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
                 "continua na cor que o resto do Hefesto já conhece.")
 
-#: A PALAVRA DO TRANSPORTE NA TELA É USB E BT — decisão dela de 21/09/2026 (a I9
-#: revogada), aplicada à 08 inteira em 24/09 (A-GESTAO-SEGUE-O-JOGADOR-01): estas
-#: duas dicas, o exame da cena e o `CENSO`. «Turno de rádio», «pesa no rádio» e
-#: «falando no rádio» ficam: ali o rádio é o recurso, não o transporte. Quem
-#: prende a palavra ao dono (`home_actions.palavra_do_transporte`) é
-#: `tests/unit/test_a_gestao_segue_o_jogador.py`.
 LUZ_NO_CABO = ("Só funciona com o controle no BT. Este está no USB, onde a barra de luz "
                "não depende de reconexão.")
 LUZ_NO_RADIO = ("Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz "
                 "volta a obedecer.")
 
-# A PALAVRA DA UNIDADE É **TURNO**, e não "fatia" nem "faixa"
-# (`D-A-FATIA-DO-RADIO-VIRA-TURNO`, 28/08). Ela pediu "faixas"; a colisão é
-# medida e está nesta MESMA aba, a poucos centímetros da régua: "faixa de 2,4
-# GHz" aparece três vezes (o exame, o título da coluna dos vizinhos e a dica do
-# imperativo), e a régua conta TEMPO — 625 µs por turno, `radio_da_mesa.py` —,
-# não frequência. Vista a colisão, ela validou: *"a ideia é mostrar algo tipo
-# porções, divisões, turnos funciona também."*
-#
-# SÓ A TELA TROCA. Em `src/` a palavra "fatia" aparece 75 vezes e a maioria é
-# outro sentido — a fatia de TEMPO do laço do daemon (`daemon/connection.py`).
-# Troca cega lá quebraria código não relacionado.
-# AS DUAS FRASES DO MICROFONE MUDARAM DE CASA — 04/09/2026, e o `+16,3` que uma
-# delas trazia DIGITADO virou derivado. Elas moram agora em
-# `a08_conexoes._DICA_DO_MIC` (a metade física, que é fato de protocolo e
 # continua verdadeira) mais `secao_controles.frase_da_capacidade_do_mic()` (o
-# custo, que deriva as constantes do medidor).
-#
-# POR QUE O NÚMERO NÃO PODIA FICAR AQUI: os 16,3 conferiam com `radio_da_mesa`
-# HOJE — eles são a segunda grafia, e no dia em que alguém remedir o A/B a
-# janela estável acompanha e o HTML não. É a forma de defeito que
 # `frase_da_capacidade_do_mic` foi escrita para impedir.
-#
-# E O `title` DESTE RESUMO DEIXOU DE SER DÍVIDA no mesmo dia: ele ganhou
-# `data-campo="mic-dica"` com alvo `atributo`, então segue o transporte VIVO em
-# vez de congelar o da cena.
-#
-# O TRANSPORTE É USB OU BT DESDE 24/09/2026 (AS-FRASES-QUE-A-BANCADA-ACHOU-01):
-# a linha ao lado, que esta frase manda ler, passou a dizer «pelo USB»/«pelo
-# BT», e a dica que a explica não pode falar outra língua (decisão dela de
-# 21/09, a I9 revogada).
 MIC_LIGADO_DICA = (
     "Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a "
     "chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.")
-#: O `?` DO BLOCO DO MICROFONE, segunda metade — e ela deixou de DECIDIR em
-#: 04/09/2026. A frase dizia *"Decide se o botão físico … cala só ele ou o
-#: computador inteiro"*, e a tela oferecia a escolha por controle enquanto o
-#: produto guarda UM valor por máquina. Agora ela DIZ.
-#:
-#: **A DOUTRINA É A DESTA MESMA ABA**, e está escrita na legenda dela: a
-#: chavinha *"pelo cabo / pelo rádio"* saiu porque *"oferecia uma escolha que o
-#: transporte já tinha feito"*. Aqui a escolha já tinha sido feita por ELA —
-#: *"o botão do Controle sempre controla a interface"* (30/08) e *"o botão é pra
-#: ligar o microfone e ele ser ouvido no canal específico dele"* (D-12, 04/09),
-#: que é um ato só. Não há duas rotas com dois comportamentos a escolher.
 BOTAO_DICA = (
     "O botão físico do microfone faz o mesmo que o desta tela: liga o microfone "
     "<b>e</b> o canal dele. O que ele cala vale para o computador todo, não só "
     "para este controle.")
 
-#: A MESMA COISA EM UMA LINHA, para o `title` da leitura. O `?` do bloco explica;
-#: o hover da linha responde "o que é isto que estou lendo".
 BOTAO_DICA_CURTA = (
     "O que o botão físico do microfone cala. É um ajuste do computador, um só "
     "para todos os controles.")
 
-#: A DICA DO GESTO, e ela descreve o RESULTADO, não o movimento.
-#:
-#: `title` não muda com CSS. Ela dizia *"Deixa só este controle aberto; os
-#: outros fecham"*, que era o acordeão; desde 26/09/2026 os cartões não abrem
-#: nem fecham, e o que o clique faz é o do daemon: as ações de saída passam a
 #: mirar só este controle (`controller.target.set`).
 SO_ESTE_DICA = ("Escolhe só este controle: a luz, os gatilhos e a vibração "
                 "passam a mirar nele.")
 
 
 def teto_dica(c):
-    """A frase do `?` do teto — desenho de bancada, REPINTADA pelo pacote.
-
-    O `?` GANHOU ENDEREÇO em 01/09/2026 (`data-campo="teto-explica"`), e ele tem
-    de ser pintado JUNTO com o `<select>`: a frase daqui diz *"este controle
-    segue o global, que vale …"* a partir de `PERFIL_DA_MESA`, que é constante
-    de bancada. Ligar só a caixa deixaria a tela dizendo "30% da força" no campo
-    e "segue o global" na dica — uma contradição NOVA, introduzida por nós.
-
-    O ALVO É `html`, e não o `texto` padrão: esta frase traz `<b>` e `<code>` no
-    desenho dela, e o `textContent` do `escrever()` os escreveria como texto
-    literal — a dica mostraria os próprios marcadores.
-
-    A FRASE É DO PRODUTO — `gui.aba_conexoes.dica_do_teto`. Aqui ficou só a
-    bancada: qual controle sobrepõe e qual perfil de mesa esta tela mostra.
-    """
+    """A frase do `?` do teto — desenho de bancada, REPINTADA pelo pacote."""
     return _aba_conexoes.dica_do_teto(_vibracao_da_bancada(c))
 
 
-# ---------------------------------------------------------------------------
-# O DESENHO DO CONTROLE SEGUE O APARELHO — a lei dela, 03/09/2026:
-#
-#     "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
-#      players com cada controle — tudo isso muda de acordo com o controle
-#      identificado no canto superior. é white no p1, mas a borda de tudo é
-#      cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
-#
-# O CSS do `.ds-mini` guardava a dívida e a receita: *"a cura certa é um alvo de
-# ATRIBUTO no piloto"*. Ele existe desde 03/09 (`data-hef-alvo="atributo"` mais
-# `data-hef-atributo`), e são estas duas funções que o alcançam.
-#
-# SÃO DUAS METADES, E UMA SÓ NÃO CURA NADA — está medido pela frente que fez o
-# alvo: `monta._so_o_colorway` guarda na folha de CADA `<svg>` só as regras do
-# modelo pedido (3.082 bytes dos 45.452 dos 28). Escrever `white` num desenho
-# cuja folha só traz `cosmic-red` dá o MESMO cinza neutro (`rgb(58, 63, 75)`) de
-# um desenho sem atributo nenhum — troca-se uma cor errada por um cinza.
-#
-# A SAÍDA ESCOLHIDA É A TABELA COMPARTILHADA, e não podar menos: o bloco das
-# cores sai de dentro dos desenhos e vai UMA vez para a página. A aritmética que
-# `_so_o_colorway` documenta continua de pé — ela existe para uma aba não
-# carregar QUATRO cópias dos 28 modelos; uma cópia só é o que ela pede.
-#
-# E O QUE VIAJA É O `<defs id="cores-do-dualsense">` INTEIRO, não só o `<style>`.
-# Isto foi MEDIDO e quase passou: OITO dos 28 modelos não têm hex nenhum no mapa
-# dela — Chroma Teal, Ghost of Yōtei, Grey Camouflage… — e a folha os pinta com
 # `url(#hachura-sem-hex)`, uma hachura; outros dois usam gradiente
-# (`casca-god-of-war-20th`, `casca-spider-man-2`). São 68 referências a TRÊS
-# `id`, e o `monta.svg()` prefixa todo `id` por controle. Uma folha solta,
 # unprefixada, apontaria para `#hachura-sem-hex` enquanto os desenhos definiriam
 # `#p1-hachura-sem-hex`: oito modelos ficariam SEM TINTA, e só na máquina de
-# quem tivesse um deles. O `<defs>` é a unidade que o
-# `scripts/gerar_cores_do_dualsense.py` escreve, e é a unidade que se move.
-#
-# ELE VAI DENTRO DE UM `<svg>` DE ZERO PIXEL porque `<pattern>` e
-# `<linearGradient>` só existem dentro de um fragmento SVG. O `url(#…)` de um SVG
-# inline resolve contra o DOCUMENTO, então os dois desenhos o alcançam de lá.
-# ---------------------------------------------------------------------------
 _CORES_NO_DESENHO = re.compile(
     r'\n?[ \t]*<defs id="[^"]*cores-do-dualsense">.*?</defs>', re.S)
 
-#: A ÂNCORA do endereço. `monta.svg()` reescreve a tag de abertura para
-#: `<svg data-colorway="…" class="…" …`, e é nela que os três atributos entram.
 _ABRE_O_DESENHO = '<svg data-colorway="'
 
 
 def _a_tabela_dos_28() -> str:
-    """As 28 cores dela, lidas do desenho — a TABELA, publicada uma vez.
-
-    Ela não é digitada aqui e não pode ser: o dono é
-    `scripts/gerar_cores_do_dualsense.py`, que a escreve no `ds_limpo.svg` a
-    partir de `docs/data/cores-do-dualsense.csv`. Uma segunda cópia envelheceria
-    sozinha no dia em que ela mapear o vigésimo nono modelo.
-    """
+    """As 28 cores dela, lidas do desenho — a TABELA, publicada uma vez."""
     achado = _CORES_NO_DESENHO.search(DS)
     if not achado:
         raise SystemExit(
@@ -2075,19 +1463,7 @@ TABELA_DAS_CORES = (
 
 
 def desenho_do_controle(c, luz):
-    """O desenho pequeno da linha, com ENDEREÇO e sem a folha podada.
-
-    Os três atributos são o contrato do alvo novo, e o par alvo/parâmetro vem
-    separado de propósito — é o que o alvo `classe` já faz com `data-hef-classe`
-    e `data-hef-quando`; um `data-hef-alvo` composto quebraria toda comparação
-    por igualdade que lê o alvo.
-
-    O ALVO É `atributo` E NÃO `html`: trocar o `<svg>` inteiro foi tentado e
-    reprovou na medição (31 pinturas em 31 tiques, tique de 4,24 para 13,56 ms,
-    e 50 KB atravessando a ponte a cada meio segundo), porque o `innerHTML` que o
-    navegador devolve de um SVG nunca volta igual ao que se escreveu. O atributo
-    são vinte bytes e a comparação casa.
-    """
+    """O desenho pequeno da linha, com ENDEREÇO e sem a folha podada."""
     x = svg(c["pref"], c["cor"], classes="ds-svg ds-mini", luz=luz, lampadas=False)
     if _ABRE_O_DESENHO not in x:
         raise SystemExit(
@@ -2097,13 +1473,6 @@ def desenho_do_controle(c, luz):
     x = x.replace(_ABRE_O_DESENHO,
                   '<svg data-campo="desenho" data-hef-alvo="atributo" '
                   'data-hef-atributo="data-colorway" data-colorway="', 1)
-    # A TABELA PODADA SAI. Ela é a escolha de UM modelo cravada no arquivo; a
-    # dos 28 já vai na página, uma vez, por `TABELA_DAS_CORES`.
-    #
-    # E A AUSÊNCIA PARA A GERAÇÃO, como o `_tira_grupo` do `monta.py`: um `sub`
-    # que não casa devolve o texto intacto e não avisa — a página sairia com as
-    # DUAS tabelas, a podada por dentro e a dos 28 por fora, e a de dentro
-    # venceria por vir depois. É a cicatriz da fita que morreu em silêncio.
     limpo, quantas = _CORES_NO_DESENHO.subn("", x)
     if quantas != 1:
         raise SystemExit(
@@ -2113,35 +1482,16 @@ def desenho_do_controle(c, luz):
     return limpo
 
 
-#: O NOME DO LUGAR QUE NÃO TEM DONO — 31/08/2026, regra dela para toda página:
-#: *"o espaço fica, mas o nome do canto muda: agora o p3 e o p4 será P3 bolinha
-#: Desconectado, igual página gatilhos"*.
-#:
-#: ELE É O TEXTO INICIAL DO CAMPO `nome`, e não um ramo à parte: o mesmo
 #: `<span data-campo="nome" data-hef-alvo="html">` que no lugar cheio traz o
-#: `rotulo(c)`. Assim o piloto tem por onde escrever a identidade quando o
-#: controle chegar, e até lá a tela diz o que ela mandou dizer.
 def nome_do_lugar_vazio(c):
     """O rótulo do lugar sem aparelho. O «P N» dele é o campo do dono, ao lado."""
     return "Desconectado"
 
 
-#: Os quatro selos do estado, na ordem do pedido dela (25/09/2026): Mic, Som,
-#: Modo de conexão, Visto como. «Conexão estável» e «Bateria» saíram em
 #: 26/09/2026; a bateria foi para o nome (`nome_com_a_bateria`).
 ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto")
-#: O nome de quem joga, na CENA do desenho: o P1 com nome escrito e o P2 sem,
-#: para o desenho mostrar os dois estados do campo. O produto escreve o que o
-#: dono do nome (a memória dos controles, pelo endereço) disser.
 DONO_DA_CENA = {"p1": "Vitória"}
-#: O Perfil de Desempenho de cada lugar na cena do desenho — um de cada, para a
-#: foto mostrar o botão aceso nos dois estados. Pelo MESMO dono que o produto
-#: chama a cada tique (`a08_conexoes.perfil_na_linha`), sobre a declaração da
-#: cena: o P2 com a economia dele ligada.
 PERFIL_DA_CENA = {"p1": "tudo_ligado", "p2": "bateria_longa"}
-#: Os três botões do cartão, ``(id, rótulo, dica)``, lidos do dono
-#: (`secao_orcamento.ROTULOS_DOS_PERFIS` e `DICAS_DO_CARTAO`): nenhuma palavra
-#: do Perfil de Desempenho é digitada no desenho.
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orc  # noqa: E402
 
 PERFIS_DO_CARTAO = tuple((p, _orc.ROTULOS_DOS_PERFIS[p], _orc.DICAS_DO_CARTAO[p])
@@ -2149,8 +1499,7 @@ PERFIS_DO_CARTAO = tuple((p, _orc.ROTULOS_DOS_PERFIS[p], _orc.DICAS_DO_CARTAO[p]
 
 
 def botao_do_perfil(pid, rotulo, dica, aceso):
-    """Um dos três botões: o produto acende o do controle pelo endereço `perfil`
-    (alvo `classe`, com o `aria-checked` junto, que é o que o leitor de tela diz)."""
+    """Um dos três botões: o produto acende o do controle pelo endereço `perfil`"""
     return (f'<button class="btn{" on" if aceso else ""}" data-gesto="perfil-do-controle" '
             f'value="{pid}" role="radio" aria-checked="{"true" if aceso else "false"}" '
             f'data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" '
@@ -2158,22 +1507,14 @@ def botao_do_perfil(pid, rotulo, dica, aceso):
             f'title="{dica}">{rotulo}</button>')
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
-# o import mora aqui, e não no topo, para não empurrar as citações `aba08.py:N`
-# que outras abas fazem das linhas de cima (a `aba09.py:629` cita a 1053).
 from types import SimpleNamespace  # noqa: E402
 
 _DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace(teto=None))
-#: A Sugestão de Conexão da cena — ver :func:`_sugestao_da_cena`.
 SUGESTAO_DA_CENA = _sugestao_da_cena()
 
 
 def _estado_da_bancada(c):
-    """Os seis selos da cena, pelo MESMO dono que o produto chama a cada tique.
-
-    A cena é a de «tudo certo»: o microfone declarado ligado, a ponte do rádio
-    de pé, o alto-falante lido e o movimento liso. O produto troca cada selo
-    pelo que o daemon disser no primeiro tique.
-    """
+    """Os seis selos da cena, pelo MESMO dono que o produto chama a cada tique."""
     radio = e_radio(c)
     vivo = {"uniq": "", "transport": "bt" if radio else "usb",
             "battery_pct": DA_CONTROLES[c["pref"]]["bat"], "hz_movimento": 480,
@@ -2183,7 +1524,6 @@ def _estado_da_bancada(c):
 
 
 #: O «Modo de conexão» da cena: o chip «Sony DualSense», que é o aceso no
-#: desenho da aba Jogar. O nome vem da tabela da fileira, como no produto.
 def _modo_da_cena():
     from hefesto_dualsense4unix.app.actions.jogar import painel as _painel
 
@@ -2232,144 +1572,38 @@ def linha_do_controle(c):
     conectado = c.get("conectado", True)
 
     def vale(cheio, vazio=TRAVESSAO):
-        """O texto inicial deste campo: o valor lido, ou o travessão.
-
-        O travessão é a resposta honesta de um lugar sem aparelho — *"isto eu
-        não sei"* —, e é o MESMO que `pacotes.__init__` manda a cada tique para
-        as colunas sem dono (`dict.fromkeys(chaves, TRAVESSAO)`). A tela em
-        repouso e a tela pintada dizem a mesma coisa, que é o que impede o
-        cartão de piscar um valor do desenho antes da primeira carga.
-        """
+        """O texto inicial deste campo: o valor lido, ou o travessão."""
         return cheio if conectado else vazio
 
     no_radio = e_radio(c)
     luz = "#%02x%02x%02x" % player_slot_color(c["jogador"])
-    # a borda só é pintada de quem foi LIDO — o resto fica com a neutra do CSS
-    # A TINTA DA BARRA, e ela é do ELEMENTO — ver o comentário do `.gc-cor` no
-    # CSS. Quem não foi lido nasce sem tinta nenhuma, e é a barra que o pacote
-    # apaga com `transparent` quando a leitura não vier.
-    # E O LUGAR SEM DONO ENTRA POR AQUI, não por um `if` a mais: sem aparelho
-    # não há cor lida, que é a mesma situação de quem está no rádio.
     tinta = ("" if (no_radio or not conectado)
              else f' style="color:{cor_da_zona(c["cor"])}"')
     barra = f'<i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"{tinta}></i>'
-    # só o CAMPO sai daqui: o "Vale …, do global" que ficava ao lado saiu da tela
-    # (`D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`) e vive agora no `?` do campo.
-    # «MICROFONE E BOTÕES» E «LIMITE DA VIBRAÇÃO» SAÍRAM DA LINHA — pedido dela,
-    # 25/09/2026 (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): os dois repetiam outras
-    # abas (o mic é da Jogar/Controles; o limite é da Vibração). No lugar deles
-    # entra o ESTADO do controle agora, só leitura, pelo mesmo dono que o
-    # produto chama a cada tique (`a08_conexoes.estado_do_controle`).
     estado = _estado_da_bancada(c) if conectado else {}
-    # A TRAVA DO BOTÃO VIROU DADO — 03/09/2026. A classe `apagado` continua
-    # nascendo do transporte da CENA (é o que ela vê ao abrir o arquivo), e o
-    # `data-campo="luz-trava"` é o que deixa o produto reescrevê-la a cada
-    # tique: `data-hef-quando="cabo"` acende a classe quando o pacote emitir
-    # `cabo`, e a apaga quando emitir `radio`.
-    #
-    # E A DÍVIDA DO `title` FECHOU EM 04/09/2026. O que estava escrito aqui —
-    # *"a dica continua a do desenho, e isso é dívida declarada … um segundo
-    # campo para o `title` pede outro elemento"* — estava certo, e o outro
-    # elemento é o `<i class="ltrava">` abaixo: ele fica com a CLASSE e o botão
-    # fica com a DICA. O que a dica ganha não é só seguir o transporte: vem
-    # junto a RAZÃO do carimbo de nascimento, que tem dono no produto (o aviso
-    # da mesa suja também vinha, e saiu em 13/09/2026). Ver
-    # `a08_conexoes.dica_da_luz`.
-    # SEM APARELHO A TRAVA NASCE SOLTA, como a de quem está no rádio: a trava é
-    # do transporte, e um lugar vazio não tem transporte que a acenda.
     trava = (f'<i class="ltrava{"" if (no_radio or not conectado) else " on"}" '
              f'data-campo="luz-trava" '
              f'data-hef-alvo="classe" '
              f'data-hef-quando="{_pacote08.LUZ_TRAVADA}"></i>')
     dica_luz = ('data-campo="luz-dica" data-hef-alvo="atributo" '
                 'data-hef-atributo="title"')
-    # O RÓTULO DO BOTÃO GANHOU ENDEREÇO PRÓPRIO — 06/09/2026, e ele é um `<span>`
-    # DENTRO do botão por uma razão de vocabulário: **um `data-campo` por nó**, e
-    # o do botão já está gasto no `title` (`luz-dica`). O clique não muda de dono
-    # — o ouvinte do piloto sobe por `closest('[data-gesto]')`, então clicar no
-    # texto continua chegando ao mesmo gesto.
-    #
-    # É ELE QUE CUMPRE A PROMESSA DO `title`. O desenho diz, desde que nasceu,
-    # *"Enquanto ele espera o PS, o mesmo botão vira 'Cancelar'"* — e até hoje o
-    # produto não tinha por onde escrever a segunda palavra.
     rotulo_luz = (f'<span data-campo="luz-texto">'
                   f'{vale(_pacote08.texto_do_botao_da_luz())}</span>')
-    # A CLASSE `apagado` SAIU DO BOTÃO — 06/09/2026, e ela era a metade que
-    # faltava da cura de 03/09. MEDIDO no DOM, com um controle no RÁDIO no lugar
-    # do P1: `luz-trava` chegava certo (o `<i>` ficava `ltrava`, sem o `on`) e o
-    # botão continuava com `class="btn apagado"`, opacidade 0,55 e cursor
-    # `help` — a classe do MOCKUP, que o pintor não tem como apagar porque o
-    # `data-campo` do botão está gasto no `title`. Quem herdasse o lugar do P1
-    # pelo rádio veria para sempre um botão com cara de desligado.
-    #
-    # E TIRÁ-LA NÃO MUDA UM PIXEL DO DESENHO: `.gc-corpo .ltrava.on ~ .btn` tem
-    # as MESMAS quatro declarações de `.btn.apagado`, e o `<i class="ltrava on">`
-    # já está no HTML estático da linha do cabo. O que muda é que agora existe UM
-    # dono da aparência, e ele segue o transporte.
     botao = (f'<button class="btn" data-gesto="luz-nao-acende" {dica_luz} '
              f'title="{vale(LUZ_NO_RADIO if no_radio else LUZ_NO_CABO)}">'
              f'<svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg>'
              f'{rotulo_luz}</button>')
-    # A LINHA DA ESPERA, E ELA NASCE SEM OCUPAR NADA. `monta.ressalva` já sabe
-    # sumir em repouso (`.ressalva:has(.nada)`), e é a mesma peça que o exame, os
-    # dois avisos da Gestão e o gabinete usam nesta aba. No desenho ela não
-    # aparece: nenhuma cena de bancada tem uma espera dela dentro.
-    #
-    # OS TRÊS FICAM NUMA CAIXA SÓ (`.gc-luz`) porque agora são três coisas que
-    # andam juntas na ponta direita da linha — e porque a trava precisa continuar
-    # IRMÃ do botão: é por `~` que ela o apaga.
-    # O NOME NÃO É `luz`, E A RAZÃO É UMA CICATRIZ DE MINUTOS ATRÁS: `luz` já é
     # a COR do jogador nesta função (`player_slot_color`), e ela entra no
-    # `desenho_do_controle` logo abaixo. Reusar o nome fez o `<g id="p1-lightbar"
-    # style="--luz:` receber o bloco HTML inteiro dentro de um atributo CSS — e o
-    # gerador saiu `rc=0`, sem uma palavra. Só a leitura do HTML gerado mostrou.
-    # A ORDEM É `ressalva · <i> · <button>`, E ELA NÃO É ESTÉTICA. Duas réguas
-    # desta casa exigem o `<i class="ltrava">` COLADO no botão
-    # (`></i><button`), e a razão está escrita nas duas: *"o `~` do CSS só
-    # alcança irmãos POSTERIORES, então o `<i>` colado antes do botão é a única
-    # forma que faz o apagado acender"*. Pôr a linha da espera no meio dos dois
-    # reprovou as duas — medido, e as duas estão certas em cobrar a POSIÇÃO.
-    # Com a ressalva na frente o `<i>` continua colado, e a tela não muda um
-    # pixel: `.ltrava` é `display:none`.
     bloco_da_luz = (f'<span class="gc-luz">{monta_ressalva("luz-espera")}'
                     f'{trava}{botao}</span>')
-    # A CLASSE E O ATRIBUTO SÃO AS DUAS ÚNICAS COISAS DE FORMA QUE `conectado`
-    # decide, e as duas têm dono no piloto: `off` é o que o passo `1b` escreve e
-    # o `1c` tira; `data-conectado` é o que a folha do `monta.py` lê para apagar
-    # widget de lugar sem aparelho (regra S-04). O desenho nasce dizendo o mesmo
-    # que o produto vai dizer — sem isso o cartão pisca o estado errado até a
-    # primeira carga chegar.
     marca = "" if conectado else ' off'
     diz = "" if conectado else ' data-conectado="nao"'
-    # O ÚNICO PIXEL QUE ESTA CURA MUDA, e ele é a bancada alcançando o produto.
-    # Medido em 07/09/2026 com o Chrome, a Gestão aberta, as duas fotos
-    # comparadas linha a linha: 2 linhas de 3.883 diferem, e as duas são a borda
-    # de cima dos cartões do P3 e do P4 — `--border-sutil` (#343746) virou
-    # `--border-forte` (#44475A). Quem a pinta é a regra S-04 do `monta.py`,
     # `[data-controle][data-conectado="nao"]:not(.vazia){border-color:…}`, e ela
-    # já valia NA TELA DELA: o passo `1b` do piloto escreve esse atributo nos
-    # lugares sem dono a cada tique. O desenho é que mostrava uma borda que o
-    # produto nunca desenha. Nada mais mudou — nem largura, nem altura, nem uma
-    # letra.
 
-    # O `title` DA LINHA: com aparelho ele explica o gesto de mirar; sem
-    # aparelho não há o que mirar, e a frase é a que o ramo vazio já dizia.
     dica_linha = (f"{SO_ESTE_DICA} A fita do topo passa a apontar para ele."
                   if conectado else "Nenhum controle neste lugar.")
-    # A BORDA NEUTRA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026. O
-    # `title` do resumo confessava, sem aparelho no cabo, que a cor não tinha
-    # sido lida; é confissão sobre um estado nosso, e a ordem dela de 13/09 a
-    # tira da tela. Com a cor lida a dica fica; sem ela, o `<span>` não tem dica.
     dica_da_borda = (' title="A borda é a cor lida deste aparelho."'
                      if (conectado and not no_radio) else "")
-    # O CARTÃO DO CONTROLE — 25/09/2026, o desenho de quem coordena, pedido
-    # dela: *«tá quebradíssima a 8»*. A linha do acordeão virou um CARTÃO por
-    # lugar, os quatro lado a lado (a mesa da aba é de quatro), no molde da aba
-    # Sistema que ela aprovou: o número e o dono em cima, o aparelho, as seis
-    # linhas de estado com a pílula de valor, e o ligável da economia embaixo.
-    # Os endereços são os mesmos de antes (`dono`, `nome`, `plastico`, os seis
-    # `est-*`, `desenho`, `economia`, `luz-*`): o produto pinta o cartão como
-    # pintava a linha.
     return f'''          <div class="gc-item gc-{c["pref"]}{marca}" data-controle="{c["pref"]}"{diz}>
             {barra}
             <div class="gc-cabeca">
@@ -2398,98 +1632,39 @@ def linha_do_controle(c):
           </div>'''
 
 
-# ---------------------------------------------------------------------------
-# As contas que o texto do exame cita — contadas, nunca digitadas.
-# ---------------------------------------------------------------------------
 POR_NOMEAR = [v for v in RADIOS_VIZINHOS if v[2]]
 JA_NOMEADOS = [v for v in RADIOS_VIZINHOS if not v[2]]
-#: "o Player 1 e o Player 4" — a lista escrita por extenso, do jeito que se lê.
 JOGADORES_NO_CABO = " e o ".join(f"Player {c['jogador']}" for c in NO_CABO)
-
 
 
 def _plural(n, um, muitos):
     return um if n == 1 else muitos
 
 
-# ---------------------------------------------------------------------------
-# POR QUE TRÊS QUADROS, e o que cada decisão de 28/08 custou em altura.
-#
-# A conta de moldura não mudou: cada quadro custa 54px (28 do topo, 24 do
-# padding do corpo, 2 de borda) e o miolo gasta 14 entre um e outro. Quatro
-# quadros são 258px dos 508 úteis antes de qualquer conteúdo, e por isso o
-# Desempenho continua sendo SEÇÃO do terceiro, e não um quarto quadro — o que
-# também é o que ela pediu: *"embaixo e separado"*, dentro do "Rádio e
-# adaptadores". Os turnos são POR ADAPTADOR, e o adaptador é a linha da tabela
-# logo acima.
-#
-# O QUE ESTA LEVA MEXEU NA ALTURA, medido no Chrome:
-#   – "Microfone e botões" saiu do quadro (86px com a margem da sub-seção) e os
-#     campos dele desceram para dentro de cada controle;
 #   – "O que só você sabe" saiu, e ele NÃO paga nada: a coluna media 110px de  # (noqa-acento: verbo medir, imperfeito)
-#     conteúdo contra 150 da coluna do exame, que é quem manda na altura;
-#   – o acordeão fecha três dos quatro, mas custa mais do que a grade 2×2 que
-#     ele substitui: quatro linhas em coluna, e não duas fileiras de dois.
-# O número final está na LEGENDA, com o que teria de sair para caber.
-# ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# OS NÚMEROS DA APERTADA, medidos no Chrome em 28/08 e usados na legenda. Ficam
-# aqui, e não escritos na prosa, porque a prosa envelhece calada.
-#
-# A ORDEM DOS QUADROS MUDOU, e ela é o que devolveu o terceiro para a tela. Só
-# os quadros ACIMA de um decidem quanto dele aparece: com "Está tudo certo?" e
-# "Gestão de Controles" na frente somando 469px, sobravam 29 para o terceiro — a
-# barra do título e nada mais. A conta é fria: para o terceiro mostrar os 64px
-# que a régua exige (título + primeira linha), os dois da frente têm de somar no
-# máximo 434. Não havia arranjo dos três em que "Está tudo certo?" viesse antes e
-# a soma coubesse; há um em que ela vem depois.
-# ---------------------------------------------------------------------------
-ALTURA = 828      # o que a aba mede, de ponta a ponta (o padding do miolo incluso)
-VISIVEL = 542     # o que o miolo mostra
-UTIL = 508        # o orçamento de conteúdo (o miolo menos o padding dele)
-ESCONDE = 286     # o que rola por dentro — eram 332 antes desta leva
+ALTURA = 828
+VISIVEL = 542
+UTIL = 508
+ESCONDE = 286
 ESCONDE_ANTES = 332
-#: A altura de cada quadro. Os nomes dizem QUAL, e não a posição: a posição
-#: mudou nesta leva, e um `Q1` teria passado a significar outro quadro sem que
-#: nenhuma linha da legenda mudasse de texto.
 Q_GESTAO, Q_EXAME, Q_RADIO = 219, 204, 343
-Q_GESTAO_ANTES = 265         # a Gestão de Controles antes de virar lista
-VISIVEL_3 = 75    # o que o terceiro quadro mostra hoje — a régua exige 64
+Q_GESTAO_ANTES = 265
+VISIVEL_3 = 75
 VISIVEL_3_ANTES = 29
-TETO_DOS_DOIS = 434  # o quanto os dois primeiros podem somar sem afogar o terceiro
-DESEMPENHO = 145  # a seção que fica embaixo, separada, no terceiro quadro
-INVENTARIO = 130  # as duas colunas do terceiro quadro, com os dois botões
-TODOS = 339       # a Gestão de Controles com os quatro abertos — eram 409
+TETO_DOS_DOIS = 434
+DESEMPENHO = 145
+INVENTARIO = 130
+TODOS = 339
 TODOS_ANTES = 409
-ESCONDE_TODOS = 406          # o que rola por dentro no estado "Todos" — eram 476
+ESCONDE_TODOS = 406
 ESCONDE_TODOS_ANTES = 476
-#: O token de altura de campo do esqueleto, LIDO do `topo.html`. Escrevê-lo aqui
-#: seria o oitavo literal — e o oitavo literal desta tela já esteve errado pelo
-#: dobro uma vez.
 H_ESCOLHA = int(re.search(r"--h-escolha:(\d+)px",
                           (pathlib.Path(__file__).resolve().parent / "topo.html").read_text()).group(1))
-ALT_TV = 1080     # a TV dela — a janela abre com 757 em todas as dez abas
-UTIL_TV = 831     # o que o miolo teria numa janela dessa altura
+ALT_TV = 1080
+UTIL_TV = 831
 
 
-# ===========================================================================
-# AS DUAS POP-UPS DA MESA — `#mapear-entradas` e `#mapear-entrada-a-entrada`.
-#
-# ELAS NÃO SÃO TELA NOVA: são as DUAS JANELAS QUE JÁ RODAM, desenhadas no
-# padrão do redesenho. A regra desta leva é uma só — *se a janela do produto
-# não tem o gesto, a pop-up não o desenha*:
-#
-#   · `app/widgets/mapa_da_mesa.py`      -> "Mapear Entradas"
-#   · `app/widgets/calibrar_entradas.py` -> "Mapear Entrada a Entrada"
-#
-# TODO TEXTO DE TELA SAI DO PRODUTO, LIDO POR AST — a mesma disciplina que os
-# sete números do rádio já seguem neste arquivo, e pela mesma razão: uma frase
-# digitada aqui vira a segunda versão dela no dia em que o produto a corrigir,
-# e régua nenhuma desta casa compara HTML com Python. O que o AST não alcança
-# (f-string, literal dentro de função) vai para o `_confere_no_produto`, que
-# reprova quando a frase deixa de existir lá.
-# ===========================================================================
 MAPA = _constantes(
     R / "src/hefesto_dualsense4unix/app/widgets/mapa_da_mesa.py",
     {"EXPLICACAO", "ROTULO_APARELHOS", "ROTULO_TIRAR", "ROTULO_EXTENSAO",
@@ -2505,10 +1680,6 @@ CALIB = _constantes(
      "CONVITE_DO_ENCAIXE", "PROCURANDO", "SEGUNDOS_ATE_O_NO",
      "SEGUNDOS_ATE_A_VIBRACAO"})
 
-#: As duas perguntas da sala, lidas de onde elas moram HOJE. Elas mudam-se para
-#: a "Mapear Entradas" nesta pop-up (`aba08.py` já registra a razão na legenda:
-#: *"lá elas preenchem um vazio real"*), e vêm com pergunta, dica e as três
-#: opções literais — nada aqui é redação nova.
 SALA = _constantes(
     R / "src/hefesto_dualsense4unix/app/actions/config/secao_mesa.py",
     {"_PERGUNTA_DA_ALTURA", "_DICA_DA_ALTURA", "_PERGUNTA_DA_VISADA",
@@ -2516,15 +1687,7 @@ SALA = _constantes(
 
 
 def _confere_no_produto(caminho, frases):
-    """Reprova quando uma frase de tela deixa de existir no fonte do produto.
-
-    O AST lê constante de módulo; ele não alcança literal dentro de função nem
-    f-string. O veredito de cada entrada (`arranjo_da_mesa.julgar`) e a frase
-    dos dois relógios (`calibrar_entradas.OS_DOIS_RELOGIOS`) são justamente
-    isso. Sem esta conferência a tela ficaria com uma CÓPIA muda: o produto
-    trocaria "vale evitar" por outra palavra e o mockup continuaria verde,
-    mostrando à Vitória uma tela que o produto não produz mais.
-    """
+    """Reprova quando uma frase de tela deixa de existir no fonte do produto."""
     fonte = pathlib.Path(caminho).read_text()
     faltam = [f for f in frases if f not in fonte]
     if faltam:
@@ -2532,9 +1695,6 @@ def _confere_no_produto(caminho, frases):
                          f"{faltam} — a pop-up copiava essa frase.")
 
 
-#: O julgamento por entrada, palavra por palavra de `arranjo_da_mesa.julgar`.
-#: Só os estados que ESTA janela produz: ela nunca calcula plano, então os três
-#: do modo ideal (`chega`, `sai`, `fica`) não entram.
 _JULGAR = R / "src/hefesto_dualsense4unix/integrations/arranjo_da_mesa.py"
 V_OCUPADA = "ocupada"
 V_INDISPONIVEL = "indisponível"
@@ -2553,13 +1713,7 @@ _confere_no_produto(_JULGAR, [
     'f"colada no {vizinho.tipo}, na entrada {entrada.par}"',
 ])
 
-#: Os dois relógios da calibração. Os NÚMEROS saem do produto por AST; a frase
-#: é f-string e por isso vive aqui, com o portão acima guardando as duas pontas
-#: dela contra uma reescrita silenciosa.
 def _virgula(n):
-    # O DONO ÚNICO É `app.fala_do_mapa.formata_pt_br` — 26/08/2026. Aqui havia
-    # a conta reescrita, byte a byte igual à dele. A saída não muda; o que muda
-    # é que no dia em que o arredondamento mudar, esta linha não fica para trás.
     from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 
     return formata_pt_br(n)
@@ -2582,41 +1736,10 @@ def ajuda(txt, largura=""):
     return f'<span class="ajuda">?<span class="dica"{st}>{txt}</span></span>'
 
 
-# ---------------------------------------------------------------------------
-# A CENA — o mesmo mundo que a aba já mostra, um passo antes e um passo depois.
-#
-# NADA AQUI É INVENTADO NUM SENTIDO E DERIVADO NOUTRO: as duas linhas da tabela
-# de adaptadores desta aba (`ADAPTADORES`) e as duas frases do exame ("o
-# adaptador Bluetooth na Entrada 3 e o receptor do teclado na Entrada 4 saem do
-# mesmo controlador USB 3.0"; "a Entrada 9 é de um controlador que só ela usa")
-# são o enunciado. A cena é o que TEM de ser verdade para as duas valerem.
-#
-# O RÓTULO DE UM APARELHO É `espécie · nome do kernel`, e o caminho fica à
-# vista de propósito — `mapa_da_mesa.rotulo_do_aparelho`: os dois adaptadores desta
-# bancada são o mesmo 2357:0604, e a espécie sozinha ofereceria dois itens
-# idênticos. A cena repete a lição com DOIS teclados (`3-4` e `1-4`).
-#
-# "Aparelho de entrada" NÃO É PALPITE: o censo classifica pela interface 0
-# (`censo_do_barramento._especie`), e `mapa_das_portas._classe_do_motor` diz com
 # todas as letras que o DualSense por cabo é `03/00/00` — classe de entrada sem
-# protocolo de arranque. Logo o censo o nomeia pela classe, "Aparelho de
-# entrada", e o MOTOR fica sem classe para ele (`""`) — que é o que acende a
-# confissão de espécie mais abaixo.
-# ---------------------------------------------------------------------------
-#: `(espécie, nome do kernel, entrada em que ela o pôs, o que é na mesa dela)`
 CENSO = [
     ("Aparelho de entrada", "1-2", "1",   f'o P{CONECTADOS[0]["jogador"]} {CONECTADOS[0]["nome"]}, no {"BT" if e_radio(CONECTADOS[0]) else "USB"}'),
     ("Mouse",               "1-3", "7",   "o receptor do mouse"),
-    # O SEGUNDO APARELHO DE ENTRADA É O SEGUNDO CONECTADO, não o `MESA[3]` —
-    # 01/09/2026. Ele citava *"o P4 White, no cabo"*, e o P4 está DESCONECTADO
-    # desde que ela mandou a mesa ter dois: o tooltip anunciava, na entrada 2, um
-    # aparelho que não está na bancada.
-    #
-    # É a mesma família do que já se curou hoje na Iluminação (o botão de player
-    # dizia *"o Galactic Purple, que tem o 3 hoje"* de um controle fora da mesa)
-    # e na Navegação (quem navega o PC saía da `MESA`). Toda frase que nomeia um
-    # controle tem de sair de `CONECTADOS` — a `MESA` sabe dos quatro lugares, e
-    # a TELA só pode falar dos que estão ocupados.
     ("Aparelho de entrada", "1-5", "2",   f'o P{CONECTADOS[1]["jogador"]} {CONECTADOS[1]["nome"]}, no {"BT" if e_radio(CONECTADOS[1]) else "USB"}'),
     ("Bluetooth",           "3-3", "3",   f'o adaptador “{ADAPTADORES[0]["nome"]}”'
                                           f' — {ADAPTADORES[0]["modelo"]}'),
@@ -2625,22 +1748,13 @@ CENSO = [
     ("Não identificado",    "4-1", "5",   "o sistema não diz o que é"),
 ]
 
-#: O que está na mão dela — o primeiro tempo do gesto de dois tempos. É o
-#: adaptador que a ordem de serviço desta mesma aba manda mudar de lugar, e por
-#: isso a pop-up mostra a ordem sendo cumprida em vez de uma tela em repouso.
 ESCOLHIDO = "3-3"
 
-#: As faces que ela desenhou, na ordem em que desenhou. Os números das entradas
-#: são do GABINETE e não se repetem entre faces (`LogicaDoMapa.acrescentar_entrada`
-#: dá sempre o menor inteiro que ainda não existe em face nenhuma).
 FACES = [
     ("Frente do gabinete", ["1", "2"]),
     ("Traseira", ["3", "4", "5", "6", "7", "8", "9", "10"]),
 ]
 
-#: A entrada por extensão: `10` ganhou uma filha `10a`, vazia. A existência do
-#: extensor é DECLARAÇÃO dela — cabo passivo não tem descritor USB e nenhuma
-#: leitura de `/sys` o distingue (`mapa_da_mesa._Janela._quadrado`).
 EXTENSAO = {"10": "10a"}
 
 ONDE_ESTA = {no: em for _, no, em, _ in CENSO if em}
@@ -2648,12 +1762,7 @@ QUEM_ESTA = {em: (esp, no) for esp, no, em, _ in CENSO if em}
 
 
 def _irmas():
-    """As entradas de duas em duas, na ordem em que ela desenhou a face.
-
-    É a `irmas_de` do produto (`mapa_das_portas`), e é ela que faz o juízo
-    "colada no vizinho" existir. A filha por extensão NÃO tem irmã por desenho —
-    o cabo de um metro a põe longe de todo mundo — e essa ausência não é lacuna.
-    """
+    """As entradas de duas em duas, na ordem em que ela desenhou a face."""
     par = {}
     for _, numeros in FACES:
         for i in range(0, len(numeros) - 1, 2):
@@ -2666,19 +1775,12 @@ PARES = _irmas()
 
 
 def veredito(n, esticada=False):
-    """O que `arranjo_da_mesa.julgar` diz desta entrada, com o Bluetooth na mão.
-
-    A ordem das perguntas é a do produto, e ela importa: ocupada vence tudo,
-    indisponível vem antes do juízo, e o juízo por classe é o último.
-    """
+    """O que `arranjo_da_mesa.julgar` diz desta entrada, com o Bluetooth na mão."""
     if n in QUEM_ESTA:
         return "cheia", V_OCUPADA, f"{QUEM_ESTA[n][0]} — {P_TIRAR}"
     if n in EXTENSAO:
         return "cheia", V_INDISPONIVEL, P_EXTENSOR
     vizinho = QUEM_ESTA.get(PARES.get(n, ""))
-    #: `CLASSES_DE_RADIO` do motor = {bt, wifi, teclado, mouse}. Um receptor de
-    #: teclado ou de mouse é rádio de 2,4 GHz tanto quanto o dongle Bluetooth —
-    #: é por isso que a entrada colada nele "vale evitar".
     if vizinho and vizinho[0] in ("Bluetooth", "Teclado", "Mouse"):
         return "evite", V_EVITAR, P_COLADA.format(tipo=vizinho[0], n=PARES[n])
     if esticada:
@@ -2686,99 +1788,20 @@ def veredito(n, esticada=False):
     return "serve", V_SERVE, P_SERVE
 
 
-#: As lacunas que ESTA cena produz, na ordem em que o produto as declara.
-#:
-#: MEDIDO no produto, e as duas primeiras não têm como não estar:
-#:   · `posicao`   — `mapa_das_portas.py:483-490` não é condicional: basta
-#:                   existir uma face.
-#:   · `velocidade`— esta janela nunca escreve `nos`; quem escreve é a outra
-#:                   (`calibrar_entradas.py:743-746`). Logo TODA entrada sai
-#:                   `usb=2`, e é por isso que nenhum plug desta tela é azul.
 #:   · `especie`   — os dois DualSense por cabo saem sem classe no motor.
-#: `par` NÃO entra: as duas faces têm número par de entradas.
-#: `regiao` NÃO entra: as duas têm pelo menos uma entrada com aparelho.
 LACUNAS = ["LACUNA_POSICAO", "LACUNA_VELOCIDADE", "LACUNA_ESPECIE"]
 
-# ---------------------------------------------------------------------------
-# A COLISÃO DE NOME QUE A POP-UP DESCOBRIU — CURADA NO PRODUTO EM 05/09/2026.
-#
-# A confissão da velocidade mandava a pessoa a uma tela pelo nome VELHO:
-# *"enquanto você não passar por «Calibrar as entradas», eu trato todas como
-# pretas"* — e o botão que a abre chamava-se, desde 28/08,
-# **Mapear Entrada a Entrada** (`D-MAPEAR-ENTRADAS-E-NAO-PORTAS`). A tela
-# mostrava o nome certo REMENDANDO a frase do produto aqui, com um `assert`
-# que parava a geração no dia em que o produto corrigisse.
-#
-# ESTE É O DIA, e os três lugares que o `assert` nomeava foram corrigidos:
-# `calibrar_entradas.TITULO_DA_JANELA`, `mapa_da_mesa.CONFISSAO
-# [LACUNA_VELOCIDADE]` e `secao_mesa._BOTAO_CALIBRAR`. A remenda sai junto —
-# uma tela que corrige uma frase JÁ CERTA é uma segunda verdade esperando para
-# divergir.
-#
-# `mapa_da_mesa.TITULO_DA_JANELA` já dizia "Mapear Entradas" e não entrava
-# nesta troca.
-# ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# A CONFISSÃO SAIU DO CORPO E VIROU DICA — decisão dela, 29/08/2026.
-#
-# A conta que a comprou está no CSS do `.mm-conf-linha`; aqui fica o TEXTO, e
-# ele continua derivado das mesmas constantes do produto — nada abaixo é
-# redação nova. Ele passa a viver em DUAS superfícies de hover:
-#   · `CONFISSAO_EM_DICA`  — na dica do `?` do `.tn-topo`, junto com o que já
-#     estava lá (é o pedido literal dela), em HTML;
-#   · `CONFISSAO_EM_TITLE` — no `title` da linha que ficou no corpo. **SAIU EM
-#     13/09/2026** (FRASES-E-DICAS-02): era confissão em primeira pessoa numa
-#     dica flutuante. A linha ficou com a contagem, e a lista inteira continua
-#     no `?`, que é ajuda.
-#
-# POR QUE NAS DUAS, E NÃO UMA APONTANDO PARA A OUTRA: uma dica que responde
-# "olhe noutro lugar" cobra um segundo gesto e ensina menos que uma que
-# responde. E repetir aqui não abre a porta que a regra da casa fecha — as
-# duas saem da MESMA constante, logo não há como uma envelhecer sem a outra.
-#
-# O `html.escape` não é zelo vazio: depois da troca acima a confissão da
-# velocidade carrega ASPAS RETAS em volta de “{MAPEAR_UMA_A_UMA}”, e aspa reta
-# dentro de `title="…"` fecha o atributo no meio da frase.
-# ---------------------------------------------------------------------------
 _CONFISSAO_ITENS = [f"· {MAPA['CONFISSAO'][k]}" for k in LACUNAS]
 CONFISSAO_EM_DICA = ("<b>" + html.escape(MAPA["CONFISSAO_ABERTURA"]) + "</b><br>"
                      + "<br>".join(html.escape(i) for i in _CONFISSAO_ITENS))
 
-#: A CONTA, por extenso — e ela é o que a linha do corpo entrega DE GRAÇA, sem
-#: hover nenhum. É dado derivado (`len(LACUNAS)`), não frase de tela: por isso
-#: pode nascer aqui sem ferir a regra de que todo texto sai do produto.
-#: O `raise` é portão: no dia em que a cena acender uma sexta lacuna, a
-#: geração PARA em vez de a tela publicar uma conta que não bate.
-#:
-#: A TABELA MUDOU-SE PARA O PACOTE — 03/09/2026, pela mesma razão do
-#: `caminho_do_mic`: a linha agora é REPINTADA com as lacunas da mesa dela, e
-#: duas tabelas de números por extenso divergiriam no dia em que uma crescesse.
 _POR_EXTENSO = _pacote08.PALAVRA_DA_CONTA
 if len(LACUNAS) not in _POR_EXTENSO:
     raise SystemExit(f"ERRO: a cena tem {len(LACUNAS)} lacunas e esta tela só "
                      f"sabe dizer {sorted(_POR_EXTENSO)} por extenso.")
 
-#: A linha que FICA no corpo, fora da `.moldura` — sempre à vista.
-#:
-#: OS TRÊS ENDEREÇOS SÃO DE 03/09/2026, e o defeito que eles fecham foi medido
-#: na mesa dela no mesmo dia: esta linha dizia **"três coisas"** — a conta da
-#: CENA — e o desenho dela tem **UMA** lacuna (`especie`). A `.mm-conf-linha`
-#: mora FORA do bloco `.mm-faces` que o pacote troca inteiro, então nunca era
-#: repintada; a dica listava as três da bancada. Uma confissão que confessa a
-#: mais manda ela procurar o que o produto já sabe, e é tão falsa quanto uma
-#: que cala.
-#:
-#:   · `confissao-nada`  no `<div>`, alvo `classe`: acende `sumido` quando o
-#:     pacote emite `sim`, isto é, quando NÃO há o que confessar. É a regra da
 #:     GTK — lá a linha não é desenhada quando `confissao_do_desenho` devolve
-#:     vazio. O `data-hef-quando` compara por IGUALDADE de propósito: sem ele o
-#:     alvo vira booleano e o sumiço acenderia justo quando há confissão;
-#:   · `confissao-dica` — os itens da mesa dela no `title` do `<span>`. **SAIU
-#:     EM 13/09/2026** (FRASES-E-DICAS-02), junto com a abertura em primeira
-#:     pessoa: a linha passou a dizer o ESTADO, `a08_conexoes.ROTULO_DA_CONTA`
-#:     mais a contagem, e os itens continuam no `?` do topo;
-#:   · `confissao-conta` no `<b>`: a palavra por extenso.
 CONFISSAO_NA_TELA = (
     f'<div class="mm-conf-linha" data-campo="confissao-nada" '
     f'data-hef-alvo="classe" data-hef-classe="sumido" data-hef-quando="sim">'
@@ -2786,12 +1809,6 @@ CONFISSAO_NA_TELA = (
     f'<b data-campo="confissao-conta">{_POR_EXTENSO[len(LACUNAS)]}</b>.'
     f'</span></div>')
 
-#: As três dicas de botão da janela do desenho — literais de dentro de função,
-#: logo fora do alcance do AST. O portão abaixo é quem as segura.
-# AS TRÊS GANHARAM NOME NO PRODUTO em 01/09/2026 e são LIDAS — eram uma
-# terceira grafia, e o `_confere_no_produto` logo abaixo existia só para
-# conferir que ela ainda batia com a do `mapa_da_mesa.py`. Um portão que compara
-# duas cópias é a confissão de que há duas.
 from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (  # noqa: E402
     DICA_ENUMERA,
     DICA_EXTENSAO,
@@ -2809,19 +1826,9 @@ _confere_no_produto(_MAPA_PY, [
 
 
 def ap_botao(esp, no, em, quem):
-    """Um aparelho da lista — o `Gtk.ToggleButton` de `_desenhar_aparelhos`.
-
-    Fica na lista mesmo depois de colocado, e clicável: o produto só lhe
-    acrescenta a dica de onde ele já está. Clicar no que já está ativo
-    DESESCOLHE.
-    """
-    # SEM DICA quando não há lugar: o produto também não põe
+    """Um aparelho da lista — o `Gtk.ToggleButton` de `_desenhar_aparelhos`."""
     # (`mapa_da_mesa._desenhar_aparelhos` só chama `set_tooltip_text` sob `if onde:`).
     dica = DICA_JA_COLOCADO.format(onde=com_artigo(na_frase(em), em=True)) if em else ""
-    # A PALAVRA "mesa" SAIU DA TELA — 05/09/2026, ordem dela. Esta metade da
-    # dica é da BANCADA, não do produto (o `_desenhar_aparelhos` da janela GTK
-    # não a põe): ela ETIQUETA o aparelho daquele botão. "O objeto:" é o termo
-    # que ela pediu, e diz o que a etiqueta é.
     return (f'<button class="mm-ap{" on" if no == ESCOLHIDO else ""}" '
             f'data-gesto="escolher-aparelho" '
             f'title="{dica} · O objeto: {quem}.">{esp}'
@@ -2829,11 +1836,7 @@ def ap_botao(esp, no, em, quem):
 
 
 def quadrado(n, esticada=False):
-    """Uma entrada — o botão de 84×56 px, com as suas até quatro linhas.
-
-    A ordem é a do produto (`_botao_de_entrada`): número, corpo, "por extensão"
-    e o veredito. O corpo é a espécie de quem está lá, ou `vazia`.
-    """
+    """Uma entrada — o botão de 84×56 px, com as suas até quatro linhas."""
     estado, texto, porque = veredito(n, esticada)
     dentro = QUEM_ESTA.get(n)
     corpo = dentro[0] if dentro else MAPA["ROTULO_VAZIA"]
@@ -2848,47 +1851,21 @@ def quadrado(n, esticada=False):
     if esticada:
         linhas.append(f'<span class="mm-ext">{MAPA["ROTULO_POR_EXTENSAO"]}</span>')
     linhas.append(f'<span class="mm-v">{texto}</span>')
-    # `data-v` É O VOCABULÁRIO QUE ESTA TELA JÁ TINHA — a CSS pinta por ele
-    # (`.mm-sq[data-v="cheia"]`), e o ouvinte do piloto já o capta. O
-    # `data-gesto` entra AO LADO, e não no lugar: trocar um pelo outro apagaria
-    # a cor do quadrado.
     return (f'<button class="mm-sq" data-v="{estado}" data-gesto="escolher-entrada" '
             f'title="{" ".join(dizeres)}">'
             + "".join(linhas) + "</button>")
 
 
 def celula(n):
-    """Uma entrada do gabinete, e só ela.
-
-    A FILHA POR EXTENSÃO SAIU DAQUI — 31/08/2026, e é o começo do que ela pediu:
-    *"até mesmo uma seção diferente pra hubs e onde ele tá conectado"*.
-
-    Ela morava empilhada DENTRO do quadrado da mãe, e o preço estava na medida:
-    a coluna do `10` ficava com dois quadrados de larguras diferentes (82 e 73px,
-    por causa do recuo de 9px que marcava a filiação), e a face inteira deixava
-    de ter colunas — medi **8 colunas distintas** numa grade de 7.
-
-    A regra que ela protegia continua de pé: a traseira segue com as OITO
-    entradas do metal (`mapa_da_mesa._Janela._desenhar_uma_face`). O hub não entrou na fileira
-    dela — ganhou face própria, e lá ele pode dizer o que aqui não cabia: em que
-    entrada está ligado.
-    """
+    """Uma entrada do gabinete, e só ela."""
     return '<div class="mm-cel">' + quadrado(n) + "</div>"
 
 
-#: DE QUAL FACE É CADA ENTRADA — para o hub poder dizer onde está ligado. Sai das
-#: próprias `FACES`, nunca digitado: mover uma entrada de face aqui muda o texto
-#: do hub junto, e não há um segundo lugar para esquecer.
 FACE_DA_ENTRADA = {n: nome for nome, numeros in FACES for n in numeros}
 
 
 def face_dos_hubs():
-    """A terceira face: o que não é buraco do gabinete.
-
-    Ela existe porque hub e entrada não são a mesma coisa, e a tela os desenhava
-    iguais: um hub é um aparelho que VOCÊ pôs na mesa e que CARREGA entradas —
-    o gabinete não sabe dele. Aqui ele diz de onde pendura.
-    """
+    """A terceira face: o que não é buraco do gabinete."""
     if not EXTENSAO:
         return ""
     celulas = "".join(
@@ -2904,16 +1881,6 @@ def face_dos_hubs():
 
 
 #: O DESENHO É DO PRODUTO desde 01/09/2026 — `gui/aba_conexoes.html_do_mapa`.
-#: Ele vivia aqui, e com ele vivia uma SEGUNDA CÓPIA do motor: a `veredito()`
-#: logo acima reescrevia à mão o `arranjo_da_mesa.julgar`, com os cinco
-#: vereditos digitados como constantes. Agora o gerador passa a CENA e o
-#: produto desenha — o mesmo desenho que o piloto usa com o gabinete DELA.
-#:
-#: A `veredito()` daqui FICA, e é ela que este gerador injeta: o motor de
-#: verdade precisa de uma `Bancada`, que precisa do censo do barramento — e um
-#: gerador de mockup não pode ler o `/sys` de quem o roda, senão a página sai
-#: diferente em cada máquina. A cópia deixou de ser a da TELA e passou a ser o
-#: que ela sempre foi: a cena de bancada.
 MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
     [{"nome": nome, "portas": numeros} for nome, numeros in FACES],
     quem_esta=QUEM_ESTA,
@@ -2928,16 +1895,6 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
            "novo_hub": _aba_conexoes.DICA_NOVO_HUB})
 
 
-#: AS TRÊS RESPOSTAS DE CADA PERGUNTA DA SALA, com o **id do esquema** ao lado
-#: do rótulo — os mesmos pares de `secao_mesa._declaracoes`. O rótulo é o que
-#: ela lê; o id é o que vai ao `maquina.json` (`MesaDeclarada.altura_da_antena`
-#: e `.linha_de_visada`), e é ele que o gesto manda no `machine.declare`.
-#:
-#: "NÃO SEI" É `""` AQUI, E VIRA `None` LÁ. O esquema é `Literal["acima",
-#: "abaixo"] | None` com `extra="forbid"`: mandar a string `"nao_sei"` faria o
-#: pydantic recusar o DOCUMENTO INTEIRO, e o sintoma na tela seria "não consegui
-#: gravar" em vez de "valor inválido" — é o que `secao_mesa._valor_do_seletor`
-#: (`:1498`) já resolve do mesmo jeito, e a razão está escrita lá.
 RESPOSTAS_DA_ALTURA = (("acima", "Sim"), ("abaixo", "Não"), ("", "Não sei"))
 RESPOSTAS_DA_VISADA = (("com_gente", "Sim"), ("livre", "Não"), ("", "Não sei"))
 _confere_no_produto(
@@ -2956,7 +1913,7 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
 
     A DICA É HOVER DO RÓTULO, e não um `?`: no produto ela é
     `texto.set_tooltip_text(...)` sobre o próprio `Gtk.Label` da pergunta
-    (`secao_mesa.py:650`). E tem de ser — ver o comentário do `.mm-sala` no CSS:
+    (`secao_mesa.py:419`). E tem de ser — ver o comentário do `.mm-sala` no CSS:
     dica dentro da `.moldura` é dica recortada.
 
     O QUE **NÃO** VEIO ANEXADO: o produto gruda a `moldura.QUANDO_VALE` no fim
@@ -3061,46 +2018,9 @@ TELA_MAPEAR = f'''
 '''
 
 
-# ---------------------------------------------------------------------------
-# `#mapear-entrada-a-entrada` — a cerimônia de um toque por aparelho.
-#
-# TRÊS TELAS, e não uma: os três estados que a janela tem, ligados pelos
-# PRÓPRIOS botões dela. Custa só HTML (`:target`, sem uma linha de script) e não
-# mente sobre transição nenhuma — responder a última pergunta leva ao fim, e
-# `[{ROTULO_VOU_MOSTRAR}]` é a única porta para a fase em pé.
-#
-# É O MESMO MUNDO DA OUTRA POP-UP, NO MESMO MOMENTO: a webcam acabou de ser
-# plugada e é o único aparelho sem lugar, logo a fase sentada tem UMA pergunta.
-# Por isso um clique numa face aqui leva de verdade ao fim — não é atalho de
-# mockup, é o que o produto faz.
-#
-# O QUE **NÃO** VEIO DO MOCKUP APROVADO DE 25/08 (`docs/process/sprints/
-# 2026-08-25-CALIBRAR-AS-ENTRADAS/mockup/calibrar-entradas.html`): ele é mais
-# rico que o produto em seis pontos que a janela nunca ganhou — barra de
-# progresso, [Próximo aparelho], [mudar o número], [Outro nome…], o recibo
-# "gravado" e o laudo de quatro blocos. O carimbo dela cobre aquele DESENHO;
-# esta pop-up desenha o CÓDIGO.
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# A SEÇÃO DO RÁDIO — o `mockup/mapa-do-radio.html` aprovado vira a cx8-3.
-# TRANSPLANTE-DA-SECAO-01, 23/09/2026.
-#
-# TRÊS COISAS SAEM DO DESENHO APROVADO, LIDAS E NÃO COPIADAS À MÃO: a folha de
-# estilo, o sprite dos ícones e a cena de exemplo (o CSV que ele embute). Copiar
-# à mão abriria a segunda grafia do desenho que ela aprovou — o defeito que o
-# `novo-layout/` pagou divergindo 25 KB em silêncio.
-#
-# O QUE NÃO SAI DE LÁ: o roteiro. O do desenho CALCULA a tela (Hz estimados,
-# sugestão, espectro inventado); aqui quem calcula é o pacote
-# (`a08_conexoes.campos_da_secao`), com os donos do produto. O roteiro desta
-# página só ABRE o que o Python já pintou — pergunta, painel, acordeão,
-# arrasto — e é por isso que ele cabe numa folha.
-# ---------------------------------------------------------------------------
 _DESENHO_DO_RADIO = R / "mockup/mapa-do-radio.html"
 _DESENHO_DO_RADIO_TXT = _DESENHO_DO_RADIO.read_text(encoding="utf-8")
 
-#: As classes do desenho que a tela renomeia. A palavra «fatia» não chega à
-#: tela nem como nome de classe (regra da leva: *nunca a palavra «fatia»*).
 _CLASSES_RENOMEADAS = {"fatias": "conta-da-vaga", "fatia": "pedaco"}
 
 
@@ -3123,13 +2043,7 @@ def _escopo(seletores: str) -> str:
 
 
 def _css_do_radio() -> str:
-    """A folha do desenho aprovado, com escopo `.radio` e sem o que é da página.
-
-    Saem: o `body` (a página é da aba) e a moldura do `.quadro` (a seção mora
-    no quadro da aba, que já tem borda e fundo) — do `.quadro` fica só o palco:
-    `position: relative` e o contexto de empilhamento que segura o painel e a
-    pergunta DENTRO da seção. Os `@keyframes` ganham o prefixo `rd-`.
-    """
+    """A folha do desenho aprovado, com escopo `.radio` e sem o que é da página."""
     corpo = re.search(r"<style>(.*?)</style>", _DESENHO_DO_RADIO_TXT, re.S).group(1)
     corpo = re.sub(r"/\*.*?\*/", "", corpo, flags=re.S)
     for velho, novo in _CLASSES_RENOMEADAS.items():
@@ -3143,7 +2057,6 @@ def _css_do_radio() -> str:
         if abre < 0:
             break
         cabeca = corpo[i:abre].strip()
-        # o bloco inteiro, com as chaves aninhadas do `@media`/`@keyframes`
         prof, j = 0, abre
         while j < len(corpo):
             if corpo[j] == "{":
@@ -3171,15 +2084,6 @@ def _css_do_radio() -> str:
     return "\n  ".join(saida)
 
 
-#: O QUE A PÁGINA DA ABA PÕE NAS MESMAS CLASSES e a folha do desenho não
-#: desfaz — medido lado a lado no Chrome (a caixa de cada peça na seção contra
-#: a mesma peça no `mapa-do-radio.html`). A folha do desenho vence onde diz
-#: alguma coisa; estas linhas apagam o que ela CALA e a página diz.
-#:
-#: AS SEIS ÚLTIMAS SÃO AS DECISÕES DELA DE 25/09/2026, que o desenho não tinha
-#: (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01): o nome do controle na forma
-#: `Nome ● Modelo do plástico ● Pn` (a coluna do nome vai de 13 a 30 caracteres,
-#: e o campo encosta o resto nele) e a caixa do adaptador que se arrasta.
 CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .btn{height:auto;padding-top:7px;padding-bottom:7px}
   .radio .btn.so-icone{padding:7px}
@@ -3305,8 +2209,6 @@ def _csv_do_desenho(ident: str) -> list[dict[str, str]]:
             for linha in cru[1:] if linha.strip()]
 
 
-#: O desenho escreve «Traseira»; a face do produto é a da cerimônia
-#: (`calibrar_entradas.FACES`), na mesma ordem das quatro do desenho.
 _FACES_DO_DESENHO = ("Frente do gabinete", "Traseira", "Num hub ou extensão", "Na escrivaninha")
 
 
@@ -3353,7 +2255,6 @@ def _cena_do_desenho() -> dict:
         for a in controles:
             voz = min(RADIO["HZ_AUDIO_COM_MIC"], parte * fracao_da_voz) if a["mic"] else 0.0
             a["hz_mov"], a["hz_voz"] = parte - voz, (voz if a["mic"] else None)
-    # O SINO: as quedas do desenho, na palavra do produto (o diário não chega cru).
     quedas = [q for q in _csv_do_desenho("quedas")]
     for lug in lugares:
         lug["quedas"] = [{"carimbo": 0.0, "quando": q["quando"],
@@ -3363,15 +2264,9 @@ def _cena_do_desenho() -> dict:
             lug["quedas_desde"] = "23/09"
     evitados = [{"lugar": x["a"], "ini": int(x["b"]), "fim": int(x["c"])}
                 for x in linhas if x["tabela"] == "evitado"]
-    # OS VIZINHOS SÃO SELOS, E NÃO FAIXAS: o produto não lê o canal de um
-    # teclado sem fio, e a tela não inventa a faixa dele (R10).
     tipo_do_desenho = {"teclado": "teclado", "mouse": "mouse", "wifi": "wifi"}
     vizinhos = [{"id": x["id"], "tipo": tipo_do_desenho.get(x["a"], ""), "nome": x["nome"],
                  "sugestao": ""} for x in linhas if x["tabela"] == "espectro"]
-    # «HUB DA MESA» NÃO CHEGA À TELA: `mesa` é palavra aposentada na tela (E3 da
-    # PALAVRA-01, decisão dela de 06/09), e o portão `palavra-de-tela` a acusa no
-    # `title` do grupo. O sinônimo é o que a própria cena usa na face «Na
-    # escrivaninha». Só o NOME do grupo muda; o desenho é o mesmo.
     portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
                "grupo": re.sub(r"\bmesa\b", "escrivaninha", x["d"]), "rotulo": x["a"]}
               for x in linhas if x["tabela"] == "porta"]
@@ -3380,21 +2275,11 @@ def _cena_do_desenho() -> dict:
     vazio = min(lugares, key=lambda lg: (sum(1 for a in aparelhos
                                              if a["lugar"] == lg["id"] and a["ponte"]),
                                          lg["varrendo"]))
-    # O QUE ESTÁ PERTO É DE UM ADAPTADOR, e o painel mostra só o do chip aceso
-    # (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 3): os achados do desenho são
-    # do adaptador do «Conectar» dele, e o painel do mockup continua com eles.
     perto = [{"id": x["id"], "adaptador": vazio["id"], "nome": x["nome"], "tipo": x["tipo"],
               "forca": int(x["forca"]), "conhecido": x["conhecido"] == "sim"}
              for x in _csv_do_desenho("perto")]
     quem_sai = [a for a in aparelhos if a["lugar"] == cheio["id"] and a["ponte"]][-1]
-    # O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026): os estados que a lista
-    # dela de 26/09 pediu, na caixa aberta — o controle que ela moveu e não
-    # chegou (com o «Tentar de Novo» e o X), e um controle pareado ali e
-    # desligado (com o «⋮»). E os dois receptores sem nome que o kernel
-    # sugere, com a palavra junto.
-    # A LINHA TEM APARELHO (ESQUECER-E-LIMPAR-AS-CONEXOES-01): o desenho
     # desenhava um «DualSense · Não Conectou» sem aparelho — a busca que
-    # ninguém respondeu, o *«controle fantasma»* dela. A linha do desenho é a
     # de um controle de verdade, com nome e cor. <!-- noqa-acento: citação literal dela -->
     aparelhos.append({"id": f"nao-conectou-{cheio['id']}-P5", "aparelho": "P5",
                       "tipo": "controle", "lugar": cheio["id"], "nome": "Lia",
@@ -3415,7 +2300,6 @@ def _cena_do_desenho() -> dict:
         "ocupado": False, "aberto": cheio["id"], "perto": perto,
         "destino_do_conectar": vazio["id"],
     }
-    # O «Procurar» do desenho diz o que as caixas dizem: aceso com uma busca.
     cena["procurando"] = (_pacote08.PROCURAR_LIGADO
                           if any(lg.get("conectando") for lg in lugares)
                           else _pacote08.PROCURAR_DESLIGADO)
@@ -3424,13 +2308,7 @@ def _cena_do_desenho() -> dict:
 
 CENA_DO_RADIO = _cena_do_desenho()
 CAMPOS_DO_RADIO = _pacote08.campos_da_secao(CENA_DO_RADIO)
-#: A sala do DESENHO nasce com os Hz escritos; a do produto, com o lugar deles
-#: vazio — o tique os pinta pelas listas `hz-*` (ver `a08_conexoes.html_da_sala`).
 SALA_DO_DESENHO = _pacote08.html_da_sala(CENA_DO_RADIO, com_hz=True)
-#: O «PROCURAR» (O-CONECTAR-E-UM-INTERRUPTOR-01): o pedido dela, *«um switch
-#: ali no lado esquerdo do conectar pra clicar e ativar igual o botão modo
-#: freestyle na aba jogar»*. A mesma peça no cabeçalho da seção e no do painel
-#: (o véu do painel cobre o da seção): o mesmo campo e o mesmo gesto, e o
 #: pintor acende os dois. <!-- noqa-acento: citação literal dela -->
 INTERRUPTOR_PROCURAR = (
     '<button class="cadeado'
@@ -3441,22 +2319,12 @@ INTERRUPTOR_PROCURAR = (
     '<span class="p"></span>Procurar</button>')
 SPRITE_DO_RADIO = _sprite_do_radio()
 
-#: O CONVITE DA FASE EM PÉ, CURTO — R9 dela: *"usarmos um dualsense e o USB
-#: pra sairmos de porta em porta"*. A frase longa do produto
-#: (`calibrar_entradas.CONVITE_DO_ENCAIXE`) vai para o «?» da tela, inteira.
 ENCAIXE_CURTO = "Encaixe o DualSense numa entrada vazia."
 
-#: A DICA DO «QUEM ESTÁ NO AR». A do desenho terminava em *"as faixas com nome
-#: são o vizinho provável"*, e o produto não desenha faixa de vizinho: o canal
-#: de um teclado sem fio não se lê (R10 — nada estimado). Os vizinhos viram
-#: SELOS ao lado do título, e a frase diz isso.
 AJUDA_DO_AR = ("Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O "
                "hachurado são os canais que os adaptadores evitam; os selos são os rádios "
                "que o sistema vê perto.")  # noqa-acento (texto de tela)
 
-#: O roteiro da seção. Ele só ABRE o que o Python pintou: quem decide é o
-#: pacote, e o piloto leva cada `data-gesto` ao Python pelo ouvinte único (que
-#: escuta na CAPTURA — lê o `dataset` antes deste roteiro fechar a janela).
 SCRIPT_DA_SECAO_DO_RADIO = r"""
   <script>
   (function(){
@@ -3924,21 +2792,10 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
 _CALIB_PY = R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py"
 
 
-# ---------------------------------------------------------------------------
-# O MAPEAR NUM BOTÃO SÓ — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026. O fluxo
-# guiado que ela descreveu: *«Use um controle do dualsense (o mesmo), vá de
-# porta em porta conectando ele, carrega a informação que medimos, aí ele salva,
-# adiciona um nome e adiciona o posicionamento»*. A tela é só a moldura: o que
-# ela diz e o que mediu vêm da foto do dono do mapa (`a08_conexoes.
 # campos_do_mapear`), e o Salvar grava pelo dono. <!-- noqa-acento: citação literal dela -->
-# ---------------------------------------------------------------------------
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _ee  # noqa: E402
 
 #: A CENA DO DESENHO é a do meio do fluxo: o DualSense acabou de chegar à
-#: terceira entrada, e três já estão mapeadas — duas com nome e uma que ela
-#: deixou vazia (29/09/2026, O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01: a lista é
-#: das numeradas). O produto troca tudo pelo que a foto do dono disser no
-#: primeiro tique.
 _MP_CENA = _pacote08.campos_do_mapear({
     "estado": "porta",
     "porta": {"rotulo": "Entrada 3", "usb": "3.0", "hub": False, "storm": 0,
@@ -4007,43 +2864,15 @@ _confere_no_produto(_CALIB_PY, [
     'self.rotulo_contador.set_text("")',
 ])
 
-#: O único aparelho sem lugar — logo, a única pergunta da fase sentada.
 SEM_LUGAR = [(esp, no) for esp, no, em, _q in CENSO if not em]
 
-#: Quantas vagas a fase em pé oferece. As do DESENHO saem da conta; as outras
-#: são o que a própria tela avisa com todas as letras — *"o sistema me lista
-#: mais entradas do que existem no seu gabinete"* —, e quantas são é dado de
-#: CENA, do mesmo tipo que "Entrada 3" e "Sala" já são nesta aba.
 VAGAS_NO_DESENHO = (sum(len(ns) for _n, ns in FACES) + len(EXTENSAO)
                     - len(ONDE_ESTA))
 CONECTORES_QUE_NINGUEM_ALCANCA = 2
 EM_PE_TOTAL = VAGAS_NO_DESENHO + CONECTORES_QUE_NINGUEM_ALCANCA
 
-#: A peneira do jogo aberto, AMARRADA AO FOCO e não à janela estar aberta — a
-#: posse do vocabulário do controle é tomada no `focus-in` e solta no
-#: `focus-out` (`calibrar_entradas.py:865-866, 1113-1123`). Dizer "enquanto esta
-#: janela estiver aberta" prometeria o que o produto não faz nem quando a
-#: peneira existir.
-#:
-#: **ELA É ESPECIFICAÇÃO, E DEPENDE DA `ONDA-CONEXOES-10`**: hoje a peneira
-#: `botoes_para_o_jogo` está escrita e NÃO TEM CHAMADOR — é lápide viva do
-#: `portao_a_casa_sabe_e_o_produto_nao_faz.py:1883`. A frase já está no `title`
-#: do botão desta aba desde 28/08; aqui ela ganha o lugar certo e o contorno
-#: certo. Nenhum glifo de X/O/D-pad acompanha: `ao_payload_do_controle` também
-#: não tem chamador, então hoje o botão não anda na tela E chega ao jogo.
-#: **A FRASE SAIU DA TELA EM 29/08/2026, E ISSO É A REGRA DA CASA.** O mockup
-#: mostra o AGORA; a peneira NÃO EXISTE hoje — `botoes_para_o_jogo` está escrita
-#: e sem chamador, e a lápide do `portao_a_casa_sabe_e_o_produto_nao_faz.py:1883`
-#: diz o contrário com todas as letras: *"confirmar uma entrada com o cabo na mão
-#: dispara um pulo ou um tiro no jogo aberto atrás da janela"*.
-#:
-#: Declarar a pendência em COMENTÁRIO não basta: quem abre o mockup lê a TELA, e
-#: a tela prometia. O requisito não se perde — ele já está no contrato do
-#: redesenho (linhas 667 e 861) e é entrega da ONDA-CONEXOES-10. Quando a peneira
-#: ganhar chamador, a frase volta, e volta com o texto abaixo, que continua sendo
-#: o certo: ela fala de *janela na frente*, não de *janela aberta*, porque a posse
-#: do vocabulário do controle é tomada no `focus-in` e solta no `focus-out`
-#: (`calibrar_entradas.py:865-866, 1113-1123`).
+#: `portao_a_casa_sabe_e_o_produto_nao_faz.py:1188`. A frase já está no `title`
+#: e sem chamador, e a lápide do `portao_a_casa_sabe_e_o_produto_nao_faz.py:1188`
 PENEIRA_QUANDO_ELA_EXISTIR = (
     "Enquanto esta janela estiver na frente, o que você apertar no "
     "controle fica <b>aqui</b> — não chega ao jogo aberto atrás.")
@@ -4051,13 +2880,7 @@ PENEIRA = ""
 
 
 def cerimonia(ident, pergunta, contador, quem, botoes, dica, rodape):
-    """Uma das três telas do «Mapear Entrada a Entrada».
-
-    OS ATOS SÃO GESTOS DO LAÇO — ENTRADA-A-ENTRADA-02 e a TRANSPLANTE: cada
-    botão chama `entrada_a_entrada.o_laco()` pelo pacote, e quem diz a próxima
-    tela é o laço (`entrada-tela`), não um `href`. O contador e o «quem» têm
-    endereço nas três telas: o valor é um só, e só a tela aberta aparece.
-    """
+    """Uma das três telas do «Mapear Entrada a Entrada»."""
     return f'''
 <div class="tela-nova" id="{ident}">
   <div class="tn-cx">
@@ -4537,7 +3360,7 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O teto da vibração está nos dois, e a tela diz qual vale</h2>
   <ul>
-    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>{ABA_DO_TETO_GLOBAL}</b>, onde se chama <b>{CASA_DO_TETO_GLOBAL}</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:127</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>{ORC["ROTULOS_DOS_PERFIS"][PERFIL_DA_MESA]}</b>, que é <b>{TETO_GLOBAL}</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
+    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>{ABA_DO_TETO_GLOBAL}</b>, onde se chama <b>{CASA_DO_TETO_GLOBAL}</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:97</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>{ORC["ROTULOS_DOS_PERFIS"][PERFIL_DA_MESA]}</b>, que é <b>{TETO_GLOBAL}</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
     <li><b>O do controle sobrepõe</b>, e o campo de cada linha mostra qual é o caso: o P{POR_PREF["p3"]["jogador"]} está com a bateria em {DA_CONTROLES["p3"]["bat"]}% e sobrepõe com <b>{fala_do_teto(COM_TETO)}</b>; os outros dizem <b>{SEGUE_O_GLOBAL}</b>. A conta feita — <b>qual dos dois está valendo, de onde ele veio, e em que aba o global se muda</b> — está no <code>?</code> ao lado do campo, e não mais numa coluna de texto ao lado dele.</li>
     <li><b>Isso nasce como sprint sobre o que já existe.</b> A <code>POR-UNIDADE-01</code> (10/08) já grava política de vibração POR CONTROLE (<code>profiles/manager._controllers_to_rumble_scales</code>), relativa à global. <b>Falta uma frase sua:</b> quando o controle sobrepõe, ele vence sempre, ou o produto aplica o <code>min</code> como faz hoje entre o orçamento e a política? O <code>min</code> é o que impede um “teto” de <i>aumentar</i> a força.</li>
   </ul>
@@ -4559,33 +3382,11 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-# ---------------------------------------------------------------------------
-# A BANCADA SÓ SE ESCREVE QUANDO ALGUÉM RODA O GERADOR — 06/09/2026.
-#
-# TUDO ABAIXO ERA NÍVEL DE MÓDULO, e por isso um `import aba08` REESCREVIA
-# `mockup/08-conexoes.html` no disco. Medido na irmã `aba05` na costura de hoje:
-# bastou o `pytest` COLETAR um teste que a importava no topo para a bancada dela
-# mudar, com o estado vivo da mesa dentro — a página que ela abre trocada por
-# efeito de import, sem ninguém ter pedido geração nenhuma.
-#
-# É a mesma família do estrago de 28/08 que este arquivo já descreve no
-# cabeçalho (*"rodar uma CÓPIA do gerador REESCREVIA o mockup dela"*), com o
-# gatilho um degrau mais barato: lá era preciso RODAR uma cópia; aqui basta
-# IMPORTAR. `aba01.py` e `aba02.py` já tinham a guarda; oito não tinham.
-#
-# O QUE FICA DE FORA DELA: as definições (constantes, funções, `MIOLO`, `CSS`,
-# `LEGENDA`). Elas não tocam o disco, e é delas que os testes e o pacote
-# precisam — a régua do teto (`_pacote08.TETO_DO_EXAME`) e o `_exigir` do fim
-# leem o HTML JÁ GRAVADO, que é ato de geração.
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import os
     import shutil
     import tempfile
 
-    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
-    # PROVISÓRIA e só vai para a de verdade se passar (a cópia é a última
-    # linha deste bloco); a razão e a régua estão no fim do `aba04.py`.
     _real = onde.saida()
     _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-08-"))
     for _vizinha in _real.glob("*.html"):
@@ -4593,13 +3394,6 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("08-conexoes", "Conexões", MIOLO, CSS, legenda=LEGENDA)
 
-    # ---------------------------------------------------------------------------
-    # AS QUATRO TELAS ENTRAM IRMÃS DA `.janela`, fora do miolo.
-    #
-    # `monta()` não tem parâmetro para pop-up, e não devia ter: a `.tela-nova` é
-    # `position:fixed`, logo ela não pertence ao miolo nem custa um pixel dele.
-    # É a mesma injeção que o `aba06.py` faz desde 28/08, na mesma marca.
-    # ---------------------------------------------------------------------------
     p = onde.pagina("08-conexoes.html")
     x = p.read_text()
     MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
@@ -4609,39 +3403,6 @@ if __name__ == "__main__":
                                              TELA_MAPEAR_PORTAS))
     x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 
-    # ---------------------------------------------------------------------------
-    # O ENDEREÇO DOS CHIPS DA FITA — `IDENTIDADE-VEM-DE-CIMA-01`, 03/09/2026.
-    #
-    # O PRODUTO JÁ ESCREVE A FITA INTEIRA, e há mais de um dia:
-    # `hefesto_vivo.py` monta `carga["fita"] = _fita(ctx.mesa)` a cada tique e o
-    # `pintar()` faz `f.outerHTML = p.fita` — com a mesa VIVA, pelo mesmo
-    # `monta.fita()` que desenhou o mockup. O que faltava era a página DIZER isso:
-    # sem `data-campo`, os dois chips do desenho ("P1 · Cosmic Red · USB",
-    # "P2 · Starlight Blue · BT") contam como identidade congelada em toda régua
-    # desta casa — seis dos quinze achados desta aba eram só isto.
-    #
-    # COM O ENDEREÇO, A `regua_do_mockup` os julga PRODUTO pelo caminho que ela já
-    # tem: o chip endereçado SOME do DOM quando a fita se troca inteira, e um campo
-    # que sumiu é *"o bloco que continha este campo foi TROCADO pelo produto — o
-    # desenho não sobreviveu, que é o que se queria"* (`regua_do_mockup:_classificar`).
-    #
-    # **O REMENDO MORREU — 03/09/2026, e a promoção já tinha acontecido.** Este
-    # bloco escrevia o `data-campo` aqui porque `monta.py` é das DEZ abas e dez
-    # agentes editando a mesma linha seria conflito garantido; ficou escrito que *"o
-    # lugar definitivo é `monta.fita()`, e quem integrar as dez pode promovê-lo lá e
-    # apagar este bloco"*. Promovido ele foi (`monta.py:714`) — e o `apagar` não.
-    #
-    # O PREÇO ERA SILENCIOSO E SÓ APARECIA A QUEM RODASSE O GERADOR: com o atributo
-    # nos dois lugares, cada chip saía com `data-campo="fita-chip"` DUPLICADO. O
-    # navegador fica com o primeiro e a tela não muda uma letra — mas a página
-    # publicada e a que o gerador produz deixaram de ser a mesma, que é a divergência
-    # que a `mockup/` existe para não deixar acontecer.
-    #
-    # A CONTAGEM FICA, e é ela que morde: um chip a mais ou a menos que a mesa
-    # continua derrubando o gerador.
-    # `<label>` DESDE 05/09/2026 — `monta.fita()` emite o chip como controle,
-    # não como texto, para que ele possa clicar nas abas que escolhem (esta é
-    # uma delas). A contagem continua sendo a régua da forma.
     _CHIP = '<label class="chip plastico'
     _quantos = x.count(_CHIP)
     if _quantos != len(CONECTADOS):
@@ -4653,10 +3414,6 @@ if __name__ == "__main__":
     onde.gravar("08-conexoes.html", x)
 
 
-    # ---------------------------------------------------------------------------
-    # AS QUATRO RÉGUAS DA CONEXÕES — 31/08/2026, e cada uma guarda um pedido dela.
-    # Elas leem o HTML JÁ GRAVADO, que é a última coisa que a página é.
-    # ---------------------------------------------------------------------------
     _HTML = onde.pagina("08-conexoes.html").read_text()
     _falhas = []
 
@@ -4667,17 +3424,7 @@ if __name__ == "__main__":
 
 
     def _dentro_do_acordeao(doc: str) -> str:
-        """O `<div class="gc">…</div>` INTEIRO, contado por `div` aberto e fechado.
-
-        Ela existe por causa da escolha dela de 06/09/2026 — *os externos no
-        mesmo frame dos assentos* —, e a régua que a guarda precisa saber onde a
-        moldura ACABA. Um `split` no primeiro `</div>` pararia dentro da
-        primeira linha de controle, e a régua ficaria vermelha sobre a maquete
-        CERTA, que é o pior dos dois erros.
-
-        Devolve `""` quando a moldura não abre — e aí quem chama reprova, que é
-        o comportamento certo: sem acordeão não há frame em que estar dentro.
-        """
+        """O `<div class="gc">…</div>` INTEIRO, contado por `div` aberto e fechado."""
         marca = '<div class="gc">'
         inicio = doc.find(marca)
         if inicio < 0:
@@ -4700,11 +3447,6 @@ if __name__ == "__main__":
         return doc[inicio:]
 
 
-    # 1. ABRIR UMA MINIMIZA AS OUTRAS. Três rádios com o MESMO `name` — com
-    #    `checkbox` as três abriam juntas e a página passava 248px do miolo.
-    #    DUAS DESDE 25/09/2026: a Gestão de Controles entrou no Check-up, por
-    #    pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01) — sobram o Check-up e
-    #    Rádio e Adaptadores, e a exclusão entre as duas continua valendo.
     _ABRE = re.findall(r'<input class="abre" type="(\w+)"(?: name="([^"]*)")?', _HTML)
     _exigir(len(_ABRE) == 2, f"não são 2 seções que expandem, e sim {len(_ABRE)}")
     _exigir(all(t == "radio" for t, _ in _ABRE),
@@ -4714,24 +3456,12 @@ if __name__ == "__main__":
             "os rádios das seções não dividem o mesmo `name` — sem isso o navegador "
             "não tem como fechar a outra")
 
-    # 1b. O TETO É DO PACOTE, E O DESENHO TEM DE OBEDECÊ-LO — 06/09/2026,
-    #     08-Q7. O `+N` conta `quantos - cabem`, e o `cabem` sai de
-    #     `a08_conexoes.TETO_DO_EXAME`. Se o desenho ganhar um
-    #     sexto bloco de exame e o teto ficar em cinco, a linha passa a dizer que
-    #     sobrou o que na verdade coube — o `+N` mentindo pelo lado que ninguém
-    #     confere. A régua LÊ o HTML gerado; ela não recontabiliza a lista que o
-    #     produziu.
     _LINHAS_DO_EXAME = _HTML.count('data-campo="exame-calada"')
     _exigir(_LINHAS_DO_EXAME == _pacote08.TETO_DO_EXAME,
             f"o desenho tem {_LINHAS_DO_EXAME} linhas de exame e o `+N` conta sobre "
             f"{_pacote08.TETO_DO_EXAME} — os dois números têm de sair do mesmo "
             "lugar, senão a linha diz que sobrou o que coube")
 
-    # 1c. O ALVO DE SAÍDA TEM DE ALCANÇAR OS {len(MESA) + 1} RÁDIOS — 06/09/2026.
-    #     A lista `alvo-aberto` é distribuída por POSIÇÃO no DOM, e o pacote a
-    #     monta com `[todos, *TODOS_OS_LUGARES]`. Um rádio sem endereço faria a
-    #     lista escorregar: o valor do P1 cairia no P2, e a tela apontaria o
-    #     controle errado — que é pior do que o defeito que esta cura fecha.
     _MARCADOS = _HTML.count('data-campo="alvo-aberto" data-hef-alvo="marcado"')
     _exigir(len(MESA) + 1 == _MARCADOS,
             f"são {_MARCADOS} rádios do acordeão com endereço e a mesa tem "
@@ -4741,71 +3471,32 @@ if __name__ == "__main__":
             "mais de um rádio do acordeão nasce `checked` — o desenho não pode "
             "afirmar dois alvos de saída ao mesmo tempo")
 
-    # 1d. AS RESSALVAS, uma por aviso que a casa sabia e a tela não
-    #     dizia. A régua cobra o ENDEREÇO, e não a frase: a frase é do dono no
-    #     produto e muda quando ele mudar; o que não pode sumir é o lugar onde
-    #     ela cabe. Endereço que some é campo que o piloto não acha e escreve
-    #     zero — calado, que é a forma em que os quatro viviam até hoje.
-    # `hub-em-comum` e `gabinete-contagens` saíram em 23/09/2026 com a seção
-    # do rádio (TRANSPLANTE-DA-SECAO-01): a tabela a que elas respondiam não
-    # existe mais, e o «junto» e o selo das portas dizem o que elas diziam.
     for _campo in ("sem-driver", "radio-fragil"):
         _exigir(_HTML.count(f'class="ressalva" data-campo="{_campo}"') == 1,
                 f"a linha de ressalva `{_campo}` não está na página — o dono da "
                 f"frase existe no produto e a tela volta a não ter onde escrevê-la")
 
-    # 1e. OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305
-    #     do CSV) com a escolha DELA do mesmo dia por cima: *no mesmo frame dos
-    #     assentos*. O endereço saiu da `.ressalva` de baixo e entrou no `.gc`,
-    #     e a régua cobra as DUAS metades — sozinha, cada uma fica verde sobre
-    #     a maquete que ela recusou.
     _exigir(_HTML.count('data-campo="externos-lista" data-hef-alvo="html"') == 1,
             "os controles que o Hefesto só vê ficaram sem endereço — o dono da "
             "frase existe no produto (`home_actions._format_external_title` e as "
             "duas irmãs) e a tela volta a não ter onde escrevê-la")
-    #     A SEGUNDA METADE: o endereço está DENTRO da moldura do acordeão. A
-    #     conta é por `div` aberto e fechado a partir do `<div class="gc">`,
     #     porque cada linha de controle traz meia dúzia de `<div>` dentro — um
-    #     `split` no primeiro `</div>` pararia dentro do primeiro cartão.
     _exigir('data-campo="externos-lista"' in _dentro_do_acordeao(_HTML),
             "o bloco dos externos saiu de dentro do acordeão dos controles — "
             "ela escolheu o MESMO frame em 06/09/2026, e a ressalva à parte é "
             "a maquete que ela recusou")
-    #     E A VAGA É `display:contents`: sem ela as linhas todas caem num item
-    #     só do `flex-direction:column`, empilhadas dentro de uma célula — que é
-    #     a faixa à parte de volta, com outro nome.
     _exigir(".gc .ext-vaga{display:contents}" in _HTML,
             "a vaga dos externos deixou de ser `display:contents` — as linhas "
             "voltam a empilhar dentro de um item só do acordeão")
 
-    #     E NENHUM APARELHO DE EXEMPLO NASCE DENTRO DELA: uma linha cravada aqui
-    #     afirmaria um 8BitDo ligado que ninguém mediu, que é o defeito exato que
-    #     a tabela dos adaptadores e o mapa do gabinete já pagaram nesta aba.
-    #     A RÉGUA CASA A MARCAÇÃO, E NÃO O TOKEN SOLTO: `_HTML` é o documento
-    #     INTEIRO, `<style>` incluído, e `"ext-linha" not in _HTML` reprovava a
-    #     própria regra de CSS que faz a linha existir. É a armadilha nomeada no
-    #     `COMO-OLHAR-A-TELA.md` — *"régua que casa um token em QUALQUER lugar
-    #     do texto"* —, e ela reprovou aqui na primeira volta.
     _exigir('class="ext-linha"' not in _HTML,
             "uma linha de controle externo nasceu no desenho — a tela estaria "
             "afirmando um aparelho que ninguém mediu")
 
-    # 2. O RESPIRO DO RÓTULO QUE EXPANDE. O `.quadro-topo` do esqueleto é
-    #    `padding:11px 14px 0`: sem esta regra sobra 1px embaixo do texto.
     _exigir(".quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}" in _HTML,
             "o rótulo das seções que expandem perdeu o respiro de baixo — volta a "
             "1px contra os 12 de cima, que é o que ela viu nas duas fotos")
 
-    # 3. O LUGAR DE QUEM NÃO ESTÁ NA MESA. As duas metades: o nome novo presente, e
-    #    o rótulo de mesa daquele controle AUSENTE — tirar só uma delas foi como uma
-    #    cura desta casa passou pela metade em 31/08.
-    #
-    #    ELAS CONTINUAM CERTAS DEPOIS DA CURA DE 07/09, e é bom dizer por quê: o
-    #    lugar vazio ganhou os endereços do cheio, e não o TEXTO dele. O `nome`
-    #    nasce com `nome_do_lugar_vazio` — que termina em `Desconectado</span>` —
-    #    e o `rotulo(c)` continua fora da página. Duas metades que mediriam o
-    #    mundo de ontem seriam estas; medidas, as duas seguem verdes sem tocar
-    #    numa letra. O que NÃO existia era régua sobre os endereços, e ela é a 3b.
     _FORA = [c for c in MESA if not c.get("conectado", True)]
     _exigir(_HTML.count("Desconectado</span>") == len(_FORA),
             f"não são {len(_FORA)} lugares 'Desconectado' na Gestão de Controles")
@@ -4813,39 +3504,11 @@ if __name__ == "__main__":
         _exigir(rotulo(_c) not in _HTML,
                 f"o rótulo de mesa do Player {_c['jogador']} continua na tela — ele não está na mesa")
 
-    # 3b. OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE ENDEREÇOS — 07/09/2026, e
-    #     esta é a régua que faltava no dia em que o defeito nasceu.
-    #
-    #     O DEFEITO, MEDIDO COM OS QUATRO DUALSENSE DELA NA MESA: o daemon
-    #     publicava quatro, a carga chegava com os quatro em `colunas` e em
-    #     `ocupados`, e a tela mostrava DOIS. O passo 2 do piloto procura
-    #     `data-campo="k"` DENTRO de `[data-controle="pN"]`; o lugar vazio tinha
-    #     o endereço do BLOCO (cura de 03/09) e nenhum endereço de CAMPO, então o
-    #     dado dela chegava e não tinha onde pousar.
-    #
-    #     A RÉGUA COMPARA CONJUNTOS, e não conta ocorrências: `mic-existe`
-    #     aparece DUAS vezes no mesmo cartão de propósito (o `<b>` do resumo e o
-    #     `<select>` do corpo — um fato, um endereço, dois vestidos), e uma régua
-    #     por contagem obrigaria a repetir essa escolha em toda mudança futura.
-    #     O que não pode divergir é QUAIS campos existem.
-    #
-    #     E ELA LÊ O HTML GRAVADO, não a função que o produziu. Escrita como
-    #     `linha_do_controle(p1) tem os mesmos campos que linha_do_controle(p3)`
-    #     ela passaria na mordida que devolvesse os dois ramos duplicados — é o
-    #     defeito nomeado na régua 4 logo abaixo, *"uma régua que compara o
-    #     produto com a variável que o produziu mede a si mesma"*.
     _CAMPO = re.compile(r'data-campo="([^"]*)"')
 
 
     def _campos_do_lugar(pref: str) -> set[str]:
-        """Os `data-campo` DENTRO do cartão daquele lugar, por `div` balanceado.
-
-        O balanceamento é o mesmo do `_dentro_do_acordeao`, e pela mesma razão:
-        cada cartão traz meia dúzia de `<div>` por dentro (o cabeçalho, o corpo,
-        a ressalva da espera), e parar no primeiro `</div>` leria só a barra da
-        cor. Uma régua que lê MENOS do que o cartão daria verde sobre a metade
-        que ela não visitou.
-        """
+        """Os `data-campo` DENTRO do cartão daquele lugar, por `div` balanceado."""
         marca = f'data-controle="{pref}"'
         achado = _HTML.find(marca)
         if achado < 0:
@@ -4869,9 +3532,6 @@ if __name__ == "__main__":
 
     _LUGARES = [c["pref"] for c in MESA]
     _CAMPOS_POR_LUGAR = {p: _campos_do_lugar(p) for p in _LUGARES}
-    #     SELETOR CEGO É ERRO, NÃO SILÊNCIO: um cartão que a régua não achar
-    #     devolve conjunto vazio, e comparar vazio com vazio passaria calado no
-    #     dia em que os quatro sumissem.
     for _p, _campos in _CAMPOS_POR_LUGAR.items():
         _exigir(bool(_campos),
                 f"o cartão do {_p} não tem `data-campo` nenhum — ou ele sumiu da "
@@ -4891,15 +3551,6 @@ if __name__ == "__main__":
                 f"{_LUGARES[0]} não tem. O conjunto é IGUAL, não maior: um campo "
                 "só num lugar é a segunda grafia do mesmo fato")
 
-    # 4. QUEM CONTA CONTROLE CONTA QUEM ESTÁ NA MESA. A aba contava quatro em
-    #    silêncio: o Check-up prometia energia para "os 2 controles no cabo" contando
-    #    o P4, que não está.
-    #    A RÉGUA REFAZ A CONTA A PARTIR DA `MESA`, e NÃO lê `NO_CABO`/`CONECTADOS`.
-    #    Escrita como `f"{len(NO_CABO)} controle" in _HTML` ela PASSOU na mordida que
-    #    devolvia `NO_CABO = [... for c in MESA ...]`: o HTML nascia do mesmo valor
-    #    errado que a régua usava para procurar, e os dois concordavam. Uma régua que
-    #    compara o produto com a variável que o produziu não mede nada — mede a si
-    #    mesma. Aqui os números saem do HTML e a verdade sai de `MESA` + `conectado`.
     _na_mesa = [c for c in MESA if c.get("conectado", True)]
     _cabo = len([c for c in _na_mesa if not e_radio(c)])
     _radio = len([c for c in _na_mesa if e_radio(c)])
@@ -4914,10 +3565,6 @@ if __name__ == "__main__":
         return int(achado.group(1))
 
 
-    # O CANTO DA GESTÃO FICA LIMPO — 26/09/2026, pedido dela: o carimbo
-    # «Examinado …» e a contagem «4 controles • 4 BT» saíram do cabeçalho.
-    #    A trava lê o cabeçalho da seção e não cita os endereços velhos: a
-    #    paridade vigia a ausência deles, e a citação aqui seria a volta.
     _inicio_da_gestao = _HTML.index('id="cx8-2"')
     _topo_da_gestao = _HTML[_inicio_da_gestao:_HTML.index('class="quadro-corpo"', _inicio_da_gestao)]
     _exigir('class="conta"' not in _topo_da_gestao,
@@ -4930,12 +3577,6 @@ if __name__ == "__main__":
     _exigir(_numero(r"dos seus (\d+) controles", "o total da frase do rádio") == len(_na_mesa),
             f"a frase do rádio não fala dos seus {len(_na_mesa)} controles")
 
-    # 5. A SEÇÃO DO RÁDIO — TRANSPLANTE-DA-SECAO-01, 23/09/2026.
-    #    (a) todo campo que o pacote emite tem endereço na página, e todo
-    #        endereço da seção tem quem o emita;
-    #    (b) as duas âncoras das telas continuam âncoras: nenhum `data-gesto`
-    #        nelas, e nenhum gesto com o nome de uma âncora (a §P4);
-    #    (c) «fatia» não chega à tela, nem como classe.
     _SECAO = _HTML[_HTML.index('id="rd-secao"'):_HTML.index("window.__hefRadio")]
     _EMITIDOS = set(_pacote08.campos_da_secao(CENA_DO_RADIO)) | {
         "entrada-tela", "entrada-contador", "entrada-quem"}

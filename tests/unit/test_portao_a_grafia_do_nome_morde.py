@@ -1,23 +1,4 @@
-"""A régua da grafia do nome MORDE — e recusa morder o identificador técnico.
-
-O portão é ``scripts/check_a_grafia_do_nome.py``. Ele tem duas peneiras, e este
-arquivo arranca as duas curas para ver cada uma reprovar:
-
-1. **a grafia** — ``Dualsense4Unix`` em texto reprova;
-2. **o dono** — a moldura DIGITANDO o nome reprova, mesmo com a grafia certa.
-
-E ele prova a metade que uma régua barulhenta erraria: os **quatro
-identificadores técnicos** têm de passar. Uma régua que reprovasse o
-``wm_class`` seria pior que a ausência dela — ela empurraria a próxima pessoa a
-trocar a caixa de uma string que o ``StartupWMClass=`` do ``.desktop`` instalado
-na máquina dela casa letra por letra, e o ícone sumiria da dock, calado.
-
-**POR QUE UM DIRETÓRIO DE MENTIRA, e não a árvore:** arrancar a cura na árvore
-viva significa reescrever 186 arquivos para depois desfazer. O portão lista por
-``git ls-files`` com ``cwd`` na raiz dele, então a mordida roda o script com a
-raiz apontada para um repositório de brinquedo, por ``_RAIZ`` monkeypatchado —
-que é a única superfície que precisa mudar.
-"""
+"""A régua da grafia do nome MORDE — e recusa morder o identificador técnico."""
 
 from __future__ import annotations
 
@@ -31,9 +12,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 PORTAO = RAIZ / "scripts" / "check_a_grafia_do_nome.py"
 CURA = RAIZ / "scripts" / "aplicar_a_grafia_do_nome.sh"
 
-#: Os quatro identificadores técnicos, escritos aqui e NÃO importados do portão.
-#: Um teste que lê a constante do próprio código sob teste passa com a cura
-#: arrancada — a mordida exige que a régua seja independente do que ela mede.
 OS_TECNICOS = (
     'wm_class="Hefesto-Dualsense4Unix",',
     "StartupWMClass=Hefesto-Dualsense4Unix",
@@ -95,42 +73,28 @@ def test_a_grafia_errada_reprova(casa: Path) -> None:
 
 
 def test_arquivo_novo_e_visto_sem_git_add(casa: Path) -> None:
-    """Portão é cego a arquivo novo por padrão — este não é.
-
-    Foi assim que quatro endereços de fixture moraram no arquivo vivo dela
-    (cicatriz ANONIMATO-CEGO-A-ARQUIVO-NOVO-01). A listagem leva
-    ``--others --exclude-standard``.
-    """
+    """Portão é cego a arquivo novo por padrão — este não é."""
     (casa / "NOVO.md").write_text("o Dualsense4Unix de ontem\n", encoding="utf-8")
     achados = _carregar(casa).a_grafia()
     assert [a[0] for a in achados] == ["NOVO.md"], achados
 
 
 def test_o_identificador_tecnico_nao_reprova(casa: Path) -> None:
-    """A METADE QUE UMA RÉGUA BARULHENTA ERRARIA.
-
-    Os seis são `wm_class`, `StartupWMClass=`, o app-id do Flatpak e os três
-    nós que o kernel publica. Nenhum é o nome do produto em texto; todos são
-    casados letra por letra por alguém de fora deste repositório.
-    """
+    """A METADE QUE UMA RÉGUA BARULHENTA ERRARIA."""
     (casa / "tecnicos.txt").write_text("\n".join(OS_TECNICOS) + "\n", encoding="utf-8")
     subprocess.run(["git", "add", "-A"], cwd=casa, check=True)
     assert _carregar(casa).a_grafia() == []
 
 
 def test_a_moldura_que_digita_o_nome_reprova(casa: Path) -> None:
-    """PENEIRA 2 — a cura arrancada do DONO, com a grafia CERTA.
-
-    É este teste que separa esta régua de um `grep`: a grafia certa digitada
-    em dois lugares é a próxima divergência esperando acontecer.
-    """
+    """PENEIRA 2 — a cura arrancada do DONO, com a grafia CERTA."""
     (casa / _MOLDURA_LIMPA[1]).write_text(
         'barra.set_title("Hefesto — DualSense4Unix")\n', encoding="utf-8"
     )
     subprocess.run(["git", "add", "-A"], cwd=casa, check=True)
     mod = _carregar(casa)
-    assert mod.a_grafia() == []          # a grafia está certa…
-    achados = mod.o_dono()               # …e mesmo assim reprova
+    assert mod.a_grafia() == []
+    achados = mod.o_dono()
     assert [a[0] for a in achados] == [_MOLDURA_LIMPA[1], _MOLDURA_LIMPA[1]], achados
 
 
@@ -150,11 +114,7 @@ def test_a_arvore_de_verdade_esta_verde() -> None:
 
 
 def test_a_cura_e_idempotente() -> None:
-    """Rodar a cura numa árvore já curada não muda byte nenhum.
-
-    É o que a costura precisa: reaplicar por cima de outras frentes sem refazer
-    a medição. Sem isso, quem costura repete o trabalho do zero.
-    """
+    """Rodar a cura numa árvore já curada não muda byte nenhum."""
     assert CURA.is_file(), f"{CURA} sumiu — a régua ficou sem cura a apontar"
     antes = subprocess.run(
         ["git", "status", "--porcelain"], cwd=RAIZ, capture_output=True, text=True

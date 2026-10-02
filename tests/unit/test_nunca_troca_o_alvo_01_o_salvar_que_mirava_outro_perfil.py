@@ -1,47 +1,8 @@
-"""NUNCA-TROCA-O-ALVO-01 — a janela trocava o nome no editor sozinha.
-
-Queixa literal dela, 06/08/2026: *"clico em salvar e ele salva com um nome
-aleatório ou de outro perfil"*.
-
-Medido em bancada antes de qualquer linha de cura. `_populate_editor` reescreve
-o campo Nome sem guarda nenhuma, e quem o dispara é o sinal `changed` da SELEÇÃO
-da lista — que a própria janela emite programaticamente em três caminhos:
-
-1. **O autoswitch.** Ela ativa `vitoria`, edita as abas, abre o jogo; o
-   autoswitch troca para `sackboy_nativo`; ao VOLTAR para a aba Perfis o
-   `switch-page` chama `_sync_selection_with_active_profile`, a seleção pula e
-   o campo Nome vira `sackboy_nativo`. O Salvar seguinte gravava lá — e como
-   `_edita_o_perfil_do_rascunho` compara com `_active_profile_name` (ainda
-   `vitoria`), a base vinha do DISCO: a cor dela não ia para lugar nenhum.
-   Medido: *"o VERDE dela foi parar em algum arquivo? NÃO — evaporou"*.
-2. **O "nome aleatório".** `_populate_profiles_store` caía no PRIMEIRO da lista
-   quando não havia alvo, e `_reload_profiles_store()` é chamado SEM alvo pelo
-   "Recarregar lista" e pela remoção. No disco dela o primeiro arquivo é
-   `acao.json` — o editor pulava para "Ação".
-3. **O rodapé.** O diálogo "Salvar Perfil" nascia pré-preenchido com
-   `_active_profile_name`, uma segunda variável escrita pela janela com a
-   resposta do daemon; o `prompt_overwrite_existing` até abria, mas perguntando
-   *"substituir sackboy_nativo?"* — o nome que a própria janela acabara de pôr.
-
-E o vizinho **I-1**, medido junto: `on_import_profile` comparava NOME CRU
-(`if nome in existentes:`) enquanto os DOIS botões de salvar já perguntam por
-SLUG. Importar um `Navegacao.json` destruía a `Navegação` dela sem uma palavra
-na tela.
-
-O princípio que a cura escreve: **a janela nunca troca o alvo do Salvar sem
-gesto dela.** Seleção programática atualiza a LISTA e para por aí.
-
-Cada teste daqui MORDE: com a cura arrancada, ele reprova. A lista de qual cura
-cada um morde está na docstring do próprio teste.
-
-GTK de VERDADE (`Gtk.TreeView`/`Gtk.ListStore`): o defeito É o sinal `changed`
-da seleção, e um dublê de lista não o emite — mediria o dublê, não a janela.
-"""
+"""NUNCA-TROCA-O-ALVO-01 — a janela trocava o nome no editor sozinha."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("NUNCA-TROCA-O-ALVO-01 (o Salvar que mirava outro perfil)")
 
 import json
@@ -68,11 +29,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 
 VERDE = (0, 255, 0)
-
-
-# ---------------------------------------------------------------------------
-# Dublês de widget — só os do EDITOR. A lista é GTK de verdade.
-# ---------------------------------------------------------------------------
 
 
 class _Entry:
@@ -159,11 +115,6 @@ class _Seletor:
             h(self)
 
 
-# ---------------------------------------------------------------------------
-# A janela: os DOIS mixins que o HefestoApp compõe, com a lista REAL do GTK
-# ---------------------------------------------------------------------------
-
-
 class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc]
     def __init__(self, draft: DraftConfig, ativo: str) -> None:
         from gi.repository import GObject, Gtk, Pango
@@ -188,9 +139,6 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
         self.toasts: list[str] = []
         self.dialogos: list[str] = []
 
-        # A MESMA montagem de `install_profiles_tab` (6 colunas: nome,
-        # prioridade, "quando usar", peso da fonte, tooltip da disputa e —
-        # PERFIL-ATUAL-01, 10/08/2026 — o realce da linha ativa).
         tree = Gtk.TreeView()
         store = Gtk.ListStore(
             GObject.TYPE_STRING,
@@ -220,33 +168,8 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
         self._widgets["profile_priority_scale"].connect(
             "value-changed", self._on_prioridade_tocada
         )
-        # A linha exata de `install_profiles_tab` — o que liga seleção a editor.
         tree.get_selection().connect("changed", self.on_profile_selection_changed)
 
-    # R-08: o "há edição pendente" NÃO é redublado aqui — vem por herança do
-    # `ProfilesActionsMixin`, que é quem o produto consulta. Este dublê chegou a
-    # tê-lo à mão, delegando para `HefestoApp._tem_edicao_pendente`; a janela
-    # saiu do disco em 06/09 e a delegação passou a estourar
-    # `ModuleNotFoundError`, que o `except` de `_ha_trabalho_no_editor` engolia
-    # como "não sei" — 12 testes vermelhos apontando para uma guarda sem dono.
-    # Herdar em vez de redublar é o que faz este arquivo medir o produto: se a
-    # guarda cair de novo, ela cai AQUI.
-    #
-    # DUAS FRENTES CURARAM ISTO NO MESMO DIA, com desenhos OPOSTOS, e a escolha
-    # é registrada porque a outra é defensável — 08/09/2026. A frente do
-    # ANONIMATO redublou a regra no dublê, copiada do original; esta pôs a regra
-    # em `ProfilesActionsMixin` (`profiles_actions.py:4651`) e deixou o dublê
-    # herdar. **Ficou esta**, e quem decidiu foi o conferente da OUTRA: ele
-    # escreveu que, com a regra só no dublê, *"quando a aba web for ligada ao
-    # `_ha_trabalho_no_editor`, este teste NÃO vai acusar a falta do
-    # `_tem_edicao_pendente` no host novo, porque o dublê fornece o seu — é a
-    # forma exata de verde sobre nada"*.
-    #
-    # E A RESSALVA DO CONFERENTE DESTA FICA ESCRITA, porque é verdadeira:
-    # NENHUMA classe de `src/` compõe o mixin hoje (a janela que o compunha saiu
-    # em `f5311616`), então isto é MOTOR REPOSTO ANTES DO COMPOSITOR. Não é
-    # defeito que chega à tela dela hoje; é o lugar certo para a regra estar no
-    # dia em que a aba Perfis web consultar a guarda.
 
     def _get(self, wid: str) -> Any:
         return self._widgets.get(wid)
@@ -266,7 +189,6 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
     def _status_toast(self, contexto: str, msg: str) -> None:
         self.toasts.append(msg)
 
-    # --- leitura de tela, para os testes falarem a língua dela ---
 
     def nome_no_editor(self) -> str:
         return self._get("profile_name_entry").get_text()
@@ -279,11 +201,6 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
             if linha[3] == 700:
                 return str(linha[0])
         return None
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 
 def _sincrono(fn: Any, on_success: Any, on_failure: Any = None) -> None:
@@ -303,8 +220,6 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(pa, "run_in_thread", _sincrono)
     monkeypatch.setattr(ipc_bridge, "run_in_thread", _sincrono)
     # P3 (25/08/2026): o `profile.switch` do Salvar saiu da thread do GTK e
-    # passou pelo `call_async` do botão Ativar. O dublê de `call_async` já
-    # engolia toda RPC desta aba; o de `profile_switch` deixou de ter alvo.
     monkeypatch.setattr(pa, "call_async", lambda **kw: None)
     monkeypatch.setattr(pa, "active_profile_name", lambda: None)
 
@@ -341,11 +256,7 @@ def _em_disco(disco: Path, slug: str) -> dict[str, Any]:
 
 
 def _sem_dialogos(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Todo diálogo vira registro + "ela clicou OK".
-
-    Se a lista de diálogos ficar vazia é porque NENHUM apareceu na tela dela —
-    e é essa a diferença entre "a janela perguntou" e "a janela fez calada".
-    """
+    """Todo diálogo vira registro + "ela clicou OK"."""
     monkeypatch.setattr(
         gui_dialogs,
         "prompt_overwrite_existing",
@@ -394,15 +305,8 @@ def _verde_em_disco(disco: Path) -> list[str]:
     return achados
 
 
-# ===========================================================================
-# MORDIDA 1 — o autoswitch e a volta para a aba Perfis
-# ===========================================================================
-
-
 class TestOAutoswitchNaoTrocaOAlvo:
-    """Morde a recusa de `_select_profile_by_name` + o portão de
-    `on_profile_selection_changed`. Arrancar qualquer uma das duas devolve o
-    campo Nome trocado sozinho e o Salvar no arquivo errado."""
+    """Morde a recusa de `_select_profile_by_name` + o portão de"""
 
     def test_o_campo_nome_nao_troca_sozinho(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
@@ -413,8 +317,6 @@ class TestOAutoswitchNaoTrocaOAlvo:
         _abrir_no_perfil(janela, "vitoria")
         _ela_mexe_na_cor(janela)
 
-        # Ela abre o jogo e volta para a aba Perfis: `switch-page` ->
-        # `_sync_selection_with_active_profile` -> este callback.
         janela._on_daemon_status_for_sync({"active_profile": "sackboy_nativo"})
 
         assert janela.nome_no_editor() == "vitoria", (
@@ -429,11 +331,7 @@ class TestOAutoswitchNaoTrocaOAlvo:
     def test_a_lista_continua_dizendo_qual_perfil_esta_ativo(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A recusa é da SELEÇÃO, não da informação: o negrito acompanha.
-
-        Sem isto a cura viraria cegueira — a lista deixaria de dizer que o
-        autoswitch trocou de perfil, que é justamente o que ela precisa ver.
-        """
+        """A recusa é da SELEÇÃO, não da informação: o negrito acompanha."""
         vitoria = next(p for p in load_all_profiles() if p.name == "vitoria")
         janela = _Janela(DraftConfig.from_profile(vitoria), ativo="vitoria")
         _sem_dialogos(janela, monkeypatch)
@@ -447,11 +345,7 @@ class TestOAutoswitchNaoTrocaOAlvo:
     def test_a_cor_dela_vai_para_o_perfil_que_ela_estava_editando(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida com dente: o VERDE tem de existir em disco no fim.
-
-        Medido antes da cura: `sackboy_nativo.json` era regravado (com a cor
-        DELE, vinda do disco) e o verde não ia para arquivo nenhum.
-        """
+        """A mordida com dente: o VERDE tem de existir em disco no fim."""
         vitoria = next(p for p in load_all_profiles() if p.name == "vitoria")
         janela = _Janela(DraftConfig.from_profile(vitoria), ativo="vitoria")
         _sem_dialogos(janela, monkeypatch)
@@ -473,12 +367,7 @@ class TestOAutoswitchNaoTrocaOAlvo:
     def test_sem_edicao_pendente_a_selecao_acompanha_o_perfil_ativo(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A cura não pode virar cadeado.
-
-        Sem trabalho a perder, a aba continua abrindo no perfil ATIVO — que é
-        a FEAT-GUI-LOAD-LAST-PROFILE-01 inteira. Se este teste reprovar, a
-        guarda parou de perguntar e passou a recusar sempre.
-        """
+        """A cura não pode virar cadeado."""
         vitoria = next(p for p in load_all_profiles() if p.name == "vitoria")
         janela = _Janela(DraftConfig.from_profile(vitoria), ativo="vitoria")
         _sem_dialogos(janela, monkeypatch)
@@ -490,14 +379,8 @@ class TestOAutoswitchNaoTrocaOAlvo:
         assert janela.linha_selecionada() == "sackboy_nativo"
 
 
-# ===========================================================================
-# MORDIDA 2 — o "nome aleatório": o primeiro da lista
-# ===========================================================================
-
-
 class TestRecarregarAListaNaoPulaParaOPrimeiro:
-    """Morde a preservação da seleção em `_populate_profiles_store`. Arrancada,
-    o editor volta a pular para o primeiro arquivo em ordem de carga."""
+    """Morde a preservação da seleção em `_populate_profiles_store`. Arrancada,"""
 
     def test_o_botao_recarregar_lista_nao_troca_o_perfil_do_editor(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
@@ -538,17 +421,11 @@ class TestRecarregarAListaNaoPulaParaOPrimeiro:
     def test_uma_edicao_pendente_sobrevive_a_recarga_da_lista(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A repintura reseleciona a MESMA linha — e nem isso pode repintar.
-
-        `store.clear()` mata os iters, então alguém precisa selecionar de novo;
-        essa reseleção emite `changed` igualzinho a um clique dela. Sem a marca
-        de "quem mexeu foi o código", o nome que ela estava digitando some.
-        """
+        """A repintura reseleciona a MESMA linha — e nem isso pode repintar."""
         vitoria = next(p for p in load_all_profiles() if p.name == "vitoria")
         janela = _Janela(DraftConfig.from_profile(vitoria), ativo="vitoria")
         _sem_dialogos(janela, monkeypatch)
         _abrir_no_perfil(janela, "vitoria")
-        # Ela está renomeando: o campo Nome já diverge do perfil aberto.
         janela._get("profile_name_entry").set_text("vitoria de casa")
 
         janela.on_profile_reload(None)
@@ -560,18 +437,7 @@ class TestRecarregarAListaNaoPulaParaOPrimeiro:
     def test_o_salvar_nao_segue_a_linha_quando_o_arquivo_dela_some(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Morde o alvo MEMORIZADO (`_alvo_do_salvar_do_editor`).
-
-        O único caso em que a barra azul se move mesmo com a cura: o perfil
-        que estava selecionado SUMIU do disco (a CLI apagou, um rename por
-        fora) e a lista não tem para onde voltar — cai no primeiro. Com o
-        editor sujo, ele fica mostrando o perfil que sumiu enquanto a linha
-        mostra outro.
-
-        Se o Salvar lesse o WIDGET, veria 'Pragmata' selecionado e 'vitoria'
-        no campo Nome, concluiria RENAME pela R-10 e se ofereceria para APAGAR
-        a Pragmata dela — um perfil que não tem nada a ver com o gesto.
-        """
+        """Morde o alvo MEMORIZADO (`_alvo_do_salvar_do_editor`)."""
         from hefesto_dualsense4unix.profiles.loader import delete_profile
 
         vitoria = next(p for p in load_all_profiles() if p.name == "vitoria")
@@ -580,7 +446,7 @@ class TestRecarregarAListaNaoPulaParaOPrimeiro:
         _abrir_no_perfil(janela, "vitoria")
         _ela_mexe_na_cor(janela)
 
-        delete_profile("vitoria")  # por fora da janela: CLI, rename, backup
+        delete_profile("vitoria")
         janela.on_profile_reload(None)
         assert janela.nome_no_editor() == "vitoria"
         assert janela.linha_selecionada() != "vitoria", (
@@ -596,49 +462,13 @@ class TestRecarregarAListaNaoPulaParaOPrimeiro:
         assert _verde_em_disco(disco) == ["vitoria.json"]
 
 
-# ===========================================================================
-# MORDIDA 3 — o rodapé
-# ===========================================================================
-
-
 class TestORodapeNaoPropoeNomeQueElaNaoEscolheu:
-    """Morde `_perfil_que_as_abas_editam`.
-
-    **O TERCEIRO TESTE DESTA CLASSE SAIU — 08/09/2026.** Era o
-    `test_a_janela_anuncia_quando_ela_mesma_troca_o_alvo`, e ele mediu o
-    `HefestoApp._reconciliar_draft_com_perfil_ativo`: o tique de 2 Hz que
-    recarregava o rascunho quando o autoswitch trocava o perfil ativo por fora
-    da GUI, avisando-a de que o alvo do Salvar tinha se mexido.
-
-    Esse método saiu do disco com a janela GTK (``D-0609-GTK-LEVA-INTEIRA``,
-    ``f5311616``), que já apagou "oito testes que só existiam para a janela" —
-    este passou pela peneira e ficou reprovando com `ModuleNotFoundError`.
-    MEDIDO antes de tirar, e é o que autoriza tirar em vez de repontar: o tique
-    inteiro se foi junto (`_bootstrap_draft_async`, `_draft_reload_for`,
-    `_draft_reload_inflight`, `DRAFT_RELOAD_INFLIGHT_TIMEOUT_S` não existem em
-    `src/`), e a frase do aviso — *"o perfil ativo virou …"* — não aparece em
-    nenhum arquivo de `src/`. **Não há para onde apontar a régua**: a interface
-    nova não reconcilia rascunho com perfil ativo.
-
-    O que ficou de PÉ é o resto da MORDIDA 3, que é o que sobrevive à janela:
-    o rodapé propõe o perfil que as ABAS editam, nunca o do daemon.
-
-    A medição que originou o teste retirado não se perde — ela está no corpo do
-    NUNCA-TROCA-O-ALVO-01 (docstring do módulo, item 3) e na sprint
-    `docs/process/sprints/2026-08-06-NUNCA-TROCA-O-ALVO-01-*.md`. Se a
-    interface nova ganhar reconciliação de rascunho, **o aviso volta a ser
-    requisito** e a régua nasce apontada para ela.
-    """
+    """Morde `_perfil_que_as_abas_editam`."""
 
     def test_o_prefill_vem_do_rascunho_e_nao_do_perfil_ativo(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """As abas mostram `vitoria`; o daemon está em `sackboy_nativo`.
-
-        Antes, o diálogo do rodapé nascia com o nome do perfil do DAEMON — e o
-        "Salvar este perfil" da aba Perfis, na mesma janela e no mesmo
-        instante, mirava outro arquivo. Os dois botões discordavam.
-        """
+        """As abas mostram `vitoria`; o daemon está em `sackboy_nativo`."""
         vitoria = next(p for p in load_all_profiles() if p.name == "vitoria")
         janela = _Janela(DraftConfig.from_profile(vitoria), ativo="sackboy_nativo")
 
@@ -648,7 +478,7 @@ class TestORodapeNaoPropoeNomeQueElaNaoEscolheu:
             @staticmethod
             def prompt_profile_name(parent: Any, default_name: str = "") -> str | None:
                 capturado["prefill"] = default_name
-                return None  # ela cancela: este teste é sobre o que ela LÊ
+                return None
 
         monkeypatch.setattr(fa, "gui_dialogs", _Dialogos)
         janela.on_save_profile()
@@ -665,20 +495,8 @@ class TestORodapeNaoPropoeNomeQueElaNaoEscolheu:
         assert janela._perfil_que_as_abas_editam() == "sackboy_nativo"
 
 
-# ===========================================================================
-# MORDIDA 4 — M2: a guarda da cura falhava ABERTO
-# ===========================================================================
-
-
 def _quebrar_a_pergunta(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`_tem_edicao_pendente` deixa de saber responder.
-
-    Não é hipótese de laboratório gratuita: a resposta sai de comparar dois
-    pydantic (`self.draft != baseline`), e QUALQUER `__eq__` que estoure — um
-    campo novo com comparação frágil, um dublê incompleto num caminho de
-    degradação — cai aqui. O ponto não é a probabilidade; é o que a guarda
-    responde quando não sabe.
-    """
+    """`_tem_edicao_pendente` deixa de saber responder."""
 
     def _estoura() -> bool:
         raise RuntimeError("R-08 indisponível: a comparação do rascunho estourou")
@@ -687,16 +505,7 @@ def _quebrar_a_pergunta(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 class TestNaoSeiEHaTrabalhoAProteger:
-    """M2 (revisão adversarial de 06/08/2026): o `except` respondia ``False``.
-
-    Uma guarda cujo único trabalho é proteger trabalho não salvo não pode ler
-    *"não sei"* como *"não há nada a perder"*. Medido: com o ``return False``
-    de volta, os três testes desta classe reprovam e o defeito INTEIRO
-    ressuscita — o editor pula para o perfil do jogo e o Salvar grava lá.
-
-    MORDIDA verificada em 06/08: trocado o ``return True`` por ``return False``
-    em `_ha_trabalho_no_editor`, 3/3 reprovam.
-    """
+    """M2 (revisão adversarial de 06/08/2026): o `except` respondia ``False``."""
 
     def test_a_guarda_responde_sim_quando_nao_sabe_responder(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
@@ -718,8 +527,8 @@ class TestNaoSeiEHaTrabalhoAProteger:
         janela = _Janela(DraftConfig.from_profile(vitoria), ativo="vitoria")
         _sem_dialogos(janela, monkeypatch)
         _abrir_no_perfil(janela, "vitoria")
-        _ela_mexe_na_cor(janela)  # o VERDE entra no rascunho...
-        _quebrar_a_pergunta(janela, monkeypatch)  # ...e a janela perde a memória
+        _ela_mexe_na_cor(janela)
+        _quebrar_a_pergunta(janela, monkeypatch)
 
         janela._on_daemon_status_for_sync({"active_profile": "sackboy_nativo"})
 
@@ -732,12 +541,7 @@ class TestNaoSeiEHaTrabalhoAProteger:
     def test_o_salvar_nao_vai_para_o_arquivo_errado_quando_a_pergunta_estoura(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A mordida com dente: onde a cor dela foi parar.
-
-        É a MESMA asserção do caminho feliz (`MORDIDA 1`), com a única
-        diferença de a guarda estar cega. Se o resultado divergir, a cura só
-        vale enquanto tudo funciona — que é o oposto de uma guarda.
-        """
+        """A mordida com dente: onde a cor dela foi parar."""
         vitoria = next(p for p in load_all_profiles() if p.name == "vitoria")
         janela = _Janela(DraftConfig.from_profile(vitoria), ativo="vitoria")
         _sem_dialogos(janela, monkeypatch)
@@ -757,11 +561,6 @@ class TestNaoSeiEHaTrabalhoAProteger:
             "o Salvar gravou por cima do perfil do JOGO"
         )
         assert janela.toasts[-1] == "Perfil salvo: vitoria"
-
-
-# ===========================================================================
-# MORDIDA 5 — I-1: o importar comparava nome cru
-# ===========================================================================
 
 
 class _Chooser:
@@ -811,10 +610,6 @@ class TestOImportarPerguntaPeloSlug:
         from hefesto_dualsense4unix.app import gui_dialogs as gd_real
 
         class _Dialogos:
-            # DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): o seletor de arquivo
-            # passou a abrir pelo envelope da casa. O dublê usa o envelope DE
-            # VERDADE (só o `_Chooser` é falso) — trocá-lo por um `lambda` que
-            # devolvesse OK esconderia deste teste justamente a camada nova.
             executar_dialogo = staticmethod(gd_real.executar_dialogo)
 
             @staticmethod
@@ -846,11 +641,7 @@ class TestOImportarPerguntaPeloSlug:
         no_disco: str,
         importado: str,
     ) -> None:
-        """Importar um `Navegacao.json` destruía a `Navegação` dela, calado.
-
-        Os dois nomes ocupam o MESMO arquivo (o slug é a identidade em disco),
-        e só o `find_by_slug` responde isso.
-        """
+        """Importar um `Navegacao.json` destruía a `Navegação` dela, calado."""
         save_profile(
             Profile(
                 name=no_disco,
@@ -867,7 +658,7 @@ class TestOImportarPerguntaPeloSlug:
             monkeypatch,
             tmp_path,
             Profile(name=importado, match=MatchAny(), priority=7),
-            escolha=None,  # ela lê a pergunta e CANCELA
+            escolha=None,
         )
 
         assert perguntas == [no_disco], (
@@ -889,8 +680,6 @@ class TestOImportarPerguntaPeloSlug:
 
         from gi.repository import Gtk
 
-        # Ela importa um "Corrida" que colide com o "Corrida" do disco, escolhe
-        # RENOMEAR — e digita um nome que ocupa o arquivo de OUTRO perfil dela.
         arquivo = tmp_path / "Corrida.json"
         arquivo.write_text(
             Profile(name="Corrida", match=MatchAny(), priority=7).model_dump_json(),
@@ -902,8 +691,6 @@ class TestOImportarPerguntaPeloSlug:
         from hefesto_dualsense4unix.app import gui_dialogs as gd_real
 
         class _Dialogos:
-            # DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): o envelope de verdade,
-            # como no dublê irmão logo acima.
             executar_dialogo = staticmethod(gd_real.executar_dialogo)
 
             @staticmethod
@@ -912,7 +699,7 @@ class TestOImportarPerguntaPeloSlug:
 
             @staticmethod
             def prompt_profile_name(parent: Any, default_name: str = "") -> str | None:
-                return "AÇÃO"  # mesmo slug de quem já está lá
+                return "AÇÃO"
 
         monkeypatch.setattr(fa, "gui_dialogs", _Dialogos)
         janela.on_import_profile()

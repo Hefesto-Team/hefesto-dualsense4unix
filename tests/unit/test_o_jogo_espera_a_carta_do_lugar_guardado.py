@@ -87,7 +87,6 @@ from tests.unit.test_coop_bancada_de_queda_do_primario import (
     _VpadFalso,
 )
 
-#: A mesa de quatro, mais um controle que ninguém viu antes (gente nova).
 CHAVES = (
     "AA:BB:CC:00:00:01",
     "AA:BB:CC:00:00:02",
@@ -101,14 +100,10 @@ CHAVE_DE = dict(zip(UNIQS, CHAVES, strict=True))
 
 BOOT = "boot-teste-o-jogo-espera-a-carta"
 
-#: O gesto da linha 17: fora vinte segundos.
 VINTE_SEGUNDOS = 20.0
-#: O tique lento da casa: o registro de identidade e o `sync` do co-op, ~2 s.
 TIQUE = 2.0
-#: O carimbo que o leitor do P1 põe no estado: de quem é o node que ele lê.
 _MARCA = "de:"
 
-#: A matriz de transportes: tudo no cabo, tudo no rádio, e a mesa dela (mista).
 TRANSPORTES = {
     "usb": ("usb", "usb", "usb", "usb"),
     "bt": ("bt", "bt", "bt", "bt"),
@@ -133,13 +128,7 @@ class _MesaDeCinco(_Mesa):
 
 
 class _LeitorDoP1(_LeitorDoPrimario):
-    """O leitor do P1 da bancada de queda, que diz DE QUEM é o node que lê.
-
-    O `read_state()` de verdade pede o `snapshot()` ao leitor quando há
-    primário; o carimbo nos botões é o que a régua lê para saber quem está
-    dirigindo o vpad do P1. Sem primário (a vaga), o `read_state()` nem pede: o
-    estado é o neutro, sem carimbo nenhum.
-    """
+    """O leitor do P1 da bancada de queda, que diz DE QUEM é o node que lê."""
 
     def snapshot(self) -> Any:
         dono = next((u for u, n in self._mesa.nodes.items() if n == self.node), None)
@@ -168,12 +157,7 @@ class Relogio:
 
 
 class Kernel:
-    """Os dois relógios do kernel, para simular uma suspensão.
-
-    Acordada, a máquina anda os dois; dormindo, só o ``CLOCK_BOOTTIME`` anda —
-    é a diferença entre eles, e é a que o ``CLOCK_MONOTONIC`` (o
-    ``time.monotonic``) esconde.
-    """
+    """Os dois relógios do kernel, para simular uma suspensão."""
 
     def __init__(self) -> None:
         self.acordada = 5000.0
@@ -210,20 +194,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 class JogoPorFora:
-    """O jogo visto de FORA do co-op: o lugar de cada vpad pela ordem em que ele nasce e morre.
-
-    É o modelo do fonte do SDL que a STEAM-NO-FISICO-01 mediu, aplicado ao
-    ciclo de vida dos vpads da bancada, e não à mesa que o co-op GUARDA
-    (``_mesa_do_jogo``), que é a saída do próprio produto (conferência da
-    O-ASSENTO-GUARDADO-NAO-ANDA-03). Uma régua que lesse a mesa guardada
-    passava com o co-op reescrevendo a própria anotação sem recriar vpad
-    nenhum: medido, as 56 desta régua passavam assim.
-
-    Com o jogo aberto, o vpad que nasce toma o menor lugar livre e o que morre
-    libera o dele; sem jogo, o que abrir depois enumera os vivos na ordem em
-    que nasceram. ``aberto`` é perguntado a cada evento, e o jogo que abre
-    enumera quem já está de pé.
-    """
+    """O jogo visto de FORA do co-op: o lugar de cada vpad pela ordem em que ele nasce e morre."""
 
     def __init__(self, aberto: Callable[[], bool]) -> None:
         self._aberto = aberto
@@ -275,12 +246,7 @@ class _VpadDaMesa(_VpadFalso):
 
 
 class MesaDoJogo:
-    """Backend real + co-op real + registro de identidade real, e um jogo aberto.
-
-    ``relogio`` None deixa os prazos no relógio do PRODUTO (``relogio_do_prazo``
-    e ``relogio_do_lugar_guardado``) — é o caso da suspensão, em que quem move o
-    tempo é o :class:`Kernel`.
-    """
+    """Backend real + co-op real + registro de identidade real, e um jogo aberto."""
 
     def __init__(
         self,
@@ -297,25 +263,20 @@ class MesaDoJogo:
         self.inst = PyDualSenseController(evdev_reader=self.leitor_p1)  # type: ignore[arg-type]
         if relogio is not None:
             self.inst._relogio = relogio
-        # A leitura do 0x05 é hidraw de verdade e não tem nada a ver com a vaga.
         self.inst.read_calibration = lambda _uniq=None: None  # type: ignore[assignment]
         self.reg = ControllerIdentityRegistry(clock=relogio)
-        # O vpad do P1 nasce antes do daemon de mentira: até lá, jogo fechado.
         self.jogo = JogoPorFora(
             lambda: getattr(getattr(self, "daemon", None), "display_authority", None) == "game"
         )
         self.vpad_do_p1 = _VpadDaMesa(1, self.jogo)
         self.vpads: list[_VpadFalso] = [self.vpad_do_p1]
         self.daemon = SimpleNamespace(
-            # A configuração de verdade do daemon, com os padrões dela.
             config=DaemonConfig(coop_enabled=coop),
             _gamepad_device=self.vpad_do_p1,
             controller=self.inst,
             _coop_manager=None,
             identity_registry=self.reg,
-            # O sinal pegajoso da R-04: "game" é o jogo com a autoridade.
             display_authority="game" if jogo else "daemon",
-            # Os dois campos do `Daemon` que o multiplicador do rumble lê.
             _last_auto_mult=0.7,
             _last_auto_change_at=0.0,
         )
@@ -337,27 +298,18 @@ class MesaDoJogo:
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
             self._nascer_vpad,
         )
-        # Hermético: NUNCA o /sys/class/leds real.
         monkeypatch.setattr("hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {})
 
     def _nascer_vpad(
         self, _flavor: Any, *, player: int = 1, identity: str | None = None, **_kw: Any
     ) -> _VpadFalso:
-        """O vpad da bancada com o MAC do PRODUTO: o do aparelho, não o do número.
-
-        O ``_VpadFalso`` da bancada de queda tira o MAC do NÚMERO do jogador, e
-        é mais frouxo que o real onde esta régua mais mede — a mesa que se
-        refaz: um vpad que renasce com o antigo ainda de pé passaria pela
-        invariante «sem MAC repetido» sempre que os dois números fossem
-        diferentes (conferência da O-ASSENTO-GUARDADO-NAO-ANDA-03).
-        """
+        """O vpad da bancada com o MAC do PRODUTO: o do aparelho, não o do número."""
         vpad = _VpadDaMesa(player, self.jogo)
         vpad.mac = vpad_mac(identity, player)
         vpad.identidade = identity  # type: ignore[attr-defined]
         self.vpads.append(vpad)
         return vpad
 
-    # -- os laços do daemon ---------------------------------------------
 
     def connect(self) -> None:
         """Um `connect()` do `reconnect_loop`, com o handle no transporte de cada um."""
@@ -380,30 +332,23 @@ class MesaDoJogo:
     def tique(self, segundos: float = TIQUE) -> None:
         """Os laços do daemon, na ordem em que o hotplug os acorda."""
         self.tempo.avancar(segundos)
-        self.connect()  # o reconnect_loop vê o /dev/input mudar
-        self.inst.read_state()  # o poll loop despacha o P1
-        # O `_sync_identity_registry` do lifecycle, com os handles de agora.
+        self.connect()
+        self.inst.read_state()
         self.reg.sync_connected(
             [u for u in self.inst.alvos_conectados().values() if isinstance(u, str)]
         )
         self.coop.sync()
         self.coop.forward_all()
-        self.coop.forward_all()  # o tique seguinte recolhe quem cedeu ao P1
+        self.coop.forward_all()
         self.conferir_invariantes()
 
     def conferir_invariantes(self) -> None:
-        """As duas da bancada de queda, em TODO instante: sem EBUSY, sem MAC repetido.
-
-        E a terceira (conferência da O-ASSENTO-03): a mesa que o co-op guarda é a
-        que o jogo vê por fora — o co-op planeja em cima dela, e uma anotação
-        que não corresponde a vpad nenhum faria o plano mirar um jogo que não
-        existe.
-        """
+        """As duas da bancada de queda, em TODO instante: sem EBUSY, sem MAC repetido."""
         assert not self.mesa.ebusy, "; ".join(self.mesa.ebusy)
         macs = [v.mac for v in self.vpads if v.vivo]
         assert len(macs) == len(set(macs)), f"dois vpads vivos com o mesmo MAC: {macs}"
         if not self.coop.should_be_active():
-            return  # sem co-op o co-op não guarda mesa nenhuma
+            return
         guardada = {
             lugar: (
                 self.daemon._gamepad_device
@@ -414,7 +359,6 @@ class MesaDoJogo:
         }
         aberto, por_fora = self.jogo.ve()
         if not aberto:
-            # Sem jogo o lugar é só a ordem, e o co-op compacta no `sync`.
             guardada = dict(enumerate(v for _lugar, v in sorted(guardada.items())))
         assert {lugar: id(v) for lugar, v in guardada.items()} == {
             lugar: id(v) for lugar, v in por_fora.items()
@@ -424,18 +368,9 @@ class MesaDoJogo:
             f"por fora { {lugar: getattr(v, 'identidade', v) for lugar, v in por_fora.items()} }"
         )
 
-    # -- a leitura --------------------------------------------------------
 
     def dono_do_vpad_do_p1(self) -> str | None:
-        """Quem alimenta o vpad do P1 agora (None = parado), pelas DUAS metades.
-
-        O laço do daemon (`dispatch_gamepad`) manda ao vpad do P1 os analógicos
-        do `read_state()` e os BOTÕES do `poll.evdev_buttons_once`, que lê o
-        leitor do P1 direto, sem passar pelo `read_state()`. Medir só a
-        primeira metade deixaria de fora um leitor que seguisse outro controle
-        com o posto vago (conferência de 24/09/2026). As duas têm de dizer o
-        mesmo dono.
-        """
+        """Quem alimenta o vpad do P1 agora (None = parado), pelas DUAS metades."""
         from hefesto_dualsense4unix.daemon.subsystems.poll import evdev_buttons_once
 
         metades = (
@@ -447,11 +382,7 @@ class MesaDoJogo:
         return next(iter(donos), None)
 
     def o_jogo_ve(self) -> dict[int, str | None]:
-        """Jogador N do jogo → o controle que alimenta o vpad daquele lugar.
-
-        O lugar vem do :class:`JogoPorFora` — o ciclo de vida dos vpads —, e não
-        da mesa que o co-op guarda (conferência da O-ASSENTO-03).
-        """
+        """Jogador N do jogo → o controle que alimenta o vpad daquele lugar."""
         fora: dict[int, str | None] = {}
         for lugar, vpad in sorted(self.jogo.ve()[1].items()):
             if vpad is self.daemon._gamepad_device:
@@ -579,14 +510,7 @@ class TestOP1ForaPorVinteSegundos:
     def test_depois_do_prazo_vale_a_num01(
         self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
     ) -> None:
-        """Passado o prazo, o P2 assume o vpad do P1 com o número 1, e ninguém fica sem controle.
-
-        Quem ficou atrás do P2 renasce no boneco do número novo, e o jogo
-        segue a tela (O-ASSENTO-GUARDADO-NAO-ANDA-03; a régua inteira dessa
-        cura é ``test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py``). Esta
-        linha dizia que eles NÃO eram recriados, porque o ``planejar_a_ordem``
-        só exigia ordem — e era o P3 no boneco 3 com a tela dizendo 2.
-        """
+        """Passado o prazo, o P2 assume o vpad do P1 com o número 1, e ninguém fica sem controle."""
         bancada = montar(monkeypatch, quantos, transporte)
         vpad_do_p1 = bancada.vpad_do_p1
 
@@ -678,7 +602,6 @@ class TestQuandoOPostoNaoEspera:
         bancada.mesa.levantar(P1)
         bancada.tique()
         assert bancada.dono_do_vpad_do_p1() is None
-        # O `identity.renumber` do IPC: o mapa dos lugares gravados.
         bancada.reg.compact(bancada.reg.snapshot())
         bancada.tique()
         assert bancada.dono_do_vpad_do_p1() == P2
@@ -699,12 +622,7 @@ class TestQuandoOPostoNaoEspera:
     def test_o_rumble_do_jogo_para_o_vpad_do_p1_nao_cai_nos_outros(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Na vaga, o rumble que o jogo manda ao vpad do P1 mira o P1 ausente.
-
-        O sink é o de produção (``make_primary_rumble_sink``). Um posto vago que
-        respondesse ``None`` ao ``primary_uniq`` cairia no ramo sem endereço do
-        ``apply_game_rumble`` — o broadcast, que sacode os três que ficaram.
-        """
+        """Na vaga, o rumble que o jogo manda ao vpad do P1 mira o P1 ausente."""
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             make_primary_rumble_sink,
         )
@@ -815,12 +733,7 @@ class TestORelogioEUmSo:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestAVoltaPeloOutroTransporte:
-    """A linha 3 da bancada dela: o P1 sai do cabo e volta pelo rádio (e o inverso).
-
-    A régua de cima devolve o P1 no MESMO transporte em que ele caiu; o gesto
-    que a bancada cobra é o da troca. A key do handle é o MAC nos dois
-    transportes, e é por ela que a vaga reconhece quem voltou.
-    """
+    """A linha 3 da bancada dela: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
 
     @pytest.mark.parametrize(
         ("de", "para"), [("usb", "bt"), ("bt", "usb")], ids=["cabo-para-radio", "radio-para-cabo"]
@@ -868,7 +781,6 @@ class TestOTopoDoEstadoNaVaga:
 
     @staticmethod
     def _carga_no_p1(bancada: MesaDoJogo, nivel: int, estado: int) -> None:
-        # O `DSBattery` que o report_thread da pydualsense preenche.
         handle = bancada.inst._handles[CHAVE_DE[P1]]
         handle.battery = SimpleNamespace(Level=nivel, State=estado)
 
@@ -913,8 +825,6 @@ class TestOTopoDoEstadoNaVaga:
         agora = 0.0
 
         def tique_do_laco() -> float:
-            # O que o `_poll_loop` faz: publica o `read_state()` no store, e o
-            # rumble do jogo (o de qualquer jogador) lê o degrau dali.
             bancada.daemon.store.update_controller_state(bancada.inst.read_state())
             return _game_rumble_mult(bancada.daemon, agora)  # type: ignore[arg-type]
 
@@ -930,16 +840,7 @@ class TestOTopoDoEstadoNaVaga:
 
 
 class TestOP1QueVoltaJogaNaHora:
-    """O leitor do P1 reabre o nó assim que ele volta — não dorme no backoff.
-
-    A conferência (24/09/2026) mediu com o `EvdevReader` de verdade (o open é
-    dublê): antes da vaga, o leitor do P1 seguia o P2 e voltava ao P1 em 0,1 s,
-    pelo `retarget`, que acorda o `select`. Com o posto vago, o leitor fica SEM
-    nó e entra no backoff (0,5 → 1 → 2 → 4 → 5 s), e a espera do backoff era um
-    `Event.wait` que nada acordava além do `stop()`: o P1 voltava, a lâmpada e a
-    tela diziam 1, e o boneco 1 ficava parado por até 4,7 s. O mesmo valia para
-    uma mesa de UM controle só.
-    """
+    """O leitor do P1 reabre o nó assim que ele volta — não dorme no backoff."""
 
     def test_o_no_que_volta_acorda_o_leitor_em_backoff(
         self, monkeypatch: pytest.MonkeyPatch
@@ -963,7 +864,7 @@ class TestOP1QueVoltaJogaNaHora:
 
             def read(self) -> Any:
                 os.read(self.r, 64)
-                raise OSError(errno.ENODEV, "No such device")  # o nó sumiu
+                raise OSError(errno.ENODEV, "No such device")
 
             def close(self) -> None:
                 for fd in (self.r, self.w):
@@ -975,7 +876,7 @@ class TestOP1QueVoltaJogaNaHora:
 
         def abrir(_path: Any, *_a: Any, **_kw: Any) -> _No:
             no = _No()
-            nos.append(no)  # antes do carimbo: quem espera lê o carimbo
+            nos.append(no)
             aberturas.append(time.monotonic())
             return no
 
@@ -1002,14 +903,9 @@ class TestOP1QueVoltaJogaNaHora:
             assert aberturas, "o leitor nem abriu o primeiro nó"
             leitor.no = None
             os.write(nos[0].w, b"x")
-            # Uma busca sem nó, e o leitor dorme até `/dev/input` mudar
-            # (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026: o recuo
-            # no relógio, que dava três buscas até a espera de 2 s, saiu). A
-            # pasta de verdade não muda aqui: quem acorda o leitor é o wake.
             assert sem_no.acquire(timeout=10)
             leitor.no = Path("/dev/input/event-dubl")
             volta = time.monotonic()
-            # O que o `_recompute_primary` faz quando o P1 retoma o posto.
             leitor.retarget(P1)
             leitor.refresh_device()
             leitor.start()

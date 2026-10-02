@@ -1,34 +1,9 @@
-"""O que a aba Rumble PRECISA dizer, e antes de 11/08/2026 não dizia.
-
-Dois silêncios, os dois medidos:
-
-1. **O deslizador que apagava os quatro botões sem uma palavra.** Mover a
-   "Intensidade global" para fora dos degraus vira um ajuste dela e desmarca
-   os quatro — e o handler não falava na barra de estado, ao contrário do irmão
-   (o clique num botão, que sempre falou). A palavra "personalizado" não existe
-   em lugar nenhum da tela, então ela ficava olhando quatro botões apagados sem
-   saber que tinha escolhido algo, nem o quê.
-
-2. **A intensidade que não alcança jogo nenhum.** No journal da máquina dela:
-   `launch_env_materializado ... backends=[] emulacao=False mascara=dualsense
-   native=False`. Sem gamepad virtual **e** sem Conexão Nativa (Sony), o
-   multiplicador dos quatro botões não age sobre a vibração do jogo — ele mora
-   no caminho de saída do gamepad virtual (`apply_game_rumble`, alcançado só
-   pelo sink de `make_primary_rumble_sink`). A aba seguia mostrando
-   Economia/Balanceado/Máximo como se valessem.
-
-A escada em si (30/100/150), a saturação em 255 e os textos do `.glade` estão
-em `test_politica_de_vibracao_a_escada_que_amplifica.py`, que NÃO importa GTK —
-aquelas provas não podem afundar num skip por falta de PyGObject.
-"""
+"""O que a aba Rumble PRECISA dizer, e antes de 11/08/2026 não dizia."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: no TOPO do arquivo, antes de qualquer import de `gi`. O
 # módulo sob teste (`app.actions.rumble_actions`) importa `gi` na primeira
-# linha, então não há como exercitá-lo contra widget de mentira sem que o
-# arquivo inteiro passe a rodar verde fora do job gtk-real.
 exigir_gi_real("aba Rumble: a voz do deslizador e o aviso de alcance")
 
 from typing import Any
@@ -43,12 +18,7 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (
 
 
 def test_a_tela_oferece_exatamente_a_escada_que_o_daemon_aplica() -> None:
-    """A tabela da aba deriva da do daemon — não é cópia que possa divergir.
-
-    Quem multiplica de verdade é o daemon; se a tela oferecer um degrau que ele
-    não aplique, ela mente por construção. `auto` é o único extra, e não é mult
-    fixo: é só onde o deslizador para.
-    """
+    """A tabela da aba deriva da do daemon — não é cópia que possa divergir."""
     da_tela = dict(rumble_actions._POLICY_MULT)
     assert da_tela.pop("auto") == pytest.approx(1.0)
     assert da_tela == RUMBLE_POLICY_MULT
@@ -58,11 +28,6 @@ def test_o_padrao_de_desempate_nao_e_mais_ancora_morta() -> None:
     """Era o literal 0,7 em quatro lugares — um degrau que deixou de existir."""
     padrao = rumble_actions._MULT_PADRAO
     assert padrao == RUMBLE_POLICY_MULT["balanceado"]
-
-
-# ---------------------------------------------------------------------------
-# Dublês de widget
-# ---------------------------------------------------------------------------
 
 
 class _FakeScale:
@@ -164,11 +129,6 @@ def aba(monkeypatch: pytest.MonkeyPatch) -> _Aba:
     return instancia
 
 
-# ---------------------------------------------------------------------------
-# 1 — o deslizador que ficava mudo
-# ---------------------------------------------------------------------------
-
-
 def test_sair_dos_degraus_avisa_na_barra_de_estado(aba: _Aba) -> None:
     barra: _FakeBarra = aba._widgets["status_bar"]
     slider: _FakeScale = aba._widgets["rumble_policy_slider"]
@@ -191,13 +151,7 @@ def test_sair_dos_degraus_avisa_na_barra_de_estado(aba: _Aba) -> None:
 
 
 def test_o_deslizador_vai_alem_dos_botoes_e_o_daemon_aceita(aba: _Aba) -> None:
-    """A faixa acima do "Máximo" é usável de ponta a ponta.
-
-    Decisão dela, 11/08/2026: o botão "Máximo" para em 150% (preset seguro) e o
-    deslizador segue até 200% (ajuste livre de quem aceita o preço). Este teste
-    guarda as duas metades — que o 200% CHEGA ao daemon, e que ele chega como
-    ajuste livre, sem se disfarçar de botão.
-    """
+    """A faixa acima do "Máximo" é usável de ponta a ponta."""
     from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 
     slider: _FakeScale = aba._widgets["rumble_policy_slider"]
@@ -211,15 +165,9 @@ def test_o_deslizador_vai_alem_dos_botoes_e_o_daemon_aceita(aba: _Aba) -> None:
     esperado = pytest.approx(RUMBLE_CUSTOM_MULT_MAX)
     assert aba.enviados[-1] == esperado  # type: ignore[attr-defined]
 
-    # E o degrau do "Máximo" continua afundando o BOTÃO, não virando ajuste.
     slider.set_value(RUMBLE_POLICY_MULT["max"] * 100)
     aba.on_rumble_policy_slider_changed(slider)
     assert aba._rumble_policy == "max"
-
-
-# ---------------------------------------------------------------------------
-# 2 — a intensidade que não alcança
-# ---------------------------------------------------------------------------
 
 
 def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
@@ -231,39 +179,9 @@ def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
         "não pode ser silêncio: a tela seguia oferecendo os quatro botões"
     )
     assert "não está chegando" in texto
-    # O GESTO QUE CURA MUDOU DE NOME — 06/09/2026, VIBRACAO-O-QUE-SOBROU-01.
-    # A frase dizia *"Ligue “Jogar pelo Hefesto” na aba Início"* e esta linha
-    # exigia esse texto. As duas coisas que ela mandava procurar não existem:
-    # não há aba "Início" (são Jogar · Controles · Gatilhos · Iluminação ·
-    # Vibração · Navegação · Lançadores · Conexões · Sistema · Perfis) e
-    # "Jogar pelo Hefesto" não é rótulo clicável em página nenhuma — medido
-    # varrendo o texto de todo `<button>`/`<label>`/`<option>`/`<a>` das dez
-    # publicadas. A régua exigia a frase impossível, que é o padrão desta casa
     # de *"a régua media o mundo de ontem"*.  # (noqa-acento: verbo medir, imperfeito)
-    #
-    # O QUE ELA MEDE AGORA é o mesmo REQUISITO — a frase diz o gesto que cura —
-    # sem digitar o rótulo: quem confere que o rótulo existe de verdade é
-    # `tests/unit/test_a_vibracao_nao_manda_num_botao_que_nao_existe.py`, que
-    # pergunta às páginas em vez de decorar.
     assert "aba Jogar" in texto, "a frase tem de dizer ONDE fica o gesto que cura"
-    # A LINHA QUE EXIGIA `"Ligado" in texto` SAIU — RECADO-VPAD-01, 17/09/2026,
-    # e o fato que a derruba está medido: NESTE estado o painel da aba Jogar já
-    # mostra o Status em **Ligado**. `sem_dono_do_rumble` exige `native=False`,
     # e com ele falso `mode_of_state` só devolve `gamepad` ou `desktop` — os
-    # dois membros de `MODOS_LIGADOS`. A frase mandava pôr em Ligado o que já
-    # estava em Ligado, e esta linha era a régua que a mantinha lá: ela exigia
-    # a palavra do gesto ERRADO, e ficou verde por um mês sobre um no-op que
-    # ela viu na tela.
-    #
-    # O gesto que cura depende do CAMINHO (Navegação → trocar o Modo; vpad que
-    # não subiu → nenhum, a causa é permissão do sistema), e quem mede isso é
-    # `tests/unit/test_recado_vpad_01_a_tela_e_o_recado_perguntam_no_mesmo_lugar.py`,
-    # perguntando ao `jogar.painel` em vez de digitar a palavra. O que sobra
-    # aqui é o requisito que NÃO mudou: a frase diz ONDE.
-    # `.lower()` desde 02/09/2026: a frase encurtou (decisão dela — ver
-    # `texto_do_alcance_da_intensidade`) e "Aqui embaixo" passou a ABRIR a
-    # última oração, com maiúscula. A régua mede a INFORMAÇÃO, não a caixa da
-    # letra; sem isto ela reprovaria a frase mais curta em vez do defeito.
     assert "aqui embaixo" in texto.lower(), (
         "sem dizer o que a intensidade AINDA faz, o aviso vira 'não serve para "
         "nada' — que é falso: ela vale para a vibração fixada"
@@ -271,10 +189,7 @@ def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
 
 
 def test_no_nativo_a_frase_e_outra() -> None:
-    """Ali não há defeito nenhum: é o modo funcionando como deve.
-
-    Mandá-la ligar o Hefesto seria mandá-la consertar o que está certo.
-    """
+    """Ali não há defeito nenhum: é o modo funcionando como deve."""
     texto = rumble_actions.texto_do_alcance_da_intensidade(
         {"rumble_ff": {"vpads": 0}, "native_mode": True}
     )
@@ -288,18 +203,7 @@ def test_no_nativo_a_frase_e_outra() -> None:
     [(False, 0), (True, 0), (False, 2), (True, 2)],
 )
 def test_a_tela_e_o_journal_usam_um_criterio_so(native: bool, vpads: int) -> None:
-    """A tabela-verdade inteira, comparada contra o predicado do daemon.
-
-    Por algumas horas em 11/08/2026 houve dois critérios paralelos para o mesmo
-    buraco: a borda de materialização olhava `backends` (e gritava
-    `rumble_sem_dono` no journal) e esta tela olhava `rumble_ff.vpads`. Dois
-    critérios para o mesmo fato divergem na primeira mudança — é a classe de
-    defeito que o HARM-19 já pagou no teto do multiplicador.
-
-    A MORDIDA: faça a tela decidir sozinha de novo (troque a chamada de
-    `sem_dono_do_rumble` por um `if not native` qualquer) e o dia em que o
-    predicado mudar de forma, esta comparação reprova.
-    """
+    """A tabela-verdade inteira, comparada contra o predicado do daemon."""
     estado = {"rumble_ff": {"vpads": vpads}, "native_mode": native}
     texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
     e_o_quadrante = sem_dono_do_rumble(

@@ -1,23 +1,4 @@
-"""O reinício do adaptador travado PARA depois de três sem cura — GOVERNADOR-DO-RADIO-01.
-
-O ``reiniciar-travado`` da ponte privilegiada (O-DIARIO-DO-RADIO-01) tirava e
-punha a porta USB de um adaptador em laço de «command tx timeout», com um freio
-de 15 min entre reinícios. O freio só ESPAÇAVA: um adaptador que volta a travar
-depois de cada reinício era reiniciado quatro vezes por hora, para sempre — e
-cada reinício é o dongle sumindo e voltando na porta dela, o que ninguém cura.
-
-A decisão de quem coordena (23/09/2026): depois de TRÊS reinícios seguidos sem
-cura, o verbo PARA, grava isso no diário UMA vez, e o sino fica com a frase de
-pôr a mão. O freio solta quando o laço some do journal.
-
-A MORDIDA, feita em 23/09/2026: tirar o bloco ``seguidos >=
-MAX_REINICIOS_SEGUIDOS`` do verbo faz
-``test_o_quarto_reinicio_sem_cura_nao_acontece`` reprovar com a porta
-reautorizada. Devolvido o arquivo, md5 conferido.
-
-Nada aqui toca o /sys, o journal ou o diário dela: as três raízes vêm de
-``tmp_path`` pelos ganchos da ponte, e o verbo roda como ela, sem sudo.
-"""
+"""O reinício do adaptador travado PARA depois de três sem cura — GOVERNADOR-DO-RADIO-01."""
 
 from __future__ import annotations
 
@@ -111,10 +92,7 @@ def _entradas(tmp_path: Path) -> list[dict]:
 
 
 def test_o_quarto_reinicio_sem_cura_nao_acontece(tmp_path: Path) -> None:
-    """Três reinícios seguidos, e o laço voltou depois de cada um: o quarto não vem.
-
-    O verbo segura, diz no diário UMA vez, e o sino fica com «tire e ponha».
-    """
+    """Três reinícios seguidos, e o laço voltou depois de cada um: o quarto não vem."""
     agora = int(time.time())
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": PORTA})
     _carimbar(tmp_path, anterior=agora - 901, seguidos=3)
@@ -132,7 +110,6 @@ def test_o_quarto_reinicio_sem_cura_nao_acontece(tmp_path: Path) -> None:
         f"O adaptador da porta {PORTA} não se cura sozinho. Tire e ponha ele."
     )
 
-    # Os tiques seguintes seguram CALADOS: o sino não repete a frase.
     for _ in range(2):
         de_novo = _reiniciar(tmp_path, sysfs, _laco(int(time.time()) - 1))
         assert de_novo.stdout.startswith(f"segurado\t{PORTA}\thci0\tparou depois de")
@@ -165,11 +142,7 @@ def test_o_reinicio_que_curou_por_horas_zera_a_conta(tmp_path: Path) -> None:
 
 
 def test_o_freio_solta_quando_o_laco_some_e_volta_a_valer_depois(tmp_path: Path) -> None:
-    """A mão dela curou (tirou e pôs): o laço sumiu do journal, e o freio solta.
-
-    Sem soltar, uma porta que parou de reiniciar uma vez ficaria parada para
-    sempre — inclusive para o travamento de outro dia, que o reinício curaria.
-    """
+    """A mão dela curou (tirou e pôs): o laço sumiu do journal, e o freio solta."""
     agora = int(time.time())
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": PORTA})
     _carimbar(tmp_path, anterior=agora - 901, seguidos=3)
@@ -177,7 +150,6 @@ def test_o_freio_solta_quando_o_laco_some_e_volta_a_valer_depois(tmp_path: Path)
     marca = _estampas(tmp_path) / f"reset-{PORTA}.desistiu"
     assert marca.exists()
 
-    # O journal sem o laço — o adaptador voltou são.
     calado = _reiniciar(tmp_path, sysfs, "")
     assert calado.returncode == 0, calado.stderr
     assert calado.stdout == ""
@@ -192,13 +164,7 @@ def test_o_freio_solta_quando_o_laco_some_e_volta_a_valer_depois(tmp_path: Path)
 
 
 def test_a_porta_vazia_solta_o_freio_sem_dizer_que_o_adaptador_voltou(tmp_path: Path) -> None:
-    """Ela tirou o adaptador e ainda não o pôs de volta: a porta está VAZIA.
-
-    O freio solta — a mão dela agiu —, mas o diário diz o que foi medido: a
-    porta sem aparelho. Conferência de 23/09/2026: ele dizia «voltou».
-
-    MORDIDA: devolva o texto único de antes e a porta vazia vira «voltou».
-    """
+    """Ela tirou o adaptador e ainda não o pôs de volta: a porta está VAZIA."""
     agora = int(time.time())
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": PORTA})
     _carimbar(tmp_path, anterior=agora - 901, seguidos=3)

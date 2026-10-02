@@ -50,8 +50,7 @@ def test_target_numero_mapeia_para_indice_zero_based(mock_ipc: dict[str, Any]) -
 def test_target_mapeia_slot_para_indice_quando_divergem(
     mock_ipc: dict[str, Any],
 ) -> None:
-    """D6 (COR-01): após replug, o slot 1 pode morar no index 1 — a usuária
-    digita o número que VÊ (slot) e o alvo mira o controle CERTO."""
+    """D6 (COR-01): após replug, o slot 1 pode morar no index 1 — a usuária"""
 
     def responder(method: str, params: dict[str, Any] | None) -> Any:
         if method == "daemon.state_full":
@@ -67,9 +66,7 @@ def test_target_mapeia_slot_para_indice_quando_divergem(
     mock_ipc["response"] = responder
     result = runner.invoke(app, ["controller", "target", "1"])
     assert result.exit_code == 0, result.output
-    # slot 1 → index 1 (posição), nunca o posicional cego (index 0).
     assert ("controller.target.set", {"index": 1}) in mock_ipc["calls"]
-    # O eco exibe o número pelo SLOT do controle mirado.
     assert "Controle 1" in result.output
 
 
@@ -104,7 +101,7 @@ def test_target_all_vira_broadcast(mock_ipc: dict[str, Any]) -> None:
 def test_target_nao_numerico_falha(mock_ipc: dict[str, Any]) -> None:
     result = runner.invoke(app, ["controller", "target", "xyz"])
     assert result.exit_code == 2
-    assert mock_ipc["calls"] == []  # nem chega no IPC
+    assert mock_ipc["calls"] == []
 
 
 def test_target_zero_invalido(mock_ipc: dict[str, Any]) -> None:
@@ -146,7 +143,6 @@ def test_list_rotula_pelo_slot_quando_presente(mock_ipc: dict[str, Any]) -> None
     }
     result = runner.invoke(app, ["controller", "list"])
     assert result.exit_code == 0, result.output
-    # index 0 exibe o slot 2 (e é o alvo); index 1 exibe o slot 1.
     assert "Controle 2 — BT" in result.output
     assert "Controle 1 — USB" in result.output
     assert "alvo de output: Controle 2" in result.output

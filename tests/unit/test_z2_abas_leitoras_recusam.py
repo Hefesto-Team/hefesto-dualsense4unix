@@ -1,24 +1,8 @@
-"""Z2-1/Z2-2 — as três abas leitoras perguntam ao dono, e a recusa chega à tela.
-
-24/08/2026. Antes desta leva, ``_edit_uniq``/``_rumble_edit_uniq`` liam o
-atributo legado por ``getattr(self, "_edit_target_uniq", None)`` — e o
-``None`` da janela que nunca soube o alvo era LITERALMENTE o mesmo valor de
-"ela escolheu Todos" (o defeito de forma P3, ``app/alvo_de_edicao.py``).
-
-**A MORDIDA:** monta o host de cada aba SEM o mixin da Status — nenhum
-atributo de alvo é escrito na instância, então ``alvo_de_edicao(host)``
-devolve ``DESCONHECIDO`` (o default de classe saiu do ar no P3; a EXISTÊNCIA
-do atributo é o sinal). Dispara o gesto de escrita e exige ZERO byte no
-rascunho e ZERO IPC — e, onde a aba já mostra toast, exige que a frase de
-``alvo.recusa()`` apareça (Z2-2). Depois cobre o lado que TEM de continuar
-aceitando (A2 do COMO-REGER-AGENTES): com o alvo definido, a escrita segue
-byte-idêntica à de sempre.
-"""
+"""Z2-1/Z2-2 — as três abas leitoras perguntam ao dono, e a recusa chega à tela."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("z2 abas leitoras recusam")
 
 from typing import Any
@@ -37,7 +21,6 @@ from hefesto_dualsense4unix.app.alvo_de_edicao import (
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 from tests.unit.test_triggers_actions import _build_mixin as _build_triggers_mixin
 
-#: MAC forjado da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 
@@ -52,9 +35,7 @@ def _draft_leds() -> draft_mod.DraftConfig:
     return draft_mod.DraftConfig.from_profile(perfil)
 
 
-# ----------------------------------------------------------------------
 # Lightbar (L1) — _persist_leds_update e _aplicar_cor_no_controle
-# ----------------------------------------------------------------------
 
 
 class _HostLuzes(LightbarActionsMixin):
@@ -90,7 +71,7 @@ def test_lightbar_definido_em_todos_continua_escrevendo_igual() -> None:
     host = _HostLuzes()
     definir_alvo(host, None, None)
     resultado = host._persist_leds_update({"lightbar_rgb": (1, 2, 3)})
-    assert resultado is False  # sem auto ligado disputando, D4 não dispara
+    assert resultado is False
     assert host.draft.leds.lightbar_rgb == (1, 2, 3)
 
 
@@ -124,13 +105,7 @@ def test_lightbar_off_desconhecido_tambem_recusa(monkeypatch: Any) -> None:
     host.on_lightbar_off(None)  # type: ignore[arg-type]
     assert host._toasts
     assert MOTIVO_SEM_ESTADO in host._toasts[-1]
-    # "Apagar" não mudou a cor corrente — o gesto foi recusado por inteiro.
     assert host._current_rgb == (0, 255, 0)
-
-
-# ----------------------------------------------------------------------
-# Rumble (L4) — _gravar_intensidade_no_rascunho
-# ----------------------------------------------------------------------
 
 
 class _HostRumble(RumbleActionsMixin):
@@ -159,27 +134,16 @@ def test_rumble_definido_em_todos_continua_gravando_igual() -> None:
     assert host.draft.rumble.policy == "max"
 
 
-# ----------------------------------------------------------------------
-# Gatilhos (L2/L3) — _persist_params_to_draft e _apply_trigger
-# ----------------------------------------------------------------------
-
-
 def test_gatilhos_desconhecido_nao_escreve_no_rascunho(monkeypatch: Any) -> None:
-    """A MORDIDA: preset escolhido sem alvo não grava — e não limpa overrides
-    de mais ninguém (o Fix HIGH do review 2026-07-16 seria acionado à toa)."""
+    """A MORDIDA: preset escolhido sem alvo não grava — e não limpa overrides"""
     mixin = _build_triggers_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    # A fixture grava "Todos" em `__init__` (Z2-1 também curou os testes
-    # existentes); aqui simulamos a janela NUNCA sincronizada — nem
-    # `_edit_target_uniq` nem `_alvo_de_edicao` na instância, ANTES do
-    # gesto que dispara a gravação (senão o combo já teria escrito com o
-    # alvo "Todos" que o `__init__` deixou).
     del mixin._edit_target_uniq
     assert not hasattr(mixin, "_edit_target_uniq")
     combo = mixin._trigger_mode["left"]
     combo.set_active_id("Rigid")
 
-    mixin.on_trigger_left_mode_changed(combo)  # dispara _persist_params_to_draft
+    mixin.on_trigger_left_mode_changed(combo)
 
     assert mixin.draft.triggers.left.mode == "Off", (
         "gravou no rascunho sem saber o alvo — a mesma família do P3"
@@ -189,8 +153,7 @@ def test_gatilhos_desconhecido_nao_escreve_no_rascunho(monkeypatch: Any) -> None
 def test_gatilhos_desconhecido_aplicar_recusa_com_motivo_e_zero_ipc(
     monkeypatch: Any,
 ) -> None:
-    """Z2-2: `_apply_trigger` recusa com a frase pronta, e `trigger.set` nunca
-    sai — o "preset gravado com a janela sem alvo" do §3 da sprint."""
+    """Z2-2: `_apply_trigger` recusa com a frase pronta, e `trigger.set` nunca"""
     mixin = _build_triggers_mixin(monkeypatch)
     mixin.install_triggers_tab()
     combo = mixin._trigger_mode["left"]
@@ -210,11 +173,6 @@ def test_gatilhos_desconhecido_aplicar_recusa_com_motivo_e_zero_ipc(
     assert "Nada foi alterado" in msg
 
 
-# ----------------------------------------------------------------------
-# Configurações (L5) — a grade de cards não marca ninguém às cegas
-# ----------------------------------------------------------------------
-
-
 class _HostConfig:
     """Host virgem: nenhum atributo de alvo."""
 
@@ -232,11 +190,7 @@ def _entrada(uniq: str, slot: int) -> dict[str, Any]:
 
 
 def test_config_desconhecido_nenhum_card_marcado() -> None:
-    """A MORDIDA: sem saber o alvo, nenhum card nasce com a marca de alvo.
-
-    ``selecionado=bool(alvo) and alvo == uniq`` já era imune ao P3 (``None``
-    nunca marca), mas a fonte agora é o dono — provado migrando E medindo.
-    """
+    """A MORDIDA: sem saber o alvo, nenhum card nasce com a marca de alvo."""
     host = _HostConfig()
     painel = _PainelDosControles(host)
     cards = painel._cards_da_mesa(

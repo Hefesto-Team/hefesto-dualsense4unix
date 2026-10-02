@@ -46,7 +46,6 @@ from tests.unit import test_o_aplicar_nao_solta_o_teto_do_controle as regua_do_a
 from tests.unit import test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar as regua_do_brilho
 from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
 
-# O caminho de `pacotes` é posto pela mesa da A-MARCA, importada acima.
 import pacotes
 from pacotes import a04_iluminacao
 
@@ -69,9 +68,6 @@ def _a08() -> Any:
     return a08_conexoes
 
 
-# ---------------------------------------------------------------------------
-# 1. O DONO — um lugar para os três rótulos, o disco e quem vence
-# ---------------------------------------------------------------------------
 def test_os_rotulos_sao_os_do_desenho_e_personalizado_e_o_terceiro() -> None:
     orc = _orc()
     assert [orc.ROTULOS_DOS_PERFIS[p] for p in orc.PERFIS] == [
@@ -108,9 +104,6 @@ def test_o_corpo_do_clique_e_o_do_dono_da_economia(k: int) -> None:
             f"o disco de «{orc.ROTULOS_DOS_PERFIS[perfil]}» não acende o mesmo botão")
 
 
-# ---------------------------------------------------------------------------
-# 2. O CLIQUE NO CARTÃO — só aquele controle, e o botão aceso depois de recarregar
-# ---------------------------------------------------------------------------
 class _PonteDoDisco:
     """O `machine.declare` do daemon, sem o daemon: a fusão contra o disco."""
 
@@ -126,15 +119,7 @@ class _PonteDoDisco:
 
 @pytest.fixture
 def disco(monkeypatch: pytest.MonkeyPatch) -> Iterator[_PonteDoDisco]:
-    """O `maquina.json` do lar de mentira, lido pela LEITURA DA ABA (`_declaracao`).
-
-    FATO SUBSTITUÍDO na conferência (26/09/2026): este dublê trocava o
-    `_declaracao` da aba por um `carregar_maquina()` a cada chamada — mais
-    frouxo que o produto, que GUARDAVA o arquivo até um gesto da própria aba
-    reler. Com ele a régua dava verde enquanto, no piloto, a «Bateria Longa»
-    gravada pela Sistema não acendia os cartões e o clique no P2 gravava por
-    cima da escolha dele. Agora só o guardado de outro teste é esquecido.
-    """
+    """O `maquina.json` do lar de mentira, lido pela LEITURA DA ABA (`_declaracao`)."""
     a08 = _a08()
     monkeypatch.setattr(a08, "_DECLARACAO", None)
     monkeypatch.setattr(a08, "_SELO_DA_DECLARACAO", None)
@@ -185,17 +170,8 @@ def test_um_perfil_que_nao_existe_recusa_sem_gravar(disco: _PonteDoDisco) -> Non
     assert disco.corpos == []
 
 
-# ---------------------------------------------------------------------------
-# 3. A SISTEMA E A CONEXÕES — o mesmo dado, pelo mesmo dono
-# ---------------------------------------------------------------------------
 def test_a_bateria_longa_da_sistema_acende_os_quatro_cartoes(disco: _PonteDoDisco) -> None:
-    """O clique do Perfil Global é o gesto da aba 09, e o cartão lê o mesmo disco.
-
-    A ordem é a do piloto da conferência (26/09/2026): o cartão já leu o disco
-    (o clique no P2 e no P3) ANTES de a Sistema gravar. MORDIDA: tire o
-    `selo != _SELO_DA_DECLARACAO` de `a08_conexoes._declaracao` → os cartões
-    não acendem, e o clique no P2 grava por cima da «Bateria Longa» dele.
-    """
+    """O clique do Perfil Global é o gesto da aba 09, e o cartão lê o mesmo disco."""
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
     orc = _orc()
@@ -203,14 +179,12 @@ def test_a_bateria_longa_da_sistema_acende_os_quatro_cartoes(disco: _PonteDoDisc
     _clicar(disco, 3, orc.PERFIL_EU_ESCOLHO)
     a09_sistema.perfil_da_mesa(None, {"v": orc.PERFIL_BATERIA_LONGA}, disco)
     assert _acesos() == dict.fromkeys((1, 2, 3, 4), orc.PERFIL_BATERIA_LONGA)
-    # sob a «Bateria Longa» global, o cartão não sai dela e não grava nada
     antes = len(disco.corpos)
     for k in (1, 2, 3, 4):
         with pytest.raises(RuntimeError, match="Perfil Global de Bateria"):
             _clicar(disco, k, orc.PERFIL_TUDO_LIGADO)
     _clicar(disco, 2, orc.PERFIL_BATERIA_LONGA)
     assert len(disco.corpos) == antes
-    # a Sistema sai da «Bateria Longa»: cada cartão volta ao que era dele
     a09_sistema.perfil_da_mesa(None, {"v": orc.PERFIL_TUDO_LIGADO}, disco)
     assert _acesos() == {1: orc.PERFIL_TUDO_LIGADO, 2: orc.PERFIL_BATERIA_LONGA,
                          3: orc.PERFIL_EU_ESCOLHO, 4: orc.PERFIL_TUDO_LIGADO}
@@ -231,9 +205,6 @@ def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.P
     assert "Eu escolho" not in html
 
 
-# ---------------------------------------------------------------------------
-# 4. A PÁGINA — três botões por cartão, com endereço, e o aceso é do produto
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("arquivo", PAGINAS, ids=["bancada", "publicada"])
 def test_cada_cartao_tem_os_tres_botoes_com_endereco(arquivo: pathlib.Path) -> None:
     orc = _orc()
@@ -281,9 +252,6 @@ def test_o_pacote_pinta_o_perfil_de_cada_controle(disco: _PonteDoDisco) -> None:
         3: orc.PERFIL_TUDO_LIGADO, 4: orc.PERFIL_EU_ESCOLHO}
 
 
-# ---------------------------------------------------------------------------
-# 5. O APARELHO — «Aplicar», e DEPOIS a «Bateria Longa»: o teto por cima da camada dela
-# ---------------------------------------------------------------------------
 @pytest.fixture
 def mesa_de(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
     """A mesa de quatro da O-APLICAR (o `IpcServer` real, o merge do backend)."""
@@ -318,11 +286,7 @@ def declarar() -> Iterator[Any]:
 
 
 def _o_clique_chega_ao_daemon(mesa: Any, declarar: Any, corpo: dict[str, Any]) -> None:
-    """O que o `machine.declare` faz depois de gravar: `reaplicar_se_a_economia_mudou`.
-
-    O daemon é o método REAL da `Daemon`, sobre o backend REAL da mesa; a
-    reativação `system` é a mesma de `_reapply_last_profile`.
-    """
+    """O que o `machine.declare` faz depois de gravar: `reaplicar_se_a_economia_mudou`."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
@@ -334,10 +298,7 @@ def _o_clique_chega_ao_daemon(mesa: Any, declarar: Any, corpo: dict[str, Any]) -
 
 
 def _donos_da_luz(mesa: Any) -> dict[int, str | None]:
-    """A camada dona das luzes de número de cada controle (`usuaria` ou `perfil`).
-
-    É o campo que o «Aplicar» escreve nos quatro (a cor só vai em quem tem a sua).
-    """
+    """A camada dona das luzes de número de cada controle (`usuaria` ou `perfil`)."""
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     with mesa.ctl._io_lock:
@@ -367,17 +328,10 @@ def test_a_bateria_longa_depois_do_aplicar_poe_o_teto_so_nele(
     assert depois[k]["gatilhos"] != livre[k]["gatilhos"], "o gatilho ficou sem teto"
     for n in {1, 2, 3, 4} - {k}:
         assert depois[n] == livre[n], f"P{k}/{via}: a economia do P{k} mexeu no P{n}"
-    # A CAMADA DOS OUTROS FICA COMO ESTAVA: a soltura é só do P<k>.
-    # NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01): o
-    # «Aplicar» era o `DraftApplier`, que escrevia a camada DELA nos quatro, e
-    # esta linha cobrava `usuaria` nos outros. Ele passou a ser a cadeia da
-    # ativação (`profile.reaplicar`), que escreve a camada do PERFIL; a régua
-    # cobra agora que o clique do P<k> não troque o dono dos outros.
     donos = _donos_da_luz(mesa)
     assert donos[k] != "usuaria", donos
     assert all(donos[n] == donos_antes[n] for n in {1, 2, 3, 4} - {k}), (donos_antes, donos)
 
-    # e o teto sai quando ela escolhe «Tudo Ligado»: nada fica preso
     _o_clique_chega_ao_daemon(mesa, declarar,
                               orc.declaracao_do_perfil(UNIQS[k - 1], orc.PERFIL_TUDO_LIGADO))
     solto = regua_do_aplicar._estado(mesa, k)
@@ -403,15 +357,7 @@ def test_a_bateria_longa_da_sistema_depois_do_aplicar_poe_o_teto_nos_quatro(
 @pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
 def test_a_bateria_longa_no_modo_nativo_poe_o_teto_na_saida_do_jogo(
         mesa_de: Any, declarar: Any, k: int, via: str) -> None:
-    """Nunca só um modo: o clique com o jogo em Modo Nativo também põe o teto.
-
-    Achado pela conferência (26/09/2026). No Modo Nativo o daemon não reaplica
-    no clique (o controle é do jogo); quem reaplica é a SAÍDA do nativo
-    (`_reapply_last_profile`, origem `system`). A camada do «Aplicar» tem de
-    estar solta já no clique, senão ela atravessa essa reativação e o P<k> sai
-    do jogo a 70% e no Médio. MORDIDA: devolva o `_soltar_o_teto_de_quem_entra`
-    para depois do `if self._native_mode` → reprova nos oito.
-    """
+    """Nunca só um modo: o clique com o jogo em Modo Nativo também põe o teto."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
@@ -429,7 +375,7 @@ def test_a_bateria_longa_no_modo_nativo_poe_o_teto_na_saida_do_jogo(
     assert not Daemon.reaplicar_se_a_economia_mudou(vivo, antes)  # type: ignore[arg-type]
     assert reaplicou == [], "no Modo Nativo o clique não reaplica: o controle é do jogo"
 
-    mesa.trocar(NOME, "system")  # a saída do Modo Nativo
+    mesa.trocar(NOME, "system")
     depois = regua_do_aplicar._mesa_inteira(mesa)
     assert depois[k]["luzes"] == (regua_do_aplicar.FRACO, regua_do_aplicar.FRACO), (
         f"P{k}/{via}: saiu do jogo com as luzes {depois[k]['luzes']} — a camada do "

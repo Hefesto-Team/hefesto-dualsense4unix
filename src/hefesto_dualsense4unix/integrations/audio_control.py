@@ -67,9 +67,6 @@ class AudioControl:
             logger.info("audio_backend_detectado", backend=self._backend)
         return self._backend
 
-    # ------------------------------------------------------------------
-    # API publica
-    # ------------------------------------------------------------------
 
     def fonte_padrao_e_o_controle(self) -> bool:
         """True quando o microfone padrão do sistema É o do DualSense.
@@ -101,7 +98,6 @@ class AudioControl:
         backend = self._ensure_backend()
         try:
             if backend == "wpctl":
-                # O `wpctl inspect` do source padrão traz `node.name` e
                 # `node.description`; o do controle carrega "DualSense".
                 saida = self._run(
                     ["wpctl", "inspect", "@DEFAULT_AUDIO_SOURCE@"]
@@ -116,14 +112,7 @@ class AudioControl:
         return "dualsense" in (saida or "").lower()
 
     def toggle_default_source_mute(self) -> bool:
-        """Alterna mute do microfone padrão do sistema.
-
-        Aplica debounce de 200ms: chamadas consecutivas dentro desse
-        intervalo ignoram o subprocess e retornam o último estado.
-
-        Returns:
-            True se o microfone agora esta mutado; False se esta ativo.
-        """
+        """Alterna mute do microfone padrão do sistema."""
         now = self._clock()
         if (now - self._last_call_at) < DEBOUNCE_SEC:
             logger.debug("audio_toggle_debounced")
@@ -148,42 +137,9 @@ class AudioControl:
             _avisar("audio_toggle_falhou", exc, backend=backend)
         return self._last_known_muted
 
-    # ------------------------------------------------------------------
-    # Métodos internos de subprocess
-    # ------------------------------------------------------------------
 
     def _run(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
-        """Executa comando como lista de args, sem shell=True — e em `LC_ALL=C`.
-
-        **O `LC_ALL=C` NÃO É ZELO, e a ausência dele era um instrumento que
-        mentia.** Medido na máquina dela em 06/09/2026, com o `LANG=pt_BR.UTF-8`
-        que ela usa::
-
-            pactl set-source-mute <nó> 1 ; pactl get-source-mute <nó>
-                sem LC_ALL  ->  Mute: sim
-                com LC_ALL=C ->  Mute: yes
-            desmutado, sem LC_ALL                ->  Mute: não
-
-        :meth:`_query_pactl_muted` responde ``"yes" in saida.lower()``. Nem
-        ``sim`` nem ``não`` contêm ``yes``, então nesta máquina a leitura
-        devolvia **False sempre** — e :meth:`toggle_default_source_mute`
-        afirmava *"o microfone está no ar"* tivesse ele mutado ou não. O
-        aparelho obedecia; quem mentia era a leitura de volta.
-
-        **É a MESMA causa que este arquivo já registra duas vezes** —
-        `fonte_de_captura_do_controle` (15/08/2026, *"já respondeu 'nenhum
-        controle com placa de áudio' sobre um sistema que tinha um"*) e
-        `_texto_do_pactl`. As duas ganharam o ambiente; esta ficou de fora, que
-        é a forma desta casa de deixar meia cura viva: **quando a cura conhece a
-        causa, ela cobre TODOS os chamadores.**
-
-        DÍVIDA DECLARADA, e ela não é desculpa: hoje NENHUM caminho de `src/`
-        chama `toggle_default_source_mute` — o botão do microfone deixou de
-        passar por ele em 01/09/2026, e há régua que reprova se ele voltar
-        (`test_bt_e_vpad_01.py`). O defeito era latente, não vivo; o que o torna
-        digno de conserto é que a próxima pessoa a reabrir aquela porta herdaria
-        uma leitura que responde sobre o idioma do shell, não sobre o aparelho.
-        """
+        """Executa comando como lista de args, sem shell=True — e em `LC_ALL=C`."""
         return _rodar_pelo_recuo(
             argv,
             timeout=SUBPROCESS_TIMEOUT_SEC,
@@ -194,53 +150,20 @@ class AudioControl:
         )
 
     def _query_wpctl_muted(self) -> bool:
-        """Consulta estado de mute via wpctl get-volume.
-
-        O wpctl inclui '[MUTED]' na saida quando o source esta mutado.
-        """
+        """Consulta estado de mute via wpctl get-volume."""
         result = self._run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SOURCE@"])
         return "[MUTED]" in (result.stdout or "")
 
     def _query_pactl_muted(self) -> bool:
-        """Consulta estado de mute via pactl get-source-mute.
-
-        A saida padrão e 'Mute: yes' ou 'Mute: no'.
-        """
+        """Consulta estado de mute via pactl get-source-mute."""
         result = self._run(["pactl", "get-source-mute", "@DEFAULT_SOURCE@"])
         return "yes" in (result.stdout or "").lower()
 
 
-#: Como se reconhece a fonte de captura DO CONTROLE entre as do sistema.
-#:
-#: São várias marcas porque são dois caminhos E dois vocabulários, e é
-#: justamente isso que o controle deslizante do microfone existe para esconder
-#: dela (MIC-VOLUME-01):
-#:
 #: - no CABO o DualSense é uma placa de áudio USB de verdade, e o source se
 #:   chama ``alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_
-#:   Controller-00.analog-stereo`` — **medido em 17/08/2026, com o controle no
 #:   cabo**. Ele TEM a palavra "DualSense";
-#: - no RÁDIO ele **não expõe placa nenhuma** (medido no mesmo dia: `pactl
-#:   list cards` traz só as duas placas da máquina). O áudio trafega como Opus
-#:   tunelado em HID, e quem publica um source é a ponte de
-#:   `integrations/dualsense_bt_audio.py`, com o prefixo `hefesto_dualsense`.
-#:
-#: **UMA marca basta, e chegar a essa conclusão custou duas correções.**
-#:
-#: A lista teve três nomes. Os outros dois saíram, e os motivos são a mesma
-#: lição por dois caminhos:
-#:
-#: - `hefesto_dualsense` saiu quando o teste da mordida mostrou que arrancá-lo
-#:   não reprovava nada: o source da ponte se chama `hefesto_dualsense_bt_<mac>`
-#:   e já casa com `dualsense`;
-#: - `sony_interactive_entertainment` saiu em 17/08, quando o source do cabo foi
-#:   lido AO VIVO pela primeira vez. Eu o havia posto por INFERÊNCIA, escrevendo
 #:   que o nome no cabo "não teria a palavra DualSense". **Tem.** A medição
-#:   derrubou a inferência, e a marca que ela justificava caiu junto.
-#:
-#: Fica registrado porque é a regra que este dia produziu duas vezes: **marca
-#: redundante é ruído que finge cobertura** — e uma marca posta por palpite,
-#: mesmo prudente, é dívida até alguém medir.
 _MARCAS_DA_FONTE_DO_CONTROLE: tuple[str, ...] = ("dualsense",)
 
 
@@ -260,10 +183,6 @@ def fonte_de_captura_do_controle() -> str | None:
             text=True,
             timeout=SUBPROCESS_TIMEOUT_SEC,
             check=False,
-            # `pactl` TRADUZ a saída, e uma versão desta função em português
-            # já respondeu "nenhum controle com placa de áudio" sobre um
-            # sistema que tinha um — a afirmação era sobre o idioma do shell,
-            # não sobre o aparelho (medido em 15/08/2026).
             env={**os.environ, "LC_ALL": "C"},
         ).stdout
     except (OSError, subprocess.SubprocessError) as exc:
@@ -275,14 +194,7 @@ def fonte_de_captura_do_controle() -> str | None:
             continue
         nome = partes[1].strip()
         alvo = nome.lower()
-        # O MONITOR não é microfone — e esta linha foi paga com um defeito
-        # real. Medido em 16/08/2026 com o controle no cabo: a primeira versão
-        # desta função devolveu
         # `alsa_output.usb-…DualSense…analog-surround-40.monitor`, que é o ECO
-        # DA SAÍDA do controle, não a captura. Todo sink do PulseAudio ganha um
-        # source `.monitor` de brinde, e ele casa com qualquer marca que o sink
-        # casaria. Um controle deslizante de MICROFONE mexendo no monitor do
-        # ALTO-FALANTE é a tela fazendo outra coisa do que promete.
         if alvo.endswith(".monitor") or alvo.startswith("alsa_output."):
             continue
         if any(marca in alvo for marca in _MARCAS_DA_FONTE_DO_CONTROLE):
@@ -291,12 +203,7 @@ def fonte_de_captura_do_controle() -> str | None:
 
 
 def _texto_do_pactl(argv: list[str]) -> str | None:
-    """`pactl` com `LC_ALL=C`, sem shell. `None` em qualquer falha.
-
-    O `LC_ALL=C` não é zelo: o `pactl` desta máquina TRADUZ a saída, e uma
-    versão desta rotina em português já respondeu "nenhum controle com placa de
-    áudio" sobre um sistema que tinha uma (medido em 15/08/2026).
-    """
+    """`pactl` com `LC_ALL=C`, sem shell. `None` em qualquer falha."""
     try:
         return _rodar_pelo_recuo(
             argv,
@@ -407,19 +314,9 @@ def fonte_de_captura_do_uniq(
     if curta is None:
         return None
     # O dono do "quais destas são de DualSense" é o mesmo de sempre: ele
-    # descarta o `.monitor` (o ECO DA SAÍDA, que já custou um defeito real em
-    # 16/08) e reconhece tanto a placa do cabo quanto a source da ponte.
     fontes = fontes_dualsense(curta)
     if not fontes:
         return None
-    # A saída LONGA só serve ao casamento por USB — e é o único passo que o
-    # controle no rádio não tem. Sem ela, as regras de IDENTIDADE continuam
-    # valendo, e são justamente as que respondem por rádio.
-    # A MESA, COMO ELA CHEGOU. `None` é "não perguntei" e vira `[]` para o
-    # `escolher_fonte`, que é o comportamento de antes desta data; uma mesa
-    # conhecida entra inteira, e o `uniq` de quem pergunta entra junto mesmo
-    # que o backend não o tenha listado — perguntar pelo microfone de um
-    # controle e não pô-lo entre os candidatos seria a régua se contradizendo.
     candidatos = list(mesa) if mesa is not None else []
     if mesa is not None and uniq not in candidatos:
         candidatos.append(uniq)
@@ -490,17 +387,7 @@ def definir_volume_da_captura(volume_pct: int, *, fonte: str | None) -> bool:
 
 
 def volume_da_captura(*, fonte: str | None) -> int | None:
-    """O volume ATUAL da captura do controle, em por cento, ou `None`.
-
-    Lê em vez de lembrar: guardar o valor mandado como se fosse leitura é o
-    hábito que já fez esta tela parecer mentirosa quando ela nunca mentiu.
-
-    **`fonte` NÃO TEM PADRÃO** — a mesma porta que `definir_volume_da_captura`
-    fechou em 06/09/2026, e pela mesma razão, com um agravante próprio: uma
-    LEITURA que cai na primeira fonte da lista devolve o número do microfone do
-    vizinho, e quem o recebe o pinta no card certo. Mentir na leitura é pior que
-    errar na escrita, porque não deixa rastro no aparelho.
-    """
+    """O volume ATUAL da captura do controle, em por cento, ou `None`."""
     alvo = fonte
     if not alvo:
         return None
@@ -515,28 +402,12 @@ def volume_da_captura(*, fonte: str | None) -> int | None:
         ).stdout
     except (OSError, subprocess.SubprocessError):
         return None
-    # "Volume: front-left: 32768 /  50% / -18,06 dB, ..." — o primeiro por
-    # cento basta; os canais do nosso source são mono ou espelhados.
     achado = re.search(r"(\d+)%", saida or "")
     return int(achado.group(1)) if achado else None
 
 
-# ---------------------------------------------------------------------------
-# O RECUO DO SERVIDOR — SOM-RECUO-01 (13/09/2026)
-#
-# NO FIM DO MÓDULO de propósito: o mapa cita linhas deste arquivo, e código
-# novo enfiado lá em cima envelhece as citações.
-# ---------------------------------------------------------------------------
-
-
 class PactlEmRecuoError(subprocess.SubprocessError):
-    """O servidor de som está em recuo: a pergunta NÃO saiu.
-
-    Filha de ``subprocess.SubprocessError`` de propósito: toda função deste
-    módulo já transforma essa família no «não sei» dela (``None``, ``False`` ou
-    o último estado conhecido). A recusa chega a cada uma pela mesma porta que
-    o prazo estourado já usava — só que na hora, e não depois de 2 s.
-    """
+    """O servidor de som está em recuo: a pergunta NÃO saiu."""
 
 
 def _rodar_pelo_recuo(
@@ -548,32 +419,7 @@ def _rodar_pelo_recuo(
     text: Literal[True] = True,
     check: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    """``subprocess.run`` com o recuo do SERVIDOR na frente de todo ``pactl``.
-
-    **O DEFEITO:** com o ``pipewire-pulse`` sem atender ninguém, cada pergunta
-    deste módulo esperava os 2 s de :data:`SUBPROCESS_TIMEOUT_SEC` na fila do
-    mesmo servidor em que o som e o microfone já estouravam os deles — os
-    números do journal estão em ``dualsense_bt_audio.RecuoDoPactl``.
-
-    O recuo é ``dualsense_bt_audio.PACTL``, o mesmo do som e do microfone: o
-    servidor é um só. Em recuo, levanta :class:`PactlEmRecuoError` sem rodar
-    nada; um prazo estourado entra no recuo; rc=0 o zera. **rc≠0 não zera:**
-    ``Connection refused`` também sai com rc≠0, e não prova que o servidor
-    voltou.
-
-    **O ``wpctl`` fica FORA, e é de propósito.** Ele fala o protocolo nativo do
-    PipeWire, e não o ``pipewire-pulse`` que travou — medido por quem coordena
-    em 13/09: o ``pw-cli``, do mesmo protocolo, respondia enquanto o ``pactl
-    info`` dava rc=124. Pôr o ``wpctl`` no recuo calaria um caminho que atendia.
-
-    O ``PACTL`` é lido NA HORA, dentro da função: a régua troca o do módulo por
-    um de relógio de mentira, e uma cópia no topo congelaria o de antes.
-
-    **A LEITURA PERGUNTA AO RETRATO ANTES** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01,
-    28/09/2026): no daemon, quem responde é `integrations/retrato_do_som`, e o
-    servidor só é perguntado quando o retrato não tem dono. O «não sei» dele
-    chega a quem chama pela mesma porta do recuo.
-    """
+    """``subprocess.run`` com o recuo do SERVIDOR na frente de todo ``pactl``."""
     if argv[:1] != ["pactl"]:
         return subprocess.run(
             argv, capture_output=capture_output, text=text, timeout=timeout,
@@ -604,21 +450,13 @@ def _rodar_pelo_recuo(
         raise
     finally:
         retrato_do_som.escreveu(argv)
-    # `getattr` e não `.returncode`: dois dublês da suíte devolvem só `stdout`
-    # (`test_mic_da_mesa_cheia_01.py`, `test_o_volume_do_mic_nao_cai_no_vizinho.py`),
-    # e uma resposta sem rc continua sendo resposta — só um rc≠0 declarado não zera.
     if getattr(proc, "returncode", 0) == 0:
         PACTL.respondeu()
     return proc
 
 
 def _avisar(evento: str, exc: BaseException, **campos: object) -> None:
-    """A falha de verdade vira ``warning``; a pergunta que o recuo segurou, ``debug``.
-
-    Sem isto a cura só trocaria centenas de esperas de 2 s por centenas de
-    avisos instantâneos no journal. O servidor parado já é dito uma vez, por
-    estouro, em ``pactl_mudo``.
-    """
+    """A falha de verdade vira ``warning``; a pergunta que o recuo segurou, ``debug``."""
     if isinstance(exc, PactlEmRecuoError):
         logger.debug(evento, err=str(exc), **campos)
     else:

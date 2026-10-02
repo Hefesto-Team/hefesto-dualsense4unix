@@ -1,21 +1,4 @@
-"""T5, CONFIGURAÇÕES-FECHA-01 — as constantes de Hz não se desgarram do CSV.
-
-`HZ_INPUT_SEM_MIC`, `HZ_INPUT_COM_MIC` e `HZ_AUDIO_COM_MIC`
-(`integrations/radio_da_mesa.py`) são a medição do A/B de 2026-07-25 copiada à
-mão para dentro do Python. A mesma medição está no
-`docs/data/mapa-controles.csv`, na célula `radio_ressalva` da linha
-`audio.microfone` — e até esta sprint nada comparava as duas cópias: remedir
-o A/B e esquecer o CSV (ou vice-versa) deixava a aba Configurações e o mapa de
-canais discordando sobre o mesmo fato, e nenhum portão notava.
-
-Este arquivo é a fatia mínima da Z6/PAREAMENTO-01 que esta aba carrega
-sozinha — não a ponte geral entre medição, CSV e tela.
-
-A MORDIDA já foi provada em 23/08 pelo AUDITORIA-DE-PERDA-01: trocar
-`HZ_INPUT_SEM_MIC` de 260,4 para 300,0 deixando a `radio_ressalva` para trás
-passava limpo (36 testes verdes e portão OK). Este arquivo é o portão que
-falta.
-"""
+"""T5, CONFIGURAÇÕES-FECHA-01 — as constantes de Hz não se desgarram do CSV."""
 from __future__ import annotations
 
 import csv
@@ -32,8 +15,6 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 
-#: `"260,4"` → `260.4` — a forma como o `radio_ressalva` escreve os números,
-#: em português (vírgula decimal).
 _NUMERO_PT_BR = re.compile(r"(\d+,\d)")
 
 
@@ -52,11 +33,7 @@ def test_a_regua_acha_a_linha_e_a_celula() -> None:
 
 
 def test_as_tres_constantes_de_hz_batem_com_o_csv() -> None:
-    """Os três números do Python são os três primeiros números `X,Y Hz` do CSV.
-
-    A célula descreve, nesta ordem: mic desligado (input), mic ligado
-    (input), mic ligado (áudio) — a mesma ordem das três constantes.
-    """
+    """Os três números do Python são os três primeiros números `X,Y Hz` do CSV."""
     ressalva = _radio_ressalva(CHAVE_NO_MAPA_DE_CANAIS)
     achados = _NUMERO_PT_BR.findall(ressalva)
     assert len(achados) >= 3, (

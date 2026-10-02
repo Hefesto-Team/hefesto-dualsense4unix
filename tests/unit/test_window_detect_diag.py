@@ -1,21 +1,4 @@
-"""Testes do FEAT-WINDOW-DETECT-DIAG-01 (diagnóstico do detector de janela).
-
-Cobre:
-  - `build_window_reader()` retorna `WindowReaderDiag` com `backend_name`
-    correto por cenário de ambiente (X11, XWayland, Wayland puro, headless),
-    mantendo retrocompatibilidade com a API legada (callable de dict).
-  - `backend_name` dinâmico da cascata Wayland: migra cosmic -> portal ->
-    wlrctl -> null conforme os backends desistem/ficam indisponíveis.
-    (O `cosmic` entrou na frente em 02/09/2026 — JANELA-WAYLAND-CEGA-01 —
-    porque é o único que responde no compositor dela.)
-  - Metadados por leitura: `last_read_useful`, `useful_reads`,
-    `last_useful_class` ("unknown" e vazio NÃO contam como útil).
-  - `StateStore`: `set_window_detect_backend` / `record_window_detect_read`
-    e as properties `window_detect_backend` / `window_detect_healthy` /
-    `window_detect_last_class` (unknown não derruba healthy).
-  - Subsystem autoswitch: `_build_diag_window_reader` semeia o store e grava
-    backend/healthy/last_class a cada leitura com reader fake.
-"""
+"""Testes do FEAT-WINDOW-DETECT-DIAG-01 (diagnóstico do detector de janela)."""
 from __future__ import annotations
 
 import time
@@ -71,15 +54,7 @@ class TestBackendNamePorCenarioDeEnv:
     def test_wayland_puro_comeca_em_cosmic(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem leitura ainda, a cascata reporta o primeiro da fila.
-
-        O primeiro passou a ser o `cosmic` em 02/09/2026. Ele só sai da frente
-        depois de o compositor DIZER que não publica o protocolo — e enquanto
-        ninguém perguntou, ninguém sabe.
-
-        MORDIDA: pôr o portal de volta na frente de `_WaylandCascadeBackend.
-        backend_name` e este teste reprova.
-        """
+        """Sem leitura ainda, a cascata reporta o primeiro da fila."""
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         assert build_window_reader().backend_name == "cosmic"
@@ -95,29 +70,17 @@ class TestBackendNamePorCenarioDeEnv:
 
 
 class TestCascataBackendNameDinamico:
-    """A cascata migra cosmic -> portal -> wlrctl -> null conforme desistem.
-
-    **Os testes desligam o `cosmic` À MÃO, e isso é o ponto.** Ele é o
-    primeiro da fila, e sem desligá-lo a suíte iria falar com o compositor
-    DE VERDADE da máquina onde ela roda — passaria no CI (sem Wayland) e
-    mediria outra coisa na máquina dela. Régua que muda de resposta conforme
-    a máquina não é régua.
-    """
+    """A cascata migra cosmic -> portal -> wlrctl -> null conforme desistem."""
 
     def _make_cascade(self, monkeypatch: pytest.MonkeyPatch) -> Any:
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         cascade = window_detect.detect_window_backend()
-        # O compositor deste teste não publica o protocolo do COSMIC.
         cascade._cosmic._desligado_de_vez = True
         return cascade
 
     def test_cosmic_e_o_primeiro_da_fila(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Enquanto ele não desistiu, é dele o nome.
-
-        MORDIDA: tirar o ramo `if self._cosmic.available: return "cosmic"` de
-        `backend_name` e a asserção reprova.
-        """
+        """Enquanto ele não desistiu, é dele o nome."""
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         cascade = window_detect.detect_window_backend()
@@ -126,11 +89,7 @@ class TestCascataBackendNameDinamico:
     def test_leitura_util_do_cosmic_muda_o_nome(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A cascata pergunta ao cosmic ANTES do portal.
-
-        MORDIDA: mover a chamada do cosmic para depois do portal em
-        `get_active_window_info` e o nome passa a ser "portal".
-        """
+        """A cascata pergunta ao cosmic ANTES do portal."""
         from unittest.mock import MagicMock
 
         cascade = self._make_cascade(monkeypatch)
@@ -150,10 +109,7 @@ class TestCascataBackendNameDinamico:
     def test_cosmic_desiste_e_o_portal_assume(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Num compositor que não é COSMIC, a fila anda sozinha.
-
-        MORDIDA: fazer `available` do backend cosmic devolver sempre True.
-        """
+        """Num compositor que não é COSMIC, a fila anda sozinha."""
         cascade = self._make_cascade(monkeypatch)
         assert cascade.backend_name == "portal"
 
@@ -178,7 +134,6 @@ class TestCascataBackendNameDinamico:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         cascade = self._make_cascade(monkeypatch)
-        # Simula o portal após o threshold de falhas consecutivas.
         cascade._portal._consecutive_failures = (
             cascade._portal._UNSUPPORTED_THRESHOLD
         )
@@ -306,9 +261,7 @@ class TestStoreWindowDetect:
 
 
 class TestStoreSinalNuma01:
-    """NUMA-01 (bloco 14 do plano) — `window_detect_current_class` +
-    `game_window_seen_at` no `StateStore`: a fonte de evidência do
-    `game_signal` (NUNCA o sticky `window_detect_last_class`, vetado)."""
+    """NUMA-01 (bloco 14 do plano) — `window_detect_current_class` +"""
 
     def test_estado_inicial(self) -> None:
         store = StateStore()
@@ -316,9 +269,7 @@ class TestStoreSinalNuma01:
         assert store.game_window_seen_at is None
 
     def test_grava_a_classe_crua_a_cada_leitura_inclusive_unknown(self) -> None:
-        """Ao contrário do sticky `last_class`, o CRU é regravado SEMPRE —
-        inclusive com "unknown" ou None (falha-sem: sem isso o consumidor
-        não distingue "alt-tab para o desktop" de "nunca leu")."""
+        """Ao contrário do sticky `last_class`, o CRU é regravado SEMPRE —"""
         store = StateStore()
         store.record_window_detect_read("xlib", "steam_app_42")
         assert store.window_detect_current_class == "steam_app_42"
@@ -337,18 +288,14 @@ class TestStoreSinalNuma01:
     def test_game_window_seen_at_e_sticky_ele_mesmo_ate_o_proximo_match(
         self,
     ) -> None:
-        """O CARIMBO (não a classe) persiste até o PRÓXIMO steam_app — é a
-        idade dele (calculada por quem consome, `now - seen_at`) que decai
-        e vira evidência fresca/velha em `game_signal.classify`, nunca o
-        valor em si sendo tratado como "ainda é jogo"."""
+        """O CARIMBO (não a classe) persiste até o PRÓXIMO steam_app — é a"""
         store = StateStore()
         store.record_window_detect_read("xlib", "steam_app_42", now=5.0)
         store.record_window_detect_read("xlib", "unknown", now=50.0)
         assert store.game_window_seen_at == 5.0
 
     def test_now_default_usa_o_relogio_real_monotonic(self) -> None:
-        """Sem `now` explícito, usa `time.monotonic()` — a chamada de
-        produção do autoswitch não precisa injetar relógio."""
+        """Sem `now` explícito, usa `time.monotonic()` — a chamada de"""
         store = StateStore()
         antes = time.monotonic()
         store.record_window_detect_read("xlib", "steam_app_1")
@@ -357,9 +304,7 @@ class TestStoreSinalNuma01:
         assert antes <= store.game_window_seen_at <= depois
 
     def test_set_window_detect_backend_zera_tudo(self) -> None:
-        """`set_window_detect_backend` (novo boot do detector) zera TAMBÉM
-        a classe crua/monotonic/`game_window_seen_at` — um episódio novo de
-        observação não pode herdar o carimbo de jogo do anterior."""
+        """`set_window_detect_backend` (novo boot do detector) zera TAMBÉM"""
         store = StateStore()
         store.record_window_detect_read("xlib", "steam_app_42", now=5.0)
         store.set_window_detect_backend("xlib", healthy=True)
@@ -371,13 +316,7 @@ class TestSubsystemDiagReader:
     """`_build_diag_window_reader` semeia e grava no store (reader fake)."""
 
     class _FakeDiagReader:
-        """Duble do WindowReaderDiag retornado por build_window_reader.
-
-        `provou_conexao` (T-01, ONDA0-Z7): estado que `conexao_provada()`
-        devolve — `None` por padrão, o mesmo "nenhuma tentativa ainda" do
-        `XlibBackend` real, para os dublês que não se importam com a sonda de
-        T-01 continuarem representando "sem prova" e não "conectado".
-        """
+        """Duble do WindowReaderDiag retornado por build_window_reader."""
 
         def __init__(
             self,
@@ -409,14 +348,7 @@ class TestSubsystemDiagReader:
     def test_seed_xlib_com_prova_de_conexao_nasce_saudavel(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """T-01 (ONDA0-Z7): `xlib` só nasce saudável com PROVA de conexão.
-
-        Substitui `test_seed_xlib_presume_saudavel` — a presunção antiga
-        (`initial_healthy = initial_backend == "xlib"`) nascia `True` só por
-        `DISPLAY` estar presente, mesmo com o servidor recusando (medido:
-        716 falhas em 6h, `healthy=True` a sessão toda). Agora precisa da
-        sonda confirmar `conexao_provada() is True`.
-        """
+        """T-01 (ONDA0-Z7): `xlib` só nasce saudável com PROVA de conexão."""
         store = StateStore()
         fake = self._FakeDiagReader(
             "xlib", [{"wm_class": "unknown"}], provou_conexao=True
@@ -432,12 +364,7 @@ class TestSubsystemDiagReader:
     def test_seed_xlib_sem_prova_de_conexao_nasce_nao_saudavel(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """T-01: `DISPLAY` presente e MORTO não basta mais (item 7 do aceite).
-
-        A sonda tentou e o servidor recusou (`conexao_provada() is False`) —
-        o caso medido na bancada dela em 23/08. `window_detect_healthy` tem
-        de nascer `False`, não `True` por presunção.
-        """
+        """T-01: `DISPLAY` presente e MORTO não basta mais (item 7 do aceite)."""
         store = StateStore()
         fake = self._FakeDiagReader(
             "xlib", [{"wm_class": "unknown"}], provou_conexao=False
@@ -473,7 +400,7 @@ class TestSubsystemDiagReader:
         reader = _build_diag_window_reader(store)
         info = reader()
 
-        assert info["wm_class"] == "steam"  # API legada preservada
+        assert info["wm_class"] == "steam"
         assert store.window_detect_backend == "wlrctl"
         assert store.window_detect_healthy is True
         assert store.window_detect_last_class == "steam"

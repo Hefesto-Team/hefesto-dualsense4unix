@@ -1,88 +1,5 @@
 #!/usr/bin/env python3
-"""ensaio_rumble_um_bit_por_vez.py — apaga UM bit de autorização por vez.
-
-O que falta depois da bancada de 10/08/2026
--------------------------------------------
-Naquele ensaio ficou provado, com o controle na mão dela: `common[3]` (strong)
-é o motor esquerdo, `common[2]` (weak) é o direito, e o zero para de fato.
-Sabemos que o CONJUNTO funciona. Não sabemos **de quantos bits o aparelho
-precisa** — e essa é a poda que sobra (`docs/method/METODO-DE-ISOLAMENTO.md`,
-Passo 7).
-
-Os bits estão em `core/backend_pydualsense.py:829-835`::
-
-    if not rumble_asserted:
-        flag0 &= ~(COMPATIBLE_VIBRATION | HAPTICS_SELECT)   # 0x01 e 0x02
-        flag1 &= ~MOTOR_POWER                               # 0x40
-        flag2 &= ~COMPATIBLE_VIBRATION2                     # 0x04
-
-São QUATRO no código. **MEDIDO aqui, montando o report com o construtor do
-próprio produto: só TRÊS chegam ao fio.** Com rumble ativo e supressão de LED
-(o estado normal desta casa) o produto emite `flag0=0x0F`, `flag1=0x41`,
-`flag2=0x00` — o bit v2 (`VALID_FLAG2_COMPATIBLE_VIBRATION2`, 0x04) **nunca
-acende**, porque `flag2` nasce de `int(self.light.ledOption.value)` e a enum
-`LedOptions` da pydualsense vai no máximo até `Both = 0x03`. A linha que
-"limpa" o v2 limpa um bit que nunca esteve ligado.
-
-Este instrumento não acredita nesse parágrafo: ele **mede a linha de base
-chamando o `_build_common` do produto**, sem hardware, e imprime o que mediu
-antes de qualquer disparo. Se o produto mudar, o número muda aqui junto.
-
-O caminho — e por que ele NÃO passa pelo IPC
---------------------------------------------
-A armadilha nº 1 desta casa é o instrumento que disputa o hidraw com o daemon
-e imprime "aplicado" sem ter aplicado. A pergunta foi feita e MEDIDA:
-
-* `app.ipc_bridge.rumble_set` → `rumble.set` carrega **só** `weak` e `strong`;
-* nenhum handler do daemon aceita flags (`grep '"rumble\\.'` em
-  `daemon/ipc_handlers.py`: `set`, `stop`, `passthrough`, `policy_set`,
-  `policy_custom` — e mais nada);
-* os bits são fixos dentro do `_build_common`, sem parâmetro nenhum.
-
-**Não existe caminho limpo pelo IPC para variar os bits.** Então este
-instrumento faz o que a regra manda quando não há: PARA o daemon, avisa que
-parou, confere que ninguém mais está com o hidraw aberto, e o religa no fim.
-Enquanto ele roda, o Hefesto está desligado — a vibração de jogo, o perfil e o
-keepalive do daemon não existem. Isso é dito na tela, não escondido.
-
-A parada do motor é a primeira obrigação
-----------------------------------------
-Com o daemon parado, NINGUÉM zera um motor preso: o keepalive do daemon sai com
-os bits de vibração desligados de propósito (GUERRA-01), então religá-lo **não
-para** um motor que ficou girando. Quem para é este instrumento. Por isso:
-
-* todo pulso vive dentro de `try/finally`;
-* a parada é uma SEQUÊNCIA com **autorização máxima** (v1 + HAPTICS_SELECT +
-  MOTOR_POWER + v2, motores 0), depois com os flags da própria condição, e
-  depois a máxima de novo — porque se o ensaio acabou de provar que um bit era
-  necessário, parar com os flags reduzidos poderia não parar nada;
-* `SIGINT` (Ctrl+C), `SIGTERM` e `atexit` chamam a mesma parada;
-* e existe o modo de pânico, que só para e sai::
-
-      .venv/bin/python scripts/ensaio_rumble_um_bit_por_vez.py parar
-
-Uso
----
-    # o ensaio seco — não abre hidraw, não para o daemon, não vibra nada.
-    # Serve para conferir os bytes e os flags antes de encostar no controle.
-    .venv/bin/python scripts/ensaio_rumble_um_bit_por_vez.py seco
-
-    # a bancada, com ela e o controle na mão:
-    .venv/bin/python scripts/ensaio_rumble_um_bit_por_vez.py ensaio \\
-        --confirmo-parar-o-daemon
-
-    # uma condição só (o roteiro inteiro é o recomendado — a base repetida no
-    # fim é o que controla bateria caindo e mão acostumando):
-    .venv/bin/python scripts/ensaio_rumble_um_bit_por_vez.py ensaio \\
-        --confirmo-parar-o-daemon --condicao sem-motor-power
-
-    # o pânico:
-    .venv/bin/python scripts/ensaio_rumble_um_bit_por_vez.py parar
-
-Este instrumento NÃO conserta nada e NÃO toca em `src/`. O irmão dele,
-`scripts/ensaio_rumble_bits.py`, faz o contraste produto-contra-kernel sem
-desligar nada; este aqui é o que apaga bit a bit.
-"""
+"""ensaio_rumble_um_bit_por_vez.py — apaga UM bit de autorização por vez."""
 from __future__ import annotations
 
 import argparse
@@ -113,15 +30,7 @@ CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"
 VID_SONY = "0000054C"
 PID_DUALSENSE = "00000CE6"
 
-#: Onde este instrumento enumera os nós hidraw. É parâmetro só para o teste
-#: poder montar uma mesa de mentira em `tmp_path` — a medição de verdade não
-#: tem por que apontar para outro lugar.
 RAIZ_SYSFS_HIDRAW = "/sys/class/hidraw"
-
-
-# --------------------------------------------------------------------------
-# Os quatro bits — o que cada um autoriza, e quem os manda lá fora
-# --------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -130,7 +39,7 @@ class Bit:
 
     chave: str
     nome: str
-    flag: int          # 0, 1 ou 2 — qual byte de valid_flag
+    flag: int
     mascara: int
     autoriza: str
     externos: str
@@ -174,11 +83,6 @@ BITS: dict[str, Bit] = {
 CONJUNTO_KERNEL = "o conjunto que o kernel manda (haptics + v2, sem v1, sem motor power)"
 
 
-# --------------------------------------------------------------------------
-# As condições — a ordem dos ensaios, e o porquê de cada posição
-# --------------------------------------------------------------------------
-
-
 @dataclass
 class Condicao:
     """Uma linha do ensaio: um bit mexido, uma pergunta, uma previsão."""
@@ -186,21 +90,15 @@ class Condicao:
     ordem: int
     chave: str
     rotulo: str
-    #: (flag, máscara, ligar?) — o que muda em relação à linha de base.
     deltas: tuple[tuple[int, int, bool], ...]
     previsao: str
     o_que_prova: str
-    #: (suspeito, presente) que esta linha registra no caderno.
     registros: tuple[tuple[str, bool], ...] = ()
     pergunta_extra: str = ""
 
 
 def _todos_os_registros_da_base() -> tuple[tuple[str, bool], ...]:
-    """A base registra o lado PRESENTE de tudo que está no fio hoje.
-
-    O v2 entra como AUSENTE, porque é isso que ele é hoje — e o caderno precisa
-    dos dois lados para sair de `inconclusivo` (`scripts/eliminacao.py`).
-    """
+    """A base registra o lado PRESENTE de tudo que está no fio hoje."""
     return (
         (BITS["v1"].nome, True),
         (BITS["haptics"].nome, True),
@@ -305,17 +203,12 @@ ROTEIRO: tuple[Condicao, ...] = (
 )
 
 
-# --------------------------------------------------------------------------
-# As perguntas do método, respondidas por medição — antes de qualquer disparo
-# --------------------------------------------------------------------------
-
-
 @dataclass
 class Fisico:
     """O controle físico como o sistema o enxerga AGORA."""
 
     hidraw: str
-    transporte: str  # "bluetooth" | "cabo" | outro
+    transporte: str
 
 
 def achar_fisico(raiz: str = RAIZ_SYSFS_HIDRAW) -> Fisico | None:
@@ -366,13 +259,7 @@ def daemon_ativo() -> bool:
 
 
 def donos_do_hidraw(caminho: str) -> list[str]:
-    """Quem está com o hidraw ABERTO agora (processos deste usuário).
-
-    É a defesa medida contra a armadilha nº 1: se alguém além de nós tem o nó
-    aberto, o ensaio mede a briga entre escritores, não o bit. Só enxerga os
-    processos do próprio usuário — o que é suficiente, porque o daemon e o
-    Steam rodam como ela.
-    """
+    """Quem está com o hidraw ABERTO agora (processos deste usuário)."""
     donos: list[str] = []
     for proc in glob.glob("/proc/[0-9]*"):
         pid = os.path.basename(proc)
@@ -408,22 +295,10 @@ def idade_do_daemon() -> str:
     return f"daemon subiu [{inicio.split('=', 1)[-1]}] · último commit em src/ [{commit}]"
 
 
-# --------------------------------------------------------------------------
-# A linha de base — medida no PRODUTO, não digitada por mim
-# --------------------------------------------------------------------------
-
-
 def linha_de_base_do_produto(
     weak: int, strong: int, *, bt: bool, suprimir_leds: bool
 ) -> bytearray:
-    """O `common` de 47 bytes que o PRODUTO montaria para este rumble.
-
-    Chama o `_build_common` de `core/backend_pydualsense.py` numa instância sem
-    `init()` — o mesmo truque de `tests/unit/test_backend_keepalive_neutro.py`,
-    que não abre hardware nenhum. Assim os gatilhos, o áudio e os LEDs saem
-    byte a byte como o produto os manda, e a ÚNICA variável do ensaio é o bit
-    de autorização que a condição mexe.
-    """
+    """O `common` de 47 bytes que o PRODUTO montaria para este rumble."""
     from pydualsense.enums import ConnectionType
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
@@ -482,11 +357,6 @@ def hexdump(dados: bytes) -> str:
     return " ".join(f"{b:02X}" for b in dados)
 
 
-# --------------------------------------------------------------------------
-# A bancada — quem escreve, e quem PARA
-# --------------------------------------------------------------------------
-
-
 @dataclass
 class Bancada:
     """O único escritor do hidraw durante o ensaio. Sabe parar o motor."""
@@ -496,21 +366,15 @@ class Bancada:
     seco: bool = False
     keepalive: bool = True
     fd: int | None = None
-    #: Por onde o hidraw foi aberto, já na frase do relatório. Nasce vazia e é
-    #: preenchida no `abrir`; o modo seco nunca abre nada e a mantém vazia.
     porta: str = ""
     seq: int = 0
     escritas: int = 0
-    # RLock, e não Lock, de propósito: o Ctrl+C pode chegar com o laço do pulso
-    # DENTRO da trava, e o tratador de sinal roda na mesma linha de execução —
-    # com um Lock simples a parada travaria justamente com o motor girando.
     _trava: threading.RLock = field(default_factory=threading.RLock)
     _parar_keepalive: threading.Event = field(default_factory=threading.Event)
     _thread: threading.Thread | None = None
     _ultimos_flags: tuple[int, int, int] | None = None
     _fechada: bool = False
 
-    # -- montagem ---------------------------------------------------------
 
     def montar(
         self, flags: tuple[int, int, int], weak: int, strong: int
@@ -528,12 +392,7 @@ class Bancada:
         return common, bytes(rep.build_usb_report(common))
 
     def montar_inerte(self) -> bytes:
-        """Keepalive de link: TODOS os flags zerados — não autoriza nada.
-
-        Com o daemon parado, o rádio pode entrar em sniff e atrasar o pulso; o
-        daemon mantinha um keepalive a 2 Hz e é isso que estamos repondo. Como
-        nenhum bit está ligado, ele não pode influenciar o ensaio.
-        """
+        """Keepalive de link: TODOS os flags zerados — não autoriza nada."""
         from hefesto_dualsense4unix.core import ds_output_report as rep
 
         common = bytearray(rep.COMMON_LEN)
@@ -541,18 +400,9 @@ class Bancada:
             return bytes(rep.build_bt_report(common, seq=self.seq))
         return bytes(rep.build_usb_report(common))
 
-    # -- escrita ----------------------------------------------------------
 
     def abrir(self) -> None:
-        """Abre o hidraw PELA PORTA DO BROKER — e guarda por onde entrou.
-
-        O `os.open` que estava aqui colhia `EACCES` em toda mesa com o co-op
-        ligado (A-PORTA-QUE-A-CASA-CONSTRUIU-01): o Hefesto esconde o físico
-        do jogo de propósito, e este instrumento é, para o kernel, mais um
-        processo da sessão. O `O_NONBLOCK` vira `set_blocking(False)` porque o
-        fd pode ter vindo do broker, já aberto — a flag se põe depois, e o
-        efeito é o mesmo.
-        """
+        """Abre o hidraw PELA PORTA DO BROKER — e guarda por onde entrou."""
         if self.seco:
             return
         aberto = abrir_no_hidraw(self.fisico.hidraw, escrita=True)
@@ -580,7 +430,6 @@ class Bancada:
             except OSError:
                 return
 
-    # -- os dois gestos ---------------------------------------------------
 
     def pulso(
         self, flags: tuple[int, int, int], weak: int, strong: int, segundos: float
@@ -597,21 +446,13 @@ class Bancada:
         try:
             fim = time.monotonic() + segundos
             while time.monotonic() < fim:
-                # remontado a cada volta: no BT o nibble de sequência e o CRC
-                # mudam a cada write (é o que o `writeReport` do produto faz).
                 self._escrever(self.montar(flags, weak, strong)[1])
                 time.sleep(0.1)
         finally:
             self.parar("fim do pulso")
 
     def parar(self, motivo: str) -> None:
-        """A sequência de parada. Idempotente, e chamada de todo lado.
-
-        Manda motores 0 com AUTORIZAÇÃO MÁXIMA (todos os quatro bits), depois
-        com os flags da última condição, depois a máxima de novo. Se o ensaio
-        acabou de mostrar que um bit era necessário, parar só com os flags
-        reduzidos poderia não parar coisa nenhuma.
-        """
+        """A sequência de parada. Idempotente, e chamada de todo lado."""
         if self._fechada:
             return
         if not self.seco and self.fd is None:
@@ -629,7 +470,7 @@ class Bancada:
             common, report = self.montar(flags, 0, 0)
             try:
                 self._escrever(report)
-            except OSError as erro:  # nunca deixar de tentar as outras
+            except OSError as erro:
                 print(f"      ! falhou o stop '{rotulo}': {erro}")
                 continue
             print(f"      {rotulo}: {descrever_flags(flags)} · motores 0")
@@ -647,11 +488,6 @@ class Bancada:
             with contextlib.suppress(OSError):
                 os.close(self.fd)
         self.fd = None
-
-
-# --------------------------------------------------------------------------
-# O caderno
-# --------------------------------------------------------------------------
 
 
 def linhas_de_caderno(
@@ -673,27 +509,12 @@ def linhas_de_caderno(
                 f"rumble-bits-{contador[0]}",
                 linha_id,
                 lado,
-                # `degrau` VAZIO, e de propósito: este ensaio mede a SAÍDA (o
-                # motor girou), não a volta. Declarar degrau que não se mediu é a
-                # fabricação que a ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 existe para
-                # impedir. Posicional, como as outras colunas deste escritor.
                 "",
-                # `ponte` VAZIA, pela mesma razão e no mesmo lugar
-                # (ENSAIO-QUE-NAO-DIZ-A-PONTE-01, 20/08/2026): este ensaio fala
-                # com o aparelho pelo hidraw, sem jogo e sem vpad no meio, então
-                # não há ponte a declarar. Vazio aqui quer dizer "não declarou",
-                # nunca "serve para toda ponte". Posicional, como o `degrau`.
                 "",
                 quando,
                 suspeito,
                 "sim" if presente else "não",
                 resultado,
-                # `resultado_da_feature`, vazia (13/08/2026): aqui o `resultado`
-                # JÁ é o que a feature fez — o motor girou ou não —, e vazio
-                # quer dizer exatamente isso. A coluna existe para o caso em que
-                # o `resultado` fala do SUSPEITO, que não é o deste ensaio.
-                # Ela é POSICIONAL neste escritor: o lugar dela é entre
-                # `resultado` e `observado_por`, como no cabeçalho.
                 "",
                 "olho-dela",
                 fonte,
@@ -710,24 +531,12 @@ def gravar_no_caderno(linhas: list[list[str]]) -> None:
         escritor = csv.writer(fh)
         if novo:
             escritor.writerow(
-                # `degrau` e `ponte` entram depois de `transporte` porque são o
-                # mesmo tipo de eixo: o que a medição estava medindo
-                # (ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01, 20/08/2026) e POR ONDE ela
-                # chegou (ENSAIO-QUE-NAO-DIZ-A-PONTE-01, 20/08/2026). Este
-                # ensaio mede SAÍDA e fala direto com o aparelho, então os dois
-                # saem VAZIOS — declarar degrau ou ponte que não se mediu é a
-                # fabricação que a regra existe para impedir.
                 ["id", "linha_id", "transporte", "degrau", "ponte", "quando",
                  "suspeito",
                  "presente", "resultado", "resultado_da_feature", "observado_por",
                  "fonte", "nota", "linha_id_v1"]
             )
         escritor.writerows(linhas)
-
-
-# --------------------------------------------------------------------------
-# Os modos
-# --------------------------------------------------------------------------
 
 
 def cabecalho(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> None:
@@ -737,9 +546,6 @@ def cabecalho(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> None
     print("=" * 78)
     print(f"  hidraw ............ {fisico.hidraw}")
     print(f"  transporte ........ {fisico.transporte} (lido do uevent, não da memória)")
-    # A porta vai ao lado da biblioteca pelo mesmo motivo que ela: medir no nó
-    # escondido produz zero convincente e falso, como medir contra a biblioteca
-    # errada produz alarme convincente e falso.
     print(f"  {declaracao_da_porta()}")
     print(f"  daemon ............ {'ATIVO' if daemon_ativo() else 'parado'}")
     print(f"  idade ............. {idade_do_daemon()}")
@@ -878,8 +684,6 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
         except PortaFechadaError as erro:
             print(f"  {erro}")
             return 4
-        # A porta REALMENTE usada, depois de aberta — o cabeçalho declarou a
-        # provável; esta é a que valeu para este nó.
         print(f"  {bancada.porta}\n")
         for condicao in condicoes:
             flags = imprimir_condicao(condicao, base)
@@ -923,10 +727,6 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
     contador = [0]
     linhas: list[list[str]] = []
     fonte = f"bancada {datetime.now():%d/%m} — bits do rumble, daemon parado"
-    # O caderno do v2 aponta para o GRÃO (chave@controle) e guarda o transporte
-    # em coluna própria. Sem a coluna, os ensaios de cabo e de rádio cairiam no
-    # mesmo balde e um contradiria o outro — foi assim que a lightbar quase
-    # perdeu o culpado isolado.
     linha_id = args.linha_id or "vibracao.rumble.esquerdo@dualsense"
     lado = {"bluetooth": "radio", "cabo": "cabo"}.get(fisico.transporte, "")
     for condicao, resultado, nota in respostas:

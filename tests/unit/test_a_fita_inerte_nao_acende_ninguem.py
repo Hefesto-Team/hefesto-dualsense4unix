@@ -62,15 +62,10 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-#: O MESMO MOTOR DAS OUTRAS RÉGUAS DE TELA desta casa, e ele roda headless:
-#: nenhuma janela nasce na tela dela.
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome de PASTA; caminho não leva acento
 
-#: O QUE O MOTOR RESPONDE sobre cada chip da fita. `borderTopWidth` entra junto
-#: da cor porque a borda de 2px do plástico é a marca da peça VIVA: um chip que
-#: perdesse a cor e guardasse a espessura continuaria diferente dos irmãos.
 O_QUE_O_MOTOR_DESENHA = """() => {
   const f = document.querySelector('.fita');
   if (!f) return {erro: 'esta página não tem `.fita`'};
@@ -97,12 +92,7 @@ def _abas_publicadas() -> list[pathlib.Path]:
 
 @pytest.fixture(scope="module")
 def medido() -> dict:
-    """A fita de cada aba publicada, medida no Chrome — uma abertura para todas.
-
-    **RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE.** Se a pasta mudar de lugar, ela
-    reprova em vez de dar por boas nenhuma aba — o silêncio que esta casa já
-    pagou quatro vezes num dia.
-    """
+    """A fita de cada aba publicada, medida no Chrome — uma abertura para todas."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     paginas = _abas_publicadas()
@@ -130,17 +120,8 @@ def _inertes(medido: dict) -> list[tuple[str, dict]]:
     return [(n, r) for n, r in medido.items() if r.get("inerte")]
 
 
-# ---------------------------------------------------------------------------
-# 1. AS SETE — sem esta contagem, tudo abaixo passaria por ausência
-# ---------------------------------------------------------------------------
 def test_as_abas_de_fita_inerte_continuam_sendo_sete(medido: dict) -> None:
-    """Sete das dez não escolhem controle, e a lista tem UM dono.
-
-    O número sai de `monta.ABAS_QUE_ESCOLHEM` (três) contra as dez. Ele está
-    aqui para pegar o dia em que alguém mover uma aba de lado sem perceber: a
-    cura do chip só alcança a fita inerte, e uma aba que saísse dessa metade
-    sairia da cobertura desta régua EM SILÊNCIO.
-    """
+    """Sete das dez não escolhem controle, e a lista tem UM dono."""
     import monta
 
     inertes = {n for n, _ in _inertes(medido)}
@@ -153,16 +134,8 @@ def test_as_abas_de_fita_inerte_continuam_sendo_sete(medido: dict) -> None:
     assert len(inertes) == 7, f"esperava sete abas de fita inerte, achei {len(inertes)}"
 
 
-# ---------------------------------------------------------------------------
-# 2. A CURA — o marcado tem a MESMA cara dos irmãos, nas sete
-# ---------------------------------------------------------------------------
 def test_o_chip_marcado_tem_a_mesma_cara_dos_irmaos(medido: dict) -> None:
-    """Nas sete abas de fita inerte, todos os chips desenham igual.
-
-    É a frase dela virada medida: *"conseguimos deixar ele cinza como os
-    demais?"* — e "como os demais" inclui o peso da letra, que era o que sobrava
-    quando se apagava só a cor.
-    """
+    """Nas sete abas de fita inerte, todos os chips desenham igual."""
     ruins = []
     for nome, r in _inertes(medido):
         caras = {c["cara"] for c in r["chips"]}
@@ -181,13 +154,7 @@ def test_o_chip_marcado_tem_a_mesma_cara_dos_irmaos(medido: dict) -> None:
 
 
 def test_a_fita_inerte_nao_oferece_clique_em_chip_nenhum(medido: dict) -> None:
-    """E o chip continua sem endereço — a cura não pode virar a mentira seguinte.
-
-    `monta._endereco_do_chip` devolve string vazia quando `inerte`, e é a metade
-    que impede a fita apagada de OFERECER uma escolha que a aba não tem para
-    onde levar. Sem este caso, apagar o destaque poderia vir acompanhado de
-    alguém "consertando" o chip para clicar.
-    """
+    """E o chip continua sem endereço — a cura não pode virar a mentira seguinte."""
     com_gesto = [(n, c["texto"]) for n, r in _inertes(medido)
                  for c in r["chips"] if c["gesto"]]
     assert not com_gesto, (
@@ -196,19 +163,8 @@ def test_a_fita_inerte_nao_oferece_clique_em_chip_nenhum(medido: dict) -> None:
         f"faz a tela oferecer uma escolha sem destino.")
 
 
-# ---------------------------------------------------------------------------
-# 3. O CASO DELA — o marcado era o P1, e ele cai em OUTRA regra
-# ---------------------------------------------------------------------------
 def test_o_chip_do_plastico_marcado_tambem_fica_igual() -> None:
-    """Move o `.on` para o chip do P1 e remede — que é o que ela tinha na tela.
-
-    POR QUE ELE PRECISA EXISTIR: na página publicada o marcado é o `Todos`, que
-    é `.chip` puro. O chip do P1 é `.chip.plastico`, e nele DUAS regras de mesma
-    especificidade (0,4,0) disputam a borda — `.fita.inerte .chip.plastico` e
-    `.fita.inerte .chip.on`. Quem ganha é a última no arquivo. Medir só o
-    `Todos` deixaria justamente o caso que ela fotografou sem cobertura, e a
-    sprint abriu porque uma hipótese não medida pareceu óbvia.
-    """
+    """Move o `.on` para o chip do P1 e remede — que é o que ela tinha na tela."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     alvo = PUBLICADO / "03-gatilhos.html"

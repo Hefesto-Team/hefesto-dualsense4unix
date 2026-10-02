@@ -87,62 +87,29 @@ import math
 import re
 from typing import Any
 
-#: OS TRÊS VOCABULÁRIOS DE ENDEREÇO DE CAMPO, e nenhum se aposenta. É a mesma
-#: lista que a função ``achar()`` do BOOTSTRAP procura no DOM — repeti-la aqui é
-#: o preço de o Python não poder ler o JS, e o
-#: ``test_a_regua_le_os_mesmos_enderecos_do_bootstrap`` é quem impede as duas de
-#: divergirem em silêncio.
 ATRIBUTOS_DE_CAMPO = ("data-campo", "data-papel", "data-hef")
 
-#: OS ENDEREÇOS DE GESTO QUE A RÉGUA CLICA. ``data-papel`` está de FORA de
-#: propósito, e a razão é medida: na aba Vibração ele endereça 28 CAMPOS, e o
-#: ouvinte do bootstrap o aceita como gesto — clicar os 28 seria a régua
-#: inventando 28 botões que ninguém desenhou. Eles saem no relato como
-#: ``ambiguos``, que é o que eles são: um endereço que é campo e gesto ao mesmo
-#: tempo.
 ATRIBUTOS_DE_GESTO = ("data-gesto", "data-hef-gesto")
 
-#: O QUINTO VOCABULÁRIO, POR CLASSE: o rodapé mora no ``topo.html``, o esqueleto
-#: das dez, e um ``data-gesto`` ali mudaria as dez páginas de uma vez.
 CLASSE_DE_GESTO = re.compile(r"\br-([a-z]+)\b")
 
-#: Quem endereça o BLOCO de um controle. A tela fala ``pref`` (``p1``); o daemon
-#: fala ``uniq``. As duas formas aparecem em página, e o bootstrap aceita as duas.
 ATRIBUTOS_DE_DONO = ("data-controle", "data-uniq")
 
-#: As tags que não fecham. Sem esta lista, um ``<input data-campo="x">`` deixaria
-#: um quadro aberto para sempre e engoliria o texto de todos os irmãos.
 SEM_FECHO = frozenset({
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
     "meta", "param", "source", "track", "wbr",
 })
 
-#: O que o ``escrever()`` do BOOTSTRAP põe no lugar do vazio. Não é enfeite: um
-#: campo pintado com ``None`` mostra travessão, e comparar contra ``""`` diria
-#: que o produto não pintou quando pintou.
 TRAVESSAO = "—"
 
 PRODUTO = "PRODUTO"
 MOCKUP = "MOCKUP"
 INDECIDIVEL = "INDECIDIVEL"
-#: O QUARTO VEREDITO, e ele é dela (03/09/2026). Um título de seção, o texto de
-#: um botão e o nome de uma opção NÃO são dívida — são RÓTULO, e rótulo não muda.
-#: Contá-los como ``MOCKUP`` fazia 100% ser inalcançável por construção: medido
-#: em 02/09, 38 dos 53 "pendentes" eram rótulos, e o teto aritmético era ~89%.
-#:
-#: A marca é ``data-hef-rotulo`` no elemento, e ela é DECLARAÇÃO, nunca
-#: inferência: quem não a puser continua acusado. Foi assim que ela pediu — *"a
-#: régua para de cobrá-lo e passa a EXIGIR a marca"* —, e é o que impede a
-#: categoria de virar o esconderijo onde dívida real vai morar.
 ROTULO = "ROTULO"
 
 
 def _espremer(texto: str) -> str:
-    """O texto como o DOM o entrega a esta régua: sem espaço em excesso.
-
-    O HTML é gerado com indentação, e ``textContent`` traz as quebras de linha
-    junto. Comparar cru diria que TODO campo mudou.
-    """
+    """O texto como o DOM o entrega a esta régua: sem espaço em excesso."""
     return " ".join(texto.split())
 
 
@@ -158,14 +125,7 @@ class _SoOTexto(html.parser.HTMLParser):
 
 
 def _so_o_texto(marcado: str) -> str:
-    """``"hoje <b>segue o global</b>"`` → ``"hoje segue o global"``.
-
-    O QUE ELA MOSTRARIA se este HTML fosse escrito no ``innerHTML``, lido do
-    jeito que esta régua lê o alvo ``html``: pelo TEXTO. Nenhuma tag acrescenta
-    espaço — ``textContent`` cola ``<b>a</b>b`` como ``"ab"``, e o ``<br>`` não
-    vira branco nenhum —, então concatenar os dados do parser reproduz o
-    navegador. As entidades vêm resolvidas (``convert_charrefs``), como no DOM.
-    """
+    """``"hoje <b>segue o global</b>"`` → ``"hoje segue o global"``."""
     p = _SoOTexto()
     p.feed(marcado)
     p.close()
@@ -174,24 +134,7 @@ def _so_o_texto(marcado: str) -> str:
 
 @dataclasses.dataclass(frozen=True)
 class _Campo:
-    """Um endereço de pintura, com o que o ARQUIVO crava nele.
-
-    :param chave: o valor do ``data-campo`` (ou ``data-papel``/``data-hef``).
-    :param dono: o ``pref`` do bloco de controle em volta, ou ``""`` quando o
-        campo é da mesa. Sem isto a aba Gatilhos seria ilegível: os 25 campos
-        se repetem QUATRO vezes, uma por coluna, e ``aj-val-e-0`` vale ``7`` na
-        do P1 e ``3`` na do P2.
-    :param alvo: o mesmo ``data-hef-alvo`` que o bootstrap lê — o que na tela
-        recebe o valor: o texto, a largura da barra, o ``value`` do campo.
-    :param valor: o que está CRAVADO no arquivo publicado.
-    :param rotulo: o ``data-hef-rotulo`` — a DECLARAÇÃO de que este campo é
-        texto fixo, e não dado que o produto deveria escrever. Ver :data:`ROTULO`.
-    :param quando: só para o alvo ``classe`` — o ``data-hef-quando``, que é
-        QUEM ESTE ELEMENTO É dentro do grupo. Os quatro degraus da Vibração
-        compartilham um endereço só, e sem isto a régua não saberia que uma
-        declaração de ``'max'`` deixa os outros três apagados DE PROPÓSITO —
-        acusaria três endereços mortos onde o produto acertou.
-    """
+    """Um endereço de pintura, com o que o ARQUIVO crava nele."""
 
     chave: str
     dono: str
@@ -223,34 +166,19 @@ class _Veredito:
 
 
 class _Leitor(html.parser.HTMLParser):
-    """Lê o HTML publicado e devolve os endereços com o que está cravado neles.
-
-    POR QUE UM PARSER, E NÃO UM ``grep``: um ``data-campo`` não guarda o valor
-    num atributo — ele guarda no CONTEÚDO do elemento, que pode ter tags
-    dentro, e o dono está no ancestral. Expressão regular sobre isso é a
-    ferramenta errada, e a casa já pagou por ler estrutura com busca de texto.
-    """
+    """Lê o HTML publicado e devolve os endereços com o que está cravado neles."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.campos: list[tuple[int, _Campo]] = []
         self.gestos: list[_Gesto] = []
-        #: Os endereços que são CAMPO e GESTO ao mesmo tempo — a aba Vibração
-        #: inteira. Saem no relato porque não dá para tratá-los como nenhum dos
-        #: dois sem escolher por eles.
         self.ambiguos: list[str] = []
-        #: Os ``data-papel``, que o ouvinte do bootstrap ACEITA como gesto. Eles
-        #: não entram na lista de cliques (ver ``ATRIBUTOS_DE_GESTO``), mas
-        #: precisam sair no relato: em 05-vibracao os três gestos REGISTRADOS
-        #: — `forca`, `testar`, `parar` — são endereçados só assim, e uma régua
-        #: que os ignorasse não clicaria um único botão daquela aba.
         self.papeis: list[_Gesto] = []
         self.scripts = 0
         self._pilha: list[dict[str, Any]] = []
         self._donos: list[str] = []
         self._ordem = 0
 
-    # -- os quadros --------------------------------------------------------
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         d = {k: (v or "") for k, v in attrs}
         if tag == "script":
@@ -313,8 +241,6 @@ class _Leitor(html.parser.HTMLParser):
             quadro["cru"].append(data)
 
     def _fechar(self, tag: str) -> None:
-        # PROCURA O QUADRO DA TAG, e não presume que é o topo: um ``</div>``
-        # sobrando (ou um ``<p>`` sem fecho) desalinharia a pilha para sempre.
         for i in range(len(self._pilha) - 1, -1, -1):
             if self._pilha[i]["tag"] == tag:
                 break
@@ -324,19 +250,9 @@ class _Leitor(html.parser.HTMLParser):
             quadro = self._pilha.pop()
             if quadro.get("empilhou_dono") and self._donos:
                 self._donos.pop()
-            # UMA ``<option>`` VIRA ITEM DO ``<select>`` que a contém — é o que
-            # deixa a régua saber qual valor o navegador vai mostrar sem abrir
-            # navegador nenhum.
             if quadro["tag"] == "option" and self._pilha:
                 for acima in reversed(self._pilha):
                     if acima["tag"] == "select":
-                        # SEM ATRIBUTO `value`, O VALOR DA OPÇÃO É O TEXTO
-                        # DELA. É contrato do HTML, e ignorá-lo custou caro
-                        # aqui: os `<select>` da aba Conexões escrevem
-                        # `<option>Wi-Fi</option>` sem `value`, e a régua os
-                        # lia como vazios — depois acusava a página virgem de
-                        # "já ter sido pintada" porque o navegador devolvia
-                        # `Wi-Fi` e ela esperava `''`.
                         acima["escolhas"].append(
                             (quadro["attrs"].get("value",
                                                  _espremer("".join(quadro["texto"]))),
@@ -345,7 +261,6 @@ class _Leitor(html.parser.HTMLParser):
             if quadro["chave"]:
                 self.campos.append((quadro["ordem"], self._campo(quadro)))
 
-    # -- o valor cravado ---------------------------------------------------
     def _campo(self, quadro: dict[str, Any]) -> _Campo:
         d: dict[str, str] = quadro["attrs"]
         alvo = d.get("data-hef-alvo") or "texto"
@@ -354,9 +269,6 @@ class _Leitor(html.parser.HTMLParser):
         if alvo == "valor":
             if quadro["tag"] == "select":
                 escolhidas = [v for v, sel in quadro["escolhas"] if sel]
-                # SEM ``selected``, O NAVEGADOR ESCOLHE A PRIMEIRA. Presumir
-                # vazio faria a régua acusar como PRODUTO todo ``<select>`` que
-                # ninguém pintou.
                 valor = escolhidas[0] if escolhidas else (
                     quadro["escolhas"][0][0] if quadro["escolhas"] else "")
             else:
@@ -364,67 +276,14 @@ class _Leitor(html.parser.HTMLParser):
         elif alvo == "largura":
             valor = _do_estilo(d.get("style", ""), "width")
         elif alvo == "altura":
-            # O GÊMEO VERTICAL DO `largura` — as ondas sonoras da aba 02. Sem
-            # este ramo a régua leria o TEXTO de um `<i>` (que é vazio) nos dois
-            # lados e devolveria INDECIDÍVEL para as 56 barrinhas, que é o
-            # veredito mais caro que ela sabe dar.
             valor = _do_estilo(d.get("style", ""), "height")
         elif alvo == "posicao":
-            # O ALVO `posicao` — onde o pontinho está, pelas duas variáveis que
-            # o `escrever` põe no próprio elemento (A-JANELA-ABERTA-NAO-GASTA-O-
-            # PROCESSADOR-01, 25/09/2026). Sem este ramo a régua leria o TEXTO
-            # de um `<span>` vazio nos dois lados e devolveria INDECIDÍVEL, como
-            # o ramo `altura` já registra. A língua é a do `LER_CAMPOS`: `x,y`
-            # sem o `%`, ou vazio no repouso.
             valor = _posicao_do_estilo(d.get("style", ""))
         elif alvo == "cor":
-            # LIDA DE VERDADE, e não pelo texto: a normalização do WebKit para
-            # ``color`` é fechada e ``_cor_css`` a reproduz. Ver a nota do
-            # ``LER_CAMPOS``, com a sondagem que a mediu.
             valor = _cor_css(_do_estilo(d.get("style", ""), "color"))
         elif alvo == "atributo":
-            # O ALVO `atributo` — o que o ARQUIVO crava no atributo que o
-            # `data-hef-atributo` nomeia. Sem este ramo a régua leria o TEXTO de
-            # um `<svg>` (que é vazio) e chamaria de ENDEREÇO MORTO todo
-            # `data-colorway` que o produto pintasse certo — foi o que acabou de
-            # acontecer com o alvo `html`, e a lição ficou escrita em
-            # `_declarado_neste_elemento`.
-            #
-            # O VAZIO POR OMISSÃO CASA COM O `|| ''` do `LER_CAMPOS`: atributo
-            # ausente é `""` nos dois lados, que é como o produto deixa um SVG
-            # cujo aparelho não disse a cor.
             valor = d.get((d.get("data-hef-atributo") or "").strip().lower(), "")
         elif alvo == "marcado":
-            # O ALVO `marcado` FALTAVA, e DUAS frentes desta leva chegaram à mesma
-            # cura sem saber uma da outra — a `ONDA5-02-01` e a `LUZES-01`,
-            # 06/09/2026. Quando duas medições independentes param no mesmo
-            # ponto, o achado é do produto, não de quem mediu.
-            #
-            # O DEFEITO: o leitor de tela responde `el.checked ? 'sim' : ''`, e
-            # este parser caía no ramo do TEXTO — que num `<input>` é sempre
-            # vazio. A guarda do DOM virgem (`hefesto_vivo._olhar_a_pagina`)
-            # confere os dois endereço a endereço e REPROVAVA a
-            # `--prova-de-mockup` inteira:
-            #
-            #     02-controles.html: a régua lê `p1·card-aberto` como '' no
-            #     arquivo e a página virgem mostra 'sim'
-            #     04-iluminacao.html: idem, em `auto-cores`
-            #
-            # Ela estava CERTA, e era mais cega do que a reprovação mostrava:
-            # são CINCO endereços em TRÊS abas (dois na 01, dois na 02, um na
-            # 04), ilegíveis desde que o alvo `marcado` nasceu — os outros três
-            # só não apareciam porque estavam vazios dos dois lados.
-            #
-            # `checked` É ATRIBUTO BOOLEANO: o `html.parser` o entrega como
-            # chave sem valor, então a pergunta é de PRESENÇA, igual ao
-            # `selected` que este mesmo leitor já usa nos `<option>`. E a
-            # ausência é `''`, não `None` — é o que o `el.checked === false` do
-            # navegador devolve.
-            #
-            # A LÍNGUA É A DO `escrever` — `sim`/`''`, a mesma do alvo `classe`
-            # booleano. Devolver `True`/`checked` faria os dois lados comparar
-            # línguas diferentes e acusar toda pintura certa: é a mesma cura de
-            # FORMA que o alvo `cor` já custou uma medição inteira a esta casa.
             valor = "sim" if "checked" in d else ""
         elif alvo == "classe":
             classe = d.get("data-hef-classe") or "on"
@@ -432,32 +291,17 @@ class _Leitor(html.parser.HTMLParser):
             aceso = classe in (d.get("class") or "").split()
             valor = (quando or "sim") if aceso else ""
         elif alvo in ("fundo", "html"):
-            # OS DOIS ALVOS QUE A RÉGUA LÊ PELO TEXTO, e ela DIZ que faz isso.
-            # ``el.style.background`` e ``el.innerHTML`` voltam do WebKit
-            # NORMALIZADOS — a cor vira ``rgb(…)``, as aspas dos atributos
-            # trocam — e comparar a forma do arquivo com a forma do navegador
-            # acusaria mudança onde não houve. O texto visível é o denominador
-            # comum, e é o que responde a pergunta desta régua: quem olha a tela
-            # está lendo dado ou desenho?
             valor = texto
         return _Campo(chave=quadro["chave"], dono=quadro["dono"], alvo=alvo,
                       valor=valor, quando=d.get("data-hef-quando") or "",
                       rotulo="data-hef-rotulo" in d)
 
 
-#: Um comprimento CSS: o número e a unidade. Serve para reproduzir, do lado
-#: Python, a forma com que o navegador devolve ``el.style.width``.
 _COMPRIMENTO = re.compile(r"^([+-]?(?:\d+\.?\d*|\.\d+))([a-z%]*)$", re.IGNORECASE)
 
 
 def _numero_css(valor: str) -> str:
-    """``"100.0%"`` → ``"100%"``; ``"66.7%"`` fica ``"66.7%"``.
-
-    O NAVEGADOR REESCREVE O NÚMERO ao guardá-lo, e o gerador do desenho escreve
-    ``width:100.0%`` porque vem de um ``float`` do Python. Comparar as duas
-    formas cruas dizia que a barra da Vibração tinha sido pintada quando ninguém
-    a tocou — foi a última cegueira que esta régua acusou contra si mesma.
-    """
+    """``"100.0%"`` → ``"100%"``; ``"66.7%"`` fica ``"66.7%"``."""
     achou = _COMPRIMENTO.match(valor.strip())
     if not achou:
         return valor.strip()
@@ -470,31 +314,16 @@ def _numero_css(valor: str) -> str:
     return f"{curto}{unidade}"
 
 
-#: AS TRÊS FAMÍLIAS DE COR QUE O CSSOM REESCREVE — hexadecimal, ``rgb()`` e
-#: ``hsl()``. Palavra (``red``, ``transparent``, ``currentcolor``), ``var(--x)``
-#: e as funções que o motor não resolve (``color-mix``) voltam como foram
-#: escritas, só em minúsculas.
 _HEXA = re.compile(r"^#([0-9a-f]*)$", re.IGNORECASE)
 _FUNCAO_DE_COR = re.compile(r"^(rgba?|hsla?)\((.*)\)$", re.IGNORECASE | re.DOTALL)
 
-#: Uma palavra-chave de CSS: uma só, sem espaço. Serve para separar ``red`` de
-#: ``Cosmic Red``, que o CSSOM RECUSA devolvendo ``''``.
 _UMA_PALAVRA = re.compile(r"^[a-z][a-z0-9-]*$", re.IGNORECASE)
 
-#: As unidades de ângulo do matiz, e o fator que leva cada uma a GRAUS. A ordem
-#: é POR TAMANHO, do maior para o menor, e não é enfeite: ``"grad"`` termina em
-#: ``"rad"``, e testar ``rad`` primeiro leria ``200grad`` como ``200g`` radianos.
 _ANGULO = (("turn", 360.0), ("grad", 0.9), ("deg", 1.0), ("rad", 180.0 / math.pi))
 
 
 def _meio_para_cima(n: float) -> int:
-    """O arredondamento do CSSOM, que NÃO é o do Python.
-
-    ``round()`` do Python é bancário — ``round(76.5)`` dá ``76``. O CSSOM
-    arredonda meio PARA CIMA, e a diferença aparece: ``rgba(10%, 20%, 30%, 50%)``
-    volta do WebKit com o canal azul em ``77`` (30% de 255 = 76,5) e esta régua
-    dizia ``76``. Sondado no WebKit desta máquina em 02/09/2026.
-    """
+    """O arredondamento do CSSOM, que NÃO é o do Python."""
     return math.floor(n + 0.5)
 
 
@@ -509,13 +338,7 @@ def _canal(bruto: str) -> int | None:
 
 
 def _fracao(bruto: str, teto: float = 1.0) -> float | None:
-    """``"50%"`` ou ``"50"`` → ``0.5``. A saturação e a luminosidade do ``hsl()``.
-
-    O TETO É INFINITO PARA A SATURAÇÃO, e isso foi medido: o WebKit não corta a
-    saturação em 100% — ele calcula com o valor cheio e corta os CANAIS.
-    ``hsl(210, 150%, 40%)`` volta ``rgb(0, 102, 255)``; cortando a saturação
-    antes dá ``rgb(0, 102, 204)``, que foi a última divergência da sonda.
-    """
+    """``"50%"`` ou ``"50"`` → ``0.5``. A saturação e a luminosidade do ``hsl()``."""
     bruto = bruto.strip()
     try:
         n = float(bruto[:-1] if bruto.endswith("%") else bruto)
@@ -550,13 +373,7 @@ def _opacidade(bruto: str) -> int | None:
 
 
 def _alfa(byte: int) -> str:
-    """O byte de opacidade na forma mais CURTA que volta ao mesmo byte.
-
-    É o que o CSSOM serializa, e não um arredondamento a três casas: ``128``
-    vira ``0.5`` — não ``0.502`` —, ``170`` vira ``0.667`` e ``1`` vira
-    ``0.004``. Sondado no WebKit desta máquina em 02/09/2026; era esta a
-    metade errada da família de oito dígitos que a régua dizia reproduzir.
-    """
+    """O byte de opacidade na forma mais CURTA que volta ao mesmo byte."""
     for casas in (1, 2, 3):
         curto = f"{byte / 255:.{casas}f}"
         if _meio_para_cima(float(curto) * 255) == byte:
@@ -565,10 +382,7 @@ def _alfa(byte: int) -> str:
 
 
 def _tinta(canais: list[int], byte: int | None) -> str:
-    """Os três canais e a opacidade na forma serializada do CSSOM.
-
-    ``alfa`` cheio some: o WebKit devolve ``rgb(0, 0, 255)`` para ``#0000ffff``.
-    """
+    """Os três canais e a opacidade na forma serializada do CSSOM."""
     r, g, b = canais
     if byte is None or byte >= 255:
         return f"rgb({r}, {g}, {b})"
@@ -619,9 +433,6 @@ def _cor_css(valor: str) -> str:
     if achou:
         digitos = achou.group(1)
         if len(digitos) not in (3, 4, 6, 8):
-            # HEXADECIMAL INVÁLIDO: o CSSOM recusa e o elemento fica sem cor de
-            # linha, logo `el.style.color` devolve `''`. Voltar a string crua
-            # diria PRODUTO sobre um campo que o navegador nem aceitou.
             return ""
         if len(digitos) in (3, 4):
             digitos = "".join(c * 2 for c in digitos)
@@ -651,27 +462,16 @@ def _cor_css(valor: str) -> str:
                       for c in colorsys.hls_to_rgb(matiz, luz, saturacao)]
         return _tinta(canais, byte)
     if "(" in valor:
-        # UMA FUNÇÃO QUE O CSSOM NÃO RESOLVE — `color-mix`, `light-dark` — volta
-        # como foi escrita.
         return baixo
     if not _UMA_PALAVRA.match(valor):
-        # NÃO É PALAVRA-CHAVE NENHUMA (`Cosmic Red` tem espaço): o CSSOM recusa.
         return ""
     return baixo
 
 
 def _ligado(texto: str) -> bool:
-    """O que conta como LIGADO no alvo ``classe`` — a mesma lista do ``ligado()`` do JS.
-
-    Sem esta função os dois lados discordariam no caso mais comum: o pacote
-    emite ``True`` e ``_como_a_tela_escreveria`` devolve ``"True"``, enquanto o
-    JS escreveria ``"true"``. Para texto isso é inofensivo (o campo cai em
-    MOCKUP, que é o erro para o lado seguro); para uma CLASSE seria o contrário
-    — a régua acusaria endereço morto sobre um botão que acende certo.
-    """
+    """O que conta como LIGADO no alvo ``classe`` — a mesma lista do ``ligado()`` do JS."""
     b = texto.strip().lower()
     # (noqa-acento) `nao` sem til é VALOR de máquina, e não prosa: é o que um
-    # pacote pode emitir. O `escrever()` do JS lê a mesma lista, nas duas grafias.
     return b not in ("", TRAVESSAO, "0", "false", "nao", "não", "off",  # (noqa-acento): valor
                      "none", "null")
 
@@ -686,12 +486,7 @@ def _do_estilo(estilo: str, propriedade: str) -> str:
 
 
 def _posicao_do_estilo(estilo: str) -> str:
-    """``"--hef-x:62%;--hef-y:44%"`` → ``"62,44"``; sem as duas, ``""``.
-
-    A VARIÁVEL NÃO SE NORMALIZA: o navegador devolve ``--hef-x`` como foi
-    escrita (``62.0%`` continua ``62.0%``), e por isso este ramo não passa pelo
-    ``_numero_css`` do ``_do_estilo``, que tiraria o ``.0`` só deste lado.
-    """
+    """``"--hef-x:62%;--hef-y:44%"`` → ``"62,44"``; sem as duas, ``""``."""
     lido: dict[str, str] = {}
     for parte in estilo.split(";"):
         nome, _, valor = parte.partition(":")
@@ -709,63 +504,29 @@ def _ler_html(texto: str) -> _Leitor:
 
 
 def _campos_cravados(texto: str) -> list[_Campo]:
-    """Os endereços de campo do arquivo, EM ORDEM DE DOCUMENTO.
-
-    A ordem é contrato: é ela que deixa o resultado ser comparado, item a item,
-    com o que ``querySelectorAll`` devolve do DOM vivo. Sem ordem comum, um
-    campo repetido em quatro colunas não teria como casar com o seu par.
-    """
+    """Os endereços de campo do arquivo, EM ORDEM DE DOCUMENTO."""
     return [c for _, c in sorted(_ler_html(texto).campos, key=lambda p: p[0])]
 
 
 def _gestos_cravados(texto: str) -> list[_Gesto]:
-    """Os endereços CLICÁVEIS do arquivo, com o controle em volta de cada um.
-
-    É esta lista — e não o registro de ``pacotes.GESTOS`` — que a prova botão a
-    botão tem de percorrer. A diferença é o defeito de 29/08/2026: o
-    ``--prova-gesto`` da aba Controles clicava o que o CÓDIGO registrava, deu
-    verde, e nunca tocou os dois botões que a PÁGINA tinha e o código não. Uma
-    validação de interface que não cobre o botão novo é uma validação que mente.
-    """
+    """Os endereços CLICÁVEIS do arquivo, com o controle em volta de cada um."""
     return list(_ler_html(texto).gestos)
 
 
 def _papeis_cravados(texto: str) -> list[_Gesto]:
-    """Os ``data-papel`` da página — endereços que o ouvinte trata como gesto.
-
-    Eles são a razão de a lista de cliques ser a UNIÃO do que a página oferece
-    com o que o código registra: na aba Vibração o HTML não tem um único
-    ``data-gesto``, e os três gestos daquela aba vivem aqui.
-    """
+    """Os ``data-papel`` da página — endereços que o ouvinte trata como gesto."""
     return list(_ler_html(texto).papeis)
 
 
 def _como_a_tela_escreveria(valor: Any) -> str:
-    """O que o ``escrever()`` do BOOTSTRAP poria na tela para este valor.
-
-    É a tradução de ida do que o pacote declara, para poder comparar com o que
-    se lê da tela. O vazio vira travessão, como lá.
-
-    ONDE ELA ERRA, e erra para o lado seguro: ``str(True)`` é ``"True"`` e o JS
-    escreveria ``"true"``; ``str(7.0)`` é ``"7.0"`` e o JS escreveria ``"7"``.
-    Nos dois casos a régua deixa de reconhecer o valor declarado e o campo cai
-    em ``MOCKUP`` em vez de ``INDECIDIVEL`` — isto é, ela deixa de dar por
-    provado o que não conseguiu provar, que é a direção certa do erro.
-    """
+    """O que o ``escrever()`` do BOOTSTRAP poria na tela para este valor."""
     if valor is None or valor == "":
         return TRAVESSAO
     return str(valor)
 
 
 def _declarados_do_pacote(carga: dict[str, Any]) -> dict[tuple[str, str], Any]:
-    """A carga que o piloto mandaria pintar, como ``{(dono, chave): valor}``.
-
-    ``carga`` é o que o ``pacotes.normalizar()`` devolve, já com o ``topo()``
-    somado — ou seja, EXATAMENTE o que iria para a tela naquele tique. Ler daí,
-    e não do código-fonte do pacote, é o que impede esta régua de repetir o erro
-    das anteriores: ela não pergunta se o nome do campo APARECE em algum lugar,
-    pergunta se ele foi EMITIDO com um valor.
-    """
+    """A carga que o piloto mandaria pintar, como ``{(dono, chave): valor}``."""
     fora: dict[tuple[str, str], Any] = {}
     for chave, valor in (carga.get("mesa") or {}).items():
         fora[("", str(chave))] = valor
@@ -775,33 +536,12 @@ def _declarados_do_pacote(carga: dict[str, Any]) -> dict[tuple[str, str], Any]:
     return fora
 
 
-#: O QUE A RÉGUA PÕE NO LUGAR DE UM CAMPO QUE SUMIU DA TELA. Ele não é um valor
-#: possível de nenhum campo — nem o travessão é, porque travessão é o que a
-#: pintura escreve num lugar vazio da mesa.
 SUMIU = "\x00o bloco foi trocado"
 
 
 def _alinhar(cravados: list[_Campo], vivos: list[tuple[str, ...]],
             ) -> tuple[list[str], list[tuple[str, str]]]:
-    """Casa cada campo do ARQUIVO com o que a tela mostra nele AGORA.
-
-    POR QUE ISTO NÃO É UM ``zip``, e a primeira execução desta régua provou:
-    a pintura troca BLOCOS INTEIROS — a fita de chips, a lista de perfis, o mapa
-    do gabinete —, porque um bloco cujo NÚMERO DE FILHOS muda com o dado não tem
-    como ser pintado campo a campo. Depois de oito voltas, a `10-perfis` tinha
-    **81 endereços no arquivo e 55 na tela**: o produto trocou a tabela de
-    perfis do desenho pela dela, que é mais curta.
-
-    Comparar por posição ali casaria o campo de uma linha com o da linha
-    seguinte e chamaria isso de medição. Aqui o casamento é por ENDEREÇO
-    (``chave`` + ``dono``) e por ORDEM DE OCORRÊNCIA dentro dele — que é
-    exatamente como o bootstrap distribui uma lista pelos elementos de mesmo
-    endereço.
-
-    :returns: os valores vivos na ordem de ``cravados`` (com ``SUMIU`` onde o
-        campo deixou de existir), e os endereços que NASCERAM na tela e não
-        estão no arquivo — os dois são obra do produto, e o relato os separa.
-    """
+    """Casa cada campo do ARQUIVO com o que a tela mostra nele AGORA."""
     por_endereco: dict[tuple[str, str], list[str]] = {}
     for linha in vivos:
         chave, dono, _alvo, valor = linha[:4]
@@ -821,18 +561,7 @@ def _alinhar(cravados: list[_Campo], vivos: list[tuple[str, ...]],
 
 def _selos_alinhados(cravados: list[_Campo],
                      vivos: list[tuple[Any, ...]]) -> list[bool]:
-    """O SELO DA VISITA de cada campo, na ordem de ``cravados``.
-
-    Mesmo casamento do ``_alinhar`` — por endereço e por ordem de ocorrência —,
-    só que sobre o quinto elemento que o ``LER_CAMPOS`` passou a devolver: se o
-    ``escrever()`` do piloto ESTEVE naquele elemento. Um campo que sumiu da tela
-    (bloco trocado) vale ``False``: não há elemento para ter selo, e o
-    ``_classificar`` já o julga PRODUTO por outro caminho.
-
-    POR QUE FUNÇÃO SEPARADA, e não um terceiro retorno do ``_alinhar``: ele é
-    chamado em teste com quatro colunas e mudar a aridade quebraria a chamada
-    sem que ninguém ganhasse nada. Acrescentar é a regra desta casa.
-    """
+    """O SELO DA VISITA de cada campo, na ordem de ``cravados``."""
     por_endereco: dict[tuple[str, str], list[bool]] = {}
     for linha in vivos:
         chave, dono = str(linha[0]), str(linha[1])
@@ -877,84 +606,21 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
     Para todo outro alvo a declaração vale como veio.
     """
     if campo.alvo == "html":
-        # O ALVO `html` COMPARAVA MARCAÇÃO COM TEXTO, e por isso nunca casava.
-        # Achado pela frente da aba 03 em 03/09/2026, com a prova mais dura que
-        # se pode ter: a régua chamava de ENDEREÇO MORTO um elemento em que o
-        # piloto TINHA CARIMBADO O SELO. Uma régua que diz "o pacote escreve num
-        # lugar que a página não tem" sobre um lugar que ela mesma viu ser
-        # visitado está se contradizendo.
-        #
-        # A causa é de forma: o lado do ARQUIVO lê este alvo pelo TEXTO (é o
-        # ramo `alvo in ("fundo", "html")` do `_Leitor`, que o documenta), e o
-        # pacote emite MARCAÇÃO. Passar a declaração pelo mesmo espremedor de
-        # texto põe os dois na mesma língua — é a cura do alvo `cor`, aplicada
-        # ao alvo que faltava.
-        #
-        # A frente que achou isto mediu o efeito e NÃO aplicou, porque a régua
-        # não era arquivo dela: fecharia treze campos. Ela tinha razão nas duas
-        # coisas — no achado e em não tocar.
-        # A função é a da frente da aba 03 (`_so_o_texto`, que já espreme por
-        # dentro) — eu tinha escrito uma segunda sem ver a dela, e o `mypy`
-        # pegou o `no-redef`. Uma casa com duas implementações da mesma regra
-        # é o defeito que esta leva inteira existe para não repetir.
         return _so_o_texto(declarado or "")
     if campo.alvo in ("largura", "altura"):
-        # A LARGURA TAMBÉM É NORMALIZADA NA ATRIBUIÇÃO, e ignorar isso acusava
-        # endereço morto sobre o produto que ACERTOU — medido em 02/09/2026, na
-        # aba Iluminação: a barra do P1 saiu de `width:82%` para `100%` e a régua
-        # chamou de MOCKUP, porque o pacote emite `100` (número) e a tela devolve
-        # `100%` (a unidade que o CSSOM acrescenta).
-        #
-        # É o mesmo defeito de forma do alvo `cor`, uma linha acima, e a cura é a
-        # mesma: passar a declaração pela tradução que o bootstrap faz ao
-        # escrever, em vez de comparar cru com cru.
         bruto = declarado.strip() if declarado else declarado
         if bruto and not bruto.endswith(("%", "px", "em", "rem", "vw", "vh")):
             return f"{bruto}%"
         return bruto
     if campo.alvo == "valor":
-        # O `value` de um `<input>` volta do DOM como TEXTO, sempre. Um pacote
-        # que emite o número `80` via `el.value = 80` deixa `"80"` na tela, e
-        # comparar `80` com `"80"` acusa o produto que acertou.
         return "" if declarado is None else str(declarado)
     if campo.alvo == "posicao":
-        # O VAZIO E O TRAVESSÃO TIRAM AS DUAS VARIÁVEIS, e o `LER_CAMPOS` lê
-        # vazio no pontinho que ficou no repouso. `x,y` vale como veio.
         return "" if declarado in (None, "", TRAVESSAO) else str(declarado)
     if campo.alvo == "html":
-        # O TERCEIRO ALVO DA DECISÃO 15 DELA — 03/09/2026, e ele faltava: *"a
-        # régua aprende os alvos que faltam (`largura`, `valor`, `html`), como
-        # já traduz `classe` e `cor`"*. Os dois primeiros entraram; este não.
-        #
-        # A TRADUÇÃO É A MESMA IDEIA DAS OUTRAS: entre o que o pacote EMITE e o
-        # que a régua LÊ há uma conversão, e comparar cru com cru acusa endereço
-        # morto sobre o produto que acertou. Aqui a conversão é a mais grosseira
-        # de todas — o pacote emite `<b>segue o global</b>` e esta régua lê o
-        # alvo `html` pelo TEXTO, de propósito (ver `_campo` e o `LER_CAMPOS` do
-        # piloto: o WebKit devolve o `innerHTML` normalizado, e a forma do
-        # arquivo nunca casaria com a do navegador).
-        #
-        # MEDIDO em 03/09/2026, na aba Conexões: `p1·teto-explica` e
-        # `p2·teto-explica` saíam como ENDEREÇO MORTO com o produto pintando os
-        # dois a cada tique, e o texto na tela byte a byte igual ao emitido. A
-        # única diferença eram as seis tags que a régua não tirava — dois campos
-        # cobrados de uma pintura que estava certa.
         return _so_o_texto("" if declarado is None else str(declarado))
     if campo.alvo == "cor":
-        # O VAZIO APAGA A COR DE LINHA — o `escrever()` põe `''` no
-        # `style.color`, e não o travessão, que não é cor nenhuma.
         return _cor_css("" if declarado == TRAVESSAO else declarado)
     if campo.alvo == "atributo":
-        # O TRAVESSÃO APAGA O ATRIBUTO, e não vira o texto `—`. O `escrever()`
-        # chama `removeAttribute` no vazio e no travessão (é o mesmo par de
-        # caminhos do alvo `plastico`: `""` é a cor que o aparelho não respondeu,
-        # `—` é o que o molde escreve num lugar sem dono), e atributo ausente
-        # volta do `LER_CAMPOS` como `''`.
-        #
-        # Sem esta linha a régua compararia `'—'` com `''` e acusaria ENDEREÇO
-        # MORTO exatamente sobre a mesa dela: pelo rádio o mapa de canais
-        # responde que a cor do aparelho NÃO se lê, e todo SVG daquele controle
-        # é pintado com o vazio.
         return "" if declarado == TRAVESSAO else declarado
     if campo.alvo != "classe":
         return declarado
@@ -963,12 +629,7 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
     if declarado == campo.quando:
         return campo.quando
     if quandos and _ligado(declarado) and declarado not in quandos:
-        # O TOKEN QUE NENHUM MEMBRO DO GRUPO CONHECE. A tela apaga TUDO, e
-        # apagado é `''` — o mesmo que este elemento mostraria se o produto
-        # tivesse acertado. Colapsar aqui para `''` daria PRODUTO sobre um
         # grupo inteiramente APAGADO: medido em 02/09/2026, `'maximo'` no lugar  # (noqa-acento): token de máquina
-        # de `'max'` dava os mesmos 4 PRODUTO da tela que acende. Devolvendo o
-        # token cru, ele não casa com o vazio da tela e a régua acusa.
         return declarado
     return ""
 
@@ -979,36 +640,14 @@ def _classificar(
     declarados: dict[tuple[str, str], Any] | None = None,
     selos: list[bool] | None = None,
 ) -> list[_Veredito]:
-    """O veredito de cada campo: PRODUTO, ROTULO, MOCKUP ou INDECIDIVEL.
-
-    :param cravados: os campos do arquivo publicado, em ordem de documento.
-    :param vivos: o que a TELA mostra em cada um deles, na mesma ordem.
-    :param declarados: o que o pacote emitiu naquele tique — usado só para
-        separar ``MOCKUP`` de ``INDECIDIVEL``, e para nomear o endereço morto.
-    :param selos: se o ``escrever()`` do piloto ESTEVE em cada elemento. É o
-        que decide um INDECIDÍVEL: valor igual ao cravado **com** selo é o
-        produto pintando um valor que por acaso coincide com o desenho — e isso
-        é PRODUTO, provado. Sem os selos (uma chamada antiga, um teste que só
-        compara valores) a classificação é a de antes, campo por campo.
-
-    A ORDEM É O CASAMENTO, e as duas listas têm de ter o mesmo tamanho: quem
-    garante isso é o ``--prova-de-mockup``, que compara o conjunto de endereços
-    do arquivo com o do DOM antes de chegar aqui e reprova se divergirem.
-    """
+    """O veredito de cada campo: PRODUTO, ROTULO, MOCKUP ou INDECIDIVEL."""
     if len(cravados) != len(vivos):
         raise ValueError(
             f"a régua recebeu {len(cravados)} campos do arquivo e {len(vivos)} da "
             f"tela. Não se comparam listas de tamanhos diferentes: seria casar "
             f"campo com vizinho e chamar de medição.")
     declarados = declarados or {}
-    #: Quantas vezes cada endereço já apareceu — é o índice com que uma LISTA
-    #: declarada se distribui pelos elementos de mesmo endereço, do mesmo jeito
-    #: que o bootstrap distribui.
     ja_vistos: dict[tuple[str, str], int] = {}
-    #: OS MEMBROS DE CADA GRUPO DO ALVO ``classe``, por endereço. É o que deixa
-    #: `_declarado_neste_elemento` distinguir "apagado de propósito" de "o
-    #: pacote emitiu um token que ninguém conhece" — sem isso os dois têm a
-    #: mesma cara na tela (``''``) e a régua não acusa nem um nem outro.
     quandos: dict[tuple[str, str], set[str]] = {}
     for campo in cravados:
         if campo.alvo == "classe" and campo.quando:
@@ -1031,15 +670,6 @@ def _classificar(
             frozenset(quandos.get(endereco, ()))))
 
         if campo.rotulo:
-            # RÓTULO DECLARADO SAI DA CONTA — decisão dela, 03/09/2026. Ele vem
-            # ANTES de todos os outros ramos de propósito: um título de seção
-            # que por acaso mudasse de texto viraria PRODUTO nos ramos abaixo, e
-            # isso seria pior que contá-lo como dívida — daria por escrito pelo
-            # produto uma coisa que ninguém escreve.
-            #
-            # E a marca é EXIGIDA, não inferida: quem não puser `data-hef-rotulo`
-            # continua caindo nos ramos de baixo e sendo cobrado. É a diferença
-            # entre uma categoria e um esconderijo.
             fora.append(_Veredito(
                 campo, vivo, ROTULO, None,
                 "rótulo declarado: texto fixo, não é dado que o produto escreva"))
@@ -1055,12 +685,6 @@ def _classificar(
             fora.append(_Veredito(campo, vivo, MOCKUP, None,
                                  "nenhum pacote declara este endereço"))
         elif declarado == vivo and selo:
-            # O INDECIDÍVEL DECIDIDO. Eram 74 campos em 330 assim, e a nota
-            # abaixo dizia a verdade: ler a TELA não separa "pintou igual" de
-            # "não pintou". O selo não é a tela — é o piloto declarando que
-            # ESTEVE neste elemento com este valor. Com ele o campo é do
-            # produto, provado, e a coincidência com o desenho passa a ser o
-            # que sempre foi: uma coincidência.
             fora.append(_Veredito(
                 campo, vivo, PRODUTO, declarado,
                 "o piloto ESCREVEU este valor neste elemento — coincide com o "
@@ -1072,9 +696,6 @@ def _classificar(
                 "este elemento — ler a tela não separa 'pintou igual' de 'não "
                 "pintou'"))
         else:
-            # O ENDEREÇO MORTO, e ele é o pior dos casos: o pacote monta o valor
-            # e escreve num lugar que a página não tem. A tela continua no
-            # desenho, o pacote continua "cobrindo" o campo, e portão nenhum via.
             fora.append(_Veredito(
                 campo, vivo, MOCKUP, declarado,
                 f"ENDEREÇO MORTO: o pacote declara {declarado!r} e a tela "
@@ -1083,12 +704,7 @@ def _classificar(
 
 
 def _contar(vereditos: list[_Veredito]) -> dict[str, int]:
-    """As QUATRO contagens de uma aba, sempre com as quatro chaves presentes.
-
-    Eram três até 03/09/2026; a `ROTULO` entrou com a decisão dela. As chaves
-    nascem todas em zero de propósito — quem lê `contas[MOCKUP]` numa aba sem
-    nenhum não pode receber `KeyError`.
-    """
+    """As QUATRO contagens de uma aba, sempre com as quatro chaves presentes."""
     fora = {PRODUTO: 0, ROTULO: 0, MOCKUP: 0, INDECIDIVEL: 0}
     for v in vereditos:
         fora[v.classe] += 1
@@ -1101,32 +717,12 @@ def _alvos_a_clicar(
     pagina: str,
     perigosos: set[tuple[str, str]],
 ) -> tuple[list[str], list[str]]:
-    """Os gestos a clicar, e os que ficam de fora por mexerem na máquina dela.
-
-    A LISTA É A UNIÃO, e as duas metades pegam defeitos opostos:
-
-    * o que a PÁGINA oferece e o código não registra — o botão que ninguém
-      ligou. Era o que ficava de fora, e é o defeito de 29/08/2026: o
-      ``--prova-gesto`` da aba Controles clicava só o que o código registrava,
-      deu verde, e nunca tocou os dois botões que a página tinha. *Uma
-      validação de interface que não cobre o botão novo é uma validação que
-      mente.*
-    * o que o CÓDIGO registra e a página não oferece por ``data-gesto`` — a aba
-      Vibração inteira, cujos três gestos são endereçados por ``data-papel``.
-      Tirar essa metade deixaria aquela aba sem um único clique.
-
-    A ordem de saída é estável: primeiro os da página, depois os que só o
-    código conhece — para o relato ler igual em duas execuções seguidas.
-    """
+    """Os gestos a clicar, e os que ficam de fora por mexerem na máquina dela."""
     vistos: list[str] = []
     pulados: list[str] = []
     for nome in [g.nome for g in da_pagina] + sorted(registrados):
         if nome in vistos or nome in pulados:
             continue
-        # O CORINGA `("*", nome)` EXISTE PORQUE O GESTO EXISTE ASSIM: o rodapé
-        # registra `@gesto("*", "salvar")` — um gesto só, vivo nas dez páginas.
-        # Sem o coringa aqui, isentá-lo pediria dez linhas na lista e a décima
-        # primeira aba nasceria desprotegida sem ninguém notar.
         perigoso = (pagina, nome) in perigosos or ("*", nome) in perigosos
         (pulados if perigoso else vistos).append(nome)
     return vistos, pulados
@@ -1138,11 +734,6 @@ def _cobertura_dos_gestos(
     clicados: list[str],
     pulados: list[str],
 ) -> list[str]:
-    """Os endereços clicáveis que a prova NÃO tocou.
-
-    Devolver lista vazia é a única saída aceitável de uma prova de interface.
-    Qualquer nome aqui é a régua confessando que deu verde sobre um botão que
-    nunca apertou — que é o que ela existe para não fazer.
-    """
+    """Os endereços clicáveis que a prova NÃO tocou."""
     tocados = set(clicados) | set(pulados)
     return sorted(({g.nome for g in da_pagina} | set(registrados)) - tocados)

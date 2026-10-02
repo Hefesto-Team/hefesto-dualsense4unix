@@ -526,7 +526,7 @@ o atendem é que são dois. **A casa deve os dois — um já entrega por rádio
 Três lugares afirmavam que *"o GE-Proton 11-4 fechou o casamento do `ContainerId`
 do HID com o MMDevice que o jogo abre, e o 11-6 refez esse caminho pelo
 `dsound`"*: `assets/proton-pin.conf`, `install.sh:4170-4171` e
-`tests/unit/test_proton_pin.py:64`.
+`tests/unit/test_proton_pin.py:53`.
 
 **Medido em 17/09/2026:** as palavras `dsound`, `ContainerId` e `MMDevice` não
 aparecem em nenhuma das notas de release do GE-Proton **11-4, 11-5, 11-6 ou
@@ -576,7 +576,7 @@ número exato, medido no vdf vivo e batendo com o commit `84d89a8de`:
 A distinção não é preciosismo: *"locked — 25 jogos + default global"* é
 literalmente a linha falsa que o `_cmd_lock` imprimia antes de 16/09, quando os
 25 ficavam onde estavam. O código guarda essa frase como registro do defeito
-(`proton_pin.py:1349-1353`). Repeti-la como se fosse o resultado desfaz a cura.
+(`proton_pin.py:941-945`). Repeti-la como se fosse o resultado desfaz a cura.
 
 ---
 

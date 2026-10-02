@@ -1,46 +1,5 @@
 #!/usr/bin/env python3
-"""validar-caducos.py — o fato declarado caduco não pode continuar publicado.
-
-Executa Z6-09 (docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01…
-.md). O `docs/data/mapa-controles.csv` já DECLARA, por escrito, que os números
-do microfone por rádio caducaram (célula `radio_ressalva` da linha
-`audio.microfone@dualsense`) — e nenhuma régua lia essa declaração. É a
-família *"a casa sabe e o produto não faz"* aplicada ao próprio mapa.
-
-O LIVRO-CAIXA, E POR QUE NÃO É UMA COLUNA NOVA NO MAPA
----------------------------------------------------------
-`docs/data/caducos.csv`: `id, o_que_caducou, caducou_em, substituto,
-onde_pode_ficar`. Uma coluna nova no mapa seria uma SEGUNDA cópia do mesmo
-vínculo, mantida à mão — a PAREAMENTO-01 já recusou essa forma para o
-registro de `Fala` pelo mesmo motivo, e aqui vale igual.
-
-`o_que_caducou` traz os literais a procurar e a explicação, separados por
-" — ": `"literal1|literal2 — explicação"`. Cada literal é procurado por
-substring, sem diferenciar maiúsculas.
-
-AS SUPERFÍCIES VIVAS, E SÓ ELAS
-----------------------------------
-`README.md`, `docs/usage/**`, `docs/protocol/**`, `src/**` e `po/**`. NUNCA
-`docs/process/**` (narrativa histórica — a regra da casa é *"não se apaga
-decisão medida"*) nem `docs/data/mapa-controles*.csv`/`specs.html` (a célula
-que DECLARA a caducidade cita o literal caduco de propósito, e o `specs.html`
-é gerado a partir dela).
-
-**O `.glade` e o `.po` entraram em 26/08/2026** (LEVA-4-E). `src` já estava na
-lista, mas a lista de extensões descartava o `main.glade` antes de abri-lo — e
-`<property name="label">` é literalmente o texto que ela LÊ. Um fato caduco
-publicado ali chegava à tela com este portão verde, e isso foi medido.
-
-E O PORTÃO NÃO SE DESARMA MAIS SOZINHO
------------------------------------------
-Até 26/08/2026, `mv docs/data/caducos.csv /tmp/` fazia este script imprimir
-`OK` e sair `rc=0`. Ledger ausente agora é `rc=1` nomeando o arquivo, como o
-`scripts/portoes.sh` já faz para portão ausente. Ledger PRESENTE e vazio
-continua `rc=0` — mas dizendo que não mediu nada, não `OK`.
-
-Uso:
-    python3 scripts/validar-caducos.py --all
-"""
+"""validar-caducos.py — o fato declarado caduco não pode continuar publicado."""
 from __future__ import annotations
 
 import argparse
@@ -52,23 +11,8 @@ RAIZ = Path(__file__).resolve().parent.parent
 CADUCOS_RELATIVO = "docs/data/caducos.csv"
 CADUCOS_CAMINHO = RAIZ / CADUCOS_RELATIVO
 
-#: As superfícies VIVAS, e só elas — nunca `docs/process/`, nunca
-#: `docs/data/mapa-controles*.csv`, nunca `specs.html` (gerado, e cita o
-#: literal caduco na própria declaração de caducidade).
-#:
-#: `po/` ENTROU em 26/08/2026 (LEVA-4-E), junto com a extensão `.po` abaixo:
-#: a tradução é a frase que chega à tela de quem não lê inglês, e a extensão
-#: sozinha seria vacuidade — nenhum `.po` mora sob as outras quatro raízes.
 RAIZES_VIVAS = ("README.md", "docs/usage", "docs/protocol", "src", "po")
 
-#: Extensões que valem a pena varrer — texto, não binário.
-#:
-#: `.glade` e `.po` ENTRARAM em 26/08/2026 (LEVA-4-E), e o motivo é medido: o
-#: `main.glade` é a superfície MAIS viva que existe — um fato caduco escrito
-#: num `<property name="label">` chega à TELA — e ele ficava de fora apesar de
-#: `src` já estar em `RAIZES_VIVAS`, porque a lista de extensões o descartava
-#: antes. `.pot` fica de fora de propósito: é o gabarito gerado por `xgettext`
-#: a partir do código, não uma superfície que alguém escreve.
 EXTENSOES = {".md", ".py", ".html", ".rst", ".txt", ".glade", ".po"}
 
 
@@ -83,14 +27,7 @@ class Caduco:
 
 
 class LedgerAusente(Exception):
-    """O livro-caixa não está no disco — e isso NÃO é uma varredura limpa.
-
-    Medido em 26/08/2026 (LEVA-4-E): `mv docs/data/caducos.csv /tmp/` fazia
-    este portão imprimir `OK` e sair `rc=0`. Um portão que se desarma quando a
-    fonte dele some é pior que portão nenhum, porque publica um selo verde por
-    ele. O `scripts/portoes.sh` já trata portão AUSENTE como vermelho; a fonte
-    de um portão merece a mesma régua.
-    """
+    """O livro-caixa não está no disco — e isso NÃO é uma varredura limpa."""
 
 
 def carrega_caducos(caminho: Path) -> list[Caduco]:

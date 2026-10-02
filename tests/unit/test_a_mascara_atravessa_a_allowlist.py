@@ -1,34 +1,4 @@
-"""ALLOWLIST-SO-A-MASCARA-01 — a máscara do perfil atravessa a allowlist; o `kind`, não.
-
-O DEFEITO, MEDIDO NO DAEMON DELA EM 22/08/2026, com o Sackboy marcado na
-allowlist do Steam Input:
-
-    perfil Sackboy pede:  mode.gamepad_flavor = "dualsense"
-    máscara viva:         xbox  (quatro vpads uinput)
-    mode_from_profile:    None  (a seção `mode` nunca foi aplicada)
-
-A causa é que a seção `mode` carrega DUAS coisas e o ramo da allowlist tratava
-as duas como uma só:
-
-- **`kind`** (gamepad/native/desktop) é a DISPUTA PELO CONTROLE — ligar e
-  desligar vpad, largar o físico, soltar o grab. É isto que a allowlist existe
-  para pular;
-- **`gamepad_flavor`** é O QUE O JOGO ENXERGA. Com o físico escondido, o vpad é
-  o único dispositivo que o jogo marcado tem, e um vpad Xbox NÃO TEM campo de
-  touchpad, giroscópio nem acelerômetro no descritor HID — dez linhas de
-  `docs/data/mapa-controles.csv` dizem `gamepad/dualsense` na coluna
-  `ponte_alcanca`.
-
-Ou seja: marcar o jogo REMOVIA features em vez de preservá-las, que é o oposto
-exato da decisão dela — *"a allowlist do Steam Input NÃO tira o Hefesto da
-frente"*.
-
-O que este portão cobra, e por que ele é o par certo do
-`test_o_lancamento_ativa_o_perfil_inteiro.py`: aquele arquivo mede a
-CONSTRUÇÃO do gerente (quem foi injetado); este mede o COMPORTAMENTO do
-embrulho — quando ele deixa a chamada passar, quando ele barra, e o que ele
-devolve nos dois casos.
-"""
+"""ALLOWLIST-SO-A-MASCARA-01 — a máscara do perfil atravessa a allowlist; o `kind`, não."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -81,16 +51,8 @@ def _modo(kind: str | None, flavor: str | None = "dualsense") -> Any:
 PERFIL = SimpleNamespace(name="Sackboy")
 
 
-# --- O sentido que estava quebrado: a máscara PASSA -------------------------
-
-
 def test_na_allowlist_a_mascara_do_perfil_chega_ao_applier() -> None:
-    """A metade que a medição de 22/08 derrubou.
-
-    Mordida: trocar o corpo de `_mode_applier_so_a_mascara` por
-    `return lambda *a, **k: IGNORADO_DISPUTA_DA_ALLOWLIST` (que é o que
-    `mode_applier=None` fazia na prática) — a chamada some e este teste reprova.
-    """
+    """A metade que a medição de 22/08 derrubou."""
     daemon = _DaemonDeMesa()
     aplicar = le._mode_applier_so_a_mascara(daemon)
 
@@ -111,16 +73,7 @@ def test_na_allowlist_a_mascara_do_perfil_chega_ao_applier() -> None:
 
 
 def test_quem_escreve_a_mascara_continua_sendo_o_applier_do_daemon() -> None:
-    """Não é um segundo escritor: o embrulho só decide se a chamada acontece.
-
-    O gate R-04 (jogo com a autoridade => `adiado_jogo_aberto`, nada é
-    recriado na mão dela) mora dentro do `apply_profile_mode`. Um embrulho que
-    escrevesse a máscara por conta própria furaria esse gate — e recriar vpad
-    com o jogo aberto arranca o controle da mão dela.
-
-    Mordida: fazer o embrulho chamar `set_gamepad_flavor`/`_pedir_mascara_do_perfil`
-    em vez de delegar — o retorno deixa de ser o do daemon e este teste reprova.
-    """
+    """Não é um segundo escritor: o embrulho só decide se a chamada acontece."""
     daemon = _DaemonDeMesa()
 
     def _adiado(mode: Any, *, profile: Any = None, origin: str = "launch") -> str:
@@ -139,15 +92,9 @@ def test_quem_escreve_a_mascara_continua_sendo_o_applier_do_daemon() -> None:
     )
 
 
-# --- O sentido que tem de continuar barrado: o `kind` ----------------------
-
-
 @pytest.mark.parametrize("kind", ["native", "desktop", None])
 def test_na_allowlist_o_kind_que_e_pura_disputa_nao_passa(kind: str | None) -> None:
-    """`native`/`desktop` são disputa pura, e `None` não traz máscara nenhuma.
-
-    Mordida: apagar o `if kind != "gamepad"` do embrulho.
-    """
+    """`native`/`desktop` são disputa pura, e `None` não traz máscara nenhuma."""
     daemon = _DaemonDeMesa()
 
     devolvido = le._mode_applier_so_a_mascara(daemon)(
@@ -172,18 +119,7 @@ def test_na_allowlist_o_kind_que_e_pura_disputa_nao_passa(kind: str | None) -> N
 def test_fora_da_precondicao_nem_a_mascara_passa(
     rotulo: str, mesa: dict[str, Any]
 ) -> None:
-    """A precondição é o que garante que SÓ a máscara passa — e é medida, não confiada.
-
-    O ramo `kind="gamepad"` do `apply_profile_mode` tem DUAS linhas de disputa
-    (`set_native_mode(False)` e o `set_gamepad_emulation` de ligar, dentro do
-    `_pedir_mascara_do_perfil`). Elas são no-ops **só** quando o estado vivo já
-    é o `kind` que o perfil pede — `gamepad_on = emulação ligada AND
-    _gamepad_device is not None`, e nativo desligado. Fora disso, chamar o
-    applier seria ligar o vpad num jogo marcado: exatamente a disputa que a
-    allowlist pula.
-
-    Mordida: apagar o `if native or not emulacao or not tem_vpad` do embrulho.
-    """
+    """A precondição é o que garante que SÓ a máscara passa — e é medida, não confiada."""
     daemon = _DaemonDeMesa(**mesa)
 
     devolvido = le._mode_applier_so_a_mascara(daemon)(
@@ -198,11 +134,7 @@ def test_fora_da_precondicao_nem_a_mascara_passa(
 
 
 def test_daemon_sem_applier_nao_derruba_a_ativacao() -> None:
-    """Dublê da suíte e rota de CLI sem daemon existem, e não podem levantar.
-
-    Mordida: trocar o `getattr(daemon, "apply_profile_mode", None)` por acesso
-    direto.
-    """
+    """Dublê da suíte e rota de CLI sem daemon existem, e não podem levantar."""
     daemon = _DaemonDeMesa(tem_applier=False)
 
     assert le._mode_applier_so_a_mascara(daemon)(
@@ -210,18 +142,8 @@ def test_daemon_sem_applier_nao_derruba_a_ativacao() -> None:
     ) == le.IGNORADO_DISPUTA_DA_ALLOWLIST
 
 
-# --- O vocabulário do relatório --------------------------------------------
-
-
 def test_o_estado_barrado_e_distinguivel_de_aplicado_e_de_falhou() -> None:
-    """Sem palavra própria, o journal não diz qual dos quatro aconteceu.
-
-    Foi essa confusão que deixou a máscara `xbox` viva por horas num jogo cujo
-    perfil pedia `dualsense`: o relatório da ativação trazia `mode: aplicado`
-    com a allowlist sendo pulada na mesma linha.
-
-    Mordida: devolver `"ignorado"` genérico, ou reusar `IGNORADO_GESTO_DELA`.
-    """
+    """Sem palavra própria, o journal não diz qual dos quatro aconteceu."""
     from hefesto_dualsense4unix.daemon.lifecycle import (
         ADIADO_JOGO_ABERTO,
         APLICADO,

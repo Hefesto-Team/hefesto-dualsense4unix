@@ -66,30 +66,21 @@ from hefesto_dualsense4unix.core.evdev_reader import (
 )
 
 #: A faixa que o `hid_playstation` declara para os eixos do DualSense: 0..255,
-#: sem `flat` e sem `fuzz` (é a faixa canônica da casa, `EIXO_MAX_HEFESTO`).
-#: `value` é o que muda de teste para teste — é a POSIÇÃO no instante do open.
 def _abs_dualsense(valor: int) -> AbsInfo:
     return AbsInfo(value=valor, min=0, max=255, fuzz=0, flat=0, resolution=0)
 
 
-#: A faixa dos analógicos do Nintendo Pro, com sinal (medida em 06/08/2026).
 #: Aqui o CENTRO é 0 e o mínimo é o talo de verdade — o oposto do DualSense.
 def _abs_pro(valor: int) -> AbsInfo:
     return AbsInfo(value=valor, min=-32767, max=32767, fuzz=250, flat=500, resolution=0)
 
 
 #: O hat do D-pad. Entra nas caps porque um DualSense de verdade o publica, e
-#: porque ele NÃO pode ser semeado como eixo (ele vira botão em `_handle_abs`).
 _ABS_HAT = AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)
 
 
 class _DevFalso:
-    """Só o que `_on_device_opened` toca: o `capabilities()` do nó aberto.
-
-    O `capabilities()` do python-evdev devolve o `_rawcapabilities` colhido no
-    `InputDevice.__init__` — o `absinfo` do INSTANTE DO OPEN. É por isso que o
-    dublê pode ser um dicionário fixo: no produto ele também é.
-    """
+    """Só o que `_on_device_opened` toca: o `capabilities()` do nó aberto."""
 
     def __init__(self, caps: Any) -> None:
         self._caps = caps
@@ -114,11 +105,7 @@ def _caps_dualsense(
     l2: int = 0,
     r2: int = 0,
 ) -> dict[int, Any]:
-    """As caps daquela unidade no cabo, como a bancada as mediu.
-
-    Os defaults SÃO os números do ensaio de 15/08: centro (127, 124, 130, 129),
-    gatilhos em repouso. O `ly=124` é o eixo do achado.
-    """
+    """As caps daquela unidade no cabo, como a bancada as mediu."""
     return {
         ecodes.EV_KEY: [ecodes.BTN_SOUTH, ecodes.BTN_TL2, ecodes.BTN_TR2],
         ecodes.EV_ABS: [
@@ -141,15 +128,8 @@ def _reader_aberto_em(caps: Any) -> EvdevReader:
     return reader
 
 
-# --- O achado, tal como foi medido ---------------------------------------
-
-
 def test_o_eixo_parado_chega_com_a_posicao_real_e_nao_com_128() -> None:
-    """O caso literal da bancada: `ABS_Y` em 124 no open, sem um único evento.
-
-    MORDIDA: sem a semeadura, `ly` fica no default do `EvdevSnapshot` e este
-    teste reprova dizendo `124 real -> 128 publicado`.
-    """
+    """O caso literal da bancada: `ABS_Y` em 124 no open, sem um único evento."""
     reader = _reader_aberto_em(_caps_dualsense())
     snap = reader.snapshot()
     assert snap.ly == 124, (
@@ -163,11 +143,7 @@ def test_o_eixo_parado_chega_com_a_posicao_real_e_nao_com_128() -> None:
 
 
 def test_os_quatro_eixos_do_stick_chegam_com_a_medida_da_bancada() -> None:
-    """Os quatro daquela unidade, não só o que estava longe do centro.
-
-    Os outros três também nasciam 128 e só acertavam por acidente — porque se
-    mexeram e o evento veio. Sem mão na mesa, nenhum deles acerta.
-    """
+    """Os quatro daquela unidade, não só o que estava longe do centro."""
     reader = _reader_aberto_em(_caps_dualsense())
     snap = reader.snapshot()
     assert (snap.lx, snap.ly, snap.rx, snap.ry) == (127, 124, 130, 129), (
@@ -179,12 +155,7 @@ def test_os_quatro_eixos_do_stick_chegam_com_a_medida_da_bancada() -> None:
 
 
 def test_a_semente_e_o_mesmo_numero_que_o_primeiro_evento_produziria() -> None:
-    """Invariante que impede a semeadura de inventar valor novo.
-
-    A semente passa pelo MESMO `normalizar_eixo` que `_handle_abs` usa. Se um
-    dia divergirem, o snapshot daria um salto no primeiro evento de um eixo que
-    não se moveu — e ninguém saberia de onde veio.
-    """
+    """Invariante que impede a semeadura de inventar valor novo."""
     reader = _reader_aberto_em(_caps_dualsense(ly=124))
     semeado = reader.snapshot().ly
     reader._handle_abs(ecodes.ABS_Y, 124, ecodes)
@@ -193,9 +164,6 @@ def test_a_semente_e_o_mesmo_numero_que_o_primeiro_evento_produziria() -> None:
         "caminho de evento: o eixo daria um salto assim que o kernel repetisse "
         "a posição"
     )
-
-
-# --- Armadilha (a): o gatilho repousa em 0, não em 128 -------------------
 
 
 def test_gatilho_solto_no_open_continua_solto() -> None:
@@ -211,11 +179,7 @@ def test_gatilho_solto_no_open_continua_solto() -> None:
 
 
 def test_gatilho_ja_apertado_no_open_chega_apertado() -> None:
-    """O caso que hoje erra do outro lado: dedo no gatilho quando o daemon sobe.
-
-    MORDIDA: sem a semeadura, `l2_raw` fica em 0 e o teste reprova — o dedo só
-    passaria a existir para o jogo quando ela mexesse no gatilho.
-    """
+    """O caso que hoje erra do outro lado: dedo no gatilho quando o daemon sobe."""
     reader = _reader_aberto_em(_caps_dualsense(l2=200, r2=37))
     snap = reader.snapshot()
     assert (snap.l2_raw, snap.r2_raw) == (200, 37), (
@@ -226,11 +190,7 @@ def test_gatilho_ja_apertado_no_open_chega_apertado() -> None:
 
 
 def test_gatilho_sintetizado_do_pro_nao_e_afetado() -> None:
-    """No Pro não há `ABS_Z`/`ABS_RZ`: o gatilho vem do botão e continua vindo.
-
-    Sem eixo não há `absinfo.value`, então não há o que semear — e a síntese
-    digital (`_sintetizar_gatilho`) tem de seguir ligada e mandando.
-    """
+    """No Pro não há `ABS_Z`/`ABS_RZ`: o gatilho vem do botão e continua vindo."""
     caps = {
         ecodes.EV_KEY: [ecodes.BTN_TL2, ecodes.BTN_TR2],
         ecodes.EV_ABS: [
@@ -250,9 +210,6 @@ def test_gatilho_sintetizado_do_pro_nao_e_afetado() -> None:
         "a semeadura pisou na síntese digital do gatilho do Pro: o ZL dele é "
         "botão, não eixo, e sem a síntese o gatilho fica 0 para sempre"
     )
-
-
-# --- Armadilha (b): o `absinfo.value` do nó recém-criado -----------------
 
 
 def test_stick_no_minimo_declarado_nao_e_semeado() -> None:
@@ -284,11 +241,7 @@ def test_gatilho_no_minimo_e_semeado_porque_ali_o_minimo_e_o_repouso() -> None:
 
 
 def test_stick_do_pro_no_zero_continua_no_centro() -> None:
-    """Faixa com sinal: a memória zerada (`0`) JÁ É o centro, e vira 128.
-
-    No Pro o mínimo é `-32767` — o talo de verdade —, então a recusa do mínimo
-    nunca tem o que fazer ali, e o valor de nó recém-criado é inofensivo.
-    """
+    """Faixa com sinal: a memória zerada (`0`) JÁ É o centro, e vira 128."""
     caps = {
         ecodes.EV_KEY: [ecodes.BTN_SOUTH],
         ecodes.EV_ABS: [
@@ -315,15 +268,8 @@ def test_stick_do_pro_fora_do_centro_chega_convertido() -> None:
     assert esperado != 128, "o caso perdeu a força: -16384 tem de sair do centro"
 
 
-# --- Degradar para o que já rodava ---------------------------------------
-
-
 def test_node_ilegivel_nao_semeia_nada() -> None:
-    """`capabilities()` que levanta: o snapshot fica no default, sem exceção.
-
-    Passa com a cura arrancada de propósito — guarda o modo de falha, que é
-    "degradar para o que já rodava", nunca derrubar a thread de leitura.
-    """
+    """`capabilities()` que levanta: o snapshot fica no default, sem exceção."""
     reader = EvdevReader(device_path=Path("/dev/input/event999"))
     reader._on_device_opened(_DevIlegivel())
     snap = reader.snapshot()
@@ -340,22 +286,13 @@ def test_eixo_listado_sem_absinfo_nao_semeia() -> None:
 
 
 def test_o_hat_do_dpad_nao_vira_stick_na_semeadura() -> None:
-    """`ABS_HAT0X/Y` são D-pad, não eixo de stick: a semeadura não os toca.
-
-    Semeá-los como se fossem eixo escreveria o hat por cima de um campo do
-    snapshot que não é dele.
-    """
+    """`ABS_HAT0X/Y` são D-pad, não eixo de stick: a semeadura não os toca."""
     reader = _reader_aberto_em(_caps_dualsense())
     assert reader.snapshot().buttons_pressed == frozenset()
 
 
 def test_a_semeadura_e_refeita_a_cada_reabertura() -> None:
-    """Queda + reabertura: o nó novo traz posição nova, e ela manda.
-
-    `_reset_on_disconnect` esquece a forma dos eixos de propósito (o nó morreu);
-    a posição tem de ser relida no open seguinte, senão o valor velho ficaria
-    congelado até o primeiro evento do controle novo.
-    """
+    """Queda + reabertura: o nó novo traz posição nova, e ela manda."""
     reader = _reader_aberto_em(_caps_dualsense(ly=124))
     assert reader.snapshot().ly == 124
     reader._reset_on_disconnect()

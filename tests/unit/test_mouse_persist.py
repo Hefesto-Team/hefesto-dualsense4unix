@@ -1,11 +1,4 @@
-"""FEAT-MOUSE-PERSIST-01: o toggle de emulação de mouse persiste em
-restart/reboot via flag-file no config_dir.
-
-FEAT-MOUSE-CURSOR-FEEL-01 (A5): o flag ganhou conteúdo JSON com speed e
-scroll_speed (padrão flag-com-conteúdo do gamepad); conteúdo legado "1\\n"
-continua contando como ligado (velocidades None → defaults). O restore do
-daemon no boot aplica as velocidades com clamp ao contrato (1-12 / 1-5).
-"""
+"""FEAT-MOUSE-PERSIST-01: o toggle de emulação de mouse persiste em"""
 from __future__ import annotations
 
 import asyncio
@@ -32,9 +25,6 @@ def test_roundtrip_liga_desliga(tmp_config: Path) -> None:
     assert (tmp_config / "mouse_emulation.flag").exists()
     assert session.load_mouse_emulation()[0] is True
     session.save_mouse_emulation(False)
-    # HARM-06: o "off" agora é GRAVADO (era o apagar do arquivo). O que a
-    # usuária desligou tem que ser distinguível do que ela nunca configurou —
-    # senão "Controlar o PC" religa o mouse contra a vontade dela.
     assert (tmp_config / "mouse_emulation.flag").exists()
     assert session.load_mouse_emulation()[0] is False
 
@@ -50,24 +40,17 @@ def test_save_best_effort_nao_propaga_excecao(
         raise OSError("config dir indisponível")
 
     monkeypatch.setattr(session, "config_dir", _boom)
-    # Não deve levantar (best-effort); e load também é tolerante.
     session.save_mouse_emulation(True)
     assert session.load_mouse_emulation()[0] is False
     session.save_mouse_emulation(True, speed=9, scroll_speed=3)
     assert session.load_mouse_emulation() == (False, None, None)
 
 
-# --- flag JSON com velocidades (FEAT-MOUSE-CURSOR-FEEL-01, A5) ---------------
-
-
 def test_flag_json_roundtrip_com_velocidades(tmp_config: Path) -> None:
     session.save_mouse_emulation(True, speed=9, scroll_speed=3)
     assert session.load_mouse_emulation() == (True, 9, 3)
-    # Conteúdo é JSON de verdade (contrato do flag-com-conteúdo).
     data = json.loads((tmp_config / "mouse_emulation.flag").read_text("utf-8"))
     assert data == {"enabled": True, "speed": 9, "scroll_speed": 3}
-    # HARM-06: desligar GRAVA "off" (era apagar o arquivo) e PRESERVA as
-    # velocidades — o desligar não passa velocidades e não pode zerar a escolha.
     session.save_mouse_emulation(False)
     assert json.loads((tmp_config / "mouse_emulation.flag").read_text("utf-8")) == {
         "enabled": False,
@@ -99,24 +82,13 @@ def test_flag_json_malformado_ou_tipos_errados_tolerado(tmp_config: Path) -> Non
 
 
 def test_os_involucros_legados_nao_existem_mais(tmp_config: Path) -> None:
-    """PODA de 26/08/2026 — os nomes antigos saíram, e ficou UMA forma só.
-
-    Este teste era `test_wrappers_legados_continuam_funcionando` e afirmava o
-    contrário: que `save_mouse_emulation_enabled`/`load_mouse_emulation_enabled`
-    delegavam ao flag novo. Eles delegavam, e nenhum caminho de produção os
-    chamava — só `tests/`. Duas formas para a mesma gravação é a duplicação que
-    a poda veio tirar; o que sobrou é `save_mouse_emulation`, que grava as
-    velocidades junto, e `load_mouse_emulation`, que as devolve.
-    """
+    """PODA de 26/08/2026 — os nomes antigos saíram, e ficou UMA forma só."""
     assert not hasattr(session, "save_mouse_emulation_enabled")
     assert not hasattr(session, "load_mouse_emulation_enabled")
     session.save_mouse_emulation(True)
     assert session.load_mouse_emulation() == (True, None, None)
     session.save_mouse_emulation(False)
     assert session.load_mouse_emulation()[0] is False
-
-
-# --- restore no boot do daemon (restart simulado) ----------------------------
 
 
 def _boot_config() -> DaemonConfig:
@@ -143,11 +115,7 @@ async def _boot_and_stop(daemon: Daemon) -> None:
 async def test_daemon_restaura_velocidades_no_boot(
     tmp_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ligar com speed=9/scroll=3 → restart (simulado) → daemon restaura 9/3.
-
-    O start real do device é substituído (não criar uinput de verdade no
-    sistema); o alvo do teste é o restore da config a partir do flag JSON.
-    """
+    """Ligar com speed=9/scroll=3 → restart (simulado) → daemon restaura 9/3."""
     session.save_mouse_emulation(True, speed=9, scroll_speed=3)
     started: list[bool] = []
     monkeypatch.setattr(
@@ -159,7 +127,7 @@ async def test_daemon_restaura_velocidades_no_boot(
     assert daemon.config.mouse_emulation_enabled is True
     assert daemon.config.mouse_speed == 9
     assert daemon.config.mouse_scroll_speed == 3
-    assert started  # o subsystem mouse foi acionado no boot
+    assert started
 
 
 @pytest.mark.asyncio

@@ -1,15 +1,4 @@
-"""Subsystem Rumble — re-asserção periódica de vibração com política de intensidade.
-
-Responsabilidades:
-  - Re-aplicar rumble_active no hardware a cada ~200ms.
-  - Delegar cálculo de multiplicador para `hefesto_dualsense4unix.core.rumble._effective_mult`
-    (fonte canônica única — AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01).
-  - Zerar os motores quando um modo termina e o dono da vibração some
-    (`zero_motors_on_mode_exit` — HARM-16).
-
-O estado de debounce da política "auto" (_last_auto_mult, _last_auto_change_at)
-é mantido diretamente no objeto Daemon por compatibilidade com testes existentes.
-"""
+"""Subsystem Rumble — re-asserção periódica de vibração com política de intensidade."""
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -23,78 +12,13 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# FEAT-RUMBLE-POLICY-01
 AUTO_DEBOUNCE_SEC = 5.0
 
-#: QUANTO UM RUMBLE FIXADO SOBREVIVE SEM NINGUÉM REBATER — A-TELA-QUE-TRAVA-02,
-#: 15/09/2026. Passado o teto, os motores voltam ao JOGO (`rumble_active=None`).
-#:
-#: O NÚMERO É TRÊS, e ele não é chute: quem segura um par fixado rebate a cada
-#: **1 s** (`interface/pacotes/a05_vibracao.SEGUNDOS_ENTRE_BATIMENTOS`), então
-#: três dá **três batimentos** dentro da janela. Um pode se perder — um tique
-#: pulado por pintura no ar, um IPC lento, a máquina engasgando — e o teste não
-#: pisca. Com dois o primeiro perdido já soltaria; com dez a janela que morreu
-#: deixaria o jogo mudo por dez segundos, que é tempo de ela achar que quebrou.
-#:
-#: E ELE É O TETO DA OCIOSIDADE, não da duração: um teste que ela deixa ligado a
-#: tarde inteira com a janela aberta nunca solta, porque o coração bate. Foi o
-#: que ela pediu em 07/09/2026 — *"o botão Testar tem que ficar em estado de
 #: ligado"*  (noqa-acento: citação literal dela).
 TETO_DO_RUMBLE_FIXADO_S = 3.0
 
-#: A escada da intensidade, e o dono único dos três números.
-#:
-#: DECISÃO DELA — 11/08/2026, depois de o preço de cada opção ir para a mesa.
-#: A escada da tela passa a ser **30% / 100% / 150%**.
-#:
-#: * ``balanceado`` era **0,7**, e o tooltip da tela sempre prometeu *"do jeito
-#:   que o jogo pediu, sem aumentar nem diminuir"*. Eram duas afirmações e uma
-#:   mentira; quem sai é o número. Em **1,0** o botão entrega o que promete.
-#: * ``max`` era **1,0** — exatamente o mesmo que não mexer em nada. Um botão
-#:   chamado "Máximo" que não aumentava coisa alguma não tinha razão de existir.
-#:   Em **1,5** ele AMPLIFICA, acima do que o jogo pediu.
-#:
-#: **A amplificação está MEDIDA no aparelho** (11/08/2026): um report com
-#: ``common[2]=200``, com o daemon parado, fez o motor obedecer, e ela conferiu
-#: de olho. Os bytes de motor são 0-255 e o firmware honra o valor.
-#:
-#: **Quem multiplica satura em 255**, e isso não é detalhe: um valor acima de
-#: 255 truncado em byte viraria lixo (256 → 0, o motor PARARIA no pico). A
-#: conta é ``max(0, min(255, round(bruto * mult)))`` e ela vive em três lugares,
-#: todos com o mesmo recorte — ``reassert_rumble`` logo abaixo (rumble fixado),
-#: ``daemon.ipc_rumble_policy.apply_rumble_policy`` (o ``rumble.set`` da aba e o
-#: "Aplicar" do rodapé) e ``daemon.subsystems.gamepad.apply_game_rumble`` (o
-#: rumble do JOGO).
-#:
-#: **O 2,0 FOI CONSIDERADO E DESCARTADO POR ELA**, no mesmo 11/08, e o motivo é
-#: a medição da nota SATURA-01 — que não caducou: ela VENCEU EM PARTE. Rodando
-#: a conta exata acima sobre os 256 valores que o jogo pode pedir:
-#:
-#:     mult 1,0 → nenhum valor satura
-#:     mult 1,5 → satura a partir de 170: 33% da faixa vira 255
-#:     mult 2,0 → satura a partir de 128: METADE da faixa vira 255
-#:
-#: A 2,0 o jogo manda 128, 180 e 255 e o controle recebe 255 nas três: naquela
-#: metade a variação da vibração some, e o que se sente é força CONSTANTE, não
-#: força maior. Foi o que ela relatou em 10/08 — *"vibra muito mais do que o
-#: normal a ponto de não parar"*. Amplificar sem nuance não é amplificar: é
-#: achatar.
-#:
-#: **O que o 1,5 compra:** amplificação de verdade com dois terços da faixa
-#: ainda variando (satura só a partir de 170). É o ponto em que o botão faz o
-#: que o nome dele diz sem achatar a metade forte das cenas — o preço aceito é
-#: um terço, não a metade.
 #:
 #: **Por que o DESLIZADOR ainda vai até 200** (``RUMBLE_CUSTOM_MULT_MAX``, em
-#: ``profiles.schema``) — e isto NÃO é incoerência, é a divisão de papéis:
-#: os quatro botões são **presets seguros**, escolhidos por ela para quem só
-#: quer clicar; o deslizador é o **ajuste livre** de quem quer ir além e aceita
-#: o preço, que agora está escrito no tooltip. Um preset que achata metade da
-#: faixa é armadilha; um número que a pessoa arrasta até 200 de propósito é
-#: escolha dela.
-#:
-#: O caminho para amplificar SEM achatar continua sendo comprimir (uma curva)
-#: em vez de cortar, e continua por fazer.
 RUMBLE_POLICY_MULT: dict[str, float] = {
     "economia": 0.3,
     "balanceado": 1.0,
@@ -150,24 +74,7 @@ def sem_dono_do_rumble(*, native: bool, backends: Sequence[str]) -> bool:
 def escrever_rumble_no_dono(
     controller: Any, dono: str | None, weak: int, strong: int
 ) -> None:
-    """Escreve o par no DONO dele; broadcast só quando dono nenhum foi fixado.
-
-    MESA-CHEIA-05 (E0), e é o único lugar que sabe desviar do seletor global:
-    quem tem `dono` (um MAC) escreve por `set_rumble_for` — a rota por MAC que
-    já existia e não toca o ponteiro `_output_target_key`. Quem não tem cai no
-    `set_rumble` de sempre.
-
-    **Dono ausente da mesa é NO-OP, não broadcast.** `set_rumble_for` devolve
-    False quando o MAC não casa com handle nenhum; cair no broadcast ali
-    levaria o valor de um controle que saiu para todos os que ficaram — o
-    mesmo defeito de migração, pela outra porta.
-
-    Backend sem `set_rumble_for` (dublês, single-instance) cai no caminho
-    histórico — a mesma tolerância por `getattr` que o force-feedback do jogo
-    já usa (`subsystems/gamepad.py`).
-    """
-    # `isinstance(str)`: só um MAC endereça alguém. Dublê de config que devolve
-    # um objeto qualquer para qualquer atributo não vira alvo por acidente.
+    """Escreve o par no DONO dele; broadcast só quando dono nenhum foi fixado."""
     if isinstance(dono, str) and dono:
         mirar = getattr(controller, "set_rumble_for", None)
         if callable(mirar):
@@ -178,12 +85,7 @@ def escrever_rumble_no_dono(
 
 
 def _lembrar_dono_vibrando(cfg: Any, uniq: str | None) -> None:
-    """Anota quem está vibrando por nossa conta — ou apaga a anotação.
-
-    Tolerante de propósito: configs-dublê (`SimpleNamespace`, `MagicMock`) e
-    daemons antigos vivos em `install --editable` não têm o campo, e uma anotação
-    que não pode ser gravada só custa o resgate — nunca o tick.
-    """
+    """Anota quem está vibrando por nossa conta — ou apaga a anotação."""
     try:
         cfg.rumble_dono_vibrando = uniq
     except Exception:  # pragma: no cover — config imutável/exótica
@@ -242,41 +144,7 @@ def silenciar_dono_abandonado(
 
 
 def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
-    """Re-aplica rumble_active no hardware a cada ~200ms com política.
-
-    Idempotente. Necessário porque writes HID de LED/trigger podem zerar os
-    motores de vibração involuntariamente. A re-asserção a 5Hz (200ms) garante
-    que o valor fixado pelo usuário persista mesmo com outras escritas HID.
-
-    Pula silenciosamente se:
-    - rumble_active is None (passthrough — jogo/UDP controla).
-    - Controle não está conectado.
-
-    **MESA-CHEIA-05 (E0) — o par fixado NÃO migra de dono.** Enquanto isto
-    chamava `set_rumble` seco, o destino era o `_output_target_key` do backend
-    — um ponteiro mutável: ela fixava 160/220 no Controle 2, trocava o seletor
-    para o 3 por outro motivo, e 200 ms depois o 3 recebia o valor do 2. Agora
-    o par carrega o dono (`config.rumble_active_uniq`, congelado no gesto que
-    fixou) e o reassert reescreve NAQUELE controle, pela rota por MAC que já
-    existia (`set_rumble_for`) e só o co-op e o force-feedback usavam.
-
-    Com o dono fora da mesa, `set_rumble_for` devolve False e o tick é no-op —
-    de propósito: cair no broadcast levaria o valor de um controle ausente
-    para todos os presentes, que é o defeito de volta pela outra porta. Quando
-    ele voltar, o próximo tick o reencontra.
-
-    Sem dono (`rumble_active_uniq is None` — o alvo era "Todos", ou o backend
-    não sabe endereçar) segue o caminho histórico: `set_rumble`, que é
-    broadcast quando não há alvo.
-
-    **E o dono TROCA sem ninguém avisar o abandonado** (terceira rodada, 14/08):
-    por isso cada tick passa por `silenciar_dono_abandonado` antes de escrever —
-    ver a prosa dele. Em passthrough a anotação é APAGADA em vez de resgatada:
-    ali quem dirige os motores é o jogo, e um zero nosso atravessaria a vibração
-    dele. Isso mantém a saída do passthrough idêntica ao que sempre foi.
-    """
-    # Import local: core/rumble.py -> daemon/lifecycle.py (TYPE_CHECKING) ->
-    # daemon/subsystems/rumble.py. Import no topo criaria ciclo em runtime.
+    """Re-aplica rumble_active no hardware a cada ~200ms com política."""
     from hefesto_dualsense4unix.core.rumble import _effective_mult
 
     cfg = daemon.config
@@ -284,37 +152,8 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     if active is None:
         _lembrar_dono_vibrando(cfg, None)
         return
-    # O TETO DE OCIOSIDADE — A-TELA-QUE-TRAVA-02, 15/09/2026, decisão dela.
-    #
-    # ORDEM DELA, com o controle na mão: *"o testar e parar é sobre o teste
     # naquele momento isso nao interfere in game (noqa-acento: dela). (…) clicar
-    # em parar é só pra impactar no teste naquele momento e não mutar a
-    # vibração in game."*
-    #
-    # O QUE ESTAVA QUEBRADO: o "Testar" da aba Vibração tira os motores do jogo
-    # (`rumble.passthrough(False)`) e SÓ o "Parar" os devolvia. Fechar a janela,
-    # trocar de aba ou a janela morrer deixava o jogo mudo — e nada na tela
-    # dizia por quê, porque a tela já não estava lá.
-    #
-    # A JANELA GANHOU AS DUAS METADES DELA (`pacotes.CORACOES` e
-    # `pacotes.LARGADAS`), e esta é a TERCEIRA: a rede para quando a janela
-    # MORRE sem conseguir largar. Quem segura um par fixado rebate a cada
-    # segundo; passado o teto sem rebatimento, os motores voltam ao jogo.
-    #
-    # ELE COBRE TODOS OS CHAMADORES, e é por isso que mora aqui e não na aba: o
-    # `hef test rumble` da CLI fixa pelo MESMO caminho e tinha o MESMO buraco.
-    # É a regra desta casa — *quando a cura conhece a causa, ela cobre TODOS os
-    # chamadores*.
-    #
-    # O `(0, 0)` ENTRA NO TETO, e isto revoga metade de uma decisão medida: a
     # M2 (`lifecycle.apply_profile_rumble_passthrough`) preserva o silêncio
-    # fixado porque o "Parar" da JANELA GTK significava *silêncio deliberado*.
-    # Aquela janela saiu inteira em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`), o
-    # "Parar" de hoje termina em `passthrough(True)` e nunca deixa `(0, 0)` de
-    # pé, e a regra dela de 15/09 é explícita: para calar a vibração no jogo ela
-    # zera o slicer do motor ou o degrau do perfil, nunca o "Parar". Um `(0, 0)`
-    # que ninguém rebate é, hoje, um jogo mudo por acidente. A M2 fica como
-    # está — ela guarda a troca de perfil, que é outro assunto e dura segundos.
     carimbo = getattr(cfg, "rumble_active_em", None)
     if isinstance(carimbo, (int, float)) and now - carimbo > TETO_DO_RUMBLE_FIXADO_S:
         logger.info(
@@ -330,7 +169,7 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
         return
     weak_raw, strong_raw = active
 
-    battery_pct = 50  # fallback neutro
+    battery_pct = 50
     try:
         snap = daemon.store.snapshot()
         ctrl = snap.controller
@@ -358,9 +197,6 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
         escrever_rumble_no_dono(daemon.controller, dono, weak, strong)
     except Exception as exc:
         logger.warning("rumble_reassert_failed", err=str(exc), exc_info=True)
-    # Só quem recebeu um par NÃO-NULO fica na anotação: zero não abandona
-    # ninguém, e um endereço rançoso aqui custaria uma escrita a mais no
-    # próximo dono.
     _lembrar_dono_vibrando(cfg, dono if (weak or strong) else None)
 
 
@@ -413,12 +249,6 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
     if par is not None and any(par):
         return
     try:
-        # RUMBLE-SEM-DONO-01: `set_rumble(0, 0)` com os motores do backend JÁ
-        # em 0 não MUDA o report, e report que não muda não vai ao fio (dedup
-        # do `sendReport`) — logo nada para o motor que o jogo deixou girando
-        # por fora (hidraw direto). O backend pydualsense
-        # expõe `force_rumble_stop()` (um report de stop de verdade); os
-        # demais backends/fakes seguem no zero clássico.
         force = getattr(daemon.controller, "force_rumble_stop", None)
         if callable(force):
             force()
@@ -428,114 +258,31 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
         logger.warning("rumble_zero_on_mode_exit_failed", err=str(exc), exc_info=True)
 
 
-# --- NATIVO-RUMBLE-01: o Modo Nativo RECUSA fixar vibração ------------------
-#
-# **O defeito, medido em 19/08/2026.** No Modo Nativo o backend muta TODA
-# escrita de output (`lifecycle._release_controller_to_game` →
-# `backend_pydualsense.set_output_mute(True)`), e o mute é a ÚNICA porta antes
-# do `sendReport`. Medido: `rumble.set` dentro do modo produz **zero write no
-# fio** e mesmo assim o daemon respondia `{"status": "ok"}` — a aba dizia
-# "Vibração travada (fraca=…, forte=…)" com o motor parado.
-#
-# **E a parte destrutiva não é a tela que mente, é o estado que sobrevive ao
-# modo.** Gravar `daemon.config.rumble_active` DESARMA a cura HARM-16: o
-# `zero_motors_on_mode_exit` logo acima só zera os motores em passthrough
-# (`rumble_active is None`), justamente porque com par fixado o dono é a
-# usuária. Com um par gravado durante o modo, a saída do Modo Nativo deixa de
-# zerar o hardware — e quem estava vibrando ali era o JOGO, escrevendo direto
-# no hidraw. Resultado: o controle sai do modo vibrando, e ninguém mais zera.
-#
-# **A decisão dela (19/08/2026), com as três opções na mesa** — recusar no
-# daemon, impedir o clique na tela, ou as duas: *"a aba Gatilhos já sabe exibir
-# recusa vinda do daemon"*. O mecanismo existe e só precisava ser usado aqui.
-# Impedir o clique foi descartado porque contraria a regra da casa de que **a
-# vontade da GUI prevalece**: recusar com motivo diz o que aconteceu, impedir
-# esconde a escolha.
-#
-# **Por que "recusado" e não "guardado".** As outras abas usam
-# `app.textos_de_aplicacao.guardado_ate_o_nativo_sair` — o desejado fica
-# registrado e é re-escrito no desmute. Para o rumble essa palavra seria a
-# própria bomba: guardar o par É o que desarma a HARM-16. Aqui o pedido não
-# fica pendurado; ele é recusado, e a frase diz o que fazer.
-
-#: O vocabulário de desfecho do rumble fixado — o mesmo contrato que a leva
-#: VERDADE-01 (18-19/08) criou para o gamepad em `subsystems.gamepad`, pela
-#: mesma razão: um `bool` que valia para "aplicou", "já estava" e "bloqueado"
-#: foi a mentira que fez um laço destruir e recriar o vpad no meio da partida.
-#: Quem só quer saber se pode confiar no par lê o `status`; quem precisa da
-#: verdade inteira lê o `desfecho`.
-#:
-#:   - ``"aplicado"``              — o par foi fixado e o reassert vai re-afirmá-lo;
-#:   - ``"parado"``                — o pedido era calar, e o silêncio foi fixado;
-#:   - ``"recusado_modo_nativo"``  — o Modo Nativo está ligado: NADA foi armado,
-#:                                   nem no `rumble_active` nem no hardware;
-#:   - ``"solto_no_modo_nativo"``  — o pedido era calar DENTRO do modo. O Hefesto
-#:                                   não consegue calar o jogo, mas soltou o par
-#:                                   que estivesse fixado (volta ao passthrough).
-#:   - ``"recusado_alvo_ausente"`` — BROADCAST-PROIBIDO-01 (24/08/2026): o alvo
-#:                                   escolhido no seletor está FORA da mesa.
-#:                                   NADA foi armado — nem `rumble_active`, nem
-#:                                   `set_rumble` — para não replicar o pulso do
-#:                                   jogador ausente nos outros conectados.
 RUMBLE_APLICADO = "aplicado"
 RUMBLE_PARADO = "parado"
 RUMBLE_RECUSADO_MODO_NATIVO = "recusado_modo_nativo"
 RUMBLE_SOLTO_NO_MODO_NATIVO = "solto_no_modo_nativo"
 RUMBLE_RECUSADO_ALVO_AUSENTE = "recusado_alvo_ausente"
 
-#: A frase é para uma PESSOA: o que aconteceu, e o que fazer a respeito. O
-#: léxico é o que já está na tela — "Modo Nativo" e "quem manda ... é o jogo"
-#: são as mesmas palavras de `app.textos_de_aplicacao._MOTIVO_NATIVO`, com
-#: "no controle" trocado por "nos motores" porque é dos motores que se fala.
 MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES = (
     "Vibração não aplicada: em Modo Nativo quem manda nos motores é o jogo. "
     "Saia do Modo Nativo para fixar a vibração por aqui."
 )
 
-#: O "Parar" tem frase PRÓPRIA porque o desfecho é outro, e dizer a frase de
-#: cima seria mentir por omissão: o gesto fez alguma coisa (soltou o par), só
-#: não fez a que ela esperava (calar o motor que o jogo está tocando).
 MOTIVO_MODO_NATIVO_SOLTOU_O_PAR = (
     "Em Modo Nativo quem manda nos motores é o jogo, e o Hefesto não consegue "
     "pará-los. A vibração fixada por aqui foi solta — ela não volta quando o "
     "Modo Nativo sair."
 )
 
-#: PROVISÓRIO — decisão dela (BROADCAST-PROIBIDO-01, 24/08/2026). A redação
 #: nasceu no docstring de `PyDualSenseController.alvo_de_output_ausente`
-#: (`core/backend_pydualsense.py`) e é citada aqui ao pé da letra: *"O
-#: Controle 2 não está na mesa — nada foi enviado."* Generalizada para
-#: qualquer alvo. Vai ao olho dela no LOTE da Onda 9 (RUM-1/RUM-2), junto das
-#: outras frases de rumble — nunca sozinha: uma frase avulsa custa a ela uma
-#: decisão inteira.
 MOTIVO_ALVO_FORA_DA_MESA = (
     "O controle escolhido não está na mesa — nada foi enviado."
 )
 
 
 def modo_nativo_manda_nos_motores(daemon: Any) -> bool:
-    """O Modo Nativo está ligado — logo, o dono dos motores é o jogo.
-
-    Um lugar só para a pergunta, pelo mesmo motivo que
-    `app.textos_de_aplicacao.modo_nativo_manda_no_output` é um lugar só para a
-    frase: as três portas que armam `rumble_active` (o `rumble.set` da aba, o
-    `rumble.stop` e o "Aplicar" do rodapé, em `ipc_draft_applier`) têm de
-    responder a MESMA coisa. Duas cópias divergem, e a que divergir vira o
-    vazamento silencioso.
-
-    `getattr` defensivo e `False` como padrão: sem daemon (testes de handler
-    isolado) ou sem o método, não há Modo Nativo para recusar — não se inventa
-    uma recusa por não saber.
-
-    **A resposta tem de ser `True` DE VERDADE, e não só verdadeira** — a
-    diferença é medida, não teórica: com `bool(...)` no lugar do `is True`,
-    catorze testes da MESA-CHEIA-05 e sete da ONDA-U passaram a reprovar de uma
-    vez, porque montam a mesa com `daemon = MagicMock()` e todo `MagicMock()`
-    responde verdadeiro a qualquer pergunta. O contrato de `DaemonProtocol.
-    is_native_mode` é `-> bool`, então quem responde outra coisa é um dublê — e
-    um dublê não decide o destino da vibração dela. É a mesma regra do resto da
-    casa: não afirmar o que não se sabe.
-    """
+    """O Modo Nativo está ligado — logo, o dono dos motores é o jogo."""
     if daemon is None:
         return False
     pergunta = getattr(daemon, "is_native_mode", None)
@@ -543,19 +290,13 @@ def modo_nativo_manda_nos_motores(daemon: Any) -> bool:
         return False
     try:
         return pergunta() is True
-    except Exception as exc:  # observabilidade > silêncio
+    except Exception as exc:
         logger.debug("modo_nativo_manda_nos_motores_falhou", err=str(exc))
         return False
 
 
 class RumbleSubsystem:
-    """Subsystem sentinela para o registry — lógica real está em reassert_rumble().
-
-    A re-asserção periódica de rumble é integrada diretamente no poll loop
-    do Daemon por requisitos de timing (a cada 200ms dentro do tick). Este
-    subsystem existe para completar o registry e servir como ponto de extensão
-    para futuras políticas de rumble desacopladas do poll loop.
-    """
+    """Subsystem sentinela para o registry — lógica real está em reassert_rumble()."""
 
     name = "rumble"
 

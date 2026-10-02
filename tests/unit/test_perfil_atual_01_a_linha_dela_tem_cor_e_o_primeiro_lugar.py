@@ -1,30 +1,8 @@
-"""PERFIL-ATUAL-01 — o perfil que ELA ativou tem cor e é o primeiro da lista.
-
-Pedido dela, 10/08/2026: *"esse perfil inclusive precisa ter uma linha de cor de
-destaque e aparecer primeiro na guia de perfil pra sempre evidenciar o perfil
-atual"*.
-
-E "esse perfil" tem dono, decidido no mesmo dia com as palavras dela: *"aquele
-cujo escolho vir na aba perfis e aperto em ativar"*. NÃO é o que o autoswitch
-elegeu pela janela aberta, e NÃO é o `active_profile` do daemon quando ele está
-vazio — que é o estado VIVO da máquina dela, com o cadeado do autoswitch ligado:
-`daemon.status` responde `null`, e um destaque pendurado nele nasceria invisível.
-
-Este arquivo mede as quatro coisas que a entrega promete, nesta ordem:
-
-1. o FATO sobrevive — o gesto de Ativar deixa nome em disco, e a aba parte dele;
-2. o `null` do daemon não apaga o que ela decidiu;
-3. a LINHA inteira fica verde (as três colunas visíveis), e só a dela;
-4. ela vem primeiro — e trocar de perfil move a linha sem reler o disco.
-
-E mede a armadilha do EMPATE-01/E2 junto: a ordem das LINHAS não pode vazar para
-as funções da disputa, que leem a ORDEM DE CARGA do loader.
-"""
+"""PERFIL-ATUAL-01 — o perfil que ELA ativou tem cor e é o primeiro da lista."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi`.
 exigir_gi_real("PERFIL-ATUAL-01 (a linha dela tem cor e o primeiro lugar)")
 
 import ast
@@ -43,9 +21,6 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import (
 from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
-#: A cor do "ligado" desta casa (`gui/theme.css:26`, `@green`). Escrita à mão
-#: aqui de propósito: se alguém trocar a constante do produto por outra cor sem
-#: passar pelo tema, este arquivo reprova e a conversa acontece.
 VERDE_DA_CASA = "#50fa7b"
 
 PROFILES_PY = (
@@ -80,11 +55,7 @@ def _mesa_dela() -> list[Profile]:
 
 
 def _stub() -> Any:
-    """A aba Perfis com GTK de verdade e nada de janela.
-
-    ListStore REAL porque é o modelo que carrega a cor: um dublê de lista
-    aceitaria qualquer número de colunas e mediria o dublê.
-    """
+    """A aba Perfis com GTK de verdade e nada de janela."""
     from gi.repository import GObject, Gtk, Pango
 
     class _Stub(ProfilesActionsMixin):
@@ -108,24 +79,13 @@ def _stub() -> Any:
     return _Stub()
 
 
-#: O que `AttrList.to_string()` imprime para o verde da casa: cada canal de 8
-#: bits vira 16 no Pango (`0x50` -> `0x5050`).
-#:
-#: MONTADO, e não escrito à mão: doze dígitos hexadecimais em fila são exatamente
-#: o que o `check_anonymity` desta casa procura, e o portão reprovou a primeira
-#: versão deste arquivo — com razão, porque a régua não tem como saber que ali
-#: era uma cor e não o endereço Bluetooth de um controle dela.
 VERDE_SERIALIZADO = "foreground #" + "".join(
     COR_DO_PERFIL_ATIVO[i : i + 2] * 2 for i in (1, 3, 5)
 )
 
 
 def _cor(valor: Any) -> str | None:
-    """A cor de uma linha, legível: `None`, o verde da casa, ou o que veio.
-
-    Traduz de volta em vez de responder sim/não de propósito: uma cor ERRADA
-    tem de reprovar mostrando qual é, e não virar um `False` mudo.
-    """
+    """A cor de uma linha, legível: `None`, o verde da casa, ou o que veio."""
     if valor is None:
         return None
     texto = valor.to_string()
@@ -135,11 +95,6 @@ def _cor(valor: Any) -> str | None:
 def _linhas(stub: Any) -> list[tuple[str, str | None]]:
     """(nome, cor) na ordem em que a lista desenha."""
     return [(linha[0], _cor(linha[5])) for linha in stub._profiles_store]
-
-
-# ---------------------------------------------------------------------------
-# 1. O fato sobrevive ao daemon vazio e a fechar a janela
-# ---------------------------------------------------------------------------
 
 
 class TestOFatoDoGestoDela:
@@ -163,13 +118,7 @@ class TestOFatoDoGestoDela:
         assert perfil_que_ela_ativou() == "Pragmata"
 
     def test_o_marcador_e_espelho_e_nao_vence_o_session_json(self) -> None:
-        """O `active_profile.txt` não decide nada: vale o `session.json`.
-
-        NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): até
-        aqui o marcador vencia na divergência (o seed do PERFIL-03, para as
-        versões em que o autoswitch sujava o `session.json`). A convergência que
-        ele esperava aconteceu, e o marcador virou espelho da escolha.
-        """
+        """O `active_profile.txt` não decide nada: vale o `session.json`."""
         from hefesto_dualsense4unix.profiles.loader import save_profile
 
         for nome in ("Navegação", "vitoria"):
@@ -192,13 +141,7 @@ class TestOFatoDoGestoDela:
         assert perfil_que_ela_ativou() is None
 
     def test_a_aba_semeia_o_destaque_do_disco_ao_abrir(self) -> None:
-        """A FIAÇÃO: sem esta chamada o destaque nasce invisível na máquina dela.
-
-        Gate de código-fonte pelo mesmo motivo do PERFIL-SALVA-TUDO-01: o corpo
-        de `install_profiles_tab` precisa de meia dúzia de widgets do glade, e o
-        que se mede aqui não é o desenho — é a decisão de a lista NÃO esperar o
-        daemon para saber qual perfil é o dela.
-        """
+        """A FIAÇÃO: sem esta chamada o destaque nasce invisível na máquina dela."""
         arvore = ast.parse(PROFILES_PY.read_text(encoding="utf-8"))
         funcao = next(
             no
@@ -245,11 +188,6 @@ class TestONullDoDaemonNaoApagaOQueElaDecidiu:
         assert _linhas(stub)[0] == ("vitoria", VERDE_DA_CASA)
 
 
-# ---------------------------------------------------------------------------
-# 2. A cor — a LINHA inteira, e só a dela
-# ---------------------------------------------------------------------------
-
-
 class TestALinhaDeCor:
     def test_so_o_perfil_dela_recebe_o_verde(self) -> None:
         stub = _stub()
@@ -291,11 +229,7 @@ class TestALinhaDeCor:
         return colunas
 
     def test_as_tres_colunas_visiveis_puxam_a_cor_da_mesma_coluna(self) -> None:
-        """Ela pediu a LINHA colorida: o realce vale nas três.
-
-        Amarrar só a coluna "Nome" deixaria "Prioridade" e "Quando usar" na cor
-        do tema — meia linha verde, que é o que o negrito sozinho já fazia.
-        """
+        """Ela pediu a LINHA colorida: o realce vale nas três."""
         for chamada in self._colunas_montadas():
             palavras = {kw.arg for kw in chamada.keywords}
             assert "attributes" in palavras, (
@@ -304,19 +238,7 @@ class TestALinhaDeCor:
             )
 
     def test_a_cor_nao_volta_a_ser_um_foreground_de_celula(self) -> None:
-        """A regressão MEDIDA, e a razão de o realce ser `AttrList`.
-
-        O GTK3 descarta o `foreground` de um `GtkCellRendererText` quando a
-        linha está SELECIONADA — e a linha selecionada é justamente a do perfil
-        ativo (a aba abre nela, e o sync do daemon volta a selecioná-la). O verde
-        sumia no caso mais comum, que é o oposto do "**sempre** evidenciar o
-        perfil atual" que ela pediu. Fotografado em 10/08, lado a lado: com todas
-        as linhas selecionadas, `foreground=` some, `cell-background=` fica sob a
-        faixa da seleção, e `attributes=` sobrevive.
-
-        `foreground=` é uma linha mais curta e parece igual. Este teste existe
-        para a próxima pessoa que achar isso — inclusive eu.
-        """
+        """A regressão MEDIDA, e a razão de o realce ser `AttrList`."""
         for chamada in self._colunas_montadas():
             palavras = {kw.arg for kw in chamada.keywords}
             assert "foreground" not in palavras, (
@@ -345,11 +267,6 @@ class TestALinhaDeCor:
         cores = dict(_linhas(stub))
         assert cores["Ação"] == VERDE_DA_CASA
         assert cores["vitoria"] is None
-
-
-# ---------------------------------------------------------------------------
-# 3. O primeiro lugar
-# ---------------------------------------------------------------------------
 
 
 class TestOrdemDeExibicao:
@@ -429,11 +346,7 @@ class TestAListaAbreNoPerfilDela:
         ]
 
     def test_trocar_tres_vezes_nao_empilha_as_escolhas_velhas_no_topo(self) -> None:
-        """A promessa é *o ativo primeiro, o resto na ordem de carga* — sempre.
-
-        Empurrar o novo ativo para a frente do que já estava lá deixaria a lista
-        contando o histórico dela em vez de mostrar o disco.
-        """
+        """A promessa é *o ativo primeiro, o resto na ordem de carga* — sempre."""
         stub = _stub()
         perfis = _mesa_dela()
         stub._profiles_cache = list(perfis)
@@ -453,7 +366,7 @@ class TestAListaAbreNoPerfilDela:
         """Recarga em voo: a cor e o negrito valem sozinhos, a ordem espera."""
         stub = _stub()
         perfis = _mesa_dela()
-        stub._populate_profiles_store(perfis, None)  # cache vazio de propósito
+        stub._populate_profiles_store(perfis, None)
         stub._mark_active_profile_row("vitoria")
         assert [nome for nome, _cor in _linhas(stub)] == [
             "Ação",
@@ -463,31 +376,11 @@ class TestAListaAbreNoPerfilDela:
         assert dict(_linhas(stub))["vitoria"] == VERDE_DA_CASA
 
 
-# ---------------------------------------------------------------------------
-# 4. A armadilha do EMPATE-01/E2 — duas listas, e é de propósito
-# ---------------------------------------------------------------------------
-
-
 class TestAOrdemDasLinhasNaoVazaParaADisputa:
-    """O terceiro termo do desempate é a ORDEM DE CARGA do loader.
-
-    Medido em 10/08 com as funções puras: mover UM perfil para a frente preserva
-    a ordem relativa dos outros, então o VENCEDOR anunciado não muda — mas o
-    tooltip lista os concorrentes na ordem que recebe, e essa muda. Uma frase da
-    GUI recitando a fila numa ordem que não é a do daemon é exatamente o que
-    esta casa não entrega, e é o que este teste segura.
-
-    NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5:
-    o `match any` saiu da seleção automática, e a disputa entre os «Sempre»
-    acabou — a coluna não anuncia vencedor nem recita fila. O que este bloco
-    segura agora é que arrastar a linha dela para o topo não faz a coluna nem o
-    tooltip inventarem disputa.
-    """
+    """O terceiro termo do desempate é a ORDEM DE CARGA do loader."""
 
     @staticmethod
     def _mesa_de_empate() -> list[Profile]:
-        # Ordem de CARGA: aaa, bbb, zzz. "bbb" é o ativo e não está entre os
-        # empatados no topo, então é ele que a exibição arrasta para a frente.
         return [_catch_all("aaa", 9), _catch_all("bbb", 5), _catch_all("zzz", 9)]
 
     def test_o_tooltip_nao_recita_fila_nenhuma(self) -> None:
@@ -511,11 +404,7 @@ class TestAOrdemDasLinhasNaoVazaParaADisputa:
         assert colunas == {"aaa": "Sempre", "bbb": "Sempre", "zzz": "Sempre"}
 
     def test_a_coluna_zero_continua_sendo_so_o_nome(self) -> None:
-        """Marcador textual ali quebraria Salvar, Ativar, Duplicar e Remover.
-
-        `_selected_profile_name` lê a coluna 0 como IDENTIDADE do perfil — o
-        destaque tinha de sair pela cor, e é por isso que ele saiu.
-        """
+        """Marcador textual ali quebraria Salvar, Ativar, Duplicar e Remover."""
         stub = _stub()
         perfis = _mesa_dela()
         stub._profiles_cache = list(perfis)

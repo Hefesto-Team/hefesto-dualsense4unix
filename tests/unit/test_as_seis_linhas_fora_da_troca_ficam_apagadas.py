@@ -1,41 +1,5 @@
 #!/usr/bin/env python3
-"""AS SEIS LINHAS QUE A TROCA NÃO ALCANÇA FICAM APAGADAS — F1-REMAPEAR-02, 13/09/2026.
-
-O DEFEITO, medido pela F1-REMAPEAR: a direção do L3 e do R3, o PS e as três
-regiões do touchpad tinham lista clicável na tela "Trocar os botões". Escolher
-algo nelas era recusado na hora, mas a lista continuava mostrando a escolha
-recusada, e ela ia na `forma` (`forma["ps"]` saiu `"Cruz"`): todo «Guardar»
-seguinte era recusado até ela devolver a linha a «— Sem troca —». Desde a
-FRASES-E-DICAS-01 a recusa não tem frase — o botão pisca, e nada diz qual linha
-segura o Guardar.
-
-A CURA (§D da sprint, decisão de quem coordena por delegação, sobre a regra do
-apagado da 06-Q1): as seis nascem apagadas — `disabled`, só «— Sem troca —»,
-sem gesto e sem endereço de pintura —, e o pacote só as aceita em «— Sem troca
-—». O motor continua recusando as seis.
-
-O QUE ESTA RÉGUA COBRA:
-
-1. na página, bancada e publicada: dezesseis listas com o gesto e o endereço da
-   troca, e as seis de fora apagadas, com o `data-linha` e uma opção só;
-2. a folha da 06 veste a lista apagada com a cara do apagado da casa;
-3. num Chrome com o `BOOTSTRAP` do piloto: o clique de ponteiro nas seis não
-   chega ao Python, o da Cruz chega, e a `forma` do «Guardar» traz as seis em
-   «— Sem troca —»;
-4. no pacote, com um disco de mentira: a forma com as seis em «— Sem troca —»
-   grava; qualquer outra coisa nelas recusa sem gravar — inclusive a troca por
-   si mesmo, que o motor deixa passar;
-5. o motor recusa as seis.
-
-AS MORDIDAS, rodadas na entrega da sprint:
-
-* tire o `apagado=True` de `aba06._lista_da_troca` — a geração PARA na
-  autoconferência;
-* tire o `disabled` da linha do PS na página publicada — reprovam os casos 1
-  (publicado) e 3;
-* tire a guarda das seis de `a06_navegacao.guardar_remapeamento` — o caso 4
-  reprova nas duas trocas por si mesmo.
-"""
+"""AS SEIS LINHAS QUE A TROCA NÃO ALCANÇA FICAM APAGADAS — F1-REMAPEAR-02, 13/09/2026."""
 from __future__ import annotations
 
 import json
@@ -60,7 +24,6 @@ PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 NOME = "Régua das Seis"
 
-#: AS SEIS, lidas dos donos: o que o produto lista e o motor não alcança.
 FORA_DA_TROCA = tuple(b for b in acoes.BOTOES if b not in remap.REMAPEAVEIS)
 
 _SELECT = re.compile(r"<select(?P<attrs>[^>]*)>(?P<miolo>.*?)</select>", re.S)
@@ -93,9 +56,6 @@ def _listas_da_troca(publicado: bool) -> dict[str, dict[str, Any]]:
     return fora
 
 
-# ---------------------------------------------------------------------------
-# 1. a página
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
 def test_as_seis_nascem_apagadas_e_as_dezesseis_trocam(publicado: bool) -> None:
     from pacotes.a06_navegacao import PREFIXO_DA_TROCA, SEM_TROCA
@@ -119,9 +79,6 @@ def test_as_seis_nascem_apagadas_e_as_dezesseis_trocam(publicado: bool) -> None:
         assert len(lista["rotulos"]) > 1, (botao, lista)
 
 
-# ---------------------------------------------------------------------------
-# 2. a folha
-# ---------------------------------------------------------------------------
 def test_a_folha_veste_a_lista_apagada_como_o_apagado_da_casa() -> None:
     doc = _documento(publicado=True)
     regra = re.search(r"\.campo-linha:disabled\{([^}]*)\}", doc)
@@ -134,9 +91,6 @@ def test_a_folha_veste_a_lista_apagada_como_o_apagado_da_casa() -> None:
         "não existe")
 
 
-# ---------------------------------------------------------------------------
-# 3. o navegador, com o BOOTSTRAP do piloto
-# ---------------------------------------------------------------------------
 def _bootstrap() -> str:
     fonte = (INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8")
     m = re.search(r'BOOTSTRAP = r"""(.*?)"""', fonte, re.S)
@@ -146,12 +100,7 @@ def _bootstrap() -> str:
 
 @pytest.mark.skipif(not CHROME.exists(), reason="sem o Chrome do sistema")
 def test_no_navegador_as_seis_nao_recebem_o_clique() -> None:
-    """O clique de PONTEIRO, forçado: quem recusa é o navegador, não a régua.
-
-    `force=True` pula a espera do Playwright e manda o `mousedown`/`click` no
-    centro da lista. A Cruz é o controle do instrumento: se ela não chegasse,
-    a ausência das seis não provaria nada.
-    """
+    """O clique de PONTEIRO, forçado: quem recusa é o navegador, não a régua."""
     from playwright.sync_api import sync_playwright
 
     from hefesto_dualsense4unix.interface import onde
@@ -195,9 +144,6 @@ def test_no_navegador_as_seis_nao_recebem_o_clique() -> None:
     assert {b: forma[b] for b in FORA_DA_TROCA} == dict.fromkeys(FORA_DA_TROCA, SEM_TROCA)
 
 
-# ---------------------------------------------------------------------------
-# 4. o pacote, com um disco de mentira
-# ---------------------------------------------------------------------------
 class _PonteMuda:
     """Aceita tudo e não fala com daemon nenhum — mesma das réguas irmãs da 06."""
 
@@ -286,9 +232,6 @@ def test_qualquer_outra_coisa_nas_seis_recusa_sem_gravar(
         f"a forma com {linha}={rotulo!r} gravou {[g.remapeamento for g in gravados]}")
 
 
-# ---------------------------------------------------------------------------
-# 5. o motor
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("botao", FORA_DA_TROCA)
 def test_o_motor_continua_recusando_as_seis(botao: str) -> None:
     assert len(FORA_DA_TROCA) == 6, FORA_DA_TROCA

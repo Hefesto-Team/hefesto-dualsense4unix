@@ -1,21 +1,4 @@
-"""Tray icon do HefestoApp: close-to-tray + atalhos rápidos.
-
-FEAT-COSMIC-TRAY-FALLBACK-01 (v3.1.0): em COSMIC 1.0+, a criação do
-`AppIndicator` precisa ser deferred via `GLib.timeout_add(500, ...)` para
-dar tempo do `cosmic-applet-status-area` registrar `org.kde.StatusNotifierWatcher`
-no D-Bus. Se mesmo assim o watcher não estiver presente, emitimos uma
-notification D-Bus orientadora (`cosmic-applet-status-area` desabilitado)
-e seguimos sem tray. A janela principal segue funcional como entrypoint.
-
-Warning benigno conhecido:
-    Em sessão COSMIC + Wayland, ~160ms após `Indicator.set_menu()` aparece:
-    `Gtk-CRITICAL: gtk_widget_get_scale_factor: assertion 'GTK_IS_WIDGET (widget)' failed`
-    É emitido pelo próprio `libayatana-appindicator3` durante a montagem do
-    ProxyMenu D-Bus, fora do nosso código. Não há efeito visível e o tray
-    funciona normalmente (quando o cosmic-applet-status-area está no painel).
-    Discutido em `pop-os/cosmic-applets#1009` e relacionados. Manter como
-    warning até libayatana-appindicator-glib substituir libayatana-appindicator3.
-"""
+"""Tray icon do HefestoApp: close-to-tray + atalhos rápidos."""
 # ruff: noqa: E402
 from __future__ import annotations
 
@@ -42,52 +25,21 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: AS DUAS CASAS (29/08/2026): o id do item de bandeja também é por
-#: variante — dois apps com o mesmo `app_id` de bandeja disputam o
-#: mesmo item no StatusNotifierWatcher.
 TRAY_APP_ID = identidade.atual().app_id
 
-#: Nome pedido ao tema de ícones. **Tem de terminar em `-symbolic`**, e isso é
-#: contrato, não estética — APPLET-MONOCROMÁTICO-01, pedido dela de 07/08/2026:
-#: "o applet do hefesto deve ficar em preto e branco (...) no cosmic todos os
-#: applet são assim". Ela estava certa: dez dos treze applets do System76
-#: declaram `-symbolic`, e o Hefesto era o único de glifo fixo que não.
-#:
-#: O sufixo é o que muda o resultado, e foi MEDIDO em 07/08 com um item de
-#: bandeja de prova na barra dela: o `cosmic-applet-status-area` RECOLORE o que
-#: tem nome `-symbolic` (o mesmo desenho, servido em magenta saturado, saiu com
-#: saturação máxima 30,6 — a mesma do vizinho Spotify, que é só o azulado do
-#: fundo do painel). Sem o sufixo, o painel desenha o arquivo como ele é: o PNG
-#: (ou, no caso dela, a cópia colorida da logo que o tema ativo serve sob o
-#: mesmo nome) — e o ícone fica o único cromático da barra.
 TRAY_ICON_NAME = f"{identidade.atual().icone}-symbolic"
 
-#: Nome antigo (a logo colorida, sem sufixo). Continua sendo pedido como
-#: PRIMEIRO degrau de queda: numa instalação anterior a 07/08 o simbólico não
-#: existe no tema, e cair direto no joystick genérico seria trocar um ícone
-#: certo por um errado. Ver `_preferred_icon`.
 TRAY_ICON_NAME_LEGADO = identidade.atual().icone
 
 TRAY_ICON_FALLBACK = "input-gaming"
 PROFILE_REFRESH_SEC = 3
 ACTIVE_MARKER = "> "
 
-# FEAT-COSMIC-TRAY-FALLBACK-01: delay para registrar o indicator depois que o
-# cosmic-applet-status-area subir o watcher. Aumentado para 1500ms em
-# BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01 — em COSMIC 1.0.6+ o watcher pode
-# levar até ~1s para ser registrado após o login, e disparar o probe antes
-# disso gerava notificação "Tray icon indisponivel" falsa a cada login.
 _INDICATOR_DEFERRED_MS = 1500
 
-#: Número de tentativas do probe `statusnotifierwatcher_available` antes de
-#: notificar o usuário (BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01). Cada tentativa
-#: separada por `_WATCHER_PROBE_RETRY_MS`. Total: até ~3s de tolerância.
 _WATCHER_PROBE_RETRIES = 3
 _WATCHER_PROBE_RETRY_MS = 1000
 
-#: Flag persistente entre sessões — se existir, não emite o aviso de
-#: "tray indisponível no COSMIC" novamente. Usuário pode apagar manualmente
-#: para receber o aviso de novo (ou setar `HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING=1`).
 _TRAY_WARNED_FLAG_NAME = "cosmic_tray_warned.flag"
 
 
@@ -102,26 +54,7 @@ def _desktop_is_cosmic() -> bool:
 
 ShowFn = Callable[[], None]
 def _painel_recolore_simbolico() -> bool:
-    """O painel desta sessão sabe desenhar o ícone SIMBÓLICO em SVG?
-
-    BUG-TRAY-SIMBOLICO-NAO-DESENHA-01 (medido em 18/08/2026, Pop!_OS 22.04 com
-    GNOME): o item registra no `StatusNotifierWatcher`, mas a barra desenha o
-    marcador de "ícone faltando" — três pontinhos — no lugar do símbolo. Medido
-    das duas formas que o protocolo permite: pelo NOME do tema e pelo CAMINHO
-    ABSOLUTO do arquivo. As duas dão o mesmo placeholder. O mesmo painel, na
-    mesma sessão e no mesmo instante, desenha o PNG colorido sem titubear.
-
-    A escolha do símbolo monocromático foi tomada e MEDIDA no painel do COSMIC
-    (APPLET-MONOCROMÁTICO-01, 07/08): lá o `cosmic-applet-status-area` recolore
-    o `-symbolic` com a cor do tema, e é isso que faz o ícone parar de ser o
-    único cromático da barra. Nada disso muda — o que muda é que fora do COSMIC
-    a preferência se inverte, e a logo colorida (que o painel comprovadamente
-    desenha) vem primeiro. Antes desta inversão, quem não estivesse no COSMIC
-    ficava sem ícone nenhum: não é um ícone mais feio, é a ausência dele.
-
-    A pergunta é feita ao ambiente da sessão, e na dúvida a resposta é "sim" —
-    quem não se declara continua recebendo o símbolo, como era antes.
-    """
+    """O painel desta sessão sabe desenhar o ícone SIMBÓLICO em SVG?"""
     sessao = (
         os.environ.get("XDG_CURRENT_DESKTOP", "")
         + " "
@@ -136,21 +69,9 @@ QuitFn = Callable[[], None]
 ListProfilesFn = Callable[[], list[dict[str, Any]]]
 SwitchProfileFn = Callable[[str], bool]
 #: Snapshot de `daemon.state_full` (ou None se offline) — usado para o tray
-#: mostrar quantos controles estão conectados (FEAT-DSX-MULTI-CONTROLLER-01).
 StateFn = Callable[[], dict[str, Any] | None]
 
-#: TRAY-A-LISTINHA-DELA-01, 21/09/2026. Os quatro atos que ela mandou descer
-#: da janela para a bandeja: *"Adicionar o Reiniciar Daemon, Desativar Daemon
-#: que temos na aba sistema, na aba jogar o Status Ligado e Desligado e o
-#: reconectar controles. como opções no tray"*.
 #: <!-- noqa-acento: citação literal dela -->
-#:
-#: **SÃO OPCIONAIS, e é de propósito:** `None` faz o item NÃO EXISTIR no menu,
-#: em vez de existir cinzento. Os testes do tray e qualquer chamador antigo
-#: seguem montando o menu de quatro itens sem mudar uma linha — e um item que
-#: aparece e não faz nada é o enfeite que esta casa recusa desde o
-#: `_build_camadas_dialog`.
-#: `bool` de retorno = "pegou"; o tray usa isso só para não mentir na hora.
 ModoFn = Callable[[bool], bool]
 ReconectarFn = Callable[[], bool]
 ServicoFn = Callable[[str], bool]
@@ -164,15 +85,9 @@ class AppTray:
     on_quit: QuitFn
     on_list_profiles: ListProfilesFn
     on_switch_profile: SwitchProfileFn
-    #: Opcional: snapshot de estado para o status item mostrar "N controles".
-    #: None (default) mantém o comportamento antigo (só perfil).
     on_state: StateFn | None = None
-    #: O interruptor da aba Jogar: `True` = Ligado (gamepad), `False` =
-    #: Desligado (nativo). Ver :data:`ModoFn`.
     on_set_modo: ModoFn | None = None
-    #: O «Reconectar controles» da aba Jogar.
     on_reconectar: ReconectarFn | None = None
-    #: O par da aba Sistema: recebe `"restart"` ou `"stop"` ou `"start"`.
     on_servico: ServicoFn | None = None
 
     _indicator: Any = None
@@ -182,17 +97,11 @@ class AppTray:
     _profiles_item: Gtk.MenuItem | None = None
     _status_item: Gtk.MenuItem | None = None
     _profile_menu_items: list[Gtk.MenuItem] = field(default_factory=list)
-    # BUG-TRAY-SYNC-IPC-ON-GTK-THREAD-01: guard de inflight do tick de refresh.
-    # Evita empilhar workers se o anterior (coleta de perfis + estado via IPC)
-    # ainda não terminou. Setado antes do dispatch, limpo nos dois callbacks.
     _refresh_inflight: bool = False
-    # TRAY-A-LISTINHA-DELA-01
     _modo_ligado_item: Any = None
     _modo_desligado_item: Any = None
     _servico_item: Any = None
     _servico_de_pe: bool = False
-    #: Guarda de reentrância: `True` enquanto o TIQUE mexe no rádio. Ver
-    #: :meth:`_ao_escolher_o_modo`.
     _pintando_o_modo: bool = False
 
     def is_available(self) -> bool:
@@ -205,11 +114,6 @@ class AppTray:
             logger.warning("apptray_unavailable", msg=msg)
             return False
 
-        # FEAT-COSMIC-TRAY-FALLBACK-01: em COSMIC, defere a criação do
-        # indicator para depois do mainloop subir, garantindo que o
-        # cosmic-applet-status-area já reivindicou o watcher do D-Bus. Não
-        # bloqueia o startup da GUI — janela principal abre normal e o
-        # indicator surge ~500ms depois.
         if _desktop_is_cosmic():
             logger.info(
                 "apptray_deferred_for_cosmic",
@@ -220,7 +124,6 @@ class AppTray:
                     "perde a primeira fase."
                 ),
             )
-            # GLib espera retorno bool: False = não repetir o timer.
             GLib.timeout_add(
                 _INDICATOR_DEFERRED_MS,
                 lambda: (self._start_deferred(), False)[1],
@@ -230,8 +133,7 @@ class AppTray:
         return self._start_deferred()
 
     def _start_deferred(self) -> bool:
-        """Cria o indicator de fato. Roda imediatamente em GNOME/KDE/etc
-        e via GLib.timeout em COSMIC."""
+        """Cria o indicator de fato. Roda imediatamente em GNOME/KDE/etc"""
         import gi as _gi
 
         indicator_cls, category = self._resolve_indicator(_gi)
@@ -260,10 +162,6 @@ class AppTray:
 
         self._profiles_item = Gtk.MenuItem(label=_("Perfis"))
         self._profiles_submenu = Gtk.Menu()
-        # TRAY-LOADING-ZOMBIE-01: nascido vazio — `_render_profiles` é fonte
-        # única de verdade do submenu. Estado inicial "(nenhum perfil)" é
-        # produzido logo abaixo via `_render_profiles([])`, garantindo que
-        # 100% dos itens estejam em `_profile_menu_items`.
         self._profiles_item.set_submenu(self._profiles_submenu)
         self._menu.append(self._profiles_item)
 
@@ -275,7 +173,6 @@ class AppTray:
         quit_item.connect("activate", lambda _w: self.on_quit())
         self._menu.append(quit_item)
 
-        # Popula submenu Perfis via path canônico antes do show_all.
         self._render_profiles([])
 
         self._menu.show_all()
@@ -286,14 +183,6 @@ class AppTray:
 
         logger.info("apptray_started", icon=icon)
 
-        # FEAT-COSMIC-TRAY-FALLBACK-01 + BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01:
-        # probe do StatusNotifierWatcher com retries e flag persistente.
-        # Antes notificava no primeiro probe falhado (race contra o subir do
-        # cosmic-applet-status-area) e reemitia a cada sessão da GUI — virou
-        # a fonte recorrente do "ele fica falando que tem algo não instalado"
-        # ao ligar o PC. Agora: 3 tentativas com 1s entre, e flag persistente
-        # — depois de avisado uma vez, nunca mais notifica até o usuário
-        # apagar o arquivo (ou setar HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING=1).
         if _desktop_is_cosmic():
             GLib.timeout_add(
                 _WATCHER_PROBE_RETRY_MS,
@@ -303,14 +192,7 @@ class AppTray:
         return True
 
     def _probe_watcher_with_retries(self, attempt: int) -> bool:
-        """Probe StatusNotifierWatcher com retries — só notifica se TODAS falharem.
-
-        BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01.
-
-        Retorna sempre ``False`` (callback one-shot do GLib): cada tentativa
-        reagenda a próxima internamente via novo ``timeout_add``, então a
-        source que disparou esta chamada nunca deve se repetir sozinha.
-        """
+        """Probe StatusNotifierWatcher com retries — só notifica se TODAS falharem."""
         if statusnotifierwatcher_available():
             logger.debug("statusnotifierwatcher_disponivel_apos_retry", attempt=attempt)
             return False
@@ -320,19 +202,12 @@ class AppTray:
                 lambda: self._probe_watcher_with_retries(attempt + 1),
             )
             return False
-        # Esgotou as tentativas: avisa SE ainda não avisou em sessão anterior.
         self._maybe_notify_tray_missing()
         return False
 
     @staticmethod
     def _maybe_notify_tray_missing() -> None:
-        """Emite notify de tray indisponível só se ainda não avisou (flag persistente).
-
-        BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01: usuário não quer receber o
-        mesmo aviso a cada login. Verifica `runtime_dir/cosmic_tray_warned.flag`
-        — se existe, no-op. Senão, notifica e cria a flag. Honra env opt-in
-        `HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING=1` para forçar reemissão.
-        """
+        """Emite notify de tray indisponível só se ainda não avisou (flag persistente)."""
         from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
         try:
@@ -388,28 +263,7 @@ class AppTray:
                 pass
             self._indicator = None
 
-    # ------------------------------------------------------------------
-    # TRAY-A-LISTINHA-DELA-01 — os quatro atos que desceram para a bandeja
-    #
-    # A ORDEM É A DA HISTÓRIA, e foi ela quem pediu que fosse pensada assim:
-    # *"Vc ordena a listinha que deve aparecer pensando no storytellign da
     # coisa."* <!-- noqa-acento: citação literal dela -->
-    # O menu lê de cima para baixo como uma frase:
-    #
-    #   quem sou e o que está na mesa   -> o item de estado
-    #   me abra                         -> «Abrir painel»
-    #   o que faço AGORA, no jogo       -> Ligado/Desligado · Reconectar
-    #   com que ajuste                  -> «Perfis»
-    #   e se der errado                 -> Reiniciar · Parar/Ativar o serviço
-    #   saída                           -> «Sair»
-    #
-    # O CORTE ENTRE OS DOIS GRUPOS DE AÇÃO É O QUE CUSTA CARO SE ERRAR: o que
-    # mexe no JOGO vem antes do que mexe no SERVIÇO, porque é o que ela usa no
-    # meio de uma partida — e porque «Parar o serviço» ao lado de «Ligado»
-    # faria dois interruptores parecerem o mesmo. Eles não são: a decisão dela
-    # de 31/08/2026 diz que *"Desligado"* é o **modo nativo**, não parar o
-    # Hefesto.
-    # ------------------------------------------------------------------
     def _montar_os_atos_do_jogo(self) -> None:
         """«Ligado/Desligado» e «Reconectar controles» — os da aba Jogar."""
         if self._menu is None:
@@ -420,11 +274,6 @@ class AppTray:
         self._menu.append(Gtk.SeparatorMenuItem())
 
         if self.on_set_modo is not None:
-            # DOIS RÁDIOS E NÃO UM ALTERNADOR, e é a forma da aba Jogar: lá o
-            # interruptor MOSTRA a posição de agora ao lado da outra. Um item
-            # que só dissesse "Desligar" esconderia em qual posição ela está —
-            # e a pergunta dela de 31/08 era exatamente essa: *"não sei se
-            # segue desativado"*.
             self._modo_ligado_item = Gtk.RadioMenuItem(label=_("Ligado"))
             self._modo_ligado_item.set_use_underline(False)
             self._modo_desligado_item = Gtk.RadioMenuItem(
@@ -455,23 +304,13 @@ class AppTray:
             lambda: self.on_servico("restart")))
         self._menu.append(reiniciar)
 
-        # UM ITEM, DOIS RÓTULOS — a forma que ela escolheu para esta ação em
-        # 03/09/2026: *"E em sistema um específico pra parar o Daemon E Ativar
-        # o Daemon"*. O rótulo segue o estado, e quem o atualiza é o tique.
         self._servico_item = Gtk.MenuItem(label=_("Parar o serviço"))
         self._servico_item.set_use_underline(False)
         self._servico_item.connect("activate", self._ao_mexer_no_servico)
         self._menu.append(self._servico_item)
 
     def _ao_escolher_o_modo(self, item: Any, ligado: bool) -> None:
-        """Só age no rádio que ACABOU de ser marcado, e nunca no eco da pintura.
-
-        `Gtk.RadioMenuItem` emite `activate` nos DOIS itens ao trocar de
-        posição (o que sai e o que entra), e emite de novo quando o tique
-        reescreve a posição com `set_active`. Sem estes dois guardas, um
-        clique em «Desligado» mandaria também um «Ligado» ao daemon, e o tique
-        seguinte mandaria tudo de novo a cada três segundos.
-        """
+        """Só age no rádio que ACABOU de ser marcado, e nunca no eco da pintura."""
         if self._pintando_o_modo or not item.get_active():
             return
         if self.on_set_modo is not None:
@@ -486,25 +325,14 @@ class AppTray:
 
     @staticmethod
     def _chamar_sem_cair(acao: Any) -> None:
-        """O tray NUNCA cai por causa de um clique — nem por IPC, nem por bug.
-
-        Um `Gtk.Menu` que levanta dentro do handler deixa o item de bandeja
-        vivo e mudo, e a pessoa fica sem menu até reiniciar a sessão. O erro
-        vai para o registro, que é onde ele serve.
-        """
+        """O tray NUNCA cai por causa de um clique — nem por IPC, nem por bug."""
         try:
             acao()
-        except Exception as erro:  # ver a docstring
+        except Exception as erro:
             logger.warning("apptray_acao_falhou", erro=str(erro))
 
     def _pintar_o_estado_dos_atos(self, state: dict[str, Any] | None) -> None:
-        """Põe os rótulos e as posições no estado de AGORA, a cada tique.
-
-        O ESTADO DO MODO É DERIVADO DO MESMO DONO QUE A ABA JOGAR USA —
-        `painel.hefesto_ligado` —, e não de uma regra escrita aqui: `True`
-        Ligado, `False` Desligado, `None` não se sabe. Com `None` os dois
-        rádios ficam como estavam: mentir uma posição é pior que não dizer.
-        """
+        """Põe os rótulos e as posições no estado de AGORA, a cada tique."""
         de_pe = isinstance(state, dict)
         self._servico_de_pe = de_pe
         if self._servico_item is not None:
@@ -518,9 +346,6 @@ class AppTray:
             return
         alvo = self._modo_ligado_item if ligado else self._modo_desligado_item
         if alvo is not None and not alvo.get_active():
-            # O GUARDA É O QUE IMPEDE O TIQUE DE VIRAR CLIQUE: sem ele,
-            # `set_active` emitiria `activate` e o tray mandaria ao daemon,
-            # a cada três segundos, o modo que ele acabou de LER.
             self._pintando_o_modo = True
             try:
                 alvo.set_active(True)
@@ -529,12 +354,7 @@ class AppTray:
 
     @staticmethod
     def _modo_de_agora(state: dict[str, Any] | None) -> bool | None:
-        """`True` Ligado · `False` Desligado · `None` não se sabe.
-
-        DELEGADO, e o import é tardio de propósito: `painel` puxa o motor
-        inteiro, e o tray sobe antes de qualquer janela. Com o daemon parado
-        não há `state`, e aí a resposta é `None` — a mesma que a aba Jogar dá.
-        """
+        """`True` Ligado · `False` Desligado · `None` não se sabe."""
         if not isinstance(state, dict):
             return None
         try:
@@ -543,22 +363,11 @@ class AppTray:
             return None
         try:
             return painel.hefesto_ligado(state)
-        except Exception:  # tray nunca cai por leitura
+        except Exception:
             return None
 
     def _tick_refresh(self) -> bool:
-        """Dispara a coleta de perfis + estado em thread worker (não bloqueia GTK).
-
-        BUG-TRAY-SYNC-IPC-ON-GTK-THREAD-01: antes este tick fazia DUAS chamadas
-        IPC SÍNCRONAS na thread GTK (``on_list_profiles`` e, dentro de
-        ``_controllers_suffix``, ``on_state``) a cada ``PROFILE_REFRESH_SEC`` —
-        cada uma podia travar a UI por até o timeout do socket. Agora um único
-        worker (``run_in_thread``) coleta os dois fora da thread GTK e o render
-        acontece no callback de sucesso (re-postado via ``GLib.idle_add`` pelo
-        próprio ``run_in_thread``). O guard ``_refresh_inflight`` impede empilhar
-        workers se o anterior ainda não retornou. Retorna ``True`` para manter o
-        timer do GLib vivo.
-        """
+        """Dispara a coleta de perfis + estado em thread worker (não bloqueia GTK)."""
         if self._refresh_inflight:
             return True
         self._refresh_inflight = True
@@ -580,7 +389,7 @@ class AppTray:
         if self.on_state is not None:
             try:
                 state = self.on_state()
-            except Exception:  # tray nunca cai por falha de IPC
+            except Exception:
                 state = None
         return profiles, state
 
@@ -592,37 +401,26 @@ class AppTray:
             profiles, self._controllers_suffix_from_state(state)
         )
         self._pintar_o_estado_dos_atos(state)
-        return False  # não repetir via GLib
+        return False
 
     def _on_refresh_failed(self, _exc: Exception) -> bool:
         """Callback de falha (thread GTK): só libera o guard; mantém UI estável."""
         self._refresh_inflight = False
-        return False  # não repetir via GLib
+        return False
 
     def _controllers_suffix(self) -> str:
-        """Compat/síncrono: busca o estado via ``on_state()`` e formata o sufixo.
-
-        Mantido para chamadores diretos e testes; o tick de refresh usa
-        ``_controllers_suffix_from_state`` com o estado JÁ coletado no worker,
-        evitando uma 2ª chamada IPC na thread GTK
-        (BUG-TRAY-SYNC-IPC-ON-GTK-THREAD-01).
-        """
+        """Compat/síncrono: busca o estado via ``on_state()`` e formata o sufixo."""
         if self.on_state is None:
             return ""
         try:
             state = self.on_state()
-        except Exception:  # tray nunca cai por falha de IPC
+        except Exception:
             return ""
         return self._controllers_suffix_from_state(state)
 
     @staticmethod
     def _controllers_suffix_from_state(state: dict[str, Any] | None) -> str:
-        """' · N controles (BT + USB)' quando há 2+ conectados; '' caso contrário.
-
-        FEAT-DSX-MULTI-CONTROLLER-01: deixa visível no tray que mais de um
-        controle está conectado (todos recebem o output em broadcast). Tolera
-        daemon offline/sem o bloco `controllers` (versão antiga) caindo em ''.
-        """
+        """' · N controles (BT + USB)' quando há 2+ conectados; '' caso contrário."""
         if not isinstance(state, dict):
             return ""
         controllers = state.get("controllers")
@@ -651,11 +449,6 @@ class AppTray:
         self._profile_menu_items = []
 
         if not profiles:
-            # TRAY-UNDERSCORE-MNEMONIC-01: `new_with_label` cria com
-            # use_underline=False por default; reforço com setter para
-            # robustez frente a backports/forks. Sem isso, labels com `_`
-            # são interpretadas como mnemonics e ficam com `__` no rendering
-            # dbusmenu (StatusNotifierItem).
             item = Gtk.MenuItem.new_with_label(_("(nenhum perfil)"))
             item.set_use_underline(False)
             item.set_sensitive(False)
@@ -682,12 +475,7 @@ class AppTray:
                 (p.get("name") for p in profiles if p.get("active")),
                 None,
             )
-            # A CONTAGEM DE PERFIS SAIU — 21/09/2026, palavra dela: *"no tray
             # remover o numero de perfis"*. <!-- noqa-acento: citação dela -->
-            # Ela nunca respondeu a uma pergunta de quem abre a bandeja: o
-            # número de perfis salvos não muda nada do que está acontecendo, e
-            # ocupava a linha que diz QUEM está na mesa. Quantos perfis existem
-            # continua a uma seta de distância, no submenu «Perfis».
             label = (
                 _("Hefesto - DualSense4Unix - perfil: %s") % active
                 if active
@@ -696,23 +484,7 @@ class AppTray:
             self._status_item.set_label(label + controllers_suffix)
 
     def _ensinar_o_caminho_do_icone(self, icone: str) -> None:
-        """Diz ao PAINEL onde o arquivo do ícone mora, em vez de só o nome.
-
-        BUG-TRAY-ICONE-INVISIVEL-01 (medido em 18/08/2026, Pop!_OS 22.04 com
-        GNOME): quem resolve o nome do ícone não é este processo — é o painel.
-        Aqui dentro o `Gtk.IconTheme` acha `hefesto-dualsense4unix-symbolic` sem
-        titubear, o item aparece registrado no `StatusNotifierWatcher`, e mesmo
-        assim a barra não mostra nada: o `gnome-shell` carregou o tema de ícones
-        no login, ANTES de o Hefesto existir no disco, e não recarrega sozinho
-        quando o `gtk-update-icon-cache` roda depois. Sem isto, o ícone só
-        aparecia no logout seguinte — e quem instalasse hoje concluiria que a
-        bandeja não funciona.
-
-        `set_icon_theme_path` viaja junto do item pelo D-Bus, então o painel
-        passa a procurar no diretório indicado além do tema dele. O caminho sai
-        do arquivo que realmente existe, e não de um palpite: se nenhum for
-        encontrado, o método não faz nada e o comportamento antigo continua.
-        """
+        """Diz ao PAINEL onde o arquivo do ícone mora, em vez de só o nome."""
         definir_caminho = getattr(self._indicator, "set_icon_theme_path", None)
         if definir_caminho is None:
             return
@@ -733,19 +505,7 @@ class AppTray:
 
     @staticmethod
     def _preferred_icon() -> str:
-        """Nome do ícone a pedir ao painel, em ordem de preferência.
-
-        Três degraus, e o do meio é novo em 07/08 (APPLET-MONOCROMÁTICO-01):
-
-        1. `hefesto-dualsense4unix-symbolic` — o desenho monocromático, que o
-           painel recolore com a cor do tema dela;
-        2. `hefesto-dualsense4unix` — a logo colorida. É o que uma instalação
-           anterior a 07/08 tem no disco. Sem este degrau, quem atualizasse só
-           o código veria um **joystick genérico** na barra, não um ícone feio:
-           o sintoma seria "sumiu o Hefesto", e a causa (arquivo não instalado)
-           ficaria escondida;
-        3. `input-gaming` — o joystick genérico, último recurso.
-        """
+        """Nome do ícone a pedir ao painel, em ordem de preferência."""
         theme = Gtk.IconTheme.get_default()
         if theme is None:
             return TRAY_ICON_FALLBACK

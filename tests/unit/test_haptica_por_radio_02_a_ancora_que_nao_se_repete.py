@@ -51,10 +51,7 @@ _A = "aa:bb:cc:00:00:01"
 _B = "aa:bb:cc:00:00:02"
 _C = "aa:bb:cc:00:00:03"
 _D = "aa:bb:cc:00:00:04"
-#: As marcas dos aparelhos: as chaves da conta das âncoras.
 _MA, _MB, _MC, _MD = (eh.marca_do_aparelho(u) for u in (_A, _B, _C, _D))
-#: O de marca MENOR e o de marca MAIOR: pela ordem pura das marcas, o menor que
-#: chega depois levaria a âncora do maior que já estava.
 _MENOR, _MAIOR = sorted((_A, _B), key=eh.marca_do_aparelho)
 
 
@@ -66,17 +63,11 @@ def _ancora(i: int) -> eh.Ancora:
 
 
 _QUATRO = [_ancora(i) for i in range(4)]
-#: Uma âncora a mais que os quatro: a troca de âncora precisa de uma livre.
 _CINCO = [_ancora(i) for i in range(5)]
 
 
 def _no(marca: str, ancora: eh.Ancora, module_id: str = "70") -> dict[str, list[tuple[str, str]]]:
     return {eh.nome_da_marca(marca): [(module_id, ancora.declarado)]}
-
-
-# ---------------------------------------------------------------------------
-# 1. A CONTA — `distribuir_ancoras` é pura
-# ---------------------------------------------------------------------------
 
 
 def test_quem_ja_tem_ancora_fica_com_ela() -> None:
@@ -133,46 +124,24 @@ def test_o_que_nao_e_marca_nao_ganha_ancora() -> None:
 
 @pytest.mark.parametrize("chegada", list(itertools.permutations([_MA, _MB, _MC, _MD])))
 def test_nenhuma_ordem_de_chegada_repete_ancora(chegada: tuple[str, ...]) -> None:
-    """Os quatro aparelhos chegam um por um, em cada uma das 24 ordens, lembrando o de antes.
-
-    MORDIDA: distribuir sem ``ja_postas`` (a ordenação pura de antes) reprova
-    em 23 das 24 ordens.
-    """
+    """Os quatro aparelhos chegam um por um, em cada uma das 24 ordens, lembrando o de antes."""
     lembradas: dict[str, eh.Ancora] = {}
     for n in range(1, len(chegada) + 1):
         presentes = list(chegada[:n])
         postas = eh.distribuir_ancoras(presentes, _QUATRO, ja_postas=lembradas)
-        # quem já estava na mesa não troca de âncora
         assert all(postas[u] == a for u, a in lembradas.items()), (presentes, postas)
         lembradas = dict(postas)
     assert len({a.syspath for a in lembradas.values()}) == 4
 
 
-# ---------------------------------------------------------------------------
-# 2. A FIAÇÃO — o subsystem, o endpoint de verdade e um servidor de mentira
-# ---------------------------------------------------------------------------
-
-
 class _Servidor:
-    """Um servidor de som de mentira, na forma das respostas do `pipewire-pulse`.
-
-    Guarda os módulos que carregou com o `sysfs.path` declarado — é o que o
-    jogo lê. Todo sink responde `RUNNING`: é o pior caso, o do leitor do
-    monitor segurando o nó. O jogo é um sink-input, aberto pela régua em
-    `jogo_em`.
-    """
+    """Um servidor de som de mentira, na forma das respostas do `pipewire-pulse`."""
 
     def __init__(self) -> None:
-        #: module_id -> (sink_name, sysfs.path)
         self.modulos: dict[str, tuple[str, str]] = {}
         self.cargas: list[str] = []
         self.quedas: list[str] = []
         self.jogo_em: set[str] = set()
-        #: Os `hefesto_som_<hex6>` que existem E têm som saindo —
-        #: RADIO-AFOGADO-01, 22/09/2026. Eles não são `module-null-sink` desta
-        #: bancada de propósito: quem varre endpoint órfão lê `list short
-        #: modules`, e pôr o nó do alto-falante ali faria a varredura tratá-lo
-        #: como endpoint sem dono.
         self.som_de: set[str] = set()
         self._proximo = 500
 
@@ -267,12 +236,7 @@ class _Mesa:
     ancoras: list[eh.Ancora]
 
     def casar(self, *uniqs: str) -> None:
-        """A volta do daemon, com o alto-falante de cada um TOCANDO.
-
-        RADIO-AFOGADO-01, 22/09/2026: a ponte do som deixou de subir em
-        silêncio, e estas réguas medem a ÂNCORA e o ARRANJO — o que a ponte faz
-        depois de existir. Quem quiser medir o silêncio esvazia `som_de`.
-        """
+        """A volta do daemon, com o alto-falante de cada um TOCANDO."""
         for u in uniqs:
             nome = af.nome_do_sink(u)
             if nome:
@@ -295,14 +259,6 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
     )
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
-    # **O SEGUNDO LADO DO GATE, dublado — 21/09/2026.** Ver a nota igual em
-    # `test_haptica_por_radio_01_a_ponte_troca_de_modo.py`: a
-    # QUEM-JOGA-E-QUEM-VIBRA-01 exige também que o jogo esteja LENDO aquele
-    # controle, e a máquina da suíte não tem jogo aberto. Sem o dublê estas
-    # réguas reprovam por AMBIENTE, e vermelho de ambiente se lê como
-    # regressão. Desde a A-HAPTICA-QUEM-JOGA-02 (26/09/2026) quem vota é
-    # `_quem_mexeu_na_partida`; o `_quem_o_jogo_le` é pista, dublado vazio
-    # só para a varredura não ler o `/proc` da máquina.
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()
     )
@@ -327,16 +283,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
 
 
 def test_quem_chega_depois_nao_herda_a_ancora_de_quem_estava(mesa: _Mesa) -> None:
-    """O de marca maior chega sozinho; o menor chega depois e ganha OUTRA âncora.
-
-    A régua de 18/09 volta com o endpoint por aparelho (A-HAPTICA-E-POR-
-    APARELHO-01, 02/10/2026): quem estava, talvez com o jogo aberto no nó, não
-    paga pela chegada do outro.
-
-    MORDIDA: arranque o ``ja_postas=`` da chamada em ``_casar_as_pontes`` e o
-    passo do servidor em ``distribuir_ancoras`` — pela ordem pura, o menor
-    leva a âncora do maior.
-    """
+    """O de marca maior chega sozinho; o menor chega depois e ganha OUTRA âncora."""
     mesa.casar(_MAIOR)
     antes = mesa.servidor.caminho_de(_MAIOR)
     mesa.casar(_MENOR, _MAIOR)
@@ -364,15 +311,7 @@ def test_a_queda_e_a_volta_em_outra_ordem_nao_repete(mesa: _Mesa) -> None:
 
 
 def test_o_restart_com_os_nos_de_pe_nao_recarrega_nada(mesa: _Mesa) -> None:
-    """O daemon novo nasce sem memória; o servidor ainda tem os nós do anterior.
-
-    Recarregar derrubaria um nó vivo — com o jogo talvez aberto nele — para
-    subir outro, e com a âncora trocada o device KS do prefixo deixaria de
-    casar.
-
-    MORDIDA: a distribuição sem ``de_pe`` dá as âncoras pela ordem das marcas,
-    e os nós são derrubados e recarregados.
-    """
+    """O daemon novo nasce sem memória; o servidor ainda tem os nós do anterior."""
     mesa.servidor.por(_A, _QUATRO[2])
     mesa.servidor.por(_B, _QUATRO[0])
     mesa.casar(_A, _B)
@@ -407,7 +346,7 @@ def test_com_o_jogo_tocando_a_ancora_nao_troca(mesa: _Mesa) -> None:
     mesa.casar(_A)
     antes = mesa.servidor.caminho_de(_A)
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
-    mesa.casar(_A)  # a ponte vira a da háptica
+    mesa.casar(_A)
     mesa.ancoras.remove(next(a for a in _CINCO if a.declarado == antes[0]))
     mesa.casar(_A)
     assert mesa.servidor.caminho_de(_A) == antes
@@ -416,16 +355,7 @@ def test_com_o_jogo_tocando_a_ancora_nao_troca(mesa: _Mesa) -> None:
 def test_o_servidor_mudo_numa_volta_nao_reancora_quem_ja_estava(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A memória do processo segura o nó na volta em que o servidor não responde.
-
-    Uma volta com `list short modules` sem resposta (prazo estourado, um
-    `pipewire-pulse` lento) e um controle chegando nela. O servidor não semeia
-    nada; quem sabe que o maior já tem âncora é só a memória deste processo.
-
-    MORDIDA: arrancar o ``ja_postas=`` da chamada em ``_casar_as_pontes``. A
-    distribuição volta à ordem pura, o menor leva a âncora do maior, e o nó do
-    maior é derrubado e recarregado noutra.
-    """
+    """A memória do processo segura o nó na volta em que o servidor não responde."""
     mesa.casar(_MAIOR)
     antes = mesa.servidor.caminho_de(_MAIOR)
     servidor = mesa.servidor
@@ -441,25 +371,12 @@ def test_o_servidor_mudo_numa_volta_nao_reancora_quem_ja_estava(
     assert len(set(caminhos)) == 2, caminhos
 
 
-# -- a troca de âncora pergunta ao SERVIDOR se o jogo toca --------------------
-#
-# A guarda lia só o modo da ponte, e o modo é o da volta ANTERIOR. Três formas
-# de o nó cair com o jogo aberto nele passavam por ela, e cada uma tem régua
-# abaixo. MORDIDA das três: a guarda de volta a
-# `uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica"`, sem
-# `sink_esta_tocando`.
-
-
 def _o_aparelho_da_ancora_sai(mesa: _Mesa, antes: list[str]) -> None:
     mesa.ancoras.remove(next(a for a in _CINCO if a.declarado == antes[0]))
 
 
 def test_o_jogo_que_abre_na_mesma_volta_segura_o_no(mesa: _Mesa) -> None:
-    """O jogo abre o nó na volta em que o aparelho da âncora sai do barramento.
-
-    A ponte ainda é a do som, porque o modo é o da volta anterior; só o
-    servidor sabe que o jogo já toca.
-    """
+    """O jogo abre o nó na volta em que o aparelho da âncora sai do barramento."""
     mesa.casar(_A)
     antes = mesa.servidor.caminho_de(_A)
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
@@ -508,13 +425,7 @@ def test_o_controle_sem_ponte_nao_perde_o_no_com_o_jogo_aberto(mesa: _Mesa) -> N
 def test_o_servidor_mudo_nao_e_ninguem_tocando(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Na volta em que o servidor não responde, o nó fica e a troca espera.
-
-    E ela espera só o que precisa: fechado o jogo, a âncora troca.
-
-    MORDIDA: ``na_duvida=False`` na guarda. A volta muda lê "ninguém toca" e
-    derruba o nó com o jogo aberto.
-    """
+    """Na volta em que o servidor não responde, o nó fica e a troca espera."""
     mesa.casar(_A)
     antes = mesa.servidor.caminho_de(_A)
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
@@ -525,11 +436,11 @@ def test_o_servidor_mudo_nao_e_ninguem_tocando(
         mesa.casar(_A)
     assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu na volta muda"
     assert mesa.servidor.quedas == []
-    mesa.casar(_A)  # o servidor voltou, e o jogo segue tocando
+    mesa.casar(_A)
     assert mesa.servidor.caminho_de(_A) == antes
     mesa.servidor.jogo_em.clear()
-    mesa.casar(_A)  # a ponte sai da háptica
-    mesa.casar(_A)  # e a troca acontece
+    mesa.casar(_A)
+    mesa.casar(_A)
     depois = mesa.servidor.caminho_de(_A)
     assert len(depois) == 1
     assert depois != antes
@@ -551,16 +462,8 @@ def test_na_duvida_e_resposta_so_do_servidor_mudo() -> None:
     assert af.sink_esta_tocando(nome, _sem_resposta_das_entradas, na_duvida=True) is True
 
 
-# ---------------------------------------------------------------------------
-# 3. O MODO — quem toca é um sink-input
-# ---------------------------------------------------------------------------
-
-
 def test_o_leitor_do_monitor_nao_conta_como_jogo() -> None:
-    """Sink em RUNNING sem sink-input é o NOSSO gravador segurando o nó.
-
-    MORDIDA: devolver ``sink_esta_tocando`` ao estado ``RUNNING`` do sink.
-    """
+    """Sink em RUNNING sem sink-input é o NOSSO gravador segurando o nó."""
     servidor = _Servidor()
     servidor.por(_A, _QUATRO[0])
     assert af.sink_esta_tocando(eh.nome_do_endpoint(_A), servidor) is False
@@ -577,13 +480,7 @@ def test_o_stream_de_outro_sink_nao_e_deste() -> None:
 
 
 def test_o_jogo_que_fecha_devolve_a_ponte_ao_som(mesa: _Mesa) -> None:
-    """O defeito inteiro: fechado o jogo, o alto-falante do controle volta.
-
-    O servidor de mentira responde `RUNNING` para todo sink, como o PipeWire
-    com a ponte lendo o monitor do endpoint.
-
-    MORDIDA: com o ``RUNNING`` decidindo, a última ponte continua a da háptica.
-    """
+    """O defeito inteiro: fechado o jogo, o alto-falante do controle volta."""
     mesa.casar(_A)
     assert _PonteDeMentira.criadas[-1].arranjo is None
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))

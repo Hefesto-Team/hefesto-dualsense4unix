@@ -46,13 +46,7 @@ from hefesto_dualsense4unix.testing import FakeController
 
 
 class _FakeDaemonMouse:
-    """Dublê mínimo do daemon para o payload do mouse.
-
-    Molde de `_FakeDaemonIpc` (test_emulacao_no_jogo_teclado.py), com o par
-    trocado: `_mouse_device` no lugar de `_keyboard_device`. Sabe RECUSAR —
-    `ok=False` é o device que não sobe, que é o caso da permissão ausente em
-    `/dev/uinput`.
-    """
+    """Dublê mínimo do daemon para o payload do mouse."""
 
     def __init__(self, enabled: bool = True, ok: bool = True) -> None:
         self.config = DaemonConfig(mouse_emulation_enabled=enabled)
@@ -76,9 +70,6 @@ class _FakeDaemonMouse:
             self._mouse_device = None
             self.config.mouse_emulation_enabled = False
             return True
-        # É o contrato de `subsystems/mouse.start_mouse_emulation`: a config só
-        # é marcada DEPOIS de o device subir. Com `ok=False` ela fica em False,
-        # e é justamente essa ordem que o desvio do handler precisa cobrir.
         if not self._ok:
             return False
         self._mouse_device = MagicMock()
@@ -107,11 +98,6 @@ class _HandlersCompletos(IpcHandlersMixin):
         self.controller = controller
 
 
-# ---------------------------------------------------------------------------
-# O motivo, um a um
-# ---------------------------------------------------------------------------
-
-
 def test_o_bloqueio_do_mouse_percorre_os_cinco_estados() -> None:
     """Os cinco desfechos, na ordem em que quem lê a tela os encontra."""
     d = _FakeDaemonMouse(enabled=True)
@@ -127,9 +113,6 @@ def test_o_bloqueio_do_mouse_percorre_os_cinco_estados() -> None:
     assert h._bloqueio_do_mouse() == CALADA_VPAD_SUSPENSO
     d._steam_input_vpad_suspenso = False
 
-    # A RAZÃO DESTA FRENTE: interruptor em pé, device fora do ar. É o que
-    # acontece com `/dev/uinput` sem permissão — a flag persistida religa no
-    # boot e `UinputMouseDevice.start()` falha.
     d._mouse_device = None
     assert h._bloqueio_do_mouse() == "sem_device"
 
@@ -138,12 +121,7 @@ def test_o_bloqueio_do_mouse_percorre_os_cinco_estados() -> None:
 
 
 def test_o_interruptor_vence_o_device_na_ordem_dos_motivos() -> None:
-    """Desligada com device fora do ar diz "desligada", nunca "sem_device".
-
-    A ordem não é estética: "sem_device" manda ela abrir a aba Sistema e
-    clicar em "Aplicar correções". Dizer isso para quem simplesmente desligou o
-    mouse é mandar consertar o que não está quebrado.
-    """
+    """Desligada com device fora do ar diz "desligada", nunca "sem_device"."""
     d = _FakeDaemonMouse(enabled=False)
     assert d._mouse_device is None
     assert _Handlers(d)._bloqueio_do_mouse() == "desligada"
@@ -161,13 +139,7 @@ def test_o_predicado_que_estoura_nao_derruba_o_payload() -> None:
 
 
 def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802  # maiúsculas para destacar o ponto, sem acento (noqa-acento)
-    """Um dono só para o gate do poll loop — ver `_bloqueio_da_emulacao_de_desktop`.
-
-    O `lifecycle._poll_loop` cala os dois no MESMO `if`. Duas leituras próprias
-    da mesma conjunção é como as duas respostas divergem: o teclado dizendo
-    "modo jogo" e o mouse dizendo "ligado e feliz" sobre o mesmo controle, no
-    mesmo instante.
-    """
+    """Um dono só para o gate do poll loop — ver `_bloqueio_da_emulacao_de_desktop`."""
     d = _FakeDaemonMouse(enabled=True)
     d.config.keyboard_emulation_enabled = True
     d._keyboard_device = MagicMock()  # type: ignore[attr-defined]
@@ -184,11 +156,6 @@ def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802  # 
         assert h._keyboard_emulation_payload()["bloqueio"] == esperado
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA — o payload do estado
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_a_mordida_o_state_full_diz_por_que_o_cursor_nao_anda() -> None:
     """Interruptor LIGADO, `/dev/uinput` sem permissão: o estado tem a razão.
@@ -199,7 +166,7 @@ async def test_a_mordida_o_state_full_diz_por_que_o_cursor_nao_anda() -> None:
     """
     daemon = Daemon(controller=FakeController(transport="usb"))
     daemon.config.mouse_emulation_enabled = True
-    daemon._mouse_device = None  # o device NÃO subiu
+    daemon._mouse_device = None
     h = _HandlersCompletos(daemon, daemon.store, daemon.controller)
 
     bloco = (await h._handle_daemon_state_full({}))["mouse_emulation"]
@@ -247,11 +214,6 @@ async def test_sem_config_acessivel_o_bloco_continua_OMITIDO() -> None:  # noqa:
     assert "mouse_emulation" not in await h._handle_daemon_state_full({})
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA — a recusa com motivo
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_a_mordida_ligar_e_falhar_devolve_o_motivo_certo() -> None:
     """A recusa deixa de ser muda — e não devolve o pedido dela como motivo.
@@ -282,11 +244,7 @@ async def test_a_mordida_ligar_e_falhar_devolve_o_motivo_certo() -> None:
 
 @pytest.mark.asyncio
 async def test_o_sucesso_nao_carrega_bloqueio() -> None:
-    """`bloqueio` aqui responde "por que a resposta foi NÃO" — num "sim" não há.
-
-    O contrato antigo da resposta continua intacto (o `==` é de propósito): quem
-    já lia esta resposta não ganhou chave nenhuma para tratar.
-    """
+    """`bloqueio` aqui responde "por que a resposta foi NÃO" — num "sim" não há."""
     d = _FakeDaemonMouse(enabled=False)
     res = await _Handlers(d)._handle_mouse_emulation_set(
         {"enabled": True, "speed": 7, "scroll_speed": 2}
@@ -315,20 +273,11 @@ async def test_a_rota_speed_only_tambem_diz_o_motivo_quando_falha() -> None:
     assert d.velocidades == [(9, None)]
 
 
-# ---------------------------------------------------------------------------
-# A ponte confirmada viaja no estado
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_a_mordida_a_ponte_confirmada_chega_no_state_full(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O editor de perfil sabe do carimbo no MESMO estado que já lê no tique.
-
-    Arrancar `result["pontes_confirmadas"]` devolve a aba de perfil à segunda
-    ida ao daemon por gesto (`_buscar_as_pontes_confirmadas`).
-    """
+    """O editor de perfil sabe do carimbo no MESMO estado que já lê no tique."""
     carimbo = {"2054970": {"kind": "gamepad", "gamepad_flavor": "dualsense"}}
     monkeypatch.setattr(ih, "_pontes_confirmadas_seguro", lambda: dict(carimbo))
     daemon = Daemon(controller=FakeController(transport="usb"))
@@ -396,11 +345,7 @@ async def test_o_cache_vence_quando_o_tempo_passa(
 
 
 def test_o_cache_e_por_instancia_e_nao_da_classe() -> None:
-    """Class attribute com shadow na instância — o padrão dos vizinhos.
-
-    Se ele virasse estado de CLASSE, dois daemons no mesmo processo (a suíte
-    monta vários) leriam o carimbo um do outro.
-    """
+    """Class attribute com shadow na instância — o padrão dos vizinhos."""
     assert IpcHandlersMixin._pontes_confirmadas_cache is None
     h = _Handlers(_FakeDaemonMouse())
     h._pontes_confirmadas_no_tique()
@@ -408,4 +353,3 @@ def test_o_cache_e_por_instancia_e_nao_da_classe() -> None:
     assert IpcHandlersMixin._pontes_confirmadas_cache is None
 
 
-# "Conhece-te a ti mesmo." — Sócrates

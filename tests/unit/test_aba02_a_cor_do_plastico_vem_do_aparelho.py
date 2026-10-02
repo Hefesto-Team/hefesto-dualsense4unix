@@ -88,12 +88,8 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 BANCADA = RAIZ / "mockup/02-controles.html"
 
-#: Os dois hexas que o DESENHO crava, e que nenhum assento pode mostrar quando o
-#: aparelho é outro. Saem de `monta.MESA` — Cosmic Red e Starlight Blue.
 DO_DESENHO = ("#ae335a", "#7eb8d4")
 
-#: `--border-forte` do tema, resolvido. É o "nada" que a regra dela manda
-#: mostrar, e o mesmo tom que o lugar VAZIO desta aba já usava.
 NEUTRO = "#44475a"
 
 
@@ -116,9 +112,6 @@ def doc() -> str:
     return BANCADA.read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# O RESOLVEDOR — a cascata desta página, e só dela
-# ---------------------------------------------------------------------------
 FOLHA = re.compile(r"<style([^>]*)>(.*?)</style>", re.S)
 REGRA = re.compile(r"([^{}]+)\{([^{}]*)\}")
 PLASTICO = re.compile(r"--plastico\s*:\s*([^;}]+)")
@@ -138,11 +131,7 @@ def _folhas_com_plastico(doc: str) -> list[tuple[str, str]]:
 
 
 def _cor_do_assento(doc: str, pref: str, troca: str | None = None) -> str | None:
-    """A cor que o assento `pref` acaba tendo — ``None`` se nenhuma regra o alcança.
-
-    `troca` é o que o produto escreve na folha endereçada (o `innerHTML` que o
-    alvo `html` do piloto substitui). Sem ele, mede-se a BANCADA.
-    """
+    """A cor que o assento `pref` acaba tendo — ``None`` se nenhuma regra o alcança."""
     valor = None
     for atributos, css in _folhas_com_plastico(doc):
         if troca is not None and 'data-campo="plastico-css"' in atributos:
@@ -158,9 +147,6 @@ def _cor_do_assento(doc: str, pref: str, troca: str | None = None) -> str | None
     return valor
 
 
-# ---------------------------------------------------------------------------
-# 1. A FORMA — uma folha só, endereçada, com o piso na frente
-# ---------------------------------------------------------------------------
 def test_a_pagina_tem_uma_unica_fonte_de_plastico(doc):
     """Duas folhas foi exatamente o que deixou o Starlight Blue de pé no p2."""
     folhas = _folhas_com_plastico(doc)
@@ -196,9 +182,7 @@ def test_o_piso_nao_nomeia_assento(aba02):
 
 
 def test_os_dois_pisos_gemeos_nao_divergiram(aba02, a02):
-    """O gerador é dono da BANCADA e o pacote é dono do PRODUTO, e eles não se
-    importam — importar um do outro arrastaria a bancada para o fecho de
-    produção. Quem impede a divergência é esta linha."""
+    """O gerador é dono da BANCADA e o pacote é dono do PRODUTO, e eles não se"""
     assert aba02.PISO_DO_PLASTICO == a02.PISO_DA_FOLHA
 
 
@@ -209,9 +193,6 @@ def test_o_seletor_do_assento_e_o_mesmo_dos_dois_lados(aba02, a02):
     assert seletor == aba02.seletor_do_plastico("p1")
 
 
-# ---------------------------------------------------------------------------
-# 2. A CASCATA — o buraco que esta sprint fecha
-# ---------------------------------------------------------------------------
 def test_a_bancada_mostra_o_desenho_que_ela_aprovou(doc):
     """Sem daemon, a página é a bancada: a folha nasce com o que ela aprovou."""
     assert _cor_do_assento(doc, "p1") == DO_DESENHO[0]
@@ -219,12 +200,7 @@ def test_a_bancada_mostra_o_desenho_que_ela_aprovou(doc):
 
 
 def test_com_um_controle_so_o_assento_vazio_perde_a_cor_do_desenho(doc, a02):
-    """O DEFEITO, medido: o p2 ficava Starlight Blue com o P1 sozinho na mesa.
-
-    O `#e4e0d8` é o White DO MAPA DELA (`casca_esq` do modelo `00`), o mesmo
-    hexa que o chip da fita mostra — e não o `#edeef0` da tabela aproximada que
-    esta borda usava até 03/09.
-    """
+    """O DEFEITO, medido: o p2 ficava Starlight Blue com o P1 sozinho na mesa."""
     troca = a02.folha_do_plastico([{"pref": "p1", "cor": "white"}])
     assert _cor_do_assento(doc, "p1", troca) == "#e4e0d8"
     assert _cor_do_assento(doc, "p2", troca) == a02.BORDA_SEM_COR
@@ -251,13 +227,7 @@ def test_a_mesa_dela_de_hoje_chega_inteira_a_tela(doc, a02):
 
 
 def test_nenhum_hexa_do_desenho_sobrevive_a_troca(doc, a02):
-    """A varredura final, e ela é sobre a TELA: em nenhum dos quatro assentos, em
-    nenhuma das mesas plausíveis, pode restar a cor do mockup.
-
-    As mesas de baixo NÃO trazem `cosmic-red` nem `starlight-blue` de propósito:
-    são os dois modelos do desenho, e um deles na mesa VIVA faria o assento sair
-    legitimamente naquele hexa — a régua acusaria a verdade.
-    """
+    """A varredura final, e ela é sobre a TELA: em nenhum dos quatro assentos, em"""
     mesas = [
         [],
         [{"pref": "p1", "cor": "white"}],
@@ -274,9 +244,6 @@ def test_nenhum_hexa_do_desenho_sobrevive_a_troca(doc, a02):
                 f"continuou em `{cor}`, que é a cor do desenho")
 
 
-# ---------------------------------------------------------------------------
-# 3. O DADO VEM DO MAPA DELA — os 28 modelos, e os que o produto ainda não sabe
-# ---------------------------------------------------------------------------
 def _linhas_do_mapa() -> list[dict[str, str]]:
     """As 233 linhas de `docs/data/cores-do-dualsense.csv`, sem comentário."""
     import csv
@@ -293,13 +260,7 @@ def _modelos_do_mapa() -> dict[str, str]:
 
 
 def _casca_do_mapa() -> dict[str, str]:
-    """`slug -> hexa da casca esquerda`, ou `""` quando ela não amostrou o modelo.
-
-    É A MESMA COLUNA QUE PINTA O DESENHO: `gerar_cores_do_dualsense.py` põe o
-    `casca_esq` cru em `--z-casca-solida`, e é ele que `monta.cor_da_zona`
-    devolve. Ler daqui é o que faz este teste medir o MAPA, e não a memória de
-    quem o escreveu.
-    """
+    """`slug -> hexa da casca esquerda`, ou `""` quando ela não amostrou o modelo."""
     fora: dict[str, str] = {}
     for x in _linhas_do_mapa():
         if x.get("zona") == "casca_esq":
@@ -339,12 +300,7 @@ def test_todo_modelo_do_mapa_dela_vira_borda(a02, slug):
 
 
 def test_a_borda_e_o_chip_da_fita_nunca_discordam(a02):
-    """O defeito que ELA viu: dois valores da mesma cor, três centímetros um do
-    outro. O chip lê `monta.cor_da_zona`; a borda tem de ler o MESMO dono.
-
-    Até 03/09/2026 a borda lia `cor_do_plastico.TONS` — 21 hexas, vinte deles
-    aproximados — e os dois discordavam em **28 de 28** modelos dela.
-    """
+    """O defeito que ELA viu: dois valores da mesma cor, três centímetros um do"""
     import monta
 
     for slug, medida in sorted(_casca_do_mapa().items()):
@@ -352,18 +308,6 @@ def test_a_borda_e_o_chip_da_fita_nunca_discordam(a02):
             continue
         assert a02.cor_da_borda(slug).lower() == str(monta.cor_da_zona(slug)).lower(), (
             f"a borda do card e o chip da fita discordam em `{slug}`")
-
-
-#: AS GRAFIAS E A LACUNA FECHARAM EM 25/09/2026 (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01).
-#:
-#: Até ali `cor_do_plastico.NOMES_DE_FABRICA` era uma tabela DIGITADA de 21
-#: códigos, e dois marcadores viviam aqui, medidos em 03/09/2026: três modelos
-#: escritos de dois jeitos (Z1 sem o trema, Z2 sem o `Marvel's`, ZB «Limited» em
-#: vez de «Special») e sete que o mapa dela tinha e o produto não (13, 14, 15,
-#: ZC, ZD, ZE, ZF), que chegavam à mesa **sem cor nenhuma** e saíam «Não sei».
-#: A cura foi a que o comentário daquele dia pediu: o dono LÊ o CSV em vez de
-#: repetir a lista. Agora os dois marcadores medem o contrário — que não sobrou
-#: grafia nem código de um lado só —, e a tabela de 21 de volta reprova aqui.
 
 
 def test_o_produto_escreve_cada_modelo_como_o_mapa_dela():

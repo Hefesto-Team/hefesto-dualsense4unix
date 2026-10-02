@@ -1,33 +1,8 @@
-"""RECUSA-NAO-E-QUEDA-DE-LINHA-01 — a aba Navegação para de culpar a rede.
-
-Dois defeitos da mesma aba, medidos em 23/08/2026 (sprint NAVEGAÇÃO — UM
-CONTROLE SÓ-01, §2.2), e os dois são a tela afirmando o que não sabe:
-
-N4 — o interruptor do mouse com `mode is None` (Hefesto sem resposta) ficava
-     APAGADO e MUDO: `texto = MODE_GATE_HINT if blocked and mode is not None
-     else ""`. É o que a foto oficial das 18h15 mostra. Um interruptor cinza sem
-     uma palavra ao lado é lido como defeito do produto, não como ausência de
-     resposta — e a frase do modo jogo não serve aqui, porque ela AFIRMA que há
-     jogo em andamento.
-
-N6 — quando o Hefesto RECUSA (`status != "ok"`), `_on_ok` desviava para o
-     `_on_err` do timeout, cujo texto era *"Falha ao comunicar com o daemon"*.
-     É a ELO-MUDO-01 ao contrário: em vez de comemorar o que não fez, acusar um
-     defeito de comunicação que não houve.
-
-O teste do gate de N4 mora em `test_harmonia_mouse_um_dono.py`, junto com os
-irmãos dele (o arquivo é o dono daquele gate). Aqui ficam a função pura da
-recusa e o caminho vivo do interruptor.
-
-Estes testes MORDEM: devolver o desvio para o `_on_err` faz o primeiro bloco
-reprovar; apagar a tabela de motivos faz o segundo reprovar.
-"""
+"""RECUSA-NAO-E-QUEDA-DE-LINHA-01 — a aba Navegação para de culpar a rede."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi` (mesma disciplina dos
-# irmãos desta aba — o stub que outro arquivo planta passaria pelo importorskip).
 exigir_gi_real("recusa não é queda de linha")
 
 from typing import Any
@@ -102,9 +77,6 @@ def _responder(monkeypatch: pytest.MonkeyPatch, resposta: Any) -> list[str]:
     return metodos
 
 
-# --- a função pura ------------------------------------------------------
-
-
 def test_a_recusa_com_motivo_conhecido_vira_frase_de_gente() -> None:
     frase = frase_da_recusa_do_mouse({"status": "failed", "bloqueio": "modo_jogo"})
     assert BLOQUEIO_DO_MOUSE_EM_PORTUGUES["modo_jogo"] in frase
@@ -115,11 +87,7 @@ def test_a_recusa_com_motivo_conhecido_vira_frase_de_gente() -> None:
 
 
 def test_a_recusa_sem_motivo_diz_que_o_motivo_faltou() -> None:
-    """Enquanto a N5 não publicar `bloqueio`, é ESTE o caminho de produção.
-
-    A frase não pode inventar um motivo nem culpar a rede: as duas coisas
-    afirmam o que não se sabe.
-    """
+    """Enquanto a N5 não publicar `bloqueio`, é ESTE o caminho de produção."""
     assert frase_da_recusa_do_mouse({"status": "failed"}) == RECUSA_SEM_MOTIVO
     assert "não disse por quê" in RECUSA_SEM_MOTIVO
 
@@ -142,9 +110,6 @@ def test_a_recusa_e_a_falta_de_resposta_sao_TEXTOS_DIFERENTES() -> None:  # noqa
     assert RECUSA_SEM_MOTIVO != SEM_RESPOSTA_DO_HEFESTO
     for motivo in BLOQUEIO_DO_MOUSE_EM_PORTUGUES.values():
         assert motivo not in SEM_RESPOSTA_DO_HEFESTO
-
-
-# --- o caminho vivo do interruptor --------------------------------------
 
 
 def test_daemon_que_recusa_com_motivo_produz_o_toast_do_motivo(

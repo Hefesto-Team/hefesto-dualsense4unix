@@ -1,45 +1,4 @@
-"""O nome que ela dá volta na reconexão — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, item 4.
-
-O relato dela, 26/09/2026:
-
-    *«Eu mudei o nome do dispositivo quando eu conectar os dispositivos bt
-    novamente eu quero que o nome deles sejam lidos novamente e não voltem todas
-    as vezes quie eu mudar»* <!-- noqa-acento: citação literal dela -->
-
-O nome mora no ``Alias`` do BlueZ, UM POR OBJETO — um objeto por adaptador que
-conhece o controle. O ``Pair`` num adaptador novo cria um objeto novo, com o
-nome de fábrica; e a faxina da central esquece a chave velha logo depois. Era
-assim que cada «Conectar» noutro adaptador apagava o nome dela.
-
-O QUE ESTA RÉGUA SEGURA, para qualquer adaptador de origem e de destino:
-
-1. o «Conectar» num adaptador novo leva o nome que ela deu ao objeto NOVO,
-   lido de qualquer outro objeto do MESMO controle antes de a chave velha sair
-   (o ``_dar_o_nome`` da central). MEDIDO em 26/09: os seis pares de
-   adaptadores já passavam antes desta sprint — a régua é a guarda de que o
-   destino que agora é o da caixa aberta não perdeu o nome no caminho;
-2. o nome de fábrica não é nome: o controle que ela nunca renomeou chega sem
-   escrita de ``Alias``, e o nome dela nunca vai para outro controle;
-3. a tela mostra o nome dela em toda linha do controle — no ar, desligado, em
-   qualquer adaptador em que ele tenha chave.
-
-E O QUE A O-RADIO-CONECTA-ONDE-ELA-MANDA-02 FECHOU (26/09/2026), o E2 dela:
-**o nome não depende da chave.** Com a ÚLTIMA chave do controle esquecida, não
-sobrava objeto de onde copiar, e o ``Pair`` seguinte nascia com o nome de
-fábrica. Agora o nome mora no ``maquina.json`` pelo endereço
-(``ControleDeclarado.nome``), e a central (``cuidar_dos_nomes``):
-
-4. guarda o nome quando ela renomeia — pela tela, ou por fora do produto;
-5. esquece o guardado quando ela APAGA o nome (o mesmo objeto volta ao de
-   fábrica), e não quando o objeto é novo;
-6. o devolve em todo ``Pair`` (o dela: ``_quem_e``) e em toda conexão, em
-   qualquer adaptador (a volta dos nomes, no fio da faxina) — e o objeto que
-   APARECE com um nome velho (o adaptador que volta à porta) recebe o dela,
-   não dá;
-7. só de CONTROLE: o nome de um fone continua morando no pareamento dele.
-
-Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
-"""
+"""O nome que ela dá volta na reconexão — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, item 4."""
 
 from __future__ import annotations
 
@@ -119,15 +78,12 @@ def _esquecer_em_todos(bancada: Bancada) -> None:
 
 
 def _conectar_em(bancada: Bancada, destino: str, quem: str) -> cr.Movimento:
-    """Ela abre ``destino``, clica «Conectar», segura PS + Create em ``quem`` e
-    clica em «Parear» na linha dele (O-PAREAR-ESPERA-O-CLIQUE-01)."""
+    """Ela abre ``destino``, clica «Conectar», segura PS + Create em ``quem`` e"""
     bancada.cena()
     if bancada.cena().get("aberto") != id_da_tela(destino):
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(destino))
     bancada.cena()
     rm.ela_pareia(bancada.relogio, bancada.mundo, bancada.central, quem)
-    # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
-    # o «+ Conectar» só abre o painel.
     bancada.gesto("radio-procurar")
     bancada.esperar_a_central()
     return next(m for m in bancada.central.movimentos() if m.destino == destino)
@@ -140,13 +96,7 @@ PARES = [(o, d) for o in (SALA, QUARTO, VARANDA) for d in (SALA, QUARTO, VARANDA
 def test_o_conectar_noutro_adaptador_leva_o_nome_dela(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, origem: str, destino: str,
 ) -> None:
-    """O vermelho se chama «André» na origem. Ela o desliga, abre outro adaptador
-    e clica «Conectar»: ele chega com «André» no objeto NOVO, e a tela o mostra
-    assim — em qualquer par de adaptadores.
-
-    MORDIDA: faça o ``_dar_o_nome`` da central não escrever — o objeto novo
-    nasce com o nome de fábrica e esta régua reprova nos seis pares.
-    """
+    """O vermelho se chama «André» na origem. Ela o desliga, abre outro adaptador"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(origem, VERMELHO, nome="André")
     mundo.pareado(origem, AZUL, nome="Vitória")
@@ -168,8 +118,7 @@ def test_o_conectar_noutro_adaptador_leva_o_nome_dela(
 def test_sem_nome_dela_o_objeto_novo_fica_com_o_de_fabrica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O nome de fábrica não é nome: o controle que ela nunca renomeou chega
-    sem escrita de ``Alias`` nenhuma."""
+    """O nome de fábrica não é nome: o controle que ela nunca renomeou chega"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.desligar(VERMELHO)
@@ -185,13 +134,7 @@ def test_sem_nome_dela_o_objeto_novo_fica_com_o_de_fabrica(
 def test_a_tela_mostra_o_nome_dela_em_toda_chave_do_controle(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O roxo se chama «Vitória» só no objeto da varanda; desligado, ele tem
-    chave também na sala — e a linha «Desligado» da sala diz «Vitória», não o
-    nome de fábrica. O nome é do CONTROLE, lido pelo endereço.
-
-    MORDIDA: faça ``_os_desligados`` ler só o ``Alias`` do próprio objeto — a
-    linha da sala volta ao nome de fábrica.
-    """
+    """O roxo se chama «Vitória» só no objeto da varanda; desligado, ele tem"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(VARANDA, ROXO, conectado=False, nome="Vitória")
     mundo.pareado(SALA, ROXO, host=False)
@@ -205,27 +148,12 @@ def test_a_tela_mostra_o_nome_dela_em_toda_chave_do_controle(
         bancada.fechar()
 
 
-# ---------------------------------------------------------------------------
-# O-RADIO-CONECTA-ONDE-ELA-MANDA-02: o nome não depende da chave
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(("origem", "destino"), PARES + [(a, a) for a in ADAPTADORES])
 def test_renomear_esquecer_em_todos_e_parear_de_novo_o_nome_volta(
     diario: Path, a08: Any, casa: Path, monkeypatch: pytest.MonkeyPatch,
     origem: str, destino: str,
 ) -> None:
-    """E2 da O-RADIO-CONECTA-ONDE-ELA-MANDA-02, pela mão dela e de ponta a ponta.
-
-    Ela renomeia o vermelho na tela («André»), esquece-o com o X em TODOS os
-    adaptadores em que ele tem chave, abre outro (ou o mesmo) e clica
-    «Conectar»: ele chega com «André» — no objeto novo, na linha da tela e no
-    ``maquina.json`` —, sem objeto nenhum no BlueZ de onde copiar.
-
-    MORDIDA: tire o guardado de ``_quem_e`` (o nome só do ``Alias`` de algum
-    objeto) — o ``Pair`` nasce com o nome de fábrica, e esta régua reprova nos
-    nove casos.
-    """
+    """E2 da O-RADIO-CONECTA-ONDE-ELA-MANDA-02, pela mão dela e de ponta a ponta."""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(origem, VERMELHO)
     outro = next(a for a in ADAPTADORES if a != origem)
@@ -270,14 +198,7 @@ def _central_da_casa(mundo: rm.RadioDeMentira, relogio: rm.Relogio) -> tuple[
 def test_o_controle_que_conecta_por_fora_da_central_recebe_o_nome(
     diario: Path, casa: Path, destino: str,
 ) -> None:
-    """«Reaplicado em toda conexão, em qualquer adaptador»: o nome está no
-    ``maquina.json`` e chave nenhuma sobrou; ele é pareado POR FORA da central
-    (o ``bluetoothctl``, o sistema) e conecta com o nome de fábrica. A volta
-    seguinte dos nomes o devolve — e nenhum outro controle é tocado.
-
-    MORDIDA: tire a escrita do ``Alias`` da volta (``cuidar_dos_nomes``) — o
-    objeto fica com o nome de fábrica.
-    """
+    """«Reaplicado em toda conexão, em qualquer adaptador»: o nome está no"""
     assert maquina.gravar_o_nome_do_controle(VERMELHO, "André")
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA if destino != SALA else QUARTO, AZUL)
@@ -299,13 +220,7 @@ def test_o_controle_que_conecta_por_fora_da_central_recebe_o_nome(
 def test_ela_apaga_o_nome_e_ele_nao_volta(
     diario: Path, a08: Any, casa: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Apagar o nome na tela volta ao de fábrica (e a tela ao «Player N»): o
-    guardado sai do ``maquina.json``, e o «Conectar» seguinte, noutro
-    adaptador e sem chave nenhuma, NÃO o traz de volta.
-
-    MORDIDA: tire o «ela apagou o nome» de ``_o_nome_que_vale`` — a volta
-    seguinte devolve «André» aos objetos que ela acabou de limpar.
-    """
+    """Apagar o nome na tela volta ao de fábrica (e a tela ao «Player N»): o"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(QUARTO, VERMELHO, host=False)
@@ -330,9 +245,7 @@ def test_ela_apaga_o_nome_e_ele_nao_volta(
 
 
 def test_o_nome_dado_por_fora_do_produto_tambem_fica(diario: Path, casa: Path) -> None:
-    """O produto é para qualquer computador: o nome que ela dá pelo
-    ``bluetoothctl`` (ou pelo sistema), num objeto só, é guardado e vai aos
-    outros objetos do mesmo controle."""
+    """O produto é para qualquer computador: o nome que ela dá pelo"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(VARANDA, VERMELHO, host=False)
@@ -349,13 +262,7 @@ def test_o_nome_dado_por_fora_do_produto_tambem_fica(diario: Path, casa: Path) -
 
 
 def test_so_o_controle_tem_o_nome_guardado(diario: Path, casa: Path) -> None:
-    """DECISÃO desta sprint: o campo é ``ControleDeclarado.nome``, e só controle
-    (pela classe) vai ao ``maquina.json``. O fone renomeado continua com o nome
-    no pareamento dele, e a volta não o toca.
-
-    MORDIDA: tire o filtro de controle de ``_controles_pelo_endereco`` — o fone
-    vira uma entrada de ``controles``.
-    """
+    """DECISÃO desta sprint: o campo é ``ControleDeclarado.nome``, e só controle"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, FONE, classe=rm.CLASSE_DE_FONE, nome="Caixa da Sala")
     mundo.pareado(SALA, VERMELHO, nome="André")
@@ -373,15 +280,7 @@ def test_so_o_controle_tem_o_nome_guardado(diario: Path, casa: Path) -> None:
 def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_ela_apagando(
     diario: Path, a08: Any, casa: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O X e o «Conectar» no MESMO adaptador, sem volta dos nomes no meio, e o
-    ``Alias`` do ``Pair`` recusado (o ``_dar_o_nome`` não escreve): o objeto
-    novo tem o MESMO caminho do velho e nasce de fábrica. Isso não é ela
-    apagando o nome — a central lembra o que o ``Pair`` deixou no objeto, e a
-    volta seguinte devolve «André».
-
-    MORDIDA: tire o ``_lembrar_o_alias`` do ``_parear_e_conferir`` — a volta lê
-    o objeto recriado como o de antes voltando ao de fábrica, e apaga o nome.
-    """
+    """O X e o «Conectar» no MESMO adaptador, sem volta dos nomes no meio, e o"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
@@ -404,15 +303,7 @@ def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_ela_apagando(
 
 
 def test_o_adaptador_que_volta_com_o_nome_velho_recebe_o_dela(diario: Path, casa: Path) -> None:
-    """A varanda estava fora da porta quando ela renomeou o vermelho de «André»
-    para «Bia» (a tela só alcança o objeto que existe). Ela volta à porta com a
-    chave e o nome de antes: o objeto que APARECE não fala por ela — ele recebe
-    «Bia», e o disco continua dizendo «Bia».
-
-    MORDIDA: conte como renomeado também o objeto que a volta nunca viu (a
-    lista ``renomeados`` de ``_o_nome_que_vale`` sobre todos os objetos) — o
-    nome velho volta ao disco e aos dois objetos.
-    """
+    """A varanda estava fora da porta quando ela renomeou o vermelho de «André»"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO, nome="André")
     central, dono = _central_da_casa(mundo, relogio)
@@ -435,14 +326,7 @@ def test_o_adaptador_que_volta_com_o_nome_velho_recebe_o_dela(diario: Path, casa
 
 
 def test_o_nome_apagado_sai_tambem_do_objeto_que_ficou_com_ele(diario: Path, casa: Path) -> None:
-    """Ela apaga o nome, e a escrita não alcança um dos objetos (o BlueZ recusou
-    ali): o guardado sai, e o objeto que ainda dizia «André» volta ao de
-    fábrica — senão a linha «Desligado» daquele adaptador mostraria o nome que
-    ela apagou.
-
-    MORDIDA: tire o ``novo = ""`` de quem ainda tinha o nome apagado, em
-    ``cuidar_dos_nomes`` — a varanda fica com «André».
-    """
+    """Ela apaga o nome, e a escrita não alcança um dos objetos (o BlueZ recusou"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO, nome="André")
     mundo.pareado(VARANDA, VERMELHO, host=False, nome="André")
@@ -462,12 +346,7 @@ def test_o_nome_apagado_sai_tambem_do_objeto_que_ficou_com_ele(diario: Path, cas
 
 
 def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:
-    """Ninguém chama a volta à mão no produto: é o fio da faxina, que o daemon
-    sobe no arranque, que a roda.
-
-    MORDIDA: tire o ``cuidar_dos_nomes`` de ``_faxinar_sempre`` — o nome nunca
-    chega ao disco.
-    """
+    """Ninguém chama a volta à mão no produto: é o fio da faxina, que o daemon"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, VERMELHO, nome="André")
     dono = bd.DonoVivo(mundo)
@@ -487,30 +366,11 @@ def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:
         dono.fechar()
 
 
-# ---------------------------------------------------------------------------
-# A conferência da O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026)
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("adaptador", ADAPTADORES)
 def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_ela_apagando(
     diario: Path, casa: Path, adaptador: str,
 ) -> None:
-    """O DEFEITO QUE A CONFERÊNCIA ACHOU. O vermelho se chama «André», com
-    chave em dois adaptadores. Ela o esquece com o X da TELA num deles — o X
-    é da tela, e não passa pela central —, e antes da volta seguinte o BlueZ
-    cria um objeto SEM chave no mesmo caminho: uma busca de outro programa o
-    acha enquanto ela segura PS + Create (ou o «Conectar» que não pareou deixa
-    o achado da janela). Ele nasce de fábrica. Isso não é ela apagando o nome:
-    o disco continua dizendo «André», e o outro adaptador também.
-
-    Antes da cura, a volta lia o objeto novo como o de antes «voltando ao de
-    fábrica», apagava o nome do ``maquina.json`` e ainda devolvia o de fábrica
-    ao objeto do outro adaptador — o E3 dela ao contrário.
-
-    MORDIDA: tire o ``o.pareado is True`` do «ela apagou» em
-    ``_o_nome_que_vale`` — as três posições reprovam.
-    """
+    """O DEFEITO QUE A CONFERÊNCIA ACHOU. O vermelho se chama «André», com"""
     outro = next(a for a in ADAPTADORES if a != adaptador)
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(adaptador, VERMELHO, nome="André")
@@ -521,7 +381,7 @@ def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_ela_apagando(
         central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) == "André"
 
-        mundo.esquecer_na_ponte(adaptador, VERMELHO)  # o X da tela
+        mundo.esquecer_na_ponte(adaptador, VERMELHO)
         mundo.desligar(VERMELHO)
         mundo.mesa[rm.HCIS[adaptador]][bd.ADAPTADOR]["Discovering"] = True
         mundo.segurar_ps_create(VERMELHO)
@@ -538,8 +398,7 @@ def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_ela_apagando(
 
 
 class _DiscoQueRecusa:
-    """O ``maquina.json`` de verdade (:class:`cr.NomesNaMaquina`), que recusa
-    as próximas ``recusar`` gravações — o disco cheio, a versão estranha."""
+    """O ``maquina.json`` de verdade (:class:`cr.NomesNaMaquina`), que recusa"""
 
     def __init__(self) -> None:
         self.real = cr.NomesNaMaquina()
@@ -559,15 +418,7 @@ class _DiscoQueRecusa:
 def test_a_gravacao_recusada_nao_desfaz_o_nome_que_ela_deu(
     diario: Path, casa: Path, adaptador: str,
 ) -> None:
-    """O vermelho se chama «André». Ela o renomeia para «Bia» (por fora do
-    produto, que vale igual), e o disco recusa a primeira gravação. A volta
-    não pode ler o «Bia» como um nome velho: na volta seguinte ele é gravado,
-    e o «André» nunca volta ao controle.
-
-    MORDIDA: tire de ``cuidar_dos_nomes`` o ``if not gravou`` que guarda a
-    lembrança de ANTES — a volta seguinte vê «Bia» como sabido, o guardado
-    continua «André», e ela o escreve por cima do nome que ela acabou de dar.
-    """
+    """O vermelho se chama «André». Ela o renomeia para «Bia» (por fora do"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(adaptador, VERMELHO, nome="André")
     disco = _DiscoQueRecusa()
@@ -599,13 +450,7 @@ def test_a_gravacao_recusada_nao_desfaz_o_nome_que_ela_deu(
 
 
 def test_o_endereco_no_lugar_do_nome_nao_e_nome_dela(diario: Path, casa: Path) -> None:
-    """Sem ``Name`` (o aparelho ainda não disse como se chama), o BlueZ põe o
-    ENDEREÇO no ``Alias`` (``AA-BB-CC-…``). Isso não é um nome que ela deu: não
-    vai ao ``maquina.json``, e não é propagado a outro adaptador.
-
-    MORDIDA: tire de ``_nome_dado`` a comparação com o endereço — o endereço
-    vira «o nome dela» no disco e no outro objeto.
-    """
+    """Sem ``Name`` (o aparelho ainda não disse como se chama), o BlueZ põe o"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(QUARTO, VERMELHO, host=False)
@@ -625,13 +470,7 @@ def test_o_endereco_no_lugar_do_nome_nao_e_nome_dela(diario: Path, casa: Path) -
 
 
 def test_com_o_dono_vivo_a_volta_dos_nomes_nao_espera_a_faxina(diario: Path, casa: Path) -> None:
-    """A faxina anda a cada 30 s; o nome, com o dono lendo da memória, a cada
-    :data:`cr.INTERVALO_DOS_NOMES_S`. É essa a demora entre ela renomear e o
-    nome ir ao disco — e a janela em que esquecer a última chave o perderia.
-
-    MORDIDA: faça o fio da faxina cuidar do nome só no passo dela — o nome
-    não chega ao disco antes dos 30 s.
-    """
+    """A faxina anda a cada 30 s; o nome, com o dono lendo da memória, a cada"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(VARANDA, VERMELHO, nome="André")
     dono = bd.DonoVivo(mundo)
@@ -652,16 +491,8 @@ def test_com_o_dono_vivo_a_volta_dos_nomes_nao_espera_a_faxina(diario: Path, cas
         dono.fechar()
 
 
-# ---------------------------------------------------------------------------
-# o campo, no dono dele (utils/maquina.py)
-# ---------------------------------------------------------------------------
-
-
 def test_o_nome_no_maquina_json_e_do_controle_e_nao_apaga_o_resto(casa: Path) -> None:
-    """O nome entra pela fusão: o microfone e a economia do mesmo controle
-    ficam; ``None`` esquece e poda (o arquivo não carrega silêncio); espaço em
-    volta sai; o endereço sintetizado (``02``) e o nome maior que o ``Alias``
-    não gravam — e nada disso levanta."""
+    """O nome entra pela fusão: o microfone e a economia do mesmo controle"""
     assert maquina.gravar_maquina({"controles": {rm.uniq(VERMELHO): {
         "microfone": False, "economia": True}}})
     assert maquina.gravar_o_nome_do_controle(VERMELHO.upper(), "  André  ")

@@ -47,11 +47,8 @@ from comum import (
     declaracao_da_porta,
 )
 
-#: Features do probe do hid_playstation, com os tamanhos que o driver espera.
 FEATURE_SIZES: tuple[tuple[int, int], ...] = ((0x05, 41), (0x09, 20), (0x20, 64))
 
-#: Áreas de identidade do 0x09: bytes 1..6 = MAC do device, 10..15 = MAC do
-#: host pareado. Zeradas antes de imprimir (regra de anonimato do repo).
 _MAC_AREAS_0X09: tuple[tuple[int, int], ...] = ((1, 7), (10, 16))
 
 
@@ -73,7 +70,6 @@ def sanitize_pairing_report(report: bytes) -> bytes:
 
 
 def main(node: str) -> int:
-    # A DECLARAÇÃO ANTES DA MEDIÇÃO: biblioteca (fcntl/ioctl, à mão) e porta.
     print("biblioteca ....... fcntl.ioctl (HIDIOCGFEATURE montado à mão)")
     print(f"  {declaracao_da_porta()}")
     try:

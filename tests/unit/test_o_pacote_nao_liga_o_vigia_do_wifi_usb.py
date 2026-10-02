@@ -1,24 +1,4 @@
-"""O pacote não liga o vigia do Wi-Fi USB — e o doctor diz a quem instalou por ele como ligar.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-15, na decisão de quem
-coordena: o `install-host-udev.sh` (o helper que os pacotes .deb/.rpm/Arch
-levam) NÃO instala o timer do vigia, o dispatcher do NetworkManager nem o
-drop-in do watchdog — o mesmo desenho dos timers da resiliência. A razão está
-escrita no próprio helper.
-
-O que se tranca:
-
-1. o código do helper não põe nenhum dos três, e a declaração está nele;
-2. o doctor de uma instalação por PACOTE, com Wi-Fi USB e sem vigia, diz que o
-   pacote não o liga e qual gesto liga — e não manda «atualizar», que é mandar
-   repetir o que não entrega;
-3. no checkout, a frase de sempre (quem cobra é
-   `test_o_que_era_do_zsh_mora_no_hefesto.py`).
-
-A MORDIDA, medida: pôr um `install … hefesto-wifi-usb-vigia.timer` no código do
-helper reprova o teste 1; trocar o ramo do pacote pelo `conselho_de_instalacao`
-de antes, o 2.
-"""
+"""O pacote não liga o vigia do Wi-Fi USB — e o doctor diz a quem instalou por ele como ligar."""
 
 from __future__ import annotations
 

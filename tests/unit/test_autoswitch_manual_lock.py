@@ -33,14 +33,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
-# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
-# `test_activate_lock_independente_de_manual_trigger_active`.
-#
-# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
-# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
-# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
-
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -69,9 +61,6 @@ def _mk_profile(name: str, **kw: object) -> Profile:
     return Profile(name=name, **defaults)  # type: ignore[arg-type]
 
 
-# --- Store API isolada -----------------------------------------------------
-
-
 def test_store_lock_inicia_inativo() -> None:
     """Store fresca não tem lock manual ativo."""
     store = StateStore()
@@ -84,7 +73,6 @@ def test_store_lock_ativo_apos_mark() -> None:
     store.mark_manual_profile_lock(until=150.0)
     assert store.manual_profile_lock_active(now=100.0) is True
     assert store.manual_profile_lock_active(now=149.99) is True
-    # Lock expira no instante exato (now == until).
     assert store.manual_profile_lock_active(now=150.0) is False
     assert store.manual_profile_lock_active(now=200.0) is False
 
@@ -96,7 +84,6 @@ def test_store_lock_renovado_escolha_mais_recente_vence() -> None:
     assert store.manual_profile_lock_active(now=150.0) is True
 
     # Renovação para um valor menor (ex: profile.switch chamado de novo
-    # com janela ainda menor — improvável mas possível). Armazena e respeita.
     store.mark_manual_profile_lock(until=160.0)
     assert store.manual_profile_lock_active(now=150.0) is True
     assert store.manual_profile_lock_active(now=170.0) is False
@@ -105,9 +92,6 @@ def test_store_lock_renovado_escolha_mais_recente_vence() -> None:
 def test_store_lock_constante_canonica_30s() -> None:
     """MANUAL_PROFILE_LOCK_SEC é o canônico fixo desta sprint."""
     assert MANUAL_PROFILE_LOCK_SEC == 30.0
-
-
-# --- AutoSwitcher integra com lock -----------------------------------------
 
 
 def test_activate_suprimido_quando_lock_ativo(
@@ -131,7 +115,6 @@ def test_activate_suprimido_quando_lock_ativo(
 
     monkeypatch.setattr(manager, "activate", spy_activate)
 
-    # Arma lock no instante 0 até instante 100; relógio fake retorna 50.
     store.mark_manual_profile_lock(until=100.0)
     monkeypatch.setattr(
         "hefesto_dualsense4unix.profiles.autoswitch.time.monotonic",
@@ -143,7 +126,6 @@ def test_activate_suprimido_quando_lock_ativo(
     )
     switcher._activate("shooter", {"wm_class": "Doom"})
 
-    # Manager.activate NÃO foi chamado: lock suprimiu.
     assert activate_calls == []
     assert switcher._current_profile is None
 
@@ -161,7 +143,6 @@ def test_activate_volta_a_operar_apos_lock_expirar(
     store = StateStore()
     manager = ProfileManager(controller=fc, store=store)
 
-    # Lock até instante 100; relógio fake já em 200 → expirou.
     store.mark_manual_profile_lock(until=100.0)
     monkeypatch.setattr(
         "hefesto_dualsense4unix.profiles.autoswitch.time.monotonic",

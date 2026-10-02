@@ -56,9 +56,7 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINA = "08-conexoes.html"
-#: Um teclado de vários hosts — da faixa sintética.
 TECLADO = "aa:bb:cc:00:00:e1"
-#: Os nomes da madrugada dela (o ``Alias`` no BlueZ de mentira).
 JOHNATHAN, ANDRE = VERMELHO, AZUL
 
 
@@ -72,14 +70,8 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     return preparar_a_tela(monkeypatch)
 
 
-# ---------------------------------------------------------------------------
-# a bancada
-# ---------------------------------------------------------------------------
-
-
 class PonteDeTudo:
-    """O ``ponte.resultado`` com o tratador REAL do daemon, para qualquer método
-    (o ``radio.dispensar`` também)."""
+    """O ``ponte.resultado`` com o tratador REAL do daemon, para qualquer método"""
 
     def __init__(self, central: cr.CentralDoRadio) -> None:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -99,8 +91,7 @@ class PonteDeTudo:
 
 
 class Casa(Bancada):
-    """A bancada da 08 com a ponte inteira, o cabo, e só CONTROLE na lista do
-    daemon (o teclado no ar não é controle publicado)."""
+    """A bancada da 08 com a ponte inteira, o cabo, e só CONTROLE na lista do"""
 
     def __init__(self, a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
                  relogio: rm.Relogio | None = None) -> None:
@@ -123,9 +114,7 @@ class Casa(Bancada):
         return {"controllers": controles, "radio_central": self.central.publicar(controles)}
 
     def janela_nova(self) -> Any:
-        """Ela fecha e abre o Hefesto: o módulo da 08 é RECARREGADO (tudo o que a
-        janela lembrava zera, o ``_DISPENSADOS`` também), e a central é a mesma
-        — o serviço não reiniciou."""
+        """Ela fecha e abre o Hefesto: o módulo da 08 é RECARREGADO (tudo o que a"""
         from hefesto_dualsense4unix.interface import pacotes
 
         nome = self.a08.__name__
@@ -179,8 +168,7 @@ def remocoes(mundo: rm.RadioDeMentira) -> list[tuple[str, str]]:
 
 
 def os_quatro_no_ar() -> rm.RadioDeMentira:
-    """João e Johnathan na Direita (sala), André no Meio (quarto), Vitória na
-    Esquerda (varanda) — a madrugada dela, com os nomes no BlueZ."""
+    """João e Johnathan na Direita (sala), André no Meio (quarto), Vitória na"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, JOHNATHAN, nome="Johnathan")
     mundo.pareado(SALA, VERDE, nome="João")
@@ -196,29 +184,16 @@ def movimento(aparelho: str, destino: str, estado: str = cr.NAO_CHEGOU, *,
 
 
 def o_mover_que_nao_chega(casa: Casa, quem: str, destino: str) -> cr.Movimento:
-    """O «Mover» sem o gesto dela: a central esquece a origem, abre a janela
-    no destino, e ninguém segura PS + Create."""
+    """O «Mover» sem o gesto dela: a central esquece a origem, abre a janela"""
     feito = casa.central.mover(quem, destino)
     assert (feito.estado, feito.aparelho) == (cr.NAO_CHEGOU, quem), feito
     return feito
 
 
-# ---------------------------------------------------------------------------
-# 1. a busca sem ninguém não vira linha
-# ---------------------------------------------------------------------------
-
-
 def test_o_conectar_anonimo_que_acaba_sem_ninguem_nao_vira_linha(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com os quatro no ar, o «Conectar» sem alvo na Direita (o ``radio.mover``
-    sem aparelho, que o chip ainda usa) acaba ``nao_chegou`` sem aparelho. A
-    cena não tem linha «Não Conectou» em adaptador nenhum, a Direita não fica
-    laranja, e a caixa aberta continua a que ela abriu.
-
-    MORDIDA: devolva o ``not aparelho`` ao ramo de ``_os_que_nao_conectaram``
-    (a linha volta a nascer do movimento sem endereço) — reprova.
-    """
+    """Com os quatro no ar, o «Conectar» sem alvo na Direita (o ``radio.mover``"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         casa.cena()
@@ -243,12 +218,7 @@ def test_o_conectar_anonimo_que_acaba_sem_ninguem_nao_vira_linha(
 def test_nenhum_motivo_faz_linha_sem_aparelho(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, motivo: str,
 ) -> None:
-    """A regra é pelo APARELHO, e vale para todo motivo — a janela que não abriu
-    também (a regra da O-CONECTAR-E-UM-INTERRUPTOR-01 é pelo motivo, e as duas
-    convivem).
-
-    MORDIDA: a mesma do ``not aparelho``.
-    """
+    """A regra é pelo APARELHO, e vale para todo motivo — a janela que não abriu"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         casa.central._guardar(movimento("", VARANDA, motivo=motivo))
@@ -259,22 +229,11 @@ def test_nenhum_motivo_faz_linha_sem_aparelho(
         casa.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 2. a linha morre com o aparelho
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("volta", ["no rádio, noutro adaptador", "no cabo"])
 def test_a_linha_some_quando_ele_aparece_no_ar(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, volta: str,
 ) -> None:
-    """O «Mover» de Johnathan para a Esquerda não chega: a linha «Não Conectou»
-    tem o nome dele. Quando ele aparece no ar — por outro programa no Meio, ou
-    no cabo —, a linha some no tique seguinte, bem antes dos 600 s.
-
-    MORDIDA: tire a condição «no ar» de ``_os_que_nao_conectaram`` — a linha
-    sobrevive, e reprova.
-    """
+    """O «Mover» de Johnathan para a Esquerda não chega: a linha «Não Conectou»"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         o_mover_que_nao_chega(casa, JOHNATHAN, VARANDA)
@@ -296,13 +255,7 @@ def test_a_linha_some_quando_ele_aparece_no_ar(
 def test_o_conectar_anonimo_depois_nao_apaga_a_linha_dele(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A linha é por APARELHO, como a central guarda: o «Conectar» sem ninguém
-    que acaba depois no MESMO adaptador não apaga a de Johnathan, que ficou sem
-    casa.
-
-    MORDIDA: volte ao «último por adaptador» (um movimento por ``destino``) — o
-    anônimo vence, e a linha dele some.
-    """
+    """A linha é por APARELHO, como a central guarda: o «Conectar» sem ninguém"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         o_mover_que_nao_chega(casa, JOHNATHAN, VARANDA)
@@ -320,21 +273,10 @@ def test_o_conectar_anonimo_depois_nao_apaga_a_linha_dele(
         casa.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 3. o X dispensado não volta ao reabrir
-# ---------------------------------------------------------------------------
-
-
 def test_o_x_dispensado_nao_volta_numa_janela_nova(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O X da linha de Johnathan tira a linha NA CENTRAL (``radio.dispensar``):
-    com o módulo da 08 recarregado — a janela nova, tudo o que ela lembrava
-    zerado —, a linha não volta, e a central não publica mais o movimento.
-
-    MORDIDA: dispense só na janela (o ``_DISPENSADOS``, como era) — a linha
-    some e VOLTA ao reabrir.
-    """
+    """O X da linha de Johnathan tira a linha NA CENTRAL (``radio.dispensar``):"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         o_mover_que_nao_chega(casa, JOHNATHAN, VARANDA)
@@ -356,8 +298,7 @@ def test_o_x_dispensado_nao_volta_numa_janela_nova(
 
 
 def test_o_dispensar_nunca_tira_um_esperando(diario: Path) -> None:
-    """O ``radio.dispensar`` só tira movimento ACABADO: o «esperando» fica, e
-    o tratador responde ``ocupado``."""
+    """O ``radio.dispensar`` só tira movimento ACABADO: o «esperando» fica, e"""
     mundo, relogio = os_quatro_no_ar(), rm.Relogio()
     dono = bd.DonoVivo(mundo)
     assert dono.ligar()
@@ -376,15 +317,8 @@ def test_o_dispensar_nunca_tira_um_esperando(diario: Path) -> None:
         dono.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 4. todo pareado tem «Esquecer», e o esquecer tira aquele par e só ele
-# ---------------------------------------------------------------------------
-
-
 def _a_caixa_cheia() -> rm.RadioDeMentira:
-    """Na sala: um controle no ar, um «Desligado», um no cabo com a chave BT
-    ali, um teclado no ar e um fone pareado fora do ar. O verde, sem chave em
-    lugar nenhum, é o que não chegou."""
+    """Na sala: um controle no ar, um «Desligado», um no cabo com a chave BT"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, VERMELHO, nome="Johnathan")
     mundo.pareado(SALA, ROXO, conectado=False, nome="Vitória")
@@ -409,15 +343,7 @@ def _o_menu_de(campos: dict[str, Any], aparelho: str) -> tuple[str, str] | None:
 def test_todo_pareado_tem_o_esquecer_e_ele_tira_aquele_par(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, quem: str,
 ) -> None:
-    """O «⋮» da linha abre o menu, o «Esquecer» de lá abre a pergunta, e o
-    «Esquecer» dela produz no mundo exatamente um ``RemoveDevice`` daquele par
-    naquele adaptador e uma lápide daquele par — e só. O fone aparece como
-    «Desligado», com o tipo fone; o do cabo, como «USB».
-
-    MORDIDAS: ``_tem_menu`` só para controle deixa o teclado (e o fone) sem o
-    que clicar; devolver o filtro da classe a ``_os_desligados`` some com o
-    fone. As duas reprovam.
-    """
+    """O «⋮» da linha abre o menu, o «Esquecer» de lá abre a pergunta, e o"""
     casa = Casa(a08, monkeypatch, _a_caixa_cheia())
     casa.cabo.add(AZUL)
     try:
@@ -460,8 +386,7 @@ def test_todo_pareado_tem_o_esquecer_e_ele_tira_aquele_par(
 def test_a_linha_nao_conectou_nao_tem_esquecer(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O verde que não chegou à sala tem o X (que só tira a linha), e nem o
-    «⋮» nem o «Esquecer»: não há pareamento dele ali."""
+    """O verde que não chegou à sala tem o X (que só tira a linha), e nem o"""
     casa = Casa(a08, monkeypatch, _a_caixa_cheia())
     try:
         casa.central._guardar(movimento(VERDE, SALA, motivo=cr.MOTIVO_NAO_PAREOU))
@@ -482,13 +407,7 @@ def test_a_linha_nao_conectou_nao_tem_esquecer(
 def test_todo_menu_abre_ou_treme(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, descrito: bool,
 ) -> None:
-    """O «⋮» de cada linha abre o menu dele, ou treme: nunca um clique que não
-    faz nada. MEDIDO na prova de tela de 02/10, no lar de mentira sem o BlueZ:
-    o «⋮» estava na linha, o molde do menu não (o adaptador não descrito não
-    tem pergunta de «Esquecer»), e o clique não abria nada nem tremia.
-
-    MORDIDA: sem a guarda do adaptador descrito no ``aparelho-menu``, o gesto
-    arma sem molde nenhum, e a régua reprova no caso ``sem_o_bluez``."""
+    """O «⋮» de cada linha abre o menu dele, ou treme: nunca um clique que não"""
     casa = Casa(a08, monkeypatch, _a_caixa_cheia())
     try:
         campos = casa.tique()
@@ -511,14 +430,8 @@ def test_todo_menu_abre_ou_treme(
         casa.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 5. a casa se limpa sozinha, e nunca leva a única chave
-# ---------------------------------------------------------------------------
-
-
 def _faxina(casa: Casa) -> None:
-    """O fio da faxina, com o passo curto e a volta de 30 s longe: o que limpar
-    aqui é pelos dois momentos novos, e não pela volta."""
+    """O fio da faxina, com o passo curto e a volta de 30 s longe: o que limpar"""
     casa.central.comecar_a_faxina(intervalo_s=3600.0, passo_s=0.02)
 
 
@@ -527,21 +440,14 @@ def _sobras_no_diario(diario: Path, aparelho: str) -> list[dict[str, Any]]:
 
 
 def _visto_no_ar(casa: Casa, aparelho: str) -> None:
-    """Espera o passo do fio guardar onde ``aparelho`` está no ar. Não reprova
-    aqui: sem a lembrança (a mordida dela), quem reprova é o efeito."""
+    """Espera o passo do fio guardar onde ``aparelho`` está no ar. Não reprova"""
     esperar(lambda: aparelho in casa.central._lembrancas, teto=2.0)
 
 
 def test_depois_de_uma_troca_a_dobra_sai_antes_da_volta(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """André no Meio, com a chave velha dele também na Esquerda (o autorestore
-    a devolveu). Johnathan é movido da Direita para a Esquerda e chega. Antes da
-    volta de 30 s, a chave do André na Esquerda sai, com lápide; a do Meio fica.
-
-    MORDIDA: volte a limpeza só para a volta da faxina (o pedido não chega ao
-    fio) — a dobra fica, e reprova.
-    """
+    """André no Meio, com a chave velha dele também na Esquerda (o autorestore"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     mundo = casa.mundo
     try:
@@ -558,7 +464,6 @@ def test_depois_de_uma_troca_a_dobra_sai_antes_da_volta(
         assert mundo.objeto(VARANDA, ANDRE) is None
         assert mundo.objeto(QUARTO, ANDRE) is not None, "a chave de onde ele está saiu"
         assert (QUARTO, ANDRE) not in mundo.lapides
-        # O diário vem depois da lápide, no mesmo fio.
         assert esperar(lambda: _sobras_no_diario(diario, ANDRE))
         (linha,) = _sobras_no_diario(diario, ANDRE)
         assert linha["adaptador"] == VARANDA
@@ -570,13 +475,7 @@ def test_depois_de_uma_troca_a_dobra_sai_antes_da_volta(
 def test_quando_desliga_a_dobra_sai_e_a_casa_dele_fica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, como: str,
 ) -> None:
-    """A mesma dobra, e o André desliga (ou passa ao cabo) logo depois de ser
-    visto no ar. A chave da Esquerda sai com lápide, a do Meio fica, e ele
-    continua ``Paired`` no Meio — volta com o PS, sem parear de novo.
-
-    MORDIDA: tire a lembrança de onde ele esteve (``_lembrar_onde_estao`` não
-    guarda nada) — a dobra fica, e reprova.
-    """
+    """A mesma dobra, e o André desliga (ou passa ao cabo) logo depois de ser"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     mundo = casa.mundo
     try:
@@ -595,7 +494,6 @@ def test_quando_desliga_a_dobra_sai_e_a_casa_dele_fica(
         assert mundo.lapides == [(VARANDA, ANDRE)]
         objeto = mundo.objeto(QUARTO, ANDRE)
         assert objeto is not None and objeto["Paired"] is True, "a casa dele saiu"
-        # O diário vem depois da lápide, no mesmo fio.
         assert esperar(lambda: _sobras_no_diario(diario, ANDRE))
         (linha,) = _sobras_no_diario(diario, ANDRE)
         assert linha["por_que"] == cr.QUANDO_O_CONTROLE_DESLIGOU
@@ -606,14 +504,7 @@ def test_quando_desliga_a_dobra_sai_e_a_casa_dele_fica(
 def test_a_chave_que_nasceu_depois_fica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """André é visto no ar no Meio, com a dobra da Esquerda, e desliga. Antes
-    da limpeza, outro programa o pareia na Esquerda (o objeto velho sai, e
-    nasce outro no mesmo caminho), e ele desliga de novo. A chave NOVA fica:
-    ela nasceu depois da última vez em que ele foi visto no ar.
-
-    MORDIDA: tire a contagem das entradas do objeto (``_entrada`` sempre 0) —
-    a lembrança velha vale para a chave nova, ela sai, e reprova.
-    """
+    """André é visto no ar no Meio, com a dobra da Esquerda, e desliga. Antes"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     mundo = casa.mundo
     try:
@@ -667,15 +558,7 @@ def _uma_chave_so(casa: Casa) -> None:
 def test_o_que_nunca_sai(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, cena: Any,
 ) -> None:
-    """No mesmo mundo, nada sai — nenhum ``RemoveDevice``, nenhuma lápide: o
-    controle desligado com uma chave só, os quatro desligados depois de uma
-    noite, o teclado com chave em dois adaptadores, o controle com chave num
-    adaptador desplugado, e a dobra com um movimento «esperando».
-
-    MORDIDA: tire a guarda «uma chave só» — ela mora em dois lugares (a dobra
-    pede duas chaves, e a chave de onde ele estava nunca é sobra) — e os quatro
-    desligados perdem as quatro chaves.
-    """
+    """No mesmo mundo, nada sai — nenhum ``RemoveDevice``, nenhuma lápide: o"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         cena(casa)
@@ -690,12 +573,7 @@ def test_o_que_nunca_sai(
 def test_sem_lapide_nada_sai_e_o_diario_diz_uma_vez(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com a ponte recusando, a dobra do André fica: nenhum ``RemoveDevice``,
-    e o diário diz «não limpou: sem lápide» UMA vez, por mais voltas que haja.
-
-    MORDIDA: ponha o ``RemoveDevice`` antes da ponte — a chave sai sem lápide
-    (o autorestore a devolveria), e reprova.
-    """
+    """Com a ponte recusando, a dobra do André fica: nenhum ``RemoveDevice``,"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     mundo = casa.mundo
     try:
@@ -718,11 +596,7 @@ def test_sem_lapide_nada_sai_e_o_diario_diz_uma_vez(
 def test_a_limpeza_tira_da_publicacao_o_que_nao_diz_mais_nada(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O «não chegou» de Johnathan sai da publicação na volta em que ele está
-    no ar; o anônimo sai aos 600 s, e não antes; o «chegou» fica.
-
-    MORDIDA: tire o ``_tirar_os_acabados`` da volta — os três ficam, e reprova.
-    """
+    """O «não chegou» de Johnathan sai da publicação na volta em que ele está"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     central = casa.central
     try:
@@ -747,15 +621,7 @@ def test_a_limpeza_tira_da_publicacao_o_que_nao_diz_mais_nada(
 def test_a_chave_morta_da_origem_sai_so_quando_o_pair_deu(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, pair: str,
 ) -> None:
-    """O verde guarda o Meio (desligado, com a chave lá). Ela liga o
-    «Procurar» na Esquerda, segura PS + Create e clica «Parear». Com o ``Pair``
-    dado e ele sem conectar, o controle trocou o host que guarda (ele guarda
-    UM): a chave do Meio morreu, e sai com lápide junto com a meia chave da
-    Esquerda. Sem o ``Pair``, ele nem trocou de host, e a chave do Meio fica.
-
-    MORDIDA: ``_esquecer_as_origens_mortas`` sem efeito — a chave morta do Meio
-    fica, e o caso do ``Pair`` dado reprova.
-    """
+    """O verde guarda o Meio (desligado, com a chave lá). Ela liga o"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(QUARTO, VERDE, conectado=False)
@@ -783,11 +649,6 @@ def test_a_chave_morta_da_origem_sai_so_quando_o_pair_deu(
         casa.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 6. a lápide de quem sai por fora
-# ---------------------------------------------------------------------------
-
-
 def _desligado_na_varanda(casa: Casa) -> None:
     """Vitória desligada, com a chave na Esquerda."""
     casa.mundo.desligar(ROXO)
@@ -796,20 +657,13 @@ def _desligado_na_varanda(casa: Casa) -> None:
 def test_a_chave_tirada_por_fora_ganha_lapide_depois_de_sessenta_segundos(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Outro programa tira a chave da Vitória na Esquerda, com o serviço vivo.
-    Aos 59 s nada; aos 60 s a ponte recebe o ``esquecer`` daquele par, e só
-    dele, e o diário diz. Uma vez.
-
-    MORDIDA: encurte a espera — a lápide sai antes dos 60 s, e reprova.
-    """
+    """Outro programa tira a chave da Vitória na Esquerda, com o serviço vivo."""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     central, mundo = casa.central, casa.mundo
     try:
         _desligado_na_varanda(casa)
         mundo.remover_por_fora(VARANDA, ROXO)
         comeco = casa.relogio.agora
-        # Os 60 s são medidos (o crash de 15/08 comeu bonds até ~48 s antes do
-        # SIGABRT), e a régua os diz por extenso: não lê a constante que mede.
         casa.relogio.agora = comeco + 59.0
         assert central.gravar_as_lapides_de_fora() == ()
         assert mundo.lapides == []
@@ -831,7 +685,6 @@ def _desplugue(casa: Casa) -> list[tuple[str, str]]:
 def _bluetoothd_reiniciado(casa: Casa) -> list[tuple[str, str]]:
     casa.mundo.remover_por_fora(VARANDA, ROXO)
     casa.relogio.agora += 5.0
-    # O caminho de cada passo do fio: dentro dos 60 s, nada se grava.
     casa.central.gravar_as_lapides_de_fora()
     casa.relogio.agora += 5.0
     casa.mundo.reiniciar_o_bluetoothd()
@@ -852,14 +705,7 @@ def _o_proprio_hefesto(casa: Casa) -> list[tuple[str, str]]:
 def test_as_contraprovas_da_lapide_de_fora(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, cena: Any,
 ) -> None:
-    """Nenhuma lápide de fora: o adaptador desplugado (sai o ``Adapter1``), o
-    ``bluetoothd`` reiniciado dentro dos 60 s (o crash de 15/08: o bond que ele
-    comeu é o que o autorestore devolve), e o ``RemoveDevice`` do próprio
-    Hefesto, feito sob a trava comum (ele já gravou a dele, e uma só).
-
-    MORDIDAS: tire a guarda do adaptador presente — o desplugue grava lápides;
-    encurte a espera — o crash grava. As duas reprovam.
-    """
+    """Nenhuma lápide de fora: o adaptador desplugado (sai o ``Adapter1``), o"""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     central, mundo = casa.central, casa.mundo
     try:
@@ -876,9 +722,7 @@ def test_as_contraprovas_da_lapide_de_fora(
 def test_o_dono_da_janela_nunca_grava_lapide(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A janela tem o dono dela, sem central: o mesmo sinal, visto por ele, não
-    vira lápide — nem aos 60 s, nem com a aba aberta lendo o BlueZ a cada
-    tique. Só o dono do daemon (o da central) age."""
+    """A janela tem o dono dela, sem central: o mesmo sinal, visto por ele, não"""
     mundo, relogio = os_quatro_no_ar(), rm.Relogio()
     dono = bd.DonoVivo(mundo)
     assert dono.ligar()
@@ -904,18 +748,8 @@ def test_o_dono_da_janela_nunca_grava_lapide(
         dono.fechar()
 
 
-# ---------------------------------------------------------------------------
-# 7. o desenho não tem linha sem aparelho
-# ---------------------------------------------------------------------------
-
-
 def test_o_desenho_nao_tem_linha_sem_aparelho() -> None:
-    """A cena do desenho (a mesma que gera o mockup) mostra um «Não Conectou»
-    — de um controle movido que não chegou, com nome e cor —, e nenhum sem
-    aparelho.
-
-    MORDIDA: devolva a linha sem aparelho à cena de ``aba08.py`` — reprova.
-    """
+    """A cena do desenho (a mesma que gera o mockup) mostra um «Não Conectou»"""
     from hefesto_dualsense4unix.interface import aba08
 
     linhas = [a for a in aba08.CENA_DO_RADIO["aparelhos"] if a.get("nao_conectou")]

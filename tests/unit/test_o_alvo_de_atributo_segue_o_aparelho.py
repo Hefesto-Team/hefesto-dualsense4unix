@@ -80,15 +80,6 @@ from hefesto_dualsense4unix.interface import regua_do_mockup as regua
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 REGUA = RAIZ / "src/hefesto_dualsense4unix/interface/regua_do_mockup.py"
 
-#: A PÁGINA DE ENSAIO, e ela é o SVG das dez abas em miniatura: uma folha com
-#: DOIS colorways, uma casca que obedece a folha e um retângulo que só tem o
-#: ``fill`` cru — o terceiro é a testemunha, e é ele que diz para o que o
-#: desenho cai quando nenhuma regra casa.
-#:
-#: Os três ``mau-*`` são os nomes de atributo que a guarda tem de recusar. Eles
-#: dividem a mesma pintura dos legítimos de propósito: se a guarda falhar, o
-#: CONTADOR passa de 1, e o contador é o instrumento com que esta casa prova que
-#: um endereço existe.
 PAGINA = """<html><head><title>Hefesto — aba DE PROVA</title></head><body>
 <div data-controle="p1">
   <svg id="desenho" data-campo="desenho" data-hef-alvo="atributo"
@@ -112,8 +103,6 @@ PAGINA = """<html><head><title>Hefesto — aba DE PROVA</title></head><body>
 </div>
 </body></html>"""
 
-#: O ROTEIRO INTEIRO NUMA IDA SÓ ao motor. Um round-trip por asserção custaria
-#: doze cargas de página para medir o que uma mede.
 ROTEIRO = """
 (function(){
   const fora = {};
@@ -152,33 +141,21 @@ ROTEIRO = """
 
 
 def _constante(nome: str) -> str:
-    """O BOOTSTRAP e o LER_CAMPOS lidos do FONTE do piloto, e não importados.
-
-    Importar ``hefesto_vivo`` arrastaria a janela GTK inteira para dentro do
-    teste. É como os outros testes do pintor fazem, e pela mesma razão.
-    """
+    """O BOOTSTRAP e o LER_CAMPOS lidos do FONTE do piloto, e não importados."""
     achou = re.search(rf'^{nome} = r"""(.*?)"""$',
                       PILOTO.read_text(encoding="utf-8"), re.S | re.M)
     assert achou, f"o piloto perdeu o {nome} — não há o que testar"
     return achou.group(1)
 
 
-#: O RAMO DO ALVO NOVO, DENTRO DO BOOTSTRAP. É o que a mordida arranca.
 RAMO_DO_PINTOR = re.compile(r"\n    if\(alvo === 'atributo'\)\{.*?\n    \}\n", re.S)
 
-#: O RAMO DO ALVO NOVO, DENTRO DA RÉGUA — de ``elif alvo == "atributo":`` até o
-#: ``elif`` seguinte, no mesmo nível.
 RAMO_DA_REGUA = re.compile(
     r"\n        elif alvo == \"atributo\":\n.*?(?=\n        elif )", re.S)
 
 
 def _rodar_no_webkit(bootstrap: str, roteiro: str) -> dict:
-    """Abre um WebKit offscreen sobre :data:`PAGINA`, instala o bootstrap e mede.
-
-    A janela é ``Gtk.OffscreenWindow`` — sob Xvfb não há gerenciador de janelas
-    e uma ``Gtk.Window`` fica 1x1 para sempre. E offscreen também porque a dona
-    do projeto tem UMA tela: janela de teste não nasce na frente dela.
-    """
+    """Abre um WebKit offscreen sobre :data:`PAGINA`, instala o bootstrap e mede."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -215,14 +192,6 @@ def _rodar_no_webkit(bootstrap: str, roteiro: str) -> dict:
 
     view.connect("load-changed", carregou)
     view.load_html(PAGINA, "file:///")
-    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do
-    # mesmo processo — 05/09/2026, e a cura já existia em cinco arquivos
-    # irmãos (*"Já matou onze medições"*). Aqui ela faltava: medido no
-    # lote-00 da suíte, DUAS voltas em três davam *"o WebKit não respondeu
-    # em 30 s"* com o `saiu` VAZIO — o laço não estourou, ele foi MORTO por
-    # um `main_quit` que outro teste deixou armado. Reprodutível só na
-    # ordem aleatória, que é o que o torna invisível quando se roda o
-    # arquivo sozinho.
     guarda = GLib.timeout_add(20000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -250,9 +219,6 @@ def _arquivo() -> dict[str, str]:
     return {c.endereco: c.valor for c in regua._campos_cravados(PAGINA)}
 
 
-# ---------------------------------------------------------------------------
-# 1. o alvo escreve, e a cor do desenho MUDA
-# ---------------------------------------------------------------------------
 def test_o_atributo_e_escrito_e_o_desenho_troca_de_cor(medido: dict) -> None:
     assert medido["attr"] == "white", (
         "o alvo não escreveu o `data-colorway` — os 181 SVGs continuam "
@@ -269,11 +235,7 @@ def test_o_atributo_e_escrito_e_o_desenho_troca_de_cor(medido: dict) -> None:
 
 
 def test_a_contagem_de_pinturas_nao_mente(medido: dict) -> None:
-    """Um contador que mente é pior que um campo parado.
-
-    Ele é O instrumento com que esta casa prova que um endereço existe: uma aba
-    que devolve 0 com pacote não vazio é endereço que não existe na página.
-    """
+    """Um contador que mente é pior que um campo parado."""
     assert medido["n1"] == 1, (
         f"a primeira pintura contou {medido['n1']} em vez de 1 — só o "
         f"`desenho` podia ter sido escrito; os três `mau-*` são recusados")
@@ -286,21 +248,7 @@ def test_a_contagem_de_pinturas_nao_mente(medido: dict) -> None:
 
 
 def test_o_title_e_canal_de_pintura_e_nao_so_uma_lista(medido: dict) -> None:
-    """O `title` do rodapé pinta DE VERDADE, medido neste WebKit.
-
-    A guarda `atributo_escrevivel` recusava `title` até 03/09/2026, e o
-    `fim.html` — um só para as dez páginas — pedia exatamente isso nos botões
-    Salvar e Exportar, para a dica dizer o NOME do perfil ativo em vez de
-    congelar um exemplo. Vinte páginas com um endereço que nunca pintava, e a
-    recusa era **calada** (`return 0`).
-
-    Abrir a lista não bastaria como prova: uma lista é uma palavra, e o que
-    conta é o ato. Aqui o pacote manda `Mortal Kombat` no endereço e o atributo
-    do elemento é lido de volta do motor que ela usa.
-
-    A MORDIDA: tire `'title'` de `ATRIBUTO_A_MAIS` no piloto — esta linha
-    reprova com `n7 == 0`, e o portão das páginas nomeia as vinte.
-    """
+    """O `title` do rodapé pinta DE VERDADE, medido neste WebKit."""
     assert medido["n7"] == 1, (
         f"o pacote escreveu no `title` e o piloto contou {medido['n7']} "
         "pintura(s) — a guarda voltou a recusar o nome em silêncio")
@@ -309,17 +257,8 @@ def test_o_title_e_canal_de_pintura_e_nao_so_uma_lista(medido: dict) -> None:
         "texto que o desenho congelou")
 
 
-# ---------------------------------------------------------------------------
-# 2. o vazio apaga, e cai no cinza cru — MEDIDO, não presumido
-# ---------------------------------------------------------------------------
 def test_o_vazio_apaga_o_atributo_e_o_desenho_cai_no_fill_cru(medido: dict) -> None:
-    """A resposta medida para *"apagar o `data-colorway` cai no quê?"*.
-
-    Cai nos ``fill`` do próprio arquivo — o mesmo tom de um ``<rect>`` que nunca
-    teve zona. É o controle SEM identidade, e é o que a regra dela pede: campo
-    sem informação não mostra nada. Deixar o atributo faria o contrário —
-    manteria na tela o colorway do MOCKUP sobre um aparelho que é outro.
-    """
+    """A resposta medida para *"apagar o `data-colorway` cai no quê?"*."""
     assert medido["tem_attr"] is False, (
         "o vazio tinha de REMOVER o atributo, e ele continua lá")
     assert medido["fill_apagado"] == medido["fill_crua"] == "rgb(58, 63, 75)", (
@@ -328,26 +267,13 @@ def test_o_vazio_apaga_o_atributo_e_o_desenho_cai_no_fill_cru(medido: dict) -> N
 
 
 def test_o_colorway_que_a_folha_nao_traz_da_o_mesmo_cinza(medido: dict) -> None:
-    """O ALVO É NECESSÁRIO E NÃO É SUFICIENTE, e este é o número que prova.
-
-    ``monta._so_o_colorway`` guarda na folha de cada SVG só as regras do modelo
-    pedido — 3.082 bytes dos 45.452 dos 28 modelos, para que uma aba com quatro
-    controles não carregue quatro cópias dos 28. Consequência: escrever aqui um
-    colorway que não está embutido não pinta nada, e dá o MESMO cinza do
-    atributo apagado.
-
-    Quem for ligar uma aba tem de resolver isto junto: ou o ``monta.svg()``
-    deixa de podar, ou a página publica a folha inteira uma vez.
-    """
+    """O ALVO É NECESSÁRIO E NÃO É SUFICIENTE, e este é o número que prova."""
     assert medido["n6"] == 1, "o atributo foi escrito — a pintura conta"
     assert medido["fill_nao_embutido"] == medido["fill_crua"], (
         "a folha desta página só traz `cosmic-red` e `white`; um "
         "`galactic-purple` escrito nela tinha de cair no cinza cru")
 
 
-# ---------------------------------------------------------------------------
-# 3. a guarda de nome
-# ---------------------------------------------------------------------------
 def test_a_guarda_recusa_o_prefixo_do_piloto_o_estilo_e_o_endereco(
         medido: dict) -> None:
     """Três estragos que a guarda segura, e cada um tem uma razão medida.
@@ -368,16 +294,8 @@ def test_a_guarda_recusa_o_prefixo_do_piloto_o_estilo_e_o_endereco(
         "o `data-campo` foi reescrito — o alvo mudou o próprio endereço")
 
 
-# ---------------------------------------------------------------------------
-# 4. os dois lados leem a MESMA coisa
-# ---------------------------------------------------------------------------
 def test_a_regua_e_o_leitor_de_tela_leem_o_mesmo_atributo(medido: dict) -> None:
-    """O parser de Python e o ``LER_CAMPOS`` do piloto, endereço a endereço.
-
-    É a mesma guarda que o ``--prova-de-mockup`` roda em cada aba sobre o DOM
-    virgem. Se as duas leituras divergirem, toda classificação daquela aba está
-    comparando o arquivo com outra coisa.
-    """
+    """O parser de Python e o ``LER_CAMPOS`` do piloto, endereço a endereço."""
     assert _tela(medido["virgem"]) == _arquivo(), (
         "a régua e o leitor de tela discordam sobre a página virgem")
 
@@ -395,29 +313,13 @@ def test_depois_da_pintura_a_regua_da_produto(medido: dict) -> None:
 
 
 def test_o_vazio_declarado_nao_vira_travessao_na_comparacao() -> None:
-    """O caminho da MESA DELA: pelo rádio a cor do aparelho não se lê.
-
-    ``mesa_viva`` emite ``""`` para aquele controle, o molde o traduz em
-    travessão, e o ``escrever()`` APAGA o atributo. Se a régua comparasse o
-    travessão com o vazio da tela, acusaria ENDEREÇO MORTO sobre a pintura
-    certa — em metade da mesa dela.
-    """
+    """O caminho da MESA DELA: pelo rádio a cor do aparelho não se lê."""
     campo = regua._Campo(chave="desenho", dono="p1", alvo="atributo", valor="")
     assert regua._declarado_neste_elemento(campo, regua.TRAVESSAO) == ""
 
 
-# ---------------------------------------------------------------------------
-# 5. AS TRÊS MORDIDAS
-# ---------------------------------------------------------------------------
 def test_a_mordida_do_pintor_sem_o_ramo_a_tela_fica_no_mockup() -> None:
-    """Arranca ``if(alvo === 'atributo')`` do BOOTSTRAP e roda o piloto mutilado.
-
-    Sem o ramo o ``escrever()`` cai no padrão e escreve o valor como TEXTO — e o
-    estrago MEDIDO é maior do que "a cor não muda": ``el.textContent = 'white'``
-    num ``<svg>`` **apaga os filhos**. A folha de estilo e as duas formas somem
-    do documento, e o que sobra é a palavra ``white`` escrita por cima do lugar
-    onde havia um controle. O ``data-colorway`` continua ``cosmic-red``.
-    """
+    """Arranca ``if(alvo === 'atributo')`` do BOOTSTRAP e roda o piloto mutilado."""
     inteiro = _constante("BOOTSTRAP")
     mutilado, quantos = RAMO_DO_PINTOR.subn("\n", inteiro)
     assert quantos == 1, (
@@ -434,40 +336,22 @@ def test_a_mordida_do_pintor_sem_o_ramo_a_tela_fica_no_mockup() -> None:
 
 
 def _regua_sem(ramo: re.Pattern[str], quem: str) -> object:
-    """A régua com um ramo arrancado, carregada num espaço próprio.
-
-    O módulo só importa da biblioteca padrão, então ``exec`` sobre o fonte
-    mutilado basta — e não contamina a régua de verdade, que os outros casos
-    deste arquivo continuam usando.
-    """
+    """A régua com um ramo arrancado, carregada num espaço próprio."""
     import types
 
     fonte, quantos = ramo.subn("\n", REGUA.read_text(encoding="utf-8"))
     assert quantos == 1, f"a mordida não achou {quem} — ela não morde mais nada"
     nome = f"regua_mordida_{abs(hash(quem))}"
     modulo = types.ModuleType(nome)
-    # REGISTRAR EM `sys.modules` É OBRIGATÓRIO, e não é cerimônia: o
-    # `dataclasses` resolve as anotações procurando o módulo da classe em
-    # `sys.modules`, e sem ele o `@dataclasses.dataclass` do `_Campo` levanta
-    # `AttributeError: 'NoneType' object has no attribute '__dict__'`.
     sys.modules[nome] = modulo
     exec(compile(fonte, str(REGUA), "exec"), modulo.__dict__)
     return modulo
 
 
 def test_a_mordida_da_regua_sem_o_ramo_ela_da_produto_sobre_pagina_virgem() -> None:
-    """Arranca ``elif alvo == "atributo"`` de ``_campo`` e vê o verde sobre nada.
-
-    Sem o ramo a régua lê o TEXTO do ``<svg>`` (a folha de estilo, espremida) e
-    o compara com o ``data-colorway`` que o leitor de tela devolve. Como os dois
-    diferem, ela conclui *"a tela mudou"* — **PRODUTO** — sobre uma página que
-    ninguém pintou. Uma régua que dá por provado o que não aconteceu é pior que
-    régua nenhuma.
-    """
+    """Arranca ``elif alvo == "atributo"`` de ``_campo`` e vê o verde sobre nada."""
     mordida = _regua_sem(RAMO_DA_REGUA, 'o ramo `elif alvo == "atributo"` da régua')
 
-    # A TELA, do jeito que o piloto a lê — e aqui ela é a página VIRGEM: o valor
-    # de cada endereço é o que o próprio arquivo crava, sem uma pintura sequer.
     vivos = [c.valor for c in regua._campos_cravados(PAGINA)]
     cravados = mordida._campos_cravados(PAGINA)
     vereditos = mordida._classificar(cravados, vivos)
@@ -475,7 +359,6 @@ def test_a_mordida_da_regua_sem_o_ramo_ela_da_produto_sobre_pagina_virgem() -> N
     assert desenho.classe == mordida.PRODUTO, (
         "a mordida não produziu o defeito que ela existe para mostrar")
 
-    # E com a cura de volta, a mesma página virgem é o que ela é.
     curados = regua._classificar(regua._campos_cravados(PAGINA), vivos)
     (certo,) = [v for v in curados if v.campo.chave == "desenho"]
     assert certo.classe != regua.PRODUTO, (
@@ -483,13 +366,7 @@ def test_a_mordida_da_regua_sem_o_ramo_ela_da_produto_sobre_pagina_virgem() -> N
 
 
 def test_a_mordida_do_travessao_sem_ele_a_regua_acusa_a_pintura_certa() -> None:
-    """Arranca a linha do travessão e vê a régua acusar a mesa dela.
-
-    ``_declarado_neste_elemento`` traduz o que o pacote EMITE para o que a tela
-    MOSTRARIA. Sem a linha, o travessão de um controle sem cor lida chega cru à
-    comparação e nunca casa com o atributo ausente: ENDEREÇO MORTO sobre a
-    pintura certa, em metade da mesa dela.
-    """
+    """Arranca a linha do travessão e vê a régua acusar a mesa dela."""
     linha = re.compile(
         r'\n    if campo\.alvo == "atributo":\n.*?'
         r'\n        return "" if declarado == TRAVESSAO else declarado\n', re.S)
@@ -499,29 +376,8 @@ def test_a_mordida_do_travessao_sem_ele_a_regua_acusa_a_pintura_certa() -> None:
         "a mordida não produziu o defeito — o travessão continua virando vazio")
 
 
-# ---------------------------------------------------------------------------
-# 6. o vocabulário, nas páginas de verdade
-# ---------------------------------------------------------------------------
 def test_todo_data_hef_atributo_publicado_e_escrevivel() -> None:
-    """Nenhuma página pede um nome que a guarda vai recusar.
-
-    A guarda devolve ``0`` calado, e um endereço que nunca pinta é exatamente o
-    defeito que esta casa mais paga. O barulho tem de vir daqui, do portão, e
-    não da tela dela.
-
-    ELA JÁ COBROU — 03/09/2026, e foi este o barulho. O ``fim.html`` (um só para
-    as dez páginas) passou a pedir ``data-hef-atributo="title"`` nos botões
-    Salvar e Exportar, para a dica dizer o NOME do perfil ativo em vez de
-    congelar um exemplo (``7db1e0e6``). O commit dava por certo que o alvo
-    "sabe escrever num ``title``" — e ``atributo_escrevivel`` o recusava CALADA,
-    nas vinte páginas. **A cura foi abrir o canal**, com o nome na lista curta e
-    a razão escrita no piloto: ``title`` não é ``data-hef`` (não forja o selo),
-    não é vocabulário de endereço e não desfaz o que outro alvo pintou.
-
-    A LISTA A MAIS É LIDA DO PILOTO, e não digitada aqui: duas cópias da mesma
-    regra divergem, e a que diverge é sempre a da régua — é a forma de
-    instrumento falso que esta casa mais achou.
-    """
+    """Nenhuma página pede um nome que a guarda vai recusar."""
     fonte = PILOTO.read_text(encoding="utf-8")
     crua = r"/^(data|aria)-[a-z0-9]+(-[a-z0-9]+)*$/.test(n)"
     assert crua in fonte, (

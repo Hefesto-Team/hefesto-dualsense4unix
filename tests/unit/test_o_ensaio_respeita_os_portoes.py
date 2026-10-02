@@ -1,27 +1,4 @@
-"""O `--dry-run` imprime o plano DAQUELA linha de comando — com as flags dela.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), a dívida que a conferência da
-O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 achou: o `_ensaio_camada` do `install.sh`
-descrevia cada cura de host como se ela fosse rodar, com qualquer flag.
-`./install.sh --dry-run --no-wifi-usb` prometia instalar o vigia do Wi-Fi USB;
-`--dry-run --no-udev` prometia o `/etc` inteiro; e o uhid com contrapressão,
-que é OPT-IN, nem aparecia. O cabeçalho do próprio `install.sh` diz o
-contrário: *"o plano que ele imprime é o plano DAQUELA linha de comando"*.
-
-Duas réguas, e a segunda existe porque a primeira lê texto:
-
-1. **Estática, função por função:** as flags de portão que o corpo de cada
-   `*_host` da `camada_de_maquina.sh` lê são as MESMAS que o ramo do ensaio
-   dela lê. Uma flag nova num `*_host` sem o ramo correspondente reprova
-   nomeando as duas. É a que alcança a cura de amanhã.
-2. **Pelo ato:** o ensaio de verdade, num lar de mentira com todo binário de
-   sistema dublado (a bancada do `test_o_ensaio_do_install_nao_escreve.py`),
-   com e sem as flags — e o que se lê é a saída.
-
-A MORDIDA, medida: arrancar o `if [[ "${NO_WIFI_USB}" -eq 1 ]]` do ramo
-`wifi-usb` do `_ensaio_camada` reprova as duas réguas; arrancar o do
-`COM_UHID_CONTRAPRESSAO` do ramo `dkms-uhid`, idem.
-"""
+"""O `--dry-run` imprime o plano DAQUELA linha de comando — com as flags dela."""
 
 from __future__ import annotations
 
@@ -36,8 +13,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 INSTALL = (RAIZ / "install.sh").read_text(encoding="utf-8")
 CAMADA = (RAIZ / "scripts" / "lib" / "camada_de_maquina.sh").read_text(encoding="utf-8")
 
-#: As variáveis que DESLIGAM ou MUDAM uma cura de host inteira. `AUTO_YES` fica
-#: de fora de propósito: ela muda uma pergunta, não o que a cura escreve.
 PORTOES = (
     "SKIP_UDEV",
     "NO_OSK",

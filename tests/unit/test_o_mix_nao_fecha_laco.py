@@ -53,11 +53,8 @@ from tests.unit.bancada_do_som_junto import (
     subsystem_e_gerenciador,
 )
 
-#: O nó deste controle, pelo dono único do nome.
 NO_P1 = af.nome_do_sink(P1)
 
-#: A placa USB de OUTRO controle — a saída padrão legítima de quem joga com o
-#: som num controle e o mix no outro.
 SINK_P2 = SINK_P1.replace("-00.", "-01.")
 
 
@@ -70,11 +67,6 @@ def _mixes(argvs: tuple[tuple[str, ...], ...], id_do_no: str) -> list[str]:
         for a in argv
         if a.startswith("source=")
     ]
-
-
-# ---------------------------------------------------------------------------
-# 1. O dono puro não sobe o laço
-# ---------------------------------------------------------------------------
 
 
 def test_no_radio_o_mix_do_proprio_no_nao_sobe() -> None:
@@ -128,11 +120,6 @@ def test_o_monitor_de_outro_controle_nao_e_laco() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# 2. A rota sai com o monitor vazio, e o resto dela intacto
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture()
 def bancada(monkeypatch: pytest.MonkeyPatch) -> Pactl:
     """O `pactl` desviado no dono único dele: `alto_falante_bt._rodar`."""
@@ -179,11 +166,6 @@ def test_a_rota_com_a_tv_de_saida_segue_igual(bancada: Pactl) -> None:
     rota = af.rota_do_no(P1, af.TRANSPORTE_CABO, fonte=af.FONTE_MIX)
 
     assert rota.monitor_do_mix == f"{HDMI}.monitor"
-
-
-# ---------------------------------------------------------------------------
-# 4. A cena inteira, pela fiação de produção
-# ---------------------------------------------------------------------------
 
 
 def test_o_no_de_pe_no_cabo_nao_fecha_o_laco(bancada: Pactl) -> None:

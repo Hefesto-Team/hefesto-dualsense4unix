@@ -10,7 +10,7 @@ de módulo consumida de OUTRO arquivo: o rastreador conhece só dois nomes
 que já mentiu uma vez, 17-23/08) não era um deles.
 
 A mordida da sprint: "Fazer o portão da Z6-04 tentar descobrir a população
-por FLUXO em vez de por DECLARAÇÃO → tem de deixar `external_card.py:86`
+por FLUXO em vez de por DECLARAÇÃO → tem de deixar `external_card.py:76`
 passar, e o teste que trava isso reprova." Este arquivo é esse trava: prova
 que `descobre_falas` acha uma `Fala` pela PRESENÇA da chamada `Fala(...)`,
 nunca por rastrear se o nome chega a um escoadouro de widget — então o caso
@@ -35,12 +35,7 @@ FATOS_DE_MENTIRA = (
     '"de_onde_sei": "medido", "por_que_nao_aciona": ""}}}\n'
 )
 
-#: O CASO REAL, na forma REAL: uma `Fala` de módulo, atrás de um `if` que só
-#: dispara em certas condições, consumida por um MÉTODO DE OUTRO ARQUIVO (o
-#: molde exato de `external_card.py:86` + `secao_controles.py`). Uma régua de
-#: FLUXO teria de provar que este `if` é alcançável E que o valor atravessa
 #: até um `set_label`/`set_tooltip_text` em outro módulo — exatamente o que
-#: §2.5 mediu como alcance quase nulo.
 ARQUIVO_COM_FALA_ATRAS_DE_CONDICIONAL = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala
 
@@ -89,9 +84,7 @@ def rodar(raiz: Path) -> subprocess.CompletedProcess[str]:
 def test_a_fala_atras_do_condicional_e_encontrada_mesmo_sem_analise_de_fluxo(
     tmp_path: Path,
 ) -> None:
-    """A régua acha a `Fala` pela DECLARAÇÃO — nunca precisou provar que o
-    `if` dispara nem que `dica` chega a um widget em outro arquivo.
-    """
+    """A régua acha a `Fala` pela DECLARAÇÃO — nunca precisou provar que o"""
     raiz = monta_arvore(tmp_path)
     processo = rodar(raiz)
     assert processo.returncode == 0, processo.stdout
@@ -99,18 +92,8 @@ def test_a_fala_atras_do_condicional_e_encontrada_mesmo_sem_analise_de_fluxo(
 
 
 def test_descobre_falas_nao_depende_de_alcancabilidade_nem_de_uso() -> None:
-    """Prova estrutural, direta na função: nenhuma parte de `descobre_falas`
-    executa o código encontrado nem rastreia quem consome o nome — ela só
-    caminha o AST procurando `ast.Call` cujo `func` é `Fala`. Ler o próprio
-    código do portão é a forma mais curta de travar isto: se algum dia
-    alguém acrescentar rastreamento de fluxo aqui, esta asserção denuncia.
-    """
+    """Prova estrutural, direta na função: nenhuma parte de `descobre_falas`"""
     fonte = SCRIPT.read_text(encoding="utf-8")
-    # Os verbos de rastreamento por fluxo que `validar-palavra-de-tela.py`
-    # usa (widget "escoadouro", resolução de variável entre atribuição e
-    # uso) não têm lugar em `validar-fala-de-tela.py` — a régua daqui é mais
-    # simples DE PROPÓSITO, e é essa simplicidade que a torna completa para
-    # o que ela promete (achar `Fala(...)`), ao custo de exigir declaração.
     proibidos = ("escoadouro", "set_label", "set_tooltip_text", "resolve_variavel")
     for termo in proibidos:
         assert termo not in fonte, (

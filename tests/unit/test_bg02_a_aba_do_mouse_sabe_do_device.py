@@ -1,35 +1,8 @@
-"""BG-02, lado da janela — a aba para de adivinhar se o mouse virtual subiu.
-
-O rótulo `mouse_uinput_status_label` respondia "o mouse virtual está pronto?"
-com uma sonda LOCAL: `import uinput` e `os.access("/dev/uinput")` dentro do
-processo da JANELA. Ela erra nos dois sentidos, e os dois são casos reais:
-
-- num Flatpak a janela olha o SANDBOX e grita "sem permissão" sobre um
-  `/dev/uinput` que o daemon abre sem dificuldade nenhuma;
-- com a permissão em ordem e o device fora do ar — a flag persistida religa no
-  boot, `UinputMouseDevice.start()` falha, `_mouse_device` fica `None` com o
-  interruptor EM PÉ — a sonda diz *"Pronto para usar como mouse"* enquanto o
-  cursor não anda. É a queixa que abriu esta frente.
-
-Quem abre o device é o daemon, e agora ele publica a resposta
-(`mouse_emulation.device_ativo` / `bloqueio`). A sonda local continua aqui e
-continua útil: é a única que sabe QUAL é o defeito (falta o módulo? falta
-permissão no nó?) e é o melhor palpite quando ninguém respondeu.
-
-**Nenhuma frase nova entra na tela.** As quatro do rótulo são as de sempre; o
-que muda é qual delas é a verdadeira. O lado do daemon está em
-`test_bg02_o_mouse_ganha_razao.py`.
-
-Cada teste MORDE: fixar `_mouse_virtual_no_ar` de volta em `None` (a leitura
-arrancada) faz o rótulo voltar a comemorar sobre um cursor parado, e
-`test_a_mordida_*` reprova dizendo isso.
-"""
+"""BG-02, lado da janela — a aba para de adivinhar se o mouse virtual subiu."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: antes de qualquer import de `gi` (mesma disciplina dos
-# irmãos desta aba — o stub que outro arquivo planta passaria pelo importorskip).
 exigir_gi_real("a aba do mouse sabe do device")
 
 import os
@@ -77,12 +50,7 @@ def _sonda_local(
     existe: bool = True,
     gravavel: bool = True,
 ) -> None:
-    """Finge a máquina que a JANELA enxerga — módulo, nó e permissão.
-
-    Dublê que sabe RECUSAR: `com_uinput=False` faz o `import uinput` levantar
-    ImportError de verdade (é o que `sys.modules[nome] = None` provoca), e não
-    um objeto que finge não existir.
-    """
+    """Finge a máquina que a JANELA enxerga — módulo, nó e permissão."""
     monkeypatch.setitem(
         sys.modules, "uinput", types.ModuleType("uinput") if com_uinput else None
     )
@@ -106,13 +74,7 @@ def test_a_sonda_dublada_sabe_recusar(monkeypatch: pytest.MonkeyPatch) -> None:
         import uinput  # noqa: F401
     assert os.path.exists(ma.UINPUT_DEV) is False
     assert os.access(ma.UINPUT_DEV, os.W_OK) is False
-    # E não pode ter cegado o resto do sistema de arquivos junto.
     assert os.path.exists(__file__) is True
-
-
-# ---------------------------------------------------------------------------
-# A leitura do estado vivo
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -121,11 +83,8 @@ def test_a_sonda_dublada_sabe_recusar(monkeypatch: pytest.MonkeyPatch) -> None:
         ({"device_ativo": True, "bloqueio": None}, True),
         ({"device_ativo": True, "bloqueio": "modo_jogo"}, True),
         ({"device_ativo": False, "bloqueio": "sem_device"}, False),
-        # Desligada NÃO é defeito: ela baixou o interruptor. Mandá-la em
-        # "Aplicar correções" por isso é alarme falso.
         ({"device_ativo": False, "bloqueio": "desligada"}, None),
         ({"device_ativo": False, "bloqueio": CALADA_VPAD_SUSPENSO}, None),
-        # Daemon MAIS VELHO que esta janela: sem as chaves novas, "não sei".
         ({"enabled": True, "speed": 6, "scroll_speed": 1}, None),
         ({}, None),
     ],
@@ -153,21 +112,11 @@ def test_o_tri_estado_e_por_instancia() -> None:
     assert MouseActionsMixin._mouse_virtual_no_ar is None
 
 
-# ---------------------------------------------------------------------------
-# A MORDIDA — o rótulo
-# ---------------------------------------------------------------------------
-
-
 def test_a_mordida_o_device_fora_do_ar_desmente_a_sonda_local(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Permissão em ordem, interruptor em pé, cursor parado: o rótulo avisa.
-
-    Arrancar a leitura (`_mouse_virtual_no_ar` de volta em `None`) faz o mesmo
-    rótulo, na mesma máquina, comemorar "Pronto para usar como mouse" — que é
-    o produto afirmando o contrário do que ela está vendo na tela.
-    """
-    _sonda_local(monkeypatch)  # a janela não vê defeito NENHUM
+    """Permissão em ordem, interruptor em pé, cursor parado: o rótulo avisa."""
+    _sonda_local(monkeypatch)
     aba = _Aba()
 
     aba._anotar_mouse_virtual(
@@ -184,12 +133,7 @@ def test_a_mordida_o_device_fora_do_ar_desmente_a_sonda_local(
 def test_no_flatpak_o_daemon_desmente_o_alarme_da_sonda(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O erro no outro sentido: sandbox sem `/dev/uinput`, device VIVO.
-
-    A janela num Flatpak enxerga o sandbox. Se ela mandar em "Aplicar
-    correções" um sistema que já está funcionando, o produto está inventando um
-    defeito — e o custo é ela mexer no que estava certo.
-    """
+    """O erro no outro sentido: sandbox sem `/dev/uinput`, device VIVO."""
     _sonda_local(monkeypatch, existe=True, gravavel=False)
     aba = _Aba()
 
@@ -202,20 +146,13 @@ def test_no_flatpak_o_daemon_desmente_o_alarme_da_sonda(
 def test_desligada_nao_manda_ninguem_aplicar_correcoes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O alarme falso que o tri-estado existe para não dar.
-
-    Sem device porque ela DESLIGOU o mouse não é defeito. Se "sem device"
-    bastasse, todo interruptor baixado viraria um pedido de conserto.
-    """
+    """O alarme falso que o tri-estado existe para não dar."""
     _sonda_local(monkeypatch)
     aba = _Aba()
 
     aba._anotar_mouse_virtual(
         {"mouse_emulation": {"device_ativo": False, "bloqueio": "desligada"}}
     )
-    # `install_mouse_tab` é quem pinta na abertura; aqui a pintura é explícita
-    # porque "desligada" não MUDA o tri-estado (segue `None`) e o guard de
-    # repintura — que existe para não redesenhar a aba a 10 Hz — não dispara.
     aba._refresh_mouse_view()
 
     assert PRONTO in aba.rotulo.markup
@@ -238,11 +175,7 @@ def test_sem_resposta_do_daemon_a_sonda_local_manda_como_sempre(
     gravavel: bool,
     trecho: str,
 ) -> None:
-    """Os quatro desfechos históricos do rótulo, intactos.
-
-    O daemon offline não pode PIORAR a aba: sem resposta, o melhor palpite da
-    janela continua sendo o único palpite que ela tem.
-    """
+    """Os quatro desfechos históricos do rótulo, intactos."""
     _sonda_local(monkeypatch, com_uinput=com_uinput, existe=existe, gravavel=gravavel)
     aba = _Aba()
     assert aba._mouse_virtual_no_ar is None
@@ -253,23 +186,13 @@ def test_sem_resposta_do_daemon_a_sonda_local_manda_como_sempre(
 def test_o_modulo_ausente_vence_o_device_fora_do_ar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """"Falta um componente" manda rodar o install; "não está pronto" não.
-
-    Quando a sonda sabe MAIS que o daemon (o daemon só sabe que não subiu; a
-    sonda sabe que falta o módulo `uinput` neste sistema), quem tem o texto
-    mais acionável ganha.
-    """
+    """"Falta um componente" manda rodar o install; "não está pronto" não."""
     _sonda_local(monkeypatch, com_uinput=False)
     aba = _Aba()
     aba._anotar_mouse_virtual(
         {"mouse_emulation": {"device_ativo": False, "bloqueio": "sem_device"}}
     )
     assert FALTA_COMPONENTE in aba.rotulo.markup
-
-
-# ---------------------------------------------------------------------------
-# O dado chega pelo TIQUE, não por um segundo poller
-# ---------------------------------------------------------------------------
 
 
 class _AbaViva(_Aba):
@@ -285,14 +208,7 @@ class _AbaViva(_Aba):
 def test_a_mordida_o_estado_vivo_chega_a_aba(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A fiação: sem a chamada em `_refresh_mouse_from_daemon_async`, o campo
-    viaja no socket e a aba continua sem ele — o dado publicado que ninguém lê,
-    que é o mesmo defeito, uma casa adiante.
-
-    E ela mora ANTES dos `return` daquele callback de propósito: sair por
-    "edição pendente" ou "seção do perfil" com o dado na mão deixaria o rótulo
-    mentindo exatamente quando ela está mexendo na aba.
-    """
+    """A fiação: sem a chamada em `_refresh_mouse_from_daemon_async`, o campo"""
     from hefesto_dualsense4unix.app import ipc_bridge
 
     _sonda_local(monkeypatch)
@@ -315,8 +231,6 @@ def test_a_mordida_o_estado_vivo_chega_a_aba(
     )
 
     aba = _AbaViva()
-    # A edição pendente é o cenário cruel: os `return` do callback estão logo
-    # abaixo, e é onde a leitura se perderia se ela fosse posta no lugar errado.
     aba.draft = aba.draft.model_copy(
         update={"mouse": aba.draft.mouse.model_copy(update={"dirty": True})}
     )
@@ -327,11 +241,6 @@ def test_a_mordida_o_estado_vivo_chega_a_aba(
         "sumiu, ou está depois dos `return` do callback"
     )
     assert NAO_ESTA_PRONTO in aba.rotulo.markup
-
-
-# ---------------------------------------------------------------------------
-# O vocabulário é um só, dos dois lados do socket
-# ---------------------------------------------------------------------------
 
 
 def test_todo_motivo_que_o_daemon_emite_tem_traducao() -> None:
@@ -349,4 +258,3 @@ def test_todo_motivo_que_o_daemon_emite_tem_traducao() -> None:
     )
 
 
-# "Conhece-te a ti mesmo." — Sócrates

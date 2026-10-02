@@ -49,7 +49,6 @@ def _bench_one(controller, target_hz: int, duration: float) -> dict[str, float]:
     intervals: list[float] = []
     last_tick = time.monotonic()
 
-    # CPU rusage antes e depois
     import resource
 
     ru_before = resource.getrusage(resource.RUSAGE_SELF)
@@ -77,7 +76,6 @@ def _bench_one(controller, target_hz: int, duration: float) -> dict[str, float]:
     cpu_user = ru_after.ru_utime - ru_before.ru_utime
     cpu_sys = ru_after.ru_stime - ru_before.ru_stime
 
-    # Remove o primeiro interval (zero por construção)
     intervals = intervals[1:] if len(intervals) > 1 else intervals
 
     effective_hz = n / wall_total if wall_total > 0 else 0.0
@@ -157,4 +155,3 @@ def main(argv: list[str] | None = None) -> int:
 if __name__ == "__main__":
     sys.exit(main())
 
-# "Medir é começar a dominar." — Lord Kelvin (parafraseado)

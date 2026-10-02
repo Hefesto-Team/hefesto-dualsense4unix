@@ -1,20 +1,4 @@
-"""O teto do multiplicador de rumble tem UM dono (HARM-19).
-
-A faixa valeu três valores ao mesmo tempo:
-
-  - `profiles.schema.RumbleConfig.custom_mult` — 0.0 a **2.0**
-  - `ipc_handlers._handle_rumble_policy_custom` — recusava mult > **1.0**
-  - o trilho da Intensidade na tela — até **200%**
-
-O slider manda `valor / 100` para o `rumble.policy_custom`, então de 101% em
-diante a usuária levava um erro de validação — que a aba de gatilhos ainda
-reportava como "daemon offline?". O `BUG-RUMBLE-CUSTOM-MULT-CAP-01` subiu o
-slider para 200% justamente porque "o schema aceita custom_mult até 2.0", e
-esqueceu do handler.
-
-A cura foi alinhar o handler ao schema (não truncar a UI): acima de 100% o
-multiplicador AMPLIFICA o que o jogo pediu, que é a razão de a faixa existir.
-"""
+"""O teto do multiplicador de rumble tem UM dono (HARM-19)."""
 from __future__ import annotations
 
 import re
@@ -24,15 +8,6 @@ import pytest
 
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, RumbleConfig
 
-#: O TETO DO TRILHO, na TELA QUE ELA USA — `interface/paginas/05-vibracao.html`,
-#: o `<input type="range" data-campo="mult-pos">` da coluna Intensidade.
-#:
-#: **A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta). Até aqui esta
-#: leitura era o `<property name="upper">` do `rumble_policy_adj` no
-#: `gui/main.glade` — a janela GTK, que sai inteira
-#: (`D-0609-GTK-LEVA-INTEIRA`). A pergunta medida é a MESMA e continua sendo
-#: leitura de arquivo, não número digitado: *o que a tela OFERECE é o que o
-#: esquema do perfil ACEITA?*
 _TRILHO_DA_INTENSIDADE = re.compile(
     r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>'
 )
@@ -69,18 +44,11 @@ def test_o_schema_recusa_acima_do_teto() -> None:
         RumbleConfig(policy="custom", custom_mult=RUMBLE_CUSTOM_MULT_MAX + 0.1)
 
 
-# SATURA-01 (11/08/2026): 150 e 200 saíram porque o teto voltou a 100%. Os
-# valores desta lista têm de ser os que o SLIDER produz — derivá-los do teto
-# em vez de escrevê-los à mão mantém o teste amarrado ao dono único.
 @pytest.mark.parametrize(
     "percentual", [0, 50, int(RUMBLE_CUSTOM_MULT_MAX * 100)]
 )
 def test_todo_valor_do_slider_passa_no_handler(percentual: int) -> None:
-    """O que a UI oferece, o daemon aceita — em TODA a faixa.
-
-    Era o defeito: 150% no slider virava mult=1.5 e o handler levantava
-    ValueError. Este teste percorre a régua inteira, não só as pontas.
-    """
+    """O que a UI oferece, o daemon aceita — em TODA a faixa."""
     from hefesto_dualsense4unix.daemon import ipc_handlers
 
     mult = percentual / 100.0
@@ -100,25 +68,6 @@ def test_ninguem_mais_hardcodeia_o_teto() -> None:
     assert "<= 1.0" not in trecho, "teto de 1.0 hardcoded voltou ao handler"
 
 
-# ===========================================================================
-# O NÚMERO MEDIDO TEM UM DONO SÓ — as três rotas leem a MESMA memória
-# ===========================================================================
-#
-# BG-02 (26/08/2026). O debounce do "auto" (que impede a força de pular no meio
-# da partida) era lido de DOIS lugares:
-#
-#   - `daemon._last_auto_mult` / `_last_auto_change_at` — a memória viva,
-#     declarada em `daemon/protocols.py`, escrita pelo tique de 200 ms
-#     (`subsystems/rumble.reassert_rumble`) e pelo force-feedback do jogo
-#     (`subsystems/gamepad._game_rumble_mult`);
-#   - `daemon._rumble_engine._last_auto_*` — na rota do `rumble.set`, que é a
-#     que o "Aplicar" da aba atravessa. Esse atributo **nunca é instanciado**:
-#     a leitura começava sempre de 0,7/0,0 e o resultado era jogado fora pelo
-#     `if rumble_engine is not None`.
-#
-# Duas contas para o mesmo número: a intensidade que ela sente pulava conforme
-# qual rota mexeu por último.
-
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -135,24 +84,14 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     reassert_rumble,
 )
 
-#: O instante de referência das mordidas. Qualquer número serve — o que importa
-#: é ele NÃO ser 0.0, que é o valor que o `_effective_mult` trata como "nunca
-#: mudou" e que faz o debounce liberar a primeira troca.
 T0 = 1000.0
 
-#: Bateria acima do degrau de cima do "auto" (>50%) → alvo 1,0.
 BATERIA_CHEIA = 60
-#: Bateria abaixo do degrau de baixo (<20%) → alvo 0,3.
 BATERIA_NO_FIM = 10
 
 
 class _ControleQueAnota:
-    """Backend mínimo: guarda os pares que chegaram, e nada mais.
-
-    Sem `set_rumble_for` de propósito — `escrever_rumble_no_dono` cai no
-    caminho histórico de broadcast, que é o que interessa aqui (a mira por MAC
-    tem mordida própria em `test_mesa_cheia_05_o_rumble_mira.py`).
-    """
+    """Backend mínimo: guarda os pares que chegaram, e nada mais."""
 
     def __init__(self) -> None:
         self.pares: list[tuple[int, int]] = []
@@ -162,12 +101,7 @@ class _ControleQueAnota:
 
 
 def _mesa(bateria: int) -> SimpleNamespace:
-    """Daemon de bancada: config de verdade, store de verdade, backend anotador.
-
-    `_last_auto_mult=0.7` / `_last_auto_change_at=0.0` são os valores com que o
-    daemon real nasce (`daemon/lifecycle.py`), e são exatamente os que a rota
-    quebrada inventava do nada a cada chamada.
-    """
+    """Daemon de bancada: config de verdade, store de verdade, backend anotador."""
     store = StateStore()
     store.update_controller_state(
         ControllerState(
@@ -188,30 +122,14 @@ def _mesa(bateria: int) -> SimpleNamespace:
 
 
 def _congela_o_relogio(monkeypatch: pytest.MonkeyPatch, quando: float) -> None:
-    """`apply_rumble_policy` lê `_time.monotonic()` por dentro — sem injeção.
-
-    Trocar o módulo inteiro por um `SimpleNamespace` mantém a troca dentro
-    de `ipc_rumble_policy` (o `time` global da suíte fica intacto).
-    """
+    """`apply_rumble_policy` lê `_time.monotonic()` por dentro — sem injeção."""
     monkeypatch.setattr(
         ipc_rumble_policy, "_time", SimpleNamespace(monotonic=lambda: quando)
     )
 
 
 def test_as_tres_rotas_leem_a_mesma_memoria(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A MORDIDA de BG-02: `rumble.set`, depois o poll loop, mesmo número.
-
-    O roteiro é o da partida real: ela fixa a vibração com a bateria cheia
-    (o "auto" sobe para 1,0), a bateria despenca segundos depois, e o tique de
-    200 ms pergunta de novo DENTRO da janela de debounce. Com uma memória só, o
-    tique responde 1,0 — a força não pula no meio da partida, que é a promessa
-    inteira do debounce.
-
-    Devolvendo a leitura ao `_rumble_engine`, a rota do `rumble.set` não grava
-    nada: o poll loop encontra `(0,7 / 0,0)`, lê `last_auto_change_at == 0.0`
-    como "nunca mudou", libera a troca na hora e entrega 0,3. Os dois números
-    divergem e as mensagens abaixo imprimem os dois.
-    """
+    """A MORDIDA de BG-02: `rumble.set`, depois o poll loop, mesmo número."""
     daemon = _mesa(BATERIA_CHEIA)
     _congela_o_relogio(monkeypatch, T0)
 
@@ -226,7 +144,6 @@ def test_as_tres_rotas_leem_a_mesma_memoria(monkeypatch: pytest.MonkeyPatch) -> 
         "tique seguinte — sem ele são duas contas para o mesmo número"
     )
 
-    # A bateria despenca, e o tique de 200 ms chega DENTRO do debounce.
     daemon.store.update_controller_state(
         ControllerState(
             battery_pct=BATERIA_NO_FIM,
@@ -252,11 +169,7 @@ def test_as_tres_rotas_leem_a_mesma_memoria(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_passado_o_debounce_o_degrau_troca(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O outro lado: régua que só sabe segurar não é régua.
-
-    Sem este caso, o de cima passaria também numa cura que simplesmente
-    congelasse o multiplicador para sempre.
-    """
+    """O outro lado: régua que só sabe segurar não é régua."""
     daemon = _mesa(BATERIA_CHEIA)
     _congela_o_relogio(monkeypatch, T0)
     apply_rumble_policy(daemon, 200, 200)
@@ -282,11 +195,7 @@ def test_passado_o_debounce_o_degrau_troca(monkeypatch: pytest.MonkeyPatch) -> N
 def test_a_rota_do_aplicar_herda_o_que_o_poll_loop_gravou(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """E na ordem inversa: quem escreve primeiro é o tique, e o `set` herda.
-
-    A memória é de mão dupla — provar só um sentido deixaria metade do defeito
-    viva.
-    """
+    """E na ordem inversa: quem escreve primeiro é o tique, e o `set` herda."""
     daemon = _mesa(BATERIA_CHEIA)
     reassert_rumble(daemon, T0)
     assert (daemon._last_auto_mult, daemon._last_auto_change_at) == (1.0, T0)
@@ -310,12 +219,7 @@ def test_a_rota_do_aplicar_herda_o_que_o_poll_loop_gravou(
 
 
 def test_a_memoria_viva_blinda_o_duble_que_responde_qualquer_coisa() -> None:
-    """`MagicMock` devolve um `Mock` para todo atributo — e ele não é número.
-
-    Sem a blindagem, `now - last_auto_change_at` estoura `TypeError` dentro de
-    `_effective_mult` e a vibração morre no dublê. Com ela, o dublê cai nos
-    defaults do primeiro tique, que é o comportamento honesto.
-    """
+    """`MagicMock` devolve um `Mock` para todo atributo — e ele não é número."""
     assert memoria_viva_do_auto(MagicMock()) == (0.7, 0.0)
     assert memoria_viva_do_auto(SimpleNamespace()) == (0.7, 0.0)
     assert memoria_viva_do_auto(
@@ -327,11 +231,7 @@ def test_a_memoria_viva_blinda_o_duble_que_responde_qualquer_coisa() -> None:
 
 
 def test_ninguem_mais_le_o_rumble_engine_na_rota_do_set() -> None:
-    """O caminho morto saiu da árvore, e não só ficou sem efeito.
-
-    Um `_rumble_engine` lido "só por compatibilidade" voltaria a ser a segunda
-    fonte no primeiro dia em que alguém o instanciasse.
-    """
+    """O caminho morto saiu da árvore, e não só ficou sem efeito."""
     fonte = Path(ipc_rumble_policy.__file__).read_text(encoding="utf-8")
     corpo = fonte[fonte.index("def apply_rumble_policy") :]
     assert "_rumble_engine" not in corpo, (

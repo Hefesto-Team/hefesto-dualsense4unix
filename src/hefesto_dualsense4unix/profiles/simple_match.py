@@ -20,12 +20,6 @@ from hefesto_dualsense4unix.profiles.steam_app import (
     steam_appid_from_wm_class,
 )
 
-# R-12 item 2 (auditoria 23/07): campo obrigatório em branco NÃO degrada em
-# silêncio. Antes, "Jogo específico" sem nome devolvia `MatchAny()` — o perfil
-# que ela criou PARA UM JOGO nascia valendo para TUDO, entrava na disputa com os
-# catch-all (R-01) e o toast dizia "Perfil salvo". As frases moram aqui porque
-# são contrato com a GUI: `_humanize_profile_error` as repassa inteiras em vez
-# de traduzir para o texto genérico "Revise os campos do perfil".
 MSG_JOGO_SEM_NOME = (
     "Diga o nome do programa do jogo (ex.: eldenring) ou escolha outro "
     "contexto em \"Aplica a\"."
@@ -38,66 +32,22 @@ MSG_STEAM_APPID_INVALIDO = (
     "O número do jogo na Steam é só dígitos (ex.: 1599660). Cole o endereço "
     "da página do jogo na loja e o número sai dele sozinho."
 )
-#: A IRMÃ DO `MSG_JOGO_SEM_NOME`, e ela nasceu com a sexta forma (ONDA5-10-01,
-#: 06/09/2026). O "janela" tem UM campo obrigatório — a classe da janela do
-#: jogo —, e vazio ele degradaria em `MatchCriteria(window_class=[""])`, que é
-#: um critério que nunca casa e não diz por quê. É o mesmo R-12 item 2.
 MSG_JANELA_SEM_CLASSE = (
     "Diga a janela do jogo (ex.: GrimFandango) ou escolha outro contexto em "
     "\"Funciona em\". Com o jogo em foco, o botão Detectar preenche sozinho."
 )
 
-#: A TERCEIRA IRMÃ, e ela nasceu com «de onde o jogo vem» (C4-FUNCIONA-EM,
-#: 11/09/2026). Trocar a procedência para um lançador enquanto o campo de baixo
-#: guarda um jogo de OUTRO lugar é uma frase pela metade: o endereço que está
-#: lá não vale naquele lançador, e gravá-lo assim mesmo faria nascer uma regra
-#: que nunca casa — o R-12, de novo.
-#:
-#: **ELA MANDA PARA A LISTA, e não para a linha de comando.** O caminho existe
-#: e está a um campo de distância: escolhido o lançador, o campo de baixo passa
-#: a oferecer os jogos DELE pelo nome, e escolher um grava a regra inteira.
-#:
-#: FORA DE `MENSAGENS_DE_GENTE` de propósito: aquele conjunto é comparado por
-#: igualdade EXATA, e um molde com `{procedencia}` dentro nunca casaria — ele
-#: entraria como uma linha morta que dá a impressão de cobrir o caso. Quem a
-#: levanta é a aba, que já mostra a frase crua na tarja.
 MSG_ESCOLHA_O_JOGO = (
     "Escolha o jogo na lista de baixo — “{procedencia}” mostra os jogos que "
     "vêm de lá pelo nome."
 )
 
-#: Frases que a GUI pode mostrar CRUAS para a usuária (ver `_humanize_profile_error`).
 MENSAGENS_DE_GENTE: frozenset[str] = frozenset(
     {MSG_JOGO_SEM_NOME, MSG_STEAM_SEM_APPID, MSG_STEAM_APPID_INVALIDO,
      MSG_JANELA_SEM_CLASSE}
 )
 
-# --- Os três botões de programa, e por que a lista cresceu ------------------
-# PERFIS-ABRE-O-QUE-GUARDA-01/P5 (25/08/2026). As três listas tinham DOZE
-# programas ao todo, e eram os programas DESTA BANCADA em julho. O preço não
-# era teórico: quem instalasse outro terminal, clicasse "Terminal" e salvasse
-# ganhava um perfil que **nunca casa**, sem uma palavra na tela — o perfil não
-# entra, `matches()` devolve `False` em silêncio, e não há erro nenhum a ler.
-#
-# Medido em 25/08, antes de qualquer linha de cura, com o `matches()` do
-# esquema: `ptyxis` (o terminal padrão do COSMIC, que é o desktop DESTA
-# máquina), `foot`, `wezterm`, `xterm`, `vivaldi`, `zen`, `org.gnome.Epiphany`,
-# `gedit`, `org.kde.kate`, `emacs` e `vim` — os ONZE reprovavam.
-#
-# **Lista declarada, nunca detecção mágica.** Adivinhar "isto é um editor" pelo
-# nome do processo é a classe de contorno que esta casa recusa: acerta na
-# bancada de quem escreveu e erra no computador de quem usa, sem jeito de a
-# pessoa ver por quê. Aqui é lista, com dono e com data.
-#
-# A comparação é SEM CAIXA (`schema._casa_sem_caixa`), então cada programa
-# aparece uma vez só — `Navigator` e `navigator` são a mesma entrada. O que
-# muda de verdade entre as grafias é o SUFIXO do empacotamento
-# (`chromium-browser`, `brave-browser`) e o identificador em ponto do Wayland
-# (`org.gnome.Epiphany`), e esses são nomes diferentes, não caixas diferentes.
 
-#: Navegadores. `Navigator` é a `wm_class` do Firefox sob XWayland — a mesma
-#: janela chega como `firefox` no Wayland nativo e como `Navigator` no X, e sem
-#: as duas o preset cobre metade das sessões.
 _NAVEGADORES = [
     "firefox",
     "Navigator",
@@ -122,10 +72,6 @@ _NAVEGADORES = [
     "org.qutebrowser.qutebrowser",
 ]
 
-#: Terminais. `ptyxis` encabeça por medição, não por gosto: é o terminal padrão
-#: do COSMIC, o desktop desta máquina, e era o buraco mais caro dos três.
-#: `gnome-terminal-server` é o processo que carrega as janelas do
-#: `gnome-terminal` — quem some da lista some da detecção.
 _TERMINAIS = [
     "ptyxis",
     "org.gnome.Ptyxis",
@@ -151,9 +97,6 @@ _TERMINAIS = [
     "org.contourterminal.Contour",
 ]
 
-#: Editores — de código e de texto. O critério de entrada é "programa em que se
-#: escreve", não "IDE": `gedit` e `kate` são o editor de muita gente, e deixá-los
-#: de fora era a mesma omissão do `ptyxis`.
 _EDITORES = [
     "code",
     "code-oss",
@@ -183,7 +126,6 @@ _EDITORES = [
     "jetbrains-webstorm",
 ]
 
-# Presets prontos, indexados pela chave do radio.
 SIMPLE_MATCH_PRESETS: dict[str, MatchCriteria | MatchAny] = {
     "any": MatchAny(),
     "steam": MatchCriteria(process_name=["steam"]),
@@ -192,20 +134,8 @@ SIMPLE_MATCH_PRESETS: dict[str, MatchCriteria | MatchAny] = {
     "editor": MatchCriteria(window_class=list(_EDITORES)),
 }
 
-#: As listas de ANTES de 25/08/2026, guardadas para a LEITURA continuar
-#: reconhecendo o que já está no disco.
-#:
-#: Sem isto, crescer as listas quebraria o round-trip que o R-12 existe para
-#: proteger: um perfil salvo em julho com "Terminal" tem os quatro nomes
-#: daquele dia gravados, `_criteria_equal` compara por igualdade EXATA de
-#: conjunto, e reabrir o perfil o jogaria no editor avançado — o seletor
-#: rebaixado, sem ninguém ter mexido em nada. É o mesmo defeito que a
 #: `ESCONDER-EM-VEZ-DE-SAIR-01` mediu pelo outro lado.
-#:
 #: **Só a LEITURA é tolerante.** A escrita (`from_simple_choice`) grava sempre
-#: a lista de hoje: reabrir um "Terminal" de julho e salvar ALARGA o perfil
-#: para os terminais de hoje, que é exatamente o que o rótulo "Terminal"
-#: promete — e alargar nunca tira dela um casamento que ela já tinha.
 _PRESETS_HISTORICOS: dict[str, tuple[list[str], ...]] = {
     "browser": (["firefox", "chromium", "brave", "google-chrome"],),
     "terminal": (["gnome-terminal", "alacritty", "kitty", "konsole"],),
@@ -214,18 +144,7 @@ _PRESETS_HISTORICOS: dict[str, tuple[list[str], ...]] = {
 
 
 def normalize_appid(raw: str | None) -> str | None:
-    """Extrai o appid de ``1599660`` / ``steam_app_1599660`` / ``  1599660 ``.
-
-    Devolve ``None`` quando não há nada aproveitável — quem decide se isso é
-    erro é o chamador (o editor levanta; a detecção do round-trip só ignora).
-
-    13/08/2026: passou a aceitar também o ENDEREÇO da loja e o
-    ``steam://rungameid/<id>``, delegando a `steam_app.steam_appid_de_texto`.
-    Delegar, e não repetir o regex aqui, é o que faz o caminho do **Salvar**
-    aceitar o endereço mesmo quando a janela não chegou a reescrever o campo —
-    e é a disciplina que UNIFICA-PREDICADO-01 deixou escrita: a pergunta "que
-    appid é este texto?" tem um dono só.
-    """
+    """Extrai o appid de ``1599660`` / ``steam_app_1599660`` / ``  1599660 ``."""
     appid = steam_appid_de_texto(raw)
     return None if appid is None else str(appid)
 
@@ -290,10 +209,6 @@ def from_simple_choice(
             return MatchCriteria(process_name=[custom_name.strip()])
         raise ValueError(MSG_JOGO_SEM_NOME)
     if choice == "janela":
-        # A CLASSE VAI COMO ELA VEIO, sem `.lower()`, pela MESMA razão do
-        # "game" (R-12 item 3): `MatchCriteria.matches` compara com a
-        # `wm_class` crua do detector, e `GrimFandango` não é `grimfandango`.
-        # O matcher do esquema é que compara sem caixa — não este helper.
         if custom_name and custom_name.strip():
             return MatchCriteria(window_class=[custom_name.strip()])
         raise ValueError(MSG_JANELA_SEM_CLASSE)
@@ -322,15 +237,8 @@ def detect_simple_preset(
     """
     if isinstance(match, MatchAny):
         return "any"
-    # R-12 item 3: qualquer sentinel sem campos de critério (hoje
-    # `MatchManual`) sai aqui. Sem esta guarda o laço abaixo chamaria
-    # `_criteria_equal`, que lê `window_class`/`process_name` do objeto e
-    # estouraria com AttributeError ao abrir o perfil na aba Perfis.
     if not isinstance(match, MatchCriteria):
         return None
-    # R-12: jogo da Steam ANTES dos presets fixos — `steam_app_<id>` é um
-    # window_class como outro qualquer, e sem esta checagem o round-trip
-    # (salvar → reabrir) jogaria o perfil no editor avançado.
     if _detect_steam_appid(match) is not None:
         return "steam_game"
     for key, preset in SIMPLE_MATCH_PRESETS.items():
@@ -338,12 +246,9 @@ def detect_simple_preset(
             continue
         if isinstance(preset, MatchCriteria) and _criteria_equal(match, preset):
             return key
-    # P5 (25/08/2026): e as listas de ANTES, para o perfil que já está no disco
-    # continuar abrindo na página simples. Ver `_PRESETS_HISTORICOS`.
     historico = _preset_historico(match)
     if historico is not None:
         return historico
-    # Tenta detectar "jogo específico": process_name com 1 elemento, demais vazios
     if (
         isinstance(match, MatchCriteria)
         and len(match.process_name) == 1
@@ -351,16 +256,6 @@ def detect_simple_preset(
         and not match.window_title_regex
     ):
         return "game"
-    # A SEXTA FORMA — "janela", ONDA5-10-01 (06/09/2026). O ESPELHO do "game"
-    # logo acima: uma classe de janela SÓ, sem nome de programa e sem título.
-    #
-    # ELA VEM DEPOIS DE TUDO, e a ordem é o contrato:
-    #   * `_detect_steam_appid` já correu lá em cima — um `steam_app_<id>` é um
-    #     `window_class` de UM elemento, e tem de continuar saindo como
-    #     "steam_game" ou o round-trip do R-12 quebra;
-    #   * os presets fixos e os `_PRESETS_HISTORICOS` também já correram — um
-    #     "Terminal" de julho com uma classe só continuaria sendo "Terminal".
-    #     (Hoje nenhum deles tem lista de um elemento; a ordem é que garante.)
     if (
         isinstance(match, MatchCriteria)
         and len(match.window_class) == 1
@@ -461,21 +356,7 @@ def _detect_steam_appid(match: Match) -> str | None:
 
 
 def _process_name_a_preservar(regra_do_disco: Match | None, appid: str) -> list[str]:
-    """O ``process_name`` que o editor simples não mostra, mas não pode apagar.
-
-    ESCONDER-EM-VEZ-DE-SAIR-01 (10/08/2026). ``_detect_steam_appid`` passou a
-    reconhecer o jogo da Steam mesmo com ``process_name`` junto — e a página
-    simples tem UM campo, o do número. Sem esta preservação, reabrir o perfil
-    ``Pragmata`` dela e salvar gravaria ``window_class`` sozinho: o
-    ``PRAGMATA.exe`` evaporaria porque a tela não tinha onde mostrá-lo, que é
-    o mesmo defeito de round-trip que o R-12 catalogou.
-
-    **Só do MESMO jogo.** Se ela digitar outro appid no campo, o perfil passou
-    a ser de OUTRO jogo, e carregar junto o nome do programa do jogo anterior
-    seria pior que apagar: o perfil novo nasceria com um AND que nunca casa,
-    sem nada na tela dizendo por quê. Regra de disco que não é jogo da Steam
-    (ou ausente) também não empresta nada.
-    """
+    """O ``process_name`` que o editor simples não mostra, mas não pode apagar."""
     if regra_do_disco is None:
         return []
     if _detect_steam_appid(regra_do_disco) != appid:
@@ -493,20 +374,7 @@ def _criteria_equal(a: MatchCriteria, b: MatchCriteria) -> bool:
 
 
 def _preset_historico(match: MatchCriteria) -> str | None:
-    """A chave do preset quando o perfil guarda uma lista ANTIGA. Senão None.
-
-    P5 (25/08/2026). Ver `_PRESETS_HISTORICOS` para o porquê: crescer as três
-    listas sem isto rebaixaria para o editor avançado todo perfil "Navegador",
-    "Terminal" ou "Editor" que ela já tem no disco — sem ninguém ter mexido em
-    nada, e sem uma palavra na tela.
-
-    A comparação é a MESMA do laço dos presets de hoje (`_criteria_equal`, por
-    conjunto), e por isso um perfil histórico só é reconhecido quando os
-    OUTROS campos também batem: `process_name` e `window_title_regex` vazios.
-    Um "Terminal" de julho com um `process_name` somado à mão continua caindo
-    no editor avançado — que é o certo, porque a página simples não sabe
-    mostrar esse campo (é a mesma disciplina do `exigencia_invisivel`).
-    """
+    """A chave do preset quando o perfil guarda uma lista ANTIGA. Senão None."""
     for key, listas in _PRESETS_HISTORICOS.items():
         for window_class in listas:
             if _criteria_equal(match, MatchCriteria(window_class=list(window_class))):
@@ -514,10 +382,6 @@ def _preset_historico(match: MatchCriteria) -> str | None:
     return None
 
 
-#: O CAMINHO DA JANELA GTK, e ele mora aqui por um motivo só: é a janela cujo
-#: botão tem este nome, e a constante precisa de UM dono para a régua da aba 10
-#: poder cobrar a troca. Quem a CONCATENA é `profiles_actions`, não esta função
-#: — uma tela sem "Modo avançado" nunca a vê.
 CAMINHO_DA_JANELA_GTK = "Ligue o Modo avançado para ver e mudar."
 
 
@@ -576,65 +440,16 @@ def exigencia_invisivel(match: Match) -> str:
     )
 
 
-# --- AS PROCEDÊNCIAS — «de onde o jogo vem», e as seis formas que isso vira ---
-#
-# C4-FUNCIONA-EM, 11/09/2026. Desenho DELA, confirmado com todas as letras
-# (*"isso mesmo."*), e a ordem original foi esta:
-#
 #     "seria legal nome do programa launcher aqui: A gente adicionaria  (noqa-acento) cita ela
-#      Navegação, remopve jogo da steam, jogo, jogo pela janela, estilo de
-#      jogo, e colocariamos os launchers. Isso deveria ajudar a identificar
-#      mais rápido o nome do jogo depois"
-#
-# **O QUE ELA MANDOU TIRAR ERA JARGÃO DE IMPLEMENTAÇÃO NA CARA DE QUEM JOGA.**
-# "Jogo" contra "Jogo pela janela" pedia dela exatamente o conhecimento que o
-# produto tem e ela não: por qual chave aquele jogo é reconhecível — o
-# `process_name` (basename de `/proc/PID/exe`) ou a `wm_class`. A pergunta que
-# ela SABE responder é outra: *de onde vem este jogo?*
-#
-# **A REGRA QUE ISSO IMPÕE, e é o §4 da sprint:** a tela ganha uma tradução; o
-# `MatchCriteria` NÃO MUDA. «lançador» não vira um tipo novo de casamento no
-# disco — quem escolhe a forma técnica é o produto, aqui, com o que o lançador
-# entrega. O arquivo continua guardando `steam_app_1245620` ou `gotg.exe`.
-#
-# **E ESTAS FUNÇÕES NÃO IMPORTAM `integrations`, de propósito.** Quem sabe que
-# lançadores a máquina tem é o censo, e quem sabe de qual deles vem uma chave é
-# o catálogo — os dois são leitura de disco, e `profiles/` é o esquema. A ponte
-# é o parâmetro `lancador_da_chave`: a TELA passa a função, este módulo decide a
-# forma. Sem isso, uma régua daqui precisaria da biblioteca dela para rodar.
 
-#: O perfil do desktop, sem jogo. **Atrás dele está o preset `browser`** — a
-#: lista declarada de navegadores de `_NAVEGADORES`, que existia no produto e
-#: não no desenho dela (`perfis_web.FORA_DO_DESENHO`). Esta sprint o traz para
-#: a tela com a palavra DELA, e é por isso que ela é a primeira da lista: não é
-#: procedência de jogo nenhum, é o que vale quando não há jogo.
 PROCEDENCIA_DA_NAVEGACAO = "Navegação"
 
-#: O catch-all — `MatchAny`. Última da lista pela mesma razão que o `fallback`
-#: tem prioridade zero: ele só entra quando nenhum outro serve.
 PROCEDENCIA_DE_QUALQUER_JOGO = "Qualquer jogo"
 
-#: A Steam. **Ela não vem do censo dos lançadores** (`censo_dos_lancadores` lê
-#: os CINCO que não são a Steam): quem responde por ela é o
-#: `jogos_locais.jogos_da_biblioteca_steam`. Para esta tradução isso é
-#: indiferente — o que chega aqui é o NOME, e a Steam é o único nome que tem
-#: duas formas atrás (ver `forma_da_procedencia`).
 PROCEDENCIA_DA_STEAM = "Steam"
 
-#: O QUE SEPARA AS PARTES DA COLUNA «Funciona em» — ``Steam · ELDEN RING ·
-#: 1245620``. Ele mora aqui, junto das palavras, porque tem DOIS escritores que
-#: não podem se importar: o gerador do desenho (`interface/aba10.py`, que lê o
-#: repositório no import e por isso nunca entra no caminho do produto) e o
-#: pacote vivo (`pacotes/a10_perfis.py`). Enquanto os dois o digitarem, um dia
-#: um deles muda e a régua de forma não pega — ela compara a MARCAÇÃO das duas
-#: linhas, não o texto de dentro.
-#:
-#: **É O PONTO MÉDIO, e não o `•` do `monta.SEPARADOR`**: aquele é o separador
-#: do rótulo do CONTROLE (`P1 • Cosmic Red • USB`) e vem com marcação dentro.
 SEPARADOR_DA_PROCEDENCIA = " · "
 
-#: As duas que NÃO são lançador e existem em toda máquina — inclusive numa
-#: recém-instalada, sem Steam, sem Heroic e sem Lutris. É a ordem dela de
 #: 11/09/2026: *"a ideia é que todas as features mesmo do app funcionem  (noqa-acento)
 #: nao so pra mim mas pra qualquer outro user"*.  (noqa-acento) cita ela
 _FORMA_FIXA: dict[str, str] = {
@@ -642,8 +457,6 @@ _FORMA_FIXA: dict[str, str] = {
     PROCEDENCIA_DE_QUALQUER_JOGO: "any",
 }
 
-#: O CAMINHO DE VOLTA das duas fixas — a inversão de `_FORMA_FIXA`, e não uma
-#: segunda tabela.
 _FIXA_DO_PRESET: dict[str, str] = {v: k for k, v in _FORMA_FIXA.items()}
 
 
@@ -693,29 +506,7 @@ def procedencia_do_match(
     match: Match | None,
     lancador_da_chave: Callable[[str], str] | None = None,
 ) -> str | None:
-    """De onde vem o jogo deste perfil — ou ``None``, e aí a tela não sabe.
-
-    É o CAMINHO DE VOLTA de `forma_da_procedencia`, e o ``None`` é o estado
-    honesto que o produto já tinha: `perfis_web._ambiente_do_perfil` devolve
-    ``None`` para a regra que este seletor não sabe descrever (título de
-    janela, lista de classes, `MatchManual`), o campo abre TRAVADO com a frase
-    do que ele é, e o `match` do disco fica intacto. Isto não inventa um sexto
-    estado: reusa aquele.
-
-    **O ``game`` E O ``janela`` PERGUNTAM AO CATÁLOGO**, e é aí que a §5 da
-    sprint se cumpre — *"um perfil que já existe com forma escolhida à mão
-    continua válido e continua sendo mostrado"*. A chave que o perfil guarda
-    (``gotg.exe``, ``mk1.exe``) é levada ao `lancador_da_chave`, que responde
-    «Heroic», «Lutris» ou o que for; quem não está no catálogo cai no rótulo
-    residual que a TELA escolhe (`jogos_locais.LANCADOR_DIRETO`, *"Instalado
-    aqui"*), e continua editável. **Medido nos 27 perfis dela em 11/09/2026:**
-    25 são `steam_game` (→ «Steam»), um é `game` (``guard``) e um é `janela`
-    (``Hefesto-Dualsense4Unix``) — os dois últimos são exatamente os que
-    dependem desta porta para não abrirem travados.
-
-    Sem `lancador_da_chave` a resposta é ``None``: afirmar uma procedência sem
-    ter a quem perguntar seria a tela adivinhando de onde o jogo dela veio.
-    """
+    """De onde vem o jogo deste perfil — ou ``None``, e aí a tela não sabe."""
     preset = detect_simple_preset(match) if match is not None else None
     if preset is None:
         return None
@@ -723,27 +514,6 @@ def procedencia_do_match(
     if fixa is not None:
         return fixa
     if preset in ("steam", "steam_game"):
-        # **A FORMA DA STEAM DEIXOU DE SIGNIFICAR «É DA STEAM» — 21/09/2026.**
-        #
-        # Medido com o jogo dela aberto: o Heroic lança pelo umu, que monta a
-        # pilha da Steam e exporta `SteamAppId`; o Proton batiza a janela de
-        # `steam_app_1088850`. Ou seja: *Guardians of the Galaxy*, que é da
-        # Epic, tem endereço com a cara da Steam — e este campo dizia «Steam»
-        # sobre ele. A tela dela mostrava «Funciona em: Heroic», e passaria a
-        # mentir no tique seguinte ao perfil ganhar a chave certa.
-        #
-        # Então a pergunta vai ao CATÁLOGO antes do rótulo fixo: quem sabe de
-        # onde o jogo vem é o censo dos lançadores, e ele conhece o endereço
-        # pelo qual a janela se anuncia. Sem catálogo a quem perguntar, ou com
-        # um endereço que ninguém reivindica, a resposta volta a ser «Steam» —
-        # que é o certo: um `steam_app_<id>` de que nenhum lançador se diz dono
-        # é um jogo da Steam.
-        # **SÓ O `steam_game`, NUNCA O `steam`.** O preset `steam` é o CLIENTE
-        # da loja (`process_name=["steam"]`), não um jogo: o `simple_extra`
-        # dele devolve a palavra `steam`, e perguntar ao catálogo por
-        # `steam_app_steam` traz o residual — a tela dizendo «Instalado aqui»
-        # sobre a própria Steam. Medido na régua, no mesmo minuto em que a
-        # cura entrou.
         if preset == "steam_game" and lancador_da_chave is not None and (
                 match is not None):
             numero = simple_extra(match)
@@ -752,16 +522,9 @@ def procedencia_do_match(
                     PROCEDENCIA_DA_STEAM)
         return PROCEDENCIA_DA_STEAM
     if preset in ("game", "janela"):
-        # O `match is None` já saiu na primeira linha desta função — o
-        # `detect_simple_preset` só devolve preset para um `Match` de verdade —,
-        # e esta guarda repete o fato para o verificador de tipo, que não
-        # consegue seguir a implicação por duas chamadas.
         if lancador_da_chave is None or match is None:
             return None
         return lancador_da_chave(simple_extra(match)) or None
-    # `terminal` e `editor` continuam FORA do desenho dela, e continuam caindo
-    # no campo travado com a frase — o que é o certo: nenhum dos dois responde
-    # *"de onde vem o jogo?"*, porque nenhum dos dois é jogo.
     return None
 
 
@@ -769,26 +532,7 @@ def oferta_do_funciona_em(
     lancadores_da_maquina: Iterable[str],
     atual: str = "",
 ) -> list[str]:
-    """O que o campo «Funciona em:» oferece NESTA máquina, na ordem da tela.
-
-    ``[«Navegação»] + os lançadores que existem + [«Qualquer jogo»]``.
-
-    **A LISTA NÃO É DIGITADA** — os lançadores vêm do censo, e um que a máquina
-    não tem não aparece. Numa instalação sem Steam, sem Heroic e sem Lutris
-    sobram as duas fixas, **e a tela continua certa**: sem linha vazia, sem
-    erro e sem uma palavra que pressuponha Steam. É a §6.4 da sprint, e a razão
-    é a ordem dela: o produto é para qualquer pessoa, não para esta bancada.
-
-    **O `atual` ENTRA SEMPRE, e sem ele a tela mentiria.** Um ``<select>`` só
-    mostra o que oferece: se ela desinstalar o Heroic, o perfil de um jogo do
-    Heroic continua no disco e continua válido, e sem esta linha o campo cairia
-    para a primeira opção — a tela AFIRMANDO uma regra que o arquivo não tem.
-    É o mesmo defeito que o `opts(travessao=True)` do desenho veio curar, medido
-    no DOM vivo em 04/09/2026.
-
-    Duplicata não entra duas vezes, e a ordem de chegada manda: quem ordena os
-    lançadores é quem os conta.
-    """
+    """O que o campo «Funciona em:» oferece NESTA máquina, na ordem da tela."""
     fora = [PROCEDENCIA_DA_NAVEGACAO]
     for nome in list(lancadores_da_maquina) + ([atual] if atual else []):
         limpo = str(nome or "").strip()

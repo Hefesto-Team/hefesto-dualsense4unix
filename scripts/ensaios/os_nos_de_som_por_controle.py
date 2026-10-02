@@ -1,72 +1,5 @@
 #!/usr/bin/env python3
-"""os_nos_de_som_por_controle.py — os quatro nós na lista VIVA do sistema, por controle.
-
-A PERGUNTA QUE ELE RESPONDE (SOM-POR-CONTROLE-01 §1 e §6; MIC-OS-QUATRO-01)
-----------------------------------------------------------------------------
-Duas sprints estão `feita` — O-ALTO-FALANTE-VIRTUAL-01 e SOM-QUE-SAI-01 — e
-os nós que elas descrevem **não estavam na mesa dela em 08/09 às 23h**
-(`pactl`: 2 sinks USB, 2 fontes USB, HDMI padrão, 0 «Alto-falante do
-Controle N», 0 nó de rádio). *Régua verde sobre nó que não existe é a
-assinatura dos instrumentos falsos desta casa.* Este instrumento lê a lista
-viva e diz, por controle físico:
-
-    sink FÍSICO (a placa USB)     só no cabo, e some com o cabo
-    «Alto-falante do Controle N»  o nó por controle, que NÃO some
-    «Microfone do Controle N»     idem, na entrada
-    a FONTE                       mix (há um loopback do monitor da saída
-                                  padrão para o nó) ou sfx (o nó está livre)
-
-É LEITURA PURA: `pactl`, `/sys` e `/proc`. Não escreve no aparelho, não muda
-o sink padrão, não carrega módulo nenhum.
-
-A MORDIDA DO §6, ao vivo
-------------------------
-`--observar 60` fica sessenta segundos relendo a lista a cada 2 s e imprime
-cada nó que APARECEU ou SUMIU. É o teste de *tirar o cabo de um e o nó dele
-continuar na lista* — ela tira, o instrumento diz o que a lista fez.
-
-Os nomes dos nós são decisão dela de 09/09/2026 (*"4a"*): «Alto-falante do
-Controle N» · «Microfone do Controle N». Esses rótulos são o que ELA lê; o
-instrumento **não casa por eles**.
-
-O DONO DO NÓ SE PERGUNTA PELO NOME DE DENTRO, NUNCA PELA PROSA (12/09/2026)
---------------------------------------------------------------------------
-TRES-CONTAS-PARA-UM-NUMERO-01 §6. Até 11/09 este instrumento decidia de quem
-era o nó comparando o TEXTO do `Description`, cujo N é o número do assento.
-Medido em 09/09: entre duas corridas, com a mesa mudando, **o mesmo nó virtual
-passou a ser atribuído a outro controle** — o número andou, o texto andou junto,
-e o censo seguiu o texto.
-
-A ressalva dela fecha a questão, e é sobre PRODUTO:
-
-    *"aí é foda pq a ideia não é termos nada focado pro meu caso apenas, mas
-    como produto que possa funcionar com outra pessoa."*  (noqa-acento: dela)
-
-O rótulo é prosa em português: muda com tradução, e some se alguém renomear o nó
-à mão. **FATO SUBSTITUÍDO — 20/09/2026:** esta frase também dizia *"muda quando
-o assento anda"*, e era falso no sentido que importa. Ela ouviu, em teste cego,
-o «Alto-falante do Controle 3» sair no Player 1: o rótulo é a fotografia do
-assento de quando o nó NASCEU, e até aquele dia ninguém o reescrevia quando o
-assento andava. **Hoje ele acompanha** — por `rotulo_envelheceu`, na varredura,
-republicando o nó —, e mesmo assim ele espera o silêncio do nó para mudar, então
-existe janela em que ele está atrasado. Ler prosa continua sendo o erro.
-
-A âncora é o que o daemon ESCREVE e não muda de forma — o NOME de dentro do nó,
-que carrega o endereço do controle:
-
-    `alto_falante_bt.nome_do_sink(uniq)`      → `hefesto_som_<hex6>`
-    `canal_do_microfone.nome_do_canal(uniq)`  → `hefesto_mic_<hex6>`
-
-Os dois vêm do produto, por `uniq`. A metade da saída já casava assim desde que
-nasceu; a da ENTRADA recebia `""` no lugar do nome e por isso só tinha a prosa.
-Renomeie o `Description` de um nó à mão e o censo continua acertando o dono — se
-ele errar, ele voltou a ler prosa.
-
-USO
-    os_nos_de_som_por_controle.py
-    os_nos_de_som_por_controle.py --observar 60
-    os_nos_de_som_por_controle.py --json
-"""
+"""os_nos_de_som_por_controle.py — os quatro nós na lista VIVA do sistema, por controle."""
 
 from __future__ import annotations
 
@@ -89,16 +22,7 @@ from microfone_no_cabo import placas_de_dualsense
 
 
 def _rotulo_do_produto(qual: str) -> str:
-    """«Alto-falante do Controle» / «Microfone do Controle», do DONO da constante.
-
-    Estavam digitados aqui, os dois. Um rótulo digitado num instrumento é a forma
-    de régua falsa que esta casa já nomeou onze vezes: ela mede o que ALGUÉM
-    escreveu, não o que o produto publica — mude o rótulo no produto e o censo
-    passa a dizer «NÃO EXISTE» a um nó que está lá.
-
-    Só entra na FRASE que ela lê (a coluna de faltas). Quem decide o dono do nó é
-    `_casa`, pelo nome de dentro.
-    """
+    """«Alto-falante do Controle» / «Microfone do Controle», do DONO da constante."""
     try:
         if qual == "saida":
             from hefesto_dualsense4unix.integrations import alto_falante_bt as dono
@@ -118,12 +42,7 @@ def _falta(qual: str, numero: int, nome_de_dentro: str) -> str:
 
 
 def pactl(*argv: str) -> str:
-    """`pactl <argv>` EM INGLÊS, ou "" quando o pactl não existe ou o servidor não responde.
-
-    `LC_ALL=C` não é capricho: na máquina dela o pactl fala português — `Nome:`,
-    `Descrição:` — e um parser que procura `Name:` diz «NÃO EXISTE» a um sink
-    que está lá. Foi o que aconteceu na primeira corrida, em 09/09.
-    """
+    """`pactl <argv>` EM INGLÊS, ou "" quando o pactl não existe ou o servidor não responde."""
     if not shutil.which("pactl"):
         return ""
     try:
@@ -179,7 +98,7 @@ class NoDoControle:
     fonte_fisica: str = ""
     alto_falante_virtual: str = ""
     microfone_virtual: str = ""
-    fonte: str = "sfx"  #: mix quando há loopback apontando para o nó
+    fonte: str = "sfx"
     faltas: list[str] = field(default_factory=list)
 
 
@@ -196,11 +115,7 @@ def _nome_do_sink_de_dentro(mac: str) -> str:
 
 
 def _nome_da_fonte_de_dentro(mac: str) -> str:
-    """`hefesto_mic_<hex6>` deste controle, PERGUNTADO ao dono do canal.
-
-    O par do `_nome_do_sink_de_dentro`, e ele FALTAVA — era por isso que a
-    metade da entrada só tinha o texto do `Description` para casar.
-    """
+    """`hefesto_mic_<hex6>` deste controle, PERGUNTADO ao dono do canal."""
     try:
         from hefesto_dualsense4unix.integrations import canal_do_microfone
     except ImportError:
@@ -212,16 +127,7 @@ def _nome_da_fonte_de_dentro(mac: str) -> str:
 
 
 def _casa(nome: str, nome_de_dentro: str) -> bool:
-    """O nó é DESTE controle? Pelo nome de dentro, nunca pelo rótulo.
-
-    Casa por igualdade, não por substring: `hefesto_mic_0000f0` não pode casar
-    com um `hefesto_mic_c311f01` que não é dele — é a mesma armadilha que
-    `SourceVirtualPipeWire._modulos_da_source` já paga com casamento por token.
-
-    Sem nome de dentro (controle sem identidade legível) a resposta é NÃO. O
-    censo prefere dizer «NÃO EXISTE» a atribuir o nó de alguém ao vizinho: a
-    ausência é resposta, o dono errado é mentira.
-    """
+    """O nó é DESTE controle? Pelo nome de dentro, nunca pelo rótulo."""
     return bool(nome_de_dentro) and nome == nome_de_dentro
 
 

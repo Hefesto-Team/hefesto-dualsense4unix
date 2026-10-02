@@ -16,12 +16,12 @@ Medido, arquivo a arquivo, nesta frente:
 
     símbolo                                  onde ele aparece no lado HTML
     ───────────────────────────────────────  ───────────────────────────────────
-    medir_guarda_do_steam_input()            a09_sistema.py:359   CHAMADA
-    medir_prontuario_dos_jogos()             a09_sistema.py:444   CHAMADA
-    _aplicar_sensibilidade_ligar_desligar    a09_sistema.py:1251  docstring
-    on_daemon_service_restart                a09_sistema.py:1408  comentário
-    on_daemon_autostart_toggled              a09_sistema.py:1407  comentário
-    gui_dialogs.confirm_restore_default      a09_sistema.py:1521  string de dado
+    medir_guarda_do_steam_input()            a09_sistema.py:151   CHAMADA
+    medir_prontuario_dos_jogos()             a09_sistema.py:183   CHAMADA
+    _aplicar_sensibilidade_ligar_desligar    a09_sistema.py:751  docstring
+    on_daemon_service_restart                a09_sistema.py:860  comentário
+    on_daemon_autostart_toggled              a09_sistema.py:859  comentário
+    gui_dialogs.confirm_restore_default      a09_sistema.py:950  string de dado
 
 As duas primeiras fecharam de verdade; as quatro de baixo não. É a família de
 defeito que esta casa já nomeou — *a régua confunde a PALAVRA com o ATO* — e a
@@ -50,8 +50,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: A página que o PRODUTO renderiza — não a bancada. Uma régua que medisse o
-#: `mockup/` daria verde sobre um endereço que a tela dela não tem.
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html"
 
 #: O `state_full` de mentira. O MAC é da faixa sintética da casa.
@@ -74,12 +72,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
 
 class JanelaDeMentira:
-    """O dublê de `DaemonActionsMixin` — e ele NÃO fala com o systemd.
-
-    Sem ele, cada teste desta régua rodaria `systemctl --user` de verdade na
-    máquina de quem a executa. Uma régua que reinicia o daemon de quem a roda
-    não é régua.
-    """
+    """O dublê de `DaemonActionsMixin` — e ele NÃO fala com o systemd."""
 
     def __init__(self, status: str = "online_systemd",
                  texto: str = "● unidade ativa") -> None:
@@ -93,14 +86,7 @@ class JanelaDeMentira:
         return self.texto
 
     def _find_repo_file(self, relpath: str):
-        """O localizador REAL, e não um dublê — 06/09/2026.
-
-        Ele é PURO (`encontrar_arquivo_do_repo` com as bases de instalação): não
-        roda nada, não escreve nada, só procura no disco. Dublá-lo devolvendo um
-        caminho inventado deixaria a régua verde sobre um `CONSERTOS` com nome
-        de script errado — que é a BUG-GUI-REPO-ROOT-OFFBYONE-01, o botão que
-        diz "Correções aplicadas" sem ter rodado nada.
-        """
+        """O localizador REAL, e não um dublê — 06/09/2026."""
         from hefesto_dualsense4unix.app.actions.daemon_actions import (
             DaemonActionsMixin,
         )
@@ -130,14 +116,7 @@ class PonteDeMentira:
         return self.releu
 
     def chamar_detalhado(self, metodo: str, *a):
-        """A porta que traz `(ok, motivo)` — a do `atualizar` desde 06/09/2026.
-
-        `motivo` sai `None` de propósito: é o que `_call_checked` devolve para
-        toda falha de transporte (`app/ipc_bridge.py:382-387`), que é o caso da
-        mesa dela com o serviço parado. **O dublê não pode ser mais frouxo que a
-        função real** — foi assim que três réguas desta casa deram verde sobre
-        defeito vivo.
-        """
+        """A porta que traz `(ok, motivo)` — a do `atualizar` desde 06/09/2026."""
         self.chamadas.append((metodo, a))
         return self.releu, None
 
@@ -151,11 +130,7 @@ def a09(monkeypatch):
     from pacotes import a09_sistema as mod
 
     mod._JANELA_ANTIGA[:] = [JanelaDeMentira()]
-    # `is-enabled` NÃO PODE SAIR DA MÁQUINA DE QUEM RODA: `_autostart` chama
-    # `subprocess.run` direto, fora do mixin.
     monkeypatch.setattr(mod, "_autostart", lambda: "enabled")
-    # O EXAME DE VERDADE VARRE O DISCO. Aqui ele é injetado, para que o número
-    # de linhas seja o do TESTE e não o da máquina de quem o roda.
     mod._LENTO.clear()
     mod._LENTO_EM_VOO[0] = False
     mod._PRONTUARIO.clear()
@@ -180,13 +155,7 @@ def _pagina() -> str:
     return PAGINA.read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# 1. OS QUATRO ESTADOS CHEGAM AO PIXEL
-# ---------------------------------------------------------------------------
-#: OS QUATRO NÃO SE DIGITAM AQUI — eles são as chaves de
 #: `aba_sistema._ESTADO_DO_HEFESTO`, e o texto de cada um é o dela. Uma régua
-#: que escrevesse "Ligado, em modo improvisado" viraria o segundo dono da frase,
-#: e reprovaria a melhora no dia em que ela reescrevesse o texto.
 def _os_quatro() -> list[str]:
     from hefesto_dualsense4unix.gui import aba_sistema as tela
 
@@ -224,9 +193,6 @@ def test_cada_estado_da_matriz_chega_ao_valor_da_tela(a09, estado):
     a09._JANELA_ANTIGA[:] = [JanelaDeMentira(status=estado)]
     a09._LENTO.clear()
     fora = a09.pacote(calado)
-    # DESDE 25/09/2026 o estado chega na linha «Serviço» do Status
-    # (A-09-SISTEMA-EM-TRES-SECOES-01): a pílula diz a palavra e a cor, e a
-    # lista inteira vai num endereço só. A travessia medida é a mesma.
     esperado = tela.status_do_servico(estado, {})
     lista = fora[a09.CAMPO_DO_STATUS]
     servico = lista.split("</div>", 1)[0]
@@ -236,15 +202,7 @@ def test_cada_estado_da_matriz_chega_ao_valor_da_tela(a09, estado):
 
 
 def test_o_estado_avulso_nao_promete_que_ele_volta_sozinho(a09, ctx):
-    """O `online_avulso` não pode sair com o texto e a cor do `online_systemd`.
-
-    É a consequência que a fila da paridade nomeia: os dois estados "de pé" não
-    são o mesmo estado, e a diferença é uma promessa — *"se travar, ele volta
-    sozinho"* só vale sob o systemd.
-
-    MORDIDA: fiz `_status_do_daemon` devolver sempre `online_systemd`. Este
-    teste reprovou com `'Ligado' == 'Ligado'` no lugar da desigualdade.
-    """
+    """O `online_avulso` não pode sair com o texto e a cor do `online_systemd`."""
     from hefesto_dualsense4unix.gui import aba_sistema as tela
 
     a09._JANELA_ANTIGA[:] = [JanelaDeMentira(status="online_avulso")]
@@ -256,44 +214,19 @@ def test_o_estado_avulso_nao_promete_que_ele_volta_sozinho(a09, ctx):
     assert "improvisado" in servico, servico
 
 
-# ---------------------------------------------------------------------------
-# 2. O INTERRUPTOR, O BOTÃO ACESO E O PAINEL EM REPOUSO SÃO DADO
-# ---------------------------------------------------------------------------
-#: OS TRÊS ENDEREÇOS QUE ERAM LITERAL DO DESENHO, e cada um com o valor que a
-#: página congelava. A régua NÃO digita o valor esperado — ela pergunta ao dono
-#: e exige que o pacote e a página concordem com ele.
 TRES_QUE_ERAM_DESENHO = ("hefesto-autostart", "bateria-perfil", "registro-texto")
 
 
 @pytest.mark.parametrize("endereco", TRES_QUE_ERAM_DESENHO)
 def test_o_endereco_que_era_desenho_existe_na_pagina(endereco):
-    """A página do PRODUTO tem onde receber os três. Sem o endereço, o valor cai
-    no vazio e a tela continua com o literal do mockup — que foi o defeito
-    exato de 02/09, com o painel técnico mostrando quatro linhas de registro que
-    nunca aconteceram.
-
-    MORDIDA: apaguei `data-campo="bateria-perfil"` dos três botões do Perfil de
-    Bateria numa cópia da página. Reprovou nomeando o endereço.
-    """
+    """A página do PRODUTO tem onde receber os três. Sem o endereço, o valor cai"""
     assert f'data-campo="{endereco}"' in _pagina(), (
         f"a página do produto não tem `data-campo=\"{endereco}\"` — o pacote "
         "escreveria no vazio e a tela ficaria com o literal do desenho.")
 
 
 def test_o_interruptor_do_autostart_sai_do_systemd_e_nao_do_desenho(a09, ctx, monkeypatch):
-    """`hefesto-autostart` acompanha `is-enabled` nos TRÊS desfechos.
-
-    A página nasce com a chave ACESA (`class="chave on"`). Enquanto o pacote não
-    escrevia este endereço, ela ficava acesa qualquer que fosse a verdade do
-    systemd — e o `✓` verde ao lado dizia o mesmo. Hoje nesta máquina
-    `is-enabled` responde `enabled` e o desenho acertava por coincidência.
-
-    O `False` E O `None` SÃO COISAS DIFERENTES, e o glifo é quem os separa:
-    `disabled` é "não liga sozinho"; não conseguir perguntar ao systemd não é.
-
-    MORDIDA: apaguei a linha `fora["hefesto-autostart"] = auto` do pacote.
-    Reprovou nos três casos com `KeyError: 'hefesto-autostart'`.
-    """
+    """`hefesto-autostart` acompanha `is-enabled` nos TRÊS desfechos."""
     from hefesto_dualsense4unix.gui import aba_sistema as tela
 
     for cru, esperado in (("enabled", True), ("disabled", False), (None, None)):
@@ -303,10 +236,6 @@ def test_o_interruptor_do_autostart_sai_do_systemd_e_nao_do_desenho(a09, ctx, mo
         assert fora["hefesto-autostart"] is esperado, (
             f"`is-enabled` = {cru!r} chegou à tela como "
             f"{fora['hefesto-autostart']!r}")
-    # O GLIFO QUE SEPARAVA O `False` DO `None` SAIU com a chave, em 25/09/2026:
-    # o autostart virou o ligável «Iniciar com o sistema», e a pílula tem dois
-    # estados. O `None` continua separado onde importa — no clique, que recusa
-    # em vez de adivinhar (`a09_sistema.autostart`).
     assert tela.GLIFO_INFO
 
 
@@ -335,21 +264,11 @@ def test_o_perfil_de_bateria_aceso_sai_do_disco(a09, ctx):
         assert fora["bateria-perfil"] == perfil_na_tela(), (
             f"gravei {escolhido!r} no disco e a tela recebeu "
             f"{fora['bateria-perfil']!r}")
-        # E O ACESO TEM ONDE POUSAR: o botão daquele perfil declara na página
-        # que é ELE quem acende com este valor.
         assert f'data-hef-quando="{escolhido}"' in _pagina()
 
 
 def test_o_painel_em_repouso_e_o_systemctl_status_e_nao_um_traco(a09, ctx):
-    """Sem ninguém clicar, o painel técnico traz o que a janela antiga sempre teve.
-
-    A GTK NUNCA TEVE UM TRAÇO AQUI: o `Gtk.TextView` dela fica sempre com a
-    saída de `systemctl status <unit>` (`daemon_actions.py:1970` e `:2549`).
-    Esta tela mostrava `—` até alguém clicar em "Ver detalhes".
-
-    MORDIDA: troquei o corpo de `_repouso_do_painel` por `return ""`. Reprovou
-    dizendo que o painel voltou ao traço.
-    """
+    """Sem ninguém clicar, o painel técnico traz o que a janela antiga sempre teve."""
     fora = a09.pacote(ctx)
     assert fora["registro-texto"] != "—", "o painel em repouso voltou ao traço"
     assert "unidade ativa" in fora["registro-texto"], (
@@ -357,16 +276,7 @@ def test_o_painel_em_repouso_e_o_systemctl_status_e_nao_um_traco(a09, ctx):
 
 
 def test_o_ultimo_pedido_vence_o_repouso_ate_o_proximo_clique(a09, ctx):
-    """Quem clicou em "Ver …" continua lendo o que pediu, tique após tique.
-
-    Sem isto, o texto pedido apareceria e sumiria em meio segundo — o painel é
-    repintado a 500 ms.
-
-    MORDIDA: apaguei `_PAINEL[0] = texto` de `_para_o_painel`. Reprovou: o
-    segundo pacote já trazia o `systemctl status` de volta.
-    """
-    # O «Ver detalhes» saiu em 25/09/2026; quem escreve no painel hoje é a
-    # pergunta de um gesto de dois tempos, pelo MESMO `_para_o_painel`.
+    """Quem clicou em "Ver …" continua lendo o que pediu, tique após tique."""
     a09._para_o_painel("o que ela pediu")
     primeiro = a09.pacote(ctx)["registro-texto"]
     segundo = a09.pacote(ctx)["registro-texto"]
@@ -374,27 +284,14 @@ def test_o_ultimo_pedido_vence_o_repouso_ate_o_proximo_clique(a09, ctx):
     a09._limpar_o_painel()
 
 
-# ---------------------------------------------------------------------------
-# 3. O EXAME TEM AS OITO FONTES DA JANELA ANTIGA
-# ---------------------------------------------------------------------------
 def test_os_dois_achados_condicionais_entram_no_exame(a09, monkeypatch):
-    """O vigia do Steam Input e o prontuário dos jogos entram QUANDO FALAM.
-
-    Os dois tinham UM chamador em toda a árvore, e era a GTK
-    (`_refresh_storm_diag`, `daemon_actions.py:1136` e `:1145`) — por isso o
-    exame desta tela era 6/8 do exame da janela antiga. Os dois só falam quando
-    há problema, então a diferença aparece no dia do problema, que é justamente
-    o dia em que ela precisa ver.
-
-    MORDIDA: apaguei o `linhas.append(vigia)` de `_achados`. Reprovou dizendo
-    que o achado do vigia não estava na lista.
-    """
+    """O vigia do Steam Input e o prontuário dos jogos entram QUANDO FALAM."""
     monkeypatch.setattr(a09._exame, "storm_report", lambda **k: [("[ OK ]", "base")])
     monkeypatch.setattr(a09._exame, "controles_no_cabo", lambda s: 1)
     monkeypatch.setattr(a09._daemon, "medir_guarda_do_steam_input",
                         lambda: ("[WARN]", "o vigia do Steam Input está morto"))
     a09._PRONTUARIO.clear()
-    a09._PRONTUARIO["quando"] = 1e18   # nunca vence: a thread de 7 s não roda
+    a09._PRONTUARIO["quando"] = 1e18
     a09._PRONTUARIO["achado"] = ("[WARN]", "um jogo sem perfil no disco")
 
     linhas = a09._achados(ESTADO)
@@ -405,11 +302,7 @@ def test_os_dois_achados_condicionais_entram_no_exame(a09, monkeypatch):
 
 
 def test_um_achado_condicional_que_levanta_nao_come_o_exame(a09, monkeypatch):
-    """Uma Steam meio instalada não pode apagar as linhas que já estavam prontas.
-
-    MORDIDA: tirei o `try/except` de volta do `medir_guarda_do_steam_input`.
-    Reprovou com a exceção subindo até o teste.
-    """
+    """Uma Steam meio instalada não pode apagar as linhas que já estavam prontas."""
     monkeypatch.setattr(a09._exame, "storm_report", lambda **k: [("[ OK ]", "base")])
     monkeypatch.setattr(a09._exame, "controles_no_cabo", lambda s: 1)
 
@@ -424,9 +317,6 @@ def test_um_achado_condicional_que_levanta_nao_come_o_exame(a09, monkeypatch):
     assert [f for _, f in linhas] == ["base"]
 
 
-# ---------------------------------------------------------------------------
-# 4. A TRAVA QUE VALE, E A ÚNICA QUE NÃO VALE
-# ---------------------------------------------------------------------------
 def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):
     """«Ver os plugins» SAIU — SISTEMA-BOTOES-01, 13/09/2026.
 
@@ -452,38 +342,7 @@ def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):
 
 
 def test_ver_detalhes_nao_obedece_a_trava_e_a_divergencia_e_declarada(a09):
-    """O único gesto desta aba que desobedece a `travas()`, e ele diz por quê.
-
-    `travas()` tranca o `ver-detalhes` com a frase *"O serviço está desligado —
-    não há o que perguntar a ele."* (dividida com o `ver-plugins` até ele sair
-    da aba, em 13/09/2026). Para o `ver-detalhes` ela é falsa neste produto: o
-    `ver-detalhes` daqui não pergunta ao daemon, ele lê
-    o journal do systemd, que sobrevive à queda da unit. Com o serviço parado,
-    este é o botão que responde **por que ele caiu**.
-
-    A RÉGUA COBRA NOS DOIS SENTIDOS, e é o ponto dela: enquanto `travas()`
-    trancar o `ver-detalhes`, a divergência TEM de estar declarada; no dia em
-    que a camada do produto separar os dois, esta linha reprova e manda apagar a
-    declaração — para que ela não fique como um esquecimento.
-
-    ELA COMPARA CONJUNTOS, E NÃO PERCORRE A DECLARAÇÃO — e a primeira versão
-    desta régua fazia o contrário. Ela iterava `TRAVA_QUE_NAO_VALE_AQUI.items()`
-    e cobrava cada entrada; com o dicionário VAZIO o laço não roda, e a mordida
-    de esvaziá-lo passou VERDE. Medido nesta frente, na primeira execução das
-    mordidas: 19 passaram com a declaração arrancada. É a régua dando verde
-    sobre nada — o defeito que esta casa mais pagou —, e a cura é perguntar aos
-    dois donos (quem TRANCA e quem OBEDECE) e exigir que a diferença entre eles
-    seja exatamente o que está declarado.
-
-    QUEM OBEDECE SE LÊ NO FONTE, não numa segunda lista: um `_trava(ctx, "x")`
-    no arquivo é a prova de que `x` consulta a camada do produto. Manter aqui a
-    lista dos que obedecem seria o segundo dono do fato que esta régua mede.
-
-    MORDIDA 1: esvaziei `TRAVA_QUE_NAO_VALE_AQUI`. Reprovou nomeando
-    `ver-detalhes` como trava desobedecida sem razão declarada.
-    MORDIDA 2: acrescentei `_trava(ctx, "ver-detalhes")` ao gesto — isto é, o
-    pacote passou a obedecer. Reprovou mandando apagar a declaração.
-    """
+    """O único gesto desta aba que desobedece a `travas()`, e ele diz por quê."""
     import re
 
     import pacotes
@@ -494,12 +353,8 @@ def test_ver_detalhes_nao_obedece_a_trava_e_a_divergencia_e_declarada(a09):
     a09._LENTO.clear()
     parado = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
 
-    #: QUEM TRANCA — a camada do produto, com o serviço desligado (o único
-    #: estado em que ela tranca alguma coisa além do `retomar`).
     tranca = set(tela.travas(a09._leitura(parado)))
-    #: QUEM É DESTA PÁGINA — o registro do despachante, e não uma lista minha.
     desta_pagina = {nome for pagina, nome in pacotes.GESTOS if pagina == "09-sistema.html"}
-    #: QUEM OBEDECE — lido no fonte do pacote.
     fonte = pathlib.Path(a09.__file__).read_text(encoding="utf-8")
     obedece = set(re.findall(r'_trava\(ctx,\s*"([^"]+)"\)', fonte))
 
@@ -513,13 +368,7 @@ def test_ver_detalhes_nao_obedece_a_trava_e_a_divergencia_e_declarada(a09):
     for nome, motivo in a09.TRAVA_QUE_NAO_VALE_AQUI.items():
         assert len(motivo) > 80, f"a razão de `{nome}` não diz o bastante"
 
-    # (O `ver-detalhes`, que era o outro desobediente, saiu da aba em
-    # 25/09/2026: o registro passou a estar sempre à vista.)
 
-
-# ---------------------------------------------------------------------------
-# 5. O `ATUALIZAR` RELÊ A ABA
-# ---------------------------------------------------------------------------
 def test_o_atualizar_zera_a_faixa_lenta(a09, ctx):
     """Depois do `daemon.reload`, a próxima pintura relê as cinco leituras caras.
 
@@ -532,7 +381,7 @@ def test_o_atualizar_zera_a_faixa_lenta(a09, ctx):
     MORDIDA: apaguei o `_LENTO.clear()` do gesto. Reprovou dizendo que o cache
     continuava carregado depois do clique.
     """
-    a09.pacote(ctx)                      # carrega a faixa lenta
+    a09.pacote(ctx)
     assert a09._LENTO, "a faixa lenta devia estar carregada antes do clique"
     ponte = PonteDeMentira()
     a09.atualizar(ctx, {}, ponte)
@@ -563,39 +412,13 @@ def test_o_atualizar_recarrega_antes_de_zerar(a09, ctx):
     assert ordem == ["daemon.reload · cache=cheio"], ordem
 
 
-# ---------------------------------------------------------------------------
-# 6. OS DOIS CLIQUES QUE ERAM MORTOS — 06/09/2026, a `SISTEMA-STEAM-01`
-#
-# O CSV registrava a mesma frase para os dois: *"Botão presente, sem dono.
-# Clique morto."* As réguas abaixo CLICAM — nenhuma delas lê o texto do fonte,
-# e é de propósito: seis instrumentos falsos caíram nesta casa em 05/09 por
-# medirem o próprio arquivo em vez do produto.
-# ---------------------------------------------------------------------------
 def _clicar(gesto, ctx, texto: str = ""):
-    """Um clique de verdade, com o que o DOM tinha no botão.
-
-    O `texto` é o que o piloto manda em `o["texto"]` (`hefesto_vivo.BOOTSTRAP`,
-    o ouvinte -> `alvo.textContent`), e é ele que carrega o consentimento: o
-    segundo clique só vale trazendo a palavra que só existe no botão já armado.
-    """
+    """Um clique de verdade, com o que o DOM tinha no botão."""
     return gesto(ctx, {"texto": texto}, PonteDeMentira())
 
 
 def test_o_primeiro_clique_do_consertos_mede_e_nao_mexe(a09, ctx, monkeypatch):
-    """Clique 1 de "Refazer os consertos automáticos": mede, mostra, não age.
-
-    ERA UM CLIQUE MORTO — o botão está desenhado desde que a aba nasceu e o
-    clique não chegava a lugar nenhum.
-
-    O QUE ESTA RÉGUA COBRA é a D-33 do produto virando desenho de tela: o
-    número de jogos com Steam Input só existe ANTES de desligá-lo, e um recibo
-    que contasse o DEPOIS mentiria. Então o clique 1 MEDE e o clique 2 usa o
-    que o 1 mediu.
-
-    MORDIDA: pus o `subprocess.run` no clique 1 (isto é, tirei o
-    `_confirmado`). Reprovou nas duas metades — o painel saiu com o recibo do
-    `format_fix_safe_result` em vez do "clique de novo", e `rodou` encheu.
-    """
+    """Clique 1 de "Refazer os consertos automáticos": mede, mostra, não age."""
     rodou: list[list[str]] = []
     monkeypatch.setattr(a09, "_matriz", lambda: a09._JANELA_ANTIGA[0])
     monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input",
@@ -619,17 +442,7 @@ def test_o_primeiro_clique_do_consertos_mede_e_nao_mexe(a09, ctx, monkeypatch):
 
 def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatch,
                                                            capsys):
-    """Clique 2: os dois scripts do produto, e o recibo é do DONO.
-
-    O RECIBO SAIU DO PAINEL EM 13/09/2026 (TELA-CALADA-03): é recibo, e a régua
-    dela tira recibo da tela. Continua sendo o do dono e continua escrito — no
-    diário da janela —, e o painel volta ao repouso.
-
-    MORDIDA: troquei `CONSERTOS` por uma tupla vazia. Reprovou dizendo que
-    nenhum script rodou — e o `format_fix_safe_result` respondeu *"Não encontrei
-    os scripts de correção nesta instalação"*, que é a frase certa para essa
-    máquina e a errada para esta.
-    """
+    """Clique 2: os dois scripts do produto, e o recibo é do DONO."""
     rodou: list[list[str]] = []
     monkeypatch.setattr(a09, "_matriz", lambda: a09._JANELA_ANTIGA[0])
     monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
@@ -637,14 +450,13 @@ def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatc
     monkeypatch.setattr(subprocess, "run",
                         lambda *a, **k: rodou.append(list(a[0])) or _RC0())
 
-    _clicar(a09.refazer_consertos, ctx)                 # arma
-    carga = _clicar(a09.refazer_consertos, ctx, a09.CONFIRMA)   # confirma
+    _clicar(a09.refazer_consertos, ctx)
+    carga = _clicar(a09.refazer_consertos, ctx, a09.CONFIRMA)
 
     assert len(rodou) == len(a09.CONSERTOS), rodou
     for (relpath, args), comando in zip(a09.CONSERTOS, rodou, strict=True):
         assert comando[0] == "bash" and comando[1].endswith(relpath.split("/")[-1])
         assert comando[2:] == args, comando
-    # O RECIBO É O DO PRODUTO, e não uma frase desta régua nem do gesto.
     assert set(carga) == {"blocos"}, carga
     assert a09._PAINEL[0] is None, "a pergunta do clique 1 ficou no painel"
     assert a09._daemon.format_fix_safe_result(
@@ -657,17 +469,8 @@ def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatc
 
 
 def test_o_conserto_procura_os_scripts_pelo_localizador_do_produto(a09):
-    """Os dois scripts de :data:`CONSERTOS` EXISTEM nesta instalação.
-
-    Não é zelo: contar a raiz do checkout à mão já pagou a
-    BUG-GUI-REPO-ROOT-OFFBYONE-01 nesta casa — os botões do cartão anti-storm
-    viraram no-op SILENCIOSO, com toast de sucesso e nada executado. Um nome de
-    script errado aqui reproduziria exatamente isso.
-
-    MORDIDA: troquei um dos nomes por `scripts/nao_existe.sh`. Reprovou
-    nomeando-o.
-    """
-    a09._JANELA_ANTIGA.clear()          # o localizador REAL, não o dublê
+    """Os dois scripts de :data:`CONSERTOS` EXISTEM nesta instalação."""
+    a09._JANELA_ANTIGA.clear()
     achados = {str(c) for c, _ in a09._consertos_no_disco()}
     assert len(achados) == len(a09.CONSERTOS), (
         f"o localizador do produto achou {len(achados)} dos {len(a09.CONSERTOS)} "
@@ -675,20 +478,8 @@ def test_o_conserto_procura_os_scripts_pelo_localizador_do_produto(a09):
         "botão que diz 'Correções aplicadas' sem ter rodado nada.")
 
 
-# AS QUATRO RÉGUAS DO «Tirar a sobreposição Vulkan» de dois tempos (o censo no
-# clique 1, o não-armar sem nada a fazer, o clique 2 que segue o censo)
-# perderam o objeto em 25/09/2026: o botão virou o ligável «Corrigir Vulkan»,
-# de um clique. O que elas protegiam está em
-# `test_a_09_sistema_em_tres_secoes.py` (liga tirando, desliga devolvendo,
-# recusa sem ter o que tirar) — e a recusa com jogo aberto fica aqui.
 def test_as_camadas_recusam_com_jogo_aberto(a09, ctx, monkeypatch):
-    """O Wine regrava o registro do prefixo ao sair: escrever agora é perder calado.
-
-    Desde 28/09/2026 só a DEVOLUÇÃO mexe no registro (desligar, com camada que
-    nós tiramos), e só ela recusa; a escolha fica ligada, sem meio-termo.
-
-    MORDIDA: tire o `if rl.jogo_aberto()` de `corrigir_vulkan`.
-    """
+    """O Wine regrava o registro do prefixo ao sair: escrever agora é perder calado."""
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
@@ -718,16 +509,7 @@ def test_ligar_as_camadas_com_jogo_aberto_nao_recusa(a09, ctx, monkeypatch):
 
 
 def test_nenhum_dos_cinco_destrutivos_ficou_sem_dono(a09):
-    """`SEM_MOTOR` encolheu, e o que sobra tem razão de MECANISMO.
-
-    Eram três em 04/09; hoje é UM — o `restaurar-de-fabrica`, que não espera
-    motor: espera a linha em `hefesto_vivo.PERIGOSOS`, e esse arquivo é de
-    outra posse. Sem ela a régua de clique restaura o perfil DELA para provar
-    que sabe clicar.
-
-    Esta régua cobra os dois sentidos: quem está em `SEM_MOTOR` não pode ter
-    gesto registrado, e quem NÃO está tem de ter.
-    """
+    """`SEM_MOTOR` encolheu, e o que sobra tem razão de MECANISMO."""
     import pacotes
 
     registrados = {n for (p, n) in pacotes.GESTOS if p == "09-sistema.html"}
@@ -752,22 +534,8 @@ class _RC0:
     stderr = ""
 
 
-# ---------------------------------------------------------------------------
-# 7. O PERFIL DE BATERIA DEIXOU DE SER LITERAL — 06/09/2026
-# ---------------------------------------------------------------------------
-# (As duas linhas do teto, e a régua que as seguia quando o dono mudava,
-# SAÍRAM em 25/09/2026 por pedido dela — as tabelas de baixo do Perfil de
-# Bateria somem.)
-
-
 def test_o_tique_escreve_o_status_e_os_tres_ligaveis(a09, ctx):
-    """As duas linhas do teto SAÍRAM em 25/09/2026, por pedido dela (as tabelas
-    de baixo do Perfil de Bateria somem). O que o tique escreve no lugar é o
-    Status e os três ligáveis — e um `data-campo` sem escritor é o buraco por
-    onde o literal do desenho volta.
-
-    MORDIDA: tire `fora["proton-fixado"]` do `pacote()`. Reprova nomeando-o.
-    """
+    """As duas linhas do teto SAÍRAM em 25/09/2026, por pedido dela (as tabelas"""
     from hefesto_dualsense4unix.interface.pacotes import normalizar
 
     mesa = normalizar(dict(a09.pacote(ctx)))["mesa"]
@@ -780,16 +548,7 @@ def test_o_tique_escreve_o_status_e_os_tres_ligaveis(a09, ctx):
 
 
 def test_o_apelido_da_tela_tem_um_dono_so(a09):
-    """O gerador LÊ o apelido daqui — não o digita.
-
-    Ele vivia em `interface/aba09.py` e passou a ter DOIS leitores em
-    06/09/2026: o gerador (que escreve o desenho) e o pacote (que escreve o
-    valor vivo). Digitado nos dois, os dois se afastariam no dia em que um
-    mudasse — que é como a fita viva morreu calada em 27/08.
-
-    MORDIDA: troquei o valor de `"Barra de luz"` no pacote. O gerador saiu com
-    a palavra nova, e é isso que prova que ele lê daqui.
-    """
+    """O gerador LÊ o apelido daqui — não o digita."""
     import aba09
 
     assert aba09.APELIDO_NA_TELA == a09.APELIDO_NA_TELA, (
@@ -797,26 +556,8 @@ def test_o_apelido_da_tela_tem_um_dono_so(a09):
         "pacote, e `aba09._constantes` o lê de lá sem importar nada.")
 
 
-# ---------------------------------------------------------------------------
-# 8. A FRASE DO EXAME NOMEIA O BOTÃO QUE ESTÁ NA TELA — 06/09/2026
-# ---------------------------------------------------------------------------
 def test_a_frase_do_exame_nomeia_o_botao_que_esta_na_tela(a09):
-    """O `storm_doctor` manda clicar num botão que EXISTE nesta página.
-
-    ERA UM DEFEITO VIVO, achado pela `GTK-2`: a frase dizia *"clique 'Consertar
-    problemas conhecidos' na aba Sistema"* e nesta aba o botão se chama
-    *"Refazer os consertos automáticos"*. A frase chega a esta tela — o exame é
-    pintado por `_achados()` — e mandava procurar um botão que não está lá, que
-    é a forma exata que o glossário proíbe.
-
-    **E TROCAR O `se_faltar` NÃO CURAVA.** Medido antes: com o glade no disco,
-    `rotulo_do_botao` o lê PRIMEIRO e devolve o nome velho; a reserva nem
-    chegava a ser usada (`rotulos_de_reserva() == {}`). A cura foi a ORDEM das
-    fontes — a página que o produto renderiza responde primeiro.
-
-    MORDIDA: esvaziei `storm_doctor._NA_TELA_VIVA` e o glade voltou a vencer.
-    Reprovou nomeando as duas palavras.
-    """
+    """O `storm_doctor` manda clicar num botão que EXISTE nesta página."""
     from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
     sd._ROTULOS_EM_CACHE.clear()
@@ -833,16 +574,7 @@ def test_a_frase_do_exame_nomeia_o_botao_que_esta_na_tela(a09):
 
 
 def test_os_dois_leitores_do_rotulo_nao_divergem(a09):
-    """O gêmeo declarado: o `storm_doctor` e o pacote leem o MESMO botão.
-
-    Os dois não podem ser um só sem um ciclo de import — `a09_sistema` importa
-    `storm_doctor`. O que segura o par é esta régua, e ela é a mesma disciplina
-    do `test_aba09_a_fita_vem_de_cima`: escritos duas vezes sem régua, os dois
-    se afastam no dia em que alguém mudar um.
-
-    MORDIDA: troquei o `data-gesto` de `storm_doctor._NA_TELA_VIVA` por
-    `refazer-proton`. Reprovou dizendo os dois rótulos, lado a lado.
-    """
+    """O gêmeo declarado: o `storm_doctor` e o pacote leem o MESMO botão."""
     from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
     sd._ROTULOS_EM_CACHE.clear()

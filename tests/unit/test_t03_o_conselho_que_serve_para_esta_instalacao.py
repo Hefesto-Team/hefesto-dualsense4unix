@@ -1,34 +1,8 @@
-"""T-03/T-02(b) (SISTEMA-O-VIGIA-VIVO-01) — o conselho impossível.
-
-As frases da aba Sistema **não mentiam**: quando um script falta, elas dizem
-que falta. O defeito é outro, e mais difícil de ver — elas dão um **conselho
-impossível**. Oito lugares mandavam *"rode `./install.sh`"* como única
-instrução, e `./install.sh` só existe para quem clonou o repositório.
-
-Medido em 23/08, por formato de pacote:
-
-| formato | leva os scripts do cartão? | tem `./install.sh`? |
-|---|---|---|
-| checkout | sim | **sim** |
-| .deb | sim | não |
-| Flatpak / AppImage / Arch / Fedora / Nix | **não** | não |
-
-Ou seja: em cinco dos seis formatos a pessoa via a frase COM MAIS
-frequência — porque os scripts realmente faltavam — e a instrução que recebia
-era a única que ela não tinha como cumprir.
-
-T-02(b) é a outra metade do mesmo botão: `_find_repo_file` procurava em três
-bases e **nenhuma delas era `/app/share`**, que é onde o Flatpak instala.
-Mesmo com o manifesto passando a levar os scripts, a janela não os acharia.
-"""
+"""T-03/T-02(b) (SISTEMA-O-VIGIA-VIVO-01) — o conselho impossível."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
-# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
-# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
-# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
 exigir_gi_real("test_t03_o_conselho_que_serve_para_esta_instalacao: importa código da janela GTK")
 
 import ast
@@ -43,11 +17,7 @@ class TestOGestoQueServeParaCadaInstalacao:
     def test_no_checkout_a_frase_nomeia_o_install_sh(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Para ela, que roda do clone, o gesto certo continua sendo esse.
-
-        A cura não podia piorar o caso que já funcionava: quem TEM o
-        `install.sh` merece a instrução exata, não a genérica.
-        """
+        """Para ela, que roda do clone, o gesto certo continua sendo esse."""
         monkeypatch.setattr(da, "esta_instalacao_e_um_checkout", lambda: True)
 
         assert "./install.sh" in da.como_atualizar_esta_instalacao()
@@ -66,11 +36,7 @@ class TestOGestoQueServeParaCadaInstalacao:
     def test_a_deteccao_olha_para_um_arquivo_de_verdade(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """Não é presunção: é a existência do arquivo no disco.
-
-        Régua que sabe ACEITAR e RECUSAR — o mesmo diretório responde
-        diferente antes e depois de o `install.sh` existir.
-        """
+        """Não é presunção: é a existência do arquivo no disco."""
         monkeypatch.setattr(
             da, "BASES_DE_INSTALACAO", (tmp_path, Path("/nao/existe"))
         )
@@ -90,14 +56,7 @@ class TestNenhumaFraseDaTelaMandaAoLugarInexistente:
     def test_format_steam_ready_result_nao_cita_install_sh_fora_do_checkout(
         self, monkeypatch: pytest.MonkeyPatch, script_ok: bool, wrapper_ok: bool
     ) -> None:
-        """Os três ramos de instalação incompleta que a sprint nomeia.
-
-        `janela="ok"` NÃO é decoração: com qualquer outro valor,
-        `format_steam_janela_recusa` corta a função no começo e devolve a
-        recusa da janela — a frase de instalação incompleta nunca é
-        alcançada, e o teste passaria sem exercitar nada. Foi o que aconteceu
-        na primeira versão deste arquivo, e a mordida o revelou.
-        """
+        """Os três ramos de instalação incompleta que a sprint nomeia."""
         monkeypatch.setattr(da, "esta_instalacao_e_um_checkout", lambda: False)
 
         frase = da.format_steam_ready_result(
@@ -113,34 +72,11 @@ class TestNenhumaFraseDaTelaMandaAoLugarInexistente:
         assert "install.sh" not in frase, frase
 
     def test_nenhuma_frase_do_modulo_crava_install_sh(self) -> None:
-        """O portão que impede a correção pela metade.
-
-        A regra desta casa é que fato errado sai de todos os lugares, não só
-        de onde foi notado — *"uma correção pela metade deixa as duas versões
-        vivas, que é o defeito que a regra existe para matar"*.
-
-        Ficam DE FORA, com motivo declarado:
-
-        * `medir_guarda_do_steam_input` — a frase do vigia parado é da T-01,
-          cuja hipótese (`enable --now` não re-arma) ainda **não foi medida**.
-          Trocar o texto sem o veredito seria prometer um gesto que ninguém
-          verificou;
-        **AS DUAS FRASES DE PRIMEIRA INSTALAÇÃO SAÍRAM DA LISTA — 20/09/2026**
-        (O-INSTALADOR-SEM-A-BARRA-01). Esta isenção dizia que a redação
-        alternativa seria texto novo de tela, e que isso é dela. A cura não
-        redigiu nada: a oração do diagnóstico ficou palavra por palavra, e só
-        o conselho impossível ("Rode o instalador (install.sh) uma vez")
-        passou a vir do DONO — `como_atualizar_esta_instalacao()`, que já
-        redige as outras oito frases deste mesmo arquivo. O que caducou é a
-        isenção, não a regra que a motivou.
-        """
+        """O portão que impede a correção pela metade."""
         caminho = Path(da.__file__)
         fonte = caminho.read_text(encoding="utf-8")
         isentas = ("Conserto: rode `bash install.sh` de novo (sem sudo).",)
 
-        # Docstring EXPLICA; código PINTA NA TELA. Só o segundo interessa —
-        # e a diferença entre os dois não se descobre por indentação, se
-        # descobre pela árvore sintática.
         linhas_de_docstring: set[int] = set()
         for no in ast.walk(ast.parse(fonte)):
             if not isinstance(
@@ -166,9 +102,6 @@ class TestNenhumaFraseDaTelaMandaAoLugarInexistente:
             texto = linha.strip()
             if texto.startswith("#") or any(i in texto for i in isentas):
                 continue
-            # As únicas linhas de CÓDIGO que podem citar o nome: a que
-            # PROCURA o arquivo, e o ramo do checkout — que é justamente
-            # onde ele existe.
             permitidas = (
                 "esta_instalacao_e_um_checkout",
                 'BASES_DE_INSTALACAO[0] / "install.sh"',
@@ -195,12 +128,7 @@ class TestOFlatpakEntrouNaListaDeBases:
         assert "/app/share/hefesto-dualsense4unix" in caminhos
 
     def test_as_bases_de_sempre_continuam_la(self) -> None:
-        """A base nova não pode ter empurrado nenhuma das antigas para fora.
-
-        `parents[4]` em particular já custou um defeito próprio
-        (BUG-GUI-REPO-ROOT-OFFBYONE-01: `parents[3]` apontava para `<repo>/src`
-        e os botões viravam no-op SILENCIOSO, com toast de sucesso).
-        """
+        """A base nova não pode ter empurrado nenhuma das antigas para fora."""
         caminhos = [str(b) for b in da.BASES_DE_INSTALACAO]
 
         assert "/usr/share/hefesto-dualsense4unix" in caminhos
@@ -212,11 +140,7 @@ class TestOFlatpakEntrouNaListaDeBases:
     def test_find_repo_file_acha_em_qualquer_uma_das_bases(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """A busca percorre a lista inteira — inclusive a base nova.
-
-        Sem esta mordida, acrescentar `/app/share` seria decoração: o teste
-        planta o script SÓ na segunda base e exige que a busca chegue lá.
-        """
+        """A busca percorre a lista inteira — inclusive a base nova."""
         falsa = tmp_path / "app-share"
         (falsa / "scripts").mkdir(parents=True)
         alvo = falsa / "scripts" / "disable_steam_input.sh"

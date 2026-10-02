@@ -1,22 +1,8 @@
-"""Testes de restore_default do FooterActionsMixin (UI-GLOBAL-FOOTER-ACTIONS-01).
-
-Cenários:
-  - tmp_path como profiles_dir substituto.
-  - meu_perfil.json modificado em profiles_dir.
-  - on_restore_default com asset presente e confirmação simulada restaura
-    o conteúdo ao estado do asset.
-  - self.draft é recarregado após restaurar.
-  - Confirmação cancelada não altera o perfil.
-  - Asset ausente exibe toast de erro sem lançar exceção.
-"""
+"""Testes de restore_default do FooterActionsMixin (UI-GLOBAL-FOOTER-ACTIONS-01)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
-# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
-# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
-# no CI headless, em vez de pular.
 exigir_gi_real("footer restore default")
 
 import json
@@ -33,24 +19,15 @@ from hefesto_dualsense4unix.app.actions.footer_actions import (
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture(autouse=True)
 def _sync_run_in_thread(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Executa ``ipc_bridge.run_in_thread`` de forma síncrona nos testes.
-
-    PERF-FOOTER-ASYNC-IO-01 moveu o I/O de disco do ``on_restore_default`` para um
-    worker; sem loop GTK nos testes, rodamos worker + callback na mesma thread.
-    """
+    """Executa ``ipc_bridge.run_in_thread`` de forma síncrona nos testes."""
     from typing import Any
 
     def _sync(fn: Any, on_success: Any, on_failure: Any = None) -> None:
         try:
             result = fn()
-        except Exception as exc:  # espelha o run_in_thread real
+        except Exception as exc:
             if on_failure is not None:
                 on_failure(exc)
             return
@@ -130,11 +107,6 @@ def _perfil_modificado() -> dict:  # type: ignore[type-arg]
     }
 
 
-# ---------------------------------------------------------------------------
-# Fluxo feliz
-# ---------------------------------------------------------------------------
-
-
 class TestRestoreDefault:
     def test_restaura_conteudo_do_asset(
         self,
@@ -194,14 +166,7 @@ class TestRestoreDefault:
         profiles_dir_isolado: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Statusbar deve receber mensagem mencionando o perfil padrão.
-
-        PERFIL-PADRAO-PERSONALIZADO-01: a régua exigia a palavra `meu_perfil`
-        no toast — o nome que ela mandou aposentar. Invertida: agora ela
-        GUARDA que o toast cita o nome do padrão, e reprova se o slug voltar.
-        O nome é «Freestyle» desde 24/09/2026 (O-MODO-FREESTYLE-02), e a régua
-        o pergunta ao dono.
-        """
+        """Statusbar deve receber mensagem mencionando o perfil padrão."""
         from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
         import hefesto_dualsense4unix.profiles.loader as loader_mod
@@ -219,11 +184,6 @@ class TestRestoreDefault:
         assert any(NOME_DO_PADRAO in msg for msg in stub_mixin._toasted)
         assert not any("meu_perfil" in msg for msg in stub_mixin._toasted)
         assert not any("Personalizado" in msg for msg in stub_mixin._toasted)
-
-
-# ---------------------------------------------------------------------------
-# Casos de borda
-# ---------------------------------------------------------------------------
 
 
 class TestRestoreDefaultCasosDeBorda:
@@ -250,7 +210,7 @@ class TestRestoreDefaultCasosDeBorda:
             stub_mixin.on_restore_default()
 
         resultado = json.loads(destino.read_text(encoding="utf-8"))
-        assert resultado["priority"] == 99  # não foi alterado
+        assert resultado["priority"] == 99
 
     def test_asset_ausente_exibe_toast_sem_crash(
         self,
@@ -258,12 +218,7 @@ class TestRestoreDefaultCasosDeBorda:
         profiles_dir_isolado: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Quando o preset não existe em candidato NENHUM, toast — sem exceção.
-
-        JANELA-FIEL-01/E3: a injeção é a cascata do loader, não mais uma
-        constante de módulo. Um diretório vazio como único candidato é
-        exatamente "não há preset em lugar nenhum".
-        """
+        """Quando o preset não existe em candidato NENHUM, toast — sem exceção."""
         import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
@@ -274,17 +229,6 @@ class TestRestoreDefaultCasosDeBorda:
 
         stub_mixin.on_restore_default()
 
-        # A RÉGUA PERGUNTA AO DONO — 08/09/2026. Aqui estavam digitadas três
-        # palavras — "indisponível", "ausente", "não encontrado" —, e elas são
-        # exatamente o VOCABULÁRIO QUE SAIU: em 06/09 a frase deixou de ser
-        # dev-fala (*"Asset 'personalizado.json' não encontrado — Restaurar
-        # Default indisponível."*) e passou a falar a língua dela. A régua
-        # reprovava a melhora, que é a forma mais cara de vermelho desta casa.
-        #
-        # O dono é `frase_do_preset_ausente`, e ele é UM para os dois
-        # chamadores (o motor da janela e o gesto `restaurar-de-fabrica` da
-        # interface nova) — perguntar a ele é o que impede esta régua de
-        # envelhecer de novo na próxima vez que o texto melhorar.
         assert footer_actions.frase_do_preset_ausente() in stub_mixin._toasted, (
             "o botão não disse a recusa do preset ausente: "
             f"{stub_mixin._toasted!r}"
@@ -312,39 +256,15 @@ class TestRestoreDefaultCasosDeBorda:
         assert any("cancelad" in msg.lower() for msg in stub_mixin._toasted)
 
 
-# ---------------------------------------------------------------------------
-# JANELA-FIEL-01/E3 — o botão fora da máquina de quem programou
-# ---------------------------------------------------------------------------
-
-
 class TestRestoreDefaultEmInstalacaoEmpacotada:
-    """O preset não mora só no repositório — e o botão tem de achá-lo lá.
-
-    `_MEU_PERFIL_ASSET` era `ROOT_DIR / "assets" / ...`, e `ROOT_DIR` é
-    `parents[3]` do módulo: a raiz do repositório SÓ em instalação editável
-    (`install.sh` instala com `-e`). Num `.deb` o pacote vive num venv em
-    `/opt/...`, o módulo em `.../site-packages/hefesto_dualsense4unix/app/`, e
-    `parents[3]` vira `.../venv/lib/python3.X` — um diretório onde `assets/`
-    nunca existiu. O botão desistia com o toast de indisponível numa máquina
-    onde o preset ESTÁ instalado: os três pacotes o embalam (`.deb` em
-    `/usr/share/...`, AppImage e Flatpak em `sys.prefix/share/...`).
-
-    MORDIDA: os testes abaixo põem o preset SÓ no segundo e no terceiro
-    candidato da cascata — nunca no primeiro, que é o do repositório. Com o
-    resolvedor de antes (um candidato só, o `ROOT_DIR`), os dois reprovam com o
-    toast de "não encontrado" e sem gravar nada.
-    """
+    """O preset não mora só no repositório — e o botão tem de achá-lo lá."""
 
     @staticmethod
     def _cascata_empacotada(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path, com_preset: int,
         arquivo: str | None = None,
     ) -> Path:
-        """Planta o preset no candidato `com_preset` (1=prefixo, 2=/usr/share).
-
-        O candidato 0 (repositório) NÃO existe — é a instalação empacotada.
-        `arquivo` é o nome com que o pacote o guarda: o de hoje por padrão.
-        """
+        """Planta o preset no candidato `com_preset` (1=prefixo, 2=/usr/share)."""
         import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         candidatos = [

@@ -1,45 +1,4 @@
-"""Subsystem das conexões de rádio — o controle que conecta e não vira controle.
-
-CONEXAO-ZUMBI-01. A regra mora em
-:mod:`hefesto_dualsense4unix.integrations.conexao_zumbi`; aqui está o que a faz
-acontecer no produto: um laço próprio que olha a mesa de tempos em tempos, pede
-à ponte privilegiada que derrube o link morto, e ESCREVE O QUE ACONTECEU num
-lugar que a aba Conexões consegue ler.
-
-AS TRÊS PONTAS DA RECEITA — e a lista dos subsystems avisa que são três
----------------------------------------------------------------------------
-1. a linha em ``daemon/subsystems/__init__.py`` (declarativa);
-2. o ``_safe_start`` deste vigia em ``daemon/lifecycle.py`` — é ELE que sobe;
-3. o ``_stop_conexoes`` no ``shutdown()`` de ``daemon/connection.py``.
-Quem fizer só as duas primeiras sobe uma thread que ninguém para.
-
-POR QUE UM LAÇO PRÓPRIO, E NÃO O TIQUE DO DAEMON
--------------------------------------------------
-Porque o ``poll.tick`` NÃO mede o rádio: ele conta o relógio do daemon. E
-porque as leituras desta cura chamam processos (``hcitool``, ``busctl``,
-``sudo``) — pendurar isso no laço do GTK/asyncio é o defeito que já congelou a
-janela dela uma vez (as duas viagens de IPC síncronas, 15/09/2026). A thread é
-``daemon=True`` e o ``stop()`` a colhe.
-
-O DIZER É METADE DO TRABALHO
------------------------------
-*"a recusa com motivo não é resposta"*: a pessoa não tem o que fazer com «o
-sistema não vê um microfone neste controle». Por isso cada volta deixa um
-:class:`~hefesto_dualsense4unix.integrations.conexao_zumbi.Veredito` no disco,
-em :func:`caminho_do_diario`, com o que aconteceu **e o gesto que resta** —
-quando a cura não basta, a frase já diz "repareie neste adaptador", que é o que
-a aba Conexões tem de mostrar.
-
-A TRAVA E O DIÁRIO COMUNS (O-DIARIO-DO-RADIO-01, 23/09/2026)
--------------------------------------------------------------
-Este vigia é um dos três motores que mexem no rádio sozinhos — os outros são o
-``bt_health_watchdog.sh`` (root, a cada 2 min) e a central que vai nascer. Até
-aqui nenhum sabia do outro. Agora a derrubada do link passa pela trava comum
-(:func:`~hefesto_dualsense4unix.integrations.diario_do_radio.trava_do_radio`),
-com prazo curto — quem não a consegue tenta na próxima volta, cinco segundos
-depois —, e deixa o rastro no diário comum, que é de onde o sino da aba lê. O
-``conexao-zumbi.json`` continua: ele é a ÚLTIMA volta; o diário é a história.
-"""
+"""Subsystem das conexões de rádio — o controle que conecta e não vira controle."""
 
 from __future__ import annotations
 
@@ -69,38 +28,19 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: De quanto em quanto tempo o vigia olha. Cinco segundos dá quatro observações
-#: dentro dos 20 s que um suspeito precisa durar para virar zumbi — o bastante
-#: para o tempo ser medido, e leve o suficiente para não pesar (as leituras são
-#: sysfs e dois processos curtos).
 INTERVALO_S = 5.0
 
-#: A chave que desliga. LIGADO POR DEFAULT, e a razão é a ordem dela de
-#: 18/09/2026: *"o produto precisa ser inteligente pra evitar problemas como
-#: esse"*. A cura só toca em link que NÃO serve a ninguém (as três condições do
-#: módulo da regra), então o custo de estar ligada é zero para quem não tem o
-#: defeito — e o de estar desligada é o que ela viu: dois controles conectados,
-#: ambos jogador 1, ambos com a barra azul.
 ENV_DESLIGA = "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI"
 
 
-#: Como este vigia se chama na trava e no diário comuns.
 QUEM = "vigia-de-zumbis"
 
-#: Quanto o vigia espera a trava antes de desistir desta volta. Dez segundos são
-#: duas voltas: o zumbi continua lá na próxima, e o watchdog pode segurar a
-#: trava por um tique inteiro (até ~40 s com o ``pair``).
 PRAZO_DA_TRAVA_S = 10.0
 
 
 @dataclass
 class PonteComTrava(PontePrivilegiada):
-    """A ponte do vigia, pela trava do rádio e com rastro no diário comum.
-
-    Embrulha a :class:`PontePrivilegiada` de verdade (``interna``) em vez de
-    mudar o módulo da regra: a regra decide QUEM é zumbi; o jeito de agir —
-    em fila com os outros motores, e escrevendo o que fez — é do produto.
-    """
+    """A ponte do vigia, pela trava do rádio e com rastro no diário comum."""
 
     interna: PontePrivilegiada = field(default_factory=PontePrivilegiada)
     prazo_s: float = PRAZO_DA_TRAVA_S
@@ -120,8 +60,6 @@ class PonteComTrava(PontePrivilegiada):
             except diario_do_radio.TravaOcupadaError as erro:
                 return False, f"{erro}; tento na próxima volta"
             except OSError:
-                # Sem conseguir nem abrir a trava, o vigia não fica mudo: o
-                # zumbi é real e a cura é segura. O diário diz que foi sem ela.
                 logger.debug("conexao_zumbi_sem_trava", exc_info=True)
                 sem_trava = True
             agiu, motivo = self.interna.desconectar(link)
@@ -135,9 +73,6 @@ class PonteComTrava(PontePrivilegiada):
                 controle=link.controle,
                 hci=link.hci,
                 sem_trava=sem_trava or None,
-                #: Com a trava só de pasta de execução (o install ainda não
-                #: criou a comum), este vigia ficou em fila com a central, mas
-                #: não com o watchdog root — e o diário tem de dizer isso.
                 trava_comum=diario_do_radio.a_trava_e_comum(
                     diario_do_radio.caminho_da_trava()
                 ),
@@ -176,8 +111,6 @@ def _gravar_o_diario(veredito: Veredito, agora: float) -> None:
     }
     try:
         caminho.parent.mkdir(parents=True, exist_ok=True)
-        # Troca atômica: a aba lê este arquivo a qualquer instante, e um leitor
-        # que pega o arquivo pela metade mostra "nenhum aviso" sobre um zumbi.
         temporario = caminho.with_suffix(".json.novo")
         with temporario.open("w", encoding="utf-8") as fh:
             json.dump(dado, fh, ensure_ascii=False)
@@ -203,21 +136,15 @@ class ConexoesSubsystem:
         self._intervalo_s = intervalo_s
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
-        #: A última volta, para quem perguntar pelo IPC sem tocar no disco.
         self.ultimo_veredito: Veredito | None = None
 
-    # -- contrato Subsystem ----------------------------------------------
 
     def is_enabled(self, config: DaemonConfig) -> bool:
         """Ligado por default; ``…_CONEXAO_ZUMBI=0`` desliga."""
         bruto = os.environ.get(ENV_DESLIGA)
         if bruto is None:
             return True
-        # A forma sem acento entra de propósito: quem digita a chave à mão no
-        # terminal raramente acentua, e recusar por isso seria um interruptor
-        # que não desliga.
         # (noqa-acento) na linha do conjunto: "nao" é a digitação de quem não
-        # acentua no terminal, e recusá-la faria um interruptor que não desliga.
         negativos = {"0", "false", "no", "nao", "não"}  # (noqa-acento): digitação
         return bruto.strip().lower() not in negativos
 
@@ -242,15 +169,12 @@ class ConexoesSubsystem:
                 await asyncio.to_thread(thread.join, 2.0)
         logger.info("conexoes_subsystem_parado")
 
-    # -- o laço ----------------------------------------------------------
 
     def _laco(self) -> None:
         while not self._parar.is_set():
             try:
                 self.uma_volta(time.monotonic())
             except Exception:
-                # Uma volta que levanta NÃO pode matar o vigia: o defeito que
-                # ele cura acontece justamente quando o rádio está estranho.
                 logger.debug("conexao_zumbi_volta_falhou", exc_info=True)
             self._parar.wait(self._intervalo_s)
 

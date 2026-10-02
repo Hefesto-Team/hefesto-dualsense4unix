@@ -43,16 +43,9 @@ from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 
-#: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
-#: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
-#: régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
 _SONY = " (DualSense Wireless Controller)"
 
-# ---------------------------------------------------------------------------
-# A bancada de mentira: até quatro controles, cada um no seu dispositivo USB
-# ---------------------------------------------------------------------------
 
-#: Faixas sintéticas da casa. NENHUM destes é um controle desta bancada.
 _UNIQ_P1 = "02fe0011a1b2"
 _UNIQ_P2 = "02fe0011a1b3"
 _UNIQ_P3 = "02fe0011a1b4"
@@ -72,7 +65,6 @@ _HDMI = "alsa_output.pci-0000_0c_00.4.hdmi-stereo"
 _USB_P1 = "/sys/devices/pci0000:00/usb3/3-1"
 _USB_P2 = "/sys/devices/pci0000:00/usb3/3-2"
 
-#: O assento de cada controle, como o numerador do daemon responderia.
 _ASSENTO = {_UNIQ_P1: 1, _UNIQ_P2: 2, _UNIQ_P3: 3, _UNIQ_P4: 4, _UNIQ_NUNCA_VISTO: 4}
 
 
@@ -155,12 +147,7 @@ class ServidorDeSomDeMentira:
 
 @pytest.fixture
 def servidor(monkeypatch: pytest.MonkeyPatch) -> ServidorDeSomDeMentira:
-    """O servidor de mentira no lugar do `_rodar` do dono, e o numerador de assento.
-
-    O `SinkVirtualPipeWire` construído sem `runner` e o `sink_do_controle`
-    resolvem o `_rodar` do módulo NA CHAMADA, e é por isso que trocar o
-    atributo alcança o caminho do produto inteiro.
-    """
+    """O servidor de mentira no lugar do `_rodar` do dono, e o numerador de assento."""
     falso = ServidorDeSomDeMentira()
     monkeypatch.setattr(af, "_rodar", falso)
     anterior = mic.registrar_numerador_de_assento(lambda u: _ASSENTO.get(u))
@@ -170,12 +157,7 @@ def servidor(monkeypatch: pytest.MonkeyPatch) -> ServidorDeSomDeMentira:
 
 @pytest.fixture
 def usb_da_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O censo de USB que o `sink_do_controle` consulta, dublado.
-
-    `sink_do_controle` importa `usb_pai_*` DENTRO da função, então trocar o
-    atributo do módulo alcança a chamada — e é o que evita esta régua ir ao
-    `/sys` da máquina que roda a suíte.
-    """
+    """O censo de USB que o `sink_do_controle` consulta, dublado."""
     from hefesto_dualsense4unix.integrations import usb_pai
 
     monkeypatch.setattr(
@@ -204,23 +186,10 @@ def _ponte_de_pe(_uniq: str) -> Any:
     return lambda: True
 
 
-# ---------------------------------------------------------------------------
-# 1. O MESMO NÓ, OS DOIS TRANSPORTES
-# ---------------------------------------------------------------------------
-
-
 def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no(
     servidor: ServidorDeSomDeMentira, usb_da_bancada: None
 ) -> None:
-    """Trocar o cabo pelo rádio não pode trocar o nome nem o rótulo da saída.
-
-    O P1 sobe no cabo, sai da mesa e volta pelo rádio: o servidor vê o MESMO
-    `sink_name` e o MESMO rótulo nas duas vidas.
-
-    MORDIDA: derive o nome do transporte — por exemplo, faça `nome_do_sink`
-    devolver `f"{PREFIXO_SINK_DO_SOM}{rabo}_{transporte}"` — e as duas
-    comparações reprovam. É o defeito que o nó existe para não ter.
-    """
+    """Trocar o cabo pelo rádio não pode trocar o nome nem o rótulo da saída."""
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
     ger.reconciliar([_cabo(_UNIQ_P1)])
     no_cabo = list(servidor.nos().values())
@@ -236,11 +205,7 @@ def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no(
 
 
 def test_o_rotulo_e_o_do_assento_e_o_nome_e_o_do_aparelho() -> None:
-    """Quatro assentos, quatro rótulos; o `sink_name` não muda com o assento.
-
-    MORDIDA: volte o rótulo para `f"Alto-falante · P{n}"`, que é o que esta
-    casa escrevia até 08/09, e as quatro comparações caem.
-    """
+    """Quatro assentos, quatro rótulos; o `sink_name` não muda com o assento."""
     assert [af.rotulo_do_alto_falante(n) for n in (1, 2, 3, 4)] == [
         "Alto-falante do Controle 1" + _SONY,
         "Alto-falante do Controle 2" + _SONY,
@@ -260,11 +225,6 @@ def test_sem_assento_sabido_nao_se_inventa_numero() -> None:
     """Dois «Alto-falante do Controle 1» mentem sobre qual é qual."""
     assert af.rotulo_do_alto_falante(None) == "Alto-falante do Controle" + _SONY
     assert af.rotulo_do_alto_falante(0) == "Alto-falante do Controle" + _SONY
-
-
-# ---------------------------------------------------------------------------
-# 2. O SINK É RESOLVIDO PELA IDENTIDADE, NÃO PELO TEXTO
-# ---------------------------------------------------------------------------
 
 
 def test_dois_controles_no_cabo_e_cada_no_entrega_no_sink_do_seu(
@@ -297,11 +257,7 @@ def test_dois_controles_no_cabo_e_cada_no_entrega_no_sink_do_seu(
 def test_o_laco_do_cabo_usa_os_dois_canais_da_frente(
     servidor: ServidorDeSomDeMentira, usb_da_bancada: None
 ) -> None:
-    """O mapa (`audio.alto_falante@dualsense`, `cabo_canal`) diz *canais 1-2*.
-
-    MORDIDA: tire o `channel_map` de `argv_para_ligar_o_no` e o laço cai nos
-    quatro canais da placa — os motores tocam o som do jogo.
-    """
+    """O mapa (`audio.alto_falante@dualsense`, `cabo_canal`) diz *canais 1-2*."""
     GerenciadorDeNosDeSom().reconciliar([_cabo(_UNIQ_P1)])
     lacos = [a for a in servidor.modulos.values() if a[0] == "module-loopback"]
     assert len(lacos) == 1
@@ -328,17 +284,8 @@ def test_sem_placa_de_som_no_cabo_o_no_nao_nasce_e_a_rota_diz_por_que(
     assert rota.motivo == af.MOTIVO_NO_SEM_PLACA_NO_CABO
 
 
-# ---------------------------------------------------------------------------
-# 3. NO RÁDIO, A ROTA É A PONTE — e sem ela a frase é dita
-# ---------------------------------------------------------------------------
-
-
 def test_no_radio_sem_ponte_a_rota_recusa_com_a_frase() -> None:
-    """A queixa histórica dela: *"na hora do vamos ver a versão de BT não funcionava"*.
-
-    MORDIDA: devolva `RotaDoNo(True, por_onde=POR_RADIO)` sem perguntar à
-    ponte e o nó entrega a uma ponte que não existe — o sumidouro.
-    """
+    """A queixa histórica dela: *"na hora do vamos ver a versão de BT não funcionava"*."""
     for ponte in (None, lambda: False):
         rota = af.rota_do_no(_UNIQ_P2, af.TRANSPORTE_RADIO, ponte_do_radio=ponte)
         assert rota.tem_rota is False
@@ -349,16 +296,7 @@ def test_no_radio_sem_ponte_a_rota_recusa_com_a_frase() -> None:
 
 
 def test_a_frase_do_radio_diz_as_tres_coisas() -> None:
-    """O quê, por quê, e o que fazer — e sem palavra de dentro da máquina.
-
-    ESTA RÉGUA MEDIA O MUNDO DE ONTEM, e foi curada em 10/09/2026: ela exigia
-    a frase *"ainda não sabe montar o pacote de áudio"*, que virou FALSA quando
-    o alto-falante tocou por rádio. Agora ela mede o que a frase PROMETE.
-
-    MORDIDA: troque a frase por *"indisponível"* e as três primeiras caem;
-    escreva `hidraw` nela e a quarta cai; volte a dizer que o Hefesto não sabe
-    montar e a quinta cai.
-    """
+    """O quê, por quê, e o que fazer — e sem palavra de dentro da máquina."""
     frase = af.MOTIVO_NO_SEM_PONTE_NO_RADIO
 
     assert "som" in frase.lower()
@@ -369,11 +307,6 @@ def test_a_frase_do_radio_diz_as_tres_coisas() -> None:
         assert proibida not in frase
     assert "não sabe montar" not in frase
     assert af.a_ponte_do_radio_sabe_montar() is True
-
-
-# ---------------------------------------------------------------------------
-# 4. DE UM A QUATRO, CABO E RÁDIO MISTURADOS — UM NÓ POR CONTROLE
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -392,16 +325,7 @@ def test_um_no_por_controle_no_servidor(
     servidor: ServidorDeSomDeMentira,
     usb_da_bancada: None,
 ) -> None:
-    """O servidor tem UM nó por controle, com o rótulo do assento, e mais nada.
-
-    O do cabo tem o laço até a placa DELE; o do rádio não tem laço de saída (a
-    ponte lê o monitor). Um segundo publicador do mesmo nó — o plano da janela
-    que saiu em 28/09 — apareceria aqui como dois `module-null-sink` com o
-    mesmo `sink_name`.
-
-    MORDIDA: faça `reconciliar` erguer o nó de novo a cada varredura (tire o
-    `if uniq in self._nos`) e a segunda passada dobra os módulos.
-    """
+    """O servidor tem UM nó por controle, com o rótulo do assento, e mais nada."""
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
     ger.reconciliar(mesa)
     ger.reconciliar(mesa)
@@ -422,11 +346,7 @@ def test_um_no_por_controle_no_servidor(
 def test_quem_sai_da_mesa_leva_so_o_seu_no(
     servidor: ServidorDeSomDeMentira, usb_da_bancada: None
 ) -> None:
-    """Tirar um controle derruba o nó DELE — e a rota antes do nó.
-
-    MORDIDA: derrube todos os nós quando a lista muda e o som dos outros três
-    cai junto — a rota sumindo debaixo do jogo, causada por nós.
-    """
+    """Tirar um controle derruba o nó DELE — e a rota antes do nó."""
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
     ger.reconciliar([_cabo(_UNIQ_P1), _cabo(_UNIQ_P2), _radio(_UNIQ_P3)])
     ger.reconciliar([_cabo(_UNIQ_P1), _radio(_UNIQ_P3)])
@@ -437,17 +357,8 @@ def test_quem_sai_da_mesa_leva_so_o_seu_no(
     assert servidor.modulos == {}
 
 
-# ---------------------------------------------------------------------------
-# 5. A MÁSCARA NÃO ENTRA
-# ---------------------------------------------------------------------------
-
-
 def test_a_mascara_nao_entra_em_assinatura_nenhuma_do_dono() -> None:
-    """Som não é entrada, e a máscara é do gamepad — pedido dela, literal.
-
-    MORDIDA: acrescente `flavor: str = "dualsense"` a qualquer um destes e
-    este teste nomeia quem ganhou o parâmetro.
-    """
+    """Som não é entrada, e a máscara é do gamepad — pedido dela, literal."""
     for alvo in (
         af.nome_do_sink,
         af.descricao_do_alto_falante,
@@ -460,11 +371,6 @@ def test_a_mascara_nao_entra_em_assinatura_nenhuma_do_dono() -> None:
         assert "flavor" not in parametros, alvo
         assert "mascara" not in parametros, alvo
     assert "flavor" not in {f.name for f in ControleNaLista.__dataclass_fields__.values()}
-
-
-# ---------------------------------------------------------------------------
-# 6. A RÉGUA NÃO É A BANCADA DESTA CASA
-# ---------------------------------------------------------------------------
 
 
 def test_um_controle_que_nunca_esteve_aqui_ganha_o_mesmo_no(

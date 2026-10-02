@@ -1,19 +1,4 @@
-"""O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 — o pad uinput não trava ninguém.
-
-Na noite de 27/09/2026 a sessão dela caiu duas vezes (e mais duas às 12h43 e
-12h51) pela mesma cadeia: o construtor do python-evdev abria o próprio nó do
-pad logo depois de criá-lo; o `gilrs` do `cosmic-osk` mandava um efeito de
-vibração ao pad novo; o kernel esperava o dono responder por até 30 s com a
-trava do nó presa; o dono estava parado no `open()` do mesmo nó; o logind
-travava no `TakeDevice`, e o `cosmic-comp` abortava.
-
-As duas réguas medem as duas metades da cura, e as duas mordem:
-
-- criar o pad não abre o próprio nó (devolva o `_find_device` do python-evdev
-  e reprova);
-- o pedido de efeito é atendido pelo fio do pad, sem tique nenhum (devolva o
-  atendimento ao `pump_ff` do tique e ninguém responde).
-"""
+"""O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 — o pad uinput não trava ninguém."""
 from __future__ import annotations
 
 import contextlib
@@ -32,11 +17,7 @@ from tests.unit.test_vpad_ff_passthrough import _EC, _AbsInfo, _event, _rumble_e
 
 
 class _UInputComoOPythonEvdev:
-    """Imita o construtor do python-evdev: cria e, em seguida, `_find_device`.
-
-    O `fd` é a ponta de leitura de um `os.pipe()`: o «kernel» do teste avisa
-    que há evento escrevendo um byte na outra ponta, e o `read_one` o consome.
-    """
+    """Imita o construtor do python-evdev: cria e, em seguida, `_find_device`."""
 
     instancias: ClassVar[list[_UInputComoOPythonEvdev]] = []
     abriu_o_proprio_no: ClassVar[int] = 0
@@ -132,7 +113,6 @@ def test_o_pedido_de_vibracao_e_atendido_sem_tique(
         aparelho.o_jogo_manda_um_efeito(
             _rumble_effect(0, strong=0x8000, weak=0x4000), request_id=7
         )
-        # Nenhum `pump_ff`: só o fio do pad pode responder.
         while not aparelho.uploads_feitos and time.monotonic() - inicio < 1.0:
             time.sleep(0.002)
         esperou = time.monotonic() - inicio

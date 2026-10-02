@@ -53,16 +53,11 @@ if str(RAIZ / "src") not in sys.path:
 
 from hefesto_dualsense4unix.app import ipc_bridge as _b  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# Degrau 1: o que o `ipc_bridge` já resolve. Os nomes ficam IGUAIS aos de lá,
 # de propósito: quem procurar `led_set` acha os dois e vê que são o mesmo.
-# ---------------------------------------------------------------------------
 led_set = _b.led_set
 led_set_detalhado = _b.led_set_detalhado
 player_leds_set = _b.player_leds_set
 player_leds_set_detalhado = _b.player_leds_set_detalhado
-#: O brilho das cinco luzes de número — a linha LEDs da aba Iluminação
-#: (O-BRILHO-DAS-LUZES-DE-NUMERO-01, 24/09/2026).
 player_led_brightness_set_detalhado = _b.player_led_brightness_set_detalhado
 identity_number_set = _b.identity_number_set
 
@@ -78,47 +73,22 @@ rumble_stop_checked = _b.rumble_stop_checked
 rumble_passthrough = _b.rumble_passthrough
 rumble_policy_set_checked = _b.rumble_policy_set_checked
 rumble_policy_custom = _b.rumble_policy_custom
-#: A BARRA DE CADA MOTOR, no perfil e por peça (VIBRACAO-POR-MOTOR-01). Ela
-#: nasceu na ONDA1-D2 em 04/09/2026 **sem chamador**, e a razão estava escrita:
-#: *"quem atravessa é a aba 05, que está no `nao_toca:` desta sprint"*. Esta
 #: linha é a travessia, e ela fecha as duas dívidas que a D2 declarou nos
-#: portões (`test_ipc_bridge._SEM_TRAVESSIA_DECLARADA` e
 #: `portao_a_casa_sabe_e_o_produto_nao_faz._SEM_CAMINHO_HOJE`).
 rumble_motores_set = _b.rumble_motores_set
 
 mic_set = _b.mic_set
 mic_set_detalhado = _b.mic_set_detalhado
-# O ATO INTEIRO DO MICROFONE (D-12, 04/09/2026): o canal DESTE controle e o
-# mudo do firmware, num pedido só. A ONDA1-D1 construiu as três funções no
-# `ipc_bridge` e elas nasceram SEM chamador de tela — o gesto do 🎙 da aba 02 é
-# quem as chama, e um gesto só alcança o que este módulo expõe.
 mic_canal_set = _b.mic_canal_set
 mic_canal_set_detalhado = _b.mic_canal_set_detalhado
 mic_volume_set = _b.mic_volume_set
-# A RESPOSTA INTEIRA DO VOLUME DO MICROFONE, e ela existe por um fato da MESA
 # CHEIA: com dois DualSense no cabo há duas placas de som, e a rota global pega
-# a PRIMEIRA — o microfone de outra pessoa. O `bool` do `mic_volume_set`
-# colapsa isso em sucesso; o corpo traz `por_uniq`, que `ipc_bridge.
-# alvo_honrado` lê em três estados.
 mic_volume_set_detalhado = _b.mic_volume_set_detalhado
 speaker_set = _b.speaker_set
 speaker_set_detalhado = _b.speaker_set_detalhado
 
-#: O INTERRUPTOR DE GIROSCÓPIO E ACELERÔMETRO, por peça (SENSOR-DE-VERDADE-01).
-#: Mesma história do `rumble_motores_set` logo acima: a ONDA1-D3 construiu o
-#: caminho no daemon, no perfil e no `ipc_bridge` em 04/09/2026, e ele nasceu
-#: SEM chamador de tela porque a metade de TELA é da aba 02, que estava no
-#: `nao_toca:` daquela sprint. Esta linha é a travessia.
-#:
-#: A VARIANTE É A `_detalhado`, e não o `bool` da irmã estreita: o corpo traz
-#: `alcance` e `ressalva`, e é a `ressalva` que diz que em Modo Nativo o jogo
-#: continua recebendo o giro pelo `hidraw` do controle físico. Um `bool` faria
-#: a tela dizer "aplicado" sobre um sensor que não parou de chegar ao jogo.
 sensor_set_detalhado = _b.sensor_set_detalhado
 
-#: A MIRA VIRTUAL DE CADA CONTROLE (A-MIRA-POR-MOVIMENTO-NA-TELA-01, 24/09/2026):
-#: o chip da aba Controles e os dois deslizantes da Calibrar. A `_detalhado`
-#: pela mesma razão do sensor: o `alcance` diz quando o Modo Nativo não alcança.
 mira_set_detalhado = _b.mira_set_detalhado
 
 profile_list = _b.profile_list
@@ -131,58 +101,22 @@ daemon_state_full = _b.daemon_state_full
 daemon_status_basic = _b.daemon_status_basic
 
 
-# ---------------------------------------------------------------------------
-# Degrau 3: o cru, e SÓ para o que não tem função em lugar nenhum.
-# ---------------------------------------------------------------------------
-#: OS TETOS DE TEMPO DO PRODUTO, e cada um é uma cicatriz medida — achado do
-#: agente que ligou a aba Jogar em 01/09/2026:
-#:
-#:     `_safe_call` sem timeout usa **250 ms**, e desde o
-#:     BUG-IPC-READ-NO-TIMEOUT-01 esse teto cobre também a LEITURA da resposta
-#:     (`app/ipc_bridge.py:85-105`). Mas trocar de modo CRIA uinput e faz grab: o
-#:     produto declara **2,0 s** para isso (`app/actions/mode_transition.py:37`,
-#:     `MODE_IPC_TIMEOUT_S`), e o comentário de lá diz por quê — *"sem folga o
 #:     toast dizia 'Falha' com o modo JÁ aplicado"*. O `profile.switch` teve a
-#:     mesma cicatriz e ganhou **3,0 s** (`ipc_bridge.py:49`).
-#:
 #: Sem isto, um `chamar("gamepad.emulation.set", …)` volta `False` com o modo
-#: aplicado — e um gesto que levantasse nesse `False` reintroduziria o defeito
-#: exato que o `MODE_IPC_TIMEOUT_S` curou.
 TETOS = {
     "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
     "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
-    # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o «Status do Modo», que
-    # juntou os dois de cima numa chamada; o teto é o deles.
     "desktop.status.set": 2.0,
     "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
-    # POINT-AND-CLICK-01 (17/09/2026): o terceiro passo da entrada no modo
     # Navegação. **3,0 s — a família do `profile.switch`, e não a do
     # `mouse.emulation.restore` de 2,0 s logo acima.** A razão é o que ele faz
-    # a mais: abre um `.json` de perfil do disco, resolve
     # `key_bindings`/`button_actions` e pode CRIAR o device de teclado além do
-    # de mouse.
-    #
-    # O QUE FOI MEDIDO, e o que NÃO foi: a parte em processo custa **0,7 ms**
-    # com os devices dublados (`test_o_point_and_click_ativa_o_que_a_navegacao_
-    # gravou`, 17/09/2026) — ou seja, a decisão inteira é de graça e o teto
-    # paga o uinput e a viagem de IPC, exatamente como os 2,0 s do
-    # `MODE_IPC_TIMEOUT_S` pagam. O custo com uinput REAL não foi medido aqui,
-    # e por isso o teto é o do vizinho que abre perfil, nunca um número menor
-    # justificado pelos 0,7 ms.
     "desktop.arranjo.apply": 3.0,
     "profile.switch": 3.0, "profile.apply_draft": 3.0,
     # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» roda a
     # cadeia da ativação, e por isso o teto é o do `profile.switch`.
     "profile.reaplicar": 3.0,
     "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
-    # A MÁSCARA GRAVA EM DISCO E PODE RECRIAR O VPAD — mesma família do
-    # `gamepad.emulation.set` logo acima, e por isso o mesmo teto. Sem ele o
-    # gesto caía nos 250 ms do bridge, que desde o BUG-IPC-READ-NO-TIMEOUT-01
-    # cobrem também a LEITURA da resposta: sob carga, `chamar` voltaria `False`
-    # com a escolha JÁ gravada — o defeito exato que o `MODE_IPC_TIMEOUT_S`
-    # curou, de volta por outra porta. Entrou em 04/09/2026, junto com a cura do
-    # gesto que passava os parâmetros como `timeout` posicional e nunca chegava
-    # ao daemon.
     "gamepad.mask.set": 2.0,
     "identity.number.set": 2.0,
     # Medido no daemon dela em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
@@ -196,16 +130,7 @@ def teto(metodo: str) -> float:
 
 
 def chamar(metodo: str, timeout: float | None = None, **params: Any) -> bool:
-    """Um método do daemon que ainda não tem função no bridge nem na CLI.
-
-    ANTES DE USAR ISTO, procure: o `ipc_bridge` tem 36 funções e a CLI tem os
-    `cmd_*.py`. Uma chamada crua aqui para algo que já existe lá em cima é a
-    segunda verdade que esta casa persegue — e perde a tradução da recusa, que é
-    o que faz a tela dizer *por que* não deu, em vez de não dizer nada.
-
-    Ele passa pelo `_safe_call` do bridge de propósito: herda o timeout e o
-    tratamento de erro, e não vira um segundo caminho de escrita.
-    """
+    """Um método do daemon que ainda não tem função no bridge nem na CLI."""
     ok, _ = _b._safe_call(metodo, params, timeout=timeout or teto(metodo))
     return bool(ok)
 
@@ -248,13 +173,7 @@ def chamar_detalhado(metodo: str, **params: Any) -> tuple[bool, str | None]:
 
 
 def profile_reaplicar(nome: str) -> dict[str, Any] | None:
-    """O «Aplicar» do rodapé: a resposta do `profile.reaplicar`, ou ``None``.
-
-    O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026). O daemon roda a cadeia
-    da ativação com o perfil inteiro, sem gravar a escolha dela. ``None`` é
-    «não houve resposta» (daemon calado, teto estourado ou recusa), e o gesto
-    diz isso; nunca vira «aplicado».
-    """
+    """O «Aplicar» do rodapé: a resposta do `profile.reaplicar`, ou ``None``."""
     ok, r = _b._safe_call(
         "profile.reaplicar", {"name": nome}, timeout=teto("profile.reaplicar")
     )
@@ -283,21 +202,6 @@ def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
     return r
 
 
-# ---------------------------------------------------------------------------
-# O QUE SÓ A JANELA PODE FAZER — e por isso é INJETADO, não importado
-# ---------------------------------------------------------------------------
-#: ESCOLHER UM ARQUIVO é do SISTEMA, não da página: o WebView não abre
-#: `FileChooserDialog`, e a página não tem acesso ao disco. Quem pode abri-lo é
-#: o piloto, que é GTK — e ele substitui esta função ao subir
-#: (`ponte.escolher_arquivo = self._escolher_arquivo`).
-#:
-#: POR QUE UM PONTO DE EXTENSÃO E NÃO UM IMPORT DE GTK AQUI: porque os pacotes
-#: são PUROS e é isso que os torna testáveis sem abrir janela. Um `import gi`
-#: neste módulo obrigaria toda régua a ter GTK, e o CI a rodar com display.
-#:
-#: O padrão RECUSA DIZENDO. Rodar um gesto de importação fora da janela é um
-#: erro de quem chamou, e um `None` silencioso aqui viraria "ela cancelou" —
-#: que é uma mentira sobre o que aconteceu.
 def escolher_arquivo(titulo: str, padrao: str = "*", **_: Any) -> str | None:
     """O caminho que ela escolheu, ou `None` se cancelou. Substituído pelo piloto."""
     raise RuntimeError(
@@ -318,7 +222,7 @@ def dentro_da_janela() -> bool:
     **NÃO É ADIVINHAÇÃO, E MUITO MENOS "estou sob teste?"** — é a leitura de um
     fato que já existia: quem sobe a janela SUBSTITUI os dois pontos de extensão
     acima (`ponte.escolher_arquivo` e `ponte.salvar_arquivo`, atribuídos em
-    `interface/hefesto_vivo.py:2987-2910`), e mais ninguém o faz. Enquanto
+    `interface/hefesto_vivo.py:2406`), e mais ninguém o faz. Enquanto
     `escolher_arquivo` for a função declarada aqui, não há janela: quem está
     chamando um gesto é uma régua, um script ou um driver de medição.
 
@@ -343,8 +247,4 @@ def dentro_da_janela() -> bool:
     return getattr(escolher_arquivo, "__module__", __name__) != __name__
 
 
-#: O TESTE «Háptica» DA ABA VIBRAÇÃO — A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-
-#: TESTES-01 (02/10/2026). Mora no fim do arquivo, e não junto dos irmãos do
-#: rumble: uma linha a mais lá andaria as citações `ponte.py:NNN` de outros
-#: pacotes.
 haptica_testar = _b.haptica_testar

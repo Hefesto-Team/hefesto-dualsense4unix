@@ -1,22 +1,4 @@
-"""O passo do CI que roda a suíte tem teto, e o teto reprova em vez de cancelar.
-
-O-CI-DA-DEV-VOLTA-A-VERDE-01 (28/09/2026). Sem `timeout-minutes` vale o teto do
-GitHub, 360 minutos: quatro corridas do `dev` no 3.10, de 25 a 27/09, ficaram
-seis horas presas num `Daemon.run()` cujo `shutdown` não voltava, e saíram
-«cancelled», que ninguém lê como defeito.
-
-O teto mora no PASSO, e não no job: o do job CANCELA, o do passo REPROVA. E o
-do job, quando existe, fica acima do do passo: o relógio do job corre desde a
-instalação, e um teto de job que estoura antes do passo devolve o «cancelled».
-
-Vale para todo passo que espera um `Daemon.run()` voltar: a suíte (a pasta
-inteira de unidade e as 24 partes) e o smoke do `run.sh`, que sobe o daemon de
-verdade e espera o `stop()`.
-
-A MORDIDA: arranque o `timeout-minutes` do `Pytest unit` do lint-test e
-`test_o_passo_que_roda_a_suite_tem_teto` reprova nomeando o job e o passo; ponha
-no job do lint-test um teto de 60 e ele reprova pelo teto do job.
-"""
+"""O passo do CI que roda a suíte tem teto, e o teto reprova em vez de cancelar."""
 from __future__ import annotations
 
 import re
@@ -28,28 +10,17 @@ import yaml
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
 
-#: O teto do próprio GitHub. Um `timeout-minutes` igual ou acima dele não
-#: muda nada, e é o teto de todo job que não declara o seu.
 TETO_DO_GITHUB = 360
 
-#: Quanto o teto do job fica, no mínimo, acima do teto do passo. Nas corridas
-#: do `dev` de 25 a 27/09, o que vem antes do passo levou de 0,9 a 1,9 minuto.
 FOLGA_DO_JOB = 10
 
-#: O que marca um passo que espera um `Daemon.run()` voltar: o `pytest` da
-#: pasta inteira de unidade (e não de um arquivo dela, que é o que os portões
-#: rodam), o script das 24 partes e o smoke do `run.sh`.
 MARCA_DO_PASSO = re.compile(
     r"pytest tests/unit(?![/\w])|rodar-a-suite\.sh|run\.sh --smoke")
 
-#: Os jobs que têm esse passo hoje. Sem eles na lista achada, a régua passaria
-#: sobre nada — um passo renomeado ou um `run` reescrito tira o passo da
-#: busca calado.
 JOBS_COM_O_PASSO = {"lint-test", "gtk-real", "runtime-smoke"}
 
 
 def _teto(valor: Any) -> int | None:
-    # `bool` é `int` em Python: `timeout-minutes: true` não é teto.
     if isinstance(valor, bool) or not isinstance(valor, int):
         return None
     return valor

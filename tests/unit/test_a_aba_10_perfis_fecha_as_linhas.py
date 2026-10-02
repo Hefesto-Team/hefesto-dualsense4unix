@@ -52,10 +52,6 @@ from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 
-#: A MESA DA RÉGUA — DOIS controles, com os endereços MASCARADOS (octetos 4 e 5
-#: zerados, faixa sintética da casa). Dois porque o defeito de T-04 é de
-#: DESLOCAMENTO: com um só, uma lista deslocada continuaria caindo na primeira
-#: linha e a régua ficaria verde sobre o defeito.
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
@@ -65,35 +61,19 @@ MESA = [
      "mascara": "DualSense"},
 ]
 
-#: O MENOR CORPO QUE CADA SEÇÃO ACEITA. O contrato de ``ControllerOverrides`` é
 #: *"campo `None` = sem opinião"*, e ``_secoes_do_controle`` pergunta exatamente
-#: ``is not None`` — o conteúdo não importa. O ``speaker`` exige ``volume``
-#: (SOM-02: ``muted`` sem ``volume`` mandaria volume ZERO e tomaria a posse do
-#: alto-falante).
 MENOR_CORPO: dict[str, dict[str, Any]] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {},
 }
 
 
-# ---------------------------------------------------------------------------
-# O ferramental
-# ---------------------------------------------------------------------------
 def _pagina(publicado: bool) -> str:
     return onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
 
 
 def _celulas_da_guarda(html: str) -> list[tuple[int, str]]:
-    """``(índice da linha, nome da seção)`` de cada célula, NA ORDEM DO DOCUMENTO.
-
-    É a mesma ordem que o ``BOOTSTRAP`` percorre: ele faz
-    ``document.querySelectorAll('[data-hef="guarda.secao"]')`` e distribui a
-    lista com ``alvos.forEach((el, i) => i < v.length ? v[i] : '')``. Aqui o
-    `<tbody>` é recortado primeiro para que a contagem de LINHA seja a de
-    verdade — se um dia nascer uma célula `guarda.secao` fora da tabela, a
-    distribuição inteira desloca, e é justamente essa hipótese que esta função
-    torna mensurável.
-    """
+    """``(índice da linha, nome da seção)`` de cada célula, NA ORDEM DO DOCUMENTO."""
     corpo = re.search(r'<tbody data-hef="guarda\.linhas">(.*?)</tbody>', html,
                       re.S)
     assert corpo is not None, (
@@ -135,22 +115,7 @@ def _perfil(guardado: dict[str, list[str]]) -> Any:
 
 @pytest.fixture(autouse=True)
 def _limpo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Estado de módulo zerado: um teste não herda a escolha do anterior.
-
-    **O `load_all_profiles` ENTRA AQUI, e não é zelo — é a cicatriz de 04/09.**
-    O `_emitido` abaixo troca a função por atribuição crua (`loader.x = lambda`)
-    e a atribuição crua **não se desfaz**: rodando este arquivo junto com os
-    vizinhos, o dublê vazava e derrubava QUATRO testes de outras réguas —
-    ``test_as_tres_cargas_de_perfil_disparam_a_semeadura`` entre eles, que só
-    pergunta se a carga dispara a semeadura e recebia a minha lambda.
-
-    Registrar o nome aqui com `monkeypatch` faz o pytest guardar o valor
-    ORIGINAL antes de qualquer teste tocá-lo, e devolvê-lo no teardown — a
-    atribuição crua lá dentro passa a ser desfeita de graça. É o mesmo arranjo
-    que a régua vizinha (`test_a_coluna_do_ajuste_proprio_acende_pela_classe`)
-    já usava, e foi por copiar só a METADE dele que este arquivo sujou os
-    vizinhos.
-    """
+    """Estado de módulo zerado: um teste não herda a escolha do anterior."""
     from hefesto_dualsense4unix.profiles import loader
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
@@ -171,12 +136,7 @@ def _emitido(prof: Any, mesa: list[dict[str, Any]] | None = None) -> dict[str, A
 
 
 def _distribuir(valores: list[Any], celulas: list[tuple[int, str]]) -> list[bool]:
-    """O ``forEach`` do BOOTSTRAP, em Python — e o ``ligado()`` junto.
-
-    ``escrever(el, '')`` troca o vazio por travessão e ``ligado('—')`` é falso;
-    por isso a célula que sobra da lista APAGA, em vez de guardar o que o
-    mockup cravou.
-    """
+    """O ``forEach`` do BOOTSTRAP, em Python — e o ``ligado()`` junto."""
     from hefesto_dualsense4unix.interface import regua_do_mockup
 
     return [
@@ -185,41 +145,12 @@ def _distribuir(valores: list[Any], celulas: list[tuple[int, str]]) -> list[bool
     ]
 
 
-# ---------------------------------------------------------------------------
-# T-04 · a coluna "Ajuste próprio" e o disco, célula a célula
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
 def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
         publicado: bool, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A régua que faltava a T-04: a DISTRIBUIÇÃO, e não só a emissão.
-
-    O QUE ELA REFAZ: o pacote emite uma lista PLANA (uma linha da tabela é um
-    bloco de ``len(SECOES_DA_COLUNA)`` valores) e o piloto a distribui pela
-    ordem do documento. Entre os dois passos não havia régua nenhuma — e é
-    exatamente ali que um deslocamento moraria: a lista continua com o número
-    certo de valores, a coluna continua acendendo, e cada linha mostra o que é
-    da vizinha.
-
-    O PERFIL É ASSIMÉTRICO DE PROPÓSITO: se os dois controles guardassem as
-    mesmas seções, um deslocamento de uma LINHA inteira passaria despercebido.
-
-    MORDIDA: troque `for g in guarda for secao in SECOES_DA_COLUNA` por
-    `for secao in SECOES_DA_COLUNA for g in guarda` em `a10_perfis.pacote` — a
-    lista continua com dez valores e este teste reprova nomeando a célula.
-
-    O DISCO É O PONTO DESDE 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
-    o glifo (`guarda.secao`) passou a dizer o controle agora, e o que o perfil
-    guarda só deste controle é o `guarda.proprio`, uma célula por seção na
-    mesma ordem. A régua mede o ponto; na página publicada ele espera o
-    `--publicar 10` (`a10_perfis.ESPERANDO_A_PUBLICACAO`).
-    """
+    """A régua que faltava a T-04: a DISTRIBUIÇÃO, e não só a emissão."""
     guardado = {MESA[0]["uniq"]: ["leds", "rumble"], MESA[1]["uniq"]: ["triggers"]}
     if not publicado:
-        # A BANCADA ESTÁ UMA SESSÃO À FRENTE DO PRODUTO (24/09/2026, a coluna da
-        # Mira Virtual — `perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA`). O pacote de
-        # hoje distribui pelas células da página PUBLICADA; contra o desenho, a
-        # régua mede o pacote de DEPOIS do `--publicar`, com a coluna que espera
-        # a sessão já no fim da distribuição — que é o que a publicação produz.
         monkeypatch.setattr(a10_perfis, "SECOES_DA_COLUNA", tuple(
             a10_perfis.SECOES_DA_COLUNA) + tuple(
             s for s in perfis_web.SECOES_POR_CONTROLE
@@ -236,8 +167,6 @@ def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
         "o ponto do disco não tem uma célula por seção, na ordem do glifo")
     acesos = _distribuir(fora["guarda.proprio"], celulas)
 
-    # O QUE O DISCO DIZ, POR LINHA — e a ordem das linhas é a da MESA, que é a
-    # que `perfis_web._linhas_da_guarda` percorre.
     do_disco = [set(guardado.get(str(c["uniq"]), [])) for c in MESA]
     errados = []
     for (linha, secao), aceso in zip(celulas, acesos, strict=True):
@@ -253,16 +182,7 @@ def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
 def test_a_linha_sem_controle_na_mesa_apaga_a_coluna_inteira(publicado: bool) -> None:
-    """As linhas que sobram do desenho não guardam o que o MOCKUP cravou.
-
-    O desenho tem quatro linhas e a mesa dela tem uma ou duas. As que sobram
-    recebem `''` pelo `forEach` e têm de APAGAR — se não apagassem, a tela
-    mostraria o ajuste próprio do controle de exemplo sobre um lugar vazio, que
-    é a metade mais fácil de acreditar do defeito medido em 04/09.
-
-    MORDIDA: faça o `forEach` do BOOTSTRAP parar em `i < v.length` sem escrever
-    nas que sobram (ou devolva `'sim'` no lugar do `''`) e esta régua reprova.
-    """
+    """As linhas que sobram do desenho não guardam o que o MOCKUP cravou."""
     fora = _emitido(_perfil({MESA[0]["uniq"]: ["leds", "triggers", "rumble",
                                               "speaker", "mic"]}),
                     mesa=[MESA[0]])
@@ -279,17 +199,7 @@ def test_a_linha_sem_controle_na_mesa_apaga_a_coluna_inteira(publicado: bool) ->
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
 def test_a_tabela_da_guarda_nao_tem_celula_fora_das_linhas(publicado: bool) -> None:
-    """Uma célula `guarda.secao` fora do `<tbody>` desloca a coluna INTEIRA.
-
-    Era a segunda das três hipóteses que a medição de 04/09 deixou em aberto, e
-    ela é verificável sem daemon nenhum: o `querySelectorAll` do piloto varre o
-    DOCUMENTO, e o `<tbody>` é só onde as linhas moram. Uma célula solta na
-    legenda, num exemplo ou num quadro novo entra na contagem antes das da
-    tabela e empurra todas as outras.
-
-    MORDIDA: acrescente um `<span data-hef="guarda.secao">` fora da tabela no
-    `aba10.MIOLO` e esta régua reprova com a diferença.
-    """
+    """Uma célula `guarda.secao` fora do `<tbody>` desloca a coluna INTEIRA."""
     html = _pagina(publicado)
     na_tabela = len(_celulas_da_guarda(html))
     no_documento = _todas_as_celulas(html)
@@ -300,22 +210,7 @@ def test_a_tabela_da_guarda_nao_tem_celula_fora_das_linhas(publicado: bool) -> N
 
 
 def test_a_lista_emitida_tem_um_bloco_por_controle_da_mesa() -> None:
-    """O tamanho é o contrato: ``len(mesa) vezes len(SECOES_DA_COLUNA)``.
-
-    Era a terceira hipótese de 04/09 (*"ou `guarda` traz mais linhas do que a
-    mesa"*). Ela morre aqui, e com número: `_linhas_da_guarda` itera a MESA, e
-    um bloco a mais empurraria os valores para a linha seguinte.
-    """
-    # **O TAMANHO PASSOU A SER O DA TABELA, E NÃO O DA MESA — 05/09/2026.** A
-    # hipótese que esta régua matou continua morta, e com número: um bloco a
-    # MAIS que a tabela empurraria os valores para a linha seguinte. O que
-    # mudou é o alvo da conta. O pacote emite as QUATRO linhas por decisão dela
-    # (*"os svgs não deveriam aparecer prós demais controles desconectados"*):
-    # o `forEach` do bootstrap escreve `''` no que sobra, e `''` APAGA uma
-    # classe sem nunca ACENDÊ-LA — o lugar vazio não tinha como ligar o `fora`
-    # que esconde os glifos. A régua fica MAIS estrita: o número não depende
-    # mais de quantos controles estão na mesa, então uma mesa que encolha não
-    # pode mais encolher a lista sem reprovar.
+    """O tamanho é o contrato: ``len(mesa) vezes len(SECOES_DA_COLUNA)``."""
     largura = len(a10_perfis.SECOES_DA_COLUNA)
     esperado = a10_perfis.LUGARES_DA_TABELA * largura
     for quantos in (1, 2):
@@ -324,27 +219,19 @@ def test_a_lista_emitida_tem_um_bloco_por_controle_da_mesa() -> None:
             f"com {quantos} controle(s) na mesa a lista tem "
             f"{len(fora['guarda.secao'])} valores, e a tabela tem "
             f"{a10_perfis.LUGARES_DA_TABELA} linhas de {largura} — {esperado}")
-        # E OS BLOCOS QUE SOBRAM SÃO VAZIOS, não repetição do vizinho.
         for linha in range(quantos, a10_perfis.LUGARES_DA_TABELA):
             bloco = fora["guarda.secao"][linha * largura:(linha + 1) * largura]
             assert bloco == [""] * largura, (
                 f"a linha {linha + 1} não tem controle e veio com {bloco!r}")
 
 
-# ---------------------------------------------------------------------------
-# [01] o cadeado e o ponto de alerta
-# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("classe", "estado", "frase"),
     [("trava", "editor.ambiente.travado", "editor.ambiente.recado"),
      ("exige", "editor.jogo.exige", "editor.jogo.exigencia")])
 def test_a_marca_e_a_frase_moram_na_bancada(classe: str, estado: str,
                                             frase: str) -> None:
-    """As duas metades de cada marca existem no desenho, e a dica nasce VAZIA.
-
-    MORDIDA: tire a chamada de `marca_com_dica` do `aba10.MIOLO`, regere, e esta
-    régua reprova nomeando a marca que sumiu.
-    """
+    """As duas metades de cada marca existem no desenho, e a dica nasce VAZIA."""
     html = _pagina(publicado=False)
     marca = re.search(rf'<span class="{classe}"[^>]*>', html)
     assert marca is not None, f"a marca `{classe}` não está na bancada"
@@ -357,20 +244,7 @@ def test_a_marca_e_a_frase_moram_na_bancada(classe: str, estado: str,
 
 
 def test_a_marca_acende_exatamente_quando_a_frase_existe() -> None:
-    """O invariante que torna os DOIS endereços seguros — nos dois sentidos.
-
-    São dois campos para um fato, e o `monta.botao_cinza` já escreveu por que
-    isso é perigoso: *"com dois campos seria possível pintar um botão cinza sem
-    razão, ou uma razão sem botão cinza"*. Aqui os dois saem da mesma linha do
-    mesmo cálculo — e é ESTA régua que impede que deixem de sair.
-
-    OS TRÊS ESTADOS SÃO REAIS, e cada um é um perfil que ela tem no disco:
-    o que casa por título de janela (travado, sem exigência), o Pragmata
-    (destravado, COM exigência escondida) e o perfil simples (nenhum dos dois).
-
-    MORDIDA: emita `fora["editor.jogo.exige"] = "sim"` fixo em `pacote()` e
-    este teste reprova no perfil simples.
-    """
+    """O invariante que torna os DOIS endereços seguros — nos dois sentidos."""
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
     casos = {
@@ -396,22 +270,7 @@ def test_a_marca_acende_exatamente_quando_a_frase_existe() -> None:
 
 
 def test_o_seletor_travado_tem_onde_pousar_o_travessao(gerador: Any) -> None:
-    """A outra metade do cadeado: o CAMPO também para de afirmar.
-
-    MEDIDO NO DOM VIVO em 04/09/2026, com o cadeado já aceso ao lado:
-
-        trava.acesa      true      ← "esta tela não sabe mostrar a regra"
-        editor.ambiente  "Jogo"    ← o desenho, afirmando uma regra que não é
-
-    `perfis_web` devolve `ambiente: None` para o perfil de regra fina; o
-    `escrever()` do piloto troca isso por `—`, e num `<select>` ele só escreve
-    se alguma opção CASAR. Nenhuma casava, então ele devolvia 0 e o campo ficava
-    com o valor que o MOCKUP cravou. As duas metades da mesma linha diziam
-    coisas diferentes.
-
-    MORDIDA: tire o `travessao=True` da chamada de `opts` no `aba10.MIOLO`,
-    regere, e esta régua reprova.
-    """
+    """A outra metade do cadeado: o CAMPO também para de afirmar."""
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
     fora = _emitido(Profile(name="por título",
@@ -451,9 +310,6 @@ def test_a_exigencia_do_pragmata_chega_a_esta_tela() -> None:
         f"a exigência escondida não nomeia o que o perfil exige: {frase!r}")
 
 
-# ---------------------------------------------------------------------------
-# [02] o fim da frase, reescrito para ESTA tela
-# ---------------------------------------------------------------------------
 def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
     """Ele não existe nesta interface, e a frase não pode mandar ninguém a ele.
 
@@ -487,26 +343,7 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
 
 
 def test_o_matcher_nao_nomeia_botao_de_tela_nenhuma() -> None:
-    """A REMENDA ACABOU — 05/09/2026, e esta régua guarda o que ficou no lugar.
-
-    ELA COBRAVA UM SUFIXO. Até aqui, `exigencia_invisivel` devolvia a frase com
-    o fim *"Ligue o Modo avançado para ver e mudar."* — o nome de um interruptor
-    do `main.glade` — e esta aba TROCAVA esse sufixo pelo caminho que ela
-    alcança. A régua guardava a troca: *"no dia em que o produto mudar o fim,
-    ela reprova AQUI"*.
-
-    O CONSERTO DE VERDADE ERA OUTRO, e estava escrito no próprio bloco que a
-    remenda documentava: um matcher de `profiles/` não pode nomear um botão de
-    uma tela. O FATO saiu para `exigencia_invisivel` e o CAMINHO para cada
-    tela — `simple_match.CAMINHO_DA_JANELA_GTK` na janela estável, o
-    `FIM_DA_EXIGENCIA_AQUI` aqui.
-
-    O QUE ESTA RÉGUA COBRA AGORA é o que a remenda existia para impedir, sem a
-    remenda: que a frase do produto não volte a mandar ninguém a um botão.
-
-    A MORDIDA: devolva `CAMINHO_DA_JANELA_GTK` ao fim de `exigencia_invisivel`
-    e este teste reprova nomeando a peça de tela que voltou ao matcher.
-    """
+    """A REMENDA ACABOU — 05/09/2026, e esta régua guarda o que ficou no lugar."""
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria
     from hefesto_dualsense4unix.profiles.simple_match import (
         CAMINHO_DA_JANELA_GTK,
@@ -525,18 +362,6 @@ def test_o_matcher_nao_nomeia_botao_de_tela_nenhuma() -> None:
     assert "Modo avançado" not in do_produto, (
         "o matcher voltou a nomear uma peça da janela GTK")
 
-    # E O FIM DESTA TELA CONTINUA SENDO SOMADO — 06/09/2026, ONDA5-10-01.
-    #
-    # AQUI ESTAVA ESCRITO *"sem isto o aviso vira beco sem saída: ela lê que
-    # falta um campo e não lê onde mexer"*, e essa é exatamente a frase que a
-    # decisão 10-Q2 substituiu: o "onde mexer" era a linha de comando, e a
-    # palavra dela foi *"Isso é erro do produto"*. O aviso PARA no fato de
-    # propósito — o beco sem saída é o produto, não a frase, e o conserto de um
-    # beco é abrir a saída (foi o que o Passo 3 fez com o "Detectar"), nunca
-    # pintar uma placa apontando para fora.
-    #
-    # O que esta asserção guarda continua valendo e é outra coisa: que a aba
-    # some o fim DELA ao fato do produto, em vez de reescrever o fato.
     daqui = a10_perfis._exigencia_para_esta_tela(match)
     assert daqui.startswith(do_produto), (
         f"esta aba deixou de partir do fato do produto: {daqui!r}")
@@ -545,13 +370,7 @@ def test_o_matcher_nao_nomeia_botao_de_tela_nenhuma() -> None:
 
 
 def test_nenhuma_pagina_desta_interface_oferece_o_modo_avancado() -> None:
-    """A medição que sustenta a decisão [02], refeita a cada execução.
-
-    Se um dia esta interface GANHAR um "Modo avançado", a substituição do fim da
-    frase deixa de fazer sentido — e é melhor descobrir por uma régua vermelha
-    do que por uma tela que manda ela a um lugar que agora existe e não é
-    citado.
-    """
+    """A medição que sustenta a decisão [02], refeita a cada execução."""
     achados = [p.name for p in onde.paginas(publicado=True)
                if "Modo avançado" in p.read_text(encoding="utf-8")
                and p.name.startswith(("0", "1"))]
@@ -560,23 +379,10 @@ def test_nenhuma_pagina_desta_interface_oferece_o_modo_avancado() -> None:
         f"decisão [02] do PO antes de manter a substituição do fim da frase")
 
 
-# ---------------------------------------------------------------------------
-# [03] a frase da Prioridade
-# ---------------------------------------------------------------------------
 def test_a_frase_da_prioridade_do_desenho_e_a_que_ela_aprovou(
     gerador: Any,
 ) -> None:
-    """O desenho recita a frase DELA, e a régua a lê do PRODUTO.
-
-    Decisão nº11 dela (02/09) e decisão [03] do PO (04/09): a frase entra no
-    desenho, e vão as duas — a dela primeiro. O literal mora num lugar só
-    (`aba10.FRASE_DA_PRIORIDADE_DELA`) e esta régua o amarra ao
-    `prioridade_dica` que `perfis_web` devolve: divergirem é a tela recitando
-    uma versão que o produto já abandonou.
-
-    MORDIDA: mude uma palavra de `FRASE_DA_PRIORIDADE_DELA` e ela reprova
-    mostrando as duas.
-    """
+    """O desenho recita a frase DELA, e a régua a lê do PRODUTO."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     do_produto = perfis_web._pacote_do_editor(
@@ -596,16 +402,7 @@ def test_a_frase_da_prioridade_do_desenho_e_a_que_ela_aprovou(
 
 
 def test_o_produto_continua_sem_tentar_pintar_a_dica_da_prioridade() -> None:
-    """A frase mora no desenho; emiti-la apagaria o trilho e o número.
-
-    O `<span>` que carrega a dica tem DOIS filhos-elemento (o trilho com o
-    slider dentro, e o número ao lado), e o pintor termina em `textContent` —
-    escrever ali os apaga. É por isso que `editor.prioridade.dica` está em
-    `NAO_PINTAVEIS`, e é por isso que a decisão [03] pôs a frase no desenho.
-
-    MORDIDA: tire `editor.prioridade.dica` de `NAO_PINTAVEIS` e esta régua
-    reprova.
-    """
+    """A frase mora no desenho; emiti-la apagaria o trilho e o número."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     fora = _emitido(Profile(name="régua", match=MatchAny()))
@@ -614,22 +411,10 @@ def test_o_produto_continua_sem_tentar_pintar_a_dica_da_prioridade() -> None:
         "trilho e o número que moram dentro do mesmo `<span>`")
 
 
-# ---------------------------------------------------------------------------
-# [04] o campo do jogo se corrige
-# ---------------------------------------------------------------------------
 def test_o_endereco_colado_vira_o_numero_na_frente_dela(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
 ) -> None:
-    """Colar o endereço da loja grava o número — e o CAMPO passa a mostrá-lo.
-
-    Decisão [04] do PO: *"Só a tira, e o campo se corrige."* A regra sempre
-    guardou o número; o que ficava errado era a tela, mostrando o endereço
-    colado sobre uma regra que já guardava outra coisa — e assim ficava até ela
-    trocar de perfil, porque `editor.jogo` não se repinta no tique.
-
-    MORDIDA: tire o `**{"editor.jogo": …}` do `return` de `editor_jogo` e esta
-    régua reprova dizendo que a resposta não corrige o campo.
-    """
+    """Colar o endereço da loja grava o número — e o CAMPO passa a mostrá-lo."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -656,16 +441,7 @@ def test_o_endereco_colado_vira_o_numero_na_frente_dela(
 def test_o_campo_nunca_volta_vazio_da_correcao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Corrigir não pode APAGAR o que ela digitou.
-
-    `simple_extra` devolve `""` para uma regra que não guarda extra nenhum, e o
-    `escrever()` do piloto troca vazio por travessão: sem o piso, o campo
-    diria "não sei" sobre um valor que ela acabou de escrever e que está no
-    disco.
-
-    MORDIDA: tire o `or texto` do `return` de `editor_jogo` e esta régua
-    reprova.
-    """
+    """Corrigir não pode APAGAR o que ela digitou."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -687,24 +463,8 @@ def test_o_campo_nunca_volta_vazio_da_correcao(
         "a correção apagou o que ela digitou")
 
 
-# ---------------------------------------------------------------------------
-# [05] a tira do desfecho, em duas linhas
-# ---------------------------------------------------------------------------
 def test_a_tira_do_desfecho_tem_duas_linhas_reservadas() -> None:
-    """A metade que AVISA mora no fim da frase, e é a que a linha única comia.
-
-    **A RÉGUA SE INVERTEU EM 05/09/2026, e a última asserção era o defeito.**
-    Ela exigia ``height:30px`` e ``visibility:hidden`` na MESMA regra, dizendo
-    *"a tira deixou de RESERVAR o espaço"* — e o espaço reservado em repouso são
-    **37px de banda morta debaixo do título "Perfis"**, que ela viu e chamou de
-    *"espaço vertical bizarro desnecessário"*. As duas linhas continuam
-    cobradas; o que mudou de regra é ONDE elas valem: a altura mora na ``.on``,
-    e a de repouso tem de colapsar. A medição em pixels está em
-    ``test_a_aba10_nao_reserva_banda_morta_no_titulo.py``.
-
-    MORDIDA: devolva `height:30px;margin-top:7px` à regra `.desfecho{…}` do
-    `aba10.CSS`, regere, e esta régua reprova.
-    """
+    """A metade que AVISA mora no fim da frase, e é a que a linha única comia."""
     html = _pagina(publicado=False)
     regra = re.search(r"\.desfecho\{[^}]*\}", html)
     assert regra is not None, "a regra da tira do desfecho sumiu do CSS"
@@ -725,17 +485,7 @@ def test_a_tira_do_desfecho_tem_duas_linhas_reservadas() -> None:
 
 
 def test_a_altura_reservada_e_a_conta_das_linhas_que_a_tira_mostra() -> None:
-    """``height`` = ``line-height`` vezes ``line-clamp`` — na regra que ABRE a tira.
-
-    É a metade que some sem sintoma: `-webkit-line-clamp:2` com `height:15px`
-    reticencia na segunda linha e depois a ESCONDE com o `overflow` — a tela
-    volta a cortar o aviso, e o CSS jura que não. Um `height:45px` faria o
-    contrário: 15px de espaço morto sobre a lista de perfis a cada recado.
-
-    NÃO SE DIGITA O 30: os três números são lidos das regras e a conta é feita.
-    O ``height`` mudou de casa em 05/09 (ver a régua acima); os outros dois
-    continuam na regra de repouso, que é onde a caixa se define.
-    """
+    """``height`` = ``line-height`` vezes ``line-clamp`` — na regra que ABRE a tira."""
     html = _pagina(publicado=False)
     repouso = re.search(r"\.desfecho\{[^}]*\}", html)
     acesa = re.search(r"\.desfecho\.on\{[^}]*\}", html)
@@ -750,34 +500,12 @@ def test_a_altura_reservada_e_a_conta_das_linhas_que_a_tira_mostra() -> None:
         f"— ou ela corta o aviso, ou sobra espaço morto sobre a lista")
 
 
-# ---------------------------------------------------------------------------
-# ONDA5-10-01 · o Hefesto não manda ninguém para o terminal (decisão 10-Q2)
-# ---------------------------------------------------------------------------
 #: AS FORMAS QUE `from_simple_choice` SABE ESCREVER e que NÃO são chave de
-#: ``SIMPLE_MATCH_PRESETS``: elas moram em ``if``s do corpo da função, e por
-#: isso nenhuma varredura de dicionário as alcança. Quem escrever a sétima vem
-#: aqui — e apagar um nome desta tupla é um ato que se vê no diff, ao contrário
-#: de esquecer um rótulo.
 FORMAS_FORA_DO_DICIONARIO = ("game", "steam_game", "janela")
 
 
 def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
-    """Escreve "janela", relê, e tem de voltar "janela" — com a classe junto.
-
-    É o Passo 1 da ONDA5-10-01, e o round-trip é a prova inteira: uma forma que
-    o produto ESCREVE e não RECONHECE abre o perfil travado, com o seletor
-    rebaixado e sem ninguém ter mexido em nada. É o defeito R-12.
-
-    A SEGUNDA METADE PROTEGE A ORDEM: um ``steam_app_<id>`` **também** é um
-    ``window_class`` de um elemento. Se a detecção da forma nova correr antes de
-    ``_detect_steam_appid``, todo perfil de jogo da Steam passa a abrir como
-    "Jogo (pela janela)" — e a caixinha do Steam Input, que só nasce com "Jogo
-    da Steam" escolhido, some da tela dela.
-
-    MORDIDA: apague o ramo do ``"janela"`` em ``detect_simple_preset`` e a
-    primeira asserção reprova com ``None`` — que é o perfil travado de volta.
-    Mova o ramo para ANTES do ``_detect_steam_appid`` e reprova a segunda.
-    """
+    """Escreve "janela", relê, e tem de voltar "janela" — com a classe junto."""
     from hefesto_dualsense4unix.profiles.simple_match import (
         MSG_JANELA_SEM_CLASSE,
         detect_simple_preset,
@@ -801,8 +529,6 @@ def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
         "roubou o round-trip que o R-12 existe para proteger")
     assert simple_extra(da_steam) == "1599660"
 
-    # E A RECUSA FALANTE, irmã do `MSG_JOGO_SEM_NOME`: campo obrigatório em
-    # branco não degrada em silêncio para uma regra que nunca casa.
     with pytest.raises(ValueError, match="Diga a janela do jogo"):
         from_simple_choice("janela", "   ")
     from hefesto_dualsense4unix.profiles.simple_match import MENSAGENS_DE_GENTE
@@ -812,23 +538,7 @@ def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
 
 
 def test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas() -> None:
-    """Nenhuma forma nasce órfã de rótulo — e a que não tem, se DECLARA.
-
-    ELA REPROVAVA ANTES DO PASSO 2, e de propósito: ``browser``, ``terminal`` e
-    ``editor`` existem no produto e não no desenho dela. Eles não passaram a ter
-    rótulo — passaram a estar DECLARADOS em ``perfis_web.FORA_DO_DESENHO``, que
-    é a diferença entre dívida e esquecimento.
-
-    A SEGUNDA ASSERÇÃO é a do campo livre: toda forma cujo ``simple_extra``
-    devolve alguma coisa tem de estar em ``_IDS_COM_CAMPO_LIVRE``. Sem isso o
-    ``_populate_editor`` escreve ``""`` no campo e a tela abre VAZIA sobre um
-    perfil que tem regra no disco — o defeito que o R-12 já cobrou do
-    ``steam_game``.
-
-    MORDIDA: tire ``("janela", …)`` de ``_APLICA_A_ITEMS`` e a primeira reprova
-    nomeando a forma órfã. Tire só ``"janela"`` de ``_IDS_COM_CAMPO_LIVRE`` e
-    reprova a segunda.
-    """
+    """Nenhuma forma nasce órfã de rótulo — e a que não tem, se DECLARA."""
     from hefesto_dualsense4unix.app.actions import profiles_actions as pa
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria
     from hefesto_dualsense4unix.profiles.simple_match import (
@@ -852,8 +562,6 @@ def test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas() -> None:
                 & set(perfis_web.FORA_DO_DESENHO)), (
         "uma forma está nas duas tabelas — com rótulo E declarada ausente")
 
-    # O CAMPO LIVRE, forma a forma: a régua PERGUNTA ao `simple_extra` em vez
-    # de digitar a lista das que têm campo.
     exemplos = {
         "game": MatchCriteria(process_name=["eldenring"]),
         "steam_game": MatchCriteria(window_class=["steam_app_1599660"]),
@@ -874,22 +582,7 @@ def test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas() -> None:
 def test_o_detectar_cumpre_o_que_o_title_promete(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O botão promete "qualquer lugar" no ``title``, e agora entrega.
-
-    A RÉGUA LÊ A PROMESSA, não a digita: ela recorta o ``title`` do
-    ``data-hef-gesto="detectar"`` da página e confere que ele continua dizendo
-    *"qualquer lugar"*. Se alguém apagar a promessa, esta metade cai — e aí a
-    régua diz que a promessa sumiu, em vez de cobrar uma frase que ninguém faz
-    mais.
-
-    O DUBLÊ USA UMA CLASSE QUE NÃO É DA STEAM, e isso é o teste inteiro: um
-    ``steam_app_123`` mediria o ramo velho e daria verde sobre o Passo 3
-    completo. ``GrimFandango`` é a classe de um perfil de fábrica de verdade
-    (``assets/profiles_default/point_and_click.json``).
-
-    MORDIDA: devolva o ``raise`` ao ramo do ``appid is None`` em ``detectar`` e
-    esta régua reprova — o gesto levanta em vez de gravar.
-    """
+    """O botão promete "qualquer lugar" no ``title``, e agora entrega."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
     from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset
@@ -935,31 +628,7 @@ def test_o_detectar_cumpre_o_que_o_title_promete(
 
 
 def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
-    """Nenhum texto desta aba manda a pessoa para o terminal. Decisão 10-Q2.
-
-    ***"Isso é erro do produto."*** — ela, 05/09/2026, sobre a frase que
-    terminava mandando usar ``hefesto-dualsense4unix profile`` na linha de
-    comando. E o glossário da casa
-    (``docs/A-LINGUA-DESTA-CASA-…``) proíbe em texto de tela *"linha de
-    comando"* e qualquer frase que mande a pessoa procurar um botão ou uma
-    janela que não existe.
-
-    A VARREDURA É POR CONSTANTE, e não por arquivo: são os textos de tela desta
-    aba que têm dono declarado. O corpo do ``detectar`` entra pelas STRINGS
-    LITERAIS dele, que é onde a terceira boca vivia — a recusa mora num
-    ``raise``, não numa constante.
-
-    **E ELA LÊ AS STRINGS, NUNCA O FONTE CRU — a armadilha é de 05/09/2026 e
-    esta régua caiu nela na primeira execução.** Um ``inspect.getsource`` pega
-    a DOCSTRING junto, e a docstring do ``detectar`` CITA a recusa antiga para
-    explicar por que ela saiu: o comentário que avisa vira a primeira ocorrência
-    do arquivo, e a régua reprova a explicação em vez do defeito. Prosa não
-    chega à tela dela; ``ast`` separa uma coisa da outra.
-
-    MORDIDA: devolva o fim antigo a ``FIM_DA_EXIGENCIA_AQUI`` (ou a
-    ``AMBIENTE_QUE_A_TELA_NAO_MOSTRA``, ou o ``raise`` velho do ``detectar``) e
-    esta régua reprova nomeando a constante e o trecho proibido.
-    """
+    """Nenhum texto desta aba manda a pessoa para o terminal. Decisão 10-Q2."""
     import ast
     import inspect
     import textwrap
@@ -977,14 +646,8 @@ def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
     }
     textos.update({f"perfis_web.GESTOS_SEM_MOTOR[{k!r}]": v
                    for k, v in perfis_web.GESTOS_SEM_MOTOR.items()})
-    # A RECUSA DO `detectar` é texto de tela e mora num `raise`. A régua junta
-    # as STRINGS do gesto — a docstring de fora, porque ela cita a recusa velha
-    # para explicar por que ela saiu (ver a nota da armadilha, acima).
     fn = ast.parse(textwrap.dedent(inspect.getsource(a10_perfis.detectar))).body[0]
     assert isinstance(fn, ast.FunctionDef)
-    # O PRIMEIRO `Expr` É A DOCSTRING, e a exclusão é por POSIÇÃO e não por
-    # texto: `ast.get_docstring` devolve o valor LIMPO (dedentado), que nunca é
-    # igual ao literal cru — comparar os dois deixava a docstring passar.
     sem_doc = fn.body[1:] if (fn.body and isinstance(fn.body[0], ast.Expr)
                               and isinstance(getattr(fn.body[0], "value", None),
                                              ast.Constant)) else fn.body
@@ -1000,10 +663,8 @@ def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
         + "\nO Hefesto não explica a própria falha — ele a conserta. Se a "
           "regra não cabe na tela, a frase diz o que a regra É e para.")
 
-    # E O FATO CONTINUA SENDO DITO: podar o fim não pode ter emudecido a frase.
     assert "não sabe mostrar" in perfis_web.AMBIENTE_QUE_A_TELA_NAO_MOSTRA
     assert "não mostra esses campos" in a10_perfis.FIM_DA_EXIGENCIA_AQUI
-    # O CAMINHO DA JANELA GTK NÃO SE TOCA: lá o "Modo avançado" existe.
     from hefesto_dualsense4unix.profiles.simple_match import CAMINHO_DA_JANELA_GTK
 
     assert "Modo avançado" in CAMINHO_DA_JANELA_GTK, (
@@ -1013,12 +674,7 @@ def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
 
 @pytest.fixture()
 def gerador() -> Any:
-    """O ``aba10.py`` importado como o gerador se importa — só no TESTE.
-
-    Ele insere a própria pasta no ``sys.path`` e lê o ``monta``, que abre seis
-    arquivos do repositório no import. É barato aqui e é justamente o que o
-    produto não pode fazer — por isso o pacote copia a forma em vez de importar.
-    """
+    """O ``aba10.py`` importado como o gerador se importa — só no TESTE."""
     import sys
     from pathlib import Path
 
@@ -1034,27 +690,10 @@ def gerador() -> Any:
     return aba10
 
 
-# ---------------------------------------------------------------------------
-# ONDA5-10-02 · o rótulo ao lado do campo (10-Q4) e a metade curta (10-Q5)
-# ---------------------------------------------------------------------------
 def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Três entradas, três respostas — e a terceira ACENDE, as duas primeiras não.
-
-    O BOOLEANO É O PONTO INTEIRO desta régua. Até 06/09 `_jogo_reconhecido`
-    devolvia só a PRIMEIRA metade do par, e o ``é_alerta`` que
-    ``frase_do_campo_do_jogo`` devolve morria ali — o mesmo bit que separa *"não
-    instalado aqui (o número vale)"*, que é o jogo que ela ainda vai comprar, de
-    *"não reconheci este endereço"*, que é erro de digitação. Sem ele o rótulo
-    sairia da mesma cor nos dois casos.
-
-    ELA LÊ AS CONSTANTES DE `jogos_locais` em vez de digitar as frases: foi
-    digitando o que devia LER que esta casa perdeu onze réguas em 26/08.
-
-    MORDIDA: faça `_jogo_reconhecido` devolver só a frase (ou fixe o segundo
-    membro do par em `False`) e esta régua reprova no endereço malformado.
-    """
+    """Três entradas, três respostas — e a terceira ACENDE, as duas primeiras não."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos",
@@ -1068,8 +707,6 @@ def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
     assert ausente == (jogos_locais.MSG_FORA_DA_MAQUINA, False), (
         f"o jogo que ela ainda vai comprar é ROTINA, não alerta: {ausente!r}")
 
-    # `parece_endereco` é quem decide o que "parece endereço" — a régua não
-    # inventa a forma, usa a que o dono reconhece.
     malformado = "store.steampowered.com/app/"
     assert jogos_locais.parece_endereco(malformado), (
         "a semente desta régua deixou de parecer endereço para o dono — "
@@ -1085,23 +722,7 @@ def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
 def test_o_rotulo_do_jogo_tem_onde_pousar(publicado: bool) -> None:
-    """Os dois sentidos: endereço emitido sem lugar, e lugar sem quem escreva.
-
-    É o espelho de `test_a_marca_acende_exatamente_quando_a_frase_existe`, um
-    degrau acima: lá o par é marca/frase, aqui é PRODUTO/DESENHO. Um rótulo
-    emitido para um endereço que a página não tem cai no vazio sem notícia
-    (foi o defeito do `ativo`, em 02/09); um `<span>` no desenho que ninguém
-    escreve é desenho congelado se passando por produto.
-
-    A PÁGINA PUBLICADA AINDA NÃO TEM O RÓTULO, e é por isso que os dois nomes
-    estão em `ESPERANDO_A_PUBLICACAO` — publicar é ato dela. Esta régua cobra
-    exatamente essa declaração: enquanto o endereço não estiver na publicada,
-    ele tem de estar na lista; quando ela publicar, a lista tem de esvaziar.
-
-    MORDIDA: tire `{rotulo_do_jogo()}` do `aba10.MIOLO` e regere — o ramo da
-    bancada reprova. Tire as duas entradas de `ESPERANDO_A_PUBLICACAO` e o ramo
-    da publicada reprova.
-    """
+    """Os dois sentidos: endereço emitido sem lugar, e lugar sem quem escreva."""
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
     html = _pagina(publicado)
@@ -1125,10 +746,6 @@ def test_o_rotulo_do_jogo_tem_onde_pousar(publicado: bool) -> None:
                 f"o passado é a régua se desligando sozinha. Tire no mesmo commit")
 
     if not publicado:
-        # A BANCADA TEM DE TER OS TRÊS `<span>`: o que acende, o que pinta e o
-        # que escreve. Sem o primeiro, `escrever()` troca o vazio por `'—'` e a
-        # tela ganha um travessão solto ao lado do campo em todo perfil que não
-        # é da Steam.
         assert html.count('data-hef="editor.jogo.rotulo"') == 2, (
             "o rótulo do jogo perdeu um dos dois endereços na bancada — sem o "
             "`classe` ele acende sempre, sem o `<span>` ele nunca escreve")
@@ -1197,9 +814,6 @@ def test_a_tira_diz_a_metade_curta(monkeypatch: pytest.MonkeyPatch) -> None:
         "o aviso continua no texto da tira; a decisão 10-Q5 dela é que ele SAIA "
         "daqui")
 
-    # E O CARTÃO DA ABA 07 CONTINUA RECEBENDO A FRASE INTEIRA. Sem esta metade,
-    # a cura vaza para a outra aba — e lá o aviso tem onde caber: um cartão tem
-    # CORPO, e é o mesmo lugar onde a recusa aparece.
     resultado = carona.passada()
     assert resultado.frase == longa, (
         "o dono passou a devolver a frase curta em `frase` — a janela GTK e o "
@@ -1227,19 +841,7 @@ def _teto_da_tira() -> int:
 def test_a_frase_curta_e_a_longa_sem_o_aviso_e_nao_um_corte(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quem encurta é o DONO da frase, e a curta é a longa MENOS o aviso.
-
-    Cortar no primeiro ponto seria um segundo dono do texto: a tira passaria a
-    depender da pontuação de uma frase que outra pessoa escreve, e mudar a
-    redação lá quebraria a tira aqui sem ninguém ver.
-
-    E `""` CONTINUA QUERENDO DIZER "não tenho versão curta", nunca "não diga
-    nada": o jogo NOVO e a lista de IGNORE estendida à mão já cabem, e para eles
-    quem fala é a `frase`.
-
-    MORDIDA: faça `frase_do_aviso_curta` devolver `frase_do_aviso(censo)` e a
-    primeira asserção reprova; faça-a devolver `""` na regressão e a segunda.
-    """
+    """Quem encurta é o DONO da frase, e a curta é a longa MENOS o aviso."""
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 
     def _censo(motivo: str) -> Any:
@@ -1270,23 +872,7 @@ def test_a_frase_curta_e_a_longa_sem_o_aviso_e_nao_um_corte(
 def test_o_campo_do_jogo_nao_grava_por_tecla(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O guarda-costas da QUARTA PORTA: só `change` grava — `input` não.
-
-    O "ao vivo" da decisão 10-Q4 pede que o piloto ouça `input`, o único evento
-    que um campo de texto dispara a cada TECLA. As três portas de hoje
-    (`change`, `click`, `blur`) despacham pelo `data-hef-gesto`, que aqui é
-    `editor.jogo` — e ele GRAVA NO DISCO. Ligar `input` ao mesmo atributo faria
-    o perfil ser regravado a cada tecla.
-
-    ATÉ 06/09 A GUARDA ERA UMA LISTA DE PROIBIDOS COM UM NOME (`!= "click"`), e
-    uma lista de proibidos não sabe do que ainda não nasceu: `input` não é
-    `click`, logo passava. Virou lista de permitidos, e o vazio continua
-    valendo — um dicionário de régua, montado à mão, não tem de saber o nome do
-    evento do navegador.
-
-    MORDIDA: devolva `_so_mudou` a `!= "click"` e esta régua reprova com o
-    `input` gravando.
-    """
+    """O guarda-costas da QUARTA PORTA: só `change` grava — `input` não."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -1307,7 +893,6 @@ def test_o_campo_do_jogo_nao_grava_por_tecla(
             f"um evento `{evento}` gravou o perfil no disco — com o `input` "
             f"ligado, isso é uma gravação por TECLA que ela digita")
 
-    # E O CAMINHO QUE GRAVA CONTINUA GRAVANDO, senão a guarda virou uma parede.
     for aberto in ({"valor": "1599660", "evento": "change"},
                    {"valor": "1599660"}):
         gravados.clear()

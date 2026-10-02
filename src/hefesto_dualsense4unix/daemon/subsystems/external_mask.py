@@ -136,12 +136,12 @@ a ordem de preferência, com versão de esquema nova"*. Isso **caducou em
 árvore fecham aquela porta, e os quatro estão registrados na
 ``REGRA-NAO-REGISTRO-01``:
 
-1. ``identity.load`` (``identity.py:2207``) DESCARTA a fila inteira quando a
+1. ``identity.load`` (``identity.py:1566``) DESCARTA a fila inteira quando a
    versão do arquivo difere — um bump renumeraria a mesa dela;
 2. ``identity._save_locked`` só aproveita as entradas do outro lado quando
    ``bruto.get("version") == CONTROLLERS_SCHEMA_VERSION`` (``:2170-2174``): o
    primeiro save de DualSense depois de um bump APAGARIA a fila dos externos;
-3. ``payload: dict[str, Any] = {}`` é montado do zero (``identity.py:2175``) —
+3. ``payload: dict[str, Any] = {}`` é montado do zero (``identity.py:1537``) —
    chave nova de topo escrita pelo lado externo morre no primeiro save do outro;
 4. ``merged_order_payload`` devolve exatamente ``{addr, kind, rank}``
    (``:555``) e ``order_entries`` descarta ``kind`` desconhecido (``:521``) —
@@ -212,59 +212,25 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Arquivo PRÓPRIO, irmão do ``controllers.json`` em ``config_dir()``. Nunca o
-#: mesmo arquivo: ver o cabeçalho do módulo, itens 1 a 4.
 _MASKS_FILE = "controller_masks.json"
 
-#: Versão PRÓPRIA do esquema deste arquivo — independente do
-#: ``CONTROLLERS_SCHEMA_VERSION``, que governa a FILA e cuja mudança descarta a
-#: numeração da casa inteira. Separar as duas versões é o ponto: a máscara pode
-#: evoluir sem renumerar ninguém, e a fila pode evoluir sem apagar máscara.
-#: 1 = MÁSCARA-01/E1 (07/08/2026): lista de ``{identity, flavor}``.
 MASKS_SCHEMA_VERSION = 1
 
-#: Campos do documento. Nomes em inglês por paridade com o irmão
-#: (``version``/``order``/``addr``/``kind``/``rank``) — o conteúdo é dado de
-#: máquina, não texto de tela.
 VERSION_FIELD = "version"
 MASKS_FIELD = "masks"
 IDENTITY_FIELD = "identity"
 FLAVOR_FIELD = "flavor"
 
-#: Lock de MÓDULO em volta do span read→``os.replace``, no mesmo espírito do
-#: ``CONTROLLERS_FILE_LOCK``. Este arquivo tem um escritor só (o registro
-#: abaixo), mas duas INSTÂNCIAS do registro no mesmo processo fariam
-#: read-modify-write concorrente — e o ``RLock`` de instância não protege contra
-#: o outro objeto. Nunca importar o lock do ``identity.py`` para cá: são
-#: arquivos diferentes, e dividir o lock acoplaria a máscara à fila.
 MASKS_FILE_LOCK = threading.Lock()
 
 
 def mascaras_validas() -> frozenset[str]:
-    """Os valores que uma máscara pode ter — o catálogo do vpad, não uma cópia.
-
-    Fonte única: ``integrations.uinput_gamepad.FLAVORS``. Uma máscara nova
-    (digamos, um terceiro sabor) passa a ser aceita aqui sem uma linha de
-    edição — e, o que importa mais, **não existe** aqui uma lista que possa
-    divergir daquela e aceitar no disco um valor que o vpad não sabe criar.
-
-    "Como ele mesmo" NÃO está no conjunto de propósito: ela é a AUSÊNCIA de
-    máscara (``None``, nenhuma entrada no arquivo), e não um terceiro valor.
-    Um valor para dizer "sem valor" é a porta pela qual o default entra
-    disfarçado de escolha.
-    """
+    """Os valores que uma máscara pode ter — o catálogo do vpad, não uma cópia."""
     return frozenset(FLAVORS)
 
 
 def normalizar_mascara(valor: object) -> str | None:
-    """A máscara canônica de ``valor``, ou ``None`` quando não há uma.
-
-    ESTRITA de propósito — ver o cabeçalho do módulo. Aceita só as chaves
-    canônicas do :func:`mascaras_validas`, sem espaço e sem caixa; qualquer
-    outra coisa (``None``, número, ``"banana"``, ``"xbox 360"``) devolve
-    ``None``, e quem chamou decide o que fazer com a recusa. O que esta função
-    JAMAIS faz é escolher uma máscara por conta própria.
-    """
+    """A máscara canônica de ``valor``, ou ``None`` quando não há uma."""
     if not isinstance(valor, str):
         return None
     chave = valor.strip().lower()
@@ -272,52 +238,19 @@ def normalizar_mascara(valor: object) -> str | None:
 
 
 class ExternalMaskRegistry:
-    """Identidade de aparelho externo → máscara escolhida para ele.
-
-    Leitura e escrita são puras sobre um arquivo próprio; nada aqui enumera
-    ``/dev/input``, abre ``hidraw`` ou fala com o kernel. É o que permite testar
-    a entrega inteira **sem aparelho nenhum** — e é também o que a mantém dentro
-    da `E1`: a adoção dos externos (dar-lhes gamepad virtual) é a `E3`, e ela
-    vem depois.
-
-    A chave é a que o projeto já usa para NUMERAR o externo:
-    :func:`~...external_identity.identity_for_entry`, canonizada pela MESMA
-    função da fila (``ExternalIdentityRegistry._canonical``). Recalcular por
-    conta própria é como duas camadas divergem — e aí a máscara ficaria
-    pendurada num aparelho e o número noutro.
-
-    Thread-safety: ``RLock`` de instância (o tick do daemon e a rota IPC rodam
-    em threads diferentes) + :data:`MASKS_FILE_LOCK` de módulo em volta do
-    read→``os.replace``. Nunca chama o registro de identidade segurando o
-    próprio lock — não há consulta cruzada aqui, e não deve passar a haver.
-    """
+    """Identidade de aparelho externo → máscara escolhida para ele."""
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
-        #: identidade canônica → máscara. Só quem é MAC de HARDWARE chega ao
-        #: disco; volátil vive aqui e morre com o processo (limite 1).
         self._mascaras: dict[str, str] = {}
-        #: Subconjunto de ``_mascaras`` com identidade VOLÁTIL — a lista do que
-        #: o save tem de pular. Espelha ``ExternalIdentityRegistry._volatile``.
         self._volateis: set[str] = set()
         self._loaded = False
-        #: Arquivo de versão que não é a nossa: não se lê e **não se
-        #: sobrescreve**. Escolha de alguém não se destrói para registrar outra.
         self._somente_leitura = False
 
-    # -- chave -------------------------------------------------------------
 
     @staticmethod
     def _key(identity: str | None) -> tuple[str, bool] | None:
-        """``(chave canônica, persistível)`` da identidade, ou ``None``.
-
-        Delega a ``ExternalIdentityRegistry._canonical`` — a MESMA função que a
-        fila usa — em vez de repetir a regra do MAC. O precedente de chamar o
-        método privado do irmão já existe na árvore
-        (``ExternalImuEnabler.tick``, ``external_identity.py:1047``), e é
-        deliberado: uma segunda implementação da canonização é uma segunda
-        chance de a máscara e o número discordarem sobre quem é o aparelho.
-        """
+        """``(chave canônica, persistível)`` da identidade, ou ``None``."""
         if not identity or not isinstance(identity, str):
             return None
         chave, persistivel = ExternalIdentityRegistry._canonical(identity)
@@ -325,15 +258,9 @@ class ExternalMaskRegistry:
             return None
         return chave, persistivel
 
-    # -- leitura -----------------------------------------------------------
 
     def mask_for(self, identity: str | None) -> str | None:
-        """A máscara deste aparelho, ou ``None`` = *"como ele mesmo"*.
-
-        Leitura PURA: nunca escreve no disco, nunca cria entrada. Identidade
-        vazia, malformada ou desconhecida devolve ``None`` — e ``None`` aqui não
-        é erro, é a resposta honesta *"este controle aparece como ele mesmo"*.
-        """
+        """A máscara deste aparelho, ou ``None`` = *"como ele mesmo"*."""
         par = self._key(identity)
         if par is None:
             return None
@@ -342,13 +269,7 @@ class ExternalMaskRegistry:
             return self._mascaras.get(par[0])
 
     def mask_for_entry(self, entry: dict[str, Any]) -> str | None:
-        """:meth:`mask_for` a partir de uma entrada do inventário de externos.
-
-        Atalho para o consumidor não ter de lembrar de chamar
-        :func:`~...external_identity.identity_for_entry` — que é justamente o
-        passo cuja omissão faria a máscara ser procurada por uma chave diferente
-        da que numera o aparelho.
-        """
+        """:meth:`mask_for` a partir de uma entrada do inventário de externos."""
         return self.mask_for(identity_for_entry(entry))
 
     def snapshot(self) -> dict[str, str]:
@@ -357,21 +278,9 @@ class ExternalMaskRegistry:
             self._load_locked()
             return dict(self._mascaras)
 
-    # -- escrita -----------------------------------------------------------
 
     def set_mask(self, identity: str | None, flavor: object) -> bool:
-        """Registra a máscara deste aparelho. ``True`` se ficou registrada.
-
-        Recusa (``False``, e **nada muda**) quando a identidade não resolve ou
-        quando ``flavor`` não é uma máscara válida. A recusa é explícita de
-        propósito: um valor inválido tratado como "limpar" apagaria a escolha
-        dela em silêncio, que é o mesmo defeito de um valor inválido virar
-        "xbox" — só que do outro lado. Quem quer *"como ele mesmo"* chama
-        :meth:`clear_mask`, e diz isso com todas as letras.
-
-        Persiste na hora, quando a identidade é MAC de HARDWARE: é gesto dela,
-        não estado de sessão, e não pode esperar um tick que talvez não venha.
-        """
+        """Registra a máscara deste aparelho. ``True`` se ficou registrada."""
         par = self._key(identity)
         if par is None:
             logger.warning("external_mascara_recusada_identidade", identidade=identity)
@@ -406,11 +315,7 @@ class ExternalMaskRegistry:
             return True
 
     def clear_mask(self, identity: str | None) -> bool:
-        """Volta este aparelho para *"como ele mesmo"*. ``True`` se havia algo.
-
-        Remover a entrada é a forma canônica de dizer "sem máscara": não existe
-        valor no arquivo para "nenhuma" (ver :func:`mascaras_validas`).
-        """
+        """Volta este aparelho para *"como ele mesmo"*. ``True`` se havia algo."""
         par = self._key(identity)
         if par is None:
             return False
@@ -430,47 +335,7 @@ class ExternalMaskRegistry:
             return True
 
     def manter_somente(self, identidades: Iterable[str | None]) -> tuple[str, ...]:
-        """Só estas ficam com máscara própria; TODA outra volta ao padrão.
-
-        É a decisão dela de 09/09/2026 (MASCARA-NO-PERFIL-01) escrita no
-        registro: *"Default é Hefesto dualsense padrão"* — um perfil que não
-        fala da máscara de um controle **devolve aquele controle ao padrão**, em
-        vez de deixar valendo a escolha do perfil anterior. Quem chama é
-        :meth:`~...profiles.manager.ProfileManager.apply_controller_mascaras`,
-        com a lista do que o perfil declarou.
-
-        Devolve as chaves canônicas que foram APAGADAS, ordenadas — vazio quando
-        não havia nada a apagar, que é o caso comum.
-
-        **UMA ESCRITA DE DISCO, NÃO UMA POR PEÇA, e o número é medido**
-        (09/09/2026, esta árvore, ``ext4``, mediana de 200 voltas): o
-        ``_save_locked`` custa **0,12 ms** e é read-modify-write do arquivo
-        inteiro, então quatro :meth:`clear_mask` seguidos pagam quatro deles —
-        **0,63 ms e 4 escritas**. A varredura aqui apaga os mesmos quatro
-        assentos em **0,21 ms e 1 escrita**. E quando não há nada a devolver (a
-        mesa já no padrão) ela custa **0,034 ms** e **ZERO** escrita: nada a
-        apagar, nada a gravar — que é o caso comum, e é o que torna barato
-        chamá-la em toda ativação de perfil.
-
-        O QUE ESTE MÉTODO NÃO DECIDE: quais vpads caem. Apagar a entrada não
-        derruba nada por si — quem derruba é o laço do co-op, consultando
-        :func:`vpad_ficou_para_tras`, e ele só derruba o vpad cuja máscara
-        EFETIVA mudou. Um controle que já estava no padrão perde a entrada e
-        continua no mesmo flavor: a comparação dá igual e o vpad sobrevive.
-        Medido sobre os quatro assentos, com o padrão em ``dualsense``:
-
-        =========================================  =============  ==========
-        a mesa antes do perfil calado              vpads que caem  escritas
-        =========================================  =============  ==========
-        ninguém com máscara própria                 0 de 4         0
-        um assento em Xbox                          1 de 4         1
-        os quatro em Xbox                           4 de 4         1
-        os quatro COM entrada, mas já no padrão     **0 de 4**     1
-        =========================================  =============  ==========
-
-        A última linha é a que responde ao medo que abriu esta decisão: quatro
-        entradas apagadas, e **nenhum** controle dela some da partida.
-        """
+        """Só estas ficam com máscara própria; TODA outra volta ao padrão."""
         manter: set[str] = set()
         for identidade in identidades:
             par = self._key(identidade)
@@ -499,19 +364,9 @@ class ExternalMaskRegistry:
                 self._save_locked()
             return sobrando
 
-    # -- persistência ------------------------------------------------------
 
     def load(self) -> None:
-        """Carrega o arquivo (idempotente).
-
-        Público por paridade com o irmão, mas **não é obrigatório**: todo
-        método aqui chama :meth:`_load_locked` antes de responder. O registro
-        ainda não tem fiação no daemon — a `E1` entrega o registro, e quem o
-        consome é a `E3`/`E4` —, e um registro que só carrega se alguém lembrar
-        de mandar carregar é um registro que responde *"sem máscara"* para uma
-        escolha que está no disco. Esse é exatamente o modo de falhar que esta
-        entrega existe para impedir.
-        """
+        """Carrega o arquivo (idempotente)."""
         with self._lock:
             self._load_locked()
 
@@ -524,19 +379,13 @@ class ExternalMaskRegistry:
 
     @classmethod
     def _ler_documento(cls) -> dict[str, Any] | None:
-        """O JSON do disco quando ele é um objeto; ``None`` em qualquer outro caso.
-
-        Ausente, ilegível, truncado ou não-objeto devolvem ``None`` — e ``None``
-        autoriza a escrita (não há escolha de ninguém a destruir num arquivo que
-        já não diz nada). Quem barra a escrita é a VERSÃO, checada por quem
-        chama.
-        """
+        """O JSON do disco quando ele é um objeto; ``None`` em qualquer outro caso."""
         try:
             with cls._path().open(encoding="utf-8") as fh:
                 bruto = json.load(fh)
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             return None
-        except Exception as exc:  # defensivo — leitura jamais derruba o daemon
+        except Exception as exc:
             logger.debug("external_mascaras_load_falhou", err=str(exc))
             return None
         return bruto if isinstance(bruto, dict) else None
@@ -570,8 +419,6 @@ class ExternalMaskRegistry:
                 continue
             chave, persistivel = par
             if not persistivel:
-                # Só pode ter chegado ao disco por uma versão futura ou por
-                # edição à mão: identidade volátil nunca é gravada daqui.
                 logger.info(
                     "external_mascara_nao_persistivel_descartada", identidade=chave
                 )
@@ -591,17 +438,7 @@ class ExternalMaskRegistry:
             )
 
     def _save_locked(self) -> None:
-        """Read-modify-write atômico do arquivo de máscaras (sob ``_lock``).
-
-        Preserva o que não entende — chaves de TOPO e campos POR ENTRADA
-        escritos por uma versão futura. É a lição do ``identity.py:2175``
-        (``payload = {}`` do zero) aplicada contra nós mesmos: quem monta o
-        documento do zero destrói o que o outro escritor sabia.
-
-        Versão diferente da nossa **aborta a escrita** e tranca o registro em
-        somente-leitura. Nunca propaga exceção: perder um save custa escolher a
-        máscara de novo; derrubar o tick do daemon custa a mesa inteira.
-        """
+        """Read-modify-write atômico do arquivo de máscaras (sob ``_lock``)."""
         if self._somente_leitura:
             logger.warning("external_mascaras_save_recusado_schema_desconhecido")
             return
@@ -683,30 +520,13 @@ class ExternalMaskRegistry:
             raise
 
 
-#: MÁSCARA-POR-JOGADOR-01 (15/08/2026) — a ÚNICA instância viva no processo.
-#:
-#: Não é preguiça de injeção: é a peça que FALTAVA para a decisão dela poder ser
-#: cumprida. :meth:`ExternalMaskRegistry._load_locked` lê o disco **uma vez por
-#: instância** (``_loaded``) e nunca mais; duas instâncias no mesmo processo
-#: divergem na primeira escrita — a que gravou responde a máscara nova, a outra
-#: segue respondendo a antiga até morrer. E os consumidores são três, em threads
-#: diferentes: a criação do vpad (poll loop), a comparação que decide recriá-lo
-#: (tick do co-op) e a rota IPC que grava o gesto dela. Três instâncias seriam
-#: três respostas para *"qual é a máscara deste controle?"*, e o sintoma seria o
-#: pior possível: o vpad recriado num laço eterno porque quem cria e quem
-#: compara discordam.
 _REGISTRO: ExternalMaskRegistry | None = None
 
-#: Lock só da criação preguiçosa acima (o registro tem o próprio ``RLock``).
 _REGISTRO_LOCK = threading.Lock()
 
 
 def registro_de_mascaras() -> ExternalMaskRegistry:
-    """O registro de máscaras do processo — sempre o mesmo objeto.
-
-    Criado na primeira chamada e reusado para sempre. Ver :data:`_REGISTRO`
-    para o porquê de ser um só.
-    """
+    """O registro de máscaras do processo — sempre o mesmo objeto."""
     global _REGISTRO
     if _REGISTRO is None:
         with _REGISTRO_LOCK:
@@ -716,11 +536,7 @@ def registro_de_mascaras() -> ExternalMaskRegistry:
 
 
 def _zerar_registro_de_mascaras() -> None:
-    """Descarta a instância viva. **Só para teste** — nada em produção chama.
-
-    Existe porque o registro guarda estado de disco em memória e um teste que
-    troque o ``config_dir`` herdaria as máscaras do teste anterior.
-    """
+    """Descarta a instância viva. **Só para teste** — nada em produção chama."""
     global _REGISTRO
     with _REGISTRO_LOCK:
         _REGISTRO = None
@@ -847,28 +663,13 @@ def vpad_ficou_para_tras(
         quer_uhid,
     )
 
-    # E O APARELHO — o juiz pelo aparelho (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09):
-    # a máscara Nintendo fica no `uinput` nos dois modos, e o modo Xbox que
-    # chega com o Pro de pé tem de vesti-lo de Xbox 360. A pergunta é a MESMA do
-    # `ja_estava` do P1 (`virtual_pad.o_aparelho_mudou`), ou os dois brigam.
     return quer_uhid(caminho_do_vpad(vpad), mascara) != quer_uhid(
         caminho, mascara
     ) or o_aparelho_mudou(vpad, caminho, mascara)
 
 
 def mascara_vestida(daemon: Any, uniq: str | None = None) -> str | None:
-    """A máscara que o vpad DAQUELE aparelho veste AGORA — `None` sem vpad.
-
-    TROCA-DENTRO-DO-JOGO-01 (14/09/2026): este é o leitor ÚNICO da pergunta "o
-    que o aparelho está vestindo". Ela tinha cinco respostas espalhadas — uma no
-    gesto (`hotkey.mascara_atual`), uma na env (`launch_env._mascara_do_primario`),
-    uma no cartão da tela — e no estado de FALHA (o registro já gravado, o vpad
-    ainda na máscara velha) elas divergiam: a barra dizia uma cor, a aba Jogar
-    outra. A prova é o aparelho, e o aparelho responde num lugar só.
-
-    `uniq` omitido (ou o do jogador 1) responde pelo vpad primário; os outros
-    saem do co-op, pela identidade canônica (`mesma_identidade`).
-    """
+    """A máscara que o vpad DAQUELE aparelho veste AGORA — `None` sem vpad."""
     primario = getattr(daemon, "_gamepad_device", None)
     if uniq is None or mesma_identidade(uniq, _identidade_do_primario(daemon)):
         flavor = getattr(primario, "flavor", None)
@@ -888,8 +689,6 @@ def _identidade_do_primario(daemon: Any) -> str | None:
     return getattr(getattr(daemon, "controller", None), "primary_uniq", None)
 
 
-#: Sentinela de "o chamador não passou store" — `None` é resposta válida (é o
-#: estado da máquina dela que a A-PERNA-QUE-FALTA-01 mediu).
 _SEM_STORE = object()
 
 
@@ -961,8 +760,6 @@ def escolher_a_mascara(
     vestida = mascara_vestida(daemon, uniq)
     esperada = alvo if alvo is not None else vestida
     if vestida is not None and esperada is not None and vestida != esperada:
-        # O aparelho não concordou (o gate R-04 recusou, a fábrica falhou). A
-        # escolha não vai para o perfil, e o registro volta ao que era.
         if anterior is None:
             registro.clear_mask(uniq)
         else:
@@ -975,9 +772,6 @@ def escolher_a_mascara(
                 "perfil": None, "gravado": False,
                 "motivo": "aparelho_nao_vestiu", "vestiu": vestiu}
 
-    # O `store` do servidor IPC e o do daemon são o mesmo objeto em produção; o
-    # parâmetro existe porque quem chama pelo socket já o tem na mão, e porque
-    # `None` aqui é RESPOSTA (a segunda perna, a do disco, é que responde então).
     dono = getattr(daemon, "store", None) if store is _SEM_STORE else store
     nome = nome_do_perfil_que_grava(getattr(dono, "active_profile", None))
     perfil, gravado, motivo = gravar_a_mascara_no_perfil_ativo(

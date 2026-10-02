@@ -69,34 +69,15 @@ SCROLL_RATE_LIMIT_SEC = 0.050
 DEFAULT_MOUSE_SPEED = 6
 DEFAULT_SCROLL_SPEED = 1
 
-# AS DUAS FAIXAS, e elas ganharam nome em 01/09/2026. Os números viviam como
-# LITERAIS em dois lugares — `set_speed()` logo abaixo e
-# `daemon/lifecycle.py:1445-1437` —, e a tela da aba Navegação escrevia um
-# TERCEIRO: a dica dizia *"De 1 a 10"* nas duas linhas, e nas duas estava errada.
-# Três cópias de um fato é o defeito que esta casa persegue; agora há uma, e a
-# tela a LÊ em vez de digitar.
 MOUSE_SPEED_MIN, MOUSE_SPEED_MAX = 1, 12
 SCROLL_SPEED_MIN, SCROLL_SPEED_MAX = 1, 5
 TRIGGER_PRESS_THRESHOLD = 64
 
-# FEAT-MOUSE-CURSOR-FEEL-01 (A7) — pipeline float do stick esquerdo.
-# Expoente da curva de resposta: 1.0 seria linear; 1.6 achata a região perto
-# da deadzone (micro-ajuste fino em point-and-click) e preserva o teto em
-# deflexão total. Constante de módulo — configurabilidade fica fora de escopo.
 MOUSE_EXPO = 1.6
-# Velocidade máxima (px/s) que CADA nível de `mouse_speed` adiciona: o teto em
-# deflexão total é `speed * MOUSE_PX_PER_SEC_STEP` (speed 1 → 125 px/s …
-# speed 12 → 1500 px/s; ver tabela na docstring do módulo).
 MOUSE_PX_PER_SEC_STEP = 125.0
-# Default do período do tick quando o criador não informa: espelha o
-# DEFAULT_POLL_HZ do daemon sem importá-lo (integrations não depende de
 # daemon). Os callsites reais passam `config.poll_hz`.
 DEFAULT_POLL_HZ = 60
 
-# Touchpad como cursor (FEAT-DSX-TOUCHPAD-CURSOR-B4): pixels de cursor por
-# unidade do touchpad (largura 1920 / altura 1079) com `mouse_speed` default.
-# 0.45 mapeia uma varredura horizontal cheia (~1920 un.) a ~864 px — confortável
-# em 1080p e proporcional ao stick (que também usa `mouse_speed`).
 TOUCHPAD_SENSITIVITY = 0.45
 
 BUTTON_TO_UINPUT: dict[str, str] = {
@@ -112,9 +93,6 @@ DPAD_TO_KEY: dict[str, str] = {
     "dpad_right": "KEY_RIGHT",
 }
 
-# Botões edge-triggered que emitem press+release imediatos (FEAT-MOUSE-02).
-# Circle e Square funcionam como "tecla pressionada e soltada" em cada transição
-# False→True — hold não repete. Ideal para Enter/Esc em diálogos.
 EDGE_KEY_MAP: dict[str, str] = {
     "circle": "KEY_ENTER",
     "square": "KEY_ESC",
@@ -148,26 +126,7 @@ def _build_capabilities() -> list[tuple[Any, ...]]:
 
 
 def _compute_move_px_per_sec(lx: int, ly: int, speed: int) -> tuple[float, float]:
-    """Converte o stick esquerdo (0-255 por eixo) em velocidade-alvo (px/s).
-
-    Pipeline FEAT-MOUSE-CURSOR-FEEL-01 (substitui o antigo
-    `int((raw-128)/128*speed)` por tick — linear, truncado e quantizado):
-
-      1. Normalização radial: ``nx=(lx-128)/128``, ``ny=(ly-128)/128``,
-         ``mag=hypot(nx, ny)``.
-      2. Deadzone radial REESCALADA: ``m = max(0, (mag-dz)/(1-dz))`` com
-         ``dz = MOVE_DEADZONE/128`` — a resposta começa em 0 exatamente na
-         borda da deadzone (sem o degrau 0→60 px/s do pipeline antigo).
-         ``m`` é clampado a 1.0 para que o canto diagonal (gate quadrado do
-         raw 0-255) não ultrapasse o teto nominal de px/s.
-      3. Curva expo: ``curved = m ** MOUSE_EXPO``.
-      4. Velocidade-alvo radial: ``vel = curved * speed * MOUSE_PX_PER_SEC_STEP``
-         distribuída por eixo proporcionalmente a ``nx/mag`` e ``ny/mag``
-         (simétrica em todas as direções).
-
-    Retorna ``(vx, vy)`` em px/s float — o chamador integra por tick com
-    carry fracionário (``_emit_move``).
-    """
+    """Converte o stick esquerdo (0-255 por eixo) em velocidade-alvo (px/s)."""
     nx = (lx - STICK_CENTER) / STICK_CENTER
     ny = (ly - STICK_CENTER) / STICK_CENTER
     mag = math.hypot(nx, ny)
@@ -181,10 +140,7 @@ def _compute_move_px_per_sec(lx: int, ly: int, speed: int) -> tuple[float, float
 
 
 def _compute_scroll_step(raw: int) -> int:
-    """Converte valor 0-255 de stick direito em passo de rolagem discreto.
-
-    Retorna +1, -1 ou 0 conforme a direção dominante após deadzone.
-    """
+    """Converte valor 0-255 de stick direito em passo de rolagem discreto."""
     offset = raw - STICK_CENTER
     if abs(offset) < SCROLL_DEADZONE:
         return 0
@@ -198,18 +154,8 @@ class UinputMouseDevice:
     name: str = DEVICE_NAME
     mouse_speed: int = DEFAULT_MOUSE_SPEED
     scroll_speed: int = DEFAULT_SCROLL_SPEED
-    # FEAT-MOUSE-CURSOR-FEEL-01: frequência do poll loop que chama dispatch();
-    # define o período de integração do movimento (delta/tick = vel/poll_hz).
-    # O daemon passa `config.poll_hz` nos callsites — nunca hardcodar 60 lá.
     poll_hz: int = DEFAULT_POLL_HZ
 
-    # OS TRÊS MAPAS VIRARAM ESTADO DO DEVICE — 01/09/2026,
-    # FEAT-ACOES-DE-BOTAO-01. Eles eram constantes de módulo lidas direto pelos
-    # três emissores, e por isso o perfil não tinha como trocar o que um botão
-    # faz: doze das vinte e uma linhas da tela ofereciam escolha que não ia a
-    # lugar nenhum.
-    #
-    # NASCEM IGUAIS ÀS CONSTANTES, e é isso que mantém o comportamento de hoje
     # quando ninguém escolhe nada: `set_button_actions` é quem os troca, e o
     # perfil sem `button_actions` nunca o chama.
     _mapa_botoes: dict[str, str] = field(
@@ -221,24 +167,11 @@ class UinputMouseDevice:
     _uinput_mod: Any = None
     _last_buttons_emulated: frozenset[str] = field(default_factory=frozenset)
     _last_scroll_at: float = -math.inf
-    # Estado por botão "tap" (FEAT-MOUSE-02): circle/square emitem press+release
-    # em cada transição False→True. Guarda previous_state para detectar o delta.
     _prev_edge_keys: frozenset[str] = field(default_factory=frozenset)
-    # Carry fracionário do movimento do touchpad (B4): preserva o sub-pixel
-    # truncado a cada tick para que movimento lento não "engasgue".
     _tp_carry_x: float = 0.0
     _tp_carry_y: float = 0.0
-    # Carry fracionário da MIRA POR MOVIMENTO (MOVIMENTO-EM-QUALQUER-MASCARA-01).
-    # PAR PRÓPRIO, e não o `_tp_carry_*` reaproveitado: o touchpad e o giro
-    # podem estar movendo o cursor no mesmo tique, e um carry compartilhado
-    # faria o resto de um virar movimento do outro — o dedo dela empurraria a
-    # mira e a mira empurraria o dedo.
     _giro_carry_x: float = 0.0
     _giro_carry_y: float = 0.0
-    # Carry fracionário do movimento do STICK (FEAT-MOUSE-CURSOR-FEEL-01):
-    # mesmo padrão do touchpad — o resto sub-pixel de cada tick é levado ao
-    # próximo em vez de truncado (deflexões pequenas acumulam e movem).
-    # Zerado dentro da deadzone e no start/stop para não virar drift.
     _stick_carry_x: float = 0.0
     _stick_carry_y: float = 0.0
 
@@ -255,8 +188,6 @@ class UinputMouseDevice:
             caps = _build_capabilities()
             self._device = uinput.Device(caps, name=self.name)
             self._uinput_mod = uinput
-            # Carry zerado a cada start: resto de uma sessão anterior não pode
-            # virar movimento fantasma na nova (FEAT-MOUSE-CURSOR-FEEL-01).
             self._stick_carry_x = 0.0
             self._stick_carry_y = 0.0
             logger.info("uinput_mouse_created", name=self.name)
@@ -337,10 +268,6 @@ class UinputMouseDevice:
             return
         mudos = frozenset(calados or ())
         self._mapa_botoes = dict(do_mouse)
-        # O QUE SAIU DO MOUSE SAI DOS OUTROS DOIS TAMBÉM. Um `dpad_up` que
-        # passou a ser `BTN_LEFT` não pode continuar emitindo `KEY_UP` pelo
-        # `_emit_dpad` — seriam duas coisas no mesmo aperto. E O QUE ELA CALOU
-        # SAI IGUAL, pelo motivo escrito no docstring.
         self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items()
                            if b not in do_mouse and b not in mudos}
         self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items()
@@ -402,7 +329,6 @@ class UinputMouseDevice:
     def _emit_buttons(self, emulated: frozenset[str]) -> None:
         """Edge-triggered press/release dos botões do mouse."""
         u = self._uinput_mod
-        # Filtra só botões que mapeiam pra BTN_* (cross, triangle, r3)
         relevant_now = {b for b in emulated if b in self._mapa_botoes}
         relevant_last = {b for b in self._last_buttons_emulated if b in self._mapa_botoes}
 
@@ -504,9 +430,6 @@ class UinputMouseDevice:
             return
 
         u = self._uinput_mod
-        # REL_WHEEL convenciona valores positivos para rolar pra cima.
-        # Stick direito "para cima" tem ry < 128 (offset negativo).
-        # Invertemos o sinal para manter a convenção natural de scroll.
         if step_v != 0:
             self._device.emit(u.REL_WHEEL, -step_v * self.scroll_speed, syn=False)
         if step_h != 0:
@@ -515,15 +438,7 @@ class UinputMouseDevice:
         self._last_scroll_at = now
 
     def emit_touchpad_move(self, raw_dx: int, raw_dy: int) -> None:
-        """Move o cursor a partir de um delta bruto do touchpad (B4).
-
-        `raw_dx`/`raw_dy` vêm em unidades do touchpad (kernel hid_playstation),
-        já acumuladas pelo `TouchpadReader.consume_motion` desde o último tick.
-        Escala por `TOUCHPAD_SENSITIVITY * mouse_speed/DEFAULT` (mesma noção de
-        velocidade do stick) e mantém carry fracionário para movimento suave —
-        o resto sub-pixel é levado ao próximo tick em vez de truncado (o que
-        causaria o "engasgo" em movimentos lentos).
-        """
+        """Move o cursor a partir de um delta bruto do touchpad (B4)."""
         if self._device is None or self._uinput_mod is None:
             return
         if raw_dx == 0 and raw_dy == 0:
@@ -545,24 +460,7 @@ class UinputMouseDevice:
         self._device.syn()
 
     def emit_gyro_move(self, px_x: float, px_y: float) -> None:
-        """Move o cursor a partir de um deslocamento já em PIXELS float.
-
-        MOVIMENTO-EM-QUALQUER-MASCARA-01: é o destino «mouse» do roteador de
-        movimento. Recebe pixels e não graus porque quem sabe converter é o
-        motor puro (`core/roteador_de_movimento.pixels`) — este device não
-        conhece giroscópio nenhum, e é assim que ele continua testável sem
-        aparelho.
-
-        O CARRY É A ENTREGA, e não um detalhe: uma mira lenta produz frações de
-        pixel por tique, e `int()` as jogaria fora para sempre — o giro fino
-        (o ajuste de mira, que é justamente o que o giroscópio faz melhor que o
-        stick) simplesmente não moveria nada. Mesma disciplina do
-        `emit_touchpad_move` e do `_emit_move`, com par de carry próprio.
-
-        Sem device (emulação de mouse desligada) é no-op silencioso: o roteador
-        NÃO cria nó de mouse por conta própria — um segundo dono para o cursor
-        é decisão dela, não efeito colateral de uma mira.
-        """
+        """Move o cursor a partir de um deslocamento já em PIXELS float."""
         if self._device is None or self._uinput_mod is None:
             return
         if px_x == 0.0 and px_y == 0.0:
@@ -583,21 +481,8 @@ class UinputMouseDevice:
         self._device.syn()
 
 
-# ---------------------------------------------------------------------------
-# O CURSOR DO TOQUE — NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026
-# ---------------------------------------------------------------------------
-
-#: O nome do nó. NÃO termina em «Touchpad», de propósito: a regra
-#: `assets/76-dualsense-touchpad-libinput-ignore.rules` tira do libinput todo
-#: nó `*Hefesto*Touchpad`, e este é o ponteiro que o computador tem de ler.
 NOME_DO_CURSOR_DO_TOQUE = "Hefesto - DualSense4Unix Touch Cursor"
 
-#: O CLIQUE DE QUEM PAROU DE DAR NOTÍCIA SOLTA, em segundos. O tique renova o
-#: clique de cada peça que segura a cada volta; a peça que saiu do laço (o
-#: controle que desligou no meio de um arrasto) não diz «soltei», e o botão
-#: esquerdo do computador ficaria apertado até o controle virtual cair. Meio
-#: segundo é o silêncio que o resto do roteador já usa
-#: (`roteador_de_movimento.SILENCIO_DA_DRENAGEM_S`).
 CLIQUE_SEM_NOTICIA_S = 0.5
 
 
@@ -692,11 +577,7 @@ class CursorDoToque:
         self.conferir(agora)
 
     def conferir(self, agora: float | None = None) -> None:
-        """Solta o clique de quem parou de dar notícia, e acerta o botão.
-
-        Chamado pelo tique do P1 enquanto o nó existe
-        (`gamepad._conferir_o_cursor_do_toque`) e por :meth:`clicar`.
-        """
+        """Solta o clique de quem parou de dar notícia, e acerta o botão."""
         agora = time.monotonic() if agora is None else agora
         if self._clicando:
             self._clicando = {
@@ -733,4 +614,3 @@ __all__ = [
     "_compute_scroll_step",
 ]
 
-# "O único bem verdadeiro é o conhecimento, e o único mal verdadeiro é a ignorância." — Sócrates

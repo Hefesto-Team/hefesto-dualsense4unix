@@ -137,17 +137,8 @@ if _SCRIPTS not in sys.path:
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-# A régua da identidade do vpad é UMA nesta casa, e é importada — nunca
-# recopiada. `identidade_do_vpad.py` nasceu (VPAD-NO-ESPELHO-01, 12/08/2026)
-# porque a pergunta "isto é um vpad?" estava escrita três vezes e uma delas
-# respondia errado.
 from identidade_do_vpad import VPAD_HID_PHYS, VPAD_UNIQ_PREFIXO
 
-#: O carimbo que o PRODUTO escreve, quando o pacote é importável. NÃO é uma
-#: segunda cópia da palavra: é a conferência de que as duas metades da régua
-#: não se afastaram. Se o produto trocar o `phys` e este script continuar
-#: procurando o antigo, o instrumento fica cego CALADO — que é o modo de falha
-#: mais caro desta casa. Aqui ele fica cego BARULHENTO.
 try:  # pragma: no cover - o caminho sem pacote é o do checkout sem venv
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         VPAD_HID_PHYS as _CARIMBO_DO_PRODUTO,
@@ -155,10 +146,6 @@ try:  # pragma: no cover - o caminho sem pacote é o do checkout sem venv
 except ImportError:
     _CARIMBO_DO_PRODUTO = ""
 
-#: A OUTRA régua deste mesmo degrau, a que casa por inode. Este instrumento não
-#: a importa (as duas têm de poder ficar cegas separadamente — é o ponto de
-#: haver duas), mas DIZ se ela está na árvore. Um par de réguas em que só uma
-#: existe não é um par, e quem lê a tela precisa saber disso sem ir procurar.
 A_IRMA = Path(__file__).resolve().parent / "o_jogo_segura_o_nosso_no.py"
 
 
@@ -168,27 +155,11 @@ def _estado_da_irma() -> str:
     return "NÃO ESTÁ nesta árvore — hoje esta é a única régua deste degrau"
 
 
-#: Onde o Proton larga o log. Não é configurável do lado dele: o `proton` grava
-#: em `$HOME/steam-<appid>.log` quando `PROTON_LOG=1`.
 ONDE_O_PROTON_GRAVA = Path.home()
 PADRAO_DO_NOME = "steam-*.log"
 
-#: O canal do `WINEDEBUG` sem o qual este log não responde nada. Um log gravado
-#: sem ele não tem linha de HID alguma — e um instrumento que lesse isso como
-#: "o jogo não recebeu" estaria afirmando ausência a partir da própria cegueira.
 CANAL_EXIGIDO = "hid"
 
-#: Os cinco vereditos, no LÉXICO DA IRMÃ. `o_jogo_segura_o_nosso_no.py` — a
-#: outra régua deste mesmo degrau — diz `SEGURA O NOSSO NÓ`, `SEGURA O FÍSICO,
-#: NÃO O NOSSO`, `SEGURA OS DOIS`, `NENHUM` e `NÃO SONDADO`. As duas últimas
-#: aqui são a MESMA PALAVRA, byte por byte, porque significam a mesma coisa; as
-#: outras derivam do verbo desta régua (`RECEBEU`) em vez de inventar léxico
-#: novo. Ela lê as duas telas lado a lado, e duas gramáticas para a mesma
-#: pergunta é atrito que não paga nada.
-#:
-#: `NÃO SONDADO` é o único honesto quando a pergunta não fecha. `NENHUM` é
-#: AFIRMAÇÃO POSITIVA — "o censo fechou e não havia nada" — e só sai quando o
-#: censo de fato fechou.
 V_RECEBEU = "RECEBEU DO NOSSO NÓ"
 V_SO_VIU = "VIU O NOSSO NÓ, NÃO RECEBEU"
 V_OUTRO = "RECEBEU DE OUTRO NÓ, NÃO DO NOSSO"
@@ -226,10 +197,6 @@ _RX_ENTREGOU = re.compile(
 _RX_HEXDUMP = re.compile(r"^[0-9a-f]{8}  (?P<bytes>[0-9a-f ]+)$")
 _RX_DESC = re.compile(r"\{(?P<desc>[^}]*)\}")
 
-#: O destino de um nó, em três palavras. O log escreve o descritor inteiro
-#: dentro da mesma linha, e imprimir aquilo estoura a largura da tela dela — a
-#: primeira versão deste instrumento fazia isso e a tabela ficou ilegível. O
-#: descritor não se perde: vai para `NoDoLog.desc`, e sai no `--json`.
 _DESTINOS = (
     ("in SDL ignore list", "ignorado (SDL ignore list)"),
     ("to a different backend", "adiado p/ outro backend"),
@@ -237,18 +204,7 @@ _DESTINOS = (
 
 
 def mascarar(texto: str) -> str:
-    """Zera os octetos 4 e 5 de todo MAC do texto — a máscara desta casa.
-
-    Não é enfeite e não é opcional. Este log traz o `HID_UNIQ` dos controles
-    FÍSICOS dela, que são MAC de fábrica de verdade, e a saída de um
-    instrumento acaba colada em relatório. Há portão que reprova MAC real em
-    arquivo versionado (`scripts/check_anonymity.sh`), e ele não vê o que sai
-    na tela — quem tem de ver é este instrumento.
-
-    O `uniq` forjado do vpad (`02:fe:00:00:00:01`) atravessa a máscara
-    inalterado, porque os octetos 4 e 5 dele já são zero por construção. Isso é
-    de propósito: a máscara não pode apagar justamente o crachá que se mede.
-    """
+    """Zera os octetos 4 e 5 de todo MAC do texto — a máscara desta casa."""
 
     def _troca(m: re.Match[str]) -> str:
         p = m.group(1).split(":")
@@ -362,19 +318,7 @@ class Log:
 
     @property
     def canal_hid_ligado(self) -> bool:
-        """`+hid` estava no `WINEDEBUG` que gravou este log?
-
-        Duas rotas, e a EVIDÊNCIA vence a declaração: existir uma linha
-        `trace:hid:` no corpo prova que o canal estava ligado, aconteça o que
-        acontecer no cabeçalho — o `WINEDEBUG` pode ter sido mexido depois que
-        o `proton` calculou o `Effective`. A declaração só decide quando o
-        corpo está calado.
-
-        O que as duas juntas NÃO conseguem distinguir é "o canal estava
-        desligado" de "o canal estava ligado e não havia nada para dizer". Por
-        isso a ausência das duas nunca vira `NENHUM`, que é afirmação positiva;
-        vira `NÃO SONDADO`.
-        """
+        """`+hid` estava no `WINEDEBUG` que gravou este log?"""
         if self.tem_linha_de_hid:
             return True
         return self.winedebug_declarado and f"+{CANAL_EXIGIDO}" in self.winedebug
@@ -392,20 +336,6 @@ def ler_log(caminho: str) -> Log:
     log.tamanho = estado.st_size
     log.mtime = estado.st_mtime
 
-    #: O nó cuja enumeração está ABERTA, **por thread do Wine**. Um slot só
-    #: (que é o que este parser tinha até 20/08/2026) é uma régua que não
-    #: discrimina: as linhas de `uevent` são atribuídas a quem abriu por
-    #: último, sem olhar de qual thread vieram, e basta o espelho Xbox do
-    #: Steam Input abrir na thread vizinha para que ele HERDE o nosso
-    #: `HID_PHYS=hefesto-vpad` e seja contado como nosso vpad. MEDIDO na prova
-    #: de discriminação, com log forjado.
-    #:
-    #: RESSALVA HONESTA, também medida: no único log real desta casa
-    #: (`steam-2497900.log`, 72956 linhas) as 67 linhas de `udev_add_device` e
-    #: as 524 de `get_device_subsystem_info` saem TODAS da thread `00b4` — a
-    #: contaminação era latente, não manifesta. E aquele log não tinha espelho
-    #: nenhum (zero ocorrências de `28de`), então ele não é prova de que a
-    #: enumeração continua com uma thread só quando há espelho na mesa.
     abertos: dict[str, NoDoLog] = {}
     por_no: dict[str, NoDoLog] = {}
     coletando_report_de: str | None = None
@@ -478,7 +408,7 @@ def ler_log(caminho: str) -> Log:
                 if func == "get_device_subsystem_info":
                     aberto = abertos.get(thread)
                     if aberto is None:
-                        continue  # uevent sem nó aberto NESTA thread: não é de ninguém
+                        continue
                     campo = _RX_UEVENT.match(resto)
                     if campo and campo.group("sub") in ("hid", "input"):
                         chave = campo.group("chave")
@@ -554,13 +484,7 @@ def nossos_devices(log: Log) -> list[DeviceDoWine]:
 
 
 def veredicto(log: Log) -> tuple[str, list[str]]:
-    """O veredicto e as razões que o produziram — nesta ordem, sempre a mesma.
-
-    A ordem é o desenho: tudo o que impede a pergunta de fechar vem ANTES de
-    qualquer contagem. Um instrumento que conta primeiro e confere a
-    procedência depois acaba imprimindo `NENHUM` sobre um log que nunca teve o
-    canal ligado, e `NENHUM` é afirmação positiva.
-    """
+    """O veredicto e as razões que o produziram — nesta ordem, sempre a mesma."""
     razoes: list[str] = []
 
     if _CARIMBO_DO_PRODUTO and _CARIMBO_DO_PRODUTO != VPAD_HID_PHYS:
@@ -593,9 +517,6 @@ def veredicto(log: Log) -> tuple[str, list[str]]:
     nos = nossos_nos(log)
     devices = nossos_devices(log)
 
-    # AS DUAS ROTAS SE CONFERINDO. Um `uniq` nosso do lado Windows que o lado
-    # unix nunca carimbou significa que uma das duas leituras está errada — ou
-    # que o começo do log se perdeu. Escolher uma das duas aqui seria inventar.
     orfaos = sorted(
         {dev.uniq for dev in devices} - {no.hid_uniq for no in nos if no.hid_uniq}
     )
@@ -651,11 +572,6 @@ def veredicto(log: Log) -> tuple[str, list[str]]:
     return V_NENHUM, razoes
 
 
-# --------------------------------------------------------------------------
-# Apresentação. Ela lê isto na tela, não JSON.
-# --------------------------------------------------------------------------
-
-
 def _tabela(cabecalho: list[str], linhas: list[list[str]]) -> str:
     if not linhas:
         larguras = [len(c) for c in cabecalho]
@@ -686,12 +602,7 @@ def _procedencia(nome: str) -> str:
 
 
 def cabecalho(log: Log) -> str:
-    """A procedência, ANTES do primeiro número. Regra da casa, e o motivo dela.
-
-    Aqui a "biblioteca" que engana não é o `evdev`: é o ARQUIVO. Dois logs do
-    mesmo jogo, um de antes e um de depois da cura, respondem coisas opostas — e
-    quem lê a tela precisa saber qual dos dois está na mão sem ir procurar.
-    """
+    """A procedência, ANTES do primeiro número. Regra da casa, e o motivo dela."""
     linhas = [
         "=" * 78,
         "  o_jogo_no_log_do_proton.py   (o vpad atravessou a fronteira do Wine?)",
@@ -788,8 +699,6 @@ def imprimir(log: Log, decisao: str, razoes: list[str]) -> None:
     if log.devices:
         linhas = []
         for dev in sorted(log.devices.values(), key=lambda d: -d.processou):
-            # O `\\` do log é o escape do `debugstr_w` do Wine; na tela ele vira
-            # uma barra só, que é o que o identificador realmente é.
             identificador = f"{dev.devid}\\{dev.instancia}".replace("\\\\", "\\")
             linhas.append(
                 [

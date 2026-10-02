@@ -1,47 +1,4 @@
-"""O microfone do controle que JÁ ESTAVA na mesa quando o daemon subiu nasce no ar.
-
-A LACUNA, e ela era a primeira coisa que uma máquina nova via
-------------------------------------------------------------------------------
-A NASCE-LIGADO-MIC-01 (17/09/2026) pôs o microfone no ar na chegada do
-controle, e a régua dela mediu os caminhos de conexão pelas funções que eles
-chamam. Faltou o caminho que não chama nenhuma delas: a PARTIDA do daemon.
-`Daemon.run` conecta por conta própria, publica `CONTROLLER_CONNECTED` e
-restaura o perfil — e o `reconnect_loop` nasce com `was_connected` e a foto por
-alvo tiradas depois disso, então quem já estava plugado nunca vira borda.
-
-Medido no journal dela em 18/09/2026 (só leitura): nenhuma das partidas do dia
-com `controller_connected` no boot teve um `mic_nasceu_no_ar`; os nascimentos só
-apareciam no hotplug. Numa máquina nova é o PRIMEIRO caso: o `install.sh`
-reinicia o daemon com o controle no cabo, e o microfone ficava MUDO com a tela
-dizendo que ele nasce ligado.
-
-POR QUE O DUBLÊ TEM ALVOS DE VERDADE
-------------------------------------------------------------------------------
-Com o `FakeController` cru esta régua fica verde sobre o buraco: sem
-`alvos_conectados`, `connection.alvos_conectados_de` devolve `None`, o `uniq`
-vira `None` e `agendar_o_nascimento_do_microfone` devolve `None` sem nascer
-nada — com ou sem a cura. O controle daqui diz QUEM está na mesa.
-
-O QUE NÃO SOBE AQUI, e a razão é a máquina de quem roda a suíte
-------------------------------------------------------------------------------
-O `BtMicSubsystem` de verdade não sobe: com um pedido de canal aberto, o
-supervisor dele pergunta ao `pactl` vivo e pode carregar módulo no servidor de
-som. Os ganchos da palavra e do pedido são os do subsystem, no mesmo molde de
-`test_nasce_ligado_mic_01_o_microfone_nasce_no_ar.py` — o registro é o de
-verdade, sem a thread. O eleitor é dublado pela mesma razão, e a pergunta
-"existe outro microfone?" é dublada no dono (`outra_captura_elegivel`).
-
-A MORDIDA
-------------------------------------------------------------------------------
-Tire o `reaplicar_som_em_todos_os_alvos` do connect de boot em
-`daemon/lifecycle.py` e o primeiro caso reprova. Troque a condição de
-`hotkey._nascer_no_ar_na_vez` de volta para só `eleito is None` e o segundo
-reprova — que é o que o cético avisou: curar a partida sem curar a eleição faria
-CADA partida do daemon tomar o microfone de quem tem headset. Tire a guarda da
-recusa e o terceiro reprova. Tire a pergunta pela escolha gravada
-(`hotkey._a_escolha_gravada_e_de_outro_controle`) e o quarto reprova: a partida
-com dois controles voltaria a sobrescrever o microfone que ela escolheu.
-"""
+"""O microfone do controle que JÁ ESTAVA na mesa quando o daemon subiu nasce no ar."""
 
 from __future__ import annotations
 
@@ -62,24 +19,16 @@ from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
 from hefesto_dualsense4unix.testing import FakeController
 
-#: Endereço SINTÉTICO, da faixa que o portão de fixtures permite.
 P1 = "aabbcc0000b1"
 
-#: O microfone de verdade de quem não é ela: um headset USB genérico.
 HEADSET = "alsa_input.usb-Fabricante_Headset_USB-00.mono-fallback"
 
 
-#: O segundo controle da mesa — a partida com dois é o que separa "o primeiro da
-#: fila" de "o que ela escolheu".
 P2 = "aabbcc0000b2"
 
 
 class _ControleNaMesa(FakeController):
-    """O `FakeController` que sabe dizer QUEM está conectado.
-
-    `alvos_conectados` e `describe_controllers` são as duas leituras por alvo
-    que o nascimento usa; `set_mic_led` aceita o `uniq` como o backend real.
-    """
+    """O `FakeController` que sabe dizer QUEM está conectado."""
 
     def __init__(self, *uniqs: str) -> None:
         super().__init__(transport="usb")
@@ -135,7 +84,6 @@ class _Mesa:
         self.subsystem = BtMicSubsystem(registro=self.registro)
         self.outro_microfone: str | None = None
         self.eleitor = _EleitorDublado()
-        #: os `uniq` cujo nascimento foi PEDIDO, na ordem do pedido: a barreira da partida
         self.pedidos: list[str | None] = []
 
 
@@ -144,17 +92,12 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Mesa]:
     m = _Mesa()
 
     async def _sem_o_supervisor_de_verdade(self: Daemon) -> None:
-        # O `config` da recusa chega ao subsystem de bancada pelo mesmo
-        # caminho do `start`: é ele quem o subsystem lê.
         m.subsystem._config = self.config
 
     monkeypatch.setattr(Daemon, "_start_bt_mic", _sem_o_supervisor_de_verdade)
     agendar = hotkey.agendar_o_nascimento_do_microfone
 
     def _anotar_o_pedido(daemon: Any, *, uniq: str | None) -> Any:
-        # O espião anota e devolve a tarefa do dono. O `nascer_o_microfone_ao_conectar`
-        # importa o nome na hora da chamada (`connection.py`), e o chama para todo
-        # `uniq`, inclusive o que ela recusou: a recusa mora DEPOIS do pedido.
         m.pedidos.append(uniq)
         return agendar(daemon, uniq=uniq)
 
@@ -177,16 +120,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Mesa]:
 async def _subir_e_esperar_a_partida(
     mesa: _Mesa, config: DaemonConfig, uniqs: tuple[str, ...] = (P1,)
 ) -> Daemon:
-    """Sobe o `Daemon` com o controle JÁ plugado e espera a partida acabar.
-
-    "Acabou" é o nascimento PEDIDO para cada `uniq` da mesa, e as tarefas desses
-    nascimentos terminadas. O primeiro tique do poll loop não serve: o
-    `lifecycle.py` cria o poll loop ANTES do connect de boot, e o connect só pede o
-    nascimento no fim do `reaplicar_som_em_todos_os_alvos`, depois de dois `await`
-    por controle. No runner do CI o tique vinha antes do pedido, o conjunto em voo
-    estava vazio e o `stop` chegava antes do nascimento (a corrida 36503520655).
-    Vale para um, dois ou quatro controles. Um `sleep` solto mediria um instante.
-    """
+    """Sobe o `Daemon` com o controle JÁ plugado e espera a partida acabar."""
     controle = _ControleNaMesa(*uniqs)
     store = StateStore()
     daemon = Daemon(controller=controle, bus=EventBus(), store=store, config=config)
@@ -232,11 +166,7 @@ async def test_o_controle_plugado_na_partida_nasce_no_ar(mesa: _Mesa) -> None:
 async def test_a_partida_nao_toma_o_microfone_de_quem_tem_headset(
     mesa: _Mesa,
 ) -> None:
-    """A metade que tem de entrar JUNTO: sem ela, curar a partida piora a máquina.
-
-    Cada partida do daemon — inclusive o restart do próprio `install.sh` —
-    passaria a escrever `set-default-source` por cima do headset da pessoa.
-    """
+    """A metade que tem de entrar JUNTO: sem ela, curar a partida piora a máquina."""
     mesa.outro_microfone = HEADSET
 
     daemon = await _subir_e_esperar_a_partida(mesa, _config())
@@ -253,11 +183,7 @@ async def test_a_partida_nao_toma_o_microfone_de_quem_tem_headset(
 
 @pytest.mark.asyncio
 async def test_a_recusa_dela_vale_na_partida(mesa: _Mesa) -> None:
-    """`microfone: false` no `maquina.json`: a partida não liga o que ela desligou.
-
-    A fonte chamável é a mesma que `Daemon.__init__` fia sobre o
-    `maquina.json`; passá-la montada exerce a regra sem escrever no disco.
-    """
+    """`microfone: false` no `maquina.json`: a partida não liga o que ela desligou."""
     daemon = await _subir_e_esperar_a_partida(
         mesa, _config(bt_mic_recusados=lambda: frozenset({P1}))
     )
@@ -272,16 +198,7 @@ async def test_a_recusa_dela_vale_na_partida(mesa: _Mesa) -> None:
 async def test_a_partida_nao_passa_por_cima_do_controle_que_ela_escolheu(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Dois controles na mesa, e ela escolheu o SEGUNDO como microfone padrão.
-
-    O `default.configured.audio.source` do WirePlumber diz o canal do P2. A
-    partida solta um nascimento por controle em ordem de `alvos_conectados`, e
-    o P1 vem primeiro: com a mesa sem dono ele elegia e sobrescrevia a escolha
-    dela — a cada restart do `install.sh`, a cada atualização, a cada login.
-
-    MORDIDA: tire a pergunta `_a_escolha_gravada_e_de_outro_controle` de
-    `hotkey._o_nascimento_pode_tomar_o_padrao` e o P1 aparece nas chamadas.
-    """
+    """Dois controles na mesa, e ela escolheu o SEGUNDO como microfone padrão."""
     from pathlib import Path
 
     estado = Path.home() / ".local" / "state" / "wireplumber"
@@ -291,10 +208,6 @@ async def test_a_partida_nao_passa_por_cima_do_controle_que_ela_escolheu(
         encoding="utf-8",
     )
 
-    # A AUTO-01.1 sai da partida de dois: dois controles na mesa ligam a
-    # emulação sozinhos no poll loop, o vpad nasce por `evdev.UInput`, e a
-    # VIGIA-DE-APARELHO-01 reprova a sessão (medido: dois nós recusados). A
-    # emulação não é desta régua.
     monkeypatch.setattr(
         Daemon, "aplicar_gamepad_para_multiplos_controles", lambda self: None
     )
@@ -310,7 +223,6 @@ async def test_a_partida_nao_passa_por_cima_do_controle_que_ela_escolheu(
     )
 
 
-#: A mesa de um a quatro jogadores, na faixa forjada da casa.
 MESA_DE_QUATRO = ("aabbcc0000b1", "aabbcc0000b2", "aabbcc0000b3", "aabbcc0000b4")
 
 
@@ -319,20 +231,7 @@ MESA_DE_QUATRO = ("aabbcc0000b1", "aabbcc0000b2", "aabbcc0000b3", "aabbcc0000b4"
 async def test_a_partida_com_o_connect_lento_nasce_cada_controle_no_ar(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, quantos: int
 ) -> None:
-    """O connect de boot mais lento que o primeiro tique: o runner do CI.
-
-    `lifecycle.py` cria o poll loop ANTES do connect de boot, e o nascimento de
-    cada controle é pedido depois de dois `await` por alvo. Com 0,2 s em cada
-    `reapply_mic_after_connect`, o primeiro tique chega antes de qualquer pedido;
-    e com 0,3 s no `nascer_no_ar` (a eleição que pergunta ao servidor de som), o
-    nascimento ainda corre quando a partida termina. A barreira que esperava o
-    tique parava o daemon antes do nascimento, e a régua olhava o ar antes de
-    ele acabar (a corrida 36503520655, no 3.11). Sem o atraso do nascimento, a
-    máquina daqui termina o nascimento dentro do `shutdown` e a barreira velha
-    passa: os dois atrasos juntos são o mundo lento. MORDIDA
-    (O-CI-DA-DEV-VOLTA-A-VERDE-02): volte a barreira para o `poll.tick` e os três
-    reprovam.
-    """
+    """O connect de boot mais lento que o primeiro tique: o runner do CI."""
     from hefesto_dualsense4unix.daemon import connection
 
     original = connection.reapply_mic_after_connect
@@ -349,7 +248,6 @@ async def test_a_partida_com_o_connect_lento_nasce_cada_controle_no_ar(
         return bool(await nascer(daemon, uniq))
 
     monkeypatch.setattr(hotkey, "nascer_no_ar", _nascer_devagar)
-    # A emulação de vários controles não é desta régua (o mesmo motivo do caso de dois).
     monkeypatch.setattr(
         Daemon, "aplicar_gamepad_para_multiplos_controles", lambda self: None
     )

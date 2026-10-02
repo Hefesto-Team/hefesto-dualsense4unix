@@ -1,25 +1,4 @@
-"""Trocar duas entradas move o BURACO, e o nome fica — O-MAPA-QUE-ELA-CORRIGE-01, passo 4.
-
-Pedido dela: *«trocar elas de lugar no meapemento»*. O Mapear pôs o cabo de
-uma entrada no número de outra (na máquina em que isto nasceu, 3↔4, 5↔6 e
-7↔8 estavam trocadas), e ela corrige sem mapear de novo
-(D-2609-TROCAR-MOVE-O-BURACO). <!-- noqa-acento: citação literal dela -->
-
-O QUE VAI COM O BURACO: o ``lugar`` e os nós (juntos), a ``liga`` e a ``usb``,
-a ponta do extensor inteira e a face do hub declarado.
-O QUE FICA NA POSIÇÃO: o número, o nome, a face e a ordem da fileira.
-
-Desde a A-ENTRADA-TEM-UM-REGISTRO-SO-01 (28/09/2026) o lugar mora na entrada
-(``mapa.portas[N].lugar``), e a troca troca dois registros; a máquina daqui é
-escrita na forma de ANTES e migrada na primeira leitura.
-
-AS MORDIDAS:
-
-* mova só os ``nos`` (o defeito do ``colocar``) — a régua do lugar reprova
-  (``test_trocar_7_com_8_leva_o_buraco_e_deixa_o_nome``), e o Mapear devolve o
-  cabo à 7 (``test_a_troca_sobrevive_ao_examinar_e_a_um_mapear_de_novo``);
-* mova o ``nome`` — «o nome fica» reprova (a primeira).
-"""
+"""Trocar duas entradas move o BURACO, e o nome fica — O-MAPA-QUE-ELA-CORRIGE-01, passo 4."""
 
 from __future__ import annotations
 
@@ -60,8 +39,6 @@ def _com_o_que_ela_disse() -> dict[str, Any]:
 @pytest.fixture()
 def disco(tmp_path: Path) -> Path:
     alvo = gravar_o_arquivo_de_antes(tmp_path, _com_o_que_ela_disse())
-    # A migração (a primeira leitura) já feita: a troca parte de um documento
-    # que a leitura não muda mais.
     carregar_maquina()
     return alvo
 
@@ -94,7 +71,7 @@ def test_trocar_7_com_8_leva_o_buraco_e_deixa_o_nome(disco: Path) -> None:
 
 def test_trocar_de_novo_desfaz(disco: Path) -> None:
     """A troca é uma involução: duas trocas devolvem o documento igual."""
-    assert ee.declarar_a_velocidade("9", 3).gravou  # o arquivo na forma do esquema
+    assert ee.declarar_a_velocidade("9", 3).gravou
     antes = _lido(disco)
     assert ee.trocar_as_entradas("7", "8").gravou
     assert _lido(disco) != antes
@@ -103,8 +80,7 @@ def test_trocar_de_novo_desfaz(disco: Path) -> None:
 
 
 def test_o_hub_declarado_vai_com_o_buraco(disco: Path) -> None:
-    """Hub declarado na 3, e a face «Hub na Entrada 3» no disco: trocada com a 5,
-    a face passa a «Hub na Entrada 5», e a fileira dela fica onde estava."""
+    """Hub declarado na 3, e a face «Hub na Entrada 3» no disco: trocada com a 5,"""
     documento = _lido(disco)
     faces = documento["mapa"]["faces"]
     faces[2]["nome"] = ee.FACE_DO_HUB_DECLARADO.format(numero="3")
@@ -146,8 +122,7 @@ def test_nenhuma_das_duas_mapeada_recusa(disco: Path) -> None:
 
 
 def test_o_nome_que_morava_no_lugar_nao_anda_com_o_buraco(tmp_path: Path) -> None:
-    """No arquivo de antes, o «Meio» da 1 mora no lugar: a primeira leitura o
-    leva para a posição, e a troca 1↔2 o deixa com a 1."""
+    """No arquivo de antes, o «Meio» da 1 mora no lugar: a primeira leitura o"""
     gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
     assert ee.trocar_as_entradas("1", "2").gravou
     depois = carregar_maquina()
@@ -157,15 +132,7 @@ def test_o_nome_que_morava_no_lugar_nao_anda_com_o_buraco(tmp_path: Path) -> Non
 
 
 def test_a_troca_sobrevive_ao_examinar_e_a_um_mapear_de_novo(disco: Path) -> None:
-    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01: a troca 7↔8 continua de pé
-    depois do «Examinar» (o arranjo relido do disco) e de um «Mapear Entradas»
-    que passa de novo pelo buraco que foi para a 8.
-
-    O Mapear pergunta o número ao LUGAR (``_numero_conhecido``: a entrada que
-    guarda o lugar, e depois o caminho). Uma troca que levasse só os nós
-    deixaria o lugar da 7 na 7, e o Mapear devolveria o cabo a ela — esta
-    régua reprova. O nome de cada posição fica.
-    """
+    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01: a troca 7↔8 continua de pé"""
     from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
     from hefesto_dualsense4unix.interface import arranjo_desta_maquina
     from tests.unit.test_o_nome_da_entrada_e_da_posicao import PCI_B

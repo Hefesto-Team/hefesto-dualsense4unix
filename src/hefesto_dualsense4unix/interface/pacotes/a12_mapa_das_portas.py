@@ -49,11 +49,8 @@ from . import Contexto, gesto
 
 PAGINA = "mapa-das-portas.html"
 
-#: Os gestos do editor da entrada (o que tem, a velocidade, o nome, a troca),
-#: o ensinar e o «Examinar». Só sobe.
 PISO_DA_ABA = 6
 
-#: O «Direto» do editor: é a ausência de declaração no disco (`liga` nulo).
 DIRETO = "direto"
 
 
@@ -65,13 +62,7 @@ def _a_entrada(o: dict[str, Any]) -> str:
 
 
 def _gravou(recibo: Any) -> dict[str, Any]:
-    """A gravação aconteceu, e a página recebe o arranjo RELIDO do disco.
-
-    D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO (O-MAPA-QUE-ELA-CORRIGE-01): a página
-    não pinta o clique; ela repinta pelo que voltou daqui, com o editor aberto
-    na mesma entrada. A recusa levanta antes da releitura, e a página fica
-    como estava — com o botão clicado ainda lá para a piscada o achar.
-    """
+    """A gravação aconteceu, e a página recebe o arranjo RELIDO do disco."""
     if not getattr(recibo, "gravou", False):
         raise RuntimeError(f"não gravei no mapa desta máquina ({recibo.motivo})")
     _o_rascunho_da_08_caducou()
@@ -80,9 +71,7 @@ def _gravou(recibo: Any) -> dict[str, Any]:
 
 
 def _o_rascunho_da_08_caducou() -> None:
-    """O rascunho do gabinete da aba 08 (`a08_conexoes._LOGICA`) é do mapa de
-    antes: sem esquecê-lo, o próximo gesto dele regravaria o mapa velho por cima
-    do que o editor acabou de gravar (O-MAPA-QUE-ELA-CORRIGE-01)."""
+    """O rascunho do gabinete da aba 08 (`a08_conexoes._LOGICA`) é do mapa de"""
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
     a08_conexoes.esquecer_o_rascunho_do_mapa()
@@ -109,14 +98,7 @@ def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 
 @gesto(PAGINA, "entrada-nome", grava="dar_nome_a_entrada")
 def entrada_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O nome que ela dá à entrada — da POSIÇÃO, no `maquina.json` dela.
-
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-NOME-E-DA-POSICAO). Pedido dela:
-    *«me referi as portas renomear»*. O clique que só põe o cursor no campo
-    arma e não grava (o ouvinte do piloto ouve `click` e `change` no mesmo
-    campo); o `change` grava; vazio volta a «Entrada N». Mais de 24
-    caracteres é recusa, com a frase do dono. <!-- noqa-acento: citação literal dela -->
-    """
+    """O nome que ela dá à entrada — da POSIÇÃO, no `maquina.json` dela."""
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
     return _gravou(ee.dar_nome_a_entrada(_a_entrada(o), str(o.get("valor") or "")))
@@ -124,13 +106,7 @@ def entrada_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto(PAGINA, "entrada-trocar", grava="trocar_as_entradas")
 def entrada_trocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Trocar com…»: o buraco desta entrada e o da escolhida trocam de posição.
-
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-O-BURACO). A entrada vem do
-    `data-entrada`, e a outra do `valor` do `<select>`. O clique que só abre a
-    lista arma; o valor vazio («Trocar com…») não faz nada. As recusas são as
-    frases do dono.
-    """
+    """«Trocar com…»: o buraco desta entrada e o da escolhida trocam de posição."""
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
     outra = str(o.get("valor") or "").strip()
@@ -141,12 +117,7 @@ def entrada_trocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
 
 @gesto(PAGINA, "entrada-ensinar", grava="ensinar_a_entrada")
 def entrada_ensinar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Ensinar: o aparelho fora do mapa está NESTA entrada — o nó dele passa a ser dela.
-
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO). A entrada vem do
-    `data-entrada` do plugue, e o aparelho do `data-caminho` (o caminho em que
-    a página o lê agora). As recusas são as frases do dono.
-    """
+    """Ensinar: o aparelho fora do mapa está NESTA entrada — o nó dele passa a ser dela."""
     caminho = str(o.get("caminho") or "").strip()
     if not caminho:
         raise ValueError("o clique não disse qual aparelho")
@@ -155,13 +126,7 @@ def entrada_ensinar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto(PAGINA, "reexaminar")
 def reexaminar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Examinar»: relê a máquina e devolve o arranjo novo para a página.
-
-    Não grava nada: a leitura anterior mora na memória
-    (`arranjo_desta_maquina.reexaminar`). ``None`` é a leitura que não veio (o
-    mapa sumiu do disco, o ``/sys`` não respondeu): recusar pisca o botão, e a
-    página continua com o que tinha — nunca um gabinete vazio.
-    """
+    """«Examinar»: relê a máquina e devolve o arranjo novo para a página."""
     dado = arranjo_desta_maquina.reexaminar()
     if dado is None:
         raise RuntimeError("não li o mapa deste computador de novo")

@@ -1,11 +1,7 @@
 import sys, pathlib, csv, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
 
-# AS FAIXAS E OS PADRÕES SÃO DO PRODUTO, e a tela os LÊ. Digitá-los aqui foi
-# como as duas dicas passaram a dizer 'De 1 a 10' — errado nas duas linhas.
-# O QUE CADA BOTÃO FAZ, e a LISTA do que ele pode fazer, vêm do produto — não
 # são digitados aqui. `core/acoes_de_botao` é o dono desde 01/09/2026, e ele
-# deriva o padrão dos quatro mapas do daemon.
 from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
     EIXO_DIREITO,
     EIXO_ESQUERDO,
@@ -17,17 +13,10 @@ from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
 from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
     padrao as _padrao_dos_botoes,
 )
-#: A LISTA DO PRODUTO, para a autoconferência de `_conferir` — a tela e o
-#: produto têm de listar os MESMOS botões. Aqui moram a ordem e os glifos, que
-#: são desenho; quais botões existem é fato, e fato tem um dono só.
 from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
     BOTOES as _BOTOES_DO_PRODUTO,
 )
-#: OS BOTÕES SOBRE OS QUAIS `Profile.key_bindings` MANDA — o domínio da tela
-#: "Teclas do teclado", DERIVADO pelo motor dos quatro mapas do produto
 #: (`core/acoes_de_botao._dominio_do_teclado`). Digitar a lista aqui faria o
-#: desenho oferecer campo de tecla em botão que o `resolver()` não lê — e a
-#: escolha iria para o disco sem nunca chegar ao aparelho.
 from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
     DOMINIO_DO_TECLADO as _DOMINIO_DO_TECLADO,
 )
@@ -45,10 +34,7 @@ from monta import NADA_A_DIZER  # noqa: E402
 from monta import TITULOS_DA_FITA  # noqa: E402
 from monta import folha_das_cores  # noqa: E402
 
-# O DESENHO E O PRODUTO ESCREVEM A IDENTIDADE PELA MESMA FUNÇÃO — 03/09/2026,
-# IDENTIDADE-VEM-DE-CIMA. É o mesmo arranjo de `aba04.py` com
 # `pacotes/a04_iluminacao.um_botao_de_player`: o dono mora no PACOTE, porque é
-# ele que roda a cada tique, e o gerador o chama para desenhar a bancada. Duas
 # escritas do mesmo rótulo é como o desenho e o produto divergem calados.
 from pacotes.a06_navegacao import (  # noqa: E402
     ENDERECO_DA_RESSALVA,
@@ -63,52 +49,22 @@ from pacotes.a06_navegacao import (  # noqa: E402
 from pacotes.a06_navegacao import linha_do_cartao as _linha_do_cartao  # noqa: E402
 from pacotes.a06_navegacao import SEM_TROCA as _SEM_TROCA_DO_PACOTE  # noqa: E402
 
-#: O QUE A TROCA DE BOTÕES ALCANÇA — F1-REMAPEAR, 13/09/2026. Só essas linhas da
-#: tela "Trocar os botões" ganham o gesto e o endereço da pintura; as outras
-#: seis (a direção dos dois analógicos, o PS e as três regiões do touchpad)
-#: nascem APAGADAS desde a F1-REMAPEAR-02 — só a linha e o "— Sem troca —".
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     REMAPEAVEIS as _REMAPEAVEIS,
 )
-#: O PREFIXO DO ENDEREÇO DE CADA LINHA de *o que cada botão faz*, do dono — o
-#: pacote, que é quem EMITE a chave a cada tique. Ele era digitado aqui (`acao-`
-#: dentro de uma f-string) e passou a ser lido em 11/09/2026, quando a tela do
-#: Estilo Point-and-click virou a SEGUNDA a usá-lo: duas digitações do mesmo
-#: prefixo é como o desenho e o produto deixam de se encontrar sem ninguém ver.
 from pacotes.a06_navegacao import PREFIXO_DA_ACAO  # noqa: E402
-#: OS GESTOS DO CONTROLE — o vocabulário e os endereços, dos donos
-#: (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01, 01/10/2026).
 from hefesto_dualsense4unix.core import acoes_do_gesto as _acoes_do_gesto  # noqa: E402
 from pacotes.a06_navegacao import (  # noqa: E402
     ENDERECO_DA_DICA_DOS_GESTOS,
     PREFIXO_DO_GESTO,
     PREFIXO_DO_SCRIPT,
 )
-#: A PALAVRA DO LUGAR VAZIO, do dono dela — 07/09/2026,
-#: O-LUGAR-VAZIO-TEM-ENDERECO. Agora que o rótulo do lugar vazio tem endereço,
-#: o PRODUTO escreve nele (`pacotes.apagar_os_lugares_sem_dono`, chave
-#: `IDENTIDADE_DO_LUGAR`). Digitar "Desconectado" aqui deixaria duas grafias da
-#: mesma palavra — o desenho dizendo uma e o tique escrevendo outra por cima,
 #: que é exatamente como o desenho e o produto divergem calados.
 from pacotes import SEM_NINGUEM_AQUI  # noqa: E402
 import marca_da_camada as _marca  # noqa: E402
 
-#: OS CONTROLES QUE A FITA MOSTRA. Só quem está na mesa — 31/08/2026, decisão
-#: dela: um controle desconectado não se escolhe, e pôr o chip dele ali seria
-#: oferecer um destino que não existe.
 MESA_DA_FITA = CONECTADOS
 
-# ---------------------------------------------------------------------------
-# O MAPA É O DONO. Pedido dela, 27/08/2026: "cada vez que o svg ou do controle
-# ou de um glifo aparecerem tem que considerar os do nosso mapa".
-#
-# Desta aba saíram, por causa disso, TODOS os símbolos digitados: o dropdown de
-# remapeamento dizia "Cross ✕", "Circle ○", "Square □", "Triangle △" e "D-pad ↑"
-# com o caractere desenhado à mão, e a coluna de nome ao lado de cada glifo era
-# um dicionário escrito aqui. Agora os dois saem de
-# `docs/data/pecas-do-dualsense.csv` — o mesmo arquivo que nomeia os ids do SVG
-# e que o portão `scripts/check_pecas_do_dualsense.py` mede.
-# ---------------------------------------------------------------------------
 PECAS = {p["id"]: p for p in csv.DictReader(
     [l for l in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
      if l and not l.startswith("#")])}
@@ -123,15 +79,7 @@ def gl_de(pid):
 
 
 def nome_de(pid):
-    """O nome curto da peça, LIDO do mapa.
-
-    `nome` quando ele já é curto (L1, Share, Options, PS, Touchpad, Cruz…) e o
-    apelido curto quando não é — é de lá que saem o **L3** e o **R3**, que no
-    mapa são apelido de "Analógico Esquerdo/Direito".
-
-    O apelido tem de ser alfanumérico: os apelidos do Triângulo e do D-pad são
-    os símbolos `△` e `↑`, que são exatamente o que esta rodada tirou da tela.
-    """
+    """O nome curto da peça, LIDO do mapa."""
     p = PECAS[pid]
     if len(p["nome"]) <= 8:
         return p["nome"]
@@ -152,12 +100,7 @@ def _ids(regiao):
 
 
 def _alvo(pid):
-    """Como a peça aparece numa lista de destino de remapeamento.
-
-    O `tipo` do mapa é quem decide: `eixo` são DUAS entradas na mesma peça
-    (a nota do CSV diz isso com todas as letras — "Clique e direção são duas
-    entradas na mesma peça"), e `superficie` só pode receber o clique.
-    """
+    """Como a peça aparece numa lista de destino de remapeamento."""
     n = nome_de(pid)
     if PECAS[pid]["tipo"] == "eixo":
         return [f"{n} (clique)", f"{n} (direção)"]
@@ -166,9 +109,6 @@ def _alvo(pid):
     return [n]
 
 
-# AS TRÊS REGIÕES DO TOUCHPAD saem da `nota` do mapa, e não de uma lista
-# escrita aqui: é a única linha do projeto que as declara. Se a nota mudar de
-# forma, esta linha PARA a geração em vez de deixar a tela mentir.
 _m = re.search(r"Clique ([^.]+)\.", PECAS["touchpad"]["nota"])
 if not _m:
     raise SystemExit("ERRO: a nota do touchpad não declara mais os cliques — "
@@ -176,24 +116,9 @@ if not _m:
 TOUCH_REGIOES = [f"clique {x.strip()}" for x in
                  _m.group(1).replace(" e ", ", ").split(",") if x.strip()]
 
-# QUEM NAVEGA O PC, e não é escolha de desenho — é o que o produto faz.
-# O poll loop lê o estado do controle PRIMÁRIO (`daemon/lifecycle.py:5509`), e
-# é esse estado, e só ele, que vai para o mouse (`_dispatch_mouse_emulation`,
-# :5712), para o teclado (:5723) e para o `hotkey_manager.observe` (:5726). Os
-# secundários do co-op têm UM caminho só, o do gamepad virtual
-# (`daemon/subsystems/coop.py:2366` — `forward_analog`/`forward_buttons`).
-# Logo: com quatro na mesa, mouse, teclado e os seis gestos saem de um
-# controle só, o do jogador 1. A aba diz isso na cara em vez de esconder.
-# QUEM NAVEGA SAI DOS CONECTADOS, não da MESA — 31/08/2026, quando a mesa passou
-# a ter dois lugares vazios. Um controle desconectado não navega o PC, e o menor
-# número da MESA podia ser justamente ele: a tela apontaria o cursor para um
-# aparelho que não está aqui.
 NAVEGA = min(c["jogador"] for c in CONECTADOS)
 QUEM_NAVEGA = next((c for c in CONECTADOS if c["jogador"] == NAVEGA), None)
 if QUEM_NAVEGA is None:
-    # SEM ESTA LINHA o `next()` estourava com `StopIteration` cru, e quem lesse a
-    # saída não tinha como saber o que aconteceu. Régua que quebra não diz o que
-    # está errado — a lição do mesmo dia, na aba Controles.
     raise SystemExit(f"ERRO: o Player {NAVEGA} navega o PC e NÃO está na mesa. "
                      f"Quem navega sai de `CONECTADOS`, nunca de `MESA`.")
 
@@ -204,13 +129,7 @@ def _hex(rgb):
 
 
 def _tem_tinta(pid):
-    """A peça tem superfície própria, ou o desenho dela é o glifo?
-
-    O PS é `peca sem-tinta`: o círculo existe só para receber o ponteiro, e
-    ela mandou tirá-lo da tela em 27/08 ("tem um círculo no PS de cada imagem,
-    tem que excluir eles e deixar só o glifo lá"). Acender esse círculo o
-    traria de volta em rosa — por isso o realce do PS vai no GLIFO.
-    """
+    """A peça tem superfície própria, ou o desenho dela é o glifo?"""
     m = re.search(rf'<g id="{pid}"[^>]*>(.*?)</g>', DS, re.S)
     return bool(m) and "sem-tinta" not in m.group(1)
 
@@ -312,7 +231,7 @@ CSS = CSS_GLIFO + """
      A causa estava NOMEADA nesta casa desde 04/09, no `a06_navegacao.py`: o P3
      e o P4 nascem `class="nav-ctl vazia"` no esqueleto; o P2 nasce OCUPADO (é
      o mockup de dois controles) e é esvaziado em tempo de execução — e quem o
-     esvazia escreve a classe **`off`** (`hefesto_vivo.py:1329`), *"que folha de
+     esvazia escreve a classe **`off`** (`hefesto_vivo.py:1151`), *"que folha de
      estilo nenhuma menciona"*. A cura daquele dia alcançou a COR, por outro
      caminho (`folha_do_plastico`), e a MOLDURA ficou: `.vazia` põe borda e
      fundo transparente, `off` não põe nada. Por isso o P2 desligado tinha
@@ -800,7 +719,7 @@ CSS = CSS_GLIFO + """
      tela instalado", que é justamente a que precisa de espaço).
 
      O `.nada` É COMO UMA LINHA SOME, e não o `:empty`: o `escrever()` do piloto
-     troca valor vazio por `—` (`hefesto_vivo.py:141`), então uma frase vazia
+     troca valor vazio por `—` (`hefesto_vivo.py:65`), então uma frase vazia
      viraria um travessão solto na tela dela — foi o que a primeira foto
      mostrou. O pacote manda o marcador, e o `:has()` apaga a linha inteira.
      Emitir a chave sempre (em vez de omiti-la quando não há o que dizer) é o
@@ -902,7 +821,7 @@ CSS = CSS_GLIFO + """
           quando o gesto RECUSAVA — a tela trocava de lado sozinha e nada a
           devolvia.
 
-          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:636`), e é
+          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:458`), e é
           ele quem acende agora; a palavra virou nó de texto, que o alvo padrão
           escreve. Nasce em `—` de propósito: antes do primeiro tique ninguém
           perguntou ao Hefesto, e "Desligado" seria uma afirmação. ---- */
@@ -1062,39 +981,12 @@ CSS = CSS_GLIFO + """
 
 
 def _rot(txt):
-    """O qualificador ao lado do glifo — SEMPRE com a primeira letra maiúscula.
-
-    A REGRA, e ela vale para as próximas abas: **o qualificador ao lado do glifo
-    é capitalizado, como o nome da peça no `pecas-do-dualsense.csv`** — "Direção",
-    "Clique esquerdo", "Cima". Ele é rótulo de linha, não complemento no meio de
-    uma frase: na mesma coluna, ao lado de "Touchpad" e "Options", a minúscula
-    fazia a tabela misturar duas grafias.
-
-    Decisão dela, 29/08/2026. Quem coordena recomendou o contrário — são gestos,
-    e em português o complemento é minúsculo. Ela decidiu capitalizar.
-
-    POR QUE AQUI, e não em cada `rot=`: a mesma palavra é escrita em SETE lugares
-    ("direção" em quatro, "clique" em dois, "deslizar" em um) e ainda vem de duas
-    fontes que não são texto solto — `dir_de` lê o `nome` do d-pad no mapa e
-    `TOUCH_REGIOES` lê a `nota` do touchpad. Capitalizar em cada uso deixaria
-    nove grafias para divergirem na primeira correção; capitalizar no ÚNICO lugar
-    que escreve o `<span class="rot-gl">` alcança também todo `rot=` que nascer
-    depois. As fontes continuam minúsculas: quem capitaliza é a TELA, e o mapa
-    segue dono da palavra.
-
-    `.capitalize()` não serve — ele rebaixa o resto, e um dia isso comeria a
-    maiúscula de um qualificador com nome de peça dentro ("Clique do L3").
-    """
+    """O qualificador ao lado do glifo — SEMPRE com a primeira letra maiúscula."""
     return f'<span class="rot-gl">{txt[:1].upper()}{txt[1:]}</span>'
 
 
 def _um(pid, rot=None, tam=18):
-    """Um glifo do mapa, com o nome do mapa ao lado quando ele não se lê sozinho.
-
-    Os quatro botões da face e as quatro direções do d-pad ficam SEM nome: o
-    desenho deles já é o nome. Os outros levam o `nome` (ou o apelido curto) da
-    peça — antes isso era um dicionário escrito aqui.
-    """
+    """Um glifo do mapa, com o nome do mapa ao lado quando ele não se lê sozinho."""
     g = glifo(gl_de(pid), tam=tam)
     if PECAS[pid]["regiao"] not in ("face", "direcional"):
         g += f'<span class="nm">{nome_de(pid)}</span>'
@@ -1109,33 +1001,10 @@ def gl(*pids, sep="/", rot=None, tam=18):
         corpo += _rot(rot)
     return f'<span class="gls">{corpo}</span>'
 
-# ---------------------------------------------------------------------------
-# AS LISTAS DE VALOR. Os grupos são as palavras DELA na fala [11] — "no lado
-# direito teríamos Função do teclado, Executar Comando, Mouse" —, e é por isso
-# que elas aparecem dentro de cada dropdown, e não só no bloco de ativação.
-# ---------------------------------------------------------------------------
-# UMA lista só, com as opções dos DOIS lados — ela, 27/08: "as opções que temos
-# em ambos os lados no dropin". Antes eram duas listas, e um botão que estivesse
-# nas duas tabelas fazia as duas coisas em silêncio.
-#
-# ELA DEIXOU DE SER DIGITADA em 01/09/2026, e a razão é medida: a mesma lista
 # existia em `core/acoes_de_botao.ACOES`, do lado do produto, e as duas JÁ
-# DIVERGIAM — faltavam aqui o `Backspace` e o `Delete`, que o produto emite nas
-# regiões esquerda e direita do touchpad. Com a lista digitada, a tela não
-# conseguia sequer MOSTRAR o que três das suas vinte e uma linhas fazem.
 ACOES_UNI = por_grupo()
-#: A LISTA DA LINHA DO PS — só o que ele digita (01/10/2026,
-#: O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o que o toque nele faz no
-#: computador é o ⑥ dos gestos, logo «Abrir a Steam» e «— Nada —» não estão
-#: nela. O de fábrica dela é «— Sem tecla —».
 ACOES_DO_PS = por_grupo("ps")
 
-# O REMAPEAMENTO: para qual botão do controle este botão passa a valer.
-#
-# ELE ERA DIGITADO, COM OS SÍMBOLOS DESENHADOS À MÃO: "Cross ✕", "Circle ○",
-# "Square □", "Triangle △", "D-pad ↑". Agora as cinco famílias saem da coluna
-# `regiao` do mapa, na ordem do mapa, e o nome de cada peça vem do mapa também
-# — que é o pedido dela de 27/08 aplicado ao último canto da aba onde uma peça
 # do DualSense era texto solto.
 REMAP = [
     ("Botões", [nome_de(i) for i in _ids("face")]),
@@ -1145,15 +1014,7 @@ REMAP = [
     ("Sistema", [x for i in _ids("centro") for x in _alvo(i)]),
     ("", ["— Sem troca —"]),
 ]
-#: A LISTA DOS GESTOS SAI DO PRODUTO — 01/10/2026,
-#: OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01. Ela era digitada aqui, e o
-#: daemon não tinha onde ler a escolha: a lista aceitava o clique e o controle
 #: seguia fazendo o de fábrica. O dono do vocabulário é `core/acoes_do_gesto`,
-#: e o daemon despacha pelo mesmo. A «Navegação Interna» se partiu em «Perfil»
-#: e «Mouse e teclado» (a decisão 4 da sprint, dela); entram o grupo «Hefesto»
-#: (os três da bandeja) e o «Escolher um script…»; o «— Nada —» ficou (a §14,
-#: dela, 01/10: ele volta nos seis gestos), e o «Religar o controle» saiu (o
-#: produto nunca o atendeu: religar é segurar o PS, coisa do próprio controle).
 ACOES_GESTO = _acoes_do_gesto.por_grupo()
 
 
@@ -1170,7 +1031,7 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo="",
     primeira metade caducou com a decisão dela de 02/09 (*"as 21 listas param de
     ser repintadas enquanto ela está mexendo"*): sem nome, o `change` de uma
     linha **não chega ao Python** — o `closest` do ouvinte
-    (`hefesto_vivo.py:367`) não conhece `data-campo` nem `data-linha` —, e sem
+    (`hefesto_vivo.py:189`) não conhece `data-campo` nem `data-linha` —, e sem
     ele o pacote não tem como saber que ela está mexendo. As 21 linhas de *o que
     cada botão faz* passaram a levar `gesto=LINHA_DE_BOTAO`. A segunda metade
     continua de pé: **o ponto de gravação é o "Guardar"**, e este gesto não
@@ -1204,17 +1065,8 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo="",
         op = "".join(f'<option{" selected" if o == escolhido else ""}>{o}</option>' for o in ops)
         partes.append(f'<optgroup label="{rot}">{op}</optgroup>' if rot else op)
     g = f' data-gesto="{gesto}"' if gesto else ""
-    # O ENDEREÇO DA LINHA — 01/09/2026. Sem ele o "Guardar" da tela não tem como
-    # saber QUAL botão cada `<select>` representa: o ouvinte do piloto manda o
-    # valor do elemento CLICADO, e o Guardar é outro elemento, a três telas de
-    # distância. É o que faz o botão poder GRAVAR em vez de só recusar.
     ln = f' data-linha="{linha}"' if linha else ""
-    # O ENDEREÇO DA PINTURA — 02/09/2026, e ele é o par do de cima: aquele deixa
-    # LER, este deixa ESCREVER. `data-hef-alvo="valor"` é obrigatório junto —
-    # sem ele o piloto escreveria o texto DENTRO do `<select>` e comeria as
     # opções (ver `simples`). O ouvinte da forma prefere o `data-linha`
-    # (`hefesto_vivo.py`: `el.dataset.linha || el.dataset.campo`), então os dois
-    # convivem sem disputa.
     c = f' data-campo="{campo}" data-hef-alvo="valor"' if campo else ""
     ap = " disabled" if apagado else ""
     return f'<select class="{classe}"{g}{ln}{c}{ap}>{"".join(partes)}</select>'
@@ -1225,14 +1077,14 @@ def simples(ops, classe="escolha-at", gesto="", campo="", escolhido=""):
 
     O `data-gesto` liga o campo **desde 01/09/2026**, e a frase que estava aqui
     ("nenhum `<select>` desta casa liga") caducou no mesmo dia: o piloto passou a
-    ouvir `change` além de `click` (`hefesto_vivo.py:196`) e a mandar o `valor` e
+    ouvir `change` além de `click` (`hefesto_vivo.py:75`) e a mandar o `valor` e
     o `rotulo` da opção escolhida. O motivo antigo era real — o clique num
     `<select>` chega quando a lista ABRE, com o valor ANTIGO —, e é exatamente o
     que o `change` resolve.
 
     O `campo` é o SEGUNDO endereço, e ele não é enfeite: sem ele a lista fica
     mostrando o que ela escolheu mesmo quando o gesto RECUSOU, porque a recusa
-    de um gesto só imprime no terminal (`hefesto_vivo.py:519`) — na tela não
+    de um gesto só imprime no terminal (`hefesto_vivo.py:341`) — na tela não
     aparece nada. Com ele, o tique seguinte reescreve o `value` com o que o
     DAEMON diz, e a opção sem dono volta sozinha para o lugar. É a única forma
     de uma recusa ser visível nesta aba.
@@ -1285,10 +1137,6 @@ def bignum(*pares):
         mais = f' data-gesto="{g}-mais"' if g else ""
         end = f' data-campo="{campo}"' if campo else ""
         risco = "" if i == 0 else "<span class='risco'></span>"
-        # SEM RÓTULO, quando não há com quem comparar. Com DOIS números o `.sub`
-        # dizia qual era qual ("Touch"/"Analógico"); com UM, ele repetiria o
-        # rótulo da linha. Um `<span>` vazio não é neutro: ele continua ocupando
-        # a coluna e abre um vão que a régua de alinhamento acusaria.
         sub = f'<span class="sub">{rot}</span>' if rot else ""
         partes.append(
             f'<span class="par">{risco}'
@@ -1332,66 +1180,6 @@ def trilho(valor, minimo, maximo, gesto, campo, titulo):
             f'<span class="num" data-campo="{campo}">{valor}</span></div>')
 
 
-#: O `?` PASSA A CARREGAR FRASE VIVA — 07/09/2026, ordem dela olhando a aba com
-#: os quatro controles na mesa:
-#:
-#:     *"navegacao tem essas 3 frases aqui na parte de baixo que quebram o
-#:     layout"*
-#:
-#: Eram três, e as três estavam MEDIDAS: com elas pintadas, o quadro "As opções
-#: de ativação" ia de 215px a 300,25px e o miolo passava 66px da janela — a
-#: fileira dos quatro botões terminava 41,25px ABAIXO do fim, fora da tela.
-#:
-#: NADA SE PERDEU, e é o ponto: cada frase foi para o `?` do CAMPO de que ela
-#: fala, que é a regra desta casa desde 30/08 (Vibração e Iluminação) — *"o
-#: parágrafo que nomeia um campo vai para o `?` daquele campo"*.
-#:
-#: E ELAS CONTINUAM VIVAS. `vivas` não é texto: é uma lista de ENDEREÇOS, e cada
-#: um vira um `<span>` vazio com `data-hef-alvo="html"` dentro da `.dica`. Quem
-#: escreve continua sendo o pacote, a cada tique, pelas mesmas funções — copiar
-#: a frase para dentro do desenho a congelaria, que é o defeito que
-#: `monta.ressalva` existe para impedir (*"ressalva congelada é a que já mentiu
-#: na aba 08"*).
-#:
-#: A PEÇA JÁ EXISTIA, e não é invenção desta frente: `monta.botao_cinza` põe a
-#: razão do produto numa `.dica` com `data-campo` desde 04/09, com os mesmos
-#: dois marcadores de apagar (`:empty` e `.nada`).
-#:
-#: O MESMO ENDEREÇO PODE APARECER EM MAIS DE UMA DICA, e é de propósito: uma
-#: frase que fala de três campos vai para os três `?`. O piloto escreve um
-#: escalar em TODOS os elementos de mesmo `data-campo` (`hefesto_vivo.pintar`),
-#: como o par barra+número de `trilho()` já fazia nesta aba.
-#: O `tabindex` E O `.tem-viva` SÃO DE 07/09/2026, e os dois nasceram da mesma
-#: conferência — a que mediu o `?` depois de as três frases descerem para ele.
-#:
-#: O QUE ELA ACHOU, e as duas metades são defeitos diferentes:
-#:
-#:   · **NINGUÉM SABE QUE HÁ ALGO ALI.** Um `?` com frase viva dentro é, na
-#:     tela, idêntico a um `?` de ajuda fixa. A decisão dela de 05/09
-#:     (`D-06N-TIRA-DE-AVISO`) já tinha nomeado exatamente isto, com estas
-#:     palavras: *"O que está prestes a ser apagado não pode morar num hover,
-#:     porque **ninguém passa o rato onde não sabe que há algo**."* A frase que
-#:     ela mandou tirar do pé em 07/09 tinha de sair do pé — mas sair do pé para
-#:     um lugar sem aviso é trocar "quebra o layout" por "não existe";
-#:   · **O CONTROLE NÃO ALCANÇA O `?`.** `.ajuda` é um `<span>`, e sem
-#:     `tabindex` o `el.click()` do piloto não lhe dá foco nenhum — medido:
-#:     `display da dica = 'none'`, `foco = BODY`. Na aba da NAVEGAÇÃO.
-#:
-#: A CURA DE CADA UMA:
-#:
-#:   · `tabindex="0"` em TODO `?` desta aba (não só nos que levam frase viva):
-#:     um `?` que abre no foco e outro que não seria uma tela que responde ao
-#:     controle em metade dos lugares, e a metade muda pelo estado da máquina.
-#:     A regra de estilo que o faz abrir é da FOLHA DA CASA (`topo.html`), pelo
-#:     mesmo motivo — ela vale para as dez abas;
-#:   · `.tem-viva` marca o `?` que PODE receber frase viva, e o CSS desta aba o
-#:     acende **só quando há frase de verdade lá dentro** (`:has`, lendo o
-#:     conteúdo que o piloto escreve). Um `?` marcado no desenho e apagado na
-#:     tela não promete nada; um `?` aceso com a tira vazia seria a promessa
-#:     falsa de sempre.
-#:
-#: A MARCA É DO DESENHO E O ACENDER É DO PRODUTO — a mesma divisão de toda esta
-#: casa. Nada aqui afirma que há o que dizer: quem decide continua sendo o
 #: pacote, a cada tique.
 def ajuda(txt, largura="", vivas=()):
     st = f' style="width:{largura}"' if largura else ""
@@ -1402,36 +1190,12 @@ def ajuda(txt, largura="", vivas=()):
     return (f'<span class="{cls}" tabindex="0">?'
             f'<span class="dica"{st}>{corpo}</span></span>')
 
-# ---------------------------------------------------------------------------
-# OS SEIS COMBOS: a linha da tabela e o desenho do Player 1 usam o MESMO
-# número, e o ponteiro numa linha acende as peças dela no desenho.
-#
-# A SEXTA LINHA É DE 14/09/2026, e o lugar é escolha dela: *"Tem que ficar na
 # aba navegAção."* <!-- noqa-acento: citação literal dela --> O PS + L3 anda
-# pelas máscaras como o PS + R3 anda pelos modos, e os dois ficam lado a lado —
-# analógico esquerdo e direito, uma linha cada.
-# ---------------------------------------------------------------------------
 #: O de fábrica de cada linha sai do produto (`acoes_do_gesto.PADRAO`), e as
-#: peças também (`GESTOS`): a tabela, o realce e o daemon leem o mesmo dono.
 COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO[g.chave]))
           for g in _acoes_do_gesto.GESTOS.values()]
 _GESTO_DA_LINHA = {g.numero: g.chave for g in _acoes_do_gesto.GESTOS.values()}
 
-# ---------------------------------------------------------------------------
-# O REALCE DO COMBO — e ele estava MORTO em três das cinco linhas.
-#
-# A regra antiga pintava `#nv-<peça> > .peca`, e isso não alcançava nada em dois
-# casos que só apareceram quando o desenho passou a ser gerado:
-#   · o PS é `peca sem-tinta` (`fill:none !important`) desde que ela mandou tirar
-#     o círculo de trás do logo — a regra perdia para o `!important`;
-#   · o Options traz a cor no `style` INLINE (é o que o portão das cores já
-#     dizia: "style inline vence qualquer folha") — a regra perdia de novo.
-# Resultado medido: das cinco linhas, a 1 (PS+Options) e a 5 (PS) não acendiam
-# NADA, e o PS não acendia em nenhuma. A legenda da aba afirmava o contrário.
-#
-# A cura tem três partes: `!important` na peça, o GLIFO junto (é ele o desenho
-# do PS), e nunca tocar a peça `sem-tinta` — acendê-la traria de volta o círculo
-# que ela mandou tirar.
 def _realce(pref, pid):
     sel = [f'#{pref}-glifo-{pid}', f'#{pref}-glifo-{pid} *']
     if _tem_tinta(pid):
@@ -1445,97 +1209,23 @@ REALCE = "\n".join(
     + "){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}"
     for n, pecas, _ in COMBOS)
 
-# AS CINCO LÂMPADAS SAÍRAM, e com elas a lista de ids que as acendia.
-#
-# Havia aqui um `LAMPADAS` com dez regras `#{pref}-led-jogador-{n}{fill:var(--fg)}`,
-# geradas do `PADRAO_JOGADOR`. Ela era a metade VIVA do desenho: a classe
-# `led-on` que o `monta.svg(jogador=…)` funde nas mesmas peças estava no DOM e
-# inerte, então tirar a classe não apagava nada e tirar só a lista deixaria a
-# classe herdada para a próxima folha reacender.
-#
-# Decisão dela, 28/08: as lâmpadas do jogador saem dos desenhos pequenos. Neste
-# cartão elas mediam 1,90 × 0,64 px. Agora o grupo inteiro sai do SVG, em
-# `controle()`, por `svg(lampadas=False)` — o mesmo botão que os cartões da
-# Jogar usam.
 
 CSS += "\n  /* ---- o desenho acompanha o combo apontado, sem uma linha de script ---- */\n"
 CSS += REALCE + "\n"
 
-# A PORTA PARA O MAPA DO CONTROLE (`.porta`, no `.quadro-topo`) existiu de 29/08
-# a 29/09/2026 e saiu por ordem dela, «Sai também» (O-MAPA-DO-CONTROLE-MORA-SO-
-# NA-CONEXOES-01): o mapa se abre só pela aba Conexões.
 
-
-# ---------------------------------------------------------------------------
-# A FOLHA DOS 28 MODELOS, PUBLICADA UMA VEZ — 03/09/2026, A-COR-VEM-DO-APARELHO
-#
-# A LEI É DELA: *"imagina que cada pessoa tenha um dualsense diferente. eu
-# mapeei as cores, glifos, controles, id e tudo mais. É pro projeto usar esse
 # meu trabalho (…) nada hardcoded."*  (noqa-acento: citação literal dela)
-#
-# O QUE ESTAVA ERRADO NESTA ABA: o `monta._so_o_colorway` PODA a folha embutida
-# em cada SVG e guarda só as regras do modelo pedido — 3.082 bytes dos 45.452
-# dos 28. Cada um dos quatro cartões carregava, portanto, UM modelo: o do
-# desenho. Um SVG assim não tem como virar outro aparelho, e escrever nele o
-# colorway lido do controle dela daria o cinza cru do `ds_limpo.svg`
-# (`rgb(58, 63, 75)`), não a cor dela.
-#
-# A CURA É PUBLICAR A TABELA, e é o que o `mapa-do-controle.html` já faz: a
-# folha inteira UMA vez na página, e os quatro SVGs escolhem por seletor. Aí o
-# `data-colorway` de cada desenho pode ser QUALQUER um dos 28 — que é a lei.
-#
-# NÃO É TABELA NOVA: o texto sai do `<style id="cores-do-dualsense-folha">` que
-# `scripts/gerar_cores_do_dualsense.py` escreveu dentro do `ds_limpo.svg`, a
-# partir de `docs/data/cores-do-dualsense.csv`. Digitar um hex aqui seria a
-# segunda verdade que o `check_cores_do_dualsense.py` existe para matar.
-#
-# O PREÇO, MEDIDO: a página troca 4 cópias podadas (12,3 KB) por uma folha
-# completa (45,5 KB) — +33 KB numa página de 400 KB, e o CSS das cores passa a
-# existir em UM lugar só em vez de quatro.
-#
-# A FOLHA TEM UM DONO, e é o `monta.folha_das_cores()` — 28/09/2026
-# (A-TELA-PERGUNTA-AO-DONO-01). Esta aba tinha uma `folha_das_cores` própria,
-# com a mesma leitura, ao lado da do `monta.py`, que a `aba05` e a bancada de
-# medição já usavam. A página saiu byte a byte igual com a troca (o import está
-# no topo, com os outros do `monta`). O padrão abaixo fica: ele serve a OUTRA
-# coisa, que é tirar a cópia podada de dentro de cada desenho (`desenho`), e o
-# `[^"]*` casa o id já prefixado por controle.
 _FOLHA_NO_SVG = re.compile(
     r'<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
 
-# A MARCA DE QUEM É O VALOR — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01.
 CSS += _marca.CSS
 CSS += "\n  /* ---- as 28 cores do mapa, publicadas UMA vez ---- */\n"
 CSS += re.sub(r"</?style[^>]*>", "", folha_das_cores())
 
 
-# ---------------------------------------------------------------------------
-# A TINTA QUE A FOLHA REFERENCIA — e sem ela DOZE dos 28 modelos dela somem
-#
-# DEFEITO MEDIDO NA TELA em 03/09/2026, nesta aba e só nesta: publicar a folha
-# na página curou 27 modelos e QUEBROU doze. Doze dos 28 não pintam com hex —
-# pintam com servidor de pintura (`url(#…)`): a hachura dos modelos que ela não
-# amostrou, e os dois gradientes de casca do God of War 20th e do Spider-Man 2.
-#
-#   007-first-light · 30th-anniversary · chroma-indigo · chroma-pearl ·
-#   chroma-teal · fortnite · genshin-impact · ghost-of-yotei ·
-#   god-of-war-20th · grey-camouflage · marathon · spider-man-2
-#
-# Esses três `id` moram no `<defs>` do desenho, e `monta.svg()` PREFIXA todo id
 # por controle — na página saíram `p1-hachura-sem-hex` … `p4-hachura-sem-hex`.
 # A folha da página continuou dizendo `url(#hachura-sem-hex)`, que já não existe
 # em lugar nenhum: `document.getElementById('hachura-sem-hex')` devolvia **null**
-# nos três, medido no WebKit desta máquina.
-#
-# E REFERÊNCIA MORTA NÃO CAI NO CINZA — ela APAGA A PEÇA. Medido com
-# `chroma-teal` escrito no cartão do P2: sobraram os dois gatilhos e as bolas
-# dos analógicos, e o corpo do controle SUMIU da tela. Não é a cor do aparelho
-# nem o neutro do "não sei": é um terceiro estado que não quer dizer nada, e é
-# pior do que o congelado que esta onda veio matar.
-#
-# A CURA É A DA `aba05`: o `<defs>` sai UMA vez na página, SEM prefixo, e os
-# quatro desenhos o consultam pelo id. As outras abas que publicaram a folha
-# (01, 04, 05, 08) já o traziam; a 06 era a única que publicava a folha sem a
 # tinta — `grep 'id="hachura-sem-hex"' mockup/*.html` mostra o buraco.
 _ABRE_A_TINTA = '<defs id="cores-do-dualsense">'
 if _ABRE_A_TINTA not in DS or DS.index(_ABRE_A_TINTA) > DS.index(
@@ -1546,33 +1236,10 @@ if _ABRE_A_TINTA not in DS or DS.index(_ABRE_A_TINTA) > DS.index(
         "pintam por `url(#…)` ficariam sem tinta, e o desenho deles some da "
         "tela. Rode scripts/gerar_cores_do_dualsense.py")
 
-#: Só os servidores de pintura, sem a folha: ela já foi para o `<style>` da
-#: página, e repeti-la aqui daria duas cópias dos 45 KB.
 TINTA_DOS_28 = (DS[DS.index(_ABRE_A_TINTA):
                    DS.index('<style id="cores-do-dualsense-folha">')] + "</defs>")
 
-#: O BLOCO DA TINTA, invisível e fora do fluxo. `position:absolute` com 0×0, e
-#: NÃO `display:none`: um `<defs>` em ramo escondido é caminho que já falhou em
-#: motor de SVG, e aqui não há o que ganhar arriscando — este `<svg>` não
-#: desenha nada, só empresta os três `id`.
-#:
-#: ELE VAI NO FIM DO MIOLO, E O LUGAR CUSTOU 8 PIXELS. Fora do fluxo não quer
-#: dizer fora da CONTAGEM: posto no COMEÇO, ele vira o primeiro filho de
-#: `.miolo`, e a regra
-#:
-#:     .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
-#:
-#: deixa de casar. Medido no WebKit desta máquina, com foto antes e depois: o
-#: primeiro quadro engordou de 282 para 290 px (o `padding-bottom` voltou aos
-#: 14px do padrão) e **a metade de baixo da aba desceu 8 px** — 97.857 pixels
-#: diferentes entre as duas fotos, com a renderização provada determinística
-#: (duas corridas da MESMA página dão zero).
-#:
-#: A REGRA QUE ISSO DEIXA, e ela vale para toda aba que publicar a tinta:
 #: `position:absolute` tira do FLUXO, não da lista de irmãos — `:first-child`,
-#: `:nth-child` e `+` continuam contando o elemento. No fim do `.miolo` não há
-#: o que quebrar: a página não tem uma só regra `:last-child` sobre `.quadro`
-#: (são treze regras estruturais, e só a de cima olha para os filhos do miolo).
 BLOCO_DA_TINTA = (
     '\n        <!-- A TINTA DOS 28 — os servidores de pintura que a folha das\n'
     '             cores pede por `url(#…)`. Sem eles, doze modelos dela viram\n'
@@ -1584,12 +1251,7 @@ BLOCO_DA_TINTA = (
 
 
 def tinta_referenciada():
-    """Os `id` que a folha dos 28 pede por `url(#…)` — lidos, nunca digitados.
-
-    É a lista contra a qual a página se confere no fim da geração. Digitá-la
-    aqui faria a régua envelhecer sozinha no dia em que ela mandar amostrar mais
-    um modelo e um gradiente novo nascer.
-    """
+    """Os `id` que a folha dos 28 pede por `url(#…)` — lidos, nunca digitados."""
     return sorted(set(re.findall(r"url\(#([^)]+)\)", folha_das_cores())))
 
 
@@ -1603,26 +1265,6 @@ def zonas_do_desenho():
     return zonas
 
 
-# ---------------------------------------------------------------------------
-# SEM COLORWAY, SEM COR DE APARELHO — e sem esta regra a ausência de leitura
-# mostrava VERMELHO. Medido em 03/09/2026 com `hefesto_vivo --sem-cor`:
-# apagado o `data-colorway`, nenhuma regra da folha casa e o desenho cai nos
-# `fill` crus do `ds_limpo.svg` — que incluem DOIS `#b11f54`, o Cosmic Red
-# VELHO e errado (a amostragem de 27/08 devolveu `#A51C48`; ver a nota em
-# `monta.monta` sobre as variáveis do esqueleto). O Share, o Options e as duas
-# bolas dos analógicos ficavam carmim num controle que ninguém identificou —
-# exatamente a queixa dela: *"os svgs não são os que o meu mapa cataloga"*.
-#
-# A REGRA É POR AUSÊNCIA DE ATRIBUTO, e não por classe do cartão: quem decide é
-# o mesmo fato que decide a cor — o produto leu, ou não leu. `.nav-ctl.vazia`
-# continua valendo para o lugar VAZIO na bancada, que nasce com o colorway do
-# desenho e só o perde no primeiro tique.
-#
-# SÓ AS ZONAS, e elas vêm do mapa (`zonas_do_desenho`): zona é o que muda de um
-# modelo para outro, logo é o que carrega identidade. O contorno, os glifos e a
-# barra de luz do jogador ficam — apagá-los transformaria o desenho num vulto,
-# e a luz do jogador nem é cor de plástico (a folha do mapa a exclui de
-# propósito: *"a cor de plástico nunca pinta a LUZ"*).
 CSS += "\n  /* ---- desenho sem identidade: as zonas ficam no neutro ---- */\n"
 CSS += "".join(
     f'  .nav-ctl .ds-svg:not([data-colorway]) {z}'
@@ -1631,12 +1273,6 @@ CSS += "".join(
     for z in zonas_do_desenho())
 
 
-#: OS TRÊS ATRIBUTOS QUE FAZEM O DESENHO SEGUIR O APARELHO — o contrato do alvo
-#: `atributo` do piloto (`hefesto_vivo.escrever`, ramo `atributo`). O nome do
-#: atributo vai em `data-hef-atributo`, SEPARADO do alvo: `regua_do_mockup`, o
-#: `LER_CAMPOS` e cada `campo.alvo == "…"` comparam o alvo por IGUALDADE, e um
-#: alvo composto (`atributo:data-colorway`) viraria uma palavra diferente por
-#: atributo. É a mesma forma que o alvo `classe` já usa com `data-hef-classe`.
 ENDERECO_DO_DESENHO = ('data-campo="desenho" data-hef-alvo="atributo"'
                        ' data-hef-atributo="data-colorway"')
 
@@ -1670,7 +1306,6 @@ def desenho(c, **kw):
     return x.replace("<svg ", f"<svg {ENDERECO_DO_DESENHO} ", 1)
 
 
-#: O marcador de campo vazio — o mesmo travessão das outras cinco abas.
 VAZIO = "—"
 
 
@@ -1770,19 +1405,11 @@ def controle(c):
     """
     n = c["jogador"]
     conectado = bool(c.get("conectado", True))
-    # UM LUGAR VAZIO NUNCA NAVEGA O PC. O `NAVEGA` já sai de `CONECTADOS`, mas a
-    # conjunção é o que impede a próxima pessoa de trocar aquela fonte e ganhar
-    # um cartão desconectado com a bolinha verde de "Navega o PC".
     navega = conectado and n == NAVEGA
-    # (a) A CASCA — o que o estado decide na moldura.
     classe = f'nav-ctl{" navega" if navega else ""}' if conectado else "nav-ctl vazia"
     tinta = f' style="color:{cor_da_zona(c["cor"])}"' if conectado else ""
     dica = "" if conectado else ' title="Nenhum controle neste lugar."'
-    # A LUZ DO JOGADOR só acende onde há jogador — `desenho()` a repassa ao
-    # `monta.svg()`, e um lugar vazio com barra de luz acesa seria o desenho
-    # afirmando um aparelho que não está na mesa.
     luz = {"luz": _hex(player_slot_color(n))} if conectado else {}
-    # (b) O TEXTO INICIAL de cada campo — e SÓ o texto.
     identidade = c["nome"] if conectado else SEM_NINGUEM_AQUI
     estado = _linha_do_cartao(c["via"], navega) if conectado else VAZIO
     return (
@@ -1799,8 +1426,6 @@ def controle(c):
 
 
 def linha_combo(n, pecas, faz):
-    # O PS entra SÓ com o glifo: ela, 27/08 — "temos o icone do PS e do lado
-    # direito PS escrito novamente, tira a parte escrita". O ícone já diz o nome.
     nomes = [glifo(gl_de(p), tam=18) if p == "ps" else _um(p) for p in pecas]
     combo = ' <span class="mais">+</span> '.join(nomes)
     return (f'                <tr class="g g{n}"><td class="b">'
@@ -1809,50 +1434,17 @@ def linha_combo(n, pecas, faz):
 
 
 def drop_do_gesto(chave, faz):
-    """A lista de UM gesto, com o endereço de leitura e o de pintura.
-
-    `data-linha` diz ao pacote QUAL gesto mudou, e `data-campo` deixa o tique
-    escrever o que a máquina diz — sem ele a lista mostrava a escolha recusada
-    até a aba reabrir, e aí voltava ao de fábrica (a noite de 01/10). A opção
-    do script tem endereço PRÓPRIO: com um arquivo escolhido, ela mostra o
-    nome dele.
-    """
+    """A lista de UM gesto, com o endereço de leitura e o de pintura."""
     lista = drop(ACOES_GESTO, faz, gesto="acao-do-gesto", linha=chave,
                  campo=PREFIXO_DO_GESTO + chave)
     rotulo = _acoes_do_gesto.rotulo(_acoes_do_gesto.SCRIPT)
     return lista.replace(f"<option>{rotulo}</option>",
                          f'<option data-campo="{PREFIXO_DO_SCRIPT}{chave}">{rotulo}</option>')
 
-# A LISTA ÚNICA DE BOTÕES — a MESMA primeira coluna nas duas telas de botões.
-# Ela, 27/08: "Em que cada linha seria um dos botões do controle" e, da tabela da
-# direita, "Repetindo a mesma tabela da Esquerda".
-# (peça do mapa, qualificador, o que ele faz)
 #: O PADRÃO DE CADA LINHA VEM DO PRODUTO — `core/acoes_de_botao.padrao()`, que
-#: por sua vez o deriva dos quatro mapas. Antes ele era DIGITADO aqui, ao lado
-#: de cada glifo, e três das vinte e uma linhas estavam erradas desde que foram
-#: escritas: o touchpad dizia "Botão esquerdo · Botão direito · F11" e o produto
-#: faz "Backspace · Enter · Delete". Nada as comparava.
-#:
-#: A ORDEM E OS GLIFOS CONTINUAM AQUI, porque são desenho; o que saiu foi o
-#: FATO. `_PADRAO_DOS_BOTOES` casa a linha da tela com o endereço do produto.
-#: botão -> RÓTULO, que é o que o `<select>` mostra como escolhido.
 _PADRAO_DOS_BOTOES = {b: rotulo_da_acao(a)
                       for b, a in _padrao_dos_botoes().items()}
 
-#: A MARCA DAS TRÊS REGIÕES DO TOUCHPAD — decisão do PO, 04/09/2026, §2 `06[02]`:
-#: *"Ficam, com a marca de que não disparam."*
-#:
-#: ELA NASCE FIXA, e isso é a decisão e não uma economia: a marca VIVA (que
-#: acende só quando o touchpad é o ponteiro do sistema) depende de o daemon
-#: publicar o `ponteiro_do_sistema` do leitor no estado — hoje ele só existe
-#: dentro do daemon —, e isso é sprint própria. Está no relato desta frente.
-#:
-#: O TEXTO CURTO FICA NA COLUNA e o inteiro no `title`: a decisão diz, com todas
-#: as letras, que a marca cabe na coluna do nome e não custa linha nova.
-#: A DICA ENCOLHEU PELA METADE — 11/09/2026, aprovado por ela. Ela aparecia
-#: NOVE vezes na tela (3 linhas × 3 pop-ups), e as 245 letras da versão antiga
-#: explicavam o mecanismo duas vezes. O que ela precisa saber cabe em duas
-#: orações: por que não dispara, e que a escolha não se perde.
 MARCA_DO_TOUCHPAD = (
     '<span class="marca-nao-dispara" title="O touchpad é o ponteiro do '
     "computador nesta máquina; enquanto for assim, o clique dele não vira "
@@ -1872,63 +1464,22 @@ BOTOES = [
     (gl("stick_l", rot="direção"),               EIXO_ESQUERDO),
     (gl("stick_r", rot="clique"),                "r3"),
     (gl("stick_r", rot="direção"),               EIXO_DIREITO),
-    # cada direcional é uma LINHA — ela, 27/08. Numa linha só, as quatro setas
-    # dividiam um valor e não havia como dar destino diferente a cada direção.
     (gl("dpad_up",    rot=dir_de("dpad_up")),    "dpad_up"),
     (gl("dpad_down",  rot=dir_de("dpad_down")),  "dpad_down"),
     (gl("dpad_left",  rot=dir_de("dpad_left")),  "dpad_left"),
     (gl("dpad_right", rot=dir_de("dpad_right")), "dpad_right"),
     (gl("options"),                              "options"),
     (gl("share"),                                "create"),
-    # O BOTÃO PS — 06/09/2026, decisão dela na 06-Q3: *"O PS ganha a mesma lista
-    # das outras 21 linhas; se você der uma tecla a ele, ele passa a digitar SEM
-    # parar de abrir a Steam, e a tabela não avisa isso."*
-    #
-    # A POSIÇÃO É A DO APARELHO — depois do `create`, antes do touchpad —, e é a
     # MESMA de `core/acoes_de_botao.BOTOES`. As duas ordens não se comparam por
-    # régua nenhuma hoje; o que se compara é o CONJUNTO. Manter as duas na mesma
-    # ordem é o que faz a tabela e o produto se lerem em paralelo.
-    #
-    # ISTO REVERTE a decisão de 04/09 (*"o PS fica fora, e a razão vira dica"*),
-    # e a reversão é dela. O motor chegou primeiro (ONDA5-06-01): o PS tem porta
     # própria de resolução (`acoes_de_botao.acao_do_ps`) e tem atendente
-    # (`build_ps_solo_callback`). Desde 01/10/2026 a linha dele SÓ DIGITA
-    # (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o de fábrica dela é
-    # «— Sem tecla —», e o que o toque faz no computador é o ⑥ dos gestos.
-    #
-    # A ÚLTIMA ORAÇÃO DA FRASE DELA — *"e a tabela não avisa isso"* — é a TIRA,
-    # não esta linha: quem a faz deixar de ser verdade é
-    # `a06_navegacao._o_que_o_ps_faz`, pela regra da 06-Q4 (*o que se perde
-    # ocupa linha; o que se explica mora no `?`*).
-    #
-    # ELE VEM COM O NOME AO LADO, como as outras dezessete linhas que não são
-    # face nem direcional. `linha_combo` faz o CONTRÁRIO (só o glifo), e a razão
-    # é dela, de 27/08: lá o PS aparece dentro de um combo — *"temos o icone do
-    # PS e do lado direito PS escrito novamente, tira a parte escrita"*. Aqui
-    # ele é uma LINHA, e a coluna se chama "Botão do controle": uma linha sem
-    # palavra seria a única das vinte e duas que não se lê em texto.
     (gl("ps"),                                   "ps"),
-    # as TRÊS regiões do touchpad ganharam linha — ela, 27/08: "o touchpad tem o
-    # click pra esquerda, linha do clique direita linha do click centro".
-    #
-    # E ELAS GANHARAM A MARCA — 04/09/2026, decisão do PO (§2 `06[02]`) sobre a
-    # D-15 dela. A escolha de OFERECÊ-LAS é dela e fica; o que a marca cura é a
-    # tela PROMETER um clique que o produto não dispara. A medição:
-    # `daemon/subsystems/keyboard._combine_with_touchpad:442` se cala quando o
-    # touchpad é o ponteiro do sistema, e a regra de udev instalada nesta
     # máquina só esconde os touchpads VIRTUAIS — o físico do DualSense continua
-    # sendo o mouse do computador.
     (gl("touchpad", rot=TOUCH_REGIOES[0]) + MARCA_DO_TOUCHPAD, "touchpad_left_press"),
     (gl("touchpad", rot=TOUCH_REGIOES[1]) + MARCA_DO_TOUCHPAD, "touchpad_right_press"),
     (gl("touchpad", rot=TOUCH_REGIOES[2]) + MARCA_DO_TOUCHPAD, "touchpad_middle_press"),
 ]
 SEM_TROCA = REMAP[-1][1][0]
 
-# A LISTA DA TELA E A TRADUÇÃO DO PACOTE SÃO A MESMA — F1-REMAPEAR, 13/09/2026.
-# O rótulo de cada destino sai do mapa das peças, aqui; o pacote traduz o
-# rótulo de volta para o id do botão (`a06_navegacao.ROTULOS_DA_TROCA`). Se um
-# nome mudar no CSV, a geração PARA — senão o "Guardar" recusaria como clique
-# inválido uma opção que a tela oferece.
 _ROTULOS_DO_DESENHO = {o for _g, ops in REMAP[:-1] for o in ops}
 if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_TROCA:
     raise SystemExit(
@@ -1938,39 +1489,6 @@ if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_T
         f"{sorted(set(ROTULOS_DA_TROCA) - _ROTULOS_DO_DESENHO)}; sem troca: "
         f"{SEM_TROCA!r} x {_SEM_TROCA_DO_PACOTE!r}")
 
-# ---------------------------------------------------------------------------
-# AS OPÇÕES DE ATIVAÇÃO — cada rótulo é a palavra dela na fala [11].
-# ---------------------------------------------------------------------------
-#: AS QUATRO DICAS QUE RECEBERAM AS FRASES DO PÉ — 07/09/2026. O que cada uma
-#: recebeu, e por quê (a frase nomeia o campo; o `?` daquele campo a recebe):
-#:
-#:   · `modo-portao` — *"O mouse e o teclado só se ligam fora do jogo…"*. Vai
-#:     para o `?` do **Status do Modo**, e só. O CINZA DO INTERRUPTOR NÃO SE
-#:     PERDE: a regra `:has()` da folha continua partindo desta chave — o que
-#:     mudou é o lugar do elemento, não o dono.
-#:
-#:     ELA ESTEVE NO `?` DA "Função do teclado" TAMBÉM, e foi MEDIDO que não
-#:     cabia: com os três blocos, a dica daquele campo ia a **356px** e o
-#:     `overflow-y` do `.miolo` cortava o último parágrafo — a frase que se
-#:     mudou de lugar para não sumir sumia de novo, por outro caminho. E ela era
-#:     a dispensável das três: aquele campo já tem linha própria para o jogo que
-#:     assume (`teclado-bloqueio`, *"Ligado, em pausa agora: …"*), que diz a
-#:     mesma coisa sobre o teclado com o dado do momento;
-#:   · `teclado-osk` — *"Neste computador: o teclado na tela está instalado…"*.
-#:     Vai para o `?` da **Função do teclado**, o campo que liga o teclado na
-#:     tela e a quem a dica já mandava abri-lo com o L3 sem nunca dizer se há um
-#:     instalado;
-#:   · `ativacao-ressalva` — *"O cursor, a rolagem e o teclado são um só para o
-#:     computador inteiro…"*. Vai para os `?` dos TRÊS campos que ela nomeia:
-#:     **Velocidade de cursor**, **Velocidade da rolagem** e **Função do
-#:     teclado**. É a armadilha que a D3 nomeou — a fita de cima oferece um
-#:     controle, e estes três valem para a máquina.
-#:
-#: O «ATÉ VOCÊ ENTRAR NA NAVEGAÇÃO DE NOVO» — 29/09/2026,
-#: O-MOUSE-SEGUE-A-NAVEGACAO-01, pela D-2909-A-NAVEGACAO-LIGA-O-MOUSE: entrar
-#: na Navegação (o chip ou o PS + R3) liga o mouse, e o «Desligado» deste
-#: interruptor passa a valer até a próxima entrada. A dica dizia o alcance
-#: inteiro, e deixaria de ser verdade sem a última oração.
 D_QUANDO = ajuda(
     "Vale para <b>este perfil</b>. <b>Desligado</b>, o controle "
     "é só gamepad e nada desta aba chega ao PC, até você entrar na Navegação "
@@ -1984,160 +1502,41 @@ D_MOUSE = ajuda(
     "Os <b>mapeamentos pré-prontos</b> de mouse. Trocar aqui reescreve as linhas "
     "da tabela <b>O controle como mouse</b>; qualquer linha continua "
     "editável depois.")
-#: AS DUAS DICAS SÃO LIDAS DO PRODUTO, e antes eram digitadas — as duas diziam
-#: *"De 1 a 10"*, e as duas estavam erradas: o cursor vai a 12 e a rolagem a 5
-#: (`integrations/uinput_mouse.py`, que desde 01/09/2026 é o dono da faixa).
-#:
-#: O TEXTO E A DICA SÃO COISAS DIFERENTES desde 07/09/2026, e a separação
-#: nasceu de um defeito medido nesta mesma frente: as duas velocidades aparecem
-#: em DOIS lugares — no painel das opções de ativação (as barras vivas do
-#: daemon) e dentro da pop-up "Estilo Point-and-click" (dois `−`/`+` que são a
-#: velocidade DO ESTILO, e que ficam sem endereço de propósito). Pendurar a
-#: ressalva da D3 na dica COMPARTILHADA levou a frase para dentro da pop-up
-#: também, e ali ela é falsa: aqueles dois números não são o ajuste global de
-#: ninguém. São cinco cópias do endereço onde deviam ser três — e as duas de
-#: sobra ficariam ao lado dos únicos dois campos desta aba que não escrevem.
 D_VEL_TXT = (
     f"Vale para o <b>analógico esquerdo</b> e para o <b>touchpad</b>. "
     f"De {MOUSE_SPEED_MIN} a {MOUSE_SPEED_MAX}; o padrão é "
     f"{DEFAULT_MOUSE_SPEED}.")
-#: A SEGUNDA FRASE SAIU — 07/09/2026, e é ordem dela sobre a tela inteira:
-#:
-#:     *"O app tem que funcionar e não mostrar na tela que o app não presta. Se
-#:      não tem como, ok. Testamos e criamos o canal. até lá tudo bem, o layout
-#:      não informa os nossos defeitos."*
-#:
-#: O que estava aqui dizia que o Hefesto ainda não rola com dois dedos no
-#: touchpad — uma CAPACIDADE que devemos, confessada na dica de um trilho que
-#: funciona. A dívida não some por isso: ela é de quem desenvolve, e continua
-#: onde sempre esteve. O que muda é que a tela cala.
-#:
-#: A LINHA QUE SEPARA, e ela é a parte difícil: a tela PODE dizer fato do
-#: mundo, limite do aparelho e estado presente — a frase de baixo, sobre o
-#: touchpad ser o mouse do computador, FICA por isso. O que não pode é
-#: capacidade nossa por entregar. O portão que guarda os dois casos é
-#: `scripts/check_a_tela_nao_confessa.py`.
 D_ROL_TXT = (
     f"Vale para o <b>analógico direito</b>. "
     f"De {SCROLL_SPEED_MIN} a {SCROLL_SPEED_MAX}; o padrão é "
     f"{DEFAULT_SCROLL_SPEED}.")
 D_VEL = ajuda(D_VEL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
 D_ROL = ajuda(D_ROL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
-#: AS MESMAS DUAS FRASES, SEM A RESSALVA — para a pop-up do Point-and-click.
 D_VEL_ESTILO = ajuda(D_VEL_TXT)
 D_ROL_ESTILO = ajuda(D_ROL_TXT)
 D_INTERNA = ajuda(
     "Navegar o Hefesto com o controle — abas, botões e listas.<br><br>"
     "O cursor do PC é outra coisa: é <b>um só</b>, e sai do controle marcado "
     "«Navega o PC».")
-# UMA linha só: ela, 27/08 — "o seletor de modo steam tá trocado com ativar modo
-# steam Deck. Esses dois botões tem que ser Unificados. Deixa Só Modo Steam."
 D_STEAM = ajuda(
     "Serve para navegar a <b>Steam</b> sem mouse, com o d-pad e os botões.")
 
-# O interruptor que substituiu "Quando vira mouse e teclado" — e, com ele, os dois
-# botões que ficavam sob a tabela do mouse. Ela, 27/08: "Status do Modo: ao clicar
-# no botão Ligado. Ao clicar nele de novo desligado." e "Suspender Mouse e Teclado,
-# Sair do Modo Jogo, deixam de existir devido ao botão status na parte superior."
-#
-# A MAIOR MENTIRA DESTA ABA MORREU EM 03/09/2026, e ela era de DESENHO.
-#
-# O que havia aqui: `<input type="checkbox" id="st-modo" checked>` mais um
-# `<label class="tog">` vazio, com a palavra saindo de
-# `.tog-in:checked + .tog .txt::after{content:'Ligado'}`. Duas consequências
-# medidas, as duas caladas:
-#
-#   1. o produto não tinha ONDE escrever. O `escrever()` do piloto cobre texto,
-#      valor, largura, fundo, cor, `innerHTML` e classe — nunca o atributo
-#      `checked`, e um `content:` de CSS não é nó de texto. `rato-ligado` era
-#      emitido a cada tique e caía no vazio (estava em `SEM_ENDERECO`). Com
-#      `mouse_emulation.enabled=false` no daemon dela, a tela dizia **Ligado**;
-#   2. clicar no `<label>` virava a caixa NO DOM, porque é o que o navegador faz
-#      com um rótulo ligado a um `<input>`. A tela trocava de lado mesmo quando
-#      o gesto RECUSAVA — e nada a devolvia.
-#
 # AS DUAS SAEM COM A MESMA MUDANÇA: o `<input>` some, a cor passa a ser a classe
-# `ligado` (alvo `classe` do piloto, `hefesto_vivo.py:636`, com
-# `data-hef-quando` dizendo qual palavra a acende) e a palavra vira nó de texto
-# no `.txt` (alvo padrão). Os dois elementos levam o MESMO `data-campo`: o
-# `achar()` visita os dois com o mesmo valor e cada um decide por si — é a
-# semântica que os quatro degraus da Vibração já usavam.
-#
-# NASCE EM `—`, e não em "Desligado": antes do primeiro tique ninguém perguntou
-# ao Hefesto, e afirmar o lado desligado seria trocar uma mentira por outra. É a
-# regra dela de 30/08 — *"se não tá mostrando agora, não tem info pra mostrar"*.
-#
-# O `data-gesto` FICA NO `<label>`: quem recebe o clique é ele, e é dele que o
-# `closest()` do piloto parte. Sem `for=`, porque não há mais input a alcançar.
 STATUS_MODO = ('<label class="tog" data-gesto="modo" data-campo="rato-ligado"'
                ' data-hef-alvo="classe" data-hef-classe="ligado"'
                ' data-hef-quando="Ligado">'
                '<span class="pino"></span>'
                '<span class="txt" data-campo="rato-ligado">—</span></label>')
 
-# ---------------------------------------------------------------------------
-# UM BOTÃO VIROU DOIS, E UMA POP-UP VIROU DUAS. Ela, 28/08/2026: "aba navegação
-# no botão Definições e Remapeamento / Abrimos uma tela pra remapeamento e
-# Definições Controle e Mouse, vamos dividir isso em dois botões no mesmo lugar
-# e dividir em dois pop up um pra cada. Tem muita info ali."
-#
-# O "muita info" era medida: uma tela só, de 1120x682px, com 42 listas e 42
-# linhas de tabela. Cada metade fica com 21 linhas — a divisão resolve a
-# LARGURA (1120px -> 660px, a padrão), não a densidade. O que resolve a
-# densidade é o teto de altura com rolagem interna, em `.tn-cx`.
-#
-# Havia aqui um `D_BOTOES` e um `D_PADRAO` que descreviam "as duas tabelas" da
-# tela única. Nenhum dos dois era usado em lugar nenhum do HTML — e depois da
-# divisão os dois passariam a descrever uma tela que não existe. O `D_BOTOES`
-# virou os dois abaixo, e estes SÃO usados, um no título de cada tela; o que o
-# `D_PADRAO` dizia ("o que este botão apaga") passou a viver onde ele morde, na
-# frase de confirmação de cada "Voltar ao padrão".
-# ---------------------------------------------------------------------------
-#: QUEM NAVEGA, DITO NA DICA DAS DEFINIÇÕES — e o rótulo é um CAMPO, não uma
-#: frase. Eram DUAS dicas até 13/09/2026: a da troca de botões perdeu esta frase
-#: na F1-REMAPEAR, porque a troca vale nos quatro controles (ver
-#: `D_REMAPEAMENTO`).
-#:
-#: Ele dizia `P1 Cosmic Red USB` cravado, nas duas telas. É identidade de
-#: aparelho no meio de um texto de ajuda, e por isso continuava nomeando o
-#: controle do desenho enquanto a fita do topo já lia o dela
-#: (IDENTIDADE-VEM-DE-CIMA, 03/09/2026). O endereço é `quem-navega`, e o pacote
 #: o escreve com `pacotes.identidade_de` + `pacotes.jogador_de` do PRIMÁRIO —
-#: os dois donos que a ROTA-A deixou prontos.
-#:
-#: `data-campo` no `<b>`, e não na dica inteira: o piloto escreve
-#: `textContent`, e o endereço na dica apagaria os quatro `<br>` e os `<b>` que
-#: ela tem. O `<b>` é uma folha de texto puro — é o que o alvo padrão sabe
-#: escrever sem destruir marcação.
 VALEM_PARA = (
     'Valem para o controle que navega o PC: o <b data-campo="quem-navega">'
     + rotulo_de_quem_navega(NAVEGA, QUEM_NAVEGA["nome"], QUEM_NAVEGA["via"])
     + "</b>.")
 
-#: AS DUAS RESPOSTAS QUE ESTA DICA DÁ:
-#:
 #:   · **o botão PS, e o parágrafo VIROU O CONTRÁRIO em 06/09/2026.** Ele dizia
-#:     *"o botão PS não entra, e é de propósito"* — a decisão do PO de 04/09
 #:     (§2 `06[03]`), que **a palavra dela reverteu** na 06-Q3: *"O PS ganha a
-#:     mesma lista das outras 21 linhas; se você der uma tecla a ele, ele passa
 #:     a digitar SEM parar de abrir a Steam."*
-#:
-#:     O QUE ELE PASSOU A DIZER é o que ela precisa saber para USAR a linha, e
-#:     não por que ela falta: o PS continua sendo a saída de emergência (os
-#:     seis gestos desta aba saem dele, e segurá-lo alterna o modo jogo) **e**
-#:     a tecla escolhida acontece junto. A precedência é do motor e está escrita
-#:     em tabela em `daemon/subsystems/hotkey._a_metade_da_maquina`; aqui só se
-#:     diz o que se vê acontecer.
-#:
-#:     O QUE **NÃO** ENTRA AQUI é o que se PERDE — isso ocupa linha, na tira sob
-#:     a tabela (`a06_navegacao._o_que_o_ps_faz`), pela regra que a 06-Q4 fixou;
-#:   · §2 `06[02]` — a frase que explica a marca das três regiões do touchpad.
-#:     A marca diz *o quê*; a dica diz *por quê* e o que continua guardado.
-#:
-#: AS DUAS ENTRAM NO `?` E NÃO NA TELA, e é a regra dela de 30/08: *"texto na
-#: interface é zero, só deixamos se for algo extremamente importante, e se for
-#: de média importância vira tooltip"*. O que é importante o bastante para
-#: ocupar linha é o que se PERDE, e isso mora na tira sob a tabela.
 D_DEFINICOES = ajuda(
     f"As <b>{len(BOTOES)} linhas</b> de cada botão: <b>o que ele faz</b> "
     "— mouse, tecla ou programa, na mesma lista.<br><br>"
@@ -2148,51 +1547,17 @@ D_DEFINICOES = ajuda(
     "Enquanto o touchpad for o ponteiro do computador, o clique dele não vira "
     "tecla — as três regiões ficam marcadas e a escolha fica guardada.<br><br>"
     + VALEM_PARA)
-#: A DICA DA TROCA PERDEU O `VALEM_PARA` — F1-REMAPEAR, 13/09/2026. Ele diz
-#: *"Valem para o controle que navega o PC"*, e isso é verdade sobre as
-#: Definições (mouse e teclado saem só do primário) e FALSO sobre a troca: ela é
-#: global no perfil (D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL) e entra antes do
-#: `forward_buttons` dos quatro controles. Tirar a frase errada é o mínimo; uma
-#: frase nova dizendo onde a troca vale é texto de tela, e fica no relato.
 D_REMAPEAMENTO = ajuda(
     f"As mesmas <b>{len(BOTOES)} linhas</b>, na mesma ordem, dizendo outra coisa: "
     "<b>para qual outro botão</b> cada um passa a valer. O que cada botão "
     "<b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>.")
 
-#: AS TRÊS PALAVRAS DA "Função do teclado", e elas são o CONTRATO do gesto.
-#:
-#: O `<option>` não leva `value` de propósito: `value` não está entre os
-#: atributos que `scripts/check_o_desenho_aprovado.INVISIVEIS` ignora, então
-#: pô-lo aqui faria toda marcação virar divergência de desenho. Sem ele, o
-#: `select.value` que chega ao Python É o texto da opção — e é por isso que
-#: `pacotes/a06_navegacao.py` casa por texto.
-#:
-#: **A MESMA LISTA ESTÁ LÁ, e a repetição é declarada**: o gesto casa pela
-#: palavra que DISTINGUE (`dentro`, `fora`, `desativado`) e a pintura usa a
-#: frase inteira. Quem reescrever uma opção aqui tem de abrir
-#: `a06_navegacao.py` — o cabeçalho de `_ESCOLHA` diz o que muda de cada lado.
-#:
-#: AS TRÊS SÃO DECISÃO DELA, 02/09/2026: *"`Só dentro do jogo` · `Só fora do
-#: jogo` · `Desativado`. O padrão de um perfil novo é `Só fora do jogo` — no
-#: jogo o L3 é o clique do analógico e o teclado atrapalha; no desktop é onde
-#: ele serve."*
-#:
-#: A PRIMEIRA OPÇÃO SAIU PORQUE O NOME ESTAVA ERRADO, e isto é medição e não
-#: gosto: ela dizia **"Ligada — atalhos e teclado na tela"**, e "ligada"
-#: afirmava um alcance que o produto NÃO tem. O daemon já cala a emulação de
-#: desktop quando um jogo assume — `_jogo_no_controle_do_desktop`
-#: (`daemon/lifecycle.py:3518`, a cura da queixa dela de 29/07 *"aperto r1 e ele
-#: muda de app ao invés de funcionar no jogo"*) e o `gamepad_dispatched` do laço
-#: (`:4780`). O que o teclado emulado faz hoje **é** "só fora do jogo": a
-#: etiqueta é que mentia.
 OPCOES_TECLADO = [
     "Só dentro do jogo",
     "Só fora do jogo",
     "Desativado",
 ]
 
-#: A opção que a lista mostra ANTES do primeiro tique. É a que ela escolheu como
-#: padrão, e é a única das três com dono no produto hoje — ver `OPCOES_TECLADO`.
 TECLADO_PADRAO = OPCOES_TECLADO[1]
 
 ATIVACAO_ESQ = [
@@ -2206,35 +1571,8 @@ ATIVACAO_ESQ = [
         "Desligada"], gesto="navegacao-interna")),
 ]
 
-# AS DUAS METADES DE CADA LINHA NÃO ERAM IRMÃS, e foi isto que a ligação mediu:
-# só a da direita ("Analógico") tinha dono no produto.
-#
-#   · `mouse_emulation.speed`        é UM número (1..12), e o cursor do TOUCHPAD
-#     sai dele: `emit_touchpad_move` escala por
-#     `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-#     (`integrations/uinput_mouse.py:517`). Não há segunda velocidade a ajustar
-#     — o "Touch" da tela era uma conta que ninguém faz do outro lado.
-#   · `mouse_emulation.scroll_speed` é UM número (1..5) e vale só para o
-#     analógico DIREITO: `_emit_scroll(rx, ry)` (`uinput_mouse.py:412`). Rolagem
-#     por dois dedos no touchpad **não existe** no produto — nem uma linha.
-#
-# As duas metades sem dono SAÍRAM do desenho em 01/09/2026, com os rótulos e os
-# quatro botões delas; sobrou um número por linha, com dono. A medição fica
-# porque é ela que responde "por que uma velocidade só".
 ATIVACAO_DIR = [
-    # UM NÚMERO EM CADA LINHA — decisão dela, 01/09/2026: *"só ajustar o texto e
-    # deixar rolagem, ajustar ali pra deixar um só se for o caso pra ambos"*.
-    # O segundo número de cada par prometia um ajuste que o produto não tem, e a
-    # medição está logo acima: `mouse_speed` move o touchpad E o analógico, e
-    # rolagem por dois dedos não existe. Os quatro botões `−`/`+` que sobravam
-    # saíram do desenho junto com os rótulos.
-    #
-    # E OS DOIS QUE FICARAM VIRARAM BARRA — decisão dela, 05/09/2026:
-    # *"velocidade do cursor e da rolagem coloca um slicer pra cada"*. Com isso
-    # os `−`/`+` sumiram das duas linhas, e com eles os quatro gestos de passo
     # (`vel-cursor-menos`/`-mais`, `rolagem-menos`/`-mais`): quem atende as
-    # barras é um gesto por linha, que recebe o número inteiro em `o["valor"]`.
-    # A faixa que cada barra oferece é a do DONO — ver :func:`trilho`.
     ("Velocidade de cursor", D_VEL,
      trilho(DEFAULT_MOUSE_SPEED, MOUSE_SPEED_MIN, MOUSE_SPEED_MAX,
             "vel-cursor", "vel-cursor",
@@ -2249,86 +1587,13 @@ ATIVACAO_DIR = [
         "Ligado, e a Steam abre em Modo Jogo na próxima vez"], gesto="modo-steam")),
 ]
 
-#: AS TRÊS LINHAS DE ESTADO QUE A GTK MOSTRA E ESTA ABA CALAVA — 03/09/2026.
-#:
-#: Nenhuma frase é escrita aqui: as três saem do PRODUTO, e é o pacote que as
-#: chama (ver `a06_navegacao.LINHAS_DE_ESTADO`). O que este bloco faz é dar-lhes
-#: LUGAR — que era exatamente o que faltava, e estava declarado em
-#: `SEM_ENDERECO` com as três razões:
-#:
-#:   · `rato-estado`      "Pronto para usar como mouse" / o motivo do bloqueio,
-#:                        de `app/actions/mouse_actions` (`_refresh_mouse_view`
 #:                        e `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`). É a linha que
-#:                        responde *por que o cursor não anda* com o
-#:                        interruptor em pé — e a dica deste quadro já a citava
-#:                        pelo nome ("se a linha de estado abaixo estiver
-#:                        vermelha") desde 27/08, para uma linha inexistente;
-#:   · `teclado-bloqueio` "Ligado, em pausa agora: …", de
 #:                        `app/actions/emulation_actions.descrever_teclado_emulado`.
-#:                        Separa *desligado por você* de *ligado e calado porque
-#:                        um jogo assumiu* — a lista "Função do teclado" sozinha
-#:                        fala da CONFIGURAÇÃO, nunca do que está acontecendo;
-#:   · `teclado-osk`      "Neste computador: o teclado na tela está instalado —
-#:                        o L3 abre", de
 #:                        `app/actions/input_actions.frase_do_teclado_na_tela`.
-#:                        Como nenhum atalho de fábrica digita letra, é a frase
-#:                        que decide se existe ALGUM caminho para escrever texto
-#:                        com o controle. A dica desta aba manda abrir o teclado
-#:                        na tela com o L3 sem nunca dizer se há um instalado.
-#:
-#: O ALVO É `html` PORQUE AS FRASES DO PRODUTO TÊM MARCAÇÃO — `<b>` e `<tt>` em
 #: `frase_do_teclado_na_tela`. O alvo padrão escreveria `<b>` como texto na tela
-#: dela.
-#:
-#: VAZIAS ATÉ O HEFESTO FALAR: o `:empty` do CSS as apaga, e a fileira dos
-#: botões sobe. Nenhuma das três afirma coisa alguma sobre uma máquina que
-#: ninguém olhou — as próprias funções do produto devolvem `""` nesse caso.
-#: E DUAS ENTRARAM NA ONDA 2 — 04/09/2026, as duas por decisão do PO e as duas
-#: na MESMA tira, que é o que a decisão pede em vez de um lugar novo:
-#:
 #:   · `modo-portao`   §2 `06[01]`: a razão de o interruptor do "Status do Modo"
-#:                     estar apagado. Ela é DUAS coisas com um endereço só — a
 #:                     frase desta linha e, pela regra `:has()` da folha desta
 #:                     aba, o cinza do próprio interruptor. A frase é a MESMA
-#:                     que o gesto levanta ao recusar
-#:                     (`a06_navegacao.RAZAO_DO_PORTAO`);
-#:   · `teclado-custo` §2 `06[05]`: o que sai junto enquanto a "Função do
-#:                     teclado" estiver em "Desativado". A dica `?` já dizia o
-#:                     custo ANTES do ato e some com o ponteiro; a pergunta
-#:                     *"por que o L3 parou de abrir o teclado?"* chega dias
-#:                     depois, e nesse dia esta linha ainda está aqui.
-#:
-#: A ORDEM É A DA LEITURA: primeiro o mouse, depois o teclado. As duas
-#: continuam se apagando sozinhas.
-#:
-#: DUAS DAS CINCO SAÍRAM DAQUI EM 07/09/2026, e a ordem é dela, olhando a aba
-#: com os quatro controles na mesa: *"navegacao tem essas 3 frases aqui na parte
-#: de baixo que quebram o layout"*. `modo-portao` e `teclado-osk` eram duas das
-#: três (a terceira era a ressalva, dentro da moldura).
-#:
-#: O QUE ISSO CADUCA, e é preciso dizer com todas as letras: a decisão do PO de
-#: 04/09 (§2 `06[01]`) pedia a razão do portão *"ao lado, na tira de estados"*,
-#: e a razão de `teclado-custo` recusar o `?` — *"a dica some com o ponteiro; a
-#: pergunta chega dias depois"* — valia igualmente para estas duas. A MEDIÇÃO
-#: DELA VENCEU O ARGUMENTO: com as três pintadas, o quadro das opções ia de
-#: 215px a 300,25px, o miolo passava 66px da janela e **a fileira dos quatro
-#: botões terminava 41,25px fora da tela**. Uma frase que empurra um botão para
-#: fora da janela não é uma frase permanente: é uma frase que apaga um botão.
-#:
-#: O QUE NÃO SE PERDEU:
-#:
-#:   · o SINAL de `modo-portao` continua na tela sem hover nenhum — o
-#:     interruptor do "Status do Modo" continua apagado e não clicável, pela
-#:     mesma regra `:has()` desta folha, que agora parte do ENDEREÇO;
-#:   · a RAZÃO das duas foi para o `?` do campo de que cada uma fala, viva,
-#:     escrita pelo mesmo pacote a cada tique (ver `ajuda(..., vivas=…)`).
-#:
-#: `teclado-custo` FICA, e a distinção é medida: ela nasce com a "Função do
-#: teclado" em "Desativado", que é escolha rara e deliberada, e é UMA linha
-#: curta — a tira com ela sozinha não passou de 17px em nenhuma cena. As duas
-#: que saíram nasciam com a máquina em jogo (`modo-portao`) e com o teclado na
-#: tela instalado (`teclado-osk`), que é o estado NORMAL desta máquina: as duas
-#: estavam na tela dela o tempo todo.
 ESTADOS = '''
         <div class="estados">
           <div class="estado" data-campo="rato-estado" data-hef-alvo="html"></div>
@@ -2336,29 +1601,6 @@ ESTADOS = '''
           <div class="estado" data-campo="teclado-custo" data-hef-alvo="html"></div>
         </div>'''
 
-# A FILEIRA AO PÉ DO BLOCO: os QUATRO botões com a mesma largura, ocupando-o inteiro.
-#
-# "Definições e remapeamento" virou dois, na ordem em que ela os nomeou, e no
-# mesmo lugar do que havia. Medido em 28/08: a fileira tem 1086px; com três,
-# cada botão ficava com 352,7px, e com quatro fica com 261,8px.
-#
-# O TERCEIRO BOTÃO TEVE DE ENCURTAR, e é medida: "Configurar o estilo
-# Point-and-click" ocupava 246,7px do texto — cabia nos 352,7 e NÃO cabe nos
-# 261,8 menos os 26 de padding. O `.btn` não corta texto, ele QUEBRA: o rótulo
-# ia para duas linhas dentro de uma caixa de 34px de altura fixa. O nome curto
-# não foi inventado aqui — é como a própria pop-up dele já se chama no título.
-#
-# O "VOLTAR AO PADRÃO" DA FILEIRA VOLTOU A FAZER O QUE O NOME DIZ. A frase dele
-# era "Apagar as 21 linhas das duas tabelas e voltar ao de fábrica?", e com as
-# tabelas em duas telas separadas "as duas tabelas" deixou de ser o que este
-# botão alcança. Cada tela ganhou o seu "Voltar ao padrão", que zera só a tabela
-# dela; o daqui devolve a ABA INTEIRA, e a frase agora lista o que ele apaga.
-#
-# E A FRASE PAROU DE LISTAR CINCO COISAS — 11/09/2026, A5-019, aprovada por
-# ela: a medição de 10/09 mostrou que o «Confirmar» não tem dono no pacote, e a
-# pergunta prometia apagar as opções de ativação, os gestos e as 22 linhas das
-# duas telas. Ela agora diz o que o botão faz de verdade — e, sem os `{…}` da
-# contagem, este bloco deixou de ser `f`.
 FILEIRA = '''
             <div class="acoes quatro grupo-padrao">
               <a class="btn roxo" href="#definicoes-mouse">Definições Controle e Mouse</a>
@@ -2383,59 +1625,9 @@ FILEIRA = '''
               </div>
             </div>'''
 
-#: AS SETE LINHAS DO ESTILO POINT-AND-CLICK, e a terceira coluna é o ENDEREÇO —
-#: 11/09/2026, F2-POINT-AND-CLICK. Ela é o id do botão em
 #: `core/acoes_de_botao.BOTOES`, e é o que faz a linha SER GRAVADA: sem ela o
-#: `<select>` abre, aceita escolha e não tem onde guardar — que foi o que a
-#: `PAGINAS-ESPECIAIS-B1` mediu nos sete e nos vinte e dois do remapeamento, e o
-#: que ela leu com estas palavras: *"eu achei que elas funcionavam"*.
-#:
-#: O ENDEREÇO É O MESMO DA TELA "Definições Controle e Mouse", de propósito:
-#: `data-campo="acao-<botão>"` e `data-linha="<botão>"`. As duas telas falam do
 #: MESMO campo do perfil (`Profile.button_actions`), e um segundo endereço para
-#: o mesmo dado seria a segunda verdade que esta casa persegue — o piloto pinta
-#: as duas de uma vez, com o valor do perfil, e nenhuma pode mostrar o contrário
-#: da outra. A `forma` de cada "Guardar" é recortada pelo `id` da pop-up
-#: (`hefesto_vivo`, o bloco `forma:`), então as duas não disputam.
-#:
-#: A PRIMEIRA LINHA FICA SEM ENDEREÇO, e a razão é medida: *deslizar o dedo no
-#: touchpad* não é botão em lugar nenhum do produto — não está em `BOTOES`, e
-#: quem move o cursor por ali é `uinput_mouse.emit_touchpad_move`, o próprio
-#: mouse virtual, não uma escolha por peça. Dar-lhe um `data-campo` inventaria
-#: um botão que o `resolver()` não conhece; está no relato da frente, com o que
-#: seria preciso. É a ÚNICA que ainda usa a segunda coluna.
-#:
-#: A SEGUNDA COLUNA DEIXOU DE SER O QUE A LINHA CRAVA nas seis endereçadas, e
-#: quem mandou foi a régua `test_a_06_o_duble_decide_o_indecidivel`. **Um
-#: endereço, um valor cravado.** Com `acao-touchpad_left_press` cravando
-#: `Backspace` na tela de Definições e `Botão esquerdo` aqui, o mesmo campo
-#: aparecia no documento com DOIS valores — e a régua que separa PRODUTO de
-#: MOCKUP lendo a tela ficava sem como decidir sobre um deles: um dublê que
-#: discorde do desenho ainda coincide com a outra metade, e o campo fica
-#: indecidível para sempre. As seis passaram a cravar `_PADRAO_DOS_BOTOES`, a
-#: mesma coisa que a tela irmã, e o que a pessoa vê continua sendo o perfil —
-#: a pintura chega em 100 ms e escreve nas duas de uma vez.
-#:
-#: O QUE ISSO CUSTOU, e está no relato da frente: a receita do estilo — *o
-#: touchpad e o ✕ como botão esquerdo, o ○ como direito* — vivia SÓ aqui, como
-#: `<option selected>` de HTML, onde código nenhum a alcança. Ela não some do
-#: produto porque nunca esteve nele; o que ela perde é o último lugar em que
-#: estava escrita. Se ela quiser *aplicar o estilo com um clique*, a receita
 #: precisa virar dado com dono — e isso é decisão dela.
-#: E AS DUAS LINHAS DE CLIQUE DO TOUCHPAD GANHARAM A MARCA no mesmo dia, e não
-#: por gosto: a régua `test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas`
-#: cobra a marca de TODA linha de região do touchpad que tenha endereço, e o
-#: comentário dela diz por quê — *"é ela que pega a marca posta na tela certa e
-#: na LINHA errada"*. Até aqui as duas escapavam por não terem endereço; dar-lhes
-#: endereço sem dar-lhes a marca seria a tela voltando a PROMETER um clique que o
-#: produto não dispara, agora numa terceira tela. O texto era o dos outros
-#: nove lugares — decisão do PO de 04/09/2026 sobre a D-15 dela —, e não uma
-#: frase nova.
-#:
-#: FICA PARA ELA, e está no relato da frente: a dica do cabeçalho desta tela
-#: promete que *"o toque vira o clique"*, e a marca diz que nesta máquina ele
-#: não vira. As duas são verdade sobre coisas diferentes (o toque MOVE o cursor;
-#: o CLIQUE é que não dispara tecla), e quem decide como a tela diz isso é ela.
 PONTO_MAPA = [
     (gl("touchpad", rot="deslizar"), "Movimento do cursor", ""),
     (gl("touchpad", rot=TOUCH_REGIOES[0]) + MARCA_DO_TOUCHPAD,
@@ -2448,59 +1640,9 @@ PONTO_MAPA = [
     (gl("stick_r", rot="direção"),   "Rolagem vertical e horizontal", EIXO_DIREITO),
 ]
 
-# ---------------------------------------------------------------------------
-# AS DUAS TELAS DE BOTÕES — uma por botão da fileira, uma tabela em cada.
-#
-# Elas nascem da MESMA lista `BOTOES`, na mesma ordem: é a segunda metade do
-# pedido dela ("dividir em dois pop up um pra cada"), e o que muda de uma para a
-# outra é a segunda coluna, não a primeira. Por isso a função abaixo, e não duas
-# telas escritas por extenso: duas cópias divergiriam na primeira correção.
-#
-# Cada uma leva o SEU rodapé, com o seu "Voltar ao padrão" e a frase que diz o
-# que aquele botão apaga — e o que ele NÃO apaga, que é o que a frase antiga,
-# única e comum às duas tabelas, não podia dizer.
-# ---------------------------------------------------------------------------
 def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padrao,
                    fechar="", aviso="", extra=""):
-    """Uma das duas telas de botões.
-
-    Os NOMES dos gestos vêm por argumento, e desde 02/09/2026 são TRÊS: o de
-    guardar, o de voltar ao de fábrica e o de FECHAR.
-
-    FATO SUBSTITUÍDO (02/09/2026): aqui estava escrito que *"o 'Cancelar' e o
-    '×' não levam nome porque funcionam: fecham a pop-up pelo `:target` do CSS.
-    Marcar um botão que faz o que promete o faria aparecer no relato como 'sem
-    dono'"*. Continua verdade que eles fecham sozinhos — e **deixou de ser
-    verdade que fechar é tudo o que eles têm a fazer**. Com a decisão dela de
-    02/09 (*"as 21 listas param de ser repintadas enquanto ela está mexendo,
-    até guardar ou sair"*), FECHAR É O "SAIR": é o instante em que as escolhas
-    pendentes têm de ser largadas e a tabela voltar ao que o perfil guarda.
-    Sem nome, esse instante não chega ao Python e a trava ficaria presa depois
-    de ela desistir. Eles não aparecem como "sem dono" porque agora TÊM dono —
-    `a06_navegacao.fechar_definicoes`.
-
-    FATO SUBSTITUÍDO (13/09/2026, F1-REMAPEAR): aqui estava escrito que a tela
-    de remapeamento passava `fechar=""` porque o `Guardar` dela não tinha dono.
-    Ganhou dono, e a trava das linhas dela também — ela passa
-    `fechar="fechar-troca"`, pelo mesmo motivo da tela de definições.
-
-    O `aviso` É A TIRA SOB A TABELA — 04/09/2026, decisão do PO (§2 `06[04]`).
-    Só a tela de Definições a recebe: o que a tira nomeia são os atalhos de
-    teclado que o "Guardar" DESTA tela substitui sem mostrá-los. FATO
-    SUBSTITUÍDO (13/09/2026): a razão escrita aqui era que o "Guardar" da outra
-    tela não tinha dono. Tem, e a tira continua só aqui por outra razão, que é a
-    de agora: o "Guardar" da troca grava exatamente as linhas que a tabela
-    mostra, e não há nada escondido que ele apague.
-
-    O `extra` É UM BOTÃO A MAIS NO RODAPÉ — 06/09/2026, NAVEGACAO-TECLAS-01. Só
-    a tela de Definições o recebe, e ele leva à tela "Teclas do teclado". Ele
-    NÃO foi para a `FILEIRA` da aba, e a razão é medida: aquela fileira já tem
-    quatro botões e a classe `quatro` divide a largura por eles (261,8px cada,
-    medido em 28/08) — um quinto quebraria o rótulo de todos em duas linhas
-    dentro de uma caixa de 34px de altura fixa. E o lugar é este mesmo: quem
-    quer trocar a TECLA de um botão está olhando a tabela de o que cada botão
-    faz.
-    """
+    """Uma das duas telas de botões."""
     x = f' data-gesto="{fechar}"' if fechar else ""
     return f'''
 <div class="tela-nova" id="{ident}">
@@ -2540,29 +1682,10 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
 '''
 
 
-#: O NOME DO GESTO DAS 21 LINHAS. Ele não grava nada — quem grava é o
-#: "Guardar". O que ele faz é DIZER ao Python que ela está mexendo, e é o que
-#: destrava a decisão dela de 02/09: *"as 21 listas param de ser repintadas
-#: enquanto ela está mexendo, até guardar ou sair"*.
-#:
-#: SEM ELE A ESCOLHA NUNCA CHEGAVA AO PYTHON, e isto foi medido: o ouvinte do
-#: piloto só reconhece um alvo que case com o `closest` de `manda_do_alvo`
-#: (`hefesto_vivo.py:367` — `[data-gesto]`, `[data-modo]`, `[data-papel]`…), e
-#: os 21 `<select>` tinham só `data-campo`, `data-linha` e `data-hef-alvo`.
-#: O `change` morria no navegador; o tique da pintura reescrevia a escolha por
-#: cima; e o "Guardar" ao lado nunca via uma forma diferente do perfil.
 LINHA_DE_BOTAO = "linha-de-botao"
 
-#: A TIRA DE AVISO SOB A TABELA — nasce VAZIA e o pacote a escreve a cada tique
 #: (`a06_navegacao._aviso_da_tabela`). Decisão do PO, 04/09/2026, §2 `06[04]`:
-#: *"Uma tira de aviso sob a tabela. O que vai ser APAGADO não mora num hover."*
-#:
-#: NENHUMA FRASE É ESCRITA AQUI, e é a mesma disciplina da tira de estados: o
-#: que ela diz sai do PRODUTO — os nomes dos botões de
-#: `input_actions.humanize_button`, as teclas de `humanize_binding`, e o que
 #: cada linha faz de `core/acoes_de_botao`. O que este bloco faz é dar LUGAR.
-#:
-#: O ALVO É `html` porque as três frases levam `<b>` e vêm em `<div>` cada uma.
 AVISO_DA_TABELA = ('        <div class="aviso-tabela" data-campo="aviso-da-tabela"'
                    ' data-hef-alvo="html"></div>')
 
@@ -2573,22 +1696,7 @@ TELA_DEFINICOES = tela_de_botoes(
         f'          <tr><td class="b">{b}</td>'
         f'<td>{drop(ACOES_DO_PS if i == "ps" else ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"{PREFIXO_DA_ACAO}{i}")}</td></tr>'
         for b, i in BOTOES),
-    # A CONFIRMAÇÃO GANHOU A METADE QUE FALTAVA — 04/09/2026, e é o defeito §3-2
-    # dito na tela. Ela dizia só *"as 21 linhas de o que cada botão faz"* e
-    # **nunca usava a palavra atalhos**, sendo que o gesto zera os DOIS campos
     # do perfil (`key_bindings` e `button_actions`), direto no disco e sem
-    # desfazer. Quem tivesse escrito "Ctrl + W" na janela antiga perdia isso
-    # neste clique, com a pergunta falando de outra coisa.
-    #
-    # ZERAR OS DOIS CONTINUA SENDO O CERTO — zerar só um deixaria a tabela
-    # metade de fábrica, com o botão dizendo o contrário. O que estava errado
-    # era a pergunta, não o ato.
-    #
-    # E ELA APONTA A SAÍDA MENOR — 06/09/2026, NAVEGACAO-TECLAS-01. Este botão
-    # continua sendo o "tudo ao de fábrica", e agora existe o de UMA linha
-    # (o ↺ de cada linha de "Teclas do teclado"). Uma pergunta que apaga tudo
-    # sem dizer que há um caminho de uma linha é a tela escondendo a opção
-    # barata.
     f"Devolver ao de fábrica as {len(BOTOES)} linhas? "
     "Isto apaga também os <b>atalhos de teclado</b> deste perfil — "
     "inclusive os de antes, que esta lista não sabe "
@@ -2598,48 +1706,17 @@ TELA_DEFINICOES = tela_de_botoes(
     fechar="fechar-definicoes", aviso=AVISO_DA_TABELA,
     extra='      <a class="btn" href="#teclas-do-teclado">Teclas do teclado</a>')
 
-#: OS DOIS GESTOS DAS LINHAS DA TROCA — F1-REMAPEAR, 13/09/2026. O molde é o
-#: da tela de Definições (`LINHA_DE_BOTAO`, `fechar-definicoes`): a linha diz
-#: ao Python que ela está mexendo, e o fechar larga o que ela não guardou. Os
-#: donos moram em `pacotes/a06_navegacao.py`.
 LINHA_DE_TROCA = "linha-de-troca"
 FECHAR_TROCA = "fechar-troca"
 
 
 def _campo_da_troca(botao):
-    """O endereço de pintura da linha — só para o que a troca alcança.
-
-    As seis linhas que o motor recusa (`remapeamento_de_botao.FORA_DO_ALCANCE` e
-    o PS) ficam sem: nada as pinta, porque o perfil nunca guarda troca nelas. Um
-    endereço ali mostraria "— Sem troca —" para sempre, igual ao desenho — o
-    campo que régua nenhuma decide.
-    """
+    """O endereço de pintura da linha — só para o que a troca alcança."""
     return f"{PREFIXO_DA_TROCA}{botao}" if botao in _REMAPEAVEIS else ""
 
 
 def _lista_da_troca(botao):
-    """A lista de UMA linha da troca: a que troca, ou a apagada.
-
-    AS SEIS QUE O MOTOR RECUSA NASCEM APAGADAS — F1-REMAPEAR-02, 13/09/2026.
-    Até aqui elas eram listas clicáveis como as outras dezesseis: escolher algo
-    nelas era recusado na hora, a lista continuava mostrando a escolha recusada,
-    e ela ia na `forma` — todo "Guardar" seguinte era recusado, e desde a
-    FRASES-E-DICAS-01 a recusa não tem frase que diga qual linha segura o botão.
-
-    QUEM DECIDIU foi quem coordena, por delegação (§D da sprint F1-REMAPEAR-02),
-    e a regra é a do apagado que ela deu na 06-Q1 — a palavra está citada no
-    bloco do portão de modo da folha desta aba e em
-    `docs/process/2026-09-05-AS-QUARENTA-E-UMA-DECISOES-DELA.md`: *"o switch
-    fica apagado (não clicável) MAS mostra o estado real"*. O estado real destas seis é sempre
-    "— Sem troca —", porque o perfil nunca guarda troca nelas — então é a única
-    opção. Sem `data-gesto` (não há escolha a anotar) e sem `data-campo` (não há
-    o que pintar); o `data-linha` fica, porque a `forma` do "Guardar" continua
-    sabendo de todas as linhas.
-
-    `disabled`, E NÃO SÓ TINTA: uma lista com `pointer-events:none` ainda
-    recebe o foco pelo teclado e muda de valor pelas setas — e a escolha
-    voltaria à `forma` pelo caminho que o ponteiro não vê.
-    """
+    """A lista de UMA linha da troca: a que troca, ou a apagada."""
     if botao in _REMAPEAVEIS:
         return drop(REMAP, SEM_TROCA, gesto=LINHA_DE_TROCA, linha=botao,
                     campo=_campo_da_troca(botao))
@@ -2658,43 +1735,12 @@ TELA_REMAPEAMENTO = tela_de_botoes(
     guardar="guardar-remapeamento", padrao="padrao-remapeamento",
     fechar=FECHAR_TROCA)
 
-# ---------------------------------------------------------------------------
-# A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
-#
 # O QUE ELA FECHA: a linha `FALTA_NO_HTML` de *Editar QUAL TECLA cada botão
-# digita* (`docs/data/paridade-gtk-html.csv:208`). A janela antiga tem coluna
-# EDITÁVEL EM TEXTO; a tela nova só tinha a lista fechada de 26 ações, e tudo o
-# que estivesse fora dela a GTK escrevia e o HTML não tinha como escrever.
-#
-# **NÃO É UMA VIGÉSIMA SÉTIMA OPÇÃO NA LISTA**, e é a exigência da sprint: uma
-# opção por combinação que ela invente faria a lista crescer para sempre. É um
 # campo de TEXTO, e quem traduz é o dono (`input_actions.dehumanize_binding`),
-# o mesmo da janela antiga.
-#
-# AS OITO LINHAS SÃO O DOMÍNIO DO PRODUTO, perguntado e não digitado:
 # `acoes_de_botao.DOMINIO_DO_TECLADO`. Oferecer campo nas outras catorze faria
-# a tela aceitar uma escolha que o `resolver()` não lê — gravada no disco,
-# visível na tela e sem nunca chegar ao aparelho.
-#
-# O ↺ DE CADA LINHA é o Passo 2 da sprint, e é o único caminho não destrutivo
-# que existia: até hoje voltar UMA linha ao de fábrica custava o
-# "Voltar ao padrão" da tela inteira, que zera `key_bindings` e
 # `button_actions` de uma vez.
-#
-# NÃO HÁ "Voltar ao padrão" DE TELA AQUI, e a ausência é decisão: o desta tela
-# seria um terceiro botão a zerar `key_bindings` inteiro, ao lado dos dois que
-# já fazem isso (o da tela de Definições e o da aba). O que faltava era o de UMA
-# linha, e ele está em cada linha.
-# ---------------------------------------------------------------------------
 
-#: OS EXEMPLOS DA DICA SAEM DO DONO, e não de uma digitação. `humanize_binding`
-#: é a mesma função que escreve o valor dos campos, então o que a dica ensina a
-#: escrever é, por construção, o que a tela devolve — e o dia em que um rótulo
-#: mudar lá, ele muda aqui junto.
-#:
 #: POR QUE ISTO IMPORTA, medido em 06/09/2026: `dehumanize_binding` casa pelo
-#: rótulo INTEIRO (`_REV_KEY` é `{rótulo.lower(): token}`), então escrever
-#: `Super` é RECUSADO e `Super (tecla Windows)` é aceito. A dica que ensinasse
 #: "Super" mandaria a pessoa na direção da recusa.
 def _exemplo_de_tecla(token):
     try:
@@ -2713,21 +1759,6 @@ D_TECLAS = ajuda(
     "<b>Campo em branco</b>: o botão não digita nada.<br><br>"
     "O <b>↺</b> devolve a linha ao de fábrica.")
 
-#: A LINHA DA TELA DE TECLAS. O `data-campo` é `tecla-<botão>` e **não há
-#: `data-linha`**: a `forma` que o piloto recolhe usa `data-linha || data-campo`
-#: como chave, e as vinte e duas listas da outra tela já ocupam a chave
-#: `<botão>` — um campo com `data-linha` apagaria a escolha delas dentro da
-#: mesma forma.
-#:
-#: O `data-gesto` VIVE NO `<input>` pelo mesmo motivo do trilho: o ouvinte do
-#: piloto sobe pelo `closest`, e sem ele o clique dentro do campo não chega ao
-#: Python — a trava não abre e o tique de 100 ms apaga o que ela está digitando.
-#:
-#: O ↺ NÃO LEVA `data-campo` NEM `data-linha`, e é a mesma armadilha vista do
-#: outro lado: ele não tem `value`, então a `forma` gravaria o `textContent`
-#: dele ("↺") na chave do botão, e o "Guardar" leria isso como um rótulo de
-#: ação. Ele diz quem é por `data-tecla`, que o ouvinte carrega inteiro
-#: (`Object.assign({}, d)`).
 def linha_de_tecla(rotulo, botao):
     return (f'          <tr><td class="b">{rotulo}</td>'
             f'<td><input type="text" class="tecla" data-campo="tecla-{botao}"'
@@ -2834,11 +1865,6 @@ TELA_PONTO = f'''
 '''
 
 
-#: AS DUAS MARCAS DA ATIVAÇÃO — O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
-#: 01/10/2026. O mouse (as velocidades e as Definições) e o teclado (a função e
-#: as teclas) são cartões do computador: a marca diz de quem é o valor, e o
-#: pacote a reescreve a cada tique (`pacotes/camada.py`). A cena do desenho não
-#: tem perfil ativo («—» no topo), e por isso nasce «PC».
 MARCAS_DA_ATIVACAO = "        " + _marca.rotuladas(
     (("mouse", "Mouse"), ("teclado", "Teclado")))
 
@@ -2856,11 +1882,6 @@ D_MESA = ajuda(
     "O alvo de um ajuste se escolhe na <b>fita do topo</b>; estes cartões são "
     "leitura.")
 
-#: A DICA DOS GESTOS FALA DA TABELA — 01/10/2026 (OS-GESTOS-DO-CONTROLE-01).
-#: Ela cravava *«o PS sozinho abre a Steam»* e *«o PS + R3 e o PS + Options
-#: são as duas saídas de emergência»*: com a tabela configurável, as duas
-#: passariam a mentir. O que muda com a escolha dela vem do pacote, pelo
-#: endereço vivo (`ENDERECO_DA_DICA_DOS_GESTOS`); o fixo diz só o que vale sempre.
 D_GESTOS = ajuda(
     "Combinações que valem <b>sem largar o controle</b>, a qualquer momento — "
     "mesmo com o jogo aberto. O que cada uma faz vale para o computador, em "
@@ -3128,11 +2149,11 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Mouse, teclado e os seis gestos saem de UM controle só.</b> Com um
     controle ligado ninguém podia ver isso. O poll loop lê o estado do controle
-    <b>primário</b> (<code>daemon/lifecycle.py:5976</code>) e é esse estado que vai
+    <b>primário</b> (<code>daemon/lifecycle.py:3942</code>) e é esse estado que vai
     para o mouse (<code>:6189</code>), para o teclado (<code>:6200</code>) e para o
     <code>hotkey_manager.observe</code> (<code>:6208</code>); os secundários do
     co-op têm um caminho só, o do gamepad virtual
-    (<code>daemon/subsystems/coop.py:2366</code>). Por isso o cartão do
+    (<code>daemon/subsystems/coop.py:1552</code>). Por isso o cartão do
     <b>Player {NAVEGA}</b> diz <i>{PAPEL_QUE_NAVEGA}</i> e os outros dizem <i>{PAPEL_SO_A_JANELA}</i>,
     e por isso o desenho que acende no combo é o dele. A exceção é o giro: na
     Navegação, quem acende a Mira Virtual move o cursor com ele, e o cartão
@@ -3194,13 +2215,8 @@ LEGENDA = f'''<div class="nota">
 '''
 
 
-
 def _conferir(doc):
-    """As decisões dela nesta aba, conferidas NA SAÍDA.
-
-    Só o miolo, sem comentário HTML e sem o `<style>` — as três armadilhas que
-    fizeram as réguas das abas irmãs reprovarem o que estava certo.
-    """
+    """As decisões dela nesta aba, conferidas NA SAÍDA."""
     import re as _re
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = _re.sub(r"<!--.*?-->", "", corpo, flags=_re.S)
@@ -3214,20 +2230,11 @@ def _conferir(doc):
             falhas.append(oque)
 
     vazios = [c for c in MESA if not c.get("conectado", True)]
-    # 1. A MESA — dois conectados, dois lugares vazios, e os quatro cards na tela.
     exigir(corpo.count('class="nav-ctl vazia"') == len(vazios),
            f"os lugares vazios não são {len(vazios)}")
     exigir(corpo.count('class="nav-ctl') == len(MESA),
            f"a fileira não tem os {len(MESA)} lugares")
-    # 2. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome do plástico.
-    #
-    #    A FORMA MUDOU EM 07/09/2026, O-LUGAR-VAZIO-TEM-ENDERECO, e esta régua
-    #    veio junto: a palavra `Desconectado` passou a morar DENTRO do
     #    `<span data-campo="identidade">`, que é o que faz o produto ter onde
-    #    escrever quando o terceiro controle chega. A régua antiga procurava
-    #    `P3 <span class="pt">•</span> Desconectado` cru e reprovaria a cura —
-    #    ela mediu a estrutura de ontem, não a decisão dela. **O que ela
-    #    protege continua igual**: o lugar vazio diz a posição e o estado.
     for c in vazios:
         exigir(f'P{c["jogador"]} <span class="pt">•</span> '
                f'<span data-campo="identidade">{SEM_NINGUEM_AQUI}</span>' in corpo,
@@ -3236,25 +2243,8 @@ def _conferir(doc):
                f"volta a não ter onde escrever quando o controle chegar")
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
-    # A ORDEM SE MEDE COM `find`, E O RECORTE COM `[1:]` — nunca com `[1]`.
-    # A primeira versão desta régua fazia `split(...)[1]` e ESTOUROU com
-    # `IndexError` na mordida que tirava os lugares vazios: o gerador morreu e a
-    # mensagem que ele devia imprimir nunca saiu. Na mordida isso é
-    # indistinguível de uma régua que não pegou nada. Já tinha acontecido na aba
-    # Controles hoje, com `index` em vez de `find` — mesma família, mesma cura.
-    #
-    # E O RECORTE É A FILEIRA, NUNCA O MIOLO — 11/09/2026, e o defeito era
-    # estrutural: o ÚLTIMO lugar vazio não tem um `class="nav-ctl` depois dele,
-    # então `split(..., 1)[0]` devolvia daquele cartão até o FIM da aba. A
-    # régua lia as dicas da tela de baixo como se fossem o cartão do P4, e
-    # reprovou a A5-012 — aprovada por ela — porque a dica da «Navegação
-    # Interna» diz «Navega o PC» a mil linhas dali. O ato que ela mede continua
-    # o mesmo, e agora ela o mede onde ele acontece: dentro da fileira.
     _fileira = corpo.split('<div class="nav-mesa">', 1)
     if len(_fileira) != 2 or '<div class="combos">' not in _fileira[1]:
-        # RÉGUA QUE NÃO ACHA O QUE MEDE NÃO É RÉGUA VERDE — ela PARA. Um
-        # `exigir` aqui viraria uma falha entre outras; o que aconteceu foi que
-        # a fileira mudou de marca e esta conferência deixou de ter alvo.
         raise SystemExit(
             "ERRO em 06-navegacao: a régua não achou a fileira `.nav-mesa` "
             "entre o começo dela e o `.combos` — refaça o recorte antes de "
@@ -3262,32 +2252,11 @@ def _conferir(doc):
     _fileira = _fileira[1].split('<div class="combos">', 1)[0]
     for pedaco in _fileira.split('class="nav-ctl vazia"')[1:]:
         bloco = pedaco.split('class="nav-ctl', 1)[0]
-        # OS TRÊS PAPÉIS, do dono — o terceiro, «Move o cursor», é da
-        # A-MIRA-NA-NAVEGACAO-02: um lugar vazio não move cursor nenhum.
         exigir(all(papel not in bloco for papel in
                    (PAPEL_SO_A_JANELA, PAPEL_QUE_NAVEGA, PAPEL_DO_CURSOR)),
                "um lugar vazio diz o que ele navega — e ele não navega nada")
 
-    # 1-bis. OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE `data-campo` — a régua
-    #    que faltava, e é ela que impede este defeito de voltar (07/09/2026,
-    #    O-LUGAR-VAZIO-TEM-ENDERECO).
-    #
     #    O DEFEITO QUE ELA MEDE, com os QUATRO DualSense dela na mesa: o daemon
-    #    publicava quatro controles, a carga chegava com `colunas` dos quatro e
-    #    `ocupados` com os quatro — e a tela mostrava DOIS. O passo 2 do piloto
-    #    é `for(const el of achar(raiz, k))`, e `achar` procura `data-campo`
-    #    DENTRO do bloco `[data-controle]`. Um lugar sem endereço recebe o dado
-    #    dela e não tem onde pousá-lo. A medida da página publicada era
-    #    `p1: 3 · p2: 3 · p3: 1 · p4: 1`.
-    #
-    #    POR QUE CONJUNTO, e não contagem: contar dá o mesmo número para dois
-    #    lugares que endereçam campos DIFERENTES, e é exatamente o erro que dois
-    #    ramos separados produzem quando um deles envelhece. A régua compara
-    #    endereço por endereço e NOMEIA o que falta em qual lugar.
-    #
-    #    ELA MEDE A SAÍDA, e não a função: uma régua que chamasse `controle()`
-    #    duas vezes e comparasse os dois retornos passaria mesmo que o MIOLO
-    #    deixasse de usá-la. O recorte é a fileira `.nav-mesa` inteira.
     _lugares = _fileira.split('<div class="nav-ctl')[1:]
     exigir(len(_lugares) == len(MESA),
            f"a régua dos endereços achou {len(_lugares)} lugares na fileira, e "
@@ -3309,17 +2278,8 @@ def _conferir(doc):
                    f"endereço, o dado dela chega e não tem onde pousar, e o "
                    f"lugar fica dizendo 'Desconectado' com o aparelho ligado")
 
-    # 2-bis. A BORDA DO LUGAR VAZIO SE DECLARA INTEIRA, e não só a cor.
     #    `.nav-ctl` diz `border:1px solid var(--plastico)`, e o lugar vazio NÃO
     #    tem `--plastico`. Uma `var()` sem valor **invalida a declaração toda**:
-    #    a borda não fica cinza, ela DEIXA DE EXISTIR — em silêncio, com o
-    #    `border-color` que alguém escreveu ali intacto e inútil.
-    #    Isto já me pegou duas vezes hoje (Controles e Gatilhos), e a mordida
-    #    mostrou que nenhuma régua via. Agora vê.
-    #    E A REGRA COBRE AS DUAS PALAVRAS desde 17/09/2026: o P3/P4 nascem
-    #    `vazia` no esqueleto, o P2 é esvaziado em execução com `off`, e a
-    #    folha tem de desenhar os três iguais — queixa dela, com a foto.
-    #    A verificação é por PADRÃO e não por texto digitado: o seletor pode
     #    crescer, o que não pode é a borda voltar a depender de `--plastico`.
     borda_do_vazio = re.search(
         r"border\s*:\s*1px\s+solid\s+var\(--border-forte\)", doc)
@@ -3331,27 +2291,13 @@ def _conferir(doc):
                f"a folha parou de desenhar o lugar `{palavra}` — o P2 "
                f"(esvaziado em execução, classe `off`) e o P3/P4 (`vazia` no "
                f"esqueleto) têm de ficar IGUAIS, e é a queixa dela de 17/09")
-    # 3. QUEM NAVEGA ESTÁ NA MESA. Apontar o cursor para um aparelho que não está
-    #    aqui é a mesma mentira que o nome do plástico num lugar vazio.
     exigir(QUEM_NAVEGA.get("conectado", True),
            f"quem navega (P{NAVEGA}) não está conectado")
     exigir(f'>P{NAVEGA} <span class="pt">•</span> '
            f'<span data-campo="identidade">{QUEM_NAVEGA["nome"]}</span></div>' in corpo,
            "o card de quem navega não é o do controle certo")
 
-    # 3-bis. A IDENTIDADE TEM ENDEREÇO EM TODA PARTE ONDE ELA É DITA —
-    #    03/09/2026, IDENTIDADE-VEM-DE-CIMA. Cada `exigir` daqui vale UM dos
-    #    dezesseis valores que a régua `check_identidade_vem_de_cima.py`
-    #    contava nesta aba. Tirar um endereço volta a congelar o controle do
-    #    desenho na tela dela, e a régua da onda o acusa de novo — mas ela roda
-    #    sobre a bancada INTEIRA, e esta roda sobre a saída deste gerador.
     conectados = [c for c in MESA if c.get("conectado", True)]
-    #    A CONTA PASSOU DE `len(conectados)` A `len(MESA)` — 07/09/2026,
-    #    O-LUGAR-VAZIO-TEM-ENDERECO. Ela dizia DOIS porque o gerador tinha dois
-    #    ramos e só o cheio ganhara endereço em 03/09; a régua mediu o mundo de
-    #    ontem e teria dado verde sobre o defeito para sempre. O contrato de
-    #    hoje é `len(MESA)`: os QUATRO lugares dizem a identidade, e os dois
-    #    vazios a dizem como `Desconectado` até o controle chegar.
     exigir(corpo.count('data-campo="identidade"') == len(MESA),
            f"os {len(MESA)} lugares da mesa não têm um "
            f'`data-campo="identidade"` cada — o nome do plástico volta a ser o '
@@ -3367,10 +2313,6 @@ def _conferir(doc):
     exigir('<style id="plastico-vivo"></style>' in doc,
            "a folha viva do plástico sumiu — sem ela o casco do desenho fica "
            "no colorway do mockup, que nenhum campo alcança")
-    # ERAM DUAS DICAS ATÉ 13/09/2026 (F1-REMAPEAR): a da troca de botões dizia
-    # que a troca vale só para quem navega o PC, e ela passou a valer nos quatro
-    # controles — a frase saiu, e o endereço com ela. A decisão que esta linha
-    # guarda continua inteira: a dica que nomeia o controle tem endereço.
     exigir(doc.count('data-campo="quem-navega"') == 1,
            "a dica da tela de Definições perdeu o "
            '`data-campo="quem-navega"` — ela volta a nomear o controle do '
@@ -3384,14 +2326,6 @@ def _conferir(doc):
                f"o `title` do cartão do P{c['jogador']} voltou — ele nomeia o "
                f"controle e não tem alvo de pintura")
 
-    # 3-ter. O DESENHO SEGUE O APARELHO — 03/09/2026, A-COR-VEM-DO-APARELHO.
-    #    As três linhas abaixo são a MESMA cura vista de três lados, e cada uma
-    #    sozinha a desfaz:
-    #      · sem o endereço, o `data-colorway` fica o do mockup para sempre;
-    #      · com a folha PODADA de volta dentro do SVG, escrever um colorway que
-    #        ela não traz dá o cinza cru do desenho (`rgb(58, 63, 75)`) — a
-    #        armadilha que o alvo de atributo documenta com todas as letras;
-    #      · sem a folha dos 28 na página, idem para 27 dos 28 modelos dela.
     exigir(corpo.count(ENDERECO_DO_DESENHO) == len(MESA),
            f"os {len(MESA)} desenhos perderam o `{ENDERECO_DO_DESENHO}` — o "
            f"`data-colorway` volta a ser o do mockup, e nada o reescreve")
@@ -3407,10 +2341,6 @@ def _conferir(doc):
            f"a página publica {len(_na_pagina)} dos {len(_no_mapa)} modelos do "
            f"mapa — faltam {sorted(_no_mapa - _na_pagina)}; quem tiver um "
            f"desses vê o desenho no cinza cru")
-    #    E A TINTA JUNTO. Doze dos 28 pintam por `url(#…)`, e `monta.svg()`
-    #    prefixa todo id do desenho: sem o `BLOCO_DA_TINTA` a referência morre e
-    #    a peça SOME da tela — medido no WebKit com `chroma-teal`, e é o pior
-    #    dos três estados possíveis, porque não parece defeito, parece desenho.
     _ids = set(_re.findall(r'\sid="([^"]+)"', doc))
     _mortas = [i for i in tinta_referenciada() if i not in _ids]
     exigir(not _mortas,
@@ -3419,23 +2349,7 @@ def _conferir(doc):
            f"referência morta, e o desenho deles SOME (não fica cinza). Falta o "
            f"`BLOCO_DA_TINTA` no miolo")
 
-    # 3-bis. A LISTA DA TELA É A DO PRODUTO — e esta conferência FALTAVA.
-    #
-    #    ACHADO EM 06/09/2026, mordendo a §4-P3 da ONDA5-06-02: a sprint dizia
-    #    que tirar uma entrada de `BOTOES` faria a conferência abaixo reprovar
-    #    *"nomeando quantas linhas achou contra quantas o produto declara"*.
-    #    **Não fazia.** A conferência de baixo conta `data-gesto` contra
-    #    `len(BOTOES)` — as duas pontas saem da MESMA lista deste arquivo —,
-    #    então tirar uma entrada diminui os dois lados e o gerador sai `OK`,
-    #    com a tela mostrando uma linha a menos que o produto atende.
-    #
-    #    Medido: sem a entrada do PS o gerador imprimia `21 botões do mapa` e
-    #    rc=0. Quem pegava era a suíte (as réguas que comparam a página com
     #    `core.acoes_de_botao.BOTOES`), nunca o gerador — e o gerador é quem
-    #    roda ANTES, na mão de quem mexe no desenho.
-    #
-    #    O DONO DA LISTA É O PRODUTO. Aqui moram a ORDEM e os GLIFOS, que são
-    #    desenho; QUAIS botões existem é fato, e fato tem um dono só.
     _do_produto = set(_BOTOES_DO_PRODUTO)
     _do_desenho = {i for _b, i in BOTOES}
     exigir(_do_desenho == _do_produto,
@@ -3445,18 +2359,6 @@ def _conferir(doc):
            f"lado é escolha que o Guardar descarta em silêncio, ou botão que o "
            f"produto atende e a tela não oferece")
 
-    # 4. AS LINHAS DIZEM AO PYTHON QUE ELA ESTÁ MEXENDO — decisão
-    #    dela, 02/09/2026. O `data-gesto` é o ÚNICO atributo destes `<select>`
-    #    que o ouvinte do piloto reconhece (`hefesto_vivo.py:367`); sem ele o
-    #    `change` morre no navegador, o tique reescreve a escolha por cima em
-    #    ≤1,5 s e o "Guardar" ao lado nunca vê forma diferente do perfil.
-    #    Tirá-lo desfaz a decisão CALADO, e é por isso que ele é conferido aqui.
-    #    E A CONTA É POR TELA DESDE 11/09/2026, não do documento inteiro. Com
-    #    DUAS telas escrevendo o mesmo campo do perfil, um total certo esconde o
-    #    par de erros que se anulam — seis linhas a menos numa e seis a mais na
-    #    outra dão o mesmo número, e a tela que perdeu o endereço volta a ser a
-    #    que ela abre e não grava. É a forma de defeito que esta casa mais
-    #    persegue: o instrumento respondendo sobre outra coisa.
     def _tela(ident: str) -> str:
         return corpo.split(f'id="{ident}"', 1)[-1].split('class="tela-nova"', 1)[0]
 
@@ -3468,11 +2370,6 @@ def _conferir(doc):
                f"as {_quantas} linhas {_oque} perderam o "
                f"`data-gesto=\"{LINHA_DE_BOTAO}\"` — sem ele a pintura volta a "
                f"desfazer a escolha antes do clique em Guardar")
-    # 4-bis. E O "SAIR" TEM NOME. O `×` e o `Cancelar` fecham a pop-up pelo
-    #    `:target` sozinhos; o que eles NÃO faziam era avisar o Python, e é nesse
-    #    instante que as escolhas pendentes têm de ser largadas. São DOIS em cada
-    #    uma das três telas que têm trava a soltar — a de definições, a do estilo
-    #    e, desde 13/09/2026 (F1-REMAPEAR), a da troca de botões.
     for _ident, _nome_do_gesto in (("definicoes-mouse", "fechar-definicoes"),
                                    ("point-and-click", "fechar-ponto"),
                                    ("remapeamento", FECHAR_TROCA)):
@@ -3480,15 +2377,6 @@ def _conferir(doc):
                f"o `×` e o `Cancelar` da tela {_ident} perderam o "
                f"`data-gesto=\"{_nome_do_gesto}\"` — a trava das linhas ficaria "
                "presa depois de ela desistir")
-    # 4-ter. A TROCA DE BOTÕES TEM AS 22 LINHAS FALANDO E AS QUE A TROCA ALCANÇA
-    #    PINTADAS — F1-REMAPEAR, 13/09/2026. Sem o gesto a escolha não chega ao
-    #    Python e a pintura a desfaz; sem o `data-linha` o "Guardar" não sabe de
-    #    que botão é cada lista; sem o `data-campo` a tela mostra o desenho com o
-    #    perfil guardando outra coisa — e o "Guardar" apagaria a escolha dela.
-    #    AS SEIS QUE A TROCA NÃO ALCANÇA NASCEM APAGADAS — F1-REMAPEAR-02,
-    #    13/09/2026: a conta é 16 listas com gesto e 6 apagadas, e as duas
-    #    metades somam os botões do produto. Uma apagada que volte a ter gesto,
-    #    ou uma das dezesseis que perca o dela, reprova aqui.
     _troca = _tela("remapeamento")
     _fora_da_troca = sorted(set(_BOTOES_DO_PRODUTO) - set(_REMAPEAVEIS))
     _com_gesto = _troca.count(f'data-gesto="{LINHA_DE_TROCA}"')
@@ -3516,32 +2404,18 @@ def _conferir(doc):
     exigir(_pintadas == len(_REMAPEAVEIS),
            f"a troca de botões pinta {_pintadas} linhas, e a troca alcança "
            f"{len(_REMAPEAVEIS)}")
-    # 4-ter-bis. A MARCA DO TOUCHPAD FICA SÓ ONDE A ESCOLHA É GUARDADA —
-    #    RESTOS-DA-ONDA-DOIS-01, 13/09/2026. A dica da marca termina em «A
-    #    escolha fica guardada.», e na troca a lista ao lado está apagada e não
-    #    guarda escolha nenhuma: as três linhas do touchpad da troca saem sem a
-    #    marca, e as das Definições, onde a frase é verdadeira, ficam com ela.
     exigir("marca-nao-dispara" not in _troca,
            "a tela da troca voltou a marcar o touchpad com «não dispara», e a "
            "dica promete uma escolha guardada ao lado de uma lista apagada")
     exigir(_tela("definicoes-mouse").count('class="marca-nao-dispara"')
            == len(TOUCH_REGIOES),
            "as Definições perderam a marca «não dispara» de uma região do touchpad")
-    # 4-quater. E O "Guardar" DO ESTILO TEM DE PEDIR A FORMA — 11/09/2026. Sem
-    #    `data-hef-forma`, o piloto manda só o valor do elemento CLICADO, e o
-    #    Guardar é outro elemento: ele volta a não ter o que gravar, que é
-    #    exatamente o estado de que esta frente o tirou. O `id` pedido é o da
-    #    própria pop-up — é o que recorta a varredura e impede as duas telas de
-    #    recolherem a forma uma da outra.
     exigir('data-gesto="guardar-ponto"\n         data-hef-forma="point-and-click"'
            in corpo,
            "o Guardar do Estilo Point-and-click perdeu o "
            "`data-hef-forma=\"point-and-click\"` — sem a forma ele não sabe o "
            "que está escolhido em cada linha e volta a só poder recusar")
 
-    # 4-ter. A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
-    #    As cinco conferências são a mesma cura vista de cinco lados, e cada uma
-    #    sozinha a desfaz.
     _dominio = sorted(_DOMINIO_DO_TECLADO)
     exigir(corpo.count('data-campo="tecla-') == len(_dominio),
            f"a tela de teclas não tem os {len(_dominio)} campos de texto — o "
@@ -3555,25 +2429,15 @@ def _conferir(doc):
         exigir(f'data-tecla="{_b}"' in corpo,
                f"o ↺ do {_b} sumiu — voltar UMA linha ao de fábrica volta a "
                f"custar o 'Voltar ao padrão' da tela inteira")
-    #    O CAMPO DE TEXTO NÃO PODE LEVAR `data-linha`: a `forma` que o piloto
-    #    recolhe usa `data-linha || data-campo` como chave, e as 22 listas da
-    #    outra tela já ocupam a chave `<botão>` pelo `data-linha`. Um campo com
-    #    ele apagaria a escolha da lista DENTRO da mesma forma.
     _tela_teclas = corpo.split('id="teclas-do-teclado"', 1)[-1].split(
         'class="tela-nova"', 1)[0]
     exigir("data-linha=" not in _tela_teclas,
            "voltou um `data-linha` à tela de teclas — a `forma` do piloto usa "
            "`data-linha || data-campo` como chave, e ele faria o campo de texto "
            "ocupar a chave da lista de 'o que cada botão faz'")
-    #    E O ↺ NÃO PODE LEVAR `data-campo` NEM `data-linha` pelo mesmo motivo,
-    #    visto do outro lado: sem `value`, a `forma` gravaria o `textContent`
-    #    dele ("↺") e o Guardar leria isso como rótulo de ação.
     exigir(_tela_teclas.count('data-campo="tecla-') == len(_dominio),
            "a tela de teclas tem `data-campo` fora dos campos de texto — o ↺ e "
            "os botões do rodapé não podem ter, senão entram na `forma`")
-    #    O `change` de um `<input>` só chega no BLUR. Sem o `data-gesto` no
-    #    próprio campo, o clique dentro dele não chega ao Python, a trava não
-    #    abre e o tique de 100 ms apaga o que ela está digitando.
     exigir(_tela_teclas.count('data-gesto="tecla-escrita"') == len(_dominio),
            "os campos de tecla perderam o `data-gesto=\"tecla-escrita\"` — sem "
            "ele a trava não abre e a pintura apaga a digitação dela na primeira "
@@ -3585,22 +2449,12 @@ def _conferir(doc):
     exigir('href="#teclas-do-teclado"' in corpo,
            "não há como CHEGAR à tela de teclas — ela é `:target`, e sem um "
            "link para o `id` dela a tela existe no HTML e não abre nunca")
-    # 5. A LISTA DO TECLADO NASCE NA OPÇÃO QUE ELA ESCOLHEU COMO PADRÃO, e ela
-    #    é a única das três com dono no produto. Nascer marcada na primeira
-    #    ("Só dentro do jogo") faria a tela prometer, nos 100 ms anteriores ao
-    #    primeiro tique, o que o Hefesto ainda não sabe fazer.
     exigir(f'<option selected>{TECLADO_PADRAO}</option>' in corpo,
            f"a 'Função do teclado' não nasce em {TECLADO_PADRAO!r}")
     for opcao in OPCOES_TECLADO:
         exigir(f">{opcao}</option>" in corpo,
                f"a opção {opcao!r} da 'Função do teclado' sumiu do desenho")
 
-    # 6. O "STATUS DO MODO" NÃO VOLTA A AFIRMAR SOZINHO — 03/09/2026. As três
-    #    coisas abaixo são a mesma cura vista de três lados, e cada uma sozinha
-    #    a desfaz: sem o `data-campo` o produto não tem onde escrever; com o
-    #    `<input checked>` de volta a tela troca de lado no clique recusado; com
-    #    o `content:'Ligado'` de volta a palavra volta a ser do CSS e o nó de
-    #    texto vira enfeite.
     exigir(corpo.count('data-campo="rato-ligado"') == 2,
            "o 'Status do Modo' perdeu um dos dois `data-campo=\"rato-ligado\"` "
            "(a classe no rótulo e a palavra no `.txt`) — a tela volta a dizer "
@@ -3618,27 +2472,11 @@ def _conferir(doc):
            "ninguém perguntou ao Hefesto, e qualquer das duas palavras é uma "
            "afirmação")
 
-    # 7. AS TRÊS LINHAS DE ESTADO TÊM LUGAR. Elas são a única coisa desta aba
-    #    que responde "por que o cursor não anda" e "há teclado na tela nesta
-    #    máquina" — as duas perguntas que a GTK responde e a tela nova calava.
     for campo in ("rato-estado", "teclado-bloqueio", "teclado-osk"):
         exigir(f'data-campo="{campo}" data-hef-alvo="html"' in corpo,
                f"a linha de estado `{campo}` sumiu do desenho — a frase do "
                f"produto volta a ser emitida para o vazio")
 
-    # 8. AS DUAS VELOCIDADES ARRASTAM, E A FAIXA DELAS É A DO PRODUTO —
-    #    05/09/2026, decisão dela: *"velocidade do cursor e da rolagem coloca
-    #    um slicer pra cada"*.
-    #
-    #    A FAIXA VAI CONFERIDA CONTRA A CONSTANTE, e não contra um literal: se
-    #    alguém digitar `max="100"` no gerador, esta régua reprova. É a mesma
-    #    razão de as dicas lerem `MOUSE_SPEED_MAX` em vez de dizerem "de 1 a
-    #    10", que era o erro que elas carregavam até 01/09.
-    #
-    #    E O NÚMERO AO LADO TEM O MESMO ENDEREÇO DO TRILHO: os dois mostram o
-    #    mesmo inteiro, e o piloto escreve um escalar em TODOS os elementos de
-    #    mesmo `data-campo`. Sem o segundo, a barra andaria e o número ficaria
-    #    parado no que o desenho cravou.
     for campo, minimo, maximo in (("vel-cursor", MOUSE_SPEED_MIN, MOUSE_SPEED_MAX),
                                   ("vel-rolagem", SCROLL_SPEED_MIN, SCROLL_SPEED_MAX)):
         exigir(f'<input class="trilho" type="range" min="{minimo}"'
@@ -3650,23 +2488,11 @@ def _conferir(doc):
         exigir(f'<span class="num" data-campo="{campo}">' in corpo,
                f"o número ao lado da barra de `{campo}` perdeu o endereço — a "
                f"barra andaria e o número ficaria no que o desenho cravou")
-    #    E OS `−`/`+` NÃO VOLTAM AO PAINEL. Os do "Estilo Point-and-click" ficam
-    #    (nunca tiveram endereço, e a razão está no comentário daquela pop-up):
-    #    por isso a conta é do PAINEL, recortado, e não da página.
     painel = corpo.split('As opções de ativação', 1)[-1].split('class="tela-nova"', 1)[0]
     exigir(len(painel) > 2000, "a régua não achou o painel das opções de ativação")
     exigir('class="passo"' not in painel,
            "voltou um `−`/`+` ao painel das opções de ativação — ela mandou "
            "barra, e um par de botões ao lado dela é a meia-cura")
-    # 6. AS TRÊS FRASES DO PÉ FORAM PARA O `?` DO CAMPO DELAS — 07/09/2026,
-    #    ordem dela: *"navegacao tem essas 3 frases aqui na parte de baixo que
-    #    quebram o layout"*.
-    #
-    #    A régua cobra as DUAS METADES, porque só a primeira é fácil de acertar
-    #    por acidente: elas SAÍRAM do pé (nenhuma na tira nem solta na moldura)
-    #    e CHEGARAM ao `?` do campo de que cada uma fala — vivas, nascendo
-    #    vazias. Cobrar só a saída deixaria passar a cura que apaga as frases; e
-    #    cobrar só a chegada deixaria passar a cura que as duplica.
     exigir('class="ressalva"' not in painel,
            "voltou uma linha de ressalva solta ao painel das opções de "
            "ativação — ela quebra o layout, e a frase da D3 mora no `?` dos "
@@ -3677,11 +2503,6 @@ def _conferir(doc):
                f"07/09: com as três lá, o quadro das opções ia de 215px a "
                f"300,25px e a fileira dos quatro botões terminava 41,25px "
                f"FORA da janela")
-    #    O `?` de cada campo, pelo endereço da frase, e o que ela ganhou:
-    #      · `modo-portao`      → "Status do Modo";
-    #      · `teclado-osk`      → "Função do teclado";
-    #      · a ressalva da D3   → "Velocidade de cursor", "Velocidade da
-    #                             rolagem" e "Função do teclado".
     for campo, quantas in (("modo-portao", 1), ("teclado-osk", 1),
                            (ENDERECO_DA_RESSALVA, 3)):
         alvo = (f'<span class="viva" data-campo="{campo}"'
@@ -3690,71 +2511,20 @@ def _conferir(doc):
                f"`{campo}` devia aparecer em {quantas} `?` do painel, viva e "
                f"vazia, e aparece em {painel.count(alvo)} — a frase que saiu do "
                f"pé só não se perde se chegar ao campo de que fala")
-        #  E NA PÁGINA INTEIRA NÃO PODE HAVER MAIS DO QUE ISSO. A conta é do
-        #  `doc` e não do painel porque foi ASSIM que a primeira volta desta
-        #  frente errou: `D_VEL` e `D_ROL` são as MESMAS dicas usadas pela
-        #  pop-up "Estilo Point-and-click", e pendurar a ressalva nelas levou a
-        #  frase para dentro de uma tela onde ela é FALSA — os dois `−`/`+` de
-        #  lá são a velocidade do ESTILO e não escrevem em lugar nenhum. Cinco
-        #  cópias onde deviam ser três, e o painel não via nenhuma das duas.
         exigir(doc.count(alvo) == quantas,
                f"`{campo}` aparece {doc.count(alvo)} vezes na página e devia "
                f"aparecer {quantas} — a dica de uma velocidade é COMPARTILHADA "
                f"com a pop-up do Point-and-click, e a frase não vale lá")
-    #    O CINZA DO INTERRUPTOR ANDOU JUNTO. A regra `:has()` partia de
-    #    `.estado.portao`, classe que só existia na tira; com a frase no `?`,
-    #    ela teria parado de apagar o interruptor EM SILÊNCIO.
-    #    A PERGUNTA VAI AO `doc`, NUNCA AO `corpo`: o `corpo` desta régua tira o
-    #    `<style>` de propósito (é uma das três armadilhas do cabeçalho), e uma
-    #    regra de CSS procurada nele NUNCA seria achada — a régua reprovaria a
-    #    cura certa, que foi o que ela fez na primeira volta desta frente.
     exigir('.quadro-corpo:has([data-campo="modo-portao"] .laranja)' in doc,
            "a regra que apaga o interruptor do modo deixou de partir do "
            "endereço `modo-portao` — sem ela a razão chega e o interruptor "
            "continua com cara de clicável")
-    # 6c. O `?` QUE RECEBEU A FRASE TEM DE SE ANUNCIAR E DE SER ALCANÇÁVEL —
-    #     07/09/2026, e as duas metades vêm da conferência desta leva.
-    #
-    #     A PRIMEIRA É PALAVRA DELA, de 05/09 (`D-06N-TIRA-DE-AVISO`): *"o que
-    #     está prestes a ser apagado não pode morar num hover, porque ninguém
-    #     passa o rato onde não sabe que há algo"*. Mandar a frase para o `?`
-    #     cumpre a ordem de 07/09 (tirar do pé) e só NÃO a perde se o `?` disser
-    #     que ela está lá.
-    #
-    #     A SEGUNDA FOI MEDIDA pelo caminho exato do controle (`el.click()` do
-    #     piloto): `display da dica = 'none'`, `foco = BODY`, `tabindex = None`.
-    #     Nesta aba, que é a da NAVEGAÇÃO COM O CONTROLE.
-    #
-    #     TODO `?` DESTA ABA É FOCÁVEL, e não só os três que levam frase: um
-    #     `?` que responde ao controle e outro que não seria uma tela que
-    #     obedece pela metade, com a metade decidida pelo estado da máquina.
-    #
-    #     A RÉGUA LÊ ELEMENTO, E NÃO TEXTO — e esta linha é a terceira vez que
-    #     esta casa paga o mesmo preço. A primeira volta contava
-    #     `doc.count('<span class="ajuda')` e acusava 17 `?` para 16 focáveis: o
-    #     décimo sétimo era **prosa**, a LEGENDA desta página explicando a
-    #     marcação do ícone. *Um texto que descreve o padrão vira uma ocorrência
-    #     dele* — a armadilha de 05/09 e de 07/09, aqui de novo, na régua escrita
-    #     para fechar a leva.
-    #
-    #     O QUE SEPARA OS DOIS é a forma completa: um `?` de verdade tem o
-    #     `?` colado à `.dica` que ele abre. A prosa escreve `?…`, e cai fora
-    #     sozinha — sem lista de isenção e sem contar linha de comentário.
     reais = re.findall(r'<span class="ajuda[^"]*"([^>]*)>\?<span class="dica', doc)
     sem_foco = [a for a in reais if 'tabindex="0"' not in a]
     exigir(not sem_foco,
            f"há `?` sem `tabindex` nesta aba ({len(sem_foco)} de "
            f"{len(reais)}) — sem ele o `el.click()` do controle não abre a "
            f"dica, e esta é a aba da navegação com o controle")
-    #     O ACENDER LÊ O CONTEÚDO VIVO, e é o que separa esta marca de uma
-    #     promessa: um `?` marcado no desenho e apagado na tela não afirma nada.
-    #     Sem o `:has()` o ponto acende em todo `?` marcado, com a máquina
-    #     calada — a promessa falsa de sempre.
-    #     AS DUAS METADES SÃO COBRADAS SEPARADAS, e a razão é uma mordida que
-    #     NÃO reprovou: a primeira volta desta régua procurava o seletor UMA vez,
-    #     e ele aparece em duas regras — a da cor e a do ponto. Arrancar a cor
-    #     deixava a régua verde, porque o `::after` ainda carregava o seletor.
-    #     Régua que passa com metade da cura arrancada mede metade.
     _acende = '.ajuda.tem-viva:has(.viva > :not(.nada))'
     exigir(f'{_acende}{{' in doc,
            "sumiu a regra que dá COR ao `?` com frase viva dentro — sem ela a "
@@ -3765,16 +2535,6 @@ def _conferir(doc):
            "sumiu o PONTO que anuncia o `?` com frase viva — a cor sozinha "
            "muda um `?` cinza para ciano, que é a mesma coisa que o hover já "
            "faz; o ponto é o que se vê sem chegar perto")
-    #     E TODA FRASE VIVA TEM DE ESTAR DENTRO DE UM `?` MARCADO. A conta NÃO
-    #     é `tem-viva` contra `.viva` — os números são 4 e 5 de propósito, porque
-    #     o `?` da "Função do teclado" leva DUAS frases. O que se mede é a
-    #     relação: nenhuma `.viva` órfã, isto é, nenhuma pendurada num `?` que
-    #     não se acende. Uma frase que chega sem nada avisar é o defeito inteiro
-    #     de volta pela porta dos fundos.
-    #
-    #     O CORTE É NO PRÓPRIO MARCADOR: cada pedaço começa logo depois de
-    #     `<span class="ajuda`, e as dicas desta casa não aninham `?` dentro de
-    #     `?` — então as `.viva` que caem num pedaço são as daquele `?`.
     orfas = [a for a, corpo in
              re.findall(r'<span class="ajuda([^"]*)"[^>]*>\?<span class="dica'
                         r'(.*?)</span></span>', doc, re.S)
@@ -3783,25 +2543,6 @@ def _conferir(doc):
            f"há frase viva pendurada em `?` sem a marca `tem-viva`: {orfas} — "
            f"o ponto que a anuncia sai da marca, e sem ele a frase volta a "
            f"morar num hover que ninguém sabe que existe")
-    # 6d. NENHUM `:has()` DENTRO DE OUTRO `:has()` — 07/09/2026, e esta régua
-    #     nasceu de uma regra MORTA que passou verde nesta mesma leva.
-    #
-    #     A especificação proíbe aninhar `:has()`; o navegador descarta a regra
-    #     inteira sem um aviso. A cura ficou na página, a régua que a procurava
-    #     por TEXTO deu verde, e o `?` não acendia — o instrumento respondia
-    #     sobre o próprio código em vez de sobre o produto.
-    #     E ELA LÊ O CSS SEM OS COMENTÁRIOS, porque a primeira volta reprovou
-    #     ESTE arquivo por causa da própria prosa que explica a armadilha. É a
-    #     terceira vez em três dias: *um comentário que descreve o padrão
-    #     proibido vira a primeira ocorrência dele*.
-    #
-    #     O QUE ELA MEDE É ANINHAMENTO DE VERDADE, e não dois `:has()` na mesma
-    #     regra. A primeira volta contava as ocorrências e reprovou uma regra
-    #     LEGÍTIMA desta aba —
-    #     `.quadro-corpo:has(…) .at-linha:has(…)`, que é a que apaga o
-    #     interruptor do modo. Dois `:has()` em compostos DIFERENTES de uma
-    #     cadeia são válidos; o que a especificação proíbe é um dentro dos
-    #     parênteses do outro. Então a conta é feita casando o parêntese.
     _css_nu = re.sub(r'/\*.*?\*/', '', doc, flags=re.S)
     _aninhados = []
     for m in re.finditer(r':has\(', _css_nu):
@@ -3818,11 +2559,6 @@ def _conferir(doc):
            f"há `:has()` dentro de `:has()` — o navegador descarta a regra "
            f"inteira, calado, e a régua que a procurar por texto vai continuar "
            f"verde sobre nada: {_aninhados}")
-    # 6e. E A FRASE VIVA TEM DE TRAZER MARCAÇÃO — é o contrato de que o seletor
-    #     `> :not(.nada)` depende. Uma frase pelada abriria a dica e deixaria o
-    #     ponto apagado: a tela teria o que dizer e nada anunciaria.
-    #     A PERGUNTA VAI ÀS FUNÇÕES DO PRODUTO, e não ao desenho — é o que
-    #     impede a régua de medir a própria saída.
     from hefesto_dualsense4unix.app.actions.input_actions import (
         frase_do_teclado_na_tela,
     )
@@ -3831,9 +2567,7 @@ def _conferir(doc):
         _a_razao_do_portao,
     )
     for nome, frase in (
-            # O ESTADO É O DE QUEM ESTÁ JOGANDO — é quando o portão fecha e a
             # razão tem o que dizer. A forma sai de `mode_of_state`, que lê
-            # `gamepad_emulation.enabled`, e não uma chave `mode` inventada.
             ("modo-portao",
              _a_razao_do_portao({"gamepad_emulation": {"enabled": True}})),
             ("teclado-osk", frase_do_teclado_na_tela(True)),
@@ -3850,32 +2584,12 @@ def _conferir(doc):
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-
-# A ESCRITA MORA DENTRO DE UMA FUNÇÃO, chamada só pelo `__main__` — 06/09/2026,
-# costura da ONDA C, e esta foi a ÚLTIMA das dez a receber a guarda. Sem ela,
-# `import aba06` reescreve `mockup/06-navegacao.html` no disco com o estado vivo
-# da mesa dentro: bastou o pytest COLETAR um teste que importava a irmã `aba05`
-# para o desenho dela mudar. A régua é
-# `test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import`, e agora ela
-# cobra as DEZ.
-#
-# AQUI FOI PRECISO UMA FUNÇÃO, e não só o `if`: esta aba pós-processa a saída em
-# meia centena de linhas (a fita, o `title`, as quatro telas irmãs), e o
-# `_conferir` mora no meio delas. Envolver o bloco todo num `if` deixaria o
-# `def` dentro dele; a função o mantém no lugar e é chamada depois.
 def _gerar() -> None:
     n = monta("06-navegacao", "Navegação", MIOLO, CSS, legenda=LEGENDA)
 
-    # A fita_re fica apagada nesta aba, mas o motivo herdado da Jogar é falso aqui: não há
-    # card nenhum, há 28 campos editáveis. Trocado na saída, porque o texto mora no
-    # esqueleto (topo.html) e esta aba só pode mexer no arquivo dela.
     p = onde.pagina("06-navegacao.html")
     s = p.read_text()
     antes = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
-    # O TÍTULO SAI DE `monta.TITULOS_DA_FITA` — 05/09/2026. Ele era digitado aqui,
-    # e o PILOTO não o conhecia: como ele troca o bloco inteiro da fita a cada
-    # tique, esta frase durava um tique e dava lugar ao genérico de leitura. Agora
-    # há um dono, consultado pelo gerador do arquivo E pela tela viva.
     depois = f'title="{TITULOS_DA_FITA["06-navegacao.html"]}"'
     if f"Player {NAVEGA}" not in depois:
         raise SystemExit(
@@ -3885,22 +2599,6 @@ def _gerar() -> None:
         raise SystemExit("ERRO: o title da fita mudou no topo.html — refaça a troca")
     s = s.replace(antes, depois)
 
-    # A fita_re DESTA ABA GANHA ENDEREÇO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
-    #
-    # Os dois chips nomeavam o controle do MOCKUP (`P1 · Cosmic Red · USB`,
-    # `P2 · Starlight Blue · BT`) e o `title` de cada um repetia o nome. Seis dos
-    # dezesseis valores congelados desta aba estavam aqui.
-    #
-    # O DONO DA fita_re É COMPARTILHADO (`monta.fita` desenha, `hefesto_vivo._fita`
-    # repinta), e por isso a troca é feita AQUI, na saída — a mesma razão pela qual
-    # o `title` acima é trocado neste arquivo: o bloco mora no esqueleto e esta aba
-    # só pode mexer no arquivo dela.
-    #
-    # E ELA PRECISOU EXISTIR, medido em 03/09/2026 com os dois controles dela na
-    # mesa: `_fita` **desiste** quando um controle não tem cor lida (`any(not
-    # c.get("cor") …) -> return ""`), e pelo rádio a cor não se lê. Treze tiques
-    # depois, a fita da `06` ainda dizia Cosmic Red e Starlight Blue ao lado de um
-    # cabeçalho que já contava certo. Com o endereço, quem escreve é o pacote.
     fita_re = re.compile(r'(<div class="fita inerte"[^>]*)(>)(.*?)(</div>)', re.S)
     if not fita_re.search(s):
         raise SystemExit("ERRO: a fita inerte mudou de forma — refaça o endereço")
@@ -3909,7 +2607,6 @@ def _gerar() -> None:
                    + m.group(2) + chips_da_fita(MESA_DA_FITA) + m.group(4)),
         s, count=1)
 
-    # a tela nova entra IRMÃ da janela, fora do miolo (ver o comentário no MIOLO)
     marca = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
     if marca not in s:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
@@ -3930,10 +2627,6 @@ if __name__ == "__main__":
     import shutil
     import tempfile
 
-    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
-    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
-    # no fim do `aba04.py`. Era aqui que a validação da RESTOS-DA-ONDA-DOIS-01
-    # viu a página recusada chegar ao `--publicar`.
     _real = onde.saida()
     _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-06-"))
     for _vizinha in _real.glob("*.html"):

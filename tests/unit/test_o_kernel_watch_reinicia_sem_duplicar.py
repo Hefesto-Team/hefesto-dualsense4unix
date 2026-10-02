@@ -1,24 +1,4 @@
-"""A atualização reinicia o kernel-watch — e ele não relê o boot por cima do log.
-
-INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09/2026), o pedido P-2 (item 6) da
-O-DIARIO-DO-RADIO-01, na forma que a conferência corrigiu:
-
-- o passo 7b do `install.sh` fazia `enable --now`, que NÃO troca o processo de
-  uma unit que já está de pé: a vigia velha seguia rodando o script antigo, sem
-  as tags novas do rádio (FILA-CHEIA, BT-SOCKET, ENLACE-PARADO, BT-TRAVADO,
-  CRC), até o próximo login;
-- e reiniciar sem cuidado DUPLICA o kernel.log: a primeira volta de cada boot
-  relê o boot inteiro, e ela se reconhece pela marca `kernel-watch.boot`. A
-  vigia nova, sem marca, se acharia a primeira do boot. Por isso a marca recebe
-  o boot de agora ANTES do restart.
-
-O bloco é recortado do `install.sh` REAL e rodado num lar de mentira, com um
-`systemctl` de mentira que só anota — e que, no `restart`, anota se a marca já
-estava lá.
-
-A MORDIDA, medida: tirar a gravação da marca reprova o primeiro teste; voltar ao
-`enable --now` com a vigia de pé, o segundo.
-"""
+"""A atualização reinicia o kernel-watch — e ele não relê o boot por cima do log."""
 
 from __future__ import annotations
 

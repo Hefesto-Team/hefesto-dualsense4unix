@@ -22,10 +22,6 @@ from hefesto_dualsense4unix.core.ds_output_report import (
 )
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 
 def _report_de_audio(quadro: bytes, *, seq: int = 0, crc_ok: bool = True) -> bytes:
     """Monta um input 0x31 de 78 bytes carregando `quadro` de Opus."""
@@ -93,11 +89,6 @@ class _SourceFalsa:
         return True
 
 
-# ---------------------------------------------------------------------------
-# 1. O report 0x32 que LIGA o microfone
-# ---------------------------------------------------------------------------
-
-
 def test_pedido_de_mic_tem_o_tamanho_do_report_descriptor() -> None:
     """141 bytes de payload + 1 de report ID — o que o descriptor declara."""
     assert len(bt.montar_pedido_de_mic(True)) == 142
@@ -142,11 +133,6 @@ def test_pedido_de_mic_nunca_usa_o_report_id_do_kernel() -> None:
         assert bt.montar_pedido_de_mic(ligar)[0] != bt.INPUT_REPORT_BT
 
 
-# ---------------------------------------------------------------------------
-# 2. Extração do quadro Opus do input 0x31
-# ---------------------------------------------------------------------------
-
-
 def test_extrai_71_bytes_de_opus_do_report_de_audio() -> None:
     quadro = bytes(range(bt.MIC_OPUS_LEN))
     assert bt.frame_opus_do_report(_report_de_audio(quadro)) == quadro
@@ -180,11 +166,6 @@ def test_report_de_outro_id_e_descartado() -> None:
     assert bt.frame_opus_do_report(bytes(outro)) is None
 
 
-# ---------------------------------------------------------------------------
-# 3. Byte de status do áudio (mute pelo botão físico)
-# ---------------------------------------------------------------------------
-
-
 def test_status_de_audio_le_mudo_e_fone() -> None:
     assert bt.status_de_audio(_report_de_input(bt.STATUS_MIC_MUDO)) == bt.STATUS_MIC_MUDO
     lido = bt.status_de_audio(_report_de_input(bt.STATUS_FONE_PLUGADO))
@@ -194,11 +175,6 @@ def test_status_de_audio_le_mudo_e_fone() -> None:
 def test_status_de_audio_recusa_o_pacote_de_audio() -> None:
     """Naquele offset, num pacote de áudio, mora Opus — não estado de fone."""
     assert bt.status_de_audio(_report_de_audio(bytes(bt.MIC_OPUS_LEN))) is None
-
-
-# ---------------------------------------------------------------------------
-# 4. Descoberta dos controles em Bluetooth
-# ---------------------------------------------------------------------------
 
 
 def _sysfs_falso(tmp_path, nome: str, uevent: str):  # type: ignore[no-untyped-def]
@@ -218,7 +194,6 @@ def test_descobre_so_dualsense_em_bluetooth(tmp_path) -> None:  # type: ignore[n
     _sysfs_falso(
         tmp_path, "hidraw1", "HID_ID=0003:0000054C:00000CE6\nHID_UNIQ=aa:bb:cc:dd:ee:ff\n"
     )
-    # Pro Controller da Nintendo em BT: fabricante errado.
     _sysfs_falso(tmp_path, "hidraw2", "HID_ID=0005:0000057E:00002009\nHID_UNIQ=1\n")
 
     achados = bt.nos_dualsense_bluetooth(str(tmp_path))
@@ -251,19 +226,8 @@ def test_nome_curto_sem_uniq_cai_no_no() -> None:
     assert no.nome_curto == "hidraw9"
 
 
-# ---------------------------------------------------------------------------
-# 5. A ponte (com hidraw dublado por socketpair)
-# ---------------------------------------------------------------------------
-
-
 class _ParDeSockets:
-    """Um socketpair fazendo as vezes de /dev/hidrawN (select + read + write).
-
-    SOCK_SEQPACKET, não o SOCK_STREAM default: o hidraw entrega UM report por
-    `read()`, e num stream dois reports emitidos juntos chegariam colados num
-    buffer de 156 bytes. O teste ficaria flaky e — pior — passaria a testar um
-    comportamento que o dispositivo real não tem.
-    """
+    """Um socketpair fazendo as vezes de /dev/hidrawN (select + read + write)."""
 
     def __init__(self) -> None:
         self.nosso, self.controle = socket.socketpair(
@@ -281,8 +245,6 @@ class _ParDeSockets:
         self.controle.sendall(report)
 
     def _coletar(self) -> None:
-        # A ponte ESCREVE o 0x32 no mesmo fd; sem alguém drenando, o buffer do
-        # socketpair encheria e o teste travaria.
         self.controle.settimeout(0.1)
         while not self._parar.is_set():
             try:
@@ -353,7 +315,7 @@ def test_ponte_liga_o_mic_no_start_e_desliga_no_stop(par) -> None:  # type: igno
 
 def test_mudo_pct_mede_o_ciclo_de_trabalho_do_gating() -> None:
     """A anomalia BT-MIC-GATING-01 tem que ser MEDÍVEL, não só relatada."""
-    assert bt.EstatisticaMic().mudo_pct == 0.0  # sem dado, não inventa número
+    assert bt.EstatisticaMic().mudo_pct == 0.0
     st = bt.EstatisticaMic(quadros_input=4, input_mudos=3)
     assert st.mudo_pct == 75.0
 
@@ -451,7 +413,7 @@ def test_parar_e_idempotente(par) -> None:  # type: ignore[no-untyped-def]
     )
     assert ponte.iniciar()
     ponte.parar()
-    ponte.parar()  # não pode levantar
+    ponte.parar()
 
 
 def test_descartes_vem_da_source_e_nao_sao_somados(par) -> None:  # type: ignore[no-untyped-def]
@@ -466,19 +428,13 @@ def test_descartes_vem_da_source_e_nao_sao_somados(par) -> None:  # type: ignore
         for i in range(2):
             par.emitir(_report_de_audio(bytes(bt.MIC_OPUS_LEN), seq=i))
         assert _esperar(lambda: ponte.estatistica().quadros_descartados == 2)
-        assert ponte.estatistica().quadros_descartados == 2  # não acumula ao reler
+        assert ponte.estatistica().quadros_descartados == 2
     finally:
         ponte.parar()
 
 
-# ---------------------------------------------------------------------------
-# 6. Source virtual do PipeWire (runner dublado)
-# ---------------------------------------------------------------------------
-
-
 class _RunnerFalso:
     # (noqa-acento) `modulos` é o NOME do parâmetro de `__init__`, logo abaixo:
-    # acentuá-lo faria a documentação nomear um argumento que não existe.
     """`pactl` falso: `modulos` é a saída de `list modules`."""  # (noqa-acento) nome do parâmetro
 
     def __init__(self, saida: str | None = "42\n", modulos: str = "") -> None:
@@ -508,7 +464,6 @@ def test_source_carrega_module_pipe_source_com_o_formato_do_mic(monkeypatch, tmp
     monkeypatch.setattr(bt.shutil, "which", lambda _n: "/usr/bin/pactl")
     runner = _RunnerFalso()
     src = bt.SourceVirtualPipeWire(nome="hef_teste", descricao="Teste", runner=runner)
-    # `_abrir_fifo` falha (não há PipeWire de verdade): o start recua inteiro.
     assert src.iniciar() is False
     argv = _primeiro(runner, "load-module")
     assert argv[:3] == ["pactl", "load-module", "module-pipe-source"]
@@ -516,12 +471,9 @@ def test_source_carrega_module_pipe_source_com_o_formato_do_mic(monkeypatch, tmp
     assert "format=s16le" in argv
     assert f"rate={bt.MIC_TAXA_HZ}" in argv
     assert f"channels={bt.MIC_CANAIS}" in argv
-    # Recuou de verdade: o módulo carregado foi descarregado.
     assert ["pactl", "unload-module", "42"] in runner.chamadas
 
 
-#: `pactl list modules short` de mentira — `id \t nome \t args`, TABs de
-#: verdade, com o `source_properties` cheio de espaços como na máquina dela.
 _MODULOS_COM_ORFAO = (
     "536870912\tmodule-null-sink\tsink_name=hefesto_som_0000f0\t\n"
     "536870919\tmodule-pipe-source\tsource_name=hefesto_mic_0000f0"
@@ -534,12 +486,7 @@ _MODULOS_COM_ORFAO = (
 
 
 def test_o_modulo_orfao_com_o_mesmo_nome_e_derrubado_antes_do_load(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
-    """MIC-RADIO-ORFAO-01: o servidor é a autoridade, não a tabela do processo.
-
-    Medido em 07/09/2026: com o órfão de pé entram **8 quadros** no fifo e o
-    app grava 100,00% de zeros; sem ele, 988 quadros e -34,8 dBFS. E a única
-    diferença entre os dois mundos é este `unload-module`.
-    """
+    """MIC-RADIO-ORFAO-01: o servidor é a autoridade, não a tabela do processo."""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(bt.shutil, "which", lambda _n: "/usr/bin/pactl")
     runner = _RunnerFalso(modulos=_MODULOS_COM_ORFAO)
@@ -550,13 +497,9 @@ def test_o_modulo_orfao_com_o_mesmo_nome_e_derrubado_antes_do_load(monkeypatch, 
 
     verbos = [c[1] for c in runner.chamadas if len(c) > 1]
     assert "unload-module" in verbos, "o órfão ficou de pé"
-    # A ORDEM É O TESTE: derrubar DEPOIS do load deixaria o órfão dono do nome
-    # durante a subida, que é exatamente o silêncio que isto existe para matar.
     assert verbos.index("unload-module") < verbos.index("load-module")
     assert ["pactl", "unload-module", "536870919"] in runner.chamadas
-    # E SÓ O DELE: o `536870920` é `hefesto_mic_c311f01`, outro controle.
     assert ["pactl", "unload-module", "536870920"] not in runner.chamadas
-    # O `module-null-sink` do alto-falante não é `module-pipe-source`.
     assert ["pactl", "unload-module", "536870912"] not in runner.chamadas
 
 
@@ -601,18 +544,12 @@ def test_escrita_no_fifo_nunca_bloqueia(tmp_path) -> None:  # type: ignore[no-un
         src = bt.SourceVirtualPipeWire(nome="hef_teste", descricao="Teste")
         src._fifo = str(fifo)
         assert src.escrever(b"\x00" * 64) is True
-        # Enche o pipe: em algum momento o EAGAIN aparece e vira descarte.
         for _ in range(4096):
             src.escrever(b"\x00" * 4096)
         assert src.descartes > 0
         src.parar()
     finally:
         os.close(leitor)
-
-
-# ---------------------------------------------------------------------------
-# 7. Gerenciador (hotplug)
-# ---------------------------------------------------------------------------
 
 
 class _PonteFalsa:
@@ -668,7 +605,7 @@ def test_gerenciador_sobrevive_a_ponte_que_levanta() -> None:
         raise RuntimeError("boom")
 
     g = bt.GerenciadorMicBluetooth(fabrica=_explode)
-    g.reconciliar([_no("/dev/hidraw6")])  # não pode propagar
+    g.reconciliar([_no("/dev/hidraw6")])
     assert g.pontes == {}
 
 
@@ -681,11 +618,6 @@ def test_dormir_acorda_no_parar() -> None:
     assert time.monotonic() - t0 < 2.0
 
 
-# ---------------------------------------------------------------------------
-# 8. Diagnóstico
-# ---------------------------------------------------------------------------
-
-
 def test_diagnostico_sem_controle_nao_esta_pronto() -> None:
     d = bt.Diagnostico(controles=[], libopus="1.4", pactl=True, pipe_source=True, broker=True)
     assert d.pronto is False
@@ -693,12 +625,7 @@ def test_diagnostico_sem_controle_nao_esta_pronto() -> None:
 
 
 def test_diagnostico_sem_libopus_diz_o_que_instalar() -> None:
-    """O laudo manda INSTALAR, e o nome do pacote vem do dono.
-
-    A-LIBOPUS-TEM-NOME-EM-CADA-CASA-01 (20/09/2026): esta linha DIGITAVA o
-    nome que só o Debian usa — a terceira cópia do mesmo dado. Num Arch ela
-    dava verde sobre uma frase que mandava instalar o que não existe lá.
-    """
+    """O laudo manda INSTALAR, e o nome do pacote vem do dono."""
     from hefesto_dualsense4unix.integrations import storm_doctor
 
     d = bt.Diagnostico(
@@ -728,11 +655,6 @@ def test_diagnostico_completo_esta_pronto() -> None:
     assert d.impedimentos == []
 
 
-# ---------------------------------------------------------------------------
-# 9. Subsystem do daemon (opt-in)
-# ---------------------------------------------------------------------------
-
-
 class _ConfigFalsa:
     """DaemonConfig o bastante para o gate — sem importar o lifecycle inteiro."""
 
@@ -748,9 +670,6 @@ class _GerenciadorFalso:
         self._evt = threading.Event()
 
     def reconciliar(self, nos: object = None) -> None:
-        # QUATRO-MICROFONES-01 (22/08/2026): a lista de nós chega EXPLÍCITA — é
-        # o subsystem que filtra pelos `uniq` que ela ligou antes de entregar, e
-        # é aí que o "por controle" acontece.
         self.reconciliacoes += 1
         self.ultimos_nos = nos
 
@@ -808,17 +727,7 @@ def test_subsystem_liga_por_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_por_controle_vale_pelo_lado_da_recusa() -> None:
-    """O gate é um CONJUNTO de `uniq`, não um `bool` (QUATRO-MICROFONES-01).
-
-    O `bool` só sabia dizer "todos" ou "nenhum", e a decisão dela de 22/08/2026
-    é literal: *"por controle"*. Isso não mudou em 18/09 — o que mudou foi QUAL
-    conjunto carrega a escolha dela. Era o dos ligados; passou a ser o dos
-    DESLIGADOS, porque a ausência de opinião agora liga.
-
-    CONTRATO SUBSTITUÍDO DUAS VEZES: a régua era `is_enabled`
-    (CANAL-POR-CONTROLE-01, 03/09), passou a ser `alvos()` sobre os declarados,
-    e hoje é `alvos()` sobre os recusados.
-    """
+    """O gate é um CONJUNTO de `uniq`, não um `bool` (QUATRO-MICROFONES-01)."""
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
         BtMicSubsystem,
         RegistroDePedidosDeCanal,
@@ -866,4 +775,4 @@ async def test_subsystem_sobe_e_para_o_gerenciador() -> None:
     assert _esperar(lambda: g.reconciliacoes >= 1)
     await sub.stop()
     assert g.parado is True
-    await sub.stop()  # idempotente
+    await sub.stop()

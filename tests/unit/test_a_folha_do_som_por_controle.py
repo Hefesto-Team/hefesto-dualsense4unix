@@ -1,39 +1,4 @@
-"""A FOLHA DO SOM POR CONTROLE — o positivo, o negativo e a porta que não abre.
-
-`scripts/ensaios/a_folha_do_som_por_controle.py` é o instrumento que ELA dirige
-para decidir o ensaio 13 do índice do rádio: *o som do PC chega ao alto-falante
-do controle pelo RÁDIO?* A medição é da orelha dela, com os controles na mão —
-o que se prova AQUI é a parte que já enganou esta casa antes de a orelha entrar.
-
-O QUE ESTA RÉGUA MEDE, e por que cada peça
--------------------------------------------
-1. **O tom é UM SÓ.** O WAV que o cabo toca tem de ser byte a byte o PCM que o
-   rádio codifica. Dois tons gerados lado a lado poriam uma variável escondida
-   DENTRO do controle positivo: ela ouviria o do cabo, não ouviria o do rádio, e
-   ninguém saberia dizer se a diferença é o transporte ou a amplitude.
-2. **As linhas de rádio nascem das tabelas do PRODUTO.** Arranjo novo em
-   `af.ARRANJO_POR_NOME` tem de virar linha nova sem que ninguém lembre — foi
-   digitando a lista de ontem que réguas desta casa passaram a medir o mundo de
-   ontem.
-3. **Todo positivo tem o negativo AO LADO.** Botão de tocar sem o par de CRC
-   errado é medição sem controle negativo.
-4. **A CONDIÇÃO é o `common` do produto**, e nenhum offset mora na folha.
-5. **A recusa é DITA.** Coluna que não serve à pergunta não pode ficar muda: um
-   painel calado lê-se como *"não fizeram nada"*.
-6. **`--listar` e `--oculta` não abrem nó nem escrevem byte.** A folha roda com
-   ela na frente, DEPOIS; um instrumento que tocasse o aparelho só de ser
-   listado já teria mexido no controle dela antes da primeira pergunta.
-
-AS MORDIDAS (arrancadas e conferidas em 09/09/2026, uma a uma)
----------------------------------------------------------------
-* trocar `quadros_de_pcm` por um tom próprio no `wav_do_tom` → cai (1);
-* montar `LINHAS` com dois arranjos digitados → cai (2), e é exatamente o que
-  `montar_pelos_dois_arranjos` alcança;
-* apagar o botão de CRC errado de uma linha → cai (3);
-* escrever `common[5] = volume` à mão em vez de `af.common_de_audio` → cai (4);
-* deixar a coluna do cabo sem a frase de recusa nos cruzamentos → cai (5);
-* abrir a porta no construtor da `Coluna` em vez de na primeira escrita → cai (6).
-"""
+"""A FOLHA DO SOM POR CONTROLE — o positivo, o negativo e a porta que não abre."""
 
 from __future__ import annotations
 
@@ -55,13 +20,7 @@ ENSAIOS = RAIZ / "scripts" / "ensaios"
 
 
 def _instrumento(nome: str):
-    """Carrega um instrumento de `scripts/ensaios/` pelo caminho, como os irmãos.
-
-    A SUÍTE JÁ CORRE SOB A TELA DE MENTIRA do TELA-DELA-01, e o
-    `HEFESTO_NA_TELA=1` daqui só declara isso: sem ele o import da folha subiria
-    um SEGUNDO Xvfb por cima do da suíte. A variável é devolvida depois — quem
-    a declara assume a tela, e este arquivo não pode assumi-la pelos outros.
-    """
+    """Carrega um instrumento de `scripts/ensaios/` pelo caminho, como os irmãos."""
     antes = os.environ.get("HEFESTO_NA_TELA")
     os.environ["HEFESTO_NA_TELA"] = "1"
     try:
@@ -72,7 +31,7 @@ def _instrumento(nome: str):
         spec = importlib.util.spec_from_file_location(apelido, caminho)
         assert spec is not None and spec.loader is not None
         modulo = importlib.util.module_from_spec(spec)
-        sys.modules[apelido] = modulo  # os dataclasses resolvem anotações por aqui
+        sys.modules[apelido] = modulo
         spec.loader.exec_module(modulo)
         return modulo
     finally:
@@ -117,11 +76,6 @@ def _mesa_de_dois(folha):
     ]
 
 
-# ---------------------------------------------------------------------------
-# 1. O TOM É UM SÓ — o positivo do cabo e a rajada do rádio saem do mesmo PCM
-# ---------------------------------------------------------------------------
-
-
 def test_o_wav_do_cabo_e_byte_a_byte_o_pcm_que_vai_pelo_radio(folha, tmp_path, monkeypatch):
     monkeypatch.setattr(folha, "PASTA", str(tmp_path))
     caminho = folha.wav_do_tom(0.05)
@@ -142,11 +96,6 @@ def test_o_pcm_do_tom_e_o_do_ensaio_irmao_e_nao_uma_segunda_geracao(folha):
     assert all(len(q) == 1920 for q in folha.quadros_de_pcm(0.05)), "quadros de 10 ms"
 
 
-# ---------------------------------------------------------------------------
-# 2. AS LINHAS NASCEM DAS TABELAS DO PRODUTO
-# ---------------------------------------------------------------------------
-
-
 def test_todo_arranjo_do_produto_vira_linha_em_todo_envelope(folha):
     """Arranjo novo no produto é linha nova aqui — sem ninguém lembrar."""
     from o_envelope_do_som_no_radio import ENVELOPES
@@ -160,15 +109,6 @@ def test_todo_arranjo_do_produto_vira_linha_em_todo_envelope(folha):
     assert achadas == esperadas, (
         "a folha deixou de cobrir o cruzamento inteiro de arranjo por envelope"
     )
-    # O NÚMERO É LIDO, NÃO DIGITADO — 10/09/2026. Esta linha dizia `== 6` e
-    # "são TRÊS arranjos", e envelheceu no dia em que o `ARRANJO_035` entrou:
-    # a folha se atualizou sozinha (ela gera do `ARRANJO_POR_NOME`) e foi a
-    # RÉGUA que reprovou, sobre nada. É a família que esta casa já nomeia —
-    # *a régua digita o que devia LER* —, e ela custa uma reprovação falsa a
-    # cada arranjo novo.
-    #
-    # O que continua sendo travado é o que importa: que o produto tenha MAIS de
-    # um arranjo (senão o cruzamento não prova nada) e que a conta feche.
     assert len(folha.af.ARRANJO_POR_NOME) >= 2, (
         "com um arranjo só o cruzamento arranjo x envelope não separa nada"
     )
@@ -176,13 +116,7 @@ def test_todo_arranjo_do_produto_vira_linha_em_todo_envelope(folha):
 
 
 def test_o_terceiro_arranjo_nao_e_alcancavel_por_montar_pelos_dois_arranjos(folha):
-    """A razão de a folha montar por `ARRANJO_POR_NOME`, e não pelo atalho.
-
-    `montar_pelos_dois_arranjos` (do ensaio `o_som_que_sai.py` desde 28/09/2026,
-    quando desceu do produto) devolve só os dois de `ARRANJOS`. Se um dia ele
-    passar a devolver os três, esta régua reprova — e aí o comentário do
-    cabeçalho da folha é que está velho, não o código.
-    """
+    """A razão de a folha montar por `ARRANJO_POR_NOME`, e não pelo atalho."""
     from o_som_que_sai import montar_pelos_dois_arranjos
 
     quadros = [b"\x00" * 200, b"\x00" * 200]
@@ -207,11 +141,6 @@ def test_o_positivo_do_cabo_esta_na_folha_e_e_do_cabo(folha):
     assert linha.botoes and linha.botoes[0].acao == "tom-no-sink"
 
 
-# ---------------------------------------------------------------------------
-# 3. TODO POSITIVO TEM O NEGATIVO AO LADO
-# ---------------------------------------------------------------------------
-
-
 def test_toda_linha_que_manda_report_tem_o_par_com_crc_errado(folha):
     sem_par = []
     for linha in folha.LINHAS:
@@ -232,18 +161,12 @@ def test_o_crc_errado_corrompe_so_o_rabo_e_o_produto_deixa_de_reconhecer(folha, 
     assert int.from_bytes(ruim[-4:], "little") != rep.bt_crc32(ruim[:-4], seed=rep.BT_CRC_SEED)
 
 
-# ---------------------------------------------------------------------------
-# 4. A CONDIÇÃO É O `common` DO PRODUTO — nenhum offset mora na folha
-# ---------------------------------------------------------------------------
-
-
 def test_a_condicao_da_coluna_e_exatamente_o_common_do_produto(folha, rep):
     coluna = folha.Coluna(alvo=_aparelho(folha, folha.RADIO, "hidraw91", "aa:bb:cc:00:00:02"))
     coluna.volume, coluna.rota, coluna.preamp = 200, rep.SAIDA_SO_NO_ALTO_FALANTE, 5
     assert coluna.common() == folha.af.common_de_audio(
         volume=200, rota=rep.SAIDA_SO_NO_ALTO_FALANTE, preamp=5
     )
-    # E o produto põe o volume onde o mapa diz — a folha não escolhe posição.
     assert coluna.common()[rep.COMMON_SPEAKER_VOLUME] == 200
 
 
@@ -259,11 +182,7 @@ def test_os_tres_campos_da_condicao_sao_os_tres_parametros_do_produto(folha):
 
 
 def test_o_volume_dela_chega_ao_report_de_audio_do_arranjo_que_carrega_o_common(folha, rep):
-    """O `common-preservado` leva a condição DENTRO do report de áudio.
-
-    É o único dos três que leva — e é por isso que o martelo da condição não é
-    enfeite para os outros dois: neles o volume é o do último `0x31`.
-    """
+    """O `common-preservado` leva a condição DENTRO do report de áudio."""
     common = folha.af.common_de_audio(volume=201)
     pacote = folha.pacotes_do_tom("common-preservado", segundos=0.10, common=common)[0]
     assert bytes(pacote[3 : 3 + rep.COMMON_LEN]) == common
@@ -271,15 +190,7 @@ def test_o_volume_dela_chega_ao_report_de_audio_do_arranjo_que_carrega_o_common(
 
 
 def test_o_ritmo_sai_do_arranjo_e_nao_de_um_numero_digitado(folha):
-    """O ritmo vem do ARRANJO — e do que foi MEDIDO nele, quando houver.
-
-    ESTA RÉGUA EXIGIA O NOMINAL, e por isso travava o número errado. Ela dizia
-    `== quadros_de_audio * MS_POR_QUADRO` para TODO arranjo, inclusive o `0x35`
-    — cujo intervalo medido é 10,667 ms, não 10. A folha anunciava na tela dela
-    a taxa de estouro, e a régua defendia isso.
-
-    O que ela trava agora é o que o nome dela promete: nenhum número digitado.
-    """
+    """O ritmo vem do ARRANJO — e do que foi MEDIDO nele, quando houver."""
     for nome, arranjo in folha.af.ARRANJO_POR_NOME.items():
         nominal = arranjo.quadros_de_audio * folha.af.MS_POR_QUADRO
         medido = getattr(arranjo, "intervalo_de_envio_s", None)
@@ -288,8 +199,6 @@ def test_o_ritmo_sai_do_arranjo_e_nao_de_um_numero_digitado(folha):
             f"o ritmo de {nome} não saiu do arranjo"
         )
 
-    # E o MEDIDO tem de vencer o nominal onde os dois existem — senão a cura é
-    # letra morta e a folha volta a anunciar 10 ms para o report que toca.
     do_035 = folha.af.ARRANJO_POR_NOME.get("0x35")
     if do_035 is not None and do_035.intervalo_de_envio_s:
         nominal_035 = do_035.quadros_de_audio * folha.af.MS_POR_QUADRO
@@ -297,11 +206,6 @@ def test_o_ritmo_sai_do_arranjo_e_nao_de_um_numero_digitado(folha):
             "a folha voltou a anunciar o nominal para o arranjo que TOCOU — "
             "10 ms alimentam 100 quadros/s num aparelho que come 93,75"
         )
-
-
-# ---------------------------------------------------------------------------
-# 5. A RECUSA É DITA — e a mesa incompleta diz QUAL metade falta
-# ---------------------------------------------------------------------------
 
 
 def test_toda_linha_de_um_transporte_so_tem_a_frase_de_recusa(folha):
@@ -332,11 +236,6 @@ def test_a_mesa_incompleta_diz_qual_metade_falta(folha):
     so_radio = folha.mesa_incompleta(colunas(folha.RADIO))
     assert "CABO" in so_radio and "POSITIVO" in so_radio
     assert "não achei nenhum" in folha.mesa_incompleta([])
-
-
-# ---------------------------------------------------------------------------
-# 6. `--listar` E `--oculta` NÃO TOCAM NO APARELHO
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture()
@@ -395,18 +294,13 @@ def test_a_porta_abre_na_primeira_escrita_e_nunca_no_construtor(folha, monkeypat
     )
     coluna = folha.Coluna(alvo=_aparelho(folha, folha.RADIO, "hidraw91", "aa:bb:cc:00:00:02"))
     assert pedidos == [], "a porta abriu no construtor"
-    coluna.bater()  # sem «Assumir» ligado o martelo não bate, e não abre nada
+    coluna.bater()
     assert pedidos == []
     coluna.assumido = True
     monkeypatch.setattr(folha, "enviar", lambda *_a, **_k: None)
     coluna.bater()
     assert pedidos == ["/dev/hidraw91"], "a primeira escrita é que abre a porta"
     assert coluna.escritas == 1
-
-
-# ---------------------------------------------------------------------------
-# O anonimato e a forma da linha do caderno
-# ---------------------------------------------------------------------------
 
 
 def test_nenhum_endereco_inteiro_sai_na_saida(folha, espiao, capsys):
@@ -434,18 +328,8 @@ def test_a_linha_proposta_segue_o_cabecalho_do_caderno(folha, espiao, capsys):
     )
 
 
-# ---------------------------------------------------------------------------
-# 7. A RAJADA — ela sai inteira, pelo envelope pedido, e PARA no primeiro «não»
-# ---------------------------------------------------------------------------
-
-
 class _Relogio:
-    """O laço do GTK, de mentira: guarda o agendado e me deixa girar na mão.
-
-    Sem ele o `timeout_add` de verdade fica pendurado no contexto padrão até o
-    fim da sessão de teste — e dispararia `enviar()` sobre um descritor de
-    mentira no dia em que qualquer outro teste rodasse um `Gtk.main()`.
-    """
+    """O laço do GTK, de mentira: guarda o agendado e me deixa girar na mão."""
 
     def __init__(self) -> None:
         self.agendados: list[tuple[int, object, tuple]] = []

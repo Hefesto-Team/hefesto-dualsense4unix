@@ -363,7 +363,7 @@
          `dualsense_bt_audio.py` diz que o áudio não abre canal novo, o input
          cai de 260,4 para 170,5 Hz e o total mal se mexe. Por isso o ◉ é um
          selo DENTRO deste espaço, e não um espaço ao lado.
-       · a ponte — som OU vibração, nunca os dois (`alto_falante_bt.py:835`).
+       · a ponte — som OU vibração, nunca os dois (`alto_falante_bt.py:537`).
          Um espaço reservado com dois ocupantes possíveis.
 
      O ESPAÇO FICA RESERVADO MESMO DESLIGADO: é o que deixa ver, sem clicar,
@@ -1098,7 +1098,7 @@
            339 no ar, e o menor pacote legal é o 2-DH3 (3 fatias) mais a resposta.
 
   **SOM E VIBRAÇÃO PELO RÁDIO SÃO EXCLUSIVOS, e é uma fatia só para os dois.**
-  `alto_falante_bt.py:835`, literal: *"pôr voz e vibração no MESMO report do
+  `alto_falante_bt.py:537`, literal: *"pôr voz e vibração no MESMO report do
   rádio é coisa que esta casa ainda não mediu. Pelo cabo os dois viajam juntos;
   pelo rádio, enquanto ninguém medir, **o escritor manda um ou outro**"*. Uma
   versão anterior deste desenho cobrava 281 de som MAIS 188 de vibração no
@@ -1347,7 +1347,7 @@ const moradoresDe = lid => APARELHOS.filter(a => a.lugar === lid);
    input CAI para 170,5 Hz e o áudio sobe para 106,2 na mesma fila.
 
    PONTE — 93,75 Hz. Som (`0x35`, 334 B) OU vibração (`0x32`, 142 B), nunca
-   os dois (`alto_falante_bt.py:835`).
+   os dois (`alto_falante_bt.py:537`).
 
    BARRA DE LUZ e GATILHOS ADAPTATIVOS — 0 Hz em regime: o escritor só manda
    quando a cor ou a curva MUDA (`dualsense_bt_audio.py:68`).

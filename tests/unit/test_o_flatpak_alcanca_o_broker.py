@@ -1,26 +1,4 @@
-"""O daemon do Flatpak alcança o que o install cria em /run — O-FLATPAK-ALCANCA-O-BROKER-01.
-
-No Flatpak o daemon roda DENTRO do sandbox, e o /run do sandbox é um tmpfs
-próprio: um caminho de /run que o `finish-args` não monta responde ENOENT lá
-dentro (medido em 24/09/2026, flatpak 1.18.1). Com a 70 e a 72 fechando o
-hidraw e os nós de entrada do físico, o broker é a única porta para o
-controle, e o daemon do Flatpak ficava sem ele.
-
-Esta régua LÊ no código cada caminho de /run que o daemon abre (as constantes
-de texto do pacote, fora as docstrings e fora o `broker/`, que roda como root
-no host) e cobra, no manifesto, a linha que o monta — com o modo decidido. O
-que o código cita e o sandbox NÃO deve ganhar está em :data:`NAO_SE_EXPOE`, com
-o porquê. Um caminho novo de /run no código, sem linha e sem decisão, reprova.
-Um caminho de /run MONTADO POR PARTES (`Path("/run") / …`) o varredor não lê, e
-por isso reprova também. O barramento de SISTEMA mora em /run/dbus e o `Gio` o
-abre sem texto de caminho: o varredor o acha pelo `BusType.SYSTEM`, e quem cobra
-a linha dele (e a do diário do root) é `test_o_flatpak_alcanca_o_bluez.py`.
-
-A MORDIDA, medida: tirar a linha do broker reprova o teste da cobertura e o do
-modo; pôr `:ro` na da trava reprova o do modo e o da escrita; tirar a do udev
-reprova o da cobertura; `Path("/run") / "x"` no código reprova o das partes;
-uma linha de /run que a página diz e o manifesto não tem reprova o da página.
-"""
+"""O daemon do Flatpak alcança o que o install cria em /run — O-FLATPAK-ALCANCA-O-BROKER-01."""
 
 from __future__ import annotations
 
@@ -39,10 +17,8 @@ PACOTE = RAIZ / "src" / "hefesto_dualsense4unix"
 MANIFESTO = RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml"
 PAGINA = RAIZ / "docs" / "usage" / "flatpak.md"
 
-#: Subpacotes que NUNCA rodam no sandbox: o broker é um serviço root do host.
 FORA_DO_SANDBOX = ("broker",)
 
-#: O que o código cita em /run e o sandbox não ganha, de propósito.
 NAO_SE_EXPOE: dict[str, str] = {
     "/run/systemd": (
         "é a sonda de «há systemd?» do `daemon_actions`; dentro do sandbox a "
@@ -54,7 +30,6 @@ NAO_SE_EXPOE: dict[str, str] = {
     ),
 }
 
-#: Um caminho de /run dentro de um texto; `steam://rungameid/` fica de fora.
 _RE_RUN = re.compile(r"(?<![\w:/])/run/[A-Za-z0-9_.@-]+(?:/[A-Za-z0-9_.@-]+)*")
 
 
@@ -67,15 +42,7 @@ def _docstrings(arvore: ast.AST) -> set[int]:
 
 
 def _ler_o_codigo() -> tuple[dict[str, list[str]], list[str], list[str]]:
-    """Uma volta pelo pacote: ``(caminhos, partes, barramento de sistema)``.
-
-    - ``caminhos``: ``{caminho: ["arquivo:linha", …]}`` de toda constante de
-      texto com /run;
-    - ``partes``: onde um texto é só ``/run`` ou ``/run/`` — o começo de um
-      caminho montado por partes, que o varredor não consegue ler inteiro;
-    - ``barramento de sistema``: onde o código pede o ``BusType.SYSTEM``, que
-      abre o socket de /run/dbus sem texto de caminho.
-    """
+    """Uma volta pelo pacote: ``(caminhos, partes, barramento de sistema)``."""
     caminhos: dict[str, list[str]] = {}
     partes: list[str] = []
     barramento: list[str] = []
@@ -86,8 +53,6 @@ def _ler_o_codigo() -> tuple[dict[str, list[str]], list[str], list[str]]:
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
         docs = _docstrings(arvore)
         for no in ast.walk(arvore):
-            # `Gio.BusType.SYSTEM` e também `BusType.SYSTEM`, do `BusType`
-            # importado pelo nome (a conferência de 24/09 viu este passar).
             if (
                 isinstance(no, ast.Attribute)
                 and no.attr == "SYSTEM"
@@ -132,14 +97,8 @@ def expostos() -> dict[str, str]:
     )
 
     return {
-        # A PASTA do socket: ele renasce a cada restart da socket unit, e uma
-        # montagem do arquivo ficaria presa ao socket velho. `ro` basta para o
-        # connect.
         str(PurePosixPath(DEFAULT_SOCKET_PATH).parent): "ro",
-        # A pasta da trava, com escrita: o daemon escreve nela quem está com a
-        # trava (o teste da escrita, abaixo, pergunta isso ao código).
         str(TRAVA_COMUM.parent): "rw",
-        # A base do udev, só de leitura.
         str(UDEV_DB_DIR): "ro",
     }
 

@@ -70,26 +70,11 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: A ação de um gatilho: sem argumentos, o retorno é só para o log. Ela é
-#: chamada no executor pelo laço que conta o tempo, então pode fazer I/O.
 Tarefa = Callable[[], object]
 
 
 class GatilhoDeFimDeSequencia:
-    """Debounce por FIM DE SEQUÊNCIA, com nome e ação próprios.
-
-    Lógica pura no tempo: recebe o instante de fora, não lê relógio nenhum.
-    É de propósito — é o que torna um comportamento medido em segundos
-    exercitável em milissegundos, sem hardware e sem espera.
-
-    O contrato tem três frases:
-
-    - ``armar`` a cada evento, e cada chamada **RE-ADIA** o disparo;
-    - ``consumir_se_a_sequencia_acabou`` devolve quantos eventos a sequência
-      juntou — e só quando ninguém mais chegou dentro do atraso. Depois disso
-      desarma: **uma ação por sequência**;
-    - a **tarefa** é resolvida por quem registra, e só é chamada no disparo.
-    """
+    """Debounce por FIM DE SEQUÊNCIA, com nome e ação próprios."""
 
     def __init__(self, nome: str, tarefa: Tarefa, *, atraso_s: float) -> None:
         self.nome = str(nome)
@@ -114,42 +99,23 @@ class GatilhoDeFimDeSequencia:
         return self._eventos
 
     def armar(self, agora: float, *, quantos: int = 1) -> None:
-        """Registra ``quantos`` eventos em ``agora`` e RE-ADIA o disparo.
-
-        Chamar com a sequência já armada é o caso NORMAL, não a exceção: é o
-        segundo, o terceiro e o quarto evento da rajada. Cada um empurra o
-        relógio para a frente, porque cada um recomeça o estrago.
-        """
+        """Registra ``quantos`` eventos em ``agora`` e RE-ADIA o disparo."""
         self._ultimo_evento_em = float(agora)
         self._eventos += max(1, int(quantos))
 
     def desarmar(self) -> None:
-        """Esquece a sequência aberta sem disparar.
-
-        Para quando o motivo de agir desapareceu — a mesa esvaziou, o
-        subsistema caiu. Uma sequência velha que sobrevive dispara no primeiro
-        evento da PRÓXIMA rajada, adiantada: o defeito exato que o mecanismo
-        existe para evitar.
-        """
+        """Esquece a sequência aberta sem disparar."""
         self._ultimo_evento_em = None
         self._eventos = 0
 
     def falta_para_disparar(self, agora: float) -> float | None:
-        """Segundos que faltam, ou ``None`` quando não há sequência armada.
-
-        Serve para quem espera em fatias saber quando acordar — sem isso o
-        laço de fora teria de escolher entre dormir demais (a reafirmação
-        demora) ou girar apertado (custo por nada, o dia inteiro).
-        """
+        """Segundos que faltam, ou ``None`` quando não há sequência armada."""
         if self._ultimo_evento_em is None:
             return None
         return max(0.0, self._atraso_s - (float(agora) - self._ultimo_evento_em))
 
     def consumir_se_a_sequencia_acabou(self, agora: float) -> int:
-        """``0`` = ainda não. ``>0`` = aja, e este é o tamanho da sequência.
-
-        Consome: a mesma sequência nunca dispara duas vezes.
-        """
+        """``0`` = ainda não. ``>0`` = aja, e este é o tamanho da sequência."""
         if self._ultimo_evento_em is None:
             return 0
         if float(agora) - self._ultimo_evento_em < self._atraso_s:
@@ -160,17 +126,7 @@ class GatilhoDeFimDeSequencia:
 
 
 class RegistroDeGatilhos:
-    """Os gatilhos vivos deste daemon, por nome — um relógio para todos.
-
-    Existe para que o segundo e o terceiro usuários do mecanismo não copiem
-    código nem criem um laço próprio. Quem registra diz **o nome, a ação e o
-    seu número medido**; quem conta o tempo é o `reconnect_loop`.
-
-    `registrar` é idempotente e tolerante a ordem: chamar de novo com o mesmo
-    nome atualiza a ação (e o atraso, se vier) sem perder a sequência já
-    armada. É o que permite registrar tarde — no meio de um hotplug, depois de
-    um subsistema subir — sem que a ordem de fiação vire regra escondida.
-    """
+    """Os gatilhos vivos deste daemon, por nome — um relógio para todos."""
 
     def __init__(self) -> None:
         self._gatilhos: dict[str, GatilhoDeFimDeSequencia] = {}
@@ -201,12 +157,7 @@ class RegistroDeGatilhos:
         return self._gatilhos.get(nome)
 
     def armar(self, nome: str, agora: float, *, quantos: int = 1) -> bool:
-        """Arma o gatilho ``nome``. ``False`` se ele não existe (nunca levanta).
-
-        Não levantar é decisão: um subsistema que arma antes de registrar não
-        pode derrubar o caminho que o chamou — o pior que acontece é a
-        reafirmação daquele nome não sair.
-        """
+        """Arma o gatilho ``nome``. ``False`` se ele não existe (nunca levanta)."""
         gatilho = self._gatilhos.get(nome)
         if gatilho is None:
             return False

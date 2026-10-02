@@ -1,36 +1,4 @@
-"""VERDADE-01 — o retorno que mentia, e o laço que ele alimentava (18→19/08).
-
-Na noite em que ela não conseguia jogar DON'T SCREAM, o journal registrou isto,
-em laço, com a partida aberta:
-
-    vpad_recriacao_bloqueada_por_jogo motivo=troca_de_mascara:dualsense->xbox
-    gamepad_emulation_stopped
-    gamepad_emulation_started      flavor=xbox
-    vpad_recriacao_bloqueada_por_jogo motivo=troca_de_mascara:xbox->dualsense
-    gamepad_emulation_stopped
-    gamepad_emulation_started      flavor=dualsense
-
-A raiz não era o gate R-04 (esse estava certo: recriar o vpad com jogo aberto
-arranca o controle da mão dela — medido em 23/07). A raiz era o RETORNO:
-`start_gamepad_emulation` devolvia **True** para três desfechos diferentes —
-aplicou, já estava e foi RECUSADO —, então `apply_profile_mode` reportava
-`mode=aplicado` sobre uma troca recusada, acreditava ter convergido e pedia de
-novo na volta seguinte. A divergência (perfil pede `xbox`, o vivo é
-`dualsense`) nunca sumia, e a insistência virava destruir/recriar vpad assim
-que a autoridade do jogo piscava.
-
-O que estes testes travam:
-
-1. o desfecho DISTINGUE `aplicado`/`ja_estava`/`bloqueado_por_jogo` — e o bool
-   histórico segue True nos três, porque ele sempre quis dizer "ativo ao final";
-2. quem chama PARA de pedir: um bloqueio vira estado estável, o applier devolve
-   `adiado_jogo_aberto` e o subsystem não é mais acionado enquanto o jogo
-   estiver na frente;
-3. o journal diz UMA vez, não a cada volta;
-4. quando o jogo devolve a autoridade, o pedido guardado volta a valer;
-5. o gesto DELA (ativar o perfil na mão) atravessa o gate — a última palavra é
-   sempre da usuária.
-"""
+"""VERDADE-01 — o retorno que mentia, e o laço que ele alimentava (18→19/08)."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -113,11 +81,6 @@ def _perfil(flavor: str, *, nome: str = "dont_scream") -> Profile:
     )
 
 
-# ---------------------------------------------------------------------------
-# 1. O desfecho distingue os três finais que o bool fundia
-# ---------------------------------------------------------------------------
-
-
 def test_os_tres_desfechos_sao_distinguiveis(daemon: Any) -> None:
     _autoridade(daemon, "daemon")
     assert (
@@ -140,11 +103,7 @@ def test_os_tres_desfechos_sao_distinguiveis(daemon: Any) -> None:
 
 
 def test_o_bool_continua_dizendo_ativo_ao_final_nos_tres(daemon: Any) -> None:
-    """Por que a mentira passava: o bool é o MESMO nos três desfechos.
-
-    Não é defeito do bool — é o contrato dele ("ativo ao final"). O defeito era
-    não haver mais nada para quem precisa saber se o PEDIDO valeu.
-    """
+    """Por que a mentira passava: o bool é o MESMO nos três desfechos."""
     _autoridade(daemon, "daemon")
     assert start_gamepad_emulation(daemon, "dualsense", origin="profile") is True
     assert start_gamepad_emulation(daemon, "dualsense", origin="profile") is True
@@ -152,19 +111,10 @@ def test_o_bool_continua_dizendo_ativo_ao_final_nos_tres(daemon: Any) -> None:
     assert start_gamepad_emulation(daemon, "xbox", origin="profile") is True
 
 
-# ---------------------------------------------------------------------------
-# 2. Quem chama para de pedir — o laço morre
-# ---------------------------------------------------------------------------
-
-
 def test_o_applier_diz_adiado_e_nao_repete_o_pedido(
     daemon: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A cura da noite: bloqueio vira ESTADO, não retry.
-
-    Falha-sem (o defeito medido): o applier devolvia `aplicado` e cada volta do
-    autoswitch/sinal de jogo reabria o mesmo pedido recusado.
-    """
+    """A cura da noite: bloqueio vira ESTADO, não retry."""
     _autoridade(daemon, "daemon")
     start_gamepad_emulation(daemon, "dualsense", origin="profile")
     device = daemon._gamepad_device
@@ -202,12 +152,7 @@ def test_o_applier_diz_adiado_e_nao_repete_o_pedido(
 def test_o_pingue_pongue_de_duas_janelas_tambem_para(
     daemon: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Duas janelas se revezando pediam máscaras OPOSTAS a cada volta.
-
-    Era assim no journal (o perfil do jogo e o de uma janela invisível da
-    Steam). Um latch por MÁSCARA deixaria as duas passarem; por isso o latch é
-    do episódio de jogo, não da máscara pedida.
-    """
+    """Duas janelas se revezando pediam máscaras OPOSTAS a cada volta."""
     _autoridade(daemon, "daemon")
     start_gamepad_emulation(daemon, "dualsense", origin="profile")
     _autoridade(daemon, "game")
@@ -254,8 +199,6 @@ def test_o_journal_diz_uma_vez_por_episodio(
         "o gate gritou a cada volta — foi assim que o journal dela virou muro "
         f"(avisos={avisos})"
     )
-    # E o episódio recomeça quando o jogo devolve a autoridade: o bloqueio
-    # seguinte é notícia de novo.
     _autoridade(daemon, "daemon")
     assert gamepad_mod._recriacao_bloqueada_por_jogo(
         daemon, origin="profile", motivo="teste"
@@ -265,11 +208,6 @@ def test_o_journal_diz_uma_vez_por_episodio(
         daemon, origin="profile", motivo="teste"
     ) is True
     assert avisos.count("vpad_recriacao_bloqueada_por_jogo") == 2
-
-
-# ---------------------------------------------------------------------------
-# 3. A divergência ESPERA — e volta a valer quando o jogo sai da frente
-# ---------------------------------------------------------------------------
 
 
 def test_quando_o_jogo_devolve_a_autoridade_a_mascara_entra(daemon: Any) -> None:
@@ -283,7 +221,7 @@ def test_quando_o_jogo_devolve_a_autoridade_a_mascara_entra(daemon: Any) -> None
         == ADIADO_JOGO_ABERTO
     )
 
-    _autoridade(daemon, "daemon")  # o jogo fechou / a janela saiu da frente
+    _autoridade(daemon, "daemon")
     assert (
         daemon.apply_profile_mode(perfil.mode, profile=perfil, origin="autoswitch")
         == APLICADO
@@ -304,11 +242,6 @@ def test_gesto_manual_na_mascara_esquece_a_divergencia(daemon: Any) -> None:
     daemon.set_gamepad_emulation(True, "dualsense", origin="manual")
 
     assert daemon._mascara_adiada_por_jogo is None
-
-
-# ---------------------------------------------------------------------------
-# 4. O gesto DELA atravessa o gate
-# ---------------------------------------------------------------------------
 
 
 def test_ela_ativando_o_perfil_na_mao_troca_a_mascara_com_jogo_aberto(
@@ -333,12 +266,7 @@ def test_ela_ativando_o_perfil_na_mao_troca_a_mascara_com_jogo_aberto(
 def test_o_gesto_de_perfil_nao_grava_preferencia_nem_promove_backend(
     monkeypatch: pytest.MonkeyPatch, daemon: Any
 ) -> None:
-    """`gesto_de_perfil` é "profile" em TUDO, menos no gate R-04.
-
-    Gravar a máscara do jogo em disco (R-07) trocaria o default do boot dela
-    por causa de um perfil; promover backend (BT-04(b)) recriaria o vpad
-    degradado a cada troca de janela.
-    """
+    """`gesto_de_perfil` é "profile" em TUDO, menos no gate R-04."""
     gravou: list[Any] = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_gamepad_emulation",
@@ -356,11 +284,6 @@ def test_o_gesto_de_perfil_nao_grava_preferencia_nem_promove_backend(
     assert gamepad_mod._deve_promover_backend(
         daemon, _FakePad("dualsense"), "dualsense", "gesto_de_perfil"
     ) is False
-
-
-# ---------------------------------------------------------------------------
-# 5. O gate R-04 segue de pé — a cura é sobre honestidade, não sobre furá-lo
-# ---------------------------------------------------------------------------
 
 
 def test_o_gate_r04_continua_barrando_o_caminho_automatico(daemon: Any) -> None:
@@ -381,15 +304,11 @@ def test_o_gate_r04_continua_barrando_o_caminho_automatico(daemon: Any) -> None:
 def test_modo_jogo_padrao_nao_vira_laco_com_a_mascara_divergente(
     daemon: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MODO-01/B3 pede o modo a 2 Hz enquanto o jogo está na frente.
-
-    Com a máscara divergindo, cada tique reabria o pedido recusado. Agora o
-    subsystem é acionado uma vez só.
-    """
+    """MODO-01/B3 pede o modo a 2 Hz enquanto o jogo está na frente."""
     _autoridade(daemon, "daemon")
     start_gamepad_emulation(daemon, "dualsense", origin="profile")
     _autoridade(daemon, "game")
-    daemon.config.gamepad_flavor = "xbox"  # a divergência do perfil do jogo
+    daemon.config.gamepad_flavor = "xbox"
 
     pedidos: list[str | None] = []
     real = daemon.set_gamepad_emulation_desfecho
@@ -407,8 +326,7 @@ def test_modo_jogo_padrao_nao_vira_laco_com_a_mascara_divergente(
 
 
 def test_o_dublê_de_modo_sem_flavor_nao_mexe_na_mascara(daemon: Any) -> None:
-    """Perfil `kind="gamepad"` sem `gamepad_flavor` é ausência de opinião sobre
-    a máscara — não pode acordar o latch nem pedir troca nenhuma."""
+    """Perfil `kind="gamepad"` sem `gamepad_flavor` é ausência de opinião sobre"""
     _autoridade(daemon, "daemon")
     start_gamepad_emulation(daemon, "dualsense", origin="profile")
     _autoridade(daemon, "game")

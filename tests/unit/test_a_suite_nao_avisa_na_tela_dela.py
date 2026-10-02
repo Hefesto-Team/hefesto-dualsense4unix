@@ -1,27 +1,4 @@
-"""A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — nenhum teste manda aviso para a tela dela.
-
-O DEFEITO, com a foto dela de 25/09/2026: três «Teclado na tela aberto pelo L3.»
-empilhados na tela às 20h18, com o daemon dela calado — o diário dele registra
-todo aviso que manda, e não tinha nenhum. Era a suíte, e desde 06/09.
-
-MEDIDO num barramento de mentira (um `dbus-run-session` com um servidor de
-avisos que conta cada `Notify` e anota o teste que estava rodando): o lote do
-teclado e do hotkey mandava **22** avisos — 20 do teclado na tela, de
-`test_o_l3_alterna_o_teclado_na_tela.py`, `test_osk_handler.py` e
-`test_o_teclado_nao_sobrevive_ao_daemon.py`, e 2 do «Modo jogo ligado», de
-`test_gamepad_survives_modo_jogo.py`. Com a cura, **zero**.
-
-A CURA mora no `notify` (`integrations/desktop_notifications.py`), e não num
-dublê do conftest, porque por lá passam todos os chamadores — inclusive a
-bandeja, que copiou a referência com `from … import notify` e que um dublê
-posto no módulo não alcançaria. Com a suíte no ar (`PYTEST_CURRENT_TEST`, que o
-processo filho herda, ou o `pytest` carregado) ele recusa antes de abrir o
-barramento. O escape é `HEFESTO_AVISO_DE_VERDADE=1`, só escrito dentro do teste
-e sempre com o barramento dublado; o `tests/conftest.py` o tira do ambiente
-herdado.
-
-A MORDIDA de cada régua está no docstring dela.
-"""
+"""A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — nenhum teste manda aviso para a tela dela."""
 
 from __future__ import annotations
 
@@ -42,8 +19,6 @@ from hefesto_dualsense4unix.integrations import desktop_notifications as avisos
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: Os avisos que respondem a um gesto dela e saem SEMPRE, sem o opt-in das
-#: notificações de evento — são os que a suíte mandava para a tela dela.
 _AVISOS_DE_GESTO = (
     ("teclado na tela aberto", avisos.notify_teclado_na_tela_aberto, ()),
     ("teclado na tela ausente", avisos.notify_teclado_na_tela_ausente, (["wvkbd-mobintl"],)),
@@ -62,15 +37,6 @@ def _caches_zerados() -> Iterator[None]:
     avisos.reset_throttle_cache()
 
 
-#: O `jeepney` de mentira, em texto, porque o processo filho precisa do MESMO:
-#: um `jeepney.io.blocking` cujo `open_dbus_connection` anota e RECUSA.
-#:
-#: POR QUE DE MENTIRA, e não o de verdade com o `open_dbus_connection` trocado:
-#: o `jeepney` é do extra `cosmic`, e o CI instala só o `.[dev]`. Com um
-#: `importorskip` aqui, seis dos sete casos PULAVAM no CI — medido com o
-#: `jeepney` escondido, 25/09/2026: `1 passed, 6 skipped` — e a trava podia
-#: sair sem o CI ver. Portão que só pula é portão que não existe. O `notify`
-#: importa o `jeepney` na chamada, então vê o de mentira de `sys.modules`.
 _JEEPNEY_DE_MENTIRA = textwrap.dedent(
     """
     import sys
@@ -96,13 +62,7 @@ _JEEPNEY_DE_MENTIRA = textwrap.dedent(
 
 @pytest.fixture
 def aberturas_do_barramento(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Cada vez que o `notify` tenta abrir um barramento, uma linha aqui.
-
-    O dublê é um `jeepney` inteiro de mentira em `sys.modules` (ver
-    `_JEEPNEY_DE_MENTIRA`), e ele RECUSA depois de anotar: nenhum caso deste
-    arquivo chega ao barramento da sessão dela, nem com a cura arrancada — e
-    todos rodam também onde o `jeepney` não está instalado, como no CI.
-    """
+    """Cada vez que o `notify` tenta abrir um barramento, uma linha aqui."""
     modulos: dict[str, Any] = {}
     exec(_JEEPNEY_DE_MENTIRA, modulos)
     monkeypatch.setitem(sys.modules, "jeepney", modulos["jeepney"])
@@ -115,12 +75,7 @@ def aberturas_do_barramento(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 def test_com_a_suite_no_ar_nenhum_aviso_de_gesto_abre_o_barramento(
     aberturas_do_barramento: list[str],
 ) -> None:
-    """A RÉGUA. Os quatro avisos de gesto recusam antes do barramento.
-
-    A MORDIDA: tire o `_a_suite_esta_rodando() or` da primeira condição do
-    `notify` — as quatro chamadas abrem o barramento e este caso reprova com
-    `['SESSION', 'SESSION', 'SESSION', 'SESSION']`.
-    """
+    """A RÉGUA. Os quatro avisos de gesto recusam antes do barramento."""
     for nome, aviso, argumentos in _AVISOS_DE_GESTO:
         assert aviso(*argumentos) is False, f"o aviso «{nome}» saiu com a suíte no ar"
     assert aberturas_do_barramento == [], (
@@ -132,11 +87,7 @@ def test_com_a_suite_no_ar_nenhum_aviso_de_gesto_abre_o_barramento(
 def test_a_referencia_copiada_por_from_import_tambem_recusa(
     aberturas_do_barramento: list[str],
 ) -> None:
-    """A bandeja faz `from … import notify`: a cópia recusa igual.
-
-    É o que separa a cura no `notify` de um dublê posto no módulo pelo conftest,
-    que a cópia não veria. A MORDIDA é a mesma do caso acima.
-    """
+    """A bandeja faz `from … import notify`: a cópia recusa igual."""
     from hefesto_dualsense4unix.integrations.desktop_notifications import notify
 
     assert notify("Hefesto", "a bandeja não apareceu", once_key="copia") is False
@@ -146,23 +97,14 @@ def test_a_referencia_copiada_por_from_import_tambem_recusa(
 def test_o_escape_devolve_o_caminho_inteiro(
     monkeypatch: pytest.MonkeyPatch, aberturas_do_barramento: list[str]
 ) -> None:
-    """Com `HEFESTO_AVISO_DE_VERDADE=1` o `notify` chega ao barramento (dublado).
-
-    É a contraprova: prova que quem recusa acima é a trava, e não um barramento
-    ausente, e que o teste que QUER medir o aviso ainda pode — declarando.
-    """
+    """Com `HEFESTO_AVISO_DE_VERDADE=1` o `notify` chega ao barramento (dublado)."""
     monkeypatch.setenv(avisos.AVISO_DE_VERDADE_NA_SUITE, "1")
-    assert avisos.notify_teclado_na_tela_aberto() is False  # o dublê recusa
+    assert avisos.notify_teclado_na_tela_aberto() is False
     assert aberturas_do_barramento == ["SESSION"]
 
 
 def test_o_escape_herdado_nao_atravessa_para_o_teste() -> None:
-    """O escape que viesse do terminal de quem roda a suíte não chega aqui.
-
-    A MORDIDA: tire o `os.environ.pop("HEFESTO_AVISO_DE_VERDADE", None)` do
-    topo do `tests/conftest.py` e a linha que o apaga no `_hefesto_fake_env`, e
-    rode a suíte com a chave exportada — este caso reprova.
-    """
+    """O escape que viesse do terminal de quem roda a suíte não chega aqui."""
     assert avisos.AVISO_DE_VERDADE_NA_SUITE not in os.environ, (
         "o escape do aviso chegou a um teste que não o declarou: cada L3 da "
         "suíte voltaria a aparecer na tela dela"
@@ -198,14 +140,7 @@ def _aberturas_no_filho(ambiente: dict[str, str]) -> int:
 
 
 def test_o_processo_filho_de_um_teste_tambem_recusa() -> None:
-    """Um daemon subido por um teste herda `PYTEST_CURRENT_TEST` e cala.
-
-    Sem o `pytest` carregado, o filho só sabe da suíte pelo ambiente — e é o
-    caminho de todo teste que roda o produto num processo próprio. A metade de
-    baixo é a contraprova: sem a variável, o mesmo filho abre o barramento
-    (dublado). A MORDIDA: tire o `PYTEST_CURRENT_TEST` da trava e a primeira
-    metade reprova com 1.
-    """
+    """Um daemon subido por um teste herda `PYTEST_CURRENT_TEST` e cala."""
     ambiente = dict(os.environ)
     ambiente["PYTHONPATH"] = str(RAIZ / "src")
     assert ambiente.get("PYTEST_CURRENT_TEST")
@@ -214,13 +149,6 @@ def test_o_processo_filho_de_um_teste_tambem_recusa() -> None:
     ambiente.pop("PYTEST_CURRENT_TEST")
     assert _aberturas_no_filho(ambiente) == 1
 
-
-# ---------------------------------------------------------------------------
-# A PROVA NO BARRAMENTO: um dbus-daemon próprio e um servidor de avisos que
-# conta. Nada daqui fala com a sessão dela: o endereço é o do daemon deste
-# teste, que nasce sem pasta de serviços (nenhum programa é ativado por ele) e
-# morre pelo PID.
-# ---------------------------------------------------------------------------
 
 _CONFIG_DO_BARRAMENTO = """<!DOCTYPE busconfig PUBLIC
  "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
@@ -281,10 +209,6 @@ class _ServidorDeAvisos:
 def barramento_de_mentira(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> Iterator[_ServidorDeAvisos]:
-    # Aqui o `jeepney` é o DE VERDADE, e pular sem ele é honesto: o servidor de
-    # avisos fala o protocolo, e sem o `jeepney` o `notify` não alcança
-    # barramento nenhum. Os casos de cima, com o de mentira, seguram a trava
-    # no CI.
     pytest.importorskip("jeepney.io.blocking")
     dbus_daemon = shutil.which("dbus-daemon")
     if dbus_daemon is None:
@@ -318,13 +242,7 @@ def barramento_de_mentira(
 
 
 def _apertar_o_l3(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
-    """O L3 pelo caminho do produto, com o teclado na tela de mentira.
-
-    O mesmo fio do `test_o_l3_alterna_o_teclado_na_tela.py`, que é um dos três
-    arquivos que mandavam o aviso: `dispatch({"l3"})` → token virtual →
-    `_OSKController.open()` → `_avisar_abertura()` → `notify`. O `Popen` e o
-    `shutil.which` são dublês: nenhum teclado nasce.
-    """
+    """O L3 pelo caminho do produto, com o teclado na tela de mentira."""
     from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
     from hefesto_dualsense4unix.daemon.subsystems import keyboard as subsistema
     from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
@@ -367,11 +285,7 @@ def _apertar_o_l3(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
 def test_o_l3_da_suite_nao_chega_ao_servidor_de_avisos(
     monkeypatch: pytest.MonkeyPatch, barramento_de_mentira: _ServidorDeAvisos
 ) -> None:
-    """A PROVA DA SPRINT, no barramento: o L3 abre o teclado e o servidor conta zero.
-
-    A MORDIDA: tire o `_a_suite_esta_rodando() or` do `notify` e o servidor
-    conta `['Teclado na tela aberto pelo L3.']`.
-    """
+    """A PROVA DA SPRINT, no barramento: o L3 abre o teclado e o servidor conta zero."""
     abertos = _apertar_o_l3(monkeypatch)
     assert abertos, "o L3 não abriu o teclado de mentira — o caso não mediu nada"
     time.sleep(0.2)

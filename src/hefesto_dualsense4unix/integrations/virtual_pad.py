@@ -48,58 +48,20 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: Timeout do `wait_for_bind`. O probe do `hid_playstation` faz várias idas e
-#: voltas (GET_REPORT 0x09/0x20/0x05) antes do UHID_START.
-#:
-#: Medido ao vivo (6 execuções): o START chega em **2,3 ms** (pior caso 2,4 ms) —
-#: 0,5 s são 200x de folga. Importa porque o `wait_for_bind` roda DENTRO do poll
-#: loop (o co-op promove jogador em `sync`/`forward_all`): no caminho de falha o
-#: timeout inteiro vira input congelado do P1. Com os 2,0 s originais um uhid que
-#: não subisse travava o controle por 2 segundos.
 UHID_BIND_TIMEOUT_S = 0.5
 
-# ---------------------------------------------------------------------------
-# O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026
-# ---------------------------------------------------------------------------
-# A regra é dela, em três mensagens seguidas, e está citada com a digitação
-# dela na sprint (`docs/process/sprints/2026-09-13-MODO-DE-CONEXAO-01-…`,
-# § A regra dela): o MODO é a base, e o PS + R3 é o mesmo modo; a MÁSCARA vem
-# por cima, é como o jogo vê a entrada, e independe do modo; os dois valem com
-# o jogo aberto; e o que o PS + R3 escolhe fica gravado no perfil.
-#
-# SÃO DOIS EIXOS, e esta factory já decidia os dois sem nomear o primeiro: a
-# MÁSCARA é o par VID/PID que o jogo vê; o CAMINHO é o canal por onde o
 # controle chega — o `uhid` (o relatório do DualSense, por onde voltam
-# gatilho, luz e LED de jogador) ou o `uinput` (o canal comum, o do controle de
-# Xbox e o piso de compatibilidade). Até 13/09 o caminho saía da máscara, e por
-# isso o chip «Xbox» só mudava alguma coisa quando ninguém tinha escolhido
-# máscara no cartão.
-#
 # O `uhid` só se constrói com máscara DualSense: *"o `hid_playstation` só faz
-# bind em VID/PID da Sony"* (`_try_uhid`). Com outra máscara os dois caminhos
-# dão o mesmo canal, o `uinput`, e o caminho fica guardado assim mesmo — a
-# falta do canal é dívida no mapa, nunca frase na tela (§D.2 da sprint).
-#
-# NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026): o modo Xbox ESCOLHIDO veste todo
-# pad de Xbox 360 (:func:`mascara_no_jogo`). No canal comum, o Edge e o Pro não
-# têm hidraw, e sob o Proton o jogo não os usa: na sessão dela de 27/09 o
 # PRAGMATA segurou só o mouse e o teclado com quatro Edge `uinput`, e o Future
-# Knight abriu o Pro sem entendê-lo (`medidas/sessao/G1-…`, `G3-…`).
 CAMINHO_DUALSENSE = "dualsense"
 CAMINHO_XBOX = "xbox"
 CAMINHOS: tuple[str, ...] = (CAMINHO_DUALSENSE, CAMINHO_XBOX)
 
-#: O aparelho do canal comum: o Xbox 360 (`uinput_gamepad.FLAVORS["xbox"]`,
-#: `045e:028e`), o piso que todo jogo usa (`ponte_escada.ESCADA`, 2.º degrau).
 MASCARA_DO_CANAL_COMUM = "xbox"
 
 
 def normalizar_caminho(valor: object) -> str | None:
-    """O caminho reconhecido, ou ``None`` — e ``None`` é *"ninguém escolheu"*.
-
-    ESTRITA, ao contrário do `normalize_flavor`: um valor desconhecido não vira
-    caminho nenhum por default. Quem recusa em voz alta é o portão do IPC.
-    """
+    """O caminho reconhecido, ou ``None`` — e ``None`` é *"ninguém escolheu"*."""
     if isinstance(valor, str):
         limpo = valor.strip().lower()
         if limpo in CAMINHOS:
@@ -108,13 +70,7 @@ def normalizar_caminho(valor: object) -> str | None:
 
 
 def caminho_resolvido(caminho: object, mascara: object) -> str:
-    """O caminho que vale: o escolhido, ou — sem escolha — o que sai da máscara.
-
-    O SEGUNDO RAMO É O PRODUTO DE ANTES DE 13/09, e é de propósito (§D.1 da
-    sprint): *"perfil sem `caminho`: o caminho sai de onde sai hoje (a máscara
-    dualsense dá uhid; as outras, uinput), para nenhum jogo mudar no dia da
-    cura"*.
-    """
+    """O caminho que vale: o escolhido, ou — sem escolha — o que sai da máscara."""
     escolhido = normalizar_caminho(caminho)
     if escolhido is not None:
         return escolhido
@@ -199,11 +155,7 @@ def _pendurar_o_caminho(pad: object, caminho: str) -> None:
 
 
 def _vestir_o_aparelho(pad: object, aparelho: str, *, mascara: str, player: int) -> None:
-    """Veste o pad ainda não criado com o aparelho que o jogo usa.
-
-    O `uinput` de verdade sabe (`UinputGamepad.vestir`). Um pad que não sabe
-    vestir (dublê de régua) fica como veio, e o diário diz.
-    """
+    """Veste o pad ainda não criado com o aparelho que o jogo usa."""
     vestir = getattr(pad, "vestir", None)
     if not callable(vestir):
         logger.debug("vpad_sem_como_vestir", aparelho=aparelho, player=player)
@@ -215,26 +167,11 @@ def _vestir_o_aparelho(pad: object, aparelho: str, *, mascara: str, player: int)
 
 @runtime_checkable
 class VirtualPad(Protocol):
-    """O que o daemon usa de um gamepad virtual, seja ele uinput ou uhid.
-
-    Membros só-leitura de propósito: o daemon lê `flavor`/`ff_*` para a GUI e o
-    doctor, mas quem define a máscara é a factory, na criação.
-    """
+    """O que o daemon usa de um gamepad virtual, seja ele uinput ou uhid."""
 
     @property
     def flavor(self) -> str:
-        """A máscara deste pad: "dualsense", "xbox" ou "nintendo".
-
-        A terceira entrou em 07/09/2026 e NÃO pediu linha nova aqui nem na
-        factory: o gate do `_try_uhid` é *"não é dualsense, logo não é meu"*,
-        então ela cai no uinput por si, como o xbox sempre caiu.
-
-        FATO SUBSTITUÍDO — 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): aqui se
-        dizia *"máscara que o jogo vê"*. É a máscara do cartão, que os juízes de
-        recriação comparam; o que o jogo vê é a regra :func:`mascara_no_jogo`
-        (no `uinput`, a propriedade `UinputGamepad.mascara_no_jogo`), e as duas
-        só divergem no modo Xbox, que veste todo pad de Xbox 360.
-        """
+        """A máscara deste pad: "dualsense", "xbox" ou "nintendo"."""
         ...
 
     @property
@@ -256,40 +193,17 @@ class VirtualPad(Protocol):
 
     @property
     def ff_nao_nulo_count(self) -> int:
-        """Nº de pedidos com FORÇA — os que fariam o motor mexer.
-
-        MASCARA-XBOX-MUDA-01 (09/08/2026). Entra no Protocol junto com o
-        `ff_maior_pedido` por um motivo medido: enquanto só o backend uhid os
-        tinha, o `daemon/ipc_handlers` os lia com `getattr(vp, ..., 0)` e o
-        zero do default virava AFIRMAÇÃO — com a máscara Xbox vibrando
-        perfeitamente, a aba Rumble dizia *"o jogo falou de vibração Nx, mas
-        pediu força zero em todas"*. Um backend que não responde a pergunta é
-        indistinguível de um backend que responde "não" e, num painel de
-        diagnóstico, essa é a mentira mais cara que existe.
-
-        O Protocol é o lugar certo do conserto: aqui a pergunta passa a ser
-        obrigatória, e um backend novo não tem como nascer mudo.
-        """
+        """Nº de pedidos com FORÇA — os que fariam o motor mexer."""
         ...
 
     @property
     def ff_maior_pedido(self) -> tuple[int, int]:
-        """Maior par (weak, strong) que o jogo pediu — "dava para SENTIR?".
-
-        Comparado por INTENSIDADE (`core.rumble.pedido_mais_forte`), nunca
-        pela ordem de tupla do Python.
-        """
+        """Maior par (weak, strong) que o jogo pediu — "dava para SENTIR?"."""
         ...
 
     @property
     def ff_descartado_count(self) -> int:
-        """Nº de pedidos do jogo que NÃO viraram vibração por falha nossa.
-
-        No uhid: report com motor não-nulo cujos bits de vibração não
-        reconhecemos. No uinput: play de efeito que não está no catálogo. Nos
-        dois é o mesmo significado para quem lê a tela — *o jogo pediu e nós
-        perdemos* —, e é o único caso em que o painel pode acusar a si mesmo.
-        """
+        """Nº de pedidos do jogo que NÃO viraram vibração por falha nossa."""
         ...
 
     @property
@@ -406,7 +320,6 @@ def make_virtual_pad(
     resolvido = caminho_resolvido(caminho, key)
     motivo: str | None = None
     if not quer_uhid(caminho, key):
-        # O caminho Xbox, ou uma máscara que o uhid não veste: uinput por
         # escolha, sem `motivo` — o `state_full` não o chama de degradado.
         pass
     elif allow_uhid:
@@ -434,9 +347,7 @@ def make_virtual_pad(
     if aparelho != key:
         _vestir_o_aparelho(pad, aparelho, mascara=key, player=player)
     if motivo is not None:
-        # VPAD-05 — fallback nunca silencioso: o PORQUÊ viaja com o vpad e o
         # `state_full` o expõe (`gamepad_emulation.degraded_motivo`) para a
-        # GUI/doctor, sem ninguém precisar garimpar o journal.
         pad.fallback_motivo = motivo
     if not pad.start():
         return None
@@ -477,8 +388,6 @@ def _try_uhid(
     )
 
     if flavor != "dualsense":
-        # Xbox não é trabalho do uhid: o `hid_playstation` só faz bind em
-        # VID/PID da Sony, e um device HID sem driver não vira gamepad nenhum.
         return None, None
     if not uhid_available():
         logger.info("vpad_uhid_indisponivel_usando_uinput", node=UHID_NODE, player=player)
@@ -498,22 +407,11 @@ def _try_uhid(
     )
     if pad is None:  # pragma: no cover - o gate de flavor acima já garante
         return None, "uhid_indisponivel"
-    # E3 — A IDENTIDADE ENTRA AQUI, E NÃO PELO `for_flavor`, DE PROPÓSITO.
-    # `for_flavor(identity=...)` faz uma SEGUNDA leitura do registro de
-    # máscaras, e o `make_virtual_pad` acima já resolveu a máscara efetiva
-    # justamente para não existir janela em que os dois discordem sobre quem é
-    # este controle (a armadilha que `external_mask.py:68-77` descreveu). O que
-    # o MAC do vpad precisa da identidade não é o veredito da máscara — é a
-    # âncora, e ela é o mesmo dado nas duas leituras. Atribuir antes do
-    # `start()` é o que importa: é lá que o MAC vai para o feature 0x09.
     pad.identity = identity
     if not pad.start():
         logger.warning("vpad_uhid_start_falhou_usando_uinput", player=player)
         return None, "uhid_start_falhou"
     if not pad.wait_for_bind(UHID_BIND_TIMEOUT_S):
-        # O CREATE2 foi aceito mas o driver não fez bind (kernel sem
-        # hid_playstation, MAC duplicado). Sem o `stop()` o device HID ficaria de
-        # pé, mudo, disputando o jogo com o vpad uinput que vem a seguir.
         logger.warning("vpad_uhid_bind_falhou_usando_uinput", player=player)
         pad.stop()
         return None, "uhid_bind_falhou"

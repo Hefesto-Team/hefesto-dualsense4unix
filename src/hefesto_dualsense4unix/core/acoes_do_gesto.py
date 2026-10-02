@@ -47,14 +47,7 @@ from hefesto_dualsense4unix.core import acoes_de_botao as _botao
 
 @dataclass(frozen=True)
 class Gesto:
-    """Um dos seis gestos: a chave do ``maquina.json`` e quem o detecta.
-
-    ``nome_no_gerente`` é o nome que o ``HotkeyManager`` dá ao combo
-    (``integrations/hotkey_daemon._combos_configurados``); o PS sozinho não é
-    combo e se chama ``ps_solo`` lá. ``botoes`` é o que o gerente compara;
-    ``pecas`` é como o mapa do controle chama as mesmas peças (o clique do
-    analógico é ``stick_r`` no desenho e ``r3`` no leitor).
-    """
+    """Um dos seis gestos: a chave do ``maquina.json`` e quem o detecta."""
 
     chave: str
     numero: int
@@ -63,12 +56,8 @@ class Gesto:
     pecas: tuple[str, ...]
 
 
-#: O PS SOZINHO, o sexto: o único sem combo e o único com dois donos (a tecla
-#: do perfil digita antes; o ato daqui vem depois).
 GESTO_DO_PS = "ps"
 
-#: OS SEIS, na ordem da tabela da tela — a mesma numeração das linhas e do
-#: realce do desenho.
 GESTOS: dict[str, Gesto] = {
     g.chave: g
     for g in (
@@ -81,10 +70,6 @@ GESTOS: dict[str, Gesto] = {
     )
 }
 
-# ---------------------------------------------------------------------------
-# Os tokens. Palavras com sublinhado de propósito: viram chave de JSON, e o
-# portão de acentuação cobra palavra solta dentro de string.
-# ---------------------------------------------------------------------------
 PERFIL_SEGUINTE = "perfil_seguinte"
 PERFIL_ANTERIOR = "perfil_anterior"
 SUSPENDER = "suspender_mouse_e_teclado"
@@ -98,9 +83,6 @@ PARAR_O_SERVICO = "parar_o_servico"
 SCRIPT = "script"
 NADA = "nada"
 
-#: OS GRUPOS DA LISTA. A «Navegação Interna» de antes se partiu em «Perfil» e
-#: «Mouse e teclado» (``D-2909-O-GRUPO-NAVEGACAO-INTERNA-MUDA-DE-NOME``, ela, 29/09:
-#: *«E sim pode partir em dois»*): a irmã A-NAVEGACAO-INTERNA dá à mesma palavra
 #: o sentido de andar pelas abas. <!-- noqa-acento: citação literal dela -->
 GRUPO_PERFIL = "Perfil"
 GRUPO_MOUSE_E_TECLADO = "Mouse e teclado"
@@ -111,8 +93,6 @@ GRUPO_HEFESTO = "Hefesto"
 GRUPO_COMANDO = _botao.GRUPO_COMANDO
 GRUPO_NENHUM = _botao.GRUPO_NENHUM
 
-#: TOKEN -> (grupo, rótulo), na ordem da tela. «Abrir a Steam», «Sair do modo
-#: jogo» e «— Nada —» são as palavras das Definições, e vêm do dono delas.
 ACOES: dict[str, tuple[str, str]] = {
     PERFIL_SEGUINTE: (GRUPO_PERFIL, "Próximo perfil"),
     PERFIL_ANTERIOR: (GRUPO_PERFIL, "Perfil anterior"),
@@ -128,10 +108,6 @@ ACOES: dict[str, tuple[str, str]] = {
     NADA: (GRUPO_NENHUM, _botao.rotulo(_botao.TOKEN_NADA)),
 }
 
-#: O DE FÁBRICA, que é o que o daemon fazia com o ato cravado
-#: (``start_hotkey_manager`` até 01/10/2026). O «Parar o serviço» nunca é de
-#: fábrica (``D-2909-PARAR-O-SERVICO-NAO-VOLTA-PELO-CONTROLE``): quem ouve o
-#: controle é o serviço, e parado ninguém escuta o gesto de volta.
 PADRAO: dict[str, str] = {
     "ps_options": SUSPENDER,
     "ps_cima": PERFIL_SEGUINTE,
@@ -141,19 +117,12 @@ PADRAO: dict[str, str] = {
     GESTO_DO_PS: ABRIR_A_STEAM,
 }
 
-#: AS DUAS SAÍDAS DE EMERGÊNCIA da dica da tabela: o modo (para sair de um jogo
-#: que não responde) e a suspensão do mouse e do teclado. A dica diz qual delas
-#: ficou sem gesto; nada é travado.
 SAIDAS_DE_EMERGENCIA: tuple[str, ...] = (MODO_SEGUINTE, SUSPENDER)
 
-#: O TETO DO SCRIPT, em segundos (``D-2909-O-SCRIPT-E-UM-ARQUIVO-ESCOLHIDO``).
 TETO_DO_SCRIPT_S = 60
 
-#: O tamanho máximo do caminho guardado, o ``PATH_MAX`` do Linux.
 MAXIMO_DO_CAMINHO = 4096
 
-#: As duas variáveis que o script recebe: quem fez o gesto e por onde. O
-#: endereço do controle nunca vai.
 VARIAVEL_DO_JOGADOR = "HEFESTO_JOGADOR"
 VARIAVEL_DO_TRANSPORTE = "HEFESTO_TRANSPORTE"
 
@@ -189,13 +158,7 @@ def _campo(declarado: Any, nome: str) -> Any:
 
 
 def tabela(maquina: Any) -> dict[str, EscolhaDoGesto]:
-    """Gesto -> o que ele faz: o de fábrica com a declaração da máquina por cima.
-
-    ``maquina`` é o ``MaquinaConfig`` (o daemon o tem em memória, em
-    ``Daemon._maquina``), o dicionário do arquivo, ou ``None``. Uma declaração
-    com token que esta versão não conhece cai no de fábrica: a tela mostrando o
-    de fábrica é melhor que o gesto sem ato.
-    """
+    """Gesto -> o que ele faz: o de fábrica com a declaração da máquina por cima."""
     declarados = _declarados(maquina)
     fora: dict[str, EscolhaDoGesto] = {}
     for chave, de_fabrica in PADRAO.items():
@@ -227,19 +190,13 @@ def rotulo_da_escolha(escolha: EscolhaDoGesto) -> str:
     return rotulo(escolha.faz)
 
 
-#: Os rótulos fixos, de volta para o token. O do script não entra: com um
-#: arquivo escolhido a opção dele mostra o nome do arquivo.
 _POR_ROTULO: dict[str, str] = {r: t for t, (_g, r) in ACOES.items()}
 if len(_POR_ROTULO) != len(ACOES):  # pragma: no cover - defeito de escrita
     raise SystemExit("ERRO em acoes_do_gesto: dois tokens com o mesmo rótulo.")
 
 
 def token_do_rotulo(texto: str) -> str | None:
-    """O token do texto que a lista mandou; ``None`` quando não é um rótulo fixo.
-
-    ``None`` é a opção do script com um arquivo já escolhido (ela mostra o
-    nome do arquivo): quem chama a trata como «Escolher um script…».
-    """
+    """O token do texto que a lista mandou; ``None`` quando não é um rótulo fixo."""
     return _POR_ROTULO.get((texto or "").strip())
 
 
@@ -260,15 +217,6 @@ def saidas_sem_gesto(escolhas: Mapping[str, EscolhaDoGesto]) -> list[str]:
     return [s for s in SAIDAS_DE_EMERGENCIA if s not in feitas]
 
 
-# ---------------------------------------------------------------------------
-# AS GUARDAS DO SCRIPT — ``D-2909-O-SCRIPT-E-UM-ARQUIVO-ESCOLHIDO``
-#
-# O script é código da pessoa rodando pelo controle. Ele entra pelo seletor do
-# sistema (nunca digitado), fica só na máquina (nunca no perfil), roda como
-# ela, sem shell, com teto. Esta função é a conferência, e é UMA: a tela a
-# chama ao escolher, e o daemon de novo na hora de rodar — o arquivo pode ter
-# mudado de dono ou sumido entre as duas.
-# ---------------------------------------------------------------------------
 SEM_O_ARQUIVO = "o arquivo não existe mais"
 NAO_E_ARQUIVO = "não é um arquivo"
 DE_OUTRO_DONO = "o arquivo é de outra pessoa"
@@ -280,19 +228,7 @@ CAMINHO_INVALIDO = "o caminho não é absoluto"
 
 
 def conferir_o_script(caminho: str, *, uid: int | None = None) -> str | None:
-    """``None`` quando o arquivo pode rodar; senão, o motivo em uma frase.
-
-    As regras, cada uma com a razão:
-
-    * caminho absoluto, sem NUL, até :data:`MAXIMO_DO_CAMINHO` — é o que se
-      guarda, e o ``systemd-run`` recusaria o resto;
-    * arquivo regular, depois de seguir os atalhos;
-    * do mesmo dono que quem roda, e sem escrita para grupo e outros — senão
-      outra pessoa troca o que o controle dela roda;
-    * a pasta dele também não pode ser gravável por outros, pela mesma razão;
-    * executável, e começa com ``#!``: sem shell, é o sistema que escolhe o
-      interpretador pela primeira linha, e sem ela a execução falha.
-    """
+    """``None`` quando o arquivo pode rodar; senão, o motivo em uma frase."""
     if not isinstance(caminho, str) or "\0" in caminho or not caminho:
         return CAMINHO_INVALIDO
     if not os.path.isabs(caminho) or len(caminho) > MAXIMO_DO_CAMINHO:

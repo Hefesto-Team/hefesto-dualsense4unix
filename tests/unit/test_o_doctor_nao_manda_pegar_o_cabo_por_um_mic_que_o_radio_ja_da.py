@@ -43,8 +43,6 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
-#: Toda resposta do check, nos cinco ramos. A chave é o ramo, para a reprovação
-#: nomear qual deles voltou a mentir em vez de mandar caçar.
 UMA_PLACA = "1 [Controller]: USB-Audio - DualSense Wireless Controller"
 
 
@@ -68,9 +66,6 @@ def _todas_as_frases() -> dict[str, str]:
     }
 
 
-#: As formas em que a frase derrubada volta. Casam a NEGAÇÃO do microfone por
-#: rádio, não a palavra "cabo" — o cabo é resposta legítima para o FONE, e para
-#: o controle que sumiu do barramento.
 _NEGA_O_MIC_NO_RADIO = (
     re.compile(r"no\s+rádio\s+o\s+mic\w*\s+e\s+o\s+fone\s+não\s+passam", re.I),
     re.compile(r"conecte\s+pelo\s+cabo\s+se\s+quiser\s+usar\s+o\s+mic", re.I),
@@ -93,11 +88,7 @@ def test_nenhum_ramo_manda_pegar_o_cabo_por_causa_do_microfone(ramo: str) -> Non
 
 
 def test_os_dois_ramos_sem_placa_nomeiam_a_ponte() -> None:
-    """Não basta calar a frase errada: os dois ramos têm de dizer o certo.
-
-    Sem esta metade, apagar as duas frases inteiras passaria — e a usuária
-    ficaria sem saber que o microfone dela funciona no rádio.
-    """
+    """Não basta calar a frase errada: os dois ramos têm de dizer o certo."""
     frases = _todas_as_frases()
     for ramo in ("sem_denominador_sem_placa", "nenhum_no_cabo"):
         frase = frases[ramo]
@@ -111,12 +102,7 @@ def test_os_dois_ramos_sem_placa_nomeiam_a_ponte() -> None:
 
 
 def test_a_ponte_que_a_frase_promete_existe_de_verdade() -> None:
-    """A outra metade da mordida: arranque a ponte e esta régua cai junto.
-
-    A frase nova afirma um fato do produto. Uma régua que só comparasse texto
-    deixaria a tela prometendo um caminho apagado — é o defeito que esta casa
-    já pagou com régua que digita o que devia LER.
-    """
+    """A outra metade da mordida: arranque a ponte e esta régua cai junto."""
     ponte = pytest.importorskip(
         "hefesto_dualsense4unix.integrations.dualsense_bt_audio",
         reason="a ponte de microfone por Bluetooth é o que a frase promete",

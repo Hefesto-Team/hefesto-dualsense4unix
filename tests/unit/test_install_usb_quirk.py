@@ -24,8 +24,6 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "install_usb_quirk.sh"
 
-# A string canônica do quirk (cmdline) — contrato com o kernel. Mudar isto exige
-# reavaliar o A/B do storm; mantida idêntica à regra 75 e à discovery.
 EXPECTED_QUIRK = "usbcore.quirks=054c:0ce6:gn,054c:0df2:gn"
 
 
@@ -45,14 +43,12 @@ def test_arquivo_executavel() -> None:
 
 
 def test_string_do_quirk_exata(script_text: str) -> None:
-    # A constante QUIRK precisa ser EXATAMENTE a string esperada.
     assert f'QUIRK="{EXPECTED_QUIRK}"' in script_text, (
         f"constante QUIRK não bate exatamente: esperado QUIRK=\"{EXPECTED_QUIRK}\""
     )
 
 
 def test_sintaxe_bash_valida() -> None:
-    # bash -n: parse-only, não executa nada (sem root, sem efeitos colaterais).
     result = subprocess.run(
         ["bash", "-n", str(SCRIPT_PATH)],
         capture_output=True,
@@ -63,7 +59,6 @@ def test_sintaxe_bash_valida() -> None:
 
 
 def test_status_roda_sem_root() -> None:
-    # --status é read-only (lê /proc/cmdline, config, sysfs) e NUNCA falha.
     result = subprocess.run(
         ["bash", str(SCRIPT_PATH), "--status"],
         capture_output=True,
@@ -85,7 +80,6 @@ def test_check_eh_alias_de_status() -> None:
 
 
 def test_nao_e_regra_udev_no_header(script_text: str) -> None:
-    # O header deve deixar explícito que é cmdline do kernel, NÃO regra udev.
     lowered = script_text.lower()
     assert "não é uma regra udev" in lowered or "não é regra udev" in lowered, (
         "header precisa esclarecer que NÃO é regra udev (é cmdline do kernel)"
@@ -93,11 +87,9 @@ def test_nao_e_regra_udev_no_header(script_text: str) -> None:
 
 
 def test_single_token_documentado(script_text: str) -> None:
-    # O kernel respeita só UM token usbcore.quirks=; o script avisa e não duplica.
     assert "só um token" in script_text.lower() or "só UM token".lower() in script_text.lower()
 
 
 def test_modos_de_reversao_e_runtime_existem(script_text: str) -> None:
-    # Contrato de flags: --remove (reverte) e --runtime (best-effort sysfs).
     for flag in ("--remove", "--runtime", "--status"):
         assert flag in script_text, f"flag {flag} ausente no dispatch do script"

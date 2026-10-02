@@ -1,20 +1,4 @@
-"""O TIQUE TEM TETO EM CADA ABA — O-APP-RESPONDE-NA-HORA-01, réguas 8 e 9.
-
-A janela parada na aba Perfis gastava de 38 a 41% de um núcleo no lar de mentira
-(e 46% na máquina dela), porque cada tique perguntava ao catálogo de jogos por
-linha. As nove outras abas custavam de 0,6 a 4,5 ms por tique.
-
-    R8  o tique de cada uma das dez abas tem teto (a CPU do fio do GTK)
-    R9  a abertura pede a página antes de importar as abas
-
-A janela é OCULTA e nasce no Xvfb da suíte; sem display, as duas pulam (o
-conferente as roda dentro de `dbus-run-session -- xvfb-run -a`). A R8 é o
-piloto de verdade, no processo da suíte, com os dublês da R1 da janela aberta
-(`test_a_janela_aberta_nao_gasta_o_processador`): o estado da fixture de quatro
-controles, a ponte e os `pactl` de mentira, e a casa da régua 1 de
-`test_o_app_responde_na_hora`. A R9 roda o piloto como o produto o abre
-(`__main__`, por `runpy`), num subprocesso com lar de mentira e guarda que sai.
-"""
+"""O TIQUE TEM TETO EM CADA ABA — O-APP-RESPONDE-NA-HORA-01, réguas 8 e 9."""
 
 from __future__ import annotations
 
@@ -43,21 +27,13 @@ ABAS = ("01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao
         "05-vibracao.html", "06-navegacao.html", "07-lancadores.html",
         "08-conexoes.html", "09-sistema.html", "10-perfis.html")
 
-#: Os tiques medidos por aba, depois de `ASSENTAR` tiques de folga na chegada.
 TIQUES = 40
 ASSENTAR = 3
-#: O teto, em CPU do fio do GTK por tique. Medido em 02/10 no lar de mentira: a
-#: mais cara das nove sadias é a 08 (mediana 4,4 ms); a 10 era 37 ms antes da
-#: foto do catálogo e 6,5 ms depois.
 TETO_DA_MEDIANA_MS = 15.0
 TETO_DO_P95_MS = 40.0
-#: Quanto uma aba pode levar para juntar os tiques (40 a 100 ms, cinco vezes).
 TETO_DA_ABA_S = 20.0
 
 
-# ===========================================================================
-# R8 — o tique de cada uma das dez abas tem teto
-# ===========================================================================
 def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
     """O piloto oculto passa pelas dez abas e anota a CPU de cada tique."""
     gtk = _gtk()
@@ -102,8 +78,6 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
                 gtk.main_quit()
                 return False
             aba = ABAS[roteiro.i]
-            # NAVEGAR ANTES DE A PÁGINA CONFIRMAR mata a janela (`_ir` com o
-            # título vazio): a vez de trocar é a da página de pé.
             de_pe = piloto.pronto and piloto.tela.na_aba
             if not de_pe and time.monotonic() - roteiro.desde <= TETO_DA_ABA_S:
                 return True
@@ -143,13 +117,7 @@ def _p95(valores: list[float]) -> float:
 def test_o_tique_de_cada_aba_tem_teto(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """Dez abas, 40 tiques cada, a CPU do fio do GTK em cada tique: mediana até
-    15 ms e p95 até 40 ms em toda aba, com a casa da régua 1 (33 jogos da
-    Steam, 30 perfis, 200 atalhos).
-
-    MORDIDA: devolva o catálogo por linha (a 10 sem a foto do tique) — a 10
-    reprova pela mediana, e só ela.
-    """
+    """Dez abas, 40 tiques cada, a CPU do fio do GTK em cada tique: mediana até"""
     custos = _medir_as_dez(monkeypatch)
     acima = {}
     for aba, valores in custos.items():
@@ -161,9 +129,6 @@ def test_o_tique_de_cada_aba_tem_teto(
         f"{TETO_DO_P95_MS:.0f} ms de CPU do fio do GTK): {acima}")
 
 
-# ===========================================================================
-# R9 — a abertura pede a página antes de importar as abas
-# ===========================================================================
 _PELO_PRODUTO = r'''
 import json, os, pathlib, runpy, sys
 LAR = pathlib.Path(os.environ["LAR_DA_REGUA"]).resolve()
@@ -209,13 +174,7 @@ pathlib.Path(os.environ["SAIDA_DA_REGUA"]).write_text(json.dumps(EV))
 
 
 def test_a_abertura_pede_a_pagina_antes_de_importar_as_abas(tmp_path: Path) -> None:
-    """O piloto aberto como o produto (`__main__`): quando a janela pede a 01
-    (`load_uri`), o pacote da aba 10 ainda não está no `sys.modules`; e ele
-    chega depois, na mesma abertura.
-
-    MORDIDA: devolva o import das abas ao topo de `hefesto_vivo` (o `if
-    __name__ != "__main__":` sem a condição) — o módulo já está lá no pedido.
-    """
+    """O piloto aberto como o produto (`__main__`): quando a janela pede a 01"""
     _gtk()
     lar = tmp_path / "lar"
     for sub in (".config", ".local/share", ".local/state", ".cache", "run", "bin"):
@@ -250,9 +209,6 @@ def test_a_abertura_pede_a_pagina_antes_de_importar_as_abas(tmp_path: Path) -> N
         "as abas nunca chegaram depois do pedido da página")
 
 
-# ===========================================================================
-# R9b — quem fecha a janela durante a espera da abertura, fecha o processo
-# ===========================================================================
 def _vista_de_mentira() -> object:
     """Um objeto com o sinal `load-changed` da `WebKit2.WebView`, e nada mais."""
     from typing import Any, ClassVar
@@ -288,23 +244,12 @@ def _o_laco_que_vem_s(gtk: object, teto_s: float) -> float:
 
 
 def test_quem_fecha_a_janela_durante_a_espera_fecha_o_processo() -> None:
-    """A janela do produto aparece antes de as abas chegarem, e a abertura
-    espera o WebKit começar (`_esperar_o_webkit_comecar`). O «X» da janela (e
-    a carga que falha) chama `Gtk.main_quit` nesse meio-tempo: a espera acaba
-    na hora, e o `Gtk.main` que vem depois sai sozinho, como saía antes de a
-    espera existir. Sem pedido de sair, a espera acaba no `committed` e o laço
-    seguinte segue de pé.
-
-    MORDIDA: volte a espera às voltas à mão do laço (`Gtk.main_iteration_do`),
-    como ela nasceu — o `Gtk.main_quit` sem laço rodando se perde, a espera vai
-    até o teto e o laço que vem não sai mais: o processo pendura sem janela.
-    """
+    """A janela do produto aparece antes de as abas chegarem, e a abertura"""
     gtk = _gtk()
     from gi.repository import GLib, WebKit2
 
     from hefesto_dualsense4unix.interface import hefesto_vivo as hv
 
-    # 1. O «X» aos 20 ms: a espera acaba, e o laço que vem sai sozinho.
     tela = SimpleNamespace(view=_vista_de_mentira(), morreu=None)
     GLib.timeout_add(20, lambda: (gtk.main_quit(), False)[1])
     t0 = time.monotonic()
@@ -316,7 +261,6 @@ def test_quem_fecha_a_janela_durante_a_espera_fecha_o_processo() -> None:
         f"o pedido de sair se perdeu na espera: o laço que vem durou {laco:.2f} s, "
         "e o processo ficaria pendurado sem janela")
 
-    # 2. O WebKit começa aos 20 ms: a espera acaba, e o laço que vem fica de pé.
     tela = SimpleNamespace(view=_vista_de_mentira(), morreu=None)
     GLib.timeout_add(20, lambda: (tela.view.emit("load-changed",
                                                  WebKit2.LoadEvent.COMMITTED), False)[1])

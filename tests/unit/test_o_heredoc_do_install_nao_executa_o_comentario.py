@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""O HEREDOC SEM ASPAS DO INSTALL NÃO PODE TER CRASE — ela vira comando.
-
-MEDIDO NO INSTALL DE 21/09/2026, no log dela:
-
-    ./install.sh: linha 3000: interface.hefesto_vivo:main: comando não encontrado
-    ./install.sh: linha 3000: run.sh: comando não encontrado
-
-O lançador `hefesto-dualsense4unix-gui` nasce de um `cat <<LAUNCH` SEM aspas —
-de propósito, porque o `${ROOT_DIR}` da linha que abre a interface tem de ser
-expandido. Só que a expansão não escolhe: o comentário do lançador citava dois
-nomes entre crases, e o bash EXECUTOU as duas palavras durante o install. Elas
-não existiam como comando, então o dano foi o comentário sair com dois buracos
-— e isso desde 01/09. Uma crase em volta de uma palavra que exista é um comando
-rodado na máquina de quem instala.
-
-A MORDIDA: devolva as crases ao comentário do `<<LAUNCH` e este teste reprova
-nomeando a linha. Quem precisar mesmo de substituição de comando num heredoc
-sem aspas escreve `$(…)`, que é visível na leitura — a crase se confunde com a
-marcação de nome que esta casa usa em todo comentário.
-"""
+"""O HEREDOC SEM ASPAS DO INSTALL NÃO PODE TER CRASE — ela vira comando."""
 from __future__ import annotations
 
 import re
@@ -27,7 +8,6 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 ROTEIROS = ("install.sh", "uninstall.sh")
 
-#: `<<FIM`, `<<-FIM`, `<<'FIM'` ou `<<"FIM"` — as aspas dizem se o bash expande.
 _ABRE = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z_0-9]*)\1")
 
 
@@ -65,11 +45,7 @@ def test_nenhum_heredoc_sem_aspas_tem_crase():
 
 
 def test_a_regua_enxerga_o_lancador():
-    """A guarda de vacuidade: o `<<LAUNCH` tem de estar entre os medidos.
-
-    Sem ela, um `_ABRE` quebrado devolveria lista vazia e o teste de cima
-    ficaria verde sobre nada.
-    """
+    """A guarda de vacuidade: o `<<LAUNCH` tem de estar entre os medidos."""
     medidos = {fim for _l, fim, _c in heredocs_sem_aspas(
         (RAIZ / "install.sh").read_text(encoding="utf-8"))}
     assert "LAUNCH" in medidos, medidos

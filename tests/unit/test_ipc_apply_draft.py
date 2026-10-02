@@ -1,11 +1,4 @@
-"""Testes unitarios do handler IPC profile.apply_draft (FEAT-PROFILE-STATE-01).
-
-Cobre:
-  - Handler aplica cada setor (leds, triggers, rumble, mouse).
-  - Falha em um setor não bloqueia os outros (best-effort).
-  - Retorna lista ``applied`` correta com setores aplicados com sucesso.
-  - Handler wireado corretamente no dict _handlers (armadilha A-07).
-"""
+"""Testes unitarios do handler IPC profile.apply_draft (FEAT-PROFILE-STATE-01)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,10 +18,6 @@ from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -62,22 +51,11 @@ async def server_and_controller(
     manager = ProfileManager(controller=fc, store=store)
     socket_path = tmp_path / "hefesto_draft.sock"
 
-    # Daemon mock para set_mouse_emulation. Usa DaemonConfig real para que
-    # rumble_policy tenha valor válido (balanceado, mult 0.7 por padrão)
-    # — necessário após AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01, que faz
-    # apply_draft escalar rumble via _apply_rumble_policy.
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
     fake_daemon = MagicMock()
     fake_daemon.set_mouse_emulation.return_value = True
     fake_daemon.config = DaemonConfig()
-    # Política NEUTRA para os testes que comparam set_rumble contra o payload
-    # declarado: eles falam do caminho do apply_draft, não do multiplicador.
-    #
-    # 11/08/2026: era "max", e funcionava por ACIDENTE — enquanto o Máximo valia
-    # 1,0, ele era o degrau neutro. Por decisão dela o Máximo passou a amplificar
-    # (1,5) e o passe deixou de ser 1:1. Quem é neutro POR DEFINIÇÃO é o
-    # balanceado: 1,0 = "o que o jogo pediu, sem aumentar nem diminuir".
     fake_daemon.config.rumble_policy = "balanceado"  # type: ignore[assignment]
     fake_daemon._rumble_engine = None
 
@@ -95,15 +73,9 @@ async def server_and_controller(
         await server.stop()
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 _DRAFT_COMPLETO: dict[str, Any] = {
     "triggers": {
-        # Rigid(position, force) — 2 params
         "left": {"mode": "Rigid", "params": [0, 100]},
-        # Off — 0 params
         "right": {"mode": "Off", "params": []},
     },
     "leds": {
@@ -114,11 +86,6 @@ _DRAFT_COMPLETO: dict[str, Any] = {
     "rumble": {"weak": 40, "strong": 80},
     "mouse": {"enabled": True, "speed": 6, "scroll_speed": 1},
 }
-
-
-# ---------------------------------------------------------------------------
-# Testes de wireup (A-07)
-# ---------------------------------------------------------------------------
 
 
 def test_handler_wireado_no_dict(tmp_path: Path) -> None:
@@ -133,11 +100,6 @@ def test_handler_wireado_no_dict(tmp_path: Path) -> None:
         socket_path=tmp_path / "check.sock",
     )
     assert "profile.apply_draft" in server._handlers
-
-
-# ---------------------------------------------------------------------------
-# Testes de aplicação por setor
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -158,11 +120,7 @@ async def test_apply_draft_leds_aplica_lightbar(server_and_controller) -> None:
 
 @pytest.mark.asyncio
 async def test_apply_draft_leds_brightness_aplicada(server_and_controller) -> None:
-    """brightness 0.5 dimma a cor (128, 0, 0) pela curva do piso.
-
-    A conta pergunta ao dono (`fator_do_brilho`, D-2909-O-BRILHO-TEM-PISO): o
-    número digitado aqui era o 64 da conta linear, que o «Aplicar» deixou.
-    """
+    """brightness 0.5 dimma a cor (128, 0, 0) pela curva do piso."""
     _server, socket_path, fc, _ = server_and_controller
     async with IpcClient.connect(socket_path) as client:
         await client.call(
@@ -201,7 +159,6 @@ async def test_apply_draft_triggers_aplicados(server_and_controller) -> None:
             "profile.apply_draft",
             {
                 "triggers": {
-                    # Rigid(position, force) — 2 params
                     "left": {"mode": "Rigid", "params": [0, 100]},
                     "right": {"mode": "Off", "params": []},
                 }
@@ -246,8 +203,7 @@ async def test_apply_draft_mouse_aplicado(server_and_controller) -> None:
 
 @pytest.mark.asyncio
 async def test_apply_draft_keyboard_aplica_bindings(server_and_controller) -> None:
-    """BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01: a seção keyboard empurra os
-    bindings editados ao device vivo via set_bindings, sem reativar perfil."""
+    """BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01: a seção keyboard empurra os"""
     _server, socket_path, _fc, fake_daemon = server_and_controller
     async with IpcClient.connect(socket_path) as client:
         result = await client.call(
@@ -280,9 +236,7 @@ async def test_apply_draft_keyboard_none_usa_default(server_and_controller) -> N
 
 @pytest.mark.asyncio
 async def test_apply_draft_rumble_zero_e_passthrough(server_and_controller) -> None:
-    """BUG-RUMBLE-APPLY-KILLS-GAME-01: 'Aplicar' com rumble (0,0) é passthrough
-    (rumble_active=None), não silêncio forçado a 5Hz que mataria o rumble do
-    jogo. Aplica (0,0) uma vez para soltar um rumble contínuo anterior."""
+    """BUG-RUMBLE-APPLY-KILLS-GAME-01: 'Aplicar' com rumble (0,0) é passthrough"""
     _server, socket_path, fc, fake_daemon = server_and_controller
     async with IpcClient.connect(socket_path) as client:
         result = await client.call(
@@ -296,8 +250,7 @@ async def test_apply_draft_rumble_zero_e_passthrough(server_and_controller) -> N
 
 @pytest.mark.asyncio
 async def test_apply_draft_rumble_nonzero_persiste(server_and_controller) -> None:
-    """Rumble != (0,0) continua persistindo em rumble_active para o poll loop
-    reasserir (vibração contínua deliberada)."""
+    """Rumble != (0,0) continua persistindo em rumble_active para o poll loop"""
     _server, socket_path, _fc, fake_daemon = server_and_controller
     async with IpcClient.connect(socket_path) as client:
         await client.call(
@@ -316,11 +269,6 @@ async def test_apply_draft_completo_retorna_todos_aplicados(
         result = await client.call("profile.apply_draft", _DRAFT_COMPLETO)
     assert result["status"] == "ok"
     assert set(result["applied"]) == {"leds", "triggers", "rumble", "mouse"}
-
-
-# ---------------------------------------------------------------------------
-# Testes de resiliencia: falha em um setor não bloqueia os outros
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -346,7 +294,6 @@ async def test_falha_em_leds_nao_bloqueia_triggers(
             },
         )
     assert result["status"] == "ok"
-    # leds falhou, triggers deve ter sido aplicado
     assert "leds" not in result["applied"]
     assert "triggers" in result["applied"]
 
@@ -396,11 +343,6 @@ async def test_apply_draft_ordem_leds_primeiro(server_and_controller) -> None:
         assert applied.index("leds") < applied.index("triggers")
 
 
-# ---------------------------------------------------------------------------
-# PERFIL-04: seção `controllers` — overrides por-controle no apply_draft
-# ---------------------------------------------------------------------------
-
-#: MAC forjado da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 _UNIQ_2 = "aabbcc000002"
 
 
@@ -422,9 +364,7 @@ def _applier_com_stub() -> tuple[Any, _CtrlPorUniq]:
 
 
 def test_apply_controllers_aplica_por_uniq_com_brilho_escalado() -> None:
-    """A seção controllers vira `apply_output_for(uniq, spec)` — a API
-    por-uniq do PERFIL-01 (nunca o seletor global) — com o RGB escalado
-    pelo brilho no MESMO caminho da seção global de leds."""
+    """A seção controllers vira `apply_output_for(uniq, spec)` — a API"""
     applier, ctrl = _applier_com_stub()
     applied = applier.apply(
         {
@@ -444,13 +384,12 @@ def test_apply_controllers_aplica_por_uniq_com_brilho_escalado() -> None:
     assert len(ctrl.calls) == 1
     uniq, spec = ctrl.calls[0]
     assert uniq == _UNIQ_2
-    # escalado pelo brilho 0.5 na curva do piso, o mesmo caminho da seção global
     fator = fator_do_brilho(0.5)
     assert spec.led == (0, int(100 * fator), int(255 * fator))
     assert spec.player_leds == (True, False, False, False, False)
     assert spec.trigger_right is not None
-    assert spec.trigger_left is None  # lado sem opinião não viaja
-    assert spec.mic_led is None  # mic jamais colateral
+    assert spec.trigger_left is None
+    assert spec.mic_led is None
 
 
 def test_apply_controllers_entrada_vazia_nao_chama_backend() -> None:
@@ -462,8 +401,7 @@ def test_apply_controllers_entrada_vazia_nao_chama_backend() -> None:
 
 
 def test_apply_controllers_invalido_nao_bloqueia_outras_secoes() -> None:
-    """Seção controllers malformada falha best-effort (warning) e as demais
-    seções seguem aplicadas — contrato do DraftApplier."""
+    """Seção controllers malformada falha best-effort (warning) e as demais"""
     from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 
     fc = FakeController(transport="usb")
@@ -480,13 +418,7 @@ def test_apply_controllers_invalido_nao_bloqueia_outras_secoes() -> None:
 
 
 def test_apply_draft_global_com_alvo_selecionado_atinge_todos() -> None:
-    """Fix do review (2026-07-16, MED): as seções GLOBAIS do apply_draft vão
-    por broadcast REAL (`apply_output_defaults`, a mesma medicina do
-    `ProfileManager.apply`). Antes, com um alvo selecionado no seletor (o
-    estado normal do fluxo de edição por-controle), os setters clássicos
-    gravavam a seção GLOBAL no OVERRIDE do alvo: o `_desired_default` nunca
-    era atualizado (replug do outro controle reassertava estado velho) e o
-    outro controle não recebia NADA."""
+    """Fix do review (2026-07-16, MED): as seções GLOBAIS do apply_draft vão"""
     from hefesto_dualsense4unix.core.backend_pydualsense import (
         PyDualSenseController,
     )
@@ -502,7 +434,7 @@ def test_apply_draft_global_com_alvo_selecionado_atinge_todos() -> None:
     h1, h2 = _FakeHandle(), _FakeHandle()
     backend._handles = {KEY_1: h1, KEY_2: h2}
     backend._primary_key = KEY_1
-    backend.set_output_target(1)  # usuária editando o Controle 2 (fluxo novo)
+    backend.set_output_target(1)
 
     applier = DraftApplier(controller=backend, store=MagicMock(), daemon=None)
     applied = applier.apply(
@@ -516,15 +448,12 @@ def test_apply_draft_global_com_alvo_selecionado_atinge_todos() -> None:
         }
     )
     assert applied == ["leds", "triggers"]
-    for h in (h1, h2):  # os DOIS controles receberam a seção global
+    for h in (h1, h2):
         assert h.light.colors[-1] == (129, 61, 156)
         assert h.triggerR.forces == list(rigid(5, 200).forces)
-    # O default foi atualizado (o replug reasserta o estado NOVO)...
     assert backend._desired_default.led == (129, 61, 156)
     assert backend._desired_default.trigger_right is not None
-    # ...e a seção global NÃO virou override do alvo.
     assert backend._desired_by_uniq == {}
-    # O seletor da usuária segue como estava (estado de UI preservado).
     assert backend.get_output_target_index() == 1
 
 
@@ -532,9 +461,7 @@ def test_apply_draft_global_com_alvo_selecionado_atinge_todos() -> None:
 async def test_apply_draft_controllers_fim_a_fim_com_backend_sem_estado(
     server_and_controller,
 ) -> None:
-    """Fim a fim via IPC: backend sem estado por-controle (FakeController)
-    herda o no-op seguro do IController — a seção aplica sem erro (aditivo,
-    daemon antigo simplesmente ignora a chave)."""
+    """Fim a fim via IPC: backend sem estado por-controle (FakeController)"""
     _server, socket_path, _fc, _ = server_and_controller
     async with IpcClient.connect(socket_path) as client:
         result = await client.call(
